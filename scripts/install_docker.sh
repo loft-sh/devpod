@@ -440,6 +440,9 @@ do_install() {
 				if version_gte "20.10"; then
 						pkgs="$pkgs docker-compose-plugin"
 				fi
+				if version_gte "23.0"; then
+						pkgs="$pkgs docker-buildx-plugin"
+				fi
 				if ! is_dry_run; then
 					set -x
 				fi
@@ -524,8 +527,7 @@ do_install() {
 				if version_gte "20.10"; then
 					pkgs="$pkgs docker-compose-plugin docker-ce-rootless-extras$pkg_version"
 				fi
-				# TODO(thaJeztah) remove the $CHANNEL check once 22.06 and docker-buildx-plugin is published to the "stable" channel
-				if [ "$CHANNEL" = "test" ] && version_gte "22.06"; then
+				if version_gte "23.0"; then
 						pkgs="$pkgs docker-buildx-plugin"
 				fi
 				if ! is_dry_run; then
@@ -608,9 +610,8 @@ do_install() {
 				if version_gte "20.10"; then
 					pkgs="$pkgs docker-compose-plugin docker-ce-rootless-extras$pkg_version"
 				fi
-				# TODO(thaJeztah) remove the $CHANNEL check once 22.06 and docker-buildx-plugin is published to the "stable" channel
-				if [ "$CHANNEL" = "test" ] && version_gte "22.06"; then
-						pkgs="$pkgs docker-buildx-plugin"
+				if version_gte "23.0"; then
+					pkgs="$pkgs docker-buildx-plugin"
 				fi
 				if ! is_dry_run; then
 					set -x

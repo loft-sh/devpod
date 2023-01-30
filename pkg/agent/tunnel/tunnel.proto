@@ -1,0 +1,34 @@
+// protoc -I . tunnel.proto  --go_out=. --go_opt=paths=source_relative --go-grpc_out=. --go-grpc_opt=paths=source_relative
+syntax = "proto3";
+
+option go_package = "github.com/loft-sh/devpod/pkg/agent/tunnel";
+
+package tunnel;
+
+service Tunnel {
+  rpc Ping(Empty) returns (Empty) {}
+  rpc Log(LogMessage) returns (Empty) {}
+  rpc ReadWorkspace(Empty) returns (stream Chunk) {}
+}
+
+message Chunk {
+  bytes Content = 1;
+}
+
+enum LogLevel {
+  DEBUG = 0;
+  INFO = 1;
+  DONE = 2;
+  WARNING = 3;
+  ERROR = 4;
+}
+
+message LogMessage {
+  LogLevel logLevel = 1;
+  string message = 2;
+}
+
+message Empty {
+
+}
+

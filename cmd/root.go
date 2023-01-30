@@ -40,5 +40,6 @@ func BuildRoot() *cobra.Command {
 	rootCmd.AddCommand(NewSSHCmd())
 	rootCmd.AddCommand(NewVersionCmd())
 	rootCmd.AddCommand(NewStopCmd())
+	rootCmd.AddCommand(NewListCmd())
 	return rootCmd
 }

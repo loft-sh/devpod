@@ -18,19 +18,10 @@ import (
 )
 
 var (
-	DevPodSSHFolder         = "ssh"
 	DevPodSSHHostKeyFile    = "id_devpod_host_ecdsa"
 	DevPodSSHPrivateKeyFile = "id_devpod_ecdsa"
 	DevPodSSHPublicKeyFile  = "id_devpod_ecdsa.pub"
 )
-
-func init() {
-	configDir, _ := config.GetConfigDir()
-	DevPodSSHFolder = filepath.Join(configDir, DevPodSSHFolder)
-	DevPodSSHHostKeyFile = filepath.Join(DevPodSSHFolder, DevPodSSHHostKeyFile)
-	DevPodSSHPrivateKeyFile = filepath.Join(DevPodSSHFolder, DevPodSSHPrivateKeyFile)
-	DevPodSSHPublicKeyFile = filepath.Join(DevPodSSHFolder, DevPodSSHPublicKeyFile)
-}
 
 var keyLock sync.Mutex
 
@@ -57,7 +48,7 @@ func generatePrivateKey() (*ecdsa.PrivateKey, string, error) {
 	return privateKey, privateKeyBuf.String(), nil
 }
 
-func MakeHostKey() (string, error) {
+func makeHostKey() (string, error) {
 	_, privKeyStr, err := generatePrivateKey()
 	if err != nil {
 		return "", err
@@ -65,7 +56,7 @@ func MakeHostKey() (string, error) {
 	return privKeyStr, nil
 }
 
-func MakeSSHKeyPair() (string, string, error) {
+func makeSSHKeyPair() (string, string, error) {
 	privateKey, privKeyStr, err := generatePrivateKey()
 	if err != nil {
 		return "", "", err
@@ -82,39 +73,76 @@ func MakeSSHKeyPair() (string, string, error) {
 	return pubKeyBuf.String(), privKeyStr, nil
 }
 
-func GetPrivateKeyRaw() ([]byte, error) {
+func GetPrivateKeyRaw(workspaceID string) ([]byte, error) {
+	workspaceDir, err := config.GetWorkspaceDir(workspaceID)
+	if err != nil {
+		return nil, err
+	}
+
+	return getPrivateKeyRawBase(workspaceDir)
+}
+
+func getTempDir() string {
+	tempDir := os.TempDir()
+	return filepath.Join(tempDir, "devpod-ssh")
+}
+
+func GetTempHostKey() (string, error) {
+	tempDir := getTempDir()
+	return getHostKeyBase(tempDir)
+}
+
+func GetTempPublicKey() (string, error) {
+	tempDir := getTempDir()
+	return getPublicKeyBase(tempDir)
+}
+
+func GetTempPrivateKeyRaw() ([]byte, error) {
+	tempDir := getTempDir()
+	return getPrivateKeyRawBase(tempDir)
+}
+
+func GetHostKey(workspaceID string) (string, error) {
+	workspaceDir, err := config.GetWorkspaceDir(workspaceID)
+	if err != nil {
+		return "", err
+	}
+
+	return getHostKeyBase(workspaceDir)
+}
+
+func getPrivateKeyRawBase(dir string) ([]byte, error) {
 	keyLock.Lock()
 	defer keyLock.Unlock()
 
-	_, err := os.Stat(DevPodSSHFolder)
+	err := os.MkdirAll(dir, 0755)
 	if err != nil {
-		err = os.MkdirAll(DevPodSSHFolder, 0755)
-		if err != nil {
-			return nil, err
-		}
+		return nil, err
 	}
 
 	// check if key pair exists
-	_, err = os.Stat(DevPodSSHPrivateKeyFile)
+	privateKeyFile := filepath.Join(dir, DevPodSSHPrivateKeyFile)
+	publicKeyFile := filepath.Join(dir, DevPodSSHPublicKeyFile)
+	_, err = os.Stat(privateKeyFile)
 	if err != nil {
-		pubKey, privateKey, err := MakeSSHKeyPair()
+		pubKey, privateKey, err := makeSSHKeyPair()
 		if err != nil {
 			return nil, errors.Wrap(err, "generate key pair")
 		}
 
-		err = os.WriteFile(DevPodSSHPublicKeyFile, []byte(pubKey), 0644)
+		err = os.WriteFile(publicKeyFile, []byte(pubKey), 0644)
 		if err != nil {
 			return nil, errors.Wrap(err, "write public ssh key")
 		}
 
-		err = os.WriteFile(DevPodSSHPrivateKeyFile, []byte(privateKey), 0600)
+		err = os.WriteFile(privateKeyFile, []byte(privateKey), 0600)
 		if err != nil {
 			return nil, errors.Wrap(err, "write private ssh key")
 		}
 	}
 
 	// read private key
-	out, err := os.ReadFile(DevPodSSHPrivateKeyFile)
+	out, err := os.ReadFile(privateKeyFile)
 	if err != nil {
 		return nil, errors.Wrap(err, "read private ssh key")
 	}
@@ -122,34 +150,32 @@ func GetPrivateKeyRaw() ([]byte, error) {
 	return out, nil
 }
 
-func GetHostKey() (string, error) {
+func getHostKeyBase(dir string) (string, error) {
 	keyLock.Lock()
 	defer keyLock.Unlock()
 
-	_, err := os.Stat(DevPodSSHFolder)
+	err := os.MkdirAll(dir, 0755)
 	if err != nil {
-		err = os.MkdirAll(DevPodSSHFolder, 0755)
-		if err != nil {
-			return "", err
-		}
+		return "", err
 	}
 
 	// check if key pair exists
-	_, err = os.Stat(DevPodSSHHostKeyFile)
+	hostKeyFile := filepath.Join(dir, DevPodSSHHostKeyFile)
+	_, err = os.Stat(hostKeyFile)
 	if err != nil {
-		privateKey, err := MakeHostKey()
+		privateKey, err := makeHostKey()
 		if err != nil {
 			return "", errors.Wrap(err, "generate host key")
 		}
 
-		err = os.WriteFile(DevPodSSHHostKeyFile, []byte(privateKey), 0600)
+		err = os.WriteFile(hostKeyFile, []byte(privateKey), 0600)
 		if err != nil {
 			return "", errors.Wrap(err, "write host key")
 		}
 	}
 
 	// read public key
-	out, err := os.ReadFile(DevPodSSHHostKeyFile)
+	out, err := os.ReadFile(hostKeyFile)
 	if err != nil {
 		return "", errors.Wrap(err, "read host ssh key")
 	}
@@ -157,42 +183,50 @@ func GetHostKey() (string, error) {
 	return base64.StdEncoding.EncodeToString(out), nil
 }
 
-func GetPublicKey() (string, error) {
+func getPublicKeyBase(dir string) (string, error) {
 	keyLock.Lock()
 	defer keyLock.Unlock()
 
-	_, err := os.Stat(DevPodSSHFolder)
+	err := os.MkdirAll(dir, 0755)
 	if err != nil {
-		err = os.MkdirAll(DevPodSSHFolder, 0755)
-		if err != nil {
-			return "", err
-		}
+		return "", err
 	}
 
 	// check if key pair exists
-	_, err = os.Stat(DevPodSSHPrivateKeyFile)
+	privateKeyFile := filepath.Join(dir, DevPodSSHPrivateKeyFile)
+	publicKeyFile := filepath.Join(dir, DevPodSSHPublicKeyFile)
+	_, err = os.Stat(privateKeyFile)
 	if err != nil {
-		pubKey, privateKey, err := MakeSSHKeyPair()
+		pubKey, privateKey, err := makeSSHKeyPair()
 		if err != nil {
 			return "", errors.Wrap(err, "generate key pair")
 		}
 
-		err = os.WriteFile(DevPodSSHPublicKeyFile, []byte(pubKey), 0644)
+		err = os.WriteFile(publicKeyFile, []byte(pubKey), 0644)
 		if err != nil {
 			return "", errors.Wrap(err, "write public ssh key")
 		}
 
-		err = os.WriteFile(DevPodSSHPrivateKeyFile, []byte(privateKey), 0600)
+		err = os.WriteFile(privateKeyFile, []byte(privateKey), 0600)
 		if err != nil {
 			return "", errors.Wrap(err, "write private ssh key")
 		}
 	}
 
 	// read public key
-	out, err := os.ReadFile(DevPodSSHPublicKeyFile)
+	out, err := os.ReadFile(publicKeyFile)
 	if err != nil {
 		return "", errors.Wrap(err, "read public ssh key")
 	}
 
 	return base64.StdEncoding.EncodeToString(out), nil
+}
+
+func GetPublicKey(workspaceID string) (string, error) {
+	workspaceDir, err := config.GetWorkspaceDir(workspaceID)
+	if err != nil {
+		return "", err
+	}
+
+	return getPublicKeyBase(workspaceDir)
 }

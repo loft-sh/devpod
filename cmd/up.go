@@ -4,10 +4,14 @@ import (
 	"context"
 	"fmt"
 	"github.com/loft-sh/devpod/pkg/agent"
+	"github.com/loft-sh/devpod/pkg/config"
 	"github.com/loft-sh/devpod/pkg/log"
-	"github.com/loft-sh/devpod/pkg/provider/gcp"
 	"github.com/loft-sh/devpod/pkg/provider/types"
+	"github.com/loft-sh/devpod/pkg/template"
+	workspace2 "github.com/loft-sh/devpod/pkg/workspace"
+	"github.com/loft-sh/devpod/scripts"
 	"github.com/spf13/cobra"
+	"io"
 	"os"
 	"os/exec"
 )
@@ -23,9 +27,13 @@ func NewUpCmd() *cobra.Command {
 	upCmd := &cobra.Command{
 		Use:   "up",
 		Short: "Starts a new workspace",
-		Args:  cobra.NoArgs,
 		RunE: func(_ *cobra.Command, args []string) error {
-			return cmd.Run(context.Background(), args)
+			workspace, provider, err := workspace2.ResolveWorkspace(args, log.Default)
+			if err != nil {
+				return err
+			}
+
+			return cmd.Run(context.Background(), workspace, provider)
 		},
 	}
 
@@ -34,36 +42,15 @@ func NewUpCmd() *cobra.Command {
 }
 
 // Run runs the command logic
-func (cmd *UpCmd) Run(ctx context.Context, _ []string) error {
-	// TODO: remove hardcode
-	provider := gcp.NewGCPProvider(log.Default)
-	workspace := &types.Workspace{
-		ID:         "test",
-		Repository: "https://github.com/microsoft/vscode-course-sample",
-	}
-
-	// create environment
-	err := provider.Apply(context.Background(), workspace, types.ApplyOptions{})
-	if err != nil {
-		return err
-	}
-
-	// start ssh
-	handler, err := provider.RemoteCommandHost(ctx, workspace, types.RemoteCommandOptions{})
-	if err != nil {
-		return err
-	}
-	defer handler.Close()
-
-	// install devpod
-	err = installDevPod(handler)
+func (cmd *UpCmd) Run(ctx context.Context, workspace *config.Workspace, provider types.Provider) error {
+	// make sure instance is running before we continue
+	err := startWait(ctx, provider, workspace, true, log.Default)
 	if err != nil {
 		return err
 	}
 
 	// run devpod agent up
-	log.Default.Infof("Creating devcontainer...")
-	err = devPodAgentUp(handler, workspace)
+	err = devPodUp(ctx, provider, workspace, log.Default)
 	if err != nil {
 		return err
 	}
@@ -82,19 +69,57 @@ func (cmd *UpCmd) Run(ctx context.Context, _ []string) error {
 		return err
 	}
 
-	// create snapshot
-	if cmd.Snapshot {
-		err = provider.ApplySnapshot(ctx, workspace, types.ApplySnapshotOptions{})
-		if err != nil {
-			return err
-		}
+	return nil
+}
+
+func devPodUp(ctx context.Context, provider types.Provider, workspace *config.Workspace, log log.Logger) error {
+	serverProvider, ok := provider.(types.ServerProvider)
+	if ok {
+		return devPodUpServer(ctx, serverProvider, workspace, log)
 	}
 
 	return nil
 }
 
-func devPodAgentUp(handler types.RemoteCommandHandler, workspace *types.Workspace) error {
-	err := handler.Run(context.TODO(), fmt.Sprintf("%s agent up --id %s --repository %s", agent.RemoteDevPodHelperLocation, workspace.ID, workspace.Repository), nil, os.Stdout, os.Stderr)
+func devPodUpServer(ctx context.Context, provider types.ServerProvider, workspace *config.Workspace, log log.Logger) error {
+	log.Infof("Creating devcontainer...")
+	command := fmt.Sprintf("sudo %s agent up --id %s ", agent.RemoteDevPodHelperLocation, workspace.ID)
+	if workspace.Source.GitRepository != "" {
+		command += "--repository " + workspace.Source.GitRepository
+	} else if workspace.Source.Image != "" {
+		command += "--image " + workspace.Source.Image
+	} else if workspace.Source.LocalFolder != "" {
+		command += "--local-folder"
+	}
+
+	// install devpod into the ssh machine
+	t, err := template.FillTemplate(scripts.InstallDevPodTemplate, map[string]string{
+		"BaseUrl": agent.DefaultAgentDownloadURL,
+		"Command": command,
+	})
+	if err != nil {
+		return err
+	}
+
+	// create pipes
+	stdoutReader, stdoutWriter := io.Pipe()
+	stdinReader, stdinWriter := io.Pipe()
+
+	// create client
+	go func() {
+		err = agent.StartTunnelServer(stdoutReader, stdinWriter, false, workspace.Source.LocalFolder, log)
+		if err != nil {
+			log.Errorf("Start tunnel server: %v", err)
+		}
+	}()
+
+	// create container etc.
+	err = provider.RunCommand(ctx, workspace, types.RunCommandOptions{
+		Command: t,
+		Stdin:   stdinReader,
+		Stdout:  stdoutWriter,
+		Stderr:  os.Stderr,
+	})
 	if err != nil {
 		return err
 	}

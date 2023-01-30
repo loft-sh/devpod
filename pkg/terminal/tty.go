@@ -2,10 +2,14 @@ package terminal
 
 import (
 	"io"
+	"os"
 
 	dockerterm "github.com/moby/term"
 	"k8s.io/kubectl/pkg/util/term"
 )
+
+var _, tty = SetupTTY(os.Stdin, os.Stdout)
+var IsTerminalIn = tty.IsTerminalIn()
 
 // SetupTTY creates a term.TTY (docker)
 func SetupTTY(stdin io.Reader, stdout io.Writer) (bool, term.TTY) {
