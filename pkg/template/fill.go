@@ -1,10 +1,10 @@
 package template
 
 import (
-	htmltemplate "html/template"
 	"os"
 	"path/filepath"
 	"strings"
+	"text/template"
 )
 
 func WriteFiles(folder string, files map[string]string) error {
@@ -18,8 +18,8 @@ func WriteFiles(folder string, files map[string]string) error {
 	return nil
 }
 
-func FillTemplate(template string, vars interface{}) (string, error) {
-	t, err := htmltemplate.New("gotmpl").Parse(template)
+func FillTemplate(templateString string, vars interface{}) (string, error) {
+	t, err := template.New("gotmpl").Parse(templateString)
 	if err != nil {
 		return "", err
 	}

@@ -2,9 +2,12 @@ package cmd
 
 import (
 	"context"
+	"fmt"
+	"github.com/loft-sh/devpod/pkg/config"
 	"github.com/loft-sh/devpod/pkg/log"
-	"github.com/loft-sh/devpod/pkg/provider/gcp"
 	"github.com/loft-sh/devpod/pkg/provider/types"
+	workspace2 "github.com/loft-sh/devpod/pkg/workspace"
+	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
 )
 
@@ -19,9 +22,13 @@ func NewDestroyCmd() *cobra.Command {
 	destroyCmd := &cobra.Command{
 		Use:   "destroy",
 		Short: "Destroys an existing workspace",
-		Args:  cobra.NoArgs,
 		RunE: func(_ *cobra.Command, args []string) error {
-			return cmd.Run(context.Background(), args)
+			workspace, provider, err := workspace2.GetWorkspace(args, log.Default)
+			if err != nil {
+				return err
+			}
+
+			return cmd.Run(context.Background(), workspace, provider)
 		},
 	}
 
@@ -30,26 +37,65 @@ func NewDestroyCmd() *cobra.Command {
 }
 
 // Run runs the command logic
-func (cmd *DestroyCmd) Run(ctx context.Context, _ []string) error {
-	// TODO: remove hardcode
-	provider := gcp.NewGCPProvider(log.Default)
-	workspace := &types.Workspace{
-		ID:         "test",
-		Repository: "https://github.com/microsoft/vscode-course-sample",
+func (cmd *DestroyCmd) Run(ctx context.Context, workspace *config.Workspace, provider types.Provider) error {
+	workspaceProvider, ok := provider.(types.WorkspaceProvider)
+	if ok {
+		err := cmd.destroyWorkspace(ctx, workspace, workspaceProvider)
+		if err != nil {
+			return errors.Wrap(err, "destroy workspace")
+		}
+	}
+
+	serverProvider, ok := provider.(types.ServerProvider)
+	if ok {
+		err := cmd.destroyServer(ctx, workspace, serverProvider)
+		if err != nil {
+			return errors.Wrap(err, "destroy server")
+		}
+	}
+
+	return nil
+}
+
+func (cmd *DestroyCmd) destroyWorkspace(ctx context.Context, workspace *config.Workspace, provider types.WorkspaceProvider) error {
+	// get instance status
+	instanceStatus, err := provider.WorkspaceStatus(ctx, workspace, types.WorkspaceStatusOptions{})
+	if err != nil {
+		return err
+	} else if instanceStatus == types.StatusNotFound {
+		return fmt.Errorf("cannot destroy workspace because it couldn't be found")
 	}
 
 	// destroy environment
-	err := provider.Destroy(ctx, workspace, types.DestroyOptions{})
+	err = provider.WorkspaceDestroy(ctx, workspace, types.WorkspaceDestroyOptions{})
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (cmd *DestroyCmd) destroyServer(ctx context.Context, workspace *config.Workspace, provider types.ServerProvider) error {
+	// get instance status
+	instanceStatus, err := provider.Status(ctx, workspace, types.StatusOptions{})
+	if err != nil {
+		return err
+	} else if instanceStatus == types.StatusNotFound {
+		return fmt.Errorf("cannot destroy instance because it couldn't be found")
+	}
+
+	// destroy environment
+	err = provider.Destroy(ctx, workspace, types.DestroyOptions{})
 	if err != nil {
 		return err
 	}
 
 	// destroy snapshot
 	if cmd.Snapshot {
-		err = provider.DestroySnapshot(ctx, workspace, types.DestroySnapshotOptions{})
-		if err != nil {
-			return err
-		}
+		//err = provider.DestroySnapshot(ctx, workspace, types.DestroySnapshotOptions{})
+		//if err != nil {
+		//	return err
+		//}
 	}
 
 	return nil

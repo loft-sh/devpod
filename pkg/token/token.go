@@ -12,19 +12,39 @@ type Token struct {
 	AuthorizedKeys string `json:"authorizedKeys,omitempty"`
 }
 
-func GenerateToken() (string, error) {
+func GenerateTemporaryToken() (string, error) {
 	// get host key
-	hostKey, err := ssh.GetHostKey()
+	hostKey, err := ssh.GetTempHostKey()
 	if err != nil {
 		return "", errors.Wrap(err, "generate host key")
 	}
 
 	// get public key
-	publicKey, err := ssh.GetPublicKey()
+	publicKey, err := ssh.GetTempPublicKey()
 	if err != nil {
 		return "", errors.Wrap(err, "generate key pair")
 	}
 
+	return buildToken(hostKey, publicKey)
+}
+
+func GenerateWorkspaceToken(workspaceID string) (string, error) {
+	// get host key
+	hostKey, err := ssh.GetHostKey(workspaceID)
+	if err != nil {
+		return "", errors.Wrap(err, "generate host key")
+	}
+
+	// get public key
+	publicKey, err := ssh.GetPublicKey(workspaceID)
+	if err != nil {
+		return "", errors.Wrap(err, "generate key pair")
+	}
+
+	return buildToken(hostKey, publicKey)
+}
+
+func buildToken(hostKey string, publicKey string) (string, error) {
 	out, err := json.Marshal(&Token{
 		HostKey:        hostKey,
 		AuthorizedKeys: publicKey,
@@ -50,4 +70,3 @@ func ParseToken(token string) (*Token, error) {
 
 	return t, nil
 }
-

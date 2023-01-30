@@ -7,8 +7,7 @@ import (
 	"strings"
 )
 
-var convertRegEx1 = regexp.MustCompile(`[\@/\.\:\s]+`)
-var convertRegEx2 = regexp.MustCompile(`[^a-z0-9\-]+`)
+var dockerImageNameRegEx = regexp.MustCompile(`[^a-z0-9\-_]+`)
 
 func SafeConcatName(name ...string) string {
 	return SafeConcatNameMax(name, 63)
@@ -23,20 +22,8 @@ func SafeConcatNameMax(name []string, max int) string {
 	return fullPath
 }
 
-func Convert(ID string) string {
-	ID = strings.ToLower(ID)
-	ID = convertRegEx1.ReplaceAllString(ID, "-")
-	ID = convertRegEx2.ReplaceAllString(ID, "")
-	return SafeConcatName(ID)
-}
-
-func WorkspaceID(repository string) string {
-	repository = strings.TrimPrefix(repository, "http://")
-	repository = strings.TrimPrefix(repository, "https://")
-	if strings.HasPrefix(repository, "git@") {
-		repository = strings.TrimPrefix(repository, "git@")
-		repository = strings.Replace(repository, ":", "/", 1)
-	}
-	repository = strings.TrimSuffix(repository, ".git")
-	return Convert(repository)
+func ToDockerImageName(name string) string {
+	name = strings.ToLower(name)
+	name = dockerImageNameRegEx.ReplaceAllString(name, "")
+	return name
 }

@@ -2,6 +2,7 @@ package ssh
 
 import (
 	"fmt"
+	"github.com/loft-sh/devpod/pkg/config"
 	"io"
 	"os"
 	"path/filepath"
@@ -98,15 +99,21 @@ func addHost(path, host, user, workspace string) (string, error) {
 		return "", err
 	}
 
+	// get private key path
+	workspaceDir, err := config.GetWorkspaceDir(workspace)
+	if err != nil {
+		return "", err
+	}
+
 	// add new section
 	newLines = append(newLines, startMarker)
 	newLines = append(newLines, "Host "+host)
 	newLines = append(newLines, "  LogLevel error")
-	newLines = append(newLines, "  IdentityFile \""+DevPodSSHPrivateKeyFile+"\"")
+	newLines = append(newLines, "  IdentityFile \""+filepath.Join(workspaceDir, DevPodSSHPrivateKeyFile)+"\"")
 	newLines = append(newLines, "  StrictHostKeyChecking no")
 	newLines = append(newLines, "  UserKnownHostsFile /dev/null")
-	newLines = append(newLines, fmt.Sprintf("  ProxyCommand %s ssh --jump-container --id %s", execPath, workspace))
-	newLines = append(newLines, "  User "+user)
+	newLines = append(newLines, fmt.Sprintf("  ProxyCommand %s ssh --stdio --id %s", execPath, workspace))
+	//newLines = append(newLines, "  User "+user)
 	newLines = append(newLines, endMarker)
 	return strings.Join(newLines, "\n"), nil
 }

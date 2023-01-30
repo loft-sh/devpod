@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"github.com/pkg/errors"
 	"strconv"
+	"strings"
 )
 
 var (
@@ -11,7 +12,31 @@ var (
 	ErrUnsupportedType = errors.New("unsupported type")
 )
 
+type MergedDevContainerConfig struct {
+	DevContainerConfigBase  `json:",inline"`
+	UpdatedConfigProperties `json:",inline"`
+	NonComposeBase          `json:",inline"`
+	ImageContainer          `json:",inline"`
+	ComposeContainer        `json:",inline"`
+	DockerfileContainer     `json:",inline"`
+
+	// Origin is the origin from where this config was loaded
+	Origin string `json:"-"`
+}
+
 type DevContainerConfig struct {
+	DevContainerConfigBase `json:",inline"`
+	DevContainerActions    `json:",inline"`
+	NonComposeBase         `json:",inline"`
+	ImageContainer         `json:",inline"`
+	ComposeContainer       `json:",inline"`
+	DockerfileContainer    `json:",inline"`
+
+	// Origin is the origin from where this config was loaded
+	Origin string `json:"-"`
+}
+
+type DevContainerConfigBase struct {
 	// A name for the dev container which can be displayed to the user.
 	Name string `json:"name,omitempty"`
 
@@ -31,7 +56,7 @@ type DevContainerConfig struct {
 	OtherPortsAttributes map[string]PortAttribute `json:"otherPortsAttributes,omitempty"`
 
 	// Controls whether on Linux the container's user should be updated with the local user's UID and GID. On by default when opening from a local folder.
-	UpdateRemoteUserUID bool `json:"updateRemoteUserUID,omitempty"`
+	UpdateRemoteUserUID *bool `json:"updateRemoteUserUID,omitempty"`
 
 	// Remote environment variables to set for processes spawned in the container including lifecycle scripts and any remote editor/IDE server process.
 	RemoteEnv map[string]string `json:"remoteEnv,omitempty"`
@@ -42,6 +67,38 @@ type DevContainerConfig struct {
 	// A command to run locally before anything else. This command is run before "onCreateCommand". If this is a single string, it will be run in a shell. If this is an array of strings, it will be run as a single command without shell.
 	InitializeCommand StrArray `json:"initializeCommand,omitempty"`
 
+	// Action to take when the user disconnects from the container in their editor. The default is to stop the container.
+	ShutdownAction string `json:"shutdownAction,omitempty"`
+
+	// The user command to wait for before continuing execution in the background while the UI is starting up. The default is "updateContentCommand".
+	WaitFor string `json:"waitFor,omitempty"`
+
+	// User environment probe to run. The default is "loginInteractiveShell".
+	UserEnvProbe string `json:"userEnvProbe,omitempty"`
+
+	// Host hardware requirements.
+	HostRequirements *HostRequirements `json:"hostRequirements,omitempty"`
+
+	// Whether to overwrite the command specified in the image. The default is true.
+	OverrideCommand *bool `json:"overrideCommand,omitempty"`
+
+	// The path of the workspace folder inside the container.
+	WorkspaceFolder string `json:"workspaceFolder,omitempty"`
+
+	// DEPRECATED: Use 'customizations/vscode/settings' instead
+	// Machine specific settings that should be copied into the container. These are only copied when connecting to the container for the first time, rebuilding the container then triggers it again.
+	Settings map[string]interface{} `json:"settings,omitempty"`
+
+	// DEPRECATED: Use 'customizations/vscode/extensions' instead
+	// An array of extensions that should be installed into the container.
+	Extensions []string `json:"extensions,omitempty"`
+
+	// DEPRECATED: Use 'customizations/vscode/devPort' instead
+	// The port VS Code can use to connect to its backend.
+	DevPort int `json:"devPort,omitempty"`
+}
+
+type DevContainerActions struct {
 	// A command to run when creating the container. This command is run after "initializeCommand" and before "updateContentCommand". If this is a single string, it will be run in a shell. If this is an array of strings, it will be run as a single command without shell.
 	OnCreateCommand StrArray `json:"onCreateCommand,omitempty"`
 
@@ -62,46 +119,36 @@ type DevContainerConfig struct {
 	// If this is a single string, it will be run in a shell. If this is an array of strings, it will be run as a single command without shell.
 	PostAttachCommand StrArray `json:"postAttachCommand,omitempty"`
 
-	// The user command to wait for before continuing execution in the background while the UI is starting up. The default is "updateContentCommand".
-	WaitFor string `json:"waitFor,omitempty"`
-
-	// User environment probe to run. The default is "loginInteractiveShell".
-	UserEnvProbe string `json:"userEnvProbe,omitempty"`
-
-	// Host hardware requirements.
-	HostRequirements HostRequirements `json:"hostRequirements,omitempty"`
-
 	// Tool-specific configuration. Each tool should use a JSON object subproperty with a unique name to group its customizations.
 	Customizations map[string]interface{} `json:"customizations,omitempty"`
+}
 
-	// Action to take when the user disconnects from the container in their editor. The default is to stop the container.
-	ShutdownAction string `json:"shutdownAction,omitempty"`
+type UpdatedConfigProperties struct {
+	// Entrypoint script that should fire at container start up.
+	Entrypoints []string `json:"entrypoints,omitempty"`
 
-	// Whether to overwrite the command specified in the image. The default is true.
-	OverrideCommand bool `json:"overrideCommand,omitempty"`
+	// A command to run when creating the container. This command is run after "initializeCommand" and before "updateContentCommand". If this is a single string, it will be run in a shell. If this is an array of strings, it will be run as a single command without shell.
+	OnCreateCommands []StrArray `json:"onCreateCommand,omitempty"`
 
-	// The path of the workspace folder inside the container.
-	WorkspaceFolder string `json:"workspaceFolder,omitempty"`
+	// A command to run when creating the container and rerun when the workspace content was updated while creating the container.
+	// This command is run after "onCreateCommand" and before "postCreateCommand". If this is a single string, it will be run in a shell.
+	// If this is an array of strings, it will be run as a single command without shell.
+	UpdateContentCommands []StrArray `json:"updateContentCommand,omitempty"`
 
-	// DEPRECATED: Use 'customizations/vscode/settings' instead
-	// Machine specific settings that should be copied into the container. These are only copied when connecting to the container for the first time, rebuilding the container then triggers it again.
-	Settings map[string]interface{} `json:"settings,omitempty"`
+	// A command to run after creating the container. This command is run after "updateContentCommand" and before "postStartCommand".
+	// If this is a single string, it will be run in a shell. If this is an array of strings, it will be run as a single command without shell.
+	PostCreateCommands []StrArray `json:"postCreateCommand,omitempty"`
 
-	// DEPRECATED: Use 'customizations/vscode/extensions' instead
-	// An array of extensions that should be installed into the container.
-	Extensions []string `json:"extensions,omitempty"`
+	// A command to run after starting the container. This command is run after "postCreateCommand" and before "postAttachCommand".
+	// If this is a single string, it will be run in a shell. If this is an array of strings, it will be run as a single command without shell.
+	PostStartCommands []StrArray `json:"postStartCommand,omitempty"`
 
-	// DEPRECATED: Use 'customizations/vscode/devPort' instead
-	// The port VS Code can use to connect to its backend.
-	DevPort int `json:"devPort,omitempty"`
+	// A command to run when attaching to the container. This command is run after "postStartCommand".
+	// If this is a single string, it will be run in a shell. If this is an array of strings, it will be run as a single command without shell.
+	PostAttachCommands []StrArray `json:"postAttachCommand,omitempty"`
 
-	ImageContainer      `json:",inline"`
-	NonComposeBase      `json:",inline"`
-	ComposeContainer    `json:",inline"`
-	DockerfileContainer `json:",inline"`
-
-	// Origin is the origin from where this config was loaded
-	Origin string `json:"-"`
+	// Tool-specific configuration. Each tool should use a JSON object subproperty with a unique name to group its customizations.
+	Customizations map[string][]interface{} `json:"customizations,omitempty"`
 }
 
 type ComposeContainer struct {
@@ -124,7 +171,7 @@ type NonComposeBase struct {
 	// Application ports that are exposed by the container. This can be a single port or an array of ports. Each port can be a number or a string.
 	// A number is mapped to the same port on the host. A string is passed to Docker unchanged and can be used to map ports differently,
 	// e.g. "8000:8010".
-	AppPorts StrIntArray `json:"appPorts,omitempty"`
+	AppPort StrIntArray `json:"appPort,omitempty"`
 
 	// Container environment variables.
 	ContainerEnv map[string]string `json:"containerEnv,omitempty"`
@@ -133,7 +180,19 @@ type NonComposeBase struct {
 	ContainerUser string `json:"containerUser,omitempty"`
 
 	// Mount points to set up when creating the container. See Docker's documentation for the --mount option for the supported syntax.
-	Mounts []string `json:"mounts,omitempty"`
+	Mounts []*Mount `json:"mounts,omitempty"`
+
+	// Passes the --init flag when creating the dev container.
+	Init *bool `json:"init,omitempty"`
+
+	// Passes the --privileged flag when creating the dev container.
+	Privileged *bool `json:"privileged,omitempty"`
+
+	// Passes docker capabilities to include when creating the dev container.
+	CapAdd []string `json:"capAdd,omitempty"`
+
+	// Passes docker security options to include when creating the dev container.
+	SecurityOpt []string `json:"securityOpt,omitempty"`
 
 	// The arguments required when starting in the container.
 	RunArgs []string `json:"runArgs,omitempty"`
@@ -179,6 +238,9 @@ type HostRequirements struct {
 
 	// Amount of required disk space in bytes. Supports units tb, gb, mb and kb.
 	Storage string `json:"storage,omitempty"`
+
+	// If GPU support should be enabled
+	GPU bool `json:"gpu,omitempty"`
 }
 
 type PortAttribute struct {
@@ -198,6 +260,82 @@ type PortAttribute struct {
 
 	// The protocol to use when forwarding this port.
 	Protocol string `json:"protocol,omitempty"`
+}
+
+type VSCodeCustomizations struct {
+	Settings   map[string]interface{} `json:"settings,omitempty"`
+	Extensions []string               `json:"extensions,omitempty"`
+	DevPort    int                    `json:"devPort,omitempty"`
+}
+
+type Mount struct {
+	Type   string   `json:"type,omitempty"`
+	Source string   `json:"source,omitempty"`
+	Target string   `json:"target,omitempty"`
+	Other  []string `json:"other,omitempty"`
+}
+
+func (m *Mount) String() string {
+	components := []string{}
+	if m.Type != "" {
+		components = append(components, "type="+m.Type)
+	}
+	if m.Source != "" {
+		components = append(components, "src="+m.Source)
+	}
+	if m.Target != "" {
+		components = append(components, "dst="+m.Target)
+	}
+	components = append(components, m.Other...)
+	return strings.Join(components, ",")
+}
+
+func ParseMount(str string) Mount {
+	retMount := Mount{}
+	splitted := strings.Split(str, ",")
+	for _, split := range splitted {
+		splitted2 := strings.Split(split, "=")
+		key := splitted2[0]
+		if key == "src" || key == "source" {
+			retMount.Source = splitted2[1]
+		} else if key == "dst" || key == "destination" || key == "target" {
+			retMount.Target = splitted2[1]
+		} else if key == "type" {
+			retMount.Type = splitted2[1]
+		} else {
+			retMount.Other = append(retMount.Other, split)
+		}
+	}
+
+	return retMount
+}
+
+func (m *Mount) UnmarshalJSON(data []byte) error {
+	var jsonObj interface{}
+	err := json.Unmarshal(data, &jsonObj)
+	if err != nil {
+		return err
+	}
+	switch obj := jsonObj.(type) {
+	case string:
+		*m = ParseMount(obj)
+		return nil
+	case map[string]interface{}:
+		sourceStr, ok := obj["source"].(string)
+		if ok {
+			m.Source = sourceStr
+		}
+		targetStr, ok := obj["target"].(string)
+		if ok {
+			m.Target = targetStr
+		}
+		typeStr, ok := obj["type"].(string)
+		if ok {
+			m.Type = typeStr
+		}
+		return nil
+	}
+	return ErrUnsupportedType
 }
 
 // StrIntArray string array to be used on JSON UnmarshalJSON

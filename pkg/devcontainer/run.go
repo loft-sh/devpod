@@ -3,8 +3,10 @@ package devcontainer
 import (
 	"fmt"
 	"github.com/loft-sh/devpod/pkg/devcontainer/config"
+	"github.com/loft-sh/devpod/pkg/docker"
 	"github.com/loft-sh/devpod/pkg/log"
 	"github.com/pkg/errors"
+	"github.com/sirupsen/logrus"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -12,51 +14,90 @@ import (
 	"strings"
 )
 
-func NewRunner(workspaceFolder, id string, log log.Logger) *Runner {
+func NewRunner(agentDownloadURL, workspaceFolder, id string, log log.Logger) *Runner {
 	return &Runner{
-		DockerCommand: "docker",
-		
-		WorkspaceFolder: workspaceFolder,
-		ID:              id,
-		Log:             log,
+		Docker: &docker.DockerHelper{DockerCommand: "docker"},
+
+		AgentDownloadURL:     agentDownloadURL,
+		LocalWorkspaceFolder: workspaceFolder,
+		ID:                   id,
+		Log:                  log,
 	}
 }
 
 type Runner struct {
-	DockerCommand string
+	Docker *docker.DockerHelper
 
-	WorkspaceFolder string
-	ID              string
-	Log             log.Logger
+	AgentDownloadURL string
+
+	LocalWorkspaceFolder string
+	SubstitutionContext  *config.SubstitutionContext
+
+	ID  string
+	Log log.Logger
 }
 
 func (r *Runner) Up() error {
-	parsedConfig, err := config.ParseDevContainerJSON(r.WorkspaceFolder)
+	rawParsedConfig, err := config.ParseDevContainerJSON(r.LocalWorkspaceFolder)
 	if err != nil {
 		return errors.Wrap(err, "parsing devcontainer.json")
-	} else if parsedConfig == nil {
+	} else if rawParsedConfig == nil {
 		// TODO: use a default config
 		return fmt.Errorf("couldn't find a devcontainer.json")
 	}
+	configFile := rawParsedConfig.Origin
+
+	// get workspace folder within container
+	workspace := getWorkspace(r.LocalWorkspaceFolder, rawParsedConfig)
+	r.SubstitutionContext = &config.SubstitutionContext{
+		LocalWorkspaceFolder:     r.LocalWorkspaceFolder,
+		ContainerWorkspaceFolder: workspace.RemoteWorkspaceFolder,
+		Env:                      config.ListToObject(os.Environ()),
+	}
+
+	// substitute & load
+	parsedConfig := &config.DevContainerConfig{}
+	err = config.Substitute(r.SubstitutionContext, rawParsedConfig, parsedConfig)
+	if parsedConfig.WorkspaceFolder != "" {
+		workspace.RemoteWorkspaceFolder = parsedConfig.WorkspaceFolder
+	}
+	if parsedConfig.WorkspaceMount != "" {
+		workspace.WorkspaceMount = parsedConfig.WorkspaceMount
+	}
+	parsedConfig.Origin = configFile
 
 	// run initializeCommand
-	err = runInitializeCommand(r.WorkspaceFolder, parsedConfig, r.Log)
+	err = runInitializeCommand(r.LocalWorkspaceFolder, parsedConfig, r.Log)
 	if err != nil {
 		return err
 	}
 
 	// check if its a compose devcontainer.json
 	if isDockerFileConfig(parsedConfig) || parsedConfig.Image != "" {
-		return r.runSingleContainer(parsedConfig)
+		return r.runSingleContainer(&config.SubstitutedConfig{
+			Config: parsedConfig,
+			Raw:    rawParsedConfig,
+		}, workspace.WorkspaceMount)
 	} else if len(parsedConfig.DockerComposeFile) > 0 {
 		// TODO: implement
 		panic("unimplemented")
-	} else {
-		return fmt.Errorf("dev container config is missing one of \"image\", \"dockerFile\" or \"dockerComposeFile\" properties")
 	}
 
-	// docker run --sig-proxy=false -a STDOUT -a STDERR --mount type=bind,source=/home/devpod/devpod/workspace/test,target=/workspaces/test -l dev.containers.id=test --entrypoint /bin/sh vsc-test-38392bab732ee88d03bc36cc66c16189-uid -c echo Container started
-	return runDockerImage(r.WorkspaceFolder, r.ID, parsedConfig)
+	return fmt.Errorf("dev container config is missing one of \"image\", \"dockerFile\" or \"dockerComposeFile\" properties")
+}
+
+func (r *Runner) FindDevContainer() (*docker.ContainerDetails, error) {
+	labels := r.getLabels()
+	containerDetails, err := r.Docker.FindDevContainer(labels)
+	if err != nil {
+		return nil, errors.Wrap(err, "find dev container")
+	}
+
+	return containerDetails, nil
+}
+
+func (r *Runner) getLabels() []string {
+	return []string{DockerIDLabel + "=" + r.ID}
 }
 
 func isDockerFileConfig(config *config.DevContainerConfig) bool {
@@ -78,9 +119,12 @@ func runInitializeCommand(workspaceFolder string, config *config.DevContainerCon
 
 	// run the command
 	log.Infof("Running initializeCommand from devcontainer.json: '%s'", strings.Join(args, " "))
+	writer := log.Writer(logrus.InfoLevel, false)
+	defer writer.Close()
+
 	cmd := exec.Command(args[0], args[1:]...)
-	cmd.Stdout = os.Stdout
-	cmd.Stderr = os.Stderr
+	cmd.Stdout = writer
+	cmd.Stderr = writer
 	cmd.Dir = workspaceFolder
 	err := cmd.Run()
 	if err != nil {
@@ -90,24 +134,18 @@ func runInitializeCommand(workspaceFolder string, config *config.DevContainerCon
 	return nil
 }
 
-func runDockerImage(workspaceFolder, id string, config *config.DevContainerConfig) error {
-	args := []string{"docker", "run",
-		"--mount", getWorkspaceMount(workspaceFolder, config),
-		fmt.Sprintf("-l dev.containers.id=%s", id),
-		"-d",
-		"--entrypoint", "/bin/sh", "-c", "sleep 10000000000",
-	}
-
-	err := exec.Command(args[0], args[1:]...).Run()
-	if err != nil {
-		return err
-	}
-	return nil
+type WorkspaceConfig struct {
+	WorkspaceMount        string
+	RemoteWorkspaceFolder string
 }
 
-func getWorkspaceMount(workspaceFolder string, config *config.DevContainerConfig) string {
-	if config.WorkspaceMount != "" {
-		return config.WorkspaceMount
+func getWorkspace(workspaceFolder string, conf *config.DevContainerConfig) WorkspaceConfig {
+	if conf.WorkspaceMount != "" {
+		mount := config.ParseMount(conf.WorkspaceMount)
+		return WorkspaceConfig{
+			WorkspaceMount:        conf.WorkspaceMount,
+			RemoteWorkspaceFolder: mount.Target,
+		}
 	}
 
 	containerMountFolder := "/workspaces/" + filepath.Base(workspaceFolder)
@@ -116,5 +154,8 @@ func getWorkspaceMount(workspaceFolder string, config *config.DevContainerConfig
 		consistency = ",consistency='consistent'"
 	}
 
-	return fmt.Sprintf("type=bind,source=%s,target=%s%s", workspaceFolder, containerMountFolder, consistency)
+	return WorkspaceConfig{
+		RemoteWorkspaceFolder: containerMountFolder,
+		WorkspaceMount:        fmt.Sprintf("type=bind,source=%s,target=%s%s", workspaceFolder, containerMountFolder, consistency),
+	}
 }

@@ -63,6 +63,8 @@ if [ ! -f "$DEVPOD_PATH" ]; then
   fi
 fi
 
-{{ if .Token }}
+{{ if .Command }}
+{{ .Command }}
+{{ else if .Token }}
 exec $DEVPOD_PATH agent ssh-server --token "{{ .Token }}"
 {{ end }}

@@ -2,9 +2,12 @@ package cmd
 
 import (
 	"context"
+	"fmt"
+	"github.com/loft-sh/devpod/pkg/config"
 	"github.com/loft-sh/devpod/pkg/log"
-	"github.com/loft-sh/devpod/pkg/provider/gcp"
 	"github.com/loft-sh/devpod/pkg/provider/types"
+	workspace2 "github.com/loft-sh/devpod/pkg/workspace"
+	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
 )
 
@@ -17,9 +20,13 @@ func NewStopCmd() *cobra.Command {
 	stopCmd := &cobra.Command{
 		Use:   "stop",
 		Short: "Stops an existing workspace",
-		Args:  cobra.NoArgs,
 		RunE: func(_ *cobra.Command, args []string) error {
-			return cmd.Run(context.Background(), args)
+			workspace, provider, err := workspace2.GetWorkspace(args, log.Default)
+			if err != nil {
+				return err
+			}
+
+			return cmd.Run(context.Background(), workspace, provider)
 		},
 	}
 
@@ -27,16 +34,55 @@ func NewStopCmd() *cobra.Command {
 }
 
 // Run runs the command logic
-func (cmd *StopCmd) Run(ctx context.Context, _ []string) error {
-	// TODO: remove hardcode
-	provider := gcp.NewGCPProvider(log.Default)
-	workspace := &types.Workspace{
-		ID:         "test",
-		Repository: "https://github.com/microsoft/vscode-course-sample",
+func (cmd *StopCmd) Run(ctx context.Context, workspace *config.Workspace, provider types.Provider) error {
+	workspaceProvider, ok := provider.(types.WorkspaceProvider)
+	if ok {
+		err := cmd.stopWorkspace(ctx, workspace, workspaceProvider)
+		if err != nil {
+			return errors.Wrap(err, "stop workspace")
+		}
+	}
+
+	serverProvider, ok := provider.(types.ServerProvider)
+	if ok {
+		err := cmd.stopServer(ctx, workspace, serverProvider)
+		if err != nil {
+			return errors.Wrap(err, "stop server")
+		}
+	}
+
+	return nil
+}
+
+func (cmd *StopCmd) stopServer(ctx context.Context, workspace *config.Workspace, provider types.ServerProvider) error {
+	// get instance status
+	instanceStatus, err := provider.Status(ctx, workspace, types.StatusOptions{})
+	if err != nil {
+		return err
+	} else if instanceStatus != types.StatusRunning {
+		return fmt.Errorf("cannot stop instance because it is '%s'", instanceStatus)
 	}
 
 	// stop environment
-	err := provider.Stop(ctx, workspace, types.StopOptions{})
+	err = provider.Stop(ctx, workspace, types.StopOptions{})
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (cmd *StopCmd) stopWorkspace(ctx context.Context, workspace *config.Workspace, provider types.WorkspaceProvider) error {
+	// get instance status
+	instanceStatus, err := provider.WorkspaceStatus(ctx, workspace, types.WorkspaceStatusOptions{})
+	if err != nil {
+		return err
+	} else if instanceStatus != types.StatusRunning {
+		return fmt.Errorf("cannot stop instance because it is '%s'", instanceStatus)
+	}
+
+	// stop environment
+	err = provider.WorkspaceStop(ctx, workspace, types.WorkspaceStopOptions{})
 	if err != nil {
 		return err
 	}
