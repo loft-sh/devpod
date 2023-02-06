@@ -1,64 +1,104 @@
 package config
 
-import "github.com/loft-sh/devpod/pkg/json"
+import (
+	"github.com/pkg/errors"
+	"gopkg.in/yaml.v2"
+	"os"
+	"path/filepath"
+)
 
-type Workspace struct {
-	// ID is the workspace id to use
-	ID string `json:"id,omitempty"`
+type Config struct {
+	// DefaultContext is the default context to use. Defaults to "default"
+	DefaultContext string `json:"defaultContext,omitempty"`
 
-	// Provider is the provider used to create this workspace
-	Provider WorkspaceProvider `json:"provider,omitempty"`
-
-	// Source is the source where this workspace will be created from
-	Source WorkspaceSource `json:"source,omitempty"`
-
-	// CreationTimestamp is the timestamp when this workspace was created
-	CreationTimestamp json.Time `json:"creationTimestamp,omitempty"`
-
-	// Origin is the place where this config file was loaded from
-	Origin string `json:"-"`
+	// Contexts holds the config contexts
+	Contexts map[string]*ConfigContext `json:"contexts,omitempty"`
 }
 
-type WorkspaceProvider struct {
-	// Name is the provider name
-	Name string `json:"name,omitempty"`
+type ConfigContext struct {
+	// DefaultProvider is the default provider to use
+	DefaultProvider string `json:"defaultProvider,omitempty"`
 
-	// Options are the provider options used to create the workspace
+	// Providers holds the provider configuration
+	Providers map[string]*ConfigProvider `json:"providers,omitempty"`
+}
+
+type ConfigProvider struct {
+	// Options are the configured provider options
 	Options map[string]string `json:"options,omitempty"`
 }
 
-type WorkspaceSource struct {
-	// GitRepository is the repository to clone
-	GitRepository string `json:"gitRepository,omitempty"`
+var ConfigFile = "config.yaml"
 
-	// GitBranch is the branch to use
-	GitBranch string `json:"gitBranch,omitempty"`
+const DefaultContext = "default"
 
-	// GitCommit is the commit to use
-	GitCommit string `json:"gitCommit,omitempty"`
+func LoadConfig(contextOverride string) (*Config, error) {
+	configDir, err := GetConfigDir()
+	if err != nil {
+		return nil, err
+	}
 
-	// LocalFolder is the local folder to use
-	LocalFolder string `json:"localFolder,omitempty"`
+	configBytes, err := os.ReadFile(filepath.Join(configDir, ConfigFile))
+	if err != nil {
+		if !os.IsNotExist(err) {
+			return nil, errors.Wrap(err, "read config")
+		}
 
-	// Image is the docker image to use
-	Image string `json:"image,omitempty"`
+		context := contextOverride
+		if context == "" {
+			context = DefaultContext
+		}
+
+		return &Config{
+			DefaultContext: context,
+			Contexts: map[string]*ConfigContext{
+				context: {
+					Providers: map[string]*ConfigProvider{},
+				},
+			},
+		}, nil
+	}
+
+	config := &Config{}
+	err = yaml.Unmarshal(configBytes, config)
+	if err != nil {
+		return nil, err
+	}
+	if contextOverride != "" {
+		config.DefaultContext = contextOverride
+	} else if config.DefaultContext == "" {
+		config.DefaultContext = DefaultContext
+	}
+	if config.Contexts == nil {
+		config.Contexts = map[string]*ConfigContext{}
+	}
+	if config.Contexts[config.DefaultContext] == nil {
+		config.Contexts[config.DefaultContext] = &ConfigContext{}
+	}
+
+	return config, nil
 }
 
-func (w WorkspaceSource) String() string {
-	if w.GitRepository != "" {
-		if w.GitBranch != "" {
-			return w.GitRepository + "@" + w.GitBranch
-		}
-		if w.GitCommit != "" {
-			return w.GitRepository + "@" + w.GitCommit
-		}
-
-		return w.GitRepository
+func SaveConfig(config *Config) error {
+	configDir, err := GetConfigDir()
+	if err != nil {
+		return err
 	}
 
-	if w.LocalFolder != "" {
-		return w.LocalFolder
+	out, err := yaml.Marshal(config)
+	if err != nil {
+		return err
 	}
 
-	return w.Image
+	err = os.MkdirAll(configDir, 0755)
+	if err != nil {
+		return err
+	}
+
+	err = os.WriteFile(filepath.Join(configDir, ConfigFile), out, 0666)
+	if err != nil {
+		return err
+	}
+
+	return nil
 }

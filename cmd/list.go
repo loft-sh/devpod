@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"context"
+	"github.com/loft-sh/devpod/cmd/flags"
 	"github.com/loft-sh/devpod/pkg/config"
 	"github.com/loft-sh/devpod/pkg/log"
 	"github.com/loft-sh/devpod/pkg/log/table"
@@ -13,11 +14,14 @@ import (
 
 // ListCmd holds the configuration
 type ListCmd struct {
+	flags.GlobalFlags
 }
 
 // NewListCmd creates a new destroy command
-func NewListCmd() *cobra.Command {
-	cmd := &ListCmd{}
+func NewListCmd(flags *flags.GlobalFlags) *cobra.Command {
+	cmd := &ListCmd{
+		GlobalFlags: *flags,
+	}
 	listCmd := &cobra.Command{
 		Use:   "list",
 		Short: "Lists existing workspaces",
@@ -31,7 +35,12 @@ func NewListCmd() *cobra.Command {
 
 // Run runs the command logic
 func (cmd *ListCmd) Run(ctx context.Context) error {
-	workspaceDir, err := config.GetWorkspacesDir()
+	devPodConfig, err := config.LoadConfig(cmd.Context)
+	if err != nil {
+		return err
+	}
+
+	workspaceDir, err := config.GetWorkspacesDir(devPodConfig.DefaultContext)
 	if err != nil {
 		return err
 	}
@@ -43,7 +52,7 @@ func (cmd *ListCmd) Run(ctx context.Context) error {
 
 	tableEntries := [][]string{}
 	for _, entry := range entries {
-		workspaceConfig, err := config.LoadWorkspaceConfig(entry.Name())
+		workspaceConfig, err := config.LoadWorkspaceConfig(devPodConfig.DefaultContext, entry.Name())
 		if err != nil {
 			return errors.Wrap(err, "load workspace config")
 		}

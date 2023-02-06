@@ -4,10 +4,11 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"github.com/loft-sh/devpod/cmd/flags"
 	"github.com/loft-sh/devpod/pkg/agent"
 	"github.com/loft-sh/devpod/pkg/config"
 	"github.com/loft-sh/devpod/pkg/log"
-	"github.com/loft-sh/devpod/pkg/provider/types"
+	provider2 "github.com/loft-sh/devpod/pkg/provider"
 	devssh "github.com/loft-sh/devpod/pkg/ssh"
 	"github.com/loft-sh/devpod/pkg/template"
 	"github.com/loft-sh/devpod/pkg/token"
@@ -23,6 +24,8 @@ var waitForInstanceConnectionTimeout = time.Minute * 5
 
 // SSHCmd holds the ssh cmd flags
 type SSHCmd struct {
+	flags.GlobalFlags
+
 	Stdio         bool
 	JumpContainer bool
 
@@ -33,14 +36,21 @@ type SSHCmd struct {
 }
 
 // NewSSHCmd creates a new ssh command
-func NewSSHCmd() *cobra.Command {
-	cmd := &SSHCmd{}
+func NewSSHCmd(flags *flags.GlobalFlags) *cobra.Command {
+	cmd := &SSHCmd{
+		GlobalFlags: *flags,
+	}
 	sshCmd := &cobra.Command{
 		Use:   "ssh",
 		Short: "Starts a new ssh session to a workspace",
 		Args:  cobra.NoArgs,
 		RunE: func(_ *cobra.Command, args []string) error {
-			workspace, provider, err := workspace2.GetWorkspace([]string{cmd.ID}, log.Default)
+			devPodConfig, err := config.LoadConfig(cmd.Context)
+			if err != nil {
+				return err
+			}
+
+			workspace, provider, err := workspace2.GetWorkspace(devPodConfig, []string{cmd.ID}, log.Default)
 			if err != nil {
 				return err
 			}
@@ -58,12 +68,12 @@ func NewSSHCmd() *cobra.Command {
 }
 
 // Run runs the command logic
-func (cmd *SSHCmd) Run(ctx context.Context, workspace *config.Workspace, provider types.Provider) error {
+func (cmd *SSHCmd) Run(ctx context.Context, workspace *provider2.Workspace, provider provider2.Provider) error {
 	if cmd.ShowAgentCommand {
-		return cmd.showAgentCommand(cmd.ID)
+		return cmd.showAgentCommand(workspace.Context, cmd.ID)
 	}
 	if cmd.Configure {
-		return configureSSH(cmd.ID, "root")
+		return configureSSH(workspace.Context, cmd.ID, "root")
 	}
 
 	err := startWait(ctx, provider, workspace, false, log.Default)
@@ -79,14 +89,14 @@ func (cmd *SSHCmd) Run(ctx context.Context, workspace *config.Workspace, provide
 	return nil
 }
 
-func waitForInstanceConnection(ctx context.Context, provider types.ServerProvider, workspace *config.Workspace, log log.Logger) error {
+func waitForInstanceConnection(ctx context.Context, provider provider2.ServerProvider, workspace *provider2.Workspace, log log.Logger) error {
 	// do a simple hello world to check if we can get something
 	startWaiting := time.Now()
 	now := startWaiting
 	for {
 		reader := &bytes.Buffer{}
 		cancelCtx, cancel := context.WithTimeout(ctx, time.Second*10)
-		err := provider.RunCommand(cancelCtx, workspace, types.RunCommandOptions{
+		err := provider.Command(cancelCtx, workspace, provider2.CommandOptions{
 			Command: "echo -n devpod",
 			Stdout:  reader,
 		})
@@ -109,8 +119,8 @@ func waitForInstanceConnection(ctx context.Context, provider types.ServerProvide
 	}
 }
 
-func startWait(ctx context.Context, provider types.Provider, workspace *config.Workspace, create bool, log log.Logger) error {
-	workspaceProvider, ok := provider.(types.WorkspaceProvider)
+func startWait(ctx context.Context, provider provider2.Provider, workspace *provider2.Workspace, create bool, log log.Logger) error {
+	workspaceProvider, ok := provider.(provider2.WorkspaceProvider)
 	if ok {
 		err := startWaitWorkspace(ctx, workspaceProvider, workspace, create, log)
 		if err != nil {
@@ -118,7 +128,7 @@ func startWait(ctx context.Context, provider types.Provider, workspace *config.W
 		}
 	}
 
-	serverProvider, ok := provider.(types.ServerProvider)
+	serverProvider, ok := provider.(provider2.ServerProvider)
 	if ok {
 		err := startWaitServer(ctx, serverProvider, workspace, create, log)
 		if err != nil {
@@ -129,13 +139,13 @@ func startWait(ctx context.Context, provider types.Provider, workspace *config.W
 	return nil
 }
 
-func startWaitWorkspace(ctx context.Context, provider types.WorkspaceProvider, workspace *config.Workspace, create bool, log log.Logger) error {
+func startWaitWorkspace(ctx context.Context, provider provider2.WorkspaceProvider, workspace *provider2.Workspace, create bool, log log.Logger) error {
 	startWaiting := time.Now()
 	for {
-		instanceStatus, err := provider.WorkspaceStatus(ctx, workspace, types.WorkspaceStatusOptions{})
+		instanceStatus, err := provider.Status(ctx, workspace, provider2.WorkspaceStatusOptions{})
 		if err != nil {
 			return errors.Wrap(err, "get instance status")
-		} else if instanceStatus == types.StatusBusy {
+		} else if instanceStatus == provider2.StatusBusy {
 			if time.Since(startWaiting) > time.Second*10 {
 				log.Infof("Waiting for instance to come up...")
 				startWaiting = time.Now()
@@ -143,15 +153,15 @@ func startWaitWorkspace(ctx context.Context, provider types.WorkspaceProvider, w
 
 			time.Sleep(time.Second)
 			continue
-		} else if instanceStatus == types.StatusStopped {
-			err = provider.WorkspaceStart(ctx, workspace, types.WorkspaceStartOptions{})
+		} else if instanceStatus == provider2.StatusStopped {
+			err = provider.Start(ctx, workspace, provider2.WorkspaceStartOptions{})
 			if err != nil {
 				return errors.Wrap(err, "start instance")
 			}
-		} else if instanceStatus == types.StatusNotFound {
+		} else if instanceStatus == provider2.StatusNotFound {
 			if create {
 				// create environment
-				err = provider.WorkspaceCreate(ctx, workspace, types.WorkspaceCreateOptions{})
+				err = provider.Create(ctx, workspace, provider2.WorkspaceCreateOptions{})
 				if err != nil {
 					return err
 				}
@@ -164,13 +174,13 @@ func startWaitWorkspace(ctx context.Context, provider types.WorkspaceProvider, w
 	}
 }
 
-func startWaitServer(ctx context.Context, provider types.ServerProvider, workspace *config.Workspace, create bool, log log.Logger) error {
+func startWaitServer(ctx context.Context, provider provider2.ServerProvider, workspace *provider2.Workspace, create bool, log log.Logger) error {
 	startWaiting := time.Now()
 	for {
-		instanceStatus, err := provider.Status(ctx, workspace, types.StatusOptions{})
+		instanceStatus, err := provider.Status(ctx, workspace, provider2.StatusOptions{})
 		if err != nil {
 			return errors.Wrap(err, "get instance status")
-		} else if instanceStatus == types.StatusBusy {
+		} else if instanceStatus == provider2.StatusBusy {
 			if time.Since(startWaiting) > time.Second*10 {
 				log.Infof("Waiting for instance to come up...")
 				startWaiting = time.Now()
@@ -178,15 +188,15 @@ func startWaitServer(ctx context.Context, provider types.ServerProvider, workspa
 
 			time.Sleep(time.Second)
 			continue
-		} else if instanceStatus == types.StatusStopped {
-			err = provider.Start(ctx, workspace, types.StartOptions{})
+		} else if instanceStatus == provider2.StatusStopped {
+			err = provider.Start(ctx, workspace, provider2.StartOptions{})
 			if err != nil {
 				return errors.Wrap(err, "start instance")
 			}
-		} else if instanceStatus == types.StatusNotFound {
+		} else if instanceStatus == provider2.StatusNotFound {
 			if create {
 				// create environment
-				err = provider.Create(ctx, workspace, types.CreateOptions{})
+				err = provider.Create(ctx, workspace, provider2.CreateOptions{})
 				if err != nil {
 					return err
 				}
@@ -199,29 +209,22 @@ func startWaitServer(ctx context.Context, provider types.ServerProvider, workspa
 	}
 }
 
-func jumpContainer(ctx context.Context, provider types.Provider, workspace *config.Workspace) error {
-	// get token
-	tok, err := token.GenerateWorkspaceToken(workspace.ID)
-	if err != nil {
-		return err
+func jumpContainer(ctx context.Context, provider provider2.Provider, workspace *provider2.Workspace) error {
+	workspaceProvider, ok := provider.(provider2.WorkspaceProvider)
+	if ok {
+		return jumpContainerWorkspace(ctx, workspaceProvider, workspace)
 	}
 
-	workspaceProvider, ok := provider.(types.WorkspaceProvider)
+	serverProvider, ok := provider.(provider2.ServerProvider)
 	if ok {
-		return jumpContainerWorkspace(ctx, workspaceProvider, workspace, tok)
-	}
-
-	serverProvider, ok := provider.(types.ServerProvider)
-	if ok {
-		return jumpContainerServer(ctx, serverProvider, workspace, tok)
+		return jumpContainerServer(ctx, serverProvider, workspace)
 	}
 
 	return nil
 }
 
-func jumpContainerWorkspace(ctx context.Context, provider types.WorkspaceProvider, workspace *config.Workspace, tok string) error {
-	err := provider.WorkspaceTunnel(ctx, workspace, types.WorkspaceTunnelOptions{
-		Token:  tok,
+func jumpContainerWorkspace(ctx context.Context, provider provider2.WorkspaceProvider, workspace *provider2.Workspace) error {
+	err := provider.Tunnel(ctx, workspace, provider2.WorkspaceTunnelOptions{
 		Stdin:  os.Stdin,
 		Stdout: os.Stdout,
 		Stderr: os.Stderr,
@@ -233,7 +236,13 @@ func jumpContainerWorkspace(ctx context.Context, provider types.WorkspaceProvide
 	return nil
 }
 
-func jumpContainerServer(ctx context.Context, provider types.ServerProvider, workspace *config.Workspace, tok string) error {
+func jumpContainerServer(ctx context.Context, provider provider2.ServerProvider, workspace *provider2.Workspace) error {
+	// get token
+	tok, err := token.GenerateWorkspaceToken(workspace.Context, workspace.ID)
+	if err != nil {
+		return err
+	}
+
 	// install devpod into the ssh machine
 	t, err := template.FillTemplate(scripts.InstallDevPodTemplate, map[string]string{
 		"BaseUrl": agent.DefaultAgentDownloadURL,
@@ -244,7 +253,7 @@ func jumpContainerServer(ctx context.Context, provider types.ServerProvider, wor
 	}
 
 	// tunnel to container
-	err = provider.RunCommand(ctx, workspace, types.RunCommandOptions{
+	err = provider.Command(ctx, workspace, provider2.CommandOptions{
 		Command: t,
 		Stdin:   os.Stdin,
 		Stdout:  os.Stdout,
@@ -257,14 +266,14 @@ func jumpContainerServer(ctx context.Context, provider types.ServerProvider, wor
 	return nil
 }
 
-func (cmd *SSHCmd) showAgentCommand(workspaceID string) error {
-	t, _ := token.GenerateWorkspaceToken(workspaceID)
+func (cmd *SSHCmd) showAgentCommand(context, workspaceID string) error {
+	t, _ := token.GenerateWorkspaceToken(context, workspaceID)
 	fmt.Println(fmt.Sprintf("devpod agent ssh-server --token %s", t))
 	return nil
 }
 
-func configureSSH(id, user string) error {
-	err := devssh.ConfigureSSHConfig(id, user, log.Default)
+func configureSSH(context, workspaceID, user string) error {
+	err := devssh.ConfigureSSHConfig(context, workspaceID, user, log.Default)
 	if err != nil {
 		return err
 	}

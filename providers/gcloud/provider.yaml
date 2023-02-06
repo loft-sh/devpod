@@ -1,0 +1,26 @@
+name: gcloud
+version: 0.0.1
+description: |-
+  The gcloud provides DevContainers on Google Cloud.
+options:
+  AGENT_DOWNLOAD_URL:
+    description: The Base URL where to download the DevPod Agent from
+  GCLOUD_BINARY:
+    description: The path to the gcloud binary
+    default: gcloud
+  ZONE:
+    description: The google cloud zone to create the VM in.
+  DISK_IMAGE:
+    description: The disk image to use.
+    default: projects/ubuntu-os-cloud/global/images/ubuntu-1804-bionic-v20230112
+  MACHINE_TYPE:
+    description: The machine type to use.
+    default: e2-standard-2
+exec:
+  init: ["devpod", "provider", "call", "gcloud", "init"]
+  command: ["devpod", "provider", "call", "gcloud", "command"]
+  create: ["devpod", "provider", "call", "gcloud", "create"]
+  delete: ["devpod", "provider", "call", "gcloud", "delete"]
+  start: ["devpod", "provider", "call", "gcloud", "start"]
+  stop: ["devpod", "provider", "call", "gcloud", "stop"]
+  status: ["devpod", "provider", "call", "gcloud", "status"]

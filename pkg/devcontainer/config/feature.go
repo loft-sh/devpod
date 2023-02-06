@@ -1,9 +1,6 @@
 package config
 
-import (
-	"encoding/json"
-	"strconv"
-)
+import "github.com/loft-sh/devpod/pkg/types"
 
 type FeatureSet struct {
 	ConfigID string
@@ -73,7 +70,7 @@ type FeatureConfig struct {
 
 type FeatureConfigOption struct {
 	// Default value if the user omits this option from their configuration.
-	Default StrBool `json:"default,omitempty"`
+	Default types.StrBool `json:"default,omitempty"`
 
 	// A description of the option displayed to the user by a supporting tool.
 	Description string `json:"description,omitempty"`
@@ -86,24 +83,4 @@ type FeatureConfigOption struct {
 
 	// Suggested values for this option.  Unlike 'enum', the 'proposals' attribute indicates the installation script can handle arbitrary values provided by the user.
 	Proposals []string `json:"proposals,omitempty"`
-}
-
-type StrBool string
-
-// UnmarshalJSON parses fields that may be numbers or booleans.
-func (f *StrBool) UnmarshalJSON(data []byte) error {
-	var jsonObj interface{}
-	err := json.Unmarshal(data, &jsonObj)
-	if err != nil {
-		return err
-	}
-	switch obj := jsonObj.(type) {
-	case string:
-		*f = StrBool(obj)
-		return nil
-	case bool:
-		*f = StrBool(strconv.FormatBool(obj))
-		return nil
-	}
-	return ErrUnsupportedType
 }

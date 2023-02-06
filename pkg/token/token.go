@@ -28,15 +28,15 @@ func GenerateTemporaryToken() (string, error) {
 	return buildToken(hostKey, publicKey)
 }
 
-func GenerateWorkspaceToken(workspaceID string) (string, error) {
+func GenerateWorkspaceToken(context, workspaceID string) (string, error) {
 	// get host key
-	hostKey, err := ssh.GetHostKey(workspaceID)
+	hostKey, err := ssh.GetHostKey(context, workspaceID)
 	if err != nil {
 		return "", errors.Wrap(err, "generate host key")
 	}
 
 	// get public key
-	publicKey, err := ssh.GetPublicKey(workspaceID)
+	publicKey, err := ssh.GetPublicKey(context, workspaceID)
 	if err != nil {
 		return "", errors.Wrap(err, "generate key pair")
 	}
