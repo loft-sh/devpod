@@ -22,11 +22,11 @@ var (
 	MarkerEndPrefix   = "# DevPod End "
 )
 
-func ConfigureSSHConfig(workspace, user string, log log.Logger) error {
-	return configureSSHConfigSameFile(workspace, user, log)
+func ConfigureSSHConfig(context, workspace, user string, log log.Logger) error {
+	return configureSSHConfigSameFile(context, workspace, user, log)
 }
 
-func configureSSHConfigSameFile(workspace, user string, log log.Logger) error {
+func configureSSHConfigSameFile(context, workspace, user string, log log.Logger) error {
 	configLock.Lock()
 	defer configLock.Unlock()
 
@@ -36,7 +36,7 @@ func configureSSHConfigSameFile(workspace, user string, log log.Logger) error {
 	}
 
 	sshConfigPath := filepath.Join(homeDir, ".ssh", "config")
-	newFile, err := addHost(sshConfigPath, workspace+"."+"devpod", user, workspace)
+	newFile, err := addHost(sshConfigPath, workspace+"."+"devpod", user, context, workspace)
 	if err != nil {
 		return errors.Wrap(err, "parse ssh config")
 	}
@@ -60,7 +60,7 @@ type DevPodSSHEntry struct {
 	Workspace string
 }
 
-func addHost(path, host, user, workspace string) (string, error) {
+func addHost(path, host, user, context, workspace string) (string, error) {
 	var reader io.Reader
 	f, err := os.Open(path)
 	if err != nil {
@@ -100,7 +100,7 @@ func addHost(path, host, user, workspace string) (string, error) {
 	}
 
 	// get private key path
-	workspaceDir, err := config.GetWorkspaceDir(workspace)
+	workspaceDir, err := config.GetWorkspaceDir(context, workspace)
 	if err != nil {
 		return "", err
 	}
@@ -112,7 +112,7 @@ func addHost(path, host, user, workspace string) (string, error) {
 	newLines = append(newLines, "  IdentityFile \""+filepath.Join(workspaceDir, DevPodSSHPrivateKeyFile)+"\"")
 	newLines = append(newLines, "  StrictHostKeyChecking no")
 	newLines = append(newLines, "  UserKnownHostsFile /dev/null")
-	newLines = append(newLines, fmt.Sprintf("  ProxyCommand %s ssh --stdio --id %s", execPath, workspace))
+	newLines = append(newLines, fmt.Sprintf("  ProxyCommand %s ssh --stdio --id %s --context %s", execPath, workspace, context))
 	//newLines = append(newLines, "  User "+user)
 	newLines = append(newLines, endMarker)
 	return strings.Join(newLines, "\n"), nil

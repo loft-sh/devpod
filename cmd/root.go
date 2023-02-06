@@ -3,6 +3,8 @@ package cmd
 import (
 	"fmt"
 	"github.com/loft-sh/devpod/cmd/agent"
+	"github.com/loft-sh/devpod/cmd/flags"
+	"github.com/loft-sh/devpod/cmd/provider"
 	"os"
 
 	"github.com/spf13/cobra"
@@ -11,9 +13,10 @@ import (
 // NewRootCmd returns a new root command
 func NewRootCmd() *cobra.Command {
 	return &cobra.Command{
-		Use:          "devpod",
-		Short:        "DevPod",
-		SilenceUsage: true,
+		Use:           "devpod",
+		Short:         "DevPod",
+		SilenceUsage:  true,
+		SilenceErrors: true,
 	}
 }
 
@@ -34,12 +37,16 @@ func Execute() {
 // BuildRoot creates a new root command from the
 func BuildRoot() *cobra.Command {
 	rootCmd := NewRootCmd()
-	rootCmd.AddCommand(agent.NewAgentCmd())
-	rootCmd.AddCommand(NewUpCmd())
-	rootCmd.AddCommand(NewDestroyCmd())
-	rootCmd.AddCommand(NewSSHCmd())
+	persistentFlags := rootCmd.PersistentFlags()
+	globalFlags := flags.SetGlobalFlags(persistentFlags)
+
+	rootCmd.AddCommand(agent.NewAgentCmd(globalFlags))
+	rootCmd.AddCommand(provider.NewProviderCmd(globalFlags))
+	rootCmd.AddCommand(NewUpCmd(globalFlags))
+	rootCmd.AddCommand(NewDeleteCmd(globalFlags))
+	rootCmd.AddCommand(NewSSHCmd(globalFlags))
 	rootCmd.AddCommand(NewVersionCmd())
-	rootCmd.AddCommand(NewStopCmd())
-	rootCmd.AddCommand(NewListCmd())
+	rootCmd.AddCommand(NewStopCmd(globalFlags))
+	rootCmd.AddCommand(NewListCmd(globalFlags))
 	return rootCmd
 }

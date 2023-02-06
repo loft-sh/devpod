@@ -1,6 +1,7 @@
 package workspace
 
 import (
+	"bytes"
 	"context"
 	"fmt"
 	"github.com/loft-sh/devpod/pkg/command"
@@ -8,10 +9,10 @@ import (
 	"github.com/loft-sh/devpod/pkg/image"
 	"github.com/loft-sh/devpod/pkg/log"
 	provider2 "github.com/loft-sh/devpod/pkg/provider"
-	"github.com/loft-sh/devpod/pkg/provider/types"
+	"github.com/loft-sh/devpod/pkg/provider/providerimplementation"
 	"github.com/loft-sh/devpod/pkg/survey"
 	"github.com/loft-sh/devpod/pkg/terminal"
-	"github.com/loft-sh/devpod/provider/gcloud"
+	"github.com/loft-sh/devpod/providers"
 	"github.com/pkg/errors"
 	"os"
 	"os/exec"
@@ -23,111 +24,219 @@ import (
 
 var provideWorkspaceArgErr = fmt.Errorf("please provide a workspace name. E.g. 'devpod up ./my-folder', 'devpod up github.com/my-org/my-repo' or 'devpod up ubuntu'")
 
-func getProvider() types.Provider {
-	// TODO: remove hardcode
-	// provider := provider2.NewWorkspaceProviderWrapper(docker.NewDockerProvider())
-	gcloudProvider, err := gcloud.NewProvider(gcloud.ProviderConfig{}, log.Default)
-	if err != nil {
-		panic(err)
-	}
-
-	provider := provider2.NewServerProviderWrapper(gcloudProvider)
-	return provider
+type ProviderWithOptions struct {
+	Provider provider2.Provider
+	Options  map[string]string
 }
 
-func GetWorkspace(args []string, log log.Logger) (*config.Workspace, types.Provider, error) {
+// LoadProviders loads all known providers for the given context and
+func LoadProviders(devPodConfig *config.Config, log log.Logger) (*ProviderWithOptions, map[string]*ProviderWithOptions, error) {
+	defaultContext := devPodConfig.Contexts[devPodConfig.DefaultContext]
+	retProviders, err := LoadAllProviders(devPodConfig, log)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	// get default provider
+	if defaultContext.DefaultProvider == "" {
+		return nil, nil, fmt.Errorf("no default provider found. Please make sure to run 'devpod use provider'")
+	} else if retProviders[defaultContext.DefaultProvider] == nil {
+		return nil, nil, fmt.Errorf("couldn't find default provider %s. Please make sure to add the provider via 'devpod add provider'", defaultContext.DefaultProvider)
+	}
+
+	return retProviders[defaultContext.DefaultProvider], retProviders, nil
+}
+
+func FindProvider(devPodConfig *config.Config, name string, log log.Logger) (*ProviderWithOptions, error) {
+	retProviders, err := LoadAllProviders(devPodConfig, log)
+	if err != nil {
+		return nil, err
+	} else if retProviders[name] == nil {
+		return nil, fmt.Errorf("couldn't find provider with name %s. Please make sure to add the provider via 'devpod add provider'", name)
+	}
+
+	return retProviders[name], nil
+}
+
+func LoadAllProviders(devPodConfig *config.Config, log log.Logger) (map[string]*ProviderWithOptions, error) {
+	builtInProviders, err := providers.GetBuiltInProviders()
+	if err != nil {
+		return nil, err
+	}
+
+	retProviders := map[string]*ProviderWithOptions{}
+	for k, p := range builtInProviders {
+		retProviders[k] = &ProviderWithOptions{
+			Provider: p,
+		}
+	}
+
+	defaultContext := devPodConfig.Contexts[devPodConfig.DefaultContext]
+	for providerName, providerOptions := range defaultContext.Providers {
+		if retProviders[providerName] != nil {
+			retProviders[providerName].Options = providerOptions.Options
+			continue
+		}
+
+		// try to load provider config
+		providerDir, err := config.GetProviderDir(devPodConfig.DefaultContext, providerName)
+		if err != nil {
+			log.Errorf("Error retrieving provider directory: %v", err)
+			continue
+		}
+
+		providerConfigFile := filepath.Join(providerDir, config.ProviderConfigFile)
+		contents, err := os.ReadFile(providerConfigFile)
+		if err != nil {
+			log.Errorf("Error reading provider %s config: %v", providerName, err)
+			continue
+		}
+
+		providerConfig, err := provider2.ParseProvider(bytes.NewReader(contents))
+		if err != nil {
+			log.Errorf("Error parsing provider %s config: %v", providerName, err)
+			continue
+		}
+
+		retProviders[providerName] = &ProviderWithOptions{
+			Provider: providerimplementation.NewProvider(providerConfig),
+			Options:  providerOptions.Options,
+		}
+	}
+
+	return retProviders, nil
+}
+
+func GetWorkspace(devPodConfig *config.Config, args []string, log log.Logger) (*provider2.Workspace, provider2.Provider, error) {
 	// check if we have no args
 	if len(args) == 0 {
-		return selectWorkspace(log)
+		return selectWorkspace(devPodConfig, log)
 	}
 
 	// check if workspace already exists
-	localFolder, _ := filepath.Abs(args[0])
-	workspaceID := localFolder
-	if workspaceID == "" {
-		workspaceID = args[0]
-	}
+	_, name := isLocalDir(args[0], log)
 
 	// convert to id
-	workspaceID = ToWorkspaceID(workspaceID)
+	workspaceID := ToWorkspaceID(name)
 
 	// already exists?
-	if !config.WorkspaceExists(workspaceID) {
+	if !config.WorkspaceExists(devPodConfig.DefaultContext, workspaceID) {
 		return nil, nil, fmt.Errorf("workspace %s doesn't exist", workspaceID)
 	}
 
-	workspaceConfig, err := config.LoadWorkspaceConfig(workspaceID)
+	// load workspace config
+	workspaceConfig, err := config.LoadWorkspaceConfig(devPodConfig.DefaultContext, workspaceID)
 	if err != nil {
 		return nil, nil, errors.Wrap(err, "load workspace config")
 	}
 
-	return workspaceConfig, getProvider(), nil
+	// find the matching provider
+	providerWithOptions, err := FindProvider(devPodConfig, workspaceConfig.Provider.Name, log)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	return workspaceConfig, providerWithOptions.Provider, nil
 }
 
-func ResolveWorkspace(args []string, log log.Logger) (*config.Workspace, types.Provider, error) {
-	provider := getProvider()
-
+func ResolveWorkspace(devPodConfig *config.Config, args []string, log log.Logger) (*provider2.Workspace, provider2.Provider, error) {
 	// check if we have no args
 	if len(args) == 0 {
-		return selectWorkspace(log)
+		return selectWorkspace(devPodConfig, log)
 	}
 
 	// check if workspace already exists
-	localFolder, _ := filepath.Abs(args[0])
-	workspaceID := localFolder
-	if workspaceID == "" {
-		workspaceID = args[0]
-	}
+	isLocalPath, name := isLocalDir(args[0], log)
 
 	// convert to id
-	workspaceID = ToWorkspaceID(workspaceID)
+	workspaceID := ToWorkspaceID(name)
 
 	// already exists?
-	if config.WorkspaceExists(workspaceID) {
-		workspaceConfig, err := config.LoadWorkspaceConfig(workspaceID)
+	if config.WorkspaceExists(devPodConfig.DefaultContext, workspaceID) {
+		log.Infof("Workspace %s already exists", workspaceID)
+		workspaceConfig, err := config.LoadWorkspaceConfig(devPodConfig.DefaultContext, workspaceID)
 		if err != nil {
 			return nil, nil, errors.Wrap(err, "load workspace config")
 		}
 
-		return workspaceConfig, provider, nil
+		// find the matching provider
+		providerWithOptions, err := FindProvider(devPodConfig, workspaceConfig.Provider.Name, log)
+		if err != nil {
+			return nil, nil, err
+		}
+
+		return workspaceConfig, providerWithOptions.Provider, nil
 	}
 
+	// get default provider
+	defaultProvider, _, err := LoadProviders(devPodConfig, log)
+
 	// is local folder?
-	if localFolder != "" {
-		_, err := os.Stat(localFolder)
-		if err == nil {
-			return &config.Workspace{
-				ID: workspaceID,
-				Source: config.WorkspaceSource{
-					LocalFolder: localFolder,
-				},
-			}, provider, nil
-		}
+	if isLocalPath {
+		return &provider2.Workspace{
+			ID:      workspaceID,
+			Context: devPodConfig.DefaultContext,
+			Provider: provider2.WorkspaceProviderConfig{
+				Name:    defaultProvider.Provider.Name(),
+				Options: defaultProvider.Options,
+			},
+			Source: provider2.WorkspaceSource{
+				LocalFolder: name,
+			},
+		}, defaultProvider.Provider, nil
 	}
 
 	// is git?
-	gitRepository := normalizeGitRepository(args[0])
-	if strings.HasSuffix(args[0], ".git") || pingRepository(gitRepository) {
-		return &config.Workspace{
-			ID: workspaceID,
-			Source: config.WorkspaceSource{
+	gitRepository := normalizeGitRepository(name)
+	if strings.HasSuffix(name, ".git") || pingRepository(gitRepository) {
+		return &provider2.Workspace{
+			ID:      workspaceID,
+			Context: devPodConfig.DefaultContext,
+			Provider: provider2.WorkspaceProviderConfig{
+				Name:    defaultProvider.Provider.Name(),
+				Options: defaultProvider.Options,
+			},
+			Source: provider2.WorkspaceSource{
 				GitRepository: gitRepository,
 			},
-		}, provider, nil
+		}, defaultProvider.Provider, nil
 	}
 
 	// is image?
-	_, err := image.GetImage(args[0])
+	_, err = image.GetImage(name)
 	if err == nil {
-		return &config.Workspace{
-			ID: workspaceID,
-			Source: config.WorkspaceSource{
-				Image: args[0],
+		return &provider2.Workspace{
+			ID:      workspaceID,
+			Context: devPodConfig.DefaultContext,
+			Provider: provider2.WorkspaceProviderConfig{
+				Name:    defaultProvider.Provider.Name(),
+				Options: defaultProvider.Options,
 			},
-		}, provider, nil
+			Source: provider2.WorkspaceSource{
+				Image: name,
+			},
+		}, defaultProvider.Provider, nil
 	}
 
-	return nil, nil, fmt.Errorf("")
+	return nil, nil, fmt.Errorf("%s is neither a local folder, git repository or docker image", name)
+}
+
+func isLocalDir(name string, log log.Logger) (bool, string) {
+	_, err := os.Stat(name)
+	if err == nil {
+		gitRoot := findGitRoot(name)
+		if gitRoot != "" {
+			log.Infof("Found git root at %s, switching working directory", gitRoot)
+			return true, gitRoot
+		}
+
+		absPath, err := filepath.Abs(name)
+		if err == nil {
+			return true, absPath
+		}
+	}
+
+	return false, name
 }
 
 func normalizeGitRepository(str string) string {
@@ -173,14 +282,13 @@ func ToWorkspaceID(str string) string {
 	return workspaceIDRegEx2.ReplaceAllString(workspaceIDRegEx1.ReplaceAllString(str[index+1:], "-"), "")
 }
 
-func selectWorkspace(log log.Logger) (*config.Workspace, types.Provider, error) {
-	provider := getProvider()
+func selectWorkspace(devPodConfig *config.Config, log log.Logger) (*provider2.Workspace, provider2.Provider, error) {
 	if !terminal.IsTerminalIn {
 		return nil, nil, provideWorkspaceArgErr
 	}
 
 	// ask which workspace to use
-	workspacesDir, err := config.GetWorkspacesDir()
+	workspacesDir, err := config.GetWorkspacesDir(devPodConfig.DefaultContext)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -204,10 +312,43 @@ func selectWorkspace(log log.Logger) (*config.Workspace, types.Provider, error) 
 		return nil, nil, err
 	}
 
-	workspaceConfig, err := config.LoadWorkspaceConfig(answer)
+	workspaceConfig, err := config.LoadWorkspaceConfig(devPodConfig.DefaultContext, answer)
 	if err != nil {
 		return nil, nil, err
 	}
 
-	return workspaceConfig, provider, nil
+	providerWithOptions, err := FindProvider(devPodConfig, workspaceConfig.Provider.Name, log)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	return workspaceConfig, providerWithOptions.Provider, nil
+}
+
+func findGitRoot(localFolder string) string {
+	if !command.Exists("git") {
+		return ""
+	}
+
+	out, err := exec.Command("git", "-C", localFolder, "rev-parse", "--git-dir").Output()
+	if err != nil {
+		return ""
+	}
+
+	path := strings.TrimSpace(string(out))
+	_, err = os.Stat(path)
+	if err != nil {
+		return ""
+	}
+
+	if filepath.IsAbs(path) {
+		return path
+	}
+
+	absLocalFolder, err := filepath.Abs(localFolder)
+	if err != nil {
+		return ""
+	}
+
+	return filepath.Join(absLocalFolder, path)
 }

@@ -1,11 +1,12 @@
 package agent
 
 import (
+	"github.com/loft-sh/devpod/cmd/flags"
 	"github.com/spf13/cobra"
 )
 
 // NewAgentCmd returns a new root command
-func NewAgentCmd() *cobra.Command {
+func NewAgentCmd(flags *flags.GlobalFlags) *cobra.Command {
 	agentCmd := &cobra.Command{
 		Use:    "agent",
 		Short:  "DevPod Agent",
@@ -13,7 +14,7 @@ func NewAgentCmd() *cobra.Command {
 	}
 
 	agentCmd.AddCommand(NewSSHServerCmd())
-	agentCmd.AddCommand(NewUpCmd())
+	agentCmd.AddCommand(NewUpCmd(flags))
 	agentCmd.AddCommand(NewContainerTunnelCmd())
 	return agentCmd
 }

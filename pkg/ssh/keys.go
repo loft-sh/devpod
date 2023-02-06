@@ -73,8 +73,8 @@ func makeSSHKeyPair() (string, string, error) {
 	return pubKeyBuf.String(), privKeyStr, nil
 }
 
-func GetPrivateKeyRaw(workspaceID string) ([]byte, error) {
-	workspaceDir, err := config.GetWorkspaceDir(workspaceID)
+func GetPrivateKeyRaw(context, workspaceID string) ([]byte, error) {
+	workspaceDir, err := config.GetWorkspaceDir(context, workspaceID)
 	if err != nil {
 		return nil, err
 	}
@@ -102,8 +102,8 @@ func GetTempPrivateKeyRaw() ([]byte, error) {
 	return getPrivateKeyRawBase(tempDir)
 }
 
-func GetHostKey(workspaceID string) (string, error) {
-	workspaceDir, err := config.GetWorkspaceDir(workspaceID)
+func GetHostKey(context, workspaceID string) (string, error) {
+	workspaceDir, err := config.GetWorkspaceDir(context, workspaceID)
 	if err != nil {
 		return "", err
 	}
@@ -222,8 +222,8 @@ func getPublicKeyBase(dir string) (string, error) {
 	return base64.StdEncoding.EncodeToString(out), nil
 }
 
-func GetPublicKey(workspaceID string) (string, error) {
-	workspaceDir, err := config.GetWorkspaceDir(workspaceID)
+func GetPublicKey(context, workspaceID string) (string, error) {
+	workspaceDir, err := config.GetWorkspaceDir(context, workspaceID)
 	if err != nil {
 		return "", err
 	}

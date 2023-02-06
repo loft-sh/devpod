@@ -3,6 +3,7 @@ package agent
 import (
 	"context"
 	"fmt"
+	"github.com/loft-sh/devpod/cmd/flags"
 	"github.com/loft-sh/devpod/pkg/agent"
 	"github.com/loft-sh/devpod/pkg/agent/tunnel"
 	"github.com/loft-sh/devpod/pkg/command"
@@ -21,8 +22,8 @@ import (
 
 // UpCmd holds the up cmd flags
 type UpCmd struct {
-	ID    string
-	Debug bool
+	flags.GlobalFlags
+	ID string
 
 	Image         string
 	LocalFolder   bool
@@ -30,8 +31,10 @@ type UpCmd struct {
 }
 
 // NewUpCmd creates a new ssh command
-func NewUpCmd() *cobra.Command {
-	cmd := &UpCmd{}
+func NewUpCmd(flags *flags.GlobalFlags) *cobra.Command {
+	cmd := &UpCmd{
+		GlobalFlags: *flags,
+	}
 	upCmd := &cobra.Command{
 		Use:   "up",
 		Short: "Starts a new devcontainer",
@@ -41,7 +44,6 @@ func NewUpCmd() *cobra.Command {
 		},
 	}
 
-	upCmd.Flags().BoolVar(&cmd.Debug, "debug", false, "Prints debug information")
 	upCmd.Flags().StringVar(&cmd.ID, "id", "", "The id of the dev container")
 	upCmd.Flags().StringVar(&cmd.Image, "image", "", "The docker image to use")
 	upCmd.Flags().BoolVar(&cmd.LocalFolder, "local-folder", false, "If a local folder should be used")

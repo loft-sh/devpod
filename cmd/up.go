@@ -3,10 +3,11 @@ package cmd
 import (
 	"context"
 	"fmt"
+	"github.com/loft-sh/devpod/cmd/flags"
 	"github.com/loft-sh/devpod/pkg/agent"
 	"github.com/loft-sh/devpod/pkg/config"
 	"github.com/loft-sh/devpod/pkg/log"
-	"github.com/loft-sh/devpod/pkg/provider/types"
+	provider2 "github.com/loft-sh/devpod/pkg/provider"
 	"github.com/loft-sh/devpod/pkg/template"
 	workspace2 "github.com/loft-sh/devpod/pkg/workspace"
 	"github.com/loft-sh/devpod/scripts"
@@ -18,17 +19,26 @@ import (
 
 // UpCmd holds the up cmd flags
 type UpCmd struct {
+	flags.GlobalFlags
+
 	Snapshot bool
 }
 
 // NewUpCmd creates a new up command
-func NewUpCmd() *cobra.Command {
-	cmd := &UpCmd{}
+func NewUpCmd(flags *flags.GlobalFlags) *cobra.Command {
+	cmd := &UpCmd{
+		GlobalFlags: *flags,
+	}
 	upCmd := &cobra.Command{
 		Use:   "up",
 		Short: "Starts a new workspace",
 		RunE: func(_ *cobra.Command, args []string) error {
-			workspace, provider, err := workspace2.ResolveWorkspace(args, log.Default)
+			devPodConfig, err := config.LoadConfig(cmd.Context)
+			if err != nil {
+				return err
+			}
+
+			workspace, provider, err := workspace2.ResolveWorkspace(devPodConfig, args, log.Default)
 			if err != nil {
 				return err
 			}
@@ -42,7 +52,7 @@ func NewUpCmd() *cobra.Command {
 }
 
 // Run runs the command logic
-func (cmd *UpCmd) Run(ctx context.Context, workspace *config.Workspace, provider types.Provider) error {
+func (cmd *UpCmd) Run(ctx context.Context, workspace *provider2.Workspace, provider provider2.Provider) error {
 	// make sure instance is running before we continue
 	err := startWait(ctx, provider, workspace, true, log.Default)
 	if err != nil {
@@ -56,7 +66,7 @@ func (cmd *UpCmd) Run(ctx context.Context, workspace *config.Workspace, provider
 	}
 
 	// configure container ssh
-	err = configureSSH(workspace.ID, "vscode")
+	err = configureSSH(workspace.Context, workspace.ID, "vscode")
 	if err != nil {
 		return err
 	}
@@ -72,8 +82,8 @@ func (cmd *UpCmd) Run(ctx context.Context, workspace *config.Workspace, provider
 	return nil
 }
 
-func devPodUp(ctx context.Context, provider types.Provider, workspace *config.Workspace, log log.Logger) error {
-	serverProvider, ok := provider.(types.ServerProvider)
+func devPodUp(ctx context.Context, provider provider2.Provider, workspace *provider2.Workspace, log log.Logger) error {
+	serverProvider, ok := provider.(provider2.ServerProvider)
 	if ok {
 		return devPodUpServer(ctx, serverProvider, workspace, log)
 	}
@@ -81,7 +91,7 @@ func devPodUp(ctx context.Context, provider types.Provider, workspace *config.Wo
 	return nil
 }
 
-func devPodUpServer(ctx context.Context, provider types.ServerProvider, workspace *config.Workspace, log log.Logger) error {
+func devPodUpServer(ctx context.Context, provider provider2.ServerProvider, workspace *provider2.Workspace, log log.Logger) error {
 	log.Infof("Creating devcontainer...")
 	command := fmt.Sprintf("sudo %s agent up --id %s ", agent.RemoteDevPodHelperLocation, workspace.ID)
 	if workspace.Source.GitRepository != "" {
@@ -114,7 +124,7 @@ func devPodUpServer(ctx context.Context, provider types.ServerProvider, workspac
 	}()
 
 	// create container etc.
-	err = provider.RunCommand(ctx, workspace, types.RunCommandOptions{
+	err = provider.Command(ctx, workspace, provider2.CommandOptions{
 		Command: t,
 		Stdin:   stdinReader,
 		Stdout:  stdoutWriter,

@@ -1,16 +1,17 @@
 package config
 
 import (
-	"encoding/json"
 	"fmt"
+	"github.com/loft-sh/devpod/pkg/provider"
 	homedir "github.com/mitchellh/go-homedir"
+	"gopkg.in/yaml.v2"
 	"os"
 	"path/filepath"
 )
 
-const DefaultContext = "default"
+const ProviderConfigFile = "provider.yaml"
 
-const WorkspaceConfigFile = "workspace.json"
+const WorkspaceConfigFile = "workspace.yaml"
 
 func GetConfigDir() (string, error) {
 	homeDir, err := homedir.Dir()
@@ -22,16 +23,25 @@ func GetConfigDir() (string, error) {
 	return configDir, nil
 }
 
-func GetWorkspacesDir() (string, error) {
+func GetWorkspacesDir(context string) (string, error) {
 	configDir, err := GetConfigDir()
 	if err != nil {
 		return "", err
 	}
 
-	return filepath.Join(configDir, "contexts", DefaultContext, "workspaces"), nil
+	return filepath.Join(configDir, "contexts", context, "workspaces"), nil
 }
 
-func GetWorkspaceDir(workspaceID string) (string, error) {
+func GetProviderDir(context, providerName string) (string, error) {
+	configDir, err := GetConfigDir()
+	if err != nil {
+		return "", err
+	}
+
+	return filepath.Join(configDir, "contexts", context, "providers", providerName), nil
+}
+
+func GetWorkspaceDir(context, workspaceID string) (string, error) {
 	if workspaceID == "" {
 		return "", fmt.Errorf("workspace id is empty")
 	}
@@ -41,11 +51,11 @@ func GetWorkspaceDir(workspaceID string) (string, error) {
 		return "", err
 	}
 
-	return filepath.Join(configDir, "contexts", DefaultContext, "workspaces", workspaceID), nil
+	return filepath.Join(configDir, "contexts", context, "workspaces", workspaceID), nil
 }
 
-func WorkspaceExists(id string) bool {
-	workspaceDir, err := GetWorkspaceDir(id)
+func WorkspaceExists(context, workspaceID string) bool {
+	workspaceDir, err := GetWorkspaceDir(context, workspaceID)
 	if err != nil {
 		return false
 	}
@@ -58,8 +68,8 @@ func WorkspaceExists(id string) bool {
 	return true
 }
 
-func SaveWorkspaceConfig(workspace *Workspace) error {
-	workspaceDir, err := GetWorkspaceDir(workspace.ID)
+func SaveWorkspaceConfig(workspace *provider.Workspace) error {
+	workspaceDir, err := GetWorkspaceDir(workspace.Context, workspace.ID)
 	if err != nil {
 		return err
 	}
@@ -69,7 +79,7 @@ func SaveWorkspaceConfig(workspace *Workspace) error {
 		return err
 	}
 
-	workspaceConfigBytes, err := json.Marshal(workspace)
+	workspaceConfigBytes, err := yaml.Marshal(workspace)
 	if err != nil {
 		return err
 	}
@@ -83,8 +93,8 @@ func SaveWorkspaceConfig(workspace *Workspace) error {
 	return nil
 }
 
-func LoadWorkspaceConfig(workspaceID string) (*Workspace, error) {
-	workspaceDir, err := GetWorkspaceDir(workspaceID)
+func LoadWorkspaceConfig(context, workspaceID string) (*provider.Workspace, error) {
+	workspaceDir, err := GetWorkspaceDir(context, workspaceID)
 	if err != nil {
 		return nil, err
 	}
@@ -95,12 +105,13 @@ func LoadWorkspaceConfig(workspaceID string) (*Workspace, error) {
 		return nil, err
 	}
 
-	workspaceConfig := &Workspace{}
-	err = json.Unmarshal(workspaceConfigBytes, workspaceConfig)
+	workspaceConfig := &provider.Workspace{}
+	err = yaml.Unmarshal(workspaceConfigBytes, workspaceConfig)
 	if err != nil {
 		return nil, err
 	}
 
+	workspaceConfig.Context = context
 	workspaceConfig.Origin = workspaceConfigFile
 	return workspaceConfig, nil
 }

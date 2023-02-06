@@ -2,14 +2,8 @@ package config
 
 import (
 	"encoding/json"
-	"github.com/pkg/errors"
-	"strconv"
+	"github.com/loft-sh/devpod/pkg/types"
 	"strings"
-)
-
-var (
-	// ErrUnsupportedType is returned if the type is not implemented
-	ErrUnsupportedType = errors.New("unsupported type")
 )
 
 type MergedDevContainerConfig struct {
@@ -65,7 +59,7 @@ type DevContainerConfigBase struct {
 	RemoteUser string `json:"remoteUser,omitempty"`
 
 	// A command to run locally before anything else. This command is run before "onCreateCommand". If this is a single string, it will be run in a shell. If this is an array of strings, it will be run as a single command without shell.
-	InitializeCommand StrArray `json:"initializeCommand,omitempty"`
+	InitializeCommand types.StrArray `json:"initializeCommand,omitempty"`
 
 	// Action to take when the user disconnects from the container in their editor. The default is to stop the container.
 	ShutdownAction string `json:"shutdownAction,omitempty"`
@@ -100,24 +94,24 @@ type DevContainerConfigBase struct {
 
 type DevContainerActions struct {
 	// A command to run when creating the container. This command is run after "initializeCommand" and before "updateContentCommand". If this is a single string, it will be run in a shell. If this is an array of strings, it will be run as a single command without shell.
-	OnCreateCommand StrArray `json:"onCreateCommand,omitempty"`
+	OnCreateCommand types.StrArray `json:"onCreateCommand,omitempty"`
 
 	// A command to run when creating the container and rerun when the workspace content was updated while creating the container.
 	// This command is run after "onCreateCommand" and before "postCreateCommand". If this is a single string, it will be run in a shell.
 	// If this is an array of strings, it will be run as a single command without shell.
-	UpdateContentCommand StrArray `json:"updateContentCommand,omitempty"`
+	UpdateContentCommand types.StrArray `json:"updateContentCommand,omitempty"`
 
 	// A command to run after creating the container. This command is run after "updateContentCommand" and before "postStartCommand".
 	// If this is a single string, it will be run in a shell. If this is an array of strings, it will be run as a single command without shell.
-	PostCreateCommand StrArray `json:"postCreateCommand,omitempty"`
+	PostCreateCommand types.StrArray `json:"postCreateCommand,omitempty"`
 
 	// A command to run after starting the container. This command is run after "postCreateCommand" and before "postAttachCommand".
 	// If this is a single string, it will be run in a shell. If this is an array of strings, it will be run as a single command without shell.
-	PostStartCommand StrArray `json:"postStartCommand,omitempty"`
+	PostStartCommand types.StrArray `json:"postStartCommand,omitempty"`
 
 	// A command to run when attaching to the container. This command is run after "postStartCommand".
 	// If this is a single string, it will be run in a shell. If this is an array of strings, it will be run as a single command without shell.
-	PostAttachCommand StrArray `json:"postAttachCommand,omitempty"`
+	PostAttachCommand types.StrArray `json:"postAttachCommand,omitempty"`
 
 	// Tool-specific configuration. Each tool should use a JSON object subproperty with a unique name to group its customizations.
 	Customizations map[string]interface{} `json:"customizations,omitempty"`
@@ -128,24 +122,24 @@ type UpdatedConfigProperties struct {
 	Entrypoints []string `json:"entrypoints,omitempty"`
 
 	// A command to run when creating the container. This command is run after "initializeCommand" and before "updateContentCommand". If this is a single string, it will be run in a shell. If this is an array of strings, it will be run as a single command without shell.
-	OnCreateCommands []StrArray `json:"onCreateCommand,omitempty"`
+	OnCreateCommands []types.StrArray `json:"onCreateCommand,omitempty"`
 
 	// A command to run when creating the container and rerun when the workspace content was updated while creating the container.
 	// This command is run after "onCreateCommand" and before "postCreateCommand". If this is a single string, it will be run in a shell.
 	// If this is an array of strings, it will be run as a single command without shell.
-	UpdateContentCommands []StrArray `json:"updateContentCommand,omitempty"`
+	UpdateContentCommands []types.StrArray `json:"updateContentCommand,omitempty"`
 
 	// A command to run after creating the container. This command is run after "updateContentCommand" and before "postStartCommand".
 	// If this is a single string, it will be run in a shell. If this is an array of strings, it will be run as a single command without shell.
-	PostCreateCommands []StrArray `json:"postCreateCommand,omitempty"`
+	PostCreateCommands []types.StrArray `json:"postCreateCommand,omitempty"`
 
 	// A command to run after starting the container. This command is run after "postCreateCommand" and before "postAttachCommand".
 	// If this is a single string, it will be run in a shell. If this is an array of strings, it will be run as a single command without shell.
-	PostStartCommands []StrArray `json:"postStartCommand,omitempty"`
+	PostStartCommands []types.StrArray `json:"postStartCommand,omitempty"`
 
 	// A command to run when attaching to the container. This command is run after "postStartCommand".
 	// If this is a single string, it will be run in a shell. If this is an array of strings, it will be run as a single command without shell.
-	PostAttachCommands []StrArray `json:"postAttachCommand,omitempty"`
+	PostAttachCommands []types.StrArray `json:"postAttachCommand,omitempty"`
 
 	// Tool-specific configuration. Each tool should use a JSON object subproperty with a unique name to group its customizations.
 	Customizations map[string][]interface{} `json:"customizations,omitempty"`
@@ -153,7 +147,7 @@ type UpdatedConfigProperties struct {
 
 type ComposeContainer struct {
 	// The name of the docker-compose file(s) used to start the services.
-	DockerComposeFile StrArray `json:"dockerComposeFile,omitempty"`
+	DockerComposeFile types.StrArray `json:"dockerComposeFile,omitempty"`
 
 	// The service you want to work on. This is considered the primary container for your dev environment which your editor will connect to.
 	Service string `json:"string,omitempty"`
@@ -171,7 +165,7 @@ type NonComposeBase struct {
 	// Application ports that are exposed by the container. This can be a single port or an array of ports. Each port can be a number or a string.
 	// A number is mapped to the same port on the host. A string is passed to Docker unchanged and can be used to map ports differently,
 	// e.g. "8000:8010".
-	AppPort StrIntArray `json:"appPort,omitempty"`
+	AppPort types.StrIntArray `json:"appPort,omitempty"`
 
 	// Container environment variables.
 	ContainerEnv map[string]string `json:"containerEnv,omitempty"`
@@ -226,7 +220,7 @@ type BuildOptions struct {
 	Args map[string]string `json:"args,omitempty"`
 
 	// The image to consider as a cache. Use an array to specify multiple images.
-	CacheFrom StrArray `json:"cacheFrom,omitempty"`
+	CacheFrom types.StrArray `json:"cacheFrom,omitempty"`
 }
 
 type HostRequirements struct {
@@ -335,68 +329,5 @@ func (m *Mount) UnmarshalJSON(data []byte) error {
 		}
 		return nil
 	}
-	return ErrUnsupportedType
-}
-
-// StrIntArray string array to be used on JSON UnmarshalJSON
-type StrIntArray []string
-
-// UnmarshalJSON convert JSON object array of string or
-// a string format strings to a golang string array
-func (sa *StrIntArray) UnmarshalJSON(data []byte) error {
-	var jsonObj interface{}
-	err := json.Unmarshal(data, &jsonObj)
-	if err != nil {
-		return err
-	}
-	switch obj := jsonObj.(type) {
-	case string:
-		*sa = StrIntArray([]string{obj})
-		return nil
-	case int:
-		*sa = StrIntArray([]string{strconv.Itoa(obj)})
-		return nil
-	case []interface{}:
-		s := make([]string, 0, len(obj))
-		for _, v := range obj {
-			value, ok := v.(string)
-			if !ok {
-				return ErrUnsupportedType
-			}
-			s = append(s, value)
-		}
-		*sa = StrIntArray(s)
-		return nil
-	}
-	return ErrUnsupportedType
-}
-
-// StrArray string array to be used on JSON UnmarshalJSON
-type StrArray []string
-
-// UnmarshalJSON convert JSON object array of string or
-// a string format strings to a golang string array
-func (sa *StrArray) UnmarshalJSON(data []byte) error {
-	var jsonObj interface{}
-	err := json.Unmarshal(data, &jsonObj)
-	if err != nil {
-		return err
-	}
-	switch obj := jsonObj.(type) {
-	case string:
-		*sa = StrArray([]string{obj})
-		return nil
-	case []interface{}:
-		s := make([]string, 0, len(obj))
-		for _, v := range obj {
-			value, ok := v.(string)
-			if !ok {
-				return ErrUnsupportedType
-			}
-			s = append(s, value)
-		}
-		*sa = StrArray(s)
-		return nil
-	}
-	return ErrUnsupportedType
+	return types.ErrUnsupportedType
 }
