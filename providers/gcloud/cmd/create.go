@@ -3,20 +3,12 @@ package cmd
 import (
 	"context"
 	_ "embed"
-	"encoding/base64"
 	"fmt"
-	"github.com/loft-sh/devpod/pkg/agent"
 	"github.com/loft-sh/devpod/pkg/log"
 	"github.com/loft-sh/devpod/pkg/provider"
-	"github.com/loft-sh/devpod/pkg/template"
-	"github.com/loft-sh/devpod/pkg/token"
-	"github.com/loft-sh/devpod/scripts"
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
 )
-
-//go:embed cloud-config.yaml.tpl
-var CloudConfig string
 
 // CreateCmd holds the cmd flags
 type CreateCmd struct{}
@@ -53,44 +45,18 @@ func (cmd *CreateCmd) Run(ctx context.Context, provider *gcloudProvider, workspa
 		"--no-shielded-secure-boot",
 	}
 
-	// get token
-	t, err := token.GenerateWorkspaceToken(workspace.Context, workspace.ID)
-	if err != nil {
-		return err
-	}
-
-	// fill init script
-	initScript, err := template.FillTemplate(scripts.InstallDevPodTemplate, map[string]string{
-		"BaseUrl": agent.DefaultAgentDownloadURL,
-		"Token":   t,
-	})
-	if err != nil {
-		return err
-	}
-
-	// add cloud config
-	cloudConfig, err := template.FillTemplate(CloudConfig, map[string]string{
-		"InitScript": base64.StdEncoding.EncodeToString([]byte(initScript)),
-	})
-	if err != nil {
-		return err
-	}
-	args = append(args, "--metadata", "user-data="+cloudConfig)
-
 	// add machine type
-	args = append(args, "--machine-type="+withDefault(provider.Config.MachineType, "e2-standard-2"))
+	args = append(args, "--machine-type="+provider.Config.MachineType)
 
 	// image & size
-	image := withDefault(provider.Config.DiskImage, "projects/ubuntu-os-cloud/global/images/ubuntu-1804-bionic-v20230112")
-	size := withDefault(provider.Config.DiskSizeGB, 30)
 	args = append(args, "--create-disk")
-	args = append(args, fmt.Sprintf("auto-delete=yes,boot=yes,device-name=%s,image=%s,mode=rw,size=%d,type=pd-ssd", name, image, size))
+	args = append(args, fmt.Sprintf("auto-delete=yes,boot=yes,device-name=%s,image=%s,mode=rw,size=%d,type=pd-ssd", name, provider.Config.DiskImage, provider.Config.DiskSizeGB))
 
 	// network
-	args = append(args, "--network-interface=network-tier=PREMIUM,subnet=default")
+	//args = append(args, "--network-interface=network-tier=PREMIUM,subnet=default")
 
 	log.Infof("Creating VM Instance %s...", name)
-	_, err = provider.output(ctx, args...)
+	_, err := provider.output(ctx, args...)
 	if err != nil {
 		return errors.Wrapf(err, "create vm")
 	}

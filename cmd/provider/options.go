@@ -50,6 +50,10 @@ func (cmd *OptionsCmd) Run(ctx context.Context, providerName string) error {
 
 	tableEntries := [][]string{}
 	for optionName, entry := range provider.Provider.Options() {
+		if entry.Hidden {
+			continue
+		}
+
 		entryOptions := provider.Options
 		if entryOptions == nil {
 			entryOptions = map[string]string{}

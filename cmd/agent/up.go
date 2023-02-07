@@ -2,6 +2,7 @@ package agent
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"github.com/loft-sh/devpod/cmd/flags"
 	"github.com/loft-sh/devpod/pkg/agent"
@@ -10,6 +11,7 @@ import (
 	"github.com/loft-sh/devpod/pkg/devcontainer"
 	"github.com/loft-sh/devpod/pkg/extract"
 	"github.com/loft-sh/devpod/pkg/log"
+	provider2 "github.com/loft-sh/devpod/pkg/provider"
 	"github.com/loft-sh/devpod/scripts"
 	"github.com/mitchellh/go-homedir"
 	"github.com/pkg/errors"
@@ -23,11 +25,6 @@ import (
 // UpCmd holds the up cmd flags
 type UpCmd struct {
 	flags.GlobalFlags
-	ID string
-
-	Image         string
-	LocalFolder   bool
-	GitRepository string
 }
 
 // NewUpCmd creates a new ssh command
@@ -43,11 +40,6 @@ func NewUpCmd(flags *flags.GlobalFlags) *cobra.Command {
 			return cmd.Run(context.Background())
 		},
 	}
-
-	upCmd.Flags().StringVar(&cmd.ID, "id", "", "The id of the dev container")
-	upCmd.Flags().StringVar(&cmd.Image, "image", "", "The docker image to use")
-	upCmd.Flags().BoolVar(&cmd.LocalFolder, "local-folder", false, "If a local folder should be used")
-	upCmd.Flags().StringVar(&cmd.GitRepository, "repository", "", "The repository to clone and create")
 	return upCmd
 }
 
@@ -62,6 +54,12 @@ func (cmd *UpCmd) Run(ctx context.Context) error {
 	// create debug logger
 	logger := agent.NewTunnelLogger(ctx, tunnelClient, cmd.Debug)
 
+	// get workspace
+	workspace, err := getWorkspace(ctx, tunnelClient)
+	if err != nil {
+		return err
+	}
+
 	// install dependencies
 	err = InstallDependencies(logger)
 	if err != nil {
@@ -69,13 +67,13 @@ func (cmd *UpCmd) Run(ctx context.Context) error {
 	}
 
 	// git clone repository
-	workspaceDir, err := cmd.prepareWorkspace(ctx, tunnelClient, logger)
+	workspaceDir, err := cmd.prepareWorkspace(ctx, workspace, tunnelClient, logger)
 	if err != nil {
 		return err
 	}
 
 	// create devcontainer
-	err = DevContainerUp(cmd.ID, workspaceDir, logger)
+	err = DevContainerUp(workspace.ID, workspaceDir, logger)
 	if err != nil {
 		return err
 	}
@@ -83,8 +81,8 @@ func (cmd *UpCmd) Run(ctx context.Context) error {
 	return nil
 }
 
-func (cmd *UpCmd) prepareWorkspace(ctx context.Context, client tunnel.TunnelClient, log log.Logger) (string, error) {
-	workspaceDir, err := getWorkspaceDir(cmd.ID)
+func (cmd *UpCmd) prepareWorkspace(ctx context.Context, workspace *provider2.Workspace, client tunnel.TunnelClient, log log.Logger) (string, error) {
+	workspaceDir, err := getWorkspaceDir(workspace.ID)
 	if err != nil {
 		return "", err
 	}
@@ -101,15 +99,31 @@ func (cmd *UpCmd) prepareWorkspace(ctx context.Context, client tunnel.TunnelClie
 		return "", err
 	}
 
-	if cmd.GitRepository != "" {
-		return CloneRepository(workspaceDir, cmd.GitRepository, log)
-	} else if cmd.LocalFolder {
+	// check what type of workspace this is
+	if workspace.Source.GitRepository != "" {
+		return CloneRepository(workspaceDir, workspace.Source.GitRepository, log)
+	} else if workspace.Source.LocalFolder != "" {
 		return DownloadLocalFolder(ctx, workspaceDir, client, log)
-	} else if cmd.Image != "" {
-		return PrepareImage(workspaceDir, cmd.Image)
+	} else if workspace.Source.Image != "" {
+		return PrepareImage(workspaceDir, workspace.Source.Image)
 	}
 
-	return "", fmt.Errorf("either --repository, --image or --local-folder is required")
+	return "", fmt.Errorf("either workspace repository, image or local-folder is required")
+}
+
+func getWorkspace(ctx context.Context, client tunnel.TunnelClient) (*provider2.Workspace, error) {
+	workspaceResult, err := client.Workspace(ctx, &tunnel.Empty{})
+	if err != nil {
+		return nil, err
+	}
+
+	workspace := &provider2.Workspace{}
+	err = json.Unmarshal([]byte(workspaceResult.Workspace), workspace)
+	if err != nil {
+		return nil, errors.Wrap(err, "parse workspace")
+	}
+
+	return workspace, nil
 }
 
 func DownloadLocalFolder(ctx context.Context, workspaceDir string, client tunnel.TunnelClient, log log.Logger) (string, error) {
@@ -140,7 +154,7 @@ func PrepareImage(workspaceDir, image string) (string, error) {
 }
 
 func DevContainerUp(id, workspaceFolder string, log log.Logger) error {
-	err := devcontainer.NewRunner(agent.DefaultAgentDownloadURL, workspaceFolder, id, log).Up()
+	err := devcontainer.NewRunner(agent.RemoteDevPodHelperLocation, agent.DefaultAgentDownloadURL, workspaceFolder, id, log).Up()
 	if err != nil {
 		return err
 	}

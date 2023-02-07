@@ -33,8 +33,12 @@ type ProviderConfig struct {
 	Zone    string
 }
 
-func ConfigFromEnv() ProviderConfig {
-	diskSize, _ := strconv.Atoi(os.Getenv(DISK_SIZE))
+func ConfigFromEnv() (ProviderConfig, error) {
+	diskSize, err := strconv.Atoi(os.Getenv(DISK_SIZE))
+	if err != nil {
+		return ProviderConfig{}, errors.Wrap(err, "parse disk size")
+	}
+
 	return ProviderConfig{
 		BinaryPath:  os.Getenv(GCLOUD_BINARY),
 		MachineType: os.Getenv(MACHINE_TYPE),
@@ -42,15 +46,16 @@ func ConfigFromEnv() ProviderConfig {
 		DiskSizeGB:  diskSize,
 		Project:     os.Getenv(PROJECT),
 		Zone:        os.Getenv(ZONE),
-	}
+	}, nil
 }
 
 func newProvider(log log.Logger) (*gcloudProvider, error) {
-	config := ConfigFromEnv()
-	if config.BinaryPath == "" {
-		config.BinaryPath = "gcloud"
+	config, err := ConfigFromEnv()
+	if err != nil {
+		return nil, err
 	}
 
+	// create provider
 	provider := &gcloudProvider{
 		Config: config,
 		Log:    log,
@@ -67,15 +72,6 @@ func newProvider(log log.Logger) (*gcloudProvider, error) {
 		if provider.Config.Project == "" {
 			return nil, fmt.Errorf("please set a default project for the gcloud command")
 		}
-	}
-	if provider.Config.Zone == "" {
-		provider.Config.Zone = "europe-west1-b"
-	}
-	if provider.Config.MachineType == "" {
-		provider.Config.MachineType = "e2-standard-2"
-	}
-	if provider.Config.DiskSizeGB == 0 {
-		provider.Config.DiskSizeGB = 30
 	}
 
 	return provider, nil

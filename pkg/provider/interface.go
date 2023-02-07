@@ -17,6 +17,9 @@ type Provider interface {
 	// Options returns the available options of the provider
 	Options() map[string]*ProviderOption
 
+	// AgentConfig returns the agent config
+	AgentConfig() (*ProviderAgentConfig, error)
+
 	// Init initializes the provider with new config options
 	Init(ctx context.Context, workspace *Workspace, options InitOptions) error
 }

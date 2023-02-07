@@ -5,19 +5,22 @@ import (
 	"context"
 	"fmt"
 	config "github.com/loft-sh/devpod/pkg/config"
+	"github.com/loft-sh/devpod/pkg/log"
 	"github.com/loft-sh/devpod/pkg/provider"
 	"github.com/pkg/errors"
 	"os"
 )
 
-func NewWorkspaceProvider(provider *provider.ProviderConfig) provider.WorkspaceProvider {
+func NewWorkspaceProvider(provider *provider.ProviderConfig, log log.Logger) provider.WorkspaceProvider {
 	return &workspaceProvider{
 		config: provider,
+		log:    log,
 	}
 }
 
 type workspaceProvider struct {
 	config *provider.ProviderConfig
+	log    log.Logger
 }
 
 func (s *workspaceProvider) Name() string {
@@ -30,6 +33,10 @@ func (s *workspaceProvider) Description() string {
 
 func (s *workspaceProvider) Options() map[string]*provider.ProviderOption {
 	return s.config.Options
+}
+
+func (s *workspaceProvider) AgentConfig() (*provider.ProviderAgentConfig, error) {
+	return nil, fmt.Errorf("agent config not supported in workspace providers")
 }
 
 func (s *workspaceProvider) validate(workspace *provider.Workspace) error {
@@ -46,6 +53,7 @@ func (s *workspaceProvider) Init(ctx context.Context, workspace *provider.Worksp
 		return err
 	}
 
+	logProviderCommand("init", s.config.Exec.Status, s.log)
 	return runProviderCommand(ctx, s.config.Exec.Init, workspace, os.Stdin, os.Stdout, os.Stderr, nil)
 }
 
@@ -60,6 +68,7 @@ func (s *workspaceProvider) Create(ctx context.Context, workspace *provider.Work
 		return err
 	}
 
+	logProviderCommand("create", s.config.Exec.Create, s.log)
 	return runProviderCommand(ctx, s.config.Exec.Create, workspace, os.Stdin, os.Stdout, os.Stderr, nil)
 }
 
@@ -69,6 +78,7 @@ func (s *workspaceProvider) Delete(ctx context.Context, workspace *provider.Work
 		return err
 	}
 
+	logProviderCommand("delete", s.config.Exec.Delete, s.log)
 	err = runProviderCommand(ctx, s.config.Exec.Delete, workspace, os.Stdin, os.Stdout, os.Stderr, nil)
 	if err != nil {
 		return err
@@ -83,6 +93,7 @@ func (s *workspaceProvider) Start(ctx context.Context, workspace *provider.Works
 		return err
 	}
 
+	logProviderCommand("start", s.config.Exec.Start, s.log)
 	err = runProviderCommand(ctx, s.config.Exec.Start, workspace, os.Stdin, os.Stdout, os.Stderr, nil)
 	if err != nil {
 		return err
@@ -97,6 +108,7 @@ func (s *workspaceProvider) Stop(ctx context.Context, workspace *provider.Worksp
 		return err
 	}
 
+	logProviderCommand("stop", s.config.Exec.Stop, s.log)
 	err = runProviderCommand(ctx, s.config.Exec.Stop, workspace, os.Stdin, os.Stdout, os.Stderr, nil)
 	if err != nil {
 		return err
@@ -111,6 +123,7 @@ func (s *workspaceProvider) Tunnel(ctx context.Context, workspace *provider.Work
 		return err
 	}
 
+	logProviderCommand("tunnel", s.config.Exec.Tunnel, s.log.ErrorStreamOnly())
 	err = runProviderCommand(ctx, s.config.Exec.Tunnel, workspace, options.Stdin, options.Stdout, options.Stderr, nil)
 	if err != nil {
 		return err
@@ -129,6 +142,7 @@ func (s *workspaceProvider) Status(ctx context.Context, workspace *provider.Work
 	if len(s.config.Exec.Status) > 0 {
 		stdout := &bytes.Buffer{}
 		stderr := &bytes.Buffer{}
+		logProviderCommand("status", s.config.Exec.Status, s.log)
 		err := runProviderCommand(ctx, s.config.Exec.Status, workspace, nil, stdout, stderr, nil)
 		if err != nil {
 			return provider.StatusNotFound, errors.Wrapf(err, "get status: %s%s", stdout, stderr)

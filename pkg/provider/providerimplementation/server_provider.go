@@ -6,22 +6,27 @@ import (
 	"fmt"
 	config "github.com/loft-sh/devpod/pkg/config"
 	"github.com/loft-sh/devpod/pkg/json"
+	"github.com/loft-sh/devpod/pkg/log"
 	"github.com/loft-sh/devpod/pkg/provider"
+	"github.com/loft-sh/devpod/pkg/shell"
 	"github.com/loft-sh/devpod/pkg/types"
 	"github.com/pkg/errors"
 	"io"
 	"os"
 	"os/exec"
+	"strings"
 )
 
-func NewServerProvider(provider *provider.ProviderConfig) provider.ServerProvider {
+func NewServerProvider(provider *provider.ProviderConfig, log log.Logger) provider.ServerProvider {
 	return &serverProvider{
 		config: provider,
+		log:    log,
 	}
 }
 
 type serverProvider struct {
 	config *provider.ProviderConfig
+	log    log.Logger
 }
 
 func (s *serverProvider) Name() string {
@@ -34,6 +39,11 @@ func (s *serverProvider) Description() string {
 
 func (s *serverProvider) Options() map[string]*provider.ProviderOption {
 	return s.config.Options
+}
+
+func (s *serverProvider) AgentConfig() (*provider.ProviderAgentConfig, error) {
+	// TODO: fill in options?
+	return &s.config.Agent, nil
 }
 
 func (s *serverProvider) validate(workspace *provider.Workspace) error {
@@ -50,6 +60,7 @@ func (s *serverProvider) Init(ctx context.Context, workspace *provider.Workspace
 		return err
 	}
 
+	logProviderCommand("init", s.config.Exec.Init, s.log)
 	return runProviderCommand(ctx, s.config.Exec.Init, workspace, os.Stdin, os.Stdout, os.Stderr, nil)
 }
 
@@ -64,6 +75,7 @@ func (s *serverProvider) Create(ctx context.Context, workspace *provider.Workspa
 		return err
 	}
 
+	logProviderCommand("create", s.config.Exec.Create, s.log)
 	return runProviderCommand(ctx, s.config.Exec.Create, workspace, os.Stdin, os.Stdout, os.Stderr, nil)
 }
 
@@ -73,6 +85,7 @@ func (s *serverProvider) Delete(ctx context.Context, workspace *provider.Workspa
 		return err
 	}
 
+	logProviderCommand("delete", s.config.Exec.Delete, s.log)
 	err = runProviderCommand(ctx, s.config.Exec.Delete, workspace, os.Stdin, os.Stdout, os.Stderr, nil)
 	if err != nil {
 		return err
@@ -87,6 +100,7 @@ func (s *serverProvider) Start(ctx context.Context, workspace *provider.Workspac
 		return err
 	}
 
+	logProviderCommand("start", s.config.Exec.Start, s.log)
 	err = runProviderCommand(ctx, s.config.Exec.Start, workspace, os.Stdin, os.Stdout, os.Stderr, nil)
 	if err != nil {
 		return err
@@ -101,6 +115,7 @@ func (s *serverProvider) Stop(ctx context.Context, workspace *provider.Workspace
 		return err
 	}
 
+	logProviderCommand("stop", s.config.Exec.Stop, s.log)
 	err = runProviderCommand(ctx, s.config.Exec.Stop, workspace, os.Stdin, os.Stdout, os.Stderr, nil)
 	if err != nil {
 		return err
@@ -115,6 +130,7 @@ func (s *serverProvider) Command(ctx context.Context, workspace *provider.Worksp
 		return err
 	}
 
+	logProviderCommand("command", s.config.Exec.Command, s.log.ErrorStreamOnly())
 	err = runProviderCommand(ctx, s.config.Exec.Command, workspace, options.Stdin, options.Stdout, options.Stderr, map[string]string{
 		provider.CommandEnv: options.Command,
 	})
@@ -135,6 +151,7 @@ func (s *serverProvider) Status(ctx context.Context, workspace *provider.Workspa
 	if len(s.config.Exec.Status) > 0 {
 		stdout := &bytes.Buffer{}
 		stderr := &bytes.Buffer{}
+		logProviderCommand("status", s.config.Exec.Status, s.log)
 		err := runProviderCommand(ctx, s.config.Exec.Status, workspace, nil, stdout, stderr, nil)
 		if err != nil {
 			return provider.StatusNotFound, errors.Wrapf(err, "get status: %s%s", stdout, stderr)
@@ -166,28 +183,17 @@ func (s *serverProvider) Status(ctx context.Context, workspace *provider.Workspa
 	return provider.StatusNotFound, nil
 }
 
+func logProviderCommand(stage string, command types.StrArray, log log.Logger) {
+	if len(command) == 0 {
+		return
+	}
+	log.Debugf("Run %s provider command: %s", stage, strings.Join(command, " "))
+}
+
 func runProviderCommand(ctx context.Context, command types.StrArray, workspace *provider.Workspace, stdin io.Reader, stdout io.Writer, stderr io.Writer, extraEnv map[string]string) error {
 	if len(command) == 0 {
 		return nil
 	}
-
-	// use shell if command length is equal 1
-	args := []string{}
-	if len(command) == 1 {
-		args = append(args, "sh", "-c")
-	} else {
-		// check if devpod is first arg
-		if args[0] == "devpod" {
-			devPodExec, err := os.Executable()
-			if err != nil {
-				return errors.Wrap(err, "get executable path")
-			}
-
-			args[0] = devPodExec
-		}
-
-	}
-	args = append(args, command...)
 
 	// create environment variables for command
 	osEnviron := os.Environ()
@@ -196,8 +202,23 @@ func runProviderCommand(ctx context.Context, command types.StrArray, workspace *
 		osEnviron = append(osEnviron, k+"="+v)
 	}
 
+	// use shell if command length is equal 1
+	if len(command) == 1 {
+		return shell.ExecuteCommandWithShell(ctx, command[0], stdin, stdout, stderr, osEnviron)
+	}
+
+	// check if devpod is first arg
+	if command[0] == "devpod" {
+		devPodExec, err := os.Executable()
+		if err != nil {
+			return errors.Wrap(err, "get executable path")
+		}
+
+		command[0] = devPodExec
+	}
+
 	// run command
-	cmd := exec.CommandContext(ctx, args[0], args[1:]...)
+	cmd := exec.CommandContext(ctx, command[0], command[1:]...)
 	cmd.Stdin = stdin
 	cmd.Stdout = stdout
 	cmd.Stderr = stderr

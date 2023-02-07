@@ -1,14 +1,15 @@
 package cmd
 
 import (
-	"fmt"
 	"github.com/loft-sh/devpod/cmd/agent"
 	"github.com/loft-sh/devpod/cmd/flags"
 	"github.com/loft-sh/devpod/cmd/provider"
-	"os"
-
+	log2 "github.com/loft-sh/devpod/pkg/log"
+	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 )
+
+var globalFlags *flags.GlobalFlags
 
 // NewRootCmd returns a new root command
 func NewRootCmd() *cobra.Command {
@@ -17,6 +18,15 @@ func NewRootCmd() *cobra.Command {
 		Short:         "DevPod",
 		SilenceUsage:  true,
 		SilenceErrors: true,
+		PersistentPreRunE: func(cobraCmd *cobra.Command, args []string) error {
+			if globalFlags.Silent {
+				log2.Default.SetLevel(logrus.FatalLevel)
+			} else if globalFlags.Debug {
+				log2.Default.SetLevel(logrus.DebugLevel)
+			}
+
+			return nil
+		},
 	}
 }
 
@@ -29,8 +39,11 @@ func Execute() {
 	// execute command
 	err := rootCmd.Execute()
 	if err != nil {
-		_, _ = fmt.Fprintf(os.Stderr, "%v", err)
-		os.Exit(1)
+		if globalFlags.Debug {
+			log2.Default.Fatalf("%+v", err)
+		} else {
+			log2.Default.Fatal(err)
+		}
 	}
 }
 
@@ -38,7 +51,7 @@ func Execute() {
 func BuildRoot() *cobra.Command {
 	rootCmd := NewRootCmd()
 	persistentFlags := rootCmd.PersistentFlags()
-	globalFlags := flags.SetGlobalFlags(persistentFlags)
+	globalFlags = flags.SetGlobalFlags(persistentFlags)
 
 	rootCmd.AddCommand(agent.NewAgentCmd(globalFlags))
 	rootCmd.AddCommand(provider.NewProviderCmd(globalFlags))

@@ -14,10 +14,11 @@ import (
 	"strings"
 )
 
-func NewRunner(agentDownloadURL, workspaceFolder, id string, log log.Logger) *Runner {
+func NewRunner(agentPath, agentDownloadURL, workspaceFolder, id string, log log.Logger) *Runner {
 	return &Runner{
 		Docker: &docker.DockerHelper{DockerCommand: "docker"},
 
+		AgentPath:            agentPath,
 		AgentDownloadURL:     agentDownloadURL,
 		LocalWorkspaceFolder: workspaceFolder,
 		ID:                   id,
@@ -28,6 +29,7 @@ func NewRunner(agentDownloadURL, workspaceFolder, id string, log log.Logger) *Ru
 type Runner struct {
 	Docker *docker.DockerHelper
 
+	AgentPath        string
 	AgentDownloadURL string
 
 	LocalWorkspaceFolder string

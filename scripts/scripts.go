@@ -2,9 +2,6 @@ package scripts
 
 import _ "embed"
 
-//go:embed install_devcontainer.sh
-var InstallDevContainer string
-
 //go:embed install_docker.sh
 var InstallDocker string
 

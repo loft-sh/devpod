@@ -2,10 +2,13 @@ package agent
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"github.com/loft-sh/devpod/pkg/extract"
+	provider2 "github.com/loft-sh/devpod/pkg/provider"
 	"github.com/loft-sh/devpod/pkg/scanner"
 	"github.com/loft-sh/devpod/pkg/survey"
+	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 	"google.golang.org/grpc/credentials/insecure"
 	"io"
@@ -35,7 +38,7 @@ func NewTunnelClient(reader io.Reader, writer io.WriteCloser, exitOnClose bool) 
 	return tunnel.NewTunnelClient(conn), nil
 }
 
-func StartTunnelServer(reader io.Reader, writer io.WriteCloser, exitOnClose bool, workspaceContent string, log log.Logger) error {
+func StartTunnelServer(reader io.Reader, writer io.WriteCloser, exitOnClose bool, workspace *provider2.Workspace, log log.Logger) error {
 	pipe := stdio.NewStdioStream(reader, writer, exitOnClose)
 	lis := stdio.NewStdioListener()
 	done := make(chan error)
@@ -43,7 +46,7 @@ func StartTunnelServer(reader io.Reader, writer io.WriteCloser, exitOnClose bool
 	go func() {
 		s := grpc.NewServer()
 		tunnelServ := &tunnelServer{
-			workspace: workspaceContent,
+			workspace: workspace,
 			log:       log,
 		}
 		tunnel.RegisterTunnelServer(s, tunnelServ)
@@ -58,8 +61,17 @@ func StartTunnelServer(reader io.Reader, writer io.WriteCloser, exitOnClose bool
 type tunnelServer struct {
 	tunnel.UnimplementedTunnelServer
 
-	workspace string
+	workspace *provider2.Workspace
 	log       log.Logger
+}
+
+func (t *tunnelServer) Workspace(context.Context, *tunnel.Empty) (*tunnel.WorkspaceInfo, error) {
+	out, err := json.Marshal(t.workspace)
+	if err != nil {
+		return nil, errors.Wrap(err, "marshal workspace")
+	}
+
+	return &tunnel.WorkspaceInfo{Workspace: string(out)}, nil
 }
 
 func (t *tunnelServer) Ping(context.Context, *tunnel.Empty) (*tunnel.Empty, error) {
@@ -83,7 +95,7 @@ func (t *tunnelServer) Log(ctx context.Context, message *tunnel.LogMessage) (*tu
 }
 
 func (t *tunnelServer) ReadWorkspace(response *tunnel.Empty, stream tunnel.Tunnel_ReadWorkspaceServer) error {
-	return extract.WriteTar(NewStreamWriter(stream), t.workspace)
+	return extract.WriteTar(NewStreamWriter(stream), t.workspace.Source.LocalFolder)
 }
 
 func NewStreamReader(stream tunnel.Tunnel_ReadWorkspaceClient) io.Reader {

@@ -29,10 +29,7 @@ if [ "$user" != 'root' ]; then
   fi
 fi
 
-if [ -z "${DEVPOD_PATH}" ]; then
-  DEVPOD_PATH=/tmp/devpod
-fi
-
+DEVPOD_PATH={{ .AgentPath }}
 if [ ! -f "$DEVPOD_PATH" ]; then
   DOWNLOAD_URL={{ .BaseUrl }}/devpod-linux-amd64
   if is_arm; then
