@@ -8,12 +8,7 @@ package tunnel;
 service Tunnel {
   rpc Ping(Empty) returns (Empty) {}
   rpc Log(LogMessage) returns (Empty) {}
-  rpc Workspace(Empty) returns (WorkspaceInfo) {}
   rpc ReadWorkspace(Empty) returns (stream Chunk) {}
-}
-
-message WorkspaceInfo {
-  string Workspace = 1;
 }
 
 message Chunk {

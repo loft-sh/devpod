@@ -1,6 +1,7 @@
 package config
 
 import (
+	"github.com/loft-sh/devpod/pkg/provider"
 	"github.com/pkg/errors"
 	"gopkg.in/yaml.v2"
 	"os"
@@ -25,7 +26,7 @@ type ConfigContext struct {
 
 type ConfigProvider struct {
 	// Options are the configured provider options
-	Options map[string]string `json:"options,omitempty"`
+	Options map[string]provider.OptionValue `json:"options,omitempty"`
 }
 
 var ConfigFile = "config.yaml"

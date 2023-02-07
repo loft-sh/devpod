@@ -2,13 +2,11 @@ package agent
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"github.com/loft-sh/devpod/pkg/extract"
 	provider2 "github.com/loft-sh/devpod/pkg/provider"
 	"github.com/loft-sh/devpod/pkg/scanner"
 	"github.com/loft-sh/devpod/pkg/survey"
-	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 	"google.golang.org/grpc/credentials/insecure"
 	"io"
@@ -63,15 +61,6 @@ type tunnelServer struct {
 
 	workspace *provider2.Workspace
 	log       log.Logger
-}
-
-func (t *tunnelServer) Workspace(context.Context, *tunnel.Empty) (*tunnel.WorkspaceInfo, error) {
-	out, err := json.Marshal(t.workspace)
-	if err != nil {
-		return nil, errors.Wrap(err, "marshal workspace")
-	}
-
-	return &tunnel.WorkspaceInfo{Workspace: string(out)}, nil
 }
 
 func (t *tunnelServer) Ping(context.Context, *tunnel.Empty) (*tunnel.Empty, error) {

@@ -24,7 +24,6 @@ const _ = grpc.SupportPackageIsVersion7
 type TunnelClient interface {
 	Ping(ctx context.Context, in *Empty, opts ...grpc.CallOption) (*Empty, error)
 	Log(ctx context.Context, in *LogMessage, opts ...grpc.CallOption) (*Empty, error)
-	Workspace(ctx context.Context, in *Empty, opts ...grpc.CallOption) (*WorkspaceInfo, error)
 	ReadWorkspace(ctx context.Context, in *Empty, opts ...grpc.CallOption) (Tunnel_ReadWorkspaceClient, error)
 }
 
@@ -48,15 +47,6 @@ func (c *tunnelClient) Ping(ctx context.Context, in *Empty, opts ...grpc.CallOpt
 func (c *tunnelClient) Log(ctx context.Context, in *LogMessage, opts ...grpc.CallOption) (*Empty, error) {
 	out := new(Empty)
 	err := c.cc.Invoke(ctx, "/tunnel.Tunnel/Log", in, out, opts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
-func (c *tunnelClient) Workspace(ctx context.Context, in *Empty, opts ...grpc.CallOption) (*WorkspaceInfo, error) {
-	out := new(WorkspaceInfo)
-	err := c.cc.Invoke(ctx, "/tunnel.Tunnel/Workspace", in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -101,7 +91,6 @@ func (x *tunnelReadWorkspaceClient) Recv() (*Chunk, error) {
 type TunnelServer interface {
 	Ping(context.Context, *Empty) (*Empty, error)
 	Log(context.Context, *LogMessage) (*Empty, error)
-	Workspace(context.Context, *Empty) (*WorkspaceInfo, error)
 	ReadWorkspace(*Empty, Tunnel_ReadWorkspaceServer) error
 	mustEmbedUnimplementedTunnelServer()
 }
@@ -115,9 +104,6 @@ func (UnimplementedTunnelServer) Ping(context.Context, *Empty) (*Empty, error) {
 }
 func (UnimplementedTunnelServer) Log(context.Context, *LogMessage) (*Empty, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method Log not implemented")
-}
-func (UnimplementedTunnelServer) Workspace(context.Context, *Empty) (*WorkspaceInfo, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method Workspace not implemented")
 }
 func (UnimplementedTunnelServer) ReadWorkspace(*Empty, Tunnel_ReadWorkspaceServer) error {
 	return status.Errorf(codes.Unimplemented, "method ReadWorkspace not implemented")
@@ -171,24 +157,6 @@ func _Tunnel_Log_Handler(srv interface{}, ctx context.Context, dec func(interfac
 	return interceptor(ctx, in, info, handler)
 }
 
-func _Tunnel_Workspace_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(Empty)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(TunnelServer).Workspace(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: "/tunnel.Tunnel/Workspace",
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(TunnelServer).Workspace(ctx, req.(*Empty))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
 func _Tunnel_ReadWorkspace_Handler(srv interface{}, stream grpc.ServerStream) error {
 	m := new(Empty)
 	if err := stream.RecvMsg(m); err != nil {
@@ -224,10 +192,6 @@ var Tunnel_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "Log",
 			Handler:    _Tunnel_Log_Handler,
-		},
-		{
-			MethodName: "Workspace",
-			Handler:    _Tunnel_Workspace_Handler,
 		},
 	},
 	Streams: []grpc.StreamDesc{

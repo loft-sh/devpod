@@ -1,6 +1,8 @@
 package provider
 
-import "github.com/loft-sh/devpod/pkg/json"
+import (
+	"github.com/loft-sh/devpod/pkg/types"
+)
 
 type Workspace struct {
 	// ID is the workspace id to use
@@ -16,10 +18,10 @@ type Workspace struct {
 	Source WorkspaceSource `json:"source,omitempty"`
 
 	// CreationTimestamp is the timestamp when this workspace was created
-	CreationTimestamp json.Time `json:"creationTimestamp,omitempty"`
+	CreationTimestamp types.Time `json:"creationTimestamp,omitempty"`
 
 	// Context is the context where this config file was loaded from
-	Context string `json:"-"`
+	Context string `json:"context,omitempty"`
 
 	// Origin is the place where this config file was loaded from
 	Origin string `json:"-"`
@@ -30,7 +32,18 @@ type WorkspaceProviderConfig struct {
 	Name string `json:"name,omitempty"`
 
 	// Options are the provider options used to create the workspace
-	Options map[string]string `json:"options,omitempty"`
+	Options map[string]OptionValue `json:"options,omitempty"`
+
+	// AgentOptions holds the agent options
+	AgentOptions map[string]OptionValue `json:"agentOptions,omitempty"`
+}
+
+type OptionValue struct {
+	// Value is the value of the option
+	Value string `json:"value,omitempty"`
+
+	// Retrieved is the time when this value was retrieved
+	Retrieved types.Time `json:"retrieved,omitempty"`
 }
 
 type WorkspaceSource struct {

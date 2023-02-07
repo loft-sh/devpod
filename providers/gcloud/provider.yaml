@@ -8,9 +8,12 @@ options:
     default: gcloud
   PROJECT:
     description: The project to use. If unspecified, will try to retrieve it from the gcloud cli.
+    defaultCommand: |-
+      gcloud ...
   ZONE:
     description: The google cloud zone to create the VM in.
-    default: europe-west1-b
+    defaultCommand: |-
+      gcloud ...
   DISK_SIZE:
     description: The disk size to use.
     default: "30"
@@ -20,10 +23,34 @@ options:
   MACHINE_TYPE:
     description: The machine type to use.
     default: e2-standard-2
+  CREATE_ARGS:
+    description: Extra arguments to add during creation
+  ENABLE_SLEEPMODE:
+    description: If inactivity timeout should be enabled.
+    default: "true"
+    enum: ["true", "false"]
+  DELETE_ON_TIMEOUT:
+    description: If the instance should be deleted on inactivity.
+    default: "false"
+    enum: ["true", "false"]
+  GCLOUD_TOKEN:
+    dependsOn: ["ENABLE_SLEEPMODE"]
+    hidden: true
+    cache: 4h
+    command: |-
+      if [ "${ENABLE_SLEEPMODE}" -eq "true" ]; then
+        gcloud auth application-default print-access-token --quiet
+      fi
 agent:
   path: /run/agent
+  inject: |-
+    ...
+  inactivity:
+    shutdown: |-
+      curl ... ${GCLOUD_TOKEN}
 exec:
   init: ["devpod", "provider", "call", "gcloud", "init"]
+  validate: ...
   command: ["devpod", "provider", "call", "gcloud", "command"]
   create: ["devpod", "provider", "call", "gcloud", "create"]
   delete: ["devpod", "provider", "call", "gcloud", "delete"]

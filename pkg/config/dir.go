@@ -1,17 +1,17 @@
 package config
 
 import (
+	"encoding/json"
 	"fmt"
 	"github.com/loft-sh/devpod/pkg/provider"
 	homedir "github.com/mitchellh/go-homedir"
-	"gopkg.in/yaml.v2"
 	"os"
 	"path/filepath"
 )
 
 const ProviderConfigFile = "provider.yaml"
 
-const WorkspaceConfigFile = "workspace.yaml"
+const WorkspaceConfigFile = "workspace.json"
 
 func GetConfigDir() (string, error) {
 	homeDir, err := homedir.Dir()
@@ -79,7 +79,7 @@ func SaveWorkspaceConfig(workspace *provider.Workspace) error {
 		return err
 	}
 
-	workspaceConfigBytes, err := yaml.Marshal(workspace)
+	workspaceConfigBytes, err := json.Marshal(workspace)
 	if err != nil {
 		return err
 	}
@@ -106,7 +106,7 @@ func LoadWorkspaceConfig(context, workspaceID string) (*provider.Workspace, erro
 	}
 
 	workspaceConfig := &provider.Workspace{}
-	err = yaml.Unmarshal(workspaceConfigBytes, workspaceConfig)
+	err = json.Unmarshal(workspaceConfigBytes, workspaceConfig)
 	if err != nil {
 		return nil, err
 	}

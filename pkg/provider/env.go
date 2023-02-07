@@ -70,7 +70,7 @@ func ToEnvironment(workspace *Workspace) []string {
 		retVars = append(retVars, WORKSPACE_PROVIDER+"="+workspace.Provider.Name)
 	}
 	for optionName, optionValue := range workspace.Provider.Options {
-		retVars = append(retVars, strings.ToUpper(optionName)+"="+optionValue)
+		retVars = append(retVars, strings.ToUpper(optionName)+"="+optionValue.Value)
 	}
 
 	return retVars
