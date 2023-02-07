@@ -79,7 +79,7 @@ func (cmd *UseCmd) Run(ctx context.Context, providerName string) error {
 	return nil
 }
 
-func parseOptions(provider provider2.Provider, options []string) (map[string]string, error) {
+func parseOptions(provider provider2.Provider, options []string) (map[string]provider2.OptionValue, error) {
 	providerOptions := provider.Options()
 	if providerOptions == nil {
 		providerOptions = map[string]*provider2.ProviderOption{}
@@ -90,7 +90,7 @@ func parseOptions(provider provider2.Provider, options []string) (map[string]str
 		allowedOptions = append(allowedOptions, optionName)
 	}
 
-	retMap := map[string]string{}
+	retMap := map[string]provider2.OptionValue{}
 	for _, option := range options {
 		splitted := strings.Split(option, "=")
 		if len(splitted) == 1 {
@@ -131,15 +131,9 @@ func parseOptions(provider provider2.Provider, options []string) (map[string]str
 				return nil, fmt.Errorf("invalid value '%s' for option '%s', has to match one of the following values: %v", value, key, providerOption.Enum)
 			}
 		}
-	}
 
-	// add default options
-	for optionName, providerOption := range providerOptions {
-		_, ok := retMap[optionName]
-		if !ok {
-			if providerOption.Default != "" {
-				retMap[optionName] = providerOption.Default
-			}
+		retMap[key] = provider2.OptionValue{
+			Value: value,
 		}
 	}
 

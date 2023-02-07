@@ -5,7 +5,6 @@ import (
 	"context"
 	"fmt"
 	config "github.com/loft-sh/devpod/pkg/config"
-	"github.com/loft-sh/devpod/pkg/json"
 	"github.com/loft-sh/devpod/pkg/log"
 	"github.com/loft-sh/devpod/pkg/provider"
 	"github.com/loft-sh/devpod/pkg/shell"
@@ -233,7 +232,7 @@ func runProviderCommand(ctx context.Context, command types.StrArray, workspace *
 
 func createWorkspaceFolder(workspace *provider.Workspace, provider string) error {
 	// save config
-	workspace.CreationTimestamp = json.Now()
+	workspace.CreationTimestamp = types.Now()
 	workspace.Provider.Name = provider
 	err := config.SaveWorkspaceConfig(workspace)
 	if err != nil {

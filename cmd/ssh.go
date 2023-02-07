@@ -29,8 +29,6 @@ type SSHCmd struct {
 
 	Configure bool
 	ID        string
-
-	ShowAgentCommand bool
 }
 
 // NewSSHCmd creates a new ssh command
@@ -60,16 +58,12 @@ func NewSSHCmd(flags *flags.GlobalFlags) *cobra.Command {
 	sshCmd.Flags().StringVar(&cmd.ID, "id", "", "The id of the workspace to use")
 	sshCmd.Flags().BoolVar(&cmd.Configure, "configure", false, "If true will configure ssh for the given workspace")
 	sshCmd.Flags().BoolVar(&cmd.Stdio, "stdio", false, "If true will tunnel connection through stdout and stdin")
-	sshCmd.Flags().BoolVar(&cmd.ShowAgentCommand, "show-agent-command", false, "If true will show with which flags the agent needs to be executed remotely")
 	_ = sshCmd.MarkFlagRequired("id")
 	return sshCmd
 }
 
 // Run runs the command logic
 func (cmd *SSHCmd) Run(ctx context.Context, workspace *provider2.Workspace, provider provider2.Provider) error {
-	if cmd.ShowAgentCommand {
-		return cmd.showAgentCommand(workspace.Context, cmd.ID)
-	}
 	if cmd.Configure {
 		return configureSSH(workspace.Context, cmd.ID, "root")
 	}
@@ -249,9 +243,15 @@ func jumpContainerServer(ctx context.Context, provider provider2.ServerProvider,
 		return err
 	}
 
+	// compress info
+	workspaceInfo, err := agent.NewAgentWorkspaceInfo(workspace, provider)
+	if err != nil {
+		return err
+	}
+
 	// tunnel to container
 	err = provider.Command(ctx, workspace, provider2.CommandOptions{
-		Command: fmt.Sprintf("sudo %s agent container-tunnel --id %s --token %s", agentConfig.Path, workspace.ID, tok),
+		Command: fmt.Sprintf("sudo %s agent container-tunnel --token '%s' --workspace-info '%s'", agentConfig.Path, tok, workspaceInfo),
 		Stdin:   os.Stdin,
 		Stdout:  os.Stdout,
 		Stderr:  os.Stderr,
@@ -260,12 +260,6 @@ func jumpContainerServer(ctx context.Context, provider provider2.ServerProvider,
 		return errors.Wrap(err, "start tunnel")
 	}
 
-	return nil
-}
-
-func (cmd *SSHCmd) showAgentCommand(context, workspaceID string) error {
-	t, _ := token.GenerateWorkspaceToken(context, workspaceID)
-	fmt.Println(fmt.Sprintf("devpod agent ssh-server --token %s", t))
 	return nil
 }
 

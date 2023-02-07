@@ -40,6 +40,23 @@ type ProviderAgentConfig struct {
 
 	// DownloadURL is the base url where to download the agent from
 	DownloadURL string `json:"downloadURL,omitempty"`
+
+	// Options are extra options that should be available for the agent
+	Options map[string]*ProviderOption `json:"options,omitempty"`
+
+	// Inactivity specifies what should happen if the server is inactive for
+	// a while.
+	Inactivity *ProviderAgentInactivityConfig `json:"inactivity,omitempty"`
+}
+
+type ProviderAgentInactivityConfig struct {
+	// Timeout is the timeout in minutes to wait until the agent tries
+	// to turn of the server. Defaults to 1 hour.
+	Timeout string `json:"inactivityTimeout,omitempty"`
+
+	// Shutdown is the remote command to run when the remote machine
+	// should shutdown.
+	Shutdown types.StrArray `json:"shutdown,omitempty"`
 }
 
 type ProviderType string
@@ -86,6 +103,14 @@ type ProviderCommands struct {
 	Status types.StrArray `json:"status,omitempty"`
 }
 
+type ProviderAgentOption struct {
+	// Cache is the duration to cache the value before rerunning the command
+	Cache string `json:"cache,omitempty"`
+
+	// Command is the command to run to specify
+	Command types.StrArray `json:"command,omitempty"`
+}
+
 type ProviderOption struct {
 	// Default value if the user omits this option from their configuration.
 	Default string `json:"default,omitempty"`
@@ -104,6 +129,12 @@ type ProviderOption struct {
 
 	// Hidden specifies if the option should be hidden
 	Hidden bool `json:"hidden,omitempty"`
+
+	// Local will never send the option to the server
+	Local bool `json:"local,omitempty"`
+
+	// Cache is the duration to cache the value before rerunning the command
+	Cache string `json:"cache,omitempty"`
 
 	// Command is the command to run to specify
 	Command types.StrArray `json:"command,omitempty"`

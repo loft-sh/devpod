@@ -7,6 +7,7 @@ import (
 	"github.com/loft-sh/devpod/pkg/config"
 	"github.com/loft-sh/devpod/pkg/log"
 	"github.com/loft-sh/devpod/pkg/log/table"
+	provider2 "github.com/loft-sh/devpod/pkg/provider"
 	"github.com/loft-sh/devpod/pkg/workspace"
 	"github.com/spf13/cobra"
 )
@@ -56,14 +57,14 @@ func (cmd *OptionsCmd) Run(ctx context.Context, providerName string) error {
 
 		entryOptions := provider.Options
 		if entryOptions == nil {
-			entryOptions = map[string]string{}
+			entryOptions = map[string]provider2.OptionValue{}
 		}
 
 		tableEntries = append(tableEntries, []string{
 			optionName,
 			entry.Description,
 			entry.Default,
-			entryOptions[optionName],
+			entryOptions[optionName].Value,
 		})
 	}
 

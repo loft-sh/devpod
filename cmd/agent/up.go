@@ -8,12 +8,12 @@ import (
 	"github.com/loft-sh/devpod/pkg/agent"
 	"github.com/loft-sh/devpod/pkg/agent/tunnel"
 	"github.com/loft-sh/devpod/pkg/command"
+	"github.com/loft-sh/devpod/pkg/compress"
+	"github.com/loft-sh/devpod/pkg/config"
 	"github.com/loft-sh/devpod/pkg/devcontainer"
 	"github.com/loft-sh/devpod/pkg/extract"
 	"github.com/loft-sh/devpod/pkg/log"
-	provider2 "github.com/loft-sh/devpod/pkg/provider"
 	"github.com/loft-sh/devpod/scripts"
-	"github.com/mitchellh/go-homedir"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
@@ -25,6 +25,8 @@ import (
 // UpCmd holds the up cmd flags
 type UpCmd struct {
 	flags.GlobalFlags
+
+	WorkspaceInfo string
 }
 
 // NewUpCmd creates a new ssh command
@@ -40,6 +42,8 @@ func NewUpCmd(flags *flags.GlobalFlags) *cobra.Command {
 			return cmd.Run(context.Background())
 		},
 	}
+	upCmd.Flags().StringVar(&cmd.WorkspaceInfo, "workspace-info", "", "The workspace info")
+	_ = upCmd.MarkFlagRequired("workspace-info")
 	return upCmd
 }
 
@@ -55,25 +59,31 @@ func (cmd *UpCmd) Run(ctx context.Context) error {
 	logger := agent.NewTunnelLogger(ctx, tunnelClient, cmd.Debug)
 
 	// get workspace
-	workspace, err := getWorkspace(ctx, tunnelClient)
+	workspaceInfo, err := getWorkspaceInfo(cmd.WorkspaceInfo)
 	if err != nil {
 		return err
 	}
 
-	// install dependencies
-	err = InstallDependencies(logger)
+	// install docker in background
+	errChan := make(chan error)
+	go func() {
+		errChan <- InstallDocker(logger)
+	}()
+
+	// prepare workspace
+	err = cmd.prepareWorkspace(ctx, workspaceInfo, tunnelClient, logger)
 	if err != nil {
 		return err
 	}
 
-	// git clone repository
-	workspaceDir, err := cmd.prepareWorkspace(ctx, workspace, tunnelClient, logger)
+	// wait until docker is installed
+	err = <-errChan
 	if err != nil {
-		return err
+		return errors.Wrap(err, "install docker")
 	}
 
 	// create devcontainer
-	err = DevContainerUp(workspace.ID, workspaceDir, logger)
+	err = DevContainerUp(workspaceInfo.Workspace.ID, workspaceInfo.Folder, logger)
 	if err != nil {
 		return err
 	}
@@ -81,64 +91,72 @@ func (cmd *UpCmd) Run(ctx context.Context) error {
 	return nil
 }
 
-func (cmd *UpCmd) prepareWorkspace(ctx context.Context, workspace *provider2.Workspace, client tunnel.TunnelClient, log log.Logger) (string, error) {
-	workspaceDir, err := createWorkspaceDir(workspace.ID)
-	if err != nil {
-		return "", err
-	}
-
+func (cmd *UpCmd) prepareWorkspace(ctx context.Context, workspaceInfo *agent.AgentWorkspaceInfo, client tunnel.TunnelClient, log log.Logger) error {
 	// check what type of workspace this is
-	if workspace.Source.GitRepository != "" {
-		return CloneRepository(workspaceDir, workspace.Source.GitRepository, log)
-	} else if workspace.Source.LocalFolder != "" {
-		return DownloadLocalFolder(ctx, workspaceDir, client, log)
-	} else if workspace.Source.Image != "" {
-		return PrepareImage(workspaceDir, workspace.Source.Image)
+	if workspaceInfo.Workspace.Source.GitRepository != "" {
+		return CloneRepository(workspaceInfo.Folder, workspaceInfo.Workspace.Source.GitRepository, log)
+	} else if workspaceInfo.Workspace.Source.LocalFolder != "" {
+		return DownloadLocalFolder(ctx, workspaceInfo.Folder, client, log)
+	} else if workspaceInfo.Workspace.Source.Image != "" {
+		return PrepareImage(workspaceInfo.Folder, workspaceInfo.Workspace.Source.Image)
 	}
 
-	return "", fmt.Errorf("either workspace repository, image or local-folder is required")
+	return fmt.Errorf("either workspace repository, image or local-folder is required")
 }
 
-func getWorkspace(ctx context.Context, client tunnel.TunnelClient) (*provider2.Workspace, error) {
-	workspaceResult, err := client.Workspace(ctx, &tunnel.Empty{})
+func getWorkspaceInfo(workspaceInfoRaw string) (*agent.AgentWorkspaceInfo, error) {
+	decoded, err := compress.Decompress(workspaceInfoRaw)
+	if err != nil {
+		return nil, errors.Wrap(err, "decode workspace info")
+	}
+
+	workspaceInfo := &agent.AgentWorkspaceInfo{}
+	err = json.Unmarshal([]byte(decoded), workspaceInfo)
+	if err != nil {
+		return nil, errors.Wrap(err, "parse workspace info")
+	}
+
+	// write to workspace folder
+	workspaceDir, err := agent.GetAgentWorkspaceDir(workspaceInfo.Workspace.Context, workspaceInfo.Workspace.ID)
 	if err != nil {
 		return nil, err
 	}
 
-	workspace := &provider2.Workspace{}
-	err = json.Unmarshal([]byte(workspaceResult.Workspace), workspace)
+	// write workspace config
+	err = os.WriteFile(filepath.Join(workspaceDir, config.WorkspaceConfigFile), []byte(decoded), 0666)
 	if err != nil {
-		return nil, errors.Wrap(err, "parse workspace")
+		return nil, fmt.Errorf("write workspace config file")
 	}
 
-	return workspace, nil
+	workspaceInfo.Folder = workspaceDir
+	return workspaceInfo, nil
 }
 
-func DownloadLocalFolder(ctx context.Context, workspaceDir string, client tunnel.TunnelClient, log log.Logger) (string, error) {
+func DownloadLocalFolder(ctx context.Context, workspaceDir string, client tunnel.TunnelClient, log log.Logger) error {
 	log.Infof("Upload folder to server")
 	stream, err := client.ReadWorkspace(ctx, &tunnel.Empty{})
 	if err != nil {
-		return "", errors.Wrap(err, "read workspace")
+		return errors.Wrap(err, "read workspace")
 	}
 
 	err = extract.Extract(agent.NewStreamReader(stream), workspaceDir)
 	if err != nil {
-		return "", errors.Wrap(err, "extract local folder")
+		return errors.Wrap(err, "extract local folder")
 	}
 
-	return workspaceDir, nil
+	return nil
 }
 
-func PrepareImage(workspaceDir, image string) (string, error) {
+func PrepareImage(workspaceDir, image string) error {
 	// create a .devcontainer.json with the image
 	err := os.WriteFile(filepath.Join(workspaceDir, ".devcontainer.json"), []byte(`{
   "image": "`+image+`"
 }`), 0666)
 	if err != nil {
-		return "", err
+		return err
 	}
 
-	return workspaceDir, nil
+	return nil
 }
 
 func DevContainerUp(id, workspaceFolder string, log log.Logger) error {
@@ -150,7 +168,7 @@ func DevContainerUp(id, workspaceFolder string, log log.Logger) error {
 	return nil
 }
 
-func CloneRepository(workspaceDir, repository string, log log.Logger) (string, error) {
+func CloneRepository(workspaceDir, repository string, log log.Logger) error {
 	// run git command
 	writer := log.Writer(logrus.InfoLevel, false)
 	defer writer.Close()
@@ -160,13 +178,13 @@ func CloneRepository(workspaceDir, repository string, log log.Logger) (string, e
 	gitCommand.Stderr = writer
 	err := gitCommand.Run()
 	if err != nil {
-		return "", errors.Wrap(err, "error cloning repository")
+		return errors.Wrap(err, "error cloning repository")
 	}
 
-	return workspaceDir, nil
+	return nil
 }
 
-func InstallDependencies(log log.Logger) error {
+func InstallDocker(log log.Logger) error {
 	if !command.Exists("docker") {
 		writer := log.Writer(logrus.InfoLevel, false)
 		defer writer.Close()
@@ -181,34 +199,4 @@ func InstallDependencies(log log.Logger) error {
 	}
 
 	return nil
-}
-
-func createWorkspaceDir(id string) (string, error) {
-	// workspace folder
-	homeDir, err := homedir.Dir()
-	if err != nil {
-		return "", err
-	}
-
-	baseFolders := []string{homeDir, "/home/devpod", "/var/lib/devpod"}
-	var lastErr error
-	for _, folder := range baseFolders {
-		workspaceDir := filepath.Join(folder, ".devpod", "workspace", id)
-
-		// check if it already exists
-		_, err = os.Stat(workspaceDir)
-		if err == nil {
-			return workspaceDir, nil
-		}
-
-		// create workspace folder
-		lastErr = os.MkdirAll(workspaceDir, 0755)
-		if lastErr != nil {
-			continue
-		}
-
-		return workspaceDir, nil
-	}
-
-	return "", lastErr
 }
