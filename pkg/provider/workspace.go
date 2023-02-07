@@ -6,6 +6,9 @@ type Workspace struct {
 	// ID is the workspace id to use
 	ID string `json:"id,omitempty"`
 
+	// Folder is the local folder where workspace related contents will be stored
+	Folder string `json:"folder,omitempty"`
+
 	// Provider is the provider used to create this workspace
 	Provider WorkspaceProviderConfig `json:"provider,omitempty"`
 

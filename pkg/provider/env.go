@@ -7,6 +7,7 @@ import (
 
 const (
 	WORKSPACE_ID             = "WORKSPACE_ID"
+	WORKSPACE_FOLDER         = "WORKSPACE_FOLDER"
 	WORKSPACE_CONTEXT        = "WORKSPACE_CONTEXT"
 	WORKSPACE_ORIGIN         = "WORKSPACE_ORIGIN"
 	WORKSPACE_GIT_REPOSITORY = "WORKSPACE_GIT_REPOSITORY"
@@ -19,7 +20,8 @@ const (
 
 func FromEnvironment() *Workspace {
 	return &Workspace{
-		ID: os.Getenv(WORKSPACE_ID),
+		ID:     os.Getenv(WORKSPACE_ID),
+		Folder: os.Getenv(WORKSPACE_FOLDER),
 		Source: WorkspaceSource{
 			GitRepository: os.Getenv(WORKSPACE_GIT_REPOSITORY),
 			GitBranch:     os.Getenv(WORKSPACE_GIT_BRANCH),
@@ -39,6 +41,9 @@ func ToEnvironment(workspace *Workspace) []string {
 	retVars := []string{}
 	if workspace.ID != "" {
 		retVars = append(retVars, WORKSPACE_ID+"="+workspace.ID)
+	}
+	if workspace.Folder != "" {
+		retVars = append(retVars, WORKSPACE_FOLDER+"="+workspace.Folder)
 	}
 	if workspace.Context != "" {
 		retVars = append(retVars, WORKSPACE_CONTEXT+"="+workspace.Context)

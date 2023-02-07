@@ -170,11 +170,21 @@ func ResolveWorkspace(devPodConfig *config.Config, args []string, log log.Logger
 
 	// get default provider
 	defaultProvider, _, err := LoadProviders(devPodConfig, log)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	// get workspace folder
+	workspaceFolder, err := config.GetWorkspaceDir(devPodConfig.DefaultContext, workspaceID)
+	if err != nil {
+		return nil, nil, err
+	}
 
 	// is local folder?
 	if isLocalPath {
 		return &provider2.Workspace{
 			ID:      workspaceID,
+			Folder:  workspaceFolder,
 			Context: devPodConfig.DefaultContext,
 			Provider: provider2.WorkspaceProviderConfig{
 				Name:    defaultProvider.Provider.Name(),
@@ -191,6 +201,7 @@ func ResolveWorkspace(devPodConfig *config.Config, args []string, log log.Logger
 	if strings.HasSuffix(name, ".git") || pingRepository(gitRepository) {
 		return &provider2.Workspace{
 			ID:      workspaceID,
+			Folder:  workspaceFolder,
 			Context: devPodConfig.DefaultContext,
 			Provider: provider2.WorkspaceProviderConfig{
 				Name:    defaultProvider.Provider.Name(),
@@ -207,6 +218,7 @@ func ResolveWorkspace(devPodConfig *config.Config, args []string, log log.Logger
 	if err == nil {
 		return &provider2.Workspace{
 			ID:      workspaceID,
+			Folder:  workspaceFolder,
 			Context: devPodConfig.DefaultContext,
 			Provider: provider2.WorkspaceProviderConfig{
 				Name:    defaultProvider.Provider.Name(),

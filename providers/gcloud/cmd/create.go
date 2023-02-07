@@ -52,9 +52,6 @@ func (cmd *CreateCmd) Run(ctx context.Context, provider *gcloudProvider, workspa
 	args = append(args, "--create-disk")
 	args = append(args, fmt.Sprintf("auto-delete=yes,boot=yes,device-name=%s,image=%s,mode=rw,size=%d,type=pd-ssd", name, provider.Config.DiskImage, provider.Config.DiskSizeGB))
 
-	// network
-	//args = append(args, "--network-interface=network-tier=PREMIUM,subnet=default")
-
 	log.Infof("Creating VM Instance %s...", name)
 	_, err := provider.output(ctx, args...)
 	if err != nil {
