@@ -59,7 +59,7 @@ func FindProvider(devPodConfig *config.Config, name string, log log.Logger) (*Pr
 }
 
 func LoadAllProviders(devPodConfig *config.Config, log log.Logger) (map[string]*ProviderWithOptions, error) {
-	builtInProviders, err := providers.GetBuiltInProviders()
+	builtInProviders, err := providers.GetBuiltInProviders(log)
 	if err != nil {
 		return nil, err
 	}
@@ -99,7 +99,7 @@ func LoadAllProviders(devPodConfig *config.Config, log log.Logger) (map[string]*
 		}
 
 		retProviders[providerName] = &ProviderWithOptions{
-			Provider: providerimplementation.NewProvider(providerConfig),
+			Provider: providerimplementation.NewProvider(providerConfig, log),
 			Options:  providerOptions.Options,
 		}
 	}
@@ -224,14 +224,14 @@ func ResolveWorkspace(devPodConfig *config.Config, args []string, log log.Logger
 func isLocalDir(name string, log log.Logger) (bool, string) {
 	_, err := os.Stat(name)
 	if err == nil {
+		absPath, _ := filepath.Abs(name)
 		gitRoot := findGitRoot(name)
-		if gitRoot != "" {
-			log.Infof("Found git root at %s, switching working directory", gitRoot)
+		if gitRoot != "" && gitRoot != absPath {
+			log.Infof("Found git root at %s", gitRoot)
 			return true, gitRoot
 		}
 
-		absPath, err := filepath.Abs(name)
-		if err == nil {
+		if absPath != "" {
 			return true, absPath
 		}
 	}
@@ -342,7 +342,7 @@ func findGitRoot(localFolder string) string {
 	}
 
 	if filepath.IsAbs(path) {
-		return path
+		return filepath.Dir(path)
 	}
 
 	absLocalFolder, err := filepath.Abs(localFolder)
@@ -350,5 +350,5 @@ func findGitRoot(localFolder string) string {
 		return ""
 	}
 
-	return filepath.Join(absLocalFolder, path)
+	return filepath.Dir(filepath.Join(absLocalFolder, path))
 }

@@ -23,5 +23,5 @@ type dockerProvider struct {
 }
 
 func (d *dockerProvider) newRunner(workspace *provider.Workspace, log log.Logger) *devcontainer.Runner {
-	return devcontainer.NewRunner(agent.DefaultAgentDownloadURL, workspace.Source.LocalFolder, workspace.ID, log)
+	return devcontainer.NewRunner(agent.RemoteDevPodHelperLocation, agent.DefaultAgentDownloadURL, workspace.Source.LocalFolder, workspace.ID, log)
 }

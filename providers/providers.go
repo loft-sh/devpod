@@ -2,6 +2,7 @@ package providers
 
 import (
 	_ "embed"
+	"github.com/loft-sh/devpod/pkg/log"
 	"github.com/loft-sh/devpod/pkg/provider"
 	"github.com/loft-sh/devpod/pkg/provider/providerimplementation"
 	"github.com/pkg/errors"
@@ -15,7 +16,7 @@ var DockerProvider string
 var GCloudProvider string
 
 // GetBuiltInProviders retrieves the built in providers
-func GetBuiltInProviders() (map[string]provider.Provider, error) {
+func GetBuiltInProviders(log log.Logger) (map[string]provider.Provider, error) {
 	providers := []string{DockerProvider, GCloudProvider}
 	retProviders := map[string]provider.Provider{}
 
@@ -26,7 +27,7 @@ func GetBuiltInProviders() (map[string]provider.Provider, error) {
 			return nil, errors.Wrap(err, "parse provider")
 		}
 
-		retProviders[parsedConfig.Name] = providerimplementation.NewProvider(parsedConfig)
+		retProviders[parsedConfig.Name] = providerimplementation.NewProvider(parsedConfig, log)
 	}
 
 	return retProviders, nil

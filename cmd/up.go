@@ -8,9 +8,8 @@ import (
 	"github.com/loft-sh/devpod/pkg/config"
 	"github.com/loft-sh/devpod/pkg/log"
 	provider2 "github.com/loft-sh/devpod/pkg/provider"
-	"github.com/loft-sh/devpod/pkg/template"
 	workspace2 "github.com/loft-sh/devpod/pkg/workspace"
-	"github.com/loft-sh/devpod/scripts"
+	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
 	"io"
 	"os"
@@ -53,14 +52,8 @@ func NewUpCmd(flags *flags.GlobalFlags) *cobra.Command {
 
 // Run runs the command logic
 func (cmd *UpCmd) Run(ctx context.Context, workspace *provider2.Workspace, provider provider2.Provider) error {
-	// make sure instance is running before we continue
-	err := startWait(ctx, provider, workspace, true, log.Default)
-	if err != nil {
-		return err
-	}
-
 	// run devpod agent up
-	err = devPodUp(ctx, provider, workspace, log.Default)
+	err := devPodUp(ctx, provider, workspace, log.Default)
 	if err != nil {
 		return err
 	}
@@ -88,48 +81,86 @@ func devPodUp(ctx context.Context, provider provider2.Provider, workspace *provi
 		return devPodUpServer(ctx, serverProvider, workspace, log)
 	}
 
+	workspaceProvider, ok := provider.(provider2.WorkspaceProvider)
+	if ok {
+		return startWaitWorkspace(ctx, workspaceProvider, workspace, true, log)
+	}
+
 	return nil
 }
 
 func devPodUpServer(ctx context.Context, provider provider2.ServerProvider, workspace *provider2.Workspace, log log.Logger) error {
-	log.Infof("Creating devcontainer...")
-	command := fmt.Sprintf("sudo %s agent up --id %s ", agent.RemoteDevPodHelperLocation, workspace.ID)
-	if workspace.Source.GitRepository != "" {
-		command += "--repository " + workspace.Source.GitRepository
-	} else if workspace.Source.Image != "" {
-		command += "--image " + workspace.Source.Image
-	} else if workspace.Source.LocalFolder != "" {
-		command += "--local-folder"
-	}
-
-	// install devpod into the ssh machine
-	t, err := template.FillTemplate(scripts.InstallDevPodTemplate, map[string]string{
-		"BaseUrl": agent.DefaultAgentDownloadURL,
-		"Command": command,
-	})
+	agentExists, err := startWaitServer(ctx, provider, workspace, true, log)
 	if err != nil {
 		return err
+	}
+
+	// get agent config
+	agentConfig, err := getAgentConfig(provider)
+	if err != nil {
+		return err
+	}
+
+	// inject agent
+	if !agentExists {
+		err = injectAgent(ctx, agentConfig.Path, agentConfig.DownloadURL, provider, workspace)
+		if err != nil {
+			return err
+		}
 	}
 
 	// create pipes
 	stdoutReader, stdoutWriter := io.Pipe()
 	stdinReader, stdinWriter := io.Pipe()
 
-	// create client
+	// start server on stdio
 	go func() {
-		err = agent.StartTunnelServer(stdoutReader, stdinWriter, false, workspace.Source.LocalFolder, log)
+		err := agent.StartTunnelServer(stdoutReader, stdinWriter, false, workspace, log)
 		if err != nil {
 			log.Errorf("Start tunnel server: %v", err)
 		}
 	}()
 
 	// create container etc.
+	log.Infof("Creating devcontainer...")
 	err = provider.Command(ctx, workspace, provider2.CommandOptions{
-		Command: t,
+		Command: fmt.Sprintf("sudo %s agent up", agentConfig.Path),
 		Stdin:   stdinReader,
 		Stdout:  stdoutWriter,
 		Stderr:  os.Stderr,
 	})
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func getAgentConfig(provider provider2.Provider) (*provider2.ProviderAgentConfig, error) {
+	agentConfig, err := provider.AgentConfig()
+	if err != nil {
+		return nil, errors.Wrap(err, "get agent config")
+	}
+	if agentConfig.Path == "" {
+		agentConfig.Path = agent.RemoteDevPodHelperLocation
+	}
+	if agentConfig.DownloadURL == "" {
+		agentConfig.DownloadURL = agent.DefaultAgentDownloadURL
+	}
+
+	return agentConfig, nil
+}
+
+func injectAgent(ctx context.Context, agentPath, agentURL string, provider provider2.ServerProvider, workspace *provider2.Workspace) error {
+	// install devpod into the target
+	err := agent.InjectAgent(func(command string, stdin io.Reader, stdout io.Writer, stderr io.Writer) error {
+		return provider.Command(ctx, workspace, provider2.CommandOptions{
+			Command: command,
+			Stdin:   stdin,
+			Stdout:  stdout,
+			Stderr:  stderr,
+		})
+	}, agentPath, agentURL, true)
 	if err != nil {
 		return err
 	}

@@ -24,11 +24,22 @@ type ProviderConfig struct {
 	// Options are the provider options
 	Options map[string]*ProviderOption `json:"options,omitempty"`
 
+	// Agent allows you to override agent configuration
+	Agent ProviderAgentConfig `json:"agent,omitempty"`
+
 	// Exec holds the provider commands
 	Exec ProviderCommands `json:"exec,omitempty"`
 
 	// Binaries is an optional field to specify a binary to execute the commands
 	Binaries []*ProviderBinary `json:"binaries,omitempty"`
+}
+
+type ProviderAgentConfig struct {
+	// Path is the path inside the server to use for the agent
+	Path string `json:"path,omitempty"`
+
+	// DownloadURL is the base url where to download the agent from
+	DownloadURL string `json:"downloadURL,omitempty"`
 }
 
 type ProviderType string
@@ -90,4 +101,10 @@ type ProviderOption struct {
 
 	// Allowed values for this option.
 	Enum []string `json:"enum,omitempty"`
+
+	// Hidden specifies if the option should be hidden
+	Hidden bool `json:"hidden,omitempty"`
+
+	// Command is the command to run to specify
+	Command types.StrArray `json:"command,omitempty"`
 }

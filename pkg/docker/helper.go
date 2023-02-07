@@ -201,13 +201,12 @@ func (r *DockerHelper) Inspect(ids []string, inspectType string, obj interface{}
 	return nil
 }
 
-func (r *DockerHelper) Tunnel(agentDownloadURL string, containerID string, token string, stdin io.Reader, stdout io.Writer, stderr io.Writer) error {
+func (r *DockerHelper) Tunnel(agentPath, agentDownloadURL string, containerID string, token string, stdin io.Reader, stdout io.Writer, stderr io.Writer) error {
 	// inject agent
-	err := agent.InjectAgent(agentDownloadURL, func(command []string, stdin io.Reader, stdout io.Writer, stderr io.Writer) error {
-		args := []string{"exec", "-i", "-u", "root", containerID}
-		args = append(args, command...)
+	err := agent.InjectAgent(func(command string, stdin io.Reader, stdout io.Writer, stderr io.Writer) error {
+		args := []string{"exec", "-i", "-u", "root", containerID, "sh", "-c", command}
 		return r.Run(args, stdin, stdout, stderr)
-	})
+	}, agentPath, agentDownloadURL, false)
 	if err != nil {
 		return err
 	}

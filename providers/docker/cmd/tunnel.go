@@ -42,7 +42,7 @@ func (cmd *TunnelCmd) Run(ctx context.Context, workspace *provider.Workspace) er
 		return errors.Wrap(err, "generate token")
 	}
 
-	err = runner.Docker.Tunnel(runner.AgentDownloadURL, containerDetails.Id, tok, os.Stdin, os.Stdout, os.Stderr)
+	err = runner.Docker.Tunnel(runner.AgentPath, runner.AgentDownloadURL, containerDetails.Id, tok, os.Stdin, os.Stdout, os.Stderr)
 	if err != nil {
 		return err
 	}
