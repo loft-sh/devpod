@@ -16,12 +16,12 @@ options:
     default: "30"
   DISK_IMAGE:
     description: The disk image to use.
-    default: projects/ubuntu-os-cloud/global/images/ubuntu-1804-bionic-v20230112
+    default: projects/cos-cloud/global/images/cos-101-17162-40-56
   MACHINE_TYPE:
     description: The machine type to use.
     default: e2-standard-2
 agent:
-  path: /tmp/agent123
+  path: /run/agent
 exec:
   init: ["devpod", "provider", "call", "gcloud", "init"]
   command: ["devpod", "provider", "call", "gcloud", "command"]

@@ -235,7 +235,11 @@ func (r *DockerHelper) FindContainer(labels []string) ([]string, error) {
 
 	out, err := r.buildCmd(args...).Output()
 	if err != nil {
-		return nil, err
+		if exitError, ok := err.(*exec.ExitError); ok {
+			return nil, errors.Wrapf(err, "find container: %s%s", string(exitError.Stderr), string(out))
+		}
+
+		return nil, errors.Wrapf(err, "find container: %s", string(out))
 	}
 
 	arr := []string{}

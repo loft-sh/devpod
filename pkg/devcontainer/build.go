@@ -1,7 +1,11 @@
 package devcontainer
 
 import (
+	"bytes"
+	"context"
 	"fmt"
+	"github.com/loft-sh/devpod/pkg/devcontainer/build"
+	"github.com/loft-sh/devpod/pkg/devcontainer/buildkit"
 	"github.com/loft-sh/devpod/pkg/devcontainer/config"
 	"github.com/loft-sh/devpod/pkg/devcontainer/feature"
 	"github.com/loft-sh/devpod/pkg/devcontainer/metadata"
@@ -11,6 +15,7 @@ import (
 	"github.com/loft-sh/devpod/pkg/id"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
+	"io"
 	"os"
 	"path"
 	"path/filepath"
@@ -110,7 +115,17 @@ func (r *Runner) buildImage(parsedConfig *config.SubstitutedConfig, extendedBuil
 	// extra args?
 	finalDockerfilePath := dockerfilePath
 	finalDockerfileContent := string(dockerfileContent)
-	extraArgs := []string{}
+	buildOptions := &build.BuildOptions{
+		BuildArgs: parsedConfig.Config.Build.Args,
+		Labels:    map[string]string{},
+		Contexts:  map[string]string{},
+		Load:      true,
+	}
+	if buildOptions.BuildArgs == nil {
+		buildOptions.BuildArgs = map[string]string{}
+	}
+
+	// get extended build info
 	if extendedBuildInfo != nil && extendedBuildInfo.FeaturesBuildInfo != nil {
 		featureBuildInfo := extendedBuildInfo.FeaturesBuildInfo
 
@@ -136,59 +151,49 @@ func (r *Runner) buildImage(parsedConfig *config.SubstitutedConfig, extendedBuil
 
 		// track additional build args to include below
 		for k, v := range featureBuildInfo.BuildKitContexts {
-			extraArgs = append(extraArgs, "--build-context", k+"="+v)
+			buildOptions.Contexts[k] = v
 		}
 		for k, v := range featureBuildInfo.BuildArgs {
-			extraArgs = append(extraArgs, "--build-arg", k+"="+v)
+			buildOptions.BuildArgs[k] = v
 		}
 	}
 
 	// add label
 	if extendedBuildInfo != nil && extendedBuildInfo.MetadataLabel != "" {
-		extraArgs = append(extraArgs, "--label", extendedBuildInfo.MetadataLabel)
+		buildOptions.Labels[metadata.ImageMetadataLabel] = extendedBuildInfo.MetadataLabel
 	}
 
-	// build args
-	args := []string{
-		"buildx",
-		"build",
-		//"--build-arg", "BUILDKIT_INLINE_CACHE=1",
-		"--load",
-		"-f", finalDockerfilePath,
-		"-t", imageName,
-	}
-
-	// extra args
-	args = append(args, extraArgs...)
-
-	// target stage
+	// target
 	if extendedBuildInfo != nil && extendedBuildInfo.FeaturesBuildInfo != nil && extendedBuildInfo.FeaturesBuildInfo.OverrideTarget != "" {
-		args = append(args, "--target", extendedBuildInfo.FeaturesBuildInfo.OverrideTarget)
+		buildOptions.Target = extendedBuildInfo.FeaturesBuildInfo.OverrideTarget
 	} else if parsedConfig.Config.Build.Target != "" {
-		args = append(args, "--target", parsedConfig.Config.Build.Target)
+		buildOptions.Target = parsedConfig.Config.Build.Target
 	}
 
-	// cache
-	for _, cacheFrom := range parsedConfig.Config.Build.CacheFrom {
-		args = append(args, "--cache-from", cacheFrom)
-	}
+	// other options
+	buildOptions.Dockerfile = finalDockerfilePath
+	buildOptions.Images = []string{imageName}
+	buildOptions.Context = getContextPath(parsedConfig.Config)
 
-	// build args
-	for k, v := range parsedConfig.Config.Build.Args {
-		args = append(args, "--build-arg", k+"="+v)
-	}
-
-	// context
-	args = append(args, getContextPath(parsedConfig.Config))
-	r.Log.Debugf("Running docker command: docker %s", strings.Join(args, " "))
+	// build image
 	writer := r.Log.Writer(logrus.InfoLevel, false)
 	defer writer.Close()
 
-	err := r.Docker.Run(args, nil, writer, writer)
-	if err != nil {
-		return nil, errors.Wrap(err, "build image")
+	// check if docker buildx exists
+	if r.buildxExists() {
+		err := r.buildxBuild(writer, buildOptions)
+		if err != nil {
+			return nil, errors.Wrap(err, "buildx build")
+		}
+	} else {
+		r.Log.Infof("Trying to build with internal buildkit")
+		err := r.internalBuild(context.Background(), writer, buildOptions)
+		if err != nil {
+			return nil, errors.Wrap(err, "internal build")
+		}
 	}
 
+	// inspect image
 	imageDetails, err := r.Docker.InspectImage(imageName, false)
 	if err != nil {
 		return nil, errors.Wrap(err, "get image details")
@@ -199,6 +204,88 @@ func (r *Runner) buildImage(parsedConfig *config.SubstitutedConfig, extendedBuil
 		ImageMetadata: extendedBuildInfo.MetadataConfig,
 		ImageName:     imageName,
 	}, nil
+}
+
+func (r *Runner) buildxExists() bool {
+	buf := &bytes.Buffer{}
+	err := r.Docker.Run([]string{"buildx", "version"}, nil, buf, buf)
+	if err != nil {
+		return false
+	}
+
+	return true
+}
+
+func (r *Runner) internalBuild(ctx context.Context, writer io.Writer, options *build.BuildOptions) error {
+	dockerClient, err := docker.NewClient(ctx, r.Log)
+	if err != nil {
+		return errors.Wrap(err, "create docker client")
+	}
+	defer dockerClient.Close()
+
+	buildKitClient, err := buildkit.NewDockerClient(ctx, dockerClient)
+	if err != nil {
+		return errors.Wrap(err, "create buildkit client")
+	}
+	defer buildKitClient.Close()
+
+	err = buildkit.Build(ctx, buildKitClient, writer, options)
+	if err != nil {
+		return errors.Wrap(err, "build")
+	}
+
+	return nil
+}
+
+func (r *Runner) buildxBuild(writer io.Writer, options *build.BuildOptions) error {
+	// build args
+	args := []string{
+		"buildx",
+		"build",
+		"-f", options.Dockerfile,
+	}
+
+	// add load
+	if options.Load {
+		args = append(args, "--load")
+	}
+
+	// docker images
+	for _, image := range options.Images {
+		args = append(args, "-t", image)
+	}
+
+	// build args
+	for k, v := range options.BuildArgs {
+		args = append(args, "--build-arg", k+"="+v)
+	}
+
+	// build contexts
+	for k, v := range options.Contexts {
+		args = append(args, "--build-context", k+"="+v)
+	}
+
+	// target stage
+	if options.Target != "" {
+		args = append(args, "--target", options.Target)
+	}
+
+	// cache
+	for _, cacheFrom := range options.CacheFrom {
+		args = append(args, "--cache-from", cacheFrom)
+	}
+
+	// context
+	args = append(args, options.Context)
+
+	// run command
+	r.Log.Debugf("Running docker command: docker %s", strings.Join(args, " "))
+	err := r.Docker.Run(args, nil, writer, writer)
+	if err != nil {
+		return errors.Wrap(err, "build image")
+	}
+
+	return nil
 }
 
 func getContextPath(parsedConfig *config.DevContainerConfig) string {

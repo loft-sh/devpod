@@ -82,19 +82,7 @@ func (cmd *UpCmd) Run(ctx context.Context) error {
 }
 
 func (cmd *UpCmd) prepareWorkspace(ctx context.Context, workspace *provider2.Workspace, client tunnel.TunnelClient, log log.Logger) (string, error) {
-	workspaceDir, err := getWorkspaceDir(workspace.ID)
-	if err != nil {
-		return "", err
-	}
-
-	// check if it already exists
-	_, err = os.Stat(workspaceDir)
-	if err == nil {
-		return workspaceDir, nil
-	}
-
-	// create workspace folder
-	err = os.MkdirAll(workspaceDir, 0755)
+	workspaceDir, err := createWorkspaceDir(workspace.ID)
 	if err != nil {
 		return "", err
 	}
@@ -195,13 +183,32 @@ func InstallDependencies(log log.Logger) error {
 	return nil
 }
 
-func getWorkspaceDir(id string) (string, error) {
+func createWorkspaceDir(id string) (string, error) {
 	// workspace folder
 	homeDir, err := homedir.Dir()
 	if err != nil {
 		return "", err
 	}
 
-	workspaceDir := filepath.Join(homeDir, ".devpod", "workspace", id)
-	return workspaceDir, nil
+	baseFolders := []string{homeDir, "/home/devpod", "/var/lib/devpod"}
+	var lastErr error
+	for _, folder := range baseFolders {
+		workspaceDir := filepath.Join(folder, ".devpod", "workspace", id)
+
+		// check if it already exists
+		_, err = os.Stat(workspaceDir)
+		if err == nil {
+			return workspaceDir, nil
+		}
+
+		// create workspace folder
+		lastErr = os.MkdirAll(workspaceDir, 0755)
+		if lastErr != nil {
+			continue
+		}
+
+		return workspaceDir, nil
+	}
+
+	return "", lastErr
 }
