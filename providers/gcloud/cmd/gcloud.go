@@ -3,7 +3,6 @@ package cmd
 import (
 	"bytes"
 	"context"
-	"fmt"
 	"github.com/loft-sh/devpod/pkg/log"
 	"github.com/pkg/errors"
 	"io"
@@ -60,20 +59,6 @@ func newProvider(log log.Logger) (*gcloudProvider, error) {
 		Config: config,
 		Log:    log,
 	}
-
-	// set defaults
-	if provider.Config.Project == "" {
-		defaultProject, err := provider.output(context.Background(), "config", "list", "--format", "value(core.project)")
-		if err != nil {
-			return nil, errors.Wrap(err, "find default project")
-		}
-
-		provider.Config.Project = strings.TrimSpace(string(defaultProject))
-		if provider.Config.Project == "" {
-			return nil, fmt.Errorf("please set a default project for the gcloud command")
-		}
-	}
-
 	return provider, nil
 }
 

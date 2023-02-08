@@ -8,22 +8,24 @@ import (
 	"github.com/loft-sh/devpod/pkg/image"
 	"github.com/loft-sh/devpod/pkg/log"
 	provider2 "github.com/loft-sh/devpod/pkg/provider"
+	options2 "github.com/loft-sh/devpod/pkg/provider/options"
 	"github.com/loft-sh/devpod/pkg/survey"
 	"github.com/loft-sh/devpod/pkg/terminal"
 	"github.com/pkg/errors"
 	"os"
 	"os/exec"
 	"path/filepath"
+	"reflect"
 	"regexp"
 	"strings"
 	"time"
 )
 
 // GetWorkspace tries to retrieve an already existing workspace
-func GetWorkspace(devPodConfig *config.Config, args []string, log log.Logger) (*provider2.Workspace, provider2.Provider, error) {
+func GetWorkspace(ctx context.Context, devPodConfig *config.Config, args []string, log log.Logger) (*provider2.Workspace, provider2.Provider, error) {
 	// check if we have no args
 	if len(args) == 0 {
-		return selectWorkspace(devPodConfig, log)
+		return selectWorkspace(ctx, devPodConfig, log)
 	}
 
 	// check if workspace already exists
@@ -38,25 +40,14 @@ func GetWorkspace(devPodConfig *config.Config, args []string, log log.Logger) (*
 	}
 
 	// load workspace config
-	workspaceConfig, err := config.LoadWorkspaceConfig(devPodConfig.DefaultContext, workspaceID)
-	if err != nil {
-		return nil, nil, errors.Wrap(err, "load workspace config")
-	}
-
-	// find the matching provider
-	providerWithOptions, err := FindProvider(devPodConfig, workspaceConfig.Provider.Name, log)
-	if err != nil {
-		return nil, nil, err
-	}
-
-	return workspaceConfig, providerWithOptions.Provider, nil
+	return loadExistingWorkspace(ctx, workspaceID, devPodConfig, log)
 }
 
 // ResolveWorkspace tries to retrieve an already existing workspace or creates a new one
-func ResolveWorkspace(devPodConfig *config.Config, args []string, log log.Logger) (*provider2.Workspace, provider2.Provider, error) {
+func ResolveWorkspace(ctx context.Context, devPodConfig *config.Config, args []string, log log.Logger) (*provider2.Workspace, provider2.Provider, error) {
 	// check if we have no args
 	if len(args) == 0 {
-		return selectWorkspace(devPodConfig, log)
+		return selectWorkspace(ctx, devPodConfig, log)
 	}
 
 	// check if workspace already exists
@@ -68,18 +59,7 @@ func ResolveWorkspace(devPodConfig *config.Config, args []string, log log.Logger
 	// already exists?
 	if config.WorkspaceExists(devPodConfig.DefaultContext, workspaceID) {
 		log.Infof("Workspace %s already exists", workspaceID)
-		workspaceConfig, err := config.LoadWorkspaceConfig(devPodConfig.DefaultContext, workspaceID)
-		if err != nil {
-			return nil, nil, errors.Wrap(err, "load workspace config")
-		}
-
-		// find the matching provider
-		providerWithOptions, err := FindProvider(devPodConfig, workspaceConfig.Provider.Name, log)
-		if err != nil {
-			return nil, nil, err
-		}
-
-		return workspaceConfig, providerWithOptions.Provider, nil
+		return loadExistingWorkspace(ctx, workspaceID, devPodConfig, log)
 	}
 
 	// get default provider
@@ -94,6 +74,16 @@ func ResolveWorkspace(devPodConfig *config.Config, args []string, log log.Logger
 		return nil, nil, err
 	}
 
+	// resolve options
+	options, err := options2.ResolveOptions(ctx, "", "", &provider2.Workspace{
+		Provider: provider2.WorkspaceProviderConfig{
+			Options: defaultProvider.Options,
+		},
+	}, defaultProvider.Provider.Options())
+	if err != nil {
+		return nil, nil, errors.Wrap(err, "resolve options")
+	}
+
 	// is local folder?
 	if isLocalPath {
 		return &provider2.Workspace{
@@ -102,7 +92,7 @@ func ResolveWorkspace(devPodConfig *config.Config, args []string, log log.Logger
 			Context: devPodConfig.DefaultContext,
 			Provider: provider2.WorkspaceProviderConfig{
 				Name:    defaultProvider.Provider.Name(),
-				Options: defaultProvider.Options,
+				Options: options,
 			},
 			Source: provider2.WorkspaceSource{
 				LocalFolder: name,
@@ -119,7 +109,7 @@ func ResolveWorkspace(devPodConfig *config.Config, args []string, log log.Logger
 			Context: devPodConfig.DefaultContext,
 			Provider: provider2.WorkspaceProviderConfig{
 				Name:    defaultProvider.Provider.Name(),
-				Options: defaultProvider.Options,
+				Options: options,
 			},
 			Source: provider2.WorkspaceSource{
 				GitRepository: gitRepository,
@@ -136,7 +126,7 @@ func ResolveWorkspace(devPodConfig *config.Config, args []string, log log.Logger
 			Context: devPodConfig.DefaultContext,
 			Provider: provider2.WorkspaceProviderConfig{
 				Name:    defaultProvider.Provider.Name(),
-				Options: defaultProvider.Options,
+				Options: options,
 			},
 			Source: provider2.WorkspaceSource{
 				Image: name,
@@ -208,7 +198,7 @@ func ToWorkspaceID(str string) string {
 	return workspaceIDRegEx2.ReplaceAllString(workspaceIDRegEx1.ReplaceAllString(str[index+1:], "-"), "")
 }
 
-func selectWorkspace(devPodConfig *config.Config, log log.Logger) (*provider2.Workspace, provider2.Provider, error) {
+func selectWorkspace(ctx context.Context, devPodConfig *config.Config, log log.Logger) (*provider2.Workspace, provider2.Provider, error) {
 	if !terminal.IsTerminalIn {
 		return nil, nil, provideWorkspaceArgErr
 	}
@@ -238,7 +228,12 @@ func selectWorkspace(devPodConfig *config.Config, log log.Logger) (*provider2.Wo
 		return nil, nil, err
 	}
 
-	workspaceConfig, err := config.LoadWorkspaceConfig(devPodConfig.DefaultContext, answer)
+	// load workspace
+	return loadExistingWorkspace(ctx, answer, devPodConfig, log)
+}
+
+func loadExistingWorkspace(ctx context.Context, workspaceID string, devPodConfig *config.Config, log log.Logger) (*provider2.Workspace, provider2.Provider, error) {
+	workspaceConfig, err := config.LoadWorkspaceConfig(devPodConfig.DefaultContext, workspaceID)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -246,6 +241,21 @@ func selectWorkspace(devPodConfig *config.Config, log log.Logger) (*provider2.Wo
 	providerWithOptions, err := FindProvider(devPodConfig, workspaceConfig.Provider.Name, log)
 	if err != nil {
 		return nil, nil, err
+	}
+
+	// resolve options
+	beforeOptions := workspaceConfig.Provider.Options
+	workspaceConfig.Provider.Options, err = options2.ResolveOptions(ctx, "", "", workspaceConfig, providerWithOptions.Provider.Options())
+	if err != nil {
+		return nil, nil, errors.Wrap(err, "resolve options")
+	}
+
+	// save workspace config
+	if !reflect.DeepEqual(workspaceConfig.Provider.Options, beforeOptions) {
+		err = config.SaveWorkspaceConfig(workspaceConfig)
+		if err != nil {
+			return nil, nil, err
+		}
 	}
 
 	return workspaceConfig, providerWithOptions.Provider, nil

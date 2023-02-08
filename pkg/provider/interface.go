@@ -22,9 +22,14 @@ type Provider interface {
 
 	// Init initializes the provider with new config options
 	Init(ctx context.Context, workspace *Workspace, options InitOptions) error
+
+	// Validate validates that the provider and all other values are correctly setup
+	Validate(ctx context.Context, workspace *Workspace, options ValidateOptions) error
 }
 
 type InitOptions struct{}
+
+type ValidateOptions struct{}
 
 type WorkspaceTunnelOptions struct {
 	Stdin  io.Reader

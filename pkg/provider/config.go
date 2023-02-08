@@ -21,7 +21,7 @@ type ProviderConfig struct {
 	// Description is the provider description
 	Description string `json:"description,omitempty"`
 
-	// Options are the provider options
+	// Options are the provider options.
 	Options map[string]*ProviderOption `json:"options,omitempty"`
 
 	// Agent allows you to override agent configuration
@@ -31,28 +31,30 @@ type ProviderConfig struct {
 	Exec ProviderCommands `json:"exec,omitempty"`
 
 	// Binaries is an optional field to specify a binary to execute the commands
-	Binaries []*ProviderBinary `json:"binaries,omitempty"`
+	Binaries map[string][]*ProviderBinary `json:"binaries,omitempty"`
 }
 
 type ProviderAgentConfig struct {
-	// Path is the path inside the server to use for the agent
+	// Path is the path inside the server devpod will expect the agent
 	Path string `json:"path,omitempty"`
 
 	// DownloadURL is the base url where to download the agent from
 	DownloadURL string `json:"downloadURL,omitempty"`
 
-	// Options are extra options that should be available for the agent
-	Options map[string]*ProviderOption `json:"options,omitempty"`
-
-	// Inactivity specifies what should happen if the server is inactive for
-	// a while.
-	Inactivity *ProviderAgentInactivityConfig `json:"inactivity,omitempty"`
-}
-
-type ProviderAgentInactivityConfig struct {
 	// Timeout is the timeout in minutes to wait until the agent tries
 	// to turn of the server. Defaults to 1 hour.
 	Timeout string `json:"inactivityTimeout,omitempty"`
+
+	// Exec commands that can be used on the remote
+	Exec ProviderAgentConfigExec `json:"exec,omitempty"`
+
+	// Binaries is an optional field to specify a binary to execute the commands
+	Binaries map[string][]*ProviderBinary `json:"binaries,omitempty"`
+}
+
+type ProviderAgentConfigExec struct {
+	// Init command is executed once when the agent is initially injected
+	Init types.StrArray `json:"init,omitempty"`
 
 	// Shutdown is the remote command to run when the remote machine
 	// should shutdown.
@@ -81,6 +83,9 @@ type ProviderCommands struct {
 	// Init is run directly after `devpod use provider`
 	Init types.StrArray `json:"init,omitempty"`
 
+	// Validate is run directly after init and after the variables have been resolved.
+	Validate types.StrArray `json:"validate,omitempty"`
+
 	// Command executes a command on the server
 	Command types.StrArray `json:"command,omitempty"`
 
@@ -103,20 +108,12 @@ type ProviderCommands struct {
 	Status types.StrArray `json:"status,omitempty"`
 }
 
-type ProviderAgentOption struct {
-	// Cache is the duration to cache the value before rerunning the command
-	Cache string `json:"cache,omitempty"`
-
-	// Command is the command to run to specify
-	Command types.StrArray `json:"command,omitempty"`
-}
-
 type ProviderOption struct {
-	// Default value if the user omits this option from their configuration.
-	Default string `json:"default,omitempty"`
-
 	// A description of the option displayed to the user by a supporting tool.
 	Description string `json:"description,omitempty"`
+
+	// If required is true and the user doesn't supply a value, devpod will ask the user
+	Required bool `json:"required,omitempty"`
 
 	// ValidationPattern is a regex pattern to validate the value
 	ValidationPattern string `json:"validationPattern,omitempty"`
@@ -133,9 +130,18 @@ type ProviderOption struct {
 	// Local will never send the option to the server
 	Local bool `json:"local,omitempty"`
 
+	// After is the after stage to retrieve this option
+	After string `json:"after,omitempty"`
+
+	// Before is the before stage
+	Before string `json:"before,omitempty"`
+
+	// Default value if the user omits this option from their configuration.
+	Default string `json:"default,omitempty"`
+
 	// Cache is the duration to cache the value before rerunning the command
 	Cache string `json:"cache,omitempty"`
 
-	// Command is the command to run to specify
-	Command types.StrArray `json:"command,omitempty"`
+	// Command is the command to run to specify an option
+	Command string `json:"command,omitempty"`
 }

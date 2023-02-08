@@ -7,6 +7,9 @@ import (
 	"github.com/loft-sh/devpod/pkg/config"
 	"github.com/loft-sh/devpod/pkg/log"
 	provider2 "github.com/loft-sh/devpod/pkg/provider"
+	options2 "github.com/loft-sh/devpod/pkg/provider/options"
+	"github.com/loft-sh/devpod/pkg/survey"
+	"github.com/loft-sh/devpod/pkg/terminal"
 	"github.com/loft-sh/devpod/pkg/workspace"
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
@@ -64,16 +67,76 @@ func (cmd *UseCmd) Run(ctx context.Context, providerName string) error {
 		return errors.Wrap(err, "parse options")
 	}
 
+	// TODO: this is kind of a hack, only to get the options correctly passed to init & validate
+	workspaceConfig := &provider2.Workspace{Provider: provider2.WorkspaceProviderConfig{Options: options}}
+
+	// run init command
+	err = providerWithOptions.Provider.Init(ctx, workspaceConfig, provider2.InitOptions{})
+	if err != nil {
+		return err
+	}
+
+	// fill defaults
+	workspaceConfig.Provider.Options, err = options2.ResolveOptions(ctx, "", "", workspaceConfig, providerWithOptions.Provider.Options())
+	if err != nil {
+		return errors.Wrap(err, "resolve options")
+	}
+
+	// ensure required
+	err = ensureRequired(workspaceConfig, providerWithOptions.Provider, log.Default)
+	if err != nil {
+		return errors.Wrap(err, "ensure required")
+	}
+
+	// run validate command
+	err = providerWithOptions.Provider.Validate(ctx, workspaceConfig, provider2.ValidateOptions{})
+	if err != nil {
+		return err
+	}
+
 	// set options
 	defaultContext := devPodConfig.Contexts[devPodConfig.DefaultContext]
 	defaultContext.DefaultProvider = providerWithOptions.Provider.Name()
 	defaultContext.Providers[providerName] = &config.ConfigProvider{
-		Options: options,
+		Options: workspaceConfig.Provider.Options,
 	}
 
+	// save provider config
 	err = config.SaveConfig(devPodConfig)
 	if err != nil {
 		return errors.Wrap(err, "save config")
+	}
+
+	return nil
+}
+
+func ensureRequired(workspace *provider2.Workspace, provider provider2.Provider, log log.Logger) error {
+	for optionName, option := range provider.Options() {
+		if !option.Required {
+			continue
+		}
+
+		val, ok := workspace.Provider.Options[optionName]
+		if !ok || val.Value == "" {
+			if !terminal.IsTerminalIn {
+				return fmt.Errorf("option %s is required, but no value provided", optionName)
+			}
+
+			log.Info(option.Description)
+			answer, err := log.Question(&survey.QuestionOptions{
+				Question:               fmt.Sprintf("Please enter a value for %s", optionName),
+				Options:                option.Enum,
+				ValidationRegexPattern: option.ValidationPattern,
+				ValidationMessage:      option.ValidationMessage,
+			})
+			if err != nil {
+				return err
+			}
+
+			workspace.Provider.Options[optionName] = provider2.OptionValue{
+				Value: answer,
+			}
+		}
 	}
 
 	return nil

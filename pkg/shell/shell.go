@@ -34,10 +34,10 @@ func ExecuteCommandWithShell(ctx context.Context, command string, stdin io.Reade
 	}
 
 	// run emulated shell
-	return runEmulatedShell(ctx, command, stdin, stdout, stderr, environ)
+	return RunEmulatedShell(ctx, command, stdin, stdout, stderr, environ)
 }
 
-func runEmulatedShell(ctx context.Context, command string, stdin io.Reader, stdout io.Writer, stderr io.Writer, env []string) error {
+func RunEmulatedShell(ctx context.Context, command string, stdin io.Reader, stdout io.Writer, stderr io.Writer, env []string) error {
 	// Let's parse the complete command
 	parsed, err := syntax.NewParser().Parse(strings.NewReader(command), "")
 	if err != nil {

@@ -101,6 +101,9 @@ github.com/docker/go-connections/tlsconfig
 # github.com/docker/go-units v0.5.0
 ## explicit
 github.com/docker/go-units
+# github.com/ghodss/yaml v1.0.0
+## explicit
+github.com/ghodss/yaml
 # github.com/gliderlabs/ssh v0.3.5
 ## explicit; go 1.12
 github.com/gliderlabs/ssh
