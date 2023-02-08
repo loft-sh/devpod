@@ -33,11 +33,11 @@ agent:
   path: /run/agent
   exec:
     shutdown: |-
-      echo "Shutdown Bro"
+      echo "Shutdown VM"
 exec:
   init: |-
     if ! command -v ${GCLOUD_BINARY} &> /dev/null; then
-        echo "gcloud command couldn't be found. Please make sure to install the gcloud CLI locally"
+        echo "${GCLOUD_BINARY} command couldn't be found. Please make sure to install the gcloud CLI locally"
         echo "Take a look at https://cloud.google.com/sdk/docs/install-sdk for more information"
         exit 1
     fi

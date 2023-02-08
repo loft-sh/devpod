@@ -59,7 +59,7 @@ func (cmd *ContainerTunnelCmd) Run(_ *cobra.Command, _ []string) error {
 			select {
 			case <-time.After(time.Second * 60):
 				currentTime := time.Now()
-				_ = os.Chtimes(filepath.Join(workspaceInfo.Folder, config.WorkspaceConfigFile), currentTime, currentTime)
+				_ = os.Chtimes(filepath.Join(workspaceInfo.Folder, "..", config.WorkspaceConfigFile), currentTime, currentTime)
 			}
 		}
 	}()

@@ -197,6 +197,11 @@ func runProviderCommand(ctx context.Context, name string, command types.StrArray
 		}()
 	}
 
+	// run the command
+	return RunCommand(ctx, command, workspace, stdin, stdout, stderr, extraEnv)
+}
+
+func RunCommand(ctx context.Context, command types.StrArray, workspace *provider.Workspace, stdin io.Reader, stdout io.Writer, stderr io.Writer, extraEnv map[string]string) error {
 	// create environment variables for command
 	osEnviron := os.Environ()
 	osEnviron = append(osEnviron, provider.ToEnvironment(workspace)...)
@@ -225,7 +230,7 @@ func runProviderCommand(ctx context.Context, name string, command types.StrArray
 	cmd.Stdout = stdout
 	cmd.Stderr = stderr
 	cmd.Env = osEnviron
-	err = cmd.Run()
+	err := cmd.Run()
 	if err != nil {
 		return err
 	}

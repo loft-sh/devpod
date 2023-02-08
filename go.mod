@@ -32,6 +32,7 @@ require (
 	golang.org/x/crypto v0.2.0
 	google.golang.org/grpc v1.50.1
 	google.golang.org/protobuf v1.28.1
+	gopkg.in/natefinch/lumberjack.v2 v2.2.1
 	gotest.tools v2.2.0+incompatible
 	k8s.io/kubectl v0.26.1
 	mvdan.cc/sh/v3 v3.5.1
