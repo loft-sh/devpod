@@ -10,6 +10,7 @@ import (
 	"github.com/loft-sh/devpod/pkg/command"
 	"github.com/loft-sh/devpod/pkg/compress"
 	"github.com/loft-sh/devpod/pkg/config"
+	"github.com/loft-sh/devpod/pkg/daemon"
 	"github.com/loft-sh/devpod/pkg/devcontainer"
 	"github.com/loft-sh/devpod/pkg/extract"
 	"github.com/loft-sh/devpod/pkg/log"
@@ -38,8 +39,8 @@ func NewUpCmd(flags *flags.GlobalFlags) *cobra.Command {
 		Use:   "up",
 		Short: "Starts a new devcontainer",
 		Args:  cobra.NoArgs,
-		RunE: func(_ *cobra.Command, _ []string) error {
-			return cmd.Run(context.Background())
+		Run: func(_ *cobra.Command, _ []string) {
+			cmd.Run(context.Background())
 		},
 	}
 	upCmd.Flags().StringVar(&cmd.WorkspaceInfo, "workspace-info", "", "The workspace info")
@@ -48,16 +49,22 @@ func NewUpCmd(flags *flags.GlobalFlags) *cobra.Command {
 }
 
 // Run runs the command logic
-func (cmd *UpCmd) Run(ctx context.Context) error {
+func (cmd *UpCmd) Run(ctx context.Context) {
 	// create a grpc client
 	tunnelClient, err := agent.NewTunnelClient(os.Stdin, os.Stdout, true)
 	if err != nil {
-		return errors.Wrap(err, "create tunnel client")
+		log.Default.ErrorStreamOnly().Fatalf("error creating tunnel client: %v", err)
 	}
 
 	// create debug logger
 	logger := agent.NewTunnelLogger(ctx, tunnelClient, cmd.Debug)
+	err = cmd.up(ctx, tunnelClient, logger)
+	if err != nil {
+		logger.Fatalf("DevPod Agent Error: %v", err)
+	}
+}
 
+func (cmd *UpCmd) up(ctx context.Context, tunnelClient tunnel.TunnelClient, logger log.Logger) error {
 	// get workspace
 	workspaceInfo, err := getWorkspaceInfo(cmd.WorkspaceInfo)
 	if err != nil {
@@ -74,6 +81,12 @@ func (cmd *UpCmd) Run(ctx context.Context) error {
 	err = cmd.prepareWorkspace(ctx, workspaceInfo, tunnelClient, logger)
 	if err != nil {
 		return err
+	}
+
+	// install daemon
+	err = installDaemon(workspaceInfo, logger)
+	if err != nil {
+		logger.Errorf("Install DevPod Daemon: %v", err)
 	}
 
 	// wait until docker is installed
@@ -104,6 +117,20 @@ func (cmd *UpCmd) prepareWorkspace(ctx context.Context, workspaceInfo *agent.Age
 	return fmt.Errorf("either workspace repository, image or local-folder is required")
 }
 
+func installDaemon(workspaceInfo *agent.AgentWorkspaceInfo, log log.Logger) error {
+	if workspaceInfo.AgentConfig == nil || len(workspaceInfo.AgentConfig.Exec.Shutdown) == 0 {
+		return nil
+	}
+
+	log.Debugf("Installing DevPod daemon into server...")
+	err := daemon.InstallDaemon(log)
+	if err != nil {
+		return errors.Wrap(err, "install daemon")
+	}
+
+	return nil
+}
+
 func getWorkspaceInfo(workspaceInfoRaw string) (*agent.AgentWorkspaceInfo, error) {
 	decoded, err := compress.Decompress(workspaceInfoRaw)
 	if err != nil {
@@ -123,7 +150,7 @@ func getWorkspaceInfo(workspaceInfoRaw string) (*agent.AgentWorkspaceInfo, error
 	}
 
 	// write workspace config
-	err = os.WriteFile(filepath.Join(workspaceDir, config.WorkspaceConfigFile), []byte(decoded), 0666)
+	err = os.WriteFile(filepath.Join(workspaceDir, "..", config.WorkspaceConfigFile), []byte(decoded), 0666)
 	if err != nil {
 		return nil, fmt.Errorf("write workspace config file")
 	}

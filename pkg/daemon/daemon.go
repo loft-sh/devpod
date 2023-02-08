@@ -1,11 +1,12 @@
 package daemon
 
 import (
+	"github.com/loft-sh/devpod/pkg/log"
 	"github.com/pkg/errors"
 	"github.com/takama/daemon"
 )
 
-func InstallDaemon() error {
+func InstallDaemon(log log.Logger) error {
 	service, err := daemon.New("devpod", "DevPod Agent Service", daemon.SystemDaemon)
 	if err != nil {
 		return err
@@ -21,6 +22,8 @@ func InstallDaemon() error {
 	_, err = service.Start()
 	if err != nil && err != daemon.ErrAlreadyRunning {
 		return errors.Wrap(err, "start service")
+	} else if err == nil {
+		log.Infof("Successfully installed DevPod daemon into server")
 	}
 
 	return nil
