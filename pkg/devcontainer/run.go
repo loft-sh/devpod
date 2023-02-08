@@ -9,7 +9,6 @@ import (
 	"github.com/sirupsen/logrus"
 	"os"
 	"os/exec"
-	"path/filepath"
 	"runtime"
 	"strings"
 )
@@ -50,7 +49,7 @@ func (r *Runner) Up() error {
 	configFile := rawParsedConfig.Origin
 
 	// get workspace folder within container
-	workspace := getWorkspace(r.LocalWorkspaceFolder, rawParsedConfig)
+	workspace := getWorkspace(r.LocalWorkspaceFolder, r.ID, rawParsedConfig)
 	r.SubstitutionContext = &config.SubstitutionContext{
 		LocalWorkspaceFolder:     r.LocalWorkspaceFolder,
 		ContainerWorkspaceFolder: workspace.RemoteWorkspaceFolder,
@@ -141,7 +140,7 @@ type WorkspaceConfig struct {
 	RemoteWorkspaceFolder string
 }
 
-func getWorkspace(workspaceFolder string, conf *config.DevContainerConfig) WorkspaceConfig {
+func getWorkspace(workspaceFolder, workspaceID string, conf *config.DevContainerConfig) WorkspaceConfig {
 	if conf.WorkspaceMount != "" {
 		mount := config.ParseMount(conf.WorkspaceMount)
 		return WorkspaceConfig{
@@ -150,7 +149,7 @@ func getWorkspace(workspaceFolder string, conf *config.DevContainerConfig) Works
 		}
 	}
 
-	containerMountFolder := "/workspaces/" + filepath.Base(workspaceFolder)
+	containerMountFolder := "/workspaces/" + workspaceID
 	consistency := ""
 	if runtime.GOOS != "linux" {
 		consistency = ",consistency='consistent'"

@@ -24,6 +24,10 @@ options:
   MACHINE_TYPE:
     description: The machine type to use.
     default: e2-standard-2
+  DELETE_ON_INACTIVITY:
+    description: If the compute instance should get deleted instead of stopped on inactivity.
+    default: "false"
+    enum: ["false", "true"]
   GCLOUD_TOKEN:
     hidden: true
     cache: 4h
@@ -31,9 +35,12 @@ options:
     command: ${GCLOUD_BINARY} auth application-default print-access-token --quiet --verbosity=error
 agent:
   path: /run/agent
+  inactivityTimeout: 2m
   exec:
     shutdown: |-
-      echo "Shutdown VM"
+      curl -X POST -H "Content-Length: 0" \
+           -H "Authorization: Bearer ${GCLOUD_TOKEN}" \
+           https://compute.googleapis.com/compute/v1/projects/${PROJECT}/zones/${ZONE}/instances/devpod-${WORKSPACE_ID}/stop
 exec:
   init: |-
     if ! command -v ${GCLOUD_BINARY} &> /dev/null; then
