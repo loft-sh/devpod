@@ -1,9 +1,9 @@
 package config
 
 import (
+	"github.com/ghodss/yaml"
 	"github.com/loft-sh/devpod/pkg/provider"
 	"github.com/pkg/errors"
-	"gopkg.in/yaml.v2"
 	"os"
 	"path/filepath"
 )

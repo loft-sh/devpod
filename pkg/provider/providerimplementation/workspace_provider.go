@@ -48,13 +48,11 @@ func (s *workspaceProvider) validate(workspace *provider.Workspace) error {
 }
 
 func (s *workspaceProvider) Init(ctx context.Context, workspace *provider.Workspace, options provider.InitOptions) error {
-	err := s.validate(workspace)
-	if err != nil {
-		return err
-	}
+	return runProviderCommand(ctx, "init", s.config.Exec.Init, workspace, s.Options(), os.Stdin, os.Stdout, os.Stderr, nil, s.log)
+}
 
-	logProviderCommand("init", s.config.Exec.Status, s.log)
-	return runProviderCommand(ctx, s.config.Exec.Init, workspace, os.Stdin, os.Stdout, os.Stderr, nil)
+func (s *workspaceProvider) Validate(ctx context.Context, workspace *provider.Workspace, options provider.ValidateOptions) error {
+	return runProviderCommand(ctx, "validate", s.config.Exec.Validate, workspace, s.Options(), os.Stdin, os.Stdout, os.Stderr, nil, s.log)
 }
 
 func (s *workspaceProvider) Create(ctx context.Context, workspace *provider.Workspace, options provider.WorkspaceCreateOptions) error {
@@ -68,8 +66,7 @@ func (s *workspaceProvider) Create(ctx context.Context, workspace *provider.Work
 		return err
 	}
 
-	logProviderCommand("create", s.config.Exec.Create, s.log)
-	return runProviderCommand(ctx, s.config.Exec.Create, workspace, os.Stdin, os.Stdout, os.Stderr, nil)
+	return runProviderCommand(ctx, "create", s.config.Exec.Create, workspace, s.Options(), os.Stdin, os.Stdout, os.Stderr, nil, s.log)
 }
 
 func (s *workspaceProvider) Delete(ctx context.Context, workspace *provider.Workspace, options provider.WorkspaceDeleteOptions) error {
@@ -78,8 +75,7 @@ func (s *workspaceProvider) Delete(ctx context.Context, workspace *provider.Work
 		return err
 	}
 
-	logProviderCommand("delete", s.config.Exec.Delete, s.log)
-	err = runProviderCommand(ctx, s.config.Exec.Delete, workspace, os.Stdin, os.Stdout, os.Stderr, nil)
+	err = runProviderCommand(ctx, "delete", s.config.Exec.Delete, workspace, s.Options(), os.Stdin, os.Stdout, os.Stderr, nil, s.log)
 	if err != nil {
 		return err
 	}
@@ -93,8 +89,7 @@ func (s *workspaceProvider) Start(ctx context.Context, workspace *provider.Works
 		return err
 	}
 
-	logProviderCommand("start", s.config.Exec.Start, s.log)
-	err = runProviderCommand(ctx, s.config.Exec.Start, workspace, os.Stdin, os.Stdout, os.Stderr, nil)
+	err = runProviderCommand(ctx, "start", s.config.Exec.Start, workspace, s.Options(), os.Stdin, os.Stdout, os.Stderr, nil, s.log)
 	if err != nil {
 		return err
 	}
@@ -108,8 +103,7 @@ func (s *workspaceProvider) Stop(ctx context.Context, workspace *provider.Worksp
 		return err
 	}
 
-	logProviderCommand("stop", s.config.Exec.Stop, s.log)
-	err = runProviderCommand(ctx, s.config.Exec.Stop, workspace, os.Stdin, os.Stdout, os.Stderr, nil)
+	err = runProviderCommand(ctx, "stop", s.config.Exec.Stop, workspace, s.Options(), os.Stdin, os.Stdout, os.Stderr, nil, s.log)
 	if err != nil {
 		return err
 	}
@@ -123,8 +117,7 @@ func (s *workspaceProvider) Tunnel(ctx context.Context, workspace *provider.Work
 		return err
 	}
 
-	logProviderCommand("tunnel", s.config.Exec.Tunnel, s.log.ErrorStreamOnly())
-	err = runProviderCommand(ctx, s.config.Exec.Tunnel, workspace, options.Stdin, options.Stdout, options.Stderr, nil)
+	err = runProviderCommand(ctx, "tunnel", s.config.Exec.Tunnel, workspace, s.Options(), options.Stdin, options.Stdout, options.Stderr, nil, s.log.ErrorStreamOnly())
 	if err != nil {
 		return err
 	}
@@ -142,8 +135,7 @@ func (s *workspaceProvider) Status(ctx context.Context, workspace *provider.Work
 	if len(s.config.Exec.Status) > 0 {
 		stdout := &bytes.Buffer{}
 		stderr := &bytes.Buffer{}
-		logProviderCommand("status", s.config.Exec.Status, s.log)
-		err := runProviderCommand(ctx, s.config.Exec.Status, workspace, nil, stdout, stderr, nil)
+		err := runProviderCommand(ctx, "status", s.config.Exec.Status, workspace, s.Options(), nil, stdout, stderr, nil, s.log)
 		if err != nil {
 			return provider.StatusNotFound, errors.Wrapf(err, "get status: %s%s", stdout, stderr)
 		}

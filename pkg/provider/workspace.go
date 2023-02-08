@@ -33,17 +33,14 @@ type WorkspaceProviderConfig struct {
 
 	// Options are the provider options used to create the workspace
 	Options map[string]OptionValue `json:"options,omitempty"`
-
-	// AgentOptions holds the agent options
-	AgentOptions map[string]OptionValue `json:"agentOptions,omitempty"`
 }
 
 type OptionValue struct {
 	// Value is the value of the option
 	Value string `json:"value,omitempty"`
 
-	// Retrieved is the time when this value was retrieved
-	Retrieved types.Time `json:"retrieved,omitempty"`
+	// Expires is the time when this value will expire
+	Expires *types.Time `json:"retrieved,omitempty"`
 }
 
 type WorkspaceSource struct {

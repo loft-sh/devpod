@@ -6,6 +6,7 @@ import (
 )
 
 const (
+	DEVPOD                   = "DEVPOD"
 	WORKSPACE_ID             = "WORKSPACE_ID"
 	WORKSPACE_FOLDER         = "WORKSPACE_FOLDER"
 	WORKSPACE_CONTEXT        = "WORKSPACE_CONTEXT"
@@ -37,41 +38,56 @@ func FromEnvironment() *Workspace {
 	}
 }
 
-func ToEnvironment(workspace *Workspace) []string {
-	retVars := []string{}
-	if workspace.ID != "" {
-		retVars = append(retVars, WORKSPACE_ID+"="+workspace.ID)
-	}
-	if workspace.Folder != "" {
-		retVars = append(retVars, WORKSPACE_FOLDER+"="+workspace.Folder)
-	}
-	if workspace.Context != "" {
-		retVars = append(retVars, WORKSPACE_CONTEXT+"="+workspace.Context)
-	}
-	if workspace.Origin != "" {
-		retVars = append(retVars, WORKSPACE_ORIGIN+"="+workspace.Origin)
-	}
-	if workspace.Source.LocalFolder != "" {
-		retVars = append(retVars, WORKSPACE_LOCAL_FOLDER+"="+workspace.Source.LocalFolder)
-	}
-	if workspace.Source.GitRepository != "" {
-		retVars = append(retVars, WORKSPACE_GIT_REPOSITORY+"="+workspace.Source.GitRepository)
-	}
-	if workspace.Source.GitBranch != "" {
-		retVars = append(retVars, WORKSPACE_GIT_BRANCH+"="+workspace.Source.GitBranch)
-	}
-	if workspace.Source.GitCommit != "" {
-		retVars = append(retVars, WORKSPACE_GIT_COMMIT+"="+workspace.Source.GitCommit)
-	}
-	if workspace.Source.Image != "" {
-		retVars = append(retVars, WORKSPACE_IMAGE+"="+workspace.Source.Image)
-	}
-	if workspace.Provider.Name != "" {
-		retVars = append(retVars, WORKSPACE_PROVIDER+"="+workspace.Provider.Name)
-	}
-	for optionName, optionValue := range workspace.Provider.Options {
-		retVars = append(retVars, strings.ToUpper(optionName)+"="+optionValue.Value)
+func ToOptions(workspace *Workspace) map[string]string {
+	retVars := map[string]string{}
+	if workspace == nil {
+		return retVars
 	}
 
+	for optionName, optionValue := range workspace.Provider.Options {
+		retVars[strings.ToUpper(optionName)] = optionValue.Value
+	}
+	if workspace.ID != "" {
+		retVars[WORKSPACE_ID] = workspace.ID
+	}
+	if workspace.Folder != "" {
+		retVars[WORKSPACE_FOLDER] = workspace.Folder
+	}
+	if workspace.Context != "" {
+		retVars[WORKSPACE_CONTEXT] = workspace.Context
+	}
+	if workspace.Origin != "" {
+		retVars[WORKSPACE_ORIGIN] = workspace.Origin
+	}
+	if workspace.Source.LocalFolder != "" {
+		retVars[WORKSPACE_LOCAL_FOLDER] = workspace.Source.LocalFolder
+	}
+	if workspace.Source.GitRepository != "" {
+		retVars[WORKSPACE_GIT_REPOSITORY] = workspace.Source.GitRepository
+	}
+	if workspace.Source.GitBranch != "" {
+		retVars[WORKSPACE_GIT_BRANCH] = workspace.Source.GitBranch
+	}
+	if workspace.Source.GitCommit != "" {
+		retVars[WORKSPACE_GIT_COMMIT] = workspace.Source.GitCommit
+	}
+	if workspace.Source.Image != "" {
+		retVars[WORKSPACE_IMAGE] = workspace.Source.Image
+	}
+	if workspace.Provider.Name != "" {
+		retVars[WORKSPACE_PROVIDER] = workspace.Provider.Name
+	}
+
+	// devpod binary
+	devPodBinary, _ := os.Executable()
+	retVars[DEVPOD] = devPodBinary
+	return retVars
+}
+
+func ToEnvironment(workspace *Workspace) []string {
+	retVars := []string{}
+	for k, v := range ToOptions(workspace) {
+		retVars = append(retVars, k+"="+v)
+	}
 	return retVars
 }

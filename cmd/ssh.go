@@ -41,17 +41,18 @@ func NewSSHCmd(flags *flags.GlobalFlags) *cobra.Command {
 		Short: "Starts a new ssh session to a workspace",
 		Args:  cobra.NoArgs,
 		RunE: func(_ *cobra.Command, args []string) error {
+			ctx := context.Background()
 			devPodConfig, err := config.LoadConfig(cmd.Context)
 			if err != nil {
 				return err
 			}
 
-			workspace, provider, err := workspace2.GetWorkspace(devPodConfig, []string{cmd.ID}, log.Default)
+			workspace, provider, err := workspace2.GetWorkspace(ctx, devPodConfig, []string{cmd.ID}, log.Default)
 			if err != nil {
 				return err
 			}
 
-			return cmd.Run(context.Background(), workspace, provider)
+			return cmd.Run(ctx, workspace, provider)
 		},
 	}
 

@@ -1,12 +1,15 @@
 package provider
 
 import (
+	"bytes"
+	"encoding/json"
 	"fmt"
 	"github.com/blang/semver"
+	"github.com/ghodss/yaml"
 	"github.com/pkg/errors"
-	"gopkg.in/yaml.v2"
 	"io"
 	"regexp"
+	"time"
 )
 
 var providerNameRegEx = regexp.MustCompile(`[^a-z0-9\-]+`)
@@ -14,11 +17,21 @@ var providerNameRegEx = regexp.MustCompile(`[^a-z0-9\-]+`)
 var optionNameRegEx = regexp.MustCompile(`[^A-Z0-9_]+`)
 
 func ParseProvider(reader io.Reader) (*ProviderConfig, error) {
-	decoder := yaml.NewDecoder(reader)
-	decoder.SetStrict(true)
+	payload, err := io.ReadAll(reader)
+	if err != nil {
+		return nil, err
+	}
+
+	jsonBytes, err := yaml.YAMLToJSON(payload)
+	if err != nil {
+		return nil, err
+	}
+
+	decoder := json.NewDecoder(bytes.NewReader(jsonBytes))
+	decoder.DisallowUnknownFields()
 
 	parsedConfig := &ProviderConfig{}
-	err := decoder.Decode(parsedConfig)
+	err = decoder.Decode(parsedConfig)
 	if err != nil {
 		return nil, errors.Wrap(err, "parse provider config")
 	}
@@ -29,6 +42,16 @@ func ParseProvider(reader io.Reader) (*ProviderConfig, error) {
 	}
 
 	return parsedConfig, nil
+}
+
+var validServerStages = map[string]bool{
+	"init":    true,
+	"command": true,
+	"status":  true,
+	"create":  true,
+	"delete":  true,
+	"start":   true,
+	"stop":    true,
 }
 
 func validate(config *ProviderConfig) error {
@@ -60,6 +83,37 @@ func validate(config *ProviderConfig) error {
 			if err != nil {
 				return fmt.Errorf("error parsing validation pattern '%s' for option '%s': %v", optionValue.ValidationPattern, optionName, err)
 			}
+		}
+
+		if optionValue.Default != "" && optionValue.Command != "" {
+			return fmt.Errorf("default and command cannot be used together in option '%s'", optionName)
+		}
+
+		if optionValue.After != "" && optionValue.Before != "" {
+			return fmt.Errorf("after and before cannot be used together in option '%s'", optionName)
+		}
+
+		if optionValue.After != "" && !validServerStages[optionValue.After] {
+			return fmt.Errorf("invalid after stage in option '%s': %s", optionName, optionValue.After)
+		}
+
+		if optionValue.Before != "" && !validServerStages[optionValue.Before] {
+			return fmt.Errorf("invalid before stage in option '%s': %s", optionName, optionValue.Before)
+		}
+
+		if optionValue.Cache != "" {
+			_, err := time.ParseDuration(optionValue.Cache)
+			if err != nil {
+				return fmt.Errorf("invalid cache value for option '%s': %v", optionName, err)
+			}
+		}
+
+		if optionValue.Required && (optionValue.Before != "" || optionValue.After != "") {
+			return fmt.Errorf("required cannot be used together with before or afte in option '%s'", optionName)
+		}
+
+		if optionValue.Cache != "" && optionValue.Command == "" {
+			return fmt.Errorf("cache can only be used with command in option '%s'", optionName)
 		}
 	}
 

@@ -7,12 +7,14 @@ import (
 	config "github.com/loft-sh/devpod/pkg/config"
 	"github.com/loft-sh/devpod/pkg/log"
 	"github.com/loft-sh/devpod/pkg/provider"
+	options2 "github.com/loft-sh/devpod/pkg/provider/options"
 	"github.com/loft-sh/devpod/pkg/shell"
 	"github.com/loft-sh/devpod/pkg/types"
 	"github.com/pkg/errors"
 	"io"
 	"os"
 	"os/exec"
+	"reflect"
 	"strings"
 )
 
@@ -54,13 +56,11 @@ func (s *serverProvider) validate(workspace *provider.Workspace) error {
 }
 
 func (s *serverProvider) Init(ctx context.Context, workspace *provider.Workspace, options provider.InitOptions) error {
-	err := s.validate(workspace)
-	if err != nil {
-		return err
-	}
+	return runProviderCommand(ctx, "init", s.config.Exec.Init, workspace, s.Options(), os.Stdin, os.Stdout, os.Stderr, nil, s.log)
+}
 
-	logProviderCommand("init", s.config.Exec.Init, s.log)
-	return runProviderCommand(ctx, s.config.Exec.Init, workspace, os.Stdin, os.Stdout, os.Stderr, nil)
+func (s *serverProvider) Validate(ctx context.Context, workspace *provider.Workspace, options provider.ValidateOptions) error {
+	return runProviderCommand(ctx, "validate", s.config.Exec.Validate, workspace, s.Options(), os.Stdin, os.Stdout, os.Stderr, nil, s.log)
 }
 
 func (s *serverProvider) Create(ctx context.Context, workspace *provider.Workspace, options provider.CreateOptions) error {
@@ -74,8 +74,7 @@ func (s *serverProvider) Create(ctx context.Context, workspace *provider.Workspa
 		return err
 	}
 
-	logProviderCommand("create", s.config.Exec.Create, s.log)
-	return runProviderCommand(ctx, s.config.Exec.Create, workspace, os.Stdin, os.Stdout, os.Stderr, nil)
+	return runProviderCommand(ctx, "create", s.config.Exec.Create, workspace, s.Options(), os.Stdin, os.Stdout, os.Stderr, nil, s.log)
 }
 
 func (s *serverProvider) Delete(ctx context.Context, workspace *provider.Workspace, options provider.DeleteOptions) error {
@@ -84,8 +83,7 @@ func (s *serverProvider) Delete(ctx context.Context, workspace *provider.Workspa
 		return err
 	}
 
-	logProviderCommand("delete", s.config.Exec.Delete, s.log)
-	err = runProviderCommand(ctx, s.config.Exec.Delete, workspace, os.Stdin, os.Stdout, os.Stderr, nil)
+	err = runProviderCommand(ctx, "delete", s.config.Exec.Delete, workspace, s.Options(), os.Stdin, os.Stdout, os.Stderr, nil, s.log)
 	if err != nil {
 		return err
 	}
@@ -99,8 +97,7 @@ func (s *serverProvider) Start(ctx context.Context, workspace *provider.Workspac
 		return err
 	}
 
-	logProviderCommand("start", s.config.Exec.Start, s.log)
-	err = runProviderCommand(ctx, s.config.Exec.Start, workspace, os.Stdin, os.Stdout, os.Stderr, nil)
+	err = runProviderCommand(ctx, "start", s.config.Exec.Start, workspace, s.Options(), os.Stdin, os.Stdout, os.Stderr, nil, s.log)
 	if err != nil {
 		return err
 	}
@@ -114,8 +111,7 @@ func (s *serverProvider) Stop(ctx context.Context, workspace *provider.Workspace
 		return err
 	}
 
-	logProviderCommand("stop", s.config.Exec.Stop, s.log)
-	err = runProviderCommand(ctx, s.config.Exec.Stop, workspace, os.Stdin, os.Stdout, os.Stderr, nil)
+	err = runProviderCommand(ctx, "stop", s.config.Exec.Stop, workspace, s.Options(), os.Stdin, os.Stdout, os.Stderr, nil, s.log)
 	if err != nil {
 		return err
 	}
@@ -129,10 +125,9 @@ func (s *serverProvider) Command(ctx context.Context, workspace *provider.Worksp
 		return err
 	}
 
-	logProviderCommand("command", s.config.Exec.Command, s.log.ErrorStreamOnly())
-	err = runProviderCommand(ctx, s.config.Exec.Command, workspace, options.Stdin, options.Stdout, options.Stderr, map[string]string{
+	err = runProviderCommand(ctx, "command", s.config.Exec.Command, workspace, s.Options(), options.Stdin, options.Stdout, options.Stderr, map[string]string{
 		provider.CommandEnv: options.Command,
-	})
+	}, s.log.ErrorStreamOnly())
 	if err != nil {
 		return err
 	}
@@ -150,8 +145,7 @@ func (s *serverProvider) Status(ctx context.Context, workspace *provider.Workspa
 	if len(s.config.Exec.Status) > 0 {
 		stdout := &bytes.Buffer{}
 		stderr := &bytes.Buffer{}
-		logProviderCommand("status", s.config.Exec.Status, s.log)
-		err := runProviderCommand(ctx, s.config.Exec.Status, workspace, nil, stdout, stderr, nil)
+		err := runProviderCommand(ctx, "status", s.config.Exec.Status, workspace, s.Options(), nil, stdout, stderr, nil, s.log)
 		if err != nil {
 			return provider.StatusNotFound, errors.Wrapf(err, "get status: %s%s", stdout, stderr)
 		}
@@ -182,16 +176,25 @@ func (s *serverProvider) Status(ctx context.Context, workspace *provider.Workspa
 	return provider.StatusNotFound, nil
 }
 
-func logProviderCommand(stage string, command types.StrArray, log log.Logger) {
-	if len(command) == 0 {
-		return
-	}
-	log.Debugf("Run %s provider command: %s", stage, strings.Join(command, " "))
-}
-
-func runProviderCommand(ctx context.Context, command types.StrArray, workspace *provider.Workspace, stdin io.Reader, stdout io.Writer, stderr io.Writer, extraEnv map[string]string) error {
+func runProviderCommand(ctx context.Context, name string, command types.StrArray, workspace *provider.Workspace, providerOptions map[string]*provider.ProviderOption, stdin io.Reader, stdout io.Writer, stderr io.Writer, extraEnv map[string]string, log log.Logger) (err error) {
 	if len(command) == 0 {
 		return nil
+	}
+
+	// log
+	log.Debugf("Run %s provider command: %s", name, strings.Join(command, " "))
+
+	// resolve options
+	if workspace != nil {
+		err = resolveOptions(ctx, name, "", workspace, providerOptions)
+		if err != nil {
+			return err
+		}
+		defer func() {
+			if err == nil {
+				err = resolveOptions(ctx, "", name, workspace, providerOptions)
+			}
+		}()
 	}
 
 	// create environment variables for command
@@ -222,9 +225,30 @@ func runProviderCommand(ctx context.Context, command types.StrArray, workspace *
 	cmd.Stdout = stdout
 	cmd.Stderr = stderr
 	cmd.Env = osEnviron
-	err := cmd.Run()
+	err = cmd.Run()
 	if err != nil {
 		return err
+	}
+
+	return nil
+}
+
+func resolveOptions(ctx context.Context, beforeStage, afterStage string, workspace *provider.Workspace, providerOptions map[string]*provider.ProviderOption) error {
+	var err error
+
+	// resolve options
+	beforeOptions := workspace.Provider.Options
+	workspace.Provider.Options, err = options2.ResolveOptions(ctx, beforeStage, afterStage, workspace, providerOptions)
+	if err != nil {
+		return errors.Wrap(err, "resolve options")
+	}
+
+	// save workspace config
+	if workspace.ID != "" && !reflect.DeepEqual(workspace.Provider.Options, beforeOptions) {
+		err = config.SaveWorkspaceConfig(workspace)
+		if err != nil {
+			return err
+		}
 	}
 
 	return nil
