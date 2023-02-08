@@ -39,8 +39,11 @@ func (cmd *WatchCmd) Run(ctx context.Context) error {
 		return err
 	}
 
-	// start patroling
-	patrol(log.NewFileLogger(filepath.Join(logFolder, "agent-daemon.log"), logrus.InfoLevel))
+	logger := log.NewFileLogger(filepath.Join(logFolder, "agent-daemon.log"), logrus.InfoLevel)
+	logger.Infof("Starting DevPod Daemon patrol...")
+
+	// start patrolling
+	patrol(logger)
 
 	// should never reach this
 	return nil
@@ -134,12 +137,14 @@ func checkForInactivity(workspaceConfig string, log log.Logger) error {
 
 	// we run the timeout command now
 	buf := &bytes.Buffer{}
+	log.Infof("Run shutdown command for workspace %s: %s", workspaceConfig, strings.Join(workspace.AgentConfig.Exec.Shutdown, " "))
 	err = providerimplementation.RunCommand(context.Background(), workspace.AgentConfig.Exec.Shutdown, workspace.Workspace, nil, buf, buf, nil)
 	if err != nil {
 		log.Errorf("Error running %s: %s%v", strings.Join(workspace.AgentConfig.Exec.Shutdown, " "), buf.String(), err)
 		return err
 	}
 
+	log.Infof("Successful ran command: %s", buf.String())
 	return nil
 }
 
