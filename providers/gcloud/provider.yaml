@@ -1,7 +1,7 @@
 name: gcloud
 version: 0.0.1
 description: |-
-  The gcloud provides DevContainers on Google Cloud.
+  DevPod on Google Cloud
 options:
   GCLOUD_BINARY:
     description: Path to the gcloud binary

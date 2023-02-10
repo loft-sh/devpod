@@ -39,7 +39,9 @@ type WorkspaceTunnelOptions struct {
 
 type WorkspaceCreateOptions struct{}
 
-type WorkspaceDeleteOptions struct{}
+type WorkspaceDeleteOptions struct {
+	Force bool
+}
 
 type WorkspaceStatusOptions struct{}
 
@@ -73,7 +75,9 @@ type StartOptions struct{}
 
 type StopOptions struct{}
 
-type DeleteOptions struct{}
+type DeleteOptions struct {
+	Force bool
+}
 
 type CreateOptions struct{}
 

@@ -70,17 +70,17 @@ func (cmd *DeleteCmd) Run(ctx context.Context, workspace *provider2.Workspace, p
 
 func (cmd *DeleteCmd) destroyWorkspace(ctx context.Context, workspace *provider2.Workspace, provider provider2.WorkspaceProvider) error {
 	// get instance status
-	instanceStatus, err := provider.Status(ctx, workspace, provider2.WorkspaceStatusOptions{})
-	if err != nil {
-		return err
-	} else if instanceStatus == provider2.StatusNotFound {
-		if !cmd.Force {
+	if !cmd.Force {
+		instanceStatus, err := provider.Status(ctx, workspace, provider2.WorkspaceStatusOptions{})
+		if err != nil {
+			return err
+		} else if instanceStatus == provider2.StatusNotFound {
 			return fmt.Errorf("cannot delete instance because it couldn't be found. Run with --force to ignore this error")
 		}
 	}
 
 	// destroy environment
-	err = provider.Delete(ctx, workspace, provider2.WorkspaceDeleteOptions{})
+	err := provider.Delete(ctx, workspace, provider2.WorkspaceDeleteOptions{Force: cmd.Force})
 	if err != nil {
 		return err
 	}
@@ -90,17 +90,17 @@ func (cmd *DeleteCmd) destroyWorkspace(ctx context.Context, workspace *provider2
 
 func (cmd *DeleteCmd) destroyServer(ctx context.Context, workspace *provider2.Workspace, provider provider2.ServerProvider) error {
 	// get instance status
-	instanceStatus, err := provider.Status(ctx, workspace, provider2.StatusOptions{})
-	if err != nil {
-		return err
-	} else if instanceStatus == provider2.StatusNotFound {
-		if !cmd.Force {
+	if !cmd.Force {
+		instanceStatus, err := provider.Status(ctx, workspace, provider2.StatusOptions{})
+		if err != nil {
+			return err
+		} else if instanceStatus == provider2.StatusNotFound {
 			return fmt.Errorf("cannot delete instance because it couldn't be found. Run with --force to ignore this error")
 		}
 	}
 
 	// destroy environment
-	err = provider.Delete(ctx, workspace, provider2.DeleteOptions{})
+	err := provider.Delete(ctx, workspace, provider2.DeleteOptions{Force: cmd.Force})
 	if err != nil {
 		return err
 	}

@@ -30,7 +30,6 @@ func ExecuteCommandWithShell(ctx context.Context, command string, stdin io.Reade
 		cmd.Stderr = stderr
 		cmd.Env = environ
 		return cmd.Run()
-
 	}
 
 	// run emulated shell

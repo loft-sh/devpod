@@ -9,6 +9,7 @@ import (
 	"github.com/loft-sh/devpod/pkg/log"
 	provider2 "github.com/loft-sh/devpod/pkg/provider"
 	options2 "github.com/loft-sh/devpod/pkg/provider/options"
+	devssh "github.com/loft-sh/devpod/pkg/ssh"
 	"github.com/loft-sh/devpod/pkg/survey"
 	"github.com/loft-sh/devpod/pkg/terminal"
 	"github.com/pkg/errors"
@@ -82,6 +83,12 @@ func ResolveWorkspace(ctx context.Context, devPodConfig *config.Config, args []s
 	}, defaultProvider.Provider.Options())
 	if err != nil {
 		return nil, nil, errors.Wrap(err, "resolve options")
+	}
+
+	// create workspace ssh keys
+	_, err = devssh.GetPublicKey(devPodConfig.DefaultContext, workspaceID)
+	if err != nil {
+		return nil, nil, errors.Wrap(err, "create ssh keys")
 	}
 
 	// is local folder?
