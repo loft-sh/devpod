@@ -88,7 +88,7 @@ func (s *serverProvider) Delete(ctx context.Context, workspace *provider.Workspa
 		return err
 	}
 
-	return deleteWorkspaceFolder(workspace.Context, workspace.ID)
+	return DeleteWorkspaceFolder(workspace.Context, workspace.ID)
 }
 
 func (s *serverProvider) Start(ctx context.Context, workspace *provider.Workspace, options provider.StartOptions) error {
@@ -271,7 +271,7 @@ func createWorkspaceFolder(workspace *provider.Workspace, provider string) error
 	return nil
 }
 
-func deleteWorkspaceFolder(context, workspaceID string) error {
+func DeleteWorkspaceFolder(context, workspaceID string) error {
 	workspaceFolder, err := config.GetWorkspaceDir(context, workspaceID)
 	if err != nil {
 		return err

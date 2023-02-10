@@ -13,7 +13,6 @@ func NewAgentCmd(flags *flags.GlobalFlags) *cobra.Command {
 		Hidden: true,
 	}
 
-	agentCmd.AddCommand(NewSSHServerCmd())
 	agentCmd.AddCommand(NewUpCmd(flags))
 	agentCmd.AddCommand(NewContainerTunnelCmd())
 	agentCmd.AddCommand(NewWatchCmd())

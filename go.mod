@@ -5,6 +5,7 @@ go 1.19
 require (
 	github.com/AlecAivazis/survey/v2 v2.3.6
 	github.com/acarl005/stripansi v0.0.0-20180116102854-5a71ef0e047d
+	github.com/alessio/shellescape v1.4.1
 	github.com/blang/semver v3.5.1+incompatible
 	github.com/bmatcuk/doublestar/v4 v4.6.0
 	github.com/creack/pty v1.1.18

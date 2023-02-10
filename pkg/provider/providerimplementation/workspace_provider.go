@@ -80,7 +80,7 @@ func (s *workspaceProvider) Delete(ctx context.Context, workspace *provider.Work
 		return err
 	}
 
-	return deleteWorkspaceFolder(workspace.Context, workspace.ID)
+	return DeleteWorkspaceFolder(workspace.Context, workspace.ID)
 }
 
 func (s *workspaceProvider) Start(ctx context.Context, workspace *provider.Workspace, options provider.WorkspaceStartOptions) error {

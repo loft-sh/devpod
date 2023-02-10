@@ -1,7 +1,6 @@
 package devcontainer
 
 import (
-	"fmt"
 	"github.com/loft-sh/devpod/pkg/devcontainer/config"
 	"github.com/loft-sh/devpod/pkg/devcontainer/metadata"
 	"github.com/pkg/errors"
@@ -46,8 +45,6 @@ func (r *Runner) runSingleContainer(parsedConfig *config.SubstitutedConfig, work
 			return errors.Wrap(err, "merge config")
 		}
 
-		// TODO: adjust UID:GID to map to local UID:GID?
-
 		// TODO: for non build images, add metadata label to image here during start
 
 		err = r.startDevContainer(parsedConfig.Config, mergedConfig, buildInfo.ImageName, workspaceMount, labels, buildInfo.ImageDetails)
@@ -64,16 +61,6 @@ func (r *Runner) runSingleContainer(parsedConfig *config.SubstitutedConfig, work
 		}
 	}
 
-	// tunnel container
-
-	// TODO: setup container
-	// SSH Connection:
-	// 2. Connect to DevPod binary in container
-	// 3. Run sessions
-	// 4. Setup environment variables & profile
-	// 5. Probe remote environment
-	// 6. Run post create scripts as User
-	// 7. Install VSCode extensions
-	fmt.Println("Merged config", mergedConfig.RemoteUser)
-	return nil
+	// setup container
+	return r.setupContainer(containerDetails, mergedConfig)
 }

@@ -1,6 +1,8 @@
 package cmd
 
-import "github.com/spf13/cobra"
+import (
+	"github.com/spf13/cobra"
+)
 
 // NewDockerCmd returns a new root command
 func NewDockerCmd() *cobra.Command {
@@ -9,6 +11,7 @@ func NewDockerCmd() *cobra.Command {
 		Short: "docker Provider commands",
 	}
 
+	dockerCmd.AddCommand(NewInitCmd())
 	dockerCmd.AddCommand(NewCreateCmd())
 	dockerCmd.AddCommand(NewDeleteCmd())
 	dockerCmd.AddCommand(NewStatusCmd())

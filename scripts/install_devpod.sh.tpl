@@ -63,5 +63,5 @@ fi
 {{ if .Command }}
 {{ .Command }}
 {{ else if .Token }}
-exec $DEVPOD_PATH agent ssh-server --token "{{ .Token }}"
+exec $DEVPOD_PATH helper ssh-server --token "{{ .Token }}"
 {{ end }}

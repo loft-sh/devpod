@@ -14,6 +14,7 @@ import (
 	workspace2 "github.com/loft-sh/devpod/pkg/workspace"
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
+	"io"
 	"os"
 	"time"
 )
@@ -238,6 +239,11 @@ func jumpContainerServer(ctx context.Context, provider provider2.ServerProvider,
 		}
 	}
 
+	// tunnel to container
+	return tunnelToContainer(ctx, provider, workspace, agentConfig)
+}
+
+func tunnelToContainer(ctx context.Context, provider provider2.ServerProvider, workspace *provider2.Workspace, agentConfig *provider2.ProviderAgentConfig) error {
 	// get token
 	tok, err := token.GenerateWorkspaceToken(workspace.Context, workspace.ID)
 	if err != nil {
@@ -250,15 +256,42 @@ func jumpContainerServer(ctx context.Context, provider provider2.ServerProvider,
 		return err
 	}
 
-	// tunnel to container
+	// create readers
+	stdoutReader, stdoutWriter := io.Pipe()
+	stdinReader, stdinWriter := io.Pipe()
+
+	// tunnel to host
+	// TODO: right now we have a tunnel in a tunnel, maybe its better to start 2 separate commands?
 	err = provider.Command(ctx, workspace, provider2.CommandOptions{
-		Command: fmt.Sprintf("sudo %s agent container-tunnel --token '%s' --workspace-info '%s'", agentConfig.Path, tok, workspaceInfo),
-		Stdin:   os.Stdin,
-		Stdout:  os.Stdout,
+		Command: fmt.Sprintf("sudo %s helper ssh-server --token '%s' --stdio", agentConfig.Path, tok),
+		Stdin:   stdinReader,
+		Stdout:  stdoutWriter,
 		Stderr:  os.Stderr,
 	})
 	if err != nil {
 		return errors.Wrap(err, "start tunnel")
+	}
+
+	// connect via ssh over stdin / stdout
+	keyBytes, err := devssh.GetPrivateKeyRaw(workspace.Context, workspace.ID)
+	if err != nil {
+		return err
+	}
+
+	// TODO: should we really exit here?
+	sshClient, err := devssh.StdioClientFromKeyBytes(keyBytes, stdoutReader, stdinWriter, true)
+	if err != nil {
+		return err
+	}
+	defer sshClient.Close()
+
+	// TODO: do port-forwarding etc. here with sshClient
+	// go func() {}()
+
+	// tunnel to container
+	err = devssh.Run(sshClient, fmt.Sprintf("%s agent container-tunnel --token '%s' --workspace-info '%s'", agentConfig.Path, tok, workspaceInfo), os.Stdin, os.Stdout, os.Stderr)
+	if err != nil {
+		return err
 	}
 
 	return nil

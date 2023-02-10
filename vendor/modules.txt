@@ -17,6 +17,9 @@ github.com/Microsoft/go-winio/pkg/guid
 # github.com/acarl005/stripansi v0.0.0-20180116102854-5a71ef0e047d
 ## explicit
 github.com/acarl005/stripansi
+# github.com/alessio/shellescape v1.4.1
+## explicit; go 1.14
+github.com/alessio/shellescape
 # github.com/anmitsu/go-shlex v0.0.0-20200514113438-38f4b401e2be
 ## explicit; go 1.13
 github.com/anmitsu/go-shlex

@@ -41,8 +41,12 @@ func NewUseCmd(flags *flags.GlobalFlags) *cobra.Command {
 		},
 	}
 
-	useCmd.Flags().StringSliceVarP(&cmd.Options, "option", "o", []string{}, "Provider option in the form KEY=VALUE")
+	AddFlags(useCmd, cmd)
 	return useCmd
+}
+
+func AddFlags(useCmd *cobra.Command, cmd *UseCmd) {
+	useCmd.Flags().StringSliceVarP(&cmd.Options, "option", "o", []string{}, "Provider option in the form KEY=VALUE")
 }
 
 // Run runs the command logic
@@ -65,6 +69,14 @@ func (cmd *UseCmd) Run(ctx context.Context, providerName string) error {
 	options, err := parseOptions(providerWithOptions.Provider, cmd.Options)
 	if err != nil {
 		return errors.Wrap(err, "parse options")
+	}
+
+	// merge with old values
+	for k, v := range providerWithOptions.Options {
+		_, ok := options[k]
+		if !ok {
+			options[k] = v
+		}
 	}
 
 	// TODO: this is kind of a hack, only to get the options correctly passed to init & validate
