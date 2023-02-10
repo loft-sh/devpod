@@ -9,6 +9,7 @@ import (
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
 	"os"
+	"sort"
 	"time"
 )
 
@@ -64,6 +65,9 @@ func (cmd *ListCmd) Run(ctx context.Context) error {
 			time.Since(workspaceConfig.CreationTimestamp.Time).Round(1 * time.Second).String(),
 		})
 	}
+	sort.SliceStable(tableEntries, func(i, j int) bool {
+		return tableEntries[i][0] < tableEntries[j][0]
+	})
 
 	table.PrintTable(log.Default, []string{
 		"Name",

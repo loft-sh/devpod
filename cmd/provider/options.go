@@ -10,6 +10,7 @@ import (
 	provider2 "github.com/loft-sh/devpod/pkg/provider"
 	"github.com/loft-sh/devpod/pkg/workspace"
 	"github.com/spf13/cobra"
+	"sort"
 )
 
 // OptionsCmd holds the options cmd flags
@@ -67,6 +68,9 @@ func (cmd *OptionsCmd) Run(ctx context.Context, providerName string) error {
 			entryOptions[optionName].Value,
 		})
 	}
+	sort.SliceStable(tableEntries, func(i, j int) bool {
+		return tableEntries[i][0] < tableEntries[j][0]
+	})
 
 	table.PrintTable(log.Default, []string{
 		"Name",

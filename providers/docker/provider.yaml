@@ -3,9 +3,6 @@ version: 0.0.1
 description: |-
   The Docker provider creates DevContainers on any Docker backend.
 type: Workspace
-options:
-  AGENT_DOWNLOAD_URL:
-    description: The Base URL where to download the DevPod Agent from
 exec:
   init: ["devpod", "provider", "call", "docker", "init"]
   tunnel: ["devpod", "provider", "call", "docker", "tunnel"]

@@ -217,7 +217,7 @@ func (r *DockerHelper) Tunnel(agentPath, agentDownloadURL string, containerID st
 		"-i",
 		"-u", "root",
 		containerID,
-		"sh", "-c", fmt.Sprintf("%s agent ssh-server --token %s --stdio", agent.RemoteDevPodHelperLocation, token),
+		"sh", "-c", fmt.Sprintf("%s helper ssh-server --token %s --stdio", agent.RemoteDevPodHelperLocation, token),
 	}
 	err = r.Run(args, stdin, stdout, stderr)
 	if err != nil {

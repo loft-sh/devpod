@@ -14,7 +14,7 @@ func NewCallCmd() *cobra.Command {
 		Hidden: true,
 	}
 
-	providerCmd.AddCommand(dockercmd.NewDockerCmd())
 	providerCmd.AddCommand(gcloudcmd.NewGCloudCmd())
+	providerCmd.AddCommand(dockercmd.NewDockerCmd())
 	return providerCmd
 }

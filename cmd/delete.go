@@ -15,6 +15,8 @@ import (
 // DeleteCmd holds the delete cmd flags
 type DeleteCmd struct {
 	flags.GlobalFlags
+
+	Force bool
 }
 
 // NewDeleteCmd creates a new command
@@ -41,6 +43,7 @@ func NewDeleteCmd(flags *flags.GlobalFlags) *cobra.Command {
 		},
 	}
 
+	deleteCmd.Flags().BoolVar(&cmd.Force, "force", false, "Delete workspace even if it is not found remotely anymore")
 	return deleteCmd
 }
 
@@ -71,7 +74,9 @@ func (cmd *DeleteCmd) destroyWorkspace(ctx context.Context, workspace *provider2
 	if err != nil {
 		return err
 	} else if instanceStatus == provider2.StatusNotFound {
-		return fmt.Errorf("cannot destroy workspace because it couldn't be found")
+		if !cmd.Force {
+			return fmt.Errorf("cannot delete instance because it couldn't be found. Run with --force to ignore this error")
+		}
 	}
 
 	// destroy environment
@@ -89,7 +94,9 @@ func (cmd *DeleteCmd) destroyServer(ctx context.Context, workspace *provider2.Wo
 	if err != nil {
 		return err
 	} else if instanceStatus == provider2.StatusNotFound {
-		return fmt.Errorf("cannot destroy instance because it couldn't be found")
+		if !cmd.Force {
+			return fmt.Errorf("cannot delete instance because it couldn't be found. Run with --force to ignore this error")
+		}
 	}
 
 	// destroy environment

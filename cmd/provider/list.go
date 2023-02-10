@@ -8,6 +8,7 @@ import (
 	"github.com/loft-sh/devpod/pkg/log/table"
 	"github.com/loft-sh/devpod/pkg/workspace"
 	"github.com/spf13/cobra"
+	"sort"
 	"strconv"
 )
 
@@ -52,6 +53,9 @@ func (cmd *ListCmd) Run(ctx context.Context) error {
 			entry.Provider.Description(),
 		})
 	}
+	sort.SliceStable(tableEntries, func(i, j int) bool {
+		return tableEntries[i][0] < tableEntries[j][0]
+	})
 
 	table.PrintTable(log.Default, []string{
 		"Name",

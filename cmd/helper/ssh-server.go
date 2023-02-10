@@ -1,10 +1,9 @@
-package agent
+package helper
 
 import (
 	"encoding/base64"
 	"fmt"
 	"github.com/gliderlabs/ssh"
-	"github.com/loft-sh/devpod/pkg/agent"
 	helperssh "github.com/loft-sh/devpod/pkg/ssh/server"
 	"github.com/loft-sh/devpod/pkg/ssh/server/port"
 	"github.com/loft-sh/devpod/pkg/ssh/server/stderrlog"
@@ -40,20 +39,6 @@ func NewSSHServerCmd() *cobra.Command {
 
 // Run runs the command logic
 func (cmd *SSHServerCmd) Run(_ *cobra.Command, _ []string) error {
-	// make sure others know where we are
-	execPath, err := os.Executable()
-	if err != nil {
-		return err
-	}
-
-	// create a symlink in the location where folks expect us
-	if execPath != agent.RemoteDevPodHelperLocation {
-		_, err = os.Stat(agent.RemoteDevPodHelperLocation)
-		if os.IsNotExist(err) {
-			_ = os.Symlink(execPath, agent.RemoteDevPodHelperLocation)
-		}
-	}
-
 	if cmd.Token == "" {
 		return fmt.Errorf("token is missing")
 	}
