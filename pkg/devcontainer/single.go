@@ -62,5 +62,7 @@ func (r *Runner) runSingleContainer(parsedConfig *config.SubstitutedConfig, work
 	}
 
 	// setup container
-	return r.setupContainer(containerDetails, mergedConfig)
+	//return r.setupContainer(containerDetails, mergedConfig)
+
+	return nil
 }

@@ -15,9 +15,12 @@ var DockerProvider string
 //go:embed gcloud/provider.yaml
 var GCloudProvider string
 
+//go:embed aws/provider.yaml
+var AWSProvider string
+
 // GetBuiltInProviders retrieves the built in providers
 func GetBuiltInProviders(log log.Logger) (map[string]provider.Provider, error) {
-	providers := []string{DockerProvider, GCloudProvider}
+	providers := []string{DockerProvider, GCloudProvider, AWSProvider}
 	retProviders := map[string]provider.Provider{}
 
 	// parse providers

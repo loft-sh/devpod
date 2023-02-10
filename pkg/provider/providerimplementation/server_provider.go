@@ -85,7 +85,11 @@ func (s *serverProvider) Delete(ctx context.Context, workspace *provider.Workspa
 
 	err = runProviderCommand(ctx, "delete", s.config.Exec.Delete, workspace, s.Options(), os.Stdin, os.Stdout, os.Stderr, nil, s.log)
 	if err != nil {
-		return err
+		if !options.Force {
+			return err
+		}
+
+		s.log.Errorf("Error deleting workspace %s", workspace.ID)
 	}
 
 	return DeleteWorkspaceFolder(workspace.Context, workspace.ID)

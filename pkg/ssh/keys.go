@@ -1,8 +1,7 @@
 package ssh
 
 import (
-	"crypto/ecdsa"
-	"crypto/elliptic"
+	"crypto/ed25519"
 	"crypto/rand"
 	"crypto/x509"
 	"encoding/base64"
@@ -18,38 +17,38 @@ import (
 )
 
 var (
-	DevPodSSHHostKeyFile    = "id_devpod_host_ecdsa"
-	DevPodSSHPrivateKeyFile = "id_devpod_ecdsa"
-	DevPodSSHPublicKeyFile  = "id_devpod_ecdsa.pub"
+	DevPodSSHHostKeyFile    = "id_devpod_host"
+	DevPodSSHPrivateKeyFile = "id_devpod"
+	DevPodSSHPublicKeyFile  = "id_devpod.pub"
 )
 
 var keyLock sync.Mutex
 
-func generatePrivateKey() (*ecdsa.PrivateKey, string, error) {
-	privateKey, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
+func generatePrivateKey() (ed25519.PublicKey, ed25519.PrivateKey, string, error) {
+	publicKey, privateKey, err := ed25519.GenerateKey(rand.Reader)
 	if err != nil {
-		return nil, "", err
+		return nil, nil, "", err
 	}
 
 	// generate and write private key as PEM
 	var privateKeyBuf strings.Builder
 	b, err := x509.MarshalPKCS8PrivateKey(privateKey)
 	if err != nil {
-		return nil, "", err
+		return nil, nil, "", err
 	}
 	privateKeyPEM := &pem.Block{
 		Type:  "PRIVATE KEY",
 		Bytes: b,
 	}
 	if err := pem.Encode(&privateKeyBuf, privateKeyPEM); err != nil {
-		return nil, "", err
+		return nil, nil, "", err
 	}
 
-	return privateKey, privateKeyBuf.String(), nil
+	return publicKey, privateKey, privateKeyBuf.String(), nil
 }
 
 func makeHostKey() (string, error) {
-	_, privKeyStr, err := generatePrivateKey()
+	_, _, privKeyStr, err := generatePrivateKey()
 	if err != nil {
 		return "", err
 	}
@@ -57,13 +56,13 @@ func makeHostKey() (string, error) {
 }
 
 func makeSSHKeyPair() (string, string, error) {
-	privateKey, privKeyStr, err := generatePrivateKey()
+	publicKey, _, privKeyStr, err := generatePrivateKey()
 	if err != nil {
 		return "", "", err
 	}
 
 	// generate and write public key
-	pub, err := ssh.NewPublicKey(&privateKey.PublicKey)
+	pub, err := ssh.NewPublicKey(publicKey)
 	if err != nil {
 		return "", "", err
 	}
