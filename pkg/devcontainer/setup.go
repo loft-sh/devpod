@@ -9,7 +9,7 @@ import (
 	"github.com/loft-sh/devpod/pkg/token"
 	"github.com/pkg/errors"
 	"golang.org/x/crypto/ssh"
-	"io"
+	"os"
 	"strings"
 )
 
@@ -161,8 +161,14 @@ func (r *Runner) createSSHTunnel(containerID string) (*ssh.Client, error) {
 	}
 
 	// create our connection
-	stdoutReader, stdoutWriter := io.Pipe()
-	stdinReader, stdinWriter := io.Pipe()
+	stdoutReader, stdoutWriter, err := os.Pipe()
+	if err != nil {
+		return nil, err
+	}
+	stdinReader, stdinWriter, err := os.Pipe()
+	if err != nil {
+		return nil, err
+	}
 	err = r.Docker.Tunnel(agent.RemoteDevPodHelperLocation, agent.DefaultAgentDownloadURL, containerID, tok, stdinReader, stdoutWriter, nil)
 	if err != nil {
 		return nil, errors.Wrap(err, "create docker tunnel")

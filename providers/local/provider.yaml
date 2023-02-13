@@ -1,0 +1,7 @@
+name: local
+version: 0.0.1
+description: |-
+  DevPod on Local Machine
+exec:
+  command: |-
+    sh -c "${COMMAND}"

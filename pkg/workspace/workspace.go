@@ -45,9 +45,13 @@ func GetWorkspace(ctx context.Context, devPodConfig *config.Config, args []strin
 }
 
 // ResolveWorkspace tries to retrieve an already existing workspace or creates a new one
-func ResolveWorkspace(ctx context.Context, devPodConfig *config.Config, args []string, log log.Logger) (*provider2.Workspace, provider2.Provider, error) {
+func ResolveWorkspace(ctx context.Context, devPodConfig *config.Config, args []string, desiredID string, log log.Logger) (*provider2.Workspace, provider2.Provider, error) {
 	// check if we have no args
 	if len(args) == 0 {
+		if desiredID != "" {
+			return GetWorkspace(ctx, devPodConfig, []string{desiredID}, log)
+		}
+
 		return selectWorkspace(ctx, devPodConfig, log)
 	}
 
@@ -57,8 +61,16 @@ func ResolveWorkspace(ctx context.Context, devPodConfig *config.Config, args []s
 	// convert to id
 	workspaceID := ToWorkspaceID(name)
 
-	// already exists?
-	if config.WorkspaceExists(devPodConfig.DefaultContext, workspaceID) {
+	// check if desired id already exists
+	if desiredID != "" {
+		if config.WorkspaceExists(devPodConfig.DefaultContext, desiredID) {
+			log.Infof("Workspace %s already exists", desiredID)
+			return loadExistingWorkspace(ctx, desiredID, devPodConfig, log)
+		}
+
+		// set desired id
+		workspaceID = desiredID
+	} else if config.WorkspaceExists(devPodConfig.DefaultContext, workspaceID) {
 		log.Infof("Workspace %s already exists", workspaceID)
 		return loadExistingWorkspace(ctx, workspaceID, devPodConfig, log)
 	}

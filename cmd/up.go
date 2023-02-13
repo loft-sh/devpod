@@ -20,6 +20,7 @@ import (
 type UpCmd struct {
 	flags.GlobalFlags
 
+	ID       string
 	Snapshot bool
 }
 
@@ -38,7 +39,7 @@ func NewUpCmd(flags *flags.GlobalFlags) *cobra.Command {
 				return err
 			}
 
-			workspace, provider, err := workspace2.ResolveWorkspace(ctx, devPodConfig, args, log.Default)
+			workspace, provider, err := workspace2.ResolveWorkspace(ctx, devPodConfig, args, cmd.ID, log.Default)
 			if err != nil {
 				return err
 			}
@@ -47,6 +48,7 @@ func NewUpCmd(flags *flags.GlobalFlags) *cobra.Command {
 		},
 	}
 
+	upCmd.Flags().StringVar(&cmd.ID, "id", "", "The id to use for the workspace")
 	upCmd.Flags().BoolVar(&cmd.Snapshot, "snapshot", false, "If true will create a snapshot for the environment")
 	return upCmd
 }
@@ -111,8 +113,14 @@ func devPodUpServer(ctx context.Context, provider provider2.ServerProvider, work
 	}
 
 	// create pipes
-	stdoutReader, stdoutWriter := io.Pipe()
-	stdinReader, stdinWriter := io.Pipe()
+	stdoutReader, stdoutWriter, err := os.Pipe()
+	if err != nil {
+		return err
+	}
+	stdinReader, stdinWriter, err := os.Pipe()
+	if err != nil {
+		return err
+	}
 
 	// start server on stdio
 	go func() {

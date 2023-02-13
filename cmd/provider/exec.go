@@ -3,7 +3,6 @@ package provider
 import (
 	"context"
 	"fmt"
-	"github.com/alessio/shellescape"
 	"github.com/loft-sh/devpod/cmd/flags"
 	"github.com/loft-sh/devpod/pkg/config"
 	"github.com/loft-sh/devpod/pkg/log"
@@ -11,6 +10,7 @@ import (
 	"github.com/loft-sh/devpod/pkg/workspace"
 	"github.com/spf13/cobra"
 	"os"
+	"strings"
 )
 
 // ExecCmd holds the exec cmd flags
@@ -24,8 +24,9 @@ func NewExecCmd(flags *flags.GlobalFlags) *cobra.Command {
 		GlobalFlags: *flags,
 	}
 	execCmd := &cobra.Command{
-		Use:   "exec",
-		Short: "Executes a provider command",
+		Use:                "exec",
+		DisableFlagParsing: true,
+		Short:              "Executes a provider command",
 		Long: `
 Executes a provider command in a given workspace.
 
@@ -53,7 +54,7 @@ func (cmd *ExecCmd) Run(ctx context.Context, args []string) error {
 	}
 
 	devPodConfig.Contexts[devPodConfig.DefaultContext].DefaultProvider = args[0]
-	workspaceConfig, provider, err := workspace.ResolveWorkspace(ctx, devPodConfig, []string{args[2]}, log.Default)
+	workspaceConfig, provider, err := workspace.ResolveWorkspace(ctx, devPodConfig, []string{args[2]}, "", log.Default)
 	if err != nil {
 		return err
 	}
@@ -84,7 +85,7 @@ func (cmd *ExecCmd) Run(ctx context.Context, args []string) error {
 			}
 		case "command":
 			err = serverProvider.Command(ctx, workspaceConfig, provider2.CommandOptions{
-				Command: shellescape.QuoteCommand(args[3:]),
+				Command: strings.Join(args[3:], " "),
 				Stdin:   os.Stdin,
 				Stdout:  os.Stdout,
 				Stderr:  os.Stderr,
