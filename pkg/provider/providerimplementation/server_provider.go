@@ -211,11 +211,11 @@ func runProviderCommand(ctx context.Context, name string, command types.StrArray
 	}
 
 	// run the command
-	return RunCommand(ctx, command, workspace, prov, stdin, stdout, stderr, extraEnv)
+	return RunCommand(ctx, command, workspace, stdin, stdout, stderr, extraEnv)
 }
 
-func RunCommand(ctx context.Context, command types.StrArray, workspace *provider.Workspace, prov provider.Provider, stdin io.Reader, stdout io.Writer, stderr io.Writer, extraEnv map[string]string) error {
-	env, err := provider.ToEnvironment(workspace, prov)
+func RunCommand(ctx context.Context, command types.StrArray, workspace *provider.Workspace, stdin io.Reader, stdout io.Writer, stderr io.Writer, extraEnv map[string]string) error {
+	env, err := provider.ToEnvironment(workspace)
 	if err != nil {
 		return err
 	}

@@ -139,7 +139,7 @@ func checkForInactivity(workspaceConfig string, log log.Logger) error {
 	// we run the timeout command now
 	buf := &bytes.Buffer{}
 	log.Infof("Run shutdown command for workspace %s: %s", workspaceConfig, strings.Join(workspace.AgentConfig.Exec.Shutdown, " "))
-	err = providerimplementation.RunCommand(context.Background(), workspace.AgentConfig.Exec.Shutdown, workspace.Workspace, nil, nil, buf, buf, nil)
+	err = providerimplementation.RunCommand(context.Background(), workspace.AgentConfig.Exec.Shutdown, workspace.Workspace, nil, buf, buf, nil)
 	if err != nil {
 		log.Errorf("Error running %s: %s%v", strings.Join(workspace.AgentConfig.Exec.Shutdown, " "), buf.String(), err)
 		return err

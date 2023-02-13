@@ -11,7 +11,6 @@ import (
 const (
 	DEVPOD                   = "DEVPOD"
 	WORKSPACE_ID             = "WORKSPACE_ID"
-	WORKSPACE_INFO           = "WORKSPACE_INFO"
 	WORKSPACE_FOLDER         = "WORKSPACE_FOLDER"
 	WORKSPACE_CONTEXT        = "WORKSPACE_CONTEXT"
 	WORKSPACE_ORIGIN         = "WORKSPACE_ORIGIN"
@@ -42,17 +41,10 @@ func FromEnvironment() *Workspace {
 	}
 }
 
-func ToOptions(workspace *Workspace, provider Provider) (map[string]string, error) {
+func ToOptions(workspace *Workspace) (map[string]string, error) {
 	retVars := map[string]string{}
 	if workspace == nil {
 		return retVars, nil
-	}
-	if provider != nil {
-		workspaceInfo, err := NewAgentWorkspaceInfo(workspace, provider)
-		if err != nil {
-			return nil, err
-		}
-		retVars[WORKSPACE_INFO] = workspaceInfo
 	}
 	for optionName, optionValue := range workspace.Provider.Options {
 		retVars[strings.ToUpper(optionName)] = optionValue.Value
@@ -131,8 +123,8 @@ func cloneWorkspace(workspace *Workspace) *Workspace {
 	return ret
 }
 
-func ToEnvironment(workspace *Workspace, provider Provider) ([]string, error) {
-	options, err := ToOptions(workspace, provider)
+func ToEnvironment(workspace *Workspace) ([]string, error) {
+	options, err := ToOptions(workspace)
 	if err != nil {
 		return nil, err
 	}

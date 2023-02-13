@@ -87,30 +87,6 @@ func (r *Runner) Up() error {
 	return fmt.Errorf("dev container config is missing one of \"image\", \"dockerFile\" or \"dockerComposeFile\" properties")
 }
 
-func (r *Runner) Delete() error {
-	labels := r.getLabels()
-	containerDetails, err := r.Docker.FindDevContainer(labels)
-	if err != nil {
-		return errors.Wrap(err, "find dev container")
-	} else if containerDetails == nil {
-		return nil
-	}
-
-	if strings.ToLower(containerDetails.State.Status) == "running" {
-		err = r.Docker.Stop(containerDetails.Id)
-		if err != nil {
-			return err
-		}
-	}
-
-	err = r.Docker.Remove(containerDetails.Id)
-	if err != nil {
-		return err
-	}
-
-	return nil
-}
-
 func (r *Runner) FindDevContainer() (*docker.ContainerDetails, error) {
 	labels := r.getLabels()
 	containerDetails, err := r.Docker.FindDevContainer(labels)
