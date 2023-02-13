@@ -60,6 +60,17 @@ type WorkspaceSource struct {
 	Image string `json:"image,omitempty"`
 }
 
+type AgentWorkspaceInfo struct {
+	// Workspace holds the workspace info
+	Workspace *Workspace `json:"workspace,omitempty"`
+
+	// AgentConfig holds the agent configuration
+	AgentConfig *ProviderAgentConfig `json:"agentConfig,omitempty"`
+
+	// Folder holds the workspace folder on the remote server
+	Folder string `json:"-"`
+}
+
 func (w WorkspaceSource) String() string {
 	if w.GitRepository != "" {
 		if w.GitBranch != "" {

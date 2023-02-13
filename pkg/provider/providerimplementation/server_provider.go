@@ -56,11 +56,11 @@ func (s *serverProvider) validate(workspace *provider.Workspace) error {
 }
 
 func (s *serverProvider) Init(ctx context.Context, workspace *provider.Workspace, options provider.InitOptions) error {
-	return runProviderCommand(ctx, "init", s.config.Exec.Init, workspace, s.Options(), os.Stdin, os.Stdout, os.Stderr, nil, s.log)
+	return runProviderCommand(ctx, "init", s.config.Exec.Init, workspace, s, os.Stdin, os.Stdout, os.Stderr, nil, s.log)
 }
 
 func (s *serverProvider) Validate(ctx context.Context, workspace *provider.Workspace, options provider.ValidateOptions) error {
-	return runProviderCommand(ctx, "validate", s.config.Exec.Validate, workspace, s.Options(), os.Stdin, os.Stdout, os.Stderr, nil, s.log)
+	return runProviderCommand(ctx, "validate", s.config.Exec.Validate, workspace, s, os.Stdin, os.Stdout, os.Stderr, nil, s.log)
 }
 
 func (s *serverProvider) Create(ctx context.Context, workspace *provider.Workspace, options provider.CreateOptions) error {
@@ -74,7 +74,7 @@ func (s *serverProvider) Create(ctx context.Context, workspace *provider.Workspa
 	}
 
 	s.log.Infof("Create %s server...", s.config.Name)
-	err = runProviderCommand(ctx, "create", s.config.Exec.Create, workspace, s.Options(), os.Stdin, os.Stdout, os.Stderr, nil, s.log)
+	err = runProviderCommand(ctx, "create", s.config.Exec.Create, workspace, s, os.Stdin, os.Stdout, os.Stderr, nil, s.log)
 	if err != nil {
 		return err
 	}
@@ -90,7 +90,7 @@ func (s *serverProvider) Delete(ctx context.Context, workspace *provider.Workspa
 
 	if len(s.config.Exec.Delete) > 0 {
 		s.log.Infof("Deleting %s server...", s.config.Name)
-		err = runProviderCommand(ctx, "delete", s.config.Exec.Delete, workspace, s.Options(), os.Stdin, os.Stdout, os.Stderr, nil, s.log)
+		err = runProviderCommand(ctx, "delete", s.config.Exec.Delete, workspace, s, os.Stdin, os.Stdout, os.Stderr, nil, s.log)
 		if err != nil {
 			if !options.Force {
 				return err
@@ -110,7 +110,7 @@ func (s *serverProvider) Start(ctx context.Context, workspace *provider.Workspac
 		return err
 	}
 
-	err = runProviderCommand(ctx, "start", s.config.Exec.Start, workspace, s.Options(), os.Stdin, os.Stdout, os.Stderr, nil, s.log)
+	err = runProviderCommand(ctx, "start", s.config.Exec.Start, workspace, s, os.Stdin, os.Stdout, os.Stderr, nil, s.log)
 	if err != nil {
 		return err
 	}
@@ -124,7 +124,7 @@ func (s *serverProvider) Stop(ctx context.Context, workspace *provider.Workspace
 		return err
 	}
 
-	err = runProviderCommand(ctx, "stop", s.config.Exec.Stop, workspace, s.Options(), os.Stdin, os.Stdout, os.Stderr, nil, s.log)
+	err = runProviderCommand(ctx, "stop", s.config.Exec.Stop, workspace, s, os.Stdin, os.Stdout, os.Stderr, nil, s.log)
 	if err != nil {
 		return err
 	}
@@ -138,7 +138,7 @@ func (s *serverProvider) Command(ctx context.Context, workspace *provider.Worksp
 		return err
 	}
 
-	err = runProviderCommand(ctx, "command", s.config.Exec.Command, workspace, s.Options(), options.Stdin, options.Stdout, options.Stderr, map[string]string{
+	err = runProviderCommand(ctx, "command", s.config.Exec.Command, workspace, s, options.Stdin, options.Stdout, options.Stderr, map[string]string{
 		provider.CommandEnv: options.Command,
 	}, s.log.ErrorStreamOnly())
 	if err != nil {
@@ -158,7 +158,7 @@ func (s *serverProvider) Status(ctx context.Context, workspace *provider.Workspa
 	if len(s.config.Exec.Status) > 0 {
 		stdout := &bytes.Buffer{}
 		stderr := &bytes.Buffer{}
-		err := runProviderCommand(ctx, "status", s.config.Exec.Status, workspace, s.Options(), nil, stdout, stderr, nil, s.log)
+		err := runProviderCommand(ctx, "status", s.config.Exec.Status, workspace, s, nil, stdout, stderr, nil, s.log)
 		if err != nil {
 			return provider.StatusNotFound, errors.Wrapf(err, "get status: %s%s", stdout, stderr)
 		}
@@ -189,7 +189,7 @@ func (s *serverProvider) Status(ctx context.Context, workspace *provider.Workspa
 	return provider.StatusNotFound, nil
 }
 
-func runProviderCommand(ctx context.Context, name string, command types.StrArray, workspace *provider.Workspace, providerOptions map[string]*provider.ProviderOption, stdin io.Reader, stdout io.Writer, stderr io.Writer, extraEnv map[string]string, log log.Logger) (err error) {
+func runProviderCommand(ctx context.Context, name string, command types.StrArray, workspace *provider.Workspace, prov provider.Provider, stdin io.Reader, stdout io.Writer, stderr io.Writer, extraEnv map[string]string, log log.Logger) (err error) {
 	if len(command) == 0 {
 		return nil
 	}
@@ -199,25 +199,30 @@ func runProviderCommand(ctx context.Context, name string, command types.StrArray
 
 	// resolve options
 	if workspace != nil {
-		err = resolveOptions(ctx, name, "", workspace, providerOptions)
+		err = resolveOptions(ctx, name, "", workspace, prov)
 		if err != nil {
 			return err
 		}
 		defer func() {
 			if err == nil {
-				err = resolveOptions(ctx, "", name, workspace, providerOptions)
+				err = resolveOptions(ctx, "", name, workspace, prov)
 			}
 		}()
 	}
 
 	// run the command
-	return RunCommand(ctx, command, workspace, stdin, stdout, stderr, extraEnv)
+	return RunCommand(ctx, command, workspace, prov, stdin, stdout, stderr, extraEnv)
 }
 
-func RunCommand(ctx context.Context, command types.StrArray, workspace *provider.Workspace, stdin io.Reader, stdout io.Writer, stderr io.Writer, extraEnv map[string]string) error {
+func RunCommand(ctx context.Context, command types.StrArray, workspace *provider.Workspace, prov provider.Provider, stdin io.Reader, stdout io.Writer, stderr io.Writer, extraEnv map[string]string) error {
+	env, err := provider.ToEnvironment(workspace, prov)
+	if err != nil {
+		return err
+	}
+
 	// create environment variables for command
 	osEnviron := os.Environ()
-	osEnviron = append(osEnviron, provider.ToEnvironment(workspace)...)
+	osEnviron = append(osEnviron, env...)
 	for k, v := range extraEnv {
 		osEnviron = append(osEnviron, k+"="+v)
 	}
@@ -243,7 +248,7 @@ func RunCommand(ctx context.Context, command types.StrArray, workspace *provider
 	cmd.Stdout = stdout
 	cmd.Stderr = stderr
 	cmd.Env = osEnviron
-	err := cmd.Run()
+	err = cmd.Run()
 	if err != nil {
 		return err
 	}
@@ -251,12 +256,12 @@ func RunCommand(ctx context.Context, command types.StrArray, workspace *provider
 	return nil
 }
 
-func resolveOptions(ctx context.Context, beforeStage, afterStage string, workspace *provider.Workspace, providerOptions map[string]*provider.ProviderOption) error {
+func resolveOptions(ctx context.Context, beforeStage, afterStage string, workspace *provider.Workspace, provider provider.Provider) error {
 	var err error
 
 	// resolve options
 	beforeOptions := workspace.Provider.Options
-	workspace.Provider.Options, err = options2.ResolveOptions(ctx, beforeStage, afterStage, workspace, providerOptions)
+	workspace.Provider.Options, err = options2.ResolveOptions(ctx, beforeStage, afterStage, workspace, provider)
 	if err != nil {
 		return errors.Wrap(err, "resolve options")
 	}

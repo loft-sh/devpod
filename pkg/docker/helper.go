@@ -120,6 +120,24 @@ func (r *DockerHelper) FindDevContainer(labels []string) (*ContainerDetails, err
 	return nil, nil
 }
 
+func (r *DockerHelper) Stop(id string) error {
+	out, err := r.buildCmd("stop", id).CombinedOutput()
+	if err != nil {
+		return errors.Wrapf(err, "%s", string(out))
+	}
+
+	return nil
+}
+
+func (r *DockerHelper) Remove(id string) error {
+	out, err := r.buildCmd("rm", id).CombinedOutput()
+	if err != nil {
+		return errors.Wrapf(err, "%s", string(out))
+	}
+
+	return nil
+}
+
 func (r *DockerHelper) Run(args []string, stdin io.Reader, stdout io.Writer, stderr io.Writer) error {
 	cmd := r.buildCmd(args...)
 	cmd.Stdin = stdin
