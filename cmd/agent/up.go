@@ -105,6 +105,17 @@ func (cmd *UpCmd) up(ctx context.Context, tunnelClient tunnel.TunnelClient, logg
 }
 
 func (cmd *UpCmd) prepareWorkspace(ctx context.Context, workspaceInfo *agent.AgentWorkspaceInfo, client tunnel.TunnelClient, log log.Logger) error {
+	_, err := os.Stat(workspaceInfo.Folder)
+	if err == nil {
+		return nil
+	}
+
+	// make content dir
+	err = os.MkdirAll(workspaceInfo.Folder, 0777)
+	if err != nil {
+		return errors.Wrap(err, "make workspace folder")
+	}
+
 	// check what type of workspace this is
 	if workspaceInfo.Workspace.Source.GitRepository != "" {
 		return CloneRepository(workspaceInfo.Folder, workspaceInfo.Workspace.Source.GitRepository, log)
@@ -150,12 +161,12 @@ func getWorkspaceInfo(workspaceInfoRaw string) (*agent.AgentWorkspaceInfo, error
 	}
 
 	// write workspace config
-	err = os.WriteFile(filepath.Join(workspaceDir, "..", config.WorkspaceConfigFile), []byte(decoded), 0666)
+	err = os.WriteFile(filepath.Join(workspaceDir, config.WorkspaceConfigFile), []byte(decoded), 0666)
 	if err != nil {
 		return nil, fmt.Errorf("write workspace config file")
 	}
 
-	workspaceInfo.Folder = workspaceDir
+	workspaceInfo.Folder = agent.GetAgentWorkspaceContentDir(workspaceDir)
 	return workspaceInfo, nil
 }
 

@@ -1,7 +1,6 @@
 package stdio
 
 import (
-	"fmt"
 	"io"
 	"net"
 	"os"
@@ -53,8 +52,8 @@ func (s *StdioStream) Write(b []byte) (n int, err error) {
 func (s *StdioStream) Close() error {
 	if s.exitOnClose {
 		// We kill ourself here because the streams are closed
-		_, _ = fmt.Fprintf(os.Stderr, "Streams are closed")
-		os.Exit(1)
+		//_, _ = fmt.Fprintf(os.Stderr, "Streams are closed")
+		os.Exit(0)
 	}
 
 	return s.out.Close()

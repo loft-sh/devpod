@@ -2,6 +2,8 @@ name: local
 version: 0.0.1
 description: |-
   DevPod on Local Machine
+agent:
+  path: devpod
 exec:
   command: |-
-    sh -c "${COMMAND}"
+    ${DEVPOD} helper sh -c "${COMMAND}"

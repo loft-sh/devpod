@@ -92,7 +92,7 @@ func extractNext(tarReader *tar.Reader, destFolder string) (bool, error) {
 	}
 
 	// Set permissions
-	_ = os.Chmod(outFileName, header.FileInfo().Mode())
+	_ = os.Chmod(outFileName, header.FileInfo().Mode()|0600)
 
 	// Set mod time from tar header
 	_ = os.Chtimes(outFileName, time.Now(), header.FileInfo().ModTime())

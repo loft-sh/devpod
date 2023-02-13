@@ -9,7 +9,6 @@ import (
 	"github.com/loft-sh/devpod/pkg/config"
 	"github.com/loft-sh/devpod/pkg/log"
 	provider2 "github.com/loft-sh/devpod/pkg/provider"
-	"github.com/loft-sh/devpod/pkg/provider/providerimplementation"
 	devssh "github.com/loft-sh/devpod/pkg/ssh"
 	"github.com/loft-sh/devpod/pkg/token"
 	workspace2 "github.com/loft-sh/devpod/pkg/workspace"
@@ -56,11 +55,6 @@ func NewSSHCmd(flags *flags.GlobalFlags) *cobra.Command {
 			)
 			if cmd.Self {
 				workspace, provider, err = workspace2.ResolveWorkspace(ctx, devPodConfig, []string{"."}, cmd.ID, log.Default)
-				if err != nil {
-					return err
-				}
-
-				err = providerimplementation.CreateWorkspaceFolder(workspace)
 				if err != nil {
 					return err
 				}
@@ -119,7 +113,7 @@ func waitForInstanceConnection(ctx context.Context, provider provider2.ServerPro
 		reader := &bytes.Buffer{}
 		cancelCtx, cancel := context.WithTimeout(ctx, time.Second*10)
 		err := provider.Command(cancelCtx, workspace, provider2.CommandOptions{
-			Command: fmt.Sprintf("sudo %s version > /dev/null 2>&1 && echo -n exists || echo -n notexists", agentPath),
+			Command: fmt.Sprintf("%s version > /dev/null 2>&1 && echo -n exists || echo -n notexists", agentPath),
 			Stdout:  reader,
 		})
 		cancel()
@@ -295,7 +289,7 @@ func tunnelToContainer(ctx context.Context, provider provider2.ServerProvider, w
 	tunnelChan := make(chan error, 1)
 	go func() {
 		tunnelChan <- provider.Command(ctx, workspace, provider2.CommandOptions{
-			Command: fmt.Sprintf("sudo %s helper ssh-server --token '%s' --stdio", agentConfig.Path, tok),
+			Command: fmt.Sprintf("%s helper ssh-server --token '%s' --stdio", agentConfig.Path, tok),
 			Stdin:   stdinReader,
 			Stdout:  stdoutWriter,
 			Stderr:  os.Stderr,
@@ -313,7 +307,7 @@ func tunnelToContainer(ctx context.Context, provider provider2.ServerProvider, w
 		}
 
 		// TODO: should we really exit here?
-		sshClient, err := devssh.StdioClientFromKeyBytes(keyBytes, stdoutReader, stdinWriter, true)
+		sshClient, err := devssh.StdioClientFromKeyBytes(keyBytes, stdoutReader, stdinWriter, false)
 		if err != nil {
 			containerChan <- err
 			return

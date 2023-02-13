@@ -69,12 +69,17 @@ func (s *serverProvider) Create(ctx context.Context, workspace *provider.Workspa
 		return err
 	}
 
-	err = CreateWorkspaceFolder(workspace)
+	if len(s.config.Exec.Create) == 0 {
+		return nil
+	}
+
+	s.log.Infof("Create %s server...", s.config.Name)
+	err = runProviderCommand(ctx, "create", s.config.Exec.Create, workspace, s.Options(), os.Stdin, os.Stdout, os.Stderr, nil, s.log)
 	if err != nil {
 		return err
 	}
-
-	return runProviderCommand(ctx, "create", s.config.Exec.Create, workspace, s.Options(), os.Stdin, os.Stdout, os.Stderr, nil, s.log)
+	s.log.Donef("Successfully created %s server", s.config.Name)
+	return nil
 }
 
 func (s *serverProvider) Delete(ctx context.Context, workspace *provider.Workspace, options provider.DeleteOptions) error {
@@ -83,13 +88,17 @@ func (s *serverProvider) Delete(ctx context.Context, workspace *provider.Workspa
 		return err
 	}
 
-	err = runProviderCommand(ctx, "delete", s.config.Exec.Delete, workspace, s.Options(), os.Stdin, os.Stdout, os.Stderr, nil, s.log)
-	if err != nil {
-		if !options.Force {
-			return err
-		}
+	if len(s.config.Exec.Delete) > 0 {
+		s.log.Infof("Deleting %s server...", s.config.Name)
+		err = runProviderCommand(ctx, "delete", s.config.Exec.Delete, workspace, s.Options(), os.Stdin, os.Stdout, os.Stderr, nil, s.log)
+		if err != nil {
+			if !options.Force {
+				return err
+			}
 
-		s.log.Errorf("Error deleting workspace %s", workspace.ID)
+			s.log.Errorf("Error deleting workspace %s", workspace.ID)
+		}
+		s.log.Donef("Successfully deleted %s server", s.config.Name)
 	}
 
 	return DeleteWorkspaceFolder(workspace.Context, workspace.ID)
@@ -173,7 +182,7 @@ func (s *serverProvider) Status(ctx context.Context, workspace *provider.Workspa
 
 	// does workspace folder exist?
 	_, err = os.Stat(workspaceFolder)
-	if err != nil {
+	if err == nil {
 		return provider.StatusRunning, nil
 	}
 
@@ -258,17 +267,6 @@ func resolveOptions(ctx context.Context, beforeStage, afterStage string, workspa
 		if err != nil {
 			return err
 		}
-	}
-
-	return nil
-}
-
-func CreateWorkspaceFolder(workspace *provider.Workspace) error {
-	// save config
-	workspace.CreationTimestamp = types.Now()
-	err := config.SaveWorkspaceConfig(workspace)
-	if err != nil {
-		return err
 	}
 
 	return nil

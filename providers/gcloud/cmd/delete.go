@@ -42,13 +42,10 @@ func (cmd *DeleteCmd) Run(ctx context.Context, provider *gcloudProvider, workspa
 		"--zone=" + provider.Config.Zone,
 	}
 
-	log.Infof("Deleting VM Instance %s...", name)
 	_, err := provider.output(ctx, args...)
 	if err != nil {
 		return errors.Wrapf(err, "destroy vm")
 	}
-
-	log.Infof("Successfully deleted VM instance %s", name)
 	return nil
 }
 
