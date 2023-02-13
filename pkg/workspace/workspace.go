@@ -12,6 +12,7 @@ import (
 	devssh "github.com/loft-sh/devpod/pkg/ssh"
 	"github.com/loft-sh/devpod/pkg/survey"
 	"github.com/loft-sh/devpod/pkg/terminal"
+	"github.com/loft-sh/devpod/pkg/types"
 	"github.com/pkg/errors"
 	"os"
 	"os/exec"
@@ -86,6 +87,25 @@ func ResolveWorkspace(ctx context.Context, devPodConfig *config.Config, args []s
 	if err != nil {
 		return nil, nil, err
 	}
+
+	// resolve workspace
+	workspace, provider, err := resolve(ctx, defaultProvider, devPodConfig, name, workspaceID, workspaceFolder, isLocalPath)
+	if err != nil {
+		_ = os.RemoveAll(workspaceFolder)
+		return nil, nil, err
+	}
+
+	// save workspace config
+	err = saveWorkspaceConfig(workspace)
+	if err != nil {
+		_ = os.RemoveAll(workspaceFolder)
+		return nil, nil, errors.Wrap(err, "save config")
+	}
+
+	return workspace, provider, nil
+}
+
+func resolve(ctx context.Context, defaultProvider *ProviderWithOptions, devPodConfig *config.Config, name, workspaceID, workspaceFolder string, isLocalPath bool) (*provider2.Workspace, provider2.Provider, error) {
 
 	// resolve options
 	options, err := options2.ResolveOptions(ctx, "", "", &provider2.Workspace{
@@ -306,4 +326,15 @@ func findGitRoot(localFolder string) string {
 	}
 
 	return filepath.Dir(filepath.Join(absLocalFolder, path))
+}
+
+func saveWorkspaceConfig(workspace *provider2.Workspace) error {
+	// save config
+	workspace.CreationTimestamp = types.Now()
+	err := config.SaveWorkspaceConfig(workspace)
+	if err != nil {
+		return err
+	}
+
+	return nil
 }

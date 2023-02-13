@@ -15,9 +15,11 @@ import (
 // ListCmd holds the list cmd flags
 type ListCmd struct {
 	flags.GlobalFlags
+
+	Unused bool
 }
 
-// NewListCmd creates a new destroy command
+// NewListCmd creates a new command
 func NewListCmd(flags *flags.GlobalFlags) *cobra.Command {
 	cmd := &ListCmd{
 		GlobalFlags: *flags,
@@ -30,6 +32,7 @@ func NewListCmd(flags *flags.GlobalFlags) *cobra.Command {
 		},
 	}
 
+	listCmd.Flags().BoolVar(&cmd.Unused, "unused", false, "If enabled, will also show unconfigured providers")
 	return listCmd
 }
 
@@ -45,8 +48,17 @@ func (cmd *ListCmd) Run(ctx context.Context) error {
 		return err
 	}
 
+	configuredProviders := devPodConfig.Contexts[devPodConfig.DefaultContext].Providers
+	if configuredProviders == nil {
+		configuredProviders = map[string]*config.ConfigProvider{}
+	}
+
 	tableEntries := [][]string{}
 	for _, entry := range providers {
+		if !cmd.Unused && configuredProviders[entry.Provider.Name()] == nil {
+			continue
+		}
+
 		tableEntries = append(tableEntries, []string{
 			entry.Provider.Name(),
 			strconv.FormatBool(devPodConfig.Contexts[devPodConfig.DefaultContext].DefaultProvider == entry.Provider.Name()),

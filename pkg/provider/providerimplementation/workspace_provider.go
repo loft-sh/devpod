@@ -61,11 +61,6 @@ func (s *workspaceProvider) Create(ctx context.Context, workspace *provider.Work
 		return err
 	}
 
-	err = CreateWorkspaceFolder(workspace)
-	if err != nil {
-		return err
-	}
-
 	return runProviderCommand(ctx, "create", s.config.Exec.Create, workspace, s.Options(), os.Stdin, os.Stdout, os.Stderr, nil, s.log)
 }
 

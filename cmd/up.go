@@ -139,7 +139,7 @@ func devPodUpServer(ctx context.Context, provider provider2.ServerProvider, work
 	// create container etc.
 	log.Infof("Creating devcontainer...")
 	err = provider.Command(ctx, workspace, provider2.CommandOptions{
-		Command: fmt.Sprintf("sudo %s agent up --workspace-info '%s'", agentConfig.Path, workspaceInfo),
+		Command: fmt.Sprintf("%s agent up --workspace-info '%s'", agentConfig.Path, workspaceInfo),
 		Stdin:   stdinReader,
 		Stdout:  stdoutWriter,
 		Stderr:  os.Stderr,

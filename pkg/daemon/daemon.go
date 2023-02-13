@@ -1,12 +1,19 @@
 package daemon
 
 import (
+	"fmt"
 	"github.com/loft-sh/devpod/pkg/log"
 	"github.com/pkg/errors"
 	"github.com/takama/daemon"
+	"runtime"
 )
 
 func InstallDaemon(log log.Logger) error {
+	if runtime.GOOS == "windows" || runtime.GOOS == "darwin" {
+		return fmt.Errorf("unsupported daemon os")
+	}
+
+	// check if admin
 	service, err := daemon.New("devpod", "DevPod Agent Service", daemon.SystemDaemon)
 	if err != nil {
 		return err
