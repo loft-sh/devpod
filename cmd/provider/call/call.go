@@ -1,7 +1,6 @@
 package call
 
 import (
-	dockercmd "github.com/loft-sh/devpod/providers/docker/cmd"
 	gcloudcmd "github.com/loft-sh/devpod/providers/gcloud/cmd"
 	"github.com/spf13/cobra"
 )
@@ -15,6 +14,5 @@ func NewCallCmd() *cobra.Command {
 	}
 
 	providerCmd.AddCommand(gcloudcmd.NewGCloudCmd())
-	providerCmd.AddCommand(dockercmd.NewDockerCmd())
 	return providerCmd
 }

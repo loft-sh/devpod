@@ -45,7 +45,7 @@ func ResolveOptions(ctx context.Context, beforeStage, afterStage string, workspa
 	}
 
 	// resolve options
-	resolvedOptions, err := resolveOptions(ctx, g, beforeStage, afterStage, options, workspace, provider)
+	resolvedOptions, err := resolveOptions(ctx, g, beforeStage, afterStage, options, workspace)
 	if err != nil {
 		return nil, err
 	}
@@ -53,7 +53,7 @@ func ResolveOptions(ctx context.Context, beforeStage, afterStage string, workspa
 	return resolvedOptions, nil
 }
 
-func resolveOptions(ctx context.Context, g *graph.Graph, beforeStage, afterStage string, options map[string]*provider2.ProviderOption, workspace *provider2.Workspace, provider provider2.Provider) (map[string]provider2.OptionValue, error) {
+func resolveOptions(ctx context.Context, g *graph.Graph, beforeStage, afterStage string, options map[string]*provider2.ProviderOption, workspace *provider2.Workspace) (map[string]provider2.OptionValue, error) {
 	// find out options we need to resolve
 	resolveOptions := map[string]bool{}
 	for optionName, option := range options {
@@ -85,7 +85,7 @@ func resolveOptions(ctx context.Context, g *graph.Graph, beforeStage, afterStage
 
 	// resolve options
 	for optionName := range resolveOptions {
-		err := resolveOption(ctx, g, optionName, resolveOptions, resolvedOptions, workspace, provider)
+		err := resolveOption(ctx, g, optionName, resolveOptions, resolvedOptions, workspace)
 		if err != nil {
 			return nil, errors.Wrap(err, "resolve option "+optionName)
 		}
@@ -95,7 +95,7 @@ func resolveOptions(ctx context.Context, g *graph.Graph, beforeStage, afterStage
 	return resolvedOptions, nil
 }
 
-func resolveOption(ctx context.Context, g *graph.Graph, optionName string, resolveOptions map[string]bool, resolvedOptions map[string]provider2.OptionValue, workspace *provider2.Workspace, provider provider2.Provider) error {
+func resolveOption(ctx context.Context, g *graph.Graph, optionName string, resolveOptions map[string]bool, resolvedOptions map[string]provider2.OptionValue, workspace *provider2.Workspace) error {
 	node := g.Nodes[optionName]
 
 	// are parents resolved?
@@ -116,7 +116,7 @@ func resolveOption(ctx context.Context, g *graph.Graph, optionName string, resol
 		}
 
 		// resolve parent first
-		err := resolveOption(ctx, g, parent.ID, resolveOptions, resolvedOptions, workspace, provider)
+		err := resolveOption(ctx, g, parent.ID, resolveOptions, resolvedOptions, workspace)
 		if err != nil {
 			return err
 		}
@@ -125,7 +125,7 @@ func resolveOption(ctx context.Context, g *graph.Graph, optionName string, resol
 	// resolve option
 	option := node.Data.(*provider2.ProviderOption)
 	if option.Default != "" {
-		resolved, err := toOptions(resolvedOptions, workspace, provider)
+		resolved, err := toOptions(resolvedOptions, workspace)
 		if err != nil {
 			return err
 		}
@@ -137,7 +137,7 @@ func resolveOption(ctx context.Context, g *graph.Graph, optionName string, resol
 		stdout := &bytes.Buffer{}
 		stderr := &bytes.Buffer{}
 		env := os.Environ()
-		resolved, err := toOptions(resolvedOptions, workspace, provider)
+		resolved, err := toOptions(resolvedOptions, workspace)
 		if err != nil {
 			return err
 		}
@@ -173,13 +173,13 @@ func resolveOption(ctx context.Context, g *graph.Graph, optionName string, resol
 	return nil
 }
 
-func toOptions(resolvedOptions map[string]provider2.OptionValue, workspace *provider2.Workspace, provider provider2.Provider) (map[string]string, error) {
+func toOptions(resolvedOptions map[string]provider2.OptionValue, workspace *provider2.Workspace) (map[string]string, error) {
 	options := map[string]string{}
 	for k, v := range resolvedOptions {
 		options[k] = v.Value
 	}
 	if workspace != nil {
-		workspaceOptions, err := provider2.ToOptions(workspace, provider)
+		workspaceOptions, err := provider2.ToOptions(workspace)
 		if err != nil {
 			return nil, err
 		}

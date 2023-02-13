@@ -110,7 +110,7 @@ func (cmd *UpCmd) up(ctx context.Context, workspaceInfo *provider2.AgentWorkspac
 	}
 
 	// create devcontainer
-	err = DevContainerUp(workspaceInfo.Workspace.ID, workspaceInfo.Folder, logger)
+	err = DevContainerUp(workspaceInfo, logger)
 	if err != nil {
 		return err
 	}
@@ -218,6 +218,30 @@ func installDaemon(workspaceInfo *provider2.AgentWorkspaceInfo, log log.Logger) 
 	return nil
 }
 
+func readAgentWorkspaceInfo(context, id string) (*provider2.AgentWorkspaceInfo, error) {
+	// get workspace folder
+	workspaceDir, err := agent.GetAgentWorkspaceDir(context, id)
+	if err != nil {
+		return nil, err
+	}
+
+	// read workspace config
+	out, err := os.ReadFile(filepath.Join(workspaceDir, config.WorkspaceConfigFile))
+	if err != nil {
+		return nil, err
+	}
+
+	// json unmarshal
+	workspaceInfo := &provider2.AgentWorkspaceInfo{}
+	err = json.Unmarshal(out, workspaceInfo)
+	if err != nil {
+		return nil, errors.Wrap(err, "parse workspace info")
+	}
+
+	workspaceInfo.Folder = agent.GetAgentWorkspaceContentDir(workspaceDir)
+	return workspaceInfo, nil
+}
+
 func getWorkspaceInfo(workspaceInfoRaw string) (*provider2.AgentWorkspaceInfo, error) {
 	decoded, err := compress.Decompress(workspaceInfoRaw)
 	if err != nil {
@@ -231,7 +255,7 @@ func getWorkspaceInfo(workspaceInfoRaw string) (*provider2.AgentWorkspaceInfo, e
 	}
 
 	// write to workspace folder
-	workspaceDir, err := agent.GetAgentWorkspaceDir(workspaceInfo.Workspace.Context, workspaceInfo.Workspace.ID)
+	workspaceDir, err := agent.CreateAgentWorkspaceDir(workspaceInfo.Workspace.Context, workspaceInfo.Workspace.ID)
 	if err != nil {
 		return nil, err
 	}
@@ -273,8 +297,8 @@ func PrepareImage(workspaceDir, image string) error {
 	return nil
 }
 
-func DevContainerUp(id, workspaceFolder string, log log.Logger) error {
-	err := devcontainer.NewRunner(agent.RemoteDevPodHelperLocation, agent.DefaultAgentDownloadURL, workspaceFolder, id, log).Up()
+func DevContainerUp(workspaceInfo *provider2.AgentWorkspaceInfo, log log.Logger) error {
+	err := createRunner(workspaceInfo, log).Up()
 	if err != nil {
 		return err
 	}
@@ -313,4 +337,8 @@ func InstallDocker(log log.Logger) error {
 	}
 
 	return nil
+}
+
+func createRunner(workspaceInfo *provider2.AgentWorkspaceInfo, log log.Logger) *devcontainer.Runner {
+	return devcontainer.NewRunner(agent.RemoteDevPodHelperLocation, agent.DefaultAgentDownloadURL, workspaceInfo.Folder, workspaceInfo.Workspace.ID, log)
 }

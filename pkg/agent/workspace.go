@@ -1,6 +1,7 @@
 package agent
 
 import (
+	"github.com/loft-sh/devpod/pkg/config"
 	"github.com/mitchellh/go-homedir"
 	"os"
 	"path/filepath"
@@ -48,6 +49,28 @@ func GetAgentWorkspaceContentDir(workspaceDir string) string {
 }
 
 func GetAgentWorkspaceDir(context, workspaceID string) (string, error) {
+	baseFolders := GetBaseFolders()
+	if context == "" {
+		context = config.DefaultContext
+	}
+
+	// workspace folder
+	for _, folder := range baseFolders {
+		workspaceDir := filepath.Join(folder, "contexts", context, "workspaces", workspaceID)
+
+		// check if it already exists
+		_, err := os.Stat(workspaceDir)
+		if err == nil {
+			return workspaceDir, nil
+		}
+
+		continue
+	}
+
+	return "", os.ErrNotExist
+}
+
+func CreateAgentWorkspaceDir(context, workspaceID string) (string, error) {
 	baseFolders := GetBaseFolders()
 
 	// workspace folder
