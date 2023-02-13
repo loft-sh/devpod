@@ -9,13 +9,14 @@ import (
 	"github.com/loft-sh/devpod/pkg/config"
 	"github.com/loft-sh/devpod/pkg/log"
 	provider2 "github.com/loft-sh/devpod/pkg/provider"
+	"github.com/loft-sh/devpod/pkg/provider/providerimplementation"
 	devssh "github.com/loft-sh/devpod/pkg/ssh"
 	"github.com/loft-sh/devpod/pkg/token"
 	workspace2 "github.com/loft-sh/devpod/pkg/workspace"
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
-	"io"
 	"os"
+	"os/exec"
 	"time"
 )
 
@@ -28,6 +29,7 @@ type SSHCmd struct {
 	Stdio         bool
 	JumpContainer bool
 
+	Self      bool
 	Configure bool
 	ID        string
 }
@@ -48,9 +50,25 @@ func NewSSHCmd(flags *flags.GlobalFlags) *cobra.Command {
 				return err
 			}
 
-			workspace, provider, err := workspace2.GetWorkspace(ctx, devPodConfig, []string{cmd.ID}, log.Default)
-			if err != nil {
-				return err
+			var (
+				workspace *provider2.Workspace
+				provider  provider2.Provider
+			)
+			if cmd.Self {
+				workspace, provider, err = workspace2.ResolveWorkspace(ctx, devPodConfig, []string{"."}, cmd.ID, log.Default)
+				if err != nil {
+					return err
+				}
+
+				err = providerimplementation.CreateWorkspaceFolder(workspace)
+				if err != nil {
+					return err
+				}
+			} else {
+				workspace, provider, err = workspace2.GetWorkspace(ctx, devPodConfig, []string{cmd.ID}, log.Default)
+				if err != nil {
+					return err
+				}
 			}
 
 			return cmd.Run(ctx, workspace, provider)
@@ -60,7 +78,9 @@ func NewSSHCmd(flags *flags.GlobalFlags) *cobra.Command {
 	sshCmd.Flags().StringVar(&cmd.ID, "id", "", "The id of the workspace to use")
 	sshCmd.Flags().BoolVar(&cmd.Configure, "configure", false, "If true will configure ssh for the given workspace")
 	sshCmd.Flags().BoolVar(&cmd.Stdio, "stdio", false, "If true will tunnel connection through stdout and stdin")
+	sshCmd.Flags().BoolVar(&cmd.Self, "self", false, "For testing only")
 	_ = sshCmd.MarkFlagRequired("id")
+	_ = sshCmd.Flags().MarkHidden("self")
 	return sshCmd
 }
 
@@ -68,6 +88,9 @@ func NewSSHCmd(flags *flags.GlobalFlags) *cobra.Command {
 func (cmd *SSHCmd) Run(ctx context.Context, workspace *provider2.Workspace, provider provider2.Provider) error {
 	if cmd.Configure {
 		return configureSSH(workspace.Context, cmd.ID, "root")
+	}
+	if cmd.Self {
+		return configureSSHSelf(workspace, log.Default)
 	}
 
 	if cmd.Stdio {
@@ -161,6 +184,7 @@ func startWaitServer(ctx context.Context, provider provider2.ServerProvider, wor
 		} else if instanceStatus == provider2.StatusBusy {
 			if time.Since(startWaiting) > time.Second*10 {
 				log.Infof("Waiting for instance to come up...")
+				log.Debugf("Got status %s, expected: Running", instanceStatus)
 				startWaiting = time.Now()
 			}
 
@@ -257,42 +281,77 @@ func tunnelToContainer(ctx context.Context, provider provider2.ServerProvider, w
 	}
 
 	// create readers
-	stdoutReader, stdoutWriter := io.Pipe()
-	stdinReader, stdinWriter := io.Pipe()
+	stdoutReader, stdoutWriter, err := os.Pipe()
+	if err != nil {
+		return err
+	}
+	stdinReader, stdinWriter, err := os.Pipe()
+	if err != nil {
+		return err
+	}
 
 	// tunnel to host
 	// TODO: right now we have a tunnel in a tunnel, maybe its better to start 2 separate commands?
-	err = provider.Command(ctx, workspace, provider2.CommandOptions{
-		Command: fmt.Sprintf("sudo %s helper ssh-server --token '%s' --stdio", agentConfig.Path, tok),
-		Stdin:   stdinReader,
-		Stdout:  stdoutWriter,
-		Stderr:  os.Stderr,
-	})
-	if err != nil {
-		return errors.Wrap(err, "start tunnel")
-	}
+	tunnelChan := make(chan error, 1)
+	go func() {
+		tunnelChan <- provider.Command(ctx, workspace, provider2.CommandOptions{
+			Command: fmt.Sprintf("sudo %s helper ssh-server --token '%s' --stdio", agentConfig.Path, tok),
+			Stdin:   stdinReader,
+			Stdout:  stdoutWriter,
+			Stderr:  os.Stderr,
+		})
+	}()
 
-	// connect via ssh over stdin / stdout
-	keyBytes, err := devssh.GetPrivateKeyRaw(workspace.Context, workspace.ID)
+	// connect to container
+	containerChan := make(chan error, 1)
+	go func() {
+		// connect via ssh over stdin / stdout
+		keyBytes, err := devssh.GetPrivateKeyRaw(workspace.Context, workspace.ID)
+		if err != nil {
+			containerChan <- err
+			return
+		}
+
+		// TODO: should we really exit here?
+		sshClient, err := devssh.StdioClientFromKeyBytes(keyBytes, stdoutReader, stdinWriter, true)
+		if err != nil {
+			containerChan <- err
+			return
+		}
+		defer sshClient.Close()
+
+		// TODO: do port-forwarding etc. here with sshClient
+		// go func() {}()
+
+		// tunnel to container
+		err = devssh.Run(sshClient, fmt.Sprintf("%s agent container-tunnel --token '%s' --workspace-info '%s'", agentConfig.Path, tok, workspaceInfo), os.Stdin, os.Stdout, os.Stderr)
+		if err != nil {
+			containerChan <- err
+			return
+		}
+	}()
+
+	// wait for result
+	select {
+	case err := <-containerChan:
+		return errors.Wrap(err, "tunnel to container")
+	case err := <-tunnelChan:
+		return errors.Wrap(err, "connect to server")
+	}
+}
+
+func configureSSHSelf(workspace *provider2.Workspace, log log.Logger) error {
+	tok, err := token.GenerateWorkspaceToken(workspace.Context, workspace.ID)
 	if err != nil {
 		return err
 	}
 
-	// TODO: should we really exit here?
-	sshClient, err := devssh.StdioClientFromKeyBytes(keyBytes, stdoutReader, stdinWriter, true)
+	err = devssh.ConfigureSSHConfigCommand(workspace.Context, workspace.ID, "", "devpod helper ssh-server --stdio --token "+tok, log)
 	if err != nil {
 		return err
 	}
-	defer sshClient.Close()
 
-	// TODO: do port-forwarding etc. here with sshClient
-	// go func() {}()
-
-	// tunnel to container
-	err = devssh.Run(sshClient, fmt.Sprintf("%s agent container-tunnel --token '%s' --workspace-info '%s'", agentConfig.Path, tok, workspaceInfo), os.Stdin, os.Stdout, os.Stderr)
-	if err != nil {
-		return err
-	}
+	err = exec.Command("code", "--folder-uri", fmt.Sprintf("vscode-remote://ssh-remote+%s.devpod/", workspace.ID)).Run()
 
 	return nil
 }

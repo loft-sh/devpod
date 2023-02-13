@@ -61,7 +61,7 @@ func (s *workspaceProvider) Create(ctx context.Context, workspace *provider.Work
 		return err
 	}
 
-	err = createWorkspaceFolder(workspace, s.Name())
+	err = CreateWorkspaceFolder(workspace)
 	if err != nil {
 		return err
 	}

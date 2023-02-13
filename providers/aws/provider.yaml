@@ -6,6 +6,7 @@ options:
   AWS_BINARY:
     description: Path to the aws binary
     default: aws
+    before: init
   MACHINE_TYPE:
     description: The machine type to use.
     default: t3.medium
@@ -38,7 +39,6 @@ exec:
                      --port 22 \
                      --cidr 0.0.0.0/0 \
                      --tag-specifications "ResourceType=security-group-rule,Tags=[{Key=devpod,Value=devpod-ingress}]" > /dev/null
-                     
     fi
 
   command: |-
@@ -48,10 +48,11 @@ exec:
     
     # make sure instance has public key
     ${AWS_BINARY} ec2-instance-connect send-ssh-public-key --instance-id ${INSTANCE_ID} \
-                                                           --instance-os-user ec2-user \
-                                                           --ssh-public-key "file://${WORKSPACE_FOLDER}/id_devpod.pub"
+                                                           --instance-os-user root \
+                                                           --ssh-public-key "file://${WORKSPACE_FOLDER}/id_devpod_rsa.pub" > /dev/null
     
-    echo ${DEVPOD} helper ssh-client --address "${PUBLIC_DNS}:22" --key-file "${WORKSPACE_FOLDER}/id_devpod" "${COMMAND}"
+    # run command remotely
+    ${DEVPOD} helper ssh-client --address "${PUBLIC_DNS}:22" --key-file "${WORKSPACE_FOLDER}/id_devpod_rsa" -- sh -c "${COMMAND}"
     
 
   create: |-
@@ -70,9 +71,9 @@ exec:
                           --filters "Name=tag:devpod,Values=${WORKSPACE_ID}" "Name=instance-state-name,Values=pending,running,shutting-down,stopping,stopped" | \
                           ${DEVPOD} helper json get 'Reservations[0].Instances[0].State.Name')
     if [ ! -z "${STATE}" ]; then
-      if [ "${STATE}" -eq "running" ]; then
+      if [ "${STATE}" = "running" ]; then
         echo "RUNNING"
-      elif [ "${STATE}" -eq "stopped" ]; then
+      elif [ "${STATE}" = "stopped" ]; then
         echo "STOPPED"
       else
         echo "BUSY"

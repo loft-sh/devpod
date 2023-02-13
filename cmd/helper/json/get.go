@@ -75,7 +75,10 @@ func (cmd *GetCmd) Run(ctx context.Context, args []string) error {
 	}
 
 	switch t := val.(type) {
-	case bool, int, int64, rune, string:
+	case string:
+		fmt.Print(strings.TrimSpace(t))
+		return nil
+	case bool, int, int64, rune:
 		fmt.Print(t)
 		return nil
 	}

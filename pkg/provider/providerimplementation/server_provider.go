@@ -69,7 +69,7 @@ func (s *serverProvider) Create(ctx context.Context, workspace *provider.Workspa
 		return err
 	}
 
-	err = createWorkspaceFolder(workspace, s.Name())
+	err = CreateWorkspaceFolder(workspace)
 	if err != nil {
 		return err
 	}
@@ -263,10 +263,9 @@ func resolveOptions(ctx context.Context, beforeStage, afterStage string, workspa
 	return nil
 }
 
-func createWorkspaceFolder(workspace *provider.Workspace, provider string) error {
+func CreateWorkspaceFolder(workspace *provider.Workspace) error {
 	// save config
 	workspace.CreationTimestamp = types.Now()
-	workspace.Provider.Name = provider
 	err := config.SaveWorkspaceConfig(workspace)
 	if err != nil {
 		return err

@@ -1,15 +1,15 @@
 package ssh
 
 import (
-	"crypto/ed25519"
+	"crypto"
 	"crypto/rand"
+	"crypto/rsa"
 	"crypto/x509"
 	"encoding/base64"
 	"encoding/pem"
 	"github.com/loft-sh/devpod/pkg/config"
 	"os"
 	"path/filepath"
-	"strings"
 	"sync"
 
 	"github.com/pkg/errors"
@@ -17,59 +17,55 @@ import (
 )
 
 var (
-	DevPodSSHHostKeyFile    = "id_devpod_host"
-	DevPodSSHPrivateKeyFile = "id_devpod"
-	DevPodSSHPublicKeyFile  = "id_devpod.pub"
+	DevPodSSHHostKeyFile    = "id_devpod_rsa_host"
+	DevPodSSHPrivateKeyFile = "id_devpod_rsa"
+	DevPodSSHPublicKeyFile  = "id_devpod_rsa.pub"
 )
 
 var keyLock sync.Mutex
 
-func generatePrivateKey() (ed25519.PublicKey, ed25519.PrivateKey, string, error) {
-	publicKey, privateKey, err := ed25519.GenerateKey(rand.Reader)
+func rsaKeyGen() (privateKey string, publicKey string, err error) {
+	privateKeyRaw, err := rsa.GenerateKey(rand.Reader, 2048)
 	if err != nil {
-		return nil, nil, "", err
+		return "", "", errors.Errorf("generate private key: %v", err)
 	}
 
-	// generate and write private key as PEM
-	var privateKeyBuf strings.Builder
-	b, err := x509.MarshalPKCS8PrivateKey(privateKey)
-	if err != nil {
-		return nil, nil, "", err
-	}
-	privateKeyPEM := &pem.Block{
-		Type:  "PRIVATE KEY",
-		Bytes: b,
-	}
-	if err := pem.Encode(&privateKeyBuf, privateKeyPEM); err != nil {
-		return nil, nil, "", err
-	}
+	return generateKeys(pem.Block{
+		Type:  "RSA PRIVATE KEY",
+		Bytes: x509.MarshalPKCS1PrivateKey(privateKeyRaw),
+	}, privateKeyRaw)
+}
 
-	return publicKey, privateKey, privateKeyBuf.String(), nil
+func generateKeys(block pem.Block, cp crypto.Signer) (privateKey string, publicKey string, err error) {
+	pkBytes := pem.EncodeToMemory(&block)
+	privateKey = string(pkBytes)
+
+	publicKeyRaw := cp.Public()
+	p, err := ssh.NewPublicKey(publicKeyRaw)
+	if err != nil {
+		return "", "", err
+	}
+	publicKey = string(ssh.MarshalAuthorizedKey(p))
+
+	return privateKey, publicKey, nil
 }
 
 func makeHostKey() (string, error) {
-	_, _, privKeyStr, err := generatePrivateKey()
+	privKey, _, err := rsaKeyGen()
 	if err != nil {
 		return "", err
 	}
-	return privKeyStr, nil
+
+	return privKey, err
 }
 
 func makeSSHKeyPair() (string, string, error) {
-	publicKey, _, privKeyStr, err := generatePrivateKey()
+	privKey, pubKey, err := rsaKeyGen()
 	if err != nil {
 		return "", "", err
 	}
 
-	// generate and write public key
-	pub, err := ssh.NewPublicKey(publicKey)
-	if err != nil {
-		return "", "", err
-	}
-
-	var pubKeyBuf strings.Builder
-	pubKeyBuf.Write(ssh.MarshalAuthorizedKey(pub))
-	return pubKeyBuf.String(), privKeyStr, nil
+	return pubKey, privKey, err
 }
 
 func GetPrivateKeyRaw(context, workspaceID string) ([]byte, error) {
