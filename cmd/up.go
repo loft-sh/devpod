@@ -9,7 +9,6 @@ import (
 	"github.com/loft-sh/devpod/pkg/log"
 	provider2 "github.com/loft-sh/devpod/pkg/provider"
 	workspace2 "github.com/loft-sh/devpod/pkg/workspace"
-	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
 	"io"
 	"os"
@@ -99,7 +98,7 @@ func devPodUpServer(ctx context.Context, provider provider2.ServerProvider, work
 	}
 
 	// get agent config
-	agentConfig, err := getAgentConfig(provider)
+	agentConfig, err := agent.GetAgentConfig(provider)
 	if err != nil {
 		return err
 	}
@@ -131,7 +130,7 @@ func devPodUpServer(ctx context.Context, provider provider2.ServerProvider, work
 	}()
 
 	// compress info
-	workspaceInfo, err := agent.NewAgentWorkspaceInfo(workspace, provider)
+	workspaceInfo, err := provider2.NewAgentWorkspaceInfo(workspace, provider)
 	if err != nil {
 		return err
 	}
@@ -149,21 +148,6 @@ func devPodUpServer(ctx context.Context, provider provider2.ServerProvider, work
 	}
 
 	return nil
-}
-
-func getAgentConfig(provider provider2.Provider) (*provider2.ProviderAgentConfig, error) {
-	agentConfig, err := provider.AgentConfig()
-	if err != nil {
-		return nil, errors.Wrap(err, "get agent config")
-	}
-	if agentConfig.Path == "" {
-		agentConfig.Path = agent.RemoteDevPodHelperLocation
-	}
-	if agentConfig.DownloadURL == "" {
-		agentConfig.DownloadURL = agent.DefaultAgentDownloadURL
-	}
-
-	return agentConfig, nil
 }
 
 func injectAgent(ctx context.Context, agentPath, agentURL string, provider provider2.ServerProvider, workspace *provider2.Workspace) error {

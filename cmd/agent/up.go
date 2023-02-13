@@ -14,6 +14,7 @@ import (
 	"github.com/loft-sh/devpod/pkg/devcontainer"
 	"github.com/loft-sh/devpod/pkg/extract"
 	"github.com/loft-sh/devpod/pkg/log"
+	provider2 "github.com/loft-sh/devpod/pkg/provider"
 	"github.com/loft-sh/devpod/scripts"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
@@ -21,6 +22,8 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"runtime"
+	"strings"
 )
 
 // UpCmd holds the up cmd flags
@@ -50,27 +53,38 @@ func NewUpCmd(flags *flags.GlobalFlags) *cobra.Command {
 
 // Run runs the command logic
 func (cmd *UpCmd) Run(ctx context.Context) {
+	// get workspace
+	workspaceInfo, err := getWorkspaceInfo(cmd.WorkspaceInfo)
+	if err != nil {
+		_, _ = fmt.Fprintf(os.Stderr, "Error parsing workspace info: %v", err)
+		os.Exit(1)
+	}
+
+	// check if we need to become root
+	shouldExit, err := rerunAsRoot(workspaceInfo)
+	if err != nil {
+		_, _ = fmt.Fprintf(os.Stderr, "Rerun as root: %v", err)
+		os.Exit(1)
+	} else if shouldExit {
+		return
+	}
+
 	// create a grpc client
 	tunnelClient, err := agent.NewTunnelClient(os.Stdin, os.Stdout, true)
 	if err != nil {
-		log.Default.ErrorStreamOnly().Fatalf("error creating tunnel client: %v", err)
+		_, _ = fmt.Fprintf(os.Stderr, "Error creating tunnel client: %v", err)
+		os.Exit(1)
 	}
 
 	// create debug logger
 	logger := agent.NewTunnelLogger(ctx, tunnelClient, cmd.Debug)
-	err = cmd.up(ctx, tunnelClient, logger)
+	err = cmd.up(ctx, workspaceInfo, tunnelClient, logger)
 	if err != nil {
 		logger.Fatalf("DevPod Agent Error: %v", err)
 	}
 }
 
-func (cmd *UpCmd) up(ctx context.Context, tunnelClient tunnel.TunnelClient, logger log.Logger) error {
-	// get workspace
-	workspaceInfo, err := getWorkspaceInfo(cmd.WorkspaceInfo)
-	if err != nil {
-		return err
-	}
-
+func (cmd *UpCmd) up(ctx context.Context, workspaceInfo *provider2.AgentWorkspaceInfo, tunnelClient tunnel.TunnelClient, logger log.Logger) error {
 	// install docker in background
 	errChan := make(chan error)
 	go func() {
@@ -78,7 +92,7 @@ func (cmd *UpCmd) up(ctx context.Context, tunnelClient tunnel.TunnelClient, logg
 	}()
 
 	// prepare workspace
-	err = cmd.prepareWorkspace(ctx, workspaceInfo, tunnelClient, logger)
+	err := cmd.prepareWorkspace(ctx, workspaceInfo, tunnelClient, logger)
 	if err != nil {
 		return err
 	}
@@ -104,7 +118,7 @@ func (cmd *UpCmd) up(ctx context.Context, tunnelClient tunnel.TunnelClient, logg
 	return nil
 }
 
-func (cmd *UpCmd) prepareWorkspace(ctx context.Context, workspaceInfo *agent.AgentWorkspaceInfo, client tunnel.TunnelClient, log log.Logger) error {
+func (cmd *UpCmd) prepareWorkspace(ctx context.Context, workspaceInfo *provider2.AgentWorkspaceInfo, client tunnel.TunnelClient, log log.Logger) error {
 	_, err := os.Stat(workspaceInfo.Folder)
 	if err == nil {
 		return nil
@@ -128,7 +142,69 @@ func (cmd *UpCmd) prepareWorkspace(ctx context.Context, workspaceInfo *agent.Age
 	return fmt.Errorf("either workspace repository, image or local-folder is required")
 }
 
-func installDaemon(workspaceInfo *agent.AgentWorkspaceInfo, log log.Logger) error {
+func rerunAsRoot(workspaceInfo *provider2.AgentWorkspaceInfo) (bool, error) {
+	// check if root is required
+	if runtime.GOOS == "windows" || os.Getuid() == 0 {
+		return false, nil
+	}
+
+	// check if we can reach docker with no problems
+	dockerRootRequired, err := dockerReachable()
+	if err != nil {
+		return false, nil
+	}
+
+	// check if daemon needs to be installed
+	agentRootRequired := false
+	if runtime.GOOS == "linux" && workspaceInfo.AgentConfig != nil && len(workspaceInfo.AgentConfig.Exec.Shutdown) > 0 {
+		agentRootRequired = true
+	}
+
+	// check if root required
+	if !dockerRootRequired && !agentRootRequired {
+		return false, nil
+	}
+
+	// execute ourself as root
+	binary, err := os.Executable()
+	if err != nil {
+		return false, err
+	}
+
+	// call ourself
+	args := []string{binary}
+	args = append(args, os.Args[1:]...)
+	cmd := exec.Command("sudo", args...)
+	cmd.Stdin = os.Stdin
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
+	err = cmd.Run()
+	if err != nil {
+		return false, errors.Wrap(err, "rerun as root")
+	}
+
+	return true, nil
+}
+
+func dockerReachable() (bool, error) {
+	if !command.Exists("docker") {
+		// we need root to install docker
+		return true, nil
+	}
+
+	_, err := exec.Command("docker", "ps").CombinedOutput()
+	if err != nil {
+		if strings.Contains(err.Error(), "permission denied") {
+			return true, nil
+		}
+
+		return false, errors.Wrap(err, "docker ps")
+	}
+
+	return false, nil
+}
+
+func installDaemon(workspaceInfo *provider2.AgentWorkspaceInfo, log log.Logger) error {
 	if workspaceInfo.AgentConfig == nil || len(workspaceInfo.AgentConfig.Exec.Shutdown) == 0 {
 		return nil
 	}
@@ -142,13 +218,13 @@ func installDaemon(workspaceInfo *agent.AgentWorkspaceInfo, log log.Logger) erro
 	return nil
 }
 
-func getWorkspaceInfo(workspaceInfoRaw string) (*agent.AgentWorkspaceInfo, error) {
+func getWorkspaceInfo(workspaceInfoRaw string) (*provider2.AgentWorkspaceInfo, error) {
 	decoded, err := compress.Decompress(workspaceInfoRaw)
 	if err != nil {
 		return nil, errors.Wrap(err, "decode workspace info")
 	}
 
-	workspaceInfo := &agent.AgentWorkspaceInfo{}
+	workspaceInfo := &provider2.AgentWorkspaceInfo{}
 	err = json.Unmarshal([]byte(decoded), workspaceInfo)
 	if err != nil {
 		return nil, errors.Wrap(err, "parse workspace info")

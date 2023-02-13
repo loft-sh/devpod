@@ -1,6 +1,9 @@
 package provider
 
 import (
+	"encoding/json"
+	"github.com/loft-sh/devpod/pkg/compress"
+	"github.com/pkg/errors"
 	"os"
 	"strings"
 )
@@ -8,6 +11,7 @@ import (
 const (
 	DEVPOD                   = "DEVPOD"
 	WORKSPACE_ID             = "WORKSPACE_ID"
+	WORKSPACE_INFO           = "WORKSPACE_INFO"
 	WORKSPACE_FOLDER         = "WORKSPACE_FOLDER"
 	WORKSPACE_CONTEXT        = "WORKSPACE_CONTEXT"
 	WORKSPACE_ORIGIN         = "WORKSPACE_ORIGIN"
@@ -38,12 +42,18 @@ func FromEnvironment() *Workspace {
 	}
 }
 
-func ToOptions(workspace *Workspace) map[string]string {
+func ToOptions(workspace *Workspace, provider Provider) (map[string]string, error) {
 	retVars := map[string]string{}
 	if workspace == nil {
-		return retVars
+		return retVars, nil
 	}
-
+	if provider != nil {
+		workspaceInfo, err := NewAgentWorkspaceInfo(workspace, provider)
+		if err != nil {
+			return nil, err
+		}
+		retVars[WORKSPACE_INFO] = workspaceInfo
+	}
 	for optionName, optionValue := range workspace.Provider.Options {
 		retVars[strings.ToUpper(optionName)] = optionValue.Value
 	}
@@ -81,13 +91,54 @@ func ToOptions(workspace *Workspace) map[string]string {
 	// devpod binary
 	devPodBinary, _ := os.Executable()
 	retVars[DEVPOD] = devPodBinary
-	return retVars
+	return retVars, nil
 }
 
-func ToEnvironment(workspace *Workspace) []string {
+func NewAgentWorkspaceInfo(workspace *Workspace, provider Provider) (string, error) {
+	// trim options that don't exist
+	workspace = cloneWorkspace(workspace)
+	if workspace.Provider.Options != nil {
+		for name, option := range provider.Options() {
+			_, ok := workspace.Provider.Options[name]
+			if ok && option.Local {
+				delete(workspace.Provider.Options, name)
+			}
+		}
+	}
+
+	// get agent config
+	agentConfig, err := provider.AgentConfig()
+	if err != nil {
+		return "", errors.Wrap(err, "get agent config")
+	}
+
+	// marshal config
+	out, err := json.Marshal(&AgentWorkspaceInfo{
+		Workspace:   workspace,
+		AgentConfig: agentConfig,
+	})
+	if err != nil {
+		return "", err
+	}
+
+	return compress.Compress(string(out))
+}
+
+func cloneWorkspace(workspace *Workspace) *Workspace {
+	out, _ := json.Marshal(workspace)
+	ret := &Workspace{}
+	_ = json.Unmarshal(out, ret)
+	return ret
+}
+
+func ToEnvironment(workspace *Workspace, provider Provider) ([]string, error) {
+	options, err := ToOptions(workspace, provider)
+	if err != nil {
+		return nil, err
+	}
 	retVars := []string{}
-	for k, v := range ToOptions(workspace) {
+	for k, v := range options {
 		retVars = append(retVars, k+"="+v)
 	}
-	return retVars
+	return retVars, nil
 }

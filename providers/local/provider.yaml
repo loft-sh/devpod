@@ -7,3 +7,5 @@ agent:
 exec:
   command: |-
     ${DEVPOD} helper sh -c "${COMMAND}"
+  delete: |-
+    ${DEVPOD} agent cleanup --workspace-info "${WORKSPACE_INFO}"

@@ -1,6 +1,7 @@
 package agent
 
 import (
+	"fmt"
 	"github.com/loft-sh/devpod/pkg/agent"
 	"github.com/loft-sh/devpod/pkg/config"
 	"github.com/loft-sh/devpod/pkg/devcontainer"
@@ -43,6 +44,15 @@ func (cmd *ContainerTunnelCmd) Run(_ *cobra.Command, _ []string) error {
 	workspaceInfo, err := getWorkspaceInfo(cmd.WorkspaceInfo)
 	if err != nil {
 		return err
+	}
+
+	// check if we need to become root
+	shouldExit, err := rerunAsRoot(workspaceInfo)
+	if err != nil {
+		_, _ = fmt.Fprintf(os.Stderr, "Rerun as root: %v", err)
+		os.Exit(1)
+	} else if shouldExit {
+		os.Exit(0)
 	}
 
 	// get container details

@@ -244,7 +244,7 @@ func jumpContainerServer(ctx context.Context, provider provider2.ServerProvider,
 	}
 
 	// get agent config
-	agentConfig, err := getAgentConfig(provider)
+	agentConfig, err := agent.GetAgentConfig(provider)
 	if err != nil {
 		return err
 	}
@@ -269,7 +269,7 @@ func tunnelToContainer(ctx context.Context, provider provider2.ServerProvider, w
 	}
 
 	// compress info
-	workspaceInfo, err := agent.NewAgentWorkspaceInfo(workspace, provider)
+	workspaceInfo, err := provider2.NewAgentWorkspaceInfo(workspace, provider)
 	if err != nil {
 		return err
 	}

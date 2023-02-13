@@ -7,6 +7,7 @@ import (
 	"github.com/loft-sh/devpod/pkg/agent"
 	"github.com/loft-sh/devpod/pkg/config"
 	"github.com/loft-sh/devpod/pkg/log"
+	provider2 "github.com/loft-sh/devpod/pkg/provider"
 	"github.com/loft-sh/devpod/pkg/provider/providerimplementation"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
@@ -138,7 +139,7 @@ func checkForInactivity(workspaceConfig string, log log.Logger) error {
 	// we run the timeout command now
 	buf := &bytes.Buffer{}
 	log.Infof("Run shutdown command for workspace %s: %s", workspaceConfig, strings.Join(workspace.AgentConfig.Exec.Shutdown, " "))
-	err = providerimplementation.RunCommand(context.Background(), workspace.AgentConfig.Exec.Shutdown, workspace.Workspace, nil, buf, buf, nil)
+	err = providerimplementation.RunCommand(context.Background(), workspace.AgentConfig.Exec.Shutdown, workspace.Workspace, nil, nil, buf, buf, nil)
 	if err != nil {
 		log.Errorf("Error running %s: %s%v", strings.Join(workspace.AgentConfig.Exec.Shutdown, " "), buf.String(), err)
 		return err
@@ -148,13 +149,13 @@ func checkForInactivity(workspaceConfig string, log log.Logger) error {
 	return nil
 }
 
-func parseWorkspace(path string) (*agent.AgentWorkspaceInfo, error) {
+func parseWorkspace(path string) (*provider2.AgentWorkspaceInfo, error) {
 	content, err := os.ReadFile(path)
 	if err != nil {
 		return nil, err
 	}
 
-	workspace := &agent.AgentWorkspaceInfo{}
+	workspace := &provider2.AgentWorkspaceInfo{}
 	err = json.Unmarshal(content, workspace)
 	if err != nil {
 		return nil, err

@@ -112,7 +112,7 @@ func resolve(ctx context.Context, defaultProvider *ProviderWithOptions, devPodCo
 		Provider: provider2.WorkspaceProviderConfig{
 			Options: defaultProvider.Options,
 		},
-	}, defaultProvider.Provider.Options())
+	}, defaultProvider.Provider)
 	if err != nil {
 		return nil, nil, errors.Wrap(err, "resolve options")
 	}
@@ -284,7 +284,7 @@ func loadExistingWorkspace(ctx context.Context, workspaceID string, devPodConfig
 
 	// resolve options
 	beforeOptions := workspaceConfig.Provider.Options
-	workspaceConfig.Provider.Options, err = options2.ResolveOptions(ctx, "", "", workspaceConfig, providerWithOptions.Provider.Options())
+	workspaceConfig.Provider.Options, err = options2.ResolveOptions(ctx, "", "", workspaceConfig, providerWithOptions.Provider)
 	if err != nil {
 		return nil, nil, errors.Wrap(err, "resolve options")
 	}

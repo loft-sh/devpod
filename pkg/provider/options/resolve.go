@@ -20,7 +20,8 @@ var variableExpression = regexp.MustCompile(`(?m)\$\{?([A-Z0-9_]+)(:(-|\+)([^\}]
 
 const rootID = "root"
 
-func ResolveOptions(ctx context.Context, beforeStage, afterStage string, workspace *provider2.Workspace, options map[string]*provider2.ProviderOption) (map[string]provider2.OptionValue, error) {
+func ResolveOptions(ctx context.Context, beforeStage, afterStage string, workspace *provider2.Workspace, provider provider2.Provider) (map[string]provider2.OptionValue, error) {
+	options := provider.Options()
 	if options == nil {
 		options = map[string]*provider2.ProviderOption{}
 	}
@@ -44,7 +45,7 @@ func ResolveOptions(ctx context.Context, beforeStage, afterStage string, workspa
 	}
 
 	// resolve options
-	resolvedOptions, err := resolveOptions(ctx, g, beforeStage, afterStage, options, workspace)
+	resolvedOptions, err := resolveOptions(ctx, g, beforeStage, afterStage, options, workspace, provider)
 	if err != nil {
 		return nil, err
 	}
@@ -52,7 +53,7 @@ func ResolveOptions(ctx context.Context, beforeStage, afterStage string, workspa
 	return resolvedOptions, nil
 }
 
-func resolveOptions(ctx context.Context, g *graph.Graph, beforeStage, afterStage string, options map[string]*provider2.ProviderOption, workspace *provider2.Workspace) (map[string]provider2.OptionValue, error) {
+func resolveOptions(ctx context.Context, g *graph.Graph, beforeStage, afterStage string, options map[string]*provider2.ProviderOption, workspace *provider2.Workspace, provider provider2.Provider) (map[string]provider2.OptionValue, error) {
 	// find out options we need to resolve
 	resolveOptions := map[string]bool{}
 	for optionName, option := range options {
@@ -84,7 +85,7 @@ func resolveOptions(ctx context.Context, g *graph.Graph, beforeStage, afterStage
 
 	// resolve options
 	for optionName := range resolveOptions {
-		err := resolveOption(ctx, g, optionName, resolveOptions, resolvedOptions, workspace)
+		err := resolveOption(ctx, g, optionName, resolveOptions, resolvedOptions, workspace, provider)
 		if err != nil {
 			return nil, errors.Wrap(err, "resolve option "+optionName)
 		}
@@ -94,7 +95,7 @@ func resolveOptions(ctx context.Context, g *graph.Graph, beforeStage, afterStage
 	return resolvedOptions, nil
 }
 
-func resolveOption(ctx context.Context, g *graph.Graph, optionName string, resolveOptions map[string]bool, resolvedOptions map[string]provider2.OptionValue, workspace *provider2.Workspace) error {
+func resolveOption(ctx context.Context, g *graph.Graph, optionName string, resolveOptions map[string]bool, resolvedOptions map[string]provider2.OptionValue, workspace *provider2.Workspace, provider provider2.Provider) error {
 	node := g.Nodes[optionName]
 
 	// are parents resolved?
@@ -115,7 +116,7 @@ func resolveOption(ctx context.Context, g *graph.Graph, optionName string, resol
 		}
 
 		// resolve parent first
-		err := resolveOption(ctx, g, parent.ID, resolveOptions, resolvedOptions, workspace)
+		err := resolveOption(ctx, g, parent.ID, resolveOptions, resolvedOptions, workspace, provider)
 		if err != nil {
 			return err
 		}
@@ -124,18 +125,28 @@ func resolveOption(ctx context.Context, g *graph.Graph, optionName string, resol
 	// resolve option
 	option := node.Data.(*provider2.ProviderOption)
 	if option.Default != "" {
+		resolved, err := toOptions(resolvedOptions, workspace, provider)
+		if err != nil {
+			return err
+		}
+
 		resolvedOptions[optionName] = provider2.OptionValue{
-			Value: resolveDefaultValue(option.Default, toOptions(resolvedOptions, workspace)),
+			Value: resolveDefaultValue(option.Default, resolved),
 		}
 	} else if option.Command != "" {
 		stdout := &bytes.Buffer{}
 		stderr := &bytes.Buffer{}
 		env := os.Environ()
-		for k, v := range toOptions(resolvedOptions, workspace) {
+		resolved, err := toOptions(resolvedOptions, workspace, provider)
+		if err != nil {
+			return err
+		}
+
+		for k, v := range resolved {
 			env = append(env, k+"="+v)
 		}
 
-		err := shell.ExecuteCommandWithShell(ctx, option.Command, nil, stdout, stderr, env)
+		err = shell.ExecuteCommandWithShell(ctx, option.Command, nil, stdout, stderr, env)
 		if err != nil {
 			return errors.Wrapf(err, "run command: %s%s", stdout.String(), stderr.String())
 		}
@@ -162,17 +173,22 @@ func resolveOption(ctx context.Context, g *graph.Graph, optionName string, resol
 	return nil
 }
 
-func toOptions(resolvedOptions map[string]provider2.OptionValue, workspace *provider2.Workspace) map[string]string {
+func toOptions(resolvedOptions map[string]provider2.OptionValue, workspace *provider2.Workspace, provider provider2.Provider) (map[string]string, error) {
 	options := map[string]string{}
 	for k, v := range resolvedOptions {
 		options[k] = v.Value
 	}
 	if workspace != nil {
-		for k, v := range provider2.ToOptions(workspace) {
+		workspaceOptions, err := provider2.ToOptions(workspace, provider)
+		if err != nil {
+			return nil, err
+		}
+
+		for k, v := range workspaceOptions {
 			options[k] = v
 		}
 	}
-	return options
+	return options, nil
 }
 
 func resolveDefaultValue(val string, resolvedOptions map[string]string) string {

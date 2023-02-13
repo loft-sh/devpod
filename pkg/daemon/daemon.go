@@ -35,3 +35,23 @@ func InstallDaemon(log log.Logger) error {
 
 	return nil
 }
+
+func RemoveDaemon() error {
+	if runtime.GOOS == "windows" || runtime.GOOS == "darwin" {
+		return fmt.Errorf("unsupported daemon os")
+	}
+
+	// check if admin
+	service, err := daemon.New("devpod", "DevPod Agent Service", daemon.SystemDaemon)
+	if err != nil {
+		return err
+	}
+
+	// remove daemon
+	_, err = service.Remove()
+	if err != nil && err != daemon.ErrNotInstalled {
+		return err
+	}
+
+	return nil
+}
