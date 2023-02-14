@@ -33,6 +33,9 @@ type WorkspaceProviderConfig struct {
 
 	// Options are the provider options used to create the workspace
 	Options map[string]OptionValue `json:"options,omitempty"`
+
+	// Agent is the config from the provider
+	Agent ProviderAgentConfig `json:"agent,omitempty"`
 }
 
 type OptionValue struct {
@@ -41,6 +44,9 @@ type OptionValue struct {
 
 	// Expires is the time when this value will expire
 	Expires *types.Time `json:"retrieved,omitempty"`
+
+	// Local determines if this option should be local only
+	Local bool `json:"local,omitempty"`
 }
 
 type WorkspaceSource struct {
@@ -62,10 +68,7 @@ type WorkspaceSource struct {
 
 type AgentWorkspaceInfo struct {
 	// Workspace holds the workspace info
-	Workspace *Workspace `json:"workspace,omitempty"`
-
-	// AgentConfig holds the agent configuration
-	AgentConfig *ProviderAgentConfig `json:"agentConfig,omitempty"`
+	Workspace Workspace `json:"workspace,omitempty"`
 
 	// Folder holds the workspace folder on the remote server
 	Folder string `json:"-"`

@@ -11,9 +11,11 @@ import (
 	provider2 "github.com/loft-sh/devpod/pkg/provider"
 	devssh "github.com/loft-sh/devpod/pkg/ssh"
 	"github.com/loft-sh/devpod/pkg/token"
+	"github.com/loft-sh/devpod/pkg/tunnel"
 	workspace2 "github.com/loft-sh/devpod/pkg/workspace"
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
+	"golang.org/x/crypto/ssh"
 	"os"
 	"os/exec"
 	"time"
@@ -86,9 +88,8 @@ func (cmd *SSHCmd) Run(ctx context.Context, workspace *provider2.Workspace, prov
 	if cmd.Self {
 		return configureSSHSelf(workspace, log.Default)
 	}
-
 	if cmd.Stdio {
-		return jumpContainer(ctx, provider, workspace, log.Default)
+		return jumpContainer(ctx, provider, workspace, log.Default.ErrorStreamOnly())
 	}
 
 	// TODO: Implement regular ssh client here
@@ -243,95 +244,30 @@ func jumpContainerServer(ctx context.Context, provider provider2.ServerProvider,
 		return err
 	}
 
-	// get agent config
-	agentConfig, err := agent.GetAgentConfig(provider)
-	if err != nil {
-		return err
-	}
-
 	// inject agent
 	if !agentExists {
-		err = injectAgent(ctx, agentConfig.Path, agentConfig.DownloadURL, provider, workspace)
+		err = injectAgent(ctx, workspace.Provider.Agent.Path, workspace.Provider.Agent.DownloadURL, provider, workspace)
 		if err != nil {
 			return err
 		}
 	}
 
-	// tunnel to container
-	return tunnelToContainer(ctx, provider, workspace, agentConfig)
-}
-
-func tunnelToContainer(ctx context.Context, provider provider2.ServerProvider, workspace *provider2.Workspace, agentConfig *provider2.ProviderAgentConfig) error {
 	// get token
 	tok, err := token.GenerateWorkspaceToken(workspace.Context, workspace.ID)
 	if err != nil {
 		return err
 	}
 
-	// compress info
-	workspaceInfo, err := provider2.NewAgentWorkspaceInfo(workspace, provider)
+	// compute workspace info
+	workspaceInfo, err := provider2.NewAgentWorkspaceInfo(workspace)
 	if err != nil {
 		return err
 	}
 
-	// create readers
-	stdoutReader, stdoutWriter, err := os.Pipe()
-	if err != nil {
-		return err
-	}
-	stdinReader, stdinWriter, err := os.Pipe()
-	if err != nil {
-		return err
-	}
-
-	// tunnel to host
-	// TODO: right now we have a tunnel in a tunnel, maybe its better to start 2 separate commands?
-	tunnelChan := make(chan error, 1)
-	go func() {
-		tunnelChan <- provider.Command(ctx, workspace, provider2.CommandOptions{
-			Command: fmt.Sprintf("%s helper ssh-server --token '%s' --stdio", agentConfig.Path, tok),
-			Stdin:   stdinReader,
-			Stdout:  stdoutWriter,
-			Stderr:  os.Stderr,
-		})
-	}()
-
-	// connect to container
-	containerChan := make(chan error, 1)
-	go func() {
-		// connect via ssh over stdin / stdout
-		keyBytes, err := devssh.GetPrivateKeyRaw(workspace.Context, workspace.ID)
-		if err != nil {
-			containerChan <- err
-			return
-		}
-
-		// TODO: should we really exit here?
-		sshClient, err := devssh.StdioClientFromKeyBytes(keyBytes, stdoutReader, stdinWriter, false)
-		if err != nil {
-			containerChan <- err
-			return
-		}
-		defer sshClient.Close()
-
-		// TODO: do port-forwarding etc. here with sshClient
-		// go func() {}()
-
-		// tunnel to container
-		err = devssh.Run(sshClient, fmt.Sprintf("%s agent container-tunnel --token '%s' --workspace-info '%s'", agentConfig.Path, tok, workspaceInfo), os.Stdin, os.Stdout, os.Stderr)
-		if err != nil {
-			containerChan <- err
-			return
-		}
-	}()
-
-	// wait for result
-	select {
-	case err := <-containerChan:
-		return errors.Wrap(err, "tunnel to container")
-	case err := <-tunnelChan:
-		return errors.Wrap(err, "connect to server")
-	}
+	// tunnel to container
+	return tunnel.NewContainerTunnel(provider, workspace, log).Run(ctx, func(sshClient *ssh.Client) error {
+		return devssh.Run(sshClient, fmt.Sprintf("%s agent container-tunnel --token '%s' --workspace-info '%s'", workspace.Provider.Agent.Path, tok, workspaceInfo), os.Stdin, os.Stdout, os.Stderr)
+	}, nil)
 }
 
 func configureSSHSelf(workspace *provider2.Workspace, log log.Logger) error {
@@ -346,7 +282,9 @@ func configureSSHSelf(workspace *provider2.Workspace, log log.Logger) error {
 	}
 
 	err = exec.Command("code", "--folder-uri", fmt.Sprintf("vscode-remote://ssh-remote+%s.devpod/", workspace.ID)).Run()
-
+	if err != nil {
+		return err
+	}
 	return nil
 }
 

@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"github.com/loft-sh/devpod/pkg/agent"
 	config "github.com/loft-sh/devpod/pkg/config"
 	"github.com/loft-sh/devpod/pkg/log"
 	"github.com/loft-sh/devpod/pkg/provider"
@@ -43,8 +44,15 @@ func (s *serverProvider) Options() map[string]*provider.ProviderOption {
 }
 
 func (s *serverProvider) AgentConfig() (*provider.ProviderAgentConfig, error) {
-	// TODO: fill in options?
-	return &s.config.Agent, nil
+	agentConfig := s.config.Agent
+	if agentConfig.Path == "" {
+		agentConfig.Path = agent.RemoteDevPodHelperLocation
+	}
+	if agentConfig.DownloadURL == "" {
+		agentConfig.DownloadURL = agent.DefaultAgentDownloadURL
+	}
+
+	return &agentConfig, nil
 }
 
 func (s *serverProvider) validate(workspace *provider.Workspace) error {

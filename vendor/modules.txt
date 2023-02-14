@@ -346,6 +346,9 @@ github.com/pkg/sftp/internal/encoding/ssh/filexfer
 # github.com/sirupsen/logrus v1.9.0
 ## explicit; go 1.13
 github.com/sirupsen/logrus
+# github.com/skratchdot/open-golang v0.0.0-20200116055534-eef842397966
+## explicit
+github.com/skratchdot/open-golang/open
 # github.com/spf13/cobra v1.6.1
 ## explicit; go 1.15
 github.com/spf13/cobra

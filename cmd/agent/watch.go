@@ -20,7 +20,7 @@ import (
 // WatchCmd holds the up cmd flags
 type WatchCmd struct{}
 
-// NewWatchCmd creates a new ssh command
+// NewWatchCmd creates a new command
 func NewWatchCmd() *cobra.Command {
 	cmd := &WatchCmd{}
 	watchCmd := &cobra.Command{
@@ -110,14 +110,14 @@ func checkForInactivity(workspaceConfig string, log log.Logger) error {
 	}
 
 	// check if shutdown is configured
-	if workspace.AgentConfig == nil || len(workspace.AgentConfig.Exec.Shutdown) == 0 {
+	if len(workspace.Workspace.Provider.Agent.Exec.Shutdown) == 0 {
 		return nil
 	}
 
 	// check timeout
 	timeout := agent.DefaultInactivityTimeout
-	if workspace.AgentConfig.Timeout != "" {
-		timeout, err = time.ParseDuration(workspace.AgentConfig.Timeout)
+	if workspace.Workspace.Provider.Agent.Timeout != "" {
+		timeout, err = time.ParseDuration(workspace.Workspace.Provider.Agent.Timeout)
 		if err != nil {
 			log.Errorf("Error parsing inactivity timeout: %v", err)
 			timeout = agent.DefaultInactivityTimeout
@@ -138,10 +138,10 @@ func checkForInactivity(workspaceConfig string, log log.Logger) error {
 
 	// we run the timeout command now
 	buf := &bytes.Buffer{}
-	log.Infof("Run shutdown command for workspace %s: %s", workspaceConfig, strings.Join(workspace.AgentConfig.Exec.Shutdown, " "))
-	err = providerimplementation.RunCommand(context.Background(), workspace.AgentConfig.Exec.Shutdown, workspace.Workspace, nil, buf, buf, nil)
+	log.Infof("Run shutdown command for workspace %s: %s", workspaceConfig, strings.Join(workspace.Workspace.Provider.Agent.Exec.Shutdown, " "))
+	err = providerimplementation.RunCommand(context.Background(), workspace.Workspace.Provider.Agent.Exec.Shutdown, &workspace.Workspace, nil, buf, buf, nil)
 	if err != nil {
-		log.Errorf("Error running %s: %s%v", strings.Join(workspace.AgentConfig.Exec.Shutdown, " "), buf.String(), err)
+		log.Errorf("Error running %s: %s%v", strings.Join(workspace.Workspace.Provider.Agent.Exec.Shutdown, " "), buf.String(), err)
 		return err
 	}
 

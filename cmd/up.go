@@ -7,9 +7,15 @@ import (
 	"github.com/loft-sh/devpod/pkg/agent"
 	"github.com/loft-sh/devpod/pkg/config"
 	"github.com/loft-sh/devpod/pkg/log"
+	"github.com/loft-sh/devpod/pkg/open"
+	"github.com/loft-sh/devpod/pkg/port"
 	provider2 "github.com/loft-sh/devpod/pkg/provider"
+	devssh "github.com/loft-sh/devpod/pkg/ssh"
+	"github.com/loft-sh/devpod/pkg/tunnel"
+	"github.com/loft-sh/devpod/pkg/vscode"
 	workspace2 "github.com/loft-sh/devpod/pkg/workspace"
 	"github.com/spf13/cobra"
+	"golang.org/x/crypto/ssh"
 	"io"
 	"os"
 	"os/exec"
@@ -19,8 +25,8 @@ import (
 type UpCmd struct {
 	flags.GlobalFlags
 
-	ID       string
-	Snapshot bool
+	ID      string
+	Browser bool
 }
 
 // NewUpCmd creates a new up command
@@ -48,7 +54,7 @@ func NewUpCmd(flags *flags.GlobalFlags) *cobra.Command {
 	}
 
 	upCmd.Flags().StringVar(&cmd.ID, "id", "", "The id to use for the workspace")
-	upCmd.Flags().BoolVar(&cmd.Snapshot, "snapshot", false, "If true will create a snapshot for the environment")
+	upCmd.Flags().BoolVar(&cmd.Browser, "browser", false, "If true will start VSCode in a browser")
 	return upCmd
 }
 
@@ -68,8 +74,62 @@ func (cmd *UpCmd) Run(ctx context.Context, workspace *provider2.Workspace, provi
 	log.Default.Infof("Run 'ssh %s.devpod' to ssh into the devcontainer", workspace.ID)
 
 	// start VSCode
-	log.Default.Infof("Starting VSCode...")
-	err = exec.Command("code", "--folder-uri", fmt.Sprintf("vscode-remote://ssh-remote+%s.devpod/workspaces/%s", workspace.ID, workspace.ID)).Run()
+	if cmd.Browser {
+		return startInBrowser(ctx, workspace, provider, log.Default)
+	} else {
+		log.Default.Infof("Starting VSCode...")
+		err = exec.Command("code", "--folder-uri", fmt.Sprintf("vscode-remote://ssh-remote+%s.devpod/workspaces/%s", workspace.ID, workspace.ID)).Run()
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func startInBrowser(ctx context.Context, workspace *provider2.Workspace, provider provider2.Provider, log log.Logger) error {
+	serverProvider, ok := provider.(provider2.ServerProvider)
+	if !ok {
+		return fmt.Errorf("--browser is currently only supported for server providers")
+	}
+
+	// determine port
+	vscodePort, err := port.FindAvailablePort(vscode.DefaultVSCodePort)
+	if err != nil {
+		return err
+	}
+
+	// wait until reachable then open browser
+	go func() {
+		err = open.Open(ctx, fmt.Sprintf("http://localhost:%d/?folder=/workspaces/%s", vscodePort, workspace.ID), log)
+		if err != nil {
+			log.Errorf("error opening vscode: %v", err)
+		}
+
+		log.Infof("Successfully started vscode in browser mode. Please keep this terminal open as long as you use VSCode browser version")
+	}()
+
+	// start in browser
+	log.Infof("Starting vscode in browser mode...")
+	err = tunnel.NewContainerTunnel(serverProvider, workspace, log).Run(ctx, nil, func(client *ssh.Client) error {
+		log.Debugf("Connected to container")
+
+		// forward port
+		forwardErr := make(chan error, 1)
+		go func() {
+			forwardErr <- devssh.PortForward(client, fmt.Sprintf("localhost:%d", vscodePort), fmt.Sprintf("localhost:%d", vscode.DefaultVSCodePort), log)
+		}()
+
+		// start openvscode
+		command := fmt.Sprintf("%s agent openvscode --port %d", agent.RemoteDevPodHelperLocation, vscode.DefaultVSCodePort)
+		log.Debugf("Running %s in container", command)
+		err = devssh.Run(client, command, nil, os.Stdout, os.Stderr)
+		if err != nil {
+			return err
+		}
+
+		return nil
+	})
 	if err != nil {
 		return err
 	}
@@ -97,15 +157,9 @@ func devPodUpServer(ctx context.Context, provider provider2.ServerProvider, work
 		return err
 	}
 
-	// get agent config
-	agentConfig, err := agent.GetAgentConfig(provider)
-	if err != nil {
-		return err
-	}
-
 	// inject agent
 	if !agentExists {
-		err = injectAgent(ctx, agentConfig.Path, agentConfig.DownloadURL, provider, workspace)
+		err = injectAgent(ctx, workspace.Provider.Agent.Path, workspace.Provider.Agent.DownloadURL, provider, workspace)
 		if err != nil {
 			return err
 		}
@@ -130,7 +184,7 @@ func devPodUpServer(ctx context.Context, provider provider2.ServerProvider, work
 	}()
 
 	// compress info
-	workspaceInfo, err := provider2.NewAgentWorkspaceInfo(workspace, provider)
+	workspaceInfo, err := provider2.NewAgentWorkspaceInfo(workspace)
 	if err != nil {
 		return err
 	}
@@ -138,7 +192,7 @@ func devPodUpServer(ctx context.Context, provider provider2.ServerProvider, work
 	// create container etc.
 	log.Infof("Creating devcontainer...")
 	err = provider.Command(ctx, workspace, provider2.CommandOptions{
-		Command: fmt.Sprintf("%s agent up --workspace-info '%s'", agentConfig.Path, workspaceInfo),
+		Command: fmt.Sprintf("%s agent up --workspace-info '%s'", workspace.Provider.Agent.Path, workspaceInfo),
 		Stdin:   stdinReader,
 		Stdout:  stdoutWriter,
 		Stderr:  os.Stderr,

@@ -156,7 +156,7 @@ func rerunAsRoot(workspaceInfo *provider2.AgentWorkspaceInfo) (bool, error) {
 
 	// check if daemon needs to be installed
 	agentRootRequired := false
-	if runtime.GOOS == "linux" && workspaceInfo.AgentConfig != nil && len(workspaceInfo.AgentConfig.Exec.Shutdown) > 0 {
+	if runtime.GOOS == "linux" && len(workspaceInfo.Workspace.Provider.Agent.Exec.Shutdown) > 0 {
 		agentRootRequired = true
 	}
 
@@ -205,7 +205,7 @@ func dockerReachable() (bool, error) {
 }
 
 func installDaemon(workspaceInfo *provider2.AgentWorkspaceInfo, log log.Logger) error {
-	if workspaceInfo.AgentConfig == nil || len(workspaceInfo.AgentConfig.Exec.Shutdown) == 0 {
+	if len(workspaceInfo.Workspace.Provider.Agent.Exec.Shutdown) == 0 {
 		return nil
 	}
 

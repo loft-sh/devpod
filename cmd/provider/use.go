@@ -147,6 +147,7 @@ func ensureRequired(workspace *provider2.Workspace, provider provider2.Provider,
 
 			workspace.Provider.Options[optionName] = provider2.OptionValue{
 				Value: answer,
+				Local: val.Local,
 			}
 		}
 	}
