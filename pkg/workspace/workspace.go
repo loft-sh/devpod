@@ -106,7 +106,6 @@ func ResolveWorkspace(ctx context.Context, devPodConfig *config.Config, args []s
 }
 
 func resolve(ctx context.Context, defaultProvider *ProviderWithOptions, devPodConfig *config.Config, name, workspaceID, workspaceFolder string, isLocalPath bool) (*provider2.Workspace, provider2.Provider, error) {
-
 	// resolve options
 	options, err := options2.ResolveOptions(ctx, "", "", &provider2.Workspace{
 		Provider: provider2.WorkspaceProviderConfig{
@@ -123,6 +122,12 @@ func resolve(ctx context.Context, defaultProvider *ProviderWithOptions, devPodCo
 		return nil, nil, errors.Wrap(err, "create ssh keys")
 	}
 
+	// get agent config
+	agentConfig, err := defaultProvider.Provider.AgentConfig()
+	if err != nil {
+		return nil, nil, err
+	}
+
 	// is local folder?
 	if isLocalPath {
 		return &provider2.Workspace{
@@ -132,6 +137,7 @@ func resolve(ctx context.Context, defaultProvider *ProviderWithOptions, devPodCo
 			Provider: provider2.WorkspaceProviderConfig{
 				Name:    defaultProvider.Provider.Name(),
 				Options: options,
+				Agent:   *agentConfig,
 			},
 			Source: provider2.WorkspaceSource{
 				LocalFolder: name,
@@ -149,6 +155,7 @@ func resolve(ctx context.Context, defaultProvider *ProviderWithOptions, devPodCo
 			Provider: provider2.WorkspaceProviderConfig{
 				Name:    defaultProvider.Provider.Name(),
 				Options: options,
+				Agent:   *agentConfig,
 			},
 			Source: provider2.WorkspaceSource{
 				GitRepository: gitRepository,
@@ -166,6 +173,7 @@ func resolve(ctx context.Context, defaultProvider *ProviderWithOptions, devPodCo
 			Provider: provider2.WorkspaceProviderConfig{
 				Name:    defaultProvider.Provider.Name(),
 				Options: options,
+				Agent:   *agentConfig,
 			},
 			Source: provider2.WorkspaceSource{
 				Image: name,

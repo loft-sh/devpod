@@ -132,6 +132,7 @@ func resolveOption(ctx context.Context, g *graph.Graph, optionName string, resol
 
 		resolvedOptions[optionName] = provider2.OptionValue{
 			Value: resolveDefaultValue(option.Default, resolved),
+			Local: option.Local,
 		}
 	} else if option.Command != "" {
 		stdout := &bytes.Buffer{}
@@ -151,7 +152,7 @@ func resolveOption(ctx context.Context, g *graph.Graph, optionName string, resol
 			return errors.Wrapf(err, "run command: %s%s", stdout.String(), stderr.String())
 		}
 
-		optionValue := provider2.OptionValue{Value: strings.TrimSpace(stdout.String())}
+		optionValue := provider2.OptionValue{Value: strings.TrimSpace(stdout.String()), Local: option.Local}
 		if option.Cache != "" {
 			duration, err := time.ParseDuration(option.Cache)
 			if err != nil {

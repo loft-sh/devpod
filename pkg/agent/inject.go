@@ -1,6 +1,7 @@
 package agent
 
 import (
+	"bufio"
 	"bytes"
 	"crypto/tls"
 	"fmt"
@@ -12,6 +13,7 @@ import (
 	"os"
 	"path/filepath"
 	"runtime"
+	"strings"
 )
 
 type ExecFunc func(command string, stdin io.Reader, stdout io.Writer, stderr io.Writer) error
@@ -69,12 +71,52 @@ func downloadBinaryRemotely(remoteAgentPath, tryDownloadURL string, exec ExecFun
 }
 
 func injectBinary(remoteAgentPath, tryDownloadURL string, exec ExecFunc) (err error) {
-	// make sure a linux amd64 binary exists locally
+	// first parse remote
+	stdinReader, stdinWriter, err := os.Pipe()
+	if err != nil {
+		return err
+	}
+	defer stdinWriter.Close()
+	stdoutReader, stdoutWriter, err := os.Pipe()
+	if err != nil {
+		return err
+	}
+	defer stdoutWriter.Close()
+
+	// start command
+	stderr := &bytes.Buffer{}
+	errChan := make(chan error)
+	go func() {
+		errChan <- exec(fmt.Sprintf(`INSTALLED=$(%s version 2> /dev/null && echo -n "exists" || true)
+if [ -z "$INSTALLED" ]; then
+  uname -a
+  cat > %s && chmod +x %s
+fi
+
+echo "done"`, remoteAgentPath, remoteAgentPath, remoteAgentPath), stdinReader, stdoutWriter, stderr)
+	}()
+
+	// wait until we read something
+	reader := bufio.NewReader(stdoutReader)
+	line, err := reader.ReadBytes('\n')
+	if err != nil {
+		return err
+	} else if strings.TrimSpace(string(line)) == "done" {
+		return nil
+	}
+
+	// this means we need to
+	targetArch := "amd64"
+	if strings.Contains(string(line), "arm64") || strings.Contains(string(line), "aarch64") {
+		targetArch = "arm64"
+	}
+
+	// make sure a linux arm64 binary exists locally
 	var binaryPath string
-	if runtime.GOOS == "linux" && runtime.GOARCH == "amd64" {
+	if runtime.GOOS == "linux" && runtime.GOARCH == targetArch {
 		binaryPath, err = os.Executable()
 	} else {
-		binaryPath, err = downloadAgentLocally(tryDownloadURL)
+		binaryPath, err = downloadAgentLocally(tryDownloadURL, targetArch)
 	}
 	if err != nil {
 		return err
@@ -87,18 +129,17 @@ func injectBinary(remoteAgentPath, tryDownloadURL string, exec ExecFunc) (err er
 	}
 	defer file.Close()
 
-	// use tar in this case
-	buf := &bytes.Buffer{}
-	err = exec(fmt.Sprintf("%s version || cat > %s && chmod +x %s", remoteAgentPath, remoteAgentPath, remoteAgentPath), file, buf, buf)
+	// pipe into stdin
+	_, err = io.Copy(stdinWriter, file)
 	if err != nil {
-		return errors.Wrapf(err, "copy agent binary: %s", buf.String())
+		return errors.Wrap(err, "copy to remote")
 	}
 
 	return nil
 }
 
-func downloadAgentLocally(tryDownloadURL string) (string, error) {
-	agentPath := filepath.Join(os.TempDir(), "devpod-cache", "devpod-linux-amd64")
+func downloadAgentLocally(tryDownloadURL, targetArch string) (string, error) {
+	agentPath := filepath.Join(os.TempDir(), "devpod-cache", "devpod-linux-"+targetArch)
 	_, err := os.Stat(agentPath)
 	if err == nil {
 		return agentPath, nil
@@ -120,7 +161,7 @@ func downloadAgentLocally(tryDownloadURL string) (string, error) {
 			TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
 		},
 	}
-	resp, err := httpClient.Get(tryDownloadURL + "/devpod-linux-amd64")
+	resp, err := httpClient.Get(tryDownloadURL + "/devpod-linux-" + targetArch)
 	if err != nil {
 		return "", errors.Wrap(err, "download devpod")
 	}

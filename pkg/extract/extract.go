@@ -12,7 +12,25 @@ import (
 	"time"
 )
 
-func Extract(origReader io.Reader, destFolder string) error {
+type Options struct {
+	StripLevels int
+}
+
+type Option func(o *Options)
+
+func StripLevels(levels int) Option {
+	return func(o *Options) {
+		o.StripLevels = levels
+	}
+}
+
+func Extract(origReader io.Reader, destFolder string, options ...Option) error {
+	extractOptions := &Options{}
+	for _, o := range options {
+		o(extractOptions)
+	}
+
+	// read ahead
 	bufioReader := bufio.NewReader(origReader)
 	testBytes, err := bufioReader.Peek(2) //read 2 bytes
 	if err != nil {
@@ -35,7 +53,7 @@ func Extract(origReader io.Reader, destFolder string) error {
 
 	tarReader := tar.NewReader(reader)
 	for {
-		shouldContinue, err := extractNext(tarReader, destFolder)
+		shouldContinue, err := extractNext(tarReader, destFolder, extractOptions)
 		if err != nil {
 			return errors.Wrap(err, "decompress")
 		} else if !shouldContinue {
@@ -44,7 +62,7 @@ func Extract(origReader io.Reader, destFolder string) error {
 	}
 }
 
-func extractNext(tarReader *tar.Reader, destFolder string) (bool, error) {
+func extractNext(tarReader *tar.Reader, destFolder string, options *Options) (bool, error) {
 	header, err := tarReader.Next()
 	if err != nil {
 		if err != io.EOF {
@@ -55,6 +73,19 @@ func extractNext(tarReader *tar.Reader, destFolder string) (bool, error) {
 	}
 
 	relativePath := getRelativeFromFullPath("/"+header.Name, "")
+	if options.StripLevels > 0 {
+		for i := 0; i < options.StripLevels; i++ {
+			relativePath = strings.TrimPrefix(relativePath, "/")
+			index := strings.Index(relativePath, "/")
+			if index == -1 {
+				break
+			}
+
+			relativePath = relativePath[index+1:]
+		}
+
+		relativePath = "/" + relativePath
+	}
 	outFileName := path.Join(destFolder, relativePath)
 	baseName := path.Dir(outFileName)
 

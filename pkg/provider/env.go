@@ -3,7 +3,6 @@ package provider
 import (
 	"encoding/json"
 	"github.com/loft-sh/devpod/pkg/compress"
-	"github.com/pkg/errors"
 	"os"
 	"strings"
 )
@@ -86,28 +85,20 @@ func ToOptions(workspace *Workspace) (map[string]string, error) {
 	return retVars, nil
 }
 
-func NewAgentWorkspaceInfo(workspace *Workspace, provider Provider) (string, error) {
+func NewAgentWorkspaceInfo(workspace *Workspace) (string, error) {
 	// trim options that don't exist
 	workspace = cloneWorkspace(workspace)
 	if workspace.Provider.Options != nil {
-		for name, option := range provider.Options() {
-			_, ok := workspace.Provider.Options[name]
-			if ok && option.Local {
+		for name, option := range workspace.Provider.Options {
+			if option.Local {
 				delete(workspace.Provider.Options, name)
 			}
 		}
 	}
 
-	// get agent config
-	agentConfig, err := provider.AgentConfig()
-	if err != nil {
-		return "", errors.Wrap(err, "get agent config")
-	}
-
 	// marshal config
 	out, err := json.Marshal(&AgentWorkspaceInfo{
-		Workspace:   workspace,
-		AgentConfig: agentConfig,
+		Workspace: *workspace,
 	})
 	if err != nil {
 		return "", err
