@@ -97,9 +97,9 @@ func getFeatureBuildOptions(baseImageMetadata *config.ImageMetadataConfig, user,
 		return nil, err
 	}
 
-	// write devcontainer-features.builtin.env
+	// write devcontainer-features.builtin.env, its important to have a terminating \n here as we append to that file later
 	err = os.WriteFile(filepath.Join(featureFolder, "devcontainer-features.builtin.env"), []byte(`_CONTAINER_USER=`+containerUser+`
-_REMOTE_USER=`+remoteUser), 0666)
+_REMOTE_USER=`+remoteUser+"\n"), 0666)
 	if err != nil {
 		return nil, err
 	}

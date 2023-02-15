@@ -14,13 +14,13 @@ import (
 
 // StopCmd holds the destroy cmd flags
 type StopCmd struct {
-	flags.GlobalFlags
+	*flags.GlobalFlags
 }
 
 // NewStopCmd creates a new destroy command
 func NewStopCmd(flags *flags.GlobalFlags) *cobra.Command {
 	cmd := &StopCmd{
-		GlobalFlags: *flags,
+		GlobalFlags: flags,
 	}
 	stopCmd := &cobra.Command{
 		Use:   "stop",

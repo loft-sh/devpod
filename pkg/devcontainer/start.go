@@ -3,13 +3,12 @@ package devcontainer
 import (
 	"fmt"
 	"github.com/loft-sh/devpod/pkg/devcontainer/config"
-	"github.com/loft-sh/devpod/pkg/docker"
 	"github.com/sirupsen/logrus"
 	"strconv"
 	"strings"
 )
 
-func (r *Runner) startDevContainer(parsedConfig *config.DevContainerConfig, mergedConfig *config.MergedDevContainerConfig, imageName, workspaceMount string, labels []string, imageDetails *docker.ImageDetails) error {
+func (r *Runner) startDevContainer(parsedConfig *config.DevContainerConfig, mergedConfig *config.MergedDevContainerConfig, imageName, workspaceMount string, labels []string, imageDetails *config.ImageDetails) error {
 	args := []string{
 		"run",
 		"--sig-proxy=false",

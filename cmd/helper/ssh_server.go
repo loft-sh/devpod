@@ -82,16 +82,8 @@ func (cmd *SSHServerCmd) Run(_ *cobra.Command, _ []string) error {
 
 	// should we listen on stdout & stdin?
 	if cmd.Stdio {
-		pipe := stdio.NewStdioStream(os.Stdin, os.Stdout, true)
-		lis := stdio.NewStdioListener()
-		done := make(chan error)
-
-		go func() {
-			done <- server.Serve(lis)
-		}()
-
-		lis.Ready(pipe)
-		return <-done
+		lis := stdio.NewStdioListener(os.Stdin, os.Stdout, true)
+		return server.Serve(lis)
 	}
 
 	// check if ssh is already running at that port

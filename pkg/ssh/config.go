@@ -121,7 +121,7 @@ func addHost(path, host, user, context, workspace, command string) (string, erro
 	} else {
 		newLines = append(newLines, fmt.Sprintf("  ProxyCommand %s ssh --stdio --id %s --context %s", execPath, workspace, context))
 	}
-	//newLines = append(newLines, "  User "+user)
+	newLines = append(newLines, "  User "+user)
 	newLines = append(newLines, endMarker)
 	return strings.Join(newLines, "\n"), nil
 }

@@ -15,13 +15,13 @@ import (
 
 // ListCmd holds the configuration
 type ListCmd struct {
-	flags.GlobalFlags
+	*flags.GlobalFlags
 }
 
 // NewListCmd creates a new destroy command
 func NewListCmd(flags *flags.GlobalFlags) *cobra.Command {
 	cmd := &ListCmd{
-		GlobalFlags: *flags,
+		GlobalFlags: flags,
 	}
 	listCmd := &cobra.Command{
 		Use:   "list",

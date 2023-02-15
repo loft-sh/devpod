@@ -173,7 +173,7 @@ type NonComposeBase struct {
 	// The user the container will be started with. The default is the user on the Docker image.
 	ContainerUser string `json:"containerUser,omitempty"`
 
-	// Mount points to set up when creating the container. See Docker's documentation for the --mount option for the supported syntax.
+	// Mounts points to set up when creating the container. See Docker's documentation for the --mount option for the supported syntax.
 	Mounts []*Mount `json:"mounts,omitempty"`
 
 	// Passes the --init flag when creating the dev container.

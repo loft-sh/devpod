@@ -15,13 +15,13 @@ import (
 
 // OptionsCmd holds the options cmd flags
 type OptionsCmd struct {
-	flags.GlobalFlags
+	*flags.GlobalFlags
 }
 
 // NewOptionsCmd creates a new destroy command
 func NewOptionsCmd(flags *flags.GlobalFlags) *cobra.Command {
 	cmd := &OptionsCmd{
-		GlobalFlags: *flags,
+		GlobalFlags: flags,
 	}
 	optionsCmd := &cobra.Command{
 		Use:   "options",

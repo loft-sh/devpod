@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/loft-sh/devpod/pkg/agent"
+	"github.com/loft-sh/devpod/pkg/devcontainer/config"
 	"github.com/loft-sh/devpod/pkg/image"
 	"github.com/loft-sh/devpod/pkg/scanner"
 	"github.com/pkg/errors"
@@ -13,79 +14,8 @@ import (
 	"strings"
 )
 
-type ImageDetails struct {
-	Id     string
-	Config ImageDetailsConfig
-}
-
-type ImageDetailsConfig struct {
-	User       string
-	Env        []string
-	Labels     map[string]string
-	Entrypoint []string
-	Cmd        []string
-}
-
-type ContainerDetails struct {
-	Id              string
-	Created         string
-	Name            string
-	State           ContainerDetailsState
-	Config          ContainerDetailsConfig
-	Mounts          []ContainerDetailsMount
-	NetworkSettings ContainerDetailsNetworkSettings
-	Ports           []ContainerDetailsPort
-}
-
-type ContainerDetailsPort struct {
-	IP          string
-	PrivatePort int
-	PublicPort  int
-	Type        string
-}
-
-type ContainerDetailsNetworkSettings struct {
-	Ports map[string][]ContainerDetailsNetworkSettingsPort
-}
-
-type ContainerDetailsNetworkSettingsPort struct {
-	HostIp   string
-	HostPort string
-}
-
-type ContainerDetailsMount struct {
-	Type        string
-	Name        string
-	Source      string
-	Destination string
-}
-
-type ContainerDetailsConfig struct {
-	Image  string
-	User   string
-	Env    []string
-	Labels map[string]string
-}
-
-type ContainerDetailsState struct {
-	Status     string
-	StartedAt  string
-	FinishedAt string
-}
-
 type DockerHelper struct {
 	DockerCommand string
-}
-
-func ContainerToImageDetails(containerDetails *ContainerDetails) *ImageDetails {
-	return &ImageDetails{
-		Id: containerDetails.Id,
-		Config: ImageDetailsConfig{
-			User:   containerDetails.Config.User,
-			Env:    containerDetails.Config.Env,
-			Labels: containerDetails.Config.Labels,
-		},
-	}
 }
 
 func (r *DockerHelper) GPUSupportEnabled() (bool, error) {
@@ -97,7 +27,7 @@ func (r *DockerHelper) GPUSupportEnabled() (bool, error) {
 	return strings.Contains(string(out), "nvidia-container-runtime"), nil
 }
 
-func (r *DockerHelper) FindDevContainer(labels []string) (*ContainerDetails, error) {
+func (r *DockerHelper) FindDevContainer(labels []string) (*config.ContainerDetails, error) {
 	containers, err := r.FindContainer(labels)
 	if err != nil {
 		return nil, err
@@ -162,8 +92,8 @@ func (r *DockerHelper) StartContainer(id string, labels []string) error {
 	return nil
 }
 
-func (r *DockerHelper) InspectImage(imageName string, tryRemote bool) (*ImageDetails, error) {
-	imageDetails := []*ImageDetails{}
+func (r *DockerHelper) InspectImage(imageName string, tryRemote bool) (*config.ImageDetails, error) {
+	imageDetails := []*config.ImageDetails{}
 	err := r.Inspect([]string{imageName}, "image", &imageDetails)
 	if err != nil {
 		// try remote?
@@ -176,9 +106,9 @@ func (r *DockerHelper) InspectImage(imageName string, tryRemote bool) (*ImageDet
 			return nil, err
 		}
 
-		return &ImageDetails{
+		return &config.ImageDetails{
 			Id: imageName,
-			Config: ImageDetailsConfig{
+			Config: config.ImageDetailsConfig{
 				User:       imageConfig.Config.User,
 				Env:        imageConfig.Config.Env,
 				Labels:     imageConfig.Config.Labels,
@@ -193,8 +123,8 @@ func (r *DockerHelper) InspectImage(imageName string, tryRemote bool) (*ImageDet
 	return imageDetails[0], nil
 }
 
-func (r *DockerHelper) InspectContainers(ids []string) ([]ContainerDetails, error) {
-	details := []ContainerDetails{}
+func (r *DockerHelper) InspectContainers(ids []string) ([]config.ContainerDetails, error) {
+	details := []config.ContainerDetails{}
 	err := r.Inspect(ids, "container", &details)
 	if err != nil {
 		return nil, err

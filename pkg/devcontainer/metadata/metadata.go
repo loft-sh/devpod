@@ -3,7 +3,6 @@ package metadata
 import (
 	"encoding/json"
 	"github.com/loft-sh/devpod/pkg/devcontainer/config"
-	"github.com/loft-sh/devpod/pkg/docker"
 	"github.com/loft-sh/devpod/pkg/log"
 )
 
@@ -86,7 +85,7 @@ func DevContainerConfigToImageMetadata(devConfig *config.DevContainerConfig) *co
 	}
 }
 
-func GetImageMetadataFromContainer(containerDetails *docker.ContainerDetails, substituteContext *config.SubstitutionContext, log log.Logger) (*config.ImageMetadataConfig, error) {
+func GetImageMetadataFromContainer(containerDetails *config.ContainerDetails, substituteContext *config.SubstitutionContext, log log.Logger) (*config.ImageMetadataConfig, error) {
 	if containerDetails.Config.Labels == nil || containerDetails.Config.Labels[ImageMetadataLabel] == "" {
 		return &config.ImageMetadataConfig{}, nil
 	}
@@ -115,7 +114,7 @@ func GetImageMetadataFromContainer(containerDetails *docker.ContainerDetails, su
 	return imageMetadataConfig, nil
 }
 
-func GetImageMetadata(imageDetails *docker.ImageDetails, substituteContext *config.SubstitutionContext, log log.Logger) (*config.ImageMetadataConfig, error) {
+func GetImageMetadata(imageDetails *config.ImageDetails, substituteContext *config.SubstitutionContext, log log.Logger) (*config.ImageMetadataConfig, error) {
 	if imageDetails.Config.Labels == nil || imageDetails.Config.Labels[ImageMetadataLabel] == "" {
 		return &config.ImageMetadataConfig{}, nil
 	}

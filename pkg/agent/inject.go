@@ -173,5 +173,5 @@ func downloadAgentLocally(tryDownloadURL, targetArch string) (string, error) {
 		return "", errors.Wrap(err, "download devpod")
 	}
 
-	return "", nil
+	return agentPath, nil
 }

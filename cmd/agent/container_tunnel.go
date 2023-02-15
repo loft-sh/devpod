@@ -18,7 +18,7 @@ type ContainerTunnelCmd struct {
 	WorkspaceInfo string
 }
 
-// NewContainerTunnelCmd creates a new ws-tunnel command
+// NewContainerTunnelCmd creates a new command
 func NewContainerTunnelCmd() *cobra.Command {
 	cmd := &ContainerTunnelCmd{}
 	containerTunnelCmd := &cobra.Command{
