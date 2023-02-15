@@ -86,7 +86,7 @@ func escapeQuotesForShell(str string) string {
 	// by the caller. This means we need to escape any nested single quotes within the string.
 	// We can do this by ending the first string with a single quote ('), printing an escaped
 	// single quote (\'), and then opening a new string (').
-	return strings.ReplaceAll(str, "'", `'\\''`)
+	return strings.ReplaceAll(str, "'", `'\''`)
 }
 
 func ProcessFeatureID(id, configDir string, log log.Logger) (string, error) {

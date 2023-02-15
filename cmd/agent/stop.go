@@ -11,7 +11,7 @@ import (
 
 // StopCmd holds the cmd flags
 type StopCmd struct {
-	flags.GlobalFlags
+	*flags.GlobalFlags
 
 	ID string
 }
@@ -19,7 +19,7 @@ type StopCmd struct {
 // NewStopCmd creates a new command
 func NewStopCmd(flags *flags.GlobalFlags) *cobra.Command {
 	cmd := &StopCmd{
-		GlobalFlags: *flags,
+		GlobalFlags: flags,
 	}
 	stopCmd := &cobra.Command{
 		Use:   "stop",

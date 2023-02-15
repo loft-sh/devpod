@@ -12,6 +12,7 @@ import (
 	"github.com/loft-sh/devpod/pkg/config"
 	"github.com/loft-sh/devpod/pkg/daemon"
 	"github.com/loft-sh/devpod/pkg/devcontainer"
+	config2 "github.com/loft-sh/devpod/pkg/devcontainer/config"
 	"github.com/loft-sh/devpod/pkg/extract"
 	"github.com/loft-sh/devpod/pkg/log"
 	provider2 "github.com/loft-sh/devpod/pkg/provider"
@@ -28,7 +29,7 @@ import (
 
 // UpCmd holds the up cmd flags
 type UpCmd struct {
-	flags.GlobalFlags
+	*flags.GlobalFlags
 
 	WorkspaceInfo string
 }
@@ -36,7 +37,7 @@ type UpCmd struct {
 // NewUpCmd creates a new ssh command
 func NewUpCmd(flags *flags.GlobalFlags) *cobra.Command {
 	cmd := &UpCmd{
-		GlobalFlags: *flags,
+		GlobalFlags: flags,
 	}
 	upCmd := &cobra.Command{
 		Use:   "up",
@@ -110,9 +111,19 @@ func (cmd *UpCmd) up(ctx context.Context, workspaceInfo *provider2.AgentWorkspac
 	}
 
 	// create devcontainer
-	err = DevContainerUp(workspaceInfo, logger)
+	result, err := DevContainerUp(workspaceInfo, logger)
 	if err != nil {
 		return err
+	}
+
+	// send result
+	out, err := json.Marshal(result)
+	if err != nil {
+		return err
+	}
+	_, err = tunnelClient.SendResult(ctx, &tunnel.Result{Message: string(out)})
+	if err != nil {
+		return errors.Wrap(err, "send result")
 	}
 
 	return nil
@@ -297,13 +308,13 @@ func PrepareImage(workspaceDir, image string) error {
 	return nil
 }
 
-func DevContainerUp(workspaceInfo *provider2.AgentWorkspaceInfo, log log.Logger) error {
-	err := createRunner(workspaceInfo, log).Up()
+func DevContainerUp(workspaceInfo *provider2.AgentWorkspaceInfo, log log.Logger) (*config2.Result, error) {
+	result, err := createRunner(workspaceInfo, log).Up()
 	if err != nil {
-		return err
+		return nil, err
 	}
 
-	return nil
+	return result, nil
 }
 
 func CloneRepository(workspaceDir, repository string, log log.Logger) error {

@@ -28,7 +28,7 @@ const (
 )
 
 type BuildInfo struct {
-	ImageDetails  *docker.ImageDetails
+	ImageDetails  *config.ImageDetails
 	ImageMetadata *config.ImageMetadataConfig
 	ImageName     string
 }
@@ -58,7 +58,7 @@ func (r *Runner) extendImage(parsedConfig *config.SubstitutedConfig) (*BuildInfo
 	if extendedBuildInfo == nil || extendedBuildInfo.FeaturesBuildInfo == nil {
 		return &BuildInfo{
 			ImageDetails:  imageBuildInfo.ImageDetails,
-			ImageMetadata: imageBuildInfo.Metadata,
+			ImageMetadata: extendedBuildInfo.MetadataConfig,
 			ImageName:     imageBase,
 		}, nil
 	}
@@ -131,16 +131,16 @@ func (r *Runner) buildImage(parsedConfig *config.SubstitutedConfig, extendedBuil
 
 		// cleanup features folder after we are done building
 		if featureBuildInfo.FeaturesFolder != "" {
-			defer os.RemoveAll(featureBuildInfo.FeaturesFolder)
+			//defer os.RemoveAll(featureBuildInfo.FeaturesFolder)
 		}
 
 		// rewrite dockerfile
 		finalDockerfileContent = dockerfile.RemoveSyntaxVersion(string(dockerfileContent))
-		finalDockerfileContent = strings.Join([]string{
+		finalDockerfileContent = strings.TrimSpace(strings.Join([]string{
 			featureBuildInfo.DockerfilePrefixContent,
 			strings.TrimSpace(finalDockerfileContent),
 			featureBuildInfo.DockerfileContent,
-		}, "\n")
+		}, "\n"))
 
 		// write dockerfile with features
 		finalDockerfilePath = filepath.Join(featureBuildInfo.FeaturesFolder, "Dockerfile-with-features")
@@ -175,18 +175,25 @@ func (r *Runner) buildImage(parsedConfig *config.SubstitutedConfig, extendedBuil
 	buildOptions.Images = []string{imageName}
 	buildOptions.Context = getContextPath(parsedConfig.Config)
 
+	// add build arg
+	if buildOptions.BuildArgs == nil {
+		buildOptions.BuildArgs = map[string]string{}
+	}
+	buildOptions.BuildArgs["BUILDKIT_INLINE_CACHE"] = "1"
+
 	// build image
 	writer := r.Log.Writer(logrus.InfoLevel, false)
 	defer writer.Close()
 
 	// check if docker buildx exists
 	if r.buildxExists() {
+		r.Log.Infof("Build with docker buildx")
 		err := r.buildxBuild(writer, buildOptions)
 		if err != nil {
 			return nil, errors.Wrap(err, "buildx build")
 		}
 	} else {
-		r.Log.Infof("Trying to build with internal buildkit")
+		r.Log.Infof("Build with internal buildkit")
 		err := r.internalBuild(context.Background(), writer, buildOptions)
 		if err != nil {
 			return nil, errors.Wrap(err, "internal build")
@@ -315,7 +322,7 @@ type ImageBuildInfo struct {
 
 	// Either on of these will be filled as will
 	Dockerfile   *dockerfile.Dockerfile
-	ImageDetails *docker.ImageDetails
+	ImageDetails *config.ImageDetails
 }
 
 func (r *Runner) getImageBuildInfoFromImage(imageName string) (*ImageBuildInfo, error) {

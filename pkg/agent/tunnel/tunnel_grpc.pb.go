@@ -25,6 +25,7 @@ type TunnelClient interface {
 	Ping(ctx context.Context, in *Empty, opts ...grpc.CallOption) (*Empty, error)
 	Log(ctx context.Context, in *LogMessage, opts ...grpc.CallOption) (*Empty, error)
 	ReadWorkspace(ctx context.Context, in *Empty, opts ...grpc.CallOption) (Tunnel_ReadWorkspaceClient, error)
+	SendResult(ctx context.Context, in *Result, opts ...grpc.CallOption) (*Empty, error)
 }
 
 type tunnelClient struct {
@@ -85,6 +86,15 @@ func (x *tunnelReadWorkspaceClient) Recv() (*Chunk, error) {
 	return m, nil
 }
 
+func (c *tunnelClient) SendResult(ctx context.Context, in *Result, opts ...grpc.CallOption) (*Empty, error) {
+	out := new(Empty)
+	err := c.cc.Invoke(ctx, "/tunnel.Tunnel/SendResult", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // TunnelServer is the server API for Tunnel service.
 // All implementations must embed UnimplementedTunnelServer
 // for forward compatibility
@@ -92,6 +102,7 @@ type TunnelServer interface {
 	Ping(context.Context, *Empty) (*Empty, error)
 	Log(context.Context, *LogMessage) (*Empty, error)
 	ReadWorkspace(*Empty, Tunnel_ReadWorkspaceServer) error
+	SendResult(context.Context, *Result) (*Empty, error)
 	mustEmbedUnimplementedTunnelServer()
 }
 
@@ -107,6 +118,9 @@ func (UnimplementedTunnelServer) Log(context.Context, *LogMessage) (*Empty, erro
 }
 func (UnimplementedTunnelServer) ReadWorkspace(*Empty, Tunnel_ReadWorkspaceServer) error {
 	return status.Errorf(codes.Unimplemented, "method ReadWorkspace not implemented")
+}
+func (UnimplementedTunnelServer) SendResult(context.Context, *Result) (*Empty, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method SendResult not implemented")
 }
 func (UnimplementedTunnelServer) mustEmbedUnimplementedTunnelServer() {}
 
@@ -178,6 +192,24 @@ func (x *tunnelReadWorkspaceServer) Send(m *Chunk) error {
 	return x.ServerStream.SendMsg(m)
 }
 
+func _Tunnel_SendResult_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(Result)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(TunnelServer).SendResult(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/tunnel.Tunnel/SendResult",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(TunnelServer).SendResult(ctx, req.(*Result))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // Tunnel_ServiceDesc is the grpc.ServiceDesc for Tunnel service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -192,6 +224,10 @@ var Tunnel_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "Log",
 			Handler:    _Tunnel_Log_Handler,
+		},
+		{
+			MethodName: "SendResult",
+			Handler:    _Tunnel_SendResult_Handler,
 		},
 	},
 	Streams: []grpc.StreamDesc{

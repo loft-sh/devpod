@@ -11,7 +11,7 @@ import (
 
 // StartCmd holds the cmd flags
 type StartCmd struct {
-	flags.GlobalFlags
+	*flags.GlobalFlags
 
 	ID string
 }
@@ -19,7 +19,7 @@ type StartCmd struct {
 // NewStartCmd creates a new command
 func NewStartCmd(flags *flags.GlobalFlags) *cobra.Command {
 	cmd := &StartCmd{
-		GlobalFlags: *flags,
+		GlobalFlags: flags,
 	}
 	startCmd := &cobra.Command{
 		Use:   "start",
@@ -60,7 +60,7 @@ func (cmd *StartCmd) Run(ctx context.Context) error {
 
 func startContainer(workspaceInfo *provider2.AgentWorkspaceInfo, log log.Logger) error {
 	log.Debugf("Starting DevPod container...")
-	err := createRunner(workspaceInfo, log).Up()
+	_, err := createRunner(workspaceInfo, log).Up()
 	if err != nil {
 		return err
 	}

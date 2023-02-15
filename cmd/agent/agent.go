@@ -21,5 +21,6 @@ func NewAgentCmd(flags *flags.GlobalFlags) *cobra.Command {
 	agentCmd.AddCommand(NewStartCmd(flags))
 	agentCmd.AddCommand(NewStatusCmd(flags))
 	agentCmd.AddCommand(NewOpenVSCodeCmd())
+	agentCmd.AddCommand(NewSetupContainerCmd())
 	return agentCmd
 }

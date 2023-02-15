@@ -2,7 +2,9 @@ package agent
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
+	"github.com/loft-sh/devpod/pkg/devcontainer/config"
 	"github.com/loft-sh/devpod/pkg/extract"
 	provider2 "github.com/loft-sh/devpod/pkg/provider"
 	"github.com/loft-sh/devpod/pkg/scanner"
@@ -36,31 +38,46 @@ func NewTunnelClient(reader io.Reader, writer io.WriteCloser, exitOnClose bool) 
 	return tunnel.NewTunnelClient(conn), nil
 }
 
-func StartTunnelServer(reader io.Reader, writer io.WriteCloser, exitOnClose bool, workspace *provider2.Workspace, log log.Logger) error {
-	pipe := stdio.NewStdioStream(reader, writer, exitOnClose)
-	lis := stdio.NewStdioListener()
-	done := make(chan error)
+func RunTunnelServer(ctx context.Context, reader io.Reader, writer io.WriteCloser, exitOnClose bool, workspace *provider2.Workspace, log log.Logger) (*config.Result, error) {
+	lis := stdio.NewStdioListener(reader, writer, exitOnClose)
+	s := grpc.NewServer()
+	tunnelServ := &tunnelServer{
+		workspace: workspace,
+		log:       log,
+	}
+	tunnel.RegisterTunnelServer(s, tunnelServ)
+	reflection.Register(s)
 
+	errChan := make(chan error, 1)
 	go func() {
-		s := grpc.NewServer()
-		tunnelServ := &tunnelServer{
-			workspace: workspace,
-			log:       log,
-		}
-		tunnel.RegisterTunnelServer(s, tunnelServ)
-		reflection.Register(s)
-		done <- s.Serve(lis)
+		errChan <- s.Serve(lis)
 	}()
 
-	lis.Ready(pipe)
-	return <-done
+	select {
+	case err := <-errChan:
+		return nil, err
+	case <-ctx.Done():
+		return tunnelServ.result, nil
+	}
 }
 
 type tunnelServer struct {
 	tunnel.UnimplementedTunnelServer
 
+	result    *config.Result
 	workspace *provider2.Workspace
 	log       log.Logger
+}
+
+func (t *tunnelServer) SendResult(ctx context.Context, result *tunnel.Result) (*tunnel.Empty, error) {
+	parsedResult := &config.Result{}
+	err := json.Unmarshal([]byte(result.Message), parsedResult)
+	if err != nil {
+		return nil, err
+	}
+
+	t.result = parsedResult
+	return &tunnel.Empty{}, nil
 }
 
 func (t *tunnelServer) Ping(context.Context, *tunnel.Empty) (*tunnel.Empty, error) {

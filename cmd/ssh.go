@@ -25,7 +25,7 @@ var waitForInstanceConnectionTimeout = time.Minute * 5
 
 // SSHCmd holds the ssh cmd flags
 type SSHCmd struct {
-	flags.GlobalFlags
+	*flags.GlobalFlags
 
 	Stdio         bool
 	JumpContainer bool
@@ -38,7 +38,7 @@ type SSHCmd struct {
 // NewSSHCmd creates a new ssh command
 func NewSSHCmd(flags *flags.GlobalFlags) *cobra.Command {
 	cmd := &SSHCmd{
-		GlobalFlags: *flags,
+		GlobalFlags: flags,
 	}
 	sshCmd := &cobra.Command{
 		Use:   "ssh",

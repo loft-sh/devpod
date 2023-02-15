@@ -15,7 +15,7 @@ import (
 
 // StatusCmd holds the cmd flags
 type StatusCmd struct {
-	flags.GlobalFlags
+	*flags.GlobalFlags
 
 	ID string
 }
@@ -23,7 +23,7 @@ type StatusCmd struct {
 // NewStatusCmd creates a new command
 func NewStatusCmd(flags *flags.GlobalFlags) *cobra.Command {
 	cmd := &StatusCmd{
-		GlobalFlags: *flags,
+		GlobalFlags: flags,
 	}
 	statusCmd := &cobra.Command{
 		Use:   "status",

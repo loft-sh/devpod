@@ -1,11 +1,20 @@
 package stdio
 
-import "net"
+import (
+	"io"
+	"net"
+)
 
 // NewStdioListener creates a new stdio listener
-func NewStdioListener() *StdioListener {
+func NewStdioListener(reader io.Reader, writer io.WriteCloser, exitOnClose bool) *StdioListener {
+	conn := NewStdioStream(reader, writer, exitOnClose)
+	connChan := make(chan net.Conn)
+	go func() {
+		connChan <- conn
+	}()
+
 	return &StdioListener{
-		connChan: make(chan net.Conn),
+		connChan: connChan,
 	}
 }
 
@@ -16,7 +25,7 @@ type StdioListener struct {
 
 // Ready implements interface
 func (lis *StdioListener) Ready(conn net.Conn) {
-	lis.connChan <- conn
+
 }
 
 // Accept implements interface

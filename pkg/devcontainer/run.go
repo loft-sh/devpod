@@ -38,19 +38,20 @@ type Runner struct {
 	Log log.Logger
 }
 
-func (r *Runner) Up() error {
+func (r *Runner) Up() (*config.Result, error) {
 	rawParsedConfig, err := config.ParseDevContainerJSON(r.LocalWorkspaceFolder)
 	if err != nil {
-		return errors.Wrap(err, "parsing devcontainer.json")
+		return nil, errors.Wrap(err, "parsing devcontainer.json")
 	} else if rawParsedConfig == nil {
 		// TODO: use a default config
-		return fmt.Errorf("couldn't find a devcontainer.json")
+		return nil, fmt.Errorf("couldn't find a devcontainer.json")
 	}
 	configFile := rawParsedConfig.Origin
 
 	// get workspace folder within container
 	workspace := getWorkspace(r.LocalWorkspaceFolder, r.ID, rawParsedConfig)
 	r.SubstitutionContext = &config.SubstitutionContext{
+		DevContainerID:           config.GetDevContainerID(config.ListToObject(r.getLabels())),
 		LocalWorkspaceFolder:     r.LocalWorkspaceFolder,
 		ContainerWorkspaceFolder: workspace.RemoteWorkspaceFolder,
 		Env:                      config.ListToObject(os.Environ()),
@@ -66,11 +67,11 @@ func (r *Runner) Up() error {
 		workspace.WorkspaceMount = parsedConfig.WorkspaceMount
 	}
 	parsedConfig.Origin = configFile
-
+	
 	// run initializeCommand
 	err = runInitializeCommand(r.LocalWorkspaceFolder, parsedConfig, r.Log)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	// check if its a compose devcontainer.json
@@ -84,10 +85,10 @@ func (r *Runner) Up() error {
 		panic("unimplemented")
 	}
 
-	return fmt.Errorf("dev container config is missing one of \"image\", \"dockerFile\" or \"dockerComposeFile\" properties")
+	return nil, fmt.Errorf("dev container config is missing one of \"image\", \"dockerFile\" or \"dockerComposeFile\" properties")
 }
 
-func (r *Runner) FindDevContainer() (*docker.ContainerDetails, error) {
+func (r *Runner) FindDevContainer() (*config.ContainerDetails, error) {
 	labels := r.getLabels()
 	containerDetails, err := r.Docker.FindDevContainer(labels)
 	if err != nil {
