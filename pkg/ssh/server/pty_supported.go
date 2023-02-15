@@ -48,8 +48,25 @@ func setUser(userName string, cmd *exec.Cmd) {
 		return
 	}
 
+	groups := []uint32{}
+	groupIds, err := u.GroupIds()
+	if err == nil {
+		for _, group := range groupIds {
+			gid, err := strconv.ParseInt(group, 10, 32)
+			if err != nil {
+				continue
+			}
+
+			groups = append(groups, uint32(gid))
+		}
+	}
+
 	cmd.SysProcAttr = &syscall.SysProcAttr{}
-	cmd.SysProcAttr.Credential = &syscall.Credential{Uid: uint32(uid), Gid: uint32(gid)}
+	cmd.SysProcAttr.Credential = &syscall.Credential{
+		Uid:    uint32(uid),
+		Gid:    uint32(gid),
+		Groups: groups,
+	}
 
 	// replace HOME
 	newEnv := []string{}
