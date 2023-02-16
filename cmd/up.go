@@ -183,7 +183,7 @@ func devPodUpServer(ctx context.Context, provider provider2.ServerProvider, work
 
 	// inject agent
 	if !agentExists {
-		err = injectAgent(ctx, workspace.Provider.Agent.Path, workspace.Provider.Agent.DownloadURL, provider, workspace)
+		err = injectAgent(ctx, workspace.Provider.Agent.Path, workspace.Provider.Agent.DownloadURL, provider, workspace, log)
 		if err != nil {
 			return nil, err
 		}
@@ -224,11 +224,14 @@ func devPodUpServer(ctx context.Context, provider provider2.ServerProvider, work
 		defer log.Debugf("Done executing up command")
 		defer cancel()
 
+		writer := log.ErrorStreamOnly().Writer(logrus.ErrorLevel, false)
+		defer writer.Close()
+
 		errChan <- provider.Command(cancelCtx, workspace, provider2.CommandOptions{
 			Command: command,
 			Stdin:   stdinReader,
 			Stdout:  stdoutWriter,
-			Stderr:  os.Stderr,
+			Stderr:  writer,
 		})
 	}()
 
@@ -242,7 +245,7 @@ func devPodUpServer(ctx context.Context, provider provider2.ServerProvider, work
 	return result, <-errChan
 }
 
-func injectAgent(ctx context.Context, agentPath, agentURL string, provider provider2.ServerProvider, workspace *provider2.Workspace) error {
+func injectAgent(ctx context.Context, agentPath, agentURL string, provider provider2.ServerProvider, workspace *provider2.Workspace, log log.Logger) error {
 	// install devpod into the target
 	err := agent.InjectAgent(func(command string, stdin io.Reader, stdout io.Writer, stderr io.Writer) error {
 		return provider.Command(ctx, workspace, provider2.CommandOptions{
@@ -251,7 +254,7 @@ func injectAgent(ctx context.Context, agentPath, agentURL string, provider provi
 			Stdout:  stdout,
 			Stderr:  stderr,
 		})
-	}, agentPath, agentURL, true)
+	}, agentPath, agentURL, true, log)
 	if err != nil {
 		return err
 	}

@@ -246,7 +246,7 @@ func jumpContainerServer(ctx context.Context, provider provider2.ServerProvider,
 
 	// inject agent
 	if !agentExists {
-		err = injectAgent(ctx, workspace.Provider.Agent.Path, workspace.Provider.Agent.DownloadURL, provider, workspace)
+		err = injectAgent(ctx, workspace.Provider.Agent.Path, workspace.Provider.Agent.DownloadURL, provider, workspace, log)
 		if err != nil {
 			return err
 		}
