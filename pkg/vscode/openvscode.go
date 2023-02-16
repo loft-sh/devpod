@@ -2,6 +2,7 @@ package vscode
 
 import (
 	"crypto/tls"
+	"fmt"
 	"github.com/loft-sh/devpod/pkg/command"
 	"github.com/loft-sh/devpod/pkg/extract"
 	"github.com/mitchellh/go-homedir"
@@ -23,8 +24,8 @@ const DefaultVSCodePort = 10800
 
 type OpenVSCodeServer struct{}
 
-func (o *OpenVSCodeServer) InstallAndStart(user, host, port string, out io.Writer) error {
-	err := o.Install(user)
+func (o *OpenVSCodeServer) InstallAndStart(extensions []string, settings string, user, host, port string, out io.Writer) error {
+	err := o.Install(extensions, settings, user, out)
 	if err != nil {
 		return err
 	}
@@ -32,7 +33,7 @@ func (o *OpenVSCodeServer) InstallAndStart(user, host, port string, out io.Write
 	return o.Start(user, host, port, out)
 }
 
-func (o *OpenVSCodeServer) Install(userName string) error {
+func (o *OpenVSCodeServer) Install(extensions []string, settings string, userName string, out io.Writer) error {
 	location, err := prepareOpenVSCodeServerLocation(userName)
 	if err != nil {
 		return err
@@ -67,18 +68,84 @@ func (o *OpenVSCodeServer) Install(userName string) error {
 		return errors.Wrap(err, "extract vscode")
 	}
 
+	// chown location
 	if userName != "" {
-		userId, err := user.Lookup(userName)
-		if err != nil {
-			return errors.Wrap(err, "lookup user")
-		}
-
-		uid, _ := strconv.Atoi(userId.Uid)
-		gid, _ := strconv.Atoi(userId.Gid)
-		err = ChownR(location, uid, gid)
+		err = ChownR(location, userName)
 		if err != nil {
 			return errors.Wrap(err, "chown")
 		}
+	}
+
+	// install extensions
+	err = o.InstallExtensions(extensions, userName, out)
+	if err != nil {
+		return errors.Wrap(err, "install extensions")
+	}
+
+	// paste settings
+	err = o.InstallSettings(settings, userName)
+	if err != nil {
+		return errors.Wrap(err, "install settings")
+	}
+
+	return nil
+}
+
+func (o *OpenVSCodeServer) InstallExtensions(extensions []string, userName string, out io.Writer) error {
+	if len(extensions) == 0 {
+		return nil
+	}
+
+	location, err := prepareOpenVSCodeServerLocation(userName)
+	if err != nil {
+		return err
+	}
+
+	binaryPath := filepath.Join(location, "bin", "openvscode-server")
+	for _, extension := range extensions {
+		fmt.Fprintln(out, "Install extension "+extension+"...")
+		args := []string{
+			"--install-extension", extension,
+		}
+		cmd := exec.Command(binaryPath, args...)
+		cmd.Stdout = out
+		cmd.Stderr = out
+		cmd.Env = append(cmd.Env, os.Environ()...)
+		command.AsUser(userName, cmd)
+		err = cmd.Run()
+		if err != nil {
+			fmt.Fprintln(out, "Failed installing extension "+extension)
+		}
+		fmt.Fprintln(out, "Successfully installed extension "+extension)
+	}
+
+	return nil
+}
+
+func (o *OpenVSCodeServer) InstallSettings(settings string, userName string) error {
+	if len(settings) == 0 {
+		return nil
+	}
+
+	location, err := prepareOpenVSCodeServerLocation(userName)
+	if err != nil {
+		return err
+	}
+
+	settingsDir := filepath.Join(location, "data", "Machine")
+	err = os.MkdirAll(settingsDir, 0777)
+	if err != nil {
+		return err
+	}
+
+	err = os.WriteFile(filepath.Join(settingsDir, "settings.json"), []byte(settings), 0666)
+	if err != nil {
+		return err
+	}
+
+	err = ChownR(settingsDir, userName)
+	if err != nil {
+		return err
 	}
 
 	return nil
@@ -106,9 +173,6 @@ func (o *OpenVSCodeServer) Start(userName, host, port string, out io.Writer) err
 	args := []string{
 		"server-local",
 		"--without-connection-token",
-		"--extensions-dir", filepath.Join(location, "extensions-data"),
-		"--server-data-dir", filepath.Join(location, "server-data"),
-		"--user-data-dir", filepath.Join(location, "user-data"),
 		"--host", host,
 		"--port", port,
 	}
@@ -126,7 +190,18 @@ func (o *OpenVSCodeServer) Start(userName, host, port string, out io.Writer) err
 	return nil
 }
 
-func ChownR(path string, uid, gid int) error {
+func ChownR(path string, userName string) error {
+	if userName == "" {
+		return nil
+	}
+
+	userId, err := user.Lookup(userName)
+	if err != nil {
+		return errors.Wrap(err, "lookup user")
+	}
+
+	uid, _ := strconv.Atoi(userId.Uid)
+	gid, _ := strconv.Atoi(userId.Gid)
 	return filepath.Walk(path, func(name string, info os.FileInfo, err error) error {
 		if err == nil {
 			err = os.Chown(name, uid, gid)

@@ -2,9 +2,11 @@ package cmd
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"github.com/loft-sh/devpod/cmd/flags"
 	"github.com/loft-sh/devpod/pkg/agent"
+	"github.com/loft-sh/devpod/pkg/compress"
 	"github.com/loft-sh/devpod/pkg/config"
 	config2 "github.com/loft-sh/devpod/pkg/devcontainer/config"
 	"github.com/loft-sh/devpod/pkg/log"
@@ -22,6 +24,7 @@ import (
 	"io"
 	"os"
 	"os/exec"
+	"strings"
 )
 
 // UpCmd holds the up cmd flags
@@ -91,20 +94,63 @@ func (cmd *UpCmd) Run(ctx context.Context, workspace *provider2.Workspace, provi
 	// start VSCode
 	if !cmd.NoOpen {
 		if cmd.Browser {
-			return startInBrowser(ctx, workspace, provider, user, log.Default)
+			return startInBrowser(ctx, workspace, provider, result.MergedConfig, user, log.Default)
 		} else {
-			log.Default.Infof("Starting VSCode...")
-			err = exec.Command("code", "--folder-uri", fmt.Sprintf("vscode-remote://ssh-remote+%s.devpod/workspaces/%s", workspace.ID, workspace.ID)).Run()
-			if err != nil {
-				return err
-			}
+			return startLocally(ctx, workspace, provider, result.MergedConfig, user, log.Default)
 		}
 	}
 
 	return nil
 }
 
-func startInBrowser(ctx context.Context, workspace *provider2.Workspace, provider provider2.Provider, user string, log log.Logger) error {
+func startLocally(ctx context.Context, workspace *provider2.Workspace, provider provider2.Provider, mergedConfig *config2.MergedDevContainerConfig, user string, log log.Logger) error {
+	serverProvider, ok := provider.(provider2.ServerProvider)
+	if ok {
+		vsCodeConfiguration := config2.GetVSCodeConfiguration(mergedConfig)
+		if vsCodeConfiguration != nil && (len(vsCodeConfiguration.Settings) > 0 || len(vsCodeConfiguration.Extensions) > 0) {
+			// Setting up vscode
+			err := tunnel.NewContainerTunnel(serverProvider, workspace, log).Run(ctx, nil, func(client *ssh.Client) error {
+				log.Debugf("Connected to container")
+
+				// start openvscode
+				command := fmt.Sprintf("%s agent vscode --user %s", agent.RemoteDevPodHelperLocation, user)
+				if len(vsCodeConfiguration.Extensions) > 0 {
+					command += " --extension '" + strings.Join(vsCodeConfiguration.Extensions, ",") + "'"
+				}
+				if len(vsCodeConfiguration.Settings) > 0 {
+					marshalled, _ := json.Marshal(vsCodeConfiguration.Settings)
+					compressed, err := compress.Compress(string(marshalled))
+					if err != nil {
+						return err
+					}
+
+					command += " --settings '" + compressed + "'"
+				}
+
+				log.Debugf("Running in container: %s", command)
+				err := devssh.Run(client, command, nil, os.Stdout, os.Stderr)
+				if err != nil {
+					return err
+				}
+
+				return nil
+			})
+			if err != nil {
+				return err
+			}
+		}
+	}
+
+	log.Infof("Starting VSCode...")
+	err := exec.Command("code", "--folder-uri", fmt.Sprintf("vscode-remote://ssh-remote+%s.devpod/workspaces/%s", workspace.ID, workspace.ID)).Run()
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func startInBrowser(ctx context.Context, workspace *provider2.Workspace, provider provider2.Provider, mergedConfig *config2.MergedDevContainerConfig, user string, log log.Logger) error {
 	serverProvider, ok := provider.(provider2.ServerProvider)
 	if !ok {
 		return fmt.Errorf("--browser is currently only supported for server providers")
@@ -137,9 +183,25 @@ func startInBrowser(ctx context.Context, workspace *provider2.Workspace, provide
 			forwardErr <- devssh.PortForward(client, fmt.Sprintf("localhost:%d", vscodePort), fmt.Sprintf("localhost:%d", vscode.DefaultVSCodePort), log)
 		}()
 
+		// get vs code settings & extensions
+		vsCodeConfig := config2.GetVSCodeConfiguration(mergedConfig)
+
 		// start openvscode
 		command := fmt.Sprintf("%s agent openvscode --user %s --port %d", agent.RemoteDevPodHelperLocation, user, vscode.DefaultVSCodePort)
-		log.Debugf("Running %s in container", command)
+		if len(vsCodeConfig.Extensions) > 0 {
+			command += " --extension '" + strings.Join(vsCodeConfig.Extensions, ",") + "'"
+		}
+		if len(vsCodeConfig.Settings) > 0 {
+			marshalled, _ := json.Marshal(vsCodeConfig.Settings)
+			compressed, err := compress.Compress(string(marshalled))
+			if err != nil {
+				return err
+			}
+
+			command += " --settings '" + compressed + "'"
+		}
+
+		log.Debugf("Running in container: %s", command)
 		err = devssh.Run(client, command, nil, os.Stdout, os.Stderr)
 		if err != nil {
 			return err
