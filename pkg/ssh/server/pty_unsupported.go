@@ -16,7 +16,3 @@ func startPTY(cmd *exec.Cmd) (*os.File, error) {
 func setWinSize(f *os.File, w, h int) {
 
 }
-
-func setUser(userName string, cmd *exec.Cmd) {
-
-}
