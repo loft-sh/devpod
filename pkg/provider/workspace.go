@@ -14,6 +14,9 @@ type Workspace struct {
 	// Provider is the provider used to create this workspace
 	Provider WorkspaceProviderConfig `json:"provider,omitempty"`
 
+	// IDE holds IDE specific settings
+	IDE WorkspaceIDEConfig `json:"ide,omitempty"`
+
 	// Source is the source where this workspace will be created from
 	Source WorkspaceSource `json:"source,omitempty"`
 
@@ -25,6 +28,16 @@ type Workspace struct {
 
 	// Origin is the place where this config file was loaded from
 	Origin string `json:"-"`
+}
+
+type WorkspaceIDEConfig struct {
+	// VSCode are vscode specific options
+	VSCode *WorkspaceIDEVSCode `json:"vscode,omitempty"`
+}
+
+type WorkspaceIDEVSCode struct {
+	// Browser determines if the vscode should be opened in the browser
+	Browser bool `json:"browser,omitempty"`
 }
 
 type WorkspaceProviderConfig struct {

@@ -54,7 +54,7 @@ func (cmd *ExecCmd) Run(ctx context.Context, args []string) error {
 	}
 
 	devPodConfig.Contexts[devPodConfig.DefaultContext].DefaultProvider = args[0]
-	workspaceConfig, provider, err := workspace.ResolveWorkspace(ctx, devPodConfig, []string{args[2]}, "", log.Default)
+	workspaceConfig, provider, err := workspace.ResolveWorkspace(ctx, devPodConfig, nil, []string{args[2]}, "", log.Default)
 	if err != nil {
 		return err
 	}

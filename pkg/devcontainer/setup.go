@@ -37,6 +37,16 @@ func (r *Runner) setupContainer(containerDetails *config.ContainerDetails, merge
 		return err
 	}
 
+	// compress workspace info
+	workspaceConfig, err := json.Marshal(r.WorkspaceConfig)
+	if err != nil {
+		return err
+	}
+	workspaceConfigCompressed, err := compress.Compress(string(workspaceConfig))
+	if err != nil {
+		return err
+	}
+
 	// execute docker command
 	writer := r.Log.Writer(logrus.InfoLevel, false)
 	defer writer.Close()
@@ -46,7 +56,7 @@ func (r *Runner) setupContainer(containerDetails *config.ContainerDetails, merge
 
 	// TODO: install openvscode, extensions & settings
 	// TODO: install vscode, extensions & settings
-	args := []string{"exec", "-u", "root", containerDetails.Id, agent.RemoteDevPodHelperLocation, "agent", "setup-container", "--setup-info", compressed}
+	args := []string{"exec", "-u", "root", containerDetails.Id, agent.RemoteDevPodHelperLocation, "agent", "setup-container", "--setup-info", compressed, "--workspace-info", workspaceConfigCompressed}
 	r.Log.Debugf("Run docker %s", strings.Join(args, " "))
 	err = r.Docker.Run(args, nil, writer, writer)
 	if err != nil {

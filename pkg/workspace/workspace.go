@@ -24,10 +24,10 @@ import (
 )
 
 // GetWorkspace tries to retrieve an already existing workspace
-func GetWorkspace(ctx context.Context, devPodConfig *config.Config, args []string, log log.Logger) (*provider2.Workspace, provider2.Provider, error) {
+func GetWorkspace(ctx context.Context, devPodConfig *config.Config, ide *provider2.WorkspaceIDEConfig, args []string, log log.Logger) (*provider2.Workspace, provider2.Provider, error) {
 	// check if we have no args
 	if len(args) == 0 {
-		return selectWorkspace(ctx, devPodConfig, log)
+		return selectWorkspace(ctx, devPodConfig, ide, log)
 	}
 
 	// check if workspace already exists
@@ -42,18 +42,18 @@ func GetWorkspace(ctx context.Context, devPodConfig *config.Config, args []strin
 	}
 
 	// load workspace config
-	return loadExistingWorkspace(ctx, workspaceID, devPodConfig, log)
+	return loadExistingWorkspace(ctx, workspaceID, devPodConfig, ide, log)
 }
 
 // ResolveWorkspace tries to retrieve an already existing workspace or creates a new one
-func ResolveWorkspace(ctx context.Context, devPodConfig *config.Config, args []string, desiredID string, log log.Logger) (*provider2.Workspace, provider2.Provider, error) {
+func ResolveWorkspace(ctx context.Context, devPodConfig *config.Config, ide *provider2.WorkspaceIDEConfig, args []string, desiredID string, log log.Logger) (*provider2.Workspace, provider2.Provider, error) {
 	// check if we have no args
 	if len(args) == 0 {
 		if desiredID != "" {
-			return GetWorkspace(ctx, devPodConfig, []string{desiredID}, log)
+			return GetWorkspace(ctx, devPodConfig, ide, []string{desiredID}, log)
 		}
 
-		return selectWorkspace(ctx, devPodConfig, log)
+		return selectWorkspace(ctx, devPodConfig, ide, log)
 	}
 
 	// check if workspace already exists
@@ -66,14 +66,14 @@ func ResolveWorkspace(ctx context.Context, devPodConfig *config.Config, args []s
 	if desiredID != "" {
 		if config.WorkspaceExists(devPodConfig.DefaultContext, desiredID) {
 			log.Infof("Workspace %s already exists", desiredID)
-			return loadExistingWorkspace(ctx, desiredID, devPodConfig, log)
+			return loadExistingWorkspace(ctx, desiredID, devPodConfig, ide, log)
 		}
 
 		// set desired id
 		workspaceID = desiredID
 	} else if config.WorkspaceExists(devPodConfig.DefaultContext, workspaceID) {
 		log.Infof("Workspace %s already exists", workspaceID)
-		return loadExistingWorkspace(ctx, workspaceID, devPodConfig, log)
+		return loadExistingWorkspace(ctx, workspaceID, devPodConfig, ide, log)
 	}
 
 	// get default provider
@@ -93,6 +93,11 @@ func ResolveWorkspace(ctx context.Context, devPodConfig *config.Config, args []s
 	if err != nil {
 		_ = os.RemoveAll(workspaceFolder)
 		return nil, nil, err
+	}
+
+	// set ide config
+	if ide != nil {
+		workspace.IDE = *ide
 	}
 
 	// save workspace config
@@ -245,7 +250,7 @@ func ToWorkspaceID(str string) string {
 	return workspaceIDRegEx2.ReplaceAllString(workspaceIDRegEx1.ReplaceAllString(str[index+1:], "-"), "")
 }
 
-func selectWorkspace(ctx context.Context, devPodConfig *config.Config, log log.Logger) (*provider2.Workspace, provider2.Provider, error) {
+func selectWorkspace(ctx context.Context, devPodConfig *config.Config, ide *provider2.WorkspaceIDEConfig, log log.Logger) (*provider2.Workspace, provider2.Provider, error) {
 	if !terminal.IsTerminalIn {
 		return nil, nil, provideWorkspaceArgErr
 	}
@@ -276,10 +281,10 @@ func selectWorkspace(ctx context.Context, devPodConfig *config.Config, log log.L
 	}
 
 	// load workspace
-	return loadExistingWorkspace(ctx, answer, devPodConfig, log)
+	return loadExistingWorkspace(ctx, answer, devPodConfig, ide, log)
 }
 
-func loadExistingWorkspace(ctx context.Context, workspaceID string, devPodConfig *config.Config, log log.Logger) (*provider2.Workspace, provider2.Provider, error) {
+func loadExistingWorkspace(ctx context.Context, workspaceID string, devPodConfig *config.Config, ide *provider2.WorkspaceIDEConfig, log log.Logger) (*provider2.Workspace, provider2.Provider, error) {
 	workspaceConfig, err := config.LoadWorkspaceConfig(devPodConfig.DefaultContext, workspaceID)
 	if err != nil {
 		return nil, nil, err
@@ -295,6 +300,11 @@ func loadExistingWorkspace(ctx context.Context, workspaceID string, devPodConfig
 	workspaceConfig.Provider.Options, err = options2.ResolveOptions(ctx, "", "", workspaceConfig, providerWithOptions.Provider)
 	if err != nil {
 		return nil, nil, errors.Wrap(err, "resolve options")
+	}
+
+	// replace ide config
+	if ide != nil {
+		workspaceConfig.IDE = *ide
 	}
 
 	// save workspace config

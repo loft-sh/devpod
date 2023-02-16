@@ -5,6 +5,7 @@ import (
 	"github.com/loft-sh/devpod/pkg/devcontainer/config"
 	"github.com/loft-sh/devpod/pkg/docker"
 	"github.com/loft-sh/devpod/pkg/log"
+	provider2 "github.com/loft-sh/devpod/pkg/provider"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 	"os"
@@ -13,14 +14,15 @@ import (
 	"strings"
 )
 
-func NewRunner(agentPath, agentDownloadURL, workspaceFolder, id string, log log.Logger) *Runner {
+func NewRunner(agentPath, agentDownloadURL string, workspaceConfig *provider2.AgentWorkspaceInfo, log log.Logger) *Runner {
 	return &Runner{
 		Docker: &docker.DockerHelper{DockerCommand: "docker"},
 
 		AgentPath:            agentPath,
 		AgentDownloadURL:     agentDownloadURL,
-		LocalWorkspaceFolder: workspaceFolder,
-		ID:                   id,
+		LocalWorkspaceFolder: workspaceConfig.Folder,
+		ID:                   workspaceConfig.Workspace.ID,
+		WorkspaceConfig:      workspaceConfig,
 		Log:                  log,
 	}
 }
@@ -28,6 +30,7 @@ func NewRunner(agentPath, agentDownloadURL, workspaceFolder, id string, log log.
 type Runner struct {
 	Docker *docker.DockerHelper
 
+	WorkspaceConfig  *provider2.AgentWorkspaceInfo
 	AgentPath        string
 	AgentDownloadURL string
 
@@ -67,7 +70,7 @@ func (r *Runner) Up() (*config.Result, error) {
 		workspace.WorkspaceMount = parsedConfig.WorkspaceMount
 	}
 	parsedConfig.Origin = configFile
-	
+
 	// run initializeCommand
 	err = runInitializeCommand(r.LocalWorkspaceFolder, parsedConfig, r.Log)
 	if err != nil {

@@ -2,14 +2,19 @@ package agent
 
 import (
 	"github.com/loft-sh/devpod/cmd/flags"
+	"github.com/loft-sh/devpod/pkg/log"
 	"github.com/spf13/cobra"
 )
 
 // NewAgentCmd returns a new root command
 func NewAgentCmd(flags *flags.GlobalFlags) *cobra.Command {
 	agentCmd := &cobra.Command{
-		Use:    "agent",
-		Short:  "DevPod Agent",
+		Use:   "agent",
+		Short: "DevPod Agent",
+		PersistentPreRunE: func(cobraCmd *cobra.Command, args []string) error {
+			log.Default.MakeRaw()
+			return nil
+		},
 		Hidden: true,
 	}
 
