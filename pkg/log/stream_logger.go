@@ -59,7 +59,7 @@ const (
 	RawFormat  Format = iota
 )
 
-func NewStdoutLogger(stdin io.Reader, stdout, stderr io.Writer, level logrus.Level) Logger {
+func NewStdoutLogger(stdin io.Reader, stdout, stderr io.Writer, level logrus.Level) *StreamLogger {
 	isTerminal, _ := terminal.SetupTTY(stdin, stdout)
 	return &StreamLogger{
 		m:           &sync.Mutex{},
@@ -72,7 +72,7 @@ func NewStdoutLogger(stdin io.Reader, stdout, stderr io.Writer, level logrus.Lev
 	}
 }
 
-func NewStreamLogger(stdout, stderr io.Writer, level logrus.Level) Logger {
+func NewStreamLogger(stdout, stderr io.Writer, level logrus.Level) *StreamLogger {
 	return &StreamLogger{
 		m:           &sync.Mutex{},
 		level:       level,
@@ -83,7 +83,7 @@ func NewStreamLogger(stdout, stderr io.Writer, level logrus.Level) Logger {
 	}
 }
 
-func NewStreamLoggerWithFormat(stdout, stderr io.Writer, level logrus.Level, format Format) Logger {
+func NewStreamLoggerWithFormat(stdout, stderr io.Writer, level logrus.Level, format Format) *StreamLogger {
 	return &StreamLogger{
 		m:           &sync.Mutex{},
 		level:       level,
@@ -188,6 +188,13 @@ func (s *StreamLogger) ErrorStreamOnly() Logger {
 	n.m = &sync.Mutex{}
 	n.stream = s.errorStream
 	return &n
+}
+
+func (s *StreamLogger) MakeRaw() {
+	s.m.Lock()
+	defer s.m.Unlock()
+
+	s.format = RawFormat
 }
 
 func (s *StreamLogger) WithPrefix(prefix string) Logger {

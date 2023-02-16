@@ -168,7 +168,7 @@ func (s *serverProvider) Status(ctx context.Context, workspace *provider.Workspa
 		stderr := &bytes.Buffer{}
 		err := runProviderCommand(ctx, "status", s.config.Exec.Status, workspace, s, nil, stdout, stderr, nil, s.log)
 		if err != nil {
-			return provider.StatusNotFound, errors.Wrapf(err, "get status: %s%s", stdout, stderr)
+			return provider.StatusNotFound, fmt.Errorf("get status: %s%s", strings.TrimSpace(stdout.String()), strings.TrimSpace(stderr.String()))
 		}
 
 		// parse status

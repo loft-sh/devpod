@@ -56,12 +56,12 @@ func NewSSHCmd(flags *flags.GlobalFlags) *cobra.Command {
 				provider  provider2.Provider
 			)
 			if cmd.Self {
-				workspace, provider, err = workspace2.ResolveWorkspace(ctx, devPodConfig, []string{"."}, cmd.ID, log.Default)
+				workspace, provider, err = workspace2.ResolveWorkspace(ctx, devPodConfig, nil, []string{"."}, cmd.ID, log.Default)
 				if err != nil {
 					return err
 				}
 			} else {
-				workspace, provider, err = workspace2.GetWorkspace(ctx, devPodConfig, []string{cmd.ID}, log.Default)
+				workspace, provider, err = workspace2.GetWorkspace(ctx, devPodConfig, nil, []string{cmd.ID}, log.Default)
 				if err != nil {
 					return err
 				}
@@ -140,7 +140,7 @@ func startWaitWorkspace(ctx context.Context, provider provider2.WorkspaceProvide
 	for {
 		instanceStatus, err := provider.Status(ctx, workspace, provider2.WorkspaceStatusOptions{})
 		if err != nil {
-			return errors.Wrap(err, "get instance status")
+			return err
 		} else if instanceStatus == provider2.StatusBusy {
 			if time.Since(startWaiting) > time.Second*10 {
 				log.Infof("Waiting for instance to come up...")
@@ -175,7 +175,7 @@ func startWaitServer(ctx context.Context, provider provider2.ServerProvider, wor
 	for {
 		instanceStatus, err := provider.Status(ctx, workspace, provider2.StatusOptions{})
 		if err != nil {
-			return false, errors.Wrap(err, "get instance status")
+			return false, err
 		} else if instanceStatus == provider2.StatusBusy {
 			if time.Since(startWaiting) > time.Second*10 {
 				log.Infof("Waiting for instance to come up...")

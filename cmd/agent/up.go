@@ -254,15 +254,9 @@ func readAgentWorkspaceInfo(context, id string) (*provider2.AgentWorkspaceInfo, 
 }
 
 func getWorkspaceInfo(workspaceInfoRaw string) (*provider2.AgentWorkspaceInfo, error) {
-	decoded, err := compress.Decompress(workspaceInfoRaw)
+	workspaceInfo, decoded, err := decodeWorkspaceInfo(workspaceInfoRaw)
 	if err != nil {
-		return nil, errors.Wrap(err, "decode workspace info")
-	}
-
-	workspaceInfo := &provider2.AgentWorkspaceInfo{}
-	err = json.Unmarshal([]byte(decoded), workspaceInfo)
-	if err != nil {
-		return nil, errors.Wrap(err, "parse workspace info")
+		return nil, err
 	}
 
 	// write to workspace folder
@@ -279,6 +273,21 @@ func getWorkspaceInfo(workspaceInfoRaw string) (*provider2.AgentWorkspaceInfo, e
 
 	workspaceInfo.Folder = agent.GetAgentWorkspaceContentDir(workspaceDir)
 	return workspaceInfo, nil
+}
+
+func decodeWorkspaceInfo(workspaceInfoRaw string) (*provider2.AgentWorkspaceInfo, string, error) {
+	decoded, err := compress.Decompress(workspaceInfoRaw)
+	if err != nil {
+		return nil, "", errors.Wrap(err, "decode workspace info")
+	}
+
+	workspaceInfo := &provider2.AgentWorkspaceInfo{}
+	err = json.Unmarshal([]byte(decoded), workspaceInfo)
+	if err != nil {
+		return nil, "", errors.Wrap(err, "parse workspace info")
+	}
+
+	return workspaceInfo, decoded, nil
 }
 
 func DownloadLocalFolder(ctx context.Context, workspaceDir string, client tunnel.TunnelClient, log log.Logger) error {
@@ -351,5 +360,5 @@ func InstallDocker(log log.Logger) error {
 }
 
 func createRunner(workspaceInfo *provider2.AgentWorkspaceInfo, log log.Logger) *devcontainer.Runner {
-	return devcontainer.NewRunner(agent.RemoteDevPodHelperLocation, agent.DefaultAgentDownloadURL, workspaceInfo.Folder, workspaceInfo.Workspace.ID, log)
+	return devcontainer.NewRunner(agent.RemoteDevPodHelperLocation, agent.DefaultAgentDownloadURL, workspaceInfo, log)
 }

@@ -6,6 +6,19 @@ type Result struct {
 	SubstitutionContext *SubstitutionContext
 }
 
+func GetRemoteUser(result *Result) string {
+	user := "root"
+	if result != nil {
+		if result.MergedConfig != nil && result.MergedConfig.RemoteUser != "" {
+			user = result.MergedConfig.RemoteUser
+		} else if result.ContainerDetails != nil && result.ContainerDetails.Config.User != "" {
+			user = result.ContainerDetails.Config.User
+		}
+	}
+
+	return user
+}
+
 func GetVSCodeConfiguration(mergedConfig *MergedDevContainerConfig) *VSCodeCustomizations {
 	if mergedConfig.Customizations == nil || mergedConfig.Customizations["vscode"] == nil {
 		return &VSCodeCustomizations{}
