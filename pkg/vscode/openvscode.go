@@ -108,7 +108,7 @@ func (o *OpenVSCodeServer) InstallExtensions(extensions []string, userName strin
 	binaryPath := filepath.Join(location, "bin", "openvscode-server")
 	for _, extension := range extensions {
 		log.Info("Install extension " + extension + "...")
-		runCommand := fmt.Sprintf("%s --install-extension %s", binaryPath, extension)
+		runCommand := fmt.Sprintf("%s --install-extension '%s'", binaryPath, extension)
 		args := []string{}
 		if userName != "" {
 			args = append(args, "su", userName, "-c", runCommand)
@@ -179,7 +179,7 @@ func (o *OpenVSCodeServer) Start(userName, host, port string, log log.Logger) er
 	writer := log.Writer(logrus.InfoLevel, false)
 	defer writer.Close()
 
-	runCommand := fmt.Sprintf("%s server-local --without-connection-token --host %s --port %s", binaryPath, host, port)
+	runCommand := fmt.Sprintf("%s server-local --without-connection-token --host '%s' --port '%s'", binaryPath, host, port)
 	args := []string{}
 	if userName != "" {
 		args = append(args, "su", userName, "-c", runCommand)

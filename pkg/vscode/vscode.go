@@ -70,7 +70,7 @@ func (o *VSCodeServer) Install(extensions []string, settings string, userName st
 	// download extensions
 	for _, extension := range extensions {
 		log.Info("Install extension " + extension + "...")
-		runCommand := fmt.Sprintf("%s serve-local --accept-server-lincense-terms --install-extension %s", binPath, extension)
+		runCommand := fmt.Sprintf("%s serve-local --accept-server-license-terms --install-extension '%s'", binPath, extension)
 		args := []string{}
 		if userName != "" {
 			args = append(args, "su", userName, "-c", runCommand)
