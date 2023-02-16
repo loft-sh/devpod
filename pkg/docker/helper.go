@@ -7,6 +7,7 @@ import (
 	"github.com/loft-sh/devpod/pkg/agent"
 	"github.com/loft-sh/devpod/pkg/devcontainer/config"
 	"github.com/loft-sh/devpod/pkg/image"
+	"github.com/loft-sh/devpod/pkg/log"
 	"github.com/loft-sh/devpod/pkg/scanner"
 	"github.com/pkg/errors"
 	"io"
@@ -149,12 +150,12 @@ func (r *DockerHelper) Inspect(ids []string, inspectType string, obj interface{}
 	return nil
 }
 
-func (r *DockerHelper) Tunnel(agentPath, agentDownloadURL string, containerID string, token string, stdin io.Reader, stdout io.Writer, stderr io.Writer) error {
+func (r *DockerHelper) Tunnel(agentPath, agentDownloadURL string, containerID string, token string, stdin io.Reader, stdout io.Writer, stderr io.Writer, log log.Logger) error {
 	// inject agent
 	err := agent.InjectAgent(func(command string, stdin io.Reader, stdout io.Writer, stderr io.Writer) error {
 		args := []string{"exec", "-i", "-u", "root", containerID, "sh", "-c", command}
 		return r.Run(args, stdin, stdout, stderr)
-	}, agentPath, agentDownloadURL, false)
+	}, agentPath, agentDownloadURL, false, log)
 	if err != nil {
 		return err
 	}

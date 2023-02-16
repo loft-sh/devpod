@@ -9,6 +9,8 @@ import (
 	log2 "github.com/loft-sh/devpod/pkg/log"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
+	"os"
+	"os/exec"
 )
 
 var globalFlags *flags.GlobalFlags
@@ -41,6 +43,10 @@ func Execute() {
 	// execute command
 	err := rootCmd.Execute()
 	if err != nil {
+		if exitErr, ok := err.(*exec.ExitError); ok {
+			os.Exit(exitErr.ExitCode())
+		}
+
 		if globalFlags.Debug {
 			log2.Default.Fatalf("%+v", err)
 		} else {

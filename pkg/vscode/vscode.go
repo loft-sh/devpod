@@ -26,30 +26,17 @@ func (o *VSCodeServer) Install(extensions []string, settings string, userName st
 	}
 
 	// is installed
-	_, err = os.Stat(filepath.Join(location, "bin"))
+	_, err = os.Stat(filepath.Join(location, "bin", "code-server"))
 	if err == nil {
 		return nil
 	}
 
 	// download
 	binPath := filepath.Join(location, "bin", "code-server")
-	err = downloadVSCode(binPath)
+	err = DownloadVSCode(binPath)
 	if err != nil {
 		_ = os.RemoveAll(location)
 		return err
-	}
-
-	// download extensions
-	for _, extension := range extensions {
-		fmt.Fprintln(out, "Install extension "+extension+"...")
-		cmd := exec.Command(binPath, "serve-local", "--accept-server-license-terms", "--install-extension", extension)
-		cmd.Stdout = out
-		cmd.Stderr = out
-		err = cmd.Run()
-		if err != nil {
-			fmt.Fprintln(out, "Failed installing extension "+extension)
-		}
-		fmt.Fprintln(out, "Successfully installed extension "+extension)
 	}
 
 	// set settings
@@ -72,10 +59,30 @@ func (o *VSCodeServer) Install(extensions []string, settings string, userName st
 		}
 	}
 
+	// download extensions
+	for _, extension := range extensions {
+		fmt.Fprintln(out, "Install extension "+extension+"...")
+		cmd := exec.Command(binPath, "serve-local", "--accept-server-license-terms", "--install-extension", extension)
+		cmd.Stdout = out
+		cmd.Stderr = out
+		cmd.Env = os.Environ()
+		command.AsUser(userName, cmd)
+		err = cmd.Run()
+		if err != nil {
+			fmt.Fprintln(out, "Failed installing extension "+extension)
+		}
+		fmt.Fprintln(out, "Successfully installed extension "+extension)
+	}
+
 	return nil
 }
 
-func downloadVSCode(binPath string) error {
+func DownloadVSCode(binPath string) error {
+	err := os.MkdirAll(filepath.Dir(binPath), 0777)
+	if err != nil {
+		return err
+	}
+
 	// check what release we need to download
 	url := VSCodeDownloadAmd64
 	if runtime.GOARCH == "arm64" {
@@ -102,6 +109,12 @@ func downloadVSCode(binPath string) error {
 
 	// Write the body to file
 	_, err = io.Copy(outFile, resp.Body)
+	if err != nil {
+		return err
+	}
+
+	// make file executable
+	err = os.Chmod(binPath, 0777)
 	if err != nil {
 		return err
 	}

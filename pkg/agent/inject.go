@@ -5,6 +5,7 @@ import (
 	"bytes"
 	"crypto/tls"
 	"fmt"
+	"github.com/loft-sh/devpod/pkg/log"
 	"github.com/loft-sh/devpod/pkg/template"
 	"github.com/loft-sh/devpod/scripts"
 	"github.com/pkg/errors"
@@ -18,7 +19,7 @@ import (
 
 type ExecFunc func(command string, stdin io.Reader, stdout io.Writer, stderr io.Writer) error
 
-func InjectAgent(exec ExecFunc, remoteAgentPath, downloadURL string, preferDownload bool) error {
+func InjectAgent(exec ExecFunc, remoteAgentPath, downloadURL string, preferDownload bool, log log.Logger) error {
 	if remoteAgentPath == "" {
 		remoteAgentPath = RemoteDevPodHelperLocation
 	}
@@ -30,7 +31,7 @@ func InjectAgent(exec ExecFunc, remoteAgentPath, downloadURL string, preferDownl
 	// - Use tar directly if we want to copy current binary
 	// - Call small helper script to download binary
 	if !preferDownload {
-		err := injectBinary(remoteAgentPath, downloadURL, exec)
+		err := injectBinary(remoteAgentPath, downloadURL, exec, log)
 		if err != nil {
 			err := downloadBinaryRemotely(remoteAgentPath, downloadURL, exec)
 			if err != nil {
@@ -40,7 +41,7 @@ func InjectAgent(exec ExecFunc, remoteAgentPath, downloadURL string, preferDownl
 	} else {
 		err := downloadBinaryRemotely(remoteAgentPath, downloadURL, exec)
 		if err != nil {
-			err := injectBinary(remoteAgentPath, downloadURL, exec)
+			err := injectBinary(remoteAgentPath, downloadURL, exec, log)
 			if err != nil {
 				return fmt.Errorf("error injecting devpod agent into target: %v", err)
 			}
@@ -70,7 +71,7 @@ func downloadBinaryRemotely(remoteAgentPath, tryDownloadURL string, exec ExecFun
 	return nil
 }
 
-func injectBinary(remoteAgentPath, tryDownloadURL string, exec ExecFunc) (err error) {
+func injectBinary(remoteAgentPath, tryDownloadURL string, exec ExecFunc, log log.Logger) (err error) {
 	// first parse remote
 	stdinReader, stdinWriter, err := os.Pipe()
 	if err != nil {

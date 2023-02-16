@@ -43,8 +43,8 @@ func NewUpCmd(flags *flags.GlobalFlags) *cobra.Command {
 		Use:   "up",
 		Short: "Starts a new devcontainer",
 		Args:  cobra.NoArgs,
-		Run: func(_ *cobra.Command, _ []string) {
-			cmd.Run(context.Background())
+		RunE: func(_ *cobra.Command, _ []string) error {
+			return cmd.Run(context.Background())
 		},
 	}
 	upCmd.Flags().StringVar(&cmd.WorkspaceInfo, "workspace-info", "", "The workspace info")
@@ -53,36 +53,35 @@ func NewUpCmd(flags *flags.GlobalFlags) *cobra.Command {
 }
 
 // Run runs the command logic
-func (cmd *UpCmd) Run(ctx context.Context) {
+func (cmd *UpCmd) Run(ctx context.Context) error {
 	// get workspace
 	workspaceInfo, err := getWorkspaceInfo(cmd.WorkspaceInfo)
 	if err != nil {
-		_, _ = fmt.Fprintf(os.Stderr, "Error parsing workspace info: %v", err)
-		os.Exit(1)
+		return fmt.Errorf("error parsing workspace info: %v", err)
 	}
 
 	// check if we need to become root
 	shouldExit, err := rerunAsRoot(workspaceInfo)
 	if err != nil {
-		_, _ = fmt.Fprintf(os.Stderr, "Rerun as root: %v", err)
-		os.Exit(1)
+		return fmt.Errorf("rerun as root: %v", err)
 	} else if shouldExit {
-		return
+		return nil
 	}
 
 	// create a grpc client
 	tunnelClient, err := agent.NewTunnelClient(os.Stdin, os.Stdout, true)
 	if err != nil {
-		_, _ = fmt.Fprintf(os.Stderr, "Error creating tunnel client: %v", err)
-		os.Exit(1)
+		return fmt.Errorf("error creating tunnel client: %v", err)
 	}
 
 	// create debug logger
 	logger := agent.NewTunnelLogger(ctx, tunnelClient, cmd.Debug)
 	err = cmd.up(ctx, workspaceInfo, tunnelClient, logger)
 	if err != nil {
-		logger.Fatalf("DevPod Agent Error: %v", err)
+		return errors.Wrap(err, "devcontainer up")
 	}
+
+	return nil
 }
 
 func (cmd *UpCmd) up(ctx context.Context, workspaceInfo *provider2.AgentWorkspaceInfo, tunnelClient tunnel.TunnelClient, logger log.Logger) error {
