@@ -4,8 +4,10 @@ import (
 	"crypto/tls"
 	"fmt"
 	"github.com/loft-sh/devpod/pkg/command"
+	"github.com/loft-sh/devpod/pkg/log"
 	"github.com/mitchellh/go-homedir"
 	"github.com/pkg/errors"
+	"github.com/sirupsen/logrus"
 	"io"
 	"net/http"
 	"os"
@@ -19,7 +21,7 @@ const VSCodeDownloadArm64 = "https://aka.ms/vscode-server-launcher/aarch64-unkno
 
 type VSCodeServer struct{}
 
-func (o *VSCodeServer) Install(extensions []string, settings string, userName string, out io.Writer) error {
+func (o *VSCodeServer) Install(extensions []string, settings string, userName string, log log.Logger) error {
 	location, err := prepareVSCodeServerLocation(userName)
 	if err != nil {
 		return err
@@ -32,12 +34,14 @@ func (o *VSCodeServer) Install(extensions []string, settings string, userName st
 	}
 
 	// download
+	log.Info("Download vscode...")
 	binPath := filepath.Join(location, "bin", "code-server")
 	err = DownloadVSCode(binPath)
 	if err != nil {
 		_ = os.RemoveAll(location)
 		return err
 	}
+	log.Info("Successfully downloaded vscode")
 
 	// set settings
 	settingsDir := filepath.Join(location, "data", "Machine")
@@ -59,19 +63,28 @@ func (o *VSCodeServer) Install(extensions []string, settings string, userName st
 		}
 	}
 
+	// start log writer
+	writer := log.Writer(logrus.InfoLevel, false)
+	defer writer.Close()
+
 	// download extensions
 	for _, extension := range extensions {
-		fmt.Fprintln(out, "Install extension "+extension+"...")
-		cmd := exec.Command(binPath, "serve-local", "--accept-server-license-terms", "--install-extension", extension)
-		cmd.Stdout = out
-		cmd.Stderr = out
-		cmd.Env = os.Environ()
-		command.AsUser(userName, cmd)
+		log.Info("Install extension " + extension + "...")
+		runCommand := fmt.Sprintf("%s serve-local --accept-server-lincense-terms --install-extension %s", binPath, extension)
+		args := []string{}
+		if userName != "" {
+			args = append(args, "su", userName, "-c", runCommand)
+		} else {
+			args = append(args, "sh", "-c", runCommand)
+		}
+		cmd := exec.Command(args[0], args[1:]...)
+		cmd.Stdout = writer
+		cmd.Stderr = writer
 		err = cmd.Run()
 		if err != nil {
-			fmt.Fprintln(out, "Failed installing extension "+extension)
+			log.Info("Failed installing extension " + extension)
 		}
-		fmt.Fprintln(out, "Successfully installed extension "+extension)
+		log.Info("Successfully installed extension " + extension)
 	}
 
 	return nil

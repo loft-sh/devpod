@@ -6,10 +6,10 @@ import (
 	"github.com/loft-sh/devpod/pkg/compress"
 	"github.com/loft-sh/devpod/pkg/devcontainer/config"
 	"github.com/loft-sh/devpod/pkg/devcontainer/setup"
+	"github.com/loft-sh/devpod/pkg/log"
 	provider2 "github.com/loft-sh/devpod/pkg/provider"
 	"github.com/loft-sh/devpod/pkg/vscode"
 	"github.com/spf13/cobra"
-	"os"
 )
 
 // SetupContainerCmd holds the cmd flags
@@ -54,13 +54,13 @@ func (cmd *SetupContainerCmd) Run(_ *cobra.Command, _ []string) error {
 	}
 
 	// setting up container
-	err = setup.SetupContainer(setupInfo)
+	err = setup.SetupContainer(setupInfo, log.Default)
 	if err != nil {
 		return err
 	}
 
 	// install IDE
-	err = setupVSCode(setupInfo, workspaceInfo)
+	err = setupVSCode(setupInfo, workspaceInfo, log.Default)
 	if err != nil {
 		return err
 	}
@@ -68,11 +68,12 @@ func (cmd *SetupContainerCmd) Run(_ *cobra.Command, _ []string) error {
 	return nil
 }
 
-func setupVSCode(setupInfo *config.Result, workspaceInfo *provider2.AgentWorkspaceInfo) error {
+func setupVSCode(setupInfo *config.Result, workspaceInfo *provider2.AgentWorkspaceInfo, log log.Logger) error {
 	if workspaceInfo.Workspace.IDE.VSCode == nil {
 		return nil
 	}
 
+	log.Debugf("Setup vscode...")
 	vsCodeConfiguration := config.GetVSCodeConfiguration(setupInfo.MergedConfig)
 	settings := ""
 	if len(vsCodeConfiguration.Settings) > 0 {
@@ -87,7 +88,7 @@ func setupVSCode(setupInfo *config.Result, workspaceInfo *provider2.AgentWorkspa
 	user := config.GetRemoteUser(setupInfo)
 	if workspaceInfo.Workspace.IDE.VSCode.Browser {
 		installer := &vscode.OpenVSCodeServer{}
-		return installer.Install(vsCodeConfiguration.Extensions, settings, user, os.Stdout)
+		return installer.Install(vsCodeConfiguration.Extensions, settings, user, log)
 	}
 
 	// don't install code-server if we don't have settings or extensions
@@ -96,5 +97,5 @@ func setupVSCode(setupInfo *config.Result, workspaceInfo *provider2.AgentWorkspa
 	}
 
 	installer := &vscode.VSCodeServer{}
-	return installer.Install(vsCodeConfiguration.Extensions, settings, user, os.Stdout)
+	return installer.Install(vsCodeConfiguration.Extensions, settings, user, log)
 }

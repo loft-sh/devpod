@@ -3,7 +3,6 @@ package server
 import (
 	"fmt"
 	"github.com/gliderlabs/ssh"
-	"github.com/loft-sh/devpod/pkg/command"
 	"github.com/loft-sh/devpod/pkg/ssh/server/stderrlog"
 	"github.com/pkg/errors"
 	"github.com/pkg/sftp"
@@ -243,17 +242,25 @@ func HandlePTY(sess ssh.Session, ptyReq ssh.Pty, winCh <-chan ssh.Window, cmd *e
 
 func (s *Server) getCommand(sess ssh.Session) *exec.Cmd {
 	var cmd *exec.Cmd
-	if len(sess.RawCommand()) == 0 {
-		cmd = exec.Command(s.shell)
+	if sess.User() != "" {
+		if len(sess.RawCommand()) == 0 {
+			cmd = exec.Command("su", sess.User())
+		} else {
+			args := []string{sess.User(), "-c", sess.RawCommand()}
+			cmd = exec.Command("su", args...)
+		}
 	} else {
-		args := []string{"-c", sess.RawCommand()}
-		cmd = exec.Command(s.shell, args...)
+		if len(sess.RawCommand()) == 0 {
+			cmd = exec.Command(s.shell)
+		} else {
+			args := []string{"-c", sess.RawCommand()}
+			cmd = exec.Command(s.shell, args...)
+		}
 	}
 
 	cmd.Env = append(cmd.Env, os.Environ()...)
 	cmd.Env = append(cmd.Env, sess.Environ()...)
-
-	command.AsUser(sess.User(), cmd)
+	//command.AsUser(sess.User(), cmd)
 	return cmd
 }
 
