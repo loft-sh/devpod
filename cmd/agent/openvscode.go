@@ -2,9 +2,9 @@ package agent
 
 import (
 	"context"
+	"github.com/loft-sh/devpod/pkg/log"
 	"github.com/loft-sh/devpod/pkg/vscode"
 	"github.com/spf13/cobra"
-	"os"
 	"strconv"
 )
 
@@ -33,7 +33,7 @@ func NewOpenVSCodeCmd() *cobra.Command {
 
 func (cmd *OpenVSCodeCmd) Run(ctx context.Context) error {
 	openVSCode := &vscode.OpenVSCodeServer{}
-	err := openVSCode.Start(cmd.User, cmd.Host, cmd.Port, os.Stdout)
+	err := openVSCode.Start(cmd.User, cmd.Host, cmd.Port, log.Default)
 	if err != nil {
 		return err
 	}

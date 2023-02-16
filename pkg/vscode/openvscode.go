@@ -5,9 +5,10 @@ import (
 	"fmt"
 	"github.com/loft-sh/devpod/pkg/command"
 	"github.com/loft-sh/devpod/pkg/extract"
+	"github.com/loft-sh/devpod/pkg/log"
 	"github.com/mitchellh/go-homedir"
 	"github.com/pkg/errors"
-	"io"
+	"github.com/sirupsen/logrus"
 	"net/http"
 	"os"
 	"os/exec"
@@ -24,16 +25,16 @@ const DefaultVSCodePort = 10800
 
 type OpenVSCodeServer struct{}
 
-func (o *OpenVSCodeServer) InstallAndStart(extensions []string, settings string, user, host, port string, out io.Writer) error {
-	err := o.Install(extensions, settings, user, out)
+func (o *OpenVSCodeServer) InstallAndStart(extensions []string, settings string, user, host, port string, log log.Logger) error {
+	err := o.Install(extensions, settings, user, log)
 	if err != nil {
 		return err
 	}
 
-	return o.Start(user, host, port, out)
+	return o.Start(user, host, port, log)
 }
 
-func (o *OpenVSCodeServer) Install(extensions []string, settings string, userName string, out io.Writer) error {
+func (o *OpenVSCodeServer) Install(extensions []string, settings string, userName string, log log.Logger) error {
 	location, err := prepareOpenVSCodeServerLocation(userName)
 	if err != nil {
 		return err
@@ -77,7 +78,7 @@ func (o *OpenVSCodeServer) Install(extensions []string, settings string, userNam
 	}
 
 	// install extensions
-	err = o.InstallExtensions(extensions, userName, out)
+	err = o.InstallExtensions(extensions, userName, log)
 	if err != nil {
 		return errors.Wrap(err, "install extensions")
 	}
@@ -91,7 +92,7 @@ func (o *OpenVSCodeServer) Install(extensions []string, settings string, userNam
 	return nil
 }
 
-func (o *OpenVSCodeServer) InstallExtensions(extensions []string, userName string, out io.Writer) error {
+func (o *OpenVSCodeServer) InstallExtensions(extensions []string, userName string, log log.Logger) error {
 	if len(extensions) == 0 {
 		return nil
 	}
@@ -101,22 +102,27 @@ func (o *OpenVSCodeServer) InstallExtensions(extensions []string, userName strin
 		return err
 	}
 
+	out := log.Writer(logrus.InfoLevel, false)
+	defer out.Close()
+
 	binaryPath := filepath.Join(location, "bin", "openvscode-server")
 	for _, extension := range extensions {
-		fmt.Fprintln(out, "Install extension "+extension+"...")
-		args := []string{
-			"--install-extension", extension,
+		log.Info("Install extension " + extension + "...")
+		runCommand := fmt.Sprintf("%s --install-extension %s", binaryPath, extension)
+		args := []string{}
+		if userName != "" {
+			args = append(args, "su", userName, "-c", runCommand)
+		} else {
+			args = append(args, "sh", "-c", runCommand)
 		}
-		cmd := exec.Command(binaryPath, args...)
+		cmd := exec.Command(args[0], args[1:]...)
 		cmd.Stdout = out
 		cmd.Stderr = out
-		cmd.Env = append(cmd.Env, os.Environ()...)
-		command.AsUser(userName, cmd)
 		err = cmd.Run()
 		if err != nil {
-			fmt.Fprintln(out, "Failed installing extension "+extension)
+			log.Info("Failed installing extension " + extension)
 		}
-		fmt.Fprintln(out, "Successfully installed extension "+extension)
+		log.Info("Successfully installed extension " + extension)
 	}
 
 	return nil
@@ -151,7 +157,7 @@ func (o *OpenVSCodeServer) InstallSettings(settings string, userName string) err
 	return nil
 }
 
-func (o *OpenVSCodeServer) Start(userName, host, port string, out io.Writer) error {
+func (o *OpenVSCodeServer) Start(userName, host, port string, log log.Logger) error {
 	location, err := prepareOpenVSCodeServerLocation(userName)
 	if err != nil {
 		return err
@@ -170,18 +176,20 @@ func (o *OpenVSCodeServer) Start(userName, host, port string, out io.Writer) err
 		return errors.Wrap(err, "find binary")
 	}
 
-	args := []string{
-		"server-local",
-		"--without-connection-token",
-		"--host", host,
-		"--port", port,
+	writer := log.Writer(logrus.InfoLevel, false)
+	defer writer.Close()
+
+	runCommand := fmt.Sprintf("%s server-local --without-connection-token --host %s --port %s", binaryPath, host, port)
+	args := []string{}
+	if userName != "" {
+		args = append(args, "su", userName, "-c", runCommand)
+	} else {
+		args = append(args, "sh", "-c", runCommand)
 	}
-	cmd := exec.Command(binaryPath, args...)
+	cmd := exec.Command(args[0], args[1:]...)
 	cmd.Dir = location
-	cmd.Stdout = out
-	cmd.Stderr = out
-	cmd.Env = append(cmd.Env, os.Environ()...)
-	command.AsUser(userName, cmd)
+	cmd.Stdout = writer
+	cmd.Stderr = writer
 	err = cmd.Run()
 	if err != nil {
 		return err

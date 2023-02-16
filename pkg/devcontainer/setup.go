@@ -57,6 +57,9 @@ func (r *Runner) setupContainer(containerDetails *config.ContainerDetails, merge
 	// TODO: install openvscode, extensions & settings
 	// TODO: install vscode, extensions & settings
 	args := []string{"exec", "-u", "root", containerDetails.Id, agent.RemoteDevPodHelperLocation, "agent", "setup-container", "--setup-info", compressed, "--workspace-info", workspaceConfigCompressed}
+	if r.Log.GetLevel() == logrus.DebugLevel {
+		args = append(args, "--debug")
+	}
 	r.Log.Debugf("Run docker %s", strings.Join(args, " "))
 	err = r.Docker.Run(args, nil, writer, writer)
 	if err != nil {
