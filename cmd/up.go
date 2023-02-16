@@ -91,7 +91,7 @@ func (cmd *UpCmd) Run(ctx context.Context, workspace *provider2.Workspace, provi
 	// start VSCode
 	if !cmd.NoOpen {
 		if cmd.Browser {
-			return startInBrowser(ctx, workspace, provider, log.Default)
+			return startInBrowser(ctx, workspace, provider, user, log.Default)
 		} else {
 			log.Default.Infof("Starting VSCode...")
 			err = exec.Command("code", "--folder-uri", fmt.Sprintf("vscode-remote://ssh-remote+%s.devpod/workspaces/%s", workspace.ID, workspace.ID)).Run()
@@ -104,7 +104,7 @@ func (cmd *UpCmd) Run(ctx context.Context, workspace *provider2.Workspace, provi
 	return nil
 }
 
-func startInBrowser(ctx context.Context, workspace *provider2.Workspace, provider provider2.Provider, log log.Logger) error {
+func startInBrowser(ctx context.Context, workspace *provider2.Workspace, provider provider2.Provider, user string, log log.Logger) error {
 	serverProvider, ok := provider.(provider2.ServerProvider)
 	if !ok {
 		return fmt.Errorf("--browser is currently only supported for server providers")
@@ -138,7 +138,7 @@ func startInBrowser(ctx context.Context, workspace *provider2.Workspace, provide
 		}()
 
 		// start openvscode
-		command := fmt.Sprintf("%s agent openvscode --port %d", agent.RemoteDevPodHelperLocation, vscode.DefaultVSCodePort)
+		command := fmt.Sprintf("%s agent openvscode --user %s --port %d", agent.RemoteDevPodHelperLocation, user, vscode.DefaultVSCodePort)
 		log.Debugf("Running %s in container", command)
 		err = devssh.Run(client, command, nil, os.Stdout, os.Stderr)
 		if err != nil {

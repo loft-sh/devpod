@@ -3,6 +3,7 @@ package server
 import (
 	"fmt"
 	"github.com/gliderlabs/ssh"
+	"github.com/loft-sh/devpod/pkg/command"
 	"github.com/loft-sh/devpod/pkg/ssh/server/stderrlog"
 	"github.com/pkg/errors"
 	"github.com/pkg/sftp"
@@ -252,7 +253,7 @@ func (s *Server) getCommand(sess ssh.Session) *exec.Cmd {
 	cmd.Env = append(cmd.Env, os.Environ()...)
 	cmd.Env = append(cmd.Env, sess.Environ()...)
 
-	setUser(sess.User(), cmd)
+	command.AsUser(sess.User(), cmd)
 	return cmd
 }
 

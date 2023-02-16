@@ -9,6 +9,7 @@ import (
 )
 
 type OpenVSCodeCmd struct {
+	User string
 	Host string
 	Port string
 }
@@ -24,6 +25,7 @@ func NewOpenVSCodeCmd() *cobra.Command {
 			return cmd.Run(context.Background())
 		},
 	}
+	openVSCodeCmd.Flags().StringVar(&cmd.User, "user", "", "The host to use")
 	openVSCodeCmd.Flags().StringVar(&cmd.Host, "host", "0.0.0.0", "The host to use")
 	openVSCodeCmd.Flags().StringVar(&cmd.Port, "port", strconv.Itoa(vscode.DefaultVSCodePort), "The port to listen to")
 	return openVSCodeCmd
@@ -31,7 +33,7 @@ func NewOpenVSCodeCmd() *cobra.Command {
 
 func (cmd *OpenVSCodeCmd) Run(ctx context.Context) error {
 	openVSCode := &vscode.OpenVSCodeServer{}
-	err := openVSCode.InstallAndStart(cmd.Host, cmd.Port, os.Stdout)
+	err := openVSCode.InstallAndStart(cmd.User, cmd.Host, cmd.Port, os.Stdout)
 	if err != nil {
 		return err
 	}

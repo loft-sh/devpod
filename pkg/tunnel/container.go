@@ -72,7 +72,7 @@ func (c *ContainerHandler) Run(ctx context.Context, runInHost Handler, runInCont
 	// connect to container
 	containerChan := make(chan error, 2)
 	go func() {
-		// start ssh client
+		// start ssh client as root / default user
 		sshClient, err := devssh.StdioClientFromKeyBytes(privateKey, stdoutReader, stdinWriter, false)
 		if err != nil {
 			containerChan <- err
