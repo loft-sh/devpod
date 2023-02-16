@@ -9,6 +9,10 @@ import (
 
 // Compress gzips a string and base64 encodes it
 func Compress(s string) (string, error) {
+	if s == "" {
+		return "", nil
+	}
+
 	var b bytes.Buffer
 	gz := gzip.NewWriter(&b)
 
@@ -32,6 +36,10 @@ func Compress(s string) (string, error) {
 
 // Decompress decompresses a string
 func Decompress(s string) (string, error) {
+	if s == "" {
+		return "", nil
+	}
+
 	decoded, err := base64.StdEncoding.DecodeString(s)
 	if err != nil {
 		return "", err
