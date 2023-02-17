@@ -16,6 +16,7 @@ var provideWorkspaceArgErr = fmt.Errorf("please provide a workspace name. E.g. '
 
 type ProviderWithOptions struct {
 	Provider provider2.Provider
+	Config   *provider2.ProviderConfig
 	Options  map[string]provider2.OptionValue
 }
 
@@ -49,7 +50,7 @@ func FindProvider(devPodConfig *config.Config, name string, log log.Logger) (*Pr
 }
 
 func LoadAllProviders(devPodConfig *config.Config, log log.Logger) (map[string]*ProviderWithOptions, error) {
-	builtInProviders, err := providers.GetBuiltInProviders(log)
+	builtInProviders, builtInProvidersConfig, err := providers.GetBuiltInProviders(log)
 	if err != nil {
 		return nil, err
 	}
@@ -58,6 +59,7 @@ func LoadAllProviders(devPodConfig *config.Config, log log.Logger) (map[string]*
 	for k, p := range builtInProviders {
 		retProviders[k] = &ProviderWithOptions{
 			Provider: p,
+			Config:   builtInProvidersConfig[k],
 		}
 	}
 
@@ -90,6 +92,7 @@ func LoadAllProviders(devPodConfig *config.Config, log log.Logger) (map[string]*
 
 		retProviders[providerName] = &ProviderWithOptions{
 			Provider: providerimplementation.NewProvider(providerConfig, log),
+			Config:   providerConfig,
 			Options:  providerOptions.Options,
 		}
 	}

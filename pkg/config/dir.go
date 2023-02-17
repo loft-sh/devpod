@@ -41,6 +41,15 @@ func GetProviderDir(context, providerName string) (string, error) {
 	return filepath.Join(configDir, "contexts", context, "providers", providerName), nil
 }
 
+func GetProviderBinariesDir(context, providerName string) (string, error) {
+	providerDir, err := GetProviderDir(context, providerName)
+	if err != nil {
+		return "", err
+	}
+
+	return filepath.Join(providerDir, "binaries"), nil
+}
+
 func GetWorkspaceDir(context, workspaceID string) (string, error) {
 	if workspaceID == "" {
 		return "", fmt.Errorf("workspace id is empty")

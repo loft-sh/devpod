@@ -55,14 +55,6 @@ func (s *serverProvider) AgentConfig() (*provider.ProviderAgentConfig, error) {
 	return &agentConfig, nil
 }
 
-func (s *serverProvider) validate(workspace *provider.Workspace) error {
-	if workspace.Provider.Name != s.config.Name {
-		return fmt.Errorf("provider mismatch between existing workspace and new workspace: %s (existing) != %s (current)", workspace.Provider.Name, s.config.Name)
-	}
-
-	return nil
-}
-
 func (s *serverProvider) Init(ctx context.Context, workspace *provider.Workspace, options provider.InitOptions) error {
 	return runProviderCommand(ctx, "init", s.config.Exec.Init, workspace, s, os.Stdin, os.Stdout, os.Stderr, nil, s.log)
 }
@@ -72,9 +64,8 @@ func (s *serverProvider) Validate(ctx context.Context, workspace *provider.Works
 }
 
 func (s *serverProvider) Create(ctx context.Context, workspace *provider.Workspace, options provider.CreateOptions) error {
-	err := s.validate(workspace)
-	if err != nil {
-		return err
+	if workspace.Provider.Mode == provider.ModeSingle {
+		return s.CreateSingle(ctx, workspace, options)
 	}
 
 	if len(s.config.Exec.Create) == 0 {
@@ -82,7 +73,7 @@ func (s *serverProvider) Create(ctx context.Context, workspace *provider.Workspa
 	}
 
 	s.log.Infof("Create %s server...", s.config.Name)
-	err = runProviderCommand(ctx, "create", s.config.Exec.Create, workspace, s, os.Stdin, os.Stdout, os.Stderr, nil, s.log)
+	err := runProviderCommand(ctx, "create", s.config.Exec.Create, workspace, s, os.Stdin, os.Stdout, os.Stderr, nil, s.log)
 	if err != nil {
 		return err
 	}
@@ -91,14 +82,13 @@ func (s *serverProvider) Create(ctx context.Context, workspace *provider.Workspa
 }
 
 func (s *serverProvider) Delete(ctx context.Context, workspace *provider.Workspace, options provider.DeleteOptions) error {
-	err := s.validate(workspace)
-	if err != nil {
-		return err
+	if workspace.Provider.Mode == provider.ModeSingle {
+		return s.DeleteSingle(ctx, workspace, options)
 	}
 
 	if len(s.config.Exec.Delete) > 0 {
 		s.log.Infof("Deleting %s server...", s.config.Name)
-		err = runProviderCommand(ctx, "delete", s.config.Exec.Delete, workspace, s, os.Stdin, os.Stdout, os.Stderr, nil, s.log)
+		err := runProviderCommand(ctx, "delete", s.config.Exec.Delete, workspace, s, os.Stdin, os.Stdout, os.Stderr, nil, s.log)
 		if err != nil {
 			if !options.Force {
 				return err
@@ -113,12 +103,11 @@ func (s *serverProvider) Delete(ctx context.Context, workspace *provider.Workspa
 }
 
 func (s *serverProvider) Start(ctx context.Context, workspace *provider.Workspace, options provider.StartOptions) error {
-	err := s.validate(workspace)
-	if err != nil {
-		return err
+	if workspace.Provider.Mode == provider.ModeSingle {
+		return s.StartSingle(ctx, workspace, options)
 	}
 
-	err = runProviderCommand(ctx, "start", s.config.Exec.Start, workspace, s, os.Stdin, os.Stdout, os.Stderr, nil, s.log)
+	err := runProviderCommand(ctx, "start", s.config.Exec.Start, workspace, s, os.Stdin, os.Stdout, os.Stderr, nil, s.log)
 	if err != nil {
 		return err
 	}
@@ -127,12 +116,11 @@ func (s *serverProvider) Start(ctx context.Context, workspace *provider.Workspac
 }
 
 func (s *serverProvider) Stop(ctx context.Context, workspace *provider.Workspace, options provider.StopOptions) error {
-	err := s.validate(workspace)
-	if err != nil {
-		return err
+	if workspace.Provider.Mode == provider.ModeSingle {
+		return s.StopSingle(ctx, workspace, options)
 	}
 
-	err = runProviderCommand(ctx, "stop", s.config.Exec.Stop, workspace, s, os.Stdin, os.Stdout, os.Stderr, nil, s.log)
+	err := runProviderCommand(ctx, "stop", s.config.Exec.Stop, workspace, s, os.Stdin, os.Stdout, os.Stderr, nil, s.log)
 	if err != nil {
 		return err
 	}
@@ -141,12 +129,11 @@ func (s *serverProvider) Stop(ctx context.Context, workspace *provider.Workspace
 }
 
 func (s *serverProvider) Command(ctx context.Context, workspace *provider.Workspace, options provider.CommandOptions) error {
-	err := s.validate(workspace)
-	if err != nil {
-		return err
+	if workspace.Provider.Mode == provider.ModeSingle {
+		return s.CommandSingle(ctx, workspace, options)
 	}
 
-	err = runProviderCommand(ctx, "command", s.config.Exec.Command, workspace, s, options.Stdin, options.Stdout, options.Stderr, map[string]string{
+	err := runProviderCommand(ctx, "command", s.config.Exec.Command, workspace, s, options.Stdin, options.Stdout, options.Stderr, map[string]string{
 		provider.CommandEnv: options.Command,
 	}, s.log.ErrorStreamOnly())
 	if err != nil {
@@ -157,9 +144,8 @@ func (s *serverProvider) Command(ctx context.Context, workspace *provider.Worksp
 }
 
 func (s *serverProvider) Status(ctx context.Context, workspace *provider.Workspace, options provider.StatusOptions) (provider.Status, error) {
-	err := s.validate(workspace)
-	if err != nil {
-		return "", err
+	if workspace.Provider.Mode == provider.ModeSingle {
+		return s.StatusSingle(ctx, workspace, options)
 	}
 
 	// check if provider has status command

@@ -100,6 +100,9 @@ func ResolveWorkspace(ctx context.Context, devPodConfig *config.Config, ide *pro
 		workspace.IDE = *ide
 	}
 
+	// set workspace mode
+	workspace.Provider.Mode = devPodConfig.Contexts[devPodConfig.DefaultContext].Providers[provider.Name()].Mode
+
 	// save workspace config
 	err = saveWorkspaceConfig(workspace)
 	if err != nil {

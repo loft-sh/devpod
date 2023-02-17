@@ -25,6 +25,10 @@ type ConfigContext struct {
 }
 
 type ConfigProvider struct {
+	// Mode specifies if DevPod should create a single server for all
+	// workspaces or one server for each workspace.
+	Mode provider.ProviderMode `json:"mode,omitempty"`
+
 	// Options are the configured provider options
 	Options map[string]provider.OptionValue `json:"options,omitempty"`
 }

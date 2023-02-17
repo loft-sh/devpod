@@ -8,6 +8,7 @@ import (
 	"encoding/base64"
 	"encoding/pem"
 	"github.com/loft-sh/devpod/pkg/config"
+	"github.com/mitchellh/go-homedir"
 	"os"
 	"path/filepath"
 	"sync"
@@ -77,23 +78,32 @@ func GetPrivateKeyRaw(context, workspaceID string) ([]byte, error) {
 	return getPrivateKeyRawBase(workspaceDir)
 }
 
-func getTempDir() string {
+func GetKeysTempDir() string {
+	dir, err := homedir.Dir()
+	if err == nil {
+		tempDir := filepath.Join(dir, ".devpod", "keys")
+		err = os.MkdirAll(tempDir, 0755)
+		if err == nil {
+			return tempDir
+		}
+	}
+
 	tempDir := os.TempDir()
 	return filepath.Join(tempDir, "devpod-ssh")
 }
 
 func GetTempHostKey() (string, error) {
-	tempDir := getTempDir()
+	tempDir := GetKeysTempDir()
 	return getHostKeyBase(tempDir)
 }
 
 func GetTempPublicKey() (string, error) {
-	tempDir := getTempDir()
+	tempDir := GetKeysTempDir()
 	return getPublicKeyBase(tempDir)
 }
 
 func GetTempPrivateKeyRaw() ([]byte, error) {
-	tempDir := getTempDir()
+	tempDir := GetKeysTempDir()
 	return getPrivateKeyRawBase(tempDir)
 }
 

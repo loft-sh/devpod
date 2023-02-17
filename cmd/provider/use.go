@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"github.com/loft-sh/devpod/cmd/flags"
+	"github.com/loft-sh/devpod/pkg/binaries"
 	"github.com/loft-sh/devpod/pkg/config"
 	"github.com/loft-sh/devpod/pkg/log"
 	provider2 "github.com/loft-sh/devpod/pkg/provider"
@@ -21,7 +22,9 @@ import (
 type UseCmd struct {
 	flags.GlobalFlags
 
-	Options []string
+	Reconfigure bool
+	Single      bool
+	Options     []string
 }
 
 // NewUseCmd creates a new destroy command
@@ -46,6 +49,8 @@ func NewUseCmd(flags *flags.GlobalFlags) *cobra.Command {
 }
 
 func AddFlags(useCmd *cobra.Command, cmd *UseCmd) {
+	useCmd.Flags().BoolVar(&cmd.Reconfigure, "reconfigure", false, "If enabled will not merge existing provider config")
+	useCmd.Flags().BoolVar(&cmd.Single, "single", false, "If enabled DevPod will create a single server for all workspaces")
 	useCmd.Flags().StringSliceVarP(&cmd.Options, "option", "o", []string{}, "Provider option in the form KEY=VALUE")
 }
 
@@ -72,10 +77,12 @@ func (cmd *UseCmd) Run(ctx context.Context, providerName string) error {
 	}
 
 	// merge with old values
-	for k, v := range providerWithOptions.Options {
-		_, ok := options[k]
-		if !ok {
-			options[k] = v
+	if !cmd.Reconfigure {
+		for k, v := range providerWithOptions.Options {
+			_, ok := options[k]
+			if !ok {
+				options[k] = v
+			}
 		}
 	}
 
@@ -100,16 +107,36 @@ func (cmd *UseCmd) Run(ctx context.Context, providerName string) error {
 		return errors.Wrap(err, "ensure required")
 	}
 
+	// download provider binaries
+	if len(providerWithOptions.Config.Binaries) > 0 {
+		binariesDir, err := config.GetProviderBinariesDir(devPodConfig.DefaultContext, providerWithOptions.Config.Name)
+		if err != nil {
+			return err
+		}
+
+		_, err = binaries.DownloadBinaries(providerWithOptions.Config.Binaries, binariesDir, log.Default)
+		if err != nil {
+			return errors.Wrap(err, "download binaries")
+		}
+	}
+
 	// run validate command
 	err = providerWithOptions.Provider.Validate(ctx, workspaceConfig, provider2.ValidateOptions{})
 	if err != nil {
 		return err
 	}
 
+	// check provider mode
+	mode := provider2.ModeMultiple
+	if cmd.Single || len(providerWithOptions.Config.Exec.Create) == 0 {
+		mode = provider2.ModeSingle
+	}
+
 	// set options
 	defaultContext := devPodConfig.Contexts[devPodConfig.DefaultContext]
 	defaultContext.DefaultProvider = providerWithOptions.Provider.Name()
 	defaultContext.Providers[providerName] = &config.ConfigProvider{
+		Mode:    mode,
 		Options: workspaceConfig.Provider.Options,
 	}
 
@@ -119,6 +146,7 @@ func (cmd *UseCmd) Run(ctx context.Context, providerName string) error {
 		return errors.Wrap(err, "save config")
 	}
 
+	log.Default.Donef("Successfully configured provider %s, run with '--reconfigure' to reconfigure the provider", providerWithOptions.Config.Name)
 	return nil
 }
 
