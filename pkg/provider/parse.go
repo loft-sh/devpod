@@ -9,6 +9,7 @@ import (
 	"github.com/pkg/errors"
 	"io"
 	"regexp"
+	"strings"
 	"time"
 )
 
@@ -117,6 +118,16 @@ func validate(config *ProviderConfig) error {
 		}
 	}
 
+	// validate provider binaries
+	err := validateBinaries("binaries", config.Binaries)
+	if err != nil {
+		return err
+	}
+	err = validateBinaries("agent.binaries", config.Agent.Binaries)
+	if err != nil {
+		return err
+	}
+
 	// validate provider type
 	if config.Type == "" || config.Type == ProviderTypeServer {
 		if len(config.Exec.Command) == 0 {
@@ -134,6 +145,31 @@ func validate(config *ProviderConfig) error {
 		}
 	} else {
 		return fmt.Errorf("provider type '%s' unrecognized, either choose '%s' or '%s'", config.Type, ProviderTypeServer, ProviderTypeWorkspace)
+	}
+
+	return nil
+}
+
+func validateBinaries(prefix string, binaries map[string][]*ProviderBinary) error {
+	for binaryName, binaryArr := range binaries {
+		if optionNameRegEx.MatchString(binaryName) {
+			return fmt.Errorf("binary name '%s' can only consist of upper case letters, numbers or underscores. E.g. MY_BINARY, KUBECTL", binaryName)
+		}
+
+		for _, binary := range binaryArr {
+			if binary.OS != "linux" && binary.OS != "darwin" && binary.OS != "windows" {
+				return fmt.Errorf("unsupported binary operating system '%s', must be 'linux', 'darwin' or 'windows'", binary.OS)
+			}
+			if binary.Path == "" {
+				return fmt.Errorf("%s.%s.path required binary path, cannot be empty", prefix, binaryName)
+			}
+			if binary.ArchivePath == "" && (strings.HasSuffix(binary.Path, ".gz") || strings.HasSuffix(binary.Path, ".tar") || strings.HasSuffix(binary.Path, ".tgz") || strings.HasSuffix(binary.Path, ".zip")) {
+				return fmt.Errorf("%s.%s.archivePath required because binary path is an archive", prefix, binaryName)
+			}
+			if binary.Arch == "" {
+				return fmt.Errorf("%s.%s.arch required, cannot be empty", prefix, binaryName)
+			}
+		}
 	}
 
 	return nil

@@ -70,13 +70,19 @@ const (
 
 type ProviderBinary struct {
 	// The current OS
-	OS string `json:"os"`
+	OS string `json:"os,omitempty"`
 
 	// The current Arch
-	Arch string `json:"arch"`
+	Arch string `json:"arch,omitempty"`
 
 	// The binary url to download from or relative path to use
-	Path string `json:"path"`
+	Path string `json:"path,omitempty"`
+
+	// ArchivePath is the path within the archive to extract
+	ArchivePath string `json:"archivePath,omitempty"`
+
+	// Name is the name of the binary to store locally
+	Name string `json:"name,omitempty"`
 }
 
 type ProviderCommands struct {

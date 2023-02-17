@@ -44,12 +44,22 @@ type WorkspaceProviderConfig struct {
 	// Name is the provider name
 	Name string `json:"name,omitempty"`
 
+	// Mode is the provider mode
+	Mode ProviderMode `json:"mode,omitempty"`
+
 	// Options are the provider options used to create the workspace
 	Options map[string]OptionValue `json:"options,omitempty"`
 
 	// Agent is the config from the provider
 	Agent ProviderAgentConfig `json:"agent,omitempty"`
 }
+
+type ProviderMode string
+
+const (
+	ModeSingle   ProviderMode = "Single"
+	ModeMultiple ProviderMode = "Multiple"
+)
 
 type OptionValue struct {
 	// Value is the value of the option

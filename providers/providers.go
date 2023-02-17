@@ -19,19 +19,21 @@ var GCloudProvider string
 var AWSProvider string
 
 // GetBuiltInProviders retrieves the built in providers
-func GetBuiltInProviders(log log.Logger) (map[string]provider.Provider, error) {
+func GetBuiltInProviders(log log.Logger) (map[string]provider.Provider, map[string]*provider.ProviderConfig, error) {
 	providers := []string{LocalProvider, GCloudProvider, AWSProvider}
 	retProviders := map[string]provider.Provider{}
+	retProviderConfigs := map[string]*provider.ProviderConfig{}
 
 	// parse providers
 	for _, providerConfig := range providers {
 		parsedConfig, err := provider.ParseProvider(strings.NewReader(providerConfig))
 		if err != nil {
-			return nil, errors.Wrap(err, "parse provider")
+			return nil, nil, errors.Wrap(err, "parse provider")
 		}
 
 		retProviders[parsedConfig.Name] = providerimplementation.NewProvider(parsedConfig, log)
+		retProviderConfigs[parsedConfig.Name] = parsedConfig
 	}
 
-	return retProviders, nil
+	return retProviders, retProviderConfigs, nil
 }

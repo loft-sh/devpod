@@ -7,11 +7,3 @@ agent:
 exec:
   command: |-
     ${DEVPOD} helper sh -c "${COMMAND}"
-  status: |-
-    ${DEVPOD} agent status --id "${WORKSPACE_ID}" --context "${WORKSPACE_CONTEXT}"
-  start: |-
-    ${DEVPOD} agent start --id "${WORKSPACE_ID}" --context "${WORKSPACE_CONTEXT}"
-  stop: |-
-    ${DEVPOD} agent stop --id "${WORKSPACE_ID}" --context "${WORKSPACE_CONTEXT}"
-  delete: |-
-    ${DEVPOD} agent delete --id "${WORKSPACE_ID}" --context "${WORKSPACE_CONTEXT}"
