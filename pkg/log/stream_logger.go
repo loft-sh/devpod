@@ -180,6 +180,13 @@ func (s *StreamLogger) GetFormat() Format {
 	return s.format
 }
 
+func (s *StreamLogger) SetFormat(format Format) {
+	s.m.Lock()
+	defer s.m.Unlock()
+
+	s.format = format
+}
+
 func (s *StreamLogger) ErrorStreamOnly() Logger {
 	s.m.Lock()
 	defer s.m.Unlock()

@@ -6,10 +6,12 @@ import (
 	"github.com/loft-sh/devpod/pkg/compress"
 	"github.com/loft-sh/devpod/pkg/devcontainer/config"
 	"github.com/loft-sh/devpod/pkg/devcontainer/setup"
+	"github.com/loft-sh/devpod/pkg/ide/openvscode"
+	"github.com/loft-sh/devpod/pkg/ide/vscode"
 	"github.com/loft-sh/devpod/pkg/log"
 	provider2 "github.com/loft-sh/devpod/pkg/provider"
-	"github.com/loft-sh/devpod/pkg/vscode"
 	"github.com/spf13/cobra"
+	"strconv"
 )
 
 // SetupContainerCmd holds the cmd flags
@@ -37,6 +39,7 @@ func NewSetupContainerCmd() *cobra.Command {
 
 // Run runs the command logic
 func (cmd *SetupContainerCmd) Run(_ *cobra.Command, _ []string) error {
+	log.Default.Debugf("Start setting up container...")
 	workspaceInfo, _, err := decodeWorkspaceInfo(cmd.WorkspaceInfo)
 	if err != nil {
 		return err
@@ -60,7 +63,7 @@ func (cmd *SetupContainerCmd) Run(_ *cobra.Command, _ []string) error {
 	}
 
 	// install IDE
-	err = setupVSCode(setupInfo, workspaceInfo, log.Default)
+	err = installIDE(setupInfo, workspaceInfo, log.Default)
 	if err != nil {
 		return err
 	}
@@ -68,11 +71,20 @@ func (cmd *SetupContainerCmd) Run(_ *cobra.Command, _ []string) error {
 	return nil
 }
 
-func setupVSCode(setupInfo *config.Result, workspaceInfo *provider2.AgentWorkspaceInfo, log log.Logger) error {
-	if workspaceInfo.Workspace.IDE.VSCode == nil {
+func installIDE(setupInfo *config.Result, workspaceInfo *provider2.AgentWorkspaceInfo, log log.Logger) error {
+	switch workspaceInfo.Workspace.IDE.IDE {
+	case provider2.IDENone:
 		return nil
+	case provider2.IDEVSCode:
+		return setupVSCode(setupInfo, log)
+	case provider2.IDEOpenVSCode:
+		return setupOpenVSCode(setupInfo, log)
 	}
 
+	return nil
+}
+
+func setupVSCode(setupInfo *config.Result, log log.Logger) error {
 	log.Debugf("Setup vscode...")
 	vsCodeConfiguration := config.GetVSCodeConfiguration(setupInfo.MergedConfig)
 	settings := ""
@@ -86,16 +98,28 @@ func setupVSCode(setupInfo *config.Result, workspaceInfo *provider2.AgentWorkspa
 	}
 
 	user := config.GetRemoteUser(setupInfo)
-	if workspaceInfo.Workspace.IDE.VSCode.Browser {
-		installer := &vscode.OpenVSCodeServer{}
-		return installer.Install(vsCodeConfiguration.Extensions, settings, user, log)
-	}
 
 	// don't install code-server if we don't have settings or extensions
 	if len(vsCodeConfiguration.Settings) == 0 && len(vsCodeConfiguration.Extensions) == 0 {
 		return nil
 	}
 
-	installer := &vscode.VSCodeServer{}
-	return installer.Install(vsCodeConfiguration.Extensions, settings, user, log)
+	return vscode.NewVSCodeServer(vsCodeConfiguration.Extensions, settings, user, log).Install()
+}
+
+func setupOpenVSCode(setupInfo *config.Result, log log.Logger) error {
+	log.Debugf("Setup openvscode...")
+	vsCodeConfiguration := config.GetVSCodeConfiguration(setupInfo.MergedConfig)
+	settings := ""
+	if len(vsCodeConfiguration.Settings) > 0 {
+		out, err := json.Marshal(vsCodeConfiguration.Settings)
+		if err != nil {
+			return err
+		}
+
+		settings = string(out)
+	}
+
+	user := config.GetRemoteUser(setupInfo)
+	return openvscode.NewOpenVSCodeServer(vsCodeConfiguration.Extensions, settings, user, "0.0.0.0", strconv.Itoa(openvscode.DefaultVSCodePort), log).Install()
 }

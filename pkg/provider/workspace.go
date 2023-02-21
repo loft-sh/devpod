@@ -31,9 +31,21 @@ type Workspace struct {
 }
 
 type WorkspaceIDEConfig struct {
-	// VSCode are vscode specific options
-	VSCode *WorkspaceIDEVSCode `json:"vscode,omitempty"`
+	// IDE is the name of the ide to use
+	IDE IDE `json:"ide,omitempty"`
+
+	// Options are additional ide options
+	Options map[string]string `json:"options,omitempty"`
 }
+
+type IDE string
+
+const (
+	IDENone       IDE = "none"
+	IDEVSCode     IDE = "vscode"
+	IDEOpenVSCode IDE = "openvscode"
+	IDEGoland     IDE = "goland"
+)
 
 type WorkspaceIDEVSCode struct {
 	// Browser determines if the vscode should be opened in the browser

@@ -7,13 +7,14 @@ import (
 	"github.com/loft-sh/devpod/pkg/agent"
 	"github.com/loft-sh/devpod/pkg/config"
 	config2 "github.com/loft-sh/devpod/pkg/devcontainer/config"
+	"github.com/loft-sh/devpod/pkg/ide"
+	"github.com/loft-sh/devpod/pkg/ide/openvscode"
 	"github.com/loft-sh/devpod/pkg/log"
 	"github.com/loft-sh/devpod/pkg/open"
 	"github.com/loft-sh/devpod/pkg/port"
 	provider2 "github.com/loft-sh/devpod/pkg/provider"
 	devssh "github.com/loft-sh/devpod/pkg/ssh"
 	"github.com/loft-sh/devpod/pkg/tunnel"
-	"github.com/loft-sh/devpod/pkg/vscode"
 	workspace2 "github.com/loft-sh/devpod/pkg/workspace"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
@@ -28,9 +29,9 @@ import (
 type UpCmd struct {
 	*flags.GlobalFlags
 
-	ID      string
-	Browser bool
-	NoOpen  bool
+	ID string
+
+	IDE string
 }
 
 // NewUpCmd creates a new up command
@@ -48,30 +49,32 @@ func NewUpCmd(flags *flags.GlobalFlags) *cobra.Command {
 				return err
 			}
 
-			// for now we hardcode vscode
-			ideConfig := &provider2.WorkspaceIDEConfig{
-				VSCode: &provider2.WorkspaceIDEVSCode{
-					Browser: cmd.Browser,
-				},
+			if cmd.IDE == "" {
+				cmd.IDE = string(ide.Detect())
 			}
-
-			workspace, provider, err := workspace2.ResolveWorkspace(ctx, devPodConfig, ideConfig, args, cmd.ID, log.Default)
+			ide, err := ide.Parse(cmd.IDE)
 			if err != nil {
 				return err
 			}
 
-			return cmd.Run(ctx, workspace, provider)
+			workspace, provider, err := workspace2.ResolveWorkspace(ctx, devPodConfig, &provider2.WorkspaceIDEConfig{
+				IDE: ide,
+			}, args, cmd.ID, log.Default)
+			if err != nil {
+				return err
+			}
+
+			return cmd.Run(ctx, ide, workspace, provider)
 		},
 	}
 
 	upCmd.Flags().StringVar(&cmd.ID, "id", "", "The id to use for the workspace")
-	upCmd.Flags().BoolVar(&cmd.NoOpen, "no-open", false, "If true will not try to open the IDE")
-	upCmd.Flags().BoolVar(&cmd.Browser, "browser", false, "If true will start VSCode in a browser")
+	upCmd.Flags().StringVar(&cmd.IDE, "ide", "", "The IDE to open the workspace in. If empty will use vscode locally or in browser")
 	return upCmd
 }
 
 // Run runs the command logic
-func (cmd *UpCmd) Run(ctx context.Context, workspace *provider2.Workspace, provider provider2.Provider) error {
+func (cmd *UpCmd) Run(ctx context.Context, ide provider2.IDE, workspace *provider2.Workspace, provider provider2.Provider) error {
 	// run devpod agent up
 	result, err := devPodUp(ctx, provider, workspace, log.Default)
 	if err != nil {
@@ -88,13 +91,12 @@ func (cmd *UpCmd) Run(ctx context.Context, workspace *provider2.Workspace, provi
 	}
 	log.Default.Infof("Run 'ssh %s.devpod' to ssh into the devcontainer", workspace.ID)
 
-	// start VSCode
-	if !cmd.NoOpen {
-		if cmd.Browser {
-			return startInBrowser(ctx, workspace, provider, result.MergedConfig, user, log.Default)
-		} else {
-			return startLocally(workspace, log.Default)
-		}
+	// open ide
+	switch ide {
+	case provider2.IDEVSCode:
+		return startLocally(workspace, log.Default)
+	case provider2.IDEOpenVSCode:
+		return startInBrowser(ctx, workspace, provider, log.Default)
 	}
 
 	return nil
@@ -110,14 +112,14 @@ func startLocally(workspace *provider2.Workspace, log log.Logger) error {
 	return nil
 }
 
-func startInBrowser(ctx context.Context, workspace *provider2.Workspace, provider provider2.Provider, mergedConfig *config2.MergedDevContainerConfig, user string, log log.Logger) error {
+func startInBrowser(ctx context.Context, workspace *provider2.Workspace, provider provider2.Provider, log log.Logger) error {
 	serverProvider, ok := provider.(provider2.ServerProvider)
 	if !ok {
 		return fmt.Errorf("--browser is currently only supported for server providers")
 	}
 
 	// determine port
-	vscodePort, err := port.FindAvailablePort(vscode.DefaultVSCodePort)
+	vscodePort, err := port.FindAvailablePort(openvscode.DefaultVSCodePort)
 	if err != nil {
 		return err
 	}
@@ -137,21 +139,7 @@ func startInBrowser(ctx context.Context, workspace *provider2.Workspace, provide
 	err = tunnel.NewContainerTunnel(serverProvider, workspace, log).Run(ctx, nil, func(client *ssh.Client) error {
 		log.Debugf("Connected to container")
 
-		// forward port
-		forwardErr := make(chan error, 1)
-		go func() {
-			forwardErr <- devssh.PortForward(client, fmt.Sprintf("localhost:%d", vscodePort), fmt.Sprintf("localhost:%d", vscode.DefaultVSCodePort), log)
-		}()
-
-		// start openvscode
-		command := fmt.Sprintf("%s agent openvscode --user %s --port %d", agent.RemoteDevPodHelperLocation, user, vscode.DefaultVSCodePort)
-		log.Debugf("Running in container: %s", command)
-		err = devssh.Run(client, command, nil, os.Stdout, os.Stderr)
-		if err != nil {
-			return err
-		}
-
-		return nil
+		return devssh.PortForward(client, fmt.Sprintf("localhost:%d", vscodePort), fmt.Sprintf("localhost:%d", openvscode.DefaultVSCodePort), log)
 	})
 	if err != nil {
 		return err

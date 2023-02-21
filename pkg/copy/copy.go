@@ -2,11 +2,34 @@ package copy
 
 import (
 	"fmt"
+	"github.com/pkg/errors"
 	"io"
 	"os"
+	"os/user"
 	"path/filepath"
+	"strconv"
 	"syscall"
 )
+
+func ChownR(path string, userName string) error {
+	if userName == "" {
+		return nil
+	}
+
+	userId, err := user.Lookup(userName)
+	if err != nil {
+		return errors.Wrap(err, "lookup user")
+	}
+
+	uid, _ := strconv.Atoi(userId.Uid)
+	gid, _ := strconv.Atoi(userId.Gid)
+	return filepath.Walk(path, func(name string, info os.FileInfo, err error) error {
+		if err == nil {
+			err = os.Chown(name, uid, gid)
+		}
+		return err
+	})
+}
 
 func Directory(scrDir, dest string) error {
 	entries, err := os.ReadDir(scrDir)
