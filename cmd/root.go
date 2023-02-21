@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"fmt"
 	"github.com/loft-sh/devpod/cmd/agent"
 	"github.com/loft-sh/devpod/cmd/flags"
 	"github.com/loft-sh/devpod/cmd/helper"
@@ -23,6 +24,12 @@ func NewRootCmd() *cobra.Command {
 		SilenceUsage:  true,
 		SilenceErrors: true,
 		PersistentPreRunE: func(cobraCmd *cobra.Command, args []string) error {
+			if globalFlags.LogOutput == "json" {
+				log2.Default.SetFormat(log2.JSONFormat)
+			} else if globalFlags.LogOutput != "plain" {
+				return fmt.Errorf("unrecognized log format %s, needs to be either plain or json", globalFlags.LogOutput)
+			}
+
 			if globalFlags.Silent {
 				log2.Default.SetLevel(logrus.FatalLevel)
 			} else if globalFlags.Debug {

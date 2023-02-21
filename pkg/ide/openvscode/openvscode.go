@@ -1,10 +1,12 @@
-package vscode
+package openvscode
 
 import (
 	"crypto/tls"
 	"fmt"
 	"github.com/loft-sh/devpod/pkg/command"
+	copy2 "github.com/loft-sh/devpod/pkg/copy"
 	"github.com/loft-sh/devpod/pkg/extract"
+	"github.com/loft-sh/devpod/pkg/ide"
 	"github.com/loft-sh/devpod/pkg/log"
 	"github.com/mitchellh/go-homedir"
 	"github.com/pkg/errors"
@@ -12,10 +14,10 @@ import (
 	"net/http"
 	"os"
 	"os/exec"
-	"os/user"
 	"path/filepath"
 	"runtime"
 	"strconv"
+	"time"
 )
 
 const OpenVSCodeDownloadAmd64 = "https://github.com/gitpod-io/openvscode-server/releases/download/openvscode-server-v1.75.1/openvscode-server-v1.75.1-linux-x64.tar.gz"
@@ -23,19 +25,42 @@ const OpenVSCodeDownloadArm64 = "https://github.com/gitpod-io/openvscode-server/
 
 const DefaultVSCodePort = 10800
 
-type OpenVSCodeServer struct{}
+func NewOpenVSCodeServer(extensions []string, settings string, userName string, host, port string, log log.Logger) ide.IDE {
+	return &openVSCodeServer{
+		extensions: extensions,
+		settings:   settings,
+		userName:   userName,
+		host:       host,
+		port:       port,
+		log:        log,
+	}
+}
 
-func (o *OpenVSCodeServer) InstallAndStart(extensions []string, settings string, user, host, port string, log log.Logger) error {
-	err := o.Install(extensions, settings, user, log)
+type openVSCodeServer struct {
+	extensions []string
+	settings   string
+	userName   string
+	host       string
+	port       string
+	log        log.Logger
+}
+
+func (o *openVSCodeServer) Install() error {
+	err := o.install()
 	if err != nil {
 		return err
 	}
 
-	return o.Start(user, host, port, log)
+	err = o.Start()
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
 
-func (o *OpenVSCodeServer) Install(extensions []string, settings string, userName string, log log.Logger) error {
-	location, err := prepareOpenVSCodeServerLocation(userName)
+func (o *openVSCodeServer) install() error {
+	location, err := prepareOpenVSCodeServerLocation(o.userName)
 	if err != nil {
 		return err
 	}
@@ -70,21 +95,21 @@ func (o *OpenVSCodeServer) Install(extensions []string, settings string, userNam
 	}
 
 	// chown location
-	if userName != "" {
-		err = ChownR(location, userName)
+	if o.userName != "" {
+		err = copy2.ChownR(location, o.userName)
 		if err != nil {
 			return errors.Wrap(err, "chown")
 		}
 	}
 
 	// install extensions
-	err = o.InstallExtensions(extensions, userName, log)
+	err = o.InstallExtensions()
 	if err != nil {
 		return errors.Wrap(err, "install extensions")
 	}
 
 	// paste settings
-	err = o.InstallSettings(settings, userName)
+	err = o.InstallSettings()
 	if err != nil {
 		return errors.Wrap(err, "install settings")
 	}
@@ -92,26 +117,26 @@ func (o *OpenVSCodeServer) Install(extensions []string, settings string, userNam
 	return nil
 }
 
-func (o *OpenVSCodeServer) InstallExtensions(extensions []string, userName string, log log.Logger) error {
-	if len(extensions) == 0 {
+func (o *openVSCodeServer) InstallExtensions() error {
+	if len(o.extensions) == 0 {
 		return nil
 	}
 
-	location, err := prepareOpenVSCodeServerLocation(userName)
+	location, err := prepareOpenVSCodeServerLocation(o.userName)
 	if err != nil {
 		return err
 	}
 
-	out := log.Writer(logrus.InfoLevel, false)
+	out := o.log.Writer(logrus.InfoLevel, false)
 	defer out.Close()
 
 	binaryPath := filepath.Join(location, "bin", "openvscode-server")
-	for _, extension := range extensions {
-		log.Info("Install extension " + extension + "...")
+	for _, extension := range o.extensions {
+		o.log.Info("Install extension " + extension + "...")
 		runCommand := fmt.Sprintf("%s --install-extension '%s'", binaryPath, extension)
 		args := []string{}
-		if userName != "" {
-			args = append(args, "su", userName, "-c", runCommand)
+		if o.userName != "" {
+			args = append(args, "su", o.userName, "-c", runCommand)
 		} else {
 			args = append(args, "sh", "-c", runCommand)
 		}
@@ -120,20 +145,20 @@ func (o *OpenVSCodeServer) InstallExtensions(extensions []string, userName strin
 		cmd.Stderr = out
 		err = cmd.Run()
 		if err != nil {
-			log.Info("Failed installing extension " + extension)
+			o.log.Info("Failed installing extension " + extension)
 		}
-		log.Info("Successfully installed extension " + extension)
+		o.log.Info("Successfully installed extension " + extension)
 	}
 
 	return nil
 }
 
-func (o *OpenVSCodeServer) InstallSettings(settings string, userName string) error {
-	if len(settings) == 0 {
+func (o *openVSCodeServer) InstallSettings() error {
+	if len(o.settings) == 0 {
 		return nil
 	}
 
-	location, err := prepareOpenVSCodeServerLocation(userName)
+	location, err := prepareOpenVSCodeServerLocation(o.userName)
 	if err != nil {
 		return err
 	}
@@ -144,12 +169,12 @@ func (o *OpenVSCodeServer) InstallSettings(settings string, userName string) err
 		return err
 	}
 
-	err = os.WriteFile(filepath.Join(settingsDir, "settings.json"), []byte(settings), 0666)
+	err = os.WriteFile(filepath.Join(settingsDir, "settings.json"), []byte(o.settings), 0666)
 	if err != nil {
 		return err
 	}
 
-	err = ChownR(settingsDir, userName)
+	err = copy2.ChownR(settingsDir, o.userName)
 	if err != nil {
 		return err
 	}
@@ -157,17 +182,23 @@ func (o *OpenVSCodeServer) InstallSettings(settings string, userName string) err
 	return nil
 }
 
-func (o *OpenVSCodeServer) Start(userName, host, port string, log log.Logger) error {
-	location, err := prepareOpenVSCodeServerLocation(userName)
+func (o *openVSCodeServer) Start() error {
+	isRunning, markerFile := singleProcess(o.log)
+	if isRunning {
+		o.log.Debugf("OpenVSCode is already started")
+		return nil
+	}
+
+	location, err := prepareOpenVSCodeServerLocation(o.userName)
 	if err != nil {
 		return err
 	}
 
-	if host == "" {
-		host = "0.0.0.0"
+	if o.host == "" {
+		o.host = "0.0.0.0"
 	}
-	if port == "" {
-		port = strconv.Itoa(DefaultVSCodePort)
+	if o.port == "" {
+		o.port = strconv.Itoa(DefaultVSCodePort)
 	}
 
 	binaryPath := filepath.Join(location, "bin", "openvscode-server")
@@ -176,46 +207,58 @@ func (o *OpenVSCodeServer) Start(userName, host, port string, log log.Logger) er
 		return errors.Wrap(err, "find binary")
 	}
 
-	writer := log.Writer(logrus.InfoLevel, false)
-	defer writer.Close()
-
-	runCommand := fmt.Sprintf("%s server-local --without-connection-token --host '%s' --port '%s'", binaryPath, host, port)
+	o.log.Infof("Starting openvscode in background...")
+	runCommand := fmt.Sprintf("%s server-local --without-connection-token --host '%s' --port '%s'", binaryPath, o.host, o.port)
 	args := []string{}
-	if userName != "" {
-		args = append(args, "su", userName, "-c", runCommand)
+	if o.userName != "" {
+		args = append(args, "su", o.userName, "-c", runCommand)
 	} else {
 		args = append(args, "sh", "-c", runCommand)
 	}
 	cmd := exec.Command(args[0], args[1:]...)
 	cmd.Dir = location
-	cmd.Stdout = writer
-	cmd.Stderr = writer
-	err = cmd.Run()
+	err = cmd.Start()
 	if err != nil {
 		return err
 	}
 
+	// wait until we have a process id
+	for cmd.Process.Pid < 0 {
+		time.Sleep(time.Millisecond)
+	}
+
+	// write pid to file
+	err = os.WriteFile(markerFile, []byte(strconv.Itoa(cmd.Process.Pid)), os.ModePerm)
+	if err != nil {
+		return err
+	}
+
+	// release process resources
+	err = cmd.Process.Release()
+	if err != nil {
+		return err
+	}
+
+	o.log.Infof("Successfully started openvscode...")
 	return nil
 }
 
-func ChownR(path string, userName string) error {
-	if userName == "" {
-		return nil
-	}
-
-	userId, err := user.Lookup(userName)
+func singleProcess(log log.Logger) (bool, string) {
+	// check if marker file is there
+	markerFile := filepath.Join(os.TempDir(), "openvscode.pid")
+	pid, err := os.ReadFile(markerFile)
 	if err != nil {
-		return errors.Wrap(err, "lookup user")
+		return false, markerFile
 	}
 
-	uid, _ := strconv.Atoi(userId.Uid)
-	gid, _ := strconv.Atoi(userId.Gid)
-	return filepath.Walk(path, func(name string, info os.FileInfo, err error) error {
-		if err == nil {
-			err = os.Chown(name, uid, gid)
-		}
-		return err
-	})
+	// check if process id exists
+	isRunning, err := command.IsRunning(string(pid))
+	if err != nil {
+		log.Debugf("Error retrieving running status: %v", err)
+		return false, markerFile
+	}
+
+	return isRunning, markerFile
 }
 
 func prepareOpenVSCodeServerLocation(userName string) (string, error) {
