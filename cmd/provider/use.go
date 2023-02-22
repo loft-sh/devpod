@@ -96,7 +96,7 @@ func (cmd *UseCmd) Run(ctx context.Context, providerName string) error {
 	}
 
 	// fill defaults
-	workspaceConfig.Provider.Options, err = options2.ResolveOptions(ctx, "", "", workspaceConfig, providerWithOptions.Provider)
+	workspaceConfig, err = options2.ResolveOptions(ctx, "", "", workspaceConfig, providerWithOptions.Provider)
 	if err != nil {
 		return errors.Wrap(err, "resolve options")
 	}

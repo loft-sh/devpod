@@ -55,7 +55,7 @@ func NewUpCmd(flags *flags.GlobalFlags) *cobra.Command {
 // Run runs the command logic
 func (cmd *UpCmd) Run(ctx context.Context) error {
 	// get workspace
-	workspaceInfo, err := getWorkspaceInfo(cmd.WorkspaceInfo)
+	workspaceInfo, err := writeWorkspaceInfo(cmd.WorkspaceInfo)
 	if err != nil {
 		return fmt.Errorf("error parsing workspace info: %v", err)
 	}
@@ -252,7 +252,7 @@ func readAgentWorkspaceInfo(context, id string) (*provider2.AgentWorkspaceInfo, 
 	return workspaceInfo, nil
 }
 
-func getWorkspaceInfo(workspaceInfoRaw string) (*provider2.AgentWorkspaceInfo, error) {
+func writeWorkspaceInfo(workspaceInfoRaw string) (*provider2.AgentWorkspaceInfo, error) {
 	workspaceInfo, decoded, err := decodeWorkspaceInfo(workspaceInfoRaw)
 	if err != nil {
 		return nil, err

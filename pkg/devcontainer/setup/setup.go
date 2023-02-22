@@ -47,7 +47,7 @@ func SetupContainer(setupInfo *config.Result, log log.Logger) error {
 
 func ChownWorkspace(containerDetails *config.ContainerDetails, mergedConfig *config.MergedDevContainerConfig, substitutionContext *config.SubstitutionContext) error {
 	user := mergedConfig.RemoteUser
-	if mergedConfig.RemoteUser == "" {
+	if mergedConfig.RemoteUser == "" && containerDetails != nil {
 		user = containerDetails.Config.User
 	}
 	if user == "" {

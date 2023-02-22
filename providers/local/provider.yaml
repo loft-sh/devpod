@@ -3,7 +3,7 @@ version: 0.0.1
 description: |-
   DevPod on Local Machine
 agent:
-  path: devpod
+  path: ${DEVPOD}
 exec:
   command: |-
     ${DEVPOD} helper sh -c "${COMMAND}"

@@ -20,7 +20,7 @@ func InstallDaemon(log log.Logger) error {
 	}
 
 	// install ourselves with devpod watch
-	_, err = service.Install("agent", "watch")
+	_, err = service.Install("agent", "daemon")
 	if err != nil && err != daemon.ErrAlreadyInstalled {
 		return errors.Wrap(err, "install service")
 	}
