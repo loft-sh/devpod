@@ -8,6 +8,7 @@ import (
 	"github.com/sirupsen/logrus"
 	"io"
 	"strings"
+	"time"
 )
 
 func (r *Runner) setupContainer(containerDetails *config.ContainerDetails, mergedConfig *config.MergedDevContainerConfig) error {
@@ -16,7 +17,7 @@ func (r *Runner) setupContainer(containerDetails *config.ContainerDetails, merge
 	err := agent.InjectAgent(func(command string, stdin io.Reader, stdout io.Writer, stderr io.Writer) error {
 		args := []string{"exec", "-i", "-u", "root", containerDetails.Id, "sh", "-c", command}
 		return r.Docker.Run(args, stdin, stdout, stderr)
-	}, agent.RemoteDevPodHelperLocation, agent.DefaultAgentDownloadURL, false, r.Log)
+	}, agent.RemoteDevPodHelperLocation, agent.DefaultAgentDownloadURL, false, time.Second*10)
 	if err != nil {
 		return err
 	}

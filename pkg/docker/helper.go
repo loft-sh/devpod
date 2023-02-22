@@ -13,6 +13,7 @@ import (
 	"io"
 	"os/exec"
 	"strings"
+	"time"
 )
 
 type DockerHelper struct {
@@ -155,7 +156,7 @@ func (r *DockerHelper) Tunnel(agentPath, agentDownloadURL string, containerID st
 	err := agent.InjectAgent(func(command string, stdin io.Reader, stdout io.Writer, stderr io.Writer) error {
 		args := []string{"exec", "-i", "-u", "root", containerID, "sh", "-c", command}
 		return r.Run(args, stdin, stdout, stderr)
-	}, agentPath, agentDownloadURL, false, log)
+	}, agentPath, agentDownloadURL, false, time.Second*10)
 	if err != nil {
 		return err
 	}
