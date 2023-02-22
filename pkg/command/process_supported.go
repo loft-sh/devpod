@@ -6,6 +6,7 @@ import (
 	"os"
 	"strconv"
 	"syscall"
+	"time"
 )
 
 func isRunning(pid string) (bool, error) {
@@ -25,4 +26,16 @@ func isRunning(pid string) (bool, error) {
 	}
 
 	return true, nil
+}
+
+func kill(pid string) error {
+	parsedPid, err := strconv.Atoi(pid)
+	if err != nil {
+		return err
+	}
+
+	_ = syscall.Kill(parsedPid, syscall.SIGTERM)
+	time.Sleep(2000)
+	_ = syscall.Kill(parsedPid, syscall.SIGKILL)
+	return nil
 }

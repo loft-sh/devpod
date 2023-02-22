@@ -53,9 +53,6 @@ type ProviderAgentConfig struct {
 }
 
 type ProviderAgentConfigExec struct {
-	// Init command is executed once when the agent is initially injected
-	Init types.StrArray `json:"init,omitempty"`
-
 	// Shutdown is the remote command to run when the remote machine
 	// should shutdown.
 	Shutdown types.StrArray `json:"shutdown,omitempty"`

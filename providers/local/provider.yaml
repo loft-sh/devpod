@@ -2,7 +2,11 @@ name: local
 version: 0.0.1
 description: |-
   DevPod on Local Machine
+options:
+  INACTIVITY_TIMEOUT:
+    description: If defined, will automatically stop the container after the inactivity period.
 agent:
+  inactivityTimeout: ${INACTIVITY_TIMEOUT}
   path: ${DEVPOD}
 exec:
   command: |-

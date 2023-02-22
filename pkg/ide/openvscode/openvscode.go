@@ -8,6 +8,7 @@ import (
 	"github.com/loft-sh/devpod/pkg/extract"
 	"github.com/loft-sh/devpod/pkg/ide"
 	"github.com/loft-sh/devpod/pkg/log"
+	"github.com/loft-sh/devpod/pkg/single"
 	"github.com/mitchellh/go-homedir"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
@@ -17,7 +18,6 @@ import (
 	"path/filepath"
 	"runtime"
 	"strconv"
-	"time"
 )
 
 const OpenVSCodeDownloadAmd64 = "https://github.com/gitpod-io/openvscode-server/releases/download/openvscode-server-v1.75.1/openvscode-server-v1.75.1-linux-x64.tar.gz"
@@ -183,12 +183,6 @@ func (o *openVSCodeServer) InstallSettings() error {
 }
 
 func (o *openVSCodeServer) Start() error {
-	isRunning, markerFile := singleProcess(o.log)
-	if isRunning {
-		o.log.Debugf("OpenVSCode is already started")
-		return nil
-	}
-
 	location, err := prepareOpenVSCodeServerLocation(o.userName)
 	if err != nil {
 		return err
@@ -207,58 +201,19 @@ func (o *openVSCodeServer) Start() error {
 		return errors.Wrap(err, "find binary")
 	}
 
-	o.log.Infof("Starting openvscode in background...")
-	runCommand := fmt.Sprintf("%s server-local --without-connection-token --host '%s' --port '%s'", binaryPath, o.host, o.port)
-	args := []string{}
-	if o.userName != "" {
-		args = append(args, "su", o.userName, "-c", runCommand)
-	} else {
-		args = append(args, "sh", "-c", runCommand)
-	}
-	cmd := exec.Command(args[0], args[1:]...)
-	cmd.Dir = location
-	err = cmd.Start()
-	if err != nil {
-		return err
-	}
-
-	// wait until we have a process id
-	for cmd.Process.Pid < 0 {
-		time.Sleep(time.Millisecond)
-	}
-
-	// write pid to file
-	err = os.WriteFile(markerFile, []byte(strconv.Itoa(cmd.Process.Pid)), os.ModePerm)
-	if err != nil {
-		return err
-	}
-
-	// release process resources
-	err = cmd.Process.Release()
-	if err != nil {
-		return err
-	}
-
-	o.log.Infof("Successfully started openvscode...")
-	return nil
-}
-
-func singleProcess(log log.Logger) (bool, string) {
-	// check if marker file is there
-	markerFile := filepath.Join(os.TempDir(), "openvscode.pid")
-	pid, err := os.ReadFile(markerFile)
-	if err != nil {
-		return false, markerFile
-	}
-
-	// check if process id exists
-	isRunning, err := command.IsRunning(string(pid))
-	if err != nil {
-		log.Debugf("Error retrieving running status: %v", err)
-		return false, markerFile
-	}
-
-	return isRunning, markerFile
+	return single.Single(filepath.Join(os.TempDir(), "openvscode.pid"), func() (*exec.Cmd, error) {
+		o.log.Infof("Starting openvscode in background...")
+		runCommand := fmt.Sprintf("%s server-local --without-connection-token --host '%s' --port '%s'", binaryPath, o.host, o.port)
+		args := []string{}
+		if o.userName != "" {
+			args = append(args, "su", o.userName, "-c", runCommand)
+		} else {
+			args = append(args, "sh", "-c", runCommand)
+		}
+		cmd := exec.Command(args[0], args[1:]...)
+		cmd.Dir = location
+		return cmd, nil
+	})
 }
 
 func prepareOpenVSCodeServerLocation(userName string) (string, error) {

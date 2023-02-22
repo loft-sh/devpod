@@ -30,7 +30,7 @@ options:
     enum: ["false", "true"]
   GCLOUD_TOKEN:
     hidden: true
-    cache: 4h
+    cache: 30m
     before: command
     command: ${GCLOUD_BINARY} auth application-default print-access-token --quiet --verbosity=error
 agent:

@@ -54,9 +54,21 @@ func (cmd *ExecCmd) Run(ctx context.Context, args []string) error {
 	}
 
 	devPodConfig.Contexts[devPodConfig.DefaultContext].DefaultProvider = args[0]
-	workspaceConfig, provider, err := workspace.ResolveWorkspace(ctx, devPodConfig, nil, []string{args[2]}, "", log.Default)
-	if err != nil {
-		return err
+
+	var (
+		workspaceConfig *provider2.Workspace
+		provider        provider2.Provider
+	)
+	if args[1] == "create" {
+		workspaceConfig, provider, err = workspace.ResolveWorkspace(ctx, devPodConfig, nil, []string{args[2]}, "", log.Default)
+		if err != nil {
+			return err
+		}
+	} else {
+		workspaceConfig, provider, err = workspace.GetWorkspace(ctx, devPodConfig, nil, []string{args[2]}, log.Default)
+		if err != nil {
+			return err
+		}
 	}
 
 	// case server provider

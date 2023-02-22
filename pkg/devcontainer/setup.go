@@ -57,7 +57,7 @@ func (r *Runner) setupContainer(containerDetails *config.ContainerDetails, merge
 
 	// TODO: install openvscode, extensions & settings
 	// TODO: install vscode, extensions & settings
-	args := []string{"exec", "-u", "root", containerDetails.Id, agent.RemoteDevPodHelperLocation, "agent", "setup-container", "--setup-info", compressed, "--workspace-info", workspaceConfigCompressed}
+	args := []string{"exec", "-u", "root", containerDetails.Id, agent.RemoteDevPodHelperLocation, "agent", "container", "setup", "--setup-info", compressed, "--workspace-info", workspaceConfigCompressed}
 	if r.Log.GetLevel() == logrus.DebugLevel {
 		args = append(args, "--debug")
 	}

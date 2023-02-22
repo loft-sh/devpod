@@ -1,4 +1,4 @@
-package agent
+package workspace
 
 import (
 	"context"
@@ -8,8 +8,6 @@ import (
 	"github.com/loft-sh/devpod/pkg/agent"
 	"github.com/loft-sh/devpod/pkg/agent/tunnel"
 	"github.com/loft-sh/devpod/pkg/command"
-	"github.com/loft-sh/devpod/pkg/compress"
-	"github.com/loft-sh/devpod/pkg/config"
 	"github.com/loft-sh/devpod/pkg/daemon"
 	"github.com/loft-sh/devpod/pkg/devcontainer"
 	config2 "github.com/loft-sh/devpod/pkg/devcontainer/config"
@@ -23,8 +21,6 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
-	"runtime"
-	"strings"
 )
 
 // UpCmd holds the up cmd flags
@@ -55,13 +51,13 @@ func NewUpCmd(flags *flags.GlobalFlags) *cobra.Command {
 // Run runs the command logic
 func (cmd *UpCmd) Run(ctx context.Context) error {
 	// get workspace
-	workspaceInfo, err := writeWorkspaceInfo(cmd.WorkspaceInfo)
+	workspaceInfo, err := agent.WriteWorkspaceInfo(cmd.WorkspaceInfo)
 	if err != nil {
 		return fmt.Errorf("error parsing workspace info: %v", err)
 	}
 
 	// check if we need to become root
-	shouldExit, err := rerunAsRoot(workspaceInfo)
+	shouldExit, err := agent.RerunAsRoot(workspaceInfo)
 	if err != nil {
 		return fmt.Errorf("rerun as root: %v", err)
 	} else if shouldExit {
@@ -152,68 +148,6 @@ func (cmd *UpCmd) prepareWorkspace(ctx context.Context, workspaceInfo *provider2
 	return fmt.Errorf("either workspace repository, image or local-folder is required")
 }
 
-func rerunAsRoot(workspaceInfo *provider2.AgentWorkspaceInfo) (bool, error) {
-	// check if root is required
-	if runtime.GOOS == "windows" || os.Getuid() == 0 {
-		return false, nil
-	}
-
-	// check if we can reach docker with no problems
-	dockerRootRequired, err := dockerReachable()
-	if err != nil {
-		return false, nil
-	}
-
-	// check if daemon needs to be installed
-	agentRootRequired := false
-	if runtime.GOOS == "linux" && len(workspaceInfo.Workspace.Provider.Agent.Exec.Shutdown) > 0 {
-		agentRootRequired = true
-	}
-
-	// check if root required
-	if !dockerRootRequired && !agentRootRequired {
-		return false, nil
-	}
-
-	// execute ourself as root
-	binary, err := os.Executable()
-	if err != nil {
-		return false, err
-	}
-
-	// call ourself
-	args := []string{binary}
-	args = append(args, os.Args[1:]...)
-	cmd := exec.Command("sudo", args...)
-	cmd.Stdin = os.Stdin
-	cmd.Stdout = os.Stdout
-	cmd.Stderr = os.Stderr
-	err = cmd.Run()
-	if err != nil {
-		return false, errors.Wrap(err, "rerun as root")
-	}
-
-	return true, nil
-}
-
-func dockerReachable() (bool, error) {
-	if !command.Exists("docker") {
-		// we need root to install docker
-		return true, nil
-	}
-
-	_, err := exec.Command("docker", "ps").CombinedOutput()
-	if err != nil {
-		if strings.Contains(err.Error(), "permission denied") {
-			return true, nil
-		}
-
-		return false, errors.Wrap(err, "docker ps")
-	}
-
-	return false, nil
-}
-
 func installDaemon(workspaceInfo *provider2.AgentWorkspaceInfo, log log.Logger) error {
 	if len(workspaceInfo.Workspace.Provider.Agent.Exec.Shutdown) == 0 {
 		return nil
@@ -226,67 +160,6 @@ func installDaemon(workspaceInfo *provider2.AgentWorkspaceInfo, log log.Logger) 
 	}
 
 	return nil
-}
-
-func readAgentWorkspaceInfo(context, id string) (*provider2.AgentWorkspaceInfo, error) {
-	// get workspace folder
-	workspaceDir, err := agent.GetAgentWorkspaceDir(context, id)
-	if err != nil {
-		return nil, err
-	}
-
-	// read workspace config
-	out, err := os.ReadFile(filepath.Join(workspaceDir, config.WorkspaceConfigFile))
-	if err != nil {
-		return nil, err
-	}
-
-	// json unmarshal
-	workspaceInfo := &provider2.AgentWorkspaceInfo{}
-	err = json.Unmarshal(out, workspaceInfo)
-	if err != nil {
-		return nil, errors.Wrap(err, "parse workspace info")
-	}
-
-	workspaceInfo.Folder = agent.GetAgentWorkspaceContentDir(workspaceDir)
-	return workspaceInfo, nil
-}
-
-func writeWorkspaceInfo(workspaceInfoRaw string) (*provider2.AgentWorkspaceInfo, error) {
-	workspaceInfo, decoded, err := decodeWorkspaceInfo(workspaceInfoRaw)
-	if err != nil {
-		return nil, err
-	}
-
-	// write to workspace folder
-	workspaceDir, err := agent.CreateAgentWorkspaceDir(workspaceInfo.Workspace.Context, workspaceInfo.Workspace.ID)
-	if err != nil {
-		return nil, err
-	}
-
-	// write workspace config
-	err = os.WriteFile(filepath.Join(workspaceDir, config.WorkspaceConfigFile), []byte(decoded), 0666)
-	if err != nil {
-		return nil, fmt.Errorf("write workspace config file")
-	}
-
-	workspaceInfo.Folder = agent.GetAgentWorkspaceContentDir(workspaceDir)
-	return workspaceInfo, nil
-}
-
-func decodeWorkspaceInfo(workspaceInfoRaw string) (*provider2.AgentWorkspaceInfo, string, error) {
-	decoded, err := compress.Decompress(workspaceInfoRaw)
-	if err != nil {
-		return nil, "", errors.Wrap(err, "decode workspace info")
-	}
-
-	workspaceInfo := &provider2.AgentWorkspaceInfo{}
-	err = json.Unmarshal([]byte(decoded), workspaceInfo)
-	if err != nil {
-		return nil, "", errors.Wrap(err, "parse workspace info")
-	}
-
-	return workspaceInfo, decoded, nil
 }
 
 func DownloadLocalFolder(ctx context.Context, workspaceDir string, client tunnel.TunnelClient, log log.Logger) error {

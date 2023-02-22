@@ -1,8 +1,9 @@
-package agent
+package workspace
 
 import (
 	"context"
 	"github.com/loft-sh/devpod/cmd/flags"
+	"github.com/loft-sh/devpod/pkg/agent"
 	"github.com/loft-sh/devpod/pkg/log"
 	provider2 "github.com/loft-sh/devpod/pkg/provider"
 	"github.com/pkg/errors"
@@ -23,7 +24,7 @@ func NewStartCmd(flags *flags.GlobalFlags) *cobra.Command {
 	}
 	startCmd := &cobra.Command{
 		Use:   "start",
-		Short: "Starts up a new workspace on the server",
+		Short: "Starts a workspace on the server",
 		Args:  cobra.NoArgs,
 		RunE: func(_ *cobra.Command, _ []string) error {
 			return cmd.Run(context.Background())
@@ -36,13 +37,13 @@ func NewStartCmd(flags *flags.GlobalFlags) *cobra.Command {
 
 func (cmd *StartCmd) Run(ctx context.Context) error {
 	// get workspace
-	workspaceInfo, err := readAgentWorkspaceInfo(cmd.Context, cmd.ID)
+	workspaceInfo, err := agent.ReadAgentWorkspaceInfo(cmd.Context, cmd.ID)
 	if err != nil {
 		return err
 	}
 
 	// check if we need to become root
-	shouldExit, err := rerunAsRoot(workspaceInfo)
+	shouldExit, err := agent.RerunAsRoot(workspaceInfo)
 	if err != nil {
 		return errors.Wrap(err, "rerun as root")
 	} else if shouldExit {

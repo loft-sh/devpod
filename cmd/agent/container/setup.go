@@ -1,8 +1,9 @@
-package agent
+package container
 
 import (
 	"encoding/json"
 	"github.com/loft-sh/devpod/cmd/flags"
+	"github.com/loft-sh/devpod/pkg/agent"
 	"github.com/loft-sh/devpod/pkg/compress"
 	"github.com/loft-sh/devpod/pkg/devcontainer/config"
 	"github.com/loft-sh/devpod/pkg/devcontainer/setup"
@@ -10,7 +11,10 @@ import (
 	"github.com/loft-sh/devpod/pkg/ide/vscode"
 	"github.com/loft-sh/devpod/pkg/log"
 	provider2 "github.com/loft-sh/devpod/pkg/provider"
+	"github.com/loft-sh/devpod/pkg/single"
 	"github.com/spf13/cobra"
+	"os"
+	"os/exec"
 	"strconv"
 )
 
@@ -26,7 +30,7 @@ type SetupContainerCmd struct {
 func NewSetupContainerCmd() *cobra.Command {
 	cmd := &SetupContainerCmd{}
 	setupContainerCmd := &cobra.Command{
-		Use:   "setup-container",
+		Use:   "setup",
 		Short: "Sets up a container",
 		Args:  cobra.NoArgs,
 		RunE:  cmd.Run,
@@ -40,7 +44,7 @@ func NewSetupContainerCmd() *cobra.Command {
 // Run runs the command logic
 func (cmd *SetupContainerCmd) Run(_ *cobra.Command, _ []string) error {
 	log.Default.Debugf("Start setting up container...")
-	workspaceInfo, _, err := decodeWorkspaceInfo(cmd.WorkspaceInfo)
+	workspaceInfo, _, err := agent.DecodeWorkspaceInfo(cmd.WorkspaceInfo)
 	if err != nil {
 		return err
 	}
@@ -66,6 +70,22 @@ func (cmd *SetupContainerCmd) Run(_ *cobra.Command, _ []string) error {
 	err = installIDE(setupInfo, workspaceInfo, log.Default)
 	if err != nil {
 		return err
+	}
+
+	// start container daemon if necessary
+	if workspaceInfo.Workspace.Provider.Mode == provider2.ModeSingle && workspaceInfo.Workspace.Provider.Agent.Timeout != "" {
+		err = single.Single("devpod.daemon.pid", func() (*exec.Cmd, error) {
+			log.Default.Debugf("Start DevPod Container Daemon with Inactivity Timeout %s", workspaceInfo.Workspace.Provider.Agent.Timeout)
+			binaryPath, err := os.Executable()
+			if err != nil {
+				return nil, err
+			}
+
+			return exec.Command(binaryPath, "agent", "container", "daemon", "--timeout", workspaceInfo.Workspace.Provider.Agent.Timeout), nil
+		})
+		if err != nil {
+			return err
+		}
 	}
 
 	return nil

@@ -186,7 +186,7 @@ func devPodUpServer(ctx context.Context, provider provider2.ServerProvider, work
 	// create container etc.
 	log.Infof("Creating devcontainer...")
 	defer log.Debugf("Done creating devcontainer")
-	command := fmt.Sprintf("%s agent up --workspace-info '%s'", workspace.Provider.Agent.Path, workspaceInfo)
+	command := fmt.Sprintf("%s agent workspace up --workspace-info '%s'", workspace.Provider.Agent.Path, workspaceInfo)
 	if log.GetLevel() == logrus.DebugLevel {
 		command += " --debug"
 	}

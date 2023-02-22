@@ -1,4 +1,4 @@
-package agent
+package workspace
 
 import (
 	"context"
@@ -51,13 +51,13 @@ func (cmd *StatusCmd) Run(ctx context.Context) error {
 	}
 
 	// get workspace
-	workspaceInfo, err := readAgentWorkspaceInfo(cmd.Context, cmd.ID)
+	workspaceInfo, err := agent.ReadAgentWorkspaceInfo(cmd.Context, cmd.ID)
 	if err != nil {
 		return err
 	}
 
 	// check if we need to become root
-	shouldExit, err := rerunAsRoot(workspaceInfo)
+	shouldExit, err := agent.RerunAsRoot(workspaceInfo)
 	if err != nil {
 		return errors.Wrap(err, "rerun as root")
 	} else if shouldExit {

@@ -5,7 +5,6 @@ import (
 	"github.com/loft-sh/devpod/pkg/agent"
 	"github.com/loft-sh/devpod/pkg/devcontainer"
 	"github.com/loft-sh/devpod/pkg/docker"
-	"github.com/loft-sh/devpod/pkg/log"
 	"github.com/spf13/cobra"
 	"os"
 )
@@ -39,13 +38,13 @@ func (cmd *ContainerTunnelCmd) Run(_ *cobra.Command, _ []string) error {
 	dockerHelper := docker.DockerHelper{DockerCommand: "docker"}
 
 	// get workspace info
-	workspaceInfo, err := writeWorkspaceInfo(cmd.WorkspaceInfo)
+	workspaceInfo, err := agent.WriteWorkspaceInfo(cmd.WorkspaceInfo)
 	if err != nil {
 		return err
 	}
 
 	// check if we need to become root
-	shouldExit, err := rerunAsRoot(workspaceInfo)
+	shouldExit, err := agent.RerunAsRoot(workspaceInfo)
 	if err != nil {
 		_, _ = fmt.Fprintf(os.Stderr, "Rerun as root: %v", err)
 		os.Exit(1)
@@ -62,7 +61,7 @@ func (cmd *ContainerTunnelCmd) Run(_ *cobra.Command, _ []string) error {
 	}
 
 	// create tunnel into container.
-	err = dockerHelper.Tunnel(agent.RemoteDevPodHelperLocation, agent.DefaultAgentDownloadURL, containerDetails.Id, cmd.Token, os.Stdin, os.Stdout, os.Stderr, log.Default.ErrorStreamOnly())
+	err = dockerHelper.Tunnel(agent.RemoteDevPodHelperLocation, agent.DefaultAgentDownloadURL, containerDetails.Id, cmd.Token, os.Stdin, os.Stdout, os.Stderr, true)
 	if err != nil {
 		return err
 	}

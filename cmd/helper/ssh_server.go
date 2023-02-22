@@ -4,6 +4,7 @@ import (
 	"encoding/base64"
 	"fmt"
 	"github.com/gliderlabs/ssh"
+	"github.com/loft-sh/devpod/pkg/agent"
 	helperssh "github.com/loft-sh/devpod/pkg/ssh/server"
 	"github.com/loft-sh/devpod/pkg/ssh/server/port"
 	"github.com/loft-sh/devpod/pkg/ssh/server/stderrlog"
@@ -12,13 +13,15 @@ import (
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
 	"os"
+	"time"
 )
 
 // SSHServerCmd holds the ssh server cmd flags
 type SSHServerCmd struct {
-	Token   string
-	Address string
-	Stdio   bool
+	Token         string
+	Address       string
+	Stdio         bool
+	TrackActivity bool
 }
 
 // NewSSHServerCmd creates a new ssh command
@@ -33,6 +36,7 @@ func NewSSHServerCmd() *cobra.Command {
 
 	sshCmd.Flags().StringVar(&cmd.Address, "address", fmt.Sprintf("0.0.0.0:%d", helperssh.DefaultPort), "Address to listen to")
 	sshCmd.Flags().BoolVar(&cmd.Stdio, "stdio", false, "Will listen on stdout and stdin instead of an address")
+	sshCmd.Flags().BoolVar(&cmd.TrackActivity, "track-activity", false, "If enabled will write the last activity time to a file")
 	sshCmd.Flags().StringVar(&cmd.Token, "token", "", "Base64 encoded token to use")
 	return sshCmd
 }
@@ -82,6 +86,24 @@ func (cmd *SSHServerCmd) Run(_ *cobra.Command, _ []string) error {
 
 	// should we listen on stdout & stdin?
 	if cmd.Stdio {
+		if cmd.TrackActivity {
+			go func() {
+				err = os.WriteFile(agent.ContainerActivityFile, nil, os.ModePerm)
+				if err != nil {
+					fmt.Fprintf(os.Stderr, "Error writing file: %v\n", err)
+					return
+				}
+
+				for {
+					select {
+					case <-time.After(time.Second * 10):
+						now := time.Now()
+						_ = os.Chtimes(agent.ContainerActivityFile, now, now)
+					}
+				}
+			}()
+		}
+
 		lis := stdio.NewStdioListener(os.Stdin, os.Stdout, true)
 		return server.Serve(lis)
 	}
