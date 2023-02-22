@@ -8,14 +8,13 @@ import (
 	config "github.com/loft-sh/devpod/pkg/config"
 	"github.com/loft-sh/devpod/pkg/log"
 	"github.com/loft-sh/devpod/pkg/provider"
-	options2 "github.com/loft-sh/devpod/pkg/provider/options"
+	"github.com/loft-sh/devpod/pkg/provider/options"
 	"github.com/loft-sh/devpod/pkg/shell"
 	"github.com/loft-sh/devpod/pkg/types"
 	"github.com/pkg/errors"
 	"io"
 	"os"
 	"os/exec"
-	"reflect"
 	"strings"
 )
 
@@ -193,13 +192,13 @@ func runProviderCommand(ctx context.Context, name string, command types.StrArray
 
 	// resolve options
 	if workspace != nil {
-		err = resolveOptions(ctx, name, "", workspace, prov)
+		workspace, err = options.ResolveAndSaveOptions(ctx, name, "", workspace, prov)
 		if err != nil {
 			return err
 		}
 		defer func() {
 			if err == nil {
-				err = resolveOptions(ctx, "", name, workspace, prov)
+				_, err = options.ResolveAndSaveOptions(ctx, "", name, workspace, prov)
 			}
 		}()
 	}
@@ -245,27 +244,6 @@ func RunCommand(ctx context.Context, command types.StrArray, workspace *provider
 	err = cmd.Run()
 	if err != nil {
 		return err
-	}
-
-	return nil
-}
-
-func resolveOptions(ctx context.Context, beforeStage, afterStage string, workspace *provider.Workspace, provider provider.Provider) error {
-	var err error
-
-	// resolve options
-	beforeOptions := workspace.Provider.Options
-	workspace.Provider.Options, err = options2.ResolveOptions(ctx, beforeStage, afterStage, workspace, provider)
-	if err != nil {
-		return errors.Wrap(err, "resolve options")
-	}
-
-	// save workspace config
-	if workspace.ID != "" && !reflect.DeepEqual(workspace.Provider.Options, beforeOptions) {
-		err = config.SaveWorkspaceConfig(workspace)
-		if err != nil {
-			return err
-		}
 	}
 
 	return nil

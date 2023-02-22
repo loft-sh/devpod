@@ -115,8 +115,9 @@ func ResolveWorkspace(ctx context.Context, devPodConfig *config.Config, ide *pro
 
 func resolve(ctx context.Context, defaultProvider *ProviderWithOptions, devPodConfig *config.Config, name, workspaceID, workspaceFolder string, isLocalPath bool) (*provider2.Workspace, provider2.Provider, error) {
 	// resolve options
-	options, err := options2.ResolveOptions(ctx, "", "", &provider2.Workspace{
+	workspace, err := options2.ResolveOptions(ctx, "", "", &provider2.Workspace{
 		Provider: provider2.WorkspaceProviderConfig{
+			Name:    defaultProvider.Provider.Name(),
 			Options: defaultProvider.Options,
 		},
 	}, defaultProvider.Provider)
@@ -130,23 +131,13 @@ func resolve(ctx context.Context, defaultProvider *ProviderWithOptions, devPodCo
 		return nil, nil, errors.Wrap(err, "create ssh keys")
 	}
 
-	// get agent config
-	agentConfig, err := defaultProvider.Provider.AgentConfig()
-	if err != nil {
-		return nil, nil, err
-	}
-
 	// is local folder?
 	if isLocalPath {
 		return &provider2.Workspace{
-			ID:      workspaceID,
-			Folder:  workspaceFolder,
-			Context: devPodConfig.DefaultContext,
-			Provider: provider2.WorkspaceProviderConfig{
-				Name:    defaultProvider.Provider.Name(),
-				Options: options,
-				Agent:   *agentConfig,
-			},
+			ID:       workspaceID,
+			Folder:   workspaceFolder,
+			Context:  devPodConfig.DefaultContext,
+			Provider: workspace.Provider,
 			Source: provider2.WorkspaceSource{
 				LocalFolder: name,
 			},
@@ -157,14 +148,10 @@ func resolve(ctx context.Context, defaultProvider *ProviderWithOptions, devPodCo
 	gitRepository := normalizeGitRepository(name)
 	if strings.HasSuffix(name, ".git") || pingRepository(gitRepository) {
 		return &provider2.Workspace{
-			ID:      workspaceID,
-			Folder:  workspaceFolder,
-			Context: devPodConfig.DefaultContext,
-			Provider: provider2.WorkspaceProviderConfig{
-				Name:    defaultProvider.Provider.Name(),
-				Options: options,
-				Agent:   *agentConfig,
-			},
+			ID:       workspaceID,
+			Folder:   workspaceFolder,
+			Context:  devPodConfig.DefaultContext,
+			Provider: workspace.Provider,
 			Source: provider2.WorkspaceSource{
 				GitRepository: gitRepository,
 			},
@@ -175,14 +162,10 @@ func resolve(ctx context.Context, defaultProvider *ProviderWithOptions, devPodCo
 	_, err = image.GetImage(name)
 	if err == nil {
 		return &provider2.Workspace{
-			ID:      workspaceID,
-			Folder:  workspaceFolder,
-			Context: devPodConfig.DefaultContext,
-			Provider: provider2.WorkspaceProviderConfig{
-				Name:    defaultProvider.Provider.Name(),
-				Options: options,
-				Agent:   *agentConfig,
-			},
+			ID:       workspaceID,
+			Folder:   workspaceFolder,
+			Context:  devPodConfig.DefaultContext,
+			Provider: workspace.Provider,
 			Source: provider2.WorkspaceSource{
 				Image: name,
 			},
@@ -300,7 +283,7 @@ func loadExistingWorkspace(ctx context.Context, workspaceID string, devPodConfig
 
 	// resolve options
 	beforeOptions := workspaceConfig.Provider.Options
-	workspaceConfig.Provider.Options, err = options2.ResolveOptions(ctx, "", "", workspaceConfig, providerWithOptions.Provider)
+	workspaceConfig, err = options2.ResolveOptions(ctx, "", "", workspaceConfig, providerWithOptions.Provider)
 	if err != nil {
 		return nil, nil, errors.Wrap(err, "resolve options")
 	}

@@ -8,6 +8,7 @@ import (
 	config2 "github.com/loft-sh/devpod/pkg/devcontainer/config"
 	"github.com/loft-sh/devpod/pkg/log"
 	"github.com/loft-sh/devpod/pkg/provider"
+	"github.com/loft-sh/devpod/pkg/provider/options"
 	"github.com/loft-sh/devpod/pkg/ssh"
 	"github.com/loft-sh/devpod/pkg/types"
 	"github.com/sirupsen/logrus"
@@ -35,17 +36,12 @@ func (s *serverProvider) CreateSingle(ctx context.Context, originalWorkspace *pr
 }
 
 func (s *serverProvider) DeleteSingle(ctx context.Context, workspace *provider.Workspace, options provider.DeleteOptions) error {
-	agentConfig, err := s.AgentConfig()
-	if err != nil {
-		return err
-	}
-
 	writer := s.log.Writer(logrus.InfoLevel, false)
 	defer writer.Close()
 
 	s.log.Infof("Deleting container...")
-	err = s.CommandSingle(ctx, workspace, provider.CommandOptions{
-		Command: fmt.Sprintf("%s agent delete --id %s --context %s", agentConfig.Path, workspace.ID, workspace.Context),
+	err := s.CommandSingle(ctx, workspace, provider.CommandOptions{
+		Command: fmt.Sprintf("%s agent delete --id %s --context %s", workspace.Provider.Agent.Path, workspace.ID, workspace.Context),
 		Stdout:  writer,
 		Stderr:  writer,
 	})
@@ -72,19 +68,14 @@ func (s *serverProvider) StartSingle(ctx context.Context, originalWorkspace *pro
 }
 
 func (s *serverProvider) StopSingle(ctx context.Context, workspace *provider.Workspace, options provider.StopOptions) error {
-	agentConfig, err := s.AgentConfig()
-	if err != nil {
-		return err
-	}
-
 	writer := s.log.Writer(logrus.InfoLevel, false)
 	defer writer.Close()
 
 	// TODO: stop whole machine if there is no other workspace container running anymore
 
 	s.log.Infof("Stopping container...")
-	err = s.CommandSingle(ctx, workspace, provider.CommandOptions{
-		Command: fmt.Sprintf("%s agent stop --id %s --context %s", agentConfig.Path, workspace.ID, workspace.Context),
+	err := s.CommandSingle(ctx, workspace, provider.CommandOptions{
+		Command: fmt.Sprintf("%s agent stop --id %s --context %s", workspace.Provider.Agent.Path, workspace.ID, workspace.Context),
 		Stdout:  writer,
 		Stderr:  writer,
 	})
@@ -153,13 +144,13 @@ func runProviderCommandSingle(ctx context.Context, name string, command types.St
 
 	// resolve options
 	if originalWorkspace != nil {
-		err = resolveOptions(ctx, name, "", originalWorkspace, prov)
+		originalWorkspace, err = options.ResolveAndSaveOptions(ctx, name, "", originalWorkspace, prov)
 		if err != nil {
 			return err
 		}
 		defer func() {
 			if err == nil {
-				err = resolveOptions(ctx, "", name, originalWorkspace, prov)
+				_, err = options.ResolveAndSaveOptions(ctx, "", name, originalWorkspace, prov)
 			}
 		}()
 	}

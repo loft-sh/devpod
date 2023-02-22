@@ -27,11 +27,12 @@ func NewAgentCmd(flags *flags.GlobalFlags) *cobra.Command {
 
 	agentCmd.AddCommand(NewUpCmd(flags))
 	agentCmd.AddCommand(NewContainerTunnelCmd())
-	agentCmd.AddCommand(NewWatchCmd())
+	agentCmd.AddCommand(NewDaemonCmd())
 	agentCmd.AddCommand(NewDeleteCmd(flags))
 	agentCmd.AddCommand(NewStopCmd(flags))
 	agentCmd.AddCommand(NewStartCmd(flags))
 	agentCmd.AddCommand(NewStatusCmd(flags))
 	agentCmd.AddCommand(NewSetupContainerCmd())
+	agentCmd.AddCommand(NewUpdateConfigCmd(flags))
 	return agentCmd
 }

@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"github.com/loft-sh/devpod/pkg/compress"
 	"os"
+	"path/filepath"
 	"strings"
 )
 
@@ -81,13 +82,13 @@ func ToOptions(workspace *Workspace) (map[string]string, error) {
 
 	// devpod binary
 	devPodBinary, _ := os.Executable()
-	retVars[DEVPOD] = devPodBinary
+	retVars[DEVPOD] = filepath.ToSlash(devPodBinary)
 	return retVars, nil
 }
 
 func NewAgentWorkspaceInfo(workspace *Workspace) (string, error) {
 	// trim options that don't exist
-	workspace = cloneWorkspace(workspace)
+	workspace = CloneWorkspace(workspace)
 	if workspace.Provider.Options != nil {
 		for name, option := range workspace.Provider.Options {
 			if option.Local {
@@ -107,10 +108,11 @@ func NewAgentWorkspaceInfo(workspace *Workspace) (string, error) {
 	return compress.Compress(string(out))
 }
 
-func cloneWorkspace(workspace *Workspace) *Workspace {
+func CloneWorkspace(workspace *Workspace) *Workspace {
 	out, _ := json.Marshal(workspace)
 	ret := &Workspace{}
 	_ = json.Unmarshal(out, ret)
+	ret.Origin = workspace.Origin
 	return ret
 }
 

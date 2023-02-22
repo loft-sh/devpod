@@ -3,14 +3,11 @@ package agent
 import (
 	"fmt"
 	"github.com/loft-sh/devpod/pkg/agent"
-	"github.com/loft-sh/devpod/pkg/config"
 	"github.com/loft-sh/devpod/pkg/devcontainer"
 	"github.com/loft-sh/devpod/pkg/docker"
 	"github.com/loft-sh/devpod/pkg/log"
 	"github.com/spf13/cobra"
 	"os"
-	"path/filepath"
-	"time"
 )
 
 // ContainerTunnelCmd holds the ws-tunnel cmd flags
@@ -42,7 +39,7 @@ func (cmd *ContainerTunnelCmd) Run(_ *cobra.Command, _ []string) error {
 	dockerHelper := docker.DockerHelper{DockerCommand: "docker"}
 
 	// get workspace info
-	workspaceInfo, err := getWorkspaceInfo(cmd.WorkspaceInfo)
+	workspaceInfo, err := writeWorkspaceInfo(cmd.WorkspaceInfo)
 	if err != nil {
 		return err
 	}
@@ -63,17 +60,6 @@ func (cmd *ContainerTunnelCmd) Run(_ *cobra.Command, _ []string) error {
 	if err != nil {
 		return err
 	}
-
-	// as long as we are running touch the workspace file
-	go func() {
-		for {
-			select {
-			case <-time.After(time.Second * 60):
-				currentTime := time.Now()
-				_ = os.Chtimes(filepath.Join(workspaceInfo.Folder, "..", config.WorkspaceConfigFile), currentTime, currentTime)
-			}
-		}
-	}()
 
 	// create tunnel into container.
 	err = dockerHelper.Tunnel(agent.RemoteDevPodHelperLocation, agent.DefaultAgentDownloadURL, containerDetails.Id, cmd.Token, os.Stdin, os.Stdout, os.Stderr, log.Default.ErrorStreamOnly())
