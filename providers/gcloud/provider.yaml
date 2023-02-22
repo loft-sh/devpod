@@ -41,11 +41,11 @@ agent:
       if [ "${DELETE_ON_INACTIVITY}" = "true" ]; then
         ${DEVPOD} helper http request -X DELETE \
                                     -H "Authorization: Bearer ${GCLOUD_TOKEN}" \
-                                    https://compute.googleapis.com/compute/v1/projects/${PROJECT}/zones/${ZONE}/instances/devpod-${WORKSPACE_ID}
+                                    https://compute.googleapis.com/compute/v1/projects/${PROJECT}/zones/${ZONE}/instances/devpod-${SERVER_ID}
       else 
         ${DEVPOD} helper http request -X POST \
                                     -H "Authorization: Bearer ${GCLOUD_TOKEN}" \
-                                    https://compute.googleapis.com/compute/v1/projects/${PROJECT}/zones/${ZONE}/instances/devpod-${WORKSPACE_ID}/stop
+                                    https://compute.googleapis.com/compute/v1/projects/${PROJECT}/zones/${ZONE}/instances/devpod-${SERVER_ID}/stop
       fi
 exec:
   init: |-

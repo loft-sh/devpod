@@ -2,7 +2,7 @@ package config
 
 import (
 	"github.com/ghodss/yaml"
-	"github.com/loft-sh/devpod/pkg/provider"
+	"github.com/loft-sh/devpod/pkg/types"
 	"github.com/pkg/errors"
 	"os"
 	"path/filepath"
@@ -25,12 +25,19 @@ type ConfigContext struct {
 }
 
 type ConfigProvider struct {
-	// Mode specifies if DevPod should create a single server for all
-	// workspaces or one server for each workspace.
-	Mode provider.ProviderMode `json:"mode,omitempty"`
-
 	// Options are the configured provider options
-	Options map[string]provider.OptionValue `json:"options,omitempty"`
+	Options map[string]OptionValue `json:"options,omitempty"`
+}
+
+type OptionValue struct {
+	// Value is the value of the option
+	Value string `json:"value,omitempty"`
+
+	// Expires is the time when this value will expire
+	Expires *types.Time `json:"retrieved,omitempty"`
+
+	// Local determines if this option should be local only
+	Local bool `json:"local,omitempty"`
 }
 
 var ConfigFile = "config.yaml"

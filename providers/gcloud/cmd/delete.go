@@ -50,13 +50,5 @@ func (cmd *DeleteCmd) Run(ctx context.Context, provider *gcloudProvider, workspa
 }
 
 func getName(workspace *provider.Workspace) string {
-	return "devpod-" + workspace.ID
-}
-
-func withDefault[V int | string](val V, other V) V {
-	var t V
-	if val == t {
-		return other
-	}
-	return val
+	return "devpod-" + workspace.Server.ID
 }

@@ -20,6 +20,9 @@ const (
 	WORKSPACE_LOCAL_FOLDER   = "WORKSPACE_LOCAL_FOLDER"
 	WORKSPACE_IMAGE          = "WORKSPACE_IMAGE"
 	WORKSPACE_PROVIDER       = "WORKSPACE_PROVIDER"
+	SERVER_ID                = "SERVER_ID"
+	SERVER_CONTEXT           = "SERVER_CONTEXT"
+	SERVER_FOLDER            = "SERVER_FOLDER"
 )
 
 func FromEnvironment() *Workspace {
@@ -33,6 +36,9 @@ func FromEnvironment() *Workspace {
 			LocalFolder:   os.Getenv(WORKSPACE_LOCAL_FOLDER),
 			Image:         os.Getenv(WORKSPACE_IMAGE),
 		},
+		Server: WorkspaceServerConfig{
+			ID: os.Getenv(SERVER_ID),
+		},
 		Provider: WorkspaceProviderConfig{
 			Name: os.Getenv(WORKSPACE_PROVIDER),
 		},
@@ -42,6 +48,7 @@ func FromEnvironment() *Workspace {
 }
 
 func ToOptions(workspace *Workspace) (map[string]string, error) {
+	var err error
 	retVars := map[string]string{}
 	if workspace == nil {
 		return retVars, nil
@@ -53,10 +60,11 @@ func ToOptions(workspace *Workspace) (map[string]string, error) {
 		retVars[WORKSPACE_ID] = workspace.ID
 	}
 	if workspace.Folder != "" {
-		retVars[WORKSPACE_FOLDER] = workspace.Folder
+		retVars[WORKSPACE_FOLDER] = filepath.ToSlash(workspace.Folder)
 	}
 	if workspace.Context != "" {
 		retVars[WORKSPACE_CONTEXT] = workspace.Context
+		retVars[SERVER_CONTEXT] = workspace.Context
 	}
 	if workspace.Origin != "" {
 		retVars[WORKSPACE_ORIGIN] = workspace.Origin
@@ -78,6 +86,13 @@ func ToOptions(workspace *Workspace) (map[string]string, error) {
 	}
 	if workspace.Provider.Name != "" {
 		retVars[WORKSPACE_PROVIDER] = workspace.Provider.Name
+	}
+	if workspace.Server.ID != "" {
+		retVars[SERVER_ID] = workspace.Server.ID
+		retVars[SERVER_FOLDER], err = GetServerDir(workspace.Context, workspace.Server.ID)
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	// devpod binary

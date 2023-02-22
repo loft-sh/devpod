@@ -17,7 +17,7 @@ var provideWorkspaceArgErr = fmt.Errorf("please provide a workspace name. E.g. '
 type ProviderWithOptions struct {
 	Provider provider2.Provider
 	Config   *provider2.ProviderConfig
-	Options  map[string]provider2.OptionValue
+	Options  map[string]config.OptionValue
 }
 
 // LoadProviders loads all known providers for the given context and
@@ -71,7 +71,7 @@ func LoadAllProviders(devPodConfig *config.Config, log log.Logger) (map[string]*
 		}
 
 		// try to load provider config
-		providerDir, err := config.GetProviderDir(devPodConfig.DefaultContext, providerName)
+		providerDir, err := provider2.GetProviderDir(devPodConfig.DefaultContext, providerName)
 		if err != nil {
 			log.Errorf("Error retrieving provider directory: %v", err)
 			continue

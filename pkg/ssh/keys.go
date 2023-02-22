@@ -7,7 +7,7 @@ import (
 	"crypto/x509"
 	"encoding/base64"
 	"encoding/pem"
-	"github.com/loft-sh/devpod/pkg/config"
+	"github.com/loft-sh/devpod/pkg/provider"
 	"github.com/mitchellh/go-homedir"
 	"os"
 	"path/filepath"
@@ -70,7 +70,7 @@ func makeSSHKeyPair() (string, string, error) {
 }
 
 func GetPrivateKeyRaw(context, workspaceID string) ([]byte, error) {
-	workspaceDir, err := config.GetWorkspaceDir(context, workspaceID)
+	workspaceDir, err := provider.GetWorkspaceDir(context, workspaceID)
 	if err != nil {
 		return nil, err
 	}
@@ -108,7 +108,7 @@ func GetTempPrivateKeyRaw() ([]byte, error) {
 }
 
 func GetHostKey(context, workspaceID string) (string, error) {
-	workspaceDir, err := config.GetWorkspaceDir(context, workspaceID)
+	workspaceDir, err := provider.GetWorkspaceDir(context, workspaceID)
 	if err != nil {
 		return "", err
 	}
@@ -228,7 +228,7 @@ func getPublicKeyBase(dir string) (string, error) {
 }
 
 func GetPublicKey(context, workspaceID string) (string, error) {
-	workspaceDir, err := config.GetWorkspaceDir(context, workspaceID)
+	workspaceDir, err := provider.GetWorkspaceDir(context, workspaceID)
 	if err != nil {
 		return "", err
 	}

@@ -2,7 +2,7 @@ package ssh
 
 import (
 	"fmt"
-	"github.com/loft-sh/devpod/pkg/config"
+	"github.com/loft-sh/devpod/pkg/provider"
 	"io"
 	"os"
 	"path/filepath"
@@ -104,7 +104,7 @@ func addHost(path, host, user, context, workspace, command string) (string, erro
 	}
 
 	// get private key path
-	workspaceDir, err := config.GetWorkspaceDir(context, workspace)
+	workspaceDir, err := provider.GetWorkspaceDir(context, workspace)
 	if err != nil {
 		return "", err
 	}

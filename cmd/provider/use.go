@@ -109,7 +109,7 @@ func (cmd *UseCmd) Run(ctx context.Context, providerName string) error {
 
 	// download provider binaries
 	if len(providerWithOptions.Config.Binaries) > 0 {
-		binariesDir, err := config.GetProviderBinariesDir(devPodConfig.DefaultContext, providerWithOptions.Config.Name)
+		binariesDir, err := provider2.GetProviderBinariesDir(devPodConfig.DefaultContext, providerWithOptions.Config.Name)
 		if err != nil {
 			return err
 		}
@@ -126,17 +126,10 @@ func (cmd *UseCmd) Run(ctx context.Context, providerName string) error {
 		return err
 	}
 
-	// check provider mode
-	mode := provider2.ModeMultiple
-	if cmd.Single || len(providerWithOptions.Config.Exec.Create) == 0 {
-		mode = provider2.ModeSingle
-	}
-
 	// set options
 	defaultContext := devPodConfig.Contexts[devPodConfig.DefaultContext]
 	defaultContext.DefaultProvider = providerWithOptions.Provider.Name()
 	defaultContext.Providers[providerName] = &config.ConfigProvider{
-		Mode:    mode,
 		Options: workspaceConfig.Provider.Options,
 	}
 
@@ -173,7 +166,7 @@ func ensureRequired(workspace *provider2.Workspace, provider provider2.Provider,
 				return err
 			}
 
-			workspace.Provider.Options[optionName] = provider2.OptionValue{
+			workspace.Provider.Options[optionName] = config.OptionValue{
 				Value: answer,
 				Local: val.Local,
 			}
@@ -183,7 +176,7 @@ func ensureRequired(workspace *provider2.Workspace, provider provider2.Provider,
 	return nil
 }
 
-func parseOptions(provider provider2.Provider, options []string) (map[string]provider2.OptionValue, error) {
+func parseOptions(provider provider2.Provider, options []string) (map[string]config.OptionValue, error) {
 	providerOptions := provider.Options()
 	if providerOptions == nil {
 		providerOptions = map[string]*provider2.ProviderOption{}
@@ -194,7 +187,7 @@ func parseOptions(provider provider2.Provider, options []string) (map[string]pro
 		allowedOptions = append(allowedOptions, optionName)
 	}
 
-	retMap := map[string]provider2.OptionValue{}
+	retMap := map[string]config.OptionValue{}
 	for _, option := range options {
 		splitted := strings.Split(option, "=")
 		if len(splitted) == 1 {
@@ -236,7 +229,7 @@ func parseOptions(provider provider2.Provider, options []string) (map[string]pro
 			}
 		}
 
-		retMap[key] = provider2.OptionValue{
+		retMap[key] = config.OptionValue{
 			Value: value,
 		}
 	}

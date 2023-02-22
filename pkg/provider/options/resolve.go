@@ -34,7 +34,7 @@ func ResolveAndSaveOptions(ctx context.Context, beforeStage, afterStage string, 
 
 	// save workspace config
 	if workspace.ID != "" && !reflect.DeepEqual(workspace.Provider.Options, beforeOptions) {
-		err = config.SaveWorkspaceConfig(workspace)
+		err = provider2.SaveWorkspaceConfig(workspace)
 		if err != nil {
 			return workspace, err
 		}
@@ -49,7 +49,7 @@ func ResolveOptions(ctx context.Context, beforeStage, afterStage string, workspa
 		options = map[string]*provider2.ProviderOption{}
 	}
 	if workspace != nil && workspace.Provider.Options == nil {
-		workspace.Provider.Options = map[string]provider2.OptionValue{}
+		workspace.Provider.Options = map[string]config.OptionValue{}
 	}
 
 	// create a new graph
@@ -105,7 +105,7 @@ func resolveAgentConfig(workspace *provider2.Workspace, provider provider2.Provi
 	return *agentConfig, nil
 }
 
-func resolveOptions(ctx context.Context, g *graph.Graph, beforeStage, afterStage string, options map[string]*provider2.ProviderOption, workspace *provider2.Workspace) (map[string]provider2.OptionValue, error) {
+func resolveOptions(ctx context.Context, g *graph.Graph, beforeStage, afterStage string, options map[string]*provider2.ProviderOption, workspace *provider2.Workspace) (map[string]config.OptionValue, error) {
 	// find out options we need to resolve
 	resolveOptions := map[string]bool{}
 	for optionName, option := range options {
@@ -124,7 +124,7 @@ func resolveOptions(ctx context.Context, g *graph.Graph, beforeStage, afterStage
 	}
 
 	// resolve options
-	resolvedOptions := map[string]provider2.OptionValue{}
+	resolvedOptions := map[string]config.OptionValue{}
 	if workspace != nil {
 		for optionName, v := range workspace.Provider.Options {
 			if resolveOptions[optionName] {
@@ -147,7 +147,7 @@ func resolveOptions(ctx context.Context, g *graph.Graph, beforeStage, afterStage
 	return resolvedOptions, nil
 }
 
-func resolveOption(ctx context.Context, g *graph.Graph, optionName string, resolveOptions map[string]bool, resolvedOptions map[string]provider2.OptionValue, workspace *provider2.Workspace) error {
+func resolveOption(ctx context.Context, g *graph.Graph, optionName string, resolveOptions map[string]bool, resolvedOptions map[string]config.OptionValue, workspace *provider2.Workspace) error {
 	node := g.Nodes[optionName]
 
 	// are parents resolved?
@@ -182,7 +182,7 @@ func resolveOption(ctx context.Context, g *graph.Graph, optionName string, resol
 			return err
 		}
 
-		resolvedOptions[optionName] = provider2.OptionValue{
+		resolvedOptions[optionName] = config.OptionValue{
 			Value: resolveDefaultValue(option.Default, resolved),
 			Local: option.Local,
 		}
@@ -194,19 +194,19 @@ func resolveOption(ctx context.Context, g *graph.Graph, optionName string, resol
 
 		resolvedOptions[optionName] = optionValue
 	} else {
-		resolvedOptions[optionName] = provider2.OptionValue{}
+		resolvedOptions[optionName] = config.OptionValue{}
 	}
 
 	return nil
 }
 
-func resolveFromCommand(ctx context.Context, option *provider2.ProviderOption, resolvedOptions map[string]provider2.OptionValue, workspace *provider2.Workspace) (provider2.OptionValue, error) {
+func resolveFromCommand(ctx context.Context, option *provider2.ProviderOption, resolvedOptions map[string]config.OptionValue, workspace *provider2.Workspace) (config.OptionValue, error) {
 	stdout := &bytes.Buffer{}
 	stderr := &bytes.Buffer{}
 	env := os.Environ()
 	resolved, err := toOptions(resolvedOptions, workspace)
 	if err != nil {
-		return provider2.OptionValue{}, err
+		return config.OptionValue{}, err
 	}
 
 	for k, v := range resolved {
@@ -215,14 +215,14 @@ func resolveFromCommand(ctx context.Context, option *provider2.ProviderOption, r
 
 	err = shell.ExecuteCommandWithShell(ctx, option.Command, nil, stdout, stderr, env)
 	if err != nil {
-		return provider2.OptionValue{}, errors.Wrapf(err, "run command: %s%s", stdout.String(), stderr.String())
+		return config.OptionValue{}, errors.Wrapf(err, "run command: %s%s", stdout.String(), stderr.String())
 	}
 
-	optionValue := provider2.OptionValue{Value: strings.TrimSpace(stdout.String()), Local: option.Local}
+	optionValue := config.OptionValue{Value: strings.TrimSpace(stdout.String()), Local: option.Local}
 	if option.Cache != "" {
 		duration, err := time.ParseDuration(option.Cache)
 		if err != nil {
-			return provider2.OptionValue{}, errors.Wrap(err, "parse cache duration")
+			return config.OptionValue{}, errors.Wrap(err, "parse cache duration")
 		}
 
 		expire := types.NewTime(time.Now().Add(duration))
@@ -235,7 +235,7 @@ func resolveFromCommand(ctx context.Context, option *provider2.ProviderOption, r
 	return optionValue, nil
 }
 
-func toOptions(resolvedOptions map[string]provider2.OptionValue, workspace *provider2.Workspace) (map[string]string, error) {
+func toOptions(resolvedOptions map[string]config.OptionValue, workspace *provider2.Workspace) (map[string]string, error) {
 	options := map[string]string{}
 	for k, v := range resolvedOptions {
 		options[k] = v.Value
