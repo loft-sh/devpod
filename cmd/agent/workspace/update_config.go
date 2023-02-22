@@ -1,8 +1,9 @@
-package agent
+package workspace
 
 import (
 	"context"
 	"github.com/loft-sh/devpod/cmd/flags"
+	"github.com/loft-sh/devpod/pkg/agent"
 	"github.com/spf13/cobra"
 )
 
@@ -33,7 +34,7 @@ func NewUpdateConfigCmd(flags *flags.GlobalFlags) *cobra.Command {
 
 func (cmd *UpdateConfigCmd) Run(ctx context.Context) error {
 	// get workspace
-	_, err := writeWorkspaceInfo(cmd.WorkspaceInfo)
+	_, err := agent.WriteWorkspaceInfo(cmd.WorkspaceInfo)
 	if err != nil {
 		return err
 	}

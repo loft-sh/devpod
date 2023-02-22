@@ -17,7 +17,7 @@ import (
 )
 
 func NewContainerTunnel(provider provider2.ServerProvider, workspace *provider2.Workspace, log log.Logger) *ContainerHandler {
-	updateConfigInterval := time.Second * 5
+	updateConfigInterval := time.Minute
 	return &ContainerHandler{
 		workspace:            workspace,
 		provider:             provider,
@@ -170,7 +170,7 @@ func (c *ContainerHandler) updateConfig(sshClient *ssh.Client, doneChan chan str
 
 			// update workspace remotely
 			buf := &bytes.Buffer{}
-			err = devssh.Run(sshClient, fmt.Sprintf("%s agent update-config --workspace-info '%s'", c.getWorkspace().Provider.Agent.Path, workspaceInfo), nil, buf, buf)
+			err = devssh.Run(sshClient, fmt.Sprintf("%s agent workspace update-config --workspace-info '%s'", c.getWorkspace().Provider.Agent.Path, workspaceInfo), nil, buf, buf)
 			if err != nil {
 				c.log.Errorf("Error updating remote workspace: %s%v", buf.String(), err)
 			}

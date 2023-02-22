@@ -1,6 +1,8 @@
 package agent
 
 import (
+	"github.com/loft-sh/devpod/cmd/agent/container"
+	"github.com/loft-sh/devpod/cmd/agent/workspace"
 	"github.com/loft-sh/devpod/cmd/flags"
 	"github.com/loft-sh/devpod/pkg/log"
 	"github.com/sirupsen/logrus"
@@ -25,14 +27,9 @@ func NewAgentCmd(flags *flags.GlobalFlags) *cobra.Command {
 		Hidden: true,
 	}
 
-	agentCmd.AddCommand(NewUpCmd(flags))
-	agentCmd.AddCommand(NewContainerTunnelCmd())
+	agentCmd.AddCommand(workspace.NewWorkspaceCmd(flags))
+	agentCmd.AddCommand(container.NewContainerCmd(flags))
 	agentCmd.AddCommand(NewDaemonCmd())
-	agentCmd.AddCommand(NewDeleteCmd(flags))
-	agentCmd.AddCommand(NewStopCmd(flags))
-	agentCmd.AddCommand(NewStartCmd(flags))
-	agentCmd.AddCommand(NewStatusCmd(flags))
-	agentCmd.AddCommand(NewSetupContainerCmd())
-	agentCmd.AddCommand(NewUpdateConfigCmd(flags))
+	agentCmd.AddCommand(NewContainerTunnelCmd())
 	return agentCmd
 }

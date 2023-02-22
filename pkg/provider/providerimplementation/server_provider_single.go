@@ -41,7 +41,7 @@ func (s *serverProvider) DeleteSingle(ctx context.Context, workspace *provider.W
 
 	s.log.Infof("Deleting container...")
 	err := s.CommandSingle(ctx, workspace, provider.CommandOptions{
-		Command: fmt.Sprintf("%s agent delete --id %s --context %s", workspace.Provider.Agent.Path, workspace.ID, workspace.Context),
+		Command: fmt.Sprintf("%s agent workspace delete --id %s --context %s", workspace.Provider.Agent.Path, workspace.ID, workspace.Context),
 		Stdout:  writer,
 		Stderr:  writer,
 	})
@@ -75,7 +75,7 @@ func (s *serverProvider) StopSingle(ctx context.Context, workspace *provider.Wor
 
 	s.log.Infof("Stopping container...")
 	err := s.CommandSingle(ctx, workspace, provider.CommandOptions{
-		Command: fmt.Sprintf("%s agent stop --id %s --context %s", workspace.Provider.Agent.Path, workspace.ID, workspace.Context),
+		Command: fmt.Sprintf("%s agent workspace stop --id %s --context %s", workspace.Provider.Agent.Path, workspace.ID, workspace.Context),
 		Stdout:  writer,
 		Stderr:  writer,
 	})
