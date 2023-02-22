@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"context"
 	"fmt"
-	config "github.com/loft-sh/devpod/pkg/config"
 	"github.com/loft-sh/devpod/pkg/log"
 	"github.com/loft-sh/devpod/pkg/provider"
 	"github.com/pkg/errors"
@@ -151,7 +150,7 @@ func (s *workspaceProvider) Status(ctx context.Context, workspace *provider.Work
 	// logic:
 	// - if workspace folder exists -> Running
 	// - if workspace folder doesn't exist -> NotFound
-	workspaceFolder, err := config.GetWorkspaceDir(workspace.Context, workspace.ID)
+	workspaceFolder, err := provider.GetWorkspaceDir(workspace.Context, workspace.ID)
 	if err != nil {
 		return "", err
 	}

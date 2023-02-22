@@ -1,4 +1,4 @@
-package cmd
+package server
 
 import (
 	"context"
@@ -6,7 +6,7 @@ import (
 	"github.com/loft-sh/devpod/pkg/config"
 	"github.com/loft-sh/devpod/pkg/log"
 	"github.com/loft-sh/devpod/pkg/log/table"
-	provider2 "github.com/loft-sh/devpod/pkg/provider"
+	"github.com/loft-sh/devpod/pkg/provider"
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
 	"os"
@@ -26,7 +26,7 @@ func NewListCmd(flags *flags.GlobalFlags) *cobra.Command {
 	}
 	listCmd := &cobra.Command{
 		Use:   "list",
-		Short: "Lists existing workspaces",
+		Short: "Lists existing servers",
 		RunE: func(_ *cobra.Command, args []string) error {
 			return cmd.Run(context.Background())
 		},
@@ -42,28 +42,27 @@ func (cmd *ListCmd) Run(ctx context.Context) error {
 		return err
 	}
 
-	workspaceDir, err := provider2.GetWorkspacesDir(devPodConfig.DefaultContext)
+	serverDir, err := provider.GetServersDir(devPodConfig.DefaultContext)
 	if err != nil {
 		return err
 	}
 
-	entries, err := os.ReadDir(workspaceDir)
+	entries, err := os.ReadDir(serverDir)
 	if err != nil && !os.IsNotExist(err) {
 		return err
 	}
 
 	tableEntries := [][]string{}
 	for _, entry := range entries {
-		workspaceConfig, err := provider2.LoadWorkspaceConfig(devPodConfig.DefaultContext, entry.Name())
+		serverConfig, err := provider.LoadServerConfig(devPodConfig.DefaultContext, entry.Name())
 		if err != nil {
 			return errors.Wrap(err, "load workspace config")
 		}
 
 		tableEntries = append(tableEntries, []string{
-			workspaceConfig.ID,
-			workspaceConfig.Source.String(),
-			workspaceConfig.Provider.Name,
-			time.Since(workspaceConfig.CreationTimestamp.Time).Round(1 * time.Second).String(),
+			serverConfig.ID,
+			serverConfig.Provider.Name,
+			time.Since(serverConfig.CreationTimestamp.Time).Round(1 * time.Second).String(),
 		})
 	}
 	sort.SliceStable(tableEntries, func(i, j int) bool {
@@ -72,7 +71,6 @@ func (cmd *ListCmd) Run(ctx context.Context) error {
 
 	table.PrintTable(log.Default, []string{
 		"Name",
-		"Source",
 		"Provider",
 		"Age",
 	}, tableEntries)

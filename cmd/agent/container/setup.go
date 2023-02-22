@@ -73,7 +73,7 @@ func (cmd *SetupContainerCmd) Run(_ *cobra.Command, _ []string) error {
 	}
 
 	// start container daemon if necessary
-	if workspaceInfo.Workspace.Provider.Mode == provider2.ModeSingle && workspaceInfo.Workspace.Provider.Agent.Timeout != "" {
+	if !workspaceInfo.Workspace.Server.AutoDelete && workspaceInfo.Workspace.Provider.Agent.Timeout != "" {
 		err = single.Single("devpod.daemon.pid", func() (*exec.Cmd, error) {
 			log.Default.Debugf("Start DevPod Container Daemon with Inactivity Timeout %s", workspaceInfo.Workspace.Provider.Agent.Timeout)
 			binaryPath, err := os.Executable()

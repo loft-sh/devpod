@@ -37,7 +37,7 @@ func GetWorkspace(ctx context.Context, devPodConfig *config.Config, ide *provide
 	workspaceID := ToWorkspaceID(name)
 
 	// already exists?
-	if !config.WorkspaceExists(devPodConfig.DefaultContext, workspaceID) {
+	if !provider2.WorkspaceExists(devPodConfig.DefaultContext, workspaceID) {
 		return nil, nil, fmt.Errorf("workspace %s doesn't exist", workspaceID)
 	}
 
@@ -64,14 +64,14 @@ func ResolveWorkspace(ctx context.Context, devPodConfig *config.Config, ide *pro
 
 	// check if desired id already exists
 	if desiredID != "" {
-		if config.WorkspaceExists(devPodConfig.DefaultContext, desiredID) {
+		if provider2.WorkspaceExists(devPodConfig.DefaultContext, desiredID) {
 			log.Infof("Workspace %s already exists", desiredID)
 			return loadExistingWorkspace(ctx, desiredID, devPodConfig, ide, log)
 		}
 
 		// set desired id
 		workspaceID = desiredID
-	} else if config.WorkspaceExists(devPodConfig.DefaultContext, workspaceID) {
+	} else if provider2.WorkspaceExists(devPodConfig.DefaultContext, workspaceID) {
 		log.Infof("Workspace %s already exists", workspaceID)
 		return loadExistingWorkspace(ctx, workspaceID, devPodConfig, ide, log)
 	}
@@ -83,7 +83,7 @@ func ResolveWorkspace(ctx context.Context, devPodConfig *config.Config, ide *pro
 	}
 
 	// get workspace folder
-	workspaceFolder, err := config.GetWorkspaceDir(devPodConfig.DefaultContext, workspaceID)
+	workspaceFolder, err := provider2.GetWorkspaceDir(devPodConfig.DefaultContext, workspaceID)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -99,9 +99,6 @@ func ResolveWorkspace(ctx context.Context, devPodConfig *config.Config, ide *pro
 	if ide != nil {
 		workspace.IDE = *ide
 	}
-
-	// set workspace mode
-	workspace.Provider.Mode = devPodConfig.Contexts[devPodConfig.DefaultContext].Providers[provider.Name()].Mode
 
 	// save workspace config
 	err = saveWorkspaceConfig(workspace)
@@ -242,7 +239,7 @@ func selectWorkspace(ctx context.Context, devPodConfig *config.Config, ide *prov
 	}
 
 	// ask which workspace to use
-	workspacesDir, err := config.GetWorkspacesDir(devPodConfig.DefaultContext)
+	workspacesDir, err := provider2.GetWorkspacesDir(devPodConfig.DefaultContext)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -271,7 +268,7 @@ func selectWorkspace(ctx context.Context, devPodConfig *config.Config, ide *prov
 }
 
 func loadExistingWorkspace(ctx context.Context, workspaceID string, devPodConfig *config.Config, ide *provider2.WorkspaceIDEConfig, log log.Logger) (*provider2.Workspace, provider2.Provider, error) {
-	workspaceConfig, err := config.LoadWorkspaceConfig(devPodConfig.DefaultContext, workspaceID)
+	workspaceConfig, err := provider2.LoadWorkspaceConfig(devPodConfig.DefaultContext, workspaceID)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -295,7 +292,7 @@ func loadExistingWorkspace(ctx context.Context, workspaceID string, devPodConfig
 
 	// save workspace config
 	if !reflect.DeepEqual(workspaceConfig.Provider.Options, beforeOptions) {
-		err = config.SaveWorkspaceConfig(workspaceConfig)
+		err = provider2.SaveWorkspaceConfig(workspaceConfig)
 		if err != nil {
 			return nil, nil, err
 		}
@@ -335,7 +332,7 @@ func findGitRoot(localFolder string) string {
 func saveWorkspaceConfig(workspace *provider2.Workspace) error {
 	// save config
 	workspace.CreationTimestamp = types.Now()
-	err := config.SaveWorkspaceConfig(workspace)
+	err := provider2.SaveWorkspaceConfig(workspace)
 	if err != nil {
 		return err
 	}

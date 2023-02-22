@@ -1,6 +1,7 @@
 package provider
 
 import (
+	"github.com/loft-sh/devpod/pkg/config"
 	"github.com/loft-sh/devpod/pkg/types"
 )
 
@@ -13,6 +14,9 @@ type Workspace struct {
 
 	// Provider is the provider used to create this workspace
 	Provider WorkspaceProviderConfig `json:"provider,omitempty"`
+
+	// Server is the server to use for this workspace
+	Server WorkspaceServerConfig `json:"server,omitempty"`
 
 	// IDE holds IDE specific settings
 	IDE WorkspaceIDEConfig `json:"ide,omitempty"`
@@ -28,6 +32,15 @@ type Workspace struct {
 
 	// Origin is the place where this config file was loaded from
 	Origin string `json:"-"`
+}
+
+type WorkspaceServerConfig struct {
+	// ID is the server ID to use for this workspace
+	ID string `json:"serverId,omitempty"`
+
+	// AutoDelete specifies if the server should get destroyed when
+	// the workspace is destroyed
+	AutoDelete bool `json:"autoDelete,omitempty"`
 }
 
 type WorkspaceIDEConfig struct {
@@ -56,32 +69,11 @@ type WorkspaceProviderConfig struct {
 	// Name is the provider name
 	Name string `json:"name,omitempty"`
 
-	// Mode is the provider mode
-	Mode ProviderMode `json:"mode,omitempty"`
-
 	// Options are the provider options used to create the workspace
-	Options map[string]OptionValue `json:"options,omitempty"`
+	Options map[string]config.OptionValue `json:"options,omitempty"`
 
 	// Agent is the config from the provider
 	Agent ProviderAgentConfig `json:"agent,omitempty"`
-}
-
-type ProviderMode string
-
-const (
-	ModeSingle   ProviderMode = "Single"
-	ModeMultiple ProviderMode = "Multiple"
-)
-
-type OptionValue struct {
-	// Value is the value of the option
-	Value string `json:"value,omitempty"`
-
-	// Expires is the time when this value will expire
-	Expires *types.Time `json:"retrieved,omitempty"`
-
-	// Local determines if this option should be local only
-	Local bool `json:"local,omitempty"`
 }
 
 type WorkspaceSource struct {

@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"github.com/loft-sh/devpod/pkg/command"
 	"github.com/loft-sh/devpod/pkg/compress"
-	"github.com/loft-sh/devpod/pkg/config"
 	provider2 "github.com/loft-sh/devpod/pkg/provider"
 	"github.com/pkg/errors"
 	"os"
@@ -47,7 +46,7 @@ func ReadAgentWorkspaceInfo(context, id string) (*provider2.AgentWorkspaceInfo, 
 	}
 
 	// read workspace config
-	out, err := os.ReadFile(filepath.Join(workspaceDir, config.WorkspaceConfigFile))
+	out, err := os.ReadFile(filepath.Join(workspaceDir, provider2.WorkspaceConfigFile))
 	if err != nil {
 		return nil, err
 	}
@@ -76,7 +75,7 @@ func WriteWorkspaceInfo(workspaceInfoRaw string) (*provider2.AgentWorkspaceInfo,
 	}
 
 	// write workspace config
-	err = os.WriteFile(filepath.Join(workspaceDir, config.WorkspaceConfigFile), []byte(decoded), 0666)
+	err = os.WriteFile(filepath.Join(workspaceDir, provider2.WorkspaceConfigFile), []byte(decoded), 0666)
 	if err != nil {
 		return nil, fmt.Errorf("write workspace config file")
 	}

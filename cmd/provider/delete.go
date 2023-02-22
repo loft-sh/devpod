@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"github.com/loft-sh/devpod/cmd/flags"
 	"github.com/loft-sh/devpod/pkg/config"
+	provider2 "github.com/loft-sh/devpod/pkg/provider"
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
 	"os"
@@ -46,7 +47,7 @@ func (cmd *DeleteCmd) Run(ctx context.Context, args []string) error {
 		return fmt.Errorf("provider %s is not configured", args[0])
 	}
 
-	providerDir, err := config.GetProviderDir(devPodConfig.DefaultContext, args[0])
+	providerDir, err := provider2.GetProviderDir(devPodConfig.DefaultContext, args[0])
 	if err != nil {
 		return err
 	}

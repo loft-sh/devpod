@@ -5,13 +5,13 @@ import (
 	"context"
 	"fmt"
 	"github.com/loft-sh/devpod/pkg/agent"
-	config "github.com/loft-sh/devpod/pkg/config"
 	"github.com/loft-sh/devpod/pkg/log"
 	"github.com/loft-sh/devpod/pkg/provider"
 	"github.com/loft-sh/devpod/pkg/provider/options"
 	"github.com/loft-sh/devpod/pkg/shell"
 	"github.com/loft-sh/devpod/pkg/types"
 	"github.com/pkg/errors"
+	"github.com/sirupsen/logrus"
 	"io"
 	"os"
 	"os/exec"
@@ -63,29 +63,73 @@ func (s *serverProvider) Validate(ctx context.Context, workspace *provider.Works
 }
 
 func (s *serverProvider) Create(ctx context.Context, workspace *provider.Workspace, options provider.CreateOptions) error {
-	if workspace.Provider.Mode == provider.ModeSingle {
-		return s.CreateSingle(ctx, workspace, options)
-	}
-
+	// provider doesn't support servers
 	if len(s.config.Exec.Create) == 0 {
 		return nil
 	}
 
+	// create a new server
+	if workspace.Server.ID == "" {
+		workspace.Server.ID = workspace.ID
+		workspace.Server.AutoDelete = true
+
+		err := provider.SaveWorkspaceConfig(workspace)
+		if err != nil {
+			return err
+		}
+	} else {
+		// check if server already exists
+		_, err := provider.LoadServerConfig(workspace.Context, workspace.Server.ID)
+		if err == nil {
+			return nil
+		}
+	}
+
+	// create a server
 	s.log.Infof("Create %s server...", s.config.Name)
 	err := runProviderCommand(ctx, "create", s.config.Exec.Create, workspace, s, os.Stdin, os.Stdout, os.Stderr, nil, s.log)
 	if err != nil {
 		return err
 	}
+
+	// create server folder
+	err = provider.SaveServerConfig(&provider.Server{
+		ID:      workspace.Server.ID,
+		Context: workspace.Context,
+		Provider: provider.ServerProviderConfig{
+			Name:    workspace.Provider.Name,
+			Options: workspace.Provider.Options,
+		},
+		CreationTimestamp: types.Now(),
+	})
+	if err != nil {
+		return err
+	}
+
 	s.log.Donef("Successfully created %s server", s.config.Name)
 	return nil
 }
 
 func (s *serverProvider) Delete(ctx context.Context, workspace *provider.Workspace, options provider.DeleteOptions) error {
-	if workspace.Provider.Mode == provider.ModeSingle {
-		return s.DeleteSingle(ctx, workspace, options)
-	}
+	// should just delete container?
+	if !workspace.Server.AutoDelete {
+		writer := s.log.Writer(logrus.InfoLevel, false)
+		defer writer.Close()
 
-	if len(s.config.Exec.Delete) > 0 {
+		s.log.Infof("Deleting container...")
+		err := runProviderCommand(ctx, "command", s.config.Exec.Command, workspace, s, nil, writer, writer, map[string]string{
+			provider.CommandEnv: fmt.Sprintf("%s agent workspace delete --id %s --context %s", workspace.Provider.Agent.Path, workspace.ID, workspace.Context),
+		}, s.log.ErrorStreamOnly())
+		if err != nil {
+			if !options.Force {
+				return err
+			}
+
+			s.log.Errorf("Error deleting container: %v", err)
+		} else {
+			s.log.Infof("Successfully deleted container...")
+		}
+	} else if workspace.Server.ID != "" && len(s.config.Exec.Delete) > 0 {
 		s.log.Infof("Deleting %s server...", s.config.Name)
 		err := runProviderCommand(ctx, "delete", s.config.Exec.Delete, workspace, s, os.Stdin, os.Stdout, os.Stderr, nil, s.log)
 		if err != nil {
@@ -96,14 +140,20 @@ func (s *serverProvider) Delete(ctx context.Context, workspace *provider.Workspa
 			s.log.Errorf("Error deleting workspace %s", workspace.ID)
 		}
 		s.log.Donef("Successfully deleted %s server", s.config.Name)
+
+		// delete server folder
+		err = DeleteServerFolder(workspace.Context, workspace.Server.ID)
+		if err != nil {
+			return err
+		}
 	}
 
 	return DeleteWorkspaceFolder(workspace.Context, workspace.ID)
 }
 
 func (s *serverProvider) Start(ctx context.Context, workspace *provider.Workspace, options provider.StartOptions) error {
-	if workspace.Provider.Mode == provider.ModeSingle {
-		return s.StartSingle(ctx, workspace, options)
+	if workspace.Server.ID == "" {
+		return nil
 	}
 
 	err := runProviderCommand(ctx, "start", s.config.Exec.Start, workspace, s, os.Stdin, os.Stdout, os.Stderr, nil, s.log)
@@ -115,8 +165,22 @@ func (s *serverProvider) Start(ctx context.Context, workspace *provider.Workspac
 }
 
 func (s *serverProvider) Stop(ctx context.Context, workspace *provider.Workspace, options provider.StopOptions) error {
-	if workspace.Provider.Mode == provider.ModeSingle {
-		return s.StopSingle(ctx, workspace, options)
+	if !workspace.Server.AutoDelete {
+		writer := s.log.Writer(logrus.InfoLevel, false)
+		defer writer.Close()
+
+		// TODO: stop whole machine if there is no other workspace container running anymore
+
+		s.log.Infof("Stopping container...")
+		err := runProviderCommand(ctx, "command", s.config.Exec.Command, workspace, s, nil, writer, writer, map[string]string{
+			provider.CommandEnv: fmt.Sprintf("%s agent workspace stop --id %s --context %s", workspace.Provider.Agent.Path, workspace.ID, workspace.Context),
+		}, s.log.ErrorStreamOnly())
+		if err != nil {
+			return err
+		}
+		s.log.Infof("Successfully stopped container...")
+
+		return nil
 	}
 
 	err := runProviderCommand(ctx, "stop", s.config.Exec.Stop, workspace, s, os.Stdin, os.Stdout, os.Stderr, nil, s.log)
@@ -128,10 +192,6 @@ func (s *serverProvider) Stop(ctx context.Context, workspace *provider.Workspace
 }
 
 func (s *serverProvider) Command(ctx context.Context, workspace *provider.Workspace, options provider.CommandOptions) error {
-	if workspace.Provider.Mode == provider.ModeSingle {
-		return s.CommandSingle(ctx, workspace, options)
-	}
-
 	err := runProviderCommand(ctx, "command", s.config.Exec.Command, workspace, s, options.Stdin, options.Stdout, options.Stderr, map[string]string{
 		provider.CommandEnv: options.Command,
 	}, s.log.ErrorStreamOnly())
@@ -143,12 +203,8 @@ func (s *serverProvider) Command(ctx context.Context, workspace *provider.Worksp
 }
 
 func (s *serverProvider) Status(ctx context.Context, workspace *provider.Workspace, options provider.StatusOptions) (provider.Status, error) {
-	if workspace.Provider.Mode == provider.ModeSingle {
-		return s.StatusSingle(ctx, workspace, options)
-	}
-
 	// check if provider has status command
-	if len(s.config.Exec.Status) > 0 {
+	if workspace.Server.ID != "" && len(s.config.Exec.Status) > 0 {
 		stdout := &bytes.Buffer{}
 		stderr := &bytes.Buffer{}
 		err := runProviderCommand(ctx, "status", s.config.Exec.Status, workspace, s, nil, stdout, stderr, nil, s.log)
@@ -168,7 +224,7 @@ func (s *serverProvider) Status(ctx context.Context, workspace *provider.Workspa
 	// logic:
 	// - if workspace folder exists -> Running
 	// - if workspace folder doesn't exist -> NotFound
-	workspaceFolder, err := config.GetWorkspaceDir(workspace.Context, workspace.ID)
+	workspaceFolder, err := provider.GetWorkspaceDir(workspace.Context, workspace.ID)
 	if err != nil {
 		return "", err
 	}
@@ -249,8 +305,23 @@ func RunCommand(ctx context.Context, command types.StrArray, workspace *provider
 	return nil
 }
 
+func DeleteServerFolder(context, serverID string) error {
+	serverDir, err := provider.GetServerDir(context, serverID)
+	if err != nil {
+		return err
+	}
+
+	// remove server folder
+	err = os.RemoveAll(serverDir)
+	if err != nil && !os.IsNotExist(err) {
+		return err
+	}
+
+	return nil
+}
+
 func DeleteWorkspaceFolder(context, workspaceID string) error {
-	workspaceFolder, err := config.GetWorkspaceDir(context, workspaceID)
+	workspaceFolder, err := provider.GetWorkspaceDir(context, workspaceID)
 	if err != nil {
 		return err
 	}

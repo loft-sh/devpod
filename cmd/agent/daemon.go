@@ -5,7 +5,6 @@ import (
 	"context"
 	"encoding/json"
 	"github.com/loft-sh/devpod/pkg/agent"
-	"github.com/loft-sh/devpod/pkg/config"
 	"github.com/loft-sh/devpod/pkg/log"
 	provider2 "github.com/loft-sh/devpod/pkg/provider"
 	"github.com/loft-sh/devpod/pkg/provider/providerimplementation"
@@ -69,7 +68,7 @@ func doOnce(log log.Logger) {
 
 	baseFolders := agent.GetBaseFolders()
 	for _, baseFolder := range baseFolders {
-		pattern := baseFolder + "/contexts/*/workspaces/*/" + config.WorkspaceConfigFile
+		pattern := baseFolder + "/contexts/*/workspaces/*/" + provider2.WorkspaceConfigFile
 		matches, err := filepath.Glob(pattern)
 		if err != nil {
 			log.Errorf("Error globing pattern %s: %v", pattern, err)
@@ -127,7 +126,7 @@ func doOnce(log log.Logger) {
 func initialTouch(log log.Logger) {
 	baseFolders := agent.GetBaseFolders()
 	for _, baseFolder := range baseFolders {
-		pattern := baseFolder + "/contexts/*/workspaces/*/" + config.WorkspaceConfigFile
+		pattern := baseFolder + "/contexts/*/workspaces/*/" + provider2.WorkspaceConfigFile
 		matches, err := filepath.Glob(pattern)
 		if err != nil {
 			log.Errorf("Error globing pattern %s: %v", pattern, err)
