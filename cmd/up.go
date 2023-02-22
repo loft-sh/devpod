@@ -23,6 +23,8 @@ import (
 	"io"
 	"os"
 	"os/exec"
+	"strings"
+	"time"
 )
 
 // UpCmd holds the up cmd flags
@@ -164,17 +166,15 @@ func devPodUp(ctx context.Context, provider provider2.Provider, workspace *provi
 }
 
 func devPodUpServer(ctx context.Context, provider provider2.ServerProvider, workspace *provider2.Workspace, log log.Logger) (*config2.Result, error) {
-	agentExists, err := startWaitServer(ctx, provider, workspace, true, log)
+	err := startWaitServer(ctx, provider, workspace, true, log)
 	if err != nil {
 		return nil, err
 	}
 
 	// inject agent
-	if !agentExists {
-		err = injectAgent(ctx, workspace.Provider.Agent.Path, workspace.Provider.Agent.DownloadURL, provider, workspace, log)
-		if err != nil {
-			return nil, err
-		}
+	err = injectAgent(ctx, workspace.Provider.Agent.Path, workspace.Provider.Agent.DownloadURL, provider, workspace, log)
+	if err != nil {
+		return nil, err
 	}
 
 	// compress info
@@ -235,16 +235,31 @@ func devPodUpServer(ctx context.Context, provider provider2.ServerProvider, work
 
 func injectAgent(ctx context.Context, agentPath, agentURL string, provider provider2.ServerProvider, workspace *provider2.Workspace, log log.Logger) error {
 	// install devpod into the target
-	err := agent.InjectAgent(func(command string, stdin io.Reader, stdout io.Writer, stderr io.Writer) error {
-		return provider.Command(ctx, workspace, provider2.CommandOptions{
-			Command: command,
-			Stdin:   stdin,
-			Stdout:  stdout,
-			Stderr:  stderr,
-		})
-	}, agentPath, agentURL, true, log)
-	if err != nil {
-		return err
+	// do a simple hello world to check if we can get something
+	startWaiting := time.Now()
+	now := startWaiting
+	for {
+		err := agent.InjectAgent(func(command string, stdin io.Reader, stdout io.Writer, stderr io.Writer) error {
+			return provider.Command(ctx, workspace, provider2.CommandOptions{
+				Command: command,
+				Stdin:   stdin,
+				Stdout:  stdout,
+				Stderr:  stderr,
+			})
+		}, agentPath, agentURL, true, time.Second*10)
+		if err != nil {
+			if time.Since(now) > waitForInstanceConnectionTimeout {
+				return errors.Wrap(err, "timeout waiting for instance connection")
+			} else if strings.HasPrefix(err.Error(), "unexpected start line: ") || err == context.DeadlineExceeded {
+				log.Infof("Waiting for devpod agent to come up...")
+				startWaiting = time.Now()
+				continue
+			}
+
+			return err
+		}
+
+		break
 	}
 
 	return nil
