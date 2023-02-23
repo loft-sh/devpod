@@ -80,5 +80,6 @@ func BuildRoot() *cobra.Command {
 	rootCmd.AddCommand(NewVersionCmd())
 	rootCmd.AddCommand(NewStopCmd(globalFlags))
 	rootCmd.AddCommand(NewListCmd(globalFlags))
+	rootCmd.AddCommand(NewStatusCmd(globalFlags))
 	return rootCmd
 }
