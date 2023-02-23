@@ -52,11 +52,8 @@ func (r *Runner) setupContainer(containerDetails *config.ContainerDetails, merge
 	writer := r.Log.Writer(logrus.InfoLevel, false)
 	defer writer.Close()
 
-	// TODO: run post commands
-	// TODO: install dot files
+	// TODO: clone dot files
 
-	// TODO: install openvscode, extensions & settings
-	// TODO: install vscode, extensions & settings
 	args := []string{"exec", "-u", "root", containerDetails.Id, agent.RemoteDevPodHelperLocation, "agent", "container", "setup", "--setup-info", compressed, "--workspace-info", workspaceConfigCompressed}
 	if r.Log.GetLevel() == logrus.DebugLevel {
 		args = append(args, "--debug")

@@ -3,6 +3,8 @@ package devcontainer
 import (
 	"fmt"
 	"github.com/loft-sh/devpod/pkg/devcontainer/config"
+	"github.com/loft-sh/devpod/pkg/ide/goland"
+	provider2 "github.com/loft-sh/devpod/pkg/provider"
 	"github.com/sirupsen/logrus"
 	"strconv"
 	"strings"
@@ -56,6 +58,11 @@ func (r *Runner) startDevContainer(parsedConfig *config.DevContainerConfig, merg
 	// mounts
 	for _, mount := range mergedConfig.Mounts {
 		args = append(args, "--mount", mount.String())
+	}
+
+	// add ide mounts
+	if r.WorkspaceConfig.Workspace.IDE.IDE == provider2.IDEGoland {
+		args = append(args, "--mount", "type=volume,src=devpod-goland,dst="+goland.GolandFolder)
 	}
 
 	// labels
