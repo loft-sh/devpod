@@ -54,7 +54,7 @@ func NewSSHCmd(flags *flags.GlobalFlags) *cobra.Command {
 				client client2.WorkspaceClient
 			)
 			if cmd.Self {
-				client, err = workspace2.ResolveWorkspace(ctx, devPodConfig, nil, []string{"."}, cmd.ID, log.Default)
+				client, err = workspace2.ResolveWorkspace(ctx, devPodConfig, nil, []string{"."}, cmd.ID, cmd.Provider, log.Default)
 				if err != nil {
 					return err
 				}

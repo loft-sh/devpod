@@ -66,7 +66,7 @@ func NewUpCmd(flags *flags.GlobalFlags) *cobra.Command {
 
 			client, err := workspace2.ResolveWorkspace(ctx, devPodConfig, &provider2.WorkspaceIDEConfig{
 				IDE: ide,
-			}, args, cmd.ID, log.Default)
+			}, args, cmd.ID, cmd.Provider, log.Default)
 			if err != nil {
 				return err
 			}

@@ -2,6 +2,8 @@ package server
 
 import (
 	"context"
+	"encoding/json"
+	"fmt"
 	"github.com/loft-sh/devpod/cmd/flags"
 	"github.com/loft-sh/devpod/pkg/config"
 	"github.com/loft-sh/devpod/pkg/log"
@@ -17,6 +19,8 @@ import (
 // ListCmd holds the configuration
 type ListCmd struct {
 	*flags.GlobalFlags
+
+	Output string
 }
 
 // NewListCmd creates a new destroy command
@@ -32,6 +36,7 @@ func NewListCmd(flags *flags.GlobalFlags) *cobra.Command {
 		},
 	}
 
+	listCmd.Flags().StringVar(&cmd.Output, "output", "plain", "The output format to use. Can be json or plain")
 	return listCmd
 }
 
@@ -52,27 +57,50 @@ func (cmd *ListCmd) Run(ctx context.Context) error {
 		return err
 	}
 
-	tableEntries := [][]string{}
-	for _, entry := range entries {
-		serverConfig, err := provider.LoadServerConfig(devPodConfig.DefaultContext, entry.Name())
-		if err != nil {
-			return errors.Wrap(err, "load workspace config")
+	if cmd.Output == "plain" {
+		tableEntries := [][]string{}
+		for _, entry := range entries {
+			serverConfig, err := provider.LoadServerConfig(devPodConfig.DefaultContext, entry.Name())
+			if err != nil {
+				return errors.Wrap(err, "load workspace config")
+			}
+
+			tableEntries = append(tableEntries, []string{
+				serverConfig.ID,
+				serverConfig.Provider.Name,
+				time.Since(serverConfig.CreationTimestamp.Time).Round(1 * time.Second).String(),
+			})
 		}
-
-		tableEntries = append(tableEntries, []string{
-			serverConfig.ID,
-			serverConfig.Provider.Name,
-			time.Since(serverConfig.CreationTimestamp.Time).Round(1 * time.Second).String(),
+		sort.SliceStable(tableEntries, func(i, j int) bool {
+			return tableEntries[i][0] < tableEntries[j][0]
 		})
-	}
-	sort.SliceStable(tableEntries, func(i, j int) bool {
-		return tableEntries[i][0] < tableEntries[j][0]
-	})
 
-	table.PrintTable(log.Default, []string{
-		"Name",
-		"Provider",
-		"Age",
-	}, tableEntries)
+		table.PrintTable(log.Default, []string{
+			"Name",
+			"Provider",
+			"Age",
+		}, tableEntries)
+	} else if cmd.Output == "json" {
+		tableEntries := []*provider.Server{}
+		for _, entry := range entries {
+			workspaceConfig, err := provider.LoadServerConfig(devPodConfig.DefaultContext, entry.Name())
+			if err != nil {
+				return errors.Wrap(err, "load workspace config")
+			}
+
+			tableEntries = append(tableEntries, workspaceConfig)
+		}
+		sort.SliceStable(tableEntries, func(i, j int) bool {
+			return tableEntries[i].ID < tableEntries[j].ID
+		})
+		out, err := json.Marshal(tableEntries)
+		if err != nil {
+			return err
+		}
+		fmt.Print(string(out))
+	} else {
+		return fmt.Errorf("unexpected output format, choose either json or plain. Got %s", cmd.Output)
+	}
+
 	return nil
 }

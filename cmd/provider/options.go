@@ -2,11 +2,13 @@ package provider
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"github.com/loft-sh/devpod/cmd/flags"
 	"github.com/loft-sh/devpod/pkg/config"
 	"github.com/loft-sh/devpod/pkg/log"
 	"github.com/loft-sh/devpod/pkg/log/table"
+	provider2 "github.com/loft-sh/devpod/pkg/provider"
 	"github.com/loft-sh/devpod/pkg/workspace"
 	"github.com/spf13/cobra"
 	"sort"
@@ -15,6 +17,8 @@ import (
 // OptionsCmd holds the options cmd flags
 type OptionsCmd struct {
 	*flags.GlobalFlags
+
+	Output string
 }
 
 // NewOptionsCmd creates a new destroy command
@@ -34,7 +38,14 @@ func NewOptionsCmd(flags *flags.GlobalFlags) *cobra.Command {
 		},
 	}
 
+	optionsCmd.Flags().StringVar(&cmd.Output, "output", "plain", "The output format to use. Can be json or plain")
 	return optionsCmd
+}
+
+type optionWithValue struct {
+	provider2.ProviderOption `json:",inline"`
+
+	Value string `json:"value,omitempty"`
 }
 
 // Run runs the command logic
@@ -49,33 +60,52 @@ func (cmd *OptionsCmd) Run(ctx context.Context, providerName string) error {
 		return err
 	}
 
-	tableEntries := [][]string{}
-	for optionName, entry := range provider.Config.Options {
-		if entry.Hidden {
-			continue
-		}
-
-		entryOptions := provider.Options
-		if entryOptions == nil {
-			entryOptions = map[string]config.OptionValue{}
-		}
-
-		tableEntries = append(tableEntries, []string{
-			optionName,
-			entry.Description,
-			entry.Default,
-			entryOptions[optionName].Value,
-		})
+	entryOptions := provider.Options
+	if entryOptions == nil {
+		entryOptions = map[string]config.OptionValue{}
 	}
-	sort.SliceStable(tableEntries, func(i, j int) bool {
-		return tableEntries[i][0] < tableEntries[j][0]
-	})
 
-	table.PrintTable(log.Default, []string{
-		"Name",
-		"Description",
-		"Default",
-		"Value",
-	}, tableEntries)
+	if cmd.Output == "plain" {
+		tableEntries := [][]string{}
+		for optionName, entry := range provider.Config.Options {
+			if entry.Hidden {
+				continue
+			}
+
+			tableEntries = append(tableEntries, []string{
+				optionName,
+				entry.Description,
+				entry.Default,
+				entryOptions[optionName].Value,
+			})
+		}
+		sort.SliceStable(tableEntries, func(i, j int) bool {
+			return tableEntries[i][0] < tableEntries[j][0]
+		})
+
+		table.PrintTable(log.Default, []string{
+			"Name",
+			"Description",
+			"Default",
+			"Value",
+		}, tableEntries)
+	} else if cmd.Output == "json" {
+		options := map[string]optionWithValue{}
+		for optionName, entry := range provider.Config.Options {
+			options[optionName] = optionWithValue{
+				ProviderOption: *entry,
+				Value:          entryOptions[optionName].Value,
+			}
+		}
+
+		out, err := json.Marshal(options)
+		if err != nil {
+			return err
+		}
+		fmt.Print(string(out))
+	} else {
+		return fmt.Errorf("unexpected output format, choose either json or plain. Got %s", cmd.Output)
+	}
+
 	return nil
 }
