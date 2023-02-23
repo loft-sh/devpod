@@ -28,6 +28,9 @@ options:
     description: If the compute instance should get deleted instead of stopped on inactivity.
     default: "false"
     enum: ["false", "true"]
+  INACTIVITY_TIMEOUT:
+    description: If defined, will automatically stop the VM after the inactivity period.
+    default: 10m
   GCLOUD_TOKEN:
     hidden: true
     cache: 30m
@@ -35,7 +38,7 @@ options:
     command: ${GCLOUD_BINARY} auth application-default print-access-token --quiet --verbosity=error
 agent:
   path: /run/agent
-  inactivityTimeout: 10m
+  inactivityTimeout: ${INACTIVITY_TIMEOUT}
   exec:
     shutdown: |-
       if [ "${DELETE_ON_INACTIVITY}" = "true" ]; then

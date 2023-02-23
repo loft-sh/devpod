@@ -23,7 +23,7 @@ const GolandDownloadArm64 = "https://download.jetbrains.com/go/goland-2022.3.2-a
 
 const GolandArchive = "goland.tar.gz"
 
-const GolandFolder = "/var/devpod"
+const GolandFolder = "/var/devpod/goland"
 
 func NewGolandServer(userName string, log log.Logger) ide.IDE {
 	return &golandServer{
@@ -111,10 +111,6 @@ func downloadGoland(targetFolder string, log log.Logger) (string, error) {
 	}
 
 	targetPath := path.Join(filepath.ToSlash(targetFolder), GolandArchive)
-	_, err = os.Stat(targetPath)
-	if err == nil {
-		return targetPath, nil
-	}
 
 	// initiate download
 	log.Infof("Download Goland from %s", downloadUrl)
@@ -129,6 +125,11 @@ func downloadGoland(targetFolder string, log log.Logger) (string, error) {
 		return "", errors.Wrap(err, "download binary")
 	}
 	defer resp.Body.Close()
+
+	stat, err := os.Stat(targetPath)
+	if err == nil && stat.Size() == resp.ContentLength {
+		return targetPath, nil
+	}
 
 	file, err := os.Create(targetPath)
 	if err != nil {

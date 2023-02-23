@@ -105,13 +105,14 @@ func (cmd *UpCmd) Run(ctx context.Context, ide provider2.IDE, client client2.Wor
 	case provider2.IDEOpenVSCode:
 		return startInBrowser(ctx, client, log.Default)
 	case provider2.IDEGoland:
-		return startGoland(result, client)
+		return startGoland(result, client, log.Default)
 	}
 
 	return nil
 }
 
-func startGoland(result *config2.Result, client client2.WorkspaceClient) error {
+func startGoland(result *config2.Result, client client2.WorkspaceClient, log log.Logger) error {
+	log.Infof("Starting JetBrains Gateway...")
 	remoteUser := config2.GetRemoteUser(result)
 	err := open.Start(`jetbrains-gateway://connect#idePath=` + url.QueryEscape(goland.GetGolandDirectory(path.Join("/", "home", remoteUser))) + `&projectPath=` + url.QueryEscape(result.SubstitutionContext.ContainerWorkspaceFolder) + `&host=` + client.Workspace() + `.devpod&port=22&user=` + remoteUser + `&type=ssh&deploy=false`)
 	if err != nil {
