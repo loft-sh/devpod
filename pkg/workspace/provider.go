@@ -6,7 +6,6 @@ import (
 	"github.com/loft-sh/devpod/pkg/config"
 	"github.com/loft-sh/devpod/pkg/log"
 	provider2 "github.com/loft-sh/devpod/pkg/provider"
-	"github.com/loft-sh/devpod/pkg/provider/providerimplementation"
 	"github.com/loft-sh/devpod/providers"
 	"os"
 	"path/filepath"
@@ -15,9 +14,8 @@ import (
 var provideWorkspaceArgErr = fmt.Errorf("please provide a workspace name. E.g. 'devpod up ./my-folder', 'devpod up github.com/my-org/my-repo' or 'devpod up ubuntu'")
 
 type ProviderWithOptions struct {
-	Provider provider2.Provider
-	Config   *provider2.ProviderConfig
-	Options  map[string]config.OptionValue
+	Config  *provider2.ProviderConfig
+	Options map[string]config.OptionValue
 }
 
 // LoadProviders loads all known providers for the given context and
@@ -50,16 +48,15 @@ func FindProvider(devPodConfig *config.Config, name string, log log.Logger) (*Pr
 }
 
 func LoadAllProviders(devPodConfig *config.Config, log log.Logger) (map[string]*ProviderWithOptions, error) {
-	builtInProviders, builtInProvidersConfig, err := providers.GetBuiltInProviders(log)
+	builtInProvidersConfig, err := providers.GetBuiltInProviders()
 	if err != nil {
 		return nil, err
 	}
 
 	retProviders := map[string]*ProviderWithOptions{}
-	for k, p := range builtInProviders {
+	for k := range builtInProvidersConfig {
 		retProviders[k] = &ProviderWithOptions{
-			Provider: p,
-			Config:   builtInProvidersConfig[k],
+			Config: builtInProvidersConfig[k],
 		}
 	}
 
@@ -91,9 +88,8 @@ func LoadAllProviders(devPodConfig *config.Config, log log.Logger) (map[string]*
 		}
 
 		retProviders[providerName] = &ProviderWithOptions{
-			Provider: providerimplementation.NewProvider(providerConfig, log),
-			Config:   providerConfig,
-			Options:  providerOptions.Options,
+			Config:  providerConfig,
+			Options: providerOptions.Options,
 		}
 	}
 

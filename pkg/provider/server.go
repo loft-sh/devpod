@@ -3,6 +3,9 @@ package provider
 import (
 	"github.com/loft-sh/devpod/pkg/config"
 	"github.com/loft-sh/devpod/pkg/types"
+	"os"
+	"path/filepath"
+	"strings"
 )
 
 type Server struct {
@@ -31,4 +34,31 @@ type ServerProviderConfig struct {
 
 	// Options are the provider options used to create this server
 	Options map[string]config.OptionValue `json:"options,omitempty"`
+}
+
+func ToOptionsServer(s *Server) map[string]string {
+	retVars := map[string]string{}
+	if s == nil {
+		return retVars
+	}
+	for optionName, optionValue := range s.Provider.Options {
+		retVars[strings.ToUpper(optionName)] = optionValue.Value
+	}
+	if s.ID != "" {
+		retVars[SERVER_ID] = s.ID
+	}
+	if s.Folder != "" {
+		retVars[SERVER_FOLDER] = filepath.ToSlash(s.Folder)
+	}
+	if s.Context != "" {
+		retVars[SERVER_CONTEXT] = s.Context
+	}
+	if s.Provider.Name != "" {
+		retVars[SERVER_PROVIDER] = s.Provider.Name
+	}
+
+	// devpod binary
+	devPodBinary, _ := os.Executable()
+	retVars[DEVPOD] = filepath.ToSlash(devPodBinary)
+	return retVars
 }

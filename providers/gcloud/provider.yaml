@@ -35,7 +35,7 @@ options:
     command: ${GCLOUD_BINARY} auth application-default print-access-token --quiet --verbosity=error
 agent:
   path: /run/agent
-  inactivityTimeout: 2m
+  inactivityTimeout: 10m
   exec:
     shutdown: |-
       if [ "${DELETE_ON_INACTIVITY}" = "true" ]; then

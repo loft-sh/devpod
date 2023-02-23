@@ -5,9 +5,9 @@ import (
 	"context"
 	"encoding/json"
 	"github.com/loft-sh/devpod/pkg/agent"
+	"github.com/loft-sh/devpod/pkg/client/clientimplementation"
 	"github.com/loft-sh/devpod/pkg/log"
 	provider2 "github.com/loft-sh/devpod/pkg/provider"
-	"github.com/loft-sh/devpod/pkg/provider/providerimplementation"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 	"os"
@@ -114,7 +114,7 @@ func doOnce(log log.Logger) {
 	// we run the timeout command now
 	buf := &bytes.Buffer{}
 	log.Infof("Run shutdown command for workspace %s: %s", workspace.Workspace.ID, strings.Join(workspace.Workspace.Provider.Agent.Exec.Shutdown, " "))
-	err := providerimplementation.RunCommand(context.Background(), workspace.Workspace.Provider.Agent.Exec.Shutdown, &workspace.Workspace, nil, buf, buf, nil)
+	err := clientimplementation.RunCommand(context.Background(), workspace.Workspace.Provider.Agent.Exec.Shutdown, clientimplementation.ToEnvironment(&workspace.Workspace, nil), nil, buf, buf)
 	if err != nil {
 		log.Errorf("Error running %s: %s%v", strings.Join(workspace.Workspace.Provider.Agent.Exec.Shutdown, " "), buf.String(), err)
 		return

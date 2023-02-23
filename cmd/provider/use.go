@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"github.com/loft-sh/devpod/cmd/flags"
 	"github.com/loft-sh/devpod/pkg/binaries"
+	"github.com/loft-sh/devpod/pkg/client/clientimplementation"
 	"github.com/loft-sh/devpod/pkg/config"
 	"github.com/loft-sh/devpod/pkg/log"
 	provider2 "github.com/loft-sh/devpod/pkg/provider"
@@ -14,6 +15,7 @@ import (
 	"github.com/loft-sh/devpod/pkg/workspace"
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
+	"os"
 	"regexp"
 	"strings"
 )
@@ -71,7 +73,7 @@ func (cmd *UseCmd) Run(ctx context.Context, providerName string) error {
 	}
 
 	// parse options
-	options, err := parseOptions(providerWithOptions.Provider, cmd.Options)
+	options, err := parseOptions(providerWithOptions.Config, cmd.Options)
 	if err != nil {
 		return errors.Wrap(err, "parse options")
 	}
@@ -89,20 +91,32 @@ func (cmd *UseCmd) Run(ctx context.Context, providerName string) error {
 	// TODO: this is kind of a hack, only to get the options correctly passed to init & validate
 	workspaceConfig := &provider2.Workspace{Provider: provider2.WorkspaceProviderConfig{Options: options}}
 
+	// fill defaults
+	workspaceConfig, err = options2.ResolveOptions(ctx, "init", "", workspaceConfig, providerWithOptions.Config)
+	if err != nil {
+		return errors.Wrap(err, "resolve options")
+	}
+
 	// run init command
-	err = providerWithOptions.Provider.Init(ctx, workspaceConfig, provider2.InitOptions{})
+	err = clientimplementation.RunCommand(ctx, providerWithOptions.Config.Exec.Init, clientimplementation.ToEnvironment(workspaceConfig, nil), nil, os.Stdout, os.Stderr)
 	if err != nil {
 		return err
 	}
 
 	// fill defaults
-	workspaceConfig, err = options2.ResolveOptions(ctx, "", "", workspaceConfig, providerWithOptions.Provider)
+	workspaceConfig, err = options2.ResolveOptions(ctx, "", "init", workspaceConfig, providerWithOptions.Config)
+	if err != nil {
+		return errors.Wrap(err, "resolve options")
+	}
+
+	// fill defaults
+	workspaceConfig, err = options2.ResolveOptions(ctx, "", "", workspaceConfig, providerWithOptions.Config)
 	if err != nil {
 		return errors.Wrap(err, "resolve options")
 	}
 
 	// ensure required
-	err = ensureRequired(workspaceConfig, providerWithOptions.Provider, log.Default)
+	err = ensureRequired(workspaceConfig, providerWithOptions.Config, log.Default)
 	if err != nil {
 		return errors.Wrap(err, "ensure required")
 	}
@@ -121,14 +135,14 @@ func (cmd *UseCmd) Run(ctx context.Context, providerName string) error {
 	}
 
 	// run validate command
-	err = providerWithOptions.Provider.Validate(ctx, workspaceConfig, provider2.ValidateOptions{})
+	err = clientimplementation.RunCommand(ctx, providerWithOptions.Config.Exec.Validate, clientimplementation.ToEnvironment(workspaceConfig, nil), nil, os.Stdout, os.Stderr)
 	if err != nil {
 		return err
 	}
 
 	// set options
 	defaultContext := devPodConfig.Contexts[devPodConfig.DefaultContext]
-	defaultContext.DefaultProvider = providerWithOptions.Provider.Name()
+	defaultContext.DefaultProvider = providerWithOptions.Config.Name
 	defaultContext.Providers[providerName] = &config.ConfigProvider{
 		Options: workspaceConfig.Provider.Options,
 	}
@@ -143,8 +157,8 @@ func (cmd *UseCmd) Run(ctx context.Context, providerName string) error {
 	return nil
 }
 
-func ensureRequired(workspace *provider2.Workspace, provider provider2.Provider, log log.Logger) error {
-	for optionName, option := range provider.Options() {
+func ensureRequired(workspace *provider2.Workspace, provider *provider2.ProviderConfig, log log.Logger) error {
+	for optionName, option := range provider.Options {
 		if !option.Required {
 			continue
 		}
@@ -176,8 +190,8 @@ func ensureRequired(workspace *provider2.Workspace, provider provider2.Provider,
 	return nil
 }
 
-func parseOptions(provider provider2.Provider, options []string) (map[string]config.OptionValue, error) {
-	providerOptions := provider.Options()
+func parseOptions(provider *provider2.ProviderConfig, options []string) (map[string]config.OptionValue, error) {
+	providerOptions := provider.Options
 	if providerOptions == nil {
 		providerOptions = map[string]*provider2.ProviderOption{}
 	}

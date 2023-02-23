@@ -5,8 +5,8 @@ import (
 	"fmt"
 	"github.com/loft-sh/devpod/cmd/flags"
 	"github.com/loft-sh/devpod/pkg/agent"
+	"github.com/loft-sh/devpod/pkg/client"
 	"github.com/loft-sh/devpod/pkg/log"
-	"github.com/loft-sh/devpod/pkg/provider"
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
 	"os"
@@ -43,7 +43,7 @@ func (cmd *StatusCmd) Run(ctx context.Context) error {
 	_, err := agent.GetAgentWorkspaceDir(cmd.Context, cmd.ID)
 	if err != nil {
 		if os.IsNotExist(err) {
-			fmt.Print(provider.StatusNotFound)
+			fmt.Print(client.StatusNotFound)
 			return nil
 		}
 
@@ -69,19 +69,19 @@ func (cmd *StatusCmd) Run(ctx context.Context) error {
 	if err != nil {
 		return err
 	} else if containerDetails == nil {
-		fmt.Print(provider.StatusNotFound)
+		fmt.Print(client.StatusNotFound)
 		return nil
 	}
 
 	// is running?
 	if strings.ToLower(containerDetails.State.Status) == "running" {
-		fmt.Print(provider.StatusRunning)
+		fmt.Print(client.StatusRunning)
 		return nil
 	} else if strings.ToLower(containerDetails.State.Status) == "exited" {
-		fmt.Print(provider.StatusStopped)
+		fmt.Print(client.StatusStopped)
 		return nil
 	}
 
-	fmt.Print(provider.StatusBusy)
+	fmt.Print(client.StatusBusy)
 	return nil
 }

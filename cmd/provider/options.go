@@ -50,7 +50,7 @@ func (cmd *OptionsCmd) Run(ctx context.Context, providerName string) error {
 	}
 
 	tableEntries := [][]string{}
-	for optionName, entry := range provider.Provider.Options() {
+	for optionName, entry := range provider.Config.Options {
 		if entry.Hidden {
 			continue
 		}

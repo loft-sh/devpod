@@ -53,7 +53,6 @@ exec:
     
     # run command remotely
     ${DEVPOD} helper ssh-client --address "${PUBLIC_DNS}:22" --key-file "${SERVER_FOLDER}/id_devpod_rsa" -- sh -c "${COMMAND}"
-    
 
   create: |-
     SECURITY_GROUP_ID=$(${AWS_BINARY} ec2 describe-security-groups --filters "Name=tag:devpod,Values=devpod" | ${DEVPOD} helper json get 'SecurityGroups[0].GroupId')
@@ -63,9 +62,11 @@ exec:
                                     --image-id ${DISK_IMAGE} \
                                     --instance-type ${MACHINE_TYPE} \
                                     --tag-specifications "ResourceType=instance,Tags=[{Key=devpod,Value=${SERVER_ID}}]" > /dev/null
+
   delete: |-
     ${AWS_BINARY} ec2 terminate-instances \
                   --instance-ids $(${AWS_BINARY} ec2 describe-instances --filters "Name=tag:devpod,Values=${SERVER_ID}" "Name=instance-state-name,Values=pending,running,shutting-down,stopping,stopped" | ${DEVPOD} helper json get 'Reservations[0].Instances[0].InstanceId') > /dev/null
+
   status: |-
     STATE=$(${AWS_BINARY} ec2 describe-instances \
                           --filters "Name=tag:devpod,Values=${SERVER_ID}" "Name=instance-state-name,Values=pending,running,shutting-down,stopping,stopped" | \

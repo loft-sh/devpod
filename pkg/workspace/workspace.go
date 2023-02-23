@@ -3,6 +3,8 @@ package workspace
 import (
 	"context"
 	"fmt"
+	"github.com/loft-sh/devpod/pkg/client"
+	"github.com/loft-sh/devpod/pkg/client/clientimplementation"
 	"github.com/loft-sh/devpod/pkg/command"
 	"github.com/loft-sh/devpod/pkg/config"
 	"github.com/loft-sh/devpod/pkg/image"
@@ -24,7 +26,7 @@ import (
 )
 
 // GetWorkspace tries to retrieve an already existing workspace
-func GetWorkspace(ctx context.Context, devPodConfig *config.Config, ide *provider2.WorkspaceIDEConfig, args []string, log log.Logger) (*provider2.Workspace, provider2.Provider, error) {
+func GetWorkspace(ctx context.Context, devPodConfig *config.Config, ide *provider2.WorkspaceIDEConfig, args []string, log log.Logger) (client.WorkspaceClient, error) {
 	// check if we have no args
 	if len(args) == 0 {
 		return selectWorkspace(ctx, devPodConfig, ide, log)
@@ -38,7 +40,7 @@ func GetWorkspace(ctx context.Context, devPodConfig *config.Config, ide *provide
 
 	// already exists?
 	if !provider2.WorkspaceExists(devPodConfig.DefaultContext, workspaceID) {
-		return nil, nil, fmt.Errorf("workspace %s doesn't exist", workspaceID)
+		return nil, fmt.Errorf("workspace %s doesn't exist", workspaceID)
 	}
 
 	// load workspace config
@@ -46,7 +48,7 @@ func GetWorkspace(ctx context.Context, devPodConfig *config.Config, ide *provide
 }
 
 // ResolveWorkspace tries to retrieve an already existing workspace or creates a new one
-func ResolveWorkspace(ctx context.Context, devPodConfig *config.Config, ide *provider2.WorkspaceIDEConfig, args []string, desiredID string, log log.Logger) (*provider2.Workspace, provider2.Provider, error) {
+func ResolveWorkspace(ctx context.Context, devPodConfig *config.Config, ide *provider2.WorkspaceIDEConfig, args []string, desiredID string, log log.Logger) (client.WorkspaceClient, error) {
 	// check if we have no args
 	if len(args) == 0 {
 		if desiredID != "" {
@@ -79,20 +81,20 @@ func ResolveWorkspace(ctx context.Context, devPodConfig *config.Config, ide *pro
 	// get default provider
 	defaultProvider, _, err := LoadProviders(devPodConfig, log)
 	if err != nil {
-		return nil, nil, err
+		return nil, err
 	}
 
 	// get workspace folder
 	workspaceFolder, err := provider2.GetWorkspaceDir(devPodConfig.DefaultContext, workspaceID)
 	if err != nil {
-		return nil, nil, err
+		return nil, err
 	}
 
 	// resolve workspace
-	workspace, provider, err := resolve(ctx, defaultProvider, devPodConfig, name, workspaceID, workspaceFolder, isLocalPath)
+	workspace, err := resolve(ctx, defaultProvider, devPodConfig, name, workspaceID, workspaceFolder, isLocalPath)
 	if err != nil {
 		_ = os.RemoveAll(workspaceFolder)
-		return nil, nil, err
+		return nil, err
 	}
 
 	// set ide config
@@ -104,28 +106,29 @@ func ResolveWorkspace(ctx context.Context, devPodConfig *config.Config, ide *pro
 	err = saveWorkspaceConfig(workspace)
 	if err != nil {
 		_ = os.RemoveAll(workspaceFolder)
-		return nil, nil, errors.Wrap(err, "save config")
+		return nil, errors.Wrap(err, "save config")
 	}
 
-	return workspace, provider, nil
+	// create a new client
+	return clientimplementation.NewWorkspaceClient(defaultProvider.Config, workspace, log)
 }
 
-func resolve(ctx context.Context, defaultProvider *ProviderWithOptions, devPodConfig *config.Config, name, workspaceID, workspaceFolder string, isLocalPath bool) (*provider2.Workspace, provider2.Provider, error) {
+func resolve(ctx context.Context, defaultProvider *ProviderWithOptions, devPodConfig *config.Config, name, workspaceID, workspaceFolder string, isLocalPath bool) (*provider2.Workspace, error) {
 	// resolve options
 	workspace, err := options2.ResolveOptions(ctx, "", "", &provider2.Workspace{
 		Provider: provider2.WorkspaceProviderConfig{
-			Name:    defaultProvider.Provider.Name(),
+			Name:    defaultProvider.Config.Name,
 			Options: defaultProvider.Options,
 		},
-	}, defaultProvider.Provider)
+	}, defaultProvider.Config)
 	if err != nil {
-		return nil, nil, errors.Wrap(err, "resolve options")
+		return nil, errors.Wrap(err, "resolve options")
 	}
 
 	// create workspace ssh keys
 	_, err = devssh.GetPublicKey(devPodConfig.DefaultContext, workspaceID)
 	if err != nil {
-		return nil, nil, errors.Wrap(err, "create ssh keys")
+		return nil, errors.Wrap(err, "create ssh keys")
 	}
 
 	// is local folder?
@@ -138,7 +141,7 @@ func resolve(ctx context.Context, defaultProvider *ProviderWithOptions, devPodCo
 			Source: provider2.WorkspaceSource{
 				LocalFolder: name,
 			},
-		}, defaultProvider.Provider, nil
+		}, nil
 	}
 
 	// is git?
@@ -152,7 +155,7 @@ func resolve(ctx context.Context, defaultProvider *ProviderWithOptions, devPodCo
 			Source: provider2.WorkspaceSource{
 				GitRepository: gitRepository,
 			},
-		}, defaultProvider.Provider, nil
+		}, nil
 	}
 
 	// is image?
@@ -166,10 +169,10 @@ func resolve(ctx context.Context, defaultProvider *ProviderWithOptions, devPodCo
 			Source: provider2.WorkspaceSource{
 				Image: name,
 			},
-		}, defaultProvider.Provider, nil
+		}, nil
 	}
 
-	return nil, nil, fmt.Errorf("%s is neither a local folder, git repository or docker image", name)
+	return nil, fmt.Errorf("%s is neither a local folder, git repository or docker image", name)
 }
 
 func isLocalDir(name string, log log.Logger) (bool, string) {
@@ -233,15 +236,15 @@ func ToWorkspaceID(str string) string {
 	return workspaceIDRegEx2.ReplaceAllString(workspaceIDRegEx1.ReplaceAllString(str[index+1:], "-"), "")
 }
 
-func selectWorkspace(ctx context.Context, devPodConfig *config.Config, ide *provider2.WorkspaceIDEConfig, log log.Logger) (*provider2.Workspace, provider2.Provider, error) {
+func selectWorkspace(ctx context.Context, devPodConfig *config.Config, ide *provider2.WorkspaceIDEConfig, log log.Logger) (client.WorkspaceClient, error) {
 	if !terminal.IsTerminalIn {
-		return nil, nil, provideWorkspaceArgErr
+		return nil, provideWorkspaceArgErr
 	}
 
 	// ask which workspace to use
 	workspacesDir, err := provider2.GetWorkspacesDir(devPodConfig.DefaultContext)
 	if err != nil {
-		return nil, nil, err
+		return nil, err
 	}
 
 	workspaceIDs := []string{}
@@ -250,7 +253,7 @@ func selectWorkspace(ctx context.Context, devPodConfig *config.Config, ide *prov
 		workspaceIDs = append(workspaceIDs, workspace.Name())
 	}
 	if len(workspaceIDs) == 0 {
-		return nil, nil, provideWorkspaceArgErr
+		return nil, provideWorkspaceArgErr
 	}
 
 	answer, err := log.Question(&survey.QuestionOptions{
@@ -260,29 +263,29 @@ func selectWorkspace(ctx context.Context, devPodConfig *config.Config, ide *prov
 		Sort:         true,
 	})
 	if err != nil {
-		return nil, nil, err
+		return nil, err
 	}
 
 	// load workspace
 	return loadExistingWorkspace(ctx, answer, devPodConfig, ide, log)
 }
 
-func loadExistingWorkspace(ctx context.Context, workspaceID string, devPodConfig *config.Config, ide *provider2.WorkspaceIDEConfig, log log.Logger) (*provider2.Workspace, provider2.Provider, error) {
+func loadExistingWorkspace(ctx context.Context, workspaceID string, devPodConfig *config.Config, ide *provider2.WorkspaceIDEConfig, log log.Logger) (client.WorkspaceClient, error) {
 	workspaceConfig, err := provider2.LoadWorkspaceConfig(devPodConfig.DefaultContext, workspaceID)
 	if err != nil {
-		return nil, nil, err
+		return nil, err
 	}
 
 	providerWithOptions, err := FindProvider(devPodConfig, workspaceConfig.Provider.Name, log)
 	if err != nil {
-		return nil, nil, err
+		return nil, err
 	}
 
 	// resolve options
 	beforeOptions := workspaceConfig.Provider.Options
-	workspaceConfig, err = options2.ResolveOptions(ctx, "", "", workspaceConfig, providerWithOptions.Provider)
+	workspaceConfig, err = options2.ResolveOptions(ctx, "", "", workspaceConfig, providerWithOptions.Config)
 	if err != nil {
-		return nil, nil, errors.Wrap(err, "resolve options")
+		return nil, errors.Wrap(err, "resolve options")
 	}
 
 	// replace ide config
@@ -294,11 +297,11 @@ func loadExistingWorkspace(ctx context.Context, workspaceID string, devPodConfig
 	if !reflect.DeepEqual(workspaceConfig.Provider.Options, beforeOptions) {
 		err = provider2.SaveWorkspaceConfig(workspaceConfig)
 		if err != nil {
-			return nil, nil, err
+			return nil, err
 		}
 	}
 
-	return workspaceConfig, providerWithOptions.Provider, nil
+	return clientimplementation.NewWorkspaceClient(providerWithOptions.Config, workspaceConfig, log)
 }
 
 func findGitRoot(localFolder string) string {

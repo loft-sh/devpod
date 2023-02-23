@@ -61,8 +61,8 @@ type ProviderAgentConfigExec struct {
 type ProviderType string
 
 const (
-	ProviderTypeServer    = "Server"
-	ProviderTypeWorkspace = "Workspace"
+	ProviderTypeServer = "Server"
+	ProviderTypeDirect = "Direct"
 )
 
 type ProviderBinary struct {
@@ -91,9 +91,6 @@ type ProviderCommands struct {
 
 	// Command executes a command on the server
 	Command types.StrArray `json:"command,omitempty"`
-
-	// Tunnel creates a tunnel to the workspace
-	Tunnel types.StrArray `json:"tunnel,omitempty"`
 
 	// Create creates a new server
 	Create types.StrArray `json:"create,omitempty"`

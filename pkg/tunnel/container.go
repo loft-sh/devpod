@@ -4,9 +4,8 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"github.com/loft-sh/devpod/pkg/client"
 	"github.com/loft-sh/devpod/pkg/log"
-	provider2 "github.com/loft-sh/devpod/pkg/provider"
-	"github.com/loft-sh/devpod/pkg/provider/options"
 	devssh "github.com/loft-sh/devpod/pkg/ssh"
 	"github.com/loft-sh/devpod/pkg/token"
 	"github.com/pkg/errors"
@@ -16,21 +15,17 @@ import (
 	"time"
 )
 
-func NewContainerTunnel(provider provider2.ServerProvider, workspace *provider2.Workspace, log log.Logger) *ContainerHandler {
+func NewContainerTunnel(client client.AgentClient, log log.Logger) *ContainerHandler {
 	updateConfigInterval := time.Minute
 	return &ContainerHandler{
-		workspace:            workspace,
-		provider:             provider,
+		client:               client,
 		updateConfigInterval: updateConfigInterval,
 		log:                  log,
 	}
 }
 
 type ContainerHandler struct {
-	workspaceMutex sync.Mutex
-	workspace      *provider2.Workspace
-
-	provider             provider2.ServerProvider
+	client               client.AgentClient
 	updateConfigInterval time.Duration
 	log                  log.Logger
 }
@@ -68,8 +63,8 @@ func (c *ContainerHandler) Run(ctx context.Context, runInHost Handler, runInCont
 	//TODO: right now we have a tunnel in a tunnel, maybe its better to start 2 separate commands?
 	tunnelChan := make(chan error, 1)
 	go func() {
-		tunnelChan <- c.provider.Command(ctx, c.getWorkspace(), provider2.CommandOptions{
-			Command: fmt.Sprintf("%s helper ssh-server --token '%s' --stdio", c.getWorkspace().Provider.Agent.Path, tok),
+		tunnelChan <- c.client.Command(ctx, client.CommandOptions{
+			Command: fmt.Sprintf("%s helper ssh-server --token '%s' --stdio", c.client.AgentPath(), tok),
 			Stdin:   stdinReader,
 			Stdout:  stdoutWriter,
 			Stderr:  os.Stderr,
@@ -131,20 +126,6 @@ func (c *ContainerHandler) Run(ctx context.Context, runInHost Handler, runInCont
 	}
 }
 
-func (c *ContainerHandler) getWorkspace() *provider2.Workspace {
-	c.workspaceMutex.Lock()
-	defer c.workspaceMutex.Unlock()
-
-	return c.workspace
-}
-
-func (c *ContainerHandler) setWorkspace(w *provider2.Workspace) {
-	c.workspaceMutex.Lock()
-	defer c.workspaceMutex.Unlock()
-
-	c.workspace = w
-}
-
 func (c *ContainerHandler) updateConfig(sshClient *ssh.Client, doneChan chan struct{}) {
 	for {
 		select {
@@ -152,17 +133,14 @@ func (c *ContainerHandler) updateConfig(sshClient *ssh.Client, doneChan chan str
 			return
 		case <-time.After(c.updateConfigInterval):
 			// update options
-			workspace, err := options.ResolveAndSaveOptions(context.Background(), "command", "", c.getWorkspace(), c.provider)
+			err := c.client.RefreshOptions("command", "")
 			if err != nil {
-				c.log.Errorf("Error resolving options: %v", err)
+				c.log.Errorf("Error refreshing workspace options: %v", err)
 				break
 			}
 
-			// update workspace
-			c.setWorkspace(workspace)
-
 			// compress info
-			workspaceInfo, err := provider2.NewAgentWorkspaceInfo(c.getWorkspace())
+			workspaceInfo, err := c.client.AgentInfo()
 			if err != nil {
 				c.log.Errorf("Error compressing workspace info: %v", err)
 				break
@@ -170,7 +148,7 @@ func (c *ContainerHandler) updateConfig(sshClient *ssh.Client, doneChan chan str
 
 			// update workspace remotely
 			buf := &bytes.Buffer{}
-			err = devssh.Run(sshClient, fmt.Sprintf("%s agent workspace update-config --workspace-info '%s'", c.getWorkspace().Provider.Agent.Path, workspaceInfo), nil, buf, buf)
+			err = devssh.Run(sshClient, fmt.Sprintf("%s agent workspace update-config --workspace-info '%s'", c.client.AgentPath(), workspaceInfo), nil, buf, buf)
 			if err != nil {
 				c.log.Errorf("Error updating remote workspace: %s%v", buf.String(), err)
 			}
@@ -180,7 +158,7 @@ func (c *ContainerHandler) updateConfig(sshClient *ssh.Client, doneChan chan str
 
 func (c *ContainerHandler) runRunInContainer(sshClient *ssh.Client, tok string, privateKey []byte, runInContainer Handler) error {
 	// compress info
-	workspaceInfo, err := provider2.NewAgentWorkspaceInfo(c.getWorkspace())
+	workspaceInfo, err := c.client.AgentInfo()
 	if err != nil {
 		return err
 	}
@@ -201,7 +179,7 @@ func (c *ContainerHandler) runRunInContainer(sshClient *ssh.Client, tok string, 
 	containerChan := make(chan error, 1)
 	go func() {
 		buf := &bytes.Buffer{}
-		err = devssh.Run(sshClient, fmt.Sprintf("%s agent container-tunnel --token '%s' --workspace-info '%s'", c.getWorkspace().Provider.Agent.Path, tok, workspaceInfo), stdinReader, stdoutWriter, os.Stderr)
+		err = devssh.Run(sshClient, fmt.Sprintf("%s agent container-tunnel --token '%s' --workspace-info '%s'", c.client.AgentPath(), tok, workspaceInfo), stdinReader, stdoutWriter, os.Stderr)
 		if err != nil {
 			c.log.Errorf("Error tunneling to container: %v", err)
 			containerChan <- errors.Wrapf(err, "%s", buf.String())
