@@ -2,6 +2,8 @@ package cmd
 
 import (
 	"context"
+	"encoding/json"
+	"fmt"
 	"github.com/loft-sh/devpod/cmd/flags"
 	"github.com/loft-sh/devpod/pkg/config"
 	"github.com/loft-sh/devpod/pkg/log"
@@ -17,6 +19,8 @@ import (
 // ListCmd holds the configuration
 type ListCmd struct {
 	*flags.GlobalFlags
+
+	Output string
 }
 
 // NewListCmd creates a new destroy command
@@ -32,6 +36,7 @@ func NewListCmd(flags *flags.GlobalFlags) *cobra.Command {
 		},
 	}
 
+	listCmd.Flags().StringVar(&cmd.Output, "output", "plain", "The output format to use. Can be json or plain")
 	return listCmd
 }
 
@@ -52,29 +57,51 @@ func (cmd *ListCmd) Run(ctx context.Context) error {
 		return err
 	}
 
-	tableEntries := [][]string{}
-	for _, entry := range entries {
-		workspaceConfig, err := provider2.LoadWorkspaceConfig(devPodConfig.DefaultContext, entry.Name())
-		if err != nil {
-			return errors.Wrap(err, "load workspace config")
+	if cmd.Output == "json" {
+		tableEntries := []*provider2.Workspace{}
+		for _, entry := range entries {
+			workspaceConfig, err := provider2.LoadWorkspaceConfig(devPodConfig.DefaultContext, entry.Name())
+			if err != nil {
+				return errors.Wrap(err, "load workspace config")
+			}
+
+			tableEntries = append(tableEntries, workspaceConfig)
 		}
-
-		tableEntries = append(tableEntries, []string{
-			workspaceConfig.ID,
-			workspaceConfig.Source.String(),
-			workspaceConfig.Provider.Name,
-			time.Since(workspaceConfig.CreationTimestamp.Time).Round(1 * time.Second).String(),
+		sort.SliceStable(tableEntries, func(i, j int) bool {
+			return tableEntries[i].ID < tableEntries[j].ID
 		})
-	}
-	sort.SliceStable(tableEntries, func(i, j int) bool {
-		return tableEntries[i][0] < tableEntries[j][0]
-	})
+		out, err := json.Marshal(tableEntries)
+		if err != nil {
+			return err
+		}
+		fmt.Print(string(out))
+	} else if cmd.Output == "plain" {
+		tableEntries := [][]string{}
+		for _, entry := range entries {
+			workspaceConfig, err := provider2.LoadWorkspaceConfig(devPodConfig.DefaultContext, entry.Name())
+			if err != nil {
+				return errors.Wrap(err, "load workspace config")
+			}
 
-	table.PrintTable(log.Default, []string{
-		"Name",
-		"Source",
-		"Provider",
-		"Age",
-	}, tableEntries)
+			tableEntries = append(tableEntries, []string{
+				workspaceConfig.ID,
+				workspaceConfig.Source.String(),
+				workspaceConfig.Provider.Name,
+				time.Since(workspaceConfig.CreationTimestamp.Time).Round(1 * time.Second).String(),
+			})
+		}
+		sort.SliceStable(tableEntries, func(i, j int) bool {
+			return tableEntries[i][0] < tableEntries[j][0]
+		})
+		table.PrintTable(log.Default, []string{
+			"Name",
+			"Source",
+			"Provider",
+			"Age",
+		}, tableEntries)
+	} else {
+		return fmt.Errorf("unexpected output format, choose either json or plain. Got %s", cmd.Output)
+	}
+
 	return nil
 }
