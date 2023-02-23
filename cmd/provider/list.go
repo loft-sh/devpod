@@ -2,6 +2,8 @@ package provider
 
 import (
 	"context"
+	"encoding/json"
+	"fmt"
 	"github.com/loft-sh/devpod/cmd/flags"
 	"github.com/loft-sh/devpod/pkg/config"
 	"github.com/loft-sh/devpod/pkg/log"
@@ -16,7 +18,8 @@ import (
 type ListCmd struct {
 	flags.GlobalFlags
 
-	Unused bool
+	Output string
+	Used   bool
 }
 
 // NewListCmd creates a new command
@@ -32,7 +35,8 @@ func NewListCmd(flags *flags.GlobalFlags) *cobra.Command {
 		},
 	}
 
-	listCmd.Flags().BoolVar(&cmd.Unused, "unused", false, "If enabled, will also show unconfigured providers")
+	listCmd.Flags().StringVar(&cmd.Output, "output", "plain", "The output format to use. Can be json or plain")
+	listCmd.Flags().BoolVar(&cmd.Used, "used", false, "If enabled, will only show used providers")
 	return listCmd
 }
 
@@ -53,26 +57,39 @@ func (cmd *ListCmd) Run(ctx context.Context) error {
 		configuredProviders = map[string]*config.ConfigProvider{}
 	}
 
-	tableEntries := [][]string{}
-	for _, entry := range providers {
-		if !cmd.Unused && configuredProviders[entry.Config.Name] == nil {
-			continue
+	if cmd.Output == "plain" {
+		tableEntries := [][]string{}
+		for _, entry := range providers {
+			if cmd.Used && configuredProviders[entry.Config.Name] == nil {
+				continue
+			}
+
+			tableEntries = append(tableEntries, []string{
+				entry.Config.Name,
+				strconv.FormatBool(devPodConfig.Contexts[devPodConfig.DefaultContext].DefaultProvider == entry.Config.Name),
+				strconv.FormatBool(configuredProviders[entry.Config.Name] != nil),
+				entry.Config.Description,
+			})
 		}
-
-		tableEntries = append(tableEntries, []string{
-			entry.Config.Name,
-			strconv.FormatBool(devPodConfig.Contexts[devPodConfig.DefaultContext].DefaultProvider == entry.Config.Name),
-			entry.Config.Description,
+		sort.SliceStable(tableEntries, func(i, j int) bool {
+			return tableEntries[i][0] < tableEntries[j][0]
 		})
-	}
-	sort.SliceStable(tableEntries, func(i, j int) bool {
-		return tableEntries[i][0] < tableEntries[j][0]
-	})
 
-	table.PrintTable(log.Default, []string{
-		"Name",
-		"Default",
-		"Description",
-	}, tableEntries)
+		table.PrintTable(log.Default, []string{
+			"Name",
+			"Default",
+			"Configured",
+			"Description",
+		}, tableEntries)
+	} else if cmd.Output == "json" {
+		out, err := json.Marshal(devPodConfig.Contexts[devPodConfig.DefaultContext])
+		if err != nil {
+			return err
+		}
+		fmt.Print(string(out))
+	} else {
+		return fmt.Errorf("unexpected output format, choose either json or plain. Got %s", cmd.Output)
+	}
+
 	return nil
 }

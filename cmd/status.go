@@ -84,6 +84,8 @@ func (cmd *StatusCmd) Run(ctx context.Context, client client2.WorkspaceClient) e
 		}
 
 		fmt.Print(string(out))
+	} else {
+		return fmt.Errorf("unexpected output format, choose either json or plain. Got %s", cmd.Output)
 	}
 
 	return nil

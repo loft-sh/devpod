@@ -48,7 +48,7 @@ func GetWorkspace(ctx context.Context, devPodConfig *config.Config, ide *provide
 }
 
 // ResolveWorkspace tries to retrieve an already existing workspace or creates a new one
-func ResolveWorkspace(ctx context.Context, devPodConfig *config.Config, ide *provider2.WorkspaceIDEConfig, args []string, desiredID string, log log.Logger) (client.WorkspaceClient, error) {
+func ResolveWorkspace(ctx context.Context, devPodConfig *config.Config, ide *provider2.WorkspaceIDEConfig, args []string, desiredID, providerOverride string, log log.Logger) (client.WorkspaceClient, error) {
 	// check if we have no args
 	if len(args) == 0 {
 		if desiredID != "" {
@@ -79,9 +79,16 @@ func ResolveWorkspace(ctx context.Context, devPodConfig *config.Config, ide *pro
 	}
 
 	// get default provider
-	defaultProvider, _, err := LoadProviders(devPodConfig, log)
+	defaultProvider, allProviders, err := LoadProviders(devPodConfig, log)
 	if err != nil {
 		return nil, err
+	}
+	if providerOverride != "" {
+		var ok bool
+		defaultProvider, ok = allProviders[providerOverride]
+		if !ok {
+			return nil, fmt.Errorf("couldn't find provider %s", providerOverride)
+		}
 	}
 
 	// get workspace folder
