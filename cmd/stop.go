@@ -4,11 +4,10 @@ import (
 	"context"
 	"fmt"
 	"github.com/loft-sh/devpod/cmd/flags"
+	client2 "github.com/loft-sh/devpod/pkg/client"
 	"github.com/loft-sh/devpod/pkg/config"
 	"github.com/loft-sh/devpod/pkg/log"
-	provider2 "github.com/loft-sh/devpod/pkg/provider"
 	workspace2 "github.com/loft-sh/devpod/pkg/workspace"
-	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
 )
 
@@ -32,12 +31,12 @@ func NewStopCmd(flags *flags.GlobalFlags) *cobra.Command {
 				return err
 			}
 
-			workspace, provider, err := workspace2.GetWorkspace(ctx, devPodConfig, nil, args, log.Default)
+			client, err := workspace2.GetWorkspace(ctx, devPodConfig, nil, args, log.Default)
 			if err != nil {
 				return err
 			}
 
-			return cmd.Run(ctx, workspace, provider)
+			return cmd.Run(ctx, client)
 		},
 	}
 
@@ -45,55 +44,17 @@ func NewStopCmd(flags *flags.GlobalFlags) *cobra.Command {
 }
 
 // Run runs the command logic
-func (cmd *StopCmd) Run(ctx context.Context, workspace *provider2.Workspace, provider provider2.Provider) error {
-	workspaceProvider, ok := provider.(provider2.WorkspaceProvider)
-	if ok {
-		err := cmd.stopWorkspace(ctx, workspace, workspaceProvider)
-		if err != nil {
-			return errors.Wrap(err, "stop workspace")
-		}
-	}
-
-	serverProvider, ok := provider.(provider2.ServerProvider)
-	if ok {
-		err := cmd.stopServer(ctx, workspace, serverProvider)
-		if err != nil {
-			return errors.Wrap(err, "stop server")
-		}
-	}
-
-	return nil
-}
-
-func (cmd *StopCmd) stopServer(ctx context.Context, workspace *provider2.Workspace, provider provider2.ServerProvider) error {
+func (cmd *StopCmd) Run(ctx context.Context, client client2.WorkspaceClient) error {
 	// get instance status
-	instanceStatus, err := provider.Status(ctx, workspace, provider2.StatusOptions{})
+	instanceStatus, err := client.Status(ctx, client2.StatusOptions{})
 	if err != nil {
 		return err
-	} else if instanceStatus != provider2.StatusRunning {
+	} else if instanceStatus != client2.StatusRunning {
 		return fmt.Errorf("cannot stop instance because it is '%s'", instanceStatus)
 	}
 
 	// stop environment
-	err = provider.Stop(ctx, workspace, provider2.StopOptions{})
-	if err != nil {
-		return err
-	}
-
-	return nil
-}
-
-func (cmd *StopCmd) stopWorkspace(ctx context.Context, workspace *provider2.Workspace, provider provider2.WorkspaceProvider) error {
-	// get instance status
-	instanceStatus, err := provider.Status(ctx, workspace, provider2.WorkspaceStatusOptions{})
-	if err != nil {
-		return err
-	} else if instanceStatus != provider2.StatusRunning {
-		return fmt.Errorf("cannot stop instance because it is '%s'", instanceStatus)
-	}
-
-	// stop environment
-	err = provider.Stop(ctx, workspace, provider2.WorkspaceStopOptions{})
+	err = client.Stop(ctx, client2.StopOptions{})
 	if err != nil {
 		return err
 	}

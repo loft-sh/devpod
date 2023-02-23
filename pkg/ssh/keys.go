@@ -94,12 +94,12 @@ func GetKeysTempDir() string {
 
 func GetTempHostKey() (string, error) {
 	tempDir := GetKeysTempDir()
-	return getHostKeyBase(tempDir)
+	return GetHostKeyBase(tempDir)
 }
 
 func GetTempPublicKey() (string, error) {
 	tempDir := GetKeysTempDir()
-	return getPublicKeyBase(tempDir)
+	return GetPublicKeyBase(tempDir)
 }
 
 func GetTempPrivateKeyRaw() ([]byte, error) {
@@ -113,7 +113,7 @@ func GetHostKey(context, workspaceID string) (string, error) {
 		return "", err
 	}
 
-	return getHostKeyBase(workspaceDir)
+	return GetHostKeyBase(workspaceDir)
 }
 
 func getPrivateKeyRawBase(dir string) ([]byte, error) {
@@ -155,7 +155,7 @@ func getPrivateKeyRawBase(dir string) ([]byte, error) {
 	return out, nil
 }
 
-func getHostKeyBase(dir string) (string, error) {
+func GetHostKeyBase(dir string) (string, error) {
 	keyLock.Lock()
 	defer keyLock.Unlock()
 
@@ -188,7 +188,7 @@ func getHostKeyBase(dir string) (string, error) {
 	return base64.StdEncoding.EncodeToString(out), nil
 }
 
-func getPublicKeyBase(dir string) (string, error) {
+func GetPublicKeyBase(dir string) (string, error) {
 	keyLock.Lock()
 	defer keyLock.Unlock()
 
@@ -233,5 +233,5 @@ func GetPublicKey(context, workspaceID string) (string, error) {
 		return "", err
 	}
 
-	return getPublicKeyBase(workspaceDir)
+	return GetPublicKeyBase(workspaceDir)
 }

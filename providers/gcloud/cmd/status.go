@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"github.com/loft-sh/devpod/pkg/client"
 	"github.com/loft-sh/devpod/pkg/log"
 	"github.com/loft-sh/devpod/pkg/provider"
 	"github.com/spf13/cobra"
@@ -62,20 +63,20 @@ func (cmd *StatusCmd) Run(ctx context.Context, provider *gcloudProvider, workspa
 	return nil
 }
 
-func (cmd *StatusCmd) statusFromInstanceStatus(status *InstanceStatus) (provider.Status, error) {
+func (cmd *StatusCmd) statusFromInstanceStatus(status *InstanceStatus) (client.Status, error) {
 	if status == nil {
-		return provider.StatusNotFound, nil
+		return client.StatusNotFound, nil
 	}
 
 	if status.Status == "RUNNING" {
-		return provider.StatusRunning, nil
+		return client.StatusRunning, nil
 	} else if status.Status == "STOPPING" || status.Status == "SUSPENDING" || status.Status == "REPAIRING" || status.Status == "PROVISIONING" || status.Status == "STAGING" {
-		return provider.StatusBusy, nil
+		return client.StatusBusy, nil
 	} else if status.Status == "TERMINATED" {
-		return provider.StatusStopped, nil
+		return client.StatusStopped, nil
 	}
 
-	return provider.StatusNotFound, fmt.Errorf("unexpected status: %v", status.Status)
+	return client.StatusNotFound, fmt.Errorf("unexpected status: %v", status.Status)
 }
 
 func getWorkspaceStatus(ctx context.Context, name string, provider *gcloudProvider) (*InstanceStatus, error) {

@@ -45,14 +45,9 @@ func ParseProvider(reader io.Reader) (*ProviderConfig, error) {
 	return parsedConfig, nil
 }
 
-var validServerStages = map[string]bool{
+var ValidServerStages = map[string]bool{
 	"init":    true,
 	"command": true,
-	"status":  true,
-	"create":  true,
-	"delete":  true,
-	"start":   true,
-	"stop":    true,
 }
 
 func validate(config *ProviderConfig) error {
@@ -94,11 +89,11 @@ func validate(config *ProviderConfig) error {
 			return fmt.Errorf("after and before cannot be used together in option '%s'", optionName)
 		}
 
-		if optionValue.After != "" && !validServerStages[optionValue.After] {
+		if optionValue.After != "" && !ValidServerStages[optionValue.After] {
 			return fmt.Errorf("invalid after stage in option '%s': %s", optionName, optionValue.After)
 		}
 
-		if optionValue.Before != "" && !validServerStages[optionValue.Before] {
+		if optionValue.Before != "" && !ValidServerStages[optionValue.Before] {
 			return fmt.Errorf("invalid before stage in option '%s': %s", optionName, optionValue.Before)
 		}
 
@@ -131,20 +126,14 @@ func validate(config *ProviderConfig) error {
 	// validate provider type
 	if config.Type == "" || config.Type == ProviderTypeServer {
 		if len(config.Exec.Command) == 0 {
-			return fmt.Errorf("exec.command is required if provider is 'Server' type")
+			return fmt.Errorf("exec.command is required")
 		}
-		if len(config.Exec.Tunnel) > 0 {
-			return fmt.Errorf("exec.tunnel is forbidden if provider is 'Server' type")
-		}
-	} else if config.Type == ProviderTypeWorkspace {
-		if len(config.Exec.Tunnel) == 0 {
-			return fmt.Errorf("exec.tunnel is required if provider is 'Workspace' type")
-		}
-		if len(config.Exec.Command) > 0 {
-			return fmt.Errorf("exec.command is forbidden if provider is 'Workspace' type")
+	} else if config.Type == ProviderTypeDirect {
+		if len(config.Exec.Command) == 0 {
+			return fmt.Errorf("exec.command is required")
 		}
 	} else {
-		return fmt.Errorf("provider type '%s' unrecognized, either choose '%s' or '%s'", config.Type, ProviderTypeServer, ProviderTypeWorkspace)
+		return fmt.Errorf("provider type '%s' unrecognized, either choose '%s' or '%s'", config.Type, ProviderTypeServer, ProviderTypeDirect)
 	}
 
 	return nil

@@ -2,9 +2,7 @@ package providers
 
 import (
 	_ "embed"
-	"github.com/loft-sh/devpod/pkg/log"
 	"github.com/loft-sh/devpod/pkg/provider"
-	"github.com/loft-sh/devpod/pkg/provider/providerimplementation"
 	"github.com/pkg/errors"
 	"strings"
 )
@@ -19,21 +17,19 @@ var GCloudProvider string
 var AWSProvider string
 
 // GetBuiltInProviders retrieves the built in providers
-func GetBuiltInProviders(log log.Logger) (map[string]provider.Provider, map[string]*provider.ProviderConfig, error) {
+func GetBuiltInProviders() (map[string]*provider.ProviderConfig, error) {
 	providers := []string{LocalProvider, GCloudProvider, AWSProvider}
-	retProviders := map[string]provider.Provider{}
 	retProviderConfigs := map[string]*provider.ProviderConfig{}
 
 	// parse providers
 	for _, providerConfig := range providers {
 		parsedConfig, err := provider.ParseProvider(strings.NewReader(providerConfig))
 		if err != nil {
-			return nil, nil, errors.Wrap(err, "parse provider")
+			return nil, errors.Wrap(err, "parse provider")
 		}
 
-		retProviders[parsedConfig.Name] = providerimplementation.NewProvider(parsedConfig, log)
 		retProviderConfigs[parsedConfig.Name] = parsedConfig
 	}
 
-	return retProviders, retProviderConfigs, nil
+	return retProviderConfigs, nil
 }

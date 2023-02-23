@@ -119,7 +119,6 @@ func SaveServerConfig(server *Server) error {
 		return err
 	}
 
-	server.Folder = serverDir
 	err = os.MkdirAll(serverDir, 0755)
 	if err != nil {
 		return err
@@ -137,6 +136,20 @@ func SaveServerConfig(server *Server) error {
 	}
 
 	return nil
+}
+
+func ServerExists(context, serverID string) bool {
+	serverDir, err := GetServerDir(context, serverID)
+	if err != nil {
+		return false
+	}
+
+	_, err = os.Stat(serverDir)
+	if err != nil {
+		return false
+	}
+
+	return true
 }
 
 func LoadServerConfig(context, serverID string) (*Server, error) {

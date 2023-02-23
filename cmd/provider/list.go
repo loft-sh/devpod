@@ -55,14 +55,14 @@ func (cmd *ListCmd) Run(ctx context.Context) error {
 
 	tableEntries := [][]string{}
 	for _, entry := range providers {
-		if !cmd.Unused && configuredProviders[entry.Provider.Name()] == nil {
+		if !cmd.Unused && configuredProviders[entry.Config.Name] == nil {
 			continue
 		}
 
 		tableEntries = append(tableEntries, []string{
-			entry.Provider.Name(),
-			strconv.FormatBool(devPodConfig.Contexts[devPodConfig.DefaultContext].DefaultProvider == entry.Provider.Name()),
-			entry.Provider.Description(),
+			entry.Config.Name,
+			strconv.FormatBool(devPodConfig.Contexts[devPodConfig.DefaultContext].DefaultProvider == entry.Config.Name),
+			entry.Config.Description,
 		})
 	}
 	sort.SliceStable(tableEntries, func(i, j int) bool {

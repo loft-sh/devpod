@@ -38,12 +38,12 @@ func NewTunnelClient(reader io.Reader, writer io.WriteCloser, exitOnClose bool) 
 	return tunnel.NewTunnelClient(conn), nil
 }
 
-func RunTunnelServer(ctx context.Context, reader io.Reader, writer io.WriteCloser, exitOnClose bool, workspace *provider2.Workspace, log log.Logger) (*config.Result, error) {
+func RunTunnelServer(ctx context.Context, reader io.Reader, writer io.WriteCloser, exitOnClose bool, workspaceSource provider2.WorkspaceSource, log log.Logger) (*config.Result, error) {
 	lis := stdio.NewStdioListener(reader, writer, exitOnClose)
 	s := grpc.NewServer()
 	tunnelServ := &tunnelServer{
-		workspace: workspace,
-		log:       log,
+		workspaceSource: workspaceSource,
+		log:             log,
 	}
 	tunnel.RegisterTunnelServer(s, tunnelServ)
 	reflection.Register(s)
@@ -64,9 +64,9 @@ func RunTunnelServer(ctx context.Context, reader io.Reader, writer io.WriteClose
 type tunnelServer struct {
 	tunnel.UnimplementedTunnelServer
 
-	result    *config.Result
-	workspace *provider2.Workspace
-	log       log.Logger
+	result          *config.Result
+	workspaceSource provider2.WorkspaceSource
+	log             log.Logger
 }
 
 func (t *tunnelServer) SendResult(ctx context.Context, result *tunnel.Result) (*tunnel.Empty, error) {
@@ -101,7 +101,7 @@ func (t *tunnelServer) Log(ctx context.Context, message *tunnel.LogMessage) (*tu
 }
 
 func (t *tunnelServer) ReadWorkspace(response *tunnel.Empty, stream tunnel.Tunnel_ReadWorkspaceServer) error {
-	return extract.WriteTar(NewStreamWriter(stream), t.workspace.Source.LocalFolder)
+	return extract.WriteTar(NewStreamWriter(stream), t.workspaceSource.LocalFolder)
 }
 
 func NewStreamReader(stream tunnel.Tunnel_ReadWorkspaceClient) io.Reader {

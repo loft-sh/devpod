@@ -4,9 +4,9 @@ import (
 	"context"
 	"fmt"
 	"github.com/loft-sh/devpod/cmd/flags"
+	client2 "github.com/loft-sh/devpod/pkg/client"
 	"github.com/loft-sh/devpod/pkg/config"
 	"github.com/loft-sh/devpod/pkg/log"
-	provider2 "github.com/loft-sh/devpod/pkg/provider"
 	"github.com/loft-sh/devpod/pkg/workspace"
 	"github.com/spf13/cobra"
 	"os"
@@ -54,65 +54,57 @@ func (cmd *ExecCmd) Run(ctx context.Context, args []string) error {
 	}
 
 	devPodConfig.Contexts[devPodConfig.DefaultContext].DefaultProvider = args[0]
-
 	var (
-		workspaceConfig *provider2.Workspace
-		provider        provider2.Provider
+		client client2.WorkspaceClient
 	)
 	if args[1] == "create" {
-		workspaceConfig, provider, err = workspace.ResolveWorkspace(ctx, devPodConfig, nil, []string{args[2]}, "", log.Default)
-		if err != nil {
-			return err
-		}
+		client, err = workspace.ResolveWorkspace(ctx, devPodConfig, nil, []string{args[2]}, "", log.Default)
 	} else {
-		workspaceConfig, provider, err = workspace.GetWorkspace(ctx, devPodConfig, nil, []string{args[2]}, log.Default)
-		if err != nil {
-			return err
-		}
+		client, err = workspace.GetWorkspace(ctx, devPodConfig, nil, []string{args[2]}, log.Default)
+	}
+	if err != nil {
+		return err
 	}
 
 	// case server provider
-	serverProvider, ok := provider.(provider2.ServerProvider)
-	if ok {
-		switch args[1] {
-		case "create":
-			err = serverProvider.Create(ctx, workspaceConfig, provider2.CreateOptions{})
-			if err != nil {
-				return err
-			}
-		case "delete":
-			err = serverProvider.Delete(ctx, workspaceConfig, provider2.DeleteOptions{})
-			if err != nil {
-				return err
-			}
-		case "stop":
-			err = serverProvider.Stop(ctx, workspaceConfig, provider2.StopOptions{})
-			if err != nil {
-				return err
-			}
-		case "start":
-			err = serverProvider.Start(ctx, workspaceConfig, provider2.StartOptions{})
-			if err != nil {
-				return err
-			}
-		case "command":
-			err = serverProvider.Command(ctx, workspaceConfig, provider2.CommandOptions{
-				Command: strings.Join(args[3:], " "),
-				Stdin:   os.Stdin,
-				Stdout:  os.Stdout,
-				Stderr:  os.Stderr,
-			})
-			if err != nil {
-				return err
-			}
-		case "status":
-			status, err := serverProvider.Status(ctx, workspaceConfig, provider2.StatusOptions{})
-			if err != nil {
-				return err
-			}
-
-			fmt.Println(status)
+	switch args[1] {
+	case "create":
+		err = client.Create(ctx, client2.CreateOptions{})
+		if err != nil {
+			return err
 		}
+	case "delete":
+		err = client.Delete(ctx, client2.DeleteOptions{})
+		if err != nil {
+			return err
+		}
+	case "stop":
+		err = client.Stop(ctx, client2.StopOptions{})
+		if err != nil {
+			return err
+		}
+	case "start":
+		err = client.Start(ctx, client2.StartOptions{})
+		if err != nil {
+			return err
+		}
+	case "command":
+		err = client.Command(ctx, client2.CommandOptions{
+			Command: strings.Join(args[3:], " "),
+			Stdin:   os.Stdin,
+			Stdout:  os.Stdout,
+			Stderr:  os.Stderr,
+		})
+		if err != nil {
+			return err
+		}
+	case "status":
+		status, err := client.Status(ctx, client2.StatusOptions{})
+		if err != nil {
+			return err
+		}
+
+		fmt.Println(status)
 	}
 
 	return nil

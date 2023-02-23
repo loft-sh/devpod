@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"github.com/loft-sh/devpod/pkg/agent"
 	"github.com/loft-sh/devpod/pkg/config"
 	"github.com/loft-sh/devpod/pkg/devcontainer/graph"
 	provider2 "github.com/loft-sh/devpod/pkg/provider"
@@ -22,7 +23,7 @@ var variableExpression = regexp.MustCompile(`(?m)\$\{?([A-Z0-9_]+)(:(-|\+)([^\}]
 
 const rootID = "root"
 
-func ResolveAndSaveOptions(ctx context.Context, beforeStage, afterStage string, workspace *provider2.Workspace, provider provider2.Provider) (*provider2.Workspace, error) {
+func ResolveAndSaveOptions(ctx context.Context, beforeStage, afterStage string, workspace *provider2.Workspace, provider *provider2.ProviderConfig) (*provider2.Workspace, error) {
 	var err error
 
 	// resolve options
@@ -43,13 +44,65 @@ func ResolveAndSaveOptions(ctx context.Context, beforeStage, afterStage string, 
 	return workspace, nil
 }
 
-func ResolveOptions(ctx context.Context, beforeStage, afterStage string, workspace *provider2.Workspace, provider provider2.Provider) (*provider2.Workspace, error) {
-	options := provider.Options()
+func ResolveAndSaveOptionsServer(ctx context.Context, beforeStage, afterStage string, server *provider2.Server, provider *provider2.ProviderConfig) (*provider2.Server, error) {
+	var err error
+
+	// resolve options
+	beforeOptions := server.Provider.Options
+	server, err = ResolveOptionsServer(ctx, beforeStage, afterStage, server, provider)
+	if err != nil {
+		return server, errors.Wrap(err, "resolve options")
+	}
+
+	// save workspace config
+	if server.ID != "" && !reflect.DeepEqual(server.Provider.Options, beforeOptions) {
+		err = provider2.SaveServerConfig(server)
+		if err != nil {
+			return server, err
+		}
+	}
+
+	return server, nil
+}
+
+func ResolveOptionsServer(ctx context.Context, beforeStage, afterStage string, server *provider2.Server, provider *provider2.ProviderConfig) (*provider2.Server, error) {
+	// resolve options
+	resolvedOptions, err := resolveOptionsGeneric(ctx, beforeStage, afterStage, server.Provider.Options, provider2.ToOptionsServer(server), provider)
+	if err != nil {
+		return nil, err
+	}
+
+	// return workspace
+	server = provider2.CloneServer(server)
+	server.Provider.Name = provider.Name
+	server.Provider.Options = resolvedOptions
+	return server, nil
+}
+
+func ResolveOptions(ctx context.Context, beforeStage, afterStage string, workspace *provider2.Workspace, provider *provider2.ProviderConfig) (*provider2.Workspace, error) {
+	resolvedOptions, err := resolveOptionsGeneric(ctx, beforeStage, afterStage, workspace.Provider.Options, provider2.ToOptions(workspace), provider)
+	if err != nil {
+		return nil, err
+	}
+
+	// return workspace
+	workspace = provider2.CloneWorkspace(workspace)
+	workspace.Provider.Name = provider.Name
+	workspace.Provider.Options = resolvedOptions
+
+	// resolve agent config
+	workspace.Provider.Agent, err = resolveAgentConfig(workspace, provider)
+	if err != nil {
+		return nil, err
+	}
+
+	return workspace, nil
+}
+
+func resolveOptionsGeneric(ctx context.Context, beforeStage, afterStage string, optionValues map[string]config.OptionValue, extraValues map[string]string, provider *provider2.ProviderConfig) (map[string]config.OptionValue, error) {
+	options := provider.Options
 	if options == nil {
 		options = map[string]*provider2.ProviderOption{}
-	}
-	if workspace != nil && workspace.Provider.Options == nil {
-		workspace.Provider.Options = map[string]config.OptionValue{}
 	}
 
 	// create a new graph
@@ -68,44 +121,31 @@ func ResolveOptions(ctx context.Context, beforeStage, afterStage string, workspa
 	}
 
 	// resolve options
-	resolvedOptions, err := resolveOptions(ctx, g, beforeStage, afterStage, options, workspace)
+	resolvedOptions, err := resolveOptions(ctx, g, beforeStage, afterStage, options, optionValues, extraValues)
 	if err != nil {
 		return nil, err
 	}
 
-	// return workspace
-	workspace = provider2.CloneWorkspace(workspace)
-	workspace.Provider.Name = provider.Name()
-	workspace.Provider.Options = resolvedOptions
-
-	// resolve agent config
-	workspace.Provider.Agent, err = resolveAgentConfig(workspace, provider)
-	if err != nil {
-		return nil, err
-	}
-
-	return workspace, nil
+	return resolvedOptions, nil
 }
 
-func resolveAgentConfig(workspace *provider2.Workspace, provider provider2.Provider) (provider2.ProviderAgentConfig, error) {
+func resolveAgentConfig(workspace *provider2.Workspace, provider *provider2.ProviderConfig) (provider2.ProviderAgentConfig, error) {
 	// fill in agent config
-	agentConfig, err := provider.AgentConfig()
-	if err != nil {
-		return provider2.ProviderAgentConfig{}, err
-	}
-
-	options, err := toOptions(workspace.Provider.Options, workspace)
-	if err != nil {
-		return provider2.ProviderAgentConfig{}, err
-	}
-
+	options := provider2.ToOptions(workspace)
+	agentConfig := provider.Agent
 	agentConfig.Path = resolveDefaultValue(agentConfig.Path, options)
+	if agentConfig.Path == "" {
+		agentConfig.Path = agent.RemoteDevPodHelperLocation
+	}
 	agentConfig.DownloadURL = resolveDefaultValue(agentConfig.DownloadURL, options)
+	if agentConfig.DownloadURL == "" {
+		agentConfig.DownloadURL = agent.DefaultAgentDownloadURL
+	}
 	agentConfig.Timeout = resolveDefaultValue(agentConfig.Timeout, options)
-	return *agentConfig, nil
+	return agentConfig, nil
 }
 
-func resolveOptions(ctx context.Context, g *graph.Graph, beforeStage, afterStage string, options map[string]*provider2.ProviderOption, workspace *provider2.Workspace) (map[string]config.OptionValue, error) {
+func resolveOptions(ctx context.Context, g *graph.Graph, beforeStage, afterStage string, options map[string]*provider2.ProviderOption, optionValues map[string]config.OptionValue, extraValues map[string]string) (map[string]config.OptionValue, error) {
 	// find out options we need to resolve
 	resolveOptions := map[string]bool{}
 	for optionName, option := range options {
@@ -113,8 +153,8 @@ func resolveOptions(ctx context.Context, g *graph.Graph, beforeStage, afterStage
 			continue
 		}
 
-		if workspace != nil {
-			val, ok := workspace.Provider.Options[optionName]
+		if optionValues != nil {
+			val, ok := optionValues[optionName]
 			if ok && (val.Expires == nil || time.Now().Before(val.Expires.Time)) {
 				continue
 			}
@@ -125,8 +165,8 @@ func resolveOptions(ctx context.Context, g *graph.Graph, beforeStage, afterStage
 
 	// resolve options
 	resolvedOptions := map[string]config.OptionValue{}
-	if workspace != nil {
-		for optionName, v := range workspace.Provider.Options {
+	if optionValues != nil {
+		for optionName, v := range optionValues {
 			if resolveOptions[optionName] {
 				continue
 			}
@@ -137,7 +177,7 @@ func resolveOptions(ctx context.Context, g *graph.Graph, beforeStage, afterStage
 
 	// resolve options
 	for optionName := range resolveOptions {
-		err := resolveOption(ctx, g, optionName, resolveOptions, resolvedOptions, workspace)
+		err := resolveOption(ctx, g, optionName, resolveOptions, resolvedOptions, extraValues)
 		if err != nil {
 			return nil, errors.Wrap(err, "resolve option "+optionName)
 		}
@@ -147,7 +187,7 @@ func resolveOptions(ctx context.Context, g *graph.Graph, beforeStage, afterStage
 	return resolvedOptions, nil
 }
 
-func resolveOption(ctx context.Context, g *graph.Graph, optionName string, resolveOptions map[string]bool, resolvedOptions map[string]config.OptionValue, workspace *provider2.Workspace) error {
+func resolveOption(ctx context.Context, g *graph.Graph, optionName string, resolveOptions map[string]bool, resolvedOptions map[string]config.OptionValue, extraValues map[string]string) error {
 	node := g.Nodes[optionName]
 
 	// are parents resolved?
@@ -168,7 +208,7 @@ func resolveOption(ctx context.Context, g *graph.Graph, optionName string, resol
 		}
 
 		// resolve parent first
-		err := resolveOption(ctx, g, parent.ID, resolveOptions, resolvedOptions, workspace)
+		err := resolveOption(ctx, g, parent.ID, resolveOptions, resolvedOptions, extraValues)
 		if err != nil {
 			return err
 		}
@@ -177,17 +217,13 @@ func resolveOption(ctx context.Context, g *graph.Graph, optionName string, resol
 	// resolve option
 	option := node.Data.(*provider2.ProviderOption)
 	if option.Default != "" {
-		resolved, err := toOptions(resolvedOptions, workspace)
-		if err != nil {
-			return err
-		}
 
 		resolvedOptions[optionName] = config.OptionValue{
-			Value: resolveDefaultValue(option.Default, resolved),
+			Value: resolveDefaultValue(option.Default, combine(resolvedOptions, extraValues)),
 			Local: option.Local,
 		}
 	} else if option.Command != "" {
-		optionValue, err := resolveFromCommand(ctx, option, resolvedOptions, workspace)
+		optionValue, err := resolveFromCommand(ctx, option, resolvedOptions, extraValues)
 		if err != nil {
 			return err
 		}
@@ -200,20 +236,15 @@ func resolveOption(ctx context.Context, g *graph.Graph, optionName string, resol
 	return nil
 }
 
-func resolveFromCommand(ctx context.Context, option *provider2.ProviderOption, resolvedOptions map[string]config.OptionValue, workspace *provider2.Workspace) (config.OptionValue, error) {
+func resolveFromCommand(ctx context.Context, option *provider2.ProviderOption, resolvedOptions map[string]config.OptionValue, extraValues map[string]string) (config.OptionValue, error) {
 	stdout := &bytes.Buffer{}
 	stderr := &bytes.Buffer{}
 	env := os.Environ()
-	resolved, err := toOptions(resolvedOptions, workspace)
-	if err != nil {
-		return config.OptionValue{}, err
-	}
-
-	for k, v := range resolved {
+	for k, v := range combine(resolvedOptions, extraValues) {
 		env = append(env, k+"="+v)
 	}
 
-	err = shell.ExecuteCommandWithShell(ctx, option.Command, nil, stdout, stderr, env)
+	err := shell.ExecuteCommandWithShell(ctx, option.Command, nil, stdout, stderr, env)
 	if err != nil {
 		return config.OptionValue{}, errors.Wrapf(err, "run command: %s%s", stdout.String(), stderr.String())
 	}
@@ -235,22 +266,15 @@ func resolveFromCommand(ctx context.Context, option *provider2.ProviderOption, r
 	return optionValue, nil
 }
 
-func toOptions(resolvedOptions map[string]config.OptionValue, workspace *provider2.Workspace) (map[string]string, error) {
+func combine(resolvedOptions map[string]config.OptionValue, extraValues map[string]string) map[string]string {
 	options := map[string]string{}
+	for k, v := range extraValues {
+		options[k] = v
+	}
 	for k, v := range resolvedOptions {
 		options[k] = v.Value
 	}
-	if workspace != nil {
-		workspaceOptions, err := provider2.ToOptions(workspace)
-		if err != nil {
-			return nil, err
-		}
-
-		for k, v := range workspaceOptions {
-			options[k] = v
-		}
-	}
-	return options, nil
+	return options
 }
 
 func resolveDefaultValue(val string, resolvedOptions map[string]string) string {
