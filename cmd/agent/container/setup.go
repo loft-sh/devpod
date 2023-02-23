@@ -7,6 +7,7 @@ import (
 	"github.com/loft-sh/devpod/pkg/compress"
 	"github.com/loft-sh/devpod/pkg/devcontainer/config"
 	"github.com/loft-sh/devpod/pkg/devcontainer/setup"
+	"github.com/loft-sh/devpod/pkg/ide/goland"
 	"github.com/loft-sh/devpod/pkg/ide/openvscode"
 	"github.com/loft-sh/devpod/pkg/ide/vscode"
 	"github.com/loft-sh/devpod/pkg/log"
@@ -15,6 +16,7 @@ import (
 	"github.com/spf13/cobra"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"strconv"
 )
 
@@ -74,7 +76,7 @@ func (cmd *SetupContainerCmd) Run(_ *cobra.Command, _ []string) error {
 
 	// start container daemon if necessary
 	if !workspaceInfo.Workspace.Server.AutoDelete && workspaceInfo.Workspace.Provider.Agent.Timeout != "" {
-		err = single.Single("devpod.daemon.pid", func() (*exec.Cmd, error) {
+		err = single.Single(filepath.Join(os.TempDir(), "devpod.daemon.pid"), func() (*exec.Cmd, error) {
 			log.Default.Debugf("Start DevPod Container Daemon with Inactivity Timeout %s", workspaceInfo.Workspace.Provider.Agent.Timeout)
 			binaryPath, err := os.Executable()
 			if err != nil {
@@ -99,9 +101,18 @@ func installIDE(setupInfo *config.Result, workspaceInfo *provider2.AgentWorkspac
 		return setupVSCode(setupInfo, log)
 	case provider2.IDEOpenVSCode:
 		return setupOpenVSCode(setupInfo, log)
+	case provider2.IDEGoland:
+		return setupGoland(setupInfo, log)
 	}
 
 	return nil
+}
+
+func setupGoland(setupInfo *config.Result, log log.Logger) error {
+	log.Debugf("Setup goland...")
+
+	user := config.GetRemoteUser(setupInfo)
+	return goland.NewGolandServer(user, log).Install()
 }
 
 func setupVSCode(setupInfo *config.Result, log log.Logger) error {

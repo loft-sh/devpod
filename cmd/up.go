@@ -9,9 +9,10 @@ import (
 	"github.com/loft-sh/devpod/pkg/config"
 	config2 "github.com/loft-sh/devpod/pkg/devcontainer/config"
 	"github.com/loft-sh/devpod/pkg/ide"
+	"github.com/loft-sh/devpod/pkg/ide/goland"
 	"github.com/loft-sh/devpod/pkg/ide/openvscode"
 	"github.com/loft-sh/devpod/pkg/log"
-	"github.com/loft-sh/devpod/pkg/open"
+	open2 "github.com/loft-sh/devpod/pkg/open"
 	"github.com/loft-sh/devpod/pkg/port"
 	provider2 "github.com/loft-sh/devpod/pkg/provider"
 	devssh "github.com/loft-sh/devpod/pkg/ssh"
@@ -19,11 +20,14 @@ import (
 	workspace2 "github.com/loft-sh/devpod/pkg/workspace"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
+	"github.com/skratchdot/open-golang/open"
 	"github.com/spf13/cobra"
 	"golang.org/x/crypto/ssh"
 	"io"
+	"net/url"
 	"os"
 	"os/exec"
+	"path"
 	"strings"
 	"time"
 )
@@ -97,15 +101,26 @@ func (cmd *UpCmd) Run(ctx context.Context, ide provider2.IDE, client client2.Wor
 	// open ide
 	switch ide {
 	case provider2.IDEVSCode:
-		return startLocally(client, log.Default)
+		return startVSCodeLocally(client, log.Default)
 	case provider2.IDEOpenVSCode:
 		return startInBrowser(ctx, client, log.Default)
+	case provider2.IDEGoland:
+		return startGoland(result, client)
 	}
 
 	return nil
 }
 
-func startLocally(client client2.WorkspaceClient, log log.Logger) error {
+func startGoland(result *config2.Result, client client2.WorkspaceClient) error {
+	remoteUser := config2.GetRemoteUser(result)
+	err := open.Start(`jetbrains-gateway://connect#idePath=` + url.QueryEscape(goland.GetGolandDirectory(path.Join("/", "home", remoteUser))) + `&projectPath=` + url.QueryEscape(result.SubstitutionContext.ContainerWorkspaceFolder) + `&host=` + client.Workspace() + `.devpod&port=22&user=` + remoteUser + `&type=ssh&deploy=false`)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func startVSCodeLocally(client client2.WorkspaceClient, log log.Logger) error {
 	log.Infof("Starting VSCode...")
 	err := exec.Command("code", "--folder-uri", fmt.Sprintf("vscode-remote://ssh-remote+%s.devpod/workspaces/%s", client.Workspace(), client.Workspace())).Run()
 	if err != nil {
@@ -129,7 +144,7 @@ func startInBrowser(ctx context.Context, client client2.WorkspaceClient, log log
 
 	// wait until reachable then open browser
 	go func() {
-		err = open.Open(ctx, fmt.Sprintf("http://localhost:%d/?folder=/workspaces/%s", vscodePort, client.Workspace()), log)
+		err = open2.Open(ctx, fmt.Sprintf("http://localhost:%d/?folder=/workspaces/%s", vscodePort, client.Workspace()), log)
 		if err != nil {
 			log.Errorf("error opening vscode: %v", err)
 		}
