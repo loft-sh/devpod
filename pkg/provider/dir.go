@@ -1,6 +1,7 @@
 package provider
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"github.com/loft-sh/devpod/pkg/config"
@@ -11,6 +12,8 @@ import (
 const WorkspaceConfigFile = "workspace.json"
 
 const ServerConfigFile = "server.json"
+
+const ProviderConfigFile = "provider.json"
 
 func GetServersDir(context string) (string, error) {
 	configDir, err := config.GetConfigDir()
@@ -28,6 +31,15 @@ func GetWorkspacesDir(context string) (string, error) {
 	}
 
 	return filepath.Join(configDir, "contexts", context, "workspaces"), nil
+}
+
+func GetProvidersDir(context string) (string, error) {
+	configDir, err := config.GetConfigDir()
+	if err != nil {
+		return "", err
+	}
+
+	return filepath.Join(configDir, "contexts", context, "providers"), nil
 }
 
 func GetProviderDir(context, providerName string) (string, error) {
@@ -86,6 +98,31 @@ func WorkspaceExists(context, workspaceID string) bool {
 	}
 
 	return true
+}
+
+func SaveProviderConfig(context string, provider *ProviderConfig) error {
+	providerDir, err := GetProviderDir(context, provider.Name)
+	if err != nil {
+		return err
+	}
+
+	err = os.MkdirAll(providerDir, 0755)
+	if err != nil {
+		return err
+	}
+
+	providerDirBytes, err := json.Marshal(provider)
+	if err != nil {
+		return err
+	}
+
+	providerConfigFile := filepath.Join(providerDir, ProviderConfigFile)
+	err = os.WriteFile(providerConfigFile, providerDirBytes, 0666)
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
 
 func SaveWorkspaceConfig(workspace *Workspace) error {
@@ -150,6 +187,26 @@ func ServerExists(context, serverID string) bool {
 	}
 
 	return true
+}
+
+func LoadProviderConfig(context, provider string) (*ProviderConfig, error) {
+	providerDir, err := GetProviderDir(context, provider)
+	if err != nil {
+		return nil, err
+	}
+
+	providerFile := filepath.Join(providerDir, ProviderConfigFile)
+	providerConfigBytes, err := os.ReadFile(providerFile)
+	if err != nil {
+		return nil, err
+	}
+
+	providerConfig, err := ParseProvider(bytes.NewReader(providerConfigBytes))
+	if err != nil {
+		return nil, err
+	}
+
+	return providerConfig, nil
 }
 
 func LoadServerConfig(context, serverID string) (*Server, error) {

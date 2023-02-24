@@ -219,6 +219,13 @@ func (s *agentClient) Delete(ctx context.Context, options client.DeleteOptions) 
 	s.m.Lock()
 	defer s.m.Unlock()
 
+	// kill the command after the grace period
+	if options.GracePeriod != nil {
+		var cancel context.CancelFunc
+		ctx, cancel = context.WithTimeout(ctx, *options.GracePeriod)
+		defer cancel()
+	}
+
 	// should just delete container?
 	if s.workspace.Server.ID == "" || !s.workspace.Server.AutoDelete {
 		writer := s.log.Writer(logrus.InfoLevel, false)
@@ -242,8 +249,6 @@ func (s *agentClient) Delete(ctx context.Context, options client.DeleteOptions) 
 			}
 
 			s.log.Errorf("Error deleting container: %v", err)
-		} else {
-			s.log.Infof("Successfully deleted container...")
 		}
 	} else if s.workspace.Server.ID != "" && len(s.config.Exec.Delete) > 0 {
 		// delete server if config was found

@@ -6,6 +6,7 @@ import (
 	"github.com/loft-sh/devpod/pkg/provider"
 	"io"
 	"strings"
+	"time"
 )
 
 type Client interface {
@@ -72,7 +73,8 @@ type StartOptions struct{}
 type StopOptions struct{}
 
 type DeleteOptions struct {
-	Force bool
+	Force       bool
+	GracePeriod *time.Duration
 }
 
 type CreateOptions struct{}

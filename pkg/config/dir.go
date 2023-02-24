@@ -5,8 +5,6 @@ import (
 	"path/filepath"
 )
 
-const ProviderConfigFile = "provider.yaml"
-
 func GetConfigDir() (string, error) {
 	homeDir, err := homedir.Dir()
 	if err != nil {

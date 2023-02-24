@@ -107,6 +107,13 @@ func (s *serverClient) Status(ctx context.Context, options client.StatusOptions)
 }
 
 func (s *serverClient) Delete(ctx context.Context, options client.DeleteOptions) error {
+	// kill the command after the grace period
+	if options.GracePeriod != nil {
+		var cancel context.CancelFunc
+		ctx, cancel = context.WithTimeout(ctx, *options.GracePeriod)
+		defer cancel()
+	}
+
 	s.log.Infof("Deleting %s server...", s.config.Name)
 	err := runCommand(ctx, "delete", s.config.Exec.Delete, ToEnvironmentServer(s.server, nil), os.Stdin, os.Stdout, os.Stderr, s.log)
 	if err != nil {
