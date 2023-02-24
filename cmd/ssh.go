@@ -20,8 +20,6 @@ import (
 	"time"
 )
 
-var waitForInstanceConnectionTimeout = time.Minute * 5
-
 // SSHCmd holds the ssh cmd flags
 type SSHCmd struct {
 	*flags.GlobalFlags
@@ -163,12 +161,6 @@ func jumpContainerWorkspace(ctx context.Context, client client2.WorkspaceClient)
 
 func jumpContainerServer(ctx context.Context, client client2.AgentClient, log log.Logger) error {
 	err := startWait(ctx, client, false, log)
-	if err != nil {
-		return err
-	}
-
-	// inject agent
-	err = injectAgent(ctx, client, log)
 	if err != nil {
 		return err
 	}

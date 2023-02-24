@@ -2,17 +2,18 @@ package docker
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"fmt"
 	"github.com/loft-sh/devpod/pkg/agent"
 	"github.com/loft-sh/devpod/pkg/devcontainer/config"
 	"github.com/loft-sh/devpod/pkg/image"
+	"github.com/loft-sh/devpod/pkg/log"
 	"github.com/loft-sh/devpod/pkg/scanner"
 	"github.com/pkg/errors"
 	"io"
 	"os/exec"
 	"strings"
-	"time"
 )
 
 type DockerHelper struct {
@@ -20,7 +21,7 @@ type DockerHelper struct {
 }
 
 func (r *DockerHelper) GPUSupportEnabled() (bool, error) {
-	out, err := r.buildCmd("info", "-f", "{{.Runtimes.nvidia}}").Output()
+	out, err := r.buildCmd(context.TODO(), "info", "-f", "{{.Runtimes.nvidia}}").Output()
 	if err != nil {
 		return false, err
 	}
@@ -52,7 +53,7 @@ func (r *DockerHelper) FindDevContainer(labels []string) (*config.ContainerDetai
 }
 
 func (r *DockerHelper) Stop(id string) error {
-	out, err := r.buildCmd("stop", id).CombinedOutput()
+	out, err := r.buildCmd(context.TODO(), "stop", id).CombinedOutput()
 	if err != nil {
 		return errors.Wrapf(err, "%s", string(out))
 	}
@@ -61,7 +62,7 @@ func (r *DockerHelper) Stop(id string) error {
 }
 
 func (r *DockerHelper) Remove(id string) error {
-	out, err := r.buildCmd("rm", id).CombinedOutput()
+	out, err := r.buildCmd(context.TODO(), "rm", id).CombinedOutput()
 	if err != nil {
 		return errors.Wrapf(err, "%s", string(out))
 	}
@@ -69,8 +70,8 @@ func (r *DockerHelper) Remove(id string) error {
 	return nil
 }
 
-func (r *DockerHelper) Run(args []string, stdin io.Reader, stdout io.Writer, stderr io.Writer) error {
-	cmd := r.buildCmd(args...)
+func (r *DockerHelper) Run(ctx context.Context, args []string, stdin io.Reader, stdout io.Writer, stderr io.Writer) error {
+	cmd := r.buildCmd(ctx, args...)
 	cmd.Stdin = stdin
 	cmd.Stdout = stdout
 	cmd.Stderr = stderr
@@ -78,7 +79,7 @@ func (r *DockerHelper) Run(args []string, stdin io.Reader, stdout io.Writer, std
 }
 
 func (r *DockerHelper) StartContainer(id string, labels []string) error {
-	out, err := r.buildCmd("start", id).CombinedOutput()
+	out, err := r.buildCmd(context.TODO(), "start", id).CombinedOutput()
 	if err != nil {
 		return errors.Wrapf(err, "start command: %v", string(out))
 	}
@@ -137,7 +138,7 @@ func (r *DockerHelper) InspectContainers(ids []string) ([]config.ContainerDetail
 func (r *DockerHelper) Inspect(ids []string, inspectType string, obj interface{}) error {
 	args := []string{"inspect", "--type", inspectType}
 	args = append(args, ids...)
-	out, err := r.buildCmd(args...).Output()
+	out, err := r.buildCmd(context.TODO(), args...).Output()
 	if err != nil {
 		return errors.Wrapf(err, "inspect container: %v", string(out))
 	}
@@ -150,12 +151,12 @@ func (r *DockerHelper) Inspect(ids []string, inspectType string, obj interface{}
 	return nil
 }
 
-func (r *DockerHelper) Tunnel(agentPath, agentDownloadURL string, containerID string, token string, stdin io.Reader, stdout io.Writer, stderr io.Writer, trackActivity bool) error {
+func (r *DockerHelper) Tunnel(agentPath, agentDownloadURL string, containerID string, token string, stdin io.Reader, stdout io.Writer, stderr io.Writer, trackActivity bool, log log.Logger) error {
 	// inject agent
-	err := agent.InjectAgent(func(command string, stdin io.Reader, stdout io.Writer, stderr io.Writer) error {
+	err := agent.InjectAgent(context.Background(), func(ctx context.Context, command string, stdin io.Reader, stdout io.Writer, stderr io.Writer) error {
 		args := []string{"exec", "-i", "-u", "root", containerID, "sh", "-c", command}
-		return r.Run(args, stdin, stdout, stderr)
-	}, agentPath, agentDownloadURL, false, time.Second*10)
+		return r.Run(ctx, args, stdin, stdout, stderr)
+	}, agentPath, agentDownloadURL, false, log)
 	if err != nil {
 		return err
 	}
@@ -174,7 +175,7 @@ func (r *DockerHelper) Tunnel(agentPath, agentDownloadURL string, containerID st
 		containerID,
 		"sh", "-c", command,
 	}
-	err = r.Run(args, stdin, stdout, stderr)
+	err = r.Run(context.TODO(), args, stdin, stdout, stderr)
 	if err != nil {
 		return err
 	}
@@ -188,7 +189,7 @@ func (r *DockerHelper) FindContainer(labels []string) ([]string, error) {
 		args = append(args, "--filter", "label="+label)
 	}
 
-	out, err := r.buildCmd(args...).Output()
+	out, err := r.buildCmd(context.TODO(), args...).Output()
 	if err != nil {
 		if exitError, ok := err.(*exec.ExitError); ok {
 			return nil, fmt.Errorf("find container: %s", strings.TrimSpace(string(exitError.Stderr)))
@@ -206,6 +207,6 @@ func (r *DockerHelper) FindContainer(labels []string) ([]string, error) {
 	return arr, nil
 }
 
-func (r *DockerHelper) buildCmd(args ...string) *exec.Cmd {
-	return exec.Command(r.DockerCommand, args...)
+func (r *DockerHelper) buildCmd(ctx context.Context, args ...string) *exec.Cmd {
+	return exec.CommandContext(ctx, r.DockerCommand, args...)
 }

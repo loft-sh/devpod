@@ -9,13 +9,19 @@ PREFER_DOWNLOAD="{{ .PreferDownload }}"
 CHMOD_PATH="{{ .ChmodPath }}"
 
 # start marker
-echo "start"
+echo "ping"
+
+# we don't want the script to do anything without us
+IFS='$\n' read -r DEVPOD_PING
+if [ "$DEVPOD_PING" != "pong" ]; then
+  exit 0
+fi
 
 command_exists() {
-  command -v "$@" > /dev/null 2>&1
+  command -v "$@" >/dev/null 2>&1
 }
 
-user="$(id -un 2>/dev/null || true)"
+user="$(id -un || true)"
 sh_c='sh -c'
 if [ "$user" != 'root' ]; then
   if command_exists sudo; then
@@ -23,8 +29,8 @@ if [ "$user" != 'root' ]; then
   elif command_exists su; then
     sh_c='su -c'
   else
-    echo Error: this installer needs the ability to run commands as root.
-    echo We are unable to find either "sudo" or "su" available to make this happen.
+    >&2 echo Error: this installer needs the ability to run commands as root.
+    >&2 echo We are unable to find either "sudo" or "su" available to make this happen.
     exit 1
   fi
 fi
@@ -39,14 +45,21 @@ is_arm() {
   esac
 }
 
-DOWNLOAD_URL={{ .DownloadAmd }}
+DOWNLOAD_URL="{{ .DownloadAmd }}"
 if is_arm; then
-  DOWNLOAD_URL={{ .DownloadArm }}
+  DOWNLOAD_URL="{{ .DownloadArm }}"
 fi
 
 inject() {
   echo "ARM-$(is_arm && echo -n 'true' || echo -n 'false')"
   cat > $INSTALL_PATH
+
+  if [ "$CHMOD_PATH" = "true" ]; then
+    $sh_c "chmod +x $INSTALL_PATH"
+  fi
+
+  echo "done"
+  exit 0
 }
 
 download() {
@@ -62,9 +75,9 @@ download() {
         echo "error: no download tool found, please install curl or wget"
         exit 127
     fi
-    echo "error: failed to download devpod"
-    echo "       command returned: ${status}"
-    echo "Trying again in 10 seconds..."
+    >&2 echo "error: failed to download devpod"
+    >&2 echo "       command returned: ${status}"
+    >&2 echo "Trying again in 10 seconds..."
     sleep 10
   done
 }
@@ -85,3 +98,6 @@ fi
 
 # send parent done stream
 echo "done"
+
+# Execute command
+{{ .Command }}

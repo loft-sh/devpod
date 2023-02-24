@@ -72,6 +72,14 @@ func (cmd *UpCmd) Run(ctx context.Context) error {
 
 	// create debug logger
 	logger := agent.NewTunnelLogger(ctx, tunnelClient, cmd.Debug)
+
+	// this message serves as a ping to the client
+	_, err = tunnelClient.Ping(ctx, &tunnel.Empty{})
+	if err != nil {
+		return errors.Wrap(err, "ping client")
+	}
+
+	// start up
 	err = cmd.up(ctx, workspaceInfo, tunnelClient, logger)
 	if err != nil {
 		return errors.Wrap(err, "devcontainer up")
@@ -127,6 +135,7 @@ func (cmd *UpCmd) up(ctx context.Context, workspaceInfo *provider2.AgentWorkspac
 func (cmd *UpCmd) prepareWorkspace(ctx context.Context, workspaceInfo *provider2.AgentWorkspaceInfo, client tunnel.TunnelClient, log log.Logger) error {
 	_, err := os.Stat(workspaceInfo.Folder)
 	if err == nil {
+		log.Debugf("Workspace Folder already exists")
 		return nil
 	}
 
@@ -138,10 +147,13 @@ func (cmd *UpCmd) prepareWorkspace(ctx context.Context, workspaceInfo *provider2
 
 	// check what type of workspace this is
 	if workspaceInfo.Workspace.Source.GitRepository != "" {
+		log.Debugf("Clone Repository")
 		return CloneRepository(workspaceInfo.Folder, workspaceInfo.Workspace.Source.GitRepository, log)
 	} else if workspaceInfo.Workspace.Source.LocalFolder != "" {
+		log.Debugf("Download Local Folder")
 		return DownloadLocalFolder(ctx, workspaceInfo.Folder, client, log)
 	} else if workspaceInfo.Workspace.Source.Image != "" {
+		log.Debugf("Prepare Image")
 		return PrepareImage(workspaceInfo.Folder, workspaceInfo.Workspace.Source.Image)
 	}
 
