@@ -4,12 +4,15 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"github.com/loft-sh/devpod/pkg/agent"
 	"github.com/loft-sh/devpod/pkg/client"
 	"github.com/loft-sh/devpod/pkg/log"
 	devssh "github.com/loft-sh/devpod/pkg/ssh"
 	"github.com/loft-sh/devpod/pkg/token"
 	"github.com/pkg/errors"
+	"github.com/sirupsen/logrus"
 	"golang.org/x/crypto/ssh"
+	"io"
 	"os"
 	"sync"
 	"time"
@@ -63,12 +66,19 @@ func (c *ContainerHandler) Run(ctx context.Context, runInHost Handler, runInCont
 	//TODO: right now we have a tunnel in a tunnel, maybe its better to start 2 separate commands?
 	tunnelChan := make(chan error, 1)
 	go func() {
-		tunnelChan <- c.client.Command(ctx, client.CommandOptions{
-			Command: fmt.Sprintf("%s helper ssh-server --token '%s' --stdio", c.client.AgentPath(), tok),
-			Stdin:   stdinReader,
-			Stdout:  stdoutWriter,
-			Stderr:  os.Stderr,
-		})
+		stderrLog := c.log.ErrorStreamOnly()
+		writer := stderrLog.Writer(logrus.DebugLevel, false)
+		defer writer.Close()
+
+		command := fmt.Sprintf("%s helper ssh-server --token '%s' --stdio", c.client.AgentPath(), tok)
+		tunnelChan <- agent.InjectAgentAndExecute(ctx, func(ctx context.Context, command string, stdin io.Reader, stdout io.Writer, stderr io.Writer) error {
+			return c.client.Command(ctx, client.CommandOptions{
+				Command: command,
+				Stdin:   stdin,
+				Stdout:  stdout,
+				Stderr:  stderr,
+			})
+		}, c.client.AgentPath(), c.client.AgentURL(), true, command, stdinReader, stdoutWriter, writer, stderrLog)
 	}()
 
 	// connect to container

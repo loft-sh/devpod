@@ -215,7 +215,7 @@ func (r *Runner) buildImage(parsedConfig *config.SubstitutedConfig, extendedBuil
 
 func (r *Runner) buildxExists() bool {
 	buf := &bytes.Buffer{}
-	err := r.Docker.Run([]string{"buildx", "version"}, nil, buf, buf)
+	err := r.Docker.Run(context.TODO(), []string{"buildx", "version"}, nil, buf, buf)
 	if err != nil {
 		return false
 	}
@@ -287,7 +287,7 @@ func (r *Runner) buildxBuild(writer io.Writer, options *build.BuildOptions) erro
 
 	// run command
 	r.Log.Debugf("Running docker command: docker %s", strings.Join(args, " "))
-	err := r.Docker.Run(args, nil, writer, writer)
+	err := r.Docker.Run(context.TODO(), args, nil, writer, writer)
 	if err != nil {
 		return errors.Wrap(err, "build image")
 	}

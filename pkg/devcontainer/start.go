@@ -1,6 +1,7 @@
 package devcontainer
 
 import (
+	"context"
 	"fmt"
 	"github.com/loft-sh/devpod/pkg/devcontainer/config"
 	"github.com/loft-sh/devpod/pkg/ide/goland"
@@ -105,7 +106,7 @@ while sleep 1 & wait $!; do :; done`, "-"} // `wait $!` allows for the `trap` to
 	writer := r.Log.Writer(logrus.InfoLevel, false)
 	defer writer.Close()
 
-	err := r.Docker.Run(args, nil, writer, writer)
+	err := r.Docker.Run(context.TODO(), args, nil, writer, writer)
 	if err != nil {
 		return err
 	}

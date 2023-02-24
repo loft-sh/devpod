@@ -1,25 +1,26 @@
 package devcontainer
 
 import (
+	"context"
 	"encoding/json"
 	"github.com/loft-sh/devpod/pkg/agent"
 	"github.com/loft-sh/devpod/pkg/compress"
 	"github.com/loft-sh/devpod/pkg/devcontainer/config"
+	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 	"io"
 	"strings"
-	"time"
 )
 
 func (r *Runner) setupContainer(containerDetails *config.ContainerDetails, mergedConfig *config.MergedDevContainerConfig) error {
 	// inject agent
 	r.Log.Infof("Setup container...")
-	err := agent.InjectAgent(func(command string, stdin io.Reader, stdout io.Writer, stderr io.Writer) error {
+	err := agent.InjectAgent(context.TODO(), func(ctx context.Context, command string, stdin io.Reader, stdout io.Writer, stderr io.Writer) error {
 		args := []string{"exec", "-i", "-u", "root", containerDetails.Id, "sh", "-c", command}
-		return r.Docker.Run(args, stdin, stdout, stderr)
-	}, agent.RemoteDevPodHelperLocation, agent.DefaultAgentDownloadURL, false, time.Second*10)
+		return r.Docker.Run(ctx, args, stdin, stdout, stderr)
+	}, agent.RemoteDevPodHelperLocation, agent.DefaultAgentDownloadURL, false, r.Log)
 	if err != nil {
-		return err
+		return errors.Wrap(err, "inject agent")
 	}
 	r.Log.Debugf("Injected into container")
 	defer r.Log.Debugf("Done setting up container")
@@ -59,7 +60,7 @@ func (r *Runner) setupContainer(containerDetails *config.ContainerDetails, merge
 		args = append(args, "--debug")
 	}
 	r.Log.Debugf("Run docker %s", strings.Join(args, " "))
-	err = r.Docker.Run(args, nil, writer, writer)
+	err = r.Docker.Run(context.TODO(), args, nil, writer, writer)
 	if err != nil {
 		return err
 	}

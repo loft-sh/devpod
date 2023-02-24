@@ -1,19 +1,28 @@
 package agent
 
 import (
+	"context"
 	"crypto/tls"
 	"fmt"
 	"github.com/loft-sh/devpod/pkg/inject"
+	"github.com/loft-sh/devpod/pkg/log"
 	"github.com/pkg/errors"
 	"io"
 	"net/http"
 	"os"
 	"path/filepath"
 	"runtime"
+	"strings"
 	"time"
 )
 
-func InjectAgent(exec inject.ExecFunc, remoteAgentPath, downloadURL string, preferDownload bool, timeout time.Duration) error {
+var waitForInstanceConnectionTimeout = time.Minute * 5
+
+func InjectAgent(ctx context.Context, exec inject.ExecFunc, remoteAgentPath, downloadURL string, preferDownload bool, log log.Logger) error {
+	return InjectAgentAndExecute(ctx, exec, remoteAgentPath, downloadURL, preferDownload, "", nil, nil, nil, log)
+}
+
+func InjectAgentAndExecute(ctx context.Context, exec inject.ExecFunc, remoteAgentPath, downloadURL string, preferDownload bool, command string, stdin io.Reader, stdout io.Writer, stderr io.Writer, log log.Logger) error {
 	if remoteAgentPath == "" {
 		remoteAgentPath = RemoteDevPodHelperLocation
 	}
@@ -21,20 +30,47 @@ func InjectAgent(exec inject.ExecFunc, remoteAgentPath, downloadURL string, pref
 		downloadURL = DefaultAgentDownloadURL
 	}
 
-	err := inject.Inject(
-		exec,
-		func(arm bool) (io.ReadCloser, error) {
-			return injectBinary(arm, downloadURL)
-		},
-		fmt.Sprintf(`[ "$(%s version && echo 'true' || echo 'false')" = "false" ]`, remoteAgentPath),
-		remoteAgentPath,
-		downloadURL+"/devpod-linux-amd64",
-		downloadURL+"/devpod-linux-arm64",
-		preferDownload,
-		true,
-		timeout,
-	)
-	return err
+	// install devpod into the target
+	// do a simple hello world to check if we can get something
+	startWaiting := time.Now()
+	now := startWaiting
+	for {
+		err := inject.InjectAndExecute(
+			ctx,
+			exec,
+			func(arm bool) (io.ReadCloser, error) {
+				return injectBinary(arm, downloadURL)
+			},
+			fmt.Sprintf(`[ "$(%s version >/dev/null 2>&1 && echo 'true' || echo 'false')" = "false" ]`, remoteAgentPath),
+			remoteAgentPath,
+			downloadURL+"/devpod-linux-amd64",
+			downloadURL+"/devpod-linux-arm64",
+			preferDownload,
+			true,
+			command,
+			stdin,
+			stdout,
+			stderr,
+			time.Second*10,
+			log,
+		)
+		if err != nil {
+			if time.Since(now) > waitForInstanceConnectionTimeout {
+				return errors.Wrap(err, "timeout waiting for instance connection")
+			} else if strings.HasPrefix(err.Error(), "unexpected start line: ") || err == context.DeadlineExceeded {
+				log.Infof("Waiting for devpod agent to come up...")
+				log.Debugf("Inject Error: %v", err)
+				startWaiting = time.Now()
+				continue
+			}
+
+			return err
+		}
+
+		break
+	}
+
+	return nil
 }
 
 func injectBinary(arm bool, tryDownloadURL string) (io.ReadCloser, error) {

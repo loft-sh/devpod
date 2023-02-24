@@ -28,8 +28,6 @@ import (
 	"os"
 	"os/exec"
 	"path"
-	"strings"
-	"time"
 )
 
 // UpCmd holds the up cmd flags
@@ -182,12 +180,6 @@ func devPodUp(ctx context.Context, client client2.WorkspaceClient, log log.Logge
 }
 
 func devPodUpServer(ctx context.Context, client client2.AgentClient, log log.Logger) (*config2.Result, error) {
-	// inject agent
-	err := injectAgent(ctx, client, log)
-	if err != nil {
-		return nil, err
-	}
-
 	// compress info
 	workspaceInfo, err := client.AgentInfo()
 	if err != nil {
@@ -223,15 +215,17 @@ func devPodUpServer(ctx context.Context, client client2.AgentClient, log log.Log
 		defer log.Debugf("Done executing up command")
 		defer cancel()
 
-		writer := log.ErrorStreamOnly().Writer(logrus.ErrorLevel, false)
+		writer := log.ErrorStreamOnly().Writer(logrus.DebugLevel, false)
 		defer writer.Close()
 
-		errChan <- client.Command(cancelCtx, client2.CommandOptions{
-			Command: command,
-			Stdin:   stdinReader,
-			Stdout:  stdoutWriter,
-			Stderr:  writer,
-		})
+		errChan <- agent.InjectAgentAndExecute(cancelCtx, func(ctx context.Context, command string, stdin io.Reader, stdout io.Writer, stderr io.Writer) error {
+			return client.Command(ctx, client2.CommandOptions{
+				Command: command,
+				Stdin:   stdin,
+				Stdout:  stdout,
+				Stderr:  stderr,
+			})
+		}, client.AgentPath(), client.AgentURL(), true, command, stdinReader, stdoutWriter, writer, log.ErrorStreamOnly())
 	}()
 
 	// create container etc.
@@ -242,36 +236,4 @@ func devPodUpServer(ctx context.Context, client client2.AgentClient, log log.Log
 
 	// wait until command finished
 	return result, <-errChan
-}
-
-func injectAgent(ctx context.Context, client client2.AgentClient, log log.Logger) error {
-	// install devpod into the target
-	// do a simple hello world to check if we can get something
-	startWaiting := time.Now()
-	now := startWaiting
-	for {
-		err := agent.InjectAgent(func(command string, stdin io.Reader, stdout io.Writer, stderr io.Writer) error {
-			return client.Command(ctx, client2.CommandOptions{
-				Command: command,
-				Stdin:   stdin,
-				Stdout:  stdout,
-				Stderr:  stderr,
-			})
-		}, client.AgentPath(), client.AgentURL(), true, time.Second*10)
-		if err != nil {
-			if time.Since(now) > waitForInstanceConnectionTimeout {
-				return errors.Wrap(err, "timeout waiting for instance connection")
-			} else if strings.HasPrefix(err.Error(), "unexpected start line: ") || err == context.DeadlineExceeded {
-				log.Infof("Waiting for devpod agent to come up...")
-				startWaiting = time.Now()
-				continue
-			}
-
-			return err
-		}
-
-		break
-	}
-
-	return nil
 }
