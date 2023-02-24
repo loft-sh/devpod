@@ -16,8 +16,8 @@ import (
 	"github.com/spf13/cobra"
 	"os"
 	"os/exec"
-	"path/filepath"
 	"strconv"
+	"strings"
 )
 
 // SetupContainerCmd holds the cmd flags
@@ -69,14 +69,14 @@ func (cmd *SetupContainerCmd) Run(_ *cobra.Command, _ []string) error {
 	}
 
 	// install IDE
-	err = installIDE(setupInfo, workspaceInfo, log.Default)
+	err = cmd.installIDE(setupInfo, workspaceInfo, log.Default)
 	if err != nil {
 		return err
 	}
 
 	// start container daemon if necessary
 	if !workspaceInfo.Workspace.Server.AutoDelete && workspaceInfo.Workspace.Provider.Agent.Timeout != "" {
-		err = single.Single(filepath.Join(os.TempDir(), "devpod.daemon.pid"), func() (*exec.Cmd, error) {
+		err = single.Single("devpod.daemon.pid", func() (*exec.Cmd, error) {
 			log.Default.Debugf("Start DevPod Container Daemon with Inactivity Timeout %s", workspaceInfo.Workspace.Provider.Agent.Timeout)
 			binaryPath, err := os.Executable()
 			if err != nil {
@@ -93,12 +93,12 @@ func (cmd *SetupContainerCmd) Run(_ *cobra.Command, _ []string) error {
 	return nil
 }
 
-func installIDE(setupInfo *config.Result, workspaceInfo *provider2.AgentWorkspaceInfo, log log.Logger) error {
+func (cmd *SetupContainerCmd) installIDE(setupInfo *config.Result, workspaceInfo *provider2.AgentWorkspaceInfo, log log.Logger) error {
 	switch workspaceInfo.Workspace.IDE.IDE {
 	case provider2.IDENone:
 		return nil
 	case provider2.IDEVSCode:
-		return setupVSCode(setupInfo, log)
+		return cmd.setupVSCode(setupInfo, log)
 	case provider2.IDEOpenVSCode:
 		return setupOpenVSCode(setupInfo, log)
 	case provider2.IDEGoland:
@@ -115,7 +115,7 @@ func setupGoland(setupInfo *config.Result, log log.Logger) error {
 	return goland.NewGolandServer(user, log).Install()
 }
 
-func setupVSCode(setupInfo *config.Result, log log.Logger) error {
+func (cmd *SetupContainerCmd) setupVSCode(setupInfo *config.Result, log log.Logger) error {
 	log.Debugf("Setup vscode...")
 	vsCodeConfiguration := config.GetVSCodeConfiguration(setupInfo.MergedConfig)
 	settings := ""
@@ -135,7 +135,30 @@ func setupVSCode(setupInfo *config.Result, log log.Logger) error {
 		return nil
 	}
 
-	return vscode.NewVSCodeServer(vsCodeConfiguration.Extensions, settings, user, log).Install()
+	err := vscode.NewVSCodeServer(vsCodeConfiguration.Extensions, settings, user, log).Install()
+	if err != nil {
+		return err
+	}
+
+	if len(vsCodeConfiguration.Extensions) == 0 {
+		return nil
+	}
+
+	return single.Single("vscode-async.pid", func() (*exec.Cmd, error) {
+		log.Infof("Install extensions '%s' in the background", strings.Join(vsCodeConfiguration.Extensions, ","))
+		binaryPath, err := os.Executable()
+		if err != nil {
+			return nil, err
+		}
+
+		return exec.Command(binaryPath, "agent", "container", "vscode-async", "--setup-info", cmd.SetupInfo), nil
+	})
+}
+
+func setupVSCodeExtensions(setupInfo *config.Result, log log.Logger) error {
+	vsCodeConfiguration := config.GetVSCodeConfiguration(setupInfo.MergedConfig)
+	user := config.GetRemoteUser(setupInfo)
+	return vscode.NewVSCodeServer(vsCodeConfiguration.Extensions, "", user, log).InstallExtensions()
 }
 
 func setupOpenVSCode(setupInfo *config.Result, log log.Logger) error {

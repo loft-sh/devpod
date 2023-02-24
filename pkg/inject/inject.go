@@ -122,6 +122,7 @@ func InjectAndExecute(
 	case err = <-execErrChan:
 		result = <-injectChan
 	case result = <-injectChan:
+		// we don't wait for the command termination here and will just retry on error
 	}
 
 	// prefer result error
