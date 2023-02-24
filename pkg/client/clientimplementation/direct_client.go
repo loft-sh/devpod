@@ -53,6 +53,13 @@ func (s *directClient) Create(ctx context.Context, options client.CreateOptions)
 }
 
 func (s *directClient) Delete(ctx context.Context, options client.DeleteOptions) error {
+	// kill the command after the grace period
+	if options.GracePeriod != nil {
+		var cancel context.CancelFunc
+		ctx, cancel = context.WithTimeout(ctx, *options.GracePeriod)
+		defer cancel()
+	}
+
 	err := runCommand(ctx, "delete", s.config.Exec.Delete, ToEnvironment(s.workspace, nil), os.Stdin, os.Stdout, os.Stderr, s.log)
 	if err != nil {
 		if !options.Force {
