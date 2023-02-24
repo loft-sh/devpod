@@ -12,7 +12,6 @@ import (
 	"os"
 	"path/filepath"
 	"runtime"
-	"strings"
 	"time"
 )
 
@@ -57,14 +56,12 @@ func InjectAgentAndExecute(ctx context.Context, exec inject.ExecFunc, remoteAgen
 		if err != nil {
 			if time.Since(now) > waitForInstanceConnectionTimeout {
 				return errors.Wrap(err, "timeout waiting for instance connection")
-			} else if strings.HasPrefix(err.Error(), "unexpected start line: ") || err == context.DeadlineExceeded {
-				log.Infof("Waiting for devpod agent to come up...")
-				log.Debugf("Inject Error: %v", err)
-				startWaiting = time.Now()
-				continue
 			}
 
-			return err
+			log.Infof("Waiting for devpod agent to come up...")
+			log.Debugf("Inject Error: %v", err)
+			startWaiting = time.Now()
+			continue
 		}
 
 		break

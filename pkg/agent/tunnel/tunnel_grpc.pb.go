@@ -27,6 +27,7 @@ type TunnelClient interface {
 	ReadWorkspace(ctx context.Context, in *Empty, opts ...grpc.CallOption) (Tunnel_ReadWorkspaceClient, error)
 	SendResult(ctx context.Context, in *Message, opts ...grpc.CallOption) (*Empty, error)
 	GitCredentials(ctx context.Context, in *Message, opts ...grpc.CallOption) (*Message, error)
+	GitUser(ctx context.Context, in *Empty, opts ...grpc.CallOption) (*Message, error)
 }
 
 type tunnelClient struct {
@@ -105,6 +106,15 @@ func (c *tunnelClient) GitCredentials(ctx context.Context, in *Message, opts ...
 	return out, nil
 }
 
+func (c *tunnelClient) GitUser(ctx context.Context, in *Empty, opts ...grpc.CallOption) (*Message, error) {
+	out := new(Message)
+	err := c.cc.Invoke(ctx, "/tunnel.Tunnel/GitUser", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // TunnelServer is the server API for Tunnel service.
 // All implementations must embed UnimplementedTunnelServer
 // for forward compatibility
@@ -114,6 +124,7 @@ type TunnelServer interface {
 	ReadWorkspace(*Empty, Tunnel_ReadWorkspaceServer) error
 	SendResult(context.Context, *Message) (*Empty, error)
 	GitCredentials(context.Context, *Message) (*Message, error)
+	GitUser(context.Context, *Empty) (*Message, error)
 	mustEmbedUnimplementedTunnelServer()
 }
 
@@ -135,6 +146,9 @@ func (UnimplementedTunnelServer) SendResult(context.Context, *Message) (*Empty, 
 }
 func (UnimplementedTunnelServer) GitCredentials(context.Context, *Message) (*Message, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GitCredentials not implemented")
+}
+func (UnimplementedTunnelServer) GitUser(context.Context, *Empty) (*Message, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GitUser not implemented")
 }
 func (UnimplementedTunnelServer) mustEmbedUnimplementedTunnelServer() {}
 
@@ -242,6 +256,24 @@ func _Tunnel_GitCredentials_Handler(srv interface{}, ctx context.Context, dec fu
 	return interceptor(ctx, in, info, handler)
 }
 
+func _Tunnel_GitUser_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(Empty)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(TunnelServer).GitUser(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/tunnel.Tunnel/GitUser",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(TunnelServer).GitUser(ctx, req.(*Empty))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // Tunnel_ServiceDesc is the grpc.ServiceDesc for Tunnel service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -264,6 +296,10 @@ var Tunnel_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "GitCredentials",
 			Handler:    _Tunnel_GitCredentials_Handler,
+		},
+		{
+			MethodName: "GitUser",
+			Handler:    _Tunnel_GitUser_Handler,
 		},
 	},
 	Streams: []grpc.StreamDesc{

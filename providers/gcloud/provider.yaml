@@ -38,6 +38,7 @@ options:
     command: ${GCLOUD_BINARY} auth application-default print-access-token --quiet --verbosity=error
 agent:
   path: /run/agent
+  injectGitCredentials: true
   inactivityTimeout: ${INACTIVITY_TIMEOUT}
   exec:
     shutdown: |-

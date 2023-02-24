@@ -68,5 +68,5 @@ func (cmd *CredentialsServerCmd) Run(ctx context.Context, _ []string) error {
 	}
 
 	// run the credentials server
-	return gitcredentials.RunCredentialsServer(ctx, cmd.User, port, tunnelClient, log)
+	return gitcredentials.RunCredentialsServer(ctx, cmd.User, port, true, tunnelClient, log)
 }
