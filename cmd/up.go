@@ -234,8 +234,11 @@ func devPodUpServer(ctx context.Context, client client2.AgentClient, log log.Log
 		}, client.AgentPath(), client.AgentURL(), true, command, stdinReader, stdoutWriter, writer, log.ErrorStreamOnly())
 	}()
 
+	// get workspace config
+	workspaceConfig := client.WorkspaceConfig()
+
 	// create container etc.
-	result, err := agent.RunTunnelServer(cancelCtx, stdoutReader, stdinWriter, false, false, client.WorkspaceConfig(), log)
+	result, err := agent.RunTunnelServer(cancelCtx, stdoutReader, stdinWriter, false, string(workspaceConfig.Provider.Agent.InjectGitCredentials) == "true" && workspaceConfig.Source.GitRepository != "", client.WorkspaceConfig(), log)
 	if err != nil {
 		return nil, errors.Wrap(err, "run tunnel server")
 	}

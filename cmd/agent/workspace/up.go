@@ -2,6 +2,7 @@ package workspace
 
 import (
 	"context"
+	"crypto/tls"
 	"encoding/json"
 	"fmt"
 	"github.com/loft-sh/devpod/cmd/flags"
@@ -12,15 +13,21 @@ import (
 	"github.com/loft-sh/devpod/pkg/devcontainer"
 	config2 "github.com/loft-sh/devpod/pkg/devcontainer/config"
 	"github.com/loft-sh/devpod/pkg/extract"
+	"github.com/loft-sh/devpod/pkg/gitcredentials"
 	"github.com/loft-sh/devpod/pkg/log"
+	"github.com/loft-sh/devpod/pkg/port"
 	provider2 "github.com/loft-sh/devpod/pkg/provider"
+	"github.com/loft-sh/devpod/pkg/random"
 	"github.com/loft-sh/devpod/scripts"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
+	"net/http"
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strconv"
+	"time"
 )
 
 // UpCmd holds the up cmd flags
@@ -148,7 +155,19 @@ func (cmd *UpCmd) prepareWorkspace(ctx context.Context, workspaceInfo *provider2
 	// check what type of workspace this is
 	if workspaceInfo.Workspace.Source.GitRepository != "" {
 		log.Debugf("Clone Repository")
-		return CloneRepository(workspaceInfo.Folder, workspaceInfo.Workspace.Source.GitRepository, log)
+		helper := ""
+		if workspaceInfo.Workspace.Provider.Agent.InjectGitCredentials == "true" {
+			log.Debugf("Start credentials server")
+			cancelCtx, cancel := context.WithCancel(ctx)
+			defer cancel()
+
+			helper, err = startGitCredentialsHelper(cancelCtx, cancel, client, log)
+			if err != nil {
+				return err
+			}
+		}
+
+		return CloneRepository(workspaceInfo.Folder, workspaceInfo.Workspace.Source.GitRepository, helper, log)
 	} else if workspaceInfo.Workspace.Source.LocalFolder != "" {
 		log.Debugf("Download Local Folder")
 		return DownloadLocalFolder(ctx, workspaceInfo.Folder, client, log)
@@ -158,6 +177,77 @@ func (cmd *UpCmd) prepareWorkspace(ctx context.Context, workspaceInfo *provider2
 	}
 
 	return fmt.Errorf("either workspace repository, image or local-folder is required")
+}
+
+func startGitCredentialsHelper(ctx context.Context, cancel context.CancelFunc, client tunnel.TunnelClient, log log.Logger) (string, error) {
+	port, err := port.FindAvailablePort(random.InRange(13000, 17000))
+	if err != nil {
+		return "", err
+	}
+
+	go func() {
+		defer cancel()
+
+		err := gitcredentials.RunCredentialsServer(ctx, "", port, false, client, log)
+		if err != nil {
+			log.Errorf("Run git credentials server: %v", err)
+		}
+	}()
+
+	// wait until credentials server is up
+	maxWait := time.Second * 4
+	now := time.Now()
+Outer:
+	for {
+		err := PingURL(ctx, "http://localhost:"+strconv.Itoa(port))
+		if err != nil {
+			select {
+			case <-ctx.Done():
+				break Outer
+			case <-time.After(time.Second):
+			}
+		} else {
+			log.Debugf("Credentials server started...")
+			break
+		}
+
+		if time.Since(now) > maxWait {
+			log.Debugf("Credentials server didn't start in time...")
+			break
+		}
+	}
+
+	binaryPath, err := os.Executable()
+	if err != nil {
+		return "", err
+	}
+
+	return fmt.Sprintf("%s agent git-credentials --port %d", binaryPath, port), nil
+}
+
+func PingURL(ctx context.Context, url string) error {
+	timeoutCtx, cancel := context.WithTimeout(ctx, time.Second)
+	defer cancel()
+
+	req, err := http.NewRequestWithContext(timeoutCtx, "GET", url, nil)
+	if err != nil {
+		return err
+	}
+
+	client := &http.Client{Transport: &http.Transport{
+		TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
+	}}
+
+	resp, err := client.Do(req)
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode >= 400 {
+		return fmt.Errorf("unexpected status code: %d", resp.StatusCode)
+	}
+	return nil
 }
 
 func installDaemon(workspaceInfo *provider2.AgentWorkspaceInfo, log log.Logger) error {
@@ -210,12 +300,17 @@ func DevContainerUp(workspaceInfo *provider2.AgentWorkspaceInfo, log log.Logger)
 	return result, nil
 }
 
-func CloneRepository(workspaceDir, repository string, log log.Logger) error {
+func CloneRepository(workspaceDir, repository, helper string, log log.Logger) error {
 	// run git command
 	writer := log.Writer(logrus.InfoLevel, false)
 	defer writer.Close()
 
-	gitCommand := exec.Command("git", "clone", repository, workspaceDir)
+	args := []string{"clone"}
+	if helper != "" {
+		args = append(args, "--config", "credential.helper="+helper)
+	}
+	args = append(args, repository, workspaceDir)
+	gitCommand := exec.Command("git", args...)
 	gitCommand.Stdout = writer
 	gitCommand.Stderr = writer
 	err := gitCommand.Run()

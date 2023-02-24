@@ -73,6 +73,26 @@ type tunnelServer struct {
 	log                 log.Logger
 }
 
+func (t *tunnelServer) GitUser(ctx context.Context, empty *tunnel.Empty) (*tunnel.Message, error) {
+	if !t.allowGitCredentials {
+		return nil, fmt.Errorf("git credentials forbidden")
+	}
+
+	gitUser, err := gitcredentials.GetUser()
+	if err != nil {
+		return nil, err
+	}
+
+	out, err := json.Marshal(gitUser)
+	if err != nil {
+		return nil, err
+	}
+
+	return &tunnel.Message{
+		Message: string(out),
+	}, nil
+}
+
 func (t *tunnelServer) GitCredentials(ctx context.Context, message *tunnel.Message) (*tunnel.Message, error) {
 	if !t.allowGitCredentials {
 		return nil, fmt.Errorf("git credentials forbidden")

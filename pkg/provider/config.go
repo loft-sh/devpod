@@ -45,6 +45,10 @@ type ProviderAgentConfig struct {
 	// to turn of the server. Defaults to 1 hour.
 	Timeout string `json:"inactivityTimeout,omitempty"`
 
+	// InjectGitCredentials signals DevPod if git credentials should get synced into
+	// the remote machine for cloning the repository.
+	InjectGitCredentials types.StrBool `json:"injectGitCredentials,omitempty"`
+
 	// Exec commands that can be used on the remote
 	Exec ProviderAgentConfigExec `json:"exec,omitempty"`
 

@@ -142,6 +142,7 @@ func resolveAgentConfig(workspace *provider2.Workspace, provider *provider2.Prov
 		agentConfig.DownloadURL = agent.DefaultAgentDownloadURL
 	}
 	agentConfig.Timeout = resolveDefaultValue(agentConfig.Timeout, options)
+	agentConfig.InjectGitCredentials = types.StrBool(resolveDefaultValue(string(agentConfig.InjectGitCredentials), options))
 	return agentConfig, nil
 }
 
