@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"github.com/loft-sh/devpod/pkg/command"
 	copy2 "github.com/loft-sh/devpod/pkg/copy"
-	"github.com/loft-sh/devpod/pkg/ide"
 	"github.com/loft-sh/devpod/pkg/log"
 	"github.com/mitchellh/go-homedir"
 	"github.com/pkg/errors"
@@ -21,8 +20,8 @@ import (
 const VSCodeDownloadAmd64 = "https://aka.ms/vscode-server-launcher/x86_64-unknown-linux-gnu"
 const VSCodeDownloadArm64 = "https://aka.ms/vscode-server-launcher/aarch64-unknown-linux-gnu"
 
-func NewVSCodeServer(extensions []string, settings string, userName string, log log.Logger) ide.IDE {
-	return &vsCodeServer{
+func NewVSCodeServer(extensions []string, settings string, userName string, log log.Logger) *VsCodeServer {
+	return &VsCodeServer{
 		extensions: extensions,
 		settings:   settings,
 		userName:   userName,
@@ -30,15 +29,49 @@ func NewVSCodeServer(extensions []string, settings string, userName string, log 
 	}
 }
 
-type vsCodeServer struct {
+type VsCodeServer struct {
 	extensions []string
 	settings   string
 	userName   string
 	log        log.Logger
 }
 
-func (o *vsCodeServer) Install() error {
-	location, err := prepareVSCodeServerLocation(o.userName)
+func (o *VsCodeServer) InstallExtensions() error {
+	location, err := PrepareVSCodeServerLocation(o.userName, false)
+	if err != nil {
+		return err
+	}
+	binPath := filepath.Join(location, "bin", "code-server")
+
+	// start log writer
+	writer := o.log.Writer(logrus.InfoLevel, false)
+	defer writer.Close()
+
+	// download extensions
+	for _, extension := range o.extensions {
+		o.log.Info("Install extension " + extension + "...")
+		runCommand := fmt.Sprintf("%s serve-local --accept-server-license-terms --install-extension '%s'", binPath, extension)
+		args := []string{}
+		if o.userName != "" {
+			args = append(args, "su", o.userName, "-c", runCommand)
+		} else {
+			args = append(args, "sh", "-c", runCommand)
+		}
+		cmd := exec.Command(args[0], args[1:]...)
+		cmd.Stdout = writer
+		cmd.Stderr = writer
+		err := cmd.Run()
+		if err != nil {
+			o.log.Info("Failed installing extension " + extension)
+		}
+		o.log.Info("Successfully installed extension " + extension)
+	}
+
+	return nil
+}
+
+func (o *VsCodeServer) Install() error {
+	location, err := PrepareVSCodeServerLocation(o.userName, true)
 	if err != nil {
 		return err
 	}
@@ -77,30 +110,6 @@ func (o *vsCodeServer) Install() error {
 		if err != nil {
 			return errors.Wrap(err, "chown")
 		}
-	}
-
-	// start log writer
-	writer := o.log.Writer(logrus.InfoLevel, false)
-	defer writer.Close()
-
-	// download extensions
-	for _, extension := range o.extensions {
-		o.log.Info("Install extension " + extension + "...")
-		runCommand := fmt.Sprintf("%s serve-local --accept-server-license-terms --install-extension '%s'", binPath, extension)
-		args := []string{}
-		if o.userName != "" {
-			args = append(args, "su", o.userName, "-c", runCommand)
-		} else {
-			args = append(args, "sh", "-c", runCommand)
-		}
-		cmd := exec.Command(args[0], args[1:]...)
-		cmd.Stdout = writer
-		cmd.Stderr = writer
-		err = cmd.Run()
-		if err != nil {
-			o.log.Info("Failed installing extension " + extension)
-		}
-		o.log.Info("Successfully installed extension " + extension)
 	}
 
 	return nil
@@ -151,7 +160,7 @@ func DownloadVSCode(binPath string) error {
 	return nil
 }
 
-func prepareVSCodeServerLocation(userName string) (string, error) {
+func PrepareVSCodeServerLocation(userName string, create bool) (string, error) {
 	var err error
 	homeFolder := ""
 	if userName != "" {
@@ -164,9 +173,11 @@ func prepareVSCodeServerLocation(userName string) (string, error) {
 	}
 
 	folder := filepath.Join(homeFolder, ".vscode-server")
-	err = os.MkdirAll(folder, 0777)
-	if err != nil {
-		return "", err
+	if create {
+		err = os.MkdirAll(folder, 0777)
+		if err != nil {
+			return "", err
+		}
 	}
 
 	return folder, nil

@@ -201,7 +201,7 @@ func (o *openVSCodeServer) Start() error {
 		return errors.Wrap(err, "find binary")
 	}
 
-	return single.Single(filepath.Join(os.TempDir(), "openvscode.pid"), func() (*exec.Cmd, error) {
+	return single.Single("openvscode.pid", func() (*exec.Cmd, error) {
 		o.log.Infof("Starting openvscode in background...")
 		runCommand := fmt.Sprintf("%s server-local --without-connection-token --host '%s' --port '%s'", binaryPath, o.host, o.port)
 		args := []string{}

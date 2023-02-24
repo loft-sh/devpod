@@ -6,6 +6,7 @@ import (
 	"github.com/pkg/errors"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"strconv"
 	"time"
 )
@@ -13,6 +14,7 @@ import (
 type CreateCommand func() (*exec.Cmd, error)
 
 func Single(file string, createCommand CreateCommand) error {
+	file = filepath.Join(os.TempDir(), file)
 	fileLock := flock.New(file + ".lock")
 	locked, err := fileLock.TryLock()
 	if err != nil {
