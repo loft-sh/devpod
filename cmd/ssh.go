@@ -185,7 +185,13 @@ func (cmd *SSHCmd) jumpContainerServer(ctx context.Context, client client2.Agent
 	var runInContainer tunnel.Handler
 	if client.WorkspaceConfig().IDE.IDE != provider2.IDEVSCode {
 		runInContainer = func(client *ssh.Client) error {
-			return cmd.runCredentialsServer(ctx, client, log)
+			err := runCredentialsServer(ctx, client, cmd.User, log)
+			if err != nil {
+				log.Errorf("Error running credential server: %v", err)
+			}
+
+			<-ctx.Done()
+			return nil
 		}
 	}
 
@@ -195,7 +201,7 @@ func (cmd *SSHCmd) jumpContainerServer(ctx context.Context, client client2.Agent
 	}, runInContainer)
 }
 
-func (cmd *SSHCmd) runCredentialsServer(ctx context.Context, client *ssh.Client, log log.Logger) error {
+func runCredentialsServer(ctx context.Context, client *ssh.Client, user string, log log.Logger) error {
 	stdoutReader, stdoutWriter, err := os.Pipe()
 	if err != nil {
 		return err
@@ -218,11 +224,7 @@ func (cmd *SSHCmd) runCredentialsServer(ctx context.Context, client *ssh.Client,
 		writer := log.ErrorStreamOnly().Writer(logrus.DebugLevel, false)
 		defer writer.Close()
 
-		command := fmt.Sprintf("%s agent container credentials-server --user %s", agent.RemoteDevPodHelperLocation, cmd.User)
-		if cmd.Debug {
-			command += " --debug"
-		}
-
+		command := fmt.Sprintf("%s agent container credentials-server --user %s", agent.RemoteDevPodHelperLocation, user)
 		errChan <- devssh.Run(client, command, stdinReader, stdoutWriter, writer)
 	}()
 

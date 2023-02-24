@@ -101,7 +101,7 @@ func (cmd *UpCmd) Run(ctx context.Context, ide provider2.IDE, client client2.Wor
 	case provider2.IDEVSCode:
 		return startVSCodeLocally(client, log.Default)
 	case provider2.IDEOpenVSCode:
-		return startInBrowser(ctx, client, log.Default)
+		return startInBrowser(ctx, client, user, log.Default)
 	case provider2.IDEGoland:
 		return startGoland(result, client, log.Default)
 	}
@@ -129,7 +129,7 @@ func startVSCodeLocally(client client2.WorkspaceClient, log log.Logger) error {
 	return nil
 }
 
-func startInBrowser(ctx context.Context, client client2.WorkspaceClient, log log.Logger) error {
+func startInBrowser(ctx context.Context, client client2.WorkspaceClient, user string, log log.Logger) error {
 	agentClient, ok := client.(client2.AgentClient)
 	if !ok {
 		return fmt.Errorf("--browser is currently only supported for server providers")
@@ -155,6 +155,12 @@ func startInBrowser(ctx context.Context, client client2.WorkspaceClient, log log
 	log.Infof("Starting vscode in browser mode...")
 	err = tunnel.NewContainerTunnel(agentClient, log).Run(ctx, nil, func(client *ssh.Client) error {
 		log.Debugf("Connected to container")
+		go func() {
+			err := runCredentialsServer(ctx, client, user, log)
+			if err != nil {
+				log.Errorf("error running credentials server: %v", err)
+			}
+		}()
 
 		return devssh.PortForward(client, fmt.Sprintf("localhost:%d", vscodePort), fmt.Sprintf("localhost:%d", openvscode.DefaultVSCodePort), log)
 	})

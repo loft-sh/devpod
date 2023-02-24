@@ -3,6 +3,7 @@ package gitcredentials
 import (
 	"context"
 	"fmt"
+	"github.com/gofrs/flock"
 	"github.com/loft-sh/devpod/pkg/agent/tunnel"
 	"github.com/loft-sh/devpod/pkg/command"
 	"github.com/loft-sh/devpod/pkg/log"
@@ -165,6 +166,15 @@ func removeCredentialHelper(content string) string {
 }
 
 func RunCredentialsServer(ctx context.Context, userName string, port int, client tunnel.TunnelClient, log log.Logger) error {
+	fileLock := flock.New(filepath.Join(os.TempDir(), "devpod-credentials.lock"))
+	locked, err := fileLock.TryLock()
+	if err != nil {
+		return errors.Wrap(err, "acquire lock")
+	} else if !locked {
+		return nil
+	}
+	defer fileLock.Unlock()
+
 	binaryPath, err := os.Executable()
 	if err != nil {
 		return err
