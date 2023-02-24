@@ -12,12 +12,14 @@ import (
 	"github.com/loft-sh/devpod/pkg/workspace"
 	"github.com/spf13/cobra"
 	"sort"
+	"strconv"
 )
 
 // OptionsCmd holds the options cmd flags
 type OptionsCmd struct {
 	*flags.GlobalFlags
 
+	Hidden bool
 	Output string
 }
 
@@ -38,6 +40,7 @@ func NewOptionsCmd(flags *flags.GlobalFlags) *cobra.Command {
 		},
 	}
 
+	optionsCmd.Flags().BoolVar(&cmd.Hidden, "hidden", false, "If true, will also show hidden options.")
 	optionsCmd.Flags().StringVar(&cmd.Output, "output", "plain", "The output format to use. Can be json or plain")
 	return optionsCmd
 }
@@ -68,12 +71,13 @@ func (cmd *OptionsCmd) Run(ctx context.Context, providerName string) error {
 	if cmd.Output == "plain" {
 		tableEntries := [][]string{}
 		for optionName, entry := range provider.Config.Options {
-			if entry.Hidden {
+			if !cmd.Hidden && entry.Hidden {
 				continue
 			}
 
 			tableEntries = append(tableEntries, []string{
 				optionName,
+				strconv.FormatBool(entry.Required),
 				entry.Description,
 				entry.Default,
 				entryOptions[optionName].Value,
@@ -85,6 +89,7 @@ func (cmd *OptionsCmd) Run(ctx context.Context, providerName string) error {
 
 		table.PrintTable(log.Default, []string{
 			"Name",
+			"Required",
 			"Description",
 			"Default",
 			"Value",
@@ -92,6 +97,10 @@ func (cmd *OptionsCmd) Run(ctx context.Context, providerName string) error {
 	} else if cmd.Output == "json" {
 		options := map[string]optionWithValue{}
 		for optionName, entry := range provider.Config.Options {
+			if !cmd.Hidden && entry.Hidden {
+				continue
+			}
+
 			options[optionName] = optionWithValue{
 				ProviderOption: *entry,
 				Value:          entryOptions[optionName].Value,
