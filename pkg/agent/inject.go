@@ -38,7 +38,7 @@ func InjectAgentAndExecute(ctx context.Context, exec inject.ExecFunc, remoteAgen
 			ctx,
 			exec,
 			func(arm bool) (io.ReadCloser, error) {
-				return injectBinary(arm, downloadURL)
+				return injectBinary(arm, downloadURL, log)
 			},
 			fmt.Sprintf(`[ "$(%s version >/dev/null 2>&1 && echo 'true' || echo 'false')" = "false" ]`, remoteAgentPath),
 			remoteAgentPath,
@@ -70,7 +70,7 @@ func InjectAgentAndExecute(ctx context.Context, exec inject.ExecFunc, remoteAgen
 	return nil
 }
 
-func injectBinary(arm bool, tryDownloadURL string) (io.ReadCloser, error) {
+func injectBinary(arm bool, tryDownloadURL string, log log.Logger) (io.ReadCloser, error) {
 	// this means we need to
 	targetArch := "amd64"
 	if arm {
@@ -83,7 +83,7 @@ func injectBinary(arm bool, tryDownloadURL string) (io.ReadCloser, error) {
 	if runtime.GOOS == "linux" && runtime.GOARCH == targetArch {
 		binaryPath, err = os.Executable()
 	} else {
-		binaryPath, err = downloadAgentLocally(tryDownloadURL, targetArch)
+		binaryPath, err = downloadAgentLocally(tryDownloadURL, targetArch, log)
 	}
 	if err != nil {
 		return nil, err
@@ -98,23 +98,12 @@ func injectBinary(arm bool, tryDownloadURL string) (io.ReadCloser, error) {
 	return file, nil
 }
 
-func downloadAgentLocally(tryDownloadURL, targetArch string) (string, error) {
+func downloadAgentLocally(tryDownloadURL, targetArch string, log log.Logger) (string, error) {
 	agentPath := filepath.Join(os.TempDir(), "devpod-cache", "devpod-linux-"+targetArch)
-	_, err := os.Stat(agentPath)
-	if err == nil {
-		return agentPath, nil
-	}
-
-	err = os.MkdirAll(filepath.Dir(agentPath), 0755)
+	err := os.MkdirAll(filepath.Dir(agentPath), 0755)
 	if err != nil {
 		return "", errors.Wrap(err, "create agent path")
 	}
-
-	file, err := os.Create(agentPath)
-	if err != nil {
-		return "", errors.Wrap(err, "create agent binary")
-	}
-	defer file.Close()
 
 	httpClient := &http.Client{
 		Transport: &http.Transport{
@@ -126,6 +115,18 @@ func downloadAgentLocally(tryDownloadURL, targetArch string) (string, error) {
 		return "", errors.Wrap(err, "download devpod")
 	}
 	defer resp.Body.Close()
+
+	stat, err := os.Stat(agentPath)
+	if err == nil && stat.Size() == resp.ContentLength {
+		return agentPath, nil
+	}
+
+	log.Infof("Download DevPod Agent...")
+	file, err := os.Create(agentPath)
+	if err != nil {
+		return "", errors.Wrap(err, "create agent binary")
+	}
+	defer file.Close()
 
 	_, err = io.Copy(file, resp.Body)
 	if err != nil {
