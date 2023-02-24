@@ -14,7 +14,8 @@ echo "ping"
 # we don't want the script to do anything without us
 IFS='$\n' read -r DEVPOD_PING
 if [ "$DEVPOD_PING" != "pong" ]; then
-  exit 0
+  >&2 echo "Received wrong answer for ping request $DEVPOD_PING"
+  exit 1
 fi
 
 command_exists() {

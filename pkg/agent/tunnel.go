@@ -6,9 +6,11 @@ import (
 	"fmt"
 	"github.com/loft-sh/devpod/pkg/devcontainer/config"
 	"github.com/loft-sh/devpod/pkg/extract"
+	"github.com/loft-sh/devpod/pkg/gitcredentials"
 	provider2 "github.com/loft-sh/devpod/pkg/provider"
 	"github.com/loft-sh/devpod/pkg/scanner"
 	"github.com/loft-sh/devpod/pkg/survey"
+	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 	"google.golang.org/grpc/credentials/insecure"
 	"io"
@@ -38,12 +40,13 @@ func NewTunnelClient(reader io.Reader, writer io.WriteCloser, exitOnClose bool) 
 	return tunnel.NewTunnelClient(conn), nil
 }
 
-func RunTunnelServer(ctx context.Context, reader io.Reader, writer io.WriteCloser, exitOnClose bool, workspaceSource provider2.WorkspaceSource, log log.Logger) (*config.Result, error) {
+func RunTunnelServer(ctx context.Context, reader io.Reader, writer io.WriteCloser, exitOnClose, allowGitCredentials bool, workspace *provider2.Workspace, log log.Logger) (*config.Result, error) {
 	lis := stdio.NewStdioListener(reader, writer, exitOnClose)
 	s := grpc.NewServer()
 	tunnelServ := &tunnelServer{
-		workspaceSource: workspaceSource,
-		log:             log,
+		workspace:           workspace,
+		allowGitCredentials: allowGitCredentials,
+		log:                 log,
 	}
 	tunnel.RegisterTunnelServer(s, tunnelServ)
 	reflection.Register(s)
@@ -64,12 +67,37 @@ func RunTunnelServer(ctx context.Context, reader io.Reader, writer io.WriteClose
 type tunnelServer struct {
 	tunnel.UnimplementedTunnelServer
 
-	result          *config.Result
-	workspaceSource provider2.WorkspaceSource
-	log             log.Logger
+	allowGitCredentials bool
+	result              *config.Result
+	workspace           *provider2.Workspace
+	log                 log.Logger
 }
 
-func (t *tunnelServer) SendResult(ctx context.Context, result *tunnel.Result) (*tunnel.Empty, error) {
+func (t *tunnelServer) GitCredentials(ctx context.Context, message *tunnel.Message) (*tunnel.Message, error) {
+	if !t.allowGitCredentials {
+		return nil, fmt.Errorf("git credentials forbidden")
+	}
+
+	credentials := &gitcredentials.GitCredentials{}
+	err := json.Unmarshal([]byte(message.Message), credentials)
+	if err != nil {
+		return nil, errors.Wrap(err, "decode git credentials request")
+	}
+
+	response, err := gitcredentials.GetCredentials(credentials)
+	if err != nil {
+		return nil, errors.Wrap(err, "get git response")
+	}
+
+	out, err := json.Marshal(response)
+	if err != nil {
+		return nil, err
+	}
+
+	return &tunnel.Message{Message: string(out)}, nil
+}
+
+func (t *tunnelServer) SendResult(ctx context.Context, result *tunnel.Message) (*tunnel.Empty, error) {
 	parsedResult := &config.Result{}
 	err := json.Unmarshal([]byte(result.Message), parsedResult)
 	if err != nil {
@@ -101,7 +129,11 @@ func (t *tunnelServer) Log(ctx context.Context, message *tunnel.LogMessage) (*tu
 }
 
 func (t *tunnelServer) ReadWorkspace(response *tunnel.Empty, stream tunnel.Tunnel_ReadWorkspaceServer) error {
-	return extract.WriteTar(NewStreamWriter(stream), t.workspaceSource.LocalFolder)
+	if t.workspace == nil {
+		return fmt.Errorf("workspace is nil")
+	}
+
+	return extract.WriteTar(NewStreamWriter(stream), t.workspace.Source.LocalFolder)
 }
 
 func NewStreamReader(stream tunnel.Tunnel_ReadWorkspaceClient) io.Reader {

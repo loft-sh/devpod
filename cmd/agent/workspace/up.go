@@ -124,7 +124,7 @@ func (cmd *UpCmd) up(ctx context.Context, workspaceInfo *provider2.AgentWorkspac
 	if err != nil {
 		return err
 	}
-	_, err = tunnelClient.SendResult(ctx, &tunnel.Result{Message: string(out)})
+	_, err = tunnelClient.SendResult(ctx, &tunnel.Message{Message: string(out)})
 	if err != nil {
 		return errors.Wrap(err, "send result")
 	}

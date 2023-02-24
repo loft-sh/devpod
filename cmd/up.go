@@ -229,7 +229,7 @@ func devPodUpServer(ctx context.Context, client client2.AgentClient, log log.Log
 	}()
 
 	// create container etc.
-	result, err := agent.RunTunnelServer(cancelCtx, stdoutReader, stdinWriter, false, client.WorkspaceConfig().Source, log)
+	result, err := agent.RunTunnelServer(cancelCtx, stdoutReader, stdinWriter, false, false, client.WorkspaceConfig(), log)
 	if err != nil {
 		return nil, errors.Wrap(err, "run tunnel server")
 	}
