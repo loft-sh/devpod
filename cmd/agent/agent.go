@@ -31,5 +31,6 @@ func NewAgentCmd(flags *flags.GlobalFlags) *cobra.Command {
 	agentCmd.AddCommand(container.NewContainerCmd(flags))
 	agentCmd.AddCommand(NewDaemonCmd())
 	agentCmd.AddCommand(NewContainerTunnelCmd())
+	agentCmd.AddCommand(NewGitCredentialsCmd(flags))
 	return agentCmd
 }

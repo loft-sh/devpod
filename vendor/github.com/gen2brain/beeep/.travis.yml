@@ -1,0 +1,10 @@
+language: go
+
+go:
+  - 1.9.x
+
+install:
+  - go get -t ./...
+
+script:
+  - go build ./...
