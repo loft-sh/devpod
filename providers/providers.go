@@ -10,6 +10,9 @@ import (
 //go:embed local/provider.yaml
 var LocalProvider string
 
+//go:embed ssh/provider.yaml
+var SSHProvider string
+
 //go:embed gcloud/provider.yaml
 var GCloudProvider string
 
@@ -18,7 +21,7 @@ var AWSProvider string
 
 // GetBuiltInProviders retrieves the built in providers
 func GetBuiltInProviders() (map[string]*provider.ProviderConfig, error) {
-	providers := []string{LocalProvider, GCloudProvider, AWSProvider}
+	providers := []string{LocalProvider, SSHProvider, GCloudProvider, AWSProvider}
 	retProviderConfigs := map[string]*provider.ProviderConfig{}
 
 	// parse providers

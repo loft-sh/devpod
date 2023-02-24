@@ -1,0 +1,47 @@
+name: ssh
+version: 0.0.1
+description: |-
+  DevPod on SSH
+options:
+  INACTIVITY_TIMEOUT:
+    description: "If defined, will automatically stop the container after the inactivity period. Example: 10m"
+  AGENT_PATH:
+    description: The path where to inject the DevPod agent to.
+    default: /opt/devpod/agent
+  HOST:
+    required: true
+    description: 'The SSH Host to connect to. Example: my-user@my-domain.com'
+  PORT:
+    description: "The SSH Port to use. Defaults to 22"
+    default: "22"
+  EXTRA_FLAGS:
+    description: "Extra flags to pass to the SSH command."
+  INJECT_GIT_CREDENTIALS:
+    description: "If DevPod should inject git credentials into the remote host."
+    default: "true"
+agent:
+  inactivityTimeout: ${INACTIVITY_TIMEOUT}
+  injectGitCredentials: ${INJECT_GIT_CREDENTIALS}
+  path: ${AGENT_PATH}
+exec:
+  validate: |-
+    OUTPUT=$(ssh -oStrictHostKeyChecking=no \
+                 -p ${PORT} \
+                 ${EXTRA_FLAGS} \
+                 "${HOST}" \
+                 'sh -c "echo DevPodTest"')
+    
+    if [ "$OUTPUT" != "DevPodTest" ]; then
+      echo "Unexpected ssh output."
+      echo "Please make sure you have configured the correct SSH host"
+      echo "and the following command can be executed on your system:"
+      echo ssh -oStrictHostKeyChecking=no -p "${PORT}" "${HOST}" 'sh -c "echo DevPodTest"'
+      exit 1
+    fi
+
+  command: |-
+    ssh -oStrictHostKeyChecking=no \
+        -p ${PORT} \
+        ${EXTRA_FLAGS} \
+        "${HOST}" \
+        "${COMMAND}"
