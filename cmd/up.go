@@ -34,8 +34,9 @@ import (
 type UpCmd struct {
 	*flags.GlobalFlags
 
-	ID  string
-	IDE string
+	ID                   string
+	IDE                  string
+	PrebuildRepositories []string
 }
 
 // NewUpCmd creates a new up command
@@ -67,6 +68,7 @@ func NewUpCmd(flags *flags.GlobalFlags) *cobra.Command {
 		},
 	}
 
+	upCmd.Flags().StringSliceVar(&cmd.PrebuildRepositories, "prebuild-repository", []string{}, "Docker respository that hosts devpod prebuilds for this workspace")
 	upCmd.Flags().StringVar(&cmd.ID, "id", "", "The id to use for the workspace")
 	upCmd.Flags().StringVar(&cmd.IDE, "ide", "", "The IDE to open the workspace in. If empty will use vscode locally or in browser")
 	return upCmd
@@ -75,7 +77,7 @@ func NewUpCmd(flags *flags.GlobalFlags) *cobra.Command {
 // Run runs the command logic
 func (cmd *UpCmd) Run(ctx context.Context, client client2.WorkspaceClient) error {
 	// run devpod agent up
-	result, err := devPodUp(ctx, client, log.Default)
+	result, err := cmd.devPodUp(ctx, client, log.Default)
 	if err != nil {
 		return err
 	}
@@ -187,7 +189,7 @@ func startInBrowser(ctx context.Context, client client2.WorkspaceClient, user st
 	return nil
 }
 
-func devPodUp(ctx context.Context, client client2.WorkspaceClient, log log.Logger) (*config2.Result, error) {
+func (cmd *UpCmd) devPodUp(ctx context.Context, client client2.WorkspaceClient, log log.Logger) (*config2.Result, error) {
 	err := startWait(ctx, client, true, log)
 	if err != nil {
 		return nil, err
@@ -195,13 +197,13 @@ func devPodUp(ctx context.Context, client client2.WorkspaceClient, log log.Logge
 
 	agentClient, ok := client.(client2.AgentClient)
 	if ok {
-		return devPodUpServer(ctx, agentClient, log)
+		return cmd.devPodUpServer(ctx, agentClient, log)
 	}
 
 	return nil, nil
 }
 
-func devPodUpServer(ctx context.Context, client client2.AgentClient, log log.Logger) (*config2.Result, error) {
+func (cmd *UpCmd) devPodUpServer(ctx context.Context, client client2.AgentClient, log log.Logger) (*config2.Result, error) {
 	// compress info
 	workspaceInfo, err := client.AgentInfo()
 	if err != nil {
@@ -214,6 +216,9 @@ func devPodUpServer(ctx context.Context, client client2.AgentClient, log log.Log
 	command := fmt.Sprintf("%s agent workspace up --workspace-info '%s'", client.AgentPath(), workspaceInfo)
 	if log.GetLevel() == logrus.DebugLevel {
 		command += " --debug"
+	}
+	for _, repo := range cmd.PrebuildRepositories {
+		command += fmt.Sprintf(" --prebuild-repository '%s'", repo)
 	}
 
 	// create pipes

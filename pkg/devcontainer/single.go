@@ -7,7 +7,7 @@ import (
 	"github.com/pkg/errors"
 )
 
-func (r *Runner) runSingleContainer(parsedConfig *config.SubstitutedConfig, workspaceMount string) (*config.Result, error) {
+func (r *Runner) runSingleContainer(parsedConfig *config.SubstitutedConfig, workspaceMount string, options UpOptions) (*config.Result, error) {
 	labels := r.getLabels()
 	containerDetails, err := r.Docker.FindDevContainer(labels)
 	if err != nil {
@@ -36,7 +36,9 @@ func (r *Runner) runSingleContainer(parsedConfig *config.SubstitutedConfig, work
 		}
 	} else {
 		// we need to build container
-		buildInfo, err := r.build(parsedConfig, BuildOptions{})
+		buildInfo, err := r.build(parsedConfig, BuildOptions{
+			PrebuildRepositories: options.PrebuildRepositories,
+		})
 		if err != nil {
 			return nil, errors.Wrap(err, "build image")
 		}

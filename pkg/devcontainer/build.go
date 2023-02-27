@@ -38,7 +38,8 @@ type BuildInfo struct {
 type BuildOptions struct {
 	ForceRebuild bool
 
-	PushRepository string
+	PrebuildRepositories []string
+	PushRepository       string
 }
 
 func (r *Runner) build(parsedConfig *config.SubstitutedConfig, options BuildOptions) (*BuildInfo, error) {
@@ -125,8 +126,9 @@ func (r *Runner) buildImage(parsedConfig *config.SubstitutedConfig, extendedBuil
 
 	// check if there is a prebuild image
 	if !options.ForceRebuild {
-		devPodCustomiztations := config.GetDevPodCustomizations(parsedConfig.Config)
-		for _, prebuildRepo := range devPodCustomiztations.PrebuildRepo {
+		devPodCustomizations := config.GetDevPodCustomizations(parsedConfig.Config)
+		options.PrebuildRepositories = append(options.PrebuildRepositories, devPodCustomizations.PrebuildRepo...)
+		for _, prebuildRepo := range options.PrebuildRepositories {
 			prebuildImage := prebuildRepo + ":" + prebuildHash
 			img, err := image.GetImage(prebuildImage)
 			if err == nil && img != nil {

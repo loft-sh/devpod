@@ -41,7 +41,9 @@ type Runner struct {
 	Log log.Logger
 }
 
-type UpOptions struct{}
+type UpOptions struct {
+	PrebuildRepositories []string
+}
 
 func (r *Runner) prepare() (*config.SubstitutedConfig, *WorkspaceConfig, error) {
 	rawParsedConfig, err := config.ParseDevContainerJSON(r.LocalWorkspaceFolder)
@@ -92,7 +94,7 @@ func (r *Runner) Up(options UpOptions) (*config.Result, error) {
 
 	// check if its a compose devcontainer.json
 	if isDockerFileConfig(substitutedConfig.Config) || substitutedConfig.Config.Image != "" {
-		return r.runSingleContainer(substitutedConfig, workspace.WorkspaceMount)
+		return r.runSingleContainer(substitutedConfig, workspace.WorkspaceMount, options)
 	} else if len(substitutedConfig.Config.DockerComposeFile) > 0 {
 		// TODO: implement
 		panic("unimplemented")
