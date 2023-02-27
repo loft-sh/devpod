@@ -44,7 +44,7 @@ func InjectAndExecute(
 	stderr io.Writer,
 	timeout time.Duration,
 	log log.Logger,
-) error {
+) (bool, error) {
 	// generate script
 	t, err := template.FillTemplate(Script, map[string]string{
 		"Command":         command,
@@ -57,7 +57,7 @@ func InjectAndExecute(
 		"DownloadArm":     downloadArm64,
 	})
 	if err != nil {
-		return err
+		return true, err
 	}
 	log.Debugf("execute inject script")
 	defer log.Debugf("done injecting")
@@ -65,20 +65,20 @@ func InjectAndExecute(
 	// start script
 	stdinReader, stdinWriter, err := os.Pipe()
 	if err != nil {
-		return err
+		return true, err
 	}
 	defer stdinWriter.Close()
 
 	stdoutReader, stdoutWriter, err := os.Pipe()
 	if err != nil {
-		return err
+		return true, err
 	}
 	defer stdoutWriter.Close()
 
 	// check if context is done
 	select {
 	case <-ctx.Done():
-		return context.Canceled
+		return true, context.Canceled
 	default:
 	}
 
@@ -127,14 +127,14 @@ func InjectAndExecute(
 
 	// prefer result error
 	if result.err != nil {
-		return result.err
+		return result.wasExecuted, result.err
 	} else if err != nil {
-		return err
+		return result.wasExecuted, err
 	} else if result.wasExecuted || command == "" {
-		return nil
+		return result.wasExecuted, nil
 	}
 
-	return exec(ctx, command, stdin, stdout, stderr)
+	return true, exec(ctx, command, stdin, stdout, stderr)
 }
 
 func inject(localFile LocalFile, stdout io.ReadCloser, stdoutOut io.Writer, stdin io.WriteCloser, stdinOut io.Reader, timeout time.Duration, log log.Logger) (bool, error) {

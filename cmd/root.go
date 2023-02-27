@@ -52,6 +52,9 @@ func Execute() {
 	err := rootCmd.Execute()
 	if err != nil {
 		if exitErr, ok := err.(*exec.ExitError); ok {
+			if len(exitErr.Stderr) > 0 {
+				log2.Default.ErrorStreamOnly().Error(string(exitErr.Stderr))
+			}
 			os.Exit(exitErr.ExitCode())
 		}
 
@@ -81,6 +84,6 @@ func BuildRoot() *cobra.Command {
 	rootCmd.AddCommand(NewStopCmd(globalFlags))
 	rootCmd.AddCommand(NewListCmd(globalFlags))
 	rootCmd.AddCommand(NewStatusCmd(globalFlags))
-	rootCmd.AddCommand(NewPrebuildCmd(globalFlags))
+	rootCmd.AddCommand(NewBuildCmd(globalFlags))
 	return rootCmd
 }

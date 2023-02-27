@@ -80,6 +80,14 @@ func (cmd *UpCmd) Run(ctx context.Context) error {
 		return err
 	}
 
+	// get docker credentials
+	dir, err := configureDockerCredentials(ctx, workspaceInfo, tunnelClient, logger)
+	if err != nil {
+		logger.Errorf("Error retrieving docker credentials: %v", err)
+	} else if dir != "" {
+		defer os.RemoveAll(dir)
+	}
+
 	// start up
 	err = cmd.up(ctx, workspaceInfo, tunnelClient, logger)
 	if err != nil {
@@ -121,14 +129,6 @@ func initWorkspace(ctx context.Context, workspaceInfo *provider2.AgentWorkspaceI
 	err = installDaemon(workspaceInfo, logger)
 	if err != nil {
 		logger.Errorf("Install DevPod Daemon: %v", err)
-	}
-
-	// get docker credentials
-	file, err := configureDockerCredentials(ctx, workspaceInfo, tunnelClient, logger)
-	if err != nil {
-		logger.Errorf("Error retrieving docker credentials: %v", err)
-	} else if file != "" {
-		defer os.Remove(file)
 	}
 
 	// wait until docker is installed

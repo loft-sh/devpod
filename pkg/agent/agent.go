@@ -126,7 +126,7 @@ func RerunAsRoot(workspaceInfo *provider2.AgentWorkspaceInfo) (bool, error) {
 	cmd.Stderr = os.Stderr
 	err = cmd.Run()
 	if err != nil {
-		return false, errors.Wrap(err, "rerun as root")
+		return false, err
 	}
 
 	return true, nil

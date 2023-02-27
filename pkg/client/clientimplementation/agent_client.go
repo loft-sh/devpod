@@ -248,7 +248,9 @@ func (s *agentClient) Delete(ctx context.Context, options client.DeleteOptions) 
 				return err
 			}
 
-			s.log.Errorf("Error deleting container: %v", err)
+			if err != context.DeadlineExceeded {
+				s.log.Errorf("Error deleting container: %v", err)
+			}
 		}
 	} else if s.workspace.Server.ID != "" && len(s.config.Exec.Delete) > 0 {
 		// delete server if config was found

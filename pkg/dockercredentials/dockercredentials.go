@@ -1,11 +1,12 @@
 package dockercredentials
 
 import (
-	"encoding/json"
+	"bytes"
 	"github.com/docker/cli/cli/config/configfile"
 	"github.com/docker/cli/cli/config/types"
 	"github.com/loft-sh/devpod/pkg/docker"
 	"os"
+	"path/filepath"
 )
 
 // Credentials holds the information shared between docker and the credentials store.
@@ -16,23 +17,22 @@ type Credentials struct {
 }
 
 func ConfigureCredentials(dockerCredentials string) (string, error) {
-	dockerConfig, err := os.CreateTemp("", "")
-	if err != nil {
-		return "", err
-	}
-	defer dockerConfig.Close()
-
-	_, err = dockerConfig.WriteString(dockerCredentials)
+	dockerConfigDir, err := os.MkdirTemp("", "")
 	if err != nil {
 		return "", err
 	}
 
-	err = os.Setenv("DOCKER_CONFIG", dockerConfig.Name())
+	err = os.WriteFile(filepath.Join(dockerConfigDir, "config.json"), []byte(dockerCredentials), os.ModePerm)
 	if err != nil {
 		return "", err
 	}
 
-	return dockerConfig.Name(), nil
+	err = os.Setenv("DOCKER_CONFIG", dockerConfigDir)
+	if err != nil {
+		return "", err
+	}
+
+	return dockerConfigDir, nil
 }
 
 func GetAuthConfigs() (map[string]types.AuthConfig, error) {
@@ -61,6 +61,7 @@ func GetFilledCredentials() ([]byte, error) {
 			return nil, err
 		}
 
+		config.ServerAddress = host
 		config.Username = ac.Username
 		config.Password = ac.Password
 		config.IdentityToken = ac.IdentityToken
@@ -70,12 +71,14 @@ func GetFilledCredentials() ([]byte, error) {
 	dockerFile := &configfile.ConfigFile{
 		AuthConfigs: authConfigs,
 	}
-	dockerFileRaw, err := json.Marshal(dockerFile)
+
+	buf := &bytes.Buffer{}
+	err = dockerFile.SaveToWriter(buf)
 	if err != nil {
 		return nil, err
 	}
 
-	return dockerFileRaw, nil
+	return buf.Bytes(), nil
 }
 
 func GetAuthConfig(host string) (*Credentials, error) {
