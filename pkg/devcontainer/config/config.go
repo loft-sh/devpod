@@ -256,6 +256,10 @@ type PortAttribute struct {
 	Protocol string `json:"protocol,omitempty"`
 }
 
+type DevPodCustomizations struct {
+	PrebuildRepo types.StrArray `json:"prebuildRepo,omitempty"`
+}
+
 type VSCodeCustomizations struct {
 	Settings   map[string]interface{} `json:"settings,omitempty"`
 	Extensions []string               `json:"extensions,omitempty"`

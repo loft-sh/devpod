@@ -25,6 +25,26 @@ import (
 	"time"
 )
 
+// Exists checks if the given workspace already exists
+func Exists(devPodConfig *config.Config, args []string, log log.Logger) string {
+	if len(args) == 0 {
+		return ""
+	}
+
+	// check if workspace already exists
+	_, name := isLocalDir(args[0], log)
+
+	// convert to id
+	workspaceID := ToWorkspaceID(name)
+
+	// already exists?
+	if !provider2.WorkspaceExists(devPodConfig.DefaultContext, workspaceID) {
+		return ""
+	}
+
+	return workspaceID
+}
+
 // GetWorkspace tries to retrieve an already existing workspace
 func GetWorkspace(ctx context.Context, devPodConfig *config.Config, ide *provider2.WorkspaceIDEConfig, args []string, log log.Logger) (client.WorkspaceClient, error) {
 	// check if we have no args
@@ -188,7 +208,7 @@ func isLocalDir(name string, log log.Logger) (bool, string) {
 		absPath, _ := filepath.Abs(name)
 		gitRoot := findGitRoot(name)
 		if gitRoot != "" && gitRoot != absPath {
-			log.Infof("Found git root at %s", gitRoot)
+			log.Debugf("Found git root at %s", gitRoot)
 			return true, gitRoot
 		}
 

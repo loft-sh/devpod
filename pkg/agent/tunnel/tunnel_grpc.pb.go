@@ -26,6 +26,7 @@ type TunnelClient interface {
 	Log(ctx context.Context, in *LogMessage, opts ...grpc.CallOption) (*Empty, error)
 	ReadWorkspace(ctx context.Context, in *Empty, opts ...grpc.CallOption) (Tunnel_ReadWorkspaceClient, error)
 	SendResult(ctx context.Context, in *Message, opts ...grpc.CallOption) (*Empty, error)
+	DockerCredentials(ctx context.Context, in *Empty, opts ...grpc.CallOption) (*Message, error)
 	GitCredentials(ctx context.Context, in *Message, opts ...grpc.CallOption) (*Message, error)
 	GitUser(ctx context.Context, in *Empty, opts ...grpc.CallOption) (*Message, error)
 }
@@ -97,6 +98,15 @@ func (c *tunnelClient) SendResult(ctx context.Context, in *Message, opts ...grpc
 	return out, nil
 }
 
+func (c *tunnelClient) DockerCredentials(ctx context.Context, in *Empty, opts ...grpc.CallOption) (*Message, error) {
+	out := new(Message)
+	err := c.cc.Invoke(ctx, "/tunnel.Tunnel/DockerCredentials", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 func (c *tunnelClient) GitCredentials(ctx context.Context, in *Message, opts ...grpc.CallOption) (*Message, error) {
 	out := new(Message)
 	err := c.cc.Invoke(ctx, "/tunnel.Tunnel/GitCredentials", in, out, opts...)
@@ -123,6 +133,7 @@ type TunnelServer interface {
 	Log(context.Context, *LogMessage) (*Empty, error)
 	ReadWorkspace(*Empty, Tunnel_ReadWorkspaceServer) error
 	SendResult(context.Context, *Message) (*Empty, error)
+	DockerCredentials(context.Context, *Empty) (*Message, error)
 	GitCredentials(context.Context, *Message) (*Message, error)
 	GitUser(context.Context, *Empty) (*Message, error)
 	mustEmbedUnimplementedTunnelServer()
@@ -143,6 +154,9 @@ func (UnimplementedTunnelServer) ReadWorkspace(*Empty, Tunnel_ReadWorkspaceServe
 }
 func (UnimplementedTunnelServer) SendResult(context.Context, *Message) (*Empty, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method SendResult not implemented")
+}
+func (UnimplementedTunnelServer) DockerCredentials(context.Context, *Empty) (*Message, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method DockerCredentials not implemented")
 }
 func (UnimplementedTunnelServer) GitCredentials(context.Context, *Message) (*Message, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GitCredentials not implemented")
@@ -238,6 +252,24 @@ func _Tunnel_SendResult_Handler(srv interface{}, ctx context.Context, dec func(i
 	return interceptor(ctx, in, info, handler)
 }
 
+func _Tunnel_DockerCredentials_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(Empty)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(TunnelServer).DockerCredentials(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/tunnel.Tunnel/DockerCredentials",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(TunnelServer).DockerCredentials(ctx, req.(*Empty))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 func _Tunnel_GitCredentials_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(Message)
 	if err := dec(in); err != nil {
@@ -292,6 +324,10 @@ var Tunnel_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "SendResult",
 			Handler:    _Tunnel_SendResult_Handler,
+		},
+		{
+			MethodName: "DockerCredentials",
+			Handler:    _Tunnel_DockerCredentials_Handler,
 		},
 		{
 			MethodName: "GitCredentials",

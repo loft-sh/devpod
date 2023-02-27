@@ -36,10 +36,20 @@ options:
     cache: 30m
     before: command
     command: ${GCLOUD_BINARY} auth application-default print-access-token --quiet --verbosity=error
+  INJECT_GIT_CREDENTIALS:
+    description: "If DevPod should inject git credentials into the remote host."
+    default: "true"
+  INJECT_DOCKER_CREDENTIALS:
+    description: "If DevPod should inject docker credentials into the remote host."
+    default: "true"
+  AGENT_PATH:
+    description: The path where to inject the DevPod agent to.
+    default: /run/agent
 agent:
-  path: /run/agent
-  injectGitCredentials: true
+  path: ${AGENT_PATH}
   inactivityTimeout: ${INACTIVITY_TIMEOUT}
+  injectGitCredentials: ${INJECT_GIT_CREDENTIALS}
+  injectDockerCredentials: ${INJECT_DOCKER_CREDENTIALS}
   exec:
     shutdown: |-
       if [ "${DELETE_ON_INACTIVITY}" = "true" ]; then

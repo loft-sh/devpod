@@ -41,13 +41,15 @@ type Runner struct {
 	Log log.Logger
 }
 
-func (r *Runner) Up() (*config.Result, error) {
+type UpOptions struct{}
+
+func (r *Runner) prepare() (*config.SubstitutedConfig, *WorkspaceConfig, error) {
 	rawParsedConfig, err := config.ParseDevContainerJSON(r.LocalWorkspaceFolder)
 	if err != nil {
-		return nil, errors.Wrap(err, "parsing devcontainer.json")
+		return nil, nil, errors.Wrap(err, "parsing devcontainer.json")
 	} else if rawParsedConfig == nil {
 		// TODO: use a default config
-		return nil, fmt.Errorf("couldn't find a devcontainer.json")
+		return nil, nil, fmt.Errorf("couldn't find a devcontainer.json")
 	}
 	configFile := rawParsedConfig.Origin
 
@@ -70,20 +72,28 @@ func (r *Runner) Up() (*config.Result, error) {
 		workspace.WorkspaceMount = parsedConfig.WorkspaceMount
 	}
 	parsedConfig.Origin = configFile
+	return &config.SubstitutedConfig{
+		Config: parsedConfig,
+		Raw:    rawParsedConfig,
+	}, &workspace, nil
+}
+
+func (r *Runner) Up(options UpOptions) (*config.Result, error) {
+	substitutedConfig, workspace, err := r.prepare()
+	if err != nil {
+		return nil, err
+	}
 
 	// run initializeCommand
-	err = runInitializeCommand(r.LocalWorkspaceFolder, parsedConfig, r.Log)
+	err = runInitializeCommand(r.LocalWorkspaceFolder, substitutedConfig.Config, r.Log)
 	if err != nil {
 		return nil, err
 	}
 
 	// check if its a compose devcontainer.json
-	if isDockerFileConfig(parsedConfig) || parsedConfig.Image != "" {
-		return r.runSingleContainer(&config.SubstitutedConfig{
-			Config: parsedConfig,
-			Raw:    rawParsedConfig,
-		}, workspace.WorkspaceMount)
-	} else if len(parsedConfig.DockerComposeFile) > 0 {
+	if isDockerFileConfig(substitutedConfig.Config) || substitutedConfig.Config.Image != "" {
+		return r.runSingleContainer(substitutedConfig, workspace.WorkspaceMount)
+	} else if len(substitutedConfig.Config.DockerComposeFile) > 0 {
 		// TODO: implement
 		panic("unimplemented")
 	}

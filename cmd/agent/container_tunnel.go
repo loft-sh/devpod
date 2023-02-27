@@ -1,6 +1,7 @@
 package agent
 
 import (
+	"context"
 	"fmt"
 	"github.com/loft-sh/devpod/pkg/agent"
 	"github.com/loft-sh/devpod/pkg/devcontainer"
@@ -36,7 +37,7 @@ func NewContainerTunnelCmd() *cobra.Command {
 // Run runs the command logic
 func (cmd *ContainerTunnelCmd) Run(_ *cobra.Command, _ []string) error {
 	// create new docker client
-	dockerHelper := docker.DockerHelper{DockerCommand: "docker"}
+	dockerHelper := &docker.DockerHelper{DockerCommand: "docker"}
 
 	// get workspace info
 	workspaceInfo, err := agent.WriteWorkspaceInfo(cmd.WorkspaceInfo)
@@ -62,7 +63,7 @@ func (cmd *ContainerTunnelCmd) Run(_ *cobra.Command, _ []string) error {
 	}
 
 	// create tunnel into container.
-	err = dockerHelper.Tunnel(agent.RemoteDevPodHelperLocation, agent.DefaultAgentDownloadURL, containerDetails.Id, cmd.Token, os.Stdin, os.Stdout, os.Stderr, true, log.Default.ErrorStreamOnly())
+	err = agent.Tunnel(context.TODO(), dockerHelper, agent.RemoteDevPodHelperLocation, agent.DefaultAgentDownloadURL, containerDetails.Id, cmd.Token, os.Stdin, os.Stdout, os.Stderr, true, log.Default.ErrorStreamOnly())
 	if err != nil {
 		return err
 	}

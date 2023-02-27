@@ -5,10 +5,8 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"github.com/loft-sh/devpod/pkg/agent"
 	"github.com/loft-sh/devpod/pkg/devcontainer/config"
 	"github.com/loft-sh/devpod/pkg/image"
-	"github.com/loft-sh/devpod/pkg/log"
 	"github.com/loft-sh/devpod/pkg/scanner"
 	"github.com/pkg/errors"
 	"io"
@@ -146,38 +144,6 @@ func (r *DockerHelper) Inspect(ids []string, inspectType string, obj interface{}
 	err = json.Unmarshal(out, obj)
 	if err != nil {
 		return errors.Wrap(err, "parse inspect output")
-	}
-
-	return nil
-}
-
-func (r *DockerHelper) Tunnel(agentPath, agentDownloadURL string, containerID string, token string, stdin io.Reader, stdout io.Writer, stderr io.Writer, trackActivity bool, log log.Logger) error {
-	// inject agent
-	err := agent.InjectAgent(context.Background(), func(ctx context.Context, command string, stdin io.Reader, stdout io.Writer, stderr io.Writer) error {
-		args := []string{"exec", "-i", "-u", "root", containerID, "sh", "-c", command}
-		return r.Run(ctx, args, stdin, stdout, stderr)
-	}, agentPath, agentDownloadURL, false, log)
-	if err != nil {
-		return err
-	}
-
-	// build command
-	command := fmt.Sprintf("%s helper ssh-server --token %s --stdio", agent.RemoteDevPodHelperLocation, token)
-	if trackActivity {
-		command += " --track-activity"
-	}
-
-	// create tunnel
-	args := []string{
-		"exec",
-		"-i",
-		"-u", "root",
-		containerID,
-		"sh", "-c", command,
-	}
-	err = r.Run(context.TODO(), args, stdin, stdout, stderr)
-	if err != nil {
-		return err
 	}
 
 	return nil

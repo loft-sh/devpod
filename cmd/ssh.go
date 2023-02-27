@@ -228,7 +228,7 @@ func runCredentialsServer(ctx context.Context, client *ssh.Client, user string, 
 		errChan <- devssh.Run(client, command, stdinReader, stdoutWriter, writer)
 	}()
 
-	_, err = agent.RunTunnelServer(cancelCtx, stdoutReader, stdinWriter, false, true, nil, log)
+	_, err = agent.RunTunnelServer(cancelCtx, stdoutReader, stdinWriter, false, true, false, nil, log)
 	if err != nil {
 		return errors.Wrap(err, "run tunnel server")
 	}
