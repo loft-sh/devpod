@@ -34,7 +34,7 @@ func InjectAgentAndExecute(ctx context.Context, exec inject.ExecFunc, remoteAgen
 	startWaiting := time.Now()
 	now := startWaiting
 	for {
-		err := inject.InjectAndExecute(
+		wasExecuted, err := inject.InjectAndExecute(
 			ctx,
 			exec,
 			func(arm bool) (io.ReadCloser, error) {
@@ -56,6 +56,8 @@ func InjectAgentAndExecute(ctx context.Context, exec inject.ExecFunc, remoteAgen
 		if err != nil {
 			if time.Since(now) > waitForInstanceConnectionTimeout {
 				return errors.Wrap(err, "timeout waiting for instance connection")
+			} else if wasExecuted {
+				return err
 			}
 
 			log.Infof("Waiting for devpod agent to come up...")

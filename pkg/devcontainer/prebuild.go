@@ -12,12 +12,7 @@ import (
 	"strings"
 )
 
-type PrebuildOptions struct {
-	PushRepository string
-	ForceRebuild   bool
-}
-
-func (r *Runner) Prebuild(options PrebuildOptions) (string, error) {
+func (r *Runner) Build(options BuildOptions) (string, error) {
 	substitutedConfig, _, err := r.prepare()
 	if err != nil {
 		return "", err

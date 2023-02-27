@@ -1,12 +1,14 @@
 package cmd
 
 import (
+	"bytes"
 	"context"
 	"fmt"
 	"github.com/loft-sh/devpod/cmd/flags"
 	"github.com/loft-sh/devpod/pkg/agent"
 	"github.com/loft-sh/devpod/pkg/client"
 	"github.com/loft-sh/devpod/pkg/config"
+	"github.com/loft-sh/devpod/pkg/image"
 	"github.com/loft-sh/devpod/pkg/log"
 	workspace2 "github.com/loft-sh/devpod/pkg/workspace"
 	"github.com/pkg/errors"
@@ -16,8 +18,8 @@ import (
 	"os"
 )
 
-// PrebuildCmd holds the cmd flags
-type PrebuildCmd struct {
+// BuildCmd holds the cmd flags
+type BuildCmd struct {
 	*flags.GlobalFlags
 
 	SkipDelete bool
@@ -25,19 +27,25 @@ type PrebuildCmd struct {
 	ForceBuild bool
 }
 
-// NewPrebuildCmd creates a new command
-func NewPrebuildCmd(flags *flags.GlobalFlags) *cobra.Command {
-	cmd := &PrebuildCmd{
+// NewBuildCmd creates a new command
+func NewBuildCmd(flags *flags.GlobalFlags) *cobra.Command {
+	cmd := &BuildCmd{
 		GlobalFlags: flags,
 	}
-	prebuildCmd := &cobra.Command{
-		Use:   "prebuild",
-		Short: "Prebuilds a workspace",
+	buildCmd := &cobra.Command{
+		Use:   "build",
+		Short: "Builds a workspace",
 		RunE: func(_ *cobra.Command, args []string) error {
 			ctx := context.Background()
 			devPodConfig, err := config.LoadConfig(cmd.Context)
 			if err != nil {
 				return err
+			}
+
+			// check permissions
+			err = image.CheckPushPermissions(cmd.Repository)
+			if err != nil {
+				return fmt.Errorf("cannot push to %s, please make sure you have push permissions to repository %s")
 			}
 
 			exists := workspace2.Exists(devPodConfig, args, log.Default)
@@ -60,16 +68,16 @@ func NewPrebuildCmd(flags *flags.GlobalFlags) *cobra.Command {
 		},
 	}
 
-	prebuildCmd.Flags().BoolVar(&cmd.SkipDelete, "skip-delete", false, "If true will not delete the workspace after prebuilding it")
-	prebuildCmd.Flags().BoolVar(&cmd.ForceBuild, "force-build", false, "If true will force build the image")
-	prebuildCmd.Flags().StringVar(&cmd.Repository, "repository", "", "The repository to push to")
-	_ = prebuildCmd.MarkFlagRequired("repository")
-	return prebuildCmd
+	buildCmd.Flags().BoolVar(&cmd.SkipDelete, "skip-delete", false, "If true will not delete the workspace after building it")
+	buildCmd.Flags().BoolVar(&cmd.ForceBuild, "force-build", false, "If true will force build the image")
+	buildCmd.Flags().StringVar(&cmd.Repository, "repository", "", "The repository to push to")
+	_ = buildCmd.MarkFlagRequired("repository")
+	return buildCmd
 }
 
-func (cmd *PrebuildCmd) Run(ctx context.Context, client client.WorkspaceClient) error {
-	// prebuild workspace
-	err := cmd.prebuild(ctx, client, log.Default)
+func (cmd *BuildCmd) Run(ctx context.Context, client client.WorkspaceClient) error {
+	// build workspace
+	err := cmd.build(ctx, client, log.Default)
 	if err != nil {
 		return err
 	}
@@ -77,7 +85,7 @@ func (cmd *PrebuildCmd) Run(ctx context.Context, client client.WorkspaceClient) 
 	return nil
 }
 
-func (cmd *PrebuildCmd) prebuild(ctx context.Context, workspaceClient client.WorkspaceClient, log log.Logger) error {
+func (cmd *BuildCmd) build(ctx context.Context, workspaceClient client.WorkspaceClient, log log.Logger) error {
 	err := startWait(ctx, workspaceClient, true, log)
 	if err != nil {
 		return err
@@ -85,13 +93,13 @@ func (cmd *PrebuildCmd) prebuild(ctx context.Context, workspaceClient client.Wor
 
 	agentClient, ok := workspaceClient.(client.AgentClient)
 	if ok {
-		return cmd.prebuildAgentClient(ctx, agentClient, log)
+		return cmd.buildAgentClient(ctx, agentClient, log)
 	}
 
-	return fmt.Errorf("prebuilds are not supported for direct providers. Please use another provider instead")
+	return fmt.Errorf("builds are not supported for direct providers. Please use another provider instead")
 }
 
-func (cmd *PrebuildCmd) prebuildAgentClient(ctx context.Context, agentClient client.AgentClient, log log.Logger) error {
+func (cmd *BuildCmd) buildAgentClient(ctx context.Context, agentClient client.AgentClient, log log.Logger) error {
 	// compress info
 	workspaceInfo, err := agentClient.AgentInfo()
 	if err != nil {
@@ -99,9 +107,9 @@ func (cmd *PrebuildCmd) prebuildAgentClient(ctx context.Context, agentClient cli
 	}
 
 	// create container etc.
-	log.Infof("Prebuilding devcontainer...")
-	defer log.Debugf("Done prebuilding devcontainer")
-	command := fmt.Sprintf("%s agent workspace prebuild --workspace-info '%s'", agentClient.AgentPath(), workspaceInfo)
+	log.Infof("Building devcontainer...")
+	defer log.Debugf("Done building devcontainer")
+	command := fmt.Sprintf("%s agent workspace build --workspace-info '%s'", agentClient.AgentPath(), workspaceInfo)
 	if log.GetLevel() == logrus.DebugLevel {
 		command += " --debug"
 	}
@@ -133,17 +141,20 @@ func (cmd *PrebuildCmd) prebuildAgentClient(ctx context.Context, agentClient cli
 		defer log.Debugf("Done executing up command")
 		defer cancel()
 
-		writer := log.ErrorStreamOnly().Writer(logrus.DebugLevel, false)
-		defer writer.Close()
-
-		errChan <- agent.InjectAgentAndExecute(cancelCtx, func(ctx context.Context, command string, stdin io.Reader, stdout io.Writer, stderr io.Writer) error {
+		buf := &bytes.Buffer{}
+		err := agent.InjectAgentAndExecute(cancelCtx, func(ctx context.Context, command string, stdin io.Reader, stdout io.Writer, stderr io.Writer) error {
 			return agentClient.Command(ctx, client.CommandOptions{
 				Command: command,
 				Stdin:   stdin,
 				Stdout:  stdout,
 				Stderr:  stderr,
 			})
-		}, agentClient.AgentPath(), agentClient.AgentURL(), true, command, stdinReader, stdoutWriter, writer, log.ErrorStreamOnly())
+		}, agentClient.AgentPath(), agentClient.AgentURL(), true, command, stdinReader, stdoutWriter, buf, log.ErrorStreamOnly())
+		if err != nil {
+			errChan <- errors.Wrapf(err, "%s", buf.String())
+		} else {
+			errChan <- nil
+		}
 	}()
 
 	// get workspace config

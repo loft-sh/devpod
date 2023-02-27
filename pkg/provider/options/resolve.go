@@ -143,6 +143,7 @@ func resolveAgentConfig(workspace *provider2.Workspace, provider *provider2.Prov
 	}
 	agentConfig.Timeout = resolveDefaultValue(agentConfig.Timeout, options)
 	agentConfig.InjectGitCredentials = types.StrBool(resolveDefaultValue(string(agentConfig.InjectGitCredentials), options))
+	agentConfig.InjectDockerCredentials = types.StrBool(resolveDefaultValue(string(agentConfig.InjectDockerCredentials), options))
 	return agentConfig, nil
 }
 
