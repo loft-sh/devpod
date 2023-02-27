@@ -35,7 +35,8 @@ import (
 type UpCmd struct {
 	*flags.GlobalFlags
 
-	WorkspaceInfo string
+	WorkspaceInfo        string
+	PrebuildRepositories []string
 }
 
 // NewUpCmd creates a new command
@@ -51,6 +52,7 @@ func NewUpCmd(flags *flags.GlobalFlags) *cobra.Command {
 			return cmd.Run(context.Background())
 		},
 	}
+	upCmd.Flags().StringSliceVar(&cmd.PrebuildRepositories, "prebuild-repository", []string{}, "Docker respository that hosts devpod prebuilds for this workspace")
 	upCmd.Flags().StringVar(&cmd.WorkspaceInfo, "workspace-info", "", "The workspace info")
 	_ = upCmd.MarkFlagRequired("workspace-info")
 	return upCmd
@@ -140,7 +142,7 @@ func initWorkspace(ctx context.Context, workspaceInfo *provider2.AgentWorkspaceI
 
 func (cmd *UpCmd) up(ctx context.Context, workspaceInfo *provider2.AgentWorkspaceInfo, tunnelClient tunnel.TunnelClient, logger log.Logger) error {
 	// create devcontainer
-	result, err := DevContainerUp(workspaceInfo, logger)
+	result, err := cmd.devPodUp(workspaceInfo, logger)
 	if err != nil {
 		return err
 	}
@@ -325,8 +327,10 @@ func PrepareImage(workspaceDir, image string) error {
 	return nil
 }
 
-func DevContainerUp(workspaceInfo *provider2.AgentWorkspaceInfo, log log.Logger) (*config2.Result, error) {
-	result, err := createRunner(workspaceInfo, log).Up(devcontainer.UpOptions{})
+func (cmd *UpCmd) devPodUp(workspaceInfo *provider2.AgentWorkspaceInfo, log log.Logger) (*config2.Result, error) {
+	result, err := createRunner(workspaceInfo, log).Up(devcontainer.UpOptions{
+		PrebuildRepositories: cmd.PrebuildRepositories,
+	})
 	if err != nil {
 		return nil, err
 	}
