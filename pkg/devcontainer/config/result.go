@@ -19,6 +19,20 @@ func GetRemoteUser(result *Result) string {
 	return user
 }
 
+func GetDevPodCustomizations(parsedConfig *DevContainerConfig) *DevPodCustomizations {
+	if parsedConfig.Customizations == nil || parsedConfig.Customizations["devpod"] == nil {
+		return &DevPodCustomizations{}
+	}
+
+	devPod := &DevPodCustomizations{}
+	err := Convert(parsedConfig.Customizations["devpod"], devPod)
+	if err != nil {
+		return &DevPodCustomizations{}
+	}
+
+	return devPod
+}
+
 func GetVSCodeConfiguration(mergedConfig *MergedDevContainerConfig) *VSCodeCustomizations {
 	if mergedConfig.Customizations == nil || mergedConfig.Customizations["vscode"] == nil {
 		return &VSCodeCustomizations{}

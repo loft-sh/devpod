@@ -10,6 +10,7 @@ service Tunnel {
   rpc Log(LogMessage) returns (Empty) {}
   rpc ReadWorkspace(Empty) returns (stream Chunk) {}
   rpc SendResult(Message) returns (Empty) {}
+  rpc DockerCredentials(Empty) returns (Message) {}
   rpc GitCredentials(Message) returns (Message) {}
   rpc GitUser(Empty) returns (Message) {}
 }

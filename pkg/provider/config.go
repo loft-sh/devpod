@@ -49,6 +49,10 @@ type ProviderAgentConfig struct {
 	// the remote machine for cloning the repository.
 	InjectGitCredentials types.StrBool `json:"injectGitCredentials,omitempty"`
 
+	// InjectDockerCredentials signals DevPod if docker credentials should get synced
+	// into the remote machine for pulling and pushing images.
+	InjectDockerCredentials types.StrBool `json:"injectDockerCredentials,omitempty"`
+
 	// Exec commands that can be used on the remote
 	Exec ProviderAgentConfigExec `json:"exec,omitempty"`
 

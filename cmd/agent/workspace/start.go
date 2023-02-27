@@ -4,6 +4,7 @@ import (
 	"context"
 	"github.com/loft-sh/devpod/cmd/flags"
 	"github.com/loft-sh/devpod/pkg/agent"
+	"github.com/loft-sh/devpod/pkg/devcontainer"
 	"github.com/loft-sh/devpod/pkg/log"
 	provider2 "github.com/loft-sh/devpod/pkg/provider"
 	"github.com/pkg/errors"
@@ -61,7 +62,7 @@ func (cmd *StartCmd) Run(ctx context.Context) error {
 
 func startContainer(workspaceInfo *provider2.AgentWorkspaceInfo, log log.Logger) error {
 	log.Debugf("Starting DevPod container...")
-	_, err := createRunner(workspaceInfo, log).Up()
+	_, err := createRunner(workspaceInfo, log).Up(devcontainer.UpOptions{})
 	if err != nil {
 		return err
 	}

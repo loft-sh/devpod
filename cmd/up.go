@@ -34,8 +34,7 @@ import (
 type UpCmd struct {
 	*flags.GlobalFlags
 
-	ID string
-
+	ID  string
 	IDE string
 }
 
@@ -54,22 +53,17 @@ func NewUpCmd(flags *flags.GlobalFlags) *cobra.Command {
 				return err
 			}
 
-			if cmd.IDE == "" {
-				cmd.IDE = string(ide.Detect())
-			}
-			ide, err := ide.Parse(cmd.IDE)
+			ideConfig, err := cmd.parseIDE(ctx, devPodConfig, args)
 			if err != nil {
 				return err
 			}
 
-			client, err := workspace2.ResolveWorkspace(ctx, devPodConfig, &provider2.WorkspaceIDEConfig{
-				IDE: ide,
-			}, args, cmd.ID, cmd.Provider, log.Default)
+			client, err := workspace2.ResolveWorkspace(ctx, devPodConfig, ideConfig, args, cmd.ID, cmd.Provider, log.Default)
 			if err != nil {
 				return err
 			}
 
-			return cmd.Run(ctx, ide, client)
+			return cmd.Run(ctx, client)
 		},
 	}
 
@@ -79,7 +73,7 @@ func NewUpCmd(flags *flags.GlobalFlags) *cobra.Command {
 }
 
 // Run runs the command logic
-func (cmd *UpCmd) Run(ctx context.Context, ide provider2.IDE, client client2.WorkspaceClient) error {
+func (cmd *UpCmd) Run(ctx context.Context, client client2.WorkspaceClient) error {
 	// run devpod agent up
 	result, err := devPodUp(ctx, client, log.Default)
 	if err != nil {
@@ -97,7 +91,7 @@ func (cmd *UpCmd) Run(ctx context.Context, ide provider2.IDE, client client2.Wor
 	log.Default.Infof("Run 'ssh %s.devpod' to ssh into the devcontainer", client.Workspace())
 
 	// open ide
-	switch ide {
+	switch client.WorkspaceConfig().IDE.IDE {
 	case provider2.IDEVSCode:
 		return startVSCodeLocally(client, log.Default)
 	case provider2.IDEOpenVSCode:
@@ -107,6 +101,28 @@ func (cmd *UpCmd) Run(ctx context.Context, ide provider2.IDE, client client2.Wor
 	}
 
 	return nil
+}
+
+func (cmd *UpCmd) parseIDE(ctx context.Context, devPodConfig *config.Config, args []string) (*provider2.WorkspaceIDEConfig, error) {
+	if cmd.IDE == "" {
+		if len(args) > 0 {
+			_, err := workspace2.GetWorkspace(ctx, devPodConfig, nil, args, log.Default)
+			if err == nil {
+				return nil, nil
+			}
+		}
+
+		cmd.IDE = string(ide.Detect())
+	}
+
+	ideStr, err := ide.Parse(cmd.IDE)
+	if err != nil {
+		return nil, err
+	}
+
+	return &provider2.WorkspaceIDEConfig{
+		IDE: ideStr,
+	}, nil
 }
 
 func startGoland(result *config2.Result, client client2.WorkspaceClient, log log.Logger) error {
@@ -238,7 +254,16 @@ func devPodUpServer(ctx context.Context, client client2.AgentClient, log log.Log
 	workspaceConfig := client.WorkspaceConfig()
 
 	// create container etc.
-	result, err := agent.RunTunnelServer(cancelCtx, stdoutReader, stdinWriter, false, string(workspaceConfig.Provider.Agent.InjectGitCredentials) == "true" && workspaceConfig.Source.GitRepository != "", client.WorkspaceConfig(), log)
+	result, err := agent.RunTunnelServer(
+		cancelCtx,
+		stdoutReader,
+		stdinWriter,
+		false,
+		string(workspaceConfig.Provider.Agent.InjectGitCredentials) == "true" && workspaceConfig.Source.GitRepository != "",
+		string(workspaceConfig.Provider.Agent.InjectDockerCredentials) == "true",
+		client.WorkspaceConfig(),
+		log,
+	)
 	if err != nil {
 		return nil, errors.Wrap(err, "run tunnel server")
 	}

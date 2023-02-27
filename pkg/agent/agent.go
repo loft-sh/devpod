@@ -1,12 +1,16 @@
 package agent
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"github.com/loft-sh/devpod/pkg/command"
 	"github.com/loft-sh/devpod/pkg/compress"
+	"github.com/loft-sh/devpod/pkg/docker"
+	"github.com/loft-sh/devpod/pkg/log"
 	provider2 "github.com/loft-sh/devpod/pkg/provider"
 	"github.com/pkg/errors"
+	"io"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -126,6 +130,38 @@ func RerunAsRoot(workspaceInfo *provider2.AgentWorkspaceInfo) (bool, error) {
 	}
 
 	return true, nil
+}
+
+func Tunnel(ctx context.Context, dockerHelper *docker.DockerHelper, agentPath, agentDownloadURL string, containerID string, token string, stdin io.Reader, stdout io.Writer, stderr io.Writer, trackActivity bool, log log.Logger) error {
+	// inject agent
+	err := InjectAgent(ctx, func(ctx context.Context, command string, stdin io.Reader, stdout io.Writer, stderr io.Writer) error {
+		args := []string{"exec", "-i", "-u", "root", containerID, "sh", "-c", command}
+		return dockerHelper.Run(ctx, args, stdin, stdout, stderr)
+	}, agentPath, agentDownloadURL, false, log)
+	if err != nil {
+		return err
+	}
+
+	// build command
+	command := fmt.Sprintf("%s helper ssh-server --token %s --stdio", RemoteDevPodHelperLocation, token)
+	if trackActivity {
+		command += " --track-activity"
+	}
+
+	// create tunnel
+	args := []string{
+		"exec",
+		"-i",
+		"-u", "root",
+		containerID,
+		"sh", "-c", command,
+	}
+	err = dockerHelper.Run(ctx, args, stdin, stdout, stderr)
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
 
 func dockerReachable() (bool, error) {

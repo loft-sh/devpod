@@ -13,6 +13,7 @@ import (
 	"github.com/loft-sh/devpod/pkg/dockerfile"
 	"github.com/loft-sh/devpod/pkg/hash"
 	"github.com/loft-sh/devpod/pkg/id"
+	"github.com/loft-sh/devpod/pkg/image"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 	"io"
@@ -31,17 +32,24 @@ type BuildInfo struct {
 	ImageDetails  *config.ImageDetails
 	ImageMetadata *config.ImageMetadataConfig
 	ImageName     string
+	PrebuildHash  string
 }
 
-func (r *Runner) build(parsedConfig *config.SubstitutedConfig) (*BuildInfo, error) {
+type BuildOptions struct {
+	ForceRebuild bool
+
+	PushRepository string
+}
+
+func (r *Runner) build(parsedConfig *config.SubstitutedConfig, options BuildOptions) (*BuildInfo, error) {
 	if isDockerFileConfig(parsedConfig.Config) {
-		return r.buildAndExtendImage(parsedConfig)
+		return r.buildAndExtendImage(parsedConfig, options)
 	}
 
-	return r.extendImage(parsedConfig)
+	return r.extendImage(parsedConfig, options)
 }
 
-func (r *Runner) extendImage(parsedConfig *config.SubstitutedConfig) (*BuildInfo, error) {
+func (r *Runner) extendImage(parsedConfig *config.SubstitutedConfig, options BuildOptions) (*BuildInfo, error) {
 	imageBase := parsedConfig.Config.Image
 	imageBuildInfo, err := r.getImageBuildInfoFromImage(imageBase)
 	if err != nil {
@@ -64,10 +72,10 @@ func (r *Runner) extendImage(parsedConfig *config.SubstitutedConfig) (*BuildInfo
 	}
 
 	// build the image
-	return r.buildImage(parsedConfig, extendedBuildInfo, "", "")
+	return r.buildImage(parsedConfig, extendedBuildInfo, "", "", options)
 }
 
-func (r *Runner) buildAndExtendImage(parsedConfig *config.SubstitutedConfig) (*BuildInfo, error) {
+func (r *Runner) buildAndExtendImage(parsedConfig *config.SubstitutedConfig, options BuildOptions) (*BuildInfo, error) {
 	dockerFilePath, err := r.getDockerfilePath(parsedConfig.Config)
 	if err != nil {
 		return nil, err
@@ -106,10 +114,41 @@ func (r *Runner) buildAndExtendImage(parsedConfig *config.SubstitutedConfig) (*B
 	}
 
 	// build the image
-	return r.buildImage(parsedConfig, extendedBuildInfo, dockerFilePath, string(dockerFileContent))
+	return r.buildImage(parsedConfig, extendedBuildInfo, dockerFilePath, string(dockerFileContent), options)
 }
 
-func (r *Runner) buildImage(parsedConfig *config.SubstitutedConfig, extendedBuildInfo *feature.ExtendedBuildInfo, dockerfilePath, dockerfileContent string) (*BuildInfo, error) {
+func (r *Runner) buildImage(parsedConfig *config.SubstitutedConfig, extendedBuildInfo *feature.ExtendedBuildInfo, dockerfilePath, dockerfileContent string, options BuildOptions) (*BuildInfo, error) {
+	prebuildHash, err := calculatePrebuildHash(parsedConfig.Config, dockerfileContent)
+	if err != nil {
+		return nil, err
+	}
+
+	// check if there is a prebuild image
+	if !options.ForceRebuild {
+		devPodCustomiztations := config.GetDevPodCustomizations(parsedConfig.Config)
+		for _, prebuildRepo := range devPodCustomiztations.PrebuildRepo {
+			prebuildImage := prebuildRepo + ":" + prebuildHash
+			img, err := image.GetImage(prebuildImage)
+			if err == nil && img != nil {
+				// prebuild image found
+				r.Log.Infof("Found existing prebuilt image %s", prebuildImage)
+
+				// inspect image
+				imageDetails, err := r.Docker.InspectImage(prebuildImage, false)
+				if err != nil {
+					return nil, errors.Wrap(err, "get image details")
+				}
+
+				return &BuildInfo{
+					ImageDetails:  imageDetails,
+					ImageMetadata: extendedBuildInfo.MetadataConfig,
+					ImageName:     prebuildImage,
+					PrebuildHash:  prebuildHash,
+				}, nil
+			}
+		}
+	}
+
 	imageName := r.getImageName()
 
 	// extra args?
@@ -131,7 +170,7 @@ func (r *Runner) buildImage(parsedConfig *config.SubstitutedConfig, extendedBuil
 
 		// cleanup features folder after we are done building
 		if featureBuildInfo.FeaturesFolder != "" {
-			//defer os.RemoveAll(featureBuildInfo.FeaturesFolder)
+			defer os.RemoveAll(featureBuildInfo.FeaturesFolder)
 		}
 
 		// rewrite dockerfile
@@ -172,7 +211,10 @@ func (r *Runner) buildImage(parsedConfig *config.SubstitutedConfig, extendedBuil
 
 	// other options
 	buildOptions.Dockerfile = finalDockerfilePath
-	buildOptions.Images = []string{imageName}
+	buildOptions.Images = append(buildOptions.Images, imageName)
+	if options.PushRepository != "" {
+		buildOptions.Images = append(buildOptions.Images, options.PushRepository+":"+prebuildHash)
+	}
 	buildOptions.Context = getContextPath(parsedConfig.Config)
 
 	// add build arg
@@ -210,6 +252,7 @@ func (r *Runner) buildImage(parsedConfig *config.SubstitutedConfig, extendedBuil
 		ImageDetails:  imageDetails,
 		ImageMetadata: extendedBuildInfo.MetadataConfig,
 		ImageName:     imageName,
+		PrebuildHash:  prebuildHash,
 	}, nil
 }
 

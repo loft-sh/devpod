@@ -12,6 +12,7 @@ import (
 	"github.com/loft-sh/devpod/pkg/daemon"
 	"github.com/loft-sh/devpod/pkg/devcontainer"
 	config2 "github.com/loft-sh/devpod/pkg/devcontainer/config"
+	"github.com/loft-sh/devpod/pkg/dockercredentials"
 	"github.com/loft-sh/devpod/pkg/extract"
 	"github.com/loft-sh/devpod/pkg/gitcredentials"
 	"github.com/loft-sh/devpod/pkg/log"
@@ -37,7 +38,7 @@ type UpCmd struct {
 	WorkspaceInfo string
 }
 
-// NewUpCmd creates a new ssh command
+// NewUpCmd creates a new command
 func NewUpCmd(flags *flags.GlobalFlags) *cobra.Command {
 	cmd := &UpCmd{
 		GlobalFlags: flags,
@@ -71,19 +72,10 @@ func (cmd *UpCmd) Run(ctx context.Context) error {
 		return nil
 	}
 
-	// create a grpc client
-	tunnelClient, err := agent.NewTunnelClient(os.Stdin, os.Stdout, true)
+	// initialize the workspace
+	tunnelClient, logger, err := initWorkspace(ctx, workspaceInfo, cmd.Debug)
 	if err != nil {
-		return fmt.Errorf("error creating tunnel client: %v", err)
-	}
-
-	// create debug logger
-	logger := agent.NewTunnelLogger(ctx, tunnelClient, cmd.Debug)
-
-	// this message serves as a ping to the client
-	_, err = tunnelClient.Ping(ctx, &tunnel.Empty{})
-	if err != nil {
-		return errors.Wrap(err, "ping client")
+		return err
 	}
 
 	// start up
@@ -95,7 +87,22 @@ func (cmd *UpCmd) Run(ctx context.Context) error {
 	return nil
 }
 
-func (cmd *UpCmd) up(ctx context.Context, workspaceInfo *provider2.AgentWorkspaceInfo, tunnelClient tunnel.TunnelClient, logger log.Logger) error {
+func initWorkspace(ctx context.Context, workspaceInfo *provider2.AgentWorkspaceInfo, debug bool) (tunnel.TunnelClient, log.Logger, error) {
+	// create a grpc client
+	tunnelClient, err := agent.NewTunnelClient(os.Stdin, os.Stdout, true)
+	if err != nil {
+		return nil, nil, fmt.Errorf("error creating tunnel client: %v", err)
+	}
+
+	// create debug logger
+	logger := agent.NewTunnelLogger(ctx, tunnelClient, debug)
+
+	// this message serves as a ping to the client
+	_, err = tunnelClient.Ping(ctx, &tunnel.Empty{})
+	if err != nil {
+		return nil, nil, errors.Wrap(err, "ping client")
+	}
+
 	// install docker in background
 	errChan := make(chan error)
 	go func() {
@@ -103,9 +110,9 @@ func (cmd *UpCmd) up(ctx context.Context, workspaceInfo *provider2.AgentWorkspac
 	}()
 
 	// prepare workspace
-	err := cmd.prepareWorkspace(ctx, workspaceInfo, tunnelClient, logger)
+	err = prepareWorkspace(ctx, workspaceInfo, tunnelClient, logger)
 	if err != nil {
-		return err
+		return nil, nil, err
 	}
 
 	// install daemon
@@ -114,12 +121,24 @@ func (cmd *UpCmd) up(ctx context.Context, workspaceInfo *provider2.AgentWorkspac
 		logger.Errorf("Install DevPod Daemon: %v", err)
 	}
 
+	// get docker credentials
+	file, err := configureDockerCredentials(ctx, workspaceInfo, tunnelClient, logger)
+	if err != nil {
+		logger.Errorf("Error retrieving docker credentials: %v", err)
+	} else if file != "" {
+		defer os.Remove(file)
+	}
+
 	// wait until docker is installed
 	err = <-errChan
 	if err != nil {
-		return errors.Wrap(err, "install docker")
+		return nil, nil, errors.Wrap(err, "install docker")
 	}
 
+	return tunnelClient, logger, nil
+}
+
+func (cmd *UpCmd) up(ctx context.Context, workspaceInfo *provider2.AgentWorkspaceInfo, tunnelClient tunnel.TunnelClient, logger log.Logger) error {
 	// create devcontainer
 	result, err := DevContainerUp(workspaceInfo, logger)
 	if err != nil {
@@ -139,7 +158,22 @@ func (cmd *UpCmd) up(ctx context.Context, workspaceInfo *provider2.AgentWorkspac
 	return nil
 }
 
-func (cmd *UpCmd) prepareWorkspace(ctx context.Context, workspaceInfo *provider2.AgentWorkspaceInfo, client tunnel.TunnelClient, log log.Logger) error {
+func configureDockerCredentials(ctx context.Context, workspaceInfo *provider2.AgentWorkspaceInfo, client tunnel.TunnelClient, log log.Logger) (string, error) {
+	if workspaceInfo.Workspace.Provider.Agent.InjectDockerCredentials != "true" {
+		return "", nil
+	}
+
+	log.Debugf("Get docker credentials...")
+	dockerCredentials, err := client.DockerCredentials(ctx, &tunnel.Empty{})
+	if err != nil {
+		return "", err
+	}
+
+	log.Debugf("Successfully retrieved docker credentials")
+	return dockercredentials.ConfigureCredentials(dockerCredentials.Message)
+}
+
+func prepareWorkspace(ctx context.Context, workspaceInfo *provider2.AgentWorkspaceInfo, client tunnel.TunnelClient, log log.Logger) error {
 	_, err := os.Stat(workspaceInfo.Folder)
 	if err == nil {
 		log.Debugf("Workspace Folder already exists")
@@ -292,7 +326,7 @@ func PrepareImage(workspaceDir, image string) error {
 }
 
 func DevContainerUp(workspaceInfo *provider2.AgentWorkspaceInfo, log log.Logger) (*config2.Result, error) {
-	result, err := createRunner(workspaceInfo, log).Up()
+	result, err := createRunner(workspaceInfo, log).Up(devcontainer.UpOptions{})
 	if err != nil {
 		return nil, err
 	}
