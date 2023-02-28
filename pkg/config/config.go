@@ -1,6 +1,7 @@
 package config
 
 import (
+	"encoding/json"
 	"github.com/ghodss/yaml"
 	"github.com/loft-sh/devpod/pkg/types"
 	"github.com/pkg/errors"
@@ -14,6 +15,12 @@ type Config struct {
 
 	// Contexts holds the config contexts
 	Contexts map[string]*ConfigContext `json:"contexts,omitempty"`
+
+	// Origin holds the path where this config was loaded from
+	Origin string `json:"-"`
+
+	// OriginalContext is the original default context
+	OriginalContext string `json:"-"`
 }
 
 type ConfigContext struct {
@@ -35,14 +42,40 @@ type OptionValue struct {
 
 	// Expires is the time when this value will expire
 	Expires *types.Time `json:"retrieved,omitempty"`
+}
 
-	// Local determines if this option should be local only
-	Local bool `json:"local,omitempty"`
+func (c *Config) Current() *ConfigContext {
+	return c.Contexts[c.DefaultContext]
+}
+
+func (c *Config) ProviderOptions(provider string) map[string]OptionValue {
+	return c.Current().ProviderOptions(provider)
+}
+
+func (c *ConfigContext) ProviderOptions(provider string) map[string]OptionValue {
+	retOptions := map[string]OptionValue{}
+	if c.Providers == nil || c.Providers[provider] == nil {
+		return retOptions
+	}
+
+	for k, v := range c.Providers[provider].Options {
+		retOptions[k] = v
+	}
+	return retOptions
 }
 
 var ConfigFile = "config.yaml"
 
 const DefaultContext = "default"
+
+func CloneConfig(config *Config) *Config {
+	out, _ := json.Marshal(config)
+	ret := &Config{}
+	_ = json.Unmarshal(out, ret)
+	ret.Origin = config.Origin
+	ret.OriginalContext = config.OriginalContext
+	return ret
+}
 
 func LoadConfig(contextOverride string) (*Config, error) {
 	configDir, err := GetConfigDir()
@@ -50,7 +83,8 @@ func LoadConfig(contextOverride string) (*Config, error) {
 		return nil, err
 	}
 
-	configBytes, err := os.ReadFile(filepath.Join(configDir, ConfigFile))
+	configOrigin := filepath.Join(configDir, ConfigFile)
+	configBytes, err := os.ReadFile(configOrigin)
 	if err != nil {
 		if !os.IsNotExist(err) {
 			return nil, errors.Wrap(err, "read config")
@@ -68,6 +102,7 @@ func LoadConfig(contextOverride string) (*Config, error) {
 					Providers: map[string]*ConfigProvider{},
 				},
 			},
+			Origin: configOrigin,
 		}, nil
 	}
 
@@ -77,6 +112,7 @@ func LoadConfig(contextOverride string) (*Config, error) {
 		return nil, err
 	}
 	if contextOverride != "" {
+		config.OriginalContext = config.DefaultContext
 		config.DefaultContext = contextOverride
 	} else if config.DefaultContext == "" {
 		config.DefaultContext = DefaultContext
@@ -87,11 +123,20 @@ func LoadConfig(contextOverride string) (*Config, error) {
 	if config.Contexts[config.DefaultContext] == nil {
 		config.Contexts[config.DefaultContext] = &ConfigContext{}
 	}
+	if config.Contexts[config.DefaultContext].Providers == nil {
+		config.Contexts[config.DefaultContext].Providers = map[string]*ConfigProvider{}
+	}
 
+	config.Origin = configOrigin
 	return config, nil
 }
 
 func SaveConfig(config *Config) error {
+	config = CloneConfig(config)
+	if config.OriginalContext != "" {
+		config.DefaultContext = config.OriginalContext
+	}
+
 	configDir, err := GetConfigDir()
 	if err != nil {
 		return err

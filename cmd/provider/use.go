@@ -88,35 +88,40 @@ func (cmd *UseCmd) Run(ctx context.Context, providerName string) error {
 		}
 	}
 
-	// TODO: this is kind of a hack, only to get the options correctly passed to init & validate
-	workspaceConfig := &provider2.Workspace{Provider: provider2.WorkspaceProviderConfig{Options: options}}
+	if devPodConfig.Current().Providers == nil {
+		devPodConfig.Current().Providers = map[string]*config.ConfigProvider{}
+	}
+	if devPodConfig.Current().Providers[providerWithOptions.Config.Name] == nil {
+		devPodConfig.Current().Providers[providerWithOptions.Config.Name] = &config.ConfigProvider{Options: map[string]config.OptionValue{}}
+	}
+	devPodConfig.Current().Providers[providerWithOptions.Config.Name].Options = options
 
 	// fill defaults
-	workspaceConfig, err = options2.ResolveOptions(ctx, "init", "", workspaceConfig, providerWithOptions.Config)
+	_, devPodConfig, err = options2.ResolveOptions(ctx, "init", "", nil, nil, devPodConfig, providerWithOptions.Config)
 	if err != nil {
 		return errors.Wrap(err, "resolve options")
 	}
 
 	// run init command
-	err = clientimplementation.RunCommand(ctx, providerWithOptions.Config.Exec.Init, clientimplementation.ToEnvironment(workspaceConfig, nil), nil, os.Stdout, os.Stderr)
+	err = clientimplementation.RunCommand(ctx, providerWithOptions.Config.Exec.Init, clientimplementation.ToEnvironment(nil, nil, options, nil), nil, os.Stdout, os.Stderr)
 	if err != nil {
 		return err
 	}
 
 	// fill defaults
-	workspaceConfig, err = options2.ResolveOptions(ctx, "", "init", workspaceConfig, providerWithOptions.Config)
+	_, devPodConfig, err = options2.ResolveOptions(ctx, "", "init", nil, nil, devPodConfig, providerWithOptions.Config)
 	if err != nil {
 		return errors.Wrap(err, "resolve options")
 	}
 
 	// fill defaults
-	workspaceConfig, err = options2.ResolveOptions(ctx, "", "", workspaceConfig, providerWithOptions.Config)
+	_, devPodConfig, err = options2.ResolveOptions(ctx, "", "", nil, nil, devPodConfig, providerWithOptions.Config)
 	if err != nil {
 		return errors.Wrap(err, "resolve options")
 	}
 
 	// ensure required
-	err = ensureRequired(workspaceConfig, providerWithOptions.Config, log.Default)
+	err = ensureRequired(devPodConfig, providerWithOptions.Config, log.Default)
 	if err != nil {
 		return errors.Wrap(err, "ensure required")
 	}
@@ -135,17 +140,14 @@ func (cmd *UseCmd) Run(ctx context.Context, providerName string) error {
 	}
 
 	// run validate command
-	err = clientimplementation.RunCommand(ctx, providerWithOptions.Config.Exec.Validate, clientimplementation.ToEnvironment(workspaceConfig, nil), nil, os.Stdout, os.Stderr)
+	err = clientimplementation.RunCommand(ctx, providerWithOptions.Config.Exec.Validate, clientimplementation.ToEnvironment(nil, nil, devPodConfig.Current().Providers[providerWithOptions.Config.Name].Options, nil), nil, os.Stdout, os.Stderr)
 	if err != nil {
 		return err
 	}
 
 	// set options
-	defaultContext := devPodConfig.Contexts[devPodConfig.DefaultContext]
+	defaultContext := devPodConfig.Current()
 	defaultContext.DefaultProvider = providerWithOptions.Config.Name
-	defaultContext.Providers[providerName] = &config.ConfigProvider{
-		Options: workspaceConfig.Provider.Options,
-	}
 
 	// save provider config
 	err = config.SaveConfig(devPodConfig)
@@ -157,13 +159,13 @@ func (cmd *UseCmd) Run(ctx context.Context, providerName string) error {
 	return nil
 }
 
-func ensureRequired(workspace *provider2.Workspace, provider *provider2.ProviderConfig, log log.Logger) error {
+func ensureRequired(devPodConfig *config.Config, provider *provider2.ProviderConfig, log log.Logger) error {
 	for optionName, option := range provider.Options {
 		if !option.Required {
 			continue
 		}
 
-		val, ok := workspace.Provider.Options[optionName]
+		val, ok := devPodConfig.Current().Providers[provider.Name].Options[optionName]
 		if !ok || val.Value == "" {
 			if !terminal.IsTerminalIn {
 				return fmt.Errorf("option %s is required, but no value provided", optionName)
@@ -180,9 +182,8 @@ func ensureRequired(workspace *provider2.Workspace, provider *provider2.Provider
 				return err
 			}
 
-			workspace.Provider.Options[optionName] = config.OptionValue{
+			devPodConfig.Current().Providers[provider.Name].Options[optionName] = config.OptionValue{
 				Value: answer,
-				Local: val.Local,
 			}
 		}
 	}

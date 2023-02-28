@@ -8,12 +8,9 @@ import (
 	"github.com/loft-sh/devpod/pkg/config"
 	"github.com/loft-sh/devpod/pkg/log"
 	provider2 "github.com/loft-sh/devpod/pkg/provider"
-	options2 "github.com/loft-sh/devpod/pkg/provider/options"
 	"github.com/loft-sh/devpod/pkg/survey"
 	"github.com/loft-sh/devpod/pkg/terminal"
-	"github.com/pkg/errors"
 	"os"
-	"reflect"
 )
 
 // GetServerClient creates a server client
@@ -83,20 +80,5 @@ func loadExistingServer(ctx context.Context, serverID string, devPodConfig *conf
 		return nil, err
 	}
 
-	// resolve options
-	beforeOptions := serverConfig.Provider.Options
-	serverConfig, err = options2.ResolveOptionsServer(ctx, "", "", serverConfig, providerWithOptions.Config)
-	if err != nil {
-		return nil, errors.Wrap(err, "resolve options")
-	}
-
-	// save workspace config
-	if !reflect.DeepEqual(serverConfig.Provider.Options, beforeOptions) {
-		err = provider2.SaveServerConfig(serverConfig)
-		if err != nil {
-			return nil, err
-		}
-	}
-
-	return clientimplementation.NewServerClient(providerWithOptions.Config, serverConfig, log), nil
+	return clientimplementation.NewServerClient(devPodConfig, providerWithOptions.Config, serverConfig, log), nil
 }

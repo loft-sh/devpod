@@ -75,7 +75,7 @@ func (cmd *UpCmd) Run(ctx context.Context) error {
 	}
 
 	// initialize the workspace
-	tunnelClient, logger, err := initWorkspace(ctx, workspaceInfo, cmd.Debug)
+	tunnelClient, logger, err := initWorkspace(ctx, workspaceInfo, cmd.Debug, true)
 	if err != nil {
 		return err
 	}
@@ -97,7 +97,7 @@ func (cmd *UpCmd) Run(ctx context.Context) error {
 	return nil
 }
 
-func initWorkspace(ctx context.Context, workspaceInfo *provider2.AgentWorkspaceInfo, debug bool) (tunnel.TunnelClient, log.Logger, error) {
+func initWorkspace(ctx context.Context, workspaceInfo *provider2.AgentWorkspaceInfo, debug, shouldInstallDaemon bool) (tunnel.TunnelClient, log.Logger, error) {
 	// create a grpc client
 	tunnelClient, err := agent.NewTunnelClient(os.Stdin, os.Stdout, true)
 	if err != nil {
@@ -126,9 +126,11 @@ func initWorkspace(ctx context.Context, workspaceInfo *provider2.AgentWorkspaceI
 	}
 
 	// install daemon
-	err = installDaemon(workspaceInfo, logger)
-	if err != nil {
-		logger.Errorf("Install DevPod Daemon: %v", err)
+	if shouldInstallDaemon {
+		err = installDaemon(workspaceInfo, logger)
+		if err != nil {
+			logger.Errorf("Install DevPod Daemon: %v", err)
+		}
 	}
 
 	// wait until docker is installed

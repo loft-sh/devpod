@@ -27,7 +27,7 @@ type ProviderWithOptions struct {
 
 // LoadProviders loads all known providers for the given context and
 func LoadProviders(devPodConfig *config.Config, log log.Logger) (*ProviderWithOptions, map[string]*ProviderWithOptions, error) {
-	defaultContext := devPodConfig.Contexts[devPodConfig.DefaultContext]
+	defaultContext := devPodConfig.Current()
 	retProviders, err := LoadAllProviders(devPodConfig, log)
 	if err != nil {
 		return nil, nil, err
@@ -129,7 +129,7 @@ func installProvider(devPodConfig *config.Config, raw []byte) (*provider2.Provid
 	providerConfig, err := provider2.ParseProvider(bytes.NewReader(raw))
 	if err != nil {
 		return nil, err
-	} else if devPodConfig.Contexts[devPodConfig.DefaultContext].Providers[providerConfig.Name] != nil {
+	} else if devPodConfig.Current().Providers[providerConfig.Name] != nil {
 		return nil, fmt.Errorf("provider %s already exists. Please run 'devpod provider delete %s' before adding the provider", providerConfig.Name, providerConfig.Name)
 	}
 
@@ -165,7 +165,7 @@ func LoadAllProviders(devPodConfig *config.Config, log log.Logger) (map[string]*
 		}
 	}
 
-	defaultContext := devPodConfig.Contexts[devPodConfig.DefaultContext]
+	defaultContext := devPodConfig.Current()
 	for providerName, providerOptions := range defaultContext.Providers {
 		if retProviders[providerName] != nil {
 			retProviders[providerName].Configured = true
