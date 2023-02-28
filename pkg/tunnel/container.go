@@ -18,7 +18,7 @@ import (
 )
 
 func NewContainerTunnel(client client.AgentClient, log log.Logger) *ContainerHandler {
-	updateConfigInterval := time.Minute
+	updateConfigInterval := time.Second * 30
 	return &ContainerHandler{
 		client:               client,
 		updateConfigInterval: updateConfigInterval,
@@ -39,16 +39,6 @@ func (c *ContainerHandler) Run(ctx context.Context, runInHost Handler, runInCont
 		return nil
 	}
 
-	// get token
-	tok, err := token.GenerateTemporaryToken()
-	if err != nil {
-		return err
-	}
-	privateKey, err := devssh.GetTempPrivateKeyRaw()
-	if err != nil {
-		return err
-	}
-
 	// create readers
 	stdoutReader, stdoutWriter, err := os.Pipe()
 	if err != nil {
@@ -60,6 +50,12 @@ func (c *ContainerHandler) Run(ctx context.Context, runInHost Handler, runInCont
 	}
 	defer stdoutWriter.Close()
 	defer stdinWriter.Close()
+
+	// get token
+	tok, err := token.GenerateTemporaryToken()
+	if err != nil {
+		return err
+	}
 
 	// tunnel to host
 	//TODO: right now we have a tunnel in a tunnel, maybe its better to start 2 separate commands?
@@ -81,6 +77,11 @@ func (c *ContainerHandler) Run(ctx context.Context, runInHost Handler, runInCont
 			tunnelChan <- nil
 		}
 	}()
+
+	privateKey, err := devssh.GetTempPrivateKeyRaw()
+	if err != nil {
+		return err
+	}
 
 	// connect to container
 	containerChan := make(chan error, 2)

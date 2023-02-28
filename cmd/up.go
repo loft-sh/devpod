@@ -191,7 +191,7 @@ func startInBrowser(ctx context.Context, client client2.WorkspaceClient, user st
 }
 
 func (cmd *UpCmd) devPodUp(ctx context.Context, client client2.WorkspaceClient, log log.Logger) (*config2.Result, error) {
-	err := startWait(ctx, client, true, log)
+	err := startWait(ctx, client, true, false, log)
 	if err != nil {
 		return nil, err
 	}

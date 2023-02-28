@@ -1,6 +1,7 @@
 package clientimplementation
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -135,7 +136,7 @@ func (s *agentClient) Create(ctx context.Context, options client.CreateOptions) 
 	defer s.m.Unlock()
 
 	// provider doesn't support servers
-	if len(s.config.Exec.Create) == 0 {
+	if !s.isServerProvider() {
 		return nil
 	}
 
@@ -296,7 +297,22 @@ func (s *agentClient) Status(ctx context.Context, options client.StatusOptions) 
 			return client.StatusNotFound, nil
 		}
 
-		return NewServerClient(s.devPodConfig, s.config, s.server, s.log).Status(ctx, options)
+		status, err := NewServerClient(s.devPodConfig, s.config, s.server, s.log).Status(ctx, options)
+		if err != nil {
+			return status, err
+		}
+
+		// try to check container status and if that fails check workspace folder
+		if status == client.StatusRunning && options.ContainerStatus {
+			return s.getContainerStatus(ctx)
+		}
+
+		return status, err
+	}
+
+	// try to check container status and if that fails check workspace folder
+	if options.ContainerStatus {
+		return s.getContainerStatus(ctx)
 	}
 
 	// logic:
@@ -314,6 +330,25 @@ func (s *agentClient) Status(ctx context.Context, options client.StatusOptions) 
 	}
 
 	return client.StatusNotFound, nil
+}
+
+func (s *agentClient) getContainerStatus(ctx context.Context) (client.Status, error) {
+	stdout := &bytes.Buffer{}
+	stderr := &bytes.Buffer{}
+	command := fmt.Sprintf("%s agent workspace status --id %s --context %s", s.workspace.Provider.Agent.Path, s.workspace.ID, s.workspace.Context)
+	err := runCommand(ctx, "command", s.config.Exec.Command, ToEnvironment(s.workspace, s.server, s.devPodConfig.ProviderOptions(s.config.Name), map[string]string{
+		provider.CommandEnv: command,
+	}), nil, stdout, stderr, s.log.ErrorStreamOnly())
+	if err != nil {
+		return client.StatusNotFound, err
+	}
+
+	parsed, err := client.ParseStatus(stdout.String())
+	if err != nil {
+		return client.StatusNotFound, fmt.Errorf("error parsing container status: %s%s%v", stdout.String(), stderr.String(), err)
+	}
+
+	return parsed, nil
 }
 
 func (s *agentClient) isServerProvider() bool {

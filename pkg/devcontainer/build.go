@@ -37,6 +37,7 @@ type BuildInfo struct {
 
 type BuildOptions struct {
 	ForceRebuild bool
+	NoBuild      bool
 
 	PrebuildRepositories []string
 	PushRepository       string
@@ -149,6 +150,11 @@ func (r *Runner) buildImage(parsedConfig *config.SubstitutedConfig, extendedBuil
 				}, nil
 			}
 		}
+	}
+
+	// check if we shouldn't build
+	if options.NoBuild {
+		return nil, fmt.Errorf("you cannot build in this mode. Please make sure the image was built before")
 	}
 
 	imageName := r.getImageName()

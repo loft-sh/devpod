@@ -5,6 +5,8 @@ import (
 	"github.com/loft-sh/devpod/cmd/flags"
 	"github.com/loft-sh/devpod/pkg/agent"
 	"github.com/loft-sh/devpod/pkg/devcontainer"
+	"github.com/loft-sh/devpod/pkg/devcontainer/config"
+	"github.com/loft-sh/devpod/pkg/docker"
 	"github.com/loft-sh/devpod/pkg/log"
 	provider2 "github.com/loft-sh/devpod/pkg/provider"
 	"github.com/pkg/errors"
@@ -51,22 +53,32 @@ func (cmd *StartCmd) Run(ctx context.Context) error {
 		return nil
 	}
 
-	// start docker container
-	err = startContainer(workspaceInfo, log.Default)
+	// create new docker client
+	dockerHelper := &docker.DockerHelper{DockerCommand: "docker"}
+
+	// get container details
+	containerDetails, err := dockerHelper.FindDevContainer([]string{
+		devcontainer.DockerIDLabel + "=" + workspaceInfo.Workspace.ID,
+	})
 	if err != nil {
-		return errors.Wrap(err, "start container")
+		return err
+	} else if containerDetails == nil || containerDetails.State.Status != "running" {
+		// start docker container
+		_, err = StartContainer(workspaceInfo, log.Default)
+		if err != nil {
+			return errors.Wrap(err, "start container")
+		}
 	}
 
 	return nil
 }
 
-func startContainer(workspaceInfo *provider2.AgentWorkspaceInfo, log log.Logger) error {
+func StartContainer(workspaceInfo *provider2.AgentWorkspaceInfo, log log.Logger) (*config.Result, error) {
 	log.Debugf("Starting DevPod container...")
-	_, err := createRunner(workspaceInfo, log).Up(devcontainer.UpOptions{})
+	result, err := createRunner(workspaceInfo, log).Up(devcontainer.UpOptions{NoBuild: true})
 	if err != nil {
-		return err
+		return result, err
 	}
 	log.Debugf("Successfully started DevPod container")
-
-	return nil
+	return result, err
 }

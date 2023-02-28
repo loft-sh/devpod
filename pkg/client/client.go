@@ -79,7 +79,9 @@ type DeleteOptions struct {
 
 type CreateOptions struct{}
 
-type StatusOptions struct{}
+type StatusOptions struct {
+	ContainerStatus bool
+}
 
 type CommandOptions struct {
 	Command string
