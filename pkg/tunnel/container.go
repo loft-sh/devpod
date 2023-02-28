@@ -18,7 +18,7 @@ import (
 )
 
 func NewContainerTunnel(client client.AgentClient, log log.Logger) *ContainerHandler {
-	updateConfigInterval := time.Second * 30
+	updateConfigInterval := time.Second * 10
 	return &ContainerHandler{
 		client:               client,
 		updateConfigInterval: updateConfigInterval,
@@ -69,6 +69,8 @@ func (c *ContainerHandler) Run(ctx context.Context, runInHost Handler, runInCont
 				Stdin:   stdin,
 				Stdout:  stdout,
 				Stderr:  stderr,
+
+				SkipOptionsResolve: true,
 			})
 		}, c.client.AgentPath(), c.client.AgentURL(), true, command, stdinReader, stdoutWriter, buf, c.log.ErrorStreamOnly())
 		if err != nil {

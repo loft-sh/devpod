@@ -30,6 +30,13 @@ type DevContainerConfig struct {
 	Origin string `json:"-"`
 }
 
+func CloneDevContainerConfig(config *DevContainerConfig) *DevContainerConfig {
+	out := &DevContainerConfig{}
+	_ = Convert(config, out)
+	out.Origin = config.Origin
+	return out
+}
+
 type DevContainerConfigBase struct {
 	// A name for the dev container which can be displayed to the user.
 	Name string `json:"name,omitempty"`

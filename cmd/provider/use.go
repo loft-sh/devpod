@@ -14,8 +14,8 @@ import (
 	"github.com/loft-sh/devpod/pkg/terminal"
 	"github.com/loft-sh/devpod/pkg/workspace"
 	"github.com/pkg/errors"
+	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
-	"os"
 	"regexp"
 	"strings"
 )
@@ -102,10 +102,16 @@ func (cmd *UseCmd) Run(ctx context.Context, providerName string) error {
 		return errors.Wrap(err, "resolve options")
 	}
 
+	stdout := log.Default.Writer(logrus.InfoLevel, false)
+	defer stdout.Close()
+
+	stderr := log.Default.Writer(logrus.ErrorLevel, false)
+	defer stderr.Close()
+
 	// run init command
-	err = clientimplementation.RunCommand(ctx, providerWithOptions.Config.Exec.Init, clientimplementation.ToEnvironment(nil, nil, options, nil), nil, os.Stdout, os.Stderr)
+	err = clientimplementation.RunCommand(ctx, providerWithOptions.Config.Exec.Init, clientimplementation.ToEnvironment(nil, nil, options, nil), nil, stdout, stderr)
 	if err != nil {
-		return err
+		return errors.Wrap(err, "init")
 	}
 
 	// fill defaults
@@ -140,9 +146,9 @@ func (cmd *UseCmd) Run(ctx context.Context, providerName string) error {
 	}
 
 	// run validate command
-	err = clientimplementation.RunCommand(ctx, providerWithOptions.Config.Exec.Validate, clientimplementation.ToEnvironment(nil, nil, devPodConfig.Current().Providers[providerWithOptions.Config.Name].Options, nil), nil, os.Stdout, os.Stderr)
+	err = clientimplementation.RunCommand(ctx, providerWithOptions.Config.Exec.Validate, clientimplementation.ToEnvironment(nil, nil, devPodConfig.Current().Providers[providerWithOptions.Config.Name].Options, nil), nil, stdout, stderr)
 	if err != nil {
-		return err
+		return errors.Wrap(err, "validate")
 	}
 
 	// set options

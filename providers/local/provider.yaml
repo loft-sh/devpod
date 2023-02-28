@@ -9,5 +9,15 @@ agent:
   inactivityTimeout: ${INACTIVITY_TIMEOUT}
   path: ${DEVPOD}
 exec:
+  validate: |-
+    # Check if docker exists and is reachable
+    DOCKER_REACHABLE=$(docker ps > /dev/null 2>&1 && echo -n "true" || echo -n "false")
+    if [ "$DOCKER_REACHABLE" = "false" ]; then
+      >&2 echo "Seems like docker is not reachable on your system."
+      >&2 echo "Please make sure docker is installed and running."
+      >&2 echo "You can verify if docker is running correctly via 'docker ps'"
+      exit 1
+    fi
+
   command: |-
     ${DEVPOD} helper sh -c "${COMMAND}"

@@ -3,6 +3,17 @@ version: 0.0.1
 description: |-
   DevPod on AWS
 options:
+  INACTIVITY_TIMEOUT:
+    description: "If defined, will automatically stop the container after the inactivity period. Example: 10m"
+  AGENT_PATH:
+    description: The path where to inject the DevPod agent to.
+    default: /opt/devpod/agent
+  INJECT_GIT_CREDENTIALS:
+    description: "If DevPod should inject git credentials into the remote host."
+    default: "true"
+  INJECT_DOCKER_CREDENTIALS:
+    description: "If DevPod should inject docker credentials into the remote host."
+    default: "true"
   AWS_BINARY:
     description: Path to the aws binary
     default: aws
@@ -13,6 +24,16 @@ options:
   DISK_IMAGE:
     description: The disk image to use
     default: ami-0d1ddd83282187d18
+agent:
+  path: ${AGENT_PATH}
+  inactivityTimeout: ${INACTIVITY_TIMEOUT}
+  injectGitCredentials: ${INJECT_GIT_CREDENTIALS}
+  injectDockerCredentials: ${INJECT_DOCKER_CREDENTIALS}
+  exec:
+    shutdown: |-
+      # Just terminate the machine as we aren't paying
+      # for any turned off machines.
+      shutdown -n now
 exec:
   init: |-
     # Create a security group for us to use

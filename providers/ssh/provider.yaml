@@ -8,6 +8,12 @@ options:
   AGENT_PATH:
     description: The path where to inject the DevPod agent to.
     default: /opt/devpod/agent
+  INJECT_GIT_CREDENTIALS:
+    description: "If DevPod should inject git credentials into the remote host."
+    default: "true"
+  INJECT_DOCKER_CREDENTIALS:
+    description: "If DevPod should inject docker credentials into the remote host."
+    default: "true"
   HOST:
     required: true
     description: 'The SSH Host to connect to. Example: my-user@my-domain.com'
@@ -16,12 +22,6 @@ options:
     default: "22"
   EXTRA_FLAGS:
     description: "Extra flags to pass to the SSH command."
-  INJECT_GIT_CREDENTIALS:
-    description: "If DevPod should inject git credentials into the remote host."
-    default: "true"
-  INJECT_DOCKER_CREDENTIALS:
-    description: "If DevPod should inject docker credentials into the remote host."
-    default: "true"
 agent:
   inactivityTimeout: ${INACTIVITY_TIMEOUT}
   injectGitCredentials: ${INJECT_GIT_CREDENTIALS}
@@ -31,21 +31,21 @@ exec:
   validate: |-
     OUTPUT=$(ssh -oStrictHostKeyChecking=no \
                  -p ${PORT} \
-                 ${EXTRA_FLAGS} \
+                 "${EXTRA_FLAGS}" \
                  "${HOST}" \
                  'sh -c "echo DevPodTest"')
     
     if [ "$OUTPUT" != "DevPodTest" ]; then
-      echo "Unexpected ssh output."
-      echo "Please make sure you have configured the correct SSH host"
-      echo "and the following command can be executed on your system:"
-      echo ssh -oStrictHostKeyChecking=no -p "${PORT}" "${HOST}" 'sh -c "echo DevPodTest"'
+      >&2 echo "Unexpected ssh output."
+      >&2 echo "Please make sure you have configured the correct SSH host"
+      >&2 echo "and the following command can be executed on your system:"
+      >&2 echo ssh -oStrictHostKeyChecking=no -p "${PORT}" "${HOST}" 'sh -c "echo DevPodTest"'
       exit 1
     fi
 
   command: |-
     ssh -oStrictHostKeyChecking=no \
         -p ${PORT} \
-        ${EXTRA_FLAGS} \
+        "${EXTRA_FLAGS}" \
         "${HOST}" \
         "${COMMAND}"

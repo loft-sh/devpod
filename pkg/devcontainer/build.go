@@ -120,7 +120,7 @@ func (r *Runner) buildAndExtendImage(parsedConfig *config.SubstitutedConfig, opt
 }
 
 func (r *Runner) buildImage(parsedConfig *config.SubstitutedConfig, extendedBuildInfo *feature.ExtendedBuildInfo, dockerfilePath, dockerfileContent string, options BuildOptions) (*BuildInfo, error) {
-	prebuildHash, err := calculatePrebuildHash(parsedConfig.Config, dockerfileContent)
+	prebuildHash, err := calculatePrebuildHash(parsedConfig.Config, dockerfileContent, r.Log)
 	if err != nil {
 		return nil, err
 	}
