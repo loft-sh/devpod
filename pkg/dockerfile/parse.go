@@ -113,9 +113,9 @@ func (d *Dockerfile) findValue(buildArgs map[string]string, baseImageEnv map[str
 				}
 
 				if buildArgs[stage.Args[i].Key] != "" {
-					return buildArgs[stage.Args[i].Key]
+					return strings.Trim(buildArgs[stage.Args[i].Key], "\"'")
 				} else if stage.Args[i].Value != "" {
-					return d.replaceVariables(stage.Args[i].Value, buildArgs, baseImageEnv, stage, stage.Args[i].Line)
+					return strings.Trim(d.replaceVariables(stage.Args[i].Value, buildArgs, baseImageEnv, stage, stage.Args[i].Line), "\"'")
 				}
 			}
 		}
