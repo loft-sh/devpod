@@ -264,7 +264,7 @@ type PortAttribute struct {
 }
 
 type DevPodCustomizations struct {
-	PrebuildRepo types.StrArray `json:"prebuildRepo,omitempty"`
+	PrebuildRepository types.StrArray `json:"prebuildRepository,omitempty"`
 }
 
 type VSCodeCustomizations struct {
