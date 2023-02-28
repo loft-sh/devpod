@@ -7,8 +7,8 @@ import (
 	"github.com/loft-sh/devpod/pkg/client"
 	"github.com/loft-sh/devpod/pkg/config"
 	"github.com/loft-sh/devpod/pkg/log"
+	"github.com/loft-sh/devpod/pkg/options"
 	"github.com/loft-sh/devpod/pkg/provider"
-	"github.com/loft-sh/devpod/pkg/provider/options"
 	"github.com/loft-sh/devpod/pkg/types"
 	"io"
 	"os"
@@ -37,6 +37,14 @@ func (s *serverClient) Provider() string {
 
 func (s *serverClient) ProviderType() provider.ProviderType {
 	return s.config.Type
+}
+
+func (s *serverClient) AgentPath() string {
+	return options.ResolveAgentConfig(s.devPodConfig, s.config).Path
+}
+
+func (s *serverClient) AgentURL() string {
+	return options.ResolveAgentConfig(s.devPodConfig, s.config).DownloadURL
 }
 
 func (s *serverClient) Context() string {
@@ -77,13 +85,13 @@ func (s *serverClient) Command(ctx context.Context, commandOptions client.Comman
 	var err error
 
 	// resolve options
-	_, s.devPodConfig, err = options.ResolveAndSaveOptions(ctx, "command", "", nil, s.server, s.devPodConfig, s.config)
+	s.devPodConfig, err = options.ResolveAndSaveOptions(ctx, "command", "", s.devPodConfig, s.config)
 	if err != nil {
 		return err
 	}
 	defer func() {
 		if err == nil {
-			_, s.devPodConfig, err = options.ResolveAndSaveOptions(ctx, "", "command", nil, s.server, s.devPodConfig, s.config)
+			s.devPodConfig, err = options.ResolveAndSaveOptions(ctx, "", "command", s.devPodConfig, s.config)
 		}
 	}()
 

@@ -159,6 +159,7 @@ func (cmd *BuildCmd) buildAgentClient(ctx context.Context, agentClient client.Ag
 
 	// get workspace config
 	workspaceConfig := agentClient.WorkspaceConfig()
+	agentConfig := agentClient.AgentConfig()
 
 	// create container etc.
 	_, err = agent.RunTunnelServer(
@@ -166,8 +167,8 @@ func (cmd *BuildCmd) buildAgentClient(ctx context.Context, agentClient client.Ag
 		stdoutReader,
 		stdinWriter,
 		false,
-		string(workspaceConfig.Provider.Agent.InjectGitCredentials) == "true" && workspaceConfig.Source.GitRepository != "",
-		string(workspaceConfig.Provider.Agent.InjectDockerCredentials) == "true",
+		string(agentConfig.InjectGitCredentials) == "true" && workspaceConfig.Source.GitRepository != "",
+		string(agentConfig.InjectDockerCredentials) == "true",
 		agentClient.WorkspaceConfig(),
 		log,
 	)

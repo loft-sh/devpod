@@ -9,8 +9,8 @@ import (
 	"github.com/loft-sh/devpod/pkg/compress"
 	"github.com/loft-sh/devpod/pkg/config"
 	"github.com/loft-sh/devpod/pkg/log"
+	"github.com/loft-sh/devpod/pkg/options"
 	"github.com/loft-sh/devpod/pkg/provider"
-	"github.com/loft-sh/devpod/pkg/provider/options"
 	"github.com/loft-sh/devpod/pkg/shell"
 	"github.com/loft-sh/devpod/pkg/ssh"
 	"github.com/loft-sh/devpod/pkg/types"
@@ -77,14 +77,14 @@ func (s *agentClient) AgentPath() string {
 	s.m.Lock()
 	defer s.m.Unlock()
 
-	return s.workspace.Provider.Agent.Path
+	return options.ResolveAgentConfig(s.devPodConfig, s.config).Path
 }
 
 func (s *agentClient) AgentURL() string {
 	s.m.Lock()
 	defer s.m.Unlock()
 
-	return s.workspace.Provider.Agent.DownloadURL
+	return options.ResolveAgentConfig(s.devPodConfig, s.config).DownloadURL
 }
 
 func (s *agentClient) Context() string {
@@ -94,24 +94,24 @@ func (s *agentClient) Context() string {
 	return s.workspace.Context
 }
 
-func (s *agentClient) Options() map[string]*provider.ProviderOption {
-	s.m.Lock()
-	defer s.m.Unlock()
-
-	return s.config.Options
-}
-
 func (s *agentClient) RefreshOptions(ctx context.Context, beforeStage, afterStage string) error {
 	s.m.Lock()
 	defer s.m.Unlock()
 
 	var err error
-	s.workspace, s.devPodConfig, err = options.ResolveAndSaveOptions(ctx, beforeStage, afterStage, s.workspace, s.server, s.devPodConfig, s.config)
+	s.devPodConfig, err = options.ResolveAndSaveOptions(ctx, beforeStage, afterStage, s.devPodConfig, s.config)
 	if err != nil {
 		return err
 	}
 
 	return nil
+}
+
+func (s *agentClient) AgentConfig() provider.ProviderAgentConfig {
+	s.m.Lock()
+	defer s.m.Unlock()
+
+	return options.ResolveAgentConfig(s.devPodConfig, s.config)
 }
 
 func (s *agentClient) AgentInfo() (string, error) {
@@ -122,7 +122,8 @@ func (s *agentClient) AgentInfo() (string, error) {
 	out, err := json.Marshal(&provider.AgentWorkspaceInfo{
 		Workspace: s.workspace,
 		Server:    s.server,
-		Options:   s.devPodConfig.Current().ProviderOptions(s.Provider()),
+		Agent:     options.ResolveAgentConfig(s.devPodConfig, s.config),
+		Options:   s.devPodConfig.ProviderOptions(s.Provider()),
 	})
 	if err != nil {
 		return "", err
@@ -189,14 +190,14 @@ func (s *agentClient) Create(ctx context.Context, options client.CreateOptions) 
 	return NewServerClient(s.devPodConfig, s.config, s.server, s.log).Create(ctx, options)
 }
 
-func (s *agentClient) Delete(ctx context.Context, options client.DeleteOptions) error {
+func (s *agentClient) Delete(ctx context.Context, opt client.DeleteOptions) error {
 	s.m.Lock()
 	defer s.m.Unlock()
 
 	// kill the command after the grace period
-	if options.GracePeriod != nil {
+	if opt.GracePeriod != nil {
 		var cancel context.CancelFunc
-		ctx, cancel = context.WithTimeout(ctx, *options.GracePeriod)
+		ctx, cancel = context.WithTimeout(ctx, *opt.GracePeriod)
 		defer cancel()
 	}
 
@@ -206,12 +207,12 @@ func (s *agentClient) Delete(ctx context.Context, options client.DeleteOptions) 
 		defer writer.Close()
 
 		s.log.Infof("Deleting container...")
-		command := fmt.Sprintf("%s agent workspace delete --id %s --context %s", s.workspace.Provider.Agent.Path, s.workspace.ID, s.workspace.Context)
+		command := fmt.Sprintf("%s agent workspace delete --id %s --context %s", options.ResolveAgentConfig(s.devPodConfig, s.config).Path, s.workspace.ID, s.workspace.Context)
 		err := runCommand(ctx, "command", s.config.Exec.Command, ToEnvironment(s.workspace, s.server, s.devPodConfig.ProviderOptions(s.config.Name), map[string]string{
 			provider.CommandEnv: command,
 		}), nil, writer, writer, s.log.ErrorStreamOnly())
 		if err != nil {
-			if !options.Force {
+			if !opt.Force {
 				return err
 			}
 
@@ -221,7 +222,7 @@ func (s *agentClient) Delete(ctx context.Context, options client.DeleteOptions) 
 		}
 	} else if s.workspace.Server.ID != "" && len(s.config.Exec.Delete) > 0 {
 		// delete server if config was found
-		err := NewServerClient(s.devPodConfig, s.config, s.server, s.log).Delete(ctx, options)
+		err := NewServerClient(s.devPodConfig, s.config, s.server, s.log).Delete(ctx, opt)
 		if err != nil {
 			return err
 		}
@@ -241,7 +242,7 @@ func (s *agentClient) Start(ctx context.Context, options client.StartOptions) er
 	return NewServerClient(s.devPodConfig, s.config, s.server, s.log).Start(ctx, options)
 }
 
-func (s *agentClient) Stop(ctx context.Context, options client.StopOptions) error {
+func (s *agentClient) Stop(ctx context.Context, opt client.StopOptions) error {
 	s.m.Lock()
 	defer s.m.Unlock()
 
@@ -252,7 +253,7 @@ func (s *agentClient) Stop(ctx context.Context, options client.StopOptions) erro
 		// TODO: stop whole machine if there is no other workspace container running anymore
 
 		s.log.Infof("Stopping container...")
-		command := fmt.Sprintf("%s agent workspace stop --id %s --context %s", s.workspace.Provider.Agent.Path, s.workspace.ID, s.workspace.Context)
+		command := fmt.Sprintf("%s agent workspace stop --id %s --context %s", options.ResolveAgentConfig(s.devPodConfig, s.config).Path, s.workspace.ID, s.workspace.Context)
 		err := runCommand(ctx, "command", s.config.Exec.Command, ToEnvironment(s.workspace, s.server, s.devPodConfig.ProviderOptions(s.config.Name), map[string]string{
 			provider.CommandEnv: command,
 		}), nil, writer, writer, s.log.ErrorStreamOnly())
@@ -264,7 +265,7 @@ func (s *agentClient) Stop(ctx context.Context, options client.StopOptions) erro
 		return nil
 	}
 
-	return NewServerClient(s.devPodConfig, s.config, s.server, s.log).Stop(ctx, options)
+	return NewServerClient(s.devPodConfig, s.config, s.server, s.log).Stop(ctx, opt)
 }
 
 func (s *agentClient) Command(ctx context.Context, commandOptions client.CommandOptions) (err error) {
@@ -335,7 +336,7 @@ func (s *agentClient) Status(ctx context.Context, options client.StatusOptions) 
 func (s *agentClient) getContainerStatus(ctx context.Context) (client.Status, error) {
 	stdout := &bytes.Buffer{}
 	stderr := &bytes.Buffer{}
-	command := fmt.Sprintf("%s agent workspace status --id %s --context %s", s.workspace.Provider.Agent.Path, s.workspace.ID, s.workspace.Context)
+	command := fmt.Sprintf("%s agent workspace status --id %s --context %s", options.ResolveAgentConfig(s.devPodConfig, s.config).Path, s.workspace.ID, s.workspace.Context)
 	err := runCommand(ctx, "command", s.config.Exec.Command, ToEnvironment(s.workspace, s.server, s.devPodConfig.ProviderOptions(s.config.Name), map[string]string{
 		provider.CommandEnv: command,
 	}), nil, stdout, stderr, s.log.ErrorStreamOnly())

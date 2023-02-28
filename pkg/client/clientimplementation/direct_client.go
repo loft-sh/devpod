@@ -6,6 +6,7 @@ import (
 	"github.com/loft-sh/devpod/pkg/client"
 	"github.com/loft-sh/devpod/pkg/config"
 	"github.com/loft-sh/devpod/pkg/log"
+	"github.com/loft-sh/devpod/pkg/options"
 	"github.com/loft-sh/devpod/pkg/provider"
 	"github.com/pkg/errors"
 	"os"
@@ -29,6 +30,14 @@ type directClient struct {
 
 func (s *directClient) Provider() string {
 	return s.config.Name
+}
+
+func (s *directClient) AgentPath() string {
+	return options.ResolveAgentConfig(s.devPodConfig, s.config).Path
+}
+
+func (s *directClient) AgentURL() string {
+	return options.ResolveAgentConfig(s.devPodConfig, s.config).DownloadURL
 }
 
 func (s *directClient) ProviderType() provider.ProviderType {

@@ -10,7 +10,6 @@ import (
 	"github.com/loft-sh/devpod/pkg/image"
 	"github.com/loft-sh/devpod/pkg/log"
 	provider2 "github.com/loft-sh/devpod/pkg/provider"
-	options2 "github.com/loft-sh/devpod/pkg/provider/options"
 	devssh "github.com/loft-sh/devpod/pkg/ssh"
 	"github.com/loft-sh/devpod/pkg/survey"
 	"github.com/loft-sh/devpod/pkg/terminal"
@@ -141,18 +140,8 @@ func ResolveWorkspace(ctx context.Context, devPodConfig *config.Config, ide *pro
 }
 
 func resolve(ctx context.Context, defaultProvider *ProviderWithOptions, devPodConfig *config.Config, name, workspaceID, workspaceFolder string, isLocalPath bool) (*provider2.Workspace, error) {
-	// resolve agent options
-	workspace, devPodConfig, err := options2.ResolveAndSaveOptions(ctx, "", "", &provider2.Workspace{
-		Provider: provider2.WorkspaceProviderConfig{
-			Name: defaultProvider.Config.Name,
-		},
-	}, nil, devPodConfig, defaultProvider.Config)
-	if err != nil {
-		return nil, errors.Wrap(err, "resolve options")
-	}
-
 	// create workspace ssh keys
-	_, err = devssh.GetPublicKey(devPodConfig.DefaultContext, workspaceID)
+	_, err := devssh.GetPublicKey(devPodConfig.DefaultContext, workspaceID)
 	if err != nil {
 		return nil, errors.Wrap(err, "create ssh keys")
 	}
@@ -160,10 +149,12 @@ func resolve(ctx context.Context, defaultProvider *ProviderWithOptions, devPodCo
 	// is local folder?
 	if isLocalPath {
 		return &provider2.Workspace{
-			ID:       workspaceID,
-			Folder:   workspaceFolder,
-			Context:  devPodConfig.DefaultContext,
-			Provider: workspace.Provider,
+			ID:      workspaceID,
+			Folder:  workspaceFolder,
+			Context: devPodConfig.DefaultContext,
+			Provider: provider2.WorkspaceProviderConfig{
+				Name: defaultProvider.Config.Name,
+			},
 			Source: provider2.WorkspaceSource{
 				LocalFolder: name,
 			},
@@ -174,10 +165,12 @@ func resolve(ctx context.Context, defaultProvider *ProviderWithOptions, devPodCo
 	gitRepository := normalizeGitRepository(name)
 	if strings.HasSuffix(name, ".git") || pingRepository(gitRepository) {
 		return &provider2.Workspace{
-			ID:       workspaceID,
-			Folder:   workspaceFolder,
-			Context:  devPodConfig.DefaultContext,
-			Provider: workspace.Provider,
+			ID:      workspaceID,
+			Folder:  workspaceFolder,
+			Context: devPodConfig.DefaultContext,
+			Provider: provider2.WorkspaceProviderConfig{
+				Name: defaultProvider.Config.Name,
+			},
 			Source: provider2.WorkspaceSource{
 				GitRepository: gitRepository,
 			},
@@ -188,10 +181,12 @@ func resolve(ctx context.Context, defaultProvider *ProviderWithOptions, devPodCo
 	_, err = image.GetImage(name)
 	if err == nil {
 		return &provider2.Workspace{
-			ID:       workspaceID,
-			Folder:   workspaceFolder,
-			Context:  devPodConfig.DefaultContext,
-			Provider: workspace.Provider,
+			ID:      workspaceID,
+			Folder:  workspaceFolder,
+			Context: devPodConfig.DefaultContext,
+			Provider: provider2.WorkspaceProviderConfig{
+				Name: defaultProvider.Config.Name,
+			},
 			Source: provider2.WorkspaceSource{
 				Image: name,
 			},

@@ -102,7 +102,7 @@ func RerunAsRoot(workspaceInfo *provider2.AgentWorkspaceInfo) (bool, error) {
 
 	// check if daemon needs to be installed
 	agentRootRequired := false
-	if runtime.GOOS == "linux" && len(workspaceInfo.Workspace.Provider.Agent.Exec.Shutdown) > 0 {
+	if runtime.GOOS == "linux" && len(workspaceInfo.Agent.Exec.Shutdown) > 0 {
 		agentRootRequired = true
 	}
 
