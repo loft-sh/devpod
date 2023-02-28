@@ -60,17 +60,19 @@ func (s *agentClient) ProviderType() provider.ProviderType {
 }
 
 func (s *agentClient) Workspace() string {
-	s.m.Lock()
-	defer s.m.Unlock()
-
 	return s.workspace.ID
 }
 
 func (s *agentClient) WorkspaceConfig() *provider.Workspace {
-	s.m.Lock()
-	defer s.m.Unlock()
-
 	return provider.CloneWorkspace(s.workspace)
+}
+
+func (s *agentClient) Server() string {
+	if s.server != nil {
+		return s.server.ID
+	}
+
+	return ""
 }
 
 func (s *agentClient) AgentPath() string {
@@ -88,9 +90,6 @@ func (s *agentClient) AgentURL() string {
 }
 
 func (s *agentClient) Context() string {
-	s.m.Lock()
-	defer s.m.Unlock()
-
 	return s.workspace.Context
 }
 

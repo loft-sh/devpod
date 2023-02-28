@@ -42,12 +42,10 @@ func (cmd *StartCmd) Run(ctx context.Context, provider *gcloudProvider, workspac
 		"--zone=" + provider.Config.Zone,
 	}
 
-	log.Infof("Starting VM Instance %s...", name)
 	_, err := provider.output(ctx, args...)
 	if err != nil {
 		return errors.Wrapf(err, "start vm")
 	}
 
-	log.Infof("Successfully started VM instance %s", name)
 	return nil
 }

@@ -55,8 +55,6 @@ func (cmd *StatusCmd) Run(ctx context.Context, client client2.WorkspaceClient) e
 	instanceStatus, err := client.Status(ctx, client2.StatusOptions{ContainerStatus: cmd.ContainerStatus})
 	if err != nil {
 		return err
-	} else if instanceStatus == client2.StatusNotFound {
-		return fmt.Errorf("cannot status instance because it couldn't be found. Run with --force to ignore this error")
 	}
 
 	if cmd.Output == "plain" {

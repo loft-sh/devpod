@@ -32,7 +32,9 @@ type SSHCmd struct {
 	JumpContainer bool
 
 	Configure bool
-	User      string
+
+	Command string
+	User    string
 }
 
 // NewSSHCmd creates a new ssh command
@@ -59,6 +61,7 @@ func NewSSHCmd(flags *flags.GlobalFlags) *cobra.Command {
 		},
 	}
 
+	sshCmd.Flags().StringVar(&cmd.Command, "command", "", "The command to execute within the workspace")
 	sshCmd.Flags().StringVar(&cmd.User, "user", "", "The user of the workspace to use")
 	sshCmd.Flags().BoolVar(&cmd.Configure, "configure", false, "If true will configure ssh for the given workspace")
 	sshCmd.Flags().BoolVar(&cmd.Stdio, "stdio", false, "If true will tunnel connection through stdout and stdin")
@@ -196,9 +199,12 @@ func (cmd *SSHCmd) jumpContainerServer(ctx context.Context, client client2.Agent
 			return err
 		}
 
-		return server.StartSSHSession(ctx, privateKey, cmd.User, func(ctx context.Context, stdin io.Reader, stdout io.Writer, stderr io.Writer) error {
+		writer := log.ErrorStreamOnly().Writer(logrus.InfoLevel, false)
+		defer writer.Close()
+
+		return server.StartSSHSession(ctx, privateKey, cmd.User, cmd.Command, func(ctx context.Context, stdin io.Reader, stdout io.Writer, stderr io.Writer) error {
 			return devssh.Run(sshClient, command, stdin, stdout, stderr)
-		})
+		}, writer)
 	}, runInContainer)
 }
 

@@ -14,5 +14,8 @@ func NewServerCmd(flags *flags.GlobalFlags) *cobra.Command {
 
 	serverCmd.AddCommand(NewListCmd(flags))
 	serverCmd.AddCommand(NewSSHCmd(flags))
+	serverCmd.AddCommand(NewStopCmd(flags))
+	serverCmd.AddCommand(NewStartCmd(flags))
+	serverCmd.AddCommand(NewStatusCmd(flags))
 	return serverCmd
 }

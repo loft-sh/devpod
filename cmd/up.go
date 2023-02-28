@@ -35,8 +35,10 @@ import (
 type UpCmd struct {
 	*flags.GlobalFlags
 
-	ID                   string
-	IDE                  string
+	ID     string
+	Server string
+	IDE    string
+
 	PrebuildRepositories []string
 }
 
@@ -60,7 +62,7 @@ func NewUpCmd(flags *flags.GlobalFlags) *cobra.Command {
 				return err
 			}
 
-			client, err := workspace2.ResolveWorkspace(ctx, devPodConfig, ideConfig, args, cmd.ID, cmd.Provider, log.Default)
+			client, err := workspace2.ResolveWorkspace(ctx, devPodConfig, ideConfig, args, cmd.ID, cmd.Server, cmd.Provider, log.Default)
 			if err != nil {
 				return err
 			}
@@ -71,6 +73,7 @@ func NewUpCmd(flags *flags.GlobalFlags) *cobra.Command {
 
 	upCmd.Flags().StringSliceVar(&cmd.PrebuildRepositories, "prebuild-repository", []string{}, "Docker respository that hosts devpod prebuilds for this workspace")
 	upCmd.Flags().StringVar(&cmd.ID, "id", "", "The id to use for the workspace")
+	upCmd.Flags().StringVar(&cmd.Server, "server", "", "The server to use for this workspace. The server needs to exist beforehand or the command will fail. If the workspace already exists, this option has no effect")
 	upCmd.Flags().StringVar(&cmd.IDE, "ide", "", "The IDE to open the workspace in. If empty will use vscode locally or in browser")
 	return upCmd
 }
