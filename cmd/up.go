@@ -101,7 +101,7 @@ func (cmd *UpCmd) Run(ctx context.Context, client client2.WorkspaceClient) error
 	// open ide
 	switch client.WorkspaceConfig().IDE.IDE {
 	case provider2.IDEVSCode:
-		return startVSCodeLocally(client, log.Default)
+		return startVSCodeLocally(result, client, log.Default)
 	case provider2.IDEOpenVSCode:
 		return startInBrowser(ctx, client, user, log.Default)
 	case provider2.IDEGoland:

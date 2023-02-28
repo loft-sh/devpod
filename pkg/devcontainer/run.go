@@ -2,6 +2,7 @@ package devcontainer
 
 import (
 	"fmt"
+	"github.com/loft-sh/devpod/pkg/compose"
 	"github.com/loft-sh/devpod/pkg/devcontainer/config"
 	"github.com/loft-sh/devpod/pkg/docker"
 	"github.com/loft-sh/devpod/pkg/log"
@@ -15,8 +16,15 @@ import (
 )
 
 func NewRunner(agentPath, agentDownloadURL string, workspaceConfig *provider2.AgentWorkspaceInfo, log log.Logger) *Runner {
+	dockerHelper := &docker.DockerHelper{DockerCommand: "docker"}
+	composeHelper, err := compose.NewComposeHelper("docker-compose", dockerHelper)
+	if err != nil {
+		log.Debugf("Could not create docker-compose helper: %+v", err)
+	}
+
 	return &Runner{
-		Docker: &docker.DockerHelper{DockerCommand: "docker"},
+		Docker:  dockerHelper,
+		Compose: composeHelper,
 
 		AgentPath:            agentPath,
 		AgentDownloadURL:     agentDownloadURL,
@@ -28,7 +36,8 @@ func NewRunner(agentPath, agentDownloadURL string, workspaceConfig *provider2.Ag
 }
 
 type Runner struct {
-	Docker *docker.DockerHelper
+	Docker  *docker.DockerHelper
+	Compose *compose.ComposeHelper
 
 	WorkspaceConfig  *provider2.AgentWorkspaceInfo
 	AgentPath        string
@@ -101,8 +110,7 @@ func (r *Runner) Up(options UpOptions) (*config.Result, error) {
 	if isDockerFileConfig(substitutedConfig.Config) || substitutedConfig.Config.Image != "" {
 		return r.runSingleContainer(substitutedConfig, workspace.WorkspaceMount, options)
 	} else if len(substitutedConfig.Config.DockerComposeFile) > 0 {
-		// TODO: implement
-		panic("unimplemented")
+		return r.runDockerCompose(substitutedConfig, options)
 	}
 
 	return nil, fmt.Errorf("dev container config is missing one of \"image\", \"dockerFile\" or \"dockerComposeFile\" properties")
