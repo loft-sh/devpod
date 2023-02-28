@@ -131,7 +131,7 @@ func (r *Runner) buildImage(parsedConfig *config.SubstitutedConfig, extendedBuil
 		if options.PushRepository != "" {
 			options.PrebuildRepositories = append(options.PrebuildRepositories, options.PushRepository)
 		}
-		options.PrebuildRepositories = append(options.PrebuildRepositories, devPodCustomizations.PrebuildRepo...)
+		options.PrebuildRepositories = append(options.PrebuildRepositories, devPodCustomizations.PrebuildRepository...)
 		r.Log.Debugf("Try to find prebuild image %s in repositories %s", prebuildHash, strings.Join(options.PrebuildRepositories, ","))
 		for _, prebuildRepo := range options.PrebuildRepositories {
 			prebuildImage := prebuildRepo + ":" + prebuildHash
