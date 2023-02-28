@@ -90,7 +90,7 @@ func removeContainer(workspaceInfo *provider2.AgentWorkspaceInfo, log log.Logger
 }
 
 func removeDaemon(workspaceInfo *provider2.AgentWorkspaceInfo, log log.Logger) error {
-	if len(workspaceInfo.Workspace.Provider.Agent.Exec.Shutdown) == 0 {
+	if len(workspaceInfo.Agent.Exec.Shutdown) == 0 {
 		return nil
 	}
 

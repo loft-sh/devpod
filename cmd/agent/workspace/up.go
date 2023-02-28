@@ -163,7 +163,7 @@ func (cmd *UpCmd) up(ctx context.Context, workspaceInfo *provider2.AgentWorkspac
 }
 
 func configureDockerCredentials(ctx context.Context, workspaceInfo *provider2.AgentWorkspaceInfo, client tunnel.TunnelClient, log log.Logger) (string, error) {
-	if workspaceInfo.Workspace.Provider.Agent.InjectDockerCredentials != "true" {
+	if workspaceInfo.Agent.InjectDockerCredentials != "true" {
 		return "", nil
 	}
 
@@ -194,7 +194,7 @@ func prepareWorkspace(ctx context.Context, workspaceInfo *provider2.AgentWorkspa
 	if workspaceInfo.Workspace.Source.GitRepository != "" {
 		log.Debugf("Clone Repository")
 		helper := ""
-		if workspaceInfo.Workspace.Provider.Agent.InjectGitCredentials == "true" {
+		if workspaceInfo.Agent.InjectGitCredentials == "true" {
 			log.Debugf("Start credentials server")
 			cancelCtx, cancel := context.WithCancel(ctx)
 			defer cancel()
@@ -289,7 +289,7 @@ func PingURL(ctx context.Context, url string) error {
 }
 
 func installDaemon(workspaceInfo *provider2.AgentWorkspaceInfo, log log.Logger) error {
-	if len(workspaceInfo.Workspace.Provider.Agent.Exec.Shutdown) == 0 {
+	if len(workspaceInfo.Agent.Exec.Shutdown) == 0 {
 		return nil
 	}
 

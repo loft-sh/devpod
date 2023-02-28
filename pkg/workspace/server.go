@@ -13,8 +13,8 @@ import (
 	"os"
 )
 
-// GetServerClient creates a server client
-func GetServerClient(ctx context.Context, devPodConfig *config.Config, args []string, log log.Logger) (client.Client, error) {
+// GetServer creates a server client
+func GetServer(ctx context.Context, devPodConfig *config.Config, args []string, log log.Logger) (client.Client, error) {
 	// check if we have no args
 	if len(args) == 0 {
 		return selectServer(ctx, devPodConfig, log)

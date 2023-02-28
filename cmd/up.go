@@ -269,6 +269,7 @@ func (cmd *UpCmd) devPodUpServer(ctx context.Context, client client2.AgentClient
 
 	// get workspace config
 	workspaceConfig := client.WorkspaceConfig()
+	agentConfig := client.AgentConfig()
 
 	// create container etc.
 	result, err := agent.RunTunnelServer(
@@ -276,8 +277,8 @@ func (cmd *UpCmd) devPodUpServer(ctx context.Context, client client2.AgentClient
 		stdoutReader,
 		stdinWriter,
 		false,
-		string(workspaceConfig.Provider.Agent.InjectGitCredentials) == "true" && workspaceConfig.Source.GitRepository != "",
-		string(workspaceConfig.Provider.Agent.InjectDockerCredentials) == "true",
+		string(agentConfig.InjectGitCredentials) == "true" && workspaceConfig.Source.GitRepository != "",
+		string(agentConfig.InjectDockerCredentials) == "true",
 		client.WorkspaceConfig(),
 		log,
 	)

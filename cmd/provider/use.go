@@ -8,8 +8,8 @@ import (
 	"github.com/loft-sh/devpod/pkg/client/clientimplementation"
 	"github.com/loft-sh/devpod/pkg/config"
 	"github.com/loft-sh/devpod/pkg/log"
+	options2 "github.com/loft-sh/devpod/pkg/options"
 	provider2 "github.com/loft-sh/devpod/pkg/provider"
-	options2 "github.com/loft-sh/devpod/pkg/provider/options"
 	"github.com/loft-sh/devpod/pkg/survey"
 	"github.com/loft-sh/devpod/pkg/terminal"
 	"github.com/loft-sh/devpod/pkg/workspace"
@@ -97,7 +97,7 @@ func (cmd *UseCmd) Run(ctx context.Context, providerName string) error {
 	devPodConfig.Current().Providers[providerWithOptions.Config.Name].Options = options
 
 	// fill defaults
-	_, devPodConfig, err = options2.ResolveOptions(ctx, "init", "", nil, nil, devPodConfig, providerWithOptions.Config)
+	devPodConfig, err = options2.ResolveOptions(ctx, "init", "", devPodConfig, providerWithOptions.Config)
 	if err != nil {
 		return errors.Wrap(err, "resolve options")
 	}
@@ -109,13 +109,13 @@ func (cmd *UseCmd) Run(ctx context.Context, providerName string) error {
 	}
 
 	// fill defaults
-	_, devPodConfig, err = options2.ResolveOptions(ctx, "", "init", nil, nil, devPodConfig, providerWithOptions.Config)
+	devPodConfig, err = options2.ResolveOptions(ctx, "", "init", devPodConfig, providerWithOptions.Config)
 	if err != nil {
 		return errors.Wrap(err, "resolve options")
 	}
 
 	// fill defaults
-	_, devPodConfig, err = options2.ResolveOptions(ctx, "", "", nil, nil, devPodConfig, providerWithOptions.Config)
+	devPodConfig, err = options2.ResolveOptions(ctx, "", "", devPodConfig, providerWithOptions.Config)
 	if err != nil {
 		return errors.Wrap(err, "resolve options")
 	}

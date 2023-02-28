@@ -19,6 +19,12 @@ type Client interface {
 	// Context returns the context of the provider
 	Context() string
 
+	// AgentPath returns the agent path
+	AgentPath() string
+
+	// AgentURL returns the agent download url
+	AgentURL() string
+
 	// Create creates a new workspace
 	Create(ctx context.Context, options CreateOptions) error
 
@@ -51,17 +57,14 @@ type WorkspaceClient interface {
 type AgentClient interface {
 	WorkspaceClient
 
-	// RefreshOptions updates the options
-	RefreshOptions(ctx context.Context, beforeStage, afterStage string) error
+	// AgentConfig returns the agent config to send to the agent
+	AgentConfig() provider.ProviderAgentConfig
 
 	// AgentInfo returns the info to send to the agent
 	AgentInfo() (string, error)
 
-	// AgentPath returns the agent path
-	AgentPath() string
-
-	// AgentURL returns the agent download url
-	AgentURL() string
+	// RefreshOptions updates the options
+	RefreshOptions(ctx context.Context, beforeStage, afterStage string) error
 }
 
 type InitOptions struct{}

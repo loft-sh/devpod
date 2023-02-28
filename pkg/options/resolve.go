@@ -24,11 +24,11 @@ var variableExpression = regexp.MustCompile(`(?m)\$\{?([A-Z0-9_]+)(:(-|\+)([^\}]
 
 const rootID = "root"
 
-func ResolveAndSaveOptions(ctx context.Context, beforeStage, afterStage string, workspace *provider2.Workspace, server *provider2.Server, originalDevConfig *config.Config, provider *provider2.ProviderConfig) (*provider2.Workspace, *config.Config, error) {
+func ResolveAndSaveOptions(ctx context.Context, beforeStage, afterStage string, originalDevConfig *config.Config, provider *provider2.ProviderConfig) (*config.Config, error) {
 	// reload config
 	devConfig, err := config.LoadConfig(originalDevConfig.DefaultContext)
 	if err != nil {
-		return workspace, originalDevConfig, err
+		return originalDevConfig, err
 	}
 
 	// resolve devconfig options
@@ -38,38 +38,26 @@ func ResolveAndSaveOptions(ctx context.Context, beforeStage, afterStage string, 
 	}
 
 	// resolve options
-	workspace, devConfig, err = ResolveOptions(ctx, beforeStage, afterStage, workspace, server, devConfig, provider)
+	devConfig, err = ResolveOptions(ctx, beforeStage, afterStage, devConfig, provider)
 	if err != nil {
-		return workspace, devConfig, errors.Wrap(err, "resolve options")
+		return devConfig, errors.Wrap(err, "resolve options")
 	}
 
 	// save devconfig config
 	if devConfig != nil && !reflect.DeepEqual(devConfig.Current().ProviderOptions(provider.Name), beforeConfigOptions) {
 		err = config.SaveConfig(devConfig)
 		if err != nil {
-			return workspace, devConfig, err
+			return devConfig, err
 		}
 	}
 
-	return workspace, devConfig, nil
+	return devConfig, nil
 }
 
-func ResolveOptions(ctx context.Context, beforeStage, afterStage string, workspace *provider2.Workspace, server *provider2.Server, devConfig *config.Config, provider *provider2.ProviderConfig) (*provider2.Workspace, *config.Config, error) {
+func ResolveOptions(ctx context.Context, beforeStage, afterStage string, devConfig *config.Config, provider *provider2.ProviderConfig) (*config.Config, error) {
 	resolvedOptions, err := resolveOptionsGeneric(ctx, beforeStage, afterStage, devConfig.ProviderOptions(provider.Name), extraOptions(), provider)
 	if err != nil {
-		return nil, nil, err
-	}
-
-	// workspace
-	if workspace != nil && server == nil {
-		workspace = provider2.CloneWorkspace(workspace)
-		workspace.Provider.Name = provider.Name
-
-		// resolve agent config
-		workspace.Provider.Agent, err = resolveAgentConfig(workspace, devConfig, provider)
-		if err != nil {
-			return nil, nil, err
-		}
+		return nil, err
 	}
 
 	// dev config
@@ -84,7 +72,7 @@ func ResolveOptions(ctx context.Context, beforeStage, afterStage string, workspa
 		}
 	}
 
-	return workspace, devConfig, nil
+	return devConfig, nil
 }
 
 func extraOptions() map[string]string {
@@ -124,9 +112,9 @@ func resolveOptionsGeneric(ctx context.Context, beforeStage, afterStage string, 
 	return resolvedOptions, nil
 }
 
-func resolveAgentConfig(workspace *provider2.Workspace, devConfig *config.Config, provider *provider2.ProviderConfig) (provider2.ProviderAgentConfig, error) {
+func ResolveAgentConfig(devConfig *config.Config, provider *provider2.ProviderConfig) provider2.ProviderAgentConfig {
 	// fill in agent config
-	options := provider2.ToOptions(workspace, nil, devConfig.ProviderOptions(provider.Name))
+	options := provider2.ToOptions(nil, nil, devConfig.ProviderOptions(provider.Name))
 	agentConfig := provider.Agent
 	agentConfig.Path = resolveDefaultValue(agentConfig.Path, options)
 	if agentConfig.Path == "" {
@@ -139,7 +127,7 @@ func resolveAgentConfig(workspace *provider2.Workspace, devConfig *config.Config
 	agentConfig.Timeout = resolveDefaultValue(agentConfig.Timeout, options)
 	agentConfig.InjectGitCredentials = types.StrBool(resolveDefaultValue(string(agentConfig.InjectGitCredentials), options))
 	agentConfig.InjectDockerCredentials = types.StrBool(resolveDefaultValue(string(agentConfig.InjectDockerCredentials), options))
-	return agentConfig, nil
+	return agentConfig
 }
 
 func resolveOptions(ctx context.Context, g *graph.Graph, beforeStage, afterStage string, options map[string]*provider2.ProviderOption, optionValues map[string]config.OptionValue, extraValues map[string]string) (map[string]config.OptionValue, error) {

@@ -99,9 +99,9 @@ func doOnce(log log.Logger) {
 
 	// check timeout
 	timeout := agent.DefaultInactivityTimeout
-	if workspace.Workspace.Provider.Agent.Timeout != "" {
+	if workspace.Agent.Timeout != "" {
 		var err error
-		timeout, err = time.ParseDuration(workspace.Workspace.Provider.Agent.Timeout)
+		timeout, err = time.ParseDuration(workspace.Agent.Timeout)
 		if err != nil {
 			log.Errorf("Error parsing inactivity timeout: %v", err)
 			timeout = agent.DefaultInactivityTimeout
@@ -113,10 +113,10 @@ func doOnce(log log.Logger) {
 
 	// we run the timeout command now
 	buf := &bytes.Buffer{}
-	log.Infof("Run shutdown command for workspace %s: %s", workspace.Workspace.ID, strings.Join(workspace.Workspace.Provider.Agent.Exec.Shutdown, " "))
-	err := clientimplementation.RunCommand(context.Background(), workspace.Workspace.Provider.Agent.Exec.Shutdown, clientimplementation.ToEnvironment(workspace.Workspace, workspace.Server, workspace.Options, nil), nil, buf, buf)
+	log.Infof("Run shutdown command for workspace %s: %s", workspace.Workspace.ID, strings.Join(workspace.Agent.Exec.Shutdown, " "))
+	err := clientimplementation.RunCommand(context.Background(), workspace.Agent.Exec.Shutdown, clientimplementation.ToEnvironment(workspace.Workspace, workspace.Server, workspace.Options, nil), nil, buf, buf)
 	if err != nil {
-		log.Errorf("Error running %s: %s%v", strings.Join(workspace.Workspace.Provider.Agent.Exec.Shutdown, " "), buf.String(), err)
+		log.Errorf("Error running %s: %s%v", strings.Join(workspace.Agent.Exec.Shutdown, " "), buf.String(), err)
 		return
 	}
 
@@ -153,7 +153,7 @@ func getActivity(workspaceConfig string, log log.Logger) (*time.Time, *provider2
 	}
 
 	// check if shutdown is configured
-	if len(workspace.Workspace.Provider.Agent.Exec.Shutdown) == 0 {
+	if len(workspace.Agent.Exec.Shutdown) == 0 {
 		return nil, nil, nil
 	}
 
