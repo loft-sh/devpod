@@ -86,7 +86,7 @@ func (cmd *BuildCmd) Run(ctx context.Context, client client.WorkspaceClient) err
 }
 
 func (cmd *BuildCmd) build(ctx context.Context, workspaceClient client.WorkspaceClient, log log.Logger) error {
-	err := startWait(ctx, workspaceClient, true, log)
+	err := startWait(ctx, workspaceClient, true, false, log)
 	if err != nil {
 		return err
 	}

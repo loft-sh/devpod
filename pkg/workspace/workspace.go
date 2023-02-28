@@ -307,12 +307,6 @@ func loadExistingWorkspace(ctx context.Context, workspaceID string, devPodConfig
 		return nil, err
 	}
 
-	// resolve options
-	workspaceConfig, devPodConfig, err = options2.ResolveAndSaveOptions(ctx, "", "", workspaceConfig, nil, devPodConfig, providerWithOptions.Config)
-	if err != nil {
-		return nil, errors.Wrap(err, "resolve options")
-	}
-
 	// replace ide config
 	beforeIDE := workspaceConfig.IDE
 	if ide != nil {

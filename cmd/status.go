@@ -16,7 +16,8 @@ import (
 type StatusCmd struct {
 	*flags.GlobalFlags
 
-	Output string
+	Output          string
+	ContainerStatus bool
 }
 
 // NewStatusCmd creates a new command
@@ -43,6 +44,7 @@ func NewStatusCmd(flags *flags.GlobalFlags) *cobra.Command {
 		},
 	}
 
+	statusCmd.Flags().BoolVar(&cmd.ContainerStatus, "container-status", true, "If enabled shows the workspace container status as well")
 	statusCmd.Flags().StringVar(&cmd.Output, "output", "plain", "Status shows the workspace status")
 	return statusCmd
 }
@@ -50,7 +52,7 @@ func NewStatusCmd(flags *flags.GlobalFlags) *cobra.Command {
 // Run runs the command logic
 func (cmd *StatusCmd) Run(ctx context.Context, client client2.WorkspaceClient) error {
 	// get instance status
-	instanceStatus, err := client.Status(ctx, client2.StatusOptions{})
+	instanceStatus, err := client.Status(ctx, client2.StatusOptions{ContainerStatus: cmd.ContainerStatus})
 	if err != nil {
 		return err
 	} else if instanceStatus == client2.StatusNotFound {
@@ -61,7 +63,7 @@ func (cmd *StatusCmd) Run(ctx context.Context, client client2.WorkspaceClient) e
 		if instanceStatus == client2.StatusStopped {
 			log.Default.Infof("Workspace '%s' is '%s', you can start it via 'devpod up %s'", client.Workspace(), instanceStatus, client.Workspace())
 		} else if instanceStatus == client2.StatusBusy {
-			log.Default.Infof("Workspace '%s' is '%s', which means its currently unaccessible. This is usually resolved by waiting", client.Workspace(), instanceStatus)
+			log.Default.Infof("Workspace '%s' is '%s', which means its currently unaccessible. This is usually resolved by waiting a couple of minutes", client.Workspace(), instanceStatus)
 		} else if instanceStatus == client2.StatusNotFound {
 			log.Default.Infof("Workspace '%s' is '%s', you can create it via 'devpod up %s'", client.Workspace(), instanceStatus, client.Workspace())
 		} else {

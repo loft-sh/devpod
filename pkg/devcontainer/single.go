@@ -38,6 +38,7 @@ func (r *Runner) runSingleContainer(parsedConfig *config.SubstitutedConfig, work
 		// we need to build container
 		buildInfo, err := r.build(parsedConfig, BuildOptions{
 			PrebuildRepositories: options.PrebuildRepositories,
+			NoBuild:              options.NoBuild,
 		})
 		if err != nil {
 			return nil, errors.Wrap(err, "build image")

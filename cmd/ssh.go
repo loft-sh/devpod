@@ -3,6 +3,7 @@ package cmd
 import (
 	"context"
 	"fmt"
+	"github.com/gen2brain/beeep"
 	"github.com/loft-sh/devpod/cmd/flags"
 	"github.com/loft-sh/devpod/pkg/agent"
 	client2 "github.com/loft-sh/devpod/pkg/client"
@@ -96,7 +97,7 @@ func (cmd *SSHCmd) Run(ctx context.Context, client client2.WorkspaceClient) erro
 	return nil
 }
 
-func startWait(ctx context.Context, client client2.WorkspaceClient, create bool, log log.Logger) error {
+func startWait(ctx context.Context, client client2.WorkspaceClient, create, showNotification bool, log log.Logger) error {
 	startWaiting := time.Now()
 	for {
 		instanceStatus, err := client.Status(ctx, client2.StatusOptions{})
@@ -112,6 +113,12 @@ func startWait(ctx context.Context, client client2.WorkspaceClient, create bool,
 			time.Sleep(time.Second)
 			continue
 		} else if instanceStatus == client2.StatusStopped {
+			if showNotification {
+				go func() {
+					_ = beeep.Notify("DevPod", fmt.Sprintf("Starting currently stopped workspace %s...", client.Workspace()), "assets/information.png")
+				}()
+			}
+
 			err = client.Start(ctx, client2.StartOptions{})
 			if err != nil {
 				return errors.Wrap(err, "start instance")
@@ -146,7 +153,7 @@ func (cmd *SSHCmd) jumpContainer(ctx context.Context, client client2.WorkspaceCl
 }
 
 func (cmd *SSHCmd) jumpContainerWorkspace(ctx context.Context, client client2.WorkspaceClient) error {
-	err := startWait(ctx, client, false, log.Default)
+	err := startWait(ctx, client, false, true, log.Default)
 	if err != nil {
 		return err
 	}
@@ -164,7 +171,7 @@ func (cmd *SSHCmd) jumpContainerWorkspace(ctx context.Context, client client2.Wo
 }
 
 func (cmd *SSHCmd) jumpContainerServer(ctx context.Context, client client2.AgentClient, log log.Logger) error {
-	err := startWait(ctx, client, false, log)
+	err := startWait(ctx, client, false, true, log)
 	if err != nil {
 		return err
 	}
@@ -197,7 +204,7 @@ func (cmd *SSHCmd) jumpContainerServer(ctx context.Context, client client2.Agent
 
 	// tunnel to container
 	return tunnel.NewContainerTunnel(client, log).Run(ctx, func(sshClient *ssh.Client) error {
-		return devssh.Run(sshClient, fmt.Sprintf("%s agent container-tunnel --token '%s' --workspace-info '%s'", client.AgentPath(), tok, workspaceInfo), os.Stdin, os.Stdout, os.Stderr)
+		return devssh.Run(sshClient, fmt.Sprintf("%s agent container-tunnel --start-container --token '%s' --workspace-info '%s'", client.AgentPath(), tok, workspaceInfo), os.Stdin, os.Stdout, os.Stderr)
 	}, runInContainer)
 }
 
