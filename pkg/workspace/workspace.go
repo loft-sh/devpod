@@ -63,7 +63,7 @@ func GetWorkspace(ctx context.Context, devPodConfig *config.Config, ide *provide
 	}
 
 	// load workspace config
-	return loadExistingWorkspace(ctx, workspaceID, devPodConfig, ide, log)
+	return loadExistingWorkspace(workspaceID, devPodConfig, ide, log)
 }
 
 // ResolveWorkspace tries to retrieve an already existing workspace or creates a new one
@@ -87,14 +87,14 @@ func ResolveWorkspace(ctx context.Context, devPodConfig *config.Config, ide *pro
 	if desiredID != "" {
 		if provider2.WorkspaceExists(devPodConfig.DefaultContext, desiredID) {
 			log.Infof("Workspace %s already exists", desiredID)
-			return loadExistingWorkspace(ctx, desiredID, devPodConfig, ide, log)
+			return loadExistingWorkspace(desiredID, devPodConfig, ide, log)
 		}
 
 		// set desired id
 		workspaceID = desiredID
 	} else if provider2.WorkspaceExists(devPodConfig.DefaultContext, workspaceID) {
 		log.Infof("Workspace %s already exists", workspaceID)
-		return loadExistingWorkspace(ctx, workspaceID, devPodConfig, ide, log)
+		return loadExistingWorkspace(workspaceID, devPodConfig, ide, log)
 	}
 
 	// get default provider
@@ -117,7 +117,7 @@ func ResolveWorkspace(ctx context.Context, devPodConfig *config.Config, ide *pro
 	}
 
 	// resolve workspace
-	workspace, err := resolve(ctx, defaultProvider, devPodConfig, name, workspaceID, workspaceFolder, isLocalPath)
+	workspace, err := resolve(defaultProvider, devPodConfig, name, workspaceID, workspaceFolder, isLocalPath)
 	if err != nil {
 		_ = os.RemoveAll(workspaceFolder)
 		return nil, err
@@ -131,11 +131,13 @@ func ResolveWorkspace(ctx context.Context, devPodConfig *config.Config, ide *pro
 	// set server
 	if desiredServer != "" {
 		if !defaultProvider.Config.IsServerProvider() {
+			_ = os.RemoveAll(workspaceFolder)
 			return nil, fmt.Errorf("provider %s cannot create servers and cannot be used", defaultProvider.Config.Name)
 		}
 
 		// check if server exists
 		if !provider2.ServerExists(workspace.Context, desiredServer) {
+			_ = os.RemoveAll(workspaceFolder)
 			return nil, fmt.Errorf("server %s doesn't exist and cannot be used", desiredServer)
 		}
 
@@ -156,7 +158,7 @@ func ResolveWorkspace(ctx context.Context, devPodConfig *config.Config, ide *pro
 	return clientimplementation.NewWorkspaceClient(devPodConfig, defaultProvider.Config, workspace, log)
 }
 
-func resolve(ctx context.Context, defaultProvider *ProviderWithOptions, devPodConfig *config.Config, name, workspaceID, workspaceFolder string, isLocalPath bool) (*provider2.Workspace, error) {
+func resolve(defaultProvider *ProviderWithOptions, devPodConfig *config.Config, name, workspaceID, workspaceFolder string, isLocalPath bool) (*provider2.Workspace, error) {
 	// create workspace ssh keys
 	_, err := devssh.GetPublicKey(devPodConfig.DefaultContext, workspaceID)
 	if err != nil {
@@ -305,10 +307,10 @@ func selectWorkspace(ctx context.Context, devPodConfig *config.Config, ide *prov
 	}
 
 	// load workspace
-	return loadExistingWorkspace(ctx, answer, devPodConfig, ide, log)
+	return loadExistingWorkspace(answer, devPodConfig, ide, log)
 }
 
-func loadExistingWorkspace(ctx context.Context, workspaceID string, devPodConfig *config.Config, ide *provider2.WorkspaceIDEConfig, log log.Logger) (client.WorkspaceClient, error) {
+func loadExistingWorkspace(workspaceID string, devPodConfig *config.Config, ide *provider2.WorkspaceIDEConfig, log log.Logger) (client.WorkspaceClient, error) {
 	workspaceConfig, err := provider2.LoadWorkspaceConfig(devPodConfig.DefaultContext, workspaceID)
 	if err != nil {
 		return nil, err

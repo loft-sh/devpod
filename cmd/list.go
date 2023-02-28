@@ -9,7 +9,6 @@ import (
 	"github.com/loft-sh/devpod/pkg/log"
 	"github.com/loft-sh/devpod/pkg/log/table"
 	provider2 "github.com/loft-sh/devpod/pkg/provider"
-	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
 	"os"
 	"sort"
@@ -62,7 +61,8 @@ func (cmd *ListCmd) Run(ctx context.Context) error {
 		for _, entry := range entries {
 			workspaceConfig, err := provider2.LoadWorkspaceConfig(devPodConfig.DefaultContext, entry.Name())
 			if err != nil {
-				return errors.Wrap(err, "load workspace config")
+				log.Default.ErrorStreamOnly().Warnf("Couldn't load workspace %s: %v", entry.Name(), err)
+				continue
 			}
 
 			tableEntries = append(tableEntries, workspaceConfig)
@@ -80,7 +80,8 @@ func (cmd *ListCmd) Run(ctx context.Context) error {
 		for _, entry := range entries {
 			workspaceConfig, err := provider2.LoadWorkspaceConfig(devPodConfig.DefaultContext, entry.Name())
 			if err != nil {
-				return errors.Wrap(err, "load workspace config")
+				log.Default.ErrorStreamOnly().Warnf("Couldn't load workspace %s: %v", entry.Name(), err)
+				continue
 			}
 
 			tableEntries = append(tableEntries, []string{
