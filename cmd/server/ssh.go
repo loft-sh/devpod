@@ -103,7 +103,7 @@ func StartSSHSession(ctx context.Context, privateKey []byte, user, command strin
 	// start ssh server
 	errChan := make(chan error, 1)
 	go func() {
-		errChan <- exec(ctx, stdinReader, stdoutWriter, os.Stderr)
+		errChan <- exec(ctx, stdinReader, stdoutWriter, stderr)
 	}()
 
 	// start ssh client as root / default user

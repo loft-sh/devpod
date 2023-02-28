@@ -160,7 +160,7 @@ func (r *Runner) buildImage(parsedConfig *config.SubstitutedConfig, extendedBuil
 
 	// check if we shouldn't build
 	if options.NoBuild {
-		return nil, fmt.Errorf("you cannot build in this mode. Please make sure the image was built before")
+		return nil, fmt.Errorf("you cannot build in this mode. Please run 'devpod up' to rebuild the container")
 	}
 
 	imageName := r.getImageName()
