@@ -14,11 +14,7 @@ func MergeConfiguration(config *DevContainerConfig, imageMetadataEntries []*Imag
 		}
 	}
 
-	copiedConfig := &DevContainerConfig{}
-	err := Convert(config, copiedConfig)
-	if err != nil {
-		return nil, err
-	}
+	copiedConfig := CloneDevContainerConfig(config)
 
 	// reverse the order
 	reversed := ReverseSlice(imageMetadataEntries)

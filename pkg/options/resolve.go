@@ -34,7 +34,7 @@ func ResolveAndSaveOptions(ctx context.Context, beforeStage, afterStage string, 
 	// resolve devconfig options
 	var beforeConfigOptions map[string]config.OptionValue
 	if devConfig != nil {
-		beforeConfigOptions = devConfig.Current().ProviderOptions(provider.Name)
+		beforeConfigOptions = devConfig.ProviderOptions(provider.Name)
 	}
 
 	// resolve options
@@ -44,7 +44,7 @@ func ResolveAndSaveOptions(ctx context.Context, beforeStage, afterStage string, 
 	}
 
 	// save devconfig config
-	if devConfig != nil && !reflect.DeepEqual(devConfig.Current().ProviderOptions(provider.Name), beforeConfigOptions) {
+	if devConfig != nil && !reflect.DeepEqual(devConfig.ProviderOptions(provider.Name), beforeConfigOptions) {
 		err = config.SaveConfig(devConfig)
 		if err != nil {
 			return devConfig, err
@@ -140,8 +140,17 @@ func resolveOptions(ctx context.Context, g *graph.Graph, beforeStage, afterStage
 
 		if optionValues != nil {
 			val, ok := optionValues[optionName]
-			if ok && (val.Expires == nil || time.Now().Before(val.Expires.Time)) {
+			if ok && option.Cache == "" {
 				continue
+			} else if ok && val.Filled != nil && option.Cache != "" {
+				duration, err := time.ParseDuration(option.Cache)
+				if err != nil {
+					return nil, errors.Wrapf(err, "parse cache duration of option %s", optionName)
+				}
+
+				if val.Filled.Add(duration).After(time.Now()) {
+					continue
+				}
 			}
 		}
 
@@ -233,19 +242,8 @@ func resolveFromCommand(ctx context.Context, option *provider2.ProviderOption, r
 	}
 
 	optionValue := config.OptionValue{Value: strings.TrimSpace(stdout.String())}
-	if option.Cache != "" {
-		duration, err := time.ParseDuration(option.Cache)
-		if err != nil {
-			return config.OptionValue{}, errors.Wrap(err, "parse cache duration")
-		}
-
-		expire := types.NewTime(time.Now().Add(duration))
-		optionValue.Expires = &expire
-	} else {
-		expire := types.Now()
-		optionValue.Expires = &expire
-	}
-
+	expire := types.NewTime(time.Now())
+	optionValue.Filled = &expire
 	return optionValue, nil
 }
 

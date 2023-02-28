@@ -189,18 +189,18 @@ func (cmd *SSHCmd) jumpContainerServer(ctx context.Context, client client2.Agent
 
 	// tunnel to container
 	return tunnel.NewContainerTunnel(client, log).Run(ctx, func(sshClient *ssh.Client) error {
+		writer := log.ErrorStreamOnly().Writer(logrus.InfoLevel, false)
+		defer writer.Close()
+
 		command := fmt.Sprintf("%s agent container-tunnel --start-container --token '%s' --workspace-info '%s'", client.AgentPath(), tok, workspaceInfo)
 		if cmd.Stdio {
-			return devssh.Run(sshClient, command, os.Stdin, os.Stdout, os.Stderr)
+			return devssh.Run(sshClient, command, os.Stdin, os.Stdout, writer)
 		}
 
 		privateKey, err := devssh.GetPrivateKeyRaw(client.Context(), client.Workspace())
 		if err != nil {
 			return err
 		}
-
-		writer := log.ErrorStreamOnly().Writer(logrus.InfoLevel, false)
-		defer writer.Close()
 
 		return server.StartSSHSession(ctx, privateKey, cmd.User, cmd.Command, func(ctx context.Context, stdin io.Reader, stdout io.Writer, stderr io.Writer) error {
 			return devssh.Run(sshClient, command, stdin, stdout, stderr)

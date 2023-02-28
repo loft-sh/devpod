@@ -24,16 +24,12 @@ options:
   MACHINE_TYPE:
     description: The machine type to use.
     default: e2-standard-2
-  DELETE_ON_INACTIVITY:
-    description: If the compute instance should get deleted instead of stopped on inactivity.
-    default: "false"
-    enum: ["false", "true"]
   INACTIVITY_TIMEOUT:
     description: If defined, will automatically stop the VM after the inactivity period.
     default: 10m
   GCLOUD_TOKEN:
     hidden: true
-    cache: 30m
+    cache: 20s
     before: command
     command: ${GCLOUD_BINARY} auth application-default print-access-token --quiet --verbosity=error
   INJECT_GIT_CREDENTIALS:
@@ -52,15 +48,9 @@ agent:
   injectDockerCredentials: ${INJECT_DOCKER_CREDENTIALS}
   exec:
     shutdown: |-
-      if [ "${DELETE_ON_INACTIVITY}" = "true" ]; then
-        ${DEVPOD} helper http request -X DELETE \
-                                    -H "Authorization: Bearer ${GCLOUD_TOKEN}" \
-                                    https://compute.googleapis.com/compute/v1/projects/${PROJECT}/zones/${ZONE}/instances/devpod-${SERVER_ID}
-      else 
-        ${DEVPOD} helper http request -X POST \
+      ${DEVPOD} helper http request -X POST \
                                     -H "Authorization: Bearer ${GCLOUD_TOKEN}" \
                                     https://compute.googleapis.com/compute/v1/projects/${PROJECT}/zones/${ZONE}/instances/devpod-${SERVER_ID}/stop
-      fi
 exec:
   init: |-
     if ! command -v ${GCLOUD_BINARY} &> /dev/null; then

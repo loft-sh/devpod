@@ -208,14 +208,14 @@ func (cmd *UpCmd) devPodUp(ctx context.Context, client client2.WorkspaceClient, 
 }
 
 func (cmd *UpCmd) devPodUpServer(ctx context.Context, client client2.AgentClient, log log.Logger) (*config2.Result, error) {
-	// compress info
-	workspaceInfo, err := client.AgentInfo()
+	// update options
+	err := client.RefreshOptions(ctx, "command", "")
 	if err != nil {
 		return nil, err
 	}
 
-	// update options
-	err = client.RefreshOptions(ctx, "command", "")
+	// compress info
+	workspaceInfo, err := client.AgentInfo()
 	if err != nil {
 		return nil, err
 	}

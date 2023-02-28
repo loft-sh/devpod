@@ -86,6 +86,7 @@ func (cmd *ListCmd) Run(ctx context.Context) error {
 			tableEntries = append(tableEntries, []string{
 				workspaceConfig.ID,
 				workspaceConfig.Source.String(),
+				workspaceConfig.Server.ID,
 				workspaceConfig.Provider.Name,
 				time.Since(workspaceConfig.CreationTimestamp.Time).Round(1 * time.Second).String(),
 			})
@@ -96,6 +97,7 @@ func (cmd *ListCmd) Run(ctx context.Context) error {
 		table.PrintTable(log.Default, []string{
 			"Name",
 			"Source",
+			"Server",
 			"Provider",
 			"Age",
 		}, tableEntries)

@@ -278,7 +278,7 @@ func RunCredentialsServer(ctx context.Context, userName string, port int, config
 
 	errChan := make(chan error, 1)
 	go func() {
-		log.Infof("Credentials server started on %d...", port)
+		log.Infof("Credentials server started on port %d...", port)
 
 		// always returns error. ErrServerClosed on graceful close
 		if err := srv.ListenAndServe(); err != http.ErrServerClosed {

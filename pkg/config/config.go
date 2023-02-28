@@ -40,8 +40,8 @@ type OptionValue struct {
 	// Value is the value of the option
 	Value string `json:"value,omitempty"`
 
-	// Expires is the time when this value will expire
-	Expires *types.Time `json:"retrieved,omitempty"`
+	// Filled is the time when this value was filled
+	Filled *types.Time `json:"filled,omitempty"`
 }
 
 func (c *Config) Current() *ConfigContext {

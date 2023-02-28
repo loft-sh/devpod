@@ -51,7 +51,7 @@ func NewBuildCmd(flags *flags.GlobalFlags) *cobra.Command {
 
 			// create a temporary workspace
 			exists := workspace2.Exists(devPodConfig, args, log.Default)
-			workspaceClient, err := workspace2.ResolveWorkspace(ctx, devPodConfig, nil, args, "", cmd.Provider, cmd.Server, log.Default)
+			workspaceClient, err := workspace2.ResolveWorkspace(ctx, devPodConfig, nil, args, "", cmd.Server, cmd.Provider, log.Default)
 			if err != nil {
 				return err
 			}
