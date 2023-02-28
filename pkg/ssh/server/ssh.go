@@ -266,10 +266,13 @@ func (s *Server) getCommand(sess ssh.Session) *exec.Cmd {
 
 func exitWithError(s ssh.Session, err error) {
 	if err != nil {
-		stderrlog.Errorf("%v", err)
-		msg := strings.TrimPrefix(err.Error(), "exec: ")
-		if _, err := s.Stderr().Write([]byte(msg)); err != nil {
-			stderrlog.Errorf("failed to write error to session: %v", err)
+		_, ok := errors.Cause(err).(*exec.ExitError)
+		if !ok {
+			stderrlog.Errorf("%v", err)
+			msg := strings.TrimPrefix(err.Error(), "exec: ")
+			if _, err := s.Stderr().Write([]byte(msg)); err != nil {
+				stderrlog.Errorf("failed to write error to session: %v", err)
+			}
 		}
 	}
 

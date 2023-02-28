@@ -128,7 +128,11 @@ func (r *Runner) buildImage(parsedConfig *config.SubstitutedConfig, extendedBuil
 	// check if there is a prebuild image
 	if !options.ForceRebuild {
 		devPodCustomizations := config.GetDevPodCustomizations(parsedConfig.Config)
+		if options.PushRepository != "" {
+			options.PrebuildRepositories = append(options.PrebuildRepositories, options.PushRepository)
+		}
 		options.PrebuildRepositories = append(options.PrebuildRepositories, devPodCustomizations.PrebuildRepo...)
+		r.Log.Debugf("Try to find prebuild image %s in repositories %s", prebuildHash, strings.Join(options.PrebuildRepositories, ","))
 		for _, prebuildRepo := range options.PrebuildRepositories {
 			prebuildImage := prebuildRepo + ":" + prebuildHash
 			img, err := image.GetImage(prebuildImage)
@@ -148,6 +152,8 @@ func (r *Runner) buildImage(parsedConfig *config.SubstitutedConfig, extendedBuil
 					ImageName:     prebuildImage,
 					PrebuildHash:  prebuildHash,
 				}, nil
+			} else if err != nil {
+				r.Log.Debugf("Error trying to find prebuild image %s: %v", prebuildImage, err)
 			}
 		}
 	}
