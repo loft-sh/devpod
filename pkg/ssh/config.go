@@ -26,10 +26,6 @@ func ConfigureSSHConfig(context, workspace, user string, log log.Logger) error {
 	return configureSSHConfigSameFile(context, workspace, user, "", log)
 }
 
-func ConfigureSSHConfigCommand(context, workspace, user, command string, log log.Logger) error {
-	return configureSSHConfigSameFile(context, workspace, user, command, log)
-}
-
 func configureSSHConfigSameFile(context, workspace, user, command string, log log.Logger) error {
 	configLock.Lock()
 	defer configLock.Unlock()
@@ -119,7 +115,7 @@ func addHost(path, host, user, context, workspace, command string) (string, erro
 	if command != "" {
 		newLines = append(newLines, fmt.Sprintf("  ProxyCommand %s", command))
 	} else {
-		newLines = append(newLines, fmt.Sprintf("  ProxyCommand %s ssh --stdio --id %s --context %s --user %s", execPath, workspace, context, user))
+		newLines = append(newLines, fmt.Sprintf("  ProxyCommand %s ssh --stdio --context %s --user %s %s", execPath, context, user, workspace))
 	}
 	newLines = append(newLines, "  User "+user)
 	newLines = append(newLines, endMarker)

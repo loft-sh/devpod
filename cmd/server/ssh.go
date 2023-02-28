@@ -26,14 +26,14 @@ type SSHCmd struct {
 
 // NewSSHCmd creates a new destroy command
 func NewSSHCmd(flags *flags.GlobalFlags) *cobra.Command {
-	cmd := &ListCmd{
+	cmd := &SSHCmd{
 		GlobalFlags: flags,
 	}
 	sshCmd := &cobra.Command{
 		Use:   "ssh",
 		Short: "SSH into the server",
 		RunE: func(c *cobra.Command, args []string) error {
-			return cmd.Run(context.Background())
+			return cmd.Run(context.Background(), args)
 		},
 	}
 
@@ -52,6 +52,35 @@ func (cmd *SSHCmd) Run(ctx context.Context, args []string) error {
 		return err
 	}
 
+	// get token
+	tok, err := token.GenerateTemporaryToken()
+	if err != nil {
+		return err
+	}
+
+	// get private key
+	privateKey, err := devssh.GetTempPrivateKeyRaw()
+	if err != nil {
+		return err
+	}
+
+	// start the ssh session
+	return StartSSHSession(ctx, privateKey, "", func(ctx context.Context, stdin io.Reader, stdout io.Writer, stderr io.Writer) error {
+		command := fmt.Sprintf("%s helper ssh-server --token '%s' --stdio", serverClient.AgentPath(), tok)
+		return agent.InjectAgentAndExecute(ctx, func(ctx context.Context, command string, stdin io.Reader, stdout io.Writer, stderr io.Writer) error {
+			return serverClient.Command(ctx, client.CommandOptions{
+				Command: command,
+				Stdin:   stdin,
+				Stdout:  stdout,
+				Stderr:  stderr,
+			})
+		}, serverClient.AgentPath(), serverClient.AgentURL(), true, command, stdin, stdout, stderr, log.Default.ErrorStreamOnly())
+	})
+}
+
+type ExecFunc func(ctx context.Context, stdin io.Reader, stdout io.Writer, stderr io.Writer) error
+
+func StartSSHSession(ctx context.Context, privateKey []byte, user string, exec ExecFunc) error {
 	// create readers
 	stdoutReader, stdoutWriter, err := os.Pipe()
 	if err != nil {
@@ -64,34 +93,14 @@ func (cmd *SSHCmd) Run(ctx context.Context, args []string) error {
 	defer stdoutWriter.Close()
 	defer stdinWriter.Close()
 
-	// get token
-	tok, err := token.GenerateTemporaryToken()
-	if err != nil {
-		return err
-	}
-
 	// start ssh server
 	errChan := make(chan error, 1)
 	go func() {
-		command := fmt.Sprintf("%s helper ssh-server --token '%s' --stdio", serverClient.AgentPath(), tok)
-		errChan <- agent.InjectAgentAndExecute(ctx, func(ctx context.Context, command string, stdin io.Reader, stdout io.Writer, stderr io.Writer) error {
-			return serverClient.Command(ctx, client.CommandOptions{
-				Command: command,
-				Stdin:   stdin,
-				Stdout:  stdout,
-				Stderr:  stderr,
-			})
-		}, serverClient.AgentPath(), serverClient.AgentURL(), true, command, stdinReader, stdoutWriter, os.Stderr, log.Default.ErrorStreamOnly())
+		errChan <- exec(ctx, stdinReader, stdoutWriter, os.Stderr)
 	}()
 
-	// get private key
-	privateKey, err := devssh.GetTempPrivateKeyRaw()
-	if err != nil {
-		return err
-	}
-
 	// start ssh client as root / default user
-	sshClient, err := devssh.StdioClientFromKeyBytes(privateKey, stdoutReader, stdinWriter, false)
+	sshClient, err := devssh.StdioClientFromKeyBytesWithUser(privateKey, stdoutReader, stdinWriter, user, false)
 	if err != nil {
 		return err
 	}

@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"github.com/gen2brain/beeep"
 	"github.com/loft-sh/devpod/cmd/flags"
+	"github.com/loft-sh/devpod/cmd/server"
 	"github.com/loft-sh/devpod/pkg/agent"
 	client2 "github.com/loft-sh/devpod/pkg/client"
 	"github.com/loft-sh/devpod/pkg/config"
@@ -18,8 +19,8 @@ import (
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 	"golang.org/x/crypto/ssh"
+	"io"
 	"os"
-	"os/exec"
 	"time"
 )
 
@@ -30,9 +31,7 @@ type SSHCmd struct {
 	Stdio         bool
 	JumpContainer bool
 
-	Self      bool
 	Configure bool
-	ID        string
 	User      string
 }
 
@@ -44,7 +43,6 @@ func NewSSHCmd(flags *flags.GlobalFlags) *cobra.Command {
 	sshCmd := &cobra.Command{
 		Use:   "ssh",
 		Short: "Starts a new ssh session to a workspace",
-		Args:  cobra.NoArgs,
 		RunE: func(_ *cobra.Command, args []string) error {
 			ctx := context.Background()
 			devPodConfig, err := config.LoadConfig(cmd.Context)
@@ -52,31 +50,18 @@ func NewSSHCmd(flags *flags.GlobalFlags) *cobra.Command {
 				return err
 			}
 
-			var (
-				client client2.WorkspaceClient
-			)
-			if cmd.Self {
-				client, err = workspace2.ResolveWorkspace(ctx, devPodConfig, nil, []string{"."}, cmd.ID, cmd.Provider, log.Default)
-				if err != nil {
-					return err
-				}
-			} else {
-				client, err = workspace2.GetWorkspace(ctx, devPodConfig, nil, []string{cmd.ID}, log.Default)
-				if err != nil {
-					return err
-				}
+			client, err := workspace2.GetWorkspace(ctx, devPodConfig, nil, args, log.Default)
+			if err != nil {
+				return err
 			}
 
 			return cmd.Run(ctx, client)
 		},
 	}
 
-	sshCmd.Flags().StringVar(&cmd.ID, "id", "", "The id of the workspace to use")
 	sshCmd.Flags().StringVar(&cmd.User, "user", "", "The user of the workspace to use")
 	sshCmd.Flags().BoolVar(&cmd.Configure, "configure", false, "If true will configure ssh for the given workspace")
 	sshCmd.Flags().BoolVar(&cmd.Stdio, "stdio", false, "If true will tunnel connection through stdout and stdin")
-	sshCmd.Flags().BoolVar(&cmd.Self, "self", false, "For testing only")
-	_ = sshCmd.MarkFlagRequired("id")
 	_ = sshCmd.Flags().MarkHidden("self")
 	return sshCmd
 }
@@ -86,15 +71,8 @@ func (cmd *SSHCmd) Run(ctx context.Context, client client2.WorkspaceClient) erro
 	if cmd.Configure {
 		return configureSSH(client, "root")
 	}
-	if cmd.Self {
-		return configureSSHSelf(client, log.Default)
-	}
-	if cmd.Stdio {
-		return cmd.jumpContainer(ctx, client, log.Default.ErrorStreamOnly())
-	}
 
-	// TODO: Implement regular ssh client here
-	return nil
+	return cmd.jumpContainer(ctx, client, log.Default.ErrorStreamOnly())
 }
 
 func startWait(ctx context.Context, client client2.WorkspaceClient, create, showNotification bool, log log.Logger) error {
@@ -149,10 +127,14 @@ func (cmd *SSHCmd) jumpContainer(ctx context.Context, client client2.WorkspaceCl
 		return cmd.jumpContainerWorkspace(ctx, client)
 	}
 
-	return nil
+	return fmt.Errorf("unsupported workspace")
 }
 
 func (cmd *SSHCmd) jumpContainerWorkspace(ctx context.Context, client client2.WorkspaceClient) error {
+	if !cmd.Stdio {
+		return fmt.Errorf("unsupported")
+	}
+
 	err := startWait(ctx, client, false, true, log.Default)
 	if err != nil {
 		return err
@@ -204,7 +186,19 @@ func (cmd *SSHCmd) jumpContainerServer(ctx context.Context, client client2.Agent
 
 	// tunnel to container
 	return tunnel.NewContainerTunnel(client, log).Run(ctx, func(sshClient *ssh.Client) error {
-		return devssh.Run(sshClient, fmt.Sprintf("%s agent container-tunnel --start-container --token '%s' --workspace-info '%s'", client.AgentPath(), tok, workspaceInfo), os.Stdin, os.Stdout, os.Stderr)
+		command := fmt.Sprintf("%s agent container-tunnel --start-container --token '%s' --workspace-info '%s'", client.AgentPath(), tok, workspaceInfo)
+		if cmd.Stdio {
+			return devssh.Run(sshClient, command, os.Stdin, os.Stdout, os.Stderr)
+		}
+
+		privateKey, err := devssh.GetPrivateKeyRaw(client.Context(), client.Workspace())
+		if err != nil {
+			return err
+		}
+
+		return server.StartSSHSession(ctx, privateKey, cmd.User, func(ctx context.Context, stdin io.Reader, stdout io.Writer, stderr io.Writer) error {
+			return devssh.Run(sshClient, command, stdin, stdout, stderr)
+		})
 	}, runInContainer)
 }
 
@@ -242,24 +236,6 @@ func runCredentialsServer(ctx context.Context, client *ssh.Client, user string, 
 
 	// wait until command finished
 	return <-errChan
-}
-
-func configureSSHSelf(client client2.WorkspaceClient, log log.Logger) error {
-	tok, err := token.GenerateWorkspaceToken(client.Context(), client.Workspace())
-	if err != nil {
-		return err
-	}
-
-	err = devssh.ConfigureSSHConfigCommand(client.Context(), client.Workspace(), "", "devpod helper ssh-server --stdio --token "+tok, log)
-	if err != nil {
-		return err
-	}
-
-	err = exec.Command("code", "--folder-uri", fmt.Sprintf("vscode-remote://ssh-remote+%s.devpod/", client.Workspace())).Run()
-	if err != nil {
-		return err
-	}
-	return nil
 }
 
 func configureSSH(client client2.WorkspaceClient, user string) error {

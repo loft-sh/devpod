@@ -9,12 +9,17 @@ import (
 )
 
 func StdioClientFromKeyBytes(keyBytes []byte, reader io.Reader, writer io.WriteCloser, exitOnClose bool) (*ssh.Client, error) {
+	return StdioClientFromKeyBytesWithUser(keyBytes, reader, writer, "", exitOnClose)
+}
+
+func StdioClientFromKeyBytesWithUser(keyBytes []byte, reader io.Reader, writer io.WriteCloser, user string, exitOnClose bool) (*ssh.Client, error) {
 	conn := stdio.NewStdioStream(reader, writer, exitOnClose)
 	clientConfig, err := ConfigFromKeyBytes(keyBytes)
 	if err != nil {
 		return nil, err
 	}
 
+	clientConfig.User = user
 	c, chans, req, err := ssh.NewClientConn(conn, "stdio", clientConfig)
 	if err != nil {
 		return nil, err
