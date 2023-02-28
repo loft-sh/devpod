@@ -12,6 +12,7 @@ import (
 	"github.com/loft-sh/devpod/pkg/types"
 	"github.com/pkg/errors"
 	"os"
+	"path/filepath"
 	"reflect"
 	"regexp"
 	"sort"
@@ -23,80 +24,74 @@ var variableExpression = regexp.MustCompile(`(?m)\$\{?([A-Z0-9_]+)(:(-|\+)([^\}]
 
 const rootID = "root"
 
-func ResolveAndSaveOptions(ctx context.Context, beforeStage, afterStage string, workspace *provider2.Workspace, provider *provider2.ProviderConfig) (*provider2.Workspace, error) {
-	var err error
-
-	// resolve options
-	beforeOptions := workspace.Provider.Options
-	workspace, err = ResolveOptions(ctx, beforeStage, afterStage, workspace, provider)
+func ResolveAndSaveOptions(ctx context.Context, beforeStage, afterStage string, workspace *provider2.Workspace, server *provider2.Server, originalDevConfig *config.Config, provider *provider2.ProviderConfig) (*provider2.Workspace, *config.Config, error) {
+	// reload config
+	devConfig, err := config.LoadConfig(originalDevConfig.DefaultContext)
 	if err != nil {
-		return workspace, errors.Wrap(err, "resolve options")
+		return workspace, originalDevConfig, err
 	}
 
-	// save workspace config
-	if workspace.ID != "" && !reflect.DeepEqual(workspace.Provider.Options, beforeOptions) {
-		err = provider2.SaveWorkspaceConfig(workspace)
+	// resolve devconfig options
+	var beforeConfigOptions map[string]config.OptionValue
+	if devConfig != nil {
+		beforeConfigOptions = devConfig.Current().ProviderOptions(provider.Name)
+	}
+
+	// resolve options
+	workspace, devConfig, err = ResolveOptions(ctx, beforeStage, afterStage, workspace, server, devConfig, provider)
+	if err != nil {
+		return workspace, devConfig, errors.Wrap(err, "resolve options")
+	}
+
+	// save devconfig config
+	if devConfig != nil && !reflect.DeepEqual(devConfig.Current().ProviderOptions(provider.Name), beforeConfigOptions) {
+		err = config.SaveConfig(devConfig)
 		if err != nil {
-			return workspace, err
+			return workspace, devConfig, err
 		}
 	}
 
-	return workspace, nil
+	return workspace, devConfig, nil
 }
 
-func ResolveAndSaveOptionsServer(ctx context.Context, beforeStage, afterStage string, server *provider2.Server, provider *provider2.ProviderConfig) (*provider2.Server, error) {
-	var err error
-
-	// resolve options
-	beforeOptions := server.Provider.Options
-	server, err = ResolveOptionsServer(ctx, beforeStage, afterStage, server, provider)
+func ResolveOptions(ctx context.Context, beforeStage, afterStage string, workspace *provider2.Workspace, server *provider2.Server, devConfig *config.Config, provider *provider2.ProviderConfig) (*provider2.Workspace, *config.Config, error) {
+	resolvedOptions, err := resolveOptionsGeneric(ctx, beforeStage, afterStage, devConfig.ProviderOptions(provider.Name), extraOptions(), provider)
 	if err != nil {
-		return server, errors.Wrap(err, "resolve options")
+		return nil, nil, err
 	}
 
-	// save workspace config
-	if server.ID != "" && !reflect.DeepEqual(server.Provider.Options, beforeOptions) {
-		err = provider2.SaveServerConfig(server)
+	// workspace
+	if workspace != nil && server == nil {
+		workspace = provider2.CloneWorkspace(workspace)
+		workspace.Provider.Name = provider.Name
+
+		// resolve agent config
+		workspace.Provider.Agent, err = resolveAgentConfig(workspace, devConfig, provider)
 		if err != nil {
-			return server, err
+			return nil, nil, err
 		}
 	}
 
-	return server, nil
+	// dev config
+	if devConfig != nil {
+		devConfig = config.CloneConfig(devConfig)
+		if devConfig.Current().Providers[provider.Name] == nil {
+			devConfig.Current().Providers[provider.Name] = &config.ConfigProvider{}
+		}
+		devConfig.Current().Providers[provider.Name].Options = map[string]config.OptionValue{}
+		for k, v := range resolvedOptions {
+			devConfig.Current().Providers[provider.Name].Options[k] = v
+		}
+	}
+
+	return workspace, devConfig, nil
 }
 
-func ResolveOptionsServer(ctx context.Context, beforeStage, afterStage string, server *provider2.Server, provider *provider2.ProviderConfig) (*provider2.Server, error) {
-	// resolve options
-	resolvedOptions, err := resolveOptionsGeneric(ctx, beforeStage, afterStage, server.Provider.Options, provider2.ToOptionsServer(server), provider)
-	if err != nil {
-		return nil, err
-	}
-
-	// return workspace
-	server = provider2.CloneServer(server)
-	server.Provider.Name = provider.Name
-	server.Provider.Options = resolvedOptions
-	return server, nil
-}
-
-func ResolveOptions(ctx context.Context, beforeStage, afterStage string, workspace *provider2.Workspace, provider *provider2.ProviderConfig) (*provider2.Workspace, error) {
-	resolvedOptions, err := resolveOptionsGeneric(ctx, beforeStage, afterStage, workspace.Provider.Options, provider2.ToOptions(workspace), provider)
-	if err != nil {
-		return nil, err
-	}
-
-	// return workspace
-	workspace = provider2.CloneWorkspace(workspace)
-	workspace.Provider.Name = provider.Name
-	workspace.Provider.Options = resolvedOptions
-
-	// resolve agent config
-	workspace.Provider.Agent, err = resolveAgentConfig(workspace, provider)
-	if err != nil {
-		return nil, err
-	}
-
-	return workspace, nil
+func extraOptions() map[string]string {
+	retVars := map[string]string{}
+	devPodBinary, _ := os.Executable()
+	retVars[provider2.DEVPOD] = filepath.ToSlash(devPodBinary)
+	return retVars
 }
 
 func resolveOptionsGeneric(ctx context.Context, beforeStage, afterStage string, optionValues map[string]config.OptionValue, extraValues map[string]string, provider *provider2.ProviderConfig) (map[string]config.OptionValue, error) {
@@ -129,9 +124,9 @@ func resolveOptionsGeneric(ctx context.Context, beforeStage, afterStage string, 
 	return resolvedOptions, nil
 }
 
-func resolveAgentConfig(workspace *provider2.Workspace, provider *provider2.ProviderConfig) (provider2.ProviderAgentConfig, error) {
+func resolveAgentConfig(workspace *provider2.Workspace, devConfig *config.Config, provider *provider2.ProviderConfig) (provider2.ProviderAgentConfig, error) {
 	// fill in agent config
-	options := provider2.ToOptions(workspace)
+	options := provider2.ToOptions(workspace, nil, devConfig.ProviderOptions(provider.Name))
 	agentConfig := provider.Agent
 	agentConfig.Path = resolveDefaultValue(agentConfig.Path, options)
 	if agentConfig.Path == "" {
@@ -219,10 +214,8 @@ func resolveOption(ctx context.Context, g *graph.Graph, optionName string, resol
 	// resolve option
 	option := node.Data.(*provider2.ProviderOption)
 	if option.Default != "" {
-
 		resolvedOptions[optionName] = config.OptionValue{
 			Value: resolveDefaultValue(option.Default, combine(resolvedOptions, extraValues)),
-			Local: option.Local,
 		}
 	} else if option.Command != "" {
 		optionValue, err := resolveFromCommand(ctx, option, resolvedOptions, extraValues)
@@ -251,7 +244,7 @@ func resolveFromCommand(ctx context.Context, option *provider2.ProviderOption, r
 		return config.OptionValue{}, errors.Wrapf(err, "run command: %s%s", stdout.String(), stderr.String())
 	}
 
-	optionValue := config.OptionValue{Value: strings.TrimSpace(stdout.String()), Local: option.Local}
+	optionValue := config.OptionValue{Value: strings.TrimSpace(stdout.String())}
 	if option.Cache != "" {
 		duration, err := time.ParseDuration(option.Cache)
 		if err != nil {

@@ -58,7 +58,7 @@ func (cmd *BuildCmd) Run(ctx context.Context) error {
 	}
 
 	// initialize the workspace
-	tunnelClient, logger, err := initWorkspace(ctx, workspaceInfo, cmd.Debug)
+	tunnelClient, logger, err := initWorkspace(ctx, workspaceInfo, cmd.Debug, false)
 	if err != nil {
 		return err
 	}

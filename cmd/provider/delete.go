@@ -42,7 +42,7 @@ func (cmd *DeleteCmd) Run(ctx context.Context, args []string) error {
 		return err
 	}
 
-	defaultProviders := devPodConfig.Contexts[devPodConfig.DefaultContext].Providers
+	defaultProviders := devPodConfig.Current().Providers
 	if defaultProviders == nil || defaultProviders[args[0]] == nil {
 		return fmt.Errorf("provider %s is not configured", args[0])
 	}
@@ -52,11 +52,11 @@ func (cmd *DeleteCmd) Run(ctx context.Context, args []string) error {
 		return err
 	}
 
-	if devPodConfig.Contexts[devPodConfig.DefaultContext].DefaultProvider == args[0] {
-		devPodConfig.Contexts[devPodConfig.DefaultContext].DefaultProvider = ""
+	if devPodConfig.Current().DefaultProvider == args[0] {
+		devPodConfig.Current().DefaultProvider = ""
 	}
 	delete(defaultProviders, args[0])
-	devPodConfig.Contexts[devPodConfig.DefaultContext].Providers = defaultProviders
+	devPodConfig.Current().Providers = defaultProviders
 	err = config.SaveConfig(devPodConfig)
 	if err != nil {
 		return errors.Wrap(err, "save config")

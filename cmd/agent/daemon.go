@@ -114,7 +114,7 @@ func doOnce(log log.Logger) {
 	// we run the timeout command now
 	buf := &bytes.Buffer{}
 	log.Infof("Run shutdown command for workspace %s: %s", workspace.Workspace.ID, strings.Join(workspace.Workspace.Provider.Agent.Exec.Shutdown, " "))
-	err := clientimplementation.RunCommand(context.Background(), workspace.Workspace.Provider.Agent.Exec.Shutdown, clientimplementation.ToEnvironment(&workspace.Workspace, nil), nil, buf, buf)
+	err := clientimplementation.RunCommand(context.Background(), workspace.Workspace.Provider.Agent.Exec.Shutdown, clientimplementation.ToEnvironment(workspace.Workspace, workspace.Server, workspace.Options, nil), nil, buf, buf)
 	if err != nil {
 		log.Errorf("Error running %s: %s%v", strings.Join(workspace.Workspace.Provider.Agent.Exec.Shutdown, " "), buf.String(), err)
 		return

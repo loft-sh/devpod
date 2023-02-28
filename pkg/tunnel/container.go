@@ -119,7 +119,7 @@ func (c *ContainerHandler) Run(ctx context.Context, runInHost Handler, runInCont
 		doneChan := make(chan struct{})
 		if c.updateConfigInterval > 0 {
 			go func() {
-				c.updateConfig(sshClient, doneChan)
+				c.updateConfig(ctx, sshClient, doneChan)
 			}()
 		}
 
@@ -137,14 +137,14 @@ func (c *ContainerHandler) Run(ctx context.Context, runInHost Handler, runInCont
 	}
 }
 
-func (c *ContainerHandler) updateConfig(sshClient *ssh.Client, doneChan chan struct{}) {
+func (c *ContainerHandler) updateConfig(ctx context.Context, sshClient *ssh.Client, doneChan chan struct{}) {
 	for {
 		select {
 		case <-doneChan:
 			return
 		case <-time.After(c.updateConfigInterval):
 			// update options
-			err := c.client.RefreshOptions("command", "")
+			err := c.client.RefreshOptions(ctx, "command", "")
 			if err != nil {
 				c.log.Errorf("Error refreshing workspace options: %v", err)
 				break

@@ -128,6 +128,12 @@ func validate(config *ProviderConfig) error {
 		if len(config.Exec.Command) == 0 {
 			return fmt.Errorf("exec.command is required")
 		}
+		if len(config.Exec.Create) > 0 && len(config.Exec.Delete) == 0 {
+			return fmt.Errorf("exec.delete is required")
+		}
+		if len(config.Exec.Create) == 0 && len(config.Exec.Delete) > 0 {
+			return fmt.Errorf("exec.create is required")
+		}
 	} else if config.Type == ProviderTypeDirect {
 		if len(config.Exec.Command) == 0 {
 			return fmt.Errorf("exec.command is required")

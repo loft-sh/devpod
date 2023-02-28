@@ -137,17 +137,16 @@ func ResolveWorkspace(ctx context.Context, devPodConfig *config.Config, ide *pro
 	}
 
 	// create a new client
-	return clientimplementation.NewWorkspaceClient(defaultProvider.Config, workspace, log)
+	return clientimplementation.NewWorkspaceClient(devPodConfig, defaultProvider.Config, workspace, log)
 }
 
 func resolve(ctx context.Context, defaultProvider *ProviderWithOptions, devPodConfig *config.Config, name, workspaceID, workspaceFolder string, isLocalPath bool) (*provider2.Workspace, error) {
-	// resolve options
-	workspace, err := options2.ResolveOptions(ctx, "", "", &provider2.Workspace{
+	// resolve agent options
+	workspace, devPodConfig, err := options2.ResolveAndSaveOptions(ctx, "", "", &provider2.Workspace{
 		Provider: provider2.WorkspaceProviderConfig{
-			Name:    defaultProvider.Config.Name,
-			Options: defaultProvider.Options,
+			Name: defaultProvider.Config.Name,
 		},
-	}, defaultProvider.Config)
+	}, nil, devPodConfig, defaultProvider.Config)
 	if err != nil {
 		return nil, errors.Wrap(err, "resolve options")
 	}
@@ -309,26 +308,26 @@ func loadExistingWorkspace(ctx context.Context, workspaceID string, devPodConfig
 	}
 
 	// resolve options
-	beforeOptions := workspaceConfig.Provider.Options
-	workspaceConfig, err = options2.ResolveOptions(ctx, "", "", workspaceConfig, providerWithOptions.Config)
+	workspaceConfig, devPodConfig, err = options2.ResolveAndSaveOptions(ctx, "", "", workspaceConfig, nil, devPodConfig, providerWithOptions.Config)
 	if err != nil {
 		return nil, errors.Wrap(err, "resolve options")
 	}
 
 	// replace ide config
+	beforeIDE := workspaceConfig.IDE
 	if ide != nil {
 		workspaceConfig.IDE = *ide
 	}
 
 	// save workspace config
-	if !reflect.DeepEqual(workspaceConfig.Provider.Options, beforeOptions) {
+	if !reflect.DeepEqual(workspaceConfig.IDE, beforeIDE) {
 		err = provider2.SaveWorkspaceConfig(workspaceConfig)
 		if err != nil {
 			return nil, err
 		}
 	}
 
-	return clientimplementation.NewWorkspaceClient(providerWithOptions.Config, workspaceConfig, log)
+	return clientimplementation.NewWorkspaceClient(devPodConfig, providerWithOptions.Config, workspaceConfig, log)
 }
 
 func findGitRoot(localFolder string) string {

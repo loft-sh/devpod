@@ -69,9 +69,6 @@ type WorkspaceProviderConfig struct {
 	// Name is the provider name
 	Name string `json:"name,omitempty"`
 
-	// Options are the provider options used to create the workspace
-	Options map[string]config.OptionValue `json:"options,omitempty"`
-
 	// Agent is the config from the provider
 	Agent ProviderAgentConfig `json:"agent,omitempty"`
 }
@@ -95,7 +92,13 @@ type WorkspaceSource struct {
 
 type AgentWorkspaceInfo struct {
 	// Workspace holds the workspace info
-	Workspace Workspace `json:"workspace,omitempty"`
+	Workspace *Workspace `json:"workspace,omitempty"`
+
+	// Server holds the server info
+	Server *Server `json:"server,omitempty"`
+
+	// Options holds the filled provider options for this workspace
+	Options map[string]config.OptionValue `json:"options,omitempty"`
 
 	// Folder holds the workspace folder on the remote server
 	Folder string `json:"-"`

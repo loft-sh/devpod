@@ -5,6 +5,7 @@ import (
 	"context"
 	"fmt"
 	"github.com/loft-sh/devpod/pkg/client"
+	"github.com/loft-sh/devpod/pkg/config"
 	"github.com/loft-sh/devpod/pkg/log"
 	"github.com/loft-sh/devpod/pkg/provider"
 	"github.com/loft-sh/devpod/pkg/provider/options"
@@ -14,18 +15,20 @@ import (
 	"strings"
 )
 
-func NewServerClient(provider *provider.ProviderConfig, server *provider.Server, log log.Logger) client.Client {
+func NewServerClient(devPodConfig *config.Config, provider *provider.ProviderConfig, server *provider.Server, log log.Logger) client.Client {
 	return &serverClient{
-		config: provider,
-		server: server,
-		log:    log,
+		devPodConfig: devPodConfig,
+		config:       provider,
+		server:       server,
+		log:          log,
 	}
 }
 
 type serverClient struct {
-	config *provider.ProviderConfig
-	server *provider.Server
-	log    log.Logger
+	devPodConfig *config.Config
+	config       *provider.ProviderConfig
+	server       *provider.Server
+	log          log.Logger
 }
 
 func (s *serverClient) Provider() string {
@@ -43,7 +46,7 @@ func (s *serverClient) Context() string {
 func (s *serverClient) Create(ctx context.Context, options client.CreateOptions) error {
 	// create a server
 	s.log.Infof("Create %s server...", s.config.Name)
-	err := runCommand(ctx, "create", s.config.Exec.Create, ToEnvironmentServer(s.server, nil), os.Stdin, os.Stdout, os.Stderr, s.log)
+	err := runCommand(ctx, "create", s.config.Exec.Create, ToEnvironment(nil, s.server, s.devPodConfig.ProviderOptions(s.config.Name), nil), os.Stdin, os.Stdout, os.Stderr, s.log)
 	if err != nil {
 		return err
 	}
@@ -53,7 +56,7 @@ func (s *serverClient) Create(ctx context.Context, options client.CreateOptions)
 }
 
 func (s *serverClient) Start(ctx context.Context, options client.StartOptions) error {
-	err := runCommand(ctx, "start", s.config.Exec.Start, ToEnvironmentServer(s.server, nil), os.Stdin, os.Stdout, os.Stderr, s.log)
+	err := runCommand(ctx, "start", s.config.Exec.Start, ToEnvironment(nil, s.server, s.devPodConfig.ProviderOptions(s.config.Name), nil), os.Stdin, os.Stdout, os.Stderr, s.log)
 	if err != nil {
 		return err
 	}
@@ -62,7 +65,7 @@ func (s *serverClient) Start(ctx context.Context, options client.StartOptions) e
 }
 
 func (s *serverClient) Stop(ctx context.Context, options client.StopOptions) error {
-	err := runCommand(ctx, "stop", s.config.Exec.Stop, ToEnvironmentServer(s.server, nil), os.Stdin, os.Stdout, os.Stderr, s.log)
+	err := runCommand(ctx, "stop", s.config.Exec.Stop, ToEnvironment(nil, s.server, s.devPodConfig.ProviderOptions(s.config.Name), nil), os.Stdin, os.Stdout, os.Stderr, s.log)
 	if err != nil {
 		return err
 	}
@@ -74,17 +77,17 @@ func (s *serverClient) Command(ctx context.Context, commandOptions client.Comman
 	var err error
 
 	// resolve options
-	s.server, err = options.ResolveAndSaveOptionsServer(ctx, "command", "", s.server, s.config)
+	_, s.devPodConfig, err = options.ResolveAndSaveOptions(ctx, "command", "", nil, s.server, s.devPodConfig, s.config)
 	if err != nil {
 		return err
 	}
 	defer func() {
 		if err == nil {
-			s.server, err = options.ResolveAndSaveOptionsServer(ctx, "", "command", s.server, s.config)
+			_, s.devPodConfig, err = options.ResolveAndSaveOptions(ctx, "", "command", nil, s.server, s.devPodConfig, s.config)
 		}
 	}()
 
-	return runCommand(ctx, "command", s.config.Exec.Command, ToEnvironmentServer(s.server, map[string]string{
+	return runCommand(ctx, "command", s.config.Exec.Command, ToEnvironment(nil, s.server, s.devPodConfig.ProviderOptions(s.config.Name), map[string]string{
 		provider.CommandEnv: commandOptions.Command,
 	}), commandOptions.Stdin, commandOptions.Stdout, commandOptions.Stderr, s.log.ErrorStreamOnly())
 }
@@ -92,7 +95,7 @@ func (s *serverClient) Command(ctx context.Context, commandOptions client.Comman
 func (s *serverClient) Status(ctx context.Context, options client.StatusOptions) (client.Status, error) {
 	stdout := &bytes.Buffer{}
 	stderr := &bytes.Buffer{}
-	err := runCommand(ctx, "status", s.config.Exec.Status, ToEnvironmentServer(s.server, nil), nil, stdout, stderr, s.log)
+	err := runCommand(ctx, "status", s.config.Exec.Status, ToEnvironment(nil, s.server, s.devPodConfig.ProviderOptions(s.config.Name), nil), nil, stdout, stderr, s.log)
 	if err != nil {
 		return client.StatusNotFound, fmt.Errorf("get status: %s%s", strings.TrimSpace(stdout.String()), strings.TrimSpace(stderr.String()))
 	}
@@ -115,7 +118,7 @@ func (s *serverClient) Delete(ctx context.Context, options client.DeleteOptions)
 	}
 
 	s.log.Infof("Deleting %s server...", s.config.Name)
-	err := runCommand(ctx, "delete", s.config.Exec.Delete, ToEnvironmentServer(s.server, nil), os.Stdin, os.Stdout, os.Stderr, s.log)
+	err := runCommand(ctx, "delete", s.config.Exec.Delete, ToEnvironment(nil, s.server, s.devPodConfig.ProviderOptions(s.config.Name), nil), os.Stdin, os.Stdout, os.Stderr, s.log)
 	if err != nil {
 		if !options.Force {
 			return err
@@ -144,19 +147,4 @@ func runCommand(ctx context.Context, name string, command types.StrArray, enviro
 
 	// run the command
 	return RunCommand(ctx, command, environ, stdin, stdout, stderr)
-}
-
-func ToEnvironmentServer(server *provider.Server, extraEnv map[string]string) []string {
-	env := provider.ToOptionsServer(server)
-
-	// create environment variables for command
-	osEnviron := os.Environ()
-	for k, v := range env {
-		osEnviron = append(osEnviron, k+"="+v)
-	}
-	for k, v := range extraEnv {
-		osEnviron = append(osEnviron, k+"="+v)
-	}
-
-	return osEnviron
 }

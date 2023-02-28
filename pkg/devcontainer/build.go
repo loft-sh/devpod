@@ -136,7 +136,7 @@ func (r *Runner) buildImage(parsedConfig *config.SubstitutedConfig, extendedBuil
 				r.Log.Infof("Found existing prebuilt image %s", prebuildImage)
 
 				// inspect image
-				imageDetails, err := r.Docker.InspectImage(prebuildImage, false)
+				imageDetails, err := r.Docker.InspectImage(prebuildImage, true)
 				if err != nil {
 					return nil, errors.Wrap(err, "get image details")
 				}

@@ -21,7 +21,7 @@ import (
 	"sync"
 )
 
-func NewAgentClient(prov *provider.ProviderConfig, workspace *provider.Workspace, log log.Logger) (client.AgentClient, error) {
+func NewAgentClient(devPodConfig *config.Config, prov *provider.ProviderConfig, workspace *provider.Workspace, log log.Logger) (client.AgentClient, error) {
 	var serverConfig *provider.Server
 	if workspace.Server.ID != "" {
 		var err error
@@ -32,20 +32,22 @@ func NewAgentClient(prov *provider.ProviderConfig, workspace *provider.Workspace
 	}
 
 	return &agentClient{
-		config:    prov,
-		workspace: workspace,
-		server:    serverConfig,
-		log:       log,
+		devPodConfig: devPodConfig,
+		config:       prov,
+		workspace:    workspace,
+		server:       serverConfig,
+		log:          log,
 	}, nil
 }
 
 type agentClient struct {
 	m sync.Mutex
 
-	config    *provider.ProviderConfig
-	workspace *provider.Workspace
-	server    *provider.Server
-	log       log.Logger
+	devPodConfig *config.Config
+	config       *provider.ProviderConfig
+	workspace    *provider.Workspace
+	server       *provider.Server
+	log          log.Logger
 }
 
 func (s *agentClient) Provider() string {
@@ -98,26 +100,16 @@ func (s *agentClient) Options() map[string]*provider.ProviderOption {
 	return s.config.Options
 }
 
-func (s *agentClient) RefreshOptions(beforeStage, afterStage string) error {
+func (s *agentClient) RefreshOptions(ctx context.Context, beforeStage, afterStage string) error {
 	s.m.Lock()
 	defer s.m.Unlock()
 
-	if s.workspace.Server.ID != "" {
-		serverConfig, err := options.ResolveAndSaveOptionsServer(context.TODO(), beforeStage, afterStage, s.server, s.config)
-		if err != nil {
-			return err
-		}
-
-		s.server = serverConfig
-		return nil
-	}
-
-	workspace, err := options.ResolveAndSaveOptions(context.TODO(), beforeStage, afterStage, s.workspace, s.config)
+	var err error
+	s.workspace, s.devPodConfig, err = options.ResolveAndSaveOptions(ctx, beforeStage, afterStage, s.workspace, s.server, s.devPodConfig, s.config)
 	if err != nil {
 		return err
 	}
 
-	s.workspace = workspace
 	return nil
 }
 
@@ -125,29 +117,11 @@ func (s *agentClient) AgentInfo() (string, error) {
 	s.m.Lock()
 	defer s.m.Unlock()
 
-	// trim options that don't exist
-	workspace := provider.CloneWorkspace(s.workspace)
-	if workspace.Server.ID != "" {
-		newOptions := map[string]config.OptionValue{}
-		for name, option := range s.server.Provider.Options {
-			if option.Local {
-				continue
-			}
-
-			newOptions[name] = option
-		}
-		workspace.Provider.Options = newOptions
-	} else if workspace.Provider.Options != nil {
-		for name, option := range workspace.Provider.Options {
-			if option.Local {
-				delete(workspace.Provider.Options, name)
-			}
-		}
-	}
-
 	// marshal config
 	out, err := json.Marshal(&provider.AgentWorkspaceInfo{
-		Workspace: *workspace,
+		Workspace: s.workspace,
+		Server:    s.server,
+		Options:   s.devPodConfig.Current().ProviderOptions(s.Provider()),
 	})
 	if err != nil {
 		return "", err
@@ -187,8 +161,7 @@ func (s *agentClient) Create(ctx context.Context, options client.CreateOptions) 
 		Folder:  serverDir,
 		Context: s.workspace.Context,
 		Provider: provider.ServerProviderConfig{
-			Name:    s.workspace.Provider.Name,
-			Options: s.workspace.Provider.Options,
+			Name: s.workspace.Provider.Name,
 		},
 		CreationTimestamp: types.Now(),
 	}
@@ -212,7 +185,7 @@ func (s *agentClient) Create(ctx context.Context, options client.CreateOptions) 
 	}
 
 	// create server
-	return NewServerClient(s.config, s.server, s.log).Create(ctx, options)
+	return NewServerClient(s.devPodConfig, s.config, s.server, s.log).Create(ctx, options)
 }
 
 func (s *agentClient) Delete(ctx context.Context, options client.DeleteOptions) error {
@@ -227,22 +200,15 @@ func (s *agentClient) Delete(ctx context.Context, options client.DeleteOptions) 
 	}
 
 	// should just delete container?
-	if s.workspace.Server.ID == "" || !s.workspace.Server.AutoDelete {
+	if !s.isServerProvider() || !s.workspace.Server.AutoDelete {
 		writer := s.log.Writer(logrus.InfoLevel, false)
 		defer writer.Close()
 
 		s.log.Infof("Deleting container...")
 		command := fmt.Sprintf("%s agent workspace delete --id %s --context %s", s.workspace.Provider.Agent.Path, s.workspace.ID, s.workspace.Context)
-		var err error
-		if s.workspace.Server.ID != "" {
-			err = runCommand(ctx, "command", s.config.Exec.Command, ToEnvironmentServer(s.server, map[string]string{
-				provider.CommandEnv: command,
-			}), nil, writer, writer, s.log.ErrorStreamOnly())
-		} else {
-			err = runCommand(ctx, "command", s.config.Exec.Command, ToEnvironment(s.workspace, map[string]string{
-				provider.CommandEnv: command,
-			}), nil, writer, writer, s.log.ErrorStreamOnly())
-		}
+		err := runCommand(ctx, "command", s.config.Exec.Command, ToEnvironment(s.workspace, s.server, s.devPodConfig.ProviderOptions(s.config.Name), map[string]string{
+			provider.CommandEnv: command,
+		}), nil, writer, writer, s.log.ErrorStreamOnly())
 		if err != nil {
 			if !options.Force {
 				return err
@@ -254,7 +220,7 @@ func (s *agentClient) Delete(ctx context.Context, options client.DeleteOptions) 
 		}
 	} else if s.workspace.Server.ID != "" && len(s.config.Exec.Delete) > 0 {
 		// delete server if config was found
-		err := NewServerClient(s.config, s.server, s.log).Delete(ctx, options)
+		err := NewServerClient(s.devPodConfig, s.config, s.server, s.log).Delete(ctx, options)
 		if err != nil {
 			return err
 		}
@@ -267,18 +233,18 @@ func (s *agentClient) Start(ctx context.Context, options client.StartOptions) er
 	s.m.Lock()
 	defer s.m.Unlock()
 
-	if s.workspace.Server.ID == "" {
+	if !s.isServerProvider() {
 		return nil
 	}
 
-	return NewServerClient(s.config, s.server, s.log).Start(ctx, options)
+	return NewServerClient(s.devPodConfig, s.config, s.server, s.log).Start(ctx, options)
 }
 
 func (s *agentClient) Stop(ctx context.Context, options client.StopOptions) error {
 	s.m.Lock()
 	defer s.m.Unlock()
 
-	if s.workspace.Server.ID == "" || !s.workspace.Server.AutoDelete {
+	if !s.isServerProvider() || !s.workspace.Server.AutoDelete {
 		writer := s.log.Writer(logrus.InfoLevel, false)
 		defer writer.Close()
 
@@ -286,16 +252,9 @@ func (s *agentClient) Stop(ctx context.Context, options client.StopOptions) erro
 
 		s.log.Infof("Stopping container...")
 		command := fmt.Sprintf("%s agent workspace stop --id %s --context %s", s.workspace.Provider.Agent.Path, s.workspace.ID, s.workspace.Context)
-		var err error
-		if s.workspace.Server.ID != "" {
-			err = runCommand(ctx, "command", s.config.Exec.Command, ToEnvironmentServer(s.server, map[string]string{
-				provider.CommandEnv: command,
-			}), nil, writer, writer, s.log.ErrorStreamOnly())
-		} else {
-			err = runCommand(ctx, "command", s.config.Exec.Command, ToEnvironment(s.workspace, map[string]string{
-				provider.CommandEnv: command,
-			}), nil, writer, writer, s.log.ErrorStreamOnly())
-		}
+		err := runCommand(ctx, "command", s.config.Exec.Command, ToEnvironment(s.workspace, s.server, s.devPodConfig.ProviderOptions(s.config.Name), map[string]string{
+			provider.CommandEnv: command,
+		}), nil, writer, writer, s.log.ErrorStreamOnly())
 		if err != nil {
 			return err
 		}
@@ -304,58 +263,26 @@ func (s *agentClient) Stop(ctx context.Context, options client.StopOptions) erro
 		return nil
 	}
 
-	return NewServerClient(s.config, s.server, s.log).Stop(ctx, options)
+	return NewServerClient(s.devPodConfig, s.config, s.server, s.log).Stop(ctx, options)
 }
 
 func (s *agentClient) Command(ctx context.Context, commandOptions client.CommandOptions) (err error) {
-	if s.workspace.Server.ID == "" {
-		// resolve options
-		s.m.Lock()
-		s.workspace, err = options.ResolveAndSaveOptions(ctx, "command", "", s.workspace, s.config)
+	// resolve options
+	if !commandOptions.SkipOptionsResolve {
+		err := s.RefreshOptions(ctx, "command", "")
 		if err != nil {
-			s.m.Unlock()
 			return err
 		}
-		environ := ToEnvironment(s.workspace, map[string]string{
-			provider.CommandEnv: commandOptions.Command,
-		})
-		s.m.Unlock()
-
-		// resolve after again
-		defer func() {
-			s.m.Lock()
-			defer s.m.Unlock()
-
-			if err == nil {
-				s.workspace, err = options.ResolveAndSaveOptions(ctx, "", "command", s.workspace, s.config)
-			}
-		}()
-
-		return runCommand(ctx, "command", s.config.Exec.Command, environ, commandOptions.Stdin, commandOptions.Stdout, commandOptions.Stderr, s.log.ErrorStreamOnly())
 	}
 
-	// resolve options
+	// get environment variables
 	s.m.Lock()
-	s.server, err = options.ResolveAndSaveOptionsServer(ctx, "command", "", s.server, s.config)
-	if err != nil {
-		s.m.Unlock()
-		return err
-	}
-	environ := ToEnvironmentServer(s.server, map[string]string{
+	environ := ToEnvironment(s.workspace, s.server, s.devPodConfig.ProviderOptions(s.config.Name), map[string]string{
 		provider.CommandEnv: commandOptions.Command,
 	})
 	s.m.Unlock()
 
-	// resolve after again
-	defer func() {
-		if err == nil {
-			s.m.Lock()
-			defer s.m.Unlock()
-
-			s.server, err = options.ResolveAndSaveOptionsServer(ctx, "", "command", s.server, s.config)
-		}
-	}()
-
+	// resolve options
 	return runCommand(ctx, "command", s.config.Exec.Command, environ, commandOptions.Stdin, commandOptions.Stdout, commandOptions.Stderr, s.log.ErrorStreamOnly())
 }
 
@@ -364,12 +291,12 @@ func (s *agentClient) Status(ctx context.Context, options client.StatusOptions) 
 	defer s.m.Unlock()
 
 	// check if provider has status command
-	if len(s.config.Exec.Create) > 0 {
+	if s.isServerProvider() {
 		if s.server == nil {
 			return client.StatusNotFound, nil
 		}
 
-		return NewServerClient(s.config, s.server, s.log).Status(ctx, options)
+		return NewServerClient(s.devPodConfig, s.config, s.server, s.log).Status(ctx, options)
 	}
 
 	// logic:
@@ -389,8 +316,12 @@ func (s *agentClient) Status(ctx context.Context, options client.StatusOptions) 
 	return client.StatusNotFound, nil
 }
 
-func ToEnvironment(workspace *provider.Workspace, extraEnv map[string]string) []string {
-	env := provider.ToOptions(workspace)
+func (s *agentClient) isServerProvider() bool {
+	return len(s.config.Exec.Create) > 0
+}
+
+func ToEnvironment(workspace *provider.Workspace, server *provider.Server, options map[string]config.OptionValue, extraEnv map[string]string) []string {
+	env := provider.ToOptions(workspace, server, options)
 
 	// create environment variables for command
 	osEnviron := os.Environ()

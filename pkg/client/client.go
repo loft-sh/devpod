@@ -52,7 +52,7 @@ type AgentClient interface {
 	WorkspaceClient
 
 	// RefreshOptions updates the options
-	RefreshOptions(beforeStage, afterStage string) error
+	RefreshOptions(ctx context.Context, beforeStage, afterStage string) error
 
 	// AgentInfo returns the info to send to the agent
 	AgentInfo() (string, error)
@@ -86,6 +86,8 @@ type CommandOptions struct {
 	Stdin   io.Reader
 	Stdout  io.Writer
 	Stderr  io.Writer
+
+	SkipOptionsResolve bool
 }
 
 type Status string

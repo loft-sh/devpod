@@ -211,6 +211,12 @@ func (cmd *UpCmd) devPodUpServer(ctx context.Context, client client2.AgentClient
 		return nil, err
 	}
 
+	// update options
+	err = client.RefreshOptions(ctx, "command", "")
+	if err != nil {
+		return nil, err
+	}
+
 	// create container etc.
 	log.Infof("Creating devcontainer...")
 	defer log.Debugf("Done creating devcontainer")
@@ -250,6 +256,8 @@ func (cmd *UpCmd) devPodUpServer(ctx context.Context, client client2.AgentClient
 				Stdin:   stdin,
 				Stdout:  stdout,
 				Stderr:  stderr,
+
+				SkipOptionsResolve: true,
 			})
 		}, client.AgentPath(), client.AgentURL(), true, command, stdinReader, stdoutWriter, buf, log.ErrorStreamOnly())
 		if err != nil {
