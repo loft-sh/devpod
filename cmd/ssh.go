@@ -193,6 +193,9 @@ func (cmd *SSHCmd) jumpContainerServer(ctx context.Context, client client2.Agent
 		defer writer.Close()
 
 		command := fmt.Sprintf("%s agent container-tunnel --start-container --token '%s' --workspace-info '%s'", client.AgentPath(), tok, workspaceInfo)
+		if cmd.Debug {
+			command += " --debug"
+		}
 		if cmd.Stdio {
 			return devssh.Run(sshClient, command, os.Stdin, os.Stdout, writer)
 		}
