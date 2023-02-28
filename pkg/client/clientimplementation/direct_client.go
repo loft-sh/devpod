@@ -36,6 +36,10 @@ func (s *directClient) AgentPath() string {
 	return options.ResolveAgentConfig(s.devPodConfig, s.config).Path
 }
 
+func (s *directClient) Server() string {
+	return ""
+}
+
 func (s *directClient) AgentURL() string {
 	return options.ResolveAgentConfig(s.devPodConfig, s.config).DownloadURL
 }

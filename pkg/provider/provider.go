@@ -153,3 +153,13 @@ type ProviderOption struct {
 	// Command is the command to run to specify an option
 	Command string `json:"command,omitempty"`
 }
+
+func (c *ProviderConfig) IsServerProvider() bool {
+	if c.Type == ProviderTypeDirect {
+		return false
+	}
+	if len(c.Exec.Create) > 0 {
+		return true
+	}
+	return false
+}

@@ -43,12 +43,10 @@ func (cmd *StopCmd) Run(ctx context.Context, provider *gcloudProvider, workspace
 		"--async",
 	}
 
-	log.Infof("Stopping VM Instance %s...", name)
 	_, err := provider.output(ctx, args...)
 	if err != nil {
 		return errors.Wrapf(err, "stop vm")
 	}
 
-	log.Infof("Successfully stopped VM instance %s", name)
 	return nil
 }

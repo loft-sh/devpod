@@ -39,6 +39,10 @@ func (s *serverClient) ProviderType() provider.ProviderType {
 	return s.config.Type
 }
 
+func (s *serverClient) Server() string {
+	return s.server.ID
+}
+
 func (s *serverClient) AgentPath() string {
 	return options.ResolveAgentConfig(s.devPodConfig, s.config).Path
 }
@@ -64,19 +68,23 @@ func (s *serverClient) Create(ctx context.Context, options client.CreateOptions)
 }
 
 func (s *serverClient) Start(ctx context.Context, options client.StartOptions) error {
+	s.log.Infof("Starting server %s...", s.server.ID)
 	err := runCommand(ctx, "start", s.config.Exec.Start, ToEnvironment(nil, s.server, s.devPodConfig.ProviderOptions(s.config.Name), nil), os.Stdin, os.Stdout, os.Stderr, s.log)
 	if err != nil {
 		return err
 	}
+	s.log.Donef("Successfully started %s", s.server.ID)
 
 	return nil
 }
 
 func (s *serverClient) Stop(ctx context.Context, options client.StopOptions) error {
+	s.log.Infof("Stopping server %s...", s.server.ID)
 	err := runCommand(ctx, "stop", s.config.Exec.Stop, ToEnvironment(nil, s.server, s.devPodConfig.ProviderOptions(s.config.Name), nil), os.Stdin, os.Stdout, os.Stderr, s.log)
 	if err != nil {
 		return err
 	}
+	s.log.Donef("Successfully stopped %s", s.server.ID)
 
 	return nil
 }

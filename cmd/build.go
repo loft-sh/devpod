@@ -24,6 +24,7 @@ type BuildCmd struct {
 
 	SkipDelete bool
 	Repository string
+	Server     string
 	ForceBuild bool
 }
 
@@ -48,8 +49,9 @@ func NewBuildCmd(flags *flags.GlobalFlags) *cobra.Command {
 				return fmt.Errorf("cannot push to %s, please make sure you have push permissions to repository %s")
 			}
 
+			// create a temporary workspace
 			exists := workspace2.Exists(devPodConfig, args, log.Default)
-			workspaceClient, err := workspace2.ResolveWorkspace(ctx, devPodConfig, nil, args, "", cmd.Provider, log.Default)
+			workspaceClient, err := workspace2.ResolveWorkspace(ctx, devPodConfig, nil, args, "", cmd.Provider, cmd.Server, log.Default)
 			if err != nil {
 				return err
 			}
@@ -70,6 +72,7 @@ func NewBuildCmd(flags *flags.GlobalFlags) *cobra.Command {
 
 	buildCmd.Flags().BoolVar(&cmd.SkipDelete, "skip-delete", false, "If true will not delete the workspace after building it")
 	buildCmd.Flags().BoolVar(&cmd.ForceBuild, "force-build", false, "If true will force build the image")
+	buildCmd.Flags().StringVar(&cmd.Server, "server", "", "The server to use for this workspace. The server needs to exist beforehand or the command will fail. If the workspace already exists, this option has no effect")
 	buildCmd.Flags().StringVar(&cmd.Repository, "repository", "", "The repository to push to")
 	_ = buildCmd.MarkFlagRequired("repository")
 	return buildCmd

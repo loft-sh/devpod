@@ -57,7 +57,7 @@ func (cmd *ExecCmd) Run(ctx context.Context, args []string) error {
 		client client2.WorkspaceClient
 	)
 	if args[1] == "create" {
-		client, err = workspace.ResolveWorkspace(ctx, devPodConfig, nil, []string{args[2]}, "", args[0], log.Default)
+		client, err = workspace.ResolveWorkspace(ctx, devPodConfig, nil, []string{args[2]}, "", "", args[0], log.Default)
 	} else {
 		client, err = workspace.GetWorkspace(ctx, devPodConfig, nil, []string{args[2]}, log.Default)
 	}
