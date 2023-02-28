@@ -42,8 +42,6 @@ func NewContainerTunnelCmd() *cobra.Command {
 
 // Run runs the command logic
 func (cmd *ContainerTunnelCmd) Run(_ *cobra.Command, _ []string) error {
-	// create new docker client
-
 	// get workspace info
 	workspaceInfo, err := agent.WriteWorkspaceInfo(cmd.WorkspaceInfo)
 	if err != nil {
