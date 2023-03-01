@@ -5,8 +5,10 @@ import (
 	"strings"
 )
 
-func (r *Runner) Delete() error {
-	labels := r.getLabels()
+func (r *Runner) Delete(labels []string) error {
+	if len(labels) == 0 {
+		labels = r.getLabels()
+	}
 	containerDetails, err := r.Docker.FindDevContainer(labels)
 	if err != nil {
 		return errors.Wrap(err, "find dev container")
@@ -14,6 +16,7 @@ func (r *Runner) Delete() error {
 		return nil
 	}
 
+	r.Log.Infof("Deleting devcontainer...")
 	if strings.ToLower(containerDetails.State.Status) == "running" {
 		err = r.Docker.Stop(containerDetails.Id)
 		if err != nil {

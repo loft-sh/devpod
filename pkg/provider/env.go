@@ -5,11 +5,14 @@ import (
 	"github.com/loft-sh/devpod/pkg/config"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 )
 
 const (
 	DEVPOD                   = "DEVPOD"
+	DEVPOD_OS                = "DEVPOD_OS"
+	DEVPOD_ARCH              = "DEVPOD_ARCH"
 	WORKSPACE_ID             = "WORKSPACE_ID"
 	WORKSPACE_FOLDER         = "WORKSPACE_FOLDER"
 	WORKSPACE_CONTEXT        = "WORKSPACE_CONTEXT"
@@ -104,10 +107,21 @@ func ToOptions(workspace *Workspace, server *Server, options map[string]config.O
 			retVars[SERVER_PROVIDER] = server.Provider.Name
 		}
 	}
+	for k, v := range GetBaseEnvironment() {
+		retVars[k] = v
+	}
+
+	return retVars
+}
+
+func GetBaseEnvironment() map[string]string {
+	retVars := map[string]string{}
 
 	// devpod binary
 	devPodBinary, _ := os.Executable()
 	retVars[DEVPOD] = filepath.ToSlash(devPodBinary)
+	retVars[DEVPOD_OS] = runtime.GOOS
+	retVars[DEVPOD_ARCH] = runtime.GOARCH
 	return retVars
 }
 

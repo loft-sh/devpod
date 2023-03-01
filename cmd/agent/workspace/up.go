@@ -37,6 +37,9 @@ type UpCmd struct {
 
 	WorkspaceInfo        string
 	PrebuildRepositories []string
+
+	ForceBuild bool
+	Recreate   bool
 }
 
 // NewUpCmd creates a new command
@@ -52,6 +55,8 @@ func NewUpCmd(flags *flags.GlobalFlags) *cobra.Command {
 			return cmd.Run(context.Background())
 		},
 	}
+	upCmd.Flags().BoolVar(&cmd.ForceBuild, "force-build", false, "If true will rebuild the container even if there is a prebuild already")
+	upCmd.Flags().BoolVar(&cmd.Recreate, "recreate", false, "If true will remove any existing containers and recreate them")
 	upCmd.Flags().StringSliceVar(&cmd.PrebuildRepositories, "prebuild-repository", []string{}, "Docker respository that hosts devpod prebuilds for this workspace")
 	upCmd.Flags().StringVar(&cmd.WorkspaceInfo, "workspace-info", "", "The workspace info")
 	_ = upCmd.MarkFlagRequired("workspace-info")
@@ -332,6 +337,9 @@ func PrepareImage(workspaceDir, image string) error {
 func (cmd *UpCmd) devPodUp(workspaceInfo *provider2.AgentWorkspaceInfo, log log.Logger) (*config2.Result, error) {
 	result, err := createRunner(workspaceInfo, log).Up(devcontainer.UpOptions{
 		PrebuildRepositories: cmd.PrebuildRepositories,
+
+		ForceBuild: cmd.ForceBuild,
+		Recreate:   cmd.Recreate,
 	})
 	if err != nil {
 		return nil, err

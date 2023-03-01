@@ -12,7 +12,6 @@ import (
 	"github.com/loft-sh/devpod/pkg/types"
 	"github.com/pkg/errors"
 	"os"
-	"path/filepath"
 	"reflect"
 	"regexp"
 	"sort"
@@ -55,7 +54,7 @@ func ResolveAndSaveOptions(ctx context.Context, beforeStage, afterStage string, 
 }
 
 func ResolveOptions(ctx context.Context, beforeStage, afterStage string, devConfig *config.Config, provider *provider2.ProviderConfig) (*config.Config, error) {
-	resolvedOptions, err := resolveOptionsGeneric(ctx, beforeStage, afterStage, devConfig.ProviderOptions(provider.Name), extraOptions(), provider)
+	resolvedOptions, err := resolveOptionsGeneric(ctx, beforeStage, afterStage, devConfig.ProviderOptions(provider.Name), provider2.GetBaseEnvironment(), provider)
 	if err != nil {
 		return nil, err
 	}
@@ -73,13 +72,6 @@ func ResolveOptions(ctx context.Context, beforeStage, afterStage string, devConf
 	}
 
 	return devConfig, nil
-}
-
-func extraOptions() map[string]string {
-	retVars := map[string]string{}
-	devPodBinary, _ := os.Executable()
-	retVars[provider2.DEVPOD] = filepath.ToSlash(devPodBinary)
-	return retVars
 }
 
 func resolveOptionsGeneric(ctx context.Context, beforeStage, afterStage string, optionValues map[string]config.OptionValue, extraValues map[string]string, provider *provider2.ProviderConfig) (map[string]config.OptionValue, error) {

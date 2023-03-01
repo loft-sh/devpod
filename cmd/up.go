@@ -40,6 +40,9 @@ type UpCmd struct {
 	IDE    string
 
 	PrebuildRepositories []string
+
+	ForceBuild bool
+	Recreate   bool
 }
 
 // NewUpCmd creates a new up command
@@ -71,6 +74,8 @@ func NewUpCmd(flags *flags.GlobalFlags) *cobra.Command {
 		},
 	}
 
+	upCmd.Flags().BoolVar(&cmd.ForceBuild, "force-build", false, "If true will rebuild the container even if there is a prebuild already")
+	upCmd.Flags().BoolVar(&cmd.Recreate, "recreate", false, "If true will remove any existing containers and recreate them")
 	upCmd.Flags().StringSliceVar(&cmd.PrebuildRepositories, "prebuild-repository", []string{}, "Docker respository that hosts devpod prebuilds for this workspace")
 	upCmd.Flags().StringVar(&cmd.ID, "id", "", "The id to use for the workspace")
 	upCmd.Flags().StringVar(&cmd.Server, "server", "", "The server to use for this workspace. The server needs to exist beforehand or the command will fail. If the workspace already exists, this option has no effect")
@@ -229,6 +234,12 @@ func (cmd *UpCmd) devPodUpServer(ctx context.Context, client client2.AgentClient
 	}
 	for _, repo := range cmd.PrebuildRepositories {
 		command += fmt.Sprintf(" --prebuild-repository '%s'", repo)
+	}
+	if cmd.Recreate {
+		command += " --recreate"
+	}
+	if cmd.ForceBuild {
+		command += " --force-build"
 	}
 
 	// create pipes

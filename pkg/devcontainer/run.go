@@ -45,6 +45,9 @@ type UpOptions struct {
 	PrebuildRepositories []string
 
 	NoBuild bool
+
+	ForceBuild bool
+	Recreate   bool
 }
 
 func (r *Runner) prepare() (*config.SubstitutedConfig, *WorkspaceConfig, error) {
