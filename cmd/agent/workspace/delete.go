@@ -80,7 +80,7 @@ func (cmd *DeleteCmd) Run(ctx context.Context) error {
 
 func removeContainer(workspaceInfo *provider2.AgentWorkspaceInfo, log log.Logger) error {
 	log.Debugf("Removing DevPod container from server...")
-	err := createRunner(workspaceInfo, log).Delete()
+	err := createRunner(workspaceInfo, log).Delete(nil)
 	if err != nil {
 		return err
 	}

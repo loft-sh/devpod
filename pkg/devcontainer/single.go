@@ -9,6 +9,13 @@ import (
 
 func (r *Runner) runSingleContainer(parsedConfig *config.SubstitutedConfig, workspaceMount string, options UpOptions) (*config.Result, error) {
 	labels := r.getLabels()
+	if options.Recreate {
+		err := r.Delete(labels)
+		if err != nil {
+			return nil, errors.Wrap(err, "delete devcontainer")
+		}
+	}
+
 	containerDetails, err := r.Docker.FindDevContainer(labels)
 	if err != nil {
 		return nil, errors.Wrap(err, "find dev container")
@@ -39,6 +46,7 @@ func (r *Runner) runSingleContainer(parsedConfig *config.SubstitutedConfig, work
 		buildInfo, err := r.build(parsedConfig, BuildOptions{
 			PrebuildRepositories: options.PrebuildRepositories,
 			NoBuild:              options.NoBuild,
+			ForceRebuild:         options.ForceBuild,
 		})
 		if err != nil {
 			return nil, errors.Wrap(err, "build image")
