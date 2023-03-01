@@ -24,8 +24,9 @@ import (
 type SetupContainerCmd struct {
 	*flags.GlobalFlags
 
-	WorkspaceInfo string
-	SetupInfo     string
+	ChownWorkspace bool
+	WorkspaceInfo  string
+	SetupInfo      string
 }
 
 // NewSetupContainerCmd creates a new command
@@ -37,6 +38,7 @@ func NewSetupContainerCmd() *cobra.Command {
 		Args:  cobra.NoArgs,
 		RunE:  cmd.Run,
 	}
+	setupContainerCmd.Flags().BoolVar(&cmd.ChownWorkspace, "chown-workspace", false, "If DevPod should chown the workspace to the remote user")
 	setupContainerCmd.Flags().StringVar(&cmd.WorkspaceInfo, "workspace-info", "", "The workspace info")
 	setupContainerCmd.Flags().StringVar(&cmd.SetupInfo, "setup-info", "", "The container setup info")
 	_ = setupContainerCmd.MarkFlagRequired("setup-info")
@@ -63,7 +65,7 @@ func (cmd *SetupContainerCmd) Run(_ *cobra.Command, _ []string) error {
 	}
 
 	// setting up container
-	err = setup.SetupContainer(setupInfo, log.Default)
+	err = setup.SetupContainer(setupInfo, cmd.ChownWorkspace, log.Default)
 	if err != nil {
 		return err
 	}

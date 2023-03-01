@@ -2,6 +2,7 @@ package setup
 
 import (
 	"github.com/loft-sh/devpod/pkg/command"
+	copy2 "github.com/loft-sh/devpod/pkg/copy"
 	"github.com/loft-sh/devpod/pkg/devcontainer/config"
 	"github.com/loft-sh/devpod/pkg/log"
 	"github.com/loft-sh/devpod/pkg/types"
@@ -13,17 +14,18 @@ import (
 	"strings"
 )
 
-func SetupContainer(setupInfo *config.Result, log log.Logger) error {
+func SetupContainer(setupInfo *config.Result, chownWorkspace bool, log log.Logger) error {
 	// chown user dir
-	log.Debugf("Chown workspace...")
-	err := ChownWorkspace(setupInfo.ContainerDetails, setupInfo.MergedConfig, setupInfo.SubstitutionContext)
-	if err != nil {
-		return errors.Wrap(err, "chown workspace")
+	if chownWorkspace {
+		err := ChownWorkspace(setupInfo.ContainerDetails, setupInfo.MergedConfig, setupInfo.SubstitutionContext, log)
+		if err != nil {
+			return errors.Wrap(err, "chown workspace")
+		}
 	}
 
 	// patch remote env
 	log.Debugf("Patch etc environment & profile...")
-	err = PatchEtcEnvironment(setupInfo.MergedConfig)
+	err := PatchEtcEnvironment(setupInfo.MergedConfig)
 	if err != nil {
 		return errors.Wrap(err, "patch etc environment")
 	}
@@ -45,7 +47,7 @@ func SetupContainer(setupInfo *config.Result, log log.Logger) error {
 	return nil
 }
 
-func ChownWorkspace(containerDetails *config.ContainerDetails, mergedConfig *config.MergedDevContainerConfig, substitutionContext *config.SubstitutionContext) error {
+func ChownWorkspace(containerDetails *config.ContainerDetails, mergedConfig *config.MergedDevContainerConfig, substitutionContext *config.SubstitutionContext, log log.Logger) error {
 	user := mergedConfig.RemoteUser
 	if mergedConfig.RemoteUser == "" && containerDetails != nil {
 		user = containerDetails.Config.User
@@ -64,21 +66,10 @@ func ChownWorkspace(containerDetails *config.ContainerDetails, mergedConfig *con
 		return errors.Wrapf(err, "create marker file: %v", string(out))
 	}
 
-	out, err = exec.Command("sh", "-c", `chown -R `+user+` `+substitutionContext.ContainerWorkspaceFolder).CombinedOutput()
+	log.Infof("Chown workspace...")
+	err = copy2.ChownR(substitutionContext.ContainerWorkspaceFolder, user)
 	if err != nil {
-		return errors.Wrapf(err, "chown workspace folder: %v", string(out))
-	}
-
-	// make sure all volume mounts are owned by the correct user
-	for _, mount := range mergedConfig.Mounts {
-		if mount.Type != "volume" || mount.Target == "" {
-			continue
-		}
-
-		out, err = exec.Command("sh", "-c", `chown -R `+user+` `+mount.Target).CombinedOutput()
-		if err != nil {
-			return errors.Wrapf(err, "chown volume: %v", string(out))
-		}
+		return errors.Wrapf(err, "chown workspace folder: %s", string(out))
 	}
 
 	return nil
@@ -209,7 +200,7 @@ func runPostCreateCommand(commands []types.StrArray, user, dir string, remoteEnv
 	defer writer.Close()
 
 	for _, c := range commands {
-		log.Infof("Run command: %s", strings.Join(c, " "))
+		log.Infof("Run command: %s...", strings.Join(c, " "))
 		args := []string{}
 		if user != "root" {
 			args = append(args, "su", user, "-c", strings.Join(c, " "))
@@ -229,7 +220,7 @@ func runPostCreateCommand(commands []types.StrArray, user, dir string, remoteEnv
 			log.Errorf("Failed running command: %v", err)
 			return err
 		}
-		log.Infof("Successfully ran command: %s", strings.Join(c, " "))
+		log.Donef("Successfully ran command: %s", strings.Join(c, " "))
 	}
 
 	return nil

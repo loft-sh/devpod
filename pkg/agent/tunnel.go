@@ -1,6 +1,7 @@
 package agent
 
 import (
+	"bufio"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -18,6 +19,7 @@ import (
 	"net"
 	"os"
 	"strings"
+	"time"
 
 	"github.com/loft-sh/devpod/pkg/agent/tunnel"
 	"github.com/loft-sh/devpod/pkg/log"
@@ -169,7 +171,14 @@ func (t *tunnelServer) ReadWorkspace(response *tunnel.Empty, stream tunnel.Tunne
 		return fmt.Errorf("workspace is nil")
 	}
 
-	return extract.WriteTar(NewStreamWriter(stream), t.workspace.Source.LocalFolder)
+	buf := bufio.NewWriterSize(NewStreamWriter(stream, t.log), 10*1024)
+	err := extract.WriteTar(buf, t.workspace.Source.LocalFolder, false)
+	if err != nil {
+		return err
+	}
+
+	// make sure buffer is flushed
+	return buf.Flush()
 }
 
 func NewStreamReader(stream tunnel.Tunnel_ReadWorkspaceClient) io.Reader {
@@ -180,16 +189,16 @@ func NewStreamReader(stream tunnel.Tunnel_ReadWorkspaceClient) io.Reader {
 
 		for {
 			resp, err := stream.Recv()
-			if err == io.EOF {
-				return
-			}
-			if err != nil {
-				_ = writer.CloseWithError(err)
-			} else if len(resp.Content) > 0 {
+			if resp != nil && len(resp.Content) > 0 {
 				_, err = writer.Write(resp.Content)
 				if err != nil {
 					_ = writer.CloseWithError(err)
 				}
+			}
+			if err == io.EOF {
+				return
+			} else if err != nil {
+				_ = writer.CloseWithError(err)
 			}
 		}
 	}()
@@ -197,18 +206,28 @@ func NewStreamReader(stream tunnel.Tunnel_ReadWorkspaceClient) io.Reader {
 	return reader
 }
 
-func NewStreamWriter(stream tunnel.Tunnel_ReadWorkspaceServer) io.Writer {
-	return &streamWriter{stream: stream}
+func NewStreamWriter(stream tunnel.Tunnel_ReadWorkspaceServer, log log.Logger) io.Writer {
+	return &streamWriter{stream: stream, log: log, lastMessage: time.Now()}
 }
 
 type streamWriter struct {
 	stream tunnel.Tunnel_ReadWorkspaceServer
+
+	lastMessage  time.Time
+	bytesWritten int64
+	log          log.Logger
 }
 
 func (s *streamWriter) Write(p []byte) (int, error) {
 	err := s.stream.Send(&tunnel.Chunk{Content: p})
 	if err != nil {
 		return 0, err
+	}
+
+	s.bytesWritten += int64(len(p))
+	if time.Since(s.lastMessage) > time.Second*2 {
+		s.log.Infof("Uploaded %.2f MB", float64(s.bytesWritten)/1024/1024)
+		s.lastMessage = time.Now()
 	}
 
 	return len(p), nil
