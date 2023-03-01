@@ -111,7 +111,7 @@ func extractNext(tarReader *tar.Reader, destFolder string, options *Options) (bo
 
 	// Is dir?
 	if header.FileInfo().IsDir() {
-		if err := os.Mkdir(outFileName, dirPerm); err != nil {
+		if err := os.MkdirAll(outFileName, dirPerm); err != nil {
 			return false, err
 		}
 
