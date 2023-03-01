@@ -14,6 +14,10 @@ import (
 
 type Options struct {
 	StripLevels int
+
+	Perm *os.FileMode
+	Uid  *int
+	Gid  *int
 }
 
 type Option func(o *Options)
@@ -21,6 +25,12 @@ type Option func(o *Options)
 func StripLevels(levels int) Option {
 	return func(o *Options) {
 		o.StripLevels = levels
+	}
+}
+
+func OverridePerm(perm os.FileMode) Option {
+	return func(o *Options) {
+		o.Perm = &perm
 	}
 }
 
@@ -89,30 +99,40 @@ func extractNext(tarReader *tar.Reader, destFolder string, options *Options) (bo
 	outFileName := path.Join(destFolder, relativePath)
 	baseName := path.Dir(outFileName)
 
+	dirPerm := os.ModePerm
+	if options.Perm != nil {
+		dirPerm = *options.Perm
+	}
+
 	// Check if newer file is there and then don't override?
-	if err := os.MkdirAll(baseName, 0755); err != nil {
+	if err := os.MkdirAll(baseName, dirPerm); err != nil {
 		return false, err
 	}
 
+	// Is dir?
 	if header.FileInfo().IsDir() {
-		if err := os.MkdirAll(outFileName, 0755); err != nil {
+		if err := os.Mkdir(outFileName, dirPerm); err != nil {
 			return false, err
 		}
 
 		return true, nil
 	}
 
+	filePerm := os.FileMode(0666)
+	if options.Perm != nil {
+		filePerm = *options.Perm
+	}
+
 	// Create / Override file
-	outFile, err := os.Create(outFileName)
+	outFile, err := os.OpenFile(outFileName, os.O_RDWR|os.O_CREATE|os.O_TRUNC, filePerm)
 	if err != nil {
 		// Try again after 5 seconds
 		time.Sleep(time.Second * 5)
-		outFile, err = os.Create(outFileName)
+		outFile, err = os.OpenFile(outFileName, os.O_RDWR|os.O_CREATE|os.O_TRUNC, filePerm)
 		if err != nil {
 			return false, errors.Wrapf(err, "create %s", outFileName)
 		}
 	}
-
 	defer outFile.Close()
 
 	if _, err := io.Copy(outFile, tarReader); err != nil {
@@ -123,7 +143,9 @@ func extractNext(tarReader *tar.Reader, destFolder string, options *Options) (bo
 	}
 
 	// Set permissions
-	_ = os.Chmod(outFileName, header.FileInfo().Mode()|0600)
+	if options.Perm == nil {
+		_ = os.Chmod(outFileName, header.FileInfo().Mode()|0600)
+	}
 
 	// Set mod time from tar header
 	_ = os.Chtimes(outFileName, time.Now(), header.FileInfo().ModTime())

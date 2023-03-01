@@ -13,7 +13,7 @@ import (
 	"time"
 )
 
-func WriteTar(writer io.Writer, localPath string) error {
+func WriteTar(writer io.Writer, localPath string, compress bool) error {
 	absolute, err := filepath.Abs(localPath)
 	if err != nil {
 		return errors.Wrap(err, "absolute")
@@ -26,8 +26,13 @@ func WriteTar(writer io.Writer, localPath string) error {
 	}
 
 	// Use compression
-	gw := gzip.NewWriter(writer)
-	defer gw.Close()
+	gw := writer
+	if compress {
+		gwWriter := gzip.NewWriter(writer)
+		defer gwWriter.Close()
+
+		gw = gwWriter
+	}
 
 	// Create tar writer
 	tarWriter := tar.NewWriter(gw)

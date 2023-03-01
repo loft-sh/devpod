@@ -9,12 +9,12 @@ import (
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 	"io"
+	"runtime"
 	"strings"
 )
 
 func (r *Runner) setupContainer(containerDetails *config.ContainerDetails, mergedConfig *config.MergedDevContainerConfig) error {
 	// inject agent
-	r.Log.Infof("Setup container...")
 	err := agent.InjectAgent(context.TODO(), func(ctx context.Context, command string, stdin io.Reader, stdout io.Writer, stderr io.Writer) error {
 		args := []string{"exec", "-i", "-u", "root", containerDetails.Id, "sh", "-c", command}
 		return r.Docker.Run(ctx, args, stdin, stdout, stderr)
@@ -49,13 +49,15 @@ func (r *Runner) setupContainer(containerDetails *config.ContainerDetails, merge
 		return err
 	}
 
-	// execute docker command
 	writer := r.Log.Writer(logrus.InfoLevel, false)
 	defer writer.Close()
 
-	// TODO: clone dot files
-
+	// execute docker command
+	r.Log.Infof("Setup container...")
 	args := []string{"exec", "-u", "root", containerDetails.Id, agent.RemoteDevPodHelperLocation, "agent", "container", "setup", "--setup-info", compressed, "--workspace-info", workspaceConfigCompressed}
+	if runtime.GOOS == "linux" {
+		args = append(args, "--chown-workspace")
+	}
 	if r.Log.GetLevel() == logrus.DebugLevel {
 		args = append(args, "--debug")
 	}
