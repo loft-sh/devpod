@@ -1,0 +1,38 @@
+module.exports = {
+  root: true,
+  env: {
+    browser: true,
+    es6: true,
+    node: true,
+  },
+  extends: [
+    "eslint:recommended",
+    "plugin:react/recommended",
+    "plugin:@typescript-eslint/eslint-recommended",
+    "plugin:react-hooks/recommended",
+    "prettier",
+  ],
+  globals: {
+    Atomics: "readonly",
+    SharedArrayBuffer: "readonly",
+  },
+  parser: "@typescript-eslint/parser",
+  parserOptions: {
+    project: ["./tsconfig.json"],
+  },
+  plugins: ["react", "@typescript-eslint"],
+  settings: {
+    react: {
+      version: "detect",
+    },
+  },
+  rules: {
+    "react/react-in-jsx-scope": "off",
+    "no-unused-vars": "off", // overriden by `@typescript-eslint`
+    "@typescript-eslint/no-unused-vars": ["error"],
+    "padding-line-between-statements": ["warn", { blankLine: "always", prev: "*", next: "return" }],
+    "no-warning-comments": ["error", { terms: ["fixme"], location: "start" }],
+    "@typescript-eslint/no-unnecessary-condition": ["warn", { allowConstantLoopConditions: true }],
+  },
+  ignorePatterns: ["dist/**/*", "src-tauri/**/*", "public/**/*"],
+}
