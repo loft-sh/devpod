@@ -33,8 +33,8 @@ func NewCreateCmd() *cobra.Command {
 }
 
 // Run runs the command logic
-func (cmd *CreateCmd) Run(ctx context.Context, provider *gcloudProvider, workspace *provider.Workspace, log log.Logger) error {
-	name := getName(workspace)
+func (cmd *CreateCmd) Run(ctx context.Context, provider *gcloudProvider, machine *provider.Machine, log log.Logger) error {
+	name := getName(machine)
 	args := []string{
 		"compute",
 		"instances",

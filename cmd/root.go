@@ -5,8 +5,8 @@ import (
 	"github.com/loft-sh/devpod/cmd/agent"
 	"github.com/loft-sh/devpod/cmd/flags"
 	"github.com/loft-sh/devpod/cmd/helper"
+	"github.com/loft-sh/devpod/cmd/machine"
 	"github.com/loft-sh/devpod/cmd/provider"
-	"github.com/loft-sh/devpod/cmd/server"
 	"github.com/loft-sh/devpod/cmd/use"
 	log2 "github.com/loft-sh/devpod/pkg/log"
 	"github.com/sirupsen/logrus"
@@ -80,7 +80,7 @@ func BuildRoot() *cobra.Command {
 	rootCmd.AddCommand(provider.NewProviderCmd(globalFlags))
 	rootCmd.AddCommand(use.NewUseCmd(globalFlags))
 	rootCmd.AddCommand(helper.NewHelperCmd(globalFlags))
-	rootCmd.AddCommand(server.NewServerCmd(globalFlags))
+	rootCmd.AddCommand(machine.NewMachineCmd(globalFlags))
 	rootCmd.AddCommand(NewUpCmd(globalFlags))
 	rootCmd.AddCommand(NewDeleteCmd(globalFlags))
 	rootCmd.AddCommand(NewSSHCmd(globalFlags))

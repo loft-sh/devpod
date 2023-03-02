@@ -65,10 +65,9 @@ func NewUpCmd(flags *flags.GlobalFlags) *cobra.Command {
 
 // Run runs the command logic
 func (cmd *UpCmd) Run(ctx context.Context) error {
-	// get workspace
-	workspaceInfo, err := agent.WriteWorkspaceInfo(cmd.WorkspaceInfo)
+	workspaceInfo, decoded, err := agent.DecodeWorkspaceInfo(cmd.WorkspaceInfo)
 	if err != nil {
-		return fmt.Errorf("error parsing workspace info: %v", err)
+		return err
 	}
 
 	// check if we need to become root
@@ -77,6 +76,12 @@ func (cmd *UpCmd) Run(ctx context.Context) error {
 		return fmt.Errorf("rerun as root: %v", err)
 	} else if shouldExit {
 		return nil
+	}
+
+	// get workspace
+	err = agent.WriteWorkspaceInfo(workspaceInfo, decoded)
+	if err != nil {
+		return fmt.Errorf("error parsing workspace info: %v", err)
 	}
 
 	// initialize the workspace

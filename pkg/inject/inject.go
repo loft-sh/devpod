@@ -134,6 +134,7 @@ func InjectAndExecute(
 		return result.wasExecuted, nil
 	}
 
+	log.Debugf("Rerun command as binary was injected")
 	return true, exec(ctx, command, stdin, stdout, stderr)
 }
 

@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"github.com/gen2brain/beeep"
 	"github.com/loft-sh/devpod/cmd/flags"
-	"github.com/loft-sh/devpod/cmd/server"
+	"github.com/loft-sh/devpod/cmd/machine"
 	"github.com/loft-sh/devpod/pkg/agent"
 	client2 "github.com/loft-sh/devpod/pkg/client"
 	"github.com/loft-sh/devpod/pkg/config"
@@ -175,7 +175,7 @@ func (cmd *SSHCmd) jumpContainerServer(ctx context.Context, client client2.Agent
 
 	// create credential helper in workspace
 	var runInContainer tunnel.Handler
-	if client.WorkspaceConfig().IDE.IDE != provider2.IDEVSCode {
+	if client.WorkspaceConfig().IDE.IDE != provider2.IDEVSCode && cmd.User != "" {
 		runInContainer = func(client *ssh.Client) error {
 			err := runCredentialsServer(ctx, client, cmd.User, log)
 			if err != nil {
@@ -192,6 +192,7 @@ func (cmd *SSHCmd) jumpContainerServer(ctx context.Context, client client2.Agent
 		writer := log.ErrorStreamOnly().Writer(logrus.InfoLevel, false)
 		defer writer.Close()
 
+		log.Debugf("Run outer container tunnel")
 		command := fmt.Sprintf("%s agent container-tunnel --start-container --token '%s' --workspace-info '%s'", client.AgentPath(), tok, workspaceInfo)
 		if cmd.Debug {
 			command += " --debug"
@@ -205,7 +206,7 @@ func (cmd *SSHCmd) jumpContainerServer(ctx context.Context, client client2.Agent
 			return err
 		}
 
-		return server.StartSSHSession(ctx, privateKey, cmd.User, cmd.Command, func(ctx context.Context, stdin io.Reader, stdout io.Writer, stderr io.Writer) error {
+		return machine.StartSSHSession(ctx, privateKey, cmd.User, cmd.Command, func(ctx context.Context, stdin io.Reader, stdout io.Writer, stderr io.Writer) error {
 			return devssh.Run(sshClient, command, stdin, stdout, stderr)
 		}, writer)
 	}, runInContainer)
@@ -228,6 +229,7 @@ func runCredentialsServer(ctx context.Context, client *ssh.Client, user string, 
 	cancelCtx, cancel := context.WithCancel(ctx)
 	defer cancel()
 
+	// only run credentials server if we know the user
 	errChan := make(chan error, 1)
 	go func() {
 		defer cancel()

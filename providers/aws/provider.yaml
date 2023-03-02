@@ -63,17 +63,17 @@ exec:
     fi
 
   command: |-
-    DESCRIBE_OUTPUT=$(${AWS_BINARY} ec2 describe-instances --filters "Name=tag:devpod,Values=${SERVER_ID}" "Name=instance-state-name,Values=pending,running,shutting-down,stopping,stopped")
+    DESCRIBE_OUTPUT=$(${AWS_BINARY} ec2 describe-instances --filters "Name=tag:devpod,Values=${MACHINE_ID}" "Name=instance-state-name,Values=pending,running,shutting-down,stopping,stopped")
     INSTANCE_ID=$(echo ${DESCRIBE_OUTPUT} | ${DEVPOD} helper json get 'Reservations[0].Instances[0].InstanceId')
     PUBLIC_DNS=$(echo ${DESCRIBE_OUTPUT} | ${DEVPOD} helper json get 'Reservations[0].Instances[0].NetworkInterfaces[0].Association.PublicDnsName')
     
     # make sure instance has public key
     ${AWS_BINARY} ec2-instance-connect send-ssh-public-key --instance-id ${INSTANCE_ID} \
                                                            --instance-os-user root \
-                                                           --ssh-public-key "file://${SERVER_FOLDER}/id_devpod_rsa.pub" > /dev/null
+                                                           --ssh-public-key "file://${MACHINE_FOLDER}/id_devpod_rsa.pub" > /dev/null
     
     # run command remotely
-    ${DEVPOD} helper ssh-client --address "${PUBLIC_DNS}:22" --key-file "${SERVER_FOLDER}/id_devpod_rsa" -- sh -c "${COMMAND}"
+    ${DEVPOD} helper ssh-client --address "${PUBLIC_DNS}:22" --key-file "${MACHINE_FOLDER}/id_devpod_rsa" -- sh -c "${COMMAND}"
 
   create: |-
     SECURITY_GROUP_ID=$(${AWS_BINARY} ec2 describe-security-groups --filters "Name=tag:devpod,Values=devpod" | ${DEVPOD} helper json get 'SecurityGroups[0].GroupId')
@@ -82,15 +82,15 @@ exec:
                                     --security-group-ids ${SECURITY_GROUP_ID} \
                                     --image-id ${DISK_IMAGE} \
                                     --instance-type ${MACHINE_TYPE} \
-                                    --tag-specifications "ResourceType=instance,Tags=[{Key=devpod,Value=${SERVER_ID}}]" > /dev/null
+                                    --tag-specifications "ResourceType=instance,Tags=[{Key=devpod,Value=${MACHINE_ID}}]" > /dev/null
 
   delete: |-
     ${AWS_BINARY} ec2 terminate-instances \
-                  --instance-ids $(${AWS_BINARY} ec2 describe-instances --filters "Name=tag:devpod,Values=${SERVER_ID}" "Name=instance-state-name,Values=pending,running,shutting-down,stopping,stopped" | ${DEVPOD} helper json get 'Reservations[0].Instances[0].InstanceId') > /dev/null
+                  --instance-ids $(${AWS_BINARY} ec2 describe-instances --filters "Name=tag:devpod,Values=${MACHINE_ID}" "Name=instance-state-name,Values=pending,running,shutting-down,stopping,stopped" | ${DEVPOD} helper json get 'Reservations[0].Instances[0].InstanceId') > /dev/null
 
   status: |-
     STATE=$(${AWS_BINARY} ec2 describe-instances \
-                          --filters "Name=tag:devpod,Values=${SERVER_ID}" "Name=instance-state-name,Values=pending,running,shutting-down,stopping,stopped" | \
+                          --filters "Name=tag:devpod,Values=${MACHINE_ID}" "Name=instance-state-name,Values=pending,running,shutting-down,stopping,stopped" | \
                           ${DEVPOD} helper json get 'Reservations[0].Instances[0].State.Name')
     if [ ! -z "${STATE}" ]; then
       if [ "${STATE}" = "running" ]; then

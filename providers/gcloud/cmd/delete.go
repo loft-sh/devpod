@@ -31,8 +31,8 @@ func NewDeleteCmd() *cobra.Command {
 }
 
 // Run runs the command logic
-func (cmd *DeleteCmd) Run(ctx context.Context, provider *gcloudProvider, workspace *provider.Workspace, log log.Logger) error {
-	name := getName(workspace)
+func (cmd *DeleteCmd) Run(ctx context.Context, provider *gcloudProvider, machine *provider.Machine, log log.Logger) error {
+	name := getName(machine)
 	args := []string{
 		"compute",
 		"instances",
@@ -49,6 +49,6 @@ func (cmd *DeleteCmd) Run(ctx context.Context, provider *gcloudProvider, workspa
 	return nil
 }
 
-func getName(workspace *provider.Workspace) string {
-	return "devpod-" + workspace.Server.ID
+func getName(machine *provider.Machine) string {
+	return "devpod-" + machine.ID
 }

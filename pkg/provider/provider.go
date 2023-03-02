@@ -69,8 +69,8 @@ type ProviderAgentConfigExec struct {
 type ProviderType string
 
 const (
-	ProviderTypeServer = "Server"
-	ProviderTypeDirect = "Direct"
+	ProviderTypeMachine = "Machine"
+	ProviderTypeDirect  = "Direct"
 )
 
 type ProviderBinary struct {
@@ -154,7 +154,7 @@ type ProviderOption struct {
 	Command string `json:"command,omitempty"`
 }
 
-func (c *ProviderConfig) IsServerProvider() bool {
+func (c *ProviderConfig) IsMachineProvider() bool {
 	if c.Type == ProviderTypeDirect {
 		return false
 	}

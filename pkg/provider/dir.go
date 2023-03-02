@@ -11,17 +11,17 @@ import (
 
 const WorkspaceConfigFile = "workspace.json"
 
-const ServerConfigFile = "server.json"
+const MachineConfigFile = "machine.json"
 
 const ProviderConfigFile = "provider.json"
 
-func GetServersDir(context string) (string, error) {
+func GetMachinesDir(context string) (string, error) {
 	configDir, err := config.GetConfigDir()
 	if err != nil {
 		return "", err
 	}
 
-	return filepath.Join(configDir, "contexts", context, "servers"), nil
+	return filepath.Join(configDir, "contexts", context, "machines"), nil
 }
 
 func GetWorkspacesDir(context string) (string, error) {
@@ -60,9 +60,9 @@ func GetProviderBinariesDir(context, providerName string) (string, error) {
 	return filepath.Join(providerDir, "binaries"), nil
 }
 
-func GetServerDir(context, serverID string) (string, error) {
-	if serverID == "" {
-		return "", fmt.Errorf("server id is empty")
+func GetMachineDir(context, machineID string) (string, error) {
+	if machineID == "" {
+		return "", fmt.Errorf("machine id is empty")
 	}
 
 	configDir, err := config.GetConfigDir()
@@ -70,7 +70,7 @@ func GetServerDir(context, serverID string) (string, error) {
 		return "", err
 	}
 
-	return filepath.Join(configDir, "contexts", context, "servers", serverID), nil
+	return filepath.Join(configDir, "contexts", context, "machines", machineID), nil
 }
 
 func GetWorkspaceDir(context, workspaceID string) (string, error) {
@@ -150,24 +150,24 @@ func SaveWorkspaceConfig(workspace *Workspace) error {
 	return nil
 }
 
-func SaveServerConfig(server *Server) error {
-	serverDir, err := GetServerDir(server.Context, server.ID)
+func SaveMachineConfig(machine *Machine) error {
+	machineDir, err := GetMachineDir(machine.Context, machine.ID)
 	if err != nil {
 		return err
 	}
 
-	err = os.MkdirAll(serverDir, 0755)
+	err = os.MkdirAll(machineDir, 0755)
 	if err != nil {
 		return err
 	}
 
-	serverConfigBytes, err := json.Marshal(server)
+	machineConfigBytes, err := json.Marshal(machine)
 	if err != nil {
 		return err
 	}
 
-	serverConfigFile := filepath.Join(serverDir, ServerConfigFile)
-	err = os.WriteFile(serverConfigFile, serverConfigBytes, 0666)
+	machineConfigFile := filepath.Join(machineDir, MachineConfigFile)
+	err = os.WriteFile(machineConfigFile, machineConfigBytes, 0666)
 	if err != nil {
 		return err
 	}
@@ -175,13 +175,13 @@ func SaveServerConfig(server *Server) error {
 	return nil
 }
 
-func ServerExists(context, serverID string) bool {
-	serverDir, err := GetServerDir(context, serverID)
+func MachineExists(context, machineID string) bool {
+	machineDir, err := GetMachineDir(context, machineID)
 	if err != nil {
 		return false
 	}
 
-	_, err = os.Stat(serverDir)
+	_, err = os.Stat(machineDir)
 	if err != nil {
 		return false
 	}
@@ -209,27 +209,27 @@ func LoadProviderConfig(context, provider string) (*ProviderConfig, error) {
 	return providerConfig, nil
 }
 
-func LoadServerConfig(context, serverID string) (*Server, error) {
-	serverDir, err := GetServerDir(context, serverID)
+func LoadMachineConfig(context, machineID string) (*Machine, error) {
+	machineDir, err := GetMachineDir(context, machineID)
 	if err != nil {
 		return nil, err
 	}
 
-	serverConfigFile := filepath.Join(serverDir, ServerConfigFile)
-	serverConfigBytes, err := os.ReadFile(serverConfigFile)
+	machineConfigFile := filepath.Join(machineDir, MachineConfigFile)
+	machineConfigBytes, err := os.ReadFile(machineConfigFile)
 	if err != nil {
 		return nil, err
 	}
 
-	serverConfig := &Server{}
-	err = json.Unmarshal(serverConfigBytes, serverConfig)
+	machineConfig := &Machine{}
+	err = json.Unmarshal(machineConfigBytes, machineConfig)
 	if err != nil {
 		return nil, err
 	}
 
-	serverConfig.Context = context
-	serverConfig.Origin = serverConfigFile
-	return serverConfig, nil
+	machineConfig.Context = context
+	machineConfig.Origin = machineConfigFile
+	return machineConfig, nil
 }
 
 func LoadWorkspaceConfig(context, workspaceID string) (*Workspace, error) {

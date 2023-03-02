@@ -11,6 +11,8 @@ import (
 	provider2 "github.com/loft-sh/devpod/pkg/provider"
 	"github.com/spf13/cobra"
 	"os"
+	"os/signal"
+	"syscall"
 	"time"
 )
 
@@ -43,7 +45,7 @@ func NewContainerTunnelCmd() *cobra.Command {
 // Run runs the command logic
 func (cmd *ContainerTunnelCmd) Run(_ *cobra.Command, _ []string) error {
 	// get workspace info
-	workspaceInfo, err := agent.WriteWorkspaceInfo(cmd.WorkspaceInfo)
+	workspaceInfo, decoded, err := agent.DecodeWorkspaceInfo(cmd.WorkspaceInfo)
 	if err != nil {
 		return err
 	}
@@ -57,6 +59,12 @@ func (cmd *ContainerTunnelCmd) Run(_ *cobra.Command, _ []string) error {
 		os.Exit(0)
 	}
 
+	// write workspace info
+	err = agent.WriteWorkspaceInfo(workspaceInfo, decoded)
+	if err != nil {
+		return err
+	}
+
 	// wait until devcontainer is started
 	containerId := ""
 	if cmd.StartContainer {
@@ -67,6 +75,14 @@ func (cmd *ContainerTunnelCmd) Run(_ *cobra.Command, _ []string) error {
 	if err != nil {
 		return err
 	}
+
+	// handle SIGHUP
+	sigs := make(chan os.Signal, 1)
+	signal.Notify(sigs, syscall.SIGHUP)
+	go func() {
+		<-sigs
+		os.Exit(0)
+	}()
 
 	// create tunnel into container.
 	err = agent.Tunnel(context.TODO(), docker.NewDockerHelper(), agent.RemoteDevPodHelperLocation, agent.DefaultAgentDownloadURL, containerId, cmd.Token, os.Stdin, os.Stdout, os.Stderr, true, log.Default.ErrorStreamOnly())

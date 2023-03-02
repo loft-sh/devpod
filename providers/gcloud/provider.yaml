@@ -26,10 +26,10 @@ options:
     default: c2-standard-4
   INACTIVITY_TIMEOUT:
     description: If defined, will automatically stop the VM after the inactivity period.
-    default: 10m
+    default: 500m
   GCLOUD_TOKEN:
     hidden: true
-    cache: 20s
+    cache: 10m
     before: command
     command: ${GCLOUD_BINARY} auth application-default print-access-token --quiet --verbosity=error
   INJECT_GIT_CREDENTIALS:

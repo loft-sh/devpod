@@ -47,8 +47,8 @@ func NewStatusCmd() *cobra.Command {
 }
 
 // Run runs the command logic
-func (cmd *StatusCmd) Run(ctx context.Context, provider *gcloudProvider, workspace *provider.Workspace, log log.Logger) error {
-	name := getName(workspace)
+func (cmd *StatusCmd) Run(ctx context.Context, provider *gcloudProvider, machine *provider.Machine, log log.Logger) error {
+	name := getName(machine)
 	status, err := getWorkspaceStatus(ctx, name, provider)
 	if err != nil {
 		return err

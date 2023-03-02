@@ -67,7 +67,7 @@ func GetWorkspace(ctx context.Context, devPodConfig *config.Config, ide *provide
 }
 
 // ResolveWorkspace tries to retrieve an already existing workspace or creates a new one
-func ResolveWorkspace(ctx context.Context, devPodConfig *config.Config, ide *provider2.WorkspaceIDEConfig, args []string, desiredID, desiredServer, providerOverride string, log log.Logger) (client.WorkspaceClient, error) {
+func ResolveWorkspace(ctx context.Context, devPodConfig *config.Config, ide *provider2.WorkspaceIDEConfig, args []string, desiredID, desiredMachine, providerOverride string, log log.Logger) (client.WorkspaceClient, error) {
 	// check if we have no args
 	if len(args) == 0 {
 		if desiredID != "" {
@@ -129,21 +129,21 @@ func ResolveWorkspace(ctx context.Context, devPodConfig *config.Config, ide *pro
 	}
 
 	// set server
-	if desiredServer != "" {
-		if !defaultProvider.Config.IsServerProvider() {
+	if desiredMachine != "" {
+		if !defaultProvider.Config.IsMachineProvider() {
 			_ = os.RemoveAll(workspaceFolder)
 			return nil, fmt.Errorf("provider %s cannot create servers and cannot be used", defaultProvider.Config.Name)
 		}
 
 		// check if server exists
-		if !provider2.ServerExists(workspace.Context, desiredServer) {
+		if !provider2.MachineExists(workspace.Context, desiredMachine) {
 			_ = os.RemoveAll(workspaceFolder)
-			return nil, fmt.Errorf("server %s doesn't exist and cannot be used", desiredServer)
+			return nil, fmt.Errorf("server %s doesn't exist and cannot be used", desiredMachine)
 		}
 
 		// configure server for workspace
-		workspace.Server = provider2.WorkspaceServerConfig{
-			ID: desiredServer,
+		workspace.Machine = provider2.WorkspaceMachineConfig{
+			ID: desiredMachine,
 		}
 	}
 

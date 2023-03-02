@@ -4,15 +4,15 @@ import (
 	"github.com/loft-sh/devpod/pkg/types"
 )
 
-type Server struct {
-	// ID is the server id to use
+type Machine struct {
+	// ID is the machine id to use
 	ID string `json:"id,omitempty"`
 
-	// Folder is the local folder where server related contents will be stored
+	// Folder is the local folder where machine related contents will be stored
 	Folder string `json:"folder,omitempty"`
 
 	// Provider is the provider used to create this workspace
-	Provider ServerProviderConfig `json:"provider,omitempty"`
+	Provider MachineProviderConfig `json:"provider,omitempty"`
 
 	// CreationTimestamp is the timestamp when this workspace was created
 	CreationTimestamp types.Time `json:"creationTimestamp,omitempty"`
@@ -24,7 +24,7 @@ type Server struct {
 	Origin string `json:"-"`
 }
 
-type ServerProviderConfig struct {
-	// Name is the provider name used to deploy this server
+type MachineProviderConfig struct {
+	// Name is the provider name used to deploy this machine
 	Name string `json:"name,omitempty"`
 }

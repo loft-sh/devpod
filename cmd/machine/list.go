@@ -1,4 +1,4 @@
-package server
+package machine
 
 import (
 	"context"
@@ -30,7 +30,7 @@ func NewListCmd(flags *flags.GlobalFlags) *cobra.Command {
 	}
 	listCmd := &cobra.Command{
 		Use:   "list",
-		Short: "Lists existing servers",
+		Short: "Lists existing machines",
 		RunE: func(_ *cobra.Command, args []string) error {
 			return cmd.Run(context.Background())
 		},
@@ -47,12 +47,12 @@ func (cmd *ListCmd) Run(ctx context.Context) error {
 		return err
 	}
 
-	serverDir, err := provider.GetServersDir(devPodConfig.DefaultContext)
+	machineDir, err := provider.GetMachinesDir(devPodConfig.DefaultContext)
 	if err != nil {
 		return err
 	}
 
-	entries, err := os.ReadDir(serverDir)
+	entries, err := os.ReadDir(machineDir)
 	if err != nil && !os.IsNotExist(err) {
 		return err
 	}
@@ -60,15 +60,15 @@ func (cmd *ListCmd) Run(ctx context.Context) error {
 	if cmd.Output == "plain" {
 		tableEntries := [][]string{}
 		for _, entry := range entries {
-			serverConfig, err := provider.LoadServerConfig(devPodConfig.DefaultContext, entry.Name())
+			machineConfig, err := provider.LoadMachineConfig(devPodConfig.DefaultContext, entry.Name())
 			if err != nil {
 				return errors.Wrap(err, "load workspace config")
 			}
 
 			tableEntries = append(tableEntries, []string{
-				serverConfig.ID,
-				serverConfig.Provider.Name,
-				time.Since(serverConfig.CreationTimestamp.Time).Round(1 * time.Second).String(),
+				machineConfig.ID,
+				machineConfig.Provider.Name,
+				time.Since(machineConfig.CreationTimestamp.Time).Round(1 * time.Second).String(),
 			})
 		}
 		sort.SliceStable(tableEntries, func(i, j int) bool {
@@ -81,9 +81,9 @@ func (cmd *ListCmd) Run(ctx context.Context) error {
 			"Age",
 		}, tableEntries)
 	} else if cmd.Output == "json" {
-		tableEntries := []*provider.Server{}
+		tableEntries := []*provider.Machine{}
 		for _, entry := range entries {
-			workspaceConfig, err := provider.LoadServerConfig(devPodConfig.DefaultContext, entry.Name())
+			workspaceConfig, err := provider.LoadMachineConfig(devPodConfig.DefaultContext, entry.Name())
 			if err != nil {
 				return errors.Wrap(err, "load workspace config")
 			}

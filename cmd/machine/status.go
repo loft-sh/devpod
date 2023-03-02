@@ -1,4 +1,4 @@
-package server
+package machine
 
 import (
 	"context"
@@ -26,13 +26,13 @@ func NewStatusCmd(flags *flags.GlobalFlags) *cobra.Command {
 	}
 	statusCmd := &cobra.Command{
 		Use:   "status",
-		Short: "Retrieves the status of an existing server",
+		Short: "Retrieves the status of an existing machine",
 		RunE: func(_ *cobra.Command, args []string) error {
 			return cmd.Run(context.Background(), args)
 		},
 	}
 
-	statusCmd.Flags().StringVar(&cmd.Output, "output", "plain", "Status shows the server status")
+	statusCmd.Flags().StringVar(&cmd.Output, "output", "plain", "Status shows the machine status")
 	return statusCmd
 }
 
@@ -43,26 +43,26 @@ func (cmd *StatusCmd) Run(ctx context.Context, args []string) error {
 		return err
 	}
 
-	serverClient, err := workspace.GetServer(ctx, devPodConfig, args, log.Default)
+	machineClient, err := workspace.GetMachine(ctx, devPodConfig, args, log.Default)
 	if err != nil {
 		return err
 	}
 
 	// get status
-	serverStatus, err := serverClient.Status(ctx, client.StatusOptions{})
+	machineStatus, err := machineClient.Status(ctx, client.StatusOptions{})
 	if err != nil {
 		return err
 	}
 
 	if cmd.Output == "plain" {
-		if serverStatus == client.StatusStopped {
-			log.Default.Infof("Server '%s' is '%s', you can start it via 'devpod server start %s'", serverClient.Server(), serverStatus, serverClient.Server())
-		} else if serverStatus == client.StatusBusy {
-			log.Default.Infof("Server '%s' is '%s', which means its currently unaccessible. This is usually resolved by waiting a couple of minutes", serverClient.Server(), serverStatus)
-		} else if serverStatus == client.StatusNotFound {
-			log.Default.Infof("Server '%s' is '%s'", serverClient.Server(), serverStatus)
+		if machineStatus == client.StatusStopped {
+			log.Default.Infof("Machine '%s' is '%s', you can start it via 'devpod machine start %s'", machineClient.Machine(), machineStatus, machineClient.Machine())
+		} else if machineStatus == client.StatusBusy {
+			log.Default.Infof("Machine '%s' is '%s', which means its currently unaccessible. This is usually resolved by waiting a couple of minutes", machineClient.Machine(), machineStatus)
+		} else if machineStatus == client.StatusNotFound {
+			log.Default.Infof("Machine '%s' is '%s'", machineClient.Machine(), machineStatus)
 		} else {
-			log.Default.Infof("Server '%s' is '%s'", serverClient.Server(), serverStatus)
+			log.Default.Infof("Machine '%s' is '%s'", machineClient.Machine(), machineStatus)
 		}
 	} else if cmd.Output == "json" {
 		out, err := json.Marshal(struct {
@@ -71,10 +71,10 @@ func (cmd *StatusCmd) Run(ctx context.Context, args []string) error {
 			Provider string `json:"provider,omitempty"`
 			State    string `json:"state,omitempty"`
 		}{
-			ID:       serverClient.Server(),
-			Context:  serverClient.Context(),
-			Provider: serverClient.Provider(),
-			State:    string(serverStatus),
+			ID:       machineClient.Machine(),
+			Context:  machineClient.Context(),
+			Provider: machineClient.Provider(),
+			State:    string(machineStatus),
 		})
 		if err != nil {
 			return err
