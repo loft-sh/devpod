@@ -36,7 +36,7 @@ func (s *directClient) AgentPath() string {
 	return options.ResolveAgentConfig(s.devPodConfig, s.config).Path
 }
 
-func (s *directClient) Server() string {
+func (s *directClient) Machine() string {
 	return ""
 }
 

@@ -23,35 +23,24 @@ const (
 	WORKSPACE_LOCAL_FOLDER   = "WORKSPACE_LOCAL_FOLDER"
 	WORKSPACE_IMAGE          = "WORKSPACE_IMAGE"
 	WORKSPACE_PROVIDER       = "WORKSPACE_PROVIDER"
-	SERVER_ID                = "SERVER_ID"
-	SERVER_CONTEXT           = "SERVER_CONTEXT"
-	SERVER_FOLDER            = "SERVER_FOLDER"
-	SERVER_PROVIDER          = "SERVER_PROVIDER"
+	MACHINE_ID               = "MACHINE_ID"
+	MACHINE_CONTEXT          = "MACHINE_CONTEXT"
+	MACHINE_FOLDER           = "MACHINE_FOLDER"
+	MACHINE_PROVIDER         = "MACHINE_PROVIDER"
 )
 
-func FromEnvironment() *Workspace {
-	return &Workspace{
-		ID:     os.Getenv(WORKSPACE_ID),
-		Folder: os.Getenv(WORKSPACE_FOLDER),
-		Source: WorkspaceSource{
-			GitRepository: os.Getenv(WORKSPACE_GIT_REPOSITORY),
-			GitBranch:     os.Getenv(WORKSPACE_GIT_BRANCH),
-			GitCommit:     os.Getenv(WORKSPACE_GIT_COMMIT),
-			LocalFolder:   os.Getenv(WORKSPACE_LOCAL_FOLDER),
-			Image:         os.Getenv(WORKSPACE_IMAGE),
+func FromEnvironment() *Machine {
+	return &Machine{
+		ID:     os.Getenv(MACHINE_ID),
+		Folder: os.Getenv(MACHINE_FOLDER),
+		Provider: MachineProviderConfig{
+			Name: os.Getenv(MACHINE_PROVIDER),
 		},
-		Server: WorkspaceServerConfig{
-			ID: os.Getenv(SERVER_ID),
-		},
-		Provider: WorkspaceProviderConfig{
-			Name: os.Getenv(WORKSPACE_PROVIDER),
-		},
-		Context: os.Getenv(WORKSPACE_CONTEXT),
-		Origin:  os.Getenv(WORKSPACE_ORIGIN),
+		Context: os.Getenv(MACHINE_CONTEXT),
 	}
 }
 
-func ToOptions(workspace *Workspace, server *Server, options map[string]config.OptionValue) map[string]string {
+func ToOptions(workspace *Workspace, server *Machine, options map[string]config.OptionValue) map[string]string {
 	retVars := map[string]string{}
 	for optionName, optionValue := range options {
 		retVars[strings.ToUpper(optionName)] = optionValue.Value
@@ -65,7 +54,7 @@ func ToOptions(workspace *Workspace, server *Server, options map[string]config.O
 		}
 		if workspace.Context != "" {
 			retVars[WORKSPACE_CONTEXT] = workspace.Context
-			retVars[SERVER_CONTEXT] = workspace.Context
+			retVars[MACHINE_CONTEXT] = workspace.Context
 		}
 		if workspace.Origin != "" {
 			retVars[WORKSPACE_ORIGIN] = workspace.Origin
@@ -88,23 +77,23 @@ func ToOptions(workspace *Workspace, server *Server, options map[string]config.O
 		if workspace.Provider.Name != "" {
 			retVars[WORKSPACE_PROVIDER] = workspace.Provider.Name
 		}
-		if workspace.Server.ID != "" {
-			retVars[SERVER_ID] = workspace.Server.ID
-			retVars[SERVER_FOLDER], _ = GetServerDir(workspace.Context, workspace.Server.ID)
+		if workspace.Machine.ID != "" {
+			retVars[MACHINE_ID] = workspace.Machine.ID
+			retVars[MACHINE_FOLDER], _ = GetMachineDir(workspace.Context, workspace.Machine.ID)
 		}
 	}
 	if server != nil {
 		if server.ID != "" {
-			retVars[SERVER_ID] = server.ID
+			retVars[MACHINE_ID] = server.ID
 		}
 		if server.Folder != "" {
-			retVars[SERVER_FOLDER] = filepath.ToSlash(server.Folder)
+			retVars[MACHINE_FOLDER] = filepath.ToSlash(server.Folder)
 		}
 		if server.Context != "" {
-			retVars[SERVER_CONTEXT] = server.Context
+			retVars[MACHINE_CONTEXT] = server.Context
 		}
 		if server.Provider.Name != "" {
-			retVars[SERVER_PROVIDER] = server.Provider.Name
+			retVars[MACHINE_PROVIDER] = server.Provider.Name
 		}
 	}
 	for k, v := range GetBaseEnvironment() {
@@ -125,7 +114,7 @@ func GetBaseEnvironment() map[string]string {
 	return retVars
 }
 
-func GetProviderOptions(workspace *Workspace, server *Server, devConfig *config.Config) map[string]config.OptionValue {
+func GetProviderOptions(workspace *Workspace, server *Machine, devConfig *config.Config) map[string]config.OptionValue {
 	retValues := map[string]config.OptionValue{}
 	providerName := ""
 	if workspace != nil {
@@ -150,9 +139,9 @@ func CloneWorkspace(workspace *Workspace) *Workspace {
 	return ret
 }
 
-func CloneServer(server *Server) *Server {
+func CloneMachine(server *Machine) *Machine {
 	out, _ := json.Marshal(server)
-	ret := &Server{}
+	ret := &Machine{}
 	_ = json.Unmarshal(out, ret)
 	ret.Origin = server.Origin
 	return ret

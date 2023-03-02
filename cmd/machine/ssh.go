@@ -1,4 +1,4 @@
-package server
+package machine
 
 import (
 	"context"
@@ -34,13 +34,13 @@ func NewSSHCmd(flags *flags.GlobalFlags) *cobra.Command {
 	}
 	sshCmd := &cobra.Command{
 		Use:   "ssh",
-		Short: "SSH into the server",
+		Short: "SSH into the machine",
 		RunE: func(c *cobra.Command, args []string) error {
 			return cmd.Run(context.Background(), args)
 		},
 	}
 
-	sshCmd.Flags().StringVar(&cmd.Command, "command", "", "The command to execute on the remote server")
+	sshCmd.Flags().StringVar(&cmd.Command, "command", "", "The command to execute on the remote machine")
 	return sshCmd
 }
 
@@ -51,7 +51,7 @@ func (cmd *SSHCmd) Run(ctx context.Context, args []string) error {
 		return err
 	}
 
-	serverClient, err := workspace.GetServer(ctx, devPodConfig, args, log.Default)
+	machineClient, err := workspace.GetMachine(ctx, devPodConfig, args, log.Default)
 	if err != nil {
 		return err
 	}
@@ -73,15 +73,18 @@ func (cmd *SSHCmd) Run(ctx context.Context, args []string) error {
 
 	// start the ssh session
 	return StartSSHSession(ctx, privateKey, "", cmd.Command, func(ctx context.Context, stdin io.Reader, stdout io.Writer, stderr io.Writer) error {
-		command := fmt.Sprintf("%s helper ssh-server --token '%s' --stdio", serverClient.AgentPath(), tok)
+		command := fmt.Sprintf("%s helper ssh-server --token '%s' --stdio", machineClient.AgentPath(), tok)
+		if cmd.Debug {
+			command += " --debug"
+		}
 		return agent.InjectAgentAndExecute(ctx, func(ctx context.Context, command string, stdin io.Reader, stdout io.Writer, stderr io.Writer) error {
-			return serverClient.Command(ctx, client.CommandOptions{
+			return machineClient.Command(ctx, client.CommandOptions{
 				Command: command,
 				Stdin:   stdin,
 				Stdout:  stdout,
 				Stderr:  stderr,
 			})
-		}, serverClient.AgentPath(), serverClient.AgentURL(), true, command, stdin, stdout, stderr, log.Default.ErrorStreamOnly())
+		}, machineClient.AgentPath(), machineClient.AgentURL(), true, command, stdin, stdout, stderr, log.Default.ErrorStreamOnly())
 	}, writer)
 }
 
@@ -100,7 +103,7 @@ func StartSSHSession(ctx context.Context, privateKey []byte, user, command strin
 	defer stdoutWriter.Close()
 	defer stdinWriter.Close()
 
-	// start ssh server
+	// start ssh machine
 	errChan := make(chan error, 1)
 	go func() {
 		errChan <- exec(ctx, stdinReader, stdoutWriter, stderr)

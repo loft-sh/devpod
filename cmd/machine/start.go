@@ -1,4 +1,4 @@
-package server
+package machine
 
 import (
 	"context"
@@ -10,40 +10,40 @@ import (
 	"github.com/spf13/cobra"
 )
 
-// StopCmd holds the configuration
-type StopCmd struct {
+// StartCmd holds the configuration
+type StartCmd struct {
 	*flags.GlobalFlags
 }
 
-// NewStopCmd creates a new destroy command
-func NewStopCmd(flags *flags.GlobalFlags) *cobra.Command {
-	cmd := &StopCmd{
+// NewStartCmd creates a new destroy command
+func NewStartCmd(flags *flags.GlobalFlags) *cobra.Command {
+	cmd := &StartCmd{
 		GlobalFlags: flags,
 	}
-	stopCmd := &cobra.Command{
-		Use:   "stop",
-		Short: "Stops an existing server",
+	startCmd := &cobra.Command{
+		Use:   "start",
+		Short: "Starts an existing machine",
 		RunE: func(_ *cobra.Command, args []string) error {
 			return cmd.Run(context.Background(), args)
 		},
 	}
 
-	return stopCmd
+	return startCmd
 }
 
 // Run runs the command logic
-func (cmd *StopCmd) Run(ctx context.Context, args []string) error {
+func (cmd *StartCmd) Run(ctx context.Context, args []string) error {
 	devPodConfig, err := config.LoadConfig(cmd.Context)
 	if err != nil {
 		return err
 	}
 
-	serverClient, err := workspace.GetServer(ctx, devPodConfig, args, log.Default)
+	machineClient, err := workspace.GetMachine(ctx, devPodConfig, args, log.Default)
 	if err != nil {
 		return err
 	}
 
-	err = serverClient.Stop(ctx, client.StopOptions{})
+	err = machineClient.Start(ctx, client.StartOptions{})
 	if err != nil {
 		return err
 	}

@@ -23,12 +23,12 @@ import (
 )
 
 func NewAgentClient(devPodConfig *config.Config, prov *provider.ProviderConfig, workspace *provider.Workspace, log log.Logger) (client.AgentClient, error) {
-	var serverConfig *provider.Server
-	if workspace.Server.ID != "" {
+	var machineConfig *provider.Machine
+	if workspace.Machine.ID != "" {
 		var err error
-		serverConfig, err = provider.LoadServerConfig(workspace.Context, workspace.Server.ID)
+		machineConfig, err = provider.LoadMachineConfig(workspace.Context, workspace.Machine.ID)
 		if err != nil {
-			return nil, errors.Wrap(err, "load server config")
+			return nil, errors.Wrap(err, "load machine config")
 		}
 	}
 
@@ -36,7 +36,7 @@ func NewAgentClient(devPodConfig *config.Config, prov *provider.ProviderConfig, 
 		devPodConfig: devPodConfig,
 		config:       prov,
 		workspace:    workspace,
-		server:       serverConfig,
+		machine:      machineConfig,
 		log:          log,
 	}, nil
 }
@@ -47,7 +47,7 @@ type agentClient struct {
 	devPodConfig *config.Config
 	config       *provider.ProviderConfig
 	workspace    *provider.Workspace
-	server       *provider.Server
+	machine      *provider.Machine
 	log          log.Logger
 }
 
@@ -67,9 +67,9 @@ func (s *agentClient) WorkspaceConfig() *provider.Workspace {
 	return provider.CloneWorkspace(s.workspace)
 }
 
-func (s *agentClient) Server() string {
-	if s.server != nil {
-		return s.server.ID
+func (s *agentClient) Machine() string {
+	if s.machine != nil {
+		return s.machine.ID
 	}
 
 	return ""
@@ -120,7 +120,7 @@ func (s *agentClient) AgentInfo() (string, error) {
 	// marshal config
 	out, err := json.Marshal(&provider.AgentWorkspaceInfo{
 		Workspace: s.workspace,
-		Server:    s.server,
+		Machine:   s.machine,
 		Agent:     options.ResolveAgentConfig(s.devPodConfig, s.config),
 		Options:   s.devPodConfig.ProviderOptions(s.Provider()),
 	})
@@ -135,46 +135,46 @@ func (s *agentClient) Create(ctx context.Context, options client.CreateOptions) 
 	s.m.Lock()
 	defer s.m.Unlock()
 
-	// provider doesn't support servers
-	if !s.isServerProvider() {
+	// provider doesn't support machines
+	if !s.isMachineProvider() {
 		return nil
 	}
 
-	// create a new server
-	if s.workspace.Server.ID != "" {
+	// create a new machine
+	if s.workspace.Machine.ID != "" {
 		return nil
 	}
 
-	// create a new server
+	// create a new machine
 	s.workspace = provider.CloneWorkspace(s.workspace)
-	s.workspace.Server.ID = s.workspace.ID
-	s.workspace.Server.AutoDelete = true
+	s.workspace.Machine.ID = s.workspace.ID
+	s.workspace.Machine.AutoDelete = true
 
-	// get the server dir
-	serverDir, err := provider.GetServerDir(s.workspace.Context, s.workspace.Server.ID)
+	// get the machine dir
+	machineDir, err := provider.GetMachineDir(s.workspace.Context, s.workspace.Machine.ID)
 	if err != nil {
 		return err
 	}
 
-	// save server config
-	s.server = &provider.Server{
-		ID:      s.workspace.Server.ID,
-		Folder:  serverDir,
+	// save machine config
+	s.machine = &provider.Machine{
+		ID:      s.workspace.Machine.ID,
+		Folder:  machineDir,
 		Context: s.workspace.Context,
-		Provider: provider.ServerProviderConfig{
+		Provider: provider.MachineProviderConfig{
 			Name: s.workspace.Provider.Name,
 		},
 		CreationTimestamp: types.Now(),
 	}
 
-	// create server folder
-	err = provider.SaveServerConfig(s.server)
+	// create machine folder
+	err = provider.SaveMachineConfig(s.machine)
 	if err != nil {
 		return err
 	}
 
-	// create server ssh keys
-	_, err = ssh.GetPublicKeyBase(s.server.Folder)
+	// create machine ssh keys
+	_, err = ssh.GetPublicKeyBase(s.machine.Folder)
 	if err != nil {
 		return err
 	}
@@ -185,8 +185,8 @@ func (s *agentClient) Create(ctx context.Context, options client.CreateOptions) 
 		return err
 	}
 
-	// create server
-	return NewServerClient(s.devPodConfig, s.config, s.server, s.log).Create(ctx, options)
+	// create machine
+	return NewMachineClient(s.devPodConfig, s.config, s.machine, s.log).Create(ctx, options)
 }
 
 func (s *agentClient) Delete(ctx context.Context, opt client.DeleteOptions) error {
@@ -201,13 +201,13 @@ func (s *agentClient) Delete(ctx context.Context, opt client.DeleteOptions) erro
 	}
 
 	// should just delete container?
-	if !s.isServerProvider() || !s.workspace.Server.AutoDelete {
+	if !s.isMachineProvider() || !s.workspace.Machine.AutoDelete {
 		writer := s.log.Writer(logrus.InfoLevel, false)
 		defer writer.Close()
 
 		s.log.Infof("Deleting container...")
 		command := fmt.Sprintf("%s agent workspace delete --id %s --context %s", options.ResolveAgentConfig(s.devPodConfig, s.config).Path, s.workspace.ID, s.workspace.Context)
-		err := runCommand(ctx, "command", s.config.Exec.Command, ToEnvironment(s.workspace, s.server, s.devPodConfig.ProviderOptions(s.config.Name), map[string]string{
+		err := runCommand(ctx, "command", s.config.Exec.Command, ToEnvironment(s.workspace, s.machine, s.devPodConfig.ProviderOptions(s.config.Name), map[string]string{
 			provider.CommandEnv: command,
 		}), nil, writer, writer, s.log.ErrorStreamOnly())
 		if err != nil {
@@ -219,9 +219,9 @@ func (s *agentClient) Delete(ctx context.Context, opt client.DeleteOptions) erro
 				s.log.Errorf("Error deleting container: %v", err)
 			}
 		}
-	} else if s.workspace.Server.ID != "" && len(s.config.Exec.Delete) > 0 {
-		// delete server if config was found
-		err := NewServerClient(s.devPodConfig, s.config, s.server, s.log).Delete(ctx, opt)
+	} else if s.workspace.Machine.ID != "" && len(s.config.Exec.Delete) > 0 {
+		// delete machine if config was found
+		err := NewMachineClient(s.devPodConfig, s.config, s.machine, s.log).Delete(ctx, opt)
 		if err != nil {
 			return err
 		}
@@ -234,18 +234,18 @@ func (s *agentClient) Start(ctx context.Context, options client.StartOptions) er
 	s.m.Lock()
 	defer s.m.Unlock()
 
-	if !s.isServerProvider() {
+	if !s.isMachineProvider() {
 		return nil
 	}
 
-	return NewServerClient(s.devPodConfig, s.config, s.server, s.log).Start(ctx, options)
+	return NewMachineClient(s.devPodConfig, s.config, s.machine, s.log).Start(ctx, options)
 }
 
 func (s *agentClient) Stop(ctx context.Context, opt client.StopOptions) error {
 	s.m.Lock()
 	defer s.m.Unlock()
 
-	if !s.isServerProvider() || !s.workspace.Server.AutoDelete {
+	if !s.isMachineProvider() || !s.workspace.Machine.AutoDelete {
 		writer := s.log.Writer(logrus.InfoLevel, false)
 		defer writer.Close()
 
@@ -253,7 +253,7 @@ func (s *agentClient) Stop(ctx context.Context, opt client.StopOptions) error {
 
 		s.log.Infof("Stopping container...")
 		command := fmt.Sprintf("%s agent workspace stop --id %s --context %s", options.ResolveAgentConfig(s.devPodConfig, s.config).Path, s.workspace.ID, s.workspace.Context)
-		err := runCommand(ctx, "command", s.config.Exec.Command, ToEnvironment(s.workspace, s.server, s.devPodConfig.ProviderOptions(s.config.Name), map[string]string{
+		err := runCommand(ctx, "command", s.config.Exec.Command, ToEnvironment(s.workspace, s.machine, s.devPodConfig.ProviderOptions(s.config.Name), map[string]string{
 			provider.CommandEnv: command,
 		}), nil, writer, writer, s.log.ErrorStreamOnly())
 		if err != nil {
@@ -264,7 +264,7 @@ func (s *agentClient) Stop(ctx context.Context, opt client.StopOptions) error {
 		return nil
 	}
 
-	return NewServerClient(s.devPodConfig, s.config, s.server, s.log).Stop(ctx, opt)
+	return NewMachineClient(s.devPodConfig, s.config, s.machine, s.log).Stop(ctx, opt)
 }
 
 func (s *agentClient) Command(ctx context.Context, commandOptions client.CommandOptions) (err error) {
@@ -278,7 +278,7 @@ func (s *agentClient) Command(ctx context.Context, commandOptions client.Command
 
 	// get environment variables
 	s.m.Lock()
-	environ := ToEnvironment(s.workspace, s.server, s.devPodConfig.ProviderOptions(s.config.Name), map[string]string{
+	environ := ToEnvironment(s.workspace, s.machine, s.devPodConfig.ProviderOptions(s.config.Name), map[string]string{
 		provider.CommandEnv: commandOptions.Command,
 	})
 	s.m.Unlock()
@@ -292,12 +292,12 @@ func (s *agentClient) Status(ctx context.Context, options client.StatusOptions) 
 	defer s.m.Unlock()
 
 	// check if provider has status command
-	if s.isServerProvider() {
-		if s.server == nil {
+	if s.isMachineProvider() {
+		if s.machine == nil {
 			return client.StatusNotFound, nil
 		}
 
-		status, err := NewServerClient(s.devPodConfig, s.config, s.server, s.log).Status(ctx, options)
+		status, err := NewMachineClient(s.devPodConfig, s.config, s.machine, s.log).Status(ctx, options)
 		if err != nil {
 			return status, err
 		}
@@ -336,7 +336,7 @@ func (s *agentClient) getContainerStatus(ctx context.Context) (client.Status, er
 	stdout := &bytes.Buffer{}
 	stderr := &bytes.Buffer{}
 	command := fmt.Sprintf("%s agent workspace status --id %s --context %s", options.ResolveAgentConfig(s.devPodConfig, s.config).Path, s.workspace.ID, s.workspace.Context)
-	err := runCommand(ctx, "command", s.config.Exec.Command, ToEnvironment(s.workspace, s.server, s.devPodConfig.ProviderOptions(s.config.Name), map[string]string{
+	err := runCommand(ctx, "command", s.config.Exec.Command, ToEnvironment(s.workspace, s.machine, s.devPodConfig.ProviderOptions(s.config.Name), map[string]string{
 		provider.CommandEnv: command,
 	}), nil, stdout, stderr, s.log.ErrorStreamOnly())
 	if err != nil {
@@ -351,12 +351,12 @@ func (s *agentClient) getContainerStatus(ctx context.Context) (client.Status, er
 	return parsed, nil
 }
 
-func (s *agentClient) isServerProvider() bool {
+func (s *agentClient) isMachineProvider() bool {
 	return len(s.config.Exec.Create) > 0
 }
 
-func ToEnvironment(workspace *provider.Workspace, server *provider.Server, options map[string]config.OptionValue, extraEnv map[string]string) []string {
-	env := provider.ToOptions(workspace, server, options)
+func ToEnvironment(workspace *provider.Workspace, machine *provider.Machine, options map[string]config.OptionValue, extraEnv map[string]string) []string {
+	env := provider.ToOptions(workspace, machine, options)
 
 	// create environment variables for command
 	osEnviron := os.Environ()
@@ -394,14 +394,14 @@ func RunCommand(ctx context.Context, command types.StrArray, environ []string, s
 	return nil
 }
 
-func DeleteServerFolder(context, serverID string) error {
-	serverDir, err := provider.GetServerDir(context, serverID)
+func DeleteMachineFolder(context, machineID string) error {
+	machineDir, err := provider.GetMachineDir(context, machineID)
 	if err != nil {
 		return err
 	}
 
-	// remove server folder
-	err = os.RemoveAll(serverDir)
+	// remove machine folder
+	err = os.RemoveAll(machineDir)
 	if err != nil && !os.IsNotExist(err) {
 		return err
 	}

@@ -1,7 +1,6 @@
 package cmd
 
 import (
-	"bytes"
 	"context"
 	"fmt"
 	"github.com/loft-sh/devpod/cmd/flags"
@@ -24,7 +23,7 @@ type BuildCmd struct {
 
 	SkipDelete bool
 	Repository string
-	Server     string
+	Machine    string
 	ForceBuild bool
 }
 
@@ -51,7 +50,7 @@ func NewBuildCmd(flags *flags.GlobalFlags) *cobra.Command {
 
 			// create a temporary workspace
 			exists := workspace2.Exists(devPodConfig, args, log.Default)
-			workspaceClient, err := workspace2.ResolveWorkspace(ctx, devPodConfig, nil, args, "", cmd.Server, cmd.Provider, log.Default)
+			workspaceClient, err := workspace2.ResolveWorkspace(ctx, devPodConfig, nil, args, "", cmd.Machine, cmd.Provider, log.Default)
 			if err != nil {
 				return err
 			}
@@ -72,7 +71,7 @@ func NewBuildCmd(flags *flags.GlobalFlags) *cobra.Command {
 
 	buildCmd.Flags().BoolVar(&cmd.SkipDelete, "skip-delete", false, "If true will not delete the workspace after building it")
 	buildCmd.Flags().BoolVar(&cmd.ForceBuild, "force-build", false, "If true will force build the image")
-	buildCmd.Flags().StringVar(&cmd.Server, "server", "", "The server to use for this workspace. The server needs to exist beforehand or the command will fail. If the workspace already exists, this option has no effect")
+	buildCmd.Flags().StringVar(&cmd.Machine, "machine", "", "The machine to use for this workspace. The machine needs to exist beforehand or the command will fail. If the workspace already exists, this option has no effect")
 	buildCmd.Flags().StringVar(&cmd.Repository, "repository", "", "The repository to push to")
 	_ = buildCmd.MarkFlagRequired("repository")
 	return buildCmd
@@ -135,7 +134,7 @@ func (cmd *BuildCmd) buildAgentClient(ctx context.Context, agentClient client.Ag
 	defer stdoutWriter.Close()
 	defer stdinWriter.Close()
 
-	// start server on stdio
+	// start machine on stdio
 	cancelCtx, cancel := context.WithCancel(ctx)
 	defer cancel()
 
@@ -144,20 +143,17 @@ func (cmd *BuildCmd) buildAgentClient(ctx context.Context, agentClient client.Ag
 		defer log.Debugf("Done executing up command")
 		defer cancel()
 
-		buf := &bytes.Buffer{}
-		err := agent.InjectAgentAndExecute(cancelCtx, func(ctx context.Context, command string, stdin io.Reader, stdout io.Writer, stderr io.Writer) error {
+		writer := log.ErrorStreamOnly().Writer(logrus.InfoLevel, false)
+		defer writer.Close()
+
+		errChan <- agent.InjectAgentAndExecute(cancelCtx, func(ctx context.Context, command string, stdin io.Reader, stdout io.Writer, stderr io.Writer) error {
 			return agentClient.Command(ctx, client.CommandOptions{
 				Command: command,
 				Stdin:   stdin,
 				Stdout:  stdout,
 				Stderr:  stderr,
 			})
-		}, agentClient.AgentPath(), agentClient.AgentURL(), true, command, stdinReader, stdoutWriter, buf, log.ErrorStreamOnly())
-		if err != nil {
-			errChan <- errors.Wrapf(err, "%s", buf.String())
-		} else {
-			errChan <- nil
-		}
+		}, agentClient.AgentPath(), agentClient.AgentURL(), true, command, stdinReader, stdoutWriter, writer, log.ErrorStreamOnly())
 	}()
 
 	// get workspace config
@@ -176,7 +172,7 @@ func (cmd *BuildCmd) buildAgentClient(ctx context.Context, agentClient client.Ag
 		log,
 	)
 	if err != nil {
-		return errors.Wrap(err, "run tunnel server")
+		return errors.Wrap(err, "run tunnel machine")
 	}
 
 	// wait until command finished

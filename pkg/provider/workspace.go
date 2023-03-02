@@ -15,8 +15,8 @@ type Workspace struct {
 	// Provider is the provider used to create this workspace
 	Provider WorkspaceProviderConfig `json:"provider,omitempty"`
 
-	// Server is the server to use for this workspace
-	Server WorkspaceServerConfig `json:"server,omitempty"`
+	// Machine is the machine to use for this workspace
+	Machine WorkspaceMachineConfig `json:"machine,omitempty"`
 
 	// IDE holds IDE specific settings
 	IDE WorkspaceIDEConfig `json:"ide,omitempty"`
@@ -34,11 +34,11 @@ type Workspace struct {
 	Origin string `json:"-"`
 }
 
-type WorkspaceServerConfig struct {
-	// ID is the server ID to use for this workspace
-	ID string `json:"serverId,omitempty"`
+type WorkspaceMachineConfig struct {
+	// ID is the machine ID to use for this workspace
+	ID string `json:"machineId,omitempty"`
 
-	// AutoDelete specifies if the server should get destroyed when
+	// AutoDelete specifies if the machine should get destroyed when
 	// the workspace is destroyed
 	AutoDelete bool `json:"autoDelete,omitempty"`
 }
@@ -91,8 +91,8 @@ type AgentWorkspaceInfo struct {
 	// Workspace holds the workspace info
 	Workspace *Workspace `json:"workspace,omitempty"`
 
-	// Server holds the server info
-	Server *Server `json:"server,omitempty"`
+	// Machine holds the machine info
+	Machine *Machine `json:"machine,omitempty"`
 
 	// Agent holds the agent info
 	Agent ProviderAgentConfig `json:"agent,omitempty"`
@@ -100,7 +100,7 @@ type AgentWorkspaceInfo struct {
 	// Options holds the filled provider options for this workspace
 	Options map[string]config.OptionValue `json:"options,omitempty"`
 
-	// Folder holds the workspace folder on the remote server
+	// Folder holds the workspace folder on the remote machine
 	Folder string `json:"-"`
 }
 

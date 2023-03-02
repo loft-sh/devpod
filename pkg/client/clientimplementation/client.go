@@ -10,7 +10,7 @@ import (
 
 func NewWorkspaceClient(devPodConfig *config.Config, parsedConfig *provider.ProviderConfig, workspace *provider.Workspace, log log.Logger) (client.WorkspaceClient, error) {
 	// create an interface out of the config
-	if parsedConfig.Type == "" || parsedConfig.Type == provider.ProviderTypeServer {
+	if parsedConfig.Type == "" || parsedConfig.Type == provider.ProviderTypeMachine {
 		return NewAgentClient(devPodConfig, parsedConfig, workspace, log)
 	} else if parsedConfig.Type == provider.ProviderTypeDirect {
 		return NewDirectClient(devPodConfig, parsedConfig, workspace, log), nil

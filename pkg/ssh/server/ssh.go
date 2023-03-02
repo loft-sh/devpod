@@ -3,21 +3,21 @@ package server
 import (
 	"fmt"
 	"github.com/gliderlabs/ssh"
-	"github.com/loft-sh/devpod/pkg/ssh/server/stderrlog"
+	"github.com/loft-sh/devpod/pkg/log"
 	"github.com/pkg/errors"
 	"github.com/pkg/sftp"
 	"io"
-	"log"
 	"net"
 	"os"
 	"os/exec"
 	"strings"
+	"sync"
 	"time"
 )
 
 var DefaultPort = 8022
 
-func NewServer(addr string, hostKey []byte, keys []ssh.PublicKey) (*Server, error) {
+func NewServer(addr string, hostKey []byte, keys []ssh.PublicKey, log log.Logger) (*Server, error) {
 	shell, err := getShell()
 	if err != nil {
 		return nil, err
@@ -26,6 +26,7 @@ func NewServer(addr string, hostKey []byte, keys []ssh.PublicKey) (*Server, erro
 	forwardHandler := &ssh.ForwardedTCPHandler{}
 	server := &Server{
 		shell: shell,
+		log:   log,
 		sshServer: ssh.Server{
 			Addr: addr,
 			PublicKeyHandler: func(ctx ssh.Context, key ssh.PublicKey) bool {
@@ -39,15 +40,15 @@ func NewServer(addr string, hostKey []byte, keys []ssh.PublicKey) (*Server, erro
 					}
 				}
 
-				stderrlog.Debugf("Declined public key")
+				log.Debugf("Declined public key")
 				return false
 			},
 			LocalPortForwardingCallback: func(ctx ssh.Context, dhost string, dport uint32) bool {
-				stderrlog.Debugf("Accepted forward", dhost, dport)
+				log.Debugf("Accepted forward", dhost, dport)
 				return true
 			},
 			ReversePortForwardingCallback: func(ctx ssh.Context, host string, port uint32) bool {
-				stderrlog.Debugf("attempt to bind", host, port, "granted")
+				log.Debugf("attempt to bind", host, port, "granted")
 				return true
 			},
 			ChannelHandlers: map[string]ssh.ChannelHandler{
@@ -59,7 +60,9 @@ func NewServer(addr string, hostKey []byte, keys []ssh.PublicKey) (*Server, erro
 				"cancel-tcpip-forward": forwardHandler.HandleSSHRequest,
 			},
 			SubsystemHandlers: map[string]ssh.SubsystemHandler{
-				"sftp": SftpHandler,
+				"sftp": func(s ssh.Session) {
+					SftpHandler(s, log)
+				},
 			},
 		},
 	}
@@ -78,6 +81,7 @@ func NewServer(addr string, hostKey []byte, keys []ssh.PublicKey) (*Server, erro
 type Server struct {
 	shell     string
 	sshServer ssh.Server
+	log       log.Logger
 }
 
 func getShell() (string, error) {
@@ -100,7 +104,7 @@ func (s *Server) handler(sess ssh.Session) {
 	if ssh.AgentRequested(sess) {
 		l, err := ssh.NewAgentListener()
 		if err != nil {
-			exitWithError(sess, errors.Wrap(err, "start agent"))
+			s.exitWithError(sess, errors.Wrap(err, "start agent"))
 			return
 		}
 
@@ -113,26 +117,28 @@ func (s *Server) handler(sess ssh.Session) {
 	var err error
 	ptyReq, winCh, isPty := sess.Pty()
 	if isPty {
+		s.log.Debugf("Execute SSH server PTY command: %s", strings.Join(cmd.Args, " "))
 		err = HandlePTY(sess, ptyReq, winCh, cmd, nil)
 	} else {
-		err = HandleNonPTY(sess, cmd, nil)
+		s.log.Debugf("Execute SSH server command: %s", strings.Join(cmd.Args, " "))
+		err = s.HandleNonPTY(sess, cmd)
 	}
 
 	// exit session
-	exitWithError(sess, err)
+	s.exitWithError(sess, err)
 }
 
-func HandleNonPTY(sess ssh.Session, cmd *exec.Cmd, decorateReader func(reader io.Reader) io.Reader) (err error) {
+func (s *Server) HandleNonPTY(sess ssh.Session, cmd *exec.Cmd) (err error) {
 	// init pipes
-	stdinWriter, err := cmd.StdinPipe()
+	stdin, err := cmd.StdinPipe()
 	if err != nil {
 		return err
 	}
-	stdoutReader, err := cmd.StdoutPipe()
+	stdout, err := cmd.StdoutPipe()
 	if err != nil {
 		return err
 	}
-	stderrReader, err := cmd.StderrPipe()
+	stderr, err := cmd.StderrPipe()
 	if err != nil {
 		return err
 	}
@@ -143,51 +149,40 @@ func HandleNonPTY(sess ssh.Session, cmd *exec.Cmd, decorateReader func(reader io
 		return errors.Wrap(err, "start command")
 	}
 
-	stdoutDone := make(chan struct{})
 	go func() {
-		defer close(stdoutDone)
-		defer stdoutReader.Close()
+		defer stdin.Close()
 
-		var reader io.Reader = stdoutReader
-		if decorateReader != nil {
-			reader = decorateReader(stdoutReader)
+		_, err := io.Copy(stdin, sess)
+		if err != nil {
+			s.log.Debugf("Error piping stdin: %v", err)
 		}
-
-		_, _ = io.Copy(sess, reader)
 	}()
 
-	stderrDone := make(chan struct{})
+	waitGroup := sync.WaitGroup{}
+	waitGroup.Add(1)
 	go func() {
-		defer close(stderrDone)
-		defer stderrReader.Close()
+		defer waitGroup.Done()
 
-		var reader io.Reader = stderrReader
-		if decorateReader != nil {
-			reader = decorateReader(stderrReader)
+		_, err := io.Copy(sess, stdout)
+		if err != nil {
+			s.log.Debugf("Error piping stdout: %v", err)
 		}
-
-		_, _ = io.Copy(sess.Stderr(), reader)
 	}()
 
+	waitGroup.Add(1)
 	go func() {
-		defer stdinWriter.Close()
+		defer waitGroup.Done()
 
-		_, _ = io.Copy(stdinWriter, sess)
+		_, err := io.Copy(sess.Stderr(), stderr)
+		if err != nil {
+			s.log.Debugf("Error piping stderr: %v", err)
+		}
 	}()
 
+	waitGroup.Wait()
 	err = cmd.Wait()
 	if err != nil {
 		return err
-	}
-
-	// make sure channels are closed
-	select {
-	case <-stdoutDone:
-		select {
-		case <-stderrDone:
-		case <-time.After(time.Second):
-		}
-	case <-time.After(time.Second):
 	}
 
 	return nil
@@ -260,30 +255,29 @@ func (s *Server) getCommand(sess ssh.Session) *exec.Cmd {
 
 	cmd.Env = append(cmd.Env, os.Environ()...)
 	cmd.Env = append(cmd.Env, sess.Environ()...)
-	//command.AsUser(sess.User(), cmd)
 	return cmd
 }
 
-func exitWithError(s ssh.Session, err error) {
+func (s *Server) exitWithError(sess ssh.Session, err error) {
 	if err != nil {
 		_, ok := errors.Cause(err).(*exec.ExitError)
 		if !ok {
-			stderrlog.Errorf("%v", err)
+			s.log.Errorf("Exit error: %v", err)
 			msg := strings.TrimPrefix(err.Error(), "exec: ")
-			if _, err := s.Stderr().Write([]byte(msg)); err != nil {
-				stderrlog.Errorf("failed to write error to session: %v", err)
+			if _, err := sess.Stderr().Write([]byte(msg)); err != nil {
+				s.log.Errorf("failed to write error to session: %v", err)
 			}
 		}
 	}
 
 	// always exit session
-	err = s.Exit(ExitCode(err))
+	err = sess.Exit(ExitCode(err))
 	if err != nil {
-		stderrlog.Errorf("session failed to exit: %v", err)
+		s.log.Errorf("session failed to exit: %v", err)
 	}
 }
 
-func SftpHandler(sess ssh.Session) {
+func SftpHandler(sess ssh.Session, log log.Logger) {
 	debugStream := io.Discard
 	serverOptions := []sftp.ServerOption{
 		sftp.WithDebug(debugStream),
@@ -293,7 +287,7 @@ func SftpHandler(sess ssh.Session) {
 		serverOptions...,
 	)
 	if err != nil {
-		log.Printf("sftp server init error: %s\n", err)
+		log.Debugf("sftp server init error: %s\n", err)
 		return
 	}
 	if err := server.Serve(); err == io.EOF {
@@ -323,6 +317,6 @@ func (s *Server) Serve(listener net.Listener) error {
 }
 
 func (s *Server) ListenAndServe() error {
-	stderrlog.Infof("Start ssh server on %s", s.sshServer.Addr)
+	s.log.Debugf("Start ssh server on %s", s.sshServer.Addr)
 	return s.sshServer.ListenAndServe()
 }

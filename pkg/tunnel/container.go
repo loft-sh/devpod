@@ -10,6 +10,7 @@ import (
 	devssh "github.com/loft-sh/devpod/pkg/ssh"
 	"github.com/loft-sh/devpod/pkg/token"
 	"github.com/pkg/errors"
+	"github.com/sirupsen/logrus"
 	"golang.org/x/crypto/ssh"
 	"io"
 	"os"
@@ -61,9 +62,14 @@ func (c *ContainerHandler) Run(ctx context.Context, runInHost Handler, runInCont
 	//TODO: right now we have a tunnel in a tunnel, maybe its better to start 2 separate commands?
 	tunnelChan := make(chan error, 1)
 	go func() {
-		buf := &bytes.Buffer{}
+		writer := c.log.ErrorStreamOnly().Writer(logrus.InfoLevel, false)
+		defer writer.Close()
+
 		command := fmt.Sprintf("%s helper ssh-server --token '%s' --stdio", c.client.AgentPath(), tok)
-		err := agent.InjectAgentAndExecute(ctx, func(ctx context.Context, command string, stdin io.Reader, stdout io.Writer, stderr io.Writer) error {
+		if c.log.GetLevel() == logrus.DebugLevel {
+			command += " --debug"
+		}
+		tunnelChan <- agent.InjectAgentAndExecute(ctx, func(ctx context.Context, command string, stdin io.Reader, stdout io.Writer, stderr io.Writer) error {
 			return c.client.Command(ctx, client.CommandOptions{
 				Command: command,
 				Stdin:   stdin,
@@ -72,12 +78,7 @@ func (c *ContainerHandler) Run(ctx context.Context, runInHost Handler, runInCont
 
 				SkipOptionsResolve: true,
 			})
-		}, c.client.AgentPath(), c.client.AgentURL(), true, command, stdinReader, stdoutWriter, buf, c.log.ErrorStreamOnly())
-		if err != nil {
-			tunnelChan <- errors.Wrapf(err, "%s", buf.String())
-		} else {
-			tunnelChan <- nil
-		}
+		}, c.client.AgentPath(), c.client.AgentURL(), true, command, stdinReader, stdoutWriter, writer, c.log.ErrorStreamOnly())
 	}()
 
 	privateKey, err := devssh.GetTempPrivateKeyRaw()
@@ -146,6 +147,8 @@ func (c *ContainerHandler) updateConfig(ctx context.Context, sshClient *ssh.Clie
 		case <-doneChan:
 			return
 		case <-time.After(c.updateConfigInterval):
+			c.log.Debugf("Start refresh")
+
 			// update options
 			err := c.client.RefreshOptions(ctx, "command", "")
 			if err != nil {
@@ -162,9 +165,13 @@ func (c *ContainerHandler) updateConfig(ctx context.Context, sshClient *ssh.Clie
 
 			// update workspace remotely
 			buf := &bytes.Buffer{}
-			err = devssh.Run(sshClient, fmt.Sprintf("%s agent workspace update-config --workspace-info '%s'", c.client.AgentPath(), workspaceInfo), nil, buf, buf)
+			command := fmt.Sprintf("%s agent workspace update-config --workspace-info '%s'", c.client.AgentPath(), workspaceInfo)
+			c.log.Debugf("Run command in container: %s", command)
+			err = devssh.Run(sshClient, command, nil, buf, buf)
 			if err != nil {
 				c.log.Errorf("Error updating remote workspace: %s%v", buf.String(), err)
+			} else {
+				c.log.Debugf("Out: %s", buf.String())
 			}
 		}
 	}
@@ -190,16 +197,22 @@ func (c *ContainerHandler) runRunInContainer(sshClient *ssh.Client, tok string, 
 	defer stdinWriter.Close()
 
 	// tunnel to container
-	containerChan := make(chan error, 1)
 	go func() {
-		buf := &bytes.Buffer{}
-		err = devssh.Run(sshClient, fmt.Sprintf("%s agent container-tunnel --token '%s' --workspace-info '%s'", c.client.AgentPath(), tok, workspaceInfo), stdinReader, stdoutWriter, os.Stderr)
+		writer := c.log.Writer(logrus.InfoLevel, false)
+		defer writer.Close()
+
+		c.log.Debugf("Run container tunnel")
+		defer c.log.Debugf("Container tunnel exited")
+
+		command := fmt.Sprintf("%s agent container-tunnel --token '%s' --workspace-info '%s'", c.client.AgentPath(), tok, workspaceInfo)
+		if c.log.GetLevel() == logrus.DebugLevel {
+			command += " --debug"
+		}
+		err = devssh.Run(sshClient, command, stdinReader, stdoutWriter, writer)
 		if err != nil {
 			c.log.Errorf("Error tunneling to container: %v", err)
-			containerChan <- errors.Wrapf(err, "%s", buf.String())
 			return
 		}
-		c.log.Debugf("Container tunnel exited")
 	}()
 
 	// start ssh client

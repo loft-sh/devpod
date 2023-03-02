@@ -44,7 +44,7 @@ func NewBuildCmd(flags *flags.GlobalFlags) *cobra.Command {
 // Run runs the command logic
 func (cmd *BuildCmd) Run(ctx context.Context) error {
 	// get workspace
-	workspaceInfo, err := agent.WriteWorkspaceInfo(cmd.WorkspaceInfo)
+	workspaceInfo, decoded, err := agent.DecodeWorkspaceInfo(cmd.WorkspaceInfo)
 	if err != nil {
 		return fmt.Errorf("error parsing workspace info: %v", err)
 	}
@@ -55,6 +55,12 @@ func (cmd *BuildCmd) Run(ctx context.Context) error {
 		return err
 	} else if shouldExit {
 		return nil
+	}
+
+	// write workspace info
+	err = agent.WriteWorkspaceInfo(workspaceInfo, decoded)
+	if err != nil {
+		return err
 	}
 
 	// initialize the workspace

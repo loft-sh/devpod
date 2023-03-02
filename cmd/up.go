@@ -35,9 +35,9 @@ import (
 type UpCmd struct {
 	*flags.GlobalFlags
 
-	ID     string
-	Server string
-	IDE    string
+	ID      string
+	Machine string
+	IDE     string
 
 	PrebuildRepositories []string
 
@@ -65,7 +65,7 @@ func NewUpCmd(flags *flags.GlobalFlags) *cobra.Command {
 				return err
 			}
 
-			client, err := workspace2.ResolveWorkspace(ctx, devPodConfig, ideConfig, args, cmd.ID, cmd.Server, cmd.Provider, log.Default)
+			client, err := workspace2.ResolveWorkspace(ctx, devPodConfig, ideConfig, args, cmd.ID, cmd.Machine, cmd.Provider, log.Default)
 			if err != nil {
 				return err
 			}
@@ -78,7 +78,7 @@ func NewUpCmd(flags *flags.GlobalFlags) *cobra.Command {
 	upCmd.Flags().BoolVar(&cmd.Recreate, "recreate", false, "If true will remove any existing containers and recreate them")
 	upCmd.Flags().StringSliceVar(&cmd.PrebuildRepositories, "prebuild-repository", []string{}, "Docker respository that hosts devpod prebuilds for this workspace")
 	upCmd.Flags().StringVar(&cmd.ID, "id", "", "The id to use for the workspace")
-	upCmd.Flags().StringVar(&cmd.Server, "server", "", "The server to use for this workspace. The server needs to exist beforehand or the command will fail. If the workspace already exists, this option has no effect")
+	upCmd.Flags().StringVar(&cmd.Machine, "machine", "", "The machine to use for this workspace. The machine needs to exist beforehand or the command will fail. If the workspace already exists, this option has no effect")
 	upCmd.Flags().StringVar(&cmd.IDE, "ide", "", "The IDE to open the workspace in. If empty will use vscode locally or in browser")
 	return upCmd
 }
@@ -116,11 +116,13 @@ func (cmd *UpCmd) Run(ctx context.Context, client client2.WorkspaceClient) error
 
 func (cmd *UpCmd) parseIDE(ctx context.Context, devPodConfig *config.Config, args []string) (*provider2.WorkspaceIDEConfig, error) {
 	if cmd.IDE == "" {
-		if len(args) > 0 {
-			_, err := workspace2.GetWorkspace(ctx, devPodConfig, nil, args, log.Default)
-			if err == nil {
-				return nil, nil
-			}
+		if len(args) == 0 {
+			return nil, nil
+		}
+
+		_, err := workspace2.GetWorkspace(ctx, devPodConfig, nil, args, log.Default)
+		if err == nil {
+			return nil, nil
 		}
 
 		cmd.IDE = string(ide.Detect())
@@ -159,7 +161,7 @@ func startVSCodeLocally(client client2.WorkspaceClient, log log.Logger) error {
 func startInBrowser(ctx context.Context, client client2.WorkspaceClient, user string, log log.Logger) error {
 	agentClient, ok := client.(client2.AgentClient)
 	if !ok {
-		return fmt.Errorf("--browser is currently only supported for server providers")
+		return fmt.Errorf("--browser is currently only supported for machine providers")
 	}
 
 	// determine port
@@ -206,13 +208,13 @@ func (cmd *UpCmd) devPodUp(ctx context.Context, client client2.WorkspaceClient, 
 
 	agentClient, ok := client.(client2.AgentClient)
 	if ok {
-		return cmd.devPodUpServer(ctx, agentClient, log)
+		return cmd.devPodUpMachine(ctx, agentClient, log)
 	}
 
 	return nil, nil
 }
 
-func (cmd *UpCmd) devPodUpServer(ctx context.Context, client client2.AgentClient, log log.Logger) (*config2.Result, error) {
+func (cmd *UpCmd) devPodUpMachine(ctx context.Context, client client2.AgentClient, log log.Logger) (*config2.Result, error) {
 	// update options
 	err := client.RefreshOptions(ctx, "command", "")
 	if err != nil {
@@ -254,7 +256,7 @@ func (cmd *UpCmd) devPodUpServer(ctx context.Context, client client2.AgentClient
 	defer stdoutWriter.Close()
 	defer stdinWriter.Close()
 
-	// start server on stdio
+	// start machine on stdio
 	cancelCtx, cancel := context.WithCancel(ctx)
 	defer cancel()
 
@@ -297,7 +299,7 @@ func (cmd *UpCmd) devPodUpServer(ctx context.Context, client client2.AgentClient
 		log,
 	)
 	if err != nil {
-		return nil, errors.Wrap(err, "run tunnel server")
+		return nil, errors.Wrap(err, "run tunnel machine")
 	}
 
 	// wait until command finished

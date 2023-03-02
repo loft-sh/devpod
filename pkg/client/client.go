@@ -19,8 +19,8 @@ type Client interface {
 	// Context returns the context of the provider
 	Context() string
 
-	// Server returns the server of this client
-	Server() string
+	// Machine returns the machine of this client
+	Machine() string
 
 	// AgentPath returns the agent path
 	AgentPath() string

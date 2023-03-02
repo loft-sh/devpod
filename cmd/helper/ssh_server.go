@@ -4,10 +4,11 @@ import (
 	"encoding/base64"
 	"fmt"
 	"github.com/gliderlabs/ssh"
+	"github.com/loft-sh/devpod/cmd/flags"
 	"github.com/loft-sh/devpod/pkg/agent"
+	"github.com/loft-sh/devpod/pkg/log"
 	helperssh "github.com/loft-sh/devpod/pkg/ssh/server"
 	"github.com/loft-sh/devpod/pkg/ssh/server/port"
-	"github.com/loft-sh/devpod/pkg/ssh/server/stderrlog"
 	"github.com/loft-sh/devpod/pkg/stdio"
 	"github.com/loft-sh/devpod/pkg/token"
 	"github.com/pkg/errors"
@@ -18,6 +19,8 @@ import (
 
 // SSHServerCmd holds the ssh server cmd flags
 type SSHServerCmd struct {
+	*flags.GlobalFlags
+
 	Token         string
 	Address       string
 	Stdio         bool
@@ -25,8 +28,10 @@ type SSHServerCmd struct {
 }
 
 // NewSSHServerCmd creates a new ssh command
-func NewSSHServerCmd() *cobra.Command {
-	cmd := &SSHServerCmd{}
+func NewSSHServerCmd(flags *flags.GlobalFlags) *cobra.Command {
+	cmd := &SSHServerCmd{
+		GlobalFlags: flags,
+	}
 	sshCmd := &cobra.Command{
 		Use:   "ssh-server",
 		Short: "Starts a new ssh server",
@@ -79,7 +84,7 @@ func (cmd *SSHServerCmd) Run(_ *cobra.Command, _ []string) error {
 		}
 	}
 
-	server, err := helperssh.NewServer(cmd.Address, hostKey, keys)
+	server, err := helperssh.NewServer(cmd.Address, hostKey, keys, log.Default.ErrorStreamOnly())
 	if err != nil {
 		return err
 	}
@@ -115,7 +120,7 @@ func (cmd *SSHServerCmd) Run(_ *cobra.Command, _ []string) error {
 			return fmt.Errorf("address %s already in use: %v", cmd.Address, err)
 		}
 
-		stderrlog.Debugf("address %s already in use", cmd.Address)
+		log.Default.ErrorStreamOnly().Debugf("address %s already in use", cmd.Address)
 		return nil
 	}
 

@@ -32,14 +32,14 @@ func NewCommandCmd() *cobra.Command {
 }
 
 // Run runs the command logic
-func (cmd *CommandCmd) Run(ctx context.Context, provider *gcloudProvider, workspace *provider2.Workspace, log log.Logger) error {
+func (cmd *CommandCmd) Run(ctx context.Context, provider *gcloudProvider, machine *provider2.Machine, log log.Logger) error {
 	command := os.Getenv(provider2.CommandEnv)
 	if command == "" {
 		return fmt.Errorf("command is empty")
 	}
 
 	// via cmd
-	name := getName(workspace)
+	name := getName(machine)
 	args := []string{
 		"compute",
 		"ssh",

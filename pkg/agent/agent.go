@@ -10,6 +10,7 @@ import (
 	"github.com/loft-sh/devpod/pkg/log"
 	provider2 "github.com/loft-sh/devpod/pkg/provider"
 	"github.com/pkg/errors"
+	"github.com/sirupsen/logrus"
 	"io"
 	"os"
 	"os/exec"
@@ -66,26 +67,29 @@ func ReadAgentWorkspaceInfo(context, id string) (*provider2.AgentWorkspaceInfo, 
 	return workspaceInfo, nil
 }
 
-func WriteWorkspaceInfo(workspaceInfoRaw string) (*provider2.AgentWorkspaceInfo, error) {
-	workspaceInfo, decoded, err := DecodeWorkspaceInfo(workspaceInfoRaw)
-	if err != nil {
-		return nil, err
-	}
-
+func WriteWorkspaceInfo(workspaceInfo *provider2.AgentWorkspaceInfo, workspaceInfoRaw string) error {
 	// write to workspace folder
 	workspaceDir, err := CreateAgentWorkspaceDir(workspaceInfo.Workspace.Context, workspaceInfo.Workspace.ID)
 	if err != nil {
-		return nil, err
+		return err
 	}
 
 	// write workspace config
-	err = os.WriteFile(filepath.Join(workspaceDir, provider2.WorkspaceConfigFile), []byte(decoded), 0666)
+	workspaceConfig := filepath.Join(workspaceDir, provider2.WorkspaceConfigFile)
+	err = os.WriteFile(workspaceConfig, []byte(workspaceInfoRaw), 0666)
 	if err != nil {
-		return nil, fmt.Errorf("write workspace config file")
+		return fmt.Errorf("write workspace config file")
+	}
+
+	// change times
+	now := time.Now()
+	err = os.Chtimes(workspaceConfig, now, now)
+	if err != nil {
+		return fmt.Errorf("change times")
 	}
 
 	workspaceInfo.Folder = GetAgentWorkspaceContentDir(workspaceDir)
-	return workspaceInfo, nil
+	return nil
 }
 
 func RerunAsRoot(workspaceInfo *provider2.AgentWorkspaceInfo) (bool, error) {
@@ -146,6 +150,9 @@ func Tunnel(ctx context.Context, dockerHelper *docker.DockerHelper, agentPath, a
 	command := fmt.Sprintf("%s helper ssh-server --token %s --stdio", RemoteDevPodHelperLocation, token)
 	if trackActivity {
 		command += " --track-activity"
+	}
+	if log.GetLevel() == logrus.DebugLevel {
+		command += " --debug"
 	}
 
 	// create tunnel
