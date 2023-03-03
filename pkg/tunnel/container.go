@@ -19,7 +19,7 @@ import (
 )
 
 func NewContainerTunnel(client client.AgentClient, log log.Logger) *ContainerHandler {
-	updateConfigInterval := time.Second * 10
+	updateConfigInterval := time.Second * 30
 	return &ContainerHandler{
 		client:               client,
 		updateConfigInterval: updateConfigInterval,

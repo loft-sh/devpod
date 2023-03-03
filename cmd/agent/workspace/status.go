@@ -7,9 +7,7 @@ import (
 	"github.com/loft-sh/devpod/pkg/agent"
 	"github.com/loft-sh/devpod/pkg/client"
 	"github.com/loft-sh/devpod/pkg/log"
-	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
-	"os"
 	"strings"
 )
 
@@ -39,27 +37,10 @@ func NewStatusCmd(flags *flags.GlobalFlags) *cobra.Command {
 }
 
 func (cmd *StatusCmd) Run(ctx context.Context) error {
-	// get workspace folder
-	_, err := agent.GetAgentWorkspaceDir(cmd.Context, cmd.ID)
-	if err != nil {
-		if os.IsNotExist(err) {
-			fmt.Print(client.StatusNotFound)
-			return nil
-		}
-
-		return err
-	}
-
 	// get workspace
-	workspaceInfo, err := agent.ReadAgentWorkspaceInfo(cmd.Context, cmd.ID)
+	shouldExit, workspaceInfo, err := agent.ReadAgentWorkspaceInfo(cmd.Context, cmd.ID)
 	if err != nil {
 		return err
-	}
-
-	// check if we need to become root
-	shouldExit, err := agent.RerunAsRoot(workspaceInfo)
-	if err != nil {
-		return errors.Wrap(err, "rerun as root")
 	} else if shouldExit {
 		return nil
 	}

@@ -43,7 +43,7 @@ func DecodeWorkspaceInfo(workspaceInfoRaw string) (*provider2.AgentWorkspaceInfo
 	return workspaceInfo, decoded, nil
 }
 
-func ReadAgentWorkspaceInfo(context, id string) (*provider2.AgentWorkspaceInfo, error) {
+func readAgentWorkspaceInfo(context, id string) (*provider2.AgentWorkspaceInfo, error) {
 	// get workspace folder
 	workspaceDir, err := GetAgentWorkspaceDir(context, id)
 	if err != nil {
@@ -67,34 +67,59 @@ func ReadAgentWorkspaceInfo(context, id string) (*provider2.AgentWorkspaceInfo, 
 	return workspaceInfo, nil
 }
 
-func WriteWorkspaceInfo(workspaceInfo *provider2.AgentWorkspaceInfo, workspaceInfoRaw string) error {
+func ReadAgentWorkspaceInfo(context, id string) (bool, *provider2.AgentWorkspaceInfo, error) {
+	workspaceInfo, err := readAgentWorkspaceInfo(context, id)
+	if err != nil && err != FindAgentHomeFolderErr {
+		return false, nil, err
+	}
+
+	// check if we need to become root
+	shouldExit, err := rerunAsRoot(workspaceInfo)
+	if err != nil {
+		return false, nil, errors.Wrap(err, "rerun as root")
+	} else if shouldExit {
+		return true, nil, nil
+	} else if workspaceInfo == nil {
+		return false, nil, FindAgentHomeFolderErr
+	}
+
+	return false, workspaceInfo, nil
+}
+
+func WriteWorkspaceInfo(workspaceInfoEncoded string) (bool, *provider2.AgentWorkspaceInfo, error) {
+	workspaceInfo, decoded, err := DecodeWorkspaceInfo(workspaceInfoEncoded)
+	if err != nil {
+		return false, nil, err
+	}
+
+	// check if we need to become root
+	shouldExit, err := rerunAsRoot(workspaceInfo)
+	if err != nil {
+		return false, nil, fmt.Errorf("rerun as root: %v", err)
+	} else if shouldExit {
+		return true, nil, nil
+	}
+
 	// write to workspace folder
 	workspaceDir, err := CreateAgentWorkspaceDir(workspaceInfo.Workspace.Context, workspaceInfo.Workspace.ID)
 	if err != nil {
-		return err
+		return false, nil, err
 	}
 
 	// write workspace config
 	workspaceConfig := filepath.Join(workspaceDir, provider2.WorkspaceConfigFile)
-	err = os.WriteFile(workspaceConfig, []byte(workspaceInfoRaw), 0666)
+	err = os.WriteFile(workspaceConfig, []byte(decoded), 0666)
 	if err != nil {
-		return fmt.Errorf("write workspace config file")
-	}
-
-	// change times
-	now := time.Now()
-	err = os.Chtimes(workspaceConfig, now, now)
-	if err != nil {
-		return fmt.Errorf("change times")
+		return false, nil, fmt.Errorf("write workspace config file")
 	}
 
 	workspaceInfo.Folder = GetAgentWorkspaceContentDir(workspaceDir)
-	return nil
+	return false, workspaceInfo, nil
 }
 
-func RerunAsRoot(workspaceInfo *provider2.AgentWorkspaceInfo) (bool, error) {
+func rerunAsRoot(workspaceInfo *provider2.AgentWorkspaceInfo) (bool, error) {
 	// check if root is required
-	if runtime.GOOS == "windows" || os.Getuid() == 0 {
+	if runtime.GOOS != "linux" || os.Getuid() == 0 {
 		return false, nil
 	}
 
@@ -106,7 +131,7 @@ func RerunAsRoot(workspaceInfo *provider2.AgentWorkspaceInfo) (bool, error) {
 
 	// check if daemon needs to be installed
 	agentRootRequired := false
-	if runtime.GOOS == "linux" && len(workspaceInfo.Agent.Exec.Shutdown) > 0 {
+	if workspaceInfo == nil || len(workspaceInfo.Agent.Exec.Shutdown) > 0 {
 		agentRootRequired = true
 	}
 

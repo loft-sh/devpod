@@ -44,25 +44,12 @@ func NewContainerTunnelCmd() *cobra.Command {
 
 // Run runs the command logic
 func (cmd *ContainerTunnelCmd) Run(_ *cobra.Command, _ []string) error {
-	// get workspace info
-	workspaceInfo, decoded, err := agent.DecodeWorkspaceInfo(cmd.WorkspaceInfo)
-	if err != nil {
-		return err
-	}
-
-	// check if we need to become root
-	shouldExit, err := agent.RerunAsRoot(workspaceInfo)
-	if err != nil {
-		_, _ = fmt.Fprintf(os.Stderr, "Rerun as root: %v", err)
-		os.Exit(1)
-	} else if shouldExit {
-		os.Exit(0)
-	}
-
 	// write workspace info
-	err = agent.WriteWorkspaceInfo(workspaceInfo, decoded)
+	shouldExit, workspaceInfo, err := agent.WriteWorkspaceInfo(cmd.WorkspaceInfo)
 	if err != nil {
 		return err
+	} else if shouldExit {
+		return nil
 	}
 
 	// wait until devcontainer is started
