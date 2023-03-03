@@ -61,34 +61,34 @@ func (s *machineClient) Context() string {
 
 func (s *machineClient) Create(ctx context.Context, options client.CreateOptions) error {
 	// create a machine
-	s.log.Infof("Create %s machine...", s.config.Name)
+	s.log.Infof("Create machine '%s' with provider '%s'...", s.machine.ID, s.config.Name)
 	err := runCommand(ctx, "create", s.config.Exec.Create, ToEnvironment(nil, s.machine, s.devPodConfig.ProviderOptions(s.config.Name), nil), os.Stdin, os.Stdout, os.Stderr, s.log)
 	if err != nil {
 		return err
 	}
 
-	s.log.Donef("Successfully created %s machine", s.config.Name)
+	s.log.Donef("Successfully created machine '%s' with provider '%s'", s.machine.ID, s.config.Name)
 	return nil
 }
 
 func (s *machineClient) Start(ctx context.Context, options client.StartOptions) error {
-	s.log.Infof("Starting machine %s...", s.machine.ID)
+	s.log.Infof("Starting machine '%s'...", s.machine.ID)
 	err := runCommand(ctx, "start", s.config.Exec.Start, ToEnvironment(nil, s.machine, s.devPodConfig.ProviderOptions(s.config.Name), nil), os.Stdin, os.Stdout, os.Stderr, s.log)
 	if err != nil {
 		return err
 	}
-	s.log.Donef("Successfully started %s", s.machine.ID)
+	s.log.Donef("Successfully started '%s'", s.machine.ID)
 
 	return nil
 }
 
 func (s *machineClient) Stop(ctx context.Context, options client.StopOptions) error {
-	s.log.Infof("Stopping machine %s...", s.machine.ID)
+	s.log.Infof("Stopping machine '%s'...", s.machine.ID)
 	err := runCommand(ctx, "stop", s.config.Exec.Stop, ToEnvironment(nil, s.machine, s.devPodConfig.ProviderOptions(s.config.Name), nil), os.Stdin, os.Stdout, os.Stderr, s.log)
 	if err != nil {
 		return err
 	}
-	s.log.Donef("Successfully stopped %s", s.machine.ID)
+	s.log.Donef("Successfully stopped '%s'", s.machine.ID)
 
 	return nil
 }
