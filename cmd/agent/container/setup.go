@@ -7,7 +7,7 @@ import (
 	"github.com/loft-sh/devpod/pkg/compress"
 	"github.com/loft-sh/devpod/pkg/devcontainer/config"
 	"github.com/loft-sh/devpod/pkg/devcontainer/setup"
-	"github.com/loft-sh/devpod/pkg/ide/goland"
+	"github.com/loft-sh/devpod/pkg/ide/jetbrains"
 	"github.com/loft-sh/devpod/pkg/ide/openvscode"
 	"github.com/loft-sh/devpod/pkg/ide/vscode"
 	"github.com/loft-sh/devpod/pkg/log"
@@ -104,17 +104,24 @@ func (cmd *SetupContainerCmd) installIDE(setupInfo *config.Result, workspaceInfo
 	case provider2.IDEOpenVSCode:
 		return setupOpenVSCode(setupInfo, log)
 	case provider2.IDEGoland:
-		return setupGoland(setupInfo, log)
+		return jetbrains.NewGolandServer(config.GetRemoteUser(setupInfo), log).Install()
+	case provider2.IDEPyCharm:
+		return jetbrains.NewPyCharmServer(config.GetRemoteUser(setupInfo), log).Install()
+	case provider2.IDEPhpStorm:
+		return jetbrains.NewPhpStorm(config.GetRemoteUser(setupInfo), log).Install()
+	case provider2.IDEIntellij:
+		return jetbrains.NewIntellij(config.GetRemoteUser(setupInfo), log).Install()
+	case provider2.IDECLion:
+		return jetbrains.NewCLionServer(config.GetRemoteUser(setupInfo), log).Install()
+	case provider2.IDERider:
+		return jetbrains.NewRiderServer(config.GetRemoteUser(setupInfo), log).Install()
+	case provider2.IDERubyMine:
+		return jetbrains.NewRubyMineServer(config.GetRemoteUser(setupInfo), log).Install()
+	case provider2.IDEWebStorm:
+		return jetbrains.NewWebStormServer(config.GetRemoteUser(setupInfo), log).Install()
 	}
 
 	return nil
-}
-
-func setupGoland(setupInfo *config.Result, log log.Logger) error {
-	log.Debugf("Setup goland...")
-
-	user := config.GetRemoteUser(setupInfo)
-	return goland.NewGolandServer(user, log).Install()
 }
 
 func (cmd *SetupContainerCmd) setupVSCode(setupInfo *config.Result, log log.Logger) error {

@@ -20,6 +20,13 @@ var allowedIDEs = []provider2.IDE{
 	provider2.IDEVSCode,
 	provider2.IDEOpenVSCode,
 	provider2.IDEGoland,
+	provider2.IDEPyCharm,
+	provider2.IDEPhpStorm,
+	provider2.IDEIntellij,
+	provider2.IDECLion,
+	provider2.IDERider,
+	provider2.IDERubyMine,
+	provider2.IDEWebStorm,
 }
 
 func Parse(ide string) (provider2.IDE, error) {

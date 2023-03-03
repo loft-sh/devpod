@@ -14,7 +14,6 @@ import (
 	"github.com/loft-sh/devpod/pkg/provider"
 	"github.com/loft-sh/devpod/pkg/shell"
 	"github.com/loft-sh/devpod/pkg/types"
-	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 	"io"
 	"os"
@@ -28,7 +27,7 @@ func NewAgentClient(devPodConfig *config.Config, prov *provider.ProviderConfig, 
 		var err error
 		machineConfig, err = provider.LoadMachineConfig(workspace.Context, workspace.Machine.ID)
 		if err != nil {
-			return nil, errors.Wrap(err, "load machine config")
+			log.Errorf("Error loading machine config: %v", err)
 		}
 	}
 
@@ -202,11 +201,13 @@ func (s *agentClient) Delete(ctx context.Context, opt client.DeleteOptions) erro
 				s.log.Errorf("Error deleting container: %v", err)
 			}
 		}
-	} else if s.workspace.Machine.ID != "" && len(s.config.Exec.Delete) > 0 {
+	} else if s.machine != nil && s.workspace.Machine.ID != "" && len(s.config.Exec.Delete) > 0 {
 		// delete machine if config was found
 		machineClient, err := NewMachineClient(s.devPodConfig, s.config, s.machine, s.log)
 		if err != nil {
-			return err
+			if !opt.Force {
+				return err
+			}
 		}
 
 		err = machineClient.Delete(ctx, opt)
@@ -222,7 +223,7 @@ func (s *agentClient) Start(ctx context.Context, options client.StartOptions) er
 	s.m.Lock()
 	defer s.m.Unlock()
 
-	if !s.isMachineProvider() {
+	if !s.isMachineProvider() || s.machine == nil {
 		return nil
 	}
 

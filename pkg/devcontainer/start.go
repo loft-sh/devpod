@@ -4,7 +4,7 @@ import (
 	"context"
 	"fmt"
 	"github.com/loft-sh/devpod/pkg/devcontainer/config"
-	"github.com/loft-sh/devpod/pkg/ide/goland"
+	"github.com/loft-sh/devpod/pkg/ide/jetbrains"
 	provider2 "github.com/loft-sh/devpod/pkg/provider"
 	"github.com/sirupsen/logrus"
 	"strconv"
@@ -62,8 +62,23 @@ func (r *Runner) startDevContainer(parsedConfig *config.DevContainerConfig, merg
 	}
 
 	// add ide mounts
-	if r.WorkspaceConfig.Workspace.IDE.IDE == provider2.IDEGoland {
-		args = append(args, "--mount", "type=volume,src=devpod-goland,dst="+goland.GolandFolder)
+	switch r.WorkspaceConfig.Workspace.IDE.IDE {
+	case provider2.IDEGoland:
+		args = append(args, "--mount", jetbrains.NewGolandServer("", r.Log).GetVolume())
+	case provider2.IDEPyCharm:
+		args = append(args, "--mount", jetbrains.NewPyCharmServer("", r.Log).GetVolume())
+	case provider2.IDEPhpStorm:
+		args = append(args, "--mount", jetbrains.NewPhpStorm("", r.Log).GetVolume())
+	case provider2.IDEIntellij:
+		args = append(args, "--mount", jetbrains.NewIntellij("", r.Log).GetVolume())
+	case provider2.IDECLion:
+		args = append(args, "--mount", jetbrains.NewCLionServer("", r.Log).GetVolume())
+	case provider2.IDERider:
+		args = append(args, "--mount", jetbrains.NewRiderServer("", r.Log).GetVolume())
+	case provider2.IDERubyMine:
+		args = append(args, "--mount", jetbrains.NewRubyMineServer("", r.Log).GetVolume())
+	case provider2.IDEWebStorm:
+		args = append(args, "--mount", jetbrains.NewWebStormServer("", r.Log).GetVolume())
 	}
 
 	// labels
