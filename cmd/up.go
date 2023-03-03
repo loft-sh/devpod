@@ -10,7 +10,7 @@ import (
 	"github.com/loft-sh/devpod/pkg/config"
 	config2 "github.com/loft-sh/devpod/pkg/devcontainer/config"
 	"github.com/loft-sh/devpod/pkg/ide"
-	"github.com/loft-sh/devpod/pkg/ide/goland"
+	"github.com/loft-sh/devpod/pkg/ide/jetbrains"
 	"github.com/loft-sh/devpod/pkg/ide/openvscode"
 	"github.com/loft-sh/devpod/pkg/log"
 	open2 "github.com/loft-sh/devpod/pkg/open"
@@ -21,14 +21,11 @@ import (
 	workspace2 "github.com/loft-sh/devpod/pkg/workspace"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
-	"github.com/skratchdot/open-golang/open"
 	"github.com/spf13/cobra"
 	"golang.org/x/crypto/ssh"
 	"io"
-	"net/url"
 	"os"
 	"os/exec"
-	"path"
 )
 
 // UpCmd holds the up cmd flags
@@ -108,7 +105,21 @@ func (cmd *UpCmd) Run(ctx context.Context, client client2.WorkspaceClient) error
 	case provider2.IDEOpenVSCode:
 		return startInBrowser(ctx, client, user, log.Default)
 	case provider2.IDEGoland:
-		return startGoland(result, client, log.Default)
+		return jetbrains.NewGolandServer(config2.GetRemoteUser(result), log.Default).OpenGateway(result.SubstitutionContext.ContainerWorkspaceFolder, client.Workspace())
+	case provider2.IDEPyCharm:
+		return jetbrains.NewPyCharmServer(config2.GetRemoteUser(result), log.Default).OpenGateway(result.SubstitutionContext.ContainerWorkspaceFolder, client.Workspace())
+	case provider2.IDEPhpStorm:
+		return jetbrains.NewPhpStorm(config2.GetRemoteUser(result), log.Default).OpenGateway(result.SubstitutionContext.ContainerWorkspaceFolder, client.Workspace())
+	case provider2.IDEIntellij:
+		return jetbrains.NewIntellij(config2.GetRemoteUser(result), log.Default).OpenGateway(result.SubstitutionContext.ContainerWorkspaceFolder, client.Workspace())
+	case provider2.IDECLion:
+		return jetbrains.NewCLionServer(config2.GetRemoteUser(result), log.Default).OpenGateway(result.SubstitutionContext.ContainerWorkspaceFolder, client.Workspace())
+	case provider2.IDERider:
+		return jetbrains.NewRiderServer(config2.GetRemoteUser(result), log.Default).OpenGateway(result.SubstitutionContext.ContainerWorkspaceFolder, client.Workspace())
+	case provider2.IDERubyMine:
+		return jetbrains.NewRubyMineServer(config2.GetRemoteUser(result), log.Default).OpenGateway(result.SubstitutionContext.ContainerWorkspaceFolder, client.Workspace())
+	case provider2.IDEWebStorm:
+		return jetbrains.NewWebStormServer(config2.GetRemoteUser(result), log.Default).OpenGateway(result.SubstitutionContext.ContainerWorkspaceFolder, client.Workspace())
 	}
 
 	return nil
@@ -136,16 +147,6 @@ func (cmd *UpCmd) parseIDE(ctx context.Context, devPodConfig *config.Config, arg
 	return &provider2.WorkspaceIDEConfig{
 		IDE: ideStr,
 	}, nil
-}
-
-func startGoland(result *config2.Result, client client2.WorkspaceClient, log log.Logger) error {
-	log.Infof("Starting JetBrains Gateway...")
-	remoteUser := config2.GetRemoteUser(result)
-	err := open.Start(`jetbrains-gateway://connect#idePath=` + url.QueryEscape(goland.GetGolandDirectory(path.Join("/", "home", remoteUser))) + `&projectPath=` + url.QueryEscape(result.SubstitutionContext.ContainerWorkspaceFolder) + `&host=` + client.Workspace() + `.devpod&port=22&user=` + remoteUser + `&type=ssh&deploy=false`)
-	if err != nil {
-		return err
-	}
-	return nil
 }
 
 func startVSCodeLocally(client client2.WorkspaceClient, log log.Logger) error {

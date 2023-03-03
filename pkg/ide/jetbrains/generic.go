@@ -1,16 +1,18 @@
-package goland
+package jetbrains
 
 import (
 	"crypto/tls"
+	"fmt"
 	"github.com/loft-sh/devpod/pkg/command"
 	copy2 "github.com/loft-sh/devpod/pkg/copy"
 	"github.com/loft-sh/devpod/pkg/extract"
-	"github.com/loft-sh/devpod/pkg/ide"
 	"github.com/loft-sh/devpod/pkg/log"
 	"github.com/mitchellh/go-homedir"
 	"github.com/pkg/errors"
+	"github.com/skratchdot/open-golang/open"
 	"io"
 	"net/http"
+	"net/url"
 	"os"
 	"path"
 	"path/filepath"
@@ -18,31 +20,52 @@ import (
 	"time"
 )
 
-const GolandDownloadAmd64 = "https://download.jetbrains.com/go/goland-2022.3.2.tar.gz"
-const GolandDownloadArm64 = "https://download.jetbrains.com/go/goland-2022.3.2-aarch64.tar.gz"
+type GenericOptions struct {
+	ID          string
+	DisplayName string
 
-const GolandArchive = "goland.tar.gz"
+	DownloadAmd64 string
+	DownloadArm64 string
+}
 
-const GolandFolder = "/var/devpod/goland"
-
-func NewGolandServer(userName string, log log.Logger) ide.IDE {
-	return &golandServer{
+func newGenericServer(userName string, options *GenericOptions, log log.Logger) *GenericJetBrainsServer {
+	return &GenericJetBrainsServer{
 		userName: userName,
+		options:  options,
 		log:      log,
 	}
 }
 
-type golandServer struct {
+type GenericJetBrainsServer struct {
 	userName string
+	options  *GenericOptions
 	log      log.Logger
 }
 
-func (o *golandServer) Install() error {
+func (o *GenericJetBrainsServer) OpenGateway(workspaceFolder, workspaceID string) error {
+	o.log.Infof("Starting %s trough JetBrains Gateway...", o.options.DisplayName)
+	err := open.Start(`jetbrains-gateway://connect#idePath=` + url.QueryEscape(o.getDirectory(path.Join("/", "home", o.userName))) + `&projectPath=` + url.QueryEscape(workspaceFolder) + `&host=` + workspaceID + `.devpod&port=22&user=` + url.QueryEscape(o.userName) + `&type=ssh&deploy=false`)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func (o *GenericJetBrainsServer) GetVolume() string {
+	return fmt.Sprintf("type=volume,src=devpod-%s,dst=%s", o.options.ID, o.getDownloadFolder())
+}
+
+func (o *GenericJetBrainsServer) getDownloadFolder() string {
+	return fmt.Sprintf("/var/devpod/%s", o.options.ID)
+}
+
+func (o *GenericJetBrainsServer) Install() error {
+	o.log.Debugf("Setup %s...", o.options.DisplayName)
 	baseFolder, err := getBaseFolder(o.userName)
 	if err != nil {
 		return err
 	}
-	targetLocation := GetGolandDirectory(baseFolder)
+	targetLocation := o.getDirectory(baseFolder)
 
 	_, err = os.Stat(targetLocation)
 	if err == nil {
@@ -50,14 +73,14 @@ func (o *golandServer) Install() error {
 		return nil
 	}
 
-	o.log.Debugf("Download goland archive")
-	archivePath, err := downloadGoland(GolandFolder, o.log)
+	o.log.Debugf("Download %s archive", o.options.DisplayName)
+	archivePath, err := o.download(o.getDownloadFolder(), o.log)
 	if err != nil {
 		return err
 	}
 
-	o.log.Infof("Extract goland...")
-	err = extractGoland(archivePath, targetLocation)
+	o.log.Infof("Extract %s...", o.options.DisplayName)
+	err = o.extractArchive(archivePath, targetLocation)
 	if err != nil {
 		return err
 	}
@@ -66,7 +89,7 @@ func (o *golandServer) Install() error {
 	if err != nil {
 		return errors.Wrap(err, "chown")
 	}
-	o.log.Infof("Successfully installed goland backend")
+	o.log.Infof("Successfully installed %s backend", o.options.DisplayName)
 	return nil
 }
 
@@ -85,11 +108,11 @@ func getBaseFolder(userName string) (string, error) {
 	return homeFolder, nil
 }
 
-func GetGolandDirectory(baseFolder string) string {
-	return path.Join(baseFolder, ".cache", "JetBrains", "RemoteDev", "dist", "goland")
+func (o *GenericJetBrainsServer) getDirectory(baseFolder string) string {
+	return path.Join(baseFolder, ".cache", "JetBrains", "RemoteDev", "dist", o.options.ID)
 }
 
-func extractGoland(fromPath string, toPath string) error {
+func (o *GenericJetBrainsServer) extractArchive(fromPath string, toPath string) error {
 	file, err := os.Open(fromPath)
 	if err != nil {
 		return err
@@ -99,22 +122,22 @@ func extractGoland(fromPath string, toPath string) error {
 	return extract.Extract(file, toPath, extract.StripLevels(1))
 }
 
-func downloadGoland(targetFolder string, log log.Logger) (string, error) {
+func (o *GenericJetBrainsServer) download(targetFolder string, log log.Logger) (string, error) {
 	err := os.MkdirAll(targetFolder, os.ModePerm)
 	if err != nil {
 		return "", err
 	}
 
-	downloadUrl := GolandDownloadAmd64
+	downloadUrl := o.options.DownloadAmd64
 	if runtime.GOARCH == "arm64" {
-		downloadUrl = GolandDownloadArm64
+		downloadUrl = o.options.DownloadArm64
 	}
 
-	targetPath := path.Join(filepath.ToSlash(targetFolder), GolandArchive)
+	targetPath := path.Join(filepath.ToSlash(targetFolder), o.options.ID+".tar.gz")
 
 	// initiate download
-	log.Infof("Download Goland from %s", downloadUrl)
-	defer log.Debugf("Successfully downloaded Goland")
+	log.Infof("Download %s from %s", o.options.DisplayName, downloadUrl)
+	defer log.Debugf("Successfully downloaded %s", o.options.DisplayName)
 	httpClient := &http.Client{
 		Transport: &http.Transport{
 			TLSClientConfig: &tls.Config{InsecureSkipVerify: true},

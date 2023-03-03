@@ -19,6 +19,9 @@ func NewMachineClient(devPodConfig *config.Config, provider *provider.ProviderCo
 	if !provider.IsMachineProvider() {
 		return nil, fmt.Errorf("provider '%s' is not a machine provider. Please use another provider", provider.Name)
 	}
+	if machine == nil {
+		return nil, fmt.Errorf("machine doesn't exist. Seems like it was deleted without the workspace being deleted")
+	}
 
 	return &machineClient{
 		devPodConfig: devPodConfig,
