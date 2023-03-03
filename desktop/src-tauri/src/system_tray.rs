@@ -1,15 +1,16 @@
-use log::trace;
+use log::warn;
 use tauri::{
-    AppHandle, CustomMenuItem, Manager, SystemTray as TauriSystemTray, SystemTrayEvent,
+    AppHandle, CustomMenuItem, Manager, State, SystemTray as TauriSystemTray, SystemTrayEvent,
     SystemTrayMenu, SystemTrayMenuItem, SystemTraySubmenu, WindowBuilder, WindowUrl, Wry,
 };
 
 use crate::{providers::ProvidersState, workspaces::WorkspacesState, AppState};
 
 pub trait SystemTrayIdentifier {}
+pub type SystemTrayClickHandler = Box<dyn Fn(&AppHandle, State<AppState>) -> ()>;
 pub trait ToSystemTraySubmenu {
     fn to_submenu(&self) -> SystemTraySubmenu;
-    fn on_tray_item_clicked(&self, id: &str) -> ();
+    fn on_tray_item_clicked(&self, tray_item_id: &str) -> Option<SystemTrayClickHandler>;
 }
 
 pub struct SystemTray {}
@@ -25,8 +26,8 @@ impl SystemTray {
     const SHOW_DASHBOARD_ID: &str = "show_dashboard";
 }
 
+// FIXME: should implement proper builder pattern
 impl SystemTray {
-
     pub fn build_menu(&self) -> SystemTrayMenu {
         let show_dashboard = CustomMenuItem::new(Self::SHOW_DASHBOARD_ID, "Show Dashboard");
         let quit = CustomMenuItem::new(Self::QUIT_ID, "Quit");
@@ -90,21 +91,25 @@ impl SystemTray {
                 }
                 id => {
                     let app_state = app.state::<AppState>();
+                    let mut maybe_handler: Option<_> = None;
 
                     if id.starts_with(WorkspacesState::IDENTIFIER_PREFIX) {
                         let workspaces_state = &*app_state.workspaces.lock().unwrap();
-                        workspaces_state.on_tray_item_clicked(id);
-
-                        return;
-                    }
-                    if id.starts_with(ProvidersState::IDENTIFIER_PREFIX) {
+                        maybe_handler = workspaces_state.on_tray_item_clicked(id);
+                    } else if id.starts_with(ProvidersState::IDENTIFIER_PREFIX) {
                         let providers_state = &*app_state.providers.lock().unwrap();
-                        providers_state.on_tray_item_clicked(id);
+                        maybe_handler = providers_state.on_tray_item_clicked(id);
+                    } else {
+                        warn!("Received unhandled click for ID: {}", id);
+                    }
+
+                    if let Some(handler) = maybe_handler {
+                        handler(app, app_state);
 
                         return;
                     }
 
-                    trace!("Received unhandled click for ID: {}", id)
+                    return;
                 }
             },
             _ => {}

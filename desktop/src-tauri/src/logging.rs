@@ -1,5 +1,5 @@
 use tauri::{plugin::TauriPlugin, Wry};
-use tauri_plugin_log::{LogLevel, LogTarget};
+use tauri_plugin_log::{LogTarget};
 
 pub fn build_plugin() -> TauriPlugin<Wry> {
     let enable_debug_logging: Option<&'static str> = option_env!("DEBUG");
