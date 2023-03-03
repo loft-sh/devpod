@@ -78,12 +78,11 @@ func CloneConfig(config *Config) *Config {
 }
 
 func LoadConfig(contextOverride string) (*Config, error) {
-	configDir, err := GetConfigDir()
+	configOrigin, err := GetConfigPath()
 	if err != nil {
 		return nil, err
 	}
 
-	configOrigin := filepath.Join(configDir, ConfigFile)
 	configBytes, err := os.ReadFile(configOrigin)
 	if err != nil {
 		if !os.IsNotExist(err) {
@@ -132,14 +131,14 @@ func LoadConfig(contextOverride string) (*Config, error) {
 }
 
 func SaveConfig(config *Config) error {
+	configOrigin, err := GetConfigPath()
+	if err != nil {
+		return err
+	}
+
 	config = CloneConfig(config)
 	if config.OriginalContext != "" {
 		config.DefaultContext = config.OriginalContext
-	}
-
-	configDir, err := GetConfigDir()
-	if err != nil {
-		return err
 	}
 
 	out, err := yaml.Marshal(config)
@@ -147,12 +146,12 @@ func SaveConfig(config *Config) error {
 		return err
 	}
 
-	err = os.MkdirAll(configDir, 0755)
+	err = os.MkdirAll(filepath.Dir(configOrigin), 0755)
 	if err != nil {
 		return err
 	}
 
-	err = os.WriteFile(filepath.Join(configDir, ConfigFile), out, 0666)
+	err = os.WriteFile(configOrigin, out, 0666)
 	if err != nil {
 		return err
 	}

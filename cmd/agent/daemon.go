@@ -66,29 +66,33 @@ func doOnce(log log.Logger) {
 	var latestActivity *time.Time
 	var workspace *provider2.AgentWorkspaceInfo
 
-	baseFolders := agent.GetBaseFolders()
-	for _, baseFolder := range baseFolders {
-		pattern := baseFolder + "/contexts/*/workspaces/*/" + provider2.WorkspaceConfigFile
-		matches, err := filepath.Glob(pattern)
+	// get base folder
+	baseFolder, err := agent.FindAgentHomeFolder()
+	if err != nil {
+		return
+	}
+
+	// get all workspace configs
+	pattern := baseFolder + "/contexts/*/workspaces/*/" + provider2.WorkspaceConfigFile
+	matches, err := filepath.Glob(pattern)
+	if err != nil {
+		log.Errorf("Error globing pattern %s: %v", pattern, err)
+		return
+	}
+
+	// check when the last touch was
+	for _, match := range matches {
+		activity, activityWorkspace, err := getActivity(match, log)
 		if err != nil {
-			log.Errorf("Error globing pattern %s: %v", pattern, err)
+			log.Errorf("Error checking for inactivity: %v", err)
+			continue
+		} else if activity == nil {
 			continue
 		}
 
-		// check when the last touch was
-		for _, match := range matches {
-			activity, activityWorkspace, err := getActivity(match, log)
-			if err != nil {
-				log.Errorf("Error checking for inactivity: %v", err)
-				continue
-			} else if activity == nil {
-				continue
-			}
-
-			if latestActivity == nil || activity.After(*latestActivity) {
-				latestActivity = activity
-				workspace = activityWorkspace
-			}
+		if latestActivity == nil || activity.After(*latestActivity) {
+			latestActivity = activity
+			workspace = activityWorkspace
 		}
 	}
 
@@ -114,7 +118,7 @@ func doOnce(log log.Logger) {
 	// we run the timeout command now
 	buf := &bytes.Buffer{}
 	log.Infof("Run shutdown command for workspace %s: %s", workspace.Workspace.ID, strings.Join(workspace.Agent.Exec.Shutdown, " "))
-	err := clientimplementation.RunCommand(context.Background(), workspace.Agent.Exec.Shutdown, clientimplementation.ToEnvironment(workspace.Workspace, workspace.Machine, workspace.Options, nil), nil, buf, buf)
+	err = clientimplementation.RunCommand(context.Background(), workspace.Agent.Exec.Shutdown, clientimplementation.ToEnvironment(workspace.Workspace, workspace.Machine, workspace.Options, nil), nil, buf, buf)
 	if err != nil {
 		log.Errorf("Error running %s: %s%v", strings.Join(workspace.Agent.Exec.Shutdown, " "), buf.String(), err)
 		return
@@ -124,23 +128,27 @@ func doOnce(log log.Logger) {
 }
 
 func initialTouch(log log.Logger) {
-	baseFolders := agent.GetBaseFolders()
-	for _, baseFolder := range baseFolders {
-		pattern := baseFolder + "/contexts/*/workspaces/*/" + provider2.WorkspaceConfigFile
-		matches, err := filepath.Glob(pattern)
-		if err != nil {
-			log.Errorf("Error globing pattern %s: %v", pattern, err)
-			continue
-		}
+	// get base folder
+	baseFolder, err := agent.FindAgentHomeFolder()
+	if err != nil {
+		return
+	}
 
-		// check when the last touch was
-		now := time.Now()
-		for _, match := range matches {
-			err := os.Chtimes(match, now, now)
-			if err != nil {
-				log.Errorf("Error touching workspace config %s: %v", pattern, err)
-				continue
-			}
+	// get workspace configs
+	pattern := baseFolder + "/contexts/*/workspaces/*/" + provider2.WorkspaceConfigFile
+	matches, err := filepath.Glob(pattern)
+	if err != nil {
+		log.Errorf("Error globing pattern %s: %v", pattern, err)
+		return
+	}
+
+	// check when the last touch was
+	now := time.Now()
+	for _, match := range matches {
+		err := os.Chtimes(match, now, now)
+		if err != nil {
+			log.Errorf("Error touching workspace config %s: %v", pattern, err)
+			return
 		}
 	}
 }

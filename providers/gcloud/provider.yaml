@@ -40,7 +40,7 @@ options:
     default: "true"
   AGENT_PATH:
     description: The path where to inject the DevPod agent to.
-    default: /run/agent
+    default: /var/lib/toolbox/devpod
 agent:
   path: ${AGENT_PATH}
   inactivityTimeout: ${INACTIVITY_TIMEOUT}
@@ -50,7 +50,7 @@ agent:
     shutdown: |-
       ${DEVPOD} helper http request -X POST \
                                     -H "Authorization: Bearer ${GCLOUD_TOKEN}" \
-                                    https://compute.googleapis.com/compute/v1/projects/${PROJECT}/zones/${ZONE}/instances/devpod-${SERVER_ID}/stop
+                                    https://compute.googleapis.com/compute/v1/projects/${PROJECT}/zones/${ZONE}/instances/devpod-${MACHINE_ID}/stop
 exec:
   init: |-
     if ! command -v ${GCLOUD_BINARY} &> /dev/null; then

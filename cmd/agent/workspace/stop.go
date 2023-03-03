@@ -37,15 +37,9 @@ func NewStopCmd(flags *flags.GlobalFlags) *cobra.Command {
 
 func (cmd *StopCmd) Run(ctx context.Context) error {
 	// get workspace
-	workspaceInfo, err := agent.ReadAgentWorkspaceInfo(cmd.Context, cmd.ID)
+	shouldExit, workspaceInfo, err := agent.ReadAgentWorkspaceInfo(cmd.Context, cmd.ID)
 	if err != nil {
 		return err
-	}
-
-	// check if we need to become root
-	shouldExit, err := agent.RerunAsRoot(workspaceInfo)
-	if err != nil {
-		return errors.Wrap(err, "rerun as root")
 	} else if shouldExit {
 		return nil
 	}
