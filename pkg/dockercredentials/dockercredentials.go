@@ -1,13 +1,24 @@
 package dockercredentials
 
 import (
-	"bytes"
-	"github.com/docker/cli/cli/config/configfile"
-	"github.com/docker/cli/cli/config/types"
+	"fmt"
+	"github.com/docker/cli/cli/config"
+	"github.com/loft-sh/devpod/pkg/command"
 	"github.com/loft-sh/devpod/pkg/docker"
+	"github.com/loft-sh/devpod/pkg/random"
+	"github.com/pkg/errors"
 	"os"
 	"path/filepath"
 )
+
+type Request struct {
+	// If ServerURL is empty its a list request
+	ServerURL string
+}
+
+type ListResponse struct {
+	Registries map[string]string
+}
 
 // Credentials holds the information shared between docker and the credentials store.
 type Credentials struct {
@@ -16,69 +27,87 @@ type Credentials struct {
 	Secret    string
 }
 
-func ConfigureCredentials(dockerCredentials string) (string, error) {
-	dockerConfigDir, err := os.MkdirTemp("", "")
+func ConfigureCredentialsContainer(userName string, port int) error {
+	userHome, err := command.GetHome(userName)
+	if err != nil {
+		return err
+	}
+
+	configDir := os.Getenv("DOCKER_CONFIG")
+	if configDir == "" {
+		configDir = filepath.Join(userHome, ".docker")
+	}
+
+	return configureCredentials("/usr/local/bin", configDir, port)
+}
+
+func configureCredentials(targetDir, configDir string, port int) error {
+	binaryPath, err := os.Executable()
+	if err != nil {
+		return err
+	}
+
+	dockerConfig, err := config.Load(configDir)
+	if err != nil {
+		return err
+	}
+
+	// write credentials helper
+	err = os.WriteFile(filepath.Join(targetDir, "docker-credential-devpod"), []byte(fmt.Sprintf(`#!/bin/sh
+%s agent docker-credentials --port %d "$@"`, binaryPath, port)), 0755)
+	if err != nil {
+		return errors.Wrap(err, "write credential helper")
+	}
+
+	dockerConfig.CredentialsStore = "devpod"
+	return dockerConfig.Save()
+}
+
+func ConfigureCredentialsMachine(targetFolder string, port int) (string, error) {
+	dockerConfigDir := filepath.Join(targetFolder, ".cache", random.String(12))
+	err := os.MkdirAll(dockerConfigDir, 0777)
 	if err != nil {
 		return "", err
 	}
 
-	err = os.WriteFile(filepath.Join(dockerConfigDir, "config.json"), []byte(dockerCredentials), os.ModePerm)
+	err = configureCredentials(dockerConfigDir, dockerConfigDir, port)
 	if err != nil {
+		_ = os.RemoveAll(dockerConfigDir)
 		return "", err
 	}
 
 	err = os.Setenv("DOCKER_CONFIG", dockerConfigDir)
 	if err != nil {
+		_ = os.RemoveAll(dockerConfigDir)
+		return "", err
+	}
+
+	err = os.Setenv("PATH", os.Getenv("PATH")+":"+dockerConfigDir)
+	if err != nil {
+		_ = os.RemoveAll(dockerConfigDir)
 		return "", err
 	}
 
 	return dockerConfigDir, nil
 }
 
-func GetAuthConfigs() (map[string]types.AuthConfig, error) {
+func ListCredentials() (*ListResponse, error) {
 	dockerConfig, err := docker.LoadDockerConfig()
 	if err != nil {
 		return nil, err
 	}
 
-	return dockerConfig.GetAuthConfigs(), nil
-}
-
-func GetFilledCredentials() ([]byte, error) {
-	dockerConfig, err := docker.LoadDockerConfig()
+	allCredentials, err := dockerConfig.GetAllCredentials()
 	if err != nil {
 		return nil, err
 	}
 
-	authConfigs := dockerConfig.GetAuthConfigs()
-	for key, config := range authConfigs {
-		host := config.ServerAddress
-		if host == "registry-1.docker.io" {
-			host = "https://index.docker.io/v1/"
-		}
-		ac, err := dockerConfig.GetAuthConfig(host)
-		if err != nil {
-			return nil, err
-		}
-
-		config.ServerAddress = host
-		config.Username = ac.Username
-		config.Password = ac.Password
-		config.IdentityToken = ac.IdentityToken
-		authConfigs[key] = config
+	retList := &ListResponse{Registries: map[string]string{}}
+	for registryHostname, auth := range allCredentials {
+		retList.Registries[registryHostname] = auth.Username
 	}
 
-	dockerFile := &configfile.ConfigFile{
-		AuthConfigs: authConfigs,
-	}
-
-	buf := &bytes.Buffer{}
-	err = dockerFile.SaveToWriter(buf)
-	if err != nil {
-		return nil, err
-	}
-
-	return buf.Bytes(), nil
+	return retList, nil
 }
 
 func GetAuthConfig(host string) (*Credentials, error) {

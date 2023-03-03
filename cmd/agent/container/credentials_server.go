@@ -6,7 +6,7 @@ import (
 	"github.com/loft-sh/devpod/cmd/flags"
 	"github.com/loft-sh/devpod/pkg/agent"
 	"github.com/loft-sh/devpod/pkg/agent/tunnel"
-	"github.com/loft-sh/devpod/pkg/gitcredentials"
+	"github.com/loft-sh/devpod/pkg/credentials"
 	"github.com/loft-sh/devpod/pkg/log"
 	"github.com/loft-sh/devpod/pkg/port"
 	"github.com/loft-sh/devpod/pkg/random"
@@ -21,6 +21,9 @@ type CredentialsServerCmd struct {
 	*flags.GlobalFlags
 
 	User string
+
+	ConfigureGitHelper    bool
+	ConfigureDockerHelper bool
 }
 
 // NewCredentialsServerCmd creates a new command
@@ -30,12 +33,14 @@ func NewCredentialsServerCmd(flags *flags.GlobalFlags) *cobra.Command {
 	}
 	credentialsServerCmd := &cobra.Command{
 		Use:   "credentials-server",
-		Short: "Starts a git credentials server",
+		Short: "Starts a credentials server",
 		Args:  cobra.NoArgs,
 		RunE: func(_ *cobra.Command, args []string) error {
 			return cmd.Run(context.Background(), args)
 		},
 	}
+	credentialsServerCmd.Flags().BoolVar(&cmd.ConfigureGitHelper, "configure-git-helper", false, "If true will configure git helper")
+	credentialsServerCmd.Flags().BoolVar(&cmd.ConfigureDockerHelper, "configure-docker-helper", false, "If true will configure docker helper")
 	credentialsServerCmd.Flags().StringVar(&cmd.User, "user", "", "The user to use")
 	_ = credentialsServerCmd.MarkFlagRequired("user")
 	return credentialsServerCmd
@@ -68,5 +73,5 @@ func (cmd *CredentialsServerCmd) Run(ctx context.Context, _ []string) error {
 	}
 
 	// run the credentials server
-	return gitcredentials.RunCredentialsServer(ctx, cmd.User, port, true, tunnelClient, log)
+	return credentials.RunCredentialsServer(ctx, cmd.User, port, cmd.ConfigureGitHelper, cmd.ConfigureDockerHelper, tunnelClient, log)
 }

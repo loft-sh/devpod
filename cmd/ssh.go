@@ -236,11 +236,11 @@ func runCredentialsServer(ctx context.Context, client *ssh.Client, user string, 
 		writer := log.ErrorStreamOnly().Writer(logrus.DebugLevel, false)
 		defer writer.Close()
 
-		command := fmt.Sprintf("%s agent container credentials-server --user %s", agent.RemoteDevPodHelperLocation, user)
+		command := fmt.Sprintf("%s agent container credentials-server --user %s --configure-git-helper --configure-docker-helper", agent.RemoteDevPodHelperLocation, user)
 		errChan <- devssh.Run(client, command, stdinReader, stdoutWriter, writer)
 	}()
 
-	_, err = agent.RunTunnelServer(cancelCtx, stdoutReader, stdinWriter, false, true, false, nil, log)
+	_, err = agent.RunTunnelServer(cancelCtx, stdoutReader, stdinWriter, false, true, true, nil, log)
 	if err != nil {
 		return errors.Wrap(err, "run tunnel server")
 	}
