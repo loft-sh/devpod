@@ -8,7 +8,7 @@ use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use tauri::{api::process::Command, CustomMenuItem, SystemTrayMenu, SystemTraySubmenu};
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Default, Eq, PartialEq)]
 #[serde(rename_all(serialize = "camelCase", deserialize = "camelCase"))]
 pub struct ProvidersState {
     default_provider: Option<String>,
@@ -42,7 +42,10 @@ impl ProvidersState {
 impl ToSystemTraySubmenu for ProvidersState {
     fn to_submenu(&self) -> tauri::SystemTraySubmenu {
         let mut providers_menu = SystemTrayMenu::new();
-        for (provider_name, _value) in &self.providers {
+        let mut providers: Vec<_> = self.providers.iter().collect();
+        providers.sort_by_key(|(key, _)| *key);
+
+        for (provider_name, _value) in providers {
             let mut item = CustomMenuItem::new(Self::item_id(provider_name), provider_name);
             if Some(provider_name.to_string()) == self.default_provider {
                 item = item.selected();
@@ -53,17 +56,21 @@ impl ToSystemTraySubmenu for ProvidersState {
 
         SystemTraySubmenu::new("Providers", providers_menu)
     }
+
+    fn on_tray_item_clicked(&self, _id: &str) -> () {
+        todo!()
+    }
 }
 
 type Providers = HashMap<String, Provider>;
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Eq, PartialEq)]
 #[serde(rename_all(serialize = "camelCase", deserialize = "camelCase"))]
 struct Provider {
     options: Option<HashMap<String, ProviderOption>>,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Eq, PartialEq)]
 #[serde(rename_all(serialize = "camelCase", deserialize = "camelCase"))]
 struct ProviderOption {
     value: Option<String>,

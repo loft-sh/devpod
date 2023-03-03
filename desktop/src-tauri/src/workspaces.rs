@@ -8,7 +8,7 @@ use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use tauri::{api::process::Command, CustomMenuItem, SystemTrayMenu, SystemTraySubmenu};
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Default, Eq, PartialEq)]
 #[serde(
     transparent,
     rename_all(serialize = "camelCase", deserialize = "camelCase")
@@ -52,9 +52,13 @@ impl ToSystemTraySubmenu for WorkspacesState {
 
         SystemTraySubmenu::new("Workspaces", providers_menu)
     }
+
+    fn on_tray_item_clicked(&self, _id: &str) -> () {
+        todo!()
+    }
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Eq, PartialEq)]
 #[serde(rename_all(serialize = "camelCase", deserialize = "camelCase"))]
 struct Workspace {
     id: Option<String>,
@@ -72,13 +76,13 @@ impl Workspace {
     }
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Eq, PartialEq)]
 #[serde(rename_all(serialize = "camelCase", deserialize = "camelCase"))]
 struct WorkspaceProvider {
     name: Option<String>,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Eq, PartialEq)]
 #[serde(rename_all(serialize = "camelCase", deserialize = "camelCase"))]
 struct WorkspaceIDE {
     #[serde(rename = "ide")]
@@ -86,7 +90,7 @@ struct WorkspaceIDE {
     options: Option<HashMap<String, String>>,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Eq, PartialEq)]
 #[serde(rename_all(serialize = "camelCase", deserialize = "camelCase"))]
 struct WorkspaceSource {
     git_repository: Option<String>,

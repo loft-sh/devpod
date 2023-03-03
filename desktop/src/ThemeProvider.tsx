@@ -4,6 +4,9 @@ import { ReactNode } from "react"
 const theme = extendTheme({
   styles: {
     global: {
+      html: {
+        fontSize: "14px",
+      },
       body: {
         userSelect: "none",
       },
