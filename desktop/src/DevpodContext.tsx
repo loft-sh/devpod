@@ -24,7 +24,6 @@ export function DevpodProvider({ children }: Readonly<{ children?: ReactNode }>)
   useEffect(() => {
     ;(async () => {
       const unsubscribe = await listen<TProviders>("providers", (event) => {
-        console.log("providers")
         setProviders(event.payload)
       })
 
@@ -35,7 +34,6 @@ export function DevpodProvider({ children }: Readonly<{ children?: ReactNode }>)
   useEffect(() => {
     ;(async () => {
       const unsubscribe = await listen<TWorkspaces>("workspaces", (event) => {
-        console.log("workspaces")
         setWorkspaces(event.payload)
       })
 

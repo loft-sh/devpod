@@ -1,12 +1,12 @@
 use crate::{
     commands::{list_workspaces::ListWorkspacesCommand, DevpodCommandConfig, DevpodCommandError},
-    system_tray::ToSystemTraySubmenu,
+    system_tray::{SystemTrayClickHandler, ToSystemTraySubmenu},
 };
 use chrono::DateTime;
 use log::trace;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
-use tauri::{api::process::Command, CustomMenuItem, SystemTrayMenu, SystemTraySubmenu};
+use tauri::{CustomMenuItem, SystemTrayMenu, SystemTraySubmenu};
 
 #[derive(Serialize, Deserialize, Debug, Default, Eq, PartialEq)]
 #[serde(
@@ -26,18 +26,9 @@ impl WorkspacesState {
 impl WorkspacesState {
     pub fn load() -> Result<Self, DevpodCommandError> {
         trace!("loading workspaces");
-
         let list_workspaces_cmd = ListWorkspacesCommand::new();
-        let config = list_workspaces_cmd.config();
 
-        // TODO: maybe refactor into `Command` type
-        let output = Command::new_sidecar(config.binary_name())
-            .expect("should have found `devpod` binary")
-            .args(config.args())
-            .output()
-            .expect("should have spawned `devpod`");
-
-        list_workspaces_cmd.deserialize(&output.stdout)
+        list_workspaces_cmd.exec()
     }
 }
 impl ToSystemTraySubmenu for WorkspacesState {
@@ -53,7 +44,7 @@ impl ToSystemTraySubmenu for WorkspacesState {
         SystemTraySubmenu::new("Workspaces", providers_menu)
     }
 
-    fn on_tray_item_clicked(&self, _id: &str) -> () {
+    fn on_tray_item_clicked(&self, _id: &str) -> Option<SystemTrayClickHandler> {
         todo!()
     }
 }
