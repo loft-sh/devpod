@@ -4,11 +4,12 @@ use tauri::{
     SystemTrayMenu, SystemTrayMenuItem, SystemTraySubmenu, WindowBuilder, WindowUrl, Wry,
 };
 
-use crate::{providers::ProvidersState, workspaces::WorkspacesState};
+use crate::{providers::ProvidersState, workspaces::WorkspacesState, AppState};
 
 pub trait SystemTrayIdentifier {}
 pub trait ToSystemTraySubmenu {
     fn to_submenu(&self) -> SystemTraySubmenu;
+    fn on_tray_item_clicked(&self, id: &str) -> ();
 }
 
 pub struct SystemTray {}
@@ -25,8 +26,6 @@ impl SystemTray {
 }
 
 impl SystemTray {
-    pub const PROVIDERS_ID: &str = "providers";
-    pub const WORKSPACES_ID: &str = "workspaces";
 
     pub fn build_menu(&self) -> SystemTrayMenu {
         let show_dashboard = CustomMenuItem::new(Self::SHOW_DASHBOARD_ID, "Show Dashboard");
@@ -42,7 +41,7 @@ impl SystemTray {
 
     pub fn build_with_submenus(
         &self,
-        submenu_builders: Vec<Box<dyn ToSystemTraySubmenu>>,
+        submenu_builders: Vec<Box<&dyn ToSystemTraySubmenu>>,
     ) -> SystemTrayMenu {
         let show_dashboard = CustomMenuItem::new(Self::SHOW_DASHBOARD_ID, "Show Dashboard");
         let quit = CustomMenuItem::new(Self::QUIT_ID, "Quit");
@@ -90,14 +89,18 @@ impl SystemTray {
                     }
                 }
                 id => {
+                    let app_state = app.state::<AppState>();
+
                     if id.starts_with(WorkspacesState::IDENTIFIER_PREFIX) {
-                        trace!("workspaces {id}");
-                        // workspaces handle this event
+                        let workspaces_state = &*app_state.workspaces.lock().unwrap();
+                        workspaces_state.on_tray_item_clicked(id);
+
                         return;
                     }
                     if id.starts_with(ProvidersState::IDENTIFIER_PREFIX) {
-                        trace!("providers {id}");
-                        // providers handle this event
+                        let providers_state = &*app_state.providers.lock().unwrap();
+                        providers_state.on_tray_item_clicked(id);
+
                         return;
                     }
 

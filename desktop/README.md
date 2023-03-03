@@ -6,7 +6,7 @@ Prerequisites:
 
 - [NodeJS + yarn](https://nodejs.org/en/)
 - [Rust](https://www.rust-lang.org/tools/install)
-- `devpod` binary for your platform in `./src-tauri/bin/`. Needs to be named according to your platform, see [rustc docs](https://doc.rust-lang.org/nightly/rustc/platform-support.html) for details.
+- `devpod` binary for your platform in `src-tauri/bin/`. Needs to be named according to your platform, see [rustc docs](https://doc.rust-lang.org/nightly/rustc/platform-support.html) for details.
   You can build the devpod binary for your current platform by running `cd .. && go build .`.
   For example for macOS:
   ```sh
@@ -26,5 +26,6 @@ As of now, we just bundle all of the javascript into one file, so we don't have 
 
 To spin up the application in development mode, run `yarn tauri dev`. It will report both the frontend webserver output (vite) and the backend logs to your current terminal.
 Tauri should automatically restart the app if your backend code changes and vite is responsible for hot module updates in the frontend.
+Enable debug logging to stdout during development with `DEBUG=true yarn tauri dev`.
 
 Once you're happy with the current state, give it a spin in release mode by running `yarn tauri build`. You can find the packaged version of the application in the `src-tauri/target/release/{PLATFORM}` folder.
