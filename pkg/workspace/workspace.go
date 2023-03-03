@@ -34,7 +34,7 @@ func Exists(devPodConfig *config.Config, args []string, log log.Logger) string {
 	_, name := isLocalDir(args[0], log)
 
 	// convert to id
-	workspaceID := ToWorkspaceID(name)
+	workspaceID := ToID(name)
 
 	// already exists?
 	if !provider2.WorkspaceExists(devPodConfig.DefaultContext, workspaceID) {
@@ -55,7 +55,7 @@ func GetWorkspace(ctx context.Context, devPodConfig *config.Config, ide *provide
 	_, name := isLocalDir(args[0], log)
 
 	// convert to id
-	workspaceID := ToWorkspaceID(name)
+	workspaceID := ToID(name)
 
 	// already exists?
 	if !provider2.WorkspaceExists(devPodConfig.DefaultContext, workspaceID) {
@@ -81,7 +81,7 @@ func ResolveWorkspace(ctx context.Context, devPodConfig *config.Config, ide *pro
 	isLocalPath, name := isLocalDir(args[0], log)
 
 	// convert to id
-	workspaceID := ToWorkspaceID(name)
+	workspaceID := ToID(name)
 
 	// check if desired id already exists
 	if desiredID != "" {
@@ -264,7 +264,7 @@ func pingRepository(str string) bool {
 var workspaceIDRegEx1 = regexp.MustCompile(`[^\w\-]`)
 var workspaceIDRegEx2 = regexp.MustCompile(`[^0-9a-z\-]+`)
 
-func ToWorkspaceID(str string) string {
+func ToID(str string) string {
 	str = strings.ToLower(filepath.ToSlash(str))
 
 	// get last element if we find a /
