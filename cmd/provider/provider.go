@@ -19,5 +19,6 @@ func NewProviderCmd(flags *flags.GlobalFlags) *cobra.Command {
 	providerCmd.AddCommand(NewOptionsCmd(flags))
 	providerCmd.AddCommand(NewDeleteCmd(flags))
 	providerCmd.AddCommand(NewAddCmd(flags))
+	providerCmd.AddCommand(NewUpdateCmd(flags))
 	return providerCmd
 }

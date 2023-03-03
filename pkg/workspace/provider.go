@@ -44,6 +44,24 @@ func LoadProviders(devPodConfig *config.Config, log log.Logger) (*ProviderWithOp
 }
 
 func AddProvider(devPodConfig *config.Config, provider string, log log.Logger) (*provider2.ProviderConfig, error) {
+	providerRaw, err := resolveProvider(provider, log)
+	if err != nil {
+		return nil, err
+	}
+
+	return installProvider(devPodConfig, providerRaw)
+}
+
+func UpdateProvider(devPodConfig *config.Config, provider string, log log.Logger) (*provider2.ProviderConfig, error) {
+	providerRaw, err := resolveProvider(provider, log)
+	if err != nil {
+		return nil, err
+	}
+
+	return updateProvider(devPodConfig, provider, providerRaw)
+}
+
+func resolveProvider(provider string, log log.Logger) ([]byte, error) {
 	// local file?
 	_, err := os.Stat(provider)
 	if err == nil {
@@ -52,7 +70,7 @@ func AddProvider(devPodConfig *config.Config, provider string, log log.Logger) (
 			return nil, err
 		}
 
-		return installProvider(devPodConfig, out)
+		return out, nil
 	}
 
 	// is git?
@@ -91,7 +109,7 @@ func AddProvider(devPodConfig *config.Config, provider string, log log.Logger) (
 			return nil, err
 		}
 
-		return installProvider(devPodConfig, providerBytes)
+		return providerBytes, nil
 	}
 
 	// url?
@@ -103,7 +121,7 @@ func AddProvider(devPodConfig *config.Config, provider string, log log.Logger) (
 			return nil, err
 		}
 
-		return installProvider(devPodConfig, out)
+		return out, nil
 	}
 
 	return nil, fmt.Errorf("unrecognized provider type, please specify either a local file, url or git repository")
@@ -123,6 +141,40 @@ func downloadProvider(url string) ([]byte, error) {
 	defer resp.Body.Close()
 
 	return io.ReadAll(resp.Body)
+}
+
+func updateProvider(devPodConfig *config.Config, provider string, raw []byte) (*provider2.ProviderConfig, error) {
+	providerConfig, err := provider2.ParseProvider(bytes.NewReader(raw))
+	if err != nil {
+		return nil, err
+	}
+
+	if devPodConfig.Current().Providers[providerConfig.Name] == nil {
+		return nil, fmt.Errorf("provider %s doesn't exist. Please run 'devpod provider add %s' instead", providerConfig.Name, provider)
+	}
+	if providerConfig.Options == nil {
+		providerConfig.Options = map[string]*provider2.ProviderOption{}
+	}
+
+	// update options
+	for optionName := range devPodConfig.Current().Providers[providerConfig.Name].Options {
+		_, ok := providerConfig.Options[optionName]
+		if !ok {
+			delete(devPodConfig.Current().Providers[providerConfig.Name].Options, optionName)
+		}
+	}
+
+	err = config.SaveConfig(devPodConfig)
+	if err != nil {
+		return nil, err
+	}
+
+	err = provider2.SaveProviderConfig(devPodConfig.DefaultContext, providerConfig)
+	if err != nil {
+		return nil, err
+	}
+
+	return providerConfig, nil
 }
 
 func installProvider(devPodConfig *config.Config, raw []byte) (*provider2.ProviderConfig, error) {
