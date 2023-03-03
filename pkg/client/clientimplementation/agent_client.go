@@ -9,10 +9,10 @@ import (
 	"github.com/loft-sh/devpod/pkg/compress"
 	"github.com/loft-sh/devpod/pkg/config"
 	"github.com/loft-sh/devpod/pkg/log"
+	"github.com/loft-sh/devpod/pkg/machine"
 	"github.com/loft-sh/devpod/pkg/options"
 	"github.com/loft-sh/devpod/pkg/provider"
 	"github.com/loft-sh/devpod/pkg/shell"
-	"github.com/loft-sh/devpod/pkg/ssh"
 	"github.com/loft-sh/devpod/pkg/types"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
@@ -150,31 +150,9 @@ func (s *agentClient) Create(ctx context.Context, options client.CreateOptions) 
 	s.workspace.Machine.ID = s.workspace.ID
 	s.workspace.Machine.AutoDelete = true
 
-	// get the machine dir
-	machineDir, err := provider.GetMachineDir(s.workspace.Context, s.workspace.Machine.ID)
-	if err != nil {
-		return err
-	}
-
-	// save machine config
-	s.machine = &provider.Machine{
-		ID:      s.workspace.Machine.ID,
-		Folder:  machineDir,
-		Context: s.workspace.Context,
-		Provider: provider.MachineProviderConfig{
-			Name: s.workspace.Provider.Name,
-		},
-		CreationTimestamp: types.Now(),
-	}
-
 	// create machine folder
-	err = provider.SaveMachineConfig(s.machine)
-	if err != nil {
-		return err
-	}
-
-	// create machine ssh keys
-	_, err = ssh.GetPublicKeyBase(s.machine.Folder)
+	var err error
+	s.machine, err = machine.CreateMachine(s.workspace.Context, s.workspace.ID, s.config.Name)
 	if err != nil {
 		return err
 	}
@@ -186,7 +164,12 @@ func (s *agentClient) Create(ctx context.Context, options client.CreateOptions) 
 	}
 
 	// create machine
-	return NewMachineClient(s.devPodConfig, s.config, s.machine, s.log).Create(ctx, options)
+	machineClient, err := NewMachineClient(s.devPodConfig, s.config, s.machine, s.log)
+	if err != nil {
+		return err
+	}
+
+	return machineClient.Create(ctx, options)
 }
 
 func (s *agentClient) Delete(ctx context.Context, opt client.DeleteOptions) error {
@@ -221,7 +204,12 @@ func (s *agentClient) Delete(ctx context.Context, opt client.DeleteOptions) erro
 		}
 	} else if s.workspace.Machine.ID != "" && len(s.config.Exec.Delete) > 0 {
 		// delete machine if config was found
-		err := NewMachineClient(s.devPodConfig, s.config, s.machine, s.log).Delete(ctx, opt)
+		machineClient, err := NewMachineClient(s.devPodConfig, s.config, s.machine, s.log)
+		if err != nil {
+			return err
+		}
+
+		err = machineClient.Delete(ctx, opt)
 		if err != nil {
 			return err
 		}
@@ -238,7 +226,12 @@ func (s *agentClient) Start(ctx context.Context, options client.StartOptions) er
 		return nil
 	}
 
-	return NewMachineClient(s.devPodConfig, s.config, s.machine, s.log).Start(ctx, options)
+	machineClient, err := NewMachineClient(s.devPodConfig, s.config, s.machine, s.log)
+	if err != nil {
+		return err
+	}
+
+	return machineClient.Start(ctx, options)
 }
 
 func (s *agentClient) Stop(ctx context.Context, opt client.StopOptions) error {
@@ -264,7 +257,12 @@ func (s *agentClient) Stop(ctx context.Context, opt client.StopOptions) error {
 		return nil
 	}
 
-	return NewMachineClient(s.devPodConfig, s.config, s.machine, s.log).Stop(ctx, opt)
+	machineClient, err := NewMachineClient(s.devPodConfig, s.config, s.machine, s.log)
+	if err != nil {
+		return err
+	}
+
+	return machineClient.Stop(ctx, opt)
 }
 
 func (s *agentClient) Command(ctx context.Context, commandOptions client.CommandOptions) (err error) {
@@ -297,7 +295,12 @@ func (s *agentClient) Status(ctx context.Context, options client.StatusOptions) 
 			return client.StatusNotFound, nil
 		}
 
-		status, err := NewMachineClient(s.devPodConfig, s.config, s.machine, s.log).Status(ctx, options)
+		machineClient, err := NewMachineClient(s.devPodConfig, s.config, s.machine, s.log)
+		if err != nil {
+			return client.StatusNotFound, err
+		}
+
+		status, err := machineClient.Status(ctx, options)
 		if err != nil {
 			return status, err
 		}

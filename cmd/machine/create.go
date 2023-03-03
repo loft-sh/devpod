@@ -10,40 +10,40 @@ import (
 	"github.com/spf13/cobra"
 )
 
-// StartCmd holds the configuration
-type StartCmd struct {
+// CreateCmd holds the configuration
+type CreateCmd struct {
 	*flags.GlobalFlags
 }
 
-// NewStartCmd creates a new destroy command
-func NewStartCmd(flags *flags.GlobalFlags) *cobra.Command {
-	cmd := &StartCmd{
+// NewCreateCmd creates a new destroy command
+func NewCreateCmd(flags *flags.GlobalFlags) *cobra.Command {
+	cmd := &CreateCmd{
 		GlobalFlags: flags,
 	}
-	startCmd := &cobra.Command{
-		Use:   "start",
-		Short: "Starts an existing machine",
+	deleteCmd := &cobra.Command{
+		Use:   "create",
+		Short: "Creates a new machine",
 		RunE: func(_ *cobra.Command, args []string) error {
 			return cmd.Run(context.Background(), args)
 		},
 	}
 
-	return startCmd
+	return deleteCmd
 }
 
 // Run runs the command logic
-func (cmd *StartCmd) Run(ctx context.Context, args []string) error {
+func (cmd *CreateCmd) Run(ctx context.Context, args []string) error {
 	devPodConfig, err := config.LoadConfig(cmd.Context)
 	if err != nil {
 		return err
 	}
 
-	machineClient, err := workspace.GetMachine(devPodConfig, args, log.Default)
+	machineClient, err := workspace.ResolveMachine(devPodConfig, args, cmd.Provider, log.Default)
 	if err != nil {
 		return err
 	}
 
-	err = machineClient.Start(ctx, client.StartOptions{})
+	err = machineClient.Create(ctx, client.CreateOptions{})
 	if err != nil {
 		return err
 	}

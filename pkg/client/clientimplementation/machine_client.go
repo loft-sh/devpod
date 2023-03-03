@@ -15,13 +15,17 @@ import (
 	"strings"
 )
 
-func NewMachineClient(devPodConfig *config.Config, provider *provider.ProviderConfig, machine *provider.Machine, log log.Logger) client.Client {
+func NewMachineClient(devPodConfig *config.Config, provider *provider.ProviderConfig, machine *provider.Machine, log log.Logger) (client.Client, error) {
+	if !provider.IsMachineProvider() {
+		return nil, fmt.Errorf("provider '%s' is not a machine provider. Please use another provider", provider.Name)
+	}
+
 	return &machineClient{
 		devPodConfig: devPodConfig,
 		config:       provider,
 		machine:      machine,
 		log:          log,
-	}
+	}, nil
 }
 
 type machineClient struct {

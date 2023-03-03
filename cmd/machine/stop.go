@@ -38,7 +38,7 @@ func (cmd *StopCmd) Run(ctx context.Context, args []string) error {
 		return err
 	}
 
-	machineClient, err := workspace.GetMachine(ctx, devPodConfig, args, log.Default)
+	machineClient, err := workspace.GetMachine(devPodConfig, args, log.Default)
 	if err != nil {
 		return err
 	}
