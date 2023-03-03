@@ -9,6 +9,7 @@ import (
 	"github.com/loft-sh/devpod/pkg/agent"
 	"github.com/loft-sh/devpod/pkg/agent/tunnel"
 	"github.com/loft-sh/devpod/pkg/command"
+	"github.com/loft-sh/devpod/pkg/credentials"
 	"github.com/loft-sh/devpod/pkg/daemon"
 	"github.com/loft-sh/devpod/pkg/devcontainer"
 	config2 "github.com/loft-sh/devpod/pkg/devcontainer/config"
@@ -80,7 +81,9 @@ func (cmd *UpCmd) Run(ctx context.Context) error {
 	}
 
 	// get docker credentials
-	dir, err := configureDockerCredentials(ctx, workspaceInfo, tunnelClient, logger)
+	cancelCtx, cancel := context.WithCancel(ctx)
+	defer cancel()
+	dir, err := configureDockerCredentials(cancelCtx, cancel, workspaceInfo, tunnelClient, logger)
 	if err != nil {
 		logger.Errorf("Error retrieving docker credentials: %v", err)
 	} else if dir != "" {
@@ -161,21 +164,6 @@ func (cmd *UpCmd) up(ctx context.Context, workspaceInfo *provider2.AgentWorkspac
 	return nil
 }
 
-func configureDockerCredentials(ctx context.Context, workspaceInfo *provider2.AgentWorkspaceInfo, client tunnel.TunnelClient, log log.Logger) (string, error) {
-	if workspaceInfo.Agent.InjectDockerCredentials != "true" {
-		return "", nil
-	}
-
-	log.Debugf("Get docker credentials...")
-	dockerCredentials, err := client.DockerCredentials(ctx, &tunnel.Empty{})
-	if err != nil {
-		return "", err
-	}
-
-	log.Debugf("Successfully retrieved docker credentials")
-	return dockercredentials.ConfigureCredentials(dockerCredentials.Message)
-}
-
 func prepareWorkspace(ctx context.Context, workspaceInfo *provider2.AgentWorkspaceInfo, client tunnel.TunnelClient, log log.Logger) error {
 	_, err := os.Stat(workspaceInfo.Folder)
 	if err == nil {
@@ -216,16 +204,33 @@ func prepareWorkspace(ctx context.Context, workspaceInfo *provider2.AgentWorkspa
 	return fmt.Errorf("either workspace repository, image or local-folder is required")
 }
 
-func startGitCredentialsHelper(ctx context.Context, cancel context.CancelFunc, client tunnel.TunnelClient, log log.Logger) (string, error) {
-	port, err := port.FindAvailablePort(random.InRange(13000, 17000))
+func configureDockerCredentials(ctx context.Context, cancel context.CancelFunc, workspaceInfo *provider2.AgentWorkspaceInfo, client tunnel.TunnelClient, log log.Logger) (string, error) {
+	if workspaceInfo.Agent.InjectDockerCredentials != "true" {
+		return "", nil
+	}
+
+	serverPort, err := startCredentialsServer(ctx, cancel, client, log)
 	if err != nil {
 		return "", err
+	}
+
+	if workspaceInfo.Folder == "" {
+		return "", fmt.Errorf("workspace folder is not set")
+	}
+
+	return dockercredentials.ConfigureCredentialsMachine(filepath.Join(workspaceInfo.Folder, ".."), serverPort)
+}
+
+func startCredentialsServer(ctx context.Context, cancel context.CancelFunc, client tunnel.TunnelClient, log log.Logger) (int, error) {
+	port, err := port.FindAvailablePort(random.InRange(13000, 17000))
+	if err != nil {
+		return 0, err
 	}
 
 	go func() {
 		defer cancel()
 
-		err := gitcredentials.RunCredentialsServer(ctx, "", port, false, client, log)
+		err := credentials.RunCredentialsServer(ctx, "", port, false, false, client, log)
 		if err != nil {
 			log.Errorf("Run git credentials server: %v", err)
 		}
@@ -252,6 +257,15 @@ Outer:
 			log.Debugf("Credentials server didn't start in time...")
 			break
 		}
+	}
+
+	return port, nil
+}
+
+func startGitCredentialsHelper(ctx context.Context, cancel context.CancelFunc, client tunnel.TunnelClient, log log.Logger) (string, error) {
+	port, err := startCredentialsServer(ctx, cancel, client, log)
+	if err != nil {
+		return "", err
 	}
 
 	binaryPath, err := os.Executable()
@@ -358,6 +372,14 @@ func CloneRepository(workspaceDir, repository, helper string, log log.Logger) er
 	err := gitCommand.Run()
 	if err != nil {
 		return errors.Wrap(err, "error cloning repository")
+	}
+
+	// remove the credential helper or otherwise we will receive strange errors within the container
+	if helper != "" {
+		err = gitcredentials.RemoveHelperFromPath(filepath.Join(workspaceDir, ".git", "config"))
+		if err != nil {
+			return err
+		}
 	}
 
 	return nil

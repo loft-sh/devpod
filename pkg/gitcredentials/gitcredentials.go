@@ -1,21 +1,13 @@
 package gitcredentials
 
 import (
-	"context"
-	"encoding/json"
 	"fmt"
-	"github.com/gofrs/flock"
-	"github.com/loft-sh/devpod/pkg/agent/tunnel"
 	"github.com/loft-sh/devpod/pkg/command"
-	"github.com/loft-sh/devpod/pkg/log"
 	"github.com/loft-sh/devpod/pkg/scanner"
 	"github.com/pkg/errors"
-	"io"
-	"net/http"
 	"os"
 	"os/exec"
 	"path/filepath"
-	"strconv"
 	"strings"
 )
 
@@ -68,6 +60,10 @@ func RemoveHelper(userName string) error {
 	}
 
 	gitConfigPath := filepath.Join(homeDir, ".gitconfig")
+	return RemoveHelperFromPath(gitConfigPath)
+}
+
+func RemoveHelperFromPath(gitConfigPath string) error {
 	out, err := os.ReadFile(gitConfigPath)
 	if err != nil && !os.IsNotExist(err) {
 		return err
@@ -213,105 +209,4 @@ func removeCredentialHelper(content string) string {
 	}
 
 	return strings.Join(out, "\n")
-}
-
-func RunCredentialsServer(ctx context.Context, userName string, port int, configureHelper bool, client tunnel.TunnelClient, log log.Logger) error {
-	if configureHelper {
-		fileLock := flock.New(filepath.Join(os.TempDir(), "devpod-credentials.lock"))
-		locked, err := fileLock.TryLock()
-		if err != nil {
-			return errors.Wrap(err, "acquire lock")
-		} else if !locked {
-			return nil
-		}
-		defer fileLock.Unlock()
-
-		binaryPath, err := os.Executable()
-		if err != nil {
-			return err
-		}
-
-		// set user & email
-		response, err := client.GitUser(ctx, &tunnel.Empty{})
-		if err != nil {
-			log.Errorf("Retrieve git user: %v", err)
-		} else {
-			gitUser := &GitUser{}
-			err = json.Unmarshal([]byte(response.Message), gitUser)
-			if err != nil {
-				return err
-			}
-
-			err = SetUser(userName, gitUser)
-			if err != nil {
-				log.Errorf("Set git user: %v", err)
-			}
-		}
-
-		// configure helper
-		err = ConfigureHelper(binaryPath, userName, port)
-		if err != nil {
-			return errors.Wrap(err, "configure git helper")
-		}
-
-		// cleanup when we are done
-		defer func() {
-			_ = RemoveHelper(userName)
-		}()
-	}
-
-	srv := &http.Server{
-		Addr: "localhost:" + strconv.Itoa(port),
-		Handler: http.HandlerFunc(func(writer http.ResponseWriter, request *http.Request) {
-			log.Debugf("Incoming client connection at %s", request.URL.Path)
-			if request.URL.Path != "/git-credentials" {
-				return
-			}
-
-			err := handleCredentialsRequest(ctx, writer, request, client, log)
-			if err != nil {
-				http.Error(writer, err.Error(), http.StatusInternalServerError)
-				return
-			}
-		}),
-	}
-
-	errChan := make(chan error, 1)
-	go func() {
-		log.Infof("Credentials server started on port %d...", port)
-
-		// always returns error. ErrServerClosed on graceful close
-		if err := srv.ListenAndServe(); err != http.ErrServerClosed {
-			errChan <- err
-		} else {
-			errChan <- nil
-		}
-	}()
-
-	select {
-	case err := <-errChan:
-		return err
-	case <-ctx.Done():
-		_ = srv.Close()
-		return nil
-	}
-}
-
-func handleCredentialsRequest(ctx context.Context, writer http.ResponseWriter, request *http.Request, client tunnel.TunnelClient, log log.Logger) error {
-	out, err := io.ReadAll(request.Body)
-	if err != nil {
-		return errors.Wrap(err, "read request body")
-	}
-
-	log.Debugf("Received credentials post data: %s", string(out))
-	response, err := client.GitCredentials(ctx, &tunnel.Message{Message: string(out)})
-	if err != nil {
-		return errors.Wrap(err, "get git credentials response")
-	}
-
-	writer.Header().Set("Content-Type", "application/json")
-	writer.WriteHeader(http.StatusOK)
-	_, _ = writer.Write([]byte(response.Message))
-	log.Debugf("Successfully wrote back %d bytes", len(response.Message))
-	return nil
 }

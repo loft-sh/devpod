@@ -78,17 +78,44 @@ type tunnelServer struct {
 	log                    log.Logger
 }
 
-func (t *tunnelServer) DockerCredentials(ctx context.Context, empty *tunnel.Empty) (*tunnel.Message, error) {
+func (t *tunnelServer) DockerCredentials(ctx context.Context, message *tunnel.Message) (*tunnel.Message, error) {
 	if !t.allowDockerCredentials {
 		return nil, fmt.Errorf("docker credentials forbidden")
 	}
 
-	filledCredentials, err := dockercredentials.GetFilledCredentials()
+	request := &dockercredentials.Request{}
+	err := json.Unmarshal([]byte(message.Message), request)
 	if err != nil {
 		return nil, err
 	}
 
-	return &tunnel.Message{Message: string(filledCredentials)}, nil
+	// check if list or get
+	if request.ServerURL != "" {
+		credentials, err := dockercredentials.GetAuthConfig(request.ServerURL)
+		if err != nil {
+			return nil, err
+		}
+
+		out, err := json.Marshal(credentials)
+		if err != nil {
+			return nil, err
+		}
+
+		return &tunnel.Message{Message: string(out)}, nil
+	}
+
+	// do a list
+	listResponse, err := dockercredentials.ListCredentials()
+	if err != nil {
+		return nil, err
+	}
+
+	out, err := json.Marshal(listResponse)
+	if err != nil {
+		return nil, err
+	}
+
+	return &tunnel.Message{Message: string(out)}, nil
 }
 
 func (t *tunnelServer) GitUser(ctx context.Context, empty *tunnel.Empty) (*tunnel.Message, error) {

@@ -57,7 +57,9 @@ func (cmd *BuildCmd) Run(ctx context.Context) error {
 	}
 
 	// get docker credentials
-	dir, err := configureDockerCredentials(ctx, workspaceInfo, tunnelClient, logger)
+	cancelCtx, cancel := context.WithCancel(ctx)
+	defer cancel()
+	dir, err := configureDockerCredentials(cancelCtx, cancel, workspaceInfo, tunnelClient, logger)
 	if err != nil {
 		logger.Errorf("Error retrieving docker credentials: %v", err)
 	} else if dir != "" {
