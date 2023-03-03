@@ -47,6 +47,11 @@ func configureCredentials(targetDir, configDir string, port int) error {
 		return err
 	}
 
+	err = os.MkdirAll(configDir, 0777)
+	if err != nil {
+		return err
+	}
+
 	dockerConfig, err := config.Load(configDir)
 	if err != nil {
 		return err
@@ -54,7 +59,7 @@ func configureCredentials(targetDir, configDir string, port int) error {
 
 	// write credentials helper
 	err = os.WriteFile(filepath.Join(targetDir, "docker-credential-devpod"), []byte(fmt.Sprintf(`#!/bin/sh
-%s agent docker-credentials --port %d "$@"`, binaryPath, port)), 0755)
+%s agent docker-credentials --port %d "$@"`, binaryPath, port)), 0777)
 	if err != nil {
 		return errors.Wrap(err, "write credential helper")
 	}
@@ -65,12 +70,7 @@ func configureCredentials(targetDir, configDir string, port int) error {
 
 func ConfigureCredentialsMachine(targetFolder string, port int) (string, error) {
 	dockerConfigDir := filepath.Join(targetFolder, ".cache", random.String(12))
-	err := os.MkdirAll(dockerConfigDir, 0777)
-	if err != nil {
-		return "", err
-	}
-
-	err = configureCredentials(dockerConfigDir, dockerConfigDir, port)
+	err := configureCredentials(dockerConfigDir, dockerConfigDir, port)
 	if err != nil {
 		_ = os.RemoveAll(dockerConfigDir)
 		return "", err
