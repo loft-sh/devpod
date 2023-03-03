@@ -17,5 +17,6 @@ func NewMachineCmd(flags *flags.GlobalFlags) *cobra.Command {
 	machineCmd.AddCommand(NewStopCmd(flags))
 	machineCmd.AddCommand(NewStartCmd(flags))
 	machineCmd.AddCommand(NewStatusCmd(flags))
+	machineCmd.AddCommand(NewDeleteCmd(flags))
 	return machineCmd
 }
