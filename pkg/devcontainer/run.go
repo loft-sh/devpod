@@ -178,7 +178,11 @@ func getWorkspace(workspaceFolder, workspaceID string, conf *config.DevContainer
 		}
 	}
 
-	containerMountFolder := "/workspaces/" + workspaceID
+	containerMountFolder := conf.WorkspaceFolder
+	if containerMountFolder == "" {
+		containerMountFolder = "/workspaces/" + workspaceID
+	}
+
 	consistency := ""
 	if runtime.GOOS != "linux" {
 		consistency = ",consistency='consistent'"
