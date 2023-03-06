@@ -1,6 +1,7 @@
 package devcontainer
 
 import (
+	"github.com/loft-sh/devpod/pkg/devcontainer/config"
 	"github.com/pkg/errors"
 	"strings"
 )
@@ -17,16 +18,23 @@ func (r *Runner) Delete(labels []string) error {
 	}
 
 	r.Log.Infof("Deleting devcontainer...")
-	if strings.ToLower(containerDetails.State.Status) == "running" {
-		err = r.Docker.Stop(containerDetails.Id)
+	if isDockerCompose, projectName := getDockerComposeProject(containerDetails); isDockerCompose {
+		err = r.Compose.Remove(projectName)
 		if err != nil {
 			return err
 		}
-	}
+	} else {
+		if strings.ToLower(containerDetails.State.Status) == "running" {
+			err = r.Docker.Stop(containerDetails.Id)
+			if err != nil {
+				return err
+			}
+		}
 
-	err = r.Docker.Remove(containerDetails.Id)
-	if err != nil {
-		return err
+		err = r.Docker.Remove(containerDetails.Id)
+		if err != nil {
+			return err
+		}
 	}
 
 	return nil
@@ -42,11 +50,26 @@ func (r *Runner) Stop() error {
 	}
 
 	if strings.ToLower(containerDetails.State.Status) == "running" {
-		err = r.Docker.Stop(containerDetails.Id)
-		if err != nil {
-			return err
+		if isDockerCompose, projectName := getDockerComposeProject(containerDetails); isDockerCompose {
+			err = r.Compose.Stop(projectName)
+			if err != nil {
+				return err
+			}
+		} else {
+			err = r.Docker.Stop(containerDetails.Id)
+			if err != nil {
+				return err
+			}
 		}
 	}
 
 	return nil
+}
+
+func getDockerComposeProject(containerDetails *config.ContainerDetails) (bool, string) {
+	if projectName, ok := containerDetails.Config.Labels["com.docker.compose.project"]; ok {
+		return true, projectName
+	}
+
+	return false, ""
 }

@@ -28,7 +28,7 @@ const (
 	FeaturesStartOverrideFilePrefix = "docker-compose.devcontainer.containerFeatures"
 )
 
-func (r *Runner) runDockerCompose(parsedConfig *config.SubstitutedConfig, workspace *WorkspaceConfig) (*config.Result, error) {
+func (r *Runner) runDockerCompose(parsedConfig *config.SubstitutedConfig, options UpOptions) (*config.Result, error) {
 	envFiles, err := r.getEnvFiles()
 	if err != nil {
 		return nil, errors.Wrap(err, "get env files")
@@ -165,7 +165,7 @@ func (r *Runner) getProjectName(project *composetypes.Project, envFiles []string
 		}
 	}
 
-	// Use the parent directory name if loaded from .devcontainer
+	// Use the workspace ID if loaded from .devcontainer
 	if project.Name == "devcontainer" {
 		projectName = r.ID
 	}
@@ -537,16 +537,22 @@ func (r *Runner) generateDockerComposeUpProject(
 	entrypoint := composetypes.ShellCommand{
 		"/bin/sh",
 		"-c",
-		fmt.Sprintf(`echo Container started
+		`echo Container started
 trap "exit 0" 15
-%s
-exec "$$@"
-while sleep 1 & wait $$!; do :; done"`,
-			strings.Join(mergedConfig.Entrypoints, "\\n\n"),
-		),
+` + strings.Join(mergedConfig.Entrypoints, "\n") + `
+exec "$@"
+while sleep 1 & wait $!; do :; done"`,
 		"-",
 	}
 	entrypoint = append(entrypoint, userEntrypoint...)
+
+	var labels composetypes.Labels
+	for _, v := range r.getLabels() {
+		tokens := strings.Split(v, "=")
+		if len(tokens) == 2 {
+			labels = labels.Add(tokens[0], tokens[1])
+		}
+	}
 
 	overrideService := &composetypes.ServiceConfig{
 		Name:        composeService.Name,
@@ -555,6 +561,7 @@ while sleep 1 & wait $$!; do :; done"`,
 		Init:        mergedConfig.Init,
 		CapAdd:      mergedConfig.CapAdd,
 		SecurityOpt: mergedConfig.SecurityOpt,
+		Labels:      labels,
 	}
 
 	if originalImageName != overrideImageName {
