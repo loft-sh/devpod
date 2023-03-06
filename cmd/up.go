@@ -101,7 +101,7 @@ func (cmd *UpCmd) Run(ctx context.Context, client client2.WorkspaceClient) error
 	// open ide
 	switch client.WorkspaceConfig().IDE.IDE {
 	case provider2.IDEVSCode:
-		return startVSCodeLocally(result, client, log.Default)
+		return startVSCodeLocally(client, result.SubstitutionContext.ContainerWorkspaceFolder, log.Default)
 	case provider2.IDEOpenVSCode:
 		return startInBrowser(ctx, client, user, log.Default)
 	case provider2.IDEGoland:
@@ -149,9 +149,9 @@ func (cmd *UpCmd) parseIDE(ctx context.Context, devPodConfig *config.Config, arg
 	}, nil
 }
 
-func startVSCodeLocally(client client2.WorkspaceClient, log log.Logger) error {
+func startVSCodeLocally(client client2.WorkspaceClient, workspaceFolder string, log log.Logger) error {
 	log.Infof("Starting VSCode...")
-	err := exec.Command("code", "--folder-uri", fmt.Sprintf("vscode-remote://ssh-remote+%s.devpod/workspaces/%s", client.Workspace(), client.Workspace())).Run()
+	err := exec.Command("code", "--folder-uri", fmt.Sprintf("vscode-remote://ssh-remote+%s.devpod/%s", client.Workspace(), workspaceFolder)).Run()
 	if err != nil {
 		return err
 	}
