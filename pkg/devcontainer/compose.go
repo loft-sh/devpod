@@ -29,6 +29,14 @@ const (
 )
 
 func (r *Runner) runDockerCompose(parsedConfig *config.SubstitutedConfig, options UpOptions) (*config.Result, error) {
+	if options.Recreate {
+		labels := r.getLabels()
+		err := r.Delete(labels)
+		if err != nil {
+			return nil, errors.Wrap(err, "delete devcontainer")
+		}
+	}
+
 	envFiles, err := r.getEnvFiles()
 	if err != nil {
 		return nil, errors.Wrap(err, "get env files")
