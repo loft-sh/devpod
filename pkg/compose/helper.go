@@ -110,7 +110,7 @@ func (r *ComposeHelper) Run(ctx context.Context, args []string, stdin io.Reader,
 }
 
 func (r *ComposeHelper) Stop(projectName string) error {
-	out, err := r.buildCmd(context.TODO(), "stop", projectName).CombinedOutput()
+	out, err := r.buildCmd(context.TODO(), "--project-name", projectName, "stop").CombinedOutput()
 	if err != nil {
 		return errors.Wrapf(err, "%s", string(out))
 	}
@@ -119,7 +119,7 @@ func (r *ComposeHelper) Stop(projectName string) error {
 }
 
 func (r *ComposeHelper) Remove(projectName string) error {
-	out, err := r.buildCmd(context.TODO(), "down", projectName).CombinedOutput()
+	out, err := r.buildCmd(context.TODO(), "--project-name", projectName, "down").CombinedOutput()
 	if err != nil {
 		return errors.Wrapf(err, "%s", string(out))
 	}
