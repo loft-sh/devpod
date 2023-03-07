@@ -157,7 +157,7 @@ type ComposeContainer struct {
 	DockerComposeFile types.StrArray `json:"dockerComposeFile,omitempty"`
 
 	// The service you want to work on. This is considered the primary container for your dev environment which your editor will connect to.
-	Service string `json:"string,omitempty"`
+	Service string `json:"service,omitempty"`
 
 	// An array of services that should be started and stopped.
 	RunServices []string `json:"runServices,omitempty"`
