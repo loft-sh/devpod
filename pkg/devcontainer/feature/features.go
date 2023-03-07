@@ -255,7 +255,7 @@ func downloadFeatureFromURL(url string, destFile string, log log.Logger) error {
 }
 
 func getFeaturesTempFolder(id string) string {
-	hashedId := hash.Sha256(id)[:10]
+	hashedId := hash.String(id)[:10]
 	tempDir := os.TempDir()
 	out, err := exec.Command("id", "-u", "-n").Output()
 	if err != nil || len(out) == 0 {

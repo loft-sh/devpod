@@ -81,7 +81,21 @@ func (s *machineClient) Context() string {
 func (s *machineClient) Create(ctx context.Context, options client.CreateOptions) error {
 	// create a machine
 	s.log.Infof("Create machine '%s' with provider '%s'...", s.machine.ID, s.config.Name)
-	err := runCommand(ctx, "create", s.config.Exec.Create, provider.ToEnvironment(nil, s.machine, s.devPodConfig.ProviderOptions(s.config.Name), nil), os.Stdin, os.Stdout, os.Stderr, s.log)
+	err := RunCommandWithBinaries(
+		ctx,
+		"create",
+		s.config.Exec.Create,
+		s.machine.Context,
+		nil,
+		s.machine,
+		s.devPodConfig.ProviderOptions(s.config.Name),
+		s.config,
+		nil,
+		os.Stdin,
+		os.Stdout,
+		os.Stderr,
+		s.log,
+	)
 	if err != nil {
 		return err
 	}
@@ -92,7 +106,21 @@ func (s *machineClient) Create(ctx context.Context, options client.CreateOptions
 
 func (s *machineClient) Start(ctx context.Context, options client.StartOptions) error {
 	s.log.Infof("Starting machine '%s'...", s.machine.ID)
-	err := runCommand(ctx, "start", s.config.Exec.Start, provider.ToEnvironment(nil, s.machine, s.devPodConfig.ProviderOptions(s.config.Name), nil), os.Stdin, os.Stdout, os.Stderr, s.log)
+	err := RunCommandWithBinaries(
+		ctx,
+		"start",
+		s.config.Exec.Start,
+		s.machine.Context,
+		nil,
+		s.machine,
+		s.devPodConfig.ProviderOptions(s.config.Name),
+		s.config,
+		nil,
+		os.Stdin,
+		os.Stdout,
+		os.Stderr,
+		s.log,
+	)
 	if err != nil {
 		return err
 	}
@@ -103,7 +131,21 @@ func (s *machineClient) Start(ctx context.Context, options client.StartOptions) 
 
 func (s *machineClient) Stop(ctx context.Context, options client.StopOptions) error {
 	s.log.Infof("Stopping machine '%s'...", s.machine.ID)
-	err := runCommand(ctx, "stop", s.config.Exec.Stop, provider.ToEnvironment(nil, s.machine, s.devPodConfig.ProviderOptions(s.config.Name), nil), os.Stdin, os.Stdout, os.Stderr, s.log)
+	err := RunCommandWithBinaries(
+		ctx,
+		"stop",
+		s.config.Exec.Stop,
+		s.machine.Context,
+		nil,
+		s.machine,
+		s.devPodConfig.ProviderOptions(s.config.Name),
+		s.config,
+		nil,
+		os.Stdin,
+		os.Stdout,
+		os.Stderr,
+		s.log,
+	)
 	if err != nil {
 		return err
 	}
@@ -113,15 +155,43 @@ func (s *machineClient) Stop(ctx context.Context, options client.StopOptions) er
 }
 
 func (s *machineClient) Command(ctx context.Context, commandOptions client.CommandOptions) error {
-	return runCommand(ctx, "command", s.config.Exec.Command, provider.ToEnvironment(nil, s.machine, s.devPodConfig.ProviderOptions(s.config.Name), map[string]string{
-		provider.CommandEnv: commandOptions.Command,
-	}), commandOptions.Stdin, commandOptions.Stdout, commandOptions.Stderr, s.log.ErrorStreamOnly())
+	return RunCommandWithBinaries(
+		ctx,
+		"command",
+		s.config.Exec.Command,
+		s.machine.Context,
+		nil,
+		s.machine,
+		s.devPodConfig.ProviderOptions(s.config.Name),
+		s.config,
+		map[string]string{
+			provider.CommandEnv: commandOptions.Command,
+		},
+		commandOptions.Stdin,
+		commandOptions.Stdout,
+		commandOptions.Stderr,
+		s.log.ErrorStreamOnly(),
+	)
 }
 
 func (s *machineClient) Status(ctx context.Context, options client.StatusOptions) (client.Status, error) {
 	stdout := &bytes.Buffer{}
 	stderr := &bytes.Buffer{}
-	err := runCommand(ctx, "status", s.config.Exec.Status, provider.ToEnvironment(nil, s.machine, s.devPodConfig.ProviderOptions(s.config.Name), nil), nil, stdout, stderr, s.log)
+	err := RunCommandWithBinaries(
+		ctx,
+		"status",
+		s.config.Exec.Status,
+		s.machine.Context,
+		nil,
+		s.machine,
+		s.devPodConfig.ProviderOptions(s.config.Name),
+		s.config,
+		nil,
+		nil,
+		stdout,
+		stderr,
+		s.log,
+	)
 	if err != nil {
 		return client.StatusNotFound, fmt.Errorf("get status: %s%s", strings.TrimSpace(stdout.String()), strings.TrimSpace(stderr.String()))
 	}
@@ -144,7 +214,21 @@ func (s *machineClient) Delete(ctx context.Context, options client.DeleteOptions
 	}
 
 	s.log.Infof("Deleting %s machine...", s.config.Name)
-	err := runCommand(ctx, "delete", s.config.Exec.Delete, provider.ToEnvironment(nil, s.machine, s.devPodConfig.ProviderOptions(s.config.Name), nil), os.Stdin, os.Stdout, os.Stderr, s.log)
+	err := RunCommandWithBinaries(
+		ctx,
+		"delete",
+		s.config.Exec.Delete,
+		s.machine.Context,
+		nil,
+		s.machine,
+		s.devPodConfig.ProviderOptions(s.config.Name),
+		s.config,
+		nil,
+		os.Stdin,
+		os.Stdout,
+		os.Stderr,
+		s.log,
+	)
 	if err != nil {
 		if !options.Force {
 			return err
