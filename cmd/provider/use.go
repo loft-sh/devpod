@@ -68,57 +68,60 @@ func (cmd *UseCmd) Run(ctx context.Context, providerName string) error {
 		return err
 	}
 
-	// parse options
-	options, err := provider2.ParseOptions(providerWithOptions.Config, cmd.Options)
-	if err != nil {
-		return errors.Wrap(err, "parse options")
-	}
+	// should reconfigure?
+	if cmd.Reconfigure || len(cmd.Options) > 0 || !providerWithOptions.Configured {
+		// parse options
+		options, err := provider2.ParseOptions(providerWithOptions.Config, cmd.Options)
+		if err != nil {
+			return errors.Wrap(err, "parse options")
+		}
 
-	// merge with old values
-	if !cmd.Reconfigure {
-		for k, v := range providerWithOptions.Options {
-			_, ok := options[k]
-			if !ok && v.UserProvided {
-				options[k] = v.Value
+		// merge with old values
+		if !cmd.Reconfigure {
+			for k, v := range providerWithOptions.Options {
+				_, ok := options[k]
+				if !ok && v.UserProvided {
+					options[k] = v.Value
+				}
 			}
 		}
-	}
 
-	stdout := log.Default.Writer(logrus.InfoLevel, false)
-	defer stdout.Close()
+		stdout := log.Default.Writer(logrus.InfoLevel, false)
+		defer stdout.Close()
 
-	stderr := log.Default.Writer(logrus.ErrorLevel, false)
-	defer stderr.Close()
+		stderr := log.Default.Writer(logrus.ErrorLevel, false)
+		defer stderr.Close()
 
-	// run init command
-	err = clientimplementation.RunCommand(ctx, providerWithOptions.Config.Exec.Init, provider2.ToEnvironment(nil, nil, nil, nil), nil, stdout, stderr)
-	if err != nil {
-		return errors.Wrap(err, "init")
-	}
-
-	// fill defaults
-	devPodConfig, err = options2.ResolveOptions(ctx, devPodConfig, providerWithOptions.Config, options, log.Default)
-	if err != nil {
-		return errors.Wrap(err, "resolve options")
-	}
-
-	// download provider binaries
-	if len(providerWithOptions.Config.Binaries) > 0 {
-		binariesDir, err := provider2.GetProviderBinariesDir(devPodConfig.DefaultContext, providerWithOptions.Config.Name)
+		// run init command
+		err = clientimplementation.RunCommand(ctx, providerWithOptions.Config.Exec.Init, provider2.ToEnvironment(nil, nil, nil, nil), nil, stdout, stderr)
 		if err != nil {
-			return err
+			return errors.Wrap(err, "init")
 		}
 
-		_, err = binaries.DownloadBinaries(providerWithOptions.Config.Binaries, binariesDir, log.Default)
+		// fill defaults
+		devPodConfig, err = options2.ResolveOptions(ctx, devPodConfig, providerWithOptions.Config, options, log.Default)
 		if err != nil {
-			return errors.Wrap(err, "download binaries")
+			return errors.Wrap(err, "resolve options")
 		}
-	}
 
-	// run validate command
-	err = clientimplementation.RunCommand(ctx, providerWithOptions.Config.Exec.Validate, provider2.ToEnvironment(nil, nil, devPodConfig.Current().Providers[providerWithOptions.Config.Name].Options, nil), nil, stdout, stderr)
-	if err != nil {
-		return errors.Wrap(err, "validate")
+		// download provider binaries
+		if len(providerWithOptions.Config.Binaries) > 0 {
+			binariesDir, err := provider2.GetProviderBinariesDir(devPodConfig.DefaultContext, providerWithOptions.Config.Name)
+			if err != nil {
+				return err
+			}
+
+			_, err = binaries.DownloadBinaries(providerWithOptions.Config.Binaries, binariesDir, log.Default)
+			if err != nil {
+				return errors.Wrap(err, "download binaries")
+			}
+		}
+
+		// run validate command
+		err = clientimplementation.RunCommand(ctx, providerWithOptions.Config.Exec.Validate, provider2.ToEnvironment(nil, nil, devPodConfig.Current().Providers[providerWithOptions.Config.Name].Options, nil), nil, stdout, stderr)
+		if err != nil {
+			return errors.Wrap(err, "validate")
+		}
 	}
 
 	// set options
