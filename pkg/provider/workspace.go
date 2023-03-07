@@ -87,9 +87,6 @@ type WorkspaceSource struct {
 	// GitBranch is the branch to use
 	GitBranch string `json:"gitBranch,omitempty"`
 
-	// GitCommit is the commit to use
-	GitCommit string `json:"gitCommit,omitempty"`
-
 	// LocalFolder is the local folder to use
 	LocalFolder string `json:"localFolder,omitempty"`
 
@@ -118,9 +115,6 @@ func (w WorkspaceSource) String() string {
 	if w.GitRepository != "" {
 		if w.GitBranch != "" {
 			return w.GitRepository + "@" + w.GitBranch
-		}
-		if w.GitCommit != "" {
-			return w.GitRepository + "@" + w.GitCommit
 		}
 
 		return w.GitRepository

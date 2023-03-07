@@ -24,6 +24,8 @@ import (
 	"time"
 )
 
+var branchRegEx = regexp.MustCompile(`[^a-zA-Z0-9\.\-]+`)
+
 // Exists checks if the given workspace already exists
 func Exists(devPodConfig *config.Config, args []string, log log.Logger) string {
 	if len(args) == 0 {
@@ -202,7 +204,7 @@ func resolve(defaultProvider *ProviderWithOptions, devPodConfig *config.Config, 
 	}
 
 	// is git?
-	gitRepository := normalizeGitRepository(name)
+	gitRepository, gitBranch := normalizeGitRepository(name)
 	if strings.HasSuffix(name, ".git") || pingRepository(gitRepository) {
 		return &provider2.Workspace{
 			ID:      workspaceID,
@@ -213,6 +215,7 @@ func resolve(defaultProvider *ProviderWithOptions, devPodConfig *config.Config, 
 			},
 			Source: provider2.WorkspaceSource{
 				GitRepository: gitRepository,
+				GitBranch:     gitBranch,
 			},
 		}, nil
 	}
@@ -248,16 +251,31 @@ func isLocalDir(name string) (bool, string) {
 	return false, name
 }
 
-func normalizeGitRepository(str string) string {
-	if strings.HasSuffix(str, ".git") {
+func normalizeGitRepository(str string) (string, string) {
+	if !strings.HasPrefix(str, "git@") && !strings.HasPrefix(str, "http://") && !strings.HasPrefix(str, "https://") {
+		str = "http://" + str
+	}
+
+	// resolve branch
+	branch := ""
+	index := strings.LastIndex(str, "@")
+	if index != -1 {
+		branch = str[index+1:]
+		repo := str[:index]
+
+		// is not a valid tag / branch name?
+		if branchRegEx.MatchString(branch) {
+			branch = ""
+		} else {
+			str = repo
+		}
+	}
+
+	if !strings.HasSuffix(str, ".git") {
 		str += ".git"
 	}
 
-	if !strings.HasPrefix(str, "git@") && !strings.HasPrefix(str, "http://") && !strings.HasPrefix(str, "https://") {
-		return "http://" + str
-	}
-
-	return str
+	return str, branch
 }
 
 func pingRepository(str string) bool {
@@ -284,11 +302,20 @@ func ToID(str string) string {
 
 	// get last element if we find a /
 	index := strings.LastIndex(str, "/")
-	if index == -1 {
-		return workspaceIDRegEx2.ReplaceAllString(workspaceIDRegEx1.ReplaceAllString(str, "-"), "")
+	if index != -1 {
+		str = str[index+1:]
+
+		// remove .git if there is it
+		str = strings.TrimSuffix(str, ".git")
+
+		// remove a potential tag / branch name
+		splitted := strings.Split(str, "@")
+		if len(splitted) == 2 && !branchRegEx.MatchString(splitted[1]) {
+			str = splitted[0]
+		}
 	}
 
-	return workspaceIDRegEx2.ReplaceAllString(workspaceIDRegEx1.ReplaceAllString(str[index+1:], "-"), "")
+	return workspaceIDRegEx2.ReplaceAllString(workspaceIDRegEx1.ReplaceAllString(str, "-"), "")
 }
 
 func selectWorkspace(ctx context.Context, devPodConfig *config.Config, ide *provider2.WorkspaceIDEConfig, log log.Logger) (client.WorkspaceClient, error) {

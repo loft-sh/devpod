@@ -192,7 +192,7 @@ func prepareWorkspace(ctx context.Context, workspaceInfo *provider2.AgentWorkspa
 			}
 		}
 
-		return CloneRepository(workspaceInfo.Folder, workspaceInfo.Workspace.Source.GitRepository, helper, log)
+		return CloneRepository(workspaceInfo.Folder, workspaceInfo.Workspace.Source.GitRepository, workspaceInfo.Workspace.Source.GitBranch, helper, log)
 	} else if workspaceInfo.Workspace.Source.LocalFolder != "" {
 		log.Debugf("Download Local Folder")
 		return DownloadLocalFolder(ctx, workspaceInfo.Folder, client, log)
@@ -356,7 +356,7 @@ func (cmd *UpCmd) devPodUp(workspaceInfo *provider2.AgentWorkspaceInfo, log log.
 	return result, nil
 }
 
-func CloneRepository(workspaceDir, repository, helper string, log log.Logger) error {
+func CloneRepository(workspaceDir, repository, branch, helper string, log log.Logger) error {
 	// run git command
 	writer := log.Writer(logrus.InfoLevel, false)
 	defer writer.Close()
@@ -364,6 +364,9 @@ func CloneRepository(workspaceDir, repository, helper string, log log.Logger) er
 	args := []string{"clone"}
 	if helper != "" {
 		args = append(args, "--config", "credential.helper="+helper)
+	}
+	if branch != "" {
+		args = append(args, "--branch", branch)
 	}
 	args = append(args, repository, workspaceDir)
 	gitCommand := exec.Command("git", args...)
