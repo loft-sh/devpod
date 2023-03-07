@@ -440,7 +440,7 @@ func (r *Runner) getImageBuildInfoFromDockerfile(dockerFileContent string, build
 }
 
 func (r *Runner) getImageName() string {
-	imageHash := hash.Sha256(r.LocalWorkspaceFolder)[:5]
+	imageHash := hash.String(r.LocalWorkspaceFolder)[:5]
 	return "vsc-" + id.ToDockerImageName(filepath.Base(r.LocalWorkspaceFolder)) + "-" + imageHash
 }
 

@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"github.com/loft-sh/devpod/cmd/flags"
-	"github.com/loft-sh/devpod/pkg/binaries"
 	"github.com/loft-sh/devpod/pkg/client/clientimplementation"
 	"github.com/loft-sh/devpod/pkg/config"
 	"github.com/loft-sh/devpod/pkg/log"
@@ -69,7 +68,8 @@ func (cmd *UseCmd) Run(ctx context.Context, providerName string) error {
 	}
 
 	// should reconfigure?
-	if cmd.Reconfigure || len(cmd.Options) > 0 || !providerWithOptions.Configured {
+	shouldReconfigure := cmd.Reconfigure || len(cmd.Options) > 0 || !providerWithOptions.Configured
+	if shouldReconfigure {
 		// parse options
 		options, err := provider2.ParseOptions(providerWithOptions.Config, cmd.Options)
 		if err != nil {
@@ -93,7 +93,21 @@ func (cmd *UseCmd) Run(ctx context.Context, providerName string) error {
 		defer stderr.Close()
 
 		// run init command
-		err = clientimplementation.RunCommand(ctx, providerWithOptions.Config.Exec.Init, provider2.ToEnvironment(nil, nil, nil, nil), nil, stdout, stderr)
+		err = clientimplementation.RunCommandWithBinaries(
+			ctx,
+			"init",
+			providerWithOptions.Config.Exec.Init,
+			devPodConfig.DefaultContext,
+			nil,
+			nil,
+			nil,
+			providerWithOptions.Config,
+			nil,
+			nil,
+			stdout,
+			stderr,
+			log.Default,
+		)
 		if err != nil {
 			return errors.Wrap(err, "init")
 		}
@@ -104,24 +118,27 @@ func (cmd *UseCmd) Run(ctx context.Context, providerName string) error {
 			return errors.Wrap(err, "resolve options")
 		}
 
-		// download provider binaries
-		if len(providerWithOptions.Config.Binaries) > 0 {
-			binariesDir, err := provider2.GetProviderBinariesDir(devPodConfig.DefaultContext, providerWithOptions.Config.Name)
-			if err != nil {
-				return err
-			}
-
-			_, err = binaries.DownloadBinaries(providerWithOptions.Config.Binaries, binariesDir, log.Default)
-			if err != nil {
-				return errors.Wrap(err, "download binaries")
-			}
-		}
-
-		// run validate command
-		err = clientimplementation.RunCommand(ctx, providerWithOptions.Config.Exec.Validate, provider2.ToEnvironment(nil, nil, devPodConfig.Current().Providers[providerWithOptions.Config.Name].Options, nil), nil, stdout, stderr)
+		// run init command
+		err = clientimplementation.RunCommandWithBinaries(
+			ctx,
+			"validate",
+			providerWithOptions.Config.Exec.Validate,
+			devPodConfig.DefaultContext,
+			nil,
+			nil,
+			devPodConfig.ProviderOptions(providerWithOptions.Config.Name),
+			providerWithOptions.Config,
+			nil,
+			nil,
+			stdout,
+			stderr,
+			log.Default,
+		)
 		if err != nil {
 			return errors.Wrap(err, "validate")
 		}
+	} else {
+		log.Default.Infof("To reconfigure provider %s, run with '--reconfigure' to reconfigure the provider", providerWithOptions.Config.Name)
 	}
 
 	// set options
@@ -134,6 +151,12 @@ func (cmd *UseCmd) Run(ctx context.Context, providerName string) error {
 		return errors.Wrap(err, "save config")
 	}
 
-	log.Default.Donef("Successfully configured provider %s, run with '--reconfigure' to reconfigure the provider", providerWithOptions.Config.Name)
+	// print success message
+	if shouldReconfigure {
+		log.Default.Donef("Successfully configured provider '%s'", providerWithOptions.Config.Name)
+	} else {
+		log.Default.Donef("Successfully switched default provider to '%s'", providerWithOptions.Config.Name)
+	}
+
 	return nil
 }

@@ -3,8 +3,10 @@ package binaries
 import (
 	"crypto/tls"
 	"fmt"
+	"github.com/loft-sh/devpod/pkg/config"
 	"github.com/loft-sh/devpod/pkg/copy"
 	"github.com/loft-sh/devpod/pkg/extract"
+	"github.com/loft-sh/devpod/pkg/hash"
 	"github.com/loft-sh/devpod/pkg/log"
 	provider2 "github.com/loft-sh/devpod/pkg/provider"
 	"github.com/pkg/errors"
@@ -17,6 +19,25 @@ import (
 	"strings"
 )
 
+func ToEnvironmentWithBinaries(context string, workspace *provider2.Workspace, machine *provider2.Machine, options map[string]config.OptionValue, config *provider2.ProviderConfig, extraEnv map[string]string, log log.Logger) ([]string, error) {
+	environ := provider2.ToEnvironment(workspace, machine, options, extraEnv)
+
+	binariesDir, err := provider2.GetProviderBinariesDir(context, config.Name)
+	if err != nil {
+		return nil, err
+	}
+
+	binariesMap, err := DownloadBinaries(config.Binaries, binariesDir, log)
+	if err != nil {
+		return nil, err
+	}
+
+	for k, v := range binariesMap {
+		environ = append(environ, k+"="+v)
+	}
+	return environ, nil
+}
+
 func DownloadBinaries(binaries map[string][]*provider2.ProviderBinary, targetFolder string, log log.Logger) (map[string]string, error) {
 	retBinaries := map[string]string{}
 	for binaryName, binaryLocations := range binaries {
@@ -25,15 +46,35 @@ func DownloadBinaries(binaries map[string][]*provider2.ProviderBinary, targetFol
 				continue
 			}
 
-			binaryPath, err := downloadBinary(binaryName, binary, filepath.Join(targetFolder, strings.ToLower(binaryName)), log)
-			if err != nil {
-				return nil, errors.Wrapf(err, "downloading binary %s", binaryName)
-			}
+			// try to download the binary
+			for i := 0; i < 2; i++ {
+				binaryPath, err := downloadBinary(binaryName, binary, filepath.Join(targetFolder, strings.ToLower(binaryName)), log)
+				if err != nil {
+					return nil, errors.Wrapf(err, "downloading binary %s", binaryName)
+				}
 
-			retBinaries[binaryName] = binaryPath
+				if binary.Checksum != "" {
+					fileHash, err := hash.File(binaryPath)
+					if err != nil {
+						_ = os.Remove(binaryPath)
+						log.Errorf("Error hashing %s: %v", binaryPath, err)
+						continue
+					} else if strings.ToLower(fileHash) != strings.ToLower(binary.Checksum) {
+						_ = os.Remove(binaryPath)
+						log.Errorf("Unexpected file checksum %s != %s for binary %s", strings.ToLower(fileHash), strings.ToLower(binary.Checksum), binaryName)
+						continue
+					}
+				}
+
+				retBinaries[binaryName] = binaryPath
+				break
+			}
+			if retBinaries[binaryName] == "" {
+				return nil, fmt.Errorf("cannot download provider binary %s, because checksum check has failed", binaryName)
+			}
 		}
 		if retBinaries[binaryName] == "" {
-			log.Infof("Skip downloading binary %s, because no binary location matched OS %s and ARCH %s", runtime.GOOS, runtime.GOARCH)
+			return nil, fmt.Errorf("cannot download provider binary %s, because no binary location matched OS %s and ARCH %s", binaryName, runtime.GOOS, runtime.GOARCH)
 		}
 	}
 
@@ -41,19 +82,20 @@ func DownloadBinaries(binaries map[string][]*provider2.ProviderBinary, targetFol
 }
 
 func downloadBinary(binaryName string, binary *provider2.ProviderBinary, targetFolder string, log log.Logger) (string, error) {
-	err := os.MkdirAll(targetFolder, os.ModePerm)
-	if err != nil {
-		return "", errors.Wrap(err, "create folder")
-	}
-
 	// check if local
-	_, err = os.Stat(binary.Path)
-	if err != nil {
+	_, err := os.Stat(binary.Path)
+	if err == nil {
 		if filepath.IsAbs(binary.Path) {
 			return binary.Path, nil
 		}
 
-		targetPath, err := copyLocal(binary, targetFolder)
+		err := os.MkdirAll(targetFolder, 0755)
+		if err != nil {
+			return "", errors.Wrap(err, "create folder")
+		}
+
+		targetPath := localTargetPath(binary, targetFolder)
+		err = copyLocal(binary, targetFolder)
 		if err != nil {
 			_ = os.RemoveAll(targetFolder)
 			return "", err
@@ -64,7 +106,20 @@ func downloadBinary(binaryName string, binary *provider2.ProviderBinary, targetF
 
 	// check if download
 	if !strings.HasPrefix(binary.Path, "http://") && !strings.HasPrefix(binary.Path, "https://") {
+		// check if local already copied
+		targetPath := localTargetPath(binary, targetFolder)
+		_, err := os.Stat(targetPath)
+		if err == nil {
+			return targetPath, nil
+		}
+
 		return "", fmt.Errorf("cannot download %s as scheme is missing", binary.Path)
+	}
+
+	// create target folder
+	err = os.MkdirAll(targetFolder, 0755)
+	if err != nil {
+		return "", errors.Wrap(err, "create folder")
 	}
 
 	// check if archive
@@ -75,7 +130,7 @@ func downloadBinary(binaryName string, binary *provider2.ProviderBinary, targetF
 			return "", err
 		}
 
-		err = os.Chmod(targetPath, os.ModePerm)
+		err = os.Chmod(targetPath, 0755)
 		if err != nil {
 			return "", err
 		}
@@ -90,7 +145,7 @@ func downloadBinary(binaryName string, binary *provider2.ProviderBinary, targetF
 		return "", err
 	}
 
-	err = os.Chmod(targetPath, os.ModePerm)
+	err = os.Chmod(targetPath, 0755)
 	if err != nil {
 		return "", err
 	}
@@ -205,28 +260,32 @@ func downloadToTempFile(reader io.Reader) (string, error) {
 	return tempFile.Name(), nil
 }
 
-func copyLocal(binary *provider2.ProviderBinary, targetFolder string) (string, error) {
-	// determine binary name
+func localTargetPath(binary *provider2.ProviderBinary, targetFolder string) string {
 	name := binary.Name
 	if name == "" {
 		name = path.Base(binary.Path)
 	}
 
 	targetPath := filepath.Join(targetFolder, name)
-	_, err := os.Stat(targetPath)
+	return targetPath
+}
+
+func copyLocal(binary *provider2.ProviderBinary, targetPath string) error {
+	// determine binary name
+	targetPathStat, err := os.Stat(targetPath)
 	if err == nil {
-		return targetPath, nil
+		binaryStat, err := os.Stat(binary.Path)
+		if err != nil {
+			return err
+		} else if targetPathStat.Size() == binaryStat.Size() {
+			return nil
+		}
 	}
 
-	err = copy.File(binary.Path, targetPath)
+	err = copy.File(binary.Path, targetPath, 0755)
 	if err != nil {
-		return "", err
+		return err
 	}
 
-	err = os.Chmod(targetPath, 0755)
-	if err != nil {
-		return "", err
-	}
-
-	return targetPath, nil
+	return nil
 }

@@ -80,7 +80,10 @@ type ProviderBinary struct {
 	// The current Arch
 	Arch string `json:"arch,omitempty"`
 
-	// The binary url to download from or relative path to use
+	// Checksum is the sha256 hash of the binary
+	Checksum string `json:"checksum,omitempty"`
+
+	// Path is the binary url to download from or relative path to use
 	Path string `json:"path,omitempty"`
 
 	// ArchivePath is the path within the archive to extract

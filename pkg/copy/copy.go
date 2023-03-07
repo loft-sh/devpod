@@ -87,7 +87,7 @@ func Directory(scrDir, dest string) error {
 				return err
 			}
 		default:
-			if err := File(sourcePath, destPath); err != nil {
+			if err := File(sourcePath, destPath, 0666); err != nil {
 				return err
 			}
 		}
@@ -111,8 +111,8 @@ func Directory(scrDir, dest string) error {
 	return nil
 }
 
-func File(srcFile, dstFile string) error {
-	out, err := os.Create(dstFile)
+func File(srcFile, dstFile string, perm os.FileMode) error {
+	out, err := os.OpenFile(dstFile, os.O_RDWR|os.O_CREATE|os.O_TRUNC, perm)
 	if err != nil {
 		return err
 	}

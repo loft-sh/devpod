@@ -5,6 +5,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"github.com/loft-sh/devpod/pkg/binaries"
 	"github.com/loft-sh/devpod/pkg/client"
 	"github.com/loft-sh/devpod/pkg/compress"
 	"github.com/loft-sh/devpod/pkg/config"
@@ -224,9 +225,23 @@ func (s *agentClient) Delete(ctx context.Context, opt client.DeleteOptions) erro
 
 		s.log.Infof("Deleting container...")
 		command := fmt.Sprintf("%s agent workspace delete --id %s --context %s", options.ResolveAgentConfig(s.devPodConfig, s.config, s.workspace, s.machine).Path, s.workspace.ID, s.workspace.Context)
-		err := runCommand(ctx, "command", s.config.Exec.Command, provider.ToEnvironment(s.workspace, s.machine, s.devPodConfig.ProviderOptions(s.config.Name), map[string]string{
-			provider.CommandEnv: command,
-		}), nil, writer, writer, s.log.ErrorStreamOnly())
+		err := RunCommandWithBinaries(
+			ctx,
+			"command",
+			s.config.Exec.Command,
+			s.workspace.Context,
+			s.workspace,
+			s.machine,
+			s.devPodConfig.ProviderOptions(s.config.Name),
+			s.config,
+			map[string]string{
+				provider.CommandEnv: command,
+			},
+			nil,
+			writer,
+			writer,
+			s.log.ErrorStreamOnly(),
+		)
 		if err != nil {
 			if !opt.Force {
 				return err
@@ -282,9 +297,23 @@ func (s *agentClient) Stop(ctx context.Context, opt client.StopOptions) error {
 
 		s.log.Infof("Stopping container...")
 		command := fmt.Sprintf("%s agent workspace stop --id %s --context %s", options.ResolveAgentConfig(s.devPodConfig, s.config, s.workspace, s.machine).Path, s.workspace.ID, s.workspace.Context)
-		err := runCommand(ctx, "command", s.config.Exec.Command, provider.ToEnvironment(s.workspace, s.machine, s.devPodConfig.ProviderOptions(s.config.Name), map[string]string{
-			provider.CommandEnv: command,
-		}), nil, writer, writer, s.log.ErrorStreamOnly())
+		err := RunCommandWithBinaries(
+			ctx,
+			"command",
+			s.config.Exec.Command,
+			s.workspace.Context,
+			s.workspace,
+			s.machine,
+			s.devPodConfig.ProviderOptions(s.config.Name),
+			s.config,
+			map[string]string{
+				provider.CommandEnv: command,
+			},
+			nil,
+			writer,
+			writer,
+			s.log.ErrorStreamOnly(),
+		)
 		if err != nil {
 			return err
 		}
@@ -304,9 +333,12 @@ func (s *agentClient) Stop(ctx context.Context, opt client.StopOptions) error {
 func (s *agentClient) Command(ctx context.Context, commandOptions client.CommandOptions) (err error) {
 	// get environment variables
 	s.m.Lock()
-	environ := provider.ToEnvironment(s.workspace, s.machine, s.devPodConfig.ProviderOptions(s.config.Name), map[string]string{
+	environ, err := binaries.ToEnvironmentWithBinaries(s.workspace.Context, s.workspace, s.machine, s.devPodConfig.ProviderOptions(s.config.Name), s.config, map[string]string{
 		provider.CommandEnv: commandOptions.Command,
-	})
+	}, s.log)
+	if err != nil {
+		return err
+	}
 	s.m.Unlock()
 
 	// resolve options
@@ -367,9 +399,9 @@ func (s *agentClient) getContainerStatus(ctx context.Context) (client.Status, er
 	stdout := &bytes.Buffer{}
 	stderr := &bytes.Buffer{}
 	command := fmt.Sprintf("%s agent workspace status --id %s --context %s", options.ResolveAgentConfig(s.devPodConfig, s.config, s.workspace, s.machine).Path, s.workspace.ID, s.workspace.Context)
-	err := runCommand(ctx, "command", s.config.Exec.Command, provider.ToEnvironment(s.workspace, s.machine, s.devPodConfig.ProviderOptions(s.config.Name), map[string]string{
+	err := RunCommandWithBinaries(ctx, "command", s.config.Exec.Command, s.workspace.Context, s.workspace, s.machine, s.devPodConfig.ProviderOptions(s.config.Name), s.config, map[string]string{
 		provider.CommandEnv: command,
-	}), nil, stdout, stderr, s.log.ErrorStreamOnly())
+	}, nil, stdout, stderr, s.log.ErrorStreamOnly())
 	if err != nil {
 		return client.StatusNotFound, err
 	}
@@ -384,6 +416,15 @@ func (s *agentClient) getContainerStatus(ctx context.Context) (client.Status, er
 
 func (s *agentClient) isMachineProvider() bool {
 	return len(s.config.Exec.Create) > 0
+}
+
+func RunCommandWithBinaries(ctx context.Context, name string, command types.StrArray, context string, workspace *provider.Workspace, machine *provider.Machine, options map[string]config.OptionValue, config *provider.ProviderConfig, extraEnv map[string]string, stdin io.Reader, stdout io.Writer, stderr io.Writer, log log.Logger) (err error) {
+	environ, err := binaries.ToEnvironmentWithBinaries(context, workspace, machine, options, config, extraEnv, log)
+	if err != nil {
+		return err
+	}
+
+	return runCommand(ctx, name, command, environ, stdin, stdout, stderr, log)
 }
 
 func RunCommand(ctx context.Context, command types.StrArray, environ []string, stdin io.Reader, stdout io.Writer, stderr io.Writer) error {

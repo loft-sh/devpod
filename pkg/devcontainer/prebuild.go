@@ -80,5 +80,5 @@ func calculatePrebuildHash(parsedConfig *config.DevContainerConfig, dockerfileCo
 	}
 
 	log.Debugf("Prebuild hash from: %s %s %s", runtime.GOARCH, string(configStr), dockerfileContent)
-	return "devpod-" + hash.Sha256(runtime.GOARCH + string(configStr) + dockerfileContent)[:32], nil
+	return "devpod-" + hash.String(runtime.GOARCH + string(configStr) + dockerfileContent)[:32], nil
 }

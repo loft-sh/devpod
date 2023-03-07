@@ -200,7 +200,7 @@ func ListToObject(list []string) map[string]string {
 
 func GetDevContainerID(labels map[string]string) string {
 	labelsBytes, _ := json.Marshal(labels)
-	hashedLabels := hash.Sha256(string(labelsBytes))
+	hashedLabels := hash.String(string(labelsBytes))
 	bigInt := big.Int{}
 	bigInt.SetString(hashedLabels, 16)
 	return bigInt.Text(32)
