@@ -36,6 +36,8 @@ type UpCmd struct {
 	Machine string
 	IDE     string
 
+	ProviderOptions []string
+
 	PrebuildRepositories []string
 
 	ForceBuild bool
@@ -62,7 +64,7 @@ func NewUpCmd(flags *flags.GlobalFlags) *cobra.Command {
 				return err
 			}
 
-			client, err := workspace2.ResolveWorkspace(ctx, devPodConfig, ideConfig, args, cmd.ID, cmd.Machine, cmd.Provider, log.Default)
+			client, err := workspace2.ResolveWorkspace(ctx, devPodConfig, ideConfig, args, cmd.ID, cmd.Machine, cmd.Provider, cmd.ProviderOptions, log.Default)
 			if err != nil {
 				return err
 			}
@@ -71,6 +73,7 @@ func NewUpCmd(flags *flags.GlobalFlags) *cobra.Command {
 		},
 	}
 
+	upCmd.Flags().StringSliceVar(&cmd.ProviderOptions, "provider-option", []string{}, "Provider option in the form KEY=VALUE")
 	upCmd.Flags().BoolVar(&cmd.ForceBuild, "force-build", false, "If true will rebuild the container even if there is a prebuild already")
 	upCmd.Flags().BoolVar(&cmd.Recreate, "recreate", false, "If true will remove any existing containers and recreate them")
 	upCmd.Flags().StringSliceVar(&cmd.PrebuildRepositories, "prebuild-repository", []string{}, "Docker respository that hosts devpod prebuilds for this workspace")
@@ -216,12 +219,6 @@ func (cmd *UpCmd) devPodUp(ctx context.Context, client client2.WorkspaceClient, 
 }
 
 func (cmd *UpCmd) devPodUpMachine(ctx context.Context, client client2.AgentClient, log log.Logger) (*config2.Result, error) {
-	// update options
-	err := client.RefreshOptions(ctx, "command", "")
-	if err != nil {
-		return nil, err
-	}
-
 	// compress info
 	workspaceInfo, err := client.AgentInfo()
 	if err != nil {
@@ -273,8 +270,6 @@ func (cmd *UpCmd) devPodUpMachine(ctx context.Context, client client2.AgentClien
 				Stdin:   stdin,
 				Stdout:  stdout,
 				Stderr:  stderr,
-
-				SkipOptionsResolve: true,
 			})
 		}, client.AgentPath(), client.AgentURL(), true, command, stdinReader, stdoutWriter, buf, log.ErrorStreamOnly())
 		if err != nil {

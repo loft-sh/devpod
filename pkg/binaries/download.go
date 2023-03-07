@@ -49,6 +49,10 @@ func downloadBinary(binaryName string, binary *provider2.ProviderBinary, targetF
 	// check if local
 	_, err = os.Stat(binary.Path)
 	if err != nil {
+		if filepath.IsAbs(binary.Path) {
+			return binary.Path, nil
+		}
+
 		targetPath, err := copyLocal(binary, targetFolder)
 		if err != nil {
 			_ = os.RemoveAll(targetFolder)

@@ -5,8 +5,8 @@ description: |-
 options:
   GCLOUD_BINARY:
     description: Path to the gcloud binary
+    global: true
     default: gcloud
-    before: init
   PROJECT:
     description: The project id to use.
     required: true
@@ -30,7 +30,6 @@ options:
   GCLOUD_TOKEN:
     hidden: true
     cache: 10m
-    before: command
     command: ${GCLOUD_BINARY} auth application-default print-access-token --quiet --verbosity=error
   INJECT_GIT_CREDENTIALS:
     description: "If DevPod should inject git credentials into the remote host."

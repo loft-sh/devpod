@@ -40,6 +40,9 @@ type OptionValue struct {
 	// Value is the value of the option
 	Value string `json:"value,omitempty"`
 
+	// UserProvided signals that this value was user provided
+	UserProvided bool `json:"userProvided,omitempty"`
+
 	// Filled is the time when this value was filled
 	Filled *types.Time `json:"filled,omitempty"`
 }

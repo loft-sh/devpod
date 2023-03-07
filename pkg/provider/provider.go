@@ -1,6 +1,7 @@
 package provider
 
 import (
+	"github.com/loft-sh/devpod/pkg/config"
 	"github.com/loft-sh/devpod/pkg/types"
 )
 
@@ -138,11 +139,9 @@ type ProviderOption struct {
 	// Local will never send the option to the server
 	Local bool `json:"local,omitempty"`
 
-	// After is the after stage to retrieve this option
-	After string `json:"after,omitempty"`
-
-	// Before is the before stage
-	Before string `json:"before,omitempty"`
+	// Global means the variable is stored globally. By default, option values will be
+	// saved per machine or workspace instead.
+	Global bool `json:"globa,omitempty"`
 
 	// Default value if the user omits this option from their configuration.
 	Default string `json:"default,omitempty"`
@@ -162,4 +161,12 @@ func (c *ProviderConfig) IsMachineProvider() bool {
 		return true
 	}
 	return false
+}
+
+func FlattenOptions(options map[string]config.OptionValue) map[string]string {
+	retValues := map[string]string{}
+	for k, v := range options {
+		retValues[k] = v.Value
+	}
+	return retValues
 }

@@ -40,9 +40,50 @@ func FromEnvironment() *Machine {
 	}
 }
 
-func ToOptions(workspace *Workspace, server *Machine, options map[string]config.OptionValue) map[string]string {
+func combineOptions(resolvedOptions map[string]config.OptionValue, otherOptions map[string]config.OptionValue) map[string]config.OptionValue {
+	options := map[string]config.OptionValue{}
+	for k, v := range resolvedOptions {
+		options[k] = v
+	}
+	for k, v := range otherOptions {
+		options[k] = v
+	}
+	return options
+}
+
+func ToEnvironment(workspace *Workspace, machine *Machine, options map[string]config.OptionValue, extraEnv map[string]string) []string {
+	env := ToOptions(workspace, machine, options)
+
+	// create environment variables for command
+	osEnviron := os.Environ()
+	for k, v := range env {
+		osEnviron = append(osEnviron, k+"="+v)
+	}
+	for k, v := range extraEnv {
+		osEnviron = append(osEnviron, k+"="+v)
+	}
+
+	return osEnviron
+}
+
+func CombineOptions(workspace *Workspace, machine *Machine, options map[string]config.OptionValue) map[string]config.OptionValue {
+	providerOptions := map[string]config.OptionValue{}
+	if options != nil {
+		providerOptions = combineOptions(providerOptions, options)
+	}
+	if workspace != nil {
+		providerOptions = combineOptions(providerOptions, workspace.Provider.Options)
+	}
+	if machine != nil {
+		providerOptions = combineOptions(providerOptions, machine.Provider.Options)
+	}
+	return providerOptions
+}
+
+func ToOptions(workspace *Workspace, machine *Machine, options map[string]config.OptionValue) map[string]string {
+	providerOptions := CombineOptions(workspace, machine, options)
 	retVars := map[string]string{}
-	for optionName, optionValue := range options {
+	for optionName, optionValue := range providerOptions {
 		retVars[strings.ToUpper(optionName)] = optionValue.Value
 	}
 	if workspace != nil {
@@ -82,18 +123,18 @@ func ToOptions(workspace *Workspace, server *Machine, options map[string]config.
 			retVars[MACHINE_FOLDER], _ = GetMachineDir(workspace.Context, workspace.Machine.ID)
 		}
 	}
-	if server != nil {
-		if server.ID != "" {
-			retVars[MACHINE_ID] = server.ID
+	if machine != nil {
+		if machine.ID != "" {
+			retVars[MACHINE_ID] = machine.ID
 		}
-		if server.Folder != "" {
-			retVars[MACHINE_FOLDER] = filepath.ToSlash(server.Folder)
+		if machine.Folder != "" {
+			retVars[MACHINE_FOLDER] = filepath.ToSlash(machine.Folder)
 		}
-		if server.Context != "" {
-			retVars[MACHINE_CONTEXT] = server.Context
+		if machine.Context != "" {
+			retVars[MACHINE_CONTEXT] = machine.Context
 		}
-		if server.Provider.Name != "" {
-			retVars[MACHINE_PROVIDER] = server.Provider.Name
+		if machine.Provider.Name != "" {
+			retVars[MACHINE_PROVIDER] = machine.Provider.Name
 		}
 	}
 	for k, v := range GetBaseEnvironment() {

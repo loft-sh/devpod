@@ -2,31 +2,35 @@ package options
 
 import (
 	"context"
+	"github.com/loft-sh/devpod/pkg/config"
+	"github.com/loft-sh/devpod/pkg/log"
 	provider2 "github.com/loft-sh/devpod/pkg/provider"
 	"github.com/loft-sh/devpod/pkg/types"
 	"gotest.tools/assert"
-	"reflect"
 	"testing"
 	"time"
 )
 
 type testCase struct {
-	Name            string
-	BeforeStage     string
-	AfterStage      string
-	Workspace       *provider2.Workspace
-	ProviderOptions map[string]*provider2.ProviderOption
+	Name             string
+	ProviderOptions  map[string]*provider2.ProviderOption
+	UserValues       map[string]string
+	Values           map[string]config.OptionValue
+	ExtraValues      map[string]string
+	ResolveGlobal    bool
+	DontResolveLocal bool
 
-	ExpectNotChanged bool
-	ExpectErr        bool
-	ExpectedOptions  map[string]string
+	ExpectErr       bool
+	ExpectedOptions map[string]string
 }
 
 func TestResolveOptions(t *testing.T) {
 	testCases := []testCase{
 		{
-			Name:      "simple",
-			Workspace: &provider2.Workspace{ID: "test"},
+			Name: "simple",
+			ExtraValues: map[string]string{
+				"WORKSPACE_ID": "test",
+			},
 			ProviderOptions: map[string]*provider2.ProviderOption{
 				"TEST": {
 					Default: "${WORKSPACE_ID}-test",
@@ -37,8 +41,10 @@ func TestResolveOptions(t *testing.T) {
 			},
 		},
 		{
-			Name:      "dependency",
-			Workspace: &provider2.Workspace{ID: "test"},
+			Name: "dependency",
+			ExtraValues: map[string]string{
+				"WORKSPACE_ID": "test",
+			},
 			ProviderOptions: map[string]*provider2.ProviderOption{
 				"TEST": {
 					Default: "${WORKSPACE_ID}-test-${COMMAND}-$COMMAND",
@@ -53,7 +59,7 @@ func TestResolveOptions(t *testing.T) {
 			},
 		},
 		{
-			Name: "Nil workspace",
+			Name: "No extra values",
 			ProviderOptions: map[string]*provider2.ProviderOption{
 				"COMMAND1": {
 					Command: "echo ${COMMAND2}-test",
@@ -80,57 +86,11 @@ func TestResolveOptions(t *testing.T) {
 			ExpectErr: true,
 		},
 		{
-			Name:       "Later stage",
-			AfterStage: "command",
-			ProviderOptions: map[string]*provider2.ProviderOption{
-				"COMMAND1": {
-					Command: "echo ${COMMAND2}",
-					After:   "command",
-				},
-				"COMMAND2": {
-					Command: "echo bar",
-				},
-			},
-			ExpectErr: true,
-		},
-		{
-			Name:       "Correct stage",
-			AfterStage: "command",
-			Workspace: &provider2.Workspace{
-				ID: "test",
-				Provider: provider2.WorkspaceProviderConfig{
-					Options: map[string]provider2.OptionValue{
-						"COMMAND2": {
-							Value:   "bar",
-							Expires: &[]types.Time{types.NewTime(time.Time{})}[0],
-						},
-					},
-				},
-			},
-			ProviderOptions: map[string]*provider2.ProviderOption{
-				"COMMAND1": {
-					Command: "echo ${COMMAND2}",
-					After:   "command",
-				},
-				"COMMAND2": {
-					Command: "echo bar",
-				},
-			},
-			ExpectedOptions: map[string]string{
-				"COMMAND1": "bar",
-				"COMMAND2": "bar",
-			},
-		},
-		{
 			Name: "Override",
-			Workspace: &provider2.Workspace{
-				ID: "test",
-				Provider: provider2.WorkspaceProviderConfig{
-					Options: map[string]provider2.OptionValue{
-						"COMMAND": {
-							Value: "foo",
-						},
-					},
+			Values: map[string]config.OptionValue{
+				"COMMAND": {
+					Value:        "foo",
+					UserProvided: true,
 				},
 			},
 			ProviderOptions: map[string]*provider2.ProviderOption{
@@ -144,14 +104,10 @@ func TestResolveOptions(t *testing.T) {
 		},
 		{
 			Name: "Override",
-			Workspace: &provider2.Workspace{
-				ID: "test",
-				Provider: provider2.WorkspaceProviderConfig{
-					Options: map[string]provider2.OptionValue{
-						"COMMAND": {
-							Value: "foo",
-						},
-					},
+			Values: map[string]config.OptionValue{
+				"COMMAND": {
+					Value:        "foo",
+					UserProvided: true,
 				},
 			},
 			ProviderOptions: map[string]*provider2.ProviderOption{
@@ -173,92 +129,30 @@ func TestResolveOptions(t *testing.T) {
 		},
 		{
 			Name: "Expire",
-			Workspace: &provider2.Workspace{
-				ID: "test",
-				Provider: provider2.WorkspaceProviderConfig{
-					Options: map[string]provider2.OptionValue{
-						"EXPIRE": {
-							Value:   "foo",
-							Expires: &[]types.Time{types.NewTime(time.Time{})}[0],
-						},
-						"NOTEXPIRE": {
-							Value:   "foo",
-							Expires: &[]types.Time{types.NewTime(time.Now().Add(time.Hour))}[0],
-						},
-					},
+			Values: map[string]config.OptionValue{
+				"EXPIRE": {
+					Value:  "foo",
+					Filled: &[]types.Time{types.NewTime(time.Time{})}[0],
+				},
+				"NOTEXPIRE": {
+					Value:  "foo",
+					Filled: &[]types.Time{types.Now()}[0],
 				},
 			},
 			ProviderOptions: map[string]*provider2.ProviderOption{
 				"EXPIRE": {
 					Command: "echo bar",
+					Cache:   "10m",
 				},
 				"NOTEXPIRE": {
 					Command: "echo bar",
+					Cache:   "10m",
 				},
 			},
 			ExpectedOptions: map[string]string{
 				"EXPIRE":    "bar",
 				"NOTEXPIRE": "foo",
 			},
-		},
-		{
-			Name:        "Expire Stage",
-			BeforeStage: "init",
-			Workspace: &provider2.Workspace{
-				ID: "test",
-				Provider: provider2.WorkspaceProviderConfig{
-					Options: map[string]provider2.OptionValue{
-						"EXPIRE": {
-							Value:   "foo",
-							Expires: &[]types.Time{types.NewTime(time.Time{})}[0],
-						},
-						"NOTEXPIRE": {
-							Value:   "foo",
-							Expires: &[]types.Time{types.NewTime(time.Now().Add(time.Hour))}[0],
-						},
-					},
-				},
-			},
-			ProviderOptions: map[string]*provider2.ProviderOption{
-				"EXPIRE": {
-					Command: "echo bar",
-				},
-				"NOTEXPIRE": {
-					Command: "echo bar",
-				},
-			},
-			ExpectedOptions: map[string]string{
-				"EXPIRE":    "foo",
-				"NOTEXPIRE": "foo",
-			},
-		},
-		{
-			Name:        "No change",
-			BeforeStage: "init",
-			Workspace: &provider2.Workspace{
-				ID: "test",
-				Provider: provider2.WorkspaceProviderConfig{
-					Options: map[string]provider2.OptionValue{
-						"EXPIRE": {
-							Value:   "foo",
-							Expires: &[]types.Time{types.NewTime(time.Time{})}[0],
-						},
-						"NOTEXPIRE": {
-							Value:   "foo",
-							Expires: &[]types.Time{types.NewTime(time.Now().Add(time.Hour))}[0],
-						},
-					},
-				},
-			},
-			ProviderOptions: map[string]*provider2.ProviderOption{
-				"EXPIRE": {
-					Command: "echo bar",
-				},
-				"NOTEXPIRE": {
-					Command: "echo bar",
-				},
-			},
-			ExpectNotChanged: true,
 		},
 		{
 			Name: "Ignore self",
@@ -271,10 +165,81 @@ func TestResolveOptions(t *testing.T) {
 				"SELF": "test",
 			},
 		},
+		{
+			Name: "Recompute children",
+			UserValues: map[string]string{
+				"PARENT": "foo",
+			},
+			Values: map[string]config.OptionValue{
+				"PARENT": {
+					Value:        "test",
+					UserProvided: true,
+				},
+				"CHILD1": {
+					Value: "test-child1",
+				},
+				"CHILD2": {
+					Value: "test-child2",
+				},
+			},
+			ProviderOptions: map[string]*provider2.ProviderOption{
+				"PARENT": {},
+				"CHILD1": {
+					Command: "echo ${PARENT}-child1",
+				},
+				"CHILD2": {
+					Default: "${PARENT}-child2",
+				},
+			},
+			ExpectedOptions: map[string]string{
+				"PARENT": "foo",
+				"CHILD1": "foo-child1",
+				"CHILD2": "foo-child2",
+			},
+		},
+		{
+			Name: "Error local global",
+			ProviderOptions: map[string]*provider2.ProviderOption{
+				"PARENT": {
+					Default: "test",
+				},
+				"CHILD1": {
+					Global:  true,
+					Default: "${PARENT}",
+				},
+			},
+			ExpectErr: true,
+		},
+		{
+			Name: "Don't resolve local",
+			ProviderOptions: map[string]*provider2.ProviderOption{
+				"PARENT": {
+					Default: "test",
+				},
+				"CHILD1": {
+					Default: "${PARENT}",
+				},
+			},
+			DontResolveLocal: true,
+			ExpectedOptions:  map[string]string{},
+		},
+		{
+			Name: "Don't resolve local",
+			ProviderOptions: map[string]*provider2.ProviderOption{
+				"PARENT": {
+					Default: "test",
+				},
+				"CHILD1": {
+					Default: "${PARENT}",
+				},
+			},
+			DontResolveLocal: true,
+			ExpectedOptions:  map[string]string{},
+		},
 	}
 
 	for _, testCase := range testCases {
-		options, err := ResolveOptions(context.Background(), testCase.BeforeStage, testCase.AfterStage, testCase.Workspace, testCase.ProviderOptions)
+		options, err := resolveOptionsGeneric(context.Background(), testCase.ProviderOptions, testCase.Values, testCase.UserValues, testCase.ExtraValues, !testCase.DontResolveLocal, testCase.ResolveGlobal, log.Default)
 		if !testCase.ExpectErr {
 			assert.NilError(t, err, testCase.Name)
 		} else if testCase.ExpectErr {
@@ -292,11 +257,6 @@ func TestResolveOptions(t *testing.T) {
 			}
 
 			assert.DeepEqual(t, strOptions, testCase.ExpectedOptions)
-		}
-
-		if testCase.ExpectNotChanged {
-			assert.DeepEqual(t, options, testCase.Workspace.Provider.Options)
-			assert.DeepEqual(t, reflect.DeepEqual(options, testCase.Workspace.Provider.Options), true)
 		}
 	}
 }

@@ -7,8 +7,11 @@ import (
 	"github.com/loft-sh/devpod/pkg/agent"
 	"github.com/loft-sh/devpod/pkg/config"
 	"github.com/loft-sh/devpod/pkg/devcontainer/graph"
+	"github.com/loft-sh/devpod/pkg/log"
 	provider2 "github.com/loft-sh/devpod/pkg/provider"
 	"github.com/loft-sh/devpod/pkg/shell"
+	"github.com/loft-sh/devpod/pkg/survey"
+	"github.com/loft-sh/devpod/pkg/terminal"
 	"github.com/loft-sh/devpod/pkg/types"
 	"github.com/pkg/errors"
 	"os"
@@ -23,7 +26,75 @@ var variableExpression = regexp.MustCompile(`(?m)\$\{?([A-Z0-9_]+)(:(-|\+)([^\}]
 
 const rootID = "root"
 
-func ResolveAndSaveOptions(ctx context.Context, beforeStage, afterStage string, originalDevConfig *config.Config, provider *provider2.ProviderConfig) (*config.Config, error) {
+func ResolveAndSaveOptionsMachine(ctx context.Context, devConfig *config.Config, provider *provider2.ProviderConfig, originalMachine *provider2.Machine, userOptions map[string]string, log log.Logger) (*provider2.Machine, error) {
+	// reload config
+	machine, err := provider2.LoadMachineConfig(originalMachine.Context, originalMachine.ID)
+	if err != nil {
+		return originalMachine, err
+	}
+
+	// resolve devconfig options
+	var beforeConfigOptions map[string]config.OptionValue
+	if machine != nil {
+		beforeConfigOptions = machine.Provider.Options
+	}
+
+	// resolve options
+	resolvedOptions, err := resolveOptionsGeneric(ctx, provider.Options, provider2.CombineOptions(nil, machine, devConfig.ProviderOptions(provider.Name)), userOptions, provider2.ToOptions(nil, machine, devConfig.ProviderOptions(provider.Name)), true, false, log)
+	if err != nil {
+		return nil, err
+	}
+
+	// remove global options
+	filterResolvedOptions(resolvedOptions, beforeConfigOptions, devConfig.ProviderOptions(provider.Name), provider.Options, userOptions)
+
+	// save machine config
+	machine.Provider.Options = resolvedOptions
+	if machine != nil && !reflect.DeepEqual(beforeConfigOptions, machine.Provider.Options) {
+		err = provider2.SaveMachineConfig(machine)
+		if err != nil {
+			return machine, err
+		}
+	}
+
+	return machine, nil
+}
+
+func ResolveAndSaveOptionsWorkspace(ctx context.Context, devConfig *config.Config, provider *provider2.ProviderConfig, originalWorkspace *provider2.Workspace, userOptions map[string]string, log log.Logger) (*provider2.Workspace, error) {
+	// reload config
+	workspace, err := provider2.LoadWorkspaceConfig(originalWorkspace.Context, originalWorkspace.ID)
+	if err != nil {
+		return originalWorkspace, err
+	}
+
+	// resolve devconfig options
+	var beforeConfigOptions map[string]config.OptionValue
+	if workspace != nil {
+		beforeConfigOptions = workspace.Provider.Options
+	}
+
+	// resolve options
+	resolvedOptions, err := resolveOptionsGeneric(ctx, provider.Options, provider2.CombineOptions(workspace, nil, devConfig.ProviderOptions(provider.Name)), userOptions, provider2.ToOptions(workspace, nil, devConfig.ProviderOptions(provider.Name)), true, false, log)
+	if err != nil {
+		return nil, err
+	}
+
+	// remove global options
+	filterResolvedOptions(resolvedOptions, beforeConfigOptions, devConfig.ProviderOptions(provider.Name), provider.Options, userOptions)
+
+	// save workspace config
+	workspace.Provider.Options = resolvedOptions
+	if workspace != nil && !reflect.DeepEqual(beforeConfigOptions, workspace.Provider.Options) {
+		err = provider2.SaveWorkspaceConfig(workspace)
+		if err != nil {
+			return workspace, err
+		}
+	}
+
+	return workspace, nil
+}
+
+func ResolveAndSaveOptions(ctx context.Context, originalDevConfig *config.Config, provider *provider2.ProviderConfig, log log.Logger) (*config.Config, error) {
 	// reload config
 	devConfig, err := config.LoadConfig(originalDevConfig.DefaultContext)
 	if err != nil {
@@ -37,7 +108,7 @@ func ResolveAndSaveOptions(ctx context.Context, beforeStage, afterStage string, 
 	}
 
 	// resolve options
-	devConfig, err = ResolveOptions(ctx, beforeStage, afterStage, devConfig, provider)
+	devConfig, err = ResolveOptions(ctx, devConfig, provider, nil, log)
 	if err != nil {
 		return devConfig, errors.Wrap(err, "resolve options")
 	}
@@ -53,8 +124,8 @@ func ResolveAndSaveOptions(ctx context.Context, beforeStage, afterStage string, 
 	return devConfig, nil
 }
 
-func ResolveOptions(ctx context.Context, beforeStage, afterStage string, devConfig *config.Config, provider *provider2.ProviderConfig) (*config.Config, error) {
-	resolvedOptions, err := resolveOptionsGeneric(ctx, beforeStage, afterStage, devConfig.ProviderOptions(provider.Name), provider2.GetBaseEnvironment(), provider)
+func ResolveOptions(ctx context.Context, devConfig *config.Config, provider *provider2.ProviderConfig, userOptions map[string]string, log log.Logger) (*config.Config, error) {
+	resolvedOptions, err := resolveOptionsGeneric(ctx, provider.Options, devConfig.ProviderOptions(provider.Name), userOptions, provider2.GetBaseEnvironment(), false, true, log)
 	if err != nil {
 		return nil, err
 	}
@@ -74,10 +145,39 @@ func ResolveOptions(ctx context.Context, beforeStage, afterStage string, devConf
 	return devConfig, nil
 }
 
-func resolveOptionsGeneric(ctx context.Context, beforeStage, afterStage string, optionValues map[string]config.OptionValue, extraValues map[string]string, provider *provider2.ProviderConfig) (map[string]config.OptionValue, error) {
-	options := provider.Options
+func ResolveAgentConfig(devConfig *config.Config, provider *provider2.ProviderConfig, workspace *provider2.Workspace, machine *provider2.Machine) provider2.ProviderAgentConfig {
+	// fill in agent config
+	options := provider2.ToOptions(workspace, machine, devConfig.ProviderOptions(provider.Name))
+	agentConfig := provider.Agent
+	agentConfig.Path = resolveDefaultValue(agentConfig.Path, options)
+	if agentConfig.Path == "" {
+		agentConfig.Path = agent.RemoteDevPodHelperLocation
+	}
+	agentConfig.DownloadURL = resolveDefaultValue(agentConfig.DownloadURL, options)
+	if agentConfig.DownloadURL == "" {
+		agentConfig.DownloadURL = agent.DefaultAgentDownloadURL
+	}
+	agentConfig.Timeout = resolveDefaultValue(agentConfig.Timeout, options)
+	agentConfig.InjectGitCredentials = types.StrBool(resolveDefaultValue(string(agentConfig.InjectGitCredentials), options))
+	agentConfig.InjectDockerCredentials = types.StrBool(resolveDefaultValue(string(agentConfig.InjectDockerCredentials), options))
+	return agentConfig
+}
+
+func resolveOptionsGeneric(
+	ctx context.Context,
+	options map[string]*provider2.ProviderOption,
+	optionValues map[string]config.OptionValue,
+	userOptions map[string]string,
+	extraValues map[string]string,
+	resolveLocal bool,
+	resolveGlobal bool,
+	log log.Logger,
+) (map[string]config.OptionValue, error) {
 	if options == nil {
 		options = map[string]*provider2.ProviderOption{}
+	}
+	if userOptions == nil {
+		userOptions = map[string]string{}
 	}
 
 	// create a new graph
@@ -96,7 +196,7 @@ func resolveOptionsGeneric(ctx context.Context, beforeStage, afterStage string, 
 	}
 
 	// resolve options
-	resolvedOptions, err := resolveOptions(ctx, g, beforeStage, afterStage, options, optionValues, extraValues)
+	resolvedOptions, err := resolveOptions(ctx, g, optionValues, userOptions, extraValues, resolveLocal, resolveGlobal, log)
 	if err != nil {
 		return nil, err
 	}
@@ -104,105 +204,106 @@ func resolveOptionsGeneric(ctx context.Context, beforeStage, afterStage string, 
 	return resolvedOptions, nil
 }
 
-func ResolveAgentConfig(devConfig *config.Config, provider *provider2.ProviderConfig) provider2.ProviderAgentConfig {
-	// fill in agent config
-	options := provider2.ToOptions(nil, nil, devConfig.ProviderOptions(provider.Name))
-	agentConfig := provider.Agent
-	agentConfig.Path = resolveDefaultValue(agentConfig.Path, options)
-	if agentConfig.Path == "" {
-		agentConfig.Path = agent.RemoteDevPodHelperLocation
-	}
-	agentConfig.DownloadURL = resolveDefaultValue(agentConfig.DownloadURL, options)
-	if agentConfig.DownloadURL == "" {
-		agentConfig.DownloadURL = agent.DefaultAgentDownloadURL
-	}
-	agentConfig.Timeout = resolveDefaultValue(agentConfig.Timeout, options)
-	agentConfig.InjectGitCredentials = types.StrBool(resolveDefaultValue(string(agentConfig.InjectGitCredentials), options))
-	agentConfig.InjectDockerCredentials = types.StrBool(resolveDefaultValue(string(agentConfig.InjectDockerCredentials), options))
-	return agentConfig
-}
-
-func resolveOptions(ctx context.Context, g *graph.Graph, beforeStage, afterStage string, options map[string]*provider2.ProviderOption, optionValues map[string]config.OptionValue, extraValues map[string]string) (map[string]config.OptionValue, error) {
-	// find out options we need to resolve
-	resolveOptions := map[string]bool{}
-	for optionName, option := range options {
-		if option.Before != beforeStage || option.After != afterStage {
-			continue
-		}
-
-		if optionValues != nil {
-			val, ok := optionValues[optionName]
-			if ok && option.Cache == "" {
-				continue
-			} else if ok && val.Filled != nil && option.Cache != "" {
-				duration, err := time.ParseDuration(option.Cache)
-				if err != nil {
-					return nil, errors.Wrapf(err, "parse cache duration of option %s", optionName)
-				}
-
-				if val.Filled.Add(duration).After(time.Now()) {
-					continue
-				}
-			}
-		}
-
-		resolveOptions[optionName] = true
-	}
-
-	// resolve options
+func resolveOptions(
+	ctx context.Context,
+	g *graph.Graph,
+	optionValues map[string]config.OptionValue,
+	userOptions map[string]string,
+	extraValues map[string]string,
+	resolveLocal bool,
+	resolveGlobal bool,
+	log log.Logger,
+) (map[string]config.OptionValue, error) {
+	// copy options
 	resolvedOptions := map[string]config.OptionValue{}
-	if optionValues != nil {
-		for optionName, v := range optionValues {
-			if resolveOptions[optionName] {
-				continue
-			}
-
-			resolvedOptions[optionName] = v
-		}
+	for optionName, v := range optionValues {
+		resolvedOptions[optionName] = v
 	}
 
-	// resolve options
-	for optionName := range resolveOptions {
-		err := resolveOption(ctx, g, optionName, resolveOptions, resolvedOptions, extraValues)
+	// resolve options order
+	clonedGraph := g.Clone()
+	orderedOptions := []string{}
+	nextLeaf := clonedGraph.GetNextLeaf(clonedGraph.Root)
+	for nextLeaf != clonedGraph.Root {
+		orderedOptions = append(orderedOptions, nextLeaf.ID)
+		err := clonedGraph.RemoveNode(nextLeaf.ID)
+		if err != nil {
+			return nil, err
+		}
+
+		nextLeaf = clonedGraph.GetNextLeaf(clonedGraph.Root)
+	}
+
+	// resolve options in reverse order
+	for i := len(orderedOptions) - 1; i >= 0; i-- {
+		optionName := orderedOptions[i]
+		err := resolveOption(ctx, g, optionName, resolvedOptions, userOptions, extraValues, resolveLocal, resolveGlobal, log)
 		if err != nil {
 			return nil, errors.Wrap(err, "resolve option "+optionName)
 		}
 	}
 
-	// TODO: recompute children?
 	return resolvedOptions, nil
 }
 
-func resolveOption(ctx context.Context, g *graph.Graph, optionName string, resolveOptions map[string]bool, resolvedOptions map[string]config.OptionValue, extraValues map[string]string) error {
+func resolveOption(
+	ctx context.Context,
+	g *graph.Graph,
+	optionName string,
+	resolvedOptions map[string]config.OptionValue,
+	userOptions map[string]string,
+	extraValues map[string]string,
+	resolveLocal bool,
+	resolveGlobal bool,
+	log log.Logger,
+) error {
 	node := g.Nodes[optionName]
+	option := node.Data.(*provider2.ProviderOption)
 
-	// are parents resolved?
-	for _, parent := range node.Parents {
-		if parent.ID == rootID {
-			continue
-		}
+	// check if user value exists
+	userValue, userValueOk := userOptions[optionName]
 
-		_, ok := resolveOptions[parent.ID]
-		if !ok {
-			// check if it was already resolved
-			_, ok := resolvedOptions[parent.ID]
-			if !ok {
-				return fmt.Errorf("cannot resolve option %s, because it depends on %s which is not loaded at this stage", optionName, parent.ID)
+	// find out options we need to resolve
+	if !userValueOk {
+		// make sure required is always resolved
+		if option.Required {
+			// skip if global
+			if !resolveGlobal && option.Global {
+				return nil
+			} else if !resolveLocal && !option.Global {
+				return nil
 			}
-
-			continue
 		}
 
-		// resolve parent first
-		err := resolveOption(ctx, g, parent.ID, resolveOptions, resolvedOptions, extraValues)
-		if err != nil {
-			return err
+		// check if value is already filled
+		val, ok := resolvedOptions[optionName]
+		if ok {
+			if val.UserProvided || option.Cache == "" {
+				return nil
+			} else if option.Cache != "" {
+				duration, err := time.ParseDuration(option.Cache)
+				if err != nil {
+					return errors.Wrapf(err, "parse cache duration of option %s", optionName)
+				}
+
+				// has value expired?
+				if val.Filled != nil && val.Filled.Add(duration).After(time.Now()) {
+					return nil
+				}
+			}
 		}
 	}
 
+	// get before value
+	beforeValue := resolvedOptions[optionName].Value
+
 	// resolve option
-	option := node.Data.(*provider2.ProviderOption)
-	if option.Default != "" {
+	if userValueOk {
+		resolvedOptions[optionName] = config.OptionValue{
+			Value:        userValue,
+			UserProvided: true,
+		}
+	} else if option.Default != "" {
 		resolvedOptions[optionName] = config.OptionValue{
 			Value: resolveDefaultValue(option.Default, combine(resolvedOptions, extraValues)),
 		}
@@ -215,6 +316,42 @@ func resolveOption(ctx context.Context, g *graph.Graph, optionName string, resol
 		resolvedOptions[optionName] = optionValue
 	} else {
 		resolvedOptions[optionName] = config.OptionValue{}
+	}
+
+	// is required?
+	if !userValueOk && option.Required && resolvedOptions[optionName].Value == "" && !resolvedOptions[optionName].UserProvided {
+		if !terminal.IsTerminalIn {
+			return fmt.Errorf("option %s is required, but no value provided", optionName)
+		}
+
+		log.Info(option.Description)
+		answer, err := log.Question(&survey.QuestionOptions{
+			Question:               fmt.Sprintf("Please enter a value for %s", optionName),
+			Options:                option.Enum,
+			ValidationRegexPattern: option.ValidationPattern,
+			ValidationMessage:      option.ValidationMessage,
+		})
+		if err != nil {
+			return err
+		}
+
+		resolvedOptions[optionName] = config.OptionValue{
+			Value:        answer,
+			UserProvided: true,
+		}
+	}
+
+	// has changed
+	if beforeValue != resolvedOptions[optionName].Value {
+		// resolve children again
+		for _, child := range node.Childs {
+			// check if value is already there
+			optionValue, ok := resolvedOptions[child.ID]
+			if ok && !optionValue.UserProvided {
+				// recompute children
+				delete(resolvedOptions, child.ID)
+			}
+		}
 	}
 
 	return nil
@@ -270,6 +407,10 @@ func addDependencies(g *graph.Graph, options map[string]*provider2.ProviderOptio
 				continue
 			}
 
+			if option.Global && !options[dep].Global {
+				return fmt.Errorf("cannot use a global option as a dependency of a non-global option. Option '%s' used in default of option '%s'", dep, optionName)
+			}
+
 			err := g.AddEdge(dep, optionName)
 			if err != nil {
 				return err
@@ -280,6 +421,10 @@ func addDependencies(g *graph.Graph, options map[string]*provider2.ProviderOptio
 		for _, dep := range deps {
 			if options[dep] == nil || dep == optionName {
 				continue
+			}
+
+			if option.Global && !options[dep].Global {
+				return fmt.Errorf("cannot use a global option as a dependency of a non-global option. Option '%s' used in command of option '%s'", dep, optionName)
 			}
 
 			err := g.AddEdge(dep, optionName)
@@ -312,13 +457,27 @@ func removeRootParent(g *graph.Graph, options map[string]*provider2.ProviderOpti
 		// remove root parent
 		if len(node.Parents) > 1 {
 			newParents := []*graph.Node{}
+			removed := false
 			for _, parent := range node.Parents {
 				if parent.ID == rootID {
+					removed = true
 					continue
 				}
 				newParents = append(newParents, parent)
 			}
 			node.Parents = newParents
+
+			// remove from root childs
+			if removed {
+				newChilds := []*graph.Node{}
+				for _, child := range g.Root.Childs {
+					if child.ID == node.ID {
+						continue
+					}
+					newChilds = append(newChilds, child)
+				}
+				g.Root.Childs = newChilds
+			}
 		}
 	}
 }
@@ -341,4 +500,39 @@ func FindVariables(str string) []string {
 
 	sort.Strings(retVarsArr)
 	return retVarsArr
+}
+
+func filterResolvedOptions(resolvedOptions, beforeConfigOptions, providerValues map[string]config.OptionValue, providerOptions map[string]*provider2.ProviderOption, userOptions map[string]string) {
+	for k := range resolvedOptions {
+		// check if user supplied
+		if userOptions != nil {
+			_, ok := userOptions[k]
+			if ok {
+				continue
+			}
+		}
+
+		// check if it was there before
+		if beforeConfigOptions != nil {
+			_, ok := beforeConfigOptions[k]
+			if ok {
+				continue
+			}
+		}
+
+		// check if not available in the provider values
+		if providerValues != nil {
+			_, ok := providerValues[k]
+			if !ok {
+				continue
+			}
+		}
+
+		// check if not global
+		if providerOptions == nil || providerOptions[k] == nil || !providerOptions[k].Global {
+			continue
+		}
+
+		delete(resolvedOptions, k)
+	}
 }

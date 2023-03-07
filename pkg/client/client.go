@@ -19,6 +19,9 @@ type Client interface {
 	// Context returns the context of the provider
 	Context() string
 
+	// RefreshOptions updates the options
+	RefreshOptions(ctx context.Context, userOptions []string) error
+
 	// Machine returns the machine of this client
 	Machine() string
 
@@ -65,9 +68,6 @@ type AgentClient interface {
 
 	// AgentInfo returns the info to send to the agent
 	AgentInfo() (string, error)
-
-	// RefreshOptions updates the options
-	RefreshOptions(ctx context.Context, beforeStage, afterStage string) error
 }
 
 type InitOptions struct{}
@@ -94,8 +94,6 @@ type CommandOptions struct {
 	Stdin   io.Reader
 	Stdout  io.Writer
 	Stderr  io.Writer
-
-	SkipOptionsResolve bool
 }
 
 type Status string
