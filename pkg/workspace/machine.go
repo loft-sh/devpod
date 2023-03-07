@@ -80,7 +80,7 @@ func MachineExists(devPodConfig *config.Config, args []string, log log.Logger) s
 	}
 
 	// check if workspace already exists
-	_, name := isLocalDir(args[0], log)
+	_, name := isLocalDir(args[0])
 
 	// convert to id
 	workspaceID := ToID(name)
@@ -101,7 +101,7 @@ func GetMachine(devPodConfig *config.Config, args []string, log log.Logger) (cli
 	}
 
 	// check if workspace already exists
-	_, name := isLocalDir(args[0], log)
+	_, name := isLocalDir(args[0])
 
 	// convert to id
 	machineID := ToID(name)

@@ -31,7 +31,7 @@ func Exists(devPodConfig *config.Config, args []string, log log.Logger) string {
 	}
 
 	// check if workspace already exists
-	_, name := isLocalDir(args[0], log)
+	_, name := isLocalDir(args[0])
 
 	// convert to id
 	workspaceID := ToID(name)
@@ -52,7 +52,7 @@ func GetWorkspace(ctx context.Context, devPodConfig *config.Config, ide *provide
 	}
 
 	// check if workspace already exists
-	_, name := isLocalDir(args[0], log)
+	_, name := isLocalDir(args[0])
 
 	// convert to id
 	workspaceID := ToID(name)
@@ -93,7 +93,7 @@ func resolveWorkspace(ctx context.Context, devPodConfig *config.Config, ide *pro
 	}
 
 	// check if workspace already exists
-	isLocalPath, name := isLocalDir(args[0], log)
+	isLocalPath, name := isLocalDir(args[0])
 
 	// convert to id
 	workspaceID := ToID(name)
@@ -236,16 +236,10 @@ func resolve(defaultProvider *ProviderWithOptions, devPodConfig *config.Config, 
 	return nil, fmt.Errorf("%s is neither a local folder, git repository or docker image", name)
 }
 
-func isLocalDir(name string, log log.Logger) (bool, string) {
+func isLocalDir(name string) (bool, string) {
 	_, err := os.Stat(name)
 	if err == nil {
 		absPath, _ := filepath.Abs(name)
-		gitRoot := findGitRoot(name)
-		if gitRoot != "" && gitRoot != absPath {
-			log.Debugf("Found git root at %s", gitRoot)
-			return true, gitRoot
-		}
-
 		if absPath != "" {
 			return true, absPath
 		}
@@ -357,34 +351,6 @@ func loadExistingWorkspace(workspaceID string, devPodConfig *config.Config, ide 
 	}
 
 	return clientimplementation.NewWorkspaceClient(devPodConfig, providerWithOptions.Config, workspaceConfig, log)
-}
-
-func findGitRoot(localFolder string) string {
-	if !command.Exists("git") {
-		return ""
-	}
-
-	out, err := exec.Command("git", "-C", localFolder, "rev-parse", "--git-dir").Output()
-	if err != nil {
-		return ""
-	}
-
-	path := strings.TrimSpace(string(out))
-	_, err = os.Stat(path)
-	if err != nil {
-		return ""
-	}
-
-	if filepath.IsAbs(path) {
-		return filepath.Dir(path)
-	}
-
-	absLocalFolder, err := filepath.Abs(localFolder)
-	if err != nil {
-		return ""
-	}
-
-	return filepath.Dir(filepath.Join(absLocalFolder, path))
 }
 
 func saveWorkspaceConfig(workspace *provider2.Workspace) error {
