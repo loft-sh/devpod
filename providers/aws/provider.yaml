@@ -17,7 +17,6 @@ options:
   AWS_BINARY:
     description: Path to the aws binary
     default: aws
-    before: init
   MACHINE_TYPE:
     description: The machine type to use.
     default: t3.medium

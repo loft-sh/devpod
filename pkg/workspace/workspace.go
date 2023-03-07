@@ -67,7 +67,22 @@ func GetWorkspace(ctx context.Context, devPodConfig *config.Config, ide *provide
 }
 
 // ResolveWorkspace tries to retrieve an already existing workspace or creates a new one
-func ResolveWorkspace(ctx context.Context, devPodConfig *config.Config, ide *provider2.WorkspaceIDEConfig, args []string, desiredID, desiredMachine, providerOverride string, log log.Logger) (client.WorkspaceClient, error) {
+func ResolveWorkspace(ctx context.Context, devPodConfig *config.Config, ide *provider2.WorkspaceIDEConfig, args []string, desiredID, desiredMachine, providerOverride string, providerUserOptions []string, log log.Logger) (client.WorkspaceClient, error) {
+	workspaceClient, err := resolveWorkspace(ctx, devPodConfig, ide, args, desiredID, desiredMachine, providerOverride, log)
+	if err != nil {
+		return nil, err
+	}
+
+	// refresh options
+	err = workspaceClient.RefreshOptions(ctx, providerUserOptions)
+	if err != nil {
+		return nil, err
+	}
+
+	return workspaceClient, nil
+}
+
+func resolveWorkspace(ctx context.Context, devPodConfig *config.Config, ide *provider2.WorkspaceIDEConfig, args []string, desiredID, desiredMachine, providerOverride string, log log.Logger) (client.WorkspaceClient, error) {
 	// check if we have no args
 	if len(args) == 0 {
 		if desiredID != "" {
@@ -155,7 +170,13 @@ func ResolveWorkspace(ctx context.Context, devPodConfig *config.Config, ide *pro
 	}
 
 	// create a new client
-	return clientimplementation.NewWorkspaceClient(devPodConfig, defaultProvider.Config, workspace, log)
+	workspaceClient, err := clientimplementation.NewWorkspaceClient(devPodConfig, defaultProvider.Config, workspace, log)
+	if err != nil {
+		_ = os.RemoveAll(workspaceFolder)
+		return nil, errors.Wrap(err, "create workspace client")
+	}
+
+	return workspaceClient, nil
 }
 
 func resolve(defaultProvider *ProviderWithOptions, devPodConfig *config.Config, name, workspaceID, workspaceFolder string, isLocalPath bool) (*provider2.Workspace, error) {

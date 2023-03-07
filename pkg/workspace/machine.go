@@ -1,6 +1,7 @@
 package workspace
 
 import (
+	"context"
 	"fmt"
 	"github.com/loft-sh/devpod/pkg/client"
 	"github.com/loft-sh/devpod/pkg/client/clientimplementation"
@@ -13,7 +14,22 @@ import (
 	"os"
 )
 
-func ResolveMachine(devPodConfig *config.Config, args []string, providerOverride string, log log.Logger) (client.Client, error) {
+func ResolveMachine(devPodConfig *config.Config, args []string, providerOverride string, userOptions []string, log log.Logger) (client.Client, error) {
+	machineClient, err := resolveMachine(devPodConfig, args, providerOverride, log)
+	if err != nil {
+		return nil, err
+	}
+
+	// refresh options
+	err = machineClient.RefreshOptions(context.TODO(), userOptions)
+	if err != nil {
+		return nil, err
+	}
+
+	return machineClient, nil
+}
+
+func resolveMachine(devPodConfig *config.Config, args []string, providerOverride string, log log.Logger) (client.Client, error) {
 	// check if we have no args
 	if len(args) == 0 {
 		return nil, fmt.Errorf("please specify the machine name")

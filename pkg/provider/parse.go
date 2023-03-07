@@ -45,11 +45,6 @@ func ParseProvider(reader io.Reader) (*ProviderConfig, error) {
 	return parsedConfig, nil
 }
 
-var ValidServerStages = map[string]bool{
-	"init":    true,
-	"command": true,
-}
-
 func validate(config *ProviderConfig) error {
 	// validate name
 	if config.Name == "" {
@@ -85,16 +80,8 @@ func validate(config *ProviderConfig) error {
 			return fmt.Errorf("default and command cannot be used together in option '%s'", optionName)
 		}
 
-		if optionValue.After != "" && optionValue.Before != "" {
-			return fmt.Errorf("after and before cannot be used together in option '%s'", optionName)
-		}
-
-		if optionValue.After != "" && !ValidServerStages[optionValue.After] {
-			return fmt.Errorf("invalid after stage in option '%s': %s", optionName, optionValue.After)
-		}
-
-		if optionValue.Before != "" && !ValidServerStages[optionValue.Before] {
-			return fmt.Errorf("invalid before stage in option '%s': %s", optionName, optionValue.Before)
+		if optionValue.Global && optionValue.Cache != "" {
+			return fmt.Errorf("global and cache cannot be used together in option '%s'", optionName)
 		}
 
 		if optionValue.Cache != "" {
@@ -102,10 +89,6 @@ func validate(config *ProviderConfig) error {
 			if err != nil {
 				return fmt.Errorf("invalid cache value for option '%s': %v", optionName, err)
 			}
-		}
-
-		if optionValue.Required && (optionValue.Before != "" || optionValue.After != "") {
-			return fmt.Errorf("required cannot be used together with before or afte in option '%s'", optionName)
 		}
 
 		if optionValue.Cache != "" && optionValue.Command == "" {
@@ -168,4 +151,63 @@ func validateBinaries(prefix string, binaries map[string][]*ProviderBinary) erro
 	}
 
 	return nil
+}
+
+func ParseOptions(provider *ProviderConfig, options []string) (map[string]string, error) {
+	providerOptions := provider.Options
+	if providerOptions == nil {
+		providerOptions = map[string]*ProviderOption{}
+	}
+
+	allowedOptions := []string{}
+	for optionName := range providerOptions {
+		allowedOptions = append(allowedOptions, optionName)
+	}
+
+	retMap := map[string]string{}
+	for _, option := range options {
+		splitted := strings.Split(option, "=")
+		if len(splitted) == 1 {
+			return nil, fmt.Errorf("invalid option %s, expected format KEY=VALUE", option)
+		}
+
+		key := strings.ToUpper(strings.TrimSpace(splitted[0]))
+		value := strings.Join(splitted[1:], "=")
+		providerOption := providerOptions[key]
+		if providerOption == nil {
+			return nil, fmt.Errorf("invalid option %s, allowed options are: %v", key, allowedOptions)
+		}
+
+		if providerOption.ValidationPattern != "" {
+			matcher, err := regexp.Compile(providerOption.ValidationPattern)
+			if err != nil {
+				return nil, err
+			}
+
+			if !matcher.MatchString(value) {
+				if providerOption.ValidationMessage != "" {
+					return nil, fmt.Errorf(providerOption.ValidationMessage)
+				}
+
+				return nil, fmt.Errorf("invalid value '%s' for option '%s', has to match the following regEx: %s", value, key, providerOption.ValidationPattern)
+			}
+		}
+
+		if len(providerOption.Enum) > 0 {
+			found := false
+			for _, e := range providerOption.Enum {
+				if value == e {
+					found = true
+					break
+				}
+			}
+			if !found {
+				return nil, fmt.Errorf("invalid value '%s' for option '%s', has to match one of the following values: %v", value, key, providerOption.Enum)
+			}
+		}
+
+		retMap[key] = value
+	}
+
+	return retMap, nil
 }

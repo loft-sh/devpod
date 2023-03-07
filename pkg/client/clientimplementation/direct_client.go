@@ -33,15 +33,20 @@ func (s *directClient) Provider() string {
 }
 
 func (s *directClient) AgentPath() string {
-	return options.ResolveAgentConfig(s.devPodConfig, s.config).Path
+	return options.ResolveAgentConfig(s.devPodConfig, s.config, s.workspace, nil).Path
 }
 
 func (s *directClient) Machine() string {
 	return ""
 }
 
+func (s *directClient) RefreshOptions(ctx context.Context, userOptions []string) error {
+	// TODO: refresh options
+	return nil
+}
+
 func (s *directClient) AgentURL() string {
-	return options.ResolveAgentConfig(s.devPodConfig, s.config).DownloadURL
+	return options.ResolveAgentConfig(s.devPodConfig, s.config, s.workspace, nil).DownloadURL
 }
 
 func (s *directClient) ProviderType() provider.ProviderType {
@@ -65,7 +70,7 @@ func (s *directClient) Options() map[string]*provider.ProviderOption {
 }
 
 func (s *directClient) Create(ctx context.Context, options client.CreateOptions) error {
-	return runCommand(ctx, "create", s.config.Exec.Create, ToEnvironment(s.workspace, nil, s.devPodConfig.ProviderOptions(s.config.Name), nil), os.Stdin, os.Stdout, os.Stderr, s.log)
+	return runCommand(ctx, "create", s.config.Exec.Create, provider.ToEnvironment(s.workspace, nil, s.devPodConfig.ProviderOptions(s.config.Name), nil), os.Stdin, os.Stdout, os.Stderr, s.log)
 }
 
 func (s *directClient) Delete(ctx context.Context, options client.DeleteOptions) error {
@@ -76,7 +81,7 @@ func (s *directClient) Delete(ctx context.Context, options client.DeleteOptions)
 		defer cancel()
 	}
 
-	err := runCommand(ctx, "delete", s.config.Exec.Delete, ToEnvironment(s.workspace, nil, s.devPodConfig.ProviderOptions(s.config.Name), nil), os.Stdin, os.Stdout, os.Stderr, s.log)
+	err := runCommand(ctx, "delete", s.config.Exec.Delete, provider.ToEnvironment(s.workspace, nil, s.devPodConfig.ProviderOptions(s.config.Name), nil), os.Stdin, os.Stdout, os.Stderr, s.log)
 	if err != nil {
 		if !options.Force {
 			return err
@@ -89,7 +94,7 @@ func (s *directClient) Delete(ctx context.Context, options client.DeleteOptions)
 }
 
 func (s *directClient) Start(ctx context.Context, options client.StartOptions) error {
-	err := runCommand(ctx, "start", s.config.Exec.Start, ToEnvironment(s.workspace, nil, s.devPodConfig.ProviderOptions(s.config.Name), nil), os.Stdin, os.Stdout, os.Stderr, s.log)
+	err := runCommand(ctx, "start", s.config.Exec.Start, provider.ToEnvironment(s.workspace, nil, s.devPodConfig.ProviderOptions(s.config.Name), nil), os.Stdin, os.Stdout, os.Stderr, s.log)
 	if err != nil {
 		return err
 	}
@@ -98,7 +103,7 @@ func (s *directClient) Start(ctx context.Context, options client.StartOptions) e
 }
 
 func (s *directClient) Stop(ctx context.Context, options client.StopOptions) error {
-	err := runCommand(ctx, "stop", s.config.Exec.Stop, ToEnvironment(s.workspace, nil, s.devPodConfig.ProviderOptions(s.config.Name), nil), os.Stdin, os.Stdout, os.Stderr, s.log)
+	err := runCommand(ctx, "stop", s.config.Exec.Stop, provider.ToEnvironment(s.workspace, nil, s.devPodConfig.ProviderOptions(s.config.Name), nil), os.Stdin, os.Stdout, os.Stderr, s.log)
 	if err != nil {
 		return err
 	}
@@ -107,7 +112,7 @@ func (s *directClient) Stop(ctx context.Context, options client.StopOptions) err
 }
 
 func (s *directClient) Command(ctx context.Context, options client.CommandOptions) error {
-	err := runCommand(ctx, "command", s.config.Exec.Command, ToEnvironment(s.workspace, nil, s.devPodConfig.ProviderOptions(s.config.Name), nil), options.Stdin, options.Stdout, options.Stderr, s.log.ErrorStreamOnly())
+	err := runCommand(ctx, "command", s.config.Exec.Command, provider.ToEnvironment(s.workspace, nil, s.devPodConfig.ProviderOptions(s.config.Name), nil), options.Stdin, options.Stdout, options.Stderr, s.log.ErrorStreamOnly())
 	if err != nil {
 		return err
 	}
@@ -120,7 +125,7 @@ func (s *directClient) Status(ctx context.Context, options client.StatusOptions)
 	if len(s.config.Exec.Status) > 0 {
 		stdout := &bytes.Buffer{}
 		stderr := &bytes.Buffer{}
-		err := runCommand(ctx, "status", s.config.Exec.Status, ToEnvironment(s.workspace, nil, s.devPodConfig.ProviderOptions(s.config.Name), nil), nil, stdout, stderr, s.log)
+		err := runCommand(ctx, "status", s.config.Exec.Status, provider.ToEnvironment(s.workspace, nil, s.devPodConfig.ProviderOptions(s.config.Name), nil), nil, stdout, stderr, s.log)
 		if err != nil {
 			return client.StatusNotFound, errors.Wrapf(err, "get status: %s%s", stdout, stderr)
 		}

@@ -13,6 +13,8 @@ import (
 // CreateCmd holds the configuration
 type CreateCmd struct {
 	*flags.GlobalFlags
+
+	ProviderOptions []string
 }
 
 // NewCreateCmd creates a new destroy command
@@ -20,15 +22,15 @@ func NewCreateCmd(flags *flags.GlobalFlags) *cobra.Command {
 	cmd := &CreateCmd{
 		GlobalFlags: flags,
 	}
-	deleteCmd := &cobra.Command{
+	createCmd := &cobra.Command{
 		Use:   "create",
 		Short: "Creates a new machine",
 		RunE: func(_ *cobra.Command, args []string) error {
 			return cmd.Run(context.Background(), args)
 		},
 	}
-
-	return deleteCmd
+	createCmd.Flags().StringSliceVar(&cmd.ProviderOptions, "provider-option", []string{}, "Provider option in the form KEY=VALUE")
+	return createCmd
 }
 
 // Run runs the command logic
@@ -38,7 +40,7 @@ func (cmd *CreateCmd) Run(ctx context.Context, args []string) error {
 		return err
 	}
 
-	machineClient, err := workspace.ResolveMachine(devPodConfig, args, cmd.Provider, log.Default)
+	machineClient, err := workspace.ResolveMachine(devPodConfig, args, cmd.Provider, cmd.ProviderOptions, log.Default)
 	if err != nil {
 		return err
 	}

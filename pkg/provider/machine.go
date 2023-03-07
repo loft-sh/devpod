@@ -1,6 +1,7 @@
 package provider
 
 import (
+	"github.com/loft-sh/devpod/pkg/config"
 	"github.com/loft-sh/devpod/pkg/types"
 )
 
@@ -27,4 +28,7 @@ type Machine struct {
 type MachineProviderConfig struct {
 	// Name is the provider name used to deploy this machine
 	Name string `json:"name,omitempty"`
+
+	// Options are the local options that override the global ones
+	Options map[string]config.OptionValue `json:"options,omitempty"`
 }

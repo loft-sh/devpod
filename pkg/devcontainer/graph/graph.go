@@ -50,9 +50,35 @@ func NewNode(id string, data interface{}) *Node {
 		ID:   id,
 		Data: data,
 
-		Parents: make([]*Node, 0, 1),
-		Childs:  make([]*Node, 0, 1),
+		Parents: []*Node{},
+		Childs:  []*Node{},
 	}
+}
+
+// Clone returns a cloned graph
+func (g *Graph) Clone() *Graph {
+	retGraph := &Graph{
+		Nodes: map[string]*Node{},
+		item:  g.item,
+	}
+
+	// copy nodes
+	for k, v := range g.Nodes {
+		retGraph.Nodes[k] = NewNode(v.ID, v.Data)
+	}
+	retGraph.Root = retGraph.Nodes[g.Root.ID]
+
+	// copy edges
+	for k, v := range g.Nodes {
+		for _, child := range v.Childs {
+			retGraph.Nodes[k].Childs = append(retGraph.Nodes[k].Childs, retGraph.Nodes[child.ID])
+		}
+		for _, parent := range v.Parents {
+			retGraph.Nodes[k].Parents = append(retGraph.Nodes[k].Parents, retGraph.Nodes[parent.ID])
+		}
+	}
+
+	return retGraph
 }
 
 // InsertNodeAt inserts a new node at the given parent position
@@ -96,9 +122,10 @@ func (g *Graph) RemoveNode(id string) error {
 				}
 			}
 
-			if i != -1 {
-				parent.Childs = append(parent.Childs[:i], parent.Childs[i+1:]...)
+			if i == -1 {
+				return fmt.Errorf("couldn't find %s in parent", getNameOrID(node))
 			}
+			parent.Childs = append(parent.Childs[:i], parent.Childs[i+1:]...)
 		}
 
 		// Remove from graph nodes

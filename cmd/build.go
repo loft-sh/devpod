@@ -21,6 +21,8 @@ import (
 type BuildCmd struct {
 	*flags.GlobalFlags
 
+	ProviderOptions []string
+
 	SkipDelete bool
 	Repository string
 	Machine    string
@@ -50,7 +52,7 @@ func NewBuildCmd(flags *flags.GlobalFlags) *cobra.Command {
 
 			// create a temporary workspace
 			exists := workspace2.Exists(devPodConfig, args, log.Default)
-			workspaceClient, err := workspace2.ResolveWorkspace(ctx, devPodConfig, nil, args, "", cmd.Machine, cmd.Provider, log.Default)
+			workspaceClient, err := workspace2.ResolveWorkspace(ctx, devPodConfig, nil, args, "", cmd.Machine, cmd.Provider, cmd.ProviderOptions, log.Default)
 			if err != nil {
 				return err
 			}
@@ -69,6 +71,7 @@ func NewBuildCmd(flags *flags.GlobalFlags) *cobra.Command {
 		},
 	}
 
+	buildCmd.Flags().StringSliceVar(&cmd.ProviderOptions, "provider-option", []string{}, "Provider option in the form KEY=VALUE")
 	buildCmd.Flags().BoolVar(&cmd.SkipDelete, "skip-delete", false, "If true will not delete the workspace after building it")
 	buildCmd.Flags().BoolVar(&cmd.ForceBuild, "force-build", false, "If true will force build the image")
 	buildCmd.Flags().StringVar(&cmd.Machine, "machine", "", "The machine to use for this workspace. The machine needs to exist beforehand or the command will fail. If the workspace already exists, this option has no effect")

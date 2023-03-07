@@ -75,8 +75,6 @@ func (c *ContainerHandler) Run(ctx context.Context, runInHost Handler, runInCont
 				Stdin:   stdin,
 				Stdout:  stdout,
 				Stderr:  stderr,
-
-				SkipOptionsResolve: true,
 			})
 		}, c.client.AgentPath(), c.client.AgentURL(), true, command, stdinReader, stdoutWriter, writer, c.log.ErrorStreamOnly())
 	}()
@@ -150,7 +148,7 @@ func (c *ContainerHandler) updateConfig(ctx context.Context, sshClient *ssh.Clie
 			c.log.Debugf("Start refresh")
 
 			// update options
-			err := c.client.RefreshOptions(ctx, "command", "")
+			err := c.client.RefreshOptions(ctx, nil)
 			if err != nil {
 				c.log.Errorf("Error refreshing workspace options: %v", err)
 				break

@@ -75,6 +75,9 @@ type WorkspaceIDEVSCode struct {
 type WorkspaceProviderConfig struct {
 	// Name is the provider name
 	Name string `json:"name,omitempty"`
+
+	// Options are the local options that override the global ones
+	Options map[string]config.OptionValue `json:"options,omitempty"`
 }
 
 type WorkspaceSource struct {

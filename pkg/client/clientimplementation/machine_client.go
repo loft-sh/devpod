@@ -10,6 +10,7 @@ import (
 	"github.com/loft-sh/devpod/pkg/options"
 	"github.com/loft-sh/devpod/pkg/provider"
 	"github.com/loft-sh/devpod/pkg/types"
+	"github.com/pkg/errors"
 	"io"
 	"os"
 	"strings"
@@ -50,12 +51,27 @@ func (s *machineClient) Machine() string {
 	return s.machine.ID
 }
 
+func (s *machineClient) RefreshOptions(ctx context.Context, userOptionsRaw []string) error {
+	userOptions, err := provider.ParseOptions(s.config, userOptionsRaw)
+	if err != nil {
+		return errors.Wrap(err, "parse options")
+	}
+
+	machine, err := options.ResolveAndSaveOptionsMachine(ctx, s.devPodConfig, s.config, s.machine, userOptions, s.log)
+	if err != nil {
+		return err
+	}
+
+	s.machine = machine
+	return nil
+}
+
 func (s *machineClient) AgentPath() string {
-	return options.ResolveAgentConfig(s.devPodConfig, s.config).Path
+	return options.ResolveAgentConfig(s.devPodConfig, s.config, nil, s.machine).Path
 }
 
 func (s *machineClient) AgentURL() string {
-	return options.ResolveAgentConfig(s.devPodConfig, s.config).DownloadURL
+	return options.ResolveAgentConfig(s.devPodConfig, s.config, nil, s.machine).DownloadURL
 }
 
 func (s *machineClient) Context() string {
@@ -65,7 +81,7 @@ func (s *machineClient) Context() string {
 func (s *machineClient) Create(ctx context.Context, options client.CreateOptions) error {
 	// create a machine
 	s.log.Infof("Create machine '%s' with provider '%s'...", s.machine.ID, s.config.Name)
-	err := runCommand(ctx, "create", s.config.Exec.Create, ToEnvironment(nil, s.machine, s.devPodConfig.ProviderOptions(s.config.Name), nil), os.Stdin, os.Stdout, os.Stderr, s.log)
+	err := runCommand(ctx, "create", s.config.Exec.Create, provider.ToEnvironment(nil, s.machine, s.devPodConfig.ProviderOptions(s.config.Name), nil), os.Stdin, os.Stdout, os.Stderr, s.log)
 	if err != nil {
 		return err
 	}
@@ -76,7 +92,7 @@ func (s *machineClient) Create(ctx context.Context, options client.CreateOptions
 
 func (s *machineClient) Start(ctx context.Context, options client.StartOptions) error {
 	s.log.Infof("Starting machine '%s'...", s.machine.ID)
-	err := runCommand(ctx, "start", s.config.Exec.Start, ToEnvironment(nil, s.machine, s.devPodConfig.ProviderOptions(s.config.Name), nil), os.Stdin, os.Stdout, os.Stderr, s.log)
+	err := runCommand(ctx, "start", s.config.Exec.Start, provider.ToEnvironment(nil, s.machine, s.devPodConfig.ProviderOptions(s.config.Name), nil), os.Stdin, os.Stdout, os.Stderr, s.log)
 	if err != nil {
 		return err
 	}
@@ -87,7 +103,7 @@ func (s *machineClient) Start(ctx context.Context, options client.StartOptions) 
 
 func (s *machineClient) Stop(ctx context.Context, options client.StopOptions) error {
 	s.log.Infof("Stopping machine '%s'...", s.machine.ID)
-	err := runCommand(ctx, "stop", s.config.Exec.Stop, ToEnvironment(nil, s.machine, s.devPodConfig.ProviderOptions(s.config.Name), nil), os.Stdin, os.Stdout, os.Stderr, s.log)
+	err := runCommand(ctx, "stop", s.config.Exec.Stop, provider.ToEnvironment(nil, s.machine, s.devPodConfig.ProviderOptions(s.config.Name), nil), os.Stdin, os.Stdout, os.Stderr, s.log)
 	if err != nil {
 		return err
 	}
@@ -97,20 +113,7 @@ func (s *machineClient) Stop(ctx context.Context, options client.StopOptions) er
 }
 
 func (s *machineClient) Command(ctx context.Context, commandOptions client.CommandOptions) error {
-	var err error
-
-	// resolve options
-	s.devPodConfig, err = options.ResolveAndSaveOptions(ctx, "command", "", s.devPodConfig, s.config)
-	if err != nil {
-		return err
-	}
-	defer func() {
-		if err == nil {
-			s.devPodConfig, err = options.ResolveAndSaveOptions(ctx, "", "command", s.devPodConfig, s.config)
-		}
-	}()
-
-	return runCommand(ctx, "command", s.config.Exec.Command, ToEnvironment(nil, s.machine, s.devPodConfig.ProviderOptions(s.config.Name), map[string]string{
+	return runCommand(ctx, "command", s.config.Exec.Command, provider.ToEnvironment(nil, s.machine, s.devPodConfig.ProviderOptions(s.config.Name), map[string]string{
 		provider.CommandEnv: commandOptions.Command,
 	}), commandOptions.Stdin, commandOptions.Stdout, commandOptions.Stderr, s.log.ErrorStreamOnly())
 }
@@ -118,7 +121,7 @@ func (s *machineClient) Command(ctx context.Context, commandOptions client.Comma
 func (s *machineClient) Status(ctx context.Context, options client.StatusOptions) (client.Status, error) {
 	stdout := &bytes.Buffer{}
 	stderr := &bytes.Buffer{}
-	err := runCommand(ctx, "status", s.config.Exec.Status, ToEnvironment(nil, s.machine, s.devPodConfig.ProviderOptions(s.config.Name), nil), nil, stdout, stderr, s.log)
+	err := runCommand(ctx, "status", s.config.Exec.Status, provider.ToEnvironment(nil, s.machine, s.devPodConfig.ProviderOptions(s.config.Name), nil), nil, stdout, stderr, s.log)
 	if err != nil {
 		return client.StatusNotFound, fmt.Errorf("get status: %s%s", strings.TrimSpace(stdout.String()), strings.TrimSpace(stderr.String()))
 	}
@@ -141,7 +144,7 @@ func (s *machineClient) Delete(ctx context.Context, options client.DeleteOptions
 	}
 
 	s.log.Infof("Deleting %s machine...", s.config.Name)
-	err := runCommand(ctx, "delete", s.config.Exec.Delete, ToEnvironment(nil, s.machine, s.devPodConfig.ProviderOptions(s.config.Name), nil), os.Stdin, os.Stdout, os.Stderr, s.log)
+	err := runCommand(ctx, "delete", s.config.Exec.Delete, provider.ToEnvironment(nil, s.machine, s.devPodConfig.ProviderOptions(s.config.Name), nil), os.Stdin, os.Stdout, os.Stderr, s.log)
 	if err != nil {
 		if !options.Force {
 			return err
