@@ -109,9 +109,6 @@ func ToOptions(workspace *Workspace, machine *Machine, options map[string]config
 		if workspace.Source.GitBranch != "" {
 			retVars[WORKSPACE_GIT_BRANCH] = workspace.Source.GitBranch
 		}
-		if workspace.Source.GitCommit != "" {
-			retVars[WORKSPACE_GIT_COMMIT] = workspace.Source.GitCommit
-		}
 		if workspace.Source.Image != "" {
 			retVars[WORKSPACE_IMAGE] = workspace.Source.Image
 		}

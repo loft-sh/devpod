@@ -74,7 +74,7 @@ func resolveProvider(provider string, log log.Logger) ([]byte, error) {
 	}
 
 	// is git?
-	gitRepository := normalizeGitRepository(provider)
+	gitRepository, gitBranch := normalizeGitRepository(provider)
 	if strings.HasSuffix(provider, ".git") || pingRepository(gitRepository) {
 		log.Infof("Clone git repository %s...", gitRepository)
 
@@ -85,7 +85,12 @@ func resolveProvider(provider string, log log.Logger) ([]byte, error) {
 		}
 		defer os.RemoveAll(tempDir.Name())
 
-		out, err := exec.Command("git", "clone", "--depth", "1", gitRepository, tempDir.Name()).CombinedOutput()
+		args := []string{"clone", "--depth", "1", gitRepository, tempDir.Name()}
+		if gitBranch != "" {
+			args = append(args, "--branch", gitBranch)
+		}
+
+		out, err := exec.Command("git", args...).CombinedOutput()
 		if err != nil {
 			return nil, errors.Wrapf(err, "git clone %s: %s", gitRepository, string(out))
 		}
