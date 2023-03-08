@@ -7,7 +7,6 @@ import (
 	"github.com/loft-sh/devpod/pkg/config"
 	"github.com/loft-sh/devpod/pkg/log"
 	provider2 "github.com/loft-sh/devpod/pkg/provider"
-	"github.com/loft-sh/devpod/pkg/workspace"
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
 	"os"
@@ -44,13 +43,17 @@ func (cmd *DeleteCmd) Run(ctx context.Context, args []string) error {
 		return err
 	}
 
-	_, err = workspace.FindProvider(devPodConfig, args[0], log.Default)
+	providerDir, err := provider2.GetProviderDir(devPodConfig.DefaultContext, args[0])
 	if err != nil {
 		return err
 	}
 
-	providerDir, err := provider2.GetProviderDir(devPodConfig.DefaultContext, args[0])
+	_, err = os.Stat(providerDir)
 	if err != nil {
+		if os.IsNotExist(err) {
+			return fmt.Errorf("provider '%s' does not exist", args[0])
+		}
+
 		return err
 	}
 
@@ -63,7 +66,11 @@ func (cmd *DeleteCmd) Run(ctx context.Context, args []string) error {
 		return errors.Wrap(err, "save config")
 	}
 
-	_ = os.RemoveAll(providerDir)
+	err = os.RemoveAll(providerDir)
+	if err != nil {
+		return errors.Wrap(err, "delete provider dir")
+	}
+
 	log.Default.Donef("Successfully deleted provider '%s'", args[0])
 	return nil
 }

@@ -203,6 +203,16 @@ func installProvider(devPodConfig *config.Config, raw []byte, log log.Logger) (*
 		return nil, fmt.Errorf("provider %s already exists. Please run 'devpod provider delete %s' before adding the provider", providerConfig.Name, providerConfig.Name)
 	}
 
+	providerDir, err := provider2.GetProviderDir(devPodConfig.DefaultContext, providerConfig.Name)
+	if err != nil {
+		return nil, err
+	}
+
+	_, err = os.Stat(providerDir)
+	if err == nil {
+		return nil, fmt.Errorf("provider %s already exists. Please run 'devpod provider delete %s' before adding the provider", providerConfig.Name, providerConfig.Name)
+	}
+
 	binariesDir, err := provider2.GetProviderBinariesDir(devPodConfig.DefaultContext, providerConfig.Name)
 	if err != nil {
 		return nil, errors.Wrap(err, "get binaries dir")
@@ -210,7 +220,7 @@ func installProvider(devPodConfig *config.Config, raw []byte, log log.Logger) (*
 
 	_, err = binaries.DownloadBinaries(providerConfig.Binaries, binariesDir, log)
 	if err != nil {
-		_ = os.RemoveAll(binariesDir)
+		_ = os.RemoveAll(providerDir)
 		return nil, errors.Wrap(err, "download binaries")
 	}
 
