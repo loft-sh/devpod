@@ -266,7 +266,7 @@ func resolveOption(
 	// find out options we need to resolve
 	if !userValueOk {
 		// make sure required is always resolved
-		if option.Required {
+		if !option.Required {
 			// skip if global
 			if !resolveGlobal && option.Global {
 				return nil

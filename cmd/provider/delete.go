@@ -5,7 +5,9 @@ import (
 	"fmt"
 	"github.com/loft-sh/devpod/cmd/flags"
 	"github.com/loft-sh/devpod/pkg/config"
+	"github.com/loft-sh/devpod/pkg/log"
 	provider2 "github.com/loft-sh/devpod/pkg/provider"
+	"github.com/loft-sh/devpod/pkg/workspace"
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
 	"os"
@@ -42,9 +44,9 @@ func (cmd *DeleteCmd) Run(ctx context.Context, args []string) error {
 		return err
 	}
 
-	defaultProviders := devPodConfig.Current().Providers
-	if defaultProviders == nil || defaultProviders[args[0]] == nil {
-		return fmt.Errorf("provider %s is not configured", args[0])
+	_, err = workspace.FindProvider(devPodConfig, args[0], log.Default)
+	if err != nil {
+		return err
 	}
 
 	providerDir, err := provider2.GetProviderDir(devPodConfig.DefaultContext, args[0])
@@ -55,13 +57,13 @@ func (cmd *DeleteCmd) Run(ctx context.Context, args []string) error {
 	if devPodConfig.Current().DefaultProvider == args[0] {
 		devPodConfig.Current().DefaultProvider = ""
 	}
-	delete(defaultProviders, args[0])
-	devPodConfig.Current().Providers = defaultProviders
+	delete(devPodConfig.Current().Providers, args[0])
 	err = config.SaveConfig(devPodConfig)
 	if err != nil {
 		return errors.Wrap(err, "save config")
 	}
 
 	_ = os.RemoveAll(providerDir)
+	log.Default.Donef("Successfully deleted provider '%s'", args[0])
 	return nil
 }

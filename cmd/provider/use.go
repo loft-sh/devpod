@@ -57,7 +57,7 @@ func (cmd *UseCmd) Run(ctx context.Context, providerName string) error {
 		return fmt.Errorf("cannot use --context for this command")
 	}
 
-	devPodConfig, err := config.LoadConfig("")
+	devPodConfig, err := config.LoadConfig(cmd.Context)
 	if err != nil {
 		return err
 	}

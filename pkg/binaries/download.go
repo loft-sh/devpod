@@ -41,14 +41,19 @@ func GetBinaries(binaries map[string][]*provider2.ProviderBinary, targetFolder s
 	retBinaries := map[string]string{}
 	for binaryName, binaryLocations := range binaries {
 		for _, binary := range binaryLocations {
-			if binary.OS != runtime.GOOS && binary.Arch != runtime.GOARCH {
+			if binary.OS != runtime.GOOS || binary.Arch != runtime.GOARCH {
 				continue
 			}
 
-			_, err := os.Stat(getBinaryPath(binary, targetFolder))
+			// get binaries
+			targetFolder := filepath.Join(targetFolder, strings.ToLower(binaryName))
+			binaryPath := getBinaryPath(binary, targetFolder)
+			_, err := os.Stat(binaryPath)
 			if err != nil {
 				return nil, fmt.Errorf("error trying to find binary %s: %v", binaryName, err)
 			}
+
+			retBinaries[binaryName] = binaryPath
 		}
 		if retBinaries[binaryName] == "" {
 			return nil, fmt.Errorf("cannot find provider binary %s, because no binary location matched OS %s and ARCH %s", binaryName, runtime.GOOS, runtime.GOARCH)
@@ -62,11 +67,12 @@ func DownloadBinaries(binaries map[string][]*provider2.ProviderBinary, targetFol
 	retBinaries := map[string]string{}
 	for binaryName, binaryLocations := range binaries {
 		for _, binary := range binaryLocations {
-			if binary.OS != runtime.GOOS && binary.Arch != runtime.GOARCH {
+			if binary.OS != runtime.GOOS || binary.Arch != runtime.GOARCH {
 				continue
 			}
 
 			// check if binary is correct
+			targetFolder := filepath.Join(targetFolder, strings.ToLower(binaryName))
 			binaryPath := verifyBinary(binary, targetFolder)
 			if binaryPath != "" {
 				retBinaries[binaryName] = binaryPath
@@ -75,7 +81,7 @@ func DownloadBinaries(binaries map[string][]*provider2.ProviderBinary, targetFol
 
 			// try to download the binary
 			for i := 0; i < 2; i++ {
-				binaryPath, err := downloadBinary(binaryName, binary, filepath.Join(targetFolder, strings.ToLower(binaryName)), log)
+				binaryPath, err := downloadBinary(binaryName, binary, targetFolder, log)
 				if err != nil {
 					return nil, errors.Wrapf(err, "downloading binary %s", binaryName)
 				}
