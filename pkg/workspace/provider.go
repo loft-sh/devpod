@@ -63,14 +63,14 @@ func UpdateProvider(devPodConfig *config.Config, provider string, log log.Logger
 
 func resolveProvider(provider string, log log.Logger) ([]byte, error) {
 	// local file?
-	_, err := os.Stat(provider)
-	if err == nil {
-		out, err := os.ReadFile(provider)
-		if err != nil {
-			return nil, err
+	if strings.HasSuffix(provider, ".yaml") || strings.HasSuffix(provider, ".yml") {
+		_, err := os.Stat(provider)
+		if err == nil {
+			out, err := os.ReadFile(provider)
+			if err == nil {
+				return out, nil
+			}
 		}
-
-		return out, nil
 	}
 
 	// url?
@@ -109,7 +109,9 @@ func DownloadProviderGithub(path string) ([]byte, error) {
 
 	// split by separator
 	splitted := strings.Split(strings.TrimSuffix(path, "/"), "/")
-	if len(splitted) != 2 {
+	if len(splitted) == 1 {
+		path = "loft-sh/devpod-provider-" + path
+	} else if len(splitted) != 2 {
 		return nil, nil
 	}
 
