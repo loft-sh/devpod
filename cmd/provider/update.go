@@ -39,7 +39,7 @@ func NewUpdateCmd(flags *flags.GlobalFlags) *cobra.Command {
 
 func (cmd *UpdateCmd) Run(ctx context.Context, devPodConfig *config.Config, args []string) error {
 	if len(args) != 1 {
-		return fmt.Errorf("please specify either a local file, url or git repository. E.g. devpod provider update https://path/to/my/provider.yaml")
+		return fmt.Errorf("please specify either a local file, url or git repository. E.g. devpod provider update loft-sh/devpod-provider-gcloud")
 	}
 
 	providerConfig, err := workspace.UpdateProvider(devPodConfig, args[0], log.Default)
