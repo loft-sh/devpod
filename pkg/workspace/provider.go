@@ -4,7 +4,9 @@ import (
 	"bytes"
 	"crypto/tls"
 	"fmt"
+	"github.com/loft-sh/devpod/pkg/binaries"
 	"github.com/loft-sh/devpod/pkg/config"
+	"github.com/loft-sh/devpod/pkg/download"
 	"github.com/loft-sh/devpod/pkg/log"
 	provider2 "github.com/loft-sh/devpod/pkg/provider"
 	"github.com/loft-sh/devpod/providers"
@@ -12,8 +14,6 @@ import (
 	"io"
 	"net/http"
 	"os"
-	"os/exec"
-	"path/filepath"
 	"strings"
 )
 
@@ -49,7 +49,7 @@ func AddProvider(devPodConfig *config.Config, provider string, log log.Logger) (
 		return nil, err
 	}
 
-	return installProvider(devPodConfig, providerRaw)
+	return installProvider(devPodConfig, providerRaw, log)
 }
 
 func UpdateProvider(devPodConfig *config.Config, provider string, log log.Logger) (*provider2.ProviderConfig, error) {
@@ -58,7 +58,7 @@ func UpdateProvider(devPodConfig *config.Config, provider string, log log.Logger
 		return nil, err
 	}
 
-	return updateProvider(devPodConfig, provider, providerRaw)
+	return updateProvider(devPodConfig, provider, providerRaw, log)
 }
 
 func resolveProvider(provider string, log log.Logger) ([]byte, error) {
@@ -73,50 +73,6 @@ func resolveProvider(provider string, log log.Logger) ([]byte, error) {
 		return out, nil
 	}
 
-	// is git?
-	gitRepository, gitBranch := normalizeGitRepository(provider)
-	if strings.HasSuffix(provider, ".git") || pingRepository(gitRepository) {
-		log.Infof("Clone git repository %s...", gitRepository)
-
-		// shallow clone repository
-		tempDir, err := os.CreateTemp("", "")
-		if err != nil {
-			return nil, err
-		}
-		defer os.RemoveAll(tempDir.Name())
-
-		args := []string{"clone", "--depth", "1", gitRepository, tempDir.Name()}
-		if gitBranch != "" {
-			args = append(args, "--branch", gitBranch)
-		}
-
-		out, err := exec.Command("git", args...).CombinedOutput()
-		if err != nil {
-			return nil, errors.Wrapf(err, "git clone %s: %s", gitRepository, string(out))
-		}
-
-		filePath := filepath.Join(tempDir.Name(), "provider.yaml")
-		_, err = os.Stat(filePath)
-		if err != nil {
-			filePath = filepath.Join(tempDir.Name(), "provider.yml")
-			_, err = os.Stat(filePath)
-			if err != nil {
-				filePath = filepath.Join(tempDir.Name(), "provider.json")
-				_, err = os.Stat(filePath)
-				if err != nil {
-					return nil, fmt.Errorf("couldn't find provider.yaml, provider.yml or provider.json in git repository")
-				}
-			}
-		}
-
-		providerBytes, err := os.ReadFile(filePath)
-		if err != nil {
-			return nil, err
-		}
-
-		return providerBytes, nil
-	}
-
 	// url?
 	if strings.HasPrefix(provider, "http://") || strings.HasPrefix(provider, "https://") {
 		log.Infof("Download provider %s...", provider)
@@ -129,7 +85,51 @@ func resolveProvider(provider string, log log.Logger) ([]byte, error) {
 		return out, nil
 	}
 
-	return nil, fmt.Errorf("unrecognized provider type, please specify either a local file, url or git repository")
+	// check if github
+	out, err := DownloadProviderGithub(provider)
+	if err != nil {
+		return nil, errors.Wrap(err, "download github")
+	} else if len(out) > 0 {
+		return out, nil
+	}
+
+	return nil, fmt.Errorf("unrecognized provider type, please specify either a local file, url or github repository")
+}
+
+func DownloadProviderGithub(path string) ([]byte, error) {
+	path = strings.TrimPrefix(path, "github.com/")
+
+	// resolve release
+	release := ""
+	index := strings.LastIndex(path, "@")
+	if index != -1 {
+		release = path[index+1:]
+		path = path[:index]
+	}
+
+	// split by separator
+	splitted := strings.Split(strings.TrimSuffix(path, "/"), "/")
+	if len(splitted) != 2 {
+		return nil, nil
+	}
+
+	// get latest release
+	requestURL := ""
+	if release == "" {
+		requestURL = fmt.Sprintf("https://github.com/%s/releases/latest/download/provider.yaml", path)
+	} else {
+		requestURL = fmt.Sprintf("https://github.com/%s/releases/download/%s/provider.yaml", path, release)
+	}
+
+	// download
+	body, err := download.File(requestURL)
+	if err != nil {
+		return nil, errors.Wrap(err, "download")
+	}
+	defer body.Close()
+
+	// read body
+	return io.ReadAll(body)
 }
 
 func downloadProvider(url string) ([]byte, error) {
@@ -148,7 +148,7 @@ func downloadProvider(url string) ([]byte, error) {
 	return io.ReadAll(resp.Body)
 }
 
-func updateProvider(devPodConfig *config.Config, provider string, raw []byte) (*provider2.ProviderConfig, error) {
+func updateProvider(devPodConfig *config.Config, provider string, raw []byte, log log.Logger) (*provider2.ProviderConfig, error) {
 	providerConfig, err := provider2.ParseProvider(bytes.NewReader(raw))
 	if err != nil {
 		return nil, err
@@ -174,6 +174,17 @@ func updateProvider(devPodConfig *config.Config, provider string, raw []byte) (*
 		return nil, err
 	}
 
+	binariesDir, err := provider2.GetProviderBinariesDir(devPodConfig.DefaultContext, providerConfig.Name)
+	if err != nil {
+		return nil, errors.Wrap(err, "get binaries dir")
+	}
+
+	_, err = binaries.DownloadBinaries(providerConfig.Binaries, binariesDir, log)
+	if err != nil {
+		_ = os.RemoveAll(binariesDir)
+		return nil, errors.Wrap(err, "download binaries")
+	}
+
 	err = provider2.SaveProviderConfig(devPodConfig.DefaultContext, providerConfig)
 	if err != nil {
 		return nil, err
@@ -182,12 +193,23 @@ func updateProvider(devPodConfig *config.Config, provider string, raw []byte) (*
 	return providerConfig, nil
 }
 
-func installProvider(devPodConfig *config.Config, raw []byte) (*provider2.ProviderConfig, error) {
+func installProvider(devPodConfig *config.Config, raw []byte, log log.Logger) (*provider2.ProviderConfig, error) {
 	providerConfig, err := provider2.ParseProvider(bytes.NewReader(raw))
 	if err != nil {
 		return nil, err
 	} else if devPodConfig.Current().Providers[providerConfig.Name] != nil {
 		return nil, fmt.Errorf("provider %s already exists. Please run 'devpod provider delete %s' before adding the provider", providerConfig.Name, providerConfig.Name)
+	}
+
+	binariesDir, err := provider2.GetProviderBinariesDir(devPodConfig.DefaultContext, providerConfig.Name)
+	if err != nil {
+		return nil, errors.Wrap(err, "get binaries dir")
+	}
+
+	_, err = binaries.DownloadBinaries(providerConfig.Binaries, binariesDir, log)
+	if err != nil {
+		_ = os.RemoveAll(binariesDir)
+		return nil, errors.Wrap(err, "download binaries")
 	}
 
 	err = provider2.SaveProviderConfig(devPodConfig.DefaultContext, providerConfig)

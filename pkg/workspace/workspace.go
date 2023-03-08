@@ -253,7 +253,7 @@ func isLocalDir(name string) (bool, string) {
 
 func normalizeGitRepository(str string) (string, string) {
 	if !strings.HasPrefix(str, "git@") && !strings.HasPrefix(str, "http://") && !strings.HasPrefix(str, "https://") {
-		str = "http://" + str
+		str = "https://" + str
 	}
 
 	// resolve branch
@@ -269,10 +269,6 @@ func normalizeGitRepository(str string) (string, string) {
 		} else {
 			str = repo
 		}
-	}
-
-	if !strings.HasSuffix(str, ".git") {
-		str += ".git"
 	}
 
 	return str, branch
