@@ -56,7 +56,7 @@ func validate(config *ProviderConfig) error {
 
 	// validate version
 	if config.Version != "" {
-		_, err := semver.Parse(config.Version)
+		_, err := semver.Parse(strings.TrimPrefix(config.Version, "v"))
 		if err != nil {
 			return errors.Wrap(err, "parse provider version")
 		}
