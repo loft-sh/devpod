@@ -1,17 +1,16 @@
 package binaries
 
 import (
-	"crypto/tls"
 	"fmt"
 	"github.com/loft-sh/devpod/pkg/config"
 	"github.com/loft-sh/devpod/pkg/copy"
+	"github.com/loft-sh/devpod/pkg/download"
 	"github.com/loft-sh/devpod/pkg/extract"
 	"github.com/loft-sh/devpod/pkg/hash"
 	"github.com/loft-sh/devpod/pkg/log"
 	provider2 "github.com/loft-sh/devpod/pkg/provider"
 	"github.com/pkg/errors"
 	"io"
-	"net/http"
 	"os"
 	"path"
 	"path/filepath"
@@ -27,7 +26,7 @@ func ToEnvironmentWithBinaries(context string, workspace *provider2.Workspace, m
 		return nil, err
 	}
 
-	binariesMap, err := DownloadBinaries(config.Binaries, binariesDir, log)
+	binariesMap, err := GetBinaries(config.Binaries, binariesDir)
 	if err != nil {
 		return nil, err
 	}
@@ -38,11 +37,39 @@ func ToEnvironmentWithBinaries(context string, workspace *provider2.Workspace, m
 	return environ, nil
 }
 
+func GetBinaries(binaries map[string][]*provider2.ProviderBinary, targetFolder string) (map[string]string, error) {
+	retBinaries := map[string]string{}
+	for binaryName, binaryLocations := range binaries {
+		for _, binary := range binaryLocations {
+			if binary.OS != runtime.GOOS && binary.Arch != runtime.GOARCH {
+				continue
+			}
+
+			_, err := os.Stat(getBinaryPath(binary, targetFolder))
+			if err != nil {
+				return nil, fmt.Errorf("error trying to find binary %s: %v", binaryName, err)
+			}
+		}
+		if retBinaries[binaryName] == "" {
+			return nil, fmt.Errorf("cannot find provider binary %s, because no binary location matched OS %s and ARCH %s", binaryName, runtime.GOOS, runtime.GOARCH)
+		}
+	}
+
+	return retBinaries, nil
+}
+
 func DownloadBinaries(binaries map[string][]*provider2.ProviderBinary, targetFolder string, log log.Logger) (map[string]string, error) {
 	retBinaries := map[string]string{}
 	for binaryName, binaryLocations := range binaries {
 		for _, binary := range binaryLocations {
 			if binary.OS != runtime.GOOS && binary.Arch != runtime.GOARCH {
+				continue
+			}
+
+			// check if binary is correct
+			binaryPath := verifyBinary(binary, targetFolder)
+			if binaryPath != "" {
+				retBinaries[binaryName] = binaryPath
 				continue
 			}
 
@@ -79,6 +106,52 @@ func DownloadBinaries(binaries map[string][]*provider2.ProviderBinary, targetFol
 	}
 
 	return retBinaries, nil
+}
+
+func verifyBinary(binary *provider2.ProviderBinary, targetFolder string) string {
+	binaryPath := getBinaryPath(binary, targetFolder)
+	_, err := os.Stat(binaryPath)
+	if err != nil {
+		return ""
+	}
+
+	// verify checksum
+	if binary.Checksum != "" {
+		fileHash, err := hash.File(binaryPath)
+		if err != nil || strings.ToLower(fileHash) != strings.ToLower(binary.Checksum) {
+			_ = os.Remove(binaryPath)
+			return ""
+		}
+	}
+
+	return binaryPath
+}
+
+func getBinaryPath(binary *provider2.ProviderBinary, targetFolder string) string {
+	if filepath.IsAbs(binary.Path) {
+		return binary.Path
+	}
+
+	// check if download
+	if !strings.HasPrefix(binary.Path, "http://") && !strings.HasPrefix(binary.Path, "https://") {
+		return localTargetPath(binary, targetFolder)
+	}
+
+	// check if archive
+	if binary.ArchivePath != "" {
+		return path.Join(filepath.ToSlash(targetFolder), binary.ArchivePath)
+	}
+
+	// determine binary name
+	name := binary.Name
+	if name == "" {
+		name = path.Base(binary.Path)
+		if runtime.GOOS == "windows" && !strings.HasSuffix(name, ".exe") {
+			name += ".exe"
+		}
+	}
+
+	return path.Join(filepath.ToSlash(targetFolder), name)
 }
 
 func downloadBinary(binaryName string, binary *provider2.ProviderBinary, targetFolder string, log log.Logger) (string, error) {
@@ -172,16 +245,11 @@ func downloadFile(binaryName string, binary *provider2.ProviderBinary, targetFol
 	// initiate download
 	log.Infof("Download binary %s from %s", binaryName, binary.Path)
 	defer log.Debugf("Successfully downloaded binary %s", binary.Path)
-	httpClient := &http.Client{
-		Transport: &http.Transport{
-			TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
-		},
-	}
-	resp, err := httpClient.Get(binary.Path)
+	body, err := download.File(binary.Path)
 	if err != nil {
 		return "", errors.Wrap(err, "download binary")
 	}
-	defer resp.Body.Close()
+	defer body.Close()
 
 	file, err := os.Create(targetPath)
 	if err != nil {
@@ -189,7 +257,7 @@ func downloadFile(binaryName string, binary *provider2.ProviderBinary, targetFol
 	}
 	defer file.Close()
 
-	_, err = io.Copy(file, resp.Body)
+	_, err = io.Copy(file, body)
 	if err != nil {
 		return "", errors.Wrap(err, "download file")
 	}
@@ -207,27 +275,22 @@ func downloadArchive(binaryName string, binary *provider2.ProviderBinary, target
 	// initiate download
 	log.Infof("Download binary %s from %s", binaryName, binary.Path)
 	defer log.Debugf("Successfully extracted & downloaded archive")
-	httpClient := &http.Client{
-		Transport: &http.Transport{
-			TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
-		},
-	}
-	resp, err := httpClient.Get(binary.Path)
+	body, err := download.File(binary.Path)
 	if err != nil {
-		return "", errors.Wrap(err, "download binary")
+		return "", err
 	}
-	defer resp.Body.Close()
+	defer body.Close()
 
 	// determine archive
 	if strings.HasSuffix(binary.Path, ".gz") || strings.HasSuffix(binary.Path, ".tar") || strings.HasSuffix(binary.Path, ".tgz") {
-		err = extract.Extract(resp.Body, targetFolder)
+		err = extract.Extract(body, targetFolder)
 		if err != nil {
 			return "", err
 		}
 
 		return targetPath, nil
 	} else if strings.HasSuffix(binary.Path, ".zip") {
-		tempFile, err := downloadToTempFile(resp.Body)
+		tempFile, err := downloadToTempFile(body)
 		if err != nil {
 			return "", err
 		}
