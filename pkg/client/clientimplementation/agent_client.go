@@ -350,7 +350,7 @@ func (s *agentClient) Status(ctx context.Context, options client.StatusOptions) 
 	defer s.m.Unlock()
 
 	// check if provider has status command
-	if s.isMachineProvider() {
+	if s.isMachineProvider() && len(s.config.Exec.Status) > 0 {
 		if s.machine == nil {
 			return client.StatusNotFound, nil
 		}
