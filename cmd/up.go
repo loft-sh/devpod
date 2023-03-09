@@ -264,16 +264,18 @@ func (cmd *UpCmd) devPodUpMachine(ctx context.Context, client client2.AgentClien
 		defer cancel()
 
 		buf := &bytes.Buffer{}
-		err := agent.InjectAgentAndExecute(cancelCtx, func(ctx context.Context, command string, stdin io.Reader, stdout io.Writer, stderr io.Writer) error {
+		writer := log.Writer(logrus.DebugLevel, false)
+		defer writer.Close()
+		errChan <- agent.InjectAgentAndExecute(cancelCtx, func(ctx context.Context, command string, stdin io.Reader, stdout io.Writer, stderr io.Writer) error {
 			return client.Command(ctx, client2.CommandOptions{
 				Command: command,
 				Stdin:   stdin,
 				Stdout:  stdout,
 				Stderr:  stderr,
 			})
-		}, client.AgentPath(), client.AgentURL(), true, command, stdinReader, stdoutWriter, buf, log.ErrorStreamOnly())
+		}, client.AgentPath(), client.AgentURL(), true, command, stdinReader, stdoutWriter, io.MultiWriter(writer, buf), log.ErrorStreamOnly())
 		if err != nil {
-			errChan <- errors.Wrapf(err, "%s", buf.String())
+			errors.Wrapf(err, "%s", buf.String())
 		} else {
 			errChan <- nil
 		}

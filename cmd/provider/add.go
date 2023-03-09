@@ -7,12 +7,16 @@ import (
 	"github.com/loft-sh/devpod/pkg/config"
 	"github.com/loft-sh/devpod/pkg/log"
 	"github.com/loft-sh/devpod/pkg/workspace"
+	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
 )
 
 // AddCmd holds the cmd flags
 type AddCmd struct {
 	*flags.GlobalFlags
+
+	Use     bool
+	Options []string
 }
 
 // NewAddCmd creates a new command
@@ -34,6 +38,8 @@ func NewAddCmd(flags *flags.GlobalFlags) *cobra.Command {
 		},
 	}
 
+	addCmd.Flags().BoolVar(&cmd.Use, "use", true, "If enabled will automatically activate the provider")
+	addCmd.Flags().StringSliceVarP(&cmd.Options, "option", "o", []string{}, "Provider option in the form KEY=VALUE")
 	return addCmd
 }
 
@@ -48,6 +54,16 @@ func (cmd *AddCmd) Run(ctx context.Context, devPodConfig *config.Config, args []
 	}
 
 	log.Default.Donef("Successfully installed provider %s", providerConfig.Name)
+	if cmd.Use {
+		err = configureProvider(ctx, providerConfig, devPodConfig.DefaultContext, cmd.Options, true)
+		if err != nil {
+			log.Default.Errorf("Error configuring provider, please retry with 'devpod provider use %s --reconfigure'", providerConfig.Name)
+			return errors.Wrap(err, "configure provider")
+		}
+
+		return nil
+	}
+
 	log.Default.Infof("To use the provider, please run the following command:")
 	log.Default.Infof("devpod use provider %s", providerConfig.Name)
 	return nil

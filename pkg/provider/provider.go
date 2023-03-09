@@ -138,7 +138,7 @@ type ProviderOption struct {
 	// Hidden specifies if the option should be hidden
 	Hidden bool `json:"hidden,omitempty"`
 
-	// Local will never send the option to the server
+	// Local means the variable is not resolved immediately and instead later when the workspace / machine was created.
 	Local bool `json:"local,omitempty"`
 
 	// Global means the variable is stored globally. By default, option values will be

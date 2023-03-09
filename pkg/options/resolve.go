@@ -5,6 +5,7 @@ import (
 	"context"
 	"fmt"
 	"github.com/loft-sh/devpod/pkg/agent"
+	"github.com/loft-sh/devpod/pkg/binaries"
 	"github.com/loft-sh/devpod/pkg/config"
 	"github.com/loft-sh/devpod/pkg/devcontainer/graph"
 	"github.com/loft-sh/devpod/pkg/log"
@@ -39,8 +40,23 @@ func ResolveAndSaveOptionsMachine(ctx context.Context, devConfig *config.Config,
 		beforeConfigOptions = machine.Provider.Options
 	}
 
+	// get binary paths
+	binaryPaths, err := binaries.GetBinaries(devConfig.DefaultContext, provider)
+	if err != nil {
+		return nil, err
+	}
+
 	// resolve options
-	resolvedOptions, err := resolveOptionsGeneric(ctx, provider.Options, provider2.CombineOptions(nil, machine, devConfig.ProviderOptions(provider.Name)), userOptions, provider2.ToOptions(nil, machine, devConfig.ProviderOptions(provider.Name)), true, false, log)
+	resolvedOptions, err := resolveOptionsGeneric(
+		ctx,
+		provider.Options,
+		provider2.CombineOptions(nil, machine, devConfig.ProviderOptions(provider.Name)),
+		userOptions,
+		provider2.Merge(provider2.ToOptionsMachine(machine), binaryPaths),
+		true,
+		false,
+		log,
+	)
 	if err != nil {
 		return nil, err
 	}
@@ -73,8 +89,23 @@ func ResolveAndSaveOptionsWorkspace(ctx context.Context, devConfig *config.Confi
 		beforeConfigOptions = workspace.Provider.Options
 	}
 
+	// get binary paths
+	binaryPaths, err := binaries.GetBinaries(devConfig.DefaultContext, provider)
+	if err != nil {
+		return nil, err
+	}
+
 	// resolve options
-	resolvedOptions, err := resolveOptionsGeneric(ctx, provider.Options, provider2.CombineOptions(workspace, nil, devConfig.ProviderOptions(provider.Name)), userOptions, provider2.ToOptions(workspace, nil, devConfig.ProviderOptions(provider.Name)), true, false, log)
+	resolvedOptions, err := resolveOptionsGeneric(
+		ctx,
+		provider.Options,
+		provider2.CombineOptions(workspace, nil, devConfig.ProviderOptions(provider.Name)),
+		userOptions,
+		provider2.Merge(provider2.ToOptionsWorkspace(workspace), binaryPaths),
+		true,
+		false,
+		log,
+	)
 	if err != nil {
 		return nil, err
 	}
@@ -94,38 +125,24 @@ func ResolveAndSaveOptionsWorkspace(ctx context.Context, devConfig *config.Confi
 	return workspace, nil
 }
 
-func ResolveAndSaveOptions(ctx context.Context, originalDevConfig *config.Config, provider *provider2.ProviderConfig, log log.Logger) (*config.Config, error) {
-	// reload config
-	devConfig, err := config.LoadConfig(originalDevConfig.DefaultContext)
+func ResolveOptions(ctx context.Context, devConfig *config.Config, provider *provider2.ProviderConfig, userOptions map[string]string, log log.Logger) (*config.Config, error) {
+	// get binary paths
+	binaryPaths, err := binaries.GetBinaries(devConfig.DefaultContext, provider)
 	if err != nil {
-		return originalDevConfig, err
-	}
-
-	// resolve devconfig options
-	var beforeConfigOptions map[string]config.OptionValue
-	if devConfig != nil {
-		beforeConfigOptions = devConfig.ProviderOptions(provider.Name)
+		return nil, err
 	}
 
 	// resolve options
-	devConfig, err = ResolveOptions(ctx, devConfig, provider, nil, log)
-	if err != nil {
-		return devConfig, errors.Wrap(err, "resolve options")
-	}
-
-	// save devconfig config
-	if devConfig != nil && !reflect.DeepEqual(devConfig.ProviderOptions(provider.Name), beforeConfigOptions) {
-		err = config.SaveConfig(devConfig)
-		if err != nil {
-			return devConfig, err
-		}
-	}
-
-	return devConfig, nil
-}
-
-func ResolveOptions(ctx context.Context, devConfig *config.Config, provider *provider2.ProviderConfig, userOptions map[string]string, log log.Logger) (*config.Config, error) {
-	resolvedOptions, err := resolveOptionsGeneric(ctx, provider.Options, devConfig.ProviderOptions(provider.Name), userOptions, provider2.GetBaseEnvironment(), false, true, log)
+	resolvedOptions, err := resolveOptionsGeneric(
+		ctx,
+		provider.Options,
+		devConfig.ProviderOptions(provider.Name),
+		userOptions,
+		provider2.Merge(provider2.GetBaseEnvironment(), binaryPaths),
+		false,
+		true,
+		log,
+	)
 	if err != nil {
 		return nil, err
 	}
@@ -270,7 +287,7 @@ func resolveOption(
 			// skip if global
 			if !resolveGlobal && option.Global {
 				return nil
-			} else if !resolveLocal && !option.Global {
+			} else if !resolveLocal && option.Local {
 				return nil
 			}
 		}
@@ -409,6 +426,8 @@ func addDependencies(g *graph.Graph, options map[string]*provider2.ProviderOptio
 
 			if option.Global && !options[dep].Global {
 				return fmt.Errorf("cannot use a global option as a dependency of a non-global option. Option '%s' used in default of option '%s'", dep, optionName)
+			} else if !option.Local && options[dep].Local {
+				return fmt.Errorf("cannot use a non-local option as a dependency of a local option. Option '%s' used in default of option '%s'", dep, optionName)
 			}
 
 			err := g.AddEdge(dep, optionName)
@@ -425,6 +444,8 @@ func addDependencies(g *graph.Graph, options map[string]*provider2.ProviderOptio
 
 			if option.Global && !options[dep].Global {
 				return fmt.Errorf("cannot use a global option as a dependency of a non-global option. Option '%s' used in command of option '%s'", dep, optionName)
+			} else if !option.Local && options[dep].Local {
+				return fmt.Errorf("cannot use a non-local option as a dependency of a local option. Option '%s' used in default of option '%s'", dep, optionName)
 			}
 
 			err := g.AddEdge(dep, optionName)

@@ -33,6 +33,7 @@ func InjectAgentAndExecute(ctx context.Context, exec inject.ExecFunc, remoteAgen
 	// do a simple hello world to check if we can get something
 	startWaiting := time.Now()
 	now := startWaiting
+	lastMessage := time.Now()
 	for {
 		wasExecuted, err := inject.InjectAndExecute(
 			ctx,
@@ -60,7 +61,11 @@ func InjectAgentAndExecute(ctx context.Context, exec inject.ExecFunc, remoteAgen
 				return err
 			}
 
-			log.Infof("Waiting for devpod agent to come up...")
+			if time.Since(lastMessage) > time.Second*5 {
+				log.Infof("Waiting for devpod agent to come up...")
+				lastMessage = time.Now()
+			}
+
 			log.Debugf("Inject Error: %v", err)
 			startWaiting = time.Now()
 			continue

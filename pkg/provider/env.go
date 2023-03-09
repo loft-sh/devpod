@@ -19,7 +19,6 @@ const (
 	WORKSPACE_ORIGIN         = "WORKSPACE_ORIGIN"
 	WORKSPACE_GIT_REPOSITORY = "WORKSPACE_GIT_REPOSITORY"
 	WORKSPACE_GIT_BRANCH     = "WORKSPACE_GIT_BRANCH"
-	WORKSPACE_GIT_COMMIT     = "WORKSPACE_GIT_COMMIT"
 	WORKSPACE_LOCAL_FOLDER   = "WORKSPACE_LOCAL_FOLDER"
 	WORKSPACE_IMAGE          = "WORKSPACE_IMAGE"
 	WORKSPACE_PROVIDER       = "WORKSPACE_PROVIDER"
@@ -80,12 +79,8 @@ func CombineOptions(workspace *Workspace, machine *Machine, options map[string]c
 	return providerOptions
 }
 
-func ToOptions(workspace *Workspace, machine *Machine, options map[string]config.OptionValue) map[string]string {
-	providerOptions := CombineOptions(workspace, machine, options)
+func ToOptionsWorkspace(workspace *Workspace) map[string]string {
 	retVars := map[string]string{}
-	for optionName, optionValue := range providerOptions {
-		retVars[strings.ToUpper(optionName)] = optionValue.Value
-	}
 	if workspace != nil {
 		if workspace.ID != "" {
 			retVars[WORKSPACE_ID] = workspace.ID
@@ -119,7 +114,15 @@ func ToOptions(workspace *Workspace, machine *Machine, options map[string]config
 			retVars[MACHINE_ID] = workspace.Machine.ID
 			retVars[MACHINE_FOLDER], _ = GetMachineDir(workspace.Context, workspace.Machine.ID)
 		}
+		for k, v := range GetBaseEnvironment() {
+			retVars[k] = v
+		}
 	}
+	return retVars
+}
+
+func ToOptionsMachine(machine *Machine) map[string]string {
+	retVars := map[string]string{}
 	if machine != nil {
 		if machine.ID != "" {
 			retVars[MACHINE_ID] = machine.ID
@@ -133,12 +136,35 @@ func ToOptions(workspace *Workspace, machine *Machine, options map[string]config
 		if machine.Provider.Name != "" {
 			retVars[MACHINE_PROVIDER] = machine.Provider.Name
 		}
+		for k, v := range GetBaseEnvironment() {
+			retVars[k] = v
+		}
 	}
-	for k, v := range GetBaseEnvironment() {
-		retVars[k] = v
+	return retVars
+}
+
+func ToOptions(workspace *Workspace, machine *Machine, options map[string]config.OptionValue) map[string]string {
+	providerOptions := CombineOptions(workspace, machine, options)
+	retVars := map[string]string{}
+	for optionName, optionValue := range providerOptions {
+		retVars[strings.ToUpper(optionName)] = optionValue.Value
 	}
 
+	retVars = Merge(retVars, ToOptionsWorkspace(workspace))
+	retVars = Merge(retVars, ToOptionsMachine(machine))
 	return retVars
+}
+
+func Merge(m1 map[string]string, m2 map[string]string) map[string]string {
+	retMap := map[string]string{}
+	for k, v := range m1 {
+		retMap[k] = v
+	}
+	for k, v := range m2 {
+		retMap[k] = v
+	}
+
+	return retMap
 }
 
 func GetBaseEnvironment() map[string]string {
