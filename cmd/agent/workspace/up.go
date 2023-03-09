@@ -171,15 +171,10 @@ func prepareWorkspace(ctx context.Context, workspaceInfo *provider2.AgentWorkspa
 		return nil
 	}
 
-	// make content dir
-	err = os.MkdirAll(workspaceInfo.Folder, 0777)
-	if err != nil {
-		return errors.Wrap(err, "make workspace folder")
-	}
-
 	// check what type of workspace this is
 	if workspaceInfo.Workspace.Source.GitRepository != "" {
 		log.Debugf("Clone Repository")
+
 		helper := ""
 		if workspaceInfo.Agent.InjectGitCredentials == "true" {
 			log.Debugf("Start credentials server")
@@ -192,12 +187,32 @@ func prepareWorkspace(ctx context.Context, workspaceInfo *provider2.AgentWorkspa
 			}
 		}
 
+		// make content dir
+		err = os.MkdirAll(workspaceInfo.Folder, 0777)
+		if err != nil {
+			return errors.Wrap(err, "make workspace folder")
+		}
+
 		return CloneRepository(workspaceInfo.Folder, workspaceInfo.Workspace.Source.GitRepository, workspaceInfo.Workspace.Source.GitBranch, helper, log)
 	} else if workspaceInfo.Workspace.Source.LocalFolder != "" {
 		log.Debugf("Download Local Folder")
+
+		// make content dir
+		err = os.MkdirAll(workspaceInfo.Folder, 0777)
+		if err != nil {
+			return errors.Wrap(err, "make workspace folder")
+		}
+
 		return DownloadLocalFolder(ctx, workspaceInfo.Folder, client, log)
 	} else if workspaceInfo.Workspace.Source.Image != "" {
 		log.Debugf("Prepare Image")
+
+		// make content dir
+		err = os.MkdirAll(workspaceInfo.Folder, 0777)
+		if err != nil {
+			return errors.Wrap(err, "make workspace folder")
+		}
+
 		return PrepareImage(workspaceInfo.Folder, workspaceInfo.Workspace.Source.Image)
 	}
 
@@ -357,10 +372,58 @@ func (cmd *UpCmd) devPodUp(workspaceInfo *provider2.AgentWorkspaceInfo, log log.
 }
 
 func CloneRepository(workspaceDir, repository, branch, helper string, log log.Logger) error {
-	// run git command
 	writer := log.Writer(logrus.InfoLevel, false)
 	defer writer.Close()
 
+	// check if command exists
+	if !command.Exists("git") {
+		// try to install git via apt / apk
+		if !command.Exists("apt") && !command.Exists("apk") {
+			// TODO: use golang git implementation
+			return fmt.Errorf("couldn't find a package manager to install git")
+		}
+
+		if command.Exists("apt") {
+			log.Infof("Git command is missing, try to install git with apt")
+			cmd := exec.Command("apt", "update")
+			cmd.Stdout = writer
+			cmd.Stderr = writer
+			err := cmd.Run()
+			if err != nil {
+				return errors.Wrap(err, "run apt update")
+			}
+			cmd = exec.Command("apt", "-y", "install", "git")
+			cmd.Stdout = writer
+			cmd.Stderr = writer
+			err = cmd.Run()
+			if err != nil {
+				return errors.Wrap(err, "run apt install git -y")
+			}
+		} else if command.Exists("apk") {
+			log.Infof("Git command is missing, try to install git with apk")
+			cmd := exec.Command("apk", "update")
+			cmd.Stdout = writer
+			cmd.Stderr = writer
+			err := cmd.Run()
+			if err != nil {
+				return errors.Wrap(err, "run apk update")
+			}
+			cmd = exec.Command("apk", "add", "git")
+			cmd.Stdout = writer
+			cmd.Stderr = writer
+			err = cmd.Run()
+			if err != nil {
+				return errors.Wrap(err, "run apk add git")
+			}
+		}
+
+		// is git available now?
+		if !command.Exists("git") {
+			return fmt.Errorf("couldn't install git")
+		}
+	}
+
+	// run git command
 	args := []string{"clone"}
 	if helper != "" {
 		args = append(args, "--config", "credential.helper="+helper)
