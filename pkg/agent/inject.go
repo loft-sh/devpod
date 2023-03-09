@@ -1,6 +1,7 @@
 package agent
 
 import (
+	"bytes"
 	"context"
 	"crypto/tls"
 	"fmt"
@@ -22,6 +23,7 @@ func InjectAgent(ctx context.Context, exec inject.ExecFunc, remoteAgentPath, dow
 }
 
 func InjectAgentAndExecute(ctx context.Context, exec inject.ExecFunc, remoteAgentPath, downloadURL string, preferDownload bool, command string, stdin io.Reader, stdout io.Writer, stderr io.Writer, log log.Logger) error {
+	defer log.Debugf("Done InjectAgentAndExecute")
 	if remoteAgentPath == "" {
 		remoteAgentPath = RemoteDevPodHelperLocation
 	}
@@ -35,6 +37,7 @@ func InjectAgentAndExecute(ctx context.Context, exec inject.ExecFunc, remoteAgen
 	now := startWaiting
 	lastMessage := time.Now()
 	for {
+		buf := &bytes.Buffer{}
 		wasExecuted, err := inject.InjectAndExecute(
 			ctx,
 			exec,
@@ -50,7 +53,7 @@ func InjectAgentAndExecute(ctx context.Context, exec inject.ExecFunc, remoteAgen
 			command,
 			stdin,
 			stdout,
-			stderr,
+			io.MultiWriter(stderr, buf),
 			time.Second*10,
 			log,
 		)
@@ -58,7 +61,7 @@ func InjectAgentAndExecute(ctx context.Context, exec inject.ExecFunc, remoteAgen
 			if time.Since(now) > waitForInstanceConnectionTimeout {
 				return errors.Wrap(err, "timeout waiting for instance connection")
 			} else if wasExecuted {
-				return err
+				return errors.Wrapf(err, "agent error: %s", buf.String())
 			}
 
 			if time.Since(lastMessage) > time.Second*5 {
@@ -66,7 +69,7 @@ func InjectAgentAndExecute(ctx context.Context, exec inject.ExecFunc, remoteAgen
 				lastMessage = time.Now()
 			}
 
-			log.Debugf("Inject Error: %v", err)
+			log.Debugf("Inject Error: %s%v", buf.String(), err)
 			startWaiting = time.Now()
 			continue
 		}

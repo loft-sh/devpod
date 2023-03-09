@@ -1,7 +1,6 @@
 package cmd
 
 import (
-	"bytes"
 	"context"
 	"fmt"
 	"github.com/loft-sh/devpod/cmd/flags"
@@ -263,7 +262,6 @@ func (cmd *UpCmd) devPodUpMachine(ctx context.Context, client client2.AgentClien
 		defer log.Debugf("Done executing up command")
 		defer cancel()
 
-		buf := &bytes.Buffer{}
 		writer := log.Writer(logrus.DebugLevel, false)
 		defer writer.Close()
 		errChan <- agent.InjectAgentAndExecute(cancelCtx, func(ctx context.Context, command string, stdin io.Reader, stdout io.Writer, stderr io.Writer) error {
@@ -273,12 +271,7 @@ func (cmd *UpCmd) devPodUpMachine(ctx context.Context, client client2.AgentClien
 				Stdout:  stdout,
 				Stderr:  stderr,
 			})
-		}, client.AgentPath(), client.AgentURL(), true, command, stdinReader, stdoutWriter, io.MultiWriter(writer, buf), log.ErrorStreamOnly())
-		if err != nil {
-			errors.Wrapf(err, "%s", buf.String())
-		} else {
-			errChan <- nil
-		}
+		}, client.AgentPath(), client.AgentURL(), true, command, stdinReader, stdoutWriter, writer, log.ErrorStreamOnly())
 	}()
 
 	// get workspace config
