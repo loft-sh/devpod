@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"github.com/loft-sh/devpod/pkg/inject"
 	"github.com/loft-sh/devpod/pkg/log"
+	"github.com/loft-sh/devpod/pkg/version"
 	"github.com/pkg/errors"
 	"io"
 	"net/http"
@@ -44,7 +45,7 @@ func InjectAgentAndExecute(ctx context.Context, exec inject.ExecFunc, remoteAgen
 			func(arm bool) (io.ReadCloser, error) {
 				return injectBinary(arm, downloadURL, log)
 			},
-			fmt.Sprintf(`[ "$(%s version >/dev/null 2>&1 && echo 'true' || echo 'false')" = "false" ]`, remoteAgentPath),
+			fmt.Sprintf(`[ "$(%s version 2>/dev/null || echo 'false')" != "%s" ]`, remoteAgentPath, version.GetVersion()),
 			remoteAgentPath,
 			downloadURL+"/devpod-linux-amd64",
 			downloadURL+"/devpod-linux-arm64",

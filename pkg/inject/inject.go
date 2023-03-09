@@ -174,6 +174,7 @@ func inject(localFile LocalFile, stdout io.ReadCloser, stdoutOut io.Writer, stdi
 	if err != nil {
 		return false, err
 	}
+	log.Debugf("Received line after pong: %v", line)
 
 	// check if we need to inject the file
 	lineStr := strings.TrimSpace(line)
