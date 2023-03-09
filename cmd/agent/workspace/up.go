@@ -384,7 +384,7 @@ func CloneRepository(workspaceDir, repository, branch, helper string, log log.Lo
 		}
 
 		if command.Exists("apt") {
-			log.Infof("Git command is missing, try to install git with apt")
+			log.Infof("Git command is missing, try to install git with apt...")
 			cmd := exec.Command("apt", "update")
 			cmd.Stdout = writer
 			cmd.Stderr = writer
@@ -400,7 +400,7 @@ func CloneRepository(workspaceDir, repository, branch, helper string, log log.Lo
 				return errors.Wrap(err, "run apt install git -y")
 			}
 		} else if command.Exists("apk") {
-			log.Infof("Git command is missing, try to install git with apk")
+			log.Infof("Git command is missing, try to install git with apk...")
 			cmd := exec.Command("apk", "update")
 			cmd.Stdout = writer
 			cmd.Stderr = writer
@@ -421,6 +421,8 @@ func CloneRepository(workspaceDir, repository, branch, helper string, log log.Lo
 		if !command.Exists("git") {
 			return fmt.Errorf("couldn't install git")
 		}
+
+		log.Donef("Successfully installed git")
 	}
 
 	// run git command
