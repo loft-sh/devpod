@@ -2,11 +2,31 @@ package ssh
 
 import (
 	"bytes"
+	"fmt"
+	"io"
+
 	"github.com/loft-sh/devpod/pkg/stdio"
 	"github.com/pkg/errors"
 	"golang.org/x/crypto/ssh"
-	"io"
 )
+
+func NewSSHClient(user, addr string, keyBytes []byte) (*ssh.Client, error) {
+	sshConfig, err := ConfigFromKeyBytes(keyBytes)
+	if err != nil {
+		return nil, err
+	}
+
+	if user != "" {
+		sshConfig.User = user
+	}
+
+	client, err := ssh.Dial("tcp", addr, sshConfig)
+	if err != nil {
+		return nil, fmt.Errorf("dial to %v failed: %w", addr, err)
+	}
+
+	return client, nil
+}
 
 func StdioClientFromKeyBytes(keyBytes []byte, reader io.Reader, writer io.WriteCloser, exitOnClose bool) (*ssh.Client, error) {
 	return StdioClientFromKeyBytesWithUser(keyBytes, reader, writer, "", exitOnClose)
