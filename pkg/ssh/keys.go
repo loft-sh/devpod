@@ -7,11 +7,12 @@ import (
 	"crypto/x509"
 	"encoding/base64"
 	"encoding/pem"
-	"github.com/loft-sh/devpod/pkg/provider"
-	"github.com/mitchellh/go-homedir"
 	"os"
 	"path/filepath"
 	"sync"
+
+	"github.com/loft-sh/devpod/pkg/provider"
+	"github.com/mitchellh/go-homedir"
 
 	"github.com/pkg/errors"
 	"golang.org/x/crypto/ssh"
@@ -75,7 +76,7 @@ func GetPrivateKeyRaw(context, workspaceID string) ([]byte, error) {
 		return nil, err
 	}
 
-	return getPrivateKeyRawBase(workspaceDir)
+	return GetPrivateKeyRawBase(workspaceDir)
 }
 
 func GetKeysTempDir() string {
@@ -104,7 +105,7 @@ func GetTempPublicKey() (string, error) {
 
 func GetTempPrivateKeyRaw() ([]byte, error) {
 	tempDir := GetKeysTempDir()
-	return getPrivateKeyRawBase(tempDir)
+	return GetPrivateKeyRawBase(tempDir)
 }
 
 func GetHostKey(context, workspaceID string) (string, error) {
@@ -116,7 +117,7 @@ func GetHostKey(context, workspaceID string) (string, error) {
 	return GetHostKeyBase(workspaceDir)
 }
 
-func getPrivateKeyRawBase(dir string) ([]byte, error) {
+func GetPrivateKeyRawBase(dir string) ([]byte, error) {
 	keyLock.Lock()
 	defer keyLock.Unlock()
 
@@ -186,6 +187,20 @@ func GetHostKeyBase(dir string) (string, error) {
 	}
 
 	return base64.StdEncoding.EncodeToString(out), nil
+}
+
+func GetPublicKeyPlain(dir string) (string, error) {
+	resultb64, err := GetPublicKeyBase(dir)
+	if err != nil {
+		return "", err
+	}
+
+	result, err := base64.StdEncoding.DecodeString(resultb64)
+	if err != nil {
+		return "", err
+	}
+
+	return string(result), nil
 }
 
 func GetPublicKeyBase(dir string) (string, error) {
