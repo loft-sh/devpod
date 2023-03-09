@@ -2,12 +2,13 @@ package ssh
 
 import (
 	"fmt"
-	"github.com/loft-sh/devpod/pkg/provider"
 	"io"
 	"os"
 	"path/filepath"
 	"strings"
 	"sync"
+
+	"github.com/loft-sh/devpod/pkg/provider"
 
 	"github.com/loft-sh/devpod/pkg/log"
 	"github.com/loft-sh/devpod/pkg/scanner"

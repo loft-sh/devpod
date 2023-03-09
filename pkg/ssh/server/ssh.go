@@ -2,10 +2,6 @@ package server
 
 import (
 	"fmt"
-	"github.com/gliderlabs/ssh"
-	"github.com/loft-sh/devpod/pkg/log"
-	"github.com/pkg/errors"
-	"github.com/pkg/sftp"
 	"io"
 	"net"
 	"os"
@@ -13,6 +9,11 @@ import (
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/gliderlabs/ssh"
+	"github.com/loft-sh/devpod/pkg/log"
+	"github.com/pkg/errors"
+	"github.com/pkg/sftp"
 )
 
 var DefaultPort = 8022

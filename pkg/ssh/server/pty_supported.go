@@ -4,11 +4,12 @@
 package server
 
 import (
-	"github.com/creack/pty"
 	"os"
 	"os/exec"
 	"syscall"
 	"unsafe"
+
+	"github.com/creack/pty"
 )
 
 func startPTY(cmd *exec.Cmd) (*os.File, error) {
