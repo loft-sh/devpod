@@ -93,11 +93,23 @@ func injectBinary(arm bool, tryDownloadURL string, log log.Logger) (io.ReadClose
 	var binaryPath string
 	if runtime.GOOS == "linux" && runtime.GOARCH == targetArch {
 		binaryPath, err = os.Executable()
-	} else {
-		binaryPath, err = downloadAgentLocally(tryDownloadURL, targetArch, log)
+		if err != nil {
+			return nil, errors.Wrap(err, "get executable")
+		}
+
+		// check if we still exist
+		_, err = os.Stat(binaryPath)
+		if err != nil {
+			binaryPath = ""
+		}
 	}
-	if err != nil {
-		return nil, err
+
+	// download devpod locally
+	if binaryPath == "" {
+		binaryPath, err = downloadAgentLocally(tryDownloadURL, targetArch, log)
+		if err != nil {
+			return nil, errors.Wrap(err, "download agent locally")
+		}
 	}
 
 	// read file
