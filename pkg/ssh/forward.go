@@ -1,11 +1,12 @@
 package ssh
 
 import (
-	"github.com/loft-sh/devpod/pkg/log"
-	"golang.org/x/crypto/ssh"
 	"io"
 	"net"
 	"sync"
+
+	"github.com/loft-sh/devpod/pkg/log"
+	"golang.org/x/crypto/ssh"
 )
 
 func PortForward(client *ssh.Client, localAddr, remoteAddr string, log log.Logger) error {

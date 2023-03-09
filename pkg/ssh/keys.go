@@ -7,11 +7,12 @@ import (
 	"crypto/x509"
 	"encoding/base64"
 	"encoding/pem"
-	"github.com/loft-sh/devpod/pkg/provider"
-	"github.com/mitchellh/go-homedir"
 	"os"
 	"path/filepath"
 	"sync"
+
+	"github.com/loft-sh/devpod/pkg/provider"
+	"github.com/mitchellh/go-homedir"
 
 	"github.com/pkg/errors"
 	"golang.org/x/crypto/ssh"
