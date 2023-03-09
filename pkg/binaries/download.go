@@ -20,13 +20,7 @@ import (
 
 func ToEnvironmentWithBinaries(context string, workspace *provider2.Workspace, machine *provider2.Machine, options map[string]config.OptionValue, config *provider2.ProviderConfig, extraEnv map[string]string, log log.Logger) ([]string, error) {
 	environ := provider2.ToEnvironment(workspace, machine, options, extraEnv)
-
-	binariesDir, err := provider2.GetProviderBinariesDir(context, config.Name)
-	if err != nil {
-		return nil, err
-	}
-
-	binariesMap, err := GetBinaries(config.Binaries, binariesDir)
+	binariesMap, err := GetBinaries(context, config)
 	if err != nil {
 		return nil, err
 	}
@@ -37,16 +31,21 @@ func ToEnvironmentWithBinaries(context string, workspace *provider2.Workspace, m
 	return environ, nil
 }
 
-func GetBinaries(binaries map[string][]*provider2.ProviderBinary, targetFolder string) (map[string]string, error) {
+func GetBinaries(context string, config *provider2.ProviderConfig) (map[string]string, error) {
+	binariesDir, err := provider2.GetProviderBinariesDir(context, config.Name)
+	if err != nil {
+		return nil, err
+	}
+
 	retBinaries := map[string]string{}
-	for binaryName, binaryLocations := range binaries {
+	for binaryName, binaryLocations := range config.Binaries {
 		for _, binary := range binaryLocations {
 			if binary.OS != runtime.GOOS || binary.Arch != runtime.GOARCH {
 				continue
 			}
 
 			// get binaries
-			targetFolder := filepath.Join(targetFolder, strings.ToLower(binaryName))
+			targetFolder := filepath.Join(binariesDir, strings.ToLower(binaryName))
 			binaryPath := getBinaryPath(binary, targetFolder)
 			_, err := os.Stat(binaryPath)
 			if err != nil {

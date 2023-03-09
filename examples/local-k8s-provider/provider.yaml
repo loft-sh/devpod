@@ -1,0 +1,74 @@
+name: kubernetes
+version: 0.0.1
+description: |-
+  DevPod on Kubernetes
+options:
+  NAMESPACE:
+    required: true
+    description: The namespace to use
+    command: |-
+      NAMESPACE=$(kubectl config view --minify -o jsonpath='{..namespace}' 2>/dev/null || true)
+      if [ -z "${NAMESPACE}" ]; then
+        NAMESPACE=default
+      fi
+      
+      echo $NAMESPACE
+  INACTIVITY_TIMEOUT:
+    description: If defined, will automatically stop the container after the inactivity period.
+agent:
+  inactivityTimeout: ${INACTIVITY_TIMEOUT}
+  path: /tmp/devpod
+exec:
+  command: |-
+    kubectl exec -n "${NAMESPACE}" -c devpod-container -i devpod-${MACHINE_ID} -- sh -c "${COMMAND}"
+  status: |-
+    STATUS=$(kubectl get pods devpod-${MACHINE_ID} -n "${NAMESPACE}" --no-headers -o custom-columns=":status.phase" 2>/dev/null || true)
+    if [ -z "$STATUS" ]; then
+      echo "NotFound"
+    elif [ "$STATUS" = "Running" ]; then
+      echo "Running"
+    elif [ "$STATUS" = "Succeeded" ]; then
+      echo "Stopped"
+    else
+      echo "Busy"
+    fi
+  create: |-
+    kubectl create -n "${NAMESPACE}" -f - << EOF
+    apiVersion: v1
+    kind: Pod
+    metadata:
+      name: devpod-${MACHINE_ID}
+      labels:
+        app: devpod
+    spec:
+      volumes:
+        - name: devpod-storage
+          persistentVolumeClaim:
+            claimName: devpod-${MACHINE_ID}
+      containers:
+        - name: devpod-container
+          image: docker:dind
+          volumeMounts:
+          - mountPath: /var/lib/docker
+            name: devpod-storage
+            subPath: var/lib/docker
+          - mountPath: /root
+            name: devpod-storage
+            subPath: root
+          securityContext:
+            privileged: true
+    ---
+    apiVersion: v1
+    kind: PersistentVolumeClaim
+    metadata:
+      name: devpod-${MACHINE_ID}
+    spec:
+      accessModes:
+        - ReadWriteOnce
+      resources:
+        requests:
+          storage: 20Gi
+    EOF
+  delete: |-
+    kubectl delete pod devpod-${MACHINE_ID} -n "${NAMESPACE}" || true
+    kubectl delete pvc devpod-${MACHINE_ID} -n "${NAMESPACE}" || true

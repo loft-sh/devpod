@@ -211,17 +211,17 @@ func TestResolveOptions(t *testing.T) {
 			ExpectErr: true,
 		},
 		{
-			Name: "Don't resolve local",
+			Name: "Error local var",
 			ProviderOptions: map[string]*provider2.ProviderOption{
 				"PARENT": {
+					Local:   true,
 					Default: "test",
 				},
 				"CHILD1": {
 					Default: "${PARENT}",
 				},
 			},
-			DontResolveLocal: true,
-			ExpectedOptions:  map[string]string{},
+			ExpectErr: true,
 		},
 		{
 			Name: "Don't resolve local",
@@ -231,10 +231,29 @@ func TestResolveOptions(t *testing.T) {
 				},
 				"CHILD1": {
 					Default: "${PARENT}",
+					Local:   true,
 				},
 			},
 			DontResolveLocal: true,
-			ExpectedOptions:  map[string]string{},
+			ExpectedOptions: map[string]string{
+				"PARENT": "test",
+			},
+		},
+		{
+			Name: "Resolve",
+			ProviderOptions: map[string]*provider2.ProviderOption{
+				"PARENT": {
+					Default: "test",
+				},
+				"CHILD1": {
+					Default: "${PARENT}",
+				},
+			},
+			DontResolveLocal: true,
+			ExpectedOptions: map[string]string{
+				"PARENT": "test",
+				"CHILD1": "test",
+			},
 		},
 	}
 
@@ -250,13 +269,14 @@ func TestResolveOptions(t *testing.T) {
 			continue
 		}
 
+		strOptions := map[string]string{}
+		for k, v := range options {
+			strOptions[k] = v.Value
+		}
 		if len(testCase.ExpectedOptions) > 0 {
-			strOptions := map[string]string{}
-			for k, v := range options {
-				strOptions[k] = v.Value
-			}
-
 			assert.DeepEqual(t, strOptions, testCase.ExpectedOptions)
+		} else {
+			assert.DeepEqual(t, strOptions, map[string]string{})
 		}
 	}
 }

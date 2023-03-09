@@ -70,73 +70,7 @@ func (cmd *UseCmd) Run(ctx context.Context, providerName string) error {
 	// should reconfigure?
 	shouldReconfigure := cmd.Reconfigure || len(cmd.Options) > 0 || !providerWithOptions.Configured
 	if shouldReconfigure {
-		// parse options
-		options, err := provider2.ParseOptions(providerWithOptions.Config, cmd.Options)
-		if err != nil {
-			return errors.Wrap(err, "parse options")
-		}
-
-		// merge with old values
-		if !cmd.Reconfigure {
-			for k, v := range providerWithOptions.Options {
-				_, ok := options[k]
-				if !ok && v.UserProvided {
-					options[k] = v.Value
-				}
-			}
-		}
-
-		stdout := log.Default.Writer(logrus.InfoLevel, false)
-		defer stdout.Close()
-
-		stderr := log.Default.Writer(logrus.ErrorLevel, false)
-		defer stderr.Close()
-
-		// run init command
-		err = clientimplementation.RunCommandWithBinaries(
-			ctx,
-			"init",
-			providerWithOptions.Config.Exec.Init,
-			devPodConfig.DefaultContext,
-			nil,
-			nil,
-			nil,
-			providerWithOptions.Config,
-			nil,
-			nil,
-			stdout,
-			stderr,
-			log.Default,
-		)
-		if err != nil {
-			return errors.Wrap(err, "init")
-		}
-
-		// fill defaults
-		devPodConfig, err = options2.ResolveOptions(ctx, devPodConfig, providerWithOptions.Config, options, log.Default)
-		if err != nil {
-			return errors.Wrap(err, "resolve options")
-		}
-
-		// run init command
-		err = clientimplementation.RunCommandWithBinaries(
-			ctx,
-			"validate",
-			providerWithOptions.Config.Exec.Validate,
-			devPodConfig.DefaultContext,
-			nil,
-			nil,
-			devPodConfig.ProviderOptions(providerWithOptions.Config.Name),
-			providerWithOptions.Config,
-			nil,
-			nil,
-			stdout,
-			stderr,
-			log.Default,
-		)
-		if err != nil {
-			return errors.Wrap(err, "validate")
-		}
+		return configureProvider(ctx, providerWithOptions.Config, devPodConfig.DefaultContext, cmd.Options, cmd.Reconfigure)
 	} else {
 		log.Default.Infof("To reconfigure provider %s, run with '--reconfigure' to reconfigure the provider", providerWithOptions.Config.Name)
 	}
@@ -152,11 +86,94 @@ func (cmd *UseCmd) Run(ctx context.Context, providerName string) error {
 	}
 
 	// print success message
-	if shouldReconfigure {
-		log.Default.Donef("Successfully configured provider '%s'", providerWithOptions.Config.Name)
-	} else {
-		log.Default.Donef("Successfully switched default provider to '%s'", providerWithOptions.Config.Name)
+	log.Default.Donef("Successfully switched default provider to '%s'", providerWithOptions.Config.Name)
+	return nil
+}
+
+func configureProvider(ctx context.Context, provider *provider2.ProviderConfig, context string, userOptions []string, reconfigure bool) error {
+	devPodConfig, err := config.LoadConfig(context)
+	if err != nil {
+		return err
 	}
 
+	// parse options
+	options, err := provider2.ParseOptions(provider, userOptions)
+	if err != nil {
+		return errors.Wrap(err, "parse options")
+	}
+
+	// merge with old values
+	if !reconfigure {
+		for k, v := range devPodConfig.ProviderOptions(provider.Name) {
+			_, ok := options[k]
+			if !ok && v.UserProvided {
+				options[k] = v.Value
+			}
+		}
+	}
+
+	stdout := log.Default.Writer(logrus.InfoLevel, false)
+	defer stdout.Close()
+
+	stderr := log.Default.Writer(logrus.ErrorLevel, false)
+	defer stderr.Close()
+
+	// run init command
+	err = clientimplementation.RunCommandWithBinaries(
+		ctx,
+		"init",
+		provider.Exec.Init,
+		devPodConfig.DefaultContext,
+		nil,
+		nil,
+		nil,
+		provider,
+		nil,
+		nil,
+		stdout,
+		stderr,
+		log.Default,
+	)
+	if err != nil {
+		return errors.Wrap(err, "init")
+	}
+
+	// fill defaults
+	devPodConfig, err = options2.ResolveOptions(ctx, devPodConfig, provider, options, log.Default)
+	if err != nil {
+		return errors.Wrap(err, "resolve options")
+	}
+
+	// run init command
+	err = clientimplementation.RunCommandWithBinaries(
+		ctx,
+		"validate",
+		provider.Exec.Validate,
+		devPodConfig.DefaultContext,
+		nil,
+		nil,
+		devPodConfig.ProviderOptions(provider.Name),
+		provider,
+		nil,
+		nil,
+		stdout,
+		stderr,
+		log.Default,
+	)
+	if err != nil {
+		return errors.Wrap(err, "validate")
+	}
+
+	// set options
+	defaultContext := devPodConfig.Current()
+	defaultContext.DefaultProvider = provider.Name
+
+	// save provider config
+	err = config.SaveConfig(devPodConfig)
+	if err != nil {
+		return errors.Wrap(err, "save config")
+	}
+
+	log.Default.Donef("Successfully configured provider '%s'", provider.Name)
 	return nil
 }

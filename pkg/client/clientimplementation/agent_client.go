@@ -171,7 +171,27 @@ func (s *agentClient) Create(ctx context.Context, options client.CreateOptions) 
 
 	// create a new machine
 	if s.workspace.Machine.ID != "" {
-		return nil
+		// check machine state
+		if s.machine == nil {
+			return fmt.Errorf("machine is not defined")
+		}
+
+		// create machine client
+		machineClient, err := NewMachineClient(s.devPodConfig, s.config, s.machine, s.log)
+		if err != nil {
+			return err
+		}
+
+		// get status
+		machineStatus, err := machineClient.Status(ctx, client.StatusOptions{})
+		if err != nil {
+			return err
+		} else if machineStatus != client.StatusNotFound {
+			return nil
+		}
+
+		// create the machine
+		return machineClient.Create(ctx, client.CreateOptions{})
 	}
 
 	// create a new machine
@@ -204,6 +224,7 @@ func (s *agentClient) Create(ctx context.Context, options client.CreateOptions) 
 		return err
 	}
 
+	// create machine
 	return machineClient.Create(ctx, options)
 }
 
