@@ -1,6 +1,8 @@
 package cmd
 
 import (
+	"fmt"
+	"github.com/loft-sh/devpod/pkg/version"
 	"github.com/spf13/cobra"
 )
 
@@ -23,5 +25,6 @@ func NewVersionCmd() *cobra.Command {
 
 // Run runs the command logic
 func (cmd *VersionCmd) Run(_ *cobra.Command, _ []string) error {
+	fmt.Print(version.GetVersion())
 	return nil
 }
