@@ -4,9 +4,10 @@ package ssh
 
 import (
 	"context"
-	"golang.org/x/sys/unix"
 	"os"
 	"os/signal"
+
+	"golang.org/x/sys/unix"
 )
 
 func WatchWindowSize(ctx context.Context) <-chan os.Signal {
