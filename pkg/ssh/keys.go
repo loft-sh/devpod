@@ -76,7 +76,7 @@ func GetPrivateKeyRaw(context, workspaceID string) ([]byte, error) {
 		return nil, err
 	}
 
-	return GetPrivateKeyRawBase(workspaceDir)
+	return getPrivateKeyRawBase(workspaceDir)
 }
 
 func GetKeysTempDir() string {
@@ -105,7 +105,7 @@ func GetTempPublicKey() (string, error) {
 
 func GetTempPrivateKeyRaw() ([]byte, error) {
 	tempDir := GetKeysTempDir()
-	return GetPrivateKeyRawBase(tempDir)
+	return getPrivateKeyRawBase(tempDir)
 }
 
 func GetHostKey(context, workspaceID string) (string, error) {
@@ -117,7 +117,7 @@ func GetHostKey(context, workspaceID string) (string, error) {
 	return GetHostKeyBase(workspaceDir)
 }
 
-func GetPrivateKeyRawBase(dir string) ([]byte, error) {
+func getPrivateKeyRawBase(dir string) ([]byte, error) {
 	keyLock.Lock()
 	defer keyLock.Unlock()
 
@@ -187,20 +187,6 @@ func GetHostKeyBase(dir string) (string, error) {
 	}
 
 	return base64.StdEncoding.EncodeToString(out), nil
-}
-
-func GetPublicKeyPlain(dir string) (string, error) {
-	resultb64, err := GetPublicKeyBase(dir)
-	if err != nil {
-		return "", err
-	}
-
-	result, err := base64.StdEncoding.DecodeString(resultb64)
-	if err != nil {
-		return "", err
-	}
-
-	return string(result), nil
 }
 
 func GetPublicKeyBase(dir string) (string, error) {
