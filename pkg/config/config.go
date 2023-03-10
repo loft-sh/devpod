@@ -2,11 +2,13 @@ package config
 
 import (
 	"encoding/json"
+	"fmt"
+	"os"
+	"path/filepath"
+
 	"github.com/ghodss/yaml"
 	"github.com/loft-sh/devpod/pkg/types"
 	"github.com/pkg/errors"
-	"os"
-	"path/filepath"
 )
 
 type Config struct {
@@ -74,7 +76,15 @@ const DefaultContext = "default"
 func CloneConfig(config *Config) *Config {
 	out, _ := json.Marshal(config)
 	ret := &Config{}
-	_ = json.Unmarshal(out, ret)
+	err := json.Unmarshal(out, ret)
+	if err != nil {
+		panic(fmt.Errorf("failed to unmarshal config: %+w", err))
+	}
+	for _, ctx := range ret.Contexts {
+		if ctx.Providers == nil {
+			ctx.Providers = map[string]*ConfigProvider{}
+		}
+	}
 	ret.Origin = config.Origin
 	ret.OriginalContext = config.OriginalContext
 	return ret
