@@ -80,6 +80,7 @@ impl SystemTray {
                     match app.get_window("main") {
                         Some(window) => {
                             _ = window.show(); // TODO: handle error
+                            _ = window.eval("window.location.href = '/providers'");
                         }
                         None => {
                             // FIXME: implement correctly and reread from original window

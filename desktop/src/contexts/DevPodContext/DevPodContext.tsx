@@ -15,9 +15,9 @@ type TDevpodContext = Readonly<{
   providers: TProviders | null
   workspaces: TWorkspaces | null
 }>
-const DevpodContext = createContext<TDevpodContext>(null!)
+const DevPodContext = createContext<TDevpodContext>(null!)
 
-export function DevpodProvider({ children }: Readonly<{ children?: ReactNode }>) {
+export function DevPodProvider({ children }: Readonly<{ children?: ReactNode }>) {
   const [providers, setProviders] = useState<TProviders | null>(null)
   const [workspaces, setWorkspaces] = useState<TWorkspaces | null>(null)
 
@@ -43,13 +43,13 @@ export function DevpodProvider({ children }: Readonly<{ children?: ReactNode }>)
 
   const value = useMemo<TDevpodContext>(() => ({ providers, workspaces }), [providers, workspaces])
 
-  return <DevpodContext.Provider value={value}>{children}</DevpodContext.Provider>
+  return <DevPodContext.Provider value={value}>{children}</DevPodContext.Provider>
 }
 
 export function useWorkspaces(): TDevpodContext["workspaces"] {
-  return useContext(DevpodContext).workspaces
+  return useContext(DevPodContext).workspaces
 }
 
 export function useProviders(): TDevpodContext["providers"] {
-  return useContext(DevpodContext).providers
+  return useContext(DevPodContext).providers
 }

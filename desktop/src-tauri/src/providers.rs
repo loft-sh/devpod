@@ -9,7 +9,7 @@ use chrono::DateTime;
 use log::trace;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
-use tauri::{CustomMenuItem, SystemTrayMenu, SystemTraySubmenu};
+use tauri::{CustomMenuItem, SystemTrayMenu, SystemTraySubmenu, SystemTrayMenuItem};
 
 #[derive(Serialize, Deserialize, Debug, Default, Eq, PartialEq)]
 #[serde(rename_all(serialize = "camelCase", deserialize = "camelCase"))]
@@ -33,12 +33,18 @@ impl ProvidersState {
     }
 }
 
+impl ProvidersState {
+    const ADD_PROVIDER_ID: &str = "add_provider";
+}
+
 impl ToSystemTraySubmenu for ProvidersState {
     fn to_submenu(&self) -> tauri::SystemTraySubmenu {
         let mut providers_menu = SystemTrayMenu::new();
         let mut providers: Vec<_> = self.providers.iter().collect();
         providers.sort_by_key(|(key, _)| *key);
 
+        providers_menu = providers_menu.add_item(CustomMenuItem::new(Self::ADD_PROVIDER_ID, "Add Provider"))
+            .add_native_item(SystemTrayMenuItem::Separator);
         for (provider_name, _value) in providers {
             let mut item = CustomMenuItem::new(Self::item_id(provider_name), provider_name);
             if Some(provider_name.to_string()) == self.default_provider {
@@ -47,7 +53,6 @@ impl ToSystemTraySubmenu for ProvidersState {
 
             providers_menu = providers_menu.add_item(item);
         }
-
         SystemTraySubmenu::new("Providers", providers_menu)
     }
 

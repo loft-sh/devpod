@@ -3,7 +3,7 @@ import { invoke } from "@tauri-apps/api"
 import { StrictMode, useEffect } from "react"
 import ReactDOM from "react-dom/client"
 import { App } from "./App"
-import { DevpodProvider } from "./DevpodContext"
+import { DevPodProvider } from "./contexts/DevPodContext/DevPodContext"
 
 ReactDOM.createRoot(document.getElementById("root") as HTMLElement).render(<Root />)
 
@@ -16,9 +16,9 @@ function Root() {
   return (
     <StrictMode>
       <ThemeProvider>
-        <DevpodProvider>
+        <DevPodProvider>
           <App />
-        </DevpodProvider>
+        </DevPodProvider>
       </ThemeProvider>
     </StrictMode>
   )

@@ -6,7 +6,7 @@ use chrono::DateTime;
 use log::trace;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
-use tauri::{CustomMenuItem, SystemTrayMenu, SystemTraySubmenu};
+use tauri::{CustomMenuItem, SystemTrayMenu, SystemTraySubmenu, SystemTrayMenuItem};
 
 #[derive(Serialize, Deserialize, Debug, Default, Eq, PartialEq)]
 #[serde(
@@ -16,6 +16,7 @@ use tauri::{CustomMenuItem, SystemTrayMenu, SystemTraySubmenu};
 pub struct WorkspacesState {
     workspaces: Vec<Workspace>,
 }
+
 impl WorkspacesState {
     pub const IDENTIFIER_PREFIX: &str = "workspaces";
 
@@ -23,6 +24,7 @@ impl WorkspacesState {
         format!("{}-{}", Self::IDENTIFIER_PREFIX, id)
     }
 }
+
 impl WorkspacesState {
     pub fn load() -> Result<Self, DevpodCommandError> {
         trace!("loading workspaces");
@@ -31,9 +33,17 @@ impl WorkspacesState {
         list_workspaces_cmd.exec()
     }
 }
+
+impl WorkspacesState {
+    const CREATE_WORKSPACE_ID: &str = "create_workspace";
+}
+
 impl ToSystemTraySubmenu for WorkspacesState {
     fn to_submenu(&self) -> tauri::SystemTraySubmenu {
         let mut providers_menu = SystemTrayMenu::new();
+
+        providers_menu = providers_menu.add_item(CustomMenuItem::new(Self::CREATE_WORKSPACE_ID, "Create Workspace"))
+            .add_native_item(SystemTrayMenuItem::Separator);
         for workspace in &self.workspaces {
             if let Some(id) = workspace.id() {
                 let item = CustomMenuItem::new(Self::item_id(id), id);
@@ -45,7 +55,10 @@ impl ToSystemTraySubmenu for WorkspacesState {
     }
 
     fn on_tray_item_clicked(&self, _id: &str) -> Option<SystemTrayClickHandler> {
-        todo!()
+
+
+
+        None
     }
 }
 
