@@ -28,8 +28,7 @@ exec:
     spec:
       volumes:
         - name: devpod-storage
-          persistentVolumeClaim:
-            claimName: devpod-${MACHINE_ID}
+          emptyDir: {}
       containers:
         - name: devpod-container
           image: docker:dind
@@ -42,18 +41,6 @@ exec:
             subPath: root
           securityContext:
             privileged: true
-    ---
-    apiVersion: v1
-    kind: PersistentVolumeClaim
-    metadata:
-      name: devpod-${MACHINE_ID}
-    spec:
-      accessModes:
-        - ReadWriteOnce
-      resources:
-        requests:
-          storage: 20Gi
     EOF
   delete: |-
     kubectl delete pod devpod-${MACHINE_ID} -n "${NAMESPACE}" || true
-    kubectl delete pvc devpod-${MACHINE_ID} -n "${NAMESPACE}" || true

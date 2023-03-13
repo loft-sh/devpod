@@ -10,7 +10,6 @@ import (
 	"github.com/loft-sh/devpod/pkg/compress"
 	"github.com/loft-sh/devpod/pkg/config"
 	"github.com/loft-sh/devpod/pkg/log"
-	"github.com/loft-sh/devpod/pkg/machine"
 	"github.com/loft-sh/devpod/pkg/options"
 	"github.com/loft-sh/devpod/pkg/provider"
 	"github.com/loft-sh/devpod/pkg/shell"
@@ -33,13 +32,18 @@ func NewAgentClient(devPodConfig *config.Config, prov *provider.ProviderConfig, 
 		}
 	}
 
-	return &agentClient{
+	agentClient := &agentClient{
 		devPodConfig: devPodConfig,
 		config:       prov,
 		workspace:    workspace,
 		machine:      machineConfig,
 		log:          log,
-	}, nil
+	}
+	if agentClient.isMachineProvider() && workspace.Machine.ID == "" {
+		return nil, fmt.Errorf("workspace machine ID is empty, but machine provider found")
+	}
+
+	return agentClient, nil
 }
 
 type agentClient struct {
@@ -169,63 +173,27 @@ func (s *agentClient) Create(ctx context.Context, options client.CreateOptions) 
 		return nil
 	}
 
-	// create a new machine
-	if s.workspace.Machine.ID != "" {
-		// check machine state
-		if s.machine == nil {
-			return fmt.Errorf("machine is not defined")
-		}
-
-		// create machine client
-		machineClient, err := NewMachineClient(s.devPodConfig, s.config, s.machine, s.log)
-		if err != nil {
-			return err
-		}
-
-		// get status
-		machineStatus, err := machineClient.Status(ctx, client.StatusOptions{})
-		if err != nil {
-			return err
-		} else if machineStatus != client.StatusNotFound {
-			return nil
-		}
-
-		// create the machine
-		return machineClient.Create(ctx, client.CreateOptions{})
+	// check machine state
+	if s.machine == nil {
+		return fmt.Errorf("machine is not defined")
 	}
 
-	// create a new machine
-	s.workspace = provider.CloneWorkspace(s.workspace)
-	s.workspace.Machine.ID = s.workspace.ID
-	s.workspace.Machine.AutoDelete = true
-
-	// create machine folder
-	var err error
-	s.machine, err = machine.CreateMachine(s.workspace.Context, s.workspace.ID, s.config.Name)
-	if err != nil {
-		return err
-	}
-
-	// save workspace config
-	err = provider.SaveWorkspaceConfig(s.workspace)
-	if err != nil {
-		return err
-	}
-
-	// create machine
+	// create machine client
 	machineClient, err := NewMachineClient(s.devPodConfig, s.config, s.machine, s.log)
 	if err != nil {
 		return err
 	}
 
-	// refresh options
-	err = machineClient.RefreshOptions(ctx, nil)
+	// get status
+	machineStatus, err := machineClient.Status(ctx, client.StatusOptions{})
 	if err != nil {
 		return err
+	} else if machineStatus != client.StatusNotFound {
+		return nil
 	}
 
-	// create machine
-	return machineClient.Create(ctx, options)
+	// create the machine
+	return machineClient.Create(ctx, client.CreateOptions{})
 }
 
 func (s *agentClient) Delete(ctx context.Context, opt client.DeleteOptions) error {

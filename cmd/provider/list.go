@@ -47,7 +47,7 @@ func (cmd *ListCmd) Run(ctx context.Context) error {
 		return err
 	}
 
-	providers, err := workspace.LoadAllProviders(devPodConfig, log.Default)
+	providers, err := workspace.LoadAllProviders(devPodConfig)
 	if err != nil {
 		return err
 	}
@@ -67,7 +67,7 @@ func (cmd *ListCmd) Run(ctx context.Context) error {
 			tableEntries = append(tableEntries, []string{
 				entry.Config.Name,
 				strconv.FormatBool(devPodConfig.Current().DefaultProvider == entry.Config.Name),
-				strconv.FormatBool(entry.Configured),
+				strconv.FormatBool(entry.State != nil),
 				entry.Config.Description,
 			})
 		}
@@ -82,7 +82,7 @@ func (cmd *ListCmd) Run(ctx context.Context) error {
 			"Description",
 		}, tableEntries)
 	} else if cmd.Output == "json" {
-		out, err := json.Marshal(devPodConfig.Current())
+		out, err := json.Marshal(providers)
 		if err != nil {
 			return err
 		}

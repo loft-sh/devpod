@@ -79,7 +79,7 @@ func GetPrivateKeyRaw(context, workspaceID string) ([]byte, error) {
 	return GetPrivateKeyRawBase(workspaceDir)
 }
 
-func GetKeysTempDir() string {
+func GetDevPodKeysDir() string {
 	dir, err := homedir.Dir()
 	if err == nil {
 		tempDir := filepath.Join(dir, ".devpod", "keys")
@@ -93,18 +93,18 @@ func GetKeysTempDir() string {
 	return filepath.Join(tempDir, "devpod-ssh")
 }
 
-func GetTempHostKey() (string, error) {
-	tempDir := GetKeysTempDir()
+func GetDevPodHostKey() (string, error) {
+	tempDir := GetDevPodKeysDir()
 	return GetHostKeyBase(tempDir)
 }
 
-func GetTempPublicKey() (string, error) {
-	tempDir := GetKeysTempDir()
+func GetDevPodPublicKey() (string, error) {
+	tempDir := GetDevPodKeysDir()
 	return GetPublicKeyBase(tempDir)
 }
 
-func GetTempPrivateKeyRaw() ([]byte, error) {
-	tempDir := GetKeysTempDir()
+func GetDevPodPrivateKeyRaw() ([]byte, error) {
+	tempDir := GetDevPodKeysDir()
 	return GetPrivateKeyRawBase(tempDir)
 }
 

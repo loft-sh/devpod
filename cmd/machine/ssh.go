@@ -57,13 +57,13 @@ func (cmd *SSHCmd) Run(ctx context.Context, args []string) error {
 	}
 
 	// get token
-	tok, err := token.GenerateTemporaryToken()
+	tok, err := token.GetDevPodToken()
 	if err != nil {
 		return err
 	}
 
 	// get private key
-	privateKey, err := devssh.GetTempPrivateKeyRaw()
+	privateKey, err := devssh.GetDevPodPrivateKeyRaw()
 	if err != nil {
 		return err
 	}

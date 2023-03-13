@@ -7,7 +7,6 @@ import (
 	"github.com/loft-sh/devpod/pkg/client/clientimplementation"
 	"github.com/loft-sh/devpod/pkg/config"
 	"github.com/loft-sh/devpod/pkg/log"
-	"github.com/loft-sh/devpod/pkg/machine"
 	provider2 "github.com/loft-sh/devpod/pkg/provider"
 	"github.com/loft-sh/devpod/pkg/survey"
 	"github.com/loft-sh/devpod/pkg/terminal"
@@ -58,7 +57,7 @@ func resolveMachine(devPodConfig *config.Config, args []string, providerOverride
 	}
 
 	// resolve workspace
-	machineObj, err := machine.CreateMachine(devPodConfig.DefaultContext, machineID, defaultProvider.Config.Name)
+	machineObj, err := createMachine(devPodConfig.DefaultContext, machineID, defaultProvider.Config.Name)
 	if err != nil {
 		return nil, err
 	}

@@ -10,7 +10,6 @@ import (
 	"github.com/loft-sh/devpod/pkg/image"
 	"github.com/loft-sh/devpod/pkg/log"
 	provider2 "github.com/loft-sh/devpod/pkg/provider"
-	devssh "github.com/loft-sh/devpod/pkg/ssh"
 	"github.com/loft-sh/devpod/pkg/survey"
 	"github.com/loft-sh/devpod/pkg/terminal"
 	"github.com/loft-sh/devpod/pkg/types"
@@ -70,7 +69,7 @@ func GetWorkspace(ctx context.Context, devPodConfig *config.Config, ide *provide
 
 // ResolveWorkspace tries to retrieve an already existing workspace or creates a new one
 func ResolveWorkspace(ctx context.Context, devPodConfig *config.Config, ide *provider2.WorkspaceIDEConfig, args []string, desiredID, desiredMachine, providerOverride string, providerUserOptions []string, log log.Logger) (client.WorkspaceClient, error) {
-	workspaceClient, err := resolveWorkspace(ctx, devPodConfig, ide, args, desiredID, desiredMachine, providerOverride, log)
+	workspaceClient, err := resolveWorkspace(ctx, devPodConfig, ide, args, desiredID, desiredMachine, providerOverride, providerUserOptions, log)
 	if err != nil {
 		return nil, err
 	}
@@ -84,7 +83,7 @@ func ResolveWorkspace(ctx context.Context, devPodConfig *config.Config, ide *pro
 	return workspaceClient, nil
 }
 
-func resolveWorkspace(ctx context.Context, devPodConfig *config.Config, ide *provider2.WorkspaceIDEConfig, args []string, desiredID, desiredMachine, providerOverride string, log log.Logger) (client.WorkspaceClient, error) {
+func resolveWorkspace(ctx context.Context, devPodConfig *config.Config, ide *provider2.WorkspaceIDEConfig, args []string, desiredID, desiredMachine, providerOverride string, providerUserOptions []string, log log.Logger) (client.WorkspaceClient, error) {
 	// check if we have no args
 	if len(args) == 0 {
 		if desiredID != "" {
@@ -114,14 +113,24 @@ func resolveWorkspace(ctx context.Context, devPodConfig *config.Config, ide *pro
 		return loadExistingWorkspace(workspaceID, devPodConfig, ide, log)
 	}
 
-	// get default provider
-	defaultProvider, allProviders, err := LoadProviders(devPodConfig, log)
+	// create workspace
+	workspaceClient, err := createWorkspace(ctx, devPodConfig, ide, workspaceID, name, desiredMachine, providerOverride, providerUserOptions, isLocalPath, log)
 	if err != nil {
+		_ = clientimplementation.DeleteWorkspaceFolder(devPodConfig.DefaultContext, workspaceID)
 		return nil, err
 	}
-	if providerOverride != "" {
+
+	return workspaceClient, nil
+}
+
+func createWorkspace(ctx context.Context, devPodConfig *config.Config, ide *provider2.WorkspaceIDEConfig, workspaceID, name, desiredMachine, providerOverride string, providerUserOptions []string, isLocalPath bool, log log.Logger) (client.WorkspaceClient, error) {
+	// get default provider
+	provider, allProviders, err := LoadProviders(devPodConfig, log)
+	if err != nil {
+		return nil, err
+	} else if providerOverride != "" {
 		var ok bool
-		defaultProvider, ok = allProviders[providerOverride]
+		provider, ok = allProviders[providerOverride]
 		if !ok {
 			return nil, fmt.Errorf("couldn't find provider %s", providerOverride)
 		}
@@ -134,9 +143,8 @@ func resolveWorkspace(ctx context.Context, devPodConfig *config.Config, ide *pro
 	}
 
 	// resolve workspace
-	workspace, err := resolve(defaultProvider, devPodConfig, name, workspaceID, workspaceFolder, isLocalPath)
+	workspace, err := resolve(provider, devPodConfig, name, workspaceID, workspaceFolder, isLocalPath)
 	if err != nil {
-		_ = os.RemoveAll(workspaceFolder)
 		return nil, err
 	}
 
@@ -147,14 +155,12 @@ func resolveWorkspace(ctx context.Context, devPodConfig *config.Config, ide *pro
 
 	// set server
 	if desiredMachine != "" {
-		if !defaultProvider.Config.IsMachineProvider() {
-			_ = os.RemoveAll(workspaceFolder)
-			return nil, fmt.Errorf("provider %s cannot create servers and cannot be used", defaultProvider.Config.Name)
+		if !provider.Config.IsMachineProvider() {
+			return nil, fmt.Errorf("provider %s cannot create servers and cannot be used", provider.Config.Name)
 		}
 
 		// check if server exists
 		if !provider2.MachineExists(workspace.Context, desiredMachine) {
-			_ = os.RemoveAll(workspaceFolder)
 			return nil, fmt.Errorf("server %s doesn't exist and cannot be used", desiredMachine)
 		}
 
@@ -164,17 +170,55 @@ func resolveWorkspace(ctx context.Context, devPodConfig *config.Config, ide *pro
 		}
 	}
 
-	// save workspace config
-	err = saveWorkspaceConfig(workspace)
-	if err != nil {
-		_ = os.RemoveAll(workspaceFolder)
-		return nil, errors.Wrap(err, "save config")
+	// create a new machine
+	if provider.Config.IsMachineProvider() && workspace.Machine.ID == "" {
+		// create a new machine
+		workspace.Machine.ID = workspace.ID
+		workspace.Machine.AutoDelete = true
+
+		// save workspace config
+		err = saveWorkspaceConfig(workspace)
+		if err != nil {
+			return nil, errors.Wrap(err, "save config")
+		}
+
+		// create machine folder
+		machineConfig, err := createMachine(workspace.Context, workspace.ID, provider.Config.Name)
+		if err != nil {
+			return nil, err
+		}
+
+		// create machine
+		machineClient, err := clientimplementation.NewMachineClient(devPodConfig, provider.Config, machineConfig, log)
+		if err != nil {
+			_ = clientimplementation.DeleteMachineFolder(machineConfig.Context, machineConfig.ID)
+			return nil, err
+		}
+
+		// refresh options
+		err = machineClient.RefreshOptions(ctx, providerUserOptions)
+		if err != nil {
+			_ = clientimplementation.DeleteMachineFolder(machineConfig.Context, machineConfig.ID)
+			return nil, err
+		}
+
+		// create machine
+		err = machineClient.Create(ctx, client.CreateOptions{})
+		if err != nil {
+			_ = clientimplementation.DeleteMachineFolder(machineConfig.Context, machineConfig.ID)
+			return nil, err
+		}
+	} else {
+		// save workspace config
+		err = saveWorkspaceConfig(workspace)
+		if err != nil {
+			return nil, errors.Wrap(err, "save config")
+		}
 	}
 
 	// create a new client
-	workspaceClient, err := clientimplementation.NewWorkspaceClient(devPodConfig, defaultProvider.Config, workspace, log)
+	workspaceClient, err := clientimplementation.NewWorkspaceClient(devPodConfig, provider.Config, workspace, log)
 	if err != nil {
-		_ = os.RemoveAll(workspaceFolder)
 		return nil, errors.Wrap(err, "create workspace client")
 	}
 
@@ -182,12 +226,6 @@ func resolveWorkspace(ctx context.Context, devPodConfig *config.Config, ide *pro
 }
 
 func resolve(defaultProvider *ProviderWithOptions, devPodConfig *config.Config, name, workspaceID, workspaceFolder string, isLocalPath bool) (*provider2.Workspace, error) {
-	// create workspace ssh keys
-	_, err := devssh.GetPublicKey(devPodConfig.DefaultContext, workspaceID)
-	if err != nil {
-		return nil, errors.Wrap(err, "create ssh keys")
-	}
-
 	// is local folder?
 	if isLocalPath {
 		return &provider2.Workspace{
@@ -221,7 +259,7 @@ func resolve(defaultProvider *ProviderWithOptions, devPodConfig *config.Config, 
 	}
 
 	// is image?
-	_, err = image.GetImage(name)
+	_, err := image.GetImage(name)
 	if err == nil {
 		return &provider2.Workspace{
 			ID:      workspaceID,
@@ -385,4 +423,32 @@ func saveWorkspaceConfig(workspace *provider2.Workspace) error {
 	}
 
 	return nil
+}
+
+func createMachine(context, machineID, providerName string) (*provider2.Machine, error) {
+	// get the machine dir
+	machineDir, err := provider2.GetMachineDir(context, machineID)
+	if err != nil {
+		return nil, err
+	}
+
+	// save machine config
+	machine := &provider2.Machine{
+		ID:      machineID,
+		Folder:  machineDir,
+		Context: context,
+		Provider: provider2.MachineProviderConfig{
+			Name: providerName,
+		},
+		CreationTimestamp: types.Now(),
+	}
+
+	// create machine folder
+	err = provider2.SaveMachineConfig(machine)
+	if err != nil {
+		_ = os.RemoveAll(machineDir)
+		return nil, err
+	}
+
+	return machine, nil
 }

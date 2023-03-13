@@ -34,6 +34,9 @@ type ConfigContext struct {
 }
 
 type ConfigProvider struct {
+	// Initialized holds if the provider was initialized correctly
+	Initialized bool `json:"initialized,omitempty"`
+
 	// Options are the configured provider options
 	Options map[string]OptionValue `json:"options,omitempty"`
 }

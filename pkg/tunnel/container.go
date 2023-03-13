@@ -53,7 +53,7 @@ func (c *ContainerHandler) Run(ctx context.Context, runInHost Handler, runInCont
 	defer stdinWriter.Close()
 
 	// get token
-	tok, err := token.GenerateTemporaryToken()
+	tok, err := token.GetDevPodToken()
 	if err != nil {
 		return err
 	}
@@ -79,7 +79,7 @@ func (c *ContainerHandler) Run(ctx context.Context, runInHost Handler, runInCont
 		}, c.client.AgentPath(), c.client.AgentURL(), true, command, stdinReader, stdoutWriter, writer, c.log.ErrorStreamOnly())
 	}()
 
-	privateKey, err := devssh.GetTempPrivateKeyRaw()
+	privateKey, err := devssh.GetDevPodPrivateKeyRaw()
 	if err != nil {
 		return err
 	}

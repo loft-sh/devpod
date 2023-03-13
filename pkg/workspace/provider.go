@@ -14,21 +14,21 @@ import (
 	"io"
 	"net/http"
 	"os"
+	"path/filepath"
 	"strings"
 )
 
 var provideWorkspaceArgErr = fmt.Errorf("please provide a workspace name. E.g. 'devpod up ./my-folder', 'devpod up github.com/my-org/my-repo' or 'devpod up ubuntu'")
 
 type ProviderWithOptions struct {
-	Configured bool
-	Config     *provider2.ProviderConfig
-	Options    map[string]config.OptionValue
+	Config *provider2.ProviderConfig
+	State  *config.ConfigProvider
 }
 
 // LoadProviders loads all known providers for the given context and
 func LoadProviders(devPodConfig *config.Config, log log.Logger) (*ProviderWithOptions, map[string]*ProviderWithOptions, error) {
 	defaultContext := devPodConfig.Current()
-	retProviders, err := LoadAllProviders(devPodConfig, log)
+	retProviders, err := LoadAllProviders(devPodConfig)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -44,60 +44,66 @@ func LoadProviders(devPodConfig *config.Config, log log.Logger) (*ProviderWithOp
 }
 
 func AddProvider(devPodConfig *config.Config, provider string, log log.Logger) (*provider2.ProviderConfig, error) {
-	providerRaw, err := resolveProvider(provider, log)
+	providerRaw, providerSource, err := resolveProvider(provider, log)
 	if err != nil {
 		return nil, err
 	}
 
-	return installProvider(devPodConfig, providerRaw, log)
+	return installProvider(devPodConfig, providerRaw, providerSource, log)
 }
 
 func UpdateProvider(devPodConfig *config.Config, provider string, log log.Logger) (*provider2.ProviderConfig, error) {
-	providerRaw, err := resolveProvider(provider, log)
+	providerRaw, providerSource, err := resolveProvider(provider, log)
 	if err != nil {
 		return nil, err
 	}
 
-	return updateProvider(devPodConfig, provider, providerRaw, log)
+	return updateProvider(devPodConfig, provider, providerRaw, providerSource, log)
 }
 
-func resolveProvider(provider string, log log.Logger) ([]byte, error) {
+func resolveProvider(provider string, log log.Logger) ([]byte, *provider2.ProviderSource, error) {
+	// url?
+	if strings.HasPrefix(provider, "http://") || strings.HasPrefix(provider, "https://") {
+		log.Infof("Download provider %s...", provider)
+		out, err := downloadProvider(provider)
+		if err != nil {
+			return nil, nil, err
+		}
+
+		return out, &provider2.ProviderSource{URL: provider}, nil
+	}
+
 	// local file?
 	if strings.HasSuffix(provider, ".yaml") || strings.HasSuffix(provider, ".yml") {
 		_, err := os.Stat(provider)
 		if err == nil {
 			out, err := os.ReadFile(provider)
 			if err == nil {
-				return out, nil
+				absPath, err := filepath.Abs(provider)
+				if err != nil {
+					return nil, nil, err
+				}
+
+				return out, &provider2.ProviderSource{
+					File: absPath,
+				}, nil
 			}
 		}
 	}
 
-	// url?
-	if strings.HasPrefix(provider, "http://") || strings.HasPrefix(provider, "https://") {
-		log.Infof("Download provider %s...", provider)
-
-		out, err := downloadProvider(provider)
-		if err != nil {
-			return nil, err
-		}
-
-		return out, nil
-	}
-
 	// check if github
-	out, err := DownloadProviderGithub(provider)
+	out, source, err := DownloadProviderGithub(provider)
 	if err != nil {
-		return nil, errors.Wrap(err, "download github")
+		return nil, nil, errors.Wrap(err, "download github")
 	} else if len(out) > 0 {
-		return out, nil
+		return out, source, nil
 	}
 
-	return nil, fmt.Errorf("unrecognized provider type, please specify either a local file, url or github repository")
+	return nil, nil, fmt.Errorf("unrecognized provider type, please specify either a local file, url or github repository")
 }
 
-func DownloadProviderGithub(path string) ([]byte, error) {
-	path = strings.TrimPrefix(path, "github.com/")
+func DownloadProviderGithub(originalPath string) ([]byte, *provider2.ProviderSource, error) {
+	path := strings.TrimPrefix(originalPath, "github.com/")
 
 	// resolve release
 	release := ""
@@ -112,7 +118,7 @@ func DownloadProviderGithub(path string) ([]byte, error) {
 	if len(splitted) == 1 {
 		path = "loft-sh/devpod-provider-" + path
 	} else if len(splitted) != 2 {
-		return nil, nil
+		return nil, nil, nil
 	}
 
 	// get latest release
@@ -126,12 +132,19 @@ func DownloadProviderGithub(path string) ([]byte, error) {
 	// download
 	body, err := download.File(requestURL)
 	if err != nil {
-		return nil, errors.Wrap(err, "download")
+		return nil, nil, errors.Wrap(err, "download")
 	}
 	defer body.Close()
 
 	// read body
-	return io.ReadAll(body)
+	out, err := io.ReadAll(body)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	return out, &provider2.ProviderSource{
+		Github: path,
+	}, nil
 }
 
 func downloadProvider(url string) ([]byte, error) {
@@ -150,11 +163,12 @@ func downloadProvider(url string) ([]byte, error) {
 	return io.ReadAll(resp.Body)
 }
 
-func updateProvider(devPodConfig *config.Config, provider string, raw []byte, log log.Logger) (*provider2.ProviderConfig, error) {
+func updateProvider(devPodConfig *config.Config, provider string, raw []byte, source *provider2.ProviderSource, log log.Logger) (*provider2.ProviderConfig, error) {
 	providerConfig, err := provider2.ParseProvider(bytes.NewReader(raw))
 	if err != nil {
 		return nil, err
 	}
+	providerConfig.Source = *source
 
 	if devPodConfig.Current().Providers[providerConfig.Name] == nil {
 		return nil, fmt.Errorf("provider %s doesn't exist. Please run 'devpod provider add %s' instead", providerConfig.Name, provider)
@@ -195,13 +209,14 @@ func updateProvider(devPodConfig *config.Config, provider string, raw []byte, lo
 	return providerConfig, nil
 }
 
-func installProvider(devPodConfig *config.Config, raw []byte, log log.Logger) (*provider2.ProviderConfig, error) {
+func installProvider(devPodConfig *config.Config, raw []byte, source *provider2.ProviderSource, log log.Logger) (*provider2.ProviderConfig, error) {
 	providerConfig, err := provider2.ParseProvider(bytes.NewReader(raw))
 	if err != nil {
 		return nil, err
 	} else if devPodConfig.Current().Providers[providerConfig.Name] != nil {
 		return nil, fmt.Errorf("provider %s already exists. Please run 'devpod provider delete %s' before adding the provider", providerConfig.Name, providerConfig.Name)
 	}
+	providerConfig.Source = *source
 
 	providerDir, err := provider2.GetProviderDir(devPodConfig.DefaultContext, providerConfig.Name)
 	if err != nil {
@@ -233,7 +248,7 @@ func installProvider(devPodConfig *config.Config, raw []byte, log log.Logger) (*
 }
 
 func FindProvider(devPodConfig *config.Config, name string, log log.Logger) (*ProviderWithOptions, error) {
-	retProviders, err := LoadAllProviders(devPodConfig, log)
+	retProviders, err := LoadAllProviders(devPodConfig)
 	if err != nil {
 		return nil, err
 	} else if retProviders[name] == nil {
@@ -243,7 +258,7 @@ func FindProvider(devPodConfig *config.Config, name string, log log.Logger) (*Pr
 	return retProviders[name], nil
 }
 
-func LoadAllProviders(devPodConfig *config.Config, log log.Logger) (map[string]*ProviderWithOptions, error) {
+func LoadAllProviders(devPodConfig *config.Config) (map[string]*ProviderWithOptions, error) {
 	builtInProvidersConfig, err := providers.GetBuiltInProviders()
 	if err != nil {
 		return nil, err
@@ -257,10 +272,9 @@ func LoadAllProviders(devPodConfig *config.Config, log log.Logger) (map[string]*
 	}
 
 	defaultContext := devPodConfig.Current()
-	for providerName, providerOptions := range defaultContext.Providers {
+	for providerName, providerState := range defaultContext.Providers {
 		if retProviders[providerName] != nil {
-			retProviders[providerName].Configured = true
-			retProviders[providerName].Options = providerOptions.Options
+			retProviders[providerName].State = providerState
 			continue
 		}
 
@@ -271,9 +285,8 @@ func LoadAllProviders(devPodConfig *config.Config, log log.Logger) (map[string]*
 		}
 
 		retProviders[providerName] = &ProviderWithOptions{
-			Configured: true,
-			Config:     providerConfig,
-			Options:    providerOptions.Options,
+			Config: providerConfig,
+			State:  providerState,
 		}
 	}
 

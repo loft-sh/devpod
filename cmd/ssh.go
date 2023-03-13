@@ -3,7 +3,6 @@ package cmd
 import (
 	"context"
 	"fmt"
-	"github.com/gen2brain/beeep"
 	"github.com/loft-sh/devpod/cmd/flags"
 	"github.com/loft-sh/devpod/cmd/machine"
 	"github.com/loft-sh/devpod/pkg/agent"
@@ -78,7 +77,7 @@ func (cmd *SSHCmd) Run(ctx context.Context, client client2.WorkspaceClient) erro
 	return cmd.jumpContainer(ctx, client, log.Default.ErrorStreamOnly())
 }
 
-func startWait(ctx context.Context, client client2.WorkspaceClient, create, showNotification bool, log log.Logger) error {
+func startWait(ctx context.Context, client client2.WorkspaceClient, create bool, log log.Logger) error {
 	startWaiting := time.Now()
 	for {
 		instanceStatus, err := client.Status(ctx, client2.StatusOptions{})
@@ -94,15 +93,14 @@ func startWait(ctx context.Context, client client2.WorkspaceClient, create, show
 			time.Sleep(time.Second)
 			continue
 		} else if instanceStatus == client2.StatusStopped {
-			if showNotification {
-				go func() {
-					_ = beeep.Notify("DevPod", fmt.Sprintf("Starting currently stopped workspace %s...", client.Workspace()), "assets/information.png")
-				}()
-			}
-
-			err = client.Start(ctx, client2.StartOptions{})
-			if err != nil {
-				return errors.Wrap(err, "start instance")
+			if create {
+				// start environment
+				err = client.Start(ctx, client2.StartOptions{})
+				if err != nil {
+					return errors.Wrap(err, "start instance")
+				}
+			} else {
+				return fmt.Errorf("workspace is stopped")
 			}
 		} else if instanceStatus == client2.StatusNotFound {
 			if create {
@@ -112,7 +110,7 @@ func startWait(ctx context.Context, client client2.WorkspaceClient, create, show
 					return err
 				}
 			} else {
-				return fmt.Errorf("instance wasn't found")
+				return fmt.Errorf("workspace wasn't found")
 			}
 		}
 
@@ -138,7 +136,7 @@ func (cmd *SSHCmd) jumpContainerWorkspace(ctx context.Context, client client2.Wo
 		return fmt.Errorf("unsupported")
 	}
 
-	err := startWait(ctx, client, false, true, log.Default)
+	err := startWait(ctx, client, false, log.Default)
 	if err != nil {
 		return err
 	}
@@ -156,13 +154,13 @@ func (cmd *SSHCmd) jumpContainerWorkspace(ctx context.Context, client client2.Wo
 }
 
 func (cmd *SSHCmd) jumpContainerServer(ctx context.Context, client client2.AgentClient, log log.Logger) error {
-	err := startWait(ctx, client, false, true, log)
+	err := startWait(ctx, client, false, log)
 	if err != nil {
 		return err
 	}
 
 	// get token
-	tok, err := token.GenerateWorkspaceToken(client.Context(), client.Workspace())
+	tok, err := token.GetDevPodToken()
 	if err != nil {
 		return err
 	}
@@ -201,7 +199,7 @@ func (cmd *SSHCmd) jumpContainerServer(ctx context.Context, client client2.Agent
 			return devssh.Run(sshClient, command, os.Stdin, os.Stdout, writer)
 		}
 
-		privateKey, err := devssh.GetPrivateKeyRaw(client.Context(), client.Workspace())
+		privateKey, err := devssh.GetDevPodPrivateKeyRaw()
 		if err != nil {
 			return err
 		}

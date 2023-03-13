@@ -150,6 +150,9 @@ func ResolveOptions(ctx context.Context, devConfig *config.Config, provider *pro
 	// dev config
 	if devConfig != nil {
 		devConfig = config.CloneConfig(devConfig)
+		if devConfig.Current().Providers == nil {
+			devConfig.Current().Providers = map[string]*config.ConfigProvider{}
+		}
 		if devConfig.Current().Providers[provider.Name] == nil {
 			devConfig.Current().Providers[provider.Name] = &config.ConfigProvider{}
 		}

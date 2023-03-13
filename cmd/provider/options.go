@@ -63,9 +63,9 @@ func (cmd *OptionsCmd) Run(ctx context.Context, providerName string) error {
 		return err
 	}
 
-	entryOptions := provider.Options
-	if entryOptions == nil {
-		entryOptions = map[string]config.OptionValue{}
+	entryOptions := map[string]config.OptionValue{}
+	if provider.State != nil && provider.State.Options != nil {
+		entryOptions = provider.State.Options
 	}
 
 	if cmd.Output == "plain" {
