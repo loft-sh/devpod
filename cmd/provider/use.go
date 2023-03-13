@@ -87,7 +87,7 @@ func (cmd *UseCmd) Run(ctx context.Context, providerName string) error {
 
 func configureProvider(ctx context.Context, provider *provider2.ProviderConfig, context string, userOptions []string, reconfigure, runInit bool) error {
 	// set options
-	devPodConfig, err := setOptions(ctx, provider, context, userOptions, reconfigure)
+	devPodConfig, err := setOptions(ctx, provider, context, userOptions, reconfigure, false)
 	if err != nil {
 		return err
 	}
@@ -120,7 +120,7 @@ func configureProvider(ctx context.Context, provider *provider2.ProviderConfig, 
 	return nil
 }
 
-func setOptions(ctx context.Context, provider *provider2.ProviderConfig, context string, userOptions []string, reconfigure bool) (*config.Config, error) {
+func setOptions(ctx context.Context, provider *provider2.ProviderConfig, context string, userOptions []string, reconfigure, skipRequired bool) (*config.Config, error) {
 	devPodConfig, err := config.LoadConfig(context)
 	if err != nil {
 		return nil, err
@@ -143,7 +143,7 @@ func setOptions(ctx context.Context, provider *provider2.ProviderConfig, context
 	}
 
 	// fill defaults
-	devPodConfig, err = options2.ResolveOptions(ctx, devPodConfig, provider, options, log.Default)
+	devPodConfig, err = options2.ResolveOptions(ctx, devPodConfig, provider, options, skipRequired, log.Default)
 	if err != nil {
 		return nil, errors.Wrap(err, "resolve options")
 	}

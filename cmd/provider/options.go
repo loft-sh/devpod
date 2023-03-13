@@ -8,6 +8,7 @@ import (
 	"github.com/loft-sh/devpod/pkg/config"
 	"github.com/loft-sh/devpod/pkg/log"
 	"github.com/loft-sh/devpod/pkg/log/table"
+	"github.com/loft-sh/devpod/pkg/options"
 	provider2 "github.com/loft-sh/devpod/pkg/provider"
 	"github.com/loft-sh/devpod/pkg/workspace"
 	"github.com/spf13/cobra"
@@ -19,8 +20,9 @@ import (
 type OptionsCmd struct {
 	*flags.GlobalFlags
 
-	Hidden bool
-	Output string
+	Prefill bool
+	Hidden  bool
+	Output  string
 }
 
 // NewOptionsCmd creates a new command
@@ -40,6 +42,7 @@ func NewOptionsCmd(flags *flags.GlobalFlags) *cobra.Command {
 		},
 	}
 
+	optionsCmd.Flags().BoolVar(&cmd.Prefill, "prefill", true, "If provider is not initialized, will show prefilled values.")
 	optionsCmd.Flags().BoolVar(&cmd.Hidden, "hidden", false, "If true, will also show hidden options.")
 	optionsCmd.Flags().StringVar(&cmd.Output, "output", "plain", "The output format to use. Can be json or plain")
 	return optionsCmd
@@ -63,11 +66,14 @@ func (cmd *OptionsCmd) Run(ctx context.Context, providerName string) error {
 		return err
 	}
 
-	entryOptions := map[string]config.OptionValue{}
-	if provider.State != nil && provider.State.Options != nil {
-		entryOptions = provider.State.Options
+	if cmd.Prefill && provider.State == nil {
+		devPodConfig, err = options.ResolveOptions(ctx, devPodConfig, provider.Config, nil, true, log.Default)
+		if err != nil {
+			return err
+		}
 	}
 
+	entryOptions := devPodConfig.ProviderOptions(provider.Config.Name)
 	if cmd.Output == "plain" {
 		tableEntries := [][]string{}
 		for optionName, entry := range provider.Config.Options {

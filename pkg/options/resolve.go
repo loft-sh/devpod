@@ -55,6 +55,7 @@ func ResolveAndSaveOptionsMachine(ctx context.Context, devConfig *config.Config,
 		provider2.Merge(provider2.ToOptionsMachine(machine), binaryPaths),
 		true,
 		false,
+		false,
 		log,
 	)
 	if err != nil {
@@ -104,6 +105,7 @@ func ResolveAndSaveOptionsWorkspace(ctx context.Context, devConfig *config.Confi
 		provider2.Merge(provider2.ToOptionsWorkspace(workspace), binaryPaths),
 		true,
 		false,
+		false,
 		log,
 	)
 	if err != nil {
@@ -125,7 +127,7 @@ func ResolveAndSaveOptionsWorkspace(ctx context.Context, devConfig *config.Confi
 	return workspace, nil
 }
 
-func ResolveOptions(ctx context.Context, devConfig *config.Config, provider *provider2.ProviderConfig, userOptions map[string]string, log log.Logger) (*config.Config, error) {
+func ResolveOptions(ctx context.Context, devConfig *config.Config, provider *provider2.ProviderConfig, userOptions map[string]string, skipRequired bool, log log.Logger) (*config.Config, error) {
 	// get binary paths
 	binaryPaths, err := binaries.GetBinaries(devConfig.DefaultContext, provider)
 	if err != nil {
@@ -141,6 +143,7 @@ func ResolveOptions(ctx context.Context, devConfig *config.Config, provider *pro
 		provider2.Merge(provider2.GetBaseEnvironment(), binaryPaths),
 		false,
 		true,
+		skipRequired,
 		log,
 	)
 	if err != nil {
@@ -191,6 +194,7 @@ func resolveOptionsGeneric(
 	extraValues map[string]string,
 	resolveLocal bool,
 	resolveGlobal bool,
+	skipRequired bool,
 	log log.Logger,
 ) (map[string]config.OptionValue, error) {
 	if options == nil {
@@ -216,7 +220,17 @@ func resolveOptionsGeneric(
 	}
 
 	// resolve options
-	resolvedOptions, err := resolveOptions(ctx, g, optionValues, userOptions, extraValues, resolveLocal, resolveGlobal, log)
+	resolvedOptions, err := resolveOptions(
+		ctx,
+		g,
+		optionValues,
+		userOptions,
+		extraValues,
+		resolveLocal,
+		resolveGlobal,
+		skipRequired,
+		log,
+	)
 	if err != nil {
 		return nil, err
 	}
@@ -232,6 +246,7 @@ func resolveOptions(
 	extraValues map[string]string,
 	resolveLocal bool,
 	resolveGlobal bool,
+	skipRequired bool,
 	log log.Logger,
 ) (map[string]config.OptionValue, error) {
 	// copy options
@@ -254,10 +269,15 @@ func resolveOptions(
 		nextLeaf = clonedGraph.GetNextLeaf(clonedGraph.Root)
 	}
 
-	// resolve options in reverse order
+	// resolve options in reverse order to walk from highest to lowest
+	excludedOptions := map[string]bool{}
 	for i := len(orderedOptions) - 1; i >= 0; i-- {
 		optionName := orderedOptions[i]
-		err := resolveOption(ctx, g, optionName, resolvedOptions, userOptions, extraValues, resolveLocal, resolveGlobal, log)
+		if excludedOptions[optionName] {
+			continue
+		}
+
+		err := resolveOption(ctx, g, optionName, resolvedOptions, excludedOptions, userOptions, extraValues, resolveLocal, resolveGlobal, skipRequired, log)
 		if err != nil {
 			return nil, errors.Wrap(err, "resolve option "+optionName)
 		}
@@ -271,10 +291,12 @@ func resolveOption(
 	g *graph.Graph,
 	optionName string,
 	resolvedOptions map[string]config.OptionValue,
+	excludedOptions map[string]bool,
 	userOptions map[string]string,
 	extraValues map[string]string,
 	resolveLocal bool,
 	resolveGlobal bool,
+	skipRequired bool,
 	log log.Logger,
 ) error {
 	node := g.Nodes[optionName]
@@ -340,6 +362,13 @@ func resolveOption(
 
 	// is required?
 	if !userValueOk && option.Required && resolvedOptions[optionName].Value == "" && !resolvedOptions[optionName].UserProvided {
+		if skipRequired {
+			delete(resolvedOptions, optionName)
+			excludeChildren(g.Nodes[optionName], excludedOptions)
+			return nil
+		}
+
+		// check if we can ask a question
 		if !terminal.IsTerminalIn {
 			return fmt.Errorf("option %s is required, but no value provided", optionName)
 		}
@@ -375,6 +404,13 @@ func resolveOption(
 	}
 
 	return nil
+}
+
+func excludeChildren(node *graph.Node, excludedOptions map[string]bool) {
+	for _, child := range node.Childs {
+		excludedOptions[child.ID] = true
+		excludeChildren(child, excludedOptions)
+	}
 }
 
 func resolveFromCommand(ctx context.Context, option *provider2.ProviderOption, resolvedOptions map[string]config.OptionValue, extraValues map[string]string) (config.OptionValue, error) {
