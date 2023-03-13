@@ -21,11 +21,10 @@ type UseCmd struct {
 	flags.GlobalFlags
 
 	Reconfigure bool
-	Single      bool
 	Options     []string
 }
 
-// NewUseCmd creates a new destroy command
+// NewUseCmd creates a new command
 func NewUseCmd(flags *flags.GlobalFlags) *cobra.Command {
 	cmd := &UseCmd{
 		GlobalFlags: *flags,
@@ -48,16 +47,11 @@ func NewUseCmd(flags *flags.GlobalFlags) *cobra.Command {
 
 func AddFlags(useCmd *cobra.Command, cmd *UseCmd) {
 	useCmd.Flags().BoolVar(&cmd.Reconfigure, "reconfigure", false, "If enabled will not merge existing provider config")
-	useCmd.Flags().BoolVar(&cmd.Single, "single", false, "If enabled DevPod will create a single server for all workspaces")
 	useCmd.Flags().StringSliceVarP(&cmd.Options, "option", "o", []string{}, "Provider option in the form KEY=VALUE")
 }
 
 // Run runs the command logic
 func (cmd *UseCmd) Run(ctx context.Context, providerName string) error {
-	if cmd.Context != "" {
-		return fmt.Errorf("cannot use --context for this command")
-	}
-
 	devPodConfig, err := config.LoadConfig(cmd.Context)
 	if err != nil {
 		return err
@@ -92,41 +86,20 @@ func (cmd *UseCmd) Run(ctx context.Context, providerName string) error {
 }
 
 func configureProvider(ctx context.Context, provider *provider2.ProviderConfig, context string, userOptions []string, reconfigure, runInit bool) error {
-	devPodConfig, err := config.LoadConfig(context)
+	// set options
+	devPodConfig, err := setOptions(ctx, provider, context, userOptions, reconfigure)
 	if err != nil {
 		return err
 	}
 
-	// parse options
-	options, err := provider2.ParseOptions(provider, userOptions)
-	if err != nil {
-		return errors.Wrap(err, "parse options")
-	}
-
-	// merge with old values
-	if !reconfigure {
-		for k, v := range devPodConfig.ProviderOptions(provider.Name) {
-			_, ok := options[k]
-			if !ok && v.UserProvided {
-				options[k] = v.Value
-			}
-		}
-	}
-
-	stdout := log.Default.Writer(logrus.InfoLevel, false)
-	defer stdout.Close()
-
-	stderr := log.Default.Writer(logrus.ErrorLevel, false)
-	defer stderr.Close()
-
-	// fill defaults
-	devPodConfig, err = options2.ResolveOptions(ctx, devPodConfig, provider, options, log.Default)
-	if err != nil {
-		return errors.Wrap(err, "resolve options")
-	}
-
 	// run init command
 	if runInit {
+		stdout := log.Default.Writer(logrus.InfoLevel, false)
+		defer stdout.Close()
+
+		stderr := log.Default.Writer(logrus.ErrorLevel, false)
+		defer stderr.Close()
+
 		err = initProvider(ctx, devPodConfig, provider, stdout, stderr)
 		if err != nil {
 			return err
@@ -145,6 +118,37 @@ func configureProvider(ctx context.Context, provider *provider2.ProviderConfig, 
 
 	log.Default.Donef("Successfully configured provider '%s'", provider.Name)
 	return nil
+}
+
+func setOptions(ctx context.Context, provider *provider2.ProviderConfig, context string, userOptions []string, reconfigure bool) (*config.Config, error) {
+	devPodConfig, err := config.LoadConfig(context)
+	if err != nil {
+		return nil, err
+	}
+
+	// parse options
+	options, err := provider2.ParseOptions(provider, userOptions)
+	if err != nil {
+		return nil, errors.Wrap(err, "parse options")
+	}
+
+	// merge with old values
+	if !reconfigure {
+		for k, v := range devPodConfig.ProviderOptions(provider.Name) {
+			_, ok := options[k]
+			if !ok && v.UserProvided {
+				options[k] = v.Value
+			}
+		}
+	}
+
+	// fill defaults
+	devPodConfig, err = options2.ResolveOptions(ctx, devPodConfig, provider, options, log.Default)
+	if err != nil {
+		return nil, errors.Wrap(err, "resolve options")
+	}
+
+	return devPodConfig, nil
 }
 
 func initProvider(ctx context.Context, devPodConfig *config.Config, provider *provider2.ProviderConfig, stdout, stderr io.Writer) error {
