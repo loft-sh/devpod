@@ -23,7 +23,7 @@ type OptionsCmd struct {
 	Output string
 }
 
-// NewOptionsCmd creates a new destroy command
+// NewOptionsCmd creates a new command
 func NewOptionsCmd(flags *flags.GlobalFlags) *cobra.Command {
 	cmd := &OptionsCmd{
 		GlobalFlags: flags,

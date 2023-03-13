@@ -19,8 +19,7 @@ import (
 func NewMachineClient(devPodConfig *config.Config, provider *provider.ProviderConfig, machine *provider.Machine, log log.Logger) (client.Client, error) {
 	if !provider.IsMachineProvider() {
 		return nil, fmt.Errorf("provider '%s' is not a machine provider. Please use another provider", provider.Name)
-	}
-	if machine == nil {
+	} else if machine == nil {
 		return nil, fmt.Errorf("machine doesn't exist. Seems like it was deleted without the workspace being deleted")
 	}
 
@@ -213,7 +212,7 @@ func (s *machineClient) Delete(ctx context.Context, options client.DeleteOptions
 		defer cancel()
 	}
 
-	s.log.Infof("Deleting %s machine...", s.config.Name)
+	s.log.Infof("Deleting '%s' machine '%s'...", s.config.Name, s.machine.ID)
 	err := RunCommandWithBinaries(
 		ctx,
 		"delete",
@@ -234,9 +233,9 @@ func (s *machineClient) Delete(ctx context.Context, options client.DeleteOptions
 			return err
 		}
 
-		s.log.Errorf("Error deleting machine %s", s.machine.ID)
+		s.log.Errorf("Error deleting machine '%s'", s.machine.ID)
 	}
-	s.log.Donef("Successfully deleted %s machine", s.config.Name)
+	s.log.Donef("Successfully deleted '%s' machine '%s'", s.config.Name, s.machine.ID)
 
 	// delete machine folder
 	err = DeleteMachineFolder(s.machine.Context, s.machine.ID)
