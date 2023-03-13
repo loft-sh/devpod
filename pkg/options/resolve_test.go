@@ -19,6 +19,7 @@ type testCase struct {
 	ExtraValues      map[string]string
 	ResolveGlobal    bool
 	DontResolveLocal bool
+	SkipRequired     bool
 
 	ExpectErr       bool
 	ExpectedOptions map[string]string
@@ -255,10 +256,33 @@ func TestResolveOptions(t *testing.T) {
 				"CHILD1": "test",
 			},
 		},
+		{
+			Name: "Skip Required",
+			ProviderOptions: map[string]*provider2.ProviderOption{
+				"PARENT": {
+					Required: true,
+				},
+				"CHILD1": {
+					Default: "${PARENT}",
+				},
+				"PARENT2": {
+					Required: true,
+					Default:  "test",
+				},
+				"CHILD2": {
+					Default: "${PARENT2}",
+				},
+			},
+			SkipRequired: true,
+			ExpectedOptions: map[string]string{
+				"PARENT2": "test",
+				"CHILD2":  "test",
+			},
+		},
 	}
 
 	for _, testCase := range testCases {
-		options, err := resolveOptionsGeneric(context.Background(), testCase.ProviderOptions, testCase.Values, testCase.UserValues, testCase.ExtraValues, !testCase.DontResolveLocal, testCase.ResolveGlobal, log.Default)
+		options, err := resolveOptionsGeneric(context.Background(), testCase.ProviderOptions, testCase.Values, testCase.UserValues, testCase.ExtraValues, !testCase.DontResolveLocal, testCase.ResolveGlobal, testCase.SkipRequired, log.Default)
 		if !testCase.ExpectErr {
 			assert.NilError(t, err, testCase.Name)
 		} else if testCase.ExpectErr {
