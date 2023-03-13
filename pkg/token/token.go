@@ -12,31 +12,15 @@ type Token struct {
 	AuthorizedKeys string `json:"authorizedKeys,omitempty"`
 }
 
-func GenerateTemporaryToken() (string, error) {
+func GetDevPodToken() (string, error) {
 	// get host key
-	hostKey, err := ssh.GetTempHostKey()
+	hostKey, err := ssh.GetDevPodHostKey()
 	if err != nil {
 		return "", errors.Wrap(err, "generate host key")
 	}
 
 	// get public key
-	publicKey, err := ssh.GetTempPublicKey()
-	if err != nil {
-		return "", errors.Wrap(err, "generate key pair")
-	}
-
-	return buildToken(hostKey, publicKey)
-}
-
-func GenerateWorkspaceToken(context, workspaceID string) (string, error) {
-	// get host key
-	hostKey, err := ssh.GetHostKey(context, workspaceID)
-	if err != nil {
-		return "", errors.Wrap(err, "generate host key")
-	}
-
-	// get public key
-	publicKey, err := ssh.GetPublicKey(context, workspaceID)
+	publicKey, err := ssh.GetDevPodPublicKey()
 	if err != nil {
 		return "", errors.Wrap(err, "generate key pair")
 	}

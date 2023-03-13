@@ -8,8 +8,6 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/loft-sh/devpod/pkg/provider"
-
 	"github.com/loft-sh/devpod/pkg/log"
 	"github.com/loft-sh/devpod/pkg/scanner"
 	"github.com/mitchellh/go-homedir"
@@ -100,17 +98,11 @@ func addHost(path, host, user, context, workspace, command string) (string, erro
 		return "", err
 	}
 
-	// get private key path
-	workspaceDir, err := provider.GetWorkspaceDir(context, workspace)
-	if err != nil {
-		return "", err
-	}
-
 	// add new section
 	newLines = append(newLines, startMarker)
 	newLines = append(newLines, "Host "+host)
 	newLines = append(newLines, "  LogLevel error")
-	newLines = append(newLines, "  IdentityFile \""+filepath.Join(workspaceDir, DevPodSSHPrivateKeyFile)+"\"")
+	newLines = append(newLines, "  IdentityFile \""+filepath.Join(GetDevPodKeysDir(), DevPodSSHPrivateKeyFile)+"\"")
 	newLines = append(newLines, "  StrictHostKeyChecking no")
 	newLines = append(newLines, "  UserKnownHostsFile /dev/null")
 	newLines = append(newLines, "  IdentitiesOnly yes")

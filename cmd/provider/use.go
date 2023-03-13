@@ -13,6 +13,7 @@ import (
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
+	"io"
 )
 
 // UseCmd holds the use cmd flags
@@ -68,9 +69,9 @@ func (cmd *UseCmd) Run(ctx context.Context, providerName string) error {
 	}
 
 	// should reconfigure?
-	shouldReconfigure := cmd.Reconfigure || len(cmd.Options) > 0 || !providerWithOptions.Configured
+	shouldReconfigure := cmd.Reconfigure || len(cmd.Options) > 0 || providerWithOptions.State == nil
 	if shouldReconfigure {
-		return configureProvider(ctx, providerWithOptions.Config, devPodConfig.DefaultContext, cmd.Options, cmd.Reconfigure)
+		return configureProvider(ctx, providerWithOptions.Config, devPodConfig.DefaultContext, cmd.Options, cmd.Reconfigure, true)
 	} else {
 		log.Default.Infof("To reconfigure provider %s, run with '--reconfigure' to reconfigure the provider", providerWithOptions.Config.Name)
 	}
@@ -90,7 +91,7 @@ func (cmd *UseCmd) Run(ctx context.Context, providerName string) error {
 	return nil
 }
 
-func configureProvider(ctx context.Context, provider *provider2.ProviderConfig, context string, userOptions []string, reconfigure bool) error {
+func configureProvider(ctx context.Context, provider *provider2.ProviderConfig, context string, userOptions []string, reconfigure, runInit bool) error {
 	devPodConfig, err := config.LoadConfig(context)
 	if err != nil {
 		return err
@@ -118,26 +119,6 @@ func configureProvider(ctx context.Context, provider *provider2.ProviderConfig, 
 	stderr := log.Default.Writer(logrus.ErrorLevel, false)
 	defer stderr.Close()
 
-	// run init command
-	err = clientimplementation.RunCommandWithBinaries(
-		ctx,
-		"init",
-		provider.Exec.Init,
-		devPodConfig.DefaultContext,
-		nil,
-		nil,
-		nil,
-		provider,
-		nil,
-		nil,
-		stdout,
-		stderr,
-		log.Default,
-	)
-	if err != nil {
-		return errors.Wrap(err, "init")
-	}
-
 	// fill defaults
 	devPodConfig, err = options2.ResolveOptions(ctx, devPodConfig, provider, options, log.Default)
 	if err != nil {
@@ -145,23 +126,11 @@ func configureProvider(ctx context.Context, provider *provider2.ProviderConfig, 
 	}
 
 	// run init command
-	err = clientimplementation.RunCommandWithBinaries(
-		ctx,
-		"validate",
-		provider.Exec.Validate,
-		devPodConfig.DefaultContext,
-		nil,
-		nil,
-		devPodConfig.ProviderOptions(provider.Name),
-		provider,
-		nil,
-		nil,
-		stdout,
-		stderr,
-		log.Default,
-	)
-	if err != nil {
-		return errors.Wrap(err, "validate")
+	if runInit {
+		err = initProvider(ctx, devPodConfig, provider, stdout, stderr)
+		if err != nil {
+			return err
+		}
 	}
 
 	// set options
@@ -175,5 +144,35 @@ func configureProvider(ctx context.Context, provider *provider2.ProviderConfig, 
 	}
 
 	log.Default.Donef("Successfully configured provider '%s'", provider.Name)
+	return nil
+}
+
+func initProvider(ctx context.Context, devPodConfig *config.Config, provider *provider2.ProviderConfig, stdout, stderr io.Writer) error {
+	// run init command
+	err := clientimplementation.RunCommandWithBinaries(
+		ctx,
+		"init",
+		provider.Exec.Init,
+		devPodConfig.DefaultContext,
+		nil,
+		nil,
+		devPodConfig.ProviderOptions(provider.Name),
+		provider,
+		nil,
+		nil,
+		stdout,
+		stderr,
+		log.Default,
+	)
+	if err != nil {
+		return errors.Wrap(err, "init")
+	}
+	if devPodConfig.Current().Providers == nil {
+		devPodConfig.Current().Providers = map[string]*config.ConfigProvider{}
+	}
+	if devPodConfig.Current().Providers[provider.Name] == nil {
+		devPodConfig.Current().Providers[provider.Name] = &config.ConfigProvider{}
+	}
+	devPodConfig.Current().Providers[provider.Name].Initialized = true
 	return nil
 }
