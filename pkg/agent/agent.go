@@ -161,7 +161,19 @@ func rerunAsRoot(workspaceInfo *provider2.AgentWorkspaceInfo) (bool, error) {
 	return true, nil
 }
 
-func Tunnel(ctx context.Context, dockerHelper *docker.DockerHelper, agentPath, agentDownloadURL string, containerID string, token string, stdin io.Reader, stdout io.Writer, stderr io.Writer, trackActivity bool, log log.Logger) error {
+func Tunnel(
+	ctx context.Context,
+	dockerHelper *docker.DockerHelper,
+	agentPath, agentDownloadURL string,
+	containerID string,
+	token string,
+	user string,
+	stdin io.Reader,
+	stdout io.Writer,
+	stderr io.Writer,
+	trackActivity bool,
+	log log.Logger,
+) error {
 	// inject agent
 	err := InjectAgent(ctx, func(ctx context.Context, command string, stdin io.Reader, stdout io.Writer, stderr io.Writer) error {
 		args := []string{"exec", "-i", "-u", "root", containerID, "sh", "-c", command}
@@ -172,19 +184,22 @@ func Tunnel(ctx context.Context, dockerHelper *docker.DockerHelper, agentPath, a
 	}
 
 	// build command
-	command := fmt.Sprintf("%s helper ssh-server --token %s --stdio", RemoteDevPodHelperLocation, token)
+	command := fmt.Sprintf("%s helper ssh-server --token '%s' --stdio", RemoteDevPodHelperLocation, token)
 	if trackActivity {
 		command += " --track-activity"
 	}
 	if log.GetLevel() == logrus.DebugLevel {
 		command += " --debug"
 	}
+	if user == "" {
+		user = "root"
+	}
 
 	// create tunnel
 	args := []string{
 		"exec",
 		"-i",
-		"-u", "root",
+		"-u", user,
 		containerID,
 		"sh", "-c", command,
 	}

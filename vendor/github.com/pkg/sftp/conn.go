@@ -61,14 +61,6 @@ func (c *clientConn) Close() error {
 	return c.conn.Close()
 }
 
-func (c *clientConn) loop() {
-	defer c.wg.Done()
-	err := c.recv()
-	if err != nil {
-		c.broadcastErr(err)
-	}
-}
-
 // recv continuously reads from the server and forwards responses to the
 // appropriate channel.
 func (c *clientConn) recv() error {

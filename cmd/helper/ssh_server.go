@@ -52,6 +52,7 @@ func (cmd *SSHServerCmd) Run(_ *cobra.Command, _ []string) error {
 		return fmt.Errorf("token is missing")
 	}
 
+	// parse token
 	t, err := token.ParseToken(cmd.Token)
 	if err != nil {
 		return errors.Wrap(err, "parse token")
@@ -93,10 +94,15 @@ func (cmd *SSHServerCmd) Run(_ *cobra.Command, _ []string) error {
 	if cmd.Stdio {
 		if cmd.TrackActivity {
 			go func() {
-				err = os.WriteFile(agent.ContainerActivityFile, nil, os.ModePerm)
+				_, err = os.Stat(agent.ContainerActivityFile)
 				if err != nil {
-					fmt.Fprintf(os.Stderr, "Error writing file: %v\n", err)
-					return
+					err = os.WriteFile(agent.ContainerActivityFile, nil, 0777)
+					if err != nil {
+						fmt.Fprintf(os.Stderr, "Error writing file: %v\n", err)
+						return
+					}
+
+					_ = os.Chmod(agent.ContainerActivityFile, 0777)
 				}
 
 				for {

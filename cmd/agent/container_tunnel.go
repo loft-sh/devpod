@@ -20,7 +20,9 @@ import (
 type ContainerTunnelCmd struct {
 	Token         string
 	WorkspaceInfo string
+	User          string
 
+	TrackActivity  bool
 	StartContainer bool
 }
 
@@ -34,6 +36,8 @@ func NewContainerTunnelCmd() *cobra.Command {
 		RunE:  cmd.Run,
 	}
 
+	containerTunnelCmd.Flags().BoolVar(&cmd.TrackActivity, "track-activity", false, "If true, tracks the activity in the container")
+	containerTunnelCmd.Flags().StringVar(&cmd.User, "user", "", "The user to create the tunnel with")
 	containerTunnelCmd.Flags().BoolVar(&cmd.StartContainer, "start-container", false, "If true, will try to start the container")
 	containerTunnelCmd.Flags().StringVar(&cmd.Token, "token", "", "The token to use for the container ssh server")
 	containerTunnelCmd.Flags().StringVar(&cmd.WorkspaceInfo, "workspace-info", "", "The workspace info")
@@ -72,7 +76,20 @@ func (cmd *ContainerTunnelCmd) Run(_ *cobra.Command, _ []string) error {
 	}()
 
 	// create tunnel into container.
-	err = agent.Tunnel(context.TODO(), docker.NewDockerHelper(), agent.RemoteDevPodHelperLocation, agent.DefaultAgentDownloadURL, containerId, cmd.Token, os.Stdin, os.Stdout, os.Stderr, true, log.Default.ErrorStreamOnly())
+	err = agent.Tunnel(
+		context.TODO(),
+		docker.NewDockerHelper(),
+		agent.RemoteDevPodHelperLocation,
+		agent.DefaultAgentDownloadURL,
+		containerId,
+		cmd.Token,
+		cmd.User,
+		os.Stdin,
+		os.Stdout,
+		os.Stderr,
+		cmd.TrackActivity,
+		log.Default.ErrorStreamOnly(),
+	)
 	if err != nil {
 		return err
 	}

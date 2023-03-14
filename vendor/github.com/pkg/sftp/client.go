@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/binary"
 	"errors"
+	"fmt"
 	"io"
 	"math"
 	"os"
@@ -226,15 +227,22 @@ func NewClientPipe(rd io.Reader, wr io.WriteCloser, opts ...ClientOption) (*Clie
 
 	if err := sftp.sendInit(); err != nil {
 		wr.Close()
-		return nil, err
+		return nil, fmt.Errorf("error sending init packet to server: %w", err)
 	}
+
 	if err := sftp.recvVersion(); err != nil {
 		wr.Close()
-		return nil, err
+		return nil, fmt.Errorf("error receiving version packet from server: %w", err)
 	}
 
 	sftp.clientConn.wg.Add(1)
-	go sftp.loop()
+	go func() {
+		defer sftp.clientConn.wg.Done()
+
+		if err := sftp.clientConn.recv(); err != nil {
+			sftp.clientConn.broadcastErr(err)
+		}
+	}()
 
 	return sftp, nil
 }
@@ -267,8 +275,13 @@ func (c *Client) nextID() uint32 {
 func (c *Client) recvVersion() error {
 	typ, data, err := c.recvPacket(0)
 	if err != nil {
+		if err == io.EOF {
+			return fmt.Errorf("server unexpectedly closed connection: %w", io.ErrUnexpectedEOF)
+		}
+
 		return err
 	}
+
 	if typ != sshFxpVersion {
 		return &unexpectedPacketErr{sshFxpVersion, typ}
 	}
@@ -277,6 +290,7 @@ func (c *Client) recvVersion() error {
 	if err != nil {
 		return err
 	}
+
 	if version != sftpProtocolVersion {
 		return &unexpectedVersionErr{sftpProtocolVersion, version}
 	}
@@ -1660,7 +1674,7 @@ func (f *File) ReadFromWithConcurrency(r io.Reader, concurrency int) (read int64
 					Handle: f.handle,
 					Offset: uint64(off),
 					Length: uint32(n),
-					Data:   b,
+					Data:   b[:n],
 				})
 
 				select {

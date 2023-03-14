@@ -42,7 +42,7 @@ func (cmd *DaemonCmd) Run(_ *cobra.Command, _ []string) error {
 		return nil
 	}
 
-	err = os.WriteFile(agent.ContainerActivityFile, nil, os.ModePerm)
+	err = os.WriteFile(agent.ContainerActivityFile, nil, 0777)
 	if err != nil {
 		return err
 	}
