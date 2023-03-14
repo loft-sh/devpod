@@ -59,7 +59,6 @@ func (c *ContainerHandler) Run(ctx context.Context, runInHost Handler, runInCont
 	}
 
 	// tunnel to host
-	//TODO: right now we have a tunnel in a tunnel, maybe its better to start 2 separate commands?
 	tunnelChan := make(chan error, 1)
 	go func() {
 		writer := c.log.ErrorStreamOnly().Writer(logrus.InfoLevel, false)
@@ -90,7 +89,7 @@ func (c *ContainerHandler) Run(ctx context.Context, runInHost Handler, runInCont
 		// start ssh client as root / default user
 		sshClient, err := devssh.StdioClientFromKeyBytes(privateKey, stdoutReader, stdinWriter, false)
 		if err != nil {
-			containerChan <- err
+			containerChan <- errors.Wrap(err, "create ssh client")
 			return
 		}
 		defer sshClient.Close()
@@ -103,7 +102,7 @@ func (c *ContainerHandler) Run(ctx context.Context, runInHost Handler, runInCont
 			go func() {
 				defer waitGroup.Done()
 
-				containerChan <- c.runRunInContainer(sshClient, tok, privateKey, runInContainer)
+				containerChan <- errors.Wrap(c.runRunInContainer(sshClient, tok, privateKey, runInContainer), "run in container")
 			}()
 		}
 
@@ -113,7 +112,7 @@ func (c *ContainerHandler) Run(ctx context.Context, runInHost Handler, runInCont
 			go func() {
 				defer waitGroup.Done()
 
-				containerChan <- runInHost(sshClient)
+				containerChan <- errors.Wrap(runInHost(sshClient), "run in host")
 			}()
 		}
 
