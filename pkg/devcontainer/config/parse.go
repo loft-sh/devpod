@@ -41,6 +41,29 @@ func ParseDevContainerFeature(folder string) (*FeatureConfig, error) {
 	return featureConfig, nil
 }
 
+func SaveDevContainerJSON(config *DevContainerConfig) error {
+	if config.Origin == "" {
+		return fmt.Errorf("no origin in config")
+	}
+
+	err := os.MkdirAll(filepath.Dir(config.Origin), 0777)
+	if err != nil {
+		return err
+	}
+
+	out, err := json.Marshal(config)
+	if err != nil {
+		return err
+	}
+
+	err = os.WriteFile(config.Origin, out, 0666)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
 func ParseDevContainerJSON(folder string) (*DevContainerConfig, error) {
 	path := filepath.Join(folder, ".devcontainer", "devcontainer.json")
 	_, err := os.Stat(path)

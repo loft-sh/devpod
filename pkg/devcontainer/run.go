@@ -5,12 +5,15 @@ import (
 	"github.com/loft-sh/devpod/pkg/compose"
 	"github.com/loft-sh/devpod/pkg/devcontainer/config"
 	"github.com/loft-sh/devpod/pkg/docker"
+	"github.com/loft-sh/devpod/pkg/language"
 	"github.com/loft-sh/devpod/pkg/log"
 	provider2 "github.com/loft-sh/devpod/pkg/provider"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 	"os"
 	"os/exec"
+	"path"
+	"path/filepath"
 	"runtime"
 	"strings"
 )
@@ -64,8 +67,16 @@ func (r *Runner) prepare() (*config.SubstitutedConfig, *WorkspaceConfig, error) 
 	if err != nil {
 		return nil, nil, errors.Wrap(err, "parsing devcontainer.json")
 	} else if rawParsedConfig == nil {
-		// TODO: use a default config
-		return nil, nil, fmt.Errorf("couldn't find a devcontainer.json")
+		r.Log.Infof("Couldn't find a devcontainer.json")
+		r.Log.Infof("Try detecting project programming language...")
+		defaultConfig := language.DefaultConfig(r.LocalWorkspaceFolder, r.Log)
+		defaultConfig.Origin = path.Join(filepath.ToSlash(r.LocalWorkspaceFolder), ".devcontainer.json")
+		err = config.SaveDevContainerJSON(defaultConfig)
+		if err != nil {
+			return nil, nil, errors.Wrap(err, "write default devcontainer.json")
+		}
+
+		rawParsedConfig = defaultConfig
 	}
 	configFile := rawParsedConfig.Origin
 
