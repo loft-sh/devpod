@@ -2,10 +2,13 @@ package server
 
 import (
 	"fmt"
+	"github.com/loft-sh/devpod/pkg/command"
+	"github.com/sirupsen/logrus"
 	"io"
 	"net"
 	"os"
 	"os/exec"
+	"os/user"
 	"strings"
 	"sync"
 	"time"
@@ -24,10 +27,16 @@ func NewServer(addr string, hostKey []byte, keys []ssh.PublicKey, log log.Logger
 		return nil, err
 	}
 
+	currentUser, err := user.Current()
+	if err != nil {
+		return nil, err
+	}
+
 	forwardHandler := &ssh.ForwardedTCPHandler{}
 	server := &Server{
-		shell: shell,
-		log:   log,
+		shell:       shell,
+		log:         log,
+		currentUser: currentUser.Username,
 		sshServer: ssh.Server{
 			Addr: addr,
 			PublicKeyHandler: func(ctx ssh.Context, key ssh.PublicKey) bool {
@@ -62,7 +71,7 @@ func NewServer(addr string, hostKey []byte, keys []ssh.PublicKey, log log.Logger
 			},
 			SubsystemHandlers: map[string]ssh.SubsystemHandler{
 				"sftp": func(s ssh.Session) {
-					SftpHandler(s, log)
+					SftpHandler(s, currentUser.Username, log)
 				},
 			},
 		},
@@ -80,9 +89,10 @@ func NewServer(addr string, hostKey []byte, keys []ssh.PublicKey, log log.Logger
 }
 
 type Server struct {
-	shell     string
-	sshServer ssh.Server
-	log       log.Logger
+	currentUser string
+	shell       string
+	sshServer   ssh.Server
+	log         log.Logger
 }
 
 func getShell() (string, error) {
@@ -238,7 +248,13 @@ func HandlePTY(sess ssh.Session, ptyReq ssh.Pty, winCh <-chan ssh.Window, cmd *e
 
 func (s *Server) getCommand(sess ssh.Session) *exec.Cmd {
 	var cmd *exec.Cmd
-	if sess.User() != "" {
+	user := sess.User()
+	if user == s.currentUser {
+		user = ""
+	}
+
+	// has user set?
+	if user != "" {
 		if len(sess.RawCommand()) == 0 {
 			cmd = exec.Command("su", sess.User())
 		} else {
@@ -254,6 +270,9 @@ func (s *Server) getCommand(sess ssh.Session) *exec.Cmd {
 		}
 	}
 
+	// switch default directory
+	home, _ := command.GetHome(user)
+	cmd.Dir = home
 	cmd.Env = append(cmd.Env, os.Environ()...)
 	cmd.Env = append(cmd.Env, sess.Environ()...)
 	return cmd
@@ -278,10 +297,19 @@ func (s *Server) exitWithError(sess ssh.Session, err error) {
 	}
 }
 
-func SftpHandler(sess ssh.Session, log log.Logger) {
-	debugStream := io.Discard
+func SftpHandler(sess ssh.Session, currentUser string, log log.Logger) {
+	writer := log.Writer(logrus.DebugLevel, false)
+	defer writer.Close()
+
+	user := sess.User()
+	if user == currentUser {
+		user = ""
+	}
+
+	workingDir, _ := command.GetHome(user)
 	serverOptions := []sftp.ServerOption{
-		sftp.WithDebug(debugStream),
+		sftp.WithDebug(writer),
+		sftp.WithServerWorkingDirectory(workingDir),
 	}
 	server, err := sftp.NewServer(
 		sess,
@@ -291,12 +319,19 @@ func SftpHandler(sess ssh.Session, log log.Logger) {
 		log.Debugf("sftp server init error: %s\n", err)
 		return
 	}
-	if err := server.Serve(); err == io.EOF {
-		server.Close()
-		fmt.Println("sftp client exited session.")
-	} else if err != nil {
-		fmt.Println("sftp server completed with error:", err)
+	defer server.Close()
+
+	// serve
+	err = server.Serve()
+	if err == io.EOF {
+		_ = sess.Exit(0)
+		return
 	}
+
+	if err != nil {
+		log.Debugf("sftp server completed with error: %v", err)
+	}
+	_ = sess.Exit(1)
 }
 
 func ExitCode(err error) int {
