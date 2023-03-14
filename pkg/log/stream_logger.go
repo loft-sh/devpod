@@ -60,12 +60,11 @@ const (
 )
 
 func NewStdoutLogger(stdin io.Reader, stdout, stderr io.Writer, level logrus.Level) *StreamLogger {
-	isTerminal, _ := terminal.SetupTTY(stdin, stdout)
 	return &StreamLogger{
 		m:           &sync.Mutex{},
 		level:       level,
 		format:      TextFormat,
-		isTerminal:  isTerminal,
+		isTerminal:  terminal.IsTerminal(stdin),
 		stream:      stdout,
 		errorStream: stderr,
 		survey:      survey.NewSurvey(),
