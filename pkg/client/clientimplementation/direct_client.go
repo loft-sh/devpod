@@ -36,10 +36,6 @@ func (s *directClient) AgentPath() string {
 	return options.ResolveAgentConfig(s.devPodConfig, s.config, s.workspace, nil).Path
 }
 
-func (s *directClient) Machine() string {
-	return ""
-}
-
 func (s *directClient) RefreshOptions(ctx context.Context, userOptions []string) error {
 	// TODO: refresh options
 	return nil

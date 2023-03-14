@@ -22,28 +22,20 @@ import (
 	"sync"
 )
 
-func NewAgentClient(devPodConfig *config.Config, prov *provider.ProviderConfig, workspace *provider.Workspace, log log.Logger) (client.AgentClient, error) {
-	var machineConfig *provider.Machine
-	if workspace.Machine.ID != "" {
-		var err error
-		machineConfig, err = provider.LoadMachineConfig(workspace.Context, workspace.Machine.ID)
-		if err != nil {
-			log.Errorf("Error loading machine config: %v", err)
-		}
-	}
-
-	agentClient := &agentClient{
-		devPodConfig: devPodConfig,
-		config:       prov,
-		workspace:    workspace,
-		machine:      machineConfig,
-		log:          log,
-	}
-	if agentClient.isMachineProvider() && workspace.Machine.ID == "" {
+func NewAgentClient(devPodConfig *config.Config, prov *provider.ProviderConfig, workspace *provider.Workspace, machine *provider.Machine, log log.Logger) (client.AgentClient, error) {
+	if workspace.Machine.ID != "" && machine == nil {
+		return nil, fmt.Errorf("workspace machine is not found")
+	} else if prov.IsMachineProvider() && workspace.Machine.ID == "" {
 		return nil, fmt.Errorf("workspace machine ID is empty, but machine provider found")
 	}
 
-	return agentClient, nil
+	return &agentClient{
+		devPodConfig: devPodConfig,
+		config:       prov,
+		workspace:    workspace,
+		machine:      machine,
+		log:          log,
+	}, nil
 }
 
 type agentClient struct {
@@ -76,17 +68,6 @@ func (s *agentClient) WorkspaceConfig() *provider.Workspace {
 	defer s.m.Unlock()
 
 	return provider.CloneWorkspace(s.workspace)
-}
-
-func (s *agentClient) Machine() string {
-	s.m.Lock()
-	defer s.m.Unlock()
-
-	if s.machine != nil {
-		return s.machine.ID
-	}
-
-	return ""
 }
 
 func (s *agentClient) AgentPath() string {

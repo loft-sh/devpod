@@ -58,12 +58,12 @@ func NewUpCmd(flags *flags.GlobalFlags) *cobra.Command {
 				return err
 			}
 
-			ideConfig, err := cmd.parseIDE(ctx, devPodConfig, args)
+			ideConfig, err := cmd.parseIDE(devPodConfig, args)
 			if err != nil {
 				return err
 			}
 
-			client, err := workspace2.ResolveWorkspace(ctx, devPodConfig, ideConfig, args, cmd.ID, cmd.Machine, cmd.Provider, cmd.ProviderOptions, log.Default)
+			client, err := workspace2.ResolveWorkspace(ctx, devPodConfig, ideConfig, args, cmd.ID, cmd.Machine, cmd.Provider, cmd.ProviderOptions, true, log.Default)
 			if err != nil {
 				return err
 			}
@@ -127,13 +127,13 @@ func (cmd *UpCmd) Run(ctx context.Context, client client2.WorkspaceClient) error
 	return nil
 }
 
-func (cmd *UpCmd) parseIDE(ctx context.Context, devPodConfig *config.Config, args []string) (*provider2.WorkspaceIDEConfig, error) {
+func (cmd *UpCmd) parseIDE(devPodConfig *config.Config, args []string) (*provider2.WorkspaceIDEConfig, error) {
 	if cmd.IDE == "" {
 		if len(args) == 0 {
 			return nil, nil
 		}
 
-		_, err := workspace2.GetWorkspace(ctx, devPodConfig, nil, args, log.Default)
+		_, err := workspace2.GetWorkspace(devPodConfig, nil, args, false, log.Default)
 		if err == nil {
 			return nil, nil
 		}

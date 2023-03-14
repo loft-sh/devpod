@@ -93,7 +93,7 @@ func MachineExists(devPodConfig *config.Config, args []string, log log.Logger) s
 }
 
 // GetMachine creates a machine client
-func GetMachine(devPodConfig *config.Config, args []string, log log.Logger) (client.Client, error) {
+func GetMachine(devPodConfig *config.Config, args []string, log log.Logger) (client.MachineClient, error) {
 	// check if we have no args
 	if len(args) == 0 {
 		return selectMachine(devPodConfig, log)
@@ -114,7 +114,7 @@ func GetMachine(devPodConfig *config.Config, args []string, log log.Logger) (cli
 	return loadExistingMachine(machineID, devPodConfig, log)
 }
 
-func selectMachine(devPodConfig *config.Config, log log.Logger) (client.Client, error) {
+func selectMachine(devPodConfig *config.Config, log log.Logger) (client.MachineClient, error) {
 	if !terminal.IsTerminalIn {
 		return nil, provideWorkspaceArgErr
 	}
@@ -148,7 +148,7 @@ func selectMachine(devPodConfig *config.Config, log log.Logger) (client.Client, 
 	return loadExistingMachine(answer, devPodConfig, log)
 }
 
-func loadExistingMachine(machineID string, devPodConfig *config.Config, log log.Logger) (client.Client, error) {
+func loadExistingMachine(machineID string, devPodConfig *config.Config, log log.Logger) (client.MachineClient, error) {
 	machineConfig, err := provider2.LoadMachineConfig(devPodConfig.DefaultContext, machineID)
 	if err != nil {
 		return nil, err

@@ -16,7 +16,7 @@ import (
 	"strings"
 )
 
-func NewMachineClient(devPodConfig *config.Config, provider *provider.ProviderConfig, machine *provider.Machine, log log.Logger) (client.Client, error) {
+func NewMachineClient(devPodConfig *config.Config, provider *provider.ProviderConfig, machine *provider.Machine, log log.Logger) (client.MachineClient, error) {
 	if !provider.IsMachineProvider() {
 		return nil, fmt.Errorf("provider '%s' is not a machine provider. Please use another provider", provider.Name)
 	} else if machine == nil {
@@ -48,6 +48,10 @@ func (s *machineClient) ProviderType() provider.ProviderType {
 
 func (s *machineClient) Machine() string {
 	return s.machine.ID
+}
+
+func (s *machineClient) MachineConfig() *provider.Machine {
+	return provider.CloneMachine(s.machine)
 }
 
 func (s *machineClient) RefreshOptions(ctx context.Context, userOptionsRaw []string) error {
