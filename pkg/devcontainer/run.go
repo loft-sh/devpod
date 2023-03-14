@@ -2,6 +2,7 @@ package devcontainer
 
 import (
 	"fmt"
+	"github.com/loft-sh/devpod/pkg/agent"
 	"github.com/loft-sh/devpod/pkg/compose"
 	"github.com/loft-sh/devpod/pkg/devcontainer/config"
 	"github.com/loft-sh/devpod/pkg/docker"
@@ -118,13 +119,29 @@ func (r *Runner) Up(options UpOptions) (*config.Result, error) {
 	}
 
 	// check if its a compose devcontainer.json
+	var result *config.Result
 	if isDockerFileConfig(substitutedConfig.Config) || substitutedConfig.Config.Image != "" {
-		return r.runSingleContainer(substitutedConfig, workspace.WorkspaceMount, options)
+		result, err = r.runSingleContainer(substitutedConfig, workspace.WorkspaceMount, options)
+		if err != nil {
+			return nil, err
+		}
 	} else if len(substitutedConfig.Config.DockerComposeFile) > 0 {
-		return r.runDockerCompose(substitutedConfig, options)
+		result, err = r.runDockerCompose(substitutedConfig, options)
+		if err != nil {
+			return nil, err
+		}
+	} else {
+		return nil, fmt.Errorf("dev container config is missing one of \"image\", \"dockerFile\" or \"dockerComposeFile\" properties")
 	}
 
-	return nil, fmt.Errorf("dev container config is missing one of \"image\", \"dockerFile\" or \"dockerComposeFile\" properties")
+	// write result
+	err = agent.WriteAgentWorkspaceDevContainerResult(r.WorkspaceConfig.Workspace.Context, r.WorkspaceConfig.Workspace.ID, result)
+	if err != nil {
+		r.Log.Errorf("Error writing dev container result: %v", err)
+	}
+
+	// return result
+	return result, nil
 }
 
 func (r *Runner) FindDevContainer() (*config.ContainerDetails, error) {

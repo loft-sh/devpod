@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"github.com/loft-sh/devpod/pkg/command"
 	"github.com/loft-sh/devpod/pkg/compress"
+	"github.com/loft-sh/devpod/pkg/devcontainer/config"
 	"github.com/loft-sh/devpod/pkg/docker"
 	"github.com/loft-sh/devpod/pkg/log"
 	provider2 "github.com/loft-sh/devpod/pkg/provider"
@@ -25,6 +26,8 @@ const DefaultInactivityTimeout = time.Hour
 const RemoteDevPodHelperLocation = "/tmp/devpod"
 
 const ContainerActivityFile = "/tmp/devpod.activity"
+
+const WorkspaceDevContainerResult = "result.json"
 
 const DefaultAgentDownloadURL = "https://github.com/FabianKramm/foundation/releases/download/test"
 
@@ -65,6 +68,51 @@ func readAgentWorkspaceInfo(context, id string) (*provider2.AgentWorkspaceInfo, 
 
 	workspaceInfo.Folder = GetAgentWorkspaceContentDir(workspaceDir)
 	return workspaceInfo, nil
+}
+
+func ReadAgentWorkspaceDevContainerResult(context, id string) (*config.Result, error) {
+	// get workspace folder
+	workspaceDir, err := GetAgentWorkspaceDir(context, id)
+	if err != nil {
+		return nil, err
+	}
+
+	// read workspace config
+	out, err := os.ReadFile(filepath.Join(workspaceDir, WorkspaceDevContainerResult))
+	if err != nil {
+		return nil, err
+	}
+
+	// json unmarshal
+	workspaceResult := &config.Result{}
+	err = json.Unmarshal(out, workspaceResult)
+	if err != nil {
+		return nil, errors.Wrap(err, "parse workspace result")
+	}
+
+	return workspaceResult, nil
+}
+
+func WriteAgentWorkspaceDevContainerResult(context, id string, result *config.Result) error {
+	// get workspace folder
+	workspaceDir, err := GetAgentWorkspaceDir(context, id)
+	if err != nil {
+		return err
+	}
+
+	// marshal result
+	out, err := json.Marshal(result)
+	if err != nil {
+		return err
+	}
+
+	// read workspace config
+	err = os.WriteFile(filepath.Join(workspaceDir, WorkspaceDevContainerResult), out, 0666)
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
 
 func ReadAgentWorkspaceInfo(context, id string) (bool, *provider2.AgentWorkspaceInfo, error) {
