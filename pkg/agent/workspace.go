@@ -20,18 +20,18 @@ func GetAgentDaemonLogFolder() (string, error) {
 	return FindAgentHomeFolder()
 }
 
-func FindAgentHomeFolder() (string, error) {
+func findDir(validate func(path string) bool) string {
 	homeFolder := os.Getenv(config.DEVPOD_HOME)
-	if homeFolder != "" && isDevPodHome(homeFolder) {
-		return homeFolder, nil
+	if homeFolder != "" && validate(homeFolder) {
+		return homeFolder
 	}
 
 	// check home folder first
 	homeDir, _ := homedir.Dir()
 	if homeDir != "" {
 		homeDir = filepath.Join(homeDir, ".devpod", "agent")
-		if isDevPodHome(homeDir) {
-			return homeDir, nil
+		if validate(homeDir) {
+			return homeDir
 		}
 	}
 
@@ -39,16 +39,34 @@ func FindAgentHomeFolder() (string, error) {
 	homeDir, _ = command.GetHome("root")
 	if homeDir != "" {
 		homeDir = filepath.Join(homeDir, ".devpod", "agent")
-		if isDevPodHome(homeDir) {
-			return homeDir, nil
+		if validate(homeDir) {
+			return homeDir
+		}
+	}
+
+	// check current directory
+	execDir, _ := os.Executable()
+	if execDir != "" {
+		execDir = filepath.Join(filepath.Dir(execDir), "agent")
+		if validate(execDir) {
+			return execDir
 		}
 	}
 
 	// check other folders
 	for _, dir := range extraSearchLocations {
-		if isDevPodHome(dir) {
-			return dir, nil
+		if validate(dir) {
+			return dir
 		}
+	}
+
+	return ""
+}
+
+func FindAgentHomeFolder() (string, error) {
+	homeDir := findDir(isDevPodHome)
+	if homeDir != "" {
+		return homeDir, nil
 	}
 
 	return "", FindAgentHomeFolderErr
@@ -60,34 +78,16 @@ func isDevPodHome(dir string) bool {
 }
 
 func PrepareAgentHomeFolder() (string, error) {
-	homeFolder := os.Getenv(config.DEVPOD_HOME)
-	if homeFolder != "" {
+	// try to find agent home folder first
+	homeFolder, err := FindAgentHomeFolder()
+	if err == nil {
 		return homeFolder, nil
 	}
 
-	// check home folder first
-	homeDir, _ := homedir.Dir()
+	// try to find an executable directory
+	homeDir := findDir(IsDirExecutable)
 	if homeDir != "" {
-		homeDir = filepath.Join(homeDir, ".devpod", "agent")
-		if IsDirExecutable(homeDir) {
-			return homeDir, nil
-		}
-	}
-
-	// check current directory
-	execDir, _ := os.Executable()
-	if execDir != "" {
-		execDir = filepath.Join(filepath.Dir(execDir), "agent")
-		if IsDirExecutable(execDir) {
-			return execDir, nil
-		}
-	}
-
-	// check other folders
-	for _, dir := range extraSearchLocations {
-		if IsDirExecutable(dir) {
-			return dir, nil
-		}
+		return homeDir, nil
 	}
 
 	return "", fmt.Errorf("couldn't find an executable directory, please specify DEVPOD_HOME")
