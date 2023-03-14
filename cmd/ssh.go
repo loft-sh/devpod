@@ -85,7 +85,7 @@ func startWait(ctx context.Context, client client2.WorkspaceClient, create bool,
 			return err
 		} else if instanceStatus == client2.StatusBusy {
 			if time.Since(startWaiting) > time.Second*10 {
-				log.Infof("Waiting for instance to come up...")
+				log.Infof("Waiting for workspace to come up...")
 				log.Debugf("Got status %s, expected: Running", instanceStatus)
 				startWaiting = time.Now()
 			}
@@ -97,7 +97,7 @@ func startWait(ctx context.Context, client client2.WorkspaceClient, create bool,
 				// start environment
 				err = client.Start(ctx, client2.StartOptions{})
 				if err != nil {
-					return errors.Wrap(err, "start instance")
+					return errors.Wrap(err, "start workspace")
 				}
 			} else {
 				return fmt.Errorf("workspace is stopped")
@@ -173,9 +173,10 @@ func (cmd *SSHCmd) jumpContainerServer(ctx context.Context, client client2.Agent
 
 	// create credential helper in workspace
 	var runInContainer tunnel.Handler
-	if client.WorkspaceConfig().IDE.IDE != provider2.IDEVSCode && cmd.User != "" {
-		runInContainer = func(client *ssh.Client) error {
-			err := runCredentialsServer(ctx, client, cmd.User, log)
+	if cmd.User != "" {
+		gitCredentials := client.WorkspaceConfig().IDE.IDE != provider2.IDEVSCode
+		runInContainer = func(sshClient *ssh.Client) error {
+			err := runCredentialsServer(ctx, sshClient, cmd.User, gitCredentials, true, log)
 			if err != nil {
 				log.Errorf("Error running credential server: %v", err)
 			}
@@ -213,7 +214,11 @@ func (cmd *SSHCmd) jumpContainerServer(ctx context.Context, client client2.Agent
 	}, runInContainer)
 }
 
-func runCredentialsServer(ctx context.Context, client *ssh.Client, user string, log log.Logger) error {
+func runCredentialsServer(ctx context.Context, client *ssh.Client, user string, gitCredentials, dockerCredentials bool, log log.Logger) error {
+	if !gitCredentials && !dockerCredentials {
+		return nil
+	}
+
 	stdoutReader, stdoutWriter, err := os.Pipe()
 	if err != nil {
 		return err
@@ -230,18 +235,26 @@ func runCredentialsServer(ctx context.Context, client *ssh.Client, user string, 
 	cancelCtx, cancel := context.WithCancel(ctx)
 	defer cancel()
 
-	// only run credentials server if we know the user
+	// run credentials server
 	errChan := make(chan error, 1)
 	go func() {
 		defer cancel()
 		writer := log.ErrorStreamOnly().Writer(logrus.DebugLevel, false)
 		defer writer.Close()
 
-		command := fmt.Sprintf("%s agent container credentials-server --user %s --configure-git-helper --configure-docker-helper", agent.RemoteDevPodHelperLocation, user)
+		command := fmt.Sprintf("%s agent container credentials-server --user '%s'", agent.RemoteDevPodHelperLocation, user)
+		if gitCredentials {
+			command += " --configure-git-helper"
+		}
+		if dockerCredentials {
+			command += " --configure-docker-helper"
+		}
+
 		errChan <- devssh.Run(client, command, stdinReader, stdoutWriter, writer)
 	}()
 
-	_, err = agent.RunTunnelServer(cancelCtx, stdoutReader, stdinWriter, false, true, true, nil, log)
+	// forward credentials to container
+	_, err = agent.RunTunnelServer(cancelCtx, stdoutReader, stdinWriter, false, gitCredentials, dockerCredentials, nil, log)
 	if err != nil {
 		return errors.Wrap(err, "run tunnel server")
 	}

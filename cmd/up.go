@@ -188,7 +188,7 @@ func startInBrowser(ctx context.Context, client client2.WorkspaceClient, user st
 	err = tunnel.NewContainerTunnel(agentClient, log).Run(ctx, nil, func(client *ssh.Client) error {
 		log.Debugf("Connected to container")
 		go func() {
-			err := runCredentialsServer(ctx, client, user, log)
+			err := runCredentialsServer(ctx, client, user, true, true, log)
 			if err != nil {
 				log.Errorf("error running credentials server: %v", err)
 			}
