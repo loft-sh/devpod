@@ -209,31 +209,6 @@ github.com/grpc-ecosystem/go-grpc-middleware
 github.com/grpc-ecosystem/grpc-gateway/internal
 github.com/grpc-ecosystem/grpc-gateway/runtime
 github.com/grpc-ecosystem/grpc-gateway/utilities
-# github.com/hashicorp/go-cleanhttp v0.5.2
-## explicit; go 1.13
-github.com/hashicorp/go-cleanhttp
-# github.com/hashicorp/go-version v1.6.0
-## explicit
-github.com/hashicorp/go-version
-# github.com/hashicorp/hc-install v0.4.0
-## explicit; go 1.16
-github.com/hashicorp/hc-install/internal/build
-github.com/hashicorp/hc-install/internal/httpclient
-github.com/hashicorp/hc-install/internal/pubkey
-github.com/hashicorp/hc-install/internal/releasesjson
-github.com/hashicorp/hc-install/internal/src
-github.com/hashicorp/hc-install/internal/validators
-github.com/hashicorp/hc-install/internal/version
-github.com/hashicorp/hc-install/product
-github.com/hashicorp/hc-install/releases
-github.com/hashicorp/hc-install/src
-# github.com/hashicorp/terraform-exec v0.17.3
-## explicit; go 1.18
-github.com/hashicorp/terraform-exec/internal/version
-github.com/hashicorp/terraform-exec/tfexec
-# github.com/hashicorp/terraform-json v0.14.0
-## explicit; go 1.13
-github.com/hashicorp/terraform-json
 # github.com/imdario/mergo v0.3.13
 ## explicit; go 1.13
 github.com/imdario/mergo
@@ -392,10 +367,6 @@ github.com/xeipuuv/gojsonreference
 # github.com/xeipuuv/gojsonschema v1.2.0
 ## explicit
 github.com/xeipuuv/gojsonschema
-# github.com/zclconf/go-cty v1.11.0
-## explicit; go 1.18
-github.com/zclconf/go-cty/cty
-github.com/zclconf/go-cty/cty/set
 # go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc v0.29.0
 ## explicit; go 1.16
 go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc
@@ -434,7 +405,6 @@ go.opentelemetry.io/proto/otlp/trace/v1
 # golang.org/x/crypto v0.6.0
 ## explicit; go 1.17
 golang.org/x/crypto/blowfish
-golang.org/x/crypto/cast5
 golang.org/x/crypto/chacha20
 golang.org/x/crypto/curve25519
 golang.org/x/crypto/curve25519/internal/field
@@ -442,12 +412,6 @@ golang.org/x/crypto/ed25519
 golang.org/x/crypto/internal/alias
 golang.org/x/crypto/internal/poly1305
 golang.org/x/crypto/nacl/sign
-golang.org/x/crypto/openpgp
-golang.org/x/crypto/openpgp/armor
-golang.org/x/crypto/openpgp/elgamal
-golang.org/x/crypto/openpgp/errors
-golang.org/x/crypto/openpgp/packet
-golang.org/x/crypto/openpgp/s2k
 golang.org/x/crypto/ssh
 golang.org/x/crypto/ssh/internal/bcrypt_pbkdf
 # golang.org/x/mod v0.6.0
