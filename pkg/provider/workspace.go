@@ -27,6 +27,9 @@ type Workspace struct {
 	// CreationTimestamp is the timestamp when this workspace was created
 	CreationTimestamp types.Time `json:"creationTimestamp,omitempty"`
 
+	// LastUsedTimestamp holds the timestamp when this workspace was last accessed
+	LastUsedTimestamp types.Time `json:"lastUsed,omitempty"`
+
 	// Context is the context where this config file was loaded from
 	Context string `json:"context,omitempty"`
 

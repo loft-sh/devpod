@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"github.com/loft-sh/devpod/cmd/flags"
 	client2 "github.com/loft-sh/devpod/pkg/client"
+	"github.com/loft-sh/devpod/pkg/client/clientimplementation"
 	"github.com/loft-sh/devpod/pkg/config"
 	"github.com/loft-sh/devpod/pkg/log"
 	workspace2 "github.com/loft-sh/devpod/pkg/workspace"
@@ -36,12 +37,7 @@ func NewDeleteCmd(flags *flags.GlobalFlags) *cobra.Command {
 				return err
 			}
 
-			client, err := workspace2.GetWorkspace(ctx, devPodConfig, nil, args, log.Default)
-			if err != nil {
-				return err
-			}
-
-			return cmd.Run(ctx, client)
+			return cmd.Run(ctx, devPodConfig, args)
 		},
 	}
 
@@ -51,14 +47,42 @@ func NewDeleteCmd(flags *flags.GlobalFlags) *cobra.Command {
 }
 
 // Run runs the command logic
-func (cmd *DeleteCmd) Run(ctx context.Context, client client2.WorkspaceClient) error {
+func (cmd *DeleteCmd) Run(ctx context.Context, devPodConfig *config.Config, args []string) error {
+	// try to load workspace
+	client, err := workspace2.GetWorkspace(devPodConfig, nil, args, false, log.Default)
+	if err != nil {
+		if !cmd.Force {
+			log.Default.Errorf("cannot delete workspace because there was an error loading the workspace. Run with --force to ignore this error")
+			return err
+		} else if len(args) == 0 {
+			return fmt.Errorf("cannot delete workspace because there was an error loading the workspace: %v. Please specify the id of the workspace you want to delete. E.g. 'devpod delete my-workspace --force'", err)
+		}
+
+		workspaceID := workspace2.Exists(devPodConfig, args)
+		if workspaceID == "" {
+			return fmt.Errorf("couldn't find workspace %s", args[0])
+		}
+
+		// print error
+		log.Default.Errorf("Error retrieving workspace: %v", err)
+
+		// delete workspace folder
+		err = clientimplementation.DeleteWorkspaceFolder(devPodConfig.DefaultContext, workspaceID)
+		if err != nil {
+			return err
+		}
+
+		log.Default.Donef("Successfully deleted workspace '%s'", workspaceID)
+		return nil
+	}
+
 	// get instance status
 	if !cmd.Force {
 		instanceStatus, err := client.Status(ctx, client2.StatusOptions{})
 		if err != nil {
 			return err
 		} else if instanceStatus == client2.StatusNotFound {
-			return fmt.Errorf("cannot delete instance because it couldn't be found. Run with --force to ignore this error")
+			return fmt.Errorf("cannot delete workspace because it couldn't be found. Run with --force to ignore this error")
 		}
 	}
 
@@ -73,7 +97,7 @@ func (cmd *DeleteCmd) Run(ctx context.Context, client client2.WorkspaceClient) e
 	}
 
 	// destroy environment
-	err := client.Delete(ctx, client2.DeleteOptions{
+	err = client.Delete(ctx, client2.DeleteOptions{
 		Force:       cmd.Force,
 		GracePeriod: duration,
 	})
@@ -81,6 +105,6 @@ func (cmd *DeleteCmd) Run(ctx context.Context, client client2.WorkspaceClient) e
 		return err
 	}
 
-	log.Default.Donef("Successfully deleted workspace %s", client.Workspace())
+	log.Default.Donef("Successfully deleted workspace '%s'", client.Workspace())
 	return nil
 }

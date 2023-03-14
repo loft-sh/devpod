@@ -22,9 +22,6 @@ type Client interface {
 	// RefreshOptions updates the options
 	RefreshOptions(ctx context.Context, userOptions []string) error
 
-	// Machine returns the machine of this client
-	Machine() string
-
 	// AgentPath returns the agent path
 	AgentPath() string
 
@@ -56,8 +53,18 @@ type WorkspaceClient interface {
 	// Workspace returns the workspace of this provider
 	Workspace() string
 
-	// WorkspaceConfig returns the workspace source
+	// WorkspaceConfig returns the workspace config
 	WorkspaceConfig() *provider.Workspace
+}
+
+type MachineClient interface {
+	Client
+
+	// Machine returns the machine of this client
+	Machine() string
+
+	// MachineConfig returns the machine config
+	MachineConfig() *provider.Machine
 }
 
 type AgentClient interface {
