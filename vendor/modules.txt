@@ -131,6 +131,17 @@ github.com/ghodss/yaml
 # github.com/gliderlabs/ssh v0.3.5
 ## explicit; go 1.12
 github.com/gliderlabs/ssh
+# github.com/go-enry/go-enry/v2 v2.8.4
+## explicit; go 1.14
+github.com/go-enry/go-enry/v2
+github.com/go-enry/go-enry/v2/data
+github.com/go-enry/go-enry/v2/data/rule
+github.com/go-enry/go-enry/v2/internal/tokenizer
+github.com/go-enry/go-enry/v2/internal/tokenizer/flex
+github.com/go-enry/go-enry/v2/regex
+# github.com/go-enry/go-oniguruma v1.2.1
+## explicit; go 1.14
+github.com/go-enry/go-oniguruma
 # github.com/go-logr/logr v1.2.3
 ## explicit; go 1.16
 github.com/go-logr/logr

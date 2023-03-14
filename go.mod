@@ -15,6 +15,7 @@ require (
 	github.com/docker/docker v23.0.0-rc.1+incompatible
 	github.com/ghodss/yaml v1.0.0
 	github.com/gliderlabs/ssh v0.3.5
+	github.com/go-enry/go-enry/v2 v2.8.4
 	github.com/gofrs/flock v0.8.1
 	github.com/google/go-containerregistry v0.13.0
 	github.com/hashicorp/go-version v1.6.0
@@ -64,6 +65,7 @@ require (
 	github.com/docker/docker-credential-helpers v0.7.0 // indirect
 	github.com/docker/go-connections v0.4.0 // indirect
 	github.com/docker/go-units v0.5.0 // indirect
+	github.com/go-enry/go-oniguruma v1.2.1 // indirect
 	github.com/go-logr/logr v1.2.3 // indirect
 	github.com/go-logr/stdr v1.2.2 // indirect
 	github.com/gogo/googleapis v1.4.1 // indirect
