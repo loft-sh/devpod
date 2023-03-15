@@ -43,43 +43,64 @@ func LoadProviders(devPodConfig *config.Config, log log.Logger) (*ProviderWithOp
 	return retProviders[defaultContext.DefaultProvider], retProviders, nil
 }
 
-func AddProvider(devPodConfig *config.Config, provider string, log log.Logger) (*provider2.ProviderConfig, error) {
-	providerRaw, providerSource, err := resolveProvider(provider, log)
+func AddProvider(devPodConfig *config.Config, providerName, providerSourceRaw string, log log.Logger) (*provider2.ProviderConfig, error) {
+	providerRaw, providerSource, err := resolveProvider(providerSourceRaw, log)
 	if err != nil {
 		return nil, err
 	}
 
-	return installProvider(devPodConfig, providerRaw, providerSource, log)
+	return installProvider(devPodConfig, providerName, providerRaw, providerSource, log)
 }
 
-func UpdateProvider(devPodConfig *config.Config, provider string, log log.Logger) (*provider2.ProviderConfig, error) {
-	providerRaw, providerSource, err := resolveProvider(provider, log)
+func UpdateProvider(devPodConfig *config.Config, providerName, providerSourceRaw string, log log.Logger) (*provider2.ProviderConfig, error) {
+	if devPodConfig.Current().Providers[providerName] == nil {
+		return nil, fmt.Errorf("provider %s doesn't exist. Please run 'devpod provider add %s' instead", providerName, providerSourceRaw)
+	}
+
+	if providerSourceRaw == "" {
+		providerConfig, err := FindProvider(devPodConfig, providerName, log)
+		if err != nil {
+			return nil, errors.Wrap(err, "find provider")
+		}
+
+		if providerConfig.Config.Source.URL != "" {
+			providerSourceRaw = providerConfig.Config.Source.URL
+		} else if providerConfig.Config.Source.File != "" {
+			providerSourceRaw = providerConfig.Config.Source.File
+		} else if providerConfig.Config.Source.Github != "" {
+			providerSourceRaw = providerConfig.Config.Source.Github
+		} else {
+			return nil, fmt.Errorf("provider %s is missing a source. Please run `devpod provider update %s SOURCE`", providerName, providerName)
+		}
+	}
+
+	providerRaw, providerSource, err := resolveProvider(providerSourceRaw, log)
 	if err != nil {
 		return nil, err
 	}
 
-	return updateProvider(devPodConfig, provider, providerRaw, providerSource, log)
+	return updateProvider(devPodConfig, providerName, providerRaw, providerSource, log)
 }
 
-func resolveProvider(provider string, log log.Logger) ([]byte, *provider2.ProviderSource, error) {
+func resolveProvider(providerSource string, log log.Logger) ([]byte, *provider2.ProviderSource, error) {
 	// url?
-	if strings.HasPrefix(provider, "http://") || strings.HasPrefix(provider, "https://") {
-		log.Infof("Download provider %s...", provider)
-		out, err := downloadProvider(provider)
+	if strings.HasPrefix(providerSource, "http://") || strings.HasPrefix(providerSource, "https://") {
+		log.Infof("Download provider %s...", providerSource)
+		out, err := downloadProvider(providerSource)
 		if err != nil {
 			return nil, nil, err
 		}
 
-		return out, &provider2.ProviderSource{URL: provider}, nil
+		return out, &provider2.ProviderSource{URL: providerSource}, nil
 	}
 
 	// local file?
-	if strings.HasSuffix(provider, ".yaml") || strings.HasSuffix(provider, ".yml") {
-		_, err := os.Stat(provider)
+	if strings.HasSuffix(providerSource, ".yaml") || strings.HasSuffix(providerSource, ".yml") {
+		_, err := os.Stat(providerSource)
 		if err == nil {
-			out, err := os.ReadFile(provider)
+			out, err := os.ReadFile(providerSource)
 			if err == nil {
-				absPath, err := filepath.Abs(provider)
+				absPath, err := filepath.Abs(providerSource)
 				if err != nil {
 					return nil, nil, err
 				}
@@ -92,7 +113,7 @@ func resolveProvider(provider string, log log.Logger) ([]byte, *provider2.Provid
 	}
 
 	// check if github
-	out, source, err := DownloadProviderGithub(provider, log)
+	out, source, err := DownloadProviderGithub(providerSource, log)
 	if err != nil {
 		return nil, nil, errors.Wrap(err, "download github")
 	} else if len(out) > 0 {
@@ -163,15 +184,14 @@ func downloadProvider(url string) ([]byte, error) {
 	return io.ReadAll(resp.Body)
 }
 
-func updateProvider(devPodConfig *config.Config, provider string, raw []byte, source *provider2.ProviderSource, log log.Logger) (*provider2.ProviderConfig, error) {
+func updateProvider(devPodConfig *config.Config, providerName string, raw []byte, source *provider2.ProviderSource, log log.Logger) (*provider2.ProviderConfig, error) {
 	providerConfig, err := provider2.ParseProvider(bytes.NewReader(raw))
 	if err != nil {
 		return nil, err
 	}
 	providerConfig.Source = *source
-
-	if devPodConfig.Current().Providers[providerConfig.Name] == nil {
-		return nil, fmt.Errorf("provider %s doesn't exist. Please run 'devpod provider add %s' instead", providerConfig.Name, provider)
+	if providerName != "" {
+		providerConfig.Name = providerName
 	}
 	if providerConfig.Options == nil {
 		providerConfig.Options = map[string]*provider2.ProviderOption{}
@@ -209,14 +229,18 @@ func updateProvider(devPodConfig *config.Config, provider string, raw []byte, so
 	return providerConfig, nil
 }
 
-func installProvider(devPodConfig *config.Config, raw []byte, source *provider2.ProviderSource, log log.Logger) (*provider2.ProviderConfig, error) {
+func installProvider(devPodConfig *config.Config, providerName string, raw []byte, source *provider2.ProviderSource, log log.Logger) (*provider2.ProviderConfig, error) {
 	providerConfig, err := provider2.ParseProvider(bytes.NewReader(raw))
 	if err != nil {
 		return nil, err
-	} else if devPodConfig.Current().Providers[providerConfig.Name] != nil {
-		return nil, fmt.Errorf("provider %s already exists. Please run 'devpod provider delete %s' before adding the provider", providerConfig.Name, providerConfig.Name)
 	}
 	providerConfig.Source = *source
+	if providerName != "" {
+		providerConfig.Name = providerName
+	}
+	if devPodConfig.Current().Providers[providerConfig.Name] != nil {
+		return nil, fmt.Errorf("provider %s already exists. Please run 'devpod provider delete %s' before adding the provider", providerConfig.Name, providerConfig.Name)
+	}
 
 	providerDir, err := provider2.GetProviderDir(devPodConfig.DefaultContext, providerConfig.Name)
 	if err != nil {

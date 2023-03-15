@@ -17,6 +17,8 @@ type AddCmd struct {
 
 	Use     bool
 	Options []string
+
+	Name string
 }
 
 // NewAddCmd creates a new command
@@ -38,6 +40,7 @@ func NewAddCmd(flags *flags.GlobalFlags) *cobra.Command {
 		},
 	}
 
+	addCmd.Flags().StringVar(&cmd.Name, "name", "", "The name to use for this provider. If empty will use the name within the loaded config")
 	addCmd.Flags().BoolVar(&cmd.Use, "use", true, "If enabled will automatically activate the provider")
 	addCmd.Flags().StringSliceVarP(&cmd.Options, "option", "o", []string{}, "Provider option in the form KEY=VALUE")
 	return addCmd
@@ -48,7 +51,7 @@ func (cmd *AddCmd) Run(ctx context.Context, devPodConfig *config.Config, args []
 		return fmt.Errorf("please specify either a local file, url or git repository. E.g. devpod provider add https://path/to/my/provider.yaml")
 	}
 
-	providerConfig, err := workspace.AddProvider(devPodConfig, args[0], log.Default)
+	providerConfig, err := workspace.AddProvider(devPodConfig, cmd.Name, args[0], log.Default)
 	if err != nil {
 		return err
 	}
