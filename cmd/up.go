@@ -219,7 +219,7 @@ func (cmd *UpCmd) devPodUp(ctx context.Context, client client2.WorkspaceClient, 
 
 func (cmd *UpCmd) devPodUpMachine(ctx context.Context, client client2.AgentClient, log log.Logger) (*config2.Result, error) {
 	// compress info
-	workspaceInfo, err := client.AgentInfo()
+	workspaceInfo, _, err := client.AgentInfo()
 	if err != nil {
 		return nil, err
 	}

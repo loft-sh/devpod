@@ -106,7 +106,7 @@ func (cmd *BuildCmd) build(ctx context.Context, workspaceClient client.Workspace
 
 func (cmd *BuildCmd) buildAgentClient(ctx context.Context, agentClient client.AgentClient, log log.Logger) error {
 	// compress info
-	workspaceInfo, err := agentClient.AgentInfo()
+	workspaceInfo, _, err := agentClient.AgentInfo()
 	if err != nil {
 		return err
 	}

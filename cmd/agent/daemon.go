@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"github.com/loft-sh/devpod/cmd/flags"
 	"github.com/loft-sh/devpod/pkg/agent"
 	"github.com/loft-sh/devpod/pkg/client/clientimplementation"
 	"github.com/loft-sh/devpod/pkg/log"
@@ -17,11 +18,15 @@ import (
 )
 
 // DaemonCmd holds the cmd flags
-type DaemonCmd struct{}
+type DaemonCmd struct {
+	*flags.GlobalFlags
+}
 
 // NewDaemonCmd creates a new command
-func NewDaemonCmd() *cobra.Command {
-	cmd := &DaemonCmd{}
+func NewDaemonCmd(flags *flags.GlobalFlags) *cobra.Command {
+	cmd := &DaemonCmd{
+		GlobalFlags: flags,
+	}
 	daemonCmd := &cobra.Command{
 		Use:   "daemon",
 		Short: "Watches for activity and stops the server due to inactivity",
@@ -34,7 +39,7 @@ func NewDaemonCmd() *cobra.Command {
 }
 
 func (cmd *DaemonCmd) Run(ctx context.Context) error {
-	logFolder, err := agent.GetAgentDaemonLogFolder()
+	logFolder, err := agent.GetAgentDaemonLogFolder(cmd.AgentDir)
 	if err != nil {
 		return err
 	}
@@ -43,31 +48,31 @@ func (cmd *DaemonCmd) Run(ctx context.Context) error {
 	logger.Infof("Starting DevPod Daemon patrol...")
 
 	// start patrolling
-	patrol(logger)
+	cmd.patrol(logger)
 
 	// should never reach this
 	return nil
 }
 
-func patrol(log log.Logger) {
+func (cmd *DaemonCmd) patrol(log log.Logger) {
 	// make sure we don't immediately resleep on startup
-	initialTouch(log)
+	cmd.initialTouch(log)
 
 	// loop over workspace configs and check their last ModTime
 	for {
 		select {
 		case <-time.After(time.Minute):
-			doOnce(log)
+			cmd.doOnce(log)
 		}
 	}
 }
 
-func doOnce(log log.Logger) {
+func (cmd *DaemonCmd) doOnce(log log.Logger) {
 	var latestActivity *time.Time
 	var workspace *provider2.AgentWorkspaceInfo
 
 	// get base folder
-	baseFolder, err := agent.FindAgentHomeFolder()
+	baseFolder, err := agent.FindAgentHomeFolder(cmd.AgentDir)
 	if err != nil {
 		return
 	}
@@ -127,9 +132,9 @@ func doOnce(log log.Logger) {
 	log.Infof("Successful ran command: %s", buf.String())
 }
 
-func initialTouch(log log.Logger) {
+func (cmd *DaemonCmd) initialTouch(log log.Logger) {
 	// get base folder
-	baseFolder, err := agent.FindAgentHomeFolder()
+	baseFolder, err := agent.FindAgentHomeFolder(cmd.AgentDir)
 	if err != nil {
 		return
 	}

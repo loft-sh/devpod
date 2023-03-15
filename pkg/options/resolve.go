@@ -172,6 +172,7 @@ func ResolveAgentConfig(devConfig *config.Config, provider *provider2.ProviderCo
 	// fill in agent config
 	options := provider2.ToOptions(workspace, machine, devConfig.ProviderOptions(provider.Name))
 	agentConfig := provider.Agent
+	agentConfig.DataPath = resolveDefaultValue(agentConfig.DataPath, options)
 	agentConfig.Path = resolveDefaultValue(agentConfig.Path, options)
 	if agentConfig.Path == "" {
 		agentConfig.Path = agent.RemoteDevPodHelperLocation

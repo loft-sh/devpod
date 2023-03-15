@@ -49,8 +49,11 @@ type ProviderSource struct {
 }
 
 type ProviderAgentConfig struct {
-	// Path is the path inside the server devpod will expect the agent
+	// Path is the binary path inside the server devpod will expect the agent binary
 	Path string `json:"path,omitempty"`
+
+	// DataPath is the agent path where data is stored
+	DataPath string `json:"dataPath,omitempty"`
 
 	// DownloadURL is the base url where to download the agent from
 	DownloadURL string `json:"downloadURL,omitempty"`

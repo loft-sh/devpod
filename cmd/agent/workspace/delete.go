@@ -44,7 +44,7 @@ func NewDeleteCmd(flags *flags.GlobalFlags) *cobra.Command {
 
 func (cmd *DeleteCmd) Run(ctx context.Context) error {
 	// get workspace
-	shouldExit, workspaceInfo, err := agent.ReadAgentWorkspaceInfo(cmd.Context, cmd.ID)
+	shouldExit, workspaceInfo, err := agent.ReadAgentWorkspaceInfo(cmd.AgentDir, cmd.Context, cmd.ID)
 	if err != nil {
 		return err
 	} else if shouldExit {

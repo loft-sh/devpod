@@ -16,11 +16,21 @@ var extraSearchLocations = []string{"/home/devpod/.devpod/agent", "/opt/devpod/a
 
 var FindAgentHomeFolderErr = fmt.Errorf("couldn't find devpod home directory")
 
-func GetAgentDaemonLogFolder() (string, error) {
-	return FindAgentHomeFolder()
+func GetAgentDaemonLogFolder(agentFolder string) (string, error) {
+	return FindAgentHomeFolder(agentFolder)
 }
 
-func findDir(validate func(path string) bool) string {
+func findDir(agentFolder string, validate func(path string) bool) string {
+	// get agent folder
+	if agentFolder != "" {
+		if !validate(agentFolder) {
+			return ""
+		}
+
+		return agentFolder
+	}
+
+	// check environment
 	homeFolder := os.Getenv(config.DEVPOD_HOME)
 	if homeFolder != "" && validate(homeFolder) {
 		return homeFolder
@@ -63,8 +73,8 @@ func findDir(validate func(path string) bool) string {
 	return ""
 }
 
-func FindAgentHomeFolder() (string, error) {
-	homeDir := findDir(isDevPodHome)
+func FindAgentHomeFolder(agentFolder string) (string, error) {
+	homeDir := findDir(agentFolder, isDevPodHome)
 	if homeDir != "" {
 		return homeDir, nil
 	}
@@ -77,15 +87,15 @@ func isDevPodHome(dir string) bool {
 	return err == nil
 }
 
-func PrepareAgentHomeFolder() (string, error) {
+func PrepareAgentHomeFolder(agentFolder string) (string, error) {
 	// try to find agent home folder first
-	homeFolder, err := FindAgentHomeFolder()
+	homeFolder, err := FindAgentHomeFolder(agentFolder)
 	if err == nil {
 		return homeFolder, nil
 	}
 
 	// try to find an executable directory
-	homeDir := findDir(IsDirExecutable)
+	homeDir := findDir(agentFolder, isDirExecutable)
 	if homeDir != "" {
 		return homeDir, nil
 	}
@@ -93,7 +103,7 @@ func PrepareAgentHomeFolder() (string, error) {
 	return "", fmt.Errorf("couldn't find an executable directory, please specify DEVPOD_HOME")
 }
 
-func IsDirExecutable(dir string) bool {
+func isDirExecutable(dir string) bool {
 	if !filepath.IsAbs(dir) {
 		var err error
 		dir, err = filepath.Abs(dir)
@@ -133,8 +143,8 @@ func GetAgentWorkspaceContentDir(workspaceDir string) string {
 	return filepath.Join(workspaceDir, "content")
 }
 
-func GetAgentWorkspaceDir(context, workspaceID string) (string, error) {
-	homeFolder, err := FindAgentHomeFolder()
+func GetAgentWorkspaceDir(agentFolder, context, workspaceID string) (string, error) {
+	homeFolder, err := FindAgentHomeFolder(agentFolder)
 	if err != nil {
 		return "", err
 	}
@@ -154,8 +164,8 @@ func GetAgentWorkspaceDir(context, workspaceID string) (string, error) {
 	return "", os.ErrNotExist
 }
 
-func CreateAgentWorkspaceDir(context, workspaceID string) (string, error) {
-	homeFolder, err := PrepareAgentHomeFolder()
+func CreateAgentWorkspaceDir(agentFolder, context, workspaceID string) (string, error) {
+	homeFolder, err := PrepareAgentHomeFolder(agentFolder)
 	if err != nil {
 		return "", err
 	}

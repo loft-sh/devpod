@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"github.com/loft-sh/devpod/cmd/agent/workspace"
+	"github.com/loft-sh/devpod/cmd/flags"
 	"github.com/loft-sh/devpod/pkg/agent"
 	"github.com/loft-sh/devpod/pkg/devcontainer"
 	"github.com/loft-sh/devpod/pkg/docker"
@@ -18,6 +19,8 @@ import (
 
 // ContainerTunnelCmd holds the ws-tunnel cmd flags
 type ContainerTunnelCmd struct {
+	*flags.GlobalFlags
+
 	Token         string
 	WorkspaceInfo string
 	User          string
@@ -27,8 +30,10 @@ type ContainerTunnelCmd struct {
 }
 
 // NewContainerTunnelCmd creates a new command
-func NewContainerTunnelCmd() *cobra.Command {
-	cmd := &ContainerTunnelCmd{}
+func NewContainerTunnelCmd(flags *flags.GlobalFlags) *cobra.Command {
+	cmd := &ContainerTunnelCmd{
+		GlobalFlags: flags,
+	}
 	containerTunnelCmd := &cobra.Command{
 		Use:   "container-tunnel",
 		Short: "Starts a new container ssh tunnel",

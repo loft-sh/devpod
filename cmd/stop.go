@@ -50,7 +50,7 @@ func (cmd *StopCmd) Run(ctx context.Context, client client2.WorkspaceClient) err
 	if err != nil {
 		return err
 	} else if instanceStatus != client2.StatusRunning {
-		return fmt.Errorf("cannot stop instance because it is '%s'", instanceStatus)
+		return fmt.Errorf("cannot stop workspace because it is '%s'", instanceStatus)
 	}
 
 	// stop environment
