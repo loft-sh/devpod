@@ -36,7 +36,7 @@ func NewGetResultCmd(flags *flags.GlobalFlags) *cobra.Command {
 
 func (cmd *GetResultCmd) Run(ctx context.Context) error {
 	// get workspace
-	shouldExit, _, err := agent.ReadAgentWorkspaceInfo(cmd.Context, cmd.ID)
+	shouldExit, _, err := agent.ReadAgentWorkspaceInfo(cmd.AgentDir, cmd.Context, cmd.ID)
 	if err != nil {
 		return err
 	} else if shouldExit {
@@ -44,7 +44,7 @@ func (cmd *GetResultCmd) Run(ctx context.Context) error {
 	}
 
 	// read dev container result
-	result, err := agent.ReadAgentWorkspaceDevContainerResult(cmd.Context, cmd.ID)
+	result, err := agent.ReadAgentWorkspaceDevContainerResult(cmd.AgentDir, cmd.Context, cmd.ID)
 	if err != nil {
 		return err
 	}

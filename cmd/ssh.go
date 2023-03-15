@@ -166,7 +166,7 @@ func (cmd *SSHCmd) jumpContainerServer(ctx context.Context, client client2.Agent
 	}
 
 	// compute workspace info
-	workspaceInfo, err := client.AgentInfo()
+	workspaceInfo, _, err := client.AgentInfo()
 	if err != nil {
 		return err
 	}

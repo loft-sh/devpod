@@ -127,22 +127,29 @@ func (s *agentClient) AgentConfig() provider.ProviderAgentConfig {
 	return options.ResolveAgentConfig(s.devPodConfig, s.config, s.workspace, s.machine)
 }
 
-func (s *agentClient) AgentInfo() (string, error) {
+func (s *agentClient) AgentInfo() (string, *provider.AgentWorkspaceInfo, error) {
 	s.m.Lock()
 	defer s.m.Unlock()
 
-	// marshal config
-	out, err := json.Marshal(&provider.AgentWorkspaceInfo{
+	agentInfo := &provider.AgentWorkspaceInfo{
 		Workspace: s.workspace,
 		Machine:   s.machine,
 		Agent:     options.ResolveAgentConfig(s.devPodConfig, s.config, s.workspace, s.machine),
 		Options:   s.devPodConfig.ProviderOptions(s.Provider()),
-	})
-	if err != nil {
-		return "", err
 	}
 
-	return compress.Compress(string(out))
+	// marshal config
+	out, err := json.Marshal(agentInfo)
+	if err != nil {
+		return "", nil, err
+	}
+
+	compressed, err := compress.Compress(string(out))
+	if err != nil {
+		return "", nil, err
+	}
+
+	return compressed, agentInfo, nil
 }
 
 func (s *agentClient) Create(ctx context.Context, options client.CreateOptions) error {
@@ -194,7 +201,11 @@ func (s *agentClient) Delete(ctx context.Context, opt client.DeleteOptions) erro
 		defer writer.Close()
 
 		s.log.Infof("Deleting container...")
-		command := fmt.Sprintf("%s agent workspace delete --id %s --context %s", options.ResolveAgentConfig(s.devPodConfig, s.config, s.workspace, s.machine).Path, s.workspace.ID, s.workspace.Context)
+		agentConfig := options.ResolveAgentConfig(s.devPodConfig, s.config, s.workspace, s.machine)
+		command := fmt.Sprintf("%s agent workspace delete --id %s --context %s", agentConfig.Path, s.workspace.ID, s.workspace.Context)
+		if agentConfig.DataPath != "" {
+			command += fmt.Sprintf(" --agent-dir '%s'", agentConfig.DataPath)
+		}
 		err := RunCommandWithBinaries(
 			ctx,
 			"command",
@@ -266,7 +277,11 @@ func (s *agentClient) Stop(ctx context.Context, opt client.StopOptions) error {
 		// TODO: stop whole machine if there is no other workspace container running anymore
 
 		s.log.Infof("Stopping container...")
-		command := fmt.Sprintf("%s agent workspace stop --id %s --context %s", options.ResolveAgentConfig(s.devPodConfig, s.config, s.workspace, s.machine).Path, s.workspace.ID, s.workspace.Context)
+		agentConfig := options.ResolveAgentConfig(s.devPodConfig, s.config, s.workspace, s.machine)
+		command := fmt.Sprintf("%s agent workspace stop --id '%s' --context '%s'", agentConfig.Path, s.workspace.ID, s.workspace.Context)
+		if agentConfig.DataPath != "" {
+			command += fmt.Sprintf(" --agent-dir '%s'", agentConfig.DataPath)
+		}
 		err := RunCommandWithBinaries(
 			ctx,
 			"command",
@@ -368,7 +383,11 @@ func (s *agentClient) Status(ctx context.Context, options client.StatusOptions) 
 func (s *agentClient) getContainerStatus(ctx context.Context) (client.Status, error) {
 	stdout := &bytes.Buffer{}
 	stderr := &bytes.Buffer{}
-	command := fmt.Sprintf("%s agent workspace status --id %s --context %s", options.ResolveAgentConfig(s.devPodConfig, s.config, s.workspace, s.machine).Path, s.workspace.ID, s.workspace.Context)
+	agentConfig := options.ResolveAgentConfig(s.devPodConfig, s.config, s.workspace, s.machine)
+	command := fmt.Sprintf("%s agent workspace status --id '%s' --context '%s'", agentConfig.Path, s.workspace.ID, s.workspace.Context)
+	if agentConfig.DataPath != "" {
+		command += fmt.Sprintf(" --agent-dir '%s'", agentConfig.DataPath)
+	}
 	err := RunCommandWithBinaries(ctx, "command", s.config.Exec.Command, s.workspace.Context, s.workspace, s.machine, s.devPodConfig.ProviderOptions(s.config.Name), s.config, map[string]string{
 		provider.CommandEnv: command,
 	}, nil, stdout, stderr, s.log.ErrorStreamOnly())

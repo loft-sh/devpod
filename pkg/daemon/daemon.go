@@ -8,7 +8,7 @@ import (
 	"runtime"
 )
 
-func InstallDaemon(log log.Logger) error {
+func InstallDaemon(agentDir string, log log.Logger) error {
 	if runtime.GOOS == "windows" || runtime.GOOS == "darwin" {
 		return fmt.Errorf("unsupported daemon os")
 	}
@@ -20,7 +20,11 @@ func InstallDaemon(log log.Logger) error {
 	}
 
 	// install ourselves with devpod watch
-	_, err = service.Install("agent", "daemon")
+	args := []string{"agent", "daemon"}
+	if agentDir != "" {
+		args = append(args, "--agent-dir", agentDir)
+	}
+	_, err = service.Install(args...)
 	if err != nil && err != daemon.ErrAlreadyInstalled {
 		return errors.Wrap(err, "install service")
 	}

@@ -322,7 +322,7 @@ func installDaemon(workspaceInfo *provider2.AgentWorkspaceInfo, log log.Logger) 
 	}
 
 	log.Debugf("Installing DevPod daemon into server...")
-	err := daemon.InstallDaemon(log)
+	err := daemon.InstallDaemon(workspaceInfo.Agent.DataPath, log)
 	if err != nil {
 		return errors.Wrap(err, "install daemon")
 	}

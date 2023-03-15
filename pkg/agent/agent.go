@@ -46,9 +46,9 @@ func DecodeWorkspaceInfo(workspaceInfoRaw string) (*provider2.AgentWorkspaceInfo
 	return workspaceInfo, decoded, nil
 }
 
-func readAgentWorkspaceInfo(context, id string) (*provider2.AgentWorkspaceInfo, error) {
+func readAgentWorkspaceInfo(agentFolder, context, id string) (*provider2.AgentWorkspaceInfo, error) {
 	// get workspace folder
-	workspaceDir, err := GetAgentWorkspaceDir(context, id)
+	workspaceDir, err := GetAgentWorkspaceDir(agentFolder, context, id)
 	if err != nil {
 		return nil, err
 	}
@@ -70,9 +70,9 @@ func readAgentWorkspaceInfo(context, id string) (*provider2.AgentWorkspaceInfo, 
 	return workspaceInfo, nil
 }
 
-func ReadAgentWorkspaceDevContainerResult(context, id string) (*config.Result, error) {
+func ReadAgentWorkspaceDevContainerResult(agentFolder, context, id string) (*config.Result, error) {
 	// get workspace folder
-	workspaceDir, err := GetAgentWorkspaceDir(context, id)
+	workspaceDir, err := GetAgentWorkspaceDir(agentFolder, context, id)
 	if err != nil {
 		return nil, err
 	}
@@ -93,9 +93,9 @@ func ReadAgentWorkspaceDevContainerResult(context, id string) (*config.Result, e
 	return workspaceResult, nil
 }
 
-func WriteAgentWorkspaceDevContainerResult(context, id string, result *config.Result) error {
+func WriteAgentWorkspaceDevContainerResult(agentFolder, context, id string, result *config.Result) error {
 	// get workspace folder
-	workspaceDir, err := GetAgentWorkspaceDir(context, id)
+	workspaceDir, err := GetAgentWorkspaceDir(agentFolder, context, id)
 	if err != nil {
 		return err
 	}
@@ -115,8 +115,8 @@ func WriteAgentWorkspaceDevContainerResult(context, id string, result *config.Re
 	return nil
 }
 
-func ReadAgentWorkspaceInfo(context, id string) (bool, *provider2.AgentWorkspaceInfo, error) {
-	workspaceInfo, err := readAgentWorkspaceInfo(context, id)
+func ReadAgentWorkspaceInfo(agentFolder, context, id string) (bool, *provider2.AgentWorkspaceInfo, error) {
+	workspaceInfo, err := readAgentWorkspaceInfo(agentFolder, context, id)
 	if err != nil && err != FindAgentHomeFolderErr {
 		return false, nil, err
 	}
@@ -149,7 +149,7 @@ func WriteWorkspaceInfo(workspaceInfoEncoded string) (bool, *provider2.AgentWork
 	}
 
 	// write to workspace folder
-	workspaceDir, err := CreateAgentWorkspaceDir(workspaceInfo.Workspace.Context, workspaceInfo.Workspace.ID)
+	workspaceDir, err := CreateAgentWorkspaceDir(workspaceInfo.Agent.DataPath, workspaceInfo.Workspace.Context, workspaceInfo.Workspace.ID)
 	if err != nil {
 		return false, nil, err
 	}

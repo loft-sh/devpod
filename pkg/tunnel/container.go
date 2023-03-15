@@ -160,7 +160,7 @@ func (c *ContainerHandler) updateConfig(ctx context.Context, sshClient *ssh.Clie
 			}
 
 			// compress info
-			workspaceInfo, err := c.client.AgentInfo()
+			workspaceInfo, agentInfo, err := c.client.AgentInfo()
 			if err != nil {
 				c.log.Errorf("Error compressing workspace info: %v", err)
 				break
@@ -169,6 +169,10 @@ func (c *ContainerHandler) updateConfig(ctx context.Context, sshClient *ssh.Clie
 			// update workspace remotely
 			buf := &bytes.Buffer{}
 			command := fmt.Sprintf("%s agent workspace update-config --workspace-info '%s'", c.client.AgentPath(), workspaceInfo)
+			if agentInfo.Agent.DataPath != "" {
+				command += fmt.Sprintf(" --agent-dir '%s'")
+			}
+
 			c.log.Debugf("Run command in container: %s", command)
 			err = devssh.Run(sshClient, command, nil, buf, buf)
 			if err != nil {
@@ -182,7 +186,7 @@ func (c *ContainerHandler) updateConfig(ctx context.Context, sshClient *ssh.Clie
 
 func (c *ContainerHandler) runRunInContainer(sshClient *ssh.Client, tok string, privateKey []byte, runInContainer Handler) error {
 	// compress info
-	workspaceInfo, err := c.client.AgentInfo()
+	workspaceInfo, _, err := c.client.AgentInfo()
 	if err != nil {
 		return err
 	}
@@ -295,10 +299,15 @@ func (c *ContainerHandler) getDevContainerResult(client *ssh.Client) (*config.Re
 	writer := c.log.Writer(logrus.InfoLevel, false)
 	defer writer.Close()
 
+	agentConfig := c.client.AgentConfig()
+
 	// retrieve devcontainer result
 	command := fmt.Sprintf("%s agent workspace get-result --id '%s' --context '%s'", c.client.AgentPath(), c.client.Workspace(), c.client.Context())
 	if c.log.GetLevel() == logrus.DebugLevel {
 		command += " --debug"
+	}
+	if agentConfig.DataPath != "" {
+		command += fmt.Sprintf(" --agent-dir '%s'", agentConfig.DataPath)
 	}
 	buf := &bytes.Buffer{}
 	err := devssh.Run(client, command, nil, buf, writer)

@@ -135,7 +135,7 @@ func (r *Runner) Up(options UpOptions) (*config.Result, error) {
 	}
 
 	// write result
-	err = agent.WriteAgentWorkspaceDevContainerResult(r.WorkspaceConfig.Workspace.Context, r.WorkspaceConfig.Workspace.ID, result)
+	err = agent.WriteAgentWorkspaceDevContainerResult(r.WorkspaceConfig.Agent.DataPath, r.WorkspaceConfig.Workspace.Context, r.WorkspaceConfig.Workspace.ID, result)
 	if err != nil {
 		r.Log.Errorf("Error writing dev container result: %v", err)
 	}

@@ -74,7 +74,7 @@ type AgentClient interface {
 	AgentConfig() provider.ProviderAgentConfig
 
 	// AgentInfo returns the info to send to the agent
-	AgentInfo() (string, error)
+	AgentInfo() (string, *provider.AgentWorkspaceInfo, error)
 }
 
 type InitOptions struct{}
