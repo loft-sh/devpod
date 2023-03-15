@@ -237,7 +237,7 @@ func (s *machineClient) Delete(ctx context.Context, options client.DeleteOptions
 			return err
 		}
 
-		s.log.Errorf("Error deleting machine '%s'", s.machine.ID)
+		s.log.Errorf("Error deleting machine '%s': %v", s.machine.ID, err)
 	}
 	s.log.Donef("Successfully deleted machine '%s'", s.machine.ID)
 
