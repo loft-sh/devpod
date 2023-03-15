@@ -1,39 +1,26 @@
-import {useWorkspaces} from "../../contexts/DevPodContext/DevPodContext";
-import {useMemo} from "react";
-import {exists} from "../../helpers";
-import {ListItem, Text, UnorderedList} from "@chakra-ui/react";
-import {Link} from "react-router-dom";
+import { Box, Heading, HStack } from "@chakra-ui/react"
+import { Outlet } from "react-router"
+import { exists } from "../../lib"
+import { useWorkspaceTitle } from "./useWorkspaceTitle"
 
-type TWorkspaceRow = Readonly<{ name: string; providerName: string | null }>
-export function WorkspacesTab() {
-    const workspaces = useWorkspaces()
-    const providerRows = useMemo<readonly TWorkspaceRow[]>(() => {
-        if (!exists(workspaces)) {
-            return []
-        }
+export function Workspaces() {
+  const title = useWorkspaceTitle()
 
-        return workspaces.reduce<readonly TWorkspaceRow[]>((acc, { id, provider }) => {
-            if (!exists(id)) {
-                return acc
-            }
+  return (
+    <>
+      {exists(title) && (
+        <HStack align="center">
+          {exists(title.leadingAction) && title.leadingAction}
+          <Heading as={title.priority === "high" ? "h1" : "h2"} size="xl">
+            {title.label}
+          </Heading>
+          {exists(title.trailingAction) && title.trailingAction}
+        </HStack>
+      )}
 
-            return [...acc, { providerName: provider?.name ?? null, name: id }]
-        }, [])
-    }, [workspaces])
-
-    return (
-        <>
-            <div>Workspaces</div>
-            <Link to={"/open?test=test"}>Test</Link>
-            <UnorderedList>
-                {providerRows.map((row) => (
-                    <ListItem key={row.name}>
-                        <Text fontWeight="bold">{row.name}</Text>
-
-                        {exists(row.providerName) && <Text>Provider: {row.providerName}</Text>}
-                    </ListItem>
-                ))}
-            </UnorderedList>
-        </>
-    )
+      <Box paddingTop="10">
+        <Outlet />
+      </Box>
+    </>
+  )
 }
