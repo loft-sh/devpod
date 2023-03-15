@@ -33,6 +33,24 @@ module.exports = {
     "padding-line-between-statements": ["warn", { blankLine: "always", prev: "*", next: "return" }],
     "no-warning-comments": ["error", { terms: ["fixme"], location: "start" }],
     "@typescript-eslint/no-unnecessary-condition": ["warn", { allowConstantLoopConditions: true }],
+    "@typescript-eslint/naming-convention": [
+      "error",
+      {
+        selector: ["typeParameter", "typeAlias"],
+        format: ["PascalCase"],
+        prefix: ["T"],
+      },
+      {
+        selector: ["interface"],
+        format: ["PascalCase"],
+        prefix: ["I"],
+      },
+      {
+        selector: ["enum"],
+        format: ["PascalCase"],
+        prefix: ["E"],
+      },
+    ],
   },
   ignorePatterns: ["dist/**/*", "src-tauri/**/*", "public/**/*"],
 }
