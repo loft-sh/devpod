@@ -54,7 +54,7 @@ func NewContainerTunnelCmd(flags *flags.GlobalFlags) *cobra.Command {
 // Run runs the command logic
 func (cmd *ContainerTunnelCmd) Run(_ *cobra.Command, _ []string) error {
 	// write workspace info
-	shouldExit, workspaceInfo, err := agent.WriteWorkspaceInfo(cmd.WorkspaceInfo)
+	shouldExit, workspaceInfo, err := agent.WriteWorkspaceInfo(cmd.WorkspaceInfo, log.Default.ErrorStreamOnly())
 	if err != nil {
 		return err
 	} else if shouldExit {
