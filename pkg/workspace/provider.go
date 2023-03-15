@@ -92,7 +92,7 @@ func resolveProvider(provider string, log log.Logger) ([]byte, *provider2.Provid
 	}
 
 	// check if github
-	out, source, err := DownloadProviderGithub(provider)
+	out, source, err := DownloadProviderGithub(provider, log)
 	if err != nil {
 		return nil, nil, errors.Wrap(err, "download github")
 	} else if len(out) > 0 {
@@ -102,7 +102,7 @@ func resolveProvider(provider string, log log.Logger) ([]byte, *provider2.Provid
 	return nil, nil, fmt.Errorf("unrecognized provider type, please specify either a local file, url or github repository")
 }
 
-func DownloadProviderGithub(originalPath string) ([]byte, *provider2.ProviderSource, error) {
+func DownloadProviderGithub(originalPath string, log log.Logger) ([]byte, *provider2.ProviderSource, error) {
 	path := strings.TrimPrefix(originalPath, "github.com/")
 
 	// resolve release
@@ -130,7 +130,7 @@ func DownloadProviderGithub(originalPath string) ([]byte, *provider2.ProviderSou
 	}
 
 	// download
-	body, err := download.File(requestURL)
+	body, err := download.File(requestURL, log)
 	if err != nil {
 		return nil, nil, errors.Wrap(err, "download")
 	}
