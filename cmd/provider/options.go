@@ -81,12 +81,17 @@ func (cmd *OptionsCmd) Run(ctx context.Context, providerName string) error {
 				continue
 			}
 
+			value := entryOptions[optionName].Value
+			if value != "" && entry.Password {
+				value = "********"
+			}
+
 			tableEntries = append(tableEntries, []string{
 				optionName,
 				strconv.FormatBool(entry.Required),
 				entry.Description,
 				entry.Default,
-				entryOptions[optionName].Value,
+				value,
 			})
 		}
 		sort.SliceStable(tableEntries, func(i, j int) bool {

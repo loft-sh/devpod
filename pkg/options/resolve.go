@@ -380,6 +380,7 @@ func resolveOption(
 			Options:                option.Enum,
 			ValidationRegexPattern: option.ValidationPattern,
 			ValidationMessage:      option.ValidationMessage,
+			IsPassword:             option.Password,
 		})
 		if err != nil {
 			return err
