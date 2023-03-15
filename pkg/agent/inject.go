@@ -72,7 +72,7 @@ func InjectAgentAndExecute(ctx context.Context, exec inject.ExecFunc, remoteAgen
 
 			log.Debugf("Inject Error: %s%v", buf.String(), err)
 			startWaiting = time.Now()
-			time.Sleep(time.Second * 2)
+			time.Sleep(time.Second * 3)
 			continue
 		}
 

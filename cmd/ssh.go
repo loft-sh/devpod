@@ -90,7 +90,7 @@ func startWait(ctx context.Context, client client2.WorkspaceClient, create bool,
 				startWaiting = time.Now()
 			}
 
-			time.Sleep(time.Second)
+			time.Sleep(time.Second * 2)
 			continue
 		} else if instanceStatus == client2.StatusStopped {
 			if create {
