@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/loft-sh/devpod/pkg/gitcredentials"
+	"github.com/loft-sh/devpod/pkg/log"
 	"github.com/pkg/errors"
 	"io"
 	"net/http"
@@ -32,7 +33,7 @@ func Head(rawURL string) (int, error) {
 	return resp.StatusCode, nil
 }
 
-func File(rawURL string) (io.ReadCloser, error) {
+func File(rawURL string, log log.Logger) (io.ReadCloser, error) {
 	parsed, err := url.Parse(rawURL)
 	if err != nil {
 		return nil, err
@@ -60,6 +61,7 @@ func File(rawURL string) (io.ReadCloser, error) {
 					Path:     parsed.Path,
 				})
 				if err == nil && credentials != nil && credentials.Password != "" {
+					log.Debugf("Make request with credentials")
 					return downloadGithubRelease(org, repo, release, file, credentials.Password)
 				}
 			}

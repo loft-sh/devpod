@@ -250,7 +250,7 @@ func downloadFile(binaryName string, binary *provider2.ProviderBinary, targetFol
 	// initiate download
 	log.Infof("Download binary %s from %s", binaryName, binary.Path)
 	defer log.Debugf("Successfully downloaded binary %s", binary.Path)
-	body, err := download.File(binary.Path)
+	body, err := download.File(binary.Path, log)
 	if err != nil {
 		return "", errors.Wrap(err, "download binary")
 	}
@@ -280,7 +280,7 @@ func downloadArchive(binaryName string, binary *provider2.ProviderBinary, target
 	// initiate download
 	log.Infof("Download binary %s from %s", binaryName, binary.Path)
 	defer log.Debugf("Successfully extracted & downloaded archive")
-	body, err := download.File(binary.Path)
+	body, err := download.File(binary.Path, log)
 	if err != nil {
 		return "", err
 	}
