@@ -95,48 +95,59 @@ func PrepareAgentHomeFolder(agentFolder string) (string, error) {
 	}
 
 	// try to find an executable directory
-	homeDir := findDir(agentFolder, isDirExecutable)
+	homeDir := findDir(agentFolder, func(path string) bool {
+		ok, _ := isDirExecutable(path)
+		return ok
+	})
 	if homeDir != "" {
 		return homeDir, nil
 	}
 
-	return "", fmt.Errorf("couldn't find an executable directory, please specify DEVPOD_HOME")
+	// check if agentFolder is set
+	if agentFolder != "" {
+		_, err := isDirExecutable(agentFolder)
+		return "", err
+	}
+
+	// return generic error here
+	return "", fmt.Errorf("couldn't find an executable directory")
 }
 
-func isDirExecutable(dir string) bool {
+func isDirExecutable(dir string) (bool, error) {
 	if !filepath.IsAbs(dir) {
 		var err error
 		dir, err = filepath.Abs(dir)
 		if err != nil {
-			return false
+			return false, err
 		}
 	}
 
 	err := os.MkdirAll(dir, 0777)
 	if err != nil {
-		return false
+		return false, err
 	}
 
 	testFile := filepath.Join(dir, "devpod_test.sh")
 	err = os.WriteFile(testFile, []byte(`#!/bin/sh
-echo DevPod`), 0755)
+echo DevPod
+`), 0755)
 	if err != nil {
-		return false
+		return false, err
 	}
 	defer os.Remove(testFile)
 	if runtime.GOOS != "linux" {
-		return true
+		return true, nil
 	}
 
 	// try to execute
 	out, err := exec.Command(testFile).Output()
 	if err != nil {
-		return false
+		return false, err
 	} else if strings.TrimSpace(string(out)) != "DevPod" {
-		return false
+		return false, fmt.Errorf("received %s, expected DevPod", strings.TrimSpace(string(out)))
 	}
 
-	return true
+	return true, nil
 }
 
 func GetAgentWorkspaceContentDir(workspaceDir string) string {

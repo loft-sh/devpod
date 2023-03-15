@@ -4,6 +4,7 @@ import (
 	"context"
 	"github.com/loft-sh/devpod/cmd/flags"
 	"github.com/loft-sh/devpod/pkg/agent"
+	"github.com/loft-sh/devpod/pkg/log"
 	"github.com/spf13/cobra"
 )
 
@@ -34,7 +35,7 @@ func NewUpdateConfigCmd(flags *flags.GlobalFlags) *cobra.Command {
 
 func (cmd *UpdateConfigCmd) Run(ctx context.Context) error {
 	// write workspace info
-	shouldExit, _, err := agent.WriteWorkspaceInfo(cmd.WorkspaceInfo)
+	shouldExit, _, err := agent.WriteWorkspaceInfo(cmd.WorkspaceInfo, log.Default)
 	if err != nil {
 		return err
 	} else if shouldExit {

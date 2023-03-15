@@ -115,14 +115,14 @@ func WriteAgentWorkspaceDevContainerResult(agentFolder, context, id string, resu
 	return nil
 }
 
-func ReadAgentWorkspaceInfo(agentFolder, context, id string) (bool, *provider2.AgentWorkspaceInfo, error) {
+func ReadAgentWorkspaceInfo(agentFolder, context, id string, log log.Logger) (bool, *provider2.AgentWorkspaceInfo, error) {
 	workspaceInfo, err := readAgentWorkspaceInfo(agentFolder, context, id)
 	if err != nil && err != FindAgentHomeFolderErr {
 		return false, nil, err
 	}
 
 	// check if we need to become root
-	shouldExit, err := rerunAsRoot(workspaceInfo)
+	shouldExit, err := rerunAsRoot(workspaceInfo, log)
 	if err != nil {
 		return false, nil, errors.Wrap(err, "rerun as root")
 	} else if shouldExit {
@@ -134,14 +134,14 @@ func ReadAgentWorkspaceInfo(agentFolder, context, id string) (bool, *provider2.A
 	return false, workspaceInfo, nil
 }
 
-func WriteWorkspaceInfo(workspaceInfoEncoded string) (bool, *provider2.AgentWorkspaceInfo, error) {
+func WriteWorkspaceInfo(workspaceInfoEncoded string, log log.Logger) (bool, *provider2.AgentWorkspaceInfo, error) {
 	workspaceInfo, decoded, err := DecodeWorkspaceInfo(workspaceInfoEncoded)
 	if err != nil {
 		return false, nil, err
 	}
 
 	// check if we need to become root
-	shouldExit, err := rerunAsRoot(workspaceInfo)
+	shouldExit, err := rerunAsRoot(workspaceInfo, log)
 	if err != nil {
 		return false, nil, fmt.Errorf("rerun as root: %v", err)
 	} else if shouldExit {
@@ -165,7 +165,7 @@ func WriteWorkspaceInfo(workspaceInfoEncoded string) (bool, *provider2.AgentWork
 	return false, workspaceInfo, nil
 }
 
-func rerunAsRoot(workspaceInfo *provider2.AgentWorkspaceInfo) (bool, error) {
+func rerunAsRoot(workspaceInfo *provider2.AgentWorkspaceInfo, log log.Logger) (bool, error) {
 	// check if root is required
 	if runtime.GOOS != "linux" || os.Getuid() == 0 {
 		return false, nil
@@ -174,7 +174,8 @@ func rerunAsRoot(workspaceInfo *provider2.AgentWorkspaceInfo) (bool, error) {
 	// check if we can reach docker with no problems
 	dockerRootRequired, err := dockerReachable()
 	if err != nil {
-		return false, nil
+		log.Debugf("Error trying to reach docker daemon: %v", err)
+		dockerRootRequired = true
 	}
 
 	// check if daemon needs to be installed
@@ -185,6 +186,7 @@ func rerunAsRoot(workspaceInfo *provider2.AgentWorkspaceInfo) (bool, error) {
 
 	// check if root required
 	if !dockerRootRequired && !agentRootRequired {
+		log.Debugf("No root required, because neither docker nor agent daemon needs to be installed")
 		return false, nil
 	}
 
@@ -197,6 +199,7 @@ func rerunAsRoot(workspaceInfo *provider2.AgentWorkspaceInfo) (bool, error) {
 	// call ourself
 	args := []string{binary}
 	args = append(args, os.Args[1:]...)
+	log.Debugf("Rerun as root: %s", strings.Join(args, " "))
 	cmd := exec.Command("sudo", args...)
 	cmd.Stdin = os.Stdin
 	cmd.Stdout = os.Stdout

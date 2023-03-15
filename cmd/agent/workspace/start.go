@@ -40,7 +40,7 @@ func NewStartCmd(flags *flags.GlobalFlags) *cobra.Command {
 
 func (cmd *StartCmd) Run(ctx context.Context) error {
 	// get workspace
-	shouldExit, workspaceInfo, err := agent.ReadAgentWorkspaceInfo(cmd.AgentDir, cmd.Context, cmd.ID)
+	shouldExit, workspaceInfo, err := agent.ReadAgentWorkspaceInfo(cmd.AgentDir, cmd.Context, cmd.ID, log.Default.ErrorStreamOnly())
 	if err != nil {
 		return err
 	} else if shouldExit {
