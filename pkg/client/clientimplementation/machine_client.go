@@ -239,7 +239,7 @@ func (s *machineClient) Delete(ctx context.Context, options client.DeleteOptions
 
 		s.log.Errorf("Error deleting machine '%s'", s.machine.ID)
 	}
-	s.log.Donef("Successfully deleted machine '%s'", s.config.Name, s.machine.ID)
+	s.log.Donef("Successfully deleted machine '%s'", s.machine.ID)
 
 	// delete machine folder
 	err = DeleteMachineFolder(s.machine.Context, s.machine.ID)
