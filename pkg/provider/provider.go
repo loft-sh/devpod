@@ -140,6 +140,9 @@ type ProviderOption struct {
 	// If required is true and the user doesn't supply a value, devpod will ask the user
 	Required bool `json:"required,omitempty"`
 
+	// If true, will not show the value to the user
+	Password bool `json:"password,omitempty"`
+
 	// ValidationPattern is a regex pattern to validate the value
 	ValidationPattern string `json:"validationPattern,omitempty"`
 
