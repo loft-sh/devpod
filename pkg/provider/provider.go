@@ -18,9 +18,6 @@ type ProviderConfig struct {
 	// Source is the source the provider was loaded from
 	Source ProviderSource `json:"source,omitempty"`
 
-	// Type defines the type of the provider. Defaults to Server
-	Type ProviderType `json:"type,omitempty"`
-
 	// Description is the provider description
 	Description string `json:"description,omitempty"`
 
@@ -82,13 +79,6 @@ type ProviderAgentConfigExec struct {
 	// should shutdown.
 	Shutdown types.StrArray `json:"shutdown,omitempty"`
 }
-
-type ProviderType string
-
-const (
-	ProviderTypeMachine = "Machine"
-	ProviderTypeDirect  = "Direct"
-)
 
 type ProviderBinary struct {
 	// The current OS
@@ -173,9 +163,6 @@ type ProviderOption struct {
 }
 
 func (c *ProviderConfig) IsMachineProvider() bool {
-	if c.Type == ProviderTypeDirect {
-		return false
-	}
 	if len(c.Exec.Create) > 0 {
 		return true
 	}

@@ -107,22 +107,26 @@ func validate(config *ProviderConfig) error {
 	}
 
 	// validate provider type
-	if config.Type == "" || config.Type == ProviderTypeMachine {
-		if len(config.Exec.Command) == 0 {
-			return fmt.Errorf("exec.command is required")
-		}
-		if len(config.Exec.Create) > 0 && len(config.Exec.Delete) == 0 {
-			return fmt.Errorf("exec.delete is required")
-		}
-		if len(config.Exec.Create) == 0 && len(config.Exec.Delete) > 0 {
-			return fmt.Errorf("exec.create is required")
-		}
-	} else if config.Type == ProviderTypeDirect {
-		if len(config.Exec.Command) == 0 {
-			return fmt.Errorf("exec.command is required")
-		}
-	} else {
-		return fmt.Errorf("provider type '%s' unrecognized, either choose '%s' or '%s'", config.Type, ProviderTypeMachine, ProviderTypeDirect)
+	if len(config.Exec.Command) == 0 {
+		return fmt.Errorf("exec.command is required")
+	}
+	if len(config.Exec.Create) > 0 && len(config.Exec.Delete) == 0 {
+		return fmt.Errorf("exec.delete is required")
+	}
+	if len(config.Exec.Create) == 0 && len(config.Exec.Delete) > 0 {
+		return fmt.Errorf("exec.create is required")
+	}
+	if len(config.Exec.Start) == 0 && len(config.Exec.Stop) > 0 {
+		return fmt.Errorf("exec.start is required")
+	}
+	if len(config.Exec.Stop) == 0 && len(config.Exec.Start) > 0 {
+		return fmt.Errorf("exec.start is required")
+	}
+	if len(config.Exec.Status) == 0 && len(config.Exec.Start) > 0 {
+		return fmt.Errorf("exec.status is required")
+	}
+	if len(config.Exec.Create) == 0 && len(config.Exec.Start) > 0 {
+		return fmt.Errorf("exec.create is required")
 	}
 
 	return nil

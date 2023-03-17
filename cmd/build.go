@@ -96,17 +96,12 @@ func (cmd *BuildCmd) build(ctx context.Context, workspaceClient client.Workspace
 		return err
 	}
 
-	agentClient, ok := workspaceClient.(client.AgentClient)
-	if ok {
-		return cmd.buildAgentClient(ctx, agentClient, log)
-	}
-
-	return fmt.Errorf("builds are not supported for direct providers. Please use another provider instead")
+	return cmd.buildAgentClient(ctx, workspaceClient, log)
 }
 
-func (cmd *BuildCmd) buildAgentClient(ctx context.Context, agentClient client.AgentClient, log log.Logger) error {
+func (cmd *BuildCmd) buildAgentClient(ctx context.Context, workspaceClient client.WorkspaceClient, log log.Logger) error {
 	// compress info
-	workspaceInfo, _, err := agentClient.AgentInfo()
+	workspaceInfo, _, err := workspaceClient.AgentInfo()
 	if err != nil {
 		return err
 	}
@@ -114,7 +109,7 @@ func (cmd *BuildCmd) buildAgentClient(ctx context.Context, agentClient client.Ag
 	// create container etc.
 	log.Infof("Building devcontainer...")
 	defer log.Debugf("Done building devcontainer")
-	command := fmt.Sprintf("%s agent workspace build --workspace-info '%s'", agentClient.AgentPath(), workspaceInfo)
+	command := fmt.Sprintf("%s agent workspace build --workspace-info '%s'", workspaceClient.AgentPath(), workspaceInfo)
 	if log.GetLevel() == logrus.DebugLevel {
 		command += " --debug"
 	}
@@ -150,18 +145,18 @@ func (cmd *BuildCmd) buildAgentClient(ctx context.Context, agentClient client.Ag
 		defer writer.Close()
 
 		errChan <- agent.InjectAgentAndExecute(cancelCtx, func(ctx context.Context, command string, stdin io.Reader, stdout io.Writer, stderr io.Writer) error {
-			return agentClient.Command(ctx, client.CommandOptions{
+			return workspaceClient.Command(ctx, client.CommandOptions{
 				Command: command,
 				Stdin:   stdin,
 				Stdout:  stdout,
 				Stderr:  stderr,
 			})
-		}, agentClient.AgentPath(), agentClient.AgentURL(), true, command, stdinReader, stdoutWriter, writer, log.ErrorStreamOnly())
+		}, workspaceClient.AgentPath(), workspaceClient.AgentURL(), true, command, stdinReader, stdoutWriter, writer, log.ErrorStreamOnly())
 	}()
 
 	// get workspace config
-	workspaceConfig := agentClient.WorkspaceConfig()
-	agentConfig := agentClient.AgentConfig()
+	workspaceConfig := workspaceClient.WorkspaceConfig()
+	agentConfig := workspaceClient.AgentConfig()
 
 	// create container etc.
 	_, err = agent.RunTunnelServer(
@@ -171,7 +166,7 @@ func (cmd *BuildCmd) buildAgentClient(ctx context.Context, agentClient client.Ag
 		false,
 		string(agentConfig.InjectGitCredentials) == "true" && workspaceConfig.Source.GitRepository != "",
 		string(agentConfig.InjectDockerCredentials) == "true",
-		agentClient.WorkspaceConfig(),
+		workspaceClient.WorkspaceConfig(),
 		log,
 	)
 	if err != nil {

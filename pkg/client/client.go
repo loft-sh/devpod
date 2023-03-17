@@ -13,9 +13,6 @@ type Client interface {
 	// Provider returns the name of the provider
 	Provider() string
 
-	// ProviderType returns the provider type
-	ProviderType() provider.ProviderType
-
 	// Context returns the context of the provider
 	Context() string
 
@@ -47,16 +44,6 @@ type Client interface {
 	Command(ctx context.Context, options CommandOptions) error
 }
 
-type WorkspaceClient interface {
-	Client
-
-	// Workspace returns the workspace of this provider
-	Workspace() string
-
-	// WorkspaceConfig returns the workspace config
-	WorkspaceConfig() *provider.Workspace
-}
-
 type MachineClient interface {
 	Client
 
@@ -67,8 +54,14 @@ type MachineClient interface {
 	MachineConfig() *provider.Machine
 }
 
-type AgentClient interface {
-	WorkspaceClient
+type WorkspaceClient interface {
+	Client
+
+	// Workspace returns the workspace of this provider
+	Workspace() string
+
+	// WorkspaceConfig returns the workspace config
+	WorkspaceConfig() *provider.Workspace
 
 	// AgentConfig returns the agent config to send to the agent
 	AgentConfig() provider.ProviderAgentConfig

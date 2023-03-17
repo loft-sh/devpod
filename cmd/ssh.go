@@ -119,16 +119,7 @@ func startWait(ctx context.Context, client client2.WorkspaceClient, create bool,
 }
 
 func (cmd *SSHCmd) jumpContainer(ctx context.Context, client client2.WorkspaceClient, log log.Logger) error {
-	agentClient, ok := client.(client2.AgentClient)
-	if ok {
-		return cmd.jumpContainerServer(ctx, agentClient, log)
-	}
-
-	if client.ProviderType() == provider2.ProviderTypeDirect {
-		return cmd.jumpContainerWorkspace(ctx, client)
-	}
-
-	return fmt.Errorf("unsupported workspace")
+	return cmd.jumpContainerServer(ctx, client, log)
 }
 
 func (cmd *SSHCmd) jumpContainerWorkspace(ctx context.Context, client client2.WorkspaceClient) error {
@@ -153,7 +144,7 @@ func (cmd *SSHCmd) jumpContainerWorkspace(ctx context.Context, client client2.Wo
 	return nil
 }
 
-func (cmd *SSHCmd) jumpContainerServer(ctx context.Context, client client2.AgentClient, log log.Logger) error {
+func (cmd *SSHCmd) jumpContainerServer(ctx context.Context, client client2.WorkspaceClient, log log.Logger) error {
 	err := startWait(ctx, client, false, log)
 	if err != nil {
 		return err

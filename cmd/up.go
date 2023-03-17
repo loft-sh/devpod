@@ -162,11 +162,6 @@ func startVSCodeLocally(client client2.WorkspaceClient, workspaceFolder string, 
 }
 
 func startInBrowser(ctx context.Context, client client2.WorkspaceClient, user string, log log.Logger) error {
-	agentClient, ok := client.(client2.AgentClient)
-	if !ok {
-		return fmt.Errorf("--browser is currently only supported for machine providers")
-	}
-
 	// determine port
 	vscodePort, err := port.FindAvailablePort(openvscode.DefaultVSCodePort)
 	if err != nil {
@@ -185,7 +180,7 @@ func startInBrowser(ctx context.Context, client client2.WorkspaceClient, user st
 
 	// start in browser
 	log.Infof("Starting vscode in browser mode...")
-	err = tunnel.NewContainerTunnel(agentClient, log).Run(ctx, nil, func(client *ssh.Client) error {
+	err = tunnel.NewContainerTunnel(client, log).Run(ctx, nil, func(client *ssh.Client) error {
 		log.Debugf("Connected to container")
 		go func() {
 			err := runCredentialsServer(ctx, client, user, true, true, log)
@@ -209,15 +204,10 @@ func (cmd *UpCmd) devPodUp(ctx context.Context, client client2.WorkspaceClient, 
 		return nil, err
 	}
 
-	agentClient, ok := client.(client2.AgentClient)
-	if ok {
-		return cmd.devPodUpMachine(ctx, agentClient, log)
-	}
-
-	return nil, nil
+	return cmd.devPodUpMachine(ctx, client, log)
 }
 
-func (cmd *UpCmd) devPodUpMachine(ctx context.Context, client client2.AgentClient, log log.Logger) (*config2.Result, error) {
+func (cmd *UpCmd) devPodUpMachine(ctx context.Context, client client2.WorkspaceClient, log log.Logger) (*config2.Result, error) {
 	// compress info
 	workspaceInfo, _, err := client.AgentInfo()
 	if err != nil {

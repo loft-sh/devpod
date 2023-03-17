@@ -21,7 +21,7 @@ import (
 	"time"
 )
 
-func NewContainerTunnel(client client.AgentClient, log log.Logger) *ContainerHandler {
+func NewContainerTunnel(client client.WorkspaceClient, log log.Logger) *ContainerHandler {
 	updateConfigInterval := time.Second * 30
 	workspacePortForwarding := true
 	return &ContainerHandler{
@@ -33,7 +33,7 @@ func NewContainerTunnel(client client.AgentClient, log log.Logger) *ContainerHan
 }
 
 type ContainerHandler struct {
-	client                  client.AgentClient
+	client                  client.WorkspaceClient
 	updateConfigInterval    time.Duration
 	workspacePortForwarding bool
 	log                     log.Logger
