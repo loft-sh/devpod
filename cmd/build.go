@@ -155,7 +155,6 @@ func (cmd *BuildCmd) buildAgentClient(ctx context.Context, workspaceClient clien
 	}()
 
 	// get workspace config
-	workspaceConfig := workspaceClient.WorkspaceConfig()
 	agentConfig := workspaceClient.AgentConfig()
 
 	// create container etc.
@@ -164,7 +163,7 @@ func (cmd *BuildCmd) buildAgentClient(ctx context.Context, workspaceClient clien
 		stdoutReader,
 		stdinWriter,
 		false,
-		string(agentConfig.InjectGitCredentials) == "true" && workspaceConfig.Source.GitRepository != "",
+		string(agentConfig.InjectGitCredentials) == "true",
 		string(agentConfig.InjectDockerCredentials) == "true",
 		workspaceClient.WorkspaceConfig(),
 		log,

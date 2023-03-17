@@ -265,7 +265,6 @@ func (cmd *UpCmd) devPodUpMachine(ctx context.Context, client client2.WorkspaceC
 	}()
 
 	// get workspace config
-	workspaceConfig := client.WorkspaceConfig()
 	agentConfig := client.AgentConfig()
 
 	// create container etc.
@@ -274,7 +273,7 @@ func (cmd *UpCmd) devPodUpMachine(ctx context.Context, client client2.WorkspaceC
 		stdoutReader,
 		stdinWriter,
 		false,
-		string(agentConfig.InjectGitCredentials) == "true" && workspaceConfig.Source.GitRepository != "",
+		string(agentConfig.InjectGitCredentials) == "true",
 		string(agentConfig.InjectDockerCredentials) == "true",
 		client.WorkspaceConfig(),
 		log,

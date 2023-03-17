@@ -136,6 +136,7 @@ func handleGitCredentialsRequest(ctx context.Context, writer http.ResponseWriter
 	log.Debugf("Received git credentials post data: %s", string(out))
 	response, err := client.GitCredentials(ctx, &tunnel.Message{Message: string(out)})
 	if err != nil {
+		log.Debugf("Error receiving git credentials: %v", err)
 		return errors.Wrap(err, "get git credentials response")
 	}
 
