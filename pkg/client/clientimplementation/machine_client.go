@@ -42,10 +42,6 @@ func (s *machineClient) Provider() string {
 	return s.config.Name
 }
 
-func (s *machineClient) ProviderType() provider.ProviderType {
-	return s.config.Type
-}
-
 func (s *machineClient) Machine() string {
 	return s.machine.ID
 }

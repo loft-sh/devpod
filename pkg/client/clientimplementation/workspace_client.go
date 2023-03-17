@@ -22,14 +22,14 @@ import (
 	"sync"
 )
 
-func NewAgentClient(devPodConfig *config.Config, prov *provider.ProviderConfig, workspace *provider.Workspace, machine *provider.Machine, log log.Logger) (client.AgentClient, error) {
+func NewWorkspaceClient(devPodConfig *config.Config, prov *provider.ProviderConfig, workspace *provider.Workspace, machine *provider.Machine, log log.Logger) (client.WorkspaceClient, error) {
 	if workspace.Machine.ID != "" && machine == nil {
 		return nil, fmt.Errorf("workspace machine is not found")
 	} else if prov.IsMachineProvider() && workspace.Machine.ID == "" {
 		return nil, fmt.Errorf("workspace machine ID is empty, but machine provider found")
 	}
 
-	return &agentClient{
+	return &workspaceClient{
 		devPodConfig: devPodConfig,
 		config:       prov,
 		workspace:    workspace,
@@ -38,7 +38,7 @@ func NewAgentClient(devPodConfig *config.Config, prov *provider.ProviderConfig, 
 	}, nil
 }
 
-type agentClient struct {
+type workspaceClient struct {
 	m sync.Mutex
 
 	devPodConfig *config.Config
@@ -48,47 +48,43 @@ type agentClient struct {
 	log          log.Logger
 }
 
-func (s *agentClient) Provider() string {
+func (s *workspaceClient) Provider() string {
 	return s.config.Name
 }
 
-func (s *agentClient) ProviderType() provider.ProviderType {
-	return s.config.Type
-}
-
-func (s *agentClient) Workspace() string {
+func (s *workspaceClient) Workspace() string {
 	s.m.Lock()
 	defer s.m.Unlock()
 
 	return s.workspace.ID
 }
 
-func (s *agentClient) WorkspaceConfig() *provider.Workspace {
+func (s *workspaceClient) WorkspaceConfig() *provider.Workspace {
 	s.m.Lock()
 	defer s.m.Unlock()
 
 	return provider.CloneWorkspace(s.workspace)
 }
 
-func (s *agentClient) AgentPath() string {
+func (s *workspaceClient) AgentPath() string {
 	s.m.Lock()
 	defer s.m.Unlock()
 
 	return options.ResolveAgentConfig(s.devPodConfig, s.config, s.workspace, s.machine).Path
 }
 
-func (s *agentClient) AgentURL() string {
+func (s *workspaceClient) AgentURL() string {
 	s.m.Lock()
 	defer s.m.Unlock()
 
 	return options.ResolveAgentConfig(s.devPodConfig, s.config, s.workspace, s.machine).DownloadURL
 }
 
-func (s *agentClient) Context() string {
+func (s *workspaceClient) Context() string {
 	return s.workspace.Context
 }
 
-func (s *agentClient) RefreshOptions(ctx context.Context, userOptionsRaw []string) error {
+func (s *workspaceClient) RefreshOptions(ctx context.Context, userOptionsRaw []string) error {
 	s.m.Lock()
 	defer s.m.Unlock()
 
@@ -120,14 +116,14 @@ func (s *agentClient) RefreshOptions(ctx context.Context, userOptionsRaw []strin
 	return nil
 }
 
-func (s *agentClient) AgentConfig() provider.ProviderAgentConfig {
+func (s *workspaceClient) AgentConfig() provider.ProviderAgentConfig {
 	s.m.Lock()
 	defer s.m.Unlock()
 
 	return options.ResolveAgentConfig(s.devPodConfig, s.config, s.workspace, s.machine)
 }
 
-func (s *agentClient) AgentInfo() (string, *provider.AgentWorkspaceInfo, error) {
+func (s *workspaceClient) AgentInfo() (string, *provider.AgentWorkspaceInfo, error) {
 	s.m.Lock()
 	defer s.m.Unlock()
 
@@ -152,7 +148,7 @@ func (s *agentClient) AgentInfo() (string, *provider.AgentWorkspaceInfo, error) 
 	return compressed, agentInfo, nil
 }
 
-func (s *agentClient) Create(ctx context.Context, options client.CreateOptions) error {
+func (s *workspaceClient) Create(ctx context.Context, options client.CreateOptions) error {
 	s.m.Lock()
 	defer s.m.Unlock()
 
@@ -184,7 +180,7 @@ func (s *agentClient) Create(ctx context.Context, options client.CreateOptions) 
 	return machineClient.Create(ctx, client.CreateOptions{})
 }
 
-func (s *agentClient) Delete(ctx context.Context, opt client.DeleteOptions) error {
+func (s *workspaceClient) Delete(ctx context.Context, opt client.DeleteOptions) error {
 	s.m.Lock()
 	defer s.m.Unlock()
 
@@ -250,7 +246,7 @@ func (s *agentClient) Delete(ctx context.Context, opt client.DeleteOptions) erro
 	return DeleteWorkspaceFolder(s.workspace.Context, s.workspace.ID)
 }
 
-func (s *agentClient) Start(ctx context.Context, options client.StartOptions) error {
+func (s *workspaceClient) Start(ctx context.Context, options client.StartOptions) error {
 	s.m.Lock()
 	defer s.m.Unlock()
 
@@ -266,7 +262,7 @@ func (s *agentClient) Start(ctx context.Context, options client.StartOptions) er
 	return machineClient.Start(ctx, options)
 }
 
-func (s *agentClient) Stop(ctx context.Context, opt client.StopOptions) error {
+func (s *workspaceClient) Stop(ctx context.Context, opt client.StopOptions) error {
 	s.m.Lock()
 	defer s.m.Unlock()
 
@@ -315,7 +311,7 @@ func (s *agentClient) Stop(ctx context.Context, opt client.StopOptions) error {
 	return machineClient.Stop(ctx, opt)
 }
 
-func (s *agentClient) Command(ctx context.Context, commandOptions client.CommandOptions) (err error) {
+func (s *workspaceClient) Command(ctx context.Context, commandOptions client.CommandOptions) (err error) {
 	// get environment variables
 	s.m.Lock()
 	environ, err := binaries.ToEnvironmentWithBinaries(s.workspace.Context, s.workspace, s.machine, s.devPodConfig.ProviderOptions(s.config.Name), s.config, map[string]string{
@@ -330,7 +326,7 @@ func (s *agentClient) Command(ctx context.Context, commandOptions client.Command
 	return runCommand(ctx, "command", s.config.Exec.Command, environ, commandOptions.Stdin, commandOptions.Stdout, commandOptions.Stderr, s.log.ErrorStreamOnly())
 }
 
-func (s *agentClient) Status(ctx context.Context, options client.StatusOptions) (client.Status, error) {
+func (s *workspaceClient) Status(ctx context.Context, options client.StatusOptions) (client.Status, error) {
 	s.m.Lock()
 	defer s.m.Unlock()
 
@@ -380,7 +376,7 @@ func (s *agentClient) Status(ctx context.Context, options client.StatusOptions) 
 	return client.StatusNotFound, nil
 }
 
-func (s *agentClient) getContainerStatus(ctx context.Context) (client.Status, error) {
+func (s *workspaceClient) getContainerStatus(ctx context.Context) (client.Status, error) {
 	stdout := &bytes.Buffer{}
 	stderr := &bytes.Buffer{}
 	agentConfig := options.ResolveAgentConfig(s.devPodConfig, s.config, s.workspace, s.machine)
@@ -403,7 +399,7 @@ func (s *agentClient) getContainerStatus(ctx context.Context) (client.Status, er
 	return parsed, nil
 }
 
-func (s *agentClient) isMachineProvider() bool {
+func (s *workspaceClient) isMachineProvider() bool {
 	return len(s.config.Exec.Create) > 0
 }
 
