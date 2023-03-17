@@ -1,111 +1,150 @@
-import React from "react"
-import * as XTerm from "xterm"
+import { Box, useColorModeValue, useToken } from "@chakra-ui/react"
+import { css } from "@emotion/react"
+import { forwardRef, useEffect, useImperativeHandle, useLayoutEffect, useMemo, useRef } from "react"
+import { Terminal as XTermTerminal, ITheme as IXTermTheme } from "xterm"
 import { FitAddon } from "xterm-addon-fit"
+import { exists } from "../../lib"
 
-export interface TerminalProps {
-    value?: string
-    className?: string
-    cursorBlink?: boolean
-    disableStdin?: boolean
+type TTerminalRef = Readonly<{
+  clear: VoidFunction
+  write: (data: string) => void
+  writeln: (data: string) => void
+}>
+export type TTerminal = TTerminalRef
 
-    addons?: XTerm.ITerminalAddon[]
+export const Terminal = forwardRef<TTerminalRef, {}>(function T(_, ref) {
+  const containerRef = useRef<HTMLDivElement>(null)
+  const terminalRef = useRef<XTermTerminal | null>(null)
+  const termFitRef = useRef<FitAddon | null>(null)
 
-    height?: number
-    width?: number
-}
+  const backgroundToken = useColorModeValue("gray.900", "gray.300")
+  const backgroundColor = useToken("colors", backgroundToken)
 
-export class Terminal extends React.PureComponent<TerminalProps> {
-    private term: XTerm.Terminal
-    private termFit: FitAddon
-    private ref: React.RefObject<HTMLDivElement>
+  const textToken = useColorModeValue("gray.100", "gray.900")
+  const textColor = useToken("colors", textToken)
 
-    constructor(props: TerminalProps) {
-        super(props)
+  const scrollBarThumbToken = useColorModeValue("gray.500", "gray.200")
+  const scrollBarThumbColor = useToken("colors", scrollBarThumbToken)
 
-        this.ref = React.createRef()
-        this.term = new XTerm.Terminal({
-            // We need this setting to automatically convert \n -> \r\n
-            convertEol: true,
-            fontSize: 12,
-            scrollback: 25000,
-            cursorBlink: this.props.cursorBlink != null ? this.props.cursorBlink : false,
-            disableStdin: this.props.disableStdin != null ? this.props.disableStdin : true,
-            theme: {
-                background: "#263544",
-                foreground: "#AFC6D2",
-            },
-        })
+  const terminalTheme = useMemo<Partial<IXTermTheme>>(
+    () => ({
+      background: backgroundColor,
+      foreground: textColor,
+    }),
+    [backgroundColor, textColor]
+  )
 
-        this.termFit = new FitAddon()
-        this.term.loadAddon(this.termFit)
+  useLayoutEffect(() => {
+    if (!exists(terminalRef.current)) {
+      const terminal = new XTermTerminal({
+        convertEol: true,
+        scrollback: 25_000,
+        theme: terminalTheme,
+        // TODO: should be configurable via props
+        cursorStyle: "underline",
+        disableStdin: true,
+        cursorBlink: false,
+      })
+      terminalRef.current = terminal
 
-        const { addons = [] } = this.props
-        for (const addon of addons) {
-            this.term.loadAddon(addon)
+      terminal.onKey((key) => {
+        if (terminal.hasSelection() && key.domEvent.ctrlKey && key.domEvent.key === "c") {
+          document.execCommand("copy")
         }
+      })
 
-        this.term.onKey((key) => {
-            if (this.term.hasSelection() && key.domEvent.ctrlKey && key.domEvent.key === "c") {
-                document.execCommand("copy")
+      const termFit = new FitAddon()
+      termFitRef.current = termFit
+      terminal.loadAddon(termFit)
+
+      terminal.open(containerRef.current!)
+      termFit.fit()
+
+      // Clean up aaaall the things :)
+      return () => {
+        termFitRef.current?.dispose()
+        termFitRef.current = null
+
+        terminalRef.current?.dispose()
+        terminalRef.current = null
+      }
+    }
+
+    // Don't initialize more than once! Use imperative api to update terminal state
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
+  useEffect(() => {
+    const resizeHandler = () => {
+      try {
+        termFitRef.current?.fit()
+      } catch {
+        /* ignore */
+      }
+    }
+    window.addEventListener("resize", resizeHandler, true)
+
+    return () => window.removeEventListener("resize", resizeHandler, true)
+  }, [])
+
+  useEffect(() => {
+    let maybeTheme = terminalRef.current?.options.theme
+    if (exists(maybeTheme)) {
+      maybeTheme = terminalTheme
+    }
+  }, [terminalTheme])
+
+  useImperativeHandle(ref, () => ({
+    clear() {
+      terminalRef.current?.clear()
+    },
+    write(data) {
+      terminalRef.current?.write(data)
+      termFitRef.current?.fit()
+    },
+    writeln(data) {
+      terminalRef.current?.writeln(data)
+      termFitRef.current?.fit()
+    },
+  }))
+
+  return (
+    <Box width="full" height="full">
+      <Box
+        height="full"
+        as="div"
+        padding="4"
+        overflow="hidden"
+        backgroundColor={terminalTheme.background}
+        borderRadius="md"
+        ref={containerRef}
+        css={css`
+          .xterm-viewport {
+            &::-webkit-scrollbar-button {
+              display: none;
+              height: 13px;
+              border-radius: 0px;
+              background-color: transparent;
             }
-        })
-    }
-
-    clear = () => {
-        this.term.clear()
-    }
-
-    write = (data: string) => {
-        this.term.write(data)
-        this.updateDimensions()
-    }
-
-    writeln = (data: string) => {
-        this.term.writeln(data)
-        this.updateDimensions()
-    }
-
-    updateDimensions = () => {
-        this.termFit.fit()
-    }
-
-    componentDidUpdate() {
-        this.updateDimensions()
-    }
-
-    componentDidMount() {
-        window.addEventListener("resize", this.updateDimensions, true)
-
-        this.term.open(this.ref.current!)
-        this.updateDimensions()
-    }
-
-    componentWillUnmount() {
-        window.removeEventListener("resize", this.updateDimensions, true)
-        this.term.dispose()
-        this.termFit.dispose()
-        const { addons = [] } = this.props
-        for (const addon of addons) {
-            addon.dispose()
-        }
-    }
-
-    render() {
-        const classnames = [""]; //[styles.terminalWrapper]
-        if (this.props.className) {
-            classnames.push(this.props.className)
-        }
-
-        return (
-            <div
-                className={classnames.join(" ")}
-                style={{
-                    display: "flex",
-                    width: this.props.width ? `${this.props.width}px` : undefined,
-                    height: this.props.height ? `${this.props.height}px` : undefined,
-                }}>
-                <div className={""} ref={this.ref} />
-            </div>
-        )
-    }
-}
+            &::-webkit-scrollbar-button:hover {
+              background-color: transparent;
+            }
+            &::-webkit-scrollbar-thumb {
+              border-radius: 4px;
+              background-color: ${scrollBarThumbColor};
+            }
+            &::-webkit-scrollbar-track {
+              background-color: transparent;
+            }
+            &::-webkit-scrollbar-track:hover {
+              background-color: transparent;
+            }
+            &::-webkit-scrollbar {
+              width: 6px;
+            }
+          }
+        `}
+      />
+    </Box>
+  )
+})

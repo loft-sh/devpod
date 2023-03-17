@@ -5,19 +5,23 @@
 
 mod commands;
 mod logging;
+mod new_workspace_id;
 mod providers;
 mod system_tray;
 mod ui_ready;
 mod util;
 mod workspaces;
 
+use log::info;
+use new_workspace_id::new_workspace_id;
 use providers::ProvidersState;
 use std::sync::{Arc, Mutex};
 use system_tray::SystemTray;
 use tauri::Manager;
 use tauri_plugin_deep_link;
-use workspaces::WorkspacesState;
 use ui_ready::ui_ready;
+use url::{ParseError, Url};
+use workspaces::WorkspacesState;
 
 // Should match the one from `tauri.config.json"
 const APP_IDENTIFIER: &str = "sh.loft.devpod-desktop";
@@ -42,11 +46,17 @@ fn main() {
         .system_tray(system_tray.build())
         .plugin(logging::build_plugin())
         .setup(|app| {
-            let handler = |url| {
-                println!("App opened with URL: {:?}", url);
+            let handler = |url: String| {
+                info!("App opened with URL: {:?}", url.to_string());
+
+                if let Ok(url) = Url::parse(&url) {
+                // TODO: Validate URL and route based on scheme
+                    info!("{:?}", url);
+                };
+
             };
 
-            tauri_plugin_deep_link::register("test-scheme", handler)
+            tauri_plugin_deep_link::register("devpod", handler)
                 .expect("should be able to listen to custom protocols");
 
             #[cfg(debug_assertions)] // open browser devtools automatically during development
@@ -58,7 +68,7 @@ fn main() {
             Ok(())
         })
         .on_system_tray_event(system_tray_event_handler)
-        .invoke_handler(tauri::generate_handler![ui_ready])
+        .invoke_handler(tauri::generate_handler![ui_ready, new_workspace_id])
         .build(tauri::generate_context!())
         .expect("error while building tauri application")
         .run(|_app, event| match event {
