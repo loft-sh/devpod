@@ -184,12 +184,14 @@ func prepareWorkspace(ctx context.Context, workspaceInfo *provider2.AgentWorkspa
 	// download provider
 	binariesDir, err := agent.GetAgentBinariesDir(workspaceInfo.Agent.DataPath, workspaceInfo.Workspace.Context, workspaceInfo.Workspace.ID)
 	if err != nil {
+		_ = os.RemoveAll(workspaceInfo.Folder)
 		return fmt.Errorf("error getting workspace %s binaries dir: %v", workspaceInfo.Workspace.ID, err)
 	}
 
 	// download binaries
 	_, err = binaries.DownloadBinaries(workspaceInfo.Agent.Binaries, binariesDir, log)
 	if err != nil {
+		_ = os.RemoveAll(workspaceInfo.Folder)
 		return fmt.Errorf("error downloading workspace %s binaries: %v", workspaceInfo.Workspace.ID, err)
 	}
 
