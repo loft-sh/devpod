@@ -6,7 +6,7 @@ use chrono::DateTime;
 use log::trace;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
-use tauri::{CustomMenuItem, SystemTrayMenu, SystemTraySubmenu, SystemTrayMenuItem};
+use tauri::{CustomMenuItem, SystemTrayMenu, SystemTrayMenuItem, SystemTraySubmenu};
 
 #[derive(Serialize, Deserialize, Debug, Default, Eq, PartialEq)]
 #[serde(
@@ -42,7 +42,11 @@ impl ToSystemTraySubmenu for WorkspacesState {
     fn to_submenu(&self) -> tauri::SystemTraySubmenu {
         let mut providers_menu = SystemTrayMenu::new();
 
-        providers_menu = providers_menu.add_item(CustomMenuItem::new(Self::CREATE_WORKSPACE_ID, "Create Workspace"))
+        providers_menu = providers_menu
+            .add_item(CustomMenuItem::new(
+                Self::CREATE_WORKSPACE_ID,
+                "Create Workspace",
+            ))
             .add_native_item(SystemTrayMenuItem::Separator);
         for workspace in &self.workspaces {
             if let Some(id) = workspace.id() {
@@ -55,9 +59,6 @@ impl ToSystemTraySubmenu for WorkspacesState {
     }
 
     fn on_tray_item_clicked(&self, _id: &str) -> Option<SystemTrayClickHandler> {
-
-
-
         None
     }
 }

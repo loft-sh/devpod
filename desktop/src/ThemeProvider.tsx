@@ -6,6 +6,7 @@ const theme = extendTheme({
     global: {
       html: {
         fontSize: "14px",
+        overflow: "hidden",
       },
       body: {
         userSelect: "none",
