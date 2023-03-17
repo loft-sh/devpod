@@ -154,6 +154,27 @@ func GetAgentWorkspaceContentDir(workspaceDir string) string {
 	return filepath.Join(workspaceDir, "content")
 }
 
+func GetAgentBinariesDir(agentFolder, context, workspaceID string) (string, error) {
+	homeFolder, err := FindAgentHomeFolder(agentFolder)
+	if err != nil {
+		return "", err
+	}
+	if context == "" {
+		context = config.DefaultContext
+	}
+
+	// workspace folder
+	workspaceDir := filepath.Join(homeFolder, "contexts", context, "workspaces", workspaceID)
+
+	// check if it already exists
+	_, err = os.Stat(workspaceDir)
+	if err == nil {
+		return filepath.Join(workspaceDir, "binaries"), nil
+	}
+
+	return "", os.ErrNotExist
+}
+
 func GetAgentWorkspaceDir(agentFolder, context, workspaceID string) (string, error) {
 	homeFolder, err := FindAgentHomeFolder(agentFolder)
 	if err != nil {

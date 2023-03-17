@@ -4,8 +4,10 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"fmt"
 	"github.com/loft-sh/devpod/cmd/flags"
 	"github.com/loft-sh/devpod/pkg/agent"
+	"github.com/loft-sh/devpod/pkg/binaries"
 	"github.com/loft-sh/devpod/pkg/client/clientimplementation"
 	"github.com/loft-sh/devpod/pkg/log"
 	provider2 "github.com/loft-sh/devpod/pkg/provider"
@@ -120,16 +122,51 @@ func (cmd *DaemonCmd) doOnce(log log.Logger) {
 		return
 	}
 
+	// get environ
+	environ, err := toEnvironWithBinaries(cmd.AgentDir, workspace, log)
+	if err != nil {
+		log.Errorf("%v", err)
+		return
+	}
+
 	// we run the timeout command now
 	buf := &bytes.Buffer{}
 	log.Infof("Run shutdown command for workspace %s: %s", workspace.Workspace.ID, strings.Join(workspace.Agent.Exec.Shutdown, " "))
-	err = clientimplementation.RunCommand(context.Background(), workspace.Agent.Exec.Shutdown, provider2.ToEnvironment(workspace.Workspace, workspace.Machine, workspace.Options, nil), nil, buf, buf)
+	err = clientimplementation.RunCommand(
+		context.Background(),
+		workspace.Agent.Exec.Shutdown,
+		environ,
+		nil,
+		buf,
+		buf,
+	)
 	if err != nil {
 		log.Errorf("Error running %s: %s%v", strings.Join(workspace.Agent.Exec.Shutdown, " "), buf.String(), err)
 		return
 	}
 
 	log.Infof("Successful ran command: %s", buf.String())
+}
+
+func toEnvironWithBinaries(agentDir string, workspace *provider2.AgentWorkspaceInfo, log log.Logger) ([]string, error) {
+	// get binaries dir
+	binariesDir, err := agent.GetAgentBinariesDir(agentDir, workspace.Workspace.Context, workspace.Workspace.ID)
+	if err != nil {
+		return nil, fmt.Errorf("error getting workspace %s binaries dir: %v", workspace.Workspace.ID, err)
+	}
+
+	// download binaries
+	agentBinaries, err := binaries.DownloadBinaries(workspace.Agent.Binaries, binariesDir, log)
+	if err != nil {
+		return nil, fmt.Errorf("error downloading workspace %s binaries: %v", workspace.Workspace.ID, err)
+	}
+
+	// get environ
+	environ := provider2.ToEnvironment(workspace.Workspace, workspace.Machine, workspace.Options, nil)
+	for k, v := range agentBinaries {
+		environ = append(environ, k+"="+v)
+	}
+	return environ, nil
 }
 
 func (cmd *DaemonCmd) initialTouch(log log.Logger) {
