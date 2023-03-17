@@ -9,7 +9,6 @@ import (
 	"os/user"
 	"path/filepath"
 	"strconv"
-	"syscall"
 )
 
 func Chown(path string, userName string) error {
@@ -43,8 +42,7 @@ func ChownR(path string, userName string) error {
 			return nil
 		}
 
-		stat, ok := info.Sys().(*syscall.Stat_t)
-		if ok && stat.Uid == uint32(uid) {
+		if IsUID(info, uint32(uid)) {
 			return nil
 		}
 
@@ -69,11 +67,6 @@ func Directory(scrDir, dest string) error {
 			return err
 		}
 
-		stat, ok := fileInfo.Sys().(*syscall.Stat_t)
-		if !ok {
-			return fmt.Errorf("failed to get raw syscall.Stat_t data for '%s'", sourcePath)
-		}
-
 		switch fileInfo.Mode() & os.ModeType {
 		case os.ModeDir:
 			if err := CreateIfNotExists(destPath, 0755); err != nil {
@@ -92,7 +85,8 @@ func Directory(scrDir, dest string) error {
 			}
 		}
 
-		if err := os.Lchown(destPath, int(stat.Uid), int(stat.Gid)); err != nil {
+		err = Lchown(fileInfo, sourcePath, destPath)
+		if err != nil {
 			return err
 		}
 

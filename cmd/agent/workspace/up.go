@@ -8,6 +8,7 @@ import (
 	"github.com/loft-sh/devpod/cmd/flags"
 	"github.com/loft-sh/devpod/pkg/agent"
 	"github.com/loft-sh/devpod/pkg/agent/tunnel"
+	"github.com/loft-sh/devpod/pkg/binaries"
 	"github.com/loft-sh/devpod/pkg/command"
 	"github.com/loft-sh/devpod/pkg/credentials"
 	"github.com/loft-sh/devpod/pkg/daemon"
@@ -75,19 +76,15 @@ func (cmd *UpCmd) Run(ctx context.Context) error {
 	}
 
 	// initialize the workspace
-	tunnelClient, logger, err := initWorkspace(ctx, workspaceInfo, cmd.Debug, true)
-	if err != nil {
-		return err
-	}
-
-	// get docker credentials
 	cancelCtx, cancel := context.WithCancel(ctx)
 	defer cancel()
-	dir, err := configureDockerCredentials(cancelCtx, cancel, workspaceInfo, tunnelClient, logger)
+	tunnelClient, logger, credentialsDir, err := initWorkspace(cancelCtx, cancel, workspaceInfo, cmd.Debug, true)
 	if err != nil {
-		logger.Errorf("Error retrieving docker credentials: %v", err)
-	} else if dir != "" {
-		defer os.RemoveAll(dir)
+		return err
+	} else if credentialsDir != "" {
+		defer func() {
+			_ = os.RemoveAll(credentialsDir)
+		}()
 	}
 
 	// start up
@@ -99,11 +96,11 @@ func (cmd *UpCmd) Run(ctx context.Context) error {
 	return nil
 }
 
-func initWorkspace(ctx context.Context, workspaceInfo *provider2.AgentWorkspaceInfo, debug, shouldInstallDaemon bool) (tunnel.TunnelClient, log.Logger, error) {
+func initWorkspace(ctx context.Context, cancel context.CancelFunc, workspaceInfo *provider2.AgentWorkspaceInfo, debug, shouldInstallDaemon bool) (tunnel.TunnelClient, log.Logger, string, error) {
 	// create a grpc client
 	tunnelClient, err := agent.NewTunnelClient(os.Stdin, os.Stdout, true)
 	if err != nil {
-		return nil, nil, fmt.Errorf("error creating tunnel client: %v", err)
+		return nil, nil, "", fmt.Errorf("error creating tunnel client: %v", err)
 	}
 
 	// create debug logger
@@ -112,7 +109,13 @@ func initWorkspace(ctx context.Context, workspaceInfo *provider2.AgentWorkspaceI
 	// this message serves as a ping to the client
 	_, err = tunnelClient.Ping(ctx, &tunnel.Empty{})
 	if err != nil {
-		return nil, nil, errors.Wrap(err, "ping client")
+		return nil, nil, "", errors.Wrap(err, "ping client")
+	}
+
+	// get docker credentials
+	dockerCredentialsDir, gitCredentialsHelper, err := configureCredentials(ctx, cancel, workspaceInfo, tunnelClient, logger)
+	if err != nil {
+		logger.Errorf("Error retrieving docker / git credentials: %v", err)
 	}
 
 	// install docker in background
@@ -122,9 +125,9 @@ func initWorkspace(ctx context.Context, workspaceInfo *provider2.AgentWorkspaceI
 	}()
 
 	// prepare workspace
-	err = prepareWorkspace(ctx, workspaceInfo, tunnelClient, logger)
+	err = prepareWorkspace(ctx, workspaceInfo, tunnelClient, gitCredentialsHelper, logger)
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, "", err
 	}
 
 	// install daemon
@@ -138,10 +141,10 @@ func initWorkspace(ctx context.Context, workspaceInfo *provider2.AgentWorkspaceI
 	// wait until docker is installed
 	err = <-errChan
 	if err != nil {
-		return nil, nil, errors.Wrap(err, "install docker")
+		return nil, nil, "", errors.Wrap(err, "install docker")
 	}
 
-	return tunnelClient, logger, nil
+	return tunnelClient, logger, dockerCredentialsDir, nil
 }
 
 func (cmd *UpCmd) up(ctx context.Context, workspaceInfo *provider2.AgentWorkspaceInfo, tunnelClient tunnel.TunnelClient, logger log.Logger) error {
@@ -164,76 +167,81 @@ func (cmd *UpCmd) up(ctx context.Context, workspaceInfo *provider2.AgentWorkspac
 	return nil
 }
 
-func prepareWorkspace(ctx context.Context, workspaceInfo *provider2.AgentWorkspaceInfo, client tunnel.TunnelClient, log log.Logger) error {
+func prepareWorkspace(ctx context.Context, workspaceInfo *provider2.AgentWorkspaceInfo, client tunnel.TunnelClient, helper string, log log.Logger) error {
+	// check if workspace folder exists
 	_, err := os.Stat(workspaceInfo.Folder)
 	if err == nil {
 		log.Debugf("Workspace Folder already exists")
 		return nil
 	}
 
+	// make content dir
+	err = os.MkdirAll(workspaceInfo.Folder, 0777)
+	if err != nil {
+		return errors.Wrap(err, "make workspace folder")
+	}
+
+	// download provider
+	binariesDir, err := agent.GetAgentBinariesDir(workspaceInfo.Agent.DataPath, workspaceInfo.Workspace.Context, workspaceInfo.Workspace.ID)
+	if err != nil {
+		return fmt.Errorf("error getting workspace %s binaries dir: %v", workspaceInfo.Workspace.ID, err)
+	}
+
+	// download binaries
+	_, err = binaries.DownloadBinaries(workspaceInfo.Agent.Binaries, binariesDir, log)
+	if err != nil {
+		return fmt.Errorf("error downloading workspace %s binaries: %v", workspaceInfo.Workspace.ID, err)
+	}
+
 	// check what type of workspace this is
 	if workspaceInfo.Workspace.Source.GitRepository != "" {
 		log.Debugf("Clone Repository")
-
-		helper := ""
-		if workspaceInfo.Agent.InjectGitCredentials == "true" {
-			log.Debugf("Start credentials server")
-			cancelCtx, cancel := context.WithCancel(ctx)
-			defer cancel()
-
-			helper, err = startGitCredentialsHelper(cancelCtx, cancel, client, log)
-			if err != nil {
-				return err
-			}
-		}
-
-		// make content dir
-		err = os.MkdirAll(workspaceInfo.Folder, 0777)
-		if err != nil {
-			return errors.Wrap(err, "make workspace folder")
-		}
-
 		return CloneRepository(workspaceInfo.Folder, workspaceInfo.Workspace.Source.GitRepository, workspaceInfo.Workspace.Source.GitBranch, helper, log)
 	} else if workspaceInfo.Workspace.Source.LocalFolder != "" {
 		log.Debugf("Download Local Folder")
-
-		// make content dir
-		err = os.MkdirAll(workspaceInfo.Folder, 0777)
-		if err != nil {
-			return errors.Wrap(err, "make workspace folder")
-		}
-
 		return DownloadLocalFolder(ctx, workspaceInfo.Folder, client, log)
 	} else if workspaceInfo.Workspace.Source.Image != "" {
 		log.Debugf("Prepare Image")
-
-		// make content dir
-		err = os.MkdirAll(workspaceInfo.Folder, 0777)
-		if err != nil {
-			return errors.Wrap(err, "make workspace folder")
-		}
-
 		return PrepareImage(workspaceInfo.Folder, workspaceInfo.Workspace.Source.Image)
 	}
 
 	return fmt.Errorf("either workspace repository, image or local-folder is required")
 }
 
-func configureDockerCredentials(ctx context.Context, cancel context.CancelFunc, workspaceInfo *provider2.AgentWorkspaceInfo, client tunnel.TunnelClient, log log.Logger) (string, error) {
-	if workspaceInfo.Agent.InjectDockerCredentials != "true" {
-		return "", nil
+func configureCredentials(ctx context.Context, cancel context.CancelFunc, workspaceInfo *provider2.AgentWorkspaceInfo, client tunnel.TunnelClient, log log.Logger) (string, string, error) {
+	if workspaceInfo.Agent.InjectDockerCredentials != "true" && workspaceInfo.Agent.InjectGitCredentials != "true" {
+		return "", "", nil
 	}
 
 	serverPort, err := startCredentialsServer(ctx, cancel, client, log)
 	if err != nil {
-		return "", err
+		return "", "", err
+	}
+
+	binaryPath, err := os.Executable()
+	if err != nil {
+		return "", "", err
 	}
 
 	if workspaceInfo.Folder == "" {
-		return "", fmt.Errorf("workspace folder is not set")
+		return "", "", fmt.Errorf("workspace folder is not set")
 	}
 
-	return dockercredentials.ConfigureCredentialsMachine(filepath.Join(workspaceInfo.Folder, ".."), serverPort)
+	dockerCredentials := ""
+	if workspaceInfo.Agent.InjectDockerCredentials == "true" {
+		dockerCredentials, err = dockercredentials.ConfigureCredentialsMachine(filepath.Join(workspaceInfo.Folder, ".."), serverPort)
+		if err != nil {
+			return "", "", err
+		}
+	}
+
+	gitCredentials := ""
+	if workspaceInfo.Agent.InjectGitCredentials == "true" {
+		gitCredentials = fmt.Sprintf("%s agent git-credentials --port %d", binaryPath, serverPort)
+		_ = os.Setenv("DEVPOD_GIT_HELPER_PORT", strconv.Itoa(serverPort))
+	}
+
+	return dockerCredentials, gitCredentials, nil
 }
 
 func startCredentialsServer(ctx context.Context, cancel context.CancelFunc, client tunnel.TunnelClient, log log.Logger) (int, error) {
@@ -275,20 +283,6 @@ Outer:
 	}
 
 	return port, nil
-}
-
-func startGitCredentialsHelper(ctx context.Context, cancel context.CancelFunc, client tunnel.TunnelClient, log log.Logger) (string, error) {
-	port, err := startCredentialsServer(ctx, cancel, client, log)
-	if err != nil {
-		return "", err
-	}
-
-	binaryPath, err := os.Executable()
-	if err != nil {
-		return "", err
-	}
-
-	return fmt.Sprintf("%s agent git-credentials --port %d", binaryPath, port), nil
 }
 
 func PingURL(ctx context.Context, url string) error {

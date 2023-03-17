@@ -52,19 +52,15 @@ func (cmd *BuildCmd) Run(ctx context.Context) error {
 	}
 
 	// initialize the workspace
-	tunnelClient, logger, err := initWorkspace(ctx, workspaceInfo, cmd.Debug, false)
-	if err != nil {
-		return err
-	}
-
-	// get docker credentials
 	cancelCtx, cancel := context.WithCancel(ctx)
 	defer cancel()
-	dir, err := configureDockerCredentials(cancelCtx, cancel, workspaceInfo, tunnelClient, logger)
+	_, logger, credentialsDir, err := initWorkspace(cancelCtx, cancel, workspaceInfo, cmd.Debug, false)
 	if err != nil {
-		logger.Errorf("Error retrieving docker credentials: %v", err)
-	} else if dir != "" {
-		defer os.RemoveAll(dir)
+		return err
+	} else if credentialsDir != "" {
+		defer func() {
+			_ = os.RemoveAll(credentialsDir)
+		}()
 	}
 
 	// build the image

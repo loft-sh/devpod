@@ -176,9 +176,22 @@ func GetUser() (*GitUser, error) {
 }
 
 func GetCredentials(requestObj *GitCredentials) (*GitCredentials, error) {
-	cmd := exec.Command("git", "credential", "fill")
-	cmd.Stdin = strings.NewReader(ToString(requestObj))
-	stdout, err := cmd.Output()
+	var c *exec.Cmd
+
+	gitHelperPort := os.Getenv("DEVPOD_GIT_HELPER_PORT")
+	if gitHelperPort != "" {
+		binaryPath, err := os.Executable()
+		if err != nil {
+			return nil, err
+		}
+
+		c = exec.Command(binaryPath, "agent", "git-credentials", "--port", gitHelperPort, "get")
+	} else {
+		c = exec.Command("git", "credential", "fill")
+	}
+
+	c.Stdin = strings.NewReader(ToString(requestObj))
+	stdout, err := c.Output()
 	if err != nil {
 		return nil, err
 	}
