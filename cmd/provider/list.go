@@ -66,6 +66,7 @@ func (cmd *ListCmd) Run(ctx context.Context) error {
 
 			tableEntries = append(tableEntries, []string{
 				entry.Config.Name,
+				entry.Config.Version,
 				strconv.FormatBool(devPodConfig.Current().DefaultProvider == entry.Config.Name),
 				strconv.FormatBool(entry.State != nil),
 				entry.Config.Description,
@@ -77,6 +78,7 @@ func (cmd *ListCmd) Run(ctx context.Context) error {
 
 		table.PrintTable(log.Default, []string{
 			"Name",
+			"Version",
 			"Default",
 			"Configured",
 			"Description",
