@@ -119,32 +119,6 @@ func startWait(ctx context.Context, client client2.WorkspaceClient, create bool,
 }
 
 func (cmd *SSHCmd) jumpContainer(ctx context.Context, client client2.WorkspaceClient, log log.Logger) error {
-	return cmd.jumpContainerServer(ctx, client, log)
-}
-
-func (cmd *SSHCmd) jumpContainerWorkspace(ctx context.Context, client client2.WorkspaceClient) error {
-	if !cmd.Stdio {
-		return fmt.Errorf("unsupported")
-	}
-
-	err := startWait(ctx, client, false, log.Default)
-	if err != nil {
-		return err
-	}
-
-	err = client.Command(ctx, client2.CommandOptions{
-		Stdin:  os.Stdin,
-		Stdout: os.Stdout,
-		Stderr: os.Stderr,
-	})
-	if err != nil {
-		return err
-	}
-
-	return nil
-}
-
-func (cmd *SSHCmd) jumpContainerServer(ctx context.Context, client client2.WorkspaceClient, log log.Logger) error {
 	err := startWait(ctx, client, false, log)
 	if err != nil {
 		return err
