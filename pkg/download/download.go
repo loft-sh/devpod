@@ -55,6 +55,7 @@ func File(rawURL string, log log.Logger) (io.ReadCloser, error) {
 			org, repo, release, file := parseGithubURL(path)
 			if org != "" {
 				// try to download with credentials if its a release
+				log.Debugf("Try to find credentials for github")
 				credentials, err := gitcredentials.GetCredentials(&gitcredentials.GitCredentials{
 					Protocol: parsed.Scheme,
 					Host:     parsed.Host,
