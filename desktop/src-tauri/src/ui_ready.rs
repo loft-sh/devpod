@@ -73,11 +73,12 @@ pub fn ui_ready(
 
     // TODO: should synchronize with background loops if either one of them changed
     // Initial update to system tray after setting up data pipelines.
-    let providers = ProvidersState::load().unwrap();
+     
+    // let providers = ProvidersState::load().unwrap();
     let workspaces = WorkspacesState::load().unwrap();
 
     let new_menu =
-        SystemTray::new().build_with_submenus(vec![Box::new(&workspaces), Box::new(&providers)]);
+        SystemTray::new().build_with_submenus(vec![Box::new(&workspaces)]);
     tray_handle
         .set_menu(new_menu)
         .expect("should be able to set menu");
