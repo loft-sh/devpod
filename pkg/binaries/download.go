@@ -31,12 +31,7 @@ func ToEnvironmentWithBinaries(context string, workspace *provider2.Workspace, m
 	return environ, nil
 }
 
-func GetBinaries(context string, config *provider2.ProviderConfig) (map[string]string, error) {
-	binariesDir, err := provider2.GetProviderBinariesDir(context, config.Name)
-	if err != nil {
-		return nil, err
-	}
-
+func GetBinariesFrom(config *provider2.ProviderConfig, binariesDir string) (map[string]string, error) {
 	retBinaries := map[string]string{}
 	for binaryName, binaryLocations := range config.Binaries {
 		for _, binary := range binaryLocations {
@@ -60,6 +55,15 @@ func GetBinaries(context string, config *provider2.ProviderConfig) (map[string]s
 	}
 
 	return retBinaries, nil
+}
+
+func GetBinaries(context string, config *provider2.ProviderConfig) (map[string]string, error) {
+	binariesDir, err := provider2.GetProviderBinariesDir(context, config.Name)
+	if err != nil {
+		return nil, err
+	}
+
+	return GetBinariesFrom(config, binariesDir)
 }
 
 func DownloadBinaries(binaries map[string][]*provider2.ProviderBinary, targetFolder string, log log.Logger) (map[string]string, error) {
