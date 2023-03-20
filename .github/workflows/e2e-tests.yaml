@@ -6,6 +6,7 @@ on:
       - main
     paths:
       - "**.go"
+      - "!**_test.go" # exclude test files to ignore unit test changes
       - "e2e/**_test.go" # include test files in e2e again
       - ".github/workflows/e2e-tests.yaml"
 
@@ -26,13 +27,17 @@ jobs:
       with:
         go-version: 1.19
 
-    #- name: Build binary and copy to the E2E directory
-    #  run: |
-    #    chmod +x ./hack/rebuild.sh
-    #    BUILDDIR=e2e/bin ./hack/rebuild.sh
+    - name: Build binary and copy to the E2E directory
+      run: |
+        chmod +x ./hack/rebuild.sh
+        BUILDDIR=e2e/bin ./hack/rebuild.sh
 
 
     #- name: E2E test
     #  working-directory: ./e2e
     #  run: |
     #    go test -v -ginkgo.v -timeout 3600s
+    - name: e2e test
+      working-directory: ./e2e
+      run: |
+        go test -v -ginkgo.v -timeout 3600s

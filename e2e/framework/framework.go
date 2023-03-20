@@ -2,7 +2,6 @@ package framework
 
 import (
 	"fmt"
-	"io/ioutil"
 	"os"
 
 	"github.com/onsi/ginkgo/v2"
@@ -13,7 +12,7 @@ type Framework struct {
 }
 
 func (f *Framework) SetupTestDirectory() error {
-	dir, err := ioutil.TempDir("devpod-e2e", "test")
+	dir, err := os.MkdirTemp("devpod-e2e", "test")
 	if err != nil {
 		return err
 	}
