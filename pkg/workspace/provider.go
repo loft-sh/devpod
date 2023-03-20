@@ -4,6 +4,12 @@ import (
 	"bytes"
 	"crypto/tls"
 	"fmt"
+	"io"
+	"net/http"
+	"os"
+	"path/filepath"
+	"strings"
+
 	"github.com/loft-sh/devpod/pkg/binaries"
 	"github.com/loft-sh/devpod/pkg/config"
 	"github.com/loft-sh/devpod/pkg/download"
@@ -11,11 +17,6 @@ import (
 	provider2 "github.com/loft-sh/devpod/pkg/provider"
 	"github.com/loft-sh/devpod/providers"
 	"github.com/pkg/errors"
-	"io"
-	"net/http"
-	"os"
-	"path/filepath"
-	"strings"
 )
 
 var provideWorkspaceArgErr = fmt.Errorf("please provide a workspace name. E.g. 'devpod up ./my-folder', 'devpod up github.com/my-org/my-repo' or 'devpod up ubuntu'")
@@ -37,7 +38,7 @@ func LoadProviders(devPodConfig *config.Config, log log.Logger) (*ProviderWithOp
 	if defaultContext.DefaultProvider == "" {
 		return nil, nil, fmt.Errorf("no default provider found. Please make sure to run 'devpod use provider'")
 	} else if retProviders[defaultContext.DefaultProvider] == nil {
-		return nil, nil, fmt.Errorf("couldn't find default provider %s. Please make sure to add the provider via 'devpod add provider'", defaultContext.DefaultProvider)
+		return nil, nil, fmt.Errorf("couldn't find default provider %s. Please make sure to add the provider via 'devpod provider add'", defaultContext.DefaultProvider)
 	}
 
 	return retProviders[defaultContext.DefaultProvider], retProviders, nil
@@ -276,7 +277,7 @@ func FindProvider(devPodConfig *config.Config, name string, log log.Logger) (*Pr
 	if err != nil {
 		return nil, err
 	} else if retProviders[name] == nil {
-		return nil, fmt.Errorf("couldn't find provider with name %s. Please make sure to add the provider via 'devpod add provider'", name)
+		return nil, fmt.Errorf("couldn't find provider with name %s. Please make sure to add the provider via 'devpod provider add'", name)
 	}
 
 	return retProviders[name], nil
