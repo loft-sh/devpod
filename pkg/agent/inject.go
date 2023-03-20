@@ -39,6 +39,12 @@ func InjectAgentAndExecute(ctx context.Context, exec inject.ExecFunc, remoteAgen
 	lastMessage := time.Now()
 	for {
 		buf := &bytes.Buffer{}
+		if stderr != nil {
+			stderr = io.MultiWriter(stderr, buf)
+		} else {
+			stderr = buf
+		}
+
 		wasExecuted, err := inject.InjectAndExecute(
 			ctx,
 			exec,
@@ -54,7 +60,7 @@ func InjectAgentAndExecute(ctx context.Context, exec inject.ExecFunc, remoteAgen
 			command,
 			stdin,
 			stdout,
-			io.MultiWriter(stderr, buf),
+			stderr,
 			time.Second*10,
 			log,
 		)
