@@ -1,9 +1,13 @@
 // TODO: types need some love :)
 
 import { UseMutationResult } from "@tanstack/react-query"
-import { TStreamEventHandlerFn } from "./client"
+import { TStreamEventListenerFn } from "./client"
 
 export type TUnsubscribeFn = VoidFunction
+export type TComparable<T> = Readonly<{ eq(b: T): boolean }>
+export type TIdentifiable = Readonly<{ id: string }>
+export type TViewID = string
+
 export type TLogOutput = Readonly<{ time: Date; message: string; level: string }>
 export type TProviderID = string
 export type TProviders = Readonly<{
@@ -55,22 +59,30 @@ export type TWorkspaceStartConfig = Readonly<{
     source: string
   }>
 }>
+type TWithStream = Readonly<{ onStream?: TStreamEventListenerFn }>
 export type TWorkspaceManager = Readonly<{
   create: TOperationManager<
     Readonly<{
       rawWorkspaceSource: string
       config: TWorkspaceStartConfig
-      onStream?: TStreamEventHandlerFn
-    }>
+    }> &
+      TWithStream
   >
   start: TOperationManager<
-    TWithWorkspaceID & Readonly<{ config: TWorkspaceStartConfig; onStream?: TStreamEventHandlerFn }>
-  >
+    TWithWorkspaceID &
+      Readonly<{ config: TWorkspaceStartConfig; onStream?: TStreamEventListenerFn }>
+  > &
+    TConnectable
   stop: TOperationManager
   remove: TOperationManager
   rebuild: TOperationManager
 }>
-export type TWorkspaceManagerRunConfig<T extends keyof TWorkspaceManager> = Parameters<
+type TConnectable = Readonly<{ connect: TConnectOperationFn }>
+export type TConnectConfig = TWithWorkspaceID & TWithStream
+export type TConnectOperationFn = (connectConfig: TConnectConfig) => void
+
+export type TWorkspaceManagerOperations = Exclude<keyof TWorkspaceManager, "connect">
+export type TWorkspaceManagerRunConfig<T extends TWorkspaceManagerOperations> = Parameters<
   TWorkspaceManager[T]["run"]
 >[0]
 

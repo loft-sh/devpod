@@ -1,11 +1,11 @@
 import { useCallback } from "react"
-import { TStreamEventHandlerFn } from "../../client"
+import { TStreamEventListenerFn } from "../../client"
 import { useTerminal } from "./useTerminal"
 
 export function useStreamingTerminal() {
   const { terminal, terminalRef } = useTerminal()
 
-  const connectStream = useCallback<TStreamEventHandlerFn>(
+  const connectStream = useCallback<TStreamEventListenerFn>(
     (event) => {
       switch (event.type) {
         case "data":

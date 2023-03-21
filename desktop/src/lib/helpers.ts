@@ -21,3 +21,7 @@ export function serializeMap<T extends Map<unknown, unknown>>(map: T): string {
 export function deserializeMap<T extends Map<unknown, unknown>>(serializedMap: string): T {
   return new Map(JSON.parse(serializedMap)) as T
 }
+
+export function isEmpty<T extends { length: number }>(arg: T): boolean {
+  return arg.length <= 0
+}

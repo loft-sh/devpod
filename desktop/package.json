@@ -8,8 +8,8 @@
     "build": "tsc && vite build",
     "preview": "vite preview",
     "tauri": "tauri",
-    "format:check": "yarn prettier --check .",
-    "format:fix": "yarn prettier --write ."
+    "format:check": "prettier --check .",
+    "format:fix": "prettier --write ."
   },
   "dependencies": {
     "@chakra-ui/icons": "2.0.17",
@@ -30,6 +30,7 @@
     "xterm-addon-fit": "0.7.0"
   },
   "devDependencies": {
+    "@tanstack/eslint-plugin-query": "4.27.0",
     "@tauri-apps/cli": "1.2.3",
     "@types/node": "18.15.3",
     "@types/react": "18.0.28",

@@ -1,7 +1,7 @@
 import { Button, Heading, Link, ListItem, Text, UnorderedList, VStack } from "@chakra-ui/react"
 import { useMemo } from "react"
 import { Link as RouterLink } from "react-router-dom"
-import { useWorkspaces } from "../../contexts/DevPodContext/DevPodContext"
+import { useWorkspaces } from "../../contexts"
 import { exists } from "../../lib"
 import { Routes } from "../../routes"
 import { TWorkspace, TWorkspaceID } from "../../types"
@@ -94,9 +94,7 @@ export function ListWorkspaces() {
               <Text>Status: {status}</Text>
 
               <Button
-                onClick={() =>
-                  start.run({ workspaceID: id, config: { ideConfig: ide }, onStream: () => {} })
-                }
+                onClick={() => start.run({ workspaceID: id, config: { ideConfig: ide } })}
                 isLoading={start.status === "loading"}>
                 Start
               </Button>

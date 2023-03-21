@@ -1,8 +1,8 @@
-import { ThemeProvider } from "./ThemeProvider"
+import { ThemeProvider } from "./Theme"
 import { invoke } from "@tauri-apps/api"
 import { StrictMode, useEffect } from "react"
 import ReactDOM from "react-dom/client"
-import { DevPodProvider } from "./contexts"
+import { DevPodProvider, SettingsProvider } from "./contexts"
 import { RouterProvider } from "react-router"
 import { router } from "./routes"
 import "xterm/css/xterm.css"
@@ -23,9 +23,11 @@ function Root() {
     <StrictMode>
       <ThemeProvider>
         <QueryClientProvider client={queryClient}>
-          <DevPodProvider>
-            <RouterProvider router={router} />
-          </DevPodProvider>
+          <SettingsProvider>
+            <DevPodProvider>
+              <RouterProvider router={router} />
+            </DevPodProvider>
+          </SettingsProvider>
           {/* Will be disabled in production automatically */}
           <ReactQueryDevtools position="top-right" />
         </QueryClientProvider>

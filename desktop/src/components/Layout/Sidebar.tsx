@@ -1,16 +1,29 @@
-import { Box, Flex, Grid, Link, useToken, VStack } from "@chakra-ui/react"
-import { ReactNode } from "react"
+import {
+  Box,
+  BoxProps,
+  Flex,
+  Grid,
+  Link,
+  useColorModeValue,
+  useToken,
+  VStack,
+} from "@chakra-ui/react"
+import { ReactElement, ReactNode } from "react"
 import { LinkProps, NavLink as RouterLink } from "react-router-dom"
 import { DevpodIcon } from "../../icons"
 
-type TSidebarProps = Readonly<{ children?: ReactNode }>
-export function Sidebar({ children }: TSidebarProps) {
-  // FIXME: refactor into type-safe hook
+type TSidebarProps = Readonly<{ children?: readonly ReactElement[] }> & BoxProps
+export function Sidebar({ children, ...boxProps }: TSidebarProps) {
   const iconColor = useToken("colors", "primary")
-  const sidebarBackgroundColor = useToken("colors", "gray.100")
+  const sidebarBackgroundColor = useColorModeValue("gray.100", "gray.700")
 
   return (
-    <Grid templateRows="6rem 1fr 6rem" width="full" backgroundColor={sidebarBackgroundColor}>
+    <Grid
+      templateRows="6rem 1fr 6rem"
+      width="full"
+      backgroundColor={sidebarBackgroundColor}
+      height="100vh"
+      {...boxProps}>
       <Flex paddingLeft="6" alignItems="center" justify="flex-start" width="full">
         <DevpodIcon boxSize={8} color={iconColor} />
       </Flex>
@@ -22,7 +35,7 @@ export function Sidebar({ children }: TSidebarProps) {
 
 type TSidebarMenuProps = Pick<LinkProps, "to"> & Readonly<{ children?: ReactNode }>
 export function SidebarMenuItem({ to, children }: TSidebarMenuProps) {
-  const activeBackgroundColor = useToken("colors", "gray.300")
+  const activeBackgroundColor = useColorModeValue("gray.300", "gray.600")
 
   return (
     <Box paddingX="4" width="full">
