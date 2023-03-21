@@ -1,19 +1,23 @@
-### Run the e2e tests
+### E2E tests
+
+#### Prerequisites
 
 Make sure you have ginkgo installed on your local machine:
 ```
 go get github.com/onsi/ginkgo/ginkgo
 ```
 
-#### Run all e2e test suites
+To build the binaries locally use the following command from this directory
 ```
-# Install ginkgo and run in this folder
-ginkgo e2e/...
-```
-
-#### Run a specific e2e test suite
-```
-# Install ginkgo and run in this folder
-ginkgo e2e/smoke
+BUILDDIR=bin SRCDIR=".." ../hack/rebuild.sh
 ```
 
+#### Run all E2E test
+```
+# Install ginkgo and run in this directory
+ginkgo
+```
+
+#### Test suites
+- `up` command
+- `ssh` command

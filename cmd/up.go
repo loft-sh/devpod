@@ -3,6 +3,10 @@ package cmd
 import (
 	"context"
 	"fmt"
+	"io"
+	"os"
+	"os/exec"
+
 	"github.com/loft-sh/devpod/cmd/flags"
 	"github.com/loft-sh/devpod/pkg/agent"
 	client2 "github.com/loft-sh/devpod/pkg/client"
@@ -22,9 +26,6 @@ import (
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 	"golang.org/x/crypto/ssh"
-	"io"
-	"os"
-	"os/exec"
 )
 
 // UpCmd holds the up cmd flags

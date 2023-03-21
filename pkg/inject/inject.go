@@ -5,15 +5,16 @@ import (
 	"context"
 	_ "embed"
 	"fmt"
-	"github.com/loft-sh/devpod/pkg/log"
-	"github.com/loft-sh/devpod/pkg/template"
-	"github.com/pkg/errors"
 	"io"
 	"os"
 	"path"
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/loft-sh/devpod/pkg/log"
+	"github.com/loft-sh/devpod/pkg/template"
+	"github.com/pkg/errors"
 )
 
 //go:embed inject.sh
