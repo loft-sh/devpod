@@ -1,12 +1,17 @@
 package e2e
 
 import (
-	"github.com/onsi/ginkgo/v2"
 	"math/rand"
 	"testing"
 	"time"
 
+	"github.com/onsi/ginkgo/v2"
+
 	"github.com/onsi/gomega"
+
+	// Register tests
+	_ "github.com/loft-sh/devpod/e2e/tests/ssh"
+	_ "github.com/loft-sh/devpod/e2e/tests/up"
 )
 
 // TestRunE2ETests checks configuration parameters (specified through flags) and then runs
@@ -17,5 +22,5 @@ import (
 func TestRunE2ETests(t *testing.T) {
 	rand.Seed(time.Now().UTC().UnixNano())
 	gomega.RegisterFailHandler(ginkgo.Fail)
-	ginkgo.RunSpecs(t, "DevSpace e2e suite")
+	ginkgo.RunSpecs(t, "DevPod e2e suite")
 }

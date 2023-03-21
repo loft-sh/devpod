@@ -1,29 +1,29 @@
 package framework
 
 import (
-	"fmt"
-	"os"
-
-	"github.com/onsi/ginkgo/v2"
+	"runtime"
 )
 
 type Framework struct {
-	TestDirectory string
+	DevpodBinDir  string
+	DevpodBinName string
 }
 
-func (f *Framework) SetupTestDirectory() error {
-	dir, err := os.MkdirTemp("devpod-e2e", "test")
-	if err != nil {
-		return err
+func NewDefaultFramework(path string) *Framework {
+
+	var binName = "devpod-"
+	switch runtime.GOOS {
+	case "darwin":
+		binName = binName + "darwin-"
+	case "linux":
+		binName = binName + "linux-"
 	}
-	f.TestDirectory = dir
-	return nil
-}
 
-func (f *Framework) TeardownTestDirectory() error {
-	return os.RemoveAll(f.TestDirectory)
-}
-
-func RegisterTestCase(testsuite, testcase string, fn func()) bool {
-	return ginkgo.Describe(fmt.Sprintf("[%s]: %s", testsuite, testcase), fn)
+	switch runtime.GOARCH {
+	case "amd64":
+		binName = binName + "amd64"
+	case "arm64":
+		binName = binName + "arm64"
+	}
+	return &Framework{DevpodBinDir: path, DevpodBinName: binName}
 }

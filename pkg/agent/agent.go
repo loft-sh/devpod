@@ -4,6 +4,14 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"io"
+	"os"
+	"os/exec"
+	"path/filepath"
+	"runtime"
+	"strings"
+	"time"
+
 	"github.com/loft-sh/devpod/pkg/command"
 	"github.com/loft-sh/devpod/pkg/compress"
 	"github.com/loft-sh/devpod/pkg/devcontainer/config"
@@ -12,13 +20,6 @@ import (
 	provider2 "github.com/loft-sh/devpod/pkg/provider"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
-	"io"
-	"os"
-	"os/exec"
-	"path/filepath"
-	"runtime"
-	"strings"
-	"time"
 )
 
 const DefaultInactivityTimeout = time.Hour
