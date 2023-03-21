@@ -567,6 +567,7 @@ dependencies = [
  "tauri-plugin-log",
  "thiserror",
  "tokio",
+ "url",
 ]
 
 [[package]]

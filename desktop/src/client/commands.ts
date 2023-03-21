@@ -8,22 +8,23 @@ import {
   TWorkspaceStatusResult,
   TWorkspaceWithoutStatus,
 } from "../types"
-
-const DEVPOD_BINARY = "bin/devpod"
-const DEVPOD_COMMAND_LIST = "list"
-const DEVPOD_COMMAND_STATUS = "status"
-const DEVPOD_COMMAND_UP = "up"
-const DEVPOD_COMMAND_STOP = "stop"
-const DEVPOD_COMMAND_BUILD = "build"
-const DEVPOD_COMMAND_DELETE = "delete"
-const DEVPOD_FLAG_JSON_OUTPUT = "--output=json"
-const DEVPOD_FLAG_JSON_LOG_OUTPUT = "--log-output=json"
-const DEVPOD_FLAG_FORCE_BUILD = "--force-build"
-const DEVPOD_FLAG_RECREATE = "--recreate"
-const DEVPOD_FLAG_IDE = "--ide"
-const DEVPOD_FLAG_ID = "--id"
-// const DEVPOD_COMMAND_PROVIDER = "provider"
-// const DEVPOD_ARG_USE = "use"
+import {
+  DEFAULT_STATIC_COMMAND_CONFIG,
+  DEVPOD_BINARY,
+  DEVPOD_COMMAND_BUILD,
+  DEVPOD_COMMAND_DELETE,
+  DEVPOD_COMMAND_LIST,
+  DEVPOD_COMMAND_STATUS,
+  DEVPOD_COMMAND_STOP,
+  DEVPOD_COMMAND_UP,
+  DEVPOD_FLAG_DEBUG,
+  DEVPOD_FLAG_FORCE_BUILD,
+  DEVPOD_FLAG_ID,
+  DEVPOD_FLAG_IDE,
+  DEVPOD_FLAG_JSON_LOG_OUTPUT,
+  DEVPOD_FLAG_JSON_OUTPUT,
+  DEVPOD_FLAG_RECREATE,
+} from "./constants"
 
 type TGetResultFromConfig<T> = T extends TCommandConfig<infer U, TCommandStaticConfig> ? U : never
 export type TCommand<
@@ -40,11 +41,11 @@ export type TCommand<
         stream?: never
       }
 >
-type TStreamEvent = Readonly<
+export type TStreamEvent = Readonly<
   { type: "data"; data: TLogOutput } | { type: "error"; error: TLogOutput }
 >
-export type TStreamEventHandlerFn = (event: TStreamEvent) => void
-export type TStreamCommandFn = (eventHandler: TStreamEventHandlerFn) => Promise<void>
+export type TStreamEventListenerFn = (event: TStreamEvent) => void
+export type TStreamCommandFn = (eventListener: TStreamEventListenerFn) => Promise<void>
 
 type TEventListener<TEventName extends string> = Parameters<
   EventEmitter<TEventName>["addListener"]
@@ -56,22 +57,20 @@ type TCommandRequiredConfig<TResult> = Readonly<{
 }>
 type TDoStreamResponse = { streamResponse: true }
 type TNoStreamResponse = { streamResponse: false }
-type TCommandStaticConfig = Readonly<TDoStreamResponse | TNoStreamResponse>
-const DEFAULT_STATIC_CONFIG = {
-  streamResponse: false,
-} as const
-type TDefaultStaticConfig = typeof DEFAULT_STATIC_CONFIG
+type TCommandStaticConfig = Readonly<{ debug: boolean } & (TDoStreamResponse | TNoStreamResponse)>
+type TDefaultStaticConfig = typeof DEFAULT_STATIC_COMMAND_CONFIG
 type TCommandConfig<
   TResult,
   TStaticConfig extends TCommandStaticConfig = TDefaultStaticConfig
 > = TCommandRequiredConfig<TResult> & TStaticConfig
 
-export function createCommand<TResult extends unknown, TStaticConfig extends TCommandStaticConfig>(
-  config: TCommandConfig<TResult, TStaticConfig>
-): TCommand<TStaticConfig, typeof config> {
-  const args = config.args()
+export async function createCommand<
+  TResult extends unknown,
+  TStaticConfig extends TCommandStaticConfig
+>(config: TCommandConfig<TResult, TStaticConfig>): Promise<TCommand<TStaticConfig, typeof config>> {
+  const args = [...config.args(), ...(config.debug ? [DEVPOD_FLAG_DEBUG] : [])]
 
-  if (Debug.get?.("logs")) {
+  if (await Debug.get?.("logs")) {
     console.info("Creating Devpod command with args: ", args)
   }
 
@@ -80,15 +79,15 @@ export function createCommand<TResult extends unknown, TStaticConfig extends TCo
   const run = async function run(): Promise<TResult> {
     const rawResult = await sidecarCommand.execute()
 
-    if (Debug.get?.("logs")) {
+    if (await Debug.get?.("logs")) {
       console.info(`Result for command with args ${args}:`, rawResult)
     }
 
     return config.process(rawResult)
   }
 
-  const stream: TCommand<TStaticConfig, typeof config>["stream"] = async function stream(handler) {
-    if (!exists(handler)) {
+  const stream: TCommand<TStaticConfig, typeof config>["stream"] = async function stream(listener) {
+    if (!exists(listener)) {
       await sidecarCommand.execute()
 
       return Promise.resolve()
@@ -100,7 +99,7 @@ export function createCommand<TResult extends unknown, TStaticConfig extends TCo
       const stdoutListener: TEventListener<"data"> = (message) => {
         try {
           // TODO: TYPECHECK
-          handler({ type: "data", data: JSON.parse(message) })
+          listener({ type: "data", data: JSON.parse(message) })
         } catch (error) {
           console.error("Failed to parse stdout message ", message, error)
         }
@@ -108,7 +107,7 @@ export function createCommand<TResult extends unknown, TStaticConfig extends TCo
       const stderrListener: TEventListener<"data"> = (message) => {
         try {
           // TODO: TYPECHECK
-          handler({ type: "error", error: JSON.parse(message) })
+          listener({ type: "error", error: JSON.parse(message) })
         } catch (error) {
           console.error("Failed to parse stderr message ", message, error)
         }
@@ -140,16 +139,27 @@ export function createCommand<TResult extends unknown, TStaticConfig extends TCo
   } as TCommand<TStaticConfig, typeof config> // TS has problems inferring the runtime check based `stream` method, so we need to cast here,
 }
 
-function createConfig<TResult, TStaticConfig extends TCommandStaticConfig>(
+function createBaseConfig<TResult, TStaticConfig extends TCommandStaticConfig>(
   configImpl: TCommandRequiredConfig<TResult>,
   staticConfig?: TStaticConfig
 ): TCommandConfig<TResult, TStaticConfig> {
-  const resolvedStaticConfig = { ...DEFAULT_STATIC_CONFIG, ...staticConfig } as TStaticConfig
+  const resolvedStaticConfig = {
+    ...DEFAULT_STATIC_COMMAND_CONFIG,
+    ...staticConfig,
+  } as TStaticConfig
 
   return {
     ...resolvedStaticConfig,
     ...configImpl,
   }
+}
+
+export function createWithDebug(
+  getShouldDebug: () => boolean
+): <TResult, TConfig extends TCommandConfig<TResult, TCommandStaticConfig>>(
+  commandConfig: TConfig
+) => TConfig {
+  return (commandConfig) => ({ ...commandConfig, debug: getShouldDebug() })
 }
 
 function toFlagArg(flag: string, arg: string) {
@@ -160,7 +170,7 @@ function toFlagArg(flag: string, arg: string) {
 type TRawWorkspaces = readonly (Omit<TWorkspace, "status" | "id"> &
   Readonly<{ id: string | null }>)[]
 export function listWorkspacesCommandConfig(): TCommandConfig<readonly TWorkspaceWithoutStatus[]> {
-  return createConfig({
+  return createBaseConfig({
     args() {
       return [DEVPOD_COMMAND_LIST, DEVPOD_FLAG_JSON_OUTPUT]
     },
@@ -177,7 +187,7 @@ export function listWorkspacesCommandConfig(): TCommandConfig<readonly TWorkspac
 export function workspaceStatusCommandConfig(
   id: TWorkspaceID
 ): TCommandConfig<Pick<TWorkspace, "id" | "status">> {
-  return createConfig({
+  return createBaseConfig({
     args() {
       return [DEVPOD_COMMAND_STATUS, id, DEVPOD_FLAG_JSON_OUTPUT]
     },
@@ -193,11 +203,8 @@ export function workspaceStatusCommandConfig(
   })
 }
 
-export function startWorkspaceCommandConfig(
-  id: TWorkspaceID,
-  config: TWorkspaceStartConfig
-): TCommandConfig<void, TDoStreamResponse> {
-  return createConfig(
+export function startWorkspaceCommandConfig(id: TWorkspaceID, config: TWorkspaceStartConfig) {
+  return createBaseConfig(
     {
       args() {
         // TODO: Implement other options
@@ -222,12 +229,12 @@ export function startWorkspaceCommandConfig(
         // noop
       },
     },
-    { streamResponse: true } as const
+    { streamResponse: true, debug: false } as const
   )
 }
 
 export function stopWorkspaceCommandConfig(id: TWorkspaceID): TCommandConfig<void> {
-  return createConfig({
+  return createBaseConfig({
     args() {
       return [DEVPOD_COMMAND_STOP, id, DEVPOD_FLAG_JSON_LOG_OUTPUT]
     },
@@ -240,7 +247,7 @@ export function stopWorkspaceCommandConfig(id: TWorkspaceID): TCommandConfig<voi
 }
 
 export function rebuildWorkspaceCommandConfig(id: TWorkspaceID): TCommandConfig<void> {
-  return createConfig({
+  return createBaseConfig({
     args() {
       return [
         DEVPOD_COMMAND_BUILD,
@@ -259,7 +266,7 @@ export function rebuildWorkspaceCommandConfig(id: TWorkspaceID): TCommandConfig<
 }
 
 export function removeWorkspaceCommandConfig(id: TWorkspaceID): TCommandConfig<void> {
-  return createConfig({
+  return createBaseConfig({
     args() {
       return [DEVPOD_COMMAND_DELETE, id]
     },

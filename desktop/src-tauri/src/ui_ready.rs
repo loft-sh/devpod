@@ -21,16 +21,7 @@ pub fn ui_ready(
     let sleep_duration = time::Duration::from_millis(1_000);
     let (tx, rx) = mpsc::channel::<Update>();
 
-    let providers_tx = tx.clone();
     let workspaces_tx = tx.clone();
-
-    // Poll devpod from infinitely running background threads every `sleep_duration` ms.
-    thread::spawn(move || loop {
-        let providers = ProvidersState::load().unwrap();
-        providers_tx.send(Update::Providers(providers)).unwrap();
-
-        thread::sleep(sleep_duration);
-    });
 
     thread::spawn(move || loop {
         let workspaces = WorkspacesState::load().unwrap();
@@ -71,10 +62,6 @@ pub fn ui_ready(
         }
     });
 
-    // TODO: should synchronize with background loops if either one of them changed
-    // Initial update to system tray after setting up data pipelines.
-     
-    // let providers = ProvidersState::load().unwrap();
     let workspaces = WorkspacesState::load().unwrap();
 
     let new_menu =

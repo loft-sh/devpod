@@ -40,8 +40,8 @@ type TFormValues = {
   [FieldName.DEFAULT_IDE]: TSupportedIDE
   [FieldName.PROVIDER]: TProviderID // TODO: needs runtime validation
 }
-// TODO: handle no provider configured
 
+// TODO: handle no provider configured
 export function CreateWorkspace() {
   const navigate = useNavigate()
   const { create } = useWorkspaceManager()
@@ -51,11 +51,11 @@ export function CreateWorkspace() {
 
   const onSubmit = useCallback<SubmitHandler<TFormValues>>(
     (data) => {
-      const workspaceSource = data[FieldName.SOURCE]
+      const workspaceSource = data[FieldName.SOURCE].trim()
       const providerID = data[FieldName.PROVIDER]
       const defaultIDE = data[FieldName.DEFAULT_IDE]
 
-      // TODO: after creating a workspace, the status is NOT_FOUND until the whole devcontainer was set up...
+      // TODO: after creating a workspace, the status is NOT_FOUND until the whole devcontainer is set up...
       // can we change this in cli?
       create.run({
         rawWorkspaceSource: workspaceSource,

@@ -1,9 +1,17 @@
 import { createBrowserRouter, Params } from "react-router-dom"
 import { App, ErrorPage } from "./App"
-import { CreateWorkspace, ListWorkspaces, Providers, Workspace, Workspaces } from "./views"
+import {
+  CreateWorkspace,
+  ListWorkspaces,
+  Providers,
+  Settings,
+  Workspace,
+  Workspaces,
+} from "./views"
 
 export const Routes = {
   ROOT: "/",
+  SETTINGS: "/settings",
   WORKSPACES: "/workspaces",
   PROVIDERS: "/providers",
   get WORKSPACE() {
@@ -49,6 +57,7 @@ export const router = createBrowserRouter([
         path: Routes.PROVIDERS,
         element: <Providers />,
       },
+      { path: Routes.SETTINGS, element: <Settings /> },
     ],
   },
 ])

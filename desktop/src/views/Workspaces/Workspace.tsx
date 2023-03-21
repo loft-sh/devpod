@@ -1,5 +1,5 @@
 import { Box, Button, CircularProgress, HStack, Text, VStack } from "@chakra-ui/react"
-import { useCallback, useMemo } from "react"
+import { useCallback, useEffect, useMemo } from "react"
 import { useParams } from "react-router"
 import { useStreamingTerminal } from "../../components"
 import { useWorkspace } from "../../contexts"
@@ -8,12 +8,12 @@ import { Routes } from "../../routes"
 
 export function Workspace() {
   const params = useParams()
-  const workpaceId = useMemo(() => Routes.getWorkspaceId(params), [params])
+  const workspaceID = useMemo(() => Routes.getWorkspaceId(params), [params])
   const { terminal, connectStream } = useStreamingTerminal()
 
   // TODO: add "global" operation status
   const [[workspace, { status, error }], { start, stop, remove, rebuild }] =
-    useWorkspace(workpaceId)
+    useWorkspace(workspaceID)
 
   const handleStartClicked = useCallback(async () => {
     if (!exists(workspace)) {
@@ -27,7 +27,16 @@ export function Workspace() {
     })
   }, [connectStream, start, workspace])
 
-  // TODO: connect to running `start` operation if it's currently running
+  useEffect(() => {
+    if (!exists(workspaceID)) {
+      return
+    }
+
+    start.connect({
+      workspaceID,
+      onStream: connectStream,
+    })
+  }, [workspaceID, connectStream, start])
 
   if (status === "loading") {
     return <CircularProgress isIndeterminate />
@@ -79,8 +88,9 @@ export function Workspace() {
         <Text>IDE: {workspace.ide?.ide ?? "unknown"}</Text>
       </VStack>
 
-      <Box height="60">{terminal}</Box>
-      {/*start.status === "loading" && <Box>{terminal}</Box>*/}
+      <Box height="60" minWidth="sm" maxWidth="100%">
+        {terminal}
+      </Box>
     </>
   )
 }

@@ -27,6 +27,9 @@
       },
       "os": {
         "all": true
+      },
+      "window": {
+        "startDragging": true
       }
     },
     "bundle": {
@@ -85,7 +88,9 @@
         "minHeight": 600,
         "x": 0,
         "y": 0,
-        "focus": false
+        "focus": false,
+        "titleBarStyle": "Overlay",
+        "hiddenTitle": true
       }
     ]
   }

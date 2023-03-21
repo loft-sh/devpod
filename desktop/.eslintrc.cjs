@@ -11,6 +11,7 @@ module.exports = {
     "plugin:@typescript-eslint/eslint-recommended",
     "plugin:react-hooks/recommended",
     "prettier",
+    "plugin:@tanstack/eslint-plugin-query/recommended",
   ],
   globals: {
     Atomics: "readonly",
@@ -20,7 +21,7 @@ module.exports = {
   parserOptions: {
     project: ["./tsconfig.json"],
   },
-  plugins: ["react", "@typescript-eslint"],
+  plugins: ["react", "@typescript-eslint", "@tanstack/query"],
   settings: {
     react: {
       version: "detect",
