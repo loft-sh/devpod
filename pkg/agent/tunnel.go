@@ -5,6 +5,12 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"io"
+	"net"
+	"os"
+	"strings"
+	"time"
+
 	"github.com/loft-sh/devpod/pkg/devcontainer/config"
 	"github.com/loft-sh/devpod/pkg/dockercredentials"
 	"github.com/loft-sh/devpod/pkg/extract"
@@ -15,11 +21,6 @@ import (
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 	"google.golang.org/grpc/credentials/insecure"
-	"io"
-	"net"
-	"os"
-	"strings"
-	"time"
 
 	"github.com/loft-sh/devpod/pkg/agent/tunnel"
 	"github.com/loft-sh/devpod/pkg/log"
@@ -54,7 +55,6 @@ func RunTunnelServer(ctx context.Context, reader io.Reader, writer io.WriteClose
 	}
 	tunnel.RegisterTunnelServer(s, tunnelServ)
 	reflection.Register(s)
-
 	errChan := make(chan error, 1)
 	go func() {
 		errChan <- s.Serve(lis)
