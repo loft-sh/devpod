@@ -1,0 +1,46 @@
+name: provider2
+version: 0.0.1
+description: |-
+  DevPod on Kubernetes
+options:
+  NAMESPACE:
+    required: true
+    description: The namespace to use
+    command: |-
+      NAMESPACE=$(kubectl config view --minify -o jsonpath='{..namespace}' 2>/dev/null || true)
+      if [ -z "${NAMESPACE}" ]; then
+        NAMESPACE=default
+      fi
+      echo $NAMESPACE
+agent:
+  path: /tmp/devpod
+exec:
+  command: |-
+    kubectl exec -n "${NAMESPACE}" -c devpod-container -i devpod-${MACHINE_ID} -- sh -c "${COMMAND}"
+  create: |-
+    kubectl create -n "${NAMESPACE}" -f - << EOF
+    apiVersion: v1
+    kind: Pod
+    metadata:
+      name: devpod-${MACHINE_ID}
+      labels:
+        app: devpod
+    spec:
+      volumes:
+        - name: devpod-storage
+          emptyDir: {}
+      containers:
+        - name: devpod-container
+          image: docker:dind
+          volumeMounts:
+          - mountPath: /var/lib/docker
+            name: devpod-storage
+            subPath: var/lib/docker
+          - mountPath: /root
+            name: devpod-storage
+            subPath: root
+          securityContext:
+            privileged: true
+    EOF
+  delete: |-
+    kubectl delete pod devpod-${MACHINE_ID} -n "${NAMESPACE}" || true
