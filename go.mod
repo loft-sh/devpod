@@ -13,6 +13,7 @@ require (
 	github.com/creack/pty v1.1.18
 	github.com/docker/cli v23.0.0-rc.1+incompatible
 	github.com/docker/docker v23.0.0-rc.1+incompatible
+	github.com/docker/go-connections v0.4.0
 	github.com/ghodss/yaml v1.0.0
 	github.com/gliderlabs/ssh v0.3.5
 	github.com/go-enry/go-enry/v2 v2.8.4
@@ -27,6 +28,9 @@ require (
 	github.com/moby/buildkit v0.11.2
 	github.com/moby/term v0.0.0-20221205130635-1aeaba878587
 	github.com/olekukonko/tablewriter v0.0.5
+	github.com/onsi/ginkgo/v2 v2.9.1
+	github.com/onsi/gomega v1.27.4
+	github.com/otiai10/copy v1.7.0
 	github.com/pkg/errors v0.9.1
 	github.com/pkg/sftp v1.13.6-0.20230213180117-971c283182b6
 	github.com/sirupsen/logrus v1.9.0
@@ -35,8 +39,8 @@ require (
 	github.com/spf13/pflag v1.0.5
 	github.com/takama/daemon v1.0.0
 	golang.org/x/crypto v0.6.0
-	golang.org/x/sys v0.5.0
-	golang.org/x/term v0.5.0
+	golang.org/x/sys v0.6.0
+	golang.org/x/term v0.6.0
 	google.golang.org/grpc v1.50.1
 	google.golang.org/protobuf v1.28.1
 	gopkg.in/natefinch/lumberjack.v2 v2.2.1
@@ -58,15 +62,16 @@ require (
 	github.com/distribution/distribution/v3 v3.0.0-20230214150026-36d8c594d7aa // indirect
 	github.com/docker/distribution v2.8.1+incompatible // indirect
 	github.com/docker/docker-credential-helpers v0.7.0 // indirect
-	github.com/docker/go-connections v0.4.0 // indirect
 	github.com/docker/go-units v0.5.0 // indirect
 	github.com/go-enry/go-oniguruma v1.2.1 // indirect
 	github.com/go-logr/logr v1.2.3 // indirect
 	github.com/go-logr/stdr v1.2.2 // indirect
+	github.com/go-task/slim-sprig v0.0.0-20210107165309-348f09dbbbc0 // indirect
 	github.com/gogo/googleapis v1.4.1 // indirect
 	github.com/gogo/protobuf v1.3.2 // indirect
-	github.com/golang/protobuf v1.5.2 // indirect
+	github.com/golang/protobuf v1.5.3 // indirect
 	github.com/google/go-cmp v0.5.9 // indirect
+	github.com/google/pprof v0.0.0-20210720184732-4bb14d4b1be1 // indirect
 	github.com/google/shlex v0.0.0-20191202100458-e7afc7fbc510 // indirect
 	github.com/grpc-ecosystem/go-grpc-middleware v1.3.0 // indirect
 	github.com/grpc-ecosystem/grpc-gateway v1.16.0 // indirect
@@ -96,11 +101,12 @@ require (
 	go.opentelemetry.io/otel/sdk v1.4.1 // indirect
 	go.opentelemetry.io/otel/trace v1.4.1 // indirect
 	go.opentelemetry.io/proto/otlp v0.12.0 // indirect
-	golang.org/x/mod v0.6.0 // indirect
-	golang.org/x/net v0.6.0 // indirect
+	golang.org/x/mod v0.9.0 // indirect
+	golang.org/x/net v0.8.0 // indirect
 	golang.org/x/sync v0.1.0 // indirect
-	golang.org/x/text v0.7.0 // indirect
+	golang.org/x/text v0.8.0 // indirect
 	golang.org/x/time v0.1.0 // indirect
-	golang.org/x/tools v0.1.12 // indirect
+	golang.org/x/tools v0.7.0 // indirect
 	google.golang.org/genproto v0.0.0-20220706185917-7780775163c4 // indirect
+	gopkg.in/yaml.v3 v3.0.1 // indirect
 )

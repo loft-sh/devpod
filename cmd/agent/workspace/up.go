@@ -5,6 +5,13 @@ import (
 	"crypto/tls"
 	"encoding/json"
 	"fmt"
+	"net/http"
+	"os"
+	"os/exec"
+	"path/filepath"
+	"strconv"
+	"time"
+
 	"github.com/loft-sh/devpod/cmd/flags"
 	"github.com/loft-sh/devpod/pkg/agent"
 	"github.com/loft-sh/devpod/pkg/agent/tunnel"
@@ -25,12 +32,6 @@ import (
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
-	"net/http"
-	"os"
-	"os/exec"
-	"path/filepath"
-	"strconv"
-	"time"
 )
 
 // UpCmd holds the up cmd flags

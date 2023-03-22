@@ -1,3 +1,4 @@
 /.idea
-/test
 .DS_Store
+/test
+/e2e/bin
