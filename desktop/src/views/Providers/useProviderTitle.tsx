@@ -6,61 +6,61 @@ import { TViewTitle } from "../../components"
 import { exists } from "../../lib"
 import { Routes } from "../../routes"
 
-export function useWorkspaceTitle(): TViewTitle | null {
+export function useProviderTitle(): TViewTitle | null {
   const navigate = useNavigate()
 
-  const matchWorkspacesRoot = useMatch(Routes.WORKSPACES)
-  const matchCreateWorkspace = useMatch(Routes.WORKSPACE_CREATE)
-  const matchWorkspace = useMatch(Routes.WORKSPACE)
+  const matchProviderRoot = useMatch(Routes.PROVIDERS)
+  const matchAddProvider = useMatch(Routes.PROVIDER_ADD)
+  const matchProvider = useMatch(Routes.PROVIDER)
 
-  const navigateToWorkspacesRoot = useCallback(() => {
-    navigate(Routes.WORKSPACES)
+  const navigateToProviderRoot = useCallback(() => {
+    navigate(Routes.PROVIDERS)
   }, [navigate])
 
   const navigateBackAction = useMemo(() => {
     return (
       <IconButton
         variant="ghost"
-        aria-label="Navigate back to Workspaces"
+        aria-label="Navigate back to providers"
         icon={<ArrowBackIcon boxSize="6" />}
-        onClick={navigateToWorkspacesRoot}
+        onClick={navigateToProviderRoot}
       />
     )
-  }, [navigateToWorkspacesRoot])
+  }, [navigateToProviderRoot])
 
   return useMemo<TViewTitle | null>(() => {
-    if (exists(matchWorkspacesRoot)) {
+    if (exists(matchProviderRoot)) {
       return {
-        label: "Workspaces",
+        label: "Providers",
         priority: "high",
         trailingAction: (
           <IconButton
-            aria-label="Create Workspace"
+            aria-label="Create Provider"
             icon={<AddIcon />}
-            onClick={() => navigate(Routes.WORKSPACE_CREATE)}
+            onClick={() => navigate(Routes.PROVIDER_ADD)}
           />
         ),
       }
     }
 
-    if (exists(matchCreateWorkspace)) {
+    if (exists(matchAddProvider)) {
       return {
-        label: "Create Workspace",
+        label: "Add Provider",
         priority: "regular",
         leadingAction: navigateBackAction,
       }
     }
 
-    if (exists(matchWorkspace)) {
-      const maybeWorkspaceId = Routes.getWorkspaceId(matchWorkspace.params)
+    if (exists(matchProvider)) {
+      const maybeWorkspaceId = Routes.getProviderId(matchProvider.params)
 
       return {
-        label: maybeWorkspaceId ?? "Unknown Workspace",
+        label: maybeWorkspaceId ?? "Unknown Provider",
         priority: "regular",
         leadingAction: navigateBackAction,
       }
     }
 
     return null
-  }, [matchCreateWorkspace, matchWorkspace, matchWorkspacesRoot, navigate, navigateBackAction])
+  }, [matchAddProvider, matchProvider, matchProviderRoot, navigate, navigateBackAction])
 }

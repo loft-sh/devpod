@@ -6,7 +6,7 @@ import { exists } from "../../lib"
 import { Routes } from "../../routes"
 import { TWorkspace, TWorkspaceID } from "../../types"
 
-type TWorkspacesViewModel = Readonly<{
+type TWorkspacesInfo = Readonly<{
   activeProviderCards: TWorkspaceRow[]
   inactiveProviderRows: TWorkspaceRow[]
 }>
@@ -20,13 +20,13 @@ type TWorkspaceRow = Readonly<{
 
 export function ListWorkspaces() {
   const [[workspaces], { start, stop, remove }] = useWorkspaces()
-  const { activeProviderCards, inactiveProviderRows } = useMemo<TWorkspacesViewModel>(() => {
-    const empty: TWorkspacesViewModel = { inactiveProviderRows: [], activeProviderCards: [] }
+  const { activeProviderCards, inactiveProviderRows } = useMemo<TWorkspacesInfo>(() => {
+    const empty: TWorkspacesInfo = { inactiveProviderRows: [], activeProviderCards: [] }
     if (!exists(workspaces)) {
       return empty
     }
 
-    return workspaces.reduce<TWorkspacesViewModel>((acc, workspace) => {
+    return workspaces.reduce<TWorkspacesInfo>((acc, workspace) => {
       const { id, status } = workspace
       if (!exists(id)) {
         return acc

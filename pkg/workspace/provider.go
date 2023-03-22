@@ -22,8 +22,8 @@ import (
 var provideWorkspaceArgErr = fmt.Errorf("please provide a workspace name. E.g. 'devpod up ./my-folder', 'devpod up github.com/my-org/my-repo' or 'devpod up ubuntu'")
 
 type ProviderWithOptions struct {
-	Config *provider2.ProviderConfig
-	State  *config.ConfigProvider
+	Config *provider2.ProviderConfig `json:"config,omitempty"`
+	State  *config.ConfigProvider    `json:"state,omitempty"`
 }
 
 // LoadProviders loads all known providers for the given context and

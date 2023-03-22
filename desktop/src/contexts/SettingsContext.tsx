@@ -8,6 +8,7 @@ import {
   useState,
 } from "react"
 import { client } from "../client"
+import { getKeys } from "../lib"
 import { Store } from "../lib/store"
 import { TUnsubscribeFn } from "../types"
 
@@ -29,7 +30,7 @@ const initialSettings: TSettings = {
   debugFlag: false,
 }
 function getSettingKeys(): readonly TSetting[] {
-  return Object.keys(initialSettings) as readonly TSetting[]
+  return getKeys(initialSettings)
 }
 
 const DEBUG_STORE_KEY = "settings"

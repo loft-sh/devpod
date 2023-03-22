@@ -4,6 +4,7 @@ import { client } from "../../client"
 import { MutationKeys, QueryKeys } from "../../queryKeys"
 import {
   TConnectOperationFn,
+  TWithWorkspaceID,
   TWorkspaceManager,
   TWorkspaceManagerRunConfig,
   TWorkspaces,
@@ -23,7 +24,7 @@ export function useWorkspaceManager(): TWorkspaceManager {
       rawWorkspaceSource,
       config,
       onStream,
-    }: TWorkspaceManagerRunConfig<"create">) => {
+    }: TWorkspaceManagerRunConfig["create"]) => {
       // At this point we don't have a workspaceID yet, so we need to create one
       const workspaceID = await client.workspaces.newWorkspaceID(rawWorkspaceSource)
       const status = await client.workspaces.start(workspaceID, config, viewID, onStream)
@@ -36,25 +37,25 @@ export function useWorkspaceManager(): TWorkspaceManager {
   })
   const startMutation = useMutation({
     mutationKey: MutationKeys.START,
-    mutationFn: ({ workspaceID, config, onStream }: TWorkspaceManagerRunConfig<"start">) =>
+    mutationFn: ({ workspaceID, config, onStream }: TWorkspaceManagerRunConfig["start"]) =>
       client.workspaces.start(workspaceID, config, viewID, onStream),
     onSuccess: updateWorkspaceStatus,
   })
   const stopMutation = useMutation({
     mutationKey: MutationKeys.STOP,
-    mutationFn: ({ workspaceID }: TWorkspaceManagerRunConfig<"stop">) =>
+    mutationFn: ({ workspaceID }: TWorkspaceManagerRunConfig["stop"]) =>
       client.workspaces.stop(workspaceID),
     onSuccess: updateWorkspaceStatus,
   })
   const rebuildMutation = useMutation({
     mutationKey: MutationKeys.REBUILD,
-    mutationFn: ({ workspaceID }: TWorkspaceManagerRunConfig<"rebuild">) =>
+    mutationFn: ({ workspaceID }: TWorkspaceManagerRunConfig["rebuild"]) =>
       client.workspaces.rebuild(workspaceID),
     onSuccess: updateWorkspaceStatus,
   })
   const removeMutation = useMutation({
     mutationKey: MutationKeys.REMOVE,
-    mutationFn: async ({ workspaceID }: TWorkspaceManagerRunConfig<"remove">) => {
+    mutationFn: async ({ workspaceID }: TWorkspaceManagerRunConfig["remove"]) => {
       await client.workspaces.remove(workspaceID)
 
       return Promise.resolve()
@@ -66,7 +67,7 @@ export function useWorkspaceManager(): TWorkspaceManager {
     },
   })
 
-  const connectStart = useCallback<TConnectOperationFn>(
+  const connectStart = useCallback<TConnectOperationFn<TWithWorkspaceID>>(
     (config) => {
       startSubscriptionRef.current = client.workspaces.subscribeToStart(
         config.workspaceID,
@@ -88,12 +89,10 @@ export function useWorkspaceManager(): TWorkspaceManager {
         run: createMutation.mutate,
         status: createMutation.status,
         error: createMutation.error,
+        target: createMutation.variables,
       },
       start: {
-        ...getOperationManagerFromMutation<
-          TWorkspaceManagerRunConfig<"start">, // let's help typescript out a bit here
-          typeof startMutation
-        >(startMutation),
+        ...getOperationManagerFromMutation(startMutation),
         connect: connectStart,
       },
       stop: getOperationManagerFromMutation(stopMutation),
@@ -105,6 +104,7 @@ export function useWorkspaceManager(): TWorkspaceManager {
       createMutation.error,
       createMutation.mutate,
       createMutation.status,
+      createMutation.variables,
       rebuildMutation,
       removeMutation,
       startMutation,

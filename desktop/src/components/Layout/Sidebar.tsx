@@ -3,19 +3,24 @@ import {
   BoxProps,
   Flex,
   Grid,
+  HStack,
   Link,
+  Progress,
+  Text,
   useColorModeValue,
   useToken,
   VStack,
 } from "@chakra-ui/react"
 import { ReactElement, ReactNode } from "react"
 import { LinkProps, NavLink as RouterLink } from "react-router-dom"
+import { useOngoingOperations } from "../../contexts"
 import { DevpodIcon } from "../../icons"
 
 type TSidebarProps = Readonly<{ children?: readonly ReactElement[] }> & BoxProps
 export function Sidebar({ children, ...boxProps }: TSidebarProps) {
   const iconColor = useToken("colors", "primary")
   const sidebarBackgroundColor = useColorModeValue("gray.100", "gray.700")
+  const operations = useOngoingOperations()
 
   return (
     <Grid
@@ -28,7 +33,14 @@ export function Sidebar({ children, ...boxProps }: TSidebarProps) {
         <DevpodIcon boxSize={8} color={iconColor} />
       </Flex>
       <VStack align="start">{children}</VStack>
-      <Box />
+      <VStack>
+        {operations.map((operation) => (
+          <HStack key={operation} width="full" paddingX={8} align="center">
+            <Text>{operation}</Text>
+            <Progress size="xs" width="full" isIndeterminate />
+          </HStack>
+        ))}
+      </VStack>
     </Grid>
   )
 }

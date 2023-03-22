@@ -1,7 +1,11 @@
 import { ChildProcess, Command, EventEmitter } from "@tauri-apps/api/shell"
-import { Debug, exists } from "../lib"
+import { Debug, exists, safeJSONParse } from "../lib"
 import {
+  TAddProviderConfig,
   TLogOutput,
+  TProviderID,
+  TProviderOptions,
+  TProviders,
   TWorkspace,
   TWorkspaceID,
   TWorkspaceStartConfig,
@@ -11,9 +15,12 @@ import {
 import {
   DEFAULT_STATIC_COMMAND_CONFIG,
   DEVPOD_BINARY,
+  DEVPOD_COMMAND_ADD,
   DEVPOD_COMMAND_BUILD,
   DEVPOD_COMMAND_DELETE,
   DEVPOD_COMMAND_LIST,
+  DEVPOD_COMMAND_OPTIONS,
+  DEVPOD_COMMAND_PROVIDER,
   DEVPOD_COMMAND_STATUS,
   DEVPOD_COMMAND_STOP,
   DEVPOD_COMMAND_UP,
@@ -23,7 +30,9 @@ import {
   DEVPOD_FLAG_IDE,
   DEVPOD_FLAG_JSON_LOG_OUTPUT,
   DEVPOD_FLAG_JSON_OUTPUT,
+  DEVPOD_FLAG_NAME,
   DEVPOD_FLAG_RECREATE,
+  DEVPOD_FLAG_USE,
 } from "./constants"
 
 type TGetResultFromConfig<T> = T extends TCommandConfig<infer U, TCommandStaticConfig> ? U : never
@@ -166,7 +175,11 @@ function toFlagArg(flag: string, arg: string) {
   return [flag, arg].join("=")
 }
 
-//#region commands
+function isOk(result: ChildProcess): boolean {
+  return result.code === 0
+}
+
+//#region workspace commands
 type TRawWorkspaces = readonly (Omit<TWorkspace, "status" | "id"> &
   Readonly<{ id: string | null }>)[]
 export function listWorkspacesCommandConfig(): TCommandConfig<readonly TWorkspaceWithoutStatus[]> {
@@ -192,7 +205,7 @@ export function workspaceStatusCommandConfig(
       return [DEVPOD_COMMAND_STATUS, id, DEVPOD_FLAG_JSON_OUTPUT]
     },
     process(rawResult) {
-      if (rawResult.code !== 0) {
+      if (!isOk(rawResult)) {
         throw Error(`Failed to get status for workspace ${id}`)
       }
 
@@ -239,7 +252,7 @@ export function stopWorkspaceCommandConfig(id: TWorkspaceID): TCommandConfig<voi
       return [DEVPOD_COMMAND_STOP, id, DEVPOD_FLAG_JSON_LOG_OUTPUT]
     },
     process(rawResult) {
-      if (rawResult.code !== 0) {
+      if (!isOk(rawResult)) {
         throw Error(`Failed to stop Workspace ${id}`)
       }
     },
@@ -258,7 +271,7 @@ export function rebuildWorkspaceCommandConfig(id: TWorkspaceID): TCommandConfig<
       ]
     },
     process(rawResult) {
-      if (rawResult.code !== 0) {
+      if (!isOk(rawResult)) {
         throw Error(`Failed to rebuild Workspace ${id}`)
       }
     },
@@ -271,10 +284,81 @@ export function removeWorkspaceCommandConfig(id: TWorkspaceID): TCommandConfig<v
       return [DEVPOD_COMMAND_DELETE, id]
     },
     process(rawResult) {
-      if (rawResult.code !== 0) {
+      if (!isOk(rawResult)) {
         throw Error(`Failed to delete Workspace ${id}`)
       }
     },
   })
 }
+//#endregion
+
+//#region provider commands
+export function listProvidersCommandConfig(): TCommandConfig<TProviders> {
+  return createBaseConfig({
+    args() {
+      return [DEVPOD_COMMAND_PROVIDER, DEVPOD_COMMAND_LIST, DEVPOD_FLAG_JSON_OUTPUT]
+    },
+    process(rawResult) {
+      return JSON.parse(rawResult.stdout) as TProviders
+    },
+  })
+}
+
+export function addProviderCommandConfig(
+  rawProviderSource: string,
+  config: TAddProviderConfig
+): TCommandConfig<void> {
+  return createBaseConfig({
+    args() {
+      const maybeName = config.name
+      const maybeNameFlag = exists(maybeName) ? [toFlagArg(DEVPOD_FLAG_NAME, maybeName)] : []
+      const useFlag = toFlagArg(DEVPOD_FLAG_USE, "false")
+
+      return [
+        DEVPOD_COMMAND_PROVIDER,
+        DEVPOD_COMMAND_ADD,
+        rawProviderSource,
+        ...maybeNameFlag,
+        useFlag,
+        DEVPOD_FLAG_JSON_LOG_OUTPUT,
+      ]
+    },
+    process(rawResult) {
+      if (!isOk(rawResult)) {
+        const maybeOutput = safeJSONParse<TLogOutput>(rawResult.stderr)
+        throw Error(
+          maybeOutput?.message ?? `Failed to add provider with source ${rawProviderSource}`
+        )
+      }
+    },
+  })
+}
+
+export function removeProviderCommandConfig(id: TProviderID): TCommandConfig<void> {
+  return createBaseConfig({
+    args() {
+      return [DEVPOD_COMMAND_PROVIDER, DEVPOD_COMMAND_DELETE, id]
+    },
+    process(rawResult) {
+      if (!isOk(rawResult)) {
+        throw Error(`Failed to delete Provider ${id}`)
+      }
+    },
+  })
+}
+export function getProviderOptionsCommandConfig(id: TProviderID): TCommandConfig<TProviderOptions> {
+  return createBaseConfig({
+    args() {
+      return [DEVPOD_COMMAND_PROVIDER, DEVPOD_COMMAND_OPTIONS, id, DEVPOD_FLAG_JSON_OUTPUT]
+    },
+    process(rawResult) {
+      if (!isOk(rawResult)) {
+        throw Error(`Failed to delete Provider ${id}`)
+      }
+
+      return JSON.parse(rawResult.stdout) as TProviderOptions
+    },
+  })
+}
+
 //#endregion
