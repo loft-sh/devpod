@@ -7,7 +7,7 @@ import (
 
 // DevPodUp executes the `devpod up` command in the test framework
 func (f *Framework) DevPodUp(ctx context.Context, workspace string) error {
-	err := f.ExecCommand(ctx, true, true, "Successfully started vscode in browser mode.", []string{"up", "--ide none", workspace})
+	err := f.ExecCommand(ctx, true, true, "Successfully started vscode in browser mode.", []string{"up", "--ide", "none", workspace})
 	if err != nil {
 		return fmt.Errorf("devpod up failed: %s", err.Error())
 	}

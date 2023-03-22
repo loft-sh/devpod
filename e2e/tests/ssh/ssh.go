@@ -25,20 +25,13 @@ var _ = DevPodDescribe("devpod ssh test suite", func() {
 		f.DevPodProviderUse(context.Background(), "local")
 
 		// Start up devpod workspace
-		devpodUpDeadline := time.Now().Add(2 * time.Minute)
-		devpodUpCtx, devpodUpCancel := context.WithDeadline(context.Background(), devpodUpDeadline)
-		go func(ctx context.Context) {
-			// Wait for devpod workspace to come online (dealine: 1 minute)
-			f.DevPodUp(devpodUpCtx, tempDir)
-		}(devpodUpCtx)
-
-		// Wait 30 seconds for workspace to come online
-		time.Sleep(20 * time.Second)
+		devpodUpDeadline := time.Now().Add(1 * time.Minute)
+		devpodUpCtx, _ := context.WithDeadline(context.Background(), devpodUpDeadline)
+		f.DevPodUp(devpodUpCtx, tempDir)
 
 		devpodSSHDeadline := time.Now().Add(20 * time.Second)
 		devpodSSHCtx, _ := context.WithDeadline(context.Background(), devpodSSHDeadline)
 
-		defer devpodUpCancel()
 		err = f.DevPodSSHEchoTestString(devpodSSHCtx, tempDir)
 		framework.ExpectNoError(err)
 
