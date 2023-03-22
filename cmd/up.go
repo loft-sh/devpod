@@ -88,6 +88,8 @@ func (cmd *UpCmd) Run(ctx context.Context, client client2.WorkspaceClient) error
 	result, err := cmd.devPodUp(ctx, client, log.Default)
 	if err != nil {
 		return err
+	} else if result == nil {
+		return fmt.Errorf("didn't receive a result back from agent")
 	}
 
 	// get user from result
@@ -254,6 +256,8 @@ func (cmd *UpCmd) devPodUpMachine(ctx context.Context, client client2.WorkspaceC
 
 		writer := log.Writer(logrus.DebugLevel, false)
 		defer writer.Close()
+
+		log.Debugf("Inject and run command: %s", command)
 		errChan <- agent.InjectAgentAndExecute(cancelCtx, func(ctx context.Context, command string, stdin io.Reader, stdout io.Writer, stderr io.Writer) error {
 			return client.Command(ctx, client2.CommandOptions{
 				Command: command,

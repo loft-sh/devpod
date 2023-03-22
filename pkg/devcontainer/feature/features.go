@@ -91,12 +91,15 @@ func escapeQuotesForShell(str string) string {
 
 func ProcessFeatureID(id, configDir string, log log.Logger) (string, error) {
 	if strings.HasPrefix(id, "https://") || strings.HasPrefix(id, "http://") {
+		log.Debugf("Process url feature")
 		return processDirectTarFeature(id, log)
 	} else if strings.HasPrefix(id, "./") || strings.HasPrefix(id, "../") {
+		log.Debugf("Process local feature")
 		return filepath.Abs(path.Join(filepath.ToSlash(configDir), id))
 	}
 
 	// get oci feature
+	log.Debugf("Process OCI feature")
 	return processOCIFeature(id, log)
 }
 
@@ -131,6 +134,7 @@ func processOCIFeature(id string, log log.Logger) (string, error) {
 	}
 	defer file.Close()
 
+	log.Debugf("Extract feature into %s", featureExtractedFolder)
 	err = extract.Extract(file, featureExtractedFolder)
 	if err != nil {
 		return "", err
