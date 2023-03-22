@@ -1,4 +1,5 @@
-export { useProviders, DevPodProvider } from "./DevPodProvider"
+export { DevPodProvider, useOngoingOperations } from "./DevPodProvider"
+export { useProviders } from "./useProviders"
 export { useWorkspace } from "./useWorkspace"
 export { useWorkspaceManager } from "./useWorkspaceManager"
 export { useWorkspaces } from "./useWorkspaces"

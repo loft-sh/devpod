@@ -27,6 +27,8 @@ import { Debug, useArch, useDebug, usePlatform } from "./lib"
 import { Routes } from "./routes"
 
 const TITLE_BAR_SAFE_AREA: BoxProps["height"] = "10"
+const STATUS_BAR_SAFE_AREA: BoxProps["height"] = "10"
+
 export function App() {
   const navigate = useNavigate()
   const rootRouteMatch = useMatch(Routes.ROOT)
@@ -83,7 +85,8 @@ export function App() {
               position="relative"
               width="full"
               height="full"
-              overflowY="auto">
+              overflowY="auto"
+              paddingBottom={STATUS_BAR_SAFE_AREA}>
               <Box paddingX="8" paddingY="8" width="full" height="full" overflowY="auto">
                 <Outlet />
               </Box>

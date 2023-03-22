@@ -1,5 +1,5 @@
-import { useQueries, useQuery, useQueryClient } from "@tanstack/react-query"
-import { createContext, ReactNode, useContext, useMemo } from "react"
+import { useIsMutating, useQueries, useQuery, useQueryClient } from "@tanstack/react-query"
+import { createContext, ReactNode, useMemo } from "react"
 import { client } from "../../client"
 import { exists } from "../../lib"
 import { QueryKeys } from "../../queryKeys"
@@ -19,9 +19,8 @@ export function DevPodProvider({ children }: Readonly<{ children?: ReactNode }>)
   const queryClient = useQueryClient()
   const providersQuery = useQuery({
     queryKey: QueryKeys.PROVIDERS,
-    queryFn: () => undefined,
+    queryFn: () => client.providers.listAll(),
     refetchInterval: REFETCH_INTERVAL_MS,
-    enabled: false,
   })
 
   const updateWorkspaceStatus = useUpdateWorkspaceStatus()
@@ -74,11 +73,11 @@ export function DevPodProvider({ children }: Readonly<{ children?: ReactNode }>)
     () => ({
       providers: [
         providersQuery.data,
-        { status: providersQuery.status, error: providersQuery.error },
+        { status: providersQuery.status, error: providersQuery.error, target: undefined },
       ],
       workspaces: [
         workspacesQuery.data,
-        { status: workspacesQuery.status, error: workspacesQuery.error },
+        { status: workspacesQuery.status, error: workspacesQuery.error, target: undefined },
       ],
       updateWorkspaceStatus,
     }),
@@ -96,6 +95,31 @@ export function DevPodProvider({ children }: Readonly<{ children?: ReactNode }>)
   return <DevPodContext.Provider value={value}>{children}</DevPodContext.Provider>
 }
 
-export function useProviders(): TDevpodContext["providers"] {
-  return useContext(DevPodContext).providers
+export function useOngoingOperations() {
+  const queryClient = useQueryClient()
+  const isMutating = useIsMutating()
+
+  const activeOperations = useMemo<readonly string[]>(() => {
+    if (isMutating === 0) {
+      return []
+    }
+    const mutationCache = queryClient.getMutationCache()
+
+    // `TODO: make more efficient :upside_down_face:
+    return mutationCache
+      .getAll()
+      .filter((mutation) => mutation.state.status === "loading")
+      .reduce<string[]>((acc, curr) => {
+        const maybeMutationKey = curr.options.mutationKey
+        const maybeOperationName = maybeMutationKey?.[0] as string
+
+        if (exists(maybeOperationName)) {
+          acc.push(maybeOperationName)
+        }
+
+        return acc
+      }, [])
+  }, [queryClient, isMutating])
+
+  return activeOperations
 }
