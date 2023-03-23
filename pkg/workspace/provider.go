@@ -45,7 +45,7 @@ func LoadProviders(devPodConfig *config.Config, log log.Logger) (*ProviderWithOp
 }
 
 func AddProvider(devPodConfig *config.Config, providerName, providerSourceRaw string, log log.Logger) (*provider2.ProviderConfig, error) {
-	providerRaw, providerSource, err := resolveProvider(providerSourceRaw, log)
+	providerRaw, providerSource, err := ResolveProvider(providerSourceRaw, log)
 	if err != nil {
 		return nil, err
 	}
@@ -75,7 +75,7 @@ func UpdateProvider(devPodConfig *config.Config, providerName, providerSourceRaw
 		}
 	}
 
-	providerRaw, providerSource, err := resolveProvider(providerSourceRaw, log)
+	providerRaw, providerSource, err := ResolveProvider(providerSourceRaw, log)
 	if err != nil {
 		return nil, err
 	}
@@ -83,7 +83,7 @@ func UpdateProvider(devPodConfig *config.Config, providerName, providerSourceRaw
 	return updateProvider(devPodConfig, providerName, providerRaw, providerSource, log)
 }
 
-func resolveProvider(providerSource string, log log.Logger) ([]byte, *provider2.ProviderSource, error) {
+func ResolveProvider(providerSource string, log log.Logger) ([]byte, *provider2.ProviderSource, error) {
 	// url?
 	if strings.HasPrefix(providerSource, "http://") || strings.HasPrefix(providerSource, "https://") {
 		log.Infof("Download provider %s...", providerSource)

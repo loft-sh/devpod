@@ -45,6 +45,20 @@ func Exists(devPodConfig *config.Config, args []string) string {
 	return workspaceID
 }
 
+func GetWorkspaceName(args []string) string {
+	if len(args) == 0 {
+		return ""
+	}
+
+	// check if workspace already exists
+	_, name := isLocalDir(args[0])
+
+	// convert to id
+	workspaceID := ToID(name)
+
+	return workspaceID
+}
+
 // GetWorkspace tries to retrieve an already existing workspace
 func GetWorkspace(devPodConfig *config.Config, ide *provider2.WorkspaceIDEConfig, args []string, changeLastUsed bool, log log.Logger) (client.WorkspaceClient, error) {
 	// check if we have no args
