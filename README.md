@@ -12,7 +12,7 @@ You can of DevPod as the glue that connects your local IDE to a machine where yo
 
 <br>
 
-![devpod Intro](docs/static/media/devpod-architecture.png)
+![devpod Intro](docs/static/media/devpod-architecture.svg)
 
 ## Why DevPod?
 
