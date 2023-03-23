@@ -7,25 +7,41 @@ import {
   Settings,
   Workspace,
   Workspaces,
+  ListProviders,
+  Provider,
+  AddProvider,
 } from "./views"
 
 export const Routes = {
   ROOT: "/",
   SETTINGS: "/settings",
   WORKSPACES: "/workspaces",
-  PROVIDERS: "/providers",
   get WORKSPACE() {
     return `${Routes.WORKSPACES}/:workspace`
   },
   get WORKSPACE_CREATE() {
     return `${Routes.WORKSPACES}/new`
   },
-  toWorkspace(workspaceId: string) {
-    return `${Routes.WORKSPACES}/${workspaceId}`
+  toWorkspace(workspaceID: string) {
+    return `${Routes.WORKSPACES}/${workspaceID}`
   },
   getWorkspaceId(params: Params<string>): string | undefined {
-    // needs to match `:workspace` from detail route exactly
+    // Needs to match `:workspace` from detail route exactly!
     return params["workspace"]
+  },
+  PROVIDERS: "/providers",
+  get PROVIDER() {
+    return `${Routes.PROVIDERS}/:provider`
+  },
+  get PROVIDER_ADD() {
+    return `${Routes.PROVIDERS}/add`
+  },
+  toProvider(providerID: string) {
+    return `${Routes.PROVIDERS}/${providerID}`
+  },
+  getProviderId(params: Params<string>): string | undefined {
+    // Needs to match `:provider` from detail route exactly!
+    return params["provider"]
   },
 } as const
 
@@ -56,6 +72,17 @@ export const router = createBrowserRouter([
       {
         path: Routes.PROVIDERS,
         element: <Providers />,
+        children: [
+          { index: true, element: <ListProviders /> },
+          {
+            path: Routes.PROVIDER,
+            element: <Provider />,
+          },
+          {
+            path: Routes.PROVIDER_ADD,
+            element: <AddProvider />,
+          },
+        ],
       },
       { path: Routes.SETTINGS, element: <Settings /> },
     ],

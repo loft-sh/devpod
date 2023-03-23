@@ -9,7 +9,8 @@
     "preview": "vite preview",
     "tauri": "tauri",
     "format:check": "prettier --check .",
-    "format:fix": "prettier --write ."
+    "format:fix": "prettier --write .",
+    "types:check": "tsc -p ./tsconfig.json --noEmit"
   },
   "dependencies": {
     "@chakra-ui/icons": "2.0.17",

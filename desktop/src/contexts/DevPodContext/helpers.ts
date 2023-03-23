@@ -1,22 +1,22 @@
 import { UseMutationResult } from "@tanstack/react-query"
 import {
   TOperationManager,
-  TWithWorkspaceID,
+  TWithResourceID,
   TWorkspace,
   TWorkspaceID,
   TWorkspaces,
 } from "../../types"
 
-export function getOperationManagerFromMutation<
-  TRunConfig extends TWithWorkspaceID,
-  TMutation extends UseMutationResult<unknown, unknown, TRunConfig, unknown>
->(mutation: TMutation): TOperationManager {
+export function getOperationManagerFromMutation<TRunConfig extends TWithResourceID>(
+  mutation: UseMutationResult<unknown, unknown, TRunConfig, unknown>
+): TOperationManager<TRunConfig> {
   return {
-    run: (runConfig: TRunConfig) => {
+    run(runConfig) {
       mutation.mutate(runConfig)
     },
     status: mutation.status,
     error: mutation.error,
+    target: mutation.variables,
   }
 }
 

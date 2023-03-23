@@ -3,6 +3,9 @@ import { listen } from "@tauri-apps/api/event"
 import { TSettings } from "../contexts"
 import { exists, noop, THandler } from "../lib"
 import {
+  TAddProviderConfig,
+  TProviderID,
+  TProviderOptions,
   TProviders,
   TUnsubscribeFn,
   TViewID,
@@ -14,10 +17,14 @@ import {
 } from "../types"
 import { createStartCommandCache } from "./cache"
 import {
+  addProviderCommandConfig,
   createCommand,
   createWithDebug,
+  getProviderOptionsCommandConfig,
+  listProvidersCommandConfig,
   listWorkspacesCommandConfig,
   rebuildWorkspaceCommandConfig,
+  removeProviderCommandConfig,
   removeWorkspaceCommandConfig,
   startWorkspaceCommandConfig,
   stopWorkspaceCommandConfig,
@@ -44,9 +51,10 @@ type TClient = Readonly<{
     channel: T,
     eventListener: TClientEventListener<T>
   ): Promise<TUnsubscribeFn>
-  workspaces: TWorkspaceClient
   fetchPlatform: () => Promise<TPlatform>
   fetchArch: () => Promise<TArch>
+  workspaces: TWorkspaceClient
+  providers: TProviderClient
 }>
 type TClientSettings = Pick<TSettings, "debugFlag">
 
@@ -68,6 +76,13 @@ type TWorkspaceClient = Readonly<{
   rebuild(workspaceID: TWorkspaceID): Promise<TWorkspace["status"]>
   remove(workspaceID: TWorkspaceID): Promise<void>
   newWorkspaceID(rawWorkspaceSource: string): Promise<TWorkspaceID>
+}>
+
+type TProviderClient = Readonly<{
+  listAll(): Promise<TProviders>
+  add(rawProviderSource: string, config: TAddProviderConfig): Promise<void>
+  remove(providerID: TProviderID): Promise<void>
+  getOptions(providerID: TProviderID): Promise<TProviderOptions>
 }>
 
 function createClient(): TClient {
@@ -99,14 +114,12 @@ function createClient(): TClient {
     },
     workspaces: {
       async listAll() {
-        return createCommand(withDebug(listWorkspacesCommandConfig())).then((command) =>
-          command.run()
-        )
+        return createCommand(listWorkspacesCommandConfig()).then((cmd) => cmd.run())
       },
       async getStatus(id) {
         // Don't run with `--debug` flag!
-        const { status } = await createCommand(workspaceStatusCommandConfig(id)).then((command) =>
-          command.run()
+        const { status } = await createCommand(workspaceStatusCommandConfig(id)).then((cmd) =>
+          cmd.run()
         )
 
         return status
@@ -147,33 +160,38 @@ function createClient(): TClient {
         return this.getStatus(id)
       },
       async stop(id) {
-        await createCommand(withDebug(stopWorkspaceCommandConfig(id))).then((command) =>
-          command.run()
-        )
+        await createCommand(withDebug(stopWorkspaceCommandConfig(id))).then((cmd) => cmd.run())
 
         return this.getStatus(id)
       },
       async rebuild(id) {
-        await createCommand(withDebug(rebuildWorkspaceCommandConfig(id))).then((command) =>
-          command.run()
-        )
+        await createCommand(withDebug(rebuildWorkspaceCommandConfig(id))).then((cmd) => cmd.run())
 
         return this.getStatus(id)
       },
       async remove(id) {
-        await createCommand(withDebug(removeWorkspaceCommandConfig(id))).then((command) =>
-          command.run()
-        )
+        await createCommand(withDebug(removeWorkspaceCommandConfig(id))).then((cmd) => cmd.run())
       },
       async newWorkspaceID(rawSource) {
         return invoke<string>("new_workspace_id", { sourceName: rawSource })
       },
     },
+    providers: {
+      async listAll() {
+        return createCommand(listProvidersCommandConfig()).then((cmd) => cmd.run())
+      },
+      async add(rawSource, config) {
+        return createCommand(addProviderCommandConfig(rawSource, config)).then((cmd) => cmd.run())
+      },
+      async remove(id) {
+        await createCommand(withDebug(removeProviderCommandConfig(id))).then((cmd) => cmd.run())
+      },
+      async getOptions(id) {
+        return await createCommand(getProviderOptionsCommandConfig(id)).then((cmd) => cmd.run())
+      },
+    },
   }
 }
-
-// singleton client
-export const client = createClient()
 
 function createStartHandler(
   viewID: TViewID,
@@ -187,3 +205,6 @@ function createStartHandler(
     notify: exists(listener) ? listener : noop,
   }
 }
+
+// Singleton client
+export const client = createClient()

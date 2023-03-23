@@ -113,10 +113,11 @@ export const Terminal = forwardRef<TTerminalRef, {}>(function T(_, ref) {
       <Box
         height="full"
         as="div"
-        padding="4"
-        overflow="hidden"
         backgroundColor={terminalTheme.background}
         borderRadius="md"
+        borderWidth={8}
+        boxSizing="content-box" // needs to be set to accomodate for the way xterm measures it's container
+        borderColor={terminalTheme.background}
         ref={containerRef}
         css={css`
           .xterm-viewport {

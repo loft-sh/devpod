@@ -32,5 +32,5 @@ export function useWorkspace(
     enabled: exists(workspaceID),
   })
 
-  return [[data, { status, error }], manager]
+  return [[data, { status, error, target: { workspaceID: workspaceID } }], manager]
 }
