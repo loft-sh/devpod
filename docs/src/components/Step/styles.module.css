@@ -1,0 +1,25 @@
+.step {
+  float: left;
+  margin-top: -0.2em;
+  margin-right: 0.7em;
+  background-color: #8fa6b2 !important;
+}
+
+.step + h2,
+.step + h3,
+.step + h4,
+.step + h5 {
+  display: inline-block;
+}
+
+.step:global(.h2) {
+  margin-top: calc(var(--ifm-h2-vertical-rhythm-top) * var(--ifm-h2-font-size) * var(--ifm-leading-number));
+}
+
+.step:nth-of-type(1) + h2 {
+  margin-top: 0;
+}
+
+.step + h2 :global(.hash-link) {
+  left: 0;
+}
