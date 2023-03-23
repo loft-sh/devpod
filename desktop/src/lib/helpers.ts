@@ -25,3 +25,15 @@ export function deserializeMap<T extends Map<unknown, unknown>>(serializedMap: s
 export function isEmpty<T extends { length: number }>(arg: T): boolean {
   return arg.length <= 0
 }
+
+export function safeJSONParse<T>(arg: string): T | null {
+  try {
+    return JSON.parse(arg) as T
+  } catch {
+    return null
+  }
+}
+
+export function getKeys<T extends object>(arg: T): readonly (keyof T)[] {
+  return Object.keys(arg) as unknown as readonly (keyof T)[]
+}

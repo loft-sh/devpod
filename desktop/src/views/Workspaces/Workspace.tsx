@@ -1,7 +1,7 @@
-import { Box, Button, CircularProgress, HStack, Text, VStack } from "@chakra-ui/react"
+import { Box, Button, HStack, Spinner, Text, VStack } from "@chakra-ui/react"
 import { useCallback, useEffect, useMemo } from "react"
 import { useParams } from "react-router"
-import { useStreamingTerminal } from "../../components"
+import { ErrorMessageBox, useStreamingTerminal } from "../../components"
 import { useWorkspace } from "../../contexts"
 import { exists, isError } from "../../lib"
 import { Routes } from "../../routes"
@@ -39,16 +39,14 @@ export function Workspace() {
   }, [workspaceID, connectStream, start])
 
   if (status === "loading") {
-    return <CircularProgress isIndeterminate />
+    return <Spinner />
   }
 
   if (isError(error)) {
     return (
       <>
         <Text>Whoops, something went wrong</Text>
-        <Box backgroundColor="red.100" marginTop="4" padding="4" borderRadius="md">
-          <Text color="red.700">{error.message}</Text>
-        </Box>
+        <ErrorMessageBox error={error} />
       </>
     )
   }
@@ -88,7 +86,7 @@ export function Workspace() {
         <Text>IDE: {workspace.ide?.ide ?? "unknown"}</Text>
       </VStack>
 
-      <Box height="60" minWidth="sm" maxWidth="100%">
+      <Box minHeight="60" maxHeight="2xl" minWidth="sm" maxWidth="100%">
         {terminal}
       </Box>
     </>
