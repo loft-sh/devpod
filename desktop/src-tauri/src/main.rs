@@ -5,7 +5,6 @@
 
 mod commands;
 mod logging;
-mod new_workspace_id;
 mod providers;
 mod system_tray;
 mod ui_ready;
@@ -13,7 +12,6 @@ mod util;
 mod workspaces;
 
 use log::info;
-use new_workspace_id::new_workspace_id;
 use providers::ProvidersState;
 use std::sync::{Arc, Mutex};
 use system_tray::SystemTray;
@@ -68,7 +66,7 @@ fn main() {
             Ok(())
         })
         .on_system_tray_event(system_tray_event_handler)
-        .invoke_handler(tauri::generate_handler![ui_ready, new_workspace_id])
+        .invoke_handler(tauri::generate_handler![ui_ready])
         .build(tauri::generate_context!())
         .expect("error while building tauri application")
         .run(|_app, event| match event {
