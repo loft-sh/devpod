@@ -17,17 +17,9 @@ import { ReactNode, useCallback, useMemo } from "react"
 import { FormProvider, SubmitHandler, useForm, useFormContext } from "react-hook-form"
 import { client } from "../../../client"
 import { exists, useFormErrors } from "../../../lib"
-import {
-  TConfigureProviderConfig,
-  TOptionID,
-  TProviderID,
-  TProviderOption,
-  TProviderOptions,
-} from "../../../types"
+import { TConfigureProviderConfig, TProviderID, TProviderOptions } from "../../../types"
+import { getVisibleOptions, TOptionWithID } from "../helpers"
 
-// TODO: refactor
-type TOptionWithID = Readonly<{ id: TOptionID; defaultValue: TProviderOption["default"] }> &
-  Omit<TProviderOption, "default">
 type TAllOptions = Readonly<{ required: TOptionWithID[]; other: TOptionWithID[] }>
 const Form = styled.form`
   width: 100%;
@@ -46,21 +38,25 @@ type TFieldValues = Readonly<{
 type TConfigureProviderOptionsFormProps = Readonly<{
   providerID: TProviderID
   options: TProviderOptions
-  onFinish: () => void
+  initializeProvider?: boolean
+  onFinish?: () => void
 }>
 export function ConfigureProviderOptionsForm({
   providerID,
   onFinish,
   options: optionsProp,
+  initializeProvider = false,
 }: TConfigureProviderOptionsFormProps) {
   const formMethods = useForm<TFieldValues>()
   const { status, mutate: configureProvider } = useMutation({
     mutationFn: async ({
       providerID,
       config,
-    }: Readonly<{ providerID: TProviderID; config: TConfigureProviderConfig }>) => (await client.providers.configure(providerID, config)).unwrap(),
+    }: Readonly<{ providerID: TProviderID; config: TConfigureProviderConfig }>) =>
+      // TODO: wire up `initializeProvider`
+      client.providers.configure(providerID, config),
     onSuccess() {
-      onFinish()
+      onFinish?.()
     },
   })
   const onSubmit = useCallback<SubmitHandler<TFieldValues>>(
@@ -70,10 +66,10 @@ export function ConfigureProviderOptionsForm({
       const { useAsDefault, reuseMachine: _, ...options } = data
       configureProvider({
         providerID,
-        config: { useAsDefaultProvider: useAsDefault, options: options },
+        config: { initializeProvider, useAsDefaultProvider: useAsDefault, options: options },
       })
     },
-    [configureProvider, providerID]
+    [configureProvider, initializeProvider, providerID]
   )
   const { reuseMachineError, useAsDefaultError } = useFormErrors(
     Object.values(FieldName),
@@ -85,46 +81,48 @@ export function ConfigureProviderOptionsForm({
       return empty
     }
 
-    return Object.entries(optionsProp)
-      .filter(([, { hidden }]) => !(exists(hidden) && hidden))
-      .reduce<TAllOptions>((acc, [optionName, optionValue]) => {
-        if (optionValue.required) {
-          acc.required.push({ id: optionName, ...optionValue, defaultValue: optionValue.default })
-
-          return acc
-        }
-
-        acc.other.push({ id: optionName, ...optionValue, defaultValue: optionValue.default })
+    return getVisibleOptions(optionsProp).reduce<TAllOptions>((acc, option) => {
+      if (option.required) {
+        acc.required.push(option)
 
         return acc
-      }, empty)
+      }
+
+      acc.other.push(option)
+
+      return acc
+    }, empty)
   }, [optionsProp])
 
   return (
     <FormProvider {...formMethods}>
       <Form onSubmit={formMethods.handleSubmit(onSubmit)}>
         <VStack align="start" spacing={14}>
-          <Box width="full">
-            <Heading size="sm" marginBottom={4}>
-              Required
-            </Heading>
-            <VStack align="start" spacing={4}>
-              {options.required.map((option) => (
-                <OptionFormField key={option.id} isRequired {...option} />
-              ))}
-            </VStack>
-          </Box>
+          {options.required.length > 0 && (
+            <Box width="full">
+              <Heading size="sm" marginBottom={4}>
+                Required
+              </Heading>
+              <VStack align="start" spacing={4}>
+                {options.required.map((option) => (
+                  <OptionFormField key={option.id} isRequired {...option} />
+                ))}
+              </VStack>
+            </Box>
+          )}
 
-          <Box width="full">
-            <Heading size="sm" marginBottom={4}>
-              Optional
-            </Heading>
-            <SimpleGrid minChildWidth="60" spacingX={8} spacingY={4}>
-              {options.other.map((option) => (
-                <OptionFormField key={option.id} {...option} />
-              ))}
-            </SimpleGrid>
-          </Box>
+          {options.other.length > 0 && (
+            <Box width="full">
+              <Heading size="sm" marginBottom={4}>
+                Optional
+              </Heading>
+              <SimpleGrid minChildWidth="60" spacingX={8} spacingY={4}>
+                {options.other.map((option) => (
+                  <OptionFormField key={option.id} {...option} />
+                ))}
+              </SimpleGrid>
+            </Box>
+          )}
 
           <Box width="full">
             <Heading size="sm" marginBottom={4}>
@@ -178,16 +176,11 @@ function OptionFormField({
   value,
   description,
   type,
+  displayName,
   isRequired = false,
 }: TOptionFormField) {
   const { register, formState } = useFormContext()
   const optionError = formState.errors[id]
-  const displayName = useMemo(() => {
-    return id
-      .toLowerCase()
-      .replace(/_/g, " ")
-      .replace(/\b\w/g, (l) => l.toUpperCase())
-  }, [id])
 
   const input = useMemo<ReactNode>(() => {
     const registerProps = register(id, { required: isRequired })
