@@ -10,6 +10,7 @@ import (
 	"github.com/onsi/gomega"
 
 	// Register tests
+	_ "github.com/loft-sh/devpod/e2e/tests/provider"
 	_ "github.com/loft-sh/devpod/e2e/tests/ssh"
 	_ "github.com/loft-sh/devpod/e2e/tests/up"
 )
