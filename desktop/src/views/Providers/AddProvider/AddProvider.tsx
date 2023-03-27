@@ -1,34 +1,55 @@
-import { Box, Heading, useBoolean, VStack } from "@chakra-ui/react"
+import { Box, Heading, VStack } from "@chakra-ui/react"
 import { useEffect, useRef } from "react"
+import { CollapsibleSection } from "../../../components"
+import { ConfigureProviderOptionsForm } from "./ConfigureProviderOptionsForm"
 import { SetupProviderSourceForm } from "./SetupProviderSourceForm"
+import { useAddProvider } from "./useAddProvider"
 
 export function AddProvider() {
-  const [ready, setReady] = useBoolean()
-  const optionsRef = useRef<HTMLDivElement>(null)
+  const openLockRef = useRef(false)
+  const { state, completeFirstStep, completeSecondStep } = useAddProvider()
 
   useEffect(() => {
-    if (ready) {
-      optionsRef.current?.scrollIntoView({ behavior: "smooth", block: "start" })
+    if (state.currentStep === "done") {
+      navigate()
     }
-  }, [ready])
+  })
 
   return (
-    <Box>
+    <Box paddingBottom={80}>
       <VStack align="start" spacing={8} width="full">
-        <Heading size="sm">1. Setup Provider Source</Heading>
-        <SetupProviderSourceForm onFinish={() => setReady.on()} />
+        <CollapsibleSection isOpen title={<Heading size="md">1. Setup Provider Source</Heading>}>
+          <SetupProviderSourceForm onFinish={completeFirstStep} />
+        </CollapsibleSection>
       </VStack>
 
-      <VStack align="start" spacing={8} width="full">
-        <Heading marginTop={8} size="sm">
-          2. Options
-        </Heading>
-        <VStack ref={optionsRef} align="start" width="full">
-          <Box width="full" height="80" backgroundColor="blue" />
-        </VStack>
+      <VStack align="start" spacing={8} marginTop={6} width="full">
+        <CollapsibleSection
+          isOpen={state.currentStep === 2}
+          onOpenChange={(isOpen, el) => {
+            if (isOpen && !openLockRef.current) {
+              openLockRef.current = true
+              setTimeout(() =>
+                el?.scrollIntoView({
+                  behavior: "smooth",
+                  block: "start",
+                  inline: "nearest",
+                })
+              )
+            }
+          }}
+          title={<Heading size="md">2. Configure Provider</Heading>}>
+          <VStack align="start" width="full">
+            {state.currentStep === 2 && (
+              <ConfigureProviderOptionsForm
+                providerID={state.providerID}
+                options={state.options}
+                onFinish={completeSecondStep}
+              />
+            )}
+          </VStack>
+        </CollapsibleSection>
       </VStack>
-
-      <Box height={8} />
     </Box>
   )
 }

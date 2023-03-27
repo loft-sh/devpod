@@ -18,9 +18,7 @@ export type TConnectOperationFn<T extends TWithResourceID> = (
 ) => void
 export type TOperationManager<TRunConfig = TWithResourceID> = TRunnable<TRunConfig> &
   TOperationStatus<TRunConfig>
-export type TOperationManagerRunConfig<
-  TManager extends Record<string, TOperationManager<unknown>>
-> = {
+type TOperationManagerRunConfig<TManager extends Record<string, TOperationManager<unknown>>> = {
   [K in keyof TManager]: Parameters<TManager[K]["run"]>[0]
 }
 type TOperationStatus<TRunConfig> = Pick<UseMutationResult, "status" | "error"> &
@@ -32,6 +30,7 @@ type TConnectable<T extends TWithResourceID> = Readonly<{ connect: TConnectOpera
 
 //#region Provider
 export type TProviderID = string
+export type TOptionID = string
 export type TWithProviderID = Readonly<{ providerID: TProviderID }>
 export type TProviders = Record<TProviderID, TProvider>
 export type TProvider = Readonly<{
@@ -44,6 +43,8 @@ export type TProviderConfig = Readonly<{
   source: TProviderSource | null
   description: string | null
   options: TProviderOptions
+  icon: string | null
+  home: string | null
 }>
 type TProviderSource = Readonly<{
   github: string | null
@@ -52,13 +53,32 @@ type TProviderSource = Readonly<{
 }>
 export type TProviderOptions = Record<string, TProviderOption>
 export type TProviderOption = Readonly<{
-  // TODO: add more stuff from go
-  local: string | null
-  retrieved: string | null
+  // Value is the options current value
   value: string | null
+  // A description of the option displayed to the user by a supporting tool.
+  description: string | null
+  // If required is true and the user doesn't supply a value, devpod will ask the user
+  required: boolean | null
+  // Allowed values for this option.
+  enum: string[] | null
+  // Hidden specifies if the option should be hidden
+  hidden: boolean | null
+  // Local means the variable is not resolved immediately and instead later when the workspace / machine was created.
+  local: boolean | null
+  // Default value if the user omits this option from their configuration.
+  default: string | null
+  // Command is the command to run to specify an option
+  command: string | null
+  // Type is the provider option type. Can be one of: string, duration, number or boolean. Defaults to string
+  type: "string" | "duration" | "number" | "boolean" | null
 }>
+
 export type TAddProviderConfig = Readonly<{
   name?: TProviderConfig["name"]
+}>
+export type TConfigureProviderConfig = Readonly<{
+  options: Record<string, unknown>
+  useAsDefaultProvider: boolean
 }>
 export type TProviderManager = Readonly<{
   remove: TOperationManager<TWithProviderID>

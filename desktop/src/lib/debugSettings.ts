@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react"
 import { TUnsubscribeFn } from "../types"
-import { Store } from "./store"
+import { LocalStorageBackend, Store } from "./store"
 
 const DEBUG_STORE_KEY = "debug"
 const DEBUG_OPTIONS = ["logs"] as const
@@ -17,7 +17,7 @@ type TInternalDebug = Readonly<{
 }>
 
 function init(): TDebug & TInternalDebug {
-  const store = Store.create<TDebugStore>(Store.backend.createLocalStorageBackend(DEBUG_STORE_KEY))
+  const store = new Store<TDebugStore>(new LocalStorageBackend<TDebugStore>(DEBUG_STORE_KEY))
 
   return {
     isEnabled: true,

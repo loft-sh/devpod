@@ -30,77 +30,85 @@ type TEventManager<TEvents extends TBaseEvents> = Readonly<{
   clear: <TEventName extends keyof TEvents>(eventName: TEventName) => void
 }>
 
-export const EventManager = {
-  create: createEventManager,
-  createSingle: createSingleEventManager,
-  toHandler: createHandler,
-}
+export class EventManager<TEvents extends TBaseEvents> implements TEventManager<TEvents> {
+  private handlers = new Map<keyof TEvents, TEventHandler<TEvents>[]>()
 
-function createHandler<TFn extends Function>(
-  listenerFn: TFn,
-  id: string = crypto.randomUUID()
-): THandler<TFn> {
-  return {
-    id,
-    eq(other) {
-      return this.id === other.id
-    },
-    notify: listenerFn,
+  public static toHandler<TFn extends Function>(
+    listenerFn: TFn,
+    id: string = crypto.randomUUID()
+  ): THandler<TFn> {
+    return {
+      id,
+      eq(other) {
+        return this.id === other.id
+      },
+      notify: listenerFn,
+    }
   }
-}
 
-function createEventManager<TEvents extends TBaseEvents>(): TEventManager<TEvents> {
-  const handlers = new Map<keyof TEvents, TEventHandler<TEvents>[]>()
+  public subscribe<TEventName extends keyof TEvents>(
+    eventName: TEventName,
+    handler: TEventHandler<TEvents, TEventName>
+  ): VoidFunction {
+    const maybeHandlers = this.handlers.get(eventName)
+    if (!exists(maybeHandlers)) {
+      this.handlers.set(eventName, [handler as TEventHandler<TEvents>])
+    } else {
+      this.handlers.set(eventName, [...maybeHandlers, handler as TEventHandler<TEvents>])
+    }
 
-  return {
-    subscribe(eventName, handler) {
-      const maybeHandlers = handlers.get(eventName)
-      if (!exists(maybeHandlers)) {
-        handlers.set(eventName, [handler as TEventHandler<TEvents>])
-      } else {
-        handlers.set(eventName, [...maybeHandlers, handler as TEventHandler<TEvents>])
-      }
+    return () => this.unsubscribe(eventName, handler)
+  }
 
-      return () => this.unsubscribe(eventName, handler)
-    },
-    isSubscribed(eventName, handler) {
-      const maybeHandlers = handlers.get(eventName)
-      if (!exists(maybeHandlers)) {
-        return false
-      }
+  public isSubscribed<TEventName extends keyof TEvents>(
+    eventName: TEventName,
+    handler: TEventHandler<TEvents, TEventName>
+  ): boolean {
+    const maybeHandlers = this.handlers.get(eventName)
+    if (!exists(maybeHandlers)) {
+      return false
+    }
 
-      return exists(maybeHandlers.find((l) => l.eq(handler)))
-    },
-    unsubscribe(eventName, handler) {
-      const maybeEventHandlers = handlers.get(eventName)
-      if (!exists(maybeEventHandlers)) {
-        return
-      }
+    return exists(maybeHandlers.find((l) => l.eq(handler)))
+  }
 
-      handlers.set(
-        eventName,
-        maybeEventHandlers.filter((h) => !h.eq(handler))
-      )
+  public unsubscribe<TEventName extends keyof TEvents>(
+    eventName: TEventName,
+    handler: TEventHandler<TEvents, TEventName>
+  ): void {
+    const maybeEventHandlers = this.handlers.get(eventName)
+    if (!exists(maybeEventHandlers)) {
+      return
+    }
 
-      if (isEmpty(maybeEventHandlers)) {
-        handlers.delete(eventName)
-      }
-    },
-    publish(eventName, event): boolean {
-      const maybeHandlers = handlers.get(eventName)
-      if (!exists(maybeHandlers)) {
-        return false
-      }
+    this.handlers.set(
+      eventName,
+      maybeEventHandlers.filter((h) => !h.eq(handler))
+    )
 
-      for (const handler of maybeHandlers) {
-        handler.notify(event)
-      }
+    if (isEmpty(maybeEventHandlers)) {
+      this.handlers.delete(eventName)
+    }
+  }
 
-      return true
-    },
-    clear(eventName) {
-      handlers.delete(eventName)
-    },
+  public publish<TEventName extends keyof TEvents>(
+    eventName: TEventName,
+    event: TEvents[TEventName]
+  ): boolean {
+    const maybeHandlers = this.handlers.get(eventName)
+    if (!exists(maybeHandlers)) {
+      return false
+    }
+
+    for (const handler of maybeHandlers) {
+      handler.notify(event)
+    }
+
+    return true
+  }
+
+  public clear<TEventName extends keyof TEvents>(eventName: TEventName): void {
+    this.handlers.delete(eventName)
   }
 }
 
@@ -112,24 +120,26 @@ type TSingleEventManager<T extends TBaseEvents> = {
     : never
 }
 
-export function createSingleEventManager<T extends TBaseEvents>(): TSingleEventManager<T> {
-  const manager = createEventManager<{ event: T }>()
+export class SingleEventManager<T extends TBaseEvents> implements TSingleEventManager<T> {
+  private manager = new EventManager<{ event: T }>()
 
-  return {
-    subscribe(handler) {
-      return manager.subscribe("event", handler)
-    },
-    isSubscribed(handler) {
-      return manager.isSubscribed("event", handler)
-    },
-    unsubscribe(handler) {
-      return manager.unsubscribe("event", handler)
-    },
-    publish(event) {
-      return manager.publish("event", event)
-    },
-    clear() {
-      return manager.clear("event")
-    },
+  subscribe(handler: TEventHandler<{ event: T }, "event">): VoidFunction {
+    return this.manager.subscribe("event", handler)
+  }
+
+  isSubscribed(handler: TEventHandler<{ event: T }, "event">): boolean {
+    return this.manager.isSubscribed("event", handler)
+  }
+
+  unsubscribe(handler: TEventHandler<{ event: T }, "event">): void {
+    return this.manager.unsubscribe("event", handler)
+  }
+
+  publish(event: T): boolean {
+    return this.manager.publish("event", event)
+  }
+
+  clear(): void {
+    return this.manager.clear("event")
   }
 }
