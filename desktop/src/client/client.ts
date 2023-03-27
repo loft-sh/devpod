@@ -17,27 +17,11 @@ import {
   TWorkspaceWithoutStatus,
 } from "../types"
 import { StartCommandCache } from "./cache"
-import {
-  addProviderCommandConfig,
-  createCommand,
-  createWithDebug,
-  getProviderOptionsCommandConfig,
-  initProviderCommandConfig,
-  listProvidersCommandConfig,
-  listWorkspacesCommandConfig,
-  providerIDCommandConfig,
-  rebuildWorkspaceCommandConfig,
-  removeProviderCommandConfig,
-  removeWorkspaceCommandConfig,
-  setProviderOptionsCommandConfig,
-  startWorkspaceCommandConfig,
-  stopWorkspaceCommandConfig,
-  TStreamEventListenerFn,
-  useProviderCommandConfig,
-  workspaceIDCommandConfig,
-  workspaceStatusCommandConfig,
-} from "./commands"
 import { DEFAULT_STATIC_COMMAND_CONFIG } from "./constants"
+import {Result, ResultError, Return} from "../lib/result";
+import {TStreamEventListenerFn} from "./command";
+import {WorkspaceCommands} from "./workspaceCommands";
+import {ProviderCommands} from "./providerCommands";
 
 type TChannels = {
   providers: TProviders
@@ -56,7 +40,7 @@ type TClient = Readonly<{
   subscribe<T extends TChannelName>(
     channel: T,
     eventListener: TClientEventListener<T>
-  ): Promise<TUnsubscribeFn>
+  ): Promise<Result<TUnsubscribeFn>>
   fetchPlatform: () => Promise<TPlatform>
   fetchArch: () => Promise<TArch>
   workspaces: TWorkspaceClient
@@ -65,32 +49,32 @@ type TClient = Readonly<{
 type TClientSettings = Pick<TSettings, "debugFlag">
 
 type TWorkspaceClient = Readonly<{
-  listAll: () => Promise<readonly TWorkspaceWithoutStatus[]>
-  getStatus: (workspaceID: TWorkspaceID) => Promise<TWorkspace["status"]>
-  newID(rawWorkspaceSource: string): Promise<TWorkspaceID>
+  listAll: () => Promise<Result<readonly TWorkspaceWithoutStatus[]>>
+  getStatus: (workspaceID: TWorkspaceID) => Promise<Result<TWorkspace["status"]>>
+  newID(rawWorkspaceSource: string): Promise<Result<TWorkspaceID>>
   start(
     workspaceID: TWorkspaceID,
     config: TWorkspaceStartConfig,
     viewID: TViewID,
     streamListener?: TStreamEventListenerFn
-  ): Promise<TWorkspace["status"]>
+  ): Promise<Result<TWorkspace["status"]>>
   subscribeToStart: (
     workspaceID: TWorkspaceID,
     viewID: TViewID,
     streamListener?: TStreamEventListenerFn
   ) => TUnsubscribeFn
-  stop(workspaceID: TWorkspaceID): Promise<TWorkspace["status"]>
-  rebuild(workspaceID: TWorkspaceID): Promise<TWorkspace["status"]>
-  remove(workspaceID: TWorkspaceID): Promise<void>
+  stop(workspaceID: TWorkspaceID): Promise<Result<TWorkspace["status"]>>
+  rebuild(workspaceID: TWorkspaceID): Promise<Result<TWorkspace["status"]>>
+  remove(workspaceID: TWorkspaceID): Promise<ResultError>
 }>
 
 type TProvidersClient = Readonly<{
-  listAll(): Promise<TProviders>
-  newID(rawProviderSource: string): Promise<TProviderID>
-  add(rawProviderSource: string, config: TAddProviderConfig): Promise<void>
-  remove(providerID: TProviderID): Promise<void>
-  getOptions(providerID: TProviderID): Promise<TProviderOptions>
-  configure(providerID: TProviderID, config: TConfigureProviderConfig): Promise<void>
+  listAll(): Promise<Result<TProviders>>
+  newID(rawProviderSource: string): Promise<Result<TProviderID>>
+  add(rawProviderSource: string, config: TAddProviderConfig): Promise<ResultError>
+  remove(providerID: TProviderID): Promise<ResultError>
+  getOptions(providerID: TProviderID): Promise<Result<TProviderOptions>>
+  configure(providerID: TProviderID, config: TConfigureProviderConfig): Promise<ResultError>
 }>
 
 class Client implements TClient {
@@ -99,11 +83,8 @@ class Client implements TClient {
     ["debugFlag", DEFAULT_STATIC_COMMAND_CONFIG.debug],
   ])
 
-  private withDebug = createWithDebug(
-    () => this.settings.get("debugFlag") ?? DEFAULT_STATIC_COMMAND_CONFIG.debug
-  )
-  public workspaces = new WorkspacesClient(this.withDebug, this.startCommandCache)
-  public providers = new ProvidersClient(this.withDebug)
+  public workspaces = new WorkspacesClient(this.settings.get("debugFlag"), this.startCommandCache)
+  public providers = new ProvidersClient(this.settings.get("debugFlag"))
 
   public setSetting<TSettingName extends keyof TClientSettings>(
     name: TSettingName,
@@ -111,16 +92,21 @@ class Client implements TClient {
   ) {
     this.settings.set(name, value)
   }
+
   public async subscribe<T extends TChannelName>(
     channel: T,
     listener: TClientEventListener<T>
-  ): Promise<TUnsubscribeFn> {
+  ): Promise<Result<TUnsubscribeFn>> {
     // `TClient` is strictly typed so we're fine casting the response as `any`.
-    const unsubscribe = await listen<any>(channel, (event) => {
-      listener(event.payload)
-    })
+    try {
+      const unsubscribe = await listen<any>(channel, (event) => {
+        listener(event.payload)
+      })
 
-    return unsubscribe
+      return Return.Value(unsubscribe)
+    } catch(e) {
+      return Return.Failed(e+"")
+    }
   }
 
   public fetchPlatform(): Promise<TPlatform> {
@@ -134,7 +120,7 @@ class Client implements TClient {
 
 class WorkspacesClient implements TWorkspaceClient {
   constructor(
-    private withDebug: ReturnType<typeof createWithDebug>,
+    private withDebug: boolean | undefined,
     private startCommandCache: StartCommandCache
   ) {}
 
@@ -151,21 +137,22 @@ class WorkspacesClient implements TWorkspaceClient {
     }
   }
 
-  public async listAll(): Promise<readonly TWorkspaceWithoutStatus[]> {
-    return createCommand(listWorkspacesCommandConfig()).then((cmd) => cmd.run())
+  public async listAll(): Promise<Result<readonly TWorkspaceWithoutStatus[]>> {
+    return await WorkspaceCommands.ListWorkspaces()
   }
 
-  public async getStatus(id: string): Promise<"Running" | "Busy" | "Stopped" | "NotFound" | null> {
-    // Don't run with `--debug` flag!
-    const { status } = await createCommand(workspaceStatusCommandConfig(id)).then((cmd) =>
-      cmd.run()
-    )
+  public async getStatus(id: string): Promise<Result<"Running" | "Busy" | "Stopped" | "NotFound" | null>> {
+    const result = await WorkspaceCommands.GetWorkspaceStatus(id)
+    if (result.err) {
+      return result
+    }
 
-    return status
+    const { status } = result.val
+    return Return.Value(status)
   }
 
-  public async newID(rawSource: string): Promise<string> {
-    return createCommand(workspaceIDCommandConfig(rawSource)).then((cmd) => cmd.run())
+  public async newID(rawSource: string): Promise<Result<string>> {
+    return await WorkspaceCommands.GetWorkspaceID(rawSource)
   }
 
   public async start(
@@ -177,31 +164,32 @@ class WorkspacesClient implements TWorkspaceClient {
     }>,
     viewID: string,
     listener?: TStreamEventListenerFn | undefined
-  ): Promise<"Running" | "Busy" | "Stopped" | "NotFound" | null> {
-    try {
-      const maybeRunningCommand = this.startCommandCache.get(id)
-      const handler = this.createStartHandler(viewID, listener)
+  ): Promise<Result<"Running" | "Busy" | "Stopped" | "NotFound" | null>> {
+    const maybeRunningCommand = this.startCommandCache.get(id)
+    const handler = this.createStartHandler(viewID, listener)
 
-      // If `start` for id is running already,
-      // wire up the new listener and return the existing operation
-      if (exists(maybeRunningCommand)) {
-        maybeRunningCommand.stream?.(handler)
-        await maybeRunningCommand.promise
+    // If `start` for id is running already,
+    // wire up the new listener and return the existing operation
+    if (exists(maybeRunningCommand)) {
+      maybeRunningCommand.stream?.(handler)
+      await maybeRunningCommand.promise
 
-        return this.getStatus(id)
-      }
-
-      const cmd = await createCommand(this.withDebug(startWorkspaceCommandConfig(id, config)))
-      const { operation, stream } = this.startCommandCache.connect(id, cmd)
-      stream?.(handler)
-
-      await operation
-    } finally {
-      this.startCommandCache.clear(id)
+      return this.getStatus(id)
     }
 
+    const cmd = WorkspaceCommands.StartWorkspace(id, config)
+    const { operation, stream } = this.startCommandCache.connect(id, cmd)
+    stream?.(handler)
+
+    const result = await operation
+    if (result.err) {
+      return result
+    }
+
+    this.startCommandCache.clear(id)
     return this.getStatus(id)
   }
+
   public subscribeToStart(
     id: string,
     viewID: string,
@@ -213,69 +201,73 @@ class WorkspacesClient implements TWorkspaceClient {
     }
 
     const maybeUnsubscribe = maybeRunningCommand.stream?.(this.createStartHandler(viewID, listener))
-
     return () => maybeUnsubscribe?.()
   }
 
-  public async stop(id: string): Promise<"Running" | "Busy" | "Stopped" | "NotFound" | null> {
-    await createCommand(this.withDebug(stopWorkspaceCommandConfig(id))).then((cmd) => cmd.run())
+  public async stop(id: string): Promise<Result<"Running" | "Busy" | "Stopped" | "NotFound" | null>> {
+    const result = await WorkspaceCommands.StopWorkspace(id).run()
+    if (result.err) {
+      return result
+    }
 
     return this.getStatus(id)
   }
 
-  public async rebuild(id: string): Promise<"Running" | "Busy" | "Stopped" | "NotFound" | null> {
-    await createCommand(this.withDebug(rebuildWorkspaceCommandConfig(id))).then((cmd) => cmd.run())
+  public async rebuild(id: string): Promise<Result<"Running" | "Busy" | "Stopped" | "NotFound" | null>> {
+    const result = await WorkspaceCommands.RebuildWorkspace(id).run()
+    if (result.err) {
+      return result
+    }
 
     return this.getStatus(id)
   }
-  public async remove(id: string): Promise<void> {
-    await createCommand(this.withDebug(removeWorkspaceCommandConfig(id))).then((cmd) => cmd.run())
+
+  public async remove(id: string): Promise<ResultError> {
+    return await WorkspaceCommands.RemoveWorkspace(id).run()
   }
 }
-class ProvidersClient implements TProvidersClient {
-  constructor(private withDebug: ReturnType<typeof createWithDebug>) {}
 
-  public async listAll(): Promise<TProviders> {
-    return createCommand(listProvidersCommandConfig()).then((cmd) => cmd.run())
+class ProvidersClient implements TProvidersClient {
+  constructor(private withDebug: boolean | undefined) {}
+
+  public async listAll(): Promise<Result<TProviders>> {
+    return ProviderCommands.ListProviders()
   }
 
-  public async newID(rawSource: string): Promise<string> {
-    return createCommand(providerIDCommandConfig(rawSource)).then((cmd) => cmd.run())
+  public async newID(rawSource: string): Promise<Result<string>> {
+    return ProviderCommands.GetProviderID(rawSource)
   }
 
   public async add(
     rawSource: string,
     config: Readonly<{ name?: string | null | undefined }>
-  ): Promise<void> {
-    return createCommand(addProviderCommandConfig(rawSource, config)).then((cmd) => cmd.run())
+  ): Promise<ResultError> {
+    return ProviderCommands.AddProvider(rawSource, config)
   }
 
-  public async remove(id: string): Promise<void> {
-    await createCommand(this.withDebug(removeProviderCommandConfig(id))).then((cmd) => cmd.run())
+  public async remove(id: string): Promise<ResultError> {
+    return await ProviderCommands.RemoveProvider(id)
   }
 
-  public async getOptions(id: string): Promise<TProviderOptions> {
-    return createCommand(getProviderOptionsCommandConfig(id)).then((cmd) => cmd.run())
+  public async getOptions(id: string): Promise<Result<TProviderOptions>> {
+    return await ProviderCommands.GetProviderOptions(id)
   }
 
   public async configure(
     id: string,
     config: Readonly<{ options: Record<string, unknown>; useAsDefaultProvider: boolean }>
-  ): Promise<void> {
-    if (config.useAsDefaultProvider) {
-      // eslint-disable-next-line react-hooks/rules-of-hooks
-      return createCommand(useProviderCommandConfig(id, config.options)).then((cmd) => cmd.run())
-    } else {
-      const setProviderOptionsCmd = await createCommand(
-        setProviderOptionsCommandConfig(id, config.options)
-      )
-      const initProviderCmd = await createCommand(initProviderCommandConfig(id))
-
-      await setProviderOptionsCmd.run()
-      await initProviderCmd.run()
-
-      return
+  ): Promise<ResultError> {
+    const setResult = await ProviderCommands.SetProviderOptions(id, config.options)
+    if (setResult.err) {
+      return setResult
     }
+
+    const initResult = await ProviderCommands.InitProvider(id)
+    if (initResult.err) {
+      return initResult
+    }
+
+    return Return.Ok()
   }
 }
 
