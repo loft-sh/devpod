@@ -19,7 +19,7 @@ type InitCmd struct {
 
 // NewInitCmd creates a new command
 func NewInitCmd(flags *flags.GlobalFlags) *cobra.Command {
-	cmd := &AddCmd{
+	cmd := &InitCmd{
 		GlobalFlags: flags,
 	}
 	initCmd := &cobra.Command{
