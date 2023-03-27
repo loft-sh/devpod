@@ -2,6 +2,7 @@ import { os } from "@tauri-apps/api"
 import { listen } from "@tauri-apps/api/event"
 import { TSettings } from "../contexts"
 import { exists, noop, THandler } from "../lib"
+import { Result, ResultError, Return } from "../lib/result"
 import {
   TAddProviderConfig,
   TConfigureProviderConfig,
@@ -17,11 +18,9 @@ import {
   TWorkspaceWithoutStatus,
 } from "../types"
 import { StartCommandCache } from "./cache"
-import { DEFAULT_STATIC_COMMAND_CONFIG } from "./constants"
-import {Result, ResultError, Return} from "../lib/result";
-import {TStreamEventListenerFn} from "./command";
-import {WorkspaceCommands} from "./workspaceCommands";
-import {ProviderCommands} from "./providerCommands";
+import { TStreamEventListenerFn } from "./command"
+import { ProviderCommands } from "./providerCommands"
+import { WorkspaceCommands } from "./workspaceCommands"
 
 type TChannels = {
   providers: TProviders
@@ -79,18 +78,17 @@ type TProvidersClient = Readonly<{
 
 class Client implements TClient {
   private startCommandCache = new StartCommandCache()
-  private settings = new Map<keyof TClientSettings, TClientSettings[keyof TClientSettings]>([
-    ["debugFlag", DEFAULT_STATIC_COMMAND_CONFIG.debug],
-  ])
-
-  public workspaces = new WorkspacesClient(this.settings.get("debugFlag"), this.startCommandCache)
-  public providers = new ProvidersClient(this.settings.get("debugFlag"))
+  public workspaces = new WorkspacesClient(this.startCommandCache)
+  public providers = new ProvidersClient()
 
   public setSetting<TSettingName extends keyof TClientSettings>(
     name: TSettingName,
     value: TSettings[TSettingName]
   ) {
-    this.settings.set(name, value)
+    if (name === "debugFlag") {
+      WorkspaceCommands.DEBUG = value
+      ProviderCommands.DEBUG = value
+    }
   }
 
   public async subscribe<T extends TChannelName>(
@@ -104,8 +102,8 @@ class Client implements TClient {
       })
 
       return Return.Value(unsubscribe)
-    } catch(e) {
-      return Return.Failed(e+"")
+    } catch (e) {
+      return Return.Failed(e + "")
     }
   }
 
@@ -119,10 +117,7 @@ class Client implements TClient {
 }
 
 class WorkspacesClient implements TWorkspaceClient {
-  constructor(
-    private withDebug: boolean | undefined,
-    private startCommandCache: StartCommandCache
-  ) {}
+  constructor(private startCommandCache: StartCommandCache) {}
 
   private createStartHandler(
     viewID: TViewID,
@@ -138,16 +133,19 @@ class WorkspacesClient implements TWorkspaceClient {
   }
 
   public async listAll(): Promise<Result<readonly TWorkspaceWithoutStatus[]>> {
-    return await WorkspaceCommands.ListWorkspaces()
+    return WorkspaceCommands.ListWorkspaces()
   }
 
-  public async getStatus(id: string): Promise<Result<"Running" | "Busy" | "Stopped" | "NotFound" | null>> {
+  public async getStatus(
+    id: string
+  ): Promise<Result<"Running" | "Busy" | "Stopped" | "NotFound" | null>> {
     const result = await WorkspaceCommands.GetWorkspaceStatus(id)
     if (result.err) {
       return result
     }
 
     const { status } = result.val
+
     return Return.Value(status)
   }
 
@@ -187,6 +185,7 @@ class WorkspacesClient implements TWorkspaceClient {
     }
 
     this.startCommandCache.clear(id)
+
     return this.getStatus(id)
   }
 
@@ -194,17 +193,20 @@ class WorkspacesClient implements TWorkspaceClient {
     id: string,
     viewID: string,
     listener?: TStreamEventListenerFn | undefined
-  ): VoidFunction {
+  ): TUnsubscribeFn {
     const maybeRunningCommand = this.startCommandCache.get(id)
     if (!exists(maybeRunningCommand)) {
       return noop
     }
 
     const maybeUnsubscribe = maybeRunningCommand.stream?.(this.createStartHandler(viewID, listener))
+
     return () => maybeUnsubscribe?.()
   }
 
-  public async stop(id: string): Promise<Result<"Running" | "Busy" | "Stopped" | "NotFound" | null>> {
+  public async stop(
+    id: string
+  ): Promise<Result<"Running" | "Busy" | "Stopped" | "NotFound" | null>> {
     const result = await WorkspaceCommands.StopWorkspace(id).run()
     if (result.err) {
       return result
@@ -213,7 +215,9 @@ class WorkspacesClient implements TWorkspaceClient {
     return this.getStatus(id)
   }
 
-  public async rebuild(id: string): Promise<Result<"Running" | "Busy" | "Stopped" | "NotFound" | null>> {
+  public async rebuild(
+    id: string
+  ): Promise<Result<"Running" | "Busy" | "Stopped" | "NotFound" | null>> {
     const result = await WorkspaceCommands.RebuildWorkspace(id).run()
     if (result.err) {
       return result
@@ -223,12 +227,12 @@ class WorkspacesClient implements TWorkspaceClient {
   }
 
   public async remove(id: string): Promise<ResultError> {
-    return await WorkspaceCommands.RemoveWorkspace(id).run()
+    return WorkspaceCommands.RemoveWorkspace(id).run()
   }
 }
 
 class ProvidersClient implements TProvidersClient {
-  constructor(private withDebug: boolean | undefined) {}
+  constructor() {}
 
   public async listAll(): Promise<Result<TProviders>> {
     return ProviderCommands.ListProviders()
@@ -246,11 +250,11 @@ class ProvidersClient implements TProvidersClient {
   }
 
   public async remove(id: string): Promise<ResultError> {
-    return await ProviderCommands.RemoveProvider(id)
+    return ProviderCommands.RemoveProvider(id)
   }
 
   public async getOptions(id: string): Promise<Result<TProviderOptions>> {
-    return await ProviderCommands.GetProviderOptions(id)
+    return ProviderCommands.GetProviderOptions(id)
   }
 
   public async configure(

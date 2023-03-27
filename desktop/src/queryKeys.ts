@@ -1,4 +1,4 @@
-import { TWorkspaceID } from "./types"
+import { TProviderID, TWorkspaceID } from "./types"
 
 export const QueryKeys = {
   PLATFORM: ["platform"],
@@ -10,6 +10,9 @@ export const QueryKeys = {
   },
   workspaceStatus(id: TWorkspaceID): string[] {
     return [...QueryKeys.WORKSPACES, id, "status"]
+  },
+  provider(id: TProviderID): string[] {
+    return [...QueryKeys.PROVIDERS, id]
   },
 }
 

@@ -1,5 +1,6 @@
 import { ChildProcess } from "@tauri-apps/api/shell"
 import { exists } from "../lib"
+import { Result, Return } from "../lib/result"
 import {
   TWorkspace,
   TWorkspaceID,
@@ -7,6 +8,7 @@ import {
   TWorkspaceStatusResult,
   TWorkspaceWithoutStatus,
 } from "../types"
+import { Command, TCommand } from "./command"
 import {
   DEVPOD_COMMAND_BUILD,
   DEVPOD_COMMAND_DELETE,
@@ -21,17 +23,16 @@ import {
   DEVPOD_FLAG_ID,
   DEVPOD_FLAG_IDE,
   DEVPOD_FLAG_JSON_LOG_OUTPUT,
-  DEVPOD_FLAG_JSON_OUTPUT, DEVPOD_FLAG_PROVIDER,
+  DEVPOD_FLAG_JSON_OUTPUT,
+  DEVPOD_FLAG_PROVIDER,
   DEVPOD_FLAG_RECREATE,
 } from "./constants"
-import {Result, ResultError, Return} from "../lib/result";
-import {Command, TCommand} from "./command";
 
 type TRawWorkspaces = readonly (Omit<TWorkspace, "status" | "id"> &
-    Readonly<{ id: string | null }>)[]
+  Readonly<{ id: string | null }>)[]
 
 export class WorkspaceCommands {
-  static DEBUG = false;
+  static DEBUG = false
 
   private static newCommand(args: string[]): Command {
     return new Command([...args, ...(WorkspaceCommands.DEBUG ? [DEVPOD_FLAG_DEBUG] : [])])
@@ -44,9 +45,12 @@ export class WorkspaceCommands {
     }
 
     const rawWorkspaces = JSON.parse(result.val.stdout) as TRawWorkspaces
-    return Return.Value(rawWorkspaces.filter((workspace): workspace is TWorkspaceWithoutStatus =>
+
+    return Return.Value(
+      rawWorkspaces.filter((workspace): workspace is TWorkspaceWithoutStatus =>
         exists(workspace.id)
-    ))
+      )
+    )
   }
 
   static async GetWorkspaceStatus(id: string): Promise<Result<Pick<TWorkspace, "id" | "status">>> {
@@ -60,11 +64,16 @@ export class WorkspaceCommands {
     }
 
     const { state } = JSON.parse(result.val.stdout) as TWorkspaceStatusResult
+
     return Return.Value({ id, status: state })
   }
 
   static async GetWorkspaceID(source: string) {
-    const result = await new Command([DEVPOD_COMMAND_HELPER, DEVPOD_COMMAND_GET_WORKSPACE_NAME, source]).run()
+    const result = await new Command([
+      DEVPOD_COMMAND_HELPER,
+      DEVPOD_COMMAND_GET_WORKSPACE_NAME,
+      source,
+    ]).run()
     if (result.err) {
       return result
     }
@@ -84,9 +93,12 @@ export class WorkspaceCommands {
     const maybeIDEFlag = exists(maybeIdeName) ? [toFlagArg(DEVPOD_FLAG_IDE, maybeIdeName)] : []
 
     const maybeProviderID = config.providerConfig?.providerID
-    const maybeProviderFlag = exists(maybeProviderID) ? [toFlagArg(DEVPOD_FLAG_PROVIDER, maybeProviderID)] : []
+    const maybeProviderFlag = exists(maybeProviderID)
+      ? [toFlagArg(DEVPOD_FLAG_PROVIDER, maybeProviderID)]
+      : []
 
     const identifier = exists(maybeSource) && exists(maybeIDFlag) ? maybeSource : id
+
     return WorkspaceCommands.newCommand([
       DEVPOD_COMMAND_UP,
       identifier,
@@ -102,7 +114,7 @@ export class WorkspaceCommands {
       DEVPOD_COMMAND_STOP,
       id,
       DEVPOD_FLAG_JSON_LOG_OUTPUT,
-    ]).withConversion(rawResult => {
+    ]).withConversion((rawResult) => {
       if (!isOk(rawResult)) {
         return Return.Failed(`Failed to stop Workspace ${id}`, rawResult.stderr)
       }
@@ -118,7 +130,7 @@ export class WorkspaceCommands {
       DEVPOD_FLAG_JSON_LOG_OUTPUT,
       DEVPOD_FLAG_FORCE_BUILD,
       DEVPOD_FLAG_RECREATE,
-    ]).withConversion(rawResult => {
+    ]).withConversion((rawResult) => {
       if (!isOk(rawResult)) {
         return Return.Failed(`Failed to rebuild Workspace ${id}`, rawResult.stderr)
       }
@@ -128,10 +140,7 @@ export class WorkspaceCommands {
   }
 
   static RemoveWorkspace(id: TWorkspaceID): TCommand<undefined> {
-    return WorkspaceCommands.newCommand([
-      DEVPOD_COMMAND_DELETE,
-      id,
-    ]).withConversion(rawResult => {
+    return WorkspaceCommands.newCommand([DEVPOD_COMMAND_DELETE, id]).withConversion((rawResult) => {
       if (!isOk(rawResult)) {
         return Return.Failed(`Failed to rebuild Workspace ${id}`, rawResult.stderr)
       }

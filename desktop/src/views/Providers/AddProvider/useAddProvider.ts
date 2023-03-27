@@ -13,7 +13,7 @@ type TAddProviderState = Readonly<
       providerID: TProviderID
       options: TProviderOptions
     }
-  | { currentStep: "done" }
+  | { currentStep: "done"; providerID: TProviderID }
 >
 type TCompleteFirstStepAction = TAction<
   "completeFirstStep",
@@ -34,7 +34,7 @@ function addProviderReducer(state: TAddProviderState, action: TActions): TAddPro
         options: action.payload.options,
       }
     case "completeSecondStep":
-      return { currentStep: "done" }
+      return { currentStep: "done", providerID: state.providerID! }
     default:
       return state
   }
@@ -43,13 +43,24 @@ function addProviderReducer(state: TAddProviderState, action: TActions): TAddPro
 export function useAddProvider() {
   const [state, dispatch] = useReducer(addProviderReducer, initialState)
 
-  const completeFirstStep = useCallback((payload: TCompleteFirstStepAction["payload"]) => {
-    dispatch({ type: "completeFirstStep", payload })
-  }, [])
+  const completeFirstStep = useCallback(
+    (payload: TCompleteFirstStepAction["payload"]) => {
+      if (state.currentStep !== 1) {
+        return
+      }
+
+      dispatch({ type: "completeFirstStep", payload })
+    },
+    [state.currentStep]
+  )
 
   const completeSecondStep = useCallback(() => {
+    if (state.currentStep !== 2) {
+      return
+    }
+
     dispatch({ type: "completeSecondStep" })
-  }, [])
+  }, [state.currentStep])
 
   return { state, completeFirstStep, completeSecondStep }
 }
