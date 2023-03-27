@@ -9,12 +9,12 @@ import {
   FormControl,
   FormErrorMessage,
   FormHelperText,
-  FormLabel,
-  Input,
+  FormLabel, HStack,
+  Input, Link,
   Select,
   VStack,
 } from "@chakra-ui/react"
-import { useCallback, useEffect, useMemo } from "react"
+import {useCallback, useEffect, useMemo, useState} from "react"
 import { SubmitHandler, useForm } from "react-hook-form"
 import { useNavigate } from "react-router"
 import { useStreamingTerminal } from "../../components"
@@ -46,6 +46,7 @@ export function CreateWorkspace() {
   const { create } = useWorkspaceManager()
   const [[providers]] = useProviders()
   const { register, handleSubmit, formState } = useForm<TFormValues>()
+  const [showAdvancedOptions, setShowAdvancedOptions] = useState<boolean>(false)
   const { terminal, connectStream } = useStreamingTerminal()
 
   const onSubmit = useCallback<SubmitHandler<TFormValues>>(
@@ -71,7 +72,7 @@ export function CreateWorkspace() {
     [create, connectStream]
   )
 
-  const { sourceError, defaultIDEError, providerError } = useFormErrors(
+  const { sourceError, defaultIDEError } = useFormErrors(
     Object.values(FieldName),
     formState
   )
@@ -98,80 +99,57 @@ export function CreateWorkspace() {
     <form onSubmit={handleSubmit(onSubmit)}>
       <VStack align="start" spacing="6">
         <FormControl isRequired isInvalid={exists(sourceError)}>
-          <FormLabel>Source</FormLabel>
-          <Input
-            placeholder="Source"
-            type="text"
-            {...register(FieldName.SOURCE, { required: true })}
-          />
-          {exists(sourceError) ? (
+          <HStack spacing="0">
+            <Input
+                placeholder="github.com/my-org/my-repo"
+                type="text"
+                {...register(FieldName.SOURCE, { required: true })}
+            />
+            <Box w="150px">
+              <Select
+                  defaultValue={DEFAULT_PROVIDER}
+                  placeholder="Select Provider"
+                  {...register(FieldName.PROVIDER, { required: true })}>
+                {providerOptions.map((providerID) => (
+                    <option key={providerID} value={providerID}>
+                      {providerID}
+                    </option>
+                ))}
+              </Select>
+            </Box>
+          </HStack>
+          {exists(sourceError) && (
             <FormErrorMessage>{sourceError.message ?? "Error"}</FormErrorMessage>
-          ) : (
-            <FormHelperText>
-              Can be either a Git Repository, a Git Branch, a docker image or the path to a local
-              folder. This cannot be changed after creating the workspace!
-            </FormHelperText>
           )}
         </FormControl>
 
-        <FormControl isRequired isInvalid={exists(providerError)}>
-          <FormLabel>Provider</FormLabel>
-          <Select
-            defaultValue={DEFAULT_PROVIDER}
-            placeholder="Select Provider"
-            {...register(FieldName.PROVIDER, { required: true })}>
-            {providerOptions.map((providerID) => (
-              <option key={providerID} value={providerID}>
-                {providerID}
-              </option>
-            ))}
-          </Select>
-          {exists(providerError) ? (
-            <FormErrorMessage>{providerError.message ?? "Error"}</FormErrorMessage>
-          ) : (
-            <FormHelperText>
-              Devpod will use the selected provider to spin up this workspace. This cannot be
-              changed after creating the workspace!
-            </FormHelperText>
-          )}
-        </FormControl>
-
-        <FormControl isRequired isInvalid={exists(defaultIDEError)}>
+        <Link onClick={() => setShowAdvancedOptions(!showAdvancedOptions)}>
+          {showAdvancedOptions ? "Hide" : "Show"} Advanced Options
+        </Link>
+        {showAdvancedOptions && <FormControl isRequired isInvalid={exists(defaultIDEError)}>
           <FormLabel>Default IDE</FormLabel>
           <Select
-            defaultValue={"vscode"}
-            placeholder="Select Default IDE"
-            {...register(FieldName.DEFAULT_IDE, { required: true })}>
+              defaultValue={"vscode"}
+              placeholder="Select Default IDE"
+              {...register(FieldName.DEFAULT_IDE, { required: true })}>
             {SUPPORTED_IDES.map((ide) => (
-              <option key={ide} value={ide}>
-                {ide}
-              </option>
+                <option key={ide} value={ide}>
+                  {ide}
+                </option>
             ))}
           </Select>
           {exists(defaultIDEError) ? (
-            <FormErrorMessage>{defaultIDEError.message ?? "Error"}</FormErrorMessage>
+              <FormErrorMessage>{defaultIDEError.message ?? "Error"}</FormErrorMessage>
           ) : (
-            <FormHelperText>
-              Devpod will open this workspace with the selected IDE by default. You can still change
-              your default IDE later.
-            </FormHelperText>
+              <FormHelperText>
+                Devpod will open this workspace with the selected IDE by default. You can still change
+                your default IDE later.
+              </FormHelperText>
           )}
-        </FormControl>
-
-        <Accordion allowMultiple width="full">
-          <AccordionItem borderTop="none">
-            <AccordionButton>
-              <Box as="span" flex="1" textAlign="left">
-                Advanced Options
-              </Box>
-              <AccordionIcon />
-            </AccordionButton>
-            <AccordionPanel>TODO: Implement me</AccordionPanel>
-          </AccordionItem>
-        </Accordion>
+        </FormControl>}
 
         <Button marginTop="10" type="submit" disabled={formState.isSubmitting}>
-          Submit
+          Create Workspace
         </Button>
       </VStack>
     </form>
