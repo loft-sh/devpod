@@ -9,7 +9,7 @@ import {
 } from "react"
 import { client } from "../client"
 import { getKeys } from "../lib"
-import { Store } from "../lib/store"
+import { LocalStorageBackend, Store } from "../lib"
 import { TUnsubscribeFn } from "../types"
 
 export type TSettings = {
@@ -35,9 +35,7 @@ function getSettingKeys(): readonly TSetting[] {
 
 const DEBUG_STORE_KEY = "settings"
 // TODO: persist to disk...
-const settingsStore = Store.create<TSettings>(
-  Store.backend.createLocalStorageBackend(DEBUG_STORE_KEY)
-)
+const settingsStore = new Store(new LocalStorageBackend(DEBUG_STORE_KEY))
 
 export function SettingsProvider({ children }: Readonly<{ children?: ReactNode }>) {
   const [settings, setSettings] = useState(initialSettings)

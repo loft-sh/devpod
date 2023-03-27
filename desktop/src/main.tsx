@@ -9,7 +9,26 @@ import "xterm/css/xterm.css"
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query"
 import { ReactQueryDevtools } from "@tanstack/react-query-devtools"
 
-const queryClient = new QueryClient()
+const queryClient = new QueryClient({
+  logger: {
+    log(...args) {
+      console.log(args)
+    },
+    warn(...args) {
+      console.warn(args)
+    },
+    error(...args) {
+      const maybeError = args[0]
+      if (maybeError instanceof Error) {
+        console.error(maybeError.name, maybeError.message, maybeError.cause, maybeError)
+
+        return
+      }
+
+      console.error(args)
+    },
+  },
+})
 
 ReactDOM.createRoot(document.getElementById("root") as HTMLElement).render(<Root />)
 
