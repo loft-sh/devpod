@@ -1,17 +1,20 @@
 import { Box, Heading, VStack } from "@chakra-ui/react"
 import { useEffect, useRef } from "react"
+import { useNavigate } from "react-router-dom"
 import { CollapsibleSection } from "../../../components"
+import { Routes } from "../../../routes"
 import { ConfigureProviderOptionsForm } from "./ConfigureProviderOptionsForm"
 import { SetupProviderSourceForm } from "./SetupProviderSourceForm"
 import { useAddProvider } from "./useAddProvider"
 
 export function AddProvider() {
+  const navigate = useNavigate()
   const openLockRef = useRef(false)
   const { state, completeFirstStep, completeSecondStep } = useAddProvider()
 
   useEffect(() => {
     if (state.currentStep === "done") {
-      navigate()
+      navigate(Routes.toProvider(state.providerID))
     }
   })
 
@@ -42,6 +45,7 @@ export function AddProvider() {
           <VStack align="start" width="full">
             {state.currentStep === 2 && (
               <ConfigureProviderOptionsForm
+                initializeProvider
                 providerID={state.providerID}
                 options={state.options}
                 onFinish={completeSecondStep}
