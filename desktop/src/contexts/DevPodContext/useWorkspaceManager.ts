@@ -25,8 +25,8 @@ export function useWorkspaceManager(): TWorkspaceManager {
       config,
       onStream,
     }: TWorkspaceManagerRunConfig["create"]) => {
-      // At this point we don't have a workspaceID yet, so we need to create one
-      const workspaceID = await client.workspaces.newWorkspaceID(rawWorkspaceSource)
+      // At this point we don't have a workspaceID yet, so we need to get it from the CLI
+      const workspaceID = await client.workspaces.newID(rawWorkspaceSource)
       const status = await client.workspaces.start(workspaceID, config, viewID, onStream)
 
       return { status, workspaceID }

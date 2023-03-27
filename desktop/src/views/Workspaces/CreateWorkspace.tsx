@@ -1,23 +1,19 @@
 import {
-  Accordion,
-  AccordionButton,
-  AccordionIcon,
-  AccordionItem,
-  AccordionPanel,
   Box,
   Button,
   FormControl,
   FormErrorMessage,
   FormHelperText,
-  FormLabel, HStack,
-  Input, Link,
+  FormLabel,
+  HStack,
+  Input,
   Select,
   VStack,
 } from "@chakra-ui/react"
-import {useCallback, useEffect, useMemo, useState} from "react"
+import { useCallback, useEffect, useMemo } from "react"
 import { SubmitHandler, useForm } from "react-hook-form"
 import { useNavigate } from "react-router"
-import { useStreamingTerminal } from "../../components"
+import { CollapsibleSection, useStreamingTerminal } from "../../components"
 import { useProviders, useWorkspaceManager } from "../../contexts"
 import { exists, useFormErrors } from "../../lib"
 import { Routes } from "../../routes"
@@ -46,7 +42,6 @@ export function CreateWorkspace() {
   const { create } = useWorkspaceManager()
   const [[providers]] = useProviders()
   const { register, handleSubmit, formState } = useForm<TFormValues>()
-  const [showAdvancedOptions, setShowAdvancedOptions] = useState<boolean>(false)
   const { terminal, connectStream } = useStreamingTerminal()
 
   const onSubmit = useCallback<SubmitHandler<TFormValues>>(
@@ -72,10 +67,7 @@ export function CreateWorkspace() {
     [create, connectStream]
   )
 
-  const { sourceError, defaultIDEError } = useFormErrors(
-    Object.values(FieldName),
-    formState
-  )
+  const { sourceError, defaultIDEError } = useFormErrors(Object.values(FieldName), formState)
 
   const providerOptions = useMemo<readonly TProviderID[]>(() => {
     if (!exists(providers)) {
@@ -101,19 +93,19 @@ export function CreateWorkspace() {
         <FormControl isRequired isInvalid={exists(sourceError)}>
           <HStack spacing="0">
             <Input
-                placeholder="github.com/my-org/my-repo"
-                type="text"
-                {...register(FieldName.SOURCE, { required: true })}
+              placeholder="github.com/my-org/my-repo"
+              type="text"
+              {...register(FieldName.SOURCE, { required: true })}
             />
             <Box w="150px">
               <Select
-                  defaultValue={DEFAULT_PROVIDER}
-                  placeholder="Select Provider"
-                  {...register(FieldName.PROVIDER, { required: true })}>
+                defaultValue={DEFAULT_PROVIDER}
+                placeholder="Select Provider"
+                {...register(FieldName.PROVIDER, { required: true })}>
                 {providerOptions.map((providerID) => (
-                    <option key={providerID} value={providerID}>
-                      {providerID}
-                    </option>
+                  <option key={providerID} value={providerID}>
+                    {providerID}
+                  </option>
                 ))}
               </Select>
             </Box>
@@ -123,30 +115,30 @@ export function CreateWorkspace() {
           )}
         </FormControl>
 
-        <Link onClick={() => setShowAdvancedOptions(!showAdvancedOptions)}>
-          {showAdvancedOptions ? "Hide" : "Show"} Advanced Options
-        </Link>
-        {showAdvancedOptions && <FormControl isRequired isInvalid={exists(defaultIDEError)}>
-          <FormLabel>Default IDE</FormLabel>
-          <Select
+        <CollapsibleSection
+          title={(isOpen) => (isOpen ? "Hide Advanced Options" : "Show Advanced Options")}>
+          <FormControl isRequired isInvalid={exists(defaultIDEError)}>
+            <FormLabel>Default IDE</FormLabel>
+            <Select
               defaultValue={"vscode"}
               placeholder="Select Default IDE"
               {...register(FieldName.DEFAULT_IDE, { required: true })}>
-            {SUPPORTED_IDES.map((ide) => (
+              {SUPPORTED_IDES.map((ide) => (
                 <option key={ide} value={ide}>
                   {ide}
                 </option>
-            ))}
-          </Select>
-          {exists(defaultIDEError) ? (
+              ))}
+            </Select>
+            {exists(defaultIDEError) ? (
               <FormErrorMessage>{defaultIDEError.message ?? "Error"}</FormErrorMessage>
-          ) : (
+            ) : (
               <FormHelperText>
-                Devpod will open this workspace with the selected IDE by default. You can still change
-                your default IDE later.
+                Devpod will open this workspace with the selected IDE by default. You can still
+                change your default IDE later.
               </FormHelperText>
-          )}
-        </FormControl>}
+            )}
+          </FormControl>
+        </CollapsibleSection>
 
         <Button marginTop="10" type="submit" disabled={formState.isSubmitting}>
           Create Workspace

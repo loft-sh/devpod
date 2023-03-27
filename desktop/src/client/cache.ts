@@ -1,4 +1,4 @@
-import { exists, isEmpty, noop, EventManager, THandler } from "../lib"
+import { exists, isEmpty, noop, SingleEventManager, THandler } from "../lib"
 import { TUnsubscribeFn, TWorkspaceID } from "../types"
 import { TStreamCommandFn, TStreamEvent, TStreamEventListenerFn } from "./commands"
 
@@ -19,51 +19,57 @@ type TStartCommandCache = Pick<TStartCommandCacheStore, "get"> &
     clear: (workspaceID: TWorkspaceID) => void
   }>
 
-export function createStartCommandCache(): TStartCommandCache {
-  const store: TStartCommandCacheStore = new Map()
+export class StartCommandCache implements TStartCommandCache {
+  private store: TStartCommandCacheStore = new Map()
 
-  return {
-    get(id) {
-      return store.get(id)
-    },
-    clear(id) {
-      store.delete(id)
-    },
-    connect(id, cmd) {
-      const events: TStreamEvent[] = []
-      const eventManager = EventManager.createSingle<TStreamEvent>()
+  public get(id: TWorkspaceID) {
+    return this.store.get(id)
+  }
 
-      const promise = cmd.stream((event) => {
-        events.push(event)
+  public clear(id: TWorkspaceID) {
+    this.store.delete(id)
+  }
 
-        eventManager.publish(event)
-      })
-      const stream: TStartCommandHandler["stream"] = (handler) => {
-        if (!exists(handler)) {
-          return noop
-        }
+  public connect(
+    id: TWorkspaceID,
+    cmd: Readonly<{ run(): Promise<void>; stream: TStreamCommandFn }>
+  ): Readonly<{
+    operation: TStartCommandHandler["promise"]
+    stream: TStartCommandHandler["stream"]
+  }> {
+    const events: TStreamEvent[] = []
+    const eventManager = new SingleEventManager<TStreamEvent>()
 
-        // Make sure we subscribe handlers only once
-        if (eventManager.isSubscribed(handler)) {
-          return () => eventManager.unsubscribe(handler)
-        }
+    const promise = cmd.stream((event) => {
+      events.push(event)
 
-        // Replay events in-order before registering the new newHandler
-        if (!isEmpty(events)) {
-          for (const event of events) {
-            handler.notify(event)
-          }
-        }
-
-        return eventManager.subscribe(handler)
+      eventManager.publish(event)
+    })
+    const stream: TStartCommandHandler["stream"] = (handler) => {
+      if (!exists(handler)) {
+        return noop
       }
 
-      store.set(id, {
-        promise,
-        stream,
-      })
+      // Make sure we subscribe handlers only once
+      if (eventManager.isSubscribed(handler)) {
+        return () => eventManager.unsubscribe(handler)
+      }
 
-      return { operation: promise, stream }
-    },
+      // Replay events in-order before registering the new newHandler
+      if (!isEmpty(events)) {
+        for (const event of events) {
+          handler.notify(event)
+        }
+      }
+
+      return eventManager.subscribe(handler)
+    }
+
+    this.store.set(id, {
+      promise,
+      stream,
+    })
+
+    return { operation: promise, stream }
   }
 }

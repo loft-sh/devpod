@@ -13,61 +13,70 @@ type TStore<T extends TBaseStore> = Readonly<{
 }>
 type TStorageBackend<T extends TBaseStore = TBaseStore> = Omit<TStore<T>, "subscribe">
 
-export const Store = { create: createStore, backend: { createLocalStorageBackend } }
+export class Store<T extends TBaseStore> implements TStore<T> {
+  private eventManager = new EventManager<T>()
+  constructor(private backend: TStorageBackend<T>) {}
 
-function createStore<T extends TBaseStore>(backend: TStorageBackend<T>): TStore<T> {
-  const eventManager = EventManager.create<T>()
+  public async set<TKey extends keyof T>(key: TKey, value: T[TKey]): Promise<void> {
+    await this.backend.set(key, value)
+    this.eventManager.publish(key, value)
+  }
 
-  return {
-    async set(key, value) {
-      await backend.set(key, value)
-      eventManager.publish(key, value)
-    },
-    get(key) {
-      return backend.get(key)
-    },
-    async remove(key) {
-      return backend.remove(key)
-    },
-    async clear() {
-      return backend.clear()
-    },
-    subscribe(key, listener) {
-      const handler = EventManager.toHandler(listener)
+  public async get<TKey extends keyof T>(key: TKey): Promise<T[TKey] | null> {
+    return this.backend.get(key)
+  }
 
-      return eventManager.subscribe(key, handler)
-    },
+  public async remove<TKey extends keyof T>(key: TKey): Promise<void> {
+    return this.backend.remove(key)
+  }
+
+  public subscribe<TKey extends keyof T>(
+    key: TKey,
+    listener: (newValue: T[TKey]) => void
+  ): VoidFunction {
+    const handler = EventManager.toHandler(listener)
+
+    return this.eventManager.subscribe(key, handler)
+  }
+
+  public async clear(): Promise<void> {
+    return this.backend.clear()
   }
 }
 
-function createLocalStorageBackend<T extends TBaseStore>(storageKey: string): TStorageBackend<T> {
-  const getKey = (key: keyof TBaseStore) => `devpod-${storageKey}-${key.toString()}`
+export class LocalStorageBackend<T extends TBaseStore> implements TStorageBackend<T> {
+  constructor(private storageKey: string) {}
 
-  return {
-    async set(key, value) {
-      try {
-        window.localStorage.setItem(getKey(key), JSON.stringify(value))
-      } catch {
-        // TODO: let caller know, noop for now
-      }
-    },
-    async get(key) {
-      try {
-        const maybeValue = window.localStorage.getItem(getKey(key))
-        if (!exists(maybeValue)) {
-          return null
-        }
+  private getKey(key: keyof TBaseStore): string {
+    return `devpod-${this.storageKey}-${key.toString()}`
+  }
 
-        return JSON.parse(maybeValue)
-      } catch {
+  public async set<TKey extends keyof T>(key: TKey, value: T[TKey]): Promise<void> {
+    try {
+      window.localStorage.setItem(this.getKey(key), JSON.stringify(value))
+    } catch {
+      // TODO: let caller know, noop for now
+    }
+  }
+
+  public async get<TKey extends keyof T>(key: TKey): Promise<T[TKey] | null> {
+    try {
+      const maybeValue = window.localStorage.getItem(this.getKey(key))
+      if (!exists(maybeValue)) {
         return null
       }
-    },
-    async remove(key) {
-      window.localStorage.removeItem(getKey(key))
-    },
-    async clear() {
-      window.localStorage.clear()
-    },
+
+      return JSON.parse(maybeValue)
+    } catch {
+      return null
+    }
+  }
+
+  public async remove<TKey extends keyof T>(key: TKey): Promise<void> {
+    window.localStorage.removeItem(this.getKey(key))
+  }
+
+  public async clear(): Promise<void> {
+    window.localStorage.clear()
   }
 }
