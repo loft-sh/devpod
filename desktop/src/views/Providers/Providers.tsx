@@ -9,7 +9,7 @@ export function Providers() {
   return (
     <>
       <NavigationViewLayout title={title}>
-        <Box paddingTop="10" height="full">
+        <Box paddingTop="10">
           <Outlet />
         </Box>
       </NavigationViewLayout>

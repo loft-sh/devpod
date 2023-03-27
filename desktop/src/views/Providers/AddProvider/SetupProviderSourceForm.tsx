@@ -10,12 +10,12 @@ import {
   VStack,
 } from "@chakra-ui/react"
 import styled from "@emotion/styled"
-import { useMutation } from "@tanstack/react-query"
-import { useCallback, useEffect } from "react"
+import { useMutation, useQuery } from "@tanstack/react-query"
+import { useCallback, useDeferredValue, useEffect, useMemo } from "react"
 import { SubmitHandler, useForm } from "react-hook-form"
 import { client } from "../../../client"
 import { ErrorMessageBox } from "../../../components"
-import { exists, isError, useFormErrors } from "../../../lib"
+import { exists, isEmpty, isError, useFormErrors } from "../../../lib"
 import { TAddProviderConfig, TProviderOptions, TWithProviderID } from "../../../types"
 
 const Form = styled.form`
@@ -35,12 +35,32 @@ type TSetupProviderSourceFormProps = Readonly<{
   onFinish: (result: TWithProviderID & Readonly<{ options: TProviderOptions }>) => void
 }>
 export function SetupProviderSourceForm({ onFinish }: TSetupProviderSourceFormProps) {
-  const { register, handleSubmit, formState, watch } = useForm<TFormValues>({ mode: "onBlur" })
+  const { register, handleSubmit, formState, watch, setValue } = useForm<TFormValues>({
+    mode: "onBlur",
+  })
+  const providerSource = watch(FieldName.PROVIDER_SOURCE, "")
+  const deferredProviderSource = useDeferredValue(providerSource)
+
+  const { data: suggestedProviderName } = useQuery({
+    queryKey: ["providerNameSuggestion", deferredProviderSource],
+    queryFn: () => {
+      return client.providers.newID(deferredProviderSource)
+    },
+    onSuccess(suggestedName) {
+      setValue(FieldName.PROVIDER_NAME, suggestedName, {
+        shouldDirty: false,
+        shouldTouch: false,
+        shouldValidate: true,
+      })
+    },
+    enabled: !isEmpty(deferredProviderSource),
+  })
+
   const {
     mutate: addProvider,
     status,
     error,
-    reset,
+    reset: resetAddProvider,
   } = useMutation({
     mutationFn: async ({
       rawProviderSource,
@@ -50,9 +70,7 @@ export function SetupProviderSourceForm({ onFinish }: TSetupProviderSourceFormPr
       config: TAddProviderConfig
     }>) => {
       await client.providers.add(rawProviderSource, config)
-      const providerID = "local"
-
-      // TODO: How to get providerID here?
+      const providerID = await client.providers.newID(rawProviderSource)
       const options = await client.providers.getOptions(providerID)
 
       return { providerID, options }
@@ -74,20 +92,27 @@ export function SetupProviderSourceForm({ onFinish }: TSetupProviderSourceFormPr
 
   useEffect(() => {
     const watchProviderSource = watch((_, { name }) => {
-      if (name !== FieldName.PROVIDER_SOURCE || status !== "error") {
+      if (name !== FieldName.PROVIDER_SOURCE) {
         return
       }
 
-      reset()
+      // Reset the provider mutation if the source changes after we ran into an error
+      if (status === "error") {
+        resetAddProvider()
+      }
     })
 
     return () => watchProviderSource.unsubscribe()
-  }, [watch, status, reset])
+  }, [watch, status, resetAddProvider])
 
   const { providerSourceError, providerNameError } = useFormErrors(
     Object.values(FieldName),
     formState
   )
+
+  const isSubmitDisabled = useMemo(() => {
+    return status === "error" || !formState.dirtyFields[FieldName.PROVIDER_SOURCE]
+  }, [formState.dirtyFields, status])
 
   return (
     <Form onSubmit={handleSubmit(onSubmit)}>
@@ -108,8 +133,9 @@ export function SetupProviderSourceForm({ onFinish }: TSetupProviderSourceFormPr
             </FormHelperText>
           )}
         </FormControl>
-
-        <FormControl isInvalid={exists(providerNameError)}>
+        <FormControl
+          isDisabled={!exists(suggestedProviderName)}
+          isInvalid={exists(providerNameError)}>
           <FormLabel>Custom Name</FormLabel>
           <Input
             placeholder="Custom provider name"
@@ -130,13 +156,13 @@ export function SetupProviderSourceForm({ onFinish }: TSetupProviderSourceFormPr
             </FormHelperText>
           )}
         </FormControl>
-
+        )
         <VStack align="start">
           {status === "error" && isError(error) && <ErrorMessageBox error={error} />}
           <Button
             marginTop="10"
             type="submit"
-            isDisabled={status === "error"}
+            isDisabled={isSubmitDisabled}
             isLoading={status === "loading"}
             disabled={formState.isSubmitting}>
             Continue

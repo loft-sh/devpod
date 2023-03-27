@@ -9,7 +9,7 @@ type TFormErrors<T extends Record<string, unknown>> = {
 export function useFormErrors<TFormValues extends FieldValues>(
   fieldNames: readonly (keyof TFormValues)[],
   formState: FormState<TFormValues>
-) {
+): TFormErrors<TFormValues> {
   return useMemo(() => {
     return fieldNames.reduce<TFormErrors<TFormValues>>(
       (acc, curr) => ({ ...acc, [`${String(curr)}Error`]: formState.errors[curr] }),
