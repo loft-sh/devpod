@@ -19,7 +19,7 @@ export function DevPodProvider({ children }: Readonly<{ children?: ReactNode }>)
   const queryClient = useQueryClient()
   const providersQuery = useQuery({
     queryKey: QueryKeys.PROVIDERS,
-    queryFn: () => Client.providers.listAll(),
+    queryFn: () => client.providers.listAll(),
     refetchInterval: REFETCH_INTERVAL_MS,
   })
 
