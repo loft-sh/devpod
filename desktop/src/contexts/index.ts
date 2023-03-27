@@ -3,6 +3,7 @@ export {
   useWorkspaces,
   useWorkspace,
   useWorkspaceManager,
+  useProvider,
   useProviders,
   useOngoingOperations,
 } from "./DevPodContext"

@@ -35,7 +35,10 @@ export type TWithProviderID = Readonly<{ providerID: TProviderID }>
 export type TProviders = Record<TProviderID, TProvider>
 export type TProvider = Readonly<{
   config: TProviderConfig | null
-  state: null /* TODO: TYPE ME */
+  state: Readonly<{
+    initialized: boolean | null
+    options: TProviderOptions | null
+  }> | null
 }>
 export type TProviderConfig = Readonly<{
   name: string | null
