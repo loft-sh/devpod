@@ -9,6 +9,7 @@ import (
 	"github.com/pkg/errors"
 	"io"
 	"regexp"
+	"strconv"
 	"strings"
 	"time"
 )
@@ -16,6 +17,13 @@ import (
 var providerNameRegEx = regexp.MustCompile(`[^a-z0-9\-]+`)
 
 var optionNameRegEx = regexp.MustCompile(`[^A-Z0-9_]+`)
+
+var allowedTypes = []string{
+	"string",
+	"duration",
+	"number",
+	"boolean",
+}
 
 func ParseProvider(reader io.Reader) (*ProviderConfig, error) {
 	payload, err := io.ReadAll(reader)
@@ -89,6 +97,10 @@ func validate(config *ProviderConfig) error {
 			if err != nil {
 				return fmt.Errorf("invalid cache value for option '%s': %v", optionName, err)
 			}
+		}
+
+		if optionValue.Type != "" && !contains(allowedTypes, optionValue.Type) {
+			return fmt.Errorf("type can only be one of in option '%s': %v", optionName, allowedTypes)
 		}
 
 		if optionValue.Cache != "" && optionValue.Command == "" {
@@ -210,8 +222,36 @@ func ParseOptions(provider *ProviderConfig, options []string) (map[string]string
 			}
 		}
 
+		if providerOption.Type != "" {
+			if providerOption.Type == "number" {
+				_, err := strconv.ParseInt(value, 10, 64)
+				if err != nil {
+					return nil, fmt.Errorf("invalid value '%s' for option '%s', must be a number", value, key)
+				}
+			} else if providerOption.Type == "boolean" {
+				_, err := strconv.ParseBool(value)
+				if err != nil {
+					return nil, fmt.Errorf("invalid value '%s' for option '%s', must be a boolean", value, key)
+				}
+			} else if providerOption.Type == "duration" {
+				_, err := time.ParseDuration(value)
+				if err != nil {
+					return nil, fmt.Errorf("invalid value '%s' for option '%s', must be a duration like 10s, 5m or 24h", value, key)
+				}
+			}
+		}
+
 		retMap[key] = value
 	}
 
 	return retMap, nil
+}
+
+func contains(haystack []string, needle string) bool {
+	for _, s := range haystack {
+		if s == needle {
+			return true
+		}
+	}
+	return false
 }
