@@ -19,17 +19,17 @@ export function DevPodProvider({ children }: Readonly<{ children?: ReactNode }>)
   const queryClient = useQueryClient()
   const providersQuery = useQuery({
     queryKey: QueryKeys.PROVIDERS,
-    queryFn: () => client.providers.listAll(),
+    queryFn: async () => (await client.providers.listAll()).unwrap(),
     refetchInterval: REFETCH_INTERVAL_MS,
   })
 
   const updateWorkspaceStatus = useUpdateWorkspaceStatus()
   const workspacesQuery = useQuery({
     queryKey: QueryKeys.WORKSPACES,
-    queryFn: () => client.workspaces.listAll(),
+    queryFn: async () => (await client.workspaces.listAll()).unwrap(),
     select(baseWorkspaces): TWorkspaces {
       // Merge workspaces with existing workspaces status, if we have any
-      return baseWorkspaces.map((baseWorkspace) => {
+      return baseWorkspaces!.map((baseWorkspace) => {
         const maybeStatus = queryClient.getQueryData<TWorkspace>(
           QueryKeys.workspace(baseWorkspace.id)
         )?.status
@@ -50,7 +50,7 @@ export function DevPodProvider({ children }: Readonly<{ children?: ReactNode }>)
   useQueries({
     queries: (workspacesQuery.data ?? []).map((workspace) => ({
       queryKey: QueryKeys.workspaceStatus(workspace.id),
-      queryFn: () => client.workspaces.getStatus(workspace.id),
+      queryFn: async () => (await client.workspaces.getStatus(workspace.id)).unwrap(),
       onSuccess(newStatus: TWorkspace["status"]) {
         queryClient.setQueryData(QueryKeys.workspace(workspace.id), {
           ...workspace,

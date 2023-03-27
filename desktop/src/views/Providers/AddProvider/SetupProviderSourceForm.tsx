@@ -43,8 +43,8 @@ export function SetupProviderSourceForm({ onFinish }: TSetupProviderSourceFormPr
 
   const { data: suggestedProviderName } = useQuery({
     queryKey: ["providerNameSuggestion", deferredProviderSource],
-    queryFn: () => {
-      return client.providers.newID(deferredProviderSource)
+    queryFn: async () => {
+      return (await client.providers.newID(deferredProviderSource)).unwrap()
     },
     onSuccess(suggestedName) {
       setValue(FieldName.PROVIDER_NAME, suggestedName, {
@@ -69,11 +69,11 @@ export function SetupProviderSourceForm({ onFinish }: TSetupProviderSourceFormPr
       rawProviderSource: string
       config: TAddProviderConfig
     }>) => {
-      await client.providers.add(rawProviderSource, config)
-      const providerID = await client.providers.newID(rawProviderSource)
-      const options = await client.providers.getOptions(providerID)
+      (await client.providers.add(rawProviderSource, config)).unwrap()
+      const providerID = (await client.providers.newID(rawProviderSource)).unwrap()
+      const options = (await client.providers.getOptions(providerID!)).unwrap()
 
-      return { providerID, options }
+      return { providerID: providerID!, options: options! }
     },
     onSuccess(result) {
       onFinish(result)

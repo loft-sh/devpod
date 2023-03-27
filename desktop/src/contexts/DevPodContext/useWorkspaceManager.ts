@@ -26,10 +26,10 @@ export function useWorkspaceManager(): TWorkspaceManager {
       onStream,
     }: TWorkspaceManagerRunConfig["create"]) => {
       // At this point we don't have a workspaceID yet, so we need to get it from the CLI
-      const workspaceID = await client.workspaces.newID(rawWorkspaceSource)
-      const status = await client.workspaces.start(workspaceID, config, viewID, onStream)
+      const workspaceID = (await client.workspaces.newID(rawWorkspaceSource)).unwrap()
+      const status = (await client.workspaces.start(workspaceID!, config, viewID, onStream)).unwrap()
 
-      return { status, workspaceID }
+      return { status: status!, workspaceID: workspaceID! }
     },
     onSuccess({ status, workspaceID }) {
       updateWorkspaceStatus(status, { workspaceID })
@@ -37,26 +37,26 @@ export function useWorkspaceManager(): TWorkspaceManager {
   })
   const startMutation = useMutation({
     mutationKey: MutationKeys.START,
-    mutationFn: ({ workspaceID, config, onStream }: TWorkspaceManagerRunConfig["start"]) =>
-      client.workspaces.start(workspaceID, config, viewID, onStream),
+    mutationFn: async ({ workspaceID, config, onStream }: TWorkspaceManagerRunConfig["start"]) =>
+        (await client.workspaces.start(workspaceID, config, viewID, onStream)).unwrap()!,
     onSuccess: updateWorkspaceStatus,
   })
   const stopMutation = useMutation({
     mutationKey: MutationKeys.STOP,
-    mutationFn: ({ workspaceID }: TWorkspaceManagerRunConfig["stop"]) =>
-      client.workspaces.stop(workspaceID),
+    mutationFn: async ({ workspaceID }: TWorkspaceManagerRunConfig["stop"]) =>
+        (await client.workspaces.stop(workspaceID)).unwrap()!,
     onSuccess: updateWorkspaceStatus,
   })
   const rebuildMutation = useMutation({
     mutationKey: MutationKeys.REBUILD,
-    mutationFn: ({ workspaceID }: TWorkspaceManagerRunConfig["rebuild"]) =>
-      client.workspaces.rebuild(workspaceID),
+    mutationFn: async ({ workspaceID }: TWorkspaceManagerRunConfig["rebuild"]) =>
+        (await client.workspaces.rebuild(workspaceID)).unwrap()!,
     onSuccess: updateWorkspaceStatus,
   })
   const removeMutation = useMutation({
     mutationKey: MutationKeys.REMOVE,
     mutationFn: async ({ workspaceID }: TWorkspaceManagerRunConfig["remove"]) => {
-      await client.workspaces.remove(workspaceID)
+      (await client.workspaces.remove(workspaceID)).unwrap()
 
       return Promise.resolve()
     },
