@@ -9,7 +9,7 @@ go get github.com/onsi/ginkgo/ginkgo
 
 To build the binaries locally use the following command from this directory
 ```
-BUILDDIR=bin SRCDIR=".." ../hack/rebuild.sh
+BUILDDIR=bin SRCDIR=".." ../hack/build-e2e.sh
 ```
 
 #### Run all E2E test
