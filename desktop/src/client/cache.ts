@@ -1,9 +1,11 @@
 import { exists, isEmpty, noop, SingleEventManager, THandler } from "../lib"
 import { TUnsubscribeFn, TWorkspaceID } from "../types"
-import { TStreamCommandFn, TStreamEvent, TStreamEventListenerFn } from "./commands"
+import {ResultError} from "../lib/result";
+import {TCommand, TStreamEvent, TStreamEventListenerFn} from "./command";
+import {ChildProcess} from "@tauri-apps/api/shell";
 
 export type TStartCommandHandler = Readonly<{
-  promise: Promise<void>
+  promise: Promise<ResultError>
   stream?: (streamHandler?: THandler<TStreamEventListenerFn>) => TUnsubscribeFn
 }>
 type TStartCommandCacheStore = Map<TWorkspaceID, TStartCommandHandler>
@@ -11,7 +13,7 @@ type TStartCommandCache = Pick<TStartCommandCacheStore, "get"> &
   Readonly<{
     connect: (
       workspaceID: TWorkspaceID,
-      cmd: Readonly<{ run(): Promise<void>; stream: TStreamCommandFn }>
+      cmd: Readonly<TCommand<ChildProcess>>
     ) => Readonly<{
       operation: TStartCommandHandler["promise"]
       stream: TStartCommandHandler["stream"]
@@ -32,7 +34,7 @@ export class StartCommandCache implements TStartCommandCache {
 
   public connect(
     id: TWorkspaceID,
-    cmd: Readonly<{ run(): Promise<void>; stream: TStreamCommandFn }>
+    cmd: Readonly<TCommand<ChildProcess>>
   ): Readonly<{
     operation: TStartCommandHandler["promise"]
     stream: TStartCommandHandler["stream"]

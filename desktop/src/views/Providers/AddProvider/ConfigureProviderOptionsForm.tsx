@@ -55,11 +55,10 @@ export function ConfigureProviderOptionsForm({
 }: TConfigureProviderOptionsFormProps) {
   const formMethods = useForm<TFieldValues>()
   const { status, mutate: configureProvider } = useMutation({
-    mutationFn: ({
+    mutationFn: async ({
       providerID,
       config,
-    }: Readonly<{ providerID: TProviderID; config: TConfigureProviderConfig }>) =>
-      client.providers.configure(providerID, config),
+    }: Readonly<{ providerID: TProviderID; config: TConfigureProviderConfig }>) => (await client.providers.configure(providerID, config)).unwrap(),
     onSuccess() {
       onFinish()
     },

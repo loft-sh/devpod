@@ -9,8 +9,8 @@ export function useProviderManager() {
   const queryClient = useQueryClient()
 
   const removeMutation = useMutation({
-    mutationFn: ({ providerID }: TProviderManagerRunConfig["remove"]) =>
-      client.providers.remove(providerID),
+    mutationFn: async ({ providerID }: TProviderManagerRunConfig["remove"]) =>
+        (await client.providers.remove(providerID)).unwrap(),
     onSuccess(_, { providerID }) {
       queryClient.setQueryData<TProviders>(QueryKeys.PROVIDERS, (current) => {
         const shallowCopy = { ...current }
