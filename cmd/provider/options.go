@@ -68,7 +68,7 @@ func (cmd *OptionsCmd) Run(ctx context.Context, providerName string) error {
 	}
 
 	if cmd.Prefill && provider.State == nil {
-		devPodConfig, err = options.ResolveOptions(ctx, devPodConfig, provider.Config, nil, true, log.Default)
+		devPodConfig, err = options.ResolveOptions(ctx, devPodConfig, provider.Config, nil, true, nil, log.Default)
 		if err != nil {
 			return err
 		}

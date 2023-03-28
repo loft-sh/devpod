@@ -9,6 +9,9 @@ type Workspace struct {
 	// ID is the workspace id to use
 	ID string `json:"id,omitempty"`
 
+	// UID is used to identify this specific workspace
+	UID string `json:"uid,omitempty"`
+
 	// Folder is the local folder where workspace related contents will be stored
 	Folder string `json:"folder,omitempty"`
 

@@ -46,41 +46,26 @@ func (cmd *ListCmd) Run(ctx context.Context) error {
 		return err
 	}
 
-	workspaceDir, err := provider2.GetWorkspacesDir(devPodConfig.DefaultContext)
+	workspaces, err := listWorkspaces(devPodConfig, log.Default)
 	if err != nil {
 		return err
 	}
 
-	entries, err := os.ReadDir(workspaceDir)
-	if err != nil && !os.IsNotExist(err) {
-		return err
-	}
-
 	if cmd.Output == "json" {
-		tableEntries := []*provider2.Workspace{}
-		for _, entry := range entries {
-			workspaceConfig, err := provider2.LoadWorkspaceConfig(devPodConfig.DefaultContext, entry.Name())
-			if err != nil {
-				log.Default.ErrorStreamOnly().Warnf("Couldn't load workspace %s: %v", entry.Name(), err)
-				continue
-			}
-
-			tableEntries = append(tableEntries, workspaceConfig)
-		}
-		sort.SliceStable(tableEntries, func(i, j int) bool {
-			return tableEntries[i].ID < tableEntries[j].ID
+		sort.SliceStable(workspaces, func(i, j int) bool {
+			return workspaces[i].ID < workspaces[j].ID
 		})
-		out, err := json.Marshal(tableEntries)
+		out, err := json.Marshal(workspaces)
 		if err != nil {
 			return err
 		}
 		fmt.Print(string(out))
 	} else if cmd.Output == "plain" {
 		tableEntries := [][]string{}
-		for _, entry := range entries {
-			workspaceConfig, err := provider2.LoadWorkspaceConfig(devPodConfig.DefaultContext, entry.Name())
+		for _, entry := range workspaces {
+			workspaceConfig, err := provider2.LoadWorkspaceConfig(devPodConfig.DefaultContext, entry.ID)
 			if err != nil {
-				log.Default.ErrorStreamOnly().Warnf("Couldn't load workspace %s: %v", entry.Name(), err)
+				log.Default.ErrorStreamOnly().Warnf("Couldn't load workspace %s: %v", entry.ID, err)
 				continue
 			}
 
@@ -109,4 +94,29 @@ func (cmd *ListCmd) Run(ctx context.Context) error {
 	}
 
 	return nil
+}
+
+func listWorkspaces(devPodConfig *config.Config, log log.Logger) ([]*provider2.Workspace, error) {
+	workspaceDir, err := provider2.GetWorkspacesDir(devPodConfig.DefaultContext)
+	if err != nil {
+		return nil, err
+	}
+
+	entries, err := os.ReadDir(workspaceDir)
+	if err != nil && !os.IsNotExist(err) {
+		return nil, err
+	}
+
+	retWorkspaces := []*provider2.Workspace{}
+	for _, entry := range entries {
+		workspaceConfig, err := provider2.LoadWorkspaceConfig(devPodConfig.DefaultContext, entry.Name())
+		if err != nil {
+			log.ErrorStreamOnly().Warnf("Couldn't load workspace %s: %v", entry.Name(), err)
+			continue
+		}
+
+		retWorkspaces = append(retWorkspaces, workspaceConfig)
+	}
+
+	return retWorkspaces, nil
 }
