@@ -86,6 +86,7 @@ func (cmd *DeleteCmd) Run(ctx context.Context, devPodConfig *config.Config, args
 		}
 	}
 
+	// parse grace period
 	var duration *time.Duration
 	if cmd.GracePeriod != "" {
 		gracePeriod, err := time.ParseDuration(cmd.GracePeriod)
@@ -94,6 +95,14 @@ func (cmd *DeleteCmd) Run(ctx context.Context, devPodConfig *config.Config, args
 		}
 
 		duration = &gracePeriod
+	}
+
+	// delete if single machine provider
+	wasDeleted, err := cmd.deleteSingleMachine(ctx, client, devPodConfig, duration)
+	if err != nil {
+		return err
+	} else if wasDeleted {
+		return nil
 	}
 
 	// destroy environment
@@ -107,4 +116,55 @@ func (cmd *DeleteCmd) Run(ctx context.Context, devPodConfig *config.Config, args
 
 	log.Default.Donef("Successfully deleted workspace '%s'", client.Workspace())
 	return nil
+}
+
+func (cmd *DeleteCmd) deleteSingleMachine(ctx context.Context, client client2.WorkspaceClient, devPodConfig *config.Config, duration *time.Duration) (bool, error) {
+	// check if single machine
+	singleMachineName := workspace2.SingleMachineName(client.Provider())
+	if !devPodConfig.Current().IsSingleMachine(client.Provider()) || client.WorkspaceConfig().Machine.ID != singleMachineName {
+		return false, nil
+	}
+
+	// try to find other workspace with same machine
+	workspaces, err := listWorkspaces(devPodConfig, log.Default)
+	if err != nil {
+		return false, errors.Wrap(err, "list workspaces")
+	}
+
+	// loop workspaces
+	foundOther := false
+	for _, workspace := range workspaces {
+		if workspace.ID == client.Workspace() || workspace.Machine.ID != singleMachineName {
+			continue
+		}
+
+		foundOther = true
+		break
+	}
+	if foundOther {
+		return false, nil
+	}
+
+	// if we haven't found another workspace on this machine, delete the whole machine
+	machineClient, err := workspace2.GetMachine(devPodConfig, []string{singleMachineName}, log.Default)
+	if err != nil {
+		return false, errors.Wrap(err, "get machine")
+	}
+
+	// delete the machine
+	err = machineClient.Delete(ctx, client2.DeleteOptions{
+		Force:       cmd.Force,
+		GracePeriod: duration,
+	})
+	if err != nil {
+		return false, errors.Wrap(err, "delete machine")
+	}
+
+	err = clientimplementation.DeleteWorkspaceFolder(client.Context(), client.Workspace())
+	if err != nil {
+		return false, err
+	}
+
+	log.Default.Donef("Successfully deleted workspace '%s'", client.Workspace())
+	return true, nil
 }

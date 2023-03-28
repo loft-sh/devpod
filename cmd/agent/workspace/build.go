@@ -6,9 +6,11 @@ import (
 	"github.com/loft-sh/devpod/pkg/agent"
 	"github.com/loft-sh/devpod/pkg/devcontainer"
 	"github.com/loft-sh/devpod/pkg/log"
+	provider2 "github.com/loft-sh/devpod/pkg/provider"
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
 	"os"
+	"path/filepath"
 )
 
 // BuildCmd holds the cmd flags
@@ -44,7 +46,7 @@ func NewBuildCmd(flags *flags.GlobalFlags) *cobra.Command {
 // Run runs the command logic
 func (cmd *BuildCmd) Run(ctx context.Context) error {
 	// write workspace info
-	shouldExit, workspaceInfo, err := agent.WriteWorkspaceInfo(cmd.WorkspaceInfo, log.Default.ErrorStreamOnly())
+	shouldExit, workspaceInfo, err := agent.WriteWorkspaceInfoAndDeleteOld(cmd.WorkspaceInfo, deleteWorkspace, log.Default.ErrorStreamOnly())
 	if err != nil {
 		return err
 	} else if shouldExit {
@@ -74,5 +76,15 @@ func (cmd *BuildCmd) Run(ctx context.Context) error {
 	}
 
 	logger.Donef("Successfully build and pushed image %s", imageName)
+	return nil
+}
+
+func deleteWorkspace(workspaceInfo *provider2.AgentWorkspaceInfo, log log.Logger) error {
+	err := removeContainer(workspaceInfo, log)
+	if err != nil {
+		return errors.Wrap(err, "remove container")
+	}
+
+	_ = os.RemoveAll(filepath.Join(workspaceInfo.Folder, ".."))
 	return nil
 }

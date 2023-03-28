@@ -193,39 +193,46 @@ func (s *workspaceClient) Delete(ctx context.Context, opt client.DeleteOptions) 
 
 	// should just delete container?
 	if !s.isMachineProvider() || !s.workspace.Machine.AutoDelete {
-		writer := s.log.Writer(logrus.InfoLevel, false)
-		defer writer.Close()
-
-		s.log.Infof("Deleting container...")
-		agentConfig := options.ResolveAgentConfig(s.devPodConfig, s.config, s.workspace, s.machine)
-		command := fmt.Sprintf("%s agent workspace delete --id %s --context %s", agentConfig.Path, s.workspace.ID, s.workspace.Context)
-		if agentConfig.DataPath != "" {
-			command += fmt.Sprintf(" --agent-dir '%s'", agentConfig.DataPath)
-		}
-		err := RunCommandWithBinaries(
-			ctx,
-			"command",
-			s.config.Exec.Command,
-			s.workspace.Context,
-			s.workspace,
-			s.machine,
-			s.devPodConfig.ProviderOptions(s.config.Name),
-			s.config,
-			map[string]string{
-				provider.CommandEnv: command,
-			},
-			nil,
-			writer,
-			writer,
-			s.log.ErrorStreamOnly(),
-		)
+		isRunning, err := s.isMachineRunning(ctx)
 		if err != nil {
 			if !opt.Force {
 				return err
 			}
+		} else if isRunning {
+			writer := s.log.Writer(logrus.InfoLevel, false)
+			defer writer.Close()
 
-			if err != context.DeadlineExceeded {
-				s.log.Errorf("Error deleting container: %v", err)
+			s.log.Infof("Deleting container...")
+			agentConfig := options.ResolveAgentConfig(s.devPodConfig, s.config, s.workspace, s.machine)
+			command := fmt.Sprintf("%s agent workspace delete --id %s --context %s", agentConfig.Path, s.workspace.ID, s.workspace.Context)
+			if agentConfig.DataPath != "" {
+				command += fmt.Sprintf(" --agent-dir '%s'", agentConfig.DataPath)
+			}
+			err := RunCommandWithBinaries(
+				ctx,
+				"command",
+				s.config.Exec.Command,
+				s.workspace.Context,
+				s.workspace,
+				s.machine,
+				s.devPodConfig.ProviderOptions(s.config.Name),
+				s.config,
+				map[string]string{
+					provider.CommandEnv: command,
+				},
+				nil,
+				writer,
+				writer,
+				s.log.ErrorStreamOnly(),
+			)
+			if err != nil {
+				if !opt.Force {
+					return err
+				}
+
+				if err != context.DeadlineExceeded {
+					s.log.Errorf("Error deleting container: %v", err)
+				}
 			}
 		}
 	} else if s.machine != nil && s.workspace.Machine.ID != "" && len(s.config.Exec.Delete) > 0 {
@@ -244,6 +251,28 @@ func (s *workspaceClient) Delete(ctx context.Context, opt client.DeleteOptions) 
 	}
 
 	return DeleteWorkspaceFolder(s.workspace.Context, s.workspace.ID)
+}
+
+func (s *workspaceClient) isMachineRunning(ctx context.Context) (bool, error) {
+	if !s.isMachineProvider() {
+		return true, nil
+	}
+
+	// delete machine if config was found
+	machineClient, err := NewMachineClient(s.devPodConfig, s.config, s.machine, s.log)
+	if err != nil {
+		return false, err
+	}
+
+	// retrieve status
+	status, err := machineClient.Status(ctx, client.StatusOptions{})
+	if err != nil {
+		return false, errors.Wrap(err, "retrieve machine status")
+	} else if status == client.StatusRunning {
+		return true, nil
+	}
+
+	return false, nil
 }
 
 func (s *workspaceClient) Start(ctx context.Context, options client.StartOptions) error {
@@ -269,8 +298,6 @@ func (s *workspaceClient) Stop(ctx context.Context, opt client.StopOptions) erro
 	if !s.isMachineProvider() || !s.workspace.Machine.AutoDelete {
 		writer := s.log.Writer(logrus.InfoLevel, false)
 		defer writer.Close()
-
-		// TODO: stop whole machine if there is no other workspace container running anymore
 
 		s.log.Infof("Stopping container...")
 		agentConfig := options.ResolveAgentConfig(s.devPodConfig, s.config, s.workspace, s.machine)
