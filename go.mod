@@ -19,6 +19,7 @@ require (
 	github.com/go-enry/go-enry/v2 v2.8.4
 	github.com/gofrs/flock v0.8.1
 	github.com/google/go-containerregistry v0.13.0
+	github.com/google/uuid v1.3.0
 	github.com/joho/godotenv v1.5.1
 	github.com/k0kubun/go-ansi v0.0.0-20180517002512-3bf9e2903213
 	github.com/loft-sh/utils v0.0.15
