@@ -3,6 +3,7 @@ package workspace
 import (
 	"context"
 	"fmt"
+	"github.com/google/uuid"
 	"github.com/loft-sh/devpod/pkg/client"
 	"github.com/loft-sh/devpod/pkg/client/clientimplementation"
 	"github.com/loft-sh/devpod/pkg/command"
@@ -267,11 +268,13 @@ func createWorkspace(ctx context.Context, devPodConfig *config.Config, ide *prov
 
 func resolve(defaultProvider *ProviderWithOptions, devPodConfig *config.Config, name, workspaceID, workspaceFolder string, isLocalPath bool) (*provider2.Workspace, error) {
 	now := types.Now()
+	uid := uuid.New().String()
 
 	// is local folder?
 	if isLocalPath {
 		return &provider2.Workspace{
 			ID:      workspaceID,
+			UID:     uid,
 			Folder:  workspaceFolder,
 			Context: devPodConfig.DefaultContext,
 			Provider: provider2.WorkspaceProviderConfig{
@@ -290,6 +293,7 @@ func resolve(defaultProvider *ProviderWithOptions, devPodConfig *config.Config, 
 	if strings.HasSuffix(name, ".git") || pingRepository(gitRepository) {
 		return &provider2.Workspace{
 			ID:      workspaceID,
+			UID:     uid,
 			Folder:  workspaceFolder,
 			Context: devPodConfig.DefaultContext,
 			Provider: provider2.WorkspaceProviderConfig{
@@ -309,6 +313,7 @@ func resolve(defaultProvider *ProviderWithOptions, devPodConfig *config.Config, 
 	if err == nil {
 		return &provider2.Workspace{
 			ID:      workspaceID,
+			UID:     uid,
 			Folder:  workspaceFolder,
 			Context: devPodConfig.DefaultContext,
 			Provider: provider2.WorkspaceProviderConfig{

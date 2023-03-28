@@ -54,8 +54,13 @@ func readAgentWorkspaceInfo(agentFolder, context, id string) (*provider2.AgentWo
 		return nil, err
 	}
 
+	// parse agent workspace info
+	return parseAgentWorkspaceInfo(filepath.Join(workspaceDir, provider2.WorkspaceConfigFile))
+}
+
+func parseAgentWorkspaceInfo(workspaceConfigFile string) (*provider2.AgentWorkspaceInfo, error) {
 	// read workspace config
-	out, err := os.ReadFile(filepath.Join(workspaceDir, provider2.WorkspaceConfigFile))
+	out, err := os.ReadFile(workspaceConfigFile)
 	if err != nil {
 		return nil, err
 	}
@@ -67,7 +72,7 @@ func readAgentWorkspaceInfo(agentFolder, context, id string) (*provider2.AgentWo
 		return nil, errors.Wrap(err, "parse workspace info")
 	}
 
-	workspaceInfo.Folder = GetAgentWorkspaceContentDir(workspaceDir)
+	workspaceInfo.Folder = GetAgentWorkspaceContentDir(filepath.Dir(workspaceConfigFile))
 	return workspaceInfo, nil
 }
 
@@ -136,6 +141,10 @@ func ReadAgentWorkspaceInfo(agentFolder, context, id string, log log.Logger) (bo
 }
 
 func WriteWorkspaceInfo(workspaceInfoEncoded string, log log.Logger) (bool, *provider2.AgentWorkspaceInfo, error) {
+	return WriteWorkspaceInfoAndDeleteOld(workspaceInfoEncoded, nil, log)
+}
+
+func WriteWorkspaceInfoAndDeleteOld(workspaceInfoEncoded string, deleteWorkspace func(workspaceInfo *provider2.AgentWorkspaceInfo, log log.Logger) error, log log.Logger) (bool, *provider2.AgentWorkspaceInfo, error) {
 	workspaceInfo, decoded, err := DecodeWorkspaceInfo(workspaceInfoEncoded)
 	if err != nil {
 		return false, nil, err
@@ -155,11 +164,28 @@ func WriteWorkspaceInfo(workspaceInfoEncoded string, log log.Logger) (bool, *pro
 		return false, nil, err
 	}
 
-	// write workspace config
+	// check if workspace config already exists
 	workspaceConfig := filepath.Join(workspaceDir, provider2.WorkspaceConfigFile)
+	oldWorkspaceInfo, err := parseAgentWorkspaceInfo(workspaceConfig)
+	if oldWorkspaceInfo != nil && oldWorkspaceInfo.Workspace.UID != workspaceInfo.Workspace.UID {
+		// delete the old workspace
+		log.Infof("Delete old workspace '%s'", oldWorkspaceInfo.Workspace.ID)
+		err = deleteWorkspace(oldWorkspaceInfo, log)
+		if err != nil {
+			return false, nil, errors.Wrap(err, "delete old workspace")
+		}
+		
+		// recreate workspace folder again
+		workspaceDir, err = CreateAgentWorkspaceDir(workspaceInfo.Agent.DataPath, workspaceInfo.Workspace.Context, workspaceInfo.Workspace.ID)
+		if err != nil {
+			return false, nil, err
+		}
+	}
+
+	// write workspace config
 	err = os.WriteFile(workspaceConfig, []byte(decoded), 0666)
 	if err != nil {
-		return false, nil, fmt.Errorf("write workspace config file")
+		return false, nil, fmt.Errorf("write workspace config file: %v", err)
 	}
 
 	workspaceInfo.Folder = GetAgentWorkspaceContentDir(workspaceDir)
