@@ -1,8 +1,10 @@
-import { useCallback, useReducer } from "react"
-import { TAction } from "../../../lib"
+import { useCallback, useEffect, useReducer } from "react"
+import { client } from "../../../client"
+import { useProviderManager } from "../../../contexts"
+import { exists, TAction } from "../../../lib"
 import { TProviderID, TProviderOptions } from "../../../types"
 
-type TAddProviderState = Readonly<
+type TSetupProviderState = Readonly<
   | {
       currentStep: 1
       providerID: null
@@ -20,11 +22,10 @@ type TCompleteFirstStepAction = TAction<
   Readonly<{ providerID: TProviderID; options: TProviderOptions }>
 >
 type TCompleteSecondStepAction = TAction<"completeSecondStep">
-
 type TActions = TCompleteFirstStepAction | TCompleteSecondStepAction
 
-const initialState: TAddProviderState = { currentStep: 1, providerID: null, options: null }
-function addProviderReducer(state: TAddProviderState, action: TActions): TAddProviderState {
+const initialState: TSetupProviderState = { currentStep: 1, providerID: null, options: null }
+function setupProviderReducer(state: TSetupProviderState, action: TActions): TSetupProviderState {
   switch (action.type) {
     case "completeFirstStep":
       return {
@@ -40,8 +41,8 @@ function addProviderReducer(state: TAddProviderState, action: TActions): TAddPro
   }
 }
 
-export function useAddProvider() {
-  const [state, dispatch] = useReducer(addProviderReducer, initialState)
+export function useSetupProvider() {
+  const [state, dispatch] = useReducer(setupProviderReducer, initialState)
 
   const completeFirstStep = useCallback(
     (payload: TCompleteFirstStepAction["payload"]) => {
@@ -61,6 +62,28 @@ export function useAddProvider() {
 
     dispatch({ type: "completeSecondStep" })
   }, [state.currentStep])
+
+  const { remove } = useProviderManager()
+  useEffect(() => {
+    if (state.currentStep === 1 || state.currentStep === "done") {
+      client.providers.popDangling()
+
+      return
+    }
+
+    client.providers.setDangling(state.providerID)
+  }, [state])
+
+  useEffect(() => {
+    return () => {
+      const danglingProviderID = client.providers.popDangling()
+      if (exists(danglingProviderID)) {
+        remove.run({ providerID: danglingProviderID })
+      }
+    }
+    // We need to ensure this effect only runs when the hook unmounts at the cost of potentially stale dependencies
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   return { state, completeFirstStep, completeSecondStep }
 }

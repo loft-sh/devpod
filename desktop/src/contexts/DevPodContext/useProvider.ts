@@ -5,7 +5,7 @@ import { TProvider, TProviderID, TProviderManager, TProviders, TQueryResult } fr
 import { useProviderManager } from "./useProviderManager"
 
 export function useProvider(
-  providerID: TProviderID | undefined
+  providerID: TProviderID | undefined | null
 ): [TQueryResult<TProvider>, TProviderManager] {
   const queryClient = useQueryClient()
   const manager = useProviderManager()

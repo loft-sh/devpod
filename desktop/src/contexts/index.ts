@@ -5,6 +5,7 @@ export {
   useWorkspaceManager,
   useProvider,
   useProviders,
+  useProviderManager,
   useOngoingOperations,
 } from "./DevPodContext"
 export { SettingsProvider, useSettings, useChangeSettings } from "./SettingsContext"

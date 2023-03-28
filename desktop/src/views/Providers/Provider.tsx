@@ -1,10 +1,14 @@
-import { Box, Button, HStack, SimpleGrid, Spinner, Text, useBoolean } from "@chakra-ui/react"
-import { useEffect, useMemo } from "react"
+import { Box, Button, Grid, HStack, Spinner, Text, useBoolean, VStack } from "@chakra-ui/react"
+import { useMutation } from "@tanstack/react-query"
+import { Fragment, useEffect, useMemo } from "react"
 import { useNavigate, useParams } from "react-router"
+import { client } from "../../client"
 import { ErrorMessageBox } from "../../components"
+import { WarningMessageBox } from "../../components/Warning"
 import { useProvider } from "../../contexts"
 import { exists, isError } from "../../lib"
 import { Routes } from "../../routes"
+import { TProviderID, TWithProviderID } from "../../types"
 import { ConfigureProviderOptionsForm } from "./AddProvider/ConfigureProviderOptionsForm"
 import { getOptionValue, getVisibleOptions } from "./helpers"
 
@@ -40,6 +44,10 @@ export function Provider() {
     return null
   }
 
+  if (!exists(provider.state)) {
+    return <UninitializedProvider providerID={providerID} />
+  }
+
   return (
     <>
       <HStack marginTop="-6">
@@ -52,24 +60,54 @@ export function Provider() {
         </Button>
       </HStack>
 
-      <Box width="full">
+      <Box width="full" marginTop={8}>
         {isEditing ? (
           <ConfigureProviderOptionsForm
             providerID={providerID}
-            options={provider.state?.options ?? {}}
+            options={provider.state.options ?? {}}
             onFinish={() => setIsEditing.off()}
           />
         ) : (
-          <SimpleGrid>
+          <Grid>
             {options.map((option) => (
-              <HStack key={option.id}>
+              <Fragment key={option.id}>
                 <Text fontWeight="bold">{option.displayName}</Text>
                 <Text>{getOptionValue(option)}</Text>
-              </HStack>
+              </Fragment>
             ))}
-          </SimpleGrid>
+          </Grid>
         )}
       </Box>
     </>
+  )
+}
+type TUninitializedProviderProps = Readonly<{ providerID: TProviderID }>
+function UninitializedProvider({ providerID }: TUninitializedProviderProps) {
+  const {
+    mutate: initalize,
+    status,
+    error,
+  } = useMutation({
+    mutationFn: async ({ providerID }: TWithProviderID) => {
+      return (await client.providers.initialize(providerID)).unwrap()
+    },
+  })
+
+  return (
+    <VStack align="start">
+      {isError(error) ? (
+        <ErrorMessageBox error={error} />
+      ) : (
+        <WarningMessageBox warning="Looks like this provider isn't initialized yet" />
+      )}
+      <Button
+        isLoading={status === "loading"}
+        onClick={() =>
+          /*TODO: stream response for debugging and wire up --debug option*/
+          initalize({ providerID })
+        }>
+        Initialize
+      </Button>
+    </VStack>
   )
 }

@@ -25,13 +25,17 @@ type TCollapsibleSectionProps = Readonly<{
   title: ReactNode | ((isOpen: boolean) => ReactNode)
   children: ReactNode
   isOpen?: boolean
+  isDisabled?: boolean
   onOpenChange?: (isOpen: boolean, element: HTMLDivElement | null) => void
 }>
 export const CollapsibleSection = forwardRef<HTMLDivElement, TCollapsibleSectionProps>(
-  function CollapsibleSection({ title, children, onOpenChange, isOpen: isOpenProp = false }, ref) {
+  function CollapsibleSection(
+    { title, children, onOpenChange, isOpen: isOpenProp = false, isDisabled = false },
+    ref
+  ) {
     const motionRef = useRef<HTMLDivElement>(null)
     const { isOpen, onOpen, onClose, getDisclosureProps, getButtonProps } = useDisclosure()
-    const buttonProps = getButtonProps()
+    const buttonProps = getButtonProps({ isDisabled })
     const disclosureProps = getDisclosureProps()
 
     useLayoutEffect(() => {

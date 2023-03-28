@@ -24,9 +24,11 @@ export function ListProviders() {
       return []
     }
 
-    return Object.entries(providers).map(([name, details]) => {
-      return { name, options: JSON.stringify(details.config, null, 2) }
-    })
+    return Object.entries(providers)
+      .filter(([, details]) => exists(details.state))
+      .map(([name, details]) => {
+        return { name, options: JSON.stringify(details.config, null, 2) }
+      })
   }, [providers])
 
   return (
