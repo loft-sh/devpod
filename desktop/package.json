@@ -27,6 +27,7 @@
     "react-hook-form": "7.43.5",
     "react-router": "6.9.0",
     "react-router-dom": "6.9.0",
+    "tauri-plugin-store-api": "https://github.com/tauri-apps/tauri-plugin-store",
     "xterm": "5.1.0",
     "xterm-addon-fit": "0.7.0"
   },

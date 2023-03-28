@@ -112,3 +112,11 @@ function debug(...args: Parameters<(typeof console)["info"]>): void {
     }
   })
 }
+
+export function isOk(result: ChildProcess): boolean {
+  return result.code === 0
+}
+
+export function toFlagArg(flag: string, arg: string) {
+  return [flag, arg].join("=")
+}

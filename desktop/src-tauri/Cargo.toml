@@ -16,6 +16,7 @@ serde = { version = "1.0", features = ["derive"] }
 # Tauri
 tauri = { version = "1.2.4", features = ["os-all", "process-command-api", "shell-open", "shell-sidecar", "system-tray", "window-start-dragging"] }
 tauri-plugin-deep-link = { version = "0.1.0" }
+tauri-plugin-store = { git = "https://github.com/tauri-apps/plugins-workspace", branch = "dev" }
 # Logging
 log = { version = "0.4" }
 tauri-plugin-log = { git = "https://github.com/tauri-apps/plugins-workspace", branch = "dev" }

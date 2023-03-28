@@ -1,9 +1,15 @@
-import { exists, safeJSONParse } from "../lib"
-import { Result, ResultError, Return } from "../lib/result"
-import { TAddProviderConfig, TLogOutput, TProviderID, TProviderOptions, TProviders } from "../types"
-import { Command } from "./command"
+import { exists, safeJSONParse, Result, ResultError, Return } from "../../lib"
+import {
+  TAddProviderConfig,
+  TLogOutput,
+  TProviderID,
+  TProviderOptions,
+  TProviders,
+} from "../../types"
+import { Command, isOk, toFlagArg } from "../command"
 import {
   DEVPOD_COMMAND_ADD,
+  DEVPOD_COMMAND_DELETE,
   DEVPOD_COMMAND_GET_PROVIDER_NAME,
   DEVPOD_COMMAND_HELPER,
   DEVPOD_COMMAND_INIT,
@@ -11,14 +17,14 @@ import {
   DEVPOD_COMMAND_OPTIONS,
   DEVPOD_COMMAND_PROVIDER,
   DEVPOD_COMMAND_SET_OPTIONS,
+  DEVPOD_COMMAND_USE,
   DEVPOD_FLAG_DEBUG,
   DEVPOD_FLAG_JSON_LOG_OUTPUT,
   DEVPOD_FLAG_JSON_OUTPUT,
   DEVPOD_FLAG_NAME,
   DEVPOD_FLAG_OPTION,
   DEVPOD_FLAG_USE,
-} from "./constants"
-import { isOk, toFlagArg } from "./workspaceCommands"
+} from "../constants"
 
 export class ProviderCommands {
   static DEBUG = false
@@ -83,7 +89,7 @@ export class ProviderCommands {
       const maybeOutput = safeJSONParse<TLogOutput>(result.val.stderr)
 
       return Return.Failed(
-        maybeOutput?.message ||
+        maybeOutput?.message ??
           `Failed to add provider with source ${rawProviderSource}: ${result.val.stderr}`
       )
     }
@@ -94,9 +100,8 @@ export class ProviderCommands {
   static async RemoveProvider(id: TProviderID) {
     const result = await ProviderCommands.newCommand([
       DEVPOD_COMMAND_PROVIDER,
-      DEVPOD_COMMAND_OPTIONS,
+      DEVPOD_COMMAND_DELETE,
       id,
-      DEVPOD_FLAG_JSON_OUTPUT,
     ]).run()
     if (result.err) {
       return result
@@ -106,7 +111,33 @@ export class ProviderCommands {
       const maybeOutput = safeJSONParse<TLogOutput>(result.val.stderr)
 
       return Return.Failed(
-        maybeOutput?.message || `Failed to remove provider ${id}: ${result.val.stderr}`
+        maybeOutput?.message ?? `Failed to remove provider ${id}: ${result.val.stderr}`
+      )
+    }
+
+    return Return.Ok()
+  }
+
+  static async UseProvider(id: TProviderID, rawOptions: Record<string, unknown>) {
+    const optionsFlag = toFlagArg(DEVPOD_FLAG_OPTION, serializeRawOptions(rawOptions))
+
+    const result = await ProviderCommands.newCommand([
+      DEVPOD_COMMAND_PROVIDER,
+      DEVPOD_COMMAND_USE,
+      id,
+      optionsFlag,
+      DEVPOD_FLAG_JSON_LOG_OUTPUT,
+    ]).run()
+
+    if (result.err) {
+      return result
+    }
+
+    if (!isOk(result.val)) {
+      const maybeOutput = safeJSONParse<TLogOutput>(result.val.stderr)
+
+      return Return.Failed(
+        maybeOutput?.message ?? `Failed to use provider ${id}: ${result.val.stderr}`
       )
     }
 
@@ -130,7 +161,7 @@ export class ProviderCommands {
       const maybeOutput = safeJSONParse<TLogOutput>(result.val.stderr)
 
       return Return.Failed(
-        maybeOutput?.message || `Failed to set options for provider ${id}: ${result.val.stderr}`
+        maybeOutput?.message ?? `Failed to set options for provider ${id}: ${result.val.stderr}`
       )
     }
 
@@ -152,7 +183,7 @@ export class ProviderCommands {
       const maybeOutput = safeJSONParse<TLogOutput>(result.val.stderr)
 
       return Return.Failed(
-        maybeOutput?.message || `Failed to get options for provider ${id}: ${result.val.stderr}`
+        maybeOutput?.message ?? `Failed to get options for provider ${id}: ${result.val.stderr}`
       )
     }
 
@@ -174,7 +205,7 @@ export class ProviderCommands {
       const maybeOutput = safeJSONParse<TLogOutput>(result.val.stderr)
 
       return Return.Failed(
-        maybeOutput?.message || `Failed to init provider ${id}: ${result.val.stderr}`
+        maybeOutput?.message ?? `Failed to init provider ${id}: ${result.val.stderr}`
       )
     }
 

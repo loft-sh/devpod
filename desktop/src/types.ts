@@ -48,6 +48,7 @@ export type TProviderConfig = Readonly<{
   options: TProviderOptions
   icon: string | null
   home: string | null
+  exec: Record<string, readonly string[]> | null
 }>
 type TProviderSource = Readonly<{
   github: string | null
@@ -82,6 +83,7 @@ export type TAddProviderConfig = Readonly<{
 export type TConfigureProviderConfig = Readonly<{
   options: Record<string, unknown>
   useAsDefaultProvider: boolean
+  initializeProvider: boolean
 }>
 export type TProviderManager = Readonly<{
   remove: TOperationManager<TWithProviderID>

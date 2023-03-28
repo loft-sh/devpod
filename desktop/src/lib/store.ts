@@ -1,6 +1,7 @@
 import { TUnsubscribeFn } from "../types"
 import { EventManager } from "./eventManager"
 import { exists } from "./helpers"
+import { Store as TauriPluginStore } from "tauri-plugin-store-api"
 
 type TBaseStore = Record<string | number | symbol, unknown>
 
@@ -78,5 +79,46 @@ export class LocalStorageBackend<T extends TBaseStore> implements TStorageBacken
 
   public async clear(): Promise<void> {
     window.localStorage.clear()
+  }
+}
+
+export class FileStorageBackend<T extends TBaseStore> implements TStorageBackend<T> {
+  private readonly store: TauriPluginStore
+
+  constructor(name: string) {
+    const fileName = `.${name}.dat`
+    this.store = new TauriPluginStore(fileName)
+  }
+
+  public async set<TKey extends keyof T>(key: TKey, value: T[TKey]): Promise<void> {
+    try {
+      await this.store.set(key.toString(), value)
+      await this.store.save()
+    } catch {
+      // TODO: let caller know, noop for now
+    }
+  }
+
+  public async get<TKey extends keyof T>(key: TKey): Promise<T[TKey] | null> {
+    try {
+      const maybeValue = await this.store.get<T[TKey] | null>(key.toString())
+      if (!exists(maybeValue)) {
+        return null
+      }
+
+      return maybeValue
+    } catch {
+      return null
+    }
+  }
+
+  public async remove<TKey extends keyof T>(key: TKey): Promise<void> {
+    await this.store.delete(key.toString())
+    await this.store.save()
+  }
+
+  public async clear(): Promise<void> {
+    await this.store.clear()
+    await this.store.save()
   }
 }
