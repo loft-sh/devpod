@@ -270,8 +270,6 @@ func (s *workspaceClient) Stop(ctx context.Context, opt client.StopOptions) erro
 		writer := s.log.Writer(logrus.InfoLevel, false)
 		defer writer.Close()
 
-		// TODO: stop whole machine if there is no other workspace container running anymore
-
 		s.log.Infof("Stopping container...")
 		agentConfig := options.ResolveAgentConfig(s.devPodConfig, s.config, s.workspace, s.machine)
 		command := fmt.Sprintf("%s agent workspace stop --id '%s' --context '%s'", agentConfig.Path, s.workspace.ID, s.workspace.Context)

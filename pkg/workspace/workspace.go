@@ -25,6 +25,10 @@ import (
 
 var branchRegEx = regexp.MustCompile(`[^a-zA-Z0-9\.\-]+`)
 
+func SingleMachineName(provider string) string {
+	return "devpod-machine-" + provider
+}
+
 // Exists checks if the given workspace already exists
 func Exists(devPodConfig *config.Config, args []string) string {
 	if len(args) == 0 {
@@ -188,8 +192,12 @@ func createWorkspace(ctx context.Context, devPodConfig *config.Config, ide *prov
 	var machineConfig *provider2.Machine
 	if provider.Config.IsMachineProvider() && workspace.Machine.ID == "" {
 		// create a new machine
-		workspace.Machine.ID = workspace.ID
-		workspace.Machine.AutoDelete = true
+		if provider.State != nil && provider.State.SingleMachine {
+			workspace.Machine.ID = SingleMachineName(provider.Config.Name)
+		} else {
+			workspace.Machine.ID = workspace.ID
+			workspace.Machine.AutoDelete = true
+		}
 
 		// save workspace config
 		err = saveWorkspaceConfig(workspace)
@@ -197,31 +205,40 @@ func createWorkspace(ctx context.Context, devPodConfig *config.Config, ide *prov
 			return nil, errors.Wrap(err, "save config")
 		}
 
-		// create machine folder
-		machineConfig, err = createMachine(workspace.Context, workspace.ID, provider.Config.Name)
-		if err != nil {
-			return nil, err
-		}
+		// only create machine if it does not exist yet
+		if !provider2.MachineExists(devPodConfig.DefaultContext, workspace.Machine.ID) {
+			// create machine folder
+			machineConfig, err = createMachine(workspace.Context, workspace.Machine.ID, provider.Config.Name)
+			if err != nil {
+				return nil, err
+			}
 
-		// create machine
-		machineClient, err := clientimplementation.NewMachineClient(devPodConfig, provider.Config, machineConfig, log)
-		if err != nil {
-			_ = clientimplementation.DeleteMachineFolder(machineConfig.Context, machineConfig.ID)
-			return nil, err
-		}
+			// create machine
+			machineClient, err := clientimplementation.NewMachineClient(devPodConfig, provider.Config, machineConfig, log)
+			if err != nil {
+				_ = clientimplementation.DeleteMachineFolder(machineConfig.Context, machineConfig.ID)
+				return nil, err
+			}
 
-		// refresh options
-		err = machineClient.RefreshOptions(ctx, providerUserOptions)
-		if err != nil {
-			_ = clientimplementation.DeleteMachineFolder(machineConfig.Context, machineConfig.ID)
-			return nil, err
-		}
+			// refresh options
+			err = machineClient.RefreshOptions(ctx, providerUserOptions)
+			if err != nil {
+				_ = clientimplementation.DeleteMachineFolder(machineConfig.Context, machineConfig.ID)
+				return nil, err
+			}
 
-		// create machine
-		err = machineClient.Create(ctx, client.CreateOptions{})
-		if err != nil {
-			_ = clientimplementation.DeleteMachineFolder(machineConfig.Context, machineConfig.ID)
-			return nil, err
+			// create machine
+			err = machineClient.Create(ctx, client.CreateOptions{})
+			if err != nil {
+				_ = clientimplementation.DeleteMachineFolder(machineConfig.Context, machineConfig.ID)
+				return nil, err
+			}
+		} else {
+			// load machine config
+			machineConfig, err = provider2.LoadMachineConfig(workspace.Context, workspace.Machine.ID)
+			if err != nil {
+				return nil, errors.Wrap(err, "load machine config")
+			}
 		}
 	} else {
 		// save workspace config
@@ -380,7 +397,12 @@ func ToID(str string) string {
 		}
 	}
 
-	return workspaceIDRegEx2.ReplaceAllString(workspaceIDRegEx1.ReplaceAllString(str, "-"), "")
+	str = workspaceIDRegEx2.ReplaceAllString(workspaceIDRegEx1.ReplaceAllString(str, "-"), "")
+	if len(str) > 63 {
+		str = str[:63]
+	}
+
+	return str
 }
 
 func selectWorkspace(devPodConfig *config.Config, ide *provider2.WorkspaceIDEConfig, changeLastUsed bool, log log.Logger) (client.WorkspaceClient, error) {

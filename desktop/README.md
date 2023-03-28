@@ -2,19 +2,14 @@
 
 ## Development
 
-Prerequisites:
+1. Install [NodeJS + yarn](https://nodejs.org/en/)
+2. Install [Rust](https://www.rust-lang.org/tools/install)
+3. Install [Go](https://go.dev/doc/install)
+4. Run `../hack/rebuild.sh`
+5. Install dependencies with `yarn`
+6. Run `yarn tauri dev`
 
-- [NodeJS + yarn](https://nodejs.org/en/)
-- [Rust](https://www.rust-lang.org/tools/install)
-- `devpod` binary for your platform in `src-tauri/bin/`. Needs to be named according to your platform, see [rustc docs](https://doc.rust-lang.org/nightly/rustc/platform-support.html) for details.
-  You can build the devpod binary for your current platform by running `cd .. && go build .`.
-  For example for macOS:
-  ```sh
-  cd ..
-  go build -o ./desktop/src-tauri/bin/devpod -ldflags "-s -w"
-  cd desktop
-  mv src-tauri/bin/devpod src-tauri/bin/devpod-x86_64-apple-darwin
-  ```
+### Additional Information
 
 Make sure all of your dependencies are installed and up to date by running `yarn` and `cd src-tauri && cargo update`.
 
@@ -29,3 +24,7 @@ Tauri should automatically restart the app if your backend code changes and vite
 Enable debug logging to stdout during development with `DEBUG=true yarn tauri dev`.
 
 Once you're happy with the current state, give it a spin in release mode by running `yarn tauri build`. You can find the packaged version of the application in the `src-tauri/target/release/{PLATFORM}` folder.
+
+## Check Type Errors
+
+Run `yarn types:check` to check for errors
