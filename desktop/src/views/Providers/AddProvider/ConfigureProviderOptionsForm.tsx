@@ -16,9 +16,10 @@ import { useMutation } from "@tanstack/react-query"
 import { ReactNode, useCallback, useMemo } from "react"
 import { FormProvider, SubmitHandler, useForm, useFormContext } from "react-hook-form"
 import { client } from "../../../client"
+import { useProvider } from "../../../contexts"
 import { exists, useFormErrors } from "../../../lib"
 import { TConfigureProviderConfig, TProviderID, TProviderOptions } from "../../../types"
-import { getVisibleOptions, TOptionWithID } from "../helpers"
+import { canCreateMachine, getVisibleOptions, TOptionWithID } from "../helpers"
 
 type TAllOptions = Readonly<{ required: TOptionWithID[]; other: TOptionWithID[] }>
 const Form = styled.form`
@@ -31,7 +32,7 @@ const FieldName = {
 } as const
 
 type TFieldValues = Readonly<{
-  [FieldName.REUSE_MACHINE]: boolean
+  [FieldName.REUSE_MACHINE]: boolean | undefined
   [FieldName.USE_AS_DEFAULT]: boolean
   [key: string]: unknown
 }>
@@ -47,23 +48,26 @@ export function ConfigureProviderOptionsForm({
   options: optionsProp,
   initializeProvider = false,
 }: TConfigureProviderOptionsFormProps) {
+  const [[provider]] = useProvider(providerID)
   const formMethods = useForm<TFieldValues>()
   const { status, mutate: configureProvider } = useMutation({
     mutationFn: async ({
       providerID,
       config,
     }: Readonly<{ providerID: TProviderID; config: TConfigureProviderConfig }>) =>
-      // TODO: wire up `initializeProvider`
       client.providers.configure(providerID, config),
     onSuccess() {
       onFinish?.()
     },
   })
+
   const onSubmit = useCallback<SubmitHandler<TFieldValues>>(
     (data) => {
       // TODO: wire up `reuseMachine`
+      // TODO: persists `useAsDefault`options
       // eslint-disable-next-line @typescript-eslint/no-unused-vars
       const { useAsDefault, reuseMachine: _, ...options } = data
+
       configureProvider({
         providerID,
         config: { initializeProvider, useAsDefaultProvider: useAsDefault, options: options },
@@ -75,6 +79,7 @@ export function ConfigureProviderOptionsForm({
     Object.values(FieldName),
     formMethods.formState
   )
+
   const options = useMemo(() => {
     const empty: TAllOptions = { required: [], other: [] }
     if (!exists(optionsProp)) {
@@ -124,37 +129,40 @@ export function ConfigureProviderOptionsForm({
             </Box>
           )}
 
-          <Box width="full">
-            <Heading size="sm" marginBottom={4}>
-              Other Options
-            </Heading>
-            <VStack align="start" spacing={4}>
-              <FormControl>
-                <Checkbox {...formMethods.register(FieldName.REUSE_MACHINE)}>
-                  Reuse Machine
-                </Checkbox>
-                {exists(reuseMachineError) ? (
-                  <FormErrorMessage>{reuseMachineError.message ?? "Error"}</FormErrorMessage>
-                ) : (
-                  <FormHelperText>
-                    Provider reuses the vm of the first workspaces for all subsequent workspaces.
-                    Otherwise, it will spin up one VM per workspace
-                  </FormHelperText>
+          {initializeProvider && (
+            <Box width="full">
+              <Heading size="sm" marginBottom={4}>
+                Other Options
+              </Heading>
+              <VStack align="start" spacing={4}>
+                {canCreateMachine(provider?.config) && (
+                  <FormControl>
+                    <Checkbox {...formMethods.register(FieldName.REUSE_MACHINE)}>
+                      Reuse Machine
+                    </Checkbox>
+                    {exists(reuseMachineError) ? (
+                      <FormErrorMessage>{reuseMachineError.message ?? "Error"}</FormErrorMessage>
+                    ) : (
+                      <FormHelperText>
+                        Provider reuses the vm of the first workspaces for all subsequent
+                        workspaces. Otherwise, it will spin up one VM per workspace
+                      </FormHelperText>
+                    )}
+                  </FormControl>
                 )}
-              </FormControl>
-
-              <FormControl>
-                <Checkbox {...formMethods.register(FieldName.USE_AS_DEFAULT)}>
-                  Default Provider
-                </Checkbox>
-                {exists(useAsDefaultError) ? (
-                  <FormErrorMessage>{useAsDefaultError.message ?? "Error"}</FormErrorMessage>
-                ) : (
-                  <FormHelperText>Use this provider as the default provider</FormHelperText>
-                )}
-              </FormControl>
-            </VStack>
-          </Box>
+                <FormControl>
+                  <Checkbox {...formMethods.register(FieldName.USE_AS_DEFAULT)}>
+                    Default Provider
+                  </Checkbox>
+                  {exists(useAsDefaultError) ? (
+                    <FormErrorMessage>{useAsDefaultError.message ?? "Error"}</FormErrorMessage>
+                  ) : (
+                    <FormHelperText>Use this provider as the default provider</FormHelperText>
+                  )}
+                </FormControl>
+              </VStack>
+            </Box>
+          )}
 
           <Button
             marginTop="10"

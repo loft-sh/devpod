@@ -1,14 +1,12 @@
-import { ChildProcess } from "@tauri-apps/api/shell"
-import { exists } from "../lib"
-import { Result, Return } from "../lib/result"
+import { exists, Result, Return } from "../../lib"
 import {
   TWorkspace,
   TWorkspaceID,
   TWorkspaceStartConfig,
   TWorkspaceStatusResult,
   TWorkspaceWithoutStatus,
-} from "../types"
-import { Command, TCommand } from "./command"
+} from "../../types"
+import { Command, isOk, TCommand, toFlagArg } from "../command"
 import {
   DEVPOD_COMMAND_BUILD,
   DEVPOD_COMMAND_DELETE,
@@ -26,7 +24,7 @@ import {
   DEVPOD_FLAG_JSON_OUTPUT,
   DEVPOD_FLAG_PROVIDER,
   DEVPOD_FLAG_RECREATE,
-} from "./constants"
+} from "../constants"
 
 type TRawWorkspaces = readonly (Omit<TWorkspace, "status" | "id"> &
   Readonly<{ id: string | null }>)[]
@@ -148,12 +146,4 @@ export class WorkspaceCommands {
       return Return.Ok()
     })
   }
-}
-
-export function isOk(result: ChildProcess): boolean {
-  return result.code === 0
-}
-
-export function toFlagArg(flag: string, arg: string) {
-  return [flag, arg].join("=")
 }

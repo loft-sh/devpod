@@ -10,12 +10,13 @@ import {
   VStack,
 } from "@chakra-ui/react"
 import styled from "@emotion/styled"
-import { useMutation, useQuery } from "@tanstack/react-query"
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { useCallback, useDeferredValue, useEffect, useMemo } from "react"
 import { SubmitHandler, useForm } from "react-hook-form"
 import { client } from "../../../client"
 import { ErrorMessageBox } from "../../../components"
 import { exists, isEmpty, isError, useFormErrors } from "../../../lib"
+import { QueryKeys } from "../../../queryKeys"
 import { TAddProviderConfig, TProviderOptions, TWithProviderID } from "../../../types"
 
 const Form = styled.form`
@@ -25,7 +26,7 @@ const FieldName = {
   PROVIDER_SOURCE: "providerSource",
   PROVIDER_NAME: "providerName",
 } as const
-const ALLOWED_NAMES_REGEX = /^[a-zA-Z0-9\\.\\-]+$/
+const ALLOWED_NAMES_REGEX = /^[a-z0-9\\.\\-]+$/
 type TFormValues = {
   [FieldName.PROVIDER_SOURCE]: string
   [FieldName.PROVIDER_NAME]: string | undefined
@@ -41,6 +42,7 @@ export function SetupProviderSourceForm({ onFinish }: TSetupProviderSourceFormPr
   const providerSource = watch(FieldName.PROVIDER_SOURCE, "")
   const deferredProviderSource = useDeferredValue(providerSource)
 
+  const queryClient = useQueryClient()
   const { data: suggestedProviderName } = useQuery({
     queryKey: ["providerNameSuggestion", deferredProviderSource],
     queryFn: async () => {
@@ -69,13 +71,14 @@ export function SetupProviderSourceForm({ onFinish }: TSetupProviderSourceFormPr
       rawProviderSource: string
       config: TAddProviderConfig
     }>) => {
-      (await client.providers.add(rawProviderSource, config)).unwrap()
+      ;(await client.providers.add(rawProviderSource, config)).unwrap()
       const providerID = (await client.providers.newID(rawProviderSource)).unwrap()
       const options = (await client.providers.getOptions(providerID!)).unwrap()
 
       return { providerID: providerID!, options: options! }
     },
     onSuccess(result) {
+      queryClient.invalidateQueries(QueryKeys.PROVIDERS)
       onFinish(result)
     },
   })
@@ -91,11 +94,7 @@ export function SetupProviderSourceForm({ onFinish }: TSetupProviderSourceFormPr
   )
 
   useEffect(() => {
-    const watchProviderSource = watch((_, { name }) => {
-      if (name !== FieldName.PROVIDER_SOURCE) {
-        return
-      }
-
+    const watchProviderSource = watch(() => {
       // Reset the provider mutation if the source changes after we ran into an error
       if (status === "error") {
         resetAddProvider()
@@ -111,11 +110,15 @@ export function SetupProviderSourceForm({ onFinish }: TSetupProviderSourceFormPr
   )
 
   const isSubmitDisabled = useMemo(() => {
-    return status === "error" || !formState.dirtyFields[FieldName.PROVIDER_SOURCE]
-  }, [formState.dirtyFields, status])
+    return (
+      status === "error" ||
+      !formState.dirtyFields[FieldName.PROVIDER_SOURCE] ||
+      formState.isSubmitting
+    )
+  }, [formState.dirtyFields, formState.isSubmitting, status])
 
   return (
-    <Form onSubmit={handleSubmit(onSubmit)}>
+    <Form onSubmit={handleSubmit(onSubmit)} spellCheck={false}>
       <Stack spacing={6} width="full">
         <FormControl isRequired isInvalid={exists(providerSourceError)}>
           <FormLabel>Source</FormLabel>
@@ -163,8 +166,7 @@ export function SetupProviderSourceForm({ onFinish }: TSetupProviderSourceFormPr
             marginTop="10"
             type="submit"
             isDisabled={isSubmitDisabled}
-            isLoading={status === "loading"}
-            disabled={formState.isSubmitting}>
+            isLoading={status === "loading"}>
             Continue
           </Button>
         </VStack>
