@@ -14,7 +14,7 @@ import (
 	"time"
 )
 
-var providerNameRegEx = regexp.MustCompile(`[^a-z0-9\-]+`)
+var ProviderNameRegEx = regexp.MustCompile(`[^a-z0-9\-]+`)
 
 var optionNameRegEx = regexp.MustCompile(`[^A-Z0-9_]+`)
 
@@ -58,8 +58,10 @@ func validate(config *ProviderConfig) error {
 	if config.Name == "" {
 		return fmt.Errorf("name is missing in provider.yaml")
 	}
-	if providerNameRegEx.MatchString(config.Name) {
+	if ProviderNameRegEx.MatchString(config.Name) {
 		return fmt.Errorf("provider name can only include smaller case letters, numbers or dashes")
+	} else if len(config.Name) > 32 {
+		return fmt.Errorf("provider name cannot be longer than 32 characters")
 	}
 
 	// validate version

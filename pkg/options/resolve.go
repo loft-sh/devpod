@@ -127,7 +127,7 @@ func ResolveAndSaveOptionsWorkspace(ctx context.Context, devConfig *config.Confi
 	return workspace, nil
 }
 
-func ResolveOptions(ctx context.Context, devConfig *config.Config, provider *provider2.ProviderConfig, userOptions map[string]string, skipRequired bool, log log.Logger) (*config.Config, error) {
+func ResolveOptions(ctx context.Context, devConfig *config.Config, provider *provider2.ProviderConfig, userOptions map[string]string, skipRequired bool, singleMachine *bool, log log.Logger) (*config.Config, error) {
 	// get binary paths
 	binaryPaths, err := binaries.GetBinaries(devConfig.DefaultContext, provider)
 	if err != nil {
@@ -162,6 +162,9 @@ func ResolveOptions(ctx context.Context, devConfig *config.Config, provider *pro
 		devConfig.Current().Providers[provider.Name].Options = map[string]config.OptionValue{}
 		for k, v := range resolvedOptions {
 			devConfig.Current().Providers[provider.Name].Options[k] = v
+		}
+		if singleMachine != nil {
+			devConfig.Current().Providers[provider.Name].SingleMachine = *singleMachine
 		}
 	}
 

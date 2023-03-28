@@ -6,6 +6,7 @@ import (
 	"github.com/loft-sh/devpod/cmd/flags"
 	"github.com/loft-sh/devpod/pkg/config"
 	"github.com/loft-sh/devpod/pkg/log"
+	"github.com/loft-sh/devpod/pkg/provider"
 	"github.com/loft-sh/devpod/pkg/workspace"
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
@@ -49,6 +50,10 @@ func NewAddCmd(flags *flags.GlobalFlags) *cobra.Command {
 func (cmd *AddCmd) Run(ctx context.Context, devPodConfig *config.Config, args []string) error {
 	if len(args) != 1 {
 		return fmt.Errorf("please specify either a local file, url or git repository. E.g. devpod provider add https://path/to/my/provider.yaml")
+	} else if cmd.Name != "" && provider.ProviderNameRegEx.MatchString(cmd.Name) {
+		return fmt.Errorf("provider name can only include smaller case letters, numbers or dashes")
+	} else if cmd.Name != "" && len(cmd.Name) > 32 {
+		return fmt.Errorf("provider name cannot be longer than 32 characters")
 	}
 
 	providerConfig, err := workspace.AddProvider(devPodConfig, cmd.Name, args[0], log.Default)
@@ -58,7 +63,7 @@ func (cmd *AddCmd) Run(ctx context.Context, devPodConfig *config.Config, args []
 
 	log.Default.Donef("Successfully installed provider %s", providerConfig.Name)
 	if cmd.Use {
-		err = configureProvider(ctx, providerConfig, devPodConfig.DefaultContext, cmd.Options, true, true)
+		err = configureProvider(ctx, providerConfig, devPodConfig.DefaultContext, cmd.Options, true, true, nil)
 		if err != nil {
 			log.Default.Errorf("Error configuring provider, please retry with 'devpod provider use %s --reconfigure'", providerConfig.Name)
 			return errors.Wrap(err, "configure provider")

@@ -73,7 +73,7 @@ func resolveMachine(devPodConfig *config.Config, args []string, providerOverride
 }
 
 // MachineExists checks if the given workspace already exists
-func MachineExists(devPodConfig *config.Config, args []string, log log.Logger) string {
+func MachineExists(devPodConfig *config.Config, args []string) string {
 	if len(args) == 0 {
 		return ""
 	}
@@ -82,14 +82,14 @@ func MachineExists(devPodConfig *config.Config, args []string, log log.Logger) s
 	_, name := isLocalDir(args[0])
 
 	// convert to id
-	workspaceID := ToID(name)
+	machineID := ToID(name)
 
 	// already exists?
-	if !provider2.WorkspaceExists(devPodConfig.DefaultContext, workspaceID) {
+	if !provider2.MachineExists(devPodConfig.DefaultContext, machineID) {
 		return ""
 	}
 
-	return workspaceID
+	return machineID
 }
 
 // GetMachine creates a machine client

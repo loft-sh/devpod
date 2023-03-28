@@ -34,8 +34,11 @@ type ConfigContext struct {
 }
 
 type ConfigProvider struct {
-	// Initialized holds if the provider was initialized correctly
+	// Initialized holds if the provider was initialized correctly.
 	Initialized bool `json:"initialized,omitempty"`
+
+	// SingleMachine signals DevPod if a single machine should be used for this provider.
+	SingleMachine bool `json:"singleMachine,omitempty"`
 
 	// Options are the configured provider options
 	Options map[string]OptionValue `json:"options,omitempty"`
@@ -58,6 +61,13 @@ func (c *Config) Current() *ConfigContext {
 
 func (c *Config) ProviderOptions(provider string) map[string]OptionValue {
 	return c.Current().ProviderOptions(provider)
+}
+
+func (c *ConfigContext) IsSingleMachine(provider string) bool {
+	if c.Providers == nil || c.Providers[provider] == nil {
+		return false
+	}
+	return c.Providers[provider].SingleMachine
 }
 
 func (c *ConfigContext) ProviderOptions(provider string) map[string]OptionValue {
