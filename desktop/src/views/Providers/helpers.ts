@@ -1,5 +1,5 @@
 import { exists } from "../../lib"
-import { TOptionID, TProviderOption, TProviderOptions } from "../../types"
+import { TOptionID, TProviderConfig, TProviderOption, TProviderOptions } from "../../types"
 
 export type TOptionWithID = Readonly<{
   id: TOptionID
@@ -9,6 +9,9 @@ export type TOptionWithID = Readonly<{
   Omit<TProviderOption, "default">
 export function getOptionValue(option: TOptionWithID) {
   return option.value ?? option.defaultValue
+}
+export function canCreateMachine(providerConfig: TProviderConfig | undefined | null): boolean {
+  return exists(providerConfig?.exec?.["create"])
 }
 
 function getOptionDisplayName(id: TOptionID) {

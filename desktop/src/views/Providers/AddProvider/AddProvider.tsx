@@ -5,18 +5,18 @@ import { CollapsibleSection } from "../../../components"
 import { Routes } from "../../../routes"
 import { ConfigureProviderOptionsForm } from "./ConfigureProviderOptionsForm"
 import { SetupProviderSourceForm } from "./SetupProviderSourceForm"
-import { useAddProvider } from "./useAddProvider"
+import { useSetupProvider } from "./useSetupProvider"
 
 export function AddProvider() {
   const navigate = useNavigate()
   const openLockRef = useRef(false)
-  const { state, completeFirstStep, completeSecondStep } = useAddProvider()
+  const { state, completeFirstStep, completeSecondStep } = useSetupProvider()
 
   useEffect(() => {
     if (state.currentStep === "done") {
       navigate(Routes.toProvider(state.providerID))
     }
-  })
+  }, [navigate, state.currentStep, state.providerID])
 
   return (
     <Box paddingBottom={80}>
@@ -28,6 +28,7 @@ export function AddProvider() {
 
       <VStack align="start" spacing={8} marginTop={6} width="full">
         <CollapsibleSection
+          isDisabled={state.currentStep === 1}
           isOpen={state.currentStep === 2}
           onOpenChange={(isOpen, el) => {
             if (isOpen && !openLockRef.current) {
