@@ -23,7 +23,11 @@ export const theme = extendTheme({
       }
     },
   },
-  colors: { primary: "#BA50FF" },
+  colors: {
+    primary: {
+      500: "#BA50FF",
+    },
+  },
   config: {
     initialColorMode: "system",
     useSystemColorMode: true,
