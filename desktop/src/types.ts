@@ -84,6 +84,7 @@ export type TConfigureProviderConfig = Readonly<{
   options: Record<string, unknown>
   useAsDefaultProvider: boolean
   initializeProvider: boolean
+  reuseMachine: boolean
 }>
 export type TProviderManager = Readonly<{
   remove: TOperationManager<TWithProviderID>
