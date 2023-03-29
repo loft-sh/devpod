@@ -154,10 +154,10 @@ func ResolveOptions(ctx context.Context, devConfig *config.Config, provider *pro
 	if devConfig != nil {
 		devConfig = config.CloneConfig(devConfig)
 		if devConfig.Current().Providers == nil {
-			devConfig.Current().Providers = map[string]*config.ConfigProvider{}
+			devConfig.Current().Providers = map[string]*config.ProviderConfig{}
 		}
 		if devConfig.Current().Providers[provider.Name] == nil {
-			devConfig.Current().Providers[provider.Name] = &config.ConfigProvider{}
+			devConfig.Current().Providers[provider.Name] = &config.ProviderConfig{}
 		}
 		devConfig.Current().Providers[provider.Name].Options = map[string]config.OptionValue{}
 		for k, v := range resolvedOptions {

@@ -1,17 +1,36 @@
 package jetbrains
 
 import (
+	"github.com/loft-sh/devpod/pkg/config"
+	"github.com/loft-sh/devpod/pkg/ide"
 	"github.com/loft-sh/devpod/pkg/log"
 )
 
-const GolandDownloadAmd64 = "https://download.jetbrains.com/go/goland-2022.3.2.tar.gz"
-const GolandDownloadArm64 = "https://download.jetbrains.com/go/goland-2022.3.2-aarch64.tar.gz"
+const GolandDownloadAmd64Template = "https://download.jetbrains.com/go/goland-%s.tar.gz"
+const GolandDownloadArm64Template = "https://download.jetbrains.com/go/goland-%s-aarch64.tar.gz"
 
-func NewGolandServer(userName string, log log.Logger) *GenericJetBrainsServer {
+var GolandOptions = ide.Options{
+	VersionOption: {
+		Name:        VersionOption,
+		Description: "The version for the binary",
+		Default:     "2022.3.3",
+	},
+	DownloadArm64Option: {
+		Name:        DownloadArm64Option,
+		Description: "The download url for the arm64 server binary",
+	},
+	DownloadAmd64Option: {
+		Name:        DownloadAmd64Option,
+		Description: "The download url for the amd64 server binary",
+	},
+}
+
+func NewGolandServer(userName string, values map[string]config.OptionValue, log log.Logger) *GenericJetBrainsServer {
+	amd64Download, arm64Download := getDownloadURLs(GolandOptions, values, GolandDownloadAmd64Template, GolandDownloadArm64Template)
 	return newGenericServer(userName, &GenericOptions{
 		ID:            "goland",
 		DisplayName:   "Goland",
-		DownloadAmd64: GolandDownloadAmd64,
-		DownloadArm64: GolandDownloadArm64,
+		DownloadAmd64: amd64Download,
+		DownloadArm64: arm64Download,
 	}, log)
 }

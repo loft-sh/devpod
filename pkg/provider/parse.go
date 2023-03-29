@@ -186,14 +186,14 @@ func ParseOptions(provider *ProviderConfig, options []string) (map[string]string
 	for _, option := range options {
 		splitted := strings.Split(option, "=")
 		if len(splitted) == 1 {
-			return nil, fmt.Errorf("invalid option %s, expected format KEY=VALUE", option)
+			return nil, fmt.Errorf("invalid option '%s', expected format KEY=VALUE", option)
 		}
 
 		key := strings.ToUpper(strings.TrimSpace(splitted[0]))
 		value := strings.Join(splitted[1:], "=")
 		providerOption := providerOptions[key]
 		if providerOption == nil {
-			return nil, fmt.Errorf("invalid option %s, allowed options are: %v", key, allowedOptions)
+			return nil, fmt.Errorf("invalid option '%s', allowed options are: %v", key, allowedOptions)
 		}
 
 		if providerOption.ValidationPattern != "" {

@@ -31,7 +31,7 @@ func NewStopCmd(flags *flags.GlobalFlags) *cobra.Command {
 				return err
 			}
 
-			client, err := workspace2.GetWorkspace(devPodConfig, nil, args, false, log.Default)
+			client, err := workspace2.GetWorkspace(devPodConfig, args, false, log.Default)
 			if err != nil {
 				return err
 			}

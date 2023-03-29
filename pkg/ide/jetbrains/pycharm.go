@@ -1,15 +1,36 @@
 package jetbrains
 
-import "github.com/loft-sh/devpod/pkg/log"
+import (
+	"github.com/loft-sh/devpod/pkg/config"
+	"github.com/loft-sh/devpod/pkg/ide"
+	"github.com/loft-sh/devpod/pkg/log"
+)
 
-const PycharmDownloadAmd64 = "https://download.jetbrains.com/python/pycharm-professional-2022.3.2.tar.gz"
-const PycharmDownloadArm64 = "https://download.jetbrains.com/python/pycharm-professional-2022.3.2-aarch64.tar.gz"
+const PycharmDownloadAmd64Template = "https://download.jetbrains.com/python/pycharm-professional-%s.tar.gz"
+const PycharmDownloadArm64Template = "https://download.jetbrains.com/python/pycharm-professional-%s-aarch64.tar.gz"
 
-func NewPyCharmServer(userName string, log log.Logger) *GenericJetBrainsServer {
+var PyCharmOptions = ide.Options{
+	VersionOption: {
+		Name:        VersionOption,
+		Description: "The version for the binary",
+		Default:     "2022.3.3",
+	},
+	DownloadArm64Option: {
+		Name:        DownloadArm64Option,
+		Description: "The download url for the arm64 server binary",
+	},
+	DownloadAmd64Option: {
+		Name:        DownloadAmd64Option,
+		Description: "The download url for the amd64 server binary",
+	},
+}
+
+func NewPyCharmServer(userName string, values map[string]config.OptionValue, log log.Logger) *GenericJetBrainsServer {
+	amd64Download, arm64Download := getDownloadURLs(PyCharmOptions, values, PycharmDownloadAmd64Template, PycharmDownloadArm64Template)
 	return newGenericServer(userName, &GenericOptions{
 		ID:            "pycharm",
 		DisplayName:   "PyCharm",
-		DownloadAmd64: PycharmDownloadAmd64,
-		DownloadArm64: PycharmDownloadArm64,
+		DownloadAmd64: amd64Download,
+		DownloadArm64: arm64Download,
 	}, log)
 }

@@ -1,4 +1,4 @@
-package provider
+package ide
 
 import (
 	"context"
@@ -6,9 +6,9 @@ import (
 	"fmt"
 	"github.com/loft-sh/devpod/cmd/flags"
 	"github.com/loft-sh/devpod/pkg/config"
+	"github.com/loft-sh/devpod/pkg/ide/ideparse"
 	"github.com/loft-sh/devpod/pkg/log"
 	"github.com/loft-sh/devpod/pkg/log/table"
-	"github.com/loft-sh/devpod/pkg/workspace"
 	"github.com/spf13/cobra"
 	"sort"
 	"strconv"
@@ -19,7 +19,6 @@ type ListCmd struct {
 	flags.GlobalFlags
 
 	Output string
-	Used   bool
 }
 
 // NewListCmd creates a new command
@@ -29,14 +28,13 @@ func NewListCmd(flags *flags.GlobalFlags) *cobra.Command {
 	}
 	listCmd := &cobra.Command{
 		Use:   "list",
-		Short: "List available providers",
+		Short: "List available IDEs",
 		RunE: func(_ *cobra.Command, args []string) error {
 			return cmd.Run(context.Background())
 		},
 	}
 
 	listCmd.Flags().StringVar(&cmd.Output, "output", "plain", "The output format to use. Can be json or plain")
-	listCmd.Flags().BoolVar(&cmd.Used, "used", false, "If enabled, will only show used providers")
 	return listCmd
 }
 
@@ -47,29 +45,12 @@ func (cmd *ListCmd) Run(ctx context.Context) error {
 		return err
 	}
 
-	providers, err := workspace.LoadAllProviders(devPodConfig)
-	if err != nil {
-		return err
-	}
-
-	configuredProviders := devPodConfig.Current().Providers
-	if configuredProviders == nil {
-		configuredProviders = map[string]*config.ProviderConfig{}
-	}
-
 	if cmd.Output == "plain" {
 		tableEntries := [][]string{}
-		for _, entry := range providers {
-			if cmd.Used && configuredProviders[entry.Config.Name] == nil {
-				continue
-			}
-
+		for _, entry := range ideparse.AllowedIDEs {
 			tableEntries = append(tableEntries, []string{
-				entry.Config.Name,
-				entry.Config.Version,
-				strconv.FormatBool(devPodConfig.Current().DefaultProvider == entry.Config.Name),
-				strconv.FormatBool(entry.State != nil),
-				entry.Config.Description,
+				string(entry.Name),
+				strconv.FormatBool(devPodConfig.Current().DefaultIDE == string(entry.Name)),
 			})
 		}
 		sort.SliceStable(tableEntries, func(i, j int) bool {
@@ -78,13 +59,10 @@ func (cmd *ListCmd) Run(ctx context.Context) error {
 
 		table.PrintTable(log.Default, []string{
 			"Name",
-			"Version",
 			"Default",
-			"Configured",
-			"Description",
 		}, tableEntries)
 	} else if cmd.Output == "json" {
-		out, err := json.Marshal(providers)
+		out, err := json.Marshal(ideparse.AllowedIDEs)
 		if err != nil {
 			return err
 		}
