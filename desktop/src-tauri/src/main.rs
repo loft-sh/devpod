@@ -15,14 +15,11 @@ use log::info;
 use providers::ProvidersState;
 use std::sync::{Arc, Mutex};
 use system_tray::SystemTray;
-use tauri::{AppHandle, EventLoopMessage, Manager, Menu, Wry};
+use tauri::{Manager, Menu, Wry};
 use tauri_plugin_deep_link;
-use tauri_plugin_store::{with_store, StoreCollection};
 use ui_ready::ui_ready;
 use url::{ParseError, Url};
 use workspaces::WorkspacesState;
-
-use crate::commands::{delete_provider::DeleteProviderCommand, DevpodCommandConfig};
 
 // Should match the one from "tauri.config.json" and "Info.plist"
 const APP_IDENTIFIER: &str = "sh.loft.devpod-desktop";
@@ -86,55 +83,12 @@ fn main() {
             }
             tauri::RunEvent::WindowEvent { event, .. } => {
                 if let tauri::WindowEvent::Destroyed = event {
-                    check_dangling_provider(app);
+                    providers::check_dangling_provider(app);
                 }
             }
             tauri::RunEvent::Exit => {
-                check_dangling_provider(app);
+                providers::check_dangling_provider(app);
             }
             _ => {}
         });
-}
-
-fn check_dangling_provider(app: &AppHandle<Wry>) {
-    let stores = app.state::<StoreCollection<Wry>>();
-    let file_name = ".providers.dat"; // WARN: needs to match the file name defined in typescript
-    let dangling_provider_key = "danglingProvider"; // WARN: needs to match the key defined in typescript
-    let path = app.path_resolver().app_data_dir();
-    if path.is_none() {
-        return;
-    }
-
-    let mut path = path.expect("AppDataDir should exist");
-    path.push(file_name);
-
-    let _ = with_store(app.app_handle(), stores, path, |store| {
-        store
-            .get(dangling_provider_key)
-            .and_then(|dangling_provider| {
-                serde_json::from_value::<String>(dangling_provider.clone()).ok()
-            })
-            .and_then(|dangling_provider| {
-                info!(
-                    "Found dangling provider: {}, attempting to delete",
-                    dangling_provider
-                );
-                if DeleteProviderCommand::new(dangling_provider.clone())
-                    .exec()
-                    .is_ok()
-                {
-                    if let Ok(_) = store.delete(dangling_provider_key) {
-                        info!(
-                            "Successfully deleted dangling provider: {}",
-                            dangling_provider
-                        );
-                        let _ = store.save();
-                    };
-                }
-
-                Some(())
-            });
-
-        Ok(())
-    });
 }

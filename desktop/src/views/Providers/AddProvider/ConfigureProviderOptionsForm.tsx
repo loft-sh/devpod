@@ -63,14 +63,16 @@ export function ConfigureProviderOptionsForm({
 
   const onSubmit = useCallback<SubmitHandler<TFieldValues>>(
     (data) => {
-      // TODO: wire up `reuseMachine`
-      // TODO: persists `useAsDefault`options
-      // eslint-disable-next-line @typescript-eslint/no-unused-vars
-      const { useAsDefault, reuseMachine: _, ...options } = data
+      const { useAsDefault, reuseMachine, ...options } = data
 
       configureProvider({
         providerID,
-        config: { initializeProvider, useAsDefaultProvider: useAsDefault, options: options },
+        config: {
+          initializeProvider,
+          reuseMachine: reuseMachine ?? false,
+          useAsDefaultProvider: useAsDefault,
+          options: options,
+        },
       })
     },
     [configureProvider, initializeProvider, providerID]
@@ -79,6 +81,11 @@ export function ConfigureProviderOptionsForm({
     Object.values(FieldName),
     formMethods.formState
   )
+  const showReuseMachineField = useMemo(
+    () => canCreateMachine(provider?.config),
+    [provider?.config]
+  )
+  const showUseAsDefaultField = useMemo(() => initializeProvider, [initializeProvider])
 
   const options = useMemo(() => {
     const empty: TAllOptions = { required: [], other: [] }
@@ -129,13 +136,13 @@ export function ConfigureProviderOptionsForm({
             </Box>
           )}
 
-          {initializeProvider && (
+          {(showReuseMachineField || showUseAsDefaultField) && (
             <Box width="full">
               <Heading size="sm" marginBottom={4}>
                 Other Options
               </Heading>
               <VStack align="start" spacing={4}>
-                {canCreateMachine(provider?.config) && (
+                {showReuseMachineField && (
                   <FormControl>
                     <Checkbox {...formMethods.register(FieldName.REUSE_MACHINE)}>
                       Reuse Machine
@@ -150,16 +157,19 @@ export function ConfigureProviderOptionsForm({
                     )}
                   </FormControl>
                 )}
-                <FormControl>
-                  <Checkbox {...formMethods.register(FieldName.USE_AS_DEFAULT)}>
-                    Default Provider
-                  </Checkbox>
-                  {exists(useAsDefaultError) ? (
-                    <FormErrorMessage>{useAsDefaultError.message ?? "Error"}</FormErrorMessage>
-                  ) : (
-                    <FormHelperText>Use this provider as the default provider</FormHelperText>
-                  )}
-                </FormControl>
+
+                {showUseAsDefaultField && (
+                  <FormControl>
+                    <Checkbox {...formMethods.register(FieldName.USE_AS_DEFAULT)}>
+                      Default Provider
+                    </Checkbox>
+                    {exists(useAsDefaultError) ? (
+                      <FormErrorMessage>{useAsDefaultError.message ?? "Error"}</FormErrorMessage>
+                    ) : (
+                      <FormHelperText>Use this provider as the default provider</FormHelperText>
+                    )}
+                  </FormControl>
+                )}
               </VStack>
             </Box>
           )}
@@ -169,7 +179,7 @@ export function ConfigureProviderOptionsForm({
             type="submit"
             isLoading={status === "loading"}
             disabled={formMethods.formState.isSubmitting}>
-            Create Provider
+            {initializeProvider ? "Create Provider" : "Save"}
           </Button>
         </VStack>
       </Form>
