@@ -9,11 +9,17 @@ import {
 import { TDebuggable } from "../types"
 import { ProviderCommands } from "./providerCommands"
 
-type TProviderStore = Readonly<{ danglingProvider: TProviderID | null }>
+// WARN: These need to match the rust `file_name` and `dangling_provider_key` constants
+// for reliable cleanup!
+// Make sure to update them in `src/provider.rs` if you change them here!
+const PROVIDERS_STORE_FILE_NAME = "providers"
+const PROVIDERS_STORE_DANGLING_PROVIDER_KEY = "danglingProvider"
+
+type TProviderStore = Readonly<{ [PROVIDERS_STORE_DANGLING_PROVIDER_KEY]: TProviderID | null }>
 
 export class ProvidersClient implements TDebuggable {
   private readonly store = new Store<TProviderStore>(
-    new FileStorageBackend<TProviderStore>("providers")
+    new FileStorageBackend<TProviderStore>(PROVIDERS_STORE_FILE_NAME)
   )
   private danglingProviderID: TProviderID | null = null
   // Queues store operations and guarantees they will be executed in order
@@ -47,13 +53,13 @@ export class ProvidersClient implements TDebuggable {
 
   public async configure(
     id: TProviderID,
-    { useAsDefaultProvider, initializeProvider, options }: TConfigureProviderConfig
+    { useAsDefaultProvider, initializeProvider, reuseMachine, options }: TConfigureProviderConfig
   ): Promise<ResultError> {
     if (useAsDefaultProvider) {
-      return ProviderCommands.UseProvider(id, options)
+      return ProviderCommands.UseProvider(id, options, reuseMachine)
     }
 
-    const setResult = await ProviderCommands.SetProviderOptions(id, options)
+    const setResult = await ProviderCommands.SetProviderOptions(id, options, reuseMachine)
     if (setResult.err) {
       return setResult
     }
@@ -83,7 +89,7 @@ export class ProvidersClient implements TDebuggable {
     const maybeProviderID = this.danglingProviderID
     this.danglingProviderID = null
     this.storeOperationQueue = this.storeOperationQueue.then(() =>
-      this.store.set("danglingProvider", null)
+      this.store.remove("danglingProvider")
     )
 
     return maybeProviderID
