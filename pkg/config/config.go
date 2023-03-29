@@ -31,6 +31,9 @@ type ConfigContext struct {
 
 	// Providers holds the provider configuration
 	Providers map[string]*ConfigProvider `json:"providers,omitempty"`
+
+	// OriginalProvider is the original default provider
+	OriginalProvider string `json:"-"`
 }
 
 type ConfigProvider struct {
@@ -91,19 +94,20 @@ func CloneConfig(config *Config) *Config {
 	ret := &Config{}
 	err := json.Unmarshal(out, ret)
 	if err != nil {
-		panic(fmt.Errorf("failed to unmarshal config: %+w", err))
+		panic(fmt.Errorf("failed to unmarshal config: %v", err))
 	}
-	for _, ctx := range ret.Contexts {
+	for ctxName, ctx := range ret.Contexts {
 		if ctx.Providers == nil {
 			ctx.Providers = map[string]*ConfigProvider{}
 		}
+		ctx.OriginalProvider = config.Contexts[ctxName].OriginalProvider
 	}
 	ret.Origin = config.Origin
 	ret.OriginalContext = config.OriginalContext
 	return ret
 }
 
-func LoadConfig(contextOverride string) (*Config, error) {
+func LoadConfig(contextOverride string, providerOverride string) (*Config, error) {
 	configOrigin, err := GetConfigPath()
 	if err != nil {
 		return nil, err
@@ -124,7 +128,8 @@ func LoadConfig(contextOverride string) (*Config, error) {
 			DefaultContext: context,
 			Contexts: map[string]*ConfigContext{
 				context: {
-					Providers: map[string]*ConfigProvider{},
+					DefaultProvider: providerOverride,
+					Providers:       map[string]*ConfigProvider{},
 				},
 			},
 			Origin: configOrigin,
@@ -151,6 +156,10 @@ func LoadConfig(contextOverride string) (*Config, error) {
 	if config.Contexts[config.DefaultContext].Providers == nil {
 		config.Contexts[config.DefaultContext].Providers = map[string]*ConfigProvider{}
 	}
+	if providerOverride != "" {
+		config.Contexts[config.DefaultContext].OriginalProvider = config.Contexts[config.DefaultContext].DefaultProvider
+		config.Contexts[config.DefaultContext].DefaultProvider = providerOverride
+	}
 
 	config.Origin = configOrigin
 	return config, nil
@@ -165,6 +174,9 @@ func SaveConfig(config *Config) error {
 	config = CloneConfig(config)
 	if config.OriginalContext != "" {
 		config.DefaultContext = config.OriginalContext
+	}
+	if config.Contexts[config.DefaultContext].OriginalProvider != "" {
+		config.Contexts[config.DefaultContext].DefaultProvider = config.Contexts[config.DefaultContext].OriginalProvider
 	}
 
 	out, err := yaml.Marshal(config)

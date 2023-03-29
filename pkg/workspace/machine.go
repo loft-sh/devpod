@@ -13,8 +13,8 @@ import (
 	"os"
 )
 
-func ResolveMachine(devPodConfig *config.Config, args []string, providerOverride string, userOptions []string, log log.Logger) (client.Client, error) {
-	machineClient, err := resolveMachine(devPodConfig, args, providerOverride, log)
+func ResolveMachine(devPodConfig *config.Config, args []string, userOptions []string, log log.Logger) (client.Client, error) {
+	machineClient, err := resolveMachine(devPodConfig, args, log)
 	if err != nil {
 		return nil, err
 	}
@@ -28,7 +28,7 @@ func ResolveMachine(devPodConfig *config.Config, args []string, providerOverride
 	return machineClient, nil
 }
 
-func resolveMachine(devPodConfig *config.Config, args []string, providerOverride string, log log.Logger) (client.Client, error) {
+func resolveMachine(devPodConfig *config.Config, args []string, log log.Logger) (client.Client, error) {
 	// check if we have no args
 	if len(args) == 0 {
 		return nil, fmt.Errorf("please specify the machine name")
@@ -44,16 +44,9 @@ func resolveMachine(devPodConfig *config.Config, args []string, providerOverride
 	}
 
 	// get default provider
-	defaultProvider, allProviders, err := LoadProviders(devPodConfig, log)
+	defaultProvider, _, err := LoadProviders(devPodConfig)
 	if err != nil {
 		return nil, err
-	}
-	if providerOverride != "" {
-		var ok bool
-		defaultProvider, ok = allProviders[providerOverride]
-		if !ok {
-			return nil, fmt.Errorf("couldn't find provider %s", providerOverride)
-		}
 	}
 
 	// resolve workspace
@@ -154,7 +147,7 @@ func loadExistingMachine(machineID string, devPodConfig *config.Config, log log.
 		return nil, err
 	}
 
-	providerWithOptions, err := FindProvider(devPodConfig, machineConfig.Provider.Name, log)
+	providerWithOptions, err := FindProvider(devPodConfig, machineConfig.Provider.Name)
 	if err != nil {
 		return nil, err
 	}

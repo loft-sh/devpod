@@ -27,7 +27,7 @@ func NewInitCmd(flags *flags.GlobalFlags) *cobra.Command {
 		Short: "Initializes a provider in DevPod",
 		RunE: func(_ *cobra.Command, args []string) error {
 			ctx := context.Background()
-			devPodConfig, err := config.LoadConfig(cmd.Context)
+			devPodConfig, err := config.LoadConfig(cmd.Context, cmd.Provider)
 			if err != nil {
 				return err
 			}
@@ -44,7 +44,7 @@ func (cmd *InitCmd) Run(ctx context.Context, devPodConfig *config.Config, args [
 		return fmt.Errorf("please specify a provider name. E.g. devpod provider init local")
 	}
 
-	providerConfig, err := workspace.FindProvider(devPodConfig, args[0], log.Default)
+	providerConfig, err := workspace.FindProvider(devPodConfig, args[0])
 	if err != nil {
 		return err
 	}

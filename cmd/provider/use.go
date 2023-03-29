@@ -54,12 +54,12 @@ func AddFlags(useCmd *cobra.Command, cmd *UseCmd) {
 
 // Run runs the command logic
 func (cmd *UseCmd) Run(ctx context.Context, providerName string) error {
-	devPodConfig, err := config.LoadConfig(cmd.Context)
+	devPodConfig, err := config.LoadConfig(cmd.Context, cmd.Provider)
 	if err != nil {
 		return err
 	}
 
-	providerWithOptions, err := workspace.FindProvider(devPodConfig, providerName, log.Default)
+	providerWithOptions, err := workspace.FindProvider(devPodConfig, providerName)
 	if err != nil {
 		return err
 	}
@@ -123,7 +123,7 @@ func configureProvider(ctx context.Context, provider *provider2.ProviderConfig, 
 }
 
 func setOptions(ctx context.Context, provider *provider2.ProviderConfig, context string, userOptions []string, reconfigure, skipRequired bool, singleMachine *bool) (*config.Config, error) {
-	devPodConfig, err := config.LoadConfig(context)
+	devPodConfig, err := config.LoadConfig(context, "")
 	if err != nil {
 		return nil, err
 	}
