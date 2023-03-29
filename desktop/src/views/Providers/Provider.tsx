@@ -98,7 +98,7 @@ function UninitializedProvider({ providerID }: TUninitializedProviderProps) {
       {isError(error) ? (
         <ErrorMessageBox error={error} />
       ) : (
-        <WarningMessageBox warning="Looks like this provider isn't initialized yet" />
+        <WarningMessageBox warning="Looks like this provider isn't initialized yet. If this doesn't change soon, try to initialize the provider again." />
       )}
       <Button
         isLoading={status === "loading"}

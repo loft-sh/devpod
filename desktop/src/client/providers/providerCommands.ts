@@ -23,6 +23,7 @@ import {
   DEVPOD_FLAG_JSON_OUTPUT,
   DEVPOD_FLAG_NAME,
   DEVPOD_FLAG_OPTION,
+  DEVPOD_FLAG_SINGLE_MACHINE,
   DEVPOD_FLAG_USE,
 } from "../constants"
 
@@ -118,14 +119,20 @@ export class ProviderCommands {
     return Return.Ok()
   }
 
-  static async UseProvider(id: TProviderID, rawOptions: Record<string, unknown>) {
+  static async UseProvider(
+    id: TProviderID,
+    rawOptions: Record<string, unknown>,
+    reuseMachine: boolean
+  ) {
     const optionsFlag = toFlagArg(DEVPOD_FLAG_OPTION, serializeRawOptions(rawOptions))
+    const maybeResuseMachineFlag = reuseMachine ? [DEVPOD_FLAG_SINGLE_MACHINE] : []
 
     const result = await ProviderCommands.newCommand([
       DEVPOD_COMMAND_PROVIDER,
       DEVPOD_COMMAND_USE,
       id,
       optionsFlag,
+      ...maybeResuseMachineFlag,
       DEVPOD_FLAG_JSON_LOG_OUTPUT,
     ]).run()
 
@@ -144,13 +151,20 @@ export class ProviderCommands {
     return Return.Ok()
   }
 
-  static async SetProviderOptions(id: TProviderID, rawOptions: Record<string, unknown>) {
+  static async SetProviderOptions(
+    id: TProviderID,
+    rawOptions: Record<string, unknown>,
+    reuseMachine: boolean
+  ) {
     const optionsFlag = toFlagArg(DEVPOD_FLAG_OPTION, serializeRawOptions(rawOptions))
+    const maybeResuseMachineFlag = reuseMachine ? [DEVPOD_FLAG_SINGLE_MACHINE] : []
+
     const result = await ProviderCommands.newCommand([
       DEVPOD_COMMAND_PROVIDER,
       DEVPOD_COMMAND_SET_OPTIONS,
       id,
       optionsFlag,
+      ...maybeResuseMachineFlag,
       DEVPOD_FLAG_JSON_LOG_OUTPUT,
     ]).run()
     if (result.err) {
