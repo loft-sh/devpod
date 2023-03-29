@@ -4,8 +4,10 @@ import (
 	"crypto/tls"
 	"fmt"
 	"github.com/loft-sh/devpod/pkg/command"
+	"github.com/loft-sh/devpod/pkg/config"
 	copy2 "github.com/loft-sh/devpod/pkg/copy"
 	"github.com/loft-sh/devpod/pkg/extract"
+	"github.com/loft-sh/devpod/pkg/ide"
 	"github.com/loft-sh/devpod/pkg/log"
 	"github.com/mitchellh/go-homedir"
 	"github.com/pkg/errors"
@@ -19,6 +21,26 @@ import (
 	"runtime"
 	"time"
 )
+
+const (
+	VersionOption       = "VERSION"
+	DownloadAmd64Option = "DOWNLOAD_AMD64"
+	DownloadArm64Option = "DOWNLOAD_ARM64"
+)
+
+func getDownloadURLs(options ide.Options, values map[string]config.OptionValue, templateAmd64, templateArm64 string) (string, string) {
+	version := options.GetValue(values, VersionOption)
+	amd64Download := options.GetValue(values, DownloadAmd64Option)
+	if amd64Download == "" {
+		amd64Download = fmt.Sprintf(templateAmd64, version)
+	}
+	arm64Download := options.GetValue(values, DownloadArm64Option)
+	if arm64Download == "" {
+		arm64Download = fmt.Sprintf(templateArm64, version)
+	}
+
+	return amd64Download, arm64Download
+}
 
 type GenericOptions struct {
 	ID          string

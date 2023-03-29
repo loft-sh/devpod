@@ -12,13 +12,11 @@ import (
 	client2 "github.com/loft-sh/devpod/pkg/client"
 	"github.com/loft-sh/devpod/pkg/config"
 	config2 "github.com/loft-sh/devpod/pkg/devcontainer/config"
-	"github.com/loft-sh/devpod/pkg/ide"
 	"github.com/loft-sh/devpod/pkg/ide/jetbrains"
 	"github.com/loft-sh/devpod/pkg/ide/openvscode"
 	"github.com/loft-sh/devpod/pkg/log"
 	open2 "github.com/loft-sh/devpod/pkg/open"
 	"github.com/loft-sh/devpod/pkg/port"
-	provider2 "github.com/loft-sh/devpod/pkg/provider"
 	devssh "github.com/loft-sh/devpod/pkg/ssh"
 	"github.com/loft-sh/devpod/pkg/tunnel"
 	workspace2 "github.com/loft-sh/devpod/pkg/workspace"
@@ -34,7 +32,9 @@ type UpCmd struct {
 
 	ID      string
 	Machine string
-	IDE     string
+
+	IDE        string
+	IDEOptions []string
 
 	ProviderOptions []string
 
@@ -59,12 +59,7 @@ func NewUpCmd(flags *flags.GlobalFlags) *cobra.Command {
 				return err
 			}
 
-			ideConfig, err := cmd.parseIDE(devPodConfig, args)
-			if err != nil {
-				return err
-			}
-
-			client, err := workspace2.ResolveWorkspace(ctx, devPodConfig, ideConfig, args, cmd.ID, cmd.Machine, cmd.ProviderOptions, true, log.Default)
+			client, err := workspace2.ResolveWorkspace(ctx, devPodConfig, cmd.IDE, cmd.IDEOptions, args, cmd.ID, cmd.Machine, cmd.ProviderOptions, true, log.Default)
 			if err != nil {
 				return err
 			}
@@ -73,6 +68,7 @@ func NewUpCmd(flags *flags.GlobalFlags) *cobra.Command {
 		},
 	}
 
+	upCmd.Flags().StringSliceVar(&cmd.IDEOptions, "ide-option", []string{}, "IDE option in the form KEY=VALUE")
 	upCmd.Flags().StringSliceVar(&cmd.ProviderOptions, "provider-option", []string{}, "Provider option in the form KEY=VALUE")
 	upCmd.Flags().BoolVar(&cmd.ForceBuild, "force-build", false, "If true will rebuild the container even if there is a prebuild already")
 	upCmd.Flags().BoolVar(&cmd.Recreate, "recreate", false, "If true will remove any existing containers and recreate them")
@@ -104,54 +100,31 @@ func (cmd *UpCmd) Run(ctx context.Context, client client2.WorkspaceClient) error
 	log.Default.Infof("Run 'ssh %s.devpod' to ssh into the devcontainer", client.Workspace())
 
 	// open ide
-	switch client.WorkspaceConfig().IDE.IDE {
-	case provider2.IDEVSCode:
+	ideConfig := client.WorkspaceConfig().IDE
+	switch ideConfig.Name {
+	case string(config.IDEVSCode):
 		return startVSCodeLocally(client, result.SubstitutionContext.ContainerWorkspaceFolder, log.Default)
-	case provider2.IDEOpenVSCode:
-		return startInBrowser(ctx, client, user, log.Default)
-	case provider2.IDEGoland:
-		return jetbrains.NewGolandServer(config2.GetRemoteUser(result), log.Default).OpenGateway(result.SubstitutionContext.ContainerWorkspaceFolder, client.Workspace())
-	case provider2.IDEPyCharm:
-		return jetbrains.NewPyCharmServer(config2.GetRemoteUser(result), log.Default).OpenGateway(result.SubstitutionContext.ContainerWorkspaceFolder, client.Workspace())
-	case provider2.IDEPhpStorm:
-		return jetbrains.NewPhpStorm(config2.GetRemoteUser(result), log.Default).OpenGateway(result.SubstitutionContext.ContainerWorkspaceFolder, client.Workspace())
-	case provider2.IDEIntellij:
-		return jetbrains.NewIntellij(config2.GetRemoteUser(result), log.Default).OpenGateway(result.SubstitutionContext.ContainerWorkspaceFolder, client.Workspace())
-	case provider2.IDECLion:
-		return jetbrains.NewCLionServer(config2.GetRemoteUser(result), log.Default).OpenGateway(result.SubstitutionContext.ContainerWorkspaceFolder, client.Workspace())
-	case provider2.IDERider:
-		return jetbrains.NewRiderServer(config2.GetRemoteUser(result), log.Default).OpenGateway(result.SubstitutionContext.ContainerWorkspaceFolder, client.Workspace())
-	case provider2.IDERubyMine:
-		return jetbrains.NewRubyMineServer(config2.GetRemoteUser(result), log.Default).OpenGateway(result.SubstitutionContext.ContainerWorkspaceFolder, client.Workspace())
-	case provider2.IDEWebStorm:
-		return jetbrains.NewWebStormServer(config2.GetRemoteUser(result), log.Default).OpenGateway(result.SubstitutionContext.ContainerWorkspaceFolder, client.Workspace())
+	case string(config.IDEOpenVSCode):
+		return startInBrowser(ctx, client, user, ideConfig.Options, log.Default)
+	case string(config.IDEGoland):
+		return jetbrains.NewGolandServer(config2.GetRemoteUser(result), ideConfig.Options, log.Default).OpenGateway(result.SubstitutionContext.ContainerWorkspaceFolder, client.Workspace())
+	case string(config.IDEPyCharm):
+		return jetbrains.NewPyCharmServer(config2.GetRemoteUser(result), ideConfig.Options, log.Default).OpenGateway(result.SubstitutionContext.ContainerWorkspaceFolder, client.Workspace())
+	case string(config.IDEPhpStorm):
+		return jetbrains.NewPhpStorm(config2.GetRemoteUser(result), ideConfig.Options, log.Default).OpenGateway(result.SubstitutionContext.ContainerWorkspaceFolder, client.Workspace())
+	case string(config.IDEIntellij):
+		return jetbrains.NewIntellij(config2.GetRemoteUser(result), ideConfig.Options, log.Default).OpenGateway(result.SubstitutionContext.ContainerWorkspaceFolder, client.Workspace())
+	case string(config.IDECLion):
+		return jetbrains.NewCLionServer(config2.GetRemoteUser(result), ideConfig.Options, log.Default).OpenGateway(result.SubstitutionContext.ContainerWorkspaceFolder, client.Workspace())
+	case string(config.IDERider):
+		return jetbrains.NewRiderServer(config2.GetRemoteUser(result), ideConfig.Options, log.Default).OpenGateway(result.SubstitutionContext.ContainerWorkspaceFolder, client.Workspace())
+	case string(config.IDERubyMine):
+		return jetbrains.NewRubyMineServer(config2.GetRemoteUser(result), ideConfig.Options, log.Default).OpenGateway(result.SubstitutionContext.ContainerWorkspaceFolder, client.Workspace())
+	case string(config.IDEWebStorm):
+		return jetbrains.NewWebStormServer(config2.GetRemoteUser(result), ideConfig.Options, log.Default).OpenGateway(result.SubstitutionContext.ContainerWorkspaceFolder, client.Workspace())
 	}
 
 	return nil
-}
-
-func (cmd *UpCmd) parseIDE(devPodConfig *config.Config, args []string) (*provider2.WorkspaceIDEConfig, error) {
-	if cmd.IDE == "" {
-		if len(args) == 0 {
-			return nil, nil
-		}
-
-		_, err := workspace2.GetWorkspace(devPodConfig, nil, args, false, log.Default)
-		if err == nil {
-			return nil, nil
-		}
-
-		cmd.IDE = string(ide.Detect())
-	}
-
-	ideStr, err := ide.Parse(cmd.IDE)
-	if err != nil {
-		return nil, err
-	}
-
-	return &provider2.WorkspaceIDEConfig{
-		IDE: ideStr,
-	}, nil
 }
 
 func startVSCodeLocally(client client2.WorkspaceClient, workspaceFolder string, log log.Logger) error {
@@ -164,7 +137,7 @@ func startVSCodeLocally(client client2.WorkspaceClient, workspaceFolder string, 
 	return nil
 }
 
-func startInBrowser(ctx context.Context, client client2.WorkspaceClient, user string, log log.Logger) error {
+func startInBrowser(ctx context.Context, client client2.WorkspaceClient, user string, ideOptions map[string]config.OptionValue, log log.Logger) error {
 	// determine port
 	vscodePort, err := port.FindAvailablePort(openvscode.DefaultVSCodePort)
 	if err != nil {
@@ -172,17 +145,20 @@ func startInBrowser(ctx context.Context, client client2.WorkspaceClient, user st
 	}
 
 	// wait until reachable then open browser
-	go func() {
-		err = open2.Open(ctx, fmt.Sprintf("http://localhost:%d/?folder=/workspaces/%s", vscodePort, client.Workspace()), log)
-		if err != nil {
-			log.Errorf("error opening vscode: %v", err)
-		}
+	targetURL := fmt.Sprintf("http://localhost:%d/?folder=/workspaces/%s", vscodePort, client.Workspace())
+	if openvscode.Options.GetValue(ideOptions, openvscode.OpenOption) == "true" {
+		go func() {
+			err = open2.Open(ctx, targetURL, log)
+			if err != nil {
+				log.Errorf("error opening vscode: %v", err)
+			}
 
-		log.Infof("Successfully started vscode in browser mode. Please keep this terminal open as long as you use VSCode browser version")
-	}()
+			log.Infof("Successfully started vscode in browser mode. Please keep this terminal open as long as you use VSCode browser version")
+		}()
+	}
 
 	// start in browser
-	log.Infof("Starting vscode in browser mode...")
+	log.Infof("Starting vscode in browser mode at %s", targetURL)
 	err = tunnel.NewContainerTunnel(client, log).Run(ctx, nil, func(client *ssh.Client) error {
 		log.Debugf("Connected to container")
 		go func() {

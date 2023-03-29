@@ -1,15 +1,36 @@
 package jetbrains
 
-import "github.com/loft-sh/devpod/pkg/log"
+import (
+	"github.com/loft-sh/devpod/pkg/config"
+	"github.com/loft-sh/devpod/pkg/ide"
+	"github.com/loft-sh/devpod/pkg/log"
+)
 
-const WebStormDownloadAmd64 = "https://download.jetbrains.com/webstorm/WebStorm-2022.3.2.tar.gz"
-const WebStormDownloadArm64 = "https://download.jetbrains.com/webstorm/WebStorm-2022.3.2-aarch64.tar.gz"
+const WebStormDownloadAmd64Template = "https://download.jetbrains.com/webstorm/WebStorm-%s.tar.gz"
+const WebStormDownloadArm64Template = "https://download.jetbrains.com/webstorm/WebStorm-%s-aarch64.tar.gz"
 
-func NewWebStormServer(userName string, log log.Logger) *GenericJetBrainsServer {
+var WebStormOptions = ide.Options{
+	VersionOption: {
+		Name:        VersionOption,
+		Description: "The version for the binary",
+		Default:     "2022.3.3",
+	},
+	DownloadArm64Option: {
+		Name:        DownloadArm64Option,
+		Description: "The download url for the arm64 server binary",
+	},
+	DownloadAmd64Option: {
+		Name:        DownloadAmd64Option,
+		Description: "The download url for the amd64 server binary",
+	},
+}
+
+func NewWebStormServer(userName string, values map[string]config.OptionValue, log log.Logger) *GenericJetBrainsServer {
+	amd64Download, arm64Download := getDownloadURLs(WebStormOptions, values, WebStormDownloadAmd64Template, WebStormDownloadArm64Template)
 	return newGenericServer(userName, &GenericOptions{
 		ID:            "webstorm",
 		DisplayName:   "WebStorm",
-		DownloadAmd64: WebStormDownloadAmd64,
-		DownloadArm64: WebStormDownloadArm64,
+		DownloadAmd64: amd64Download,
+		DownloadArm64: arm64Download,
 	}, log)
 }

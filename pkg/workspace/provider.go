@@ -23,7 +23,7 @@ var provideWorkspaceArgErr = fmt.Errorf("please provide a workspace name. E.g. '
 
 type ProviderWithOptions struct {
 	Config *provider2.ProviderConfig `json:"config,omitempty"`
-	State  *config.ConfigProvider    `json:"state,omitempty"`
+	State  *config.ProviderConfig    `json:"state,omitempty"`
 }
 
 // LoadProviders loads all known providers for the given context and
