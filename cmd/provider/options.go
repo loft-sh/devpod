@@ -57,12 +57,12 @@ type optionWithValue struct {
 
 // Run runs the command logic
 func (cmd *OptionsCmd) Run(ctx context.Context, providerName string) error {
-	devPodConfig, err := config.LoadConfig(cmd.Context)
+	devPodConfig, err := config.LoadConfig(cmd.Context, cmd.Provider)
 	if err != nil {
 		return err
 	}
 
-	provider, err := workspace.FindProvider(devPodConfig, providerName, log.Default)
+	provider, err := workspace.FindProvider(devPodConfig, providerName)
 	if err != nil {
 		return err
 	}

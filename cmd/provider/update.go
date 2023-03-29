@@ -29,7 +29,7 @@ func NewUpdateCmd(flags *flags.GlobalFlags) *cobra.Command {
 		Short: "Updates a provider in DevPod",
 		RunE: func(_ *cobra.Command, args []string) error {
 			ctx := context.Background()
-			devPodConfig, err := config.LoadConfig(cmd.Context)
+			devPodConfig, err := config.LoadConfig(cmd.Context, cmd.Provider)
 			if err != nil {
 				return err
 			}
