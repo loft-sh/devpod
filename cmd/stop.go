@@ -26,7 +26,7 @@ func NewStopCmd(flags *flags.GlobalFlags) *cobra.Command {
 		Short: "Stops an existing workspace",
 		RunE: func(_ *cobra.Command, args []string) error {
 			ctx := context.Background()
-			devPodConfig, err := config.LoadConfig(cmd.Context)
+			devPodConfig, err := config.LoadConfig(cmd.Context, cmd.Provider)
 			if err != nil {
 				return err
 			}

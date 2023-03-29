@@ -27,7 +27,7 @@ type ProviderWithOptions struct {
 }
 
 // LoadProviders loads all known providers for the given context and
-func LoadProviders(devPodConfig *config.Config, log log.Logger) (*ProviderWithOptions, map[string]*ProviderWithOptions, error) {
+func LoadProviders(devPodConfig *config.Config) (*ProviderWithOptions, map[string]*ProviderWithOptions, error) {
 	defaultContext := devPodConfig.Current()
 	retProviders, err := LoadAllProviders(devPodConfig)
 	if err != nil {
@@ -59,7 +59,7 @@ func UpdateProvider(devPodConfig *config.Config, providerName, providerSourceRaw
 	}
 
 	if providerSourceRaw == "" {
-		providerConfig, err := FindProvider(devPodConfig, providerName, log)
+		providerConfig, err := FindProvider(devPodConfig, providerName)
 		if err != nil {
 			return nil, errors.Wrap(err, "find provider")
 		}
@@ -272,7 +272,7 @@ func installProvider(devPodConfig *config.Config, providerName string, raw []byt
 	return providerConfig, nil
 }
 
-func FindProvider(devPodConfig *config.Config, name string, log log.Logger) (*ProviderWithOptions, error) {
+func FindProvider(devPodConfig *config.Config, name string) (*ProviderWithOptions, error) {
 	retProviders, err := LoadAllProviders(devPodConfig)
 	if err != nil {
 		return nil, err

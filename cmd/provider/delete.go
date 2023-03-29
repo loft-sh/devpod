@@ -38,7 +38,7 @@ func (cmd *DeleteCmd) Run(ctx context.Context, args []string) error {
 		return fmt.Errorf("please specify a provider to delete")
 	}
 
-	devPodConfig, err := config.LoadConfig(cmd.Context)
+	devPodConfig, err := config.LoadConfig(cmd.Context, cmd.Provider)
 	if err != nil {
 		return err
 	}

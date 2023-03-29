@@ -35,12 +35,12 @@ func NewCreateCmd(flags *flags.GlobalFlags) *cobra.Command {
 
 // Run runs the command logic
 func (cmd *CreateCmd) Run(ctx context.Context, args []string) error {
-	devPodConfig, err := config.LoadConfig(cmd.Context)
+	devPodConfig, err := config.LoadConfig(cmd.Context, cmd.Provider)
 	if err != nil {
 		return err
 	}
 
-	machineClient, err := workspace.ResolveMachine(devPodConfig, args, cmd.Provider, cmd.ProviderOptions, log.Default)
+	machineClient, err := workspace.ResolveMachine(devPodConfig, args, cmd.ProviderOptions, log.Default)
 	if err != nil {
 		return err
 	}
