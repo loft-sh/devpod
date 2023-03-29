@@ -9,7 +9,6 @@ import (
 	client2 "github.com/loft-sh/devpod/pkg/client"
 	"github.com/loft-sh/devpod/pkg/config"
 	"github.com/loft-sh/devpod/pkg/log"
-	provider2 "github.com/loft-sh/devpod/pkg/provider"
 	devssh "github.com/loft-sh/devpod/pkg/ssh"
 	"github.com/loft-sh/devpod/pkg/token"
 	"github.com/loft-sh/devpod/pkg/tunnel"
@@ -51,7 +50,7 @@ func NewSSHCmd(flags *flags.GlobalFlags) *cobra.Command {
 				return err
 			}
 
-			client, err := workspace2.GetWorkspace(devPodConfig, nil, args, true, log.Default)
+			client, err := workspace2.GetWorkspace(devPodConfig, args, true, log.Default)
 			if err != nil {
 				return err
 			}
@@ -139,7 +138,7 @@ func (cmd *SSHCmd) jumpContainer(ctx context.Context, client client2.WorkspaceCl
 	// create credential helper in workspace
 	var runInContainer tunnel.Handler
 	if cmd.User != "" {
-		gitCredentials := client.WorkspaceConfig().IDE.IDE != provider2.IDEVSCode
+		gitCredentials := client.WorkspaceConfig().IDE.Name != string(config.IDEVSCode)
 		runInContainer = func(sshClient *ssh.Client) error {
 			err := runCredentialsServer(ctx, sshClient, cmd.User, gitCredentials, true, log)
 			if err != nil {

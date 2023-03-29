@@ -5,6 +5,7 @@ import (
 	"github.com/loft-sh/devpod/cmd/flags"
 	"github.com/loft-sh/devpod/pkg/agent"
 	"github.com/loft-sh/devpod/pkg/compress"
+	config2 "github.com/loft-sh/devpod/pkg/config"
 	"github.com/loft-sh/devpod/pkg/devcontainer/config"
 	"github.com/loft-sh/devpod/pkg/devcontainer/setup"
 	"github.com/loft-sh/devpod/pkg/ide/jetbrains"
@@ -96,35 +97,35 @@ func (cmd *SetupContainerCmd) Run(_ *cobra.Command, _ []string) error {
 }
 
 func (cmd *SetupContainerCmd) installIDE(setupInfo *config.Result, workspaceInfo *provider2.AgentWorkspaceInfo, log log.Logger) error {
-	switch workspaceInfo.Workspace.IDE.IDE {
-	case provider2.IDENone:
+	switch workspaceInfo.Workspace.IDE.Name {
+	case string(config2.IDENone):
 		return nil
-	case provider2.IDEVSCode:
-		return cmd.setupVSCode(setupInfo, log)
-	case provider2.IDEOpenVSCode:
-		return setupOpenVSCode(setupInfo, log)
-	case provider2.IDEGoland:
-		return jetbrains.NewGolandServer(config.GetRemoteUser(setupInfo), log).Install()
-	case provider2.IDEPyCharm:
-		return jetbrains.NewPyCharmServer(config.GetRemoteUser(setupInfo), log).Install()
-	case provider2.IDEPhpStorm:
-		return jetbrains.NewPhpStorm(config.GetRemoteUser(setupInfo), log).Install()
-	case provider2.IDEIntellij:
-		return jetbrains.NewIntellij(config.GetRemoteUser(setupInfo), log).Install()
-	case provider2.IDECLion:
-		return jetbrains.NewCLionServer(config.GetRemoteUser(setupInfo), log).Install()
-	case provider2.IDERider:
-		return jetbrains.NewRiderServer(config.GetRemoteUser(setupInfo), log).Install()
-	case provider2.IDERubyMine:
-		return jetbrains.NewRubyMineServer(config.GetRemoteUser(setupInfo), log).Install()
-	case provider2.IDEWebStorm:
-		return jetbrains.NewWebStormServer(config.GetRemoteUser(setupInfo), log).Install()
+	case string(config2.IDEVSCode):
+		return cmd.setupVSCode(setupInfo, workspaceInfo, log)
+	case string(config2.IDEOpenVSCode):
+		return setupOpenVSCode(setupInfo, workspaceInfo, log)
+	case string(config2.IDEGoland):
+		return jetbrains.NewGolandServer(config.GetRemoteUser(setupInfo), workspaceInfo.Workspace.IDE.Options, log).Install()
+	case string(config2.IDEPyCharm):
+		return jetbrains.NewPyCharmServer(config.GetRemoteUser(setupInfo), workspaceInfo.Workspace.IDE.Options, log).Install()
+	case string(config2.IDEPhpStorm):
+		return jetbrains.NewPhpStorm(config.GetRemoteUser(setupInfo), workspaceInfo.Workspace.IDE.Options, log).Install()
+	case string(config2.IDEIntellij):
+		return jetbrains.NewIntellij(config.GetRemoteUser(setupInfo), workspaceInfo.Workspace.IDE.Options, log).Install()
+	case string(config2.IDECLion):
+		return jetbrains.NewCLionServer(config.GetRemoteUser(setupInfo), workspaceInfo.Workspace.IDE.Options, log).Install()
+	case string(config2.IDERider):
+		return jetbrains.NewRiderServer(config.GetRemoteUser(setupInfo), workspaceInfo.Workspace.IDE.Options, log).Install()
+	case string(config2.IDERubyMine):
+		return jetbrains.NewRubyMineServer(config.GetRemoteUser(setupInfo), workspaceInfo.Workspace.IDE.Options, log).Install()
+	case string(config2.IDEWebStorm):
+		return jetbrains.NewWebStormServer(config.GetRemoteUser(setupInfo), workspaceInfo.Workspace.IDE.Options, log).Install()
 	}
 
 	return nil
 }
 
-func (cmd *SetupContainerCmd) setupVSCode(setupInfo *config.Result, log log.Logger) error {
+func (cmd *SetupContainerCmd) setupVSCode(setupInfo *config.Result, workspaceInfo *provider2.AgentWorkspaceInfo, log log.Logger) error {
 	log.Debugf("Setup vscode...")
 	vsCodeConfiguration := config.GetVSCodeConfiguration(setupInfo.MergedConfig)
 	settings := ""
@@ -144,7 +145,7 @@ func (cmd *SetupContainerCmd) setupVSCode(setupInfo *config.Result, log log.Logg
 		return nil
 	}
 
-	err := vscode.NewVSCodeServer(vsCodeConfiguration.Extensions, settings, user, log).Install()
+	err := vscode.NewVSCodeServer(vsCodeConfiguration.Extensions, settings, user, workspaceInfo.Workspace.IDE.Options, log).Install()
 	if err != nil {
 		return err
 	}
@@ -164,13 +165,17 @@ func (cmd *SetupContainerCmd) setupVSCode(setupInfo *config.Result, log log.Logg
 	})
 }
 
-func setupVSCodeExtensions(setupInfo *config.Result, log log.Logger) error {
+func setupVSCodeExtensions(setupInfo *config.Result, workspaceInfo *provider2.AgentWorkspaceInfo, log log.Logger) error {
 	vsCodeConfiguration := config.GetVSCodeConfiguration(setupInfo.MergedConfig)
 	user := config.GetRemoteUser(setupInfo)
-	return vscode.NewVSCodeServer(vsCodeConfiguration.Extensions, "", user, log).InstallExtensions()
+	var options map[string]config2.OptionValue
+	if workspaceInfo != nil {
+		options = workspaceInfo.Workspace.IDE.Options
+	}
+	return vscode.NewVSCodeServer(vsCodeConfiguration.Extensions, "", user, options, log).InstallExtensions()
 }
 
-func setupOpenVSCode(setupInfo *config.Result, log log.Logger) error {
+func setupOpenVSCode(setupInfo *config.Result, workspaceInfo *provider2.AgentWorkspaceInfo, log log.Logger) error {
 	log.Debugf("Setup openvscode...")
 	vsCodeConfiguration := config.GetVSCodeConfiguration(setupInfo.MergedConfig)
 	settings := ""
@@ -184,5 +189,5 @@ func setupOpenVSCode(setupInfo *config.Result, log log.Logger) error {
 	}
 
 	user := config.GetRemoteUser(setupInfo)
-	return openvscode.NewOpenVSCodeServer(vsCodeConfiguration.Extensions, settings, user, "0.0.0.0", strconv.Itoa(openvscode.DefaultVSCodePort), log).Install()
+	return openvscode.NewOpenVSCodeServer(vsCodeConfiguration.Extensions, settings, user, "0.0.0.0", strconv.Itoa(openvscode.DefaultVSCodePort), workspaceInfo.Workspace.IDE.Options, log).Install()
 }

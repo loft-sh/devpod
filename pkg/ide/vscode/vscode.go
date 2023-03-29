@@ -4,7 +4,9 @@ import (
 	"crypto/tls"
 	"fmt"
 	"github.com/loft-sh/devpod/pkg/command"
+	"github.com/loft-sh/devpod/pkg/config"
 	copy2 "github.com/loft-sh/devpod/pkg/copy"
+	"github.com/loft-sh/devpod/pkg/ide"
 	"github.com/loft-sh/devpod/pkg/log"
 	"github.com/mitchellh/go-homedir"
 	"github.com/pkg/errors"
@@ -17,11 +19,27 @@ import (
 	"runtime"
 )
 
-const VSCodeDownloadAmd64 = "https://aka.ms/vscode-server-launcher/x86_64-unknown-linux-gnu"
-const VSCodeDownloadArm64 = "https://aka.ms/vscode-server-launcher/aarch64-unknown-linux-gnu"
+const (
+	DownloadAmd64Option = "DOWNLOAD_AMD64"
+	DownloadArm64Option = "DOWNLOAD_ARM64"
+)
 
-func NewVSCodeServer(extensions []string, settings string, userName string, log log.Logger) *VsCodeServer {
+var Options = ide.Options{
+	DownloadArm64Option: {
+		Name:        DownloadArm64Option,
+		Description: "The download url for the arm64 vscode server binary",
+		Default:     "https://aka.ms/vscode-server-launcher/aarch64-unknown-linux-gnu",
+	},
+	DownloadAmd64Option: {
+		Name:        DownloadAmd64Option,
+		Description: "The download url for the amd64 vscode server binary",
+		Default:     "https://aka.ms/vscode-server-launcher/x86_64-unknown-linux-gnu",
+	},
+}
+
+func NewVSCodeServer(extensions []string, settings string, userName string, values map[string]config.OptionValue, log log.Logger) *VsCodeServer {
 	return &VsCodeServer{
+		values:     values,
 		extensions: extensions,
 		settings:   settings,
 		userName:   userName,
@@ -30,6 +48,7 @@ func NewVSCodeServer(extensions []string, settings string, userName string, log 
 }
 
 type VsCodeServer struct {
+	values     map[string]config.OptionValue
 	extensions []string
 	settings   string
 	userName   string
@@ -85,7 +104,7 @@ func (o *VsCodeServer) Install() error {
 	// download
 	o.log.Info("Download vscode...")
 	binPath := filepath.Join(location, "bin", "code-server")
-	err = DownloadVSCode(binPath)
+	err = o.downloadVSCode(binPath)
 	if err != nil {
 		_ = os.RemoveAll(location)
 		return err
@@ -115,16 +134,16 @@ func (o *VsCodeServer) Install() error {
 	return nil
 }
 
-func DownloadVSCode(binPath string) error {
+func (o *VsCodeServer) downloadVSCode(binPath string) error {
 	err := os.MkdirAll(filepath.Dir(binPath), 0777)
 	if err != nil {
 		return err
 	}
 
 	// check what release we need to download
-	url := VSCodeDownloadAmd64
+	url := Options.GetValue(o.values, DownloadAmd64Option)
 	if runtime.GOARCH == "arm64" {
-		url = VSCodeDownloadArm64
+		url = Options.GetValue(o.values, DownloadArm64Option)
 	}
 
 	// download binary

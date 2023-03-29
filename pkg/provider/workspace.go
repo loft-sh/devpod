@@ -40,6 +40,14 @@ type Workspace struct {
 	Origin string `json:"-"`
 }
 
+type WorkspaceIDEConfig struct {
+	// Name is the name of the IDE
+	Name string `json:"name,omitempty"`
+
+	// Options are the local options that override the global ones
+	Options map[string]config.OptionValue `json:"options,omitempty"`
+}
+
 type WorkspaceMachineConfig struct {
 	// ID is the machine ID to use for this workspace
 	ID string `json:"machineId,omitempty"`
@@ -47,35 +55,6 @@ type WorkspaceMachineConfig struct {
 	// AutoDelete specifies if the machine should get destroyed when
 	// the workspace is destroyed
 	AutoDelete bool `json:"autoDelete,omitempty"`
-}
-
-type WorkspaceIDEConfig struct {
-	// IDE is the name of the ide to use
-	IDE IDE `json:"ide,omitempty"`
-
-	// Options are additional ide options
-	Options map[string]string `json:"options,omitempty"`
-}
-
-type IDE string
-
-const (
-	IDENone       IDE = "none"
-	IDEVSCode     IDE = "vscode"
-	IDEOpenVSCode IDE = "openvscode"
-	IDEIntellij   IDE = "intellij"
-	IDEGoland     IDE = "goland"
-	IDEPyCharm    IDE = "pycharm"
-	IDEPhpStorm   IDE = "phpstorm"
-	IDECLion      IDE = "clion"
-	IDERubyMine   IDE = "rubymine"
-	IDERider      IDE = "rider"
-	IDEWebStorm   IDE = "webstorm"
-)
-
-type WorkspaceIDEVSCode struct {
-	// Browser determines if the vscode should be opened in the browser
-	Browser bool `json:"browser,omitempty"`
 }
 
 type WorkspaceProviderConfig struct {
