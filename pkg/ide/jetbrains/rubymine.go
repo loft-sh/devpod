@@ -1,15 +1,36 @@
 package jetbrains
 
-import "github.com/loft-sh/devpod/pkg/log"
+import (
+	"github.com/loft-sh/devpod/pkg/config"
+	"github.com/loft-sh/devpod/pkg/ide"
+	"github.com/loft-sh/devpod/pkg/log"
+)
 
-const RubyMineDownloadAmd64 = "https://download.jetbrains.com/ruby/RubyMine-2022.3.2.tar.gz"
-const RubyMineDownloadArm64 = "https://download.jetbrains.com/ruby/RubyMine-2022.3.2-aarch64.tar.gz"
+const RubyMineDownloadAmd64Template = "https://download.jetbrains.com/ruby/RubyMine-%s.tar.gz"
+const RubyMineDownloadArm64Template = "https://download.jetbrains.com/ruby/RubyMine-%s-aarch64.tar.gz"
 
-func NewRubyMineServer(userName string, log log.Logger) *GenericJetBrainsServer {
+var RubyMineOptions = ide.Options{
+	VersionOption: {
+		Name:        VersionOption,
+		Description: "The version for the binary",
+		Default:     "2022.3.3",
+	},
+	DownloadArm64Option: {
+		Name:        DownloadArm64Option,
+		Description: "The download url for the arm64 server binary",
+	},
+	DownloadAmd64Option: {
+		Name:        DownloadAmd64Option,
+		Description: "The download url for the amd64 server binary",
+	},
+}
+
+func NewRubyMineServer(userName string, values map[string]config.OptionValue, log log.Logger) *GenericJetBrainsServer {
+	amd64Download, arm64Download := getDownloadURLs(RubyMineOptions, values, RubyMineDownloadAmd64Template, RubyMineDownloadArm64Template)
 	return newGenericServer(userName, &GenericOptions{
 		ID:            "rubymine",
 		DisplayName:   "RubyMine",
-		DownloadAmd64: RubyMineDownloadAmd64,
-		DownloadArm64: RubyMineDownloadArm64,
+		DownloadAmd64: amd64Download,
+		DownloadArm64: arm64Download,
 	}, log)
 }

@@ -49,7 +49,7 @@ func NewDeleteCmd(flags *flags.GlobalFlags) *cobra.Command {
 // Run runs the command logic
 func (cmd *DeleteCmd) Run(ctx context.Context, devPodConfig *config.Config, args []string) error {
 	// try to load workspace
-	client, err := workspace2.GetWorkspace(devPodConfig, nil, args, false, log.Default)
+	client, err := workspace2.GetWorkspace(devPodConfig, args, false, log.Default)
 	if err != nil {
 		if !cmd.Force {
 			log.Default.Errorf("cannot delete workspace because there was an error loading the workspace. Run with --force to ignore this error")

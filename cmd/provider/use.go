@@ -174,10 +174,10 @@ func initProvider(ctx context.Context, devPodConfig *config.Config, provider *pr
 		return errors.Wrap(err, "init")
 	}
 	if devPodConfig.Current().Providers == nil {
-		devPodConfig.Current().Providers = map[string]*config.ConfigProvider{}
+		devPodConfig.Current().Providers = map[string]*config.ProviderConfig{}
 	}
 	if devPodConfig.Current().Providers[provider.Name] == nil {
-		devPodConfig.Current().Providers[provider.Name] = &config.ConfigProvider{}
+		devPodConfig.Current().Providers[provider.Name] = &config.ProviderConfig{}
 	}
 	devPodConfig.Current().Providers[provider.Name].Initialized = true
 	return nil

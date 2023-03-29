@@ -4,6 +4,7 @@ import (
 	"crypto/tls"
 	"fmt"
 	"github.com/loft-sh/devpod/pkg/command"
+	"github.com/loft-sh/devpod/pkg/config"
 	copy2 "github.com/loft-sh/devpod/pkg/copy"
 	"github.com/loft-sh/devpod/pkg/extract"
 	"github.com/loft-sh/devpod/pkg/ide"
@@ -20,13 +21,46 @@ import (
 	"strconv"
 )
 
-const OpenVSCodeDownloadAmd64 = "https://github.com/gitpod-io/openvscode-server/releases/download/openvscode-server-v1.75.1/openvscode-server-v1.75.1-linux-x64.tar.gz"
-const OpenVSCodeDownloadArm64 = "https://github.com/gitpod-io/openvscode-server/releases/download/openvscode-server-v1.75.1/openvscode-server-v1.75.1-linux-arm64.tar.gz"
+const DownloadAmd64Template = "https://github.com/gitpod-io/openvscode-server/releases/download/openvscode-server-%s/openvscode-server-%s-linux-x64.tar.gz"
+const DownloadArm64Template = "https://github.com/gitpod-io/openvscode-server/releases/download/openvscode-server-%s/openvscode-server-%s-linux-arm64.tar.gz"
+
+const (
+	OpenOption          = "OPEN"
+	VersionOption       = "VERSION"
+	DownloadAmd64Option = "DOWNLOAD_AMD64"
+	DownloadArm64Option = "DOWNLOAD_ARM64"
+)
+
+var Options = ide.Options{
+	VersionOption: {
+		Name:        VersionOption,
+		Description: "The version for the open vscode binary",
+		Default:     "v1.76.2",
+	},
+	OpenOption: {
+		Name:        OpenOption,
+		Description: "If DevPod should automatically open the browser",
+		Default:     "true",
+		Enum: []string{
+			"true",
+			"false",
+		},
+	},
+	DownloadArm64Option: {
+		Name:        DownloadArm64Option,
+		Description: "The download url for the arm64 vscode server binary",
+	},
+	DownloadAmd64Option: {
+		Name:        DownloadAmd64Option,
+		Description: "The download url for the amd64 vscode server binary",
+	},
+}
 
 const DefaultVSCodePort = 10800
 
-func NewOpenVSCodeServer(extensions []string, settings string, userName string, host, port string, log log.Logger) ide.IDE {
+func NewOpenVSCodeServer(extensions []string, settings string, userName string, host, port string, values map[string]config.OptionValue, log log.Logger) ide.IDE {
 	return &openVSCodeServer{
+		values:     values,
 		extensions: extensions,
 		settings:   settings,
 		userName:   userName,
@@ -37,6 +71,7 @@ func NewOpenVSCodeServer(extensions []string, settings string, userName string, 
 }
 
 type openVSCodeServer struct {
+	values     map[string]config.OptionValue
 	extensions []string
 	settings   string
 	userName   string
@@ -72,9 +107,18 @@ func (o *openVSCodeServer) install() error {
 	}
 
 	// check what release we need to download
-	url := OpenVSCodeDownloadAmd64
+	var url string
+	version := Options.GetValue(o.values, VersionOption)
 	if runtime.GOARCH == "arm64" {
-		url = OpenVSCodeDownloadArm64
+		url = Options.GetValue(o.values, DownloadArm64Option)
+		if url == "" {
+			url = fmt.Sprintf(DownloadArm64Template, version, version)
+		}
+	} else {
+		url = Options.GetValue(o.values, DownloadAmd64Option)
+		if url == "" {
+			url = fmt.Sprintf(DownloadAmd64Template, version, version)
+		}
 	}
 
 	// download tar
@@ -146,8 +190,9 @@ func (o *openVSCodeServer) InstallExtensions() error {
 		err = cmd.Run()
 		if err != nil {
 			o.log.Info("Failed installing extension " + extension)
+		} else {
+			o.log.Info("Successfully installed extension " + extension)
 		}
-		o.log.Info("Successfully installed extension " + extension)
 	}
 
 	return nil

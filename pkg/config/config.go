@@ -16,7 +16,7 @@ type Config struct {
 	DefaultContext string `json:"defaultContext,omitempty"`
 
 	// Contexts holds the config contexts
-	Contexts map[string]*ConfigContext `json:"contexts,omitempty"`
+	Contexts map[string]*ContextConfig `json:"contexts,omitempty"`
 
 	// Origin holds the path where this config was loaded from
 	Origin string `json:"-"`
@@ -25,18 +25,45 @@ type Config struct {
 	OriginalContext string `json:"-"`
 }
 
-type ConfigContext struct {
+type ContextConfig struct {
 	// DefaultProvider is the default provider to use
 	DefaultProvider string `json:"defaultProvider,omitempty"`
 
+	// DefaultIDE holds default ide configuration
+	DefaultIDE string `json:"defaultIde,omitempty"`
+
+	// IDEs holds the ide configuration
+	IDEs map[string]*IDEConfig `json:"ides,omitempty"`
+
 	// Providers holds the provider configuration
-	Providers map[string]*ConfigProvider `json:"providers,omitempty"`
+	Providers map[string]*ProviderConfig `json:"providers,omitempty"`
 
 	// OriginalProvider is the original default provider
 	OriginalProvider string `json:"-"`
 }
 
-type ConfigProvider struct {
+type IDEConfig struct {
+	// Options are additional ide options
+	Options map[string]OptionValue `json:"options,omitempty"`
+}
+
+type IDE string
+
+const (
+	IDENone       IDE = "none"
+	IDEVSCode     IDE = "vscode"
+	IDEOpenVSCode IDE = "openvscode"
+	IDEIntellij   IDE = "intellij"
+	IDEGoland     IDE = "goland"
+	IDEPyCharm    IDE = "pycharm"
+	IDEPhpStorm   IDE = "phpstorm"
+	IDECLion      IDE = "clion"
+	IDERubyMine   IDE = "rubymine"
+	IDERider      IDE = "rider"
+	IDEWebStorm   IDE = "webstorm"
+)
+
+type ProviderConfig struct {
 	// Initialized holds if the provider was initialized correctly.
 	Initialized bool `json:"initialized,omitempty"`
 
@@ -58,7 +85,7 @@ type OptionValue struct {
 	Filled *types.Time `json:"filled,omitempty"`
 }
 
-func (c *Config) Current() *ConfigContext {
+func (c *Config) Current() *ContextConfig {
 	return c.Contexts[c.DefaultContext]
 }
 
@@ -66,14 +93,30 @@ func (c *Config) ProviderOptions(provider string) map[string]OptionValue {
 	return c.Current().ProviderOptions(provider)
 }
 
-func (c *ConfigContext) IsSingleMachine(provider string) bool {
+func (c *Config) IDEOptions(ide string) map[string]OptionValue {
+	return c.Current().IDEOptions(ide)
+}
+
+func (c *ContextConfig) IsSingleMachine(provider string) bool {
 	if c.Providers == nil || c.Providers[provider] == nil {
 		return false
 	}
 	return c.Providers[provider].SingleMachine
 }
 
-func (c *ConfigContext) ProviderOptions(provider string) map[string]OptionValue {
+func (c *ContextConfig) IDEOptions(ide string) map[string]OptionValue {
+	retOptions := map[string]OptionValue{}
+	if c.IDEs == nil || c.IDEs[ide] == nil {
+		return retOptions
+	}
+
+	for k, v := range c.IDEs[ide].Options {
+		retOptions[k] = v
+	}
+	return retOptions
+}
+
+func (c *ContextConfig) ProviderOptions(provider string) map[string]OptionValue {
 	retOptions := map[string]OptionValue{}
 	if c.Providers == nil || c.Providers[provider] == nil {
 		return retOptions
@@ -98,7 +141,10 @@ func CloneConfig(config *Config) *Config {
 	}
 	for ctxName, ctx := range ret.Contexts {
 		if ctx.Providers == nil {
-			ctx.Providers = map[string]*ConfigProvider{}
+			ctx.Providers = map[string]*ProviderConfig{}
+		}
+		if ctx.IDEs == nil {
+			ctx.IDEs = map[string]*IDEConfig{}
 		}
 		ctx.OriginalProvider = config.Contexts[ctxName].OriginalProvider
 	}
@@ -126,10 +172,11 @@ func LoadConfig(contextOverride string, providerOverride string) (*Config, error
 
 		return &Config{
 			DefaultContext: context,
-			Contexts: map[string]*ConfigContext{
+			Contexts: map[string]*ContextConfig{
 				context: {
 					DefaultProvider: providerOverride,
-					Providers:       map[string]*ConfigProvider{},
+					Providers:       map[string]*ProviderConfig{},
+					IDEs:            map[string]*IDEConfig{},
 				},
 			},
 			Origin: configOrigin,
@@ -148,13 +195,16 @@ func LoadConfig(contextOverride string, providerOverride string) (*Config, error
 		config.DefaultContext = DefaultContext
 	}
 	if config.Contexts == nil {
-		config.Contexts = map[string]*ConfigContext{}
+		config.Contexts = map[string]*ContextConfig{}
 	}
 	if config.Contexts[config.DefaultContext] == nil {
-		config.Contexts[config.DefaultContext] = &ConfigContext{}
+		config.Contexts[config.DefaultContext] = &ContextConfig{}
 	}
 	if config.Contexts[config.DefaultContext].Providers == nil {
-		config.Contexts[config.DefaultContext].Providers = map[string]*ConfigProvider{}
+		config.Contexts[config.DefaultContext].Providers = map[string]*ProviderConfig{}
+	}
+	if config.Contexts[config.DefaultContext].IDEs == nil {
+		config.Contexts[config.DefaultContext].IDEs = map[string]*IDEConfig{}
 	}
 	if providerOverride != "" {
 		config.Contexts[config.DefaultContext].OriginalProvider = config.Contexts[config.DefaultContext].DefaultProvider

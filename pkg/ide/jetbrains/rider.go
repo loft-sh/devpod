@@ -1,15 +1,36 @@
 package jetbrains
 
-import "github.com/loft-sh/devpod/pkg/log"
+import (
+	"github.com/loft-sh/devpod/pkg/config"
+	"github.com/loft-sh/devpod/pkg/ide"
+	"github.com/loft-sh/devpod/pkg/log"
+)
 
-const RiderDownloadAmd64 = "https://download.jetbrains.com/rider/JetBrains.Rider-2022.3.2.tar.gz"
-const RiderDownloadArm64 = "https://download.jetbrains.com/rider/JetBrains.Rider-2022.3.2-aarch64.tar.gz"
+const RiderDownloadAmd64Template = "https://download.jetbrains.com/rider/JetBrains.Rider-%s.tar.gz"
+const RiderDownloadArm64Template = "https://download.jetbrains.com/rider/JetBrains.Rider-%s-aarch64.tar.gz"
 
-func NewRiderServer(userName string, log log.Logger) *GenericJetBrainsServer {
+var RiderOptions = ide.Options{
+	VersionOption: {
+		Name:        VersionOption,
+		Description: "The version for the binary",
+		Default:     "2022.3.3",
+	},
+	DownloadArm64Option: {
+		Name:        DownloadArm64Option,
+		Description: "The download url for the arm64 server binary",
+	},
+	DownloadAmd64Option: {
+		Name:        DownloadAmd64Option,
+		Description: "The download url for the amd64 server binary",
+	},
+}
+
+func NewRiderServer(userName string, values map[string]config.OptionValue, log log.Logger) *GenericJetBrainsServer {
+	amd64Download, arm64Download := getDownloadURLs(RiderOptions, values, RiderDownloadAmd64Template, RiderDownloadArm64Template)
 	return newGenericServer(userName, &GenericOptions{
 		ID:            "rider",
 		DisplayName:   "Rider",
-		DownloadAmd64: RiderDownloadAmd64,
-		DownloadArm64: RiderDownloadArm64,
+		DownloadAmd64: amd64Download,
+		DownloadArm64: arm64Download,
 	}, log)
 }
