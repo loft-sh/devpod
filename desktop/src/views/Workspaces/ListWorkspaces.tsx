@@ -1,4 +1,4 @@
-import { Button, Heading, Link, ListItem, Text, UnorderedList, VStack } from "@chakra-ui/react"
+import { Button, Link, ListItem, Text, UnorderedList, VStack } from "@chakra-ui/react"
 import { useMemo } from "react"
 import { Link as RouterLink } from "react-router-dom"
 import { useWorkspaces } from "../../contexts"
@@ -7,9 +7,9 @@ import { Routes } from "../../routes"
 import { TWorkspace, TWorkspaceID } from "../../types"
 
 type TWorkspacesInfo = Readonly<{
-  activeProviderCards: TWorkspaceRow[]
-  inactiveProviderRows: TWorkspaceRow[]
+  workspaceCards: TWorkspaceRow[]
 }>
+
 type TWorkspaceRow = Readonly<{
   id: TWorkspaceID
   name: string
@@ -20,27 +20,20 @@ type TWorkspaceRow = Readonly<{
 
 export function ListWorkspaces() {
   const [[workspaces], { start, stop, remove }] = useWorkspaces()
-  const { activeProviderCards, inactiveProviderRows } = useMemo<TWorkspacesInfo>(() => {
-    const empty: TWorkspacesInfo = { inactiveProviderRows: [], activeProviderCards: [] }
+  const { workspaceCards } = useMemo<TWorkspacesInfo>(() => {
+    const empty: TWorkspacesInfo = { workspaceCards: [] }
     if (!exists(workspaces)) {
       return empty
     }
 
     return workspaces.reduce<TWorkspacesInfo>((acc, workspace) => {
-      const { id, status } = workspace
+      const { id } = workspace
       if (!exists(id)) {
         return acc
       }
 
       const row = WorkspaceRow.fromWorkspace(workspace)
-
-      if (status === "Running") {
-        acc.activeProviderCards.push(row)
-
-        return acc
-      }
-
-      acc.inactiveProviderRows.push(row)
+      acc.workspaceCards.push(row)
 
       return acc
     }, empty)
@@ -49,42 +42,8 @@ export function ListWorkspaces() {
   return (
     <>
       <VStack align="start" marginBottom="12">
-        <Heading as="h3" size="md" marginBottom="4">
-          Active
-        </Heading>
         <UnorderedList listStyleType="none">
-          {activeProviderCards.map(({ id, name, providerName, status }) => (
-            <ListItem key={name}>
-              <Link as={RouterLink} to={Routes.toWorkspace(name)}>
-                <Text fontWeight="bold">{name}</Text>
-              </Link>
-
-              {exists(providerName) && <Text>Provider: {providerName}</Text>}
-              <Text>Status: {status}</Text>
-
-              <Button
-                onClick={() => stop.run({ workspaceID: id })}
-                isLoading={stop.status === "loading"}>
-                Stop
-              </Button>
-              <Button
-                colorScheme="red"
-                onClick={() => remove.run({ workspaceID: id })}
-                isLoading={remove.status === "loading"}>
-                Delete
-              </Button>
-            </ListItem>
-          ))}
-        </UnorderedList>
-      </VStack>
-
-      <VStack align="start" marginBottom="4">
-        <Heading as="h3" size="md" marginBottom="4">
-          Inactive
-        </Heading>
-
-        <UnorderedList listStyleType="none">
-          {inactiveProviderRows.map(({ id, name, providerName, status, ide }) => (
+          {workspaceCards.map(({ id, name, ide, providerName, status }) => (
             <ListItem key={name}>
               <Link as={RouterLink} to={Routes.toWorkspace(name)}>
                 <Text fontWeight="bold">{name}</Text>
@@ -97,6 +56,11 @@ export function ListWorkspaces() {
                 onClick={() => start.run({ workspaceID: id, config: { ideConfig: ide } })}
                 isLoading={start.status === "loading"}>
                 Start
+              </Button>
+              <Button
+                onClick={() => stop.run({ workspaceID: id })}
+                isLoading={stop.status === "loading"}>
+                Stop
               </Button>
               <Button
                 colorScheme="red"
