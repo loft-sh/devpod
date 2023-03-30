@@ -1,12 +1,13 @@
 import { Box, Button, HStack, Text, VStack } from "@chakra-ui/react"
 import { useCallback, useEffect, useMemo } from "react"
-import { useParams } from "react-router"
+import { useNavigate, useParams } from "react-router"
 import { ErrorMessageBox, useStreamingTerminal } from "../../components"
 import { useWorkspace } from "../../contexts"
 import { exists, isError } from "../../lib"
 import { Routes } from "../../routes"
 
 export function Workspace() {
+  const navigate = useNavigate()
   const params = useParams()
   const workspaceID = useMemo(() => Routes.getWorkspaceId(params), [params])
   const { terminal, connectStream } = useStreamingTerminal()
@@ -22,13 +23,20 @@ export function Workspace() {
   }, [connectStream, workspace])
 
   useEffect(() => {
-    if (!exists(workspace)) {
+    if (workspace.current === undefined) {
       return
     }
 
-    // TODO: implement
-    // workspace.current.connect(connectStream)
+    workspace.current.connect(connectStream)
   }, [connectStream, workspace])
+
+  useEffect(() => {
+    if (workspace.current?.name !== "remove" || workspace.current.status !== "success") {
+      return
+    }
+
+    navigate(Routes.WORKSPACES)
+  }, [navigate, workspace])
 
   const maybeError = workspace.current?.error
   if (isError(maybeError)) {
@@ -49,17 +57,19 @@ export function Workspace() {
         <Button onClick={handleStartClicked} isLoading={workspace.current?.name === "start"}>
           Start
         </Button>
-        <Button onClick={() => workspace.stop()} isLoading={workspace.current?.name === "stop"}>
+        <Button
+          onClick={() => workspace.stop(connectStream)}
+          isLoading={workspace.current?.name === "stop"}>
           Stop
         </Button>
         <Button
-          onClick={() => workspace.rebuild()}
+          onClick={() => workspace.rebuild(connectStream)}
           isLoading={workspace.current?.name === "rebuild"}>
           Rebuild
         </Button>
         <Button
           colorScheme="red"
-          onClick={() => workspace.remove()}
+          onClick={() => workspace.remove(connectStream)}
           isLoading={workspace.current?.name === "remove"}>
           Delete
         </Button>

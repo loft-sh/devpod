@@ -1,5 +1,5 @@
 import { replaceEqualDeep } from "@tanstack/react-query"
-import { EventManager, SingleEventManager } from "../../../lib"
+import { debug, EventManager, SingleEventManager } from "../../../lib"
 import { TUnsubscribeFn, TWorkspace, TWorkspaceID } from "../../../types"
 import { Action, TActionFn, TActionName } from "./action"
 
@@ -18,11 +18,13 @@ class WorkspacesStore {
 
   private actionDidChange() {
     this.lastActions = Array.from(this.actions.values())
+    debug("actions", this.lastActions)
     this.eventManager.publish()
   }
 
   private workspacesDidChange() {
     this.lastWorkspaces = Array.from(this.workspaces.values())
+    debug("workspaces", this.lastWorkspaces)
     this.eventManager.publish()
   }
 

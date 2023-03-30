@@ -6,9 +6,8 @@ import {
   TWorkspaceStatusResult,
   TWorkspaceWithoutStatus,
 } from "../../types"
-import { Command, isOk, TCommand, toFlagArg } from "../command"
+import { Command, isOk, toFlagArg } from "../command"
 import {
-  DEVPOD_COMMAND_BUILD,
   DEVPOD_COMMAND_DELETE,
   DEVPOD_COMMAND_GET_WORKSPACE_NAME,
   DEVPOD_COMMAND_HELPER,
@@ -107,43 +106,21 @@ export class WorkspaceCommands {
     ])
   }
 
-  static StopWorkspace(id: TWorkspaceID): TCommand<undefined> {
-    return WorkspaceCommands.newCommand([
-      DEVPOD_COMMAND_STOP,
-      id,
-      DEVPOD_FLAG_JSON_LOG_OUTPUT,
-    ]).withConversion((rawResult) => {
-      if (!isOk(rawResult)) {
-        return Return.Failed(`Failed to stop Workspace ${id}`, rawResult.stderr)
-      }
-
-      return Return.Ok()
-    })
+  static StopWorkspace(id: TWorkspaceID) {
+    return WorkspaceCommands.newCommand([DEVPOD_COMMAND_STOP, id, DEVPOD_FLAG_JSON_LOG_OUTPUT])
   }
 
-  static RebuildWorkspace(id: TWorkspaceID): TCommand<undefined> {
+  static RebuildWorkspace(id: TWorkspaceID) {
     return WorkspaceCommands.newCommand([
-      DEVPOD_COMMAND_BUILD,
+      DEVPOD_COMMAND_UP,
       id,
       DEVPOD_FLAG_JSON_LOG_OUTPUT,
-      DEVPOD_FLAG_FORCE_BUILD,
       DEVPOD_FLAG_RECREATE,
-    ]).withConversion((rawResult) => {
-      if (!isOk(rawResult)) {
-        return Return.Failed(`Failed to rebuild Workspace ${id}`, rawResult.stderr)
-      }
-
-      return Return.Ok()
-    })
+      DEVPOD_FLAG_FORCE_BUILD,
+    ])
   }
 
-  static RemoveWorkspace(id: TWorkspaceID): TCommand<undefined> {
-    return WorkspaceCommands.newCommand([DEVPOD_COMMAND_DELETE, id]).withConversion((rawResult) => {
-      if (!isOk(rawResult)) {
-        return Return.Failed(`Failed to remove Workspace ${id}`, rawResult.stderr)
-      }
-
-      return Return.Ok()
-    })
+  static RemoveWorkspace(id: TWorkspaceID) {
+    return WorkspaceCommands.newCommand([DEVPOD_COMMAND_DELETE, id, DEVPOD_FLAG_JSON_LOG_OUTPUT])
   }
 }

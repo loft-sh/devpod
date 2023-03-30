@@ -8,7 +8,7 @@ export type TActionName = keyof Pick<
 >
 export type TActionFn = (context: TActionContext) => Promise<Result<unknown>>
 export type TActionStatus = "pending" | "success" | "error" | "cancelled"
-export type TAction = typeof Action
+export type TActionID = Action["id"]
 // We don't want to expose the methods to consumers of these actions, so we'll strip them off on the type level
 export type TPublicAction = Omit<Action, "run" | "cancel" | "once">
 type TActionContext = Readonly<{ id: Action["id"] }>
@@ -16,9 +16,9 @@ type TActionContext = Readonly<{ id: Action["id"] }>
 export class Action {
   private _status: TActionStatus = "pending"
   private _error: Error | undefined = undefined
-  private createdAt = Date.now()
   private readonly eventManager = new SingleEventManager<TActionStatus>()
   public readonly id = window.crypto.randomUUID()
+  public readonly createdAt = Date.now()
 
   constructor(
     public readonly name: TActionName,
