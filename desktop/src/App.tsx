@@ -111,9 +111,17 @@ export function App() {
           <Menu>
             <MenuButton>Debug</MenuButton>
             <MenuList>
-              <MenuItem onClick={() => Debug.toggle?.("logs")}>
-                <Checkbox isChecked={debug.options.logs} />
-                <Text paddingLeft="4">Debug Logs</Text>
+              <MenuItem onClick={() => Debug.toggle?.("commands")}>
+                <Checkbox isChecked={debug.options.commands} />
+                <Text paddingLeft="4">Print command logs</Text>
+              </MenuItem>
+              <MenuItem onClick={() => Debug.toggle?.("actions")}>
+                <Checkbox isChecked={debug.options.actions} />
+                <Text paddingLeft="4">Print action logs</Text>
+              </MenuItem>
+              <MenuItem onClick={() => Debug.toggle?.("workspaces")}>
+                <Checkbox isChecked={debug.options.workspaces} />
+                <Text paddingLeft="4">Print workspace logs</Text>
               </MenuItem>
             </MenuList>
           </Menu>
