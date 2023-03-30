@@ -1,7 +1,6 @@
 package devcontainer
 
 import (
-	"context"
 	"encoding/json"
 	"fmt"
 	"github.com/loft-sh/devpod/pkg/devcontainer/config"
@@ -9,19 +8,17 @@ import (
 	"github.com/loft-sh/devpod/pkg/image"
 	"github.com/loft-sh/devpod/pkg/log"
 	"github.com/pkg/errors"
-	"github.com/sirupsen/logrus"
 	"runtime"
-	"strings"
 )
 
-func (r *Runner) Build(options BuildOptions) (string, error) {
+func (r *Runner) Build(options config.BuildOptions) (string, error) {
 	substitutedConfig, _, err := r.prepare()
 	if err != nil {
 		return "", err
 	}
 
 	// check if we need to build container
-	buildInfo, err := r.build(substitutedConfig, BuildOptions{ForceRebuild: options.ForceRebuild, PushRepository: options.PushRepository})
+	buildInfo, err := r.build(substitutedConfig, config.BuildOptions{ForceRebuild: options.ForceRebuild, PushRepository: options.PushRepository})
 	if err != nil {
 		return "", errors.Wrap(err, "build image")
 	}
@@ -39,33 +36,12 @@ func (r *Runner) Build(options BuildOptions) (string, error) {
 	}
 
 	// push the image to the registry
-	err = r.pushImage(prebuildImage)
+	err = r.Driver.PushDevContainer(prebuildImage)
 	if err != nil {
 		return "", errors.Wrap(err, "push image")
 	}
 
 	return prebuildImage, nil
-}
-
-func (r *Runner) pushImage(image string) error {
-	// push image
-	writer := r.Log.Writer(logrus.InfoLevel, false)
-	defer writer.Close()
-
-	// build args
-	args := []string{
-		"push",
-		image,
-	}
-
-	// run command
-	r.Log.Debugf("Running docker command: docker %s", strings.Join(args, " "))
-	err := r.Docker.Run(context.TODO(), args, nil, writer, writer)
-	if err != nil {
-		return errors.Wrap(err, "push image")
-	}
-
-	return nil
 }
 
 func calculatePrebuildHash(parsedConfig *config.DevContainerConfig, dockerfileContent string, log log.Logger) (string, error) {

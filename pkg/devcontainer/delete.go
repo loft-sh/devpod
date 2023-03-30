@@ -10,7 +10,7 @@ func (r *Runner) Delete(labels []string) error {
 	if len(labels) == 0 {
 		labels = r.getLabels()
 	}
-	containerDetails, err := r.Docker.FindDevContainer(labels)
+	containerDetails, err := r.Driver.FindDevContainer(labels)
 	if err != nil {
 		return errors.Wrap(err, "find dev container")
 	} else if containerDetails == nil {
@@ -19,19 +19,19 @@ func (r *Runner) Delete(labels []string) error {
 
 	r.Log.Infof("Deleting devcontainer...")
 	if isDockerCompose, projectName := getDockerComposeProject(containerDetails); isDockerCompose {
-		err = r.Compose.Remove(projectName)
+		err = r.deleteDockerCompose(projectName)
 		if err != nil {
 			return err
 		}
 	} else {
 		if strings.ToLower(containerDetails.State.Status) == "running" {
-			err = r.Docker.Stop(containerDetails.Id)
+			err = r.Driver.StopDevContainer(containerDetails.Id)
 			if err != nil {
 				return err
 			}
 		}
 
-		err = r.Docker.Remove(containerDetails.Id)
+		err = r.Driver.DeleteDevContainer(containerDetails.Id)
 		if err != nil {
 			return err
 		}
@@ -42,7 +42,7 @@ func (r *Runner) Delete(labels []string) error {
 
 func (r *Runner) Stop() error {
 	labels := r.getLabels()
-	containerDetails, err := r.Docker.FindDevContainer(labels)
+	containerDetails, err := r.Driver.FindDevContainer(labels)
 	if err != nil {
 		return errors.Wrap(err, "find dev container")
 	} else if containerDetails == nil {
@@ -51,12 +51,12 @@ func (r *Runner) Stop() error {
 
 	if strings.ToLower(containerDetails.State.Status) == "running" {
 		if isDockerCompose, projectName := getDockerComposeProject(containerDetails); isDockerCompose {
-			err = r.Compose.Stop(projectName)
+			err = r.stopDockerCompose(projectName)
 			if err != nil {
 				return err
 			}
 		} else {
-			err = r.Docker.Stop(containerDetails.Id)
+			err = r.Driver.StopDevContainer(containerDetails.Id)
 			if err != nil {
 				return err
 			}

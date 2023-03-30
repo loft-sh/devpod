@@ -355,7 +355,12 @@ func PrepareImage(workspaceDir, image string) error {
 }
 
 func (cmd *UpCmd) devPodUp(workspaceInfo *provider2.AgentWorkspaceInfo, log log.Logger) (*config2.Result, error) {
-	result, err := createRunner(workspaceInfo, log).Up(devcontainer.UpOptions{
+	runner, err := createRunner(workspaceInfo, log)
+	if err != nil {
+		return nil, err
+	}
+
+	result, err := runner.Up(devcontainer.UpOptions{
 		PrebuildRepositories: cmd.PrebuildRepositories,
 
 		ForceBuild: cmd.ForceBuild,
@@ -467,6 +472,6 @@ func InstallDocker(log log.Logger) error {
 	return nil
 }
 
-func createRunner(workspaceInfo *provider2.AgentWorkspaceInfo, log log.Logger) *devcontainer.Runner {
+func createRunner(workspaceInfo *provider2.AgentWorkspaceInfo, log log.Logger) (*devcontainer.Runner, error) {
 	return devcontainer.NewRunner(agent.RemoteDevPodHelperLocation, agent.DefaultAgentDownloadURL, workspaceInfo, log)
 }

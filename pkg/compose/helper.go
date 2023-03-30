@@ -64,16 +64,17 @@ func NewComposeHelper(dockerComposeCLI string, dockerHelper *docker.DockerHelper
 		return nil, err
 	}
 
-	if out, err := exec.Command(dockerCLI, "compose", "version", "--short").Output(); err == nil {
+	out, err := exec.Command(dockerCLI, "compose", "version", "--short").Output()
+	if err == nil {
 		return &ComposeHelper{
 			Command: dockerCLI,
 			Version: strings.TrimSpace(string(out)),
 			Args:    []string{"compose"},
 			Docker:  dockerHelper,
 		}, nil
-	} else {
-		return nil, err
 	}
+
+	return nil, err
 }
 
 func (h *ComposeHelper) FindDevContainer(projectName, serviceName string) (*config.ContainerDetails, error) {

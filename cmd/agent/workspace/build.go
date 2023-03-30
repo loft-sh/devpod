@@ -4,7 +4,7 @@ import (
 	"context"
 	"github.com/loft-sh/devpod/cmd/flags"
 	"github.com/loft-sh/devpod/pkg/agent"
-	"github.com/loft-sh/devpod/pkg/devcontainer"
+	"github.com/loft-sh/devpod/pkg/devcontainer/config"
 	"github.com/loft-sh/devpod/pkg/log"
 	provider2 "github.com/loft-sh/devpod/pkg/provider"
 	"github.com/pkg/errors"
@@ -65,8 +65,13 @@ func (cmd *BuildCmd) Run(ctx context.Context) error {
 		}()
 	}
 
+	runner, err := createRunner(workspaceInfo, logger)
+	if err != nil {
+		return err
+	}
+
 	// build the image
-	imageName, err := createRunner(workspaceInfo, logger).Build(devcontainer.BuildOptions{
+	imageName, err := runner.Build(config.BuildOptions{
 		PushRepository: cmd.Repository,
 		ForceRebuild:   cmd.ForceBuild,
 	})

@@ -6,8 +6,9 @@ import (
 	"github.com/loft-sh/devpod/cmd/agent/workspace"
 	"github.com/loft-sh/devpod/cmd/flags"
 	"github.com/loft-sh/devpod/pkg/agent"
-	"github.com/loft-sh/devpod/pkg/devcontainer"
-	"github.com/loft-sh/devpod/pkg/docker"
+	"github.com/loft-sh/devpod/pkg/devcontainer/config"
+	"github.com/loft-sh/devpod/pkg/driver"
+	"github.com/loft-sh/devpod/pkg/driver/drivercreate"
 	"github.com/loft-sh/devpod/pkg/log"
 	provider2 "github.com/loft-sh/devpod/pkg/provider"
 	"github.com/spf13/cobra"
@@ -61,12 +62,18 @@ func (cmd *ContainerTunnelCmd) Run(_ *cobra.Command, _ []string) error {
 		return nil
 	}
 
+	// create driver
+	driver, err := drivercreate.NewDriver(workspaceInfo, log.Default.ErrorStreamOnly())
+	if err != nil {
+		return err
+	}
+
 	// wait until devcontainer is started
 	containerId := ""
 	if cmd.StartContainer {
-		containerId, err = startDevContainer(workspaceInfo)
+		containerId, err = startDevContainer(workspaceInfo, driver)
 	} else {
-		containerId, err = waitForDevContainer(workspaceInfo)
+		containerId, err = waitForDevContainer(workspaceInfo, driver)
 	}
 	if err != nil {
 		return err
@@ -83,7 +90,7 @@ func (cmd *ContainerTunnelCmd) Run(_ *cobra.Command, _ []string) error {
 	// create tunnel into container.
 	err = agent.Tunnel(
 		context.TODO(),
-		docker.NewDockerHelper(),
+		driver,
 		agent.RemoteDevPodHelperLocation,
 		agent.DefaultAgentDownloadURL,
 		containerId,
@@ -102,12 +109,11 @@ func (cmd *ContainerTunnelCmd) Run(_ *cobra.Command, _ []string) error {
 	return nil
 }
 
-func waitForDevContainer(workspaceInfo *provider2.AgentWorkspaceInfo) (string, error) {
-	dockerHelper := docker.NewDockerHelper()
+func waitForDevContainer(workspaceInfo *provider2.AgentWorkspaceInfo, driver driver.Driver) (string, error) {
 	now := time.Now()
 	for time.Since(now) < time.Minute*2 {
-		containerDetails, err := dockerHelper.FindDevContainer([]string{
-			devcontainer.DockerIDLabel + "=" + workspaceInfo.Workspace.ID,
+		containerDetails, err := driver.FindDevContainer([]string{
+			config.DockerIDLabel + "=" + workspaceInfo.Workspace.ID,
 		})
 		if err != nil {
 			return "", err
@@ -122,10 +128,9 @@ func waitForDevContainer(workspaceInfo *provider2.AgentWorkspaceInfo) (string, e
 	return "", fmt.Errorf("timed out waiting for devcontainer to come up")
 }
 
-func startDevContainer(workspaceInfo *provider2.AgentWorkspaceInfo) (string, error) {
-	dockerHelper := docker.NewDockerHelper()
-	containerDetails, err := dockerHelper.FindDevContainer([]string{
-		devcontainer.DockerIDLabel + "=" + workspaceInfo.Workspace.ID,
+func startDevContainer(workspaceInfo *provider2.AgentWorkspaceInfo, driver driver.Driver) (string, error) {
+	containerDetails, err := driver.FindDevContainer([]string{
+		config.DockerIDLabel + "=" + workspaceInfo.Workspace.ID,
 	})
 	if err != nil {
 		return "", err

@@ -210,10 +210,10 @@ type DockerfileContainer struct {
 	Context string `json:"context,omitempty"`
 
 	// Docker build-related options.
-	Build BuildOptions `json:"build,omitempty"`
+	Build ConfigBuildOptions `json:"build,omitempty"`
 }
 
-type BuildOptions struct {
+type ConfigBuildOptions struct {
 	// The location of the Dockerfile that defines the contents of the container. The path is relative to the folder containing the `devcontainer.json` file.
 	Dockerfile string `json:"dockerfile,omitempty"`
 
