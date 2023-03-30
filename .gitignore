@@ -2,3 +2,7 @@
 .DS_Store
 /test
 /e2e/bin
+
+# Unit test targets
+main
+profile.out
