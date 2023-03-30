@@ -28,7 +28,39 @@ const (
 	FeaturesStartOverrideFilePrefix = "docker-compose.devcontainer.containerFeatures"
 )
 
+func (r *Runner) stopDockerCompose(projectName string) error {
+	composeHelper, err := r.Driver.ComposeHelper()
+	if err != nil {
+		return errors.Wrap(err, "find docker compose")
+	}
+
+	err = composeHelper.Stop(projectName)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (r *Runner) deleteDockerCompose(projectName string) error {
+	composeHelper, err := r.Driver.ComposeHelper()
+	if err != nil {
+		return errors.Wrap(err, "find docker compose")
+	}
+
+	err = composeHelper.Remove(projectName)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
 func (r *Runner) runDockerCompose(parsedConfig *config.SubstitutedConfig, options UpOptions) (*config.Result, error) {
+	composeHelper, err := r.Driver.ComposeHelper()
+	if err != nil {
+		return nil, errors.Wrap(err, "find docker compose")
+	}
 	if options.Recreate {
 		labels := r.getLabels()
 		err := r.Delete(labels)
@@ -61,10 +93,10 @@ func (r *Runner) runDockerCompose(parsedConfig *config.SubstitutedConfig, option
 	if err != nil {
 		return nil, errors.Wrap(err, "load docker compose project")
 	}
-	project.Name = r.getProjectName(project, envFiles)
+	project.Name = r.getProjectName(project, composeHelper, envFiles)
 	r.Log.Debugf("Loaded project %s", project.Name)
 
-	containerDetails, err := r.Compose.FindDevContainer(project.Name, parsedConfig.Config.Service)
+	containerDetails, err := composeHelper.FindDevContainer(project.Name, parsedConfig.Config.Service)
 	if err != nil {
 		return nil, errors.Wrap(err, "find dev container")
 	}
@@ -72,7 +104,7 @@ func (r *Runner) runDockerCompose(parsedConfig *config.SubstitutedConfig, option
 	// does the container already exist or is it not running?
 	if containerDetails == nil || containerDetails.State.Status != "running" {
 		// Start container if not running
-		containerDetails, err = r.startContainer(parsedConfig, project, composeGlobalArgs)
+		containerDetails, err = r.startContainer(parsedConfig, project, composeHelper, composeGlobalArgs)
 		if err != nil {
 			return nil, errors.Wrap(err, "start container")
 		}
@@ -160,7 +192,7 @@ func (r *Runner) getEnvFiles() ([]string, error) {
 	return envFiles, nil
 }
 
-func (r *Runner) getProjectName(project *composetypes.Project, envFiles []string) string {
+func (r *Runner) getProjectName(project *composetypes.Project, composeHelper *compose.ComposeHelper, envFiles []string) string {
 	projectName := os.Getenv("COMPOSE_PROJECT_NAME")
 
 	if projectName == "" {
@@ -178,7 +210,7 @@ func (r *Runner) getProjectName(project *composetypes.Project, envFiles []string
 		projectName = r.ID
 	}
 
-	useNewProjectNameFormat, _ := r.Compose.UseNewProjectName()
+	useNewProjectNameFormat, _ := composeHelper.UseNewProjectName()
 	if useNewProjectNameFormat {
 		return regexp.MustCompile("[^a-z0-9]").ReplaceAllString(strings.ToLower(projectName), "")
 	}
@@ -186,21 +218,21 @@ func (r *Runner) getProjectName(project *composetypes.Project, envFiles []string
 	return regexp.MustCompile("[^-_a-z0-9]").ReplaceAllString(strings.ToLower(projectName), "")
 }
 
-func (r *Runner) startContainer(parsedConfig *config.SubstitutedConfig, project *composetypes.Project, globalArgs []string) (*config.ContainerDetails, error) {
+func (r *Runner) startContainer(parsedConfig *config.SubstitutedConfig, project *composetypes.Project, composeHelper *compose.ComposeHelper, globalArgs []string) (*config.ContainerDetails, error) {
 	service := parsedConfig.Config.Service
 	composeService, err := project.GetService(service)
 	if err != nil {
 		return nil, fmt.Errorf("service '%s' configured in devcontainer.json not found in Docker Compose configuration", service)
 	}
 
-	container, err := r.Compose.FindDevContainer(project.Name, service)
+	container, err := composeHelper.FindDevContainer(project.Name, service)
 	if err != nil {
 		return nil, errors.Wrap(err, "find dev container")
 	}
 
 	originalImageName := composeService.Image
 	if originalImageName == "" {
-		originalImageName, err = r.Compose.GetDefaultImage(project.Name, service)
+		originalImageName, err = composeHelper.GetDefaultImage(project.Name, service)
 		if err != nil {
 			return nil, errors.Wrap(err, "get default image")
 		}
@@ -236,7 +268,7 @@ func (r *Runner) startContainer(parsedConfig *config.SubstitutedConfig, project 
 	}
 
 	if container == nil || !didRestoreFromPersistedShare {
-		overrideBuildImageName, overrideComposeBuildFilePath, imageMetadata, err := r.buildAndExtendDockerCompose(parsedConfig, project, &composeService, globalArgs)
+		overrideBuildImageName, overrideComposeBuildFilePath, imageMetadata, err := r.buildAndExtendDockerCompose(parsedConfig, project, composeHelper, &composeService, globalArgs)
 		if err != nil {
 			return nil, err
 		}
@@ -250,7 +282,7 @@ func (r *Runner) startContainer(parsedConfig *config.SubstitutedConfig, project 
 			currentImageName = originalImageName
 		}
 
-		imageDetails, err := r.Docker.InspectImage(currentImageName, true)
+		imageDetails, err := r.Driver.InspectImage(currentImageName)
 		if err != nil {
 			return nil, err
 		}
@@ -262,7 +294,7 @@ func (r *Runner) startContainer(parsedConfig *config.SubstitutedConfig, project 
 
 		// TODO update remote user UID?
 
-		overrideComposeUpFilePath, err := r.extendedDockerComposeUp(parsedConfig, mergedConfig, &composeService, originalImageName, overrideBuildImageName, imageDetails)
+		overrideComposeUpFilePath, err := r.extendedDockerComposeUp(parsedConfig, mergedConfig, composeHelper, &composeService, originalImageName, overrideBuildImageName, imageDetails)
 		if err != nil {
 			return nil, err
 		}
@@ -290,19 +322,19 @@ func (r *Runner) startContainer(parsedConfig *config.SubstitutedConfig, project 
 	// start compose
 	writer := r.Log.Writer(logrus.InfoLevel, false)
 	defer writer.Close()
-	err = r.Compose.Run(context.TODO(), upArgs, nil, writer, writer)
+	err = composeHelper.Run(context.TODO(), upArgs, nil, writer, writer)
 	if err != nil {
 		return nil, err
 	}
 
 	// TODO wait for started event?
-	return r.Compose.FindDevContainer(project.Name, composeService.Name)
+	return composeHelper.FindDevContainer(project.Name, composeService.Name)
 }
 
 // This extends the build information for docker compose containers
-func (r *Runner) buildAndExtendDockerCompose(parsedConfig *config.SubstitutedConfig, project *composetypes.Project, composeService *composetypes.ServiceConfig, globalArgs []string) (string, string, *config.ImageMetadataConfig, error) {
+func (r *Runner) buildAndExtendDockerCompose(parsedConfig *config.SubstitutedConfig, project *composetypes.Project, composeHelper *compose.ComposeHelper, composeService *composetypes.ServiceConfig, globalArgs []string) (string, string, *config.ImageMetadataConfig, error) {
 	var dockerFilePath, dockerfileContents, dockerComposeFilePath string
-	var imageBuildInfo *ImageBuildInfo
+	var imageBuildInfo *config.ImageBuildInfo
 	var err error
 
 	buildImageName := composeService.Image
@@ -325,7 +357,7 @@ func (r *Runner) buildAndExtendDockerCompose(parsedConfig *config.SubstitutedCon
 		if originalTarget != "" {
 			buildTarget = originalTarget
 		} else {
-			lastStageName, modifiedDockerfile, err := dockerfile.EnsureDockerfileHasFinalStageName(string(originalDockerfile), DockerfileDefaultTarget)
+			lastStageName, modifiedDockerfile, err := dockerfile.EnsureDockerfileHasFinalStageName(string(originalDockerfile), config.DockerfileDefaultTarget)
 			if err != nil {
 				return "", "", nil, err
 			}
@@ -402,7 +434,7 @@ func (r *Runner) buildAndExtendDockerCompose(parsedConfig *config.SubstitutedCon
 	// build image
 	writer := r.Log.Writer(logrus.InfoLevel, false)
 	defer writer.Close()
-	err = r.Compose.Run(context.TODO(), buildArgs, nil, writer, writer)
+	err = composeHelper.Run(context.TODO(), buildArgs, nil, writer, writer)
 	if err != nil {
 		return buildImageName, "", nil, err
 	}
@@ -493,12 +525,13 @@ func extendedDockerComposeBuild(composeService *composetypes.ServiceConfig, dock
 func (r *Runner) extendedDockerComposeUp(
 	parsedConfig *config.SubstitutedConfig,
 	mergedConfig *config.MergedDevContainerConfig,
+	composeHelper *compose.ComposeHelper,
 	composeService *composetypes.ServiceConfig,
 	originalImageName,
 	overrideImageName string,
 	imageDetails *config.ImageDetails,
 ) (string, error) {
-	dockerComposeUpProject := r.generateDockerComposeUpProject(parsedConfig, mergedConfig, composeService, originalImageName, overrideImageName, imageDetails)
+	dockerComposeUpProject := r.generateDockerComposeUpProject(parsedConfig, mergedConfig, composeHelper, composeService, originalImageName, overrideImageName, imageDetails)
 	dockerComposeData, err := yaml.Marshal(dockerComposeUpProject)
 	if err != nil {
 		return "", err
@@ -521,6 +554,7 @@ func (r *Runner) extendedDockerComposeUp(
 func (r *Runner) generateDockerComposeUpProject(
 	parsedConfig *config.SubstitutedConfig,
 	mergedConfig *config.MergedDevContainerConfig,
+	composeHelper *compose.ComposeHelper,
 	composeService *composetypes.ServiceConfig,
 	originalImageName,
 	overrideImageName string,
@@ -588,7 +622,7 @@ while sleep 1 & wait $!; do :; done"`,
 		overrideService.Privileged = *mergedConfig.Privileged
 	}
 
-	gpuSupportEnabled, _ := r.Docker.GPUSupportEnabled()
+	gpuSupportEnabled, _ := composeHelper.Docker.GPUSupportEnabled()
 	if parsedConfig.Config.HostRequirements != nil && parsedConfig.Config.HostRequirements.GPU && gpuSupportEnabled {
 		overrideService.Deploy = &composetypes.DeployConfig{
 			Resources: composetypes.Resources{

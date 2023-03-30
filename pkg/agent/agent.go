@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"github.com/loft-sh/devpod/pkg/driver"
 	"io"
 	"os"
 	"os/exec"
@@ -15,7 +16,6 @@ import (
 	"github.com/loft-sh/devpod/pkg/command"
 	"github.com/loft-sh/devpod/pkg/compress"
 	"github.com/loft-sh/devpod/pkg/devcontainer/config"
-	"github.com/loft-sh/devpod/pkg/docker"
 	"github.com/loft-sh/devpod/pkg/log"
 	provider2 "github.com/loft-sh/devpod/pkg/provider"
 	"github.com/pkg/errors"
@@ -174,7 +174,7 @@ func WriteWorkspaceInfoAndDeleteOld(workspaceInfoEncoded string, deleteWorkspace
 		if err != nil {
 			return false, nil, errors.Wrap(err, "delete old workspace")
 		}
-		
+
 		// recreate workspace folder again
 		workspaceDir, err = CreateAgentWorkspaceDir(workspaceInfo.Agent.DataPath, workspaceInfo.Workspace.Context, workspaceInfo.Workspace.ID)
 		if err != nil {
@@ -241,7 +241,7 @@ func rerunAsRoot(workspaceInfo *provider2.AgentWorkspaceInfo, log log.Logger) (b
 
 func Tunnel(
 	ctx context.Context,
-	dockerHelper *docker.DockerHelper,
+	driver driver.Driver,
 	agentPath, agentDownloadURL string,
 	containerID string,
 	token string,
@@ -254,8 +254,7 @@ func Tunnel(
 ) error {
 	// inject agent
 	err := InjectAgent(ctx, func(ctx context.Context, command string, stdin io.Reader, stdout io.Writer, stderr io.Writer) error {
-		args := []string{"exec", "-i", "-u", "root", containerID, "sh", "-c", command}
-		return dockerHelper.Run(ctx, args, stdin, stdout, stderr)
+		return driver.CommandDevContainer(ctx, containerID, "root", command, stdin, stdout, stderr)
 	}, agentPath, agentDownloadURL, false, log)
 	if err != nil {
 		return err
@@ -274,14 +273,7 @@ func Tunnel(
 	}
 
 	// create tunnel
-	args := []string{
-		"exec",
-		"-i",
-		"-u", user,
-		containerID,
-		"sh", "-c", command,
-	}
-	err = dockerHelper.Run(ctx, args, stdin, stdout, stderr)
+	err = driver.CommandDevContainer(ctx, containerID, user, command, stdin, stdout, stderr)
 	if err != nil {
 		return err
 	}
