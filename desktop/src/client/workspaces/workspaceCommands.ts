@@ -140,7 +140,7 @@ export class WorkspaceCommands {
   static RemoveWorkspace(id: TWorkspaceID): TCommand<undefined> {
     return WorkspaceCommands.newCommand([DEVPOD_COMMAND_DELETE, id]).withConversion((rawResult) => {
       if (!isOk(rawResult)) {
-        return Return.Failed(`Failed to rebuild Workspace ${id}`, rawResult.stderr)
+        return Return.Failed(`Failed to remove Workspace ${id}`, rawResult.stderr)
       }
 
       return Return.Ok()

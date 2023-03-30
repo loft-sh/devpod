@@ -3,6 +3,13 @@ package workspace
 import (
 	"context"
 	"fmt"
+	"os"
+	"os/exec"
+	"path/filepath"
+	"regexp"
+	"strings"
+	"time"
+
 	"github.com/google/uuid"
 	"github.com/loft-sh/devpod/pkg/client"
 	"github.com/loft-sh/devpod/pkg/client/clientimplementation"
@@ -16,12 +23,6 @@ import (
 	"github.com/loft-sh/devpod/pkg/terminal"
 	"github.com/loft-sh/devpod/pkg/types"
 	"github.com/pkg/errors"
-	"os"
-	"os/exec"
-	"path/filepath"
-	"regexp"
-	"strings"
-	"time"
 )
 
 var branchRegEx = regexp.MustCompile(`[^a-zA-Z0-9\.\-]+`)
