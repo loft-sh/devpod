@@ -64,6 +64,8 @@ export class Command implements TCommand<ChildProcess> {
       await new Promise((res, rej) => {
         const stdoutListener: TEventListener<"data"> = (message) => {
           try {
+            // TODO: CONTINUE HERE :)
+            console.log(message)
             // TODO: TYPECHECK
             listener({ type: "data", data: JSON.parse(message) })
           } catch (error) {

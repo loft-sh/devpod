@@ -37,3 +37,7 @@ export function safeJSONParse<T>(arg: string): T | null {
 export function getKeys<T extends object>(arg: T): readonly (keyof T)[] {
   return Object.keys(arg) as unknown as readonly (keyof T)[]
 }
+
+export function sleep(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms))
+}

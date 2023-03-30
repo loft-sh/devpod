@@ -1,7 +1,8 @@
 import { exists, noop, Result, ResultError, Return, THandler } from "../../lib"
 import {
   TUnsubscribeFn,
-  TViewID,
+  TCacheID,
+  TWorkspace,
   TWorkspaceID,
   TWorkspaceStartConfig,
   TWorkspaceWithoutStatus,
@@ -19,13 +20,13 @@ export class WorkspacesClient implements TDebuggable {
   }
 
   private createStartHandler(
-    viewID: TViewID,
+    id: TCacheID,
     listener: TStreamEventListenerFn | undefined
   ): THandler<TStreamEventListenerFn> {
     return {
-      id: viewID,
+      id,
       eq(other) {
-        return viewID === other.id
+        return id === other.id
       },
       notify: exists(listener) ? listener : noop,
     }
@@ -35,9 +36,7 @@ export class WorkspacesClient implements TDebuggable {
     return WorkspaceCommands.ListWorkspaces()
   }
 
-  public async getStatus(
-    id: TWorkspaceID
-  ): Promise<Result<"Running" | "Busy" | "Stopped" | "NotFound" | null>> {
+  public async getStatus(id: TWorkspaceID): Promise<Result<TWorkspace["status"]>> {
     const result = await WorkspaceCommands.GetWorkspaceStatus(id)
     if (result.err) {
       return result
@@ -55,11 +54,11 @@ export class WorkspacesClient implements TDebuggable {
   public async start(
     id: TWorkspaceID,
     config: TWorkspaceStartConfig,
-    viewID: TViewID,
+    cacheID: TCacheID,
     listener?: TStreamEventListenerFn | undefined
-  ): Promise<Result<"Running" | "Busy" | "Stopped" | "NotFound" | null>> {
+  ): Promise<Result<TWorkspace["status"]>> {
     const maybeRunningCommand = this.startCommandCache.get(id)
-    const handler = this.createStartHandler(viewID, listener)
+    const handler = this.createStartHandler(cacheID, listener)
 
     // If `start` for id is running already,
     // wire up the new listener and return the existing operation
@@ -86,7 +85,7 @@ export class WorkspacesClient implements TDebuggable {
 
   public subscribeToStart(
     id: TWorkspaceID,
-    viewID: TViewID,
+    viewID: TCacheID,
     listener?: TStreamEventListenerFn | undefined
   ): TUnsubscribeFn {
     const maybeRunningCommand = this.startCommandCache.get(id)
@@ -99,9 +98,7 @@ export class WorkspacesClient implements TDebuggable {
     return () => maybeUnsubscribe?.()
   }
 
-  public async stop(
-    id: TWorkspaceID
-  ): Promise<Result<"Running" | "Busy" | "Stopped" | "NotFound" | null>> {
+  public async stop(id: TWorkspaceID): Promise<Result<TWorkspace["status"]>> {
     const result = await WorkspaceCommands.StopWorkspace(id).run()
     if (result.err) {
       return result
@@ -110,9 +107,7 @@ export class WorkspacesClient implements TDebuggable {
     return this.getStatus(id)
   }
 
-  public async rebuild(
-    id: TWorkspaceID
-  ): Promise<Result<"Running" | "Busy" | "Stopped" | "NotFound" | null>> {
+  public async rebuild(id: TWorkspaceID): Promise<Result<TWorkspace["status"]>> {
     const result = await WorkspaceCommands.RebuildWorkspace(id).run()
     if (result.err) {
       return result

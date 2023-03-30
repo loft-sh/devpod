@@ -17,9 +17,9 @@ export const QueryKeys = {
 }
 
 export const MutationKeys = {
-  CREATE: ["create"],
-  START: ["start"],
-  STOP: ["stop"],
-  REBUILD: ["rebuild"],
-  REMOVE: ["remove"],
-}
+  CREATE_WORKSPACE: ["createWorkspace"],
+  START_WORKSPACE: ["startWorkspace"],
+  STOP_WORKSPACE: ["stopWorkspace"],
+  REBUILD_WORKSPACE: ["rebuildWorkspace"],
+  REMOVE_WORKSPACE: ["removeWorkspace"],
+} as const

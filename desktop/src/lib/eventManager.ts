@@ -1,10 +1,9 @@
 import { TComparable, TIdentifiable, TUnsubscribeFn } from "../types"
 import { exists, isEmpty } from "./helpers"
 
-type TEventHandler<
-  TEvents extends TBaseEvents,
-  TEventName extends keyof TEvents = keyof TEvents
-> = THandler<(event: TEvents[TEventName]) => void>
+type TEventHandler<TEvents, TEventName extends keyof TEvents = keyof TEvents> = THandler<
+  (event: TEvents[TEventName]) => void
+>
 export type THandler<TFn = Function> = Readonly<{ notify: TFn }> &
   TIdentifiable &
   TComparable<TIdentifiable>
@@ -112,15 +111,7 @@ export class EventManager<TEvents extends TBaseEvents> implements TEventManager<
   }
 }
 
-// Mapped helper type, essentially removes the first argument, the eventName, from TEventManager
-type TEM<T extends TBaseEvents> = TEventManager<{ event: T }>
-type TSingleEventManager<T extends TBaseEvents> = {
-  [K in keyof TEM<T>]: TEM<T>[K] extends Function
-    ? (arg: Parameters<TEM<T>[K]>[1]) => ReturnType<TEM<T>[K]>
-    : never
-}
-
-export class SingleEventManager<T extends TBaseEvents> implements TSingleEventManager<T> {
+export class SingleEventManager<T> {
   private manager = new EventManager<{ event: T }>()
 
   subscribe(handler: TEventHandler<{ event: T }, "event">): VoidFunction {
