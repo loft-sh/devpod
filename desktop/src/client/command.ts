@@ -1,8 +1,8 @@
 import { ChildProcess, Command as ShellCommand, EventEmitter } from "@tauri-apps/api/shell"
-import { DEVPOD_BINARY } from "./constants"
+import { debug, isError } from "../lib"
 import { Result, ResultError, Return } from "../lib/result"
-import { Debug, exists } from "../lib"
 import { TLogOutput } from "../types"
+import { DEVPOD_BINARY } from "./constants"
 
 export type TStreamEvent = Readonly<
   { type: "data"; data: TLogOutput } | { type: "error"; error: TLogOutput }
@@ -22,7 +22,7 @@ export class Command implements TCommand<ChildProcess> {
   private args: string[]
 
   constructor(args: string[]) {
-    debug("Creating Devpod command with args: ", args)
+    debug("commands", "Creating Devpod command with args: ", args)
     this.sidecarCommand = ShellCommand.sidecar(DEVPOD_BINARY, args)
     this.args = args
   }
@@ -44,7 +44,7 @@ export class Command implements TCommand<ChildProcess> {
   public async run(): Promise<Result<ChildProcess>> {
     try {
       const rawResult = await this.sidecarCommand.execute()
-      debug(`Result for command with args ${this.args}:`, rawResult)
+      debug("commands", `Result for command with args ${this.args}:`, rawResult)
 
       return Return.Value(rawResult)
     } catch (e) {
@@ -54,18 +54,12 @@ export class Command implements TCommand<ChildProcess> {
 
   public async stream(listener: TStreamEventListenerFn): Promise<ResultError> {
     try {
-      if (!exists(listener)) {
-        await this.sidecarCommand.execute()
-
-        return Return.Ok()
-      }
-
       await this.sidecarCommand.spawn()
       await new Promise((res, rej) => {
         const stdoutListener: TEventListener<"data"> = (message) => {
           try {
             // TODO: CONTINUE HERE :)
-            console.log(message)
+            // console.log(message)
             // TODO: TYPECHECK
             listener({ type: "data", data: JSON.parse(message) })
           } catch (error) {
@@ -102,17 +96,13 @@ export class Command implements TCommand<ChildProcess> {
 
       return Return.Ok()
     } catch (e) {
-      return Return.Failed(e + "")
+      if (isError(e)) {
+        return Return.Failed(e.message)
+      }
+
+      return Return.Failed("streaming failed")
     }
   }
-}
-
-function debug(...args: Parameters<(typeof console)["info"]>): void {
-  Debug.get?.("logs").then((isEnabled) => {
-    if (isEnabled) {
-      console.info(...args)
-    }
-  })
 }
 
 export function isOk(result: ChildProcess): boolean {

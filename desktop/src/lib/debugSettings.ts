@@ -3,7 +3,7 @@ import { TUnsubscribeFn } from "../types"
 import { LocalStorageBackend, Store } from "./store"
 
 const DEBUG_STORE_KEY = "debug"
-const DEBUG_OPTIONS = ["logs"] as const
+const DEBUG_OPTIONS = ["commands", "actions", "workspaces"] as const
 type TDebugOption = (typeof DEBUG_OPTIONS)[number]
 type TDebug = Readonly<{
   isEnabled?: boolean
@@ -38,13 +38,11 @@ function init(): TDebug & TInternalDebug {
   }
 }
 
-function getInitialDebugOptions(): TDebugStore {
-  return { logs: false }
-}
+const initialDebugOptions: TDebugStore = { commands: false, workspaces: false, actions: false }
 
 type TUseDebug = Readonly<{ options: Record<TDebugOption, boolean> }> & Pick<TDebug, "isEnabled">
 function useInternalDebug(): TUseDebug {
-  const [options, setOptions] = useState<TDebugStore>(getInitialDebugOptions())
+  const [options, setOptions] = useState<TDebugStore>(initialDebugOptions)
 
   useEffect(() => {
     ;(async () => {
@@ -80,10 +78,17 @@ function useInternalDebug(): TUseDebug {
 
   return { options, isEnabled: true }
 }
+export function debug(option: TDebugOption, ...args: Parameters<(typeof console)["info"]>): void {
+  Debug.get?.(option).then((isEnabled) => {
+    if (isEnabled) {
+      console.info(...args)
+    }
+  })
+}
 
 // Only available during development
 export const Debug: TDebug = import.meta.env.DEV ? init() : { isEnabled: false }
 // Only available during development
 export const useDebug: typeof useInternalDebug = import.meta.env.DEV
   ? useInternalDebug
-  : () => ({ options: getInitialDebugOptions(), isEnabled: false })
+  : () => ({ options: initialDebugOptions, isEnabled: false })

@@ -1,4 +1,15 @@
-import { Button, Card, CardBody, CardFooter, Heading, Link, Stack, Text } from "@chakra-ui/react"
+import {
+  Button,
+  Card,
+  CardBody,
+  CardFooter,
+  CardHeader,
+  Checkbox,
+  Heading,
+  Link,
+  Stack,
+  Text,
+} from "@chakra-ui/react"
 import { Link as RouterLink } from "react-router-dom"
 import { useWorkspace } from "../../contexts"
 import { Routes } from "../../routes"
@@ -6,9 +17,10 @@ import { TWorkspaceID } from "../../types"
 
 type TWorkspaceCardProps = Readonly<{
   workspaceID: TWorkspaceID
+  onSelectionChange?: (isSelected: boolean) => void
 }>
 
-export function WorkspaceCard({ workspaceID }: TWorkspaceCardProps) {
+export function WorkspaceCard({ workspaceID, onSelectionChange }: TWorkspaceCardProps) {
   const workspace = useWorkspace(workspaceID)
 
   if (workspace.data === undefined) {
@@ -20,13 +32,17 @@ export function WorkspaceCard({ workspaceID }: TWorkspaceCardProps) {
   return (
     <Card key={id} direction={{ base: "column", sm: "row" }} overflow="hidden" variant="outline">
       <Stack>
-        <CardBody>
+        <CardHeader display="flex" width="full" justifyContent="space-between">
           <Heading size="md">
             <Link as={RouterLink} to={Routes.toWorkspace(id)}>
               <Text fontWeight="bold">{id}</Text>
             </Link>
           </Heading>
-
+          {onSelectionChange !== undefined && (
+            <Checkbox onChange={(e) => onSelectionChange(e.target.checked)} />
+          )}
+        </CardHeader>
+        <CardBody>
           {provider?.name && <Text>Provider: {provider.name}</Text>}
           <Text>Status: {status}</Text>
         </CardBody>

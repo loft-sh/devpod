@@ -1,9 +1,8 @@
 import { os } from "@tauri-apps/api"
 import { listen } from "@tauri-apps/api/event"
 import { TSettings } from "../contexts"
-import { Result, Return } from "../lib/result"
+import { Result, Return } from "../lib"
 import { TProviders, TUnsubscribeFn, TWorkspaces } from "../types"
-import { StartCommandCache } from "./cache"
 import { ProvidersClient } from "./providers"
 import { WorkspacesClient } from "./workspaces"
 
@@ -33,8 +32,7 @@ type TClient = Readonly<{
 type TClientSettings = Pick<TSettings, "debugFlag">
 
 class Client implements TClient {
-  private readonly startCommandCache = new StartCommandCache()
-  public readonly workspaces = new WorkspacesClient(this.startCommandCache)
+  public readonly workspaces = new WorkspacesClient()
   public readonly providers = new ProvidersClient()
 
   public setSetting<TSettingName extends keyof TClientSettings>(

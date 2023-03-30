@@ -1,7 +1,7 @@
 export * from "./helpers"
 export { EventManager, SingleEventManager } from "./eventManager"
 export type { THandler } from "./eventManager"
-export { Debug, useDebug } from "./debugSettings"
+export { Debug, useDebug, debug } from "./debugSettings"
 export * from "./result"
 export { Store, LocalStorageBackend, FileStorageBackend } from "./store"
 export { useArch, usePlatform } from "./systemInfo"
