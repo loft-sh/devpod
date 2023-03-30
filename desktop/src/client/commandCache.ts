@@ -1,0 +1,76 @@
+import { TActionName } from "../contexts"
+import { exists, isEmpty, noop, ResultError, SingleEventManager, THandler } from "../lib"
+import { TUnsubscribeFn } from "../types"
+import { TCommand, TStreamEvent, TStreamEventListenerFn } from "./command"
+
+export type TCommandCacheInfo = Readonly<{ id: string; actionName: TActionName }>
+type TCommandCacheID = `${string}:${TActionName}`
+type TCommandHandler = Readonly<{
+  promise: Promise<ResultError>
+  stream?: (streamHandler?: THandler<TStreamEventListenerFn>) => TUnsubscribeFn
+}>
+type TCommandCacheStore = Map<TCommandCacheID, TCommandHandler>
+
+// TODO: continue here - persist all logs :)
+export class CommandCache {
+  private store: TCommandCacheStore = new Map()
+
+  private getCacheID(info: TCommandCacheInfo): TCommandCacheID {
+    return `${info.id}:${info.actionName}`
+  }
+
+  public get(info: TCommandCacheInfo): TCommandHandler | undefined {
+    const cacheID = this.getCacheID(info)
+
+    return this.store.get(cacheID)
+  }
+
+  public clear(info: TCommandCacheInfo) {
+    const cacheID = this.getCacheID(info)
+    this.store.delete(cacheID)
+  }
+
+  public connect<T>(
+    info: TCommandCacheInfo,
+    cmd: Readonly<TCommand<T>>
+  ): Readonly<{
+    operation: TCommandHandler["promise"]
+    stream: TCommandHandler["stream"]
+  }> {
+    const events: TStreamEvent[] = []
+    const eventManager = new SingleEventManager<TStreamEvent>()
+
+    const promise = cmd.stream((event) => {
+      events.push(event)
+
+      eventManager.publish(event)
+    })
+    const stream: TCommandHandler["stream"] = (handler) => {
+      if (!exists(handler)) {
+        return noop
+      }
+
+      // Make sure we subscribe handlers only once
+      if (eventManager.isSubscribed(handler)) {
+        return () => eventManager.unsubscribe(handler)
+      }
+
+      // Replay events in-order before registering the new newHandler
+      if (!isEmpty(events)) {
+        for (const event of events) {
+          handler.notify(event)
+        }
+      }
+
+      return eventManager.subscribe(handler)
+    }
+
+    const cacheID = this.getCacheID(info)
+    this.store.set(cacheID, {
+      promise,
+      stream,
+    })
+
+    return { operation: promise, stream }
+  }
+}
