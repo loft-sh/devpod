@@ -4,7 +4,10 @@ import { TStreamEventListenerFn } from "./client"
 export type TUnsubscribeFn = VoidFunction
 export type TComparable<T> = Readonly<{ eq(b: T): boolean }>
 export type TIdentifiable = Readonly<{ id: string }>
-export type TViewID = string
+export type TCacheID = string
+export type TDeepNonNullable<T> = {
+  [K in keyof T]-?: T[K] extends object ? TDeepNonNullable<T[K]> : Required<NonNullable<T[K]>>
+}
 
 //#region Shared
 export type TLogOutput = Readonly<{ time: Date; message: string; level: string }>
@@ -97,7 +100,7 @@ export type TWorkspaceID = NonNullable<TWorkspace["id"]>
 export type TWorkspace = Readonly<{
   id: string
   provider: Readonly<{ name: string | null }> | null
-  status: "Running" | "Busy" | "Stopped" | "NotFound" | null
+  status: "Running" | "Busy" | "Stopped" | "NotFound" | undefined | null
   ide: {
     ide: string | null
   } | null
@@ -145,3 +148,7 @@ export type TWorkspaceManager = Readonly<{
 }>
 export type TWorkspaceManagerRunConfig = TOperationManagerRunConfig<TWorkspaceManager>
 //#endregion
+
+export function isWithWorkspaceID(arg: unknown): arg is TWithWorkspaceID {
+  return typeof arg === "object" && arg !== null && "workspaceID" in arg
+}

@@ -14,7 +14,7 @@ import { useCallback, useEffect, useMemo } from "react"
 import { SubmitHandler, useForm } from "react-hook-form"
 import { useNavigate } from "react-router"
 import { CollapsibleSection, useStreamingTerminal } from "../../components"
-import { useProviders, useWorkspaceManager } from "../../contexts"
+import { useProviders, useWorkspace } from "../../contexts"
 import { exists, useFormErrors } from "../../lib"
 import { Routes } from "../../routes"
 import { TProviderID } from "../../types"
@@ -39,9 +39,14 @@ type TFormValues = {
 // TODO: handle no provider configured
 export function CreateWorkspace() {
   const navigate = useNavigate()
-  const { create } = useWorkspaceManager()
+  const workspace = useWorkspace(undefined)
   const [[providers]] = useProviders()
-  const { register, handleSubmit, formState } = useForm<TFormValues>()
+  const { register, handleSubmit, formState } = useForm<TFormValues>({
+    defaultValues: {
+      [FieldName.DEFAULT_IDE]: "vscode",
+      [FieldName.PROVIDER]: DEFAULT_PROVIDER,
+    },
+  })
   const { terminal, connectStream } = useStreamingTerminal()
 
   const onSubmit = useCallback<SubmitHandler<TFormValues>>(
@@ -52,19 +57,18 @@ export function CreateWorkspace() {
 
       // TODO: after creating a workspace, the status is NOT_FOUND until the whole devcontainer is set up...
       // can we change this in cli?
-      create.run({
-        rawWorkspaceSource: workspaceSource,
-        config: {
+      workspace.create(
+        {
           providerConfig: { providerID },
           ideConfig: { ide: defaultIDE },
           sourceConfig: {
             source: workspaceSource,
           },
         },
-        onStream: connectStream,
-      })
+        connectStream
+      )
     },
-    [create, connectStream]
+    [workspace, connectStream]
   )
 
   const { sourceError, defaultIDEError } = useFormErrors(Object.values(FieldName), formState)
@@ -77,13 +81,18 @@ export function CreateWorkspace() {
     return Object.keys(providers)
   }, [providers])
 
+  const isLoading = useMemo(
+    () => workspace.current?.name === "create" && workspace.current.status === "pending",
+    [workspace]
+  )
+
   useEffect(() => {
-    if (create.status === "success") {
+    if (workspace.current?.name === "create" && workspace.current.status === "success") {
       navigate(Routes.WORKSPACES)
     }
-  }, [navigate, create.status])
+  }, [navigate, workspace])
 
-  if (create.status === "loading") {
+  if (isLoading) {
     return terminal
   }
 
@@ -99,7 +108,6 @@ export function CreateWorkspace() {
             />
             <Box w="150px">
               <Select
-                defaultValue={DEFAULT_PROVIDER}
                 placeholder="Select Provider"
                 {...register(FieldName.PROVIDER, { required: true })}>
                 {providerOptions.map((providerID) => (
@@ -120,7 +128,6 @@ export function CreateWorkspace() {
           <FormControl isRequired isInvalid={exists(defaultIDEError)}>
             <FormLabel>Default IDE</FormLabel>
             <Select
-              defaultValue={"vscode"}
               placeholder="Select Default IDE"
               {...register(FieldName.DEFAULT_IDE, { required: true })}>
               {SUPPORTED_IDES.map((ide) => (

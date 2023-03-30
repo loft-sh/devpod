@@ -3,14 +3,14 @@ import { useMemo } from "react"
 import { useWorkspaces } from "../../contexts"
 import { exists } from "../../lib"
 import { TWorkspace } from "../../types"
-import { Workspace } from "./Workspace"
+import { WorkspaceCard } from "./WorkspaceCard"
 
 type TWorkspacesInfo = Readonly<{
   workspaceCards: TWorkspace[]
 }>
 
 export function ListWorkspaces() {
-  const [workspaces] = useWorkspaces()
+  const workspaces = useWorkspaces()
   const { workspaceCards } = useMemo<TWorkspacesInfo>(() => {
     const empty: TWorkspacesInfo = { workspaceCards: [] }
     if (!exists(workspaces)) {
@@ -33,7 +33,7 @@ export function ListWorkspaces() {
     <>
       <VStack align="start" marginBottom="12">
         {workspaceCards.map((workspace) => (
-          <Workspace key={workspace.id} workspace={workspace} />
+          <WorkspaceCard key={workspace.id} workspaceID={workspace.id} />
         ))}
       </VStack>
     </>
