@@ -473,5 +473,5 @@ func InstallDocker(log log.Logger) error {
 }
 
 func createRunner(workspaceInfo *provider2.AgentWorkspaceInfo, log log.Logger) (*devcontainer.Runner, error) {
-	return devcontainer.NewRunner(agent.RemoteDevPodHelperLocation, agent.DefaultAgentDownloadURL, workspaceInfo, log)
+	return devcontainer.NewRunner(agent.ContainerDevPodHelperLocation, agent.DefaultAgentDownloadURL, workspaceInfo, log)
 }
