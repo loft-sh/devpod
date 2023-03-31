@@ -1,19 +1,3 @@
-import { UseMutationResult } from "@tanstack/react-query"
-import { TOperationManager, TWithResourceID } from "../../types"
-
-export function getOperationManagerFromMutation<TRunConfig extends TWithResourceID>(
-  mutation: UseMutationResult<unknown, unknown, TRunConfig, unknown>
-): TOperationManager<TRunConfig> {
-  return {
-    run(runConfig) {
-      mutation.mutate(runConfig)
-    },
-    status: mutation.status,
-    error: mutation.error,
-    target: mutation.variables,
-  }
-}
-
 // copied from https://github.com/TkDodo/react-query/blob/c1ae82ba188fd5abda5e256cac070145e5941447/src/core/utils.ts#L346
 /**
  * This function returns `a` if `b` is deeply equal.
@@ -43,8 +27,11 @@ export function replaceEqualDeep(a: any, b: any): any {
         equalItems++
       }
     }
+    const sameSize = aSize === bSize
+    const sameItems = equalItems === aSize
+    const keepA = sameSize && sameItems
 
-    return aSize === bSize && equalItems === aSize ? a : copy
+    return keepA ? a : copy
   }
 
   return b

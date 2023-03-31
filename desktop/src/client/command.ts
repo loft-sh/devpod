@@ -1,12 +1,9 @@
 import { ChildProcess, Command as ShellCommand, EventEmitter } from "@tauri-apps/api/shell"
 import { debug, isError } from "../lib"
 import { Result, ResultError, Return } from "../lib/result"
-import { TLogOutput } from "../types"
 import { DEVPOD_BINARY } from "./constants"
+import { TStreamEvent } from "./types"
 
-export type TStreamEvent = Readonly<
-  { type: "data"; data: TLogOutput } | { type: "error"; error: TLogOutput }
->
 export type TStreamEventListenerFn = (event: TStreamEvent) => void
 export type TEventListener<TEventName extends string> = Parameters<
   EventEmitter<TEventName>["addListener"]
@@ -61,7 +58,7 @@ export class Command implements TCommand<ChildProcess> {
             // TODO: CONTINUE HERE :)
             // console.log(message)
             // TODO: TYPECHECK
-            listener({ type: "data", data: JSON.parse(message) })
+            listener({ type: "data", data: JSON.parse(message), rawData: message })
           } catch (error) {
             console.error("Failed to parse stdout message ", message, error)
           }
@@ -69,7 +66,7 @@ export class Command implements TCommand<ChildProcess> {
         const stderrListener: TEventListener<"data"> = (message) => {
           try {
             // TODO: TYPECHECK
-            listener({ type: "error", error: JSON.parse(message) })
+            listener({ type: "error", error: JSON.parse(message), rawData: message })
           } catch (error) {
             console.error("Failed to parse stderr message ", message, error)
           }

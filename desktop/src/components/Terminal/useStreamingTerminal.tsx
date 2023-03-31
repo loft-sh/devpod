@@ -1,18 +1,22 @@
-import { useCallback } from "react"
+import { useCallback, useMemo, useRef } from "react"
 import { TStreamEventListenerFn } from "../../client"
-import { useTerminal } from "./useTerminal"
+import { Terminal, TTerminal } from "./Terminal"
 
 export function useStreamingTerminal() {
-  const { terminal, terminalRef } = useTerminal()
+  const terminalRef = useRef<TTerminal | null>(null)
+  const terminal = useMemo(() => <Terminal ref={terminalRef} />, [])
 
   const connectStream = useCallback<TStreamEventListenerFn>(
     (event) => {
+      console.log(event)
+      console.log(terminalRef.current)
+
+      // TODO: Message color
       switch (event.type) {
         case "data":
           terminalRef.current?.writeln(event.data.message)
           break
         case "error":
-          // TODO: highlight stderr messages
           terminalRef.current?.writeln(event.error.message)
           break
       }

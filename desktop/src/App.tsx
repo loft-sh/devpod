@@ -21,6 +21,7 @@ import {
 import { useEffect, useMemo } from "react"
 import { Link as RouterLink, Outlet, useMatch, useNavigate, useRouteError } from "react-router-dom"
 import { version } from "../package.json"
+import { client } from "./client"
 import { Sidebar, SidebarMenuItem } from "./components"
 import { useSettings } from "./contexts"
 import { Debug, useArch, useDebug, usePlatform } from "./lib"
@@ -87,7 +88,7 @@ export function App() {
               height="full"
               overflowY="auto"
               paddingBottom={STATUS_BAR_SAFE_AREA}>
-              <Box paddingX="8" paddingY="8" width="full" height="full" overflowY="auto">
+              <Box paddingX="8" width="full" height="full" overflowY="auto">
                 <Outlet />
               </Box>
             </Box>
@@ -122,6 +123,9 @@ export function App() {
               <MenuItem onClick={() => Debug.toggle?.("workspaces")}>
                 <Checkbox isChecked={debug.options.workspaces} />
                 <Text paddingLeft="4">Print workspace logs</Text>
+              </MenuItem>
+              <MenuItem onClick={() => client.openDir("AppData")}>
+                <Text paddingLeft="4">Open app_dir</Text>
               </MenuItem>
             </MenuList>
           </Menu>

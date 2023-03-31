@@ -8,7 +8,8 @@ import {
   TWorkspaceID,
   TWorkspaceStartConfig,
 } from "../../../types"
-import { TPublicAction } from "./action"
+import { TActionID, TActionObj, TPublicAction } from "./action"
+import { useWorkspaceActions } from "./useWorkspaceActions"
 import { workspacesStore } from "./workspacesStore"
 
 export type TWorkspaceResult = Readonly<{
@@ -17,10 +18,10 @@ export type TWorkspaceResult = Readonly<{
   current:
     | (TPublicAction & Readonly<{ connect: (listener: TStreamEventListenerFn) => void }>)
     | undefined
-  // history: Readonly<{
-  //   get: (actionID: TActionID) => TAction
-  //   getAll: (actionName: TActionName) => readonly TAction[]
-  // }>
+  history: Readonly<{
+    // all: readonly TActionObj[]
+    replay: (actionID: TActionID, listener: TStreamEventListenerFn) => void
+  }>
   start: (config: TWorkspaceStartConfig, onStream?: TStreamEventListenerFn) => void
   create: (
     config: Omit<TWorkspaceStartConfig, "sourceConfig"> &
@@ -164,7 +165,7 @@ export function useWorkspace(workspaceID: TWorkspaceID | undefined): TWorkspaceR
           if (result.err) {
             return result
           }
-          workspacesStore.setStatus(workspaceID, result.val)
+          workspacesStore.removeWorkspace(workspaceID)
 
           return result
         },
@@ -209,17 +210,26 @@ export function useWorkspace(workspaceID: TWorkspaceID | undefined): TWorkspaceR
     }
   }, [currentAction, viewID])
 
+  const history = useMemo<TWorkspaceResult["history"]>(() => {
+    return {
+      replay: (actionID, listener) => {
+        client.workspaces.replayAction(actionID, listener)
+      },
+    }
+  }, [])
+
   return useMemo(
     () => ({
       data,
       isLoading,
       current,
+      history,
       create,
       start,
       stop,
       rebuild,
       remove,
     }),
-    [data, isLoading, current, create, start, stop, rebuild, remove]
+    [data, isLoading, current, history, create, start, stop, rebuild, remove]
   )
 }

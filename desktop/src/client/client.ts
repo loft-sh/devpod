@@ -1,37 +1,19 @@
-import { os } from "@tauri-apps/api"
+import { fs, os, path, shell } from "@tauri-apps/api"
 import { listen } from "@tauri-apps/api/event"
 import { TSettings } from "../contexts"
 import { Result, Return } from "../lib"
-import { TProviders, TUnsubscribeFn, TWorkspaces } from "../types"
+import { TUnsubscribeFn } from "../types"
 import { ProvidersClient } from "./providers"
 import { WorkspacesClient } from "./workspaces"
 
-type TChannels = {
-  providers: TProviders
-  workspaces: TWorkspaces
-}
+type TChannels = {}
 type TChannelName = keyof TChannels
 type TClientEventListener<TChannel extends TChannelName> = (payload: TChannels[TChannel]) => void
+type TClientSettings = Pick<TSettings, "debugFlag">
 export type TPlatform = Awaited<ReturnType<typeof os.platform>>
 export type TArch = Awaited<ReturnType<typeof os.arch>>
 
-type TClient = Readonly<{
-  setSetting<TSettingName extends keyof TClientSettings>(
-    name: TSettingName,
-    settingValue: TSettings[TSettingName]
-  ): void
-  subscribe<T extends TChannelName>(
-    channel: T,
-    eventListener: TClientEventListener<T>
-  ): Promise<Result<TUnsubscribeFn>>
-  fetchPlatform: () => Promise<TPlatform>
-  fetchArch: () => Promise<TArch>
-  workspaces: WorkspacesClient
-  providers: ProvidersClient
-}>
-type TClientSettings = Pick<TSettings, "debugFlag">
-
-class Client implements TClient {
+class Client {
   public readonly workspaces = new WorkspacesClient()
   public readonly providers = new ProvidersClient()
 
@@ -67,6 +49,21 @@ class Client implements TClient {
 
   public fetchArch(): Promise<TArch> {
     return os.arch()
+  }
+
+  public async openDir(dir: Extract<keyof typeof fs.BaseDirectory, "AppData">): Promise<void> {
+    try {
+      let p: string
+      switch (dir) {
+        case "AppData": {
+          p = await path.appDataDir()
+          break
+        }
+      }
+      shell.open(p)
+    } catch (e) {
+      // noop for now
+    }
   }
 }
 
