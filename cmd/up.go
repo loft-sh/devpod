@@ -137,7 +137,7 @@ func startVSCodeLocally(client client2.WorkspaceClient, workspaceFolder string, 
 	return nil
 }
 
-func startInBrowser(ctx context.Context, client client2.WorkspaceClient, user string, ideOptions map[string]config.OptionValue, log log.Logger) error {
+func startInBrowser(ctx context.Context, client client2.WorkspaceClient, user string, ideOptions map[string]config.OptionValue, log *log.StreamLogger) error {
 	// determine port
 	vscodePort, err := port.FindAvailablePort(openvscode.DefaultVSCodePort)
 	if err != nil {
@@ -156,6 +156,11 @@ func startInBrowser(ctx context.Context, client client2.WorkspaceClient, user st
 			log.Infof("Successfully started vscode in browser mode. Please keep this terminal open as long as you use VSCode browser version")
 		}()
 	}
+
+	// print port to console
+	log.JSON(logrus.InfoLevel, map[string]string{
+		"url": targetURL,
+	})
 
 	// start in browser
 	log.Infof("Starting vscode in browser mode at %s", targetURL)
