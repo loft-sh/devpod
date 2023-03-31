@@ -3,6 +3,7 @@ package devcontainer
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"github.com/loft-sh/devpod/pkg/agent"
 	"github.com/loft-sh/devpod/pkg/compress"
 	"github.com/loft-sh/devpod/pkg/devcontainer/config"
@@ -10,14 +11,12 @@ import (
 	"github.com/sirupsen/logrus"
 	"io"
 	"runtime"
-	"strings"
 )
 
 func (r *Runner) setupContainer(containerDetails *config.ContainerDetails, mergedConfig *config.MergedDevContainerConfig) error {
 	// inject agent
 	err := agent.InjectAgent(context.TODO(), func(ctx context.Context, command string, stdin io.Reader, stdout io.Writer, stderr io.Writer) error {
-		args := []string{"exec", "-i", "-u", "root", containerDetails.Id, "sh", "-c", command}
-		return r.Docker.Run(ctx, args, stdin, stdout, stderr)
+		return r.Driver.CommandDevContainer(ctx, containerDetails.Id, "root", command, stdin, stdout, stderr)
 	}, agent.RemoteDevPodHelperLocation, agent.DefaultAgentDownloadURL, false, r.Log)
 	if err != nil {
 		return errors.Wrap(err, "inject agent")
@@ -40,11 +39,11 @@ func (r *Runner) setupContainer(containerDetails *config.ContainerDetails, merge
 	}
 
 	// compress workspace info
-	workspaceConfig, err := json.Marshal(r.WorkspaceConfig)
+	workspaceConfigRaw, err := json.Marshal(r.WorkspaceConfig)
 	if err != nil {
 		return err
 	}
-	workspaceConfigCompressed, err := compress.Compress(string(workspaceConfig))
+	workspaceConfigCompressed, err := compress.Compress(string(workspaceConfigRaw))
 	if err != nil {
 		return err
 	}
@@ -54,15 +53,15 @@ func (r *Runner) setupContainer(containerDetails *config.ContainerDetails, merge
 
 	// execute docker command
 	r.Log.Infof("Setup container...")
-	args := []string{"exec", "-u", "root", containerDetails.Id, agent.RemoteDevPodHelperLocation, "agent", "container", "setup", "--setup-info", compressed, "--workspace-info", workspaceConfigCompressed}
+	command := fmt.Sprintf("%s agent container setup --setup-info '%s' --workspace-info '%s'", agent.RemoteDevPodHelperLocation, compressed, workspaceConfigCompressed)
 	if runtime.GOOS == "linux" {
-		args = append(args, "--chown-workspace")
+		command += " --chown-workspace"
 	}
 	if r.Log.GetLevel() == logrus.DebugLevel {
-		args = append(args, "--debug")
+		command += " --debug"
 	}
-	r.Log.Debugf("Run docker %s", strings.Join(args, " "))
-	err = r.Docker.Run(context.TODO(), args, nil, writer, writer)
+	r.Log.Debugf("Run command: %s", command)
+	err = r.Driver.CommandDevContainer(context.TODO(), containerDetails.Id, "root", command, nil, writer, writer)
 	if err != nil {
 		return err
 	}

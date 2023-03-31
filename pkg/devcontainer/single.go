@@ -16,7 +16,7 @@ func (r *Runner) runSingleContainer(parsedConfig *config.SubstitutedConfig, work
 		}
 	}
 
-	containerDetails, err := r.Docker.FindDevContainer(labels)
+	containerDetails, err := r.Driver.FindDevContainer(labels)
 	if err != nil {
 		return nil, errors.Wrap(err, "find dev container")
 	}
@@ -26,7 +26,7 @@ func (r *Runner) runSingleContainer(parsedConfig *config.SubstitutedConfig, work
 	if containerDetails != nil {
 		// start container if not running
 		if containerDetails.State.Status != "running" {
-			err = r.Docker.StartContainer(containerDetails.Id, labels)
+			err = r.Driver.StartDevContainer(containerDetails.Id, labels)
 			if err != nil {
 				return nil, err
 			}
@@ -43,7 +43,7 @@ func (r *Runner) runSingleContainer(parsedConfig *config.SubstitutedConfig, work
 		}
 	} else {
 		// we need to build container
-		buildInfo, err := r.build(parsedConfig, BuildOptions{
+		buildInfo, err := r.build(parsedConfig, config.BuildOptions{
 			PrebuildRepositories: options.PrebuildRepositories,
 			NoBuild:              options.NoBuild,
 			ForceRebuild:         options.ForceBuild,
@@ -68,7 +68,7 @@ func (r *Runner) runSingleContainer(parsedConfig *config.SubstitutedConfig, work
 			labels = append(labels, metadata.ImageMetadataLabel+"="+string(marshalled))
 		}
 
-		err = r.startDevContainer(parsedConfig.Config, mergedConfig, buildInfo.ImageName, workspaceMount, labels, buildInfo.ImageDetails)
+		err = r.Driver.RunDevContainer(parsedConfig.Config, mergedConfig, buildInfo.ImageName, workspaceMount, labels, r.WorkspaceConfig.Workspace.IDE.Name, r.WorkspaceConfig.Workspace.IDE.Options, buildInfo.ImageDetails)
 		if err != nil {
 			return nil, errors.Wrap(err, "start dev container")
 		}
@@ -76,7 +76,7 @@ func (r *Runner) runSingleContainer(parsedConfig *config.SubstitutedConfig, work
 		//TODO: wait here a bit for correct startup?
 
 		// get container details
-		containerDetails, err = r.Docker.FindDevContainer(labels)
+		containerDetails, err = r.Driver.FindDevContainer(labels)
 		if err != nil {
 			return nil, err
 		}

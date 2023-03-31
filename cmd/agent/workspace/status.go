@@ -45,8 +45,14 @@ func (cmd *StatusCmd) Run(ctx context.Context) error {
 		return nil
 	}
 
+	// create runner
+	runner, err := createRunner(workspaceInfo, log.Default)
+	if err != nil {
+		return err
+	}
+
 	// find dev container
-	containerDetails, err := createRunner(workspaceInfo, log.Default).FindDevContainer()
+	containerDetails, err := runner.FindDevContainer()
 	if err != nil {
 		return err
 	} else if containerDetails == nil {

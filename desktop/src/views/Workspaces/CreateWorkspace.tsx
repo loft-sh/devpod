@@ -28,7 +28,7 @@ const FieldName = {
 const SUPPORTED_IDES = ["vscode", "intellj"] as const
 type TSupportedIDE = (typeof SUPPORTED_IDES)[number]
 
-const DEFAULT_PROVIDER = "local"
+const DEFAULT_PROVIDER = "docker"
 
 type TFormValues = {
   [FieldName.SOURCE]: string
