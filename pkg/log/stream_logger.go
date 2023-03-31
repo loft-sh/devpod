@@ -94,9 +94,8 @@ func NewStreamLoggerWithFormat(stdout, stderr io.Writer, level logrus.Level, for
 }
 
 type StreamLogger struct {
-	m      *sync.Mutex
-	level  logrus.Level
-	extras map[string]string
+	m     *sync.Mutex
+	level logrus.Level
 
 	prefixes []Prefix
 
