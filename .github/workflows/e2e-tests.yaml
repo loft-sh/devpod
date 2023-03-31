@@ -37,4 +37,4 @@ jobs:
     - name: E2E test
       working-directory: ./e2e
       run: |
-        go test -v -ginkgo.v -timeout 3600s
+        sudo go test -v -ginkgo.v -timeout 3600s

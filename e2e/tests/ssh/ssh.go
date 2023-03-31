@@ -16,7 +16,7 @@ var _ = DevPodDescribe("devpod ssh test suite", func() {
 	}
 
 	ginkgo.It("should start a new workspace with a local provider (default) and ssh into it", func() {
-		tempDir, err := framework.CopyToTempDir("tests/up/testdata/local-test")
+		tempDir, err := framework.CopyToTempDir("tests/ssh/testdata/local-test")
 		framework.ExpectNoError(err)
 		defer framework.CleanupTempDir(initialDir, tempDir)
 
