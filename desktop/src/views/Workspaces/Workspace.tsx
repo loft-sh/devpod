@@ -1,6 +1,6 @@
 import { Box, Button, HStack, Text, VStack } from "@chakra-ui/react"
 import { useCallback, useEffect, useMemo } from "react"
-import { useNavigate, useParams } from "react-router"
+import { useSearchParams, useNavigate, useParams } from "react-router-dom"
 import { ErrorMessageBox, useStreamingTerminal } from "../../components"
 import { useWorkspace } from "../../contexts"
 import { exists, isError } from "../../lib"
@@ -8,8 +8,10 @@ import { Routes } from "../../routes"
 
 export function Workspace() {
   const navigate = useNavigate()
+  const [searchParams, setSearchParams] = useSearchParams()
   const params = useParams()
   const workspaceID = useMemo(() => Routes.getWorkspaceId(params), [params])
+  const actionID = useMemo(() => Routes.getActionIDFromSearchParams(searchParams), [searchParams])
   const { terminal, connectStream } = useStreamingTerminal()
 
   const workspace = useWorkspace(workspaceID)
@@ -22,6 +24,7 @@ export function Workspace() {
     workspace.start({ ideConfig: workspace.data.ide }, connectStream)
   }, [connectStream, workspace])
 
+  // Wire up terminal to current action
   useEffect(() => {
     if (workspace.current === undefined) {
       return
@@ -30,6 +33,17 @@ export function Workspace() {
     workspace.current.connect(connectStream)
   }, [connectStream, workspace])
 
+  // Listen to search param actionID
+  useEffect(() => {
+    if (actionID === undefined || workspace.isLoading) {
+      return
+    }
+
+    setSearchParams() // Clear search params
+    workspace.history.replay(actionID, connectStream)
+  }, [actionID, connectStream, setSearchParams, workspace.history, workspace.isLoading])
+
+  // Navigate to workspaces when workspace is deleted
   useEffect(() => {
     if (workspace.current?.name !== "remove" || workspace.current.status !== "success") {
       return

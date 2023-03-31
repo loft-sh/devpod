@@ -1,31 +1,33 @@
-import { replaceEqualDeep } from "@tanstack/react-query"
 import { debug, EventManager, SingleEventManager } from "../../../lib"
-import { TUnsubscribeFn, TWorkspace, TWorkspaceID } from "../../../types"
-import { Action, TActionFn, TActionName } from "./action"
+import { TUnsubscribeFn, TWorkspace, TWorkspaceID, TWorkspaceWithoutStatus } from "../../../types"
+import { replaceEqualDeep } from "../helpers"
+import { Action, TActionFn, TActionName, TActionObj } from "./action"
+import { ActionHistory } from "./actionHistory"
 
-// We don't want to expose the methods to consumers of these actions, so we'll strip them off on the type level
-type TPublicAction = Omit<Action, "run" | "cancel" | "once">
+type TPublicAction = Omit<Action, "run" | "once" | "cancel">
+type TLastActions = Readonly<{ active: readonly TPublicAction[]; history: readonly TActionObj[] }>
 
 class WorkspacesStore {
   private readonly eventManager = new SingleEventManager<void>()
-  private history: Action[] = []
+  private actionsHistory = new ActionHistory()
   private workspaces = new Map<TWorkspaceID, TWorkspace>()
-  private actions = new Map<TWorkspaceID, Action>()
   private lastWorkspaces: readonly TWorkspace[] = []
-  private lastActions: readonly TPublicAction[] = []
+  private lastActions: TLastActions = { active: [], history: [] }
 
-  constructor() {}
+  constructor() {
+    this.lastActions = this.actionsHistory.getAll()
+  }
 
   private actionDidChange() {
-    this.lastActions = Array.from(this.actions.values())
-    debug("actions", this.lastActions)
+    this.lastActions = this.actionsHistory.getAll()
     this.eventManager.publish()
+    debug("actions", this.lastActions)
   }
 
   private workspacesDidChange() {
     this.lastWorkspaces = Array.from(this.workspaces.values())
-    debug("workspaces", this.lastWorkspaces)
     this.eventManager.publish()
+    debug("workspaces", this.lastWorkspaces)
   }
 
   public subscribe(listener: VoidFunction): TUnsubscribeFn {
@@ -43,15 +45,22 @@ class WorkspacesStore {
   }
 
   public getCurrentAction(workspaceID: TWorkspaceID): TPublicAction | undefined {
-    return this.actions.get(workspaceID)
+    return this.actionsHistory.getActive(workspaceID)
   }
 
-  public getAllActions(): readonly TPublicAction[] {
+  public getAllActions(): TLastActions {
     return this.lastActions
   }
 
-  public setWorkspaces(newWorkspaces: readonly TWorkspace[]) {
-    const prevWorkspaces = this.lastWorkspaces
+  public setWorkspaces(newWorkspaces: readonly TWorkspaceWithoutStatus[]): void {
+    const prevWorkspaces = this.lastWorkspaces.map((workspace) => {
+      // we need to remove `status` before comparing the workspaces because the new ones will not have it.
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
+      const { status: _, ...w } = workspace
+
+      return w
+    })
+
     const workspaces = replaceEqualDeep(prevWorkspaces, newWorkspaces)
 
     if (Object.is(workspaces, prevWorkspaces)) {
@@ -69,7 +78,12 @@ class WorkspacesStore {
     this.workspacesDidChange()
   }
 
-  public setStatus(workspaceID: TWorkspaceID, status: TWorkspace["status"]) {
+  public removeWorkspace(workspaceID: TWorkspaceID): void {
+    this.workspaces.delete(workspaceID)
+    this.workspacesDidChange()
+  }
+
+  public setStatus(workspaceID: TWorkspaceID, status: TWorkspace["status"]): void {
     const maybeWorkspace = this.workspaces.get(workspaceID)
     if (maybeWorkspace === undefined) {
       return
@@ -95,20 +109,18 @@ class WorkspacesStore {
   }>): void {
     // By default, actions cancel previous actios.
     // If you need to wait for an action to finish, you can use `getCurrentAction` and wait until it is undefined
-    const maybeCurrentAction = this.actions.get(workspaceID)
+    const maybeCurrentAction = this.actionsHistory.getActive(workspaceID)
     if (maybeCurrentAction !== undefined) {
       maybeCurrentAction.cancel()
-      this.history.push(maybeCurrentAction)
-      this.actions.delete(maybeCurrentAction.workpaceID)
+      this.actionsHistory.archive(maybeCurrentAction)
     }
 
     const action = new Action(actionName, workspaceID, actionFn)
-    this.actions.set(workspaceID, action)
+    this.actionsHistory.addActive(workspaceID, action)
 
     // Setup listener for when the action is done
     action.once(() => {
-      this.history.push(action)
-      this.actions.delete(action.workpaceID)
+      this.actionsHistory.archive(action)
       this.actionDidChange()
     })
 

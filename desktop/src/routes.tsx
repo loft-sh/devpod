@@ -1,5 +1,7 @@
 import { createBrowserRouter, Params } from "react-router-dom"
 import { App, ErrorPage } from "./App"
+import { TActionID } from "./contexts"
+import { TAddProviderConfig } from "./types"
 import {
   CreateWorkspace,
   ListWorkspaces,
@@ -22,12 +24,15 @@ export const Routes = {
   get WORKSPACE_CREATE() {
     return `${Routes.WORKSPACES}/new`
   },
-  toWorkspace(workspaceID: string) {
-    return `${Routes.WORKSPACES}/${workspaceID}`
+  toWorkspace(workspaceID: string, actionID?: TActionID) {
+    return `${Routes.WORKSPACES}/${workspaceID}?actionID=${actionID}`
   },
   getWorkspaceId(params: Params<string>): string | undefined {
     // Needs to match `:workspace` from detail route exactly!
     return params["workspace"]
+  },
+  getActionIDFromSearchParams(searchParams: URLSearchParams): TActionID | undefined {
+    return (searchParams.get("actionID") ?? undefined) as TActionID | undefined
   },
   PROVIDERS: "/providers",
   get PROVIDER() {

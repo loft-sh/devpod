@@ -32,5 +32,5 @@ export function useProvider(
     enabled: exists(providerID),
   })
 
-  return [[data, { status, error, target: { providerID } }], manager]
+  return [[data, { status, error }], manager]
 }

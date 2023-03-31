@@ -3,14 +3,13 @@ import { useMemo } from "react"
 import { client } from "../../client"
 import { exists } from "../../lib"
 import { QueryKeys } from "../../queryKeys"
-import { TProviderManagerRunConfig, TProviders } from "../../types"
-import { getOperationManagerFromMutation } from "./helpers"
+import { TProviderManager, TProviders, TWithProviderID } from "../../types"
 
-export function useProviderManager() {
+export function useProviderManager(): TProviderManager {
   const queryClient = useQueryClient()
 
   const removeMutation = useMutation({
-    mutationFn: async ({ providerID }: TProviderManagerRunConfig["remove"]) =>
+    mutationFn: async ({ providerID }: TWithProviderID) =>
       (await client.providers.remove(providerID)).unwrap(),
     onMutate({ providerID }) {
       // Optimistically updates `delete` mutation
@@ -43,7 +42,12 @@ export function useProviderManager() {
 
   return useMemo(
     () => ({
-      remove: getOperationManagerFromMutation(removeMutation),
+      remove: {
+        run: removeMutation.mutate,
+        status: removeMutation.status,
+        error: removeMutation.error,
+        target: removeMutation.variables,
+      },
     }),
     [removeMutation]
   )
