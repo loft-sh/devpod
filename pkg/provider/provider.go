@@ -62,8 +62,12 @@ type ProviderAgentConfig struct {
 	DownloadURL string `json:"downloadURL,omitempty"`
 
 	// Timeout is the timeout in minutes to wait until the agent tries
-	// to turn of the server. Defaults to 1 hour.
+	// to turn of the server.
 	Timeout string `json:"inactivityTimeout,omitempty"`
+
+	// ContainerTimeout is the timeout in minutes to wait until the agent tries
+	// to delete the container.
+	ContainerTimeout string `json:"containerInactivityTimeout,omitempty"`
 
 	// InjectGitCredentials signals DevPod if git credentials should get synced into
 	// the remote machine for cloning the repository.

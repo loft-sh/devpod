@@ -22,7 +22,7 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
-const DefaultInactivityTimeout = time.Hour
+const DefaultInactivityTimeout = time.Minute * 20
 
 const RemoteDevPodHelperLocation = "/tmp/devpod"
 

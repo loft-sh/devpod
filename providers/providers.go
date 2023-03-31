@@ -7,12 +7,12 @@ import (
 	"strings"
 )
 
-//go:embed local/provider.yaml
-var LocalProvider string
+//go:embed docker/provider.yaml
+var DockerProvider string
 
 // GetBuiltInProviders retrieves the built in providers
 func GetBuiltInProviders() (map[string]*provider.ProviderConfig, error) {
-	providers := []string{LocalProvider}
+	providers := []string{DockerProvider}
 	retProviderConfigs := map[string]*provider.ProviderConfig{}
 
 	// parse providers

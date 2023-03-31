@@ -185,6 +185,7 @@ func ResolveAgentConfig(devConfig *config.Config, provider *provider2.ProviderCo
 		agentConfig.DownloadURL = agent.DefaultAgentDownloadURL
 	}
 	agentConfig.Timeout = resolveDefaultValue(agentConfig.Timeout, options)
+	agentConfig.ContainerTimeout = resolveDefaultValue(agentConfig.ContainerTimeout, options)
 	agentConfig.InjectGitCredentials = types.StrBool(resolveDefaultValue(string(agentConfig.InjectGitCredentials), options))
 	agentConfig.InjectDockerCredentials = types.StrBool(resolveDefaultValue(string(agentConfig.InjectDockerCredentials), options))
 	return agentConfig
