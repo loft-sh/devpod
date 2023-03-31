@@ -1,7 +1,8 @@
+import { invoke } from "@tauri-apps/api"
 import { TActionID, TActionName, TPublicAction } from "../../contexts"
 import { exists, noop, Result, ResultError, Return, THandler } from "../../lib"
 import {
-  TCacheID as TStreamID,
+  TStreamID,
   TUnsubscribeFn,
   TWorkspace,
   TWorkspaceID,
@@ -10,9 +11,12 @@ import {
 } from "../../types"
 import { TCommand, TStreamEventListenerFn } from "../command"
 import { CommandCache, TCommandCacheInfo } from "../commandCache"
-import { TDebuggable } from "../types"
+import { TDebuggable, TStreamEvent } from "../types"
 import { WorkspaceCommands } from "./workspaceCommands"
 
+// Every workspace can have one active action at a time,
+// but multiple views might need to listen to the same action.
+// The `streamID` identifies a view listener.
 type TWorkspaceClientContext = Readonly<{
   id: TWorkspaceID
   actionID: TActionID
@@ -26,15 +30,20 @@ export class WorkspacesClient implements TDebuggable {
 
   private createStreamHandler(
     id: TStreamID,
-    listener: TStreamEventListenerFn | undefined
+    listener: TStreamEventListenerFn
   ): THandler<TStreamEventListenerFn> {
     return {
       id,
       eq(other) {
         return id === other.id
       },
-      notify: exists(listener) ? listener : noop,
+      notify: listener,
     }
+  }
+
+  private async writeEvent(actionID: TActionID, event: TStreamEvent) {
+    // Be wary of the spelling, tauri expects this to be `actionId` instead of `actionID` because of the serde deserialization
+    await invoke("write_action_log", { actionId: actionID, data: JSON.stringify(event) })
   }
 
   private async execActionCmd<T>(
@@ -49,7 +58,11 @@ export class WorkspacesClient implements TDebuggable {
   ) {
     const cacheInfo: TCommandCacheInfo = { id: ctx.id, actionName: ctx.actionName }
     const maybeRunningCommand = this.commandCache.get(cacheInfo)
-    const handler = this.createStreamHandler(ctx.streamID, ctx.listener)
+    const handler = this.createStreamHandler(ctx.streamID, (event) => {
+      this.writeEvent(ctx.actionID, event)
+
+      ctx.listener?.(event)
+    })
 
     // If `start` for id is running already,
     // wire up the new listener and return the existing operation
@@ -152,7 +165,7 @@ export class WorkspacesClient implements TDebuggable {
     listener: TStreamEventListenerFn
   ): TUnsubscribeFn {
     const maybeRunningCommand = this.commandCache.get({
-      id: action.workpaceID,
+      id: action.workspaceID,
       actionName: action.name,
     })
     if (!exists(maybeRunningCommand)) {
@@ -164,5 +177,33 @@ export class WorkspacesClient implements TDebuggable {
     )
 
     return () => maybeUnsubscribe?.()
+  }
+
+  public replayAction(actionID: TActionID, listener: TStreamEventListenerFn): TUnsubscribeFn {
+    let cancelled = false
+    const unsubscribe = () => {
+      cancelled = true
+    }
+    // Be wary of the spelling, tauri expects this to be `actionId` instead of `actionID` because of the serde deserialization
+    invoke<readonly string[]>("get_action_logs", { actionId: actionID })
+      .then((events) => {
+        if (cancelled) {
+          return
+        }
+        for (const event of events) {
+          try {
+            listener(JSON.parse(event))
+          } catch (e) {
+            console.log(e)
+            // noop
+          }
+        }
+      })
+      .catch((e) => {
+        console.error("Failed to replay action", e)
+        unsubscribe()
+      })
+
+    return unsubscribe
   }
 }

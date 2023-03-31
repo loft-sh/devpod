@@ -18,13 +18,14 @@ export function DevPodProvider({ children }: Readonly<{ children?: ReactNode }>)
     queryKey: QueryKeys.PROVIDERS,
     queryFn: async () => (await client.providers.listAll()).unwrap(),
     refetchInterval: REFETCH_INTERVAL_MS,
+    enabled: false,
   })
 
   const value = useMemo<TDevpodContext>(
     () => ({
       providers: [
         providersQuery.data,
-        { status: providersQuery.status, error: providersQuery.error, target: undefined },
+        { status: providersQuery.status, error: providersQuery.error },
       ],
     }),
     [providersQuery.data, providersQuery.status, providersQuery.error]

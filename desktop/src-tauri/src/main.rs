@@ -3,6 +3,7 @@
     windows_subsystem = "windows"
 )]
 
+mod action_logs;
 mod commands;
 mod logging;
 mod providers;
@@ -17,7 +18,6 @@ use std::sync::{Arc, Mutex};
 use system_tray::SystemTray;
 use tauri::{Manager, Menu, Wry};
 use tauri_plugin_deep_link;
-use ui_ready::ui_ready;
 use url::{ParseError, Url};
 use workspaces::WorkspacesState;
 
@@ -58,7 +58,7 @@ fn main() {
                     info!("{:?}", url);
                 };
             };
-            println!("{:?}", app.path_resolver().app_data_dir().unwrap());
+            action_logs::setup(&app.handle())?;
 
             tauri_plugin_deep_link::register(APP_URL_SCHEME, handler)
                 .expect("should be able to listen to custom protocols");
@@ -72,7 +72,11 @@ fn main() {
             Ok(())
         })
         .on_system_tray_event(system_tray_event_handler)
-        .invoke_handler(tauri::generate_handler![ui_ready])
+        .invoke_handler(tauri::generate_handler![
+            ui_ready::ui_ready,
+            action_logs::write_action_log,
+            action_logs::get_action_logs
+        ])
         .build(ctx)
         .expect("error while building tauri application")
         .run(|app, event| match event {

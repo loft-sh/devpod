@@ -94,19 +94,27 @@ export const Terminal = forwardRef<TTerminalRef, {}>(function T(_, ref) {
     }
   }, [terminalTheme])
 
-  useImperativeHandle(ref, () => ({
-    clear() {
-      terminalRef.current?.clear()
+  useImperativeHandle(
+    ref,
+    () => {
+      return {
+        clear() {
+          terminalRef.current?.clear()
+        },
+        write(data) {
+          terminalRef.current?.write(data)
+          termFitRef.current?.fit()
+        },
+        writeln(data) {
+          console.log("data", data)
+          console.log(terminalRef.current)
+          terminalRef.current?.writeln(data)
+          termFitRef.current?.fit()
+        },
+      }
     },
-    write(data) {
-      terminalRef.current?.write(data)
-      termFitRef.current?.fit()
-    },
-    writeln(data) {
-      terminalRef.current?.writeln(data)
-      termFitRef.current?.fit()
-    },
-  }))
+    [terminalRef]
+  )
 
   return (
     <Box width="full" height="full">
