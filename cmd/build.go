@@ -3,6 +3,9 @@ package cmd
 import (
 	"context"
 	"fmt"
+	"io"
+	"os"
+
 	"github.com/loft-sh/devpod/cmd/flags"
 	"github.com/loft-sh/devpod/pkg/agent"
 	"github.com/loft-sh/devpod/pkg/client"
@@ -13,8 +16,6 @@ import (
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
-	"io"
-	"os"
 )
 
 // BuildCmd holds the cmd flags
@@ -47,7 +48,7 @@ func NewBuildCmd(flags *flags.GlobalFlags) *cobra.Command {
 			// check permissions
 			err = image.CheckPushPermissions(cmd.Repository)
 			if err != nil {
-				return fmt.Errorf("cannot push to %s, please make sure you have push permissions to repository %s")
+				return fmt.Errorf("cannot push to %s, please make sure you have push permissions to repository %s", cmd.Repository, cmd.Repository)
 			}
 
 			// create a temporary workspace
