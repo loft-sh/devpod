@@ -30,7 +30,7 @@ func NewRunner(agentPath, agentDownloadURL string, workspaceConfig *provider2.Ag
 
 		AgentPath:            agentPath,
 		AgentDownloadURL:     agentDownloadURL,
-		LocalWorkspaceFolder: workspaceConfig.Folder,
+		LocalWorkspaceFolder: workspaceConfig.ContentFolder,
 		ID:                   workspaceConfig.Workspace.ID,
 		WorkspaceConfig:      workspaceConfig,
 		Log:                  log,

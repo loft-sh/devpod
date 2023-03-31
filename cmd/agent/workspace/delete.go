@@ -10,7 +10,6 @@ import (
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
 	"os"
-	"path/filepath"
 )
 
 // DeleteCmd holds the cmd flags
@@ -68,7 +67,7 @@ func (cmd *DeleteCmd) Run(ctx context.Context) error {
 	}
 
 	// delete workspace folder
-	_ = os.RemoveAll(filepath.Join(workspaceInfo.Folder, ".."))
+	_ = os.RemoveAll(workspaceInfo.Origin)
 	return nil
 }
 

@@ -72,7 +72,7 @@ func parseAgentWorkspaceInfo(workspaceConfigFile string) (*provider2.AgentWorksp
 		return nil, errors.Wrap(err, "parse workspace info")
 	}
 
-	workspaceInfo.Folder = GetAgentWorkspaceContentDir(filepath.Dir(workspaceConfigFile))
+	workspaceInfo.Origin = filepath.Dir(workspaceConfigFile)
 	return workspaceInfo, nil
 }
 
@@ -145,7 +145,7 @@ func WriteWorkspaceInfo(workspaceInfoEncoded string, log log.Logger) (bool, *pro
 }
 
 func WriteWorkspaceInfoAndDeleteOld(workspaceInfoEncoded string, deleteWorkspace func(workspaceInfo *provider2.AgentWorkspaceInfo, log log.Logger) error, log log.Logger) (bool, *provider2.AgentWorkspaceInfo, error) {
-	workspaceInfo, decoded, err := DecodeWorkspaceInfo(workspaceInfoEncoded)
+	workspaceInfo, _, err := DecodeWorkspaceInfo(workspaceInfoEncoded)
 	if err != nil {
 		return false, nil, err
 	}
@@ -166,7 +166,7 @@ func WriteWorkspaceInfoAndDeleteOld(workspaceInfoEncoded string, deleteWorkspace
 
 	// check if workspace config already exists
 	workspaceConfig := filepath.Join(workspaceDir, provider2.WorkspaceConfigFile)
-	oldWorkspaceInfo, err := parseAgentWorkspaceInfo(workspaceConfig)
+	oldWorkspaceInfo, _ := parseAgentWorkspaceInfo(workspaceConfig)
 	if oldWorkspaceInfo != nil && oldWorkspaceInfo.Workspace.UID != workspaceInfo.Workspace.UID {
 		// delete the old workspace
 		log.Infof("Delete old workspace '%s'", oldWorkspaceInfo.Workspace.ID)
@@ -182,13 +182,32 @@ func WriteWorkspaceInfoAndDeleteOld(workspaceInfoEncoded string, deleteWorkspace
 		}
 	}
 
+	// check content folder
+	if workspaceInfo.Workspace.Source.LocalFolder != "" {
+		_, err = os.Stat(workspaceInfo.Workspace.Source.LocalFolder)
+		if err == nil {
+			workspaceInfo.ContentFolder = workspaceInfo.Workspace.Source.LocalFolder
+		}
+	}
+
+	// set content folder
+	if workspaceInfo.ContentFolder == "" {
+		workspaceInfo.ContentFolder = GetAgentWorkspaceContentDir(workspaceDir)
+	}
+
+	// encode workspace info
+	encoded, err := json.Marshal(workspaceInfo)
+	if err != nil {
+		return false, nil, err
+	}
+
 	// write workspace config
-	err = os.WriteFile(workspaceConfig, []byte(decoded), 0666)
+	err = os.WriteFile(workspaceConfig, []byte(encoded), 0666)
 	if err != nil {
 		return false, nil, fmt.Errorf("write workspace config file: %v", err)
 	}
 
-	workspaceInfo.Folder = GetAgentWorkspaceContentDir(workspaceDir)
+	workspaceInfo.Origin = workspaceDir
 	return false, workspaceInfo, nil
 }
 

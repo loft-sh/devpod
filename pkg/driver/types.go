@@ -22,6 +22,12 @@ type Driver interface {
 	// InspectImage inspects the given image name
 	InspectImage(imageName string) (*config.ImageDetails, error)
 
+	// StartDevContainer starts the devcontainer
+	StartDevContainer(id string, labels []string) error
+
+	// StopDevContainer stops the devcontainer
+	StopDevContainer(id string) error
+
 	// RunDevContainer runs a devcontainer
 	RunDevContainer(
 		parsedConfig *config.DevContainerConfig,
@@ -47,12 +53,6 @@ type Driver interface {
 		prebuildHash string,
 		options config.BuildOptions,
 	) (*config.BuildInfo, error)
-
-	// StartDevContainer starts the devcontainer
-	StartDevContainer(id string, labels []string) error
-
-	// StopDevContainer stops the devcontainer
-	StopDevContainer(id string) error
 
 	// ComposeHelper returns the compose helper
 	ComposeHelper() (*compose.ComposeHelper, error)
