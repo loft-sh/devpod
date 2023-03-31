@@ -49,8 +49,7 @@ type Driver interface {
 		extendedBuildInfo *feature.ExtendedBuildInfo,
 		dockerfilePath,
 		dockerfileContent string,
-		imageName string,
-		prebuildHash string,
+		localWorkspaceFolder string,
 		options config.BuildOptions,
 	) (*config.BuildInfo, error)
 

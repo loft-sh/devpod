@@ -1,14 +1,10 @@
 package devcontainer
 
 import (
-	"encoding/json"
 	"fmt"
 	"github.com/loft-sh/devpod/pkg/devcontainer/config"
-	"github.com/loft-sh/devpod/pkg/hash"
 	"github.com/loft-sh/devpod/pkg/image"
-	"github.com/loft-sh/devpod/pkg/log"
 	"github.com/pkg/errors"
-	"runtime"
 )
 
 func (r *Runner) Build(options config.BuildOptions) (string, error) {
@@ -42,19 +38,4 @@ func (r *Runner) Build(options config.BuildOptions) (string, error) {
 	}
 
 	return prebuildImage, nil
-}
-
-func calculatePrebuildHash(parsedConfig *config.DevContainerConfig, dockerfileContent string, log log.Logger) (string, error) {
-	// TODO: is it a good idea to delete customizations before calculating the hash?
-	parsedConfig = config.CloneDevContainerConfig(parsedConfig)
-	parsedConfig.Customizations = nil
-
-	// marshal the config
-	configStr, err := json.Marshal(parsedConfig)
-	if err != nil {
-		return "", err
-	}
-
-	log.Debugf("Prebuild hash from: %s %s %s", runtime.GOARCH, string(configStr), dockerfileContent)
-	return "devpod-" + hash.String(runtime.GOARCH + string(configStr) + dockerfileContent)[:32], nil
 }

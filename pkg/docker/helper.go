@@ -18,10 +18,6 @@ type DockerHelper struct {
 	DockerCommand string
 }
 
-func NewDockerHelper() *DockerHelper {
-	return &DockerHelper{DockerCommand: "docker"}
-}
-
 func (r *DockerHelper) GPUSupportEnabled() (bool, error) {
 	out, err := r.buildCmd(context.TODO(), "info", "-f", "{{.Runtimes.nvidia}}").Output()
 	if err != nil {

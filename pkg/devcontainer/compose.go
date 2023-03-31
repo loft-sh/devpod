@@ -389,8 +389,6 @@ func (r *Runner) buildAndExtendDockerCompose(parsedConfig *config.SubstitutedCon
 			dockerfileContents = fmt.Sprintf("FROM %s AS %s\n", composeService.Image, buildTarget)
 		}
 
-		buildImageName = r.getImageName()
-
 		extendedDockerfilePath, extendedDockerfileContent := r.extendedDockerfile(
 			extendImageBuildInfo.FeaturesBuildInfo,
 			dockerFilePath,
@@ -405,7 +403,7 @@ func (r *Runner) buildAndExtendDockerCompose(parsedConfig *config.SubstitutedCon
 
 		dockerComposeFilePath, err = extendedDockerComposeBuild(
 			composeService,
-			buildImageName,
+			extendedDockerfilePath,
 			extendImageBuildInfo.FeaturesBuildInfo,
 		)
 		if err != nil {

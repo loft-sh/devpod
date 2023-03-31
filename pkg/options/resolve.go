@@ -175,6 +175,9 @@ func ResolveAgentConfig(devConfig *config.Config, provider *provider2.ProviderCo
 	// fill in agent config
 	options := provider2.ToOptions(workspace, machine, devConfig.ProviderOptions(provider.Name))
 	agentConfig := provider.Agent
+	agentConfig.Driver = resolveDefaultValue(agentConfig.Driver, options)
+	agentConfig.Docker.Path = resolveDefaultValue(agentConfig.Docker.Path, options)
+	agentConfig.Kubernetes.Path = resolveDefaultValue(agentConfig.Kubernetes.Path, options)
 	agentConfig.DataPath = resolveDefaultValue(agentConfig.DataPath, options)
 	agentConfig.Path = resolveDefaultValue(agentConfig.Path, options)
 	if agentConfig.Path == "" {
