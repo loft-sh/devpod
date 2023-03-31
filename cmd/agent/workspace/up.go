@@ -169,15 +169,15 @@ func (cmd *UpCmd) up(ctx context.Context, workspaceInfo *provider2.AgentWorkspac
 }
 
 func prepareWorkspace(ctx context.Context, workspaceInfo *provider2.AgentWorkspaceInfo, client tunnel.TunnelClient, helper string, log log.Logger) error {
-	// check if workspace folder exists
-	_, err := os.Stat(workspaceInfo.Folder)
+	// check if workspace content folder exists
+	_, err := os.Stat(workspaceInfo.ContentFolder)
 	if err == nil {
 		log.Debugf("Workspace Folder already exists")
 		return nil
 	}
 
 	// make content dir
-	err = os.MkdirAll(workspaceInfo.Folder, 0777)
+	err = os.MkdirAll(workspaceInfo.ContentFolder, 0777)
 	if err != nil {
 		return errors.Wrap(err, "make workspace folder")
 	}
@@ -185,27 +185,27 @@ func prepareWorkspace(ctx context.Context, workspaceInfo *provider2.AgentWorkspa
 	// download provider
 	binariesDir, err := agent.GetAgentBinariesDir(workspaceInfo.Agent.DataPath, workspaceInfo.Workspace.Context, workspaceInfo.Workspace.ID)
 	if err != nil {
-		_ = os.RemoveAll(workspaceInfo.Folder)
+		_ = os.RemoveAll(workspaceInfo.ContentFolder)
 		return fmt.Errorf("error getting workspace %s binaries dir: %v", workspaceInfo.Workspace.ID, err)
 	}
 
 	// download binaries
 	_, err = binaries.DownloadBinaries(workspaceInfo.Agent.Binaries, binariesDir, log)
 	if err != nil {
-		_ = os.RemoveAll(workspaceInfo.Folder)
+		_ = os.RemoveAll(workspaceInfo.ContentFolder)
 		return fmt.Errorf("error downloading workspace %s binaries: %v", workspaceInfo.Workspace.ID, err)
 	}
 
 	// check what type of workspace this is
 	if workspaceInfo.Workspace.Source.GitRepository != "" {
 		log.Debugf("Clone Repository")
-		return CloneRepository(workspaceInfo.Folder, workspaceInfo.Workspace.Source.GitRepository, workspaceInfo.Workspace.Source.GitBranch, helper, log)
+		return CloneRepository(workspaceInfo.ContentFolder, workspaceInfo.Workspace.Source.GitRepository, workspaceInfo.Workspace.Source.GitBranch, helper, log)
 	} else if workspaceInfo.Workspace.Source.LocalFolder != "" {
 		log.Debugf("Download Local Folder")
-		return DownloadLocalFolder(ctx, workspaceInfo.Folder, client, log)
+		return DownloadLocalFolder(ctx, workspaceInfo.ContentFolder, client, log)
 	} else if workspaceInfo.Workspace.Source.Image != "" {
 		log.Debugf("Prepare Image")
-		return PrepareImage(workspaceInfo.Folder, workspaceInfo.Workspace.Source.Image)
+		return PrepareImage(workspaceInfo.ContentFolder, workspaceInfo.Workspace.Source.Image)
 	}
 
 	return fmt.Errorf("either workspace repository, image or local-folder is required")
@@ -226,13 +226,13 @@ func configureCredentials(ctx context.Context, cancel context.CancelFunc, worksp
 		return "", "", err
 	}
 
-	if workspaceInfo.Folder == "" {
+	if workspaceInfo.Origin == "" {
 		return "", "", fmt.Errorf("workspace folder is not set")
 	}
 
 	dockerCredentials := ""
 	if workspaceInfo.Agent.InjectDockerCredentials == "true" {
-		dockerCredentials, err = dockercredentials.ConfigureCredentialsMachine(filepath.Join(workspaceInfo.Folder, ".."), serverPort)
+		dockerCredentials, err = dockercredentials.ConfigureCredentialsMachine(workspaceInfo.Origin, serverPort)
 		if err != nil {
 			return "", "", err
 		}

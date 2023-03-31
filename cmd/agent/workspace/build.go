@@ -10,7 +10,6 @@ import (
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
 	"os"
-	"path/filepath"
 )
 
 // BuildCmd holds the cmd flags
@@ -90,6 +89,6 @@ func deleteWorkspace(workspaceInfo *provider2.AgentWorkspaceInfo, log log.Logger
 		return errors.Wrap(err, "remove container")
 	}
 
-	_ = os.RemoveAll(filepath.Join(workspaceInfo.Folder, ".."))
+	_ = os.RemoveAll(workspaceInfo.Origin)
 	return nil
 }
