@@ -21,19 +21,20 @@ var _ = DevPodDescribe("devpod ssh test suite", func() {
 		defer framework.CleanupTempDir(initialDir, tempDir)
 
 		f := framework.NewDefaultFramework(initialDir + "/bin")
-
-		f.DevPodProviderUse(context.Background(), "local")
+		err = f.DevPodProviderUse(context.Background(), "docker")
+		framework.ExpectNoError(err)
 
 		// Start up devpod workspace
 		devpodUpDeadline := time.Now().Add(1 * time.Minute)
-		devpodUpCtx, _ := context.WithDeadline(context.Background(), devpodUpDeadline)
-		f.DevPodUp(devpodUpCtx, tempDir)
-
-		devpodSSHDeadline := time.Now().Add(20 * time.Second)
-		devpodSSHCtx, _ := context.WithDeadline(context.Background(), devpodSSHDeadline)
-
-		err = f.DevPodSSHEchoTestString(devpodSSHCtx, tempDir)
+		devpodUpCtx, cancel := context.WithDeadline(context.Background(), devpodUpDeadline)
+		defer cancel()
+		err = f.DevPodUp(devpodUpCtx, tempDir)
 		framework.ExpectNoError(err)
 
+		devpodSSHDeadline := time.Now().Add(20 * time.Second)
+		devpodSSHCtx, cancelSSH := context.WithDeadline(context.Background(), devpodSSHDeadline)
+		defer cancelSSH()
+		err = f.DevPodSSHEchoTestString(devpodSSHCtx, tempDir)
+		framework.ExpectNoError(err)
 	})
 })

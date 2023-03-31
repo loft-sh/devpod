@@ -21,12 +21,13 @@ var _ = DevPodDescribe("devpod up test suite", func() {
 		defer framework.CleanupTempDir(initialDir, tempDir)
 
 		f := framework.NewDefaultFramework(initialDir + "/bin")
-
-		f.DevPodProviderUse(context.Background(), "local")
+		err = f.DevPodProviderUse(context.Background(), "docker")
+		framework.ExpectNoError(err)
 
 		// Wait for devpod workspace to come online (dealine: 30s)
 		deadline := time.Now().Add(30 * time.Second)
-		devpodUpCtx, _ := context.WithDeadline(context.Background(), deadline)
+		devpodUpCtx, cancel := context.WithDeadline(context.Background(), deadline)
+		defer cancel()
 		err = f.DevPodUp(devpodUpCtx, tempDir)
 		framework.ExpectNoError(err)
 	})

@@ -41,7 +41,7 @@ func NewInitCmd(flags *flags.GlobalFlags) *cobra.Command {
 
 func (cmd *InitCmd) Run(ctx context.Context, devPodConfig *config.Config, args []string) error {
 	if len(args) != 1 {
-		return fmt.Errorf("please specify a provider name. E.g. devpod provider init local")
+		return fmt.Errorf("please specify a provider name. E.g. devpod provider init docker")
 	}
 
 	providerConfig, err := workspace.FindProvider(devPodConfig, args[0])
