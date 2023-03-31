@@ -5,9 +5,14 @@ description: |-
 options:
   INACTIVITY_TIMEOUT:
     description: If defined, will automatically stop the container after the inactivity period.
+  DOCKER_PATH:
+    description: The path where to find the docker binary.
+    default: docker
 agent:
   containerInactivityTimeout: ${INACTIVITY_TIMEOUT}
   path: ${DEVPOD}
+  docker:
+    path: ${DOCKER_PATH}
 exec:
   init: |-
     # Check if docker exists and is reachable

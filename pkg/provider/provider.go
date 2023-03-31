@@ -82,6 +82,31 @@ type ProviderAgentConfig struct {
 
 	// Binaries is an optional field to specify a binary to execute the commands
 	Binaries map[string][]*ProviderBinary `json:"binaries,omitempty"`
+
+	// Driver is the driver to use for deploying the devcontainer. Currently supports
+	// docker (default) or kubernetes (experimental)
+	Driver string `json:"driver,omitempty"`
+
+	// Kubernetes holds kubernetes specific configuration
+	Kubernetes ProviderKubernetesDriverConfig `json:"kubernetes,omitempty"`
+
+	// Docker holds docker specific configuration
+	Docker ProviderDockerDriverConfig `json:"docker,omitempty"`
+}
+
+const (
+	DockerDriver     = "docker"
+	KubernetesDriver = "kubernetes"
+)
+
+type ProviderKubernetesDriverConfig struct {
+	// Path where to find the kubectl binary, defaults to 'kubectl'
+	Path string `json:"path,omitempty"`
+}
+
+type ProviderDockerDriverConfig struct {
+	// Path where to find the docker binary, defaults to 'docker'
+	Path string `json:"path,omitempty"`
 }
 
 type ProviderAgentConfigExec struct {

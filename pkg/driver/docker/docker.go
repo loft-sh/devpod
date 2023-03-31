@@ -10,6 +10,7 @@ import (
 	"github.com/loft-sh/devpod/pkg/driver"
 	"github.com/loft-sh/devpod/pkg/ide/jetbrains"
 	"github.com/loft-sh/devpod/pkg/log"
+	provider2 "github.com/loft-sh/devpod/pkg/provider"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 	"io"
@@ -17,9 +18,14 @@ import (
 	"strings"
 )
 
-func NewDockerDriver(log log.Logger) driver.Driver {
-	dockerHelper := &docker.DockerHelper{DockerCommand: "docker"}
+func NewDockerDriver(workspaceInfo *provider2.AgentWorkspaceInfo, log log.Logger) driver.Driver {
+	dockerCommand := "docker"
+	if workspaceInfo.Agent.Docker.Path != "" {
+		dockerCommand = workspaceInfo.Agent.Docker.Path
+	}
 
+	log.Debugf("Using docker command '%s'", dockerCommand)
+	dockerHelper := &docker.DockerHelper{DockerCommand: dockerCommand}
 	return &dockerDriver{
 		Docker: dockerHelper,
 		Log:    log,
