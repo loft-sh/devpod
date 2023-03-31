@@ -170,7 +170,7 @@ func (c *ContainerHandler) updateConfig(ctx context.Context, sshClient *ssh.Clie
 			buf := &bytes.Buffer{}
 			command := fmt.Sprintf("%s agent workspace update-config --workspace-info '%s'", c.client.AgentPath(), workspaceInfo)
 			if agentInfo.Agent.DataPath != "" {
-				command += fmt.Sprintf(" --agent-dir '%s'")
+				command += fmt.Sprintf(" --agent-dir '%s'", agentInfo.Agent.DataPath)
 			}
 
 			c.log.Debugf("Run command in container: %s", command)

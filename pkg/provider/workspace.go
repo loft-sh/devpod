@@ -92,8 +92,11 @@ type AgentWorkspaceInfo struct {
 	// Options holds the filled provider options for this workspace
 	Options map[string]config.OptionValue `json:"options,omitempty"`
 
-	// Folder holds the workspace folder on the remote machine
-	Folder string `json:"-"`
+	// ContentFolder holds the folder where the content is stored
+	ContentFolder string `json:"contentFolder,omitempty"`
+
+	// Origin holds the folder where this config was loaded from
+	Origin string `json:"-"`
 }
 
 func (w WorkspaceSource) String() string {

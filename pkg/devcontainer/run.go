@@ -3,9 +3,9 @@ package devcontainer
 import (
 	"fmt"
 	"github.com/loft-sh/devpod/pkg/agent"
-	"github.com/loft-sh/devpod/pkg/compose"
 	"github.com/loft-sh/devpod/pkg/devcontainer/config"
-	"github.com/loft-sh/devpod/pkg/docker"
+	"github.com/loft-sh/devpod/pkg/driver"
+	"github.com/loft-sh/devpod/pkg/driver/drivercreate"
 	"github.com/loft-sh/devpod/pkg/language"
 	"github.com/loft-sh/devpod/pkg/log"
 	provider2 "github.com/loft-sh/devpod/pkg/provider"
@@ -19,29 +19,26 @@ import (
 	"strings"
 )
 
-func NewRunner(agentPath, agentDownloadURL string, workspaceConfig *provider2.AgentWorkspaceInfo, log log.Logger) *Runner {
-	dockerHelper := &docker.DockerHelper{DockerCommand: "docker"}
-	composeHelper, err := compose.NewComposeHelper("docker-compose", dockerHelper)
+func NewRunner(agentPath, agentDownloadURL string, workspaceConfig *provider2.AgentWorkspaceInfo, log log.Logger) (*Runner, error) {
+	driver, err := drivercreate.NewDriver(workspaceConfig, log)
 	if err != nil {
-		log.Debugf("Could not create docker-compose helper: %+v", err)
+		return nil, err
 	}
 
 	return &Runner{
-		Docker:  dockerHelper,
-		Compose: composeHelper,
+		Driver: driver,
 
 		AgentPath:            agentPath,
 		AgentDownloadURL:     agentDownloadURL,
-		LocalWorkspaceFolder: workspaceConfig.Folder,
+		LocalWorkspaceFolder: workspaceConfig.ContentFolder,
 		ID:                   workspaceConfig.Workspace.ID,
 		WorkspaceConfig:      workspaceConfig,
 		Log:                  log,
-	}
+	}, nil
 }
 
 type Runner struct {
-	Docker  *docker.DockerHelper
-	Compose *compose.ComposeHelper
+	Driver driver.Driver
 
 	WorkspaceConfig  *provider2.AgentWorkspaceInfo
 	AgentPath        string
@@ -146,7 +143,7 @@ func (r *Runner) Up(options UpOptions) (*config.Result, error) {
 
 func (r *Runner) FindDevContainer() (*config.ContainerDetails, error) {
 	labels := r.getLabels()
-	containerDetails, err := r.Docker.FindDevContainer(labels)
+	containerDetails, err := r.Driver.FindDevContainer(labels)
 	if err != nil {
 		return nil, errors.Wrap(err, "find dev container")
 	}
@@ -155,7 +152,7 @@ func (r *Runner) FindDevContainer() (*config.ContainerDetails, error) {
 }
 
 func (r *Runner) getLabels() []string {
-	return []string{DockerIDLabel + "=" + r.ID}
+	return []string{config.DockerIDLabel + "=" + r.ID}
 }
 
 func isDockerFileConfig(config *config.DevContainerConfig) bool {

@@ -10,7 +10,6 @@ import (
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
 	"os"
-	"path/filepath"
 )
 
 // DeleteCmd holds the cmd flags
@@ -68,13 +67,18 @@ func (cmd *DeleteCmd) Run(ctx context.Context) error {
 	}
 
 	// delete workspace folder
-	_ = os.RemoveAll(filepath.Join(workspaceInfo.Folder, ".."))
+	_ = os.RemoveAll(workspaceInfo.Origin)
 	return nil
 }
 
 func removeContainer(workspaceInfo *provider2.AgentWorkspaceInfo, log log.Logger) error {
 	log.Debugf("Removing DevPod container from server...")
-	err := createRunner(workspaceInfo, log).Delete(nil)
+	runner, err := createRunner(workspaceInfo, log)
+	if err != nil {
+		return err
+	}
+
+	err = runner.Delete(nil)
 	if err != nil {
 		return err
 	}

@@ -4,13 +4,12 @@ import (
 	"context"
 	"github.com/loft-sh/devpod/cmd/flags"
 	"github.com/loft-sh/devpod/pkg/agent"
-	"github.com/loft-sh/devpod/pkg/devcontainer"
+	"github.com/loft-sh/devpod/pkg/devcontainer/config"
 	"github.com/loft-sh/devpod/pkg/log"
 	provider2 "github.com/loft-sh/devpod/pkg/provider"
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
 	"os"
-	"path/filepath"
 )
 
 // BuildCmd holds the cmd flags
@@ -65,8 +64,13 @@ func (cmd *BuildCmd) Run(ctx context.Context) error {
 		}()
 	}
 
+	runner, err := createRunner(workspaceInfo, logger)
+	if err != nil {
+		return err
+	}
+
 	// build the image
-	imageName, err := createRunner(workspaceInfo, logger).Build(devcontainer.BuildOptions{
+	imageName, err := runner.Build(config.BuildOptions{
 		PushRepository: cmd.Repository,
 		ForceRebuild:   cmd.ForceBuild,
 	})
@@ -85,6 +89,6 @@ func deleteWorkspace(workspaceInfo *provider2.AgentWorkspaceInfo, log log.Logger
 		return errors.Wrap(err, "remove container")
 	}
 
-	_ = os.RemoveAll(filepath.Join(workspaceInfo.Folder, ".."))
+	_ = os.RemoveAll(workspaceInfo.Origin)
 	return nil
 }

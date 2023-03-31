@@ -6,7 +6,7 @@ import (
 	"github.com/loft-sh/devpod/pkg/agent"
 	"github.com/loft-sh/devpod/pkg/devcontainer"
 	"github.com/loft-sh/devpod/pkg/devcontainer/config"
-	"github.com/loft-sh/devpod/pkg/docker"
+	"github.com/loft-sh/devpod/pkg/driver/drivercreate"
 	"github.com/loft-sh/devpod/pkg/log"
 	provider2 "github.com/loft-sh/devpod/pkg/provider"
 	"github.com/pkg/errors"
@@ -48,11 +48,14 @@ func (cmd *StartCmd) Run(ctx context.Context) error {
 	}
 
 	// create new docker client
-	dockerHelper := &docker.DockerHelper{DockerCommand: "docker"}
+	driver, err := drivercreate.NewDriver(workspaceInfo, log.Default)
+	if err != nil {
+		return err
+	}
 
 	// get container details
-	containerDetails, err := dockerHelper.FindDevContainer([]string{
-		devcontainer.DockerIDLabel + "=" + workspaceInfo.Workspace.ID,
+	containerDetails, err := driver.FindDevContainer([]string{
+		config.DockerIDLabel + "=" + workspaceInfo.Workspace.ID,
 	})
 	if err != nil {
 		return err
@@ -69,7 +72,12 @@ func (cmd *StartCmd) Run(ctx context.Context) error {
 
 func StartContainer(workspaceInfo *provider2.AgentWorkspaceInfo, log log.Logger) (*config.Result, error) {
 	log.Debugf("Starting DevPod container...")
-	result, err := createRunner(workspaceInfo, log).Up(devcontainer.UpOptions{NoBuild: true})
+	runner, err := createRunner(workspaceInfo, log)
+	if err != nil {
+		return nil, err
+	}
+
+	result, err := runner.Up(devcontainer.UpOptions{NoBuild: true})
 	if err != nil {
 		return result, err
 	}

@@ -14,14 +14,11 @@ type ImageDetailsConfig struct {
 }
 
 type ContainerDetails struct {
-	Id              string
-	Created         string
-	Name            string
-	State           ContainerDetailsState
-	Config          ContainerDetailsConfig
-	Mounts          []ContainerDetailsMount
-	NetworkSettings ContainerDetailsNetworkSettings
-	Ports           []ContainerDetailsPort
+	Id      string
+	Created string
+	Name    string
+	State   ContainerDetailsState
+	Config  ContainerDetailsConfig
 }
 
 type ContainerDetailsPort struct {
@@ -29,22 +26,6 @@ type ContainerDetailsPort struct {
 	PrivatePort int
 	PublicPort  int
 	Type        string
-}
-
-type ContainerDetailsNetworkSettings struct {
-	Ports map[string][]ContainerDetailsNetworkSettingsPort
-}
-
-type ContainerDetailsNetworkSettingsPort struct {
-	HostIp   string
-	HostPort string
-}
-
-type ContainerDetailsMount struct {
-	Type        string
-	Name        string
-	Source      string
-	Destination string
 }
 
 type ContainerDetailsConfig struct {
