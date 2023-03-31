@@ -169,6 +169,8 @@ func createWorkspace(ctx context.Context, devPodConfig *config.Config, workspace
 	provider, _, err := LoadProviders(devPodConfig)
 	if err != nil {
 		return nil, nil, nil, err
+	} else if provider.State == nil || !provider.State.Initialized {
+		return nil, nil, nil, fmt.Errorf("provider '%s' is not initialized, please make sure to run 'devpod provider use %s' at least once before using this provider", provider.Config.Name, provider.Config.Name)
 	}
 
 	// get workspace folder
