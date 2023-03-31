@@ -15,7 +15,7 @@
       "all": false,
       "shell": {
         "all": false,
-        "open": true,
+        "open": ".*",
         "sidecar": true,
         "scope": [
           {
@@ -30,6 +30,16 @@
       },
       "window": {
         "startDragging": true
+      },
+      "fs": {
+        "scope": [
+          "$APPDATA/*",
+          "$APPDATA/actions/*"
+        ],
+        "all": true
+      },
+      "path": {
+        "all": true
       }
     },
     "bundle": {

@@ -1,7 +1,8 @@
 import { TActionName } from "../contexts"
 import { exists, isEmpty, noop, ResultError, SingleEventManager, THandler } from "../lib"
 import { TUnsubscribeFn } from "../types"
-import { TCommand, TStreamEvent, TStreamEventListenerFn } from "./command"
+import { TCommand, TStreamEventListenerFn } from "./command"
+import { TStreamEvent } from "./types"
 
 export type TCommandCacheInfo = Readonly<{ id: string; actionName: TActionName }>
 type TCommandCacheID = `${string}:${TActionName}`

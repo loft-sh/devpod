@@ -12,7 +12,6 @@ type TWorkspacesInfo = Readonly<{
 
 export function ListWorkspaces() {
   const [selectedWorkspaces, setSelectedWorkspaces] = useState<readonly TWorkspace[]>([])
-  console.log(selectedWorkspaces)
   const workspaces = useWorkspaces()
   const { workspaceCards } = useMemo<TWorkspacesInfo>(() => {
     const empty: TWorkspacesInfo = { workspaceCards: [] }

@@ -555,6 +555,7 @@ dependencies = [
 name = "devpod-desktop"
 version = "0.0.0"
 dependencies = [
+ "anyhow",
  "chrono",
  "lazy_static",
  "log",

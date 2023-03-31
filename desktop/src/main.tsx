@@ -8,6 +8,10 @@ import { router } from "./routes"
 import "xterm/css/xterm.css"
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query"
 import { ReactQueryDevtools } from "@tanstack/react-query-devtools"
+import dayjs from "dayjs"
+import relativeTime from "dayjs/plugin/relativeTime"
+
+dayjs.extend(relativeTime)
 
 const queryClient = new QueryClient({
   logger: {
