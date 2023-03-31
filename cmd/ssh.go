@@ -206,7 +206,7 @@ func runCredentialsServer(ctx context.Context, client *ssh.Client, user string, 
 		writer := log.ErrorStreamOnly().Writer(logrus.DebugLevel, false)
 		defer writer.Close()
 
-		command := fmt.Sprintf("%s agent container credentials-server --user '%s'", agent.RemoteDevPodHelperLocation, user)
+		command := fmt.Sprintf("%s agent container credentials-server --user '%s'", agent.ContainerDevPodHelperLocation, user)
 		if gitCredentials {
 			command += " --configure-git-helper"
 		}

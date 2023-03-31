@@ -53,7 +53,7 @@ fi
 
 inject() {
   echo "ARM-$(is_arm && echo -n 'true' || echo -n 'false')"
-  cat > $INSTALL_PATH
+  $sh_c "cat > $INSTALL_PATH"
 
   if [ "$CHMOD_PATH" = "true" ]; then
     $sh_c "chmod +x $INSTALL_PATH"

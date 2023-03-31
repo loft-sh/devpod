@@ -24,6 +24,8 @@ import (
 
 const DefaultInactivityTimeout = time.Minute * 20
 
+const ContainerDevPodHelperLocation = "/usr/local/bin/devpod"
+
 const RemoteDevPodHelperLocation = "/tmp/devpod"
 
 const ContainerActivityFile = "/tmp/devpod.activity"
@@ -261,7 +263,6 @@ func rerunAsRoot(workspaceInfo *provider2.AgentWorkspaceInfo, log log.Logger) (b
 func Tunnel(
 	ctx context.Context,
 	driver driver.Driver,
-	agentPath, agentDownloadURL string,
 	containerID string,
 	token string,
 	user string,
@@ -274,13 +275,13 @@ func Tunnel(
 	// inject agent
 	err := InjectAgent(ctx, func(ctx context.Context, command string, stdin io.Reader, stdout io.Writer, stderr io.Writer) error {
 		return driver.CommandDevContainer(ctx, containerID, "root", command, stdin, stdout, stderr)
-	}, agentPath, agentDownloadURL, false, log)
+	}, ContainerDevPodHelperLocation, DefaultAgentDownloadURL, false, log)
 	if err != nil {
 		return err
 	}
 
 	// build command
-	command := fmt.Sprintf("%s helper ssh-server --token '%s' --stdio", RemoteDevPodHelperLocation, token)
+	command := fmt.Sprintf("%s helper ssh-server --token '%s' --stdio", ContainerDevPodHelperLocation, token)
 	if trackActivity {
 		command += " --track-activity"
 	}

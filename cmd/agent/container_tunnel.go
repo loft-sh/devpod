@@ -91,8 +91,6 @@ func (cmd *ContainerTunnelCmd) Run(_ *cobra.Command, _ []string) error {
 	err = agent.Tunnel(
 		context.TODO(),
 		driver,
-		agent.RemoteDevPodHelperLocation,
-		agent.DefaultAgentDownloadURL,
 		containerId,
 		cmd.Token,
 		cmd.User,
