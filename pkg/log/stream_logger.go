@@ -94,8 +94,9 @@ func NewStreamLoggerWithFormat(stdout, stderr io.Writer, level logrus.Level, for
 }
 
 type StreamLogger struct {
-	m     *sync.Mutex
-	level logrus.Level
+	m      *sync.Mutex
+	level  logrus.Level
+	extras map[string]string
 
 	prefixes []Prefix
 
@@ -314,6 +315,19 @@ func (s *StreamLogger) writeMessage(fnType logFunctionType, message string) {
 			_, _ = stream.Write([]byte(message))
 		} else if s.format == JSONFormat {
 			s.writeJSON(message, fnInformation.logLevel)
+		}
+	}
+}
+
+func (s *StreamLogger) JSON(level logrus.Level, value interface{}) {
+	s.m.Lock()
+	defer s.m.Unlock()
+
+	if s.level >= level && s.format == JSONFormat {
+		stream := s.getStream(level)
+		line, err := json.Marshal(value)
+		if err == nil {
+			_, _ = stream.Write([]byte(string(line) + "\n"))
 		}
 	}
 }
