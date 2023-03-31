@@ -1,6 +1,7 @@
 package drivercreate
 
 import (
+	"fmt"
 	"github.com/loft-sh/devpod/pkg/driver"
 	"github.com/loft-sh/devpod/pkg/driver/docker"
 	"github.com/loft-sh/devpod/pkg/log"
@@ -8,5 +9,12 @@ import (
 )
 
 func NewDriver(workspaceInfo *provider2.AgentWorkspaceInfo, log log.Logger) (driver.Driver, error) {
-	return docker.NewDockerDriver(log), nil
+	driver := workspaceInfo.Agent.Driver
+	if driver == "" || driver == provider2.DockerDriver {
+		return docker.NewDockerDriver(workspaceInfo, log), nil
+	} else if driver == provider2.KubernetesDriver {
+		panic("TODO")
+	}
+
+	return nil, fmt.Errorf("unrecognized driver '%s', possible values are %s or %s", driver, provider2.DockerDriver, provider2.KubernetesDriver)
 }
