@@ -54,7 +54,7 @@ func (cmd *StartCmd) Run(ctx context.Context) error {
 	}
 
 	// get container details
-	containerDetails, err := driver.FindDevContainer([]string{
+	containerDetails, err := driver.FindDevContainer(ctx, []string{
 		config.DockerIDLabel + "=" + workspaceInfo.Workspace.ID,
 	})
 	if err != nil {

@@ -14,22 +14,23 @@ type Driver interface {
 	CommandDevContainer(ctx context.Context, id, user, command string, stdin io.Reader, stdout io.Writer, stderr io.Writer) error
 
 	// DeleteDevContainer deletes the devcontainer
-	DeleteDevContainer(id string) error
+	DeleteDevContainer(ctx context.Context, id string) error
 
 	// FindDevContainer returns a running devcontainer details
-	FindDevContainer(labels []string) (*config.ContainerDetails, error)
-
-	// InspectImage inspects the given image name
-	InspectImage(imageName string) (*config.ImageDetails, error)
+	FindDevContainer(ctx context.Context, labels []string) (*config.ContainerDetails, error)
 
 	// StartDevContainer starts the devcontainer
-	StartDevContainer(id string, labels []string) error
+	StartDevContainer(ctx context.Context, id string, labels []string) error
 
 	// StopDevContainer stops the devcontainer
-	StopDevContainer(id string) error
+	StopDevContainer(ctx context.Context, id string) error
+
+	// InspectImage inspects the given image name
+	InspectImage(ctx context.Context, imageName string) (*config.ImageDetails, error)
 
 	// RunDevContainer runs a devcontainer
 	RunDevContainer(
+		ctx context.Context,
 		parsedConfig *config.DevContainerConfig,
 		mergedConfig *config.MergedDevContainerConfig,
 		imageName,
@@ -41,10 +42,11 @@ type Driver interface {
 	) error
 
 	// PushDevContainer pushes the given image to a registry
-	PushDevContainer(image string) error
+	PushDevContainer(ctx context.Context, image string) error
 
 	// BuildDevContainer builds a devcontainer
 	BuildDevContainer(
+		ctx context.Context,
 		parsedConfig *config.SubstitutedConfig,
 		extendedBuildInfo *feature.ExtendedBuildInfo,
 		dockerfilePath,

@@ -1,10 +1,12 @@
 package devcontainer
 
 import (
+	"context"
 	"encoding/json"
 	"github.com/loft-sh/devpod/pkg/devcontainer/config"
 	"github.com/loft-sh/devpod/pkg/devcontainer/metadata"
 	"github.com/pkg/errors"
+	"strings"
 )
 
 func (r *Runner) runSingleContainer(parsedConfig *config.SubstitutedConfig, workspaceMount string, options UpOptions) (*config.Result, error) {
@@ -16,7 +18,7 @@ func (r *Runner) runSingleContainer(parsedConfig *config.SubstitutedConfig, work
 		}
 	}
 
-	containerDetails, err := r.Driver.FindDevContainer(labels)
+	containerDetails, err := r.Driver.FindDevContainer(context.TODO(), labels)
 	if err != nil {
 		return nil, errors.Wrap(err, "find dev container")
 	}
@@ -25,8 +27,8 @@ func (r *Runner) runSingleContainer(parsedConfig *config.SubstitutedConfig, work
 	var mergedConfig *config.MergedDevContainerConfig
 	if containerDetails != nil {
 		// start container if not running
-		if containerDetails.State.Status != "running" {
-			err = r.Driver.StartDevContainer(containerDetails.Id, labels)
+		if strings.ToLower(containerDetails.State.Status) != "running" {
+			err = r.Driver.StartDevContainer(context.TODO(), containerDetails.Id, labels)
 			if err != nil {
 				return nil, err
 			}
@@ -68,7 +70,7 @@ func (r *Runner) runSingleContainer(parsedConfig *config.SubstitutedConfig, work
 			labels = append(labels, metadata.ImageMetadataLabel+"="+string(marshalled))
 		}
 
-		err = r.Driver.RunDevContainer(parsedConfig.Config, mergedConfig, buildInfo.ImageName, workspaceMount, labels, r.WorkspaceConfig.Workspace.IDE.Name, r.WorkspaceConfig.Workspace.IDE.Options, buildInfo.ImageDetails)
+		err = r.Driver.RunDevContainer(context.TODO(), parsedConfig.Config, mergedConfig, buildInfo.ImageName, workspaceMount, labels, r.WorkspaceConfig.Workspace.IDE.Name, r.WorkspaceConfig.Workspace.IDE.Options, buildInfo.ImageDetails)
 		if err != nil {
 			return nil, errors.Wrap(err, "start dev container")
 		}
@@ -76,7 +78,7 @@ func (r *Runner) runSingleContainer(parsedConfig *config.SubstitutedConfig, work
 		//TODO: wait here a bit for correct startup?
 
 		// get container details
-		containerDetails, err = r.Driver.FindDevContainer(labels)
+		containerDetails, err = r.Driver.FindDevContainer(context.TODO(), labels)
 		if err != nil {
 			return nil, err
 		}

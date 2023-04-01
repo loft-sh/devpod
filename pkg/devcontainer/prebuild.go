@@ -1,6 +1,7 @@
 package devcontainer
 
 import (
+	"context"
 	"fmt"
 	"github.com/loft-sh/devpod/pkg/devcontainer/config"
 	"github.com/loft-sh/devpod/pkg/image"
@@ -32,7 +33,7 @@ func (r *Runner) Build(options config.BuildOptions) (string, error) {
 	}
 
 	// push the image to the registry
-	err = r.Driver.PushDevContainer(prebuildImage)
+	err = r.Driver.PushDevContainer(context.TODO(), prebuildImage)
 	if err != nil {
 		return "", errors.Wrap(err, "push image")
 	}

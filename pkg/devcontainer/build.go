@@ -1,6 +1,7 @@
 package devcontainer
 
 import (
+	"context"
 	"fmt"
 	"github.com/loft-sh/devpod/pkg/devcontainer/config"
 	"github.com/loft-sh/devpod/pkg/devcontainer/feature"
@@ -108,7 +109,7 @@ func (r *Runner) getDockerfilePath(parsedConfig *config.DevContainerConfig) (str
 }
 
 func (r *Runner) getImageBuildInfoFromImage(imageName string) (*config.ImageBuildInfo, error) {
-	imageDetails, err := r.Driver.InspectImage(imageName)
+	imageDetails, err := r.Driver.InspectImage(context.TODO(), imageName)
 	if err != nil {
 		return nil, err
 	}
@@ -137,7 +138,7 @@ func (r *Runner) getImageBuildInfoFromDockerfile(dockerFileContent string, build
 	}
 
 	baseImage := parsedDockerfile.FindBaseImage(buildArgs, target)
-	imageDetails, err := r.Driver.InspectImage(baseImage)
+	imageDetails, err := r.Driver.InspectImage(context.TODO(), baseImage)
 	if err != nil {
 		return nil, errors.Wrapf(err, "inspect image %s", baseImage)
 	}
@@ -165,5 +166,5 @@ func (r *Runner) getImageBuildInfoFromDockerfile(dockerFileContent string, build
 }
 
 func (r *Runner) buildImage(parsedConfig *config.SubstitutedConfig, extendedBuildInfo *feature.ExtendedBuildInfo, dockerfilePath, dockerfileContent string, options config.BuildOptions) (*config.BuildInfo, error) {
-	return r.Driver.BuildDevContainer(parsedConfig, extendedBuildInfo, dockerfilePath, dockerfileContent, r.LocalWorkspaceFolder, options)
+	return r.Driver.BuildDevContainer(context.TODO(), parsedConfig, extendedBuildInfo, dockerfilePath, dockerfileContent, r.LocalWorkspaceFolder, options)
 }

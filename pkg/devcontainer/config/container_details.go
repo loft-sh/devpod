@@ -16,16 +16,8 @@ type ImageDetailsConfig struct {
 type ContainerDetails struct {
 	Id      string
 	Created string
-	Name    string
 	State   ContainerDetailsState
 	Config  ContainerDetailsConfig
-}
-
-type ContainerDetailsPort struct {
-	IP          string
-	PrivatePort int
-	PublicPort  int
-	Type        string
 }
 
 type ContainerDetailsConfig struct {
@@ -36,9 +28,8 @@ type ContainerDetailsConfig struct {
 }
 
 type ContainerDetailsState struct {
-	Status     string
-	StartedAt  string
-	FinishedAt string
+	Status    string
+	StartedAt string
 }
 
 func ContainerToImageDetails(containerDetails *ContainerDetails) *ImageDetails {

@@ -14,6 +14,8 @@ import (
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 	"io"
+	"path"
+	"path/filepath"
 	"strconv"
 	"strings"
 )
@@ -47,7 +49,7 @@ func (d *dockerDriver) CommandDevContainer(ctx context.Context, id, user, comman
 	return d.Docker.Run(ctx, args, stdin, stdout, stderr)
 }
 
-func (d *dockerDriver) PushDevContainer(image string) error {
+func (d *dockerDriver) PushDevContainer(ctx context.Context, image string) error {
 	// push image
 	writer := d.Log.Writer(logrus.InfoLevel, false)
 	defer writer.Close()
@@ -60,7 +62,7 @@ func (d *dockerDriver) PushDevContainer(image string) error {
 
 	// run command
 	d.Log.Debugf("Running docker command: docker %s", strings.Join(args, " "))
-	err := d.Docker.Run(context.TODO(), args, nil, writer, writer)
+	err := d.Docker.Run(ctx, args, nil, writer, writer)
 	if err != nil {
 		return errors.Wrap(err, "push image")
 	}
@@ -68,19 +70,19 @@ func (d *dockerDriver) PushDevContainer(image string) error {
 	return nil
 }
 
-func (d *dockerDriver) StartDevContainer(id string, labels []string) error {
-	return d.Docker.StartContainer(id, labels)
+func (d *dockerDriver) StartDevContainer(ctx context.Context, id string, labels []string) error {
+	return d.Docker.StartContainer(ctx, id, labels)
 }
 
-func (d *dockerDriver) DeleteDevContainer(id string) error {
-	return d.Docker.Remove(id)
+func (d *dockerDriver) DeleteDevContainer(ctx context.Context, id string) error {
+	return d.Docker.Remove(ctx, id)
 }
 
-func (d *dockerDriver) StopDevContainer(id string) error {
-	return d.Docker.Stop(id)
+func (d *dockerDriver) StopDevContainer(ctx context.Context, id string) error {
+	return d.Docker.Stop(ctx, id)
 }
 
-func (d *dockerDriver) InspectImage(imageName string) (*config.ImageDetails, error) {
+func (d *dockerDriver) InspectImage(ctx context.Context, imageName string) (*config.ImageDetails, error) {
 	return d.Docker.InspectImage(imageName, true)
 }
 
@@ -88,11 +90,12 @@ func (d *dockerDriver) ComposeHelper() (*compose.ComposeHelper, error) {
 	return compose.NewComposeHelper("docker-compose", d.Docker)
 }
 
-func (d *dockerDriver) FindDevContainer(labels []string) (*config.ContainerDetails, error) {
+func (d *dockerDriver) FindDevContainer(ctx context.Context, labels []string) (*config.ContainerDetails, error) {
 	return d.Docker.FindDevContainer(labels)
 }
 
 func (d *dockerDriver) RunDevContainer(
+	ctx context.Context,
 	parsedConfig *config.DevContainerConfig,
 	mergedConfig *config.MergedDevContainerConfig,
 	imageName,
@@ -188,12 +191,29 @@ func (d *dockerDriver) RunDevContainer(
 	args = append(args, "-d")
 
 	// add entrypoint
-	args = append(args, "--entrypoint", "/bin/sh")
+	entrypoint, cmd := GetContainerEntrypointAndArgs(mergedConfig, imageDetails)
+	args = append(args, "--entrypoint", entrypoint)
 
 	// image name
 	args = append(args, imageName)
 
 	// entrypoint
+	args = append(args, cmd...)
+
+	// run the command
+	d.Log.Debugf("Running docker command: docker %s", strings.Join(args, " "))
+	writer := d.Log.Writer(logrus.InfoLevel, false)
+	defer writer.Close()
+
+	err := d.Docker.RunWithDir(ctx, path.Dir(filepath.ToSlash(parsedConfig.Origin)), args, nil, writer, writer)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func GetContainerEntrypointAndArgs(mergedConfig *config.MergedDevContainerConfig, imageDetails *config.ImageDetails) (string, []string) {
 	customEntrypoints := mergedConfig.Entrypoints
 	cmd := []string{"-c", `echo Container started
 trap "exit 0" 15
@@ -204,17 +224,5 @@ while sleep 1 & wait $!; do :; done`, "-"} // `wait $!` allows for the `trap` to
 		cmd = append(cmd, imageDetails.Config.Entrypoint...)
 		cmd = append(cmd, imageDetails.Config.Cmd...)
 	}
-	args = append(args, cmd...)
-
-	// run the command
-	d.Log.Debugf("Running docker command: docker %s", strings.Join(args, " "))
-	writer := d.Log.Writer(logrus.InfoLevel, false)
-	defer writer.Close()
-
-	err := d.Docker.Run(context.TODO(), args, nil, writer, writer)
-	if err != nil {
-		return err
-	}
-
-	return nil
+	return "/bin/sh", cmd
 }
