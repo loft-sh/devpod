@@ -178,6 +178,10 @@ func ResolveAgentConfig(devConfig *config.Config, provider *provider2.ProviderCo
 	agentConfig.Driver = resolveDefaultValue(agentConfig.Driver, options)
 	agentConfig.Docker.Path = resolveDefaultValue(agentConfig.Docker.Path, options)
 	agentConfig.Kubernetes.Path = resolveDefaultValue(agentConfig.Kubernetes.Path, options)
+	agentConfig.Kubernetes.HelperImage = resolveDefaultValue(agentConfig.Kubernetes.HelperImage, options)
+	agentConfig.Kubernetes.Config = resolveDefaultValue(agentConfig.Kubernetes.Config, options)
+	agentConfig.Kubernetes.Context = resolveDefaultValue(agentConfig.Kubernetes.Context, options)
+	agentConfig.Kubernetes.Namespace = resolveDefaultValue(agentConfig.Kubernetes.Namespace, options)
 	agentConfig.DataPath = resolveDefaultValue(agentConfig.DataPath, options)
 	agentConfig.Path = resolveDefaultValue(agentConfig.Path, options)
 	if agentConfig.Path == "" {

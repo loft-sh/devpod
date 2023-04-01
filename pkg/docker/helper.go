@@ -42,7 +42,8 @@ func (r *DockerHelper) FindDevContainer(labels []string) (*config.ContainerDetai
 
 	// find matching container
 	for _, details := range containerDetails {
-		if details.State.Status != "removing" {
+		if strings.ToLower(details.State.Status) != "removing" {
+			details.State.Status = strings.ToLower(details.State.Status)
 			return &details, nil
 		}
 	}
@@ -50,8 +51,8 @@ func (r *DockerHelper) FindDevContainer(labels []string) (*config.ContainerDetai
 	return nil, nil
 }
 
-func (r *DockerHelper) Stop(id string) error {
-	out, err := r.buildCmd(context.TODO(), "stop", id).CombinedOutput()
+func (r *DockerHelper) Stop(ctx context.Context, id string) error {
+	out, err := r.buildCmd(ctx, "stop", id).CombinedOutput()
 	if err != nil {
 		return errors.Wrapf(err, "%s", string(out))
 	}
@@ -59,8 +60,8 @@ func (r *DockerHelper) Stop(id string) error {
 	return nil
 }
 
-func (r *DockerHelper) Remove(id string) error {
-	out, err := r.buildCmd(context.TODO(), "rm", id).CombinedOutput()
+func (r *DockerHelper) Remove(ctx context.Context, id string) error {
+	out, err := r.buildCmd(ctx, "rm", id).CombinedOutput()
 	if err != nil {
 		return errors.Wrapf(err, "%s", string(out))
 	}
@@ -69,15 +70,20 @@ func (r *DockerHelper) Remove(id string) error {
 }
 
 func (r *DockerHelper) Run(ctx context.Context, args []string, stdin io.Reader, stdout io.Writer, stderr io.Writer) error {
+	return r.RunWithDir(ctx, "", args, stdin, stdout, stderr)
+}
+
+func (r *DockerHelper) RunWithDir(ctx context.Context, dir string, args []string, stdin io.Reader, stdout io.Writer, stderr io.Writer) error {
 	cmd := r.buildCmd(ctx, args...)
+	cmd.Dir = dir
 	cmd.Stdin = stdin
 	cmd.Stdout = stdout
 	cmd.Stderr = stderr
 	return cmd.Run()
 }
 
-func (r *DockerHelper) StartContainer(id string, labels []string) error {
-	out, err := r.buildCmd(context.TODO(), "start", id).CombinedOutput()
+func (r *DockerHelper) StartContainer(ctx context.Context, id string, labels []string) error {
+	out, err := r.buildCmd(ctx, "start", id).CombinedOutput()
 	if err != nil {
 		return errors.Wrapf(err, "start command: %v", string(out))
 	}

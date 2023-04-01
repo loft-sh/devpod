@@ -25,6 +25,7 @@ import (
 )
 
 func (d *dockerDriver) BuildDevContainer(
+	ctx context.Context,
 	parsedConfig *config.SubstitutedConfig,
 	extendedBuildInfo *feature.ExtendedBuildInfo,
 	dockerfilePath,
@@ -53,7 +54,7 @@ func (d *dockerDriver) BuildDevContainer(
 				d.Log.Infof("Found existing prebuilt image %s", prebuildImage)
 
 				// inspect image
-				imageDetails, err := d.InspectImage(prebuildImage)
+				imageDetails, err := d.InspectImage(ctx, prebuildImage)
 				if err != nil {
 					return nil, errors.Wrap(err, "get image details")
 				}
@@ -155,15 +156,15 @@ func (d *dockerDriver) BuildDevContainer(
 	defer writer.Close()
 
 	// check if docker buildx exists
-	if d.buildxExists() {
+	if d.buildxExists(ctx) {
 		d.Log.Infof("Build with docker buildx")
-		err := d.buildxBuild(writer, buildOptions)
+		err := d.buildxBuild(ctx, writer, buildOptions)
 		if err != nil {
 			return nil, errors.Wrap(err, "buildx build")
 		}
 	} else {
 		d.Log.Infof("Build with internal buildkit")
-		err := d.internalBuild(context.Background(), writer, buildOptions)
+		err := d.internalBuild(ctx, writer, buildOptions)
 		if err != nil {
 			return nil, errors.Wrap(err, "internal build")
 		}
@@ -188,9 +189,9 @@ func getImageName(localWorkspaceFolder string) string {
 	return "vsc-" + id.ToDockerImageName(filepath.Base(localWorkspaceFolder)) + "-" + imageHash
 }
 
-func (d *dockerDriver) buildxExists() bool {
+func (d *dockerDriver) buildxExists(ctx context.Context) bool {
 	buf := &bytes.Buffer{}
-	err := d.Docker.Run(context.TODO(), []string{"buildx", "version"}, nil, buf, buf)
+	err := d.Docker.Run(ctx, []string{"buildx", "version"}, nil, buf, buf)
 	if err != nil {
 		return false
 	}
@@ -219,7 +220,7 @@ func (d *dockerDriver) internalBuild(ctx context.Context, writer io.Writer, opti
 	return nil
 }
 
-func (d *dockerDriver) buildxBuild(writer io.Writer, options *build.BuildOptions) error {
+func (d *dockerDriver) buildxBuild(ctx context.Context, writer io.Writer, options *build.BuildOptions) error {
 	// build args
 	args := []string{
 		"buildx",
@@ -262,7 +263,7 @@ func (d *dockerDriver) buildxBuild(writer io.Writer, options *build.BuildOptions
 
 	// run command
 	d.Log.Debugf("Running docker command: docker %s", strings.Join(args, " "))
-	err := d.Docker.Run(context.TODO(), args, nil, writer, writer)
+	err := d.Docker.Run(ctx, args, nil, writer, writer)
 	if err != nil {
 		return errors.Wrap(err, "build image")
 	}

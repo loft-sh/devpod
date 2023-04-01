@@ -102,6 +102,21 @@ const (
 type ProviderKubernetesDriverConfig struct {
 	// Path where to find the kubectl binary, defaults to 'kubectl'
 	Path string `json:"path,omitempty"`
+
+	// Namespace is the Kubernetes namespace to use
+	Namespace string `json:"namespace,omitempty"`
+
+	// Context is the context to use
+	Context string `json:"context,omitempty"`
+
+	// Config is the path to the kube config to use
+	Config string `json:"config,omitempty"`
+
+	// HelperImage is used to find out cluster architecture and copy files
+	HelperImage string `json:"helperImage,omitempty"`
+
+	// PersistentVolumeSize is the size of the persistent volume in GB
+	PersistentVolumeSize string `json:"persistentVolumeSize,omitempty"`
 }
 
 type ProviderDockerDriverConfig struct {
