@@ -1,6 +1,7 @@
 package devcontainer
 
 import (
+	"context"
 	"github.com/loft-sh/devpod/pkg/devcontainer/config"
 	"github.com/pkg/errors"
 	"strings"
@@ -10,7 +11,7 @@ func (r *Runner) Delete(labels []string) error {
 	if len(labels) == 0 {
 		labels = r.getLabels()
 	}
-	containerDetails, err := r.Driver.FindDevContainer(labels)
+	containerDetails, err := r.Driver.FindDevContainer(context.TODO(), labels)
 	if err != nil {
 		return errors.Wrap(err, "find dev container")
 	} else if containerDetails == nil {
@@ -25,13 +26,13 @@ func (r *Runner) Delete(labels []string) error {
 		}
 	} else {
 		if strings.ToLower(containerDetails.State.Status) == "running" {
-			err = r.Driver.StopDevContainer(containerDetails.Id)
+			err = r.Driver.StopDevContainer(context.TODO(), containerDetails.Id)
 			if err != nil {
 				return err
 			}
 		}
 
-		err = r.Driver.DeleteDevContainer(containerDetails.Id)
+		err = r.Driver.DeleteDevContainer(context.TODO(), containerDetails.Id)
 		if err != nil {
 			return err
 		}
@@ -42,7 +43,7 @@ func (r *Runner) Delete(labels []string) error {
 
 func (r *Runner) Stop() error {
 	labels := r.getLabels()
-	containerDetails, err := r.Driver.FindDevContainer(labels)
+	containerDetails, err := r.Driver.FindDevContainer(context.TODO(), labels)
 	if err != nil {
 		return errors.Wrap(err, "find dev container")
 	} else if containerDetails == nil {
@@ -56,7 +57,7 @@ func (r *Runner) Stop() error {
 				return err
 			}
 		} else {
-			err = r.Driver.StopDevContainer(containerDetails.Id)
+			err = r.Driver.StopDevContainer(context.TODO(), containerDetails.Id)
 			if err != nil {
 				return err
 			}

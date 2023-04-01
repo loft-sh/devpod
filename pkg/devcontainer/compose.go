@@ -282,7 +282,7 @@ func (r *Runner) startContainer(parsedConfig *config.SubstitutedConfig, project 
 			currentImageName = originalImageName
 		}
 
-		imageDetails, err := r.Driver.InspectImage(currentImageName)
+		imageDetails, err := r.Driver.InspectImage(context.TODO(), currentImageName)
 		if err != nil {
 			return nil, err
 		}

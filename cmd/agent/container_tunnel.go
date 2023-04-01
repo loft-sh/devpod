@@ -110,7 +110,7 @@ func (cmd *ContainerTunnelCmd) Run(_ *cobra.Command, _ []string) error {
 func waitForDevContainer(workspaceInfo *provider2.AgentWorkspaceInfo, driver driver.Driver) (string, error) {
 	now := time.Now()
 	for time.Since(now) < time.Minute*2 {
-		containerDetails, err := driver.FindDevContainer([]string{
+		containerDetails, err := driver.FindDevContainer(context.TODO(), []string{
 			config.DockerIDLabel + "=" + workspaceInfo.Workspace.ID,
 		})
 		if err != nil {
@@ -127,7 +127,7 @@ func waitForDevContainer(workspaceInfo *provider2.AgentWorkspaceInfo, driver dri
 }
 
 func startDevContainer(workspaceInfo *provider2.AgentWorkspaceInfo, driver driver.Driver) (string, error) {
-	containerDetails, err := driver.FindDevContainer([]string{
+	containerDetails, err := driver.FindDevContainer(context.TODO(), []string{
 		config.DockerIDLabel + "=" + workspaceInfo.Workspace.ID,
 	})
 	if err != nil {

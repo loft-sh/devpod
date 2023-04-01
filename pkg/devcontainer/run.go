@@ -1,6 +1,7 @@
 package devcontainer
 
 import (
+	"context"
 	"fmt"
 	"github.com/loft-sh/devpod/pkg/agent"
 	"github.com/loft-sh/devpod/pkg/devcontainer/config"
@@ -141,9 +142,9 @@ func (r *Runner) Up(options UpOptions) (*config.Result, error) {
 	return result, nil
 }
 
-func (r *Runner) FindDevContainer() (*config.ContainerDetails, error) {
+func (r *Runner) FindDevContainer(ctx context.Context) (*config.ContainerDetails, error) {
 	labels := r.getLabels()
-	containerDetails, err := r.Driver.FindDevContainer(labels)
+	containerDetails, err := r.Driver.FindDevContainer(ctx, labels)
 	if err != nil {
 		return nil, errors.Wrap(err, "find dev container")
 	}
