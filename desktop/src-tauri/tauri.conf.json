@@ -87,10 +87,9 @@
       "iconPath": "icons/icon.png",
       "iconAsTemplate": true
     },
+    "macOSPrivateApi": true,
     "windows": [
       {
-        "fullscreen": false,
-        "resizable": true,
         "title": "Devpod Desktop",
         "width": 1200,
         "height": 800,
@@ -100,7 +99,10 @@
         "y": 0,
         "focus": false,
         "titleBarStyle": "Overlay",
-        "hiddenTitle": true
+        "fullscreen": false,
+        "resizable": true,
+        "hiddenTitle": true,
+        "transparent": true
       }
     ]
   }

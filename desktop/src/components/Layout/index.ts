@@ -1,3 +1,5 @@
 export { NavigationViewLayout } from "./NavigationViewLayout"
 export { Sidebar, SidebarMenuItem } from "./Sidebar"
 export type { TViewTitle } from "./types"
+export { Toolbar, ToolbarTitle, ToolbarActions } from "./Toolbar"
+export { StatusBar } from "./StatusBar"

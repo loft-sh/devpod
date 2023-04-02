@@ -1,17 +1,17 @@
 // We need the `.cts` filename for chakra-cli to properly generate our types
 import { extendTheme, Theme, ThemeOverride } from "@chakra-ui/react"
-import { mode } from "@chakra-ui/theme-tools"
 
 export const theme = extendTheme({
   styles: {
-    global({ colorMode }) {
+    global() {
       return {
         html: {
           fontSize: "14px",
           overflow: "hidden",
+          backgroun: "transparent",
         },
         body: {
-          backgroundColor: mode("gray.50", "gray.900")({ colorMode }),
+          background: "transparent",
           userSelect: "none",
         },
         td: {
