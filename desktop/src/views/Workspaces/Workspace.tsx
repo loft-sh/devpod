@@ -1,8 +1,10 @@
-import { Box, Button, HStack, Text, VStack } from "@chakra-ui/react"
+import { Box, IconButton, Text, VStack } from "@chakra-ui/react"
 import { useCallback, useEffect, useMemo } from "react"
-import { useSearchParams, useNavigate, useParams } from "react-router-dom"
-import { ErrorMessageBox, useStreamingTerminal } from "../../components"
+import { useNavigate, useParams, useSearchParams } from "react-router-dom"
+import { ErrorMessageBox, ToolbarActions, useStreamingTerminal } from "../../components"
 import { useWorkspace } from "../../contexts"
+import { Pause, Play, Trash } from "../../icons"
+import { ArrowPath } from "../../icons/ArrowPath"
 import { exists, isError } from "../../lib"
 import { Routes } from "../../routes"
 
@@ -67,27 +69,41 @@ export function Workspace() {
 
   return (
     <>
-      <HStack marginTop="-6">
-        <Button onClick={handleStartClicked} isLoading={workspace.current?.name === "start"}>
-          Start
-        </Button>
-        <Button
-          onClick={() => workspace.stop(connectStream)}
-          isLoading={workspace.current?.name === "stop"}>
-          Stop
-        </Button>
-        <Button
+      <ToolbarActions>
+        {workspace.data.status === "Running" ? (
+          <IconButton
+            aria-label="Stop workspace"
+            variant="ghost"
+            icon={<Pause />}
+            onClick={() => workspace.stop(connectStream)}
+            isLoading={workspace.current?.name === "stop"}
+          />
+        ) : (
+          <IconButton
+            aria-label="Start workspace"
+            variant="ghost"
+            icon={<Play />}
+            onClick={handleStartClicked}
+            isLoading={workspace.current?.name === "start"}
+          />
+        )}
+
+        <IconButton
+          aria-label="Rebuild workspace"
+          variant="ghost"
+          icon={<ArrowPath />}
           onClick={() => workspace.rebuild(connectStream)}
-          isLoading={workspace.current?.name === "rebuild"}>
-          Rebuild
-        </Button>
-        <Button
+          isLoading={workspace.current?.name === "rebuild"}
+        />
+        <IconButton
           colorScheme="red"
+          aria-label="Remove workspace"
+          variant="ghost"
+          icon={<Trash />}
           onClick={() => workspace.remove(connectStream)}
-          isLoading={workspace.current?.name === "remove"}>
-          Delete
-        </Button>
-      </HStack>
+          isLoading={workspace.current?.name === "remove"}
+        />
+      </ToolbarActions>
 
       <VStack align="start" marginTop="10">
         <Text>Status: {workspace.data.status}</Text>

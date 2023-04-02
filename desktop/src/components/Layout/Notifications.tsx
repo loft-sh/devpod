@@ -1,9 +1,6 @@
-import { BellIcon, CheckCircleIcon, WarningIcon } from "@chakra-ui/icons"
 import {
   Center,
-  Icon,
   IconButton,
-  IconProps,
   LinkBox,
   LinkOverlay,
   Popover,
@@ -19,11 +16,12 @@ import {
   VStack,
 } from "@chakra-ui/react"
 import dayjs from "dayjs"
-import { motion } from "framer-motion"
 import { useMemo } from "react"
 import { Link as RouterLink } from "react-router-dom"
 import { useWorkspaceActions } from "../../contexts"
+import { Bell, CheckCircle, ExclamationCircle, ExclamationTriangle } from "../../icons"
 import { Routes } from "../../routes"
+import { Pulse } from "../Animation"
 
 export function Notifications() {
   const actions = useWorkspaceActions()
@@ -36,18 +34,17 @@ export function Notifications() {
   }, [actions.active, actions.history])
 
   return (
-    <Popover placement="top">
+    <Popover placement="bottom">
       <PopoverTrigger>
         <Center>
           <IconButton
-            variant="solid"
+            variant="ghost"
             size="md"
             rounded="full"
-            color="gray.500"
             aria-label="Show onging operations"
             icon={
               <>
-                <BellIcon boxSize={6} position="absolute" />
+                <Bell boxSize={6} position="absolute" />
                 {hasActiveActions && <Pulse boxSize={10} />}
               </>
             }
@@ -72,9 +69,9 @@ export function Notifications() {
                 gap={3}
                 _hover={{ backgroundColor: actionHoverColor }}>
                 {action.status === "pending" && <Spinner color="blue.300" size="sm" />}
-                {action.status === "success" && <CheckCircleIcon color="green.300" />}
-                {action.status === "error" && <WarningIcon color="red.300" />}
-                {action.status === "cancelled" && <WarningIcon color="orange.300" />}
+                {action.status === "success" && <CheckCircle color="green.300" />}
+                {action.status === "error" && <ExclamationCircle color="red.300" />}
+                {action.status === "cancelled" && <ExclamationTriangle color="orange.300" />}
 
                 <VStack align="start">
                   <Text fontWeight="bold">
@@ -96,41 +93,5 @@ export function Notifications() {
         </PopoverContent>
       </Portal>
     </Popover>
-  )
-}
-
-const initial = {
-  r: 4,
-  opacity: 0.3,
-}
-const animate = { r: 12, opacity: 0 }
-const transition = { duration: 4, repeat: Infinity }
-function Pulse(props: IconProps) {
-  return (
-    <Icon {...props} viewBox="0 0 24 24">
-      <motion.circle
-        cx="12"
-        cy="12"
-        fill="currentColor"
-        initial={initial}
-        animate={animate}
-        transition={transition}
-      />
-      <motion.circle
-        cx="12"
-        cy="12"
-        fill="currentColor"
-        initial={initial}
-        animate={animate}
-        transition={{ ...transition, delay: 1 }}
-      />
-      <motion.circle
-        cx="12"
-        cy="12"
-        initial={initial}
-        animate={animate}
-        transition={{ ...transition, delay: 2 }}
-      />
-    </Icon>
   )
 }

@@ -18,7 +18,6 @@ export function DevPodProvider({ children }: Readonly<{ children?: ReactNode }>)
     queryKey: QueryKeys.PROVIDERS,
     queryFn: async () => (await client.providers.listAll()).unwrap(),
     refetchInterval: REFETCH_INTERVAL_MS,
-    enabled: false,
   })
 
   const value = useMemo<TDevpodContext>(

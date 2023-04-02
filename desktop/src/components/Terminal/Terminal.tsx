@@ -106,8 +106,6 @@ export const Terminal = forwardRef<TTerminalRef, {}>(function T(_, ref) {
           termFitRef.current?.fit()
         },
         writeln(data) {
-          console.log("data", data)
-          console.log(terminalRef.current)
           terminalRef.current?.writeln(data)
           termFitRef.current?.fit()
         },

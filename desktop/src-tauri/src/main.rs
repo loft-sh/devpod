@@ -16,7 +16,7 @@ use log::info;
 use providers::ProvidersState;
 use std::sync::{Arc, Mutex};
 use system_tray::SystemTray;
-use tauri::{Manager, Menu, Wry};
+use tauri::{Manager, Menu};
 use tauri_plugin_deep_link;
 use url::{ParseError, Url};
 use workspaces::WorkspacesState;
@@ -63,10 +63,29 @@ fn main() {
             tauri_plugin_deep_link::register(APP_URL_SCHEME, handler)
                 .expect("should be able to listen to custom protocols");
 
-            #[cfg(debug_assertions)] // open browser devtools automatically during development
+            let window = app.get_window("main").unwrap();
+
+            // open browser devtools automatically during development
+            #[cfg(debug_assertions)]
             {
-                let window = app.get_window("main").unwrap();
                 window.open_devtools();
+            }
+
+            // Window vibrancy
+            #[cfg(target_os = "macos")]
+            {
+                window_vibrancy::apply_vibrancy(
+                    &window,
+                    window_vibrancy::NSVisualEffectMaterial::HudWindow,
+                    None,
+                    None,
+                )
+                .expect("Unsupported platform! 'apply_vibrancy' is only supported on macOS");
+            }
+            #[cfg(target_os = "windows")]
+            {
+                window_vibrancy::apply_blur(&window, Some((18, 18, 18, 125)))
+                    .expect("Unsupported platform! 'apply_blur' is only supported on Windows");
             }
 
             Ok(())

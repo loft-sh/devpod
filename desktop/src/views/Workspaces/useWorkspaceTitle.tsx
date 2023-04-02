@@ -1,8 +1,8 @@
-import { AddIcon, ArrowBackIcon } from "@chakra-ui/icons"
-import { IconButton } from "@chakra-ui/react"
+import { Button, IconButton } from "@chakra-ui/react"
 import { useCallback, useMemo } from "react"
 import { useMatch, useNavigate } from "react-router"
 import { TViewTitle } from "../../components"
+import { ArrowLeft, Plus } from "../../icons"
 import { exists } from "../../lib"
 import { Routes } from "../../routes"
 
@@ -22,7 +22,7 @@ export function useWorkspaceTitle(): TViewTitle | null {
       <IconButton
         variant="ghost"
         aria-label="Navigate back to Workspaces"
-        icon={<ArrowBackIcon boxSize="6" />}
+        icon={<ArrowLeft />}
         onClick={navigateToWorkspacesRoot}
       />
     )
@@ -34,11 +34,14 @@ export function useWorkspaceTitle(): TViewTitle | null {
         label: "Workspaces",
         priority: "high",
         trailingAction: (
-          <IconButton
-            aria-label="Create Workspace"
-            icon={<AddIcon />}
-            onClick={() => navigate(Routes.WORKSPACE_CREATE)}
-          />
+          <Button
+            size="sm"
+            variant="outline"
+            aria-label="Create new workspace"
+            leftIcon={<Plus boxSize={5} />}
+            onClick={() => navigate(Routes.WORKSPACE_CREATE)}>
+            Create
+          </Button>
         ),
       }
     }
