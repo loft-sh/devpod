@@ -21,10 +21,11 @@ import { Link as RouterLink } from "react-router-dom"
 import { useWorkspaceActions } from "../../contexts"
 import { Bell, CheckCircle, ExclamationCircle, ExclamationTriangle } from "../../icons"
 import { Routes } from "../../routes"
-import { Pulse } from "../Animation"
+import { Ripple } from "../Animation"
 
 export function Notifications() {
   const actions = useWorkspaceActions()
+  const backgroundColor = useColorModeValue("white", "gray.900")
   const subheadingTextColor = useColorModeValue("gray.500", "gray.400")
   const actionHoverColor = useColorModeValue("gray.100", "gray.800")
   const hasActiveActions = actions.active.length > 0
@@ -45,16 +46,18 @@ export function Notifications() {
             icon={
               <>
                 <Bell boxSize={6} position="absolute" />
-                {hasActiveActions && <Pulse boxSize={10} />}
+                {hasActiveActions && <Ripple boxSize={10} />}
               </>
             }
           />
         </Center>
       </PopoverTrigger>
       <Portal>
-        <PopoverContent>
-          <PopoverArrow />
-          <PopoverHeader>Notifications</PopoverHeader>
+        <PopoverContent backgroundColor={backgroundColor}>
+          <PopoverArrow backgroundColor={backgroundColor} />
+          <PopoverHeader paddingY="4" fontWeight="bold">
+            Notifications
+          </PopoverHeader>
           <PopoverBody overflowY="scroll" maxHeight="20rem">
             {combinedActions.length === 0 && <Text>No notifications</Text>}
             {combinedActions.map((action) => (

@@ -1,5 +1,5 @@
 use crate::{
-    commands::DevpodCommandError, providers::ProvidersState, system_tray::SystemTray,
+    commands::DevpodCommandError,  system_tray::SystemTray,
     workspaces::WorkspacesState, AppState,
 };
 use std::{
@@ -9,7 +9,6 @@ use std::{
 use tauri::{AppHandle, Manager};
 
 enum Update {
-    Providers(ProvidersState),
     Workspaces(WorkspacesState),
 }
 
@@ -30,7 +29,6 @@ pub fn ui_ready(
         thread::sleep(sleep_duration);
     });
 
-    let providers_state = Arc::clone(&state.providers);
     let workspaces_state = Arc::clone(&state.workspaces);
     let tray_handle = app_handle.tray_handle();
 
@@ -38,16 +36,6 @@ pub fn ui_ready(
     thread::spawn(move || {
         while let Ok(msg) = rx.recv() {
             match msg {
-                Update::Providers(providers) => {
-                    let current_providers = &mut *providers_state.lock().unwrap();
-
-                    if current_providers != &providers {
-                        app_handle
-                            .emit_all("providers", &providers)
-                            .expect("should be able to emit providers");
-                        *current_providers = providers;
-                    }
-                }
                 Update::Workspaces(workspaces) => {
                     let current_workspaces = &mut *workspaces_state.lock().unwrap();
 

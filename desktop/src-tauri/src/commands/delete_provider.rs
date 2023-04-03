@@ -1,6 +1,6 @@
 use super::{
     config::{CommandConfig, DevpodCommandConfig, DevpodCommandError},
-    constants::{DEVPOD_BINARY_NAME, DEVPOD_COMMAND_PROVIDER, DEVPOD_COMMAND_USE, DEVPOD_COMMAND_DELETE},
+    constants::{DEVPOD_BINARY_NAME, DEVPOD_COMMAND_PROVIDER, DEVPOD_COMMAND_DELETE},
 };
 
 pub struct DeleteProviderCommand {

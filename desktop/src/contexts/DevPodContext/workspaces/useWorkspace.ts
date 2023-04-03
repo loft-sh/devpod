@@ -8,8 +8,7 @@ import {
   TWorkspaceID,
   TWorkspaceStartConfig,
 } from "../../../types"
-import { TActionID, TActionObj, TPublicAction } from "./action"
-import { useWorkspaceActions } from "./useWorkspaceActions"
+import { TActionID, TPublicAction } from "./action"
 import { workspacesStore } from "./workspacesStore"
 
 export type TWorkspaceResult = Readonly<{

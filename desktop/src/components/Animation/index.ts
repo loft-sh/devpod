@@ -1,1 +1,1 @@
-export { Pulse } from "./pulse"
+export { Ripple } from "./Ripple"
