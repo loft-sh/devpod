@@ -22,7 +22,7 @@ import { CollapsibleSection, useStreamingTerminal } from "../../components"
 import { useProviders, useWorkspace, useWorkspaces } from "../../contexts"
 import { exists, useFormErrors } from "../../lib"
 import { Routes } from "../../routes"
-import { TProviderID } from "../../types"
+import { TProviderID, TWorkspaceID } from "../../types"
 import { ExampleCard } from "./ExampleCard"
 import GolangPng from "../../images/go.png"
 import NodeJSPng from "../../images/nodejs.png"
@@ -33,9 +33,9 @@ const DEFAULT_PROVIDER = "docker"
 
 // TODO: handle no provider configured
 export function CreateWorkspace() {
+  const [workspaceID, setWorkspaceID] = useState<TWorkspaceID | undefined>(undefined)
   const navigate = useNavigate()
   const workspaces = useWorkspaces()
-  const [workspaceID, setWorkspaceID] = useState<string | undefined>(undefined)
   const workspace = useWorkspace(workspaceID)
   const [[providers]] = useProviders()
   const { register, handleSubmit, formState, watch, setError, setValue } = useForm<TFormValues>({
@@ -65,9 +65,7 @@ export function CreateWorkspace() {
       const providerID = data[FieldName.PROVIDER]
       const defaultIDE = data[FieldName.DEFAULT_IDE]
 
-      // TODO: after creating a workspace, the status is NOT_FOUND until the whole devcontainer is set up...
-      // can we change this in cli?
-      workspace.create(
+      const result = await workspace.create(
         {
           id: workspaceID,
           providerConfig: { providerID },
@@ -104,8 +102,12 @@ export function CreateWorkspace() {
   )
 
   useEffect(() => {
-    if (workspace.current?.name === "create" && workspace.current.status === "success") {
-      navigate(Routes.WORKSPACES)
+    if (workspace.current?.name === "create" && workspace.data?.id !== undefined) {
+      const id = workspace.data.id
+
+      return () => {
+        navigate(Routes.toWorkspace(id))
+      }
     }
   }, [navigate, workspace])
 

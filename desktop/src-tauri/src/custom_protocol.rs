@@ -6,7 +6,7 @@ use tauri_plugin_deep_link;
 use thiserror::Error;
 use url::Url;
 
-use crate::AppState;
+use crate::{AppState, UiMessage};
 
 // Should match the one from "tauri.config.json" and "Info.plist"
 const APP_IDENTIFIER: &str = "sh.loft.devpod-desktop";
@@ -14,7 +14,7 @@ const APP_URL_SCHEME: &str = "devpod";
 
 pub struct CustomProtocol;
 
-#[derive(Debug, PartialEq, Deserialize)]
+#[derive(Debug, PartialEq, Deserialize, Clone)]
 pub struct OpenWorkspaceMsg {
     #[serde(rename(deserialize = "workspace"))]
     workspace_id: String,
@@ -38,25 +38,35 @@ impl CustomProtocol {
 
     pub fn setup(&self, app: AppHandle) {
         tauri_plugin_deep_link::register(APP_URL_SCHEME, move |url_scheme| {
-            info!("App opened with URL: {:?}", url_scheme.to_string());
+            tauri::async_runtime::block_on(async {
+                info!("App opened with URL: {:?}", url_scheme.to_string());
 
-            let msg = CustomProtocol::parse(&url_scheme.to_string());
-            println!("x: {:?}", msg);
+                let msg = CustomProtocol::parse(&url_scheme.to_string());
 
-            match msg {
-                Ok(msg) => {
-                    let app_state = app.state::<AppState>();
-                    let mut launch_msg = app_state.launch_msg.lock().unwrap();
-                    *launch_msg = Some(msg)
+                match msg {
+                    Ok(msg) => {
+                        let app_state = app.state::<AppState>();
+                        // try to send to UI if ready, otherwise buffer and let ui_ready handle
+                        if let Err(err) = app_state
+                            .ui_messages
+                            .send(UiMessage::OpenWorkspace(msg))
+                            .await
+                        {
+                            error!(
+                                "Failed to broadcast custom protocol message: {:?}, {}",
+                                err.0, err
+                            );
+                        };
+                    }
+                    Err(err) => {
+                        error!(
+                            "Failed to parse custom protocol: {:?}, {}",
+                            url_scheme.to_string(),
+                            err
+                        );
+                    }
                 }
-                Err(err) => {
-                    error!(
-                        "Failed to parse custom protocol: {:?}, {}",
-                        url_scheme.to_string(),
-                        err
-                    );
-                }
-            }
+            })
         })
         .expect("should be able to listen to custom protocols");
     }

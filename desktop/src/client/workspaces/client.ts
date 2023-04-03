@@ -1,5 +1,6 @@
 import { invoke } from "@tauri-apps/api"
-import { TActionID, TActionName, TPublicAction } from "../../contexts"
+import { TActionID, TActionName } from "../../contexts"
+import { TActionObj } from "../../contexts/DevPodContext/workspaces/action"
 import { exists, noop, Result, ResultError, Return, THandler } from "../../lib"
 import {
   TStreamID,
@@ -82,8 +83,6 @@ export class WorkspacesClient implements TDebuggable {
     }
 
     this.commandCache.clear(cacheInfo)
-
-    return this.getStatus(ctx.id)
   }
 
   public setDebug(isEnabled: boolean): void {
@@ -116,7 +115,9 @@ export class WorkspacesClient implements TDebuggable {
   ): Promise<Result<TWorkspace["status"]>> {
     const cmd = WorkspaceCommands.StartWorkspace(ctx.id, config)
 
-    return this.execActionCmd(cmd, { ...ctx, listener, actionName: "start" })
+    await this.execActionCmd(cmd, { ...ctx, listener, actionName: "start" })
+
+    return this.getStatus(ctx.id)
   }
 
   public async stop(
@@ -125,7 +126,9 @@ export class WorkspacesClient implements TDebuggable {
   ): Promise<Result<TWorkspace["status"]>> {
     const cmd = WorkspaceCommands.StopWorkspace(ctx.id)
 
-    return this.execActionCmd(cmd, { ...ctx, listener, actionName: "stop" })
+    await this.execActionCmd(cmd, { ...ctx, listener, actionName: "stop" })
+
+    return this.getStatus(ctx.id)
   }
 
   public async rebuild(
@@ -134,7 +137,9 @@ export class WorkspacesClient implements TDebuggable {
   ): Promise<Result<TWorkspace["status"]>> {
     const cmd = WorkspaceCommands.RebuildWorkspace(ctx.id)
 
-    return this.execActionCmd(cmd, { ...ctx, listener, actionName: "rebuild" })
+    await this.execActionCmd(cmd, { ...ctx, listener, actionName: "rebuild" })
+
+    return this.getStatus(ctx.id)
   }
 
   public async remove(
@@ -143,11 +148,7 @@ export class WorkspacesClient implements TDebuggable {
   ): Promise<ResultError> {
     const cmd = WorkspaceCommands.RemoveWorkspace(ctx.id)
 
-    const result = await this.execActionCmd(cmd, { ...ctx, listener, actionName: "remove" })
-
-    if (result.err) {
-      return result
-    }
+    await this.execActionCmd(cmd, { ...ctx, listener, actionName: "remove" })
 
     return Return.Ok()
   }
@@ -160,7 +161,7 @@ export class WorkspacesClient implements TDebuggable {
   }
 
   public subscribe(
-    action: TPublicAction,
+    action: TActionObj,
     streamID: TStreamID,
     listener: TStreamEventListenerFn
   ): TUnsubscribeFn {

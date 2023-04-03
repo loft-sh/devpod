@@ -8,14 +8,14 @@ import {
   TWorkspaceID,
   TWorkspaceStartConfig,
 } from "../../../types"
-import { TActionID, TPublicAction } from "./action"
+import { TActionID, TActionObj } from "./action"
 import { workspacesStore } from "./workspacesStore"
 
 export type TWorkspaceResult = Readonly<{
   data: TWorkspace | undefined
   isLoading: boolean
   current:
-    | (TPublicAction & Readonly<{ connect: (listener: TStreamEventListenerFn) => void }>)
+    | (TActionObj & Readonly<{ connect: (listener: TStreamEventListenerFn) => void }>)
     | undefined
   history: Readonly<{
     // all: readonly TActionObj[]

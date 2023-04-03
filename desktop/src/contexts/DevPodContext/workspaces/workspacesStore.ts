@@ -4,8 +4,7 @@ import { replaceEqualDeep } from "../helpers"
 import { Action, TActionFn, TActionName, TActionObj } from "./action"
 import { ActionHistory } from "./actionHistory"
 
-type TPublicAction = Omit<Action, "run" | "once" | "cancel">
-type TLastActions = Readonly<{ active: readonly TPublicAction[]; history: readonly TActionObj[] }>
+type TLastActions = Readonly<{ active: readonly TActionObj[]; history: readonly TActionObj[] }>
 
 class WorkspacesStore {
   private readonly eventManager = new SingleEventManager<void>()
@@ -44,8 +43,8 @@ class WorkspacesStore {
     return this.lastWorkspaces
   }
 
-  public getCurrentAction(workspaceID: TWorkspaceID): TPublicAction | undefined {
-    return this.actionsHistory.getActive(workspaceID)
+  public getCurrentAction(workspaceID: TWorkspaceID): TActionObj | undefined {
+    return this.lastActions.active.find((action) => action.workspaceID === workspaceID)
   }
 
   public getAllActions(): TLastActions {
@@ -120,8 +119,10 @@ class WorkspacesStore {
 
     // Setup listener for when the action is done
     action.once(() => {
-      this.actionsHistory.archive(action)
+      // We need to give the UI a chance to listen to the settled state, so we need to inform it about the change once
+      // before and once after archiving the action
       this.actionDidChange()
+      this.actionsHistory.archive(action)
     })
 
     action.run()
