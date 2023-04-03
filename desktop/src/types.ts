@@ -106,6 +106,7 @@ export type TWorkspaceStatusResult = Readonly<{
   state: TWorkspace["status"] | null
 }>
 export type TWorkspaceStartConfig = Readonly<{
+  id: string
   ideConfig?: TWorkspace["ide"]
   providerConfig?: Readonly<{ providerID?: TProviderID }>
   // Instead of starting a workspace just by ID, the sourceConfig starts it with a `source/ID` combination

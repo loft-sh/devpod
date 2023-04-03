@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useId, useMemo, useRef, useSyncExternalStore } from "react"
 import { client, TStreamEventListenerFn } from "../../../client"
-import { exists, Result } from "../../../lib"
+import { exists } from "../../../lib"
 import {
   TDeepNonNullable,
   TUnsubscribeFn,
@@ -26,7 +26,7 @@ export type TWorkspaceResult = Readonly<{
     config: Omit<TWorkspaceStartConfig, "sourceConfig"> &
       Pick<TDeepNonNullable<TWorkspaceStartConfig>, "sourceConfig">,
     onStream?: TStreamEventListenerFn
-  ) => Promise<Result<TWorkspaceID>>
+  ) => void
   stop: (onStream?: TStreamEventListenerFn) => void
   remove: (onStream?: TStreamEventListenerFn) => void
   rebuild: (onStream?: TStreamEventListenerFn) => void
@@ -40,31 +40,23 @@ export function useWorkspace(workspaceID: TWorkspaceID | undefined): TWorkspaceR
   )
   const create = useCallback<TWorkspaceResult["create"]>(
     async (config, onStream) => {
-      const newIDResult = await client.workspaces.newID(config.sourceConfig.source)
-      if (newIDResult.err) {
-        return newIDResult
-      }
-      const workspaceID = newIDResult.val
-
       workspacesStore.startAction({
         actionName: "create",
-        workspaceID,
+        workspaceID: config.id,
         actionFn: async (ctx) => {
           const result = await client.workspaces.start(config, onStream, {
-            id: workspaceID,
+            id: config.id,
             actionID: ctx.id,
             streamID: viewID,
           })
           if (result.err) {
             return result
           }
-          workspacesStore.setStatus(workspaceID, result.val)
+          workspacesStore.setStatus(config.id, result.val)
 
           return result
         },
       })
-
-      return newIDResult
     },
     [viewID]
   )

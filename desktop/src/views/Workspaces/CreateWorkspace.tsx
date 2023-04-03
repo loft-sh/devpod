@@ -1,5 +1,4 @@
 import {
-  Box,
   Button,
   FormControl,
   FormErrorMessage,
@@ -16,41 +15,30 @@ import {
   Tabs,
   VStack,
 } from "@chakra-ui/react"
-import { useCallback, useEffect, useMemo } from "react"
+import { useCallback, useEffect, useMemo, useState } from "react"
 import { SubmitHandler, useForm } from "react-hook-form"
 import { useNavigate } from "react-router"
 import { CollapsibleSection, useStreamingTerminal } from "../../components"
-import { useProviders, useWorkspace } from "../../contexts"
+import { useProviders, useWorkspace, useWorkspaces } from "../../contexts"
 import { exists, useFormErrors } from "../../lib"
 import { Routes } from "../../routes"
 import { TProviderID } from "../../types"
 import { ExampleCard } from "./ExampleCard"
 import GolangPng from "../../images/go.png"
 import NodeJSPng from "../../images/nodejs.png"
-
-export const FieldName = {
-  SOURCE: "source",
-  DEFAULT_IDE: "defaultIDE",
-  PROVIDER: "provider",
-} as const
-
-const SUPPORTED_IDES = ["vscode", "intellj"] as const
-type TSupportedIDE = (typeof SUPPORTED_IDES)[number]
+import { client } from "../../client"
+import { FieldName, SUPPORTED_IDES, TFormValues } from "./types"
 
 const DEFAULT_PROVIDER = "docker"
-
-export type TFormValues = {
-  [FieldName.SOURCE]: string
-  [FieldName.DEFAULT_IDE]: TSupportedIDE
-  [FieldName.PROVIDER]: TProviderID // TODO: needs runtime validation
-}
 
 // TODO: handle no provider configured
 export function CreateWorkspace() {
   const navigate = useNavigate()
-  const workspace = useWorkspace(undefined)
+  const workspaces = useWorkspaces()
+  const [workspaceID, setWorkspaceID] = useState<string | undefined>(undefined)
+  const workspace = useWorkspace(workspaceID)
   const [[providers]] = useProviders()
-  const { register, handleSubmit, formState, watch, setValue } = useForm<TFormValues>({
+  const { register, handleSubmit, formState, watch, setError, setValue } = useForm<TFormValues>({
     defaultValues: {
       [FieldName.DEFAULT_IDE]: "vscode",
       [FieldName.PROVIDER]: DEFAULT_PROVIDER,
@@ -60,8 +48,20 @@ export function CreateWorkspace() {
   const { terminal, connectStream } = useStreamingTerminal()
 
   const onSubmit = useCallback<SubmitHandler<TFormValues>>(
-    (data) => {
+    async (data) => {
       const workspaceSource = data[FieldName.SOURCE].trim()
+      const newIDResult = await client.workspaces.newID(workspaceSource)
+      if (newIDResult.err) {
+        setError(FieldName.SOURCE, { message: newIDResult.val.message })
+
+        return
+      } else if (workspaces.find((workspace) => workspace.id === newIDResult.val)) {
+        setError(FieldName.SOURCE, { message: "workspace with the same name already exists" })
+
+        return
+      }
+
+      const workspaceID = newIDResult.val
       const providerID = data[FieldName.PROVIDER]
       const defaultIDE = data[FieldName.DEFAULT_IDE]
 
@@ -69,6 +69,7 @@ export function CreateWorkspace() {
       // can we change this in cli?
       workspace.create(
         {
+          id: workspaceID,
           providerConfig: { providerID },
           ideConfig: { ide: defaultIDE },
           sourceConfig: {
@@ -77,6 +78,9 @@ export function CreateWorkspace() {
         },
         connectStream
       )
+
+      // set workspace id to show terminal
+      setWorkspaceID(workspaceID)
     },
     [workspace, connectStream]
   )
@@ -98,8 +102,6 @@ export function CreateWorkspace() {
     () => workspace.current?.name === "create" && workspace.current.status === "pending",
     [workspace.current]
   )
-
-  console.info(workspace)
 
   useEffect(() => {
     if (workspace.current?.name === "create" && workspace.current.status === "success") {
@@ -142,23 +144,28 @@ export function CreateWorkspace() {
               </FormControl>
             </TabPanel>
             <TabPanel>
-              <SimpleGrid
-                spacing={4}
-                templateColumns="repeat(auto-fill, minmax(120px, 1fr))"
-                marginTop={"10px"}>
-                <ExampleCard
-                  image={GolangPng}
-                  source={"https://github.com/Microsoft/vscode-remote-try-go"}
-                  currentSource={currentSource}
-                  setValue={setValue}
-                />
-                <ExampleCard
-                  image={NodeJSPng}
-                  source={"https://github.com/microsoft/vscode-remote-try-node"}
-                  currentSource={currentSource}
-                  setValue={setValue}
-                />
-              </SimpleGrid>
+              <FormControl isRequired isInvalid={exists(sourceError)}>
+                <SimpleGrid
+                  spacing={4}
+                  templateColumns="repeat(auto-fill, minmax(120px, 1fr))"
+                  marginTop={"10px"}>
+                  <ExampleCard
+                    image={GolangPng}
+                    source={"https://github.com/Microsoft/vscode-remote-try-go"}
+                    currentSource={currentSource}
+                    setValue={setValue}
+                  />
+                  <ExampleCard
+                    image={NodeJSPng}
+                    source={"https://github.com/microsoft/vscode-remote-try-node"}
+                    currentSource={currentSource}
+                    setValue={setValue}
+                  />
+                </SimpleGrid>
+                {exists(sourceError) && (
+                  <FormErrorMessage>{sourceError.message ?? "Error"}</FormErrorMessage>
+                )}
+              </FormControl>
             </TabPanel>
           </TabPanels>
         </Tabs>
