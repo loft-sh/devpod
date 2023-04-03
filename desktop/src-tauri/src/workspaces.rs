@@ -3,7 +3,6 @@ use crate::{
     system_tray::{SystemTrayClickHandler, ToSystemTraySubmenu},
 };
 use chrono::DateTime;
-use log::trace;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use tauri::{CustomMenuItem, SystemTrayMenu, SystemTrayMenuItem, SystemTraySubmenu};
@@ -27,7 +26,6 @@ impl WorkspacesState {
 
 impl WorkspacesState {
     pub fn load() -> Result<Self, DevpodCommandError> {
-        trace!("loading workspaces");
         let list_workspaces_cmd = ListWorkspacesCommand::new();
 
         list_workspaces_cmd.exec()

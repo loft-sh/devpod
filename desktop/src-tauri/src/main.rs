@@ -17,12 +17,19 @@ use custom_protocol::{CustomProtocol, OpenWorkspaceMsg};
 use std::sync::{Arc, Mutex};
 use system_tray::SystemTray;
 use tauri::{Manager, Menu};
+use tokio::sync::mpsc::{self, Sender};
 use workspaces::WorkspacesState;
 
 #[derive(Debug)]
 pub struct AppState {
     workspaces: Arc<Mutex<WorkspacesState>>,
-    launch_msg: Mutex<Option<OpenWorkspaceMsg>>,
+    ui_messages: Sender<UiMessage>,
+}
+
+#[derive(Debug)]
+enum UiMessage {
+    Ready,
+    OpenWorkspace(OpenWorkspaceMsg),
 }
 
 fn main() {
@@ -35,10 +42,12 @@ fn main() {
     let system_tray = SystemTray::new();
     let system_tray_event_handler = system_tray.get_event_handler();
 
+    let (tx, mut rx) = mpsc::channel::<UiMessage>(10);
+
     tauri::Builder::default()
         .manage(AppState {
             workspaces: Arc::new(Mutex::new(WorkspacesState::default())),
-            launch_msg: Mutex::new(None),
+            ui_messages: tx,
         })
         .plugin(logging::build_plugin())
         .plugin(tauri_plugin_store::Builder::default().build())
@@ -51,6 +60,10 @@ fn main() {
 
             let window = app.get_window("main").unwrap();
             setup_window(&window);
+
+            // TODO: Continue here:
+            // Need to sync the ui with the open workspace message
+            // Test current behaviour
 
             Ok(())
         })

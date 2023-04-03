@@ -19,8 +19,13 @@ export class ActionHistory {
     this.history = JSON.parse(maybeHistory) as TActionObj[]
   }
 
-  private getAllActive(): readonly Action[] {
-    return Array.from(this.active.values())
+  private getAllActive(): readonly TActionObj[] {
+    const active = []
+    for (const action of this.active.values()) {
+      active.push(action.getData())
+    }
+
+    return active
   }
 
   public getActive(workspaceID: TWorkspaceID): Action | undefined {
@@ -28,7 +33,10 @@ export class ActionHistory {
   }
 
   public getAll(): TWorkspaceActions {
-    return { active: this.getAllActive(), history: [...this.history] }
+    const active = this.getAllActive()
+    const history = this.history.slice()
+
+    return { active, history }
   }
 
   public addActive(workspaceID: TWorkspaceID, action: Action): void {

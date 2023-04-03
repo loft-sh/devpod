@@ -43,39 +43,54 @@ export function ListWorkspaces() {
     }
   }, [])
 
-  const handleDeleteSelectedClicked = useCallback(() => {
-    // TODO: handle properly via workspaceStore
-    client.workspaces.removeMany(selectedWorkspaces)
-  }, [selectedWorkspaces])
-  const handleDeleteAllClicked = useCallback(() => {
-    // TODO: handle properly via workspaceStore
-    client.workspaces.removeMany(workspaces)
-  }, [workspaces])
-
   return (
     <>
       <VStack align="start" marginBottom="12">
-        <HStack width="full" justifyContent="end" minHeight="8" marginBottom="12">
-          {selectedWorkspaces.length > 0 && (
-            <Button colorScheme="red" onClick={handleDeleteSelectedClicked}>
-              Delete {selectedWorkspaces.length}
-            </Button>
-          )}
-          {workspaces.length > 0 && (
-            <Button colorScheme="red" onClick={handleDeleteAllClicked}>
-              Delete All
-            </Button>
-          )}
-        </HStack>
+        {import.meta.env.DEV && (
+          <BatchDeleteWorkspaces
+            allWorkspaces={workspaces}
+            selectedWorkspaces={selectedWorkspaces}
+          />
+        )}
 
         {workspaceCards.map((workspace) => (
           <WorkspaceCard
             key={workspace.id}
             workspaceID={workspace.id}
-            onSelectionChange={handleWorkspaceSelectionChanged(workspace)}
+            onSelectionChange={
+              import.meta.env.DEV ? handleWorkspaceSelectionChanged(workspace) : undefined
+            }
           />
         ))}
       </VStack>
     </>
+  )
+}
+
+type TBatchDeleteWorkspaces = Readonly<{
+  allWorkspaces: readonly TWorkspace[]
+  selectedWorkspaces: readonly TWorkspace[]
+}>
+function BatchDeleteWorkspaces({ allWorkspaces, selectedWorkspaces }: TBatchDeleteWorkspaces) {
+  const handleDeleteSelectedClicked = useCallback(() => {
+    client.workspaces.removeMany(selectedWorkspaces)
+  }, [selectedWorkspaces])
+  const handleDeleteAllClicked = useCallback(() => {
+    client.workspaces.removeMany(allWorkspaces)
+  }, [allWorkspaces])
+
+  return (
+    <HStack width="full" justifyContent="end" minHeight="8" marginBottom="12">
+      {selectedWorkspaces.length > 0 && (
+        <Button colorScheme="red" onClick={handleDeleteSelectedClicked}>
+          Delete {selectedWorkspaces.length}
+        </Button>
+      )}
+      {allWorkspaces.length > 0 && (
+        <Button colorScheme="red" onClick={handleDeleteAllClicked}>
+          Delete All
+        </Button>
+      )}
+    </HStack>
   )
 }

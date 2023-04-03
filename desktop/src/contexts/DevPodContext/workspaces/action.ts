@@ -14,9 +14,8 @@ export type TActionObj = Pick<
   Action,
   "id" | "name" | "status" | "error" | "createdAt" | "finishedAt" | "workspaceID"
 >
-export type TPublicAction = Omit<Action, "run" | "once" | "cancel">
 export type TWorkspaceActions = Readonly<{
-  active: readonly TPublicAction[]
+  active: readonly TActionObj[]
   history: readonly TActionObj[]
 }>
 type TActionContext = Readonly<{ id: Action["id"] }>

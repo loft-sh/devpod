@@ -3001,6 +3001,7 @@ dependencies = [
  "autocfg",
  "bytes",
  "num_cpus",
+ "parking_lot",
  "pin-project-lite",
  "windows-sys 0.45.0",
 ]
