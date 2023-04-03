@@ -1,7 +1,7 @@
 import React from "react"
 import { Card, Image } from "@chakra-ui/react"
 import { UseFormSetValue } from "react-hook-form"
-import { FieldName, TFormValues } from "./CreateWorkspace"
+import { FieldName, TFormValues } from "./types"
 
 type TExampleCardProps = {
   image: string
