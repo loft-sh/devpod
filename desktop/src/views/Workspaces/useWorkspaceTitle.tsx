@@ -5,9 +5,11 @@ import { TViewTitle } from "../../components"
 import { ArrowLeft, Plus } from "../../icons"
 import { exists } from "../../lib"
 import { Routes } from "../../routes"
+import { useWorkspaces } from "../../contexts"
 
 export function useWorkspaceTitle(): TViewTitle | null {
   const navigate = useNavigate()
+  const workspaces = useWorkspaces()
 
   const matchWorkspacesRoot = useMatch(Routes.WORKSPACES)
   const matchCreateWorkspace = useMatch(Routes.WORKSPACE_CREATE)
@@ -47,6 +49,13 @@ export function useWorkspaceTitle(): TViewTitle | null {
     }
 
     if (exists(matchCreateWorkspace)) {
+      if (!workspaces.length) {
+        return {
+          label: "Create Workspace",
+          priority: "regular",
+        }
+      }
+
       return {
         label: "Create Workspace",
         priority: "regular",
@@ -65,5 +74,12 @@ export function useWorkspaceTitle(): TViewTitle | null {
     }
 
     return null
-  }, [matchCreateWorkspace, matchWorkspace, matchWorkspacesRoot, navigate, navigateBackAction])
+  }, [
+    matchCreateWorkspace,
+    matchWorkspace,
+    matchWorkspacesRoot,
+    navigate,
+    navigateBackAction,
+    workspaces,
+  ])
 }
