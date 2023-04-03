@@ -111,7 +111,7 @@ func validate(config *ProviderConfig) error {
 	}
 
 	// validate driver
-	if config.Agent.Driver != DockerDriver && config.Agent.Driver != KubernetesDriver {
+	if config.Agent.Driver != "" && config.Agent.Driver != DockerDriver && config.Agent.Driver != KubernetesDriver {
 		return fmt.Errorf("agent.driver can only be docker or kubernetes")
 	}
 
