@@ -92,7 +92,8 @@ export function SidebarMenuItem({ to, children, icon }: TSidebarMenuProps) {
         style={({ isActive }) => ({
           ...(isActive
             ? {
-                backgroundColor,
+                backgroundColor: "#AA40EE",
+                color: "white",
                 borderColor,
                 opacity: 1,
               }
@@ -100,7 +101,7 @@ export function SidebarMenuItem({ to, children, icon }: TSidebarMenuProps) {
         })}>
         {icon}
         <Box width="2" />
-        <Text color="chakra-body-text">{children}</Text>
+        <Text>{children}</Text>
       </Link>
     </Box>
   )
