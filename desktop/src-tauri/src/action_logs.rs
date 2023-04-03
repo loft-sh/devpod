@@ -69,7 +69,7 @@ pub fn get_action_logs(
 
 pub fn setup(app_handle: &AppHandle) -> anyhow::Result<()> {
     let dir_path = get_actions_dir(app_handle)?;
-    let _ = fs::create_dir(&dir_path); // Make sure we have the action logs dir
+    let _ = fs::create_dir_all(&dir_path); // Make sure we have the action logs dir
 
     // TODO:  trim down logs to keep in sync with UI
 
