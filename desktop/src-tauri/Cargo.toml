@@ -30,6 +30,7 @@ lazy_static = "1.4.0"
 url = "2.3.1"
 anyhow = "1.0.70"
 window-vibrancy = "0.3.2"
+serde_qs = "0.12.0"
 
 [features]
 # by default Tauri runs in production mode

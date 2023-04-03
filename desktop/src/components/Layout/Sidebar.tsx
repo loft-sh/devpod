@@ -62,8 +62,11 @@ export function Sidebar({ children, ...boxProps }: TSidebarProps) {
 
 type TSidebarMenuProps = Pick<LinkProps, "to"> & Readonly<{ children?: ReactNode; icon: ReactNode }>
 export function SidebarMenuItem({ to, children, icon }: TSidebarMenuProps) {
-  const activeColor = useToken("colors", "primary.500")
   const settings = useSettings()
+  const backgroundColorToken = useColorModeValue("blackAlpha.100", "whiteAlpha.200")
+  const backgroundColor = useToken("colors", backgroundColorToken)
+  const borderColorToken = useColorModeValue("blackAlpha.200", "whiteAlpha.300")
+  const borderColor = useToken("colors", borderColorToken)
   const isLeft = settings.sidebarPosition === "left"
 
   return (
@@ -71,20 +74,33 @@ export function SidebarMenuItem({ to, children, icon }: TSidebarMenuProps) {
       <Link
         display="flex"
         paddingX="4"
-        paddingY="4"
+        paddingY="3"
         as={RouterLink}
         to={to}
         width="full"
-        borderRadius="sm"
+        borderRadius="md"
         flexDirection="row"
         flexGrow="nowrap"
         alignItems="center"
         flexFlow={isLeft ? "row" : "row-reverse"}
         justifyContent="flex-start"
-        _activeLink={{ fontWeight: "bold", color: activeColor }}>
+        borderWidth="thin"
+        borderColor="transparent"
+        opacity={0.6}
+        _hover={{ textDecoration: "none", backgroundColor }}
+        // @ts-ignore // this function is added by react-router-dom's `NavLink`
+        style={({ isActive }) => ({
+          ...(isActive
+            ? {
+                backgroundColor,
+                borderColor,
+                opacity: 1,
+              }
+            : {}),
+        })}>
         {icon}
         <Box width="2" />
-        <Text>{children}</Text>
+        <Text color="chakra-body-text">{children}</Text>
       </Link>
     </Box>
   )

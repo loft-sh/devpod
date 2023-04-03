@@ -4,7 +4,7 @@ use tauri::{
     SystemTrayMenu, SystemTrayMenuItem, SystemTraySubmenu, WindowBuilder, WindowUrl, Wry,
 };
 
-use crate::{providers::ProvidersState, workspaces::WorkspacesState, AppState};
+use crate::{workspaces::WorkspacesState, AppState};
 
 pub trait SystemTrayIdentifier {}
 pub type SystemTrayClickHandler = Box<dyn Fn(&AppHandle, State<AppState>) -> ()>;
@@ -97,9 +97,6 @@ impl SystemTray {
                     if id.starts_with(WorkspacesState::IDENTIFIER_PREFIX) {
                         let workspaces_state = &*app_state.workspaces.lock().unwrap();
                         maybe_handler = workspaces_state.on_tray_item_clicked(id);
-                    } else if id.starts_with(ProvidersState::IDENTIFIER_PREFIX) {
-                        let providers_state = &*app_state.providers.lock().unwrap();
-                        maybe_handler = providers_state.on_tray_item_clicked(id);
                     } else {
                         warn!("Received unhandled click for ID: {}", id);
                     }
