@@ -1,6 +1,7 @@
-import { Box, Heading, HStack } from "@chakra-ui/react"
+import { Heading, HStack } from "@chakra-ui/react"
 import { ReactNode } from "react"
 import { exists } from "../../lib"
+import { ToolbarTitle } from "./Toolbar"
 import { TViewTitle } from "./types"
 
 type TNavigationViewLayoutProps = Readonly<{ title: TViewTitle | null; children?: ReactNode }>
@@ -8,16 +9,20 @@ export function NavigationViewLayout({ title, children }: TNavigationViewLayoutP
   return (
     <>
       {exists(title) && (
-        <>
-          <HStack align="center">
+        <ToolbarTitle>
+          <HStack align="center" width="full" overflow="hidden">
             {exists(title.leadingAction) && title.leadingAction}
-            <Heading as={title.priority === "high" ? "h1" : "h2"} size="md">
+            <Heading
+              overflow="hidden"
+              whiteSpace={"nowrap"}
+              textOverflow="ellipsis"
+              as={title.priority === "high" ? "h1" : "h2"}
+              size="sm">
               {title.label}
             </Heading>
             {exists(title.trailingAction) && title.trailingAction}
           </HStack>
-          <Box borderBottomWidth="thin" width="full" marginLeft={-8} marginTop={4} />
-        </>
+        </ToolbarTitle>
       )}
       {children}
     </>

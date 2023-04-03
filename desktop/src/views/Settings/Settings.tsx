@@ -10,6 +10,7 @@ import {
   VStack,
 } from "@chakra-ui/react"
 import { ReactNode } from "react"
+import { ToolbarTitle } from "../../components"
 import { TSettings, useChangeSettings } from "../../contexts"
 
 export function Settings() {
@@ -17,6 +18,11 @@ export function Settings() {
 
   return (
     <>
+      <ToolbarTitle>
+        <Heading as="h3" size="sm">
+          Settings
+        </Heading>
+      </ToolbarTitle>
       <VStack align="start" spacing={10}>
         <VStack align="start">
           <Heading as="h4" size="md" marginBottom={4}>
