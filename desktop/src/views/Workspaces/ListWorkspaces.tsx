@@ -1,9 +1,11 @@
 import { VStack } from "@chakra-ui/react"
-import { useMemo } from "react"
+import { useEffect, useMemo } from "react"
 import { useWorkspaces } from "../../contexts"
 import { exists } from "../../lib"
 import { TWorkspace } from "../../types"
 import { WorkspaceCard } from "./WorkspaceCard"
+import { useNavigate } from "react-router"
+import { Routes } from "../../routes"
 
 type TWorkspacesInfo = Readonly<{
   workspaceCards: TWorkspace[]
@@ -11,6 +13,7 @@ type TWorkspacesInfo = Readonly<{
 
 export function ListWorkspaces() {
   const workspaces = useWorkspaces()
+  const navigate = useNavigate()
   const { workspaceCards } = useMemo<TWorkspacesInfo>(() => {
     const empty: TWorkspacesInfo = { workspaceCards: [] }
     if (!exists(workspaces)) {
@@ -28,6 +31,12 @@ export function ListWorkspaces() {
       return acc
     }, empty)
   }, [workspaces])
+
+  useEffect(() => {
+    if (workspaces.length === 0) {
+      navigate(Routes.WORKSPACE_CREATE)
+    }
+  }, [workspaces, navigate])
 
   return (
     <VStack align="start" marginBottom="12">

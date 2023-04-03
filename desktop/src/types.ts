@@ -91,6 +91,8 @@ export type TWorkspace = Readonly<{
   ide: {
     ide: string | null
   } | null
+  creationTimestamp: string
+  lastUsed: string
   source: {
     gitRepository: string | null
     gitBranch: string | null
