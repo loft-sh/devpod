@@ -8,6 +8,12 @@ import {
   HStack,
   Input,
   Select,
+  SimpleGrid,
+  Tab,
+  TabList,
+  TabPanel,
+  TabPanels,
+  Tabs,
   VStack,
 } from "@chakra-ui/react"
 import { useCallback, useEffect, useMemo } from "react"
@@ -18,8 +24,11 @@ import { useProviders, useWorkspace } from "../../contexts"
 import { exists, useFormErrors } from "../../lib"
 import { Routes } from "../../routes"
 import { TProviderID } from "../../types"
+import { ExampleCard } from "./ExampleCard"
+import GolangPng from "../../images/go.png"
+import NodeJSPng from "../../images/nodejs.png"
 
-const FieldName = {
+export const FieldName = {
   SOURCE: "source",
   DEFAULT_IDE: "defaultIDE",
   PROVIDER: "provider",
@@ -30,7 +39,7 @@ type TSupportedIDE = (typeof SUPPORTED_IDES)[number]
 
 const DEFAULT_PROVIDER = "docker"
 
-type TFormValues = {
+export type TFormValues = {
   [FieldName.SOURCE]: string
   [FieldName.DEFAULT_IDE]: TSupportedIDE
   [FieldName.PROVIDER]: TProviderID // TODO: needs runtime validation
@@ -41,12 +50,13 @@ export function CreateWorkspace() {
   const navigate = useNavigate()
   const workspace = useWorkspace(undefined)
   const [[providers]] = useProviders()
-  const { register, handleSubmit, formState } = useForm<TFormValues>({
+  const { register, handleSubmit, formState, watch, setValue } = useForm<TFormValues>({
     defaultValues: {
       [FieldName.DEFAULT_IDE]: "vscode",
       [FieldName.PROVIDER]: DEFAULT_PROVIDER,
     },
   })
+  const currentSource = watch(FieldName.SOURCE)
   const { terminal, connectStream } = useStreamingTerminal()
 
   const onSubmit = useCallback<SubmitHandler<TFormValues>>(
@@ -71,7 +81,10 @@ export function CreateWorkspace() {
     [workspace, connectStream]
   )
 
-  const { sourceError, defaultIDEError } = useFormErrors(Object.values(FieldName), formState)
+  const { sourceError, providerError, defaultIDEError } = useFormErrors(
+    Object.values(FieldName),
+    formState
+  )
 
   const providerOptions = useMemo<readonly TProviderID[]>(() => {
     if (!exists(providers)) {
@@ -83,8 +96,10 @@ export function CreateWorkspace() {
 
   const isLoading = useMemo(
     () => workspace.current?.name === "create" && workspace.current.status === "pending",
-    [workspace]
+    [workspace.current]
   )
+
+  console.info(workspace)
 
   useEffect(() => {
     if (workspace.current?.name === "create" && workspace.current.status === "success") {
@@ -99,14 +114,80 @@ export function CreateWorkspace() {
   return (
     <form onSubmit={handleSubmit(onSubmit)}>
       <VStack align="start" spacing="6">
-        <FormControl isRequired isInvalid={exists(sourceError)}>
+        <Tabs colorScheme={"primary"} width={"100%"} maxWidth={"1024px"}>
+          <TabList>
+            <Tab>From Path</Tab>
+            <Tab>From Example</Tab>
+          </TabList>
+
+          <TabPanels>
+            <TabPanel>
+              <FormControl isRequired isInvalid={exists(sourceError)}>
+                <Input
+                  placeholder="github.com/my-org/my-repo"
+                  fontSize={"16px"}
+                  padding={"10px"}
+                  height={"42px"}
+                  type="text"
+                  {...register(FieldName.SOURCE, { required: true })}
+                />
+                {exists(sourceError) ? (
+                  <FormErrorMessage>{sourceError.message ?? "Error"}</FormErrorMessage>
+                ) : (
+                  <FormHelperText>
+                    Enter any git repository or local path to a folder you would like to create a
+                    workspace from.
+                  </FormHelperText>
+                )}
+              </FormControl>
+            </TabPanel>
+            <TabPanel>
+              <SimpleGrid
+                spacing={4}
+                templateColumns="repeat(auto-fill, minmax(120px, 1fr))"
+                marginTop={"10px"}>
+                <ExampleCard
+                  image={GolangPng}
+                  source={"https://github.com/Microsoft/vscode-remote-try-go"}
+                  currentSource={currentSource}
+                  setValue={setValue}
+                />
+                <ExampleCard
+                  image={NodeJSPng}
+                  source={"https://github.com/microsoft/vscode-remote-try-node"}
+                  currentSource={currentSource}
+                  setValue={setValue}
+                />
+              </SimpleGrid>
+            </TabPanel>
+          </TabPanels>
+        </Tabs>
+
+        <CollapsibleSection
+          title={(isOpen) => (isOpen ? "Hide Advanced Options" : "Show Advanced Options")}>
           <HStack spacing="0">
-            <Input
-              placeholder="github.com/my-org/my-repo"
-              type="text"
-              {...register(FieldName.SOURCE, { required: true })}
-            />
-            <Box w="150px">
+            <FormControl isRequired isInvalid={exists(defaultIDEError)}>
+              <FormLabel>Default IDE</FormLabel>
+              <Select
+                placeholder="Select Default IDE"
+                {...register(FieldName.DEFAULT_IDE, { required: true })}>
+                {SUPPORTED_IDES.map((ide) => (
+                  <option key={ide} value={ide}>
+                    {ide}
+                  </option>
+                ))}
+              </Select>
+              {exists(defaultIDEError) ? (
+                <FormErrorMessage>{defaultIDEError.message ?? "Error"}</FormErrorMessage>
+              ) : (
+                <FormHelperText>
+                  Devpod will open this workspace with the selected IDE by default. You can still
+                  change your default IDE later.
+                </FormHelperText>
+              )}
+            </FormControl>
+            <FormControl isRequired isInvalid={exists(providerError)}>
+              <FormLabel>Provider</FormLabel>
               <Select
                 placeholder="Select Provider"
                 {...register(FieldName.PROVIDER, { required: true })}>
@@ -116,38 +197,20 @@ export function CreateWorkspace() {
                   </option>
                 ))}
               </Select>
-            </Box>
+              {exists(providerError) ? (
+                <FormErrorMessage>{providerError.message ?? "Error"}</FormErrorMessage>
+              ) : (
+                <FormHelperText>Use this provider to create the workspace.</FormHelperText>
+              )}
+            </FormControl>
           </HStack>
-          {exists(sourceError) && (
-            <FormErrorMessage>{sourceError.message ?? "Error"}</FormErrorMessage>
-          )}
-        </FormControl>
-
-        <CollapsibleSection
-          title={(isOpen) => (isOpen ? "Hide Advanced Options" : "Show Advanced Options")}>
-          <FormControl isRequired isInvalid={exists(defaultIDEError)}>
-            <FormLabel>Default IDE</FormLabel>
-            <Select
-              placeholder="Select Default IDE"
-              {...register(FieldName.DEFAULT_IDE, { required: true })}>
-              {SUPPORTED_IDES.map((ide) => (
-                <option key={ide} value={ide}>
-                  {ide}
-                </option>
-              ))}
-            </Select>
-            {exists(defaultIDEError) ? (
-              <FormErrorMessage>{defaultIDEError.message ?? "Error"}</FormErrorMessage>
-            ) : (
-              <FormHelperText>
-                Devpod will open this workspace with the selected IDE by default. You can still
-                change your default IDE later.
-              </FormHelperText>
-            )}
-          </FormControl>
         </CollapsibleSection>
 
-        <Button marginTop="10" type="submit" disabled={formState.isSubmitting}>
+        <Button
+          colorScheme={"primary"}
+          marginTop="10"
+          type="submit"
+          disabled={formState.isSubmitting}>
           Create Workspace
         </Button>
       </VStack>

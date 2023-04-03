@@ -8,7 +8,7 @@ export function Workspaces() {
 
   return (
     <NavigationViewLayout title={title}>
-      <Box paddingTop="10">
+      <Box>
         <Outlet />
       </Box>
     </NavigationViewLayout>
