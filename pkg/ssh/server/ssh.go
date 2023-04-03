@@ -54,11 +54,11 @@ func NewServer(addr string, hostKey []byte, keys []ssh.PublicKey, log log.Logger
 				return false
 			},
 			LocalPortForwardingCallback: func(ctx ssh.Context, dhost string, dport uint32) bool {
-				log.Debugf("Accepted forward", dhost, dport)
+				log.Debugf("Accepted forward: %s:%d", dhost, dport)
 				return true
 			},
 			ReversePortForwardingCallback: func(ctx ssh.Context, host string, port uint32) bool {
-				log.Debugf("attempt to bind", host, port, "granted")
+				log.Debugf("attempt to bind %s:%d - %s", host, port, "granted")
 				return true
 			},
 			ChannelHandlers: map[string]ssh.ChannelHandler{
