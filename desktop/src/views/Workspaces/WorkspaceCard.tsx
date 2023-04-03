@@ -1,19 +1,33 @@
 import {
   Button,
   Card,
+  Image,
   CardBody,
   CardFooter,
   CardHeader,
   Checkbox,
   Heading,
-  Link,
   Stack,
   Text,
+  HStack,
+  Box,
+  IconButton,
+  Popover,
+  PopoverTrigger,
+  PopoverContent,
+  PopoverArrow,
+  PopoverCloseButton,
+  PopoverHeader,
+  PopoverBody,
+  VStack,
+  Tooltip,
 } from "@chakra-ui/react"
-import { Link as RouterLink } from "react-router-dom"
 import { useWorkspace } from "../../contexts"
-import { Routes } from "../../routes"
 import { TWorkspaceID } from "../../types"
+import { Pause, Trash } from "../../icons"
+import { ArrowPath } from "../../icons/ArrowPath"
+import CodeImage from "../../images/code.jpg"
+import { Ellipsis } from "../../icons/Ellipsis"
 
 type TWorkspaceCardProps = Readonly<{
   workspaceID: TWorkspaceID
@@ -22,7 +36,6 @@ type TWorkspaceCardProps = Readonly<{
 
 export function WorkspaceCard({ workspaceID, onSelectionChange }: TWorkspaceCardProps) {
   const workspace = useWorkspace(workspaceID)
-
   if (workspace.data === undefined) {
     return null
   }
@@ -30,13 +43,36 @@ export function WorkspaceCard({ workspaceID, onSelectionChange }: TWorkspaceCard
   const { id, provider, status, ide } = workspace.data
 
   return (
-    <Card key={id} direction={{ base: "column", sm: "row" }} overflow="hidden" variant="outline">
+    <Card
+      key={id}
+      direction={{ base: "row", sm: "row" }}
+      width={"100%"}
+      maxWidth={"600px"}
+      overflow="hidden"
+      variant="outline">
+      <Image
+        objectFit="cover"
+        maxW={{ base: "100%", sm: "200px" }}
+        src={CodeImage}
+        alt="Caffe Latte"
+      />
+
       <Stack>
         <CardHeader display="flex" width="full" justifyContent="space-between">
           <Heading size="md">
-            <Link as={RouterLink} to={Routes.toWorkspace(id)}>
+            <HStack>
               <Text fontWeight="bold">{id}</Text>
-            </Link>
+              <Box
+                as={"span"}
+                display={"inline-block"}
+                backgroundColor={status === "Running" ? "green" : "orange"}
+                borderRadius={"20px"}
+                width={"10px"}
+                height={"10px"}
+                position={"relative"}
+                top={"1px"}
+              />
+            </HStack>
           </Heading>
           {onSelectionChange !== undefined && (
             <Checkbox onChange={(e) => onSelectionChange(e.target.checked)} />
@@ -44,25 +80,58 @@ export function WorkspaceCard({ workspaceID, onSelectionChange }: TWorkspaceCard
         </CardHeader>
         <CardBody>
           {provider?.name && <Text>Provider: {provider.name}</Text>}
-          <Text>Status: {status}</Text>
+          <Text>Last Used: 10m ago</Text>
         </CardBody>
 
         <CardFooter>
-          <Button
-            colorScheme="primary"
-            onClick={() => workspace.start({ ideConfig: ide })}
-            isLoading={workspace.current?.name === "start"}>
-            Start
-          </Button>
-          <Button onClick={() => workspace.stop()} isLoading={workspace.current?.name === "stop"}>
-            Stop
-          </Button>
-          <Button
-            colorScheme="red"
-            onClick={() => workspace.remove()}
-            isLoading={workspace.current?.name === "remove"}>
-            Delete
-          </Button>
+          <HStack spacing={"2"}>
+            <Button
+              colorScheme="primary"
+              onClick={() => workspace.start({ id, ideConfig: ide })}
+              isLoading={workspace.current?.name === "start"}>
+              Open
+            </Button>
+            <IconButton
+              aria-label="Stop workspace"
+              variant="ghost"
+              colorScheme="gray"
+              onClick={() => workspace.stop()}
+              icon={<Pause width={"16px"} />}
+              isLoading={workspace.current?.name === "stop"}
+            />
+            <Tooltip label={"Delete workspace"}>
+              <IconButton
+                aria-label="Delete workspace"
+                variant="ghost"
+                colorScheme="gray"
+                icon={<Trash width={"16px"} />}
+                onClick={() => workspace.remove()}
+                isLoading={workspace.current?.name === "remove"}
+              />
+            </Tooltip>
+            <Popover trigger={"hover"}>
+              <PopoverTrigger>
+                <IconButton
+                  aria-label="Delete workspace"
+                  variant="ghost"
+                  colorScheme="gray"
+                  icon={<Ellipsis width={"16px"} />}
+                  onClick={() => workspace.remove()}
+                  isLoading={workspace.current?.name === "remove"}
+                />
+              </PopoverTrigger>
+              <PopoverContent>
+                <PopoverArrow />
+                <Box padding={"10px"}>
+                  <VStack>
+                    <Button>Open with...</Button>
+                    <Button>Edit</Button>
+                    <Button>Rebuild</Button>
+                  </VStack>
+                </Box>
+              </PopoverContent>
+            </Popover>
+          </HStack>
         </CardFooter>
       </Stack>
     </Card>

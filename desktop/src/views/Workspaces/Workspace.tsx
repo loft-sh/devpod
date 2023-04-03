@@ -23,7 +23,7 @@ export function Workspace() {
       return
     }
 
-    workspace.start({ ideConfig: workspace.data.ide }, connectStream)
+    workspace.start({ id: workspaceID!, ideConfig: workspace.data.ide }, connectStream)
   }, [connectStream, workspace])
 
   // Wire up terminal to current action
@@ -104,14 +104,6 @@ export function Workspace() {
           isLoading={workspace.current?.name === "remove"}
         />
       </ToolbarActions>
-
-      <VStack align="start" marginTop="10">
-        <Text>Status: {workspace.data.status}</Text>
-        <Text>Source: {workspace.data.source?.localFolder ?? "unknown"}</Text>
-        <Text>Provider: {workspace.data.provider?.name ?? "unknown"}</Text>
-        <Text>IDE: {workspace.data.ide?.ide ?? "unknown"}</Text>
-      </VStack>
-
       <Box minHeight="60" maxHeight="2xl" minWidth="sm" maxWidth="100%">
         {terminal}
       </Box>
