@@ -56,7 +56,7 @@ var MapConfig = map[ProgrammingLanguage]*config.DevContainerConfig{
 	},
 	JavaScript: &config.DevContainerConfig{
 		ImageContainer: config.ImageContainer{
-			Image: "mcr.microsoft.com/devcontainers/typescript-node",
+			Image: "mcr.microsoft.com/devcontainers/javascript-node",
 		},
 	},
 	Python: &config.DevContainerConfig{
