@@ -8,9 +8,6 @@ export function useStreamingTerminal() {
 
   const connectStream = useCallback<TStreamEventListenerFn>(
     (event) => {
-      console.log(event)
-      console.log(terminalRef.current)
-
       // TODO: Message color
       switch (event.type) {
         case "data":

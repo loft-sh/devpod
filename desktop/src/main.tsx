@@ -52,7 +52,10 @@ function Root() {
             </DevPodProvider>
           </SettingsProvider>
           {/* Will be disabled in production automatically */}
-          <ReactQueryDevtools position="top-right" />
+          <ReactQueryDevtools
+            position="bottom-right"
+            toggleButtonProps={{ style: { margin: "0.5em 0.5em 2rem" } }}
+          />
         </QueryClientProvider>
       </ThemeProvider>
     </StrictMode>

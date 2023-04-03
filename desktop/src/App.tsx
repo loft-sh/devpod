@@ -1,43 +1,35 @@
 import {
   Box,
   BoxProps,
-  Checkbox,
   Code,
   Container,
   Flex,
   Grid,
   GridItem,
   GridProps,
-  HStack,
   Link,
-  Menu,
-  MenuButton,
-  MenuItem,
-  MenuList,
   Text,
   useColorModeValue,
+  useToken,
   VStack,
 } from "@chakra-ui/react"
 import { useEffect, useMemo } from "react"
 import { Link as RouterLink, Outlet, useMatch, useNavigate, useRouteError } from "react-router-dom"
-import { version } from "../package.json"
-import { client } from "./client"
-import { Sidebar, SidebarMenuItem } from "./components"
-import { useSettings } from "./contexts"
-import { Debug, useArch, useDebug, usePlatform } from "./lib"
+import { Sidebar, SidebarMenuItem, StatusBar, Toolbar } from "./components"
+import { ToolbarProvider, useSettings } from "./contexts"
+import { Briefcase, Cog, Stack3D } from "./icons"
 import { Routes } from "./routes"
 
 const TITLE_BAR_SAFE_AREA: BoxProps["height"] = "10"
-const STATUS_BAR_SAFE_AREA: BoxProps["height"] = "10"
+const STATUS_BAR_SAFE_AREA: BoxProps["height"] = "5"
+const TOOLBAR_HEIGHT: BoxProps["height"] = "32"
 
 export function App() {
   const navigate = useNavigate()
   const rootRouteMatch = useMatch(Routes.ROOT)
-  const platform = usePlatform()
-  const arch = useArch()
-  const debug = useDebug()
-  const statusBarBackgroundColor = useColorModeValue("gray.300", "gray.600")
   const { sidebarPosition } = useSettings()
+  const contentBackgroundColor = useColorModeValue("white", "black")
+  const toolbarHeight = useToken("sizes", TOOLBAR_HEIGHT as string)
 
   const mainGridProps = useMemo<GridProps>(() => {
     if (sidebarPosition === "right") {
@@ -61,7 +53,8 @@ export function App() {
         position="fixed"
         top="0"
         width="full"
-        textAlign={"center"}>
+        textAlign={"center"}
+        zIndex={2}>
         <Text
           data-tauri-drag-region // keep!
           fontWeight="bold"
@@ -73,64 +66,51 @@ export function App() {
         <Grid height="full" {...mainGridProps}>
           <GridItem area="sidebar">
             <Sidebar paddingTop={TITLE_BAR_SAFE_AREA}>
-              <SidebarMenuItem to={Routes.WORKSPACES}>Workspaces</SidebarMenuItem>
-              <SidebarMenuItem to={Routes.PROVIDERS}>Providers</SidebarMenuItem>
-              <SidebarMenuItem to={Routes.SETTINGS}>Settings</SidebarMenuItem>
+              <SidebarMenuItem to={Routes.WORKSPACES} icon={<Briefcase />}>
+                Workspaces
+              </SidebarMenuItem>
+              <SidebarMenuItem to={Routes.PROVIDERS} icon={<Stack3D />}>
+                Providers
+              </SidebarMenuItem>
+              <SidebarMenuItem to={Routes.SETTINGS} icon={<Cog />}>
+                Settings
+              </SidebarMenuItem>
             </Sidebar>
           </GridItem>
 
           <GridItem area="main" height="100vh" width="full" overflowX="auto">
-            <Box
-              data-tauri-drag-region // keep!
-              paddingTop={TITLE_BAR_SAFE_AREA}
-              position="relative"
-              width="full"
-              height="full"
-              overflowY="auto"
-              paddingBottom={STATUS_BAR_SAFE_AREA}>
-              <Box paddingX="8" width="full" height="full" overflowY="auto">
-                <Outlet />
+            <ToolbarProvider>
+              <Box
+                data-tauri-drag-region // keep!
+                backgroundColor={contentBackgroundColor}
+                width="full"
+                height="full"
+                overflowY="auto">
+                <Toolbar
+                  paddingTop={TITLE_BAR_SAFE_AREA}
+                  backgroundColor={contentBackgroundColor}
+                  height={TOOLBAR_HEIGHT}
+                  position="sticky"
+                  zIndex={1}
+                  width="full"
+                />
+                <Box
+                  as="main"
+                  paddingTop="8"
+                  paddingBottom={STATUS_BAR_SAFE_AREA}
+                  paddingX="8"
+                  width="full"
+                  sx={{ height: `calc(100vh - ${toolbarHeight})` }}
+                  overflowY="auto">
+                  <Outlet />
+                </Box>
               </Box>
-            </Box>
+            </ToolbarProvider>
           </GridItem>
         </Grid>
       </Box>
 
-      <HStack
-        justify="space-between"
-        paddingX="6"
-        position="fixed"
-        bottom="0"
-        backgroundColor={statusBarBackgroundColor}
-        width="full"
-        fontSize="sm"
-        zIndex="1">
-        <Text>
-          Version {version} | {platform ?? "unknown platform"} | {arch ?? "unknown arch"}
-        </Text>
-        {debug.isEnabled && (
-          <Menu>
-            <MenuButton>Debug</MenuButton>
-            <MenuList>
-              <MenuItem onClick={() => Debug.toggle?.("commands")}>
-                <Checkbox isChecked={debug.options.commands} />
-                <Text paddingLeft="4">Print command logs</Text>
-              </MenuItem>
-              <MenuItem onClick={() => Debug.toggle?.("actions")}>
-                <Checkbox isChecked={debug.options.actions} />
-                <Text paddingLeft="4">Print action logs</Text>
-              </MenuItem>
-              <MenuItem onClick={() => Debug.toggle?.("workspaces")}>
-                <Checkbox isChecked={debug.options.workspaces} />
-                <Text paddingLeft="4">Print workspace logs</Text>
-              </MenuItem>
-              <MenuItem onClick={() => client.openDir("AppData")}>
-                <Text paddingLeft="4">Open app_dir</Text>
-              </MenuItem>
-            </MenuList>
-          </Menu>
-        )}
-      </HStack>
+      <StatusBar />
     </Flex>
   )
 }
