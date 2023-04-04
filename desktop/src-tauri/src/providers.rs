@@ -1,8 +1,9 @@
 use crate::commands::{delete_provider::DeleteProviderCommand, DevpodCommandConfig};
+use crate::AppHandle;
 use log::info;
-use tauri::{AppHandle, Wry};
+use tauri::Wry;
 
-pub fn check_dangling_provider(app: &AppHandle<Wry>) {
+pub fn check_dangling_provider(app: &AppHandle) {
     use tauri::Manager;
     use tauri_plugin_store::{with_store, StoreCollection};
 

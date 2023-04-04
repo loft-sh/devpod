@@ -4,12 +4,11 @@ use std::{
     io::Write,
     path::PathBuf,
 };
-use tauri::Wry;
 use thiserror::Error;
+use crate::AppHandle;
 
 const ACTION_LOGS_DIR: &str = "action_logs";
 
-type AppHandle = tauri::AppHandle<Wry>;
 
 #[derive(Error, Debug)]
 pub enum ActionLogError {

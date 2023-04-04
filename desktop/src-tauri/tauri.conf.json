@@ -14,7 +14,7 @@
     "allowlist": {
       "all": false,
       "shell": {
-        "all": false,
+        "all": true,
         "open": ".*",
         "sidecar": true,
         "scope": [
@@ -65,7 +65,7 @@
       "longDescription": "TODO: provide long description",
       "targets": "all",
       "macOS": {
-        "entitlements": null,
+        "entitlements": "./entitlements.plist",
         "exceptionDomain": "",
         "frameworks": [],
         "providerShortName": null,

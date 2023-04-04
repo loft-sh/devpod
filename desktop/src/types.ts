@@ -124,6 +124,8 @@ export type TWorkspaceStartConfig = Readonly<{
     source: string
   }>
 }>
+export const SUPPORTED_IDES = ["vscode", "intellj"] as const
+export type TSupportedIDE = (typeof SUPPORTED_IDES)[number]
 //#endregion
 
 export function isWithWorkspaceID(arg: unknown): arg is TWithWorkspaceID {

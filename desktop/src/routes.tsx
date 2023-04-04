@@ -1,17 +1,18 @@
-import { createBrowserRouter, Params } from "react-router-dom"
+import { createBrowserRouter, Params, Path } from "react-router-dom"
 import { App, ErrorPage } from "./App"
 import { TActionID } from "./contexts"
-import { TAddProviderConfig } from "./types"
+import { exists } from "./lib"
+import { TProviderID, TSupportedIDE } from "./types"
 import {
+  AddProvider,
   CreateWorkspace,
+  ListProviders,
   ListWorkspaces,
+  Provider,
   Providers,
   Settings,
   Workspace,
   Workspaces,
-  ListProviders,
-  Provider,
-  AddProvider,
 } from "./views"
 
 export const Routes = {
@@ -24,6 +25,25 @@ export const Routes = {
   get WORKSPACE_CREATE() {
     return `${Routes.WORKSPACES}/new`
   },
+  toWorkspaceCreate(
+    options: Readonly<{
+      providerID: TProviderID | null
+      ide: string | null
+      rawSource: string | null
+    }>
+  ): Partial<Path> {
+    const searchParams = new URLSearchParams()
+    for (const [key, value] of Object.entries(options)) {
+      if (exists(value)) {
+        searchParams.set(key, value)
+      }
+    }
+
+    return {
+      pathname: Routes.WORKSPACE_CREATE,
+      search: searchParams.toString(),
+    }
+  },
   toWorkspace(workspaceID: string, actionID?: TActionID) {
     return `${Routes.WORKSPACES}/${workspaceID}?actionID=${actionID}`
   },
@@ -33,6 +53,19 @@ export const Routes = {
   },
   getActionIDFromSearchParams(searchParams: URLSearchParams): TActionID | undefined {
     return (searchParams.get("actionID") ?? undefined) as TActionID | undefined
+  },
+  getWorkspaceCreateParamsFromSearchParams(searchParams: URLSearchParams): Partial<
+    Readonly<{
+      providerID: TProviderID
+      ide: TSupportedIDE
+      rawSource: string
+    }>
+  > {
+    return {
+      providerID: searchParams.get("providerID") ?? undefined,
+      ide: (searchParams.get("ide") as TSupportedIDE | null) ?? undefined,
+      rawSource: searchParams.get("rawSource") ?? undefined,
+    }
   },
   PROVIDERS: "/providers",
   get PROVIDER() {

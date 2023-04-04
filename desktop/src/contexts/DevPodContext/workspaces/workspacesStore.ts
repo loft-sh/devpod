@@ -105,7 +105,7 @@ class WorkspacesStore {
     actionName: TActionName
     workspaceID: TWorkspaceID
     actionFn: TActionFn
-  }>): void {
+  }>): Action["id"] {
     // By default, actions cancel previous actios.
     // If you need to wait for an action to finish, you can use `getCurrentAction` and wait until it is undefined
     const maybeCurrentAction = this.actionsHistory.getActive(workspaceID)
@@ -127,6 +127,8 @@ class WorkspacesStore {
 
     action.run()
     this.actionDidChange()
+
+    return action.id
   }
 }
 

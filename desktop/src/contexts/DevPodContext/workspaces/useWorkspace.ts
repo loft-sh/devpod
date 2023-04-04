@@ -3,6 +3,7 @@ import { client, TStreamEventListenerFn } from "../../../client"
 import { exists } from "../../../lib"
 import {
   TDeepNonNullable,
+  TStreamID,
   TUnsubscribeFn,
   TWorkspace,
   TWorkspaceID,
@@ -66,23 +67,7 @@ export function useWorkspace(workspaceID: TWorkspaceID | undefined): TWorkspaceR
       if (workspaceID === undefined) {
         return
       }
-      workspacesStore.startAction({
-        actionName: "start",
-        workspaceID,
-        actionFn: async (ctx) => {
-          const result = await client.workspaces.start(config, onStream, {
-            id: workspaceID,
-            actionID: ctx.id,
-            streamID: viewID,
-          })
-          if (result.err) {
-            return result
-          }
-          workspacesStore.setStatus(workspaceID, result.val)
-
-          return result
-        },
-      })
+      startWorkspaceAction({ workspaceID, config, onStream, streamID: viewID })
     },
     [viewID, workspaceID]
   )
@@ -223,4 +208,35 @@ export function useWorkspace(workspaceID: TWorkspaceID | undefined): TWorkspaceR
     }),
     [data, isLoading, current, history, create, start, stop, rebuild, remove]
   )
+}
+
+type TStartWorkspaceActionArgs = Readonly<{
+  config: TWorkspaceStartConfig
+  onStream?: TStreamEventListenerFn
+  workspaceID: TWorkspaceID
+  streamID: TStreamID
+}>
+export function startWorkspaceAction({
+  workspaceID,
+  streamID,
+  config,
+  onStream,
+}: TStartWorkspaceActionArgs): TActionObj["id"] {
+  return workspacesStore.startAction({
+    actionName: "start",
+    workspaceID,
+    actionFn: async (ctx) => {
+      const result = await client.workspaces.start(config, onStream, {
+        id: workspaceID,
+        actionID: ctx.id,
+        streamID,
+      })
+      if (result.err) {
+        return result
+      }
+      workspacesStore.setStatus(workspaceID, result.val)
+
+      return result
+    },
+  })
 }

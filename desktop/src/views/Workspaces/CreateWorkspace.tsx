@@ -29,19 +29,22 @@ import { exists, useFormErrors } from "../../lib"
 import { Routes } from "../../routes"
 import { TProviderID, TWorkspaceID } from "../../types"
 import { ExampleCard } from "./ExampleCard"
-import GolangPng from "../../images/go.png"
-import NodeJSPng from "../../images/nodejs.png"
-import CppSvg from "../../images/cpp.svg"
-import RustSvg from "../../images/rust.svg"
-import DotNetPng from "../../images/dotnetcore.png"
-import JavaPng from "../../images/java.png"
-import PhpSvg from "../../images/php.svg"
-import PythonSvg from "../../images/python.svg"
+import {
+  CppSvg,
+  GoPng,
+  PhpSvg,
+  JavaPng,
+  RustSvg,
+  NodejsPng,
+  PythonSvg,
+  DotnetcorePng,
+} from "../../images"
 import { FiFile } from "react-icons/fi"
 import { client } from "../../client"
 import { FieldName, TFormValues } from "./types"
 import { useQuery } from "@tanstack/react-query"
 import { QueryKeys } from "../../queryKeys"
+import { useSearchParams } from "react-router-dom"
 
 const DEFAULT_PROVIDER = "docker"
 
@@ -52,18 +55,14 @@ export function CreateWorkspace() {
     queryFn: async () => (await client.ides.listAll()).unwrap(),
   })
 
+  const params = useCreateWorkspaceParams()
   const [workspaceID, setWorkspaceID] = useState<TWorkspaceID | undefined>(undefined)
   const navigate = useNavigate()
   const workspaces = useWorkspaces()
   const workspace = useWorkspace(workspaceID)
   const [[providers]] = useProviders()
-  const { register, handleSubmit, formState, watch, setError, clearErrors, setValue } =
-    useForm<TFormValues>({
-      defaultValues: {
-        [FieldName.DEFAULT_IDE]: "vscode",
-        [FieldName.PROVIDER]: DEFAULT_PROVIDER,
-      },
-    })
+  const { register, handleSubmit, formState, watch, setError, setValue, clearErrors } =
+    useForm<TFormValues>({})
   const currentSource = watch(FieldName.SOURCE)
   const { terminal, connectStream } = useStreamingTerminal()
 
@@ -89,7 +88,7 @@ export function CreateWorkspace() {
 
       const providerID = data[FieldName.PROVIDER]
       const defaultIDE = data[FieldName.DEFAULT_IDE]
-      await workspace.create(
+      workspace.create(
         {
           id: workspaceID,
           providerConfig: { providerID },
@@ -104,7 +103,7 @@ export function CreateWorkspace() {
       // set workspace id to show terminal
       setWorkspaceID(workspaceID)
     },
-    [workspace, connectStream]
+    [workspaces, workspace, connectStream, setError]
   )
 
   const { sourceError, providerError, defaultIDEError, idError } = useFormErrors(
@@ -122,7 +121,7 @@ export function CreateWorkspace() {
 
   const isLoading = useMemo(
     () => workspace.current?.name === "create" && workspace.current.status === "pending",
-    [workspace.current]
+    [workspace]
   )
 
   useEffect(() => {
@@ -155,6 +154,7 @@ export function CreateWorkspace() {
                     fontSize={"16px"}
                     padding={"10px"}
                     height={"42px"}
+                    defaultValue={params.rawSource}
                     type="text"
                     {...register(FieldName.SOURCE, { required: true })}
                   />
@@ -205,13 +205,13 @@ export function CreateWorkspace() {
                     setValue={setValue}
                   />
                   <ExampleCard
-                    image={NodeJSPng}
+                    image={NodejsPng}
                     source={"https://github.com/microsoft/vscode-remote-try-node"}
                     currentSource={currentSource}
                     setValue={setValue}
                   />
                   <ExampleCard
-                    image={GolangPng}
+                    image={GoPng}
                     source={"https://github.com/Microsoft/vscode-remote-try-go"}
                     currentSource={currentSource}
                     setValue={setValue}
@@ -241,7 +241,7 @@ export function CreateWorkspace() {
                     setValue={setValue}
                   />
                   <ExampleCard
-                    image={DotNetPng}
+                    image={DotnetcorePng}
                     source={"https://github.com/microsoft/vscode-remote-try-dotnet"}
                     currentSource={currentSource}
                     setValue={setValue}
@@ -266,7 +266,9 @@ export function CreateWorkspace() {
             <HStack spacing="8" alignItems={"top"} width={"100%"} justifyContent={"start"}>
               <FormControl isRequired isInvalid={exists(providerError)}>
                 <FormLabel>Provider</FormLabel>
-                <Select {...register(FieldName.PROVIDER, { required: true })}>
+                <Select
+                  defaultValue={params.providerID}
+                  {...register(FieldName.PROVIDER, { required: true })}>
                   {providerOptions.map((providerID) => (
                     <option key={providerID} value={providerID}>
                       {providerID}
@@ -281,7 +283,9 @@ export function CreateWorkspace() {
               </FormControl>
               <FormControl isRequired isInvalid={exists(defaultIDEError)}>
                 <FormLabel>Default IDE</FormLabel>
-                <Select {...register(FieldName.DEFAULT_IDE, { required: true })}>
+                <Select
+                  defaultValue={params.ide}
+                  {...register(FieldName.DEFAULT_IDE, { required: true })}>
                   {idesQuery.data?.map((ide) => (
                     <option key={ide.name} value={ide.name!}>
                       {ide.displayName}
@@ -340,4 +344,10 @@ export function CreateWorkspace() {
       </VStack>
     </form>
   )
+}
+
+function useCreateWorkspaceParams() {
+  const [searchParams] = useSearchParams()
+
+  return Routes.getWorkspaceCreateParamsFromSearchParams(searchParams)
 }

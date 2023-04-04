@@ -19,12 +19,14 @@ import { Sidebar, SidebarMenuItem, StatusBar, Toolbar } from "./components"
 import { ToolbarProvider, useSettings } from "./contexts"
 import { Briefcase, Cog, Stack3D } from "./icons"
 import { Routes } from "./routes"
+import { useAppReady } from "./useAppReady"
 
 const TITLE_BAR_SAFE_AREA: BoxProps["height"] = "10"
 const STATUS_BAR_SAFE_AREA: BoxProps["height"] = "5"
 const TOOLBAR_HEIGHT: BoxProps["height"] = "32"
 
 export function App() {
+  useAppReady()
   const navigate = useNavigate()
   const rootRouteMatch = useMatch(Routes.ROOT)
   const { sidebarPosition } = useSettings()

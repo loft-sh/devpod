@@ -11,14 +11,22 @@ mod providers;
 mod system_tray;
 mod ui_ready;
 mod util;
+mod window;
 mod workspaces;
 
 use custom_protocol::{CustomProtocol, OpenWorkspaceMsg};
-use std::sync::{Arc, Mutex};
+use log::error;
+use serde::Serialize;
+use std::{
+    collections::VecDeque,
+    sync::{Arc, Mutex},
+};
 use system_tray::SystemTray;
-use tauri::{Manager, Menu};
+use tauri::{Manager, Menu, Wry};
 use tokio::sync::mpsc::{self, Sender};
 use workspaces::WorkspacesState;
+
+pub type AppHandle = tauri::AppHandle<Wry>;
 
 #[derive(Debug)]
 pub struct AppState {
@@ -26,16 +34,18 @@ pub struct AppState {
     ui_messages: Sender<UiMessage>,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Serialize, Clone)]
 enum UiMessage {
     Ready,
+    ExitRequested,
+    ShowDashboard,
     OpenWorkspace(OpenWorkspaceMsg),
 }
 
 fn main() {
     let ctx = tauri::generate_context!();
-    let app_name = &ctx.package_info().name;
-    let menu = Menu::os_default(app_name);
+    let app_name = ctx.package_info().name.to_string();
+    let menu = Menu::os_default(&app_name);
 
     let custom_protocol = CustomProtocol::init();
 
@@ -47,19 +57,58 @@ fn main() {
     tauri::Builder::default()
         .manage(AppState {
             workspaces: Arc::new(Mutex::new(WorkspacesState::default())),
-            ui_messages: tx,
+            ui_messages: tx.clone(),
         })
         .plugin(logging::build_plugin())
         .plugin(tauri_plugin_store::Builder::default().build())
         .system_tray(system_tray.build())
         .menu(menu)
         .setup(move |app| {
+            workspaces::setup(&app.handle(), app.state());
             action_logs::setup(&app.handle())?;
-
             custom_protocol.setup(app.handle());
 
             let window = app.get_window("main").unwrap();
-            setup_window(&window);
+            window::setup(&window);
+
+            let app_handle = app.handle();
+            println!("setup");
+            tauri::async_runtime::spawn(async move {
+                let mut is_ready = false;
+                let mut messages: VecDeque<UiMessage> = VecDeque::new();
+
+                while let Some(ui_msg) = rx.recv().await {
+                    println!("received message = {:?}", ui_msg);
+                    match ui_msg {
+                        UiMessage::Ready => {
+                            is_ready = true;
+                            while let Some(msg) = messages.pop_front() {
+                                app_handle.emit_all("event", msg);
+                            }
+                        }
+                        UiMessage::ExitRequested => {
+                            is_ready = false;
+                        }
+                        UiMessage::OpenWorkspace(..) => {
+                            if is_ready {
+                                app_handle.emit_all("event", ui_msg);
+                            } else {
+                                // recreate window
+                                window::new_main(&app_handle, app_name.to_string());
+                                messages.push_back(ui_msg);
+                            }
+                        }
+                        UiMessage::ShowDashboard => {
+                            if is_ready {
+                                app_handle.emit_all("event", ui_msg);
+                            } else {
+                                window::new_main(&app_handle, app_name.to_string());
+                                messages.push_back(ui_msg);
+                            }
+                        }
+                    }
+                }
+            });
 
             // TODO: Continue here:
             // Need to sync the ui with the open workspace message
@@ -75,44 +124,28 @@ fn main() {
         ])
         .build(ctx)
         .expect("error while building tauri application")
-        .run(|app, event| match event {
-            // Prevents app from exiting when last window is closed, leaving the system tray active
-            tauri::RunEvent::ExitRequested { api, .. } => {
-                api.prevent_exit();
-            }
-            tauri::RunEvent::WindowEvent { event, .. } => {
-                if let tauri::WindowEvent::Destroyed = event {
+        .run(move |app, event| {
+            let exit_requested_tx = tx.clone();
+
+            match event {
+                // Prevents app from exiting when last window is closed, leaving the system tray active
+                tauri::RunEvent::ExitRequested { api, .. } => {
+                    tauri::async_runtime::block_on(async move {
+                        if let Err(err) = exit_requested_tx.send(UiMessage::ExitRequested).await {
+                            error!("Failed to broadcast UI ready message: {:?}", err);
+                        }
+                    });
+                    api.prevent_exit();
+                }
+                tauri::RunEvent::WindowEvent { event, .. } => {
+                    if let tauri::WindowEvent::Destroyed = event {
+                        providers::check_dangling_provider(app);
+                    }
+                }
+                tauri::RunEvent::Exit => {
                     providers::check_dangling_provider(app);
                 }
+                _ => {}
             }
-            tauri::RunEvent::Exit => {
-                providers::check_dangling_provider(app);
-            }
-            _ => {}
         });
-}
-
-fn setup_window(window: &tauri::Window<tauri::Wry>) {
-    // open browser devtools automatically during development
-    #[cfg(debug_assertions)]
-    {
-        window.open_devtools();
-    }
-
-    // Window vibrancy
-    #[cfg(target_os = "macos")]
-    {
-        window_vibrancy::apply_vibrancy(
-            window,
-            window_vibrancy::NSVisualEffectMaterial::HudWindow,
-            None,
-            None,
-        )
-        .expect("Unsupported platform! 'apply_vibrancy' is only supported on macOS");
-    }
-    #[cfg(target_os = "windows")]
-    {
-        window_vibrancy::apply_blur(window, Some((18, 18, 18, 125)))
-            .expect("Unsupported platform! 'apply_blur' is only supported on Windows");
-    }
 }
