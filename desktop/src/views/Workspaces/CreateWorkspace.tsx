@@ -130,9 +130,7 @@ export function CreateWorkspace() {
       workspace.current.status === "success" &&
       workspace.data?.id !== undefined
     ) {
-      return () => {
-        navigate(Routes.WORKSPACES)
-      }
+      navigate(Routes.WORKSPACES)
     }
   }, [navigate, workspace])
 
@@ -142,7 +140,7 @@ export function CreateWorkspace() {
 
   return (
     <form onSubmit={handleSubmit(onSubmit)}>
-      <VStack align="start" spacing="6">
+      <VStack align="start" spacing="6" marginBottom={"20px"}>
         <Tabs colorScheme={"primary"} width={"100%"} maxWidth={"1024px"}>
           <TabList>
             <Tab>From Path</Tab>
