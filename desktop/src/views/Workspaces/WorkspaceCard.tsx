@@ -73,6 +73,7 @@ export function WorkspaceCard({ workspaceID, onSelectionChange }: TWorkspaceCard
         direction={{ base: "row", sm: "row" }}
         width={"100%"}
         maxWidth={"600px"}
+        height={"210px"}
         overflow="hidden"
         variant="outline">
         <Image
@@ -105,7 +106,7 @@ export function WorkspaceCard({ workspaceID, onSelectionChange }: TWorkspaceCard
               <Checkbox onChange={(e) => onSelectionChange(e.target.checked)} />
             )}
           </CardHeader>
-          <CardBody>
+          <CardBody paddingTop={"0"} paddingBottom={"0"}>
             {provider?.name && <Text>Provider: {provider.name}</Text>}
             {workspace.data.ide?.name && <Text>IDE: {workspace.data.ide?.name}</Text>}
             <Text>Last Used: {dayjs(new Date(workspace.data.lastUsed)).fromNow()}</Text>
