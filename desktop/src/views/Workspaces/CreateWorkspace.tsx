@@ -5,7 +5,10 @@ import {
   FormHelperText,
   FormLabel,
   HStack,
+  Icon,
   Input,
+  InputGroup,
+  InputRightElement,
   Select,
   SimpleGrid,
   Tab,
@@ -13,9 +16,11 @@ import {
   TabPanel,
   TabPanels,
   Tabs,
+  Tooltip,
   VStack,
 } from "@chakra-ui/react"
-import { useCallback, useEffect, useMemo, useState } from "react"
+import { open } from "@tauri-apps/api/dialog"
+import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { SubmitHandler, useForm } from "react-hook-form"
 import { useNavigate } from "react-router"
 import { CollapsibleSection, useStreamingTerminal } from "../../components"
@@ -26,6 +31,7 @@ import { TProviderID, TWorkspaceID } from "../../types"
 import { ExampleCard } from "./ExampleCard"
 import GolangPng from "../../images/go.png"
 import NodeJSPng from "../../images/nodejs.png"
+import { FiFile } from "react-icons/fi"
 import { client } from "../../client"
 import { FieldName, SUPPORTED_IDES, TFormValues } from "./types"
 
@@ -33,6 +39,7 @@ const DEFAULT_PROVIDER = "docker"
 
 // TODO: handle no provider configured
 export function CreateWorkspace() {
+  const inputRef = useRef<HTMLInputElement>(null)
   const [workspaceID, setWorkspaceID] = useState<TWorkspaceID | undefined>(undefined)
   const navigate = useNavigate()
   const workspaces = useWorkspaces()
@@ -64,12 +71,11 @@ export function CreateWorkspace() {
       const workspaceID = newIDResult.val
       const providerID = data[FieldName.PROVIDER]
       const defaultIDE = data[FieldName.DEFAULT_IDE]
-
-      const result = await workspace.create(
+      await workspace.create(
         {
           id: workspaceID,
           providerConfig: { providerID },
-          ideConfig: { ide: defaultIDE },
+          ideConfig: { name: defaultIDE },
           sourceConfig: {
             source: workspaceSource,
           },
@@ -125,14 +131,39 @@ export function CreateWorkspace() {
           <TabPanels>
             <TabPanel>
               <FormControl isRequired isInvalid={exists(sourceError)}>
-                <Input
-                  placeholder="github.com/my-org/my-repo"
-                  fontSize={"16px"}
-                  padding={"10px"}
-                  height={"42px"}
-                  type="text"
-                  {...register(FieldName.SOURCE, { required: true })}
-                />
+                <InputGroup>
+                  <Input
+                    placeholder="github.com/my-org/my-repo"
+                    fontSize={"16px"}
+                    padding={"10px"}
+                    height={"42px"}
+                    type="text"
+                    {...register(FieldName.SOURCE, { required: true })}
+                  />
+                  <Tooltip label={"Select Folder"}>
+                    <InputRightElement
+                      cursor={"pointer"}
+                      onClick={async () => {
+                        const selected = await open({
+                          directory: true,
+                        })
+                        if (selected) {
+                          setValue(FieldName.SOURCE, selected + "", {
+                            shouldDirty: true,
+                          })
+                        }
+                      }}>
+                      <Icon
+                        _hover={{ color: "black" }}
+                        position={"relative"}
+                        top={"3px"}
+                        fontSize={"18px"}
+                        as={FiFile}
+                        color={"grey"}
+                      />
+                    </InputRightElement>
+                  </Tooltip>
+                </InputGroup>
                 {exists(sourceError) ? (
                   <FormErrorMessage>{sourceError.message ?? "Error"}</FormErrorMessage>
                 ) : (

@@ -14,13 +14,17 @@ type TExampleCardProps = {
 export function ExampleCard(props: TExampleCardProps) {
   return (
     <Card
+      _hover={{
+        boxShadow: "rgba(186, 80, 255, 0.8) 0px 1px 4px 0px",
+      }}
+      transition={"box-shadow .5s"}
       width={"120px"}
       height={"120px"}
       alignItems={"center"}
       display={"flex"}
       justifyContent={"center"}
       cursor={"pointer"}
-      border={props.currentSource === props.source ? "#BA50FF 1.5px solid" : undefined}
+      border={props.currentSource === props.source ? "#BA50FF 1px solid" : undefined}
       onClick={() => {
         props.setValue(FieldName.SOURCE, props.currentSource === props.source ? "" : props.source, {
           shouldDirty: true,

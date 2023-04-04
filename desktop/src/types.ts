@@ -89,7 +89,7 @@ export type TWorkspace = Readonly<{
   provider: Readonly<{ name: string | null }> | null
   status: "Running" | "Busy" | "Stopped" | "NotFound" | undefined | null
   ide: {
-    ide: string | null
+    name: string | null
   } | null
   creationTimestamp: string
   lastUsed: string
