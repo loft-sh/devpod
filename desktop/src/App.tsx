@@ -119,9 +119,10 @@ export function App() {
 
 export function ErrorPage() {
   const error = useRouteError()
+  const contentBackgroundColor = useColorModeValue("white", "black")
 
   return (
-    <Container padding="16">
+    <Container padding="16" backgroundColor={contentBackgroundColor}>
       <VStack>
         <Text>Whoops, something went wrong or this page doesn&apos;t exist.</Text>
         <Box paddingBottom="6">

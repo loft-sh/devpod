@@ -46,7 +46,7 @@ export function SettingsProvider({ children }: Readonly<{ children?: ReactNode }
         getSettingKeys().map((option) =>
           settingsStore
             .get(option)
-            .then((value) => [option, value ?? false] as const)
+            .then((value) => [option, value ?? initialSettings[option]] as const)
             .catch(() => [option, false] as const)
         )
       )
