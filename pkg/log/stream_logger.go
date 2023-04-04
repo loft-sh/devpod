@@ -3,6 +3,7 @@ package log
 import (
 	"encoding/json"
 	"fmt"
+	"github.com/acarl005/stripansi"
 	"io"
 	"os"
 	"strconv"
@@ -13,7 +14,6 @@ import (
 	"github.com/loft-sh/devpod/pkg/hash"
 	"github.com/loft-sh/devpod/pkg/scanner"
 
-	"github.com/acarl005/stripansi"
 	goansi "github.com/k0kubun/go-ansi"
 	"github.com/loft-sh/devpod/pkg/survey"
 	"github.com/loft-sh/devpod/pkg/terminal"
@@ -332,14 +332,16 @@ func (s *StreamLogger) JSON(level logrus.Level, value interface{}) {
 }
 
 func (s *StreamLogger) writeJSON(message string, level logrus.Level) {
-	stream := s.getStream(level)
-	line, err := json.Marshal(&Line{
-		Time:    time.Now(),
-		Message: stripansi.Strip(strings.TrimSpace(message)),
-		Level:   level,
-	})
-	if err == nil {
-		_, _ = stream.Write([]byte(string(line) + "\n"))
+	if message != "" {
+		stream := s.getStream(level)
+		line, err := json.Marshal(&Line{
+			Time:    time.Now(),
+			Message: stripansi.Strip(strings.TrimSpace(message)),
+			Level:   level,
+		})
+		if err == nil {
+			_, _ = stream.Write([]byte(string(line) + "\n"))
+		}
 	}
 }
 
