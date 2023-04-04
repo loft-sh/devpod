@@ -20,7 +20,7 @@ import {
   VStack,
 } from "@chakra-ui/react"
 import { open } from "@tauri-apps/api/dialog"
-import { useCallback, useEffect, useMemo, useRef, useState } from "react"
+import { useCallback, useEffect, useMemo, useState } from "react"
 import { SubmitHandler, useForm } from "react-hook-form"
 import { useNavigate } from "react-router"
 import { CollapsibleSection, useStreamingTerminal } from "../../components"
@@ -33,42 +33,54 @@ import GolangPng from "../../images/go.png"
 import NodeJSPng from "../../images/nodejs.png"
 import { FiFile } from "react-icons/fi"
 import { client } from "../../client"
-import { FieldName, SUPPORTED_IDES, TFormValues } from "./types"
+import { FieldName, TFormValues } from "./types"
+import { useQuery } from "@tanstack/react-query"
+import { QueryKeys } from "../../queryKeys"
 
 const DEFAULT_PROVIDER = "docker"
 
 // TODO: handle no provider configured
 export function CreateWorkspace() {
-  const inputRef = useRef<HTMLInputElement>(null)
+  const idesQuery = useQuery({
+    queryKey: QueryKeys.IDES,
+    queryFn: async () => (await client.ides.listAll()).unwrap(),
+  })
+
   const [workspaceID, setWorkspaceID] = useState<TWorkspaceID | undefined>(undefined)
   const navigate = useNavigate()
   const workspaces = useWorkspaces()
   const workspace = useWorkspace(workspaceID)
   const [[providers]] = useProviders()
-  const { register, handleSubmit, formState, watch, setError, setValue } = useForm<TFormValues>({
-    defaultValues: {
-      [FieldName.DEFAULT_IDE]: "vscode",
-      [FieldName.PROVIDER]: DEFAULT_PROVIDER,
-    },
-  })
+  const { register, handleSubmit, formState, watch, setError, clearErrors, setValue } =
+    useForm<TFormValues>({
+      defaultValues: {
+        [FieldName.DEFAULT_IDE]: "vscode",
+        [FieldName.PROVIDER]: DEFAULT_PROVIDER,
+      },
+    })
   const currentSource = watch(FieldName.SOURCE)
   const { terminal, connectStream } = useStreamingTerminal()
 
   const onSubmit = useCallback<SubmitHandler<TFormValues>>(
     async (data) => {
       const workspaceSource = data[FieldName.SOURCE].trim()
-      const newIDResult = await client.workspaces.newID(workspaceSource)
-      if (newIDResult.err) {
-        setError(FieldName.SOURCE, { message: newIDResult.val.message })
+      let workspaceID = data[FieldName.ID]
+      if (!workspaceID) {
+        const newIDResult = await client.workspaces.newID(workspaceSource)
+        if (newIDResult.err) {
+          setError(FieldName.SOURCE, { message: newIDResult.val.message })
 
-        return
-      } else if (workspaces.find((workspace) => workspace.id === newIDResult.val)) {
+          return
+        }
+
+        workspaceID = newIDResult.val
+      }
+      if (workspaces.find((workspace) => workspace.id === workspaceID)) {
         setError(FieldName.SOURCE, { message: "workspace with the same name already exists" })
 
         return
       }
 
-      const workspaceID = newIDResult.val
       const providerID = data[FieldName.PROVIDER]
       const defaultIDE = data[FieldName.DEFAULT_IDE]
       await workspace.create(
@@ -89,7 +101,7 @@ export function CreateWorkspace() {
     [workspace, connectStream]
   )
 
-  const { sourceError, providerError, defaultIDEError } = useFormErrors(
+  const { sourceError, providerError, defaultIDEError, idError } = useFormErrors(
     Object.values(FieldName),
     formState
   )
@@ -203,45 +215,72 @@ export function CreateWorkspace() {
 
         <CollapsibleSection
           title={(isOpen) => (isOpen ? "Hide Advanced Options" : "Show Advanced Options")}>
-          <HStack spacing="0">
-            <FormControl isRequired isInvalid={exists(defaultIDEError)}>
-              <FormLabel>Default IDE</FormLabel>
-              <Select
-                placeholder="Select Default IDE"
-                {...register(FieldName.DEFAULT_IDE, { required: true })}>
-                {SUPPORTED_IDES.map((ide) => (
-                  <option key={ide} value={ide}>
-                    {ide}
-                  </option>
-                ))}
-              </Select>
-              {exists(defaultIDEError) ? (
-                <FormErrorMessage>{defaultIDEError.message ?? "Error"}</FormErrorMessage>
+          <VStack spacing="10" maxWidth={"1024px"}>
+            <HStack spacing="8" alignItems={"top"} width={"100%"} justifyContent={"start"}>
+              <FormControl isRequired isInvalid={exists(providerError)}>
+                <FormLabel>Provider</FormLabel>
+                <Select {...register(FieldName.PROVIDER, { required: true })}>
+                  {providerOptions.map((providerID) => (
+                    <option key={providerID} value={providerID}>
+                      {providerID}
+                    </option>
+                  ))}
+                </Select>
+                {exists(providerError) ? (
+                  <FormErrorMessage>{providerError.message ?? "Error"}</FormErrorMessage>
+                ) : (
+                  <FormHelperText>Use this provider to create the workspace.</FormHelperText>
+                )}
+              </FormControl>
+              <FormControl isRequired isInvalid={exists(defaultIDEError)}>
+                <FormLabel>Default IDE</FormLabel>
+                <Select {...register(FieldName.DEFAULT_IDE, { required: true })}>
+                  {idesQuery.data?.map((ide) => (
+                    <option key={ide.name} value={ide.name!}>
+                      {ide.displayName}
+                    </option>
+                  ))}
+                </Select>
+                {exists(defaultIDEError) ? (
+                  <FormErrorMessage>{defaultIDEError.message ?? "Error"}</FormErrorMessage>
+                ) : (
+                  <FormHelperText>
+                    Devpod will open this workspace with the selected IDE by default. You can still
+                    change your default IDE later.
+                  </FormHelperText>
+                )}
+              </FormControl>
+            </HStack>
+            <FormControl isInvalid={exists(idError)}>
+              <FormLabel>Workspace Name</FormLabel>
+              <Input
+                placeholder="my-workspace"
+                type="text"
+                {...register(FieldName.ID)}
+                onChange={(e) => {
+                  setValue(FieldName.ID, e.target.value, {
+                    shouldDirty: true,
+                  })
+
+                  if (/[^a-z0-9-]+/.test(e.target.value)) {
+                    setError(FieldName.ID, {
+                      message: "Name can only consist of lower case letters, numbers and dashes",
+                    })
+                  } else {
+                    clearErrors(FieldName.ID)
+                  }
+                }}
+              />
+              {exists(idError) ? (
+                <FormErrorMessage>{idError.message ?? "Error"}</FormErrorMessage>
               ) : (
                 <FormHelperText>
-                  Devpod will open this workspace with the selected IDE by default. You can still
-                  change your default IDE later.
+                  This is the workspace name DevPod will use. This is an optional field and usually
+                  only needed if you have an already existing workspace with the same name.
                 </FormHelperText>
               )}
             </FormControl>
-            <FormControl isRequired isInvalid={exists(providerError)}>
-              <FormLabel>Provider</FormLabel>
-              <Select
-                placeholder="Select Provider"
-                {...register(FieldName.PROVIDER, { required: true })}>
-                {providerOptions.map((providerID) => (
-                  <option key={providerID} value={providerID}>
-                    {providerID}
-                  </option>
-                ))}
-              </Select>
-              {exists(providerError) ? (
-                <FormErrorMessage>{providerError.message ?? "Error"}</FormErrorMessage>
-              ) : (
-                <FormHelperText>Use this provider to create the workspace.</FormHelperText>
-              )}
-            </FormControl>
-          </HStack>
+          </VStack>
         </CollapsibleSection>
 
         <Button
