@@ -87,7 +87,7 @@ export function WorkspaceCard({ workspaceID, onSelectionChange }: TWorkspaceCard
             <Heading size="md">
               <HStack>
                 <Text fontWeight="bold">{id}</Text>
-                <Tooltip label={`Workspace is ${status}`}>
+                <Tooltip label={`Workspace is ${status ?? "Pending"}`}>
                   <Box
                     as={"span"}
                     display={"inline-block"}

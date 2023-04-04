@@ -42,8 +42,8 @@ enum UiMessage {
     OpenWorkspace(OpenWorkspaceMsg),
 }
 
-fn main() {
-        fix_path_env::fix();
+fn main() -> anyhow::Result<()> {
+    fix_path_env::fix()?;
     let ctx = tauri::generate_context!();
     let app_name = ctx.package_info().name.to_string();
     let menu = Menu::os_default(&app_name);
@@ -79,12 +79,11 @@ fn main() {
                 let mut messages: VecDeque<UiMessage> = VecDeque::new();
 
                 while let Some(ui_msg) = rx.recv().await {
-                    println!("received message = {:?}", ui_msg);
                     match ui_msg {
                         UiMessage::Ready => {
                             is_ready = true;
                             while let Some(msg) = messages.pop_front() {
-                                app_handle.emit_all("event", msg);
+                                let _ = app_handle.emit_all("event", msg);
                             }
                         }
                         UiMessage::ExitRequested => {
@@ -92,28 +91,24 @@ fn main() {
                         }
                         UiMessage::OpenWorkspace(..) => {
                             if is_ready {
-                                app_handle.emit_all("event", ui_msg);
+                                let _  = app_handle.emit_all("event", ui_msg);
                             } else {
                                 // recreate window
-                                window::new_main(&app_handle, app_name.to_string());
+                                let _ = window::new_main(&app_handle, app_name.to_string());
                                 messages.push_back(ui_msg);
                             }
                         }
                         UiMessage::ShowDashboard => {
                             if is_ready {
-                                app_handle.emit_all("event", ui_msg);
+                                let _ = app_handle.emit_all("event", ui_msg);
                             } else {
-                                window::new_main(&app_handle, app_name.to_string());
+                                let _ = window::new_main(&app_handle, app_name.to_string());
                                 messages.push_back(ui_msg);
                             }
                         }
                     }
                 }
             });
-
-            // TODO: Continue here:
-            // Need to sync the ui with the open workspace message
-            // Test current behaviour
 
             Ok(())
         })
@@ -149,4 +144,6 @@ fn main() {
                 _ => {}
             }
         });
+
+    Ok(())
 }
