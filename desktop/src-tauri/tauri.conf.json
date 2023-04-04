@@ -38,6 +38,9 @@
         ],
         "all": true
       },
+      "dialog": {
+        "open": true
+      },
       "path": {
         "all": true
       }

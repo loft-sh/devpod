@@ -26,6 +26,7 @@
     "react": "18.2.0",
     "react-dom": "18.2.0",
     "react-hook-form": "7.43.5",
+    "react-icons": "4.8.0",
     "react-router": "6.9.0",
     "react-router-dom": "6.9.0",
     "tauri-plugin-store-api": "https://github.com/tauri-apps/tauri-plugin-store",

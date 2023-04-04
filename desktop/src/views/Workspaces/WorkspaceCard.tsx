@@ -83,6 +83,7 @@ export function WorkspaceCard({ workspaceID, onSelectionChange }: TWorkspaceCard
         </CardHeader>
         <CardBody>
           {provider?.name && <Text>Provider: {provider.name}</Text>}
+          {workspace.data.ide?.name && <Text>IDE: {workspace.data.ide?.name}</Text>}
           <Text>Last Used: {dayjs(new Date(workspace.data.lastUsed)).fromNow()}</Text>
         </CardBody>
         <CardFooter>
