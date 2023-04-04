@@ -125,7 +125,11 @@ export function CreateWorkspace() {
   )
 
   useEffect(() => {
-    if (workspace.current?.name === "create" && workspace.data?.id !== undefined) {
+    if (
+      workspace.current?.name === "create" &&
+      workspace.current.status === "success" &&
+      workspace.data?.id !== undefined
+    ) {
       return () => {
         navigate(Routes.WORKSPACES)
       }
