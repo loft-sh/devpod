@@ -1,10 +1,9 @@
-use log::warn;
+use crate::{ workspaces::WorkspacesState, AppHandle, AppState, UiMessage};
+use log::{error, warn};
 use tauri::{
-    AppHandle, CustomMenuItem, Manager, State, SystemTray as TauriSystemTray, SystemTrayEvent,
-    SystemTrayMenu, SystemTrayMenuItem, SystemTraySubmenu, WindowBuilder, WindowUrl, Wry,
+    CustomMenuItem, Manager, State, SystemTray as TauriSystemTray, SystemTrayEvent, SystemTrayMenu,
+    SystemTrayMenuItem, SystemTraySubmenu,
 };
-
-use crate::{workspaces::WorkspacesState, AppState};
 
 pub trait SystemTrayIdentifier {}
 pub type SystemTrayClickHandler = Box<dyn Fn(&AppHandle, State<AppState>) -> ()>;
@@ -70,25 +69,21 @@ impl SystemTray {
         tray
     }
 
-    pub fn get_event_handler(&self) -> impl Fn(&AppHandle<Wry>, SystemTrayEvent) + Send + Sync {
+    pub fn get_event_handler(&self) -> impl Fn(&AppHandle, SystemTrayEvent) + Send + Sync {
         return |app, event| match event {
             SystemTrayEvent::MenuItemClick { id, .. } => match id.as_str() {
                 Self::QUIT_ID => {
                     std::process::exit(0);
                 }
                 Self::SHOW_DASHBOARD_ID => {
-                    match app.get_window("main") {
-                        Some(window) => {
-                            _ = window.show(); // TODO: handle error
-                            _ = window.eval("window.location.href = '/providers'");
-                        }
-                        None => {
-                            // FIXME: implement correctly and reread from original window
-                            _ = WindowBuilder::new(app, "main".to_string(), WindowUrl::default())
-                                .title("Main")
-                                .build();
-                        }
-                    }
+                    let app_state = app.state::<AppState>();
+
+                    tauri::async_runtime::block_on(async move {
+                        if let Err(err) = app_state.ui_messages.send(UiMessage::ShowDashboard).await
+                        {
+                            error!("Failed to broadcast show dashboard message: {}", err);
+                        };
+                    });
                 }
                 id => {
                     let app_state = app.state::<AppState>();

@@ -1,4 +1,4 @@
-import { fs, os, path, shell } from "@tauri-apps/api"
+import { fs, invoke, os, path, shell } from "@tauri-apps/api"
 import { listen } from "@tauri-apps/api/event"
 import { TSettings } from "../contexts"
 import { Result, Return } from "../lib"
@@ -7,7 +7,19 @@ import { ProvidersClient } from "./providers"
 import { WorkspacesClient } from "./workspaces"
 import { IDEsClient } from "./ides/client"
 
-type TChannels = {}
+// Theses types have to match the rust types! Make sure to update them as well!
+type TChannels = {
+  event:
+    | "ShowDashboard"
+    | Readonly<{
+        OpenWorkspace: Readonly<{
+          workspace_id: string
+          provider_id: string | null
+          ide: string | null
+          source: string | null
+        }>
+      }>
+}
 type TChannelName = keyof TChannels
 type TClientEventListener<TChannel extends TChannelName> = (payload: TChannels[TChannel]) => void
 type TClientSettings = Pick<TSettings, "debugFlag">
@@ -27,6 +39,9 @@ class Client {
       this.workspaces.setDebug(value)
       this.providers.setDebug(value)
     }
+  }
+  public ready(): Promise<void> {
+    return invoke("ui_ready")
   }
 
   public async subscribe<T extends TChannelName>(

@@ -55,18 +55,16 @@ export class Command implements TCommand<ChildProcess> {
       await new Promise((res, rej) => {
         const stdoutListener: TEventListener<"data"> = (message) => {
           try {
-            // TODO: CONTINUE HERE :)
-            // console.log(message)
-            // TODO: TYPECHECK
-            listener({ type: "data", data: JSON.parse(message), rawData: message })
+            const data = JSON.parse(message)
+            listener({ type: "data", data })
           } catch (error) {
             console.error("Failed to parse stdout message ", message, error)
           }
         }
         const stderrListener: TEventListener<"data"> = (message) => {
           try {
-            // TODO: TYPECHECK
-            listener({ type: "error", error: JSON.parse(message), rawData: message })
+            const error = JSON.parse(message)
+            listener({ type: "error", error })
           } catch (error) {
             console.error("Failed to parse stderr message ", message, error)
           }

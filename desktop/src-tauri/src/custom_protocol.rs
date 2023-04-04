@@ -1,6 +1,6 @@
 use anyhow::{Context, Result};
 use log::{error, info};
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 use tauri::{AppHandle, Manager};
 use tauri_plugin_deep_link;
 use thiserror::Error;
@@ -14,7 +14,7 @@ const APP_URL_SCHEME: &str = "devpod";
 
 pub struct CustomProtocol;
 
-#[derive(Debug, PartialEq, Deserialize, Clone)]
+#[derive(Debug, PartialEq, Serialize, Deserialize, Clone)]
 pub struct OpenWorkspaceMsg {
     #[serde(rename(deserialize = "workspace"))]
     workspace_id: String,
