@@ -31,6 +31,12 @@ import { TProviderID, TWorkspaceID } from "../../types"
 import { ExampleCard } from "./ExampleCard"
 import GolangPng from "../../images/go.png"
 import NodeJSPng from "../../images/nodejs.png"
+import CppSvg from "../../images/cpp.svg"
+import RustSvg from "../../images/rust.svg"
+import DotNetPng from "../../images/dotnetcore.png"
+import JavaPng from "../../images/java.png"
+import PhpSvg from "../../images/php.svg"
+import PythonSvg from "../../images/python.svg"
 import { FiFile } from "react-icons/fi"
 import { client } from "../../client"
 import { FieldName, TFormValues } from "./types"
@@ -193,8 +199,8 @@ export function CreateWorkspace() {
                   templateColumns="repeat(auto-fill, minmax(120px, 1fr))"
                   marginTop={"10px"}>
                   <ExampleCard
-                    image={GolangPng}
-                    source={"https://github.com/Microsoft/vscode-remote-try-go"}
+                    image={PythonSvg}
+                    source={"https://github.com/microsoft/vscode-remote-try-python"}
                     currentSource={currentSource}
                     setValue={setValue}
                   />
@@ -204,9 +210,50 @@ export function CreateWorkspace() {
                     currentSource={currentSource}
                     setValue={setValue}
                   />
+                  <ExampleCard
+                    image={GolangPng}
+                    source={"https://github.com/Microsoft/vscode-remote-try-go"}
+                    currentSource={currentSource}
+                    setValue={setValue}
+                  />
+                  <ExampleCard
+                    image={RustSvg}
+                    source={"https://github.com/microsoft/vscode-remote-try-rust"}
+                    currentSource={currentSource}
+                    setValue={setValue}
+                  />
+                  <ExampleCard
+                    image={JavaPng}
+                    source={"https://github.com/microsoft/vscode-remote-try-java"}
+                    currentSource={currentSource}
+                    setValue={setValue}
+                  />
+                  <ExampleCard
+                    image={PhpSvg}
+                    source={"https://github.com/microsoft/vscode-remote-try-php"}
+                    currentSource={currentSource}
+                    setValue={setValue}
+                  />
+                  <ExampleCard
+                    image={CppSvg}
+                    source={"https://github.com/microsoft/vscode-remote-try-cpp"}
+                    currentSource={currentSource}
+                    setValue={setValue}
+                  />
+                  <ExampleCard
+                    image={DotNetPng}
+                    source={"https://github.com/microsoft/vscode-remote-try-dotnet"}
+                    currentSource={currentSource}
+                    setValue={setValue}
+                  />
                 </SimpleGrid>
-                {exists(sourceError) && (
+                {exists(sourceError) ? (
                   <FormErrorMessage>{sourceError.message ?? "Error"}</FormErrorMessage>
+                ) : (
+                  <FormHelperText>
+                    Select one of the example repositories above to get started with your favourite
+                    programming language.
+                  </FormHelperText>
                 )}
               </FormControl>
             </TabPanel>

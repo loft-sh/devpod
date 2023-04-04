@@ -135,7 +135,7 @@ export function WorkspaceCard({ workspaceID, onSelectionChange }: TWorkspaceCard
                     />
                   </Tooltip>
                 )}
-                <Tooltip label={"Delete workspace"}>
+                <Tooltip label={`Delete workspace`}>
                   <IconButton
                     aria-label="Delete workspace"
                     variant="ghost"
@@ -226,12 +226,12 @@ export function WorkspaceCard({ workspaceID, onSelectionChange }: TWorkspaceCard
       <Modal onClose={onRebuildClose} isOpen={isRebuildOpen} isCentered>
         <ModalOverlay />
         <ModalContent>
-          <ModalHeader>Rebuild Workspace</ModalHeader>
+          <ModalHeader>Rebuild Workspace {workspace.data.id}</ModalHeader>
           <ModalCloseButton />
           <ModalBody>
             Rebuilding the workspace will erase all state saved in the docker container overlay.
             This means you might need to reinstall or reconfigure certain applications. State in
-            docker volumes is persisted. Are you sure you want to rebuild?
+            docker volumes is persisted. Are you sure you want to rebuild {workspace.data.id}?
           </ModalBody>
           <ModalFooter>
             <HStack spacing={"2"}>
@@ -251,10 +251,11 @@ export function WorkspaceCard({ workspaceID, onSelectionChange }: TWorkspaceCard
       <Modal onClose={onDeleteClose} isOpen={isDeleteOpen} isCentered>
         <ModalOverlay />
         <ModalContent>
-          <ModalHeader>Delete Workspace</ModalHeader>
+          <ModalHeader>Delete Workspace {workspace.data.id}</ModalHeader>
           <ModalCloseButton />
           <ModalBody>
-            Deleting the workspace will erase all state. Are you sure you want to delete?
+            Deleting the workspace will erase all state. Are you sure you want to delete{" "}
+            {workspace.data.id}?
           </ModalBody>
           <ModalFooter>
             <HStack spacing={"2"}>
