@@ -18,54 +18,67 @@ import (
 type AllowedIDE struct {
 	// Name of the IDE
 	Name config.IDE `json:"name,omitempty"`
+	// DisplayName is the name to show to the user
+	DisplayName string `json:"displayName,omitempty"`
 	// Options of the IDE
 	Options ide.Options `json:"options,omitempty"`
 }
 
 var AllowedIDEs = []AllowedIDE{
 	{
-		Name:    config.IDENone,
-		Options: map[string]ide.Option{},
+		Name:        config.IDENone,
+		DisplayName: "None",
+		Options:     map[string]ide.Option{},
 	},
 	{
-		Name:    config.IDEVSCode,
-		Options: vscode.Options,
+		Name:        config.IDEVSCode,
+		DisplayName: "VSCode",
+		Options:     vscode.Options,
 	},
 	{
-		Name:    config.IDEOpenVSCode,
-		Options: openvscode.Options,
+		Name:        config.IDEOpenVSCode,
+		DisplayName: "VSCode Browser",
+		Options:     openvscode.Options,
 	},
 	{
-		Name:    config.IDEGoland,
-		Options: jetbrains.GolandOptions,
+		Name:        config.IDEGoland,
+		DisplayName: "Goland",
+		Options:     jetbrains.GolandOptions,
 	},
 	{
-		Name:    config.IDEPyCharm,
-		Options: jetbrains.PyCharmOptions,
+		Name:        config.IDEPyCharm,
+		DisplayName: "PyCharm",
+		Options:     jetbrains.PyCharmOptions,
 	},
 	{
-		Name:    config.IDEPhpStorm,
-		Options: jetbrains.PhpStormOptions,
+		Name:        config.IDEPhpStorm,
+		DisplayName: "PhpStorm",
+		Options:     jetbrains.PhpStormOptions,
 	},
 	{
-		Name:    config.IDEIntellij,
-		Options: jetbrains.IntellijOptions,
+		Name:        config.IDEIntellij,
+		DisplayName: "Intellij",
+		Options:     jetbrains.IntellijOptions,
 	},
 	{
-		Name:    config.IDECLion,
-		Options: jetbrains.CLionOptions,
+		Name:        config.IDECLion,
+		DisplayName: "CLion",
+		Options:     jetbrains.CLionOptions,
 	},
 	{
-		Name:    config.IDERider,
-		Options: jetbrains.RiderOptions,
+		Name:        config.IDERider,
+		DisplayName: "Rider",
+		Options:     jetbrains.RiderOptions,
 	},
 	{
-		Name:    config.IDERubyMine,
-		Options: jetbrains.RubyMineOptions,
+		Name:        config.IDERubyMine,
+		DisplayName: "RubyMine",
+		Options:     jetbrains.RubyMineOptions,
 	},
 	{
-		Name:    config.IDEWebStorm,
-		Options: jetbrains.WebStormOptions,
+		Name:        config.IDEWebStorm,
+		DisplayName: "WebStorm",
+		Options:     jetbrains.WebStormOptions,
 	},
 }
 

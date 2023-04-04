@@ -1,8 +1,5 @@
 import { TProviderID } from "../../types"
 
-export const SUPPORTED_IDES = ["vscode", "intellj"] as const
-type TSupportedIDE = (typeof SUPPORTED_IDES)[number]
-
 export const FieldName = {
   SOURCE: "source",
   ID: "id",
@@ -12,7 +9,7 @@ export const FieldName = {
 
 export type TFormValues = {
   [FieldName.SOURCE]: string
-  [FieldName.DEFAULT_IDE]: TSupportedIDE
+  [FieldName.DEFAULT_IDE]: string
   [FieldName.PROVIDER]: TProviderID // TODO: needs runtime validation
   [FieldName.ID]: string
 }

@@ -5,6 +5,7 @@ import { Result, Return } from "../lib"
 import { TUnsubscribeFn } from "../types"
 import { ProvidersClient } from "./providers"
 import { WorkspacesClient } from "./workspaces"
+import { IDEsClient } from "./ides/client"
 
 type TChannels = {}
 type TChannelName = keyof TChannels
@@ -16,6 +17,7 @@ export type TArch = Awaited<ReturnType<typeof os.arch>>
 class Client {
   public readonly workspaces = new WorkspacesClient()
   public readonly providers = new ProvidersClient()
+  public readonly ides = new IDEsClient()
 
   public setSetting<TSettingName extends keyof TClientSettings>(
     name: TSettingName,

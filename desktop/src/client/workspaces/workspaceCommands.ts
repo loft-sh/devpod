@@ -86,7 +86,7 @@ export class WorkspaceCommands {
     const maybeSource = config.sourceConfig?.source
     const maybeIDFlag = exists(maybeSource) ? [toFlagArg(DEVPOD_FLAG_ID, id)] : []
 
-    const maybeIdeName = config.ideConfig?.ide
+    const maybeIdeName = config.ideConfig?.name
     const maybeIDEFlag = exists(maybeIdeName) ? [toFlagArg(DEVPOD_FLAG_IDE, maybeIdeName)] : []
 
     const maybeProviderID = config.providerConfig?.providerID

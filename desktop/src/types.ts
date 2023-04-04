@@ -17,6 +17,14 @@ export type TQueryResult<TData extends Readonly<object>> = [
 type TRunnable<TRunConfig> = Readonly<{ run(config: TRunConfig): void }>
 //#endregion
 
+//#region IDE
+export type TIDEs = Array<TIDE>
+export type TIDE = Readonly<{
+  name: string | null
+  displayName: string
+}>
+//#endregion
+
 //#region Provider
 export type TProviderID = string
 export type TOptionID = string
