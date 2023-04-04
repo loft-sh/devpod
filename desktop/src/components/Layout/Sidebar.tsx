@@ -3,6 +3,7 @@ import {
   BoxProps,
   Flex,
   Grid,
+  Image,
   Link,
   Text,
   useColorModeValue,
@@ -12,12 +13,11 @@ import {
 import { ReactElement, ReactNode } from "react"
 import { LinkProps, NavLink as RouterLink } from "react-router-dom"
 import { useSettings } from "../../contexts"
-import { DevpodIcon } from "../../icons"
+import DevPodLogo from "../../images/devpod.png"
 import { useBorderColor } from "../../Theme"
 
 type TSidebarProps = Readonly<{ children?: readonly ReactElement[] }> & BoxProps
 export function Sidebar({ children, ...boxProps }: TSidebarProps) {
-  const iconColor = useToken("colors", "primary.500")
   const borderColor = useBorderColor()
   const backgroundColor = useColorModeValue("white", "black")
   const isLeft = useSettings().sidebarPosition === "left"
@@ -39,7 +39,7 @@ export function Sidebar({ children, ...boxProps }: TSidebarProps) {
         justify="flex-start"
         width="full">
         <Box width="8" />
-        <DevpodIcon boxSize={8} color={iconColor} />
+        <Image marginTop="10px" width={"150px"} src={DevPodLogo} />
       </Flex>
       <VStack as="nav" align="start">
         {children}
