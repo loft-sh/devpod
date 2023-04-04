@@ -43,6 +43,7 @@ enum UiMessage {
 }
 
 fn main() {
+        fix_path_env::fix();
     let ctx = tauri::generate_context!();
     let app_name = ctx.package_info().name.to_string();
     let menu = Menu::os_default(&app_name);

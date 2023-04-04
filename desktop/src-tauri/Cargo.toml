@@ -23,6 +23,8 @@ tauri-plugin-log = { git = "https://github.com/tauri-apps/plugins-workspace", br
 # Datetime
 chrono = { version = "0.4.23", features = ["serde"] }
 
+fix-path-env = { git = "https://github.com/tauri-apps/fix-path-env-rs" }
+
 tokio = { version = "1.26.0", features = ["time", "parking_lot", "sync"] }
 thiserror = "1.0.38"
 regex = "1.7.1"
