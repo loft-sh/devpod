@@ -226,7 +226,7 @@ export function WorkspaceCard({ workspaceID, onSelectionChange }: TWorkspaceCard
       <Modal onClose={onRebuildClose} isOpen={isRebuildOpen} isCentered>
         <ModalOverlay />
         <ModalContent>
-          <ModalHeader>Rebuild Workspace {workspace.data.id}</ModalHeader>
+          <ModalHeader>Rebuild Workspace</ModalHeader>
           <ModalCloseButton />
           <ModalBody>
             Rebuilding the workspace will erase all state saved in the docker container overlay.
@@ -251,7 +251,7 @@ export function WorkspaceCard({ workspaceID, onSelectionChange }: TWorkspaceCard
       <Modal onClose={onDeleteClose} isOpen={isDeleteOpen} isCentered>
         <ModalOverlay />
         <ModalContent>
-          <ModalHeader>Delete Workspace {workspace.data.id}</ModalHeader>
+          <ModalHeader>Delete Workspace</ModalHeader>
           <ModalCloseButton />
           <ModalBody>
             Deleting the workspace will erase all state. Are you sure you want to delete{" "}
