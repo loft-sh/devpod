@@ -5,6 +5,7 @@ import (
 	"github.com/google/go-containerregistry/pkg/name"
 	v1 "github.com/google/go-containerregistry/pkg/v1"
 	"github.com/google/go-containerregistry/pkg/v1/remote"
+	"github.com/pkg/errors"
 	"net/http"
 )
 
@@ -53,17 +54,17 @@ func CheckPushPermissions(image string) error {
 func GetImageConfig(image string) (*v1.ConfigFile, v1.Image, error) {
 	ref, err := name.ParseReference(image)
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, errors.Wrapf(err, "parse reference %s", image)
 	}
 
 	img, err := remote.Image(ref, remote.WithAuthFromKeychain(authn.DefaultKeychain))
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, errors.Wrapf(err, "retrieve image %s", image)
 	}
 
 	configFile, err := img.ConfigFile()
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, errors.Wrap(err, "config file")
 	}
 
 	return configFile, img, nil
