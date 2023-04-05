@@ -21,6 +21,7 @@ var _ = DevPodDescribe("devpod up test suite", func() {
 		defer framework.CleanupTempDir(initialDir, tempDir)
 
 		f := framework.NewDefaultFramework(initialDir + "/bin")
+		_ = f.DevPodProviderAdd([]string{"docker"})
 		err = f.DevPodProviderUse(context.Background(), "docker")
 		framework.ExpectNoError(err)
 

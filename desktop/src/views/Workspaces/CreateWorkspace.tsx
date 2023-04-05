@@ -262,8 +262,7 @@ export function CreateWorkspace() {
           </TabPanels>
         </Tabs>
 
-        <CollapsibleSection
-          title={(isOpen) => (isOpen ? "Hide Advanced Options" : "Show Advanced Options")}>
+        <CollapsibleSection title={"Advanced Options"} showIcon={true}>
           <VStack spacing="10" maxWidth={"1024px"}>
             <HStack spacing="8" alignItems={"top"} width={"100%"} justifyContent={"start"}>
               <FormControl isRequired isInvalid={exists(providerError)}>

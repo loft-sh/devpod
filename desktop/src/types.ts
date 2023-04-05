@@ -42,12 +42,19 @@ export type TProviderConfig = Readonly<{
   version: string | null
   source: TProviderSource | null
   description: string | null
+  optionGroups: TProviderOptionGroup[]
   options: TProviderOptions
   icon: string | null
   home: string | null
   exec: Record<string, readonly string[]> | null
 }>
+export type TProviderOptionGroup = Readonly<{
+  name: string | null
+  options: string[] | null
+  defaultVisible: boolean | null
+}>
 type TProviderSource = Readonly<{
+  internal: boolean | null
   github: string | null
   file: string | null
   url: string | null

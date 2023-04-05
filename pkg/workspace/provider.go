@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"crypto/tls"
 	"fmt"
+	"github.com/loft-sh/devpod/providers"
 	"io"
 	"net/http"
 	"os"
@@ -15,7 +16,6 @@ import (
 	"github.com/loft-sh/devpod/pkg/download"
 	"github.com/loft-sh/devpod/pkg/log"
 	provider2 "github.com/loft-sh/devpod/pkg/provider"
-	"github.com/loft-sh/devpod/providers"
 	"github.com/pkg/errors"
 )
 
@@ -27,9 +27,9 @@ type ProviderWithOptions struct {
 }
 
 // LoadProviders loads all known providers for the given context and
-func LoadProviders(devPodConfig *config.Config) (*ProviderWithOptions, map[string]*ProviderWithOptions, error) {
+func LoadProviders(devPodConfig *config.Config, log log.Logger) (*ProviderWithOptions, map[string]*ProviderWithOptions, error) {
 	defaultContext := devPodConfig.Current()
-	retProviders, err := LoadAllProviders(devPodConfig)
+	retProviders, err := LoadAllProviders(devPodConfig, log)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -59,12 +59,14 @@ func UpdateProvider(devPodConfig *config.Config, providerName, providerSourceRaw
 	}
 
 	if providerSourceRaw == "" {
-		providerConfig, err := FindProvider(devPodConfig, providerName)
+		providerConfig, err := FindProvider(devPodConfig, providerName, log)
 		if err != nil {
 			return nil, errors.Wrap(err, "find provider")
 		}
 
-		if providerConfig.Config.Source.URL != "" {
+		if providerConfig.Config.Source.Internal {
+			providerSourceRaw = providerConfig.Config.Name
+		} else if providerConfig.Config.Source.URL != "" {
 			providerSourceRaw = providerConfig.Config.Source.URL
 		} else if providerConfig.Config.Source.File != "" {
 			providerSourceRaw = providerConfig.Config.Source.File
@@ -84,6 +86,12 @@ func UpdateProvider(devPodConfig *config.Config, providerName, providerSourceRaw
 }
 
 func ResolveProvider(providerSource string, log log.Logger) ([]byte, *provider2.ProviderSource, error) {
+	// in-built?
+	internalProviders := providers.GetBuiltInProviders()
+	if internalProviders[providerSource] != "" {
+		return []byte(internalProviders[providerSource]), &provider2.ProviderSource{Internal: true}, nil
+	}
+
 	// url?
 	if strings.HasPrefix(providerSource, "http://") || strings.HasPrefix(providerSource, "https://") {
 		log.Infof("Download provider %s...", providerSource)
@@ -272,8 +280,8 @@ func installProvider(devPodConfig *config.Config, providerName string, raw []byt
 	return providerConfig, nil
 }
 
-func FindProvider(devPodConfig *config.Config, name string) (*ProviderWithOptions, error) {
-	retProviders, err := LoadAllProviders(devPodConfig)
+func FindProvider(devPodConfig *config.Config, name string, log log.Logger) (*ProviderWithOptions, error) {
+	retProviders, err := LoadAllProviders(devPodConfig, log)
 	if err != nil {
 		return nil, err
 	} else if retProviders[name] == nil {
@@ -283,19 +291,8 @@ func FindProvider(devPodConfig *config.Config, name string) (*ProviderWithOption
 	return retProviders[name], nil
 }
 
-func LoadAllProviders(devPodConfig *config.Config) (map[string]*ProviderWithOptions, error) {
-	builtInProvidersConfig, err := providers.GetBuiltInProviders()
-	if err != nil {
-		return nil, err
-	}
-
+func LoadAllProviders(devPodConfig *config.Config, log log.Logger) (map[string]*ProviderWithOptions, error) {
 	retProviders := map[string]*ProviderWithOptions{}
-	for k := range builtInProvidersConfig {
-		retProviders[k] = &ProviderWithOptions{
-			Config: builtInProvidersConfig[k],
-		}
-	}
-
 	defaultContext := devPodConfig.Current()
 	for providerName, providerState := range defaultContext.Providers {
 		if retProviders[providerName] != nil {
@@ -306,7 +303,8 @@ func LoadAllProviders(devPodConfig *config.Config) (map[string]*ProviderWithOpti
 		// try to load provider config
 		providerConfig, err := provider2.LoadProviderConfig(devPodConfig.DefaultContext, providerName)
 		if err != nil {
-			return nil, err
+			log.Warnf("Error loading provider '%s': %v", providerName, err)
+			continue
 		}
 
 		retProviders[providerName] = &ProviderWithOptions{
@@ -338,6 +336,18 @@ func LoadAllProviders(devPodConfig *config.Config) (map[string]*ProviderWithOpti
 
 		retProviders[providerConfig.Name] = &ProviderWithOptions{
 			Config: providerConfig,
+		}
+	}
+
+	// update internal providers
+	for k, v := range retProviders {
+		if providers.GetBuiltInProviders()[k] == "" {
+			continue
+		}
+
+		v.Config, err = provider2.ParseProvider(bytes.NewReader([]byte(providers.GetBuiltInProviders()[k])))
+		if err != nil {
+			return nil, err
 		}
 	}
 

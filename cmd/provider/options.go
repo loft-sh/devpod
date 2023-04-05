@@ -62,13 +62,13 @@ func (cmd *OptionsCmd) Run(ctx context.Context, providerName string) error {
 		return err
 	}
 
-	provider, err := workspace.FindProvider(devPodConfig, providerName)
+	provider, err := workspace.FindProvider(devPodConfig, providerName, log.Default.ErrorStreamOnly())
 	if err != nil {
 		return err
 	}
 
 	if cmd.Prefill && provider.State == nil {
-		devPodConfig, err = options.ResolveOptions(ctx, devPodConfig, provider.Config, nil, true, nil, log.Default)
+		devPodConfig, err = options.ResolveOptions(ctx, devPodConfig, provider.Config, nil, true, nil, log.Default.ErrorStreamOnly())
 		if err != nil {
 			return err
 		}

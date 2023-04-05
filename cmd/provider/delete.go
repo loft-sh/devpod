@@ -42,21 +42,6 @@ func (cmd *DeleteCmd) Run(ctx context.Context, args []string) error {
 	if err != nil {
 		return err
 	}
-
-	providerDir, err := provider2.GetProviderDir(devPodConfig.DefaultContext, args[0])
-	if err != nil {
-		return err
-	}
-
-	_, err = os.Stat(providerDir)
-	if err != nil {
-		if os.IsNotExist(err) {
-			return fmt.Errorf("provider '%s' does not exist", args[0])
-		}
-
-		return err
-	}
-
 	if devPodConfig.Current().DefaultProvider == args[0] {
 		devPodConfig.Current().DefaultProvider = ""
 	}
@@ -66,6 +51,18 @@ func (cmd *DeleteCmd) Run(ctx context.Context, args []string) error {
 		return errors.Wrap(err, "save config")
 	}
 
+	providerDir, err := provider2.GetProviderDir(devPodConfig.DefaultContext, args[0])
+	if err != nil {
+		return err
+	}
+	_, err = os.Stat(providerDir)
+	if err != nil {
+		if os.IsNotExist(err) {
+			return fmt.Errorf("provider '%s' does not exist", args[0])
+		}
+
+		return err
+	}
 	err = os.RemoveAll(providerDir)
 	if err != nil {
 		return errors.Wrap(err, "delete provider dir")

@@ -14,10 +14,15 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { useCallback, useDeferredValue, useEffect, useMemo } from "react"
 import { SubmitHandler, useForm } from "react-hook-form"
 import { client } from "../../../client"
-import { ErrorMessageBox } from "../../../components"
+import { CollapsibleSection, ErrorMessageBox } from "../../../components"
 import { exists, isEmpty, isError, useFormErrors } from "../../../lib"
 import { QueryKeys } from "../../../queryKeys"
-import { TAddProviderConfig, TProviderOptions, TWithProviderID } from "../../../types"
+import {
+  TAddProviderConfig,
+  TProviderOptionGroup,
+  TProviderOptions,
+  TWithProviderID,
+} from "../../../types"
 
 const Form = styled.form`
   width: 100%;
@@ -33,7 +38,10 @@ type TFormValues = {
 }
 
 type TSetupProviderSourceFormProps = Readonly<{
-  onFinish: (result: TWithProviderID & Readonly<{ options: TProviderOptions }>) => void
+  onFinish: (
+    result: TWithProviderID &
+      Readonly<{ options: TProviderOptions; optionGroups: TProviderOptionGroup[] }>
+  ) => void
 }>
 export function SetupProviderSourceForm({ onFinish }: TSetupProviderSourceFormProps) {
   const { register, handleSubmit, formState, watch, setValue } = useForm<TFormValues>({
@@ -74,8 +82,16 @@ export function SetupProviderSourceForm({ onFinish }: TSetupProviderSourceFormPr
       ;(await client.providers.add(rawProviderSource, config)).unwrap()
       const providerID = (await client.providers.newID(rawProviderSource)).unwrap()
       const options = (await client.providers.getOptions(providerID!)).unwrap()
+      const providers = (await client.providers.listAll()).unwrap()
+      if (!providers?.[providerID!]) {
+        throw `Provider ${providerID} couldn't be found`
+      }
 
-      return { providerID: providerID!, options: options! }
+      return {
+        providerID: providerID!,
+        options: options!,
+        optionGroups: providers[providerID!]?.config?.optionGroups || [],
+      }
     },
     onSuccess(result) {
       queryClient.invalidateQueries(QueryKeys.PROVIDERS)
@@ -136,37 +152,35 @@ export function SetupProviderSourceForm({ onFinish }: TSetupProviderSourceFormPr
             </FormHelperText>
           )}
         </FormControl>
-        <FormControl
-          isDisabled={!exists(suggestedProviderName)}
-          isInvalid={exists(providerNameError)}>
-          <FormLabel>Custom Name</FormLabel>
-          <Input
-            placeholder="Custom provider name"
-            type="text"
-            {...register(FieldName.PROVIDER_NAME, {
-              pattern: {
-                value: ALLOWED_NAMES_REGEX,
-                message: "Name can only contain letters, numbers, . and -",
-              },
-            })}
-          />
-          {exists(providerNameError) ? (
-            <FormErrorMessage>{providerNameError.message ?? "Error"}</FormErrorMessage>
-          ) : (
-            <FormHelperText>
-              Optionally give your provider a different name from the one specified in its{" "}
-              <Code>provider.yaml</Code>
-            </FormHelperText>
-          )}
-        </FormControl>
+        <CollapsibleSection title={"Advanced Options"} showIcon={true}>
+          <FormControl
+            isDisabled={!exists(suggestedProviderName)}
+            isInvalid={exists(providerNameError)}>
+            <FormLabel>Custom Name</FormLabel>
+            <Input
+              placeholder="Custom provider name"
+              type="text"
+              {...register(FieldName.PROVIDER_NAME, {
+                pattern: {
+                  value: ALLOWED_NAMES_REGEX,
+                  message: "Name can only contain letters, numbers, . and -",
+                },
+              })}
+            />
+            {exists(providerNameError) ? (
+              <FormErrorMessage>{providerNameError.message ?? "Error"}</FormErrorMessage>
+            ) : (
+              <FormHelperText>
+                Optionally give your provider a different name from the one specified in its{" "}
+                <Code>provider.yaml</Code>
+              </FormHelperText>
+            )}
+          </FormControl>
+        </CollapsibleSection>
         )
         <VStack align="start">
           {status === "error" && isError(error) && <ErrorMessageBox error={error} />}
-          <Button
-            marginTop="10"
-            type="submit"
-            isDisabled={isSubmitDisabled}
-            isLoading={status === "loading"}>
+          <Button type="submit" isDisabled={isSubmitDisabled} isLoading={status === "loading"}>
             Continue
           </Button>
         </VStack>

@@ -96,7 +96,7 @@ func getWorkspace(devPodConfig *config.Config, args []string, changeLastUsed boo
 	}
 
 	// load workspace config
-	return loadExistingWorkspace(workspaceID, devPodConfig, changeLastUsed)
+	return loadExistingWorkspace(workspaceID, devPodConfig, changeLastUsed, log)
 }
 
 // ResolveWorkspace tries to retrieve an already existing workspace or creates a new one
@@ -148,14 +148,14 @@ func resolveWorkspace(ctx context.Context, devPodConfig *config.Config, args []s
 	if desiredID != "" {
 		if provider2.WorkspaceExists(devPodConfig.DefaultContext, desiredID) {
 			log.Infof("Workspace %s already exists", desiredID)
-			return loadExistingWorkspace(desiredID, devPodConfig, changeLastUsed)
+			return loadExistingWorkspace(desiredID, devPodConfig, changeLastUsed, log)
 		}
 
 		// set desired id
 		workspaceID = desiredID
 	} else if provider2.WorkspaceExists(devPodConfig.DefaultContext, workspaceID) {
 		log.Infof("Workspace %s already exists", workspaceID)
-		return loadExistingWorkspace(workspaceID, devPodConfig, changeLastUsed)
+		return loadExistingWorkspace(workspaceID, devPodConfig, changeLastUsed, log)
 	}
 
 	// create workspace
@@ -170,7 +170,7 @@ func resolveWorkspace(ctx context.Context, devPodConfig *config.Config, args []s
 
 func createWorkspace(ctx context.Context, devPodConfig *config.Config, workspaceID, name, desiredMachine string, providerUserOptions []string, isLocalPath bool, log log.Logger) (*provider2.ProviderConfig, *provider2.Workspace, *provider2.Machine, error) {
 	// get default provider
-	provider, _, err := LoadProviders(devPodConfig)
+	provider, _, err := LoadProviders(devPodConfig, log)
 	if err != nil {
 		return nil, nil, nil, err
 	} else if provider.State == nil || !provider.State.Initialized {
@@ -342,10 +342,10 @@ func resolve(defaultProvider *ProviderWithOptions, devPodConfig *config.Config, 
 	return nil, fmt.Errorf("%s is neither a local folder, git repository or docker image", name)
 }
 
-var regexes map[string]*regexp.Regexp= map[string]*regexp.Regexp{
+var regexes map[string]*regexp.Regexp = map[string]*regexp.Regexp{
 	"github.com": regexp.MustCompile(`(<meta[^>]+property)="og:image" content="([^"]+)"`),
 	"gitlab.com": regexp.MustCompile(`(<meta[^>]+content)="([^"]+)" property="og:image"`),
-	"content": regexp.MustCompile(`content="([^"]+)"`),
+	"content":    regexp.MustCompile(`content="([^"]+)"`),
 }
 
 func getProjectImage(link string) string {
@@ -454,7 +454,7 @@ func ToID(str string) string {
 		str = str[:63]
 	}
 
-	return str
+	return strings.Trim(str, "-")
 }
 
 func selectWorkspace(devPodConfig *config.Config, changeLastUsed bool, log log.Logger) (*provider2.ProviderConfig, *provider2.Workspace, *provider2.Machine, error) {
@@ -488,16 +488,16 @@ func selectWorkspace(devPodConfig *config.Config, changeLastUsed bool, log log.L
 	}
 
 	// load workspace
-	return loadExistingWorkspace(answer, devPodConfig, changeLastUsed)
+	return loadExistingWorkspace(answer, devPodConfig, changeLastUsed, log)
 }
 
-func loadExistingWorkspace(workspaceID string, devPodConfig *config.Config, changeLastUsed bool) (*provider2.ProviderConfig, *provider2.Workspace, *provider2.Machine, error) {
+func loadExistingWorkspace(workspaceID string, devPodConfig *config.Config, changeLastUsed bool, log log.Logger) (*provider2.ProviderConfig, *provider2.Workspace, *provider2.Machine, error) {
 	workspaceConfig, err := provider2.LoadWorkspaceConfig(devPodConfig.DefaultContext, workspaceID)
 	if err != nil {
 		return nil, nil, nil, err
 	}
 
-	providerWithOptions, err := FindProvider(devPodConfig, workspaceConfig.Provider.Name)
+	providerWithOptions, err := FindProvider(devPodConfig, workspaceConfig.Provider.Name, log)
 	if err != nil {
 		return nil, nil, nil, err
 	}

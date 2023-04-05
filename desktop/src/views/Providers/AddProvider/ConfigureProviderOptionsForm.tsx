@@ -18,10 +18,20 @@ import { FormProvider, SubmitHandler, useForm, useFormContext } from "react-hook
 import { client } from "../../../client"
 import { useProvider } from "../../../contexts"
 import { exists, useFormErrors } from "../../../lib"
-import { TConfigureProviderConfig, TProviderID, TProviderOptions } from "../../../types"
+import {
+  TConfigureProviderConfig,
+  TProviderID,
+  TProviderOptionGroup,
+  TProviderOptions,
+} from "../../../types"
 import { canCreateMachine, getVisibleOptions, TOptionWithID } from "../helpers"
+import { CollapsibleSection } from "../../../components"
 
-type TAllOptions = Readonly<{ required: TOptionWithID[]; other: TOptionWithID[] }>
+type TAllOptions = Readonly<{
+  required: TOptionWithID[]
+  groups: { [key: string]: TOptionWithID[] }
+  other: TOptionWithID[]
+}>
 const Form = styled.form`
   width: 100%;
 `
@@ -39,13 +49,16 @@ type TFieldValues = Readonly<{
 type TConfigureProviderOptionsFormProps = Readonly<{
   providerID: TProviderID
   options: TProviderOptions
+  optionGroups: TProviderOptionGroup[]
   initializeProvider?: boolean
   onFinish?: () => void
 }>
+
 export function ConfigureProviderOptionsForm({
   providerID,
   onFinish,
   options: optionsProp,
+  optionGroups,
   initializeProvider = false,
 }: TConfigureProviderOptionsFormProps) {
   const [[provider]] = useProvider(providerID)
@@ -88,12 +101,22 @@ export function ConfigureProviderOptionsForm({
   const showUseAsDefaultField = useMemo(() => initializeProvider, [initializeProvider])
 
   const options = useMemo(() => {
-    const empty: TAllOptions = { required: [], other: [] }
+    const empty: TAllOptions = { required: [], groups: {}, other: [] }
     if (!exists(optionsProp)) {
       return empty
     }
 
     return getVisibleOptions(optionsProp).reduce<TAllOptions>((acc, option) => {
+      const optionGroup = optionGroups.find((group) => group.options?.find((o) => o === option.id))
+      if (optionGroup) {
+        if (!acc.groups[optionGroup.name!]) {
+          acc.groups[optionGroup.name!] = []
+        }
+        acc.groups[optionGroup.name!]!.push(option)
+
+        return acc
+      }
+
       if (option.required) {
         acc.required.push(option)
 
@@ -109,68 +132,86 @@ export function ConfigureProviderOptionsForm({
   return (
     <FormProvider {...formMethods}>
       <Form onSubmit={formMethods.handleSubmit(onSubmit)}>
-        <VStack align="start" spacing={14}>
+        <VStack align="start" spacing={8}>
           {options.required.length > 0 && (
             <Box width="full">
-              <Heading size="sm" marginBottom={4}>
-                Required
-              </Heading>
-              <VStack align="start" spacing={4}>
-                {options.required.map((option) => (
-                  <OptionFormField key={option.id} isRequired {...option} />
-                ))}
-              </VStack>
+              <CollapsibleSection showIcon={true} title={"Required"} isOpen={true}>
+                <VStack align="start" spacing={4}>
+                  {options.required.map((option) => (
+                    <OptionFormField key={option.id} isRequired {...option} />
+                  ))}
+                </VStack>
+              </CollapsibleSection>
             </Box>
           )}
 
+          {optionGroups
+            .filter((group) => !!options.groups[group.name!])
+            .map((group) => {
+              const groupOptions = options.groups[group.name!]
+
+              return (
+                <Box key={group.name!} width="full">
+                  <CollapsibleSection
+                    showIcon={true}
+                    title={group.name}
+                    isOpen={!!group.defaultVisible}>
+                    <SimpleGrid minChildWidth="60" spacingX={8} spacingY={4}>
+                      {groupOptions?.map((option) => (
+                        <OptionFormField key={option.id} {...option} />
+                      ))}
+                    </SimpleGrid>
+                  </CollapsibleSection>
+                </Box>
+              )
+            })}
+
           {options.other.length > 0 && (
             <Box width="full">
-              <Heading size="sm" marginBottom={4}>
-                Optional
-              </Heading>
-              <SimpleGrid minChildWidth="60" spacingX={8} spacingY={4}>
-                {options.other.map((option) => (
-                  <OptionFormField key={option.id} {...option} />
-                ))}
-              </SimpleGrid>
+              <CollapsibleSection showIcon={true} title={"Optional"} isOpen={false}>
+                <SimpleGrid minChildWidth="60" spacingX={8} spacingY={4}>
+                  {options.other.map((option) => (
+                    <OptionFormField key={option.id} {...option} />
+                  ))}
+                </SimpleGrid>
+              </CollapsibleSection>
             </Box>
           )}
 
           {(showReuseMachineField || showUseAsDefaultField) && (
             <Box width="full">
-              <Heading size="sm" marginBottom={4}>
-                Other Options
-              </Heading>
-              <VStack align="start" spacing={4}>
-                {showReuseMachineField && (
-                  <FormControl>
-                    <Checkbox {...formMethods.register(FieldName.REUSE_MACHINE)}>
-                      Reuse Machine
-                    </Checkbox>
-                    {exists(reuseMachineError) ? (
-                      <FormErrorMessage>{reuseMachineError.message ?? "Error"}</FormErrorMessage>
-                    ) : (
-                      <FormHelperText>
-                        Provider reuses the vm of the first workspaces for all subsequent
-                        workspaces. Otherwise, it will spin up one VM per workspace
-                      </FormHelperText>
-                    )}
-                  </FormControl>
-                )}
+              <CollapsibleSection title={"Other Options"} isOpen={true}>
+                <VStack align="start" spacing={4}>
+                  {showReuseMachineField && (
+                    <FormControl>
+                      <Checkbox {...formMethods.register(FieldName.REUSE_MACHINE)}>
+                        Reuse Machine
+                      </Checkbox>
+                      {exists(reuseMachineError) ? (
+                        <FormErrorMessage>{reuseMachineError.message ?? "Error"}</FormErrorMessage>
+                      ) : (
+                        <FormHelperText>
+                          Provider reuses the vm of the first workspaces for all subsequent
+                          workspaces. Otherwise, it will spin up one VM per workspace
+                        </FormHelperText>
+                      )}
+                    </FormControl>
+                  )}
 
-                {showUseAsDefaultField && (
-                  <FormControl>
-                    <Checkbox {...formMethods.register(FieldName.USE_AS_DEFAULT)}>
-                      Default Provider
-                    </Checkbox>
-                    {exists(useAsDefaultError) ? (
-                      <FormErrorMessage>{useAsDefaultError.message ?? "Error"}</FormErrorMessage>
-                    ) : (
-                      <FormHelperText>Use this provider as the default provider</FormHelperText>
-                    )}
-                  </FormControl>
-                )}
-              </VStack>
+                  {showUseAsDefaultField && (
+                    <FormControl>
+                      <Checkbox {...formMethods.register(FieldName.USE_AS_DEFAULT)}>
+                        Default Provider
+                      </Checkbox>
+                      {exists(useAsDefaultError) ? (
+                        <FormErrorMessage>{useAsDefaultError.message ?? "Error"}</FormErrorMessage>
+                      ) : (
+                        <FormHelperText>Use this provider as the default provider</FormHelperText>
+                      )}
+                    </FormControl>
+                  )}
+                </VStack>
+              </CollapsibleSection>
             </Box>
           )}
 

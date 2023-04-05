@@ -65,6 +65,7 @@ export function Provider() {
           <ConfigureProviderOptionsForm
             providerID={providerID}
             options={provider.state.options ?? {}}
+            optionGroups={provider.config?.optionGroups || []}
             onFinish={() => setIsEditing.off()}
           />
         ) : (

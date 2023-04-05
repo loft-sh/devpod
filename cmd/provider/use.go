@@ -59,7 +59,7 @@ func (cmd *UseCmd) Run(ctx context.Context, providerName string) error {
 		return err
 	}
 
-	providerWithOptions, err := workspace.FindProvider(devPodConfig, providerName)
+	providerWithOptions, err := workspace.FindProvider(devPodConfig, providerName, log.Default)
 	if err != nil {
 		return err
 	}
