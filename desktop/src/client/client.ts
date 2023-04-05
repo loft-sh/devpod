@@ -38,6 +38,7 @@ class Client {
     if (name === "debugFlag") {
       this.workspaces.setDebug(value)
       this.providers.setDebug(value)
+      this.ides.setDebug(value)
     }
   }
   public ready(): Promise<void> {

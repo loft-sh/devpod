@@ -39,10 +39,8 @@ export function useAppReady() {
                   },
                 },
               })
-              // TODO: Continue here: navigate to actionID
-              // For now, navigate to workspace view
 
-              navigate(Routes.toWorkspace(maybeWorkspace.id))
+              navigate(Routes.toAction(actionID))
 
               return
             }

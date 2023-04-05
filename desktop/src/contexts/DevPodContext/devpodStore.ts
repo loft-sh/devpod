@@ -1,12 +1,12 @@
-import { debug, EventManager, SingleEventManager } from "../../../lib"
-import { TUnsubscribeFn, TWorkspace, TWorkspaceID, TWorkspaceWithoutStatus } from "../../../types"
-import { replaceEqualDeep } from "../helpers"
+import { debug, EventManager, SingleEventManager } from "../../lib"
+import { TUnsubscribeFn, TWorkspace, TWorkspaceID, TWorkspaceWithoutStatus } from "../../types"
+import { replaceEqualDeep } from "./helpers"
 import { Action, TActionFn, TActionName, TActionObj } from "./action"
-import { ActionHistory } from "./actionHistory"
+import { ActionHistory } from "./action/actionHistory" // This is a workaround for how typescript resolves circular dependencies, usually the import should be from "./action"
 
 type TLastActions = Readonly<{ active: readonly TActionObj[]; history: readonly TActionObj[] }>
 
-class WorkspacesStore {
+class DevpodStore {
   private readonly eventManager = new SingleEventManager<void>()
   private actionsHistory = new ActionHistory()
   private workspaces = new Map<TWorkspaceID, TWorkspace>()
@@ -44,7 +44,7 @@ class WorkspacesStore {
   }
 
   public getCurrentAction(workspaceID: TWorkspaceID): TActionObj | undefined {
-    return this.lastActions.active.find((action) => action.workspaceID === workspaceID)
+    return this.lastActions.active.find((action) => action.targetID === workspaceID)
   }
 
   public getAllActions(): TLastActions {
@@ -133,4 +133,4 @@ class WorkspacesStore {
 }
 
 // Singleton store
-export const workspacesStore = new WorkspacesStore()
+export const devpodStore = new DevpodStore()

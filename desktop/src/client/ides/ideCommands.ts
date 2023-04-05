@@ -16,7 +16,7 @@ export class IDECommands {
   }
 
   static async ListIDEs(): Promise<Result<TIDEs>> {
-    const result = await new Command([
+    const result = await IDECommands.newCommand([
       DEVPOD_COMMAND_IDE,
       DEVPOD_COMMAND_LIST,
       DEVPOD_FLAG_JSON_OUTPUT,
@@ -25,8 +25,8 @@ export class IDECommands {
       return result
     }
 
-    const rawProviders = JSON.parse(result.val.stdout) as TIDEs
+    const ides = JSON.parse(result.val.stdout) as TIDEs
 
-    return Return.Value(rawProviders)
+    return Return.Value(ides)
   }
 }

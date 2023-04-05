@@ -1,45 +1,48 @@
 import {
+  Box,
   Button,
   Card,
-  Image,
-  CardBody,
   CardFooter,
   CardHeader,
   Checkbox,
   Heading,
-  Stack,
-  Text,
   HStack,
-  Box,
-  IconButton,
-  Popover,
-  PopoverTrigger,
-  PopoverContent,
-  PopoverArrow,
-  VStack,
-  Tooltip,
-  useDisclosure,
-  Modal,
-  ModalOverlay,
-  ModalHeader,
-  ModalContent,
-  ModalCloseButton,
-  ModalBody,
-  ModalFooter,
   Icon,
+  IconButton,
+  Image,
+  InputGroup,
+  Menu,
+  MenuButton,
+  MenuItem,
+  MenuList,
+  Modal,
+  ModalBody,
+  ModalCloseButton,
+  ModalContent,
+  ModalFooter,
+  ModalHeader,
+  ModalOverlay,
   Select,
+  Stack,
+  Tag,
+  TagLabel,
+  Text,
+  Tooltip,
+  useColorModeValue,
+  useDisclosure,
 } from "@chakra-ui/react"
-import { useWorkspace } from "../../contexts"
-import { TWorkspaceID } from "../../types"
-import { Pause, Trash } from "../../icons"
-import CodeImage from "../../images/code.jpg"
-import { Ellipsis } from "../../icons/Ellipsis"
-import dayjs from "dayjs"
-import { GrCode, GrRefresh } from "react-icons/gr"
 import { useQuery } from "@tanstack/react-query"
-import { QueryKeys } from "../../queryKeys"
+import dayjs from "dayjs"
+import { useCallback, useState } from "react"
+import { HiClock, HiOutlineCode } from "react-icons/hi"
+import { useNavigate } from "react-router"
 import { client } from "../../client"
-import { useState } from "react"
+import { TActionID, useWorkspace } from "../../contexts"
+import { Ellipsis, Pause, Play, Stack3D, Trash, ArrowPath } from "../../icons"
+import { CodeJPG } from "../../images"
+import { QueryKeys } from "../../queryKeys"
+import { Routes } from "../../routes"
+import { TIDEs, TWorkspace, TWorkspaceID } from "../../types"
 
 type TWorkspaceCardProps = Readonly<{
   workspaceID: TWorkspaceID
@@ -47,19 +50,38 @@ type TWorkspaceCardProps = Readonly<{
 }>
 
 export function WorkspaceCard({ workspaceID, onSelectionChange }: TWorkspaceCardProps) {
+  const navigate = useNavigate()
   const idesQuery = useQuery({
     queryKey: QueryKeys.IDES,
     queryFn: async () => (await client.ides.listAll()).unwrap(),
   })
   const { isOpen: isDeleteOpen, onOpen: onDeleteOpen, onClose: onDeleteClose } = useDisclosure()
   const { isOpen: isRebuildOpen, onOpen: onRebuildOpen, onClose: onRebuildClose } = useDisclosure()
-  const {
-    isOpen: isOpenWithOpen,
-    onOpen: onOpenWithOpen,
-    onClose: onOpenWithClose,
-  } = useDisclosure()
   const workspace = useWorkspace(workspaceID)
-  const [ideName, setIdeName] = useState<string | undefined>(workspace.data?.ide?.name || undefined)
+  const [ideName, setIdeName] = useState<string | undefined>(workspace.data?.ide?.name ?? undefined)
+  const tagColor = useColorModeValue("gray.700", "gray.300")
+
+  const navigateToAction = useCallback(
+    (actionID: TActionID | undefined) => {
+      if (actionID !== undefined && actionID !== "") {
+        navigate(Routes.toAction(actionID))
+      }
+    },
+    [navigate]
+  )
+
+  const handleOpenWithIDEClicked = useCallback(
+    (id: TWorkspaceID) => async () => {
+      if (!ideName) {
+        return
+      }
+
+      const actionID = workspace.start({ id, ideConfig: { name: ideName } })
+      navigateToAction(actionID)
+    },
+    [ideName, workspace, navigateToAction]
+  )
+
   if (workspace.data === undefined) {
     return null
   }
@@ -70,160 +92,153 @@ export function WorkspaceCard({ workspaceID, onSelectionChange }: TWorkspaceCard
     <>
       <Card
         key={id}
-        direction={{ base: "row", sm: "row" }}
-        width={"100%"}
-        maxWidth={"600px"}
-        height={"210px"}
+        direction="row"
+        width="full"
+        maxWidth="50rem"
         overflow="hidden"
-        variant="outline">
-        <Image
-          objectFit="cover"
-          maxW={{ base: "100%", sm: "200px" }}
-          src={CodeImage}
-          alt="Project Image"
-        />
+        variant="outline"
+        maxHeight="48">
+        <Image objectFit="cover" maxHeight={"full"} width="40%" src={CodeJPG} alt="Project Image" />
 
-        <Stack>
-          <CardHeader display="flex" width="full" justifyContent="space-between">
-            <Heading size="md">
-              <HStack>
-                <Text fontWeight="bold">{id}</Text>
-                <Tooltip label={`Workspace is ${status ?? "Pending"}`}>
-                  <Box
-                    as={"span"}
-                    display={"inline-block"}
-                    backgroundColor={status === "Running" ? "green" : "orange"}
-                    borderRadius={"20px"}
-                    width={"10px"}
-                    height={"10px"}
-                    position={"relative"}
-                    top={"1px"}
-                  />
-                </Tooltip>
-              </HStack>
-            </Heading>
-            {onSelectionChange !== undefined && (
-              <Checkbox onChange={(e) => onSelectionChange(e.target.checked)} />
-            )}
+        <Stack width="full" justifyContent={"space-between"}>
+          <CardHeader display="flex" flexDirection="column">
+            <HStack justifyContent="space-between">
+              <Heading size="md">
+                <HStack alignItems="center">
+                  <Text fontWeight="bold">{id}</Text>
+                  <Tooltip label={`Workspace is ${status ?? "Pending"}`}>
+                    <Box
+                      as={"span"}
+                      backgroundColor={status === "Running" ? "green" : "orange"}
+                      borderRadius={"full"}
+                      width={"3"}
+                      height={"3"}
+                    />
+                  </Tooltip>
+                </HStack>
+              </Heading>
+              {onSelectionChange !== undefined && (
+                <Checkbox onChange={(e) => onSelectionChange(e.target.checked)} />
+              )}
+            </HStack>
+            <HStack rowGap={2} marginTop={4} flexWrap="wrap" alignItems="center">
+              <Tag
+                borderRadius="full"
+                color={tagColor}
+                marginInlineStart="0 !important"
+                marginRight={2}>
+                <Stack3D boxSize={4} />
+                <TagLabel marginLeft={2}>{provider?.name ?? "No provider"}</TagLabel>
+              </Tag>
+              <Tag
+                borderRadius="full"
+                color={tagColor}
+                marginInlineStart="0 !important"
+                marginRight={2}>
+                <Icon boxSize={4} as={HiOutlineCode} />
+                <TagLabel marginLeft={2}>{getIDEName(workspace.data.ide, idesQuery.data)}</TagLabel>
+              </Tag>
+              <Tag borderRadius="full" color={tagColor} marginInlineStart="0 !important">
+                <Icon marginLeft={2} as={HiClock} />
+                <TagLabel>{dayjs(new Date(workspace.data.lastUsed)).fromNow()}</TagLabel>
+              </Tag>
+            </HStack>
           </CardHeader>
-          <CardBody paddingTop={"0"} paddingBottom={"0"}>
-            {provider?.name && <Text>Provider: {provider.name}</Text>}
-            {workspace.data.ide?.name && <Text>IDE: {workspace.data.ide?.name}</Text>}
-            <Text>Last Used: {dayjs(new Date(workspace.data.lastUsed)).fromNow()}</Text>
-          </CardBody>
-          <CardFooter>
-            {workspace.data.status !== "Busy" && workspace.data.status !== "NotFound" && (
-              <HStack spacing={"2"}>
-                <Button
-                  colorScheme="primary"
-                  onClick={() => workspace.start({ id, ideConfig: ide })}
+
+          <CardFooter padding="none" paddingBottom={4}>
+            <HStack spacing="2" width="full" justifyContent="end">
+              {workspace.data.status !== "Running" ? (
+                <IconButton
+                  aria-label="Start workspace"
+                  variant="ghost"
+                  color="primary"
+                  icon={<Play boxSize={5} />}
+                  isDisabled={
+                    workspace.data.status === "Busy" || workspace.data.status === "NotFound"
+                  }
+                  onClick={() => {
+                    const actionID = workspace.start({ id, ideConfig: ide })
+                    navigateToAction(actionID)
+                  }}
                   isLoading={
                     workspace.current?.name === "start" && workspace.current.status === "pending"
-                  }>
-                  {workspace.data.status === "Stopped" ? "Start" : "Open"}
-                </Button>
-                {workspace.data.status === "Running" && (
+                  }
+                />
+              ) : (
+                <>
                   <Tooltip label={"Stop workspace"}>
                     <IconButton
                       aria-label="Stop workspace"
                       variant="ghost"
                       colorScheme="gray"
                       onClick={() => workspace.stop()}
-                      icon={<Pause width={"16px"} />}
+                      icon={<Pause boxSize={5} />}
                       isLoading={
                         workspace.current?.name === "stop" && workspace.current.status === "pending"
                       }
                     />
                   </Tooltip>
-                )}
-                <Tooltip label={`Delete workspace`}>
-                  <IconButton
-                    aria-label="Delete workspace"
+                </>
+              )}
+              <Tooltip label={`Delete workspace`}>
+                <IconButton
+                  aria-label="Delete workspace"
+                  variant="ghost"
+                  colorScheme="gray"
+                  icon={<Trash boxSize={5} />}
+                  onClick={() => onDeleteOpen()}
+                  isLoading={
+                    workspace.current?.name === "remove" && workspace.current.status === "pending"
+                  }
+                />
+              </Tooltip>
+              <Menu placement="top">
+                <Tooltip label="More Actions">
+                  <MenuButton
+                    as={IconButton}
+                    aria-label="More actions"
+                    isDisabled={workspace.data.status !== "Running"}
                     variant="ghost"
                     colorScheme="gray"
-                    icon={<Trash width={"16px"} />}
-                    onClick={() => onDeleteOpen()}
-                    isLoading={
-                      workspace.current?.name === "remove" && workspace.current.status === "pending"
-                    }
+                    icon={<Ellipsis transform={"rotate(90deg)"} boxSize={5} />}
                   />
                 </Tooltip>
-                {workspace.data.status === "Running" && (
-                  <Popover trigger={"hover"}>
-                    <PopoverTrigger>
-                      <IconButton
-                        aria-label="More actions"
-                        variant="ghost"
-                        colorScheme="gray"
-                        icon={<Ellipsis width={"16px"} />}
-                        onClick={() => {}}
-                      />
-                    </PopoverTrigger>
-                    <PopoverContent>
-                      <PopoverArrow />
-                      <Box padding={"10px"}>
-                        <VStack>
-                          <Button
-                            leftIcon={<Icon as={GrCode} />}
-                            width={"150px"}
-                            onClick={() => onOpenWithOpen()}>
-                            Open with...
-                          </Button>
-                          <Button
-                            leftIcon={<Icon as={GrRefresh} />}
-                            width={"150px"}
-                            onClick={() => onRebuildOpen()}>
-                            Rebuild
-                          </Button>
-                        </VStack>
-                      </Box>
-                    </PopoverContent>
-                  </Popover>
-                )}
-              </HStack>
-            )}
+                <MenuList>
+                  <InputGroup paddingRight={3}>
+                    <Button
+                      colorScheme={"primary"}
+                      variant="ghost"
+                      fontWeight={"normal"}
+                      color="primary"
+                      leftIcon={<Play boxSize={4} />}
+                      onClick={handleOpenWithIDEClicked(workspace.data.id)}>
+                      Start with
+                    </Button>
+                    <Select
+                      maxWidth={40}
+                      overflow="hidden"
+                      textOverflow="ellipsis"
+                      whiteSpace="nowrap"
+                      defaultValue={workspace.data.ide?.name ?? undefined}
+                      onChange={(e) => setIdeName(e.target.value)}
+                      value={ideName}>
+                      {idesQuery.data?.map((ide) => (
+                        <option key={ide.name} value={ide.name!}>
+                          {ide.displayName}
+                        </option>
+                      ))}
+                    </Select>
+                  </InputGroup>
+                  <MenuItem icon={<ArrowPath boxSize={4} />} onClick={onRebuildOpen}>
+                    Rebuild
+                  </MenuItem>
+                </MenuList>
+              </Menu>
+            </HStack>
           </CardFooter>
         </Stack>
       </Card>
-      <Modal onClose={onOpenWithClose} isOpen={isOpenWithOpen} isCentered>
-        <ModalOverlay />
-        <ModalContent>
-          <ModalHeader>Open Workspace With IDE</ModalHeader>
-          <ModalCloseButton />
-          <ModalBody>
-            <Heading as="h5" size="s" marginBottom={"10px"}>
-              Select IDE:
-            </Heading>
-            <Select onChange={(e) => setIdeName(e.target.value)} value={ideName}>
-              {idesQuery.data?.map((ide) => (
-                <option key={ide.name} value={ide.name!}>
-                  {ide.displayName}
-                </option>
-              ))}
-            </Select>
-            <Text fontSize={"12px"} marginTop={"7px"}>
-              Devpod will open this workspace with the selected IDE.
-            </Text>
-          </ModalBody>
-          <ModalFooter>
-            <HStack spacing={"2"}>
-              <Button onClick={onOpenWithClose}>Close</Button>
-              <Button
-                colorScheme={"primary"}
-                onClick={async () => {
-                  if (!ideName) {
-                    return
-                  }
 
-                  workspace.start({ id, ideConfig: { name: ideName } })
-                  onOpenWithClose()
-                }}>
-                Open
-              </Button>
-            </HStack>
-          </ModalFooter>
-        </ModalContent>
-      </Modal>
       <Modal onClose={onRebuildClose} isOpen={isRebuildOpen} isCentered>
         <ModalOverlay />
         <ModalContent>
@@ -240,8 +255,9 @@ export function WorkspaceCard({ workspaceID, onSelectionChange }: TWorkspaceCard
               <Button
                 colorScheme={"primary"}
                 onClick={async () => {
-                  workspace.rebuild()
+                  const actionID = workspace.rebuild()
                   onRebuildClose()
+                  navigateToAction(actionID)
                 }}>
                 Rebuild
               </Button>
@@ -249,6 +265,7 @@ export function WorkspaceCard({ workspaceID, onSelectionChange }: TWorkspaceCard
           </ModalFooter>
         </ModalContent>
       </Modal>
+
       <Modal onClose={onDeleteClose} isOpen={isDeleteOpen} isCentered>
         <ModalOverlay />
         <ModalContent>
@@ -275,4 +292,10 @@ export function WorkspaceCard({ workspaceID, onSelectionChange }: TWorkspaceCard
       </Modal>
     </>
   )
+}
+
+function getIDEName(ide: TWorkspace["ide"], ides: TIDEs | undefined) {
+  const maybeIDE = ides?.find((i) => i.name === ide?.name)
+
+  return maybeIDE?.displayName ?? ide?.name ?? maybeIDE?.name ?? "Unknown"
 }

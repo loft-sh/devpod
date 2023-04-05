@@ -13,7 +13,6 @@ export function useWorkspaceTitle(): TViewTitle | null {
 
   const matchWorkspacesRoot = useMatch(Routes.WORKSPACES)
   const matchCreateWorkspace = useMatch(Routes.WORKSPACE_CREATE)
-  const matchWorkspace = useMatch(Routes.WORKSPACE)
 
   const navigateToWorkspacesRoot = useCallback(() => {
     navigate(Routes.WORKSPACES)
@@ -63,23 +62,6 @@ export function useWorkspaceTitle(): TViewTitle | null {
       }
     }
 
-    if (exists(matchWorkspace)) {
-      const maybeWorkspaceId = Routes.getWorkspaceId(matchWorkspace.params)
-
-      return {
-        label: maybeWorkspaceId ?? "Unknown Workspace",
-        priority: "regular",
-        leadingAction: navigateBackAction,
-      }
-    }
-
     return null
-  }, [
-    matchCreateWorkspace,
-    matchWorkspace,
-    matchWorkspacesRoot,
-    navigate,
-    navigateBackAction,
-    workspaces,
-  ])
+  }, [matchCreateWorkspace, matchWorkspacesRoot, navigate, navigateBackAction, workspaces])
 }
