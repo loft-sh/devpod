@@ -1,4 +1,5 @@
 import {
+  Box,
   Button,
   FormControl,
   FormErrorMessage,
@@ -11,40 +12,35 @@ import {
   InputRightElement,
   Select,
   SimpleGrid,
-  Tab,
-  TabList,
-  TabPanel,
-  TabPanels,
-  Tabs,
+  Text,
   Tooltip,
   VStack,
 } from "@chakra-ui/react"
-import { open } from "@tauri-apps/api/dialog"
+import { useQuery } from "@tanstack/react-query"
 import { useCallback, useEffect, useMemo, useState } from "react"
 import { SubmitHandler, useForm } from "react-hook-form"
+import { FiFile } from "react-icons/fi"
 import { useNavigate } from "react-router"
+import { useSearchParams } from "react-router-dom"
+import { client } from "../../client"
 import { CollapsibleSection, useStreamingTerminal } from "../../components"
 import { useProviders, useWorkspace, useWorkspaces } from "../../contexts"
+import {
+  CppSvg,
+  DotnetcorePng,
+  GoPng,
+  JavaPng,
+  NodejsPng,
+  PhpSvg,
+  PythonSvg,
+  RustSvg,
+} from "../../images"
 import { exists, useFormErrors } from "../../lib"
+import { QueryKeys } from "../../queryKeys"
 import { Routes } from "../../routes"
 import { TProviderID, TWorkspaceID } from "../../types"
 import { ExampleCard } from "./ExampleCard"
-import {
-  CppSvg,
-  GoPng,
-  PhpSvg,
-  JavaPng,
-  RustSvg,
-  NodejsPng,
-  PythonSvg,
-  DotnetcorePng,
-} from "../../images"
-import { FiFile } from "react-icons/fi"
-import { client } from "../../client"
 import { FieldName, TFormValues } from "./types"
-import { useQuery } from "@tanstack/react-query"
-import { QueryKeys } from "../../queryKeys"
-import { useSearchParams } from "react-router-dom"
 
 const DEFAULT_PROVIDER = "docker"
 
@@ -55,24 +51,36 @@ export function CreateWorkspace() {
     queryFn: async () => (await client.ides.listAll()).unwrap(),
   })
 
+  const [isSubmitLoading, setIsSubmitLoading] = useState(false)
   const params = useCreateWorkspaceParams()
   const [workspaceID, setWorkspaceID] = useState<TWorkspaceID | undefined>(undefined)
   const navigate = useNavigate()
   const workspaces = useWorkspaces()
   const workspace = useWorkspace(workspaceID)
   const [[providers]] = useProviders()
-  const { register, handleSubmit, formState, watch, setError, setValue, clearErrors } =
-    useForm<TFormValues>({})
+  const { register, handleSubmit, formState, watch, setError, setValue, clearErrors, reset } =
+    useForm<TFormValues>()
   const currentSource = watch(FieldName.SOURCE)
   const { terminal, connectStream } = useStreamingTerminal()
+
+  useEffect(() => {
+    console.log(params)
+    reset({
+      ...(params.rawSource !== undefined ? { [FieldName.SOURCE]: params.rawSource } : {}),
+      ...(params.ide !== undefined ? { [FieldName.DEFAULT_IDE]: params.ide } : {}),
+      ...(params.providerID !== undefined ? { [FieldName.PROVIDER]: params.providerID } : {}),
+    })
+  }, [params, reset])
 
   const onSubmit = useCallback<SubmitHandler<TFormValues>>(
     async (data) => {
       const workspaceSource = data[FieldName.SOURCE].trim()
+      setIsSubmitLoading(true)
       let workspaceID = data[FieldName.ID]
       if (!workspaceID) {
         const newIDResult = await client.workspaces.newID(workspaceSource)
         if (newIDResult.err) {
+          setIsSubmitLoading(false)
           setError(FieldName.SOURCE, { message: newIDResult.val.message })
 
           return
@@ -80,6 +88,8 @@ export function CreateWorkspace() {
 
         workspaceID = newIDResult.val
       }
+      setIsSubmitLoading(false)
+
       if (workspaces.find((workspace) => workspace.id === workspaceID)) {
         setError(FieldName.SOURCE, { message: "workspace with the same name already exists" })
 
@@ -110,6 +120,7 @@ export function CreateWorkspace() {
     Object.values(FieldName),
     formState
   )
+  console.log(defaultIDEError)
 
   const providerOptions = useMemo<readonly TProviderID[]>(() => {
     if (!exists(providers)) {
@@ -123,6 +134,15 @@ export function CreateWorkspace() {
     () => workspace.current?.name === "create" && workspace.current.status === "pending",
     [workspace]
   )
+
+  const handleSelectFolderClicked = useCallback(async () => {
+    const selected = await client.selectFromDir()
+    if (selected) {
+      setValue(FieldName.SOURCE, selected + "", {
+        shouldDirty: true,
+      })
+    }
+  }, [setValue])
 
   useEffect(() => {
     if (
@@ -140,61 +160,54 @@ export function CreateWorkspace() {
 
   return (
     <form onSubmit={handleSubmit(onSubmit)}>
-      <VStack align="start" spacing="6" marginBottom={"20px"}>
-        <Tabs colorScheme={"primary"} width={"100%"} maxWidth={"1024px"}>
-          <TabList>
-            <Tab>From Path</Tab>
-            <Tab>From Example</Tab>
-          </TabList>
-
-          <TabPanels>
-            <TabPanel>
-              <FormControl isRequired isInvalid={exists(sourceError)}>
-                <InputGroup>
-                  <Input
-                    placeholder="github.com/my-org/my-repo"
-                    fontSize={"16px"}
-                    padding={"10px"}
-                    height={"42px"}
-                    defaultValue={params.rawSource}
-                    type="text"
-                    {...register(FieldName.SOURCE, { required: true })}
+      <VStack align="start" spacing="6" marginBottom="8">
+        <VStack
+          width="full"
+          backgroundColor="gray.50"
+          borderRadius="lg"
+          borderWidth="thin"
+          borderColor="gray.200">
+          <FormControl
+            padding="20"
+            isRequired
+            isInvalid={exists(sourceError)}
+            borderBottomWidth="thin"
+            borderBottomColor="gray.200">
+            <Text marginBottom="2" fontWeight="bold">
+              Enter any git repository or local path to a folder you would like to create a
+              workspace from
+            </Text>
+            <InputGroup backgroundColor="white">
+              <Input
+                placeholder="github.com/my-org/my-repo"
+                fontSize={"16px"}
+                padding={"10px"}
+                height={"42px"}
+                type="text"
+                {...register(FieldName.SOURCE, { required: true })}
+              />
+              <Tooltip label={"Select Folder"}>
+                <InputRightElement cursor={"pointer"} onClick={handleSelectFolderClicked}>
+                  <Icon
+                    _hover={{ color: "black" }}
+                    position={"relative"}
+                    top={"3px"}
+                    fontSize={"18px"}
+                    as={FiFile}
+                    color={"grey"}
                   />
-                  <Tooltip label={"Select Folder"}>
-                    <InputRightElement
-                      cursor={"pointer"}
-                      onClick={async () => {
-                        const selected = await open({
-                          directory: true,
-                        })
-                        if (selected) {
-                          setValue(FieldName.SOURCE, selected + "", {
-                            shouldDirty: true,
-                          })
-                        }
-                      }}>
-                      <Icon
-                        _hover={{ color: "black" }}
-                        position={"relative"}
-                        top={"3px"}
-                        fontSize={"18px"}
-                        as={FiFile}
-                        color={"grey"}
-                      />
-                    </InputRightElement>
-                  </Tooltip>
-                </InputGroup>
-                {exists(sourceError) ? (
-                  <FormErrorMessage>{sourceError.message ?? "Error"}</FormErrorMessage>
-                ) : (
-                  <FormHelperText>
-                    Enter any git repository or local path to a folder you would like to create a
-                    workspace from.
-                  </FormHelperText>
-                )}
-              </FormControl>
-            </TabPanel>
-            <TabPanel>
+                </InputRightElement>
+              </Tooltip>
+            </InputGroup>
+            {exists(sourceError) ? (
+              <FormErrorMessage>{sourceError.message ?? "Error"}</FormErrorMessage>
+            ) : (
+              <FormHelperText></FormHelperText>
+            )}
+          </FormControl>
+
+          <Box width="full" height="full" padding={4} marginBottom="8">
+            <CollapsibleSection title="Or use one of our quickstart examples" showIcon isOpen>
               <FormControl isRequired isInvalid={exists(sourceError)}>
                 <SimpleGrid
                   spacing={4}
@@ -252,24 +265,19 @@ export function CreateWorkspace() {
                 {exists(sourceError) ? (
                   <FormErrorMessage>{sourceError.message ?? "Error"}</FormErrorMessage>
                 ) : (
-                  <FormHelperText>
-                    Select one of the example repositories above to get started with your favourite
-                    programming language.
-                  </FormHelperText>
+                  <FormHelperText></FormHelperText>
                 )}
               </FormControl>
-            </TabPanel>
-          </TabPanels>
-        </Tabs>
+            </CollapsibleSection>
+          </Box>
+        </VStack>
 
-        <CollapsibleSection title={"Advanced Options"} showIcon={true}>
+        <CollapsibleSection title={"Advanced Options"} showIcon>
           <VStack spacing="10" maxWidth={"1024px"}>
             <HStack spacing="8" alignItems={"top"} width={"100%"} justifyContent={"start"}>
               <FormControl isRequired isInvalid={exists(providerError)}>
                 <FormLabel>Provider</FormLabel>
-                <Select
-                  defaultValue={params.providerID}
-                  {...register(FieldName.PROVIDER, { required: true })}>
+                <Select {...register(FieldName.PROVIDER, { required: true })}>
                   {providerOptions.map((providerID) => (
                     <option key={providerID} value={providerID}>
                       {providerID}
@@ -284,9 +292,7 @@ export function CreateWorkspace() {
               </FormControl>
               <FormControl isRequired isInvalid={exists(defaultIDEError)}>
                 <FormLabel>Default IDE</FormLabel>
-                <Select
-                  defaultValue={params.ide}
-                  {...register(FieldName.DEFAULT_IDE, { required: true })}>
+                <Select {...register(FieldName.DEFAULT_IDE, { required: true })}>
                   {idesQuery.data?.map((ide) => (
                     <option key={ide.name} value={ide.name!}>
                       {ide.displayName}
@@ -336,10 +342,11 @@ export function CreateWorkspace() {
         </CollapsibleSection>
 
         <Button
-          colorScheme={"primary"}
+          variant="primary"
           marginTop="10"
           type="submit"
-          disabled={formState.isSubmitting}>
+          disabled={formState.isSubmitting}
+          isLoading={formState.isSubmitting || isSubmitLoading}>
           Create Workspace
         </Button>
       </VStack>
@@ -350,5 +357,8 @@ export function CreateWorkspace() {
 function useCreateWorkspaceParams() {
   const [searchParams] = useSearchParams()
 
-  return Routes.getWorkspaceCreateParamsFromSearchParams(searchParams)
+  return useMemo(
+    () => Routes.getWorkspaceCreateParamsFromSearchParams(searchParams),
+    [searchParams]
+  )
 }

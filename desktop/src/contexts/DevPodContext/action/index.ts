@@ -1,4 +1,4 @@
-export { useAction, useReplayAction, useConnectAction } from "./useAction"
+export { getAction, useAction, useReplayAction, useConnectAction } from "./useAction"
 export { Action } from "./action"
 export type {
   TActionName,

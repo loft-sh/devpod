@@ -6,6 +6,7 @@ import { TUnsubscribeFn } from "../types"
 import { ProvidersClient } from "./providers"
 import { WorkspacesClient } from "./workspaces"
 import { IDEsClient } from "./ides/client"
+import { dialog } from "@tauri-apps/api"
 
 // Theses types have to match the rust types! Make sure to update them as well!
 type TChannels = {
@@ -82,6 +83,10 @@ class Client {
     } catch (e) {
       // noop for now
     }
+  }
+
+  public async selectFromDir(): Promise<string | string[] | null> {
+    return dialog.open({ directory: true, multiple: false })
   }
 }
 

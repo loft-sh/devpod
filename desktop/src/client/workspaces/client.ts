@@ -104,7 +104,7 @@ export class WorkspacesClient implements TDebuggable {
   }
 
   public async newID(rawSource: string): Promise<Result<string>> {
-    return await WorkspaceCommands.GetWorkspaceID(rawSource)
+    return WorkspaceCommands.GetWorkspaceID(rawSource)
   }
 
   public async start(

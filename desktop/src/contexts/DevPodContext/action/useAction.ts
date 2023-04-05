@@ -18,14 +18,13 @@ export function useAction(actionID: TActionID | undefined): TActionResult | unde
         return undefined
       }
 
-      const { active, history } = devpodStore.getAllActions()
-
-      return [...active, ...history].find((action) => action.id === actionID)
+      return getAction(actionID)
     }
   )
 
   const connect = useConnectAction(data, viewID)
   const replay = useReplayAction()
+  console.log(data?.status)
 
   return useMemo(() => {
     if (data === undefined) {
@@ -43,6 +42,12 @@ export function useAction(actionID: TActionID | undefined): TActionResult | unde
       },
     }
   }, [data, connect, replay])
+}
+
+export function getAction(actionID: TActionID): TActionObj | undefined {
+  const { active, history } = devpodStore.getAllActions()
+
+  return [...active, ...history].find((action) => action.id === actionID)
 }
 
 export function useConnectAction(

@@ -3,7 +3,6 @@ import {
   BoxProps,
   Flex,
   Grid,
-  Image,
   Link,
   Text,
   useColorModeValue,
@@ -13,13 +12,14 @@ import {
 import { ReactElement, ReactNode } from "react"
 import { LinkProps, NavLink as RouterLink } from "react-router-dom"
 import { useSettings } from "../../contexts"
-import DevPodLogo from "../../images/devpod.png"
+import { DevpodWordmark } from "../../icons/DevpodWordmark"
 import { useBorderColor } from "../../Theme"
 
 type TSidebarProps = Readonly<{ children?: readonly ReactElement[] }> & BoxProps
 export function Sidebar({ children, ...boxProps }: TSidebarProps) {
   const borderColor = useBorderColor()
   const backgroundColor = useColorModeValue("white", "black")
+  const wordmarkColor = useColorModeValue("black", "white")
   const isLeft = useSettings().sidebarPosition === "left"
 
   return (
@@ -39,7 +39,7 @@ export function Sidebar({ children, ...boxProps }: TSidebarProps) {
         justify="flex-start"
         width="full">
         <Box width="8" />
-        <Image marginTop="10px" width={"150px"} src={DevPodLogo} />
+        <DevpodWordmark marginTop={4} width={32} height={16} color={wordmarkColor} />
       </Flex>
       <VStack as="nav" align="start">
         {children}
@@ -67,6 +67,7 @@ export function SidebarMenuItem({ to, children, icon }: TSidebarMenuProps) {
   const backgroundColor = useToken("colors", backgroundColorToken)
   const borderColorToken = useColorModeValue("blackAlpha.200", "whiteAlpha.300")
   const borderColor = useToken("colors", borderColorToken)
+  const backgroundActiveColor = useToken("colors", "primary.400")
   const isLeft = settings.sidebarPosition === "left"
 
   return (
@@ -86,13 +87,13 @@ export function SidebarMenuItem({ to, children, icon }: TSidebarMenuProps) {
         justifyContent="flex-start"
         borderWidth="thin"
         borderColor="transparent"
-        opacity={0.6}
+        opacity={0.8}
         _hover={{ textDecoration: "none", backgroundColor }}
         // @ts-ignore // this function is added by react-router-dom's `NavLink`
         style={({ isActive }) => ({
           ...(isActive
             ? {
-                backgroundColor: "#AA40EE",
+                backgroundColor: backgroundActiveColor,
                 color: "white",
                 borderColor,
                 opacity: 1,

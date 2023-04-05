@@ -1,4 +1,4 @@
-export { useAction } from "./action"
+export { getAction, useAction } from "./action"
 export type { TActionName, TActionID, TActionObj } from "./action"
 export { DevPodProvider } from "./DevPodProvider"
 export { useProvider } from "./useProvider"

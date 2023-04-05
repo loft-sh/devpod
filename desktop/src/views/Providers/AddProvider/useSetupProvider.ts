@@ -51,6 +51,7 @@ function setupProviderReducer(state: TSetupProviderState, action: TActions): TSe
 
 export function useSetupProvider() {
   const [state, dispatch] = useReducer(setupProviderReducer, initialState)
+  const { remove } = useProviderManager()
 
   const reset = useCallback(() => {
     const danglingProviderID = client.providers.popDangling()
@@ -59,7 +60,7 @@ export function useSetupProvider() {
     }
 
     dispatch({ type: "reset" })
-  }, [dispatch])
+  }, [remove])
 
   const completeFirstStep = useCallback(
     (payload: TCompleteFirstStepAction["payload"]) => {
@@ -80,7 +81,6 @@ export function useSetupProvider() {
     dispatch({ type: "completeSecondStep" })
   }, [state.currentStep])
 
-  const { remove } = useProviderManager()
   useEffect(() => {
     if (state.currentStep === 1 || state.currentStep === "done") {
       client.providers.popDangling()
