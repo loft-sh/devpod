@@ -3,6 +3,9 @@ package workspace
 import (
 	"context"
 	"fmt"
+	"io/ioutil"
+	"net/http"
+	"net/url"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -304,6 +307,7 @@ func resolve(defaultProvider *ProviderWithOptions, devPodConfig *config.Config, 
 			UID:     uid,
 			Folder:  workspaceFolder,
 			Context: devPodConfig.DefaultContext,
+			Picture: getProjectImage(name),
 			Provider: provider2.WorkspaceProviderConfig{
 				Name: defaultProvider.Config.Name,
 			},
@@ -336,6 +340,41 @@ func resolve(defaultProvider *ProviderWithOptions, devPodConfig *config.Config, 
 	}
 
 	return nil, fmt.Errorf("%s is neither a local folder, git repository or docker image", name)
+}
+
+var regexes map[string]*regexp.Regexp= map[string]*regexp.Regexp{
+	"github.com": regexp.MustCompile(`(<meta[^>]+property)="og:image" content="([^"]+)"`),
+	"gitlab.com": regexp.MustCompile(`(<meta[^>]+content)="([^"]+)" property="og:image"`),
+	"content": regexp.MustCompile(`content="([^"]+)"`),
+}
+
+func getProjectImage(link string) string {
+	baseUrl, err := url.Parse(link)
+	if err != nil {
+		return ""
+	}
+
+	res, err := http.Get(link)
+	if err != nil {
+		return ""
+	}
+
+	content, err := ioutil.ReadAll(res.Body)
+	res.Body.Close()
+	if err != nil {
+		return ""
+	}
+
+	html := string(content)
+
+	// Find github social share image: https://css-tricks.com/essential-meta-tags-social-media/
+	meta := regexes[baseUrl.Host].FindString(html)
+	url := strings.Split(
+		regexes["content"].FindString(meta),
+		`"`,
+	)[1]
+
+	return url
 }
 
 func isLocalDir(name string) (bool, string) {
