@@ -5,16 +5,10 @@ description: |-
   DevPod on Docker
 optionGroups:
   - options:
-      - INACTIVITY_TIMEOUT
-      - OPTION_A
-    name: "Agent Options"
-  - options:
       - DOCKER_PATH
-    name: "Other Options"
-    defaultVisible: false
+      - INACTIVITY_TIMEOUT
+    name: "Advanced Options"
 options:
-  OPTION_A:
-    description: If defined, will automatically stop the container after the inactivity period.
   INACTIVITY_TIMEOUT:
     description: If defined, will automatically stop the container after the inactivity period.
   DOCKER_PATH:

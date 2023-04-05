@@ -14,7 +14,7 @@ export type TQueryResult<TData extends Readonly<object>> = [
   TData | undefined,
   Pick<UseMutationResult, "status" | "error">
 ]
-type TRunnable<TRunConfig> = Readonly<{ run(config: TRunConfig): void }>
+export type TRunnable<TRunConfig> = Readonly<{ run(config: TRunConfig): void }>
 //#endregion
 
 //#region IDE
@@ -69,6 +69,8 @@ export type TProviderOption = Readonly<{
   required: boolean | null
   // Allowed values for this option.
   enum: string[] | null
+  // Suggestions are suggestions to show in the DevPod UI for this option
+  suggestions: string[] | null
   // Hidden specifies if the option should be hidden
   hidden: boolean | null
   // Local means the variable is not resolved immediately and instead later when the workspace / machine was created.
