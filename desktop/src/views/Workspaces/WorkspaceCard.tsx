@@ -22,6 +22,7 @@ import {
   ModalFooter,
   ModalHeader,
   ModalOverlay,
+  Portal,
   Select,
   Stack,
   Tag,
@@ -122,23 +123,15 @@ export function WorkspaceCard({ workspaceID, onSelectionChange }: TWorkspaceCard
               )}
             </HStack>
             <HStack rowGap={2} marginTop={4} flexWrap="wrap" alignItems="center">
-              <Tag
-                borderRadius="full"
-                color={tagColor}
-                marginInlineStart="0 !important"
-                marginRight={2}>
+              <Tag borderRadius="full" color={tagColor}>
                 <Stack3D boxSize={4} />
                 <TagLabel marginLeft={2}>{provider?.name ?? "No provider"}</TagLabel>
               </Tag>
-              <Tag
-                borderRadius="full"
-                color={tagColor}
-                marginInlineStart="0 !important"
-                marginRight={2}>
+              <Tag borderRadius="full" color={tagColor}>
                 <Icon boxSize={4} as={HiOutlineCode} />
                 <TagLabel marginLeft={2}>{getIDEName(workspace.data.ide, idesQuery.data)}</TagLabel>
               </Tag>
-              <Tag borderRadius="full" color={tagColor} marginInlineStart="0 !important">
+              <Tag marginRight={2} borderRadius="full" color={tagColor}>
                 <Icon marginLeft={2} as={HiClock} />
                 <TagLabel>{dayjs(new Date(workspace.data.lastUsed)).fromNow()}</TagLabel>
               </Tag>
@@ -147,51 +140,26 @@ export function WorkspaceCard({ workspaceID, onSelectionChange }: TWorkspaceCard
 
           <CardFooter padding="none" paddingBottom={4}>
             <HStack spacing="2" width="full" justifyContent="end">
-              {workspace.data.status !== "Running" ? (
-                <IconButton
-                  aria-label="Start workspace"
-                  variant="ghost"
-                  color="primary"
-                  icon={<Play boxSize={5} />}
-                  isDisabled={
-                    workspace.data.status === "Busy" || workspace.data.status === "NotFound"
-                  }
-                  onClick={() => {
-                    const actionID = workspace.start({ id, ideConfig: ide })
-                    navigateToAction(actionID)
-                  }}
-                  isLoading={
-                    workspace.current?.name === "start" && workspace.current.status === "pending"
-                  }
-                />
-              ) : (
-                <>
-                  <Tooltip label={"Stop workspace"}>
-                    <IconButton
-                      aria-label="Stop workspace"
-                      variant="ghost"
-                      colorScheme="gray"
-                      onClick={() => workspace.stop()}
-                      icon={<Pause boxSize={5} />}
-                      isLoading={
-                        workspace.current?.name === "stop" && workspace.current.status === "pending"
-                      }
-                    />
-                  </Tooltip>
-                </>
-              )}
-              <Tooltip label={`Delete workspace`}>
-                <IconButton
-                  aria-label="Delete workspace"
-                  variant="ghost"
-                  colorScheme="gray"
-                  icon={<Trash boxSize={5} />}
-                  onClick={() => onDeleteOpen()}
-                  isLoading={
-                    workspace.current?.name === "remove" && workspace.current.status === "pending"
-                  }
-                />
-              </Tooltip>
+              <Button
+                aria-label="Start workspace"
+                variant="solid"
+                color="white"
+                borderColor={"#AA40EE"}
+                borderWidth={1}
+                backgroundColor="primary.500"
+                leftIcon={<Icon as={HiOutlineCode} boxSize={5} />}
+                isDisabled={
+                  workspace.data.status === "Busy" || workspace.data.status === "NotFound"
+                }
+                onClick={() => {
+                  const actionID = workspace.start({ id, ideConfig: ide })
+                  navigateToAction(actionID)
+                }}
+                isLoading={
+                  workspace.current?.name === "start" && workspace.current.status === "pending"
+                }>
+                Open
+              </Button>
               <Menu placement="top">
                 <Tooltip label="More Actions">
                   <MenuButton
@@ -203,36 +171,50 @@ export function WorkspaceCard({ workspaceID, onSelectionChange }: TWorkspaceCard
                     icon={<Ellipsis transform={"rotate(90deg)"} boxSize={5} />}
                   />
                 </Tooltip>
-                <MenuList>
-                  <InputGroup paddingRight={3}>
-                    <Button
-                      colorScheme={"primary"}
-                      variant="ghost"
-                      fontWeight={"normal"}
-                      color="primary"
-                      leftIcon={<Play boxSize={4} />}
-                      onClick={handleOpenWithIDEClicked(workspace.data.id)}>
-                      Start with
-                    </Button>
-                    <Select
-                      maxWidth={40}
-                      overflow="hidden"
-                      textOverflow="ellipsis"
-                      whiteSpace="nowrap"
-                      defaultValue={workspace.data.ide?.name ?? undefined}
-                      onChange={(e) => setIdeName(e.target.value)}
-                      value={ideName}>
-                      {idesQuery.data?.map((ide) => (
-                        <option key={ide.name} value={ide.name!}>
-                          {ide.displayName}
-                        </option>
-                      ))}
-                    </Select>
-                  </InputGroup>
-                  <MenuItem icon={<ArrowPath boxSize={4} />} onClick={onRebuildOpen}>
-                    Rebuild
-                  </MenuItem>
-                </MenuList>
+                <Portal>
+                  <MenuList>
+                    <InputGroup paddingRight={3}>
+                      <Button
+                        colorScheme={"primary"}
+                        variant="ghost"
+                        fontWeight={"normal"}
+                        color="primary"
+                        leftIcon={<Play boxSize={4} />}
+                        onClick={handleOpenWithIDEClicked(workspace.data.id)}>
+                        Start with
+                      </Button>
+                      <Select
+                        maxWidth={40}
+                        overflow="hidden"
+                        textOverflow="ellipsis"
+                        whiteSpace="nowrap"
+                        defaultValue={workspace.data.ide?.name ?? undefined}
+                        onChange={(e) => setIdeName(e.target.value)}
+                        value={ideName}>
+                        {idesQuery.data?.map((ide) => (
+                          <option key={ide.name} value={ide.name!}>
+                            {ide.displayName}
+                          </option>
+                        ))}
+                      </Select>
+                    </InputGroup>
+                    <MenuItem icon={<ArrowPath boxSize={4} />} onClick={onRebuildOpen}>
+                      Rebuild
+                    </MenuItem>
+                    <MenuItem
+                      onClick={() => workspace.stop()}
+                      icon={<Pause boxSize={5} />}
+                      isDisabled={workspace.data.status !== "Running"}>
+                      Stop
+                    </MenuItem>
+                    <MenuItem
+                      fontWeight="normal"
+                      icon={<Trash boxSize={5} />}
+                      onClick={() => onDeleteOpen()}>
+                      Delete
+                    </MenuItem>
+                  </MenuList>
+                </Portal>
               </Menu>
             </HStack>
           </CardFooter>
