@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"net/http"
+	"net/url"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -306,7 +307,7 @@ func resolve(defaultProvider *ProviderWithOptions, devPodConfig *config.Config, 
 			UID:     uid,
 			Folder:  workspaceFolder,
 			Context: devPodConfig.DefaultContext,
-			Picture: getGithubImage(name),
+			Picture: getProjectImage(name),
 			Provider: provider2.WorkspaceProviderConfig{
 				Name: defaultProvider.Config.Name,
 			},
@@ -341,8 +342,15 @@ func resolve(defaultProvider *ProviderWithOptions, devPodConfig *config.Config, 
 	return nil, fmt.Errorf("%s is neither a local folder, git repository or docker image", name)
 }
 
-func getGithubImage(link string) string {
-	if !strings.Contains(link, "github") {
+var regexes map[string]*regexp.Regexp= map[string]*regexp.Regexp{
+	"github.com": regexp.MustCompile(`(<meta[^>]+property)="og:image" content="([^"]+)"`),
+	"gitlab.com": regexp.MustCompile(`(<meta[^>]+content)="([^"]+)" property="og:image"`),
+	"content": regexp.MustCompile(`content="([^"]+)"`),
+}
+
+func getProjectImage(link string) string {
+	baseUrl, err := url.Parse(link)
+	if err != nil {
 		return ""
 	}
 
@@ -360,12 +368,13 @@ func getGithubImage(link string) string {
 	html := string(content)
 
 	// Find github social share image: https://css-tricks.com/essential-meta-tags-social-media/
-	var re = regexp.MustCompile(`(<meta[^>]+property)="og:image" content="([^"]+)"`)
-	url := re.FindString(html)
+	meta := regexes[baseUrl.Host].FindString(html)
+	url := strings.Split(
+		regexes["content"].FindString(meta),
+		`"`,
+	)[1]
 
-	return strings.Trim(
-		strings.SplitAfter(url, "content=")[1],
-		`"`)
+	return url
 }
 
 func isLocalDir(name string) (bool, string) {
