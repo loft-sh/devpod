@@ -349,6 +349,12 @@ var regexes map[string]*regexp.Regexp = map[string]*regexp.Regexp{
 }
 
 func getProjectImage(link string) string {
+	if !strings.HasPrefix(link, "http") &&
+		!strings.HasPrefix(link, "https") {
+
+		link = "https://" + link
+	}
+
 	baseUrl, err := url.Parse(link)
 	if err != nil {
 		return ""
