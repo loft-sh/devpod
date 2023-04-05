@@ -1,11 +1,5 @@
-import { exists, safeJSONParse, Result, ResultError, Return } from "../../lib"
-import {
-  TAddProviderConfig,
-  TLogOutput,
-  TProviderID,
-  TProviderOptions,
-  TProviders,
-} from "../../types"
+import { exists, Result, ResultError, Return, getErrorFromChildProcess } from "../../lib"
+import { TAddProviderConfig, TProviderID, TProviderOptions, TProviders } from "../../types"
 import { Command, isOk, toFlagArg } from "../command"
 import {
   DEVPOD_COMMAND_ADD,
@@ -60,7 +54,7 @@ export class ProviderCommands {
     }
 
     if (!isOk(result.val)) {
-      return Return.Failed(`Failed to get ID for provider source ${source}: ${result.val.stderr}`)
+      return getErrorFromChildProcess(result.val)
     }
 
     return Return.Value(result.val.stdout)
@@ -87,12 +81,7 @@ export class ProviderCommands {
     }
 
     if (!isOk(result.val)) {
-      const maybeOutput = safeJSONParse<TLogOutput>(result.val.stderr)
-
-      return Return.Failed(
-        maybeOutput?.message ??
-          `Failed to add provider with source ${rawProviderSource}: ${result.val.stderr}`
-      )
+      return getErrorFromChildProcess(result.val)
     }
 
     return Return.Ok()
@@ -109,11 +98,7 @@ export class ProviderCommands {
     }
 
     if (!isOk(result.val)) {
-      const maybeOutput = safeJSONParse<TLogOutput>(result.val.stderr)
-
-      return Return.Failed(
-        maybeOutput?.message ?? `Failed to remove provider ${id}: ${result.val.stderr}`
-      )
+      return getErrorFromChildProcess(result.val)
     }
 
     return Return.Ok()
@@ -141,11 +126,7 @@ export class ProviderCommands {
     }
 
     if (!isOk(result.val)) {
-      const maybeOutput = safeJSONParse<TLogOutput>(result.val.stderr)
-
-      return Return.Failed(
-        maybeOutput?.message ?? `Failed to use provider ${id}: ${result.val.stderr}`
-      )
+      return getErrorFromChildProcess(result.val)
     }
 
     return Return.Ok()
@@ -172,11 +153,7 @@ export class ProviderCommands {
     }
 
     if (!isOk(result.val)) {
-      const maybeOutput = safeJSONParse<TLogOutput>(result.val.stderr)
-
-      return Return.Failed(
-        maybeOutput?.message ?? `Failed to set options for provider ${id}: ${result.val.stderr}`
-      )
+      return getErrorFromChildProcess(result.val)
     }
 
     return Return.Ok()
@@ -194,11 +171,7 @@ export class ProviderCommands {
     }
 
     if (!isOk(result.val)) {
-      const maybeOutput = safeJSONParse<TLogOutput>(result.val.stderr)
-
-      return Return.Failed(
-        maybeOutput?.message ?? `Failed to get options for provider ${id}: ${result.val.stderr}`
-      )
+      return getErrorFromChildProcess(result.val)
     }
 
     return Return.Value(JSON.parse(result.val.stdout) as TProviderOptions)
@@ -216,11 +189,7 @@ export class ProviderCommands {
     }
 
     if (!isOk(result.val)) {
-      const maybeOutput = safeJSONParse<TLogOutput>(result.val.stderr)
-
-      return Return.Failed(
-        maybeOutput?.message ?? `Failed to init provider ${id}: ${result.val.stderr}`
-      )
+      return getErrorFromChildProcess(result.val)
     }
 
     return Return.Ok()

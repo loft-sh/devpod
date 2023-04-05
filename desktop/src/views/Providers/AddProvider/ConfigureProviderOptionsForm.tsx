@@ -6,7 +6,6 @@ import {
   FormErrorMessage,
   FormHelperText,
   FormLabel,
-  Heading,
   Input,
   SimpleGrid,
   VStack,
@@ -17,7 +16,7 @@ import { ReactNode, useCallback, useMemo } from "react"
 import { FormProvider, SubmitHandler, useForm, useFormContext } from "react-hook-form"
 import { client } from "../../../client"
 import { useProvider } from "../../../contexts"
-import { exists, useFormErrors } from "../../../lib"
+import { exists, isError, useFormErrors } from "../../../lib"
 import {
   TConfigureProviderConfig,
   TProviderID,
@@ -25,7 +24,7 @@ import {
   TProviderOptions,
 } from "../../../types"
 import { canCreateMachine, getVisibleOptions, TOptionWithID } from "../helpers"
-import { CollapsibleSection } from "../../../components"
+import { CollapsibleSection, ErrorMessageBox } from "../../../components"
 
 type TAllOptions = Readonly<{
   required: TOptionWithID[]
@@ -72,12 +71,17 @@ export function ConfigureProviderOptionsForm({
       reuseMachine: showReuseMachineField,
     },
   })
-  const { status, mutate: configureProvider } = useMutation({
+  const {
+    status,
+    error,
+    mutate: configureProvider,
+  } = useMutation({
     mutationFn: async ({
       providerID,
       config,
-    }: Readonly<{ providerID: TProviderID; config: TConfigureProviderConfig }>) =>
-      client.providers.configure(providerID, config),
+    }: Readonly<{ providerID: TProviderID; config: TConfigureProviderConfig }>) => {
+      ;(await client.providers.configure(providerID, config)).unwrap()
+    },
     onSuccess() {
       onFinish?.()
     },
@@ -219,7 +223,7 @@ export function ConfigureProviderOptionsForm({
               </CollapsibleSection>
             </Box>
           )}
-
+          {status === "error" && isError(error) && <ErrorMessageBox error={error} />}
           <Button
             marginTop="10"
             type="submit"

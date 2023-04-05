@@ -1,3 +1,7 @@
+import { TLogOutput } from "../types"
+import { ChildProcess } from "@tauri-apps/api/shell"
+import { Err, Failed, Return } from "./result"
+
 export function exists<T extends any | null | undefined>(
   arg: T
 ): arg is Exclude<T, null | undefined> {
@@ -32,6 +36,57 @@ export function safeJSONParse<T>(arg: string): T | null {
   } catch {
     return null
   }
+}
+
+export function getErrorFromChildProcess(result: ChildProcess): Err<Failed> {
+  const stdout = parseOutput(result.stdout)
+  const stderr = parseOutput(result.stderr)
+  const sorted = [...stdout, ...stderr].sort((a, b) => {
+    if (a.time === b.time) {
+      return 0
+    }
+
+    const aTime = new Date(a.time).getTime() || 0
+    const bTime = new Date(b.time).getTime() || 0
+    if (aTime < bTime) {
+      return -1
+    }
+
+    return 1
+  })
+
+  const message: string[] = sorted.reduce((acc, log) => {
+    const line = log.message?.trim()
+    if (!line) {
+      return acc
+    }
+
+    acc.push(line)
+
+    return acc
+  }, [] as string[])
+
+  return Return.Failed(message.join("\n"))
+}
+
+export function parseOutput(arg: string): TLogOutput[] {
+  const retOutput: TLogOutput[] = arg.split("\n").reduce((acc, line) => {
+    const trimmed = line.trim()
+    if (!trimmed) {
+      return acc
+    }
+
+    const logLine = safeJSONParse(line) as TLogOutput | undefined
+    if (!logLine?.message) {
+      return acc
+    }
+
+    acc.push(logLine)
+
+    return acc
+  }, [] as TLogOutput[])
+
+  return retOutput
 }
 
 export function getKeys<T extends object>(arg: T): readonly (keyof T)[] {
