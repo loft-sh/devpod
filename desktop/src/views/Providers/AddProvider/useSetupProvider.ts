@@ -2,7 +2,7 @@ import { useCallback, useEffect, useReducer } from "react"
 import { client } from "../../../client"
 import { useProviderManager } from "../../../contexts"
 import { exists, TAction } from "../../../lib"
-import { TProviderID, TProviderOptions } from "../../../types"
+import { TProviderID, TProviderOptionGroup, TProviderOptions } from "../../../types"
 
 type TSetupProviderState = Readonly<
   | {
@@ -14,12 +14,17 @@ type TSetupProviderState = Readonly<
       currentStep: 2
       providerID: TProviderID
       options: TProviderOptions
+      optionGroups: TProviderOptionGroup[]
     }
   | { currentStep: "done"; providerID: TProviderID }
 >
 type TCompleteFirstStepAction = TAction<
   "completeFirstStep",
-  Readonly<{ providerID: TProviderID; options: TProviderOptions }>
+  Readonly<{
+    providerID: TProviderID
+    options: TProviderOptions
+    optionGroups: TProviderOptionGroup[]
+  }>
 >
 type TCompleteSecondStepAction = TAction<"completeSecondStep">
 type TActions = TCompleteFirstStepAction | TCompleteSecondStepAction
@@ -33,6 +38,7 @@ function setupProviderReducer(state: TSetupProviderState, action: TActions): TSe
         currentStep: 2,
         providerID: action.payload.providerID,
         options: action.payload.options,
+        optionGroups: action.payload.optionGroups,
       }
     case "completeSecondStep":
       return { currentStep: "done", providerID: state.providerID! }

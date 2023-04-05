@@ -27,6 +27,9 @@ type ProviderConfig struct {
 	// Description is the provider description
 	Description string `json:"description,omitempty"`
 
+	// OptionGroups holds information how to display options
+	OptionGroups []ProviderOptionGroup `json:"optionGroups,omitempty"`
+
 	// Options are the provider options.
 	Options map[string]*ProviderOption `json:"options,omitempty"`
 
@@ -40,7 +43,21 @@ type ProviderConfig struct {
 	Binaries map[string][]*ProviderBinary `json:"binaries,omitempty"`
 }
 
+type ProviderOptionGroup struct {
+	// Name is the display name of the option group
+	Name string `json:"name,omitempty"`
+
+	// Options are the options that belong to this group
+	Options []string `json:"options,omitempty"`
+
+	// DefaultVisible defines if the option group should be visible by default
+	DefaultVisible bool `json:"defaultVisible,omitempty"`
+}
+
 type ProviderSource struct {
+	// Internal means provider was received internally
+	Internal bool `json:"internal,omitempty"`
+
 	// Github source for the provider
 	Github string `json:"github,omitempty"`
 

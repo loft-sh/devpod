@@ -49,6 +49,7 @@ export function AddProvider() {
                 initializeProvider
                 providerID={state.providerID}
                 options={state.options}
+                optionGroups={state.optionGroups}
                 onFinish={completeSecondStep}
               />
             )}

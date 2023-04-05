@@ -1,6 +1,7 @@
-import { Box, Button, useDisclosure } from "@chakra-ui/react"
+import { Box, Button, Icon, useDisclosure } from "@chakra-ui/react"
 import { AnimatePresence, motion, Variants } from "framer-motion"
 import { forwardRef, ReactNode, useLayoutEffect, useRef } from "react"
+import { AiOutlineCaretRight } from "react-icons/ai"
 
 const variants: Variants = {
   enter: {
@@ -26,11 +27,12 @@ type TCollapsibleSectionProps = Readonly<{
   children: ReactNode
   isOpen?: boolean
   isDisabled?: boolean
+  showIcon?: boolean
   onOpenChange?: (isOpen: boolean, element: HTMLDivElement | null) => void
 }>
 export const CollapsibleSection = forwardRef<HTMLDivElement, TCollapsibleSectionProps>(
   function CollapsibleSection(
-    { title, children, onOpenChange, isOpen: isOpenProp = false, isDisabled = false },
+    { title, children, onOpenChange, isOpen: isOpenProp = false, isDisabled = false, showIcon },
     ref
   ) {
     const motionRef = useRef<HTMLDivElement>(null)
@@ -50,6 +52,15 @@ export const CollapsibleSection = forwardRef<HTMLDivElement, TCollapsibleSection
       <Box width="full">
         <Button ref={ref} variant="ghost" width="full" {...buttonProps}>
           <Box as="span" flex="1" textAlign="left">
+            {showIcon && (
+              <Icon
+                marginRight={"3px"}
+                fontSize={"12px"}
+                transition={"transform .2s"}
+                transform={isOpen ? "rotate(90deg)" : ""}
+                as={AiOutlineCaretRight}
+              />
+            )}
             {typeof title === "function" ? title(isOpen) : title}
           </Box>
         </Button>

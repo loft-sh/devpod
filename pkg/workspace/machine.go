@@ -44,7 +44,7 @@ func resolveMachine(devPodConfig *config.Config, args []string, log log.Logger) 
 	}
 
 	// get default provider
-	defaultProvider, _, err := LoadProviders(devPodConfig)
+	defaultProvider, _, err := LoadProviders(devPodConfig, log)
 	if err != nil {
 		return nil, err
 	}
@@ -147,7 +147,7 @@ func loadExistingMachine(machineID string, devPodConfig *config.Config, log log.
 		return nil, err
 	}
 
-	providerWithOptions, err := FindProvider(devPodConfig, machineConfig.Provider.Name)
+	providerWithOptions, err := FindProvider(devPodConfig, machineConfig.Provider.Name, log)
 	if err != nil {
 		return nil, err
 	}

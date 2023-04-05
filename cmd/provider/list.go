@@ -47,7 +47,7 @@ func (cmd *ListCmd) Run(ctx context.Context) error {
 		return err
 	}
 
-	providers, err := workspace.LoadAllProviders(devPodConfig)
+	providers, err := workspace.LoadAllProviders(devPodConfig, log.Default.ErrorStreamOnly())
 	if err != nil {
 		return err
 	}

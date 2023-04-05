@@ -44,7 +44,7 @@ func (cmd *InitCmd) Run(ctx context.Context, devPodConfig *config.Config, args [
 		return fmt.Errorf("please specify a provider name. E.g. devpod provider init docker")
 	}
 
-	providerConfig, err := workspace.FindProvider(devPodConfig, args[0])
+	providerConfig, err := workspace.FindProvider(devPodConfig, args[0], log.Default)
 	if err != nil {
 		return err
 	}

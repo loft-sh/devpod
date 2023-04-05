@@ -1,8 +1,20 @@
 name: docker
-version: 0.0.1
+version: v0.0.1
+icon: https://www.docker.com/wp-content/uploads/2022/03/vertical-logo-monochromatic.png
 description: |-
   DevPod on Docker
+optionGroups:
+  - options:
+      - INACTIVITY_TIMEOUT
+      - OPTION_A
+    name: "Agent Options"
+  - options:
+      - DOCKER_PATH
+    name: "Other Options"
+    defaultVisible: false
 options:
+  OPTION_A:
+    description: If defined, will automatically stop the container after the inactivity period.
   INACTIVITY_TIMEOUT:
     description: If defined, will automatically stop the container after the inactivity period.
   DOCKER_PATH:

@@ -148,6 +148,31 @@ func validate(config *ProviderConfig) error {
 		return fmt.Errorf("exec.create is required")
 	}
 
+	err = validateOptionGroups(config)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func validateOptionGroups(config *ProviderConfig) error {
+	foundOptions := map[string]bool{}
+	for idx, group := range config.OptionGroups {
+		if group.Name == "" {
+			return fmt.Errorf("optionGroups[%d].name cannot be empty", idx)
+		}
+
+		for _, option := range group.Options {
+			if config.Options == nil || config.Options[option] == nil {
+				return fmt.Errorf("option '%s' in option group '%s' was not found under options", option, group.Name)
+			} else if foundOptions[option] {
+				return fmt.Errorf("option '%s' is used in multiple option groups", option)
+			}
+
+			foundOptions[option] = true
+		}
+	}
 	return nil
 }
 

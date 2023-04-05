@@ -61,7 +61,8 @@ var _ = DevPodDescribe("devpod provider test suite", func() {
 
 		// Ensure provider 2 namespace parameter has the default value
 		ctx, _ := context.WithDeadline(context.Background(), time.Now().Add(30*time.Second))
-		f.DevPodProviderOptionsCheckNamespaceDescription(ctx, "provider2", "The namespace to use")
+		err = f.DevPodProviderOptionsCheckNamespaceDescription(ctx, "provider2", "The namespace to use")
+		framework.ExpectNoError(err)
 
 		// Update provider 2 (change the namespace description value)
 		err = f.DevPodProviderUpdate([]string{"provider2", tempDir + "/provider2-update.yaml"})
@@ -69,7 +70,8 @@ var _ = DevPodDescribe("devpod provider test suite", func() {
 
 		// Ensure that provider 2 was updated
 		ctx, _ = context.WithDeadline(context.Background(), time.Now().Add(30*time.Second))
-		f.DevPodProviderOptionsCheckNamespaceDescription(ctx, "provider2", "Updated namespace parameter description")
+		err = f.DevPodProviderOptionsCheckNamespaceDescription(ctx, "provider2", "Updated namespace parameter description")
+		framework.ExpectNoError(err)
 
 		// Cleanup: delete provider 2
 		err = f.DevPodProviderDelete([]string{"provider2"})
