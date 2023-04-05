@@ -150,9 +150,10 @@ export function WorkspaceCard({ workspaceID, onSelectionChange }: TWorkspaceCard
                 aria-label="Start workspace"
                 variant="solid"
                 color="white"
-                borderColor={"#AA40EE"}
+                borderColor={"primary.400"}
                 borderWidth={1}
                 backgroundColor="primary.500"
+                _hover={{ backgroundColor: "primary.600" }}
                 leftIcon={<Icon as={HiOutlineCode} boxSize={5} />}
                 isDisabled={
                   workspace.data.status === "Busy" || workspace.data.status === "NotFound"
@@ -194,7 +195,6 @@ export function WorkspaceCard({ workspaceID, onSelectionChange }: TWorkspaceCard
                         overflow="hidden"
                         textOverflow="ellipsis"
                         whiteSpace="nowrap"
-                        defaultValue={workspace.data.ide?.name ?? undefined}
                         onChange={(e) => setIdeName(e.target.value)}
                         value={ideName}>
                         {idesQuery.data?.map((ide) => (

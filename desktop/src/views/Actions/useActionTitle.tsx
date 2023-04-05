@@ -1,13 +1,17 @@
 import { IconButton } from "@chakra-ui/react"
 import { useMemo } from "react"
-import { useMatch, useNavigate } from "react-router"
+import { useLocation, useMatch, useNavigate } from "react-router-dom"
 import { TViewTitle } from "../../components"
+import { getAction } from "../../contexts"
 import { ArrowLeft } from "../../icons"
-import { exists } from "../../lib"
+import { exists, getActionDisplayName } from "../../lib"
 import { Routes } from "../../routes"
 
 export function useActionTitle(): TViewTitle | null {
   const navigate = useNavigate()
+  const location = useLocation()
+
+  console.log(location)
 
   const matchAction = useMatch(Routes.ACTION)
 
@@ -15,19 +19,32 @@ export function useActionTitle(): TViewTitle | null {
     if (!exists(matchAction)) {
       return null
     }
+    const maybeActionID = Routes.getActionID(matchAction.params)
+    if (!maybeActionID) {
+      return null
+    }
+    const maybeAction = getAction(maybeActionID)
+    if (maybeAction === undefined) {
+      return null
+    }
 
     return {
-      label: "TODO: get action title",
+      label: getActionDisplayName(maybeAction),
       priority: "regular",
       leadingAction: (
         <IconButton
           variant="ghost"
           aria-label="Navigate back to Workspaces"
           icon={<ArrowLeft />}
-          onClick={() => {}}
-          // TODO: navigate to wherever the user came from or to workspace root
+          onClick={() => {
+            if (location.key !== "default") {
+              navigate(-1)
+            } else {
+              navigate(Routes.WORKSPACES)
+            }
+          }}
         />
       ),
     }
-  }, [matchAction])
+  }, [location.key, matchAction, navigate])
 }

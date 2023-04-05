@@ -136,7 +136,7 @@ export function ConfigureProviderOptionsForm({
 
       return acc
     }, empty)
-  }, [optionsProp])
+  }, [optionGroups, optionsProp])
 
   return (
     <FormProvider {...formMethods}>

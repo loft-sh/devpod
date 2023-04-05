@@ -12,6 +12,7 @@ import {
   Select,
   SimpleGrid,
   Tab,
+  Text,
   TabList,
   TabPanel,
   TabPanels,
@@ -141,128 +142,129 @@ export function CreateWorkspace() {
   return (
     <form onSubmit={handleSubmit(onSubmit)}>
       <VStack align="start" spacing="6" marginBottom={"20px"}>
-        <Tabs colorScheme={"primary"} width={"100%"} maxWidth={"1024px"}>
-          <TabList>
-            <Tab>From Path</Tab>
-            <Tab>From Example</Tab>
-          </TabList>
+        <VStack
+          width="full"
+          backgroundColor="gray.50"
+          borderRadius="lg"
+          borderWidth="thin"
+          borderColor="gray.200">
+          <FormControl
+            marginBottom="8"
+            padding="16"
+            isRequired
+            isInvalid={exists(sourceError)}
+            borderBottomWidth="thin"
+            borderBottomColor="gray.200">
+            <Text marginBottom="2" fontWeight="bold">
+              Enter any git repository or local path to a folder you would like to create a
+              workspace from.
+            </Text>
+            <InputGroup backgroundColor="white">
+              <Input
+                placeholder="github.com/my-org/my-repo"
+                fontSize={"16px"}
+                padding={"10px"}
+                height={"42px"}
+                defaultValue={params.rawSource}
+                type="text"
+                {...register(FieldName.SOURCE, { required: true })}
+              />
+              <Tooltip label={"Select Folder"}>
+                <InputRightElement
+                  cursor={"pointer"}
+                  onClick={async () => {
+                    const selected = await open({
+                      directory: true,
+                    })
+                    if (selected) {
+                      setValue(FieldName.SOURCE, selected + "", {
+                        shouldDirty: true,
+                      })
+                    }
+                  }}>
+                  <Icon
+                    _hover={{ color: "black" }}
+                    position={"relative"}
+                    top={"3px"}
+                    fontSize={"18px"}
+                    as={FiFile}
+                    color={"grey"}
+                  />
+                </InputRightElement>
+              </Tooltip>
+            </InputGroup>
+            {exists(sourceError) ? (
+              <FormErrorMessage>{sourceError.message ?? "Error"}</FormErrorMessage>
+            ) : (
+              <FormHelperText></FormHelperText>
+            )}
+          </FormControl>
 
-          <TabPanels>
-            <TabPanel>
-              <FormControl isRequired isInvalid={exists(sourceError)}>
-                <InputGroup>
-                  <Input
-                    placeholder="github.com/my-org/my-repo"
-                    fontSize={"16px"}
-                    padding={"10px"}
-                    height={"42px"}
-                    defaultValue={params.rawSource}
-                    type="text"
-                    {...register(FieldName.SOURCE, { required: true })}
-                  />
-                  <Tooltip label={"Select Folder"}>
-                    <InputRightElement
-                      cursor={"pointer"}
-                      onClick={async () => {
-                        const selected = await open({
-                          directory: true,
-                        })
-                        if (selected) {
-                          setValue(FieldName.SOURCE, selected + "", {
-                            shouldDirty: true,
-                          })
-                        }
-                      }}>
-                      <Icon
-                        _hover={{ color: "black" }}
-                        position={"relative"}
-                        top={"3px"}
-                        fontSize={"18px"}
-                        as={FiFile}
-                        color={"grey"}
-                      />
-                    </InputRightElement>
-                  </Tooltip>
-                </InputGroup>
-                {exists(sourceError) ? (
-                  <FormErrorMessage>{sourceError.message ?? "Error"}</FormErrorMessage>
-                ) : (
-                  <FormHelperText>
-                    Enter any git repository or local path to a folder you would like to create a
-                    workspace from.
-                  </FormHelperText>
-                )}
-              </FormControl>
-            </TabPanel>
-            <TabPanel>
-              <FormControl isRequired isInvalid={exists(sourceError)}>
-                <SimpleGrid
-                  spacing={4}
-                  templateColumns="repeat(auto-fill, minmax(120px, 1fr))"
-                  marginTop={"10px"}>
-                  <ExampleCard
-                    image={PythonSvg}
-                    source={"https://github.com/microsoft/vscode-remote-try-python"}
-                    currentSource={currentSource}
-                    setValue={setValue}
-                  />
-                  <ExampleCard
-                    image={NodejsPng}
-                    source={"https://github.com/microsoft/vscode-remote-try-node"}
-                    currentSource={currentSource}
-                    setValue={setValue}
-                  />
-                  <ExampleCard
-                    image={GoPng}
-                    source={"https://github.com/Microsoft/vscode-remote-try-go"}
-                    currentSource={currentSource}
-                    setValue={setValue}
-                  />
-                  <ExampleCard
-                    image={RustSvg}
-                    source={"https://github.com/microsoft/vscode-remote-try-rust"}
-                    currentSource={currentSource}
-                    setValue={setValue}
-                  />
-                  <ExampleCard
-                    image={JavaPng}
-                    source={"https://github.com/microsoft/vscode-remote-try-java"}
-                    currentSource={currentSource}
-                    setValue={setValue}
-                  />
-                  <ExampleCard
-                    image={PhpSvg}
-                    source={"https://github.com/microsoft/vscode-remote-try-php"}
-                    currentSource={currentSource}
-                    setValue={setValue}
-                  />
-                  <ExampleCard
-                    image={CppSvg}
-                    source={"https://github.com/microsoft/vscode-remote-try-cpp"}
-                    currentSource={currentSource}
-                    setValue={setValue}
-                  />
-                  <ExampleCard
-                    image={DotnetcorePng}
-                    source={"https://github.com/microsoft/vscode-remote-try-dotnet"}
-                    currentSource={currentSource}
-                    setValue={setValue}
-                  />
-                </SimpleGrid>
-                {exists(sourceError) ? (
-                  <FormErrorMessage>{sourceError.message ?? "Error"}</FormErrorMessage>
-                ) : (
-                  <FormHelperText>
-                    Select one of the example repositories above to get started with your favourite
-                    programming language.
-                  </FormHelperText>
-                )}
-              </FormControl>
-            </TabPanel>
-          </TabPanels>
-        </Tabs>
+          <CollapsibleSection title="Or use one of our quickstart examples..." showIcon isOpen>
+            <FormControl isRequired isInvalid={exists(sourceError)} marginBottom="8">
+              <SimpleGrid
+                spacing={4}
+                templateColumns="repeat(auto-fill, minmax(120px, 1fr))"
+                marginTop={"10px"}>
+                <ExampleCard
+                  image={PythonSvg}
+                  source={"https://github.com/microsoft/vscode-remote-try-python"}
+                  currentSource={currentSource}
+                  setValue={setValue}
+                />
+                <ExampleCard
+                  image={NodejsPng}
+                  source={"https://github.com/microsoft/vscode-remote-try-node"}
+                  currentSource={currentSource}
+                  setValue={setValue}
+                />
+                <ExampleCard
+                  image={GoPng}
+                  source={"https://github.com/Microsoft/vscode-remote-try-go"}
+                  currentSource={currentSource}
+                  setValue={setValue}
+                />
+                <ExampleCard
+                  image={RustSvg}
+                  source={"https://github.com/microsoft/vscode-remote-try-rust"}
+                  currentSource={currentSource}
+                  setValue={setValue}
+                />
+                <ExampleCard
+                  image={JavaPng}
+                  source={"https://github.com/microsoft/vscode-remote-try-java"}
+                  currentSource={currentSource}
+                  setValue={setValue}
+                />
+                <ExampleCard
+                  image={PhpSvg}
+                  source={"https://github.com/microsoft/vscode-remote-try-php"}
+                  currentSource={currentSource}
+                  setValue={setValue}
+                />
+                <ExampleCard
+                  image={CppSvg}
+                  source={"https://github.com/microsoft/vscode-remote-try-cpp"}
+                  currentSource={currentSource}
+                  setValue={setValue}
+                />
+                <ExampleCard
+                  image={DotnetcorePng}
+                  source={"https://github.com/microsoft/vscode-remote-try-dotnet"}
+                  currentSource={currentSource}
+                  setValue={setValue}
+                />
+              </SimpleGrid>
+              {exists(sourceError) ? (
+                <FormErrorMessage>{sourceError.message ?? "Error"}</FormErrorMessage>
+              ) : (
+                <FormHelperText></FormHelperText>
+              )}
+            </FormControl>
+          </CollapsibleSection>
+        </VStack>
 
-        <CollapsibleSection title={"Advanced Options"} showIcon={true}>
+        <CollapsibleSection title={"Advanced Options"} showIcon>
           <VStack spacing="10" maxWidth={"1024px"}>
             <HStack spacing="8" alignItems={"top"} width={"100%"} justifyContent={"start"}>
               <FormControl isRequired isInvalid={exists(providerError)}>
@@ -334,7 +336,6 @@ export function CreateWorkspace() {
             </FormControl>
           </VStack>
         </CollapsibleSection>
-
         <Button
           colorScheme={"primary"}
           marginTop="10"

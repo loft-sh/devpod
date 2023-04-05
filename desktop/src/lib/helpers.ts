@@ -1,6 +1,7 @@
 import { TLogOutput } from "../types"
 import { ChildProcess } from "@tauri-apps/api/shell"
 import { Err, Failed, Return } from "./result"
+import { TActionObj } from "../contexts"
 
 export function exists<T extends any | null | undefined>(
   arg: T
@@ -95,4 +96,8 @@ export function getKeys<T extends object>(arg: T): readonly (keyof T)[] {
 
 export function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms))
+}
+
+export function getActionDisplayName(action: TActionObj): string {
+  return `${action.name} ${action.targetID}`
 }

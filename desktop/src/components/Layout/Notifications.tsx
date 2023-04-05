@@ -20,6 +20,7 @@ import { useMemo } from "react"
 import { Link as RouterLink } from "react-router-dom"
 import { useWorkspaceActions } from "../../contexts"
 import { Bell, CheckCircle, ExclamationCircle, ExclamationTriangle } from "../../icons"
+import { getActionDisplayName } from "../../lib"
 import { Routes } from "../../routes"
 import { Ripple } from "../Animation"
 
@@ -78,8 +79,11 @@ export function Notifications() {
 
                 <VStack align="start">
                   <Text fontWeight="bold">
-                    <LinkOverlay as={RouterLink} to={Routes.toAction(action.id)}>
-                      {action.name} {action.targetID}
+                    <LinkOverlay
+                      as={RouterLink}
+                      to={Routes.toAction(action.id)}
+                      textTransform="capitalize">
+                      {getActionDisplayName(action)}
                     </LinkOverlay>
                   </Text>
                   {action.finishedAt !== undefined && (

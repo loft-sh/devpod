@@ -25,7 +25,9 @@ export const theme = extendTheme({
   },
   colors: {
     primary: {
+      400: "#AA40EE",
       500: "#BA50FF",
+      600: "#CA60FF", // TODO: change to #CA60FF
     },
   },
   config: {

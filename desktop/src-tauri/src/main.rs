@@ -73,7 +73,6 @@ fn main() -> anyhow::Result<()> {
             window::setup(&window);
 
             let app_handle = app.handle();
-            println!("setup");
             tauri::async_runtime::spawn(async move {
                 let mut is_ready = false;
                 let mut messages: VecDeque<UiMessage> = VecDeque::new();

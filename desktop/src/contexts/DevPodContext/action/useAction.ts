@@ -18,9 +18,7 @@ export function useAction(actionID: TActionID | undefined): TActionResult | unde
         return undefined
       }
 
-      const { active, history } = devpodStore.getAllActions()
-
-      return [...active, ...history].find((action) => action.id === actionID)
+      return getAction(actionID)
     }
   )
 
@@ -43,6 +41,12 @@ export function useAction(actionID: TActionID | undefined): TActionResult | unde
       },
     }
   }, [data, connect, replay])
+}
+
+export function getAction(actionID: TActionID): TActionObj | undefined {
+  const { active, history } = devpodStore.getAllActions()
+
+  return [...active, ...history].find((action) => action.id === actionID)
 }
 
 export function useConnectAction(

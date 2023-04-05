@@ -16,6 +16,7 @@ export function NavigationViewLayout({ title, children }: TNavigationViewLayoutP
               overflow="hidden"
               whiteSpace={"nowrap"}
               textOverflow="ellipsis"
+              textTransform={"capitalize"}
               as={title.priority === "high" ? "h1" : "h2"}
               size="sm">
               {title.label}
