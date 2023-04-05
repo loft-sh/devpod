@@ -78,10 +78,8 @@ export function Notifications() {
 
                 <VStack align="start">
                   <Text fontWeight="bold">
-                    <LinkOverlay
-                      as={RouterLink}
-                      to={Routes.toWorkspace(action.workspaceID, action.id)}>
-                      {action.name} {action.workspaceID}
+                    <LinkOverlay as={RouterLink} to={Routes.toAction(action.id)}>
+                      {action.name} {action.targetID}
                     </LinkOverlay>
                   </Text>
                   {action.finishedAt !== undefined && (

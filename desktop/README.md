@@ -1,5 +1,7 @@
 # Devpod Desktop
 
+[Open Example Devpod](devpod://open?workspace=vscode-remote-try-go&source=https://github.com/Microsoft/vscode-remote-try-go&provider=docker)
+
 ## Development
 
 1. Install [NodeJS + yarn](https://nodejs.org/en/)

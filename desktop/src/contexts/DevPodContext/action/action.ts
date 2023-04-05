@@ -1,20 +1,15 @@
 import { Result, SingleEventManager, EventManager } from "../../../lib"
-import { TWorkspaceID } from "../../../types"
-import { TWorkspaceResult } from "./useWorkspace"
 
-export type TActionName = keyof Pick<
-  TWorkspaceResult,
-  "create" | "start" | "stop" | "rebuild" | "remove"
->
+export type TActionName = "create" | "start" | "stop" | "rebuild" | "remove"
 export type TActionFn = (context: TActionContext) => Promise<Result<unknown>>
 export type TActionStatus = "pending" | "success" | "error" | "cancelled"
 export type TActionID = Action["id"]
 // We don't want to expose the methods to consumers of these actions, so we'll limit the type to data-only properties
 export type TActionObj = Pick<
   Action,
-  "id" | "name" | "status" | "error" | "createdAt" | "finishedAt" | "workspaceID"
+  "id" | "name" | "status" | "error" | "createdAt" | "finishedAt" | "targetID"
 >
-export type TWorkspaceActions = Readonly<{
+export type TActions = Readonly<{
   active: readonly TActionObj[]
   history: readonly TActionObj[]
 }>
@@ -34,7 +29,7 @@ export class Action {
 
   constructor(
     public readonly name: TActionName,
-    public readonly workspaceID: TWorkspaceID,
+    public readonly targetID: string,
     private actionFn: TActionFn
   ) {}
 
@@ -106,7 +101,7 @@ export class Action {
   public getData(): TActionObj {
     return {
       id: this.id,
-      workspaceID: this.workspaceID,
+      targetID: this.targetID,
       name: this.name,
       status: this.status,
       error: this.error,

@@ -1,6 +1,5 @@
 import { invoke } from "@tauri-apps/api"
-import { TActionID, TActionName } from "../../contexts"
-import { TActionObj } from "../../contexts/DevPodContext/workspaces/action"
+import { TActionID, TActionName, TActionObj } from "../../contexts"
 import { exists, noop, Result, ResultError, Return, THandler } from "../../lib"
 import {
   TStreamID,
@@ -166,7 +165,7 @@ export class WorkspacesClient implements TDebuggable {
     listener: TStreamEventListenerFn
   ): TUnsubscribeFn {
     const maybeRunningCommand = this.commandCache.get({
-      id: action.workspaceID,
+      id: action.targetID,
       actionName: action.name,
     })
     if (!exists(maybeRunningCommand)) {

@@ -2,7 +2,7 @@ import { useEffect } from "react"
 import { client } from "../../../client"
 import { TWorkspaceID } from "../../../types"
 import { REFETCH_INTERVAL_MS } from "../constants"
-import { workspacesStore } from "./workspacesStore"
+import { devpodStore } from "../devpodStore"
 
 export function usePollWorkspaces() {
   useEffect(() => {
@@ -11,16 +11,16 @@ export function usePollWorkspaces() {
       if (result.err) {
         return
       }
-      workspacesStore.setWorkspaces(result.val)
+      devpodStore.setWorkspaces(result.val)
     }, REFETCH_INTERVAL_MS)
 
     const ongoingRequests: Record<TWorkspaceID, true> = {}
     const statusIntervalID = setInterval(async () => {
-      for (const workspace of workspacesStore.getAll()) {
+      for (const workspace of devpodStore.getAll()) {
         // Don't kick off a request if we already have one in flight or if we're executing an action on this workspace
         if (
           ongoingRequests[workspace.id] !== undefined ||
-          workspacesStore.getCurrentAction(workspace.id) !== undefined
+          devpodStore.getCurrentAction(workspace.id) !== undefined
         ) {
           continue
         }
@@ -33,7 +33,7 @@ export function usePollWorkspaces() {
           }
           // We don't care about the order here, we just want to update the status
           // whenever we get a result back
-          workspacesStore.setStatus(workspace.id, result.val)
+          devpodStore.setStatus(workspace.id, result.val)
         } finally {
           delete ongoingRequests[workspace.id]
         }

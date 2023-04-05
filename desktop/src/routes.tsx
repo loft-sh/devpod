@@ -4,6 +4,8 @@ import { TActionID } from "./contexts"
 import { exists } from "./lib"
 import { TProviderID, TSupportedIDE } from "./types"
 import {
+  Action,
+  Actions,
   AddProvider,
   CreateWorkspace,
   ListProviders,
@@ -11,7 +13,6 @@ import {
   Provider,
   Providers,
   Settings,
-  Workspace,
   Workspaces,
 } from "./views"
 
@@ -19,8 +20,9 @@ export const Routes = {
   ROOT: "/",
   SETTINGS: "/settings",
   WORKSPACES: "/workspaces",
-  get WORKSPACE() {
-    return `${Routes.WORKSPACES}/:workspace`
+  ACTIONS: "/actions",
+  get ACTION() {
+    return `${Routes.ACTIONS}/:action`
   },
   get WORKSPACE_CREATE() {
     return `${Routes.WORKSPACES}/new`
@@ -44,15 +46,12 @@ export const Routes = {
       search: searchParams.toString(),
     }
   },
-  toWorkspace(workspaceID: string, actionID?: TActionID) {
-    return `${Routes.WORKSPACES}/${workspaceID}?actionID=${actionID}`
+  toAction(actionID: TActionID) {
+    return `${Routes.ACTIONS}/${actionID}`
   },
-  getWorkspaceId(params: Params<string>): string | undefined {
-    // Needs to match `:workspace` from detail route exactly!
-    return params["workspace"]
-  },
-  getActionIDFromSearchParams(searchParams: URLSearchParams): TActionID | undefined {
-    return (searchParams.get("actionID") ?? undefined) as TActionID | undefined
+  getActionID(params: Params<string>): string | undefined {
+    // Needs to match `:action` from detail route exactly!
+    return params["action"]
   },
   getWorkspaceCreateParamsFromSearchParams(searchParams: URLSearchParams): Partial<
     Readonly<{
@@ -98,10 +97,6 @@ export const router = createBrowserRouter([
             element: <ListWorkspaces />,
           },
           {
-            path: Routes.WORKSPACE,
-            element: <Workspace />,
-          },
-          {
             path: Routes.WORKSPACE_CREATE,
             element: <CreateWorkspace />,
           },
@@ -121,6 +116,11 @@ export const router = createBrowserRouter([
             element: <AddProvider />,
           },
         ],
+      },
+      {
+        path: Routes.ACTIONS,
+        element: <Actions />,
+        children: [{ path: Routes.ACTION, element: <Action /> }],
       },
       { path: Routes.SETTINGS, element: <Settings /> },
     ],

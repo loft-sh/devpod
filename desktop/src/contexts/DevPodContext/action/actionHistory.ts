@@ -1,11 +1,10 @@
-import { TWorkspaceID } from "../../../types"
-import { Action, TActionObj, TWorkspaceActions } from "./action"
+import { Action, TActionObj, TActions } from "./action"
 
 const HISTORY_KEY = "devpod-workspace-action-history"
 const MAX_HISTORY_ENTRIES = 50
 
 export class ActionHistory {
-  private active = new Map<TWorkspaceID, Action>()
+  private active = new Map<string, Action>()
   private history: TActionObj[]
 
   constructor() {
@@ -28,23 +27,23 @@ export class ActionHistory {
     return active
   }
 
-  public getActive(workspaceID: TWorkspaceID): Action | undefined {
-    return this.active.get(workspaceID)
+  public getActive(targetID: string): Action | undefined {
+    return this.active.get(targetID)
   }
 
-  public getAll(): TWorkspaceActions {
+  public getAll(): TActions {
     const active = this.getAllActive()
     const history = this.history.slice()
 
     return { active, history }
   }
 
-  public addActive(workspaceID: TWorkspaceID, action: Action): void {
-    this.active.set(workspaceID, action)
+  public addActive(targetID: string, action: Action): void {
+    this.active.set(targetID, action)
   }
 
   public archive(action: Action): void {
-    this.active.delete(action.workspaceID)
+    this.active.delete(action.targetID)
     this.history.push(action.getData())
 
     // Limit history size

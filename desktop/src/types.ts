@@ -9,7 +9,7 @@ export type TDeepNonNullable<T> = {
 }
 
 //#region Shared
-export type TLogOutput = Readonly<{ time: Date; message: string; level: string }>
+export type TLogOutput = Readonly<{ time: Date; message?: string; level: string }>
 export type TQueryResult<TData extends Readonly<object>> = [
   TData | undefined,
   Pick<UseMutationResult, "status" | "error">
@@ -18,7 +18,7 @@ type TRunnable<TRunConfig> = Readonly<{ run(config: TRunConfig): void }>
 //#endregion
 
 //#region IDE
-export type TIDEs = Array<TIDE>
+export type TIDEs = readonly TIDE[]
 export type TIDE = Readonly<{
   name: string | null
   displayName: string

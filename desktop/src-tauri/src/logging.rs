@@ -1,6 +1,6 @@
 use log::LevelFilter;
 use tauri::{plugin::TauriPlugin, Wry};
-use tauri_plugin_log::{LogTarget, LogLevel};
+use tauri_plugin_log::LogTarget;
 
 #[allow(unused_variables)]
 pub fn build_plugin() -> TauriPlugin<Wry> {

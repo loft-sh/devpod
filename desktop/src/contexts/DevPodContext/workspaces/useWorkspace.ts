@@ -1,16 +1,15 @@
-import { useCallback, useEffect, useId, useMemo, useRef, useSyncExternalStore } from "react"
+import { useCallback, useId, useMemo, useSyncExternalStore } from "react"
 import { client, TStreamEventListenerFn } from "../../../client"
 import { exists } from "../../../lib"
 import {
   TDeepNonNullable,
   TStreamID,
-  TUnsubscribeFn,
   TWorkspace,
   TWorkspaceID,
   TWorkspaceStartConfig,
 } from "../../../types"
-import { TActionID, TActionObj } from "./action"
-import { workspacesStore } from "./workspacesStore"
+import { TActionID, TActionObj, useConnectAction, useReplayAction } from "../action"
+import { devpodStore } from "../devpodStore"
 
 export type TWorkspaceResult = Readonly<{
   data: TWorkspace | undefined
@@ -22,26 +21,26 @@ export type TWorkspaceResult = Readonly<{
     // all: readonly TActionObj[]
     replay: (actionID: TActionID, listener: TStreamEventListenerFn) => void
   }>
-  start: (config: TWorkspaceStartConfig, onStream?: TStreamEventListenerFn) => void
+  start: (config: TWorkspaceStartConfig, onStream?: TStreamEventListenerFn) => TActionID | undefined
   create: (
     config: Omit<TWorkspaceStartConfig, "sourceConfig"> &
       Pick<TDeepNonNullable<TWorkspaceStartConfig>, "sourceConfig">,
     onStream?: TStreamEventListenerFn
-  ) => void
-  stop: (onStream?: TStreamEventListenerFn) => void
-  remove: (onStream?: TStreamEventListenerFn) => void
-  rebuild: (onStream?: TStreamEventListenerFn) => void
+  ) => TActionID
+  stop: (onStream?: TStreamEventListenerFn) => TActionID | undefined
+  remove: (onStream?: TStreamEventListenerFn) => TActionID | undefined
+  rebuild: (onStream?: TStreamEventListenerFn) => TActionID | undefined
 }>
 
 export function useWorkspace(workspaceID: TWorkspaceID | undefined): TWorkspaceResult {
   const viewID = useId()
   const data = useSyncExternalStore(
-    useCallback((listener) => workspacesStore.subscribe(listener), []),
-    () => (workspaceID !== undefined ? workspacesStore.get(workspaceID) : undefined)
+    useCallback((listener) => devpodStore.subscribe(listener), []),
+    () => (workspaceID !== undefined ? devpodStore.get(workspaceID) : undefined)
   )
   const create = useCallback<TWorkspaceResult["create"]>(
-    async (config, onStream) => {
-      workspacesStore.startAction({
+    (config, onStream) => {
+      return devpodStore.startAction({
         actionName: "create",
         workspaceID: config.id,
         actionFn: async (ctx) => {
@@ -53,7 +52,7 @@ export function useWorkspace(workspaceID: TWorkspaceID | undefined): TWorkspaceR
           if (result.err) {
             return result
           }
-          workspacesStore.setStatus(config.id, result.val)
+          devpodStore.setStatus(config.id, result.val)
 
           return result
         },
@@ -67,7 +66,8 @@ export function useWorkspace(workspaceID: TWorkspaceID | undefined): TWorkspaceR
       if (workspaceID === undefined) {
         return
       }
-      startWorkspaceAction({ workspaceID, config, onStream, streamID: viewID })
+
+      return startWorkspaceAction({ workspaceID, config, onStream, streamID: viewID })
     },
     [viewID, workspaceID]
   )
@@ -77,7 +77,8 @@ export function useWorkspace(workspaceID: TWorkspaceID | undefined): TWorkspaceR
       if (workspaceID === undefined) {
         return
       }
-      workspacesStore.startAction({
+
+      return devpodStore.startAction({
         actionName: "stop",
         workspaceID,
         actionFn: async (ctx) => {
@@ -89,7 +90,7 @@ export function useWorkspace(workspaceID: TWorkspaceID | undefined): TWorkspaceR
           if (result.err) {
             return result
           }
-          workspacesStore.setStatus(workspaceID, result.val)
+          devpodStore.setStatus(workspaceID, result.val)
 
           return result
         },
@@ -103,7 +104,8 @@ export function useWorkspace(workspaceID: TWorkspaceID | undefined): TWorkspaceR
       if (workspaceID === undefined) {
         return
       }
-      workspacesStore.startAction({
+
+      return devpodStore.startAction({
         actionName: "rebuild",
         workspaceID,
         actionFn: async (ctx) => {
@@ -115,7 +117,7 @@ export function useWorkspace(workspaceID: TWorkspaceID | undefined): TWorkspaceR
           if (result.err) {
             return result
           }
-          workspacesStore.setStatus(workspaceID, result.val)
+          devpodStore.setStatus(workspaceID, result.val)
 
           return result
         },
@@ -129,7 +131,8 @@ export function useWorkspace(workspaceID: TWorkspaceID | undefined): TWorkspaceR
       if (workspaceID === undefined) {
         return
       }
-      workspacesStore.startAction({
+
+      return devpodStore.startAction({
         actionName: "remove",
         workspaceID,
         actionFn: async (ctx) => {
@@ -141,7 +144,7 @@ export function useWorkspace(workspaceID: TWorkspaceID | undefined): TWorkspaceR
           if (result.err) {
             return result
           }
-          workspacesStore.removeWorkspace(workspaceID)
+          devpodStore.removeWorkspace(workspaceID)
 
           return result
         },
@@ -151,28 +154,12 @@ export function useWorkspace(workspaceID: TWorkspaceID | undefined): TWorkspaceR
   )
 
   const currentAction = useSyncExternalStore(
-    useCallback((listener) => workspacesStore.subscribe(listener), []),
-    () => (workspaceID !== undefined ? workspacesStore.getCurrentAction(workspaceID) : undefined)
+    useCallback((listener) => devpodStore.subscribe(listener), []),
+    () => (workspaceID !== undefined ? devpodStore.getCurrentAction(workspaceID) : undefined)
   )
   const isLoading = useMemo(() => exists(currentAction), [currentAction])
 
-  const subscriptionRef = useRef<TUnsubscribeFn>()
-  // Make sure we unsubscribe on onmount
-  useEffect(() => {
-    return () => subscriptionRef.current?.()
-  }, [])
-
-  // Unsubscribe whenever action changes
-  useEffect(() => {
-    if (
-      (currentAction === undefined || currentAction.status !== "pending") &&
-      subscriptionRef.current !== undefined
-    ) {
-      subscriptionRef.current()
-      subscriptionRef.current = undefined
-    }
-  }, [currentAction])
-
+  const connect = useConnectAction(currentAction, viewID)
   const current = useMemo<TWorkspaceResult["current"]>(() => {
     if (currentAction === undefined) {
       return undefined
@@ -180,19 +167,14 @@ export function useWorkspace(workspaceID: TWorkspaceID | undefined): TWorkspaceR
 
     return {
       ...currentAction,
-      connect: (onStream: TStreamEventListenerFn) => {
-        subscriptionRef.current = client.workspaces.subscribe(currentAction, viewID, onStream)
-      },
+      connect,
     }
-  }, [currentAction, viewID])
+  }, [currentAction, connect])
 
+  const replay = useReplayAction()
   const history = useMemo<TWorkspaceResult["history"]>(() => {
-    return {
-      replay: (actionID, listener) => {
-        client.workspaces.replayAction(actionID, listener)
-      },
-    }
-  }, [])
+    return { replay }
+  }, [replay])
 
   return useMemo(
     () => ({
@@ -222,7 +204,7 @@ export function startWorkspaceAction({
   config,
   onStream,
 }: TStartWorkspaceActionArgs): TActionObj["id"] {
-  return workspacesStore.startAction({
+  return devpodStore.startAction({
     actionName: "start",
     workspaceID,
     actionFn: async (ctx) => {
@@ -234,7 +216,7 @@ export function startWorkspaceAction({
       if (result.err) {
         return result
       }
-      workspacesStore.setStatus(workspaceID, result.val)
+      devpodStore.setStatus(workspaceID, result.val)
 
       return result
     },

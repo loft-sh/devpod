@@ -11,9 +11,15 @@ export function useStreamingTerminal() {
       // TODO: Message color
       switch (event.type) {
         case "data":
+          if (event.data.message === undefined) {
+            return
+          }
           terminalRef.current?.writeln(event.data.message)
           break
         case "error":
+          if (event.error.message === undefined) {
+            return
+          }
           terminalRef.current?.writeln(event.error.message)
           break
       }
@@ -21,5 +27,9 @@ export function useStreamingTerminal() {
     [terminalRef]
   )
 
-  return { terminal, connectStream }
+  const clear = useCallback(() => {
+    terminalRef.current?.clear()
+  }, [])
+
+  return { terminal, connectStream, clear }
 }
