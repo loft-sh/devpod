@@ -62,9 +62,14 @@ export function ConfigureProviderOptionsForm({
   initializeProvider = false,
 }: TConfigureProviderOptionsFormProps) {
   const [[provider]] = useProvider(providerID)
+  const showReuseMachineField = useMemo(
+    () => canCreateMachine(provider?.config),
+    [provider?.config]
+  )
   const formMethods = useForm<TFieldValues>({
     defaultValues: {
       useAsDefault: true,
+      reuseMachine: showReuseMachineField,
     },
   })
   const { status, mutate: configureProvider } = useMutation({
@@ -97,10 +102,6 @@ export function ConfigureProviderOptionsForm({
   const { reuseMachineError, useAsDefaultError } = useFormErrors(
     Object.values(FieldName),
     formMethods.formState
-  )
-  const showReuseMachineField = useMemo(
-    () => canCreateMachine(provider?.config),
-    [provider?.config]
   )
   const showUseAsDefaultField = useMemo(() => initializeProvider, [initializeProvider])
 
@@ -184,7 +185,7 @@ export function ConfigureProviderOptionsForm({
 
           {(showReuseMachineField || showUseAsDefaultField) && (
             <Box width="full">
-              <CollapsibleSection title={"Other Options"} isOpen={true}>
+              <CollapsibleSection title={"Provider Options"} isOpen={true}>
                 <VStack align="start" spacing={4}>
                   {showReuseMachineField && (
                     <FormControl>

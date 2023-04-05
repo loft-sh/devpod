@@ -209,6 +209,9 @@ type ProviderOption struct {
 	// ValidationMessage is the message that appears if the user enters an invalid option
 	ValidationMessage string `json:"validationMessage,omitempty"`
 
+	// Suggestions are suggestions to show in the DevPod UI for this option
+	Suggestions []string `json:"suggestions,omitempty"`
+
 	// Allowed values for this option.
 	Enum []string `json:"enum,omitempty"`
 
