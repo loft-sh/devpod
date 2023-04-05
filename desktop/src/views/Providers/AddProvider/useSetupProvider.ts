@@ -4,7 +4,7 @@ import { useProviderManager } from "../../../contexts"
 import { exists, TAction } from "../../../lib"
 import { TProviderID, TProviderOptionGroup, TProviderOptions } from "../../../types"
 
-type TSetupProviderState = Readonly<
+export type TSetupProviderState = Readonly<
   | {
       currentStep: 1
       providerID: null
@@ -27,11 +27,13 @@ type TCompleteFirstStepAction = TAction<
   }>
 >
 type TCompleteSecondStepAction = TAction<"completeSecondStep">
-type TActions = TCompleteFirstStepAction | TCompleteSecondStepAction
+type TActions = TCompleteFirstStepAction | TCompleteSecondStepAction | TAction<"reset">
 
 const initialState: TSetupProviderState = { currentStep: 1, providerID: null, options: null }
 function setupProviderReducer(state: TSetupProviderState, action: TActions): TSetupProviderState {
   switch (action.type) {
+    case "reset":
+      return initialState
     case "completeFirstStep":
       return {
         ...state,
@@ -49,6 +51,15 @@ function setupProviderReducer(state: TSetupProviderState, action: TActions): TSe
 
 export function useSetupProvider() {
   const [state, dispatch] = useReducer(setupProviderReducer, initialState)
+
+  const reset = useCallback(() => {
+    const danglingProviderID = client.providers.popDangling()
+    if (exists(danglingProviderID)) {
+      remove.run({ providerID: danglingProviderID })
+    }
+
+    dispatch({ type: "reset" })
+  }, [dispatch])
 
   const completeFirstStep = useCallback(
     (payload: TCompleteFirstStepAction["payload"]) => {
@@ -91,5 +102,5 @@ export function useSetupProvider() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
-  return { state, completeFirstStep, completeSecondStep }
+  return { state, reset, completeFirstStep, completeSecondStep }
 }
