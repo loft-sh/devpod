@@ -87,7 +87,7 @@ export function WorkspaceCard({ workspaceID, onSelectionChange }: TWorkspaceCard
     return null
   }
 
-  const { id, provider, status, ide } = workspace.data
+  const { id, provider, picture, status, ide } = workspace.data
 
   return (
     <>
@@ -99,7 +99,13 @@ export function WorkspaceCard({ workspaceID, onSelectionChange }: TWorkspaceCard
         overflow="hidden"
         variant="outline"
         maxHeight="48">
-        <Image objectFit="cover" maxHeight={"full"} width="40%" src={CodeJPG} alt="Project Image" />
+        <Image
+          objectFit="cover"
+          maxHeight={"full"}
+          width="250px"
+          src={picture || CodeJPG}
+          alt="Project Image"
+        />
 
         <Stack width="full" justifyContent={"space-between"}>
           <CardHeader display="flex" flexDirection="column">

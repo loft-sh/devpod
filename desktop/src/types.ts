@@ -103,6 +103,7 @@ export type TWorkspaceID = NonNullable<TWorkspace["id"]>
 export type TWithWorkspaceID = Readonly<{ workspaceID: TWorkspaceID }>
 export type TWorkspace = Readonly<{
   id: string
+  picture: string | null
   provider: Readonly<{ name: string | null }> | null
   status: "Running" | "Busy" | "Stopped" | "NotFound" | undefined | null
   ide: {
