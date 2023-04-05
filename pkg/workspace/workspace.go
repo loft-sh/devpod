@@ -342,13 +342,19 @@ func resolve(defaultProvider *ProviderWithOptions, devPodConfig *config.Config, 
 	return nil, fmt.Errorf("%s is neither a local folder, git repository or docker image", name)
 }
 
-var regexes map[string]*regexp.Regexp= map[string]*regexp.Regexp{
+var regexes map[string]*regexp.Regexp = map[string]*regexp.Regexp{
 	"github.com": regexp.MustCompile(`(<meta[^>]+property)="og:image" content="([^"]+)"`),
 	"gitlab.com": regexp.MustCompile(`(<meta[^>]+content)="([^"]+)" property="og:image"`),
-	"content": regexp.MustCompile(`content="([^"]+)"`),
+	"content":    regexp.MustCompile(`content="([^"]+)"`),
 }
 
 func getProjectImage(link string) string {
+	if !strings.HasPrefix(link, "http") &&
+		!strings.HasPrefix(link, "https") {
+
+		link = "https://" + link
+	}
+
 	baseUrl, err := url.Parse(link)
 	if err != nil {
 		return ""
