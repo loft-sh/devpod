@@ -3,6 +3,8 @@ package workspace
 import (
 	"context"
 	"fmt"
+	"io/ioutil"
+	"net/http"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -304,6 +306,7 @@ func resolve(defaultProvider *ProviderWithOptions, devPodConfig *config.Config, 
 			UID:     uid,
 			Folder:  workspaceFolder,
 			Context: devPodConfig.DefaultContext,
+			Picture: getGithubImage(name),
 			Provider: provider2.WorkspaceProviderConfig{
 				Name: defaultProvider.Config.Name,
 			},
@@ -336,6 +339,33 @@ func resolve(defaultProvider *ProviderWithOptions, devPodConfig *config.Config, 
 	}
 
 	return nil, fmt.Errorf("%s is neither a local folder, git repository or docker image", name)
+}
+
+func getGithubImage(link string) string {
+	if !strings.Contains(link, "github") {
+		return ""
+	}
+
+	res, err := http.Get(link)
+	if err != nil {
+		return ""
+	}
+
+	content, err := ioutil.ReadAll(res.Body)
+	res.Body.Close()
+	if err != nil {
+		return ""
+	}
+
+	html := string(content)
+
+	// Find github social share image: https://css-tricks.com/essential-meta-tags-social-media/
+	var re = regexp.MustCompile(`(<meta[^>]+property)="og:image" content="([^"]+)"`)
+	url := re.FindString(html)
+
+	return strings.Trim(
+		strings.SplitAfter(url, "content=")[1],
+		`"`)
 }
 
 func isLocalDir(name string) (bool, string) {
