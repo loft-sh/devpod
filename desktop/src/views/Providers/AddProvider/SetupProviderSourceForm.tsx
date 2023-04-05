@@ -1,49 +1,69 @@
 import {
+  Box,
   Button,
   Code,
   FormControl,
   FormErrorMessage,
   FormHelperText,
   FormLabel,
+  Icon,
   Input,
+  SimpleGrid,
   Stack,
   VStack,
 } from "@chakra-ui/react"
 import styled from "@emotion/styled"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
-import { useCallback, useDeferredValue, useEffect, useMemo } from "react"
+import { useCallback, useDeferredValue, useEffect, useMemo, useState } from "react"
 import { SubmitHandler, useForm } from "react-hook-form"
 import { client } from "../../../client"
 import { CollapsibleSection, ErrorMessageBox } from "../../../components"
 import { exists, isEmpty, isError, useFormErrors } from "../../../lib"
 import { QueryKeys } from "../../../queryKeys"
+import DockerPng from "../../../images/docker.png"
+import GCloudSvg from "../../../images/gcloud.svg"
+import AWSSvg from "../../../images/aws.svg"
+import AzureSvg from "../../../images/azure.svg"
+import DigitalOceanSvg from "../../../images/digitalocean.svg"
+import KubernetesSvg from "../../../images/kubernetes.svg"
+import { AiOutlinePlusCircle } from "react-icons/ai"
 import {
   TAddProviderConfig,
   TProviderOptionGroup,
   TProviderOptions,
+  TProviders,
   TWithProviderID,
 } from "../../../types"
+import { FieldName, TFormValues } from "./types"
+import { RecommendedProviderCard } from "./RecommendedProviderCard"
+import { UseFormSetValue } from "react-hook-form/dist/types/form"
+import { TSetupProviderState } from "./useSetupProvider"
 
 const Form = styled.form`
   width: 100%;
 `
-const FieldName = {
-  PROVIDER_SOURCE: "providerSource",
-  PROVIDER_NAME: "providerName",
-} as const
 const ALLOWED_NAMES_REGEX = /^[a-z0-9\\.\\-]+$/
-type TFormValues = {
-  [FieldName.PROVIDER_SOURCE]: string
-  [FieldName.PROVIDER_NAME]: string | undefined
-}
 
 type TSetupProviderSourceFormProps = Readonly<{
+  state: TSetupProviderState
+  onReset: () => void
   onFinish: (
     result: TWithProviderID &
       Readonly<{ options: TProviderOptions; optionGroups: TProviderOptionGroup[] }>
   ) => void
 }>
-export function SetupProviderSourceForm({ onFinish }: TSetupProviderSourceFormProps) {
+export function SetupProviderSourceForm({
+  state,
+  onFinish,
+  onReset,
+}: TSetupProviderSourceFormProps) {
+  const [providers, setProviders] = useState<TProviders | undefined>()
+  useEffect(() => {
+    ;(async () => {
+      setProviders((await client.providers.listAll()).unwrap())
+    })()
+  }, [])
+  const [showCustom, setShowCustom] = useState(false)
   const { register, handleSubmit, formState, watch, setValue } = useForm<TFormValues>({
     mode: "onBlur",
   })
@@ -54,6 +74,10 @@ export function SetupProviderSourceForm({ onFinish }: TSetupProviderSourceFormPr
   const { data: suggestedProviderName } = useQuery({
     queryKey: ["providerNameSuggestion", deferredProviderSource],
     queryFn: async () => {
+      if (!deferredProviderSource) {
+        return ""
+      }
+
       return (await client.providers.newID(deferredProviderSource)).unwrap()
     },
     onSuccess(suggestedName) {
@@ -79,6 +103,10 @@ export function SetupProviderSourceForm({ onFinish }: TSetupProviderSourceFormPr
       rawProviderSource: string
       config: TAddProviderConfig
     }>) => {
+      if (state.currentStep !== 1) {
+        onReset()
+      }
+
       ;(await client.providers.add(rawProviderSource, config)).unwrap()
       const providerID = (await client.providers.newID(rawProviderSource)).unwrap()
       const options = (await client.providers.getOptions(providerID!)).unwrap()
@@ -133,23 +161,97 @@ export function SetupProviderSourceForm({ onFinish }: TSetupProviderSourceFormPr
     )
   }, [formState.dirtyFields, formState.isSubmitting, status])
 
+  const wrappedSetValue: UseFormSetValue<TFormValues> = (a, b, c) => {
+    setShowCustom(false)
+    setValue(a, b as any, c)
+  }
+
   return (
     <Form onSubmit={handleSubmit(onSubmit)} spellCheck={false}>
       <Stack spacing={6} width="full">
         <FormControl isRequired isInvalid={exists(providerSourceError)}>
-          <FormLabel>Source</FormLabel>
-          <Input
-            placeholder="Enter provider source"
-            type="text"
-            {...register(FieldName.PROVIDER_SOURCE, { required: true })}
-          />
-          {exists(providerSourceError) ? (
-            <FormErrorMessage>{providerSourceError.message ?? "Error"}</FormErrorMessage>
-          ) : (
-            <FormHelperText>
-              Can either be a URL or local path to a <Code>provider</Code> binary, or a github repo
-              in the form of <Code>$ORG/$REPO</Code>, i.e. <Code>loft-sh/devpod-provider-loft</Code>
-            </FormHelperText>
+          <SimpleGrid
+            spacing={4}
+            templateColumns="repeat(auto-fill, minmax(120px, 1fr))"
+            marginTop={"10px"}>
+            {!providers?.["docker"] && (
+              <RecommendedProviderCard
+                image={DockerPng}
+                source={"docker"}
+                currentSource={providerSource}
+                setValue={wrappedSetValue}
+              />
+            )}
+            {!providers?.["aws"] && (
+              <RecommendedProviderCard
+                image={AWSSvg}
+                source={"aws"}
+                currentSource={providerSource}
+                setValue={wrappedSetValue}
+              />
+            )}
+            {!providers?.["gcloud"] && (
+              <RecommendedProviderCard
+                image={GCloudSvg}
+                source={"gcloud"}
+                currentSource={providerSource}
+                setValue={wrappedSetValue}
+              />
+            )}
+            {!providers?.["azure"] && (
+              <RecommendedProviderCard
+                image={AzureSvg}
+                source={"azure"}
+                currentSource={providerSource}
+                setValue={wrappedSetValue}
+              />
+            )}
+            {!providers?.["digitalocean"] && (
+              <RecommendedProviderCard
+                image={DigitalOceanSvg}
+                source={"digitalocean"}
+                currentSource={providerSource}
+                setValue={wrappedSetValue}
+              />
+            )}
+            {!providers?.["kubernetes"] && (
+              <RecommendedProviderCard
+                image={KubernetesSvg}
+                source={"kubernetes"}
+                currentSource={providerSource}
+                setValue={wrappedSetValue}
+              />
+            )}
+            <RecommendedProviderCard
+              imageNode={<Icon as={AiOutlinePlusCircle} fontSize={"64px"} color={"primary.500"} />}
+              selected={showCustom}
+              currentSource={providerSource}
+              onClick={() => {
+                setShowCustom(!showCustom)
+                setValue(FieldName.PROVIDER_SOURCE, "", {
+                  shouldDirty: true,
+                })
+              }}
+            />
+          </SimpleGrid>
+          {showCustom && (
+            <Box marginTop={"10px"}>
+              <FormLabel>Source</FormLabel>
+              <Input
+                placeholder="Enter provider source"
+                type="text"
+                {...register(FieldName.PROVIDER_SOURCE, { required: true })}
+              />
+              {providerSourceError && providerSourceError.message ? (
+                <FormErrorMessage>{providerSourceError.message ?? "Error"}</FormErrorMessage>
+              ) : (
+                <FormHelperText>
+                  Can either be a URL or local path to a <Code>provider</Code> binary, or a github
+                  repo in the form of <Code>$ORG/$REPO</Code>, i.e.{" "}
+                  <Code>loft-sh/devpod-provider-loft</Code>
+                </FormHelperText>
+              )}
+            </Box>
           )}
         </FormControl>
         <CollapsibleSection title={"Advanced Options"} showIcon={true}>

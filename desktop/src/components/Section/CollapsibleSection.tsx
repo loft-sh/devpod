@@ -1,4 +1,4 @@
-import { Box, Button, Icon, useDisclosure } from "@chakra-ui/react"
+import { Box, BoxProps, Button, ButtonProps, Icon, useDisclosure } from "@chakra-ui/react"
 import { AnimatePresence, motion, Variants } from "framer-motion"
 import { forwardRef, ReactNode, useLayoutEffect, useRef } from "react"
 import { AiOutlineCaretRight } from "react-icons/ai"
@@ -28,11 +28,22 @@ type TCollapsibleSectionProps = Readonly<{
   isOpen?: boolean
   isDisabled?: boolean
   showIcon?: boolean
+  headerProps?: ButtonProps
+  contentProps?: BoxProps
   onOpenChange?: (isOpen: boolean, element: HTMLDivElement | null) => void
 }>
 export const CollapsibleSection = forwardRef<HTMLDivElement, TCollapsibleSectionProps>(
   function CollapsibleSection(
-    { title, children, onOpenChange, isOpen: isOpenProp = false, isDisabled = false, showIcon },
+    {
+      title,
+      headerProps,
+      contentProps,
+      children,
+      onOpenChange,
+      isOpen: isOpenProp = false,
+      isDisabled = false,
+      showIcon,
+    },
     ref
   ) {
     const motionRef = useRef<HTMLDivElement>(null)
@@ -50,7 +61,7 @@ export const CollapsibleSection = forwardRef<HTMLDivElement, TCollapsibleSection
 
     return (
       <Box width="full">
-        <Button ref={ref} variant="ghost" width="full" {...buttonProps}>
+        <Button ref={ref} variant="ghost" width="full" {...headerProps} {...buttonProps}>
           <Box as="span" flex="1" textAlign="left">
             {showIcon && (
               <Icon
@@ -77,7 +88,12 @@ export const CollapsibleSection = forwardRef<HTMLDivElement, TCollapsibleSection
                 overflow: "hidden",
                 display: "block",
               }}>
-              <Box {...disclosureProps} marginTop={4} paddingLeft={4} width="full">
+              <Box
+                {...disclosureProps}
+                marginTop={4}
+                paddingLeft={4}
+                width="full"
+                {...contentProps}>
                 {children}
               </Box>
             </motion.div>

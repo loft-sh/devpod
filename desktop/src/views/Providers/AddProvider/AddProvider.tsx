@@ -10,24 +10,25 @@ import { useSetupProvider } from "./useSetupProvider"
 export function AddProvider() {
   const navigate = useNavigate()
   const openLockRef = useRef(false)
-  const { state, completeFirstStep, completeSecondStep } = useSetupProvider()
+  const { state, reset, completeFirstStep, completeSecondStep } = useSetupProvider()
 
   useEffect(() => {
     if (state.currentStep === "done") {
-      navigate(Routes.toProvider(state.providerID))
+      navigate(Routes.PROVIDERS)
     }
-  }, [navigate, state.currentStep, state.providerID])
+  }, [navigate, state.currentStep])
 
   return (
     <Box paddingBottom={80}>
       <VStack align="start" spacing={8} width="full">
-        <CollapsibleSection isOpen title={<Heading size="md">1. Setup Provider Source</Heading>}>
-          <SetupProviderSourceForm onFinish={completeFirstStep} />
-        </CollapsibleSection>
+        <Heading size="md">1. Setup Provider Source</Heading>
+        <SetupProviderSourceForm state={state} onReset={reset} onFinish={completeFirstStep} />
       </VStack>
 
       <VStack align="start" spacing={8} marginTop={6} width="full">
         <CollapsibleSection
+          headerProps={{ pointerEvents: "none", padding: "0" }}
+          contentProps={{ paddingLeft: "0" }}
           isDisabled={state.currentStep === 1}
           isOpen={state.currentStep === 2}
           onOpenChange={(isOpen, el) => {

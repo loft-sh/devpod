@@ -62,7 +62,11 @@ export function ConfigureProviderOptionsForm({
   initializeProvider = false,
 }: TConfigureProviderOptionsFormProps) {
   const [[provider]] = useProvider(providerID)
-  const formMethods = useForm<TFieldValues>()
+  const formMethods = useForm<TFieldValues>({
+    defaultValues: {
+      useAsDefault: true,
+    },
+  })
   const { status, mutate: configureProvider } = useMutation({
     mutationFn: async ({
       providerID,
@@ -218,6 +222,7 @@ export function ConfigureProviderOptionsForm({
           <Button
             marginTop="10"
             type="submit"
+            colorScheme={"primary"}
             isLoading={status === "loading"}
             disabled={formMethods.formState.isSubmitting}>
             {initializeProvider ? "Create Provider" : "Save"}
