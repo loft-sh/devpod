@@ -1,4 +1,3 @@
-import React from "react"
 import { Card, Image } from "@chakra-ui/react"
 import { UseFormSetValue } from "react-hook-form"
 import { FieldName, TFormValues } from "./types"
@@ -18,8 +17,8 @@ export function ExampleCard(props: TExampleCardProps) {
         boxShadow: "rgba(186, 80, 255, 0.8) 0px 1px 4px 0px",
       }}
       transition={"box-shadow .5s"}
-      width={"120px"}
-      height={"120px"}
+      width={"100px"}
+      height={"100px"}
       alignItems={"center"}
       display={"flex"}
       justifyContent={"center"}
@@ -31,12 +30,7 @@ export function ExampleCard(props: TExampleCardProps) {
         })
       }}
       padding={"10px"}>
-      <Image
-        objectFit="cover"
-        maxH={{ base: "100%", sm: "100px" }}
-        maxW={{ base: "100%", sm: "100px" }}
-        src={props.image}
-      />
+      <Image objectFit="contain" overflow="hidden" width="fill" height="fill" src={props.image} />
     </Card>
   )
 }

@@ -11,8 +11,6 @@ export function useActionTitle(): TViewTitle | null {
   const navigate = useNavigate()
   const location = useLocation()
 
-  console.log(location)
-
   const matchAction = useMatch(Routes.ACTION)
 
   return useMemo<TViewTitle | null>(() => {

@@ -44,8 +44,8 @@ export function ProviderCard({ id, provider, remove }: TProviderCardProps) {
         <CardHeader>
           <Image
             objectFit="cover"
-            maxW={{ base: "100%" }}
-            src={provider?.config?.icon || CodeImage}
+            borderRadius="md"
+            src={provider?.config?.icon ?? CodeImage}
             alt="Project Image"
           />
         </CardHeader>

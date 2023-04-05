@@ -102,8 +102,8 @@ export function WorkspaceCard({ workspaceID, onSelectionChange }: TWorkspaceCard
         <Image
           objectFit="cover"
           maxHeight={"full"}
-          width="250px"
-          src={picture || CodeJPG}
+          style={{ aspectRatio: "2 / 1" }}
+          src={picture ?? CodeJPG}
           alt="Project Image"
         />
 
@@ -118,8 +118,8 @@ export function WorkspaceCard({ workspaceID, onSelectionChange }: TWorkspaceCard
                       as={"span"}
                       backgroundColor={status === "Running" ? "green" : "orange"}
                       borderRadius={"full"}
-                      width={"3"}
-                      height={"3"}
+                      width={"10px"}
+                      height={"10px"}
                     />
                   </Tooltip>
                 </HStack>
@@ -138,8 +138,10 @@ export function WorkspaceCard({ workspaceID, onSelectionChange }: TWorkspaceCard
                 <TagLabel marginLeft={2}>{getIDEName(workspace.data.ide, idesQuery.data)}</TagLabel>
               </Tag>
               <Tag marginRight={2} borderRadius="full" color={tagColor}>
-                <Icon marginLeft={2} as={HiClock} />
-                <TagLabel>{dayjs(new Date(workspace.data.lastUsed)).fromNow()}</TagLabel>
+                <Icon as={HiClock} />
+                <TagLabel marginLeft={2}>
+                  {dayjs(new Date(workspace.data.lastUsed)).fromNow()}
+                </TagLabel>
               </Tag>
             </HStack>
           </CardHeader>
@@ -148,12 +150,7 @@ export function WorkspaceCard({ workspaceID, onSelectionChange }: TWorkspaceCard
             <HStack spacing="2" width="full" justifyContent="end">
               <Button
                 aria-label="Start workspace"
-                variant="solid"
-                color="white"
-                borderColor={"primary.400"}
-                borderWidth={1}
-                backgroundColor="primary.500"
-                _hover={{ backgroundColor: "primary.600" }}
+                variant="primary"
                 leftIcon={<Icon as={HiOutlineCode} boxSize={5} />}
                 isDisabled={
                   workspace.data.status === "Busy" || workspace.data.status === "NotFound"
