@@ -10,23 +10,26 @@ import {
   Input,
   SimpleGrid,
   Stack,
+  useToken,
   VStack,
 } from "@chakra-ui/react"
 import styled from "@emotion/styled"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { useCallback, useDeferredValue, useEffect, useMemo, useState } from "react"
 import { SubmitHandler, useForm } from "react-hook-form"
+import { AiOutlinePlusCircle } from "react-icons/ai"
 import { client } from "../../../client"
 import { CollapsibleSection, ErrorMessageBox } from "../../../components"
+import {
+  AWSSvg,
+  AzureSvg,
+  DigitalOceanSvg,
+  DockerPng,
+  GCloudSvg,
+  KubernetesSvg,
+} from "../../../images"
 import { exists, isEmpty, isError, useFormErrors } from "../../../lib"
 import { QueryKeys } from "../../../queryKeys"
-import DockerPng from "../../../images/docker.png"
-import GCloudSvg from "../../../images/gcloud.svg"
-import AWSSvg from "../../../images/aws.svg"
-import AzureSvg from "../../../images/azure.svg"
-import DigitalOceanSvg from "../../../images/digitalocean.svg"
-import KubernetesSvg from "../../../images/kubernetes.svg"
-import { AiOutlinePlusCircle } from "react-icons/ai"
 import {
   TAddProviderConfig,
   TProviderOptionGroup,
@@ -34,15 +37,23 @@ import {
   TProviders,
   TWithProviderID,
 } from "../../../types"
-import { FieldName, TFormValues } from "./types"
 import { RecommendedProviderCard } from "./RecommendedProviderCard"
-import { UseFormSetValue } from "react-hook-form/dist/types/form"
+import { FieldName, TFormValues } from "./types"
 import { TSetupProviderState } from "./useSetupProvider"
 
 const Form = styled.form`
   width: 100%;
 `
 const ALLOWED_NAMES_REGEX = /^[a-z0-9\\.\\-]+$/
+
+const RECOMMENDED_PROVIDER_SOURCES = [
+  { image: DockerPng, name: "docker" },
+  { image: AWSSvg, name: "aws" },
+  { image: GCloudSvg, name: "gcloud" },
+  { image: AzureSvg, name: "azure" },
+  { image: DigitalOceanSvg, name: "digitalocean" },
+  { image: KubernetesSvg, name: "kubernetes" },
+] as const
 
 type TSetupProviderSourceFormProps = Readonly<{
   state: TSetupProviderState
@@ -57,6 +68,7 @@ export function SetupProviderSourceForm({
   onFinish,
   onReset,
 }: TSetupProviderSourceFormProps) {
+  const cardSize = useToken("sizes", "36")
   const [providers, setProviders] = useState<TProviders | undefined>()
   useEffect(() => {
     ;(async () => {
@@ -161,10 +173,15 @@ export function SetupProviderSourceForm({
     )
   }, [formState.dirtyFields, formState.isSubmitting, status])
 
-  const wrappedSetValue: UseFormSetValue<TFormValues> = (a, b, c) => {
-    setShowCustom(false)
-    setValue(a, b as any, c)
-  }
+  const handleRecommendedProviderClicked = useCallback(
+    (sourceName: string) => () => {
+      setShowCustom(false)
+      setValue(FieldName.PROVIDER_SOURCE, providerSource === sourceName ? "" : sourceName, {
+        shouldDirty: true,
+      })
+    },
+    [providerSource, setValue]
+  )
 
   return (
     <Form onSubmit={handleSubmit(onSubmit)} spellCheck={false}>
@@ -172,60 +189,23 @@ export function SetupProviderSourceForm({
         <FormControl isRequired isInvalid={exists(providerSourceError)}>
           <SimpleGrid
             spacing={4}
-            templateColumns="repeat(auto-fill, minmax(120px, 1fr))"
-            marginTop={"10px"}>
-            {!providers?.["docker"] && (
-              <RecommendedProviderCard
-                image={DockerPng}
-                source={"docker"}
-                currentSource={providerSource}
-                setValue={wrappedSetValue}
-              />
-            )}
-            {!providers?.["aws"] && (
-              <RecommendedProviderCard
-                image={AWSSvg}
-                source={"aws"}
-                currentSource={providerSource}
-                setValue={wrappedSetValue}
-              />
-            )}
-            {!providers?.["gcloud"] && (
-              <RecommendedProviderCard
-                image={GCloudSvg}
-                source={"gcloud"}
-                currentSource={providerSource}
-                setValue={wrappedSetValue}
-              />
-            )}
-            {!providers?.["azure"] && (
-              <RecommendedProviderCard
-                image={AzureSvg}
-                source={"azure"}
-                currentSource={providerSource}
-                setValue={wrappedSetValue}
-              />
-            )}
-            {!providers?.["digitalocean"] && (
-              <RecommendedProviderCard
-                image={DigitalOceanSvg}
-                source={"digitalocean"}
-                currentSource={providerSource}
-                setValue={wrappedSetValue}
-              />
-            )}
-            {!providers?.["kubernetes"] && (
-              <RecommendedProviderCard
-                image={KubernetesSvg}
-                source={"kubernetes"}
-                currentSource={providerSource}
-                setValue={wrappedSetValue}
-              />
+            templateColumns={`repeat(auto-fill, ${cardSize})`}
+            marginTop="2.5">
+            {RECOMMENDED_PROVIDER_SOURCES.filter((source) => !providers?.[source.name]).map(
+              (source) => (
+                <RecommendedProviderCard
+                  key={source.name}
+                  image={source.image}
+                  source={source.name}
+                  isSelected={providerSource === source.name}
+                  onClick={handleRecommendedProviderClicked(source.name)}
+                />
+              )
             )}
             <RecommendedProviderCard
               imageNode={<Icon as={AiOutlinePlusCircle} fontSize={"64px"} color={"primary.500"} />}
-              selected={showCustom}
-              currentSource={providerSource}
+              isSelected={showCustom}
+              isCurrentSource={providerSource === ""}
               onClick={() => {
                 setShowCustom(!showCustom)
                 setValue(FieldName.PROVIDER_SOURCE, "", {
@@ -243,7 +223,7 @@ export function SetupProviderSourceForm({
                 {...register(FieldName.PROVIDER_SOURCE, { required: true })}
               />
               {providerSourceError && providerSourceError.message ? (
-                <FormErrorMessage>{providerSourceError.message ?? "Error"}</FormErrorMessage>
+                <FormErrorMessage>{providerSourceError.message}</FormErrorMessage>
               ) : (
                 <FormHelperText>
                   Can either be a URL or local path to a <Code>provider</Code> binary, or a github

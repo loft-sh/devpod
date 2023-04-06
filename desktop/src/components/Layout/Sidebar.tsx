@@ -24,7 +24,6 @@ export function Sidebar({ children, ...boxProps }: TSidebarProps) {
 
   return (
     <Grid
-      resizable="horizontal"
       as="aside"
       templateRows="6rem 1fr 6rem"
       width="full"

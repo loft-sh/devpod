@@ -1,4 +1,4 @@
-import { SimpleGrid } from "@chakra-ui/react"
+import { Grid, useToken } from "@chakra-ui/react"
 import { useMemo } from "react"
 import { useProviders } from "../../contexts"
 import { exists } from "../../lib"
@@ -7,6 +7,7 @@ import { ProviderCard } from "./ProviderCard"
 
 type TProviderInfo = Readonly<{ name: TProviderID }>
 export function ListProviders() {
+  const cardSize = useToken("sizes", "56")
   const [[providers], { remove }] = useProviders()
   const providersInfo = useMemo<readonly TProviderInfo[]>(() => {
     if (!exists(providers)) {
@@ -21,10 +22,10 @@ export function ListProviders() {
   }, [providers])
 
   return (
-    <SimpleGrid spacing={6} templateColumns="repeat(auto-fill, minmax(20rem, 1fr))">
+    <Grid gridGap={4} gridTemplateColumns={`repeat(auto-fill, ${cardSize})`}>
       {providersInfo.map(({ name }) => (
         <ProviderCard key={name} id={name} provider={providers?.[name]} remove={remove} />
       ))}
-    </SimpleGrid>
+    </Grid>
   )
 }

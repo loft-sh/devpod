@@ -5,6 +5,7 @@ import {
   CardBody,
   CardFooter,
   CardHeader,
+  Center,
   Heading,
   HStack,
   IconButton,
@@ -20,13 +21,12 @@ import {
   Tooltip,
   useDisclosure,
 } from "@chakra-ui/react"
-import { Link as RouterLink } from "react-router-dom"
-import { Routes } from "../../routes"
-import { noop } from "../../lib"
-import { TProvider, TRunnable, TWithProviderID } from "../../types"
 import { UseMutationResult } from "@tanstack/react-query"
-import CodeImage from "../../images/code.jpg"
-import { Trash } from "../../icons"
+import { Link as RouterLink } from "react-router-dom"
+import { ProviderPlaceholder, Trash } from "../../icons"
+import { exists, noop } from "../../lib"
+import { Routes } from "../../routes"
+import { TProvider, TRunnable, TWithProviderID } from "../../types"
 
 type TProviderCardProps = {
   id: string
@@ -40,14 +40,22 @@ export function ProviderCard({ id, provider, remove }: TProviderCardProps) {
 
   return (
     <>
-      <Card variant="outline" width={"200px"} key={id}>
-        <CardHeader>
-          <Image
-            objectFit="cover"
-            borderRadius="md"
-            src={provider?.config?.icon ?? CodeImage}
-            alt="Project Image"
-          />
+      <Card variant="outline" height="96" key={id}>
+        <CardHeader display="flex" justifyContent="center" padding="0">
+          {exists(provider?.config?.icon) ? (
+            <Image
+              objectFit="cover"
+              padding="8"
+              borderRadius="md"
+              height="48"
+              src={provider?.config?.icon}
+              alt="Project Image"
+            />
+          ) : (
+            <Center height="48">
+              <ProviderPlaceholder boxSize={24} color="chakra-body-text" />
+            </Center>
+          )}
         </CardHeader>
         <CardBody>
           <Heading size="md">

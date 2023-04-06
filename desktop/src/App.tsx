@@ -19,11 +19,13 @@ import { Sidebar, SidebarMenuItem, StatusBar, Toolbar } from "./components"
 import { ToolbarProvider, useSettings } from "./contexts"
 import { Briefcase, Cog, Stack3D } from "./icons"
 import { Routes } from "./routes"
+import { useBorderColor } from "./Theme"
 import { useAppReady } from "./useAppReady"
 
 const TITLE_BAR_SAFE_AREA: BoxProps["height"] = "10"
 const STATUS_BAR_SAFE_AREA: BoxProps["height"] = "5"
 const TOOLBAR_HEIGHT: BoxProps["height"] = "32"
+const SIDEBAR_WIDTH: BoxProps["width"] = "15rem"
 
 export function App() {
   useAppReady()
@@ -32,13 +34,14 @@ export function App() {
   const { sidebarPosition } = useSettings()
   const contentBackgroundColor = useColorModeValue("white", "black")
   const toolbarHeight = useToken("sizes", TOOLBAR_HEIGHT as string)
+  const borderColor = useBorderColor()
 
   const mainGridProps = useMemo<GridProps>(() => {
     if (sidebarPosition === "right") {
-      return { templateAreas: `"main sidebar"`, gridTemplateColumns: "1fr 15rem" }
+      return { templateAreas: `"main sidebar"`, gridTemplateColumns: `1fr ${SIDEBAR_WIDTH}` }
     }
 
-    return { templateAreas: `"sidebar main"`, gridTemplateColumns: "15rem 1fr" }
+    return { templateAreas: `"sidebar main"`, gridTemplateColumns: `${SIDEBAR_WIDTH} 1fr` }
   }, [sidebarPosition])
 
   useEffect(() => {
@@ -85,6 +88,7 @@ export function App() {
               <Box
                 data-tauri-drag-region // keep!
                 backgroundColor={contentBackgroundColor}
+                position="relative"
                 width="full"
                 height="full"
                 overflowY="auto">
@@ -102,17 +106,23 @@ export function App() {
                   paddingBottom={STATUS_BAR_SAFE_AREA}
                   paddingX="8"
                   width="full"
-                  sx={{ height: `calc(100vh - ${toolbarHeight})` }}
+                  height={`calc(100vh - ${toolbarHeight})`}
                   overflowY="auto">
                   <Outlet />
                 </Box>
+                <StatusBar
+                  position="fixed"
+                  bottom="0"
+                  width={`calc(100% - ${SIDEBAR_WIDTH})`}
+                  borderTopWidth="thin"
+                  borderTopColor={borderColor}
+                  backgroundColor={contentBackgroundColor}
+                />
               </Box>
             </ToolbarProvider>
           </GridItem>
         </Grid>
       </Box>
-
-      <StatusBar />
     </Flex>
   )
 }
