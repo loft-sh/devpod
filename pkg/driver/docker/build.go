@@ -26,6 +26,7 @@ import (
 
 func (d *dockerDriver) BuildDevContainer(
 	ctx context.Context,
+	labels []string,
 	parsedConfig *config.SubstitutedConfig,
 	extendedBuildInfo *feature.ExtendedBuildInfo,
 	dockerfilePath,
@@ -79,6 +80,53 @@ func (d *dockerDriver) BuildDevContainer(
 	// build the image
 	imageName := getImageName(localWorkspaceFolder)
 
+	// get build options
+	buildOptions, err := CreateBuildOptions(dockerfilePath, dockerfileContent, parsedConfig, extendedBuildInfo, imageName, options.PushRepository, prebuildHash)
+	if err != nil {
+		return nil, err
+	}
+
+	// build image
+	writer := d.Log.Writer(logrus.InfoLevel, false)
+	defer writer.Close()
+
+	// check if docker buildx exists
+	if d.buildxExists(ctx) {
+		d.Log.Infof("Build with docker buildx")
+		err := d.buildxBuild(ctx, writer, buildOptions)
+		if err != nil {
+			return nil, errors.Wrap(err, "buildx build")
+		}
+	} else {
+		d.Log.Infof("Build with internal buildkit")
+		err := d.internalBuild(ctx, writer, buildOptions)
+		if err != nil {
+			return nil, errors.Wrap(err, "internal build")
+		}
+	}
+
+	// inspect image
+	imageDetails, err := d.Docker.InspectImage(imageName, false)
+	if err != nil {
+		return nil, errors.Wrap(err, "get image details")
+	}
+
+	return &config.BuildInfo{
+		ImageDetails:  imageDetails,
+		ImageMetadata: extendedBuildInfo.MetadataConfig,
+		ImageName:     imageName,
+		PrebuildHash:  prebuildHash,
+	}, nil
+}
+
+func CreateBuildOptions(
+	dockerfilePath, dockerfileContent string,
+	parsedConfig *config.SubstitutedConfig,
+	extendedBuildInfo *feature.ExtendedBuildInfo,
+	imageName string,
+	pushRepository string,
+	prebuildHash string,
+) (*build.BuildOptions, error) {
 	// extra args?
 	finalDockerfilePath := dockerfilePath
 	finalDockerfileContent := string(dockerfileContent)
@@ -139,9 +187,11 @@ func (d *dockerDriver) BuildDevContainer(
 
 	// other options
 	buildOptions.Dockerfile = finalDockerfilePath
-	buildOptions.Images = append(buildOptions.Images, imageName)
-	if options.PushRepository != "" {
-		buildOptions.Images = append(buildOptions.Images, options.PushRepository+":"+prebuildHash)
+	if imageName != "" {
+		buildOptions.Images = append(buildOptions.Images, imageName)
+	}
+	if pushRepository != "" {
+		buildOptions.Images = append(buildOptions.Images, pushRepository+":"+prebuildHash)
 	}
 	buildOptions.Context = getContextPath(parsedConfig.Config)
 
@@ -150,38 +200,7 @@ func (d *dockerDriver) BuildDevContainer(
 		buildOptions.BuildArgs = map[string]string{}
 	}
 	buildOptions.BuildArgs["BUILDKIT_INLINE_CACHE"] = "1"
-
-	// build image
-	writer := d.Log.Writer(logrus.InfoLevel, false)
-	defer writer.Close()
-
-	// check if docker buildx exists
-	if d.buildxExists(ctx) {
-		d.Log.Infof("Build with docker buildx")
-		err := d.buildxBuild(ctx, writer, buildOptions)
-		if err != nil {
-			return nil, errors.Wrap(err, "buildx build")
-		}
-	} else {
-		d.Log.Infof("Build with internal buildkit")
-		err := d.internalBuild(ctx, writer, buildOptions)
-		if err != nil {
-			return nil, errors.Wrap(err, "internal build")
-		}
-	}
-
-	// inspect image
-	imageDetails, err := d.Docker.InspectImage(imageName, false)
-	if err != nil {
-		return nil, errors.Wrap(err, "get image details")
-	}
-
-	return &config.BuildInfo{
-		ImageDetails:  imageDetails,
-		ImageMetadata: extendedBuildInfo.MetadataConfig,
-		ImageName:     imageName,
-		PrebuildHash:  prebuildHash,
-	}, nil
+	return buildOptions, nil
 }
 
 func getImageName(localWorkspaceFolder string) string {
@@ -212,7 +231,7 @@ func (d *dockerDriver) internalBuild(ctx context.Context, writer io.Writer, opti
 	}
 	defer buildKitClient.Close()
 
-	err = buildkit.Build(ctx, buildKitClient, writer, options)
+	err = buildkit.Build(ctx, buildKitClient, writer, options, d.Log)
 	if err != nil {
 		return errors.Wrap(err, "build")
 	}

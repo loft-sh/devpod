@@ -136,6 +136,16 @@ type ProviderKubernetesDriverConfig struct {
 	// ServiceAccount is the service account to use
 	ServiceAccount string `json:"serviceAccount,omitempty"`
 
+	// BuildRepository defines the repository to push builds. If empty,
+	// DevPod will not try to build any images at all.
+	BuildRepository string `json:"buildRepository,omitempty"`
+
+	// BuildkitImage is the build kit image to use
+	BuildkitImage string `json:"buildkitImage,omitempty"`
+
+	// BuildkitPrivileged signals if pod should be ran in privileged mode
+	BuildkitPrivileged string `json:"buildkitPrivileged,omitempty"`
+
 	// HelperImage is used to find out cluster architecture and copy files
 	HelperImage string `json:"helperImage,omitempty"`
 

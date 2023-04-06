@@ -118,13 +118,10 @@ func (k *kubernetesDriver) runContainer(
 
 	// service account
 	serviceAccount := ""
-	automountServiceAccountToken := false
 	if k.config.ServiceAccount != "" {
 		serviceAccount = k.config.ServiceAccount
-		automountServiceAccountToken = true
 	} else if k.config.ClusterRole != "" {
 		serviceAccount = id
-		automountServiceAccountToken = true
 	}
 
 	// create the pod manifest
@@ -138,9 +135,8 @@ func (k *kubernetesDriver) runContainer(
 			Name: id,
 		},
 		Spec: corev1.PodSpec{
-			ServiceAccountName:           serviceAccount,
-			AutomountServiceAccountToken: &automountServiceAccountToken,
-			InitContainers:               initContainer,
+			ServiceAccountName: serviceAccount,
+			InitContainers:     initContainer,
 			Containers: []corev1.Container{
 				{
 					Name:         "devpod",
@@ -176,6 +172,7 @@ func (k *kubernetesDriver) runContainer(
 	}
 
 	// create the pod
+	k.Log.Infof("Create Pod '%s'", id)
 	buf := &bytes.Buffer{}
 	err = k.runCommand(ctx, []string{"create", "-f", "-"}, strings.NewReader(string(podRaw)), buf, buf)
 	if err != nil {

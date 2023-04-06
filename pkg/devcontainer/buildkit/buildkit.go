@@ -4,10 +4,10 @@ import (
 	"context"
 	"github.com/loft-sh/devpod/pkg/devcontainer/build"
 	"github.com/loft-sh/devpod/pkg/docker"
+	"github.com/loft-sh/devpod/pkg/log"
 	buildkit "github.com/moby/buildkit/client"
 	"github.com/moby/buildkit/session"
 	"github.com/moby/buildkit/session/auth/authprovider"
-	"github.com/moby/buildkit/session/upload/uploadprovider"
 	"github.com/pkg/errors"
 	"io"
 	"os"
@@ -16,7 +16,7 @@ import (
 	"syscall"
 )
 
-func Build(ctx context.Context, client *buildkit.Client, writer io.Writer, options *build.BuildOptions) error {
+func Build(ctx context.Context, client *buildkit.Client, writer io.Writer, options *build.BuildOptions, log log.Logger) error {
 	dockerConfig, err := docker.LoadDockerConfig()
 	if err != nil {
 		return err
@@ -30,11 +30,6 @@ func Build(ctx context.Context, client *buildkit.Client, writer io.Writer, optio
 
 	// is context stream?
 	attachable := []session.Attachable{}
-	if options.ContextReader != nil {
-		up := uploadprovider.New()
-		options.Context = up.Add(options.ContextReader)
-		attachable = append(attachable, up)
-	}
 	attachable = append(attachable, authprovider.NewDockerAuthProvider(dockerConfig))
 
 	// create solve options
@@ -44,7 +39,6 @@ func Build(ctx context.Context, client *buildkit.Client, writer io.Writer, optio
 			"filename": filepath.Base(options.Dockerfile),
 			"context":  options.Context,
 		},
-		LocalDirs:    map[string]string{},
 		Session:      attachable,
 		CacheImports: cacheFrom,
 	}
@@ -55,6 +49,7 @@ func Build(ctx context.Context, client *buildkit.Client, writer io.Writer, optio
 	}
 
 	// add context and dockerfile to local dirs
+	solveOptions.LocalDirs = map[string]string{}
 	solveOptions.LocalDirs["context"] = options.Context
 	solveOptions.LocalDirs["dockerfile"] = filepath.Dir(options.Dockerfile)
 
@@ -85,7 +80,7 @@ func Build(ctx context.Context, client *buildkit.Client, writer io.Writer, optio
 		})
 	} else if options.Push {
 		solveOptions.Exports = append(solveOptions.Exports, buildkit.ExportEntry{
-			Type: "moby",
+			Type: "image",
 			Attrs: map[string]string{
 				"name":           strings.Join(options.Images, ","),
 				"name-canonical": "",
