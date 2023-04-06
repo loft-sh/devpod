@@ -119,6 +119,10 @@ func (k *kubernetesDriver) runContainer(
 	// create the pod manifest
 	entrypoint, args := docker.GetContainerEntrypointAndArgs(mergedConfig, imageDetails)
 	podRaw, err := json.Marshal(&corev1.Pod{
+		TypeMeta: metav1.TypeMeta{
+			Kind:       "Pod",
+			APIVersion: corev1.SchemeGroupVersion.String(),
+		},
 		ObjectMeta: metav1.ObjectMeta{
 			Name: id,
 		},
@@ -179,7 +183,7 @@ func (k *kubernetesDriver) runContainer(
 			// run kubectl
 			k.Log.Infof("Copy %s into DevContainer %s", copyMount.Source, copyMount.Target)
 			buf := &bytes.Buffer{}
-			err = k.runCommandWithDir(ctx, filepath.Dir(parsedConfig.Origin), []string{"cp", "-c", "devpod", copyMount.Source, fmt.Sprintf("%s:%s", id, copyMount.Target)}, nil, buf, buf)
+			err = k.runCommandWithDir(ctx, filepath.Dir(parsedConfig.Origin), []string{"cp", "-c", "devpod", strings.TrimRight(copyMount.Source, "/") + "/.", fmt.Sprintf("%s:%s", id, strings.TrimRight(copyMount.Target, "/"))}, nil, buf, buf)
 			if err != nil {
 				return errors.Wrap(err, "copy to devcontainer")
 			}

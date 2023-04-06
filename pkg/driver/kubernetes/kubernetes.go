@@ -23,6 +23,9 @@ func NewKubernetesDriver(workspaceInfo *provider2.AgentWorkspaceInfo, log log.Lo
 		kubectl = workspaceInfo.Agent.Kubernetes.Path
 	}
 
+	if workspaceInfo.Agent.Kubernetes.Namespace != "" {
+		log.Infof("Use Kubernetes Namespace '%s'", workspaceInfo.Agent.Kubernetes.Namespace)
+	}
 	return &kubernetesDriver{
 		kubectl: kubectl,
 
@@ -115,7 +118,8 @@ func (k *kubernetesDriver) infoFromObject(ctx context.Context, pvc *corev1.Persi
 	// check pod
 	pod, err := k.waitPodRunning(ctx, pvc.Name)
 	if err != nil {
-		return nil, err
+		k.Log.Infof("Error finding pod: %v", err)
+		pod = nil
 	}
 
 	// determine status
@@ -199,17 +203,17 @@ func (k *kubernetesDriver) CommandDevContainer(ctx context.Context, id, user, co
 func (k *kubernetesDriver) buildCmd(ctx context.Context, args []string) *exec.Cmd {
 	newArgs := []string{}
 	if k.namespace != "" {
-		newArgs = []string{"--namespace", k.namespace}
+		newArgs = append(newArgs, "--namespace", k.namespace)
 	}
 	if k.kubeConfig != "" {
-		newArgs = append(args, "--kubeconfig", k.kubeConfig)
+		newArgs = append(newArgs, "--kubeconfig", k.kubeConfig)
 	}
 	if k.context != "" {
-		newArgs = append(args, "--context", k.context)
+		newArgs = append(newArgs, "--context", k.context)
 	}
 	newArgs = append(newArgs, args...)
-	k.Log.Debugf("Run command: %s %s", k.kubectl, strings.Join(args, " "))
-	return exec.CommandContext(ctx, k.kubectl, args...)
+	k.Log.Debugf("Run command: %s %s", k.kubectl, strings.Join(newArgs, " "))
+	return exec.CommandContext(ctx, k.kubectl, newArgs...)
 }
 
 func (k *kubernetesDriver) runCommand(ctx context.Context, args []string, stdin io.Reader, stdout io.Writer, stderr io.Writer) error {

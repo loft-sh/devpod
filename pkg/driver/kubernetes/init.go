@@ -24,7 +24,7 @@ func (k *kubernetesDriver) getInitContainer(
 		copyFrom := volumeMount.MountPath
 		volumeMount.MountPath = "/" + volumeMount.SubPath
 		volumeMounts = append(volumeMounts, volumeMount)
-		commands = append(commands, fmt.Sprintf(`cp -a %s/. %s/`, strings.TrimRight(copyFrom, "/"), strings.TrimRight(volumeMount.MountPath, "/")))
+		commands = append(commands, fmt.Sprintf(`cp -a %s/. %s/ || true`, strings.TrimRight(copyFrom, "/"), strings.TrimRight(volumeMount.MountPath, "/")))
 	}
 
 	// check if there is at least one mount

@@ -57,6 +57,36 @@ func (k *kubernetesDriver) waitPodRunning(ctx context.Context, id string) (*core
 		}
 
 		// check container status
+		for _, c := range pod.Status.InitContainerStatuses {
+			// is waiting
+			if c.State.Waiting != nil {
+				if CriticalStatus[c.State.Waiting.Reason] {
+					return false, fmt.Errorf("pod '%s' init container '%s' is waiting to start: %s (%s)", id, c.Name, c.State.Waiting.Message, c.State.Waiting.Reason)
+				}
+
+				if now.After(nextMessage) {
+					k.Log.Infof("Waiting, since pod '%s' is waiting to start: %s (%s)", id, c.State.Waiting.Message, c.State.Waiting.Reason)
+					nextMessage = now.Add(time.Second * 5)
+				}
+				return false, nil
+			}
+
+			// is terminated
+			if c.State.Terminated != nil && c.State.Terminated.ExitCode != 0 {
+				return false, fmt.Errorf("pod '%s' init container '%s' is terminated: %s (%s)", id, c.Name, c.State.Terminated.Message, c.State.Terminated.Reason)
+			}
+
+			// is running
+			if c.State.Running != nil {
+				if now.After(nextMessage) {
+					k.Log.Infof("Waiting, since pod '%s' init container '%s' is running", id, c.Name)
+					nextMessage = now.Add(time.Second * 5)
+				}
+				return false, nil
+			}
+		}
+
+		// check container status
 		for _, c := range pod.Status.ContainerStatuses {
 			// delete succeeded pods
 			if c.State.Terminated != nil && c.State.Terminated.ExitCode == 0 {
