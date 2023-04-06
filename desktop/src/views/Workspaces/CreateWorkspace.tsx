@@ -127,7 +127,6 @@ export function CreateWorkspace() {
     Object.values(FieldName),
     formState
   )
-  console.log(defaultIDEError)
 
   const providerOptions = useMemo<readonly TProviderID[]>(() => {
     if (!exists(providers)) {
