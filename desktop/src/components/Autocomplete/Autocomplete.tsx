@@ -9,16 +9,18 @@ import {
   useToken,
 } from "@chakra-ui/react"
 import { Combobox } from "@headlessui/react"
-import { forwardRef, ReactNode, useState } from "react"
+import { forwardRef, ReactNode, useEffect, useState } from "react"
 import { AiOutlineCaretRight } from "react-icons/ai"
 
 type TAutoCompleteOption = Readonly<{
   key: string
-  label: ReactNode
+  label: string
 }>
 type TAutoCompleteProps = Readonly<{
   options: readonly TAutoCompleteOption[]
   onChange?: (value: TAutoCompleteOption) => void
+  onBlur?: () => void
+  value?: TAutoCompleteOption
   defaultValue?: TAutoCompleteOption
   name?: string
 }>
@@ -38,8 +40,8 @@ type TAutoCompleteProps = Readonly<{
     </form>
   ```
  */
-export const AutoComplete = forwardRef<HTMLElement, TAutoCompleteProps>(function InnerAutocomlete(
-  { name, options, defaultValue, onChange },
+export const AutoComplete = forwardRef<HTMLElement, TAutoCompleteProps>(function InnerAutoComplete(
+  { name, options, defaultValue, value, onChange, onBlur },
   ref
 ) {
   const optionsBackgroundColor = useColorModeValue("gray.100", "gray.800")
@@ -57,12 +59,14 @@ export const AutoComplete = forwardRef<HTMLElement, TAutoCompleteProps>(function
     <Combobox<TAutoCompleteOption>
       ref={ref}
       name={name}
+      value={value}
       defaultValue={defaultValue}
       onChange={onChange}>
       {({ open: isOpen }) => (
         <Box position="relative" zIndex={""}>
           <InputGroup>
             <Input
+              onBlur={onBlur}
               spellCheck={false}
               as={Combobox.Input}
               onChange={(event) => setQuery(event.target.value)}
@@ -82,7 +86,9 @@ export const AutoComplete = forwardRef<HTMLElement, TAutoCompleteProps>(function
             {({ open: isOpen }) => (
               <Box backgroundColor={optionsBackgroundColor} padding="2" borderRadius="md">
                 <Fade in={isOpen}>
-                  {query.length > 0 && <Option option={{ key: query, label: query }} />}
+                  {query.length > 0 && !filteredOptions.find((o) => o.label === query) && (
+                    <Option option={{ key: query, label: query }} />
+                  )}
                   {filteredOptions.map((option) => (
                     <Option key={option.key} option={option} />
                   ))}

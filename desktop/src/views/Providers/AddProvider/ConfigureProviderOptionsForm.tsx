@@ -13,7 +13,7 @@ import {
 import styled from "@emotion/styled"
 import { useMutation } from "@tanstack/react-query"
 import { ReactNode, useCallback, useMemo } from "react"
-import { FormProvider, SubmitHandler, useForm, useFormContext } from "react-hook-form"
+import { Controller, FormProvider, SubmitHandler, useForm, useFormContext } from "react-hook-form"
 import { client } from "../../../client"
 import { useProvider } from "../../../contexts"
 import { exists, isError, useFormErrors } from "../../../lib"
@@ -24,7 +24,7 @@ import {
   TProviderOptions,
 } from "../../../types"
 import { canCreateMachine, getVisibleOptions, TOptionWithID } from "../helpers"
-import { CollapsibleSection, ErrorMessageBox } from "../../../components"
+import { AutoComplete, CollapsibleSection, ErrorMessageBox } from "../../../components"
 
 type TAllOptions = Readonly<{
   required: TOptionWithID[]
@@ -227,10 +227,10 @@ export function ConfigureProviderOptionsForm({
           <Button
             marginTop="10"
             type="submit"
-            colorScheme={"primary"}
+            variant="primary"
             isLoading={status === "loading"}
             disabled={formMethods.formState.isSubmitting}>
-            {initializeProvider ? "Create Provider" : "Save"}
+            {initializeProvider ? "Add Provider" : "Save"}
           </Button>
         </VStack>
       </Form>
@@ -246,6 +246,7 @@ function OptionFormField({
   description,
   type,
   displayName,
+  suggestions,
   isRequired = false,
 }: TOptionFormField) {
   const { register, formState } = useFormContext()
@@ -256,6 +257,25 @@ function OptionFormField({
     const valueProp = exists(value) ? { defaultValue: value } : {}
     const defaultValueProp = exists(defaultValue) ? { defaultValue } : {}
     const props = { ...defaultValueProp, ...valueProp, ...registerProps }
+
+    if (exists(suggestions)) {
+      return (
+        <Controller
+          name={id}
+          defaultValue={value ?? defaultValue ?? undefined}
+          rules={{ required: isRequired }}
+          render={({ field: { onChange, onBlur, value: v, ref } }) => (
+            <AutoComplete
+              ref={ref}
+              value={v}
+              onBlur={onBlur}
+              onChange={onChange}
+              options={suggestions.map((s) => ({ key: s, label: s }))}
+            />
+          )}
+        />
+      )
+    }
 
     switch (type) {
       case "boolean":
@@ -269,7 +289,7 @@ function OptionFormField({
       default:
         return <Input placeholder={`Enter ${displayName}`} type="text" {...props} />
     }
-  }, [defaultValue, displayName, id, isRequired, register, type, value])
+  }, [register, id, isRequired, value, defaultValue, suggestions, type, displayName])
 
   return (
     <FormControl isRequired={isRequired}>

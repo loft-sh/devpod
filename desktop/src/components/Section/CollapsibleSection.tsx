@@ -7,6 +7,7 @@ const variants: Variants = {
   enter: {
     opacity: 1,
     height: "auto",
+    overflow: "revert",
     transition: {
       opacity: { duration: 0.2 },
       height: { duration: 0.3 },
@@ -15,6 +16,7 @@ const variants: Variants = {
   exit: {
     opacity: 0,
     height: 0,
+    overflow: "hidden",
     transition: {
       opacity: { duration: 0.3 },
       height: { duration: 0.2 },
@@ -85,7 +87,6 @@ export const CollapsibleSection = forwardRef<HTMLDivElement, TCollapsibleSection
               exit="exit"
               onAnimationComplete={() => onOpenChange?.(isOpen, motionRef.current)}
               style={{
-                overflow: "hidden",
                 display: "block",
               }}>
               <Box

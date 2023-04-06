@@ -22,7 +22,7 @@ use std::{
     sync::{Arc, Mutex},
 };
 use system_tray::SystemTray;
-use tauri::{Manager, Menu, Wry};
+use tauri::{Manager, Menu, Wry, ActivationPolicy};
 use tokio::sync::mpsc::{self, Sender};
 use workspaces::WorkspacesState;
 
@@ -65,12 +65,12 @@ fn main() -> anyhow::Result<()> {
         .system_tray(system_tray.build())
         .menu(menu)
         .setup(move |app| {
+            let window = app.get_window("main").unwrap();
+            window::setup(&window);
+
             workspaces::setup(&app.handle(), app.state());
             action_logs::setup(&app.handle())?;
             custom_protocol.setup(app.handle());
-
-            let window = app.get_window("main").unwrap();
-            window::setup(&window);
 
             let app_handle = app.handle();
             tauri::async_runtime::spawn(async move {
@@ -81,6 +81,8 @@ fn main() -> anyhow::Result<()> {
                     match ui_msg {
                         UiMessage::Ready => {
                             is_ready = true;
+
+                            app_handle.get_window("main").and_then(|w| Some(w.show()));
                             while let Some(msg) = messages.pop_front() {
                                 let _ = app_handle.emit_all("event", msg);
                             }
@@ -90,7 +92,8 @@ fn main() -> anyhow::Result<()> {
                         }
                         UiMessage::OpenWorkspace(..) => {
                             if is_ready {
-                                let _  = app_handle.emit_all("event", ui_msg);
+                                app_handle.get_window("main").and_then(|w| Some(w.show()));
+                                let _ = app_handle.emit_all("event", ui_msg);
                             } else {
                                 // recreate window
                                 let _ = window::new_main(&app_handle, app_name.to_string());
@@ -99,6 +102,7 @@ fn main() -> anyhow::Result<()> {
                         }
                         UiMessage::ShowDashboard => {
                             if is_ready {
+                                app_handle.get_window("main").and_then(|w| Some(w.show()));
                                 let _ = app_handle.emit_all("event", ui_msg);
                             } else {
                                 let _ = window::new_main(&app_handle, app_name.to_string());
