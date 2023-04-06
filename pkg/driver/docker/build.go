@@ -81,10 +81,15 @@ func (d *dockerDriver) BuildDevContainer(
 	imageName := getImageName(localWorkspaceFolder)
 
 	// get build options
-	buildOptions, err := CreateBuildOptions(dockerfilePath, dockerfileContent, parsedConfig, extendedBuildInfo, imageName, options.PushRepository, prebuildHash)
+	buildOptions, deleteFolders, err := CreateBuildOptions(dockerfilePath, dockerfileContent, parsedConfig, extendedBuildInfo, imageName, options.PushRepository, prebuildHash)
 	if err != nil {
 		return nil, err
 	}
+	defer func() {
+		for _, folder := range deleteFolders {
+			_ = os.RemoveAll(folder)
+		}
+	}()
 
 	// build image
 	writer := d.Log.Writer(logrus.InfoLevel, false)
@@ -126,7 +131,7 @@ func CreateBuildOptions(
 	imageName string,
 	pushRepository string,
 	prebuildHash string,
-) (*build.BuildOptions, error) {
+) (*build.BuildOptions, []string, error) {
 	// extra args?
 	finalDockerfilePath := dockerfilePath
 	finalDockerfileContent := string(dockerfileContent)
@@ -139,6 +144,7 @@ func CreateBuildOptions(
 	if buildOptions.BuildArgs == nil {
 		buildOptions.BuildArgs = map[string]string{}
 	}
+	deleteFolders := []string{}
 
 	// get extended build info
 	if extendedBuildInfo != nil && extendedBuildInfo.FeaturesBuildInfo != nil {
@@ -146,7 +152,7 @@ func CreateBuildOptions(
 
 		// cleanup features folder after we are done building
 		if featureBuildInfo.FeaturesFolder != "" {
-			defer os.RemoveAll(featureBuildInfo.FeaturesFolder)
+			deleteFolders = append(deleteFolders, featureBuildInfo.FeaturesFolder)
 		}
 
 		// rewrite dockerfile
@@ -161,7 +167,7 @@ func CreateBuildOptions(
 		finalDockerfilePath = filepath.Join(featureBuildInfo.FeaturesFolder, "Dockerfile-with-features")
 		err := os.WriteFile(finalDockerfilePath, []byte(finalDockerfileContent), 0666)
 		if err != nil {
-			return nil, errors.Wrap(err, "write Dockerfile with features")
+			return nil, nil, errors.Wrap(err, "write Dockerfile with features")
 		}
 
 		// track additional build args to include below
@@ -200,7 +206,7 @@ func CreateBuildOptions(
 		buildOptions.BuildArgs = map[string]string{}
 	}
 	buildOptions.BuildArgs["BUILDKIT_INLINE_CACHE"] = "1"
-	return buildOptions, nil
+	return buildOptions, deleteFolders, nil
 }
 
 func getImageName(localWorkspaceFolder string) string {

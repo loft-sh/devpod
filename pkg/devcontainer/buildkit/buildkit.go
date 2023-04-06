@@ -2,6 +2,7 @@ package buildkit
 
 import (
 	"context"
+	"fmt"
 	"github.com/loft-sh/devpod/pkg/devcontainer/build"
 	"github.com/loft-sh/devpod/pkg/docker"
 	"github.com/loft-sh/devpod/pkg/log"
@@ -13,7 +14,6 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
-	"syscall"
 )
 
 func Build(ctx context.Context, client *buildkit.Client, writer io.Writer, options *build.BuildOptions, log log.Logger) error {
@@ -60,7 +60,7 @@ func Build(ctx context.Context, client *buildkit.Client, writer io.Writer, optio
 			return errors.Wrapf(err, "failed to get build context %v", k)
 		}
 		if !st.IsDir() {
-			return errors.Wrapf(syscall.ENOTDIR, "failed to get build context path %v", v)
+			return fmt.Errorf("build context '%s' is not a directory", v)
 		}
 		localName := k
 		if k == "context" || k == "dockerfile" {

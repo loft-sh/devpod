@@ -128,7 +128,7 @@ func (k *kubernetesDriver) buildPod(
 
 	// get build options
 	imageName := k.config.BuildRepository + ":" + prebuildHash
-	buildOptions, err := docker.CreateBuildOptions(
+	buildOptions, deleteFolders, err := docker.CreateBuildOptions(
 		dockerfilePath,
 		dockerfileContent,
 		parsedConfig,
@@ -140,9 +140,13 @@ func (k *kubernetesDriver) buildPod(
 	if err != nil {
 		return nil, err
 	}
+	defer func() {
+		for _, folder := range deleteFolders {
+			_ = os.RemoveAll(folder)
+		}
+	}()
 	buildOptions.Load = false
 	buildOptions.Push = true
-	//buildOptions.Upload = true
 
 	// get pod
 	var pod *corev1.Pod
