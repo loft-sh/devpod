@@ -14,6 +14,7 @@ import {
   SimpleGrid,
   Text,
   Tooltip,
+  useColorModeValue,
   VStack,
 } from "@chakra-ui/react"
 import { useQuery } from "@tanstack/react-query"
@@ -22,6 +23,7 @@ import { SubmitHandler, useForm } from "react-hook-form"
 import { FiFile } from "react-icons/fi"
 import { useNavigate } from "react-router"
 import { useSearchParams } from "react-router-dom"
+import { DEFAULT_ECDH_CURVE } from "tls"
 import { client } from "../../client"
 import { CollapsibleSection, useStreamingTerminal } from "../../components"
 import { useProviders, useWorkspace, useWorkspaces } from "../../contexts"
@@ -38,6 +40,7 @@ import {
 import { exists, useFormErrors } from "../../lib"
 import { QueryKeys } from "../../queryKeys"
 import { Routes } from "../../routes"
+import { useBorderColor } from "../../Theme"
 import { TProviderID, TWorkspaceID } from "../../types"
 import { ExampleCard } from "./ExampleCard"
 import { FieldName, TFormValues } from "./types"
@@ -59,12 +62,16 @@ export function CreateWorkspace() {
   const workspace = useWorkspace(workspaceID)
   const [[providers]] = useProviders()
   const { register, handleSubmit, formState, watch, setError, setValue, clearErrors, reset } =
-    useForm<TFormValues>()
+    useForm<TFormValues>({
+      defaultValues: {
+        [FieldName.PROVIDER]: DEFAULT_PROVIDER,
+        [FieldName.DEFAULT_IDE]: "vscode",
+      },
+    })
   const currentSource = watch(FieldName.SOURCE)
   const { terminal, connectStream } = useStreamingTerminal()
 
   useEffect(() => {
-    console.log(params)
     reset({
       ...(params.rawSource !== undefined ? { [FieldName.SOURCE]: params.rawSource } : {}),
       ...(params.ide !== undefined ? { [FieldName.DEFAULT_IDE]: params.ide } : {}),
@@ -154,6 +161,10 @@ export function CreateWorkspace() {
     }
   }, [navigate, workspace])
 
+  const backgroundColor = useColorModeValue("blackAlpha.100", "whiteAlpha.100")
+  const borderColor = useBorderColor()
+  const inputBackgroundColor = useColorModeValue("white", "black")
+
   if (isLoading) {
     return terminal
   }
@@ -163,21 +174,21 @@ export function CreateWorkspace() {
       <VStack align="start" spacing="6" marginBottom="8">
         <VStack
           width="full"
-          backgroundColor="gray.50"
+          backgroundColor={backgroundColor}
           borderRadius="lg"
           borderWidth="thin"
-          borderColor="gray.200">
+          borderColor={borderColor}>
           <FormControl
             padding="20"
             isRequired
             isInvalid={exists(sourceError)}
             borderBottomWidth="thin"
-            borderBottomColor="gray.200">
+            borderBottomColor={borderColor}>
             <Text marginBottom="2" fontWeight="bold">
               Enter any git repository or local path to a folder you would like to create a
               workspace from
             </Text>
-            <InputGroup backgroundColor="white">
+            <InputGroup backgroundColor={inputBackgroundColor} borderRadius="md">
               <Input
                 placeholder="github.com/my-org/my-repo"
                 fontSize={"16px"}
@@ -277,7 +288,7 @@ export function CreateWorkspace() {
             <HStack spacing="8" alignItems={"top"} width={"100%"} justifyContent={"start"}>
               <FormControl isRequired isInvalid={exists(providerError)}>
                 <FormLabel>Provider</FormLabel>
-                <Select {...register(FieldName.PROVIDER, { required: true })}>
+                <Select {...register(FieldName.PROVIDER)}>
                   {providerOptions.map((providerID) => (
                     <option key={providerID} value={providerID}>
                       {providerID}
@@ -292,7 +303,7 @@ export function CreateWorkspace() {
               </FormControl>
               <FormControl isRequired isInvalid={exists(defaultIDEError)}>
                 <FormLabel>Default IDE</FormLabel>
-                <Select {...register(FieldName.DEFAULT_IDE, { required: true })}>
+                <Select {...register(FieldName.DEFAULT_IDE)}>
                   {idesQuery.data?.map((ide) => (
                     <option key={ide.name} value={ide.name!}>
                       {ide.displayName}

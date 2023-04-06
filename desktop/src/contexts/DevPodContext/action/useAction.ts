@@ -24,7 +24,6 @@ export function useAction(actionID: TActionID | undefined): TActionResult | unde
 
   const connect = useConnectAction(data, viewID)
   const replay = useReplayAction()
-  console.log(data?.status)
 
   return useMemo(() => {
     if (data === undefined) {

@@ -1,4 +1,4 @@
-import { Button, Grid, SimpleGrid, Text, VStack } from "@chakra-ui/react"
+import { Button, Grid, Text, VStack } from "@chakra-ui/react"
 import { useMemo } from "react"
 import { useNavigate } from "react-router"
 import { useWorkspaces } from "../../contexts"
@@ -34,7 +34,7 @@ export function ListWorkspaces() {
 
   return (
     <Grid
-      gridTemplateColumns={"repeat(auto-fit, minmax(30rem, 1fr))"}
+      gridTemplateColumns={"repeat(auto-fit, minmax(45rem, 1fr))"}
       gridGap={8}
       marginBottom="12">
       {workspaceCards.length === 0 ? (
