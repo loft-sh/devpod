@@ -122,16 +122,18 @@ export function ErrorPage() {
   const contentBackgroundColor = useColorModeValue("white", "black")
 
   return (
-    <Container padding="16" backgroundColor={contentBackgroundColor}>
-      <VStack>
-        <Text>Whoops, something went wrong or this page doesn&apos;t exist.</Text>
-        <Box paddingBottom="6">
-          <Link as={RouterLink} to={Routes.ROOT}>
-            Go back to home
-          </Link>
-        </Box>
-        <Code>{JSON.stringify(error, null, 2)}</Code>{" "}
-      </VStack>
-    </Container>
+    <Box height="100vh" width="100vw" backgroundColor={contentBackgroundColor}>
+      <Container padding="16">
+        <VStack>
+          <Text>Whoops, something went wrong or this page doesn&apos;t exist.</Text>
+          <Box paddingBottom="6">
+            <Link as={RouterLink} to={Routes.ROOT}>
+              Go back to home
+            </Link>
+          </Box>
+          <Code>{JSON.stringify(error, null, 2)}</Code>{" "}
+        </VStack>
+      </Container>
+    </Box>
   )
 }

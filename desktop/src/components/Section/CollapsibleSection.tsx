@@ -65,8 +65,8 @@ export const CollapsibleSection = forwardRef<HTMLDivElement, TCollapsibleSection
           <Box as="span" flex="1" textAlign="left">
             {showIcon && (
               <Icon
-                marginRight={"3px"}
-                fontSize={"12px"}
+                marginRight="1"
+                boxSize={4}
                 transition={"transform .2s"}
                 transform={isOpen ? "rotate(90deg)" : ""}
                 as={AiOutlineCaretRight}
