@@ -129,6 +129,13 @@ type ProviderKubernetesDriverConfig struct {
 	// Config is the path to the kube config to use
 	Config string `json:"config,omitempty"`
 
+	// ClusterRole defines a role binding with the given cluster role
+	// DevPod should create.
+	ClusterRole string `json:"clusterRole,omitempty"`
+
+	// ServiceAccount is the service account to use
+	ServiceAccount string `json:"serviceAccount,omitempty"`
+
 	// HelperImage is used to find out cluster architecture and copy files
 	HelperImage string `json:"helperImage,omitempty"`
 

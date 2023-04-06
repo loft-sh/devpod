@@ -24,7 +24,13 @@ func NewKubernetesDriver(workspaceInfo *provider2.AgentWorkspaceInfo, log log.Lo
 	}
 
 	if workspaceInfo.Agent.Kubernetes.Namespace != "" {
-		log.Infof("Use Kubernetes Namespace '%s'", workspaceInfo.Agent.Kubernetes.Namespace)
+		log.Debugf("Use Kubernetes Namespace '%s'", workspaceInfo.Agent.Kubernetes.Namespace)
+	}
+	if workspaceInfo.Agent.Kubernetes.Config != "" {
+		log.Debugf("Use Kubernetes Config '%s'", workspaceInfo.Agent.Kubernetes.Config)
+	}
+	if workspaceInfo.Agent.Kubernetes.Context != "" {
+		log.Debugf("Use Kubernetes Context '%s'", workspaceInfo.Agent.Kubernetes.Context)
 	}
 	return &kubernetesDriver{
 		kubectl: kubectl,
@@ -171,6 +177,21 @@ func (k *kubernetesDriver) DeleteDevContainer(ctx context.Context, id string) er
 	out, err := k.buildCmd(ctx, []string{"delete", "pvc", id, "--ignore-not-found", "--grace-period=5"}).CombinedOutput()
 	if err != nil {
 		return errors.Wrapf(err, "delete pvc: %s", string(out))
+	}
+
+	// delete role binding & service account
+	if k.config.ClusterRole != "" {
+		out, err := k.buildCmd(ctx, []string{"delete", "rolebinding", id, "--ignore-not-found"}).CombinedOutput()
+		if err != nil {
+			return errors.Wrapf(err, "delete role binding: %s", string(out))
+		}
+
+		if k.config.ServiceAccount == "" {
+			out, err = k.buildCmd(ctx, []string{"delete", "serviceaccount", id, "--ignore-not-found"}).CombinedOutput()
+			if err != nil {
+				return errors.Wrapf(err, "delete service account: %s", string(out))
+			}
+		}
 	}
 
 	return nil
