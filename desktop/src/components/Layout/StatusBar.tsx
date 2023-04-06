@@ -1,4 +1,5 @@
 import {
+  BoxProps,
   Checkbox,
   HStack,
   Menu,
@@ -6,28 +7,18 @@ import {
   MenuItem,
   MenuList,
   Text,
-  useColorModeValue,
 } from "@chakra-ui/react"
 import { version } from "../../../package.json"
 import { client } from "../../client"
 import { Debug, useArch, useDebug, usePlatform } from "../../lib"
 
-export function StatusBar() {
+export function StatusBar(boxProps: BoxProps) {
   const arch = useArch()
   const platform = usePlatform()
   const debug = useDebug()
-  const statusBarBackgroundColor = useColorModeValue("gray.300", "gray.600")
 
   return (
-    <HStack
-      justify="space-between"
-      paddingX="6"
-      position="fixed"
-      bottom="0"
-      backgroundColor={statusBarBackgroundColor}
-      width="full"
-      fontSize="sm"
-      zIndex="1">
+    <HStack justify="space-between" paddingX="6" fontSize="sm" zIndex="base" {...boxProps}>
       <Text>
         Version {version} | {platform ?? "unknown platform"} | {arch ?? "unknown arch"}
       </Text>

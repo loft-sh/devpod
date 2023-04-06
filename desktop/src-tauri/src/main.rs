@@ -22,7 +22,7 @@ use std::{
     sync::{Arc, Mutex},
 };
 use system_tray::SystemTray;
-use tauri::{Manager, Menu, Wry, ActivationPolicy};
+use tauri::{Manager, Menu, Wry};
 use tokio::sync::mpsc::{self, Sender};
 use workspaces::WorkspacesState;
 
