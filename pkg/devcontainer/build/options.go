@@ -1,7 +1,5 @@
 package build
 
-import "io"
-
 type BuildOptions struct {
 	BuildArgs map[string]string
 	Labels    map[string]string
@@ -9,13 +7,13 @@ type BuildOptions struct {
 	Images    []string
 	CacheFrom []string
 
-	Dockerfile    string
-	Context       string
-	ContextReader io.Reader
-	Contexts      map[string]string
+	Dockerfile string
+	Context    string
+	Contexts   map[string]string
 
 	Target string
 
-	Load bool
-	Push bool
+	Load   bool
+	Push   bool
+	Upload bool
 }

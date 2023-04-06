@@ -129,6 +129,23 @@ type ProviderKubernetesDriverConfig struct {
 	// Config is the path to the kube config to use
 	Config string `json:"config,omitempty"`
 
+	// ClusterRole defines a role binding with the given cluster role
+	// DevPod should create.
+	ClusterRole string `json:"clusterRole,omitempty"`
+
+	// ServiceAccount is the service account to use
+	ServiceAccount string `json:"serviceAccount,omitempty"`
+
+	// BuildRepository defines the repository to push builds. If empty,
+	// DevPod will not try to build any images at all.
+	BuildRepository string `json:"buildRepository,omitempty"`
+
+	// BuildkitImage is the build kit image to use
+	BuildkitImage string `json:"buildkitImage,omitempty"`
+
+	// BuildkitPrivileged signals if pod should be ran in privileged mode
+	BuildkitPrivileged string `json:"buildkitPrivileged,omitempty"`
+
 	// HelperImage is used to find out cluster architecture and copy files
 	HelperImage string `json:"helperImage,omitempty"`
 

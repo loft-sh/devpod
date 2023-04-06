@@ -116,6 +116,14 @@ func (k *kubernetesDriver) runContainer(
 		})
 	}
 
+	// service account
+	serviceAccount := ""
+	if k.config.ServiceAccount != "" {
+		serviceAccount = k.config.ServiceAccount
+	} else if k.config.ClusterRole != "" {
+		serviceAccount = id
+	}
+
 	// create the pod manifest
 	entrypoint, args := docker.GetContainerEntrypointAndArgs(mergedConfig, imageDetails)
 	podRaw, err := json.Marshal(&corev1.Pod{
@@ -127,7 +135,8 @@ func (k *kubernetesDriver) runContainer(
 			Name: id,
 		},
 		Spec: corev1.PodSpec{
-			InitContainers: initContainer,
+			ServiceAccountName: serviceAccount,
+			InitContainers:     initContainer,
 			Containers: []corev1.Container{
 				{
 					Name:         "devpod",
@@ -145,8 +154,7 @@ func (k *kubernetesDriver) runContainer(
 					},
 				},
 			},
-			RestartPolicy:                corev1.RestartPolicyNever,
-			AutomountServiceAccountToken: &[]bool{false}[0],
+			RestartPolicy: corev1.RestartPolicyNever,
 			Volumes: []corev1.Volume{
 				{
 					Name: "devpod",
@@ -164,6 +172,7 @@ func (k *kubernetesDriver) runContainer(
 	}
 
 	// create the pod
+	k.Log.Infof("Create Pod '%s'", id)
 	buf := &bytes.Buffer{}
 	err = k.runCommand(ctx, []string{"create", "-f", "-"}, strings.NewReader(string(podRaw)), buf, buf)
 	if err != nil {

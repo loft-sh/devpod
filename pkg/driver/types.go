@@ -47,6 +47,7 @@ type Driver interface {
 	// BuildDevContainer builds a devcontainer
 	BuildDevContainer(
 		ctx context.Context,
+		labels []string,
 		parsedConfig *config.SubstitutedConfig,
 		extendedBuildInfo *feature.ExtendedBuildInfo,
 		dockerfilePath,

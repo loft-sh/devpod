@@ -166,5 +166,5 @@ func (r *Runner) getImageBuildInfoFromDockerfile(dockerFileContent string, build
 }
 
 func (r *Runner) buildImage(parsedConfig *config.SubstitutedConfig, extendedBuildInfo *feature.ExtendedBuildInfo, dockerfilePath, dockerfileContent string, options config.BuildOptions) (*config.BuildInfo, error) {
-	return r.Driver.BuildDevContainer(context.TODO(), parsedConfig, extendedBuildInfo, dockerfilePath, dockerfileContent, r.LocalWorkspaceFolder, options)
+	return r.Driver.BuildDevContainer(context.TODO(), r.getLabels(), parsedConfig, extendedBuildInfo, dockerfilePath, dockerfileContent, r.LocalWorkspaceFolder, options)
 }
