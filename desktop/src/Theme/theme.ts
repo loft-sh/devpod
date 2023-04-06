@@ -10,6 +10,9 @@ const Button = defineStyleConfig({
       backgroundColor: "primary.500",
       _hover: {
         backgroundColor: "primary.600",
+        _disabled: {
+          background: "primary.500",
+        },
       },
     },
   },

@@ -95,7 +95,7 @@ export function WorkspaceCard({ workspaceID, onSelectionChange }: TWorkspaceCard
         key={id}
         direction="row"
         width="full"
-        maxWidth="50rem"
+        maxWidth="60rem"
         overflow="hidden"
         variant="outline"
         maxHeight="48">
@@ -169,7 +169,6 @@ export function WorkspaceCard({ workspaceID, onSelectionChange }: TWorkspaceCard
                   <MenuButton
                     as={IconButton}
                     aria-label="More actions"
-                    isDisabled={workspace.data.status !== "Running"}
                     variant="ghost"
                     colorScheme="gray"
                     icon={<Ellipsis transform={"rotate(90deg)"} boxSize={5} />}
