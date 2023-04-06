@@ -62,6 +62,10 @@ func (k *kubernetesDriver) buildPersistentVolumeClaim(
 	}
 
 	raw, err := json.Marshal(&corev1.PersistentVolumeClaim{
+		TypeMeta: metav1.TypeMeta{
+			Kind:       "PersistentVolumeClaim",
+			APIVersion: corev1.SchemeGroupVersion.String(),
+		},
 		ObjectMeta: metav1.ObjectMeta{
 			Name: name,
 			Labels: map[string]string{
@@ -72,6 +76,9 @@ func (k *kubernetesDriver) buildPersistentVolumeClaim(
 			},
 		},
 		Spec: corev1.PersistentVolumeClaimSpec{
+			AccessModes: []corev1.PersistentVolumeAccessMode{
+				corev1.ReadWriteOnce,
+			},
 			Resources: corev1.ResourceRequirements{
 				Requests: map[corev1.ResourceName]resource.Quantity{
 					corev1.ResourceStorage: quantity,
