@@ -12,14 +12,14 @@ import { Combobox } from "@headlessui/react"
 import { forwardRef, ReactNode, useState } from "react"
 import { AiOutlineCaretRight } from "react-icons/ai"
 
-type TAutocompleteOption = Readonly<{
+type TAutoCompleteOption = Readonly<{
   key: string
   label: ReactNode
 }>
-type TAutocompleteProps = Readonly<{
-  options: readonly TAutocompleteOption[]
-  onChange?: (value: TAutocompleteOption) => void
-  defaultValue?: TAutocompleteOption
+type TAutoCompleteProps = Readonly<{
+  options: readonly TAutoCompleteOption[]
+  onChange?: (value: TAutoCompleteOption) => void
+  defaultValue?: TAutoCompleteOption
   name?: string
 }>
 
@@ -32,20 +32,19 @@ type TAutocompleteProps = Readonly<{
       <Controller
         name="auto"
         control={control}
-        render={({ field }) => <Autocomplete options={options} {...field} />}
+        render={({ field }) => <AutoComplete options={options} {...field} />}
       />
       <button type="submit">Submit</button>
     </form>
   ```
  */
-export const Autocomplete = forwardRef<HTMLElement, TAutocompleteProps>(function InnerAutocomlete(
+export const AutoComplete = forwardRef<HTMLElement, TAutoCompleteProps>(function InnerAutocomlete(
   { name, options, defaultValue, onChange },
   ref
 ) {
   const optionsBackgroundColor = useColorModeValue("gray.100", "gray.800")
   const optionsZIndex = useToken("zIndices", "dropdown")
   const [query, setQuery] = useState("")
-  console.log(optionsZIndex)
 
   const filteredOptions =
     query === ""
@@ -55,7 +54,7 @@ export const Autocomplete = forwardRef<HTMLElement, TAutocompleteProps>(function
         })
 
   return (
-    <Combobox<TAutocompleteOption>
+    <Combobox<TAutoCompleteOption>
       ref={ref}
       name={name}
       defaultValue={defaultValue}
@@ -97,7 +96,7 @@ export const Autocomplete = forwardRef<HTMLElement, TAutocompleteProps>(function
   )
 })
 
-function Option({ option }: { option: TAutocompleteOption }) {
+function Option({ option }: { option: TAutoCompleteOption }) {
   const activeOptionBackgroundColor = useColorModeValue("gray.200", "gray.700")
 
   return (
