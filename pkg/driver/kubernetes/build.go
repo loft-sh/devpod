@@ -42,7 +42,7 @@ func (k *kubernetesDriver) BuildDevContainer(
 	options config.BuildOptions,
 ) (*config.BuildInfo, error) {
 	// namespace
-	if k.namespace != "" {
+	if k.namespace != "" && k.config.CreateNamespace == "true" {
 		k.Log.Debugf("Create namespace '%s'", k.namespace)
 		buf := &bytes.Buffer{}
 		err := k.runCommand(ctx, []string{"create", "ns", k.namespace}, nil, buf, buf)

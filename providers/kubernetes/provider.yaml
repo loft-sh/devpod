@@ -1,0 +1,101 @@
+name: kubernetes
+version: v0.0.1
+icon: https://cncf-branding.netlify.app/img/projects/kubernetes/stacked/color/kubernetes-stacked-color.svg
+home: https://github.com/loft-sh/devpod
+description: |-
+  DevPod on Kubernetes
+optionGroups:
+  - options:
+      - KUBERNETES_NAMESPACE
+      - DISK_SIZE
+      - BUILD_REPOSITORY
+    name: "Options"
+    defaultVisible: true
+  - options:
+      - KUBERNETES_CONTEXT
+      - KUBERNETES_CONFIG
+    name: "Kubernetes Config"
+  - options:
+      - BUILDKIT_IMAGE
+      - BUILDKIT_PRIVILEGED
+      - HELPER_IMAGE
+    name: "Building"
+  - options:
+      - CLUSTER_ROLE
+      - SERVICE_ACCOUNT
+      - CREATE_NAMESPACE
+      - KUBECTL_PATH
+      - INACTIVITY_TIMEOUT
+    name: "Advanced Options"
+options:
+  BUILD_REPOSITORY:
+    description: If defined, DevPod will build and push images to the given repository. If empty, DevPod will not build any images. Make sure you have push permissions for the given repository.
+    global: true
+  DISK_SIZE:
+    description: The default size for the persistent volume to use.
+    default: 10Gi
+  BUILDKIT_IMAGE:
+    description: The buildkit image to use for building dev containers.
+    global: true
+  BUILDKIT_PRIVILEGED:
+    description: If the buildkit pod should run as a privileged pod.
+    type: boolean
+    global: true
+  KUBERNETES_CONTEXT:
+    description: The kubernetes context to use. E.g. my-kube-context
+  KUBERNETES_CONFIG:
+    description: The kubernetes config to use. E.g. /path/to/my/kube/config.yaml
+  KUBERNETES_NAMESPACE:
+    description: The kubernetes namespace to use
+    command: |-
+      NAMESPACE=$(KUBECONFIG=${KUBERNETES_CONFIG} ${KUBECTL_PATH} config view --context=${KUBERNETES_CONTEXT} --minify -o jsonpath='{..namespace}' 2>/dev/null || true)
+      if [ -z "${NAMESPACE}" ]; then
+        NAMESPACE=default
+      fi
+      echo $NAMESPACE
+  CREATE_NAMESPACE:
+    description: If true, DevPod will try to create the namespace.
+    default: "true"
+    global: true
+  CLUSTER_ROLE:
+    description: If defined, DevPod will create a role binding for the given cluster role.
+  SERVICE_ACCOUNT:
+    description: If defined, DevPod will use the given service account for the dev container.
+  HELPER_IMAGE:
+    description: The image DevPod will use to find out the cluster architecture. Defaults to alpine.
+    global: true
+  KUBECTL_PATH:
+    description: The path where to find the kubectl binary.
+    default: kubectl
+    global: true
+  INACTIVITY_TIMEOUT:
+    description: If defined, will automatically stop the pod after the inactivity period.
+agent:
+  containerInactivityTimeout: ${INACTIVITY_TIMEOUT}
+  path: ${DEVPOD}
+  driver: kubernetes
+  kubernetes:
+    path: ${KUBECTL_PATH}
+    namespace: ${KUBERNETES_NAMESPACE}
+    context: ${KUBERNETES_CONTEXT}
+    config: ${KUBERNETES_CONFIG}
+    clusterRole: ${CLUSTER_ROLE}
+    serviceAccount: ${SERVICE_ACCOUNT}
+    buildRepository: ${BUILD_REPOSITORY}
+    helperImage: ${HELPER_IMAGE}
+    buildkitImage: ${BUILDKIT_IMAGE}
+    buildkitPrivileged: ${BUILDKIT_PRIVILEGED}
+    persistentVolumeSize: ${DISK_SIZE}
+exec:
+  init: |-
+    # Check if kubernetes is reachable
+    KUBERNETES_REACHABLE=$(KUBECONFIG=${KUBERNETES_CONFIG} ${KUBECTL_PATH} get pods --namespace=${KUBERNETES_NAMESPACE} --context=${KUBERNETES_CONTEXT} > /dev/null 2>&1 && echo -n "true" || echo -n "false")
+    if [ "KUBERNETES_REACHABLE" = "false" ]; then
+      >&2 echo "Seems like kubernetes is not reachable on your system."
+      >&2 echo "Please make sure kubectl is installed and working."
+      >&2 echo "You can verify if kubectl is working correctly via: KUBECONFIG=${KUBERNETES_CONFIG} ${KUBECTL_PATH} get pods --namespace=${KUBERNETES_NAMESPACE} --context=${KUBERNETES_CONTEXT}"
+      exit 1
+    fi
+
+  command: |-
+    ${DEVPOD} helper sh -c "${COMMAND}"

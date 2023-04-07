@@ -123,6 +123,9 @@ type ProviderKubernetesDriverConfig struct {
 	// Namespace is the Kubernetes namespace to use
 	Namespace string `json:"namespace,omitempty"`
 
+	// CreateNamespace specifies if DevPod should try to create the namespace
+	CreateNamespace types.StrBool `json:"createNamespace,omitempty"`
+
 	// Context is the context to use
 	Context string `json:"context,omitempty"`
 
@@ -144,7 +147,7 @@ type ProviderKubernetesDriverConfig struct {
 	BuildkitImage string `json:"buildkitImage,omitempty"`
 
 	// BuildkitPrivileged signals if pod should be ran in privileged mode
-	BuildkitPrivileged string `json:"buildkitPrivileged,omitempty"`
+	BuildkitPrivileged types.StrBool `json:"buildkitPrivileged,omitempty"`
 
 	// HelperImage is used to find out cluster architecture and copy files
 	HelperImage string `json:"helperImage,omitempty"`
@@ -156,6 +159,9 @@ type ProviderKubernetesDriverConfig struct {
 type ProviderDockerDriverConfig struct {
 	// Path where to find the docker binary, defaults to 'docker'
 	Path string `json:"path,omitempty"`
+
+	// If false, DevPod will not try to install docker into the machine.
+	Install types.StrBool `json:"install,omitempty"`
 }
 
 type ProviderAgentConfigExec struct {
