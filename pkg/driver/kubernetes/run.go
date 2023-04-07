@@ -42,6 +42,16 @@ func (k *kubernetesDriver) RunDevContainer(
 		return err
 	}
 
+	// namespace
+	if k.namespace != "" && k.config.CreateNamespace == "true" {
+		k.Log.Debugf("Create namespace '%s'", k.namespace)
+		buf := &bytes.Buffer{}
+		err := k.runCommand(ctx, []string{"create", "ns", k.namespace}, nil, buf, buf)
+		if err != nil {
+			k.Log.Debugf("Error creating namespace: %v", err)
+		}
+	}
+
 	// create persistent volume claim
 	err = k.createPersistentVolumeClaim(ctx, id, parsedConfig, mergedConfig, imageName, workspaceMount, labels, imageDetails)
 	if err != nil {

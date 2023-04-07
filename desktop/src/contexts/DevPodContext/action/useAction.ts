@@ -6,7 +6,7 @@ import { TActionID, TActionObj } from "./action"
 
 type TActionResult = Readonly<{
   data: TActionObj
-  connectOrReplay(onStream: TStreamEventListenerFn): void
+  connectOrReplay(onStream: TStreamEventListenerFn): void | VoidFunction
 }>
 
 export function useAction(actionID: TActionID | undefined): TActionResult | undefined {
@@ -82,6 +82,9 @@ export function useConnectAction(
   )
 }
 
-export function useReplayAction(): (actionID: TActionID, onStream: TStreamEventListenerFn) => void {
+export function useReplayAction(): (
+  actionID: TActionID,
+  onStream: TStreamEventListenerFn
+) => VoidFunction {
   return useCallback((actionID, onStream) => client.workspaces.replayAction(actionID, onStream), [])
 }

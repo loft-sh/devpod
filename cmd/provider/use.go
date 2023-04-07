@@ -34,8 +34,8 @@ func NewUseCmd(flags *flags.GlobalFlags) *cobra.Command {
 		Use:   "use",
 		Short: "Configure an existing provider and set as default",
 		RunE: func(_ *cobra.Command, args []string) error {
-			if len(args) == 0 {
-				return fmt.Errorf("please specify the provider to use")
+			if len(args) != 1 {
+				return fmt.Errorf("please specify only the provider to use")
 			}
 
 			return cmd.Run(context.Background(), args[0])

@@ -20,6 +20,7 @@ agent:
   path: ${DEVPOD}
   docker:
     path: ${DOCKER_PATH}
+    install: false
 exec:
   init: |-
     # Check if docker exists and is reachable

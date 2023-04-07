@@ -1,7 +1,7 @@
 package ssh
 
 import (
-	"bytes"
+	"context"
 	"fmt"
 	"io"
 
@@ -64,25 +64,23 @@ func ConfigFromKeyBytes(keyBytes []byte) (*ssh.ClientConfig, error) {
 	return clientConfig, nil
 }
 
-func Output(client *ssh.Client, command string) ([]byte, []byte, error) {
-	stdout := &bytes.Buffer{}
-	stderr := &bytes.Buffer{}
-	err := Run(client, command, nil, stdout, stderr)
-	return stdout.Bytes(), stderr.Bytes(), err
-}
-
-func CombinedOutput(client *ssh.Client, command string) ([]byte, error) {
-	buf := &bytes.Buffer{}
-	err := Run(client, command, nil, buf, buf)
-	return buf.Bytes(), err
-}
-
-func Run(client *ssh.Client, command string, stdin io.Reader, stdout io.Writer, stderr io.Writer) error {
+func Run(ctx context.Context, client *ssh.Client, command string, stdin io.Reader, stdout io.Writer, stderr io.Writer) error {
 	sess, err := client.NewSession()
 	if err != nil {
 		return err
 	}
 	defer sess.Close()
+
+	exit := make(chan struct{})
+	defer close(exit)
+	go func() {
+		select {
+		case <-ctx.Done():
+			_ = sess.Signal(ssh.SIGINT)
+			_ = sess.Close()
+		case <-exit:
+		}
+	}()
 
 	sess.Stdin = stdin
 	sess.Stdout = stdout

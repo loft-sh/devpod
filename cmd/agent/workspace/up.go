@@ -120,9 +120,15 @@ func initWorkspace(ctx context.Context, cancel context.CancelFunc, workspaceInfo
 	}
 
 	// install docker in background
-	errChan := make(chan error)
+	errChan := make(chan error, 1)
 	go func() {
-		errChan <- InstallDocker(logger)
+		if workspaceInfo.Agent.Driver != "" && workspaceInfo.Agent.Driver != provider2.DockerDriver {
+			errChan <- nil
+		} else if workspaceInfo.Agent.Docker.Install == "false" {
+			errChan <- nil
+		} else {
+			errChan <- InstallDocker(logger)
+		}
 	}()
 
 	// prepare workspace

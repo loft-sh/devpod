@@ -78,9 +78,13 @@ export class Command implements TCommand<ChildProcess> {
           this.sidecarCommand.stdout.removeListener("data", stdoutListener)
         }
 
-        this.sidecarCommand.on("close", () => {
+        this.sidecarCommand.on("close", (arg?: { code: number }) => {
           cleanup()
-          res(Return.Ok())
+          if (arg?.code !== 0) {
+            rej(new Error("exit code: " + arg?.code))
+          } else {
+            res(Return.Ok())
+          }
         })
 
         this.sidecarCommand.on("error", (arg) => {

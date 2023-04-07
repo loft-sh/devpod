@@ -28,7 +28,7 @@ func NewStatusCmd(flags *flags.GlobalFlags) *cobra.Command {
 		Short: "Print the status of a remote container",
 		Args:  cobra.NoArgs,
 		RunE: func(_ *cobra.Command, _ []string) error {
-			return cmd.Run(context.Background())
+			return cmd.Run(context.Background(), log.Default.ErrorStreamOnly())
 		},
 	}
 	statusCmd.Flags().StringVar(&cmd.ID, "id", "", "The workspace id to print the status on the agent side")
@@ -36,9 +36,9 @@ func NewStatusCmd(flags *flags.GlobalFlags) *cobra.Command {
 	return statusCmd
 }
 
-func (cmd *StatusCmd) Run(ctx context.Context) error {
+func (cmd *StatusCmd) Run(ctx context.Context, log log.Logger) error {
 	// get workspace
-	shouldExit, workspaceInfo, err := agent.ReadAgentWorkspaceInfo(cmd.AgentDir, cmd.Context, cmd.ID, log.Default.ErrorStreamOnly())
+	shouldExit, workspaceInfo, err := agent.ReadAgentWorkspaceInfo(cmd.AgentDir, cmd.Context, cmd.ID, log)
 	if err != nil {
 		return err
 	} else if shouldExit {
@@ -46,7 +46,7 @@ func (cmd *StatusCmd) Run(ctx context.Context) error {
 	}
 
 	// create runner
-	runner, err := createRunner(workspaceInfo, log.Default.ErrorStreamOnly())
+	runner, err := createRunner(workspaceInfo, log)
 	if err != nil {
 		return err
 	}

@@ -39,12 +39,16 @@ type ContainerHandler struct {
 	log                     log.Logger
 }
 
-type Handler func(client *ssh.Client) error
+type Handler func(ctx context.Context, client *ssh.Client) error
 
 func (c *ContainerHandler) Run(ctx context.Context, runInHost Handler, runInContainer Handler) error {
 	if runInHost == nil && runInContainer == nil {
 		return nil
 	}
+
+	// create context
+	cancelCtx, cancel := context.WithCancel(ctx)
+	defer cancel()
 
 	// create readers
 	stdoutReader, stdoutWriter, err := os.Pipe()
@@ -69,12 +73,13 @@ func (c *ContainerHandler) Run(ctx context.Context, runInHost Handler, runInCont
 	go func() {
 		writer := c.log.ErrorStreamOnly().Writer(logrus.InfoLevel, false)
 		defer writer.Close()
+		defer c.log.Debugf("Tunnel to host closed")
 
 		command := fmt.Sprintf("%s helper ssh-server --token '%s' --stdio", c.client.AgentPath(), tok)
 		if c.log.GetLevel() == logrus.DebugLevel {
 			command += " --debug"
 		}
-		tunnelChan <- agent.InjectAgentAndExecute(ctx, func(ctx context.Context, command string, stdin io.Reader, stdout io.Writer, stderr io.Writer) error {
+		tunnelChan <- agent.InjectAgentAndExecute(cancelCtx, func(ctx context.Context, command string, stdin io.Reader, stdout io.Writer, stderr io.Writer) error {
 			return c.client.Command(ctx, client.CommandOptions{
 				Command: command,
 				Stdin:   stdin,
@@ -99,6 +104,8 @@ func (c *ContainerHandler) Run(ctx context.Context, runInHost Handler, runInCont
 			return
 		}
 		defer sshClient.Close()
+		defer cancel()
+		defer c.log.Debugf("Connection to container closed")
 		c.log.Debugf("Successfully connected to host")
 
 		// do port-forwarding etc. here with sshClient
@@ -107,8 +114,9 @@ func (c *ContainerHandler) Run(ctx context.Context, runInHost Handler, runInCont
 			waitGroup.Add(1)
 			go func() {
 				defer waitGroup.Done()
+				defer c.log.Debugf("Run in container done")
 
-				containerChan <- errors.Wrap(c.runRunInContainer(sshClient, tok, privateKey, runInContainer), "run in container")
+				containerChan <- errors.Wrap(c.runRunInContainer(cancelCtx, sshClient, tok, privateKey, runInContainer), "run in container")
 			}()
 		}
 
@@ -117,22 +125,21 @@ func (c *ContainerHandler) Run(ctx context.Context, runInHost Handler, runInCont
 			waitGroup.Add(1)
 			go func() {
 				defer waitGroup.Done()
+				defer c.log.Debugf("Run in host done")
 
-				containerChan <- errors.Wrap(runInHost(sshClient), "run in host")
+				containerChan <- errors.Wrap(runInHost(cancelCtx, sshClient), "run in host")
 			}()
 		}
 
 		// update workspace remotely
-		doneChan := make(chan struct{})
 		if c.updateConfigInterval > 0 {
 			go func() {
-				c.updateConfig(ctx, sshClient, doneChan)
+				c.updateConfig(cancelCtx, sshClient)
 			}()
 		}
 
 		// wait until we are done
 		waitGroup.Wait()
-		close(doneChan)
 	}()
 
 	// wait for result
@@ -144,10 +151,10 @@ func (c *ContainerHandler) Run(ctx context.Context, runInHost Handler, runInCont
 	}
 }
 
-func (c *ContainerHandler) updateConfig(ctx context.Context, sshClient *ssh.Client, doneChan chan struct{}) {
+func (c *ContainerHandler) updateConfig(ctx context.Context, sshClient *ssh.Client) {
 	for {
 		select {
-		case <-doneChan:
+		case <-ctx.Done():
 			return
 		case <-time.After(c.updateConfigInterval):
 			c.log.Debugf("Start refresh")
@@ -174,7 +181,7 @@ func (c *ContainerHandler) updateConfig(ctx context.Context, sshClient *ssh.Clie
 			}
 
 			c.log.Debugf("Run command in container: %s", command)
-			err = devssh.Run(sshClient, command, nil, buf, buf)
+			err = devssh.Run(ctx, sshClient, command, nil, buf, buf)
 			if err != nil {
 				c.log.Errorf("Error updating remote workspace: %s%v", buf.String(), err)
 			} else {
@@ -184,7 +191,7 @@ func (c *ContainerHandler) updateConfig(ctx context.Context, sshClient *ssh.Clie
 	}
 }
 
-func (c *ContainerHandler) runRunInContainer(sshClient *ssh.Client, tok string, privateKey []byte, runInContainer Handler) error {
+func (c *ContainerHandler) runRunInContainer(ctx context.Context, sshClient *ssh.Client, tok string, privateKey []byte, runInContainer Handler) error {
 	// compress info
 	workspaceInfo, _, err := c.client.AgentInfo()
 	if err != nil {
@@ -203,10 +210,16 @@ func (c *ContainerHandler) runRunInContainer(sshClient *ssh.Client, tok string, 
 	defer stdoutWriter.Close()
 	defer stdinWriter.Close()
 
+	// create cancel context
+	cancelCtx, cancel := context.WithCancel(ctx)
+	defer cancel()
+
 	// tunnel to container
 	go func() {
 		writer := c.log.Writer(logrus.InfoLevel, false)
 		defer writer.Close()
+		defer stdoutWriter.Close()
+		defer cancel()
 
 		c.log.Debugf("Run container tunnel")
 		defer c.log.Debugf("Container tunnel exited")
@@ -215,7 +228,7 @@ func (c *ContainerHandler) runRunInContainer(sshClient *ssh.Client, tok string, 
 		if c.log.GetLevel() == logrus.DebugLevel {
 			command += " --debug"
 		}
-		err = devssh.Run(sshClient, command, stdinReader, stdoutWriter, writer)
+		err = devssh.Run(cancelCtx, sshClient, command, stdinReader, stdoutWriter, writer)
 		if err != nil {
 			c.log.Errorf("Error tunneling to container: %v", err)
 			return
@@ -234,16 +247,16 @@ func (c *ContainerHandler) runRunInContainer(sshClient *ssh.Client, tok string, 
 	if c.workspacePortForwarding {
 		go func() {
 			// start forwarding ports
-			c.forwardPorts(sshClient, containerClient)
+			c.forwardPorts(cancelCtx, sshClient, containerClient)
 		}()
 	}
 
 	// start handler
-	return runInContainer(containerClient)
+	return runInContainer(cancelCtx, containerClient)
 }
 
-func (c *ContainerHandler) forwardPorts(sshClient, containerClient *ssh.Client) {
-	result, err := c.getDevContainerResult(sshClient)
+func (c *ContainerHandler) forwardPorts(ctx context.Context, sshClient, containerClient *ssh.Client) {
+	result, err := c.getDevContainerResult(ctx, sshClient)
 	if err != nil {
 		c.log.Errorf("Error retrieving dev container result: %v", err)
 		return
@@ -268,7 +281,7 @@ func (c *ContainerHandler) forwardPorts(sshClient, containerClient *ssh.Client) 
 				}
 
 				// do the forward
-				err = devssh.PortForward(containerClient, parsedPort.Binding.HostIP+":"+parsedPort.Binding.HostPort, "localhost:"+parsedPort.Port.Port(), c.log)
+				err = devssh.PortForward(ctx, containerClient, parsedPort.Binding.HostIP+":"+parsedPort.Binding.HostPort, "localhost:"+parsedPort.Port.Port(), c.log)
 				if err != nil {
 					c.log.Debugf("Error port forwarding %s:%s:%s: %v", parsedPort.Binding.HostIP, parsedPort.Binding.HostPort, parsedPort.Port.Port(), err)
 				}
@@ -287,7 +300,7 @@ func (c *ContainerHandler) forwardPorts(sshClient, containerClient *ssh.Client) 
 
 		// try to forward
 		go func(i int64, port json.Number) {
-			err = devssh.PortForward(containerClient, "localhost:"+port.String(), "localhost:"+port.String(), c.log)
+			err = devssh.PortForward(ctx, containerClient, "localhost:"+port.String(), "localhost:"+port.String(), c.log)
 			if err != nil {
 				c.log.Debugf("Error port forwarding %d: %v", int(i), err)
 			}
@@ -295,7 +308,7 @@ func (c *ContainerHandler) forwardPorts(sshClient, containerClient *ssh.Client) 
 	}
 }
 
-func (c *ContainerHandler) getDevContainerResult(client *ssh.Client) (*config.Result, error) {
+func (c *ContainerHandler) getDevContainerResult(ctx context.Context, client *ssh.Client) (*config.Result, error) {
 	writer := c.log.Writer(logrus.InfoLevel, false)
 	defer writer.Close()
 
@@ -310,7 +323,7 @@ func (c *ContainerHandler) getDevContainerResult(client *ssh.Client) (*config.Re
 		command += fmt.Sprintf(" --agent-dir '%s'", agentConfig.DataPath)
 	}
 	buf := &bytes.Buffer{}
-	err := devssh.Run(client, command, nil, buf, writer)
+	err := devssh.Run(ctx, client, command, nil, buf, writer)
 	if err != nil {
 		return nil, fmt.Errorf("error retrieving workspace get-result: %v", err)
 	}

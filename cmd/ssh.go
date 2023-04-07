@@ -139,7 +139,7 @@ func (cmd *SSHCmd) jumpContainer(ctx context.Context, client client2.WorkspaceCl
 	var runInContainer tunnel.Handler
 	if cmd.User != "" {
 		gitCredentials := client.WorkspaceConfig().IDE.Name != string(config.IDEVSCode)
-		runInContainer = func(sshClient *ssh.Client) error {
+		runInContainer = func(ctx context.Context, sshClient *ssh.Client) error {
 			err := runCredentialsServer(ctx, sshClient, cmd.User, gitCredentials, true, log)
 			if err != nil {
 				log.Errorf("Error running credential server: %v", err)
@@ -151,7 +151,7 @@ func (cmd *SSHCmd) jumpContainer(ctx context.Context, client client2.WorkspaceCl
 	}
 
 	// tunnel to container
-	return tunnel.NewContainerTunnel(client, log).Run(ctx, func(sshClient *ssh.Client) error {
+	return tunnel.NewContainerTunnel(client, log).Run(ctx, func(ctx context.Context, sshClient *ssh.Client) error {
 		writer := log.ErrorStreamOnly().Writer(logrus.InfoLevel, false)
 		defer writer.Close()
 
@@ -164,7 +164,7 @@ func (cmd *SSHCmd) jumpContainer(ctx context.Context, client client2.WorkspaceCl
 			command += fmt.Sprintf(" --user='%s'", cmd.User)
 		}
 		if cmd.Stdio {
-			return devssh.Run(sshClient, command, os.Stdin, os.Stdout, writer)
+			return devssh.Run(ctx, sshClient, command, os.Stdin, os.Stdout, writer)
 		}
 
 		privateKey, err := devssh.GetDevPodPrivateKeyRaw()
@@ -173,7 +173,7 @@ func (cmd *SSHCmd) jumpContainer(ctx context.Context, client client2.WorkspaceCl
 		}
 
 		return machine.StartSSHSession(ctx, privateKey, cmd.User, cmd.Command, func(ctx context.Context, stdin io.Reader, stdout io.Writer, stderr io.Writer) error {
-			return devssh.Run(sshClient, command, stdin, stdout, stderr)
+			return devssh.Run(ctx, sshClient, command, stdin, stdout, stderr)
 		}, writer)
 	}, runInContainer)
 }
@@ -214,7 +214,7 @@ func runCredentialsServer(ctx context.Context, client *ssh.Client, user string, 
 			command += " --configure-docker-helper"
 		}
 
-		errChan <- devssh.Run(client, command, stdinReader, stdoutWriter, writer)
+		errChan <- devssh.Run(cancelCtx, client, command, stdinReader, stdoutWriter, writer)
 	}()
 
 	// forward credentials to container

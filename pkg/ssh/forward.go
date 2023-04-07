@@ -1,6 +1,7 @@
 package ssh
 
 import (
+	"context"
 	"io"
 	"net"
 	"sync"
@@ -9,12 +10,23 @@ import (
 	"golang.org/x/crypto/ssh"
 )
 
-func PortForward(client *ssh.Client, localAddr, remoteAddr string, log log.Logger) error {
+func PortForward(ctx context.Context, client *ssh.Client, localAddr, remoteAddr string, log log.Logger) error {
 	listener, err := net.Listen("tcp", localAddr)
 	if err != nil {
 		return err
 	}
 	defer listener.Close()
+
+	done := make(chan struct{})
+	defer close(done)
+
+	go func() {
+		select {
+		case <-done:
+		case <-ctx.Done():
+			_ = listener.Close()
+		}
+	}()
 
 	for {
 		// waiting for a new connection

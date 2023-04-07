@@ -220,10 +220,14 @@ func rerunAsRoot(workspaceInfo *provider2.AgentWorkspaceInfo, log log.Logger) (b
 	}
 
 	// check if we can reach docker with no problems
-	dockerRootRequired, err := dockerReachable()
-	if err != nil {
-		log.Debugf("Error trying to reach docker daemon: %v", err)
-		dockerRootRequired = true
+	dockerRootRequired := false
+	if workspaceInfo.Agent.Driver == "" || workspaceInfo.Agent.Driver == provider2.DockerDriver {
+		var err error
+		dockerRootRequired, err = dockerReachable()
+		if err != nil {
+			log.Debugf("Error trying to reach docker daemon: %v", err)
+			dockerRootRequired = true
+		}
 	}
 
 	// check if daemon needs to be installed

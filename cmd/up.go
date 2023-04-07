@@ -164,7 +164,7 @@ func startInBrowser(ctx context.Context, client client2.WorkspaceClient, user st
 
 	// start in browser
 	log.Infof("Starting vscode in browser mode at %s", targetURL)
-	err = tunnel.NewContainerTunnel(client, log).Run(ctx, nil, func(client *ssh.Client) error {
+	err = tunnel.NewContainerTunnel(client, log).Run(ctx, nil, func(ctx context.Context, client *ssh.Client) error {
 		log.Debugf("Connected to container")
 		go func() {
 			err := runCredentialsServer(ctx, client, user, true, true, log)
@@ -173,7 +173,7 @@ func startInBrowser(ctx context.Context, client client2.WorkspaceClient, user st
 			}
 		}()
 
-		return devssh.PortForward(client, fmt.Sprintf("localhost:%d", vscodePort), fmt.Sprintf("localhost:%d", openvscode.DefaultVSCodePort), log)
+		return devssh.PortForward(ctx, client, fmt.Sprintf("localhost:%d", vscodePort), fmt.Sprintf("localhost:%d", openvscode.DefaultVSCodePort), log)
 	})
 	if err != nil {
 		return err

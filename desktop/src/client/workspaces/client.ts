@@ -113,8 +113,10 @@ export class WorkspacesClient implements TDebuggable {
     ctx: TWorkspaceClientContext
   ): Promise<Result<TWorkspace["status"]>> {
     const cmd = WorkspaceCommands.StartWorkspace(ctx.id, config)
-
-    await this.execActionCmd(cmd, { ...ctx, listener, actionName: "start" })
+    const result = await this.execActionCmd(cmd, { ...ctx, listener, actionName: "start" })
+    if (result?.err) {
+      return result
+    }
 
     return this.getStatus(ctx.id)
   }
@@ -124,8 +126,10 @@ export class WorkspacesClient implements TDebuggable {
     ctx: TWorkspaceClientContext
   ): Promise<Result<TWorkspace["status"]>> {
     const cmd = WorkspaceCommands.StopWorkspace(ctx.id)
-
-    await this.execActionCmd(cmd, { ...ctx, listener, actionName: "stop" })
+    const result = await this.execActionCmd(cmd, { ...ctx, listener, actionName: "stop" })
+    if (result?.err) {
+      return result
+    }
 
     return this.getStatus(ctx.id)
   }
@@ -135,8 +139,10 @@ export class WorkspacesClient implements TDebuggable {
     ctx: TWorkspaceClientContext
   ): Promise<Result<TWorkspace["status"]>> {
     const cmd = WorkspaceCommands.RebuildWorkspace(ctx.id)
-
-    await this.execActionCmd(cmd, { ...ctx, listener, actionName: "rebuild" })
+    const result = await this.execActionCmd(cmd, { ...ctx, listener, actionName: "rebuild" })
+    if (result?.err) {
+      return result
+    }
 
     return this.getStatus(ctx.id)
   }
@@ -146,8 +152,10 @@ export class WorkspacesClient implements TDebuggable {
     ctx: TWorkspaceClientContext
   ): Promise<ResultError> {
     const cmd = WorkspaceCommands.RemoveWorkspace(ctx.id)
-
-    await this.execActionCmd(cmd, { ...ctx, listener, actionName: "remove" })
+    const result = await this.execActionCmd(cmd, { ...ctx, listener, actionName: "remove" })
+    if (result?.err) {
+      return result
+    }
 
     return Return.Ok()
   }
