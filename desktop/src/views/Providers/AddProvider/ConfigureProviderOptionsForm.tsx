@@ -166,9 +166,14 @@ export function ConfigureProviderOptionsForm({
                     title={group.name}
                     isOpen={!!group.defaultVisible}>
                     <SimpleGrid minChildWidth="60" spacingX={8} spacingY={4}>
-                      {groupOptions?.map((option) => (
-                        <OptionFormField key={option.id} {...option} />
-                      ))}
+                      {group.options?.map((optionName) => {
+                        const option = groupOptions?.find((option) => option.id === optionName)
+                        if (!option) {
+                          return undefined
+                        }
+
+                        return <OptionFormField key={option.id} {...option} />
+                      })}
                     </SimpleGrid>
                   </CollapsibleSection>
                 </Box>

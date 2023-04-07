@@ -405,7 +405,7 @@ func (s *workspaceClient) Status(ctx context.Context, options client.StatusOptio
 
 func (s *workspaceClient) getContainerStatus(ctx context.Context) (client.Status, error) {
 	stdout := &bytes.Buffer{}
-	stderr := &bytes.Buffer{}
+	buf := &bytes.Buffer{}
 	agentConfig := options.ResolveAgentConfig(s.devPodConfig, s.config, s.workspace, s.machine)
 	command := fmt.Sprintf("%s agent workspace status --id '%s' --context '%s'", agentConfig.Path, s.workspace.ID, s.workspace.Context)
 	if agentConfig.DataPath != "" {
@@ -413,16 +413,17 @@ func (s *workspaceClient) getContainerStatus(ctx context.Context) (client.Status
 	}
 	err := RunCommandWithBinaries(ctx, "command", s.config.Exec.Command, s.workspace.Context, s.workspace, s.machine, s.devPodConfig.ProviderOptions(s.config.Name), s.config, map[string]string{
 		provider.CommandEnv: command,
-	}, nil, stdout, stderr, s.log.ErrorStreamOnly())
+	}, nil, io.MultiWriter(stdout, buf), buf, s.log.ErrorStreamOnly())
 	if err != nil {
-		return client.StatusNotFound, err
+		return client.StatusNotFound, fmt.Errorf("error retrieving container status: %s%v", buf.String(), err)
 	}
 
 	parsed, err := client.ParseStatus(stdout.String())
 	if err != nil {
-		return client.StatusNotFound, fmt.Errorf("error parsing container status: %s%s%v", stdout.String(), stderr.String(), err)
+		return client.StatusNotFound, fmt.Errorf("error parsing container status: %s%v", buf.String(), err)
 	}
 
+	s.log.Debugf("Container status command output (stdout & stderr): %s %s (%s)", buf.String(), stdout.String(), parsed)
 	return parsed, nil
 }
 

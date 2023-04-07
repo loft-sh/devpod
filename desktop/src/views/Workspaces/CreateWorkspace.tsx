@@ -136,10 +136,7 @@ export function CreateWorkspace() {
     return Object.keys(providers)
   }, [providers])
 
-  const isLoading = useMemo(
-    () => workspace.current?.name === "create" && workspace.current.status === "pending",
-    [workspace]
-  )
+  const isLoading = useMemo(() => workspace.current?.name === "create", [workspace])
 
   const handleSelectFolderClicked = useCallback(async () => {
     const selected = await client.selectFromDir()

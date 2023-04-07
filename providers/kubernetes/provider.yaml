@@ -56,6 +56,7 @@ options:
   CREATE_NAMESPACE:
     description: If true, DevPod will try to create the namespace.
     default: "true"
+    type: boolean
     global: true
   CLUSTER_ROLE:
     description: If defined, DevPod will create a role binding for the given cluster role.

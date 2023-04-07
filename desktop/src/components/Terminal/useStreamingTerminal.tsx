@@ -5,7 +5,6 @@ import { Terminal, TTerminal } from "./Terminal"
 export function useStreamingTerminal() {
   const terminalRef = useRef<TTerminal | null>(null)
   const terminal = useMemo(() => <Terminal ref={terminalRef} />, [])
-
   const connectStream = useCallback<TStreamEventListenerFn>(
     (event) => {
       // TODO: Message color
@@ -29,7 +28,7 @@ export function useStreamingTerminal() {
 
   const clear = useCallback(() => {
     terminalRef.current?.clear()
-  }, [])
+  }, [terminalRef])
 
   return { terminal, connectStream, clear }
 }

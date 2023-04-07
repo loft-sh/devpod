@@ -54,11 +54,11 @@ func (k *kubernetesDriver) buildPersistentVolumeClaim(
 
 	size := "10Gi"
 	if k.config.PersistentVolumeSize != "" {
-		size = k.config.PersistentVolumeSize + "Gi"
+		size = k.config.PersistentVolumeSize
 	}
 	quantity, err := resource.ParseQuantity(size)
 	if err != nil {
-		return "", errors.Wrap(err, "parse persistent volume size")
+		return "", errors.Wrapf(err, "parse persistent volume size '%s'", size)
 	}
 
 	raw, err := json.Marshal(&corev1.PersistentVolumeClaim{

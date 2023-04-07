@@ -35,12 +35,13 @@ func NewStatusCmd(flags *flags.GlobalFlags) *cobra.Command {
 				return err
 			}
 
-			client, err := workspace2.GetWorkspace(devPodConfig, args, false, log.Default)
+			log := log.Default.ErrorStreamOnly()
+			client, err := workspace2.GetWorkspace(devPodConfig, args, false, log)
 			if err != nil {
 				return err
 			}
 
-			return cmd.Run(ctx, client)
+			return cmd.Run(ctx, client, log)
 		},
 	}
 
@@ -50,7 +51,7 @@ func NewStatusCmd(flags *flags.GlobalFlags) *cobra.Command {
 }
 
 // Run runs the command logic
-func (cmd *StatusCmd) Run(ctx context.Context, client client2.WorkspaceClient) error {
+func (cmd *StatusCmd) Run(ctx context.Context, client client2.WorkspaceClient, log log.Logger) error {
 	// get instance status
 	instanceStatus, err := client.Status(ctx, client2.StatusOptions{ContainerStatus: cmd.ContainerStatus})
 	if err != nil {
@@ -59,13 +60,13 @@ func (cmd *StatusCmd) Run(ctx context.Context, client client2.WorkspaceClient) e
 
 	if cmd.Output == "plain" {
 		if instanceStatus == client2.StatusStopped {
-			log.Default.Infof("Workspace '%s' is '%s', you can start it via 'devpod up %s'", client.Workspace(), instanceStatus, client.Workspace())
+			log.Infof("Workspace '%s' is '%s', you can start it via 'devpod up %s'", client.Workspace(), instanceStatus, client.Workspace())
 		} else if instanceStatus == client2.StatusBusy {
-			log.Default.Infof("Workspace '%s' is '%s', which means its currently unaccessible. This is usually resolved by waiting a couple of minutes", client.Workspace(), instanceStatus)
+			log.Infof("Workspace '%s' is '%s', which means its currently unaccessible. This is usually resolved by waiting a couple of minutes", client.Workspace(), instanceStatus)
 		} else if instanceStatus == client2.StatusNotFound {
-			log.Default.Infof("Workspace '%s' is '%s', you can create it via 'devpod up %s'", client.Workspace(), instanceStatus, client.Workspace())
+			log.Infof("Workspace '%s' is '%s', you can create it via 'devpod up %s'", client.Workspace(), instanceStatus, client.Workspace())
 		} else {
-			log.Default.Infof("Workspace '%s' is '%s'", client.Workspace(), instanceStatus)
+			log.Infof("Workspace '%s' is '%s'", client.Workspace(), instanceStatus)
 		}
 	} else if cmd.Output == "json" {
 		out, err := json.Marshal(struct {

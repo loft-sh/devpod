@@ -16,8 +16,8 @@ export function Action() {
       return
     }
 
-    action.connectOrReplay(connectStream)
-  }, [connectStream, action])
+    return action.connectOrReplay(connectStream)
+  }, [action, connectStream])
 
   // Clear terminal when actionID changes
   useEffect(() => {
