@@ -29,8 +29,8 @@ func NewSetOptionsCmd(flags *flags.GlobalFlags) *cobra.Command {
 		Use:   "set-options",
 		Short: "Sets options for the given provider. Similar to 'devpod provider use', but does not switch the default provider.",
 		RunE: func(_ *cobra.Command, args []string) error {
-			if len(args) == 0 {
-				return fmt.Errorf("please specify the provider to use")
+			if len(args) != 1 {
+				return fmt.Errorf("please specify only the provider to use")
 			}
 
 			return cmd.Run(context.Background(), args[0])

@@ -168,12 +168,14 @@ func (k *kubernetesDriver) StopDevContainer(ctx context.Context, id string) erro
 
 func (k *kubernetesDriver) DeleteDevContainer(ctx context.Context, id string) error {
 	// delete pod
+	k.Log.Infof("Delete pod '%s'...", id)
 	err := k.deletePod(ctx, id)
 	if err != nil {
 		return err
 	}
 
 	// delete pvc
+	k.Log.Infof("Delete persistent volume claim '%s'...", id)
 	out, err := k.buildCmd(ctx, []string{"delete", "pvc", id, "--ignore-not-found", "--grace-period=5"}).CombinedOutput()
 	if err != nil {
 		return errors.Wrapf(err, "delete pvc: %s", string(out))
@@ -181,12 +183,14 @@ func (k *kubernetesDriver) DeleteDevContainer(ctx context.Context, id string) er
 
 	// delete role binding & service account
 	if k.config.ClusterRole != "" {
+		k.Log.Infof("Delete role binding '%s'...", id)
 		out, err := k.buildCmd(ctx, []string{"delete", "rolebinding", id, "--ignore-not-found"}).CombinedOutput()
 		if err != nil {
 			return errors.Wrapf(err, "delete role binding: %s", string(out))
 		}
 
 		if k.config.ServiceAccount == "" {
+			k.Log.Infof("Delete service account '%s'...", id)
 			out, err = k.buildCmd(ctx, []string{"delete", "serviceaccount", id, "--ignore-not-found"}).CombinedOutput()
 			if err != nil {
 				return errors.Wrapf(err, "delete service account: %s", string(out))

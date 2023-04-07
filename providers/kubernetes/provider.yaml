@@ -87,6 +87,7 @@ agent:
     buildkitImage: ${BUILDKIT_IMAGE}
     buildkitPrivileged: ${BUILDKIT_PRIVILEGED}
     persistentVolumeSize: ${DISK_SIZE}
+    createNamespace: ${CREATE_NAMESPACE}
 exec:
   init: |-
     # Check if kubernetes is reachable

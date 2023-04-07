@@ -30,6 +30,7 @@ func NewListCmd(flags *flags.GlobalFlags) *cobra.Command {
 	listCmd := &cobra.Command{
 		Use:   "list",
 		Short: "List available providers",
+		Args:  cobra.NoArgs,
 		RunE: func(_ *cobra.Command, args []string) error {
 			return cmd.Run(context.Background())
 		},
