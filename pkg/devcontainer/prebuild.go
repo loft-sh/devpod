@@ -15,14 +15,14 @@ func (r *Runner) Build(options config.BuildOptions) (string, error) {
 	}
 
 	// check if we need to build container
-	buildInfo, err := r.build(substitutedConfig, config.BuildOptions{ForceRebuild: options.ForceRebuild, PushRepository: options.PushRepository})
+	buildInfo, err := r.build(substitutedConfig, config.BuildOptions{PushRepository: options.PushRepository})
 	if err != nil {
 		return "", errors.Wrap(err, "build image")
 	}
 
 	// prebuild already exists
 	prebuildImage := options.PushRepository + ":" + buildInfo.PrebuildHash
-	if !options.ForceRebuild && buildInfo.ImageName == prebuildImage {
+	if buildInfo.ImageName == prebuildImage {
 		return buildInfo.ImageName, nil
 	}
 

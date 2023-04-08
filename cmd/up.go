@@ -36,12 +36,10 @@ type UpCmd struct {
 	IDE        string
 	IDEOptions []string
 
-	ProviderOptions []string
-
+	ProviderOptions      []string
 	PrebuildRepositories []string
 
-	ForceBuild bool
-	Recreate   bool
+	Recreate bool
 }
 
 // NewUpCmd creates a new up command
@@ -70,7 +68,6 @@ func NewUpCmd(flags *flags.GlobalFlags) *cobra.Command {
 
 	upCmd.Flags().StringSliceVar(&cmd.IDEOptions, "ide-option", []string{}, "IDE option in the form KEY=VALUE")
 	upCmd.Flags().StringSliceVar(&cmd.ProviderOptions, "provider-option", []string{}, "Provider option in the form KEY=VALUE")
-	upCmd.Flags().BoolVar(&cmd.ForceBuild, "force-build", false, "If true will rebuild the container even if there is a prebuild already")
 	upCmd.Flags().BoolVar(&cmd.Recreate, "recreate", false, "If true will remove any existing containers and recreate them")
 	upCmd.Flags().StringSliceVar(&cmd.PrebuildRepositories, "prebuild-repository", []string{}, "Docker respository that hosts devpod prebuilds for this workspace")
 	upCmd.Flags().StringVar(&cmd.ID, "id", "", "The id to use for the workspace")
@@ -210,9 +207,6 @@ func (cmd *UpCmd) devPodUpMachine(ctx context.Context, client client2.WorkspaceC
 	}
 	if cmd.Recreate {
 		command += " --recreate"
-	}
-	if cmd.ForceBuild {
-		command += " --force-build"
 	}
 
 	// create pipes

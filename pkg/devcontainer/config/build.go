@@ -8,8 +8,7 @@ const (
 )
 
 type BuildOptions struct {
-	ForceRebuild bool
-	NoBuild      bool
+	NoBuild bool
 
 	PrebuildRepositories []string
 	PushRepository       string

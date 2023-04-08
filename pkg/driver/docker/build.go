@@ -40,35 +40,47 @@ func (d *dockerDriver) BuildDevContainer(
 	}
 
 	// check if there is a prebuild image
-	if !options.ForceRebuild {
-		devPodCustomizations := config.GetDevPodCustomizations(parsedConfig.Config)
-		if options.PushRepository != "" {
-			options.PrebuildRepositories = append(options.PrebuildRepositories, options.PushRepository)
-		}
-		options.PrebuildRepositories = append(options.PrebuildRepositories, devPodCustomizations.PrebuildRepository...)
-		d.Log.Debugf("Try to find prebuild image %s in repositories %s", prebuildHash, strings.Join(options.PrebuildRepositories, ","))
-		for _, prebuildRepo := range options.PrebuildRepositories {
-			prebuildImage := prebuildRepo + ":" + prebuildHash
-			img, err := image.GetImage(prebuildImage)
-			if err == nil && img != nil {
-				// prebuild image found
-				d.Log.Infof("Found existing prebuilt image %s", prebuildImage)
+	devPodCustomizations := config.GetDevPodCustomizations(parsedConfig.Config)
+	if options.PushRepository != "" {
+		options.PrebuildRepositories = append(options.PrebuildRepositories, options.PushRepository)
+	}
+	options.PrebuildRepositories = append(options.PrebuildRepositories, devPodCustomizations.PrebuildRepository...)
+	d.Log.Debugf("Try to find prebuild image %s in repositories %s", prebuildHash, strings.Join(options.PrebuildRepositories, ","))
+	for _, prebuildRepo := range options.PrebuildRepositories {
+		prebuildImage := prebuildRepo + ":" + prebuildHash
+		img, err := image.GetImage(prebuildImage)
+		if err == nil && img != nil {
+			// prebuild image found
+			d.Log.Infof("Found existing prebuilt image %s", prebuildImage)
 
-				// inspect image
-				imageDetails, err := d.InspectImage(ctx, prebuildImage)
-				if err != nil {
-					return nil, errors.Wrap(err, "get image details")
-				}
-
-				return &config.BuildInfo{
-					ImageDetails:  imageDetails,
-					ImageMetadata: extendedBuildInfo.MetadataConfig,
-					ImageName:     prebuildImage,
-					PrebuildHash:  prebuildHash,
-				}, nil
-			} else if err != nil {
-				d.Log.Debugf("Error trying to find prebuild image %s: %v", prebuildImage, err)
+			// inspect image
+			imageDetails, err := d.InspectImage(ctx, prebuildImage)
+			if err != nil {
+				return nil, errors.Wrap(err, "get image details")
 			}
+
+			return &config.BuildInfo{
+				ImageDetails:  imageDetails,
+				ImageMetadata: extendedBuildInfo.MetadataConfig,
+				ImageName:     prebuildImage,
+				PrebuildHash:  prebuildHash,
+			}, nil
+		} else if err != nil {
+			d.Log.Debugf("Error trying to find prebuild image %s: %v", prebuildImage, err)
+		}
+	}
+
+	// check if image build is necessary
+	imageName := getImageName(localWorkspaceFolder, prebuildHash)
+	if options.PushRepository == "" {
+		imageDetails, err := d.Docker.InspectImage(imageName, false)
+		if err == nil && imageDetails != nil {
+			return &config.BuildInfo{
+				ImageDetails:  imageDetails,
+				ImageMetadata: extendedBuildInfo.MetadataConfig,
+				ImageName:     imageName,
+				PrebuildHash:  prebuildHash,
+			}, nil
 		}
 	}
 
@@ -76,9 +88,6 @@ func (d *dockerDriver) BuildDevContainer(
 	if options.NoBuild {
 		return nil, fmt.Errorf("you cannot build in this mode. Please run 'devpod up' to rebuild the container")
 	}
-
-	// build the image
-	imageName := getImageName(localWorkspaceFolder)
 
 	// get build options
 	buildOptions, deleteFolders, err := CreateBuildOptions(dockerfilePath, dockerfileContent, parsedConfig, extendedBuildInfo, imageName, options.PushRepository, prebuildHash)
@@ -209,9 +218,9 @@ func CreateBuildOptions(
 	return buildOptions, deleteFolders, nil
 }
 
-func getImageName(localWorkspaceFolder string) string {
+func getImageName(localWorkspaceFolder, prebuildHash string) string {
 	imageHash := hash.String(localWorkspaceFolder)[:5]
-	return "vsc-" + id.ToDockerImageName(filepath.Base(localWorkspaceFolder)) + "-" + imageHash
+	return "vsc-" + id.ToDockerImageName(filepath.Base(localWorkspaceFolder)) + "-" + imageHash + ":" + prebuildHash
 }
 
 func (d *dockerDriver) buildxExists(ctx context.Context) bool {
