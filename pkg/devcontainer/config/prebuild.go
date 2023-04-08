@@ -6,10 +6,27 @@ import (
 	"github.com/loft-sh/devpod/pkg/log"
 )
 
-func CalculatePrebuildHash(parsedConfig *DevContainerConfig, architecture, dockerfileContent string, log log.Logger) (string, error) {
-	// TODO: is it a good idea to delete customizations before calculating the hash?
-	parsedConfig = CloneDevContainerConfig(parsedConfig)
-	parsedConfig.Customizations = nil
+func CalculatePrebuildHash(originalConfig *DevContainerConfig, architecture, dockerfileContent string, log log.Logger) (string, error) {
+	parsedConfig := CloneDevContainerConfig(originalConfig)
+
+	// delete all options that are not relevant for the build
+	parsedConfig.Origin = ""
+	parsedConfig.DevContainerActions = DevContainerActions{}
+	parsedConfig.NonComposeBase = NonComposeBase{}
+	parsedConfig.DevContainerConfigBase = DevContainerConfigBase{
+		Name:                        parsedConfig.Name,
+		Features:                    parsedConfig.Features,
+		OverrideFeatureInstallOrder: parsedConfig.OverrideFeatureInstallOrder,
+	}
+	parsedConfig.ImageContainer = ImageContainer{
+		Image: parsedConfig.Image,
+	}
+	parsedConfig.ComposeContainer = ComposeContainer{}
+	parsedConfig.DockerfileContainer = DockerfileContainer{
+		Dockerfile: parsedConfig.Dockerfile,
+		Context:    parsedConfig.Context,
+		Build:      parsedConfig.Build,
+	}
 
 	// marshal the config
 	configStr, err := json.Marshal(parsedConfig)

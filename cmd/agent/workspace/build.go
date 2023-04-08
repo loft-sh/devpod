@@ -2,6 +2,7 @@ package workspace
 
 import (
 	"context"
+	"fmt"
 	"github.com/loft-sh/devpod/cmd/flags"
 	"github.com/loft-sh/devpod/pkg/agent"
 	"github.com/loft-sh/devpod/pkg/devcontainer/config"
@@ -16,7 +17,6 @@ import (
 type BuildCmd struct {
 	*flags.GlobalFlags
 
-	ForceBuild    bool
 	Repository    string
 	WorkspaceInfo string
 }
@@ -34,7 +34,6 @@ func NewBuildCmd(flags *flags.GlobalFlags) *cobra.Command {
 			return cmd.Run(context.Background())
 		},
 	}
-	buildCmd.Flags().BoolVar(&cmd.ForceBuild, "force-build", false, "If true will force build the image")
 	buildCmd.Flags().StringVar(&cmd.Repository, "repository", "", "The repository to push to")
 	buildCmd.Flags().StringVar(&cmd.WorkspaceInfo, "workspace-info", "", "The workspace info")
 	_ = buildCmd.MarkFlagRequired("workspace-info")
@@ -44,6 +43,10 @@ func NewBuildCmd(flags *flags.GlobalFlags) *cobra.Command {
 
 // Run runs the command logic
 func (cmd *BuildCmd) Run(ctx context.Context) error {
+	if cmd.Repository == "" {
+		return fmt.Errorf("repository needs to be specified")
+	}
+
 	// write workspace info
 	shouldExit, workspaceInfo, err := agent.WriteWorkspaceInfoAndDeleteOld(cmd.WorkspaceInfo, deleteWorkspace, log.Default.ErrorStreamOnly())
 	if err != nil {
@@ -72,7 +75,6 @@ func (cmd *BuildCmd) Run(ctx context.Context) error {
 	// build the image
 	imageName, err := runner.Build(config.BuildOptions{
 		PushRepository: cmd.Repository,
-		ForceRebuild:   cmd.ForceBuild,
 	})
 	if err != nil {
 		logger.Errorf("Error building image: %v", err)

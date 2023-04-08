@@ -48,7 +48,6 @@ func (r *Runner) runSingleContainer(parsedConfig *config.SubstitutedConfig, work
 		buildInfo, err := r.build(parsedConfig, config.BuildOptions{
 			PrebuildRepositories: options.PrebuildRepositories,
 			NoBuild:              options.NoBuild,
-			ForceRebuild:         options.ForceBuild,
 		})
 		if err != nil {
 			return nil, errors.Wrap(err, "build image")
@@ -59,17 +58,14 @@ func (r *Runner) runSingleContainer(parsedConfig *config.SubstitutedConfig, work
 			return nil, errors.Wrap(err, "merge config")
 		}
 
-		// have we built the image?
-		if buildInfo.ImageName == parsedConfig.Config.Image {
-			// add metadata as label here
-			marshalled, err := json.Marshal(buildInfo.ImageMetadata.Raw)
-			if err != nil {
-				return nil, errors.Wrap(err, "marshal config")
-			}
-
-			labels = append(labels, metadata.ImageMetadataLabel+"="+string(marshalled))
+		// add metadata as label here
+		marshalled, err := json.Marshal(buildInfo.ImageMetadata.Raw)
+		if err != nil {
+			return nil, errors.Wrap(err, "marshal config")
 		}
+		labels = append(labels, metadata.ImageMetadataLabel+"="+string(marshalled))
 
+		// run dev container
 		err = r.Driver.RunDevContainer(context.TODO(), parsedConfig.Config, mergedConfig, buildInfo.ImageName, workspaceMount, labels, r.WorkspaceConfig.Workspace.IDE.Name, r.WorkspaceConfig.Workspace.IDE.Options, buildInfo.ImageDetails)
 		if err != nil {
 			return nil, errors.Wrap(err, "start dev container")

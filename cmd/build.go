@@ -27,7 +27,6 @@ type BuildCmd struct {
 	SkipDelete bool
 	Repository string
 	Machine    string
-	ForceBuild bool
 }
 
 // NewBuildCmd creates a new command
@@ -74,7 +73,6 @@ func NewBuildCmd(flags *flags.GlobalFlags) *cobra.Command {
 
 	buildCmd.Flags().StringSliceVar(&cmd.ProviderOptions, "provider-option", []string{}, "Provider option in the form KEY=VALUE")
 	buildCmd.Flags().BoolVar(&cmd.SkipDelete, "skip-delete", false, "If true will not delete the workspace after building it")
-	buildCmd.Flags().BoolVar(&cmd.ForceBuild, "force-build", false, "If true will force build the image")
 	buildCmd.Flags().StringVar(&cmd.Machine, "machine", "", "The machine to use for this workspace. The machine needs to exist beforehand or the command will fail. If the workspace already exists, this option has no effect")
 	buildCmd.Flags().StringVar(&cmd.Repository, "repository", "", "The repository to push to")
 	_ = buildCmd.MarkFlagRequired("repository")
@@ -116,9 +114,6 @@ func (cmd *BuildCmd) buildAgentClient(ctx context.Context, workspaceClient clien
 	}
 	if cmd.Repository != "" {
 		command += fmt.Sprintf(" --repository '%s'", cmd.Repository)
-	}
-	if cmd.ForceBuild {
-		command += " --force-build"
 	}
 
 	// create pipes
