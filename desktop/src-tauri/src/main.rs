@@ -119,7 +119,8 @@ fn main() -> anyhow::Result<()> {
         .invoke_handler(tauri::generate_handler![
             ui_ready::ui_ready,
             action_logs::write_action_log,
-            action_logs::get_action_logs
+            action_logs::get_action_logs,
+            action_logs::sync_action_logs,
         ])
         .build(ctx)
         .expect("error while building tauri application")
