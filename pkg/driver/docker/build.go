@@ -75,12 +75,16 @@ func (d *dockerDriver) BuildDevContainer(
 	if options.PushRepository == "" {
 		imageDetails, err := d.Docker.InspectImage(imageName, false)
 		if err == nil && imageDetails != nil {
+			// local image found
+			d.Log.Infof("Found existing local image %s", imageName)
 			return &config.BuildInfo{
 				ImageDetails:  imageDetails,
 				ImageMetadata: extendedBuildInfo.MetadataConfig,
 				ImageName:     imageName,
 				PrebuildHash:  prebuildHash,
 			}, nil
+		} else if err != nil {
+			d.Log.Debugf("Error trying to find local image %s: %v", imageName, err)
 		}
 	}
 

@@ -119,7 +119,7 @@ func (cmd *OptionsCmd) Run(ctx context.Context, providerName string) error {
 			}
 		}
 
-		out, err := json.Marshal(options)
+		out, err := json.MarshalIndent(options, "", "  ")
 		if err != nil {
 			return err
 		}

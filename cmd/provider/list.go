@@ -41,6 +41,12 @@ func NewListCmd(flags *flags.GlobalFlags) *cobra.Command {
 	return listCmd
 }
 
+type ProviderWithDefault struct {
+	workspace.ProviderWithOptions `json:",inline"`
+
+	Default bool `json:"default,omitempty"`
+}
+
 // Run runs the command logic
 func (cmd *ListCmd) Run(ctx context.Context) error {
 	devPodConfig, err := config.LoadConfig(cmd.Context, cmd.Provider)
@@ -85,7 +91,15 @@ func (cmd *ListCmd) Run(ctx context.Context) error {
 			"Description",
 		}, tableEntries)
 	} else if cmd.Output == "json" {
-		out, err := json.Marshal(providers)
+		retMap := map[string]ProviderWithDefault{}
+		for k, entry := range providers {
+			retMap[k] = ProviderWithDefault{
+				ProviderWithOptions: *entry,
+				Default:             devPodConfig.Current().DefaultProvider == entry.Config.Name,
+			}
+		}
+
+		out, err := json.MarshalIndent(retMap, "", "  ")
 		if err != nil {
 			return err
 		}

@@ -106,17 +106,19 @@ export class ProviderCommands {
 
   static async UseProvider(
     id: TProviderID,
-    rawOptions: Record<string, unknown>,
-    reuseMachine: boolean
+    rawOptions?: Record<string, unknown>,
+    reuseMachine?: boolean
   ) {
-    const optionsFlag = toFlagArg(DEVPOD_FLAG_OPTION, serializeRawOptions(rawOptions))
+    const optionsFlag = rawOptions
+      ? [toFlagArg(DEVPOD_FLAG_OPTION, serializeRawOptions(rawOptions))]
+      : []
     const maybeResuseMachineFlag = reuseMachine ? [DEVPOD_FLAG_SINGLE_MACHINE] : []
 
     const result = await ProviderCommands.newCommand([
       DEVPOD_COMMAND_PROVIDER,
       DEVPOD_COMMAND_USE,
       id,
-      optionsFlag,
+      ...optionsFlag,
       ...maybeResuseMachineFlag,
       DEVPOD_FLAG_JSON_LOG_OUTPUT,
     ]).run()
@@ -196,7 +198,7 @@ export class ProviderCommands {
   }
 }
 
-function serializeRawOptions(rawOptions: Record<string, unknown>): string {
+export function serializeRawOptions(rawOptions: Record<string, unknown>): string {
   return Object.entries(rawOptions)
     .map(([key, value]) => `${key}=${value}`)
     .join(",")
