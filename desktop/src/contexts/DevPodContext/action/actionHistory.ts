@@ -1,3 +1,4 @@
+import { client } from "../../../client"
 import { Action, TActionObj, TActions } from "./action"
 
 const HISTORY_KEY = "devpod-workspace-action-history"
@@ -53,5 +54,6 @@ export class ActionHistory {
     }
 
     window.localStorage.setItem(HISTORY_KEY, JSON.stringify(this.history))
+    client.workspaces.syncActionLogs(this.history.map((a) => a.id))
   }
 }

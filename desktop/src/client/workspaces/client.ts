@@ -160,7 +160,6 @@ export class WorkspacesClient implements TDebuggable {
     return Return.Ok()
   }
 
-  // TODO: Make nicer :)
   public removeMany(workspaces: readonly TWorkspace[]) {
     for (const workspace of workspaces) {
       WorkspaceCommands.RemoveWorkspace(workspace.id).run()
@@ -213,5 +212,9 @@ export class WorkspacesClient implements TDebuggable {
       })
 
     return unsubscribe
+  }
+
+  public syncActionLogs(actionIDs: readonly string[]) {
+    invoke("sync_action_logs", { actions: actionIDs })
   }
 }

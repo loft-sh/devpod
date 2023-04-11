@@ -1,14 +1,16 @@
+use crate::AppHandle;
 use anyhow::Context;
+use log::info;
 use std::{
     fs::{self, OpenOptions},
     io::Write,
     path::PathBuf,
+    time::{Duration, SystemTime},
 };
 use thiserror::Error;
-use crate::AppHandle;
 
 const ACTION_LOGS_DIR: &str = "action_logs";
-
+const ONE_DAY: Duration = Duration::new(60 * 60 * 24, 0);
 
 #[derive(Error, Debug)]
 pub enum ActionLogError {
@@ -18,6 +20,8 @@ pub enum ActionLogError {
     FileOpen(#[source] std::io::Error),
     #[error("unable to write to file")]
     Write(#[source] std::io::Error),
+    #[error("unable to delete to file")]
+    FileDelete(#[source] std::io::Error),
 }
 impl serde::Serialize for ActionLogError {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
@@ -66,11 +70,43 @@ pub fn get_action_logs(
     Ok(lines)
 }
 
+#[tauri::command]
+pub fn sync_action_logs(app_handle: AppHandle, actions: Vec<String>) -> Result<(), ActionLogError> {
+    let now = SystemTime::now();
+    let dir_path = get_actions_dir(&app_handle).map_err(|_| ActionLogError::NoDir)?;
+    let paths_to_delete = fs::read_dir(dir_path)
+        .map_err(|e| ActionLogError::FileOpen(e))?
+        .filter_map(|r| {
+            let entry = r.ok()?;
+            let path = entry.path();
+            let file_stem = path.file_stem()?.to_str()?;
+            if actions.contains(&file_stem.to_string()) {
+                return None;
+            }
+
+            let metadata = entry.metadata().ok()?;
+            let created = metadata.created().ok()?;
+
+            let elapsed = now.duration_since(created).ok()?;
+            // older than a day
+            if elapsed < ONE_DAY {
+                return None;
+            }
+
+            Some(path)
+        });
+
+    for path in paths_to_delete {
+        info!("Deleting {:?}", path);
+        fs::remove_file(path).map_err(|e| ActionLogError::FileDelete(e))?;
+    }
+
+    Ok(())
+}
+
 pub fn setup(app_handle: &AppHandle) -> anyhow::Result<()> {
     let dir_path = get_actions_dir(app_handle)?;
     let _ = fs::create_dir_all(&dir_path); // Make sure we have the action logs dir
-
-    // TODO:  trim down logs to keep in sync with UI
 
     Ok(())
 }
