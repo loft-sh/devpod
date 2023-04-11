@@ -5,6 +5,7 @@ import (
 	"fmt"
 
 	"github.com/loft-sh/devpod/cmd/flags"
+	"github.com/loft-sh/devpod/cmd/machine"
 	"github.com/loft-sh/devpod/cmd/provider"
 )
 
@@ -54,4 +55,14 @@ func (f *Framework) DevPodProviderDelete(args []string) error {
 func (f *Framework) DevPodProviderUpdate(args []string) error {
 	updateCmd := provider.NewUpdateCmd(&flags.GlobalFlags{})
 	return updateCmd.RunE(nil, args)
+}
+
+func (f *Framework) DevPodMachineCreate(args []string) error {
+	createCmd := machine.NewCreateCmd(&flags.GlobalFlags{})
+	return createCmd.RunE(nil, args)
+}
+
+func (f *Framework) DevPodMachineDelete(args []string) error {
+	deleteCmd := machine.NewDeleteCmd(&flags.GlobalFlags{})
+	return deleteCmd.RunE(nil, args)
 }
