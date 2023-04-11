@@ -8,14 +8,14 @@ import {
   FormLabel,
   Icon,
   Input,
-  SimpleGrid,
   Stack,
-  useToken,
   VStack,
+  Wrap,
+  WrapItem,
 } from "@chakra-ui/react"
 import styled from "@emotion/styled"
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
-import { useCallback, useDeferredValue, useEffect, useMemo, useState } from "react"
+import { useMutation, useQueryClient } from "@tanstack/react-query"
+import { useCallback, useEffect, useMemo, useState } from "react"
 import { SubmitHandler, useForm } from "react-hook-form"
 import { AiOutlinePlusCircle } from "react-icons/ai"
 import { client } from "../../../client"
@@ -25,10 +25,11 @@ import {
   AzureSvg,
   DigitalOceanSvg,
   DockerPng,
+  SSHPng,
   GCloudSvg,
   KubernetesSvg,
 } from "../../../images"
-import { exists, isEmpty, isError, useFormErrors } from "../../../lib"
+import { exists, isError, useFormErrors } from "../../../lib"
 import { QueryKeys } from "../../../queryKeys"
 import {
   TAddProviderConfig,
@@ -48,11 +49,12 @@ const ALLOWED_NAMES_REGEX = /^[a-z0-9\\-]+$/
 
 const RECOMMENDED_PROVIDER_SOURCES = [
   { image: DockerPng, name: "docker" },
+  { image: SSHPng, name: "ssh" },
+  { image: KubernetesSvg, name: "kubernetes" },
   { image: AWSSvg, name: "aws" },
   { image: GCloudSvg, name: "gcloud" },
   { image: AzureSvg, name: "azure" },
   { image: DigitalOceanSvg, name: "digitalocean" },
-  { image: KubernetesSvg, name: "kubernetes" },
 ] as const
 
 type TSetupProviderSourceFormProps = Readonly<{
@@ -64,7 +66,6 @@ type TSetupProviderSourceFormProps = Readonly<{
   ) => void
 }>
 export function SetupProviderSourceForm({ state, reset, onFinish }: TSetupProviderSourceFormProps) {
-  const cardSize = useToken("sizes", "36")
   const [providers, setProviders] = useState<TProviders | undefined>()
   useEffect(() => {
     ;(async () => {
@@ -76,27 +77,7 @@ export function SetupProviderSourceForm({ state, reset, onFinish }: TSetupProvid
     mode: "onBlur",
   })
   const providerSource = watch(FieldName.PROVIDER_SOURCE, "")
-  const deferredProviderSource = useDeferredValue(providerSource)
-
   const queryClient = useQueryClient()
-  const { data: suggestedProviderName } = useQuery({
-    queryKey: ["providerNameSuggestion", deferredProviderSource],
-    queryFn: async () => {
-      if (!deferredProviderSource) {
-        return ""
-      }
-
-      return (await client.providers.newID(deferredProviderSource)).unwrap()
-    },
-    onSuccess(suggestedName) {
-      setValue(FieldName.PROVIDER_NAME, suggestedName, {
-        shouldDirty: false,
-        shouldTouch: false,
-        shouldValidate: true,
-      })
-    },
-    enabled: !isEmpty(deferredProviderSource),
-  })
 
   const {
     mutate: addProvider,
@@ -113,9 +94,13 @@ export function SetupProviderSourceForm({ state, reset, onFinish }: TSetupProvid
     }>) => {
       // delete the old selected provider
       if (state.currentStep !== 1) {
-        const providerID = client.providers.popDangling()
-        if (providerID) {
-          ;(await client.providers.remove(providerID)).unwrap()
+        try {
+          const providerID = client.providers.popDangling()
+          if (providerID) {
+            ;(await client.providers.remove(providerID)).unwrap()
+          }
+        } catch (err) {
+          console.error("Delete old provider", err)
         }
       }
 
@@ -204,9 +189,6 @@ export function SetupProviderSourceForm({ state, reset, onFinish }: TSetupProvid
       setValue(FieldName.PROVIDER_SOURCE, providerSource === sourceName ? "" : sourceName, {
         shouldDirty: true,
       })
-      setValue(FieldName.PROVIDER_NAME, providerSource === sourceName ? "" : sourceName, {
-        shouldDirty: true,
-      })
     },
     [providerSource, setValue]
   )
@@ -215,32 +197,35 @@ export function SetupProviderSourceForm({ state, reset, onFinish }: TSetupProvid
     <Form onSubmit={handleSubmit(onSubmit)} spellCheck={false}>
       <Stack spacing={6} width="full">
         <FormControl isRequired isInvalid={exists(providerSourceError)}>
-          <SimpleGrid
-            spacing={4}
-            templateColumns={`repeat(auto-fill, ${cardSize})`}
-            marginTop="2.5">
+          <Wrap spacing={3} marginTop="2.5">
             {RECOMMENDED_PROVIDER_SOURCES.filter(
               (source) => !providers?.[source.name] || !providers[source.name]?.state?.initialized
             ).map((source) => (
-              <RecommendedProviderCard
-                key={source.name}
-                image={source.image}
-                source={source.name}
-                isSelected={providerSource === source.name}
-                onClick={handleRecommendedProviderClicked(source.name)}
-              />
+              <WrapItem key={source.name} padding={"1"}>
+                <RecommendedProviderCard
+                  key={source.name}
+                  image={source.image}
+                  source={source.name}
+                  isSelected={providerSource === source.name}
+                  onClick={handleRecommendedProviderClicked(source.name)}
+                />
+              </WrapItem>
             ))}
-            <RecommendedProviderCard
-              imageNode={<Icon as={AiOutlinePlusCircle} fontSize={"64px"} color={"primary.500"} />}
-              isSelected={showCustom}
-              onClick={() => {
-                setShowCustom(!showCustom)
-                setValue(FieldName.PROVIDER_SOURCE, "", {
-                  shouldDirty: true,
-                })
-              }}
-            />
-          </SimpleGrid>
+            <WrapItem key={"custom"} padding={"1"}>
+              <RecommendedProviderCard
+                imageNode={
+                  <Icon as={AiOutlinePlusCircle} fontSize={"64px"} color={"primary.500"} />
+                }
+                isSelected={showCustom}
+                onClick={() => {
+                  setShowCustom(!showCustom)
+                  setValue(FieldName.PROVIDER_SOURCE, "", {
+                    shouldDirty: true,
+                  })
+                }}
+              />
+            </WrapItem>
+          </Wrap>
           {showCustom && (
             <Box marginTop={"10px"}>
               <FormLabel>Source</FormLabel>
@@ -262,9 +247,7 @@ export function SetupProviderSourceForm({ state, reset, onFinish }: TSetupProvid
           )}
         </FormControl>
         <CollapsibleSection title={"Advanced Options"} showIcon={true}>
-          <FormControl
-            isDisabled={!exists(suggestedProviderName)}
-            isInvalid={exists(providerNameError)}>
+          <FormControl isInvalid={exists(providerNameError)}>
             <FormLabel>Custom Name</FormLabel>
             <Input
               placeholder="Custom provider name"

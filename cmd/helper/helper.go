@@ -16,13 +16,18 @@ func NewHelperCmd(flags *flags.GlobalFlags) *cobra.Command {
 		Use:   "helper",
 		Short: "DevPod Utility Commands",
 		PersistentPreRunE: func(cobraCmd *cobra.Command, args []string) error {
+			if flags.LogOutput == "json" {
+				log.Default.SetFormat(log.JSONFormat)
+			} else {
+				log.Default.MakeRaw()
+			}
+
 			if flags.Silent {
 				log.Default.SetLevel(logrus.FatalLevel)
 			} else if flags.Debug {
 				log.Default.SetLevel(logrus.DebugLevel)
 			}
 
-			log.Default.MakeRaw()
 			return nil
 		},
 		Hidden: true,

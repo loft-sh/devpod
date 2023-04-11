@@ -8,6 +8,7 @@ import {
   Center,
   Heading,
   HStack,
+  Icon,
   IconButton,
   Image,
   Link,
@@ -18,17 +19,21 @@ import {
   ModalFooter,
   ModalHeader,
   ModalOverlay,
+  Tag,
+  TagLabel,
   Tooltip,
+  useColorModeValue,
   useDisclosure,
 } from "@chakra-ui/react"
 import { UseMutationResult } from "@tanstack/react-query"
 import { Link as RouterLink } from "react-router-dom"
-import { ProviderPlaceholder, Trash } from "../../icons"
+import { ProviderPlaceholder, Stack3D, Trash } from "../../icons"
 import { exists, noop } from "../../lib"
 import { Routes } from "../../routes"
 import { TProvider, TRunnable, TWithProviderID } from "../../types"
 import { useWorkspaces } from "../../contexts"
 import { useMemo } from "react"
+import { useNavigate } from "react-router"
 
 type TProviderCardProps = {
   id: string
@@ -38,16 +43,18 @@ type TProviderCardProps = {
 }
 
 export function ProviderCard({ id, provider, remove }: TProviderCardProps) {
+  const navigate = useNavigate()
   const workspaces = useWorkspaces()
   const { isOpen: isDeleteOpen, onOpen: onDeleteOpen, onClose: onDeleteClose } = useDisclosure()
-  const providerHasWorkspaces = useMemo(
-    () => workspaces.find((workspace) => workspace.provider?.name === id),
+  const providerWorkspaces = useMemo(
+    () => workspaces.filter((workspace) => workspace.provider?.name === id),
     [workspaces]
   )
+  const tagColor = useColorModeValue("gray.700", "gray.300")
 
   return (
     <>
-      <Card variant="outline" height="96" key={id}>
+      <Card variant="outline" width={"250px"} height="96" key={id}>
         <CardHeader display="flex" justifyContent="center" padding="0">
           {exists(provider?.config?.icon) ? (
             <Image
@@ -70,11 +77,28 @@ export function ProviderCard({ id, provider, remove }: TProviderCardProps) {
               {id}
             </Link>
           </Heading>
+          <HStack rowGap={2} marginTop={4} flexWrap="nowrap" alignItems="center">
+            <Tag borderRadius="full" color={tagColor}>
+              <Stack3D boxSize={4} />
+              <TagLabel marginLeft={2}>
+                {providerWorkspaces.length === 1
+                  ? "1 workspace"
+                  : providerWorkspaces.length > 0
+                  ? providerWorkspaces.length + " workspaces"
+                  : "No workspaces"}
+              </TagLabel>
+            </Tag>
+            {provider?.default && (
+              <Tag borderRadius="full" color={tagColor}>
+                <TagLabel>{"default"}</TagLabel>
+              </Tag>
+            )}
+          </HStack>
         </CardBody>
         <CardFooter justify="end">
           <ButtonGroup>
-            <Button onClick={noop} isLoading={false}>
-              Update
+            <Button onClick={() => navigate(Routes.toProvider(id))} isLoading={false}>
+              Edit
             </Button>
             <Tooltip label={`Delete Provider`}>
               <IconButton
@@ -97,7 +121,7 @@ export function ProviderCard({ id, provider, remove }: TProviderCardProps) {
           <ModalHeader>Delete Provider</ModalHeader>
           <ModalCloseButton />
           <ModalBody>
-            {!providerHasWorkspaces ? (
+            {!providerWorkspaces.length ? (
               <>
                 Deleting the provider will erase all provider state. Make sure to delete provider
                 workspaces before. Are you sure you want to delete provider {id}?
@@ -112,7 +136,7 @@ export function ProviderCard({ id, provider, remove }: TProviderCardProps) {
           <ModalFooter>
             <HStack spacing={"2"}>
               <Button onClick={onDeleteClose}>Close</Button>
-              {!providerHasWorkspaces && (
+              {!providerWorkspaces.length && (
                 <Button
                   colorScheme={"red"}
                   onClick={async () => {

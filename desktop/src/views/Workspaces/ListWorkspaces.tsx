@@ -1,4 +1,4 @@
-import { Button, Grid, Text, VStack } from "@chakra-ui/react"
+import { Button, Text, VStack, Wrap, WrapItem } from "@chakra-ui/react"
 import { useMemo } from "react"
 import { useNavigate } from "react-router"
 import { useWorkspaces } from "../../contexts"
@@ -32,21 +32,16 @@ export function ListWorkspaces() {
     }, empty)
   }, [workspaces])
 
-  return (
-    <Grid
-      gridTemplateColumns={"repeat(auto-fit, minmax(45rem, 1fr))"}
-      gridGap={8}
-      marginBottom="12">
-      {workspaceCards.length === 0 ? (
-        <VStack>
-          <Text>No workspaces found. Click here to create one</Text>
-          <Button onClick={() => navigate(Routes.WORKSPACE_CREATE)}>Create Workspace</Button>
-        </VStack>
-      ) : (
-        workspaceCards.map((workspace) => (
-          <WorkspaceCard key={workspace.id} workspaceID={workspace.id} />
-        ))
-      )}
-    </Grid>
+  return workspaceCards.length === 0 ? (
+    <VStack>
+      <Text>No workspaces found. Click here to create one</Text>
+      <Button onClick={() => navigate(Routes.WORKSPACE_CREATE)}>Create Workspace</Button>
+    </VStack>
+  ) : (
+    <VStack alignItems={"flex-start"}>
+      {workspaceCards.map((workspace) => (
+        <WorkspaceCard key={workspace.id} workspaceID={workspace.id} />
+      ))}
+    </VStack>
   )
 }

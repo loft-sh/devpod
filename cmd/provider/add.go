@@ -63,7 +63,7 @@ func (cmd *AddCmd) Run(ctx context.Context, devPodConfig *config.Config, args []
 
 	log.Default.Donef("Successfully installed provider %s", providerConfig.Name)
 	if cmd.Use {
-		err = configureProvider(ctx, providerConfig, devPodConfig.DefaultContext, cmd.Options, true, true, nil)
+		err = configureProvider(ctx, providerConfig, devPodConfig.DefaultContext, cmd.Options, true, nil)
 		if err != nil {
 			log.Default.Errorf("Error configuring provider, please retry with 'devpod provider use %s --reconfigure'", providerConfig.Name)
 			return errors.Wrap(err, "configure provider")

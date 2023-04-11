@@ -67,7 +67,7 @@ func (cmd *UseCmd) Run(ctx context.Context, providerName string) error {
 	// should reconfigure?
 	shouldReconfigure := cmd.Reconfigure || len(cmd.Options) > 0 || providerWithOptions.State == nil || cmd.SingleMachine
 	if shouldReconfigure {
-		return configureProvider(ctx, providerWithOptions.Config, devPodConfig.DefaultContext, cmd.Options, cmd.Reconfigure, true, &cmd.SingleMachine)
+		return configureProvider(ctx, providerWithOptions.Config, devPodConfig.DefaultContext, cmd.Options, cmd.Reconfigure, &cmd.SingleMachine)
 	} else {
 		log.Default.Infof("To reconfigure provider %s, run with '--reconfigure' to reconfigure the provider", providerWithOptions.Config.Name)
 	}
@@ -87,25 +87,11 @@ func (cmd *UseCmd) Run(ctx context.Context, providerName string) error {
 	return nil
 }
 
-func configureProvider(ctx context.Context, provider *provider2.ProviderConfig, context string, userOptions []string, reconfigure, runInit bool, singleMachine *bool) error {
+func configureProvider(ctx context.Context, provider *provider2.ProviderConfig, context string, userOptions []string, reconfigure bool, singleMachine *bool) error {
 	// set options
 	devPodConfig, err := setOptions(ctx, provider, context, userOptions, reconfigure, false, singleMachine)
 	if err != nil {
 		return err
-	}
-
-	// run init command
-	if runInit {
-		stdout := log.Default.Writer(logrus.InfoLevel, false)
-		defer stdout.Close()
-
-		stderr := log.Default.Writer(logrus.ErrorLevel, false)
-		defer stderr.Close()
-
-		err = initProvider(ctx, devPodConfig, provider, stdout, stderr)
-		if err != nil {
-			return err
-		}
 	}
 
 	// set options
@@ -148,6 +134,18 @@ func setOptions(ctx context.Context, provider *provider2.ProviderConfig, context
 	devPodConfig, err = options2.ResolveOptions(ctx, devPodConfig, provider, options, skipRequired, singleMachine, log.Default)
 	if err != nil {
 		return nil, errors.Wrap(err, "resolve options")
+	}
+
+	// run init command
+	stdout := log.Default.Writer(logrus.InfoLevel, false)
+	defer stdout.Close()
+
+	stderr := log.Default.Writer(logrus.ErrorLevel, false)
+	defer stderr.Close()
+
+	err = initProvider(ctx, devPodConfig, provider, stdout, stderr)
+	if err != nil {
+		return nil, err
 	}
 
 	return devPodConfig, nil

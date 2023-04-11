@@ -1,5 +1,6 @@
 export { default as CodeJPG } from "./code.jpg"
 export { default as CppSvg } from "./cpp.svg"
+export { default as SSHPng } from "./ssh.svg"
 export { default as DotnetcorePng } from "./dotnetcore.png"
 export { default as GoPng } from "./go.png"
 export { default as JavaPng } from "./java.png"

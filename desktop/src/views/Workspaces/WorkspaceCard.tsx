@@ -102,6 +102,8 @@ export function WorkspaceCard({ workspaceID, onSelectionChange }: TWorkspaceCard
         <Image
           objectFit="cover"
           maxHeight={"full"}
+          width={"300px"}
+          maxWidth={"300px"}
           style={{ aspectRatio: "2 / 1" }}
           src={picture ?? CodeJPG}
           alt="Project Image"

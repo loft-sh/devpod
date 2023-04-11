@@ -57,29 +57,18 @@ export class ProvidersClient implements TDebuggable {
 
   public async configure(
     id: TProviderID,
-    { useAsDefaultProvider, initializeProvider, reuseMachine, options }: TConfigureProviderConfig
+    { useAsDefaultProvider, reuseMachine, options }: TConfigureProviderConfig
   ): Promise<ResultError> {
-    if (useAsDefaultProvider) {
-      return ProviderCommands.UseProvider(id, options, reuseMachine)
-    }
-
     const setResult = await ProviderCommands.SetProviderOptions(id, options, reuseMachine)
     if (setResult.err) {
       return setResult
     }
 
-    if (initializeProvider) {
-      const initResult = await ProviderCommands.InitProvider(id)
-      if (initResult.err) {
-        return initResult
-      }
+    if (useAsDefaultProvider) {
+      return ProviderCommands.UseProvider(id)
     }
 
     return Return.Ok()
-  }
-
-  public async initialize(id: TProviderID): Promise<ResultError> {
-    return ProviderCommands.InitProvider(id)
   }
 
   public setDangling(id: TProviderID) {

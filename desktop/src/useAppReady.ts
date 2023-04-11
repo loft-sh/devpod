@@ -55,7 +55,11 @@ export function useAppReady() {
           }
         })
 
-        await client.ready()
+        try {
+          await client.ready()
+        } catch (err) {
+          console.error(err)
+        }
 
         return unsubscribe
       })()
