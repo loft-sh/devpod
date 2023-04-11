@@ -54,20 +54,11 @@ export function useSetupProvider() {
   const { remove } = useProviderManager()
 
   const reset = useCallback(() => {
-    const danglingProviderID = client.providers.popDangling()
-    if (exists(danglingProviderID)) {
-      remove.run({ providerID: danglingProviderID })
-    }
-
     dispatch({ type: "reset" })
-  }, [remove])
+  }, [state.currentStep])
 
   const completeFirstStep = useCallback(
     (payload: TCompleteFirstStepAction["payload"]) => {
-      if (state.currentStep !== 1) {
-        return
-      }
-
       dispatch({ type: "completeFirstStep", payload })
     },
     [state.currentStep]
