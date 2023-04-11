@@ -72,6 +72,9 @@ type ProviderConfig struct {
 
 	// Options are the configured provider options
 	Options map[string]OptionValue `json:"options,omitempty"`
+
+	// CreationTimestamp is the timestamp when this provider was added
+	CreationTimestamp types.Time `json:"creationTimestamp,omitempty"`
 }
 
 type OptionValue struct {

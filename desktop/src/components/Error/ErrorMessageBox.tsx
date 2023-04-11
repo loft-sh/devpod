@@ -1,4 +1,5 @@
 import { Box, Text, useColorModeValue } from "@chakra-ui/react"
+import React from "react"
 
 type TErrorMessageBox = Readonly<{ error: Error }>
 export function ErrorMessageBox({ error }: TErrorMessageBox) {
@@ -13,11 +14,11 @@ export function ErrorMessageBox({ error }: TErrorMessageBox) {
       borderRadius="md"
       display="inline-block">
       <Text color={textColor}>
-        {error.message.split("\n").map((line) => (
-          <>
+        {error.message.split("\n").map((line, index) => (
+          <React.Fragment key={index}>
             {line}
             <br />
-          </>
+          </React.Fragment>
         ))}
       </Text>
     </Box>

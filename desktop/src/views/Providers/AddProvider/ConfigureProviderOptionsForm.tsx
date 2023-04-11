@@ -8,6 +8,7 @@ import {
   FormLabel,
   Input,
   SimpleGrid,
+  useColorModeValue,
   VStack,
 } from "@chakra-ui/react"
 import styled from "@emotion/styled"
@@ -25,6 +26,7 @@ import {
 } from "../../../types"
 import { canCreateMachine, getVisibleOptions, TOptionWithID } from "../helpers"
 import { AutoComplete, CollapsibleSection, ErrorMessageBox } from "../../../components"
+import { useBorderColor } from "../../../Theme"
 
 type TAllOptions = Readonly<{
   required: TOptionWithID[]
@@ -47,28 +49,33 @@ type TFieldValues = Readonly<{
 }>
 type TConfigureProviderOptionsFormProps = Readonly<{
   providerID: TProviderID
+  isDefault: boolean
+  reuseMachine: boolean
   options: TProviderOptions
   optionGroups: TProviderOptionGroup[]
-  initializeProvider?: boolean
+  addProvider?: boolean
   onFinish?: () => void
 }>
 
 export function ConfigureProviderOptionsForm({
   providerID,
+  isDefault,
+  reuseMachine,
   onFinish,
   options: optionsProp,
   optionGroups,
-  initializeProvider = false,
+  addProvider = false,
 }: TConfigureProviderOptionsFormProps) {
   const [[provider]] = useProvider(providerID)
+  const showDefaultField = useMemo(() => addProvider || !isDefault, [addProvider, isDefault])
   const showReuseMachineField = useMemo(
     () => canCreateMachine(provider?.config),
     [provider?.config]
   )
   const formMethods = useForm<TFieldValues>({
     defaultValues: {
-      useAsDefault: true,
-      reuseMachine: showReuseMachineField,
+      useAsDefault: isDefault,
+      reuseMachine: showReuseMachineField && reuseMachine,
     },
   })
   const {
@@ -94,20 +101,18 @@ export function ConfigureProviderOptionsForm({
       configureProvider({
         providerID,
         config: {
-          initializeProvider,
           reuseMachine: reuseMachine ?? false,
           useAsDefaultProvider: useAsDefault,
           options: options,
         },
       })
     },
-    [configureProvider, initializeProvider, providerID]
+    [configureProvider, providerID]
   )
   const { reuseMachineError, useAsDefaultError } = useFormErrors(
     Object.values(FieldName),
     formMethods.formState
   )
-  const showUseAsDefaultField = useMemo(() => initializeProvider, [initializeProvider])
 
   const options = useMemo(() => {
     const empty: TAllOptions = { required: [], groups: {}, other: [] }
@@ -137,6 +142,9 @@ export function ConfigureProviderOptionsForm({
       return acc
     }, empty)
   }, [optionGroups, optionsProp])
+
+  const backgroundColor = useColorModeValue("blackAlpha.100", "whiteAlpha.100")
+  const borderColor = useBorderColor()
 
   return (
     <FormProvider {...formMethods}>
@@ -192,40 +200,47 @@ export function ConfigureProviderOptionsForm({
             </Box>
           )}
 
-          {(showReuseMachineField || showUseAsDefaultField) && (
+          {(showDefaultField || showReuseMachineField) && (
             <Box width="full">
-              <CollapsibleSection title={"Provider Options"} isOpen={true}>
-                <VStack align="start" spacing={4}>
-                  {showReuseMachineField && (
-                    <FormControl>
-                      <Checkbox {...formMethods.register(FieldName.REUSE_MACHINE)}>
-                        Reuse Machine
-                      </Checkbox>
-                      {exists(reuseMachineError) ? (
-                        <FormErrorMessage>{reuseMachineError.message ?? "Error"}</FormErrorMessage>
-                      ) : (
-                        <FormHelperText>
-                          Provider reuses the vm of the first workspaces for all subsequent
-                          workspaces. Otherwise, it will spin up one VM per workspace
-                        </FormHelperText>
-                      )}
-                    </FormControl>
-                  )}
+              <VStack
+                align="start"
+                spacing={4}
+                width="full"
+                backgroundColor={backgroundColor}
+                borderRadius="lg"
+                borderWidth="thin"
+                padding={"10px"}
+                margin={"10px"}
+                borderColor={borderColor}>
+                {showReuseMachineField && (
+                  <FormControl>
+                    <Checkbox {...formMethods.register(FieldName.REUSE_MACHINE)}>
+                      Reuse Machine
+                    </Checkbox>
+                    {exists(reuseMachineError) ? (
+                      <FormErrorMessage>{reuseMachineError.message ?? "Error"}</FormErrorMessage>
+                    ) : (
+                      <FormHelperText>
+                        Provider reuses the vm of the first workspaces for all subsequent
+                        workspaces. Otherwise, it will spin up one VM per workspace
+                      </FormHelperText>
+                    )}
+                  </FormControl>
+                )}
 
-                  {showUseAsDefaultField && (
-                    <FormControl>
-                      <Checkbox {...formMethods.register(FieldName.USE_AS_DEFAULT)}>
-                        Default Provider
-                      </Checkbox>
-                      {exists(useAsDefaultError) ? (
-                        <FormErrorMessage>{useAsDefaultError.message ?? "Error"}</FormErrorMessage>
-                      ) : (
-                        <FormHelperText>Use this provider as the default provider</FormHelperText>
-                      )}
-                    </FormControl>
-                  )}
-                </VStack>
-              </CollapsibleSection>
+                {showDefaultField && (
+                  <FormControl>
+                    <Checkbox {...formMethods.register(FieldName.USE_AS_DEFAULT)}>
+                      Default Provider
+                    </Checkbox>
+                    {exists(useAsDefaultError) ? (
+                      <FormErrorMessage>{useAsDefaultError.message ?? "Error"}</FormErrorMessage>
+                    ) : (
+                      <FormHelperText>Use this provider as the default provider</FormHelperText>
+                    )}
+                  </FormControl>
+                )}
+              </VStack>
             </Box>
           )}
           {status === "error" && isError(error) && <ErrorMessageBox error={error} />}
@@ -235,7 +250,7 @@ export function ConfigureProviderOptionsForm({
             variant="primary"
             isLoading={status === "loading"}
             disabled={formMethods.formState.isSubmitting}>
-            {initializeProvider ? "Add Provider" : "Save"}
+            {addProvider ? "Add Provider" : "Update Options"}
           </Button>
         </VStack>
       </Form>
@@ -284,7 +299,11 @@ function OptionFormField({
 
     switch (type) {
       case "boolean":
-        return <Checkbox {...props}>{displayName}</Checkbox>
+        return (
+          <Checkbox defaultChecked={props.defaultValue === "true"} {...props}>
+            {displayName}
+          </Checkbox>
+        )
       case "number":
         return <Input placeholder={`Enter ${displayName}`} type="number" {...props} />
       case "duration":

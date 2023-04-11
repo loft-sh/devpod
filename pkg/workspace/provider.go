@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"crypto/tls"
 	"fmt"
+	"github.com/loft-sh/devpod/pkg/types"
 	"github.com/loft-sh/devpod/providers"
 	"io"
 	"net/http"
@@ -50,7 +51,25 @@ func AddProvider(devPodConfig *config.Config, providerName, providerSourceRaw st
 		return nil, err
 	}
 
-	return installProvider(devPodConfig, providerName, providerRaw, providerSource, log)
+	providerConfig, err := installProvider(devPodConfig, providerName, providerRaw, providerSource, log)
+	if err != nil {
+		return nil, err
+	}
+
+	if devPodConfig.Current().Providers == nil {
+		devPodConfig.Current().Providers = map[string]*config.ProviderConfig{}
+	}
+	if devPodConfig.Current().Providers[providerConfig.Name] == nil {
+		devPodConfig.Current().Providers[providerConfig.Name] = &config.ProviderConfig{
+			CreationTimestamp: types.Now(),
+		}
+	}
+	err = config.SaveConfig(devPodConfig)
+	if err != nil {
+		return nil, errors.Wrap(err, "save config")
+	}
+
+	return providerConfig, nil
 }
 
 func UpdateProvider(devPodConfig *config.Config, providerName, providerSourceRaw string, log log.Logger) (*provider2.ProviderConfig, error) {

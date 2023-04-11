@@ -36,6 +36,8 @@ export type TProvider = Readonly<{
   default: boolean | null
   state: Readonly<{
     initialized: boolean | null
+    singleMachine: boolean | null
+    creationTimestamp: string | null
     options: TProviderOptions | null
   }> | null
 }>
@@ -91,7 +93,6 @@ export type TAddProviderConfig = Readonly<{
 export type TConfigureProviderConfig = Readonly<{
   options: Record<string, unknown>
   useAsDefaultProvider: boolean
-  initializeProvider: boolean
   reuseMachine: boolean
 }>
 export type TProviderManager = Readonly<{

@@ -47,8 +47,10 @@ export function AddProvider() {
           <VStack align="start" width="full">
             {state.currentStep === 2 && (
               <ConfigureProviderOptionsForm
-                initializeProvider
+                addProvider={true}
                 providerID={state.providerID}
+                isDefault={true}
+                reuseMachine={true}
                 options={state.options}
                 optionGroups={state.optionGroups}
                 onFinish={completeSecondStep}
