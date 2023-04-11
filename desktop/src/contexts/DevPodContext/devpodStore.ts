@@ -123,6 +123,11 @@ class DevpodStore {
       // before and once after archiving the action
       this.actionDidChange()
       this.actionsHistory.archive(action)
+      // Notify react on next tick of event loop to check the actions once more.
+      // This ensures we have a chance to move from the `pending` to one of the `settled` states with the UI noticing.
+      setTimeout(() => {
+        this.actionDidChange()
+      }, 0)
     })
 
     action.run()
