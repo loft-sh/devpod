@@ -8,19 +8,17 @@ import {
   HStack,
   Icon,
   Input,
-  InputGroup,
-  InputRightElement,
   Select,
-  SimpleGrid,
   Text,
-  Tooltip,
   useColorModeValue,
   VStack,
+  Wrap,
+  WrapItem,
 } from "@chakra-ui/react"
 import { useQuery } from "@tanstack/react-query"
 import { useCallback, useEffect, useMemo, useState } from "react"
 import { SubmitHandler, useForm } from "react-hook-form"
-import { FiFile } from "react-icons/fi"
+import { FiFolder } from "react-icons/fi"
 import { useNavigate } from "react-router"
 import { useSearchParams } from "react-router-dom"
 import { client } from "../../client"
@@ -233,34 +231,42 @@ export function CreateWorkspace() {
             padding="20"
             isRequired
             isInvalid={exists(sourceError)}
+            justifyContent={"center"}
             borderBottomWidth="thin"
             borderBottomColor={borderColor}>
-            <Text marginBottom="2" fontWeight="bold">
-              Enter any git repository or local path to a folder you would like to create a
-              workspace from
-            </Text>
-            <InputGroup backgroundColor={inputBackgroundColor} borderRadius="md">
-              <Input
-                placeholder="github.com/my-org/my-repo"
-                fontSize={"16px"}
-                padding={"10px"}
-                height={"42px"}
-                type="text"
-                {...register(FieldName.SOURCE, { required: true })}
-              />
-              <Tooltip label={"Select Folder"}>
-                <InputRightElement cursor={"pointer"} onClick={handleSelectFolderClicked}>
-                  <Icon
-                    _hover={{ color: "black" }}
-                    position={"relative"}
-                    top={"3px"}
-                    fontSize={"18px"}
-                    as={FiFile}
-                    color={"grey"}
-                  />
-                </InputRightElement>
-              </Tooltip>
-            </InputGroup>
+            <VStack>
+              <Text marginBottom="2" fontWeight="bold">
+                Enter any git repository or local path to a folder you would like to create a
+                workspace from
+              </Text>
+              <HStack spacing={0} justifyContent={"center"}>
+                <Input
+                  backgroundColor={inputBackgroundColor}
+                  borderTopRightRadius={0}
+                  borderBottomRightRadius={0}
+                  placeholder="github.com/my-org/my-repo"
+                  fontSize={"16px"}
+                  padding={"10px"}
+                  height={"42px"}
+                  width={"400px"}
+                  type="text"
+                  {...register(FieldName.SOURCE, { required: true })}
+                />
+                <Button
+                  leftIcon={<Icon as={FiFolder} />}
+                  borderTopLeftRadius={0}
+                  borderBottomLeftRadius={0}
+                  borderTop={"1px solid white"}
+                  borderRight={"1px solid white"}
+                  borderBottom={"1px solid white"}
+                  borderColor={"gray.200"}
+                  height={"42px"}
+                  flex={"0 0 140px"}
+                  onClick={handleSelectFolderClicked}>
+                  Select Folder
+                </Button>
+              </HStack>
+            </VStack>
             {exists(sourceError) ? (
               <FormErrorMessage>{sourceError.message ?? "Error"}</FormErrorMessage>
             ) : (
@@ -271,59 +277,72 @@ export function CreateWorkspace() {
           <Box width="full" height="full" padding={4} marginBottom="8">
             <CollapsibleSection title="Or use one of our quickstart examples" showIcon isOpen>
               <FormControl isRequired isInvalid={exists(sourceError)}>
-                <SimpleGrid
-                  spacing={4}
-                  templateColumns="repeat(auto-fill, minmax(120px, 1fr))"
-                  marginTop={"10px"}>
-                  <ExampleCard
-                    image={PythonSvg}
-                    source={"https://github.com/microsoft/vscode-remote-try-python"}
-                    currentSource={currentSource}
-                    setValue={setValue}
-                  />
-                  <ExampleCard
-                    image={NodejsPng}
-                    source={"https://github.com/microsoft/vscode-remote-try-node"}
-                    currentSource={currentSource}
-                    setValue={setValue}
-                  />
-                  <ExampleCard
-                    image={GoPng}
-                    source={"https://github.com/Microsoft/vscode-remote-try-go"}
-                    currentSource={currentSource}
-                    setValue={setValue}
-                  />
-                  <ExampleCard
-                    image={RustSvg}
-                    source={"https://github.com/microsoft/vscode-remote-try-rust"}
-                    currentSource={currentSource}
-                    setValue={setValue}
-                  />
-                  <ExampleCard
-                    image={JavaPng}
-                    source={"https://github.com/microsoft/vscode-remote-try-java"}
-                    currentSource={currentSource}
-                    setValue={setValue}
-                  />
-                  <ExampleCard
-                    image={PhpSvg}
-                    source={"https://github.com/microsoft/vscode-remote-try-php"}
-                    currentSource={currentSource}
-                    setValue={setValue}
-                  />
-                  <ExampleCard
-                    image={CppSvg}
-                    source={"https://github.com/microsoft/vscode-remote-try-cpp"}
-                    currentSource={currentSource}
-                    setValue={setValue}
-                  />
-                  <ExampleCard
-                    image={DotnetcorePng}
-                    source={"https://github.com/microsoft/vscode-remote-try-dotnet"}
-                    currentSource={currentSource}
-                    setValue={setValue}
-                  />
-                </SimpleGrid>
+                <Wrap spacing={3} marginTop={"10px"} justify="center">
+                  <WrapItem padding={"1"}>
+                    <ExampleCard
+                      image={PythonSvg}
+                      source={"https://github.com/microsoft/vscode-remote-try-python"}
+                      currentSource={currentSource}
+                      setValue={setValue}
+                    />
+                  </WrapItem>
+                  <WrapItem padding={"1"}>
+                    <ExampleCard
+                      image={NodejsPng}
+                      source={"https://github.com/microsoft/vscode-remote-try-node"}
+                      currentSource={currentSource}
+                      setValue={setValue}
+                    />
+                  </WrapItem>
+                  <WrapItem padding={"1"}>
+                    <ExampleCard
+                      image={GoPng}
+                      source={"https://github.com/Microsoft/vscode-remote-try-go"}
+                      currentSource={currentSource}
+                      setValue={setValue}
+                    />
+                  </WrapItem>
+                  <WrapItem padding={"1"}>
+                    <ExampleCard
+                      image={RustSvg}
+                      source={"https://github.com/microsoft/vscode-remote-try-rust"}
+                      currentSource={currentSource}
+                      setValue={setValue}
+                    />
+                  </WrapItem>
+                  <WrapItem padding={"1"}>
+                    <ExampleCard
+                      image={JavaPng}
+                      source={"https://github.com/microsoft/vscode-remote-try-java"}
+                      currentSource={currentSource}
+                      setValue={setValue}
+                    />
+                  </WrapItem>
+                  <WrapItem padding={"1"}>
+                    <ExampleCard
+                      image={PhpSvg}
+                      source={"https://github.com/microsoft/vscode-remote-try-php"}
+                      currentSource={currentSource}
+                      setValue={setValue}
+                    />
+                  </WrapItem>
+                  <WrapItem padding={"1"}>
+                    <ExampleCard
+                      image={CppSvg}
+                      source={"https://github.com/microsoft/vscode-remote-try-cpp"}
+                      currentSource={currentSource}
+                      setValue={setValue}
+                    />
+                  </WrapItem>
+                  <WrapItem padding={"1"}>
+                    <ExampleCard
+                      image={DotnetcorePng}
+                      source={"https://github.com/microsoft/vscode-remote-try-dotnet"}
+                      currentSource={currentSource}
+                      setValue={setValue}
+                    />
+                  </WrapItem>
+                </Wrap>
               </FormControl>
             </CollapsibleSection>
           </Box>
