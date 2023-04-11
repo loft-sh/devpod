@@ -147,7 +147,7 @@ export function WorkspaceCard({ workspaceID, onSelectionChange }: TWorkspaceCard
           </CardHeader>
 
           <CardFooter padding="none" paddingBottom={4}>
-            <HStack spacing="2" width="full" justifyContent="end">
+            <HStack spacing="2" width="full" justifyContent="end" paddingRight={"10px"}>
               <Button
                 aria-label="Start workspace"
                 variant="primary"

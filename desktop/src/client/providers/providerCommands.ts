@@ -33,9 +33,14 @@ export class ProviderCommands {
       DEVPOD_COMMAND_PROVIDER,
       DEVPOD_COMMAND_LIST,
       DEVPOD_FLAG_JSON_OUTPUT,
+      DEVPOD_FLAG_JSON_LOG_OUTPUT,
     ]).run()
     if (result.err) {
       return result
+    }
+
+    if (!isOk(result.val)) {
+      return getErrorFromChildProcess(result.val)
     }
 
     const rawProviders = JSON.parse(result.val.stdout) as TProviders
@@ -48,6 +53,7 @@ export class ProviderCommands {
       DEVPOD_COMMAND_HELPER,
       DEVPOD_COMMAND_GET_PROVIDER_NAME,
       source,
+      DEVPOD_FLAG_JSON_LOG_OUTPUT,
     ]).run()
     if (result.err) {
       return result
@@ -92,6 +98,7 @@ export class ProviderCommands {
       DEVPOD_COMMAND_PROVIDER,
       DEVPOD_COMMAND_DELETE,
       id,
+      DEVPOD_FLAG_JSON_LOG_OUTPUT,
     ]).run()
     if (result.err) {
       return result
@@ -167,6 +174,7 @@ export class ProviderCommands {
       DEVPOD_COMMAND_OPTIONS,
       id,
       DEVPOD_FLAG_JSON_OUTPUT,
+      DEVPOD_FLAG_JSON_LOG_OUTPUT,
     ]).run()
     if (result.err) {
       return result

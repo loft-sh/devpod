@@ -5,7 +5,8 @@ export class Err<TError extends Error> {
   constructor(public readonly val: TError) {}
 
   public unwrap(): undefined {
-    throw Error(this.val.message, { cause: this.val })
+    console.error(this.val)
+    throw new Error(this.val.message, { cause: this.val })
   }
 }
 

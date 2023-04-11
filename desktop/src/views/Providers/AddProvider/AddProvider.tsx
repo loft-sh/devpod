@@ -22,7 +22,7 @@ export function AddProvider() {
     <Box paddingBottom={80}>
       <VStack align="start" spacing={8} width="full">
         <Heading size="md">1. Setup Provider Source</Heading>
-        <SetupProviderSourceForm state={state} onReset={reset} onFinish={completeFirstStep} />
+        <SetupProviderSourceForm state={state} reset={reset} onFinish={completeFirstStep} />
       </VStack>
 
       <VStack align="start" spacing={8} marginTop={6} width="full">

@@ -27,6 +27,8 @@ import { ProviderPlaceholder, Trash } from "../../icons"
 import { exists, noop } from "../../lib"
 import { Routes } from "../../routes"
 import { TProvider, TRunnable, TWithProviderID } from "../../types"
+import { useWorkspaces } from "../../contexts"
+import { useMemo } from "react"
 
 type TProviderCardProps = {
   id: string
@@ -36,7 +38,12 @@ type TProviderCardProps = {
 }
 
 export function ProviderCard({ id, provider, remove }: TProviderCardProps) {
+  const workspaces = useWorkspaces()
   const { isOpen: isDeleteOpen, onOpen: onDeleteOpen, onClose: onDeleteClose } = useDisclosure()
+  const providerHasWorkspaces = useMemo(
+    () => workspaces.find((workspace) => workspace.provider?.name === id),
+    [workspaces]
+  )
 
   return (
     <>
@@ -75,7 +82,9 @@ export function ProviderCard({ id, provider, remove }: TProviderCardProps) {
                 variant="ghost"
                 colorScheme="gray"
                 icon={<Trash width={"16px"} />}
-                onClick={onDeleteOpen}
+                onClick={() => {
+                  onDeleteOpen()
+                }}
                 isLoading={remove.status === "loading" && remove.target?.providerID === id}
               />
             </Tooltip>
@@ -88,20 +97,31 @@ export function ProviderCard({ id, provider, remove }: TProviderCardProps) {
           <ModalHeader>Delete Provider</ModalHeader>
           <ModalCloseButton />
           <ModalBody>
-            Deleting the provider will erase all provider state. Make sure to delete provider
-            workspaces before. Are you sure you want to delete provider {id}?
+            {!providerHasWorkspaces ? (
+              <>
+                Deleting the provider will erase all provider state. Make sure to delete provider
+                workspaces before. Are you sure you want to delete provider {id}?
+              </>
+            ) : (
+              <>
+                Please make sure to delete all workspaces that use this provider, before deleting
+                this provider itself
+              </>
+            )}
           </ModalBody>
           <ModalFooter>
             <HStack spacing={"2"}>
               <Button onClick={onDeleteClose}>Close</Button>
-              <Button
-                colorScheme={"red"}
-                onClick={async () => {
-                  remove.run({ providerID: id })
-                  onDeleteClose()
-                }}>
-                Delete
-              </Button>
+              {!providerHasWorkspaces && (
+                <Button
+                  colorScheme={"red"}
+                  onClick={async () => {
+                    remove.run({ providerID: id })
+                    onDeleteClose()
+                  }}>
+                  Delete
+                </Button>
+              )}
             </HStack>
           </ModalFooter>
         </ModalContent>

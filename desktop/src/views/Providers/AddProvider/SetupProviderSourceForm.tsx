@@ -44,7 +44,7 @@ import { TSetupProviderState } from "./useSetupProvider"
 const Form = styled.form`
   width: 100%;
 `
-const ALLOWED_NAMES_REGEX = /^[a-z0-9\\.\\-]+$/
+const ALLOWED_NAMES_REGEX = /^[a-z0-9\\-]+$/
 
 const RECOMMENDED_PROVIDER_SOURCES = [
   { image: DockerPng, name: "docker" },
@@ -57,17 +57,13 @@ const RECOMMENDED_PROVIDER_SOURCES = [
 
 type TSetupProviderSourceFormProps = Readonly<{
   state: TSetupProviderState
-  onReset: () => void
+  reset: () => void
   onFinish: (
     result: TWithProviderID &
       Readonly<{ options: TProviderOptions; optionGroups: TProviderOptionGroup[] }>
   ) => void
 }>
-export function SetupProviderSourceForm({
-  state,
-  onFinish,
-  onReset,
-}: TSetupProviderSourceFormProps) {
+export function SetupProviderSourceForm({ state, reset, onFinish }: TSetupProviderSourceFormProps) {
   const cardSize = useToken("sizes", "36")
   const [providers, setProviders] = useState<TProviders | undefined>()
   useEffect(() => {
@@ -115,16 +111,42 @@ export function SetupProviderSourceForm({
       rawProviderSource: string
       config: TAddProviderConfig
     }>) => {
+      // delete the old selected provider
       if (state.currentStep !== 1) {
-        onReset()
+        const providerID = client.providers.popDangling()
+        if (providerID) {
+          ;(await client.providers.remove(providerID)).unwrap()
+        }
       }
 
+      // check if provider exists and is not initialized
+      const providerID = config.name || (await client.providers.newID(rawProviderSource)).unwrap()
+      if (!providerID) {
+        throw new Error(`Couldn't find provider id`)
+      }
+
+      // list all providers
+      let providers = (await client.providers.listAll()).unwrap()
+      if (providers?.[providerID]) {
+        if (!providers[providerID]?.state?.initialized) {
+          ;(await client.providers.remove(providerID)).unwrap()
+        } else {
+          throw new Error(
+            `Provider with name ${providerID} already exists, please choose a different name`
+          )
+        }
+      }
+
+      // add provider
       ;(await client.providers.add(rawProviderSource, config)).unwrap()
-      const providerID = (await client.providers.newID(rawProviderSource)).unwrap()
+
+      // get options
       const options = (await client.providers.getOptions(providerID!)).unwrap()
-      const providers = (await client.providers.listAll()).unwrap()
+
+      // check if provider could be added
+      providers = (await client.providers.listAll()).unwrap()
       if (!providers?.[providerID!]) {
-        throw `Provider ${providerID} couldn't be found`
+        throw new Error(`Provider ${providerID} couldn't be found`)
       }
 
       return {
@@ -136,6 +158,9 @@ export function SetupProviderSourceForm({
     onSuccess(result) {
       queryClient.invalidateQueries(QueryKeys.PROVIDERS)
       onFinish(result)
+    },
+    onError() {
+      reset()
     },
   })
 
@@ -179,6 +204,9 @@ export function SetupProviderSourceForm({
       setValue(FieldName.PROVIDER_SOURCE, providerSource === sourceName ? "" : sourceName, {
         shouldDirty: true,
       })
+      setValue(FieldName.PROVIDER_NAME, providerSource === sourceName ? "" : sourceName, {
+        shouldDirty: true,
+      })
     },
     [providerSource, setValue]
   )
@@ -191,21 +219,20 @@ export function SetupProviderSourceForm({
             spacing={4}
             templateColumns={`repeat(auto-fill, ${cardSize})`}
             marginTop="2.5">
-            {RECOMMENDED_PROVIDER_SOURCES.filter((source) => !providers?.[source.name]).map(
-              (source) => (
-                <RecommendedProviderCard
-                  key={source.name}
-                  image={source.image}
-                  source={source.name}
-                  isSelected={providerSource === source.name}
-                  onClick={handleRecommendedProviderClicked(source.name)}
-                />
-              )
-            )}
+            {RECOMMENDED_PROVIDER_SOURCES.filter(
+              (source) => !providers?.[source.name] || !providers[source.name]?.state?.initialized
+            ).map((source) => (
+              <RecommendedProviderCard
+                key={source.name}
+                image={source.image}
+                source={source.name}
+                isSelected={providerSource === source.name}
+                onClick={handleRecommendedProviderClicked(source.name)}
+              />
+            ))}
             <RecommendedProviderCard
               imageNode={<Icon as={AiOutlinePlusCircle} fontSize={"64px"} color={"primary.500"} />}
               isSelected={showCustom}
-              isCurrentSource={providerSource === ""}
               onClick={() => {
                 setShowCustom(!showCustom)
                 setValue(FieldName.PROVIDER_SOURCE, "", {
@@ -245,7 +272,7 @@ export function SetupProviderSourceForm({
               {...register(FieldName.PROVIDER_NAME, {
                 pattern: {
                   value: ALLOWED_NAMES_REGEX,
-                  message: "Name can only contain letters, numbers, . and -",
+                  message: "Name can only contain letters, numbers and -",
                 },
               })}
             />
