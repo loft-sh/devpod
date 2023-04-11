@@ -7,7 +7,6 @@ import (
 	"path"
 	"path/filepath"
 	"reflect"
-	"regexp"
 	"strings"
 	"time"
 
@@ -148,11 +147,11 @@ func (r *Runner) getDockerComposeFilePaths(parsedConfig *config.SubstitutedConfi
 	var composeFiles []string
 	if len(parsedConfig.Config.DockerComposeFile) > 0 {
 		for _, composeFile := range parsedConfig.Config.DockerComposeFile {
-			path := composeFile
+			absPath := composeFile
 			if !filepath.IsAbs(composeFile) {
-				path = filepath.Join(configFileDir, composeFile)
+				absPath = filepath.Join(configFileDir, composeFile)
 			}
-			composeFiles = append(composeFiles, path)
+			composeFiles = append(composeFiles, absPath)
 		}
 
 		return composeFiles, nil
@@ -207,16 +206,12 @@ func (r *Runner) getProjectName(project *composetypes.Project, composeHelper *co
 	}
 
 	// Use the workspace ID if loaded from .devcontainer
-	if project.Name == "devcontainer" {
-		projectName = r.ID
+	projectName = project.Name
+	if projectName == "devcontainer" {
+		projectName = r.ID + "_devcontainer"
 	}
 
-	useNewProjectNameFormat, _ := composeHelper.UseNewProjectName()
-	if useNewProjectNameFormat {
-		return regexp.MustCompile("[^a-z0-9]").ReplaceAllString(strings.ToLower(projectName), "")
-	}
-
-	return regexp.MustCompile("[^-_a-z0-9]").ReplaceAllString(strings.ToLower(projectName), "")
+	return composeHelper.ToProjectName(projectName)
 }
 
 func (r *Runner) startContainer(parsedConfig *config.SubstitutedConfig, project *composetypes.Project, composeHelper *compose.ComposeHelper, globalArgs []string) (*config.ContainerDetails, error) {

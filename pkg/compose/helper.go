@@ -12,6 +12,7 @@ import (
 	"io"
 	"os"
 	"os/exec"
+	"regexp"
 	"strings"
 )
 
@@ -102,16 +103,16 @@ func (h *ComposeHelper) FindDevContainer(projectName, serviceName string) (*conf
 	return nil, nil
 }
 
-func (r *ComposeHelper) Run(ctx context.Context, args []string, stdin io.Reader, stdout io.Writer, stderr io.Writer) error {
-	cmd := r.buildCmd(ctx, args...)
+func (h *ComposeHelper) Run(ctx context.Context, args []string, stdin io.Reader, stdout io.Writer, stderr io.Writer) error {
+	cmd := h.buildCmd(ctx, args...)
 	cmd.Stdin = stdin
 	cmd.Stdout = stdout
 	cmd.Stderr = stderr
 	return cmd.Run()
 }
 
-func (r *ComposeHelper) Stop(projectName string) error {
-	out, err := r.buildCmd(context.TODO(), "--project-name", projectName, "stop").CombinedOutput()
+func (h *ComposeHelper) Stop(projectName string) error {
+	out, err := h.buildCmd(context.TODO(), "--project-name", projectName, "stop").CombinedOutput()
 	if err != nil {
 		return errors.Wrapf(err, "%s", string(out))
 	}
@@ -119,8 +120,8 @@ func (r *ComposeHelper) Stop(projectName string) error {
 	return nil
 }
 
-func (r *ComposeHelper) Remove(projectName string) error {
-	out, err := r.buildCmd(context.TODO(), "--project-name", projectName, "down").CombinedOutput()
+func (h *ComposeHelper) Remove(projectName string) error {
+	out, err := h.buildCmd(context.TODO(), "--project-name", projectName, "down").CombinedOutput()
 	if err != nil {
 		return errors.Wrapf(err, "%s", string(out))
 	}
@@ -146,7 +147,23 @@ func (h *ComposeHelper) GetDefaultImage(projectName, serviceName string) (string
 	return fmt.Sprintf("%s-%s", projectName, serviceName), nil
 }
 
-func (h *ComposeHelper) UseNewProjectName() (bool, error) {
+func (h *ComposeHelper) ToProjectName(projectName string) string {
+	useNewProjectNameFormat, _ := h.useNewProjectName()
+	if !useNewProjectNameFormat {
+		return regexp.MustCompile("[^a-z0-9]").ReplaceAllString(strings.ToLower(projectName), "")
+	}
+
+	return regexp.MustCompile("[^-_a-z0-9]").ReplaceAllString(strings.ToLower(projectName), "")
+}
+
+func (h *ComposeHelper) buildCmd(ctx context.Context, args ...string) *exec.Cmd {
+	var allArgs []string
+	allArgs = append(allArgs, h.Args...)
+	allArgs = append(allArgs, args...)
+	return exec.CommandContext(ctx, h.Command, allArgs...)
+}
+
+func (h *ComposeHelper) useNewProjectName() (bool, error) {
 	version, err := semver.Parse(h.Version)
 	if err != nil {
 		return false, err
@@ -162,11 +179,4 @@ func (h *ComposeHelper) UseNewProjectName() (bool, error) {
 	}
 
 	return true, nil
-}
-
-func (r *ComposeHelper) buildCmd(ctx context.Context, args ...string) *exec.Cmd {
-	var allArgs []string
-	allArgs = append(allArgs, r.Args...)
-	allArgs = append(allArgs, args...)
-	return exec.CommandContext(ctx, r.Command, allArgs...)
 }

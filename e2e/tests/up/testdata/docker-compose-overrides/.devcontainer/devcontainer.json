@@ -1,0 +1,9 @@
+{
+	"name": "Go",
+	"dockerComposeFile": [
+		"../docker-compose.yaml",
+		"./docker-compose.devcontainer.yaml"
+	],
+	"service": "app",
+	"workspaceFolder": "/workspaces"
+}

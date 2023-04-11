@@ -3,7 +3,6 @@ package framework
 import (
 	"context"
 	"fmt"
-
 	"github.com/loft-sh/devpod/cmd/flags"
 	"github.com/loft-sh/devpod/cmd/machine"
 	"github.com/loft-sh/devpod/cmd/provider"
@@ -65,4 +64,8 @@ func (f *Framework) DevPodMachineCreate(args []string) error {
 func (f *Framework) DevPodMachineDelete(args []string) error {
 	deleteCmd := machine.NewDeleteCmd(&flags.GlobalFlags{})
 	return deleteCmd.RunE(nil, args)
+}
+
+func (f *Framework) DevPodWorkspaceDelete(ctx context.Context, workspace string) error {
+	return f.ExecCommand(ctx, false, true, fmt.Sprintf("Successfully deleted workspace '%s'", workspace), []string{"delete", workspace})
 }
