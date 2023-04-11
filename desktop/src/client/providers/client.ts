@@ -51,6 +51,10 @@ export class ProvidersClient implements TDebuggable {
     return ProviderCommands.GetProviderOptions(id)
   }
 
+  public async useProvider(id: TProviderID): Promise<ResultError> {
+    return ProviderCommands.UseProvider(id)
+  }
+
   public async configure(
     id: TProviderID,
     { useAsDefaultProvider, initializeProvider, reuseMachine, options }: TConfigureProviderConfig

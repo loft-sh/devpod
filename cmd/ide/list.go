@@ -38,6 +38,12 @@ func NewListCmd(flags *flags.GlobalFlags) *cobra.Command {
 	return listCmd
 }
 
+type IDEWithDefault struct {
+	ideparse.AllowedIDE `json:",inline"`
+
+	Default bool `json:"default,omitempty"`
+}
+
 // Run runs the command logic
 func (cmd *ListCmd) Run(ctx context.Context) error {
 	devPodConfig, err := config.LoadConfig(cmd.Context, cmd.Provider)
@@ -62,7 +68,15 @@ func (cmd *ListCmd) Run(ctx context.Context) error {
 			"Default",
 		}, tableEntries)
 	} else if cmd.Output == "json" {
-		out, err := json.Marshal(ideparse.AllowedIDEs)
+		ides := []IDEWithDefault{}
+		for _, entry := range ideparse.AllowedIDEs {
+			ides = append(ides, IDEWithDefault{
+				AllowedIDE: entry,
+				Default:    devPodConfig.Current().DefaultIDE == string(entry.Name),
+			})
+		}
+
+		out, err := json.MarshalIndent(ides, "", "  ")
 		if err != nil {
 			return err
 		}

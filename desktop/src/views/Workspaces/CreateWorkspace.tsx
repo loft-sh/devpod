@@ -23,7 +23,6 @@ import { SubmitHandler, useForm } from "react-hook-form"
 import { FiFile } from "react-icons/fi"
 import { useNavigate } from "react-router"
 import { useSearchParams } from "react-router-dom"
-import { DEFAULT_ECDH_CURVE } from "tls"
 import { client } from "../../client"
 import { CollapsibleSection, useStreamingTerminal } from "../../components"
 import { useProviders, useWorkspace, useWorkspaces } from "../../contexts"
@@ -45,7 +44,7 @@ import { TProviderID, TWorkspaceID } from "../../types"
 import { ExampleCard } from "./ExampleCard"
 import { FieldName, TFormValues } from "./types"
 
-const DEFAULT_PROVIDER = "docker"
+const DEFAULT_PREBUILD_REPOSITORY_KEY = "CREATE_PREBUILD_REPOSITORY"
 
 // TODO: handle no provider configured
 export function CreateWorkspace() {
@@ -61,26 +60,61 @@ export function CreateWorkspace() {
   const workspaces = useWorkspaces()
   const workspace = useWorkspace(workspaceID)
   const [[providers]] = useProviders()
-  const { register, handleSubmit, formState, watch, setError, setValue, clearErrors, reset } =
+  const { register, handleSubmit, formState, watch, setError, setValue, clearErrors } =
     useForm<TFormValues>({
       defaultValues: {
-        [FieldName.PROVIDER]: DEFAULT_PROVIDER,
-        [FieldName.DEFAULT_IDE]: "vscode",
+        [FieldName.PREBUILD_REPOSITORY]:
+          window.localStorage.getItem(DEFAULT_PREBUILD_REPOSITORY_KEY) || "",
       },
     })
   const currentSource = watch(FieldName.SOURCE)
   const { terminal, connectStream } = useStreamingTerminal()
 
   useEffect(() => {
-    reset({
-      ...(params.rawSource !== undefined ? { [FieldName.SOURCE]: params.rawSource } : {}),
-      ...(params.ide !== undefined ? { [FieldName.DEFAULT_IDE]: params.ide } : {}),
-      ...(params.providerID !== undefined ? { [FieldName.PROVIDER]: params.providerID } : {}),
-    })
-  }, [params, reset])
+    if (params.rawSource !== undefined) {
+      setValue(FieldName.SOURCE, params.rawSource)
+    }
+
+    // default ide
+    if (params.ide !== undefined) {
+      setValue(FieldName.DEFAULT_IDE, params.ide)
+    } else if (idesQuery.data?.length) {
+      const defaultIDE = idesQuery.data.find((ide) => ide.default)
+      if (defaultIDE) {
+        setValue(FieldName.DEFAULT_IDE, defaultIDE.name!)
+      } else {
+        const vscode = idesQuery.data.find((ide) => ide.name === "vscode")
+        if (vscode) {
+          setValue(FieldName.DEFAULT_IDE, vscode.name!)
+        }
+      }
+    }
+
+    // default provider
+    if (params.providerID !== undefined) {
+      setValue(FieldName.PROVIDER, params.providerID)
+    } else if (providers) {
+      const defaultProviderID = Object.keys(providers).find(
+        (providerID) => providers[providerID]?.default
+      )
+      if (defaultProviderID) {
+        setValue(FieldName.PROVIDER, defaultProviderID)
+      }
+    }
+  }, [params, idesQuery.data, providers, setValue])
 
   const onSubmit = useCallback<SubmitHandler<TFormValues>>(
     async (data) => {
+      // save prebuild repository
+      if (data[FieldName.PREBUILD_REPOSITORY]) {
+        window.localStorage.setItem(
+          DEFAULT_PREBUILD_REPOSITORY_KEY,
+          data[FieldName.PREBUILD_REPOSITORY]
+        )
+      } else {
+        window.localStorage.removeItem(DEFAULT_PREBUILD_REPOSITORY_KEY)
+      }
+
       const workspaceSource = data[FieldName.SOURCE].trim()
       setIsSubmitLoading(true)
       let workspaceID = data[FieldName.ID]
@@ -95,9 +129,9 @@ export function CreateWorkspace() {
 
         workspaceID = newIDResult.val
       }
-      setIsSubmitLoading(false)
 
       if (workspaces.find((workspace) => workspace.id === workspaceID)) {
+        setIsSubmitLoading(false)
         setError(FieldName.SOURCE, { message: "workspace with the same name already exists" })
 
         return
@@ -105,9 +139,32 @@ export function CreateWorkspace() {
 
       const providerID = data[FieldName.PROVIDER]
       const defaultIDE = data[FieldName.DEFAULT_IDE]
+
+      // set default provider
+      const useProviderResult = await client.providers.useProvider(providerID)
+      if (useProviderResult.err) {
+        setIsSubmitLoading(false)
+        setError(FieldName.SOURCE, { message: useProviderResult.val.message })
+
+        return
+      }
+
+      // set default ide
+      const useIDEResult = await client.ides.useIDE(defaultIDE)
+      if (useIDEResult.err) {
+        setIsSubmitLoading(false)
+        setError(FieldName.SOURCE, { message: useIDEResult.val.message })
+
+        return
+      }
+
+      // create workspace
       workspace.create(
         {
           id: workspaceID,
+          prebuildRepositories: data[FieldName.PREBUILD_REPOSITORY]
+            ? [data[FieldName.PREBUILD_REPOSITORY]]
+            : [],
           providerConfig: { providerID },
           ideConfig: { name: defaultIDE },
           sourceConfig: {
@@ -123,14 +180,12 @@ export function CreateWorkspace() {
     [workspaces, workspace, connectStream, setError]
   )
 
-  const { sourceError, providerError, defaultIDEError, idError } = useFormErrors(
-    Object.values(FieldName),
-    formState
-  )
+  const { sourceError, providerError, defaultIDEError, idError, prebuildRepositoryError } =
+    useFormErrors(Object.values(FieldName), formState)
 
   const providerOptions = useMemo<readonly TProviderID[]>(() => {
     if (!exists(providers)) {
-      return [DEFAULT_PROVIDER] // TODO: make dynamic
+      return [] // TODO: make dynamic
     }
 
     return Object.keys(providers)
@@ -269,11 +324,6 @@ export function CreateWorkspace() {
                     setValue={setValue}
                   />
                 </SimpleGrid>
-                {exists(sourceError) ? (
-                  <FormErrorMessage>{sourceError.message ?? "Error"}</FormErrorMessage>
-                ) : (
-                  <FormHelperText></FormHelperText>
-                )}
               </FormControl>
             </CollapsibleSection>
           </Box>
@@ -310,41 +360,64 @@ export function CreateWorkspace() {
                   <FormErrorMessage>{defaultIDEError.message ?? "Error"}</FormErrorMessage>
                 ) : (
                   <FormHelperText>
-                    Devpod will open this workspace with the selected IDE by default. You can still
+                    DevPod will open this workspace with the selected IDE by default. You can still
                     change your default IDE later.
                   </FormHelperText>
                 )}
               </FormControl>
             </HStack>
-            <FormControl isInvalid={exists(idError)}>
-              <FormLabel>Workspace Name</FormLabel>
-              <Input
-                placeholder="my-workspace"
-                type="text"
-                {...register(FieldName.ID)}
-                onChange={(e) => {
-                  setValue(FieldName.ID, e.target.value, {
-                    shouldDirty: true,
-                  })
-
-                  if (/[^a-z0-9-]+/.test(e.target.value)) {
-                    setError(FieldName.ID, {
-                      message: "Name can only consist of lower case letters, numbers and dashes",
+            <HStack spacing="8" alignItems={"top"} width={"100%"} justifyContent={"start"}>
+              <FormControl isInvalid={exists(idError)}>
+                <FormLabel>Workspace Name</FormLabel>
+                <Input
+                  placeholder="my-workspace"
+                  type="text"
+                  {...register(FieldName.ID)}
+                  onChange={(e) => {
+                    setValue(FieldName.ID, e.target.value, {
+                      shouldDirty: true,
                     })
-                  } else {
-                    clearErrors(FieldName.ID)
-                  }
-                }}
-              />
-              {exists(idError) ? (
-                <FormErrorMessage>{idError.message ?? "Error"}</FormErrorMessage>
-              ) : (
-                <FormHelperText>
-                  This is the workspace name DevPod will use. This is an optional field and usually
-                  only needed if you have an already existing workspace with the same name.
-                </FormHelperText>
-              )}
-            </FormControl>
+
+                    if (/[^a-z0-9-]+/.test(e.target.value)) {
+                      setError(FieldName.ID, {
+                        message: "Name can only consist of lower case letters, numbers and dashes",
+                      })
+                    } else {
+                      clearErrors(FieldName.ID)
+                    }
+                  }}
+                />
+                {exists(idError) ? (
+                  <FormErrorMessage>{idError.message ?? "Error"}</FormErrorMessage>
+                ) : (
+                  <FormHelperText>
+                    This is the workspace name DevPod will use. This is an optional field and
+                    usually only needed if you have an already existing workspace with the same
+                    name.
+                  </FormHelperText>
+                )}
+              </FormControl>
+              <FormControl isInvalid={exists(prebuildRepositoryError)}>
+                <FormLabel>Prebuild Repository</FormLabel>
+                <Input
+                  placeholder="ghcr.io/my-org/my-repo"
+                  type="text"
+                  {...register(FieldName.PREBUILD_REPOSITORY)}
+                  onChange={(e) => {
+                    setValue(FieldName.PREBUILD_REPOSITORY, e.target.value, {
+                      shouldDirty: true,
+                    })
+                  }}
+                />
+                {exists(prebuildRepositoryError) ? (
+                  <FormErrorMessage>{prebuildRepositoryError.message ?? "Error"}</FormErrorMessage>
+                ) : (
+                  <FormHelperText>
+                    DevPod will use this repository to find prebuilds for the given workspace.
+                  </FormHelperText>
+                )}
+              </FormControl>
+            </HStack>
           </VStack>
         </CollapsibleSection>
 

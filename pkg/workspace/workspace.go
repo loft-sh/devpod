@@ -101,6 +101,14 @@ func getWorkspace(devPodConfig *config.Config, args []string, changeLastUsed boo
 
 // ResolveWorkspace tries to retrieve an already existing workspace or creates a new one
 func ResolveWorkspace(ctx context.Context, devPodConfig *config.Config, ide string, ideOptions []string, args []string, desiredID, desiredMachine string, providerUserOptions []string, changeLastUsed bool, log log.Logger) (client.WorkspaceClient, error) {
+	if desiredID != "" {
+		if provider2.ProviderNameRegEx.MatchString(desiredID) {
+			return nil, fmt.Errorf("workspace name can only include smaller case letters, numbers or dashes")
+		} else if len(desiredID) > 48 {
+			return nil, fmt.Errorf("workspace name cannot be longer than 63 characters")
+		}
+	}
+
 	// resolve workspace
 	provider, workspace, machine, err := resolveWorkspace(ctx, devPodConfig, args, desiredID, desiredMachine, providerUserOptions, changeLastUsed, log)
 	if err != nil {
@@ -456,8 +464,8 @@ func ToID(str string) string {
 	}
 
 	str = workspaceIDRegEx2.ReplaceAllString(workspaceIDRegEx1.ReplaceAllString(str, "-"), "")
-	if len(str) > 63 {
-		str = str[:63]
+	if len(str) > 48 {
+		str = str[:48]
 	}
 
 	return strings.Trim(str, "-")

@@ -22,6 +22,7 @@ export type TIDEs = readonly TIDE[]
 export type TIDE = Readonly<{
   name: string | null
   displayName: string
+  default: boolean | null
 }>
 //#endregion
 
@@ -32,6 +33,7 @@ export type TWithProviderID = Readonly<{ providerID: TProviderID }>
 export type TProviders = Record<TProviderID, TProvider>
 export type TProvider = Readonly<{
   config: TProviderConfig | null
+  default: boolean | null
   state: Readonly<{
     initialized: boolean | null
     options: TProviderOptions | null
@@ -127,6 +129,7 @@ export type TWorkspaceStatusResult = Readonly<{
 }>
 export type TWorkspaceStartConfig = Readonly<{
   id: string
+  prebuildRepositories?: Array<string>
   ideConfig?: TWorkspace["ide"]
   providerConfig?: Readonly<{ providerID?: TProviderID }>
   // Instead of starting a workspace just by ID, the sourceConfig starts it with a `source/ID` combination

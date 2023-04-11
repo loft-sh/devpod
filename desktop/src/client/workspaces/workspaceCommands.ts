@@ -21,6 +21,7 @@ import {
   DEVPOD_FLAG_IDE,
   DEVPOD_FLAG_JSON_LOG_OUTPUT,
   DEVPOD_FLAG_JSON_OUTPUT,
+  DEVPOD_FLAG_PREBUILD_REPOSITORY,
   DEVPOD_FLAG_PROVIDER,
   DEVPOD_FLAG_RECREATE,
 } from "../constants"
@@ -94,6 +95,10 @@ export class WorkspaceCommands {
       ? [toFlagArg(DEVPOD_FLAG_PROVIDER, maybeProviderID)]
       : []
 
+    const maybePrebuildRepositories = config.prebuildRepositories?.length
+      ? [toFlagArg(DEVPOD_FLAG_PREBUILD_REPOSITORY, config.prebuildRepositories.join(","))]
+      : []
+
     const identifier = exists(maybeSource) && exists(maybeIDFlag) ? maybeSource : id
 
     return WorkspaceCommands.newCommand([
@@ -102,6 +107,7 @@ export class WorkspaceCommands {
       ...maybeIDFlag,
       ...maybeIDEFlag,
       ...maybeProviderFlag,
+      ...maybePrebuildRepositories,
       DEVPOD_FLAG_JSON_LOG_OUTPUT,
     ])
   }
