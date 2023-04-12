@@ -48,13 +48,6 @@ export function useWorkspaceTitle(): TViewTitle | null {
     }
 
     if (exists(matchCreateWorkspace)) {
-      if (!workspaces.length) {
-        return {
-          label: "Create Workspace",
-          priority: "regular",
-        }
-      }
-
       return {
         label: "Create Workspace",
         priority: "regular",

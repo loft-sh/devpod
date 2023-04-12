@@ -47,7 +47,11 @@ export const Routes = {
       search: searchParams.toString(),
     }
   },
-  toAction(actionID: TActionID) {
+  toAction(actionID: TActionID, onSuccess?: string) {
+    if (onSuccess) {
+      return `${Routes.ACTIONS}/${actionID}?onSuccess=${encodeURIComponent(onSuccess)}`
+    }
+
     return `${Routes.ACTIONS}/${actionID}`
   },
   getActionID(params: Params<string>): string | undefined {

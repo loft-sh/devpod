@@ -16,18 +16,18 @@ import {
   WrapItem,
 } from "@chakra-ui/react"
 import { useQuery } from "@tanstack/react-query"
-import { useCallback, useEffect, useMemo, useState } from "react"
+import { useCallback, useEffect, useMemo } from "react"
 import { FiFolder } from "react-icons/fi"
 import { useNavigate } from "react-router"
 import { useSearchParams } from "react-router-dom"
 import { client } from "../../../client"
-import { CollapsibleSection, useStreamingTerminal } from "../../../components"
+import { CollapsibleSection } from "../../../components"
 import { useProviders, useWorkspace } from "../../../contexts"
 import { exists, getKeys, isEmpty, useFormErrors } from "../../../lib"
 import { QueryKeys } from "../../../queryKeys"
 import { Routes } from "../../../routes"
 import { useBorderColor } from "../../../Theme"
-import { TProviderID, TWorkspaceID } from "../../../types"
+import { TProviderID } from "../../../types"
 import { WORKSPACE_EXAMPLES } from "./constants"
 import { ExampleCard } from ".././ExampleCard"
 import { FieldName, TCreateWorkspaceArgs, TCreateWorkspaceSearchParams } from "./types"
@@ -43,11 +43,9 @@ export function CreateWorkspace() {
   const ides = useMemo(() => idesQuery.data, [idesQuery.data])
 
   const searchParams = useCreateWorkspaceParams()
-  const [workspaceID, setWorkspaceID] = useState<TWorkspaceID | undefined>(undefined)
   const navigate = useNavigate()
-  const workspace = useWorkspace(workspaceID)
+  const workspace = useWorkspace(undefined)
   const [[providers]] = useProviders()
-  const { terminal, connectStream } = useStreamingTerminal()
 
   const handleCreateWorkspace = useCallback(
     ({
@@ -57,23 +55,22 @@ export function CreateWorkspace() {
       defaultIDE,
       workspaceSource,
     }: TCreateWorkspaceArgs) => {
-      workspace.create(
-        {
-          id: workspaceID,
-          prebuildRepositories,
-          providerConfig: { providerID },
-          ideConfig: { name: defaultIDE },
-          sourceConfig: {
-            source: workspaceSource,
-          },
+      const actionID = workspace.create({
+        id: workspaceID,
+        prebuildRepositories,
+        providerConfig: { providerID },
+        ideConfig: { name: defaultIDE },
+        sourceConfig: {
+          source: workspaceSource,
         },
-        connectStream
-      )
+      })
 
       // set workspace id to show terminal
-      setWorkspaceID(workspaceID)
+      if (actionID !== undefined && actionID !== "") {
+        navigate(Routes.toAction(actionID, Routes.WORKSPACES))
+      }
     },
-    [connectStream, workspace]
+    [workspace]
   )
 
   const {
@@ -95,8 +92,6 @@ export function CreateWorkspace() {
 
     return Object.keys(providers)
   }, [providers])
-
-  const isLoading = useMemo(() => workspace.current?.name === "create", [workspace])
 
   const handleSelectFolderClicked = useCallback(async () => {
     const selected = await client.selectFromDir()
@@ -146,23 +141,9 @@ export function CreateWorkspace() {
     }
   }, [providers, searchParams.providerID, showSetupProviderModal, wasDismissed])
 
-  useEffect(() => {
-    if (
-      workspace.current?.name === "create" &&
-      workspace.current.status === "success" &&
-      workspace.data?.id !== undefined
-    ) {
-      navigate(Routes.WORKSPACES)
-    }
-  }, [navigate, workspace])
-
   const backgroundColor = useColorModeValue("blackAlpha.100", "whiteAlpha.100")
   const borderColor = useBorderColor()
   const inputBackgroundColor = useColorModeValue("white", "black")
-
-  if (isLoading) {
-    return terminal
-  }
 
   return (
     <>

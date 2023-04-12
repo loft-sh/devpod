@@ -17,7 +17,7 @@ export function ListProviders() {
     }
 
     return Object.entries(providers)
-      .filter(([, details]) => exists(details.state))
+      .filter(([, details]) => details.state?.initialized)
       .map(([name, details]) => {
         return { name, options: JSON.stringify(details.config, null, 2) }
       })
