@@ -6,6 +6,7 @@ import {
   FormErrorMessage,
   FormHelperText,
   FormLabel,
+  HStack,
   Icon,
   Input,
   Stack,
@@ -41,6 +42,7 @@ import {
 import { RecommendedProviderCard } from "./RecommendedProviderCard"
 import { FieldName, TFormValues } from "./types"
 import { TSetupProviderState } from "./useSetupProvider"
+import { FiFolder } from "react-icons/fi"
 
 const Form = styled.form`
   width: 100%;
@@ -192,6 +194,14 @@ export function SetupProviderSourceForm({ state, reset, onFinish }: TSetupProvid
     },
     [providerSource, setValue]
   )
+  const handleSelectFileClicked = useCallback(async () => {
+    const selected = await client.selectFromFileYaml()
+    if (typeof selected === "string") {
+      setValue(FieldName.PROVIDER_SOURCE, selected, {
+        shouldDirty: true,
+      })
+    }
+  }, [setValue])
 
   return (
     <Form onSubmit={handleSubmit(onSubmit)} spellCheck={false}>
@@ -227,20 +237,36 @@ export function SetupProviderSourceForm({ state, reset, onFinish }: TSetupProvid
             </WrapItem>
           </Wrap>
           {showCustom && (
-            <Box marginTop={"10px"}>
+            <Box marginTop={"10px"} maxWidth={"700px"}>
               <FormLabel>Source</FormLabel>
-              <Input
-                placeholder="Enter provider source"
-                type="text"
-                {...register(FieldName.PROVIDER_SOURCE, { required: true })}
-              />
+              <HStack spacing={0} justifyContent={"center"}>
+                <Input
+                  placeholder="Enter provider source"
+                  borderTopRightRadius={0}
+                  borderBottomRightRadius={0}
+                  type="text"
+                  {...register(FieldName.PROVIDER_SOURCE, { required: true })}
+                />
+                <Button
+                  leftIcon={<Icon as={FiFolder} />}
+                  borderTopLeftRadius={0}
+                  borderBottomLeftRadius={0}
+                  borderTop={"1px solid white"}
+                  borderRight={"1px solid white"}
+                  borderBottom={"1px solid white"}
+                  borderColor={"gray.200"}
+                  height={"35px"}
+                  flex={"0 0 140px"}
+                  onClick={handleSelectFileClicked}>
+                  Select File
+                </Button>
+              </HStack>
               {providerSourceError && providerSourceError.message ? (
                 <FormErrorMessage>{providerSourceError.message}</FormErrorMessage>
               ) : (
                 <FormHelperText>
-                  Can either be a URL or local path to a <Code>provider</Code> binary, or a github
-                  repo in the form of <Code>$ORG/$REPO</Code>, i.e.{" "}
-                  <Code>loft-sh/devpod-provider-loft</Code>
+                  Can either be a URL or local path to a <Code>provider</Code> file, or a github
+                  repo in the form of <Code>my-org/my-repo</Code>
                 </FormHelperText>
               )}
             </Box>
