@@ -1,5 +1,5 @@
 export * from "./Animation"
-export * from "./AutoComplete"
+export * from "./Autocomplete"
 export * from "./Error"
 export * from "./Layout"
 export * from "./Section"
