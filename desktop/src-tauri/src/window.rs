@@ -39,14 +39,15 @@ pub fn new_main(app_handle: &AppHandle, app_name: String) -> Result<()> {
                     .title(app_name)
                     .fullscreen(false)
                     .resizable(true)
-                    .hidden_title(true)
                     .transparent(true)
                     .min_inner_size(1000.0, 700.0)
                     .inner_size(1200.0, 800.0)
                     .visible(false);
 
             #[cfg(target_os = "macos")]
-            let window_builder = window_builder.title_bar_style(tauri::TitleBarStyle::Overlay);
+            let window_builder = window_builder
+                .title_bar_style(tauri::TitleBarStyle::Overlay)
+                .hidden_title(true);
 
             let window = window_builder.build();
 
