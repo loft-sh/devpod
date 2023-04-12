@@ -2,7 +2,7 @@ import { createBrowserRouter, Params, Path } from "react-router-dom"
 import { App, ErrorPage } from "./App"
 import { TActionID } from "./contexts"
 import { exists } from "./lib"
-import { TProviderID, TSupportedIDE } from "./types"
+import { TProviderID, TSupportedIDE, TWorkspaceID } from "./types"
 import {
   Action,
   Actions,
@@ -29,6 +29,7 @@ export const Routes = {
   },
   toWorkspaceCreate(
     options: Readonly<{
+      workspaceID: TWorkspaceID | null
       providerID: TProviderID | null
       ide: string | null
       rawSource: string | null
@@ -55,12 +56,14 @@ export const Routes = {
   },
   getWorkspaceCreateParamsFromSearchParams(searchParams: URLSearchParams): Partial<
     Readonly<{
+      workspaceID: TWorkspaceID
       providerID: TProviderID
       ide: TSupportedIDE
       rawSource: string
     }>
   > {
     return {
+      workspaceID: searchParams.get("workspaceID") ?? undefined,
       providerID: searchParams.get("providerID") ?? undefined,
       ide: (searchParams.get("ide") as TSupportedIDE | null) ?? undefined,
       rawSource: searchParams.get("rawSource") ?? undefined,

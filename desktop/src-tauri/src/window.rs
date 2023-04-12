@@ -41,7 +41,7 @@ pub fn new_main(app_handle: &AppHandle, app_name: String) -> Result<()> {
                 .resizable(true)
                 .hidden_title(true)
                 .transparent(true)
-                .min_inner_size(800.0, 600.0)
+                .min_inner_size(1000.0, 700.0)
                 .inner_size(1200.0, 800.0)
                 .visible(false)
                 .build();

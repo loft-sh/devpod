@@ -9,7 +9,7 @@ import {
   useToken,
 } from "@chakra-ui/react"
 import { Combobox } from "@headlessui/react"
-import { forwardRef, ReactNode, useEffect, useState } from "react"
+import { forwardRef, useState } from "react"
 import { AiOutlineCaretRight } from "react-icons/ai"
 
 type TAutoCompleteOption = Readonly<{
