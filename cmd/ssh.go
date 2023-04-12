@@ -11,6 +11,7 @@ import (
 	"github.com/loft-sh/devpod/pkg/config"
 	"github.com/loft-sh/devpod/pkg/log"
 	devssh "github.com/loft-sh/devpod/pkg/ssh"
+	"github.com/loft-sh/devpod/pkg/terminal"
 	"github.com/loft-sh/devpod/pkg/token"
 	"github.com/loft-sh/devpod/pkg/tunnel"
 	workspace2 "github.com/loft-sh/devpod/pkg/workspace"
@@ -100,8 +101,11 @@ func startWait(ctx context.Context, client client2.WorkspaceClient, create bool,
 					return errors.Wrap(err, "start workspace")
 				}
 			} else {
-				_ = beeep.Alert("Workspace is stopped", "Workspace is stopped, please restart the workspace", "assets/warning.png")
-				return fmt.Errorf("workspace is stopped")
+				if !terminal.IsTerminalIn {
+					_ = beeep.Notify("DevPod Workspace is stopped", "DevPod Workspace is stopped, please restart the workspace", "assets/warning.png")
+				}
+
+				return fmt.Errorf("DevPod workspace is stopped")
 			}
 		} else if instanceStatus == client2.StatusNotFound {
 			if create {
@@ -111,7 +115,7 @@ func startWait(ctx context.Context, client client2.WorkspaceClient, create bool,
 					return err
 				}
 			} else {
-				return fmt.Errorf("workspace wasn't found")
+				return fmt.Errorf("DevPod workspace wasn't found")
 			}
 		}
 

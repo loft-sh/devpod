@@ -16,8 +16,9 @@ import (
 type AddCmd struct {
 	*flags.GlobalFlags
 
-	Use     bool
-	Options []string
+	Use           bool
+	SingleMachine bool
+	Options       []string
 
 	Name string
 }
@@ -41,6 +42,7 @@ func NewAddCmd(flags *flags.GlobalFlags) *cobra.Command {
 		},
 	}
 
+	addCmd.Flags().BoolVar(&cmd.SingleMachine, "single-machine", false, "If enabled will use a single machine for all workspaces")
 	addCmd.Flags().StringVar(&cmd.Name, "name", "", "The name to use for this provider. If empty will use the name within the loaded config")
 	addCmd.Flags().BoolVar(&cmd.Use, "use", true, "If enabled will automatically activate the provider")
 	addCmd.Flags().StringSliceVarP(&cmd.Options, "option", "o", []string{}, "Provider option in the form KEY=VALUE")
@@ -63,7 +65,7 @@ func (cmd *AddCmd) Run(ctx context.Context, devPodConfig *config.Config, args []
 
 	log.Default.Donef("Successfully installed provider %s", providerConfig.Name)
 	if cmd.Use {
-		err = configureProvider(ctx, providerConfig, devPodConfig.DefaultContext, cmd.Options, true, nil)
+		err = configureProvider(ctx, providerConfig, devPodConfig.DefaultContext, cmd.Options, true, &cmd.SingleMachine)
 		if err != nil {
 			log.Default.Errorf("Error configuring provider, please retry with 'devpod provider use %s --reconfigure'", providerConfig.Name)
 			return errors.Wrap(err, "configure provider")
