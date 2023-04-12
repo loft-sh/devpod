@@ -32,7 +32,7 @@ var _ = DevPodDescribe("devpod up test suite", func() {
 
 	ginkgo.Context("using local provider", func() {
 		ginkgo.Context("with docker", func() {
-			ginkgo.It("should start a new workspace with existing image", func() {
+			ginkgo.It("should start a new workspace with existing image", func(ctx context.Context) {
 				tempDir, err := framework.CopyToTempDir("tests/up/testdata/local-test")
 				framework.ExpectNoError(err)
 				defer framework.CleanupTempDir(initialDir, tempDir)
@@ -43,12 +43,9 @@ var _ = DevPodDescribe("devpod up test suite", func() {
 				framework.ExpectNoError(err)
 
 				// Wait for devpod workspace to come online (dealine: 30s)
-				deadline := time.Now().Add(30 * time.Second)
-				devpodUpCtx, cancel := context.WithDeadline(context.Background(), deadline)
-				defer cancel()
-				err = f.DevPodUp(devpodUpCtx, tempDir)
+				err = f.DevPodUp(ctx, tempDir)
 				framework.ExpectNoError(err)
-			})
+			}, ginkgo.SpecTimeout(30*time.Second))
 		})
 
 		ginkgo.Context("with docker-compose", func() {

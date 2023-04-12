@@ -90,7 +90,7 @@ func (d *dockerDriver) InspectImage(ctx context.Context, imageName string) (*con
 }
 
 func (d *dockerDriver) ComposeHelper() (*compose.ComposeHelper, error) {
-	return compose.NewComposeHelper("docker-compose", d.Docker)
+	return compose.NewComposeHelper(compose.DockerComposeCommand, d.Docker)
 }
 
 func (d *dockerDriver) FindDevContainer(ctx context.Context, labels []string) (*config.ContainerDetails, error) {

@@ -266,7 +266,7 @@ func (r *Runner) startContainer(parsedConfig *config.SubstitutedConfig, project 
 	if container == nil || !didRestoreFromPersistedShare {
 		overrideBuildImageName, overrideComposeBuildFilePath, imageMetadata, err := r.buildAndExtendDockerCompose(parsedConfig, project, composeHelper, &composeService, globalArgs)
 		if err != nil {
-			return nil, err
+			return nil, errors.Wrap(err, "build and extend docker-compose")
 		}
 
 		if overrideComposeBuildFilePath != "" {
@@ -280,19 +280,19 @@ func (r *Runner) startContainer(parsedConfig *config.SubstitutedConfig, project 
 
 		imageDetails, err := r.Driver.InspectImage(context.TODO(), currentImageName)
 		if err != nil {
-			return nil, err
+			return nil, errors.Wrap(err, "inspect image")
 		}
 
 		mergedConfig, err := config.MergeConfiguration(parsedConfig.Config, imageMetadata.Config)
 		if err != nil {
-			return nil, err
+			return nil, errors.Wrap(err, "merge configuration")
 		}
 
 		// TODO update remote user UID?
 
 		overrideComposeUpFilePath, err := r.extendedDockerComposeUp(parsedConfig, mergedConfig, composeHelper, &composeService, originalImageName, overrideBuildImageName, imageDetails)
 		if err != nil {
-			return nil, err
+			return nil, errors.Wrap(err, "extend docker-compose up")
 		}
 
 		if overrideComposeUpFilePath != "" {
@@ -320,11 +320,16 @@ func (r *Runner) startContainer(parsedConfig *config.SubstitutedConfig, project 
 	defer writer.Close()
 	err = composeHelper.Run(context.TODO(), upArgs, nil, writer, writer)
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrapf(err, "docker-compose run")
 	}
 
 	// TODO wait for started event?
-	return composeHelper.FindDevContainer(project.Name, composeService.Name)
+	containerDetails, err := composeHelper.FindDevContainer(project.Name, composeService.Name)
+	if err != nil {
+		return nil, errors.Wrap(err, "find dev container")
+	}
+
+	return containerDetails, nil
 }
 
 // This extends the build information for docker compose containers

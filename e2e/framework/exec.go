@@ -5,6 +5,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"io"
 	"os"
 	"os/exec"
 	"strings"
@@ -15,23 +16,33 @@ func (f *Framework) ExecCommand(ctx context.Context, captureStdOut, searchForStr
 	var execErr bytes.Buffer
 	var execOut bytes.Buffer
 
+	prout, pwout, err := os.Pipe()
+	if err != nil {
+		return err
+	}
+
 	cmd := exec.CommandContext(ctx, f.DevpodBinDir+"/"+f.DevpodBinName, args...)
-	cmd.Stdout = os.Stdout
-	if captureStdOut {
-		cmd.Stdout = &execOut
-	}
+	cmd.Stdout = pwout
 	cmd.Stderr = &execErr
-	err := cmd.Run()
-	if err != nil && !errors.Is(ctx.Err(), context.DeadlineExceeded) {
-		return fmt.Errorf("%s: %s", err.Error(), execErr.String())
+
+	if err := cmd.Start(); err != nil {
+		return err
 	}
-	if errors.Is(ctx.Err(), context.DeadlineExceeded) {
-		if searchForString && captureStdOut {
-			if strings.Contains(execOut.String(), searchString) {
-				return nil
-			}
+
+	outReader := io.TeeReader(prout, os.Stdout)
+	go io.Copy(&execOut, outReader)
+
+	if err := cmd.Wait(); err != nil {
+		return err
+	}
+
+	if captureStdOut && searchForString {
+		if strings.Contains(execOut.String(), searchString) {
+			return nil
 		}
-		return context.DeadlineExceeded
+
+		return fmt.Errorf("expected to find string %s in output", searchString)
 	}
+
 	return nil
 }
