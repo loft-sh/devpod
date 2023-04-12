@@ -1,4 +1,4 @@
-use crate::{ workspaces::WorkspacesState, AppHandle, AppState, UiMessage};
+use crate::{workspaces::WorkspacesState, AppHandle, AppState, UiMessage};
 use log::{error, warn};
 use tauri::{
     CustomMenuItem, Manager, State, SystemTray as TauriSystemTray, SystemTrayEvent, SystemTrayMenu,
@@ -25,21 +25,8 @@ impl SystemTray {
     const SHOW_DASHBOARD_ID: &str = "show_dashboard";
 }
 
-// FIXME: should implement proper builder pattern
 impl SystemTray {
-    pub fn build_menu(&self) -> SystemTrayMenu {
-        let show_dashboard = CustomMenuItem::new(Self::SHOW_DASHBOARD_ID, "Show Dashboard");
-        let quit = CustomMenuItem::new(Self::QUIT_ID, "Quit");
-
-        let tray_menu = SystemTrayMenu::new()
-            .add_item(show_dashboard)
-            .add_native_item(SystemTrayMenuItem::Separator)
-            .add_item(quit);
-
-        tray_menu
-    }
-
-    pub fn build_with_submenus(
+    pub fn build_menu(
         &self,
         submenu_builders: Vec<Box<&dyn ToSystemTraySubmenu>>,
     ) -> SystemTrayMenu {
@@ -62,8 +49,11 @@ impl SystemTray {
         tray_menu
     }
 
-    pub fn build(&self) -> TauriSystemTray {
-        let tray_menu = self.build_menu();
+    pub fn build_tray(
+        &self,
+        submenu_builders: Vec<Box<&dyn ToSystemTraySubmenu>>,
+    ) -> TauriSystemTray {
+        let tray_menu = self.build_menu(submenu_builders);
         let tray = TauriSystemTray::new().with_menu(tray_menu);
 
         tray

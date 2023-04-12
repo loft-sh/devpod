@@ -62,7 +62,7 @@ fn main() -> anyhow::Result<()> {
         })
         .plugin(logging::build_plugin())
         .plugin(tauri_plugin_store::Builder::default().build())
-        .system_tray(system_tray.build())
+        .system_tray(system_tray.build_tray(vec![Box::new(&WorkspacesState::default())]))
         .menu(menu)
         .setup(move |app| {
             let window = app.get_window("main").unwrap();

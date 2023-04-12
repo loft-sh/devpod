@@ -120,6 +120,8 @@ export function useCreateWorkspaceForm(
 
           return
         }
+
+        setIsSubmitLoading(false)
         const prebuildRepositories = data[FieldName.PREBUILD_REPOSITORY]
           ? [data[FieldName.PREBUILD_REPOSITORY]]
           : []
