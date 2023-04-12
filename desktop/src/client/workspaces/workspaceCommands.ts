@@ -122,7 +122,6 @@ export class WorkspaceCommands {
       id,
       DEVPOD_FLAG_JSON_LOG_OUTPUT,
       DEVPOD_FLAG_RECREATE,
-      DEVPOD_FLAG_FORCE_BUILD,
     ])
   }
 
