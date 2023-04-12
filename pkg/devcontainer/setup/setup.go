@@ -1,7 +1,6 @@
 package setup
 
 import (
-	"github.com/loft-sh/devpod/pkg/command"
 	copy2 "github.com/loft-sh/devpod/pkg/copy"
 	"github.com/loft-sh/devpod/pkg/devcontainer/config"
 	"github.com/loft-sh/devpod/pkg/log"
@@ -56,37 +55,31 @@ func ChownWorkspace(containerDetails *config.ContainerDetails, mergedConfig *con
 		user = "root"
 	}
 
-	_, err := exec.Command("sh", "-c", "ls /var/devcontainer/.chownWorkspace").CombinedOutput()
-	if err == nil {
-		return nil
-	}
-
-	out, err := exec.Command("sh", "-c", "mkdir -p /var/devcontainer && touch /var/devcontainer/.chownWorkspace").CombinedOutput()
+	exists, err := markerFileExists("chownWorkspace", "")
 	if err != nil {
-		return errors.Wrapf(err, "create marker file: %v", string(out))
+		return err
+	} else if exists {
+		return nil
 	}
 
 	log.Infof("Chown workspace...")
 	err = copy2.ChownR(substitutionContext.ContainerWorkspaceFolder, user)
 	if err != nil {
-		return errors.Wrapf(err, "chown workspace folder: %s", string(out))
+		return errors.Wrap(err, "chown workspace folder")
 	}
 
 	return nil
 }
 
 func PatchEtcProfile() error {
-	_, err := exec.Command("sh", "-c", "ls /var/devcontainer/.patchEtcProfileMarker").CombinedOutput()
-	if err == nil {
+	exists, err := markerFileExists("patchEtcProfile", "")
+	if err != nil {
+		return err
+	} else if exists {
 		return nil
 	}
 
-	out, err := exec.Command("sh", "-c", "mkdir -p /var/devcontainer && touch /var/devcontainer/.patchEtcProfileMarker").CombinedOutput()
-	if err != nil {
-		return errors.Wrapf(err, "create marker file: %v", string(out))
-	}
-
-	out, err = exec.Command("sh", "-c", `sed -i -E 's/((^|\s)PATH=)([^\$]*)$/\1${PATH:-\3}/g' /etc/profile || true`).CombinedOutput()
+	out, err := exec.Command("sh", "-c", `sed -i -E 's/((^|\s)PATH=)([^\$]*)$/\1${PATH:-\3}/g' /etc/profile || true`).CombinedOutput()
 	if err != nil {
 		return errors.Wrapf(err, "create remote environment: %v", string(out))
 	}
@@ -99,14 +92,11 @@ func PatchEtcEnvironment(mergedConfig *config.MergedDevContainerConfig) error {
 		return nil
 	}
 
-	_, err := exec.Command("sh", "-c", "ls /var/devcontainer/.patchEtcEnvironmentMarker").CombinedOutput()
-	if err == nil {
-		return nil
-	}
-
-	out, err := exec.Command("sh", "-c", "mkdir -p /var/devcontainer && touch /var/devcontainer/.patchEtcEnvironmentMarker").CombinedOutput()
+	exists, err := markerFileExists("patchEtcEnvironment", "")
 	if err != nil {
-		return errors.Wrapf(err, "create marker file: %v", string(out))
+		return err
+	} else if exists {
+		return nil
 	}
 
 	// build remote env
@@ -115,7 +105,7 @@ func PatchEtcEnvironment(mergedConfig *config.MergedDevContainerConfig) error {
 		remoteEnvs = append(remoteEnvs, k+"=\""+v+"\"")
 	}
 
-	out, err = exec.Command("sh", "-c", `cat >> /etc/environment <<'etcEnvrionmentEOF'
+	out, err := exec.Command("sh", "-c", `cat >> /etc/environment <<'etcEnvrionmentEOF'
 `+strings.Join(remoteEnvs, "\n")+`
 etcEnvrionmentEOF
 `).CombinedOutput()
@@ -163,6 +153,25 @@ func PostCreateCommands(setupInfo *config.Result, log log.Logger) error {
 	return nil
 }
 
+func markerFileExists(markerName string, markerContent string) (bool, error) {
+	markerName = filepath.Join("/var/devpod", markerName+".marker")
+	t, err := os.ReadFile(markerName)
+	if err != nil && !os.IsNotExist(err) {
+		return false, err
+	} else if markerContent == "" || string(t) == markerContent {
+		return true, nil
+	}
+
+	// write marker
+	_ = os.MkdirAll(filepath.Dir(markerName), 0777)
+	err = os.WriteFile(markerName, []byte(markerContent), 0666)
+	if err != nil {
+		return false, errors.Wrap(err, "write marker")
+	}
+
+	return false, nil
+}
+
 func runPostCreateCommand(commands []types.StrArray, user, dir string, remoteEnv map[string]string, name, content string, log log.Logger) error {
 	if len(commands) == 0 {
 		return nil
@@ -170,24 +179,11 @@ func runPostCreateCommand(commands []types.StrArray, user, dir string, remoteEnv
 
 	// check marker file
 	if content != "" {
-		homeDir, err := command.GetHome(user)
+		exists, err := markerFileExists(name, content)
 		if err != nil {
-			return errors.Wrap(err, "find user home")
-		}
-
-		markerName := filepath.Join(homeDir, ".devpod", name+".marker")
-		t, err := os.ReadFile(markerName)
-		if err != nil && !os.IsNotExist(err) {
 			return err
-		} else if string(t) == content {
+		} else if exists {
 			return nil
-		}
-
-		// write marker
-		_ = os.MkdirAll(filepath.Dir(markerName), 0777)
-		err = os.WriteFile(markerName, []byte(content), 0666)
-		if err != nil {
-			return errors.Wrap(err, "write marker")
 		}
 	}
 

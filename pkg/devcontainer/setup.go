@@ -7,6 +7,7 @@ import (
 	"github.com/loft-sh/devpod/pkg/agent"
 	"github.com/loft-sh/devpod/pkg/compress"
 	"github.com/loft-sh/devpod/pkg/devcontainer/config"
+	provider2 "github.com/loft-sh/devpod/pkg/provider"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 	"io"
@@ -54,7 +55,7 @@ func (r *Runner) setupContainer(containerDetails *config.ContainerDetails, merge
 	// execute docker command
 	r.Log.Infof("Setup container...")
 	command := fmt.Sprintf("%s agent container setup --setup-info '%s' --workspace-info '%s'", agent.ContainerDevPodHelperLocation, compressed, workspaceConfigCompressed)
-	if runtime.GOOS == "linux" {
+	if runtime.GOOS == "linux" || r.WorkspaceConfig.Agent.Driver != provider2.DockerDriver {
 		command += " --chown-workspace"
 	}
 	if r.Log.GetLevel() == logrus.DebugLevel {
