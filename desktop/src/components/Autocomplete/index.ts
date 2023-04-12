@@ -1,1 +1,1 @@
-export { AutoComplete } from "./AutoComplete"
+export { AutoComplete } from "./Autocomplete"
