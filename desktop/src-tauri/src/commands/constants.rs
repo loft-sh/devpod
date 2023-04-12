@@ -1,5 +1,5 @@
 // Binaries
-pub(super) const DEVPOD_BINARY_NAME: &str = "devpod";
+pub const DEVPOD_BINARY_NAME: &str = "devpod";
 
 // Commands
 pub(super) const DEVPOD_COMMAND_LIST: &str = "list";
