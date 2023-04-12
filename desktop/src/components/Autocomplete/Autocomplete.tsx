@@ -9,7 +9,7 @@ import {
   useToken,
 } from "@chakra-ui/react"
 import { Combobox } from "@headlessui/react"
-import { forwardRef, useState } from "react"
+import { forwardRef, useRef, useState } from "react"
 import { AiOutlineCaretRight } from "react-icons/ai"
 
 type TAutoCompleteOption = Readonly<{
@@ -44,8 +44,11 @@ export const AutoComplete = forwardRef<HTMLElement, TAutoCompleteProps>(function
   { name, options, defaultValue, value, onChange, onBlur },
   ref
 ) {
+  const openButtonRef = useRef<HTMLButtonElement>(null)
   const optionsBackgroundColor = useColorModeValue("gray.100", "gray.800")
   const optionsZIndex = useToken("zIndices", "dropdown")
+  const maxHeight = useToken("sizes", "16")
+  console.log(maxHeight)
   const [query, setQuery] = useState("")
 
   const filteredOptions =
@@ -54,6 +57,14 @@ export const AutoComplete = forwardRef<HTMLElement, TAutoCompleteProps>(function
       : options.filter((option) => {
           return option.key.toLowerCase().includes(query.toLowerCase())
         })
+
+  function handleInputFocused(isOpen: boolean) {
+    return () => {
+      if (!isOpen) {
+        openButtonRef.current?.click()
+      }
+    }
+  }
 
   return (
     <Combobox<TAutoCompleteOption>
@@ -70,9 +81,10 @@ export const AutoComplete = forwardRef<HTMLElement, TAutoCompleteProps>(function
               spellCheck={false}
               as={Combobox.Input}
               onChange={(event) => setQuery(event.target.value)}
+              onFocus={handleInputFocused(isOpen)}
             />
             <InputRightElement>
-              <Combobox.Button>
+              <Combobox.Button ref={openButtonRef}>
                 <Icon
                   boxSize={4}
                   transition={"transform .2s"}
@@ -82,9 +94,19 @@ export const AutoComplete = forwardRef<HTMLElement, TAutoCompleteProps>(function
               </Combobox.Button>
             </InputRightElement>
           </InputGroup>
-          <Combobox.Options style={{ position: "absolute", width: "100%", zIndex: optionsZIndex }}>
+          <Combobox.Options
+            style={{
+              position: "absolute",
+              width: "100%",
+              zIndex: optionsZIndex,
+            }}>
             {({ open: isOpen }) => (
-              <Box backgroundColor={optionsBackgroundColor} padding="2" borderRadius="md">
+              <Box
+                maxHeight="48"
+                overflowY="auto"
+                backgroundColor={optionsBackgroundColor}
+                padding="2"
+                borderRadius="md">
                 <Fade in={isOpen}>
                   {query.length > 0 && !filteredOptions.find((o) => o.label === query) && (
                     <Option option={{ key: query, label: query }} />
