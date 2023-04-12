@@ -34,17 +34,21 @@ pub fn new_main(app_handle: &AppHandle, app_name: String) -> Result<()> {
         .run_on_main_thread(move || {
             // Config should match the config in `src-tauri/tauri.conf.json` for a consistent window
             // appearance
-            let window = WindowBuilder::new(&handle, "main".to_string(), WindowUrl::default())
-                .title(app_name)
-                .title_bar_style(tauri::TitleBarStyle::Overlay)
-                .fullscreen(false)
-                .resizable(true)
-                .hidden_title(true)
-                .transparent(true)
-                .min_inner_size(1000.0, 700.0)
-                .inner_size(1200.0, 800.0)
-                .visible(false)
-                .build();
+            let window_builder =
+                WindowBuilder::new(&handle, "main".to_string(), WindowUrl::default())
+                    .title(app_name)
+                    .fullscreen(false)
+                    .resizable(true)
+                    .hidden_title(true)
+                    .transparent(true)
+                    .min_inner_size(1000.0, 700.0)
+                    .inner_size(1200.0, 800.0)
+                    .visible(false);
+
+            #[cfg(target_os = "macos")]
+            let window_builder = window_builder.title_bar_style(tauri::TitleBarStyle::Overlay);
+
+            let window = window_builder.build();
 
             if let Ok(window) = window {
                 setup(&window);
