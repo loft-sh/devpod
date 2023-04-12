@@ -30,6 +30,25 @@ enum ParseError {
     UnsupportedHost(String),
 }
 
+impl OpenWorkspaceMsg {
+    pub fn empty() -> OpenWorkspaceMsg {
+        OpenWorkspaceMsg {
+            workspace_id: "new workspace".to_string(),
+            provider_id: None,
+            ide: None,
+            source: None,
+        }
+    }
+    pub fn with_id(id: String) -> OpenWorkspaceMsg {
+        OpenWorkspaceMsg {
+            workspace_id: id,
+            provider_id: None,
+            ide: None,
+            source: None,
+        }
+    }
+}
+
 impl CustomProtocol {
     pub fn init() -> Self {
         tauri_plugin_deep_link::prepare(APP_IDENTIFIER);

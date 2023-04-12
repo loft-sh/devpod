@@ -1,9 +1,11 @@
 use crate::{
     commands::{list_workspaces::ListWorkspacesCommand, DevpodCommandConfig, DevpodCommandError},
+    custom_protocol::OpenWorkspaceMsg,
     system_tray::{SystemTrayClickHandler, ToSystemTraySubmenu},
 };
-use crate::{system_tray::SystemTray, AppHandle, AppState};
+use crate::{system_tray::SystemTray, AppHandle, AppState, UiMessage};
 use chrono::DateTime;
+use log::error;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::{
@@ -30,6 +32,7 @@ pub struct WorkspacesState {
 
 impl WorkspacesState {
     pub const IDENTIFIER_PREFIX: &str = "workspaces";
+    const CREATE_WORKSPACE_ID: &str = "workspaces-create_workspace";
 
     fn item_id(id: &String) -> String {
         format!("{}-{}", Self::IDENTIFIER_PREFIX, id)
@@ -44,32 +47,56 @@ impl WorkspacesState {
     }
 }
 
-impl WorkspacesState {
-    const CREATE_WORKSPACE_ID: &str = "create_workspace";
-}
+impl WorkspacesState {}
 
 impl ToSystemTraySubmenu for WorkspacesState {
     fn to_submenu(&self) -> tauri::SystemTraySubmenu {
-        let mut providers_menu = SystemTrayMenu::new();
+        let mut workspaces_menu = SystemTrayMenu::new();
 
-        providers_menu = providers_menu
+        workspaces_menu = workspaces_menu
             .add_item(CustomMenuItem::new(
                 Self::CREATE_WORKSPACE_ID,
                 "Create Workspace",
             ))
             .add_native_item(SystemTrayMenuItem::Separator);
+
         for workspace in &self.workspaces {
             if let Some(id) = workspace.id() {
                 let item = CustomMenuItem::new(Self::item_id(id), id);
-                providers_menu = providers_menu.add_item(item);
+                workspaces_menu = workspaces_menu.add_item(item);
             }
         }
 
-        SystemTraySubmenu::new("Workspaces", providers_menu)
+        SystemTraySubmenu::new("Workspaces", workspaces_menu)
     }
 
-    fn on_tray_item_clicked(&self, _id: &str) -> Option<SystemTrayClickHandler> {
-        None
+    fn on_tray_item_clicked(&self, id: &str) -> Option<SystemTrayClickHandler> {
+        let id = id.clone().to_string();
+
+        return Some(Box::new(move |_app_handle, state| {
+            tauri::async_runtime::block_on(async {
+                let tx = &state.ui_messages;
+
+                if id == Self::CREATE_WORKSPACE_ID {
+                    if let Err(err) = tx
+                        .send(UiMessage::OpenWorkspace(OpenWorkspaceMsg::empty()))
+                        .await
+                    {
+                        error!("Failed to send create workspace message: {:?}", err);
+                    };
+                } else {
+                    let workspace_id = id.replace(Self::IDENTIFIER_PREFIX, "");
+                    if let Err(err) = tx
+                        .send(UiMessage::OpenWorkspace(OpenWorkspaceMsg::with_id(
+                            workspace_id,
+                        )))
+                        .await
+                    {
+                        error!("Failed to send create workspace message: {:?}", err);
+                    };
+                }
+            })
+        }));
     }
 }
 
@@ -153,7 +180,7 @@ pub fn setup(app_handle: &AppHandle, state: tauri::State<'_, AppState>) {
 
                                 // rebuild menu
                                 let new_menu = SystemTray::new()
-                                    .build_with_submenus(vec![Box::new(current_workspaces)]);
+                                    .build_menu(vec![Box::new(current_workspaces)]);
                                 tray_handle
                                     .set_menu(new_menu)
                                     .expect("should be able to set menu");

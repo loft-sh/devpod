@@ -213,12 +213,10 @@ export function CreateWorkspace() {
                     Select Folder
                   </Button>
                 </HStack>
+                {exists(sourceError) && (
+                  <FormErrorMessage>{sourceError.message ?? "Error"}</FormErrorMessage>
+                )}
               </VStack>
-              {exists(sourceError) ? (
-                <FormErrorMessage>{sourceError.message ?? "Error"}</FormErrorMessage>
-              ) : (
-                <FormHelperText></FormHelperText>
-              )}
             </FormControl>
 
             <Box width="full" height="full" padding={4} marginBottom="8">
