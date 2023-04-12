@@ -86,8 +86,6 @@ export class ProviderCommands {
     }
 
     if (!isOk(result.val)) {
-      console.info(result.val.code)
-
       return getErrorFromChildProcess(result.val)
     }
 
