@@ -88,6 +88,18 @@ class Client {
   public async selectFromDir(): Promise<string | string[] | null> {
     return dialog.open({ directory: true, multiple: false })
   }
+
+  public async selectFromFileYaml(): Promise<string | string[] | null> {
+    return dialog.open({
+      filters: [{ name: "yaml", extensions: ["yml", "yaml"] }],
+      directory: false,
+      multiple: false,
+    })
+  }
+
+  public async selectFromFile(): Promise<string | string[] | null> {
+    return dialog.open({ directory: false, multiple: false })
+  }
 }
 
 // Singleton client
