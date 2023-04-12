@@ -75,7 +75,7 @@ func (cmd *ListCmd) Run(ctx context.Context) error {
 				entry.Config.Name,
 				entry.Config.Version,
 				strconv.FormatBool(devPodConfig.Current().DefaultProvider == entry.Config.Name),
-				strconv.FormatBool(entry.State != nil),
+				strconv.FormatBool(entry.State != nil && entry.State.Initialized),
 				entry.Config.Description,
 			})
 		}
@@ -87,7 +87,7 @@ func (cmd *ListCmd) Run(ctx context.Context) error {
 			"Name",
 			"Version",
 			"Default",
-			"Configured",
+			"Initialized",
 			"Description",
 		}, tableEntries)
 	} else if cmd.Output == "json" {

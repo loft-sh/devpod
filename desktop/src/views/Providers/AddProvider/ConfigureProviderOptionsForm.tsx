@@ -75,7 +75,7 @@ export function ConfigureProviderOptionsForm({
   const formMethods = useForm<TFieldValues>({
     defaultValues: {
       useAsDefault: isDefault,
-      reuseMachine: showReuseMachineField && reuseMachine,
+      reuseMachine: reuseMachine,
     },
   })
   const {
