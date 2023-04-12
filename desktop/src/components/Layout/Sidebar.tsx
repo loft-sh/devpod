@@ -13,6 +13,7 @@ import { ReactElement, ReactNode } from "react"
 import { LinkProps, NavLink as RouterLink } from "react-router-dom"
 import { useSettings } from "../../contexts"
 import { DevpodWordmark } from "../../icons/DevpodWordmark"
+import { isLinux } from "../../lib"
 import { useBorderColor } from "../../Theme"
 
 type TSidebarProps = Readonly<{ children?: readonly ReactElement[] }> & BoxProps
@@ -46,15 +47,27 @@ export function Sidebar({ children, ...boxProps }: TSidebarProps) {
       <VStack></VStack>
 
       {/* Background Material */}
-      <Box
-        aria-hidden
-        width="full"
-        height="full"
-        position="absolute"
-        backgroundColor={backgroundColor}
-        zIndex={-1}
-        opacity={0.7}
-      />
+      {isLinux ? (
+        /* Linux doesn't support transparent backgrounds properly */
+        <Box
+          aria-hidden
+          width="full"
+          height="full"
+          position="absolute"
+          backgroundColor={"gray.100"}
+          zIndex={-1}
+        />
+      ) : (
+        <Box
+          aria-hidden
+          width="full"
+          height="full"
+          position="absolute"
+          backgroundColor={backgroundColor}
+          zIndex={-1}
+          opacity={0.7}
+        />
+      )}
     </Grid>
   )
 }
