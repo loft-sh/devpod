@@ -3,6 +3,7 @@ package cmd
 import (
 	"context"
 	"fmt"
+	"github.com/gen2brain/beeep"
 	"github.com/loft-sh/devpod/cmd/flags"
 	"github.com/loft-sh/devpod/cmd/machine"
 	"github.com/loft-sh/devpod/pkg/agent"
@@ -99,6 +100,7 @@ func startWait(ctx context.Context, client client2.WorkspaceClient, create bool,
 					return errors.Wrap(err, "start workspace")
 				}
 			} else {
+				_ = beeep.Alert("Workspace is stopped", "Workspace is stopped, please restart the workspace", "assets/warning.png")
 				return fmt.Errorf("workspace is stopped")
 			}
 		} else if instanceStatus == client2.StatusNotFound {

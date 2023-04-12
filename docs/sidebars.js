@@ -8,74 +8,124 @@
 module.exports = {
   adminSidebar: [
     {
-      type: 'doc',
-      id: 'what-is-devpod',
+      type: "doc",
+      id: "what-is-devpod",
     },
     {
-      type: 'category',
-      label: 'Getting Started',
+      type: "category",
+      label: "Getting Started",
       collapsed: false,
       items: [
         {
-          type: 'doc',
-          id: 'getting-started/quickstart',
+          type: "doc",
+          id: "getting-started/quickstart",
         },
       ],
     },
     {
-      type: 'category',
-      label: 'Developing in a Workspace',
+      type: "category",
+      label: "Developing in a Workspace",
       items: [
         {
-          type: 'doc',
-          id: 'developing-in-workspaces/develop-in-a-workspace',
+          type: "doc",
+          id: "developing-in-workspaces/what-are-workspaces",
+        },
+        {
+          type: "doc",
+          id: "developing-in-workspaces/create-a-workspace",
+        },
+        {
+          type: "doc",
+          id: "developing-in-workspaces/devcontainer-json",
+        },
+        {
+          type: "doc",
+          id: "developing-in-workspaces/prebuild-a-workspace",
+        },
+        {
+          type: "doc",
+          id: "developing-in-workspaces/credentials",
+        },
+        {
+          type: "doc",
+          id: "developing-in-workspaces/stop-a-workspace",
+        },
+        {
+          type: "doc",
+          id: "developing-in-workspaces/delete-a-workspace",
         },
       ],
     },
     {
-      type: 'category',
-      label: 'Prebuilding Workspaces',
+      type: "category",
+      label: "Managing your Machines",
       items: [
         {
-          type: 'doc',
-          id: 'prebuilding-workspaces/prebuild-a-workspace',
+          type: "doc",
+          id: "managing-machines/what-are-machines",
+        },
+        {
+          type: "doc",
+          id: "managing-machines/manage-machines",
         },
       ],
     },
     {
-      type: 'category',
-      label: 'Managing your Machines',
+      type: "category",
+      label: "Managing your Providers",
       items: [
         {
-          type: 'doc',
-          id: 'managing-machines/what-are-machines',
+          type: "doc",
+          id: "managing-providers/what-are-providers",
+        },
+        {
+          type: "doc",
+          id: "managing-providers/add-provider",
+        },
+        {
+          type: "doc",
+          id: "managing-providers/update-provider",
+        },
+        {
+          type: "doc",
+          id: "managing-providers/delete-provider",
+        },
+        {
+          type: "doc",
+          id: "managing-providers/docker",
+        },
+        {
+          type: "doc",
+          id: "managing-providers/kubernetes",
         },
       ],
     },
     {
-      type: 'category',
-      label: 'Managing your Providers',
+      type: "category",
+      label: "Developing Providers",
       items: [
         {
-          type: 'doc',
-          id: 'managing-providers/what-are-providers',
+          type: "doc",
+          id: "developing-providers/quickstart",
         },
-      ],
-    },
-    {
-      type: 'category',
-      label: 'Developing Providers',
-      items: [
         {
-          type: 'doc',
-          id: 'developing-providers/quickstart',
+          type: "doc",
+          id: "developing-providers/options",
+        },
+        {
+          type: "doc",
+          id: "developing-providers/binaries",
+        },
+        {
+          type: "doc",
+          id: "developing-providers/agent",
         },
       ],
     },
     {
-      type: 'link',
-      label: 'Originally created by Loft',
-      href: 'https://loft.sh/',
+      type: "link",
+      label: "Originally created by Loft",
+      href: "https://loft.sh/",
     },
   ],
 };
