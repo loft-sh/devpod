@@ -1,5 +1,5 @@
 import { Box } from "@chakra-ui/react"
-import { useEffect, useMemo } from "react"
+import { useEffect, useMemo, useRef } from "react"
 import { useParams, useSearchParams } from "react-router-dom"
 import { useStreamingTerminal } from "../../components"
 import { useAction } from "../../contexts"
@@ -19,13 +19,10 @@ export function Action() {
       return
     }
 
-    return action.connectOrReplay(connectStream)
-  }, [action, connectStream])
-
-  // Clear terminal when actionID changes
-  useEffect(() => {
     clear()
-  }, [actionID, clear])
+
+    return action.connectOrReplay(connectStream)
+  }, [actionID, connectStream])
 
   useEffect(() => {
     const onSuccess = searchParams.get("onSuccess")

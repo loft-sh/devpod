@@ -6,7 +6,7 @@ import { ActionHistory } from "./action/actionHistory" // This is a workaround f
 
 type TLastActions = Readonly<{ active: readonly TActionObj[]; history: readonly TActionObj[] }>
 
-class DevpodStore {
+class DevPodStore {
   private readonly eventManager = new SingleEventManager<void>()
   private actionsHistory = new ActionHistory()
   private workspaces = new Map<TWorkspaceID, TWorkspace>()
@@ -138,4 +138,4 @@ class DevpodStore {
 }
 
 // Singleton store
-export const devpodStore = new DevpodStore()
+export const devPodStore = new DevPodStore()

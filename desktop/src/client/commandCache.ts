@@ -50,16 +50,16 @@ export class CommandCache {
         return noop
       }
 
-      // Make sure we subscribe handlers only once
-      if (eventManager.isSubscribed(handler)) {
-        return () => eventManager.unsubscribe(handler)
-      }
-
       // Replay events in-order before registering the new newHandler
       if (!isEmpty(events)) {
         for (const event of events) {
           handler.notify(event)
         }
+      }
+
+      // Make sure we subscribe handlers only once
+      if (eventManager.isSubscribed(handler)) {
+        return () => eventManager.unsubscribe(handler)
       }
 
       return eventManager.subscribe(handler)

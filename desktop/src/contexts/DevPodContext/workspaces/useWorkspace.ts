@@ -9,7 +9,7 @@ import {
   TWorkspaceStartConfig,
 } from "../../../types"
 import { TActionID, TActionObj, useConnectAction, useReplayAction } from "../action"
-import { devpodStore } from "../devpodStore"
+import { devPodStore } from "../devPodStore"
 
 export type TWorkspaceResult = Readonly<{
   data: TWorkspace | undefined
@@ -35,13 +35,13 @@ export type TWorkspaceResult = Readonly<{
 export function useWorkspace(workspaceID: TWorkspaceID | undefined): TWorkspaceResult {
   const viewID = useId()
   const data = useSyncExternalStore(
-    useCallback((listener) => devpodStore.subscribe(listener), []),
-    () => (workspaceID !== undefined ? devpodStore.get(workspaceID) : undefined)
+    useCallback((listener) => devPodStore.subscribe(listener), []),
+    () => (workspaceID !== undefined ? devPodStore.get(workspaceID) : undefined)
   )
   const create = useCallback<TWorkspaceResult["create"]>(
     (config, onStream) => {
-      return devpodStore.startAction({
-        actionName: "create",
+      return devPodStore.startAction({
+        actionName: "start",
         workspaceID: config.id,
         actionFn: async (ctx) => {
           const result = await client.workspaces.start(config, onStream, {
@@ -52,7 +52,7 @@ export function useWorkspace(workspaceID: TWorkspaceID | undefined): TWorkspaceR
           if (result.err) {
             return result
           }
-          devpodStore.setStatus(config.id, result.val)
+          devPodStore.setStatus(config.id, result.val)
 
           return result
         },
@@ -78,7 +78,7 @@ export function useWorkspace(workspaceID: TWorkspaceID | undefined): TWorkspaceR
         return
       }
 
-      return devpodStore.startAction({
+      return devPodStore.startAction({
         actionName: "stop",
         workspaceID,
         actionFn: async (ctx) => {
@@ -90,7 +90,7 @@ export function useWorkspace(workspaceID: TWorkspaceID | undefined): TWorkspaceR
           if (result.err) {
             return result
           }
-          devpodStore.setStatus(workspaceID, result.val)
+          devPodStore.setStatus(workspaceID, result.val)
 
           return result
         },
@@ -105,7 +105,7 @@ export function useWorkspace(workspaceID: TWorkspaceID | undefined): TWorkspaceR
         return
       }
 
-      return devpodStore.startAction({
+      return devPodStore.startAction({
         actionName: "rebuild",
         workspaceID,
         actionFn: async (ctx) => {
@@ -117,7 +117,7 @@ export function useWorkspace(workspaceID: TWorkspaceID | undefined): TWorkspaceR
           if (result.err) {
             return result
           }
-          devpodStore.setStatus(workspaceID, result.val)
+          devPodStore.setStatus(workspaceID, result.val)
 
           return result
         },
@@ -132,7 +132,7 @@ export function useWorkspace(workspaceID: TWorkspaceID | undefined): TWorkspaceR
         return
       }
 
-      return devpodStore.startAction({
+      return devPodStore.startAction({
         actionName: "remove",
         workspaceID,
         actionFn: async (ctx) => {
@@ -144,7 +144,7 @@ export function useWorkspace(workspaceID: TWorkspaceID | undefined): TWorkspaceR
           if (result.err) {
             return result
           }
-          devpodStore.removeWorkspace(workspaceID)
+          devPodStore.removeWorkspace(workspaceID)
 
           return result
         },
@@ -154,8 +154,8 @@ export function useWorkspace(workspaceID: TWorkspaceID | undefined): TWorkspaceR
   )
 
   const currentAction = useSyncExternalStore(
-    useCallback((listener) => devpodStore.subscribe(listener), []),
-    () => (workspaceID !== undefined ? devpodStore.getCurrentAction(workspaceID) : undefined)
+    useCallback((listener) => devPodStore.subscribe(listener), []),
+    () => (workspaceID !== undefined ? devPodStore.getCurrentAction(workspaceID) : undefined)
   )
   const isLoading = useMemo(() => exists(currentAction), [currentAction])
 
@@ -204,7 +204,7 @@ export function startWorkspaceAction({
   config,
   onStream,
 }: TStartWorkspaceActionArgs): TActionObj["id"] {
-  return devpodStore.startAction({
+  return devPodStore.startAction({
     actionName: "start",
     workspaceID,
     actionFn: async (ctx) => {
@@ -216,7 +216,7 @@ export function startWorkspaceAction({
       if (result.err) {
         return result
       }
-      devpodStore.setStatus(workspaceID, result.val)
+      devPodStore.setStatus(workspaceID, result.val)
 
       return result
     },

@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useId, useMemo, useRef, useSyncExternalStore } from "react"
 import { client, TStreamEventListenerFn } from "../../../client"
 import { TStreamID, TUnsubscribeFn } from "../../../types"
-import { devpodStore } from "../devpodStore"
+import { devPodStore } from "../devPodStore"
 import { TActionID, TActionObj } from "./action"
 
 type TActionResult = Readonly<{
@@ -12,7 +12,7 @@ type TActionResult = Readonly<{
 export function useAction(actionID: TActionID | undefined): TActionResult | undefined {
   const viewID = useId()
   const data = useSyncExternalStore(
-    useCallback((listener) => devpodStore.subscribe(listener), []),
+    useCallback((listener) => devPodStore.subscribe(listener), []),
     () => {
       if (actionID === undefined) {
         return undefined
@@ -44,7 +44,7 @@ export function useAction(actionID: TActionID | undefined): TActionResult | unde
 }
 
 export function getAction(actionID: TActionID): TActionObj | undefined {
-  const { active, history } = devpodStore.getAllActions()
+  const { active, history } = devPodStore.getAllActions()
 
   return [...active, ...history].find((action) => action.id === actionID)
 }
