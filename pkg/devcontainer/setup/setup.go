@@ -158,7 +158,7 @@ func markerFileExists(markerName string, markerContent string) (bool, error) {
 	t, err := os.ReadFile(markerName)
 	if err != nil && !os.IsNotExist(err) {
 		return false, err
-	} else if markerContent == "" || string(t) == markerContent {
+	} else if err == nil && (markerContent == "" || string(t) == markerContent) {
 		return true, nil
 	}
 
