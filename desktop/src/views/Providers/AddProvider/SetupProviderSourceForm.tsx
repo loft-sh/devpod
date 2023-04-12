@@ -178,12 +178,8 @@ export function SetupProviderSourceForm({ state, reset, onFinish }: TSetupProvid
   )
 
   const isSubmitDisabled = useMemo(() => {
-    return (
-      status === "error" ||
-      !formState.dirtyFields[FieldName.PROVIDER_SOURCE] ||
-      formState.isSubmitting
-    )
-  }, [formState.dirtyFields, formState.isSubmitting, status])
+    return status === "error" || !providerSource || formState.isSubmitting
+  }, [providerSource, formState.isSubmitting, status])
 
   const handleRecommendedProviderClicked = useCallback(
     (sourceName: string) => () => {
@@ -298,7 +294,11 @@ export function SetupProviderSourceForm({ state, reset, onFinish }: TSetupProvid
         )
         <VStack align="start">
           {status === "error" && isError(error) && <ErrorMessageBox error={error} />}
-          <Button type="submit" isDisabled={isSubmitDisabled} isLoading={status === "loading"}>
+          <Button
+            type="submit"
+            colorScheme={"primary"}
+            isDisabled={isSubmitDisabled}
+            isLoading={status === "loading"}>
             Continue
           </Button>
         </VStack>
