@@ -12,7 +12,6 @@ type TCommandHandler = Readonly<{
 }>
 type TCommandCacheStore = Map<TCommandCacheID, TCommandHandler>
 
-// TODO: continue here - persist all logs :)
 export class CommandCache {
   private store: TCommandCacheStore = new Map()
 

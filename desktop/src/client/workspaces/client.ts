@@ -77,11 +77,11 @@ export class WorkspacesClient implements TDebuggable {
     stream?.(handler)
 
     const result = await operation
+    this.commandCache.clear(cacheInfo)
+
     if (result.err) {
       return result
     }
-
-    this.commandCache.clear(cacheInfo)
   }
 
   public setDebug(isEnabled: boolean): void {
