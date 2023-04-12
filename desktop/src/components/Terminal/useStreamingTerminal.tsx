@@ -30,5 +30,5 @@ export function useStreamingTerminal() {
     terminalRef.current?.clear()
   }, [terminalRef.current])
 
-  return { terminal, terminalObject: terminalRef.current, connectStream, clear }
+  return { terminal, connectStream, clear }
 }

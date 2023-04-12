@@ -7,7 +7,6 @@ import { exists } from "../../lib"
 
 type TTerminalRef = Readonly<{
   clear: VoidFunction
-  isNonEmpty: () => boolean | undefined
   write: (data: string) => void
   writeln: (data: string) => void
 }>
@@ -99,9 +98,6 @@ export const Terminal = forwardRef<TTerminalRef, {}>(function T(_, ref) {
     ref,
     () => {
       return {
-        isNonEmpty() {
-          return !!terminalRef.current?.buffer.active.length
-        },
         clear() {
           terminalRef.current?.clear()
         },
