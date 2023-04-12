@@ -85,7 +85,6 @@ export class ProviderCommands {
       return result
     }
 
-    console.info("TEST")
     if (!isOk(result.val)) {
       console.info(result.val.code)
 

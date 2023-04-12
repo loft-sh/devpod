@@ -47,6 +47,7 @@ export function useAppReady() {
 
             navigate(
               Routes.toWorkspaceCreate({
+                workspaceID: data.workspace_id,
                 providerID: data.provider_id,
                 rawSource: data.source,
                 ide: data.ide,

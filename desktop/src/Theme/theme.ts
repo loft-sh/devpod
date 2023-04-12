@@ -1,4 +1,3 @@
-// We need the `.cts` filename for chakra-cli to properly generate our types
 import { defineStyleConfig, extendTheme, Theme, ThemeOverride } from "@chakra-ui/react"
 
 const Button = defineStyleConfig({
@@ -44,12 +43,12 @@ export const theme = extendTheme({
     primary: {
       400: "#AA40EE",
       500: "#BA50FF",
-      600: "#CA60FF", // TODO: change to #CA60FF
+      600: "#CA60FF",
     },
   },
   config: {
-    initialColorMode: "system",
-    useSystemColorMode: true,
+    initialColorMode: "light",
+    useSystemColorMode: false,
   },
   components: {
     Button,

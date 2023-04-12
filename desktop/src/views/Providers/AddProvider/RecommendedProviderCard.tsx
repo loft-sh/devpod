@@ -1,5 +1,4 @@
 import { Box, Card, Image, useColorModeValue } from "@chakra-ui/react"
-import { css } from "@emotion/react"
 import { AnimatePresence, motion } from "framer-motion"
 import React, { useId } from "react"
 
@@ -40,11 +39,6 @@ export function RecommendedProviderCard({
       position="relative"
       backgroundColor="transparent"
       _hover={{ backgroundColor: hoverBackgroudColor }}
-      css={css`
-        :hover {
-          box-shadow: ;
-        }
-      `}
       {...(onClick ? { onClick } : {})}
       {...borderProps}>
       {imageNode ? imageNode : <Image objectFit="cover" maxWidth="28" padding="2" src={image} />}

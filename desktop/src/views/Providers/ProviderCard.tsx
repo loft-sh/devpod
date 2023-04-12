@@ -8,7 +8,6 @@ import {
   Center,
   Heading,
   HStack,
-  Icon,
   IconButton,
   Image,
   Link,
@@ -26,14 +25,14 @@ import {
   useDisclosure,
 } from "@chakra-ui/react"
 import { UseMutationResult } from "@tanstack/react-query"
-import { Link as RouterLink } from "react-router-dom"
-import { ProviderPlaceholder, Stack3D, Trash } from "../../icons"
-import { exists, noop } from "../../lib"
-import { Routes } from "../../routes"
-import { TProvider, TRunnable, TWithProviderID } from "../../types"
-import { useWorkspaces } from "../../contexts"
 import { useMemo } from "react"
 import { useNavigate } from "react-router"
+import { Link as RouterLink } from "react-router-dom"
+import { useWorkspaces } from "../../contexts"
+import { ProviderPlaceholder, Stack3D, Trash } from "../../icons"
+import { exists } from "../../lib"
+import { Routes } from "../../routes"
+import { TProvider, TRunnable, TWithProviderID } from "../../types"
 
 type TProviderCardProps = {
   id: string
@@ -48,13 +47,13 @@ export function ProviderCard({ id, provider, remove }: TProviderCardProps) {
   const { isOpen: isDeleteOpen, onOpen: onDeleteOpen, onClose: onDeleteClose } = useDisclosure()
   const providerWorkspaces = useMemo(
     () => workspaces.filter((workspace) => workspace.provider?.name === id),
-    [workspaces]
+    [id, workspaces]
   )
   const tagColor = useColorModeValue("gray.700", "gray.300")
 
   return (
     <>
-      <Card variant="outline" width={"250px"} height="96" key={id}>
+      <Card variant="outline" width="72" height="96" key={id}>
         <CardHeader display="flex" justifyContent="center" padding="0">
           {exists(provider?.config?.icon) ? (
             <Image
@@ -121,7 +120,7 @@ export function ProviderCard({ id, provider, remove }: TProviderCardProps) {
           <ModalHeader>Delete Provider</ModalHeader>
           <ModalCloseButton />
           <ModalBody>
-            {!providerWorkspaces.length ? (
+            {providerWorkspaces.length === 0 ? (
               <>
                 Deleting the provider will erase all provider state. Make sure to delete provider
                 workspaces before. Are you sure you want to delete provider {id}?
