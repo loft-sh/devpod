@@ -197,12 +197,13 @@ export function WorkspaceCard({ workspaceID, onSelectionChange }: TWorkspaceCard
                 />
                 <Portal>
                   <MenuList>
-                    <InputGroup paddingRight={3}>
+                    <InputGroup paddingRight={3} _hover={{ backgroundColor: "gray.200" }}>
                       <Button
-                        colorScheme={"primary"}
                         variant="ghost"
+                        transition={"none"}
+                        _hover={{ backgroundColor: "gray.200" }}
+                        borderRadius={0}
                         fontWeight={"normal"}
-                        color="primary"
                         leftIcon={<Play boxSize={4} />}
                         onClick={handleOpenWithIDEClicked(workspace.data.id)}>
                         Start with
@@ -211,7 +212,9 @@ export function WorkspaceCard({ workspaceID, onSelectionChange }: TWorkspaceCard
                         maxWidth={40}
                         overflow="hidden"
                         textOverflow="ellipsis"
+                        borderRadius={0}
                         whiteSpace="nowrap"
+                        backgroundColor={"white"}
                         onChange={(e) => setIdeName(e.target.value)}
                         value={ideName}>
                         {idesQuery.data?.map((ide) => (
