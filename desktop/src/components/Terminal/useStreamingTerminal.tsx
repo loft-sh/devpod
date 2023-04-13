@@ -23,12 +23,12 @@ export function useStreamingTerminal() {
           break
       }
     },
-    [terminalRef.current]
+    [terminalRef]
   )
 
   const clear = useCallback(() => {
     terminalRef.current?.clear()
-  }, [terminalRef.current])
+  }, [terminalRef])
 
   return { terminal, connectStream, clear }
 }
