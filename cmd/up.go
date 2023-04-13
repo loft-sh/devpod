@@ -102,7 +102,7 @@ func (cmd *UpCmd) Run(ctx context.Context, client client2.WorkspaceClient) error
 	case string(config.IDEVSCode):
 		return startVSCodeLocally(client, result.SubstitutionContext.ContainerWorkspaceFolder, log.Default)
 	case string(config.IDEOpenVSCode):
-		return startInBrowser(ctx, client, user, ideConfig.Options, log.Default)
+		return startInBrowser(ctx, client, result.SubstitutionContext.ContainerWorkspaceFolder, user, ideConfig.Options, log.Default)
 	case string(config.IDEGoland):
 		return jetbrains.NewGolandServer(config2.GetRemoteUser(result), ideConfig.Options, log.Default).OpenGateway(result.SubstitutionContext.ContainerWorkspaceFolder, client.Workspace())
 	case string(config.IDEPyCharm):
@@ -126,7 +126,7 @@ func (cmd *UpCmd) Run(ctx context.Context, client client2.WorkspaceClient) error
 
 func startVSCodeLocally(client client2.WorkspaceClient, workspaceFolder string, log log.Logger) error {
 	log.Infof("Starting VSCode...")
-	err := exec.Command("code", "--folder-uri", fmt.Sprintf("vscode-remote://ssh-remote+%s.devpod/%s", client.Workspace(), workspaceFolder)).Run()
+	err := exec.Command("code", "--disable-extension", "ms-vscode-remote.remote-containers", "--folder-uri", fmt.Sprintf("vscode-remote://ssh-remote+%s.devpod/%s", client.Workspace(), workspaceFolder)).Run()
 	if err != nil {
 		return err
 	}
@@ -134,7 +134,7 @@ func startVSCodeLocally(client client2.WorkspaceClient, workspaceFolder string, 
 	return nil
 }
 
-func startInBrowser(ctx context.Context, client client2.WorkspaceClient, user string, ideOptions map[string]config.OptionValue, log *log.StreamLogger) error {
+func startInBrowser(ctx context.Context, client client2.WorkspaceClient, workspaceFolder, user string, ideOptions map[string]config.OptionValue, log *log.StreamLogger) error {
 	// determine port
 	vscodePort, err := port.FindAvailablePort(openvscode.DefaultVSCodePort)
 	if err != nil {
@@ -142,7 +142,7 @@ func startInBrowser(ctx context.Context, client client2.WorkspaceClient, user st
 	}
 
 	// wait until reachable then open browser
-	targetURL := fmt.Sprintf("http://localhost:%d/?folder=/workspaces/%s", vscodePort, client.Workspace())
+	targetURL := fmt.Sprintf("http://localhost:%d/?folder=%s", vscodePort, workspaceFolder)
 	if openvscode.Options.GetValue(ideOptions, openvscode.OpenOption) == "true" {
 		go func() {
 			err = open2.Open(ctx, targetURL, log)
