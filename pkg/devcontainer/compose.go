@@ -578,11 +578,11 @@ func (r *Runner) generateDockerComposeUpProject(
 	entrypoint := composetypes.ShellCommand{
 		"/bin/sh",
 		"-c",
-		`echo Container started
+		`echo Container started 
 trap "exit 0" 15
-` + strings.Join(mergedConfig.Entrypoints, "\n") + `
-exec "$$@"
-while sleep 1 & wait $$!; do :; done"`,
+` + strings.Join(mergedConfig.Entrypoints, "\n") + ` 
+exec "$$@" 
+while sleep 1 & wait $$!; do :; done`,
 		"-",
 	}
 	entrypoint = append(entrypoint, userEntrypoint...)
