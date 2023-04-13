@@ -31,11 +31,11 @@ pub struct WorkspacesState {
 }
 
 impl WorkspacesState {
-    pub const IDENTIFIER_PREFIX: &str = "workspaces";
+    pub const IDENTIFIER_PREFIX: &str = "workspaces-";
     const CREATE_WORKSPACE_ID: &str = "workspaces-create_workspace";
 
     fn item_id(id: &String) -> String {
-        format!("{}-{}", Self::IDENTIFIER_PREFIX, id)
+        format!("{}{}", Self::IDENTIFIER_PREFIX, id)
     }
 }
 
