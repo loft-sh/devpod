@@ -34,7 +34,7 @@ func MergeConfiguration(config *DevContainerConfig, imageMetadataEntries []*Imag
 	// adjust config
 	mergedConfig.Init = some(reversed, func(entry *ImageMetadata) *bool { return entry.Init })
 	mergedConfig.Privileged = some(reversed, func(entry *ImageMetadata) *bool { return entry.Privileged })
-	mergedConfig.CapAdd = unionOrNil(reversed, func(entry *ImageMetadata) []string { return entry.CapAdd })
+	mergedConfig.CapAdd = unique(unionOrNil(reversed, func(entry *ImageMetadata) []string { return entry.CapAdd }))
 	mergedConfig.SecurityOpt = unionOrNil(reversed, func(entry *ImageMetadata) []string { return entry.SecurityOpt })
 	mergedConfig.Entrypoints = collectOrNil(reversed, func(entry *ImageMetadata) string { return entry.Entrypoint })
 	mergedConfig.Mounts = mergeMounts(reversed)
@@ -178,6 +178,18 @@ func unionOrNil[T any, K any](entries []K, m func(entry K) []T) []T {
 	}
 
 	return out
+}
+
+func unique[T comparable](s []T) []T {
+	inResult := make(map[T]bool)
+	var result []T
+	for _, str := range s {
+		if _, ok := inResult[str]; !ok {
+			inResult[str] = true
+			result = append(result, str)
+		}
+	}
+	return result
 }
 
 func some[T any](entries []T, m func(entry T) *bool) *bool {
