@@ -1,1 +1,1 @@
-export const REFETCH_INTERVAL_MS = 1_000
+export const REFETCH_INTERVAL_MS = 5_000

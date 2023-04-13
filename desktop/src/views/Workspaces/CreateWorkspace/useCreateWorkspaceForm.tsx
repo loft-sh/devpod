@@ -45,9 +45,9 @@ export function useCreateWorkspaceForm(
       if (defaultIDE) {
         setValue(FieldName.DEFAULT_IDE, defaultIDE.name!)
       } else {
-        const vscode = ides.find((ide) => ide.name === "vscode")
-        if (vscode && vscode.name) {
-          setValue(FieldName.DEFAULT_IDE, vscode.name)
+        const openvscode = ides.find((ide) => ide.name === "openvscode")
+        if (openvscode && openvscode.name) {
+          setValue(FieldName.DEFAULT_IDE, openvscode.name)
         }
       }
     }
