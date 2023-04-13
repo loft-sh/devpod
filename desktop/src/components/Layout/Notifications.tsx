@@ -74,7 +74,7 @@ export function Notifications() {
                 alignItems="center"
                 gap={3}
                 _hover={{ backgroundColor: actionHoverColor }}>
-                {action.status !== "pending" && settings.partyParrot ? (
+                {action.status === "pending" && settings.partyParrot ? (
                   <Image
                     width="6"
                     height="6"
