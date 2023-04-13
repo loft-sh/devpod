@@ -74,15 +74,17 @@ export function Notifications() {
                 alignItems="center"
                 gap={3}
                 _hover={{ backgroundColor: actionHoverColor }}>
-                {action.status !== "pending" && settings.partyParrot ? (
-                  <Image
-                    width="6"
-                    height="6"
-                    src={"https://cdn3.emoji.gg/emojis/2747_PartyParrot.gif"}
-                  />
-                ) : (
-                  <Spinner color="blue.300" size="sm" />
-                )}
+                {action.status === "pending" ? (
+                  settings.partyParrot ? (
+                    <Image
+                      width="6"
+                      height="6"
+                      src={"https://cdn3.emoji.gg/emojis/2747_PartyParrot.gif"}
+                    />
+                  ) : (
+                    <Spinner color="blue.300" size="sm" />
+                  )
+                ) : null}
                 {action.status === "success" && <CheckCircle color="green.300" />}
                 {action.status === "error" && <ExclamationCircle color="red.300" />}
                 {action.status === "cancelled" && <ExclamationTriangle color="orange.300" />}
