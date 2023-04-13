@@ -15,6 +15,7 @@ import { TUnsubscribeFn } from "../types"
 export type TSettings = {
   sidebarPosition: "left" | "right"
   debugFlag: boolean
+  partyParrot: boolean
 }
 type TSetting = keyof TSettings
 
@@ -28,13 +29,13 @@ const SettingsContext = createContext<TSettingsContext>(null!)
 const initialSettings: TSettings = {
   sidebarPosition: "left",
   debugFlag: false,
+  partyParrot: false,
 }
 function getSettingKeys(): readonly TSetting[] {
   return getKeys(initialSettings)
 }
 
 const DEBUG_STORE_KEY = "settings"
-// TODO: persist to disk...
 const settingsStore = new Store(new LocalStorageBackend(DEBUG_STORE_KEY))
 
 export function SettingsProvider({ children }: Readonly<{ children?: ReactNode }>) {
