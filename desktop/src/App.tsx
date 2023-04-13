@@ -16,7 +16,7 @@ import {
 import { useEffect, useMemo } from "react"
 import { Link as RouterLink, Outlet, useMatch, useNavigate, useRouteError } from "react-router-dom"
 import { Sidebar, SidebarMenuItem, StatusBar, Toolbar } from "./components"
-import { ToolbarProvider, useSettings } from "./contexts"
+import { ToolbarProvider, useChangeSettings, useSettings } from "./contexts"
 import { Briefcase, Cog, Stack3D } from "./icons"
 import { Routes } from "./routes"
 import { useBorderColor } from "./Theme"
@@ -49,6 +49,8 @@ export function App() {
       navigate(Routes.WORKSPACES)
     }
   }, [navigate, rootRouteMatch])
+
+  usePartyParrot()
 
   return (
     <Flex height="100vh" width="100vw" maxWidth="100vw" overflow="hidden">
@@ -146,4 +148,20 @@ export function ErrorPage() {
       </Container>
     </Box>
   )
+}
+
+function usePartyParrot() {
+  const { set: setSettings, settings } = useChangeSettings()
+
+  useEffect(() => {
+    const handler = (event: KeyboardEvent) => {
+      if (event.shiftKey && event.ctrlKey && event.key.toLowerCase() === "p") {
+        const current = settings.partyParrot
+        setSettings("partyParrot", !current)
+      }
+    }
+    document.addEventListener("keyup", handler)
+
+    return () => document.addEventListener("keyup", handler)
+  }, [setSettings, settings.partyParrot])
 }

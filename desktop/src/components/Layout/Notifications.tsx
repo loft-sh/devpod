@@ -12,13 +12,14 @@ import {
   Portal,
   Spinner,
   Text,
+  Image,
   useColorModeValue,
   VStack,
 } from "@chakra-ui/react"
 import dayjs from "dayjs"
 import { useMemo } from "react"
 import { Link as RouterLink } from "react-router-dom"
-import { useWorkspaceActions } from "../../contexts"
+import { useSettings, useWorkspaceActions } from "../../contexts"
 import { Bell, CheckCircle, ExclamationCircle, ExclamationTriangle } from "../../icons"
 import { getActionDisplayName } from "../../lib"
 import { Routes } from "../../routes"
@@ -30,6 +31,7 @@ export function Notifications() {
   const subheadingTextColor = useColorModeValue("gray.500", "gray.400")
   const actionHoverColor = useColorModeValue("gray.100", "gray.800")
   const hasActiveActions = actions.active.length > 0
+  const settings = useSettings()
 
   const combinedActions = useMemo(() => {
     return [...actions.active, ...actions.history]
@@ -72,7 +74,15 @@ export function Notifications() {
                 alignItems="center"
                 gap={3}
                 _hover={{ backgroundColor: actionHoverColor }}>
-                {action.status === "pending" && <Spinner color="blue.300" size="sm" />}
+                {action.status === "pending" && settings.partyParrot ? (
+                  <Image
+                    width="6"
+                    height="6"
+                    src={"https://cdn3.emoji.gg/emojis/2747_PartyParrot.gif"}
+                  />
+                ) : (
+                  <Spinner color="blue.300" size="sm" />
+                )}
                 {action.status === "success" && <CheckCircle color="green.300" />}
                 {action.status === "error" && <ExclamationCircle color="red.300" />}
                 {action.status === "cancelled" && <ExclamationTriangle color="orange.300" />}
