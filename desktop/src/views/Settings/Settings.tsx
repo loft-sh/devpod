@@ -1,4 +1,5 @@
 import {
+  Button,
   Checkbox,
   Code,
   Heading,
@@ -9,12 +10,19 @@ import {
   useColorModeValue,
   VStack,
 } from "@chakra-ui/react"
+import { useMutation } from "@tanstack/react-query"
 import { ReactNode } from "react"
+import { client } from "../../client"
 import { ToolbarTitle } from "../../components"
 import { TSettings, useChangeSettings } from "../../contexts"
 
 export function Settings() {
   const { settings, set } = useChangeSettings()
+  const { mutate: addBinaryToPath, isLoading } = useMutation({
+    mutationFn: async () => {
+      ;(await client.installCLI()).unwrap()
+    },
+  })
 
   return (
     <>
@@ -54,6 +62,10 @@ export function Settings() {
             Run all devpods command with the <Code>--debug</Code> flag, making it easier to
             troubleshoot
           </SettingDescription>
+
+          <Button isLoading={isLoading} onClick={() => addBinaryToPath()}>
+            Add Binary to PATH
+          </Button>
         </VStack>
       </VStack>
     </>

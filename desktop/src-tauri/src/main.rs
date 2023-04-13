@@ -6,6 +6,7 @@
 mod action_logs;
 mod commands;
 mod custom_protocol;
+mod install_cli;
 mod logging;
 mod providers;
 mod system_tray;
@@ -121,6 +122,7 @@ fn main() -> anyhow::Result<()> {
             action_logs::write_action_log,
             action_logs::get_action_logs,
             action_logs::sync_action_logs,
+            install_cli::install_cli,
         ])
         .build(ctx)
         .expect("error while building tauri application")

@@ -1,7 +1,7 @@
 import { fs, invoke, os, path, shell } from "@tauri-apps/api"
 import { listen } from "@tauri-apps/api/event"
 import { TSettings } from "../contexts"
-import { Result, Return } from "../lib"
+import { isEmpty, isError, Result, ResultError, Return } from "../lib"
 import { TUnsubscribeFn } from "../types"
 import { ProvidersClient } from "./providers"
 import { WorkspacesClient } from "./workspaces"
@@ -99,6 +99,26 @@ class Client {
 
   public async selectFromFile(): Promise<string | string[] | null> {
     return dialog.open({ directory: false, multiple: false })
+  }
+
+  public async installCLI(): Promise<Result<void>> {
+    // TODO: implement
+    try {
+      await invoke("install_cli")
+
+      return Return.Ok()
+    } catch (e) {
+      console.log(typeof e)
+      if (isError(e)) {
+        return Return.Failed(e.message)
+      }
+
+      if (typeof e === "string") {
+        return Return.Failed(`Failed to install CLI: ${e}`)
+      }
+
+      return Return.Failed("Unable to install CLI")
+    }
   }
 }
 
