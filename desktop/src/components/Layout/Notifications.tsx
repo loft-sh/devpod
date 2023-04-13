@@ -37,6 +37,8 @@ export function Notifications() {
     return [...actions.active, ...actions.history]
   }, [actions.active, actions.history])
 
+  console.log(actions.active)
+
   return (
     <Popover placement="bottom">
       <PopoverTrigger>
@@ -61,7 +63,7 @@ export function Notifications() {
           <PopoverHeader paddingY="4" fontWeight="bold">
             Notifications
           </PopoverHeader>
-          <PopoverBody overflowY="scroll" maxHeight="20rem">
+          <PopoverBody overflowY="auto" maxHeight="20rem">
             {combinedActions.length === 0 && <Text>No notifications</Text>}
             {combinedActions.map((action) => (
               <LinkBox
@@ -74,15 +76,17 @@ export function Notifications() {
                 alignItems="center"
                 gap={3}
                 _hover={{ backgroundColor: actionHoverColor }}>
-                {action.status === "pending" && settings.partyParrot ? (
-                  <Image
-                    width="6"
-                    height="6"
-                    src={"https://cdn3.emoji.gg/emojis/2747_PartyParrot.gif"}
-                  />
-                ) : (
-                  <Spinner color="blue.300" size="sm" />
-                )}
+                {action.status === "pending" ? (
+                  settings.partyParrot ? (
+                    <Image
+                      width="6"
+                      height="6"
+                      src={"https://cdn3.emoji.gg/emojis/2747_PartyParrot.gif"}
+                    />
+                  ) : (
+                    <Spinner color="blue.300" size="sm" />
+                  )
+                ) : null}
                 {action.status === "success" && <CheckCircle color="green.300" />}
                 {action.status === "error" && <ExclamationCircle color="red.300" />}
                 {action.status === "cancelled" && <ExclamationTriangle color="orange.300" />}
