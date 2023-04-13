@@ -1,4 +1,4 @@
-import { useCallback, useId, useMemo, useSyncExternalStore } from "react"
+import { useCallback, useId, useMemo, useRef, useSyncExternalStore } from "react"
 import { client, TStreamEventListenerFn } from "../../../client"
 import { exists } from "../../../lib"
 import {
@@ -28,9 +28,44 @@ export type TWorkspaceResult = Readonly<{
     onStream?: TStreamEventListenerFn
   ) => TActionID
   stop: (onStream?: TStreamEventListenerFn) => TActionID | undefined
-  remove: (onStream?: TStreamEventListenerFn) => TActionID | undefined
+  remove: (force: boolean, onStream?: TStreamEventListenerFn) => TActionID | undefined
   rebuild: (onStream?: TStreamEventListenerFn) => TActionID | undefined
 }>
+
+export function useWorkspaceActions(
+  workspaceID: TWorkspaceID | undefined
+): TActionObj[] | undefined {
+  const dataCache = useRef<TActionObj[]>()
+  const data = useSyncExternalStore(
+    useCallback((listener) => devPodStore.subscribe(listener), []),
+    () => {
+      if (workspaceID === undefined) {
+        return undefined
+      }
+
+      const workspaceActions = devPodStore.getWorkspaceActions(workspaceID)
+      if (!dataCache.current || dataCache.current.length !== workspaceActions.length) {
+        dataCache.current = workspaceActions
+
+        return dataCache.current
+      }
+
+      // compare actions
+      const diff = dataCache.current.filter(
+        (action) => !workspaceActions.find((workspaceAction) => action.id === workspaceAction.id)
+      )
+      if (diff.length > 0) {
+        dataCache.current = workspaceActions
+
+        return dataCache.current
+      }
+
+      return dataCache.current
+    }
+  )
+
+  return data
+}
 
 export function useWorkspace(workspaceID: TWorkspaceID | undefined): TWorkspaceResult {
   const viewID = useId()
@@ -127,7 +162,7 @@ export function useWorkspace(workspaceID: TWorkspaceID | undefined): TWorkspaceR
   )
 
   const remove = useCallback<TWorkspaceResult["remove"]>(
-    (onStream) => {
+    (force, onStream) => {
       if (workspaceID === undefined) {
         return
       }
@@ -136,7 +171,7 @@ export function useWorkspace(workspaceID: TWorkspaceID | undefined): TWorkspaceR
         actionName: "remove",
         workspaceID,
         actionFn: async (ctx) => {
-          const result = await client.workspaces.remove(onStream, {
+          const result = await client.workspaces.remove(force, onStream, {
             id: workspaceID,
             actionID: ctx.id,
             streamID: viewID,

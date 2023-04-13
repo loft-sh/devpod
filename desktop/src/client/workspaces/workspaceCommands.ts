@@ -16,6 +16,7 @@ import {
   DEVPOD_COMMAND_STOP,
   DEVPOD_COMMAND_UP,
   DEVPOD_FLAG_DEBUG,
+  DEVPOD_FLAG_FORCE,
   DEVPOD_FLAG_ID,
   DEVPOD_FLAG_IDE,
   DEVPOD_FLAG_JSON_LOG_OUTPUT,
@@ -124,7 +125,12 @@ export class WorkspaceCommands {
     ])
   }
 
-  static RemoveWorkspace(id: TWorkspaceID) {
-    return WorkspaceCommands.newCommand([DEVPOD_COMMAND_DELETE, id, DEVPOD_FLAG_JSON_LOG_OUTPUT])
+  static RemoveWorkspace(id: TWorkspaceID, force?: boolean) {
+    const args = [DEVPOD_COMMAND_DELETE, id, DEVPOD_FLAG_JSON_LOG_OUTPUT]
+    if (force) {
+      args.push(DEVPOD_FLAG_FORCE)
+    }
+
+    return WorkspaceCommands.newCommand(args)
   }
 }

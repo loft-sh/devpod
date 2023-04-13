@@ -43,6 +43,13 @@ class DevPodStore {
     return this.lastWorkspaces
   }
 
+  public getWorkspaceActions(workspaceID: TWorkspaceID): TActionObj[] {
+    return [
+      ...this.lastActions.active.filter((action) => action.targetID === workspaceID),
+      ...this.lastActions.history.filter((action) => action.targetID === workspaceID).reverse(),
+    ]
+  }
+
   public getCurrentAction(workspaceID: TWorkspaceID): TActionObj | undefined {
     return this.lastActions.active.find((action) => action.targetID === workspaceID)
   }
