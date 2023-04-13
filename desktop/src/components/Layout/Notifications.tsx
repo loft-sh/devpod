@@ -37,6 +37,8 @@ export function Notifications() {
     return [...actions.active, ...actions.history]
   }, [actions.active, actions.history])
 
+  console.log(actions.active)
+
   return (
     <Popover placement="bottom">
       <PopoverTrigger>
@@ -61,7 +63,7 @@ export function Notifications() {
           <PopoverHeader paddingY="4" fontWeight="bold">
             Notifications
           </PopoverHeader>
-          <PopoverBody overflowY="scroll" maxHeight="20rem">
+          <PopoverBody overflowY="auto" maxHeight="20rem">
             {combinedActions.length === 0 && <Text>No notifications</Text>}
             {combinedActions.map((action) => (
               <LinkBox
