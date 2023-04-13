@@ -44,6 +44,7 @@ import { CodeJPG } from "../../images"
 import { QueryKeys } from "../../queryKeys"
 import { Routes } from "../../routes"
 import { TIDEs, TWorkspace, TWorkspaceID } from "../../types"
+import { useWorkspaceActions } from "../../contexts/DevPodContext/workspaces/useWorkspace"
 
 type TWorkspaceCardProps = Readonly<{
   workspaceID: TWorkspaceID
@@ -51,6 +52,7 @@ type TWorkspaceCardProps = Readonly<{
 }>
 
 export function WorkspaceCard({ workspaceID, onSelectionChange }: TWorkspaceCardProps) {
+  const [forceDelete, setForceDelete] = useState<boolean>(false)
   const navigate = useNavigate()
   const idesQuery = useQuery({
     queryKey: QueryKeys.IDES,
@@ -58,6 +60,7 @@ export function WorkspaceCard({ workspaceID, onSelectionChange }: TWorkspaceCard
   })
   const { isOpen: isDeleteOpen, onOpen: onDeleteOpen, onClose: onDeleteClose } = useDisclosure()
   const { isOpen: isRebuildOpen, onOpen: onRebuildOpen, onClose: onRebuildClose } = useDisclosure()
+  const workspaceActions = useWorkspaceActions(workspaceID)
   const workspace = useWorkspace(workspaceID)
   const [ideName, setIdeName] = useState<string | undefined>(workspace.data?.ide?.name ?? undefined)
   const tagColor = useColorModeValue("gray.700", "gray.300")
@@ -99,6 +102,14 @@ export function WorkspaceCard({ workspaceID, onSelectionChange }: TWorkspaceCard
     return false
   }, [workspace.current])
 
+  const errorActionID = useMemo(() => {
+    if (!workspaceActions?.length || workspaceActions[0]?.status !== "error") {
+      return undefined
+    }
+
+    return workspaceActions[0]?.id
+  }, [workspaceActions])
+
   if (workspace.data === undefined) {
     return null
   }
@@ -134,12 +145,28 @@ export function WorkspaceCard({ workspaceID, onSelectionChange }: TWorkspaceCard
                   <Text fontWeight="bold">{id}</Text>
                   <Tooltip
                     label={
-                      isLoading ? `Workspace is loading` : `Workspace is ${status ?? "Pending"}`
+                      errorActionID
+                        ? "Workspace encountered an error"
+                        : isLoading
+                        ? `Workspace is loading`
+                        : `Workspace is ${status ?? "Pending"}`
                     }>
                     <Box
                       as={"span"}
+                      onClick={() => {
+                        if (errorActionID) {
+                          navigateToAction(errorActionID)
+                        }
+                      }}
+                      cursor={errorActionID ? "pointer" : undefined}
                       backgroundColor={
-                        isLoading ? "orange" : status === "Running" ? "green" : "orange"
+                        errorActionID
+                          ? "red"
+                          : isLoading
+                          ? "orange"
+                          : status === "Running"
+                          ? "green"
+                          : "orange"
                       }
                       borderRadius={"full"}
                       width={"10px"}
@@ -282,6 +309,11 @@ export function WorkspaceCard({ workspaceID, onSelectionChange }: TWorkspaceCard
           <ModalBody>
             Deleting the workspace will erase all state. Are you sure you want to delete{" "}
             {workspace.data.id}?
+            <Box marginTop={"10px"}>
+              <Checkbox checked={forceDelete} onChange={(e) => setForceDelete(e.target.checked)}>
+                Force Delete the Workspace
+              </Checkbox>
+            </Box>
           </ModalBody>
           <ModalFooter>
             <HStack spacing={"2"}>
@@ -289,7 +321,7 @@ export function WorkspaceCard({ workspaceID, onSelectionChange }: TWorkspaceCard
               <Button
                 colorScheme={"red"}
                 onClick={async () => {
-                  workspace.remove()
+                  workspace.remove(forceDelete)
                   onDeleteClose()
                 }}>
                 Delete
