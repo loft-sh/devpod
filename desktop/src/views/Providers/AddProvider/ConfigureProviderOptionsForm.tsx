@@ -290,6 +290,7 @@ function OptionFormField({
               value={v}
               onBlur={onBlur}
               onChange={onChange}
+              placeholder={`Enter ${displayName}`}
               options={suggestions.map((s) => ({ key: s, label: s }))}
             />
           )}
