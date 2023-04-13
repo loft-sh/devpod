@@ -312,6 +312,39 @@ var _ = DevPodDescribe("devpod up test suite", func() {
 				gomega.Expect(containerDetail.HostConfig.CapAdd).To(gomega.ContainElement("SYS_PTRACE"), "image capabilities are not duplicated")
 				gomega.Expect(containerDetail.HostConfig.CapAdd).To(gomega.ContainElement("NET_ADMIN"), "devcontainer configuration can add capabilities")
 			}, ginkgo.SpecTimeout(60*time.Second))
+
+			ginkgo.FIt("should start a new workspace with securityOpt", func(ctx context.Context) {
+				tempDir, err := framework.CopyToTempDir("tests/up/testdata/docker-compose-securityOpt")
+				framework.ExpectNoError(err)
+				defer framework.CleanupTempDir(initialDir, tempDir)
+
+				f := framework.NewDefaultFramework(initialDir + "/bin")
+				_ = f.DevPodProviderAdd([]string{"docker"})
+				err = f.DevPodProviderUse(context.Background(), "docker")
+				framework.ExpectNoError(err)
+
+				err = f.DevPodUp(ctx, tempDir)
+				framework.ExpectNoError(err)
+
+				// Check for docker-compose container running
+				projectName := composeHelper.ToProjectName(filepath.Base(tempDir))
+				defer f.DevPodWorkspaceDelete(ctx, projectName)
+
+				ids, err := dockerHelper.FindContainer([]string{
+					fmt.Sprintf("%s=%s", compose.ProjectLabel, projectName),
+					fmt.Sprintf("%s=%s", compose.ServiceLabel, "app"),
+				})
+				framework.ExpectNoError(err)
+				gomega.Expect(len(ids)).To(gomega.Equal(1), "1 compose container to be created")
+
+				var containerDetails []types.ContainerJSON
+				err = dockerHelper.Inspect(ids, "container", &containerDetails)
+				framework.ExpectNoError(err)
+
+				containerDetail := containerDetails[0]
+				gomega.Expect(containerDetail.HostConfig.SecurityOpt).To(gomega.ContainElement("seccomp=unconfined"), "securityOpts contain seccomp=unconfined")
+				gomega.Expect(containerDetail.HostConfig.SecurityOpt).To(gomega.ContainElement("apparmor=unconfined"), "securityOpts contain apparmor=unconfined")
+			}, ginkgo.SpecTimeout(60*time.Second))
 		})
 	})
 

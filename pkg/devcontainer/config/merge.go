@@ -35,7 +35,7 @@ func MergeConfiguration(config *DevContainerConfig, imageMetadataEntries []*Imag
 	mergedConfig.Init = some(reversed, func(entry *ImageMetadata) *bool { return entry.Init })
 	mergedConfig.Privileged = some(reversed, func(entry *ImageMetadata) *bool { return entry.Privileged })
 	mergedConfig.CapAdd = unique(unionOrNil(reversed, func(entry *ImageMetadata) []string { return entry.CapAdd }))
-	mergedConfig.SecurityOpt = unionOrNil(reversed, func(entry *ImageMetadata) []string { return entry.SecurityOpt })
+	mergedConfig.SecurityOpt = unique(unionOrNil(reversed, func(entry *ImageMetadata) []string { return entry.SecurityOpt }))
 	mergedConfig.Entrypoints = collectOrNil(reversed, func(entry *ImageMetadata) string { return entry.Entrypoint })
 	mergedConfig.Mounts = mergeMounts(reversed)
 	mergedConfig.OnCreateCommands = collectOrNilArr(reversed, func(entry *ImageMetadata) types.StrArray { return entry.OnCreateCommand })
