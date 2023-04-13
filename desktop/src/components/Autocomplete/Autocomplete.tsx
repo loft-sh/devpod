@@ -22,6 +22,7 @@ type TAutoCompleteProps = Readonly<{
   onBlur?: () => void
   value?: TAutoCompleteOption
   defaultValue?: TAutoCompleteOption
+  placeholder?: string
   name?: string
 }>
 
@@ -41,14 +42,12 @@ type TAutoCompleteProps = Readonly<{
   ```
  */
 export const AutoComplete = forwardRef<HTMLElement, TAutoCompleteProps>(function InnerAutoComplete(
-  { name, options, defaultValue, value, onChange, onBlur },
+  { name, placeholder, options, defaultValue, value, onChange, onBlur },
   ref
 ) {
   const openButtonRef = useRef<HTMLButtonElement>(null)
   const optionsBackgroundColor = useColorModeValue("gray.100", "gray.800")
   const optionsZIndex = useToken("zIndices", "dropdown")
-  const maxHeight = useToken("sizes", "16")
-  console.log(maxHeight)
   const [query, setQuery] = useState("")
 
   const filteredOptions =
@@ -80,6 +79,7 @@ export const AutoComplete = forwardRef<HTMLElement, TAutoCompleteProps>(function
               onBlur={onBlur}
               spellCheck={false}
               as={Combobox.Input}
+              placeholder={placeholder}
               onChange={(event) => setQuery(event.target.value)}
               onFocus={handleInputFocused(isOpen)}
             />
