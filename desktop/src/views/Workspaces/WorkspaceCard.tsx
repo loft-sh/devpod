@@ -34,7 +34,7 @@ import {
 } from "@chakra-ui/react"
 import { useQuery } from "@tanstack/react-query"
 import dayjs from "dayjs"
-import { useCallback, useState } from "react"
+import { useCallback, useMemo, useState } from "react"
 import { HiClock, HiOutlineCode } from "react-icons/hi"
 import { useNavigate } from "react-router"
 import { client } from "../../client"
@@ -83,6 +83,22 @@ export function WorkspaceCard({ workspaceID, onSelectionChange }: TWorkspaceCard
     [ideName, workspace, navigateToAction]
   )
 
+  const isLoading = useMemo(() => {
+    if (workspace.current?.status === "pending") {
+      // if vscode browser we are not loading
+      if (
+        (workspace.current?.name === "start" || workspace.current?.name === "rebuild") &&
+        workspace.data?.ide?.name === "openvscode"
+      ) {
+        return false
+      }
+
+      return true
+    }
+
+    return false
+  }, [workspace.current])
+
   if (workspace.data === undefined) {
     return null
   }
@@ -106,6 +122,7 @@ export function WorkspaceCard({ workspaceID, onSelectionChange }: TWorkspaceCard
           maxWidth={"300px"}
           style={{ aspectRatio: "2 / 1" }}
           src={picture ?? CodeJPG}
+          fallbackSrc={CodeJPG}
           alt="Project Image"
         />
 
@@ -115,10 +132,15 @@ export function WorkspaceCard({ workspaceID, onSelectionChange }: TWorkspaceCard
               <Heading size="md">
                 <HStack alignItems="center">
                   <Text fontWeight="bold">{id}</Text>
-                  <Tooltip label={`Workspace is ${status ?? "Pending"}`}>
+                  <Tooltip
+                    label={
+                      isLoading ? `Workspace is loading` : `Workspace is ${status ?? "Pending"}`
+                    }>
                     <Box
                       as={"span"}
-                      backgroundColor={status === "Running" ? "green" : "orange"}
+                      backgroundColor={
+                        isLoading ? "orange" : status === "Running" ? "green" : "orange"
+                      }
                       borderRadius={"full"}
                       width={"10px"}
                       height={"10px"}
@@ -161,21 +183,18 @@ export function WorkspaceCard({ workspaceID, onSelectionChange }: TWorkspaceCard
                   const actionID = workspace.start({ id, ideConfig: ide })
                   navigateToAction(actionID)
                 }}
-                isLoading={
-                  workspace.current?.name === "start" && workspace.current.status === "pending"
-                }>
+                isLoading={isLoading}>
                 Open
               </Button>
               <Menu placement="top">
-                <Tooltip label="More Actions">
-                  <MenuButton
-                    as={IconButton}
-                    aria-label="More actions"
-                    variant="ghost"
-                    colorScheme="gray"
-                    icon={<Ellipsis transform={"rotate(90deg)"} boxSize={5} />}
-                  />
-                </Tooltip>
+                <MenuButton
+                  as={IconButton}
+                  aria-label="More actions"
+                  variant="ghost"
+                  colorScheme="gray"
+                  isDisabled={isLoading}
+                  icon={<Ellipsis transform={"rotate(90deg)"} boxSize={5} />}
+                />
                 <Portal>
                   <MenuList>
                     <InputGroup paddingRight={3}>

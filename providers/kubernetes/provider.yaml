@@ -50,7 +50,7 @@ options:
     command: |-
       NAMESPACE=$(KUBECONFIG=${KUBERNETES_CONFIG} ${KUBECTL_PATH} config view --context=${KUBERNETES_CONTEXT} --minify -o jsonpath='{..namespace}' 2>/dev/null || true)
       if [ -z "${NAMESPACE}" ]; then
-        NAMESPACE=default
+        NAMESPACE=devpod
       fi
       echo $NAMESPACE
   CREATE_NAMESPACE:
