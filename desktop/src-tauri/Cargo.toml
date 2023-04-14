@@ -33,11 +33,11 @@ url = "2.3.1"
 anyhow = "1.0.70"
 serde_qs = "0.12.0"
 
-[target."cfg(windows)".dependencies]
+[target.'cfg(target_os = "windows")'.dependencies]
 winreg = "0.50.0"
 windows = { version = "0.48", features = ["Win32_Foundation", "Win32_UI_WindowsAndMessaging"] }
 
-[target."cfg(macos)".dependencies]
+[target.'cfg(target_os = "macos")'.dependencies]
 window-vibrancy = "0.3.2"
 
 
