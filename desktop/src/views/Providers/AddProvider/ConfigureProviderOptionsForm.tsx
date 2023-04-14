@@ -51,7 +51,7 @@ type TConfigureProviderOptionsFormProps = Readonly<{
   providerID: TProviderID
   isDefault: boolean
   reuseMachine: boolean
-  options: TProviderOptions
+  options: TProviderOptions | undefined
   optionGroups: TProviderOptionGroup[]
   addProvider?: boolean
   onFinish?: () => void
@@ -96,13 +96,13 @@ export function ConfigureProviderOptionsForm({
 
   const onSubmit = useCallback<SubmitHandler<TFieldValues>>(
     (data) => {
-      const { useAsDefault, reuseMachine, ...options } = data
+      const { useAsDefault, reuseMachine, ...configuredOptions } = data
 
       // filter undefined values
       const newOptions: { [key: string]: string } = {}
-      Object.keys(options).forEach((option) => {
-        if (exists(options[option])) {
-          newOptions[option] = options[option] + ""
+      Object.keys(configuredOptions).forEach((option) => {
+        if (exists(configuredOptions[option]) && exists(optionsProp?.[option])) {
+          newOptions[option] = configuredOptions[option] + ""
         }
       })
 
@@ -271,6 +271,7 @@ function OptionFormField({
   id,
   defaultValue,
   value,
+  password,
   description,
   type,
   displayName,
@@ -324,9 +325,21 @@ function OptionFormField({
       case "duration":
         return <Input placeholder={`Enter ${displayName}`} type="text" {...props} />
       case "string":
-        return <Input placeholder={`Enter ${displayName}`} type="text" {...props} />
+        return (
+          <Input
+            placeholder={`Enter ${displayName}`}
+            type={password ? "password" : "text"}
+            {...props}
+          />
+        )
       default:
-        return <Input placeholder={`Enter ${displayName}`} type="text" {...props} />
+        return (
+          <Input
+            placeholder={`Enter ${displayName}`}
+            type={password ? "password" : "text"}
+            {...props}
+          />
+        )
     }
   }, [register, id, isRequired, value, defaultValue, suggestions, type, displayName])
 

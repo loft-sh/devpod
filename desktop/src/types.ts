@@ -67,6 +67,8 @@ export type TProviderOptions = Record<string, TProviderOption>
 export type TProviderOption = Readonly<{
   // Value is the options current value
   value: string | null
+  // If value is a password
+  password: boolean | null
   // A description of the option displayed to the user by a supporting tool.
   description: string | null
   // If required is true and the user doesn't supply a value, devpod will ask the user

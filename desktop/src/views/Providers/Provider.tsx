@@ -1,6 +1,6 @@
 import { Box, Spinner, Text } from "@chakra-ui/react"
 import { useQuery } from "@tanstack/react-query"
-import { useEffect, useMemo } from "react"
+import { useMemo } from "react"
 import { useNavigate, useParams } from "react-router"
 import { client } from "../../client"
 import { ErrorMessageBox } from "../../components"
@@ -14,19 +14,13 @@ export function Provider() {
   const navigate = useNavigate()
   const params = useParams()
   const providerID = useMemo(() => Routes.getProviderId(params), [params])
-  const [[provider, { error }], { remove }] = useProvider(providerID)
+  const [[provider, { error }]] = useProvider(providerID)
   const providerOptionsQuery = useQuery({
     queryKey: [QueryKeys.PROVIDERS, providerID],
     queryFn: async () => (await client.providers.getOptions(providerID!)).unwrap(),
   })
 
-  useEffect(() => {
-    if (remove.status === "success") {
-      navigate(Routes.PROVIDERS)
-    }
-  }, [navigate, remove.status])
-
-  if (!exists(provider)) {
+  if (!exists(provider) || !provider.state?.initialized) {
     return <Spinner />
   }
 
@@ -44,18 +38,16 @@ export function Provider() {
   }
 
   return (
-    <>
-      <Box width="full">
-        <ConfigureProviderOptionsForm
-          providerID={providerID}
-          isDefault={!!provider.default}
-          addProvider={false}
-          reuseMachine={!!provider.state?.singleMachine}
-          options={providerOptionsQuery.data ?? {}}
-          optionGroups={provider.config?.optionGroups || []}
-          onFinish={() => navigate(Routes.PROVIDERS)}
-        />
-      </Box>
-    </>
+    <Box width="full">
+      <ConfigureProviderOptionsForm
+        providerID={providerID}
+        isDefault={!!provider.default}
+        addProvider={false}
+        reuseMachine={!!provider.state.singleMachine}
+        options={providerOptionsQuery.data ?? {}}
+        optionGroups={provider.config?.optionGroups || []}
+        onFinish={() => navigate(Routes.PROVIDERS)}
+      />
+    </Box>
   )
 }
