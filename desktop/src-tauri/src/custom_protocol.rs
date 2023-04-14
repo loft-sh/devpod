@@ -56,6 +56,7 @@ impl CustomProtocol {
     }
 
     pub fn setup(&self, app: AppHandle) {
+        #[cfg(not(target_os = "linux"))]
         tauri_plugin_deep_link::register(APP_URL_SCHEME, move |url_scheme| {
             tauri::async_runtime::block_on(async {
                 info!("App opened with URL: {:?}", url_scheme.to_string());

@@ -48,6 +48,8 @@ fn main() -> anyhow::Result<()> {
     let ctx = tauri::generate_context!();
     let app_name = ctx.package_info().name.to_string();
     let menu = Menu::os_default(&app_name);
+    #[cfg(target_os = "linux")]
+    let menu = Menu::new();
 
     let custom_protocol = CustomProtocol::init();
 
