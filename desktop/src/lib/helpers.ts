@@ -1,4 +1,4 @@
-import { TLogOutput } from "../types"
+import { TIDE, TLogOutput } from "../types"
 import { ChildProcess } from "@tauri-apps/api/shell"
 import { Err, Failed, Return } from "./result"
 import { TActionObj } from "../contexts"
@@ -100,4 +100,8 @@ export function sleep(ms: number): Promise<void> {
 
 export function getActionDisplayName(action: TActionObj): string {
   return `${action.name} ${action.targetID}`
+}
+
+export function getIDEDisplayName(ide: TIDE) {
+  return ide.displayName ?? ide.name ?? "Unknown"
 }

@@ -18,14 +18,15 @@ import { Link as RouterLink, Outlet, useMatch, useNavigate, useRouteError } from
 import { Sidebar, SidebarMenuItem, StatusBar, Toolbar } from "./components"
 import { ToolbarProvider, useChangeSettings, useSettings } from "./contexts"
 import { Briefcase, Cog, Stack3D } from "./icons"
+import { isLinux, isMacOS } from "./lib"
 import { Routes } from "./routes"
 import { useBorderColor } from "./Theme"
 import { useAppReady } from "./useAppReady"
 
-const TITLE_BAR_SAFE_AREA: BoxProps["height"] = "10"
 const STATUS_BAR_SAFE_AREA: BoxProps["height"] = "5"
-const TOOLBAR_HEIGHT: BoxProps["height"] = "32"
 const SIDEBAR_WIDTH: BoxProps["width"] = "15rem"
+
+const shouldShowTitleBar = isMacOS || isLinux
 
 export function App() {
   useAppReady()
@@ -33,8 +34,12 @@ export function App() {
   const rootRouteMatch = useMatch(Routes.ROOT)
   const { sidebarPosition } = useSettings()
   const contentBackgroundColor = useColorModeValue("white", "black")
-  const toolbarHeight = useToken("sizes", TOOLBAR_HEIGHT as string)
+  const toolbarHeight = useToken("sizes", shouldShowTitleBar ? "32" : "20" as string)
   const borderColor = useBorderColor()
+
+  const titleBarSafeArea = useMemo<BoxProps["height"]>(() => {
+return shouldShowTitleBar ? "32" : 0
+  }, [])
 
   const mainGridProps = useMemo<GridProps>(() => {
     if (sidebarPosition === "right") {
@@ -54,25 +59,28 @@ export function App() {
 
   return (
     <Flex height="100vh" width="100vw" maxWidth="100vw" overflow="hidden">
-      <Box
-        data-tauri-drag-region // keep!
-        height={TITLE_BAR_SAFE_AREA}
-        position="fixed"
-        top="0"
-        width="full"
-        textAlign={"center"}
-        zIndex={2}>
-        <Text
+      {shouldShowTitleBar && (
+        <Box
           data-tauri-drag-region // keep!
-          fontWeight="bold"
-          marginTop="2">
-          Devpod Desktop
-        </Text>
-      </Box>
+          height={titleBarSafeArea}
+          position="fixed"
+          top="0"
+          width="full"
+          textAlign={"center"}
+          zIndex={2}>
+          <Text
+            data-tauri-drag-region // keep!
+            fontWeight="bold"
+            marginTop="2">
+            Devpod Desktop
+          </Text>
+        </Box>
+      )}
+
       <Box width="full" height="full">
         <Grid height="full" {...mainGridProps}>
           <GridItem area="sidebar">
-            <Sidebar paddingTop={TITLE_BAR_SAFE_AREA}>
+            <Sidebar paddingTop={titleBarSafeArea}>
               <SidebarMenuItem to={Routes.WORKSPACES} icon={<Briefcase />}>
                 Workspaces
               </SidebarMenuItem>
@@ -95,9 +103,9 @@ export function App() {
                 height="full"
                 overflowY="auto">
                 <Toolbar
-                  paddingTop={TITLE_BAR_SAFE_AREA}
+                  paddingTop={titleBarSafeArea}
                   backgroundColor={contentBackgroundColor}
-                  height={TOOLBAR_HEIGHT}
+                  height={toolbarHeight}
                   position="sticky"
                   zIndex={1}
                   width="full"
@@ -155,6 +163,7 @@ function usePartyParrot() {
 
   useEffect(() => {
     const handler = (event: KeyboardEvent) => {
+      console.log(event.shiftKey, event.ctrlKey, event.key)
       if (event.shiftKey && event.ctrlKey && event.key.toLowerCase() === "p") {
         const current = settings.partyParrot
         setSettings("partyParrot", !current)

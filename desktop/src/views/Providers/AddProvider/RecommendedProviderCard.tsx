@@ -17,8 +17,8 @@ export function RecommendedProviderCard({
   imageNode,
   onClick,
 }: TRecommendedProviderCardProps) {
-  const hoverBackgroudColor = useColorModeValue("gray.50", "whiteAlpha.200")
-  const borderProps = isSelected
+  const hoverBackgroudColor = useColorModeValue("gray.50", "gray.800")
+  const selectedProps = isSelected
     ? {
         boxShadow:
           "0px 0.6px 0.8px hsl(0deg 0% 0% / 0.09), -0.2px 2.5px 3.3px -1.3px hsl(0deg 0% 0% / 0.18)",
@@ -40,7 +40,7 @@ export function RecommendedProviderCard({
       backgroundColor="transparent"
       _hover={{ backgroundColor: hoverBackgroudColor }}
       {...(onClick ? { onClick } : {})}
-      {...borderProps}>
+      {...selectedProps}>
       {imageNode ? imageNode : <Image objectFit="cover" maxWidth="28" padding="2" src={image} />}
       <AnimatePresence>
         {isSelected && (
