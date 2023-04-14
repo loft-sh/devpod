@@ -3,6 +3,7 @@ import {
   BoxProps,
   Flex,
   Grid,
+  HStack,
   Link,
   Text,
   useColorModeValue,
@@ -12,9 +13,10 @@ import {
 import { ReactElement, ReactNode } from "react"
 import { LinkProps, NavLink as RouterLink } from "react-router-dom"
 import { useSettings } from "../../contexts"
-import { DevpodWordmark } from "../../icons/DevpodWordmark"
+import { DevpodWordmark } from "../../icons"
 import { isMacOS } from "../../lib"
 import { useBorderColor } from "../../Theme"
+import { LoftOSSBadge } from "../LoftOSSBadge"
 
 type TSidebarProps = Readonly<{ children?: readonly ReactElement[] }> & BoxProps
 export function Sidebar({ children, ...boxProps }: TSidebarProps) {
@@ -53,7 +55,15 @@ export function Sidebar({ children, ...boxProps }: TSidebarProps) {
       <VStack as="nav" align="start">
         {children}
       </VStack>
-      <VStack></VStack>
+      <HStack
+        borderTopColor={borderColor}
+        borderTopWidth="thin"
+        alignSelf="end"
+        paddingTop="4"
+        paddingLeft="8"
+        paddingBottom="4">
+        <LoftOSSBadge />
+      </HStack>
 
       {/* Background Material */}
       {isMacOS ? (

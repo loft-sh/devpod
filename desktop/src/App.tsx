@@ -22,6 +22,7 @@ import { isLinux, isMacOS } from "./lib"
 import { Routes } from "./routes"
 import { useBorderColor } from "./Theme"
 import { useAppReady } from "./useAppReady"
+import { useWelcomeModal } from "./useWelcomeModal"
 
 const STATUS_BAR_SAFE_AREA: BoxProps["height"] = "5"
 const SIDEBAR_WIDTH: BoxProps["width"] = "15rem"
@@ -55,85 +56,90 @@ export function App() {
     }
   }, [navigate, rootRouteMatch])
 
+  const { modal: welcomeModal } = useWelcomeModal()
   usePartyParrot()
 
   return (
-    <Flex height="100vh" width="100vw" maxWidth="100vw" overflow="hidden">
-      {shouldShowTitleBar && (
-        <Box
-          data-tauri-drag-region // keep!
-          height={titleBarSafeArea}
-          position="fixed"
-          top="0"
-          width="full"
-          textAlign={"center"}
-          zIndex={2}>
-          <Text
+    <>
+      <Flex height="100vh" width="100vw" maxWidth="100vw" overflow="hidden">
+        {shouldShowTitleBar && (
+          <Box
             data-tauri-drag-region // keep!
-            fontWeight="bold"
-            marginTop="2">
-            Devpod Desktop
-          </Text>
-        </Box>
-      )}
+            height={titleBarSafeArea}
+            position="fixed"
+            top="0"
+            width="full"
+            textAlign={"center"}
+            zIndex={2}>
+            <Text
+              data-tauri-drag-region // keep!
+              fontWeight="bold"
+              marginTop="2">
+              Devpod Desktop
+            </Text>
+          </Box>
+        )}
 
-      <Box width="full" height="full">
-        <Grid height="full" {...mainGridProps}>
-          <GridItem area="sidebar">
-            <Sidebar paddingTop={titleBarSafeArea}>
-              <SidebarMenuItem to={Routes.WORKSPACES} icon={<Briefcase />}>
-                Workspaces
-              </SidebarMenuItem>
-              <SidebarMenuItem to={Routes.PROVIDERS} icon={<Stack3D />}>
-                Providers
-              </SidebarMenuItem>
-              <SidebarMenuItem to={Routes.SETTINGS} icon={<Cog />}>
-                Settings
-              </SidebarMenuItem>
-            </Sidebar>
-          </GridItem>
+        <Box width="full" height="full">
+          <Grid height="full" {...mainGridProps}>
+            <GridItem area="sidebar">
+              <Sidebar paddingTop={titleBarSafeArea}>
+                <SidebarMenuItem to={Routes.WORKSPACES} icon={<Briefcase />}>
+                  Workspaces
+                </SidebarMenuItem>
+                <SidebarMenuItem to={Routes.PROVIDERS} icon={<Stack3D />}>
+                  Providers
+                </SidebarMenuItem>
+                <SidebarMenuItem to={Routes.SETTINGS} icon={<Cog />}>
+                  Settings
+                </SidebarMenuItem>
+              </Sidebar>
+            </GridItem>
 
-          <GridItem area="main" height="100vh" width="full" overflowX="auto">
-            <ToolbarProvider>
-              <Box
-                data-tauri-drag-region // keep!
-                backgroundColor={contentBackgroundColor}
-                position="relative"
-                width="full"
-                height="full"
-                overflowY="auto">
-                <Toolbar
-                  paddingTop={titleBarSafeArea}
-                  backgroundColor={contentBackgroundColor}
-                  height={toolbarHeight}
-                  position="sticky"
-                  zIndex={1}
-                  width="full"
-                />
+            <GridItem area="main" height="100vh" width="full" overflowX="auto">
+              <ToolbarProvider>
                 <Box
-                  as="main"
-                  paddingTop="8"
-                  paddingBottom={STATUS_BAR_SAFE_AREA}
-                  paddingX="8"
-                  width="full"
-                  height={`calc(100vh - ${toolbarHeight})`}
-                  overflowY="auto">
-                  <Outlet />
-                </Box>
-                <StatusBar
-                  position="fixed"
-                  bottom="0"
-                  width={`calc(100% - ${SIDEBAR_WIDTH})`}
-                  borderTopWidth="thin"
-                  borderTopColor={borderColor}
+                  data-tauri-drag-region // keep!
                   backgroundColor={contentBackgroundColor}
-                />
-              </Box>
-            </ToolbarProvider>
-          </GridItem>
-        </Grid>
-      </Box>
-    </Flex>
+                  position="relative"
+                  width="full"
+                  height="full"
+                  overflowY="auto">
+                  <Toolbar
+                    paddingTop={titleBarSafeArea}
+                    backgroundColor={contentBackgroundColor}
+                    height={toolbarHeight}
+                    position="sticky"
+                    zIndex={1}
+                    width="full"
+                  />
+                  <Box
+                    as="main"
+                    paddingTop="8"
+                    paddingBottom={STATUS_BAR_SAFE_AREA}
+                    paddingX="8"
+                    width="full"
+                    height={`calc(100vh - ${toolbarHeight})`}
+                    overflowY="auto">
+                    <Outlet />
+                  </Box>
+                  <StatusBar
+                    position="fixed"
+                    bottom="0"
+                    width={`calc(100% - ${SIDEBAR_WIDTH})`}
+                    borderTopWidth="thin"
+                    borderTopColor={borderColor}
+                    backgroundColor={contentBackgroundColor}
+                  />
+                </Box>
+              </ToolbarProvider>
+            </GridItem>
+          </Grid>
+        </Box>
+      </Flex>
+
+      {welcomeModal}
+    </>
   )
 }
 

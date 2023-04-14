@@ -102,7 +102,6 @@ class Client {
   }
 
   public async installCLI(): Promise<Result<void>> {
-    // TODO: implement
     try {
       await invoke("install_cli")
 
@@ -119,6 +118,10 @@ class Client {
 
       return Return.Failed("Unable to install CLI")
     }
+  }
+
+  public openLink(link: string): void {
+    shell.open(link)
   }
 }
 
