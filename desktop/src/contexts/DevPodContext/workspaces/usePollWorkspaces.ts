@@ -17,10 +17,7 @@ export function usePollWorkspaces() {
     for (const workspace of devPodStore.getAll()) {
       // Don't kick off a request if we already have one in flight or if we're executing an action on this workspace
       const currentAction = devPodStore.getCurrentAction(workspace.id)
-      const shouldSkip =
-        (workspace.ide?.name !== "openvscode" || currentAction?.name !== "start") &&
-        currentAction != undefined
-      if (ongoingRequests[workspace.id] !== undefined || shouldSkip) {
+      if (ongoingRequests[workspace.id] !== undefined || currentAction != undefined) {
         continue
       }
 

@@ -56,7 +56,16 @@ export class Command implements TCommand<ChildProcess> {
         const stdoutListener: TEventListener<"data"> = (message) => {
           try {
             const data = JSON.parse(message)
-            listener({ type: "data", data })
+
+            // special case: the cli sends us a message where "done" is "true"
+            // to signal the command is terminated and we should stop listen to it
+            // This happens for the vscode browser command as it needs to stay open
+            // for port-forwarding, but we don't care anymore about its output.
+            if (data?.done === "true") {
+              res(Return.Ok())
+            } else {
+              listener({ type: "data", data })
+            }
           } catch (error) {
             console.error("Failed to parse stdout message ", message, error)
           }

@@ -156,7 +156,8 @@ func startInBrowser(ctx context.Context, client client2.WorkspaceClient, workspa
 
 	// print port to console
 	log.JSON(logrus.InfoLevel, map[string]string{
-		"url": targetURL,
+		"url":  targetURL,
+		"done": "true",
 	})
 
 	// start in browser
