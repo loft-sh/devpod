@@ -1,18 +1,27 @@
-use std::{env, path::Path};
-
-use anyhow::Context;
+use crate::{commands::DEVPOD_BINARY_NAME, AppHandle};
+use std::{
+    env,
+    path::{Path, PathBuf},
+};
 use thiserror::Error;
-
-use crate::commands::DEVPOD_BINARY_NAME;
+use windows::Win32::Foundation::HWND;
 
 #[derive(Error, Debug)]
 pub enum InstallCLIError {
-    #[error("Platform not supported")]
-    PlatformNotSupported,
     #[error("Unable to get current executable path")]
     NoExePath(#[source] std::io::Error),
     #[error("Unable to create symlink")]
     Symlink(#[source] std::io::Error),
+    #[error("Unable to convert path to string")]
+    PathConversion,
+    #[error("Encountered an issue with the windows registry: ")]
+    Registry(#[source] std::io::Error),
+    #[error("No data directory found")]
+    DataDir,
+    #[error("Unable to create directory")]
+    CreateDir(#[source] std::io::Error),
+    #[error("Unable to write to file")]
+    WriteFile(#[source] std::io::Error),
 }
 impl serde::Serialize for InstallCLIError {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
@@ -24,36 +33,124 @@ impl serde::Serialize for InstallCLIError {
 }
 
 #[tauri::command]
-pub fn install_cli() -> Result<(), InstallCLIError> {
-    install()
+pub fn install_cli(app_handle: AppHandle) -> Result<(), InstallCLIError> {
+    install(app_handle)
+}
+
+// The path to the `devpod` cli binary/executable. If bundled correctly, will be placed next to the desktop app executable.
+fn get_cli_path() -> Result<PathBuf, std::io::Error> {
+    let mut exe_path = env::current_exe()?;
+    exe_path.pop();
+    exe_path.push(DEVPOD_BINARY_NAME);
+
+    Ok(exe_path)
 }
 
 #[cfg(not(target_os = "windows"))]
 fn install() -> Result<(), InstallCLIError> {
     use std::{fs::remove_file, os::unix::fs::symlink};
 
-    let mut exe_path = env::current_exe().map_err(|e| InstallCLIError::NoExePath(e))?;
-    exe_path.pop();
-    exe_path.push(DEVPOD_BINARY_NAME);
+    let cli_path = get_cli_path().map_err(|e| InstallCLIError::NoExePath(e))?;
 
     let raw_target_path = format!("/usr/local/bin/{}", DEVPOD_BINARY_NAME);
     let target_path = Path::new(&raw_target_path);
 
     match target_path.try_exists() {
         Ok(..) => {
-            // need to be remove first
-            println!("exists, {}", target_path.display());
+            // remove symlink first before attempting to create another one
             remove_file(target_path).map_err(|e| InstallCLIError::Symlink(e))?;
         }
-        _ => {
-            println!("does not exist, {}", target_path.display());
-        }
+        _ => { /* fallthrough */ }
     }
 
-    symlink(exe_path, target_path).map_err(|e| InstallCLIError::Symlink(e))
+    symlink(cli_path, target_path).map_err(|e| InstallCLIError::Symlink(e))
 }
 
 #[cfg(target_os = "windows")]
-fn install() -> Result<(), InstallCLIError> {
-    Err(InstallCLIError::PlatformNotSupported)
+fn install(app_handle: AppHandle) -> Result<(), InstallCLIError> {
+    use std::fs;
+    use windows::{
+        Win32::{
+            Foundation::LPARAM,
+            UI::WindowsAndMessaging::{PostMessageW, WM_SETTINGCHANGE},
+        },
+    };
+    use winreg::{
+        enums::{HKEY_CURRENT_USER, KEY_ALL_ACCESS},
+        RegKey,
+    };
+
+    struct BinFile {
+        name: String,
+        content: String,
+    }
+
+    let cli_path = get_cli_path().map_err(|e| InstallCLIError::NoExePath(e))?;
+    let mut bin_dir = app_handle
+        .path_resolver()
+        .app_data_dir()
+        .ok_or(InstallCLIError::DataDir)?;
+    bin_dir.push("bin");
+
+    // Create binary directory in app dir and write bin_files to disk
+    // These will be stored in a /bin folder under our control, usually `%APP_DIR%/sh.loft.desktop-desktop/bin`
+    let cli_path = cli_path.to_str().ok_or(InstallCLIError::PathConversion)?;
+
+    let sh_file = BinFile {
+        name: DEVPOD_BINARY_NAME.to_string(),
+        // WARN: we actually need to debug print here because this escapes the backslash to `\\` and will then be recognised by the shell
+        content: format!("#!/usr/bin/env sh\n{:?}.exe\nexit $?", cli_path),
+    };
+
+    let cmd_file = BinFile {
+        name: format!("{}.cmd", DEVPOD_BINARY_NAME),
+        content: format!("@echo off\n\"{}.exe\"", cli_path),
+    };
+
+    fs::create_dir_all(bin_dir.clone()).map_err(|e| InstallCLIError::CreateDir(e))?;
+    for BinFile { content, name } in [sh_file, cmd_file] {
+        let mut file_path = bin_dir.clone();
+        file_path.push(name);
+
+        if let Err(e) = fs::write(file_path, content.as_bytes()) {
+            return Err(InstallCLIError::WriteFile(e));
+        }
+    }
+
+    // Now that we placed our entry points in the /bin folder, we need to update the users path environment variable
+    // to include said folder
+    let current_dir_path = bin_dir.to_str().ok_or(InstallCLIError::PathConversion)?;
+    let hkcu = RegKey::predef(HKEY_CURRENT_USER);
+    let environment_key = hkcu
+        .open_subkey_with_flags("Environment", KEY_ALL_ACCESS)
+        .map_err(|e| InstallCLIError::Registry(e))?;
+    let mut current_env_path: String = environment_key
+        .get_value("Path")
+        .map_err(|e| InstallCLIError::Registry(e))?;
+
+    // We don't want to add an entry every time this function is called
+    if current_env_path.contains(current_dir_path) {
+        return Ok(());
+    }
+
+    current_env_path.push_str(&format!(";{}", current_dir_path));
+
+    environment_key
+        .set_value("Path", &current_env_path)
+        .map_err(|e| InstallCLIError::Registry(e))?;
+
+    // After setting the registry key, we need to inform windows about the changes we just did.
+    // Otherwise, it would require a full system reboot for them to take effect.
+    unsafe {
+        // See https://learn.microsoft.com/en-us/windows/win32/winmsg/wm-settingchange
+        // and https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-postmessagew
+        // for more information about `WM_SETTINGCHANGE` and `PostMessageW`.
+
+        #[allow(non_snake_case)]
+        let HWND_BROADCAST = HWND(0xffff);
+        let environment_ptr = LPARAM("Environment".as_ptr() as isize);
+        PostMessageW(HWND_BROADCAST, WM_SETTINGCHANGE, None, environment_ptr);
+    };
+
+    Ok(())
 }
