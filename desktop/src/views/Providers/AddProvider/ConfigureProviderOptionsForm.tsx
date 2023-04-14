@@ -98,12 +98,20 @@ export function ConfigureProviderOptionsForm({
     (data) => {
       const { useAsDefault, reuseMachine, ...options } = data
 
+      // filter undefined values
+      const newOptions: { [key: string]: string } = {}
+      Object.keys(options).forEach((option) => {
+        if (exists(options[option])) {
+          newOptions[option] = options[option] + ""
+        }
+      })
+
       configureProvider({
         providerID,
         config: {
           reuseMachine: reuseMachine ?? false,
           useAsDefaultProvider: useAsDefault,
-          options: options,
+          options: newOptions,
         },
       })
     },
@@ -284,16 +292,22 @@ function OptionFormField({
           name={id}
           defaultValue={value ?? defaultValue ?? undefined}
           rules={{ required: isRequired }}
-          render={({ field: { onChange, onBlur, value: v, ref } }) => (
-            <AutoComplete
-              ref={ref}
-              value={v}
-              onBlur={onBlur}
-              onChange={onChange}
-              placeholder={`Enter ${displayName}`}
-              options={suggestions.map((s) => ({ key: s, label: s }))}
-            />
-          )}
+          render={({ field: { onChange, onBlur, value: v, ref } }) => {
+            return (
+              <AutoComplete
+                ref={ref}
+                value={v || ""}
+                onBlur={onBlur}
+                onChange={(value) => {
+                  if (value) {
+                    onChange(value)
+                  }
+                }}
+                placeholder={`Enter ${displayName}`}
+                options={suggestions.map((s) => ({ key: s, label: s }))}
+              />
+            )
+          }}
         />
       )
     }

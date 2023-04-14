@@ -18,10 +18,10 @@ type TAutoCompleteOption = Readonly<{
 }>
 type TAutoCompleteProps = Readonly<{
   options: readonly TAutoCompleteOption[]
-  onChange?: (value: TAutoCompleteOption) => void
+  onChange?: (value: string) => void
   onBlur?: () => void
-  value?: TAutoCompleteOption
-  defaultValue?: TAutoCompleteOption
+  value?: string
+  defaultValue?: string
   placeholder?: string
   name?: string
 }>
@@ -66,7 +66,7 @@ export const AutoComplete = forwardRef<HTMLElement, TAutoCompleteProps>(function
   }
 
   return (
-    <Combobox<TAutoCompleteOption>
+    <Combobox<string>
       ref={ref}
       name={name}
       value={value}
