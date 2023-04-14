@@ -4,7 +4,6 @@ use std::{
     path::{Path, PathBuf},
 };
 use thiserror::Error;
-use windows::Win32::Foundation::HWND;
 
 #[derive(Error, Debug)]
 pub enum InstallCLIError {
@@ -49,7 +48,7 @@ fn get_cli_path() -> Result<PathBuf, std::io::Error> {
 }
 
 #[cfg(not(target_os = "windows"))]
-fn install() -> Result<(), InstallCLIError> {
+fn install(_app_handle: AppHandle) -> Result<(), InstallCLIError> {
     use std::{fs::remove_file, os::unix::fs::symlink};
 
     let cli_path = get_cli_path().map_err(|e| InstallCLIError::NoExePath(e))?;
@@ -73,7 +72,7 @@ fn install(app_handle: AppHandle) -> Result<(), InstallCLIError> {
     use log::error;
     use std::fs;
     use windows::Win32::{
-        Foundation::{GetLastError, LPARAM},
+        Foundation::{GetLastError, LPARAM, HWND},
         UI::WindowsAndMessaging::{SendMessageTimeoutW, SMTO_ABORTIFHUNG, WM_SETTINGCHANGE},
     };
     use winreg::{
