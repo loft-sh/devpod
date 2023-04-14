@@ -31,8 +31,15 @@ regex = "1.7.1"
 lazy_static = "1.4.0"
 url = "2.3.1"
 anyhow = "1.0.70"
-window-vibrancy = "0.3.2"
 serde_qs = "0.12.0"
+
+[target."cfg(windows)".dependencies]
+winreg = "0.50.0"
+windows = { version = "0.48", features = ["Win32_Foundation", "Win32_UI_WindowsAndMessaging"] }
+
+[target."cfg(macos)".dependencies]
+window-vibrancy = "0.3.2"
+
 
 [features]
 # by default Tauri runs in production mode

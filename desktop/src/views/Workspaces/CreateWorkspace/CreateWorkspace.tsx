@@ -23,7 +23,7 @@ import { useSearchParams } from "react-router-dom"
 import { client } from "../../../client"
 import { CollapsibleSection } from "../../../components"
 import { useProviders, useWorkspace } from "../../../contexts"
-import { exists, getKeys, isEmpty, useFormErrors } from "../../../lib"
+import { exists, getIDEDisplayName, getKeys, isEmpty, useFormErrors } from "../../../lib"
 import { QueryKeys } from "../../../queryKeys"
 import { Routes } from "../../../routes"
 import { useBorderColor } from "../../../Theme"
@@ -141,7 +141,7 @@ export function CreateWorkspace() {
     }
   }, [providers, searchParams.providerID, showSetupProviderModal, wasDismissed])
 
-  const backgroundColor = useColorModeValue("blackAlpha.100", "whiteAlpha.100")
+  const backgroundColor = useColorModeValue("gray.50", "gray.800")
   const borderColor = useBorderColor()
   const inputBackgroundColor = useColorModeValue("white", "black")
 
@@ -240,10 +240,10 @@ export function CreateWorkspace() {
                 </FormControl>
                 <FormControl isRequired isInvalid={exists(defaultIDEError)}>
                   <FormLabel>Default IDE</FormLabel>
-                  <Select {...register(FieldName.DEFAULT_IDE)}>
+                  <Select textTransform="capitalize" {...register(FieldName.DEFAULT_IDE)}>
                     {idesQuery.data?.map((ide) => (
                       <option key={ide.name} value={ide.name!}>
-                        {ide.displayName}
+                        {getIDEDisplayName(ide)}
                       </option>
                     ))}
                   </Select>

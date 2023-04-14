@@ -61,7 +61,7 @@ export function Notifications() {
           <PopoverHeader paddingY="4" fontWeight="bold">
             Notifications
           </PopoverHeader>
-          <PopoverBody overflowY="scroll" maxHeight="20rem">
+          <PopoverBody overflowY="auto" maxHeight="20rem">
             {combinedActions.length === 0 && <Text>No notifications</Text>}
             {combinedActions.map((action) => (
               <LinkBox

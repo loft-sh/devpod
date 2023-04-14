@@ -143,7 +143,7 @@ export function ConfigureProviderOptionsForm({
     }, empty)
   }, [optionGroups, optionsProp])
 
-  const backgroundColor = useColorModeValue("blackAlpha.100", "whiteAlpha.100")
+  const backgroundColor = useColorModeValue("gray.50", "gray.800")
   const borderColor = useBorderColor()
 
   return (

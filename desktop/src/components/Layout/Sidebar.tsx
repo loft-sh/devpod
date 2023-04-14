@@ -13,15 +13,24 @@ import { ReactElement, ReactNode } from "react"
 import { LinkProps, NavLink as RouterLink } from "react-router-dom"
 import { useSettings } from "../../contexts"
 import { DevpodWordmark } from "../../icons/DevpodWordmark"
-import { isLinux } from "../../lib"
+import { isMacOS } from "../../lib"
 import { useBorderColor } from "../../Theme"
 
 type TSidebarProps = Readonly<{ children?: readonly ReactElement[] }> & BoxProps
 export function Sidebar({ children, ...boxProps }: TSidebarProps) {
   const borderColor = useBorderColor()
   const backgroundColor = useColorModeValue("white", "black")
+  const alternativeBackgroundColor = useColorModeValue("gray.100", "gray.900")
   const wordmarkColor = useColorModeValue("black", "white")
   const isLeft = useSettings().sidebarPosition === "left"
+
+  const sharedBackgroundMaterialProps = {
+    "aria-hidden": true,
+    width: "full",
+    height: "full",
+    position: "absolute",
+    zIndex: -1,
+  } as const
 
   return (
     <Grid
@@ -47,26 +56,10 @@ export function Sidebar({ children, ...boxProps }: TSidebarProps) {
       <VStack></VStack>
 
       {/* Background Material */}
-      {isLinux ? (
-        /* Linux doesn't support transparent backgrounds properly */
-        <Box
-          aria-hidden
-          width="full"
-          height="full"
-          position="absolute"
-          backgroundColor={"gray.100"}
-          zIndex={-1}
-        />
+      {isMacOS ? (
+        <Box {...sharedBackgroundMaterialProps} backgroundColor={backgroundColor} opacity={0.7} />
       ) : (
-        <Box
-          aria-hidden
-          width="full"
-          height="full"
-          position="absolute"
-          backgroundColor={backgroundColor}
-          zIndex={-1}
-          opacity={0.7}
-        />
+        <Box {...sharedBackgroundMaterialProps} backgroundColor={alternativeBackgroundColor} />
       )}
     </Grid>
   )
