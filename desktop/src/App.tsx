@@ -34,11 +34,11 @@ export function App() {
   const rootRouteMatch = useMatch(Routes.ROOT)
   const { sidebarPosition } = useSettings()
   const contentBackgroundColor = useColorModeValue("white", "black")
-  const toolbarHeight = useToken("sizes", shouldShowTitleBar ? "32" : ("20" as string))
+  const toolbarHeight = useToken("sizes", shouldShowTitleBar ? "32" : "20")
   const borderColor = useBorderColor()
 
   const titleBarSafeArea = useMemo<BoxProps["height"]>(() => {
-    return shouldShowTitleBar ? "32" : 0
+    return shouldShowTitleBar ? "10" : 0
   }, [])
 
   const mainGridProps = useMemo<GridProps>(() => {
