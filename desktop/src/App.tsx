@@ -34,11 +34,11 @@ export function App() {
   const rootRouteMatch = useMatch(Routes.ROOT)
   const { sidebarPosition } = useSettings()
   const contentBackgroundColor = useColorModeValue("white", "black")
-  const toolbarHeight = useToken("sizes", shouldShowTitleBar ? "32" : "20" as string)
+  const toolbarHeight = useToken("sizes", shouldShowTitleBar ? "32" : ("20" as string))
   const borderColor = useBorderColor()
 
   const titleBarSafeArea = useMemo<BoxProps["height"]>(() => {
-return shouldShowTitleBar ? "32" : 0
+    return shouldShowTitleBar ? "32" : 0
   }, [])
 
   const mainGridProps = useMemo<GridProps>(() => {
@@ -163,7 +163,6 @@ function usePartyParrot() {
 
   useEffect(() => {
     const handler = (event: KeyboardEvent) => {
-      console.log(event.shiftKey, event.ctrlKey, event.key)
       if (event.shiftKey && event.ctrlKey && event.key.toLowerCase() === "p") {
         const current = settings.partyParrot
         setSettings("partyParrot", !current)

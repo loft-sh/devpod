@@ -11,9 +11,10 @@ import (
 	"github.com/loft-sh/devpod/pkg/provider"
 	"github.com/loft-sh/devpod/pkg/types"
 	"github.com/pkg/errors"
+	"github.com/sirupsen/logrus"
 	"io"
-	"os"
 	"strings"
+	"time"
 )
 
 func NewMachineClient(devPodConfig *config.Config, provider *provider.ProviderConfig, machine *provider.Machine, log log.Logger) (client.MachineClient, error) {
@@ -78,6 +79,12 @@ func (s *machineClient) Context() string {
 }
 
 func (s *machineClient) Create(ctx context.Context, options client.CreateOptions) error {
+	done := printLogMessagePeriodically(s.log)
+	defer close(done)
+
+	writer := s.log.Writer(logrus.InfoLevel, false)
+	defer writer.Close()
+
 	// create a machine
 	s.log.Infof("Create machine '%s' with provider '%s'...", s.machine.ID, s.config.Name)
 	err := RunCommandWithBinaries(
@@ -90,9 +97,9 @@ func (s *machineClient) Create(ctx context.Context, options client.CreateOptions
 		s.devPodConfig.ProviderOptions(s.config.Name),
 		s.config,
 		nil,
-		os.Stdin,
-		os.Stdout,
-		os.Stderr,
+		nil,
+		writer,
+		writer,
 		s.log,
 	)
 	if err != nil {
@@ -104,6 +111,12 @@ func (s *machineClient) Create(ctx context.Context, options client.CreateOptions
 }
 
 func (s *machineClient) Start(ctx context.Context, options client.StartOptions) error {
+	done := printLogMessagePeriodically(s.log)
+	defer close(done)
+
+	writer := s.log.Writer(logrus.InfoLevel, false)
+	defer writer.Close()
+
 	s.log.Infof("Starting machine '%s'...", s.machine.ID)
 	err := RunCommandWithBinaries(
 		ctx,
@@ -115,9 +128,9 @@ func (s *machineClient) Start(ctx context.Context, options client.StartOptions) 
 		s.devPodConfig.ProviderOptions(s.config.Name),
 		s.config,
 		nil,
-		os.Stdin,
-		os.Stdout,
-		os.Stderr,
+		nil,
+		writer,
+		writer,
 		s.log,
 	)
 	if err != nil {
@@ -129,6 +142,12 @@ func (s *machineClient) Start(ctx context.Context, options client.StartOptions) 
 }
 
 func (s *machineClient) Stop(ctx context.Context, options client.StopOptions) error {
+	done := printLogMessagePeriodically(s.log)
+	defer close(done)
+
+	writer := s.log.Writer(logrus.InfoLevel, false)
+	defer writer.Close()
+
 	s.log.Infof("Stopping machine '%s'...", s.machine.ID)
 	err := RunCommandWithBinaries(
 		ctx,
@@ -140,9 +159,9 @@ func (s *machineClient) Stop(ctx context.Context, options client.StopOptions) er
 		s.devPodConfig.ProviderOptions(s.config.Name),
 		s.config,
 		nil,
-		os.Stdin,
-		os.Stdout,
-		os.Stderr,
+		nil,
+		writer,
+		writer,
 		s.log,
 	)
 	if err != nil {
@@ -212,6 +231,12 @@ func (s *machineClient) Delete(ctx context.Context, options client.DeleteOptions
 		defer cancel()
 	}
 
+	done := printLogMessagePeriodically(s.log)
+	defer close(done)
+
+	writer := s.log.Writer(logrus.InfoLevel, false)
+	defer writer.Close()
+
 	s.log.Infof("Deleting '%s' machine '%s'...", s.config.Name, s.machine.ID)
 	err := RunCommandWithBinaries(
 		ctx,
@@ -223,9 +248,9 @@ func (s *machineClient) Delete(ctx context.Context, options client.DeleteOptions
 		s.devPodConfig.ProviderOptions(s.config.Name),
 		s.config,
 		nil,
-		os.Stdin,
-		os.Stdout,
-		os.Stderr,
+		nil,
+		writer,
+		writer,
 		s.log,
 	)
 	if err != nil {
@@ -256,4 +281,20 @@ func runCommand(ctx context.Context, name string, command types.StrArray, enviro
 
 	// run the command
 	return RunCommand(ctx, command, environ, stdin, stdout, stderr)
+}
+
+func printLogMessagePeriodically(log log.Logger) chan struct{} {
+	done := make(chan struct{})
+	go func() {
+		for {
+			select {
+			case <-done:
+				return
+			case <-time.After(time.Second * 5):
+				log.Infof("Please hang on, DevPod is still running, this might take a while...")
+			}
+		}
+	}()
+
+	return done
 }

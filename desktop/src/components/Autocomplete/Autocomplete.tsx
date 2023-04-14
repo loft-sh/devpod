@@ -9,7 +9,7 @@ import {
   useToken,
 } from "@chakra-ui/react"
 import { Combobox } from "@headlessui/react"
-import { forwardRef, useRef, useState } from "react"
+import { forwardRef, useEffect, useRef, useState } from "react"
 import { AiOutlineCaretRight } from "react-icons/ai"
 
 type TAutoCompleteOption = Readonly<{
@@ -49,6 +49,13 @@ export const AutoComplete = forwardRef<HTMLElement, TAutoCompleteProps>(function
   const optionsBackgroundColor = useColorModeValue("gray.100", "gray.800")
   const optionsZIndex = useToken("zIndices", "dropdown")
   const [query, setQuery] = useState("")
+
+  useEffect(() => {
+    // set value intially
+    if (value) {
+      onChange?.(value)
+    }
+  }, [])
 
   const filteredOptions =
     query === ""
