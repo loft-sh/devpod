@@ -237,6 +237,7 @@ export function SetupProviderSourceForm({ state, reset, onFinish }: TSetupProvid
               <FormLabel>Source</FormLabel>
               <HStack spacing={0} justifyContent={"center"}>
                 <Input
+                  spellCheck={false}
                   placeholder="Enter provider source"
                   borderTopRightRadius={0}
                   borderBottomRightRadius={0}
@@ -272,6 +273,7 @@ export function SetupProviderSourceForm({ state, reset, onFinish }: TSetupProvid
           <FormControl isInvalid={exists(providerNameError)}>
             <FormLabel>Custom Name</FormLabel>
             <Input
+              spellCheck={false}
               placeholder="Custom provider name"
               type="text"
               {...register(FieldName.PROVIDER_NAME, {
