@@ -169,6 +169,7 @@ export function CreateWorkspace() {
                 </Text>
                 <HStack spacing={0} justifyContent={"center"}>
                   <Input
+                    spellCheck={false}
                     backgroundColor={inputBackgroundColor}
                     borderTopRightRadius={0}
                     borderBottomRightRadius={0}
@@ -261,6 +262,7 @@ export function CreateWorkspace() {
                 <FormControl isInvalid={exists(idError)}>
                   <FormLabel>Workspace Name</FormLabel>
                   <Input
+                    spellCheck={false}
                     placeholder="my-workspace"
                     type="text"
                     {...register(FieldName.ID)}
@@ -279,6 +281,7 @@ export function CreateWorkspace() {
                 <FormControl isInvalid={exists(prebuildRepositoryError)}>
                   <FormLabel>Prebuild Repository</FormLabel>
                   <Input
+                    spellCheck={false}
                     placeholder="ghcr.io/my-org/my-repo"
                     type="text"
                     {...register(FieldName.PREBUILD_REPOSITORY)}

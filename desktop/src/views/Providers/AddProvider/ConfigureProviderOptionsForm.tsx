@@ -12,7 +12,7 @@ import {
   VStack,
 } from "@chakra-ui/react"
 import styled from "@emotion/styled"
-import { useMutation } from "@tanstack/react-query"
+import { useMutation, useQueryClient } from "@tanstack/react-query"
 import { ReactNode, useCallback, useMemo } from "react"
 import { Controller, FormProvider, SubmitHandler, useForm, useFormContext } from "react-hook-form"
 import { client } from "../../../client"
@@ -27,6 +27,7 @@ import {
 import { canCreateMachine, getVisibleOptions, TOptionWithID } from "../helpers"
 import { AutoComplete, CollapsibleSection, ErrorMessageBox } from "../../../components"
 import { useBorderColor } from "../../../Theme"
+import { QueryKeys } from "../../../queryKeys"
 
 type TAllOptions = Readonly<{
   required: TOptionWithID[]
@@ -66,7 +67,8 @@ export function ConfigureProviderOptionsForm({
   optionGroups,
   addProvider = false,
 }: TConfigureProviderOptionsFormProps) {
-  const [[provider]] = useProvider(providerID)
+  const queryClient = useQueryClient()
+  const [provider] = useProvider(providerID)
   const showDefaultField = useMemo(() => addProvider || !isDefault, [addProvider, isDefault])
   const showReuseMachineField = useMemo(
     () => canCreateMachine(provider?.config),
@@ -87,7 +89,9 @@ export function ConfigureProviderOptionsForm({
       providerID,
       config,
     }: Readonly<{ providerID: TProviderID; config: TConfigureProviderConfig }>) => {
+      console.info(config)
       ;(await client.providers.configure(providerID, config)).unwrap()
+      await queryClient.invalidateQueries([QueryKeys.PROVIDERS, providerID])
     },
     onSuccess() {
       onFinish?.()
@@ -321,12 +325,17 @@ function OptionFormField({
           </Checkbox>
         )
       case "number":
-        return <Input placeholder={`Enter ${displayName}`} type="number" {...props} />
+        return (
+          <Input spellCheck={false} placeholder={`Enter ${displayName}`} type="number" {...props} />
+        )
       case "duration":
-        return <Input placeholder={`Enter ${displayName}`} type="text" {...props} />
+        return (
+          <Input spellCheck={false} placeholder={`Enter ${displayName}`} type="text" {...props} />
+        )
       case "string":
         return (
           <Input
+            spellCheck={false}
             placeholder={`Enter ${displayName}`}
             type={password ? "password" : "text"}
             {...props}
@@ -335,6 +344,7 @@ function OptionFormField({
       default:
         return (
           <Input
+            spellCheck={false}
             placeholder={`Enter ${displayName}`}
             type={password ? "password" : "text"}
             {...props}

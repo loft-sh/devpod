@@ -87,7 +87,10 @@ export const AutoComplete = forwardRef<HTMLElement, TAutoCompleteProps>(function
               spellCheck={false}
               as={Combobox.Input}
               placeholder={placeholder}
-              onChange={(event) => setQuery(event.target.value)}
+              onChange={(event) => {
+                setQuery(event.target.value)
+                onChange?.(event.target.value)
+              }}
               onFocus={handleInputFocused(isOpen)}
             />
             <InputRightElement>
