@@ -41,6 +41,7 @@ import { client } from "../../client"
 import { TActionID, useWorkspace } from "../../contexts"
 import { Ellipsis, Pause, Play, Stack3D, Trash, ArrowPath } from "../../icons"
 import { CodeJPG } from "../../images"
+import { getIDEDisplayName } from "../../lib"
 import { QueryKeys } from "../../queryKeys"
 import { Routes } from "../../routes"
 import { TIDEs, TWorkspace, TWorkspaceID } from "../../types"
@@ -223,8 +224,8 @@ export function WorkspaceCard({ workspaceID, onSelectionChange }: TWorkspaceCard
                   icon={<Ellipsis transform={"rotate(90deg)"} boxSize={5} />}
                 />
                 <Portal>
-                  <MenuList>
-                    <InputGroup paddingRight={3} _hover={{ backgroundColor: "gray.200" }}>
+                  <MenuList minWidth="72">
+                    <InputGroup paddingRight={3}>
                       <Button
                         variant="ghost"
                         transition={"none"}
@@ -241,12 +242,12 @@ export function WorkspaceCard({ workspaceID, onSelectionChange }: TWorkspaceCard
                         textOverflow="ellipsis"
                         borderRadius={0}
                         whiteSpace="nowrap"
-                        backgroundColor={"white"}
+                        textTransform="capitalize"
                         onChange={(e) => setIdeName(e.target.value)}
                         value={ideName}>
                         {idesQuery.data?.map((ide) => (
                           <option key={ide.name} value={ide.name!}>
-                            {ide.displayName}
+                            {getIDEDisplayName(ide)}
                           </option>
                         ))}
                       </Select>

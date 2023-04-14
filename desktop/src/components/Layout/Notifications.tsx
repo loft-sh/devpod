@@ -37,8 +37,6 @@ export function Notifications() {
     return [...actions.active, ...actions.history]
   }, [actions.active, actions.history])
 
-  console.log(actions.active)
-
   return (
     <Popover placement="bottom">
       <PopoverTrigger>
