@@ -22,6 +22,8 @@ pub enum InstallCLIError {
     CreateDir(#[source] std::io::Error),
     #[error("Unable to write to file")]
     WriteFile(#[source] std::io::Error),
+    #[error("Failed to inform Windows about the change in environment variables. You will need to reboot you machine for them to take effect.")]
+    WindowsBroadcastChange,
 }
 impl serde::Serialize for InstallCLIError {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
@@ -68,12 +70,11 @@ fn install() -> Result<(), InstallCLIError> {
 
 #[cfg(target_os = "windows")]
 fn install(app_handle: AppHandle) -> Result<(), InstallCLIError> {
+    use log::error;
     use std::fs;
-    use windows::{
-        Win32::{
-            Foundation::LPARAM,
-            UI::WindowsAndMessaging::{PostMessageW, WM_SETTINGCHANGE},
-        },
+    use windows::Win32::{
+        Foundation::{GetLastError, LPARAM},
+        UI::WindowsAndMessaging::{SendMessageTimeoutW, SMTO_ABORTIFHUNG, WM_SETTINGCHANGE},
     };
     use winreg::{
         enums::{HKEY_CURRENT_USER, KEY_ALL_ACCESS},
@@ -128,7 +129,7 @@ fn install(app_handle: AppHandle) -> Result<(), InstallCLIError> {
         .get_value("Path")
         .map_err(|e| InstallCLIError::Registry(e))?;
 
-    // We don't want to add an entry every time this function is called
+    // Make sure we only add the path once
     if current_env_path.contains(current_dir_path) {
         return Ok(());
     }
@@ -139,17 +140,35 @@ fn install(app_handle: AppHandle) -> Result<(), InstallCLIError> {
         .set_value("Path", &current_env_path)
         .map_err(|e| InstallCLIError::Registry(e))?;
 
-    // After setting the registry key, we need to inform windows about the changes we just did.
-    // Otherwise, it would require a full system reboot for them to take effect.
+    // After setting the registry key we need to inform windows about the changes.
+    // Otherwise it would require a full system reboot for them to take effect.
     unsafe {
         // See https://learn.microsoft.com/en-us/windows/win32/winmsg/wm-settingchange
-        // and https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-postmessagew
-        // for more information about `WM_SETTINGCHANGE` and `PostMessageW`.
+        // and https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-sendmessagetimeoutw
+        // for more information about `WM_SETTINGCHANGE` and `SendMessageTimeoutW`.
 
         #[allow(non_snake_case)]
         let HWND_BROADCAST = HWND(0xffff);
         let environment_ptr = LPARAM("Environment".as_ptr() as isize);
-        PostMessageW(HWND_BROADCAST, WM_SETTINGCHANGE, None, environment_ptr);
+        // Apparently we can only broadcast this message via a synchronous operation, `PostMessage` doesn't work here
+        // This function blocks until either all windows handled the message or the timeout is exceeded for every one of them. You can check the documentation for details.
+        // Because of this, we need to ensure this function will only be called on a thread that's okay with being blocked for some time.
+        // Right now this will only be called from a tauri command, so we're good. If you need to call this function from somewhere else, be aware of the blocking.
+        let result = SendMessageTimeoutW(
+            HWND_BROADCAST,
+            WM_SETTINGCHANGE,
+            None,
+            environment_ptr,
+            SMTO_ABORTIFHUNG,
+            3_000,
+            None,
+        );
+        if result.0 == 0 {
+            let last_error = GetLastError();
+            error!("{:?}", last_error);
+
+            return Err(InstallCLIError::WindowsBroadcastChange);
+        }
     };
 
     Ok(())
