@@ -65,7 +65,17 @@ func configureCredentials(targetDir, configDir string, port int) error {
 	}
 
 	dockerConfig.CredentialsStore = "devpod"
-	return dockerConfig.Save()
+	err = dockerConfig.Save()
+	if err != nil {
+		return err
+	}
+
+	err = os.Chmod(dockerConfig.Filename, 0666)
+	if err != nil {
+		return errors.Wrap(err, "change permissions docker.config")
+	}
+
+	return nil
 }
 
 func ConfigureCredentialsMachine(targetFolder string, port int) (string, error) {

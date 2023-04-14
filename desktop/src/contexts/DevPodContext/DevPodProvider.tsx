@@ -3,7 +3,7 @@ import { createContext, ReactNode, useMemo } from "react"
 import { client } from "../../client"
 import { QueryKeys } from "../../queryKeys"
 import { TProviders, TQueryResult } from "../../types"
-import { REFETCH_INTERVAL_MS } from "./constants"
+import { REFETCH_PROVIDER_INTERVAL_MS } from "./constants"
 import { usePollWorkspaces } from "./workspaces"
 
 export type TDevpodContext = Readonly<{
@@ -17,7 +17,7 @@ export function DevPodProvider({ children }: Readonly<{ children?: ReactNode }>)
   const providersQuery = useQuery({
     queryKey: QueryKeys.PROVIDERS,
     queryFn: async () => (await client.providers.listAll()).unwrap(),
-    refetchInterval: REFETCH_INTERVAL_MS,
+    refetchInterval: REFETCH_PROVIDER_INTERVAL_MS,
   })
 
   const value = useMemo<TDevpodContext>(
