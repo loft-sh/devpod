@@ -105,7 +105,7 @@ func ResolveWorkspace(ctx context.Context, devPodConfig *config.Config, ide stri
 		if provider2.ProviderNameRegEx.MatchString(desiredID) {
 			return nil, fmt.Errorf("workspace name can only include smaller case letters, numbers or dashes")
 		} else if len(desiredID) > 48 {
-			return nil, fmt.Errorf("workspace name cannot be longer than 63 characters")
+			return nil, fmt.Errorf("workspace name cannot be longer than 48 characters")
 		}
 	}
 

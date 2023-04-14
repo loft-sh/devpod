@@ -57,7 +57,7 @@ func NewSSHCmd(flags *flags.GlobalFlags) *cobra.Command {
 				return err
 			}
 
-			return cmd.Run(ctx, client)
+			return cmd.Run(ctx, devPodConfig, client)
 		},
 	}
 
@@ -70,12 +70,12 @@ func NewSSHCmd(flags *flags.GlobalFlags) *cobra.Command {
 }
 
 // Run runs the command logic
-func (cmd *SSHCmd) Run(ctx context.Context, client client2.WorkspaceClient) error {
+func (cmd *SSHCmd) Run(ctx context.Context, devPodConfig *config.Config, client client2.WorkspaceClient) error {
 	if cmd.Configure {
 		return configureSSH(client, "root")
 	}
 
-	return cmd.jumpContainer(ctx, client, log.Default.ErrorStreamOnly())
+	return cmd.jumpContainer(ctx, devPodConfig, client, log.Default.ErrorStreamOnly())
 }
 
 func startWait(ctx context.Context, client client2.WorkspaceClient, create bool, log log.Logger) error {
@@ -123,7 +123,7 @@ func startWait(ctx context.Context, client client2.WorkspaceClient, create bool,
 	}
 }
 
-func (cmd *SSHCmd) jumpContainer(ctx context.Context, client client2.WorkspaceClient, log log.Logger) error {
+func (cmd *SSHCmd) jumpContainer(ctx context.Context, devPodConfig *config.Config, client client2.WorkspaceClient, log log.Logger) error {
 	err := startWait(ctx, client, false, log)
 	if err != nil {
 		return err
@@ -146,7 +146,7 @@ func (cmd *SSHCmd) jumpContainer(ctx context.Context, client client2.WorkspaceCl
 	if cmd.User != "" {
 		gitCredentials := client.WorkspaceConfig().IDE.Name != string(config.IDEVSCode)
 		runInContainer = func(ctx context.Context, sshClient *ssh.Client) error {
-			err := runCredentialsServer(ctx, sshClient, cmd.User, gitCredentials, true, log)
+			err := runCredentialsServer(ctx, devPodConfig, sshClient, cmd.User, gitCredentials, true, log)
 			if err != nil {
 				log.Errorf("Error running credential server: %v", err)
 			}
@@ -184,7 +184,9 @@ func (cmd *SSHCmd) jumpContainer(ctx context.Context, client client2.WorkspaceCl
 	}, runInContainer)
 }
 
-func runCredentialsServer(ctx context.Context, client *ssh.Client, user string, gitCredentials, dockerCredentials bool, log log.Logger) error {
+func runCredentialsServer(ctx context.Context, devPodConfig *config.Config, client *ssh.Client, user string, gitCredentials, dockerCredentials bool, log log.Logger) error {
+	dockerCredentials = dockerCredentials && devPodConfig.ContextOption(config.ContextOptionInjectDockerCredentials) == "true"
+	gitCredentials = gitCredentials && devPodConfig.ContextOption(config.ContextOptionInjectGitCredentials) == "true"
 	if !gitCredentials && !dockerCredentials {
 		return nil
 	}

@@ -32,6 +32,9 @@ type ContextConfig struct {
 	// DefaultIDE holds default ide configuration
 	DefaultIDE string `json:"defaultIde,omitempty"`
 
+	// Options are additional context options
+	Options map[string]OptionValue `json:"options,omitempty"`
+
 	// IDEs holds the ide configuration
 	IDEs map[string]*IDEConfig `json:"ides,omitempty"`
 
@@ -40,6 +43,40 @@ type ContextConfig struct {
 
 	// OriginalProvider is the original default provider
 	OriginalProvider string `json:"-"`
+}
+
+const (
+	ContextOptionInjectDockerCredentials = "INJECT_DOCKER_CREDENTIALS"
+	ContextOptionInjectGitCredentials    = "INJECT_GIT_CREDENTIALS"
+)
+
+var ContextOptions = []ContextOption{
+	{
+		Name:        ContextOptionInjectDockerCredentials,
+		Description: "Specifies if DevPod should inject docker credentials into the workspace",
+		Default:     "true",
+		Enum:        []string{"true", "false"},
+	},
+	{
+		Name:        ContextOptionInjectGitCredentials,
+		Description: "Specifies if DevPod should inject git credentials into the workspace",
+		Default:     "true",
+		Enum:        []string{"true", "false"},
+	},
+}
+
+type ContextOption struct {
+	// Name of the context option
+	Name string `json:"name,omitempty"`
+
+	// Description is the description of the context option
+	Description string `json:"description,omitempty"`
+
+	// Default is the default value of the context option
+	Default string `json:"default,omitempty"`
+
+	// Enum of the allowed values
+	Enum []string `json:"enum,omitempty"`
 }
 
 type IDEConfig struct {
@@ -98,6 +135,24 @@ func (c *Config) ProviderOptions(provider string) map[string]OptionValue {
 
 func (c *Config) IDEOptions(ide string) map[string]OptionValue {
 	return c.Current().IDEOptions(ide)
+}
+
+func (c *Config) ContextOption(option string) string {
+	if c.Current().Options != nil && c.Current().Options[option].Value != "" {
+		return c.Current().Options[option].Value
+	}
+
+	for _, contextOption := range ContextOptions {
+		if contextOption.Name == option {
+			if contextOption.Default != "" {
+				return contextOption.Default
+			}
+
+			break
+		}
+	}
+
+	return ""
 }
 
 func (c *ContextConfig) IsSingleMachine(provider string) bool {
@@ -180,6 +235,7 @@ func LoadConfig(contextOverride string, providerOverride string) (*Config, error
 					DefaultProvider: providerOverride,
 					Providers:       map[string]*ProviderConfig{},
 					IDEs:            map[string]*IDEConfig{},
+					Options:         map[string]OptionValue{},
 				},
 			},
 			Origin: configOrigin,
@@ -202,6 +258,9 @@ func LoadConfig(contextOverride string, providerOverride string) (*Config, error
 	}
 	if config.Contexts[config.DefaultContext] == nil {
 		config.Contexts[config.DefaultContext] = &ContextConfig{}
+	}
+	if config.Contexts[config.DefaultContext].Options == nil {
+		config.Contexts[config.DefaultContext].Options = map[string]OptionValue{}
 	}
 	if config.Contexts[config.DefaultContext].Providers == nil {
 		config.Contexts[config.DefaultContext].Providers = map[string]*ProviderConfig{}
