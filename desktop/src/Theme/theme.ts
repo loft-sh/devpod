@@ -4,7 +4,7 @@ const Button = defineStyleConfig({
   variants: {
     primary: {
       color: "white",
-      borderColor: "primary.400",
+      borderColor: "primary.600",
       borderWidth: 1,
       backgroundColor: "primary.500",
       _hover: {
@@ -13,6 +13,15 @@ const Button = defineStyleConfig({
           background: "primary.500",
         },
       },
+    },
+  },
+})
+
+const Code = defineStyleConfig({
+  variants: {
+    decorative: {
+      backgroundColor: "primary.400",
+      color: "white",
     },
   },
 })
@@ -41,9 +50,9 @@ export const theme = extendTheme({
   },
   colors: {
     primary: {
-      400: "#AA40EE",
+      400: "#CA60FF",
       500: "#BA50FF",
-      600: "#CA60FF",
+      600: "#AA40EE",
     },
   },
   config: {
@@ -52,5 +61,6 @@ export const theme = extendTheme({
   },
   components: {
     Button,
+    Code,
   },
 } satisfies ThemeOverride) as Theme

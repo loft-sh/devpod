@@ -62,10 +62,19 @@ export function Settings() {
             Run all devpods command with the <Code>--debug</Code> flag, making it easier to
             troubleshoot
           </SettingDescription>
+        </VStack>
+
+        <VStack align="start">
+          <Heading as="h4" size="md" marginBottom={4}>
+            CLI
+          </Heading>
 
           <Button isLoading={isLoading} onClick={() => addBinaryToPath()}>
             Add Binary to PATH
           </Button>
+          <SettingDescription>
+            Adds the DevPod CLI to your local users <Code>$PATH</Code>
+          </SettingDescription>
         </VStack>
       </VStack>
     </>

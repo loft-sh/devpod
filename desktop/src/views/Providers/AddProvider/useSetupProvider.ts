@@ -55,14 +55,11 @@ export function useSetupProvider() {
 
   const reset = useCallback(() => {
     dispatch({ type: "reset" })
-  }, [state.currentStep])
+  }, [])
 
-  const completeFirstStep = useCallback(
-    (payload: TCompleteFirstStepAction["payload"]) => {
-      dispatch({ type: "completeFirstStep", payload })
-    },
-    [state.currentStep]
-  )
+  const completeFirstStep = useCallback((payload: TCompleteFirstStepAction["payload"]) => {
+    dispatch({ type: "completeFirstStep", payload })
+  }, [])
 
   const completeSecondStep = useCallback(() => {
     if (state.currentStep !== 2) {
