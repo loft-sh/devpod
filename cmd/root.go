@@ -3,6 +3,7 @@ package cmd
 import (
 	"fmt"
 	"github.com/loft-sh/devpod/cmd/agent"
+	"github.com/loft-sh/devpod/cmd/context"
 	"github.com/loft-sh/devpod/cmd/flags"
 	"github.com/loft-sh/devpod/cmd/helper"
 	"github.com/loft-sh/devpod/cmd/ide"
@@ -83,6 +84,7 @@ func BuildRoot() *cobra.Command {
 	rootCmd.AddCommand(helper.NewHelperCmd(globalFlags))
 	rootCmd.AddCommand(ide.NewIDECmd(globalFlags))
 	rootCmd.AddCommand(machine.NewMachineCmd(globalFlags))
+	rootCmd.AddCommand(context.NewContextCmd(globalFlags))
 	rootCmd.AddCommand(NewUpCmd(globalFlags))
 	rootCmd.AddCommand(NewDeleteCmd(globalFlags))
 	rootCmd.AddCommand(NewSSHCmd(globalFlags))

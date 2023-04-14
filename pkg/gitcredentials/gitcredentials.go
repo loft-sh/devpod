@@ -3,6 +3,7 @@ package gitcredentials
 import (
 	"fmt"
 	"github.com/loft-sh/devpod/pkg/command"
+	"github.com/loft-sh/devpod/pkg/file"
 	"github.com/loft-sh/devpod/pkg/scanner"
 	"github.com/pkg/errors"
 	"os"
@@ -47,6 +48,11 @@ func ConfigureHelper(binaryPath, userName string, port int) error {
 		err = os.WriteFile(gitConfigPath, []byte(content), 0644)
 		if err != nil {
 			return errors.Wrap(err, "write git config")
+		}
+
+		err = file.Chown(userName, gitConfigPath)
+		if err != nil {
+			return err
 		}
 	}
 

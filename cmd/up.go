@@ -62,7 +62,7 @@ func NewUpCmd(flags *flags.GlobalFlags) *cobra.Command {
 				return err
 			}
 
-			return cmd.Run(ctx, client)
+			return cmd.Run(ctx, devPodConfig, client)
 		},
 	}
 
@@ -77,7 +77,7 @@ func NewUpCmd(flags *flags.GlobalFlags) *cobra.Command {
 }
 
 // Run runs the command logic
-func (cmd *UpCmd) Run(ctx context.Context, client client2.WorkspaceClient) error {
+func (cmd *UpCmd) Run(ctx context.Context, devPodConfig *config.Config, client client2.WorkspaceClient) error {
 	// run devpod agent up
 	result, err := cmd.devPodUp(ctx, client, log.Default)
 	if err != nil {
@@ -102,7 +102,7 @@ func (cmd *UpCmd) Run(ctx context.Context, client client2.WorkspaceClient) error
 	case string(config.IDEVSCode):
 		return startVSCodeLocally(client, result.SubstitutionContext.ContainerWorkspaceFolder, log.Default)
 	case string(config.IDEOpenVSCode):
-		return startInBrowser(ctx, client, result.SubstitutionContext.ContainerWorkspaceFolder, user, ideConfig.Options, log.Default)
+		return startInBrowser(ctx, devPodConfig, client, result.SubstitutionContext.ContainerWorkspaceFolder, user, ideConfig.Options, log.Default)
 	case string(config.IDEGoland):
 		return jetbrains.NewGolandServer(config2.GetRemoteUser(result), ideConfig.Options, log.Default).OpenGateway(result.SubstitutionContext.ContainerWorkspaceFolder, client.Workspace())
 	case string(config.IDEPyCharm):
@@ -134,7 +134,7 @@ func startVSCodeLocally(client client2.WorkspaceClient, workspaceFolder string, 
 	return nil
 }
 
-func startInBrowser(ctx context.Context, client client2.WorkspaceClient, workspaceFolder, user string, ideOptions map[string]config.OptionValue, log *log.StreamLogger) error {
+func startInBrowser(ctx context.Context, devPodConfig *config.Config, client client2.WorkspaceClient, workspaceFolder, user string, ideOptions map[string]config.OptionValue, log *log.StreamLogger) error {
 	// determine port
 	vscodePort, err := port.FindAvailablePort(openvscode.DefaultVSCodePort)
 	if err != nil {
@@ -165,7 +165,7 @@ func startInBrowser(ctx context.Context, client client2.WorkspaceClient, workspa
 	err = tunnel.NewContainerTunnel(client, log).Run(ctx, nil, func(ctx context.Context, client *ssh.Client) error {
 		log.Debugf("Connected to container")
 		go func() {
-			err := runCredentialsServer(ctx, client, user, true, true, log)
+			err := runCredentialsServer(ctx, devPodConfig, client, user, true, true, log)
 			if err != nil {
 				log.Errorf("error running credentials server: %v", err)
 			}

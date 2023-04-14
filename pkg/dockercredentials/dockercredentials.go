@@ -5,6 +5,7 @@ import (
 	"github.com/docker/cli/cli/config"
 	"github.com/loft-sh/devpod/pkg/command"
 	"github.com/loft-sh/devpod/pkg/docker"
+	"github.com/loft-sh/devpod/pkg/file"
 	"github.com/loft-sh/devpod/pkg/random"
 	"github.com/pkg/errors"
 	"os"
@@ -38,16 +39,16 @@ func ConfigureCredentialsContainer(userName string, port int) error {
 		configDir = filepath.Join(userHome, ".docker")
 	}
 
-	return configureCredentials("/usr/local/bin", configDir, port)
+	return configureCredentials(userName, "/usr/local/bin", configDir, port)
 }
 
-func configureCredentials(targetDir, configDir string, port int) error {
+func configureCredentials(userName string, targetDir, configDir string, port int) error {
 	binaryPath, err := os.Executable()
 	if err != nil {
 		return err
 	}
 
-	err = os.MkdirAll(configDir, 0777)
+	err = file.MkdirAll(userName, configDir, 0777)
 	if err != nil {
 		return err
 	}
@@ -70,9 +71,9 @@ func configureCredentials(targetDir, configDir string, port int) error {
 		return err
 	}
 
-	err = os.Chmod(dockerConfig.Filename, 0666)
+	err = file.Chown(userName, dockerConfig.Filename)
 	if err != nil {
-		return errors.Wrap(err, "change permissions docker.config")
+		return err
 	}
 
 	return nil
@@ -80,7 +81,7 @@ func configureCredentials(targetDir, configDir string, port int) error {
 
 func ConfigureCredentialsMachine(targetFolder string, port int) (string, error) {
 	dockerConfigDir := filepath.Join(targetFolder, ".cache", random.String(12))
-	err := configureCredentials(dockerConfigDir, dockerConfigDir, port)
+	err := configureCredentials("", dockerConfigDir, dockerConfigDir, port)
 	if err != nil {
 		_ = os.RemoveAll(dockerConfigDir)
 		return "", err
