@@ -91,7 +91,6 @@ export function ConfigureProviderOptionsForm({
     }: Readonly<{ providerID: TProviderID; config: TConfigureProviderConfig }>) => {
       console.info(config)
       ;(await client.providers.configure(providerID, config)).unwrap()
-      await queryClient.invalidateQueries([QueryKeys.PROVIDERS, providerID])
     },
     onSuccess() {
       onFinish?.()
