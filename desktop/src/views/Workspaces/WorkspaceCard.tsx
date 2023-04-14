@@ -89,14 +89,6 @@ export function WorkspaceCard({ workspaceID, onSelectionChange }: TWorkspaceCard
 
   const isLoading = useMemo(() => {
     if (workspace.current?.status === "pending") {
-      // if vscode browser we are not loading
-      if (
-        (workspace.current?.name === "start" || workspace.current?.name === "rebuild") &&
-        workspace.data?.ide?.name === "openvscode"
-      ) {
-        return false
-      }
-
       return true
     }
 
