@@ -3,7 +3,6 @@ package framework
 import (
 	"bytes"
 	"context"
-	"errors"
 	"fmt"
 	"io"
 	"os"

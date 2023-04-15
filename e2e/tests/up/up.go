@@ -378,6 +378,37 @@ var _ = DevPodDescribe("devpod up test suite", func() {
 				gomega.Expect(containerDetail.Config.Entrypoint).NotTo(gomega.ContainElement("bash"), "overrides container entry point")
 				gomega.Expect(containerDetail.Config.Cmd).To(gomega.BeEmpty(), "overrides container command")
 			}, ginkgo.SpecTimeout(60*time.Second))
+
+			ginkgo.It("should start a new workspace with remote env", func(ctx context.Context) {
+				tempDir, err := framework.CopyToTempDir("tests/up/testdata/docker-compose-remote-env")
+				framework.ExpectNoError(err)
+				defer framework.CleanupTempDir(initialDir, tempDir)
+
+				f := framework.NewDefaultFramework(initialDir + "/bin")
+				_ = f.DevPodProviderAdd([]string{"docker"})
+				err = f.DevPodProviderUse(context.Background(), "docker")
+				framework.ExpectNoError(err)
+
+				err = f.DevPodUp(ctx, tempDir)
+				framework.ExpectNoError(err)
+
+				// Check for docker-compose container running
+				projectName := composeHelper.ToProjectName(filepath.Base(tempDir))
+				defer f.DevPodWorkspaceDelete(ctx, projectName)
+
+				ids, err := dockerHelper.FindContainer([]string{
+					fmt.Sprintf("%s=%s", compose.ProjectLabel, projectName),
+					fmt.Sprintf("%s=%s", compose.ServiceLabel, "app"),
+				})
+				framework.ExpectNoError(err)
+				gomega.Expect(len(ids)).To(gomega.Equal(1), "1 compose container to be created")
+
+				err = f.ExecCommand(ctx, true, true, "/home/vscode/remote-env.out", []string{"ssh", "--command", "ls /home/vscode/remote-env.out", projectName})
+				framework.ExpectNoError(err)
+
+				err = f.ExecCommand(ctx, true, true, "BAR", []string{"ssh", "--command", "cat /home/vscode/remote-env.out", projectName})
+				framework.ExpectNoError(err)
+			}, ginkgo.SpecTimeout(60*time.Second))
 		})
 	})
 
