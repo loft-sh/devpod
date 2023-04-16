@@ -4,7 +4,7 @@ import (
 	"context"
 	"fmt"
 	"github.com/loft-sh/devpod/cmd/flags"
-	"github.com/loft-sh/devpod/pkg/agent"
+	devagent "github.com/loft-sh/devpod/pkg/agent"
 	"github.com/loft-sh/devpod/pkg/client"
 	"github.com/loft-sh/devpod/pkg/config"
 	"github.com/loft-sh/devpod/pkg/log"
@@ -12,9 +12,11 @@ import (
 	"github.com/loft-sh/devpod/pkg/token"
 	"github.com/loft-sh/devpod/pkg/workspace"
 	"github.com/mattn/go-isatty"
+	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 	"golang.org/x/crypto/ssh"
+	agent "golang.org/x/crypto/ssh/agent"
 	"golang.org/x/term"
 	"io"
 	"os"
@@ -24,7 +26,8 @@ import (
 type SSHCmd struct {
 	*flags.GlobalFlags
 
-	Command string
+	Command         string
+	AgentForwarding bool
 }
 
 // NewSSHCmd creates a new destroy command
@@ -41,6 +44,7 @@ func NewSSHCmd(flags *flags.GlobalFlags) *cobra.Command {
 	}
 
 	sshCmd.Flags().StringVar(&cmd.Command, "command", "", "The command to execute on the remote machine")
+	sshCmd.Flags().BoolVar(&cmd.AgentForwarding, "agent-forwarding", false, "If true, will forward the local ssh keys")
 	return sshCmd
 }
 
@@ -72,12 +76,12 @@ func (cmd *SSHCmd) Run(ctx context.Context, args []string) error {
 	defer writer.Close()
 
 	// start the ssh session
-	return StartSSHSession(ctx, privateKey, "", cmd.Command, func(ctx context.Context, stdin io.Reader, stdout io.Writer, stderr io.Writer) error {
+	return StartSSHSession(ctx, privateKey, "", cmd.Command, cmd.AgentForwarding, func(ctx context.Context, stdin io.Reader, stdout io.Writer, stderr io.Writer) error {
 		command := fmt.Sprintf("%s helper ssh-server --token '%s' --stdio", machineClient.AgentPath(), tok)
 		if cmd.Debug {
 			command += " --debug"
 		}
-		return agent.InjectAgentAndExecute(ctx, func(ctx context.Context, command string, stdin io.Reader, stdout io.Writer, stderr io.Writer) error {
+		return devagent.InjectAgentAndExecute(ctx, func(ctx context.Context, command string, stdin io.Reader, stdout io.Writer, stderr io.Writer) error {
 			return machineClient.Command(ctx, client.CommandOptions{
 				Command: command,
 				Stdin:   stdin,
@@ -90,7 +94,7 @@ func (cmd *SSHCmd) Run(ctx context.Context, args []string) error {
 
 type ExecFunc func(ctx context.Context, stdin io.Reader, stdout io.Writer, stderr io.Writer) error
 
-func StartSSHSession(ctx context.Context, privateKey []byte, user, command string, exec ExecFunc, stderr io.Writer) error {
+func StartSSHSession(ctx context.Context, privateKey []byte, user, command string, agentForwarding bool, exec ExecFunc, stderr io.Writer) error {
 	// create readers
 	stdoutReader, stdoutWriter, err := os.Pipe()
 	if err != nil {
@@ -127,6 +131,20 @@ func StartSSHSession(ctx context.Context, privateKey []byte, user, command strin
 		stdout io.Writer = os.Stdout
 		stdin  io.Reader = os.Stdin
 	)
+
+	// request agent forwarding
+	authSock := os.Getenv("SSH_AUTH_SOCK")
+	if agentForwarding && authSock != "" {
+		err = agent.ForwardToRemote(sshClient, authSock)
+		if err != nil {
+			return errors.Errorf("forward agent: %v", err)
+		}
+
+		err = agent.RequestAgentForwarding(session)
+		if err != nil {
+			return errors.Errorf("request agent forwarding: %v", err)
+		}
+	}
 
 	stdoutFile, validOut := stdout.(*os.File)
 	stdinFile, validIn := stdin.(*os.File)

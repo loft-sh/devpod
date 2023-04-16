@@ -67,7 +67,7 @@ func (cmd *DeleteCmd) Run(ctx context.Context, devPodConfig *config.Config, args
 		log.Default.Errorf("Error retrieving workspace: %v", err)
 
 		// delete workspace folder
-		err = clientimplementation.DeleteWorkspaceFolder(devPodConfig.DefaultContext, workspaceID)
+		err = clientimplementation.DeleteWorkspaceFolder(devPodConfig.DefaultContext, workspaceID, log.Default)
 		if err != nil {
 			return err
 		}
@@ -160,7 +160,7 @@ func (cmd *DeleteCmd) deleteSingleMachine(ctx context.Context, client client2.Wo
 		return false, errors.Wrap(err, "delete machine")
 	}
 
-	err = clientimplementation.DeleteWorkspaceFolder(client.Context(), client.Workspace())
+	err = clientimplementation.DeleteWorkspaceFolder(client.Context(), client.Workspace(), log.Default)
 	if err != nil {
 		return false, err
 	}

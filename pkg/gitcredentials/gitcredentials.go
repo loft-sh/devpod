@@ -1,9 +1,11 @@
 package gitcredentials
 
 import (
+	"context"
 	"fmt"
 	"github.com/loft-sh/devpod/pkg/command"
 	"github.com/loft-sh/devpod/pkg/file"
+	"github.com/loft-sh/devpod/pkg/git"
 	"github.com/loft-sh/devpod/pkg/scanner"
 	"github.com/pkg/errors"
 	"os"
@@ -193,7 +195,7 @@ func GetCredentials(requestObj *GitCredentials) (*GitCredentials, error) {
 
 		c = exec.Command(binaryPath, "agent", "git-credentials", "--port", gitHelperPort, "get")
 	} else {
-		c = exec.Command("git", "credential", "fill")
+		c = git.CommandContext(context.TODO(), "credential", "fill")
 	}
 
 	c.Stdin = strings.NewReader(ToString(requestObj))

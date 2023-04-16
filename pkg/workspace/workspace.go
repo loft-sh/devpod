@@ -3,11 +3,11 @@ package workspace
 import (
 	"context"
 	"fmt"
+	"github.com/loft-sh/devpod/pkg/git"
 	"io/ioutil"
 	"net/http"
 	"net/url"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"regexp"
 	"strings"
@@ -169,7 +169,7 @@ func resolveWorkspace(ctx context.Context, devPodConfig *config.Config, args []s
 	// create workspace
 	provider, workspace, machine, err := createWorkspace(ctx, devPodConfig, workspaceID, name, desiredMachine, providerUserOptions, isLocalPath, log)
 	if err != nil {
-		_ = clientimplementation.DeleteWorkspaceFolder(devPodConfig.DefaultContext, workspaceID)
+		_ = clientimplementation.DeleteWorkspaceFolder(devPodConfig.DefaultContext, workspaceID, log)
 		return nil, nil, nil, err
 	}
 
@@ -404,7 +404,7 @@ func isLocalDir(name string) (bool, string) {
 }
 
 func normalizeGitRepository(str string) (string, string) {
-	if !strings.HasPrefix(str, "git@") && !strings.HasPrefix(str, "http://") && !strings.HasPrefix(str, "https://") {
+	if !strings.HasPrefix(str, "ssh://") && !strings.HasPrefix(str, "git@") && !strings.HasPrefix(str, "http://") && !strings.HasPrefix(str, "https://") {
 		str = "https://" + str
 	}
 
@@ -434,7 +434,7 @@ func pingRepository(str string) bool {
 	timeoutCtx, cancel := context.WithTimeout(context.Background(), time.Second*10)
 	defer cancel()
 
-	_, err := exec.CommandContext(timeoutCtx, "git", "ls-remote", "--quiet", str).CombinedOutput()
+	_, err := git.CommandContext(timeoutCtx, "ls-remote", "--quiet", str).CombinedOutput()
 	if err != nil {
 		return false
 	}

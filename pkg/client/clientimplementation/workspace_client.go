@@ -13,6 +13,7 @@ import (
 	"github.com/loft-sh/devpod/pkg/options"
 	"github.com/loft-sh/devpod/pkg/provider"
 	"github.com/loft-sh/devpod/pkg/shell"
+	"github.com/loft-sh/devpod/pkg/ssh"
 	"github.com/loft-sh/devpod/pkg/types"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
@@ -250,7 +251,7 @@ func (s *workspaceClient) Delete(ctx context.Context, opt client.DeleteOptions) 
 		}
 	}
 
-	return DeleteWorkspaceFolder(s.workspace.Context, s.workspace.ID)
+	return DeleteWorkspaceFolder(s.workspace.Context, s.workspace.ID, s.log)
 }
 
 func (s *workspaceClient) isMachineRunning(ctx context.Context) (bool, error) {
@@ -479,7 +480,12 @@ func DeleteMachineFolder(context, machineID string) error {
 	return nil
 }
 
-func DeleteWorkspaceFolder(context, workspaceID string) error {
+func DeleteWorkspaceFolder(context, workspaceID string, log log.Logger) error {
+	err := ssh.RemoveFromConfig(workspaceID, log)
+	if err != nil {
+		log.Errorf("Remove workspace '%s' from ssh config: %v", workspaceID, err)
+	}
+
 	workspaceFolder, err := provider.GetWorkspaceDir(context, workspaceID)
 	if err != nil {
 		return err
