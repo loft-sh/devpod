@@ -3,12 +3,12 @@ package log
 import (
 	"errors"
 	"fmt"
-	"github.com/loft-sh/devpod/pkg/survey"
 	"io"
 	"strings"
 	"sync"
 
 	"github.com/acarl005/stripansi"
+	"github.com/loft-sh/devpod/pkg/survey"
 	"github.com/sirupsen/logrus"
 	lumberjack "gopkg.in/natefinch/lumberjack.v2"
 )
@@ -16,9 +16,9 @@ import (
 type fileLogger struct {
 	logger *logrus.Logger
 
-	m        *sync.Mutex
-	level    logrus.Level
-	sinks    []Logger
+	m     *sync.Mutex
+	level logrus.Level
+	// sinks    []Logger
 	prefixes []string
 }
 

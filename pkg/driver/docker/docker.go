@@ -3,6 +3,12 @@ package docker
 import (
 	"context"
 	"fmt"
+	"io"
+	"path"
+	"path/filepath"
+	"strconv"
+	"strings"
+
 	"github.com/loft-sh/devpod/pkg/compose"
 	config2 "github.com/loft-sh/devpod/pkg/config"
 	"github.com/loft-sh/devpod/pkg/devcontainer/config"
@@ -13,11 +19,6 @@ import (
 	provider2 "github.com/loft-sh/devpod/pkg/provider"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
-	"io"
-	"path"
-	"path/filepath"
-	"strconv"
-	"strings"
 )
 
 func NewDockerDriver(workspaceInfo *provider2.AgentWorkspaceInfo, log log.Logger) driver.Driver {
@@ -220,7 +221,7 @@ trap "exit 0" 15
 ` + strings.Join(customEntrypoints, "\n") + `
 exec "$@"
 while sleep 1 & wait $!; do :; done`, "-"} // `wait $!` allows for the `trap` to run (synchronous `sleep` would not).
-	if mergedConfig.OverrideCommand != nil && *mergedConfig.OverrideCommand == false {
+	if mergedConfig.OverrideCommand != nil && !*mergedConfig.OverrideCommand {
 		cmd = append(cmd, imageDetails.Config.Entrypoint...)
 		cmd = append(cmd, imageDetails.Config.Cmd...)
 	}

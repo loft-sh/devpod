@@ -23,7 +23,8 @@ var _ = DevPodDescribe("devpod provider test suite", func() {
 		f := framework.NewDefaultFramework(initialDir + "/bin")
 
 		// Ensure that provider 1 is deleted
-		f.DevPodProviderDelete([]string{"provider1"})
+		err = f.DevPodProviderDelete([]string{"provider1"})
+		framework.ExpectNoError(err)
 
 		// Add provider 1
 		err = f.DevPodProviderAdd([]string{tempDir + "/provider1.yaml"})
@@ -51,7 +52,8 @@ var _ = DevPodDescribe("devpod provider test suite", func() {
 		f := framework.NewDefaultFramework(initialDir + "/bin")
 
 		// Ensure that provider 2 is deleted
-		f.DevPodProviderDelete([]string{"provider2"})
+		err = f.DevPodProviderDelete([]string{"provider2"})
+		framework.ExpectNoError(err)
 
 		// Add provider 2 and use it
 		err = f.DevPodProviderAdd([]string{tempDir + "/provider2.yaml"})
@@ -60,18 +62,20 @@ var _ = DevPodDescribe("devpod provider test suite", func() {
 		framework.ExpectNoError(err)
 
 		// Ensure provider 2 namespace parameter has the default value
-		ctx, _ := context.WithDeadline(context.Background(), time.Now().Add(30*time.Second))
+		ctx, cancel := context.WithDeadline(context.Background(), time.Now().Add(30*time.Second))
 		err = f.DevPodProviderOptionsCheckNamespaceDescription(ctx, "provider2", "The namespace to use")
 		framework.ExpectNoError(err)
+		cancel()
 
 		// Update provider 2 (change the namespace description value)
 		err = f.DevPodProviderUpdate([]string{"provider2", tempDir + "/provider2-update.yaml"})
 		framework.ExpectNoError(err)
 
 		// Ensure that provider 2 was updated
-		ctx, _ = context.WithDeadline(context.Background(), time.Now().Add(30*time.Second))
+		ctx, cancel = context.WithDeadline(context.Background(), time.Now().Add(30*time.Second))
 		err = f.DevPodProviderOptionsCheckNamespaceDescription(ctx, "provider2", "Updated namespace parameter description")
 		framework.ExpectNoError(err)
+		cancel()
 
 		// Cleanup: delete provider 2
 		err = f.DevPodProviderDelete([]string{"provider2"})

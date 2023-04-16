@@ -3,6 +3,9 @@ package helper
 import (
 	"encoding/base64"
 	"fmt"
+	"os"
+	"time"
+
 	"github.com/gliderlabs/ssh"
 	"github.com/loft-sh/devpod/cmd/flags"
 	"github.com/loft-sh/devpod/pkg/agent"
@@ -13,8 +16,6 @@ import (
 	"github.com/loft-sh/devpod/pkg/token"
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
-	"os"
-	"time"
 )
 
 // SSHServerCmd holds the ssh server cmd flags
@@ -105,13 +106,9 @@ func (cmd *SSHServerCmd) Run(_ *cobra.Command, _ []string) error {
 					_ = os.Chmod(agent.ContainerActivityFile, 0777)
 				}
 
-				for {
-					select {
-					case <-time.After(time.Second * 10):
-						now := time.Now()
-						_ = os.Chtimes(agent.ContainerActivityFile, now, now)
-					}
-				}
+				time.Sleep(time.Second * 10)
+				now := time.Now()
+				_ = os.Chtimes(agent.ContainerActivityFile, now, now)
 			}()
 		}
 
@@ -123,7 +120,7 @@ func (cmd *SSHServerCmd) Run(_ *cobra.Command, _ []string) error {
 	available, err := port.IsAvailable(cmd.Address)
 	if !available {
 		if err != nil {
-			return fmt.Errorf("address %s already in use: %v", cmd.Address, err)
+			return fmt.Errorf("address %s already in use: %w", cmd.Address, err)
 		}
 
 		log.Default.ErrorStreamOnly().Debugf("address %s already in use", cmd.Address)

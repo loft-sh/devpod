@@ -1,11 +1,13 @@
 package daemon
 
 import (
+	"errors"
 	"fmt"
-	"github.com/loft-sh/devpod/pkg/log"
-	"github.com/pkg/errors"
-	"github.com/takama/daemon"
 	"runtime"
+
+	"github.com/loft-sh/devpod/pkg/log"
+	perrors "github.com/pkg/errors"
+	"github.com/takama/daemon"
 )
 
 func InstallDaemon(agentDir string, log log.Logger) error {
@@ -25,14 +27,14 @@ func InstallDaemon(agentDir string, log log.Logger) error {
 		args = append(args, "--agent-dir", agentDir)
 	}
 	_, err = service.Install(args...)
-	if err != nil && err != daemon.ErrAlreadyInstalled {
-		return errors.Wrap(err, "install service")
+	if err != nil && !errors.Is(err, daemon.ErrAlreadyInstalled) {
+		return perrors.Wrap(err, "install service")
 	}
 
 	// make sure daemon is started
 	_, err = service.Start()
-	if err != nil && err != daemon.ErrAlreadyRunning {
-		return errors.Wrap(err, "start service")
+	if err != nil && !errors.Is(err, daemon.ErrAlreadyRunning) {
+		return perrors.Wrap(err, "start service")
 	} else if err == nil {
 		log.Infof("Successfully installed DevPod daemon into server")
 	}
@@ -53,7 +55,7 @@ func RemoveDaemon() error {
 
 	// remove daemon
 	_, err = service.Remove()
-	if err != nil && err != daemon.ErrNotInstalled {
+	if err != nil && !errors.Is(err, daemon.ErrNotInstalled) {
 		return err
 	}
 

@@ -2,13 +2,13 @@ package language
 
 import (
 	"bytes"
+	"io"
+	"os"
+	"path/filepath"
+
 	"github.com/go-enry/go-enry/v2"
 	"github.com/loft-sh/devpod/pkg/devcontainer/config"
 	"github.com/loft-sh/devpod/pkg/log"
-	"io"
-	"io/ioutil"
-	"os"
-	"path/filepath"
 )
 
 type ProgrammingLanguage string
@@ -49,52 +49,52 @@ var MapLanguages = map[ProgrammingLanguage]ProgrammingLanguage{
 }
 
 var MapConfig = map[ProgrammingLanguage]*config.DevContainerConfig{
-	None: &config.DevContainerConfig{
+	None: {
 		ImageContainer: config.ImageContainer{
 			Image: "mcr.microsoft.com/devcontainers/base:ubuntu",
 		},
 	},
-	JavaScript: &config.DevContainerConfig{
+	JavaScript: {
 		ImageContainer: config.ImageContainer{
 			Image: "mcr.microsoft.com/devcontainers/javascript-node",
 		},
 	},
-	Python: &config.DevContainerConfig{
+	Python: {
 		ImageContainer: config.ImageContainer{
 			Image: "mcr.microsoft.com/devcontainers/python:3",
 		},
 	},
-	Java: &config.DevContainerConfig{
+	Java: {
 		ImageContainer: config.ImageContainer{
 			Image: "mcr.microsoft.com/devcontainers/java",
 		},
 	},
-	Go: &config.DevContainerConfig{
+	Go: {
 		ImageContainer: config.ImageContainer{
 			Image: "mcr.microsoft.com/devcontainers/go",
 		},
 	},
-	Rust: &config.DevContainerConfig{
+	Rust: {
 		ImageContainer: config.ImageContainer{
 			Image: "mcr.microsoft.com/devcontainers/rust:latest",
 		},
 	},
-	Ruby: &config.DevContainerConfig{
+	Ruby: {
 		ImageContainer: config.ImageContainer{
 			Image: "mcr.microsoft.com/devcontainers/ruby",
 		},
 	},
-	PHP: &config.DevContainerConfig{
+	PHP: {
 		ImageContainer: config.ImageContainer{
 			Image: "mcr.microsoft.com/devcontainers/php",
 		},
 	},
-	Cpp: &config.DevContainerConfig{
+	Cpp: {
 		ImageContainer: config.ImageContainer{
 			Image: "mcr.microsoft.com/devcontainers/cpp",
 		},
 	},
-	DotNet: &config.DevContainerConfig{
+	DotNet: {
 		ImageContainer: config.ImageContainer{
 			Image: "mcr.microsoft.com/devcontainers/dotnet",
 		},
@@ -226,7 +226,7 @@ func DetectLanguage(startPath string) (ProgrammingLanguage, error) {
 
 func readFile(path string, limit int64) ([]byte, error) {
 	if limit <= 0 {
-		return ioutil.ReadFile(path)
+		return os.ReadFile(path)
 	}
 	f, err := os.Open(path)
 	if err != nil {

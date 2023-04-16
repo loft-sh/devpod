@@ -1,7 +1,11 @@
 package cmd
 
 import (
+	"errors"
 	"fmt"
+	"os"
+	"os/exec"
+
 	"github.com/loft-sh/devpod/cmd/agent"
 	"github.com/loft-sh/devpod/cmd/context"
 	"github.com/loft-sh/devpod/cmd/flags"
@@ -11,12 +15,10 @@ import (
 	"github.com/loft-sh/devpod/cmd/provider"
 	"github.com/loft-sh/devpod/cmd/use"
 	log2 "github.com/loft-sh/devpod/pkg/log"
-	"github.com/pkg/errors"
+	perrors "github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 	"golang.org/x/crypto/ssh"
-	"os"
-	"os/exec"
 )
 
 var globalFlags *flags.GlobalFlags
@@ -55,14 +57,17 @@ func Execute() {
 	// execute command
 	err := rootCmd.Execute()
 	if err != nil {
-		if exitErr, ok := errors.Cause(err).(*ssh.ExitError); ok {
-			os.Exit(exitErr.ExitStatus())
+		var sshExitErr *ssh.ExitError
+		if errors.As(perrors.Cause(err), &sshExitErr) {
+			os.Exit(sshExitErr.ExitStatus())
 		}
-		if exitErr, ok := errors.Cause(err).(*exec.ExitError); ok {
-			if len(exitErr.Stderr) > 0 {
-				log2.Default.ErrorStreamOnly().Error(string(exitErr.Stderr))
+
+		var execExitErr *exec.ExitError
+		if errors.As(perrors.Cause(err), &execExitErr) {
+			if len(execExitErr.Stderr) > 0 {
+				log2.Default.ErrorStreamOnly().Error(string(execExitErr.Stderr))
 			}
-			os.Exit(exitErr.ExitCode())
+			os.Exit(execExitErr.ExitCode())
 		}
 
 		if globalFlags.Debug {

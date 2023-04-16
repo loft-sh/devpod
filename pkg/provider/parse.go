@@ -4,14 +4,15 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
-	"github.com/blang/semver"
-	"github.com/ghodss/yaml"
-	"github.com/pkg/errors"
 	"io"
 	"regexp"
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/blang/semver"
+	"github.com/ghodss/yaml"
+	"github.com/pkg/errors"
 )
 
 var ProviderNameRegEx = regexp.MustCompile(`[^a-z0-9\-]+`)
@@ -82,7 +83,7 @@ func validate(config *ProviderConfig) error {
 		if optionValue.ValidationPattern != "" {
 			_, err := regexp.Compile(optionValue.ValidationPattern)
 			if err != nil {
-				return fmt.Errorf("error parsing validation pattern '%s' for option '%s': %v", optionValue.ValidationPattern, optionName, err)
+				return fmt.Errorf("error parsing validation pattern '%s' for option '%s': %w", optionValue.ValidationPattern, optionName, err)
 			}
 		}
 
@@ -97,7 +98,7 @@ func validate(config *ProviderConfig) error {
 		if optionValue.Cache != "" {
 			_, err := time.ParseDuration(optionValue.Cache)
 			if err != nil {
-				return fmt.Errorf("invalid cache value for option '%s': %v", optionName, err)
+				return fmt.Errorf("invalid cache value for option '%s': %w", optionName, err)
 			}
 		}
 

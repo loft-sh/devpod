@@ -3,6 +3,14 @@ package devcontainer
 import (
 	"context"
 	"fmt"
+	"os"
+	"path"
+	"path/filepath"
+	"reflect"
+	"regexp"
+	"strings"
+	"time"
+
 	composetypes "github.com/compose-spec/compose-go/types"
 	"github.com/joho/godotenv"
 	"github.com/loft-sh/devpod/pkg/compose"
@@ -13,13 +21,6 @@ import (
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 	"gopkg.in/yaml.v2"
-	"os"
-	"path"
-	"path/filepath"
-	"reflect"
-	"regexp"
-	"strings"
-	"time"
 )
 
 const (
@@ -239,16 +240,16 @@ func (r *Runner) startContainer(parsedConfig *config.SubstitutedConfig, project 
 	}
 
 	var didRestoreFromPersistedShare bool
-	var composeGlobalArgs []string
+	// var composeGlobalArgs []string
 	if container != nil {
 		labels := container.Config.Labels
 		if labels[ConfigFilesLabel] != "" {
 			configFiles := strings.Split(labels[ConfigFilesLabel], ",")
-			persistedBuildFileFound, persistedBuildFileExists, persistedBuildFile, err := checkForPersistedFile(configFiles, FeaturesBuildOverrideFilePrefix)
+			persistedBuildFileFound, persistedBuildFileExists, _, err := checkForPersistedFile(configFiles, FeaturesBuildOverrideFilePrefix)
 			if err != nil {
 				return nil, errors.Wrap(err, "check for persisted build override")
 			}
-			_, persistedStartFileExists, persistedStartFile, err := checkForPersistedFile(configFiles, FeaturesStartOverrideFilePrefix)
+			_, persistedStartFileExists, _, err := checkForPersistedFile(configFiles, FeaturesStartOverrideFilePrefix)
 			if err != nil {
 				return nil, errors.Wrap(err, "check for persisted start override")
 			}
@@ -256,13 +257,13 @@ func (r *Runner) startContainer(parsedConfig *config.SubstitutedConfig, project 
 			if (persistedBuildFileExists || !persistedBuildFileFound) && persistedStartFileExists {
 				didRestoreFromPersistedShare = true
 
-				if persistedBuildFileExists {
-					composeGlobalArgs = append(composeGlobalArgs, "-f", persistedBuildFile)
-				}
+				// if persistedBuildFileExists {
+				// 	composeGlobalArgs = append(composeGlobalArgs, "-f", persistedBuildFile)
+				// }
 
-				if persistedStartFileExists {
-					composeGlobalArgs = append(composeGlobalArgs, "-f", persistedStartFile)
-				}
+				// if persistedStartFileExists {
+				// 	composeGlobalArgs = append(composeGlobalArgs, "-f", persistedStartFile)
+				// }
 			}
 		}
 	}
@@ -701,7 +702,7 @@ func mappingFromMap(m map[string]string) composetypes.MappingWithEquals {
 }
 
 func mappingToMap(mapping composetypes.MappingWithEquals) map[string]string {
-	var ret map[string]string
+	ret := map[string]string{}
 	for k, v := range mapping {
 		ret[k] = *v
 	}

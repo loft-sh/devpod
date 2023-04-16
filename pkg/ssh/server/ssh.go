@@ -1,9 +1,8 @@
 package server
 
 import (
+	"errors"
 	"fmt"
-	"github.com/loft-sh/devpod/pkg/command"
-	"github.com/sirupsen/logrus"
 	"io"
 	"net"
 	"os"
@@ -14,9 +13,11 @@ import (
 	"time"
 
 	"github.com/gliderlabs/ssh"
+	"github.com/loft-sh/devpod/pkg/command"
 	"github.com/loft-sh/devpod/pkg/log"
-	"github.com/pkg/errors"
+	perrors "github.com/pkg/errors"
 	"github.com/pkg/sftp"
+	"github.com/sirupsen/logrus"
 )
 
 var DefaultPort = 8022
@@ -115,7 +116,7 @@ func (s *Server) handler(sess ssh.Session) {
 	if ssh.AgentRequested(sess) {
 		l, err := ssh.NewAgentListener()
 		if err != nil {
-			s.exitWithError(sess, errors.Wrap(err, "start agent"))
+			s.exitWithError(sess, perrors.Wrap(err, "start agent"))
 			return
 		}
 
@@ -157,7 +158,7 @@ func (s *Server) HandleNonPTY(sess ssh.Session, cmd *exec.Cmd) (err error) {
 	// start the command
 	err = cmd.Start()
 	if err != nil {
-		return errors.Wrap(err, "start command")
+		return perrors.Wrap(err, "start command")
 	}
 
 	go func() {
@@ -203,7 +204,7 @@ func HandlePTY(sess ssh.Session, ptyReq ssh.Pty, winCh <-chan ssh.Window, cmd *e
 	cmd.Env = append(cmd.Env, fmt.Sprintf("TERM=%s", ptyReq.Term))
 	f, err := startPTY(cmd)
 	if err != nil {
-		return errors.Wrap(err, "start pty")
+		return perrors.Wrap(err, "start pty")
 	}
 	defer f.Close()
 
@@ -280,8 +281,8 @@ func (s *Server) getCommand(sess ssh.Session) *exec.Cmd {
 
 func (s *Server) exitWithError(sess ssh.Session, err error) {
 	if err != nil {
-		_, ok := errors.Cause(err).(*exec.ExitError)
-		if !ok {
+		var exitError *exec.ExitError
+		if !errors.As(perrors.Cause(err), &exitError) {
 			s.log.Errorf("Exit error: %v", err)
 			msg := strings.TrimPrefix(err.Error(), "exec: ")
 			if _, err := sess.Stderr().Write([]byte(msg)); err != nil {
@@ -323,7 +324,7 @@ func SftpHandler(sess ssh.Session, currentUser string, log log.Logger) {
 
 	// serve
 	err = server.Serve()
-	if err == io.EOF {
+	if errors.Is(err, io.EOF) {
 		_ = sess.Exit(0)
 		return
 	}
@@ -335,13 +336,13 @@ func SftpHandler(sess ssh.Session, currentUser string, log log.Logger) {
 }
 
 func ExitCode(err error) int {
-	err = errors.Cause(err)
+	err = perrors.Cause(err)
 	if err == nil {
 		return 0
 	}
 
-	exitErr, ok := err.(*exec.ExitError)
-	if !ok {
+	var exitErr *exec.ExitError
+	if !errors.As(err, &exitErr) {
 		return 1
 	}
 

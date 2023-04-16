@@ -4,6 +4,13 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"os"
+	"reflect"
+	"regexp"
+	"sort"
+	"strings"
+	"time"
+
 	"github.com/loft-sh/devpod/pkg/agent"
 	"github.com/loft-sh/devpod/pkg/binaries"
 	"github.com/loft-sh/devpod/pkg/config"
@@ -15,12 +22,6 @@ import (
 	"github.com/loft-sh/devpod/pkg/terminal"
 	"github.com/loft-sh/devpod/pkg/types"
 	"github.com/pkg/errors"
-	"os"
-	"reflect"
-	"regexp"
-	"sort"
-	"strings"
-	"time"
 )
 
 var variableExpression = regexp.MustCompile(`(?m)\$\{?([A-Z0-9_]+)(:(-|\+)([^\}]+))?\}?`)
@@ -66,11 +67,14 @@ func ResolveAndSaveOptionsMachine(ctx context.Context, devConfig *config.Config,
 	filterResolvedOptions(resolvedOptions, beforeConfigOptions, devConfig.ProviderOptions(provider.Name), provider.Options, userOptions)
 
 	// save machine config
-	machine.Provider.Options = resolvedOptions
-	if machine != nil && !reflect.DeepEqual(beforeConfigOptions, machine.Provider.Options) {
-		err = provider2.SaveMachineConfig(machine)
-		if err != nil {
-			return machine, err
+	if machine != nil {
+		machine.Provider.Options = resolvedOptions
+
+		if !reflect.DeepEqual(beforeConfigOptions, machine.Provider.Options) {
+			err = provider2.SaveMachineConfig(machine)
+			if err != nil {
+				return machine, err
+			}
 		}
 	}
 
@@ -116,11 +120,14 @@ func ResolveAndSaveOptionsWorkspace(ctx context.Context, devConfig *config.Confi
 	filterResolvedOptions(resolvedOptions, beforeConfigOptions, devConfig.ProviderOptions(provider.Name), provider.Options, userOptions)
 
 	// save workspace config
-	workspace.Provider.Options = resolvedOptions
-	if workspace != nil && !reflect.DeepEqual(beforeConfigOptions, workspace.Provider.Options) {
-		err = provider2.SaveWorkspaceConfig(workspace)
-		if err != nil {
-			return workspace, err
+	if workspace != nil {
+		workspace.Provider.Options = resolvedOptions
+
+		if !reflect.DeepEqual(beforeConfigOptions, workspace.Provider.Options) {
+			err = provider2.SaveWorkspaceConfig(workspace)
+			if err != nil {
+				return workspace, err
+			}
 		}
 	}
 

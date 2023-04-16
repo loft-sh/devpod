@@ -5,6 +5,11 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"os"
+	"path/filepath"
+	"strings"
+	"time"
+
 	"github.com/loft-sh/devpod/cmd/flags"
 	"github.com/loft-sh/devpod/pkg/agent"
 	"github.com/loft-sh/devpod/pkg/binaries"
@@ -13,10 +18,6 @@ import (
 	provider2 "github.com/loft-sh/devpod/pkg/provider"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
-	"os"
-	"path/filepath"
-	"strings"
-	"time"
 )
 
 // DaemonCmd holds the cmd flags
@@ -61,12 +62,8 @@ func (cmd *DaemonCmd) patrol(log log.Logger) {
 	cmd.initialTouch(log)
 
 	// loop over workspace configs and check their last ModTime
-	for {
-		select {
-		case <-time.After(time.Minute):
-			cmd.doOnce(log)
-		}
-	}
+	time.Sleep(time.Minute)
+	cmd.doOnce(log)
 }
 
 func (cmd *DaemonCmd) doOnce(log log.Logger) {
@@ -141,7 +138,7 @@ func (cmd *DaemonCmd) doOnce(log log.Logger) {
 		buf,
 	)
 	if err != nil {
-		log.Errorf("Error running %s: %s%v", strings.Join(workspace.Agent.Exec.Shutdown, " "), buf.String(), err)
+		log.Errorf("Error running %s: %s%w", strings.Join(workspace.Agent.Exec.Shutdown, " "), buf.String(), err)
 		return
 	}
 
@@ -152,13 +149,13 @@ func toEnvironWithBinaries(agentDir string, workspace *provider2.AgentWorkspaceI
 	// get binaries dir
 	binariesDir, err := agent.GetAgentBinariesDir(agentDir, workspace.Workspace.Context, workspace.Workspace.ID)
 	if err != nil {
-		return nil, fmt.Errorf("error getting workspace %s binaries dir: %v", workspace.Workspace.ID, err)
+		return nil, fmt.Errorf("error getting workspace %s binaries dir: %w", workspace.Workspace.ID, err)
 	}
 
 	// download binaries
 	agentBinaries, err := binaries.DownloadBinaries(workspace.Agent.Binaries, binariesDir, log)
 	if err != nil {
-		return nil, fmt.Errorf("error downloading workspace %s binaries: %v", workspace.Workspace.ID, err)
+		return nil, fmt.Errorf("error downloading workspace %s binaries: %w", workspace.Workspace.ID, err)
 	}
 
 	// get environ

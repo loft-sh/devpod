@@ -3,17 +3,18 @@ package credentials
 import (
 	"context"
 	"encoding/json"
+	"io"
+	"net/http"
+	"os"
+	"path/filepath"
+	"strconv"
+
 	"github.com/gofrs/flock"
 	"github.com/loft-sh/devpod/pkg/agent/tunnel"
 	"github.com/loft-sh/devpod/pkg/dockercredentials"
 	"github.com/loft-sh/devpod/pkg/gitcredentials"
 	"github.com/loft-sh/devpod/pkg/log"
 	"github.com/pkg/errors"
-	"io"
-	"net/http"
-	"os"
-	"path/filepath"
-	"strconv"
 )
 
 func RunCredentialsServer(ctx context.Context, userName string, port int, configureGitHelper, configureDockerHelper bool, client tunnel.TunnelClient, log log.Logger) error {
@@ -25,7 +26,9 @@ func RunCredentialsServer(ctx context.Context, userName string, port int, config
 		} else if !locked {
 			return nil
 		}
-		defer fileLock.Unlock()
+		defer func(fileLock *flock.Flock) {
+			_ = fileLock.Unlock()
+		}(fileLock)
 
 		binaryPath, err := os.Executable()
 		if err != nil {
@@ -63,7 +66,9 @@ func RunCredentialsServer(ctx context.Context, userName string, port int, config
 			}
 
 			// cleanup when we are done
-			defer gitcredentials.RemoveHelper(userName)
+			defer func(userName string) {
+				_ = gitcredentials.RemoveHelper(userName)
+			}(userName)
 		}
 	}
 

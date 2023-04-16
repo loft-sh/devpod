@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	_ "embed"
+	"errors"
 	"fmt"
 	"io"
 	"os"
@@ -14,7 +15,7 @@ import (
 
 	"github.com/loft-sh/devpod/pkg/log"
 	"github.com/loft-sh/devpod/pkg/template"
-	"github.com/pkg/errors"
+	perrors "github.com/pkg/errors"
 )
 
 //go:embed inject.sh
@@ -95,7 +96,7 @@ func InjectAndExecute(
 		defer log.Debugf("done exec")
 
 		err := exec(cancelCtx, t, stdinReader, stdoutWriter, stderr)
-		if err != nil && err != context.Canceled && !strings.Contains(err.Error(), "signal: ") {
+		if err != nil && !errors.Is(err, context.Canceled) && !strings.Contains(err.Error(), "signal: ") {
 			execErrChan <- err
 		} else {
 			execErrChan <- nil
@@ -167,7 +168,7 @@ func inject(localFile LocalFile, stdout io.ReadCloser, stdoutOut io.Writer, stdi
 	// send our response
 	_, err := stdin.Write([]byte("pong\n"))
 	if err != nil {
-		return false, errors.Wrap(err, "write to stdin")
+		return false, perrors.Wrap(err, "write to stdin")
 	}
 
 	// wait until we read something
@@ -232,7 +233,7 @@ func inject(localFile LocalFile, stdout io.ReadCloser, stdoutOut io.Writer, stdi
 
 func readLine(reader io.Reader) (string, error) {
 	// we always only read a single byte
-	buf := make([]byte, 1, 1)
+	buf := make([]byte, 1)
 	str := ""
 	for {
 		n, err := reader.Read(buf)

@@ -4,7 +4,13 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
+	"io"
+	"os"
+	"os/exec"
+	"sync"
+
 	"github.com/loft-sh/devpod/pkg/binaries"
 	"github.com/loft-sh/devpod/pkg/client"
 	"github.com/loft-sh/devpod/pkg/compress"
@@ -15,12 +21,8 @@ import (
 	"github.com/loft-sh/devpod/pkg/shell"
 	"github.com/loft-sh/devpod/pkg/ssh"
 	"github.com/loft-sh/devpod/pkg/types"
-	"github.com/pkg/errors"
+	perrors "github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
-	"io"
-	"os"
-	"os/exec"
-	"sync"
 )
 
 func NewWorkspaceClient(devPodConfig *config.Config, prov *provider.ProviderConfig, workspace *provider.Workspace, machine *provider.Machine, log log.Logger) (client.WorkspaceClient, error) {
@@ -91,7 +93,7 @@ func (s *workspaceClient) RefreshOptions(ctx context.Context, userOptionsRaw []s
 
 	userOptions, err := provider.ParseOptions(s.config, userOptionsRaw)
 	if err != nil {
-		return errors.Wrap(err, "parse options")
+		return perrors.Wrap(err, "parse options")
 	}
 
 	if s.isMachineProvider() {
@@ -231,7 +233,7 @@ func (s *workspaceClient) Delete(ctx context.Context, opt client.DeleteOptions) 
 					return err
 				}
 
-				if err != context.DeadlineExceeded {
+				if !errors.Is(err, context.DeadlineExceeded) {
 					s.log.Errorf("Error deleting container: %v", err)
 				}
 			}
@@ -268,7 +270,7 @@ func (s *workspaceClient) isMachineRunning(ctx context.Context) (bool, error) {
 	// retrieve status
 	status, err := machineClient.Status(ctx, client.StatusOptions{})
 	if err != nil {
-		return false, errors.Wrap(err, "retrieve machine status")
+		return false, perrors.Wrap(err, "retrieve machine status")
 	} else if status == client.StatusRunning {
 		return true, nil
 	}
@@ -416,12 +418,12 @@ func (s *workspaceClient) getContainerStatus(ctx context.Context) (client.Status
 		provider.CommandEnv: command,
 	}, nil, io.MultiWriter(stdout, buf), buf, s.log.ErrorStreamOnly())
 	if err != nil {
-		return client.StatusNotFound, fmt.Errorf("error retrieving container status: %s%v", buf.String(), err)
+		return client.StatusNotFound, fmt.Errorf("error retrieving container status: %s%w", buf.String(), err)
 	}
 
 	parsed, err := client.ParseStatus(stdout.String())
 	if err != nil {
-		return client.StatusNotFound, fmt.Errorf("error parsing container status: %s%v", buf.String(), err)
+		return client.StatusNotFound, fmt.Errorf("error parsing container status: %s%w", buf.String(), err)
 	}
 
 	s.log.Debugf("Container status command output (stdout & stderr): %s %s (%s)", buf.String(), stdout.String(), parsed)

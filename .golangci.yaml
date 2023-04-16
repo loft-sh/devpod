@@ -1,0 +1,17 @@
+linters:
+  # We want to gradually introduce new linters to the project
+  disable-all: true
+  enable:
+    - errcheck
+    - errname
+    - errorlint
+    - ginkgolinter
+    - gosimple
+    - govet
+    - ineffassign
+    - staticcheck
+    - typecheck
+    - unused
+
+    # - cyclop
+    # - funlen

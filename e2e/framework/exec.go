@@ -3,6 +3,7 @@ package framework
 import (
 	"bytes"
 	"context"
+	"errors"
 	"fmt"
 	"os"
 	"os/exec"
@@ -21,10 +22,10 @@ func (f *Framework) ExecCommand(ctx context.Context, captureStdOut, searchForStr
 	}
 	cmd.Stderr = &execErr
 	err := cmd.Run()
-	if err != nil && ctx.Err() != context.DeadlineExceeded {
+	if err != nil && !errors.Is(ctx.Err(), context.DeadlineExceeded) {
 		return fmt.Errorf("%s: %s", err.Error(), execErr.String())
 	}
-	if ctx.Err() == context.DeadlineExceeded {
+	if errors.Is(ctx.Err(), context.DeadlineExceeded) {
 		if searchForString && captureStdOut {
 			if strings.Contains(execOut.String(), searchString) {
 				return nil

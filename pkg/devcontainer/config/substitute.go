@@ -2,17 +2,18 @@ package config
 
 import (
 	"encoding/json"
-	"github.com/loft-sh/devpod/pkg/hash"
 	"math/big"
 	"path/filepath"
 	"regexp"
 	"runtime"
 	"strings"
+
+	"github.com/loft-sh/devpod/pkg/hash"
 )
 
 type ReplaceFunction func(match, variable string, args []string) string
 
-var VariableRegExp = regexp.MustCompile("\\$\\{(.*?)\\}")
+var VariableRegExp = regexp.MustCompile(`\${(.*?)}`)
 
 type SubstitutedConfig struct {
 	Config *DevContainerConfig

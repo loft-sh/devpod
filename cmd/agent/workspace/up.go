@@ -5,8 +5,6 @@ import (
 	"crypto/tls"
 	"encoding/json"
 	"fmt"
-	"github.com/loft-sh/devpod/pkg/git"
-	"github.com/loft-sh/devpod/pkg/gitcredentials"
 	"net/http"
 	"os"
 	"os/exec"
@@ -25,6 +23,8 @@ import (
 	config2 "github.com/loft-sh/devpod/pkg/devcontainer/config"
 	"github.com/loft-sh/devpod/pkg/dockercredentials"
 	"github.com/loft-sh/devpod/pkg/extract"
+	"github.com/loft-sh/devpod/pkg/git"
+	"github.com/loft-sh/devpod/pkg/gitcredentials"
 	"github.com/loft-sh/devpod/pkg/log"
 	"github.com/loft-sh/devpod/pkg/port"
 	provider2 "github.com/loft-sh/devpod/pkg/provider"
@@ -72,7 +72,7 @@ func (cmd *UpCmd) Run(ctx context.Context) error {
 	// get workspace
 	shouldExit, workspaceInfo, err := agent.WriteWorkspaceInfoAndDeleteOld(cmd.WorkspaceInfo, deleteWorkspace, log.Default.ErrorStreamOnly())
 	if err != nil {
-		return fmt.Errorf("error parsing workspace info: %v", err)
+		return fmt.Errorf("error parsing workspace info: %w", err)
 	} else if shouldExit {
 		return nil
 	}
@@ -102,7 +102,7 @@ func initWorkspace(ctx context.Context, cancel context.CancelFunc, workspaceInfo
 	// create a grpc client
 	tunnelClient, err := agent.NewTunnelClient(os.Stdin, os.Stdout, true)
 	if err != nil {
-		return nil, nil, "", fmt.Errorf("error creating tunnel client: %v", err)
+		return nil, nil, "", fmt.Errorf("error creating tunnel client: %w", err)
 	}
 
 	// create debug logger
@@ -191,14 +191,14 @@ func prepareWorkspace(ctx context.Context, workspaceInfo *provider2.AgentWorkspa
 	binariesDir, err := agent.GetAgentBinariesDir(workspaceInfo.Agent.DataPath, workspaceInfo.Workspace.Context, workspaceInfo.Workspace.ID)
 	if err != nil {
 		_ = os.RemoveAll(workspaceInfo.ContentFolder)
-		return fmt.Errorf("error getting workspace %s binaries dir: %v", workspaceInfo.Workspace.ID, err)
+		return fmt.Errorf("error getting workspace %s binaries dir: %w", workspaceInfo.Workspace.ID, err)
 	}
 
 	// download binaries
 	_, err = binaries.DownloadBinaries(workspaceInfo.Agent.Binaries, binariesDir, log)
 	if err != nil {
 		_ = os.RemoveAll(workspaceInfo.ContentFolder)
-		return fmt.Errorf("error downloading workspace %s binaries: %v", workspaceInfo.Workspace.ID, err)
+		return fmt.Errorf("error downloading workspace %s binaries: %w", workspaceInfo.Workspace.ID, err)
 	}
 
 	// check what type of workspace this is

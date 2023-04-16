@@ -3,6 +3,8 @@ package workspace
 import (
 	"context"
 	"fmt"
+	"os"
+
 	"github.com/loft-sh/devpod/pkg/client"
 	"github.com/loft-sh/devpod/pkg/client/clientimplementation"
 	"github.com/loft-sh/devpod/pkg/config"
@@ -10,7 +12,6 @@ import (
 	provider2 "github.com/loft-sh/devpod/pkg/provider"
 	"github.com/loft-sh/devpod/pkg/survey"
 	"github.com/loft-sh/devpod/pkg/terminal"
-	"os"
 )
 
 func ResolveMachine(devPodConfig *config.Config, args []string, userOptions []string, log log.Logger) (client.Client, error) {
@@ -109,7 +110,7 @@ func GetMachine(devPodConfig *config.Config, args []string, log log.Logger) (cli
 
 func selectMachine(devPodConfig *config.Config, log log.Logger) (client.MachineClient, error) {
 	if !terminal.IsTerminalIn {
-		return nil, provideWorkspaceArgErr
+		return nil, errProvideWorkspaceArg
 	}
 
 	// ask which machine to use
@@ -120,11 +121,15 @@ func selectMachine(devPodConfig *config.Config, log log.Logger) (client.MachineC
 
 	machineIDs := []string{}
 	seversDirs, err := os.ReadDir(machinesDir)
+	if err != nil {
+		return nil, err
+	}
+
 	for _, workspace := range seversDirs {
 		machineIDs = append(machineIDs, workspace.Name())
 	}
 	if len(machineIDs) == 0 {
-		return nil, provideWorkspaceArgErr
+		return nil, errProvideWorkspaceArg
 	}
 
 	answer, err := log.Question(&survey.QuestionOptions{

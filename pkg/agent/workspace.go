@@ -2,19 +2,20 @@ package agent
 
 import (
 	"fmt"
-	"github.com/loft-sh/devpod/pkg/command"
-	"github.com/loft-sh/devpod/pkg/config"
-	"github.com/mitchellh/go-homedir"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"runtime"
 	"strings"
+
+	"github.com/loft-sh/devpod/pkg/command"
+	"github.com/loft-sh/devpod/pkg/config"
+	"github.com/mitchellh/go-homedir"
 )
 
 var extraSearchLocations = []string{"/home/devpod/.devpod/agent", "/opt/devpod/agent", "/var/lib/devpod/agent", "/var/devpod/agent"}
 
-var FindAgentHomeFolderErr = fmt.Errorf("couldn't find devpod home directory")
+var ErrFindAgentHomeFolder = fmt.Errorf("couldn't find devpod home directory")
 
 func GetAgentDaemonLogFolder(agentFolder string) (string, error) {
 	return FindAgentHomeFolder(agentFolder)
@@ -79,7 +80,7 @@ func FindAgentHomeFolder(agentFolder string) (string, error) {
 		return homeDir, nil
 	}
 
-	return "", FindAgentHomeFolderErr
+	return "", ErrFindAgentHomeFolder
 }
 
 func isDevPodHome(dir string) bool {

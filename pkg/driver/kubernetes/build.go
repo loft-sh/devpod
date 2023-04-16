@@ -5,6 +5,11 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"io"
+	"net"
+	"os"
+	"strings"
+
 	"github.com/loft-sh/devpod/pkg/devcontainer/buildkit"
 	"github.com/loft-sh/devpod/pkg/devcontainer/config"
 	"github.com/loft-sh/devpod/pkg/devcontainer/feature"
@@ -15,12 +20,8 @@ import (
 	"github.com/moby/buildkit/client"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
-	"io"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"net"
-	"os"
-	"strings"
 )
 
 const defaultRootlessBuildkitImage = "moby/buildkit:master-rootless"
@@ -395,7 +396,7 @@ func (k *kubernetesDriver) getClusterArchitecture(ctx context.Context) (string, 
 	stderr := &bytes.Buffer{}
 	err := k.runCommand(ctx, []string{"run", "-i", "devpod-" + random.String(6), "-q", "--rm", "--restart=Never", "--image", k.helperImage(), "--", "sh"}, strings.NewReader("uname -a; exit 0"), stdout, stderr)
 	if err != nil {
-		return "", fmt.Errorf("find out cluster architecture: %s %s %v", stdout.String(), stderr.String(), err)
+		return "", fmt.Errorf("find out cluster architecture: %s %s %w", stdout.String(), stderr.String(), err)
 	}
 
 	unameOutput := stdout.String()
