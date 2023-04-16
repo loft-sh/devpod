@@ -28,8 +28,9 @@ import (
 type SSHCmd struct {
 	*flags.GlobalFlags
 
-	Stdio         bool
-	JumpContainer bool
+	Stdio           bool
+	JumpContainer   bool
+	AgentForwarding bool
 
 	Command string
 	User    string
@@ -61,6 +62,7 @@ func NewSSHCmd(flags *flags.GlobalFlags) *cobra.Command {
 
 	sshCmd.Flags().StringVar(&cmd.Command, "command", "", "The command to execute within the workspace")
 	sshCmd.Flags().StringVar(&cmd.User, "user", "", "The user of the workspace to use")
+	sshCmd.Flags().BoolVar(&cmd.AgentForwarding, "agent-forwarding", true, "If true forward the local ssh keys to the remote machine")
 	sshCmd.Flags().BoolVar(&cmd.Stdio, "stdio", false, "If true will tunnel connection through stdout and stdin")
 	_ = sshCmd.Flags().MarkHidden("self")
 	return sshCmd
@@ -179,7 +181,7 @@ func (cmd *SSHCmd) jumpContainer(ctx context.Context, devPodConfig *config.Confi
 			return err
 		}
 
-		return machine.StartSSHSession(ctx, privateKey, cmd.User, cmd.Command, func(ctx context.Context, stdin io.Reader, stdout io.Writer, stderr io.Writer) error {
+		return machine.StartSSHSession(ctx, privateKey, cmd.User, cmd.Command, cmd.AgentForwarding, func(ctx context.Context, stdin io.Reader, stdout io.Writer, stderr io.Writer) error {
 			return devssh.Run(ctx, sshClient, command, stdin, stdout, stderr)
 		}, writer)
 	}, runInContainer)
