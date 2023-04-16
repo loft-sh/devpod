@@ -7,7 +7,7 @@ import (
 	"fmt"
 	"github.com/loft-sh/devpod/cmd/flags"
 	"github.com/loft-sh/devpod/pkg/dockercredentials"
-	"github.com/pkg/errors"
+	"github.com/loft-sh/devpod/pkg/log"
 	"github.com/spf13/cobra"
 	"io"
 	"net/http"
@@ -63,19 +63,22 @@ func (cmd *DockerCredentialsCmd) handleList() error {
 
 	response, err := http.Post("http://localhost:"+strconv.Itoa(cmd.Port)+"/docker-credentials", "application/json", bytes.NewReader(rawJson))
 	if err != nil {
-		return err
+		log.Default.ErrorStreamOnly().Errorf("Error retrieving list credentials: %v", err)
+		return nil
 	}
 	defer response.Body.Close()
 
 	raw, err := io.ReadAll(response.Body)
 	if err != nil {
-		return err
+		log.Default.ErrorStreamOnly().Errorf("Error reading list credentials: %v", err)
+		return nil
 	}
 
 	listResponse := &dockercredentials.ListResponse{}
 	err = json.Unmarshal(raw, listResponse)
 	if err != nil {
-		return errors.Wrapf(err, "decode response %s", string(raw))
+		log.Default.ErrorStreamOnly().Errorf("Error decoding list credentials: %s%v", string(raw), err)
+		return nil
 	}
 
 	if listResponse.Registries == nil {
@@ -83,7 +86,8 @@ func (cmd *DockerCredentialsCmd) handleList() error {
 	}
 	raw, err = json.Marshal(listResponse.Registries)
 	if err != nil {
-		return err
+		log.Default.ErrorStreamOnly().Errorf("Error encoding list credentials: %v", err)
+		return nil
 	}
 
 	// print response to stdout
@@ -106,13 +110,15 @@ func (cmd *DockerCredentialsCmd) handleGet() error {
 
 	response, err := http.Post("http://localhost:"+strconv.Itoa(cmd.Port)+"/docker-credentials", "application/json", bytes.NewReader(rawJson))
 	if err != nil {
-		return err
+		log.Default.ErrorStreamOnly().Errorf("Error retrieving credentials: %v", err)
+		return nil
 	}
 	defer response.Body.Close()
 
 	raw, err := io.ReadAll(response.Body)
 	if err != nil {
-		return err
+		log.Default.ErrorStreamOnly().Errorf("Error reading credentials: %v", err)
+		return nil
 	}
 
 	// print response to stdout

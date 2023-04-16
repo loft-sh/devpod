@@ -5,6 +5,8 @@ import (
 	"crypto/tls"
 	"encoding/json"
 	"fmt"
+	"github.com/loft-sh/devpod/pkg/git"
+	"github.com/loft-sh/devpod/pkg/gitcredentials"
 	"net/http"
 	"os"
 	"os/exec"
@@ -23,7 +25,6 @@ import (
 	config2 "github.com/loft-sh/devpod/pkg/devcontainer/config"
 	"github.com/loft-sh/devpod/pkg/dockercredentials"
 	"github.com/loft-sh/devpod/pkg/extract"
-	"github.com/loft-sh/devpod/pkg/gitcredentials"
 	"github.com/loft-sh/devpod/pkg/log"
 	"github.com/loft-sh/devpod/pkg/port"
 	provider2 "github.com/loft-sh/devpod/pkg/provider"
@@ -122,9 +123,7 @@ func initWorkspace(ctx context.Context, cancel context.CancelFunc, workspaceInfo
 	// install docker in background
 	errChan := make(chan error, 1)
 	go func() {
-		if workspaceInfo.Agent.Driver != "" && workspaceInfo.Agent.Driver != provider2.DockerDriver {
-			errChan <- nil
-		} else if workspaceInfo.Agent.Docker.Install == "false" {
+		if workspaceInfo.Agent.Driver == provider2.KubernetesDriver || workspaceInfo.Agent.Docker.Install == "false" {
 			errChan <- nil
 		} else {
 			errChan <- InstallDocker(logger)
@@ -205,7 +204,7 @@ func prepareWorkspace(ctx context.Context, workspaceInfo *provider2.AgentWorkspa
 	// check what type of workspace this is
 	if workspaceInfo.Workspace.Source.GitRepository != "" {
 		log.Debugf("Clone Repository")
-		return CloneRepository(workspaceInfo.ContentFolder, workspaceInfo.Workspace.Source.GitRepository, workspaceInfo.Workspace.Source.GitBranch, helper, log)
+		return CloneRepository(ctx, workspaceInfo.ContentFolder, workspaceInfo.Workspace.Source.GitRepository, workspaceInfo.Workspace.Source.GitBranch, helper, log)
 	} else if workspaceInfo.Workspace.Source.LocalFolder != "" {
 		log.Debugf("Download Local Folder")
 		return DownloadLocalFolder(ctx, workspaceInfo.ContentFolder, client, log)
@@ -379,7 +378,17 @@ func (cmd *UpCmd) devPodUp(workspaceInfo *provider2.AgentWorkspaceInfo, log log.
 	return result, nil
 }
 
-func CloneRepository(workspaceDir, repository, branch, helper string, log log.Logger) error {
+func CloneRepository(ctx context.Context, workspaceDir, repository, branch, helper string, log log.Logger) error {
+	// remove the credential helper or otherwise we will receive strange errors within the container
+	defer func() {
+		if helper != "" {
+			err := gitcredentials.RemoveHelperFromPath(filepath.Join(workspaceDir, ".git", "config"))
+			if err != nil {
+				log.Errorf("Remove git credential helper: %v", err)
+			}
+		}
+	}()
+
 	writer := log.Writer(logrus.InfoLevel, false)
 	defer writer.Close()
 
@@ -442,20 +451,12 @@ func CloneRepository(workspaceDir, repository, branch, helper string, log log.Lo
 		args = append(args, "--branch", branch)
 	}
 	args = append(args, repository, workspaceDir)
-	gitCommand := exec.Command("git", args...)
+	gitCommand := git.CommandContext(ctx, args...)
 	gitCommand.Stdout = writer
 	gitCommand.Stderr = writer
 	err := gitCommand.Run()
 	if err != nil {
 		return errors.Wrap(err, "error cloning repository")
-	}
-
-	// remove the credential helper or otherwise we will receive strange errors within the container
-	if helper != "" {
-		err = gitcredentials.RemoveHelperFromPath(filepath.Join(workspaceDir, ".git", "config"))
-		if err != nil {
-			return err
-		}
 	}
 
 	return nil

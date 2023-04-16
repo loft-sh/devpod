@@ -7,7 +7,7 @@ import (
 	"fmt"
 	"github.com/loft-sh/devpod/cmd/flags"
 	"github.com/loft-sh/devpod/pkg/gitcredentials"
-	"github.com/pkg/errors"
+	"github.com/loft-sh/devpod/pkg/log"
 	"github.com/spf13/cobra"
 	"io"
 	"net/http"
@@ -63,19 +63,22 @@ func (cmd *GitCredentialsCmd) Run(ctx context.Context, args []string) error {
 
 	response, err := http.Post("http://localhost:"+strconv.Itoa(cmd.Port)+"/git-credentials", "application/json", bytes.NewReader(rawJson))
 	if err != nil {
-		return err
+		log.Default.ErrorStreamOnly().Errorf("Error retrieving credentials: %v", err)
+		return nil
 	}
 	defer response.Body.Close()
 
 	raw, err = io.ReadAll(response.Body)
 	if err != nil {
-		return err
+		log.Default.ErrorStreamOnly().Errorf("Error reading credentials: %v", err)
+		return nil
 	}
 
 	credentials = &gitcredentials.GitCredentials{}
 	err = json.Unmarshal(raw, credentials)
 	if err != nil {
-		return errors.Wrapf(err, "decode response %s", string(raw))
+		log.Default.ErrorStreamOnly().Errorf("Error decoding credentials: %v", err)
+		return nil
 	}
 
 	// print response to stdout

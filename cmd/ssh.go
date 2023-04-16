@@ -31,8 +31,6 @@ type SSHCmd struct {
 	Stdio         bool
 	JumpContainer bool
 
-	Configure bool
-
 	Command string
 	User    string
 }
@@ -63,7 +61,6 @@ func NewSSHCmd(flags *flags.GlobalFlags) *cobra.Command {
 
 	sshCmd.Flags().StringVar(&cmd.Command, "command", "", "The command to execute within the workspace")
 	sshCmd.Flags().StringVar(&cmd.User, "user", "", "The user of the workspace to use")
-	sshCmd.Flags().BoolVar(&cmd.Configure, "configure", false, "If true will configure ssh for the given workspace")
 	sshCmd.Flags().BoolVar(&cmd.Stdio, "stdio", false, "If true will tunnel connection through stdout and stdin")
 	_ = sshCmd.Flags().MarkHidden("self")
 	return sshCmd
@@ -71,10 +68,6 @@ func NewSSHCmd(flags *flags.GlobalFlags) *cobra.Command {
 
 // Run runs the command logic
 func (cmd *SSHCmd) Run(ctx context.Context, devPodConfig *config.Config, client client2.WorkspaceClient) error {
-	if cmd.Configure {
-		return configureSSH(client, "root")
-	}
-
 	return cmd.jumpContainer(ctx, devPodConfig, client, log.Default.ErrorStreamOnly())
 }
 
@@ -139,6 +132,14 @@ func (cmd *SSHCmd) jumpContainer(ctx context.Context, devPodConfig *config.Confi
 	workspaceInfo, _, err := client.AgentInfo()
 	if err != nil {
 		return err
+	}
+
+	// get user
+	if cmd.User == "" {
+		cmd.User, err = devssh.GetUser(client.Workspace())
+		if err != nil {
+			return err
+		}
 	}
 
 	// create credential helper in workspace
