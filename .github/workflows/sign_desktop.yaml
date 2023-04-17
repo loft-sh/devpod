@@ -1,4 +1,4 @@
-name: 'publish'
+name: Publish Desktop
 on: workflow_dispatch
 
 jobs:
@@ -8,13 +8,16 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        platform: [macos-latest, ubuntu-20.04, windows-lastest]
+        platform: [macos-latest, ubuntu-20.04, windows-latest]
     runs-on: ${{ matrix.platform }}
+    env:
+      GO111MODULE: on
+      GOFLAGS: -mod=vendor
 
     steps:
       - name: Checkout repository
         uses: actions/checkout@v3
-        
+
       - name: Install dependencies (ubuntu only)
         if: matrix.platform == 'ubuntu-20.04'
         run: |
@@ -27,22 +30,43 @@ jobs:
       - name: Rust cache
         uses: swatinem/rust-cache@v2
         with:
-          workspaces: './desktop/src-tauri -> target'
+          workspaces: "./desktop/src-tauri -> target"
+
+      - name: Go setup
+        uses: actions/setup-go@v2
+        with:
+          go-version: 1.19
+
+      - name: Build CLI for Desktop
+        if: matrix.platform != 'windows-latest'
+        run: |
+          chmod +x ./hack/build-desktop-cli.sh
+          ./hack/rebuild.sh
+
+      - name: Build CLI for Desktop
+        if: matrix.platform == 'windows-latest'
+        run: |
+          ./hack/build-desktop-cli.sh
 
       - name: Sync node version and setup cache
         uses: actions/setup-node@v3
         with:
-          node-version: 'lts/*'
-          cache: 'yarn' # Set this to npm, yarn or pnpm.
+          node-version: "lts/*"
+          cache: "yarn"
+          cache-dependency-path: "./desktop/yarn.lock"
 
       - name: Install frontend dependencies
-        # If you don't have `beforeBuildCommand` configured you may want to build your frontend here too.
-        run: yarn install # Change this to npm, yarn or pnpm.
+        run: yarn install
+        working-directory: "./desktop"
+
+      - name: Install frontend dependencies
+        run: yarn install
+        working-directory: "./desktop"
 
       - name: Build the app
         uses: tauri-apps/tauri-action@v0
         with:
-          projectPath: './desktop'
+          projectPath: "./desktop"
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           # ENABLE_CODE_SIGNING: ${{ secrets.APPLE_CERTIFICATE }}
@@ -52,8 +76,8 @@ jobs:
           # APPLE_ID: ${{ secrets.APPLE_ID }}
           # APPLE_PASSWORD: ${{ secrets.APPLE_PASSWORD }}
         # with:
-          # tagName: app-v__VERSION__ # the action automatically replaces \_\_VERSION\_\_ with the app version
-          # releaseName: 'App v__VERSION__'
-          # releaseBody: 'See the assets to download this version and install.'
-          # releaseDraft: true
-          # prerelease: false
+        # tagName: app-v__VERSION__ # the action automatically replaces \_\_VERSION\_\_ with the app version
+        # releaseName: 'App v__VERSION__'
+        # releaseBody: 'See the assets to download this version and install.'
+        # releaseDraft: true
+        # prerelease: false
