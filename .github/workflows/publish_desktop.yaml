@@ -15,10 +15,8 @@ jobs:
             target: aarch64-apple-darwin
           - host: windows-latest
             target: x86_64-pc-windows-msvc
-            ext: .exe
-          - host: windows-latest
-            target: aarch64-pc-windows-msvc
-            ext: .exe
+          # - host: windows-latest
+          #   target: aarch64-pc-windows-msvc
           - host: ubuntu-latest
             target: x86_64-unknown-linux-gnu
           - host: ubuntu-latest
