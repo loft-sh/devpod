@@ -3,6 +3,8 @@ package cmd
 import (
 	"context"
 	"fmt"
+	"time"
+
 	"github.com/loft-sh/devpod/cmd/flags"
 	client2 "github.com/loft-sh/devpod/pkg/client"
 	"github.com/loft-sh/devpod/pkg/client/clientimplementation"
@@ -11,7 +13,6 @@ import (
 	workspace2 "github.com/loft-sh/devpod/pkg/workspace"
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
-	"time"
 )
 
 // DeleteCmd holds the delete cmd flags
@@ -55,7 +56,7 @@ func (cmd *DeleteCmd) Run(ctx context.Context, devPodConfig *config.Config, args
 			log.Default.Errorf("cannot delete workspace because there was an error loading the workspace. Run with --force to ignore this error")
 			return err
 		} else if len(args) == 0 {
-			return fmt.Errorf("cannot delete workspace because there was an error loading the workspace: %v. Please specify the id of the workspace you want to delete. E.g. 'devpod delete my-workspace --force'", err)
+			return fmt.Errorf("cannot delete workspace because there was an error loading the workspace: %w. Please specify the id of the workspace you want to delete. E.g. 'devpod delete my-workspace --force'", err)
 		}
 
 		workspaceID := workspace2.Exists(devPodConfig, args)

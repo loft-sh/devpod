@@ -3,13 +3,15 @@ package kubernetes
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
-	"github.com/pkg/errors"
-	corev1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/util/wait"
 	"os/exec"
 	"strings"
 	"time"
+
+	perrors "github.com/pkg/errors"
+	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/util/wait"
 )
 
 // CriticalStatus container status
@@ -137,11 +139,12 @@ func (k *kubernetesDriver) getPod(ctx context.Context, id string) (*corev1.Pod, 
 	// try to find pod
 	out, err := k.buildCmd(ctx, []string{"get", "pod", id, "--ignore-not-found", "-o", "json"}).Output()
 	if err != nil {
-		if exitError, ok := err.(*exec.ExitError); ok {
+		var exitError *exec.ExitError
+		if errors.As(err, &exitError) {
 			return nil, fmt.Errorf("find container: %s", strings.TrimSpace(string(exitError.Stderr)))
 		}
 
-		return nil, errors.Wrap(err, "find container")
+		return nil, perrors.Wrap(err, "find container")
 	} else if len(out) == 0 {
 		return nil, nil
 	}
@@ -150,7 +153,7 @@ func (k *kubernetesDriver) getPod(ctx context.Context, id string) (*corev1.Pod, 
 	pod := &corev1.Pod{}
 	err = json.Unmarshal(out, pod)
 	if err != nil {
-		return nil, errors.Wrap(err, "unmarshal pod")
+		return nil, perrors.Wrap(err, "unmarshal pod")
 	}
 
 	return pod, nil

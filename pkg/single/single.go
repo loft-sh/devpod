@@ -1,14 +1,15 @@
 package single
 
 import (
-	"github.com/gofrs/flock"
-	"github.com/loft-sh/devpod/pkg/command"
-	"github.com/pkg/errors"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"strconv"
 	"time"
+
+	"github.com/gofrs/flock"
+	"github.com/loft-sh/devpod/pkg/command"
+	"github.com/pkg/errors"
 )
 
 type CreateCommand func() (*exec.Cmd, error)
@@ -22,7 +23,9 @@ func Single(file string, createCommand CreateCommand) error {
 	} else if !locked {
 		return nil
 	}
-	defer fileLock.Unlock()
+	defer func(fileLock *flock.Flock) {
+		_ = fileLock.Unlock()
+	}(fileLock)
 
 	// check if marker file is there
 	pid, err := os.ReadFile(file)

@@ -4,6 +4,13 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"io"
+	"os"
+	"path"
+	"path/filepath"
+	"runtime"
+	"strings"
+
 	"github.com/loft-sh/devpod/pkg/devcontainer/build"
 	"github.com/loft-sh/devpod/pkg/devcontainer/buildkit"
 	"github.com/loft-sh/devpod/pkg/devcontainer/config"
@@ -16,12 +23,6 @@ import (
 	"github.com/loft-sh/devpod/pkg/image"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
-	"io"
-	"os"
-	"path"
-	"path/filepath"
-	"runtime"
-	"strings"
 )
 
 func (d *dockerDriver) BuildDevContainer(
@@ -147,7 +148,6 @@ func CreateBuildOptions(
 ) (*build.BuildOptions, []string, error) {
 	// extra args?
 	finalDockerfilePath := dockerfilePath
-	finalDockerfileContent := string(dockerfileContent)
 	buildOptions := &build.BuildOptions{
 		BuildArgs: parsedConfig.Config.Build.Args,
 		Labels:    map[string]string{},
@@ -169,7 +169,7 @@ func CreateBuildOptions(
 		}
 
 		// rewrite dockerfile
-		finalDockerfileContent = dockerfile.RemoveSyntaxVersion(string(dockerfileContent))
+		finalDockerfileContent := dockerfile.RemoveSyntaxVersion(string(dockerfileContent))
 		finalDockerfileContent = strings.TrimSpace(strings.Join([]string{
 			featureBuildInfo.DockerfilePrefixContent,
 			strings.TrimSpace(finalDockerfileContent),
@@ -230,11 +230,8 @@ func getImageName(localWorkspaceFolder, prebuildHash string) string {
 func (d *dockerDriver) buildxExists(ctx context.Context) bool {
 	buf := &bytes.Buffer{}
 	err := d.Docker.Run(ctx, []string{"buildx", "version"}, nil, buf, buf)
-	if err != nil {
-		return false
-	}
 
-	return true
+	return err == nil
 }
 
 func (d *dockerDriver) internalBuild(ctx context.Context, writer io.Writer, options *build.BuildOptions) error {

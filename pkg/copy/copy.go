@@ -2,13 +2,14 @@ package copy
 
 import (
 	"fmt"
-	"github.com/pkg/errors"
 	"io"
 	"io/fs"
 	"os"
 	"os/user"
 	"path/filepath"
 	"strconv"
+
+	"github.com/pkg/errors"
 )
 
 func Chown(path string, userName string) error {
@@ -37,6 +38,10 @@ func ChownR(path string, userName string) error {
 
 	uid, _ := strconv.Atoi(userId.Uid)
 	return filepath.WalkDir(path, func(name string, dirEntry fs.DirEntry, err error) error {
+		if err != nil {
+			return err
+		}
+
 		info, err := dirEntry.Info()
 		if err != nil {
 			return nil
@@ -110,14 +115,13 @@ func File(srcFile, dstFile string, perm os.FileMode) error {
 	if err != nil {
 		return err
 	}
-
 	defer out.Close()
 
 	in, err := os.Open(srcFile)
-	defer in.Close()
 	if err != nil {
 		return err
 	}
+	defer in.Close()
 
 	_, err = io.Copy(out, in)
 	if err != nil {

@@ -5,16 +5,17 @@ import (
 	"context"
 	"crypto/tls"
 	"fmt"
-	"github.com/loft-sh/devpod/pkg/inject"
-	"github.com/loft-sh/devpod/pkg/log"
-	"github.com/loft-sh/devpod/pkg/version"
-	"github.com/pkg/errors"
 	"io"
 	"net/http"
 	"os"
 	"path/filepath"
 	"runtime"
 	"time"
+
+	"github.com/loft-sh/devpod/pkg/inject"
+	"github.com/loft-sh/devpod/pkg/log"
+	"github.com/loft-sh/devpod/pkg/version"
+	"github.com/pkg/errors"
 )
 
 var waitForInstanceConnectionTimeout = time.Minute * 5
@@ -34,8 +35,7 @@ func InjectAgentAndExecute(ctx context.Context, exec inject.ExecFunc, remoteAgen
 
 	// install devpod into the target
 	// do a simple hello world to check if we can get something
-	startWaiting := time.Now()
-	now := startWaiting
+	now := time.Now()
 	lastMessage := time.Now()
 	for {
 		buf := &bytes.Buffer{}
@@ -77,7 +77,6 @@ func InjectAgentAndExecute(ctx context.Context, exec inject.ExecFunc, remoteAgen
 			}
 
 			log.Debugf("Inject Error: %s%v", buf.String(), err)
-			startWaiting = time.Now()
 			time.Sleep(time.Second * 3)
 			continue
 		}

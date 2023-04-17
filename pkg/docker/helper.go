@@ -4,14 +4,16 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
-	"github.com/loft-sh/devpod/pkg/devcontainer/config"
-	"github.com/loft-sh/devpod/pkg/image"
-	"github.com/loft-sh/devpod/pkg/scanner"
-	"github.com/pkg/errors"
 	"io"
 	"os/exec"
 	"strings"
+
+	"github.com/loft-sh/devpod/pkg/devcontainer/config"
+	"github.com/loft-sh/devpod/pkg/image"
+	"github.com/loft-sh/devpod/pkg/scanner"
+	perrors "github.com/pkg/errors"
 )
 
 type DockerHelper struct {
@@ -54,7 +56,7 @@ func (r *DockerHelper) FindDevContainer(labels []string) (*config.ContainerDetai
 func (r *DockerHelper) Stop(ctx context.Context, id string) error {
 	out, err := r.buildCmd(ctx, "stop", id).CombinedOutput()
 	if err != nil {
-		return errors.Wrapf(err, "%s", string(out))
+		return perrors.Wrapf(err, "%s", string(out))
 	}
 
 	return nil
@@ -63,7 +65,7 @@ func (r *DockerHelper) Stop(ctx context.Context, id string) error {
 func (r *DockerHelper) Remove(ctx context.Context, id string) error {
 	out, err := r.buildCmd(ctx, "rm", id).CombinedOutput()
 	if err != nil {
-		return errors.Wrapf(err, "%s", string(out))
+		return perrors.Wrapf(err, "%s", string(out))
 	}
 
 	return nil
@@ -85,7 +87,7 @@ func (r *DockerHelper) RunWithDir(ctx context.Context, dir string, args []string
 func (r *DockerHelper) StartContainer(ctx context.Context, id string, labels []string) error {
 	out, err := r.buildCmd(ctx, "start", id).CombinedOutput()
 	if err != nil {
-		return errors.Wrapf(err, "start command: %v", string(out))
+		return perrors.Wrapf(err, "start command: %v", string(out))
 	}
 
 	container, err := r.FindDevContainer(labels)
@@ -109,7 +111,7 @@ func (r *DockerHelper) InspectImage(imageName string, tryRemote bool) (*config.I
 
 		imageConfig, _, err := image.GetImageConfig(imageName)
 		if err != nil {
-			return nil, errors.Wrap(err, "get image config remotely")
+			return nil, perrors.Wrap(err, "get image config remotely")
 		}
 
 		return &config.ImageDetails{
@@ -144,12 +146,12 @@ func (r *DockerHelper) Inspect(ids []string, inspectType string, obj interface{}
 	args = append(args, ids...)
 	out, err := r.buildCmd(context.TODO(), args...).Output()
 	if err != nil {
-		return errors.Wrapf(err, "inspect container: %v", string(out))
+		return perrors.Wrapf(err, "inspect container: %v", string(out))
 	}
 
 	err = json.Unmarshal(out, obj)
 	if err != nil {
-		return errors.Wrap(err, "parse inspect output")
+		return perrors.Wrap(err, "parse inspect output")
 	}
 
 	return nil
@@ -163,7 +165,8 @@ func (r *DockerHelper) FindContainer(labels []string) ([]string, error) {
 
 	out, err := r.buildCmd(context.TODO(), args...).Output()
 	if err != nil {
-		if exitError, ok := err.(*exec.ExitError); ok {
+		var exitError *exec.ExitError
+		if errors.As(err, &exitError) {
 			return nil, fmt.Errorf("find container: %s", strings.TrimSpace(string(exitError.Stderr)))
 		}
 

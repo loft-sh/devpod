@@ -1,13 +1,14 @@
 package container
 
 import (
+	"os"
+	"strings"
+	"time"
+
 	"github.com/loft-sh/devpod/pkg/agent"
 	"github.com/loft-sh/devpod/pkg/command"
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
-	"os"
-	"strings"
-	"time"
 )
 
 // DaemonCmd holds the cmd flags
@@ -49,21 +50,18 @@ func (cmd *DaemonCmd) Run(_ *cobra.Command, _ []string) error {
 
 	// query the activity file
 	for {
-		select {
-		case <-time.After(time.Second * 10):
-			stat, err := os.Stat(agent.ContainerActivityFile)
-			if err != nil {
-				continue
-			}
+		time.Sleep(10 * time.Second)
 
-			if stat.ModTime().Add(duration).After(time.Now()) {
-				continue
-			}
-
-			// kill container
-			command.Kill("1")
+		stat, err := os.Stat(agent.ContainerActivityFile)
+		if err != nil {
+			continue
 		}
-	}
 
-	return nil
+		if stat.ModTime().Add(duration).After(time.Now()) {
+			continue
+		}
+
+		// kill container
+		return command.Kill("1")
+	}
 }

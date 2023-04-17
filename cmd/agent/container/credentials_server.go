@@ -3,6 +3,8 @@ package container
 import (
 	"context"
 	"fmt"
+	"os"
+
 	"github.com/loft-sh/devpod/cmd/flags"
 	"github.com/loft-sh/devpod/pkg/agent"
 	"github.com/loft-sh/devpod/pkg/agent/tunnel"
@@ -13,7 +15,6 @@ import (
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
-	"os"
 )
 
 // CredentialsServerCmd holds the cmd flags
@@ -57,7 +58,7 @@ func (cmd *CredentialsServerCmd) Run(ctx context.Context, _ []string) error {
 	// create a grpc client
 	tunnelClient, err := agent.NewTunnelClient(os.Stdin, os.Stdout, true)
 	if err != nil {
-		return fmt.Errorf("error creating tunnel client: %v", err)
+		return fmt.Errorf("error creating tunnel client: %w", err)
 	}
 
 	// this message serves as a ping to the client

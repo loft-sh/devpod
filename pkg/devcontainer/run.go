@@ -3,6 +3,13 @@ package devcontainer
 import (
 	"context"
 	"fmt"
+	"os"
+	"os/exec"
+	"path"
+	"path/filepath"
+	"runtime"
+	"strings"
+
 	"github.com/loft-sh/devpod/pkg/agent"
 	"github.com/loft-sh/devpod/pkg/devcontainer/config"
 	"github.com/loft-sh/devpod/pkg/driver"
@@ -12,12 +19,6 @@ import (
 	provider2 "github.com/loft-sh/devpod/pkg/provider"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
-	"os"
-	"os/exec"
-	"path"
-	"path/filepath"
-	"runtime"
-	"strings"
 )
 
 func NewRunner(agentPath, agentDownloadURL string, workspaceConfig *provider2.AgentWorkspaceInfo, log log.Logger) (*Runner, error) {
@@ -91,6 +92,9 @@ func (r *Runner) prepare() (*config.SubstitutedConfig, *WorkspaceConfig, error) 
 	// substitute & load
 	parsedConfig := &config.DevContainerConfig{}
 	err = config.Substitute(r.SubstitutionContext, rawParsedConfig, parsedConfig)
+	if err != nil {
+		return nil, nil, err
+	}
 	if parsedConfig.WorkspaceFolder != "" {
 		workspace.RemoteWorkspaceFolder = parsedConfig.WorkspaceFolder
 	}

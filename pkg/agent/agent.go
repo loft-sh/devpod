@@ -3,8 +3,8 @@ package agent
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
-	"github.com/loft-sh/devpod/pkg/driver"
 	"io"
 	"os"
 	"os/exec"
@@ -16,9 +16,10 @@ import (
 	"github.com/loft-sh/devpod/pkg/command"
 	"github.com/loft-sh/devpod/pkg/compress"
 	"github.com/loft-sh/devpod/pkg/devcontainer/config"
+	"github.com/loft-sh/devpod/pkg/driver"
 	"github.com/loft-sh/devpod/pkg/log"
 	provider2 "github.com/loft-sh/devpod/pkg/provider"
-	"github.com/pkg/errors"
+	perrors "github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 )
 
@@ -37,13 +38,13 @@ const DefaultAgentDownloadURL = "https://github.com/FabianKramm/foundation/relea
 func DecodeWorkspaceInfo(workspaceInfoRaw string) (*provider2.AgentWorkspaceInfo, string, error) {
 	decoded, err := compress.Decompress(workspaceInfoRaw)
 	if err != nil {
-		return nil, "", errors.Wrap(err, "decode workspace info")
+		return nil, "", perrors.Wrap(err, "decode workspace info")
 	}
 
 	workspaceInfo := &provider2.AgentWorkspaceInfo{}
 	err = json.Unmarshal([]byte(decoded), workspaceInfo)
 	if err != nil {
-		return nil, "", errors.Wrap(err, "parse workspace info")
+		return nil, "", perrors.Wrap(err, "parse workspace info")
 	}
 
 	return workspaceInfo, decoded, nil
@@ -71,7 +72,7 @@ func parseAgentWorkspaceInfo(workspaceConfigFile string) (*provider2.AgentWorksp
 	workspaceInfo := &provider2.AgentWorkspaceInfo{}
 	err = json.Unmarshal(out, workspaceInfo)
 	if err != nil {
-		return nil, errors.Wrap(err, "parse workspace info")
+		return nil, perrors.Wrap(err, "parse workspace info")
 	}
 
 	workspaceInfo.Origin = filepath.Dir(workspaceConfigFile)
@@ -95,7 +96,7 @@ func ReadAgentWorkspaceDevContainerResult(agentFolder, context, id string) (*con
 	workspaceResult := &config.Result{}
 	err = json.Unmarshal(out, workspaceResult)
 	if err != nil {
-		return nil, errors.Wrap(err, "parse workspace result")
+		return nil, perrors.Wrap(err, "parse workspace result")
 	}
 
 	return workspaceResult, nil
@@ -125,18 +126,18 @@ func WriteAgentWorkspaceDevContainerResult(agentFolder, context, id string, resu
 
 func ReadAgentWorkspaceInfo(agentFolder, context, id string, log log.Logger) (bool, *provider2.AgentWorkspaceInfo, error) {
 	workspaceInfo, err := readAgentWorkspaceInfo(agentFolder, context, id)
-	if err != nil && err != FindAgentHomeFolderErr {
+	if err != nil && !errors.Is(err, ErrFindAgentHomeFolder) {
 		return false, nil, err
 	}
 
 	// check if we need to become root
 	shouldExit, err := rerunAsRoot(workspaceInfo, log)
 	if err != nil {
-		return false, nil, errors.Wrap(err, "rerun as root")
+		return false, nil, perrors.Wrap(err, "rerun as root")
 	} else if shouldExit {
 		return true, nil, nil
 	} else if workspaceInfo == nil {
-		return false, nil, FindAgentHomeFolderErr
+		return false, nil, ErrFindAgentHomeFolder
 	}
 
 	return false, workspaceInfo, nil
@@ -155,7 +156,7 @@ func WriteWorkspaceInfoAndDeleteOld(workspaceInfoEncoded string, deleteWorkspace
 	// check if we need to become root
 	shouldExit, err := rerunAsRoot(workspaceInfo, log)
 	if err != nil {
-		return false, nil, fmt.Errorf("rerun as root: %v", err)
+		return false, nil, fmt.Errorf("rerun as root: %w", err)
 	} else if shouldExit {
 		return true, nil, nil
 	}
@@ -174,7 +175,7 @@ func WriteWorkspaceInfoAndDeleteOld(workspaceInfoEncoded string, deleteWorkspace
 		log.Infof("Delete old workspace '%s'", oldWorkspaceInfo.Workspace.ID)
 		err = deleteWorkspace(oldWorkspaceInfo, log)
 		if err != nil {
-			return false, nil, errors.Wrap(err, "delete old workspace")
+			return false, nil, perrors.Wrap(err, "delete old workspace")
 		}
 
 		// recreate workspace folder again
@@ -206,7 +207,7 @@ func WriteWorkspaceInfoAndDeleteOld(workspaceInfoEncoded string, deleteWorkspace
 	// write workspace config
 	err = os.WriteFile(workspaceConfig, []byte(encoded), 0666)
 	if err != nil {
-		return false, nil, fmt.Errorf("write workspace config file: %v", err)
+		return false, nil, fmt.Errorf("write workspace config file: %w", err)
 	}
 
 	workspaceInfo.Origin = workspaceDir
@@ -317,7 +318,7 @@ func dockerReachable() (bool, error) {
 			return true, nil
 		}
 
-		return false, errors.Wrap(err, "docker ps")
+		return false, perrors.Wrap(err, "docker ps")
 	}
 
 	return false, nil

@@ -3,8 +3,7 @@ package workspace
 import (
 	"context"
 	"fmt"
-	"github.com/loft-sh/devpod/pkg/git"
-	"io/ioutil"
+	"io"
 	"net/http"
 	"net/url"
 	"os"
@@ -18,6 +17,7 @@ import (
 	"github.com/loft-sh/devpod/pkg/client/clientimplementation"
 	"github.com/loft-sh/devpod/pkg/command"
 	"github.com/loft-sh/devpod/pkg/config"
+	"github.com/loft-sh/devpod/pkg/git"
 	"github.com/loft-sh/devpod/pkg/ide/ideparse"
 	"github.com/loft-sh/devpod/pkg/image"
 	"github.com/loft-sh/devpod/pkg/log"
@@ -373,7 +373,7 @@ func getProjectImage(link string) string {
 		return ""
 	}
 
-	content, err := ioutil.ReadAll(res.Body)
+	content, err := io.ReadAll(res.Body)
 	res.Body.Close()
 	if err != nil {
 		return ""
@@ -435,11 +435,7 @@ func pingRepository(str string) bool {
 	defer cancel()
 
 	_, err := git.CommandContext(timeoutCtx, "ls-remote", "--quiet", str).CombinedOutput()
-	if err != nil {
-		return false
-	}
-
-	return true
+	return err == nil
 }
 
 var workspaceIDRegEx1 = regexp.MustCompile(`[^\w\-]`)
@@ -473,7 +469,7 @@ func ToID(str string) string {
 
 func selectWorkspace(devPodConfig *config.Config, changeLastUsed bool, log log.Logger) (*provider2.ProviderConfig, *provider2.Workspace, *provider2.Machine, error) {
 	if !terminal.IsTerminalIn {
-		return nil, nil, nil, provideWorkspaceArgErr
+		return nil, nil, nil, errProvideWorkspaceArg
 	}
 
 	// ask which workspace to use
@@ -484,11 +480,15 @@ func selectWorkspace(devPodConfig *config.Config, changeLastUsed bool, log log.L
 
 	workspaceIDs := []string{}
 	workspacesDirs, err := os.ReadDir(workspacesDir)
+	if err != nil {
+		return nil, nil, nil, err
+	}
+
 	for _, workspace := range workspacesDirs {
 		workspaceIDs = append(workspaceIDs, workspace.Name())
 	}
 	if len(workspaceIDs) == 0 {
-		return nil, nil, nil, provideWorkspaceArgErr
+		return nil, nil, nil, errProvideWorkspaceArg
 	}
 
 	answer, err := log.Question(&survey.QuestionOptions{

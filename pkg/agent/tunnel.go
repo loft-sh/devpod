@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"net"
@@ -18,7 +19,7 @@ import (
 	provider2 "github.com/loft-sh/devpod/pkg/provider"
 	"github.com/loft-sh/devpod/pkg/scanner"
 	"github.com/loft-sh/devpod/pkg/survey"
-	"github.com/pkg/errors"
+	perrors "github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 	"google.golang.org/grpc/credentials/insecure"
 
@@ -146,12 +147,12 @@ func (t *tunnelServer) GitCredentials(ctx context.Context, message *tunnel.Messa
 	credentials := &gitcredentials.GitCredentials{}
 	err := json.Unmarshal([]byte(message.Message), credentials)
 	if err != nil {
-		return nil, errors.Wrap(err, "decode git credentials request")
+		return nil, perrors.Wrap(err, "decode git credentials request")
 	}
 
 	response, err := gitcredentials.GetCredentials(credentials)
 	if err != nil {
-		return nil, errors.Wrap(err, "get git response")
+		return nil, perrors.Wrap(err, "get git response")
 	}
 
 	out, err := json.Marshal(response)
@@ -223,7 +224,7 @@ func NewStreamReader(stream tunnel.Tunnel_ReadWorkspaceClient) io.Reader {
 					_ = writer.CloseWithError(err)
 				}
 			}
-			if err == io.EOF {
+			if errors.Is(err, io.EOF) {
 				return
 			} else if err != nil {
 				_ = writer.CloseWithError(err)

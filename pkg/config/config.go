@@ -195,7 +195,7 @@ func CloneConfig(config *Config) *Config {
 	ret := &Config{}
 	err := json.Unmarshal(out, ret)
 	if err != nil {
-		panic(fmt.Errorf("failed to unmarshal config: %v", err))
+		panic(fmt.Errorf("failed to unmarshal config: %w", err))
 	}
 	for ctxName, ctx := range ret.Contexts {
 		if ctx.Providers == nil {

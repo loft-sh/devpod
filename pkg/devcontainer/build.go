@@ -3,13 +3,14 @@ package devcontainer
 import (
 	"context"
 	"fmt"
+	"os"
+	"path/filepath"
+
 	"github.com/loft-sh/devpod/pkg/devcontainer/config"
 	"github.com/loft-sh/devpod/pkg/devcontainer/feature"
 	"github.com/loft-sh/devpod/pkg/devcontainer/metadata"
 	"github.com/loft-sh/devpod/pkg/dockerfile"
 	"github.com/pkg/errors"
-	"os"
-	"path/filepath"
 )
 
 func (r *Runner) build(parsedConfig *config.SubstitutedConfig, options config.BuildOptions) (*config.BuildInfo, error) {
@@ -58,7 +59,7 @@ func (r *Runner) buildAndExtendImage(parsedConfig *config.SubstitutedConfig, opt
 	}
 
 	// ensure there is a target to choose for us
-	imageBase := config.DockerfileDefaultTarget
+	var imageBase string
 	if parsedConfig.Config.Build.Target != "" {
 		imageBase = parsedConfig.Config.Build.Target
 	} else {

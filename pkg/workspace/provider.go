@@ -4,13 +4,14 @@ import (
 	"bytes"
 	"crypto/tls"
 	"fmt"
-	"github.com/loft-sh/devpod/pkg/types"
-	"github.com/loft-sh/devpod/providers"
 	"io"
 	"net/http"
 	"os"
 	"path/filepath"
 	"strings"
+
+	"github.com/loft-sh/devpod/pkg/types"
+	"github.com/loft-sh/devpod/providers"
 
 	"github.com/loft-sh/devpod/pkg/binaries"
 	"github.com/loft-sh/devpod/pkg/config"
@@ -20,7 +21,7 @@ import (
 	"github.com/pkg/errors"
 )
 
-var provideWorkspaceArgErr = fmt.Errorf("please provide a workspace name. E.g. 'devpod up ./my-folder', 'devpod up github.com/my-org/my-repo' or 'devpod up ubuntu'")
+var errProvideWorkspaceArg = errors.New("please provide a workspace name. E.g. 'devpod up ./my-folder', 'devpod up github.com/my-org/my-repo' or 'devpod up ubuntu'")
 
 type ProviderWithOptions struct {
 	Config *provider2.ProviderConfig `json:"config,omitempty"`

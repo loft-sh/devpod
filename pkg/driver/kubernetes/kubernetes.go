@@ -3,18 +3,20 @@ package kubernetes
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
+	"io"
+	"os/exec"
+	"strings"
+
 	"github.com/loft-sh/devpod/pkg/compose"
 	"github.com/loft-sh/devpod/pkg/devcontainer/config"
 	"github.com/loft-sh/devpod/pkg/driver"
 	"github.com/loft-sh/devpod/pkg/image"
 	"github.com/loft-sh/devpod/pkg/log"
 	provider2 "github.com/loft-sh/devpod/pkg/provider"
-	"github.com/pkg/errors"
-	"io"
+	perrors "github.com/pkg/errors"
 	corev1 "k8s.io/api/core/v1"
-	"os/exec"
-	"strings"
 )
 
 func NewKubernetesDriver(workspaceInfo *provider2.AgentWorkspaceInfo, log log.Logger) driver.Driver {
@@ -58,7 +60,7 @@ type kubernetesDriver struct {
 func (k *kubernetesDriver) FindDevContainer(ctx context.Context, labels []string) (*config.ContainerDetails, error) {
 	id, err := k.getID(labels)
 	if err != nil {
-		return nil, errors.Wrap(err, "get name")
+		return nil, perrors.Wrap(err, "get name")
 	}
 
 	pvc, containerInfo, err := k.getDevContainerPvc(ctx, id)
@@ -73,11 +75,12 @@ func (k *kubernetesDriver) getDevContainerPvc(ctx context.Context, id string) (*
 	// try to find pvc
 	out, err := k.buildCmd(ctx, []string{"get", "pvc", id, "--ignore-not-found", "-o", "json"}).Output()
 	if err != nil {
-		if exitError, ok := err.(*exec.ExitError); ok {
+		var exitError *exec.ExitError
+		if errors.As(err, &exitError) {
 			return nil, nil, fmt.Errorf("find pvc: %s", strings.TrimSpace(string(exitError.Stderr)))
 		}
 
-		return nil, nil, errors.Wrap(err, "find pvc")
+		return nil, nil, perrors.Wrap(err, "find pvc")
 	} else if len(out) == 0 {
 		return nil, nil, nil
 	}
@@ -86,7 +89,7 @@ func (k *kubernetesDriver) getDevContainerPvc(ctx context.Context, id string) (*
 	pvc := &corev1.PersistentVolumeClaim{}
 	err = json.Unmarshal(out, pvc)
 	if err != nil {
-		return nil, nil, errors.Wrap(err, "unmarshal pvc")
+		return nil, nil, perrors.Wrap(err, "unmarshal pvc")
 	} else if pvc.Annotations == nil || pvc.Annotations[DevContainerInfoAnnotation] == "" {
 		return nil, nil, fmt.Errorf("pvc is missing dev container info annotation")
 	}
@@ -95,7 +98,7 @@ func (k *kubernetesDriver) getDevContainerPvc(ctx context.Context, id string) (*
 	containerInfo := &DevContainerInfo{}
 	err = json.Unmarshal([]byte(pvc.GetAnnotations()[DevContainerInfoAnnotation]), containerInfo)
 	if err != nil {
-		return nil, nil, errors.Wrap(err, "decode dev container info")
+		return nil, nil, perrors.Wrap(err, "decode dev container info")
 	}
 
 	return pvc, containerInfo, nil
@@ -160,7 +163,7 @@ func (k *kubernetesDriver) StopDevContainer(ctx context.Context, id string) erro
 	// delete pod
 	out, err := k.buildCmd(ctx, []string{"delete", "po", id, "--ignore-not-found"}).CombinedOutput()
 	if err != nil {
-		return errors.Wrapf(err, "delete pod: %s", string(out))
+		return perrors.Wrapf(err, "delete pod: %s", string(out))
 	}
 
 	return nil
@@ -178,7 +181,7 @@ func (k *kubernetesDriver) DeleteDevContainer(ctx context.Context, id string) er
 	k.Log.Infof("Delete persistent volume claim '%s'...", id)
 	out, err := k.buildCmd(ctx, []string{"delete", "pvc", id, "--ignore-not-found", "--grace-period=5"}).CombinedOutput()
 	if err != nil {
-		return errors.Wrapf(err, "delete pvc: %s", string(out))
+		return perrors.Wrapf(err, "delete pvc: %s", string(out))
 	}
 
 	// delete role binding & service account
@@ -186,14 +189,14 @@ func (k *kubernetesDriver) DeleteDevContainer(ctx context.Context, id string) er
 		k.Log.Infof("Delete role binding '%s'...", id)
 		out, err := k.buildCmd(ctx, []string{"delete", "rolebinding", id, "--ignore-not-found"}).CombinedOutput()
 		if err != nil {
-			return errors.Wrapf(err, "delete role binding: %s", string(out))
+			return perrors.Wrapf(err, "delete role binding: %s", string(out))
 		}
 
 		if k.config.ServiceAccount == "" {
 			k.Log.Infof("Delete service account '%s'...", id)
 			out, err = k.buildCmd(ctx, []string{"delete", "serviceaccount", id, "--ignore-not-found"}).CombinedOutput()
 			if err != nil {
-				return errors.Wrapf(err, "delete service account: %s", string(out))
+				return perrors.Wrapf(err, "delete service account: %s", string(out))
 			}
 		}
 	}
@@ -204,7 +207,7 @@ func (k *kubernetesDriver) DeleteDevContainer(ctx context.Context, id string) er
 func (k *kubernetesDriver) deletePod(ctx context.Context, podName string) error {
 	out, err := k.buildCmd(ctx, []string{"delete", "po", podName, "--ignore-not-found", "--grace-period=10"}).CombinedOutput()
 	if err != nil {
-		return errors.Wrapf(err, "delete pod: %s", string(out))
+		return perrors.Wrapf(err, "delete pod: %s", string(out))
 	}
 
 	return nil

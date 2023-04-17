@@ -259,8 +259,5 @@ type ProviderOption struct {
 }
 
 func (c *ProviderConfig) IsMachineProvider() bool {
-	if len(c.Exec.Create) > 0 {
-		return true
-	}
-	return false
+	return len(c.Exec.Create) > 0
 }

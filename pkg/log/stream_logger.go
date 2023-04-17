@@ -3,7 +3,6 @@ package log
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/acarl005/stripansi"
 	"io"
 	"os"
 	"strconv"
@@ -11,10 +10,10 @@ import (
 	"sync"
 	"time"
 
+	"github.com/acarl005/stripansi"
+	goansi "github.com/k0kubun/go-ansi"
 	"github.com/loft-sh/devpod/pkg/hash"
 	"github.com/loft-sh/devpod/pkg/scanner"
-
-	goansi "github.com/k0kubun/go-ansi"
 	"github.com/loft-sh/devpod/pkg/survey"
 	"github.com/loft-sh/devpod/pkg/terminal"
 	"github.com/mgutz/ansi"
@@ -22,7 +21,7 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
-var startTime = time.Now()
+// var startTime = time.Now()
 
 var Default = NewStdoutLogger(os.Stdin, stdout, stderr, logrus.InfoLevel)
 

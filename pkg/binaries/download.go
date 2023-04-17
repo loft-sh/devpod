@@ -2,6 +2,13 @@ package binaries
 
 import (
 	"fmt"
+	"io"
+	"os"
+	"path"
+	"path/filepath"
+	"runtime"
+	"strings"
+
 	"github.com/loft-sh/devpod/pkg/config"
 	"github.com/loft-sh/devpod/pkg/copy"
 	"github.com/loft-sh/devpod/pkg/download"
@@ -10,12 +17,6 @@ import (
 	"github.com/loft-sh/devpod/pkg/log"
 	provider2 "github.com/loft-sh/devpod/pkg/provider"
 	"github.com/pkg/errors"
-	"io"
-	"os"
-	"path"
-	"path/filepath"
-	"runtime"
-	"strings"
 )
 
 func ToEnvironmentWithBinaries(context string, workspace *provider2.Workspace, machine *provider2.Machine, options map[string]config.OptionValue, config *provider2.ProviderConfig, extraEnv map[string]string, log log.Logger) ([]string, error) {
@@ -44,7 +45,7 @@ func GetBinariesFrom(config *provider2.ProviderConfig, binariesDir string) (map[
 			binaryPath := getBinaryPath(binary, targetFolder)
 			_, err := os.Stat(binaryPath)
 			if err != nil {
-				return nil, fmt.Errorf("error trying to find binary %s: %v", binaryName, err)
+				return nil, fmt.Errorf("error trying to find binary %s: %w", binaryName, err)
 			}
 
 			retBinaries[binaryName] = binaryPath
@@ -95,7 +96,7 @@ func DownloadBinaries(binaries map[string][]*provider2.ProviderBinary, targetFol
 						_ = os.Remove(binaryPath)
 						log.Errorf("Error hashing %s: %v", binaryPath, err)
 						continue
-					} else if strings.ToLower(fileHash) != strings.ToLower(binary.Checksum) {
+					} else if !strings.EqualFold(fileHash, binary.Checksum) {
 						_ = os.Remove(binaryPath)
 						log.Errorf("Unexpected file checksum %s != %s for binary %s", strings.ToLower(fileHash), strings.ToLower(binary.Checksum), binaryName)
 						continue
@@ -127,7 +128,7 @@ func verifyBinary(binary *provider2.ProviderBinary, targetFolder string) string 
 	// verify checksum
 	if binary.Checksum != "" {
 		fileHash, err := hash.File(binaryPath)
-		if err != nil || strings.ToLower(fileHash) != strings.ToLower(binary.Checksum) {
+		if err != nil || !strings.EqualFold(fileHash, binary.Checksum) {
 			_ = os.Remove(binaryPath)
 			return ""
 		}

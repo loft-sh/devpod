@@ -4,12 +4,14 @@ import (
 	"archive/tar"
 	"bufio"
 	"compress/gzip"
-	"github.com/pkg/errors"
+	"errors"
 	"io"
 	"os"
 	"path"
 	"strings"
 	"time"
+
+	perrors "github.com/pkg/errors"
 )
 
 type Options struct {
@@ -52,7 +54,7 @@ func Extract(origReader io.Reader, destFolder string, options ...Option) error {
 	if testBytes[0] == 31 && testBytes[1] == 139 {
 		gzipReader, err := gzip.NewReader(bufioReader)
 		if err != nil {
-			return errors.Errorf("error decompressing: %v", err)
+			return perrors.Errorf("error decompressing: %v", err)
 		}
 		defer gzipReader.Close()
 
@@ -65,7 +67,7 @@ func Extract(origReader io.Reader, destFolder string, options ...Option) error {
 	for {
 		shouldContinue, err := extractNext(tarReader, destFolder, extractOptions)
 		if err != nil {
-			return errors.Wrap(err, "decompress")
+			return perrors.Wrap(err, "decompress")
 		} else if !shouldContinue {
 			return nil
 		}
@@ -75,8 +77,8 @@ func Extract(origReader io.Reader, destFolder string, options ...Option) error {
 func extractNext(tarReader *tar.Reader, destFolder string, options *Options) (bool, error) {
 	header, err := tarReader.Next()
 	if err != nil {
-		if err != io.EOF {
-			return false, errors.Wrap(err, "tar reader next")
+		if !errors.Is(err, io.EOF) {
+			return false, perrors.Wrap(err, "tar reader next")
 		}
 
 		return false, nil
@@ -130,16 +132,16 @@ func extractNext(tarReader *tar.Reader, destFolder string, options *Options) (bo
 		time.Sleep(time.Second * 5)
 		outFile, err = os.OpenFile(outFileName, os.O_RDWR|os.O_CREATE|os.O_TRUNC, filePerm)
 		if err != nil {
-			return false, errors.Wrapf(err, "create %s", outFileName)
+			return false, perrors.Wrapf(err, "create %s", outFileName)
 		}
 	}
 	defer outFile.Close()
 
 	if _, err := io.Copy(outFile, tarReader); err != nil {
-		return false, errors.Wrapf(err, "io copy tar reader %s", outFileName)
+		return false, perrors.Wrapf(err, "io copy tar reader %s", outFileName)
 	}
 	if err := outFile.Close(); err != nil {
-		return false, errors.Wrapf(err, "out file close %s", outFileName)
+		return false, perrors.Wrapf(err, "out file close %s", outFileName)
 	}
 
 	// Set permissions

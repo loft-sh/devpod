@@ -4,9 +4,10 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
-	"github.com/loft-sh/devpod/pkg/config"
 	"os"
 	"path/filepath"
+
+	"github.com/loft-sh/devpod/pkg/config"
 )
 
 const WorkspaceConfigFile = "workspace.json"
@@ -93,11 +94,7 @@ func WorkspaceExists(context, workspaceID string) bool {
 	}
 
 	_, err = os.Stat(workspaceDir)
-	if err != nil {
-		return false
-	}
-
-	return true
+	return err == nil
 }
 
 func SaveProviderConfig(context string, provider *ProviderConfig) error {
@@ -182,11 +179,8 @@ func MachineExists(context, machineID string) bool {
 	}
 
 	_, err = os.Stat(machineDir)
-	if err != nil {
-		return false
-	}
 
-	return true
+	return err == nil
 }
 
 func LoadProviderConfig(context, provider string) (*ProviderConfig, error) {

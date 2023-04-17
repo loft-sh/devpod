@@ -5,6 +5,11 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"io"
+	"os"
+	"sync"
+	"time"
+
 	"github.com/docker/go-connections/nat"
 	"github.com/loft-sh/devpod/pkg/agent"
 	"github.com/loft-sh/devpod/pkg/client"
@@ -15,10 +20,6 @@ import (
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 	"golang.org/x/crypto/ssh"
-	"io"
-	"os"
-	"sync"
-	"time"
 )
 
 func NewContainerTunnel(client client.WorkspaceClient, log log.Logger) *ContainerHandler {
@@ -325,7 +326,7 @@ func (c *ContainerHandler) getDevContainerResult(ctx context.Context, client *ss
 	buf := &bytes.Buffer{}
 	err := devssh.Run(ctx, client, command, nil, buf, writer)
 	if err != nil {
-		return nil, fmt.Errorf("error retrieving workspace get-result: %v", err)
+		return nil, fmt.Errorf("error retrieving workspace get-result: %w", err)
 	}
 
 	// parse result

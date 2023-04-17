@@ -4,12 +4,13 @@ import (
 	"context"
 	"crypto/tls"
 	"fmt"
-	"github.com/pkg/errors"
-	"github.com/spf13/cobra"
 	"io"
 	"net/http"
 	"os"
 	"strings"
+
+	"github.com/pkg/errors"
+	"github.com/spf13/cobra"
 )
 
 type RequestCmd struct {
@@ -74,7 +75,7 @@ func (cmd *RequestCmd) Run(ctx context.Context, args []string) error {
 
 	if resp.StatusCode >= 300 {
 		out, _ := io.ReadAll(resp.Body)
-		_, _ = fmt.Fprintf(os.Stderr, string(out))
+		_, _ = fmt.Fprint(os.Stderr, string(out))
 		return fmt.Errorf("unexpected response code %d", resp.StatusCode)
 	}
 
