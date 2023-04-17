@@ -19,20 +19,10 @@ jobs:
           - host: windows-latest
             target: aarch64-pc-windows-msvc
             ext: .exe
-          - host: windows-latest
-            target: i686-pc-windows-msvc
-            ext: .exe
           - host: ubuntu-latest
             target: x86_64-unknown-linux-gnu
           - host: ubuntu-latest
-            target: x86_64-unknown-linux-musl
-          - host: ubuntu-latest
             target: aarch64-unknown-linux-gnu
-          - host: ubuntu-latest
-            target: armv7-unknown-linux-gnueabihf
-            setup: |
-              sudo apt-get update
-              sudo apt-get install -y libgtk-3-dev libwebkit2gtk-4.0-dev libayatana-appindicator3-dev librsvg2-dev
     name: ${{ matrix.settings.target }}
     runs-on: ${{ matrix.settings.host }}
     env:
@@ -44,7 +34,7 @@ jobs:
         uses: actions/checkout@v3
 
       - name: Setup System Dependencies
-        if: matrix.setting.host == 'ubuntu-latest'
+        if: matrix.settings.host == 'ubuntu-latest'
         run: |
           sudo apt-get update
           sudo apt-get install -y libgtk-3-dev libwebkit2gtk-4.0-dev libayatana-appindicator3-dev librsvg2-dev
@@ -65,13 +55,13 @@ jobs:
           go-version: 1.19
 
       - name: Build Sidecar CLI
-        if: matrix.setting.host != 'windows-latest'
+        if: matrix.settings.host != 'windows-latest'
         run: |
           chmod +x ./hack/build-desktop-cli.sh
           ./hack/build-desktop-cli.sh
 
-      - name: Build CLI for Desktop
-        if: matrix.setting.host == 'windows-latest'
+      - name: Build Sidecar CLI
+        if: matrix.settings.host == 'windows-latest'
         run: |
           .\hack\build-desktop-cli.bat
 
