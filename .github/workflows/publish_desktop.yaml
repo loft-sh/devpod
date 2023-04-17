@@ -66,17 +66,19 @@ jobs:
           BIN_NAME=devpod-${{ matrix.settings.target }}
           GOOS=${{ matrix.settings.os }} GOARCH=${{ matrix.settings.arch }} go build -ldflags "-s -w" -o "test/$BIN_NAME"
           cp "test/$BIN_NAME" "desktop/src-tauri/bin/$BIN_NAME"
+          ls desktop/src-tauri/bin
 
       - name: Build Sidecar CLI
         if: matrix.settings.host == 'windows-latest'
         run: |
           set GOOS=windows
           set GOARCH=${{ matrix.settings.target }}
-          set bin_name = devpod-${{ matrix.settings.target }}.exe
+          set bin_name=devpod-${{ matrix.settings.target }}.exe
 
           go build -ldflags "-s -w" -o test/%bin_name%
 
           xcopy /F /Y test\%bin_name% desktop\bin\*
+          dir desktop\bin
 
       - name: Sync node version and setup cache
         uses: actions/setup-node@v3
