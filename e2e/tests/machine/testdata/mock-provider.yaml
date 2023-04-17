@@ -1,0 +1,53 @@
+name: mock-provider
+version: 0.0.1
+description: |-
+  DevPod on docker
+optionGroups:
+  - options:
+      - AGENT_PATH
+      - INACTIVITY_TIMEOUT
+      - INJECT_DOCKER_CREDENTIALS
+      - INJECT_GIT_CREDENTIALS
+    name: "Agent options"
+    defaultVisible: false
+options:
+  INACTIVITY_TIMEOUT:
+    description: "If defined, will automatically stop the container after the inactivity period. Example: 10m"
+  AGENT_PATH:
+    description: The path where to inject the DevPod agent to.
+    default: /opt/devpod/agent
+  INJECT_GIT_CREDENTIALS:
+    description: "If DevPod should inject git credentials into the remote host."
+    default: "true"
+  INJECT_DOCKER_CREDENTIALS:
+    description: "If DevPod should inject docker credentials into the remote host."
+    default: "true"
+agent:
+  inactivityTimeout: ${INACTIVITY_TIMEOUT}
+  injectGitCredentials: ${INJECT_GIT_CREDENTIALS}
+  injectDockerCredentials: ${INJECT_DOCKER_CREDENTIALS}
+  path: ${AGENT_PATH}
+exec:
+  init: docker ps -a
+  command: docker exec -ti ${MACHINE_ID} ${COMMAND}
+  create: |-
+    docker create --name ${MACHINE_ID} ubuntu:latest sleep infinity
+    docker start ${MACHINE_ID}
+  delete: docker rm --force ${MACHINE_ID}
+  start: docker start ${MACHINE_ID}
+  stop: docker stop ${MACHINE_ID}
+  status: |-
+    STATE=$(docker inspect ${MACHINE_ID} --format {{.State.Status}})
+    if [ ! -z "${STATE}" ] ; then
+      if [ "${STATE}" -eq "running" ]; then
+        echo RUNNING
+      elif [ "${STATE}" -eq "stopped" ]; then
+        echo STOPPED
+      elif [ "${STATE}" -eq "exited" ]; then
+        echo STOPPED
+      else
+        echo BUSY
+      fi
+    else
+      echo NOTFOUND
+    fi
