@@ -2,21 +2,24 @@ name: 'publish'
 on: workflow_dispatch
 
 jobs:
-  publish-tauri:
+  release:
     permissions:
       contents: write
     strategy:
       fail-fast: false
       matrix:
-        platform: [macos-latest]
+        platform: [macos-latest, ubuntu-20.04, windows-lastest]
     runs-on: ${{ matrix.platform }}
-    defaults:
-      run:
-        working-directory: ./desktop
 
     steps:
       - name: Checkout repository
         uses: actions/checkout@v3
+        
+      - name: Install dependencies (ubuntu only)
+        if: matrix.platform == 'ubuntu-20.04'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libgtk-3-dev libwebkit2gtk-4.0-dev libayatana-appindicator3-dev librsvg2-dev
 
       - name: Rust setup
         uses: dtolnay/rust-toolchain@stable
@@ -38,17 +41,19 @@ jobs:
 
       - name: Build the app
         uses: tauri-apps/tauri-action@v0
+        with:
+          projectPath: './desktop'
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          ENABLE_CODE_SIGNING: ${{ secrets.APPLE_CERTIFICATE }}
-          APPLE_CERTIFICATE: ${{ secrets.APPLE_CERTIFICATE }}
-          APPLE_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
-          APPLE_SIGNING_IDENTITY: ${{ secrets.APPLE_SIGNING_IDENTITY }}
-          APPLE_ID: ${{ secrets.APPLE_ID }}
-          APPLE_PASSWORD: ${{ secrets.APPLE_PASSWORD }}
-        with:
-          tagName: app-v__VERSION__ # the action automatically replaces \_\_VERSION\_\_ with the app version
-          releaseName: 'App v__VERSION__'
-          releaseBody: 'See the assets to download this version and install.'
-          releaseDraft: true
-          prerelease: false
+          # ENABLE_CODE_SIGNING: ${{ secrets.APPLE_CERTIFICATE }}
+          # APPLE_CERTIFICATE: ${{ secrets.APPLE_CERTIFICATE }}
+          # APPLE_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
+          # APPLE_SIGNING_IDENTITY: ${{ secrets.APPLE_SIGNING_IDENTITY }}
+          # APPLE_ID: ${{ secrets.APPLE_ID }}
+          # APPLE_PASSWORD: ${{ secrets.APPLE_PASSWORD }}
+        # with:
+          # tagName: app-v__VERSION__ # the action automatically replaces \_\_VERSION\_\_ with the app version
+          # releaseName: 'App v__VERSION__'
+          # releaseBody: 'See the assets to download this version and install.'
+          # releaseDraft: true
+          # prerelease: false
