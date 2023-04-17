@@ -11,16 +11,24 @@ jobs:
         settings:
           - host: macos-latest
             target: x86_64-apple-darwin
+            os: darwin
+            arch: amd64
           - host: macos-latest
             target: aarch64-apple-darwin
+            os: darwin
+            arch: arm64
           - host: windows-latest
             target: x86_64-pc-windows-msvc
-          # - host: windows-latest
-          #   target: aarch64-pc-windows-msvc
+          - host: windows-latest
+            target: aarch64-pc-windows-msvc
           - host: ubuntu-latest
             target: x86_64-unknown-linux-gnu
+            os: linux
+            arch: amd64
           - host: ubuntu-latest
             target: aarch64-unknown-linux-gnu
+            os: linux
+            arch: arm64
     name: ${{ matrix.settings.target }}
     runs-on: ${{ matrix.settings.host }}
     env:
@@ -55,13 +63,20 @@ jobs:
       - name: Build Sidecar CLI
         if: matrix.settings.host != 'windows-latest'
         run: |
-          chmod +x ./hack/build-desktop-cli.sh
-          ./hack/build-desktop-cli.sh
+          BIN_NAME=devpod-${{ matrix.settings.target }}
+          GOOS=${{ matrix.settings.os }} GOARCH=${{ matrix.settings.arch }} go build -ldflags "-s -w" -o "test/$BIN_NAME"
+          cp "test/$BIN_NAME" "desktop/src-tauri/bin/$BIN_NAME"
 
       - name: Build Sidecar CLI
         if: matrix.settings.host == 'windows-latest'
         run: |
-          .\hack\build-desktop-cli.bat
+          set GOOS=windows
+          set GOARCH=${{ matrix.settings.target }}
+          set bin_name = devpod-${{ matrix.settings.target }}.exe
+
+          go build -ldflags "-s -w" -o test/%bin_name%
+
+          xcopy /F /Y test\%bin_name% desktop\bin\*
 
       - name: Sync node version and setup cache
         uses: actions/setup-node@v3
@@ -86,6 +101,7 @@ jobs:
           # APPLE_PASSWORD: ${{ secrets.APPLE_PASSWORD }}
         with:
           projectPath: "./desktop"
+          args: " --target ${{ matrix.settings.target }}"
           tagName: devpod-desktop-v__VERSION__ # the action automatically replaces \_\_VERSION\_\_ with the app version
           releaseName: "DevPod-Desktop-v__VERSION__"
           releaseBody: "See the assets to download this version and install."
