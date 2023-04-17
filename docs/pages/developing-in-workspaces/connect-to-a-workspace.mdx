@@ -3,8 +3,122 @@ title: Connect to a Workspace
 sidebar_label: Connect to a Workspace
 ---
 
-## VSCode
+## Connect to a Workspace
 
-## JetBrains
+After a workspace is successfully created, the workspace is reachable via the ssh host `my-workspace.devpod`.
+If you have selected an IDE to automatically open, DevPod will automatically try to open the IDE after a successful workspace creation or `devpod up` command.
 
-## SSH
+:::info
+You can change the default IDE to open globally via: `devpod use ide vscode` or `devpod up my-workspace --ide vscode` for an individual workspace.
+:::
+
+### VSCode Browser
+
+DevPod is able to open VSCode in a browser in a workspace.
+It will use the open source project [openvscode-server](https://github.com/gitpod-io/openvscode-server) for installing a vscode server binary in the workspace and then tunnel a connection to that binary from the localhost.
+To open the workspace inside VSCode browser, you can run the following command:
+```
+devpod up my-workspace --ide openvscode
+```
+
+To select a different openvscode version, run via:
+```
+devpod up my-workspace --ide openvscode --ide-option VERSION=v1.76.2
+```
+
+### VSCode
+
+Before connecting vscode with DevPod, make sure you have installed the [remote ssh extension](https://marketplace.visualstudio.com/items?itemName=ms-vscode-remote.remote-ssh) and the [code CLI](https://code.visualstudio.com/docs/editor/command-line). Then you can start the workspace directly in vscode with:
+```
+devpod up my-workspace --ide vscode
+```
+
+:::info SSH Fallback
+If for whatever reason this does not work you can also use the regular SSH connection with `WORKSPACE_NAME.devpod` to connect VSCode with a workspace
+:::
+
+### JetBrains Suite (Goland, PyCharm, Intellij etc.)
+
+Make sure you have [JetBrains Gateway](https://www.jetbrains.com/remote-development/gateway/) installed and a valid jetbrains subscription for your local IDE. The following JetBrains IDEs are supported:
+* **CLion (clion)**
+* **Goland (goland)**
+* **PyCharm (pycharm)**
+* **Intellij (intellij)**
+* **PhpStorm (phpstorm)**
+* **WebStorm (webstorm)**
+* **Rider (rider)**
+* **RubyMine (rubymine)**
+
+Then start your workspace via:
+```
+devpod up my-workspace --ide goland
+```
+
+Which will install the goland server binary into the workspace and then open JetBrains Gateway to open this workspace.
+
+After successful installation the Gateway SSH dialog will popup prefilled with the correct information, please click **Check Connection and Continue**, which will start your desired IDE inside the workspace.
+
+To select a different IDE version, please run with:
+```
+devpod up my-workspace --ide goland --ide-option VERSION=2022.3.3
+```
+
+:::info SSH Fallback
+If for whatever reason this does not work you can also use the regular SSH connection with `WORKSPACE_NAME.devpod` to connect your JetBrains IDE with a workspace
+:::
+
+:::info Fleet Support
+Fleet currently only works by manually adding an SSH connection with `WORKSPACE_NAME.devpod`
+:::
+
+### SSH
+
+Upon workspace creation, DevPod will automatically modify the `~/.ssh/config` to include an entry for `WORKSPACE_NAME.devpod`, which allows you to use the following command to connect to your workspace:
+```
+ssh WORKSPACE_NAME.devpod
+```
+
+This also allows you to connect any IDE that supports remote development through SSH via the given host `WORKSPACE_NAME.devpod`.
+
+### DevPod CLI
+
+If you don't have `ssh` installed or cannot connect through any other IDE, you can use the following DevPod command to access a workspace:
+```
+devpod ssh my-workspace
+```
+
+Optionally you can also define a command to run:
+```
+devpod ssh my-workspace --command "echo Hello World"
+```
+
+## IDE Commands
+
+This section shows additional commands to configure DevPod's behaviour when opening a workspace.
+
+### Configure IDE Options
+
+You can specify certain options such as IDE version and download path if needed. You can list the available options for an IDE via:
+```
+devpod ide openvscode
+```
+
+You will see available options and default values for them. To change an option, you can run:
+```
+devpod ide set-options openvscode -o VERSION=v1.76.2
+```
+
+### Change Default IDE
+
+To change the default IDE DevPod will use for connecting to a workspace, please run:
+```
+devpod ide use vscode
+```
+
+### List supported IDEs
+
+You can list all supported IDEs by DevPod via:
+```
+devpod ide list
+```
+

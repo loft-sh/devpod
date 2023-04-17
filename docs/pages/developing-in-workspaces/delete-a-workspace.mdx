@@ -4,3 +4,30 @@ sidebar_label: Delete a Workspace
 ---
 
 ## Delete a workspace
+
+Deleting a workspace means to erase all state of an existing workspace and remove all traces of it within DevPod.
+Depending on the DevPod provider, this means either removing a docker container or deleting a whole virtual machine.
+DevPod will automatically determine what specific action to take when a workspace is deleted.
+
+### Via DevPod Desktop Application
+
+In the 'Workspaces' view, click on the 'More Options' button and then on 'Delete'. This will delete the workspace.
+
+:::info Force Deletion
+If deletion fails because the Provider is not reachable anymore or another error has occurred, you can also force delete a workspace by checking the force checkbox.
+However, this means the workspace will only be deleted on the DevPod side locally, and any error raised by the used provider will be ignored. Only use this option with caution as this might leave previously created resources behind.
+:::
+
+### Via DevPod CLI
+
+Run the following command to delete a workspace:
+```
+devpod delete my-workspace
+```
+
+If deletion fails because the Provider is not reachable anymore or another error has occurred, you can also force delete a workspace via:
+```
+devpod delete my-workspace --force
+```
+
+However, this means the workspace will only be deleted on the DevPod side locally, and any error raised by the used provider will be ignored. Only use this option with caution as this might leave previously created resources behind.

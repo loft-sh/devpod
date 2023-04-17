@@ -3,6 +3,54 @@ title: Prebuild a Workspace
 sidebar_label: Prebuild a Workspace
 ---
 
-* Reference prebuild-repo via cli
-* Reference prebuild-repo via devcontainer.json
-* Prebuild tag generation
+## Prebuild a Workspace
+
+Prebuilding a workspace means building a ready-to-use docker image out of the `devcontainer.json`, its referenced features and a potentially linked `Dockerfile`.
+Usually when creating a new workspace, DevPod will first build a docker image based on the configuration and then later use this image to create the development environment.
+With prebuilds, this step can be omitted and DevPod can directly use the docker image to start the development environment, this can save start up time especially for more complex development environments.
+
+### How does it work?
+
+Based on the `devcontainer.json` configuration, DevPod will generate a hash in the form of `devpod-HASH` and use this as a tag for the created docker image.
+You can then reference docker image repositories, where DevPod will search this tag and if found uses it instead of building the image itself.
+
+To prebuild a workspace, you can run the following command:
+```
+# Prebuild the docker image for github.com/my-org/my-repo and save it in image registry ghcr.io/my-org/my-repo
+devpod build github.com/my-org/my-repo --repository ghcr.io/my-org/my-repo
+```
+
+:::info Detecting existing Prebuilds
+DevPod will only build the workspace if there isn't an existing prebuild found in the specified docker image repository
+:::
+
+DevPod will use the current provider for doing this, means you can also use remote providers to prebuild an image. You can even have a separate provider for just prebuilding images.
+
+## Using Prebuilds
+
+Using prebuilds means you specify a docker image repository, where DevPod will search for an image with a specific hash generated out of the devcontainer configuration. You can either specify this prebuild repository via a flag during workspace creation or directly in the `devcontainer.json`.
+
+:::info Prebuild not found
+If a prebuild cannot be found in the given repository or credentials are missing locally, DevPod will just skip the repository.
+:::
+
+### Reference Prebuild Repository as Flag
+
+When creating a new workspace, you can define the prebuild repository via the `--prebuild-repository` flag:
+```
+devpod up github.com/my-org/my-repo --prebuild-repository ghcr.io/my-org/my-repo
+```
+
+### Reference Prebuild Repository in devcontainer.json
+
+It's also possible to include the prebuild repository directly in the `devcontainer.json`, which makes it easy to automate prebuilding through a CI/CD pipeline on changes. You can specify the prebuild repository via:
+```
+{
+  "name": "my-project",
+  "customizations": {
+    "devpod": {
+      "prebuildRepository": "ghcr.io/my-org/my-repo"
+    }
+  }
+}
+```

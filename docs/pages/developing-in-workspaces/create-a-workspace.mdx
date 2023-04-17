@@ -5,6 +5,94 @@ sidebar_label: Create a Workspace
 
 ## Create a Workspace
 
-### From Git
+You can create a workspace either from the DevPod CLI or through the desktop application. A workspace can be created from a git repository, a local path or a docker container (e.g. `golang:latest`).
 
-### From Folder
+Upon successful creation, DevPod will make the development container available at the ssh host `WORKSPACE.devpod`. Alternatively, DevPod can automatically open the workspace in a locally installed IDE, such as VSCode or Intellij.
+
+:::info
+A workspace is defined through a `devcontainer.json`. If DevPod can't find one, it will automatically try to guess the programming language of your project and provide a fitting template.
+:::
+
+### Via DevPod Desktop Application
+
+Navigate to the 'Workspaces' view and click on the 'Create' button in the title. Enter the git repository you want to work on or select a local folder.
+
+You can also configure one of the additional settings:
+- **Provider**: The provider to use for this workspace
+- **Default IDE**: The ide to open after successfully creating this workspace
+- **Workspace Name**: Override the automatically determined workspace name with this option
+- **Prebuild Repository**: A docker image repository such as `ghcr.io/my-org/my-repo` that contains prebuilds for this workspace. DevPod will try to automatically find a fitting prebuild for this workspace in the given repository.
+
+Then press `Create Workspace` to launch the workspace.
+
+:::info
+Under the hood, the Desktop Application will call a `devpod up REPOSITORY`
+:::
+
+### Via DevPod CLI
+
+Make sure to install the DevPod cli locally and select a provider you would like to host the workspace on (such as local docker).
+
+#### Git Repository
+
+Run the following command in a terminal to start a new workspace:
+
+```
+# Create from git repository
+devpod up github.com/microsoft/vscode-remote-try-node
+```
+
+:::info Private Git Repositories
+DevPod will forward git credentials to a remote machine so that you can also pull private repositories.
+:::
+
+
+:::info Multiple workspaces from the same repository
+Use the `--id` flag to override the name of the workspace. This allows you to create multiple workspaces from the same repository.
+:::
+
+
+#### Local Path
+
+Run the following command in a terminal to create a new workspace:
+
+```
+# Create from a local path
+devpod up ./path/to/my-folder
+```
+
+DevPod will sync the folder into the remote machine and create a development environment out of the `devcontainer.json`.
+
+#### Docker Image
+
+Run the following command in a terminal to create a new workspace from a docker image:
+
+```
+# Create from a docker image
+devpod up ghcr.io/my-org/my-repo:latest
+```
+
+DevPod will create the following `devcontainer.json` for this:
+```
+{
+    "image": "ghcr.io/my-org/my-repo:latest"
+}
+```
+
+## Recreating a workspace
+
+If you are working on the `devcontainer.json` or have pulled changes that affect the development environment, you can recreate a workspace. Recreating a workspace means to apply changes in the `devcontainer.json` or related `Dockerfile` to the development environment. If a prebuild repository is supplied, DevPod will try to find the updated development environment image inside the prebuild repository and if not found, will fallback to building it.
+
+When recreating a workspace, changes only to the project path or mounted volumes will be preserved. **All other changes made in the container will be lost.**
+
+### Via DevPod Desktop Application
+
+Navigate to the 'Workspaces' view and press on the 'More Options' button on the workspace you want to recreate. Then press 'Rebuild' and confirm the form to rebuild the workspace.
+
+### Via DevPod CLI
+
+Run the following command to rebuild an existing workspace:
+```
+devpod up my-workspace --recreate
+```
+
