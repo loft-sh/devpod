@@ -36,6 +36,10 @@ module.exports = {
         },
         {
           type: "doc",
+          id: "developing-in-workspaces/connect-to-a-workspace",
+        },
+        {
+          type: "doc",
           id: "developing-in-workspaces/devcontainer-json",
         },
         {
