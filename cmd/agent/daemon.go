@@ -62,8 +62,10 @@ func (cmd *DaemonCmd) patrol(log log.Logger) {
 	cmd.initialTouch(log)
 
 	// loop over workspace configs and check their last ModTime
-	time.Sleep(time.Minute)
-	cmd.doOnce(log)
+	for {
+		time.Sleep(time.Minute)
+		cmd.doOnce(log)
+	}
 }
 
 func (cmd *DaemonCmd) doOnce(log log.Logger) {

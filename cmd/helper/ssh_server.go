@@ -106,9 +106,11 @@ func (cmd *SSHServerCmd) Run(_ *cobra.Command, _ []string) error {
 					_ = os.Chmod(agent.ContainerActivityFile, 0777)
 				}
 
-				time.Sleep(time.Second * 10)
-				now := time.Now()
-				_ = os.Chtimes(agent.ContainerActivityFile, now, now)
+				for {
+					time.Sleep(time.Second * 10)
+					now := time.Now()
+					_ = os.Chtimes(agent.ContainerActivityFile, now, now)
+				}
 			}()
 		}
 
