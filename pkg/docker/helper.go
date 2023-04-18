@@ -167,7 +167,7 @@ func (r *DockerHelper) FindContainer(labels []string) ([]string, error) {
 	if err != nil {
 		var exitError *exec.ExitError
 		if errors.As(err, &exitError) {
-			return nil, fmt.Errorf("find container: %s", strings.TrimSpace(string(exitError.Stderr)))
+			return nil, fmt.Errorf("find container: %s%s", string(out), strings.TrimSpace(string(exitError.Stderr)))
 		}
 
 		return nil, fmt.Errorf("find container: %s", strings.TrimSpace(string(out)))

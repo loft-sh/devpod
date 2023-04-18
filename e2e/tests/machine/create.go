@@ -23,7 +23,7 @@ var _ = DevPodDescribe("devpod machine create", func() {
 		f := framework.NewDefaultFramework(initialDir + "/bin")
 
 		// Ensure that mock-provider is deleted
-		f.DevPodProviderDelete([]string{"mock-provider"})
+		_ = f.DevPodProviderDelete([]string{"mock-provider"})
 
 		ginkgo.By("Add mock provider")
 		err = f.DevPodProviderAdd([]string{tempDir + "/mock-provider.yaml"})

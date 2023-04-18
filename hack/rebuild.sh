@@ -17,4 +17,4 @@ cp test/devpod-darwin-arm64 desktop/src-tauri/bin/devpod-aarch64-apple-darwin
 #upx "test/devpod-linux-amd64"
 #upx "test/devpod-linux-arm64"
 #upx "test/devpod-darwin-arm64"
-rm -R $TMPDIR/devpod-cache
+rm -R $TMPDIR/devpod-cache 2>/dev/null || true
