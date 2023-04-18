@@ -1,7 +1,6 @@
 package cmd
 
 import (
-	"errors"
 	"fmt"
 	"os"
 	"os/exec"
@@ -15,7 +14,6 @@ import (
 	"github.com/loft-sh/devpod/cmd/provider"
 	"github.com/loft-sh/devpod/cmd/use"
 	log2 "github.com/loft-sh/devpod/pkg/log"
-	perrors "github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 	"golang.org/x/crypto/ssh"
@@ -57,16 +55,13 @@ func Execute() {
 	// execute command
 	err := rootCmd.Execute()
 	if err != nil {
-		var sshExitErr *ssh.ExitError
-		if errors.As(perrors.Cause(err), &sshExitErr) {
+		//nolint:all
+		if sshExitErr, ok := err.(*ssh.ExitError); ok {
 			os.Exit(sshExitErr.ExitStatus())
 		}
 
-		var execExitErr *exec.ExitError
-		if errors.As(perrors.Cause(err), &execExitErr) {
-			if len(execExitErr.Stderr) > 0 {
-				log2.Default.ErrorStreamOnly().Error(string(execExitErr.Stderr))
-			}
+		//nolint:all
+		if execExitErr, ok := err.(*exec.ExitError); ok {
 			os.Exit(execExitErr.ExitCode())
 		}
 
