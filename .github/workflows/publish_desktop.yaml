@@ -70,15 +70,15 @@ jobs:
 
       - name: Build Sidecar CLI
         if: matrix.settings.host == 'windows-latest'
+        shell: cmd
         run: |
           set GOOS=windows
           set GOARCH=${{ matrix.settings.target }}
-          set bin_name=devpod-${{ matrix.settings.target }}.exe
+          set BIN_NAME=devpod-${{ matrix.settings.target }}.exe
 
-          go build -ldflags "-s -w" -o test/%bin_name%
+          go build -ldflags "-s -w" -o "test/%BIN_NAME%"
 
-          xcopy /F /Y test\%bin_name% desktop\bin\*
-          dir desktop\bin
+          xcopy /F /Y "test\%BIN_NAME%" desktop\bin\*
 
       - name: Sync node version and setup cache
         uses: actions/setup-node@v3
@@ -92,7 +92,7 @@ jobs:
         working-directory: "./desktop"
 
       - name: Build Desktop App
-        uses: tauri-apps/tauri-action@v0
+        uses: tauri-apps/tauri-action@dev
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           # ENABLE_CODE_SIGNING: ${{ secrets.APPLE_CERTIFICATE }}
