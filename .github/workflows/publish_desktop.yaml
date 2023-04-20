@@ -19,16 +19,18 @@ jobs:
             arch: arm64
           - host: windows-latest
             target: x86_64-pc-windows-msvc
+            arch: amd64
           - host: windows-latest
             target: aarch64-pc-windows-msvc
+            arch: amd64
           - host: ubuntu-latest
             target: x86_64-unknown-linux-gnu
             os: linux
             arch: amd64
-          - host: ubuntu-latest
-            target: aarch64-unknown-linux-gnu
-            os: linux
-            arch: arm64
+          # - host: ubuntu-latest
+          #   target: aarch64-unknown-linux-gnu
+          #   os: linux
+          #   arch: arm64
     name: ${{ matrix.settings.target }}
     runs-on: ${{ matrix.settings.host }}
     env:
@@ -73,7 +75,7 @@ jobs:
         shell: cmd
         run: |
           set GOOS=windows
-          set GOARCH=${{ matrix.settings.target }}
+          set GOARCH=${{ matrix.settings.arch }}
           set BIN_NAME=devpod-${{ matrix.settings.target }}.exe
 
           go build -ldflags "-s -w" -o "test/%BIN_NAME%"
