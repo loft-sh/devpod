@@ -80,7 +80,7 @@ jobs:
 
           go build -ldflags "-s -w" -o "test/%BIN_NAME%"
 
-          xcopy /F /Y "test\%BIN_NAME%" desktop\bin\*
+          xcopy /F /Y "test\%BIN_NAME%" desktop\src-tauri\bin\*
 
       - name: Sync node version and setup cache
         uses: actions/setup-node@v3
