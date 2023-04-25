@@ -8,6 +8,8 @@
     "build": "tsc && vite build",
     "preview": "vite preview",
     "tauri": "tauri",
+    "desktop:build": "tauri build",
+    "desktop:build:debug": "tauri build --debug",
     "format:check": "prettier --check .",
     "format:fix": "prettier --write .",
     "types:check": "tsc -p ./tsconfig.json --noEmit"

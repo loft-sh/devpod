@@ -7,7 +7,7 @@
     "withGlobalTauri": false
   },
   "package": {
-    "productName": "Devpod Desktop"
+    "productName": "Devpod"
   },
   "tauri": {
     "allowlist": {
@@ -50,7 +50,7 @@
       "category": "DeveloperTool",
       "copyright": "",
       "externalBin": [
-        "bin/devpod"
+        "bin/devpod-cli"
       ],
       "resources": [],
       "icon": [
@@ -92,7 +92,7 @@
     "macOSPrivateApi": true,
     "windows": [
       {
-        "title": "Devpod Desktop",
+        "title": "Devpod",
         "width": 1200,
         "height": 800,
         "minWidth": 1000,

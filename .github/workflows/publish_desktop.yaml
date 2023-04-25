@@ -17,9 +17,11 @@ jobs:
             target: aarch64-apple-darwin
             os: darwin
             arch: arm64
-          - host: windows-latest
-            target: x86_64-pc-windows-msvc
-            arch: amd64
+          # The WIX version we use for the installer (latest 3.something) doesn't support arm builds - if we need to support arm windows,
+          # we'd need to switch the installer toolchain to WIX 4.xx, not sure how that works out with tauri
+          # - host: windows-latest
+          #   target: x86_64-pc-windows-msvc
+          #   arch: amd64
           - host: windows-latest
             target: aarch64-pc-windows-msvc
             arch: amd64
@@ -65,7 +67,7 @@ jobs:
       - name: Build Sidecar CLI
         if: matrix.settings.host != 'windows-latest'
         run: |
-          BIN_NAME=devpod-${{ matrix.settings.target }}
+          BIN_NAME=devpod-cli-${{ matrix.settings.target }}
           GOOS=${{ matrix.settings.os }} GOARCH=${{ matrix.settings.arch }} go build -ldflags "-s -w" -o "test/$BIN_NAME"
           cp "test/$BIN_NAME" "desktop/src-tauri/bin/$BIN_NAME"
           ls desktop/src-tauri/bin
@@ -76,7 +78,7 @@ jobs:
         run: |
           set GOOS=windows
           set GOARCH=${{ matrix.settings.arch }}
-          set BIN_NAME=devpod-${{ matrix.settings.target }}.exe
+          set BIN_NAME=devpod-cli-${{ matrix.settings.target }}.exe
 
           go build -ldflags "-s -w" -o "test/%BIN_NAME%"
 
