@@ -18,7 +18,7 @@
         "sidecar": true,
         "scope": [
           {
-            "name": "bin/devpod",
+            "name": "bin/devpod-cli",
             "sidecar": true,
             "args": true
           }
