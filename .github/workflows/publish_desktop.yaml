@@ -21,7 +21,7 @@ jobs:
           # we'd need to switch the installer toolchain to WIX 4.xx, not sure how that works out with tauri
           # - host: windows-latest
           #   target: aarch64-pc-windows-msvc
-          #   arch: amd64
+          #   arch: arm64
           - host: windows-latest
             target: x86_64-pc-windows-msvc
             arch: amd64
