@@ -20,10 +20,10 @@ jobs:
           # The WIX version we use for the installer (latest 3.something) doesn't support arm builds - if we need to support arm windows,
           # we'd need to switch the installer toolchain to WIX 4.xx, not sure how that works out with tauri
           # - host: windows-latest
-          #   target: x86_64-pc-windows-msvc
+          #   target: aarch64-pc-windows-msvc
           #   arch: amd64
           - host: windows-latest
-            target: aarch64-pc-windows-msvc
+            target: x86_64-pc-windows-msvc
             arch: amd64
           - host: ubuntu-latest
             target: x86_64-unknown-linux-gnu
