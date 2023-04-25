@@ -20,7 +20,7 @@ jobs:
       - name: Get Version
         run: |
           PACKAGE_VERSION=$(node -p "require('./desktop/package.json').version")
-          echo "$PACKAGE_VERSION" >> $GITHUB_ENV
+          echo "PACKAGE_VERSION=$PACKAGE_VERSION" >> $GITHUB_ENV
           echo "package_version=$PACKAGE_VERSION" >> $GITHUB_OUTPUT
 
       - name: Create Release
