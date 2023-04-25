@@ -2,21 +2,59 @@ name: Publish Desktop
 on: workflow_dispatch
 
 jobs:
-  release:
+  create-release:
+    permissions:
+      contents: write
+    runs-on: ubuntu-20.04
+    outputs:
+      release_id: ${{ steps.create-release.outputs.result }}
+      upload_url: ${{ steps.create-release.outputs.upload_url }}
+      package_version: ${{ steps.create-release.outputs.package_version }}
+    steps:
+      - uses: actions/checkout@v3
+      - name: Setup Node
+        uses: actions/setup-node@v3
+        with:
+          node-version: 16
+
+      - name: Get Version
+        run: |
+          PACKAGE_VERSION=$(node -p "require('./package.json').version")
+          echo "$PACKAGE_VERSION" >> $GITHUB_ENV
+          echo "package_version=$PACKAGE_VERSION" >> $GITHUB_OUTPUT
+
+      - name: Create Release
+        id: create-release
+        uses: actions/github-script@v6
+        with:
+          script: |
+            const { data } = await github.rest.repos.createRelease({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              tag_name: `DevPod-v${process.env.PACKAGE_VERSION}`,
+              name: `DevPod v${process.env.PACKAGE_VERSION}`,
+              body: 'Take a look at the assets to download and install DevPod Desktop',
+              draft: true,
+              prerelease: false
+            })
+            return data.id
+
+  build-app:
+    needs: create-release
     permissions:
       contents: write
     strategy:
       fail-fast: false
       matrix:
         settings:
-          - host: macos-latest
-            target: x86_64-apple-darwin
-            os: darwin
-            arch: amd64
-          - host: macos-latest
-            target: aarch64-apple-darwin
-            os: darwin
-            arch: arm64
+          # - host: macos-latest
+          #   target: x86_64-apple-darwin
+          #   os: darwin
+          #   arch: amd64
+          # - host: macos-latest
+          #   target: aarch64-apple-darwin
+          #   os: darwin
+          #   arch: arm64
           # The WIX version we use for the installer (latest 3.something) doesn't support arm builds - if we need to support arm windows,
           # we'd need to switch the installer toolchain to WIX 4.xx, not sure how that works out with tauri
           # - host: windows-latest
@@ -25,14 +63,10 @@ jobs:
           - host: windows-latest
             target: x86_64-pc-windows-msvc
             arch: amd64
-          - host: ubuntu-latest
-            target: x86_64-unknown-linux-gnu
-            os: linux
-            arch: amd64
           # - host: ubuntu-latest
-          #   target: aarch64-unknown-linux-gnu
+          #   target: x86_64-unknown-linux-gnu
           #   os: linux
-          #   arch: arm64
+          #   arch: amd64
     name: ${{ matrix.settings.target }}
     runs-on: ${{ matrix.settings.host }}
     env:
@@ -96,20 +130,45 @@ jobs:
         working-directory: "./desktop"
 
       - name: Build Desktop App
+        if: matrix.settings.host != 'windows-latest'
         uses: tauri-apps/tauri-action@dev
+        with:
+          releaseId: ${{ needs.create-release.outputs.release_id }}
+          projectPath: "./desktop"
+          args: " --target ${{ matrix.settings.target }}"
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # MacOS Signing:
           # ENABLE_CODE_SIGNING: ${{ secrets.APPLE_CERTIFICATE }}
           # APPLE_CERTIFICATE: ${{ secrets.APPLE_CERTIFICATE }}
           # APPLE_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
           # APPLE_SIGNING_IDENTITY: ${{ secrets.APPLE_SIGNING_IDENTITY }}
           # APPLE_ID: ${{ secrets.APPLE_ID }}
           # APPLE_PASSWORD: ${{ secrets.APPLE_PASSWORD }}
+          #
+          # AppImage Signing:
+          SIGN: ${{ secrets.APP_IMAGE_SIGN }}
+          SIGN_KEY: ${{ secrets.APP_IMAGE_SIGN_KEY }}
+          APPIMAGETOOL_SIGN_PASSPHRASE: ${{ secrets.APP_IMAGE_SIGN_PASSPHRASE }}
+
+      - name: Build Desktop App
+        if: matrix.settings.host == 'windows-latest'
+        id: build-desktop-app
+        uses: tauri-apps/tauri-action@dev
         with:
           projectPath: "./desktop"
           args: " --target ${{ matrix.settings.target }}"
-          tagName: devpod-desktop-v__VERSION__ # the action automatically replaces \_\_VERSION\_\_ with the app version
-          releaseName: "DevPod-Desktop-v__VERSION__"
-          releaseBody: "See the assets to download this version and install."
-          releaseDraft: true
-          prerelease: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      # TODO: Need to sign application after building it
+      - name: Upload Release Asset
+        id: upload-release-asset
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ needs.create-release.outputs.upload_url }}
+          asset_path: ./desktop/src-tauri/target/release/bundle/msi/DevPod-${{ needs.create-release.outputs.package_version }}_x64_en-US.msi
+          asset_name: DevPod-${{ needs.create-release.outputs.package_version }}_x64_en-US.msi
+          asset_content_type: application/x-msi

@@ -33,5 +33,5 @@ Run `yarn types:check` to check for errors
 
 ## Versioning
 
-The apps version is determined by the one in `cargo.toml`. Be careful not to add one in `tauri.conf.json` as it override the current one.
-You can upgrade the version manually or install and run [cargo bump](https://crates.io/crates/cargo-bump) and then run `cargo bump ...`
+The apps version is determined by the one in `package.json`. Be careful not to add one in `tauri.conf.json` as it override the current one.
+You can upgrade the version manually or run `yarn version ...`
