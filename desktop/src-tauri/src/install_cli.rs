@@ -38,7 +38,7 @@ pub fn install_cli(app_handle: AppHandle) -> Result<(), InstallCLIError> {
     install(app_handle)
 }
 
-// The path to the `devpod` cli binary/executable. If bundled correctly, will be placed next to the desktop app executable.
+// The path to the `devpod-cli` binary/executable. If bundled correctly, will be placed next to the desktop app executable.
 fn get_cli_path() -> Result<PathBuf, std::io::Error> {
     let mut exe_path = env::current_exe()?;
     exe_path.pop();
@@ -53,7 +53,8 @@ fn install(_app_handle: AppHandle) -> Result<(), InstallCLIError> {
 
     let cli_path = get_cli_path().map_err(|e| InstallCLIError::NoExePath(e))?;
 
-    let raw_target_path = format!("/usr/local/bin/{}", DEVPOD_BINARY_NAME);
+    // The binary we ship with is `devpod-cli`, but we want to symlink it to `devpod` so that users can just run `devpod` in their terminal
+    let raw_target_path = format!("/usr/local/bin/{}", "devpod");
     let target_path = Path::new(&raw_target_path);
 
     match target_path.try_exists() {
@@ -72,7 +73,7 @@ fn install(app_handle: AppHandle) -> Result<(), InstallCLIError> {
     use log::error;
     use std::fs;
     use windows::Win32::{
-        Foundation::{GetLastError, LPARAM, HWND},
+        Foundation::{GetLastError, HWND, LPARAM},
         UI::WindowsAndMessaging::{SendMessageTimeoutW, SMTO_ABORTIFHUNG, WM_SETTINGCHANGE},
     };
     use winreg::{
@@ -97,13 +98,13 @@ fn install(app_handle: AppHandle) -> Result<(), InstallCLIError> {
     let cli_path = cli_path.to_str().ok_or(InstallCLIError::PathConversion)?;
 
     let sh_file = BinFile {
-        name: DEVPOD_BINARY_NAME.to_string(),
+        name: "devpod".to_string(),
         // WARN: we actually need to debug print here because this escapes the backslash to `\\` and will then be recognised by the shell
         content: format!("#!/usr/bin/env sh\n{:?}.exe\nexit $?", cli_path),
     };
 
     let cmd_file = BinFile {
-        name: format!("{}.cmd", DEVPOD_BINARY_NAME),
+        name: format!("{}.cmd", "devpod".to_string()),
         content: format!("@echo off\n\"{}.exe\"", cli_path),
     };
 

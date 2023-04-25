@@ -75,7 +75,7 @@ export function App() {
               data-tauri-drag-region // keep!
               fontWeight="bold"
               marginTop="2">
-              Devpod Desktop
+              Devpod
             </Text>
           </Box>
         )}

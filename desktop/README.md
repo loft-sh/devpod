@@ -30,3 +30,8 @@ Once you're happy with the current state, give it a spin in release mode by runn
 ## Check Type Errors
 
 Run `yarn types:check` to check for errors
+
+## Versioning
+
+The apps version is determined by the one in `cargo.toml`. Be careful not to add one in `tauri.conf.json` as it override the current one.
+You can upgrade the version manually or install and run [cargo bump](https://crates.io/crates/cargo-bump) and then run `cargo bump ...`

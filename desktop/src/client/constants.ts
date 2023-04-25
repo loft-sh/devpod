@@ -3,7 +3,7 @@ export const DEFAULT_STATIC_COMMAND_CONFIG = {
   debug: false,
 } as const
 
-export const DEVPOD_BINARY = "bin/devpod"
+export const DEVPOD_BINARY = "bin/devpod-cli"
 export const DEVPOD_COMMAND_LIST = "list"
 export const DEVPOD_COMMAND_STATUS = "status"
 export const DEVPOD_COMMAND_UP = "up"
