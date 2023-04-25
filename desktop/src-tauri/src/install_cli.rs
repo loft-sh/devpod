@@ -100,12 +100,12 @@ fn install(app_handle: AppHandle) -> Result<(), InstallCLIError> {
     let sh_file = BinFile {
         name: "devpod".to_string(),
         // WARN: we actually need to debug print here because this escapes the backslash to `\\` and will then be recognised by the shell
-        content: format!("#!/usr/bin/env sh\n{:?}.exe\nexit $?", cli_path),
+        content: format!("#!/usr/bin/env sh\n{:?}.exe \"$@\" \nexit $?", cli_path),
     };
 
     let cmd_file = BinFile {
         name: format!("{}.cmd", "devpod".to_string()),
-        content: format!("@echo off\n\"{}.exe\"", cli_path),
+        content: format!("@echo off\n\"{}.exe\" %*", cli_path),
     };
 
     fs::create_dir_all(bin_dir.clone()).map_err(|e| InstallCLIError::CreateDir(e))?;
