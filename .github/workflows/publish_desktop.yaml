@@ -42,7 +42,6 @@ jobs:
             core.setOutput("id", data.id)
             console.log(data.upload_url)
             core.setOutput("upload_url", data.upload_url)
-            
 
   build-app:
     needs: create-release
@@ -78,14 +77,14 @@ jobs:
       GO111MODULE: on
       GOFLAGS: -mod=vendor
 
-    steps: 
+    steps:
       - name: Use variables
         run: |
           echo "release id: [${{ needs.create-release.outputs.release_id }}]"
           echo "package version: [${{ needs.create-release.outputs.package_version }}]"
           echo "upload url: [${{ needs.create-release.outputs.upload_url }}]"
           exit 1
-          
+
       - name: Checkout repository
         uses: actions/checkout@v3
 
@@ -174,7 +173,7 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       # TODO: Need to sign application after building it
-      
+
       - name: Upload Release Asset
         id: upload-release-asset
         uses: actions/upload-release-asset@v1
@@ -182,6 +181,6 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           upload_url: ${{ needs.create-release.outputs.upload_url }}
-          asset_path: ./desktop/src-tauri/target/release/bundle/msi/DevPod-${{ needs.create-release.outputs.package_version }}_x64_en-US.msi
+          asset_path: ./desktop/src-tauri/target/release/bundle/msi/DevPod_${{ needs.create-release.outputs.package_version }}_x64_en-US.msi
           asset_name: DevPod-${{ needs.create-release.outputs.package_version }}_x64_en-US.msi
           asset_content_type: application/x-msi
