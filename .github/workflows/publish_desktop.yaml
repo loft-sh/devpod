@@ -9,7 +9,7 @@ jobs:
     outputs:
       package_version: ${{ steps.get-version.outputs.package_version }}
       release_id: ${{ steps.create-release.outputs.id }}
-      upload_url: ${{ steps.create-release.outputs.upload_url }}
+      tag_name: ${{ steps.get-version.outputs.tag_name }}
     steps:
       - uses: actions/checkout@v3
       - name: Setup Node
@@ -23,6 +23,7 @@ jobs:
           PACKAGE_VERSION=$(node -p "require('./desktop/package.json').version")
           echo "PACKAGE_VERSION=$PACKAGE_VERSION" >> $GITHUB_ENV
           echo "package_version=$PACKAGE_VERSION" >> $GITHUB_OUTPUT
+          echo "tag_name=DevPod-v$PACKAGE_VERSION" >> $GITHUB_OUTPUT
 
       - name: Create Release
         id: create-release
@@ -32,16 +33,13 @@ jobs:
             const { data } = await github.rest.repos.createRelease({
               owner: context.repo.owner,
               repo: context.repo.repo,
-              tag_name: `DevPod-v${process.env.PACKAGE_VERSION}`,
+              tag_name: ${{ steps.get-version.outputs.tag_name }},
               name: `DevPod v${process.env.PACKAGE_VERSION}`,
               body: 'Take a look at the assets to download and install DevPod Desktop',
               draft: true,
               prerelease: false
             })
-            console.log(data.id)
             core.setOutput("id", data.id)
-            console.log(data.upload_url)
-            core.setOutput("upload_url", data.upload_url)
 
   build-app:
     needs: create-release
@@ -176,16 +174,9 @@ jobs:
       - name: check dir
         shell: bash
         run: |
-          ls ./desktop/src-tauri/target/${{ matrix.settings.target }}/release/bundle
           ls ./desktop/src-tauri/target/${{ matrix.settings.target }}/release/bundle/msi
           
       - name: Upload Release Asset
-        id: upload-release-asset
-        uses: actions/upload-release-asset@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          upload_url: ${{ needs.create-release.outputs.upload_url }}
-          asset_path: ./desktop/src-tauri/target/${{ matrix.settings.target }}/release/bundle/msi/DevPod_${{ needs.create-release.outputs.package_version }}_x64_en-US.msi
-          asset_name: DevPod-${{ needs.create-release.outputs.package_version }}_x64_en-US.msi
-          asset_content_type: application/x-msi
+        run: |
+          gh release upload ${{ needs.create-release.outputs.tag_name }} desktop/src-tauri/target/${{ matrix.settings.target }}/release/bundle/msi/DevPod_${{ needs.create-release.outputs.package_version }}_x64_en-US.msi --clobber
+    
