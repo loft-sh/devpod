@@ -1,6 +1,7 @@
 package setup
 
 import (
+	"github.com/loft-sh/devpod/pkg/command"
 	copy2 "github.com/loft-sh/devpod/pkg/copy"
 	"github.com/loft-sh/devpod/pkg/devcontainer/config"
 	"github.com/loft-sh/devpod/pkg/log"
@@ -196,12 +197,16 @@ func runPostCreateCommand(commands []types.StrArray, user, dir string, remoteEnv
 	defer writer.Close()
 
 	for _, c := range commands {
+		if len(c) == 0 {
+			continue
+		}
+
 		log.Infof("Run command: %s...", strings.Join(c, " "))
 		args := []string{}
 		if user != "root" {
-			args = append(args, "su", user, "-c", strings.Join(c, " "))
+			args = append(args, "su", user, "-c", command.Quote(c))
 		} else {
-			args = append(args, c...)
+			args = append(args, "sh", "-c", command.Quote(c))
 		}
 
 		// create command

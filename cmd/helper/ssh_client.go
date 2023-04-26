@@ -2,7 +2,7 @@ package helper
 
 import (
 	"context"
-	"github.com/alessio/shellescape"
+	command2 "github.com/loft-sh/devpod/pkg/command"
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
 	"golang.org/x/crypto/ssh"
@@ -54,7 +54,7 @@ func (cmd *SSHClient) Run(ctx context.Context, args []string) error {
 	sess.Stdin = os.Stdin
 	sess.Stdout = os.Stdout
 	sess.Stderr = os.Stderr
-	err = sess.Run(shellescape.QuoteCommand(args))
+	err = sess.Run(command2.Quote(args))
 	if err != nil {
 		return err
 	}
