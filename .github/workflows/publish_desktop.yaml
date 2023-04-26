@@ -176,8 +176,8 @@ jobs:
       - name: check dir
         shell: bash
         run: |
-          ls ./desktop/src-tauri/target/release/bundle
-          ls ./desktop/src-tauri/target/release/bundle/msi
+          ls ./desktop/src-tauri/target/${{ matrix.settings.target }}/release/bundle
+          ls ./desktop/src-tauri/target/${{ matrix.settings.target }}/release/bundle/msi
           
       - name: Upload Release Asset
         id: upload-release-asset
@@ -186,6 +186,6 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           upload_url: ${{ needs.create-release.outputs.upload_url }}
-          asset_path: ./desktop/src-tauri/target/release/bundle/msi/DevPod_${{ needs.create-release.outputs.package_version }}_x64_en-US.msi
+          asset_path: ./desktop/src-tauri/target/${{ matrix.settings.target }}/release/bundle/msi/DevPod_${{ needs.create-release.outputs.package_version }}_x64_en-US.msi
           asset_name: DevPod-${{ needs.create-release.outputs.package_version }}_x64_en-US.msi
           asset_content_type: application/x-msi
