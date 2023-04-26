@@ -38,7 +38,9 @@ jobs:
               draft: true,
               prerelease: false
             })
+            console.log(data.id)
             core.setOutput("id", data.id)
+            console.log(data.upload_url)
             core.setOutput("upload_url", data.upload_url)
             
 
@@ -77,6 +79,13 @@ jobs:
       GOFLAGS: -mod=vendor
 
     steps: 
+      - name: Use variables
+        run: |
+          echo "release id: [${{ needs.create-release.outputs.release_id }}]"
+          echo "package version: [${{ needs.create-release.outputs.package_version }}]"
+          echo "upload url: [${{ needs.create-release.outputs.upload_url }}]"
+          exit 1
+          
       - name: Checkout repository
         uses: actions/checkout@v3
 
