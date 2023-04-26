@@ -78,12 +78,11 @@ jobs:
       GOFLAGS: -mod=vendor
 
     steps:
-      - name: Use variables
+      - name: Check variables
         run: |
           echo "release id: [${{ needs.create-release.outputs.release_id }}]"
           echo "package version: [${{ needs.create-release.outputs.package_version }}]"
           echo "upload url: [${{ needs.create-release.outputs.upload_url }}]"
-       #   exit 1
 
       - name: Checkout repository
         uses: actions/checkout@v3
@@ -181,7 +180,7 @@ jobs:
           CODESIGNTOOL_TOTP_SECRET: ${{ secrets.CODESIGNTOOL_TOTP_SECRET }}
           CODESIGNTOOL_CREDENTIAL_ID: ${{ secrets.CODESIGNTOOL_CREDENTIAL_ID }}
           CODESIGNTOOL_DOWNLOAD_URL: ${{ vars.CODESIGNTOOL_DOWNLOAD_URL }}
-          CODESIGNTOOL_FILE_PATH: desktop\src-tauri\target\${{ matrix.settings.target }}\release\bundle\msi\DevPod_${{ }}_x64_en-US.msi
+          CODESIGNTOOL_FILE_PATH: desktop\src-tauri\target\${{ matrix.settings.target }}\release\bundle\msi\DevPod_${{ needs.create-release.outputs.package_version }}_x64_en-US.msi
         run: |
           $username = $Env:CODESIGNTOOL_USERNAME
           $password = $Env:CODESIGNTOOL_PASSWORD
