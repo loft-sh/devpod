@@ -83,7 +83,7 @@ jobs:
           echo "release id: [${{ needs.create-release.outputs.release_id }}]"
           echo "package version: [${{ needs.create-release.outputs.package_version }}]"
           echo "upload url: [${{ needs.create-release.outputs.upload_url }}]"
-          exit 1
+       #   exit 1
 
       - name: Checkout repository
         uses: actions/checkout@v3
@@ -173,7 +173,12 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       # TODO: Need to sign application after building it
-
+      - name: check dir
+        shell: bash
+        run: |
+          ls ./desktop/src-tauri/target/release/bundle
+          ls ./desktop/src-tauri/target/release/bundle/msi
+          
       - name: Upload Release Asset
         id: upload-release-asset
         uses: actions/upload-release-asset@v1
