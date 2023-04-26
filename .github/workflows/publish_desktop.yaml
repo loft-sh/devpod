@@ -191,18 +191,18 @@ jobs:
 
           Write-Output "Starting to download CodeSignTool from $download_url"
 
-          Invoke-WebRequest -Uri $download_url -OutFile .\codesigntool.zip
+          Invoke-WebRequest -Uri $download_url -OutFile codesigntool.zip
 
-          $destination_path = .\codesigntool
+          $destination_path = codesigntool
           Write-Output "Unzipping to $destination_path"
-          Expand-Archive .\codesigntool.zip -DestinationPath $destination_path 
+          Expand-Archive codesigntool.zip -DestinationPath $destination_path 
 
           Set-Location -Path $destination_path
           Set-Location -Path (Get-ChildItem -Path . -Include CodeSignTool* | %{$_.FullName})
 
           cmd.exe /c ".\CodeSignTool.bat" sign -username="$username" -password="$password" -totp_secret="$totp_secret" -credential_id=$credential_id -input_file_path="$input_file_path" -override
 
-      - name: check dir
+      - name: Check Dir
         if: matrix.settings.host == 'windows-latest'
         shell: bash
         run: |
