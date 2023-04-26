@@ -172,13 +172,45 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      # TODO: Need to sign application after building it
+      - name: Sign Windows App
+        if: matrix.settings.host == 'windows-latest'
+        shell: powershell
+        env:
+          CODESIGNTOOL_USERNAME: ${{ secrets.CODESIGNTOOL_USERNAME }}
+          CODESIGNTOOL_PASSWORD: ${{ secrets.CODESIGNTOOL_PASSWORD }}
+          CODESIGNTOOL_TOTP_SECRET: ${{ secrets.CODESIGNTOOL_TOTP_SECRET }}
+          CODESIGNTOOL_CREDENTIAL_ID: ${{ secrets.CODESIGNTOOL_CREDENTIAL_ID }}
+          CODESIGNTOOL_DOWNLOAD_URL: ${{ vars.CODESIGNTOOL_DOWNLOAD_URL }}
+          CODESIGNTOOL_FILE_PATH: desktop\src-tauri\target\${{ matrix.settings.target }}\release\bundle\msi\DevPod_${{ }}_x64_en-US.msi
+        run: |
+          $username = $Env:CODESIGNTOOL_USERNAME
+          $password = $Env:CODESIGNTOOL_PASSWORD
+          $totp_secret = $Env:CODESIGNTOOL_TOTP_SECRET
+          $credential_id = $Env:CODESIGNTOOL_CREDENTIAL_ID
+          $download_url = $Env:CODESIGNTOOL_DOWNLOAD_URL
+          $input_file_path = $Env:CODESIGNTOOL_FILE_PATH
+
+          Write-Output "Starting to download CodeSignTool from $download_url"
+
+          Invoke-WebRequest -Uri $download_url -OutFile .\codesigntool.zip
+
+          $destination_path = .\codesigntool
+          Write-Output "Unzipping to $destination_path"
+          Expand-Archive .\codesigntool.zip -DestinationPath $destination_path 
+
+          Set-Location -Path $destination_path
+          Set-Location -Path (Get-ChildItem -Path . -Include CodeSignTool* | %{$_.FullName})
+
+          cmd.exe /c ".\CodeSignTool.bat" sign -username="$username" -password="$password" -totp_secret="$totp_secret" -credential_id=$credential_id -input_file_path="$input_file_path" -override
+
       - name: check dir
+        if: matrix.settings.host == 'windows-latest'
         shell: bash
         run: |
           ls ./desktop/src-tauri/target/${{ matrix.settings.target }}/release/bundle/msi
           
       - name: Upload Release Asset
+        if: matrix.settings.host == 'windows-latest'
         run: |
           gh release upload ${{ needs.create-release.outputs.tag_name }} desktop/src-tauri/target/${{ matrix.settings.target }}/release/bundle/msi/*.msi --clobber
         env:
