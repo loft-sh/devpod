@@ -30,10 +30,12 @@ jobs:
         uses: actions/github-script@v6
         with:
           script: |
+            console.log("${{ steps.get-version.outputs.tag_name }}")
+            
             const { data } = await github.rest.repos.createRelease({
               owner: context.repo.owner,
               repo: context.repo.repo,
-              tag_name: ${{ steps.get-version.outputs.tag_name }},
+              tag_name: "${{ steps.get-version.outputs.tag_name }}",
               name: `DevPod v${process.env.PACKAGE_VERSION}`,
               body: 'Take a look at the assets to download and install DevPod Desktop',
               draft: true,
