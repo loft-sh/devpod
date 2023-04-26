@@ -181,4 +181,6 @@ jobs:
       - name: Upload Release Asset
         run: |
           gh release upload ${{ needs.create-release.outputs.tag_name }} desktop/src-tauri/target/${{ matrix.settings.target }}/release/bundle/msi/DevPod_${{ needs.create-release.outputs.package_version }}_x64_en-US.msi --clobber
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
     
