@@ -38,7 +38,12 @@ jobs:
               draft: true,
               prerelease: false
             })
+            console.log(data)
             return data
+
+      - name: check return value
+        run: |
+          echo ${{ steps.create-release.outputs }}  
             
   test-step: 
     needs: create-release
