@@ -7,9 +7,9 @@ jobs:
       contents: write
     runs-on: ubuntu-20.04
     outputs:
-      release_id: ${{ steps.create-release.outputs.result.id }}
-      upload_url: ${{ steps.create-release.outputs.result.upload_url }}
       package_version: ${{ steps.get-version.outputs.package_version }}
+      release_id: ${{ steps.create-release.outputs.id }}
+      upload_url: ${{ steps.create-release.outputs.upload_url }}
     steps:
       - uses: actions/checkout@v3
       - name: Setup Node
@@ -38,8 +38,8 @@ jobs:
               draft: true,
               prerelease: false
             })
-            console.log(data)
-            return data
+            core.setOutput("id", data.id)
+            core.setOutput("upload_url", data.upload_url)
 
       - name: check return value
         run: |
