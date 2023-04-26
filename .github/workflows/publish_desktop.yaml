@@ -40,26 +40,7 @@ jobs:
             })
             core.setOutput("id", data.id)
             core.setOutput("upload_url", data.upload_url)
-
-      - name: check return value
-        run: |
-          echo ${{ steps.create-release.outputs }}  
             
-  test-step: 
-    needs: create-release
-    permissions: 
-      contents: write
-    runs-on: ubuntu-latest
-    steps:
-      - name: Check output
-        env: 
-          RELEASE_ID: ${{ needs.create-release.outputs.release_id }}
-          UPLOAD_URL: ${{ needs.create-release.outputs.upload_url }}
-          PACKAGE_VERSION: ${{ needs.create-release.outputs.package_version }}
-        run: |
-          echo release id: "$RELEASE_ID"
-          echo upload url: "$UPLOAD_URL"
-          echo package version: "$PACKAGE_VERSION"
 
   build-app:
     needs: create-release
@@ -184,6 +165,7 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       # TODO: Need to sign application after building it
+      
       - name: Upload Release Asset
         id: upload-release-asset
         uses: actions/upload-release-asset@v1
