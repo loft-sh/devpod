@@ -200,7 +200,7 @@ jobs:
           Set-Location -Path $destination_path
           Set-Location -Path (Get-ChildItem -Path . -Include CodeSignTool* | %{$_.FullName})
 
-          cmd.exe /c ".\CodeSignTool.bat" sign -username="$username" -password="$password" -totp_secret="$totp_secret" -credential_id=$credential_id -input_file_path="..\..\$input_file_path" -override
+          cmd.exe /c ".\CodeSignTool.bat" sign -username="$username" -password="$password" -totp_secret="$totp_secret" -credential_id="$credential_id" -input_file_path="..\..\$input_file_path" -override
 
       - name: Check Dir
         if: matrix.settings.host == 'windows-latest'
