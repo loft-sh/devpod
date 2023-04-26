@@ -182,20 +182,20 @@ jobs:
           CODESIGNTOOL_DOWNLOAD_URL: ${{ vars.CODESIGNTOOL_DOWNLOAD_URL }}
           CODESIGNTOOL_FILE_PATH: desktop\src-tauri\target\${{ matrix.settings.target }}\release\bundle\msi\DevPod_${{ needs.create-release.outputs.package_version }}_x64_en-US.msi
         run: |
-          $username = $Env:CODESIGNTOOL_USERNAME
-          $password = $Env:CODESIGNTOOL_PASSWORD
-          $totp_secret = $Env:CODESIGNTOOL_TOTP_SECRET
-          $credential_id = $Env:CODESIGNTOOL_CREDENTIAL_ID
-          $download_url = $Env:CODESIGNTOOL_DOWNLOAD_URL
-          $input_file_path = $Env:CODESIGNTOOL_FILE_PATH
+          $username = "$Env:CODESIGNTOOL_USERNAME"
+          $password = "$Env:CODESIGNTOOL_PASSWORD"
+          $totp_secret = "$Env:CODESIGNTOOL_TOTP_SECRET"
+          $credential_id = "$Env:CODESIGNTOOL_CREDENTIAL_ID"
+          $download_url = "$Env:CODESIGNTOOL_DOWNLOAD_URL"
+          $input_file_path = "$Env:CODESIGNTOOL_FILE_PATH"
 
           Write-Output "Starting to download CodeSignTool from $download_url"
 
           Invoke-WebRequest -Uri $download_url -OutFile codesigntool.zip
 
-          $destination_path = codesigntool
+          $destination_path = "codesigntool"
           Write-Output "Unzipping to $destination_path"
-          Expand-Archive codesigntool.zip -DestinationPath $destination_path 
+          Expand-Archive "codesigntool.zip" -DestinationPath $destination_path 
 
           Set-Location -Path $destination_path
           Set-Location -Path (Get-ChildItem -Path . -Include CodeSignTool* | %{$_.FullName})
