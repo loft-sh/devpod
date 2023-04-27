@@ -207,9 +207,11 @@ func (r *Runner) getProjectName(project *composetypes.Project, composeHelper *co
 	}
 
 	// Use the workspace ID if loaded from .devcontainer
-	projectName = project.Name
-	if projectName == "devcontainer" {
-		projectName = r.ID + "_devcontainer"
+	if projectName == "" {
+		projectName = project.Name
+		if projectName == "devcontainer" {
+			projectName = r.ID + "_devcontainer"
+		}
 	}
 
 	return composeHelper.ToProjectName(projectName)

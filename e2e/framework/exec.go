@@ -12,26 +12,12 @@ import (
 
 // ExecCommand executes the command string with the devpod test binary
 func (f *Framework) ExecCommand(ctx context.Context, captureStdOut, searchForString bool, searchString string, args []string) error {
-	var execErr bytes.Buffer
 	var execOut bytes.Buffer
 
-	prout, pwout, err := os.Pipe()
-	if err != nil {
-		return err
-	}
-
 	cmd := exec.CommandContext(ctx, f.DevpodBinDir+"/"+f.DevpodBinName, args...)
-	cmd.Stdout = pwout
-	cmd.Stderr = &execErr
+	cmd.Stdout = io.MultiWriter(os.Stdout, &execOut)
 
-	if err := cmd.Start(); err != nil {
-		return err
-	}
-
-	outReader := io.TeeReader(prout, os.Stdout)
-	go io.Copy(&execOut, outReader)
-
-	if err := cmd.Wait(); err != nil {
+	if err := cmd.Run(); err != nil {
 		return err
 	}
 

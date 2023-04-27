@@ -64,26 +64,26 @@ var _ = DevPodDescribe("devpod up test suite", func() {
 
 				// Check for docker-compose container running
 				projectName := composeHelper.ToProjectName(filepath.Base(tempDir))
-				defer f.DevPodWorkspaceDelete(ctx, projectName)
+				ginkgo.DeferCleanup(f.DevPodWorkspaceDelete, context.Background(), projectName)
 
 				ids, err := dockerHelper.FindContainer([]string{
 					fmt.Sprintf("%s=%s", compose.ProjectLabel, projectName),
 					fmt.Sprintf("%s=%s", compose.ServiceLabel, "app"),
 				})
 				framework.ExpectNoError(err)
-				gomega.Expect(len(ids)).To(gomega.Equal(1), "1 compose container to be created")
+				gomega.Expect(ids).To(gomega.HaveLen(1), "1 compose container to be created")
 
 				var containerDetails []types.ContainerJSON
 				err = dockerHelper.Inspect(ids, "container", &containerDetails)
 				framework.ExpectNoError(err)
 
 				containerDetail := containerDetails[0]
-				gomega.Expect(len(containerDetail.Mounts)).To(gomega.Equal(1), "1 container volume mount")
+				gomega.Expect(containerDetail.Mounts).To(gomega.HaveLen(1), "1 container volume mount")
 
 				mount := containerDetail.Mounts[0]
 				gomega.Expect(mount.Source).To(gomega.Equal(tempDir))
 				gomega.Expect(mount.Destination).To(gomega.Equal("/workspaces"))
-				gomega.Expect(mount.RW).To(gomega.Equal(true))
+				gomega.Expect(mount.RW).To(gomega.BeTrue())
 			}, ginkgo.SpecTimeout(60*time.Second))
 
 			ginkgo.It("should start a new workspace with sub-folder configuration", func(ctx context.Context) {
@@ -101,26 +101,26 @@ var _ = DevPodDescribe("devpod up test suite", func() {
 
 				// Check for docker-compose container running
 				projectName := composeHelper.ToProjectName(filepath.Base(tempDir))
-				defer f.DevPodWorkspaceDelete(ctx, projectName)
+				ginkgo.DeferCleanup(f.DevPodWorkspaceDelete, context.Background(), projectName)
 
 				ids, err := dockerHelper.FindContainer([]string{
 					fmt.Sprintf("%s=%s", compose.ProjectLabel, projectName),
 					fmt.Sprintf("%s=%s", compose.ServiceLabel, "app"),
 				})
 				framework.ExpectNoError(err)
-				gomega.Expect(len(ids)).To(gomega.Equal(1), "1 compose container to be created")
+				gomega.Expect(ids).To(gomega.HaveLen(1), "1 compose container to be created")
 
 				var containerDetails []types.ContainerJSON
 				err = dockerHelper.Inspect(ids, "container", &containerDetails)
 				framework.ExpectNoError(err)
 
 				containerDetail := containerDetails[0]
-				gomega.Expect(len(containerDetail.Mounts)).To(gomega.Equal(1), "1 container volume mount")
+				gomega.Expect(containerDetail.Mounts).To(gomega.HaveLen(1), "1 container volume mount")
 
 				mount := containerDetail.Mounts[0]
 				gomega.Expect(mount.Source).To(gomega.Equal(tempDir))
 				gomega.Expect(mount.Destination).To(gomega.Equal("/workspaces"))
-				gomega.Expect(mount.RW).To(gomega.Equal(true))
+				gomega.Expect(mount.RW).To(gomega.BeTrue())
 			}, ginkgo.SpecTimeout(60*time.Second))
 
 			ginkgo.It("should start a new workspace with multiple services", func(ctx context.Context) {
@@ -138,21 +138,21 @@ var _ = DevPodDescribe("devpod up test suite", func() {
 
 				// Check for docker-compose container running
 				projectName := composeHelper.ToProjectName(filepath.Base(tempDir))
-				defer f.DevPodWorkspaceDelete(ctx, projectName)
+				ginkgo.DeferCleanup(f.DevPodWorkspaceDelete, context.Background(), projectName)
 
 				appIDs, err := dockerHelper.FindContainer([]string{
 					fmt.Sprintf("%s=%s", compose.ProjectLabel, projectName),
 					fmt.Sprintf("%s=%s", compose.ServiceLabel, "app"),
 				})
 				framework.ExpectNoError(err)
-				gomega.Expect(len(appIDs)).To(gomega.Equal(1), "app container to be created")
+				gomega.Expect(appIDs).To(gomega.HaveLen(1), "app container to be created")
 
 				dbIDs, err := dockerHelper.FindContainer([]string{
 					fmt.Sprintf("%s=%s", compose.ProjectLabel, projectName),
 					fmt.Sprintf("%s=%s", compose.ServiceLabel, "app"),
 				})
 				framework.ExpectNoError(err)
-				gomega.Expect(len(dbIDs)).To(gomega.Equal(1), "db container to be created")
+				gomega.Expect(dbIDs).To(gomega.HaveLen(1), "db container to be created")
 			}, ginkgo.SpecTimeout(60*time.Second))
 
 			ginkgo.It("should start a new workspace with .devcontainer docker-compose overrides", func(ctx context.Context) {
@@ -170,26 +170,26 @@ var _ = DevPodDescribe("devpod up test suite", func() {
 
 				// Check for docker-compose container running
 				projectName := composeHelper.ToProjectName(filepath.Base(tempDir))
-				defer f.DevPodWorkspaceDelete(ctx, projectName)
+				ginkgo.DeferCleanup(f.DevPodWorkspaceDelete, context.Background(), projectName)
 
 				ids, err := dockerHelper.FindContainer([]string{
 					fmt.Sprintf("%s=%s", compose.ProjectLabel, projectName),
 					fmt.Sprintf("%s=%s", compose.ServiceLabel, "app"),
 				})
 				framework.ExpectNoError(err)
-				gomega.Expect(len(ids)).To(gomega.Equal(1), "1 compose container to be created")
+				gomega.Expect(ids).To(gomega.HaveLen(1), "1 compose container to be created")
 
 				var containerDetails []types.ContainerJSON
 				err = dockerHelper.Inspect(ids, "container", &containerDetails)
 				framework.ExpectNoError(err)
 
 				containerDetail := containerDetails[0]
-				gomega.Expect(len(containerDetail.Mounts)).To(gomega.Equal(1), "1 container volume mount")
+				gomega.Expect(containerDetail.Mounts).To(gomega.HaveLen(1), "1 container volume mount")
 
 				mount := containerDetail.Mounts[0]
 				gomega.Expect(mount.Source).To(gomega.Equal(tempDir))
 				gomega.Expect(mount.Destination).To(gomega.Equal("/workspaces"))
-				gomega.Expect(mount.RW).To(gomega.Equal(true))
+				gomega.Expect(mount.RW).To(gomega.BeTrue())
 			}, ginkgo.SpecTimeout(60*time.Second))
 
 			ginkgo.It("should start a new workspace with container environment variables set", func(ctx context.Context) {
@@ -207,14 +207,14 @@ var _ = DevPodDescribe("devpod up test suite", func() {
 
 				// Check for docker-compose container running
 				projectName := composeHelper.ToProjectName(filepath.Base(tempDir))
-				defer f.DevPodWorkspaceDelete(ctx, projectName)
+				ginkgo.DeferCleanup(f.DevPodWorkspaceDelete, context.Background(), projectName)
 
 				ids, err := dockerHelper.FindContainer([]string{
 					fmt.Sprintf("%s=%s", compose.ProjectLabel, projectName),
 					fmt.Sprintf("%s=%s", compose.ServiceLabel, "app"),
 				})
 				framework.ExpectNoError(err)
-				gomega.Expect(len(ids)).To(gomega.Equal(1), "1 compose container to be created")
+				gomega.Expect(ids).To(gomega.HaveLen(1), "1 compose container to be created")
 
 				err = f.ExecCommand(ctx, true, true, "BAR", []string{"ssh", "--command", "echo $FOO", projectName})
 				framework.ExpectNoError(err)
@@ -235,14 +235,14 @@ var _ = DevPodDescribe("devpod up test suite", func() {
 
 				// Check for docker-compose container running
 				projectName := composeHelper.ToProjectName(filepath.Base(tempDir))
-				defer f.DevPodWorkspaceDelete(ctx, projectName)
+				ginkgo.DeferCleanup(f.DevPodWorkspaceDelete, context.Background(), projectName)
 
 				ids, err := dockerHelper.FindContainer([]string{
 					fmt.Sprintf("%s=%s", compose.ProjectLabel, projectName),
 					fmt.Sprintf("%s=%s", compose.ServiceLabel, "app"),
 				})
 				framework.ExpectNoError(err)
-				gomega.Expect(len(ids)).To(gomega.Equal(1), "1 compose container to be created")
+				gomega.Expect(ids).To(gomega.HaveLen(1), "1 compose container to be created")
 
 				err = f.ExecCommand(ctx, true, true, "vscode", []string{"ssh", "--command", "ps u -p 1", projectName})
 				framework.ExpectNoError(err)
@@ -263,14 +263,14 @@ var _ = DevPodDescribe("devpod up test suite", func() {
 
 				// Check for docker-compose container running
 				projectName := composeHelper.ToProjectName(filepath.Base(tempDir))
-				defer f.DevPodWorkspaceDelete(ctx, projectName)
+				ginkgo.DeferCleanup(f.DevPodWorkspaceDelete, context.Background(), projectName)
 
 				ids, err := dockerHelper.FindContainer([]string{
 					fmt.Sprintf("%s=%s", compose.ProjectLabel, projectName),
 					fmt.Sprintf("%s=%s", compose.ServiceLabel, "app"),
 				})
 				framework.ExpectNoError(err)
-				gomega.Expect(len(ids)).To(gomega.Equal(1), "1 compose container to be created")
+				gomega.Expect(ids).To(gomega.HaveLen(1), "1 compose container to be created")
 
 				var containerDetails []types.ContainerJSON
 				err = dockerHelper.Inspect(ids, "container", &containerDetails)
@@ -295,14 +295,14 @@ var _ = DevPodDescribe("devpod up test suite", func() {
 
 				// Check for docker-compose container running
 				projectName := composeHelper.ToProjectName(filepath.Base(tempDir))
-				defer f.DevPodWorkspaceDelete(ctx, projectName)
+				ginkgo.DeferCleanup(f.DevPodWorkspaceDelete, context.Background(), projectName)
 
 				ids, err := dockerHelper.FindContainer([]string{
 					fmt.Sprintf("%s=%s", compose.ProjectLabel, projectName),
 					fmt.Sprintf("%s=%s", compose.ServiceLabel, "app"),
 				})
 				framework.ExpectNoError(err)
-				gomega.Expect(len(ids)).To(gomega.Equal(1), "1 compose container to be created")
+				gomega.Expect(ids).To(gomega.HaveLen(1), "1 compose container to be created")
 
 				var containerDetails []types.ContainerJSON
 				err = dockerHelper.Inspect(ids, "container", &containerDetails)
@@ -328,14 +328,14 @@ var _ = DevPodDescribe("devpod up test suite", func() {
 
 				// Check for docker-compose container running
 				projectName := composeHelper.ToProjectName(filepath.Base(tempDir))
-				defer f.DevPodWorkspaceDelete(ctx, projectName)
+				ginkgo.DeferCleanup(f.DevPodWorkspaceDelete, context.Background(), projectName)
 
 				ids, err := dockerHelper.FindContainer([]string{
 					fmt.Sprintf("%s=%s", compose.ProjectLabel, projectName),
 					fmt.Sprintf("%s=%s", compose.ServiceLabel, "app"),
 				})
 				framework.ExpectNoError(err)
-				gomega.Expect(len(ids)).To(gomega.Equal(1), "1 compose container to be created")
+				gomega.Expect(ids).To(gomega.HaveLen(1), "1 compose container to be created")
 
 				var containerDetails []types.ContainerJSON
 				err = dockerHelper.Inspect(ids, "container", &containerDetails)
@@ -361,14 +361,14 @@ var _ = DevPodDescribe("devpod up test suite", func() {
 
 				// Check for docker-compose container running
 				projectName := composeHelper.ToProjectName(filepath.Base(tempDir))
-				defer f.DevPodWorkspaceDelete(ctx, projectName)
+				ginkgo.DeferCleanup(f.DevPodWorkspaceDelete, context.Background(), projectName)
 
 				ids, err := dockerHelper.FindContainer([]string{
 					fmt.Sprintf("%s=%s", compose.ProjectLabel, projectName),
 					fmt.Sprintf("%s=%s", compose.ServiceLabel, "app"),
 				})
 				framework.ExpectNoError(err)
-				gomega.Expect(len(ids)).To(gomega.Equal(1), "1 compose container to be created")
+				gomega.Expect(ids).To(gomega.HaveLen(1), "1 compose container to be created")
 
 				var containerDetails []types.ContainerJSON
 				err = dockerHelper.Inspect(ids, "container", &containerDetails)
@@ -394,14 +394,14 @@ var _ = DevPodDescribe("devpod up test suite", func() {
 
 				// Check for docker-compose container running
 				projectName := composeHelper.ToProjectName(filepath.Base(tempDir))
-				defer f.DevPodWorkspaceDelete(ctx, projectName)
+				ginkgo.DeferCleanup(f.DevPodWorkspaceDelete, context.Background(), projectName)
 
 				ids, err := dockerHelper.FindContainer([]string{
 					fmt.Sprintf("%s=%s", compose.ProjectLabel, projectName),
 					fmt.Sprintf("%s=%s", compose.ServiceLabel, "app"),
 				})
 				framework.ExpectNoError(err)
-				gomega.Expect(len(ids)).To(gomega.Equal(1), "1 compose container to be created")
+				gomega.Expect(ids).To(gomega.HaveLen(1), "1 compose container to be created")
 
 				err = f.ExecCommand(ctx, true, true, "/home/vscode/remote-env.out", []string{"ssh", "--command", "ls /home/vscode/remote-env.out", projectName})
 				framework.ExpectNoError(err)
