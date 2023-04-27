@@ -57,8 +57,12 @@ impl ToSystemTraySubmenu for WorkspacesState {
             .add_item(CustomMenuItem::new(
                 Self::CREATE_WORKSPACE_ID,
                 "Create Workspace",
-            ))
-            .add_native_item(SystemTrayMenuItem::Separator);
+            ));
+
+        if self.workspaces.len() > 0 {
+            workspaces_menu = workspaces_menu
+                .add_native_item(SystemTrayMenuItem::Separator);
+        }
 
         for workspace in &self.workspaces {
             if let Some(id) = workspace.id() {
