@@ -3,6 +3,7 @@ import { useNavigate } from "react-router"
 import { client } from "./client"
 import { startWorkspaceAction } from "./contexts"
 import { Routes } from "./routes"
+import { appWindow } from "@tauri-apps/api/window"
 
 export function useAppReady() {
   const isReadyLockRef = useRef<boolean>(false)
@@ -15,6 +16,8 @@ export function useAppReady() {
       isReadyLockRef.current = true
       ;(async () => {
         const unsubscribe = await client.subscribe("event", async (event) => {
+          await appWindow.setFocus()
+
           if (event === "ShowDashboard") {
             navigate(Routes.WORKSPACES)
           } else {

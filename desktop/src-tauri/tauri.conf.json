@@ -29,7 +29,8 @@
         "all": true
       },
       "window": {
-        "startDragging": true
+        "startDragging": true,
+        "setFocus": true
       },
       "fs": {
         "scope": [
