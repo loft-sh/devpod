@@ -3,7 +3,76 @@ title: devcontainer.json
 sidebar_label: devcontainer.json
 ---
 
-* Describe what is a devcontainer.json and where to place it
-* What can a devcontainer.json do?
-* Simple example
-* Link to official docs
+DevPod uses the [open `devcontainer.json` standard](https://containers.dev/) to allow users to customize their development containers.
+Development containers are Docker containers that provide an user a fully featured development environment.
+Within DevPod, this container is created based on the underlying provider either locally, in a remote virtual machine or even in a Kubernetes cluster.
+DevPod makes sure, that no matter where you use this configuration, the developer experience stays the same.
+
+You can configure this development container for a certain git repository so that each workspace gives you a custom development environment,
+completely configured with tooling and runtimes you need for working on that specific project.
+If DevPod doesn't find any configuration for the project, it will automatically detect the programming language and provide a sane default configuration.
+
+:::info Compatibility with VSCode & Codespaces
+The same format is used by VSCode for their development containers and by Github for their Codespaces.
+This makes it easy to reuse existing configurations and tooling around this standard within DevPod.
+:::
+
+:::info Additional References
+This page mostly gives you an introduction on how to work with devcontainers. For additional information take a look at:
+* [DevContainer Reference](https://containers.dev/implementors/json_reference/)
+* [VSCode DevContainer Documentation](https://code.visualstudio.com/docs/devcontainers/create-dev-container)
+* [Github Codespaces Documentation](https://docs.github.com/en/codespaces/setting-up-your-project-for-codespaces/adding-a-dev-container-configuration/introduction-to-dev-containers#devcontainerjson)
+:::
+
+## devcontainer.json
+
+The primary file to configure your workspace is the `devcontainer.json`, that lives in the `.devcontainer` sub-folder of your project.
+This file includes information on what frameworks, tools, VSCode extensions and port-forwarding should be used during development.
+The file also usually references a Dockerfile or an Docker image to use as the base for the development environment.
+If DevPod doesn't find any configuration for the project, it will automatically detect the programming language and provide a sane default configuration.
+
+The `devcontainer.json` can be located at the following places within your project:
+* `.devcontainer/devcontainer.json`
+* `.devcontainer.json`
+* `.devcontainer/my-other-folder/devcontainer.json`
+
+A `devcontainer.json` is not able to import or inherit any settings from other `devcontainer.json` files, so make sure all dependant files and folders are available within the configuration subdirectory.
+
+### Using a Dockerfile
+
+In order to use a Dockerfile for your configuration, you can specify the following within your `devcontainer.json`:
+```
+{
+  "build": {
+    "dockerfile": "Dockerfile"
+  },
+  ...
+}
+```
+
+And the Dockerfile could look like this:
+```
+FROM mcr.microsoft.com/vscode/devcontainers/javascript-node:0-16-buster
+
+# Install extra tooling into the environment via the following command
+RUN apt-get update && apt-get install vim
+```
+
+For more information about how to write Dockerfiles, please visit the [official documentation](https://docs.docker.com/engine/reference/builder/)
+
+### Add additional DevContainer Features
+
+`devcontainer.json` allows you to reuse certain predefined features within your configuration.
+You can think of features as reusable Dockerfile parts that will be merged into your Dockerfile upon creation.
+This makes it easy to reuse functionality such as `docker-in-docker` or install extra tooling such as `node` or `kubectl` without having to look up the exact Dockerfile commands.
+A list of available features can be found [here](https://containers.dev/features)
+
+## devcontainer.json development flow
+
+When working on the `devcontainer.json` itself, it's important to understand when DevPod will apply which new configuration.
+
+A naive approach would be to delete and recreate a workspace after each `devcontainer.json` change (which obviously works), but DevPod allows you to make changes to the configuration on the fly and reapply them in two modes:
+* Running `devpod up my-workspace`: This will apply all new configuration that is not related on how to start or build the container and will apply immediately on the next start. This includes for example: port-forwarding, startup commands and remote environment variables. The Desktop app equivalent for this is the 'Open' button.
+* Running `devpod up my-workspace --recreate`: This will apply **ALL** new configuration including Dockerfile changes as well as new mounts, new features or any other configuration that is not included in the above command. DevPod will only replace the existing running container if the command has succeeded, so if there is a mistake in the new configuration, the existing workspace should not be impacted. The Desktop app equivalent for this is the 'Rebuild' button.
+
+
