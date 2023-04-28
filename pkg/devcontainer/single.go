@@ -11,13 +11,6 @@ import (
 
 func (r *Runner) runSingleContainer(parsedConfig *config.SubstitutedConfig, workspaceMount string, options UpOptions) (*config.Result, error) {
 	labels := r.getLabels()
-	if options.Recreate {
-		err := r.Delete(labels)
-		if err != nil {
-			return nil, errors.Wrap(err, "delete devcontainer")
-		}
-	}
-
 	containerDetails, err := r.Driver.FindDevContainer(context.TODO(), labels)
 	if err != nil {
 		return nil, errors.Wrap(err, "find dev container")
@@ -25,7 +18,7 @@ func (r *Runner) runSingleContainer(parsedConfig *config.SubstitutedConfig, work
 
 	// does the container already exist?
 	var mergedConfig *config.MergedDevContainerConfig
-	if containerDetails != nil {
+	if !options.Recreate && containerDetails != nil {
 		// start container if not running
 		if strings.ToLower(containerDetails.State.Status) != "running" {
 			err = r.Driver.StartDevContainer(context.TODO(), containerDetails.Id, labels)
@@ -53,6 +46,7 @@ func (r *Runner) runSingleContainer(parsedConfig *config.SubstitutedConfig, work
 			return nil, errors.Wrap(err, "build image")
 		}
 
+		// merge configuration
 		mergedConfig, err = config.MergeConfiguration(parsedConfig.Config, buildInfo.ImageMetadata.Config)
 		if err != nil {
 			return nil, errors.Wrap(err, "merge config")
@@ -64,6 +58,14 @@ func (r *Runner) runSingleContainer(parsedConfig *config.SubstitutedConfig, work
 			return nil, errors.Wrap(err, "marshal config")
 		}
 		labels = append(labels, metadata.ImageMetadataLabel+"="+string(marshalled))
+
+		// delete container on recreation
+		if options.Recreate {
+			err := r.Delete(labels)
+			if err != nil {
+				return nil, errors.Wrap(err, "delete devcontainer")
+			}
+		}
 
 		// run dev container
 		err = r.Driver.RunDevContainer(context.TODO(), parsedConfig.Config, mergedConfig, buildInfo.ImageName, workspaceMount, labels, r.WorkspaceConfig.Workspace.IDE.Name, r.WorkspaceConfig.Workspace.IDE.Options, buildInfo.ImageDetails)
