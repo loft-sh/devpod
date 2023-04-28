@@ -85,7 +85,13 @@ export const CollapsibleSection = forwardRef<HTMLDivElement, TCollapsibleSection
               initial="exit"
               animate="enter"
               exit="exit"
-              onAnimationComplete={() => onOpenChange?.(isOpen, motionRef.current)}
+              onAnimationComplete={(definition) => {
+                if (definition === "exit") {
+                  onOpenChange?.(false, motionRef.current)
+                } else {
+                  onOpenChange?.(true, motionRef.current)
+                }
+              }}
               style={{
                 display: "block",
               }}>

@@ -34,7 +34,13 @@ import { FieldName, TCreateWorkspaceArgs, TCreateWorkspaceSearchParams } from ".
 import { useCreateWorkspaceForm } from "./useCreateWorkspaceForm"
 import { useSetupProviderModal } from "./useSetupProviderModal"
 
+const SHOW_RECOMMENDED_REPOSITORIES_KEY = "devpod-show-recommended-repositories"
+
 export function CreateWorkspace() {
+  const defaultShowRecommended = useMemo(
+    () => localStorage.getItem(SHOW_RECOMMENDED_REPOSITORIES_KEY) !== "false",
+    []
+  )
   const idesQuery = useQuery({
     queryKey: QueryKeys.IDES,
     queryFn: async () => (await client.ides.listAll()).unwrap(),
@@ -202,7 +208,13 @@ export function CreateWorkspace() {
             </FormControl>
 
             <Box width="full" height="full" padding={4} marginBottom="8">
-              <CollapsibleSection title="Or use one of our quickstart examples" showIcon isOpen>
+              <CollapsibleSection
+                title="Or use one of our quickstart examples"
+                showIcon
+                isOpen={defaultShowRecommended}
+                onOpenChange={(isOpen) =>
+                  localStorage.setItem(SHOW_RECOMMENDED_REPOSITORIES_KEY, !!isOpen + "")
+                }>
                 <FormControl isRequired isInvalid={exists(sourceError)}>
                   <Wrap spacing={3} marginTop="2.5" justify="center">
                     {WORKSPACE_EXAMPLES.map((example) => (
