@@ -149,9 +149,11 @@ export function WorkspaceCard({ workspaceID, onSelectionChange }: TWorkspaceCard
                       onClick={() => {
                         if (errorActionID) {
                           navigateToAction(errorActionID)
+                        } else if (isLoading) {
+                          navigateToAction(workspace.current?.id)
                         }
                       }}
-                      cursor={errorActionID ? "pointer" : undefined}
+                      cursor={errorActionID || isLoading ? "pointer" : undefined}
                       backgroundColor={
                         errorActionID
                           ? "red"
