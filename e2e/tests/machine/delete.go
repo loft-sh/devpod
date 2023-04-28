@@ -18,7 +18,7 @@ var _ = DevPodDescribe("devpod machine delete", func() {
 	ginkgo.It("should delete a non-existing machine and get an error", func() {
 		tempDir, err := framework.CopyToTempDir("tests/machine/testdata")
 		framework.ExpectNoError(err)
-		defer framework.CleanupTempDir(initialDir, tempDir)
+		ginkgo.DeferCleanup(framework.CleanupTempDir, initialDir, tempDir)
 
 		f := framework.NewDefaultFramework(initialDir + "/bin")
 

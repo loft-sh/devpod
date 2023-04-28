@@ -18,7 +18,7 @@ var _ = DevPodDescribe("devpod provider test suite", func() {
 	ginkgo.It("should add simple provider and delete it", func() {
 		tempDir, err := framework.CopyToTempDir("tests/provider/testdata/simple-k8s-provider")
 		framework.ExpectNoError(err)
-		defer framework.CleanupTempDir(initialDir, tempDir)
+		ginkgo.DeferCleanup(framework.CleanupTempDir, initialDir, tempDir)
 
 		f := framework.NewDefaultFramework(initialDir + "/bin")
 

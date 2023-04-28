@@ -35,7 +35,7 @@ var _ = DevPodDescribe("devpod up test suite", func() {
 			ginkgo.It("should start a new workspace with existing image", func(ctx context.Context) {
 				tempDir, err := framework.CopyToTempDir("tests/up/testdata/local-test")
 				framework.ExpectNoError(err)
-				defer framework.CleanupTempDir(initialDir, tempDir)
+				ginkgo.DeferCleanup(framework.CleanupTempDir, initialDir, tempDir)
 
 				f := framework.NewDefaultFramework(initialDir + "/bin")
 				_ = f.DevPodProviderAdd([]string{"docker"})
@@ -52,7 +52,7 @@ var _ = DevPodDescribe("devpod up test suite", func() {
 			ginkgo.It("should start a new workspace with root folder configuration", func(ctx context.Context) {
 				tempDir, err := framework.CopyToTempDir("tests/up/testdata/docker-compose")
 				framework.ExpectNoError(err)
-				defer framework.CleanupTempDir(initialDir, tempDir)
+				ginkgo.DeferCleanup(framework.CleanupTempDir, initialDir, tempDir)
 
 				f := framework.NewDefaultFramework(initialDir + "/bin")
 				_ = f.DevPodProviderAdd([]string{"docker"})
@@ -89,7 +89,7 @@ var _ = DevPodDescribe("devpod up test suite", func() {
 			ginkgo.It("should start a new workspace with sub-folder configuration", func(ctx context.Context) {
 				tempDir, err := framework.CopyToTempDir("tests/up/testdata/docker-compose-subfolder")
 				framework.ExpectNoError(err)
-				defer framework.CleanupTempDir(initialDir, tempDir)
+				ginkgo.DeferCleanup(framework.CleanupTempDir, initialDir, tempDir)
 
 				f := framework.NewDefaultFramework(initialDir + "/bin")
 				_ = f.DevPodProviderAdd([]string{"docker"})
@@ -126,7 +126,7 @@ var _ = DevPodDescribe("devpod up test suite", func() {
 			ginkgo.It("should start a new workspace with multiple services", func(ctx context.Context) {
 				tempDir, err := framework.CopyToTempDir("tests/up/testdata/docker-compose-multiple-services")
 				framework.ExpectNoError(err)
-				defer framework.CleanupTempDir(initialDir, tempDir)
+				ginkgo.DeferCleanup(framework.CleanupTempDir, initialDir, tempDir)
 
 				f := framework.NewDefaultFramework(initialDir + "/bin")
 				_ = f.DevPodProviderAdd([]string{"docker"})
@@ -158,7 +158,7 @@ var _ = DevPodDescribe("devpod up test suite", func() {
 			ginkgo.It("should start a new workspace with .devcontainer docker-compose overrides", func(ctx context.Context) {
 				tempDir, err := framework.CopyToTempDir("tests/up/testdata/docker-compose-overrides")
 				framework.ExpectNoError(err)
-				defer framework.CleanupTempDir(initialDir, tempDir)
+				ginkgo.DeferCleanup(framework.CleanupTempDir, initialDir, tempDir)
 
 				f := framework.NewDefaultFramework(initialDir + "/bin")
 				_ = f.DevPodProviderAdd([]string{"docker"})
@@ -195,7 +195,7 @@ var _ = DevPodDescribe("devpod up test suite", func() {
 			ginkgo.It("should start a new workspace with container environment variables set", func(ctx context.Context) {
 				tempDir, err := framework.CopyToTempDir("tests/up/testdata/docker-compose-container-env")
 				framework.ExpectNoError(err)
-				defer framework.CleanupTempDir(initialDir, tempDir)
+				ginkgo.DeferCleanup(framework.CleanupTempDir, initialDir, tempDir)
 
 				f := framework.NewDefaultFramework(initialDir + "/bin")
 				_ = f.DevPodProviderAdd([]string{"docker"})
@@ -223,7 +223,7 @@ var _ = DevPodDescribe("devpod up test suite", func() {
 			ginkgo.It("should start a new workspace with container user", func(ctx context.Context) {
 				tempDir, err := framework.CopyToTempDir("tests/up/testdata/docker-compose-container-user")
 				framework.ExpectNoError(err)
-				defer framework.CleanupTempDir(initialDir, tempDir)
+				ginkgo.DeferCleanup(framework.CleanupTempDir, initialDir, tempDir)
 
 				f := framework.NewDefaultFramework(initialDir + "/bin")
 				_ = f.DevPodProviderAdd([]string{"docker"})
@@ -251,7 +251,7 @@ var _ = DevPodDescribe("devpod up test suite", func() {
 			ginkgo.It("should start a new workspace with privileged", func(ctx context.Context) {
 				tempDir, err := framework.CopyToTempDir("tests/up/testdata/docker-compose-privileged")
 				framework.ExpectNoError(err)
-				defer framework.CleanupTempDir(initialDir, tempDir)
+				ginkgo.DeferCleanup(framework.CleanupTempDir, initialDir, tempDir)
 
 				f := framework.NewDefaultFramework(initialDir + "/bin")
 				_ = f.DevPodProviderAdd([]string{"docker"})
@@ -283,7 +283,7 @@ var _ = DevPodDescribe("devpod up test suite", func() {
 			ginkgo.It("should start a new workspace with capAdd", func(ctx context.Context) {
 				tempDir, err := framework.CopyToTempDir("tests/up/testdata/docker-compose-capadd")
 				framework.ExpectNoError(err)
-				defer framework.CleanupTempDir(initialDir, tempDir)
+				ginkgo.DeferCleanup(framework.CleanupTempDir, initialDir, tempDir)
 
 				f := framework.NewDefaultFramework(initialDir + "/bin")
 				_ = f.DevPodProviderAdd([]string{"docker"})
@@ -316,7 +316,7 @@ var _ = DevPodDescribe("devpod up test suite", func() {
 			ginkgo.It("should start a new workspace with securityOpt", func(ctx context.Context) {
 				tempDir, err := framework.CopyToTempDir("tests/up/testdata/docker-compose-securityOpt")
 				framework.ExpectNoError(err)
-				defer framework.CleanupTempDir(initialDir, tempDir)
+				ginkgo.DeferCleanup(framework.CleanupTempDir, initialDir, tempDir)
 
 				f := framework.NewDefaultFramework(initialDir + "/bin")
 				_ = f.DevPodProviderAdd([]string{"docker"})
@@ -349,7 +349,7 @@ var _ = DevPodDescribe("devpod up test suite", func() {
 			ginkgo.It("should start a new workspace with override command", func(ctx context.Context) {
 				tempDir, err := framework.CopyToTempDir("tests/up/testdata/docker-compose-overrideCommand")
 				framework.ExpectNoError(err)
-				defer framework.CleanupTempDir(initialDir, tempDir)
+				ginkgo.DeferCleanup(framework.CleanupTempDir, initialDir, tempDir)
 
 				f := framework.NewDefaultFramework(initialDir + "/bin")
 				_ = f.DevPodProviderAdd([]string{"docker"})
@@ -382,7 +382,7 @@ var _ = DevPodDescribe("devpod up test suite", func() {
 			ginkgo.It("should start a new workspace with remote env", func(ctx context.Context) {
 				tempDir, err := framework.CopyToTempDir("tests/up/testdata/docker-compose-remote-env")
 				framework.ExpectNoError(err)
-				defer framework.CleanupTempDir(initialDir, tempDir)
+				ginkgo.DeferCleanup(framework.CleanupTempDir, initialDir, tempDir)
 
 				f := framework.NewDefaultFramework(initialDir + "/bin")
 				_ = f.DevPodProviderAdd([]string{"docker"})
