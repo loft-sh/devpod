@@ -13,7 +13,7 @@ You can think of DevPod as the glue that connects your local IDE to a machine wh
 
 ## Why DevPod?
 
-DevPod reuses the open [DevContainer standard](https://containers.dev/)(used by Github Codespaces and VSCode DevContainers) to create a consistent developer experience no matter what backend you want to use.
+DevPod reuses the open [DevContainer standard](https://containers.dev/) (used by Github Codespaces and VSCode DevContainers) to create a consistent developer experience no matter what backend you want to use.
 
 Compared to hosted services such as Github Codespaces, Jetbrains Spaces or Google Cloud Workstations, DevPod has the following advantages:
 * **Cost savings**: DevPod is usually around 5-10 times cheaper than existing services with comparable feature sets, because it uses bare virtual machines in any cloud.
