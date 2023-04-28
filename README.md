@@ -23,3 +23,4 @@ Compared to hosted services such as Github Codespaces, Jetbrains Spaces or Googl
 * **Client-only**: No need to install a server backend, DevPod runs only on your computer.
 * **Open-Source**: DevPod is 100% open-source and extensible. A provider doesn't exist? Just create your own.
 * **Rich feature set**: DevPod already supports prebuilds, auto inactivity shutdown, git & docker credentials sync and many more features to come.
+* **Easy Desktop App**: DevPod comes with an easy-to-use desktop application that abstracts all the complexity away. If you want to build your own integration, DevPod offers a feature rich CLI as well.
