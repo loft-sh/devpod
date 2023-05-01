@@ -7,7 +7,7 @@ sidebar_label: Create a Workspace
 
 You can create a workspace either from the DevPod CLI or through the desktop application. A workspace can be created from a git repository, a local path or a docker container (e.g. `golang:latest`).
 
-Upon successful creation, DevPod will make the development container available at the ssh host `WORKSPACE.devpod`. Alternatively, DevPod can automatically open the workspace in a locally installed IDE, such as VSCode or Intellij.
+Upon successful creation, DevPod will make the development container available at the ssh host `${devcontainerId}.devpod`. Alternatively, DevPod can automatically open the workspace in a locally installed IDE, such as VSCode or Intellij.
 
 :::info
 A workspace is defined through a `devcontainer.json`. If DevPod can't find one, it will automatically try to guess the programming language of your project and provide a fitting template.
@@ -61,7 +61,7 @@ Run the following command in a terminal to create a new workspace:
 devpod up ./path/to/my-folder
 ```
 
-DevPod will sync the folder into the remote machine and create a development environment out of the `devcontainer.json`.
+DevPod will sync the folder into the remote machine and create a development environment from the `devcontainer.json`.
 
 #### Docker Image
 
@@ -72,7 +72,7 @@ Run the following command in a terminal to create a new workspace from a docker 
 devpod up ghcr.io/my-org/my-repo:latest
 ```
 
-DevPod will create the following `devcontainer.json` for this:
+DevPod will create the following `.devcontainer.json`:
 ```
 {
     "image": "ghcr.io/my-org/my-repo:latest"
@@ -81,13 +81,13 @@ DevPod will create the following `devcontainer.json` for this:
 
 ## Recreating a workspace
 
-If you are working on the `devcontainer.json` or have pulled changes that affect the development environment, you can recreate a workspace. Recreating a workspace means to apply changes in the `devcontainer.json` or related `Dockerfile` to the development environment. If a prebuild repository is supplied, DevPod will try to find the updated development environment image inside the prebuild repository and if not found, will fallback to building it.
+If you are working on the `devcontainer.json` or have pulled changes that affect the development environment, you can recreate a workspace. Recreating a workspace means to apply changes in the `devcontainer.json` or related `Dockerfile` to the development environment. If a prebuild repository is supplied, DevPod will try to find the updated development environment image inside the prebuild repository and if not found will fall back to building it.
 
 When recreating a workspace, changes only to the project path or mounted volumes will be preserved. **All other changes made in the container will be lost.**
 
 ### Via DevPod Desktop Application
 
-Navigate to the 'Workspaces' view and press on the 'More Options' button on the workspace you want to recreate. Then press 'Rebuild' and confirm the form to rebuild the workspace.
+Navigate to the 'Workspaces' view and press on the 'More Options' button on the workspace you want to recreate. Then press 'Rebuild' and confirm to rebuild the workspace.
 
 ### Via DevPod CLI
 
