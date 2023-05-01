@@ -62,13 +62,6 @@ func (r *Runner) runDockerCompose(parsedConfig *config.SubstitutedConfig, option
 	if err != nil {
 		return nil, errors.Wrap(err, "find docker compose")
 	}
-	if options.Recreate {
-		labels := r.getLabels()
-		err := r.Delete(labels, false)
-		if err != nil {
-			return nil, errors.Wrap(err, "delete devcontainer")
-		}
-	}
 
 	envFiles, err := r.getEnvFiles()
 	if err != nil {
@@ -103,9 +96,9 @@ func (r *Runner) runDockerCompose(parsedConfig *config.SubstitutedConfig, option
 	}
 
 	// does the container already exist or is it not running?
-	if containerDetails == nil || containerDetails.State.Status != "running" {
+	if containerDetails == nil || containerDetails.State.Status != "running" || options.Recreate {
 		// Start container if not running
-		containerDetails, err = r.startContainer(parsedConfig, project, composeHelper, composeGlobalArgs)
+		containerDetails, err = r.startContainer(parsedConfig, project, composeHelper, composeGlobalArgs, containerDetails, options)
 		if err != nil {
 			return nil, errors.Wrap(err, "start container")
 		}
@@ -217,16 +210,18 @@ func (r *Runner) getProjectName(project *composetypes.Project, composeHelper *co
 	return composeHelper.ToProjectName(projectName)
 }
 
-func (r *Runner) startContainer(parsedConfig *config.SubstitutedConfig, project *composetypes.Project, composeHelper *compose.ComposeHelper, globalArgs []string) (*config.ContainerDetails, error) {
+func (r *Runner) startContainer(
+	parsedConfig *config.SubstitutedConfig,
+	project *composetypes.Project,
+	composeHelper *compose.ComposeHelper,
+	composeGlobalArgs []string,
+	container *config.ContainerDetails,
+	options UpOptions,
+) (*config.ContainerDetails, error) {
 	service := parsedConfig.Config.Service
 	composeService, err := project.GetService(service)
 	if err != nil {
 		return nil, fmt.Errorf("service '%s' configured in devcontainer.json not found in Docker Compose configuration", service)
-	}
-
-	container, err := composeHelper.FindDevContainer(project.Name, service)
-	if err != nil {
-		return nil, errors.Wrap(err, "find dev container")
 	}
 
 	originalImageName := composeService.Image
@@ -238,16 +233,17 @@ func (r *Runner) startContainer(parsedConfig *config.SubstitutedConfig, project 
 	}
 
 	var didRestoreFromPersistedShare bool
-	// var composeGlobalArgs []string
 	if container != nil {
 		labels := container.Config.Labels
 		if labels[ConfigFilesLabel] != "" {
 			configFiles := strings.Split(labels[ConfigFilesLabel], ",")
-			persistedBuildFileFound, persistedBuildFileExists, _, err := checkForPersistedFile(configFiles, FeaturesBuildOverrideFilePrefix)
+
+			persistedBuildFileFound, persistedBuildFileExists, persistedBuildFile, err := checkForPersistedFile(configFiles, FeaturesBuildOverrideFilePrefix)
 			if err != nil {
 				return nil, errors.Wrap(err, "check for persisted build override")
 			}
-			_, persistedStartFileExists, _, err := checkForPersistedFile(configFiles, FeaturesStartOverrideFilePrefix)
+
+			_, persistedStartFileExists, persistedStartFile, err := checkForPersistedFile(configFiles, FeaturesStartOverrideFilePrefix)
 			if err != nil {
 				return nil, errors.Wrap(err, "check for persisted start override")
 			}
@@ -255,25 +251,25 @@ func (r *Runner) startContainer(parsedConfig *config.SubstitutedConfig, project 
 			if (persistedBuildFileExists || !persistedBuildFileFound) && persistedStartFileExists {
 				didRestoreFromPersistedShare = true
 
-				// if persistedBuildFileExists {
-				// 	composeGlobalArgs = append(composeGlobalArgs, "-f", persistedBuildFile)
-				// }
+				if persistedBuildFileExists {
+					composeGlobalArgs = append(composeGlobalArgs, "-f", persistedBuildFile)
+				}
 
-				// if persistedStartFileExists {
-				// 	composeGlobalArgs = append(composeGlobalArgs, "-f", persistedStartFile)
-				// }
+				if persistedStartFileExists {
+					composeGlobalArgs = append(composeGlobalArgs, "-f", persistedStartFile)
+				}
 			}
 		}
 	}
 
 	if container == nil || !didRestoreFromPersistedShare {
-		overrideBuildImageName, overrideComposeBuildFilePath, imageMetadata, metadataLabel, err := r.buildAndExtendDockerCompose(parsedConfig, project, composeHelper, &composeService, globalArgs)
+		overrideBuildImageName, overrideComposeBuildFilePath, imageMetadata, metadataLabel, err := r.buildAndExtendDockerCompose(parsedConfig, project, composeHelper, &composeService, composeGlobalArgs)
 		if err != nil {
 			return nil, errors.Wrap(err, "build and extend docker-compose")
 		}
 
 		if overrideComposeBuildFilePath != "" {
-			globalArgs = append(globalArgs, "-f", overrideComposeBuildFilePath)
+			composeGlobalArgs = append(composeGlobalArgs, "-f", overrideComposeBuildFilePath)
 		}
 
 		currentImageName := overrideBuildImageName
@@ -302,12 +298,24 @@ func (r *Runner) startContainer(parsedConfig *config.SubstitutedConfig, project 
 		}
 
 		if overrideComposeUpFilePath != "" {
-			globalArgs = append(globalArgs, "-f", overrideComposeUpFilePath)
+			composeGlobalArgs = append(composeGlobalArgs, "-f", overrideComposeUpFilePath)
+		}
+	}
+
+	if container != nil && options.Recreate {
+		r.Log.Debugf("Deleting dev container %s due to --recreate", container.Id)
+
+		if err := r.Driver.StopDevContainer(context.TODO(), container.Id); err != nil {
+			return nil, errors.Wrap(err, "stop dev container")
+		}
+
+		if err := r.Driver.DeleteDevContainer(context.TODO(), container.Id, false); err != nil {
+			return nil, errors.Wrap(err, "delete dev container")
 		}
 	}
 
 	upArgs := []string{"--project-name", project.Name}
-	upArgs = append(upArgs, globalArgs...)
+	upArgs = append(upArgs, composeGlobalArgs...)
 	upArgs = append(upArgs, "up", "-d")
 	if container != nil {
 		upArgs = append(upArgs, "--no-recreate")
@@ -679,7 +687,7 @@ while sleep 1 & wait $$!; do :; done`,
 	return project
 }
 
-func checkForPersistedFile(files []string, prefix string) (found bool, exists bool, filePath string, err error) {
+func checkForPersistedFile(files []string, prefix string) (foundLabel bool, fileExists bool, filePath string, err error) {
 	for _, file := range files {
 		if !strings.HasPrefix(file, prefix) {
 			continue

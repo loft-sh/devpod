@@ -10,8 +10,11 @@ import (
 )
 
 // DevPodUp executes the `devpod up` command in the test framework
-func (f *Framework) DevPodUp(ctx context.Context, workspace string) error {
-	err := f.ExecCommand(ctx, true, true, fmt.Sprintf("Run 'ssh %s.devpod' to ssh into the devcontainer", filepath.Base(workspace)), []string{"up", "--ide", "none", workspace})
+func (f *Framework) DevPodUp(ctx context.Context, workspace string, additionalArgs ...string) error {
+	upArgs := []string{"up", "--ide", "none", workspace}
+	upArgs = append(upArgs, additionalArgs...)
+
+	err := f.ExecCommand(ctx, true, true, fmt.Sprintf("Run 'ssh %s.devpod' to ssh into the devcontainer", filepath.Base(workspace)), upArgs)
 	if err != nil {
 		return fmt.Errorf("devpod up failed: %s", err.Error())
 	}
