@@ -287,8 +287,6 @@ func (r *Runner) startContainer(
 			return nil, errors.Wrap(err, "merge configuration")
 		}
 
-		// TODO update remote user UID?
-
 		additionalLabels := map[string]string{
 			metadata.ImageMetadataLabel: metadataLabel,
 		}

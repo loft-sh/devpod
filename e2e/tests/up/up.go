@@ -401,7 +401,7 @@ var _ = DevPodDescribe("devpod up test suite", func() {
 			}, ginkgo.SpecTimeout(60*time.Second))
 
 			ginkgo.It("should start a new workspace with override command", func(ctx context.Context) {
-				tempDir, err := framework.CopyToTempDir("tests/up/testdata/docker-compose-overrideCommand")
+				tempDir, err := framework.CopyToTempDir("tests/up/testdata/docker-compose-override-command")
 				framework.ExpectNoError(err)
 				ginkgo.DeferCleanup(framework.CleanupTempDir, initialDir, tempDir)
 
@@ -544,6 +544,106 @@ var _ = DevPodDescribe("devpod up test suite", func() {
 				framework.ExpectNoError(err)
 				gomega.Expect(containerWorkspaceFolderBasename).To(gomega.Equal("workspaces"))
 			}, ginkgo.SpecTimeout(60*time.Second))
+
+			ginkgo.Context("with lifecycle commands", func() {
+				ginkgo.It("should start a new workspace and execute array based lifecycle commands", func(ctx context.Context) {
+					tempDir, err := framework.CopyToTempDir("tests/up/testdata/docker-compose-lifecycle-array")
+					framework.ExpectNoError(err)
+					ginkgo.DeferCleanup(framework.CleanupTempDir, initialDir, tempDir)
+
+					f := framework.NewDefaultFramework(initialDir + "/bin")
+					_ = f.DevPodProviderAdd([]string{"docker"})
+					err = f.DevPodProviderUse(context.Background(), "docker")
+					framework.ExpectNoError(err)
+
+					err = f.DevPodUp(ctx, tempDir)
+					framework.ExpectNoError(err)
+
+					// Check for docker-compose container running
+					projectName := composeHelper.ToProjectName(filepath.Base(tempDir))
+					ginkgo.DeferCleanup(f.DevPodWorkspaceDelete, context.Background(), projectName)
+
+					ids, err := dockerHelper.FindContainer([]string{
+						fmt.Sprintf("%s=%s", compose.ProjectLabel, projectName),
+						fmt.Sprintf("%s=%s", compose.ServiceLabel, "app"),
+					})
+					framework.ExpectNoError(err)
+					gomega.Expect(ids).To(gomega.HaveLen(1), "1 compose container to be created")
+
+					initializeCommand, err := os.ReadFile(filepath.Join(tempDir, "initialize-command.out"))
+					framework.ExpectNoError(err)
+					gomega.Expect(initializeCommand).To(gomega.ContainSubstring("initializeCommand"))
+
+					onCreateCommand, _, err := f.ExecCommandCapture(ctx, []string{"ssh", "--command", "cat $HOME/on-create-command.out", projectName})
+					framework.ExpectNoError(err)
+					gomega.Expect(onCreateCommand).To(gomega.ContainSubstring("onCreateCommand"))
+
+					updateContentCommand, _, err := f.ExecCommandCapture(ctx, []string{"ssh", "--command", "cat $HOME/update-content-command.out", projectName})
+					framework.ExpectNoError(err)
+					gomega.Expect(updateContentCommand).To(gomega.Equal("updateContentCommand"))
+
+					postCreateCommand, _, err := f.ExecCommandCapture(ctx, []string{"ssh", "--command", "cat $HOME/post-create-command.out", projectName})
+					framework.ExpectNoError(err)
+					gomega.Expect(postCreateCommand).To(gomega.Equal("postCreateCommand"))
+
+					postStartCommand, _, err := f.ExecCommandCapture(ctx, []string{"ssh", "--command", "cat $HOME/post-start-command.out", projectName})
+					framework.ExpectNoError(err)
+					gomega.Expect(postStartCommand).To(gomega.Equal("postStartCommand"))
+
+					postAttachCommand, _, err := f.ExecCommandCapture(ctx, []string{"ssh", "--command", "cat $HOME/post-attach-command.out", projectName})
+					framework.ExpectNoError(err)
+					gomega.Expect(postAttachCommand).To(gomega.Equal("postAttachCommand"))
+				}, ginkgo.SpecTimeout(60*time.Second))
+
+				//ginkgo.FIt("should start a new workspace and execute object based lifecycle commands", func(ctx context.Context) {
+				//	tempDir, err := framework.CopyToTempDir("tests/up/testdata/docker-compose-lifecycle-object")
+				//	framework.ExpectNoError(err)
+				//	ginkgo.DeferCleanup(framework.CleanupTempDir, initialDir, tempDir)
+				//
+				//	f := framework.NewDefaultFramework(initialDir + "/bin")
+				//	_ = f.DevPodProviderAdd([]string{"docker"})
+				//	err = f.DevPodProviderUse(context.Background(), "docker")
+				//	framework.ExpectNoError(err)
+				//
+				//	err = f.DevPodUp(ctx, tempDir)
+				//	framework.ExpectNoError(err)
+				//
+				//	// Check for docker-compose container running
+				//	projectName := composeHelper.ToProjectName(filepath.Base(tempDir))
+				//	ginkgo.DeferCleanup(f.DevPodWorkspaceDelete, context.Background(), projectName)
+				//
+				//	ids, err := dockerHelper.FindContainer([]string{
+				//		fmt.Sprintf("%s=%s", compose.ProjectLabel, projectName),
+				//		fmt.Sprintf("%s=%s", compose.ServiceLabel, "app"),
+				//	})
+				//	framework.ExpectNoError(err)
+				//	gomega.Expect(ids).To(gomega.HaveLen(1), "1 compose container to be created")
+				//
+				//	initializeCommand, err := os.ReadFile(filepath.Join(tempDir, "initialize-command.out"))
+				//	framework.ExpectNoError(err)
+				//	gomega.Expect(initializeCommand).To(gomega.ContainSubstring("initializeCommand"))
+				//
+				//	onCreateCommand, _, err := f.ExecCommandCapture(ctx, []string{"ssh", "--command", "cat $HOME/on-create-command.out", projectName})
+				//	framework.ExpectNoError(err)
+				//	gomega.Expect(onCreateCommand).To(gomega.ContainSubstring("onCreateCommand"))
+				//
+				//	updateContentCommand, _, err := f.ExecCommandCapture(ctx, []string{"ssh", "--command", "cat $HOME/update-content-command.out", projectName})
+				//	framework.ExpectNoError(err)
+				//	gomega.Expect(updateContentCommand).To(gomega.Equal("updateContentCommand"))
+				//
+				//	postCreateCommand, _, err := f.ExecCommandCapture(ctx, []string{"ssh", "--command", "cat $HOME/post-create-command.out", projectName})
+				//	framework.ExpectNoError(err)
+				//	gomega.Expect(postCreateCommand).To(gomega.Equal("postCreateCommand"))
+				//
+				//	postStartCommand, _, err := f.ExecCommandCapture(ctx, []string{"ssh", "--command", "cat $HOME/post-start-command.out", projectName})
+				//	framework.ExpectNoError(err)
+				//	gomega.Expect(postStartCommand).To(gomega.Equal("postStartCommand"))
+				//
+				//	postAttachCommand, _, err := f.ExecCommandCapture(ctx, []string{"ssh", "--command", "cat $HOME/post-attach-command.out", projectName})
+				//	framework.ExpectNoError(err)
+				//	gomega.Expect(postAttachCommand).To(gomega.Equal("postAttachCommand"))
+				//}, ginkgo.SpecTimeout(60*time.Second))
+			})
 
 			ginkgo.Context("with --recreate", func() {
 				ginkgo.It("should NOT delete container when rebuild fails", func(ctx context.Context) {
