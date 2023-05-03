@@ -31,3 +31,19 @@ func (f *Framework) ExecCommand(ctx context.Context, captureStdOut, searchForStr
 
 	return nil
 }
+
+// ExecCommandCapture executes the command string with the devpod test binary, and returns stdout, stderr, and any error that occurred.
+func (f *Framework) ExecCommandCapture(ctx context.Context, args []string) (string, string, error) {
+	var execOut bytes.Buffer
+	var execErr bytes.Buffer
+
+	cmd := exec.CommandContext(ctx, f.DevpodBinDir+"/"+f.DevpodBinName, args...)
+	cmd.Stdout = io.MultiWriter(os.Stdout, &execOut)
+	cmd.Stderr = io.MultiWriter(os.Stderr, &execErr)
+
+	if err := cmd.Run(); err != nil {
+		return "", "", err
+	}
+
+	return execOut.String(), execErr.String(), nil
+}

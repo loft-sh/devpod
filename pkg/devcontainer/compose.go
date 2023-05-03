@@ -121,7 +121,7 @@ func (r *Runner) runDockerCompose(parsedConfig *config.SubstitutedConfig, option
 	}
 
 	// setup container
-	err = r.setupContainer(containerDetails, mergedConfig)
+	err = r.setupContainer(containerDetails, newMergedConfig)
 	if err != nil {
 		return nil, errors.Wrap(err, "setup container")
 	}

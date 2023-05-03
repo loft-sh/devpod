@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"github.com/docker/docker/api/types"
 	"github.com/loft-sh/devpod/pkg/compose"
+	"github.com/loft-sh/devpod/pkg/devcontainer/config"
 	docker "github.com/loft-sh/devpod/pkg/docker"
 	"github.com/onsi/gomega"
 	"io"
@@ -34,7 +35,7 @@ var _ = DevPodDescribe("devpod up test suite", func() {
 	ginkgo.Context("using local provider", func() {
 		ginkgo.Context("with docker", func() {
 			ginkgo.It("should start a new workspace with existing image", func(ctx context.Context) {
-				tempDir, err := framework.CopyToTempDir("tests/up/testdata/local-test")
+				tempDir, err := framework.CopyToTempDir("tests/up/testdata/docker")
 				framework.ExpectNoError(err)
 				ginkgo.DeferCleanup(framework.CleanupTempDir, initialDir, tempDir)
 
@@ -46,7 +47,59 @@ var _ = DevPodDescribe("devpod up test suite", func() {
 				// Wait for devpod workspace to come online (deadline: 30s)
 				err = f.DevPodUp(ctx, tempDir)
 				framework.ExpectNoError(err)
-			}, ginkgo.SpecTimeout(30*time.Second))
+			}, ginkgo.SpecTimeout(60*time.Second))
+
+			ginkgo.It("should start a new workspace and substitute devcontainer.json variables", func(ctx context.Context) {
+				tempDir, err := framework.CopyToTempDir("tests/up/testdata/docker-variables")
+				framework.ExpectNoError(err)
+				ginkgo.DeferCleanup(framework.CleanupTempDir, initialDir, tempDir)
+
+				f := framework.NewDefaultFramework(initialDir + "/bin")
+				_ = f.DevPodProviderAdd([]string{"docker"})
+				err = f.DevPodProviderUse(context.Background(), "docker")
+				framework.ExpectNoError(err)
+
+				err = f.DevPodUp(ctx, tempDir)
+				framework.ExpectNoError(err)
+
+				// Check for docker-compose container running
+				projectName := composeHelper.ToProjectName(filepath.Base(tempDir))
+				ginkgo.DeferCleanup(f.DevPodWorkspaceDelete, context.Background(), projectName)
+
+				ids, err := dockerHelper.FindContainer([]string{
+					fmt.Sprintf("%s=%s", config.DockerIDLabel, projectName),
+				})
+				framework.ExpectNoError(err)
+				gomega.Expect(ids).To(gomega.HaveLen(1), "1 compose container to be created")
+
+				devContainerId, _, err := f.ExecCommandCapture(ctx, []string{"ssh", "--command", "cat $HOME/dev-container-id.out", projectName})
+				framework.ExpectNoError(err)
+				gomega.Expect(devContainerId).NotTo(gomega.BeEmpty())
+
+				containerEnvPath, _, err := f.ExecCommandCapture(ctx, []string{"ssh", "--command", "cat $HOME/container-env-path.out", projectName})
+				framework.ExpectNoError(err)
+				gomega.Expect(containerEnvPath).To(gomega.ContainSubstring("/usr/local/bin"))
+
+				localEnvHome, _, err := f.ExecCommandCapture(ctx, []string{"ssh", "--command", "cat $HOME/local-env-home.out", projectName})
+				framework.ExpectNoError(err)
+				gomega.Expect(localEnvHome).To(gomega.Equal(os.Getenv("HOME")))
+
+				localWorkspaceFolder, _, err := f.ExecCommandCapture(ctx, []string{"ssh", "--command", "cat $HOME/local-workspace-folder.out", projectName})
+				framework.ExpectNoError(err)
+				gomega.Expect(localWorkspaceFolder).To(gomega.Equal(tempDir))
+
+				localWorkspaceFolderBasename, _, err := f.ExecCommandCapture(ctx, []string{"ssh", "--command", "cat $HOME/local-workspace-folder-basename.out", projectName})
+				framework.ExpectNoError(err)
+				gomega.Expect(localWorkspaceFolderBasename).To(gomega.Equal(filepath.Base(tempDir)))
+
+				containerWorkspaceFolder, _, err := f.ExecCommandCapture(ctx, []string{"ssh", "--command", "cat $HOME/container-workspace-folder.out", projectName})
+				framework.ExpectNoError(err)
+				gomega.Expect(containerWorkspaceFolder).To(gomega.Equal(filepath.Join("/workspaces", filepath.Base(tempDir))))
+
+				containerWorkspaceFolderBasename, _, err := f.ExecCommandCapture(ctx, []string{"ssh", "--command", "cat $HOME/container-workspace-folder-basename.out", projectName})
+				framework.ExpectNoError(err)
+				gomega.Expect(containerWorkspaceFolderBasename).To(gomega.Equal(filepath.Base(tempDir)))
+			}, ginkgo.SpecTimeout(60*time.Second))
 		})
 
 		ginkgo.Context("with docker-compose", func() {
@@ -245,7 +298,7 @@ var _ = DevPodDescribe("devpod up test suite", func() {
 				framework.ExpectNoError(err)
 				gomega.Expect(ids).To(gomega.HaveLen(1), "1 compose container to be created")
 
-				err = f.ExecCommand(ctx, true, true, "vscode", []string{"ssh", "--command", "ps u -p 1", projectName})
+				err = f.ExecCommand(ctx, true, true, "root", []string{"ssh", "--command", "ps u -p 1", projectName})
 				framework.ExpectNoError(err)
 			}, ginkgo.SpecTimeout(60*time.Second))
 
@@ -404,11 +457,92 @@ var _ = DevPodDescribe("devpod up test suite", func() {
 				framework.ExpectNoError(err)
 				gomega.Expect(ids).To(gomega.HaveLen(1), "1 compose container to be created")
 
-				err = f.ExecCommand(ctx, true, true, "/home/vscode/remote-env.out", []string{"ssh", "--command", "ls /home/vscode/remote-env.out", projectName})
+				err = f.ExecCommand(ctx, true, true, "/home/vscode/remote-env.out", []string{"ssh", "--command", "ls $HOME/remote-env.out", projectName})
 				framework.ExpectNoError(err)
 
-				err = f.ExecCommand(ctx, true, true, "BAR", []string{"ssh", "--command", "cat /home/vscode/remote-env.out", projectName})
+				err = f.ExecCommand(ctx, true, true, "BAR", []string{"ssh", "--command", "cat $HOME/remote-env.out", projectName})
 				framework.ExpectNoError(err)
+			}, ginkgo.SpecTimeout(60*time.Second))
+
+			ginkgo.It("should start a new workspace with remote user", func(ctx context.Context) {
+				tempDir, err := framework.CopyToTempDir("tests/up/testdata/docker-compose-remote-user")
+				framework.ExpectNoError(err)
+				ginkgo.DeferCleanup(framework.CleanupTempDir, initialDir, tempDir)
+
+				f := framework.NewDefaultFramework(initialDir + "/bin")
+				_ = f.DevPodProviderAdd([]string{"docker"})
+				err = f.DevPodProviderUse(context.Background(), "docker")
+				framework.ExpectNoError(err)
+
+				err = f.DevPodUp(ctx, tempDir)
+				framework.ExpectNoError(err)
+
+				// Check for docker-compose container running
+				projectName := composeHelper.ToProjectName(filepath.Base(tempDir))
+				ginkgo.DeferCleanup(f.DevPodWorkspaceDelete, context.Background(), projectName)
+
+				ids, err := dockerHelper.FindContainer([]string{
+					fmt.Sprintf("%s=%s", compose.ProjectLabel, projectName),
+					fmt.Sprintf("%s=%s", compose.ServiceLabel, "app"),
+				})
+				framework.ExpectNoError(err)
+				gomega.Expect(ids).To(gomega.HaveLen(1), "1 compose container to be created")
+
+				err = f.ExecCommand(ctx, true, true, "root", []string{"ssh", "--command", "cat $HOME/remote-user.out", projectName})
+				framework.ExpectNoError(err)
+			}, ginkgo.SpecTimeout(60*time.Second))
+
+			ginkgo.It("should start a new workspace and substitute devcontainer.json variables", func(ctx context.Context) {
+				tempDir, err := framework.CopyToTempDir("tests/up/testdata/docker-compose-variables")
+				framework.ExpectNoError(err)
+				ginkgo.DeferCleanup(framework.CleanupTempDir, initialDir, tempDir)
+
+				f := framework.NewDefaultFramework(initialDir + "/bin")
+				_ = f.DevPodProviderAdd([]string{"docker"})
+				err = f.DevPodProviderUse(context.Background(), "docker")
+				framework.ExpectNoError(err)
+
+				err = f.DevPodUp(ctx, tempDir)
+				framework.ExpectNoError(err)
+
+				// Check for docker-compose container running
+				projectName := composeHelper.ToProjectName(filepath.Base(tempDir))
+				ginkgo.DeferCleanup(f.DevPodWorkspaceDelete, context.Background(), projectName)
+
+				ids, err := dockerHelper.FindContainer([]string{
+					fmt.Sprintf("%s=%s", compose.ProjectLabel, projectName),
+					fmt.Sprintf("%s=%s", compose.ServiceLabel, "app"),
+				})
+				framework.ExpectNoError(err)
+				gomega.Expect(ids).To(gomega.HaveLen(1), "1 compose container to be created")
+
+				devContainerId, _, err := f.ExecCommandCapture(ctx, []string{"ssh", "--command", "cat $HOME/dev-container-id.out", projectName})
+				framework.ExpectNoError(err)
+				gomega.Expect(devContainerId).NotTo(gomega.BeEmpty())
+
+				containerEnvPath, _, err := f.ExecCommandCapture(ctx, []string{"ssh", "--command", "cat $HOME/container-env-path.out", projectName})
+				framework.ExpectNoError(err)
+				gomega.Expect(containerEnvPath).To(gomega.ContainSubstring("/usr/local/bin"))
+
+				localEnvHome, _, err := f.ExecCommandCapture(ctx, []string{"ssh", "--command", "cat $HOME/local-env-home.out", projectName})
+				framework.ExpectNoError(err)
+				gomega.Expect(localEnvHome).To(gomega.Equal(os.Getenv("HOME")))
+
+				localWorkspaceFolder, _, err := f.ExecCommandCapture(ctx, []string{"ssh", "--command", "cat $HOME/local-workspace-folder.out", projectName})
+				framework.ExpectNoError(err)
+				gomega.Expect(localWorkspaceFolder).To(gomega.Equal(tempDir))
+
+				localWorkspaceFolderBasename, _, err := f.ExecCommandCapture(ctx, []string{"ssh", "--command", "cat $HOME/local-workspace-folder-basename.out", projectName})
+				framework.ExpectNoError(err)
+				gomega.Expect(localWorkspaceFolderBasename).To(gomega.Equal(filepath.Base(tempDir)))
+
+				containerWorkspaceFolder, _, err := f.ExecCommandCapture(ctx, []string{"ssh", "--command", "cat $HOME/container-workspace-folder.out", projectName})
+				framework.ExpectNoError(err)
+				gomega.Expect(containerWorkspaceFolder).To(gomega.Equal("/workspaces"))
+
+				containerWorkspaceFolderBasename, _, err := f.ExecCommandCapture(ctx, []string{"ssh", "--command", "cat $HOME/container-workspace-folder-basename.out", projectName})
+				framework.ExpectNoError(err)
+				gomega.Expect(containerWorkspaceFolderBasename).To(gomega.Equal("workspaces"))
 			}, ginkgo.SpecTimeout(60*time.Second))
 
 			ginkgo.Context("with --recreate", func() {
