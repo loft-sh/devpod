@@ -70,6 +70,6 @@ func (cmd *UpdateCmd) Run(ctx context.Context, devPodConfig *config.Config, args
 	}
 
 	log.Default.Infof("To use the provider, please run the following command:")
-	log.Default.Infof("devpod use provider %s", providerConfig.Name)
+	log.Default.Infof("devpod provider use %s", providerConfig.Name)
 	return nil
 }

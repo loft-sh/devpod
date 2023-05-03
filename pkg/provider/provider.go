@@ -191,7 +191,7 @@ type ProviderBinary struct {
 }
 
 type ProviderCommands struct {
-	// Init is run directly after `devpod use provider`
+	// Init is run directly after `devpod provider use`
 	Init types.StrArray `json:"init,omitempty"`
 
 	// Command executes a command on the server
