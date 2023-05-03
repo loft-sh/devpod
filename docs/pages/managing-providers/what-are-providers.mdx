@@ -3,7 +3,47 @@ title: What are Providers?
 sidebar_label: What are Providers?
 ---
 
-* Machine & non-machine providers
-* Kubernetes vs docker driver
-* Binaries & Options
-* Agent
+Providers are simple programs that let DevPod build, manage and run the environments
+requested by the user.
+
+DevPod relies on a model of providers in order to ensure great flexibility and
+easy adaptability for any backend of choice.
+
+See the [Add a provider](.//add-provider.mdx) section to know
+more on how to handle them.
+
+## Type of providers
+
+There are two type of providers possible:
+
+* Machine providers
+* Non-machine providers
+
+### Machine providers
+
+Machine providers are those who will create and manage a VM for the workspace
+selected.
+
+An example of Machine provider is the AWS Provider, which uses EC2 instances to
+run the environment.
+
+These type of providers will also manage the lifecycle of the VM, starting/stopping
+and deleting it when needed.
+
+### Non-Machine providers
+
+Non-machine providers are those who will work directly with containers, instead
+of using VMs.
+
+An example of this can be the SSH, Kubernetes and Docker providers.
+
+Those providers will **not** create a VM, but directly run the environment's
+containers on the target.
+
+## Managing providers
+
+You can head over the next sections on how to manage DevPod providers:
+
+- [Add a Provider](./add-provider.mdx)
+- [Update a Provider](./update-provider.mdx)
+- [Delete a provider](./delete-provider.mdx)

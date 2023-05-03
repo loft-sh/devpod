@@ -3,14 +3,187 @@ title: Add a Provider
 sidebar_label: Add a Provider
 ---
 
+Some providers are available for auto-installation:
+
+- AWS
+- Azure
+- Civo
+- Digital Ocean
+- Google Cloud
+- Terraform
+- SSH
+
+## Via DevPod Desktop Application
+
+Navigate to the 'Providers' view and click on the 'Add' button in the title.
+Select one of the providers supplied by default, or click on the '+' button to
+add a custom one.
+
+You will be prompted to fill some additional settings if needed, depending on
+the provider's needs.
+
+:::info
+Under the hood, the Desktop Application will call a `devpod provider add PROVIDER`
+:::
+
+## Via DevPod CLI
+The providers in this list can easily be installed like:
+
+```sh
+devpod provider add aws
+devpod provider add azure
+devpod provider add civo
+devpod provider add digitalocean
+devpod provider add gcloud
+devpod provider add terraform
+devpod provider add ssh
+```
+
 ## From Github
+
+You can specify a custom provider, directly from GitHub, by using the format
+`my-username/repo`, so for example:
+
+```sh
+devpod provider add loft-sh/devpod-provider-civo
+```
 
 ## From Local Path
 
+If you have locally downloaded providers, you can also add them directly to
+DevPod, by pointing to the file path of `provider.yaml` manifest:
+
+```sh
+devpod provider add ../devpod-provider-mock/provider.yaml
+```
+
 ## From URL
+
+You can also specify the URL to the `provider.yaml` file, for example:
+
+```sh
+devpod provider add https://raw.githubusercontent.com/loft-sh/devpod-provider-ssh/main/hack/provider/provider.yaml
+```
+
+### Using the Desktop Application
+
+After you clicked the `Add` button in the `Providers` section, you can click the
+big `+` button to add a custom provider, then fill the `Source` section with either
+
+- A GitHub link to the provider's project
+- A File URL to `provider.yaml`
+- A File Path to `provider.yaml`
+
+As explained previously.
 
 ## Set Provider Options
 
+Each provider has a set of options, those options can be different for each of
+them, as they are defined by the provider's developers.
+
+### Managing options from DevPod Desktop Application
+
+To manage options from the app, head over the `Providers` section, and click
+`Edit` on the provider you want to configure.
+
+### Managing options from DevPod CLI
+
+To manage options from CLI, you can list the table of provider's options by using:
+
+
+```sh
+devpod provider options <provider-name>
+```
+
+An example output for the AWS Provider is:
+
+```
+          NAME            | REQUIRED |          DESCRIPTION           |         DEFAULT         |          VALUE           
+----------------------------+----------+--------------------------------+-------------------------+--------------------------
+AGENT_PATH                | false    | The path where to inject the   | /var/lib/toolbox/devpod | /var/lib/toolbox/devpod  
+                          |          | DevPod agent to.               |                         |                          
+AWS_ACCESS_KEY_ID         | false    | The aws access key id          |                         |                          
+AWS_AMI                   | false    | The disk image to use.         |                         |                          
+AWS_DISK_SIZE             | false    | The disk size to use.          | 40                      | 40                       
+AWS_INSTANCE_TYPE         | false    | The machine type to use.       | c5.xlarge               | c5.xlarge                
+AWS_REGION                | true     | The aws cloud region to create |                         | us-west-2                
+                          |          | the VM in. E.g. us-west-1      |                         |                          
+AWS_SECRET_ACCESS_KEY     | false    | The aws secret access key      |                         |                          
+AWS_VPC_ID                | false    | The vpc id to use.             |                         |                          
+INACTIVITY_TIMEOUT        | false    | If defined, will automatically | 10m                     | 10m                      
+                          |          | stop the VM after the          |                         |                          
+                          |          | inactivity period.             |                         |                          
+INJECT_DOCKER_CREDENTIALS | false    | If DevPod should inject docker | true                    | true                     
+                          |          | credentials into the remote    |                         |                          
+                          |          | host.                          |                         |                          
+INJECT_GIT_CREDENTIALS    | false    | If DevPod should inject git    | true                    | true                     
+                          |          | credentials into the remote    |                         |                          
+                          |          | host.                          |                         |  
+```
+
+You can see this table as an overview, you can the change each option using:
+
+```sh
+devpod provider set-options <provider-name> --option <KEY>=<VALUE>
+```
+
+So for example, to change the default disk size from 40gb to 120gb, you could use:
+
+```sh
+devpod provider set-options aws --option AWS_DISK_SIZE=120
+```
+
+And check again the options for the provider using `devpod provider options aws`:
+
+```
+          NAME            | REQUIRED |          DESCRIPTION           |         DEFAULT         |          VALUE
+----------------------------+----------+--------------------------------+-------------------------+--------------------------
+AGENT_PATH                | false    | The path where to inject the   | /var/lib/toolbox/devpod | /var/lib/toolbox/devpod
+                          |          | DevPod agent to.               |                         |
+AWS_ACCESS_KEY_ID         | false    | The aws access key id          |                         |
+AWS_AMI                   | false    | The disk image to use.         |                         |
+AWS_DISK_SIZE             | false    | The disk size to use.          | 40                      | 120
+AWS_INSTANCE_TYPE         | false    | The machine type to use.       | c5.xlarge               | c5.xlarge
+AWS_REGION                | true     | The aws cloud region to create |                         | us-west-2
+                          |          | the VM in. E.g. us-west-1      |                         |
+AWS_SECRET_ACCESS_KEY     | false    | The aws secret access key      |                         |
+AWS_VPC_ID                | false    | The vpc id to use.             |                         |
+INACTIVITY_TIMEOUT        | false    | If defined, will automatically | 10m                     | 10m
+                          |          | stop the VM after the          |                         |
+                          |          | inactivity period.             |                         |
+INJECT_DOCKER_CREDENTIALS | false    | If DevPod should inject docker | true                    | true
+                          |          | credentials into the remote    |                         |
+                          |          | host.                          |                         |
+INJECT_GIT_CREDENTIALS    | false    | If DevPod should inject git    | true                    | true
+                          |          | credentials into the remote    |                         |
+                          |          | host.                          |                         |
+```
+
 ## Single Machine Provider
 
+By default DevPod will use a separate machine for each workspace using the same provider,
+you can enable `Reuse machine` in a provider in order to use a single machine for all workspaces.
+
+In **the desktop app** the option is available in the option management interface for the provider
+(see section above)
+
+In **the CLI** you can set this option using:
+
+```sh
+devpod provider set-options <provider-name> --single-machine
+```
+
 ## Default Provider
+
+When adding a provider to DevPod, you can specify it to be the **default provider**,
+this implies that when you create a Workspace, this provider will be used if no
+other is specified.
+
+In **the desktop app**, you can set a provider to be default in the option management interface for the provider
+(see section above)
+
+In **the CLI** you can set this option using:
+
+```sh
+devpod provider use <provider-name>
+```
