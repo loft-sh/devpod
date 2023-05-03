@@ -1,6 +1,17 @@
-import { defineStyleConfig, extendTheme, Theme, ThemeOverride } from "@chakra-ui/react"
+import {
+  createMultiStyleConfigHelpers,
+  defineStyleConfig,
+  extendTheme,
+  Theme,
+  Tooltip,
+  ThemeOverride,
+} from "@chakra-ui/react"
+import { menuAnatomy } from "@chakra-ui/anatomy"
 
 const Button = defineStyleConfig({
+  defaultProps: {
+    size: "sm",
+  },
   variants: {
     primary: {
       color: "white",
@@ -25,6 +36,18 @@ const Code = defineStyleConfig({
     },
   },
 })
+const { definePartsStyle, defineMultiStyleConfig } = createMultiStyleConfigHelpers(menuAnatomy.keys)
+const Menu = defineMultiStyleConfig({
+  baseStyle: definePartsStyle({
+    item: {
+      fontSize: "sm",
+    },
+  }),
+})
+
+// It's ugly but it works: https://github.com/chakra-ui/chakra-ui/issues/1424#issuecomment-743342944
+// Unfortunately there is no other way of overring the default placement.
+Tooltip.defaultProps = { ...Tooltip.defaultProps, placement: "top" }
 
 export const theme = extendTheme({
   styles: {
@@ -62,5 +85,6 @@ export const theme = extendTheme({
   components: {
     Button,
     Code,
+    Menu,
   },
 } satisfies ThemeOverride) as Theme

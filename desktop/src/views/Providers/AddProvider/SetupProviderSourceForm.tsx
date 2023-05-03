@@ -19,16 +19,17 @@ import { useMutation, useQueryClient } from "@tanstack/react-query"
 import { useCallback, useEffect, useMemo, useState } from "react"
 import { SubmitHandler, useForm } from "react-hook-form"
 import { AiOutlinePlusCircle } from "react-icons/ai"
+import { FiFolder } from "react-icons/fi"
 import { client } from "../../../client"
-import { CollapsibleSection, ErrorMessageBox } from "../../../components"
+import { CollapsibleSection, ErrorMessageBox, ExampleCard } from "../../../components"
 import {
   AWSSvg,
   AzureSvg,
   DigitalOceanSvg,
   DockerPng,
-  SSHPng,
   GCloudSvg,
   KubernetesSvg,
+  SSHPng,
 } from "../../../images"
 import { exists, isError, useFormErrors } from "../../../lib"
 import { QueryKeys } from "../../../queryKeys"
@@ -39,10 +40,8 @@ import {
   TProviders,
   TWithProviderID,
 } from "../../../types"
-import { RecommendedProviderCard } from "./RecommendedProviderCard"
 import { FieldName, TFormValues } from "./types"
 import { TSetupProviderState } from "./useSetupProvider"
-import { FiFolder } from "react-icons/fi"
 
 const Form = styled.form`
   width: 100%;
@@ -208,7 +207,7 @@ export function SetupProviderSourceForm({ state, reset, onFinish }: TSetupProvid
               (source) => !providers?.[source.name] || !providers[source.name]?.state?.initialized
             ).map((source) => (
               <WrapItem key={source.name} padding={"1"}>
-                <RecommendedProviderCard
+                <ExampleCard
                   key={source.name}
                   image={source.image}
                   source={source.name}
@@ -218,7 +217,7 @@ export function SetupProviderSourceForm({ state, reset, onFinish }: TSetupProvid
               </WrapItem>
             ))}
             <WrapItem key={"custom"} padding={"1"}>
-              <RecommendedProviderCard
+              <ExampleCard
                 imageNode={
                   <Icon as={AiOutlinePlusCircle} fontSize={"64px"} color={"primary.500"} />
                 }

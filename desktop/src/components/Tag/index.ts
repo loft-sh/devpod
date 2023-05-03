@@ -1,0 +1,1 @@
+export { IconTag } from "./IconTag"

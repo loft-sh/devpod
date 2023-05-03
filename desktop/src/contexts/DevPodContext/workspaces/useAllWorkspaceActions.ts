@@ -2,7 +2,7 @@ import { useCallback, useSyncExternalStore } from "react"
 import { TActionObj } from "../action"
 import { devPodStore } from "../devPodStore"
 
-export function useWorkspaceActions() {
+export function useAllWorkspaceActions() {
   const actions = useSyncExternalStore(
     useCallback((listener) => devPodStore.subscribe(listener), []),
     () => devPodStore.getAllActions()

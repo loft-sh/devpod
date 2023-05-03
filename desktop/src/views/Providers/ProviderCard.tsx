@@ -28,6 +28,7 @@ import { UseMutationResult } from "@tanstack/react-query"
 import { useMemo } from "react"
 import { useNavigate } from "react-router"
 import { Link as RouterLink } from "react-router-dom"
+import { IconTag } from "../../components"
 import { useWorkspaces } from "../../contexts"
 import { ProviderPlaceholder, Stack3D, Trash } from "../../icons"
 import { exists } from "../../lib"
@@ -77,16 +78,19 @@ export function ProviderCard({ id, provider, remove }: TProviderCardProps) {
             </Link>
           </Heading>
           <HStack rowGap={2} marginTop={4} flexWrap="nowrap" alignItems="center">
-            <Tag borderRadius="full" color={tagColor}>
-              <Stack3D boxSize={4} />
-              <TagLabel marginLeft={2}>
-                {providerWorkspaces.length === 1
+            <IconTag
+              icon={<Stack3D />}
+              label={
+                providerWorkspaces.length === 1
                   ? "1 workspace"
                   : providerWorkspaces.length > 0
                   ? providerWorkspaces.length + " workspaces"
-                  : "No workspaces"}
-              </TagLabel>
-            </Tag>
+                  : "No workspaces"
+              }
+              infoText={`This provider is used by ${providerWorkspaces.length} ${
+                providerWorkspaces.length === 1 ? "workspace" : "workspaces"
+              }`}
+            />
             {provider?.default && (
               <Tag borderRadius="full" color={tagColor}>
                 <TagLabel>{"default"}</TagLabel>
@@ -104,7 +108,7 @@ export function ProviderCard({ id, provider, remove }: TProviderCardProps) {
                 aria-label="Delete Provider"
                 variant="ghost"
                 colorScheme="gray"
-                icon={<Trash width={"16px"} />}
+                icon={<Trash width="4" />}
                 onClick={() => {
                   onDeleteOpen()
                 }}

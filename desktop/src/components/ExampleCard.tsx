@@ -2,7 +2,7 @@ import { Box, Card, Image, useColorModeValue } from "@chakra-ui/react"
 import { AnimatePresence, motion } from "framer-motion"
 import React, { useId } from "react"
 
-type TRecommendedProviderCardProps = {
+type TExampleCardProps = {
   image?: string
   source?: string
 
@@ -11,12 +11,7 @@ type TRecommendedProviderCardProps = {
   onClick?: () => void
 }
 
-export function RecommendedProviderCard({
-  image,
-  isSelected,
-  imageNode,
-  onClick,
-}: TRecommendedProviderCardProps) {
+export function ExampleCard({ image, isSelected, imageNode, onClick }: TExampleCardProps) {
   const hoverBackgroudColor = useColorModeValue("gray.50", "gray.800")
   const selectedProps = isSelected
     ? {
@@ -41,7 +36,19 @@ export function RecommendedProviderCard({
       _hover={{ backgroundColor: hoverBackgroudColor }}
       {...(onClick ? { onClick } : {})}
       {...selectedProps}>
-      {imageNode ? imageNode : <Image objectFit="cover" maxWidth="28" padding="2" src={image} />}
+      {imageNode ? (
+        imageNode
+      ) : (
+        <Image
+          objectFit="cover"
+          overflow="hidden"
+          maxWidth="28"
+          padding="2"
+          width="fill"
+          height="fill"
+          src={image}
+        />
+      )}
       <AnimatePresence>
         {isSelected && (
           <Box

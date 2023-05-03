@@ -9,7 +9,7 @@ use url::Url;
 use crate::{AppState, UiMessage};
 
 // Should match the one from "tauri.config.json" and "Info.plist"
-const APP_IDENTIFIER: &str = "sh.loft.devpod-desktop";
+const APP_IDENTIFIER: &str = "sh.loft.devpod";
 const APP_URL_SCHEME: &str = "devpod";
 
 pub struct CustomProtocol;

@@ -10,7 +10,7 @@ import {
   useToken,
   VStack,
 } from "@chakra-ui/react"
-import { ReactElement, ReactNode } from "react"
+import { cloneElement, ReactElement, ReactNode } from "react"
 import { LinkProps, NavLink as RouterLink } from "react-router-dom"
 import { useSettings } from "../../contexts"
 import { DevpodWordmark } from "../../icons"
@@ -55,13 +55,7 @@ export function Sidebar({ children, ...boxProps }: TSidebarProps) {
       <VStack as="nav" align="start">
         {children}
       </VStack>
-      <HStack
-        borderTopColor={borderColor}
-        borderTopWidth="thin"
-        alignSelf="end"
-        paddingTop="4"
-        paddingLeft="8"
-        paddingBottom="4">
+      <HStack alignSelf="end" paddingTop="4" paddingLeft="8" paddingBottom="4">
         <LoftOSSBadge />
       </HStack>
 
@@ -75,8 +69,9 @@ export function Sidebar({ children, ...boxProps }: TSidebarProps) {
   )
 }
 
-type TSidebarMenuProps = Pick<LinkProps, "to"> & Readonly<{ children?: ReactNode; icon: ReactNode }>
-export function SidebarMenuItem({ to, children, icon }: TSidebarMenuProps) {
+type TSidebarMenuProps = Pick<LinkProps, "to"> &
+  Readonly<{ children?: ReactNode; icon: ReactElement }>
+export function SidebarMenuItem({ to, children, icon: iconProps }: TSidebarMenuProps) {
   const settings = useSettings()
   const backgroundColorToken = useColorModeValue("blackAlpha.100", "whiteAlpha.200")
   const backgroundColor = useToken("colors", backgroundColorToken)
@@ -84,13 +79,14 @@ export function SidebarMenuItem({ to, children, icon }: TSidebarMenuProps) {
   const borderColor = useToken("colors", borderColorToken)
   const backgroundActiveColor = useToken("colors", "primary.400")
   const isLeft = settings.sidebarPosition === "left"
+  const icon = cloneElement(iconProps, { boxSize: 4 })
 
   return (
     <Box paddingX="4" width="full">
       <Link
         display="flex"
         paddingX="4"
-        paddingY="3"
+        paddingY="2"
         as={RouterLink}
         to={to}
         width="full"
@@ -103,6 +99,7 @@ export function SidebarMenuItem({ to, children, icon }: TSidebarMenuProps) {
         borderWidth="thin"
         borderColor="transparent"
         opacity={0.8}
+        fontSize="md"
         _hover={{ textDecoration: "none", backgroundColor }}
         // @ts-ignore // this function is added by react-router-dom's `NavLink`
         style={({ isActive }) => ({
