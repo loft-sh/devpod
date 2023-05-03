@@ -1,3 +1,4 @@
+import { QuestionIcon } from "@chakra-ui/icons"
 import {
   Button,
   Checkbox,
@@ -88,7 +89,11 @@ export function Settings() {
             <Heading as="h4" size="md">
               CLI
             </Heading>
-            {isCLIInstalled ? (
+            {isCLIInstalled === undefined ? (
+              <Tooltip label="No information available">
+                <QuestionIcon boxSize={5} color="gray.400" />
+              </Tooltip>
+            ) : isCLIInstalled ? (
               <Tooltip label="Installed">
                 <CheckCircle boxSize={5} color="green.500" />
               </Tooltip>

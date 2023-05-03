@@ -26,6 +26,12 @@ export function useActionTitle(): TViewTitle | null {
       return null
     }
 
+    const targetRoute =
+      // Unfortunately `Location` isn't typed, so be careful if you change this
+      exists(location.state?.origin) && location.state?.origin !== ""
+        ? location.state?.origin
+        : Routes.WORKSPACES
+
     return {
       label: getActionDisplayName(maybeAction),
       priority: "regular",
@@ -35,14 +41,10 @@ export function useActionTitle(): TViewTitle | null {
           aria-label="Navigate back to Workspaces"
           icon={<ArrowLeft />}
           onClick={() => {
-            if (location.key !== "default") {
-              navigate(-1)
-            } else {
-              navigate(Routes.WORKSPACES)
-            }
+            navigate(targetRoute)
           }}
         />
       ),
     }
-  }, [location.key, matchAction, navigate])
+  }, [location.state, matchAction, navigate])
 }

@@ -18,7 +18,7 @@ import {
 } from "@chakra-ui/react"
 import dayjs from "dayjs"
 import { useMemo } from "react"
-import { Link as RouterLink } from "react-router-dom"
+import { Link as RouterLink, useLocation } from "react-router-dom"
 import { useSettings, useAllWorkspaceActions } from "../../contexts"
 import { Bell, CheckCircle, ExclamationCircle, ExclamationTriangle } from "../../icons"
 import { getActionDisplayName } from "../../lib"
@@ -26,6 +26,7 @@ import { Routes } from "../../routes"
 import { Ripple } from "../Animation"
 
 export function Notifications() {
+  const location = useLocation()
   const actions = useAllWorkspaceActions()
   const backgroundColor = useColorModeValue("white", "gray.900")
   const subheadingTextColor = useColorModeValue("gray.500", "gray.400")
@@ -95,6 +96,7 @@ export function Notifications() {
                     <LinkOverlay
                       as={RouterLink}
                       to={Routes.toAction(action.id)}
+                      state={{ origin: location.pathname }}
                       textTransform="capitalize">
                       {getActionDisplayName(action)}
                     </LinkOverlay>
