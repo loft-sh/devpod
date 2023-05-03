@@ -5,7 +5,7 @@ sidebar_label: Prebuild a Workspace
 
 ## Prebuild a Workspace
 
-Prebuilding a workspace means building a ready-to-use docker image out of the `devcontainer.json`, its referenced features and a potentially linked `Dockerfile`.
+Prebuilding a workspace means building a ready-to-use docker image out of the `devcontainer.json`, its referenced features and optionally a linked `Dockerfile`.
 Usually when creating a new workspace, DevPod will first build a docker image based on the configuration and then later use this image to create the development environment.
 With prebuilds, this step can be omitted and DevPod can directly use the docker image to start the development environment, this can save start up time especially for more complex development environments.
 
@@ -24,11 +24,11 @@ devpod build github.com/my-org/my-repo --repository ghcr.io/my-org/my-repo
 DevPod will only build the workspace if there isn't an existing prebuild found in the specified docker image repository
 :::
 
-DevPod will use the current provider for doing this, means you can also use remote providers to prebuild an image. You can even have a separate provider for just prebuilding images.
+DevPod will use the current provider for doing this, which means you can also use remote providers to prebuild an image. You can even have a separate provider just for prebuilding images.
 
 ## Using Prebuilds
 
-Using prebuilds means you specify a docker image repository, where DevPod will search for an image with a specific hash generated out of the devcontainer configuration. You can either specify this prebuild repository via a flag during workspace creation or directly in the `devcontainer.json`.
+Using prebuilds means you specify a docker image repository, where DevPod will search for an image with a specific hash generated from the devcontainer configuration. You can either specify this prebuild repository via a flag during workspace creation or directly in the `devcontainer.json`.
 
 :::info Prebuild not found
 If a prebuild cannot be found in the given repository or credentials are missing locally, DevPod will just skip the repository.
