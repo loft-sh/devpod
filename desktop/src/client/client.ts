@@ -1,12 +1,12 @@
-import { fs, invoke, os, path, shell } from "@tauri-apps/api"
+import { dialog, fs, invoke, os, path, shell } from "@tauri-apps/api"
 import { listen } from "@tauri-apps/api/event"
+import { Command } from "@tauri-apps/api/shell"
 import { TSettings } from "../contexts"
-import { isEmpty, isError, Result, ResultError, Return } from "../lib"
+import { isError, Result, Return } from "../lib"
 import { TUnsubscribeFn } from "../types"
+import { IDEsClient } from "./ides/client"
 import { ProvidersClient } from "./providers"
 import { WorkspacesClient } from "./workspaces"
-import { IDEsClient } from "./ides/client"
-import { dialog } from "@tauri-apps/api"
 
 // Theses types have to match the rust types! Make sure to update them as well!
 type TChannels = {
@@ -117,6 +117,18 @@ class Client {
       }
 
       return Return.Failed("Unable to install CLI")
+    }
+  }
+  public async isCLIInstalled(): Promise<Result<boolean>> {
+    try {
+      const result = await new Command("run-path-devpod-cli", ["version"]).execute()
+      if (result.code !== 0) {
+        return Return.Value(false)
+      }
+
+      return Return.Value(true)
+    } catch {
+      return Return.Value(false)
     }
   }
 

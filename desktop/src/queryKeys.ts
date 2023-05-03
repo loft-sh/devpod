@@ -15,6 +15,7 @@ export const QueryKeys = {
   provider(id: TProviderID): string[] {
     return [...QueryKeys.PROVIDERS, id]
   },
+  IS_CLI_INSTALLED: ["isCliInstalled"],
 }
 
 export const MutationKeys = {

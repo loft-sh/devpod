@@ -20,7 +20,7 @@ export const WORKSPACE_EXAMPLES = [
   },
   {
     image: GoPng,
-    source: "https://github.com/Microsoft/vscode-remote-try-go",
+    source: "https://github.com/microsoft/vscode-remote-try-go",
   },
   {
     image: RustSvg,

@@ -8,6 +8,7 @@ import {
   HStack,
   Icon,
   Input,
+  Link,
   Select,
   Text,
   useColorModeValue,
@@ -21,7 +22,7 @@ import { FiFolder } from "react-icons/fi"
 import { useNavigate } from "react-router"
 import { useSearchParams } from "react-router-dom"
 import { client } from "../../../client"
-import { CollapsibleSection } from "../../../components"
+import { CollapsibleSection, ExampleCard } from "../../../components"
 import { useProviders, useWorkspace } from "../../../contexts"
 import { exists, getIDEDisplayName, getKeys, isEmpty, useFormErrors } from "../../../lib"
 import { QueryKeys } from "../../../queryKeys"
@@ -29,7 +30,6 @@ import { Routes } from "../../../routes"
 import { useBorderColor } from "../../../Theme"
 import { TProviderID } from "../../../types"
 import { WORKSPACE_EXAMPLES } from "./constants"
-import { ExampleCard } from ".././ExampleCard"
 import { FieldName, TCreateWorkspaceArgs, TCreateWorkspaceSearchParams } from "./types"
 import { useCreateWorkspaceForm } from "./useCreateWorkspaceForm"
 import { useSetupProviderModal } from "./useSetupProviderModal"
@@ -72,11 +72,11 @@ export function CreateWorkspace() {
       })
 
       // set workspace id to show terminal
-      if (actionID !== undefined && actionID !== "") {
+      if (!isEmpty(actionID)) {
         navigate(Routes.toAction(actionID, Routes.WORKSPACES))
       }
     },
-    [workspace]
+    [navigate, workspace]
   )
 
   const {
@@ -93,7 +93,7 @@ export function CreateWorkspace() {
 
   const providerOptions = useMemo<readonly TProviderID[]>(() => {
     if (!exists(providers)) {
-      return [] // TODO: make dynamic
+      return []
     }
 
     return Object.keys(providers)
@@ -155,23 +155,20 @@ export function CreateWorkspace() {
     <>
       <form onSubmit={onSubmit}>
         <VStack align="start" spacing="6" marginBottom="8">
-          <VStack
-            width="full"
-            backgroundColor={backgroundColor}
-            borderRadius="lg"
-            borderWidth="thin"
-            borderColor={borderColor}>
+          <VStack width="full" borderRadius="lg" borderWidth="thin" borderColor={borderColor}>
             <FormControl
+              backgroundColor={backgroundColor}
               padding="20"
               isRequired
               isInvalid={exists(sourceError)}
-              justifyContent={"center"}
+              justifyContent="center"
+              display="flex"
+              alignItems="center"
               borderBottomWidth="thin"
               borderBottomColor={borderColor}>
-              <VStack>
+              <VStack maxWidth="3xl">
                 <Text marginBottom="2" fontWeight="bold">
-                  Enter any git repository or local path to a folder you would like to create a
-                  workspace from
+                  Enter Workspace Source
                 </Text>
                 <HStack spacing={0} justifyContent={"center"}>
                   <Input
@@ -183,7 +180,7 @@ export function CreateWorkspace() {
                     fontSize={"16px"}
                     padding={"10px"}
                     height={"42px"}
-                    width={"400px"}
+                    width={"96"}
                     type="text"
                     {...register(FieldName.SOURCE, { required: true })}
                   />
@@ -204,6 +201,16 @@ export function CreateWorkspace() {
                 {exists(sourceError) && (
                   <FormErrorMessage>{sourceError.message ?? "Error"}</FormErrorMessage>
                 )}
+                <FormHelperText>
+                  Any git repository or local path to a folder you would like to create a workspace
+                  from can be a source as long as it adheres to the{" "}
+                  <Link
+                    fontWeight="bold"
+                    href="https://containers.dev/implementors/json_reference/">
+                    devcontainer standard
+                  </Link>
+                  .
+                </FormHelperText>
               </VStack>
             </FormControl>
 
@@ -223,7 +230,7 @@ export function CreateWorkspace() {
                           image={example.image}
                           source={example.source}
                           isSelected={currentSource === example.source}
-                          onClick={handleExampleCardClicked}
+                          onClick={() => handleExampleCardClicked(example.source)}
                         />
                       </WrapItem>
                     ))}

@@ -7,6 +7,7 @@ export { useProviderManager } from "./useProviderManager"
 export {
   useWorkspace,
   useWorkspaces,
+  useAllWorkspaceActions,
   useWorkspaceActions,
   startWorkspaceAction,
 } from "./workspaces"

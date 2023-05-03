@@ -134,7 +134,10 @@ export function useWelcomeModal() {
                   <Text>
                     DevPod ships with a powerful CLI that allows you to create, manage and connect
                     to your workspaces and providers. You can either{" "}
-                    <Link onClick={() => client.openLink("")}>download the standalone binary</Link>{" "}
+                    <Link
+                      onClick={() => client.openLink("https://github.com/loft-sh/devpod/releases")}>
+                      download the standalone binary
+                    </Link>{" "}
                     or directly add it to your <Code>$PATH</Code>.
                     <Text as="span" color="gray.500">
                       Again, feel free to skip this step. You can always install the CLI from the{" "}

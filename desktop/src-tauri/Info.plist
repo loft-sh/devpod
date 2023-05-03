@@ -8,7 +8,7 @@
 			<key>CFBundleTypeRole</key>
 			<string>Viewer</string>
 			<key>CFBundleURLName</key>
-			<string>sh.loft.devpod-desktop</string>
+			<string>sh.loft.devpod</string>
 			<key>CFBundleURLSchemes</key>
 			<array>
 				<string>devpod</string>

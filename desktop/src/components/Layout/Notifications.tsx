@@ -19,14 +19,14 @@ import {
 import dayjs from "dayjs"
 import { useMemo } from "react"
 import { Link as RouterLink } from "react-router-dom"
-import { useSettings, useWorkspaceActions } from "../../contexts"
+import { useSettings, useAllWorkspaceActions } from "../../contexts"
 import { Bell, CheckCircle, ExclamationCircle, ExclamationTriangle } from "../../icons"
 import { getActionDisplayName } from "../../lib"
 import { Routes } from "../../routes"
 import { Ripple } from "../Animation"
 
 export function Notifications() {
-  const actions = useWorkspaceActions()
+  const actions = useAllWorkspaceActions()
   const backgroundColor = useColorModeValue("white", "gray.900")
   const subheadingTextColor = useColorModeValue("gray.500", "gray.400")
   const actionHoverColor = useColorModeValue("gray.100", "gray.800")
@@ -67,6 +67,7 @@ export function Notifications() {
               <LinkBox
                 key={action.id}
                 padding={2}
+                fontSize="sm"
                 borderRadius="md"
                 width="full"
                 display="flex"

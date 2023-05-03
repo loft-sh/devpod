@@ -25,11 +25,8 @@ import {
   Portal,
   Select,
   Stack,
-  Tag,
-  TagLabel,
   Text,
   Tooltip,
-  useColorModeValue,
   useDisclosure,
 } from "@chakra-ui/react"
 import { useQuery } from "@tanstack/react-query"
@@ -38,14 +35,14 @@ import { useCallback, useMemo, useState } from "react"
 import { HiClock, HiOutlineCode } from "react-icons/hi"
 import { useNavigate } from "react-router"
 import { client } from "../../client"
-import { TActionID, useWorkspace } from "../../contexts"
+import { IconTag } from "../../components"
+import { TActionID, useWorkspace, useWorkspaceActions } from "../../contexts"
 import { Ellipsis, Pause, Play, Stack3D, Trash, ArrowPath } from "../../icons"
 import { CodeJPG } from "../../images"
 import { getIDEDisplayName } from "../../lib"
 import { QueryKeys } from "../../queryKeys"
 import { Routes } from "../../routes"
 import { TIDEs, TWorkspace, TWorkspaceID } from "../../types"
-import { useWorkspaceActions } from "../../contexts/DevPodContext/workspaces/useWorkspace"
 
 type TWorkspaceCardProps = Readonly<{
   workspaceID: TWorkspaceID
@@ -64,7 +61,6 @@ export function WorkspaceCard({ workspaceID, onSelectionChange }: TWorkspaceCard
   const workspaceActions = useWorkspaceActions(workspaceID)
   const workspace = useWorkspace(workspaceID)
   const [ideName, setIdeName] = useState<string | undefined>(workspace.data?.ide?.name ?? undefined)
-  const tagColor = useColorModeValue("gray.700", "gray.300")
 
   const navigateToAction = useCallback(
     (actionID: TActionID | undefined) => {
@@ -93,7 +89,7 @@ export function WorkspaceCard({ workspaceID, onSelectionChange }: TWorkspaceCard
     }
 
     return false
-  }, [workspace.current])
+  }, [workspace])
 
   const errorActionID = useMemo(() => {
     if (!workspaceActions?.length || workspaceActions[0]?.status !== "error") {
@@ -102,6 +98,10 @@ export function WorkspaceCard({ workspaceID, onSelectionChange }: TWorkspaceCard
 
     return workspaceActions[0]?.id
   }, [workspaceActions])
+
+  const isOpenDisabled = workspace.data?.status === "Busy"
+  const isOpenDisabledReason =
+    "Cannnot open this workspace because it is busy. If this doesn't change, try to force delete and recreate it."
 
   if (workspace.data === undefined) {
     return null
@@ -175,39 +175,40 @@ export function WorkspaceCard({ workspaceID, onSelectionChange }: TWorkspaceCard
               )}
             </HStack>
             <HStack rowGap={2} marginTop={4} flexWrap="wrap" alignItems="center">
-              <Tag borderRadius="full" color={tagColor}>
-                <Stack3D boxSize={4} />
-                <TagLabel marginLeft={2}>{provider?.name ?? "No provider"}</TagLabel>
-              </Tag>
-              <Tag borderRadius="full" color={tagColor}>
-                <Icon boxSize={4} as={HiOutlineCode} />
-                <TagLabel marginLeft={2}>{getIDEName(workspace.data.ide, idesQuery.data)}</TagLabel>
-              </Tag>
-              <Tag marginRight={2} borderRadius="full" color={tagColor}>
-                <Icon as={HiClock} />
-                <TagLabel marginLeft={2}>
-                  {dayjs(new Date(workspace.data.lastUsed)).fromNow()}
-                </TagLabel>
-              </Tag>
+              <IconTag
+                icon={<Stack3D />}
+                label={provider?.name ?? "No provider"}
+                infoText={provider?.name ? `Uses provider ${provider.name}` : undefined}
+              />
+              <IconTag
+                icon={<Icon as={HiOutlineCode} />}
+                label={getIDEName(workspace.data.ide, idesQuery.data)}
+                infoText={`Will be opened in ${getIDEName(workspace.data.ide, idesQuery.data)}`}
+              />
+              <IconTag
+                icon={<Icon as={HiClock} />}
+                label={dayjs(new Date(workspace.data.lastUsed)).fromNow()}
+                infoText={`Last used ${dayjs(new Date(workspace.data.lastUsed)).fromNow()}`}
+              />
             </HStack>
           </CardHeader>
 
           <CardFooter padding="none" paddingBottom={4}>
             <HStack spacing="2" width="full" justifyContent="end" paddingRight={"10px"}>
-              <Button
-                aria-label="Start workspace"
-                variant="primary"
-                leftIcon={<Icon as={HiOutlineCode} boxSize={5} />}
-                isDisabled={
-                  workspace.data.status === "Busy" || workspace.data.status === "NotFound"
-                }
-                onClick={() => {
-                  const actionID = workspace.start({ id, ideConfig: ide })
-                  navigateToAction(actionID)
-                }}
-                isLoading={isLoading}>
-                Open
-              </Button>
+              <Tooltip label={isOpenDisabled ? isOpenDisabledReason : undefined}>
+                <Button
+                  aria-label="Start workspace"
+                  variant="primary"
+                  leftIcon={<Icon as={HiOutlineCode} boxSize={5} />}
+                  isDisabled={isOpenDisabled}
+                  onClick={() => {
+                    const actionID = workspace.start({ id, ideConfig: ide })
+                    navigateToAction(actionID)
+                  }}
+                  isLoading={isLoading}>
+                  Open
+                </Button>
+              </Tooltip>
               <Menu placement="top">
                 <MenuButton
                   as={IconButton}
@@ -219,11 +220,12 @@ export function WorkspaceCard({ workspaceID, onSelectionChange }: TWorkspaceCard
                 />
                 <Portal>
                   <MenuList minWidth="72">
-                    <InputGroup paddingRight={3}>
+                    <InputGroup
+                      paddingRight={3}
+                      _hover={{ backgroundColor: "gray.100", cursor: "pointer" }}>
                       <Button
                         variant="ghost"
                         transition={"none"}
-                        _hover={{ backgroundColor: "gray.200" }}
                         borderRadius={0}
                         fontWeight={"normal"}
                         leftIcon={<Play boxSize={4} />}
@@ -231,6 +233,7 @@ export function WorkspaceCard({ workspaceID, onSelectionChange }: TWorkspaceCard
                         Start with
                       </Button>
                       <Select
+                        size="sm"
                         maxWidth={40}
                         overflow="hidden"
                         textOverflow="ellipsis"
@@ -251,13 +254,13 @@ export function WorkspaceCard({ workspaceID, onSelectionChange }: TWorkspaceCard
                     </MenuItem>
                     <MenuItem
                       onClick={() => workspace.stop()}
-                      icon={<Pause boxSize={5} />}
+                      icon={<Pause boxSize={4} />}
                       isDisabled={workspace.data.status !== "Running"}>
                       Stop
                     </MenuItem>
                     <MenuItem
                       fontWeight="normal"
-                      icon={<Trash boxSize={5} />}
+                      icon={<Trash boxSize={4} />}
                       onClick={() => onDeleteOpen()}>
                       Delete
                     </MenuItem>

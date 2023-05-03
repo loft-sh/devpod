@@ -1,4 +1,4 @@
 export { usePollWorkspaces } from "./usePollWorkspaces"
-export { useWorkspace, startWorkspaceAction } from "./useWorkspace"
+export { useWorkspace, startWorkspaceAction, useWorkspaceActions } from "./useWorkspace"
 export { useWorkspaces } from "./useWorkspaces"
-export { useWorkspaceActions } from "./useWorkspaceActions"
+export { useAllWorkspaceActions } from "./useAllWorkspaceActions"
