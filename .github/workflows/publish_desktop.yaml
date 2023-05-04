@@ -31,7 +31,7 @@ jobs:
         with:
           script: |
             console.log("${{ steps.get-version.outputs.tag_name }}")
-            
+
             const { data } = await github.rest.repos.createRelease({
               owner: context.repo.owner,
               repo: context.repo.repo,
@@ -51,14 +51,14 @@ jobs:
       fail-fast: false
       matrix:
         settings:
-          # - host: macos-latest
-          #   target: x86_64-apple-darwin
-          #   os: darwin
-          #   arch: amd64
-          # - host: macos-latest
-          #   target: aarch64-apple-darwin
-          #   os: darwin
-          #   arch: arm64
+          - host: macos-latest
+            target: x86_64-apple-darwin
+            os: darwin
+            arch: amd64
+          - host: macos-latest
+            target: aarch64-apple-darwin
+            os: darwin
+            arch: arm64
           # The WIX version we use for the installer (latest 3.something) doesn't support arm builds - if we need to support arm windows,
           # we'd need to switch the installer toolchain to WIX 4.xx, not sure how that works out with tauri
           # - host: windows-latest
@@ -67,10 +67,10 @@ jobs:
           - host: windows-latest
             target: x86_64-pc-windows-msvc
             arch: amd64
-          # - host: ubuntu-latest
-          #   target: x86_64-unknown-linux-gnu
-          #   os: linux
-          #   arch: amd64
+          - host: ubuntu-latest
+            target: x86_64-unknown-linux-gnu
+            os: linux
+            arch: amd64
     name: ${{ matrix.settings.target }}
     runs-on: ${{ matrix.settings.host }}
     env:
@@ -149,13 +149,12 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           # MacOS Signing:
-          # ENABLE_CODE_SIGNING: ${{ secrets.APPLE_CERTIFICATE }}
-          # APPLE_CERTIFICATE: ${{ secrets.APPLE_CERTIFICATE }}
-          # APPLE_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
-          # APPLE_SIGNING_IDENTITY: ${{ secrets.APPLE_SIGNING_IDENTITY }}
-          # APPLE_ID: ${{ secrets.APPLE_ID }}
-          # APPLE_PASSWORD: ${{ secrets.APPLE_PASSWORD }}
-          #
+          ENABLE_CODE_SIGNING: ${{ secrets.APPLE_CERTIFICATE }}
+          APPLE_CERTIFICATE: ${{ secrets.APPLE_CERTIFICATE }}
+          APPLE_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
+          APPLE_SIGNING_IDENTITY: ${{ secrets.APPLE_SIGNING_IDENTITY }}
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_PASSWORD: ${{ secrets.APPLE_PASSWORD }}
           # AppImage Signing:
           SIGN: ${{ secrets.APP_IMAGE_SIGN }}
           SIGN_KEY: ${{ secrets.APP_IMAGE_SIGN_KEY }}
@@ -207,11 +206,17 @@ jobs:
         shell: bash
         run: |
           ls ./desktop/src-tauri/target/${{ matrix.settings.target }}/release/bundle/msi
-          
+
       - name: Upload Release Asset
         if: matrix.settings.host == 'windows-latest'
         run: |
-          gh release upload ${{ needs.create-release.outputs.tag_name }} desktop/src-tauri/target/${{ matrix.settings.target }}/release/bundle/msi/DevPod_${{ needs.create-release.outputs.package_version }}_x64_en-US.msi --clobber
+          gh release upload ${{ needs.create-release.outputs.tag_name }} desktop/src-tauri/target/${{ matrix.settings.target }}/release/bundle/msi/DevPod_${{ needs.create-release.outputs.package_version }}_x64_en-US.msi  desktop/src-tauri/bin/devpod-cli-${{ matrix.settings.target }}.exe --clobber
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-    
+
+      - name: Upload CLI Asset
+        if: matrix.settings.host != 'windows-latest'
+        run: |
+          gh release upload ${{ needs.create-release.outputs.tag_name }} desktop/src-tauri/bin/devpod-cli-${{ matrix.settings.target }} --clobber
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

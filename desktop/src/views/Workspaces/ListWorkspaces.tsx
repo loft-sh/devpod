@@ -38,7 +38,7 @@ export function ListWorkspaces() {
       <Button onClick={() => navigate(Routes.WORKSPACE_CREATE)}>Create Workspace</Button>
     </VStack>
   ) : (
-    <VStack alignItems={"flex-start"}>
+    <VStack alignItems={"flex-start"} paddingBottom="8">
       {workspaceCards.map((workspace) => (
         <WorkspaceCard key={workspace.id} workspaceID={workspace.id} />
       ))}
