@@ -30,7 +30,7 @@ const SIDEBAR_WIDTH: BoxProps["width"] = "15rem"
 const shouldShowTitleBar = isMacOS || isLinux
 
 export function App() {
-  useAppReady()
+  const { modal: appReadyModal } = useAppReady()
   const navigate = useNavigate()
   const rootRouteMatch = useMatch(Routes.ROOT)
   const { sidebarPosition } = useSettings()
@@ -70,7 +70,7 @@ export function App() {
             top="0"
             width="full"
             textAlign={"center"}
-            zIndex={2}>
+            zIndex="tooltip">
             <Text
               data-tauri-drag-region // keep!
               fontWeight="bold"
@@ -139,6 +139,7 @@ export function App() {
       </Flex>
 
       {welcomeModal}
+      {appReadyModal}
     </>
   )
 }
