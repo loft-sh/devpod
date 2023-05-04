@@ -211,12 +211,14 @@ jobs:
         if: matrix.settings.host == 'windows-latest'
         shell: cmd
         run: |
-          set BASE_PATH=desktop\src-tauri\bin
           set BIN_NAME=devpod-cli-${{ matrix.settings.target }}.exe
           set CLI_TARGET_NAME=devpod-windows-${{ matrix.settings.arch }}.exe
-          ren "%BASE_PATH%\%BIN_NAME%" "%BASE_PATH%\%CLI_TARGET_NAME%"
+          
+          cd desktop\src-tauri\bin
+          ren "%BIN_NAME%" "%CLI_TARGET_NAME%"
+          cd ..
 
-          gh release upload ${{ needs.create-release.outputs.tag_name }} desktop/src-tauri/target/${{ matrix.settings.target }}/release/bundle/msi/DevPod_${{ needs.create-release.outputs.package_version }}_x64_en-US.msi  "%BASE_PATH%\%CLI_TARGET_NAME%" --clobber
+          gh release upload ${{ needs.create-release.outputs.tag_name }} target/${{ matrix.settings.target }}/release/bundle/msi/DevPod_${{ needs.create-release.outputs.package_version }}_x64_en-US.msi  "bin\%CLI_TARGET_NAME%" --clobber
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
