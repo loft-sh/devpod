@@ -12,6 +12,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"path/filepath"
+	"strconv"
 	"strings"
 )
 
@@ -52,14 +53,23 @@ func (k *kubernetesDriver) RunDevContainer(
 		}
 	}
 
-	// create persistent volume claim
-	err = k.createPersistentVolumeClaim(ctx, id, parsedConfig, mergedConfig, imageName, workspaceMount, labels, imageDetails)
+	// check if persistent volume claim already exists
+	initialize := false
+	pvc, _, err := k.getDevContainerPvc(ctx, id)
 	if err != nil {
 		return err
+	} else if pvc == nil {
+		// create persistent volume claim
+		err = k.createPersistentVolumeClaim(ctx, id, parsedConfig, mergedConfig, imageName, workspaceMount, labels, imageDetails)
+		if err != nil {
+			return err
+		}
+
+		initialize = true
 	}
 
 	// create dev container
-	err = k.runContainer(ctx, id, parsedConfig, mergedConfig, imageName, workspaceMount, labels, imageDetails, true)
+	err = k.runContainer(ctx, id, parsedConfig, mergedConfig, imageName, workspaceMount, labels, imageDetails, initialize)
 	if err != nil {
 		return err
 	}
@@ -213,10 +223,15 @@ func (k *kubernetesDriver) runContainer(
 }
 
 func getVolumeMount(idx int, mount *config.Mount) corev1.VolumeMount {
+	subPath := strconv.Itoa(idx)
+	if mount.Type == "volume" && mount.Source != "" {
+		subPath = mount.Source
+	}
+
 	return corev1.VolumeMount{
 		Name:      "devpod",
 		MountPath: mount.Target,
-		SubPath:   fmt.Sprintf("devpod/%d", idx),
+		SubPath:   fmt.Sprintf("devpod/%s", subPath),
 	}
 }
 

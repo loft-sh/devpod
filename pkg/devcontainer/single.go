@@ -61,7 +61,7 @@ func (r *Runner) runSingleContainer(parsedConfig *config.SubstitutedConfig, work
 
 		// delete container on recreation
 		if options.Recreate {
-			err := r.Delete(labels)
+			err := r.Delete(labels, false)
 			if err != nil {
 				return nil, errors.Wrap(err, "delete devcontainer")
 			}

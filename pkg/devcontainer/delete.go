@@ -7,7 +7,7 @@ import (
 	"strings"
 )
 
-func (r *Runner) Delete(labels []string) error {
+func (r *Runner) Delete(labels []string, deleteVolumes bool) error {
 	if len(labels) == 0 {
 		labels = r.getLabels()
 	}
@@ -32,7 +32,7 @@ func (r *Runner) Delete(labels []string) error {
 			}
 		}
 
-		err = r.Driver.DeleteDevContainer(context.TODO(), containerDetails.Id)
+		err = r.Driver.DeleteDevContainer(context.TODO(), containerDetails.Id, deleteVolumes)
 		if err != nil {
 			return err
 		}
