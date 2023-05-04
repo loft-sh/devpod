@@ -10,6 +10,8 @@
 
 DevPod is a client-only tool to create reproducible developer environments based on a [devcontainer.json](https://containers.dev/) on any backend. Each developer environment runs in a container and is specified through a [devcontainer.json](https://containers.dev/). Through DevPod providers these environments can be created on any backend, such as the local computer, a Kuberentes cluster, any reachable remote machine or in a public or private cloud.
 
+![DevPod Flow](docs/static/media/devpod-flow.gif)
+
 You can think of DevPod as the glue that connects your local IDE to a machine where you want to develop on. So depending on the requirements of your project, you can either create a workspace locally on the computer, on a beefy cloud machine with many GPUs or a spare remote computer. Within DevPod, every workspace is managed the same way, which also makes it easy to switch between workspaces that might be hosted somewhere else.
 
 ## Why DevPod?
