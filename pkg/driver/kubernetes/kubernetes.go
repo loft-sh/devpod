@@ -85,7 +85,7 @@ func (k *kubernetesDriver) getDevContainerPvc(ctx context.Context, id string) (*
 		return nil, nil, nil
 	}
 
-	// try to unmarshal pod
+	// try to unmarshal pvc
 	pvc := &corev1.PersistentVolumeClaim{}
 	err = json.Unmarshal(out, pvc)
 	if err != nil {
@@ -169,7 +169,7 @@ func (k *kubernetesDriver) StopDevContainer(ctx context.Context, id string) erro
 	return nil
 }
 
-func (k *kubernetesDriver) DeleteDevContainer(ctx context.Context, id string) error {
+func (k *kubernetesDriver) DeleteDevContainer(ctx context.Context, id string, deleteVolumes bool) error {
 	// delete pod
 	k.Log.Infof("Delete pod '%s'...", id)
 	err := k.deletePod(ctx, id)
@@ -178,10 +178,12 @@ func (k *kubernetesDriver) DeleteDevContainer(ctx context.Context, id string) er
 	}
 
 	// delete pvc
-	k.Log.Infof("Delete persistent volume claim '%s'...", id)
-	out, err := k.buildCmd(ctx, []string{"delete", "pvc", id, "--ignore-not-found", "--grace-period=5"}).CombinedOutput()
-	if err != nil {
-		return perrors.Wrapf(err, "delete pvc: %s", string(out))
+	if deleteVolumes {
+		k.Log.Infof("Delete persistent volume claim '%s'...", id)
+		out, err := k.buildCmd(ctx, []string{"delete", "pvc", id, "--ignore-not-found", "--grace-period=5"}).CombinedOutput()
+		if err != nil {
+			return perrors.Wrapf(err, "delete pvc: %s", string(out))
+		}
 	}
 
 	// delete role binding & service account

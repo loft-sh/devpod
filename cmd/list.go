@@ -78,6 +78,7 @@ func (cmd *ListCmd) Run(ctx context.Context) error {
 				workspaceConfig.Source.String(),
 				workspaceConfig.Machine.ID,
 				workspaceConfig.Provider.Name,
+				workspaceConfig.IDE.Name,
 				time.Since(workspaceConfig.LastUsedTimestamp.Time).Round(1 * time.Second).String(),
 				time.Since(workspaceConfig.CreationTimestamp.Time).Round(1 * time.Second).String(),
 			})
@@ -90,6 +91,7 @@ func (cmd *ListCmd) Run(ctx context.Context) error {
 			"Source",
 			"Machine",
 			"Provider",
+			"IDE",
 			"Last Used",
 			"Age",
 		}, tableEntries)

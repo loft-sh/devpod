@@ -14,7 +14,7 @@ type Driver interface {
 	CommandDevContainer(ctx context.Context, id, user, command string, stdin io.Reader, stdout io.Writer, stderr io.Writer) error
 
 	// DeleteDevContainer deletes the devcontainer
-	DeleteDevContainer(ctx context.Context, id string) error
+	DeleteDevContainer(ctx context.Context, id string, deleteVolumes bool) error
 
 	// FindDevContainer returns a running devcontainer details
 	FindDevContainer(ctx context.Context, labels []string) (*config.ContainerDetails, error)

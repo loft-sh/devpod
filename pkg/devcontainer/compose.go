@@ -64,7 +64,7 @@ func (r *Runner) runDockerCompose(parsedConfig *config.SubstitutedConfig, option
 	}
 	if options.Recreate {
 		labels := r.getLabels()
-		err := r.Delete(labels)
+		err := r.Delete(labels, false)
 		if err != nil {
 			return nil, errors.Wrap(err, "delete devcontainer")
 		}

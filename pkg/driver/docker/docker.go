@@ -75,7 +75,9 @@ func (d *dockerDriver) StartDevContainer(ctx context.Context, id string, labels 
 	return d.Docker.StartContainer(ctx, id, labels)
 }
 
-func (d *dockerDriver) DeleteDevContainer(ctx context.Context, id string) error {
+func (d *dockerDriver) DeleteDevContainer(ctx context.Context, id string, deleteVolumes bool) error {
+	// TODO: implement deleteVolumes
+
 	return d.Docker.Remove(ctx, id)
 }
 

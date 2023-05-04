@@ -78,7 +78,7 @@ func removeContainer(workspaceInfo *provider2.AgentWorkspaceInfo, log log.Logger
 		return err
 	}
 
-	err = runner.Delete(nil)
+	err = runner.Delete(nil, true)
 	if err != nil {
 		return err
 	}
