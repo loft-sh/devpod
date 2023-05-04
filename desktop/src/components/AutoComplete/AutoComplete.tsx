@@ -91,17 +91,23 @@ export const AutoComplete = forwardRef<HTMLElement, TAutoCompleteProps>(function
                 setQuery(event.target.value)
                 onChange?.(event.target.value)
               }}
-              onFocus={handleInputFocused(isOpen)}
+              onClick={handleInputFocused(isOpen)}
             />
             <InputRightElement>
-              <Combobox.Button ref={openButtonRef}>
-                <Icon
-                  boxSize={4}
-                  transition={"transform .2s"}
-                  transform={isOpen ? "rotate(90deg)" : ""}
-                  as={AiOutlineCaretRight}
-                />
-              </Combobox.Button>
+              <Box
+                onClick={(e) => {
+                  e.preventDefault()
+                  e.stopPropagation()
+                }}>
+                <Combobox.Button ref={openButtonRef}>
+                  <Icon
+                    boxSize={4}
+                    transition={"transform .2s"}
+                    transform={isOpen ? "rotate(90deg)" : ""}
+                    as={AiOutlineCaretRight}
+                  />
+                </Combobox.Button>
+              </Box>
             </InputRightElement>
           </InputGroup>
           <Combobox.Options
