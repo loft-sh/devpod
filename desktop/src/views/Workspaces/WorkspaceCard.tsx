@@ -28,6 +28,7 @@ import {
   Text,
   Tooltip,
   useDisclosure,
+  VStack,
 } from "@chakra-ui/react"
 import { useQuery } from "@tanstack/react-query"
 import dayjs from "dayjs"
@@ -39,7 +40,7 @@ import { IconTag } from "../../components"
 import { TActionID, useWorkspace, useWorkspaceActions } from "../../contexts"
 import { Ellipsis, Pause, Play, Stack3D, Trash, ArrowPath } from "../../icons"
 import { CodeJPG } from "../../images"
-import { getIDEDisplayName } from "../../lib"
+import { exists, getIDEDisplayName } from "../../lib"
 import { QueryKeys } from "../../queryKeys"
 import { Routes } from "../../routes"
 import { TIDEs, TWorkspace, TWorkspaceID } from "../../types"
@@ -107,7 +108,7 @@ export function WorkspaceCard({ workspaceID, onSelectionChange }: TWorkspaceCard
     return null
   }
 
-  const { id, provider, picture, status, ide } = workspace.data
+  const { id, provider, picture, status, ide, source } = workspace.data
 
   return (
     <>
@@ -132,48 +133,55 @@ export function WorkspaceCard({ workspaceID, onSelectionChange }: TWorkspaceCard
 
         <Stack width="full" justifyContent={"space-between"}>
           <CardHeader display="flex" flexDirection="column">
-            <HStack justifyContent="space-between">
-              <Heading size="md">
-                <HStack alignItems="center">
-                  <Text fontWeight="bold">{id}</Text>
-                  <Tooltip
-                    label={
-                      errorActionID
-                        ? "Workspace encountered an error"
-                        : isLoading
-                        ? `Workspace is loading`
-                        : `Workspace is ${status ?? "Pending"}`
-                    }>
-                    <Box
-                      as={"span"}
-                      onClick={() => {
-                        if (errorActionID) {
-                          navigateToAction(errorActionID)
-                        } else if (isLoading) {
-                          navigateToAction(workspace.current?.id)
-                        }
-                      }}
-                      cursor={errorActionID || isLoading ? "pointer" : undefined}
-                      backgroundColor={
+            <VStack align="start" spacing={0}>
+              <HStack justifyContent="space-between">
+                <Heading size="md">
+                  <HStack alignItems="center">
+                    <Text fontWeight="bold">{id}</Text>
+                    <Tooltip
+                      label={
                         errorActionID
-                          ? "red"
+                          ? "Workspace encountered an error"
                           : isLoading
-                          ? "orange"
-                          : status === "Running"
-                          ? "green"
-                          : "orange"
-                      }
-                      borderRadius={"full"}
-                      width={"10px"}
-                      height={"10px"}
-                    />
-                  </Tooltip>
-                </HStack>
-              </Heading>
-              {onSelectionChange !== undefined && (
-                <Checkbox onChange={(e) => onSelectionChange(e.target.checked)} />
+                          ? `Workspace is loading`
+                          : `Workspace is ${status ?? "Pending"}`
+                      }>
+                      <Box
+                        as={"span"}
+                        onClick={() => {
+                          if (errorActionID) {
+                            navigateToAction(errorActionID)
+                          } else if (isLoading) {
+                            navigateToAction(workspace.current?.id)
+                          }
+                        }}
+                        cursor={errorActionID || isLoading ? "pointer" : undefined}
+                        backgroundColor={
+                          errorActionID
+                            ? "red"
+                            : isLoading
+                            ? "orange"
+                            : status === "Running"
+                            ? "green"
+                            : "orange"
+                        }
+                        borderRadius={"full"}
+                        width={"10px"}
+                        height={"10px"}
+                      />
+                    </Tooltip>
+                  </HStack>
+                </Heading>
+                {onSelectionChange !== undefined && (
+                  <Checkbox onChange={(e) => onSelectionChange(e.target.checked)} />
+                )}
+              </HStack>
+              {source !== null && (
+                <Text fontSize="sm" color="gray.500" userSelect="auto">
+                  {getSourceName(source)}
+                </Text>
               )}
-            </HStack>
+            </VStack>
             <HStack rowGap={2} marginTop={4} flexWrap="wrap" alignItems="center">
               <IconTag
                 icon={<Stack3D />}
@@ -336,4 +344,29 @@ function getIDEName(ide: TWorkspace["ide"], ides: TIDEs | undefined) {
   const maybeIDE = ides?.find((i) => i.name === ide?.name)
 
   return maybeIDE?.displayName ?? ide?.name ?? maybeIDE?.name ?? "Unknown"
+}
+
+function getSourceName({
+  gitRepository,
+  gitBranch,
+  localFolder,
+  image,
+}: NonNullable<TWorkspace["source"]>): string {
+  if (exists(gitRepository) && exists(gitBranch)) {
+    return `${gitRepository}@${gitBranch}`
+  }
+
+  if (exists(gitRepository)) {
+    return gitRepository
+  }
+
+  if (exists(image)) {
+    return image
+  }
+
+  if (exists(localFolder)) {
+    return localFolder
+  }
+
+  return ""
 }

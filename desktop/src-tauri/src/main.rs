@@ -36,20 +36,24 @@ pub struct AppState {
 }
 
 #[derive(Debug, Serialize, Clone)]
+#[serde(tag = "type")]
 enum UiMessage {
     Ready,
     ExitRequested,
     ShowDashboard,
     OpenWorkspace(OpenWorkspaceMsg),
+    OpenWorkspaceFailed(crate::custom_protocol::ParseError),
 }
 
 fn main() -> anyhow::Result<()> {
     fix_path_env::fix()?;
     let ctx = tauri::generate_context!();
     let app_name = ctx.package_info().name.to_string();
-    let menu = Menu::os_default(&app_name);
-    #[cfg(target_os = "linux")]
-    let menu = Menu::new();
+    let menu = if cfg!(target_os = "linux") {
+        Menu::new()
+    } else {
+        Menu::os_default(&app_name)
+    };
 
     let custom_protocol = CustomProtocol::init();
 
@@ -103,11 +107,22 @@ fn main() -> anyhow::Result<()> {
                                 messages.push_back(ui_msg);
                             }
                         }
+                        UiMessage::OpenWorkspaceFailed(..) => {
+                            if is_ready {
+                                app_handle.get_window("main").and_then(|w| Some(w.show()));
+                                let _ = app_handle.emit_all("event", ui_msg);
+                            } else {
+                                // recreate window
+                                let _ = window::new_main(&app_handle, app_name.to_string());
+                                messages.push_back(ui_msg);
+                            }
+                        }
                         UiMessage::ShowDashboard => {
                             if is_ready {
                                 app_handle.get_window("main").and_then(|w| Some(w.show()));
                                 let _ = app_handle.emit_all("event", ui_msg);
                             } else {
+                                // recreate window
                                 let _ = window::new_main(&app_handle, app_name.to_string());
                                 messages.push_back(ui_msg);
                             }
