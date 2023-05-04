@@ -46,6 +46,14 @@ func (r *Runner) runSingleContainer(parsedConfig *config.SubstitutedConfig, work
 			return nil, errors.Wrap(err, "build image")
 		}
 
+		// delete container on recreation
+		if options.Recreate {
+			err := r.Delete(labels, false)
+			if err != nil {
+				return nil, errors.Wrap(err, "delete devcontainer")
+			}
+		}
+
 		// merge configuration
 		mergedConfig, err = config.MergeConfiguration(parsedConfig.Config, buildInfo.ImageMetadata.Config)
 		if err != nil {
@@ -58,14 +66,6 @@ func (r *Runner) runSingleContainer(parsedConfig *config.SubstitutedConfig, work
 			return nil, errors.Wrap(err, "marshal config")
 		}
 		labels = append(labels, metadata.ImageMetadataLabel+"="+string(marshalled))
-
-		// delete container on recreation
-		if options.Recreate {
-			err := r.Delete(labels, false)
-			if err != nil {
-				return nil, errors.Wrap(err, "delete devcontainer")
-			}
-		}
 
 		// run dev container
 		err = r.Driver.RunDevContainer(context.TODO(), parsedConfig.Config, mergedConfig, buildInfo.ImageName, workspaceMount, labels, r.WorkspaceConfig.Workspace.IDE.Name, r.WorkspaceConfig.Workspace.IDE.Options, buildInfo.ImageDetails)
