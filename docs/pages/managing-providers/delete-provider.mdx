@@ -2,3 +2,26 @@
 title: Delete a Provider
 sidebar_label: Delete a Provider
 ---
+
+## Via DevPod Desktop Application
+
+Navigate to the 'Providers' view and click on the trash icon of the provider
+you want to remove.
+
+If a workspace is currently using the provider, you'll be prompted to first
+remove that workspace, in order to then remove the provider.
+
+## Via DevPod CLI
+
+An already installed provider can be removed by using:
+
+```sh
+devpod provider delete <provider name>
+```
+
+:::info
+⚠️ **BE CAREFUL**:⚠️
+Remember first to delete any workspace related to this provider first, or move
+them to another provider, else you'll not be able to interact with the workspace
+until you re-install the provider used.
+:::

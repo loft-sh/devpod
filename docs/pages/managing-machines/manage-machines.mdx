@@ -5,9 +5,77 @@ sidebar_label: Manage Machines
 
 ## Create a machine
 
+You can create a new machine using:
+
+```sh
+devpod machine create <name-of-machine>
+```
+
+At any point you can list all the machines using:
+
+```sh
+devpod machine list
+```
+
+An example output would be:
+
+```
+  NAME | PROVIDER | AGE
+-------+----------+------
+  <name-of-machine> | aws      | 21s
+```
+
+You can check in which state is a machine using:
+
+```sh
+devpod machine status <name-of-machine>
+```
+
+Example output:
+
+```
+08:48:58 info Machine '<name-of-machine>' is 'Running'
+```
+
 ## SSH into a machine
+
+It is possible to SSH directly into the provider's machine using
+
+```sh
+devpod machine ssh <name-of-machine>
+```
+
+This will open a full ssh session to the machine.
 
 ## Stop a machine
 
+Stopping a machine is as easy as:
+
+```sh
+devpod machine stop <name-of-machine>
+```
+
+You can check the status afterwards using:
+
+```sh
+devpod machine status <name-of-machine>
+```
+
+Example output:
+
+```
+08:58:58 info Machine '<name-of-machine>' is 'Stopped, you can start it via 'devpod machine start <name-of-machine>''
+```
+
 ## Delete a machine
 
+Finally, you can delete the machine simply using:
+
+```sh
+devpod machine delete <name-of-machine>
+```
+
+:::warning
+**Be aware**: this is non-reversible, all the workspace containers, and data will be
+lost after deletion.
+:::

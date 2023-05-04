@@ -12,6 +12,7 @@
     "@docusaurus/core": "^2.3.1",
     "@docusaurus/preset-classic": "^2.3.1",
     "classnames": "^2.2.6",
+    "docusaurus": "^1.14.7",
     "docusaurus-gtm-plugin": "^0.0.2",
     "mdx-link-checker": "^0.1.1",
     "react": "^16.8.4",

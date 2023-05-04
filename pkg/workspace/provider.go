@@ -38,7 +38,7 @@ func LoadProviders(devPodConfig *config.Config, log log.Logger) (*ProviderWithOp
 
 	// get default provider
 	if defaultContext.DefaultProvider == "" {
-		return nil, nil, fmt.Errorf("no default provider found. Please make sure to run 'devpod use provider'")
+		return nil, nil, fmt.Errorf("no default provider found. Please make sure to run 'devpod provider use'")
 	} else if retProviders[defaultContext.DefaultProvider] == nil {
 		return nil, nil, fmt.Errorf("couldn't find default provider %s. Please make sure to add the provider via 'devpod provider add'", defaultContext.DefaultProvider)
 	}

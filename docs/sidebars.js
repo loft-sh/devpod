@@ -94,14 +94,6 @@ module.exports = {
           type: "doc",
           id: "managing-providers/delete-provider",
         },
-        {
-          type: "doc",
-          id: "managing-providers/docker",
-        },
-        {
-          type: "doc",
-          id: "managing-providers/kubernetes",
-        },
       ],
     },
     {
@@ -123,6 +115,14 @@ module.exports = {
         {
           type: "doc",
           id: "developing-providers/agent",
+        },
+        {
+          type: "doc",
+          id: "developing-providers/docker",
+        },
+        {
+          type: "doc",
+          id: "developing-providers/kubernetes",
         },
       ],
     },
