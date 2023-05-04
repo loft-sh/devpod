@@ -201,11 +201,12 @@ export function CreateWorkspace() {
                 {exists(sourceError) && (
                   <FormErrorMessage>{sourceError.message ?? "Error"}</FormErrorMessage>
                 )}
-                <FormHelperText>
+                <FormHelperText textAlign={"center"}>
                   Any git repository or local path to a folder you would like to create a workspace
                   from can be a source as long as it adheres to the{" "}
                   <Link
                     fontWeight="bold"
+                    target="_blank"
                     href="https://containers.dev/implementors/json_reference/">
                     devcontainer standard
                   </Link>
