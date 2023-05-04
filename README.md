@@ -3,7 +3,8 @@
 
 ### **[Website](https://www.devpod.sh)** • **[Quickstart](https://www.devpod.sh/docs/getting-started/quickstart)** • **[Documentation](https://www.devpod.sh/docs/what-is-devpod)** • **[Blog](https://loft.sh/blog)** • **[Twitter](https://twitter.com/loft_sh)** • **[Slack](https://slack.loft.sh/)**
 
-[Open in DevPod](https://devpod.sh/open#workspace=devpod&source=https://github.com/loft-sh/devpod)
+[![Open in DevPod!](https://devpod.sh/assets/open-in-devpod.svg)](https://devpod.sh/open#workspace=devpod&source=https://github.com/loft-sh/devpod)
+
 
 [![Join us on Slack!](docs/static/media/slack.svg)](https://slack.loft.sh/)
 
