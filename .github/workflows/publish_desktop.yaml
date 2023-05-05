@@ -160,8 +160,6 @@ jobs:
         run: |
           cd ./desktop/src-tauri/target/${{ matrix.settings.target }}/release/bundle/deb/ || exit 1
 
-          ls -la
-
           sudo apt-get update
           sudo apt-get install -y alien rpm
           # Cleanup
@@ -271,7 +269,7 @@ jobs:
         if: matrix.settings.host == 'ubuntu-latest'
         run: |
           BIN_NAME=dev-pod-${{needs.create-release.outputs.package_version}}.${{ matrix.settings.arch }}.rpm
-          BASE_PATH=./desktop/src-tauri/target/release/bundle/deb/
+          BASE_PATH=./desktop/src-tauri/target/${{ matrix.settings.target }}/release/bundle/deb/
           gh release upload ${{ needs.create-release.outputs.tag_name }} "$BASE_PATH/$BIN_NAME" --clobber
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
