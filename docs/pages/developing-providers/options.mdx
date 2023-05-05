@@ -3,6 +3,182 @@ title: Provider Options
 sidebar_label: Provider Options
 ---
 
-* Default values
-* Required options
-* Global vs local
+Inside [`provider.yaml`](./quickstart.mdx#provideryaml), you can specify options
+that DevPod can pass to the provider when calling it.
+
+```yaml
+...
+...
+options:
+  MY_OPTION_NAME:
+    description: "this is my option"
+    default: "default_value"
+    required: false
+    password: true
+    command: ./a-command-to-run
+...
+...
+```
+
+## How options work
+
+Oprions are variables needed to the provider to function properly, for example:
+
+- User Accounts
+- VMs images
+- VMs sizes
+- Account region
+
+These options are parsed and validated by DevPod when [Adding the provider](../managing-providers/add-provider.mdx)
+and passed to the provider as **environment variables**.
+
+It's then the provider's job to retrieve them from the environment and validate
+them.
+
+You can check our example in the [Devpod's AWS Provider](https://github.com/loft-sh/devpod-provider-aws/blob/main/pkg/options/options.go#L44)
+where we parse and validate the variables:
+
+```go
+...
+    diskSizeGB, err := fromEnvOrError("AWS_DISK_SIZE")
+    if err != nil {
+        return nil, err
+    }
+
+    retOptions.DiskSizeGB, err = strconv.Atoi(diskSizeGB)
+    if err != nil {
+        return nil, err
+    }
+...
+```
+
+Each option has a set of attributes that can modify how DevPod interprets it when
+configuring or adding the provider:
+
+- description
+- default
+- required
+- password
+- suggestions
+- command
+
+### Default values
+
+As the name implies, this is a default value for the option. It is always advisable
+to place a sensible default for any option.
+
+Notable exceptions would be for Tokens/Password fields.
+
+**If not specified, it defaults to empty string**.
+
+### Required options
+
+If an option is required, and no default is set, DevPod will prompt the user for
+a value when adding the provider.
+
+In the DevPod Desktop App, the required options will be displayed and prompted
+right in the Provider's "Add" page.
+
+**If not specified, it defaults to false**.
+
+### Password options
+
+If specified and true, the option's value will be threated as a secret, so it
+won't be shown when listing options.
+
+Example:
+
+```sh
+~$ adevpod provider options civo
+
+          NAME            | REQUIRED |          DESCRIPTION           |               DEFAULT                |                VALUE
+----------------------------+----------+--------------------------------+--------------------------------------+---------------------------------------
+AGENT_PATH                | false    | The path where to inject the   | /var/lib/toolbox/devpod              | /var/lib/toolbox/devpod
+                          |          | DevPod agent to.               |                                      |
+CIVO_API_KEY              | true     | The civo api key to use        |                                      | ********
+CIVO_DISK_IMAGE           | false    | The disk image to use.         | d927ad2f-5073-4ed6-b2eb-b8e61aef29a8 | d927ad2f-5073-4ed6-b2eb-b8e61aef29a8
+
+...
+```
+
+**If not specified, it defaults to false**.
+
+### Options suggestions
+
+Suggestions are a list of possible values for the option. Suggested use-cases
+could be for regions/locations, VM sizes, etc...
+
+:::info
+This option is specifically for the DevPod desktop application, suggestions won't
+be shown in the CLI app.
+:::
+
+**If not specified, it defaults to empty and ignored**.
+
+### Command options
+
+The command option lets you define a possible value for an option based on a shell
+command launched on your machine.
+
+One example would be to forward ENV variables from your machine to the provider,
+for example:
+
+
+```yaml
+  AWS_ACCESS_KEY_ID:
+    description: The aws access key id
+    required: false
+    command: printf "%s" "${AWS_ACCESS_KEY_ID:-}"
+  AWS_SECRET_ACCESS_KEY:
+    description: The aws secret access key
+    required: false
+    command: printf "%s" "${AWS_SECRET_ACCESS_KEY:-}"
+```
+
+Or running an helper command, and forward the result as the option's value:
+
+```yaml
+  AWS_TOKEN:
+    local: true
+    hidden: true
+    cache: 5m
+    description: "The AWS auth token to use"
+    command: |-
+      ${AWS_PROVIDER} token
+```
+
+**If not specified, it defaults to empty and ignored**.
+
+## Option Groups
+
+:::info
+This section is specifically for organizing options in the DevPod Desktop app.
+This has no effect on CLI app.
+:::
+
+You can organize your options in groups, for example:
+
+```yaml
+optionGroups:
+  - options:
+      - AWS_ACCESS_KEY_ID
+      - AWS_SECRET_ACCESS_KEY
+      - AWS_AMI
+      - AWS_DISK_SIZE
+      - AWS_INSTANCE_TYPE
+      - AWS_VPC_ID
+    name: "AWS options"
+    defaultVisible: true
+  - options:
+      - AGENT_PATH
+      - INACTIVITY_TIMEOUT
+      - INJECT_DOCKER_CREDENTIALS
+      - INJECT_GIT_CREDENTIALS
+    name: "Agent options"
+    defaultVisible: false
+```
+
+Options are easily grouped by listing them, each group has a `name` and a
+`defaultVisible` property, which is **true by default**.
+If `defaultVisible` is false, then an user will need to manually expand the option
+group in the Desktop App.

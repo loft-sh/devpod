@@ -3,9 +3,140 @@ title: Quickstart Guide
 sidebar_label: Quickstart
 ---
 
-- Create simple Provider by Example
+In this page we will cover all the basics to develop a functional provider for
+DevPod.
 
-- Explain Flow how DevPod will create a machine and workspace and agent
+:::info
+Before starting, it's best if you have clear [What is a providers](../managing-providers/what-are-providers.mdx)
+and [How to manage them](../managing-providers/add-provider.mdx).
+:::
 
-## Difference between Machine providers (e.g. gcloud, aws) and non machine providers (docker, ssh & kubernetes)
+## Developing a provider
 
+DevPod providers are programs that DevPod interacts with, in order to bring up
+the workspace.
+
+Providers are standalone programs that DevPod will call, parsing a **manifest**
+called `provider.yaml` that will instruct DevPod on how to interact with the program.
+
+## Provider.yaml
+
+Parsing `provider.yaml` DevPod will know how to call the provider's program, in order
+to perform all the required actions to bring up or down a workspace.
+
+Following is an example minimal manifest for a provider:
+
+```yaml
+name:  name-of-provider
+version: version-number
+description: quick description # Optional
+icon: https://url-to-icon.com
+options:
+  # Options for the provider, DevPod will pass these as
+  # ENV Variables when calling the provider
+  OPTION_NAME:
+    description: "option description"
+    default: "value"
+    required: true # or false
+  AGENT_PATH:
+    description: The path where to inject the DevPod agent to.
+    default: /opt/devpod/agent
+  INJECT_GIT_CREDENTIALS:
+    description: "If DevPod should inject git credentials into the remote host."
+    default: "true"
+  INJECT_DOCKER_CREDENTIALS:
+    description: "If DevPod should inject docker credentials into the remote host."
+    default: "true"
+agent:
+  inactivityTimeout: ${INACTIVITY_TIMEOUT}
+  injectGitCredentials: ${INJECT_GIT_CREDENTIALS}
+  injectDockerCredentials: ${INJECT_DOCKER_CREDENTIALS}
+  path: ${AGENT_PATH}
+exec:
+  init: # a command to init the provider, login to an account or similar
+  command: # a command to execute on the remote machine or container
+  create: # a command to create the machine
+  delete: # a command to delete the machine
+  start: # a command to start the machine
+  stop: # a command to stop the machine
+  status: # a command to get the machine's status
+```
+
+### How DevPod interacts with a provider
+
+DevPod will read from this yaml **what commands to execute**:
+
+- init
+- command
+- create
+- delete
+- start
+- stop
+- status
+
+Whatever command is put in those, it will be executed by DevPod to perform the
+corresponding action.
+For example, taking the [SSH Provider](https://github.com/loft-sh/devpod-provider-ssh):
+
+```yaml
+exec:
+  init: |-
+    OUTPUT=$(ssh -oStrictHostKeyChecking=no \
+                 -p ${PORT} \
+                 ${EXTRA_FLAGS} \
+                 "${HOST}" \
+                 'sh -c "echo DevPodTest"')
+
+    if [ "$OUTPUT" != "DevPodTest" ]; then
+      >&2 echo "Unexpected ssh output."
+      >&2 echo "Please make sure you have configured the correct SSH host"
+      >&2 echo "and the following command can be executed on your system:"
+      >&2 echo ssh -oStrictHostKeyChecking=no -p "${PORT}" "${HOST}" 'sh -c "echo DevPodTest"'
+      exit 1
+    fi
+
+  command: |-
+    ssh -oStrictHostKeyChecking=no \
+        -p ${PORT} \
+        "${EXTRA_FLAGS}" \
+        "${HOST}" \
+        "${COMMAND}"
+```
+
+The **init** is used to perform actions in order to verify and validate the options
+passed (in this case try a dummy command on the selected host)
+
+The **command** is used to perform commands on the target.
+In case of [Machines providers](../managing-providers/what-are-providers.mdx) this will
+usually have to SSH on the VMs created.
+
+### Non-Machine provider
+
+As you can see, for Non-Machine providers, not all entries are required, the minimum
+to have a working provider are:
+
+- init
+- command
+
+### Machine provider
+
+For Machine Providers, instead all of the commands are required in order to
+guarantee a full VMs lifecycle management.
+
+### Options
+
+The Options section is a set of OPTION_NAME and values that DevPod will inject in
+the environment when calling the provider's commands.
+
+Head over to the [Options Page](./options.mdx) to know more about how to set them up
+
+### Agent
+
+One important part of the lifecycle management of the DevPod's provider's reources is the **Agent**.  
+The agent is an helper that DevPod will inject into the workspace in order to perform utilities like:
+
+- auto-shutdown the VM after inactivity
+- inject git credentials
+- inject docker credentials
+
+Head over to the [Agent page](./agent.mdx) to know more about the agent setup.

@@ -118,11 +118,7 @@ module.exports = {
         },
         {
           type: "doc",
-          id: "developing-providers/docker",
-        },
-        {
-          type: "doc",
-          id: "developing-providers/kubernetes",
+          id: "developing-providers/driver",
         },
       ],
     },
