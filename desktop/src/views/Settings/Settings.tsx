@@ -3,6 +3,7 @@ import {
   Button,
   Checkbox,
   Code,
+  Divider,
   Heading,
   HStack,
   Radio,
@@ -115,6 +116,13 @@ export function Settings() {
           </SettingDescription>
           {isError(error) && <ErrorMessageBox error={error} />}
         </VStack>
+        <Divider />
+        <Heading as="h4" size="md" color="red.600">
+          Danger Zone
+        </Heading>
+        <Button variant="outline" colorScheme="red" onClick={() => client.quit()}>
+          Quit DevPod
+        </Button>
       </VStack>
     </>
   )

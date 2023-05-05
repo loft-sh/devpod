@@ -1,4 +1,4 @@
-import { dialog, fs, invoke, os, path, shell } from "@tauri-apps/api"
+import { dialog, fs, invoke, os, path, process, shell } from "@tauri-apps/api"
 import { listen } from "@tauri-apps/api/event"
 import { Command } from "@tauri-apps/api/shell"
 import { TSettings } from "../contexts"
@@ -134,6 +134,16 @@ class Client {
 
   public openLink(link: string): void {
     shell.open(link)
+  }
+
+  public async quit(): Promise<Result<void>> {
+    try {
+      await process.exit(0)
+
+      return Return.Ok()
+    } catch {
+      return Return.Failed("Unable to quit")
+    }
   }
 }
 
