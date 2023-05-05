@@ -154,6 +154,44 @@ jobs:
           SIGN_KEY: ${{ secrets.APP_IMAGE_SIGN_KEY }}
           APPIMAGETOOL_SIGN_PASSPHRASE: ${{ secrets.APP_IMAGE_SIGN_PASSPHRASE }}
 
+      - name: Build RPM
+        if: matrix.settings.host == 'ubuntu-latest'
+        id: build-desktop-rpm
+        run: |
+          cd ./desktop/src-tauri/target/release/bundle/deb/ || exit 1
+
+          sudo apt-get update
+          sudo apt-get install -y alien rpm
+          # Cleanup
+          rm -rf "dev-pod-${{needs.create-release.outputs.package_version}}"
+          rm -f "dev-pod-${{needs.create-release.outputs.package_version}}-2.x86_64.rpm"
+
+          # Convert deb to rpm
+          alien -r -g -v "dev-pod_${{needs.create-release.outputs.package_version}}_amd64.deb"
+
+          DEPENDENCIES="
+            libappindicator-gtk3
+            gdk-pixbuf2
+            libbsd
+            libXdmcp
+            libwmf
+            libdeflate
+            gtk3-immodules
+          "
+
+          # Inject missing dependencies
+          for dependency in ${DEPENDENCIES}; do
+            sed -i "s|Group: Converted/unknown|Group: Converted/unknown\nRequires: ${dependency}|g" "dev-pod-${{needs.create-release.outputs.package_version}}/dev-pod-${{needs.create-release.outputs.package_version}}-2.spec"
+          done
+
+          # Remove unwanted dirs
+          sed -i 's|^"/usr"$||g' "dev-pod-${{needs.create-release.outputs.package_version}}/dev-pod-${{needs.create-release.outputs.package_version}}-2.spec"
+          sed -i 's|^"/usr/bin"$||g' "dev-pod-${{needs.create-release.outputs.package_version}}/dev-pod-${{needs.create-release.outputs.package_version}}-2.spec"
+
+          cd "dev-pod-${{needs.create-release.outputs.package_version}}" || exit 1
+          rpmbuild --target=x86_64 --buildroot "$(pwd)" -bb "$(pwd)/dev-pod-${{needs.create-release.outputs.package_version}}-2.spec"
+
+
       - name: Build Desktop App
         if: matrix.settings.host == 'windows-latest'
         id: build-desktop-app
@@ -188,7 +226,7 @@ jobs:
 
           $destination_path = "codesigntool"
           Write-Output "Unzipping to $destination_path"
-          Expand-Archive "codesigntool.zip" -DestinationPath $destination_path 
+          Expand-Archive "codesigntool.zip" -DestinationPath $destination_path
 
           Set-Location -Path $destination_path
           Set-Location -Path (Get-ChildItem -Path . -Include CodeSignTool* | %{$_.FullName})
@@ -207,7 +245,7 @@ jobs:
         run: |
           set BIN_NAME=devpod-cli-${{ matrix.settings.target }}.exe
           set CLI_TARGET_NAME=devpod-windows-${{ matrix.settings.arch }}.exe
-          
+
           cd desktop\src-tauri\bin
           ren "%BIN_NAME%" "%CLI_TARGET_NAME%"
           cd ..
@@ -224,5 +262,14 @@ jobs:
           BASE_PATH=desktop/src-tauri/bin
           mv "$BASE_PATH/$BIN_NAME" "$BASE_PATH/$TARGET_NAME"
           gh release upload ${{ needs.create-release.outputs.tag_name }} "$BASE_PATH/$TARGET_NAME" --clobber
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Upload RPM Asset
+        if: matrix.settings.host == 'ubuntu-latest'
+        run: |
+          BIN_NAME=dev-pod-${{needs.create-release.outputs.package_version}}.${{ matrix.settings.arch }}.rpm
+          BASE_PATH=./desktop/src-tauri/target/release/bundle/deb/
+          gh release upload ${{ needs.create-release.outputs.tag_name }} "$BASE_PATH/$BIN_NAME" --clobber
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
