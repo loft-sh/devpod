@@ -9,8 +9,8 @@ use thiserror::Error;
 pub enum InstallCLIError {
     #[error("Unable to get current executable path")]
     NoExePath(#[source] std::io::Error),
-    #[error("Unable to create symlink")]
-    Symlink(#[source] std::io::Error),
+    #[error("Unable to create link to cli {0}")]
+    Link(#[source] anyhow::Error),
     #[error("Unable to convert path to string")]
     PathConversion,
     #[error("Encountered an issue with the windows registry: ")]
@@ -49,23 +49,82 @@ fn get_cli_path() -> Result<PathBuf, std::io::Error> {
 
 #[cfg(not(target_os = "windows"))]
 fn install(_app_handle: AppHandle) -> Result<(), InstallCLIError> {
-    use std::{fs::remove_file, os::unix::fs::symlink};
+    use anyhow::Context;
+    use dirs::home_dir;
+    use log::{info, warn};
+    use std::fs::{hard_link, remove_file};
 
     let cli_path = get_cli_path().map_err(|e| InstallCLIError::NoExePath(e))?;
 
-    // The binary we ship with is `devpod-cli`, but we want to symlink it to `devpod` so that users can just run `devpod` in their terminal
-    let raw_target_path = format!("/usr/local/bin/{}", "devpod");
-    let target_path = Path::new(&raw_target_path);
+    // The binary we ship with is `devpod-cli`, but we want to link it to `devpod` so that users can just run `devpod` in their terminal
+    let mut target_paths: Vec<PathBuf> = vec![];
 
-    match target_path.try_exists() {
-        Ok(..) => {
-            // remove symlink first before attempting to create another one
-            remove_file(target_path).map_err(|e| InstallCLIError::Symlink(e))?;
-        }
-        _ => { /* fallthrough */ }
+    // /usr/local/bin/devpod
+    let raw_system_bin = format!("/usr/local/bin/{}", "devpod");
+    target_paths.push(PathBuf::from(&raw_system_bin));
+
+    if let Some(home) = home_dir() {
+        // $HOME/bin/devpod
+        let mut user_bin = home.clone();
+        user_bin.push("bin/devpod");
+
+        // $HOME/.local/bin/devpod
+        let mut user_local_bin = home.clone();
+        user_local_bin.push(".local/bin/devpod");
+
+        target_paths.push(user_bin);
+        target_paths.push(user_local_bin);
     }
 
-    symlink(cli_path, target_path).map_err(|e| InstallCLIError::Symlink(e))
+    let mut latest_error: Option<InstallCLIError> = None;
+    for target_path in target_paths {
+        let str_target_path = target_path.to_string_lossy();
+        match target_path.try_exists() {
+            Ok(exists) => {
+                if exists {
+                    // Remove link before attempting to create another one
+                    if let Err(err) = remove_file(&target_path)
+                        .with_context(|| format!("path: {}", str_target_path))
+                        .map_err(|e| InstallCLIError::Link(e))
+                    {
+                        warn!(
+                            "Failed to remove link: {}; Retrying with other paths...",
+                            err
+                        );
+                        continue;
+                    };
+                }
+            }
+            _ => { /* fallthrough */ }
+        }
+        info!(
+            "Attempting to link cli to {}",
+            target_path.to_string_lossy()
+        );
+
+        match hard_link(cli_path.clone(), &target_path)
+            .with_context(|| format!("path: {}", str_target_path))
+            .map_err(|e| InstallCLIError::Link(e))
+        {
+            Ok(..) => {
+                return Ok(());
+            }
+            Err(err) => {
+                warn!(
+                    "Failed to link to {}: {}; Retrying with other paths...",
+                    target_path.to_string_lossy(),
+                    err
+                );
+                latest_error = Some(err);
+            }
+        }
+    }
+
+    if let Some(err) = latest_error {
+        return Err(err);
+    }
+
+    Ok(())
 }
 
 #[cfg(target_os = "windows")]

@@ -32,6 +32,7 @@ lazy_static = "1.4.0"
 url = "2.3.1"
 anyhow = "1.0.70"
 serde_qs = "0.12.0"
+dirs = "5.0.1"
 
 [target.'cfg(target_os = "windows")'.dependencies]
 winreg = "0.50.0"

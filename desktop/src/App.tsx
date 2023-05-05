@@ -24,7 +24,6 @@ import { useBorderColor } from "./Theme"
 import { useAppReady } from "./useAppReady"
 import { useWelcomeModal } from "./useWelcomeModal"
 
-const STATUS_BAR_SAFE_AREA: BoxProps["height"] = "5"
 const SIDEBAR_WIDTH: BoxProps["width"] = "15rem"
 
 const shouldShowTitleBar = isMacOS || isLinux
@@ -116,7 +115,7 @@ export function App() {
                   <Box
                     as="main"
                     paddingTop="8"
-                    paddingBottom={STATUS_BAR_SAFE_AREA}
+                    paddingBottom={"14"}
                     paddingX="8"
                     width="full"
                     height={`calc(100vh - ${toolbarHeight})`}
