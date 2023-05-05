@@ -78,12 +78,6 @@ jobs:
       GOFLAGS: -mod=vendor
 
     steps:
-      - name: Check variables
-        run: |
-          echo "release id: [${{ needs.create-release.outputs.release_id }}]"
-          echo "package version: [${{ needs.create-release.outputs.package_version }}]"
-          echo "upload url: [${{ needs.create-release.outputs.upload_url }}]"
-
       - name: Checkout repository
         uses: actions/checkout@v3
 
@@ -124,7 +118,7 @@ jobs:
           set GOARCH=${{ matrix.settings.arch }}
           set BIN_NAME=devpod-cli-${{ matrix.settings.target }}.exe
 
-          go build -ldflags "-s -w" -o "test/%BIN_NAME%"
+          go build -ldflags "-s -w" -o "test\%BIN_NAME%"
 
           xcopy /F /Y "test\%BIN_NAME%" desktop\src-tauri\bin\*
 
