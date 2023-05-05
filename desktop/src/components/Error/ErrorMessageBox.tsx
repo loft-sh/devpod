@@ -13,7 +13,7 @@ export function ErrorMessageBox({ error }: TErrorMessageBox) {
       padding="4"
       borderRadius="md"
       display="inline-block">
-      <Text color={textColor}>
+      <Text color={textColor} fontFamily="monospace">
         {error.message.split("\n").map((line, index) => (
           <React.Fragment key={index}>
             {line}
