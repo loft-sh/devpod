@@ -268,8 +268,8 @@ jobs:
       - name: Upload RPM Asset
         if: matrix.settings.host == 'ubuntu-latest'
         run: |
-          BIN_NAME=dev-pod-${{needs.create-release.outputs.package_version}}.${{ matrix.settings.arch }}.rpm
-          BASE_PATH=./desktop/src-tauri/target/${{ matrix.settings.target }}/release/bundle/deb/
+          BIN_NAME=dev-pod-${{needs.create-release.outputs.package_version}}-2.x86_64.rpm
+          BASE_PATH=./desktop/src-tauri/target/${{ matrix.settings.target }}/release/bundle/deb
           gh release upload ${{ needs.create-release.outputs.tag_name }} "$BASE_PATH/$BIN_NAME" --clobber
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
