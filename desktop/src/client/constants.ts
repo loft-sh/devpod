@@ -1,3 +1,5 @@
+export const DEVPOD_GIT_REPOSITORY = "https://github.com/loft-sh/devpod"
+
 export const DEFAULT_STATIC_COMMAND_CONFIG = {
   streamResponse: false,
   debug: false,
