@@ -13,6 +13,9 @@
   "tauri": {
     "allowlist": {
       "all": false,
+      "process": {
+        "exit": true
+      },
       "shell": {
         "all": true,
         "open": ".*",
