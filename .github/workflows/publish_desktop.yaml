@@ -158,7 +158,9 @@ jobs:
         if: matrix.settings.host == 'ubuntu-latest'
         id: build-desktop-rpm
         run: |
-          cd ./desktop/src-tauri/target/release/bundle/deb/ || exit 1
+          ls -la
+          pwd
+          cd ./devpod/desktop/src-tauri/target/release/bundle/deb/ || exit 1
 
           sudo apt-get update
           sudo apt-get install -y alien rpm
