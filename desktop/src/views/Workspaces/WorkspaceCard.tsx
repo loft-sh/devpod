@@ -40,10 +40,11 @@ import { IconTag } from "../../components"
 import { TActionID, useWorkspace, useWorkspaceActions } from "../../contexts"
 import { Ellipsis, Pause, Play, Stack3D, Trash, ArrowPath } from "../../icons"
 import { CodeJPG } from "../../images"
-import { exists, getIDEDisplayName } from "../../lib"
+import { getIDEDisplayName } from "../../lib"
 import { QueryKeys } from "../../queryKeys"
 import { Routes } from "../../routes"
-import { TIDEs, TWorkspace, TWorkspaceID } from "../../types"
+import { TWorkspace, TWorkspaceID } from "../../types"
+import { getSourceName, getIDEName } from "./helpers"
 
 type TWorkspaceCardProps = Readonly<{
   workspaceID: TWorkspaceID
@@ -59,9 +60,11 @@ export function WorkspaceCard({ workspaceID, onSelectionChange }: TWorkspaceCard
   })
   const { isOpen: isDeleteOpen, onOpen: onDeleteOpen, onClose: onDeleteClose } = useDisclosure()
   const { isOpen: isRebuildOpen, onOpen: onRebuildOpen, onClose: onRebuildClose } = useDisclosure()
-  const workspaceActions = useWorkspaceActions(workspaceID)
   const workspace = useWorkspace(workspaceID)
   const [ideName, setIdeName] = useState<string | undefined>(workspace.data?.ide?.name ?? undefined)
+  const [rebuildMenuItemPointerEvents, setRebuildMenuItemPointerEvents] = useState<"auto" | "none">(
+    "auto"
+  )
 
   const navigateToAction = useCallback(
     (actionID: TActionID | undefined) => {
@@ -92,14 +95,6 @@ export function WorkspaceCard({ workspaceID, onSelectionChange }: TWorkspaceCard
     return false
   }, [workspace])
 
-  const errorActionID = useMemo(() => {
-    if (!workspaceActions?.length || workspaceActions[0]?.status !== "error") {
-      return undefined
-    }
-
-    return workspaceActions[0]?.id
-  }, [workspaceActions])
-
   const isOpenDisabled = workspace.data?.status === "Busy"
   const isOpenDisabledReason =
     "Cannnot open this workspace because it is busy. If this doesn't change, try to force delete and recreate it."
@@ -108,7 +103,7 @@ export function WorkspaceCard({ workspaceID, onSelectionChange }: TWorkspaceCard
     return null
   }
 
-  const { id, provider, picture, status, ide, source } = workspace.data
+  const { id, picture, ide } = workspace.data
 
   return (
     <>
@@ -130,76 +125,13 @@ export function WorkspaceCard({ workspaceID, onSelectionChange }: TWorkspaceCard
           fallbackSrc={CodeJPG}
           alt="Project Image"
         />
-
         <Stack width="full" justifyContent={"space-between"}>
-          <CardHeader display="flex" flexDirection="column">
-            <VStack align="start" spacing={0}>
-              <HStack justifyContent="space-between">
-                <Heading size="md">
-                  <HStack alignItems="center">
-                    <Text fontWeight="bold">{id}</Text>
-                    <Tooltip
-                      label={
-                        errorActionID
-                          ? "Workspace encountered an error"
-                          : isLoading
-                          ? `Workspace is loading`
-                          : `Workspace is ${status ?? "Pending"}`
-                      }>
-                      <Box
-                        as={"span"}
-                        onClick={() => {
-                          if (errorActionID) {
-                            navigateToAction(errorActionID)
-                          } else if (isLoading) {
-                            navigateToAction(workspace.current?.id)
-                          }
-                        }}
-                        cursor={errorActionID || isLoading ? "pointer" : undefined}
-                        backgroundColor={
-                          errorActionID
-                            ? "red"
-                            : isLoading
-                            ? "orange"
-                            : status === "Running"
-                            ? "green"
-                            : "orange"
-                        }
-                        borderRadius={"full"}
-                        width={"10px"}
-                        height={"10px"}
-                      />
-                    </Tooltip>
-                  </HStack>
-                </Heading>
-                {onSelectionChange !== undefined && (
-                  <Checkbox onChange={(e) => onSelectionChange(e.target.checked)} />
-                )}
-              </HStack>
-              {source !== null && (
-                <Text fontSize="sm" color="gray.500" userSelect="auto">
-                  {getSourceName(source)}
-                </Text>
-              )}
-            </VStack>
-            <HStack rowGap={2} marginTop={4} flexWrap="wrap" alignItems="center">
-              <IconTag
-                icon={<Stack3D />}
-                label={provider?.name ?? "No provider"}
-                infoText={provider?.name ? `Uses provider ${provider.name}` : undefined}
-              />
-              <IconTag
-                icon={<Icon as={HiOutlineCode} />}
-                label={getIDEName(workspace.data.ide, idesQuery.data)}
-                infoText={`Will be opened in ${getIDEName(workspace.data.ide, idesQuery.data)}`}
-              />
-              <IconTag
-                icon={<Icon as={HiClock} />}
-                label={dayjs(new Date(workspace.data.lastUsed)).fromNow()}
-                infoText={`Last used ${dayjs(new Date(workspace.data.lastUsed)).fromNow()}`}
-              />
-            </HStack>
-          </CardHeader>
+          <WorkspaceCardHeader
+            workspace={workspace.data}
+            isLoading={isLoading}
+            onSelectionChange={onSelectionChange}
+            onActionIndicatorClicked={navigateToAction}
+          />
 
           <CardFooter padding="none" paddingBottom={4}>
             <HStack spacing="2" width="full" justifyContent="end" paddingRight={"10px"}>
@@ -249,6 +181,8 @@ export function WorkspaceCard({ workspaceID, onSelectionChange }: TWorkspaceCard
                         whiteSpace="nowrap"
                         textTransform="capitalize"
                         onChange={(e) => setIdeName(e.target.value)}
+                        onFocus={() => setRebuildMenuItemPointerEvents("none")}
+                        onBlur={() => setRebuildMenuItemPointerEvents("auto")}
                         value={ideName}>
                         {idesQuery.data?.map((ide) => (
                           <option key={ide.name} value={ide.name!}>
@@ -257,7 +191,10 @@ export function WorkspaceCard({ workspaceID, onSelectionChange }: TWorkspaceCard
                         ))}
                       </Select>
                     </InputGroup>
-                    <MenuItem icon={<ArrowPath boxSize={4} />} onClick={onRebuildOpen}>
+                    <MenuItem
+                      style={{ pointerEvents: rebuildMenuItemPointerEvents }}
+                      icon={<ArrowPath boxSize={4} />}
+                      onClick={onRebuildOpen}>
                       Rebuild
                     </MenuItem>
                     <MenuItem
@@ -340,33 +277,103 @@ export function WorkspaceCard({ workspaceID, onSelectionChange }: TWorkspaceCard
   )
 }
 
-function getIDEName(ide: TWorkspace["ide"], ides: TIDEs | undefined) {
-  const maybeIDE = ides?.find((i) => i.name === ide?.name)
+type TWorkspaceCardHeaderProps = Readonly<{
+  workspace: TWorkspace
+  isLoading: boolean
+  onActionIndicatorClicked: (actionID: TActionID | undefined) => void
+  onSelectionChange?: (isSelected: boolean) => void
+}>
+function WorkspaceCardHeader({
+  workspace,
+  isLoading,
+  onSelectionChange,
+  onActionIndicatorClicked,
+}: TWorkspaceCardHeaderProps) {
+  const { id, status, provider, ide, lastUsed, source } = workspace
+  const workspaceActions = useWorkspaceActions(id)
 
-  return maybeIDE?.displayName ?? ide?.name ?? maybeIDE?.name ?? "Unknown"
-}
+  const errorActionID = useMemo(() => {
+    if (!workspaceActions?.length || workspaceActions[0]?.status !== "error") {
+      return undefined
+    }
 
-function getSourceName({
-  gitRepository,
-  gitBranch,
-  localFolder,
-  image,
-}: NonNullable<TWorkspace["source"]>): string {
-  if (exists(gitRepository) && exists(gitBranch)) {
-    return `${gitRepository}@${gitBranch}`
-  }
+    return workspaceActions[0]?.id
+  }, [workspaceActions])
 
-  if (exists(gitRepository)) {
-    return gitRepository
-  }
+  const idesQuery = useQuery({
+    queryKey: QueryKeys.IDES,
+    queryFn: async () => (await client.ides.listAll()).unwrap(),
+  })
 
-  if (exists(image)) {
-    return image
-  }
+  return (
+    <CardHeader display="flex" flexDirection="column">
+      <VStack align="start" spacing={0}>
+        <HStack justifyContent="space-between">
+          <Heading size="md">
+            <HStack alignItems="center">
+              <Text fontWeight="bold">{id}</Text>
+              <Tooltip
+                label={
+                  errorActionID
+                    ? "Workspace encountered an error"
+                    : isLoading
+                    ? `Workspace is loading`
+                    : `Workspace is ${status ?? "Pending"}`
+                }>
+                <Box
+                  as={"span"}
+                  onClick={() => {
+                    if (errorActionID) {
+                      onActionIndicatorClicked(errorActionID)
+                    } else if (isLoading) {
+                      onActionIndicatorClicked(id)
+                    }
+                  }}
+                  cursor={errorActionID || isLoading ? "pointer" : undefined}
+                  backgroundColor={
+                    errorActionID
+                      ? "red"
+                      : isLoading
+                      ? "orange"
+                      : status === "Running"
+                      ? "green"
+                      : "orange"
+                  }
+                  borderRadius={"full"}
+                  width={"10px"}
+                  height={"10px"}
+                />
+              </Tooltip>
+            </HStack>
+          </Heading>
+          {onSelectionChange !== undefined && (
+            <Checkbox onChange={(e) => onSelectionChange(e.target.checked)} />
+          )}
+        </HStack>
+        {source !== null && (
+          <Text fontSize="sm" color="gray.500" userSelect="auto">
+            {getSourceName(source)}
+          </Text>
+        )}
+      </VStack>
 
-  if (exists(localFolder)) {
-    return localFolder
-  }
-
-  return ""
+      <HStack rowGap={2} marginTop={4} flexWrap="wrap" alignItems="center">
+        <IconTag
+          icon={<Stack3D />}
+          label={provider?.name ?? "No provider"}
+          infoText={provider?.name ? `Uses provider ${provider.name}` : undefined}
+        />
+        <IconTag
+          icon={<Icon as={HiOutlineCode} />}
+          label={getIDEName(ide, idesQuery.data)}
+          infoText={`Will be opened in ${getIDEName(ide, idesQuery.data)}`}
+        />
+        <IconTag
+          icon={<Icon as={HiClock} />}
+          label={dayjs(new Date(lastUsed)).fromNow()}
+          infoText={`Last used ${dayjs(new Date(lastUsed)).fromNow()}`}
+        />
+      </HStack>
+    </CardHeader>
+  )
 }
