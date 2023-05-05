@@ -1,0 +1,12 @@
+{
+	"name": "Go",
+	"image": "mcr.microsoft.com/devcontainers/go:0-1.19-bullseye",
+	"mounts": [
+		{
+			"type": "bind",
+			"source": "${localWorkspaceFolder}/mount1",
+			"target": "/home/vscode/mnt1"
+		},
+		"source=${localWorkspaceFolder}/mount2,target=/home/vscode/mnt2,type=bind"
+	]
+}

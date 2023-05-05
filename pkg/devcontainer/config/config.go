@@ -3,6 +3,7 @@ package config
 import (
 	"encoding/json"
 	"github.com/loft-sh/devpod/pkg/types"
+	"strconv"
 	"strings"
 )
 
@@ -274,10 +275,11 @@ type VSCodeCustomizations struct {
 }
 
 type Mount struct {
-	Type   string   `json:"type,omitempty"`
-	Source string   `json:"source,omitempty"`
-	Target string   `json:"target,omitempty"`
-	Other  []string `json:"other,omitempty"`
+	Type     string   `json:"type,omitempty"`
+	Source   string   `json:"source,omitempty"`
+	Target   string   `json:"target,omitempty"`
+	External bool     `json:"external,omitempty"`
+	Other    []string `json:"other,omitempty"`
 }
 
 func (m *Mount) String() string {
@@ -290,6 +292,9 @@ func (m *Mount) String() string {
 	}
 	if m.Target != "" {
 		components = append(components, "dst="+m.Target)
+	}
+	if m.External {
+		components = append(components, "external="+strconv.FormatBool(m.External))
 	}
 	components = append(components, m.Other...)
 	return strings.Join(components, ",")
@@ -307,6 +312,8 @@ func ParseMount(str string) Mount {
 			retMount.Target = splitted2[1]
 		} else if key == "type" {
 			retMount.Type = splitted2[1]
+		} else if key == "external" {
+			retMount.External, _ = strconv.ParseBool(splitted2[1])
 		} else {
 			retMount.Other = append(retMount.Other, split)
 		}
@@ -337,6 +344,10 @@ func (m *Mount) UnmarshalJSON(data []byte) error {
 		typeStr, ok := obj["type"].(string)
 		if ok {
 			m.Type = typeStr
+		}
+		externalStr, ok := obj["external"].(bool)
+		if ok {
+			m.External = externalStr
 		}
 		return nil
 	}

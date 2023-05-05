@@ -674,10 +674,18 @@ while sleep 1 & wait $$!; do :; done`,
 	var volumeMounts []composetypes.VolumeConfig
 	for _, m := range mergedConfig.Mounts {
 		if m.Type == "volume" {
-			volumeMounts = append(volumeMounts, composetypes.VolumeConfig{})
+			volumeMounts = append(volumeMounts, composetypes.VolumeConfig{
+				Name: m.Source,
+				External: composetypes.External{
+					External: m.External,
+				},
+			})
 		}
 	}
 
+	if len(volumeMounts) > 0 {
+		project.Volumes = map[string]composetypes.VolumeConfig{}
+	}
 	for _, volumeMount := range volumeMounts {
 		project.Volumes[volumeMount.Name] = volumeMount
 	}

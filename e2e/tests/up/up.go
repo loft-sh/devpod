@@ -100,6 +100,38 @@ var _ = DevPodDescribe("devpod up test suite", func() {
 				framework.ExpectNoError(err)
 				gomega.Expect(containerWorkspaceFolderBasename).To(gomega.Equal(filepath.Base(tempDir)))
 			}, ginkgo.SpecTimeout(60*time.Second))
+
+			ginkgo.It("should start a new workspace with mounts", func(ctx context.Context) {
+				tempDir, err := framework.CopyToTempDir("tests/up/testdata/docker-mounts")
+				framework.ExpectNoError(err)
+				ginkgo.DeferCleanup(framework.CleanupTempDir, initialDir, tempDir)
+
+				f := framework.NewDefaultFramework(initialDir + "/bin")
+				_ = f.DevPodProviderAdd([]string{"docker"})
+				err = f.DevPodProviderUse(context.Background(), "docker")
+				framework.ExpectNoError(err)
+
+				err = f.DevPodUp(ctx, tempDir, "--debug")
+				framework.ExpectNoError(err)
+
+				// Check for docker-compose container running
+				projectName := composeHelper.ToProjectName(filepath.Base(tempDir))
+				ginkgo.DeferCleanup(f.DevPodWorkspaceDelete, context.Background(), projectName)
+
+				ids, err := dockerHelper.FindContainer([]string{
+					fmt.Sprintf("%s=%s", config.DockerIDLabel, projectName),
+				})
+				framework.ExpectNoError(err)
+				gomega.Expect(ids).To(gomega.HaveLen(1), "1 compose container to be created")
+
+				foo, _, err := f.ExecCommandCapture(ctx, []string{"ssh", "--command", "cat $HOME/mnt1/foo.txt", projectName})
+				framework.ExpectNoError(err)
+				gomega.Expect(foo).To(gomega.Equal("BAR"))
+
+				bar, _, err := f.ExecCommandCapture(ctx, []string{"ssh", "--command", "cat $HOME/mnt2/bar.txt", projectName})
+				framework.ExpectNoError(err)
+				gomega.Expect(bar).To(gomega.Equal("FOO"))
+			}, ginkgo.SpecTimeout(60*time.Second))
 		})
 
 		ginkgo.Context("with docker-compose", func() {
@@ -543,6 +575,45 @@ var _ = DevPodDescribe("devpod up test suite", func() {
 				containerWorkspaceFolderBasename, _, err := f.ExecCommandCapture(ctx, []string{"ssh", "--command", "cat $HOME/container-workspace-folder-basename.out", projectName})
 				framework.ExpectNoError(err)
 				gomega.Expect(containerWorkspaceFolderBasename).To(gomega.Equal("workspaces"))
+			}, ginkgo.SpecTimeout(60*time.Second))
+
+			ginkgo.It("should start a new workspace with mounts", func(ctx context.Context) {
+				tempDir, err := framework.CopyToTempDir("tests/up/testdata/docker-compose-mounts")
+				framework.ExpectNoError(err)
+				ginkgo.DeferCleanup(framework.CleanupTempDir, initialDir, tempDir)
+
+				f := framework.NewDefaultFramework(initialDir + "/bin")
+				_ = f.DevPodProviderAdd([]string{"docker"})
+				err = f.DevPodProviderUse(context.Background(), "docker")
+				framework.ExpectNoError(err)
+
+				err = f.DevPodUp(ctx, tempDir, "--debug")
+				framework.ExpectNoError(err)
+
+				// Check for docker-compose container running
+				projectName := composeHelper.ToProjectName(filepath.Base(tempDir))
+				ginkgo.DeferCleanup(f.DevPodWorkspaceDelete, context.Background(), projectName)
+
+				ids, err := dockerHelper.FindContainer([]string{
+					fmt.Sprintf("%s=%s", compose.ProjectLabel, projectName),
+					fmt.Sprintf("%s=%s", compose.ServiceLabel, "app"),
+				})
+				framework.ExpectNoError(err)
+				gomega.Expect(ids).To(gomega.HaveLen(1), "1 compose container to be created")
+
+				_, _, err = f.ExecCommandCapture(ctx, []string{"ssh", "--command", "touch /home/vscode/mnt1/foo.txt", projectName, "--user", "root"})
+				framework.ExpectNoError(err)
+
+				_, _, err = f.ExecCommandCapture(ctx, []string{"ssh", "--command", "echo -n BAR > /home/vscode/mnt1/foo.txt", projectName, "--user", "root"})
+				framework.ExpectNoError(err)
+
+				foo, _, err := f.ExecCommandCapture(ctx, []string{"ssh", "--command", "cat $HOME/mnt1/foo.txt", projectName})
+				framework.ExpectNoError(err)
+				gomega.Expect(foo).To(gomega.Equal("BAR"))
+
+				bar, _, err := f.ExecCommandCapture(ctx, []string{"ssh", "--command", "cat $HOME/mnt2/bar.txt", projectName})
+				framework.ExpectNoError(err)
+				gomega.Expect(bar).To(gomega.Equal("FOO"))
 			}, ginkgo.SpecTimeout(60*time.Second))
 
 			ginkgo.Context("with lifecycle commands", func() {

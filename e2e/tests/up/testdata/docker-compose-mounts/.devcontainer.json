@@ -1,0 +1,14 @@
+{
+	"name": "Go",
+	"dockerComposeFile": "./docker-compose.yaml",
+	"service": "app",
+	"workspaceFolder": "/workspaces",
+	"mounts": [
+		{
+			"type": "volume",
+			"source": "mount1",
+			"target": "/home/vscode/mnt1"
+		},
+		"source=${localWorkspaceFolder}/mount2,target=/home/vscode/mnt2,type=bind"
+	]
+}
