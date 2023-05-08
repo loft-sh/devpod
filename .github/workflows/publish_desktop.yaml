@@ -262,6 +262,8 @@ jobs:
             const msiPath = `desktop/src-tauri/target/${{ matrix.settings.target }}/release/bundle/msi/${msiName}`
             const msiZipName = `${msiName}.zip`
             const msiZipPath = `desktop/src-tauri/target/${{ matrix.settings.target }}/release/bundle/msi/${msiZipName}`
+            const msiZipSigName = `${msiName}.zip.sig`
+            const msiZipSigPath = `desktop/src-tauri/target/${{ matrix.settings.target }}/release/bundle/msi/${msiZipSigName}`
             const cliName = "devpod-windows-${{ matrix.settings.arch }}.exe"
             const cliPath = "desktop/src-tauri/bin/devpod-cli-${{ matrix.settings.target }}.exe"
 
@@ -375,23 +377,31 @@ jobs:
 
             const latestJsonPath = "desktop/latest.json"
             const latest = fs.readFileSync(latestJsonPath, { encoding: "utf8" }) 
-            const msiName = "DevPod_${{ needs.create-release.outputs.package_version }}_x64_en-US.msi"
+            const msiName = `DevPod_${latest.version}_x64_en-US.msi`
             const assetName = `${msiName}.zip`
 
             const sigAsset = release.data.assets.find(a => a.name === `${assetName}.sig`)
             console.log(sigAsset)
             const res = await fetch(sigAsset.url, { headers: { accept: "application/octet-stream" } })
-            if(!res.ok) { 
-              core.setFailed(`${await res.text()}`)
-            }
+            if(!res.ok) { core.setFailed(`${await res.text()}`) }
 
             latest.platforms["windows-x86_64"] = {
               signature: await res.text(),
-              url: `https://github.com/loft-sh/devpod/releases/download/v${latest.version}/${assetName}`,
+              url: `https://github.com/loft-sh/devpod/releases/download/${process.env.GITHUB_REF_NAME}/${assetName}`,
             }
 
             fs.writeFileSync("desktop/latest.json", JSON.stringify(latest))
 
+            // Clean up .msi.zip.sig file
+            const msiZipSigAsset = release.data.assets.find(a => a.name.endsWith(".msi.zip.sig")
+            if(msiZipSigAsset) {
+              await github.rest.repos.deleteReleaseAsset({
+                ...releaseArgs,
+                asset_id: msiZipSigAsset.id
+              })
+            }
+
+            // Attempting to upload a previously released asset results in an error so we need to clean up before
             const latestAsset = release.data.assets.find(a => a.name === "latest.json")
             if(latestAsset) {
               await github.rest.repos.deleteReleaseAsset({
