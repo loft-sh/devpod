@@ -16,7 +16,6 @@ options:
     default: "default_value"
     required: false
     password: true
-    command: ./a-command-to-run
 ...
 ...
 ```
@@ -162,7 +161,7 @@ Or running an helper command (defined in the binaries section), and forward the 
 
 There are a couple of predefined options from DevPod, that can be used within the default field of another option or in an option command. Some built-in options are only available for `local` options as the `MACHINE_ID` might not be available already.
 Predefined options:
-- **DEVPOD**: Absolute path to the current DevPod CLI binary.
+- **DEVPOD**: Absolute path to the current DevPod CLI binary. Can be used to call a helper function within DevPod or any other DevPod command. Also available on the agent side.
 - **DEVPOD_OS**: Current Operating system. Can be either: linux, darwin or windows
 - **DEVPOD_ARCH**: Current operating system architecture. Can be either: amd64 or arm64.
 - **MACHINE_ID**: The machine id that should be used. (Only available for local options, commands and machine providers)
@@ -178,7 +177,7 @@ Predefined options:
 
 :::info
 This section is specifically for organizing options in the DevPod Desktop app.
-This has no effect on CLI app.
+This has no effect on the CLI app.
 :::
 
 You can organize your options in groups, for example:
@@ -204,6 +203,6 @@ optionGroups:
 ```
 
 Options are easily grouped by listing them, each group has a `name` and a
-`defaultVisible` property, which is **true by default**.
+`defaultVisible` property, which is **false by default**.
 If `defaultVisible` is false, then an user will need to manually expand the option
 group in the Desktop App.
