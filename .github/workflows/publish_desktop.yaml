@@ -33,7 +33,7 @@ jobs:
           script: |
             const tagName = `${process.env.TAG_NAME}`
             const packageVersion = `${process.env.PACKAGE_VERSION}` 
-            if(context.ref.split("v")[1] !== packageVersion) {
+            if(context.ref.split("-v")[1] !== packageVersion) {
               core.setFailed(`Tag must match version from \`desktop/package.json\`. Ref Version: ${tagName}, Package Version: ${packageVersion}`)
             }
 
