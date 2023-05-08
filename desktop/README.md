@@ -25,6 +25,7 @@ To spin up the application in development mode, run `yarn tauri dev`. It will re
 Tauri should automatically restart the app if your backend code changes and vite is responsible for hot module updates in the frontend.
 Enable debug logging to stdout during development with `DEBUG=true yarn tauri dev`.
 
+If you just want to preview the project locally, make sure to disabled the auto update feature by setting `desktop/src-tauri/tauri.conf.json->updater.active=false`. Please be careful not to commit this change later on.
 Once you're happy with the current state, give it a spin in release mode by running `yarn tauri build`. You can find the packaged version of the application in the `src-tauri/target/release/{PLATFORM}` folder.
 
 ## Check Type Errors
