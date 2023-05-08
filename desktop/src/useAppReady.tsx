@@ -1,9 +1,3 @@
-import { useEffect, useId, useMemo, useRef, useState } from "react"
-import { useNavigate } from "react-router"
-import { client } from "./client"
-import { startWorkspaceAction } from "./contexts"
-import { Routes } from "./routes"
-import { appWindow } from "@tauri-apps/api/window"
 import {
   Modal,
   ModalBody,
@@ -14,7 +8,14 @@ import {
   ModalOverlay,
   useDisclosure,
 } from "@chakra-ui/react"
+import { appWindow } from "@tauri-apps/api/window"
+import { useEffect, useId, useMemo, useRef, useState } from "react"
+import { useNavigate } from "react-router"
+import { client } from "./client"
 import { ErrorMessageBox } from "./components"
+import { startWorkspaceAction } from "./contexts"
+import { exists } from "./lib"
+import { Routes } from "./routes"
 
 export function useAppReady() {
   const isReadyLockRef = useRef<boolean>(false)
@@ -57,7 +58,6 @@ export function useAppReady() {
       ;(async () => {
         const unsubscribe = await client.subscribe("event", async (event) => {
           await appWindow.setFocus()
-          console.log("received event", event)
           if (event.type === "ShowDashboard") {
             navigate(Routes.WORKSPACES)
 
@@ -80,7 +80,7 @@ export function useAppReady() {
           }
 
           // Try to find workspace by source
-          const maybeWorkspace = workspacesResult.val.find((w) => {
+          let maybeWorkspace = workspacesResult.val.find((w) => {
             if (w.source === null) {
               return false
             }
@@ -107,6 +107,13 @@ export function useAppReady() {
 
             return false
           })
+
+          // If we don't have a workspace by now, `source` isn't defined but `workspace_id` is, try to find workspace by ID
+          // This happens for example if the message is triggered by a system tray item
+          // WARN: `event.source` can be an empty string here, hence the falsy check
+          if (maybeWorkspace === undefined && !event.source && exists(event.workspace_id)) {
+            maybeWorkspace = workspacesResult.val.find((w) => w.id === event.workspace_id)
+          }
 
           if (maybeWorkspace !== undefined) {
             const actionID = startWorkspaceAction({
