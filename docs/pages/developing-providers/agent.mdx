@@ -3,17 +3,14 @@ title: Provider Agent
 sidebar_label: Provider Agent
 ---
 
-Agent is a small program, part of DevPod, that is injected inside a provider's VM in order to
-ensure some integration and functionality:
+When DevPod connects through a Provider to an environment, it will inject itself into the environment to handle the following tasks there:
+- deploying the container
+- forward credentials
+- ssh server
+- auto-shutdown after a period of inactivity
 
-- deploying the containers workload
-- auto-shutdown after a period of inactivity 
-- forwarding of Git credentials
-- forwarding of Docker credentials
-
-:::info
-The agent is part of DevPod, no further action is needed by providers to support it
-:::
+This counterpart is called the DevPod agent, which is available in the same DevPod binary under `devpod agent`.
+Within the `provider.yaml` you can configure certain parts of how local DevPod should interact with its agent counterpart.
 
 :::info
 Agent's **Driver** specifies how the whole container workloads is deployed inside
@@ -23,42 +20,16 @@ Head over to the [drivers section](./driver.mdx) to understand how this impacts
 the provider
 :::
 
-## Configuring the Agent
+## Agent section
 
-It is possible to configure the agent in two sections:
-
-- options section
-- agent section
-
-
-### Options section
-
-Inside of the [options section](./options.mdx) there are some agent-specific
-options that can be declared:
+The following options are available in the `agent` section
 
 ```yaml
-  AGENT_PATH:
-    description: The path where to inject the DevPod agent to.
-    default: /opt/devpod/agent
-  INJECT_GIT_CREDENTIALS:
-    description: "If DevPod should inject git credentials into the remote host."
-    default: "true"
-  INJECT_DOCKER_CREDENTIALS:
-    description: "If DevPod should inject docker credentials into the remote host."
-    default: "true"
-```
-
-You can tweak options as needed.
-
-### Agent section
-
-A dedicated section for the agent is also needed, it's structured like:
-
-```yaml
-agent:
-  path: ${AGENT_PATH}
-  driver: docker/kubernetes # Optional, default: docker
-  inactivityTimeout: ${INACTIVITY_TIMEOUT}
+agent: # You can also use options within this section (see injectGitCredentials as example)
+  path: ${DEVPOD}
+  driver: docker # Optional, default: docker
+  inactivityTimeout: 10m
+  containerInactivityTimeout: 10m
   injectGitCredentials: ${INJECT_GIT_CREDENTIALS}
   injectDockerCredentials: ${INJECT_DOCKER_CREDENTIALS}
   binaries:
@@ -74,16 +45,17 @@ agent:
 
 Breaking down the options:
 
-- **path**: where to place the agent on the machine
-- **driver**: which driver to use to run container, [check the Drivers section](./driver.mdx)
-- **inactivityTimeout**: after how much time to shut down the machine. Configured in the options.
-- **injectGitCredentials**: wether to inject git credentials in the machine. Configured in the options.
-- **injectDockerCredentials**: wether to inject docker the machine. Configured in the options.
-- **exec**: command to execute when shutting down the machine
-- **binaries**: this section can be used to declare additional binaries to download on the machine
+- **path**: where to place the agent on the remote machine. Use ${DEVPOD} here if you want to use the local machine instead.
+- **driver**: which driver to use to run container, [check the Drivers section for more information](./driver.mdx)
+- **inactivityTimeout**: after how much time to shut down the machine. Use for machine providers
+- **containerInactivityTimeout**: after how much time to shut down the container. Use for non-machine providers
+- **injectGitCredentials**: weather to inject git credentials into the machine.
+- **injectDockerCredentials**: weather to inject docker credentials into the machine.
+- **exec.shutdown**: command to execute when shutting down the machine after DevPod has determined the `inactivityTimeout`. Option values will be available here as well. For example, you can reuse an option that stores a cloud api key within this command to terminate the machine.
+- **binaries**: this section can be used to declare additional binaries to download on the machine to use in `exec.shutdown`
 
 :::info
-The `binaries` section is useful to inject the binary provider also in the machine, in order to
+The `binaries` section is useful to inject a helper binary in the machine, in order to
 use the specific cloud's APIs to shut down the machine, if a simple `shutdown -h now` does not work
 :::
 
@@ -91,3 +63,26 @@ use the specific cloud's APIs to shut down the machine, if a simple `shutdown -h
 The `binaries` section follows the same syntax and structure of the [binaries section in the main provider manifest](./binaries.mdx)
 :::
 
+## Auto-Inactivity Stop
+
+One of the most important features of DevPod is to make sure that developer environments use as little resources as possible when they are not used.
+
+### Non-Machine Providers
+
+For non-machine providers, DevPod can automatically kill the container its running in by terminating the process with pid 1. This is useful for providers such as docker, kubernetes or ssh, where you don't want the container to be running if its not needed. The timeout can be configured through `agent.containerInactivityTimeout`. DevPod will then start a process within the container to keep track of activity and then kill itself when the user hasn't connected for the given duration. This will not erase any state within the container and instead only stop it. Then when the user wants to start working with the workspace again, DevPod will start the container again.
+
+### Machine Providers
+
+For machine providers, killing just the container within the remote machine is typically not enough as VMs still generate costs even if they are unused.
+Hence DevPod provides a way to configure automatically shutting down or deleting an unused machine on the cloud provider side if a developer is currently not working anymore.
+DevPod will then restart or recreate it again, when the development should continue.
+
+DevPod tries to make this as easy as possible for you, as it will automatically keep track of when a user is connected to a workspace or not and only needs the command to run when the machine should be stopped from the provider.
+This command can be defined through `agent.exec.shutdown`.
+All configured options are available in this command and helper binaries needed can be defined through `agent.exec.binaries`
+
+Official providers that use this method of automatically stopping an inactive machine are:
+- [devpod-provider-azure](https://github.com/loft-sh/devpod-provider-azure): Just uses `shutdown -t now` as `agent.exec.shutdown` to shutdown an unused machine.
+- [devpod-provider-aws](https://github.com/loft-sh/devpod-provider-aws): Uses the local `aws` cli tool to generate a temporary token, which is then saved in a DevPod option. This token is then used within `agent.exec.shutdown` to shutdown the machine on the agent side with an AWS api call.
+- [devpod-provider-gcloud](https://github.com/loft-sh/devpod-provider-gcloud): Uses the local `gcloud` cli tool to generate a temporary token, which is then saved in a DevPod option. This token is then used within `agent.exec.shutdown` to shutdown the machine on the agent side with an Google Cloud api call.
+- [devpod-provider-digitalocean](https://github.com/loft-sh/devpod-provider-digitalocean): Deletes the whole machine on inactivity as stopped machines are still billed by DigitalOcean. The local digital ocean token is reused on the agent side to make a API call to delete the whole machine and preserve state in an extra volume.

@@ -5,7 +5,7 @@ sidebar_label: Drivers
 
 In DevPod you can specify a **Driver** in the [Agent's configuration](./agent.mdx).
 
-A Driver indicates how the DevPod deploys all the workspace containers.
+A Driver indicates how DevPod deploys the workspace container.
 
 There are two type of drivers:
 
@@ -13,21 +13,20 @@ There are two type of drivers:
 - Kubernetes driver
 
 :::info
-If no driver is specified, the default is always **Docker**
+If no driver is specified, the default is **Docker**
 :::
 
 ## Docker Driver
 
-Docker driver is the default driver that DevPod uses to deploy into the workspace
-all the needed containers.
+Docker driver is the default driver that DevPod uses to deploy the workspace container.
 
-These containers (specificed in the [devcontainer.json](../developing-in-workspaces/devcontainer-json.mdx)),
-are simply using Docker inside the workspace, for example in a VM [in case of Machine Providers](../managing-providers/what-are-providers.mdx).
+This container (specified through a [devcontainer.json](../developing-in-workspaces/devcontainer-json.mdx)),
+is executed through Docker inside the provider environment, for example in a VM [in case of Machine Providers](../managing-providers/what-are-providers.mdx).
 
 Some optional configs are available:
 
-- **path**: where to find Docker or Podman binary
-- **install**: whether to install or not Docker in the target environment
+- **path**: where to find the Docker CLI or a replacement, such as the Podman
+- **install**: whether to install Docker or not in the target environment
 
 Example config:
 
@@ -41,45 +40,53 @@ agent:
 
 ## Kubernetes Driver
 
-If instead a Kubernetes driver is selected, the workload will be deployed in
-a specific k8s cluster
+Instead of Docker, DevPod is also able to use Kubernetes as a Driver, which allows you to deploy the workspace to a Kubernetes cluster instead.
+For example, this makes it possible to create a provider that spins up a remote Kubernetes cluster (or just namespace), connect to it and create a workspace there.
+DevPod also has a default Kubernetes provider that uses the local Kubernetes config file to deploy the workspace.
 
-This option nees some additional configs in the [agent setup](./agent.mdx):
+DevPod also allows building an image through Kubernetes with [buildkit](https://github.com/moby/buildkit).
+DevPod will automatically determine if building is necessary or a prebuild can be used. However, the `buildRepository` option needs to be specified for this to work.
 
-- **path**: where to find the `kubectl` binary
-- **namespace**: which namespace to use
-- **context**: which kubecontext to use
-- **config**: path to which kubeconfig to use
-- **clusterRole**: If defined, DevPod will create a role binding for the given cluster role
+The allowed options for the Kubernetes driver are:
+- **path**: where to find the `kubectl` binary or a drop-in replacement
+- **namespace**: which namespace to use (if empty will use current namespace or default)
+- **context**: which kube context to use (if empty will use current kube context)
+- **config**: path to which kube config to use (if empty will use default kube config at `~/.kube/config`)
+- **clusterRole**: If defined, DevPod will create a role binding for the given cluster role for the workspace container. This is useful if you need Kubernetes access within the workspace container
 - **serviceAccount**: If defined, DevPod will use the given service account for the dev container
-- **buildRepository**: If defined, DevPod will build and push images to the given repository. If empty, DevPod will not build any images. Make sure you have push permissions for the given repository.
+- **buildRepository**: If defined, DevPod will build and push images to the given repository. If empty, DevPod will not build any images. Make sure you have push permissions for the given repository locally.
 - **helperImage**: The image DevPod will use to find out the cluster architecture. Defaults to alpine.
 - **buildkitImage**: The buildkit image to use for building dev containers.
 - **buildkitPrivileged**: If the buildkit pod should run as a privileged pod
 - **persistentVolumeSize**: The default size for the persistent volume to use.
 - **createNamespace**: If true, DevPod will try to create the namespace
 
+### Example Kubernetes Provider
 
-Example configuration:
+Example Kubernetes provider that uses local kubectl to run a workspace in the current kube context:
 
 ```yaml
+name: simple-kubernetes
+version: v0.0.1
 agent:
-  containerInactivityTimeout: 300
+  containerInactivityTimeout: 300 # Pod will automatically kill itself after timeout
   path: ${DEVPOD}
   driver: kubernetes
   kubernetes:
-    path: /usr/bin/kubectl
-    namespace: my-namespace-for-devpod
-    context: default
-    config: /opt/.kubeconfig
-    clusterRole: ""
-    serviceAccount: ""
-    buildRepository: "hub.docker.com"
-    helperImage: "ubuntu:latest"
-    buildkitImage: "moby/buildkit"
-    buildkitPrivileged: false
-    persistentVolumeSize: 10Gi
+    # path: /usr/bin/kubectl
+    # namespace: my-namespace-for-devpod
+    # context: default
+    # clusterRole: ""
+    # serviceAccount: ""
+    buildRepository: "ghcr.io/my-user/my-repo"
+    # helperImage: "ubuntu:latest"
+    # buildkitImage: "moby/buildkit"
+    # buildkitPrivileged: false
+    persistentVolumeSize: 20Gi
     createNamespace: true
+exec:
+  command: |-
+    ${DEVPOD} helper sh -c "${COMMAND}"
 ```
 
-This way we 
+Then add the provider via `devpod provider add ./simple-kubernetes.yaml`

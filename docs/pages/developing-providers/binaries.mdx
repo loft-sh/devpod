@@ -3,8 +3,7 @@ title: Provider Binaries
 sidebar_label: Provider Binaries
 ---
 
-The `binaries` section, is dedicated for providers that work using a custom built
-program.
+The `binaries` section can be used to specify helper binaries DevPod should download that help the provider to accomplish its tasks.
 
 An example of this type of provider are:
 
@@ -14,14 +13,7 @@ An example of this type of provider are:
 - [devpod-provider-digitalocean](https://github.com/loft-sh/devpod-provider-digitalocean/releases)
 - [devpod-provider-gcloud](https://github.com/loft-sh/devpod-provider-gcloud/releases)
 
-These providers will handle all the phases of the VM's lifecycle, using the
-specific cloud's APIs.
-
-Being a program that runs on your machine and that can potentially handle sensitive
-data (like passwords and tokens) DevPod has a dedicated section to handle binary's
-verification and retrieval.
-
-Each binary is declared as:
+Each binary that is required is declared through:
 
 ```yaml
 binaries:
@@ -30,6 +22,7 @@ binaries:
       arch: # Binary arch
       path: # Remote (URL) or local path to binary
       checksum:  # sha sum of the binary
+      archivePath: # If its an archive, the relative path to the binary. Supported archives are .tgz, .tar, .tar.gz, .zip
 ```
 
 When [Adding a provider](../managing-providers/add-provider.mdx), DevPod will
@@ -70,9 +63,7 @@ the machine.
 
 ## Use binaries in commands
 
-Each binary declared, will be available as command using the name as variable.
-
-For example:
+DevPod will make the binary path available through an environment variable within the exec section. For example:
 
 ```yaml
 binaries:
@@ -84,6 +75,42 @@ exec:
   ....
 ```
 
-:::info
-This variable will be available across the whole manifest.
-:::
+## Use binaries in options
+
+You can also use binaries within the option `command` attribute. For example:
+
+ ```yaml
+ binaries:
+   MY_BINARY:
+     ....
+
+ options:
+   MY_OPTION:
+     command: ${MY_BINARY} retrieve-option
+ ```
+
+## Use binaries on the agent side
+
+You can also define binaries DevPod should install on the agent side through `agent.binaries`. These binaries can then be used within the `agent.exec` section to automatically stop a virtual machine if inactive.
+For example:
+
+```yaml
+agent:
+  path: ${AGENT_PATH}
+  binaries:
+    GCLOUD_PROVIDER:
+      - os: linux
+        arch: amd64
+        path: https://github.com/loft-sh/devpod-provider-gcloud/releases/download/v0.0.1-alpha.10/devpod-provider-gcloud-linux-amd64
+        checksum: 38f92457507563ee56ea40a2ec40196d12ac2bbd50a924d76f55827e96e5f831
+      - os: linux
+        arch: arm64
+        path: https://github.com/loft-sh/devpod-provider-gcloud/releases/download/v0.0.1-alpha.10/devpod-provider-gcloud-linux-arm64
+        checksum: 48e8dfa20962f1c3eb1e3da17d57842a0e26155df2b94377bcdf5b8070d7b17e
+  exec:
+    shutdown: |-
+      ${GCLOUD_PROVIDER} stop --raw
+```
+
+
+
