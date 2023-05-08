@@ -31,10 +31,10 @@ jobs:
         uses: actions/github-script@v6
         with:
           script: |
-            const tagName = `${process.env.TAG_NAME}`
-            const packageVersion = `${process.env.PACKAGE_VERSION}` 
-            if(context.ref.split("-v")[1] !== packageVersion) {
-              core.setFailed(`Tag must match version from \`desktop/package.json\`. Ref Version: ${tagName}, Package Version: ${packageVersion}`)
+            const packageVersion = `${process.env.PACKAGE_VERSION}`
+            const refName = process.env.GITHUB_REF_NAME
+            if(refName.split("-v")[1] !== packageVersion) {
+              core.setFailed(`Tag must match version from \`desktop/package.json\`. Ref Name: ${refName}, Package Version: ${packageVersion}`)
             }
 
       - name: Get Release
