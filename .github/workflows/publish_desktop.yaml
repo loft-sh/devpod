@@ -13,7 +13,9 @@ jobs:
       package_version: ${{ steps.get-version.outputs.package_version }}
       release_id: ${{ steps.get-release.outputs.id }}
     steps:
-      - uses: actions/checkout@v3
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
       - name: Setup Node
         uses: actions/setup-node@v3
         with:
@@ -158,8 +160,11 @@ jobs:
           releaseId: ${{ needs.create-release.outputs.release_id }}
           projectPath: "./desktop"
           args: " --target ${{ matrix.settings.target }}"
+          includeUpdaterJson: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAURI_PRIVATE_KEY: ${{ secrets.TAURI_PRIVATE_KEY }}
+          TAURI_KEY_PASSWORD: ${{ secrets.TAURI_KEY_PASSWORD }}
           # MacOS Signing:
           ENABLE_CODE_SIGNING: ${{ secrets.APPLE_CERTIFICATE }}
           APPLE_CERTIFICATE: ${{ secrets.APPLE_CERTIFICATE }}
@@ -216,8 +221,11 @@ jobs:
         with:
           projectPath: "./desktop"
           args: " --target ${{ matrix.settings.target }}"
+          includeUpdaterJson: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAURI_PRIVATE_KEY: ${{ secrets.TAURI_PRIVATE_KEY }}
+          TAURI_KEY_PASSWORD: ${{ secrets.TAURI_KEY_PASSWORD }}
 
       - name: Sign Windows App
         if: matrix.settings.host == 'windows-latest'
@@ -340,3 +348,27 @@ jobs:
             })
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  publish-updates:
+    needs: build-app
+    if: startsWith(github.ref, 'refs/tags/v') == true
+    permissions:
+      contents: write
+    runs-on: ubuntu-20.04
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - uses: actions/download-artifact@v3
+        name: Download `latest.json`
+        with:
+          name: latest.json
+          path: ./desktop
+
+      - name: Commit `latest.json`
+        run: |
+          git add desktop/latest.json
+          git config --global user.name 'Loft Release Bot'
+          git config --global user.email 'info@loft.sh'
+          git commit -am "chore(cd): update desktop/latest.json"
+          git push origin HEAD:main
