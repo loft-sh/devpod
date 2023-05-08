@@ -20,7 +20,7 @@ export class Action {
   private _error: Error | undefined = undefined
   private _finishedAt: number | undefined = undefined
   private readonly eventManager = new SingleEventManager<TActionStatus>()
-  public readonly id = window.crypto.randomUUID()
+  public readonly id = window.crypto.randomUUID() as string
   public readonly createdAt = Date.now()
 
   public static deserialize(str: string): TActionObj {
