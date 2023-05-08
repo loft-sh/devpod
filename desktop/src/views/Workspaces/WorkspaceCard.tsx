@@ -60,6 +60,7 @@ export function WorkspaceCard({ workspaceID, onSelectionChange }: TWorkspaceCard
   })
   const { isOpen: isDeleteOpen, onOpen: onDeleteOpen, onClose: onDeleteClose } = useDisclosure()
   const { isOpen: isRebuildOpen, onOpen: onRebuildOpen, onClose: onRebuildClose } = useDisclosure()
+  const { isOpen: isStopOpen, onOpen: onStopOpen, onClose: onStopClose } = useDisclosure()
   const workspace = useWorkspace(workspaceID)
   const [ideName, setIdeName] = useState<string | undefined>(workspace.data?.ide?.name ?? undefined)
   const [rebuildMenuItemPointerEvents, setRebuildMenuItemPointerEvents] = useState<"auto" | "none">(
@@ -103,7 +104,7 @@ export function WorkspaceCard({ workspaceID, onSelectionChange }: TWorkspaceCard
     return null
   }
 
-  const { id, picture, ide } = workspace.data
+  const { id, picture, ide, status } = workspace.data
 
   return (
     <>
@@ -169,7 +170,7 @@ export function WorkspaceCard({ workspaceID, onSelectionChange }: TWorkspaceCard
                         borderRadius={0}
                         fontWeight={"normal"}
                         leftIcon={<Play boxSize={4} />}
-                        onClick={handleOpenWithIDEClicked(workspace.data.id)}>
+                        onClick={handleOpenWithIDEClicked(id)}>
                         Start with
                       </Button>
                       <Select
@@ -198,9 +199,16 @@ export function WorkspaceCard({ workspaceID, onSelectionChange }: TWorkspaceCard
                       Rebuild
                     </MenuItem>
                     <MenuItem
-                      onClick={() => workspace.stop()}
-                      icon={<Pause boxSize={4} />}
-                      isDisabled={workspace.data.status !== "Running"}>
+                      onClick={() => {
+                        if (status !== "Running") {
+                          onStopOpen()
+
+                          return
+                        }
+
+                        workspace.stop()
+                      }}
+                      icon={<Pause boxSize={4} />}>
                       Stop
                     </MenuItem>
                     <MenuItem
@@ -252,7 +260,7 @@ export function WorkspaceCard({ workspaceID, onSelectionChange }: TWorkspaceCard
           <ModalBody>
             Deleting the workspace will erase all state. Are you sure you want to delete{" "}
             {workspace.data.id}?
-            <Box marginTop={"10px"}>
+            <Box marginTop={"2.5"}>
               <Checkbox checked={forceDelete} onChange={(e) => setForceDelete(e.target.checked)}>
                 Force Delete the Workspace
               </Checkbox>
@@ -268,6 +276,31 @@ export function WorkspaceCard({ workspaceID, onSelectionChange }: TWorkspaceCard
                   onDeleteClose()
                 }}>
                 Delete
+              </Button>
+            </HStack>
+          </ModalFooter>
+        </ModalContent>
+      </Modal>
+
+      <Modal onClose={onStopClose} isOpen={isStopOpen} isCentered>
+        <ModalOverlay />
+        <ModalContent>
+          <ModalHeader>Stop Workspace</ModalHeader>
+          <ModalCloseButton />
+          <ModalBody>
+            Stopping the workspace while it&apos;s not running may leave it in a corrupted state. Do
+            you want to stop it regardless?
+          </ModalBody>
+          <ModalFooter>
+            <HStack spacing={"2"}>
+              <Button onClick={onStopClose}>Close</Button>
+              <Button
+                colorScheme={"red"}
+                onClick={() => {
+                  workspace.stop()
+                  onStopClose()
+                }}>
+                Stop
               </Button>
             </HStack>
           </ModalFooter>

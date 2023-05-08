@@ -49,10 +49,10 @@ fn main() -> anyhow::Result<()> {
     fix_path_env::fix()?;
     let ctx = tauri::generate_context!();
     let app_name = ctx.package_info().name.to_string();
-    let menu = if cfg!(target_os = "linux") {
-        Menu::new()
-    } else {
+    let menu = if cfg!(target_os = "macos") {
         Menu::os_default(&app_name)
+    } else {
+        Menu::new()
     };
 
     let custom_protocol = CustomProtocol::init();
