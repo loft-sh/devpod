@@ -24,6 +24,13 @@ This page mostly gives you an introduction on how to work with devcontainers. Fo
 * [Github Codespaces Documentation](https://docs.github.com/en/codespaces/setting-up-your-project-for-codespaces/adding-a-dev-container-configuration/introduction-to-dev-containers#devcontainerjson)
 :::
 
+:::warning Unsupported Properties
+Currently these `devcontainer.json` properties are not supported in DevPod. These may be implemented in future releases.
+* userEnvProve
+* waitFor
+* Parallel lifecycle scripts
+:::
+
 ## devcontainer.json
 
 The primary file to configure your workspace is the `devcontainer.json`, that lives in the `.devcontainer` sub-folder of your project.
