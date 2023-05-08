@@ -232,8 +232,8 @@ export function ConfigureProviderOptionsForm({
                       <FormErrorMessage>{reuseMachineError.message ?? "Error"}</FormErrorMessage>
                     ) : (
                       <FormHelperText>
-                        Provider reuses the vm of the first workspaces for all subsequent
-                        workspaces. Otherwise, it will spin up one VM per workspace
+                        Provider will reuse the VM of the first workspace for all subsequent
+                        workspaces. Otherwise, it will spin up one VM per workspace.
                       </FormHelperText>
                     )}
                   </FormControl>
