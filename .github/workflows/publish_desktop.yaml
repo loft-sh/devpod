@@ -364,9 +364,9 @@ jobs:
             const release = await github.rest.repos.getRelease({ ...releaseArgs })
             console.log(release)
 
-            const latestAsset = release.data.assets.find(a => a.name === "latest.json")
+            const latestAsset = release.data.assets.find(a => a.name === "latest.json"))
             const latestRes = await fetch(sigAsset.url, { headers: { accept: "application/octet-stream" } })
-            if(!latestRes.ok) { core.setFailed(`${await latestRes.text()}`) }
+            if (!latestRes.ok) { core.setFailed(`${await latestRes.text()}`) }
 
             const latest = await latestRes.json()
             const msiName = `DevPod_${latest.version}_x64_en-US.msi`
@@ -375,7 +375,7 @@ jobs:
             const sigAsset = release.data.assets.find(a => a.name === `${assetName}.sig`)
             console.log(sigAsset)
             const res = await fetch(sigAsset.url, { headers: { accept: "application/octet-stream" } })
-            if(!res.ok) { core.setFailed(`${await res.text()}`) }
+            if (!res.ok) { core.setFailed(`${await res.text()}`) }
 
             latest.platforms["windows-x86_64"] = {
               signature: await res.text(),
@@ -387,7 +387,7 @@ jobs:
 
             // Clean up .msi.zip.sig file
             const msiZipSigAsset = release.data.assets.find(a => a.name.endsWith(".msi.zip.sig")
-            if(msiZipSigAsset) {
+            if (msiZipSigAsset) {
               await github.rest.repos.deleteReleaseAsset({
                 ...releaseArgs,
                 asset_id: msiZipSigAsset.id
@@ -395,7 +395,7 @@ jobs:
             }
 
             // Attempting to upload a previously released asset results in an error so we need to clean up before
-            if(latestAsset) {
+            if (latestAsset) {
               await github.rest.repos.deleteReleaseAsset({
                 ...releaseArgs,
                 asset_id: latestAsset.id
