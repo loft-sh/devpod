@@ -36,7 +36,7 @@ jobs:
               owner: context.repo.owner,
               repo: context.repo.repo,
               tag_name: "${{ steps.get-version.outputs.tag_name }}",
-              name: `DevPod v${process.env.PACKAGE_VERSION}`,
+              name: `v${process.env.PACKAGE_VERSION}`,
               body: 'Take a look at the assets to download and install DevPod Desktop',
               draft: true,
               prerelease: false
@@ -78,6 +78,12 @@ jobs:
       GOFLAGS: -mod=vendor
 
     steps:
+      - name: Check variables
+        run: |
+          echo "release id: [${{ needs.create-release.outputs.release_id }}]"
+          echo "package version: [${{ needs.create-release.outputs.package_version }}]"
+          echo "upload url: [${{ needs.create-release.outputs.upload_url }}]"
+
       - name: Checkout repository
         uses: actions/checkout@v3
 
@@ -191,11 +197,10 @@ jobs:
           cd "dev-pod-${{needs.create-release.outputs.package_version}}" || exit 1
           rpmbuild --target=x86_64 --buildroot "$(pwd)" -bb "$(pwd)/dev-pod-${{needs.create-release.outputs.package_version}}-2.spec"
 
-
       - name: Build Desktop App
         if: matrix.settings.host == 'windows-latest'
         id: build-desktop-app
-        uses: tauri-apps/tauri-action@dev
+        uses: tauri-apps/tauri-action@v0.4.0
         with:
           projectPath: "./desktop"
           args: " --target ${{ matrix.settings.target }}"
@@ -226,7 +231,7 @@ jobs:
 
           $destination_path = "codesigntool"
           Write-Output "Unzipping to $destination_path"
-          Expand-Archive "codesigntool.zip" -DestinationPath $destination_path
+          Expand-Archive "codesigntool.zip" -DestinationPath $destination_path 
 
           Set-Location -Path $destination_path
           Set-Location -Path (Get-ChildItem -Path . -Include CodeSignTool* | %{$_.FullName})
@@ -241,35 +246,58 @@ jobs:
 
       - name: Upload Release Asset
         if: matrix.settings.host == 'windows-latest'
-        shell: cmd
-        run: |
-          set BIN_NAME=devpod-cli-${{ matrix.settings.target }}.exe
-          set CLI_TARGET_NAME=devpod-windows-${{ matrix.settings.arch }}.exe
+        uses: actions/github-script@v6
+        with:
+          script: |
+            const fs = require("fs")
 
-          cd desktop\src-tauri\bin
-          ren "%BIN_NAME%" "%CLI_TARGET_NAME%"
-          cd ..
+            const msiName = "DevPod_${{ needs.create-release.outputs.package_version }}_x64_en-US.msi"
+            const msiPath = `desktop/src-tauri/target/${{ matrix.settings.target }}/release/bundle/msi/${msiName}`
+            const cliName = "devpod-windows-${{ matrix.settings.arch }}.exe"
+            const cliPath = "desktop/src-tauri/bin/devpod-cli-${{ matrix.settings.target }}.exe"
+            const releaseId = "${{ needs.create-release.outputs.release_id }}"
 
-          gh release upload ${{ needs.create-release.outputs.tag_name }} target/${{ matrix.settings.target }}/release/bundle/msi/DevPod_${{ needs.create-release.outputs.package_version }}_x64_en-US.msi  "bin\%CLI_TARGET_NAME%" --clobber
+            const releaseAssets = [{ name: msiName, path: msiPath }, { name: cliName, path: cliPath }]
+            for (const asset of releaseAssets) {
+              console.log("Attempting to upload release asset: ", asset)
+              await github.rest.repos.uploadReleaseAsset({
+                headers: {
+                  "content-type": "application/zip",
+                  "content-length": fs.statSync(asset.path).size
+                },
+                name: asset.name,
+                data: fs.readFileSync(asset.path),
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                release_id: releaseId
+              })
+            }
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Upload CLI Asset
         if: matrix.settings.host != 'windows-latest'
-        run: |
-          BIN_NAME=devpod-cli-${{ matrix.settings.target }}
-          TARGET_NAME=devpod-${{ matrix.settings.os }}-${{ matrix.settings.arch }}
-          BASE_PATH=desktop/src-tauri/bin
-          mv "$BASE_PATH/$BIN_NAME" "$BASE_PATH/$TARGET_NAME"
-          gh release upload ${{ needs.create-release.outputs.tag_name }} "$BASE_PATH/$TARGET_NAME" --clobber
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        uses: actions/github-script@v6
+        with:
+          script: |
+            const fs = require("fs")
 
-      - name: Upload RPM Asset
-        if: matrix.settings.host == 'ubuntu-latest'
-        run: |
-          BIN_NAME=dev-pod-${{needs.create-release.outputs.package_version}}-2.x86_64.rpm
-          BASE_PATH=./desktop/src-tauri/target/${{ matrix.settings.target }}/release/bundle/deb
-          gh release upload ${{ needs.create-release.outputs.tag_name }} "$BASE_PATH/$BIN_NAME" --clobber
+            const releaseId = "${{ needs.create-release.outputs.release_id }}"
+            const assetName = "devpod-cli-${{ matrix.settings.target }}"
+            const assetPath = `desktop/src-tauri/bin/${assetName}`
+
+            console.log("Attempting to upload release asset: ", assetName)
+
+            await github.rest.repos.uploadReleaseAsset({
+              headers: {
+                "content-type": "application/zip",
+                "content-length": fs.statSync(assetPath).size
+              },
+              name: assetName,
+              data: fs.readFileSync(assetPath),
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              release_id: releaseId
+            })
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
