@@ -8,6 +8,7 @@ import (
 	"github.com/loft-sh/devpod/pkg/scanner"
 	"github.com/pkg/errors"
 	"os"
+	path2 "path"
 	"path/filepath"
 	"strings"
 )
@@ -64,22 +65,32 @@ func SaveDevContainerJSON(config *DevContainerConfig) error {
 	return nil
 }
 
-func ParseDevContainerJSON(folder string) (*DevContainerConfig, error) {
-	path := filepath.Join(folder, ".devcontainer", "devcontainer.json")
-	_, err := os.Stat(path)
-	if err != nil {
-		path = filepath.Join(folder, ".devcontainer.json")
-		_, err = os.Stat(path)
+func ParseDevContainerJSON(folder, relativePath string) (*DevContainerConfig, error) {
+	path := ""
+	if relativePath != "" {
+		path = path2.Join(filepath.ToSlash(folder), relativePath)
+		_, err := os.Stat(path)
 		if err != nil {
-			matches, err := doublestar.FilepathGlob("./.devcontainer/**/devcontainer.json")
+			return nil, fmt.Errorf("devcontainer path %s doesn't exist: %w", path, err)
+		}
+	} else {
+		path = filepath.Join(folder, ".devcontainer", "devcontainer.json")
+		_, err := os.Stat(path)
+		if err != nil {
+			path = filepath.Join(folder, ".devcontainer.json")
+			_, err = os.Stat(path)
 			if err != nil {
-				return nil, err
-			} else if len(matches) == 0 {
-				return nil, nil
+				matches, err := doublestar.FilepathGlob("./.devcontainer/**/devcontainer.json")
+				if err != nil {
+					return nil, err
+				} else if len(matches) == 0 {
+					return nil, nil
+				}
 			}
 		}
 	}
 
+	var err error
 	path, err = filepath.Abs(path)
 	if err != nil {
 		return nil, errors.Wrap(err, "make path absolute")
