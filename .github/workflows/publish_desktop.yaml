@@ -135,7 +135,7 @@ jobs:
 
       - name: Build Desktop App
         if: matrix.settings.host != 'windows-latest'
-        uses: tauri-apps/tauri-action@0.4.0
+        uses: tauri-apps/tauri-action@v0.4.0
         with:
           releaseId: ${{ needs.create-release.outputs.release_id }}
           projectPath: "./desktop"
