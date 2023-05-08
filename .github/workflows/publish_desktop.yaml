@@ -1,15 +1,17 @@
 name: Publish Desktop
-on: workflow_dispatch
+on:
+  release:
+    types: [prereleased]
 
 jobs:
   create-release:
+    if: startsWith(github.ref, 'refs/tags/v') == true
     permissions:
       contents: write
     runs-on: ubuntu-20.04
     outputs:
       package_version: ${{ steps.get-version.outputs.package_version }}
-      release_id: ${{ steps.create-release.outputs.id }}
-      tag_name: ${{ steps.get-version.outputs.tag_name }}
+      release_id: ${{ steps.get-release.outputs.id }}
     steps:
       - uses: actions/checkout@v3
       - name: Setup Node
@@ -23,28 +25,38 @@ jobs:
           PACKAGE_VERSION=$(node -p "require('./desktop/package.json').version")
           echo "PACKAGE_VERSION=$PACKAGE_VERSION" >> $GITHUB_ENV
           echo "package_version=$PACKAGE_VERSION" >> $GITHUB_OUTPUT
-          echo "tag_name=DevPod-v$PACKAGE_VERSION" >> $GITHUB_OUTPUT
+          echo "TAG_NAME=DevPod-v$PACKAGE_VERSION" >> $GITHUB_ENV
 
-      - name: Create Release
-        id: create-release
+      - name: Check Version
         uses: actions/github-script@v6
         with:
           script: |
-            console.log("${{ steps.get-version.outputs.tag_name }}")
+            const tagName = `${process.env.TAG_NAME}`
+            const packageVersion = `${process.env.PACKAGE_VERSION}` 
+            if(context.ref.split("v")[1] !== packageVersion) {
+              core.setFailed("Tag must match version from \`desktop/package.json\`. Ref Version: ", tagName, ", Package Version: ", packageVersion)
+            }
 
-            const { data } = await github.rest.repos.createRelease({
+      - name: Get Release
+        uses: actions/github-script@v6
+        id: get-release
+        with:
+          script: |
+            // Find the prerelease release in our repo that triggered this workflow
+
+            const res = await github.rest.repos.listReleases({
               owner: context.repo.owner,
               repo: context.repo.repo,
-              tag_name: "${{ steps.get-version.outputs.tag_name }}",
-              name: `v${process.env.PACKAGE_VERSION}`,
-              body: 'Take a look at the assets to download and install DevPod Desktop',
-              draft: true,
-              prerelease: false
+              per_page: 5,
             })
-            core.setOutput("id", data.id)
+            const release = res.data.find((r) => r.prerelease)
+            if(!release) { core.setFailed("Unable to find prerelease for this workflow") }
+
+            core.setOutput("id", release.id)
 
   build-app:
     needs: create-release
+    if: startsWith(github.ref, 'refs/tags/v') == true
     permissions:
       contents: write
     strategy:
