@@ -3,8 +3,9 @@ title: Provider Options
 sidebar_label: Provider Options
 ---
 
-Inside [`provider.yaml`](./quickstart.mdx#provideryaml), you can specify options
+Inside the [`provider.yaml`](./quickstart.mdx#provideryaml), you can specify options
 that DevPod can pass to the provider when calling it.
+Each option will be passed as an environment variable to the commands or can be used directly inside the `agent` section of a provider.
 
 ```yaml
 ...
@@ -22,7 +23,7 @@ options:
 
 ## How options work
 
-Oprions are variables needed to the provider to function properly, for example:
+Options are variables needed for the provider to function properly, for example:
 
 - User Accounts
 - VMs images
@@ -32,8 +33,8 @@ Oprions are variables needed to the provider to function properly, for example:
 These options are parsed and validated by DevPod when [Adding the provider](../managing-providers/add-provider.mdx)
 and passed to the provider as **environment variables**.
 
-It's then the provider's job to retrieve them from the environment and validate
-them.
+It's the provider's job to retrieve them from the environment and validate them.
+It's recommended to make use of the `init` command that will be called by DevPod when options change to validate environment variables on the provider side.
 
 You can check our example in the [Devpod's AWS Provider](https://github.com/loft-sh/devpod-provider-aws/blob/main/pkg/options/options.go#L44)
 where we parse and validate the variables:
@@ -52,22 +53,30 @@ where we parse and validate the variables:
 ...
 ```
 
+Options will also be passed to the agent and can be used in the `agent.exec` section. This is very useful if you require certain information on the agent side to perform an auto-inactivity timeout.
+
+### Option configuration
+
 Each option has a set of attributes that can modify how DevPod interprets it when
 configuring or adding the provider:
 
-- description
-- default
-- required
-- password
-- suggestions
-- command
+- `description`: Description shown in `devpod provider options` and in the Desktop App
+- `default`: Default value of the option provided as a string. Can also reference other variables, e.g. `${MY_OTHER_VAR}-suffix`
+- `required`: Boolean if this option needs to be non-empty before using the provider. DevPod will ask in the CLI and make sure that this option is filled in the Desktop application.
+- `password`: Boolean to indicate this is a sensitive value. Prevents this value from showing up in the `devpod provider options` command and will be a password field in the Desktop application.
+- `suggestions`: An array of suggestions for this option. Will be shown as auto complete options in the DevPod desktop application
+- `command`: A command to retrieve the option value automatically. Can also reference other variables in the command, e.g. `echo ${MY_OTHER_VAR}-suffix`. For compatability reasons this command will be executed in an emulated shell on windows.
+- `local`: If true, the option will be filled individually for each machine / workspace
+- `global`: If true, the option will be reused for each machine / workspace
+- `cache`: If non-empty, DevPod will reexecute the command after the given timeout. E.g. if this is 5m, DevPod will reexecute the command after 5 minutes to re-fill this value. This is useful if you want to store a token or something that expires locally in a variable.
+- `hidden`: If true, DevPod will not show this option in the Desktop application or through `devpod provider options`. Can be used to calculate variables internally or save tokens or other things internally.
 
 ### Default values
 
 As the name implies, this is a default value for the option. It is always advisable
 to place a sensible default for any option.
 
-Notable exceptions would be for Tokens/Password fields.
+You can also reference other options inside the default value, e.g. `${MY_OTHER_VAR}-suffix`. DevPod will automatically figure out what options need to be resolved before this option.
 
 **If not specified, it defaults to empty string**.
 
@@ -118,7 +127,7 @@ be shown in the CLI app.
 ### Command options
 
 The command option lets you define a possible value for an option based on a shell
-command launched on your machine.
+command launched on your machine. Can also reference other variables in the command, e.g. `echo ${MY_OTHER_VAR}-suffix`. For compatability reasons this command will be executed in an emulated shell on windows.
 
 One example would be to forward ENV variables from your machine to the provider,
 for example:
@@ -135,7 +144,7 @@ for example:
     command: printf "%s" "${AWS_SECRET_ACCESS_KEY:-}"
 ```
 
-Or running an helper command, and forward the result as the option's value:
+Or running an helper command (defined in the binaries section), and forward the result as the option's value:
 
 ```yaml
   AWS_TOKEN:
@@ -148,6 +157,22 @@ Or running an helper command, and forward the result as the option's value:
 ```
 
 **If not specified, it defaults to empty and ignored**.
+
+## Built-In Options
+
+There are a couple of predefined options from DevPod, that can be used within the default field of another option or in an option command. Some built-in options are only available for `local` options as the `MACHINE_ID` might not be available already.
+Predefined options:
+- **DEVPOD**: Absolute path to the current DevPod CLI binary.
+- **DEVPOD_OS**: Current Operating system. Can be either: linux, darwin or windows
+- **DEVPOD_ARCH**: Current operating system architecture. Can be either: amd64 or arm64.
+- **MACHINE_ID**: The machine id that should be used. (Only available for local options, commands and machine providers)
+- **MACHINE_FOLDER**: The machine folder that can be used to cache information locally. (Only available for local options, commands and machine providers)
+- **MACHINE_CONTEXT**: The DevPod context this machine was created in. (Only available for local options, commands and machine providers)
+- **MACHINE_PROVIDER**: The provider name that was used to create this machine. (Only available for local options, commands and machine providers)
+- **WORKSPACE_ID**: The workspace id that should be used. (Only available for local options, commands and non-machine providers)
+- **WORKSPACE_FOLDER**: The workspace folder that can be used to cache information locally. (Only available for local options, commands and non-machine providers)
+- **WORKSPACE_CONTEXT**: The DevPod context this workspace was created in. (Only available for local options, commands and non-machine providers)
+- **WORKSPACE_PROVIDER**: The provider name that was used to create this workspace. (Only available for local options, commands and non-machine providers)
 
 ## Option Groups
 
