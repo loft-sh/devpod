@@ -341,11 +341,6 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Upload latest.json
-        uses: actions/upload-artifact@v3
-        with:
-          name: latest.json
-
   publish-updates:
     needs: [build-app, create-release]
     if: startsWith(github.ref, 'refs/tags/v') == true
@@ -355,12 +350,6 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v3
-
-      - name: Download latest.json
-        uses: actions/download-artifact@v3
-        with:
-          name: latest.json
-          path: desktop/
 
       - name: Update `latest.json`
         uses: actions/github-script@v6
@@ -375,8 +364,11 @@ jobs:
             const release = await github.rest.repos.getRelease({ ...releaseArgs })
             console.log(release)
 
-            const latestJsonPath = "desktop/latest.json"
-            const latest = fs.readFileSync(latestJsonPath, { encoding: "utf8" }) 
+            const latestAsset = release.data.assets.find(a => a.name === "latest.json")
+            const latestRes = await fetch(sigAsset.url, { headers: { accept: "application/octet-stream" } })
+            if(!latestRes.ok) { core.setFailed(`${await latestRes.text()}`) }
+
+            const latest = await latestRes.json()
             const msiName = `DevPod_${latest.version}_x64_en-US.msi`
             const assetName = `${msiName}.zip`
 
@@ -390,7 +382,8 @@ jobs:
               url: `https://github.com/loft-sh/devpod/releases/download/${process.env.GITHUB_REF_NAME}/${assetName}`,
             }
 
-            fs.writeFileSync("desktop/latest.json", JSON.stringify(latest))
+            const latestDestPath = "desktop/latest.json"
+            fs.writeFileSync(latestDestPath, JSON.stringify(latest))
 
             // Clean up .msi.zip.sig file
             const msiZipSigAsset = release.data.assets.find(a => a.name.endsWith(".msi.zip.sig")
@@ -402,7 +395,6 @@ jobs:
             }
 
             // Attempting to upload a previously released asset results in an error so we need to clean up before
-            const latestAsset = release.data.assets.find(a => a.name === "latest.json")
             if(latestAsset) {
               await github.rest.repos.deleteReleaseAsset({
                 ...releaseArgs,
@@ -414,10 +406,10 @@ jobs:
               ...releaseArgs,
               headers: {
                 "content-type": "application/zip",
-                "content-length": fs.statSync(latestJsonPath).size
+                "content-length": fs.statSync(latestDestPath).size
               },
               name: "latest.json",
-              data: fs.readFileSync(latestJsonPath),
+              data: fs.readFileSync(latestDestPath),
             })
 
       - name: Commit `latest.json`
