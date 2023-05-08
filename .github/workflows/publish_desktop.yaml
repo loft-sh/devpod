@@ -350,7 +350,7 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
   publish-updates:
-    needs: build-app
+    needs: [build-app, create-release]
     if: startsWith(github.ref, 'refs/tags/v') == true
     permissions:
       contents: write
@@ -359,11 +359,23 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v3
 
-      - uses: actions/download-artifact@v3
-        name: Download `latest.json`
+      - name: Download `latest.json`
+        uses: actions/github-script@v6
         with:
-          name: latest.json
-          path: ./desktop
+          script: |
+            const fs = require("fs")
+            
+            const release = await github.rest.repos.getRelease({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              release_id: ${{ needs.create-release.outputs.release_id }},
+            })
+            const asset = release.data.assets.find(a => a.name === "latest.json")
+            const res = await fetch(asset.url, { headers: {accept: "application/octet-stream" } })
+            if(!res.ok) { core.setFailed(`${await res.text()}`)}
+            
+            const buffer = await (await res.blob()).arrayBuffer()
+            fs.writeFileSync("desktop/latest.json", new Uint8Array(buffer))
 
       - name: Commit `latest.json`
         run: |
