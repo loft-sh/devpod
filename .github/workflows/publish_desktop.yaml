@@ -35,7 +35,7 @@ jobs:
           script: |
             const packageVersion = `${process.env.PACKAGE_VERSION}`
             const refName = process.env.GITHUB_REF_NAME
-            if(refName.split("-v")[1] !== packageVersion) {
+            if(refName.split("v")[1] !== packageVersion) {
               core.setFailed(`Tag must match version from \`desktop/package.json\`. Ref Name: ${refName}, Package Version: ${packageVersion}`)
             }
 
