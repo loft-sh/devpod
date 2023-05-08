@@ -1,0 +1,85 @@
+---
+title: Drivers
+sidebar_label: Drivers
+---
+
+In DevPod you can specify a **Driver** in the [Agent's configuration](./agent.mdx).
+
+A Driver indicates how the DevPod deploys all the workspace containers.
+
+There are two type of drivers:
+
+- Docker driver
+- Kubernetes driver
+
+:::info
+If no driver is specified, the default is always **Docker**
+:::
+
+## Docker Driver
+
+Docker driver is the default driver that DevPod uses to deploy into the workspace
+all the needed containers.
+
+These containers (specificed in the [devcontainer.json](../developing-in-workspaces/devcontainer-json.mdx)),
+are simply using Docker inside the workspace, for example in a VM [in case of Machine Providers](../managing-providers/what-are-providers.mdx).
+
+Some optional configs are available:
+
+- **path**: where to find Docker or Podman binary
+- **install**: whether to install or not Docker in the target environment
+
+Example config:
+
+```yaml
+agent:
+  containerInactivityTimeout: 300
+  docker:
+    path: /usr/bin/docker
+    install: false
+```
+
+## Kubernetes Driver
+
+If instead a Kubernetes driver is selected, the workload will be deployed in
+a specific k8s cluster
+
+This option nees some additional configs in the [agent setup](./agent.mdx):
+
+- **path**: where to find the `kubectl` binary
+- **namespace**: which namespace to use
+- **context**: which kubecontext to use
+- **config**: path to which kubeconfig to use
+- **clusterRole**: If defined, DevPod will create a role binding for the given cluster role
+- **serviceAccount**: If defined, DevPod will use the given service account for the dev container
+- **buildRepository**: If defined, DevPod will build and push images to the given repository. If empty, DevPod will not build any images. Make sure you have push permissions for the given repository.
+- **helperImage**: The image DevPod will use to find out the cluster architecture. Defaults to alpine.
+- **buildkitImage**: The buildkit image to use for building dev containers.
+- **buildkitPrivileged**: If the buildkit pod should run as a privileged pod
+- **persistentVolumeSize**: The default size for the persistent volume to use.
+- **createNamespace**: If true, DevPod will try to create the namespace
+
+
+Example configuration:
+
+```yaml
+agent:
+  containerInactivityTimeout: 300
+  path: ${DEVPOD}
+  driver: kubernetes
+  kubernetes:
+    path: /usr/bin/kubectl
+    namespace: my-namespace-for-devpod
+    context: default
+    config: /opt/.kubeconfig
+    clusterRole: ""
+    serviceAccount: ""
+    buildRepository: "hub.docker.com"
+    helperImage: "ubuntu:latest"
+    buildkitImage: "moby/buildkit"
+    buildkitPrivileged: false
+    persistentVolumeSize: 10Gi
+    createNamespace: true
+```
+
+This way we 

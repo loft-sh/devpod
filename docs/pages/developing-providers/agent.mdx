@@ -2,3 +2,92 @@
 title: Provider Agent
 sidebar_label: Provider Agent
 ---
+
+Agent is a small program, part of DevPod, that is injected inside a provider's VM in order to
+ensure some integration and functionality:
+
+- deploying the containers workload
+- auto-shutdown after a period of inactivity 
+- forwarding of Git credentials
+- forwarding of Docker credentials
+
+:::info
+The agent is part of DevPod, no further action is needed by providers to support it
+:::
+
+:::info
+Agent's **Driver** specifies how the whole container workloads is deployed inside
+the provider's resources.
+
+Head over to the [drivers section](./driver.mdx) to understand how this impacts
+the provider
+:::
+
+## Configuring the Agent
+
+It is possible to configure the agent in two sections:
+
+- options section
+- agent section
+
+
+### Options section
+
+Inside of the [options section](./options.mdx) there are some agent-specific
+options that can be declared:
+
+```yaml
+  AGENT_PATH:
+    description: The path where to inject the DevPod agent to.
+    default: /opt/devpod/agent
+  INJECT_GIT_CREDENTIALS:
+    description: "If DevPod should inject git credentials into the remote host."
+    default: "true"
+  INJECT_DOCKER_CREDENTIALS:
+    description: "If DevPod should inject docker credentials into the remote host."
+    default: "true"
+```
+
+You can tweak options as needed.
+
+### Agent section
+
+A dedicated section for the agent is also needed, it's structured like:
+
+```yaml
+agent:
+  path: ${AGENT_PATH}
+  driver: docker/kubernetes # Optional, default: docker
+  inactivityTimeout: ${INACTIVITY_TIMEOUT}
+  injectGitCredentials: ${INJECT_GIT_CREDENTIALS}
+  injectDockerCredentials: ${INJECT_DOCKER_CREDENTIALS}
+  binaries:
+    MY_BINARY:
+      - os: linux
+        arch: amd64
+        path: https://url-to-binary.com
+        checksum: shasum-of-binary
+  exec:
+    shutdown: |-
+      ${MY_BINARY} stop
+```
+
+Breaking down the options:
+
+- **path**: where to place the agent on the machine
+- **driver**: which driver to use to run container, [check the Drivers section](./driver.mdx)
+- **inactivityTimeout**: after how much time to shut down the machine. Configured in the options.
+- **injectGitCredentials**: wether to inject git credentials in the machine. Configured in the options.
+- **injectDockerCredentials**: wether to inject docker the machine. Configured in the options.
+- **exec**: command to execute when shutting down the machine
+- **binaries**: this section can be used to declare additional binaries to download on the machine
+
+:::info
+The `binaries` section is useful to inject the binary provider also in the machine, in order to
+use the specific cloud's APIs to shut down the machine, if a simple `shutdown -h now` does not work
+:::
+
+:::info
+The `binaries` section follows the same syntax and structure of the [binaries section in the main provider manifest](./binaries.mdx)
+:::
+

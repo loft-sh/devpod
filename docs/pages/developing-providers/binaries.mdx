@@ -3,6 +3,87 @@ title: Provider Binaries
 sidebar_label: Provider Binaries
 ---
 
-* Binary Checksum
-* Archives
-* Use binaries in commands
+The `binaries` section, is dedicated for providers that work using a custom built
+program.
+
+An example of this type of provider are:
+
+- [devpod-provider-aws](https://github.com/loft-sh/devpod-provider-aws/releases)
+- [devpod-provider-azure](https://github.com/loft-sh/devpod-provider-azure/releases)
+- [devpod-provider-civo](https://github.com/loft-sh/devpod-provider-civo/releases)
+- [devpod-provider-digitalocean](https://github.com/loft-sh/devpod-provider-digitalocean/releases)
+- [devpod-provider-gcloud](https://github.com/loft-sh/devpod-provider-gcloud/releases)
+
+These providers will handle all the phases of the VM's lifecycle, using the
+specific cloud's APIs.
+
+Being a program that runs on your machine and that can potentially handle sensitive
+data (like passwords and tokens) DevPod has a dedicated section to handle binary's
+verification and retrieval.
+
+Each binary is declared as:
+
+```yaml
+binaries:
+  NAME:
+    - os: # Which OS is this specific binary
+      arch: # Binary arch
+      path: # Remote (URL) or local path to binary
+      checksum:  # sha sum of the binary
+```
+
+When [Adding a provider](../managing-providers/add-provider.mdx), DevPod will
+match the binary for your OS and Arch and download the specific one for it.
+
+Example of the binary section in a `provider.yaml`:
+
+```yaml
+binaries:
+  AWS_PROVIDER:
+    - os: linux
+      arch: amd64
+      path: https://github.com/loft-sh/devpod-provider-aws/releases/download/v0.0.1-alpha.15/devpod-provider-aws-linux-amd64
+      checksum: d1e774419d90c3ed399963d9322d57bfdcee189767eabb076a2c2e926bfd9b8b
+    - os: linux
+      arch: arm64
+      path: https://github.com/loft-sh/devpod-provider-aws/releases/download/v0.0.1-alpha.15/devpod-provider-aws-linux-arm64
+      checksum: fa15c13e3f0619170d002f9dae3ef41c9949a4595a71c5efe364d89ada604cec
+    - os: darwin
+      arch: amd64
+      path: https://github.com/loft-sh/devpod-provider-aws/releases/download/v0.0.1-alpha.15/devpod-provider-aws-darwin-amd64
+      checksum: fb89d41f6ce3e01e953f3ffd18f85bd5a42dd633abafd5d586dc9d9b1322166c
+    - os: darwin
+      arch: arm64
+      path: https://github.com/loft-sh/devpod-provider-aws/releases/download/v0.0.1-alpha.15/devpod-provider-aws-darwin-arm64
+      checksum: 82b6713069fa061ea59941600ed32a15f73806a9af3074d67a20ed367d18b2aa
+    - os: windows
+      arch: amd64
+      path: https://github.com/loft-sh/devpod-provider-aws/releases/download/v0.0.1-alpha.15/devpod-provider-aws-windows-amd64.exe
+      checksum: 49bd899d439f38d4e8647102db1c18b7a0d5242b3c09c89071b20a5444e20a81
+```
+
+### Binary Checksum
+
+Each binary is also verified over an expected checksum. This is important to
+ensure that whatever binary is declared in `provider.yaml` is indeed executed on
+the machine.
+
+## Use binaries in commands
+
+Each binary declared, will be available as command using the name as variable.
+
+For example:
+
+```yaml
+binaries:
+  MY_BINARY:
+    ....
+
+exec:
+  init: ${MY_BINARY} init
+  ....
+```
+
+:::info
+This variable will be available across the whole manifest.
+:::
