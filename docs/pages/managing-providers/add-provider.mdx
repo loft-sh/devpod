@@ -3,15 +3,20 @@ title: Add a Provider
 sidebar_label: Add a Provider
 ---
 
-Some providers are available for auto-installation:
+The DevPod team maintains providers for popular services such as:
 
-- AWS
-- Azure
-- Civo
-- Digital Ocean
-- Google Cloud
-- Terraform
-- SSH
+- Docker (docker)
+- Kubernetes (kubernetes)
+- SSH (ssh)
+- AWS (aws)
+- Google Cloud (gcloud)
+- Azure (azure)
+- Digital Ocean (digitalocean)
+
+These providers can be installed with the DevPod CLI in the following form:
+```
+devpod provider add docker
+```
 
 ## Via DevPod Desktop Application
 
@@ -26,46 +31,7 @@ the provider's needs.
 Under the hood, the Desktop Application will call a `devpod provider add PROVIDER`
 :::
 
-## Via DevPod CLI
-The providers in this list can easily be installed like:
-
-```sh
-devpod provider add aws
-devpod provider add azure
-devpod provider add civo
-devpod provider add digitalocean
-devpod provider add gcloud
-devpod provider add terraform
-devpod provider add ssh
-```
-
-## From Github
-
-You can specify a custom provider, directly from GitHub, by using the format
-`my-username/repo`, so for example:
-
-```sh
-devpod provider add loft-sh/devpod-provider-civo
-```
-
-## From Local Path
-
-If you have locally downloaded providers, you can also add them directly to
-DevPod, by pointing to the file path of `provider.yaml` manifest:
-
-```sh
-devpod provider add ../devpod-provider-mock/provider.yaml
-```
-
-## From URL
-
-You can also specify the URL to the `provider.yaml` file, for example:
-
-```sh
-devpod provider add https://raw.githubusercontent.com/loft-sh/devpod-provider-ssh/main/hack/provider/provider.yaml
-```
-
-### Using the Desktop Application
+### Adding a custom provider
 
 After you clicked the `Add` button in the `Providers` section, you can click the
 big `+` button to add a custom provider, then fill the `Source` section with either
@@ -75,6 +41,56 @@ big `+` button to add a custom provider, then fill the `Source` section with eit
 - A File Path to `provider.yaml`
 
 As explained previously.
+
+## Via DevPod CLI
+The providers in this list can easily be installed like:
+
+```sh
+devpod provider add docker
+devpod provider add kubernetes
+devpod provider add ssh
+devpod provider add aws
+devpod provider add azure
+devpod provider add gcloud
+devpod provider add digitalocean
+```
+
+:::info Multiple providers at the same time
+You can use the `--name` flag to add multiple providers of the same type with different options, for example `devpod provider add aws --name aws-gpu -o AWS_INSTANCE_TYPE=p3.8xlarge`
+:::
+
+### From Github
+
+You can specify a custom provider, directly from GitHub, by using the format
+`my-username/repo`, so for example:
+
+```sh
+devpod provider add loft-sh/devpod-provider-terraform
+```
+
+DevPod will search the latest release for a `provider.yaml` and download that automatically. This should work for private github repositories where DevPod will use the local https credentials to connect to the GitHub repository.
+
+If you want to install the provider from a different release, you can do the following:
+```sh
+devpod provider add my-org/my-repo@v0.0.1
+```
+
+### From Local Path
+
+If you have locally downloaded providers, you can also add them directly to
+DevPod, by pointing to the file path of `provider.yaml` manifest:
+
+```sh
+devpod provider add ../devpod-provider-mock/provider.yaml
+```
+
+### From URL
+
+You can also specify the URL to the `provider.yaml` file, for example:
+
+```sh
+devpod provider add https://raw.githubusercontent.com/loft-sh/devpod-provider-ssh/main/hack/provider/provider.yaml
+```
 
 ## Set Provider Options
 
@@ -170,7 +186,7 @@ In **the desktop app** the option is available in the option management interfac
 In **the CLI** you can set this option using:
 
 ```sh
-devpod provider set-options <provider-name> --single-machine
+devpod provider use <provider-name> --single-machine
 ```
 
 ## Default Provider

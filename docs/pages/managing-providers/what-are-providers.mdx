@@ -3,18 +3,17 @@ title: What are Providers?
 sidebar_label: What are Providers?
 ---
 
-Providers are simple programs that let DevPod build, manage and run the environments
-requested by the user.
+Providers are simple CLI programs that let DevPod create, manage and run the workspaces requested by the user.
+In the simplest form a provider defines a command to create, delete and connect to a virtual machine in a cloud.
 
-DevPod relies on a model of providers in order to ensure great flexibility and
-easy adaptability for any backend of choice.
+DevPod relies on the provider model in order to allow flexibility and adaptability for any backend of choice.
+Providers in DevPod are defined through a `provider.yaml` that define the necessary options, configuration, binaries and commands needed to handle workspace creation.
 
-See the [Add a provider](.//add-provider.mdx) section to know
-more on how to handle them.
+See the [Add a provider](./add-provider.mdx) section to learn more about how to add a provider to DevPod.
 
 ## Type of providers
 
-There are two type of providers possible:
+There are two types of providers:
 
 * Machine providers
 * Non-machine providers
@@ -37,8 +36,8 @@ of using VMs.
 
 An example of this can be the SSH, Kubernetes and Docker providers.
 
-Those providers will **not** create a VM, but directly run the environment's
-containers on the target.
+Those providers will **not** create any VMs, but instead directly run the workspace
+container on the target.
 
 ## Managing providers
 
