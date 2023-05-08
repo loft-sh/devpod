@@ -3,7 +3,7 @@ title: Quickstart Guide
 sidebar_label: Quickstart
 ---
 
-In this page we will cover all the basics to develop a functional provider for DevPod.
+On this page we will cover all the basics to develop a functional provider for DevPod.
 
 :::info Recommended Reading
 Before starting, it's best if you have already taken a look at [What are providers](../managing-providers/what-are-providers.mdx)
@@ -13,6 +13,19 @@ and [How to manage them](../managing-providers/add-provider.mdx).
 :::info Provider Examples
 Another good starting point are the official DevPod providers specified at [Add Provider](../managing-providers/add-provider.mdx)
 :::
+
+A very basic provider that reuses local Docker to spin up workspaces would look like this:
+```yaml
+name: my-first-provider  # Required name of the provider
+version: v0.0.1          # Required version of the provider
+agent:                   # DevPod Agent options
+  path: ${DEVPOD}        # Path to the current DevPod binary
+exec:
+  # Command specifies how to run a command in the environment.
+  # In this case we want to reuse the local environment, so we just execute the command in a local shell.
+  command: |-
+    sh -c "${COMMAND}"
+```
 
 ## Developing a DevPod provider
 
