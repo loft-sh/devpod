@@ -92,12 +92,6 @@ jobs:
       GOFLAGS: -mod=vendor
 
     steps:
-      - name: Check variables
-        run: |
-          echo "release id: [${{ needs.create-release.outputs.release_id }}]"
-          echo "package version: [${{ needs.create-release.outputs.package_version }}]"
-          echo "upload url: [${{ needs.create-release.outputs.upload_url }}]"
-
       - name: Checkout repository
         uses: actions/checkout@v3
 
@@ -221,7 +215,6 @@ jobs:
         with:
           projectPath: "./desktop"
           args: " --target ${{ matrix.settings.target }}"
-          includeUpdaterJson: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           TAURI_PRIVATE_KEY: ${{ secrets.TAURI_PRIVATE_KEY }}
@@ -258,12 +251,6 @@ jobs:
 
           cmd.exe /c ".\CodeSignTool.bat" sign -username="$username" -password="$password" -totp_secret="$totp_secret" -credential_id="$credential_id" -input_file_path="..\..\$input_file_path" -override
 
-      - name: Check Dir
-        if: matrix.settings.host == 'windows-latest'
-        shell: bash
-        run: |
-          ls ./desktop/src-tauri/target/${{ matrix.settings.target }}/release/bundle/msi
-
       - name: Upload Release Asset
         if: matrix.settings.host == 'windows-latest'
         uses: actions/github-script@v6
@@ -273,8 +260,11 @@ jobs:
 
             const msiName = "DevPod_${{ needs.create-release.outputs.package_version }}_x64_en-US.msi"
             const msiPath = `desktop/src-tauri/target/${{ matrix.settings.target }}/release/bundle/msi/${msiName}`
+            const msiZipName = `${msiName}.zip`
+            const msiZipPath = `desktop/src-tauri/target/${{ matrix.settings.target }}/release/bundle/msi/${msiZipName}`
             const cliName = "devpod-windows-${{ matrix.settings.arch }}.exe"
             const cliPath = "desktop/src-tauri/bin/devpod-cli-${{ matrix.settings.target }}.exe"
+
             const releaseId = "${{ needs.create-release.outputs.release_id }}"
 
             const releaseAssets = [{ name: msiName, path: msiPath }, { name: cliName, path: cliPath }]
@@ -349,6 +339,11 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
+      - name: Upload latest.json
+        uses: actions/upload-artifact@v3
+        with:
+          name: latest.json
+
   publish-updates:
     needs: [build-app, create-release]
     if: startsWith(github.ref, 'refs/tags/v') == true
@@ -359,23 +354,61 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v3
 
-      - name: Download `latest.json`
+      - name: Download latest.json
+        uses: actions/download-artifact@v3
+        with:
+          name: latest.json
+          path: desktop/
+
+      - name: Update `latest.json`
         uses: actions/github-script@v6
         with:
           script: |
+            // At this point, we should have `linux-x86_64`, `darwin-aarch64` and `darwin-x86_64`.
+            // We need to add the missing platform/arch combinations by hand
             const fs = require("fs")
-            
-            const release = await github.rest.repos.getRelease({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              release_id: ${{ needs.create-release.outputs.release_id }},
+
+            const releaseId = "${{ needs.create-release.outputs.release_id }}"
+            const releaseArgs = { owner: context.repo.owner, repo: context.repo.repo, release_id: releaseId}
+            const release = await github.rest.repos.getRelease({ ...releaseArgs })
+            console.log(release)
+
+            const latestJsonPath = "desktop/latest.json"
+            const latest = fs.readFileSync(latestJsonPath, { encoding: "utf8" }) 
+            const msiName = "DevPod_${{ needs.create-release.outputs.package_version }}_x64_en-US.msi"
+            const assetName = `${msiName}.zip`
+
+            const sigAsset = release.data.assets.find(a => a.name === `${assetName}.sig`)
+            console.log(sigAsset)
+            const res = await fetch(sigAsset.url, { headers: { accept: "application/octet-stream" } })
+            if(!res.ok) { 
+              core.setFailed(`${await res.text()}`)
+            }
+
+            latest.platforms["windows-x86_64"] = {
+              signature: await res.text(),
+              url: `https://github.com/loft-sh/devpod/releases/download/v${latest.version}/${assetName}`,
+            }
+
+            fs.writeFileSync("desktop/latest.json", JSON.stringify(latest))
+
+            const latestAsset = release.data.assets.find(a => a.name === "latest.json")
+            if(latestAsset) {
+              await github.rest.repos.deleteReleaseAsset({
+                ...releaseArgs,
+                asset_id: latestAsset.id
+              })
+            }
+
+            await github.rest.repos.uploadReleaseAsset({
+              ...releaseArgs,
+              headers: {
+                "content-type": "application/zip",
+                "content-length": fs.statSync(latestJsonPath).size
+              },
+              name: "latest.json",
+              data: fs.readFileSync(latestJsonPath),
             })
-            const asset = release.data.assets.find(a => a.name === "latest.json")
-            const res = await fetch(asset.url, { headers: {accept: "application/octet-stream" } })
-            if(!res.ok) { core.setFailed(`${await res.text()}`)}
-            
-            const buffer = await (await res.blob()).arrayBuffer()
-            fs.writeFileSync("desktop/latest.json", new Uint8Array(buffer))
 
       - name: Commit `latest.json`
         run: |
