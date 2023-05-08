@@ -100,7 +100,20 @@ func getWorkspace(devPodConfig *config.Config, args []string, changeLastUsed boo
 }
 
 // ResolveWorkspace tries to retrieve an already existing workspace or creates a new one
-func ResolveWorkspace(ctx context.Context, devPodConfig *config.Config, ide string, ideOptions []string, args []string, desiredID, desiredMachine string, providerUserOptions []string, changeLastUsed bool, log log.Logger) (client.WorkspaceClient, error) {
+func ResolveWorkspace(
+	ctx context.Context,
+	devPodConfig *config.Config,
+	ide string,
+	ideOptions []string,
+	args []string,
+	desiredID,
+	desiredMachine string,
+	providerUserOptions []string,
+	devContainerPath string,
+	changeLastUsed bool,
+	log log.Logger,
+) (client.WorkspaceClient, error) {
+	// verify desired id
 	if desiredID != "" {
 		if provider2.ProviderNameRegEx.MatchString(desiredID) {
 			return nil, fmt.Errorf("workspace name can only include smaller case letters, numbers or dashes")
@@ -119,6 +132,16 @@ func ResolveWorkspace(ctx context.Context, devPodConfig *config.Config, ide stri
 	workspace, err = ideparse.RefreshIDEOptions(devPodConfig, workspace, ide, ideOptions)
 	if err != nil {
 		return nil, err
+	}
+
+	// configure dev container source
+	if devContainerPath != "" && workspace.DevContainerPath != devContainerPath {
+		workspace.DevContainerPath = devContainerPath
+
+		err = provider2.SaveWorkspaceConfig(workspace)
+		if err != nil {
+			return nil, errors.Wrap(err, "save workspace")
+		}
 	}
 
 	// create workspace client

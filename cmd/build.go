@@ -27,6 +27,8 @@ type BuildCmd struct {
 	SkipDelete bool
 	Repository string
 	Machine    string
+
+	DevContainerPath string
 }
 
 // NewBuildCmd creates a new command
@@ -52,7 +54,19 @@ func NewBuildCmd(flags *flags.GlobalFlags) *cobra.Command {
 
 			// create a temporary workspace
 			exists := workspace2.Exists(devPodConfig, args)
-			workspaceClient, err := workspace2.ResolveWorkspace(ctx, devPodConfig, "", nil, args, "", cmd.Machine, cmd.ProviderOptions, false, log.Default)
+			workspaceClient, err := workspace2.ResolveWorkspace(
+				ctx,
+				devPodConfig,
+				"",
+				nil,
+				args,
+				"",
+				cmd.Machine,
+				cmd.ProviderOptions,
+				cmd.DevContainerPath,
+				false,
+				log.Default,
+			)
 			if err != nil {
 				return err
 			}
@@ -71,6 +85,7 @@ func NewBuildCmd(flags *flags.GlobalFlags) *cobra.Command {
 		},
 	}
 
+	buildCmd.Flags().StringVar(&cmd.DevContainerPath, "devcontainer-path", "", "The path to the devcontainer.json relative to the project")
 	buildCmd.Flags().StringSliceVar(&cmd.ProviderOptions, "provider-option", []string{}, "Provider option in the form KEY=VALUE")
 	buildCmd.Flags().BoolVar(&cmd.SkipDelete, "skip-delete", false, "If true will not delete the workspace after building it")
 	buildCmd.Flags().StringVar(&cmd.Machine, "machine", "", "The machine to use for this workspace. The machine needs to exist beforehand or the command will fail. If the workspace already exists, this option has no effect")

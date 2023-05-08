@@ -39,6 +39,8 @@ type UpCmd struct {
 	ProviderOptions      []string
 	PrebuildRepositories []string
 
+	DevContainerPath string
+
 	Recreate bool
 }
 
@@ -57,7 +59,19 @@ func NewUpCmd(flags *flags.GlobalFlags) *cobra.Command {
 				return err
 			}
 
-			client, err := workspace2.ResolveWorkspace(ctx, devPodConfig, cmd.IDE, cmd.IDEOptions, args, cmd.ID, cmd.Machine, cmd.ProviderOptions, true, log.Default)
+			client, err := workspace2.ResolveWorkspace(
+				ctx,
+				devPodConfig,
+				cmd.IDE,
+				cmd.IDEOptions,
+				args,
+				cmd.ID,
+				cmd.Machine,
+				cmd.ProviderOptions,
+				cmd.DevContainerPath,
+				true,
+				log.Default,
+			)
 			if err != nil {
 				return err
 			}
@@ -67,6 +81,7 @@ func NewUpCmd(flags *flags.GlobalFlags) *cobra.Command {
 	}
 
 	upCmd.Flags().StringSliceVar(&cmd.IDEOptions, "ide-option", []string{}, "IDE option in the form KEY=VALUE")
+	upCmd.Flags().StringVar(&cmd.DevContainerPath, "devcontainer-path", "", "The path to the devcontainer.json relative to the project")
 	upCmd.Flags().StringSliceVar(&cmd.ProviderOptions, "provider-option", []string{}, "Provider option in the form KEY=VALUE")
 	upCmd.Flags().BoolVar(&cmd.Recreate, "recreate", false, "If true will remove any existing containers and recreate them")
 	upCmd.Flags().StringSliceVar(&cmd.PrebuildRepositories, "prebuild-repository", []string{}, "Docker respository that hosts devpod prebuilds for this workspace")

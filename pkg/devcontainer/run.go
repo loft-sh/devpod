@@ -63,7 +63,7 @@ type UpOptions struct {
 }
 
 func (r *Runner) prepare() (*config.SubstitutedConfig, *WorkspaceConfig, error) {
-	rawParsedConfig, err := config.ParseDevContainerJSON(r.LocalWorkspaceFolder)
+	rawParsedConfig, err := config.ParseDevContainerJSON(r.LocalWorkspaceFolder, r.WorkspaceConfig.Workspace.DevContainerPath)
 	if err != nil {
 		return nil, nil, errors.Wrap(err, "parsing devcontainer.json")
 	} else if rawParsedConfig == nil {

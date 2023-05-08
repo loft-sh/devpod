@@ -30,6 +30,9 @@ type Workspace struct {
 	// Source is the source where this workspace will be created from
 	Source WorkspaceSource `json:"source,omitempty"`
 
+	// DevContainerPath is the relative path where the devcontainer.json is located.
+	DevContainerPath string `json:"devContainerPath,omitempty"`
+
 	// CreationTimestamp is the timestamp when this workspace was created
 	CreationTimestamp types.Time `json:"creationTimestamp,omitempty"`
 
