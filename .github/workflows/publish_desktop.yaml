@@ -283,8 +283,8 @@ jobs:
             const fs = require("fs")
 
             const releaseId = "${{ needs.create-release.outputs.release_id }}"
-            const assetName = "devpod-cli-${{ matrix.settings.target }}"
-            const assetPath = `desktop/src-tauri/bin/${assetName}`
+            const assetName = "devpod-${{ matrix.settings.os }}-${{ matrix.settings.arch }}"
+            const assetPath = "desktop/src-tauri/bin/devpod-cli-${{ matrix.settings.target }}"
 
             console.log("Attempting to upload release asset: ", assetName)
 
