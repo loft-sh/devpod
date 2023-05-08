@@ -14,3 +14,33 @@ devpod provider update <name>
 Be aware at this time, the desktop application does not have an update button
 for a provider.
 :::
+
+## From GitHub
+
+Similar to adding a provider, you can simply update via:
+```sh
+devpod provider update <provider-name> my-org/my-repo
+```
+
+If you want to update (or downgrade) a specific version, you can do:
+```sh
+devpod provider update <provider-name> github.com/my-org/my-repo@v0.2.0
+```
+
+## From URL
+
+You can also specify the URL to the `provider.yaml` file, for example:
+
+```sh
+devpod provider update <provider-name> http://path/to/my/provider.yaml
+```
+
+### From File
+
+Run the following command to update provider `provider-name`:
+```sh
+devpod provider update <provider-name> ../path-to-updated/provider.yaml
+```
+
+
+

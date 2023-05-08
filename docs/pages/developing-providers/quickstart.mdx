@@ -3,34 +3,36 @@ title: Quickstart Guide
 sidebar_label: Quickstart
 ---
 
-In this page we will cover all the basics to develop a functional provider for
-DevPod.
+In this page we will cover all the basics to develop a functional provider for DevPod.
 
-:::info
-Before starting, it's best if you have clear [What is a providers](../managing-providers/what-are-providers.mdx)
+:::info Recommended Reading
+Before starting, it's best if you have already taken a look at [What are providers](../managing-providers/what-are-providers.mdx)
 and [How to manage them](../managing-providers/add-provider.mdx).
 :::
 
-## Developing a provider
+## Developing a DevPod provider
 
-DevPod providers are programs that DevPod interacts with, in order to bring up
-the workspace.
+DevPod providers are small CLI programs defined through a `provider.yaml` that DevPod interacts with, in order to bring up the workspace.
 
 Providers are standalone programs that DevPod will call, parsing a **manifest**
-called `provider.yaml` that will instruct DevPod on how to interact with the program.
+called `provider.yaml` that will instruct DevPod on how to interact with the program. The most important sections of a `provider.yaml` are:
+* [exec](#how-devpod-interacts-with-a-provider): Defines what commands DevPod should execute to interact with the environment
+* [options](./options.mdx): Defines what Options the user can configure in the provider
+* [binaries](./binaries.mdx): Defines what additional helper binaries are required to run the provider
+* [agent](./agent.mdx): Defines configuration options for the provider such as drivers, auto-inactivity timeout and credentials injection
 
 ## Provider.yaml
 
-Parsing `provider.yaml` DevPod will know how to call the provider's program, in order
-to perform all the required actions to bring up or down a workspace.
+With the `provider.yaml`, DevPod will know how to call the provider's binary, in order
+to perform all the required actions to bring up or down an environment for a workspace.
 
-Following is an example minimal manifest for a provider:
+Following is a minimal example manifest for a provider:
 
 ```yaml
 name:  name-of-provider
 version: version-number
 description: quick description # Optional
-icon: https://url-to-icon.com
+icon: https://url-to-icon.com  # Shown in the Desktop App
 options:
   # Options for the provider, DevPod will pass these as
   # ENV Variables when calling the provider
@@ -41,41 +43,44 @@ options:
   AGENT_PATH:
     description: The path where to inject the DevPod agent to.
     default: /opt/devpod/agent
-  INJECT_GIT_CREDENTIALS:
-    description: "If DevPod should inject git credentials into the remote host."
-    default: "true"
-  INJECT_DOCKER_CREDENTIALS:
-    description: "If DevPod should inject docker credentials into the remote host."
-    default: "true"
 agent:
-  inactivityTimeout: ${INACTIVITY_TIMEOUT}
-  injectGitCredentials: ${INJECT_GIT_CREDENTIALS}
-  injectDockerCredentials: ${INJECT_DOCKER_CREDENTIALS}
   path: ${AGENT_PATH}
 exec:
-  init: # a command to init the provider, login to an account or similar
-  command: # a command to execute on the remote machine or container
-  create: # a command to create the machine
-  delete: # a command to delete the machine
-  start: # a command to start the machine
-  stop: # a command to stop the machine
-  status: # a command to get the machine's status
+  command: # Required: a command to execute on the remote machine or container
+  init:    # Optional: a command to init the provider, login to an account or similar
+  create:  # Optional: a command to create the machine
+  delete:  # Optional: a command to delete the machine
+  start:   # Optional: a command to start the machine
+  stop:    # Optional: a command to stop the machine
+  status:  # Optional: a command to get the machine's status
+binaries:  # Optional binaries DevPod should download for this provider
+  MY_BINARY: # Will be available as MY_BINARY environment variable in the exec section
+    ...
 ```
 
 ### How DevPod interacts with a provider
 
-DevPod will read from this yaml **what commands to execute**:
+DevPod uses the `exec` section within the `provider.yaml` to know what commands it needs to execute to interact with the provider environments.
+These "commands" are regular POSIX shell scripts that call a helper program or directly interact with the underlying system of the user to manage the environment.
 
-- init
-- command
-- create
-- delete
-- start
-- stop
-- status
+In the `exec` section of the `provider.yaml`, the following commands are allowed:
 
-Whatever command is put in those, it will be executed by DevPod to perform the
-corresponding action.
+- **command**: The only command that is required for a provider to work, which defines how to run a command in the environment. DevPod will use this command to inject itself into the environment and route all communication through the commands standard output and input. An example for a local development provider would be: `sh -c "${COMMAND}"`.
+- **init**: Optional command to check if options are defined correctly and the provider is ready to create environments. For example for the Docker provider, this command checks if Docker is installed and reachable locally.
+- **create**: Optional command how to create a machine. If this command is defined, the provider will automatically be treated as a machine provider and DevPod will also expect **delete** to be defined.
+- **delete**: Optional command how to delete a machine. Counter command to **create**.
+- **start**: Optional command how to start a stopped machine. Only usable for machine providers.
+- **stop**: Optional command how to stop a machine. Only usable for machine providers.
+- **status**: Optional command how to retrieve the status of a machine. Expects one of the following statuses on standard output:
+  - Running: Machine is running and ready
+  - Busy: Machine is doing something and DevPod should wait (e.g. terminating, starting, stopping etc.)
+  - Stopped: Machine is currently stopped
+  - NotFound: Machine is not found
+
+:::info Windows Compatibility
+DevPod will execute these commands on unix systems directly in a POSIX shell, while on Windows in an [emulated shell](https://github.com/mvdan/sh) to provide compatibility. However, not all commands, such as `grep`, `sed` etc. are available there and if needed, such functionality should be transferred to a small helper binary DevPod can download and install through the binaries section.
+:::
+
 For example, taking the [SSH Provider](https://github.com/loft-sh/devpod-provider-ssh):
 
 ```yaml
@@ -106,22 +111,19 @@ exec:
 The **init** is used to perform actions in order to verify and validate the options
 passed (in this case try a dummy command on the selected host)
 
-The **command** is used to perform commands on the target.
+The **command** is used to access the remote environment. `${COMMAND}` will be supplied by DevPod and is a placeholder for the command DevPod will execute.
 In case of [Machines providers](../managing-providers/what-are-providers.mdx) this will
 usually have to SSH on the VMs created.
 
 ### Non-Machine provider
 
-As you can see, for Non-Machine providers, not all entries are required, the minimum
-to have a working provider are:
-
-- init
+For Non-Machine providers that don't want to manage any machine lifecycle, the available commands that can be used are:
 - command
+- init (optional)
 
 ### Machine provider
 
-For Machine Providers, instead all of the commands are required in order to
-guarantee a full VMs lifecycle management.
+For Machine Providers, you can use all of the commands in order to guarantee a full VMs lifecycle management.
 
 ### Options
 
@@ -132,7 +134,7 @@ Head over to the [Options Page](./options.mdx) to know more about how to set the
 
 ### Agent
 
-One important part of the lifecycle management of the DevPod's provider's reources is the **Agent**.  
+One important part of the lifecycle management of the DevPod's provider's resources is the **Agent**.
 The agent is an helper that DevPod will inject into the workspace in order to perform utilities like:
 
 - auto-shutdown the VM after inactivity
@@ -140,3 +142,42 @@ The agent is an helper that DevPod will inject into the workspace in order to pe
 - inject docker credentials
 
 Head over to the [Agent page](./agent.mdx) to know more about the agent setup.
+
+### Binaries
+
+DevPod allows you to install additional binaries that help you to create cloud resources or access these. For example, the Google Cloud provider installs its own binary via:
+```yaml
+...
+binaries:
+  GCLOUD_PROVIDER:
+    - os: linux
+      arch: amd64
+      path: https://github.com/loft-sh/devpod-provider-gcloud/releases/download/v0.0.1-alpha.10/devpod-provider-gcloud-linux-amd64
+      checksum: 38f92457507563ee56ea40a2ec40196d12ac2bbd50a924d76f55827e96e5f831
+    - os: linux
+      arch: arm64
+      path: https://github.com/loft-sh/devpod-provider-gcloud/releases/download/v0.0.1-alpha.10/devpod-provider-gcloud-linux-arm64
+      checksum: 48e8dfa20962f1c3eb1e3da17d57842a0e26155df2b94377bcdf5b8070d7b17e
+    - os: darwin
+      arch: amd64
+      path: https://github.com/loft-sh/devpod-provider-gcloud/releases/download/v0.0.1-alpha.10/devpod-provider-gcloud-darwin-amd64
+      checksum: 43ee6ecb7855d282a0512ccf6055cce029895f173beb95a8c442f77560d26678
+    - os: darwin
+      arch: arm64
+      path: https://github.com/loft-sh/devpod-provider-gcloud/releases/download/v0.0.1-alpha.10/devpod-provider-gcloud-darwin-arm64
+      checksum: c2c2d57c5d48f22814f2393f61fd6a78bdc2cde7eabc3faffd8f35eaceec4422
+    - os: windows
+      arch: amd64
+      path: https://github.com/loft-sh/devpod-provider-gcloud/releases/download/v0.0.1-alpha.10/devpod-provider-gcloud-windows-amd64.exe
+      checksum: 9b81ec48c849f222aaf30f0cb85057d4e6619d1c0f787b27925c8b8adb431a58
+exec:
+  init: ${GCLOUD_PROVIDER} init
+  command: ${GCLOUD_PROVIDER} command
+  create: ${GCLOUD_PROVIDER} create
+  delete: ${GCLOUD_PROVIDER} delete
+  start: ${GCLOUD_PROVIDER} start
+  stop: ${GCLOUD_PROVIDER} stop
+  status: ${GCLOUD_PROVIDER} status
+```
+
+You can find more information on the [Provider binaries](./binaries.mdx) page.
