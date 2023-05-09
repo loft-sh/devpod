@@ -358,7 +358,7 @@ jobs:
             // At this point, we should have `linux-x86_64`, `darwin-aarch64` and `darwin-x86_64`.
             // We need to add the missing platform/arch combinations by hand
             const fs = require("fs")
-            
+
             async function fetchAsset(assetID) {
               const releaseAsset = await github.rest.repos.getReleaseAsset({
                 owner: context.repo.owner,
@@ -380,7 +380,7 @@ jobs:
             core.info(`Downloading ${latestAsset.name} (ID: ${latestAsset.id})`)
             const latestRes = await fetchAsset(latestAsset.id)
             const latest = await latestRes.json()
-            
+
             const msiName = `DevPod_${latest.version}_x64_en-US.msi`
             const assetName = `${msiName}.zip`
 
@@ -414,16 +414,3 @@ jobs:
               name: "latest.json",
               data: fs.readFileSync(latestDestPath),
             })
-
-      - name: Commit `latest.json`
-        run: |
-          git config --global user.name 'Loft Release Bot'
-          git config --global user.email 'info@loft.sh'
-          git add desktop/latest.json
-          git commit -am "chore(cd): update desktop/latest.json"
-          export COMMIT_SHA="$(git rev-parse HEAD)"
-          git fetch origin
-          git switch -c main origin/main
-          git pull
-          git cherry-pick $COMMIT_SHA
-          git push origin main
