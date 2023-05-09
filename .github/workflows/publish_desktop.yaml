@@ -417,8 +417,12 @@ jobs:
 
       - name: Commit `latest.json`
         run: |
-          git add desktop/latest.json
           git config --global user.name 'Loft Release Bot'
           git config --global user.email 'info@loft.sh'
+          git add desktop/latest.json
           git commit -am "chore(cd): update desktop/latest.json"
-          git push origin HEAD:main --force
+          export COMMIT_SHA="$(git rev-parse HEAD)"
+          git checkout main
+          git pull
+          git cherry-pick $COMMIT_SHA
+          git push origin main
