@@ -358,32 +358,44 @@ jobs:
             // At this point, we should have `linux-x86_64`, `darwin-aarch64` and `darwin-x86_64`.
             // We need to add the missing platform/arch combinations by hand
             const fs = require("fs")
+            
+            async function fetchAsset(assetID) {
+              const releaseAsset = await github.rest.repos.getReleaseAsset({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                asset_id: assetID,
+                headers: { accept: "application/octet-stream" } 
+              })
+              const res = await fetch(releaseAsset.url, { headers: { accept: "application/octet-stream" } })
+              if (!res.ok) { core.setFailed(`${await res.text()}`) }
+              
+              return res
+            }
 
             const releaseId = "${{ needs.create-release.outputs.release_id }}"
             const releaseArgs = { owner: context.repo.owner, repo: context.repo.repo, release_id: releaseId}
             const release = await github.rest.repos.getRelease({ ...releaseArgs })
-            console.log(release)
 
             const latestAsset = release.data.assets.find(a => a.name === "latest.json")
-            const latestRes = await fetch(latestAsset.url, { headers: { accept: "application/octet-stream" } })
-            if (!latestRes.ok) { core.setFailed(`${await latestRes.text()}`) }
-
+            core.info(`Downloading ${latestAsset.name} (ID: ${latestAsset.id})`)
+            const latestRes = await fetchAsset(latestAsset.id)
             const latest = await latestRes.json()
+            
             const msiName = `DevPod_${latest.version}_x64_en-US.msi`
             const assetName = `${msiName}.zip`
 
             const sigAsset = release.data.assets.find(a => a.name === `${assetName}.sig`)
-            console.log(sigAsset)
-            const res = await fetch(sigAsset.url, { headers: { accept: "application/octet-stream" } })
-            if (!res.ok) { core.setFailed(`${await res.text()}`) }
+            core.info(`Downloading ${sigAsset.name} (ID: ${sigAsset.id})`)
+            const sig = await fetchAsset(sigAsset.id) 
 
-            latest.platforms["windows-x86_64"] = {
-              signature: await res.text(),
+            latest.platforms["windows-x86_64"] = { 
+              signature: await sig.text(),
               url: `https://github.com/loft-sh/devpod/releases/download/${process.env.GITHUB_REF_NAME}/${assetName}`,
             }
-
+            const latestJSON = JSON.stringify(latest)
             const latestDestPath = "desktop/latest.json"
-            fs.writeFileSync(latestDestPath, JSON.stringify(latest))
+            core.info(`Writing latest.json to disk (${latestDestPath}): ${latestJSON}`)
+            fs.writeFileSync(latestDestPath, latestJSON)
 
             // Clean up .msi.zip.sig file
             const msiZipSigAsset = release.data.assets.find(a => a.name.endsWith(".msi.zip.sig"))
