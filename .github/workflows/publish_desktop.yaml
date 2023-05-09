@@ -421,4 +421,4 @@ jobs:
           git config --global user.name 'Loft Release Bot'
           git config --global user.email 'info@loft.sh'
           git commit -am "chore(cd): update desktop/latest.json"
-          git push origin HEAD:main
+          git push origin HEAD:main --force
