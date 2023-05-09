@@ -97,7 +97,7 @@
     "updater": {
       "active": true,
       "endpoints": [
-        "https://raw.githubusercontent.com/loft-sh/devpod/main/desktop/latest.json"
+        "https://github.com/loft-sh/devpod/releases/latest/download/latest.json"
       ],
       "dialog": true,
       "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IEY1NDg1NDE4MzA1NDI3QjcKUldTM0oxUXdHRlJJOVhyNUtFc2xkNFZyTmE2R2w0dTRXTFF6OUVMSW03ekphejlPM3U1M2FHUCsK",
