@@ -80,6 +80,9 @@ fn main() -> anyhow::Result<()> {
             custom_protocol.setup(app.handle());
 
             let app_handle = app.handle();
+            check_update(app_handle);
+
+            let app_handle = app.handle();
             tauri::async_runtime::spawn(async move {
                 let mut is_ready = false;
                 let mut messages: VecDeque<UiMessage> = VecDeque::new();
@@ -169,4 +172,26 @@ fn main() -> anyhow::Result<()> {
         });
 
     Ok(())
+}
+
+fn check_update(app_handle: AppHandle) {
+    tauri::async_runtime::spawn(async move {
+        loop {
+            match tauri::updater::builder(app_handle.clone()).check().await {
+                Ok(update) => {
+                    if update.is_update_available() {
+                        // TODO: Might  need to be run on the main thread, check once repo is public
+                        if let Err(e) = update.download_and_install().await {
+                            error!("Failed to download and install update: {}", e)
+                        }
+                    }
+                }
+                Err(e) => {
+                    error!("Failed to get update: {}", e);
+                }
+            }
+
+            tokio::time::sleep(std::time::Duration::from_secs(60 * 10)).await;
+        }
+    });
 }
