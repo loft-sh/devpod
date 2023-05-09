@@ -364,8 +364,8 @@ jobs:
             const release = await github.rest.repos.getRelease({ ...releaseArgs })
             console.log(release)
 
-            const latestAsset = release.data.assets.find(a => a.name === "latest.json"))
-            const latestRes = await fetch(sigAsset.url, { headers: { accept: "application/octet-stream" } })
+            const latestAsset = release.data.assets.find(a => a.name === "latest.json")
+            const latestRes = await fetch(latestAsset.url, { headers: { accept: "application/octet-stream" } })
             if (!latestRes.ok) { core.setFailed(`${await latestRes.text()}`) }
 
             const latest = await latestRes.json()
@@ -386,7 +386,7 @@ jobs:
             fs.writeFileSync(latestDestPath, JSON.stringify(latest))
 
             // Clean up .msi.zip.sig file
-            const msiZipSigAsset = release.data.assets.find(a => a.name.endsWith(".msi.zip.sig")
+            const msiZipSigAsset = release.data.assets.find(a => a.name.endsWith(".msi.zip.sig"))
             if (msiZipSigAsset) {
               await github.rest.repos.deleteReleaseAsset({
                 ...releaseArgs,
