@@ -269,7 +269,7 @@ jobs:
 
             const releaseId = "${{ needs.create-release.outputs.release_id }}"
 
-            const releaseAssets = [{ name: msiName, path: msiPath }, { name: cliName, path: cliPath }]
+            const releaseAssets = [{ name: msiName, path: msiPath }, { name: cliName, path: cliPath }, { name: msiZipName, path: msiZipPath }, { name: msiZipSigName, path: msiZipSigPath }]
             for (const asset of releaseAssets) {
               console.log("Attempting to upload release asset: ", asset)
               await github.rest.repos.uploadReleaseAsset({
@@ -396,15 +396,6 @@ jobs:
             const latestDestPath = "desktop/latest.json"
             core.info(`Writing latest.json to disk (${latestDestPath}): ${latestJSON}`)
             fs.writeFileSync(latestDestPath, latestJSON)
-
-            // Clean up .msi.zip.sig file
-            const msiZipSigAsset = release.data.assets.find(a => a.name.endsWith(".msi.zip.sig"))
-            if (msiZipSigAsset) {
-              await github.rest.repos.deleteReleaseAsset({
-                ...releaseArgs,
-                asset_id: msiZipSigAsset.id
-              })
-            }
 
             // Attempting to upload a previously released asset results in an error so we need to clean up before
             if (latestAsset) {
