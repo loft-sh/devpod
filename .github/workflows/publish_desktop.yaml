@@ -422,7 +422,8 @@ jobs:
           git add desktop/latest.json
           git commit -am "chore(cd): update desktop/latest.json"
           export COMMIT_SHA="$(git rev-parse HEAD)"
-          git checkout main
+          git fetch origin
+          git switch -c main origin/main
           git pull
           git cherry-pick $COMMIT_SHA
           git push origin main
