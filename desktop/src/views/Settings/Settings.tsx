@@ -1,49 +1,32 @@
-import { QuestionIcon } from "@chakra-ui/icons"
 import {
   Button,
   Checkbox,
   Code,
   Divider,
   Heading,
+  HeadingProps,
   HStack,
   Radio,
   RadioGroup,
   Text,
-  Tooltip,
   useColorModeValue,
   VStack,
 } from "@chakra-ui/react"
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { ReactNode } from "react"
 import { client } from "../../client"
-import { ErrorMessageBox, ToolbarTitle } from "../../components"
+import { ToolbarTitle, useInstallCLI } from "../../components"
 import { TSettings, useChangeSettings } from "../../contexts"
-import { CheckCircle, ExclamationCircle } from "../../icons"
-import { isError } from "../../lib"
-import { QueryKeys } from "../../queryKeys"
 
 export function Settings() {
   const { settings, set } = useChangeSettings()
-  const { data: isCLIInstalled } = useQuery<boolean>({
-    queryKey: QueryKeys.IS_CLI_INSTALLED,
-    queryFn: async () => {
-      return (await client.isCLIInstalled()).unwrap()!
-    },
-  })
-  const queryClient = useQueryClient()
   const {
-    mutate: addBinaryToPath,
-    isLoading,
-    error,
-    status,
-  } = useMutation({
-    mutationFn: async () => {
-      ;(await client.installCLI()).unwrap()
-    },
-    onSettled: () => {
-      queryClient.invalidateQueries(QueryKeys.IS_CLI_INSTALLED)
-    },
-  })
+    badge: installCLIBadge,
+    button: installCLIButton,
+    helpText: installCLIHelpText,
+    errorMessage: installCLIErrorMessage,
+  } = useInstallCLI()
+
+  const headingProps: HeadingProps = { marginBottom: 2, as: "h4", size: "md" }
 
   return (
     <>
@@ -52,11 +35,9 @@ export function Settings() {
           Settings
         </Heading>
       </ToolbarTitle>
-      <VStack align="start" spacing={10}>
+      <VStack align="start" spacing={6}>
         <VStack align="start">
-          <Heading as="h4" size="md" marginBottom={4}>
-            Appearance
-          </Heading>
+          <Heading {...headingProps}>Appearance</Heading>
 
           <RadioGroup
             value={settings.sidebarPosition}
@@ -70,9 +51,7 @@ export function Settings() {
         </VStack>
 
         <VStack align="start">
-          <Heading as="h4" size="md" marginBottom={4}>
-            Debugging
-          </Heading>
+          <Heading {...headingProps}>Debugging</Heading>
 
           <Checkbox
             isChecked={settings.debugFlag}
@@ -86,38 +65,19 @@ export function Settings() {
         </VStack>
 
         <VStack align="start">
-          <HStack marginBottom={4}>
-            <Heading as="h4" size="md">
+          <HStack marginBottom={headingProps.marginBottom}>
+            <Heading as={headingProps.as} size={headingProps.size}>
               CLI
             </Heading>
-            {isCLIInstalled === undefined ? (
-              <Tooltip label="No information available">
-                <QuestionIcon boxSize={5} color="gray.400" />
-              </Tooltip>
-            ) : isCLIInstalled ? (
-              <Tooltip label="Installed">
-                <CheckCircle boxSize={5} color="green.500" />
-              </Tooltip>
-            ) : (
-              <Tooltip label="Not Installed">
-                <ExclamationCircle boxSize={5} color="red.500" />
-              </Tooltip>
-            )}
+            {installCLIBadge}
           </HStack>
 
-          <Button
-            isLoading={isLoading}
-            onClick={() => addBinaryToPath()}
-            isDisabled={status === "success"}>
-            Add CLI to Path
-          </Button>
-          <SettingDescription>
-            Adds the DevPod CLI to your local users <Code>$PATH</Code>
-          </SettingDescription>
-          {isError(error) && <ErrorMessageBox error={error} />}
+          {installCLIButton}
+          <SettingDescription>{installCLIHelpText}</SettingDescription>
+          {installCLIErrorMessage}
         </VStack>
         <Divider />
-        <Heading as="h4" size="md" color="red.600">
+        <Heading {...headingProps} color="red.600">
           Danger Zone
         </Heading>
         <Button variant="outline" colorScheme="red" onClick={() => client.quit()}>
@@ -132,7 +92,7 @@ function SettingDescription({ children }: TSettingDescriptionProps) {
   const descriptionColor = useColorModeValue("gray.500", "gray.400")
 
   return (
-    <Text paddingLeft={6} color={descriptionColor}>
+    <Text paddingLeft={6} color={descriptionColor} fontSize="sm">
       {children}
     </Text>
   )

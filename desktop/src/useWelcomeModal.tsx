@@ -1,5 +1,4 @@
 import {
-  Button,
   Code,
   Heading,
   HStack,
@@ -13,13 +12,11 @@ import {
   useDisclosure,
   VStack,
 } from "@chakra-ui/react"
-import { useMutation } from "@tanstack/react-query"
 import { useCallback, useEffect, useMemo } from "react"
 import { useNavigate } from "react-router"
 import { client } from "./client"
-import { CollapsibleSection, ErrorMessageBox, LoftOSSBadge, Step, Steps } from "./components"
-import { Briefcase, CheckCircle, CommandLine, DevpodWordmark, Stack3D } from "./icons"
-import { isError } from "./lib"
+import { CollapsibleSection, LoftOSSBadge, Step, Steps, useInstallCLI } from "./components"
+import { Briefcase, CommandLine, DevpodWordmark, Stack3D } from "./icons"
 import { Routes } from "./routes"
 import { SetupProviderSteps } from "./views"
 
@@ -29,15 +26,11 @@ export function useWelcomeModal() {
   const navigate = useNavigate()
   const { isOpen, onClose, onOpen } = useDisclosure()
   const {
-    mutate: addBinaryToPath,
-    isLoading,
-    error,
-    status,
-  } = useMutation<void, Error>({
-    mutationFn: async () => {
-      ;(await client.installCLI()).unwrap()
-    },
-  })
+    badge: installCLIBadge,
+    button: installCLIButton,
+    helpText: installCLIHelpText,
+    errorMessage: installCLIErrorMessage,
+  } = useInstallCLI()
   const handleSetupFinished = useCallback(() => {
     onClose()
     navigate(Routes.WORKSPACE_CREATE)
@@ -144,13 +137,16 @@ export function useWelcomeModal() {
                       <Code variant="decorative">Settings</Code> tab.
                     </Text>
                   </Text>
-                  <Button
-                    isLoading={isLoading}
-                    isDisabled={status === "success"}
-                    onClick={() => addBinaryToPath()}>
-                    {status === "success" ? <CheckCircle color="green.500" /> : "Add CLI to Path"}
-                  </Button>
-                  {isError(error) && <ErrorMessageBox error={error} />}
+                  <VStack align="start">
+                    <HStack>
+                      {installCLIButton}
+                      {installCLIBadge}
+                    </HStack>
+                    <Text color="gray.500" fontSize="sm">
+                      {installCLIHelpText}
+                    </Text>
+                  </VStack>
+                  {installCLIErrorMessage}
                 </Step>
 
                 <Step>
@@ -174,7 +170,15 @@ export function useWelcomeModal() {
         </ModalContent>
       </Modal>
     )
-  }, [addBinaryToPath, error, handleSetupFinished, isLoading, isOpen, onClose, status])
+  }, [
+    handleSetupFinished,
+    installCLIBadge,
+    installCLIButton,
+    installCLIErrorMessage,
+    installCLIHelpText,
+    isOpen,
+    onClose,
+  ])
 
   return { modal }
 }
