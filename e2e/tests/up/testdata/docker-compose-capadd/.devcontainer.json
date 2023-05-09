@@ -1,0 +1,10 @@
+{
+	"name": "Go",
+	"dockerComposeFile": "./docker-compose.yaml",
+	"service": "app",
+	"workspaceFolder": "/workspaces",
+	"capAdd": [
+		"SYS_PTRACE",
+		"NET_ADMIN"
+ 	]
+}

@@ -18,7 +18,7 @@ var _ = DevPodDescribe("devpod provider test suite", func() {
 	ginkgo.It("should add simple provider and delete it", func() {
 		tempDir, err := framework.CopyToTempDir("tests/provider/testdata/simple-k8s-provider")
 		framework.ExpectNoError(err)
-		defer framework.CleanupTempDir(initialDir, tempDir)
+		ginkgo.DeferCleanup(framework.CleanupTempDir, initialDir, tempDir)
 
 		f := framework.NewDefaultFramework(initialDir + "/bin")
 
@@ -77,7 +77,7 @@ var _ = DevPodDescribe("devpod provider test suite", func() {
 
 		// Ensure that provider 2 was updated
 		ctx, cancel = context.WithDeadline(context.Background(), time.Now().Add(30*time.Second))
-		err = f.DevPodProviderOptionsCheckNamespaceDescription(ctx, "provider2", "Updated namespace parameter description")
+		err = f.DevPodProviderOptionsCheckNamespaceDescription(ctx, "provider2", "Updated namespace parameter")
 		framework.ExpectNoError(err)
 		cancel()
 

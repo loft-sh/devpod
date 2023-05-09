@@ -1,0 +1,17 @@
+{
+	"name": "Go",
+	"dockerComposeFile": "./docker-compose.yaml",
+	"service": "app",
+	"workspaceFolder": "/workspaces",
+	"remoteEnv": {
+		"FOO": "BAR",
+		"LOCAL_ENV_HOME": "${localEnv:HOME}",
+		"CONTAINER_ENV_PATH": "${containerEnv:PATH}"
+	},
+	"initializeCommand": {
+		"one": "echo initializeCommandOne > ./initialize-command1.out",
+		"two":[
+			"sh", "-c", "echo -n \"initializeCommandTwo\" > ./initialize-command2.out"
+		]
+	}
+}

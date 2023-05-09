@@ -1,0 +1,12 @@
+{
+	"name": "Go",
+	"dockerComposeFile": "./docker-compose.yaml",
+	"service": "app",
+	"workspaceFolder": "/workspaces",
+	"remoteEnv": {
+		"FOO": "BAR"
+	},
+	"postCreateCommand": [
+		"sh", "-c", "echo $FOO > $HOME/remote-env.out"
+	]
+}

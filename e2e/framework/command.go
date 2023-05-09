@@ -3,15 +3,18 @@ package framework
 import (
 	"context"
 	"fmt"
-
 	"github.com/loft-sh/devpod/cmd/flags"
 	"github.com/loft-sh/devpod/cmd/machine"
 	"github.com/loft-sh/devpod/cmd/provider"
+	"path/filepath"
 )
 
 // DevPodUp executes the `devpod up` command in the test framework
-func (f *Framework) DevPodUp(ctx context.Context, workspace string) error {
-	err := f.ExecCommand(ctx, true, true, "Successfully started vscode in browser mode.", []string{"up", "--ide", "none", workspace})
+func (f *Framework) DevPodUp(ctx context.Context, workspace string, additionalArgs ...string) error {
+	upArgs := []string{"up", "--ide", "none", workspace}
+	upArgs = append(upArgs, additionalArgs...)
+
+	err := f.ExecCommand(ctx, true, true, fmt.Sprintf("Run 'ssh %s.devpod' to ssh into the devcontainer", filepath.Base(workspace)), upArgs)
 	if err != nil {
 		return fmt.Errorf("devpod up failed: %s", err.Error())
 	}
@@ -65,4 +68,8 @@ func (f *Framework) DevPodMachineCreate(args []string) error {
 func (f *Framework) DevPodMachineDelete(args []string) error {
 	deleteCmd := machine.NewDeleteCmd(&flags.GlobalFlags{})
 	return deleteCmd.RunE(nil, args)
+}
+
+func (f *Framework) DevPodWorkspaceDelete(ctx context.Context, workspace string) error {
+	return f.ExecCommand(ctx, false, true, fmt.Sprintf("Successfully deleted workspace '%s'", workspace), []string{"delete", workspace})
 }

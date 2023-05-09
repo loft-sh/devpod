@@ -36,7 +36,8 @@ func NewDockerDriver(workspaceInfo *provider2.AgentWorkspaceInfo, log log.Logger
 }
 
 type dockerDriver struct {
-	Docker *docker.DockerHelper
+	Docker  *docker.DockerHelper
+	Compose *compose.ComposeHelper
 
 	Log log.Logger
 }
@@ -90,7 +91,13 @@ func (d *dockerDriver) InspectImage(ctx context.Context, imageName string) (*con
 }
 
 func (d *dockerDriver) ComposeHelper() (*compose.ComposeHelper, error) {
-	return compose.NewComposeHelper("docker-compose", d.Docker)
+	if d.Compose != nil {
+		return d.Compose, nil
+	}
+
+	var err error
+	d.Compose, err = compose.NewComposeHelper(compose.DockerComposeCommand, d.Docker)
+	return d.Compose, err
 }
 
 func (d *dockerDriver) FindDevContainer(ctx context.Context, labels []string) (*config.ContainerDetails, error) {

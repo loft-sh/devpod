@@ -1,0 +1,10 @@
+{
+	"name": "Go",
+	"dockerComposeFile": "./docker-compose.yaml",
+	"service": "app",
+	"workspaceFolder": "/workspaces",
+	"remoteUser": "root",
+	"postCreateCommand": [
+		"sh", "-c", "whoami > $HOME/remote-user.out"
+	]
+}

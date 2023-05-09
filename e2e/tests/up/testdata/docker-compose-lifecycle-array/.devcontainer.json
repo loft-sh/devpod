@@ -1,0 +1,24 @@
+{
+	"name": "Go",
+	"dockerComposeFile": "./docker-compose.yaml",
+	"service": "app",
+	"workspaceFolder": "/workspaces",
+	"initializeCommand": [
+		"sh", "-c", "echo -n \"initializeCommand\" > ./initialize-command.out"
+	],
+	"onCreateCommand": [
+		"sh", "-c", "echo -n \"onCreateCommand\" > $HOME/on-create-command.out"
+	],
+	"updateContentCommand": [
+		"sh", "-c", "echo -n \"updateContentCommand\" > $HOME/update-content-command.out"
+	],
+	"postCreateCommand": [
+		"sh", "-c", "echo -n \"postCreateCommand\" > $HOME/post-create-command.out"
+	],
+	"postStartCommand": [
+		"sh", "-c", "echo -n \"postStartCommand\" > $HOME/post-start-command.out"
+	],
+	"postAttachCommand": [
+		"sh", "-c", "echo -n \"postAttachCommand\" > $HOME/post-attach-command.out"
+	]
+}
