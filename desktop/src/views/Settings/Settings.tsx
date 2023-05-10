@@ -8,6 +8,7 @@ import {
   HStack,
   Radio,
   RadioGroup,
+  Select,
   Text,
   useColorModeValue,
   VStack,
@@ -16,8 +17,13 @@ import { ReactNode } from "react"
 import { client } from "../../client"
 import { ToolbarTitle, useInstallCLI } from "../../components"
 import { TSettings, useChangeSettings } from "../../contexts"
+import { QueryKeys } from "../../queryKeys"
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
+import { getIDEDisplayName } from "../../lib"
+import { TIDE } from "../../types"
 
 export function Settings() {
+  const queryClient = useQueryClient()
   const { settings, set } = useChangeSettings()
   const {
     badge: installCLIBadge,
@@ -25,7 +31,19 @@ export function Settings() {
     helpText: installCLIHelpText,
     errorMessage: installCLIErrorMessage,
   } = useInstallCLI()
-
+  const idesQuery = useQuery({
+    queryKey: QueryKeys.IDES,
+    queryFn: async () => (await client.ides.listAll()).unwrap(),
+  })
+  const { mutate: updateDefaultIDE } = useMutation({
+    mutationFn: async ({ ide }: { ide: NonNullable<TIDE["name"]> }) => {
+      ;(await client.ides.useIDE(ide)).unwrap()
+    },
+    onSettled: () => {
+      queryClient.invalidateQueries(QueryKeys.IDES)
+    },
+  })
+  const defaultIDE = idesQuery.data?.find((ide) => ide.default)
   const headingProps: HeadingProps = { marginBottom: 2, as: "h4", size: "md" }
 
   return (
@@ -61,6 +79,26 @@ export function Settings() {
           <SettingDescription>
             Run all devpods command with the <Code>--debug</Code> flag, making it easier to
             troubleshoot
+          </SettingDescription>
+        </VStack>
+
+        <VStack align="start">
+          <Heading {...headingProps}>IDE</Heading>
+
+          <Select
+            maxWidth="52"
+            textTransform="capitalize"
+            onChange={(e) => updateDefaultIDE({ ide: e.target.value })}
+            value={defaultIDE ? defaultIDE.name! : undefined}>
+            {idesQuery.data?.map((ide) => (
+              <option key={ide.name} value={ide.name!}>
+                {getIDEDisplayName(ide)}
+              </option>
+            ))}
+          </Select>
+          <SettingDescription>
+            Select the default IDE you&apos;re using for workspaces. This will be overriden whenever
+            you create a workspace with a different IDE
           </SettingDescription>
         </VStack>
 
