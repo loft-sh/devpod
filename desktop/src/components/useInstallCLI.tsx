@@ -1,14 +1,27 @@
 import { QuestionIcon } from "@chakra-ui/icons"
-import { Button, Code, Tooltip } from "@chakra-ui/react"
+import {
+  AlertDialog,
+  AlertDialogBody,
+  AlertDialogContent,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogOverlay,
+  Button,
+  Code,
+  Tooltip,
+  useDisclosure,
+} from "@chakra-ui/react"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
-import { useMemo } from "react"
-import { CheckCircle, ExclamationCircle } from "../icons"
+import { useMemo, useRef } from "react"
 import { client } from "../client"
+import { CheckCircle, ExclamationCircle } from "../icons"
+import { Err, Failed, isError, isMacOS, isWindows } from "../lib"
 import { QueryKeys } from "../queryKeys"
-import { isError, isWindows } from "../lib"
 import { ErrorMessageBox } from "./Error"
 
 export function useInstallCLI() {
+  const { isOpen, onOpen: showAlertDialog, onClose } = useDisclosure()
+  const cancelRef = useRef<HTMLButtonElement>(null)
   const { data: isCLIInstalled } = useQuery<boolean>({
     queryKey: QueryKeys.IS_CLI_INSTALLED,
     queryFn: async () => {
@@ -21,12 +34,18 @@ export function useInstallCLI() {
     isLoading,
     error,
     status,
-  } = useMutation({
-    mutationFn: async () => {
-      ;(await client.installCLI()).unwrap()
+  } = useMutation<void, Err<Failed>, { force?: boolean }>({
+    mutationFn: async ({ force = false }) => {
+      ;(await client.installCLI(force)).unwrap()
+      // throw Return.Failed("Did not work")
     },
     onSettled: () => {
       queryClient.invalidateQueries(QueryKeys.IS_CLI_INSTALLED)
+    },
+    onError: (_, { force }) => {
+      if (isMacOS && !force) {
+        showAlertDialog()
+      }
     },
   })
 
@@ -52,15 +71,40 @@ export function useInstallCLI() {
 
   const button = useMemo(() => {
     return (
-      <Button
-        variant="outline"
-        isLoading={isLoading}
-        onClick={() => addBinaryToPath()}
-        isDisabled={status === "success"}>
-        Add CLI to Path
-      </Button>
+      <>
+        <Button
+          variant="outline"
+          isLoading={isLoading}
+          onClick={() => addBinaryToPath({})}
+          isDisabled={status === "success"}>
+          Add CLI to Path
+        </Button>
+        <AlertDialog isOpen={isOpen} onClose={onClose} leastDestructiveRef={cancelRef}>
+          <AlertDialogOverlay>
+            <AlertDialogContent>
+              <AlertDialogHeader>Failed to add CLI to path</AlertDialogHeader>
+              <AlertDialogBody>
+                Do you want to retry with Admin Privileges? You will be prompted for authentication
+              </AlertDialogBody>
+              <AlertDialogFooter>
+                <Button variant="ghost" ref={cancelRef} onClick={onClose}>
+                  Cancel
+                </Button>
+                <Button
+                  variant="solid"
+                  onClick={() => {
+                    addBinaryToPath({ force: true })
+                    onClose()
+                  }}>
+                  Okay
+                </Button>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialogOverlay>
+        </AlertDialog>
+      </>
     )
-  }, [addBinaryToPath, isLoading, status])
+  }, [addBinaryToPath, isLoading, isOpen, onClose, status])
 
   const helpText = useMemo(() => {
     return (
@@ -82,7 +126,7 @@ export function useInstallCLI() {
   }, [])
 
   const errorMessage = useMemo(() => {
-    return isError(error) && <ErrorMessageBox error={error} />
+    return error !== null && isError(error.val) && <ErrorMessageBox error={error.val} />
   }, [error])
 
   return {
