@@ -27,6 +27,16 @@ exec:
     sh -c "${COMMAND}"
 ```
 
+You can save this provider to a file called `provider.yaml` and then add it via:
+```
+devpod provider add ./path/to/provider.yaml
+```
+
+Then try to start a new workspace with:
+```
+devpod up github.com/microsoft/vscode-remote-try-go
+```
+
 ## Developing a DevPod provider
 
 DevPod providers are small CLI programs defined through a `provider.yaml` that DevPod interacts with, in order to bring up the workspace.

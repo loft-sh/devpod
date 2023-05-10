@@ -81,10 +81,12 @@ A list of available features can be found [here](https://containers.dev/features
 
 ## devcontainer.json Development Flow
 
-When working on the `devcontainer.json` itself, it's important to understand when DevPod will apply the new configuration.
+When working on the `devcontainer.json` itself, it's important to understand when DevPod will apply new configuration.
 
-A naive approach would be to delete and recreate a workspace after each `devcontainer.json` change (which obviously works), but DevPod allows you to make changes to the configuration on the fly and reapply them in two modes:
-* Running `devpod up my-workspace`: This will apply all new configuration that is not related on how to start or build the container and will apply immediately on the next start. This includes: port-forwarding, startup commands and remote environment variables. The Desktop app equivalent for this is the 'Open' button.
-* Running `devpod up my-workspace --recreate`: This will apply **ALL** new configuration including Dockerfile changes as well as new mounts, new features or any other configuration that is not included in the above command. DevPod will only replace the existing running container if the command has succeeded, so if there is a mistake in the new configuration, the existing workspace should not be impacted. The Desktop app equivalent for this is the 'Rebuild' button.
+A naive approach would be to delete and recreate a workspace after each `devcontainer.json` change (which obviously works), but DevPod allows you to make changes to the configuration on the fly and reapply them via `devpod up my-workspace --recreate`.
+This will apply **ALL** new configuration including Dockerfile changes as well as new mounts, new features or any other configuration that is not included in the above command. DevPod will only replace the existing running container if the command has succeeded, so if there is a mistake in the new configuration, the existing workspace should not be impacted.
+The Desktop app equivalent for this is the 'Rebuild' button.
 
-
+:::warning Recreating / Rebuilding
+Changes in the overlay layer of the container, which means all changes to non-volumes will be lost. Changes within the project path and all other mounted paths will be preserved.
+:::

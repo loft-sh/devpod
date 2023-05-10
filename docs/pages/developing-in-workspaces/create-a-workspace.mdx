@@ -5,9 +5,9 @@ sidebar_label: Create a Workspace
 
 ## Create a Workspace
 
-You can create a workspace either from the DevPod CLI or through the desktop application. A workspace can be created from a git repository, a local path or a docker container (e.g. `golang:latest`).
+You can create a workspace either from the DevPod CLI or through the DevPod desktop application. A workspace can be created from a git repository, a local path or a docker container (e.g. `golang:latest`).
 
-Upon successful creation, DevPod will make the development container available at the ssh host `${devcontainerId}.devpod`. Alternatively, DevPod can automatically open the workspace in a locally installed IDE, such as VSCode or Intellij.
+Upon successful creation, DevPod will make the development container available through the ssh host `WORKSPACE_NAME.devpod`. Alternatively, DevPod can automatically open the workspace in a locally installed IDE, such as VSCode or Intellij.
 
 :::info
 A workspace is defined through a `devcontainer.json`. If DevPod can't find one, it will automatically try to guess the programming language of your project and provide a fitting template.
@@ -17,21 +17,29 @@ A workspace is defined through a `devcontainer.json`. If DevPod can't find one, 
 
 Navigate to the 'Workspaces' view and click on the 'Create' button in the title. Enter the git repository you want to work on or select a local folder.
 
+:::info Add Provider
+If you haven't configured a provider yet, DevPod will automatically open the provider modal for you. You can later add providers in the same way by navigating to 'Providers' > 'Add'
+:::
+
 You can also configure one of the additional settings:
-- **Provider**: The provider to use for this workspace
-- **Default IDE**: The ide to open after successfully creating this workspace
-- **Workspace Name**: Override the automatically determined workspace name with this option
+- **Provider**: The provider to use for this workspace. Cannot be changed later.
+- **Default IDE**: The ide to open after successfully creating this workspace. Can be changed later.
+- **Workspace Name**: Override the automatically determined workspace name with this option. Cannot be changed later.
 - **Prebuild Repository**: A docker image repository such as `ghcr.io/my-org/my-repo` that contains prebuilds for this workspace. DevPod will try to automatically find a fitting prebuild for this workspace in the given repository.
 
 Then press `Create Workspace` to launch the workspace.
 
 :::info
-Under the hood, the Desktop Application will call a `devpod up REPOSITORY`
+Under the hood, the Desktop Application will call the CLI command `devpod up REPOSITORY`
 :::
 
 ### Via DevPod CLI
 
-Make sure to install the DevPod cli locally and select a provider you would like to host the workspace on (such as local docker).
+Make sure to [install the DevPod CLI locally](../getting-started/install.mdx#optional-install-devpod-cli) and select a provider you would like to host the workspace on (such as local docker) via:
+```
+# Add a provider if you haven't already
+devpod provider add docker
+```
 
 #### Git Repository
 
