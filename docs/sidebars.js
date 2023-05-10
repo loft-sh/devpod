@@ -14,11 +14,26 @@ module.exports = {
     {
       type: "category",
       label: "Getting Started",
-      collapsed: false,
       items: [
         {
           type: "doc",
-          id: "getting-started/quickstart",
+          id: "getting-started/install",
+        },
+        {
+          type: "doc",
+          id: "getting-started/quickstart-vscode-browser",
+        },
+        {
+          type: "doc",
+          id: "getting-started/quickstart-vscode",
+        },
+        {
+          type: "doc",
+          id: "getting-started/quickstart-jetbrains",
+        },
+        {
+          type: "doc",
+          id: "getting-started/quickstart-ssh",
         },
       ],
     },
