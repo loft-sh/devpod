@@ -1,0 +1,33 @@
+---
+title: Quickstart SSH
+sidebar_label: Quickstart SSH
+---
+
+import AddProvider from '../fragments/add-provider.mdx'
+import CreateWorkspace from '../fragments/create-workspace.mdx'
+
+## Quickstart with SSH
+
+Make sure you have installed [DevPod](./install.mdx) already on your system.
+
+### Add a Provider
+
+<AddProvider />
+
+### Start a Workspace with SSH
+
+Navigate to 'Workspaces' > '+ Create'. Enter your project url or choose one of the quickstart examples. Make sure to select 'None' under 'Advanced Options'
+
+<figure>
+  <img src="/docs/media/create-workspace-ssh.png" alt="DevPod Flow" />
+  <figcaption>Create Workspace</figcaption>
+</figure>
+
+
+<CreateWorkspace />
+
+A new window appears showing DevPod starting the workspace. After the workspace was created, you can connect to the workspace via ssh:
+
+```
+ssh MY_WORKSPACE_NAME.devpod
+```
