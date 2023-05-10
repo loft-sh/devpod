@@ -421,6 +421,23 @@ jobs:
                 asset_id: assetID,
                 name: info.desiredAssetName
               })
+              
+              if(info.packageType) {
+              const name = `${info.originalAssetName}${info.packageType}`
+              const b = release.data.assets.find(a => a.name === name)
+                if(!b) {
+                  core.warning(`Unable to find asset: ${name}`)
+                  continue
+                }
+                const assetID = b.id
+                // Update the asset name
+                await github.rest.repos.updateReleaseAsset({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  asset_id: assetID,
+                  name: name
+                })
+              }
             }
 
             const latestJSON = JSON.stringify(latest)
