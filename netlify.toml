@@ -20,7 +20,7 @@ command = """
     mv tmp-$TARGET_OUT_DIR/* $TARGET_OUT_DIR
 
     # Add extra files
-    #mv public/* $OUT_DIR/
+    mv public/* $OUT_DIR/
   """
 
 [build.processing]
