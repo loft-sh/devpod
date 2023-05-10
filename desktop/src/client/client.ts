@@ -101,9 +101,9 @@ class Client {
     return dialog.open({ directory: false, multiple: false })
   }
 
-  public async installCLI(): Promise<Result<void>> {
+  public async installCLI(force: boolean = false): Promise<Result<void>> {
     try {
-      await invoke("install_cli")
+      await invoke("install_cli", { force })
 
       return Return.Ok()
     } catch (e) {

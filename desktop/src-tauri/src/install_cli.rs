@@ -1,7 +1,8 @@
 use crate::{commands::DEVPOD_BINARY_NAME, AppHandle};
+use log::error;
 use std::{
     env,
-    path::{Path, PathBuf},
+    path::{PathBuf},
 };
 use thiserror::Error;
 
@@ -34,8 +35,13 @@ impl serde::Serialize for InstallCLIError {
 }
 
 #[tauri::command]
-pub fn install_cli(app_handle: AppHandle) -> Result<(), InstallCLIError> {
-    install(app_handle)
+pub fn install_cli(app_handle: AppHandle, force: bool) -> Result<(), InstallCLIError> {
+    if let Err(err) = install(app_handle, force) {
+        error!("{}", err);
+        Err(err)
+    } else {
+        Ok(())
+    }
 }
 
 // The path to the `devpod-cli` binary/executable. If bundled correctly, will be placed next to the desktop app executable.
@@ -48,7 +54,7 @@ fn get_cli_path() -> Result<PathBuf, std::io::Error> {
 }
 
 #[cfg(not(target_os = "windows"))]
-fn install(_app_handle: AppHandle) -> Result<(), InstallCLIError> {
+fn install(_app_handle: AppHandle, force: bool) -> Result<(), InstallCLIError> {
     use anyhow::Context;
     use dirs::home_dir;
     use log::{info, warn};
@@ -62,6 +68,20 @@ fn install(_app_handle: AppHandle) -> Result<(), InstallCLIError> {
     // /usr/local/bin/devpod
     let raw_system_bin = format!("/usr/local/bin/{}", "devpod");
     target_paths.push(PathBuf::from(&raw_system_bin));
+
+    if force {
+        info!("Attempting to force install CLI");
+        let script = format!("osascript -e \"do shell script \\\"mkdir -p /usr/local/bin && ln -sf '{}' '{}'\\\" with administrator privileges\"", cli_path.to_string_lossy(), raw_system_bin);
+        let status = std::process::Command::new("sh")
+            .arg("-c")
+            .arg(script)
+            .status()
+            .map_err(anyhow::Error::msg)
+            .map_err(|e| InstallCLIError::Link(e))?;
+        info!("Status: {}", status);
+
+        return Ok(());
+    }
 
     if let Some(home) = home_dir() {
         // $HOME/bin/devpod
@@ -128,7 +148,7 @@ fn install(_app_handle: AppHandle) -> Result<(), InstallCLIError> {
 }
 
 #[cfg(target_os = "windows")]
-fn install(app_handle: AppHandle) -> Result<(), InstallCLIError> {
+fn install(app_handle: AppHandle, force: bool) -> Result<(), InstallCLIError> {
     use log::error;
     use std::fs;
     use windows::Win32::{
