@@ -5,6 +5,7 @@ sidebar_label: Install DevPod
 
 import Tabs from '@theme/Tabs';
 import TabItem from '@theme/TabItem';
+import CodeBlock from '@theme/CodeBlock';
 
 In order to get started with DevPod, you can choose between the DevPod Desktop application and DevPod CLI.
 
@@ -25,45 +26,51 @@ For previous releases, please take a look at the [Github releases page](https://
 
 ## Optional: Install DevPod CLI
 
-DevPod CLI can be very useful to control DevPod from a terminal. Select one of the installation methods below:
+DevPod CLI can be very useful to control DevPod from a terminal. Select one of the installation methods below
 
-<Tabs>
-  <TabItem value="macarm" label="MacOS Silicon/ARM" default>
+<Tabs values={[
+          {label: 'MacOS Silicon/ARM', value: 'macarm64'},
+          {label: 'MacOS Intel/AMD', value: 'macamd64'},
+          {label: 'Windows', value: 'windows'},
+          {label: 'Linux AMD', value: 'linuxamd'},
+          {label: 'Linux ARM', value: 'linuxarm'},
+        ]}>
+<TabItem value="macarm64">
 
-```
+```bash
 curl -L -o devpod "https://github.com/loft-sh/devpod/releases/latest/download/devpod-darwin-arm64" && sudo install -c -m 0755 devpod /usr/local/bin && rm -f devpod
 ```
 
-  </TabItem>
-  <TabItem value="macamd" label="MacOS Intel/AMD">
+</TabItem>
+<TabItem value="macamd64">
 
-```
+```bash
 curl -L -o devpod "https://github.com/loft-sh/devpod/releases/latest/download/devpod-darwin-amd64" && sudo install -c -m 0755 devpod /usr/local/bin && rm -f devpod
 ```
 
-  </TabItem>
-  <TabItem value="windows" label="Windows">
+</TabItem>
+<TabItem value="windows">
 
-```
+```text
 md -Force "$Env:APPDATA\devpod"; [System.Net.ServicePointManager]::SecurityProtocol = [System.Net.SecurityProtocolType]'Tls,Tls11,Tls12';
 Invoke-WebRequest -URI "https://github.com/loft-sh/devpod/releases/latest/download/devpod-windows-amd64.exe" -o $Env:APPDATA\devpod\devpod.exe;
 $env:Path += ";" + $Env:APPDATA + "\devpod";
 [Environment]::SetEnvironmentVariable("Path", $env:Path, [System.EnvironmentVariableTarget]::User);
 ```
 
-  </TabItem>
-  <TabItem value="linuxamd" label="Linux AMD">
+</TabItem>
+<TabItem value="linuxamd">
 
-```
+```bash
 curl -L -o devpod "https://github.com/loft-sh/devpod/releases/latest/download/devpod-linux-amd64" && sudo install -c -m 0755 devpod /usr/local/bin && rm -f devpod
 ```
 
-  </TabItem>
-  <TabItem value="linuxarm" label="Linux ARM">
+</TabItem>
+<TabItem value="linuxarm">
 
-```
+```bash
 curl -L -o devpod "https://github.com/loft-sh/devpod/releases/latest/download/devpod-linux-arm64" && sudo install -c -m 0755 devpod /usr/local/bin && rm -f devpod
 ```
 
-  </TabItem>
+</TabItem>
 </Tabs>
