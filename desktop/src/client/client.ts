@@ -1,4 +1,4 @@
-import { dialog, fs, invoke, os, path, process, shell } from "@tauri-apps/api"
+import { clipboard, dialog, fs, invoke, os, path, process, shell } from "@tauri-apps/api"
 import { listen } from "@tauri-apps/api/event"
 import { Command } from "@tauri-apps/api/shell"
 import { TSettings } from "../contexts"
@@ -143,6 +143,16 @@ class Client {
       return Return.Ok()
     } catch {
       return Return.Failed("Unable to quit")
+    }
+  }
+
+  public async writeToClipboard(data: string): Promise<Result<void>> {
+    try {
+      await clipboard.writeText(data)
+
+      return Return.Ok()
+    } catch (e) {
+      return Return.Failed(`Unable to write to clipboard: ${e}`)
     }
   }
 }
