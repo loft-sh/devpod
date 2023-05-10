@@ -39,7 +39,7 @@ import { HiClock, HiOutlineCode, HiShare } from "react-icons/hi"
 import { useNavigate } from "react-router"
 import { client } from "../../client"
 import { IconTag } from "../../components"
-import { TActionID, useWorkspace, useWorkspaceActions } from "../../contexts"
+import { TActionID, TActionObj, useWorkspace, useWorkspaceActions } from "../../contexts"
 import { ArrowPath, Ellipsis, Pause, Play, Stack3D, Trash } from "../../icons"
 import { CodeJPG } from "../../images"
 import { exists, getIDEDisplayName } from "../../lib"
@@ -86,6 +86,7 @@ export function WorkspaceCard({ workspaceID, onSelectionChange }: TWorkspaceCard
       }
 
       const actionID = workspace.start({ id, ideConfig: { name: ideName } })
+      await client.ides.useIDE(ideName)
       navigateToAction(actionID)
     },
     [ideName, workspace, navigateToAction]
@@ -178,6 +179,7 @@ export function WorkspaceCard({ workspaceID, onSelectionChange }: TWorkspaceCard
           <WorkspaceCardHeader
             workspace={workspace.data}
             isLoading={isLoading}
+            currentAction={workspace.current}
             onSelectionChange={onSelectionChange}
             onActionIndicatorClicked={navigateToAction}
           />
@@ -252,6 +254,7 @@ export function WorkspaceCard({ workspaceID, onSelectionChange }: TWorkspaceCard
                       Rebuild
                     </MenuItem>
                     <MenuItem
+                      isDisabled={status !== "Running"}
                       onClick={() => {
                         if (status !== "Running") {
                           onStopOpen()
@@ -366,12 +369,14 @@ export function WorkspaceCard({ workspaceID, onSelectionChange }: TWorkspaceCard
 type TWorkspaceCardHeaderProps = Readonly<{
   workspace: TWorkspace
   isLoading: boolean
+  currentAction: TActionObj | undefined
   onActionIndicatorClicked: (actionID: TActionID | undefined) => void
   onSelectionChange?: (isSelected: boolean) => void
 }>
 function WorkspaceCardHeader({
   workspace,
   isLoading,
+  currentAction,
   onSelectionChange,
   onActionIndicatorClicked,
 }: TWorkspaceCardHeaderProps) {
@@ -391,6 +396,18 @@ function WorkspaceCardHeader({
     queryFn: async () => (await client.ides.listAll()).unwrap(),
   })
 
+  const handleBadgeClicked = useMemo(() => {
+    if (errorActionID !== undefined) {
+      return () => onActionIndicatorClicked(errorActionID)
+    }
+
+    if (currentAction !== undefined) {
+      return () => onActionIndicatorClicked(currentAction.id)
+    }
+
+    return undefined
+  }, [currentAction, errorActionID, onActionIndicatorClicked])
+
   return (
     <CardHeader display="flex" flexDirection="column">
       <VStack align="start" spacing={0}>
@@ -402,13 +419,7 @@ function WorkspaceCardHeader({
                 status={status}
                 isLoading={isLoading}
                 hasError={errorActionID !== undefined}
-                onClick={() => {
-                  if (errorActionID) {
-                    onActionIndicatorClicked(errorActionID)
-                  } else if (isLoading) {
-                    onActionIndicatorClicked(id)
-                  }
-                }}
+                onClick={handleBadgeClicked}
               />
             </HStack>
           </Heading>
@@ -448,7 +459,7 @@ type TWorkspaceStatusBadgeProps = Readonly<{
   status: TWorkspace["status"]
   isLoading: boolean
   hasError: boolean
-  onClick: () => void
+  onClick?: () => void
 }>
 function WorkspaceStatusBadge({
   onClick,
@@ -526,7 +537,7 @@ function WorkspaceStatusBadge({
 
   return (
     <Tooltip label={label}>
-      <HStack cursor={hasError || isLoading ? "pointer" : undefined} onClick={onClick} spacing="1">
+      <HStack cursor={onClick ? "pointer" : "default"} onClick={onClick} spacing="1">
         {badge}
       </HStack>
     </Tooltip>
