@@ -384,7 +384,7 @@ jobs:
             const infos = [
               { target: "linux-x86_64", sigFile: ".AppImage.tar.gz.sig", packageType: ".tar.gz", originalAssetName: `dev-pod_${latest.version}_amd64.AppImage`, desiredAssetName: "DevPod_amd64.AppImage" },
               { target: "darwin-aarch64", sigFile: "aarch64.app.tar.gz.sig", packageType: ".tar.gz", originalAssetName: `DevPod_${latest.version}_aarch64.dmg`, desiredAssetName: "DevPod_aarch64.dmg" },
-              { target: "darwin-x86_64", sigFile: "x64.app.tar.gz.sig", packageType: ".tar.gz", originalAssetName: `DevPod_${latest.version})_x64.dmg`, desiredAssetName: "DevPod_x64.dmg" },
+              { target: "darwin-x86_64", sigFile: "x64.app.tar.gz.sig", packageType: ".tar.gz", originalAssetName: `DevPod_${latest.version}_x64.dmg`, desiredAssetName: "DevPod_x64.dmg" },
               { target: "windows-x86_64", sigFile: ".msi.zip.sig", packageType: ".zip", originalAssetName: `DevPod_${latest.version}_x64_en-US.msi`, desiredAssetName: "DevPod_x64_en-US.msi" },
               { originalAssetName: `dev-pod-${latest.version}-2.x86_64.rpm`, desiredAssetName: "DevPod_x86_64.rpm" },
               { originalAssetName: `dev-pod_${latest.version}_amd64.deb`, desiredAssetName: "DevPod_amd64.deb" },
@@ -408,7 +408,12 @@ jobs:
                 }
               }
 
-              const assetID = release.data.assets.find(a => a.name === info.originalAssetName).id
+              const a = release.data.assets.find(a => a.name === info.originalAssetName)
+              if(!a) {
+                core.warning(`Unable to find asset: ${info.originalAssetName}`)
+                continue
+              }
+              const assetID = a.id
               // Update the asset name
               await github.rest.repos.updateReleaseAsset({
                 owner: context.repo.owner,
