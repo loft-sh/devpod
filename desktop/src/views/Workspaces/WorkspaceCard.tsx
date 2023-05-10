@@ -1,5 +1,6 @@
 import {
   Box,
+  BoxProps,
   Button,
   Card,
   CardFooter,
@@ -28,23 +29,24 @@ import {
   Text,
   Tooltip,
   useDisclosure,
+  useToast,
   VStack,
 } from "@chakra-ui/react"
 import { useQuery } from "@tanstack/react-query"
 import dayjs from "dayjs"
 import { useCallback, useMemo, useState } from "react"
-import { HiClock, HiOutlineCode } from "react-icons/hi"
+import { HiClock, HiOutlineCode, HiShare } from "react-icons/hi"
 import { useNavigate } from "react-router"
 import { client } from "../../client"
 import { IconTag } from "../../components"
 import { TActionID, useWorkspace, useWorkspaceActions } from "../../contexts"
-import { Ellipsis, Pause, Play, Stack3D, Trash, ArrowPath } from "../../icons"
+import { ArrowPath, Ellipsis, Pause, Play, Stack3D, Trash } from "../../icons"
 import { CodeJPG } from "../../images"
-import { getIDEDisplayName } from "../../lib"
+import { exists, getIDEDisplayName } from "../../lib"
 import { QueryKeys } from "../../queryKeys"
 import { Routes } from "../../routes"
 import { TWorkspace, TWorkspaceID } from "../../types"
-import { getSourceName, getIDEName } from "./helpers"
+import { getIDEName, getSourceName } from "./helpers"
 
 type TWorkspaceCardProps = Readonly<{
   workspaceID: TWorkspaceID
@@ -54,6 +56,7 @@ type TWorkspaceCardProps = Readonly<{
 export function WorkspaceCard({ workspaceID, onSelectionChange }: TWorkspaceCardProps) {
   const [forceDelete, setForceDelete] = useState<boolean>(false)
   const navigate = useNavigate()
+  const toast = useToast()
   const idesQuery = useQuery({
     queryKey: QueryKeys.IDES,
     queryFn: async () => (await client.ides.listAll()).unwrap(),
@@ -86,6 +89,51 @@ export function WorkspaceCard({ workspaceID, onSelectionChange }: TWorkspaceCard
       navigateToAction(actionID)
     },
     [ideName, workspace, navigateToAction]
+  )
+
+  const handleShareClicked = useCallback(
+    (id: TWorkspaceID) => async () => {
+      if (workspace.data === undefined) {
+        return
+      }
+
+      if (!exists(workspace.data.source)) {
+        return
+      }
+
+      const source = encodeURIComponent(getSourceName(workspace.data.source))
+      const workspaceID = encodeURIComponent(id)
+      let devpodLink = `https://devpod.sh/open#source=${source}&workspace=${workspaceID}`
+      const maybeProviderName = workspace.data.provider?.name
+      if (exists(maybeProviderName)) {
+        devpodLink = devpodLink.concat(`&provider=${encodeURIComponent(maybeProviderName)}`)
+      }
+      const maybeIDEName = workspace.data.ide?.name
+      if (exists(maybeIDEName)) {
+        devpodLink = devpodLink.concat(`&ide=${encodeURIComponent(maybeIDEName)}`)
+      }
+
+      const res = await client.writeToClipboard(devpodLink)
+      if (!res.ok) {
+        toast({
+          title: "Failed to share workspace",
+          description: res.val.message,
+          status: "error",
+          duration: 5_000,
+          isClosable: true,
+        })
+
+        return
+      }
+
+      toast({
+        title: "Copied workspace link to clipboard",
+        status: "success",
+        duration: 5_000,
+        isClosable: true,
+      })
+    },
+    [toast, workspace.data]
   )
 
   const isLoading = useMemo(() => {
@@ -171,7 +219,7 @@ export function WorkspaceCard({ workspaceID, onSelectionChange }: TWorkspaceCard
                         fontWeight={"normal"}
                         leftIcon={<Play boxSize={4} />}
                         onClick={handleOpenWithIDEClicked(id)}>
-                        Start with
+                        <Text paddingLeft={1}>Start with</Text>
                       </Button>
                       <Select
                         size="sm"
@@ -192,6 +240,11 @@ export function WorkspaceCard({ workspaceID, onSelectionChange }: TWorkspaceCard
                         ))}
                       </Select>
                     </InputGroup>
+                    <MenuItem
+                      icon={<Icon as={HiShare} boxSize={4} />}
+                      onClick={handleShareClicked(id)}>
+                      Share Configuration
+                    </MenuItem>
                     <MenuItem
                       style={{ pointerEvents: rebuildMenuItemPointerEvents }}
                       icon={<ArrowPath boxSize={4} />}
@@ -345,38 +398,18 @@ function WorkspaceCardHeader({
           <Heading size="md">
             <HStack alignItems="center">
               <Text fontWeight="bold">{id}</Text>
-              <Tooltip
-                label={
-                  errorActionID
-                    ? "Workspace encountered an error"
-                    : isLoading
-                    ? `Workspace is loading`
-                    : `Workspace is ${status ?? "Pending"}`
-                }>
-                <Box
-                  as={"span"}
-                  onClick={() => {
-                    if (errorActionID) {
-                      onActionIndicatorClicked(errorActionID)
-                    } else if (isLoading) {
-                      onActionIndicatorClicked(id)
-                    }
-                  }}
-                  cursor={errorActionID || isLoading ? "pointer" : undefined}
-                  backgroundColor={
-                    errorActionID
-                      ? "red"
-                      : isLoading
-                      ? "orange"
-                      : status === "Running"
-                      ? "green"
-                      : "orange"
+              <WorkspaceStatusBadge
+                status={status}
+                isLoading={isLoading}
+                hasError={errorActionID !== undefined}
+                onClick={() => {
+                  if (errorActionID) {
+                    onActionIndicatorClicked(errorActionID)
+                  } else if (isLoading) {
+                    onActionIndicatorClicked(id)
                   }
-                  borderRadius={"full"}
-                  width={"10px"}
-                  height={"10px"}
-                />
-              </Tooltip>
+                }}
+              />
             </HStack>
           </Heading>
           {onSelectionChange !== undefined && (
@@ -408,5 +441,94 @@ function WorkspaceCardHeader({
         />
       </HStack>
     </CardHeader>
+  )
+}
+
+type TWorkspaceStatusBadgeProps = Readonly<{
+  status: TWorkspace["status"]
+  isLoading: boolean
+  hasError: boolean
+  onClick: () => void
+}>
+function WorkspaceStatusBadge({
+  onClick,
+  status,
+  hasError,
+  isLoading,
+}: TWorkspaceStatusBadgeProps) {
+  const label = hasError
+    ? "Workspace encountered an error"
+    : isLoading
+    ? `Workspace is loading`
+    : `Workspace is ${status ?? "Pending"}`
+
+  const sharedProps = useMemo<BoxProps>(
+    () => ({
+      as: "span",
+      borderRadius: "full",
+      width: "12px",
+      height: "12px",
+      borderWidth: "2px",
+    }),
+    []
+  )
+  const sharedTextProps = useMemo(
+    () => ({
+      fontWeight: "medium",
+      fontSize: "sm",
+    }),
+    []
+  )
+
+  const badge = useMemo(() => {
+    if (hasError) {
+      return (
+        <>
+          <Box {...sharedProps} backgroundColor="transparent" borderColor="red.400" />
+          <Text {...sharedTextProps} color="red.400">
+            Error
+          </Text>
+        </>
+      )
+    }
+
+    if (isLoading) {
+      return (
+        <>
+          <Box {...sharedProps} backgroundColor="transparent" borderColor="yellow.500" />
+          <Text {...sharedTextProps} color="yellow.500">
+            Loading
+          </Text>
+        </>
+      )
+    }
+
+    if (status === "Running") {
+      return (
+        <>
+          <Box {...sharedProps} backgroundColor="green.200" borderColor="green.400" />
+          <Text {...sharedTextProps} color="green.400">
+            Running
+          </Text>
+        </>
+      )
+    }
+
+    return (
+      <>
+        <Box {...sharedProps} backgroundColor="purple.200" borderColor="purple.400" />
+        <Text {...sharedTextProps} color="purple.400">
+          {status ?? "Unknown"}
+        </Text>
+      </>
+    )
+  }, [hasError, isLoading, sharedProps, sharedTextProps, status])
+
+  return (
+    <Tooltip label={label}>
+      <HStack cursor={hasError || isLoading ? "pointer" : undefined} onClick={onClick} spacing="1">
+        {badge}
+      </HStack>
+    </Tooltip>
   )
 }

@@ -54,6 +54,9 @@
       },
       "path": {
         "all": true
+      },
+      "clipboard": {
+        "writeText": true
       }
     },
     "bundle": {
