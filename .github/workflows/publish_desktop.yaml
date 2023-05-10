@@ -364,16 +364,16 @@ jobs:
                 owner: context.repo.owner,
                 repo: context.repo.repo,
                 asset_id: assetID,
-                headers: { accept: "application/octet-stream" } 
+                headers: { accept: "application/octet-stream" }
               })
               const res = await fetch(releaseAsset.url, { headers: { accept: "application/octet-stream" } })
               if (!res.ok) { core.setFailed(`${await res.text()}`) }
-              
+
               return res
             }
 
             const releaseId = "${{ needs.create-release.outputs.release_id }}"
-            const releaseArgs = { owner: context.repo.owner, repo: context.repo.repo, release_id: releaseId}
+            const releaseArgs = { owner: context.repo.owner, repo: context.repo.repo, release_id: releaseId }
             const release = await github.rest.repos.getRelease({ ...releaseArgs })
 
             const latestAsset = release.data.assets.find(a => a.name === "latest.json")
@@ -381,17 +381,43 @@ jobs:
             const latestRes = await fetchAsset(latestAsset.id)
             const latest = await latestRes.json()
 
-            const msiName = `DevPod_${latest.version}_x64_en-US.msi`
-            const assetName = `${msiName}.zip`
+            const infos = [
+              { target: "linux-x86_64", sigFile: ".AppImage.tar.gz.sig", packageType: ".tar.gz", originalAssetName: `dev-pod_${latest.version}_amd64.AppImage`, desiredAssetName: "DevPod_amd64.AppImage" },
+              { target: "darwin-aarch64", sigFile: "aarch64.app.tar.gz.sig", packageType: ".tar.gz", originalAssetName: `DevPod_${latest.version}_aarch64.dmg`, desiredAssetName: "DevPod_aarch64.dmg" },
+              { target: "darwin-x86_64", sigFile: "x64.app.tar.gz.sig", packageType: ".tar.gz", originalAssetName: `DevPod_${latest.version})_x64.dmg`, desiredAssetName: "DevPod_x64.dmg" },
+              { target: "windows-x86_64", sigFile: ".msi.zip.sig", packageType: ".zip", originalAssetName: `DevPod_${latest.version}_x64_en-US.msi`, desiredAssetName: "DevPod_x64_en-US.msi" },
+              { originalAssetName: `dev-pod-${latest.version}-2.x86_64.rpm`, desiredAssetName: "DevPod_x86_64.rpm" },
+              { originalAssetName: `dev-pod_${latest.version}_amd64.deb`, desiredAssetName: "DevPod_amd64.deb" },
+            ]
 
-            const sigAsset = release.data.assets.find(a => a.name === `${assetName}.sig`)
-            core.info(`Downloading ${sigAsset.name} (ID: ${sigAsset.id})`)
-            const sig = await fetchAsset(sigAsset.id) 
+            for (const info of infos) {
+              // Update latest.json for platform
+              if (info.target) {
+                core.info(`Generating update info for ${info.desiredAssetName}`)
+                const sigAsset = release.data.assets.find(a => a.name.endsWith(info.sigFile))
+                if (!sigAsset) {
+                  core.warning(`Unable to find asset: ${info.sigFile}`)
+                  continue
+                }
+                core.info(`Downloading ${sigAsset.name} (ID: ${sigAsset.id})`)
+                const sig = await fetchAsset(sigAsset.id)
 
-            latest.platforms["windows-x86_64"] = { 
-              signature: await sig.text(),
-              url: `https://github.com/loft-sh/devpod/releases/download/${process.env.GITHUB_REF_NAME}/${assetName}`,
+                latest.platforms[info.target] = {
+                  signature: await sig.text(),
+                  url: `https://github.com/loft-sh/devpod/releases/download/${process.env.GITHUB_REF_NAME}/${info.desiredAssetName}${info.packageType}`,
+                }
+              }
+
+              const assetID = release.data.assets.find(a => a.name === info.originalAssetName).id
+              // Update the asset name
+              await github.rest.repos.updateReleaseAsset({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                asset_id: assetID,
+                name: info.desiredAssetName
+              })
             }
+
             const latestJSON = JSON.stringify(latest)
             const latestDestPath = "desktop/latest.json"
             core.info(`Writing latest.json to disk (${latestDestPath}): ${latestJSON}`)
@@ -414,3 +440,4 @@ jobs:
               name: "latest.json",
               data: fs.readFileSync(latestDestPath),
             })
+
