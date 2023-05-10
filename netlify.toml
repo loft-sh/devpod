@@ -1,0 +1,37 @@
+[build]
+base = "docs/"
+publish = "build/"
+command = """
+    set -e
+
+    export OUT_DIR="build/"
+    export TARGET_OUT_DIR="build/docs"
+
+    # Build docs
+    yarn build
+
+    # Delete fragments folder
+    #rm -rf $OUT_DIR/fragments
+
+    # Move files to build/docs/
+    mkdir -p tmp-$TARGET_OUT_DIR
+    mv $OUT_DIR/* tmp-$TARGET_OUT_DIR
+    mkdir -p $TARGET_OUT_DIR
+    mv tmp-$TARGET_OUT_DIR/* $TARGET_OUT_DIR
+
+    # Add extra files
+    #mv public/* $OUT_DIR/
+  """
+
+[build.processing]
+skip_processing = false
+[build.processing.html]
+pretty_urls = true
+[build.processing.css]
+bundle = false
+minify = false
+[build.processing.js]
+bundle = false
+minify = false
+[build.processing.images]
+compress = true
