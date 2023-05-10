@@ -35,6 +35,10 @@ module.exports = {
           type: "doc",
           id: "getting-started/quickstart-ssh",
         },
+        {
+          type: "doc",
+          id: "getting-started/quickstart-devpod-cli",
+        },
       ],
     },
     {
