@@ -1,14 +1,13 @@
 package language
 
 import (
-	"bytes"
-	"io"
 	"os"
 	"path/filepath"
 
-	"github.com/go-enry/go-enry/v2"
 	"github.com/loft-sh/devpod/pkg/devcontainer/config"
 	"github.com/loft-sh/devpod/pkg/log"
+
+	detector "github.com/loft-sh/programming-language-detection/pkg/detector"
 )
 
 type ProgrammingLanguage string
@@ -117,7 +116,6 @@ func DefaultConfig(startPath string, log log.Logger) *config.DevContainerConfig 
 }
 
 func DetectLanguage(startPath string) (ProgrammingLanguage, error) {
-	limit := int64(16 * 1024)
 	maxFiles := 5000
 
 	root, err := filepath.Abs(startPath)
@@ -134,115 +132,9 @@ func DetectLanguage(startPath string) (ProgrammingLanguage, error) {
 		return None, err
 	}
 
-	out := map[ProgrammingLanguage]int{}
-	walkedFiles := 0
-	err = filepath.Walk(root, func(path string, f os.FileInfo, err error) error {
-		walkedFiles++
-		if walkedFiles > maxFiles {
-			return filepath.SkipDir
-		} else if err != nil {
-			return filepath.SkipDir
-		}
-
-		if !f.Mode().IsDir() && !f.Mode().IsRegular() {
-			return nil
-		}
-
-		relativePath, err := filepath.Rel(root, path)
-		if err != nil {
-			return nil
-		}
-
-		if relativePath == "." {
-			return nil
-		}
-
-		if f.IsDir() {
-			relativePath = relativePath + "/"
-		}
-
-		if enry.IsVendor(relativePath) || enry.IsDotFile(relativePath) ||
-			enry.IsDocumentation(relativePath) || enry.IsConfiguration(relativePath) ||
-			enry.IsGenerated(relativePath, nil) {
-			if f.IsDir() {
-				return filepath.SkipDir
-			}
-
-			return nil
-		}
-
-		if f.IsDir() {
-			return nil
-		}
-
-		// TODO(bzz): provide API that mimics lingust CLI output for
-		// - running ByExtension & ByFilename
-		// - reading the file, if that did not work
-		// - GetLanguage([]Strategy)
-		content, err := readFile(path, limit)
-		if err != nil {
-			return nil
-		}
-
-		if enry.IsGenerated(relativePath, content) {
-			return nil
-		}
-
-		language := enry.GetLanguage(filepath.Base(path), content)
-		if language == enry.OtherLanguage {
-			return nil
-		}
-
-		if enry.GetLanguageType(language) != enry.Programming {
-			return nil
-		} else if !SupportedLanguages[ProgrammingLanguage(language)] {
-			return nil
-		}
-
-		// try to map language
-		if MapLanguages[ProgrammingLanguage(language)] != "" {
-			language = string(MapLanguages[ProgrammingLanguage(language)])
-		}
-
-		// inc found map
-		out[ProgrammingLanguage(language)]++
-		return nil
-	})
-	if err != nil {
-		return None, err
+	language := detector.GetLanguage(root, maxFiles)
+	if !SupportedLanguages[ProgrammingLanguage(language)] {
+		return None, nil
 	}
-
-	programmingLanguage := None
-	count := 0
-	for k, v := range out {
-		if v > count {
-			programmingLanguage = k
-			count = v
-		}
-	}
-
-	return programmingLanguage, nil
-}
-
-func readFile(path string, limit int64) ([]byte, error) {
-	if limit <= 0 {
-		return os.ReadFile(path)
-	}
-	f, err := os.Open(path)
-	if err != nil {
-		return nil, err
-	}
-	defer f.Close()
-	st, err := f.Stat()
-	if err != nil {
-		return nil, err
-	}
-	size := st.Size()
-	if limit > 0 && size > limit {
-		size = limit
-	}
-	buf := bytes.NewBuffer(nil)
-	buf.Grow(int(size))
-	_, err = io.Copy(buf, io.LimitReader(f, limit))
-	return buf.Bytes(), err
+	return ProgrammingLanguage(language), nil
 }
