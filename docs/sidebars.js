@@ -143,7 +143,7 @@ module.exports = {
     },
     {
       type: "link",
-      label: "Originally created by Loft",
+      label: "Open Sourced by Loft",
       href: "https://loft.sh/",
     },
   ],

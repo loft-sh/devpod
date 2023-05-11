@@ -23,10 +23,8 @@ There are two types of providers:
 
 Machine providers are those who will create and manage a VM for the workspace
 selected.
-
 An example of Machine provider is the AWS Provider, which uses EC2 instances to
 run the environment.
-
 These type of providers will also manage the lifecycle of the VM, starting/stopping
 and deleting it when needed.
 
@@ -34,9 +32,7 @@ and deleting it when needed.
 
 Non-machine providers are those who will work directly with containers, instead
 of using VMs.
-
 An example of this can be the SSH, Kubernetes and Docker providers.
-
 Those providers will **not** create any VMs, but instead directly run the workspace
 container on the target.
 
