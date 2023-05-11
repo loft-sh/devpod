@@ -5,7 +5,7 @@ sidebar_label: Connect to a Workspace
 
 ## Connect to a Workspace
 
-After a workspace is successfully created, the workspace is reachable via the ssh host `${devcontainerId}.devpod`.
+After a workspace is successfully created, the workspace is reachable via the ssh host `WORKSPACE_NAME.devpod`.
 If you have selected an IDE to automatically open, DevPod will automatically try to open the IDE after a successful workspace creation or `devpod up` command.
 
 :::info
@@ -34,7 +34,7 @@ devpod up my-workspace --ide vscode
 ```
 
 :::info SSH Fallback
-If for whatever reason this does not work you can also use the regular SSH connection with `${devcontainerId}.devpod` to connect VSCode with a workspace
+If for whatever reason this does not work you can also use the regular SSH connection with `WORKSPACE_NAME.devpod` to connect VSCode with a workspace
 :::
 
 ### JetBrains Suite (Goland, PyCharm, Intellij etc.)
@@ -64,21 +64,21 @@ devpod up my-workspace --ide goland --ide-option VERSION=2022.3.3
 ```
 
 :::info SSH Fallback
-If for whatever reason this does not work you can also use the regular SSH connection with `${devcontainerId}.devpod` to connect your JetBrains IDE with a workspace
+If for whatever reason this does not work you can also use the regular SSH connection with `WORKSPACE_NAME.devpod` to connect your JetBrains IDE with a workspace
 :::
 
 :::info Fleet Support
-Fleet currently only works by manually adding an SSH connection with `${devcontainerId}.devpod`
+Fleet currently only works by manually adding an SSH connection with `WORKSPACE_NAME.devpod`
 :::
 
 ### SSH
 
-Upon workspace creation, DevPod will automatically modify the `~/.ssh/config` to include an entry for `${devcontainerId}.devpod`, which allows you to use the following command to connect to your workspace:
+Upon workspace creation, DevPod will automatically modify the `~/.ssh/config` to include an entry for `WORKSPACE_NAME.devpod`, which allows you to use the following command to connect to your workspace:
 ```
-ssh ${devcontainerId}.devpod
+ssh WORKSPACE_NAME.devpod
 ```
 
-This also allows you to connect any IDE that supports remote development through SSH via the given host `${devcontainerId}.devpod`.
+This also allows you to connect any IDE that supports remote development through SSH via the given host `WORKSPACE_NAME.devpod`.
 
 ### DevPod CLI
 
