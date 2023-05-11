@@ -354,6 +354,8 @@ jobs:
       - name: Update `latest.json`
         uses: actions/github-script@v6
         with:
+          retries: 2
+          retry-exempt-status-codes: 400,401,403
           script: |
             // At this point, we should have `linux-x86_64`, `darwin-aarch64` and `darwin-x86_64`.
             // We need to add the missing platform/arch combinations by hand
@@ -396,7 +398,7 @@ jobs:
                 core.info(`Generating update info for ${info.desiredAssetName}`)
                 const sigAsset = release.data.assets.find(a => a.name.endsWith(info.sigFile))
                 if (!sigAsset) {
-                  core.warning(`Unable to find asset: ${info.sigFile}`)
+                  core.warning(`Unable to find sig asset: ${info.sigFile}`)
                   continue
                 }
                 core.info(`Downloading ${sigAsset.name} (ID: ${sigAsset.id})`)
@@ -423,10 +425,10 @@ jobs:
               })
               
               if(info.packageType) {
-              const name = `${info.originalAssetName}${info.packageType}`
-              const b = release.data.assets.find(a => a.name === name)
+                const name = `${info.originalAssetName}${info.packageType}`
+                const b = release.data.assets.find(a => a.name === name)
                 if(!b) {
-                  core.warning(`Unable to find asset: ${name}`)
+                  core.warning(`Unable to find update asset: ${name}`)
                   continue
                 }
                 const assetID = b.id
@@ -435,7 +437,7 @@ jobs:
                   owner: context.repo.owner,
                   repo: context.repo.repo,
                   asset_id: assetID,
-                  name: name
+                  name: ${info.desiredAssetName}${info.packageType}`
                 })
               }
             }
