@@ -3,6 +3,15 @@ package feature
 import (
 	"crypto/tls"
 	"fmt"
+	"io"
+	"net/http"
+	"os"
+	"os/exec"
+	"path"
+	"path/filepath"
+	"regexp"
+	"strings"
+
 	"github.com/google/go-containerregistry/pkg/authn"
 	"github.com/google/go-containerregistry/pkg/name"
 	v1 "github.com/google/go-containerregistry/pkg/v1"
@@ -12,14 +21,6 @@ import (
 	"github.com/loft-sh/devpod/pkg/hash"
 	"github.com/loft-sh/devpod/pkg/log"
 	"github.com/pkg/errors"
-	"io"
-	"net/http"
-	"os"
-	"os/exec"
-	"path"
-	"path/filepath"
-	"regexp"
-	"strings"
 )
 
 const DEVCONTAINER_MANIFEST_MEDIATYPE = "application/vnd.devcontainers"
@@ -259,12 +260,12 @@ func downloadFeatureFromURL(url string, destFile string, log log.Logger) error {
 }
 
 func getFeaturesTempFolder(id string) string {
-	hashedId := hash.String(id)[:10]
+	hashedID := hash.String(id)[:10]
 	tempDir := os.TempDir()
 	out, err := exec.Command("id", "-u", "-n").Output()
 	if err != nil || len(out) == 0 {
-		return filepath.Join(tempDir, "devpod", "features", hashedId)
+		return filepath.Join(tempDir, "devpod", "features", hashedID)
 	}
 
-	return filepath.Join(tempDir, "devpod-"+strings.TrimSpace(string(out)), "features", hashedId)
+	return filepath.Join(tempDir, "devpod-"+strings.TrimSpace(string(out)), "features", hashedID)
 }

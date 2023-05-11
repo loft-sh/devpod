@@ -18,8 +18,8 @@ type Options struct {
 	StripLevels int
 
 	Perm *os.FileMode
-	Uid  *int
-	Gid  *int
+	UID  *int
+	GID  *int
 }
 
 type Option func(o *Options)

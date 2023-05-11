@@ -301,13 +301,13 @@ func (r *Runner) startContainer(
 	}
 
 	if container != nil && options.Recreate {
-		r.Log.Debugf("Deleting dev container %s due to --recreate", container.Id)
+		r.Log.Debugf("Deleting dev container %s due to --recreate", container.ID)
 
-		if err := r.Driver.StopDevContainer(context.TODO(), container.Id); err != nil {
+		if err := r.Driver.StopDevContainer(context.TODO(), container.ID); err != nil {
 			return nil, errors.Wrap(err, "stop dev container")
 		}
 
-		if err := r.Driver.DeleteDevContainer(context.TODO(), container.Id, false); err != nil {
+		if err := r.Driver.DeleteDevContainer(context.TODO(), container.ID, false); err != nil {
 			return nil, errors.Wrap(err, "delete dev container")
 		}
 	}
@@ -505,6 +505,7 @@ func extendedDockerComposeBuild(composeService *composetypes.ServiceConfig, dock
 
 	service.Build.Args = composetypes.NewMappingWithEquals([]string{"BUILDKIT_INLINE_CACHE=1"})
 	for k, v := range featuresBuildInfo.BuildArgs {
+		v := v
 		service.Build.Args[k] = &v
 	}
 

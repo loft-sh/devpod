@@ -2,8 +2,9 @@ package config
 
 import (
 	"encoding/json"
-	"github.com/loft-sh/devpod/pkg/types"
 	"strconv"
+
+	"github.com/loft-sh/devpod/pkg/types"
 )
 
 func MergeConfiguration(config *DevContainerConfig, imageMetadataEntries []*ImageMetadata) (*MergedDevContainerConfig, error) {

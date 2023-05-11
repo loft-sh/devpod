@@ -3,6 +3,8 @@ package provider
 import (
 	"context"
 	"fmt"
+	"io"
+
 	"github.com/loft-sh/devpod/cmd/flags"
 	"github.com/loft-sh/devpod/pkg/client/clientimplementation"
 	"github.com/loft-sh/devpod/pkg/config"
@@ -13,7 +15,6 @@ import (
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
-	"io"
 )
 
 // UseCmd holds the use cmd flags

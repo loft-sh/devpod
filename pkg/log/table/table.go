@@ -1,12 +1,13 @@
 package table
 
 import (
+	"io"
+	"runtime"
+
 	"github.com/loft-sh/devpod/pkg/log"
 	"github.com/loft-sh/devpod/pkg/scanner"
 	"github.com/olekukonko/tablewriter"
 	"github.com/sirupsen/logrus"
-	"io"
-	"runtime"
 )
 
 func PrintTable(s log.Logger, header []string, values [][]string) {

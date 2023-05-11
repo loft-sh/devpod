@@ -4,6 +4,10 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"io"
+	"strings"
+	"time"
+
 	"github.com/loft-sh/devpod/pkg/client"
 	"github.com/loft-sh/devpod/pkg/config"
 	"github.com/loft-sh/devpod/pkg/log"
@@ -12,9 +16,6 @@ import (
 	"github.com/loft-sh/devpod/pkg/types"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
-	"io"
-	"strings"
-	"time"
 )
 
 func NewMachineClient(devPodConfig *config.Config, provider *provider.ProviderConfig, machine *provider.Machine, log log.Logger) (client.MachineClient, error) {

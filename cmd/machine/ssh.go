@@ -3,6 +3,9 @@ package machine
 import (
 	"context"
 	"fmt"
+	"io"
+	"os"
+
 	"github.com/loft-sh/devpod/cmd/flags"
 	devagent "github.com/loft-sh/devpod/pkg/agent"
 	"github.com/loft-sh/devpod/pkg/client"
@@ -18,8 +21,6 @@ import (
 	"golang.org/x/crypto/ssh"
 	agent "golang.org/x/crypto/ssh/agent"
 	"golang.org/x/term"
-	"io"
-	"os"
 )
 
 // SSHCmd holds the configuration

@@ -3,10 +3,11 @@ package client
 import (
 	"context"
 	"fmt"
-	"github.com/loft-sh/devpod/pkg/provider"
 	"io"
 	"strings"
 	"time"
+
+	"github.com/loft-sh/devpod/pkg/provider"
 )
 
 type Client interface {

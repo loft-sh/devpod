@@ -4,6 +4,10 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"os"
+	"sort"
+	"time"
+
 	"github.com/loft-sh/devpod/cmd/flags"
 	"github.com/loft-sh/devpod/pkg/config"
 	"github.com/loft-sh/devpod/pkg/log"
@@ -11,9 +15,6 @@ import (
 	"github.com/loft-sh/devpod/pkg/provider"
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
-	"os"
-	"sort"
-	"time"
 )
 
 // ListCmd holds the configuration

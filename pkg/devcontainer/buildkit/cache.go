@@ -2,10 +2,11 @@ package buildkit
 
 import (
 	"encoding/csv"
-	"github.com/moby/buildkit/client"
-	"github.com/pkg/errors"
 	"os"
 	"strings"
+
+	"github.com/moby/buildkit/client"
+	"github.com/pkg/errors"
 )
 
 func ParseCacheEntry(in []string) ([]client.CacheOptionsEntry, error) {

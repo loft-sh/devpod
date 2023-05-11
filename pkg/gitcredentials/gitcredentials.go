@@ -3,20 +3,21 @@ package gitcredentials
 import (
 	"context"
 	"fmt"
+	"os"
+	"os/exec"
+	"path/filepath"
+	"strings"
+
 	"github.com/loft-sh/devpod/pkg/command"
 	"github.com/loft-sh/devpod/pkg/file"
 	"github.com/loft-sh/devpod/pkg/git"
 	"github.com/loft-sh/devpod/pkg/scanner"
 	"github.com/pkg/errors"
-	"os"
-	"os/exec"
-	"path/filepath"
-	"strings"
 )
 
 type GitCredentials struct {
 	Protocol string `json:"protocol,omitempty"`
-	Url      string `json:"url,omitempty"`
+	URL      string `json:"url,omitempty"`
 	Host     string `json:"host,omitempty"`
 	Path     string `json:"path,omitempty"`
 	Username string `json:"username,omitempty"`
@@ -106,7 +107,7 @@ func Parse(raw string) (*GitCredentials, error) {
 		} else if splitted[0] == "password" {
 			credentials.Password = strings.Join(splitted[1:], "=")
 		} else if splitted[0] == "url" {
-			credentials.Url = strings.Join(splitted[1:], "=")
+			credentials.URL = strings.Join(splitted[1:], "=")
 		} else if splitted[0] == "path" {
 			credentials.Path = strings.Join(splitted[1:], "=")
 		}
@@ -120,8 +121,8 @@ func ToString(credentials *GitCredentials) string {
 	if credentials.Protocol != "" {
 		request = append(request, "protocol="+credentials.Protocol)
 	}
-	if credentials.Url != "" {
-		request = append(request, "url="+credentials.Url)
+	if credentials.URL != "" {
+		request = append(request, "url="+credentials.URL)
 	}
 	if credentials.Path != "" {
 		request = append(request, "path="+credentials.Path)

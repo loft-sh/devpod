@@ -1,6 +1,11 @@
 package setup
 
 import (
+	"os"
+	"os/exec"
+	"path/filepath"
+	"strings"
+
 	"github.com/loft-sh/devpod/pkg/command"
 	copy2 "github.com/loft-sh/devpod/pkg/copy"
 	"github.com/loft-sh/devpod/pkg/devcontainer/config"
@@ -8,10 +13,6 @@ import (
 	"github.com/loft-sh/devpod/pkg/types"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
-	"os"
-	"os/exec"
-	"path/filepath"
-	"strings"
 )
 
 func SetupContainer(setupInfo *config.Result, chownWorkspace bool, log log.Logger) error {

@@ -2,14 +2,15 @@ package dockercredentials
 
 import (
 	"fmt"
+	"os"
+	"path/filepath"
+
 	"github.com/docker/cli/cli/config"
 	"github.com/loft-sh/devpod/pkg/command"
 	"github.com/loft-sh/devpod/pkg/docker"
 	"github.com/loft-sh/devpod/pkg/file"
 	"github.com/loft-sh/devpod/pkg/random"
 	"github.com/pkg/errors"
-	"os"
-	"path/filepath"
 )
 
 type Request struct {

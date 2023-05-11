@@ -3,12 +3,13 @@ package context
 import (
 	"context"
 	"fmt"
+	"strings"
+
 	"github.com/loft-sh/devpod/cmd/flags"
 	"github.com/loft-sh/devpod/pkg/config"
 	provider2 "github.com/loft-sh/devpod/pkg/provider"
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
-	"strings"
 )
 
 // CreateCmd holds the create cmd flags

@@ -193,6 +193,10 @@ func (f *fileLogger) Print(level logrus.Level, args ...interface{}) {
 		f.Error(args...)
 	case logrus.FatalLevel:
 		f.Fatal(args...)
+	case logrus.PanicLevel:
+		f.Fatal(args...)
+	case logrus.TraceLevel:
+		f.Debug(args...)
 	}
 }
 
@@ -208,6 +212,10 @@ func (f *fileLogger) Printf(level logrus.Level, format string, args ...interface
 		f.Errorf(format, args...)
 	case logrus.FatalLevel:
 		f.Fatalf(format, args...)
+	case logrus.PanicLevel:
+		f.Fatalf(format, args...)
+	case logrus.TraceLevel:
+		f.Debugf(format, args...)
 	}
 }
 

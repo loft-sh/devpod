@@ -451,6 +451,10 @@ func (s *StreamLogger) Print(level logrus.Level, args ...interface{}) {
 		s.Error(args...)
 	case logrus.FatalLevel:
 		s.Fatal(args...)
+	case logrus.PanicLevel:
+		s.Fatal(args...)
+	case logrus.TraceLevel:
+		s.Debug(args...)
 	}
 }
 
@@ -466,6 +470,10 @@ func (s *StreamLogger) Printf(level logrus.Level, format string, args ...interfa
 		s.Errorf(format, args...)
 	case logrus.FatalLevel:
 		s.Fatalf(format, args...)
+	case logrus.PanicLevel:
+		s.Fatalf(format, args...)
+	case logrus.TraceLevel:
+		s.Debugf(format, args...)
 	}
 }
 

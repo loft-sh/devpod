@@ -2,10 +2,11 @@ package buildkit
 
 import (
 	"context"
+	"io"
+
 	"github.com/moby/buildkit/client"
 	"github.com/moby/buildkit/util/progress/progressui"
 	"github.com/moby/buildkit/util/progress/progresswriter"
-	"io"
 )
 
 type printer struct {

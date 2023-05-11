@@ -3,6 +3,11 @@ package buildkit
 import (
 	"context"
 	"fmt"
+	"io"
+	"os"
+	"path/filepath"
+	"strings"
+
 	"github.com/loft-sh/devpod/pkg/devcontainer/build"
 	"github.com/loft-sh/devpod/pkg/docker"
 	"github.com/loft-sh/devpod/pkg/log"
@@ -10,10 +15,6 @@ import (
 	"github.com/moby/buildkit/session"
 	"github.com/moby/buildkit/session/auth/authprovider"
 	"github.com/pkg/errors"
-	"io"
-	"os"
-	"path/filepath"
-	"strings"
 )
 
 func Build(ctx context.Context, client *buildkit.Client, writer io.Writer, options *build.BuildOptions, log log.Logger) error {

@@ -3,12 +3,13 @@ package ide
 import (
 	"context"
 	"fmt"
+	"strings"
+
 	"github.com/loft-sh/devpod/cmd/flags"
 	"github.com/loft-sh/devpod/pkg/config"
 	"github.com/loft-sh/devpod/pkg/ide/ideparse"
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
-	"strings"
 )
 
 // SetOptionsCmd holds the setOptions cmd flags

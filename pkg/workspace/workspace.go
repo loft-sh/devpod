@@ -386,7 +386,7 @@ func getProjectImage(link string) string {
 		link = "https://" + link
 	}
 
-	baseUrl, err := url.Parse(link)
+	baseURL, err := url.Parse(link)
 	if err != nil {
 		return ""
 	}
@@ -405,7 +405,7 @@ func getProjectImage(link string) string {
 	html := string(content)
 
 	// Find github social share image: https://css-tricks.com/essential-meta-tags-social-media/
-	meta := regexes[baseUrl.Host].FindString(html)
+	meta := regexes[baseURL.Host].FindString(html)
 	url := strings.Split(
 		regexes["content"].FindString(meta),
 		`"`,

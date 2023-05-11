@@ -3,7 +3,6 @@ package extract
 import (
 	"archive/tar"
 	"compress/gzip"
-	"github.com/pkg/errors"
 	"io"
 	"os"
 	"path"
@@ -11,6 +10,8 @@ import (
 	"runtime"
 	"strings"
 	"time"
+
+	"github.com/pkg/errors"
 )
 
 func WriteTar(writer io.Writer, localPath string, compress bool) error {

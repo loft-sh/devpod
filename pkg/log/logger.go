@@ -1,10 +1,11 @@
 package log
 
 import (
+	"io"
+
 	"github.com/loft-sh/devpod/pkg/survey"
 	"github.com/loft-sh/utils/pkg/log"
 	"github.com/sirupsen/logrus"
-	"io"
 )
 
 // logFunctionType type

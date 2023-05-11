@@ -4,13 +4,14 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
-	doublestar "github.com/bmatcuk/doublestar/v4"
-	"github.com/loft-sh/devpod/pkg/scanner"
-	"github.com/pkg/errors"
 	"os"
 	path2 "path"
 	"path/filepath"
 	"strings"
+
+	doublestar "github.com/bmatcuk/doublestar/v4"
+	"github.com/loft-sh/devpod/pkg/scanner"
+	"github.com/pkg/errors"
 )
 
 const DEVCONTAINER_FEATURE_FILE_NAME = "devcontainer-feature.json"

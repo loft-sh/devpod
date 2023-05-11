@@ -3,6 +3,13 @@ package vscode
 import (
 	"crypto/tls"
 	"fmt"
+	"io"
+	"net/http"
+	"os"
+	"os/exec"
+	"path/filepath"
+	"runtime"
+
 	"github.com/loft-sh/devpod/pkg/command"
 	"github.com/loft-sh/devpod/pkg/config"
 	copy2 "github.com/loft-sh/devpod/pkg/copy"
@@ -11,12 +18,6 @@ import (
 	"github.com/mitchellh/go-homedir"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
-	"io"
-	"net/http"
-	"os"
-	"os/exec"
-	"path/filepath"
-	"runtime"
 )
 
 const (

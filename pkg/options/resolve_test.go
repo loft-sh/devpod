@@ -2,13 +2,14 @@ package options
 
 import (
 	"context"
+	"testing"
+	"time"
+
 	"github.com/loft-sh/devpod/pkg/config"
 	"github.com/loft-sh/devpod/pkg/log"
 	provider2 "github.com/loft-sh/devpod/pkg/provider"
 	"github.com/loft-sh/devpod/pkg/types"
 	"gotest.tools/assert"
-	"testing"
-	"time"
 )
 
 type testCase struct {

@@ -115,7 +115,7 @@ func (r *DockerHelper) InspectImage(imageName string, tryRemote bool) (*config.I
 		}
 
 		return &config.ImageDetails{
-			Id: imageName,
+			ID: imageName,
 			Config: config.ImageDetailsConfig{
 				User:       imageConfig.Config.User,
 				Env:        imageConfig.Config.Env,
