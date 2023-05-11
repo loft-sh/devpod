@@ -16,6 +16,7 @@ export type TSettings = {
   sidebarPosition: "left" | "right"
   debugFlag: boolean
   partyParrot: boolean
+  fixedIDE: boolean
 }
 type TSetting = keyof TSettings
 
@@ -30,6 +31,7 @@ const initialSettings: TSettings = {
   sidebarPosition: "left",
   debugFlag: false,
   partyParrot: false,
+  fixedIDE: false,
 }
 function getSettingKeys(): readonly TSetting[] {
   return getKeys(initialSettings)

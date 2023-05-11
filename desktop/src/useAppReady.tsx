@@ -115,6 +115,12 @@ export function useAppReady() {
             maybeWorkspace = workspacesResult.val.find((w) => w.id === event.workspace_id)
           }
 
+          const ides = await client.ides.listAll()
+          let defaultIDE = undefined
+          if (ides.ok) {
+            defaultIDE = ides.val.find((ide) => ide.default)?.name
+          }
+
           if (maybeWorkspace !== undefined) {
             const actionID = startWorkspaceAction({
               workspaceID: maybeWorkspace.id,
@@ -125,7 +131,7 @@ export function useAppReady() {
                   providerID: maybeWorkspace.provider?.name ?? undefined,
                 },
                 ideConfig: {
-                  name: maybeWorkspace.ide?.name ?? null,
+                  name: defaultIDE ?? maybeWorkspace.ide?.name ?? null,
                 },
               },
             })
