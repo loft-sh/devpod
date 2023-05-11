@@ -105,3 +105,7 @@ export function getActionDisplayName(action: TActionObj): string {
 export function getIDEDisplayName(ide: TIDE) {
   return ide.displayName ?? ide.name ?? "Unknown"
 }
+
+export function randomString(length: number): string {
+  return [...Array(length)].map(() => (~~(Math.random() * 36)).toString(36)).join("")
+}

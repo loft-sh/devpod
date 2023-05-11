@@ -10,6 +10,7 @@ import {
   HStack,
   Icon,
   IconButton,
+  IconProps,
   Image,
   InputGroup,
   Menu,
@@ -27,6 +28,7 @@ import {
   Select,
   Stack,
   Text,
+  TextProps,
   Tooltip,
   useDisclosure,
   useToast,
@@ -38,7 +40,7 @@ import { useCallback, useMemo, useState } from "react"
 import { HiClock, HiOutlineCode, HiShare } from "react-icons/hi"
 import { useNavigate } from "react-router"
 import { client } from "../../client"
-import { IconTag } from "../../components"
+import { IconTag, Ripple } from "../../components"
 import { TActionID, TActionObj, useWorkspace, useWorkspaceActions } from "../../contexts"
 import { ArrowPath, Ellipsis, Pause, Play, Stack3D, Trash } from "../../icons"
 import { CodeJPG } from "../../images"
@@ -104,7 +106,7 @@ export function WorkspaceCard({ workspaceID, onSelectionChange }: TWorkspaceCard
 
       const source = encodeURIComponent(getSourceName(workspace.data.source))
       const workspaceID = encodeURIComponent(id)
-      let devpodLink = `https://devpod.sh/open#source=${source}&workspace=${workspaceID}`
+      let devpodLink = `https://devpod.sh/open#${source}&workspace=${workspaceID}`
       const maybeProviderName = workspace.data.provider?.name
       if (exists(maybeProviderName)) {
         devpodLink = devpodLink.concat(`&provider=${encodeURIComponent(maybeProviderName)}`)
@@ -473,29 +475,30 @@ function WorkspaceStatusBadge({
     ? `Workspace is loading`
     : `Workspace is ${status ?? "Pending"}`
 
-  const sharedProps = useMemo<BoxProps>(
-    () => ({
+  const badge = useMemo(() => {
+    const sharedProps: BoxProps = {
       as: "span",
       borderRadius: "full",
       width: "12px",
       height: "12px",
       borderWidth: "2px",
-    }),
-    []
-  )
-  const sharedTextProps = useMemo(
-    () => ({
+      zIndex: "1",
+    }
+    const sharedTextProps: TextProps = {
       fontWeight: "medium",
       fontSize: "sm",
-    }),
-    []
-  )
+    }
+    const rippleProps: IconProps = {
+      boxSize: 8,
+      position: "absolute",
+      left: "-12px",
+      zIndex: "0",
+    }
 
-  const badge = useMemo(() => {
     if (hasError) {
       return (
         <>
-          <Box {...sharedProps} backgroundColor="transparent" borderColor="red.400" />
+          <Box {...sharedProps} backgroundColor="white" borderColor="red.400" />
           <Text {...sharedTextProps} color="red.400">
             Error
           </Text>
@@ -506,7 +509,8 @@ function WorkspaceStatusBadge({
     if (isLoading) {
       return (
         <>
-          <Box {...sharedProps} backgroundColor="transparent" borderColor="yellow.500" />
+          <Box {...sharedProps} backgroundColor="white" borderColor="yellow.500" />
+          <Ripple {...rippleProps} color="yellow.500" />
           <Text {...sharedTextProps} color="yellow.500">
             Loading
           </Text>
@@ -527,17 +531,21 @@ function WorkspaceStatusBadge({
 
     return (
       <>
-        <Box {...sharedProps} backgroundColor="purple.200" borderColor="purple.400" />
+        <Box {...sharedProps} backgroundColor="purple.200" borderColor="purple.400" zIndex="1" />
         <Text {...sharedTextProps} color="purple.400">
           {status ?? "Unknown"}
         </Text>
       </>
     )
-  }, [hasError, isLoading, sharedProps, sharedTextProps, status])
+  }, [hasError, isLoading, status])
 
   return (
     <Tooltip label={label}>
-      <HStack cursor={onClick ? "pointer" : "default"} onClick={onClick} spacing="1">
+      <HStack
+        cursor={onClick ? "pointer" : "default"}
+        onClick={onClick}
+        spacing="1"
+        position="relative">
         {badge}
       </HStack>
     </Tooltip>

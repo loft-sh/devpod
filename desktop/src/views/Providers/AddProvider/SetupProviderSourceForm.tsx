@@ -31,7 +31,7 @@ import {
   KubernetesSvg,
   SSHPng,
 } from "../../../images"
-import { exists, isError, useFormErrors } from "../../../lib"
+import { exists, isError, randomString, useFormErrors } from "../../../lib"
 import { QueryKeys } from "../../../queryKeys"
 import {
   TAddProviderConfig,
@@ -74,6 +74,7 @@ export function SetupProviderSourceForm({ state, reset, onFinish }: TSetupProvid
     })()
   }, [])
   const [showCustom, setShowCustom] = useState(false)
+  const [showCustomName, setShowCustomName] = useState(false)
   const { register, handleSubmit, formState, watch, setValue } = useForm<TFormValues>({
     mode: "onBlur",
   })
@@ -183,11 +184,26 @@ export function SetupProviderSourceForm({ state, reset, onFinish }: TSetupProvid
   const handleRecommendedProviderClicked = useCallback(
     (sourceName: string) => () => {
       setShowCustom(false)
-      setValue(FieldName.PROVIDER_SOURCE, providerSource === sourceName ? "" : sourceName, {
+      setShowCustomName(false)
+
+      const unsetProvider = providerSource === sourceName
+      setValue(FieldName.PROVIDER_SOURCE, unsetProvider ? "" : sourceName, {
         shouldDirty: true,
       })
+      if (unsetProvider) {
+        setValue(FieldName.PROVIDER_NAME, "", { shouldDirty: true })
+
+        return
+      }
+
+      if (providers?.[sourceName] !== undefined) {
+        setValue(FieldName.PROVIDER_NAME, `${sourceName}-${randomString(8)}`, { shouldDirty: true })
+        setShowCustomName(true)
+      } else {
+        setValue(FieldName.PROVIDER_NAME, "", { shouldDirty: true })
+      }
     },
-    [providerSource, setValue]
+    [providerSource, providers, setValue]
   )
   const handleSelectFileClicked = useCallback(async () => {
     const selected = await client.selectFromFileYaml()
@@ -203,9 +219,7 @@ export function SetupProviderSourceForm({ state, reset, onFinish }: TSetupProvid
       <Stack spacing={6} width="full">
         <FormControl isRequired isInvalid={exists(providerSourceError)}>
           <Wrap spacing={3} marginTop="2.5">
-            {RECOMMENDED_PROVIDER_SOURCES.filter(
-              (source) => !providers?.[source.name] || !providers[source.name]?.state?.initialized
-            ).map((source) => (
+            {RECOMMENDED_PROVIDER_SOURCES.map((source) => (
               <WrapItem key={source.name} padding={"1"}>
                 <ExampleCard
                   key={source.name}
@@ -268,7 +282,7 @@ export function SetupProviderSourceForm({ state, reset, onFinish }: TSetupProvid
             </Box>
           )}
         </FormControl>
-        <CollapsibleSection title={"Advanced Options"} showIcon={true}>
+        <CollapsibleSection title={"Advanced Options"} showIcon={true} isOpen={showCustomName}>
           <FormControl isInvalid={exists(providerNameError)}>
             <FormLabel>Custom Name</FormLabel>
             <Input
