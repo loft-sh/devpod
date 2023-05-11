@@ -17,12 +17,12 @@ require (
 	github.com/gen2brain/beeep v0.0.0-20230307103607-6e717729cb4f
 	github.com/ghodss/yaml v1.0.0
 	github.com/gliderlabs/ssh v0.3.5
-	github.com/go-enry/go-enry/v2 v2.8.4
 	github.com/gofrs/flock v0.8.1
 	github.com/google/go-containerregistry v0.13.0
 	github.com/google/uuid v1.3.0
 	github.com/joho/godotenv v1.5.1
 	github.com/k0kubun/go-ansi v0.0.0-20180517002512-3bf9e2903213
+	github.com/loft-sh/programming-language-detection v0.0.5
 	github.com/loft-sh/utils v0.0.15
 	github.com/mattn/go-isatty v0.0.8
 	github.com/mgutz/ansi v0.0.0-20200706080929-d51e80ef957d
@@ -67,7 +67,6 @@ require (
 	github.com/docker/distribution v2.8.1+incompatible // indirect
 	github.com/docker/docker-credential-helpers v0.7.0 // indirect
 	github.com/docker/go-units v0.5.0 // indirect
-	github.com/go-enry/go-oniguruma v1.2.1 // indirect
 	github.com/go-logr/logr v1.2.3 // indirect
 	github.com/go-logr/stdr v1.2.2 // indirect
 	github.com/go-task/slim-sprig v0.0.0-20210107165309-348f09dbbbc0 // indirect
