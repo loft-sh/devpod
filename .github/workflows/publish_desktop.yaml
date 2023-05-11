@@ -437,7 +437,7 @@ jobs:
                   owner: context.repo.owner,
                   repo: context.repo.repo,
                   asset_id: assetID,
-                  name: ${info.desiredAssetName}${info.packageType}`
+                  name: `${info.desiredAssetName}${info.packageType}`
                 })
               }
             }
