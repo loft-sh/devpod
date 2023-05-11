@@ -100,6 +100,16 @@ export function Settings() {
             Select the default IDE you&apos;re using for workspaces. This will be overriden whenever
             you create a workspace with a different IDE
           </SettingDescription>
+
+          <Checkbox
+            isChecked={settings.fixedIDE}
+            onChange={(e) => set("fixedIDE", e.target.checked)}>
+            Always use this IDE
+          </Checkbox>
+          <SettingDescription>
+            Open workspaces with the selected IDE by default. Prevents the app from storing the last
+            IDE you used
+          </SettingDescription>
         </VStack>
 
         <VStack align="start">

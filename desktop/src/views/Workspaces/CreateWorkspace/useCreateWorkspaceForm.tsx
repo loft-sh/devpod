@@ -1,7 +1,7 @@
 import { ChangeEvent, FormEventHandler, useCallback, useEffect, useMemo, useState } from "react"
 import { useForm } from "react-hook-form"
 import { client } from "../../../client"
-import { useWorkspaces } from "../../../contexts"
+import { useSettings, useWorkspaces } from "../../../contexts"
 import { TIDEs, TProviders } from "../../../types"
 import { FieldName, TCreateWorkspaceArgs, TCreateWorkspaceSearchParams, TFormValues } from "./types"
 
@@ -13,6 +13,7 @@ export function useCreateWorkspaceForm(
   ides: TIDEs | undefined,
   onCreateWorkspace: (args: TCreateWorkspaceArgs) => void
 ) {
+  const settings = useSettings()
   const workspaces = useWorkspaces()
   const [isSubmitLoading, setIsSubmitLoading] = useState(false)
   const { register, handleSubmit, formState, watch, setError, setValue, clearErrors } =
@@ -112,13 +113,15 @@ export function useCreateWorkspaceForm(
           return
         }
 
-        // set default ide
-        const useIDEResult = await client.ides.useIDE(defaultIDE)
-        if (useIDEResult.err) {
-          setIsSubmitLoading(false)
-          setError(FieldName.SOURCE, { message: useIDEResult.val.message })
+        if (!settings.fixedIDE) {
+          // set default ide
+          const useIDEResult = await client.ides.useIDE(defaultIDE)
+          if (useIDEResult.err) {
+            setIsSubmitLoading(false)
+            setError(FieldName.SOURCE, { message: useIDEResult.val.message })
 
-          return
+            return
+          }
         }
 
         setIsSubmitLoading(false)
@@ -134,7 +137,7 @@ export function useCreateWorkspaceForm(
           workspaceSource,
         })
       })(event),
-    [handleSubmit, workspaces, onCreateWorkspace, setError]
+    [handleSubmit, workspaces, settings.fixedIDE, onCreateWorkspace, setError]
   )
 
   const validateWorkspaceID = useCallback(

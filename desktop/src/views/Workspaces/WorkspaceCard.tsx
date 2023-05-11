@@ -41,7 +41,13 @@ import { HiClock, HiOutlineCode, HiShare } from "react-icons/hi"
 import { useNavigate } from "react-router"
 import { client } from "../../client"
 import { IconTag, Ripple } from "../../components"
-import { TActionID, TActionObj, useWorkspace, useWorkspaceActions } from "../../contexts"
+import {
+  TActionID,
+  TActionObj,
+  useSettings,
+  useWorkspace,
+  useWorkspaceActions,
+} from "../../contexts"
 import { ArrowPath, Ellipsis, Pause, Play, Stack3D, Trash } from "../../icons"
 import { CodeJPG } from "../../images"
 import { exists, getIDEDisplayName } from "../../lib"
@@ -59,15 +65,23 @@ export function WorkspaceCard({ workspaceID, onSelectionChange }: TWorkspaceCard
   const [forceDelete, setForceDelete] = useState<boolean>(false)
   const navigate = useNavigate()
   const toast = useToast()
+  const settings = useSettings()
   const idesQuery = useQuery({
     queryKey: QueryKeys.IDES,
     queryFn: async () => (await client.ides.listAll()).unwrap(),
   })
+  const defaultIDE = idesQuery.data?.find((ide) => ide.default)
   const { isOpen: isDeleteOpen, onOpen: onDeleteOpen, onClose: onDeleteClose } = useDisclosure()
   const { isOpen: isRebuildOpen, onOpen: onRebuildOpen, onClose: onRebuildClose } = useDisclosure()
   const { isOpen: isStopOpen, onOpen: onStopOpen, onClose: onStopClose } = useDisclosure()
   const workspace = useWorkspace(workspaceID)
-  const [ideName, setIdeName] = useState<string | undefined>(workspace.data?.ide?.name ?? undefined)
+  const [ideName, setIdeName] = useState<string | undefined>(() => {
+    if (settings.fixedIDE && defaultIDE?.name) {
+      return defaultIDE.name
+    }
+
+    return workspace.data?.ide?.name ?? undefined
+  })
   const [rebuildMenuItemPointerEvents, setRebuildMenuItemPointerEvents] = useState<"auto" | "none">(
     "auto"
   )
@@ -88,10 +102,12 @@ export function WorkspaceCard({ workspaceID, onSelectionChange }: TWorkspaceCard
       }
 
       const actionID = workspace.start({ id, ideConfig: { name: ideName } })
-      await client.ides.useIDE(ideName)
+      if (!settings.fixedIDE) {
+        await client.ides.useIDE(ideName)
+      }
       navigateToAction(actionID)
     },
-    [ideName, workspace, navigateToAction]
+    [ideName, workspace, settings.fixedIDE, navigateToAction]
   )
 
   const handleShareClicked = useCallback(
@@ -182,6 +198,7 @@ export function WorkspaceCard({ workspaceID, onSelectionChange }: TWorkspaceCard
             workspace={workspace.data}
             isLoading={isLoading}
             currentAction={workspace.current}
+            ideName={ideName}
             onSelectionChange={onSelectionChange}
             onActionIndicatorClicked={navigateToAction}
           />
@@ -195,7 +212,10 @@ export function WorkspaceCard({ workspaceID, onSelectionChange }: TWorkspaceCard
                   leftIcon={<Icon as={HiOutlineCode} boxSize={5} />}
                   isDisabled={isOpenDisabled}
                   onClick={() => {
-                    const actionID = workspace.start({ id, ideConfig: ide })
+                    const actionID = workspace.start({
+                      id,
+                      ideConfig: { name: ideName ?? ide?.name ?? null },
+                    })
                     navigateToAction(actionID)
                   }}
                   isLoading={isLoading}>
@@ -372,6 +392,7 @@ type TWorkspaceCardHeaderProps = Readonly<{
   workspace: TWorkspace
   isLoading: boolean
   currentAction: TActionObj | undefined
+  ideName: string | undefined
   onActionIndicatorClicked: (actionID: TActionID | undefined) => void
   onSelectionChange?: (isSelected: boolean) => void
 }>
@@ -379,6 +400,7 @@ function WorkspaceCardHeader({
   workspace,
   isLoading,
   currentAction,
+  ideName,
   onSelectionChange,
   onActionIndicatorClicked,
 }: TWorkspaceCardHeaderProps) {
@@ -409,6 +431,11 @@ function WorkspaceCardHeader({
 
     return undefined
   }, [currentAction, errorActionID, onActionIndicatorClicked])
+
+  const ideDisplayName =
+    ideName !== undefined
+      ? getIDEName({ name: ideName }, idesQuery.data)
+      : getIDEName(ide, idesQuery.data)
 
   return (
     <CardHeader display="flex" flexDirection="column">
@@ -444,8 +471,8 @@ function WorkspaceCardHeader({
         />
         <IconTag
           icon={<Icon as={HiOutlineCode} />}
-          label={getIDEName(ide, idesQuery.data)}
-          infoText={`Will be opened in ${getIDEName(ide, idesQuery.data)}`}
+          label={ideDisplayName}
+          infoText={`Will be opened in ${ideDisplayName}`}
         />
         <IconTag
           icon={<Icon as={HiClock} />}
