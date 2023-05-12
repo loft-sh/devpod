@@ -32,7 +32,7 @@ var _ = DevPodDescribe("devpod up test suite", func() {
 		framework.ExpectNoError(err)
 	})
 
-	ginkgo.Context("using local provider", func() {
+	ginkgo.Context("using docker provider", func() {
 		ginkgo.Context("with docker", func() {
 			ginkgo.It("should start a new workspace with existing image", func(ctx context.Context) {
 				tempDir, err := framework.CopyToTempDir("tests/up/testdata/docker")
