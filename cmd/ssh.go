@@ -21,6 +21,7 @@ import (
 	workspace2 "github.com/loft-sh/devpod/pkg/workspace"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
+	"github.com/skratchdot/open-golang/open"
 	"github.com/spf13/cobra"
 	"golang.org/x/crypto/ssh"
 )
@@ -99,6 +100,10 @@ func startWait(ctx context.Context, client client2.WorkspaceClient, create bool,
 			} else {
 				if !terminal.IsTerminalIn {
 					_ = beeep.Notify("DevPod Workspace is stopped", "DevPod Workspace is stopped, please restart the workspace", "assets/warning.png")
+					err = open.Start("devpod://open?workspace=" + client.Workspace())
+					if err != nil {
+						log.Errorf("Couldn't open DevPod Desktop, maybe only CLI is installed?")
+					}
 				}
 
 				return fmt.Errorf("DevPod workspace is stopped")

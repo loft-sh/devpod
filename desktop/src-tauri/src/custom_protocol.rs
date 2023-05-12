@@ -20,7 +20,7 @@ pub struct OpenWorkspaceMsg {
     #[serde(rename(deserialize = "provider"))]
     provider_id: Option<String>,
     ide: Option<String>,
-    source: String,
+    source: Option<String>,
 }
 
 #[derive(Error, Debug, Clone, Serialize)]
@@ -37,7 +37,7 @@ impl OpenWorkspaceMsg {
             workspace_id: None,
             provider_id: None,
             ide: None,
-            source: "".to_string(),
+            source: None,
         }
     }
     pub fn with_id(id: String) -> OpenWorkspaceMsg {
@@ -45,7 +45,7 @@ impl OpenWorkspaceMsg {
             workspace_id: Some(id),
             provider_id: None,
             ide: None,
-            source: "".to_string(),
+            source: None,
         }
     }
 }
@@ -121,8 +121,19 @@ mod tests {
 
         assert_eq!(got.workspace_id, Some("workspace".to_string()));
         assert_eq!(got.provider_id, Some("provider".into()));
-        assert_eq!(got.source, "https://github.com/test123".to_string());
+        assert_eq!(got.source, Some("https://github.com/test123".to_string()));
         assert_eq!(got.ide, Some("vscode".into()));
+    }
+
+    #[test]
+    fn should_parse_workspace() {
+        let url_str = "devpod://open?workspace=some-workspace";
+        let got = super::CustomProtocol::parse(url_str).unwrap();
+
+        assert_eq!(got.workspace_id, Some("some-workspace".to_string()));
+        assert_eq!(got.provider_id, None);
+        assert_eq!(got.source, None);
+        assert_eq!(got.ide, None)
     }
 
     #[test]
@@ -132,7 +143,7 @@ mod tests {
 
         assert_eq!(got.workspace_id, None);
         assert_eq!(got.provider_id, None);
-        assert_eq!(got.source, "some-source".to_string());
+        assert_eq!(got.source, Some("some-source".to_string()));
         assert_eq!(got.ide, None)
     }
 
