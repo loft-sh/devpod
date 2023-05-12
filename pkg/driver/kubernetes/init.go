@@ -2,9 +2,10 @@ package kubernetes
 
 import (
 	"fmt"
+	"strings"
+
 	"github.com/loft-sh/devpod/pkg/devcontainer/config"
 	corev1 "k8s.io/api/core/v1"
-	"strings"
 )
 
 func (k *kubernetesDriver) getInitContainer(

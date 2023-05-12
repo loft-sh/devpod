@@ -17,12 +17,12 @@ func Chown(path string, userName string) error {
 		return nil
 	}
 
-	userId, err := user.Lookup(userName)
+	userID, err := user.Lookup(userName)
 	if err != nil {
 		return errors.Wrap(err, "lookup user")
 	}
 
-	uid, _ := strconv.Atoi(userId.Uid)
+	uid, _ := strconv.Atoi(userID.Uid)
 	return os.Chown(path, uid, -1)
 }
 
@@ -31,12 +31,12 @@ func ChownR(path string, userName string) error {
 		return nil
 	}
 
-	userId, err := user.Lookup(userName)
+	userID, err := user.Lookup(userName)
 	if err != nil {
 		return errors.Wrap(err, "lookup user")
 	}
 
-	uid, _ := strconv.Atoi(userId.Uid)
+	uid, _ := strconv.Atoi(userID.Uid)
 	return filepath.WalkDir(path, func(name string, dirEntry fs.DirEntry, err error) error {
 		if err != nil {
 			return err

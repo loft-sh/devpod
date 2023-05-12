@@ -3,6 +3,11 @@ package agent
 import (
 	"context"
 	"fmt"
+	"os"
+	"os/signal"
+	"syscall"
+	"time"
+
 	"github.com/loft-sh/devpod/cmd/agent/workspace"
 	"github.com/loft-sh/devpod/cmd/flags"
 	"github.com/loft-sh/devpod/pkg/agent"
@@ -12,10 +17,6 @@ import (
 	"github.com/loft-sh/devpod/pkg/log"
 	provider2 "github.com/loft-sh/devpod/pkg/provider"
 	"github.com/spf13/cobra"
-	"os"
-	"os/signal"
-	"syscall"
-	"time"
 )
 
 // ContainerTunnelCmd holds the ws-tunnel cmd flags
@@ -69,11 +70,11 @@ func (cmd *ContainerTunnelCmd) Run(_ *cobra.Command, _ []string) error {
 	}
 
 	// wait until devcontainer is started
-	containerId := ""
+	containerID := ""
 	if cmd.StartContainer {
-		containerId, err = startDevContainer(workspaceInfo, driver)
+		containerID, err = startDevContainer(workspaceInfo, driver)
 	} else {
-		containerId, err = waitForDevContainer(workspaceInfo, driver)
+		containerID, err = waitForDevContainer(workspaceInfo, driver)
 	}
 	if err != nil {
 		return err
@@ -91,7 +92,7 @@ func (cmd *ContainerTunnelCmd) Run(_ *cobra.Command, _ []string) error {
 	err = agent.Tunnel(
 		context.TODO(),
 		driver,
-		containerId,
+		containerID,
 		cmd.Token,
 		cmd.User,
 		os.Stdin,
@@ -120,7 +121,7 @@ func waitForDevContainer(workspaceInfo *provider2.AgentWorkspaceInfo, driver dri
 			continue
 		}
 
-		return containerDetails.Id, nil
+		return containerDetails.ID, nil
 	}
 
 	return "", fmt.Errorf("timed out waiting for devcontainer to come up")
@@ -139,8 +140,8 @@ func startDevContainer(workspaceInfo *provider2.AgentWorkspaceInfo, driver drive
 			return "", err
 		}
 
-		return result.ContainerDetails.Id, nil
+		return result.ContainerDetails.ID, nil
 	}
 
-	return containerDetails.Id, nil
+	return containerDetails.ID, nil
 }

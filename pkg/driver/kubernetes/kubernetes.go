@@ -144,7 +144,7 @@ func (k *kubernetesDriver) infoFromObject(ctx context.Context, pvc *corev1.Persi
 	}
 
 	return &config.ContainerDetails{
-		Id:      pvc.Name,
+		ID:      pvc.Name,
 		Created: pvc.CreationTimestamp.String(),
 		State: config.ContainerDetailsState{
 			Status:    status,
@@ -266,7 +266,7 @@ func (k *kubernetesDriver) InspectImage(ctx context.Context, imageName string) (
 	}
 
 	return &config.ImageDetails{
-		Id: imageName,
+		ID: imageName,
 		Config: config.ImageDetailsConfig{
 			User:       imageConfig.Config.User,
 			Env:        imageConfig.Config.Env,

@@ -2,6 +2,8 @@ package machine
 
 import (
 	"context"
+	"time"
+
 	"github.com/loft-sh/devpod/cmd/flags"
 	"github.com/loft-sh/devpod/pkg/client"
 	"github.com/loft-sh/devpod/pkg/config"
@@ -9,7 +11,6 @@ import (
 	"github.com/loft-sh/devpod/pkg/workspace"
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
-	"time"
 )
 
 // DeleteCmd holds the configuration

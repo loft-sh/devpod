@@ -3,12 +3,13 @@ package workspace
 import (
 	"context"
 	"fmt"
+	"strings"
+
 	"github.com/loft-sh/devpod/cmd/flags"
 	"github.com/loft-sh/devpod/pkg/agent"
 	"github.com/loft-sh/devpod/pkg/client"
 	"github.com/loft-sh/devpod/pkg/log"
 	"github.com/spf13/cobra"
-	"strings"
 )
 
 // StatusCmd holds the cmd flags

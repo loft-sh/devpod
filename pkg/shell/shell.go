@@ -2,16 +2,17 @@ package shell
 
 import (
 	"context"
-	command2 "github.com/loft-sh/devpod/pkg/command"
-	"github.com/pkg/errors"
 	"io"
-	"mvdan.cc/sh/v3/expand"
-	"mvdan.cc/sh/v3/interp"
-	"mvdan.cc/sh/v3/syntax"
 	"os"
 	"os/exec"
 	"strings"
 	"time"
+
+	command2 "github.com/loft-sh/devpod/pkg/command"
+	"github.com/pkg/errors"
+	"mvdan.cc/sh/v3/expand"
+	"mvdan.cc/sh/v3/interp"
+	"mvdan.cc/sh/v3/syntax"
 )
 
 func ExecuteCommandWithShell(ctx context.Context, command string, stdin io.Reader, stdout io.Writer, stderr io.Writer, environ []string) error {

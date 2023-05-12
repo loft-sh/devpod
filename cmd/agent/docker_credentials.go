@@ -5,15 +5,16 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"github.com/loft-sh/devpod/cmd/flags"
-	"github.com/loft-sh/devpod/pkg/dockercredentials"
-	"github.com/loft-sh/devpod/pkg/log"
-	"github.com/spf13/cobra"
 	"io"
 	"net/http"
 	"os"
 	"strconv"
 	"strings"
+
+	"github.com/loft-sh/devpod/cmd/flags"
+	"github.com/loft-sh/devpod/pkg/dockercredentials"
+	"github.com/loft-sh/devpod/pkg/log"
+	"github.com/spf13/cobra"
 )
 
 // DockerCredentialsCmd holds the cmd flags
@@ -56,12 +57,12 @@ func (cmd *DockerCredentialsCmd) Run(ctx context.Context, args []string) error {
 }
 
 func (cmd *DockerCredentialsCmd) handleList() error {
-	rawJson, err := json.Marshal(&dockercredentials.Request{})
+	rawJSON, err := json.Marshal(&dockercredentials.Request{})
 	if err != nil {
 		return err
 	}
 
-	response, err := http.Post("http://localhost:"+strconv.Itoa(cmd.Port)+"/docker-credentials", "application/json", bytes.NewReader(rawJson))
+	response, err := http.Post("http://localhost:"+strconv.Itoa(cmd.Port)+"/docker-credentials", "application/json", bytes.NewReader(rawJSON))
 	if err != nil {
 		log.Default.ErrorStreamOnly().Errorf("Error retrieving list credentials: %v", err)
 		return nil
@@ -103,12 +104,12 @@ func (cmd *DockerCredentialsCmd) handleGet() error {
 		return fmt.Errorf("no credentials server URL")
 	}
 
-	rawJson, err := json.Marshal(&dockercredentials.Request{ServerURL: strings.TrimSpace(string(url))})
+	rawJSON, err := json.Marshal(&dockercredentials.Request{ServerURL: strings.TrimSpace(string(url))})
 	if err != nil {
 		return err
 	}
 
-	response, err := http.Post("http://localhost:"+strconv.Itoa(cmd.Port)+"/docker-credentials", "application/json", bytes.NewReader(rawJson))
+	response, err := http.Post("http://localhost:"+strconv.Itoa(cmd.Port)+"/docker-credentials", "application/json", bytes.NewReader(rawJSON))
 	if err != nil {
 		log.Default.ErrorStreamOnly().Errorf("Error retrieving credentials: %v", err)
 		return nil

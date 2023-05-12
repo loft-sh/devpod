@@ -2,6 +2,7 @@ package metadata
 
 import (
 	"encoding/json"
+
 	"github.com/loft-sh/devpod/pkg/devcontainer/config"
 	"github.com/loft-sh/devpod/pkg/log"
 )

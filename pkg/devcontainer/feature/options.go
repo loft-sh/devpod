@@ -2,6 +2,7 @@ package feature
 
 import (
 	"fmt"
+
 	"github.com/loft-sh/devpod/pkg/devcontainer/config"
 )
 

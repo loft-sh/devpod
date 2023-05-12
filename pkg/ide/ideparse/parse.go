@@ -2,6 +2,10 @@ package ideparse
 
 import (
 	"fmt"
+	"reflect"
+	"regexp"
+	"strings"
+
 	"github.com/loft-sh/devpod/pkg/command"
 	"github.com/loft-sh/devpod/pkg/config"
 	"github.com/loft-sh/devpod/pkg/ide"
@@ -10,9 +14,6 @@ import (
 	"github.com/loft-sh/devpod/pkg/ide/vscode"
 	"github.com/loft-sh/devpod/pkg/provider"
 	"github.com/pkg/errors"
-	"reflect"
-	"regexp"
-	"strings"
 )
 
 type AllowedIDE struct {
@@ -146,6 +147,7 @@ func RefreshIDEOptions(devPodConfig *config.Config, workspace *provider.Workspac
 func GetIDEOptions(ide string) (ide.Options, error) {
 	var match *AllowedIDE
 	for _, m := range AllowedIDEs {
+		m := m
 		if string(m.Name) == ide {
 			match = &m
 			break

@@ -3,6 +3,12 @@ package feature
 import (
 	"encoding/json"
 	"fmt"
+	"os"
+	"path/filepath"
+	"regexp"
+	"strconv"
+	"strings"
+
 	"github.com/google/go-containerregistry/pkg/name"
 	"github.com/loft-sh/devpod/pkg/copy"
 	"github.com/loft-sh/devpod/pkg/devcontainer/config"
@@ -10,11 +16,6 @@ import (
 	"github.com/loft-sh/devpod/pkg/devcontainer/metadata"
 	"github.com/loft-sh/devpod/pkg/log"
 	"github.com/pkg/errors"
-	"os"
-	"path/filepath"
-	"regexp"
-	"strconv"
-	"strings"
 )
 
 var featureSafeIDRegex1 = regexp.MustCompile(`[^\w_]`)
@@ -229,21 +230,21 @@ func findContainerUsers(baseImageMetadata *config.ImageMetadataConfig, composeSe
 
 func fetchFeatures(devContainerConfig *config.DevContainerConfig, log log.Logger) ([]*config.FeatureSet, error) {
 	featureSets := []*config.FeatureSet{}
-	for featureId, featureOptions := range devContainerConfig.Features {
-		featureFolder, err := ProcessFeatureID(featureId, filepath.Dir(devContainerConfig.Origin), log)
+	for featureID, featureOptions := range devContainerConfig.Features {
+		featureFolder, err := ProcessFeatureID(featureID, filepath.Dir(devContainerConfig.Origin), log)
 		if err != nil {
-			return nil, errors.Wrap(err, "process feature "+featureId)
+			return nil, errors.Wrap(err, "process feature "+featureID)
 		}
 
 		// parse feature
 		featureConfig, err := config.ParseDevContainerFeature(featureFolder)
 		if err != nil {
-			return nil, errors.Wrap(err, "parse feature "+featureId)
+			return nil, errors.Wrap(err, "parse feature "+featureID)
 		}
 
 		// add to return array
 		featureSets = append(featureSets, &config.FeatureSet{
-			ConfigID: NormalizeFeatureID(featureId),
+			ConfigID: NormalizeFeatureID(featureID),
 			Folder:   featureFolder,
 			Config:   featureConfig,
 			Options:  featureOptions,

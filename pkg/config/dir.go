@@ -1,9 +1,10 @@
 package config
 
 import (
-	homedir "github.com/mitchellh/go-homedir"
 	"os"
 	"path/filepath"
+
+	homedir "github.com/mitchellh/go-homedir"
 )
 
 // Override devpod home

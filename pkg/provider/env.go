@@ -2,11 +2,12 @@ package provider
 
 import (
 	"encoding/json"
-	"github.com/loft-sh/devpod/pkg/config"
 	"os"
 	"path/filepath"
 	"runtime"
 	"strings"
+
+	"github.com/loft-sh/devpod/pkg/config"
 )
 
 const (

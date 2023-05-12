@@ -2,9 +2,10 @@ package buildkit
 
 import (
 	"context"
+	"net"
+
 	dockerclient "github.com/docker/docker/client"
 	"github.com/moby/buildkit/client"
-	"net"
 )
 
 func NewDockerClient(ctx context.Context, dockerClient dockerclient.CommonAPIClient) (*client.Client, error) {

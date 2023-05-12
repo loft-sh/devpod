@@ -2,9 +2,10 @@ package config
 
 import (
 	"encoding/json"
-	"github.com/loft-sh/devpod/pkg/types"
 	"strconv"
 	"strings"
+
+	"github.com/loft-sh/devpod/pkg/types"
 )
 
 type MergedDevContainerConfig struct {

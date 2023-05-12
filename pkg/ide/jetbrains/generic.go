@@ -3,6 +3,15 @@ package jetbrains
 import (
 	"crypto/tls"
 	"fmt"
+	"io"
+	"net/http"
+	"net/url"
+	"os"
+	"path"
+	"path/filepath"
+	"runtime"
+	"time"
+
 	"github.com/loft-sh/devpod/pkg/command"
 	"github.com/loft-sh/devpod/pkg/config"
 	copy2 "github.com/loft-sh/devpod/pkg/copy"
@@ -12,14 +21,6 @@ import (
 	"github.com/mitchellh/go-homedir"
 	"github.com/pkg/errors"
 	"github.com/skratchdot/open-golang/open"
-	"io"
-	"net/http"
-	"net/url"
-	"os"
-	"path"
-	"path/filepath"
-	"runtime"
-	"time"
 )
 
 const (
@@ -150,22 +151,22 @@ func (o *GenericJetBrainsServer) download(targetFolder string, log log.Logger) (
 		return "", err
 	}
 
-	downloadUrl := o.options.DownloadAmd64
+	downloadURL := o.options.DownloadAmd64
 	if runtime.GOARCH == "arm64" {
-		downloadUrl = o.options.DownloadArm64
+		downloadURL = o.options.DownloadArm64
 	}
 
 	targetPath := path.Join(filepath.ToSlash(targetFolder), o.options.ID+".tar.gz")
 
 	// initiate download
-	log.Infof("Download %s from %s", o.options.DisplayName, downloadUrl)
+	log.Infof("Download %s from %s", o.options.DisplayName, downloadURL)
 	defer log.Debugf("Successfully downloaded %s", o.options.DisplayName)
 	httpClient := &http.Client{
 		Transport: &http.Transport{
 			TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
 		},
 	}
-	resp, err := httpClient.Get(downloadUrl)
+	resp, err := httpClient.Get(downloadURL)
 	if err != nil {
 		return "", errors.Wrap(err, "download binary")
 	}

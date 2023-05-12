@@ -4,20 +4,21 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"io"
+	"runtime"
+
 	"github.com/loft-sh/devpod/pkg/agent"
 	"github.com/loft-sh/devpod/pkg/compress"
 	"github.com/loft-sh/devpod/pkg/devcontainer/config"
 	provider2 "github.com/loft-sh/devpod/pkg/provider"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
-	"io"
-	"runtime"
 )
 
 func (r *Runner) setupContainer(containerDetails *config.ContainerDetails, mergedConfig *config.MergedDevContainerConfig) error {
 	// inject agent
 	err := agent.InjectAgent(context.TODO(), func(ctx context.Context, command string, stdin io.Reader, stdout io.Writer, stderr io.Writer) error {
-		return r.Driver.CommandDevContainer(ctx, containerDetails.Id, "root", command, stdin, stdout, stderr)
+		return r.Driver.CommandDevContainer(ctx, containerDetails.ID, "root", command, stdin, stdout, stderr)
 	}, agent.ContainerDevPodHelperLocation, agent.DefaultAgentDownloadURL, false, r.Log)
 	if err != nil {
 		return errors.Wrap(err, "inject agent")
@@ -62,7 +63,7 @@ func (r *Runner) setupContainer(containerDetails *config.ContainerDetails, merge
 		command += " --debug"
 	}
 	r.Log.Debugf("Run command: %s", command)
-	err = r.Driver.CommandDevContainer(context.TODO(), containerDetails.Id, "root", command, nil, writer, writer)
+	err = r.Driver.CommandDevContainer(context.TODO(), containerDetails.ID, "root", command, nil, writer, writer)
 	if err != nil {
 		return err
 	}

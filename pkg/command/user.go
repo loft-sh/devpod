@@ -1,8 +1,9 @@
 package command
 
 import (
-	"github.com/mitchellh/go-homedir"
 	"os/user"
+
+	"github.com/mitchellh/go-homedir"
 )
 
 func GetHome(userName string) (string, error) {

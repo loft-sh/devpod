@@ -3,15 +3,16 @@ package up
 import (
 	"context"
 	"fmt"
+	"io"
+	"os"
+	"path/filepath"
+	"time"
+
 	"github.com/docker/docker/api/types"
 	"github.com/loft-sh/devpod/pkg/compose"
 	"github.com/loft-sh/devpod/pkg/devcontainer/config"
 	docker "github.com/loft-sh/devpod/pkg/docker"
 	"github.com/onsi/gomega"
-	"io"
-	"os"
-	"path/filepath"
-	"time"
 
 	"github.com/loft-sh/devpod/e2e/framework"
 	"github.com/onsi/ginkgo/v2"
@@ -72,9 +73,9 @@ var _ = DevPodDescribe("devpod up test suite", func() {
 				framework.ExpectNoError(err)
 				gomega.Expect(ids).To(gomega.HaveLen(1), "1 compose container to be created")
 
-				devContainerId, _, err := f.ExecCommandCapture(ctx, []string{"ssh", "--command", "cat $HOME/dev-container-id.out", projectName})
+				devContainerID, _, err := f.ExecCommandCapture(ctx, []string{"ssh", "--command", "cat $HOME/dev-container-id.out", projectName})
 				framework.ExpectNoError(err)
-				gomega.Expect(devContainerId).NotTo(gomega.BeEmpty())
+				gomega.Expect(devContainerID).NotTo(gomega.BeEmpty())
 
 				containerEnvPath, _, err := f.ExecCommandCapture(ctx, []string{"ssh", "--command", "cat $HOME/container-env-path.out", projectName})
 				framework.ExpectNoError(err)
@@ -548,9 +549,9 @@ var _ = DevPodDescribe("devpod up test suite", func() {
 				framework.ExpectNoError(err)
 				gomega.Expect(ids).To(gomega.HaveLen(1), "1 compose container to be created")
 
-				devContainerId, _, err := f.ExecCommandCapture(ctx, []string{"ssh", "--command", "cat $HOME/dev-container-id.out", projectName})
+				devContainerID, _, err := f.ExecCommandCapture(ctx, []string{"ssh", "--command", "cat $HOME/dev-container-id.out", projectName})
 				framework.ExpectNoError(err)
-				gomega.Expect(devContainerId).NotTo(gomega.BeEmpty())
+				gomega.Expect(devContainerID).NotTo(gomega.BeEmpty())
 
 				containerEnvPath, _, err := f.ExecCommandCapture(ctx, []string{"ssh", "--command", "cat $HOME/container-env-path.out", projectName})
 				framework.ExpectNoError(err)

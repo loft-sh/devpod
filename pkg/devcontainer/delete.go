@@ -2,9 +2,10 @@ package devcontainer
 
 import (
 	"context"
+	"strings"
+
 	"github.com/loft-sh/devpod/pkg/devcontainer/config"
 	"github.com/pkg/errors"
-	"strings"
 )
 
 func (r *Runner) Delete(labels []string, deleteVolumes bool) error {
@@ -26,13 +27,13 @@ func (r *Runner) Delete(labels []string, deleteVolumes bool) error {
 		}
 	} else {
 		if strings.ToLower(containerDetails.State.Status) == "running" {
-			err = r.Driver.StopDevContainer(context.TODO(), containerDetails.Id)
+			err = r.Driver.StopDevContainer(context.TODO(), containerDetails.ID)
 			if err != nil {
 				return err
 			}
 		}
 
-		err = r.Driver.DeleteDevContainer(context.TODO(), containerDetails.Id, deleteVolumes)
+		err = r.Driver.DeleteDevContainer(context.TODO(), containerDetails.ID, deleteVolumes)
 		if err != nil {
 			return err
 		}
@@ -57,7 +58,7 @@ func (r *Runner) Stop() error {
 				return err
 			}
 		} else {
-			err = r.Driver.StopDevContainer(context.TODO(), containerDetails.Id)
+			err = r.Driver.StopDevContainer(context.TODO(), containerDetails.ID)
 			if err != nil {
 				return err
 			}

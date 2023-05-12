@@ -3,9 +3,10 @@ package helper
 import (
 	"context"
 	"fmt"
+	"os"
+
 	"github.com/loft-sh/devpod/pkg/shell"
 	"github.com/spf13/cobra"
-	"os"
 )
 
 type ShellCommand struct {

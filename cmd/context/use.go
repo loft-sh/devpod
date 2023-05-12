@@ -3,6 +3,7 @@ package context
 import (
 	"context"
 	"fmt"
+
 	"github.com/loft-sh/devpod/cmd/flags"
 	"github.com/loft-sh/devpod/pkg/config"
 	"github.com/pkg/errors"

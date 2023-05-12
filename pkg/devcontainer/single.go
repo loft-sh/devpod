@@ -3,10 +3,11 @@ package devcontainer
 import (
 	"context"
 	"encoding/json"
+	"strings"
+
 	"github.com/loft-sh/devpod/pkg/devcontainer/config"
 	"github.com/loft-sh/devpod/pkg/devcontainer/metadata"
 	"github.com/pkg/errors"
-	"strings"
 )
 
 func (r *Runner) runSingleContainer(parsedConfig *config.SubstitutedConfig, workspaceMount string, options UpOptions) (*config.Result, error) {
@@ -21,7 +22,7 @@ func (r *Runner) runSingleContainer(parsedConfig *config.SubstitutedConfig, work
 	if !options.Recreate && containerDetails != nil {
 		// start container if not running
 		if strings.ToLower(containerDetails.State.Status) != "running" {
-			err = r.Driver.StartDevContainer(context.TODO(), containerDetails.Id, labels)
+			err = r.Driver.StartDevContainer(context.TODO(), containerDetails.ID, labels)
 			if err != nil {
 				return nil, err
 			}

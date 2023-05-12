@@ -2,16 +2,36 @@ linters:
   # We want to gradually introduce new linters to the project
   disable-all: true
   enable:
+    - durationcheck
     - errcheck
     - errname
     - errorlint
+    - exhaustive
+    - exportloopref
     - ginkgolinter
+    - goimports
     - gosimple
     - govet
+    - importas
     - ineffassign
+    - makezero
+    - misspell
+    - nakedret
+    - promlinter
     - staticcheck
+    - stylecheck
     - typecheck
     - unused
 
+    # - dupl
     # - cyclop
     # - funlen
+
+linters-settings:
+  stylecheck:
+    checks: ["*", "-ST1003"]
+  exhaustive:
+    check:
+      - switch
+      - map
+    ignore-enum-types: "ResourceName|FileMode|ProgrammingLanguage"

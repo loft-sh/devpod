@@ -2,10 +2,11 @@ package dockerfile
 
 import (
 	"fmt"
-	"github.com/loft-sh/devpod/pkg/scanner"
-	"github.com/moby/buildkit/frontend/dockerfile/parser"
 	"regexp"
 	"strings"
+
+	"github.com/loft-sh/devpod/pkg/scanner"
+	"github.com/moby/buildkit/frontend/dockerfile/parser"
 )
 
 var argumentExpression = regexp.MustCompile(`(?m)\$\{?([a-zA-Z0-9_]+)(:(-|\+)([^\}]+))?\}?`)

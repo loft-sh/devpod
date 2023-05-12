@@ -1,7 +1,7 @@
 package config
 
 type ImageDetails struct {
-	Id     string
+	ID     string
 	Config ImageDetailsConfig
 }
 
@@ -14,7 +14,7 @@ type ImageDetailsConfig struct {
 }
 
 type ContainerDetails struct {
-	Id      string
+	ID      string
 	Created string
 	State   ContainerDetailsState
 	Config  ContainerDetailsConfig
@@ -34,7 +34,7 @@ type ContainerDetailsState struct {
 
 func ContainerToImageDetails(containerDetails *ContainerDetails) *ImageDetails {
 	return &ImageDetails{
-		Id: containerDetails.Id,
+		ID: containerDetails.ID,
 		Config: ImageDetailsConfig{
 			User:   containerDetails.Config.User,
 			Env:    containerDetails.Config.Env,

@@ -2,6 +2,8 @@ package workspace
 
 import (
 	"context"
+	"os"
+
 	"github.com/loft-sh/devpod/cmd/flags"
 	"github.com/loft-sh/devpod/pkg/agent"
 	"github.com/loft-sh/devpod/pkg/daemon"
@@ -9,7 +11,6 @@ import (
 	provider2 "github.com/loft-sh/devpod/pkg/provider"
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
-	"os"
 )
 
 // DeleteCmd holds the cmd flags

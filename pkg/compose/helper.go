@@ -3,17 +3,18 @@ package compose
 import (
 	"context"
 	"fmt"
+	"io"
+	"os"
+	"os/exec"
+	"regexp"
+	"strings"
+
 	"github.com/blang/semver"
 	composecli "github.com/compose-spec/compose-go/cli"
 	composetypes "github.com/compose-spec/compose-go/types"
 	"github.com/loft-sh/devpod/pkg/devcontainer/config"
 	"github.com/loft-sh/devpod/pkg/docker"
 	"github.com/pkg/errors"
-	"io"
-	"os"
-	"os/exec"
-	"regexp"
-	"strings"
 )
 
 const (

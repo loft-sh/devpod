@@ -2,11 +2,12 @@ package helper
 
 import (
 	"context"
+	"os"
+
 	command2 "github.com/loft-sh/devpod/pkg/command"
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
 	"golang.org/x/crypto/ssh"
-	"os"
 )
 
 type SSHClient struct {

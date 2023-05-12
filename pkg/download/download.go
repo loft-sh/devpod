@@ -4,13 +4,14 @@ import (
 	"crypto/tls"
 	"encoding/json"
 	"fmt"
-	"github.com/loft-sh/devpod/pkg/gitcredentials"
-	"github.com/loft-sh/devpod/pkg/log"
-	"github.com/pkg/errors"
 	"io"
 	"net/http"
 	"net/url"
 	"strings"
+
+	"github.com/loft-sh/devpod/pkg/gitcredentials"
+	"github.com/loft-sh/devpod/pkg/log"
+	"github.com/pkg/errors"
 )
 
 var httpClient = &http.Client{
@@ -124,6 +125,7 @@ func downloadGithubRelease(org, repo, release, file, token string) (io.ReadClose
 
 	var releaseAsset *GithubReleaseAsset
 	for _, asset := range releaseObj.Assets {
+		asset := asset
 		if asset.Name == file {
 			releaseAsset = &asset
 			break

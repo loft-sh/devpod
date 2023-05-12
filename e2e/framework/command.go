@@ -3,10 +3,11 @@ package framework
 import (
 	"context"
 	"fmt"
+	"path/filepath"
+
 	"github.com/loft-sh/devpod/cmd/flags"
 	"github.com/loft-sh/devpod/cmd/machine"
 	"github.com/loft-sh/devpod/cmd/provider"
-	"path/filepath"
 )
 
 // DevPodUp executes the `devpod up` command in the test framework
