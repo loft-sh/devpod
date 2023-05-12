@@ -5,6 +5,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"github.com/loft-sh/devpod/pkg/client/clientimplementation"
 	"os"
 	"path/filepath"
 	"strings"
@@ -13,7 +14,6 @@ import (
 	"github.com/loft-sh/devpod/cmd/flags"
 	"github.com/loft-sh/devpod/pkg/agent"
 	"github.com/loft-sh/devpod/pkg/binaries"
-	"github.com/loft-sh/devpod/pkg/client/clientimplementation"
 	"github.com/loft-sh/devpod/pkg/log"
 	provider2 "github.com/loft-sh/devpod/pkg/provider"
 	"github.com/sirupsen/logrus"
@@ -48,7 +48,7 @@ func (cmd *DaemonCmd) Run(ctx context.Context) error {
 	}
 
 	logger := log.NewFileLogger(filepath.Join(logFolder, "agent-daemon.log"), logrus.InfoLevel)
-	logger.Infof("Starting DevPod Daemon patrol...")
+	logger.Infof("Starting DevPod Daemon patrol at %s...", logFolder)
 
 	// start patrolling
 	cmd.patrol(logger)
@@ -63,7 +63,7 @@ func (cmd *DaemonCmd) patrol(log log.Logger) {
 
 	// loop over workspace configs and check their last ModTime
 	for {
-		time.Sleep(time.Minute)
+		time.Sleep(time.Minute * 2)
 		cmd.doOnce(log)
 	}
 }
@@ -104,6 +104,11 @@ func (cmd *DaemonCmd) doOnce(log log.Logger) {
 
 	// should we run shutdown command?
 	if latestActivity == nil {
+		if len(matches) == 0 {
+			log.Infof("No workspaces found in path '%s'", baseFolder)
+		} else {
+			log.Infof("%d workspaces found in path '%s', but none of them had any auto-stop configured or were still running / never completed successfully", len(matches), baseFolder)
+		}
 		return
 	}
 
@@ -118,9 +123,15 @@ func (cmd *DaemonCmd) doOnce(log log.Logger) {
 		}
 	}
 	if latestActivity.Add(timeout).After(time.Now()) {
+		log.Infof("Workspace '%s' has latest activity at '%s', will auto-stop machine in %s", workspace.Workspace.ID, latestActivity.String(), latestActivity.Add(timeout).Sub(time.Now()).String())
 		return
 	}
 
+	// run shutdown command
+	cmd.runShutdownCommand(workspace, log)
+}
+
+func (cmd *DaemonCmd) runShutdownCommand(workspace *provider2.AgentWorkspaceInfo, log log.Logger) {
 	// get environ
 	environ, err := toEnvironWithBinaries(cmd.AgentDir, workspace, log)
 	if err != nil {
@@ -203,6 +214,12 @@ func getActivity(workspaceConfig string, log log.Logger) (*time.Time, *provider2
 
 	// check if shutdown is configured
 	if len(workspace.Agent.Exec.Shutdown) == 0 {
+		return nil, nil, nil
+	}
+
+	// check if it was actually ever executed fully
+	_, err = os.Stat(filepath.Join(filepath.Dir(workspaceConfig), agent.WorkspaceDevContainerResult))
+	if err != nil {
 		return nil, nil, nil
 	}
 

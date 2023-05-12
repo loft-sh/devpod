@@ -2,6 +2,7 @@ package machine
 
 import (
 	"context"
+	"fmt"
 	"time"
 
 	"github.com/loft-sh/devpod/cmd/flags"
@@ -47,6 +48,19 @@ func (cmd *DeleteCmd) Run(ctx context.Context, args []string) error {
 	machineClient, err := workspace.GetMachine(devPodConfig, args, log.Default)
 	if err != nil {
 		return err
+	}
+
+	// check if there are workspaces that still use this machine
+	workspaces, err := workspace.ListWorkspaces(devPodConfig, log.Default)
+	if err != nil {
+		return err
+	}
+
+	// search for workspace that uses this machine
+	for _, workspace := range workspaces {
+		if workspace.Machine.ID == machineClient.Machine() {
+			return fmt.Errorf("cannot delete machine '%s', because workspace '%s' is still using it. Please delete the workspace '%s' before deleting the machine", workspace.Machine.ID, workspace.ID, workspace.ID)
+		}
 	}
 
 	var duration *time.Duration

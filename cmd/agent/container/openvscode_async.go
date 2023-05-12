@@ -2,7 +2,6 @@ package container
 
 import (
 	"encoding/json"
-
 	"github.com/loft-sh/devpod/cmd/flags"
 	"github.com/loft-sh/devpod/pkg/compress"
 	"github.com/loft-sh/devpod/pkg/devcontainer/config"
@@ -10,19 +9,19 @@ import (
 	"github.com/spf13/cobra"
 )
 
-// VSCodeAsyncCmd holds the cmd flags
-type VSCodeAsyncCmd struct {
+// OpenVSCodeAsyncCmd holds the cmd flags
+type OpenVSCodeAsyncCmd struct {
 	*flags.GlobalFlags
 
 	SetupInfo string
 }
 
-// NewVSCodeAsyncCmd creates a new command
-func NewVSCodeAsyncCmd() *cobra.Command {
-	cmd := &VSCodeAsyncCmd{}
+// NewOpenVSCodeAsyncCmd creates a new command
+func NewOpenVSCodeAsyncCmd() *cobra.Command {
+	cmd := &OpenVSCodeAsyncCmd{}
 	vsCodeAsyncCmd := &cobra.Command{
-		Use:   "vscode-async",
-		Short: "Starts vscode",
+		Use:   "openvscode-async",
+		Short: "Starts openvscode",
 		Args:  cobra.NoArgs,
 		RunE:  cmd.Run,
 	}
@@ -32,7 +31,7 @@ func NewVSCodeAsyncCmd() *cobra.Command {
 }
 
 // Run runs the command logic
-func (cmd *VSCodeAsyncCmd) Run(_ *cobra.Command, _ []string) error {
+func (cmd *OpenVSCodeAsyncCmd) Run(_ *cobra.Command, _ []string) error {
 	log.Default.Debugf("Start setting up container...")
 	decompressed, err := compress.Decompress(cmd.SetupInfo)
 	if err != nil {
@@ -46,7 +45,7 @@ func (cmd *VSCodeAsyncCmd) Run(_ *cobra.Command, _ []string) error {
 	}
 
 	// install IDE
-	err = setupVSCodeExtensions(setupInfo, log.Default)
+	err = setupOpenVSCodeExtensions(setupInfo, log.Default)
 	if err != nil {
 		return err
 	}

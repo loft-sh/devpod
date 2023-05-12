@@ -94,5 +94,6 @@ func BuildRoot() *cobra.Command {
 	rootCmd.AddCommand(NewListCmd(globalFlags))
 	rootCmd.AddCommand(NewStatusCmd(globalFlags))
 	rootCmd.AddCommand(NewBuildCmd(globalFlags))
+	rootCmd.AddCommand(NewLogsDaemonCmd(globalFlags))
 	return rootCmd
 }

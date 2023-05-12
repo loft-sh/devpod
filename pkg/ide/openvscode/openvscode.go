@@ -59,8 +59,8 @@ var Options = ide.Options{
 
 const DefaultVSCodePort = 10800
 
-func NewOpenVSCodeServer(extensions []string, settings string, userName string, host, port string, values map[string]config.OptionValue, log log.Logger) ide.IDE {
-	return &openVSCodeServer{
+func NewOpenVSCodeServer(extensions []string, settings string, userName string, host, port string, values map[string]config.OptionValue, log log.Logger) *OpenVSCodeServer {
+	return &OpenVSCodeServer{
 		values:     values,
 		extensions: extensions,
 		settings:   settings,
@@ -71,7 +71,7 @@ func NewOpenVSCodeServer(extensions []string, settings string, userName string, 
 	}
 }
 
-type openVSCodeServer struct {
+type OpenVSCodeServer struct {
 	values     map[string]config.OptionValue
 	extensions []string
 	settings   string
@@ -81,21 +81,17 @@ type openVSCodeServer struct {
 	log        log.Logger
 }
 
-func (o *openVSCodeServer) Install() error {
-	err := o.install()
+func (o *OpenVSCodeServer) InstallExtensions() error {
+	// install extensions
+	err := o.installExtensions()
 	if err != nil {
-		return err
-	}
-
-	err = o.Start()
-	if err != nil {
-		return err
+		return errors.Wrap(err, "install extensions")
 	}
 
 	return nil
 }
 
-func (o *openVSCodeServer) install() error {
+func (o *OpenVSCodeServer) Install() error {
 	location, err := prepareOpenVSCodeServerLocation(o.userName)
 	if err != nil {
 		return err
@@ -147,14 +143,8 @@ func (o *openVSCodeServer) install() error {
 		}
 	}
 
-	// install extensions
-	err = o.InstallExtensions()
-	if err != nil {
-		return errors.Wrap(err, "install extensions")
-	}
-
 	// paste settings
-	err = o.InstallSettings()
+	err = o.installSettings()
 	if err != nil {
 		return errors.Wrap(err, "install settings")
 	}
@@ -162,7 +152,7 @@ func (o *openVSCodeServer) install() error {
 	return nil
 }
 
-func (o *openVSCodeServer) InstallExtensions() error {
+func (o *OpenVSCodeServer) installExtensions() error {
 	if len(o.extensions) == 0 {
 		return nil
 	}
@@ -199,7 +189,7 @@ func (o *openVSCodeServer) InstallExtensions() error {
 	return nil
 }
 
-func (o *openVSCodeServer) InstallSettings() error {
+func (o *OpenVSCodeServer) installSettings() error {
 	if len(o.settings) == 0 {
 		return nil
 	}
@@ -228,7 +218,7 @@ func (o *openVSCodeServer) InstallSettings() error {
 	return nil
 }
 
-func (o *openVSCodeServer) Start() error {
+func (o *OpenVSCodeServer) Start() error {
 	location, err := prepareOpenVSCodeServerLocation(o.userName)
 	if err != nil {
 		return err
