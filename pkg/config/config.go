@@ -3,11 +3,11 @@ package config
 import (
 	"encoding/json"
 	"fmt"
+	"github.com/loft-sh/devpod/pkg/telemetry"
 	"os"
 	"path/filepath"
 
 	"github.com/ghodss/yaml"
-	"github.com/loft-sh/devpod/pkg/telemetry"
 	"github.com/loft-sh/devpod/pkg/types"
 	"github.com/pkg/errors"
 )
@@ -49,6 +49,7 @@ type ContextConfig struct {
 const (
 	ContextOptionInjectDockerCredentials = "INJECT_DOCKER_CREDENTIALS"
 	ContextOptionInjectGitCredentials    = "INJECT_GIT_CREDENTIALS"
+	ContextOptionTelemetry               = "TELEMETRY"
 )
 
 var ContextOptions = []ContextOption{
@@ -61,6 +62,12 @@ var ContextOptions = []ContextOption{
 	{
 		Name:        ContextOptionInjectGitCredentials,
 		Description: "Specifies if DevPod should inject git credentials into the workspace",
+		Default:     "true",
+		Enum:        []string{"true", "false"},
+	},
+	{
+		Name:        ContextOptionTelemetry,
+		Description: "Specifies if DevPod should send telemetry information",
 		Default:     "true",
 		Enum:        []string{"true", "false"},
 	},
@@ -275,15 +282,11 @@ func LoadConfig(contextOverride string, providerOverride string) (*Config, error
 	}
 
 	config.Origin = configOrigin
-
-	go func() {
-		doneChan := make(chan struct{})
-		telemetry.CMDStartedDoneChan = &doneChan
-		defer close(doneChan)
-
-		telemetry.Collector.RecordCMDStartedEvent(config.Current().DefaultProvider)
-
-	}()
+	if config.ContextOption(ContextOptionTelemetry) != "false" {
+		go func() {
+			telemetry.Collector.RecordStartEvent(config.Current().DefaultProvider)
+		}()
+	}
 
 	return config, nil
 }
