@@ -3,11 +3,11 @@ package config
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/loft-sh/devpod/pkg/telemetry"
 	"os"
 	"path/filepath"
 
 	"github.com/ghodss/yaml"
+	"github.com/loft-sh/devpod/pkg/telemetry"
 	"github.com/loft-sh/devpod/pkg/types"
 	"github.com/pkg/errors"
 )

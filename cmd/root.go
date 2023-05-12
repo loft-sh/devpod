@@ -2,6 +2,10 @@ package cmd
 
 import (
 	"fmt"
+	"os"
+	"os/exec"
+	"runtime/debug"
+
 	"github.com/loft-sh/devpod/cmd/agent"
 	"github.com/loft-sh/devpod/cmd/context"
 	"github.com/loft-sh/devpod/cmd/flags"
@@ -15,9 +19,6 @@ import (
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 	"golang.org/x/crypto/ssh"
-	"os"
-	"os/exec"
-	"runtime/debug"
 )
 
 var (

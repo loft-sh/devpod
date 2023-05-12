@@ -26,11 +26,16 @@ func NewSetOptionsCmd(flags *flags.GlobalFlags) *cobra.Command {
 		Use:   "set-options",
 		Short: "Set options for a DevPod context",
 		RunE: func(_ *cobra.Command, args []string) error {
-			if len(args) != 1 {
+			if len(args) > 1 {
 				return fmt.Errorf("please specify the context")
 			}
 
-			return cmd.Run(context.Background(), args[0])
+			devPodContext := ""
+			if len(args) == 1 {
+				devPodContext = args[0]
+			}
+
+			return cmd.Run(context.Background(), devPodContext)
 		},
 	}
 
@@ -43,6 +48,11 @@ func (cmd *SetOptionsCmd) Run(ctx context.Context, context string) error {
 	devPodConfig, err := config.LoadConfig("", cmd.Provider)
 	if err != nil {
 		return err
+	}
+
+	// check for context
+	if context == "" {
+		context = devPodConfig.DefaultContext
 	} else if devPodConfig.Contexts[context] == nil {
 		return fmt.Errorf("context '%s' doesn't exist", context)
 	}
