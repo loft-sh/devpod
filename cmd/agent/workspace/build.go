@@ -20,6 +20,7 @@ type BuildCmd struct {
 
 	Repository    string
 	WorkspaceInfo string
+	Platforms     []string
 }
 
 // NewBuildCmd creates a new command
@@ -37,6 +38,7 @@ func NewBuildCmd(flags *flags.GlobalFlags) *cobra.Command {
 	}
 	buildCmd.Flags().StringVar(&cmd.Repository, "repository", "", "The repository to push to")
 	buildCmd.Flags().StringVar(&cmd.WorkspaceInfo, "workspace-info", "", "The workspace info")
+	buildCmd.Flags().StringSliceVar(&cmd.Platforms, "platform", []string{}, "Set target platform for build")
 	_ = buildCmd.MarkFlagRequired("workspace-info")
 	_ = buildCmd.MarkFlagRequired("repository")
 	return buildCmd
@@ -73,16 +75,27 @@ func (cmd *BuildCmd) Run(ctx context.Context) error {
 		return err
 	}
 
-	// build the image
-	imageName, err := runner.Build(config.BuildOptions{
-		PushRepository: cmd.Repository,
-	})
-	if err != nil {
-		logger.Errorf("Error building image: %v", err)
-		return errors.Wrap(err, "build")
+	// if there is no platform specified, we use empty to let
+	// the builder find out itself.
+	if len(cmd.Platforms) == 0 {
+		cmd.Platforms = []string{""}
 	}
 
-	logger.Donef("Successfully build and pushed image %s", imageName)
+	// build and push images
+	for _, platform := range cmd.Platforms {
+		// build the image
+		imageName, err := runner.Build(config.BuildOptions{
+			PushRepository: cmd.Repository,
+			Platform:       platform,
+		})
+		if err != nil {
+			logger.Errorf("Error building image: %v", err)
+			return errors.Wrap(err, "build")
+		}
+
+		logger.Donef("Successfully build and pushed image %s", imageName)
+	}
+
 	return nil
 }
 

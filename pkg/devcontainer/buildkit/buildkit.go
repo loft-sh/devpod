@@ -17,7 +17,7 @@ import (
 	"github.com/pkg/errors"
 )
 
-func Build(ctx context.Context, client *buildkit.Client, writer io.Writer, options *build.BuildOptions, log log.Logger) error {
+func Build(ctx context.Context, client *buildkit.Client, writer io.Writer, platform string, options *build.BuildOptions, log log.Logger) error {
 	dockerConfig, err := docker.LoadDockerConfig()
 	if err != nil {
 		return err
@@ -47,6 +47,11 @@ func Build(ctx context.Context, client *buildkit.Client, writer io.Writer, optio
 	// set options target
 	if options.Target != "" {
 		solveOptions.FrontendAttrs["target"] = options.Target
+	}
+
+	// add platforms
+	if platform != "" {
+		solveOptions.FrontendAttrs["platform"] = platform
 	}
 
 	// add context and dockerfile to local dirs

@@ -16,7 +16,7 @@ func (r *Runner) Build(options config.BuildOptions) (string, error) {
 	}
 
 	// check if we need to build container
-	buildInfo, err := r.build(substitutedConfig, config.BuildOptions{PushRepository: options.PushRepository})
+	buildInfo, err := r.build(substitutedConfig, options)
 	if err != nil {
 		return "", errors.Wrap(err, "build image")
 	}
