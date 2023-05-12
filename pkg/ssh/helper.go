@@ -10,6 +10,26 @@ import (
 	"golang.org/x/crypto/ssh"
 )
 
+func NewSSHPassClient(user, addr, password string) (*ssh.Client, error) {
+	clientConfig := &ssh.ClientConfig{
+		Auth:            []ssh.AuthMethod{},
+		HostKeyCallback: ssh.InsecureIgnoreHostKey(),
+	}
+
+	clientConfig.Auth = append(clientConfig.Auth, ssh.Password(password))
+
+	if user != "" {
+		clientConfig.User = user
+	}
+
+	client, err := ssh.Dial("tcp", addr, clientConfig)
+	if err != nil {
+		return nil, fmt.Errorf("dial to %v failed: %w", addr, err)
+	}
+
+	return client, nil
+}
+
 func NewSSHClient(user, addr string, keyBytes []byte) (*ssh.Client, error) {
 	sshConfig, err := ConfigFromKeyBytes(keyBytes)
 	if err != nil {
