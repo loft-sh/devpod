@@ -5,42 +5,46 @@ import {
   FormErrorMessage,
   FormHelperText,
   FormLabel,
+  Grid,
   HStack,
   Icon,
   Input,
   Link,
   Select,
+  SimpleGrid,
   Text,
+  Tooltip,
   useColorModeValue,
+  useToken,
   VStack,
-  Wrap,
-  WrapItem,
 } from "@chakra-ui/react"
 import { useQuery } from "@tanstack/react-query"
 import { useCallback, useEffect, useMemo } from "react"
+import { Controller, ControllerRenderProps } from "react-hook-form"
 import { FiFolder } from "react-icons/fi"
 import { useNavigate } from "react-router"
 import { useSearchParams } from "react-router-dom"
 import { client } from "../../../client"
-import { CollapsibleSection, ExampleCard } from "../../../components"
+import { ExampleCard } from "../../../components"
+import { RECOMMENDED_PROVIDER_SOURCES, SIDEBAR_WIDTH, STATUS_BAR_HEIGHT } from "../../../constants"
 import { useProviders, useWorkspace } from "../../../contexts"
 import { exists, getIDEDisplayName, getKeys, isEmpty, useFormErrors } from "../../../lib"
 import { QueryKeys } from "../../../queryKeys"
 import { Routes } from "../../../routes"
 import { useBorderColor } from "../../../Theme"
-import { TProviderID } from "../../../types"
+import { TIDE, TProviderID } from "../../../types"
 import { WORKSPACE_EXAMPLES } from "./constants"
-import { FieldName, TCreateWorkspaceArgs, TCreateWorkspaceSearchParams } from "./types"
+import {
+  FieldName,
+  TCreateWorkspaceArgs,
+  TCreateWorkspaceSearchParams,
+  TFormValues,
+  TSelectProviderOptions,
+} from "./types"
 import { useCreateWorkspaceForm } from "./useCreateWorkspaceForm"
 import { useSetupProviderModal } from "./useSetupProviderModal"
 
-const SHOW_RECOMMENDED_REPOSITORIES_KEY = "devpod-show-recommended-repositories"
-
 export function CreateWorkspace() {
-  const defaultShowRecommended = useMemo(
-    () => localStorage.getItem(SHOW_RECOMMENDED_REPOSITORIES_KEY) !== "false",
-    []
-  )
   const idesQuery = useQuery({
     queryKey: QueryKeys.IDES,
     queryFn: async () => (await client.ides.listAll()).unwrap(),
@@ -84,6 +88,7 @@ export function CreateWorkspace() {
     register,
     onSubmit,
     validateWorkspaceID,
+    control,
     formState,
     isSubmitting,
     currentSource,
@@ -91,12 +96,15 @@ export function CreateWorkspace() {
   const { sourceError, providerError, defaultIDEError, idError, prebuildRepositoryError } =
     useFormErrors(Object.values(FieldName), formState)
 
-  const providerOptions = useMemo<readonly TProviderID[]>(() => {
+  const providerOptions = useMemo<TSelectProviderOptions>(() => {
     if (!exists(providers)) {
-      return []
+      return { installed: [], recommended: RECOMMENDED_PROVIDER_SOURCES }
     }
 
-    return Object.keys(providers)
+    return {
+      installed: Object.entries(providers).map(([key, value]) => ({ name: key, ...value })),
+      recommended: RECOMMENDED_PROVIDER_SOURCES,
+    }
   }, [providers])
 
   const handleSelectFolderClicked = useCallback(async () => {
@@ -126,21 +134,14 @@ export function CreateWorkspace() {
     if (providers !== undefined) {
       // no provider available
       if (isEmpty(getKeys(providers))) {
-        showSetupProviderModal({
-          message: "Looks like you don't have providers installed yet.",
-          isStrict: true,
-        })
+        showSetupProviderModal({ isStrict: true })
 
         return
       }
 
       // selected provider not installed
       if (searchParams.providerID && providers[searchParams.providerID] === undefined) {
-        showSetupProviderModal({
-          message: `You tried to create a workspace with the "${searchParams.providerID}" provider. It looks like this provider isn't available on your machine. 
-          Please set it up first. Alternatively you can create a workspace with a different provider.`,
-          isStrict: false,
-        })
+        showSetupProviderModal({ isStrict: false })
 
         return
       }
@@ -154,23 +155,30 @@ export function CreateWorkspace() {
   return (
     <>
       <form onSubmit={onSubmit}>
-        <VStack align="start" spacing="6" marginBottom="8">
-          <VStack width="full" borderRadius="lg" borderWidth="thin" borderColor={borderColor}>
+        <VStack align="start" spacing="6" marginBottom="8" alignItems="center" width="full">
+          <HStack
+            width="full"
+            height="full"
+            borderRadius="lg"
+            borderWidth="thin"
+            borderColor={borderColor}
+            maxWidth="container.lg">
             <FormControl
               backgroundColor={backgroundColor}
-              padding="20"
+              paddingX="20"
+              paddingY="32"
+              height="full"
               isRequired
               isInvalid={exists(sourceError)}
               justifyContent="center"
               display="flex"
-              alignItems="center"
-              borderBottomWidth="thin"
-              borderBottomColor={borderColor}>
-              <VStack maxWidth="3xl">
+              borderRightWidth="thin"
+              borderRightColor={borderColor}>
+              <VStack width="full">
                 <Text marginBottom="2" fontWeight="bold">
                   Enter Workspace Source
                 </Text>
-                <HStack spacing={0} justifyContent={"center"}>
+                <HStack spacing={0} justifyContent={"center"} width="full">
                   <Input
                     spellCheck={false}
                     backgroundColor={inputBackgroundColor}
@@ -180,7 +188,7 @@ export function CreateWorkspace() {
                     fontSize={"16px"}
                     padding={"10px"}
                     height={"42px"}
-                    width={"96"}
+                    width={"60%"}
                     type="text"
                     {...register(FieldName.SOURCE, { required: true })}
                   />
@@ -215,124 +223,161 @@ export function CreateWorkspace() {
               </VStack>
             </FormControl>
 
-            <Box width="full" height="full" padding={4} marginBottom="8">
-              <CollapsibleSection
-                title="Or use one of our quickstart examples"
-                showIcon
-                isOpen={defaultShowRecommended}
-                onOpenChange={(isOpen) =>
-                  localStorage.setItem(SHOW_RECOMMENDED_REPOSITORIES_KEY, !!isOpen + "")
-                }>
-                <FormControl isRequired isInvalid={exists(sourceError)}>
-                  <Wrap spacing={3} marginTop="2.5" justify="center">
-                    {WORKSPACE_EXAMPLES.map((example) => (
-                      <WrapItem key={example.source} padding={"1"}>
-                        <ExampleCard
-                          image={example.image}
-                          source={example.source}
-                          isSelected={currentSource === example.source}
-                          onClick={() => handleExampleCardClicked(example.source)}
-                        />
-                      </WrapItem>
-                    ))}
-                  </Wrap>
-                </FormControl>
-              </CollapsibleSection>
+            <Box
+              width="72"
+              marginInlineStart="0 !important"
+              alignSelf="stretch"
+              height="full"
+              position="relative">
+              <Text
+                paddingY="3"
+                borderBottomWidth="thin"
+                borderColor={borderColor}
+                width="full"
+                color="gray.500"
+                marginBottom="4"
+                fontWeight="medium"
+                textAlign="center">
+                Or select one of our quickstart examples
+              </Text>
+              <FormControl
+                paddingTop="6"
+                width="full"
+                display="flex"
+                flexFlow="column"
+                flexWrap="nowrap"
+                alignItems="center"
+                isRequired
+                isInvalid={exists(sourceError)}>
+                <SimpleGrid columns={2} spacingX={4} spacingY={4}>
+                  {WORKSPACE_EXAMPLES.map((example) => (
+                    <ExampleCard
+                      key={example.source}
+                      size="sm"
+                      image={example.image}
+                      source={example.source}
+                      isSelected={currentSource === example.source}
+                      onClick={() => handleExampleCardClicked(example.source)}
+                    />
+                  ))}
+                </SimpleGrid>
+              </FormControl>
             </Box>
+          </HStack>
+
+          <VStack spacing="10" maxWidth="container.lg">
+            <HStack spacing="8" alignItems={"top"} width={"100%"} justifyContent={"start"}>
+              <FormControl isRequired isInvalid={exists(providerError)}>
+                <FormLabel>Provider</FormLabel>
+                <Controller
+                  name={FieldName.PROVIDER}
+                  control={control}
+                  render={({ field }) => (
+                    <ProviderInput
+                      field={field}
+                      options={providerOptions}
+                      onRecommendedProviderClicked={(name) =>
+                        showSetupProviderModal({
+                          suggestedProvider: name,
+                          isStrict: false,
+                        })
+                      }
+                    />
+                  )}
+                />
+                {exists(providerError) ? (
+                  <FormErrorMessage>{providerError.message ?? "Error"}</FormErrorMessage>
+                ) : (
+                  <FormHelperText>Use this provider to create the workspace.</FormHelperText>
+                )}
+              </FormControl>
+              <FormControl isRequired isInvalid={exists(defaultIDEError)}>
+                <FormLabel>Default IDE</FormLabel>
+                <Controller
+                  name={FieldName.DEFAULT_IDE}
+                  control={control}
+                  render={({ field }) => (
+                    <IDEInput
+                      field={field}
+                      ides={idesQuery.data}
+                      onClick={(name) => field.onChange(name)}
+                    />
+                  )}
+                />
+                {exists(defaultIDEError) ? (
+                  <FormErrorMessage>{defaultIDEError.message ?? "Error"}</FormErrorMessage>
+                ) : (
+                  <FormHelperText>
+                    DevPod will open this workspace with the selected IDE by default. You can still
+                    change your default IDE later.
+                  </FormHelperText>
+                )}
+              </FormControl>
+            </HStack>
+            <HStack spacing="8" alignItems={"top"} width={"100%"} justifyContent={"start"}>
+              <FormControl isInvalid={exists(idError)}>
+                <FormLabel>Workspace Name</FormLabel>
+                <Input
+                  spellCheck={false}
+                  placeholder="my-workspace"
+                  type="text"
+                  {...register(FieldName.ID)}
+                  onChange={validateWorkspaceID}
+                />
+                {exists(idError) ? (
+                  <FormErrorMessage>{idError.message ?? "Error"}</FormErrorMessage>
+                ) : (
+                  <FormHelperText>
+                    This is the workspace name DevPod will use. This is an optional field and
+                    usually only needed if you have an already existing workspace with the same
+                    name.
+                  </FormHelperText>
+                )}
+              </FormControl>
+              <FormControl isInvalid={exists(prebuildRepositoryError)}>
+                <FormLabel>Prebuild Repository</FormLabel>
+                <Input
+                  spellCheck={false}
+                  placeholder="ghcr.io/my-org/my-repo"
+                  type="text"
+                  {...register(FieldName.PREBUILD_REPOSITORY)}
+                  onChange={(e) => {
+                    setValue(FieldName.PREBUILD_REPOSITORY, e.target.value, {
+                      shouldDirty: true,
+                    })
+                  }}
+                />
+                {exists(prebuildRepositoryError) ? (
+                  <FormErrorMessage>{prebuildRepositoryError.message ?? "Error"}</FormErrorMessage>
+                ) : (
+                  <FormHelperText>
+                    DevPod will use this repository to find prebuilds for the given workspace.
+                  </FormHelperText>
+                )}
+              </FormControl>
+            </HStack>
           </VStack>
 
-          <CollapsibleSection title={"Advanced Options"} showIcon>
-            <VStack spacing="10" maxWidth={"1024px"}>
-              <HStack spacing="8" alignItems={"top"} width={"100%"} justifyContent={"start"}>
-                <FormControl isRequired isInvalid={exists(providerError)}>
-                  <FormLabel>Provider</FormLabel>
-                  <Select {...register(FieldName.PROVIDER)}>
-                    {providerOptions.map((providerID) => (
-                      <option key={providerID} value={providerID}>
-                        {providerID}
-                      </option>
-                    ))}
-                  </Select>
-                  {exists(providerError) ? (
-                    <FormErrorMessage>{providerError.message ?? "Error"}</FormErrorMessage>
-                  ) : (
-                    <FormHelperText>Use this provider to create the workspace.</FormHelperText>
-                  )}
-                </FormControl>
-                <FormControl isRequired isInvalid={exists(defaultIDEError)}>
-                  <FormLabel>Default IDE</FormLabel>
-                  <Select textTransform="capitalize" {...register(FieldName.DEFAULT_IDE)}>
-                    {idesQuery.data?.map((ide) => (
-                      <option key={ide.name} value={ide.name!}>
-                        {getIDEDisplayName(ide)}
-                      </option>
-                    ))}
-                  </Select>
-                  {exists(defaultIDEError) ? (
-                    <FormErrorMessage>{defaultIDEError.message ?? "Error"}</FormErrorMessage>
-                  ) : (
-                    <FormHelperText>
-                      DevPod will open this workspace with the selected IDE by default. You can
-                      still change your default IDE later.
-                    </FormHelperText>
-                  )}
-                </FormControl>
-              </HStack>
-              <HStack spacing="8" alignItems={"top"} width={"100%"} justifyContent={"start"}>
-                <FormControl isInvalid={exists(idError)}>
-                  <FormLabel>Workspace Name</FormLabel>
-                  <Input
-                    spellCheck={false}
-                    placeholder="my-workspace"
-                    type="text"
-                    {...register(FieldName.ID)}
-                    onChange={validateWorkspaceID}
-                  />
-                  {exists(idError) ? (
-                    <FormErrorMessage>{idError.message ?? "Error"}</FormErrorMessage>
-                  ) : (
-                    <FormHelperText>
-                      This is the workspace name DevPod will use. This is an optional field and
-                      usually only needed if you have an already existing workspace with the same
-                      name.
-                    </FormHelperText>
-                  )}
-                </FormControl>
-                <FormControl isInvalid={exists(prebuildRepositoryError)}>
-                  <FormLabel>Prebuild Repository</FormLabel>
-                  <Input
-                    spellCheck={false}
-                    placeholder="ghcr.io/my-org/my-repo"
-                    type="text"
-                    {...register(FieldName.PREBUILD_REPOSITORY)}
-                    onChange={(e) => {
-                      setValue(FieldName.PREBUILD_REPOSITORY, e.target.value, {
-                        shouldDirty: true,
-                      })
-                    }}
-                  />
-                  {exists(prebuildRepositoryError) ? (
-                    <FormErrorMessage>
-                      {prebuildRepositoryError.message ?? "Error"}
-                    </FormErrorMessage>
-                  ) : (
-                    <FormHelperText>
-                      DevPod will use this repository to find prebuilds for the given workspace.
-                    </FormHelperText>
-                  )}
-                </FormControl>
-              </HStack>
-            </VStack>
-          </CollapsibleSection>
-
-          <Button
-            variant="primary"
-            marginTop="10"
-            type="submit"
-            disabled={formState.isSubmitting}
-            isLoading={isSubmitting}>
-            Create Workspace
-          </Button>
+          <HStack
+            position="absolute"
+            bottom={STATUS_BAR_HEIGHT}
+            right="0"
+            width={`calc(100vw - ${SIDEBAR_WIDTH})`}
+            height="20"
+            backgroundColor="white"
+            alignItems="center"
+            borderTopWidth="thin"
+            borderTopColor={borderColor}
+            paddingX="8"
+            zIndex="overlay">
+            <Button
+              variant="primary"
+              type="submit"
+              disabled={formState.isSubmitting}
+              isLoading={isSubmitting}>
+              Create Workspace
+            </Button>
+          </HStack>
         </VStack>
       </form>
 
@@ -347,5 +392,105 @@ function useCreateWorkspaceParams(): TCreateWorkspaceSearchParams {
   return useMemo(
     () => Routes.getWorkspaceCreateParamsFromSearchParams(searchParams),
     [searchParams]
+  )
+}
+
+type TProviderInputProps = Readonly<{
+  options: TSelectProviderOptions
+  field: ControllerRenderProps<TFormValues, (typeof FieldName)["PROVIDER"]>
+  onRecommendedProviderClicked: (provider: TProviderID) => void
+}>
+function ProviderInput({ options, field, onRecommendedProviderClicked }: TProviderInputProps) {
+  return (
+    <Grid
+      templateRows={{
+        lg: "repeat(2, 1fr)",
+        xl: options.installed.length <= 2 ? "1fr" : "repeat(2, 1fr)",
+      }}
+      gridAutoFlow={"column"}>
+      <HStack>
+        {options.installed.map((p) => (
+          <Tooltip key={p.name} label={p.name}>
+            <Box>
+              <ExampleCard
+                isSelected={field.value === p.name}
+                size="sm"
+                onClick={() => field.onChange(p.name)}
+                image={p.config?.icon ?? undefined}
+              />
+              <Text
+                maxWidth="10"
+                overflow="hidden"
+                textOverflow="ellipsis"
+                whiteSpace="nowrap"
+                textAlign="center"
+                fontSize="sm"
+                color="gray.500">
+                {p.name}
+              </Text>
+            </Box>
+          </Tooltip>
+        ))}
+      </HStack>
+      <HStack>
+        {options.recommended.map((p) => (
+          <Tooltip key={p.name} label={p.name}>
+            <Box filter="grayscale(100%)" _hover={{ filter: "grayscale(0%)" }}>
+              <ExampleCard
+                size="sm"
+                onClick={() => onRecommendedProviderClicked(p.name)}
+                image={p.image}
+              />
+              <Text
+                maxWidth="10"
+                overflow="hidden"
+                textOverflow="ellipsis"
+                whiteSpace="nowrap"
+                textAlign="center"
+                fontSize="sm"
+                color="gray.500">
+                {p.name}
+              </Text>
+            </Box>
+          </Tooltip>
+        ))}
+      </HStack>
+    </Grid>
+  )
+}
+
+import { KubernetesSvg } from "../../../images"
+type TIDEInputProps = Readonly<{
+  ides: readonly TIDE[] | undefined
+  field: ControllerRenderProps<TFormValues, (typeof FieldName)["DEFAULT_IDE"]>
+  onClick: (name: TIDE["name"]) => void
+}>
+function IDEInput({ ides, field, onClick }: TIDEInputProps) {
+  const gridChildWidth = useToken("sizes", "12")
+
+  return (
+    <Grid
+      gridTemplateColumns={{
+        lg: `repeat(8, ${gridChildWidth})`,
+        xl: `repeat(11, ${gridChildWidth})`,
+        "2xl": `repeat(auto-fit, ${gridChildWidth})`,
+      }}>
+      {ides?.map((ide) => {
+        const isSelected = field.value === ide.name
+
+        return (
+          <Box
+            key={ide.name}
+            >
+            <ExampleCard
+              size="sm"
+              image={ide.icon ?? KubernetesSvg}
+              isSelected={isSelected}
+              onClick={() => onClick(ide.name!)}
+            />
+          </Box>
+        )
+      })}
+    </Grid>
   )
 }

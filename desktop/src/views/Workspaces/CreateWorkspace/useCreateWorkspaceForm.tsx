@@ -2,8 +2,10 @@ import { ChangeEvent, FormEventHandler, useCallback, useEffect, useMemo, useStat
 import { useForm } from "react-hook-form"
 import { client } from "../../../client"
 import { useSettings, useWorkspaces } from "../../../contexts"
-import { TIDEs, TProviders } from "../../../types"
+import { TIDEs, TProviders, TWorkspace } from "../../../types"
 import { FieldName, TCreateWorkspaceArgs, TCreateWorkspaceSearchParams, TFormValues } from "./types"
+import { exists } from "../../../lib"
+import { randomWords } from "../../../lib/randomWords"
 
 const DEFAULT_PREBUILD_REPOSITORY_KEY = "devpod-create-prebuild-repository"
 
@@ -16,7 +18,7 @@ export function useCreateWorkspaceForm(
   const settings = useSettings()
   const workspaces = useWorkspaces()
   const [isSubmitLoading, setIsSubmitLoading] = useState(false)
-  const { register, handleSubmit, formState, watch, setError, setValue, clearErrors } =
+  const { register, handleSubmit, formState, watch, setError, setValue, clearErrors, control } =
     useForm<TFormValues>({
       defaultValues: {
         [FieldName.PREBUILD_REPOSITORY]:
@@ -24,6 +26,7 @@ export function useCreateWorkspaceForm(
       },
     })
   const currentSource = watch(FieldName.SOURCE)
+  const currentProvider = watch(FieldName.PROVIDER)
   const isSubmitting = useMemo(
     () => formState.isSubmitting || isSubmitLoading,
     [formState.isSubmitting, isSubmitLoading]
@@ -66,15 +69,51 @@ export function useCreateWorkspaceForm(
     }
   }, [ides, params, providers, setValue])
 
+  // Handle workspace name
+  useEffect(() => {
+    if (exists(currentSource) && currentSource !== "") {
+      setValue(FieldName.ID, "", { shouldDirty: true })
+
+      client.workspaces.newID(currentSource).then((res) => {
+        console.log(res)
+        if (res.err) {
+          setError(FieldName.SOURCE, { message: res.val.message })
+
+          return
+        }
+        let workspaceID = res.val
+        if (!isWorkspaceNameAvailable(workspaceID, workspaces)) {
+          workspaceID = `${workspaceID}-${currentProvider}`
+
+          if (isWorkspaceNameAvailable(workspaceID, workspaces)) {
+            setValue(FieldName.ID, workspaceID, { shouldDirty: true })
+
+            return
+          }
+
+          const words = randomWords({ amount: 2 })
+          workspaceID = `${workspaceID}-${words[0] ?? "x"}-${words[1] ?? "y"}`
+          if (isWorkspaceNameAvailable(workspaceID, workspaces)) {
+            setValue(FieldName.ID, workspaceID, { shouldDirty: true })
+
+            return
+          }
+
+          setError(FieldName.SOURCE, { message: "Workspace with the same name already exists" })
+
+          return
+        }
+      })
+    }
+  }, [currentProvider, currentSource, setError, setValue, workspaces])
+
   const onSubmit = useCallback<FormEventHandler<HTMLFormElement>>(
     (event) =>
       handleSubmit(async (data) => {
         // save prebuild repository
-        if (data[FieldName.PREBUILD_REPOSITORY]) {
-          window.localStorage.setItem(
-            DEFAULT_PREBUILD_REPOSITORY_KEY,
-            data[FieldName.PREBUILD_REPOSITORY]
-          )
+        const maybePrebuildRepo = data[FieldName.PREBUILD_REPOSITORY]
+        if (maybePrebuildRepo) {
+          window.localStorage.setItem(DEFAULT_PREBUILD_REPOSITORY_KEY, maybePrebuildRepo)
         } else {
           window.localStorage.removeItem(DEFAULT_PREBUILD_REPOSITORY_KEY)
         }
@@ -166,5 +205,10 @@ export function useCreateWorkspaceForm(
     onSubmit,
     isSubmitting,
     currentSource,
+    control,
   }
+}
+
+function isWorkspaceNameAvailable(workspaceID: string, workspaces: readonly TWorkspace[]): boolean {
+  return workspaces.find((workspace) => workspace.id === workspaceID) === undefined
 }

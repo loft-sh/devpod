@@ -4,8 +4,12 @@ import { CollapsibleSection } from "../../../components"
 import { ConfigureProviderOptionsForm } from "./ConfigureProviderOptionsForm"
 import { SetupProviderSourceForm } from "./SetupProviderSourceForm"
 import { useSetupProvider } from "./useSetupProvider"
+import { TProviderID } from "../../../types"
 
-export function SetupProviderSteps({ onFinish }: Readonly<{ onFinish?: () => void }>) {
+export function SetupProviderSteps({
+  onFinish,
+  suggestedProvider,
+}: Readonly<{ onFinish?: () => void; suggestedProvider?: TProviderID }>) {
   const openLockRef = useRef(false)
   const { state, reset, completeFirstStep, completeSecondStep } = useSetupProvider()
 
@@ -19,7 +23,12 @@ export function SetupProviderSteps({ onFinish }: Readonly<{ onFinish?: () => voi
     <>
       <VStack align="start" spacing={8} width="full">
         <Heading size="md">1. Setup Provider Source</Heading>
-        <SetupProviderSourceForm state={state} reset={reset} onFinish={completeFirstStep} />
+        <SetupProviderSourceForm
+          state={state}
+          suggestedProvider={suggestedProvider}
+          reset={reset}
+          onFinish={completeFirstStep}
+        />
       </VStack>
 
       <VStack align="start" spacing={8} marginTop={6} width="full">

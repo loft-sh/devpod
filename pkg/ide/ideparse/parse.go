@@ -23,6 +23,8 @@ type AllowedIDE struct {
 	DisplayName string `json:"displayName,omitempty"`
 	// Options of the IDE
 	Options ide.Options `json:"options,omitempty"`
+	// Icon holds an image URL that will be displayed
+	Icon string `json:"icon,omitempty"`
 }
 
 var AllowedIDEs = []AllowedIDE{
@@ -30,56 +32,67 @@ var AllowedIDEs = []AllowedIDE{
 		Name:        config.IDENone,
 		DisplayName: "None",
 		Options:     map[string]ide.Option{},
+		Icon:        "",
 	},
 	{
 		Name:        config.IDEVSCode,
 		DisplayName: "VSCode",
 		Options:     vscode.Options,
+		Icon:        "",
 	},
 	{
 		Name:        config.IDEOpenVSCode,
 		DisplayName: "VSCode Browser",
 		Options:     openvscode.Options,
+		Icon:        "",
 	},
 	{
 		Name:        config.IDEGoland,
 		DisplayName: "Goland",
 		Options:     jetbrains.GolandOptions,
+		Icon:        "",
 	},
 	{
 		Name:        config.IDEPyCharm,
 		DisplayName: "PyCharm",
 		Options:     jetbrains.PyCharmOptions,
+		Icon:        "",
 	},
 	{
 		Name:        config.IDEPhpStorm,
 		DisplayName: "PhpStorm",
 		Options:     jetbrains.PhpStormOptions,
+		Icon:        "",
 	},
 	{
 		Name:        config.IDEIntellij,
 		DisplayName: "Intellij",
 		Options:     jetbrains.IntellijOptions,
+		Icon:        "",
 	},
 	{
 		Name:        config.IDECLion,
 		DisplayName: "CLion",
 		Options:     jetbrains.CLionOptions,
+		Icon:        "",
 	},
 	{
 		Name:        config.IDERider,
 		DisplayName: "Rider",
 		Options:     jetbrains.RiderOptions,
+		Icon:        "",
 	},
 	{
 		Name:        config.IDERubyMine,
 		DisplayName: "RubyMine",
 		Options:     jetbrains.RubyMineOptions,
+		Icon:        "",
 	},
 	{
 		Name:        config.IDEWebStorm,
 		DisplayName: "WebStorm",
 		Options:     jetbrains.WebStormOptions,
+		Icon:        "",
 	},
 }
 

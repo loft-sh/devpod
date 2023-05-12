@@ -1,38 +1,62 @@
-import { Box, Card, Image, useColorModeValue } from "@chakra-ui/react"
-import { AnimatePresence, motion } from "framer-motion"
+import { BoxProps, Card, Image, useColorModeValue, useToken } from "@chakra-ui/react"
 import React, { useId } from "react"
 
 type TExampleCardProps = {
   image?: string
   source?: string
+  size?: keyof typeof sizes
 
   isSelected?: boolean
   imageNode?: React.ReactNode
   onClick?: () => void
 }
 
-export function ExampleCard({ image, isSelected, imageNode, onClick }: TExampleCardProps) {
+const sizes: Record<"sm" | "lg", BoxProps["width"]> = {
+  sm: "12",
+  lg: "32",
+} as const
+
+export function ExampleCard({
+  image,
+  isSelected,
+  size = "lg",
+  imageNode,
+  onClick,
+}: TExampleCardProps) {
   const hoverBackgroudColor = useColorModeValue("gray.50", "gray.800")
+  const primaryColor = useToken("colors", "primary.500")
   const selectedProps = isSelected
     ? {
-        boxShadow:
-          "0px 0.6px 0.8px hsl(0deg 0% 0% / 0.09), -0.2px 2.5px 3.3px -1.3px hsl(0deg 0% 0% / 0.18)",
+        _before: {
+          content: '""',
+          position: "absolute",
+          top: 0,
+          bottom: 0,
+          left: 0,
+          right: 0,
+          backgroundColor: "primary.500",
+          opacity: 0.1,
+          width: "full",
+          height: "full",
+          border: "1px solid red",
+        },
+        boxShadow: `inset 0px 0px 0px 1px ${primaryColor}33`,
       }
     : {}
 
   return (
     <Card
       variant="unstyled"
-      width="32"
-      height="32"
+      width={sizes[size]}
+      height={sizes[size]}
       alignItems="center"
       display="flex"
       justifyContent="center"
       cursor="pointer"
-      padding="2"
       boxSizing="border-box"
       position="relative"
       backgroundColor="transparent"
+      overflow="hidden"
       _hover={{ backgroundColor: hoverBackgroudColor }}
       {...(onClick ? { onClick } : {})}
       {...selectedProps}>
@@ -40,33 +64,32 @@ export function ExampleCard({ image, isSelected, imageNode, onClick }: TExampleC
         imageNode
       ) : (
         <Image
-          objectFit="cover"
+          objectFit="fill"
           overflow="hidden"
           maxWidth="28"
           padding="2"
-          width="fill"
-          height="fill"
+          zIndex="1"
           src={image}
         />
       )}
-      <AnimatePresence>
-        {isSelected && (
-          <Box
-            as={motion.div}
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            position="absolute"
-            width="full"
-            height="3"
-            bottom={"17px"}>
-            <Box as={Glow} width="full" />
-          </Box>
-        )}
-      </AnimatePresence>
     </Card>
   )
 }
+// <AnimatePresence>
+//   {isSelected && (
+//     <Box
+//       as={motion.div}
+//       initial={{ opacity: 0 }}
+//       animate={{ opacity: 1 }}
+//       exit={{ opacity: 0 }}
+//       position="absolute"
+//       width="full"
+//       height="3"
+//       bottom={"17px"}>
+//       <Box as={Glow} width="full" />
+//     </Box>
+//   )}
+// </AnimatePresence>
 
 function Glow() {
   const id = useId()

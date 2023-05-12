@@ -496,12 +496,6 @@ function WorkspaceStatusBadge({
   hasError,
   isLoading,
 }: TWorkspaceStatusBadgeProps) {
-  const label = hasError
-    ? "Workspace encountered an error"
-    : isLoading
-    ? `Workspace is loading`
-    : `Workspace is ${status ?? "Pending"}`
-
   const badge = useMemo(() => {
     const sharedProps: BoxProps = {
       as: "span",
@@ -567,14 +561,12 @@ function WorkspaceStatusBadge({
   }, [hasError, isLoading, status])
 
   return (
-    <Tooltip label={label}>
-      <HStack
-        cursor={onClick ? "pointer" : "default"}
-        onClick={onClick}
-        spacing="1"
-        position="relative">
-        {badge}
-      </HStack>
-    </Tooltip>
+    <HStack
+      cursor={onClick ? "pointer" : "default"}
+      onClick={onClick}
+      spacing="1"
+      position="relative">
+      {badge}
+    </HStack>
   )
 }

@@ -22,19 +22,11 @@ import { AiOutlinePlusCircle } from "react-icons/ai"
 import { FiFolder } from "react-icons/fi"
 import { client } from "../../../client"
 import { CollapsibleSection, ErrorMessageBox, ExampleCard } from "../../../components"
-import {
-  AWSSvg,
-  AzureSvg,
-  DigitalOceanSvg,
-  DockerPng,
-  GCloudSvg,
-  KubernetesSvg,
-  SSHPng,
-} from "../../../images"
 import { exists, isError, randomString, useFormErrors } from "../../../lib"
 import { QueryKeys } from "../../../queryKeys"
 import {
   TAddProviderConfig,
+  TProviderID,
   TProviderOptionGroup,
   TProviderOptions,
   TProviders,
@@ -42,31 +34,28 @@ import {
 } from "../../../types"
 import { FieldName, TFormValues } from "./types"
 import { TSetupProviderState } from "./useSetupProvider"
+import { RECOMMENDED_PROVIDER_SOURCES } from "../../../constants"
 
 const Form = styled.form`
   width: 100%;
 `
 const ALLOWED_NAMES_REGEX = /^[a-z0-9\\-]+$/
 
-const RECOMMENDED_PROVIDER_SOURCES = [
-  { image: DockerPng, name: "docker" },
-  { image: SSHPng, name: "ssh" },
-  { image: KubernetesSvg, name: "kubernetes" },
-  { image: AWSSvg, name: "aws" },
-  { image: GCloudSvg, name: "gcloud" },
-  { image: AzureSvg, name: "azure" },
-  { image: DigitalOceanSvg, name: "digitalocean" },
-] as const
-
 type TSetupProviderSourceFormProps = Readonly<{
   state: TSetupProviderState
+  suggestedProvider?: TProviderID
   reset: () => void
   onFinish: (
     result: TWithProviderID &
       Readonly<{ options: TProviderOptions; optionGroups: TProviderOptionGroup[] }>
   ) => void
 }>
-export function SetupProviderSourceForm({ state, reset, onFinish }: TSetupProviderSourceFormProps) {
+export function SetupProviderSourceForm({
+  state,
+  suggestedProvider,
+  reset,
+  onFinish,
+}: TSetupProviderSourceFormProps) {
   const [providers, setProviders] = useState<TProviders | undefined>()
   useEffect(() => {
     ;(async () => {
@@ -80,6 +69,19 @@ export function SetupProviderSourceForm({ state, reset, onFinish }: TSetupProvid
   })
   const providerSource = watch(FieldName.PROVIDER_SOURCE, "")
   const queryClient = useQueryClient()
+
+  useEffect(() => {
+    if (
+      suggestedProvider &&
+      suggestedProvider !== "" &&
+      (!exists(providerSource) || providerSource === "")
+    ) {
+      setValue(FieldName.PROVIDER_SOURCE, suggestedProvider, {
+        shouldValidate: true,
+        shouldDirty: true,
+      })
+    }
+  }, [providerSource, setValue, suggestedProvider])
 
   const {
     mutate: addProvider,
