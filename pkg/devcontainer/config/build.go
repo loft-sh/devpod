@@ -11,6 +11,7 @@ type BuildOptions struct {
 	NoBuild bool
 
 	PrebuildRepositories []string
+	Platform             string
 	PushRepository       string
 }
 

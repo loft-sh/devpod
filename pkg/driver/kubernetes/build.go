@@ -58,7 +58,7 @@ func (k *kubernetesDriver) BuildDevContainer(
 		return nil, err
 	}
 
-	prebuildHash, err := config.CalculatePrebuildHash(parsedConfig.Config, arch, dockerfileContent, k.Log)
+	prebuildHash, err := config.CalculatePrebuildHash(parsedConfig.Config, options.Platform, arch, dockerfileContent, k.Log)
 	if err != nil {
 		return nil, err
 	}
@@ -114,7 +114,7 @@ func (k *kubernetesDriver) BuildDevContainer(
 	}
 
 	// build pod image
-	return k.buildPod(ctx, id, prebuildHash, dockerfilePath, dockerfileContent, parsedConfig, extendedBuildInfo)
+	return k.buildPod(ctx, id, prebuildHash, dockerfilePath, dockerfileContent, parsedConfig, options, extendedBuildInfo)
 }
 
 func (k *kubernetesDriver) buildPod(
@@ -124,6 +124,7 @@ func (k *kubernetesDriver) buildPod(
 	dockerfilePath,
 	dockerfileContent string,
 	parsedConfig *config.SubstitutedConfig,
+	options config.BuildOptions,
 	extendedBuildInfo *feature.ExtendedBuildInfo,
 ) (*config.BuildInfo, error) {
 	if k.config.BuildRepository == "" {
@@ -231,7 +232,7 @@ func (k *kubernetesDriver) buildPod(
 
 	// build
 	k.Log.Infof("Start building image '%s'...", imageName)
-	err = buildkit.Build(cancelCtx, buildKitClient, writer, buildOptions, k.Log)
+	err = buildkit.Build(cancelCtx, buildKitClient, writer, options.Platform, buildOptions, k.Log)
 	if err != nil {
 		return nil, errors.Wrap(err, "build")
 	}

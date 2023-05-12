@@ -35,7 +35,7 @@ func (d *dockerDriver) BuildDevContainer(
 	localWorkspaceFolder string,
 	options config.BuildOptions,
 ) (*config.BuildInfo, error) {
-	prebuildHash, err := config.CalculatePrebuildHash(parsedConfig.Config, runtime.GOARCH, dockerfileContent, d.Log)
+	prebuildHash, err := config.CalculatePrebuildHash(parsedConfig.Config, options.Platform, runtime.GOARCH, dockerfileContent, d.Log)
 	if err != nil {
 		return nil, err
 	}
@@ -110,15 +110,18 @@ func (d *dockerDriver) BuildDevContainer(
 	defer writer.Close()
 
 	// check if docker buildx exists
+	if options.Platform != "" {
+		d.Log.Infof("Build for platform '%s'...", options.Platform)
+	}
 	if d.buildxExists(ctx) {
-		d.Log.Infof("Build with docker buildx")
-		err := d.buildxBuild(ctx, writer, buildOptions)
+		d.Log.Infof("Build with docker buildx...")
+		err := d.buildxBuild(ctx, writer, options.Platform, buildOptions)
 		if err != nil {
 			return nil, errors.Wrap(err, "buildx build")
 		}
 	} else {
-		d.Log.Infof("Build with internal buildkit")
-		err := d.internalBuild(ctx, writer, buildOptions)
+		d.Log.Infof("Build with internal buildkit...")
+		err := d.internalBuild(ctx, writer, options.Platform, buildOptions)
 		if err != nil {
 			return nil, errors.Wrap(err, "internal build")
 		}
@@ -234,7 +237,7 @@ func (d *dockerDriver) buildxExists(ctx context.Context) bool {
 	return err == nil
 }
 
-func (d *dockerDriver) internalBuild(ctx context.Context, writer io.Writer, options *build.BuildOptions) error {
+func (d *dockerDriver) internalBuild(ctx context.Context, writer io.Writer, platform string, options *build.BuildOptions) error {
 	dockerClient, err := docker.NewClient(ctx, d.Log)
 	if err != nil {
 		return errors.Wrap(err, "create docker client")
@@ -247,7 +250,7 @@ func (d *dockerDriver) internalBuild(ctx context.Context, writer io.Writer, opti
 	}
 	defer buildKitClient.Close()
 
-	err = buildkit.Build(ctx, buildKitClient, writer, options, d.Log)
+	err = buildkit.Build(ctx, buildKitClient, writer, platform, options, d.Log)
 	if err != nil {
 		return errors.Wrap(err, "build")
 	}
@@ -255,7 +258,7 @@ func (d *dockerDriver) internalBuild(ctx context.Context, writer io.Writer, opti
 	return nil
 }
 
-func (d *dockerDriver) buildxBuild(ctx context.Context, writer io.Writer, options *build.BuildOptions) error {
+func (d *dockerDriver) buildxBuild(ctx context.Context, writer io.Writer, platform string, options *build.BuildOptions) error {
 	// build args
 	args := []string{
 		"buildx",
@@ -286,6 +289,11 @@ func (d *dockerDriver) buildxBuild(ctx context.Context, writer io.Writer, option
 	// target stage
 	if options.Target != "" {
 		args = append(args, "--target", options.Target)
+	}
+
+	// platform
+	if platform != "" {
+		args = append(args, "--platform", platform)
 	}
 
 	// cache

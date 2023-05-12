@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"strings"
 
 	"github.com/loft-sh/devpod/cmd/flags"
 	"github.com/loft-sh/devpod/pkg/agent"
@@ -27,6 +28,7 @@ type BuildCmd struct {
 	SkipDelete bool
 	Repository string
 	Machine    string
+	Platform   []string
 
 	DevContainerPath string
 }
@@ -90,6 +92,7 @@ func NewBuildCmd(flags *flags.GlobalFlags) *cobra.Command {
 	buildCmd.Flags().BoolVar(&cmd.SkipDelete, "skip-delete", false, "If true will not delete the workspace after building it")
 	buildCmd.Flags().StringVar(&cmd.Machine, "machine", "", "The machine to use for this workspace. The machine needs to exist beforehand or the command will fail. If the workspace already exists, this option has no effect")
 	buildCmd.Flags().StringVar(&cmd.Repository, "repository", "", "The repository to push to")
+	buildCmd.Flags().StringSliceVar(&cmd.Platform, "platform", []string{}, "Set target platform for build")
 	_ = buildCmd.MarkFlagRequired("repository")
 	return buildCmd
 }
@@ -129,6 +132,9 @@ func (cmd *BuildCmd) buildAgentClient(ctx context.Context, workspaceClient clien
 	}
 	if cmd.Repository != "" {
 		command += fmt.Sprintf(" --repository '%s'", cmd.Repository)
+	}
+	if len(cmd.Platform) > 0 {
+		command += fmt.Sprintf(" --platform '%s'", strings.Join(cmd.Platform, ","))
 	}
 
 	// create pipes
