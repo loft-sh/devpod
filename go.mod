@@ -27,7 +27,7 @@ require (
 	github.com/mattn/go-isatty v0.0.8
 	github.com/mgutz/ansi v0.0.0-20200706080929-d51e80ef957d
 	github.com/mitchellh/go-homedir v1.1.0
-	github.com/moby/buildkit v0.11.2
+	github.com/moby/buildkit v0.11.6
 	github.com/moby/term v0.0.0-20221205130635-1aeaba878587
 	github.com/olekukonko/tablewriter v0.0.5
 	github.com/onsi/ginkgo/v2 v2.9.1
@@ -46,11 +46,31 @@ require (
 	google.golang.org/grpc v1.50.1
 	google.golang.org/protobuf v1.28.1
 	gopkg.in/natefinch/lumberjack.v2 v2.2.1
+	gopkg.in/square/go-jose.v2 v2.5.1
 	gopkg.in/yaml.v2 v2.4.0
 	gotest.tools v2.2.0+incompatible
 	k8s.io/api v0.22.5
 	k8s.io/apimachinery v0.22.5
 	mvdan.cc/sh/v3 v3.5.1
+)
+
+require (
+	github.com/Microsoft/hcsshim v0.9.9 // indirect
+	github.com/containerd/containerd v1.6.20 // indirect
+	github.com/containerd/fifo v1.1.0 // indirect
+	github.com/containerd/ttrpc v1.2.2 // indirect
+	github.com/grpc-ecosystem/grpc-gateway v1.16.0 // indirect
+	github.com/opencontainers/image-spec v1.1.0-rc2.0.20221005185240-3a7f492d3f1b // indirect
+	github.com/opencontainers/runc v1.1.7 // indirect
+	github.com/opencontainers/selinux v1.11.0 // indirect
+	go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc v0.29.0 // indirect
+	go.opentelemetry.io/otel v1.4.1 // indirect
+	go.opentelemetry.io/otel/exporters/otlp/otlptrace v1.4.1 // indirect
+	go.opentelemetry.io/otel/sdk v1.4.1 // indirect
+	go.opentelemetry.io/otel/trace v1.4.1 // indirect
+	go.opentelemetry.io/proto/otlp v0.12.0 // indirect
+	k8s.io/klog/v2 v2.30.0 // indirect
+	sigs.k8s.io/structured-merge-diff/v4 v4.1.2 // indirect
 )
 
 require (
@@ -60,9 +80,9 @@ require (
 	github.com/PaesslerAG/gval v1.0.0 // indirect
 	github.com/anmitsu/go-shlex v0.0.0-20200514113438-38f4b401e2be // indirect
 	github.com/containerd/console v1.0.3 // indirect
-	github.com/containerd/containerd v1.6.16-0.20230124210447-1709cfe273d9 // indirect
 	github.com/containerd/continuity v0.3.0 // indirect
 	github.com/containerd/typeurl v1.0.2 // indirect
+	github.com/denisbrodbeck/machineid v1.0.1
 	github.com/distribution/distribution/v3 v3.0.0-20230214150026-36d8c594d7aa // indirect
 	github.com/docker/distribution v2.8.1+incompatible // indirect
 	github.com/docker/docker-credential-helpers v0.7.0 // indirect
@@ -80,7 +100,6 @@ require (
 	github.com/google/pprof v0.0.0-20210720184732-4bb14d4b1be1 // indirect
 	github.com/google/shlex v0.0.0-20191202100458-e7afc7fbc510 // indirect
 	github.com/grpc-ecosystem/go-grpc-middleware v1.3.0 // indirect
-	github.com/grpc-ecosystem/grpc-gateway v1.16.0 // indirect
 	github.com/imdario/mergo v0.3.13 // indirect
 	github.com/inconshreveable/mousetrap v1.0.1 // indirect
 	github.com/json-iterator/go v1.1.12 // indirect
@@ -98,7 +117,6 @@ require (
 	github.com/morikuni/aec v1.0.0 // indirect
 	github.com/nu7hatch/gouuid v0.0.0-20131221200532-179d4d0c4d8d // indirect
 	github.com/opencontainers/go-digest v1.0.0 // indirect
-	github.com/opencontainers/image-spec v1.1.0-rc2 // indirect
 	github.com/tadvi/systray v0.0.0-20190226123456-11a2b8fa57af // indirect
 	github.com/tonistiigi/fsutil v0.0.0-20230105215944-fb433841cbfa // indirect
 	github.com/tonistiigi/units v0.0.0-20180711220420-6950e57a87ea // indirect
@@ -106,21 +124,13 @@ require (
 	github.com/xeipuuv/gojsonpointer v0.0.0-20180127040702-4e3ac2762d5f // indirect
 	github.com/xeipuuv/gojsonreference v0.0.0-20180127040603-bd5ef7bd5415 // indirect
 	github.com/xeipuuv/gojsonschema v1.2.0 // indirect
-	go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc v0.29.0 // indirect
-	go.opentelemetry.io/otel v1.4.1 // indirect
-	go.opentelemetry.io/otel/exporters/otlp/otlptrace v1.4.1 // indirect
-	go.opentelemetry.io/otel/sdk v1.4.1 // indirect
-	go.opentelemetry.io/otel/trace v1.4.1 // indirect
-	go.opentelemetry.io/proto/otlp v0.12.0 // indirect
 	golang.org/x/mod v0.9.0 // indirect
 	golang.org/x/net v0.8.0 // indirect
 	golang.org/x/sync v0.1.0 // indirect
 	golang.org/x/text v0.8.0 // indirect
-	golang.org/x/time v0.1.0 // indirect
+	golang.org/x/time v0.3.0 // indirect
 	golang.org/x/tools v0.7.0 // indirect
 	google.golang.org/genproto v0.0.0-20220706185917-7780775163c4 // indirect
 	gopkg.in/inf.v0 v0.9.1 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
-	k8s.io/klog/v2 v2.30.0 // indirect
-	sigs.k8s.io/structured-merge-diff/v4 v4.1.2 // indirect
 )

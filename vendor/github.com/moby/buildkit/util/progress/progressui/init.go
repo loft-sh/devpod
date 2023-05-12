@@ -14,7 +14,7 @@ var colorError aec.ANSI
 
 func init() {
 	// As recommended on https://no-color.org/
-	if _, ok := os.LookupEnv("NO_COLOR"); ok {
+	if v := os.Getenv("NO_COLOR"); v != "" {
 		// nil values will result in no ANSI color codes being emitted.
 		return
 	} else if runtime.GOOS == "windows" {
