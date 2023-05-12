@@ -31,7 +31,7 @@ import (
 var branchRegEx = regexp.MustCompile(`[^a-zA-Z0-9\.\-]+`)
 
 func SingleMachineName(provider string) string {
-	return "devpod-shared-vm-" + provider
+	return "devpod-shared-" + provider
 }
 
 // Exists checks if the given workspace already exists
