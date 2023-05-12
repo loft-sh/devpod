@@ -48,7 +48,7 @@ func (cmd *DaemonCmd) Run(ctx context.Context) error {
 	}
 
 	logger := log.NewFileLogger(filepath.Join(logFolder, "agent-daemon.log"), logrus.InfoLevel)
-	logger.Infof("Starting DevPod Daemon patrol...")
+	logger.Infof("Starting DevPod Daemon patrol at %s...", logFolder)
 
 	// start patrolling
 	cmd.patrol(logger)
@@ -107,7 +107,7 @@ func (cmd *DaemonCmd) doOnce(log log.Logger) {
 		if len(matches) == 0 {
 			log.Infof("No workspaces found in path '%s'", baseFolder)
 		} else {
-			log.Infof("%d workspaces found in path '%s', but none of them had any auto-stop configured", len(matches), baseFolder)
+			log.Infof("%d workspaces found in path '%s', but none of them had any auto-stop configured or were still running / never completed successfully", len(matches), baseFolder)
 		}
 		return
 	}
@@ -214,6 +214,12 @@ func getActivity(workspaceConfig string, log log.Logger) (*time.Time, *provider2
 
 	// check if shutdown is configured
 	if len(workspace.Agent.Exec.Shutdown) == 0 {
+		return nil, nil, nil
+	}
+
+	// check if it was actually ever executed fully
+	_, err = os.Stat(filepath.Join(filepath.Dir(workspaceConfig), agent.WorkspaceDevContainerResult))
+	if err != nil {
 		return nil, nil, nil
 	}
 
