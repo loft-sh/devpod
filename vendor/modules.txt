@@ -14,6 +14,8 @@ github.com/Azure/go-ansiterm/winterm
 github.com/Microsoft/go-winio
 github.com/Microsoft/go-winio/internal/socket
 github.com/Microsoft/go-winio/pkg/guid
+# github.com/Microsoft/hcsshim v0.9.9
+## explicit; go 1.13
 # github.com/PaesslerAG/gval v1.0.0
 ## explicit
 github.com/PaesslerAG/gval
@@ -50,7 +52,7 @@ github.com/compose-spec/compose-go/utils
 # github.com/containerd/console v1.0.3
 ## explicit; go 1.13
 github.com/containerd/console
-# github.com/containerd/containerd v1.6.16-0.20230124210447-1709cfe273d9
+# github.com/containerd/containerd v1.6.20
 ## explicit; go 1.17
 github.com/containerd/containerd/api/services/content/v1
 github.com/containerd/containerd/content
@@ -69,12 +71,19 @@ github.com/containerd/containerd/version
 ## explicit; go 1.17
 github.com/containerd/continuity/fs
 github.com/containerd/continuity/sysx
+# github.com/containerd/fifo v1.1.0
+## explicit; go 1.18
+# github.com/containerd/ttrpc v1.2.2
+## explicit; go 1.13
 # github.com/containerd/typeurl v1.0.2
 ## explicit; go 1.13
 github.com/containerd/typeurl
 # github.com/creack/pty v1.1.18
 ## explicit; go 1.13
 github.com/creack/pty
+# github.com/denisbrodbeck/machineid v1.0.1
+## explicit
+github.com/denisbrodbeck/machineid
 # github.com/distribution/distribution/v3 v3.0.0-20230214150026-36d8c594d7aa
 ## explicit; go 1.18
 github.com/distribution/distribution/v3/reference
@@ -277,7 +286,7 @@ github.com/mitchellh/go-homedir
 # github.com/mitchellh/mapstructure v1.5.0
 ## explicit; go 1.14
 github.com/mitchellh/mapstructure
-# github.com/moby/buildkit v0.11.2
+# github.com/moby/buildkit v0.11.6
 ## explicit; go 1.18
 github.com/moby/buildkit/api/services/control
 github.com/moby/buildkit/api/types
@@ -380,10 +389,14 @@ github.com/onsi/gomega/types
 # github.com/opencontainers/go-digest v1.0.0
 ## explicit; go 1.13
 github.com/opencontainers/go-digest
-# github.com/opencontainers/image-spec v1.1.0-rc2
+# github.com/opencontainers/image-spec v1.1.0-rc2.0.20221005185240-3a7f492d3f1b
 ## explicit; go 1.17
 github.com/opencontainers/image-spec/specs-go
 github.com/opencontainers/image-spec/specs-go/v1
+# github.com/opencontainers/runc v1.1.7
+## explicit; go 1.17
+# github.com/opencontainers/selinux v1.11.0
+## explicit; go 1.19
 # github.com/otiai10/copy v1.7.0
 ## explicit; go 1.14
 github.com/otiai10/copy
@@ -476,6 +489,7 @@ golang.org/x/crypto/ed25519
 golang.org/x/crypto/internal/alias
 golang.org/x/crypto/internal/poly1305
 golang.org/x/crypto/nacl/sign
+golang.org/x/crypto/pbkdf2
 golang.org/x/crypto/ssh
 golang.org/x/crypto/ssh/agent
 golang.org/x/crypto/ssh/internal/bcrypt_pbkdf
@@ -537,7 +551,7 @@ golang.org/x/text/transform
 golang.org/x/text/unicode/bidi
 golang.org/x/text/unicode/norm
 golang.org/x/text/width
-# golang.org/x/time v0.1.0
+# golang.org/x/time v0.3.0
 ## explicit
 golang.org/x/time/rate
 # golang.org/x/tools v0.7.0
@@ -660,6 +674,12 @@ gopkg.in/inf.v0
 # gopkg.in/natefinch/lumberjack.v2 v2.2.1
 ## explicit; go 1.13
 gopkg.in/natefinch/lumberjack.v2
+# gopkg.in/square/go-jose.v2 v2.5.1
+## explicit
+gopkg.in/square/go-jose.v2
+gopkg.in/square/go-jose.v2/cipher
+gopkg.in/square/go-jose.v2/json
+gopkg.in/square/go-jose.v2/jwt
 # gopkg.in/yaml.v2 v2.4.0
 ## explicit; go 1.15
 gopkg.in/yaml.v2

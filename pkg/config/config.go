@@ -7,6 +7,7 @@ import (
 	"path/filepath"
 
 	"github.com/ghodss/yaml"
+	"github.com/loft-sh/devpod/pkg/telemetry"
 	"github.com/loft-sh/devpod/pkg/types"
 	"github.com/pkg/errors"
 )
@@ -274,6 +275,16 @@ func LoadConfig(contextOverride string, providerOverride string) (*Config, error
 	}
 
 	config.Origin = configOrigin
+
+	go func() {
+		doneChan := make(chan struct{})
+		telemetry.CMDStartedDoneChan = &doneChan
+		defer close(doneChan)
+
+		telemetry.Collector.RecordCMDStartedEvent(config.Current().DefaultProvider)
+
+	}()
+
 	return config, nil
 }
 
