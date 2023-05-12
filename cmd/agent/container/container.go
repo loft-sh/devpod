@@ -15,6 +15,7 @@ func NewContainerCmd(flags *flags.GlobalFlags) *cobra.Command {
 	containerCmd.AddCommand(NewSetupContainerCmd())
 	containerCmd.AddCommand(NewDaemonCmd())
 	containerCmd.AddCommand(NewVSCodeAsyncCmd())
+	containerCmd.AddCommand(NewOpenVSCodeAsyncCmd())
 	containerCmd.AddCommand(NewCredentialsServerCmd(flags))
 	return containerCmd
 }

@@ -19,6 +19,7 @@ import (
 	"github.com/loft-sh/devpod/pkg/log"
 	provider2 "github.com/loft-sh/devpod/pkg/provider"
 	"github.com/loft-sh/devpod/pkg/single"
+	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
 )
 
@@ -104,7 +105,7 @@ func (cmd *SetupContainerCmd) installIDE(setupInfo *config.Result, workspaceInfo
 	case string(config2.IDEVSCode):
 		return cmd.setupVSCode(setupInfo, workspaceInfo, log)
 	case string(config2.IDEOpenVSCode):
-		return setupOpenVSCode(setupInfo, workspaceInfo, log)
+		return cmd.setupOpenVSCode(setupInfo, workspaceInfo, log)
 	case string(config2.IDEGoland):
 		return jetbrains.NewGolandServer(config.GetRemoteUser(setupInfo), workspaceInfo.Workspace.IDE.Options, log).Install()
 	case string(config2.IDEPyCharm):
@@ -166,17 +167,19 @@ func (cmd *SetupContainerCmd) setupVSCode(setupInfo *config.Result, workspaceInf
 	})
 }
 
-func setupVSCodeExtensions(setupInfo *config.Result, workspaceInfo *provider2.AgentWorkspaceInfo, log log.Logger) error {
+func setupVSCodeExtensions(setupInfo *config.Result, log log.Logger) error {
 	vsCodeConfiguration := config.GetVSCodeConfiguration(setupInfo.MergedConfig)
 	user := config.GetRemoteUser(setupInfo)
-	var options map[string]config2.OptionValue
-	if workspaceInfo != nil {
-		options = workspaceInfo.Workspace.IDE.Options
-	}
-	return vscode.NewVSCodeServer(vsCodeConfiguration.Extensions, "", user, options, log).InstallExtensions()
+	return vscode.NewVSCodeServer(vsCodeConfiguration.Extensions, "", user, nil, log).InstallExtensions()
 }
 
-func setupOpenVSCode(setupInfo *config.Result, workspaceInfo *provider2.AgentWorkspaceInfo, log log.Logger) error {
+func setupOpenVSCodeExtensions(setupInfo *config.Result, log log.Logger) error {
+	vsCodeConfiguration := config.GetVSCodeConfiguration(setupInfo.MergedConfig)
+	user := config.GetRemoteUser(setupInfo)
+	return openvscode.NewOpenVSCodeServer(vsCodeConfiguration.Extensions, "", user, "", "", nil, log).InstallExtensions()
+}
+
+func (cmd *SetupContainerCmd) setupOpenVSCode(setupInfo *config.Result, workspaceInfo *provider2.AgentWorkspaceInfo, log log.Logger) error {
 	log.Debugf("Setup openvscode...")
 	vsCodeConfiguration := config.GetVSCodeConfiguration(setupInfo.MergedConfig)
 	settings := ""
@@ -190,5 +193,30 @@ func setupOpenVSCode(setupInfo *config.Result, workspaceInfo *provider2.AgentWor
 	}
 
 	user := config.GetRemoteUser(setupInfo)
-	return openvscode.NewOpenVSCodeServer(vsCodeConfiguration.Extensions, settings, user, "0.0.0.0", strconv.Itoa(openvscode.DefaultVSCodePort), workspaceInfo.Workspace.IDE.Options, log).Install()
+	openVSCode := openvscode.NewOpenVSCodeServer(vsCodeConfiguration.Extensions, settings, user, "0.0.0.0", strconv.Itoa(openvscode.DefaultVSCodePort), workspaceInfo.Workspace.IDE.Options, log)
+
+	// install open vscode
+	err := openVSCode.Install()
+	if err != nil {
+		return err
+	}
+
+	// install extensions in background
+	if len(vsCodeConfiguration.Extensions) > 0 {
+		err = single.Single("openvscode-async.pid", func() (*exec.Cmd, error) {
+			log.Infof("Install extensions '%s' in the background", strings.Join(vsCodeConfiguration.Extensions, ","))
+			binaryPath, err := os.Executable()
+			if err != nil {
+				return nil, err
+			}
+
+			return exec.Command(binaryPath, "agent", "container", "openvscode-async", "--setup-info", cmd.SetupInfo), nil
+		})
+		if err != nil {
+			return errors.Wrap(err, "install extensions")
+		}
+	}
+
+	// start the server in the background
+	return openVSCode.Start()
 }

@@ -13,6 +13,7 @@ import (
 	"github.com/loft-sh/devpod/pkg/log"
 	"github.com/loft-sh/devpod/pkg/log/table"
 	provider2 "github.com/loft-sh/devpod/pkg/provider"
+	"github.com/loft-sh/devpod/pkg/workspace"
 	"github.com/spf13/cobra"
 )
 
@@ -51,7 +52,7 @@ func (cmd *ListCmd) Run(ctx context.Context) error {
 		return err
 	}
 
-	workspaces, err := listWorkspaces(devPodConfig, log.Default)
+	workspaces, err := workspace.ListWorkspaces(devPodConfig, log.Default)
 	if err != nil {
 		return err
 	}
@@ -101,29 +102,4 @@ func (cmd *ListCmd) Run(ctx context.Context) error {
 	}
 
 	return nil
-}
-
-func listWorkspaces(devPodConfig *config.Config, log log.Logger) ([]*provider2.Workspace, error) {
-	workspaceDir, err := provider2.GetWorkspacesDir(devPodConfig.DefaultContext)
-	if err != nil {
-		return nil, err
-	}
-
-	entries, err := os.ReadDir(workspaceDir)
-	if err != nil && !os.IsNotExist(err) {
-		return nil, err
-	}
-
-	retWorkspaces := []*provider2.Workspace{}
-	for _, entry := range entries {
-		workspaceConfig, err := provider2.LoadWorkspaceConfig(devPodConfig.DefaultContext, entry.Name())
-		if err != nil {
-			log.ErrorStreamOnly().Warnf("Couldn't load workspace %s: %v", entry.Name(), err)
-			continue
-		}
-
-		retWorkspaces = append(retWorkspaces, workspaceConfig)
-	}
-
-	return retWorkspaces, nil
 }

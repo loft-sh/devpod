@@ -33,7 +33,7 @@ const ContainerActivityFile = "/tmp/devpod.activity"
 
 const WorkspaceDevContainerResult = "result.json"
 
-const DefaultAgentDownloadURL = "https://github.com/FabianKramm/foundation/releases/download/test"
+const DefaultAgentDownloadURL = "https://github.com/FabianKramm/foundation/releases/download/fabian"
 
 func DecodeWorkspaceInfo(workspaceInfoRaw string) (*provider2.AgentWorkspaceInfo, string, error) {
 	decoded, err := compress.Decompress(workspaceInfoRaw)

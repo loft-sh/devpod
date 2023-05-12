@@ -31,7 +31,7 @@ import (
 var branchRegEx = regexp.MustCompile(`[^a-zA-Z0-9\.\-]+`)
 
 func SingleMachineName(provider string) string {
-	return "devpod-machine-" + provider
+	return "devpod-shared-vm-" + provider
 }
 
 // Exists checks if the given workspace already exists
@@ -52,6 +52,31 @@ func Exists(devPodConfig *config.Config, args []string) string {
 	}
 
 	return workspaceID
+}
+
+func ListWorkspaces(devPodConfig *config.Config, log log.Logger) ([]*provider2.Workspace, error) {
+	workspaceDir, err := provider2.GetWorkspacesDir(devPodConfig.DefaultContext)
+	if err != nil {
+		return nil, err
+	}
+
+	entries, err := os.ReadDir(workspaceDir)
+	if err != nil && !os.IsNotExist(err) {
+		return nil, err
+	}
+
+	retWorkspaces := []*provider2.Workspace{}
+	for _, entry := range entries {
+		workspaceConfig, err := provider2.LoadWorkspaceConfig(devPodConfig.DefaultContext, entry.Name())
+		if err != nil {
+			log.ErrorStreamOnly().Warnf("Couldn't load workspace %s: %v", entry.Name(), err)
+			continue
+		}
+
+		retWorkspaces = append(retWorkspaces, workspaceConfig)
+	}
+
+	return retWorkspaces, nil
 }
 
 func GetWorkspaceName(args []string) string {
@@ -283,6 +308,8 @@ func createWorkspace(ctx context.Context, devPodConfig *config.Config, workspace
 				return nil, nil, nil, err
 			}
 		} else {
+			log.Infof("Reuse existing machine '%s' for workspace '%s'", workspace.Machine.ID, workspace.ID)
+
 			// load machine config
 			machineConfig, err = provider2.LoadMachineConfig(workspace.Context, workspace.Machine.ID)
 			if err != nil {
