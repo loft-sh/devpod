@@ -35,11 +35,7 @@ func NewOptionsCmd(flags *flags.GlobalFlags) *cobra.Command {
 		Use:   "options",
 		Short: "Show options of an existing provider",
 		RunE: func(_ *cobra.Command, args []string) error {
-			if len(args) != 1 {
-				return fmt.Errorf("please specify the provider to show options for")
-			}
-
-			return cmd.Run(context.Background(), args[0])
+			return cmd.Run(context.Background(), args)
 		},
 	}
 
@@ -56,10 +52,17 @@ type optionWithValue struct {
 }
 
 // Run runs the command logic
-func (cmd *OptionsCmd) Run(ctx context.Context, providerName string) error {
+func (cmd *OptionsCmd) Run(ctx context.Context, args []string) error {
 	devPodConfig, err := config.LoadConfig(cmd.Context, cmd.Provider)
 	if err != nil {
 		return err
+	}
+
+	providerName := devPodConfig.Current().DefaultProvider
+	if len(args) > 0 {
+		providerName = args[0]
+	} else if providerName == "" {
+		return fmt.Errorf("please specify a provider")
 	}
 
 	provider, err := workspace.FindProvider(devPodConfig, providerName, log.Default.ErrorStreamOnly())

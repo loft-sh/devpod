@@ -2,14 +2,15 @@ package workspace
 
 import (
 	"context"
+	"io"
+	"os"
+	"path/filepath"
+
 	"github.com/loft-sh/devpod/cmd/flags"
 	"github.com/loft-sh/devpod/pkg/agent"
 	"github.com/loft-sh/devpod/pkg/log"
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
-	"io"
-	"os"
-	"path/filepath"
 )
 
 // LogsDaemonCmd holds the cmd flags

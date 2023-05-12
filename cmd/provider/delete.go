@@ -35,7 +35,7 @@ func NewDeleteCmd(flags *flags.GlobalFlags) *cobra.Command {
 }
 
 func (cmd *DeleteCmd) Run(ctx context.Context, args []string) error {
-	if len(args) != 1 {
+	if len(args) > 1 {
 		return fmt.Errorf("please specify a provider to delete")
 	}
 
@@ -43,23 +43,31 @@ func (cmd *DeleteCmd) Run(ctx context.Context, args []string) error {
 	if err != nil {
 		return err
 	}
-	if devPodConfig.Current().DefaultProvider == args[0] {
+
+	provider := devPodConfig.Current().DefaultProvider
+	if len(args) > 0 {
+		provider = args[0]
+	} else if provider == "" {
+		return fmt.Errorf("please specify a provider to delete")
+	}
+
+	if devPodConfig.Current().DefaultProvider == provider {
 		devPodConfig.Current().DefaultProvider = ""
 	}
-	delete(devPodConfig.Current().Providers, args[0])
+	delete(devPodConfig.Current().Providers, provider)
 	err = config.SaveConfig(devPodConfig)
 	if err != nil {
 		return errors.Wrap(err, "save config")
 	}
 
-	providerDir, err := provider2.GetProviderDir(devPodConfig.DefaultContext, args[0])
+	providerDir, err := provider2.GetProviderDir(devPodConfig.DefaultContext, provider)
 	if err != nil {
 		return err
 	}
 	_, err = os.Stat(providerDir)
 	if err != nil {
 		if os.IsNotExist(err) {
-			return fmt.Errorf("provider '%s' does not exist", args[0])
+			return fmt.Errorf("provider '%s' does not exist", provider)
 		}
 
 		return err
@@ -69,6 +77,6 @@ func (cmd *DeleteCmd) Run(ctx context.Context, args []string) error {
 		return errors.Wrap(err, "delete provider dir")
 	}
 
-	log.Default.Donef("Successfully deleted provider '%s'", args[0])
+	log.Default.Donef("Successfully deleted provider '%s'", provider)
 	return nil
 }

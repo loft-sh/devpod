@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
-	"time"
+	"runtime/debug"
 
 	"github.com/loft-sh/devpod/cmd/agent"
 	"github.com/loft-sh/devpod/cmd/context"
@@ -58,8 +58,9 @@ func Execute() {
 	defer func() {
 		// recover from panic in order to log it via telemetry
 		if err := recover(); err != nil {
-			telemetry.Collector.RecordCMDFinishedEvent(fmt.Errorf("panic: %v", err))
-			log2.Default.Fatal(fmt.Errorf("panic: %v", err))
+			retErr := fmt.Errorf("panic: %v %s", err, debug.Stack())
+			telemetry.Collector.RecordEndEvent(retErr)
+			log2.Default.Fatal(retErr)
 		}
 	}()
 
@@ -67,17 +68,8 @@ func Execute() {
 	rootCmd := BuildRoot()
 
 	// execute command
-	startTime := time.Now()
 	err := rootCmd.Execute()
-	if err != nil || time.Since(startTime) > telemetry.TelemetrySendFinishedAfter {
-		telemetry.Collector.RecordCMDFinishedEvent(err)
-	}
-
-	// ensure that CMDStart telemetry async upload has finished if it started
-	if telemetry.CMDStartedDoneChan != nil {
-		<-(*telemetry.CMDStartedDoneChan)
-	}
-
+	telemetry.Collector.RecordEndEvent(err)
 	if err != nil {
 		//nolint:all
 		if sshExitErr, ok := err.(*ssh.ExitError); ok {
