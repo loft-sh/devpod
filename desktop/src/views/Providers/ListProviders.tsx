@@ -3,14 +3,13 @@ import { useMemo } from "react"
 import { useProviders } from "../../contexts"
 import { exists } from "../../lib"
 import { TProviderID } from "../../types"
+import { useSetupProviderModal } from "../Providers/useSetupProviderModal"
 import { ProviderCard } from "./ProviderCard"
-import { Routes } from "../../routes"
-import { useNavigate } from "react-router"
 
 type TProviderInfo = Readonly<{ name: TProviderID }>
 export function ListProviders() {
-  const navigate = useNavigate()
   const [[providers], { remove }] = useProviders()
+  const { show: showSetupProvider, modal } = useSetupProviderModal()
   const providersInfo = useMemo<readonly TProviderInfo[]>(() => {
     if (!exists(providers)) {
       return []
@@ -23,18 +22,24 @@ export function ListProviders() {
       })
   }, [providers])
 
-  return providersInfo.length === 0 ? (
-    <VStack>
-      <Text>No providers found. Click here to add one</Text>
-      <Button onClick={() => navigate(Routes.PROVIDER_ADD)}>Add Provider</Button>
-    </VStack>
-  ) : (
-    <Wrap>
-      {providersInfo.map(({ name }) => (
-        <WrapItem key={name}>
-          <ProviderCard key={name} id={name} provider={providers?.[name]} remove={remove} />
-        </WrapItem>
-      ))}
-    </Wrap>
+  return (
+    <>
+      {providersInfo.length === 0 ? (
+        <VStack>
+          <Text>No providers found. Click here to add one</Text>
+          <Button onClick={() => showSetupProvider({ isStrict: false })}>Add Provider</Button>
+        </VStack>
+      ) : (
+        <Wrap>
+          {providersInfo.map(({ name }) => (
+            <WrapItem key={name}>
+              <ProviderCard key={name} id={name} provider={providers?.[name]} remove={remove} />
+            </WrapItem>
+          ))}
+        </Wrap>
+      )}
+
+      {modal}
+    </>
   )
 }

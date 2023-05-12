@@ -7,23 +7,26 @@ type TExampleCardProps = {
   size?: keyof typeof sizes
 
   isSelected?: boolean
+  isDisabled?: boolean
   imageNode?: React.ReactNode
   onClick?: () => void
 }
 
-const sizes: Record<"sm" | "lg", BoxProps["width"]> = {
+const sizes: Record<"sm" | "md" | "lg", BoxProps["width"]> = {
   sm: "12",
-  lg: "32",
+  md: "20",
+  lg: "24",
 } as const
 
 export function ExampleCard({
   image,
   isSelected,
-  size = "lg",
+  isDisabled,
   imageNode,
+  size = "lg",
   onClick,
 }: TExampleCardProps) {
-  const hoverBackgroudColor = useColorModeValue("gray.50", "gray.800")
+  const hoverBackgroundColor = useColorModeValue("gray.50", "gray.800")
   const primaryColor = useToken("colors", "primary.500")
   const selectedProps = isSelected
     ? {
@@ -44,6 +47,8 @@ export function ExampleCard({
       }
     : {}
 
+  const disabledProps = isDisabled ? { filter: "grayscale(100%)", cursor: "not-allowed" } : {}
+
   return (
     <Card
       variant="unstyled"
@@ -57,9 +62,10 @@ export function ExampleCard({
       position="relative"
       backgroundColor="transparent"
       overflow="hidden"
-      _hover={{ backgroundColor: hoverBackgroudColor }}
-      {...(onClick ? { onClick } : {})}
-      {...selectedProps}>
+      _hover={{ backgroundColor: isDisabled || isSelected ? undefined : hoverBackgroundColor }}
+      {...(onClick && !isDisabled && !isSelected ? { onClick } : {})}
+      {...selectedProps}
+      {...disabledProps}>
       {imageNode ? (
         imageNode
       ) : (

@@ -1,2 +1,2 @@
-export { AddProvider } from "./AddProvider"
 export { SetupProviderSteps } from "./SetupProviderSteps"
+export { ConfigureProviderOptionsForm } from "./ConfigureProviderOptionsForm"

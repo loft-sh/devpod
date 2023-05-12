@@ -11,9 +11,9 @@ import {
 } from "@chakra-ui/react"
 import { useCallback, useMemo, useState } from "react"
 import { useNavigate } from "react-router-dom"
-import { Routes } from "../../../routes"
-import { TProviderID } from "../../../types"
-import { SetupProviderSteps } from "../../Providers"
+import { Routes } from "../../routes"
+import { TProviderID } from "../../types"
+import { SetupProviderSteps } from "../Providers"
 
 export function useSetupProviderModal() {
   const navigate = useNavigate()
@@ -59,16 +59,20 @@ export function useSetupProviderModal() {
         isCentered
         size="6xl"
         scrollBehavior="inside"
-        closeOnOverlayClick={false}>
+        closeOnOverlayClick={true}>
         <ModalOverlay />
-        <ModalContent>
+        <ModalContent position="relative" overflow="hidden">
           <ModalHeader>
             Configure Provider {isStrict ? "before creating a workspace" : ""}
           </ModalHeader>
           <ModalCloseButton onClick={handleCloseClicked} />
-          <ModalBody>
+          <ModalBody paddingBottom="20">
             <VStack align="start" spacing="8">
-              <SetupProviderSteps suggestedProvider={suggestedProvider} onFinish={onClose} />
+              <SetupProviderSteps
+                suggestedProvider={suggestedProvider}
+                onFinish={onClose}
+                isModal
+              />
             </VStack>
           </ModalBody>
           <ModalFooter />

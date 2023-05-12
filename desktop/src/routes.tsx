@@ -6,7 +6,6 @@ import { TProviderID, TSupportedIDE, TWorkspaceID } from "./types"
 import {
   Action,
   Actions,
-  AddProvider,
   CreateWorkspace,
   ListProviders,
   ListWorkspaces,
@@ -77,9 +76,6 @@ export const Routes = {
   get PROVIDER() {
     return `${Routes.PROVIDERS}/:provider`
   },
-  get PROVIDER_ADD() {
-    return `${Routes.PROVIDERS}/add`
-  },
   toProvider(providerID: string) {
     return `${Routes.PROVIDERS}/${providerID}`
   },
@@ -117,10 +113,6 @@ export const router = createBrowserRouter([
           {
             path: Routes.PROVIDER,
             element: <Provider />,
-          },
-          {
-            path: Routes.PROVIDER_ADD,
-            element: <AddProvider />,
           },
         ],
       },

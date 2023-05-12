@@ -42,7 +42,7 @@ import {
   TSelectProviderOptions,
 } from "./types"
 import { useCreateWorkspaceForm } from "./useCreateWorkspaceForm"
-import { useSetupProviderModal } from "./useSetupProviderModal"
+import { useSetupProviderModal } from "../../Providers"
 
 export function CreateWorkspace() {
   const idesQuery = useQuery({
@@ -479,9 +479,7 @@ function IDEInput({ ides, field, onClick }: TIDEInputProps) {
         const isSelected = field.value === ide.name
 
         return (
-          <Box
-            key={ide.name}
-            >
+          <Box key={ide.name}>
             <ExampleCard
               size="sm"
               image={ide.icon ?? KubernetesSvg}
