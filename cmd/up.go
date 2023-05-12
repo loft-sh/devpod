@@ -4,8 +4,8 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"net/url"
 	"os"
-	"os/exec"
 
 	"github.com/loft-sh/devpod/cmd/flags"
 	"github.com/loft-sh/devpod/pkg/agent"
@@ -22,6 +22,7 @@ import (
 	workspace2 "github.com/loft-sh/devpod/pkg/workspace"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
+	"github.com/skratchdot/open-golang/open"
 	"github.com/spf13/cobra"
 	"golang.org/x/crypto/ssh"
 )
@@ -115,7 +116,7 @@ func (cmd *UpCmd) Run(ctx context.Context, devPodConfig *config.Config, client c
 	ideConfig := client.WorkspaceConfig().IDE
 	switch ideConfig.Name {
 	case string(config.IDEVSCode):
-		return startVSCodeLocally(client, result.SubstitutionContext.ContainerWorkspaceFolder, log.Default)
+		return startVSCodeLocally(client, result.SubstitutionContext.ContainerWorkspaceFolder, user, log.Default)
 	case string(config.IDEOpenVSCode):
 		return startInBrowser(ctx, devPodConfig, client, result.SubstitutionContext.ContainerWorkspaceFolder, user, ideConfig.Options, log.Default)
 	case string(config.IDEGoland):
@@ -139,13 +140,12 @@ func (cmd *UpCmd) Run(ctx context.Context, devPodConfig *config.Config, client c
 	return nil
 }
 
-func startVSCodeLocally(client client2.WorkspaceClient, workspaceFolder string, log log.Logger) error {
+func startVSCodeLocally(client client2.WorkspaceClient, workspaceFolder, user string, log log.Logger) error {
 	log.Infof("Starting VSCode...")
-	err := exec.Command("code", "--disable-extension", "ms-vscode-remote.remote-containers", "--folder-uri", fmt.Sprintf("vscode-remote://ssh-remote+%s.devpod/%s", client.Workspace(), workspaceFolder)).Run()
+	err := open.Start(`vscode://vscode-remote/ssh-remote+` + url.QueryEscape(user) + `@` + client.Workspace() + `.devpod/` + url.QueryEscape(workspaceFolder))
 	if err != nil {
 		return err
 	}
-
 	return nil
 }
 
