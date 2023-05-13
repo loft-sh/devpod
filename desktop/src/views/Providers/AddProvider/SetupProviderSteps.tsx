@@ -12,7 +12,13 @@ export function SetupProviderSteps({
 }: Readonly<{ onFinish?: () => void; suggestedProvider?: TProviderID; isModal?: boolean }>) {
   const openLockRef = useRef(false)
   const configureProviderRef = useRef<HTMLDivElement>(null)
-  const { state, reset, completeSetupProvider, completeConfigureProvider } = useSetupProvider()
+  const {
+    state,
+    reset,
+    completeSetupProvider,
+    completeConfigureProvider,
+    removeDanglingProviders,
+  } = useSetupProvider()
 
   useEffect(() => {
     if (state.currentStep === "done") {
@@ -43,6 +49,7 @@ export function SetupProviderSteps({
             completeSetupProvider(result)
             scrollToElement(configureProviderRef.current)
           }}
+          removeDanglingProviders={removeDanglingProviders}
         />
       </VStack>
 

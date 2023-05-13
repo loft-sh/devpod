@@ -49,7 +49,7 @@ import {
   useWorkspaceActions,
 } from "../../contexts"
 import { ArrowPath, Ellipsis, Pause, Play, Stack3D, Trash } from "../../icons"
-import { CodeJPG } from "../../images"
+import { NoWorkspaceImageSvg } from "../../images"
 import { exists, getIDEDisplayName } from "../../lib"
 import { QueryKeys } from "../../queryKeys"
 import { Routes } from "../../routes"
@@ -189,8 +189,8 @@ export function WorkspaceCard({ workspaceID, onSelectionChange }: TWorkspaceCard
           width={"300px"}
           maxWidth={"300px"}
           style={{ aspectRatio: "2 / 1" }}
-          src={picture ?? CodeJPG}
-          fallbackSrc={CodeJPG}
+          src={picture ?? NoWorkspaceImageSvg}
+          fallbackSrc={NoWorkspaceImageSvg}
           alt="Project Image"
         />
         <Stack width="full" justifyContent={"space-between"}>

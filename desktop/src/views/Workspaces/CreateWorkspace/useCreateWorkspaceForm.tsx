@@ -1,11 +1,11 @@
-import { ChangeEvent, FormEventHandler, useCallback, useEffect, useMemo, useState } from "react"
+import { FormEventHandler, useCallback, useEffect, useMemo, useState } from "react"
 import { useForm } from "react-hook-form"
 import { client } from "../../../client"
 import { useSettings, useWorkspaces } from "../../../contexts"
-import { TIDEs, TProviders, TWorkspace } from "../../../types"
-import { FieldName, TCreateWorkspaceArgs, TCreateWorkspaceSearchParams, TFormValues } from "./types"
 import { exists } from "../../../lib"
 import { randomWords } from "../../../lib/randomWords"
+import { TIDEs, TProviders, TWorkspace } from "../../../types"
+import { FieldName, TCreateWorkspaceArgs, TCreateWorkspaceSearchParams, TFormValues } from "./types"
 
 const DEFAULT_PREBUILD_REPOSITORY_KEY = "devpod-create-prebuild-repository"
 
@@ -18,7 +18,7 @@ export function useCreateWorkspaceForm(
   const settings = useSettings()
   const workspaces = useWorkspaces()
   const [isSubmitLoading, setIsSubmitLoading] = useState(false)
-  const { register, handleSubmit, formState, watch, setError, setValue, clearErrors, control } =
+  const { register, handleSubmit, formState, watch, setError, setValue, control } =
     useForm<TFormValues>({
       defaultValues: {
         [FieldName.PREBUILD_REPOSITORY]:
@@ -75,7 +75,6 @@ export function useCreateWorkspaceForm(
       setValue(FieldName.ID, "", { shouldDirty: true })
 
       client.workspaces.newID(currentSource).then((res) => {
-        console.log(res)
         if (res.err) {
           setError(FieldName.SOURCE, { message: res.val.message })
 
@@ -92,7 +91,7 @@ export function useCreateWorkspaceForm(
           }
 
           const words = randomWords({ amount: 2 })
-          workspaceID = `${workspaceID}-${words[0] ?? "x"}-${words[1] ?? "y"}`
+          workspaceID = `${res.val}-${words[0] ?? "x"}-${words[1] ?? "y"}`
           if (isWorkspaceNameAvailable(workspaceID, workspaces)) {
             setValue(FieldName.ID, workspaceID, { shouldDirty: true })
 
@@ -179,28 +178,10 @@ export function useCreateWorkspaceForm(
     [handleSubmit, workspaces, settings.fixedIDE, onCreateWorkspace, setError]
   )
 
-  const validateWorkspaceID = useCallback(
-    (e: ChangeEvent<HTMLInputElement>) => {
-      setValue(FieldName.ID, e.target.value, {
-        shouldDirty: true,
-      })
-
-      if (/[^a-z0-9-]+/.test(e.target.value)) {
-        setError(FieldName.ID, {
-          message: "Name can only consist of lower case letters, numbers and dashes",
-        })
-      } else {
-        clearErrors(FieldName.ID)
-      }
-    },
-    [clearErrors, setError, setValue]
-  )
-
   return {
     register,
     setValue,
     isSubmitLoading,
-    validateWorkspaceID,
     formState,
     onSubmit,
     isSubmitting,

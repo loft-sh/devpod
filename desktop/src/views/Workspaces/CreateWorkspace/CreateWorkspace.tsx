@@ -10,10 +10,8 @@ import {
   Icon,
   Input,
   Link,
-  Select,
   SimpleGrid,
   Text,
-  Tooltip,
   useColorModeValue,
   useToken,
   VStack,
@@ -26,13 +24,14 @@ import { useNavigate } from "react-router"
 import { useSearchParams } from "react-router-dom"
 import { client } from "../../../client"
 import { ExampleCard } from "../../../components"
-import { RECOMMENDED_PROVIDER_SOURCES, SIDEBAR_WIDTH, STATUS_BAR_HEIGHT } from "../../../constants"
+import { RECOMMENDED_PROVIDER_SOURCES, SIDEBAR_WIDTH } from "../../../constants"
 import { useProviders, useWorkspace } from "../../../contexts"
-import { exists, getIDEDisplayName, getKeys, isEmpty, useFormErrors } from "../../../lib"
+import { exists, getKeys, isEmpty, useFormErrors } from "../../../lib"
 import { QueryKeys } from "../../../queryKeys"
 import { Routes } from "../../../routes"
 import { useBorderColor } from "../../../Theme"
 import { TIDE, TProviderID } from "../../../types"
+import { useSetupProviderModal } from "../../Providers"
 import { WORKSPACE_EXAMPLES } from "./constants"
 import {
   FieldName,
@@ -42,7 +41,12 @@ import {
   TSelectProviderOptions,
 } from "./types"
 import { useCreateWorkspaceForm } from "./useCreateWorkspaceForm"
-import { useSetupProviderModal } from "../../Providers"
+
+const Form = styled.form`
+  width: 100%;
+  display: flex;
+  justify-content: center;
+`
 
 export function CreateWorkspace() {
   const idesQuery = useQuery({
@@ -83,16 +87,8 @@ export function CreateWorkspace() {
     [navigate, workspace]
   )
 
-  const {
-    setValue,
-    register,
-    onSubmit,
-    validateWorkspaceID,
-    control,
-    formState,
-    isSubmitting,
-    currentSource,
-  } = useCreateWorkspaceForm(searchParams, providers, ides, handleCreateWorkspace)
+  const { setValue, register, onSubmit, control, formState, isSubmitting, currentSource } =
+    useCreateWorkspaceForm(searchParams, providers, ides, handleCreateWorkspace)
   const { sourceError, providerError, defaultIDEError, idError, prebuildRepositoryError } =
     useFormErrors(Object.values(FieldName), formState)
 
@@ -112,6 +108,7 @@ export function CreateWorkspace() {
     if (typeof selected === "string") {
       setValue(FieldName.SOURCE, selected, {
         shouldDirty: true,
+        shouldValidate: true,
       })
     }
   }, [setValue])
@@ -120,6 +117,7 @@ export function CreateWorkspace() {
     (newSource: string) => {
       setValue(FieldName.SOURCE, newSource, {
         shouldDirty: true,
+        shouldValidate: true,
       })
     },
     [setValue]
@@ -141,7 +139,7 @@ export function CreateWorkspace() {
 
       // selected provider not installed
       if (searchParams.providerID && providers[searchParams.providerID] === undefined) {
-        showSetupProviderModal({ isStrict: false })
+        // showSetupProviderModal({ isStrict: false })
 
         return
       }
@@ -154,15 +152,14 @@ export function CreateWorkspace() {
 
   return (
     <>
-      <form onSubmit={onSubmit}>
-        <VStack align="start" spacing="6" marginBottom="8" alignItems="center" width="full">
+      <Form onSubmit={onSubmit}>
+        <VStack align="start" spacing="6" alignItems="center" width="full" maxWidth="container.lg">
           <HStack
             width="full"
             height="full"
             borderRadius="lg"
             borderWidth="thin"
-            borderColor={borderColor}
-            maxWidth="container.lg">
+            borderColor={borderColor}>
             <FormControl
               backgroundColor={backgroundColor}
               paddingX="20"
@@ -255,7 +252,7 @@ export function CreateWorkspace() {
                       key={example.source}
                       size="sm"
                       image={example.image}
-                      source={example.source}
+                      name={example.name}
                       isSelected={currentSource === example.source}
                       onClick={() => handleExampleCardClicked(example.source)}
                     />
@@ -321,8 +318,18 @@ export function CreateWorkspace() {
                   spellCheck={false}
                   placeholder="my-workspace"
                   type="text"
-                  {...register(FieldName.ID)}
-                  onChange={validateWorkspaceID}
+                  {...register(FieldName.ID, {
+                    validate: {
+                      name: (value) => {
+                        if (/[^a-z0-9-]+/.test(value)) {
+                          return "Name can only consist of lower case letters, numbers and dashes"
+                        } else {
+                          return true
+                        }
+                      },
+                    },
+                    maxLength: { value: 48, message: "Name cannot be longer than 48 characters" },
+                  })}
                 />
                 {exists(idError) ? (
                   <FormErrorMessage>{idError.message ?? "Error"}</FormErrorMessage>
@@ -344,6 +351,7 @@ export function CreateWorkspace() {
                   onChange={(e) => {
                     setValue(FieldName.PREBUILD_REPOSITORY, e.target.value, {
                       shouldDirty: true,
+                      shouldValidate: true,
                     })
                   }}
                 />
@@ -359,27 +367,28 @@ export function CreateWorkspace() {
           </VStack>
 
           <HStack
-            position="absolute"
-            bottom={STATUS_BAR_HEIGHT}
+            position="sticky"
+            bottom="-1.1rem"
             right="0"
-            width={`calc(100vw - ${SIDEBAR_WIDTH})`}
+            width={{ base: `calc(100vw - ${SIDEBAR_WIDTH})`, xl: "full" }}
             height="20"
-            backgroundColor="white"
             alignItems="center"
             borderTopWidth="thin"
             borderTopColor={borderColor}
-            paddingX="8"
+            backgroundColor="white"
+            paddingX={{ base: "8", xl: "0" }}
+            paddingY="8"
             zIndex="overlay">
             <Button
               variant="primary"
               type="submit"
-              disabled={formState.isSubmitting}
+              isDisabled={formState.isSubmitting || !formState.isValid}
               isLoading={isSubmitting}>
               Create Workspace
             </Button>
           </HStack>
         </VStack>
-      </form>
+      </Form>
 
       {modal}
     </>
@@ -410,56 +419,45 @@ function ProviderInput({ options, field, onRecommendedProviderClicked }: TProvid
       gridAutoFlow={"column"}>
       <HStack>
         {options.installed.map((p) => (
-          <Tooltip key={p.name} label={p.name}>
-            <Box>
-              <ExampleCard
-                isSelected={field.value === p.name}
-                size="sm"
-                onClick={() => field.onChange(p.name)}
-                image={p.config?.icon ?? undefined}
-              />
-              <Text
-                maxWidth="10"
-                overflow="hidden"
-                textOverflow="ellipsis"
-                whiteSpace="nowrap"
-                textAlign="center"
-                fontSize="sm"
-                color="gray.500">
-                {p.name}
-              </Text>
-            </Box>
-          </Tooltip>
+          <Box key={p.name}>
+            <ExampleCard
+              isSelected={field.value === p.name}
+              name={p.name}
+              size="sm"
+              onClick={() => field.onChange(p.name)}
+              image={p.config?.icon ?? undefined}
+            />
+            <Text
+              maxWidth="10"
+              overflow="hidden"
+              textOverflow="ellipsis"
+              whiteSpace="nowrap"
+              textAlign="center"
+              fontSize="sm"
+              color="gray.500">
+              {p.name}
+            </Text>
+          </Box>
         ))}
       </HStack>
       <HStack>
         {options.recommended.map((p) => (
-          <Tooltip key={p.name} label={p.name}>
-            <Box filter="grayscale(100%)" _hover={{ filter: "grayscale(0%)" }}>
-              <ExampleCard
-                size="sm"
-                onClick={() => onRecommendedProviderClicked(p.name)}
-                image={p.image}
-              />
-              <Text
-                maxWidth="10"
-                overflow="hidden"
-                textOverflow="ellipsis"
-                whiteSpace="nowrap"
-                textAlign="center"
-                fontSize="sm"
-                color="gray.500">
-                {p.name}
-              </Text>
-            </Box>
-          </Tooltip>
+          <Box key={p.name} filter="grayscale(100%)" _hover={{ filter: "grayscale(0%)" }}>
+            <ExampleCard
+              name={p.name}
+              size="sm"
+              onClick={() => onRecommendedProviderClicked(p.name)}
+              image={p.image}
+            />
+          </Box>
         ))}
       </HStack>
     </Grid>
   )
 }
 
-import { KubernetesSvg } from "../../../images"
+import { NoneSvg } from "../../../images"
+import styled from "@emotion/styled"
 type TIDEInputProps = Readonly<{
   ides: readonly TIDE[] | undefined
   field: ControllerRenderProps<TFormValues, (typeof FieldName)["DEFAULT_IDE"]>
@@ -481,8 +479,9 @@ function IDEInput({ ides, field, onClick }: TIDEInputProps) {
         return (
           <Box key={ide.name}>
             <ExampleCard
+              name={ide.displayName}
               size="sm"
-              image={ide.icon ?? KubernetesSvg}
+              image={ide.icon ?? NoneSvg}
               isSelected={isSelected}
               onClick={() => onClick(ide.name!)}
             />

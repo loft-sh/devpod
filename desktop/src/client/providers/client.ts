@@ -1,4 +1,4 @@
-import { FileStorageBackend, Result, ResultError, Return, Store } from "../../lib"
+import { FileStorageBackend, Result, ResultError, Return, Store, isEmpty } from "../../lib"
 import {
   TAddProviderConfig,
   TConfigureProviderConfig,
@@ -79,7 +79,7 @@ export class ProvidersClient implements TDebuggable {
     )
   }
 
-  public popDangling(): readonly TProviderID[] {
+  public popAllDangling(): readonly TProviderID[] {
     const maybeProviderIDs = this.danglingProviderIDs.slice()
     this.danglingProviderIDs.length = 0
     this.storeOperationQueue = this.storeOperationQueue.then(() =>
@@ -87,5 +87,19 @@ export class ProvidersClient implements TDebuggable {
     )
 
     return maybeProviderIDs
+  }
+
+  public popDangling(): TProviderID | undefined {
+    const lastProviderID = this.danglingProviderIDs.pop()
+    const ids = this.danglingProviderIDs.slice()
+    this.storeOperationQueue = this.storeOperationQueue.then(() => {
+      if (isEmpty(ids)) {
+        return this.store.remove("danglingProviders")
+      }
+
+      return this.store.set("danglingProviders", ids)
+    })
+
+    return lastProviderID
   }
 }

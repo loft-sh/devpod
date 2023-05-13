@@ -4,6 +4,7 @@ import {
   Button,
   ButtonGroup,
   Code,
+  Container,
   FormControl,
   FormErrorMessage,
   FormHelperText,
@@ -15,6 +16,7 @@ import {
   InputProps,
   InputRightElement,
   Stack,
+  Text,
   useBreakpointValue,
 } from "@chakra-ui/react"
 import styled from "@emotion/styled"
@@ -22,13 +24,13 @@ import { useMutation, useQueryClient } from "@tanstack/react-query"
 import { AnimatePresence, motion } from "framer-motion"
 import { useCallback, useEffect, useRef, useState } from "react"
 import { Controller, ControllerRenderProps, SubmitHandler, useForm } from "react-hook-form"
-import { AiOutlinePlusCircle } from "react-icons/ai"
 import { FiFolder } from "react-icons/fi"
 import { useBorderColor } from "../../../Theme"
 import { client } from "../../../client"
 import { ErrorMessageBox, ExampleCard } from "../../../components"
 import { RECOMMENDED_PROVIDER_SOURCES } from "../../../constants"
 import { useProviders } from "../../../contexts"
+import { CustomSvg, NoneSvg } from "../../../images"
 import { exists, isError, randomString, useFormErrors } from "../../../lib"
 import { QueryKeys } from "../../../queryKeys"
 import {
@@ -55,29 +57,23 @@ type TSetupProviderSourceFormProps = Readonly<{
     result: TWithProviderID &
       Readonly<{ options: TProviderOptions; optionGroups: TProviderOptionGroup[] }>
   ) => void
+  removeDanglingProviders: VoidFunction
 }>
 export function SetupProviderSourceForm({
   suggestedProvider,
   reset,
   onFinish,
+  removeDanglingProviders,
 }: TSetupProviderSourceFormProps) {
-  const [[providers], { remove }] = useProviders()
+  const [[providers]] = useProviders()
   const [showCustom, setShowCustom] = useState(false)
-  const { register, handleSubmit, formState, watch, setValue, control } = useForm<TFormValues>({
+  const { handleSubmit, formState, watch, setValue, control } = useForm<TFormValues>({
     mode: "onBlur",
   })
   const providerSource = watch(FieldName.PROVIDER_SOURCE, "")
   const providerName = watch(FieldName.PROVIDER_NAME, undefined)
   const queryClient = useQueryClient()
   const borderColor = useBorderColor()
-
-  const removeDanglingProviders = useCallback(() => {
-    // delete the old selected provider(s)
-    const providerIDs = client.providers.popDangling()
-    for (const providerID of providerIDs) {
-      remove.run({ providerID })
-    }
-  }, [remove])
 
   const {
     mutate: addProvider,
@@ -92,8 +88,6 @@ export function SetupProviderSourceForm({
       rawProviderSource: string
       config: TAddProviderConfig
     }>) => {
-      removeDanglingProviders()
-
       // check if provider exists and is not initialized
       const providerID = config.name || (await client.providers.newID(rawProviderSource)).unwrap()
       if (!providerID) {
@@ -132,6 +126,8 @@ export function SetupProviderSourceForm({
     },
     onSuccess(result) {
       queryClient.invalidateQueries(QueryKeys.PROVIDERS)
+      setValue(FieldName.PROVIDER_NAME, undefined, { shouldDirty: true })
+      setShowCustom(false)
       onFinish(result)
     },
     onError() {
@@ -140,15 +136,30 @@ export function SetupProviderSourceForm({
   })
 
   const onSubmit = useCallback<SubmitHandler<TFormValues>>(
-    (data) => {
+    async (data) => {
       const providerSource = data[FieldName.PROVIDER_SOURCE].trim()
-      const maybeProviderName = data[FieldName.PROVIDER_NAME]?.trim()
+      let maybeProviderName = data[FieldName.PROVIDER_NAME]?.trim()
 
-      // try to delete dangling providers
+      const opts = {
+        shouldDirty: true,
+        shouldValidate: true,
+      }
 
-      addProvider({ rawProviderSource: providerSource, config: { name: maybeProviderName } })
+      const providerIDRes = await client.providers.newID(providerSource)
+      if (providerIDRes.ok) {
+        maybeProviderName = providerIDRes.val
+      }
+
+      if (maybeProviderName !== undefined && providers?.[maybeProviderName] !== undefined) {
+        setValue(FieldName.PROVIDER_NAME, `${maybeProviderName}-${randomString(8)}`, opts)
+      } else {
+        setValue(FieldName.PROVIDER_NAME, undefined, opts)
+        addProvider({ rawProviderSource: providerSource, config: { name: maybeProviderName } })
+      }
+
+      removeDanglingProviders()
     },
-    [addProvider]
+    [addProvider, providers, removeDanglingProviders, setValue]
   )
 
   useEffect(() => {
@@ -167,8 +178,6 @@ export function SetupProviderSourceForm({
     formState
   )
 
-  const isLoading = formState.isSubmitting || status === "loading"
-
   const handleRecommendedProviderClicked = useCallback(
     (sourceName: string) => () => {
       setShowCustom(false)
@@ -185,15 +194,9 @@ export function SetupProviderSourceForm({
       }
 
       reset()
-      if (providers?.[sourceName] !== undefined) {
-        setValue(FieldName.PROVIDER_NAME, `${sourceName}-${randomString(8)}`, opts)
-        removeDanglingProviders()
-      } else {
-        setValue(FieldName.PROVIDER_NAME, undefined, opts)
-        handleSubmit(onSubmit)()
-      }
+      handleSubmit(onSubmit)()
     },
-    [handleSubmit, onSubmit, providerSource, providers, removeDanglingProviders, reset, setValue]
+    [handleSubmit, onSubmit, providerSource, reset, setValue]
   )
 
   const suggestedProviderLock = useRef(true)
@@ -214,15 +217,18 @@ export function SetupProviderSourceForm({
     }
   }, [handleRecommendedProviderClicked, providerSource, setValue, suggestedProvider])
 
-  const handleSelectFileClicked = useCallback(async () => {
-    const selected = await client.selectFromFileYaml()
-    if (typeof selected === "string") {
-      setValue(FieldName.PROVIDER_SOURCE, selected, {
-        shouldDirty: true,
-      })
+  const handleCustomProviderClicked = useCallback(() => {
+    setShowCustom(true)
+    const opts = {
+      shouldDirty: true,
+      shouldValidate: true,
     }
-  }, [setValue])
+    setValue(FieldName.PROVIDER_SOURCE, "", opts)
+    setValue(FieldName.PROVIDER_NAME, undefined, opts)
+    reset()
+  }, [reset, setValue])
 
+  const isLoading = formState.isSubmitting || status === "loading"
   const exampleCardSize = useBreakpointValue<"md" | "lg">({ base: "md", xl: "lg" })
 
   const genericProviders = RECOMMENDED_PROVIDER_SOURCES.filter((p) => p.group === "generic")
@@ -231,7 +237,7 @@ export function SetupProviderSourceForm({
   return (
     <>
       <Form onSubmit={handleSubmit(onSubmit)} spellCheck={false}>
-        <Stack spacing={6} width="full" alignItems="center">
+        <Stack spacing={6} width="full" alignItems="center" paddingBottom="8">
           <FormControl
             isRequired
             isInvalid={exists(providerSourceError)}
@@ -249,7 +255,7 @@ export function SetupProviderSourceForm({
                     size={exampleCardSize}
                     key={source.name}
                     image={source.image}
-                    source={source.name}
+                    name={source.name}
                     isSelected={providerSource === source.name}
                     isDisabled={isLoading}
                     onClick={handleRecommendedProviderClicked(source.name)}
@@ -268,7 +274,7 @@ export function SetupProviderSourceForm({
                     size={exampleCardSize}
                     key={source.name}
                     image={source.image}
-                    source={source.name}
+                    name={source.name}
                     isDisabled={isLoading}
                     isSelected={providerSource === source.name}
                     onClick={handleRecommendedProviderClicked(source.name)}
@@ -279,45 +285,32 @@ export function SetupProviderSourceForm({
               <Box paddingX="6" marginInlineStart="0 !important">
                 <ExampleCard
                   size={exampleCardSize}
-                  imageNode={<Icon as={AiOutlinePlusCircle} color={"primary.500"} />}
+                  name="custom"
+                  image={CustomSvg}
                   isSelected={showCustom}
                   isDisabled={isLoading}
-                  onClick={() => {
-                    setShowCustom(!showCustom)
-                    setValue(FieldName.PROVIDER_SOURCE, "", {
-                      shouldDirty: true,
-                    })
-                  }}
+                  onClick={handleCustomProviderClicked}
                 />
               </Box>
             </HStack>
+          </FormControl>
 
+          <Container color="gray.600" maxWidth="container.md">
             {showCustom && (
-              <Box marginTop={"10px"} maxWidth={"700px"}>
+              <FormControl isRequired isInvalid={exists(providerSourceError)}>
                 <FormLabel>Source</FormLabel>
-                <HStack spacing={0} justifyContent={"center"}>
-                  <Input
-                    spellCheck={false}
-                    placeholder="Enter provider source"
-                    borderTopRightRadius={0}
-                    borderBottomRightRadius={0}
-                    type="text"
-                    {...register(FieldName.PROVIDER_SOURCE, { required: true })}
-                  />
-                  <Button
-                    leftIcon={<Icon as={FiFolder} />}
-                    borderTopLeftRadius={0}
-                    borderBottomLeftRadius={0}
-                    borderTop={"1px solid white"}
-                    borderRight={"1px solid white"}
-                    borderBottom={"1px solid white"}
-                    borderColor={"gray.200"}
-                    height={"35px"}
-                    flex={"0 0 140px"}
-                    onClick={handleSelectFileClicked}>
-                    Select File
-                  </Button>
-                </HStack>
+                <Controller
+                  name={FieldName.PROVIDER_SOURCE}
+                  rules={{ required: true }}
+                  control={control}
+                  render={({ field }) => (
+                    <CustomProviderInput
+                      field={field}
+                      isInvalid={exists(providerSourceError)}
+                      onAccept={handleSubmit(onSubmit)}
+                    />
+                  )}
+                />
                 {providerSourceError && providerSourceError.message ? (
                   <FormErrorMessage>{providerSourceError.message}</FormErrorMessage>
                 ) : (
@@ -326,9 +319,20 @@ export function SetupProviderSourceForm({
                     repo in the form of <Code>my-org/my-repo</Code>
                   </FormHelperText>
                 )}
-              </Box>
+              </FormControl>
             )}
-          </FormControl>
+
+            {!formState.isDirty && (
+              <>
+                <Text fontWeight="bold">Choose your provider</Text>
+                <Text marginBottom="8">
+                  Providers determine how and where your workspaces run. They connect to the cloud
+                  platform - or local environment - of your choice and spin up your workspaces. You
+                  can choose from a number of pre-built providers, or connect your own.
+                </Text>
+              </>
+            )}
+          </Container>
 
           <AnimatePresence>
             {exists(providerName) && (
@@ -356,6 +360,7 @@ export function SetupProviderSourceForm({
                         return providers?.[value] === undefined ? true : "Name must be unique"
                       },
                     },
+                    maxLength: { value: 48, message: "Name cannot be longer than 48 characters" },
                   }}
                   render={({ field }) => (
                     <CustomNameInput
@@ -378,6 +383,7 @@ export function SetupProviderSourceForm({
           </AnimatePresence>
 
           {status === "error" && isError(error) && <ErrorMessageBox error={error} />}
+          {isLoading && <LoadingProvider name={providerName ?? providerSource} />}
         </Stack>
       </Form>
     </>
@@ -416,5 +422,102 @@ function CustomNameInput({ field, isInvalid, onAccept }: TCustomNameInputProps) 
         </ButtonGroup>
       </InputRightElement>
     </InputGroup>
+  )
+}
+
+type TCustomProviderInputProps = Readonly<{
+  field: ControllerRenderProps<TFormValues, (typeof FieldName)["PROVIDER_SOURCE"]>
+  isInvalid: boolean
+  onAccept: () => void
+}> &
+  InputProps
+function CustomProviderInput({ field, isInvalid, onAccept }: TCustomProviderInputProps) {
+  const handleSelectFileClicked = useCallback(async () => {
+    const selected = await client.selectFromFileYaml()
+    if (typeof selected === "string") {
+      field.onChange(selected)
+      field.onBlur()
+    }
+  }, [field])
+
+  return (
+    <InputGroup>
+      <Input
+        spellCheck={false}
+        placeholder="loft-sh/devpod-provider-terraform"
+        type="text"
+        value={field.value}
+        onBlur={field.onBlur}
+        onChange={(e) => field.onChange(e.target.value)}
+      />
+      <InputRightElement width="64">
+        <Button
+          variant="outline"
+          aria-label="Continue"
+          colorScheme="green"
+          isDisabled={isInvalid}
+          marginRight="2"
+          marginLeft="3"
+          leftIcon={<CheckIcon boxSize="4" />}
+          onClick={() => onAccept()}>
+          Continue
+        </Button>
+        <Button
+          leftIcon={<Icon as={FiFolder} />}
+          borderWidth="thin"
+          borderTopRightRadius="md"
+          borderBottomRightRadius="md"
+          borderTopLeftRadius="0"
+          borderBottomLeftRadius="0"
+          borderColor={"gray.200"}
+          marginRight="-1px"
+          onClick={handleSelectFileClicked}
+          height="calc(100% - 2px)">
+          Select File
+        </Button>
+      </InputRightElement>
+    </InputGroup>
+  )
+}
+
+function LoadingProvider({ name }: Readonly<{ name: string | undefined }>) {
+  return (
+    <HStack marginTop="2" justifyContent="center" alignItems="center" color="gray.600">
+      <Text fontWeight="medium">Loading {name}</Text>
+      <Box as="svg" height="3" marginInlineStart="0 !important" width="8" viewBox="0 0 48 30">
+        <circle fill="currentColor" stroke="none" cx="6" cy="24" r="6">
+          <animateTransform
+            attributeName="transform"
+            dur="1s"
+            type="translate"
+            values="0 0; 0 -12; 0 0; 0 0; 0 0; 0 0"
+            repeatCount="indefinite"
+            begin="0"
+          />
+        </circle>
+        <circle fill="currentColor" stroke="none" cx="24" cy="24" r="6">
+          <animateTransform
+            id="op"
+            attributeName="transform"
+            dur="1s"
+            type="translate"
+            values="0 0; 0 -12; 0 0; 0 0; 0 0; 0 0"
+            repeatCount="indefinite"
+            begin="0.3s"
+          />
+        </circle>
+        <circle fill="currentColor" stroke="none" cx="42" cy="24" r="6">
+          <animateTransform
+            id="op"
+            attributeName="transform"
+            dur="1s"
+            type="translate"
+            values="0 0; 0 -12; 0 0; 0 0; 0 0; 0 0"
+            repeatCount="indefinite"
+            begin="0.6s"
+          />
+        </circle>
+      </Box>
+    </HStack>
   )
 }

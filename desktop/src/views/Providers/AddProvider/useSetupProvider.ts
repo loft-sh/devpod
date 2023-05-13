@@ -16,7 +16,6 @@ export type TSetupProviderState = Readonly<
       options: TProviderOptions
       optionGroups: TProviderOptionGroup[]
     }
-  | { currentStep: "rename-provider"; providerID: TProviderID }
   | { currentStep: "done"; providerID: TProviderID }
 >
 type TCompleteSetupProviderAction = TAction<
@@ -78,16 +77,20 @@ export function useSetupProvider() {
   }, [state.currentStep])
 
   const removeDanglingProviders = useCallback(() => {
-    const danglingProviderIDs = client.providers.popDangling()
+    const danglingProviderIDs = client.providers.popAllDangling()
+    console.log(danglingProviderIDs)
     for (const danglingProviderID of danglingProviderIDs) {
       remove.run({ providerID: danglingProviderID })
     }
   }, [remove])
 
   useEffect(() => {
-    if (state.currentStep === "select-provider" || state.currentStep === "done") {
-      removeDanglingProviders()
+    if (state.currentStep === "done") {
+      client.providers.popDangling()
 
+      return
+    }
+    if (state.providerID === null) {
       return
     }
 
@@ -102,5 +105,5 @@ export function useSetupProvider() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
-  return { state, reset, completeSetupProvider, completeConfigureProvider }
+  return { state, reset, completeSetupProvider, completeConfigureProvider, removeDanglingProviders }
 }

@@ -114,7 +114,7 @@ export function App() {
                   <Box
                     as="main"
                     paddingTop="8"
-                    paddingBottom="14"
+                    paddingBottom={STATUS_BAR_HEIGHT}
                     paddingX="8"
                     width="full"
                     height={`calc(100vh - ${toolbarHeight})`}
