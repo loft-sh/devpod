@@ -1,6 +1,6 @@
 name: kubernetes
 version: v0.0.1
-icon: https://cncf-branding.netlify.app/img/projects/kubernetes/stacked/color/kubernetes-stacked-color.svg
+icon: https://devpod.sh/assets/kubernetes.svg
 home: https://github.com/loft-sh/devpod
 description: |-
   DevPod on Kubernetes
