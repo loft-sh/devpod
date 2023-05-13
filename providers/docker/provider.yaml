@@ -1,6 +1,6 @@
 name: docker
 version: v0.0.1
-icon: https://www.docker.com/wp-content/uploads/2022/03/vertical-logo-monochromatic.png
+icon: https://devpod.sh/assets/docker.svg
 home: https://github.com/loft-sh/devpod
 description: |-
   DevPod on Docker
