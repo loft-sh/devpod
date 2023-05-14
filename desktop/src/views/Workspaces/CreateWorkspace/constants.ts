@@ -1,9 +1,9 @@
 import {
   CppSvg,
-  DotnetcorePng,
-  GoPng,
-  JavaPng,
-  NodejsPng,
+  DotnetcoreSvg,
+  GoSvg,
+  JavaSvg,
+  NodejsSvg,
   PhpSvg,
   PythonSvg,
   RustSvg,
@@ -13,33 +13,41 @@ export const WORKSPACE_EXAMPLES = [
   {
     image: PythonSvg,
     source: "https://github.com/microsoft/vscode-remote-try-python",
+    name: "Try Python",
   },
   {
-    image: NodejsPng,
+    image: NodejsSvg,
     source: "https://github.com/microsoft/vscode-remote-try-node",
+    name: "Try Node",
   },
   {
-    image: GoPng,
+    image: GoSvg,
     source: "https://github.com/microsoft/vscode-remote-try-go",
+    name: "Try Go",
   },
   {
     image: RustSvg,
     source: "https://github.com/microsoft/vscode-remote-try-rust",
+    name: "Try Rust",
   },
   {
-    image: JavaPng,
+    image: JavaSvg,
     source: "https://github.com/microsoft/vscode-remote-try-java",
+    name: "Try Java",
   },
   {
     image: PhpSvg,
     source: "https://github.com/microsoft/vscode-remote-try-php",
+    name: "Try PHP",
   },
   {
     image: CppSvg,
     source: "https://github.com/microsoft/vscode-remote-try-cpp",
+    name: "Try C++",
   },
   {
-    image: DotnetcorePng,
+    image: DotnetcoreSvg,
     source: "https://github.com/microsoft/vscode-remote-try-dotnet",
+    name: "Try Dotnet",
   },
 ]

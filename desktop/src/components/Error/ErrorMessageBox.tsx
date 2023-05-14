@@ -9,7 +9,6 @@ export function ErrorMessageBox({ error }: TErrorMessageBox) {
   return (
     <Box
       backgroundColor={backgroundColor}
-      marginTop="4"
       paddingY="1"
       paddingX="2"
       borderRadius="md"

@@ -34,7 +34,7 @@ export function StatusBar(boxProps: BoxProps) {
   }, [arch, platform])
 
   return (
-    <HStack justify="space-between" paddingX="6" fontSize="sm" zIndex="base" {...boxProps}>
+    <HStack justify="space-between" paddingX="6" fontSize="sm" zIndex="overlay" {...boxProps}>
       <Text>
         Version {version} | {platform ?? "unknown platform"} | {arch ?? "unknown arch"}
       </Text>

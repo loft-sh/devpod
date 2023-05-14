@@ -1,48 +1,55 @@
 import { useCallback, useEffect, useReducer } from "react"
 import { client } from "../../../client"
 import { useProviderManager } from "../../../contexts"
-import { exists, TAction } from "../../../lib"
+import { TAction } from "../../../lib"
 import { TProviderID, TProviderOptionGroup, TProviderOptions } from "../../../types"
 
 export type TSetupProviderState = Readonly<
   | {
-      currentStep: 1
+      currentStep: "select-provider"
       providerID: null
       options: null
     }
   | {
-      currentStep: 2
+      currentStep: "configure-provider"
       providerID: TProviderID
       options: TProviderOptions
       optionGroups: TProviderOptionGroup[]
     }
   | { currentStep: "done"; providerID: TProviderID }
 >
-type TCompleteFirstStepAction = TAction<
-  "completeFirstStep",
+type TCompleteSetupProviderAction = TAction<
+  "completeSetupProvider",
   Readonly<{
     providerID: TProviderID
     options: TProviderOptions
     optionGroups: TProviderOptionGroup[]
   }>
 >
-type TCompleteSecondStepAction = TAction<"completeSecondStep">
-type TActions = TCompleteFirstStepAction | TCompleteSecondStepAction | TAction<"reset">
 
-const initialState: TSetupProviderState = { currentStep: 1, providerID: null, options: null }
+type TActions =
+  | TCompleteSetupProviderAction
+  | TAction<"completeConfigureProvider">
+  | TAction<"reset">
+
+const initialState: TSetupProviderState = {
+  currentStep: "select-provider",
+  providerID: null,
+  options: null,
+}
 function setupProviderReducer(state: TSetupProviderState, action: TActions): TSetupProviderState {
   switch (action.type) {
     case "reset":
       return initialState
-    case "completeFirstStep":
+    case "completeSetupProvider":
       return {
         ...state,
-        currentStep: 2,
+        currentStep: "configure-provider",
         providerID: action.payload.providerID,
         options: action.payload.options,
         optionGroups: action.payload.optionGroups,
       }
-    case "completeSecondStep":
+    case "completeConfigureProvider":
       return { currentStep: "done", providerID: state.providerID! }
     default:
       return state
@@ -57,38 +64,45 @@ export function useSetupProvider() {
     dispatch({ type: "reset" })
   }, [])
 
-  const completeFirstStep = useCallback((payload: TCompleteFirstStepAction["payload"]) => {
-    dispatch({ type: "completeFirstStep", payload })
+  const completeSetupProvider = useCallback((payload: TCompleteSetupProviderAction["payload"]) => {
+    dispatch({ type: "completeSetupProvider", payload })
   }, [])
 
-  const completeSecondStep = useCallback(() => {
-    if (state.currentStep !== 2) {
+  const completeConfigureProvider = useCallback(() => {
+    if (state.currentStep !== "configure-provider") {
       return
     }
 
-    dispatch({ type: "completeSecondStep" })
+    dispatch({ type: "completeConfigureProvider" })
   }, [state.currentStep])
 
+  const removeDanglingProviders = useCallback(() => {
+    const danglingProviderIDs = client.providers.popAllDangling()
+    for (const danglingProviderID of danglingProviderIDs) {
+      remove.run({ providerID: danglingProviderID })
+    }
+  }, [remove])
+
   useEffect(() => {
-    if (state.currentStep === 1 || state.currentStep === "done") {
+    if (state.currentStep === "done") {
       client.providers.popDangling()
 
       return
     }
+    if (state.providerID === null) {
+      return
+    }
 
     client.providers.setDangling(state.providerID)
-  }, [state])
+  }, [remove, removeDanglingProviders, state])
 
   useEffect(() => {
     return () => {
-      const danglingProviderID = client.providers.popDangling()
-      if (exists(danglingProviderID)) {
-        remove.run({ providerID: danglingProviderID })
-      }
+      removeDanglingProviders()
     }
     // We need to ensure this effect only runs when the hook unmounts at the cost of potentially stale dependencies
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
-  return { state, reset, completeFirstStep, completeSecondStep }
+  return { state, reset, completeSetupProvider, completeConfigureProvider, removeDanglingProviders }
 }

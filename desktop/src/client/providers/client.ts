@@ -1,4 +1,4 @@
-import { FileStorageBackend, Result, ResultError, Return, Store } from "../../lib"
+import { FileStorageBackend, Result, ResultError, Return, Store, isEmpty } from "../../lib"
 import {
   TAddProviderConfig,
   TConfigureProviderConfig,
@@ -13,15 +13,15 @@ import { ProviderCommands } from "./providerCommands"
 // for reliable cleanup!
 // Make sure to update them in `src/provider.rs` if you change them here!
 const PROVIDERS_STORE_FILE_NAME = "providers"
-const PROVIDERS_STORE_DANGLING_PROVIDER_KEY = "danglingProvider"
+const PROVIDERS_STORE_DANGLING_PROVIDER_KEY = "danglingProviders"
 
-type TProviderStore = Readonly<{ [PROVIDERS_STORE_DANGLING_PROVIDER_KEY]: TProviderID | null }>
+type TProviderStore = Readonly<{ [PROVIDERS_STORE_DANGLING_PROVIDER_KEY]: readonly TProviderID[] }>
 
 export class ProvidersClient implements TDebuggable {
   private readonly store = new Store<TProviderStore>(
     new FileStorageBackend<TProviderStore>(PROVIDERS_STORE_FILE_NAME)
   )
-  private danglingProviderID: TProviderID | null = null
+  private danglingProviderIDs: TProviderID[] = []
   // Queues store operations and guarantees they will be executed in order
   private storeOperationQueue: Promise<unknown> = Promise.resolve()
 
@@ -71,20 +71,35 @@ export class ProvidersClient implements TDebuggable {
     return Return.Ok()
   }
 
-  public setDangling(id: TProviderID) {
-    this.danglingProviderID = id
+  public setDangling(id: TProviderID): void {
+    this.danglingProviderIDs.push(id)
+    const ids = this.danglingProviderIDs.slice()
     this.storeOperationQueue = this.storeOperationQueue.then(() =>
-      this.store.set("danglingProvider", id)
+      this.store.set("danglingProviders", ids)
     )
   }
 
-  public popDangling(): TProviderID | null {
-    const maybeProviderID = this.danglingProviderID
-    this.danglingProviderID = null
+  public popAllDangling(): readonly TProviderID[] {
+    const maybeProviderIDs = this.danglingProviderIDs.slice()
+    this.danglingProviderIDs.length = 0
     this.storeOperationQueue = this.storeOperationQueue.then(() =>
-      this.store.remove("danglingProvider")
+      this.store.remove("danglingProviders")
     )
 
-    return maybeProviderID
+    return maybeProviderIDs
+  }
+
+  public popDangling(): TProviderID | undefined {
+    const lastProviderID = this.danglingProviderIDs.pop()
+    const ids = this.danglingProviderIDs.slice()
+    this.storeOperationQueue = this.storeOperationQueue.then(() => {
+      if (isEmpty(ids)) {
+        return this.store.remove("danglingProviders")
+      }
+
+      return this.store.set("danglingProviders", ids)
+    })
+
+    return lastProviderID
   }
 }

@@ -49,7 +49,7 @@ import {
   useWorkspaceActions,
 } from "../../contexts"
 import { ArrowPath, Ellipsis, Pause, Play, Stack3D, Trash } from "../../icons"
-import { CodeJPG } from "../../images"
+import { NoWorkspaceImageSvg } from "../../images"
 import { exists, getIDEDisplayName } from "../../lib"
 import { QueryKeys } from "../../queryKeys"
 import { Routes } from "../../routes"
@@ -189,8 +189,8 @@ export function WorkspaceCard({ workspaceID, onSelectionChange }: TWorkspaceCard
           width={"300px"}
           maxWidth={"300px"}
           style={{ aspectRatio: "2 / 1" }}
-          src={picture ?? CodeJPG}
-          fallbackSrc={CodeJPG}
+          src={picture ?? NoWorkspaceImageSvg}
+          fallbackSrc={NoWorkspaceImageSvg}
           alt="Project Image"
         />
         <Stack width="full" justifyContent={"space-between"}>
@@ -496,12 +496,6 @@ function WorkspaceStatusBadge({
   hasError,
   isLoading,
 }: TWorkspaceStatusBadgeProps) {
-  const label = hasError
-    ? "Workspace encountered an error"
-    : isLoading
-    ? `Workspace is loading`
-    : `Workspace is ${status ?? "Pending"}`
-
   const badge = useMemo(() => {
     const sharedProps: BoxProps = {
       as: "span",
@@ -567,14 +561,12 @@ function WorkspaceStatusBadge({
   }, [hasError, isLoading, status])
 
   return (
-    <Tooltip label={label}>
-      <HStack
-        cursor={onClick ? "pointer" : "default"}
-        onClick={onClick}
-        spacing="1"
-        position="relative">
-        {badge}
-      </HStack>
-    </Tooltip>
+    <HStack
+      cursor={onClick ? "pointer" : "default"}
+      onClick={onClick}
+      spacing="1"
+      position="relative">
+      {badge}
+    </HStack>
   )
 }

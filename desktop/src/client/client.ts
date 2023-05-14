@@ -107,7 +107,6 @@ class Client {
 
       return Return.Ok()
     } catch (e) {
-      console.log(typeof e)
       if (isError(e)) {
         return Return.Failed(e.message)
       }

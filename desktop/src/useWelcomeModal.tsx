@@ -5,6 +5,7 @@ import {
   Link,
   Modal,
   ModalBody,
+  ModalCloseButton,
   ModalContent,
   ModalFooter,
   ModalOverlay,
@@ -12,19 +13,19 @@ import {
   useDisclosure,
   VStack,
 } from "@chakra-ui/react"
-import { useCallback, useEffect, useMemo } from "react"
+import { useCallback, useEffect, useMemo, useState } from "react"
 import { useNavigate } from "react-router"
 import { client } from "./client"
-import { CollapsibleSection, LoftOSSBadge, Step, Steps, useInstallCLI } from "./components"
-import { Briefcase, CommandLine, DevpodWordmark, Stack3D } from "./icons"
+import { LoftOSSBadge, Step, Steps, useInstallCLI } from "./components"
+import { Briefcase, CommandLine, DevpodWordmark } from "./icons"
 import { Routes } from "./routes"
-import { SetupProviderSteps } from "./views"
 
 const IS_FIRST_VISIT_KEY = "devpod-is-first-visit"
 
 export function useWelcomeModal() {
   const navigate = useNavigate()
   const { isOpen, onClose, onOpen } = useDisclosure()
+  const [isCancellable, setIsCancellable] = useState(false)
   const {
     badge: installCLIBadge,
     button: installCLIButton,
@@ -55,9 +56,11 @@ export function useWelcomeModal() {
         isCentered
         size="4xl"
         scrollBehavior="inside"
-        closeOnOverlayClick={false}>
+        closeOnEsc={isCancellable}
+        closeOnOverlayClick={isCancellable}>
         <ModalOverlay />
         <ModalContent>
+          {isCancellable && <ModalCloseButton />}
           <ModalBody>
             <VStack align="start" spacing="8" paddingX="4" paddingTop="4">
               <Steps finishText="Get Started" onFinish={handleSetupFinished}>
@@ -90,30 +93,6 @@ export function useWelcomeModal() {
                   </Text>
 
                   <Text fontWeight="bold">Let&apos;s set you up!</Text>
-                </Step>
-
-                <Step>
-                  <HStack>
-                    <Stack3D boxSize="6" />
-                    <Heading as="h1" size="lg" marginRight="2">
-                      Providers
-                    </Heading>
-                  </HStack>
-                  <Text>
-                    Providers determine how and where your workspaces run. So, in order to create a
-                    workspace you will need to connect a provider first. Providers can be simple
-                    docker containers on your local machine or more complex cloud based virtual
-                    machines.
-                    <Text as="span" color="gray.500">
-                      If you just want to explore the app, feel free to skip this step. You can
-                      always add new providers in the <Code variant="decorative">Providers</Code>{" "}
-                      tab.
-                    </Text>
-                  </Text>
-
-                  <CollapsibleSection title="Setup your first provider" isOpen={false} showIcon>
-                    <SetupProviderSteps />
-                  </CollapsibleSection>
                 </Step>
 
                 <Step>
@@ -176,9 +155,18 @@ export function useWelcomeModal() {
     installCLIButton,
     installCLIErrorMessage,
     installCLIHelpText,
+    isCancellable,
     isOpen,
     onClose,
   ])
 
-  return { modal }
+  const show = useCallback(
+    ({ cancellable = false }: Readonly<{ cancellable?: boolean }>) => {
+      setIsCancellable(cancellable)
+      onOpen()
+    },
+    [onOpen]
+  )
+
+  return { modal, show }
 }

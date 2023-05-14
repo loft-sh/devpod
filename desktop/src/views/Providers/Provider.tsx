@@ -5,7 +5,7 @@ import { client } from "../../client"
 import { useProvider } from "../../contexts"
 import { exists } from "../../lib"
 import { Routes } from "../../routes"
-import { ConfigureProviderOptionsForm } from "./AddProvider/ConfigureProviderOptionsForm"
+import { ConfigureProviderOptionsForm } from "./AddProvider"
 import { TProviderOptions } from "../../types"
 
 export function Provider() {
@@ -40,7 +40,7 @@ export function Provider() {
         isDefault={!!provider.default}
         addProvider={false}
         reuseMachine={!!provider.state?.singleMachine}
-        options={providerOptions ?? {}}
+        options={providerOptions}
         optionGroups={provider.config?.optionGroups || []}
         onFinish={() => navigate(Routes.PROVIDERS)}
       />
