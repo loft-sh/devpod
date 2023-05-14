@@ -78,7 +78,6 @@ export function useSetupProvider() {
 
   const removeDanglingProviders = useCallback(() => {
     const danglingProviderIDs = client.providers.popAllDangling()
-    console.log(danglingProviderIDs)
     for (const danglingProviderID of danglingProviderIDs) {
       remove.run({ providerID: danglingProviderID })
     }
