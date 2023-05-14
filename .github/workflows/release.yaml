@@ -1,4 +1,4 @@
-name: Publish Desktop
+name: Publish release
 on:
   release:
     types: [prereleased]
