@@ -20,13 +20,15 @@ const (
 	hashingKey = "2f1uR7n8ryzFEaAm87Ec"
 )
 
-func (d *DefaultCollector) getInstanceProperties(command *cobra.Command) types.InstanceProperties {
+func (d *DefaultCollector) getInstanceProperties(command *cobra.Command, executionID string, ts int64) types.InstanceProperties {
 	p := types.InstanceProperties{
-		UID:     getUID(),
-		Arch:    runtime.GOARCH,
-		OS:      runtime.GOOS,
-		Version: getVersion(),
-		Flags:   getFlags(command),
+		Timestamp:   ts,
+		ExecutionID: executionID,
+		UID:         getUID(),
+		Arch:        runtime.GOARCH,
+		OS:          runtime.GOOS,
+		Version:     getVersion(),
+		Flags:       getFlags(command),
 	}
 
 	return p
