@@ -136,5 +136,11 @@ func DetectLanguage(startPath string) (ProgrammingLanguage, error) {
 	if !SupportedLanguages[ProgrammingLanguage(language)] {
 		return None, nil
 	}
+
+	// try to map language
+	if MapLanguages[ProgrammingLanguage(language)] != "" {
+		language = string(MapLanguages[ProgrammingLanguage(language)])
+	}
+
 	return ProgrammingLanguage(language), nil
 }
