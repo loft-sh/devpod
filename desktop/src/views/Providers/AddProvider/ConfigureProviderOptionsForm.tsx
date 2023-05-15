@@ -329,6 +329,7 @@ export function ConfigureProviderOptionsForm({
               <PopoverTrigger>
                 <IconButton
                   ref={errorButtonRef}
+                  visibility={error ? "visible" : "hidden"}
                   variant="ghost"
                   aria-label="Show errors"
                   icon={

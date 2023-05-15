@@ -66,7 +66,7 @@ export function useSetupProviderModal() {
             Configure Provider {isStrict ? "before creating a workspace" : ""}
           </ModalHeader>
           <ModalCloseButton onClick={handleCloseClicked} />
-          <ModalBody>
+          <ModalBody overflowX="hidden" overflowY="auto" paddingBottom="0">
             <VStack align="start" spacing="8">
               <SetupProviderSteps
                 suggestedProvider={suggestedProvider}
