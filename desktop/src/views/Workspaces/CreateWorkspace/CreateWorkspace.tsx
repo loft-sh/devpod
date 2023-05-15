@@ -125,28 +125,24 @@ export function CreateWorkspace() {
     [setValue]
   )
 
-  const { modal, show: showSetupProviderModal, wasDismissed } = useSetupProviderModal()
+  const {
+    isOpen: isModalOpen,
+    modal,
+    show: showSetupProviderModal,
+    wasDismissed,
+  } = useSetupProviderModal()
   useEffect(() => {
     if (wasDismissed) {
       return
     }
 
-    if (providers !== undefined) {
-      // no provider available
-      if (isEmpty(getKeys(providers))) {
-        showSetupProviderModal({ isStrict: true })
+    // no provider available
+    if (isEmpty(getKeys(providers || {}))) {
+      showSetupProviderModal({ isStrict: true })
 
-        return
-      }
-
-      // selected provider not installed
-      if (searchParams.providerID && providers[searchParams.providerID] === undefined) {
-        // showSetupProviderModal({ isStrict: false })
-
-        return
-      }
+      return
     }
-  }, [providers, searchParams.providerID, showSetupProviderModal, wasDismissed])
+  }, [providers, showSetupProviderModal, wasDismissed])
 
   const backgroundColor = useColorModeValue("gray.50", "gray.800")
   const borderColor = useBorderColor()
@@ -391,8 +387,7 @@ export function CreateWorkspace() {
           </HStack>
         </VStack>
       </Form>
-
-      {modal}
+      {isModalOpen && modal}
     </>
   )
 }

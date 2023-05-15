@@ -3,7 +3,6 @@ import {
   ModalBody,
   ModalCloseButton,
   ModalContent,
-  ModalFooter,
   ModalHeader,
   ModalOverlay,
   useDisclosure,
@@ -81,5 +80,5 @@ export function useSetupProviderModal() {
     [onClose, isOpen, isStrict, handleCloseClicked, suggestedProvider]
   )
 
-  return { modal, show, wasDismissed }
+  return { modal, show, isOpen, wasDismissed }
 }
