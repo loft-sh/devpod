@@ -11,6 +11,14 @@
 5. Install dependencies with `yarn`
 6. Run `yarn tauri dev`
 
+### Build dependencies
+
+To build the app on Linux, you will need the following dependencies:
+
+```console
+sudo apt-get install libappindicator3-1 libgdk-pixbuf2.0-0 libbsd0 libxdmcp6 libwmf-0.2-7 libwmf-0.2-7-gtk libgtk-3-0 libwmf-dev libwebkit2gtk-4.0-37 librust-openssl-sys-dev
+```
+
 ### Additional Information
 
 Make sure all of your dependencies are installed and up to date by running `yarn` and `cd src-tauri && cargo update`.
