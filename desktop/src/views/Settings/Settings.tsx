@@ -55,7 +55,7 @@ export function Settings() {
           Settings
         </Heading>
       </ToolbarTitle>
-      <VStack align="start" spacing={6}>
+      <VStack align="start" spacing={6} paddingBottom={8}>
         <VStack align="start">
           <Heading {...headingProps}>General</Heading>
 

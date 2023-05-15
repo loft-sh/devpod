@@ -1,29 +1,24 @@
-import { Box, Spinner } from "@chakra-ui/react"
-import { useEffect, useMemo, useState } from "react"
+import { Box, Container, Spinner } from "@chakra-ui/react"
+import { useQuery } from "@tanstack/react-query"
+import { useMemo } from "react"
 import { useNavigate, useParams } from "react-router"
 import { client } from "../../client"
 import { useProvider } from "../../contexts"
 import { exists } from "../../lib"
+import { QueryKeys } from "../../queryKeys"
 import { Routes } from "../../routes"
 import { ConfigureProviderOptionsForm } from "./AddProvider"
-import { TProviderOptions } from "../../types"
 
 export function Provider() {
   const navigate = useNavigate()
   const params = useParams()
   const providerID = useMemo(() => Routes.getProviderId(params), [params])
   const [provider] = useProvider(providerID)
-  const [providerOptions, setProviderOptions] = useState<TProviderOptions | undefined>()
-  useEffect(() => {
-    ;(async () => {
-      const result = await client.providers.getOptions(providerID!)
-      if (result.err) {
-        return
-      }
-
-      setProviderOptions(result.val!)
-    })()
-  }, [providerID])
+  const { data: providerOptions } = useQuery({
+    queryKey: QueryKeys.providerOptions(providerID!),
+    queryFn: async () => (await client.providers.getOptions(providerID!)).unwrap(),
+    enabled: providerID !== undefined,
+  })
 
   if (!exists(provider) || !providerOptions) {
     return <Spinner />
@@ -34,7 +29,7 @@ export function Provider() {
   }
 
   return (
-    <Box width="full">
+    <Container width="full" maxWidth={"container.lg"}>
       <ConfigureProviderOptionsForm
         providerID={providerID}
         isDefault={!!provider.default}
@@ -44,6 +39,6 @@ export function Provider() {
         optionGroups={provider.config?.optionGroups || []}
         onFinish={() => navigate(Routes.PROVIDERS)}
       />
-    </Box>
+    </Container>
   )
 }
