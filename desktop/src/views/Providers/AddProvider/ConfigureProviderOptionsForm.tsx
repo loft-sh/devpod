@@ -16,6 +16,7 @@ import {
   Text,
   Tooltip,
   VStack,
+  useBreakpointValue,
   useColorModeValue,
 } from "@chakra-ui/react"
 import styled from "@emotion/styled"
@@ -169,6 +170,8 @@ export function ConfigureProviderOptionsForm({
 
   const backgroundColor = useColorModeValue("gray.50", "gray.800")
   const borderColor = useBorderColor()
+  const translateX = useBreakpointValue({ base: "translateX(-3rem)", xl: "" })
+  const paddingX = useBreakpointValue({ base: "3rem", xl: "4" })
 
   return (
     <FormProvider {...formMethods}>
@@ -253,19 +256,23 @@ export function ConfigureProviderOptionsForm({
 
           <HStack
             as={motion.div}
-            initial={{ transform: "translateY(100%) translateX(-3.5rem)" }}
-            animate={{ transform: "translateY(0) translateX(-3.5rem)" }}
+            initial={{ transform: `translateY(100%) ${translateX}` }}
+            animate={{ transform: `translateY(0) ${translateX}` }}
             position="sticky"
             bottom="0"
             left="0"
-            width={isModal ? "calc(100% + 6rem)" : `calc(100vw - ${SIDEBAR_WIDTH})`}
+            width={
+              isModal
+                ? "calc(100% + 5.5rem)"
+                : { base: `calc(100vw - ${SIDEBAR_WIDTH})`, xl: "full" }
+            }
             height="20"
             backgroundColor="white"
             alignItems="center"
             borderTopWidth="thin"
             borderTopColor={borderColor}
             justifyContent="space-between"
-            paddingX="3.5rem"
+            paddingX={paddingX}
             zIndex="overlay">
             <HStack>
               <Tooltip label="Please configure provider" isDisabled={formMethods.formState.isValid}>
