@@ -19,6 +19,7 @@ import (
 	"github.com/loft-sh/devpod/pkg/driver"
 	"github.com/loft-sh/devpod/pkg/log"
 	provider2 "github.com/loft-sh/devpod/pkg/provider"
+	"github.com/loft-sh/devpod/pkg/version"
 	perrors "github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 )
@@ -33,7 +34,15 @@ const ContainerActivityFile = "/tmp/devpod.activity"
 
 const WorkspaceDevContainerResult = "result.json"
 
-const DefaultAgentDownloadURL = "https://github.com/FabianKramm/foundation/releases/download/fabian"
+const defaultAgentDownloadURL = "https://github.com/loft-sh/devpod/releases/download/"
+
+func DefaultAgentDownloadURL() string {
+	if version.GetVersion() == version.DevVersion {
+		return "https://github.com/loft-sh/devpod/releases/latest/download/"
+	}
+
+	return defaultAgentDownloadURL + version.GetVersion()
+}
 
 func DecodeWorkspaceInfo(workspaceInfoRaw string) (*provider2.AgentWorkspaceInfo, string, error) {
 	decoded, err := compress.Decompress(workspaceInfoRaw)
@@ -280,7 +289,7 @@ func Tunnel(
 	// inject agent
 	err := InjectAgent(ctx, func(ctx context.Context, command string, stdin io.Reader, stdout io.Writer, stderr io.Writer) error {
 		return driver.CommandDevContainer(ctx, containerID, "root", command, stdin, stdout, stderr)
-	}, ContainerDevPodHelperLocation, DefaultAgentDownloadURL, false, log)
+	}, ContainerDevPodHelperLocation, DefaultAgentDownloadURL(), false, log)
 	if err != nil {
 		return err
 	}
