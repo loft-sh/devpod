@@ -142,6 +142,10 @@ module.exports = {
       ],
     },
     {
+      type: "doc",
+      id: "telemetry",
+    },
+    {
       type: "link",
       label: "Open Sourced by Loft",
       href: "https://loft.sh/",
