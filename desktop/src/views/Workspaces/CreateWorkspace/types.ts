@@ -1,5 +1,6 @@
+import { RECOMMENDED_PROVIDER_SOURCES } from "../../../constants"
 import { Routes } from "../../../routes"
-import { TProviderID, TWorkspaceID } from "../../../types"
+import { TNamedProvider, TProviderID, TWorkspaceID } from "../../../types"
 
 export const FieldName = {
   SOURCE: "source",
@@ -12,7 +13,7 @@ export const FieldName = {
 export type TFormValues = {
   [FieldName.SOURCE]: string
   [FieldName.DEFAULT_IDE]: string
-  [FieldName.PROVIDER]: TProviderID // TODO: needs runtime validation
+  [FieldName.PROVIDER]: TProviderID
   [FieldName.ID]: string
   [FieldName.PREBUILD_REPOSITORY]: string
 }
@@ -26,4 +27,8 @@ export type TCreateWorkspaceArgs = Readonly<{
   prebuildRepositories: string[]
   defaultIDE: string
   workspaceSource: string
+}>
+export type TSelectProviderOptions = Readonly<{
+  installed: readonly TNamedProvider[]
+  recommended: typeof RECOMMENDED_PROVIDER_SOURCES
 }>

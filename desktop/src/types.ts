@@ -23,6 +23,7 @@ export type TIDE = Readonly<{
   name: string | null
   displayName: string
   default: boolean | null
+  icon: string | null
 }>
 //#endregion
 
@@ -41,6 +42,7 @@ export type TProvider = Readonly<{
     options: TProviderOptions | null
   }> | null
 }>
+export type TNamedProvider = TProvider & Readonly<{ name: string }>
 export type TProviderConfig = Readonly<{
   name: string | null
   version: string | null

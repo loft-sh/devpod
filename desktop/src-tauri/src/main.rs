@@ -72,6 +72,7 @@ fn main() -> anyhow::Result<()> {
         .system_tray(system_tray.build_tray(vec![Box::new(&WorkspacesState::default())]))
         .menu(menu)
         .setup(move |app| {
+            providers::check_dangling_provider(&app.handle());
             let window = app.get_window("main").unwrap();
             window::setup(&window);
 

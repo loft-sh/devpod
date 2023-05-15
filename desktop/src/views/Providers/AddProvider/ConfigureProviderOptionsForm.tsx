@@ -6,28 +6,39 @@ import {
   FormErrorMessage,
   FormHelperText,
   FormLabel,
+  HStack,
+  IconButton,
   Input,
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
   SimpleGrid,
-  useColorModeValue,
+  Text,
+  Tooltip,
   VStack,
+  useBreakpointValue,
+  useColorModeValue,
 } from "@chakra-ui/react"
 import styled from "@emotion/styled"
 import { useMutation, useQueryClient } from "@tanstack/react-query"
+import { motion } from "framer-motion"
 import { ReactNode, useCallback, useMemo } from "react"
 import { Controller, FormProvider, SubmitHandler, useForm, useFormContext } from "react-hook-form"
+import { useBorderColor } from "../../../Theme"
 import { client } from "../../../client"
+import { AutoComplete, CollapsibleSection, ErrorMessageBox } from "../../../components"
+import { SIDEBAR_WIDTH } from "../../../constants"
 import { useProvider } from "../../../contexts"
-import { exists, isError, useFormErrors } from "../../../lib"
+import { ExclamationCircle } from "../../../icons"
+import { Err, Failed, exists, isError, useFormErrors } from "../../../lib"
+import { QueryKeys } from "../../../queryKeys"
 import {
   TConfigureProviderConfig,
   TProviderID,
   TProviderOptionGroup,
   TProviderOptions,
 } from "../../../types"
-import { canCreateMachine, getVisibleOptions, TOptionWithID } from "../helpers"
-import { AutoComplete, CollapsibleSection, ErrorMessageBox } from "../../../components"
-import { useBorderColor } from "../../../Theme"
-import { QueryKeys } from "../../../queryKeys"
+import { TOptionWithID, canCreateMachine, getVisibleOptions } from "../helpers"
 
 type TAllOptions = Readonly<{
   required: TOptionWithID[]
@@ -54,6 +65,7 @@ type TConfigureProviderOptionsFormProps = Readonly<{
   reuseMachine: boolean
   options: TProviderOptions | undefined
   optionGroups: TProviderOptionGroup[]
+  isModal?: boolean
   addProvider?: boolean
   onFinish?: () => void
 }>
@@ -66,6 +78,7 @@ export function ConfigureProviderOptionsForm({
   options: optionsProp,
   optionGroups,
   addProvider = false,
+  isModal = false,
 }: TConfigureProviderOptionsFormProps) {
   const queryClient = useQueryClient()
   const [provider] = useProvider(providerID)
@@ -84,11 +97,12 @@ export function ConfigureProviderOptionsForm({
     status,
     error,
     mutate: configureProvider,
-  } = useMutation({
-    mutationFn: async ({
-      providerID,
-      config,
-    }: Readonly<{ providerID: TProviderID; config: TConfigureProviderConfig }>) => {
+  } = useMutation<
+    void,
+    Err<Failed>,
+    Readonly<{ providerID: TProviderID; config: TConfigureProviderConfig }>
+  >({
+    mutationFn: async ({ providerID, config }) => {
       ;(await client.providers.configure(providerID, config)).unwrap()
       await queryClient.invalidateQueries(QueryKeys.PROVIDERS)
     },
@@ -118,7 +132,7 @@ export function ConfigureProviderOptionsForm({
         },
       })
     },
-    [configureProvider, providerID]
+    [configureProvider, optionsProp, providerID]
   )
   const { reuseMachineError, useAsDefaultError } = useFormErrors(
     Object.values(FieldName),
@@ -156,6 +170,8 @@ export function ConfigureProviderOptionsForm({
 
   const backgroundColor = useColorModeValue("gray.50", "gray.800")
   const borderColor = useBorderColor()
+  const translateX = useBreakpointValue({ base: "translateX(-3rem)", xl: "" })
+  const paddingX = useBreakpointValue({ base: "3rem", xl: "4" })
 
   return (
     <FormProvider {...formMethods}>
@@ -163,13 +179,11 @@ export function ConfigureProviderOptionsForm({
         <VStack align="start" spacing={8}>
           {options.required.length > 0 && (
             <Box width="full">
-              <CollapsibleSection showIcon={true} title={"Required"} isOpen={true}>
-                <VStack align="start" spacing={4}>
-                  {options.required.map((option) => (
-                    <OptionFormField key={option.id} isRequired {...option} />
-                  ))}
-                </VStack>
-              </CollapsibleSection>
+              <VStack align="start" spacing={4}>
+                {options.required.map((option) => (
+                  <OptionFormField key={option.id} isRequired {...option} />
+                ))}
+              </VStack>
             </Box>
           )}
 
@@ -211,7 +225,7 @@ export function ConfigureProviderOptionsForm({
             </Box>
           )}
 
-          {(showDefaultField || showReuseMachineField) && (
+          {showReuseMachineField && (
             <Box width="full">
               <VStack
                 align="start"
@@ -223,46 +237,104 @@ export function ConfigureProviderOptionsForm({
                 padding={"10px"}
                 margin={"10px"}
                 borderColor={borderColor}>
-                {showReuseMachineField && (
-                  <FormControl>
-                    <Checkbox {...formMethods.register(FieldName.REUSE_MACHINE)}>
-                      Reuse Machine
-                    </Checkbox>
-                    {exists(reuseMachineError) ? (
-                      <FormErrorMessage>{reuseMachineError.message ?? "Error"}</FormErrorMessage>
-                    ) : (
-                      <FormHelperText>
-                        Provider will reuse the VM of the first workspace for all subsequent
-                        workspaces. Otherwise, it will spin up one VM per workspace.
-                      </FormHelperText>
-                    )}
-                  </FormControl>
-                )}
-
-                {showDefaultField && (
-                  <FormControl>
-                    <Checkbox {...formMethods.register(FieldName.USE_AS_DEFAULT)}>
-                      Default Provider
-                    </Checkbox>
-                    {exists(useAsDefaultError) ? (
-                      <FormErrorMessage>{useAsDefaultError.message ?? "Error"}</FormErrorMessage>
-                    ) : (
-                      <FormHelperText>Use this provider as the default provider</FormHelperText>
-                    )}
-                  </FormControl>
-                )}
+                <FormControl>
+                  <Checkbox {...formMethods.register(FieldName.REUSE_MACHINE)}>
+                    Reuse Machine
+                  </Checkbox>
+                  {exists(reuseMachineError) ? (
+                    <FormErrorMessage>{reuseMachineError.message ?? "Error"}</FormErrorMessage>
+                  ) : (
+                    <FormHelperText>
+                      Provider will reuse the VM of the first workspace for all subsequent
+                      workspaces. Otherwise, it will spin up one VM per workspace.
+                    </FormHelperText>
+                  )}
+                </FormControl>
               </VStack>
             </Box>
           )}
-          {status === "error" && isError(error) && <ErrorMessageBox error={error} />}
-          <Button
-            marginTop="10"
-            type="submit"
-            variant="primary"
-            isLoading={status === "loading"}
-            disabled={formMethods.formState.isSubmitting}>
-            {addProvider ? "Add Provider" : "Update Options"}
-          </Button>
+
+          <HStack
+            as={motion.div}
+            initial={{ transform: `translateY(100%) ${translateX}` }}
+            animate={{ transform: `translateY(0) ${translateX}` }}
+            position="sticky"
+            bottom="0"
+            left="0"
+            width={
+              isModal
+                ? "calc(100% + 5.5rem)"
+                : { base: `calc(100vw - ${SIDEBAR_WIDTH})`, xl: "full" }
+            }
+            height="20"
+            backgroundColor="white"
+            alignItems="center"
+            borderTopWidth="thin"
+            borderTopColor={borderColor}
+            justifyContent="space-between"
+            paddingX={paddingX}
+            zIndex="overlay">
+            <HStack>
+              <Tooltip label="Please configure provider" isDisabled={formMethods.formState.isValid}>
+                <Button
+                  type="submit"
+                  variant="primary"
+                  isLoading={formMethods.formState.isSubmitting || status === "loading"}
+                  isDisabled={!formMethods.formState.isValid}
+                  title={addProvider ? "Add Provider" : "Update Options"}>
+                  {addProvider ? "Add Provider" : "Update Options"}
+                </Button>
+              </Tooltip>
+
+              {showDefaultField && (
+                <FormControl
+                  paddingX="6"
+                  flexDirection="row"
+                  display="flex"
+                  width="fit-content"
+                  isInvalid={exists(useAsDefaultError)}>
+                  <Checkbox {...formMethods.register(FieldName.USE_AS_DEFAULT)} />
+                  <FormHelperText marginLeft="2" marginTop="0">
+                    Set as default{" "}
+                  </FormHelperText>
+                </FormControl>
+              )}
+            </HStack>
+
+            <HStack>
+              {addProvider && (
+                <Text
+                  position="absolute"
+                  left="50%"
+                  fontWeight="medium"
+                  fontFamily="monospace"
+                  color="gray.700">
+                  {provider?.config?.name}
+                </Text>
+              )}
+            </HStack>
+
+            <Popover placement="top" computePositionOnMount>
+              <PopoverTrigger>
+                <IconButton
+                  variant="ghost"
+                  aria-label="Show errors"
+                  icon={
+                    <motion.span
+                      key={error ? "error" : undefined}
+                      animate={{ scale: [1, 1.2, 1] }}
+                      transition={{ type: "keyframes", ease: ["easeInOut"] }}>
+                      <ExclamationCircle boxSize="8" color="red.400" />
+                    </motion.span>
+                  }
+                  isDisabled={!exists(error)}
+                />
+              </PopoverTrigger>
+              <PopoverContent minWidth="96">
+                {isError(error) && <ErrorMessageBox error={error} />}
+              </PopoverContent>
+            </Popover>
+          </HStack>
         </VStack>
       </Form>
     </FormProvider>
@@ -350,7 +422,7 @@ function OptionFormField({
           />
         )
     }
-  }, [register, id, isRequired, value, defaultValue, suggestions, type, displayName])
+  }, [register, id, isRequired, value, defaultValue, suggestions, type, displayName, password])
 
   return (
     <FormControl isRequired={isRequired}>

@@ -21,10 +21,12 @@ import { QueryKeys } from "../../queryKeys"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { getIDEDisplayName } from "../../lib"
 import { TIDE } from "../../types"
+import { useWelcomeModal } from "../../useWelcomeModal"
 
 export function Settings() {
   const queryClient = useQueryClient()
   const { settings, set } = useChangeSettings()
+  const { modal: welcomeModal, show: showWelcomeModal } = useWelcomeModal()
   const {
     badge: installCLIBadge,
     button: installCLIButton,
@@ -53,9 +55,9 @@ export function Settings() {
           Settings
         </Heading>
       </ToolbarTitle>
-      <VStack align="start" spacing={6}>
+      <VStack align="start" spacing={6} paddingBottom={8}>
         <VStack align="start">
-          <Heading {...headingProps}>Appearance</Heading>
+          <Heading {...headingProps}>General</Heading>
 
           <RadioGroup
             value={settings.sidebarPosition}
@@ -65,7 +67,14 @@ export function Settings() {
               <Radio value="right">Right</Radio>
             </HStack>
           </RadioGroup>
-          <SettingDescription>Position the primary sidebar</SettingDescription>
+          <SettingDescription>Position the sidebar</SettingDescription>
+
+          <VStack align="start" paddingTop="2">
+            <Button variant="outline" onClick={() => showWelcomeModal({ cancellable: true })}>
+              Show Intro
+            </Button>
+            <SettingDescription>Show the introduction to DevPod again</SettingDescription>
+          </VStack>
         </VStack>
 
         <VStack align="start">
@@ -124,7 +133,9 @@ export function Settings() {
           <SettingDescription>{installCLIHelpText}</SettingDescription>
           {installCLIErrorMessage}
         </VStack>
+
         <Divider />
+
         <Heading {...headingProps} color="red.600">
           Danger Zone
         </Heading>
@@ -132,6 +143,8 @@ export function Settings() {
           Quit DevPod
         </Button>
       </VStack>
+
+      {welcomeModal}
     </>
   )
 }

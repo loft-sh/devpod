@@ -1,72 +1,106 @@
-import { Box, Card, Image, useColorModeValue } from "@chakra-ui/react"
-import { AnimatePresence, motion } from "framer-motion"
+import { BoxProps, Card, Image, Text, Tooltip, useColorModeValue, useToken } from "@chakra-ui/react"
 import React, { useId } from "react"
 
 type TExampleCardProps = {
+  name: string
   image?: string
-  source?: string
+  size?: keyof typeof sizes
 
   isSelected?: boolean
-  imageNode?: React.ReactNode
+  isDisabled?: boolean
   onClick?: () => void
 }
 
-export function ExampleCard({ image, isSelected, imageNode, onClick }: TExampleCardProps) {
-  const hoverBackgroudColor = useColorModeValue("gray.50", "gray.800")
+const sizes: Record<"sm" | "md" | "lg", BoxProps["width"]> = {
+  sm: "12",
+  md: "20",
+  lg: "24",
+} as const
+
+export function ExampleCard({
+  name,
+  image,
+  isSelected,
+  isDisabled,
+  size = "lg",
+  onClick,
+}: TExampleCardProps) {
+  const hoverBackgroundColor = useColorModeValue("gray.50", "gray.800")
+  const primaryColorLight = useToken("colors", "primary.400")
+  const primaryColorDark = useToken("colors", "primary.800")
+
   const selectedProps = isSelected
     ? {
-        boxShadow:
-          "0px 0.6px 0.8px hsl(0deg 0% 0% / 0.09), -0.2px 2.5px 3.3px -1.3px hsl(0deg 0% 0% / 0.18)",
+        _before: {
+          content: '""',
+          position: "absolute",
+          top: 0,
+          bottom: 0,
+          left: 0,
+          right: 0,
+          background: `linear-gradient(135deg, ${primaryColorLight}55 30%, ${primaryColorDark}55, ${primaryColorDark}88)`,
+          opacity: 0.7,
+          width: "full",
+          height: "full",
+        },
+        boxShadow: `inset 0px 0px 0px 1px ${primaryColorDark}55`,
       }
     : {}
 
+  const disabledProps = isDisabled ? { filter: "grayscale(100%)", cursor: "not-allowed" } : {}
+
   return (
-    <Card
-      variant="unstyled"
-      width="32"
-      height="32"
-      alignItems="center"
-      display="flex"
-      justifyContent="center"
-      cursor="pointer"
-      padding="2"
-      boxSizing="border-box"
-      position="relative"
-      backgroundColor="transparent"
-      _hover={{ backgroundColor: hoverBackgroudColor }}
-      {...(onClick ? { onClick } : {})}
-      {...selectedProps}>
-      {imageNode ? (
-        imageNode
-      ) : (
-        <Image
-          objectFit="cover"
-          overflow="hidden"
-          maxWidth="28"
-          padding="2"
-          width="fill"
-          height="fill"
-          src={image}
-        />
-      )}
-      <AnimatePresence>
-        {isSelected && (
-          <Box
-            as={motion.div}
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            position="absolute"
-            width="full"
-            height="3"
-            bottom={"17px"}>
-            <Box as={Glow} width="full" />
-          </Box>
+    <Tooltip textTransform={"capitalize"} label={name} isDisabled={size === "lg"}>
+      <Card
+        variant="unstyled"
+        width={sizes[size]}
+        height={sizes[size]}
+        alignItems="center"
+        display="flex"
+        justifyContent="center"
+        cursor="pointer"
+        boxSizing="border-box"
+        position="relative"
+        backgroundColor="transparent"
+        overflow="hidden"
+        _hover={{ backgroundColor: isDisabled || isSelected ? undefined : hoverBackgroundColor }}
+        {...(onClick && !isDisabled && !isSelected ? { onClick } : {})}
+        {...selectedProps}
+        {...disabledProps}>
+        <Image objectFit="fill" overflow="hidden" zIndex="1" src={image} />
+        {size === "lg" && (
+          <Text
+            paddingBottom="1"
+            fontSize="11px"
+            color="gray.500"
+            fontWeight="medium"
+            overflow="hidden"
+            maxWidth={sizes[size]}
+            textOverflow="ellipsis"
+            whiteSpace="nowrap"
+            textTransform={"capitalize"}>
+            {name}
+          </Text>
         )}
-      </AnimatePresence>
-    </Card>
+      </Card>
+    </Tooltip>
   )
 }
+// <AnimatePresence>
+//   {isSelected && (
+//     <Box
+//       as={motion.div}
+//       initial={{ opacity: 0 }}
+//       animate={{ opacity: 1 }}
+//       exit={{ opacity: 0 }}
+//       position="absolute"
+//       width="full"
+//       height="3"
+//       bottom={"17px"}>
+//       <Box as={Glow} width="full" />
+//     </Box>
+//   )}
+// </AnimatePresence>
 
 function Glow() {
   const id = useId()

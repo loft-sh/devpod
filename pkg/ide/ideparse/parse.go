@@ -23,6 +23,8 @@ type AllowedIDE struct {
 	DisplayName string `json:"displayName,omitempty"`
 	// Options of the IDE
 	Options ide.Options `json:"options,omitempty"`
+	// Icon holds an image URL that will be displayed
+	Icon string `json:"icon,omitempty"`
 }
 
 var AllowedIDEs = []AllowedIDE{
@@ -30,56 +32,67 @@ var AllowedIDEs = []AllowedIDE{
 		Name:        config.IDENone,
 		DisplayName: "None",
 		Options:     map[string]ide.Option{},
+		Icon:        "https://devpod.sh/assets/none.svg",
 	},
 	{
 		Name:        config.IDEVSCode,
 		DisplayName: "VSCode",
 		Options:     vscode.Options,
+		Icon:        "https://devpod.sh/assets/vscode.svg",
 	},
 	{
 		Name:        config.IDEOpenVSCode,
 		DisplayName: "VSCode Browser",
 		Options:     openvscode.Options,
+		Icon:        "https://devpod.sh/assets/vscode.svg",
 	},
 	{
 		Name:        config.IDEGoland,
 		DisplayName: "Goland",
 		Options:     jetbrains.GolandOptions,
+		Icon:        "https://devpod.sh/assets/goland.svg",
 	},
 	{
 		Name:        config.IDEPyCharm,
 		DisplayName: "PyCharm",
 		Options:     jetbrains.PyCharmOptions,
+		Icon:        "https://devpod.sh/assets/pycharm.svg",
 	},
 	{
 		Name:        config.IDEPhpStorm,
 		DisplayName: "PhpStorm",
 		Options:     jetbrains.PhpStormOptions,
+		Icon:        "https://devpod.sh/assets/phpstorm.svg",
 	},
 	{
 		Name:        config.IDEIntellij,
 		DisplayName: "Intellij",
 		Options:     jetbrains.IntellijOptions,
+		Icon:        "https://devpod.sh/assets/intellij.svg",
 	},
 	{
 		Name:        config.IDECLion,
 		DisplayName: "CLion",
 		Options:     jetbrains.CLionOptions,
+		Icon:        "https://devpod.sh/assets/clion.svg",
 	},
 	{
 		Name:        config.IDERider,
 		DisplayName: "Rider",
 		Options:     jetbrains.RiderOptions,
+		Icon:        "https://devpod.sh/assets/rider.svg",
 	},
 	{
 		Name:        config.IDERubyMine,
 		DisplayName: "RubyMine",
 		Options:     jetbrains.RubyMineOptions,
+		Icon:        "https://devpod.sh/assets/rubymine.svg",
 	},
 	{
 		Name:        config.IDEWebStorm,
 		DisplayName: "WebStorm",
 		Options:     jetbrains.WebStormOptions,
+		Icon:        "https://devpod.sh/assets/webstorm.svg",
 	},
 }
 

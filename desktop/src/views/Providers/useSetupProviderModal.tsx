@@ -11,26 +11,30 @@ import {
 } from "@chakra-ui/react"
 import { useCallback, useMemo, useState } from "react"
 import { useNavigate } from "react-router-dom"
-import { WarningMessageBox } from "../../../components/Warning"
-import { Routes } from "../../../routes"
-import { SetupProviderSteps } from "../../Providers"
+import { Routes } from "../../routes"
+import { TProviderID } from "../../types"
+import { SetupProviderSteps } from "../Providers"
 
 export function useSetupProviderModal() {
   const navigate = useNavigate()
   const { isOpen, onClose, onOpen } = useDisclosure()
-  const [message, setMessage] = useState("")
   const [isStrict, setIsStrict] = useState(true)
+  const [suggestedProvider, setSuggestedProvider] = useState<TProviderID | undefined>(undefined)
   const [wasDismissed, setWasDismissed] = useState(false)
 
   const show = useCallback(
-    ({ message: newMessage, isStrict }: Readonly<{ isStrict: boolean; message?: string }>) => {
+    ({
+      isStrict,
+      suggestedProvider,
+    }: Readonly<{ isStrict: boolean; suggestedProvider?: TProviderID }>) => {
       if (isOpen) {
         return
       }
 
-      if (newMessage) {
-        setMessage(newMessage)
+      if (suggestedProvider) {
+        setSuggestedProvider(suggestedProvider)
       }
+
       setIsStrict(isStrict)
       onOpen()
     },
@@ -55,22 +59,26 @@ export function useSetupProviderModal() {
         isCentered
         size="6xl"
         scrollBehavior="inside"
-        closeOnOverlayClick={false}>
+        closeOnOverlayClick={true}>
         <ModalOverlay />
-        <ModalContent>
-          <ModalHeader>Configure Provider</ModalHeader>
+        <ModalContent position="relative" overflow="hidden">
+          <ModalHeader>
+            Configure Provider {isStrict ? "before creating a workspace" : ""}
+          </ModalHeader>
           <ModalCloseButton onClick={handleCloseClicked} />
           <ModalBody>
             <VStack align="start" spacing="8">
-              <WarningMessageBox warning={message} />
-              <SetupProviderSteps onFinish={onClose} />
+              <SetupProviderSteps
+                suggestedProvider={suggestedProvider}
+                onFinish={onClose}
+                isModal
+              />
             </VStack>
           </ModalBody>
-          <ModalFooter />
         </ModalContent>
       </Modal>
     ),
-    [onClose, isOpen, handleCloseClicked, message]
+    [onClose, isOpen, isStrict, handleCloseClicked, suggestedProvider]
   )
 
   return { modal, show, wasDismissed }

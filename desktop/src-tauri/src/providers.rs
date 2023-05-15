@@ -9,7 +9,7 @@ pub fn check_dangling_provider(app: &AppHandle) {
 
     let stores = app.state::<StoreCollection<Wry>>();
     let file_name = ".providers.dat"; // WARN: needs to match the file name defined in typescript
-    let dangling_provider_key = "danglingProvider"; // WARN: needs to match the key defined in typescript
+    let dangling_provider_key = "danglingProviders"; // WARN: needs to match the key defined in typescript
     let path = app.path_resolver().app_data_dir();
     if path.is_none() {
         return;
@@ -21,25 +21,28 @@ pub fn check_dangling_provider(app: &AppHandle) {
     let _ = with_store(app.app_handle(), stores, path, |store| {
         store
             .get(dangling_provider_key)
-            .and_then(|dangling_provider| {
-                serde_json::from_value::<String>(dangling_provider.clone()).ok()
+            .and_then(|dangling_providers| {
+                serde_json::from_value::<Vec<String>>(dangling_providers.clone()).ok()
             })
-            .and_then(|dangling_provider| {
+            .and_then(|dangling_providers| {
                 info!(
-                    "Found dangling provider: {}, attempting to delete",
-                    dangling_provider
+                    "Found dangling providers: {}, attempting to delete",
+                    dangling_providers.join(", ")
                 );
-                if DeleteProviderCommand::new(dangling_provider.clone())
-                    .exec()
-                    .is_ok()
-                {
-                    if let Ok(_) = store.delete(dangling_provider_key) {
-                        info!(
-                            "Successfully deleted dangling provider: {}",
-                            dangling_provider
-                        );
-                        let _ = store.save();
-                    };
+
+                for dangling_provider in dangling_providers.iter() {
+                    if DeleteProviderCommand::new(dangling_provider.clone())
+                        .exec()
+                        .is_ok()
+                    {
+                        if let Ok(_) = store.delete(dangling_provider_key) {
+                            info!(
+                                "Successfully deleted dangling provider: {}",
+                                dangling_provider
+                            );
+                            let _ = store.save();
+                        };
+                    }
                 }
 
                 Some(())

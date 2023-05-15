@@ -23,8 +23,7 @@ import { Routes } from "./routes"
 import { useBorderColor } from "./Theme"
 import { useAppReady } from "./useAppReady"
 import { useWelcomeModal } from "./useWelcomeModal"
-
-const SIDEBAR_WIDTH: BoxProps["width"] = "15rem"
+import { SIDEBAR_WIDTH, STATUS_BAR_HEIGHT } from "./constants"
 
 const shouldShowTitleBar = isMacOS || isLinux
 
@@ -115,7 +114,7 @@ export function App() {
                   <Box
                     as="main"
                     paddingTop="8"
-                    paddingBottom={"14"}
+                    paddingBottom={STATUS_BAR_HEIGHT}
                     paddingX="8"
                     width="full"
                     height={`calc(100vh - ${toolbarHeight})`}
@@ -123,6 +122,7 @@ export function App() {
                     <Outlet />
                   </Box>
                   <StatusBar
+                    height={STATUS_BAR_HEIGHT}
                     position="fixed"
                     bottom="0"
                     width={`calc(100% - ${SIDEBAR_WIDTH})`}

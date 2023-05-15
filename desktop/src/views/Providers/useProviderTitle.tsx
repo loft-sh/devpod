@@ -5,13 +5,14 @@ import { TViewTitle } from "../../components"
 import { ArrowLeft, Plus } from "../../icons"
 import { exists } from "../../lib"
 import { Routes } from "../../routes"
+import { useSetupProviderModal } from "./useSetupProviderModal"
 
 export function useProviderTitle(): TViewTitle | null {
   const navigate = useNavigate()
 
   const matchProviderRoot = useMatch(Routes.PROVIDERS)
-  const matchAddProvider = useMatch(Routes.PROVIDER_ADD)
   const matchProvider = useMatch(Routes.PROVIDER)
+  const { modal, show: showSetupProvider } = useSetupProviderModal()
 
   const navigateToProviderRoot = useCallback(() => {
     navigate(Routes.PROVIDERS)
@@ -34,23 +35,18 @@ export function useProviderTitle(): TViewTitle | null {
         label: "Providers",
         priority: "high",
         trailingAction: (
-          <Button
-            size="sm"
-            variant="outline"
-            aria-label="Add provider"
-            leftIcon={<Plus />}
-            onClick={() => navigate(Routes.PROVIDER_ADD)}>
-            Add
-          </Button>
+          <>
+            <Button
+              size="sm"
+              variant="outline"
+              aria-label="Add provider"
+              leftIcon={<Plus />}
+              onClick={() => showSetupProvider({ isStrict: false })}>
+              Add
+            </Button>
+            {modal}
+          </>
         ),
-      }
-    }
-
-    if (exists(matchAddProvider)) {
-      return {
-        label: "Add Provider",
-        priority: "regular",
-        leadingAction: navigateBackAction,
       }
     }
 
@@ -65,5 +61,5 @@ export function useProviderTitle(): TViewTitle | null {
     }
 
     return null
-  }, [matchAddProvider, matchProvider, matchProviderRoot, navigate, navigateBackAction])
+  }, [matchProvider, matchProviderRoot, modal, navigateBackAction, showSetupProvider])
 }
