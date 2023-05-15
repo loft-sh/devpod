@@ -98,7 +98,9 @@ export function CreateWorkspace() {
     }
 
     return {
-      installed: Object.entries(providers).map(([key, value]) => ({ name: key, ...value })),
+      installed: Object.entries(providers)
+        .filter(([, p]) => !!p.state?.initialized)
+        .map(([key, value]) => ({ name: key, ...value })),
       recommended: RECOMMENDED_PROVIDER_SOURCES,
     }
   }, [providers])

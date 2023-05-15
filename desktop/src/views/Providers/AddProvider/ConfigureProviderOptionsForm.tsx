@@ -22,7 +22,7 @@ import {
 import styled from "@emotion/styled"
 import { useMutation, useQueryClient } from "@tanstack/react-query"
 import { motion } from "framer-motion"
-import { ReactNode, useCallback, useMemo } from "react"
+import { ReactNode, useCallback, useEffect, useMemo, useRef } from "react"
 import { Controller, FormProvider, SubmitHandler, useForm, useFormContext } from "react-hook-form"
 import { useBorderColor } from "../../../Theme"
 import { client } from "../../../client"
@@ -111,6 +111,14 @@ export function ConfigureProviderOptionsForm({
     },
   })
 
+  const errorButtonRef = useRef<HTMLButtonElement>(null)
+  // Open error popover when error changes
+  useEffect(() => {
+    if (error) {
+      errorButtonRef.current?.click()
+    }
+  }, [error])
+
   const onSubmit = useCallback<SubmitHandler<TFieldValues>>(
     (data) => {
       const { useAsDefault, reuseMachine, ...configuredOptions } = data
@@ -170,8 +178,11 @@ export function ConfigureProviderOptionsForm({
 
   const backgroundColor = useColorModeValue("gray.50", "gray.800")
   const borderColor = useBorderColor()
-  const translateX = useBreakpointValue({ base: "translateX(-3rem)", xl: "" })
-  const paddingX = useBreakpointValue({ base: "3rem", xl: "4" })
+  const translateX = useBreakpointValue({
+    base: "translateX(-3rem)",
+    xl: isModal ? "translateX(-3rem)" : "",
+  })
+  const paddingX = useBreakpointValue({ base: "3rem", xl: isModal ? "3rem" : "4" })
 
   return (
     <FormProvider {...formMethods}>
@@ -317,6 +328,7 @@ export function ConfigureProviderOptionsForm({
             <Popover placement="top" computePositionOnMount>
               <PopoverTrigger>
                 <IconButton
+                  ref={errorButtonRef}
                   variant="ghost"
                   aria-label="Show errors"
                   icon={

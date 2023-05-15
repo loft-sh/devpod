@@ -30,7 +30,7 @@ import { client } from "../../../client"
 import { ErrorMessageBox, ExampleCard } from "../../../components"
 import { RECOMMENDED_PROVIDER_SOURCES } from "../../../constants"
 import { useProviders } from "../../../contexts"
-import { CustomSvg, NoneSvg } from "../../../images"
+import { CustomSvg } from "../../../images"
 import { exists, isError, randomString, useFormErrors } from "../../../lib"
 import { QueryKeys } from "../../../queryKeys"
 import {
@@ -138,7 +138,7 @@ export function SetupProviderSourceForm({
   const onSubmit = useCallback<SubmitHandler<TFormValues>>(
     async (data) => {
       const providerSource = data[FieldName.PROVIDER_SOURCE].trim()
-      let maybeProviderName = data[FieldName.PROVIDER_NAME]?.trim()
+      const maybeProviderName = data[FieldName.PROVIDER_NAME]?.trim()
 
       const opts = {
         shouldDirty: true,
@@ -146,18 +146,34 @@ export function SetupProviderSourceForm({
       }
 
       const providerIDRes = await client.providers.newID(providerSource)
+      let preferredProviderName: string | undefined
       if (providerIDRes.ok) {
-        maybeProviderName = providerIDRes.val
+        preferredProviderName = providerIDRes.val
       }
 
+      console.log(maybeProviderName, providerSource, preferredProviderName)
+
+      removeDanglingProviders()
+      // custom name taken
       if (maybeProviderName !== undefined && providers?.[maybeProviderName] !== undefined) {
         setValue(FieldName.PROVIDER_NAME, `${maybeProviderName}-${randomString(8)}`, opts)
+        // preferred ID available
+      } else if (maybeProviderName === undefined && preferredProviderName !== undefined) {
+        // preferred ID taken
+        if (providers?.[preferredProviderName] !== undefined) {
+          setValue(FieldName.PROVIDER_NAME, `${preferredProviderName}-${randomString(8)}`, opts)
+        } else {
+          // preferred ID available
+          setValue(FieldName.PROVIDER_NAME, undefined, opts)
+          addProvider({
+            rawProviderSource: providerSource,
+            config: { name: preferredProviderName },
+          })
+        }
       } else {
         setValue(FieldName.PROVIDER_NAME, undefined, opts)
         addProvider({ rawProviderSource: providerSource, config: { name: maybeProviderName } })
       }
-
-      removeDanglingProviders()
     },
     [addProvider, providers, removeDanglingProviders, setValue]
   )
@@ -470,7 +486,7 @@ function CustomProviderInput({ field, isInvalid, onAccept }: TCustomProviderInpu
           borderTopLeftRadius="0"
           borderBottomLeftRadius="0"
           borderColor={"gray.200"}
-          marginRight="-1px"
+          marginRight="-2px"
           onClick={handleSelectFileClicked}
           height="calc(100% - 2px)">
           Select File
