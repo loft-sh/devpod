@@ -111,8 +111,9 @@ export function useWelcomeModal() {
                       download the standalone binary
                     </Link>{" "}
                     or directly add it to your <Code>$PATH</Code>.
+                    <br />
                     <Text as="span" color="gray.500">
-                      Again, feel free to skip this step. You can always install the CLI from the{" "}
+                      Feel free to skip this step. You can always install the CLI from the{" "}
                       <Code variant="decorative">Settings</Code> tab.
                     </Text>
                   </Text>

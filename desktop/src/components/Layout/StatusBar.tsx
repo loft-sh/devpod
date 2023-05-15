@@ -13,9 +13,11 @@ import {
 } from "@chakra-ui/react"
 import { useCallback } from "react"
 import { FaBug } from "react-icons/fa"
+import { HiDocumentMagnifyingGlass } from "react-icons/hi2"
 import { version } from "../../../package.json"
 import { client, DEVPOD_GIT_REPOSITORY } from "../../client"
 import { Debug, useArch, useDebug, usePlatform } from "../../lib"
+import { StarIcon } from "@chakra-ui/icons"
 
 export function StatusBar(boxProps: BoxProps) {
   const arch = useArch()
@@ -39,6 +41,24 @@ export function StatusBar(boxProps: BoxProps) {
         Version {version} | {platform ?? "unknown platform"} | {arch ?? "unknown arch"}
       </Text>
       <HStack>
+        <Tooltip label="Loving DevPod? Give us a start on Github">
+          <IconButton
+            variant="ghost"
+            rounded="full"
+            icon={<StarIcon color="gray.700" />}
+            aria-label="Loving DevPod? Give us a start on Github"
+            onClick={() => client.openLink("https://github.com/loft-sh/devpod")}
+          />
+        </Tooltip>
+        <Tooltip label="How to DevPod - Docs">
+          <IconButton
+            variant="ghost"
+            rounded="full"
+            icon={<Icon as={HiDocumentMagnifyingGlass} color="gray.700" />}
+            aria-label="How to DevPod - Docs"
+            onClick={() => client.openLink("https://devpod.sh/docs")}
+          />
+        </Tooltip>
         <Tooltip label="Report an Issue">
           <IconButton
             variant="ghost"
