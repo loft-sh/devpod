@@ -21,6 +21,10 @@ module.exports = {
         },
         {
           type: "doc",
+          id: "getting-started/update",
+        },
+        {
+          type: "doc",
           id: "getting-started/quickstart-vscode-browser",
         },
         {
