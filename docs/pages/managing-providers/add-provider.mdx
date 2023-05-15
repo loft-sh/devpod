@@ -102,7 +102,20 @@ To manage options from the app, head over the `Providers` section, and click
 
 ### Managing options from DevPod CLI
 
-To manage options from CLI, you can list the table of provider's options by using:
+Options for providers can be set during the `use` or `add` phase:
+
+```sh
+devpod provider add <provider-name> -o KEY=value
+```
+
+or
+
+```sh
+devpod provider use <provider-name> -o KEY=value
+```
+
+
+Else, to can manage options afterwards from CLI, you can list the table of provider's options by using:
 
 
 ```sh
