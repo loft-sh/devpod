@@ -30,7 +30,7 @@ func InjectAgentAndExecute(ctx context.Context, exec inject.ExecFunc, remoteAgen
 		remoteAgentPath = RemoteDevPodHelperLocation
 	}
 	if downloadURL == "" {
-		downloadURL = DefaultAgentDownloadURL
+		downloadURL = DefaultAgentDownloadURL()
 	}
 
 	// install devpod into the target

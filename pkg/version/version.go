@@ -2,7 +2,9 @@ package version
 
 import "strings"
 
-var version string = "v0.0.0"
+var DevVersion = "v0.0.0"
+
+var version = DevVersion
 
 func GetVersion() string {
 	return version

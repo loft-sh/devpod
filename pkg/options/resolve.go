@@ -204,7 +204,7 @@ func ResolveAgentConfig(devConfig *config.Config, provider *provider2.ProviderCo
 	}
 	agentConfig.DownloadURL = resolveDefaultValue(agentConfig.DownloadURL, options)
 	if agentConfig.DownloadURL == "" {
-		agentConfig.DownloadURL = agent.DefaultAgentDownloadURL
+		agentConfig.DownloadURL = agent.DefaultAgentDownloadURL()
 	}
 	agentConfig.Timeout = resolveDefaultValue(agentConfig.Timeout, options)
 	agentConfig.ContainerTimeout = resolveDefaultValue(agentConfig.ContainerTimeout, options)
