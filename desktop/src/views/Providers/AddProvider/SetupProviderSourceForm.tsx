@@ -157,8 +157,6 @@ export function SetupProviderSourceForm({
         preferredProviderName = providerIDRes.val
       }
 
-      console.log(maybeProviderName, providerSource, preferredProviderName)
-
       removeDanglingProviders()
       // custom name taken
       if (maybeProviderName !== undefined && providers?.[maybeProviderName] !== undefined) {
@@ -178,7 +176,10 @@ export function SetupProviderSourceForm({
         }
       } else {
         setValue(FieldName.PROVIDER_NAME, undefined, opts)
-        addProvider({ rawProviderSource: providerSource, config: { name: maybeProviderName } })
+        addProvider({
+          rawProviderSource: providerSource,
+          config: { name: maybeProviderName ?? preferredProviderName },
+        })
       }
     },
     [addProvider, providers, removeDanglingProviders, setValue]
@@ -209,9 +210,8 @@ export function SetupProviderSourceForm({
         shouldValidate: true,
       }
       setValue(FieldName.PROVIDER_SOURCE, sourceName, opts)
+      setValue(FieldName.PROVIDER_NAME, undefined, opts)
       if (providerSource === sourceName) {
-        setValue(FieldName.PROVIDER_NAME, undefined, opts)
-
         return
       }
 
@@ -247,8 +247,9 @@ export function SetupProviderSourceForm({
     }
     setValue(FieldName.PROVIDER_SOURCE, "", opts)
     setValue(FieldName.PROVIDER_NAME, undefined, opts)
+    removeDanglingProviders()
     reset()
-  }, [reset, setValue])
+  }, [removeDanglingProviders, reset, setValue])
 
   const isLoading = formState.isSubmitting || status === "loading"
   const exampleCardSize = useBreakpointValue<"md" | "lg">({ base: "md", xl: "lg" })
@@ -259,7 +260,7 @@ export function SetupProviderSourceForm({
   return (
     <>
       <Form onSubmit={handleSubmit(onSubmit)} spellCheck={false}>
-        <Stack spacing={6} width="full" alignItems="center" paddingBottom="8">
+        <Stack spacing={6} width="full" alignItems="center" paddingBottom={8}>
           <FormControl
             isRequired
             isInvalid={exists(providerSourceError)}

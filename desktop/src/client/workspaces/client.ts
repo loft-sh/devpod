@@ -82,6 +82,8 @@ export class WorkspacesClient implements TDebuggable {
     if (result.err) {
       return result
     }
+
+    return result
   }
 
   public setDebug(isEnabled: boolean): void {
@@ -93,7 +95,7 @@ export class WorkspacesClient implements TDebuggable {
   }
 
   public async getStatus(id: TWorkspaceID): Promise<Result<TWorkspace["status"]>> {
-    const result = await WorkspaceCommands.GetWorkspaceStatus(id)
+    const result = await WorkspaceCommands.FetchWorkspaceStatus(id)
     if (result.err) {
       return result
     }
@@ -114,7 +116,7 @@ export class WorkspacesClient implements TDebuggable {
   ): Promise<Result<TWorkspace["status"]>> {
     const cmd = WorkspaceCommands.StartWorkspace(ctx.id, config)
     const result = await this.execActionCmd(cmd, { ...ctx, listener, actionName: "start" })
-    if (result?.err) {
+    if (result.err) {
       return result
     }
 
@@ -127,7 +129,7 @@ export class WorkspacesClient implements TDebuggable {
   ): Promise<Result<TWorkspace["status"]>> {
     const cmd = WorkspaceCommands.StopWorkspace(ctx.id)
     const result = await this.execActionCmd(cmd, { ...ctx, listener, actionName: "stop" })
-    if (result?.err) {
+    if (result.err) {
       return result
     }
 
@@ -140,7 +142,7 @@ export class WorkspacesClient implements TDebuggable {
   ): Promise<Result<TWorkspace["status"]>> {
     const cmd = WorkspaceCommands.RebuildWorkspace(ctx.id)
     const result = await this.execActionCmd(cmd, { ...ctx, listener, actionName: "rebuild" })
-    if (result?.err) {
+    if (result.err) {
       return result
     }
 
@@ -151,10 +153,23 @@ export class WorkspacesClient implements TDebuggable {
     force: boolean,
     listener: TStreamEventListenerFn | undefined,
     ctx: TWorkspaceClientContext
-  ): Promise<ResultError> {
+  ): Promise<Result<TWorkspace["status"]>> {
     const cmd = WorkspaceCommands.RemoveWorkspace(ctx.id, force)
     const result = await this.execActionCmd(cmd, { ...ctx, listener, actionName: "remove" })
-    if (result?.err) {
+    if (result.err) {
+      return result
+    }
+
+    return result
+  }
+
+  public async checkStatus(
+    listener: TStreamEventListenerFn | undefined,
+    ctx: TWorkspaceClientContext
+  ): Promise<ResultError> {
+    const cmd = WorkspaceCommands.GetStatusLogs(ctx.id)
+    const result = await this.execActionCmd(cmd, { ...ctx, listener, actionName: "checkStatus" })
+    if (result.err) {
       return result
     }
 

@@ -201,6 +201,10 @@ export function WorkspaceCard({ workspaceID, onSelectionChange }: TWorkspaceCard
             isLoading={isLoading}
             currentAction={workspace.current}
             ideName={ideName}
+            onCheckStatusClicked={() => {
+              const actionID = workspace.checkStatus()
+              navigateToAction(actionID)
+            }}
             onSelectionChange={onSelectionChange}
             onActionIndicatorClicked={navigateToAction}
           />
@@ -240,19 +244,14 @@ export function WorkspaceCard({ workspaceID, onSelectionChange }: TWorkspaceCard
                       placement="right"
                       offset={[100, 0]}>
                       <PopoverTrigger>
-                        <MenuItem
-                          ref={(r) => (startWithRef.current = r)}
-                          icon={<Play boxSize={4} />}>
+                        <MenuItem ref={startWithRef} icon={<Play boxSize={4} />}>
                           <HStack width="full" justifyContent="space-between">
                             <Text>Start with</Text>
                             <ChevronRightIcon boxSize={4} />
                           </HStack>
                         </MenuItem>
                       </PopoverTrigger>
-                      <PopoverContent
-                        zIndex="popover"
-                        width="fit-content"
-                        ref={(r) => (popoverContentRef.current = r)}>
+                      <PopoverContent zIndex="popover" width="fit-content" ref={popoverContentRef}>
                         {idesQuery.data?.map((ide) => (
                           <MenuItem
                             onClick={handleOpenWithIDEClicked(id, ide.name)}
@@ -391,6 +390,7 @@ type TWorkspaceCardHeaderProps = Readonly<{
   currentAction: TActionObj | undefined
   ideName: string | undefined
   onActionIndicatorClicked: (actionID: TActionID | undefined) => void
+  onCheckStatusClicked?: VoidFunction
   onSelectionChange?: (isSelected: boolean) => void
 }>
 function WorkspaceCardHeader({
@@ -399,6 +399,7 @@ function WorkspaceCardHeader({
   currentAction,
   ideName,
   onSelectionChange,
+  onCheckStatusClicked,
   onActionIndicatorClicked,
 }: TWorkspaceCardHeaderProps) {
   const navigate = useNavigate()
@@ -423,13 +424,17 @@ function WorkspaceCardHeader({
       return () => onActionIndicatorClicked(currentAction.id)
     }
 
+    if (status === undefined || status === "NotFound") {
+      return () => onCheckStatusClicked?.()
+    }
+
     const maybeLastAction = workspaceActions?.[0]
     if (maybeLastAction) {
       return () => onActionIndicatorClicked(maybeLastAction.id)
     }
 
     return undefined
-  }, [currentAction, onActionIndicatorClicked, workspaceActions])
+  }, [currentAction, onActionIndicatorClicked, onCheckStatusClicked, status, workspaceActions])
 
   const ideDisplayName =
     ideName !== undefined

@@ -5,11 +5,18 @@ import { ConfigureProviderOptionsForm } from "./ConfigureProviderOptionsForm"
 import { SetupProviderSourceForm } from "./SetupProviderSourceForm"
 import { useSetupProvider } from "./useSetupProvider"
 
+type TSetupProviderStepsProps = Readonly<{
+  onFinish?: () => void
+  suggestedProvider?: TProviderID
+  isModal?: boolean
+  onProviderIDChanged?: (id: string | null) => void
+}>
 export function SetupProviderSteps({
   onFinish,
   suggestedProvider,
+  onProviderIDChanged,
   isModal = false,
-}: Readonly<{ onFinish?: () => void; suggestedProvider?: TProviderID; isModal?: boolean }>) {
+}: TSetupProviderStepsProps) {
   const openLockRef = useRef(false)
   const configureProviderRef = useRef<HTMLDivElement>(null)
   const {
@@ -25,6 +32,14 @@ export function SetupProviderSteps({
       onFinish?.()
     }
   }, [onFinish, state.currentStep])
+
+  useEffect(() => {
+    if (state.providerID) {
+      onProviderIDChanged?.(state.providerID)
+
+      return () => onProviderIDChanged?.(null)
+    }
+  }, [onProviderIDChanged, state.providerID])
 
   const scrollToElement = useCallback((el: HTMLElement | null) => {
     if (!openLockRef.current) {
@@ -53,7 +68,7 @@ export function SetupProviderSteps({
         />
       </VStack>
 
-      <VStack align="start" spacing={8} marginTop={6} width="full">
+      <VStack align="start" spacing={8} marginTop={4} width="full">
         <Box width="full" ref={configureProviderRef}>
           {state.currentStep === "configure-provider" && (
             <VStack align="start" width="full">

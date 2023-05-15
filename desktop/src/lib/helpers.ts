@@ -99,6 +99,10 @@ export function sleep(ms: number): Promise<void> {
 }
 
 export function getActionDisplayName(action: TActionObj): string {
+  if (action.name === "checkStatus") {
+    return `check status ${action.targetID}`
+  }
+
   return `${action.name} ${action.targetID}`
 }
 
