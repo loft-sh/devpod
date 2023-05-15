@@ -78,12 +78,14 @@ export function useSetupProvider() {
 
   const removeDanglingProviders = useCallback(() => {
     const danglingProviderIDs = client.providers.popAllDangling()
+    console.log(danglingProviderIDs)
     for (const danglingProviderID of danglingProviderIDs) {
       remove.run({ providerID: danglingProviderID })
     }
   }, [remove])
 
   useEffect(() => {
+    console.log(state)
     if (state.currentStep === "done") {
       client.providers.popDangling()
 
@@ -94,10 +96,11 @@ export function useSetupProvider() {
     }
 
     client.providers.setDangling(state.providerID)
-  }, [remove, removeDanglingProviders, state])
+  }, [state])
 
   useEffect(() => {
     return () => {
+      console.log("unmounting")
       removeDanglingProviders()
     }
     // We need to ensure this effect only runs when the hook unmounts at the cost of potentially stale dependencies

@@ -30,6 +30,7 @@ export type TWorkspaceResult = Readonly<{
   stop: (onStream?: TStreamEventListenerFn) => TActionID | undefined
   remove: (force: boolean, onStream?: TStreamEventListenerFn) => TActionID | undefined
   rebuild: (onStream?: TStreamEventListenerFn) => TActionID | undefined
+  checkStatus: (onStream?: TStreamEventListenerFn) => TActionID | undefined
 }>
 
 export function useWorkspaceActions(
@@ -103,6 +104,33 @@ export function useWorkspace(workspaceID: TWorkspaceID | undefined): TWorkspaceR
       }
 
       return startWorkspaceAction({ workspaceID, config, onStream, streamID: viewID })
+    },
+    [viewID, workspaceID]
+  )
+
+  const checkStatus = useCallback<TWorkspaceResult["stop"]>(
+    (onStream) => {
+      if (workspaceID === undefined) {
+        return
+      }
+
+      return devPodStore.startAction({
+        actionName: "checkStatus",
+        workspaceID,
+        actionFn: async (ctx) => {
+          const result = await client.workspaces.checkStatus(onStream, {
+            id: workspaceID,
+            actionID: ctx.id,
+            streamID: viewID,
+          })
+          if (result.err) {
+            return result
+          }
+          devPodStore.setStatus(workspaceID, result.val)
+
+          return result
+        },
+      })
     },
     [viewID, workspaceID]
   )
@@ -222,8 +250,9 @@ export function useWorkspace(workspaceID: TWorkspaceID | undefined): TWorkspaceR
       stop,
       rebuild,
       remove,
+      checkStatus,
     }),
-    [data, isLoading, current, history, create, start, stop, rebuild, remove]
+    [data, isLoading, current, history, create, start, stop, rebuild, remove, checkStatus]
   )
 }
 

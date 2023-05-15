@@ -3,7 +3,6 @@ import {
   ModalBody,
   ModalCloseButton,
   ModalContent,
-  ModalFooter,
   ModalHeader,
   ModalOverlay,
   useDisclosure,
@@ -21,6 +20,7 @@ export function useSetupProviderModal() {
   const [isStrict, setIsStrict] = useState(true)
   const [suggestedProvider, setSuggestedProvider] = useState<TProviderID | undefined>(undefined)
   const [wasDismissed, setWasDismissed] = useState(false)
+  const [currentProviderID, setCurrentProviderID] = useState<string | null>(null)
 
   const show = useCallback(
     ({
@@ -51,6 +51,18 @@ export function useSetupProviderModal() {
     setWasDismissed(true)
   }, [isStrict, navigate])
 
+  const title = useMemo(() => {
+    if (currentProviderID !== null) {
+      return `Configure Provider ${currentProviderID}`
+    }
+
+    if (isStrict) {
+      return "Configure Provider before creating a workspace"
+    }
+
+    return "Configure Provider"
+  }, [currentProviderID, isStrict])
+
   const modal = useMemo(
     () => (
       <Modal
@@ -62,14 +74,13 @@ export function useSetupProviderModal() {
         closeOnOverlayClick={true}>
         <ModalOverlay />
         <ModalContent position="relative" overflow="hidden">
-          <ModalHeader>
-            Configure Provider {isStrict ? "before creating a workspace" : ""}
-          </ModalHeader>
+          <ModalHeader>{title}</ModalHeader>
           <ModalCloseButton onClick={handleCloseClicked} />
           <ModalBody overflowX="hidden" overflowY="auto" paddingBottom="0">
             <VStack align="start" spacing="8">
               <SetupProviderSteps
                 suggestedProvider={suggestedProvider}
+                onProviderIDChanged={setCurrentProviderID}
                 onFinish={onClose}
                 isModal
               />
@@ -78,7 +89,7 @@ export function useSetupProviderModal() {
         </ModalContent>
       </Modal>
     ),
-    [onClose, isOpen, isStrict, handleCloseClicked, suggestedProvider]
+    [onClose, isOpen, title, handleCloseClicked, suggestedProvider]
   )
 
   return { modal, show, wasDismissed }

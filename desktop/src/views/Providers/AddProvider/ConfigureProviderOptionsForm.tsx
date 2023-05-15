@@ -312,18 +312,7 @@ export function ConfigureProviderOptionsForm({
               )}
             </HStack>
 
-            <HStack>
-              {addProvider && (
-                <Text
-                  position="absolute"
-                  left="50%"
-                  fontWeight="medium"
-                  fontFamily="monospace"
-                  color="gray.700">
-                  {provider?.config?.name}
-                </Text>
-              )}
-            </HStack>
+            <HStack />
 
             <Popover placement="top" computePositionOnMount>
               <PopoverTrigger>

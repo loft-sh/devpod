@@ -51,7 +51,9 @@ export class WorkspaceCommands {
     )
   }
 
-  static async GetWorkspaceStatus(id: string): Promise<Result<Pick<TWorkspace, "id" | "status">>> {
+  static async FetchWorkspaceStatus(
+    id: string
+  ): Promise<Result<Pick<TWorkspace, "id" | "status">>> {
     const result = await new Command([DEVPOD_COMMAND_STATUS, id, DEVPOD_FLAG_JSON_OUTPUT]).run()
     if (result.err) {
       return result
@@ -81,6 +83,10 @@ export class WorkspaceCommands {
     }
 
     return Return.Value(result.val.stdout)
+  }
+
+  static GetStatusLogs(id: string) {
+    return new Command([DEVPOD_COMMAND_STATUS, id, DEVPOD_FLAG_JSON_LOG_OUTPUT])
   }
 
   static StartWorkspace(id: TWorkspaceID, config: TWorkspaceStartConfig) {
