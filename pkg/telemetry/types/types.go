@@ -21,7 +21,7 @@ type Version struct {
 }
 
 type InstanceProperties struct {
-	Timestamp   int     `json:"timestamp,omitempty"`
+	Timestamp   int64   `json:"timestamp,omitempty"`
 	ExecutionID string  `json:"executionID,omitempty"`
 	UID         string  `json:"uid,omitempty"`
 	Arch        string  `json:"arch,omitempty"`
@@ -41,7 +41,7 @@ type Event interface{}
 
 type CMDStartedEvent struct {
 	// Timestamp represents Unix timestampt in microseconds
-	Timestamp       int    `json:"timestamp,omitempty"`
+	Timestamp       int64  `json:"timestamp,omitempty"`
 	ExecutionID     string `json:"executionID,omitempty"`
 	Command         string `json:"command,omitempty"`
 	Provider        string `json:"provider,omitempty"`
@@ -50,7 +50,7 @@ type CMDStartedEvent struct {
 
 type CMDFinishedEvent struct {
 	// Time represents Unix timestampt in microseconds
-	Timestamp       int    `json:"timestamp,omitempty"`
+	Timestamp       int64  `json:"timestamp,omitempty"`
 	ExecutionID     string `json:"executionID,omitempty"`
 	Command         string `json:"command,omitempty"`
 	Provider        string `json:"provider,omitempty"`

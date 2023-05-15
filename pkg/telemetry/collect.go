@@ -94,15 +94,16 @@ func (d *DefaultCollector) RecordStartEvent(provider string) {
 			cmd = d.command.CommandPath()
 		}
 
+		ts := time.Now().UnixMicro()
 		recordEvent(d.tokenGenerator, &types.TelemetryRequest{
 			EventType: types.EventCommandStarted,
 			Event: types.CMDStartedEvent{
-				Timestamp:   int(time.Now().UnixMicro()),
+				Timestamp:   ts,
 				ExecutionID: d.executionID,
 				Command:     cmd,
 				Provider:    provider,
 			},
-			InstanceProperties: d.getInstanceProperties(d.command),
+			InstanceProperties: d.getInstanceProperties(d.command, d.executionID, ts),
 		})
 	})
 }
@@ -126,10 +127,11 @@ func (d *DefaultCollector) RecordEndEvent(err error) {
 		cmdErr = err.Error()
 	}
 
+	ts := time.Now().UnixMicro()
 	recordEvent(d.tokenGenerator, &types.TelemetryRequest{
 		EventType: types.EventCommandFinished,
 		Event: types.CMDFinishedEvent{
-			Timestamp:      int(time.Now().UnixMicro()),
+			Timestamp:      ts,
 			ExecutionID:    d.executionID,
 			Command:        cmd,
 			Provider:       d.provider,
@@ -137,7 +139,7 @@ func (d *DefaultCollector) RecordEndEvent(err error) {
 			ProcessingTime: int(time.Since(d.startTime).Microseconds()),
 			Errors:         cmdErr,
 		},
-		InstanceProperties: d.getInstanceProperties(d.command),
+		InstanceProperties: d.getInstanceProperties(d.command, d.executionID, ts),
 	})
 }
 
