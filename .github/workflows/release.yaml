@@ -385,8 +385,8 @@ jobs:
 
             const infos = [
               { target: "linux-x86_64", sigFile: ".AppImage.tar.gz.sig", packageType: ".tar.gz", originalAssetName: `dev-pod_${latest.version}_amd64.AppImage`, desiredAssetName: "DevPod_linux_amd64.AppImage" },
-              { target: "darwin-aarch64", sigFile: "aarch64.app.tar.gz.sig", packageType: ".tar.gz", originalAssetName: `DevPod_${latest.version}_aarch64.dmg`, desiredAssetName: "DevPod_macos_aarch64.dmg" },
-              { target: "darwin-x86_64", sigFile: "x64.app.tar.gz.sig", packageType: ".tar.gz", originalAssetName: `DevPod_${latest.version}_x64.dmg`, desiredAssetName: "DevPod_macos_x64.dmg" },
+              { target: "darwin-aarch64", sigFile: "aarch64.app.tar.gz.sig", packageType: ".tar.gz", originalAssetName: `DevPod_${latest.version}_aarch64.dmg`, desiredAssetName: "DevPod_macos_aarch64.dmg", originalUpdaterAssetName: "DevPod_aarch64.app.tar.gz", desiredUpdaterAssetName: "DevPod_macos_aarch64.app.tar.gz" },
+              { target: "darwin-x86_64", sigFile: "x64.app.tar.gz.sig", packageType: ".tar.gz", originalAssetName: `DevPod_${latest.version}_x64.dmg`, desiredAssetName: "DevPod_macos_x64.dmg", originalUpdaterAssetName: "DevPod_x64.app.tar.gz", desiredUpdaterAssetName: "DevPod_macos_x64.app.tar.gz" },
               { target: "windows-x86_64", sigFile: ".msi.zip.sig", packageType: ".zip", originalAssetName: `DevPod_${latest.version}_x64_en-US.msi`, desiredAssetName: "DevPod_windows_x64_en-US.msi" },
               { originalAssetName: `dev-pod-${latest.version}-2.x86_64.rpm`, desiredAssetName: "DevPod_linux_x86_64.rpm" },
               { originalAssetName: `dev-pod_${latest.version}_amd64.deb`, desiredAssetName: "DevPod_linux_amd64.deb" },
@@ -411,7 +411,7 @@ jobs:
               }
 
               const a = release.data.assets.find(a => a.name === info.originalAssetName)
-              if(!a) {
+              if (!a) {
                 core.warning(`Unable to find asset: ${info.originalAssetName}`)
                 continue
               }
@@ -423,13 +423,20 @@ jobs:
                 asset_id: assetID,
                 name: info.desiredAssetName
               })
-              
-              if(info.packageType) {
-                const name = `${info.originalAssetName}${info.packageType}`
+
+              if (info.packageType) {
+                let name = `${info.originalAssetName}${info.packageType}`
+                if (info.originalUpdaterAssetName) {
+                  name = info.originalUpdaterAssetName
+                }
                 const b = release.data.assets.find(a => a.name === name)
-                if(!b) {
+                if (!b) {
                   core.warning(`Unable to find update asset: ${name}`)
                   continue
+                }
+                let desiredName = `${info.desiredAssetName}${info.packageType}`
+                if (info.desiredUpdaterAssetName) {
+                  desiredName = info.desiredUpdaterAssetName
                 }
                 const assetID = b.id
                 // Update the asset name
@@ -437,7 +444,7 @@ jobs:
                   owner: context.repo.owner,
                   repo: context.repo.repo,
                   asset_id: assetID,
-                  name: `${info.desiredAssetName}${info.packageType}`
+                  name: desiredName
                 })
               }
             }
