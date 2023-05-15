@@ -429,20 +429,19 @@ function ProviderInput({ options, field, onRecommendedProviderClicked }: TProvid
               onClick={() => field.onChange(p.name)}
               image={p.config?.icon ?? undefined}
             />
-            <Text
-              maxWidth="10"
-              overflow="hidden"
-              textOverflow="ellipsis"
-              whiteSpace="nowrap"
-              textAlign="center"
-              fontSize="sm"
-              color="gray.500">
-              {p.name}
-            </Text>
           </Box>
         ))}
       </HStack>
-      <HStack>
+      <HStack position={"relative"} top={"-10px"} marginTop={"20px"}>
+        <Text
+          position={"absolute"}
+          left={"5px"}
+          top={"-18px"}
+          textAlign="center"
+          fontSize="sm"
+          color="gray.500">
+          {"Recommended Providers"}
+        </Text>
         {options.recommended.map((p) => (
           <Box key={p.name} filter="grayscale(100%)" _hover={{ filter: "grayscale(0%)" }}>
             <ExampleCard
