@@ -51,11 +51,21 @@ func (cmd *DeleteCmd) Run(ctx context.Context, args []string) error {
 		return fmt.Errorf("please specify a provider to delete")
 	}
 
+	err = deleteProvider(devPodConfig, provider)
+	if err != nil {
+		return err
+	}
+
+	log.Default.Donef("Successfully deleted provider '%s'", provider)
+	return nil
+}
+
+func deleteProvider(devPodConfig *config.Config, provider string) error {
 	if devPodConfig.Current().DefaultProvider == provider {
 		devPodConfig.Current().DefaultProvider = ""
 	}
 	delete(devPodConfig.Current().Providers, provider)
-	err = config.SaveConfig(devPodConfig)
+	err := config.SaveConfig(devPodConfig)
 	if err != nil {
 		return errors.Wrap(err, "save config")
 	}
@@ -77,6 +87,5 @@ func (cmd *DeleteCmd) Run(ctx context.Context, args []string) error {
 		return errors.Wrap(err, "delete provider dir")
 	}
 
-	log.Default.Donef("Successfully deleted provider '%s'", provider)
 	return nil
 }
