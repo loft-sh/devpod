@@ -13,8 +13,8 @@ type TExampleCardProps = {
 
 const sizes: Record<"sm" | "md" | "lg", BoxProps["width"]> = {
   sm: "12",
-  md: "20",
-  lg: "24",
+  md: "16",
+  lg: "20",
 } as const
 
 export function ExampleCard({

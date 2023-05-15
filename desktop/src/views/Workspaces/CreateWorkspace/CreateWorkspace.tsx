@@ -407,14 +407,11 @@ type TProviderInputProps = Readonly<{
   onRecommendedProviderClicked: (provider: TProviderID) => void
 }>
 function ProviderInput({ options, field, onRecommendedProviderClicked }: TProviderInputProps) {
+  const gridChildWidth = useToken("sizes", "12")
+
   return (
-    <Grid
-      templateRows={{
-        lg: "repeat(2, 1fr)",
-        xl: options.installed.length <= 2 ? "1fr" : "repeat(2, 1fr)",
-      }}
-      gridAutoFlow={"column"}>
-      <HStack>
+    <Grid>
+      <HStack height="fit-content">
         {options.installed.map((p) => (
           <Box key={p.name}>
             <ExampleCard
@@ -427,15 +424,24 @@ function ProviderInput({ options, field, onRecommendedProviderClicked }: TProvid
           </Box>
         ))}
       </HStack>
-      <HStack position={"relative"} top={"-10px"} marginTop={"20px"}>
+      <Grid
+        gap={2}
+        height="fit-content"
+        templateRows={{ base: "repeat(2, 1fr)", xl: "1fr" }}
+        templateColumns={{
+          base: `repeat(6, ${gridChildWidth})`,
+          xl: `repeat(10, ${gridChildWidth})`,
+        }}
+        position={"relative"}
+        marginTop={"8"}>
         <Text
-          position={"absolute"}
-          left={"5px"}
+          position="absolute"
+          left="0"
           top={"-18px"}
           textAlign="center"
           fontSize="sm"
           color="gray.500">
-          {"Recommended Providers"}
+          Recommended Providers
         </Text>
         {options.recommended.map((p) => (
           <Box key={p.name} filter="grayscale(100%)" _hover={{ filter: "grayscale(0%)" }}>
@@ -447,7 +453,7 @@ function ProviderInput({ options, field, onRecommendedProviderClicked }: TProvid
             />
           </Box>
         ))}
-      </HStack>
+      </Grid>
     </Grid>
   )
 }
@@ -464,8 +470,9 @@ function IDEInput({ ides, field, onClick }: TIDEInputProps) {
 
   return (
     <Grid
+      gap={2}
       gridTemplateColumns={{
-        lg: `repeat(8, ${gridChildWidth})`,
+        lg: `repeat(6, ${gridChildWidth})`,
         xl: `repeat(11, ${gridChildWidth})`,
         "2xl": `repeat(auto-fit, ${gridChildWidth})`,
       }}>
