@@ -7,10 +7,17 @@
 1. Install [NodeJS + yarn](https://nodejs.org/en/)
 2. Install [Rust](https://www.rust-lang.org/tools/install)
 3. Install [Go](https://go.dev/doc/install)
-4. Install system dependencies: `sudo apt-get install libappindicator3-1 libgdk-pixbuf2.0-0 libbsd0 libxdmcp6 libwmf-0.2-7 libwmf-0.2-7-gtk libgtk-3-0 libwmf-dev libwebkit2gtk-4.0-37 librust-openssl-sys-dev`
-5. Run `../hack/rebuild.sh`
-6. Install dependencies with `yarn`
-7. Run `yarn tauri dev`
+4. Run `../hack/rebuild.sh`
+5. Install dependencies with `yarn`
+6. Run `yarn tauri dev`
+
+### Build dependencies
+
+To build the app on Linux, you will need the following dependencies:
+
+```console
+sudo apt-get install libappindicator3-1 libgdk-pixbuf2.0-0 libbsd0 libxdmcp6 libwmf-0.2-7 libwmf-0.2-7-gtk libgtk-3-0 libwmf-dev libwebkit2gtk-4.0-37 librust-openssl-sys-dev
+```
 
 ### Additional Information
 
