@@ -7,6 +7,7 @@ import {
   AlertDialogHeader,
   AlertDialogOverlay,
   Button,
+  ButtonGroup,
   Code,
   Tooltip,
   useDisclosure,
@@ -87,17 +88,19 @@ export function useInstallCLI() {
                 Do you want to retry with Admin Privileges? You will be prompted for authentication
               </AlertDialogBody>
               <AlertDialogFooter>
-                <Button variant="ghost" ref={cancelRef} onClick={onClose}>
-                  Cancel
-                </Button>
-                <Button
-                  variant="solid"
-                  onClick={() => {
-                    addBinaryToPath({ force: true })
-                    onClose()
-                  }}>
-                  Okay
-                </Button>
+                <ButtonGroup>
+                  <Button variant="ghost" ref={cancelRef} onClick={onClose}>
+                    Cancel
+                  </Button>
+                  <Button
+                    variant="solid"
+                    onClick={() => {
+                      addBinaryToPath({ force: true })
+                      onClose()
+                    }}>
+                    Okay
+                  </Button>
+                </ButtonGroup>
               </AlertDialogFooter>
             </AlertDialogContent>
           </AlertDialogOverlay>
