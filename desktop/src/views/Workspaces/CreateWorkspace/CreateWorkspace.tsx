@@ -427,9 +427,10 @@ function ProviderInput({ options, field, onRecommendedProviderClicked }: TProvid
       <Grid
         gap={2}
         height="fit-content"
-        templateRows={{ base: "repeat(2, 1fr)", xl: "1fr" }}
+        templateRows={{ base: "repeat(2, 1fr)", lg: "1fr" }}
         templateColumns={{
-          base: `repeat(6, ${gridChildWidth})`,
+          base: `repeat(5, ${gridChildWidth})`,
+          lg: `repeat(7, ${gridChildWidth})`,
           xl: `repeat(10, ${gridChildWidth})`,
         }}
         position={"relative"}
