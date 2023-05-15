@@ -1,5 +1,5 @@
 <br>
-<a href="https://www.devpod.sh"><img src="desktop/src/images/devpod.png" width="500"></a>
+<a href="https://www.devpod.sh"><img src="docs/static/media/devpod.png" width="500"></a>
 
 ### **[Website](https://www.devpod.sh)** • **[Quickstart](https://www.devpod.sh/docs/getting-started/quickstart)** • **[Documentation](https://www.devpod.sh/docs/what-is-devpod)** • **[Blog](https://loft.sh/blog)** • **[Twitter](https://twitter.com/loft_sh)** • **[Slack](https://slack.loft.sh/)**
 
