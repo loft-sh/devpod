@@ -110,7 +110,13 @@ export function SetupProviderSourceForm({
       ;(await client.providers.add(rawProviderSource, config)).unwrap()
 
       // get options
-      const options = (await client.providers.getOptions(providerID!)).unwrap()
+      let options: TProviderOptions | undefined
+      try {
+        options = (await client.providers.getOptions(providerID!)).unwrap()
+      } catch (e) {
+        ;(await client.providers.remove(providerID)).unwrap()
+        throw e
+      }
 
       // check if provider could be added
       providers = (await client.providers.listAll()).unwrap()
