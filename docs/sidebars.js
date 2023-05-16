@@ -146,8 +146,14 @@ module.exports = {
       ],
     },
     {
-      type: "doc",
-      id: "telemetry",
+      type: "category",
+      label: "Other topics",
+      items: [
+        {
+          type: "doc",
+          id: "telemetry",
+        },
+      ],
     },
     {
       type: "link",

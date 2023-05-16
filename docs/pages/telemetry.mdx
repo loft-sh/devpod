@@ -3,7 +3,7 @@ title: Telemetry
 sidebar_label: Telemetry
 ---
 
-In this section, you will find a description of the DevPod telemetry - why we are collecting telemetry, what data points are we gathering, where we are sending the data, and how to opt-out.
+In this section, you will find a description of the DevPod telemetry - why we are collecting telemetry, what data points are we gathering, where we are sending the data, and how to opt out.
 
 
 ### Why do we collect telemetry
@@ -14,7 +14,7 @@ To move forward quickly, and ensure long-term maintainability, we will be making
 
 ### What are we collecting and how
 
-When a user executes a non-trivial CLI command, one that loads the configuration, the CLI will send an event about the command and basic information about the execution environment (Operating system, CPU architecture, DevPod version, ect.). Another event is sent if a command fails, or when it takes longer than 10 seconds to complete. The events are sent to our self-hosted backend.  
+When a user executes a non-trivial CLI command, one that loads the configuration, the CLI will send an event about the command and basic information about the execution environment (Operating system, CPU architecture, DevPod version, etc.). Another event is sent if a command fails, or when it takes longer than 10 seconds to complete. The events are sent to our self-hosted backend.  
 We want to emphasize that we are **not interested in collecting data about individuals** that are using DevPod, we are collecting **only data about how it is being used**. This should be evident from the code that implements telemetry on the CLI side, which is of course open source and included in the same source code repository.
 
 ### Telemetry payload example
@@ -23,7 +23,7 @@ Below you can find an example of the payload that DevPod CLI would send to our t
 
 ```yaml
 {
-  "type":"cmdfinished",                   # type of event, other type is "cmdstarted"
+  "type":"cmdfinished",                   # type of event, another type is "cmdstarted"
   "event":{
     "timestamp":1683878643781772,
     "executionID":"23736e5...83b3d656a0", # random ID to de-duplicate information received via different event types
@@ -45,7 +45,8 @@ Below you can find an example of the payload that DevPod CLI would send to our t
       "setFlags":[             # List of flags(names only) that were set
         "debug"
       ]
-    }
+    },
+    "ui": false
   },
   "token":"eyJhbG...coNz80"    # Token generated from the static key included in the CLI binary. It is used to validate payload integrity. 
 }
@@ -53,7 +54,7 @@ Below you can find an example of the payload that DevPod CLI would send to our t
 
 ### Telemetry opt-out process
 
-To disable the telemetry execute following command:
+To disable the telemetry execute the following command:
 
 ```bash
 devpod context set-options -o TELEMETRY=false
