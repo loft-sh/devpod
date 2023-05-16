@@ -2,5 +2,8 @@
 	"cSpell.words": [
 		"devpod",
 		"perrors"
-	]
+	],
+	"[mdx]": {
+		"editor.wordWrap": "on"
+	}
 }
