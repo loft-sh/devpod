@@ -1,12 +1,6 @@
-import {
-  createMultiStyleConfigHelpers,
-  defineStyleConfig,
-  extendTheme,
-  Theme,
-  Tooltip,
-  ThemeOverride,
-} from "@chakra-ui/react"
-import { menuAnatomy } from "@chakra-ui/anatomy"
+import { Theme, ThemeOverride, Tooltip, defineStyleConfig, extendTheme } from "@chakra-ui/react"
+import { Menu } from "./menu"
+import { Switch } from "./switch"
 
 const Button = defineStyleConfig({
   defaultProps: {
@@ -35,14 +29,6 @@ const Code = defineStyleConfig({
       color: "white",
     },
   },
-})
-const { definePartsStyle, defineMultiStyleConfig } = createMultiStyleConfigHelpers(menuAnatomy.keys)
-const Menu = defineMultiStyleConfig({
-  baseStyle: definePartsStyle({
-    item: {
-      fontSize: "sm",
-    },
-  }),
 })
 
 // It's ugly but it works: https://github.com/chakra-ui/chakra-ui/issues/1424#issuecomment-743342944
@@ -87,5 +73,6 @@ export const theme = extendTheme({
     Button,
     Code,
     Menu,
+    Switch,
   },
 } satisfies ThemeOverride) as Theme

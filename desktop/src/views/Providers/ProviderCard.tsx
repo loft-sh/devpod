@@ -1,4 +1,5 @@
 import {
+  Box,
   Button,
   ButtonGroup,
   Card,
@@ -6,8 +7,9 @@ import {
   CardFooter,
   CardHeader,
   Center,
-  Heading,
   HStack,
+  Heading,
+  Icon,
   IconButton,
   Image,
   Link,
@@ -18,52 +20,75 @@ import {
   ModalFooter,
   ModalHeader,
   ModalOverlay,
-  Tag,
-  TagLabel,
+  Switch,
+  Text,
   Tooltip,
-  useColorModeValue,
   useDisclosure,
 } from "@chakra-ui/react"
-import { UseMutationResult } from "@tanstack/react-query"
+import { UseMutationResult, useMutation, useQueryClient } from "@tanstack/react-query"
 import { useMemo } from "react"
-import { useNavigate } from "react-router"
-import { Link as RouterLink } from "react-router-dom"
+import { HiPencil } from "react-icons/hi2"
+import { Link as RouterLink, useNavigate } from "react-router-dom"
 import { IconTag } from "../../components"
 import { useWorkspaces } from "../../contexts"
 import { ProviderPlaceholder, Stack3D, Trash } from "../../icons"
 import { exists } from "../../lib"
 import { Routes } from "../../routes"
-import { TProvider, TRunnable, TWithProviderID } from "../../types"
+import { TProvider, TProviderID, TRunnable, TWithProviderID } from "../../types"
+import { client } from "../../client"
+import { QueryKeys } from "../../queryKeys"
 
 type TProviderCardProps = {
   id: string
-  provider: TProvider | undefined
+  provider: TProvider
   remove: TRunnable<TWithProviderID> &
     Pick<UseMutationResult, "status" | "error"> & { target: TWithProviderID | undefined }
 }
 
 export function ProviderCard({ id, provider, remove }: TProviderCardProps) {
   const navigate = useNavigate()
+  const queryClient = useQueryClient()
   const workspaces = useWorkspaces()
   const { isOpen: isDeleteOpen, onOpen: onDeleteOpen, onClose: onDeleteClose } = useDisclosure()
   const providerWorkspaces = useMemo(
     () => workspaces.filter((workspace) => workspace.provider?.name === id),
     [id, workspaces]
   )
-  const tagColor = useColorModeValue("gray.700", "gray.300")
+  const { mutate: updateDefaultProvider } = useMutation<
+    void,
+    unknown,
+    Readonly<{ providerID: TProviderID }>
+  >({
+    mutationFn: async ({ providerID }) => {
+      ;(await client.providers.useProvider(providerID)).unwrap()
+    },
+    onSettled: () => {
+      queryClient.invalidateQueries(QueryKeys.PROVIDERS)
+    },
+  })
+
+  const providerIcon = provider.config?.icon
+  const isDefaultProvider = provider.default ?? false
 
   return (
     <>
-      <Card variant="outline" width="72" height="96" key={id}>
+      <Card variant="outline" width="72" height="96" overflow="hidden">
+        <Box
+          width="full"
+          height="2"
+          bgGradient={
+            isDefaultProvider ? "linear(to-r, primary.400 30%, primary.500)" : "transparent"
+          }
+        />
         <CardHeader display="flex" justifyContent="center" padding="0">
-          {exists(provider?.config?.icon) ? (
+          {exists(providerIcon) ? (
             <Image
               objectFit="cover"
               padding="8"
               borderRadius="md"
               height="48"
-              src={provider?.config?.icon}
-              alt="Project Image"
+              src={providerIcon}
+              alt="Provider Image"
             />
           ) : (
             <Center height="48">
@@ -91,24 +116,39 @@ export function ProviderCard({ id, provider, remove }: TProviderCardProps) {
                 providerWorkspaces.length === 1 ? "workspace" : "workspaces"
               }`}
             />
-            {provider?.default && (
-              <Tag borderRadius="full" color={tagColor}>
-                <TagLabel>{"default"}</TagLabel>
-              </Tag>
-            )}
           </HStack>
         </CardBody>
-        <CardFooter justify="end">
+        <CardFooter justify="space-between">
+          <HStack>
+            <Switch
+              isDisabled={isDefaultProvider}
+              isChecked={isDefaultProvider}
+              onChange={(e) => {
+                if (e.target.checked) {
+                  updateDefaultProvider({ providerID: id })
+                }
+              }}
+            />
+            <Text fontSize="sm" color="gray.700">
+              Default
+            </Text>
+          </HStack>
           <ButtonGroup>
-            <Button onClick={() => navigate(Routes.toProvider(id))} isLoading={false}>
-              Edit
-            </Button>
-            <Tooltip label={`Delete Provider`}>
+            <Tooltip label="Edit Provider">
+              <IconButton
+                aria-label="Edit Provider"
+                variant="ghost"
+                onClick={() => navigate(Routes.toProvider(id))}
+                isLoading={false}
+                icon={<Icon as={HiPencil} boxSize="4" />}
+              />
+            </Tooltip>
+            <Tooltip label="Delete Provider">
               <IconButton
                 aria-label="Delete Provider"
                 variant="ghost"
                 colorScheme="gray"
-                icon={<Trash width="4" />}
+                icon={<Trash boxSize="4" />}
                 onClick={() => {
                   onDeleteOpen()
                 }}
@@ -118,6 +158,7 @@ export function ProviderCard({ id, provider, remove }: TProviderCardProps) {
           </ButtonGroup>
         </CardFooter>
       </Card>
+
       <Modal onClose={onDeleteClose} isOpen={isDeleteOpen} isCentered>
         <ModalOverlay />
         <ModalContent>

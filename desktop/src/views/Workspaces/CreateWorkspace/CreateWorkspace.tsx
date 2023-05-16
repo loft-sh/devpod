@@ -8,10 +8,12 @@ import {
   Grid,
   HStack,
   Icon,
+  IconButton,
   Input,
   Link,
   SimpleGrid,
   Text,
+  Tooltip,
   useColorModeValue,
   useToken,
   VStack,
@@ -30,7 +32,7 @@ import { exists, getKeys, isEmpty, useFormErrors } from "../../../lib"
 import { QueryKeys } from "../../../queryKeys"
 import { Routes } from "../../../routes"
 import { useBorderColor } from "../../../Theme"
-import { TIDE, TProviderID } from "../../../types"
+import { TIDE } from "../../../types"
 import { useSetupProviderModal } from "../../Providers"
 import { WORKSPACE_EXAMPLES } from "./constants"
 import {
@@ -97,10 +99,12 @@ export function CreateWorkspace() {
       return { installed: [], recommended: RECOMMENDED_PROVIDER_SOURCES }
     }
 
+    const installed = Object.entries(providers)
+      .filter(([, p]) => !!p.state?.initialized)
+      .map(([key, value]) => ({ name: key, ...value }))
+
     return {
-      installed: Object.entries(providers)
-        .filter(([, p]) => !!p.state?.initialized)
-        .map(([key, value]) => ({ name: key, ...value })),
+      installed,
       recommended: RECOMMENDED_PROVIDER_SOURCES,
     }
   }, [providers])
@@ -271,9 +275,8 @@ export function CreateWorkspace() {
                     <ProviderInput
                       field={field}
                       options={providerOptions}
-                      onRecommendedProviderClicked={(name) =>
+                      onAddProviderClicked={() =>
                         showSetupProviderModal({
-                          suggestedProvider: name,
                           isStrict: false,
                         })
                       }
@@ -404,63 +407,45 @@ function useCreateWorkspaceParams(): TCreateWorkspaceSearchParams {
 type TProviderInputProps = Readonly<{
   options: TSelectProviderOptions
   field: ControllerRenderProps<TFormValues, (typeof FieldName)["PROVIDER"]>
-  onRecommendedProviderClicked: (provider: TProviderID) => void
+  onAddProviderClicked?: VoidFunction
 }>
-function ProviderInput({ options, field, onRecommendedProviderClicked }: TProviderInputProps) {
+function ProviderInput({ options, field, onAddProviderClicked }: TProviderInputProps) {
   const gridChildWidth = useToken("sizes", "12")
 
   return (
-    <Grid>
-      <HStack height="fit-content">
-        {options.installed.map((p) => (
-          <Box key={p.name}>
-            <ExampleCard
-              isSelected={field.value === p.name}
-              name={p.name}
-              size="sm"
-              onClick={() => field.onChange(p.name)}
-              image={p.config?.icon ?? undefined}
-            />
-          </Box>
-        ))}
-      </HStack>
-      <Grid
-        gap={2}
-        height="fit-content"
-        templateRows={{ base: "repeat(2, 1fr)", lg: "1fr" }}
-        templateColumns={{
-          base: `repeat(5, ${gridChildWidth})`,
-          lg: `repeat(7, ${gridChildWidth})`,
-          xl: `repeat(10, ${gridChildWidth})`,
-        }}
-        position={"relative"}
-        marginTop={"8"}>
-        <Text
-          position="absolute"
-          left="0"
-          top={"-18px"}
-          textAlign="center"
-          fontSize="sm"
-          color="gray.500">
-          Recommended Providers
-        </Text>
-        {options.recommended.map((p) => (
-          <Box key={p.name} filter="grayscale(100%)" _hover={{ filter: "grayscale(0%)" }}>
-            <ExampleCard
-              name={p.name}
-              size="sm"
-              onClick={() => onRecommendedProviderClicked(p.name)}
-              image={p.image}
-            />
-          </Box>
-        ))}
-      </Grid>
+    <Grid
+      templateColumns={`repeat(auto-fit, ${gridChildWidth})`}
+      gap="2"
+      height="fit-content"
+      width="full"
+      flexWrap="wrap">
+      {options.installed.map((p) => (
+        <Box key={p.name}>
+          <ExampleCard
+            isSelected={field.value === p.name}
+            name={p.name}
+            size="sm"
+            onClick={() => field.onChange(p.name)}
+            image={p.config?.icon ?? undefined}
+          />
+        </Box>
+      ))}
+      <Tooltip label="Add Provider">
+        <IconButton
+          variant="outline"
+          size="lg"
+          icon={<Plus />}
+          aria-label="Add Provider"
+          onClick={() => onAddProviderClicked?.()}
+        />
+      </Tooltip>
     </Grid>
   )
 }
 
-import { NoneSvg } from "../../../images"
 import styled from "@emotion/styled"
+import { Plus } from "../../../icons"
+import { NoneSvg } from "../../../images"
 type TIDEInputProps = Readonly<{
   ides: readonly TIDE[] | undefined
   field: ControllerRenderProps<TFormValues, (typeof FieldName)["DEFAULT_IDE"]>

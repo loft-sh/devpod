@@ -2,11 +2,11 @@ import { Button, Text, VStack, Wrap, WrapItem } from "@chakra-ui/react"
 import { useMemo } from "react"
 import { useProviders } from "../../contexts"
 import { exists } from "../../lib"
-import { TProviderID } from "../../types"
+import { TProvider, TProviderID } from "../../types"
 import { useSetupProviderModal } from "../Providers/useSetupProviderModal"
 import { ProviderCard } from "./ProviderCard"
 
-type TProviderInfo = Readonly<{ name: TProviderID }>
+type TProviderInfo = Readonly<{ id: TProviderID; data: TProvider }>
 export function ListProviders() {
   const [[providers], { remove }] = useProviders()
   const { show: showSetupProvider, modal } = useSetupProviderModal()
@@ -17,8 +17,8 @@ export function ListProviders() {
 
     return Object.entries(providers)
       .filter(([, details]) => details.state?.initialized)
-      .map(([name, details]) => {
-        return { name, options: JSON.stringify(details.config, null, 2) }
+      .map(([id, data]) => {
+        return { id, data }
       })
   }, [providers])
 
@@ -31,9 +31,9 @@ export function ListProviders() {
         </VStack>
       ) : (
         <Wrap>
-          {providersInfo.map(({ name }) => (
-            <WrapItem key={name}>
-              <ProviderCard key={name} id={name} provider={providers?.[name]} remove={remove} />
+          {providersInfo.map(({ id, data }) => (
+            <WrapItem key={id}>
+              <ProviderCard id={id} provider={data} remove={remove} />
             </WrapItem>
           ))}
         </Wrap>

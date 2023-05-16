@@ -11,6 +11,7 @@ export function WarningMessageBox({ warning }: TWarningMessageBox) {
       marginTop="4"
       padding="4"
       borderRadius="md"
+      userSelect="auto"
       display="inline-block">
       <Text color={textColor}>{warning}</Text>
     </Box>

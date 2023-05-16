@@ -44,7 +44,7 @@ var AllowedIDEs = []AllowedIDE{
 		Name:        config.IDEOpenVSCode,
 		DisplayName: "VSCode Browser",
 		Options:     openvscode.Options,
-		Icon:        "https://devpod.sh/assets/vscode.svg",
+		Icon:        "https://devpod.sh/assets/vscodebrowser.svg",
 	},
 	{
 		Name:        config.IDEGoland,
