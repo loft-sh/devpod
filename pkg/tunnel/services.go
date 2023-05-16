@@ -13,6 +13,7 @@ import (
 	"github.com/loft-sh/devpod/pkg/config"
 	config2 "github.com/loft-sh/devpod/pkg/devcontainer/config"
 	"github.com/loft-sh/devpod/pkg/log"
+	"github.com/loft-sh/devpod/pkg/netstat"
 	devssh "github.com/loft-sh/devpod/pkg/ssh"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
@@ -26,13 +27,22 @@ func RunInContainer(
 	hostClient,
 	containerClient *ssh.Client,
 	user string,
+	forwardPorts,
 	gitCredentials,
 	dockerCredentials bool,
 	extraPorts []string,
 	log log.Logger,
 ) error {
+	// forward ports
+	forwardedPorts, err := forwardDevContainerPorts(ctx, workspaceClient, hostClient, containerClient, extraPorts, log)
+	if err != nil {
+		return errors.Wrap(err, "forward ports")
+	}
+
 	dockerCredentials = dockerCredentials && devPodConfig.ContextOption(config.ContextOptionInjectDockerCredentials) == "true"
 	gitCredentials = gitCredentials && devPodConfig.ContextOption(config.ContextOptionInjectGitCredentials) == "true"
+	forwardPorts = forwardPorts && devPodConfig.ContextOption(config.ContextOptionAutoPortForwarding) == "true"
+
 	stdoutReader, stdoutWriter, err := os.Pipe()
 	if err != nil {
 		return err
@@ -63,18 +73,34 @@ func RunInContainer(
 		if dockerCredentials {
 			command += " --configure-docker-helper"
 		}
+		if forwardPorts {
+			command += " --forward-ports"
+		}
+		if log.GetLevel() == logrus.DebugLevel {
+			command += " --debug"
+		}
 
 		errChan <- devssh.Run(cancelCtx, containerClient, command, stdinReader, stdoutWriter, writer)
 	}()
 
-	// forward ports
-	_, err = forwardPorts(ctx, workspaceClient, hostClient, containerClient, extraPorts, log)
-	if err != nil {
-		return errors.Wrap(err, "forward ports")
+	// create a port forwarder
+	var forwarder netstat.Forwarder
+	if forwardPorts {
+		forwarder = newForwarder(containerClient, forwardedPorts, log)
 	}
 
 	// forward credentials to container
-	_, err = agent.RunTunnelServer(cancelCtx, stdoutReader, stdinWriter, false, gitCredentials, dockerCredentials, nil, log)
+	_, err = agent.RunTunnelServer(
+		cancelCtx,
+		stdoutReader,
+		stdinWriter,
+		false,
+		gitCredentials,
+		dockerCredentials,
+		nil,
+		forwarder,
+		log,
+	)
 	if err != nil {
 		return errors.Wrap(err, "run tunnel server")
 	}
@@ -83,7 +109,7 @@ func RunInContainer(
 	return <-errChan
 }
 
-func forwardPorts(ctx context.Context, workspaceClient client.WorkspaceClient, sshClient, containerClient *ssh.Client, extraPorts []string, log log.Logger) ([]string, error) {
+func forwardDevContainerPorts(ctx context.Context, workspaceClient client.WorkspaceClient, sshClient, containerClient *ssh.Client, extraPorts []string, log log.Logger) ([]string, error) {
 	result, err := getDevContainerResult(ctx, workspaceClient, sshClient, log)
 	if err != nil {
 		return nil, fmt.Errorf("error retrieving dev container result: %w", err)
@@ -115,6 +141,7 @@ func forwardPorts(ctx context.Context, workspaceClient client.WorkspaceClient, s
 			}
 			go func(parsedPort nat.PortMapping) {
 				// do the forward
+				log.Debugf("Forward port %s:%s", parsedPort.Binding.HostIP+":"+parsedPort.Binding.HostPort, "localhost:"+parsedPort.Port.Port())
 				err = devssh.PortForward(ctx, containerClient, parsedPort.Binding.HostIP+":"+parsedPort.Binding.HostPort, "localhost:"+parsedPort.Port.Port(), log)
 				if err != nil {
 					log.Debugf("Error port forwarding %s:%s:%s: %v", parsedPort.Binding.HostIP, parsedPort.Binding.HostPort, parsedPort.Port.Port(), err)
@@ -136,6 +163,7 @@ func forwardPorts(ctx context.Context, workspaceClient client.WorkspaceClient, s
 
 		// try to forward
 		go func(i int64, port json.Number) {
+			log.Debugf("Forward port %s", port.String())
 			err = devssh.PortForward(ctx, containerClient, "localhost:"+port.String(), "localhost:"+port.String(), log)
 			if err != nil {
 				log.Debugf("Error port forwarding %d: %v", int(i), err)

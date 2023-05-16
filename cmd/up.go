@@ -177,7 +177,19 @@ func startInBrowser(ctx context.Context, devPodConfig *config.Config, client cli
 	// start in browser
 	log.Infof("Starting vscode in browser mode at %s", targetURL)
 	err = tunnel.NewContainerTunnel(client, log).Run(ctx, nil, func(ctx context.Context, hostClient, containerClient *ssh.Client) error {
-		err := tunnel.RunInContainer(ctx, client, devPodConfig, hostClient, containerClient, user, true, true, []string{fmt.Sprintf("%d:%d", vscodePort, openvscode.DefaultVSCodePort)}, log)
+		err := tunnel.RunInContainer(
+			ctx,
+			client,
+			devPodConfig,
+			hostClient,
+			containerClient,
+			user,
+			true,
+			true,
+			true,
+			[]string{fmt.Sprintf("%d:%d", vscodePort, openvscode.DefaultVSCodePort)},
+			log,
+		)
 		if err != nil {
 			log.Errorf("error running credentials server: %v", err)
 		}
@@ -269,6 +281,7 @@ func (cmd *UpCmd) devPodUpMachine(ctx context.Context, client client2.WorkspaceC
 		string(agentConfig.InjectGitCredentials) == "true",
 		string(agentConfig.InjectDockerCredentials) == "true",
 		client.WorkspaceConfig(),
+		nil,
 		log,
 	)
 	if err != nil {

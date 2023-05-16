@@ -8,7 +8,6 @@ package tunnel
 
 import (
 	context "context"
-
 	grpc "google.golang.org/grpc"
 	codes "google.golang.org/grpc/codes"
 	status "google.golang.org/grpc/status"
@@ -30,6 +29,8 @@ type TunnelClient interface {
 	DockerCredentials(ctx context.Context, in *Message, opts ...grpc.CallOption) (*Message, error)
 	GitCredentials(ctx context.Context, in *Message, opts ...grpc.CallOption) (*Message, error)
 	GitUser(ctx context.Context, in *Empty, opts ...grpc.CallOption) (*Message, error)
+	ForwardPort(ctx context.Context, in *ForwardPortRequest, opts ...grpc.CallOption) (*ForwardPortResponse, error)
+	StopForwardPort(ctx context.Context, in *StopForwardPortRequest, opts ...grpc.CallOption) (*StopForwardPortResponse, error)
 }
 
 type tunnelClient struct {
@@ -126,6 +127,24 @@ func (c *tunnelClient) GitUser(ctx context.Context, in *Empty, opts ...grpc.Call
 	return out, nil
 }
 
+func (c *tunnelClient) ForwardPort(ctx context.Context, in *ForwardPortRequest, opts ...grpc.CallOption) (*ForwardPortResponse, error) {
+	out := new(ForwardPortResponse)
+	err := c.cc.Invoke(ctx, "/tunnel.Tunnel/ForwardPort", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *tunnelClient) StopForwardPort(ctx context.Context, in *StopForwardPortRequest, opts ...grpc.CallOption) (*StopForwardPortResponse, error) {
+	out := new(StopForwardPortResponse)
+	err := c.cc.Invoke(ctx, "/tunnel.Tunnel/StopForwardPort", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // TunnelServer is the server API for Tunnel service.
 // All implementations must embed UnimplementedTunnelServer
 // for forward compatibility
@@ -137,6 +156,8 @@ type TunnelServer interface {
 	DockerCredentials(context.Context, *Message) (*Message, error)
 	GitCredentials(context.Context, *Message) (*Message, error)
 	GitUser(context.Context, *Empty) (*Message, error)
+	ForwardPort(context.Context, *ForwardPortRequest) (*ForwardPortResponse, error)
+	StopForwardPort(context.Context, *StopForwardPortRequest) (*StopForwardPortResponse, error)
 	mustEmbedUnimplementedTunnelServer()
 }
 
@@ -164,6 +185,12 @@ func (UnimplementedTunnelServer) GitCredentials(context.Context, *Message) (*Mes
 }
 func (UnimplementedTunnelServer) GitUser(context.Context, *Empty) (*Message, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GitUser not implemented")
+}
+func (UnimplementedTunnelServer) ForwardPort(context.Context, *ForwardPortRequest) (*ForwardPortResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method ForwardPort not implemented")
+}
+func (UnimplementedTunnelServer) StopForwardPort(context.Context, *StopForwardPortRequest) (*StopForwardPortResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method StopForwardPort not implemented")
 }
 func (UnimplementedTunnelServer) mustEmbedUnimplementedTunnelServer() {}
 
@@ -307,6 +334,42 @@ func _Tunnel_GitUser_Handler(srv interface{}, ctx context.Context, dec func(inte
 	return interceptor(ctx, in, info, handler)
 }
 
+func _Tunnel_ForwardPort_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ForwardPortRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(TunnelServer).ForwardPort(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/tunnel.Tunnel/ForwardPort",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(TunnelServer).ForwardPort(ctx, req.(*ForwardPortRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Tunnel_StopForwardPort_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(StopForwardPortRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(TunnelServer).StopForwardPort(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/tunnel.Tunnel/StopForwardPort",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(TunnelServer).StopForwardPort(ctx, req.(*StopForwardPortRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // Tunnel_ServiceDesc is the grpc.ServiceDesc for Tunnel service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -337,6 +400,14 @@ var Tunnel_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "GitUser",
 			Handler:    _Tunnel_GitUser_Handler,
+		},
+		{
+			MethodName: "ForwardPort",
+			Handler:    _Tunnel_ForwardPort_Handler,
+		},
+		{
+			MethodName: "StopForwardPort",
+			Handler:    _Tunnel_StopForwardPort_Handler,
 		},
 	},
 	Streams: []grpc.StreamDesc{

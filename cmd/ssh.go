@@ -154,7 +154,19 @@ func (cmd *SSHCmd) jumpContainer(ctx context.Context, devPodConfig *config.Confi
 	if cmd.User != "" {
 		gitCredentials := client.WorkspaceConfig().IDE.Name != string(config.IDEVSCode)
 		runInContainer = func(ctx context.Context, hostClient, containerClient *ssh.Client) error {
-			err := tunnel.RunInContainer(ctx, client, devPodConfig, hostClient, containerClient, cmd.User, gitCredentials, true, nil, log)
+			err := tunnel.RunInContainer(
+				ctx,
+				client,
+				devPodConfig,
+				hostClient,
+				containerClient,
+				cmd.User,
+				false,
+				gitCredentials,
+				true,
+				nil,
+				log,
+			)
 			if err != nil {
 				log.Errorf("Error running credential server: %v", err)
 			}

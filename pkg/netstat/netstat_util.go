@@ -30,16 +30,16 @@ const (
 // Socket states
 const (
 	Established SkState = 0x01
-	SynSent             = 0x02
-	SynRecv             = 0x03
-	FinWait1            = 0x04
-	FinWait2            = 0x05
-	TimeWait            = 0x06
-	Close               = 0x07
-	CloseWait           = 0x08
-	LastAck             = 0x09
-	Listen              = 0x0a
-	Closing             = 0x0b
+	SynSent     SkState = 0x02
+	SynRecv     SkState = 0x03
+	FinWait1    SkState = 0x04
+	FinWait2    SkState = 0x05
+	TimeWait    SkState = 0x06
+	Close       SkState = 0x07
+	CloseWait   SkState = 0x08
+	LastAck     SkState = 0x09
+	Listen      SkState = 0x0a
+	Closing     SkState = 0x0b
 )
 
 var skStates = [...]string{

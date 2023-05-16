@@ -58,7 +58,7 @@ func RunCredentialsServer(
 		if configureGitUser {
 			err = configureGitUserLocally(ctx, userName, client)
 			if err != nil {
-				log.Errorf("Error configuring git user: %v", err)
+				log.Errorf("Error configuring git user: %w", err)
 			}
 		}
 
@@ -137,7 +137,7 @@ func configureGitUserLocally(ctx context.Context, userName string, client tunnel
 	gitUser := &gitcredentials.GitUser{}
 	err = json.Unmarshal([]byte(response.Message), gitUser)
 	if err != nil {
-		return fmt.Errorf("decode git user: %v", err)
+		return fmt.Errorf("decode git user: %w", err)
 	}
 
 	// don't override what is already there

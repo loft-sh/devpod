@@ -50,6 +50,7 @@ type ContextConfig struct {
 const (
 	ContextOptionInjectDockerCredentials = "INJECT_DOCKER_CREDENTIALS"
 	ContextOptionInjectGitCredentials    = "INJECT_GIT_CREDENTIALS"
+	ContextOptionAutoPortForwarding      = "AUTO_PORT_FORWARDING"
 	ContextOptionTelemetry               = "TELEMETRY"
 )
 
@@ -63,6 +64,12 @@ var ContextOptions = []ContextOption{
 	{
 		Name:        ContextOptionInjectGitCredentials,
 		Description: "Specifies if DevPod should inject git credentials into the workspace",
+		Default:     "true",
+		Enum:        []string{"true", "false"},
+	},
+	{
+		Name:        ContextOptionAutoPortForwarding,
+		Description: "Specifies if DevPod should automatically try to port forward container ports",
 		Default:     "true",
 		Enum:        []string{"true", "false"},
 	},
