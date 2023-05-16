@@ -70,7 +70,7 @@ options:
     default: kubectl
     global: true
   INACTIVITY_TIMEOUT:
-    description: If defined, will automatically stop the pod after the inactivity period.
+    description: "If defined, will automatically stop the pod after the inactivity period. Examples: 10m, 1h"
 agent:
   containerInactivityTimeout: ${INACTIVITY_TIMEOUT}
   path: ${DEVPOD}
