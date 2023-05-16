@@ -11,7 +11,7 @@ optionGroups:
     name: "Advanced Options"
 options:
   INACTIVITY_TIMEOUT:
-    description: If defined, will automatically stop the container after the inactivity period.
+    description: "If defined, will automatically stop the container after the inactivity period. Examples: 10m, 1h"
   DOCKER_PATH:
     description: The path where to find the docker binary.
     default: docker
