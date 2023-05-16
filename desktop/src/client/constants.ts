@@ -35,3 +35,5 @@ export const DEVPOD_FLAG_DEBUG = "--debug"
 export const DEVPOD_FLAG_USE = "--use"
 export const DEVPOD_FLAG_NAME = "--name"
 export const DEVPOD_FLAG_SINGLE_MACHINE = "--single-machine"
+
+export const DEVPOD_UI_ENV_VAR = "DEVPOD_UI"
