@@ -3,6 +3,7 @@ package credentials
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"io"
 	"net/http"
 	"os"
@@ -17,8 +18,17 @@ import (
 	"github.com/pkg/errors"
 )
 
-func RunCredentialsServer(ctx context.Context, userName string, port int, configureGitHelper, configureDockerHelper bool, client tunnel.TunnelClient, log log.Logger) error {
-	if configureGitHelper || configureDockerHelper {
+func RunCredentialsServer(
+	ctx context.Context,
+	userName string,
+	port int,
+	configureGitUser,
+	configureGitHelper,
+	configureDockerHelper bool,
+	client tunnel.TunnelClient,
+	log log.Logger,
+) error {
+	if configureGitUser || configureGitHelper || configureDockerHelper {
 		fileLock := flock.New(filepath.Join(os.TempDir(), "devpod-credentials.lock"))
 		locked, err := fileLock.TryLock()
 		if err != nil {
@@ -34,6 +44,8 @@ func RunCredentialsServer(ctx context.Context, userName string, port int, config
 		if err != nil {
 			return err
 		}
+
+		// configure docker credential helper
 		if configureDockerHelper {
 			// configure the creds store
 			err = dockercredentials.ConfigureCredentialsContainer(userName, port)
@@ -41,24 +53,17 @@ func RunCredentialsServer(ctx context.Context, userName string, port int, config
 				return err
 			}
 		}
-		if configureGitHelper {
-			// set user & email
-			response, err := client.GitUser(ctx, &tunnel.Empty{})
+
+		// configure git user
+		if configureGitUser {
+			err = configureGitUserLocally(ctx, userName, client)
 			if err != nil {
-				log.Errorf("Retrieve git user: %v", err)
-			} else {
-				gitUser := &gitcredentials.GitUser{}
-				err = json.Unmarshal([]byte(response.Message), gitUser)
-				if err != nil {
-					return err
-				}
-
-				err = gitcredentials.SetUser(userName, gitUser)
-				if err != nil {
-					log.Errorf("Set git user: %v", err)
-				}
+				log.Errorf("Error configuring git user: %v", err)
 			}
+		}
 
+		// configure git credential helper
+		if configureGitHelper {
 			// configure helper
 			err = gitcredentials.ConfigureHelper(binaryPath, userName, port)
 			if err != nil {
@@ -111,6 +116,45 @@ func RunCredentialsServer(ctx context.Context, userName string, port int, config
 		_ = srv.Close()
 		return nil
 	}
+}
+
+func configureGitUserLocally(ctx context.Context, userName string, client tunnel.TunnelClient) error {
+	// get local credentials
+	localGitUser, err := gitcredentials.GetUser()
+	if err != nil {
+		return err
+	} else if localGitUser.Name != "" && localGitUser.Email != "" {
+		return nil
+	}
+
+	// set user & email if not found
+	response, err := client.GitUser(ctx, &tunnel.Empty{})
+	if err != nil {
+		return fmt.Errorf("retrieve git user: %w", err)
+	}
+
+	// parse git user from response
+	gitUser := &gitcredentials.GitUser{}
+	err = json.Unmarshal([]byte(response.Message), gitUser)
+	if err != nil {
+		return fmt.Errorf("decode git user: %v", err)
+	}
+
+	// don't override what is already there
+	if localGitUser.Name != "" {
+		gitUser.Name = ""
+	}
+	if localGitUser.Email != "" {
+		gitUser.Email = ""
+	}
+
+	// set git user
+	err = gitcredentials.SetUser(userName, gitUser)
+	if err != nil {
+		return fmt.Errorf("set git user: %w", err)
+	}
+
+	return nil
 }
 
 func handleDockerCredentialsRequest(ctx context.Context, writer http.ResponseWriter, request *http.Request, client tunnel.TunnelClient, log log.Logger) error {

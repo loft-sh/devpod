@@ -74,5 +74,5 @@ func (cmd *CredentialsServerCmd) Run(ctx context.Context, _ []string) error {
 	}
 
 	// run the credentials server
-	return credentials.RunCredentialsServer(ctx, cmd.User, port, cmd.ConfigureGitHelper, cmd.ConfigureDockerHelper, tunnelClient, log)
+	return credentials.RunCredentialsServer(ctx, cmd.User, port, true, cmd.ConfigureGitHelper, cmd.ConfigureDockerHelper, tunnelClient, log)
 }

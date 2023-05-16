@@ -3,17 +3,14 @@ package tunnel
 import (
 	"bytes"
 	"context"
-	"encoding/json"
 	"fmt"
 	"io"
 	"os"
 	"sync"
 	"time"
 
-	"github.com/docker/go-connections/nat"
 	"github.com/loft-sh/devpod/pkg/agent"
 	"github.com/loft-sh/devpod/pkg/client"
-	"github.com/loft-sh/devpod/pkg/devcontainer/config"
 	"github.com/loft-sh/devpod/pkg/log"
 	devssh "github.com/loft-sh/devpod/pkg/ssh"
 	"github.com/loft-sh/devpod/pkg/token"
@@ -24,25 +21,23 @@ import (
 
 func NewContainerTunnel(client client.WorkspaceClient, log log.Logger) *ContainerHandler {
 	updateConfigInterval := time.Second * 30
-	workspacePortForwarding := true
 	return &ContainerHandler{
-		client:                  client,
-		updateConfigInterval:    updateConfigInterval,
-		workspacePortForwarding: workspacePortForwarding,
-		log:                     log,
+		client:               client,
+		updateConfigInterval: updateConfigInterval,
+		log:                  log,
 	}
 }
 
 type ContainerHandler struct {
-	client                  client.WorkspaceClient
-	updateConfigInterval    time.Duration
-	workspacePortForwarding bool
-	log                     log.Logger
+	client               client.WorkspaceClient
+	updateConfigInterval time.Duration
+	log                  log.Logger
 }
 
 type Handler func(ctx context.Context, client *ssh.Client) error
+type RunInContainerHandler func(ctx context.Context, hostClient, containerClient *ssh.Client) error
 
-func (c *ContainerHandler) Run(ctx context.Context, runInHost Handler, runInContainer Handler) error {
+func (c *ContainerHandler) Run(ctx context.Context, runInHost Handler, runInContainer RunInContainerHandler) error {
 	if runInHost == nil && runInContainer == nil {
 		return nil
 	}
@@ -192,7 +187,7 @@ func (c *ContainerHandler) updateConfig(ctx context.Context, sshClient *ssh.Clie
 	}
 }
 
-func (c *ContainerHandler) runRunInContainer(ctx context.Context, sshClient *ssh.Client, tok string, privateKey []byte, runInContainer Handler) error {
+func (c *ContainerHandler) runRunInContainer(ctx context.Context, sshClient *ssh.Client, tok string, privateKey []byte, runInContainer RunInContainerHandler) error {
 	// compress info
 	workspaceInfo, _, err := c.client.AgentInfo()
 	if err != nil {
@@ -244,99 +239,6 @@ func (c *ContainerHandler) runRunInContainer(ctx context.Context, sshClient *ssh
 	defer containerClient.Close()
 	c.log.Debugf("Successfully connected to container")
 
-	// run port-forwarding
-	if c.workspacePortForwarding {
-		go func() {
-			// start forwarding ports
-			c.forwardPorts(cancelCtx, sshClient, containerClient)
-		}()
-	}
-
 	// start handler
-	return runInContainer(cancelCtx, containerClient)
-}
-
-func (c *ContainerHandler) forwardPorts(ctx context.Context, sshClient, containerClient *ssh.Client) {
-	result, err := c.getDevContainerResult(ctx, sshClient)
-	if err != nil {
-		c.log.Errorf("Error retrieving dev container result: %v", err)
-		return
-	}
-
-	// app ports
-	for _, port := range result.MergedConfig.AppPort {
-		parsed, err := nat.ParsePortSpec(port)
-		if err != nil {
-			c.log.Debugf("Error parsing appPort %s: %v", port, err)
-			continue
-		}
-
-		// try to forward
-		for _, parsedPort := range parsed {
-			go func(parsedPort nat.PortMapping) {
-				if parsedPort.Binding.HostIP == "" {
-					parsedPort.Binding.HostIP = "localhost"
-				}
-				if parsedPort.Binding.HostPort == "" {
-					parsedPort.Binding.HostPort = parsedPort.Port.Port()
-				}
-
-				// do the forward
-				err = devssh.PortForward(ctx, containerClient, parsedPort.Binding.HostIP+":"+parsedPort.Binding.HostPort, "localhost:"+parsedPort.Port.Port(), c.log)
-				if err != nil {
-					c.log.Debugf("Error port forwarding %s:%s:%s: %v", parsedPort.Binding.HostIP, parsedPort.Binding.HostPort, parsedPort.Port.Port(), err)
-				}
-			}(parsedPort)
-		}
-	}
-
-	// forward ports
-	for _, port := range result.MergedConfig.ForwardPorts {
-		// convert port
-		i, err := port.Int64()
-		if err != nil {
-			c.log.Debugf("Error parsing forwardPort %s: %v", port.String(), err)
-			continue
-		}
-
-		// try to forward
-		go func(i int64, port json.Number) {
-			err = devssh.PortForward(ctx, containerClient, "localhost:"+port.String(), "localhost:"+port.String(), c.log)
-			if err != nil {
-				c.log.Debugf("Error port forwarding %d: %v", int(i), err)
-			}
-		}(i, port)
-	}
-}
-
-func (c *ContainerHandler) getDevContainerResult(ctx context.Context, client *ssh.Client) (*config.Result, error) {
-	writer := c.log.Writer(logrus.InfoLevel, false)
-	defer writer.Close()
-
-	agentConfig := c.client.AgentConfig()
-
-	// retrieve devcontainer result
-	command := fmt.Sprintf("%s agent workspace get-result --id '%s' --context '%s'", c.client.AgentPath(), c.client.Workspace(), c.client.Context())
-	if c.log.GetLevel() == logrus.DebugLevel {
-		command += " --debug"
-	}
-	if agentConfig.DataPath != "" {
-		command += fmt.Sprintf(" --agent-dir '%s'", agentConfig.DataPath)
-	}
-	buf := &bytes.Buffer{}
-	err := devssh.Run(ctx, client, command, nil, buf, writer)
-	if err != nil {
-		return nil, fmt.Errorf("error retrieving workspace get-result: %w", err)
-	}
-
-	// parse result
-	result := &config.Result{}
-	err = json.Unmarshal(buf.Bytes(), result)
-	if err != nil {
-		return nil, err
-	} else if result.MergedConfig == nil {
-		return nil, fmt.Errorf("received empty devcontainer result: %v", buf.String())
-	}
-
-	return result, nil
+	return runInContainer(cancelCtx, sshClient, containerClient)
 }
