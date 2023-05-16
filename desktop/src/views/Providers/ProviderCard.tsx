@@ -69,6 +69,7 @@ export function ProviderCard({ id, provider, remove }: TProviderCardProps) {
 
   const providerIcon = provider.config?.icon
   const isDefaultProvider = provider.default ?? false
+  const providerVersion = provider.config?.version
 
   return (
     <>
@@ -102,6 +103,11 @@ export function ProviderCard({ id, provider, remove }: TProviderCardProps) {
               {id}
             </Link>
           </Heading>
+          {providerVersion && (
+            <Text fontFamily="monospace" color="gray.600" fontSize="sm" fontWeight="regular">
+              {providerVersion}
+            </Text>
+          )}
           <HStack rowGap={2} marginTop={4} flexWrap="nowrap" alignItems="center">
             <IconTag
               icon={<Stack3D />}
