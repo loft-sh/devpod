@@ -80,23 +80,20 @@ impl CustomProtocol {
                         };
                     }
                     Err(err) => match err {
-                        ParseError::UnsupportedHost(host) => {
-                            error!(
-                                "Attempted to open custom url with unsupported host: {}",
-                                host
-                            );
-                        }
                         _ => {
-                            if let Err(err) = app_state
-                                .ui_messages
-                                .send(UiMessage::OpenWorkspaceFailed(err))
-                                .await
+                            #[cfg(not(target_os = "windows"))]
                             {
-                                error!(
+                                if let Err(err) = app_state
+                                    .ui_messages
+                                    .send(UiMessage::OpenWorkspaceFailed(err))
+                                    .await
+                                {
+                                    error!(
                                     "Failed to broadcast invalid custom protocol message: {:?}, {}",
                                     err.0, err
                                 );
-                            };
+                                };
+                            }
                         }
                     },
                 }
