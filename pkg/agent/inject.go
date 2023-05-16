@@ -33,6 +33,11 @@ func InjectAgentAndExecute(ctx context.Context, exec inject.ExecFunc, remoteAgen
 		downloadURL = DefaultAgentDownloadURL()
 	}
 
+	versionCheck := fmt.Sprintf(`[ "$(%s version 2>/dev/null || echo 'false')" != "%s" ]`, remoteAgentPath, version.GetVersion())
+	if version.GetVersion() == version.DevVersion {
+		versionCheck = fmt.Sprintf(`[ -z "$(%s version 2>/dev/null || true)" ]`, remoteAgentPath)
+	}
+
 	// install devpod into the target
 	// do a simple hello world to check if we can get something
 	now := time.Now()
@@ -51,7 +56,7 @@ func InjectAgentAndExecute(ctx context.Context, exec inject.ExecFunc, remoteAgen
 			func(arm bool) (io.ReadCloser, error) {
 				return injectBinary(arm, downloadURL, log)
 			},
-			fmt.Sprintf(`[ "$(%s version 2>/dev/null || echo 'false')" != "%s" ]`, remoteAgentPath, version.GetVersion()),
+			versionCheck,
 			remoteAgentPath,
 			downloadURL+"/devpod-linux-amd64",
 			downloadURL+"/devpod-linux-arm64",
