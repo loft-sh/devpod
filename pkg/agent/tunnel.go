@@ -12,20 +12,20 @@ import (
 	"strings"
 	"time"
 
+	"github.com/loft-sh/devpod/pkg/agent/tunnel"
 	"github.com/loft-sh/devpod/pkg/devcontainer/config"
 	"github.com/loft-sh/devpod/pkg/dockercredentials"
 	"github.com/loft-sh/devpod/pkg/extract"
 	"github.com/loft-sh/devpod/pkg/gitcredentials"
+	"github.com/loft-sh/devpod/pkg/log"
+	"github.com/loft-sh/devpod/pkg/netstat"
 	provider2 "github.com/loft-sh/devpod/pkg/provider"
 	"github.com/loft-sh/devpod/pkg/scanner"
+	"github.com/loft-sh/devpod/pkg/stdio"
 	"github.com/loft-sh/devpod/pkg/survey"
 	perrors "github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 	"google.golang.org/grpc/credentials/insecure"
-
-	"github.com/loft-sh/devpod/pkg/agent/tunnel"
-	"github.com/loft-sh/devpod/pkg/log"
-	"github.com/loft-sh/devpod/pkg/stdio"
 
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/reflection"
@@ -45,11 +45,12 @@ func NewTunnelClient(reader io.Reader, writer io.WriteCloser, exitOnClose bool) 
 	return tunnel.NewTunnelClient(conn), nil
 }
 
-func RunTunnelServer(ctx context.Context, reader io.Reader, writer io.WriteCloser, exitOnClose, allowGitCredentials, allowDockerCredentials bool, workspace *provider2.Workspace, log log.Logger) (*config.Result, error) {
+func RunTunnelServer(ctx context.Context, reader io.Reader, writer io.WriteCloser, exitOnClose, allowGitCredentials, allowDockerCredentials bool, workspace *provider2.Workspace, forwarder netstat.Forwarder, log log.Logger) (*config.Result, error) {
 	lis := stdio.NewStdioListener(reader, writer, exitOnClose)
 	s := grpc.NewServer()
 	tunnelServ := &tunnelServer{
 		workspace:              workspace,
+		forwarder:              forwarder,
 		allowGitCredentials:    allowGitCredentials,
 		allowDockerCredentials: allowDockerCredentials,
 		log:                    log,
@@ -72,11 +73,37 @@ func RunTunnelServer(ctx context.Context, reader io.Reader, writer io.WriteClose
 type tunnelServer struct {
 	tunnel.UnimplementedTunnelServer
 
+	forwarder              netstat.Forwarder
 	allowGitCredentials    bool
 	allowDockerCredentials bool
 	result                 *config.Result
 	workspace              *provider2.Workspace
 	log                    log.Logger
+}
+
+func (t *tunnelServer) ForwardPort(ctx context.Context, portRequest *tunnel.ForwardPortRequest) (*tunnel.ForwardPortResponse, error) {
+	if t.forwarder == nil {
+		return nil, fmt.Errorf("cannot forward ports")
+	}
+
+	err := t.forwarder.Forward(portRequest.Port)
+	if err != nil {
+		return nil, fmt.Errorf("error forwarding port %s: %w", portRequest.Port, err)
+	}
+
+	return &tunnel.ForwardPortResponse{}, nil
+}
+func (t *tunnelServer) StopForwardPort(ctx context.Context, portRequest *tunnel.StopForwardPortRequest) (*tunnel.StopForwardPortResponse, error) {
+	if t.forwarder == nil {
+		return nil, fmt.Errorf("cannot forward ports")
+	}
+
+	err := t.forwarder.StopForward(portRequest.Port)
+	if err != nil {
+		return nil, fmt.Errorf("error stop forwarding port %s: %w", portRequest.Port, err)
+	}
+
+	return &tunnel.StopForwardPortResponse{}, nil
 }
 
 func (t *tunnelServer) DockerCredentials(ctx context.Context, message *tunnel.Message) (*tunnel.Message, error) {
@@ -120,10 +147,6 @@ func (t *tunnelServer) DockerCredentials(ctx context.Context, message *tunnel.Me
 }
 
 func (t *tunnelServer) GitUser(ctx context.Context, empty *tunnel.Empty) (*tunnel.Message, error) {
-	if !t.allowGitCredentials {
-		return nil, fmt.Errorf("git credentials forbidden")
-	}
-
 	gitUser, err := gitcredentials.GetUser()
 	if err != nil {
 		return nil, err

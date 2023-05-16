@@ -183,6 +183,7 @@ func (cmd *BuildCmd) buildAgentClient(ctx context.Context, workspaceClient clien
 		string(agentConfig.InjectGitCredentials) == "true",
 		string(agentConfig.InjectDockerCredentials) == "true",
 		workspaceClient.WorkspaceConfig(),
+		nil,
 		log,
 	)
 	if err != nil {

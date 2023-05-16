@@ -17,7 +17,6 @@ import (
 	"github.com/loft-sh/devpod/pkg/log"
 	open2 "github.com/loft-sh/devpod/pkg/open"
 	"github.com/loft-sh/devpod/pkg/port"
-	devssh "github.com/loft-sh/devpod/pkg/ssh"
 	"github.com/loft-sh/devpod/pkg/tunnel"
 	workspace2 "github.com/loft-sh/devpod/pkg/workspace"
 	"github.com/pkg/errors"
@@ -177,16 +176,26 @@ func startInBrowser(ctx context.Context, devPodConfig *config.Config, client cli
 
 	// start in browser
 	log.Infof("Starting vscode in browser mode at %s", targetURL)
-	err = tunnel.NewContainerTunnel(client, log).Run(ctx, nil, func(ctx context.Context, client *ssh.Client) error {
-		log.Debugf("Connected to container")
-		go func() {
-			err := runCredentialsServer(ctx, devPodConfig, client, user, true, true, log)
-			if err != nil {
-				log.Errorf("error running credentials server: %v", err)
-			}
-		}()
+	err = tunnel.NewContainerTunnel(client, log).Run(ctx, nil, func(ctx context.Context, hostClient, containerClient *ssh.Client) error {
+		err := tunnel.RunInContainer(
+			ctx,
+			client,
+			devPodConfig,
+			hostClient,
+			containerClient,
+			user,
+			true,
+			true,
+			true,
+			[]string{fmt.Sprintf("%d:%d", vscodePort, openvscode.DefaultVSCodePort)},
+			log,
+		)
+		if err != nil {
+			log.Errorf("error running credentials server: %v", err)
+		}
 
-		return devssh.PortForward(ctx, client, fmt.Sprintf("localhost:%d", vscodePort), fmt.Sprintf("localhost:%d", openvscode.DefaultVSCodePort), log)
+		<-ctx.Done()
+		return nil
 	})
 	if err != nil {
 		return err
@@ -272,6 +281,7 @@ func (cmd *UpCmd) devPodUpMachine(ctx context.Context, client client2.WorkspaceC
 		string(agentConfig.InjectGitCredentials) == "true",
 		string(agentConfig.InjectDockerCredentials) == "true",
 		client.WorkspaceConfig(),
+		nil,
 		log,
 	)
 	if err != nil {

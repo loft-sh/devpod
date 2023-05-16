@@ -13,6 +13,24 @@ service Tunnel {
   rpc DockerCredentials(Message) returns (Message) {}
   rpc GitCredentials(Message) returns (Message) {}
   rpc GitUser(Empty) returns (Message) {}
+  rpc ForwardPort(ForwardPortRequest) returns (ForwardPortResponse) {}
+  rpc StopForwardPort(StopForwardPortRequest) returns (StopForwardPortResponse) {}
+}
+
+message StopForwardPortRequest {
+  string port = 1;
+}
+
+message StopForwardPortResponse {
+
+}
+
+message ForwardPortRequest {
+  string port = 1;
+}
+
+message ForwardPortResponse {
+
 }
 
 message Message {
