@@ -33,38 +33,42 @@ export function useCreateWorkspaceForm(
   )
 
   useEffect(() => {
+    const opts = {
+      shouldDirty: true,
+      shouldValidate: true,
+    }
     if (params.workspaceID !== undefined) {
-      setValue(FieldName.ID, params.workspaceID)
+      setValue(FieldName.ID, params.workspaceID, opts)
     }
 
     if (params.rawSource !== undefined) {
-      setValue(FieldName.SOURCE, params.rawSource)
+      setValue(FieldName.SOURCE, params.rawSource, opts)
     }
 
     // default ide
     if (params.ide !== undefined) {
-      setValue(FieldName.DEFAULT_IDE, params.ide)
+      setValue(FieldName.DEFAULT_IDE, params.ide, opts)
     } else if (ides?.length) {
       const defaultIDE = ides.find((ide) => ide.default)
       if (defaultIDE) {
-        setValue(FieldName.DEFAULT_IDE, defaultIDE.name!)
+        setValue(FieldName.DEFAULT_IDE, defaultIDE.name!, opts)
       } else {
         const openvscode = ides.find((ide) => ide.name === "openvscode")
         if (openvscode && openvscode.name) {
-          setValue(FieldName.DEFAULT_IDE, openvscode.name)
+          setValue(FieldName.DEFAULT_IDE, openvscode.name, opts)
         }
       }
     }
 
     // default provider
     if (params.providerID !== undefined) {
-      setValue(FieldName.PROVIDER, params.providerID)
+      setValue(FieldName.PROVIDER, params.providerID, opts)
     } else if (providers) {
       const defaultProviderID = Object.keys(providers).find(
         (providerID) => providers[providerID]?.default
       )
       if (defaultProviderID) {
-        setValue(FieldName.PROVIDER, defaultProviderID)
+        setValue(FieldName.PROVIDER, defaultProviderID, opts)
       }
     }
   }, [ides, params, providers, setValue])
