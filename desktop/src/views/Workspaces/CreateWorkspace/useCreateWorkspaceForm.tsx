@@ -23,6 +23,7 @@ export function useCreateWorkspaceForm(
       defaultValues: {
         [FieldName.PREBUILD_REPOSITORY]:
           window.localStorage.getItem(DEFAULT_PREBUILD_REPOSITORY_KEY) ?? "",
+        [FieldName.PROVIDER]: Object.keys(providers ?? {})[0] ?? undefined,
       },
     })
   const currentSource = watch(FieldName.SOURCE)
