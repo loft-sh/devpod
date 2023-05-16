@@ -6,7 +6,7 @@ sidebar_label: What are Workspaces?
 A workspace in DevPod is a containerized development environment, that holds the source code of a project as well as the dependencies to work on that project, such as a compiler and debugger.
 The underlying environment where the container runs will be created and managed through a DevPod provider. This allows DevPod to provide a consistent development experience no matter where the container is actually running, which can be a remote machine in a public cloud, localhost or even a Kubernetes cluster.
 
-To configure the development container, DevPod reuses the [devcontainer.json](https://containers.dev/) specification, which is also used by other popular tools, such as [VSCode dev containers](https://code.visualstudio.com/docs/devcontainers/containers) or [Github Codespaces](https://github.com/features/codespaces).
+To configure the development container, DevPod reuses the [devcontainer.json](https://containers.dev/) specification, which is also used by other popular tools, such as [VS Code dev containers](https://code.visualstudio.com/docs/devcontainers/containers) or [Github Codespaces](https://github.com/features/codespaces).
 This means you can already reuse projects that use this configuration to spin up a workspace in DevPod. If no configuration is found, DevPod will automatically try to find out what programming language is used and provide an appropriate template.
 
 A workspace in DevPod can be stopped and restarted without losing its state. This allows you to install additional programs or change configuration without the need of reconfiguring the container.
