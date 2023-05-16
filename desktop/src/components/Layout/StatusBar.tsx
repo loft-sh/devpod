@@ -29,12 +29,12 @@ export function StatusBar(boxProps: BoxProps) {
         Version {version} | {platform ?? "unknown platform"} | {arch ?? "unknown arch"}
       </Text>
       <HStack>
-        <Tooltip label="Loving DevPod? Give us a start on Github">
+        <Tooltip label="Loving DevPod? Give us a star on Github">
           <IconButton
             variant="ghost"
             rounded="full"
             icon={<StarIcon color="gray.700" />}
-            aria-label="Loving DevPod? Give us a start on Github"
+            aria-label="Loving DevPod? Give us a star on Github"
             onClick={() => client.openLink("https://github.com/loft-sh/devpod")}
           />
         </Tooltip>
