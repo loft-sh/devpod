@@ -2,8 +2,7 @@
 name: Bug report
 about: Create a report to help us reproduce and fix a bug
 labels:
-`kind/bug`
-
+- kind/bug
 ---
 
 <!-- Please use this template for reporting bugs and provide as much info as possible. Not doing so may result in your bug not being addressed in a timely manner. Thanks!-->

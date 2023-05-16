@@ -2,8 +2,7 @@
 name: Feature request
 about: Suggest an idea for this project
 labels:
-`kind/feature`
-
+- kind/feature
 ---
 
 **Is your feature request related to a problem?**  
