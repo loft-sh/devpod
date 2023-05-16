@@ -31,7 +31,7 @@ func (d *DefaultCollector) getInstanceProperties(command *cobra.Command, executi
 		OS:          runtime.GOOS,
 		Version:     getVersion(),
 		Flags:       getFlags(command),
-		UI:          os.Getenv(UIEnvVar) == "true",
+		UI:          isUIEvent(),
 	}
 
 	return p
@@ -79,4 +79,19 @@ func getFlags(command *cobra.Command) types.Flags {
 	})
 
 	return types.Flags{SetFlags: setFlags}
+}
+
+func shouldSkipCommand(cmd string) bool {
+	if isUIEvent() {
+		for _, exception := range UIEventsExceptions {
+			if cmd == exception {
+				return true
+			}
+		}
+	}
+	return false
+}
+
+func isUIEvent() bool {
+	return os.Getenv(UIEnvVar) == "true"
 }
