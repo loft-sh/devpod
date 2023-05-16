@@ -1,7 +1,7 @@
 import { ChildProcess, Command as ShellCommand, EventEmitter } from "@tauri-apps/api/shell"
 import { debug, isError } from "../lib"
 import { Result, ResultError, Return } from "../lib/result"
-import { DEVPOD_BINARY } from "./constants"
+import { DEVPOD_BINARY, DEVPOD_UI_ENV_VAR } from "./constants"
 import { TStreamEvent } from "./types"
 
 export type TStreamEventListenerFn = (event: TStreamEvent) => void
@@ -20,7 +20,9 @@ export class Command implements TCommand<ChildProcess> {
 
   constructor(args: string[]) {
     debug("commands", "Creating Devpod command with args: ", args)
-    this.sidecarCommand = ShellCommand.sidecar(DEVPOD_BINARY, args)
+    this.sidecarCommand = ShellCommand.sidecar(DEVPOD_BINARY, args, {
+      env: { [DEVPOD_UI_ENV_VAR]: "true" },
+    })
     this.args = args
   }
 
