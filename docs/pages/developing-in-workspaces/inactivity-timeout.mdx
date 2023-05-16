@@ -1,0 +1,25 @@
+---
+title: Inactivity Timeout
+sidebar_label: Inactivity Timeout
+---
+
+As a form of cost control DevPod will keep track of all the Workspace running on a
+provider's machine.
+If no Workspaces are running on a machine after a set period of time, DevPod will
+proceed to shut-down the machine, in order to preserve costs.
+
+Machines stopped this way preserve the data and state, so when a workspace [is started again](./connect-to-a-workspace.mdx),
+DevPod will simply restart the machine and the workspace.
+
+:::info
+All official DevPod providers offer this pre-configured to 10 minutes.
+:::
+
+## Configuring the timeout
+
+Changing the default setting for inactivity timeout can be done [configuring the provider](../managing-providers/add-provider.mdx#set-provider-options).
+
+:::info
+More info about the provider's auto-shutdown can be found in the [agent's development guide](../developing-providers/agent.mdx#machine-providers)
+That will explain how this is done and what can be configured.
+:::
