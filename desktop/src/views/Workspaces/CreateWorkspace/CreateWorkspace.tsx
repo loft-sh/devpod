@@ -271,6 +271,7 @@ export function CreateWorkspace() {
                 <Controller
                   name={FieldName.PROVIDER}
                   control={control}
+                  rules={{ required: true }}
                   render={({ field }) => (
                     <ProviderInput
                       field={field}
