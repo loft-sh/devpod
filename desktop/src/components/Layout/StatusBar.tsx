@@ -1,3 +1,4 @@
+import { StarIcon } from "@chakra-ui/icons"
 import {
   BoxProps,
   Checkbox,
@@ -11,29 +12,16 @@ import {
   Text,
   Tooltip,
 } from "@chakra-ui/react"
-import { useCallback } from "react"
 import { FaBug } from "react-icons/fa"
 import { HiDocumentMagnifyingGlass } from "react-icons/hi2"
 import { version } from "../../../package.json"
-import { client, DEVPOD_GIT_REPOSITORY } from "../../client"
+import { client } from "../../client"
 import { Debug, useArch, useDebug, usePlatform } from "../../lib"
-import { StarIcon } from "@chakra-ui/icons"
 
 export function StatusBar(boxProps: BoxProps) {
   const arch = useArch()
   const platform = usePlatform()
   const debug = useDebug()
-
-  const handleReportIssueClicked = useCallback(() => {
-    const body = encodeURIComponent(`TODO: Describe the Issue here
----
-**Version**: ${version}
-**Platform**: ${platform ?? "Unknown Platform"}
-**Arch**: ${arch ?? "Unknown Arch"}
-    `)
-    const link = `${DEVPOD_GIT_REPOSITORY}/issues/new?body=${body}`
-    client.openLink(link)
-  }, [arch, platform])
 
   return (
     <HStack justify="space-between" paddingX="6" fontSize="sm" zIndex="overlay" {...boxProps}>
@@ -65,7 +53,7 @@ export function StatusBar(boxProps: BoxProps) {
             rounded="full"
             icon={<Icon as={FaBug} color="gray.700" />}
             aria-label="Report an Issue"
-            onClick={handleReportIssueClicked}
+            onClick={() => client.openLink("https://github.com/loft-sh/devpod/issues/new/choose")}
           />
         </Tooltip>
         {debug.isEnabled && (

@@ -85,14 +85,14 @@ export function ProviderCard({ id, provider, remove }: TProviderCardProps) {
           {exists(providerIcon) ? (
             <Image
               objectFit="cover"
-              padding="8"
+              padding="4"
               borderRadius="md"
-              height="48"
+              height="44"
               src={providerIcon}
               alt="Provider Image"
             />
           ) : (
-            <Center height="48">
+            <Center height="44">
               <ProviderPlaceholder boxSize={24} color="chakra-body-text" />
             </Center>
           )}
