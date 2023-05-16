@@ -12,11 +12,11 @@ If you have selected an IDE to automatically open, DevPod will automatically try
 You can change the default IDE to open globally via: `devpod use ide vscode` or `devpod up my-workspace --ide vscode` for an individual workspace.
 :::
 
-### VSCode Browser
+### VS Code Browser
 
-DevPod is able to open VSCode in a browser in a workspace.
+DevPod is able to open VS Code in a browser in a workspace.
 It will use the open source project [openvscode-server](https://github.com/gitpod-io/openvscode-server) for installing a vscode server binary in the workspace and then tunnel a connection to that binary from the localhost.
-To open the workspace inside VSCode browser, you can run the following command:
+To open the workspace inside VS Code browser, you can run the following command:
 ```
 devpod up my-workspace --ide openvscode
 ```
@@ -26,15 +26,15 @@ To select a different openvscode version, please run with:
 devpod up my-workspace --ide openvscode --ide-option VERSION=v1.76.2
 ```
 
-### VSCode
+### VS Code
 
-Before connecting vscode with DevPod, make sure you have installed the [remote ssh extension](https://marketplace.visualstudio.com/items?itemName=ms-vscode-remote.remote-ssh) and the [code CLI](https://code.visualstudio.com/docs/editor/command-line). Then you can start the workspace directly in vscode with:
+Before connecting VS Code with DevPod, make sure you have installed the [remote ssh extension](https://marketplace.visualstudio.com/items?itemName=ms-vscode-remote.remote-ssh) and the [code CLI](https://code.visualstudio.com/docs/editor/command-line). Then you can start the workspace directly in VS Code with:
 ```
 devpod up my-workspace --ide vscode
 ```
 
 :::info SSH Fallback
-If for whatever reason this does not work you can also use the regular SSH connection with `WORKSPACE_NAME.devpod` to connect VSCode with a workspace
+If for whatever reason this does not work you can also use the regular SSH connection with `WORKSPACE_NAME.devpod` to connect VS Code with a workspace
 :::
 
 ### JetBrains Suite (Goland, PyCharm, Intellij etc.)
