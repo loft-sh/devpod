@@ -28,6 +28,7 @@ type InstanceProperties struct {
 	OS          string  `json:"os,omitempty"`
 	Version     Version `json:"version,omitempty"`
 	Flags       Flags   `json:"flags,omitempty"`
+	UI          bool    `json:"ui"`
 }
 
 type EventType string

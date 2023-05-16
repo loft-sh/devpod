@@ -4,6 +4,7 @@ import (
 	"crypto/hmac"
 	"crypto/sha256"
 	"fmt"
+	"os"
 	"runtime"
 
 	"github.com/denisbrodbeck/machineid"
@@ -18,6 +19,7 @@ const (
 	// hashingKey is a random string used for hashing the UID.
 	// It shouldn't be changed after the release.
 	hashingKey = "2f1uR7n8ryzFEaAm87Ec"
+	UIEnvVar   = "DEVPOD_UI"
 )
 
 func (d *DefaultCollector) getInstanceProperties(command *cobra.Command, executionID string, ts int64) types.InstanceProperties {
@@ -29,6 +31,7 @@ func (d *DefaultCollector) getInstanceProperties(command *cobra.Command, executi
 		OS:          runtime.GOOS,
 		Version:     getVersion(),
 		Flags:       getFlags(command),
+		UI:          os.Getenv(UIEnvVar) == "true",
 	}
 
 	return p
