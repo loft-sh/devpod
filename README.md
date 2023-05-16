@@ -5,7 +5,7 @@
 
 [![Join us on Slack!](docs/static/media/slack.svg)](https://slack.loft.sh/) [![Open in DevPod!](https://devpod.sh/assets/open-in-devpod.svg)](https://devpod.sh/open#https://github.com/loft-sh/devpod)
 
-DevPod is a client-only tool to create reproducible developer environments based on a [devcontainer.json](https://containers.dev/) on any backend. Each developer environment runs in a container and is specified through a [devcontainer.json](https://containers.dev/). Through DevPod providers these environments can be created on any backend, such as the local computer, a Kuberentes cluster, any reachable remote machine or in a public or private cloud.
+DevPod is a client-only tool to create reproducible developer environments based on a [devcontainer.json](https://containers.dev/) on any backend. Each developer environment runs in a container and is specified through a [devcontainer.json](https://containers.dev/). Through DevPod providers these environments can be created on any backend, such as the local computer, a Kuberentes cluster, any reachable remote machine or in a VM in the cloud.
 
 ![Codespaces](docs/static/media/codespaces-but.png)
 
