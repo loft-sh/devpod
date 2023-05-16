@@ -1,25 +1,37 @@
 ---
-title: Inactivity Timeout
-sidebar_label: Inactivity Timeout
+title: Auto-Inactivity Timeout
+sidebar_label: Auto-Inactivity Timeout
 ---
 
-As a form of cost control DevPod will keep track of all the Workspace running on a
-provider's machine.
-If no Workspaces are running on a machine after a set period of time, DevPod will
-proceed to shut-down the machine, in order to preserve costs.
+By default, most providers are able to automatically shutdown unused workspaces to save costs. For example, for cloud providers such as AWS, Azure and Google Cloud, DevPod will automatically stop the machine to save costs when workspaces are not used.
 
-Machines stopped this way preserve the data and state, so when a workspace [is started again](./connect-to-a-workspace.mdx),
-DevPod will simply restart the machine and the workspace.
+Machines stopped this way preserve the data and state, so when a workspace [is started again](./connect-to-a-workspace.mdx), DevPod will simply restart the machine and the workspace.
 
 :::info
-All official DevPod providers offer this pre-configured to 10 minutes.
+All official DevPod providers offer this pre-configured to 5-10 minutes. Check the provider options to see how to change the timeout.
 :::
 
 ## Configuring the timeout
 
-Changing the default setting for inactivity timeout can be done [configuring the provider](../managing-providers/add-provider.mdx#set-provider-options).
+Changing the default setting for inactivity timeout can be done by [configuring the provider options](../managing-providers/add-provider.mdx#set-provider-options). Typically there is an option called `INACTIVITY_TIMEOUT` that controls this behaviour.
 
 :::info
 More info about the provider's auto-shutdown can be found in the [agent's development guide](../developing-providers/agent.mdx#machine-providers)
 That will explain how this is done and what can be configured.
+:::
+
+## How does it work?
+
+### Non-Machine Providers
+
+For non-machine providers, DevPod can automatically kill the container its running in by terminating the process with pid 1. This is useful for providers such as docker, kubernetes or ssh, where you don't want the container to be running if its not needed. If configured on the provider, DevPod will start a process within the container to keep track of activity and then kill itself when the user hasn't connected for the given duration. This will not erase any state within the container and instead only stop it. Then when the user wants to start working with the workspace again, DevPod will restart the container again.
+
+### Machine Providers
+
+For machine providers, killing just the container within the remote machine is typically not enough as VMs still generate costs even if they are unused.
+Instead, DevPod will install itself as a Daemon into the remote VM and track the activity from there. If there wasn't activity for a given amount of time, DevPod will automatically shutdown the machine or even delete it, based on whats cheaper for the given cloud provider.
+Then when the developer wants to resume development, DevPod will restart or recreate the virtual machine.
+
+:::info
+See [agent's development guide](../developing-providers/agent.mdx#machine-providers) to learn more about how inactivity-timeout works on the provider side.
 :::
