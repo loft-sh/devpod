@@ -55,7 +55,7 @@ func (r *Runner) setupContainer(containerDetails *config.ContainerDetails, merge
 
 	// execute docker command
 	r.Log.Infof("Setup container...")
-	command := fmt.Sprintf("%s agent container setup --setup-info '%s' --workspace-info '%s'", agent.ContainerDevPodHelperLocation, compressed, workspaceConfigCompressed)
+	command := fmt.Sprintf("'%s' agent container setup --setup-info '%s' --workspace-info '%s'", agent.ContainerDevPodHelperLocation, compressed, workspaceConfigCompressed)
 	if runtime.GOOS == "linux" || r.WorkspaceConfig.Agent.Driver == provider2.KubernetesDriver {
 		command += " --chown-workspace"
 	}

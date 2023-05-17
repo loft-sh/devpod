@@ -180,6 +180,7 @@ func WriteWorkspaceInfoAndDeleteOld(workspaceInfoEncoded string, deleteWorkspace
 	if err != nil {
 		return false, nil, err
 	}
+	log.Debugf("Use %s as workspace dir", workspaceDir)
 
 	// check if workspace config already exists
 	workspaceConfig := filepath.Join(workspaceDir, provider2.WorkspaceConfigFile)
@@ -300,7 +301,7 @@ func Tunnel(
 	}
 
 	// build command
-	command := fmt.Sprintf("%s helper ssh-server --token '%s' --stdio", ContainerDevPodHelperLocation, token)
+	command := fmt.Sprintf("'%s' helper ssh-server --token '%s' --stdio", ContainerDevPodHelperLocation, token)
 	if trackActivity {
 		command += " --track-activity"
 	}

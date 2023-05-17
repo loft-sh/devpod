@@ -107,6 +107,7 @@ func initWorkspace(ctx context.Context, cancel context.CancelFunc, workspaceInfo
 
 	// create debug logger
 	logger := agent.NewTunnelLogger(ctx, tunnelClient, debug)
+	logger.Debugf("Created logger")
 
 	// this message serves as a ping to the client
 	_, err = tunnelClient.Ping(ctx, &tunnel.Empty{})
@@ -204,7 +205,7 @@ func prepareWorkspace(ctx context.Context, workspaceInfo *provider2.AgentWorkspa
 	// check what type of workspace this is
 	if workspaceInfo.Workspace.Source.GitRepository != "" {
 		log.Debugf("Clone Repository")
-		return CloneRepository(ctx, workspaceInfo.ContentFolder, workspaceInfo.Workspace.Source.GitRepository, workspaceInfo.Workspace.Source.GitBranch, helper, log)
+		return CloneRepository(ctx, workspaceInfo.Agent.Local == "true", workspaceInfo.ContentFolder, workspaceInfo.Workspace.Source.GitRepository, workspaceInfo.Workspace.Source.GitBranch, helper, log)
 	} else if workspaceInfo.Workspace.Source.LocalFolder != "" {
 		log.Debugf("Download Local Folder")
 		return DownloadLocalFolder(ctx, workspaceInfo.ContentFolder, client, log)
@@ -378,7 +379,7 @@ func (cmd *UpCmd) devPodUp(workspaceInfo *provider2.AgentWorkspaceInfo, log log.
 	return result, nil
 }
 
-func CloneRepository(ctx context.Context, workspaceDir, repository, branch, helper string, log log.Logger) error {
+func CloneRepository(ctx context.Context, local bool, workspaceDir, repository, branch, helper string, log log.Logger) error {
 	// remove the credential helper or otherwise we will receive strange errors within the container
 	defer func() {
 		if helper != "" {
@@ -394,6 +395,10 @@ func CloneRepository(ctx context.Context, workspaceDir, repository, branch, help
 
 	// check if command exists
 	if !command.Exists("git") {
+		if local {
+			return fmt.Errorf("seems like git isn't installed on your system. Please make sure to install git and make it available in the PATH")
+		}
+
 		// try to install git via apt / apk
 		if !command.Exists("apt") && !command.Exists("apk") {
 			// TODO: use golang git implementation

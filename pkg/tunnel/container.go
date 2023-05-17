@@ -71,7 +71,7 @@ func (c *ContainerHandler) Run(ctx context.Context, runInHost Handler, runInCont
 		defer writer.Close()
 		defer c.log.Debugf("Tunnel to host closed")
 
-		command := fmt.Sprintf("%s helper ssh-server --token '%s' --stdio", c.client.AgentPath(), tok)
+		command := fmt.Sprintf("'%s' helper ssh-server --token '%s' --stdio", c.client.AgentPath(), tok)
 		if c.log.GetLevel() == logrus.DebugLevel {
 			command += " --debug"
 		}
@@ -171,7 +171,7 @@ func (c *ContainerHandler) updateConfig(ctx context.Context, sshClient *ssh.Clie
 
 			// update workspace remotely
 			buf := &bytes.Buffer{}
-			command := fmt.Sprintf("%s agent workspace update-config --workspace-info '%s'", c.client.AgentPath(), workspaceInfo)
+			command := fmt.Sprintf("'%s' agent workspace update-config --workspace-info '%s'", c.client.AgentPath(), workspaceInfo)
 			if agentInfo.Agent.DataPath != "" {
 				command += fmt.Sprintf(" --agent-dir '%s'", agentInfo.Agent.DataPath)
 			}
@@ -220,7 +220,7 @@ func (c *ContainerHandler) runRunInContainer(ctx context.Context, sshClient *ssh
 		c.log.Debugf("Run container tunnel")
 		defer c.log.Debugf("Container tunnel exited")
 
-		command := fmt.Sprintf("%s agent container-tunnel --token '%s' --workspace-info '%s'", c.client.AgentPath(), tok, workspaceInfo)
+		command := fmt.Sprintf("'%s' agent container-tunnel --token '%s' --workspace-info '%s'", c.client.AgentPath(), tok, workspaceInfo)
 		if c.log.GetLevel() == logrus.DebugLevel {
 			command += " --debug"
 		}

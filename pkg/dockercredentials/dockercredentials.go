@@ -61,7 +61,7 @@ func configureCredentials(userName string, targetDir, configDir string, port int
 
 	// write credentials helper
 	err = os.WriteFile(filepath.Join(targetDir, "docker-credential-devpod"), []byte(fmt.Sprintf(`#!/bin/sh
-%s agent docker-credentials --port %d "$@"`, binaryPath, port)), 0777)
+'%s' agent docker-credentials --port %d "$@"`, binaryPath, port)), 0777)
 	if err != nil {
 		return errors.Wrap(err, "write credential helper")
 	}

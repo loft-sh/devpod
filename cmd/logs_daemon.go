@@ -53,7 +53,7 @@ func (cmd *LogsDaemonCmd) Run(ctx context.Context, args []string) error {
 		return err
 	}
 
-	command := fmt.Sprintf("%s agent workspace logs-daemon --context '%s' --id '%s'", workspaceClient.AgentPath(), workspaceClient.Context(), workspaceClient.Workspace())
+	command := fmt.Sprintf("'%s' agent workspace logs-daemon --context '%s' --id '%s'", workspaceClient.AgentPath(), workspaceClient.Context(), workspaceClient.Workspace())
 	if agentInfo.Agent.DataPath != "" {
 		command += fmt.Sprintf(" --agent-dir '%s'", agentInfo.Agent.DataPath)
 	}

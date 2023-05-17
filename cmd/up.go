@@ -223,7 +223,7 @@ func (cmd *UpCmd) devPodUpMachine(ctx context.Context, client client2.WorkspaceC
 	// create container etc.
 	log.Infof("Creating devcontainer...")
 	defer log.Debugf("Done creating devcontainer")
-	command := fmt.Sprintf("%s agent workspace up --workspace-info '%s'", client.AgentPath(), workspaceInfo)
+	command := fmt.Sprintf("'%s' agent workspace up --workspace-info '%s'", client.AgentPath(), workspaceInfo)
 	if log.GetLevel() == logrus.DebugLevel {
 		command += " --debug"
 	}

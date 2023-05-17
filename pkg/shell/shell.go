@@ -54,6 +54,12 @@ func RunEmulatedShell(ctx context.Context, command string, stdin io.Reader, stdo
 		return errors.Wrap(err, "parse shell command")
 	}
 
+	// use system default as environ if unspecified
+	if env == nil {
+		env = []string{}
+		env = append(env, os.Environ()...)
+	}
+
 	// Get current working directory
 	dir, err := os.Getwd()
 	if err != nil {
@@ -62,11 +68,14 @@ func RunEmulatedShell(ctx context.Context, command string, stdin io.Reader, stdo
 
 	// create options
 	defaultOpenHandler := interp.DefaultOpenHandler()
+	defaultExecHandler := interp.DefaultExecHandler(2 * time.Second)
 	options := []interp.RunnerOption{
 		interp.StdIO(stdin, stdout, stderr),
 		interp.Env(expand.ListEnviron(env...)),
 		interp.Dir(dir),
-		interp.ExecHandler(interp.DefaultExecHandler(2 * time.Second)),
+		interp.ExecHandler(func(ctx context.Context, args []string) error {
+			return defaultExecHandler(ctx, args)
+		}),
 		interp.OpenHandler(func(ctx context.Context, path string, flag int, perm os.FileMode) (io.ReadWriteCloser, error) {
 			if path == "/dev/null" {
 				return devNull{}, nil
