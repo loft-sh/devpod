@@ -127,8 +127,7 @@
         "fullscreen": false,
         "resizable": true,
         "hiddenTitle": true,
-        "transparent": true,
-        "visible": false
+        "transparent": true
       }
     ]
   }
