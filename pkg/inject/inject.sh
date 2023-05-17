@@ -22,20 +22,6 @@ command_exists() {
   command -v "$@" >/dev/null 2>&1
 }
 
-user="$(id -un || true)"
-sh_c='sh -c'
-if [ "$user" != 'root' ]; then
-  if command_exists sudo; then
-    sh_c='sudo -E sh -c'
-  elif command_exists su; then
-    sh_c='su -c'
-  else
-    >&2 echo Error: this installer needs the ability to run commands as root.
-    >&2 echo We are unable to find either "sudo" or "su" available to make this happen.
-    exit 1
-  fi
-fi
-
 is_arm() {
   case "$(uname -a)" in
   *arm* ) true;;
@@ -45,11 +31,6 @@ is_arm() {
   * ) false;;
   esac
 }
-
-DOWNLOAD_URL="{{ .DownloadAmd }}"
-if is_arm; then
-  DOWNLOAD_URL="{{ .DownloadArm }}"
-fi
 
 inject() {
   echo "ARM-$(is_arm && echo -n 'true' || echo -n 'false')"
@@ -64,6 +45,11 @@ inject() {
 }
 
 download() {
+  DOWNLOAD_URL="{{ .DownloadAmd }}"
+  if is_arm; then
+    DOWNLOAD_URL="{{ .DownloadArm }}"
+  fi
+  
   while :; do
     status=""
     if command_exists curl; then
@@ -84,8 +70,22 @@ download() {
 }
 
 if {{ .ExistsCheck }}; then
-  $sh_c "mkdir -p $INSTALL_DIR"
+  user="$(id -un || true)"
+  sh_c='sh -c'
+  if [ "$user" != 'root' ]; then
+    if command_exists sudo; then
+      sh_c='sudo -E sh -c'
+    elif command_exists su; then
+      sh_c='su -c'
+    else
+      >&2 echo Error: this installer needs the ability to run commands as root.
+      >&2 echo We are unable to find either "sudo" or "su" available to make this happen.
+      exit 1
+    fi
+  fi
 
+  $sh_c "mkdir -p $INSTALL_DIR"
+  
   if [ "$PREFER_DOWNLOAD" = "true" ]; then
     download || inject
   else

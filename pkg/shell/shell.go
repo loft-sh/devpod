@@ -5,6 +5,7 @@ import (
 	"io"
 	"os"
 	"os/exec"
+	"runtime"
 	"strings"
 	"time"
 
@@ -17,20 +18,22 @@ import (
 
 func ExecuteCommandWithShell(ctx context.Context, command string, stdin io.Reader, stdout io.Writer, stderr io.Writer, environ []string) error {
 	// try to find a proper shell
-	if command2.Exists("bash") {
-		cmd := exec.CommandContext(ctx, "bash", "-c", command)
-		cmd.Stdin = stdin
-		cmd.Stdout = stdout
-		cmd.Stderr = stderr
-		cmd.Env = environ
-		return cmd.Run()
-	} else if command2.Exists("sh") {
-		cmd := exec.CommandContext(ctx, "sh", "-c", command)
-		cmd.Stdin = stdin
-		cmd.Stdout = stdout
-		cmd.Stderr = stderr
-		cmd.Env = environ
-		return cmd.Run()
+	if runtime.GOOS != "windows" {
+		if command2.Exists("bash") {
+			cmd := exec.CommandContext(ctx, "bash", "-c", command)
+			cmd.Stdin = stdin
+			cmd.Stdout = stdout
+			cmd.Stderr = stderr
+			cmd.Env = environ
+			return cmd.Run()
+		} else if command2.Exists("sh") {
+			cmd := exec.CommandContext(ctx, "sh", "-c", command)
+			cmd.Stdin = stdin
+			cmd.Stdout = stdout
+			cmd.Stderr = stderr
+			cmd.Env = environ
+			return cmd.Run()
+		}
 	}
 
 	// run emulated shell
@@ -51,11 +54,19 @@ func RunEmulatedShell(ctx context.Context, command string, stdin io.Reader, stdo
 	}
 
 	// create options
+	defaultOpenHandler := interp.DefaultOpenHandler()
 	options := []interp.RunnerOption{
 		interp.StdIO(stdin, stdout, stderr),
 		interp.Env(expand.ListEnviron(env...)),
 		interp.Dir(dir),
 		interp.ExecHandler(interp.DefaultExecHandler(2 * time.Second)),
+		interp.OpenHandler(func(ctx context.Context, path string, flag int, perm os.FileMode) (io.ReadWriteCloser, error) {
+			if path == "/dev/null" {
+				return devNull{}, nil
+			}
+
+			return defaultOpenHandler(ctx, path, flag, perm)
+		}),
 	}
 
 	// Create shell runner
@@ -74,5 +85,21 @@ func RunEmulatedShell(ctx context.Context, command string, stdin io.Reader, stdo
 		return err
 	}
 
+	return nil
+}
+
+var _ io.ReadWriteCloser = devNull{}
+
+type devNull struct{}
+
+func (devNull) Read(_ []byte) (int, error) {
+	return 0, io.EOF
+}
+
+func (devNull) Write(p []byte) (int, error) {
+	return len(p), nil
+}
+
+func (devNull) Close() error {
 	return nil
 }
