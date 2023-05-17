@@ -54,7 +54,23 @@ func (d *Dockerfile) FindBaseImage(buildArgs map[string]string, target string) s
 		stage = d.Stages[len(d.Stages)-1]
 	}
 
-	return d.replaceVariables(stage.Image, buildArgs, nil, &d.Preamble.BaseStage, d.Stages[0].Instructions[0].StartLine)
+	visited := map[*Stage]bool{}
+	for stage != nil {
+		if visited[stage] {
+			return ""
+		}
+		visited[stage] = true
+
+		nextTarget := d.replaceVariables(stage.Image, buildArgs, nil, &d.Preamble.BaseStage, d.Stages[0].Instructions[0].StartLine)
+		nextStage := d.StagesByTarget[nextTarget]
+		if nextStage == nil {
+			return nextTarget
+		}
+
+		stage = nextStage
+	}
+
+	return ""
 }
 
 func (d *Dockerfile) replaceVariables(val string, buildArgs map[string]string, baseImageEnv map[string]string, stage *BaseStage, untilLine int) string {

@@ -139,6 +139,10 @@ func (r *Runner) getImageBuildInfoFromDockerfile(dockerFileContent string, build
 	}
 
 	baseImage := parsedDockerfile.FindBaseImage(buildArgs, target)
+	if baseImage == "" {
+		return nil, fmt.Errorf("find base image %s", target)
+	}
+
 	imageDetails, err := r.Driver.InspectImage(context.TODO(), baseImage)
 	if err != nil {
 		return nil, errors.Wrapf(err, "inspect image %s", baseImage)
