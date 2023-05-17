@@ -80,16 +80,19 @@ impl CustomProtocol {
                         };
                     }
                     Err(err) => {
-                        if let Err(err) = app_state
-                            .ui_messages
-                            .send(UiMessage::OpenWorkspaceFailed(err))
-                            .await
-                        {
-                            error!(
-                            "Failed to broadcast invalid custom protocol message: {:?}, {}",
-                            err.0, err
-                        );
-                        };
+                            #[cfg(not(target_os = "windows"))]
+                            {
+                                if let Err(err) = app_state
+                                    .ui_messages
+                                    .send(UiMessage::OpenWorkspaceFailed(err))
+                                    .await
+                                {
+                                    error!(
+                                    "Failed to broadcast invalid custom protocol message: {:?}, {}",
+                                    err.0, err
+                                );
+                                };
+                            }
                     },
                 }
             })
