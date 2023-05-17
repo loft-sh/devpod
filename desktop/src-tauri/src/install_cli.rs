@@ -60,7 +60,7 @@ fn install(_app_handle: AppHandle, force: bool) -> Result<(), InstallCLIError> {
     use log::{info, warn};
     use std::fs::{hard_link, remove_file};
 
-    let cli_path = get_cli_path().map_err(|e| InstallCLIError::NoExePath(e))?;
+    let cli_path = get_cli_path().map_err(InstallCLIError::NoExePath)?;
 
     // The binary we ship with is `devpod-cli`, but we want to link it to `devpod` so that users can just run `devpod` in their terminal
     let mut target_paths: Vec<PathBuf> = vec![];
@@ -77,7 +77,7 @@ fn install(_app_handle: AppHandle, force: bool) -> Result<(), InstallCLIError> {
             .arg(script)
             .status()
             .map_err(anyhow::Error::msg)
-            .map_err(|e| InstallCLIError::Link(e))?;
+            .map_err(InstallCLIError::Link)?;
         info!("Status: {}", status);
 
         return Ok(());
@@ -89,7 +89,7 @@ fn install(_app_handle: AppHandle, force: bool) -> Result<(), InstallCLIError> {
         user_bin.push("bin/devpod");
 
         // $HOME/.local/bin/devpod
-        let mut user_local_bin = home.clone();
+        let mut user_local_bin = home;
         user_local_bin.push(".local/bin/devpod");
 
         target_paths.push(user_bin);
@@ -105,7 +105,7 @@ fn install(_app_handle: AppHandle, force: bool) -> Result<(), InstallCLIError> {
                     // Remove link before attempting to create another one
                     if let Err(err) = remove_file(&target_path)
                         .with_context(|| format!("path: {}", str_target_path))
-                        .map_err(|e| InstallCLIError::Link(e))
+                        .map_err(InstallCLIError::Link)
                     {
                         warn!(
                             "Failed to remove link: {}; Retrying with other paths...",
@@ -124,7 +124,7 @@ fn install(_app_handle: AppHandle, force: bool) -> Result<(), InstallCLIError> {
 
         match hard_link(cli_path.clone(), &target_path)
             .with_context(|| format!("path: {}", str_target_path))
-            .map_err(|e| InstallCLIError::Link(e))
+            .map_err(InstallCLIError::Link)
         {
             Ok(..) => {
                 return Ok(());

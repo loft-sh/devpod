@@ -24,7 +24,7 @@ pub fn check_dangling_provider(app: &AppHandle) {
             .and_then(|dangling_providers| {
                 serde_json::from_value::<Vec<String>>(dangling_providers.clone()).ok()
             })
-            .and_then(|dangling_providers| {
+            .map(|dangling_providers| {
                 info!(
                     "Found dangling providers: {}, attempting to delete",
                     dangling_providers.join(", ")
@@ -33,19 +33,16 @@ pub fn check_dangling_provider(app: &AppHandle) {
                 for dangling_provider in dangling_providers.iter() {
                     if DeleteProviderCommand::new(dangling_provider.clone())
                         .exec()
-                        .is_ok()
-                    {
-                        if let Ok(_) = store.delete(dangling_provider_key) {
-                            info!(
-                                "Successfully deleted dangling provider: {}",
-                                dangling_provider
-                            );
-                            let _ = store.save();
-                        };
+                        .is_ok() && store.delete(dangling_provider_key).is_ok() {
+                        info!(
+                            "Successfully deleted dangling provider: {}",
+                            dangling_provider
+                        );
+                        let _ = store.save();
                     }
                 }
 
-                Some(())
+                
             });
 
         Ok(())

@@ -59,7 +59,7 @@ impl ToSystemTraySubmenu for WorkspacesState {
                 "Create Workspace",
             ));
 
-        if self.workspaces.len() > 0 {
+        if !self.workspaces.is_empty() {
             workspaces_menu = workspaces_menu
                 .add_native_item(SystemTrayMenuItem::Separator);
         }
@@ -77,7 +77,7 @@ impl ToSystemTraySubmenu for WorkspacesState {
     fn on_tray_item_clicked(&self, id: &str) -> Option<SystemTrayClickHandler> {
         let id = id.clone().to_string();
 
-        return Some(Box::new(move |_app_handle, state| {
+        Some(Box::new(move |_app_handle, state| {
             tauri::async_runtime::block_on(async {
                 let tx = &state.ui_messages;
 
@@ -100,7 +100,7 @@ impl ToSystemTraySubmenu for WorkspacesState {
                     };
                 }
             })
-        }));
+        }))
     }
 }
 
@@ -160,7 +160,7 @@ pub fn setup(app_handle: &AppHandle, state: tauri::State<'_, AppState>) {
             let sleep_duration = time::Duration::from_millis(1_000);
             let (tx, rx) = mpsc::channel::<Update>();
 
-            let workspaces_tx = tx.clone();
+            let workspaces_tx = tx;
 
             thread::spawn(move || loop {
                 let workspaces = WorkspacesState::load().unwrap();

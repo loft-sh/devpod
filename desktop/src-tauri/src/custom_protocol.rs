@@ -1,7 +1,7 @@
 use log::{error, info};
 use serde::{Deserialize, Serialize};
 use tauri::{AppHandle, Manager};
-use tauri_plugin_deep_link;
+
 use thiserror::Error;
 use url::Url;
 
@@ -79,22 +79,17 @@ impl CustomProtocol {
                             );
                         };
                     }
-                    Err(err) => match err {
-                        _ => {
-                            #[cfg(not(target_os = "windows"))]
-                            {
-                                if let Err(err) = app_state
-                                    .ui_messages
-                                    .send(UiMessage::OpenWorkspaceFailed(err))
-                                    .await
-                                {
-                                    error!(
-                                    "Failed to broadcast invalid custom protocol message: {:?}, {}",
-                                    err.0, err
-                                );
-                                };
-                            }
-                        }
+                    Err(err) => {
+                        if let Err(err) = app_state
+                            .ui_messages
+                            .send(UiMessage::OpenWorkspaceFailed(err))
+                            .await
+                        {
+                            error!(
+                            "Failed to broadcast invalid custom protocol message: {:?}, {}",
+                            err.0, err
+                        );
+                        };
                     },
                 }
             })
@@ -107,7 +102,7 @@ impl CustomProtocol {
             Url::parse(url_scheme).map_err(|_| ParseError::InvalidQuery(url_scheme.to_string()))?;
         let host_str = url.host_str().unwrap_or("no host").to_string();
         if host_str != "open" {
-            return Err(ParseError::UnsupportedHost(host_str).into());
+            return Err(ParseError::UnsupportedHost(host_str));
         }
 
         let query = url.query().unwrap_or("");
