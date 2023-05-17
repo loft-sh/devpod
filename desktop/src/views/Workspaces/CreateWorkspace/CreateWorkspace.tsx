@@ -460,8 +460,8 @@ function IDEInput({ ides, field, onClick }: TIDEInputProps) {
       gap={2}
       gridTemplateColumns={{
         lg: `repeat(6, ${gridChildWidth})`,
-        xl: `repeat(11, ${gridChildWidth})`,
-        "2xl": `repeat(auto-fit, ${gridChildWidth})`,
+        xl: `repeat(8, ${gridChildWidth})`,
+        "2xl": `repeat(9, ${gridChildWidth})`,
       }}>
       {ides?.map((ide) => {
         const isSelected = field.value === ide.name
