@@ -29,9 +29,9 @@ impl DevpodCommandConfig<()> for DeleteProviderCommand {
         let cmd = self.new_command()?;
 
         cmd.status()
-            .map_err(|err| DevpodCommandError::Failed(err))?
+            .map_err(DevpodCommandError::Failed)?
             .success()
-            .then(|| ())
+            .then_some(())
             .ok_or_else(|| DevpodCommandError::Exit)
     }
 }

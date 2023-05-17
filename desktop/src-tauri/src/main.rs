@@ -93,7 +93,7 @@ fn main() -> anyhow::Result<()> {
                         UiMessage::Ready => {
                             is_ready = true;
 
-                            app_handle.get_window("main").and_then(|w| Some(w.show()));
+                            app_handle.get_window("main").map(|w| w.show());
                             while let Some(msg) = messages.pop_front() {
                                 let _ = app_handle.emit_all("event", msg);
                             }
@@ -103,7 +103,7 @@ fn main() -> anyhow::Result<()> {
                         }
                         UiMessage::OpenWorkspace(..) => {
                             if is_ready {
-                                app_handle.get_window("main").and_then(|w| Some(w.show()));
+                                app_handle.get_window("main").map(|w| w.show());
                                 let _ = app_handle.emit_all("event", ui_msg);
                             } else {
                                 // recreate window
@@ -113,7 +113,7 @@ fn main() -> anyhow::Result<()> {
                         }
                         UiMessage::OpenWorkspaceFailed(..) => {
                             if is_ready {
-                                app_handle.get_window("main").and_then(|w| Some(w.show()));
+                                app_handle.get_window("main").map(|w| w.show());
                                 let _ = app_handle.emit_all("event", ui_msg);
                             } else {
                                 // recreate window
@@ -123,7 +123,7 @@ fn main() -> anyhow::Result<()> {
                         }
                         UiMessage::ShowDashboard => {
                             if is_ready {
-                                app_handle.get_window("main").and_then(|w| Some(w.show()));
+                                app_handle.get_window("main").map(|w| w.show());
                                 let _ = app_handle.emit_all("event", ui_msg);
                             } else {
                                 // recreate window

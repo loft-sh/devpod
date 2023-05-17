@@ -6,7 +6,7 @@ use tauri::{
 };
 
 pub trait SystemTrayIdentifier {}
-pub type SystemTrayClickHandler = Box<dyn Fn(&AppHandle, State<AppState>) -> ()>;
+pub type SystemTrayClickHandler = Box<dyn Fn(&AppHandle, State<AppState>)>;
 pub trait ToSystemTraySubmenu {
     fn to_submenu(&self) -> SystemTraySubmenu;
     fn on_tray_item_clicked(&self, tray_item_id: &str) -> Option<SystemTrayClickHandler>;
@@ -54,13 +54,13 @@ impl SystemTray {
         submenu_builders: Vec<Box<&dyn ToSystemTraySubmenu>>,
     ) -> TauriSystemTray {
         let tray_menu = self.build_menu(submenu_builders);
-        let tray = TauriSystemTray::new().with_menu(tray_menu);
+        
 
-        tray
+        TauriSystemTray::new().with_menu(tray_menu)
     }
 
     pub fn get_event_handler(&self) -> impl Fn(&AppHandle, SystemTrayEvent) + Send + Sync {
-        return |app, event| match event {
+        |app, event| match event {
             SystemTrayEvent::MenuItemClick { id, .. } => match id.as_str() {
                 Self::QUIT_ID => {
                     std::process::exit(0);
@@ -88,14 +88,10 @@ impl SystemTray {
 
                     if let Some(handler) = maybe_handler {
                         handler(app, app_state);
-
-                        return;
                     }
-
-                    return;
                 }
             },
             _ => {}
-        };
+        }
     }
 }

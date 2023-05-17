@@ -8,7 +8,7 @@ where
 {
     let start = Instant::now();
     f();
-    let duration = start.elapsed();
+    
 
-    duration
+    start.elapsed()
 }

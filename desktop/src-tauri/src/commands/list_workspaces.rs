@@ -11,7 +11,7 @@ impl ListWorkspacesCommand {
     }
 
     fn deserialize(&self, str: &str) -> Result<WorkspacesState, DevpodCommandError> {
-        serde_json::from_str(str).map_err(|err| DevpodCommandError::Parse(err))
+        serde_json::from_str(str).map_err(DevpodCommandError::Parse)
     }
 }
 impl DevpodCommandConfig<WorkspacesState> for ListWorkspacesCommand {

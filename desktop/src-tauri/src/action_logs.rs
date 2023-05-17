@@ -45,10 +45,10 @@ pub fn write_action_log(
         .create(true)
         .append(true)
         .open(path)
-        .map_err(|e| ActionLogError::FileOpen(e))?;
+        .map_err(ActionLogError::FileOpen)?;
 
     file.write_all(format!("{}\n", data).as_bytes())
-        .map_err(|e| ActionLogError::Write(e))?;
+        .map_err(ActionLogError::Write)?;
 
     Ok(())
 }
@@ -62,7 +62,7 @@ pub fn get_action_logs(
     path.push(format!("{}.log", &action_id));
 
     let lines = fs::read_to_string(path)
-        .map_err(|e| ActionLogError::FileOpen(e))?
+        .map_err(ActionLogError::FileOpen)?
         .lines()
         .map(|s| s.to_string())
         .collect();
@@ -75,7 +75,7 @@ pub fn sync_action_logs(app_handle: AppHandle, actions: Vec<String>) -> Result<(
     let now = SystemTime::now();
     let dir_path = get_actions_dir(&app_handle).map_err(|_| ActionLogError::NoDir)?;
     let paths_to_delete = fs::read_dir(dir_path)
-        .map_err(|e| ActionLogError::FileOpen(e))?
+        .map_err(ActionLogError::FileOpen)?
         .filter_map(|r| {
             let entry = r.ok()?;
             let path = entry.path();
@@ -98,7 +98,7 @@ pub fn sync_action_logs(app_handle: AppHandle, actions: Vec<String>) -> Result<(
 
     for path in paths_to_delete {
         info!("Deleting {:?}", path);
-        fs::remove_file(path).map_err(|e| ActionLogError::FileDelete(e))?;
+        fs::remove_file(path).map_err(ActionLogError::FileDelete)?;
     }
 
     Ok(())
@@ -106,7 +106,7 @@ pub fn sync_action_logs(app_handle: AppHandle, actions: Vec<String>) -> Result<(
 
 pub fn setup(app_handle: &AppHandle) -> anyhow::Result<()> {
     let dir_path = get_actions_dir(app_handle)?;
-    let _ = fs::create_dir_all(&dir_path); // Make sure we have the action logs dir
+    let _ = fs::create_dir_all(dir_path); // Make sure we have the action logs dir
 
     Ok(())
 }
