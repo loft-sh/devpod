@@ -2,11 +2,11 @@
 
 set -e
 
-GOOS=linux GOARCH=amd64 go build -ldflags "-s -w" -o test/devpod-cli-linux-amd64
-GOOS=linux GOARCH=arm64 go build -ldflags "-s -w" -o test/devpod-cli-linux-arm64
-GOOS=darwin GOARCH=arm64 go build -ldflags "-s -w" -o test/devpod-cli-darwin-arm64
-GOOS=darwin GOARCH=amd64 go build -ldflags "-s -w" -o test/devpod-cli-darwin-amd64
-GOOS=windows GOARCH=amd64 go build -ldflags "-s -w" -o test/devpod-cli-windows-amd64
+CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags "-s -w" -o test/devpod-cli-linux-amd64
+CGO_ENABLED=0 GOOS=linux GOARCH=arm64 go build -ldflags "-s -w" -o test/devpod-cli-linux-arm64
+CGO_ENABLED=0 GOOS=darwin GOARCH=arm64 go build -ldflags "-s -w" -o test/devpod-cli-darwin-arm64
+CGO_ENABLED=0 GOOS=darwin GOARCH=amd64 go build -ldflags "-s -w" -o test/devpod-cli-darwin-amd64
+CGO_ENABLED=0 GOOS=windows GOARCH=amd64 go build -ldflags "-s -w" -o test/devpod-cli-windows-amd64
 sudo go build -o /usr/local/bin/devpod
 cp test/devpod-cli-linux-amd64 test/devpod-linux-amd64
 cp test/devpod-cli-linux-arm64 test/devpod-linux-arm64
