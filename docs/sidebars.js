@@ -37,6 +37,10 @@ module.exports = {
         },
         {
           type: "doc",
+          id: "getting-started/quickstart-vim",
+        },
+        {
+          type: "doc",
           id: "getting-started/quickstart-devpod-cli",
         },
         {
