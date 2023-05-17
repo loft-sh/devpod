@@ -1,7 +1,11 @@
+use std::collections::HashMap;
+
 use tauri::api::process::Command;
 use thiserror::Error;
 
 use crate::commands::constants::DEVPOD_BINARY_NAME;
+
+use super::constants::DEVPOD_UI_ENV_VAR;
 
 pub struct CommandConfig<'a> {
     pub(crate) binary_name: &'static str,
@@ -50,9 +54,12 @@ pub trait DevpodCommandConfig<T> {
 
     fn new_command(&self) -> Result<Command, DevpodCommandError> {
         let config = self.config();
+        let env_vars: HashMap<String, String> =
+            HashMap::from([(DEVPOD_UI_ENV_VAR.into(), "true".into())]);
 
         let cmd = Command::new_sidecar(config.binary_name())
             .map_err(|_| DevpodCommandError::Sidecar)?
+            .envs(env_vars)
             .args(config.args());
 
         Ok(cmd)
