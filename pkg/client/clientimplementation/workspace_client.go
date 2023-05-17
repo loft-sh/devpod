@@ -69,6 +69,13 @@ func (s *workspaceClient) WorkspaceConfig() *provider.Workspace {
 	return provider.CloneWorkspace(s.workspace)
 }
 
+func (s *workspaceClient) AgentLocal() bool {
+	s.m.Lock()
+	defer s.m.Unlock()
+
+	return options.ResolveAgentConfig(s.devPodConfig, s.config, s.workspace, s.machine).Local == "true"
+}
+
 func (s *workspaceClient) AgentPath() string {
 	s.m.Lock()
 	defer s.m.Unlock()
@@ -207,7 +214,7 @@ func (s *workspaceClient) Delete(ctx context.Context, opt client.DeleteOptions) 
 
 			s.log.Infof("Deleting container...")
 			agentConfig := options.ResolveAgentConfig(s.devPodConfig, s.config, s.workspace, s.machine)
-			command := fmt.Sprintf("%s agent workspace delete --id %s --context %s", agentConfig.Path, s.workspace.ID, s.workspace.Context)
+			command := fmt.Sprintf("'%s' agent workspace delete --id %s --context %s", agentConfig.Path, s.workspace.ID, s.workspace.Context)
 			if agentConfig.DataPath != "" {
 				command += fmt.Sprintf(" --agent-dir '%s'", agentConfig.DataPath)
 			}
@@ -304,7 +311,7 @@ func (s *workspaceClient) Stop(ctx context.Context, opt client.StopOptions) erro
 
 		s.log.Infof("Stopping container...")
 		agentConfig := options.ResolveAgentConfig(s.devPodConfig, s.config, s.workspace, s.machine)
-		command := fmt.Sprintf("%s agent workspace stop --id '%s' --context '%s'", agentConfig.Path, s.workspace.ID, s.workspace.Context)
+		command := fmt.Sprintf("'%s' agent workspace stop --id '%s' --context '%s'", agentConfig.Path, s.workspace.ID, s.workspace.Context)
 		if agentConfig.DataPath != "" {
 			command += fmt.Sprintf(" --agent-dir '%s'", agentConfig.DataPath)
 		}
@@ -410,7 +417,7 @@ func (s *workspaceClient) getContainerStatus(ctx context.Context) (client.Status
 	stdout := &bytes.Buffer{}
 	buf := &bytes.Buffer{}
 	agentConfig := options.ResolveAgentConfig(s.devPodConfig, s.config, s.workspace, s.machine)
-	command := fmt.Sprintf("%s agent workspace status --id '%s' --context '%s'", agentConfig.Path, s.workspace.ID, s.workspace.Context)
+	command := fmt.Sprintf("'%s' agent workspace status --id '%s' --context '%s'", agentConfig.Path, s.workspace.ID, s.workspace.Context)
 	if agentConfig.DataPath != "" {
 		command += fmt.Sprintf(" --agent-dir '%s'", agentConfig.DataPath)
 	}

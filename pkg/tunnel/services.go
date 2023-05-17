@@ -66,7 +66,7 @@ func RunInContainer(
 		writer := log.ErrorStreamOnly().Writer(logrus.DebugLevel, false)
 		defer writer.Close()
 
-		command := fmt.Sprintf("%s agent container credentials-server --user '%s'", agent.ContainerDevPodHelperLocation, user)
+		command := fmt.Sprintf("'%s' agent container credentials-server --user '%s'", agent.ContainerDevPodHelperLocation, user)
 		if gitCredentials {
 			command += " --configure-git-helper"
 		}
@@ -183,7 +183,7 @@ func getDevContainerResult(ctx context.Context, workspaceClient client.Workspace
 	agentConfig := workspaceClient.AgentConfig()
 
 	// retrieve devcontainer result
-	command := fmt.Sprintf("%s agent workspace get-result --id '%s' --context '%s'", workspaceClient.AgentPath(), workspaceClient.Workspace(), workspaceClient.Context())
+	command := fmt.Sprintf("'%s' agent workspace get-result --id '%s' --context '%s'", workspaceClient.AgentPath(), workspaceClient.Workspace(), workspaceClient.Context())
 	if log.GetLevel() == logrus.DebugLevel {
 		command += " --debug"
 	}

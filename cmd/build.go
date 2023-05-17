@@ -126,7 +126,7 @@ func (cmd *BuildCmd) buildAgentClient(ctx context.Context, workspaceClient clien
 	// create container etc.
 	log.Infof("Building devcontainer...")
 	defer log.Debugf("Done building devcontainer")
-	command := fmt.Sprintf("%s agent workspace build --workspace-info '%s'", workspaceClient.AgentPath(), workspaceInfo)
+	command := fmt.Sprintf("'%s' agent workspace build --workspace-info '%s'", workspaceClient.AgentPath(), workspaceInfo)
 	if log.GetLevel() == logrus.DebugLevel {
 		command += " --debug"
 	}
@@ -168,7 +168,7 @@ func (cmd *BuildCmd) buildAgentClient(ctx context.Context, workspaceClient clien
 				Stdout:  stdout,
 				Stderr:  stderr,
 			})
-		}, workspaceClient.AgentPath(), workspaceClient.AgentURL(), true, command, stdinReader, stdoutWriter, writer, log.ErrorStreamOnly())
+		}, workspaceClient.AgentLocal(), workspaceClient.AgentPath(), workspaceClient.AgentURL(), true, command, stdinReader, stdoutWriter, writer, log.ErrorStreamOnly())
 	}()
 
 	// get workspace config

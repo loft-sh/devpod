@@ -10,12 +10,13 @@ import "bytes"
 //
 // The changes currently applied are:
 //
-//     Remove clearly useless parentheses       $(( (expr) ))
-//     Remove dollars from vars in exprs        (($var))
-//     Remove duplicate subshells               $( (stmts) )
-//     Remove redundant quotes                  [[ "$var" == str ]]
-//     Merge negations with unary operators     [[ ! -n $var ]]
-//     Use single quotes to shorten literals    "\$foo"
+//	Remove clearly useless parentheses       $(( (expr) ))
+//	Remove dollars from vars in exprs        (($var))
+//	Remove duplicate subshells               $( (stmts) )
+//	Remove redundant quotes                  [[ "$var" == str ]]
+//	Merge negations with unary operators     [[ ! -n $var ]]
+//	Use single quotes to shorten literals    "\$foo"
+//	Remove redundant param expansion colons  ${foo:-}
 func Simplify(n Node) bool {
 	s := simplifier{}
 	Walk(n, s.visit)
@@ -37,6 +38,10 @@ func (s *simplifier) visit(node Node) bool {
 		x.Index = s.removeParensArithm(x.Index)
 		// don't inline params - same as above.
 
+		if x.Exp != nil && x.Exp.Op == DefaultUnsetOrNull && x.Exp.Word == nil {
+			s.modified = true
+			x.Exp.Op = DefaultUnset
+		}
 		if x.Slice == nil {
 			break
 		}

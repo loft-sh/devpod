@@ -71,6 +71,10 @@ func (s *machineClient) AgentPath() string {
 	return options.ResolveAgentConfig(s.devPodConfig, s.config, nil, s.machine).Path
 }
 
+func (s *machineClient) AgentLocal() bool {
+	return options.ResolveAgentConfig(s.devPodConfig, s.config, nil, s.machine).Local == "true"
+}
+
 func (s *machineClient) AgentURL() string {
 	return options.ResolveAgentConfig(s.devPodConfig, s.config, nil, s.machine).DownloadURL
 }

@@ -8,6 +8,7 @@ import (
 	"os"
 	"os/exec"
 	"os/user"
+	"runtime"
 	"strings"
 	"sync"
 	"time"
@@ -91,24 +92,32 @@ func NewServer(addr string, hostKey []byte, keys []ssh.PublicKey, log log.Logger
 
 type Server struct {
 	currentUser string
-	shell       string
+	shell       []string
 	sshServer   ssh.Server
 	log         log.Logger
 }
 
-func getShell() (string, error) {
+func getShell() ([]string, error) {
 	// try to get a shell
-	_, err := exec.LookPath("bash")
-	if err != nil {
-		_, err := exec.LookPath("sh")
-		if err != nil {
-			return "", fmt.Errorf("neither 'bash' nor 'sh' found in container. Please make sure at least one is available in the container $PATH")
+	if runtime.GOOS != "windows" {
+		_, err := exec.LookPath("bash")
+		if err == nil {
+			return []string{"bash"}, nil
 		}
 
-		return "sh", nil
+		_, err = exec.LookPath("sh")
+		if err == nil {
+			return []string{"sh"}, nil
+		}
 	}
 
-	return "bash", nil
+	// fallback to our in-built shell
+	executable, err := os.Executable()
+	if err != nil {
+		return nil, err
+	}
+
+	return []string{executable, "helper", "sh"}, nil
 }
 
 func (s *Server) handler(sess ssh.Session) {
@@ -264,10 +273,12 @@ func (s *Server) getCommand(sess ssh.Session) *exec.Cmd {
 		}
 	} else {
 		if len(sess.RawCommand()) == 0 {
-			cmd = exec.Command(s.shell)
+			cmd = exec.Command(s.shell[0], s.shell[1:]...)
 		} else {
-			args := []string{"-c", sess.RawCommand()}
-			cmd = exec.Command(s.shell, args...)
+			args := []string{}
+			args = append(args, s.shell[1:]...)
+			args = append(args, "-c", sess.RawCommand())
+			cmd = exec.Command(s.shell[0], args...)
 		}
 	}
 

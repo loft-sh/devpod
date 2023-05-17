@@ -17,7 +17,7 @@ options:
     default: docker
 agent:
   containerInactivityTimeout: ${INACTIVITY_TIMEOUT}
-  path: ${DEVPOD}
+  local: true
   docker:
     path: ${DOCKER_PATH}
     install: false
@@ -33,4 +33,4 @@ exec:
     fi
 
   command: |-
-    ${DEVPOD} helper sh -c "${COMMAND}"
+    "${DEVPOD}" helper sh -c "${COMMAND}"

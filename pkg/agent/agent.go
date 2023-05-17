@@ -180,6 +180,7 @@ func WriteWorkspaceInfoAndDeleteOld(workspaceInfoEncoded string, deleteWorkspace
 	if err != nil {
 		return false, nil, err
 	}
+	log.Debugf("Use %s as workspace dir", workspaceDir)
 
 	// check if workspace config already exists
 	workspaceConfig := filepath.Join(workspaceDir, provider2.WorkspaceConfigFile)
@@ -230,7 +231,7 @@ func WriteWorkspaceInfoAndDeleteOld(workspaceInfoEncoded string, deleteWorkspace
 
 func rerunAsRoot(workspaceInfo *provider2.AgentWorkspaceInfo, log log.Logger) (bool, error) {
 	// check if root is required
-	if runtime.GOOS != "linux" || os.Getuid() == 0 {
+	if runtime.GOOS != "linux" || os.Getuid() == 0 || (workspaceInfo != nil && workspaceInfo.Agent.Local == "true") {
 		return false, nil
 	}
 
@@ -294,13 +295,13 @@ func Tunnel(
 	// inject agent
 	err := InjectAgent(ctx, func(ctx context.Context, command string, stdin io.Reader, stdout io.Writer, stderr io.Writer) error {
 		return driver.CommandDevContainer(ctx, containerID, "root", command, stdin, stdout, stderr)
-	}, ContainerDevPodHelperLocation, DefaultAgentDownloadURL(), false, log)
+	}, false, ContainerDevPodHelperLocation, DefaultAgentDownloadURL(), false, log)
 	if err != nil {
 		return err
 	}
 
 	// build command
-	command := fmt.Sprintf("%s helper ssh-server --token '%s' --stdio", ContainerDevPodHelperLocation, token)
+	command := fmt.Sprintf("'%s' helper ssh-server --token '%s' --stdio", ContainerDevPodHelperLocation, token)
 	if trackActivity {
 		command += " --track-activity"
 	}

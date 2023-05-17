@@ -4,6 +4,13 @@
 // Package interp implements an interpreter that executes shell
 // programs. It aims to support POSIX, but its support is not complete
 // yet. It also supports some Bash features.
+//
+// The interpreter generally aims to behave like Bash,
+// but it does not support all of its features.
+//
+// The interpreter currently aims to behave like a non-interactive shell,
+// which is how most shells run scripts, and is more useful to machines.
+// In the future, it may gain an option to behave like an interactive shell.
 package interp
 
 import (
@@ -185,6 +192,12 @@ func New(opts ...RunnerOption) (*Runner, error) {
 			return nil, err
 		}
 	}
+
+	// turn "on" the default Bash options
+	for i, opt := range bashOptsTable {
+		r.opts[len(shellOptsTable)+i] = opt.defaultState
+	}
+
 	// Set the default fallbacks, if necessary.
 	if r.Env == nil {
 		Env(nil)(r)
@@ -274,7 +287,7 @@ func Params(args ...string) RunnerOption {
 			value := fp.value()
 			if value == "" && enable {
 				for i, opt := range &shellOptsTable {
-					r.printOptLine(opt.name, r.opts[i])
+					r.printOptLine(opt.name, r.opts[i], true)
 				}
 				continue
 			}
@@ -288,7 +301,7 @@ func Params(args ...string) RunnerOption {
 				}
 				continue
 			}
-			opt := r.optByName(value, false)
+			_, opt := r.optByName(value, false)
 			if opt == nil {
 				return fmt.Errorf("invalid option: %q", value)
 			}
@@ -366,28 +379,38 @@ func StdIO(in io.Reader, out, err io.Writer) RunnerOption {
 	}
 }
 
-func (r *Runner) optByName(name string, bash bool) *bool {
+// optByName returns the matching runner's option index and status
+func (r *Runner) optByName(name string, bash bool) (index int, status *bool) {
 	if bash {
-		for i, optName := range bashOptsTable {
-			if optName == name {
-				return &r.opts[len(shellOptsTable)+i]
+		for i, opt := range bashOptsTable {
+			if opt.name == name {
+				index = len(shellOptsTable) + i
+				return index, &r.opts[index]
 			}
 		}
 	}
 	for i, opt := range &shellOptsTable {
 		if opt.name == name {
-			return &r.opts[i]
+			return i, &r.opts[i]
 		}
 	}
-	return nil
+	return 0, nil
 }
 
 type runnerOpts [len(shellOptsTable) + len(bashOptsTable)]bool
 
-var shellOptsTable = [...]struct {
+type shellOpt struct {
 	flag byte
 	name string
-}{
+}
+
+type bashOpt struct {
+	name         string
+	defaultState bool // Bash's default value for this option
+	supported    bool // whether we support the option's non-default state
+}
+
+var shellOptsTable = [...]shellOpt{
 	// sorted alphabetically by name; use a space for the options
 	// that have no flag form
 	{'a', "allexport"},
@@ -399,11 +422,108 @@ var shellOptsTable = [...]struct {
 	{' ', "pipefail"},
 }
 
-var bashOptsTable = [...]string{
-	// sorted alphabetically by name
-	"expand_aliases",
-	"globstar",
-	"nullglob",
+var bashOptsTable = [...]bashOpt{
+	// supported options, sorted alphabetically by name
+	{
+		name:         "expand_aliases",
+		defaultState: false,
+		supported:    true,
+	},
+	{
+		name:         "globstar",
+		defaultState: false,
+		supported:    true,
+	},
+	{
+		name:         "nullglob",
+		defaultState: false,
+		supported:    true,
+	},
+	// unsupported options, sorted alphabetically by name
+	{name: "assoc_expand_once"},
+	{name: "autocd"},
+	{name: "cdable_vars"},
+	{name: "cdspell"},
+	{name: "checkhash"},
+	{name: "checkjobs"},
+	{
+		name:         "checkwinsize",
+		defaultState: true,
+	},
+	{
+		name:         "cmdhist",
+		defaultState: true,
+	},
+	{name: "compat31"},
+	{name: "compat32"},
+	{name: "compat40"},
+	{name: "compat41"},
+	{name: "compat42"},
+	{name: "compat44"},
+	{name: "compat43"},
+	{name: "compat44"},
+	{
+		name:         "complete_fullquote",
+		defaultState: true,
+	},
+	{name: "direxpand"},
+	{name: "dirspell"},
+	{name: "dotglob"},
+	{name: "execfail"},
+	{name: "extdebug"},
+	{name: "extglob"},
+	{
+		name:         "extquote",
+		defaultState: true,
+	},
+	{name: "failglob"},
+	{
+		name:         "force_fignore",
+		defaultState: true,
+	},
+	{name: "globasciiranges"},
+	{name: "gnu_errfmt"},
+	{name: "histappend"},
+	{name: "histreedit"},
+	{name: "histverify"},
+	{
+		name:         "hostcomplete",
+		defaultState: true,
+	},
+	{name: "huponexit"},
+	{
+		name:         "inherit_errexit",
+		defaultState: true,
+	},
+	{
+		name:         "interactive_comments",
+		defaultState: true,
+	},
+	{name: "lastpipe"},
+	{name: "lithist"},
+	{name: "localvar_inherit"},
+	{name: "localvar_unset"},
+	{name: "login_shell"},
+	{name: "mailwarn"},
+	{name: "no_empty_cmd_completion"},
+	{name: "nocaseglob"},
+	{name: "nocasematch"},
+	{
+		name:         "progcomp",
+		defaultState: true,
+	},
+	{name: "progcomp_alias"},
+	{
+		name:         "promptvars",
+		defaultState: true,
+	},
+	{name: "restricted_shell"},
+	{name: "shift_verbose"},
+	{
+		name:         "sourcepath",
+		defaultState: true,
+	},
+	{name: "xpg_echo"},
 }
 
 // To access the shell options arrays without a linear search when we

@@ -189,12 +189,12 @@ func (p *Parser) arithmExprValue(compact bool) ArithmExpr {
 	case _LitWord:
 		l := p.getLit()
 		if p.tok != leftBrack {
-			x = p.word(p.wps(l))
+			x = p.wordOne(l)
 			break
 		}
 		pe := &ParamExp{Dollar: l.ValuePos, Short: true, Param: l}
 		pe.Index = p.eitherIndex()
-		x = p.word(p.wps(pe))
+		x = p.wordOne(pe)
 	case bckQuote:
 		if p.quote == arithmExprLet && p.openBquotes > 0 {
 			return nil

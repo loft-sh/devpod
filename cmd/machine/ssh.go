@@ -78,7 +78,7 @@ func (cmd *SSHCmd) Run(ctx context.Context, args []string) error {
 
 	// start the ssh session
 	return StartSSHSession(ctx, privateKey, "", cmd.Command, cmd.AgentForwarding, func(ctx context.Context, stdin io.Reader, stdout io.Writer, stderr io.Writer) error {
-		command := fmt.Sprintf("%s helper ssh-server --token '%s' --stdio", machineClient.AgentPath(), tok)
+		command := fmt.Sprintf("'%s' helper ssh-server --token '%s' --stdio", machineClient.AgentPath(), tok)
 		if cmd.Debug {
 			command += " --debug"
 		}
@@ -89,7 +89,7 @@ func (cmd *SSHCmd) Run(ctx context.Context, args []string) error {
 				Stdout:  stdout,
 				Stderr:  stderr,
 			})
-		}, machineClient.AgentPath(), machineClient.AgentURL(), true, command, stdin, stdout, stderr, log.Default.ErrorStreamOnly())
+		}, machineClient.AgentLocal(), machineClient.AgentPath(), machineClient.AgentURL(), true, command, stdin, stdout, stderr, log.Default.ErrorStreamOnly())
 	}, writer)
 }
 

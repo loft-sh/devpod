@@ -183,6 +183,7 @@ func ResolveAgentConfig(devConfig *config.Config, provider *provider2.ProviderCo
 	options := provider2.ToOptions(workspace, machine, devConfig.ProviderOptions(provider.Name))
 	agentConfig := provider.Agent
 	agentConfig.Driver = resolveDefaultValue(agentConfig.Driver, options)
+	agentConfig.Local = types.StrBool(resolveDefaultValue(string(agentConfig.Local), options))
 	agentConfig.Docker.Path = resolveDefaultValue(agentConfig.Docker.Path, options)
 	agentConfig.Docker.Install = types.StrBool(resolveDefaultValue(string(agentConfig.Docker.Install), options))
 	agentConfig.Kubernetes.Path = resolveDefaultValue(agentConfig.Kubernetes.Path, options)
@@ -199,7 +200,9 @@ func ResolveAgentConfig(devConfig *config.Config, provider *provider2.ProviderCo
 	agentConfig.Kubernetes.CreateNamespace = types.StrBool(resolveDefaultValue(string(agentConfig.Kubernetes.CreateNamespace), options))
 	agentConfig.DataPath = resolveDefaultValue(agentConfig.DataPath, options)
 	agentConfig.Path = resolveDefaultValue(agentConfig.Path, options)
-	if agentConfig.Path == "" {
+	if agentConfig.Path == "" && agentConfig.Local == "true" {
+		agentConfig.Path, _ = os.Executable()
+	} else if agentConfig.Path == "" {
 		agentConfig.Path = agent.RemoteDevPodHelperLocation
 	}
 	agentConfig.DownloadURL = resolveDefaultValue(agentConfig.DownloadURL, options)

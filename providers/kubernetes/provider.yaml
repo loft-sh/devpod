@@ -73,7 +73,7 @@ options:
     description: "If defined, will automatically stop the pod after the inactivity period. Examples: 10m, 1h"
 agent:
   containerInactivityTimeout: ${INACTIVITY_TIMEOUT}
-  path: ${DEVPOD}
+  local: true
   driver: kubernetes
   kubernetes:
     path: ${KUBECTL_PATH}
@@ -100,4 +100,4 @@ exec:
     fi
 
   command: |-
-    ${DEVPOD} helper sh -c "${COMMAND}"
+    "${DEVPOD}" helper sh -c "${COMMAND}"

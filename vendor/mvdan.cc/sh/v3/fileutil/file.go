@@ -62,23 +62,7 @@ const (
 //
 // Deprecated: prefer CouldBeScript2, which usually requires fewer syscalls.
 func CouldBeScript(info os.FileInfo) ScriptConfidence {
-	// TODO: once we drop support for Go 1.16,
-	// make use of this Go 1.17 API instead:
-	// return CouldBeScript2(fs.FileInfoToDirEntry(info))
-
-	name := info.Name()
-	switch {
-	case info.IsDir(), name[0] == '.':
-		return ConfNotScript
-	case info.Mode()&os.ModeSymlink != 0:
-		return ConfNotScript
-	case extRe.MatchString(name):
-		return ConfIsScript
-	case strings.IndexByte(name, '.') > 0:
-		return ConfNotScript // different extension
-	default:
-		return ConfIfShebang
-	}
+	return CouldBeScript2(fs.FileInfoToDirEntry(info))
 }
 
 // CouldBeScript2 reports how likely a directory entry is to be a shell script.

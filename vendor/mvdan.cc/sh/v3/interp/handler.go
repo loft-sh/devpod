@@ -67,6 +67,10 @@ type HandlerContext struct {
 // Returning a non-nil error will halt the Runner.
 type CallHandlerFunc func(ctx context.Context, args []string) ([]string, error)
 
+// TODO: consistently treat handler errors as non-fatal by default,
+// but have an interface or API to specify fatal errors which should make
+// the shell exit with a particular status code.
+
 // ExecHandlerFunc is a handler which executes simple commands.
 // It is called for all CallExpr nodes where the first argument is neither a
 // declared function nor a builtin.

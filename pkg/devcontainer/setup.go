@@ -19,7 +19,7 @@ func (r *Runner) setupContainer(containerDetails *config.ContainerDetails, merge
 	// inject agent
 	err := agent.InjectAgent(context.TODO(), func(ctx context.Context, command string, stdin io.Reader, stdout io.Writer, stderr io.Writer) error {
 		return r.Driver.CommandDevContainer(ctx, containerDetails.ID, "root", command, stdin, stdout, stderr)
-	}, agent.ContainerDevPodHelperLocation, agent.DefaultAgentDownloadURL(), false, r.Log)
+	}, false, agent.ContainerDevPodHelperLocation, agent.DefaultAgentDownloadURL(), false, r.Log)
 	if err != nil {
 		return errors.Wrap(err, "inject agent")
 	}
@@ -55,7 +55,7 @@ func (r *Runner) setupContainer(containerDetails *config.ContainerDetails, merge
 
 	// execute docker command
 	r.Log.Infof("Setup container...")
-	command := fmt.Sprintf("%s agent container setup --setup-info '%s' --workspace-info '%s'", agent.ContainerDevPodHelperLocation, compressed, workspaceConfigCompressed)
+	command := fmt.Sprintf("'%s' agent container setup --setup-info '%s' --workspace-info '%s'", agent.ContainerDevPodHelperLocation, compressed, workspaceConfigCompressed)
 	if runtime.GOOS == "linux" || r.WorkspaceConfig.Agent.Driver == provider2.KubernetesDriver {
 		command += " --chown-workspace"
 	}
