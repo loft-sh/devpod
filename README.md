@@ -2,7 +2,7 @@
 <a href="https://www.devpod.sh">
   <picture width="500">
     <source media="(prefers-color-scheme: dark)" srcset="docs/static/media/devpod_dark.png">
-    <img alt="DevPod wordmark" src="docs/static/media/devpod.png">
+    <img alt="DevPod wordmark" width="500" src="docs/static/media/devpod.png">
   </picture>
 </a>
 
