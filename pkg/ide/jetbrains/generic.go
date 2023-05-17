@@ -66,7 +66,7 @@ type GenericJetBrainsServer struct {
 }
 
 func (o *GenericJetBrainsServer) OpenGateway(workspaceFolder, workspaceID string) error {
-	o.log.Infof("Starting %s trough JetBrains Gateway...", o.options.DisplayName)
+	o.log.Infof("Starting %s through JetBrains Gateway...", o.options.DisplayName)
 	err := open.Start(`jetbrains-gateway://connect#idePath=` + url.QueryEscape(o.getDirectory(path.Join("/", "home", o.userName))) + `&projectPath=` + url.QueryEscape(workspaceFolder) + `&host=` + workspaceID + `.devpod&port=22&user=` + url.QueryEscape(o.userName) + `&type=ssh&deploy=false`)
 	if err != nil {
 		return err
