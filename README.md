@@ -1,5 +1,10 @@
 <br>
-<a href="https://www.devpod.sh"><img src="docs/static/media/devpod.png" width="500"></a>
+<a href="https://www.devpod.sh">
+  <picture width="500">
+    <source media="(prefers-color-scheme: dark)" srcset="docs/static/media/devpod_dark.png">
+    <img alt="DevPod wordmark" src="docs/static/media/devpod.png">
+  </picture>
+</a>
 
 ### **[Website](https://www.devpod.sh)** • **[Quickstart](https://www.devpod.sh/docs/getting-started/install)** • **[Documentation](https://www.devpod.sh/docs/what-is-devpod)** • **[Blog](https://loft.sh/blog)** • **[Twitter](https://twitter.com/loft_sh)** • **[Slack](https://slack.loft.sh/)**
 
