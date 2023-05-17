@@ -2,7 +2,7 @@ use crate::{commands::DEVPOD_BINARY_NAME, AppHandle};
 use log::error;
 use std::{
     env,
-    path::{PathBuf},
+    path::PathBuf,
 };
 use thiserror::Error;
 
@@ -58,7 +58,7 @@ fn install(_app_handle: AppHandle, force: bool) -> Result<(), InstallCLIError> {
     use anyhow::Context;
     use dirs::home_dir;
     use log::{info, warn};
-    use std::fs::{hard_link, remove_file};
+    use std::{fs::remove_file, os::unix::fs::symlink};
 
     let cli_path = get_cli_path().map_err(InstallCLIError::NoExePath)?;
 
@@ -122,7 +122,7 @@ fn install(_app_handle: AppHandle, force: bool) -> Result<(), InstallCLIError> {
             target_path.to_string_lossy()
         );
 
-        match hard_link(cli_path.clone(), &target_path)
+        match symlink(cli_path.clone(), &target_path)
             .with_context(|| format!("path: {}", str_target_path))
             .map_err(InstallCLIError::Link)
         {
