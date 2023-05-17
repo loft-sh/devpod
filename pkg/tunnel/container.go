@@ -82,7 +82,7 @@ func (c *ContainerHandler) Run(ctx context.Context, runInHost Handler, runInCont
 				Stdout:  stdout,
 				Stderr:  stderr,
 			})
-		}, c.client.AgentPath(), c.client.AgentURL(), true, command, stdinReader, stdoutWriter, writer, c.log.ErrorStreamOnly())
+		}, c.client.AgentLocal(), c.client.AgentPath(), c.client.AgentURL(), true, command, stdinReader, stdoutWriter, writer, c.log.ErrorStreamOnly())
 	}()
 
 	privateKey, err := devssh.GetDevPodPrivateKeyRaw()

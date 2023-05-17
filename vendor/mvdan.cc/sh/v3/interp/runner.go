@@ -6,6 +6,7 @@ package interp
 import (
 	"bytes"
 	"context"
+	"errors"
 	"fmt"
 	"io"
 	"math"
@@ -155,7 +156,19 @@ func (r *Runner) updateExpandOpts() {
 
 func (r *Runner) expandErr(err error) {
 	if err != nil {
-		r.errf("%v\n", err)
+		errMsg := err.Error()
+		fmt.Fprintln(r.stderr, errMsg)
+		switch {
+		case errors.As(err, &expand.UnsetParameterError{}):
+		case errMsg == "invalid indirect expansion":
+			// TODO: These errors are treated as fatal by bash.
+			// Make the error type reflect that.
+		case strings.HasSuffix(errMsg, "not supported"):
+			// TODO: This "has suffix" is a temporary measure until the expand
+			// package supports all syntax nodes like extended globbing.
+		default:
+			return // other cases do not exit
+		}
 		r.exitShell(context.TODO(), 1)
 	}
 }
@@ -298,7 +311,7 @@ func (r *Runner) stmtSync(ctx context.Context, st *syntax.Stmt) {
 		//   part of && or || lists
 		//   preceded by !
 		r.exitShell(ctx, r.exit)
-	} else if r.exit != 0 {
+	} else if r.exit != 0 && !r.noErrExit {
 		r.trapCallback(ctx, r.callbackErr, "error")
 	}
 	if !r.keepRedirs {
@@ -705,11 +718,11 @@ func (r *Runner) flattenAssign(as *syntax.Assign) []*syntax.Assign {
 }
 
 func match(pat, name string) bool {
-	expr, err := pattern.Regexp(pat, 0)
+	expr, err := pattern.Regexp(pat, pattern.EntireString)
 	if err != nil {
 		return false
 	}
-	rx := regexp.MustCompile("(?m)^" + expr + "$")
+	rx := regexp.MustCompile(expr)
 	return rx.MatchString(name)
 }
 

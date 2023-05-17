@@ -168,7 +168,7 @@ func (cmd *BuildCmd) buildAgentClient(ctx context.Context, workspaceClient clien
 				Stdout:  stdout,
 				Stderr:  stderr,
 			})
-		}, workspaceClient.AgentPath(), workspaceClient.AgentURL(), true, command, stdinReader, stdoutWriter, writer, log.ErrorStreamOnly())
+		}, workspaceClient.AgentLocal(), workspaceClient.AgentPath(), workspaceClient.AgentURL(), true, command, stdinReader, stdoutWriter, writer, log.ErrorStreamOnly())
 	}()
 
 	// get workspace config

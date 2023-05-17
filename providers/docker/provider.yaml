@@ -17,7 +17,7 @@ options:
     default: docker
 agent:
   containerInactivityTimeout: ${INACTIVITY_TIMEOUT}
-  path: ${DEVPOD}
+  local: true
   docker:
     path: ${DOCKER_PATH}
     install: false

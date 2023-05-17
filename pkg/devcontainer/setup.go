@@ -19,7 +19,7 @@ func (r *Runner) setupContainer(containerDetails *config.ContainerDetails, merge
 	// inject agent
 	err := agent.InjectAgent(context.TODO(), func(ctx context.Context, command string, stdin io.Reader, stdout io.Writer, stderr io.Writer) error {
 		return r.Driver.CommandDevContainer(ctx, containerDetails.ID, "root", command, stdin, stdout, stderr)
-	}, agent.ContainerDevPodHelperLocation, agent.DefaultAgentDownloadURL(), false, r.Log)
+	}, false, agent.ContainerDevPodHelperLocation, agent.DefaultAgentDownloadURL(), false, r.Log)
 	if err != nil {
 		return errors.Wrap(err, "inject agent")
 	}

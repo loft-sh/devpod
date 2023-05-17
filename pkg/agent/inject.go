@@ -14,17 +14,59 @@ import (
 
 	"github.com/loft-sh/devpod/pkg/inject"
 	"github.com/loft-sh/devpod/pkg/log"
+	"github.com/loft-sh/devpod/pkg/shell"
 	"github.com/loft-sh/devpod/pkg/version"
 	"github.com/pkg/errors"
 )
 
 var waitForInstanceConnectionTimeout = time.Minute * 5
 
-func InjectAgent(ctx context.Context, exec inject.ExecFunc, remoteAgentPath, downloadURL string, preferDownload bool, log log.Logger) error {
-	return InjectAgentAndExecute(ctx, exec, remoteAgentPath, downloadURL, preferDownload, "", nil, nil, nil, log)
+func InjectAgent(
+	ctx context.Context,
+	exec inject.ExecFunc,
+	local bool,
+	remoteAgentPath,
+	downloadURL string,
+	preferDownload bool,
+	log log.Logger,
+) error {
+	return InjectAgentAndExecute(
+		ctx,
+		exec,
+		local,
+		remoteAgentPath,
+		downloadURL,
+		preferDownload,
+		"",
+		nil,
+		nil,
+		nil,
+		log,
+	)
 }
 
-func InjectAgentAndExecute(ctx context.Context, exec inject.ExecFunc, remoteAgentPath, downloadURL string, preferDownload bool, command string, stdin io.Reader, stdout io.Writer, stderr io.Writer, log log.Logger) error {
+func InjectAgentAndExecute(
+	ctx context.Context,
+	exec inject.ExecFunc,
+	local bool,
+	remoteAgentPath,
+	downloadURL string,
+	preferDownload bool,
+	command string,
+	stdin io.Reader,
+	stdout io.Writer,
+	stderr io.Writer,
+	log log.Logger,
+) error {
+	// should execute locally?
+	if local {
+		if command == "" {
+			return nil
+		}
+
+		return shell.ExecuteCommandWithShell(ctx, command, stdin, stdout, stderr, nil)
+	}
+
 	defer log.Debugf("Done InjectAgentAndExecute")
 	if remoteAgentPath == "" {
 		remoteAgentPath = RemoteDevPodHelperLocation

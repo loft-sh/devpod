@@ -303,7 +303,7 @@ skipSpace:
 				p.advanceLitNone(r)
 			}
 		case '?', '*', '+', '@', '!':
-			if p.tokenizeGlob() {
+			if p.extendedGlob() {
 				switch r {
 				case '?':
 					p.tok = globQuest
@@ -359,26 +359,35 @@ skipSpace:
 	}
 }
 
-// tokenizeGlob determines whether the expression should be tokenized as a glob literal
-func (p *Parser) tokenizeGlob() bool {
+// extendedGlob determines whether we're parsing a Bash extended globbing expression.
+// For example, whether `*` or `@` are followed by `(` to form `@(foo)`.
+func (p *Parser) extendedGlob() bool {
 	if p.val == "function" {
 		return false
 	}
-	// NOTE: empty pattern list is a valid globbing syntax, eg @()
-	// but we'll operate on the "likelihood" that it is a function;
-	// only tokenize if its a non-empty pattern list
-	if p.peekBytes("()") {
-		return false
+	if p.peekByte('(') {
+		// NOTE: empty pattern list is a valid globbing syntax like `@()`,
+		// but we'll operate on the "likelihood" that it is a function;
+		// only tokenize if its a non-empty pattern list.
+		// We do this after peeking for just one byte, so that the input `echo *`
+		// followed by a newline does not hang an interactive shell parser until
+		// another byte is input.
+		if p.peekBytes("()") {
+			return false
+		}
+		return true
 	}
-	return p.peekByte('(')
+	return false
 }
 
 func (p *Parser) peekBytes(s string) bool {
-	for p.bsp+(len(p.bs)-1) >= len(p.bs) {
+	peekEnd := p.bsp + len(s)
+	// TODO: This should loop for slow readers, e.g. those providing one byte at
+	// a time. Use a loop and test it with testing/iotest.OneByteReader.
+	if peekEnd > len(p.bs) {
 		p.fill()
 	}
-	bw := p.bsp + len(s)
-	return bw <= len(p.bs) && bytes.HasPrefix(p.bs[p.bsp:bw], []byte(s))
+	return peekEnd <= len(p.bs) && bytes.HasPrefix(p.bs[p.bsp:peekEnd], []byte(s))
 }
 
 func (p *Parser) peekByte(b byte) bool {
@@ -503,7 +512,7 @@ func (p *Parser) regToken(r rune) token {
 			if r = p.rune(); r == '-' {
 				p.rune()
 				return dashHdoc
-			} else if r == '<' && p.lang != LangPOSIX {
+			} else if r == '<' {
 				p.rune()
 				return wordHdoc
 			}
@@ -813,7 +822,7 @@ func (p *Parser) endLit() (s string) {
 	if p.r == utf8.RuneSelf || p.r == escNewl {
 		s = string(p.litBs)
 	} else {
-		s = string(p.litBs[:len(p.litBs)-int(p.w)])
+		s = string(p.litBs[:len(p.litBs)-p.w])
 	}
 	p.litBs = nil
 	return
@@ -917,7 +926,7 @@ loop:
 			tok = _Lit
 			break loop
 		case '?', '*', '+', '@', '!':
-			if p.tokenizeGlob() {
+			if p.extendedGlob() {
 				tok = _Lit
 				break loop
 			}
@@ -1068,7 +1077,7 @@ func (p *Parser) quotedHdocWord() *Word {
 			if val == "" {
 				return nil
 			}
-			return p.word(p.wps(p.lit(pos, val)))
+			return p.wordOne(p.lit(pos, val))
 		}
 	}
 }

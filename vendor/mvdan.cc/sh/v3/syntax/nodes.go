@@ -138,8 +138,9 @@ func (p Pos) String() string {
 	return b.String()
 }
 
-// IsValid reports whether the position is valid. All positions in nodes
-// returned by Parse are valid.
+// IsValid reports whether the position contains useful position information.
+// Some positions returned via Parse may be invalid: for example, Stmt.Semicolon
+// will only be valid if a statement contained a closing token such as ';'.
 func (p Pos) IsValid() bool { return p != Pos{} }
 
 // After reports whether the position p is after p2. It is a more expressive

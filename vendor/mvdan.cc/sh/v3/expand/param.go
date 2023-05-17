@@ -160,18 +160,20 @@ func (cfg *Config) paramExp(pe *syntax.ParamExp) (string, error) {
 			strs = cfg.namesByPrefix(pe.Param.Value)
 		case orig.Kind == NameRef:
 			strs = append(strs, orig.Str)
-		case vr.Kind == Indexed:
+		case pe.Index != nil && vr.Kind == Indexed:
 			for i, e := range vr.List {
 				if e != "" {
 					strs = append(strs, strconv.Itoa(i))
 				}
 			}
-		case vr.Kind == Associative:
+		case pe.Index != nil && vr.Kind == Associative:
 			for k := range vr.Map {
 				strs = append(strs, k)
 			}
-		case !syntax.ValidName(str):
+		case vr.Kind == Unset:
 			return "", fmt.Errorf("invalid indirect expansion")
+		case str == "":
+			return "", nil
 		default:
 			vr = cfg.Env.Get(str)
 			strs = append(strs, vr.String())

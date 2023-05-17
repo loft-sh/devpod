@@ -69,6 +69,13 @@ func (s *workspaceClient) WorkspaceConfig() *provider.Workspace {
 	return provider.CloneWorkspace(s.workspace)
 }
 
+func (s *workspaceClient) AgentLocal() bool {
+	s.m.Lock()
+	defer s.m.Unlock()
+
+	return options.ResolveAgentConfig(s.devPodConfig, s.config, s.workspace, s.machine).Local == "true"
+}
+
 func (s *workspaceClient) AgentPath() string {
 	s.m.Lock()
 	defer s.m.Unlock()

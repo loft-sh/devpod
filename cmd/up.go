@@ -266,7 +266,7 @@ func (cmd *UpCmd) devPodUpMachine(ctx context.Context, client client2.WorkspaceC
 				Stdout:  stdout,
 				Stderr:  stderr,
 			})
-		}, client.AgentPath(), client.AgentURL(), true, command, stdinReader, stdoutWriter, writer, log.ErrorStreamOnly())
+		}, client.AgentLocal(), client.AgentPath(), client.AgentURL(), true, command, stdinReader, stdoutWriter, writer, log.ErrorStreamOnly())
 	}()
 
 	// get workspace config

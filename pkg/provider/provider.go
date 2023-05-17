@@ -69,6 +69,9 @@ type ProviderSource struct {
 }
 
 type ProviderAgentConfig struct {
+	// Local defines if DevPod is running locally
+	Local types.StrBool `json:"local,omitempty"`
+
 	// Path is the binary path inside the server devpod will expect the agent binary
 	Path string `json:"path,omitempty"`
 

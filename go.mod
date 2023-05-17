@@ -51,7 +51,7 @@ require (
 	gotest.tools v2.2.0+incompatible
 	k8s.io/api v0.22.5
 	k8s.io/apimachinery v0.22.5
-	mvdan.cc/sh/v3 v3.5.1
+	mvdan.cc/sh/v3 v3.6.0
 )
 
 require (

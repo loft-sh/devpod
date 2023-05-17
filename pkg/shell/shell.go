@@ -16,7 +16,14 @@ import (
 	"mvdan.cc/sh/v3/syntax"
 )
 
-func ExecuteCommandWithShell(ctx context.Context, command string, stdin io.Reader, stdout io.Writer, stderr io.Writer, environ []string) error {
+func ExecuteCommandWithShell(
+	ctx context.Context,
+	command string,
+	stdin io.Reader,
+	stdout io.Writer,
+	stderr io.Writer,
+	environ []string,
+) error {
 	// try to find a proper shell
 	if runtime.GOOS != "windows" {
 		if command2.Exists("bash") {

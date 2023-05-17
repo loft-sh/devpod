@@ -724,8 +724,8 @@ k8s.io/apimachinery/third_party/forked/golang/reflect
 # k8s.io/klog/v2 v2.30.0
 ## explicit; go 1.13
 k8s.io/klog/v2
-# mvdan.cc/sh/v3 v3.5.1
-## explicit; go 1.17
+# mvdan.cc/sh/v3 v3.6.0
+## explicit; go 1.18
 mvdan.cc/sh/v3/expand
 mvdan.cc/sh/v3/fileutil
 mvdan.cc/sh/v3/interp

@@ -89,7 +89,7 @@ func (cmd *SSHCmd) Run(ctx context.Context, args []string) error {
 				Stdout:  stdout,
 				Stderr:  stderr,
 			})
-		}, machineClient.AgentPath(), machineClient.AgentURL(), true, command, stdin, stdout, stderr, log.Default.ErrorStreamOnly())
+		}, machineClient.AgentLocal(), machineClient.AgentPath(), machineClient.AgentURL(), true, command, stdin, stdout, stderr, log.Default.ErrorStreamOnly())
 	}, writer)
 }
 

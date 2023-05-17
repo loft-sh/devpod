@@ -20,6 +20,9 @@ type Client interface {
 	// RefreshOptions updates the options
 	RefreshOptions(ctx context.Context, userOptions []string) error
 
+	// AgentLocal returns if the agent runs locally
+	AgentLocal() bool
+
 	// AgentPath returns the agent path
 	AgentPath() string
 
