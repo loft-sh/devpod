@@ -13,11 +13,6 @@ jobs:
       package_version: ${{ steps.get-version.outputs.package_version }}
       release_id: ${{ steps.get-release.outputs.id }}
     steps:
-      - name: Set git to use LF
-        run: |
-          git config --global core.autocrlf false
-          git config --global core.eol lf
-          
       - name: Checkout repository
         uses: actions/checkout@v3
 
@@ -107,6 +102,11 @@ jobs:
       GOFLAGS: -mod=vendor
 
     steps:
+      - name: Set git to use LF
+        run: |
+          git config --global core.autocrlf false
+          git config --global core.eol lf
+          
       - name: Checkout repository
         uses: actions/checkout@v3
 
