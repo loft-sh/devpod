@@ -1,0 +1,20 @@
+{
+  "tauri": {
+    "windows": [
+      {
+        "title": "DevPod",
+        "width": 1200,
+        "height": 800,
+        "minWidth": 1000,
+        "minHeight": 700,
+        "x": 0,
+        "y": 0,
+        "focus": false,
+        "titleBarStyle": "Overlay",
+        "fullscreen": false,
+        "resizable": true,
+        "hiddenTitle": true
+      }
+    ]
+  }
+}

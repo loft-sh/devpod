@@ -167,12 +167,29 @@ jobs:
         working-directory: "./desktop"
 
       - name: Build Desktop App
-        if: matrix.settings.host != 'windows-latest' && matrix.settings.cli_only == false
+        if: matrix.settings.host == 'ubuntu-latest' && matrix.settings.cli_only == false
         uses: tauri-apps/tauri-action@v0.4.0
         with:
           releaseId: ${{ needs.create-release.outputs.release_id }}
           projectPath: "./desktop"
-          args: " --target ${{ matrix.settings.target }}"
+          args: "--config src-tauri/tauri-linux.conf.json --target ${{ matrix.settings.target }}"
+          includeUpdaterJson: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAURI_PRIVATE_KEY: ${{ secrets.TAURI_PRIVATE_KEY }}
+          TAURI_KEY_PASSWORD: ${{ secrets.TAURI_KEY_PASSWORD }}
+          # AppImage Signing:
+          SIGN: ${{ secrets.APP_IMAGE_SIGN }}
+          SIGN_KEY: ${{ secrets.APP_IMAGE_SIGN_KEY }}
+          APPIMAGETOOL_SIGN_PASSPHRASE: ${{ secrets.APP_IMAGE_SIGN_PASSPHRASE }}
+
+      - name: Build Desktop App
+        if: matrix.settings.host == 'macos-latest' && matrix.settings.cli_only == false
+        uses: tauri-apps/tauri-action@v0.4.0
+        with:
+          releaseId: ${{ needs.create-release.outputs.release_id }}
+          projectPath: "./desktop"
+          args: "--target ${{ matrix.settings.target }}"
           includeUpdaterJson: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -185,10 +202,6 @@ jobs:
           APPLE_SIGNING_IDENTITY: ${{ secrets.APPLE_SIGNING_IDENTITY }}
           APPLE_ID: ${{ secrets.APPLE_ID }}
           APPLE_PASSWORD: ${{ secrets.APPLE_PASSWORD }}
-          # AppImage Signing:
-          SIGN: ${{ secrets.APP_IMAGE_SIGN }}
-          SIGN_KEY: ${{ secrets.APP_IMAGE_SIGN_KEY }}
-          APPIMAGETOOL_SIGN_PASSPHRASE: ${{ secrets.APP_IMAGE_SIGN_PASSPHRASE }}
 
       - name: Build RPM
         if: matrix.settings.host == 'ubuntu-latest' && matrix.settings.cli_only == false
