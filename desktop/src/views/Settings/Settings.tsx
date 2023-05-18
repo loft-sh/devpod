@@ -106,7 +106,7 @@ export function Settings() {
             ))}
           </Select>
           <SettingDescription>
-            Select the default IDE you&apos;re using for workspaces. This will be overriden whenever
+            Select the default IDE you&apos;re using for workspaces. This will be overridden whenever
             you create a workspace with a different IDE
           </SettingDescription>
 

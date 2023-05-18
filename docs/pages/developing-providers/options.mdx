@@ -64,7 +64,7 @@ configuring or adding the provider:
 - `required`: Boolean if this option needs to be non-empty before using the provider. DevPod will ask in the CLI and make sure that this option is filled in the Desktop application.
 - `password`: Boolean to indicate this is a sensitive value. Prevents this value from showing up in the `devpod provider options` command and will be a password field in the Desktop application.
 - `suggestions`: An array of suggestions for this option. Will be shown as auto complete options in the DevPod desktop application
-- `command`: A command to retrieve the option value automatically. Can also reference other variables in the command, e.g. `echo ${MY_OTHER_VAR}-suffix`. For compatability reasons this command will be executed in an emulated shell on windows.
+- `command`: A command to retrieve the option value automatically. Can also reference other variables in the command, e.g. `echo ${MY_OTHER_VAR}-suffix`. For compatibility reasons this command will be executed in an emulated shell on windows.
 - `local`: If true, the option will be filled individually for each machine / workspace
 - `global`: If true, the option will be reused for each machine / workspace
 - `cache`: If non-empty, DevPod will reexecute the command after the given timeout. E.g. if this is 5m, DevPod will reexecute the command after 5 minutes to re-fill this value. This is useful if you want to store a token or something that expires locally in a variable.
@@ -91,7 +91,7 @@ right in the Provider's "Add" page.
 
 ### Password options
 
-If specified and true, the option's value will be threated as a secret, so it
+If specified and true, the option's value will be treated as a secret, so it
 won't be shown when listing options.
 
 Example:
@@ -126,7 +126,7 @@ be shown in the CLI app.
 ### Command options
 
 The command option lets you define a possible value for an option based on a shell
-command launched on your machine. Can also reference other variables in the command, e.g. `echo ${MY_OTHER_VAR}-suffix`. For compatability reasons this command will be executed in an emulated shell on windows.
+command launched on your machine. Can also reference other variables in the command, e.g. `echo ${MY_OTHER_VAR}-suffix`. For compatibility reasons this command will be executed in an emulated shell on windows.
 
 One example would be to forward ENV variables from your machine to the provider,
 for example:

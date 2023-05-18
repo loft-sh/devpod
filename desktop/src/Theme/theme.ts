@@ -42,7 +42,7 @@ export const theme = extendTheme({
         html: {
           fontSize: "14px",
           overflow: "hidden",
-          backgroun: "transparent",
+          background: "transparent",
         },
         body: {
           background: "transparent",

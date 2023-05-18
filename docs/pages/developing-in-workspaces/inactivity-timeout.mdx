@@ -29,7 +29,7 @@ For non-machine providers, DevPod can automatically kill the container its runni
 ### Machine Providers
 
 For machine providers, killing just the container within the remote machine is typically not enough as VMs still generate costs even if they are unused.
-Instead, DevPod will install itself as a Daemon into the remote VM and track the activity from there. If there wasn't activity for a given amount of time, DevPod will automatically shutdown the machine or even delete it, based on whats cheaper for the given cloud provider.
+Instead, DevPod will install itself as a Daemon into the remote VM and track the activity from there. If there wasn't activity for a given amount of time, DevPod will automatically shutdown the machine or even delete it, based on what's cheaper for the given cloud provider.
 Then when the developer wants to resume development, DevPod will restart or recreate the virtual machine.
 
 :::info

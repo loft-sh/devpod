@@ -8,7 +8,7 @@ import { IDEsClient } from "./ides/client"
 import { ProvidersClient } from "./providers"
 import { WorkspacesClient } from "./workspaces"
 
-// Theses types have to match the rust types! Make sure to update them as well!
+// These types have to match the rust types! Make sure to update them as well!
 type TChannels = {
   event:
     | Readonly<{ type: "ShowDashboard" }>
