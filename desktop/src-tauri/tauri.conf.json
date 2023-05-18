@@ -128,7 +128,7 @@
         "resizable": true,
         "hiddenTitle": true,
         "transparent": true,
-        "visible": true
+        "visible": false
       }
     ]
   }
