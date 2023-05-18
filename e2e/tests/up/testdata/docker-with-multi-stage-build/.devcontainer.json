@@ -1,0 +1,13 @@
+{
+	"name": "Ruby",
+	"workspaceFolder": "/app",
+	"build": {
+		"dockerfile": "Dockerfile"
+	},
+	"customizations": {
+		"vscode": {
+			"settings": {},
+			"extensions": []
+		}
+	}
+}

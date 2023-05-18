@@ -133,6 +133,21 @@ var _ = DevPodDescribe("devpod up test suite", func() {
 				framework.ExpectNoError(err)
 				gomega.Expect(bar).To(gomega.Equal("FOO"))
 			}, ginkgo.SpecTimeout(60*time.Second))
+
+			ginkgo.It("should start a new workspace with multistage build", func(ctx context.Context) {
+				tempDir, err := framework.CopyToTempDir("tests/up/testdata/docker-with-multi-stage-build")
+				framework.ExpectNoError(err)
+				ginkgo.DeferCleanup(framework.CleanupTempDir, initialDir, tempDir)
+
+				f := framework.NewDefaultFramework(initialDir + "/bin")
+				_ = f.DevPodProviderAdd([]string{"docker"})
+				err = f.DevPodProviderUse(context.Background(), "docker")
+				framework.ExpectNoError(err)
+
+				// Wait for devpod workspace to come online (deadline: 30s)
+				err = f.DevPodUp(ctx, tempDir, "--debug")
+				framework.ExpectNoError(err)
+			}, ginkgo.SpecTimeout(60*time.Second))
 		})
 
 		ginkgo.Context("with docker-compose", func() {
@@ -615,6 +630,21 @@ var _ = DevPodDescribe("devpod up test suite", func() {
 				bar, _, err := f.ExecCommandCapture(ctx, []string{"ssh", "--command", "cat $HOME/mnt2/bar.txt", projectName})
 				framework.ExpectNoError(err)
 				gomega.Expect(bar).To(gomega.Equal("FOO"))
+			}, ginkgo.SpecTimeout(60*time.Second))
+
+			ginkgo.It("should start a new workspace with multistage build", func(ctx context.Context) {
+				tempDir, err := framework.CopyToTempDir("tests/up/testdata/docker-compose-with-multi-stage-build")
+				framework.ExpectNoError(err)
+				ginkgo.DeferCleanup(framework.CleanupTempDir, initialDir, tempDir)
+
+				f := framework.NewDefaultFramework(initialDir + "/bin")
+				_ = f.DevPodProviderAdd([]string{"docker"})
+				err = f.DevPodProviderUse(context.Background(), "docker")
+				framework.ExpectNoError(err)
+
+				// Wait for devpod workspace to come online (deadline: 30s)
+				err = f.DevPodUp(ctx, tempDir, "--debug")
+				framework.ExpectNoError(err)
 			}, ginkgo.SpecTimeout(60*time.Second))
 
 			ginkgo.Context("with lifecycle commands", func() {
