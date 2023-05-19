@@ -61,6 +61,7 @@ func InjectAndExecute(
 	if err != nil {
 		return true, err
 	}
+
 	log.Debugf("execute inject script")
 	defer log.Debugf("done injecting")
 

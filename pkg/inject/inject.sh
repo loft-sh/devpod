@@ -1,6 +1,10 @@
 #!/bin/sh
 set -e
 
+if [ "$SHELL" != "${SHELL%"/zsh"*}" ]; then
+  setopt SH_WORD_SPLIT
+fi
+
 INSTALL_DIR="{{ .InstallDir }}"
 INSTALL_FILENAME="{{ .InstallFilename }}"
 
@@ -51,19 +55,19 @@ download() {
   fi
   
   while :; do
-    status=""
+    cmd_status=""
     if command_exists curl; then
         $sh_c "curl -fsSL $DOWNLOAD_URL -o $INSTALL_PATH" && break
-        status=$?
+        cmd_status=$?
     elif command_exists wget; then
         $sh_c "wget -q $DOWNLOAD_URL -O $INSTALL_PATH" && break
-        status=$?
+        cmd_status=$?
     else
         echo "error: no download tool found, please install curl or wget"
         exit 127
     fi
     >&2 echo "error: failed to download devpod"
-    >&2 echo "       command returned: ${status}"
+    >&2 echo "       command returned: ${cmd_status}"
     >&2 echo "Trying again in 10 seconds..."
     sleep 10
   done
