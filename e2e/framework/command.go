@@ -10,6 +10,17 @@ import (
 	"github.com/loft-sh/devpod/cmd/provider"
 )
 
+// DevPodList executes the `devpod list` command in the test framework
+func (f *Framework) DevPodList(ctx context.Context) (string, error) {
+	listArgs := []string{"list", "--output", "json"}
+
+	out, _, err := f.ExecCommandCapture(ctx, listArgs)
+	if err != nil {
+		return "", fmt.Errorf("devpod list failed: %s", err.Error())
+	}
+	return out, nil
+}
+
 // DevPodUp executes the `devpod up` command in the test framework
 func (f *Framework) DevPodUp(ctx context.Context, workspace string, additionalArgs ...string) error {
 	upArgs := []string{"up", "--ide", "none", workspace}
