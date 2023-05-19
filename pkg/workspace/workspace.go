@@ -400,7 +400,7 @@ func resolve(defaultProvider *ProviderWithOptions, devPodConfig *config.Config, 
 	return nil, fmt.Errorf("%s is neither a local folder, git repository or docker image", name)
 }
 
-var regexes map[string]*regexp.Regexp = map[string]*regexp.Regexp{
+var regexes = map[string]*regexp.Regexp{
 	"github.com": regexp.MustCompile(`(<meta[^>]+property)="og:image" content="([^"]+)"`),
 	"gitlab.com": regexp.MustCompile(`(<meta[^>]+content)="([^"]+)" property="og:image"`),
 	"content":    regexp.MustCompile(`content="([^"]+)"`),
@@ -432,7 +432,12 @@ func getProjectImage(link string) string {
 	html := string(content)
 
 	// Find github social share image: https://css-tricks.com/essential-meta-tags-social-media/
-	meta := regexes[baseURL.Host].FindString(html)
+	regEx := regexes[baseURL.Host]
+	if regEx == nil {
+		return ""
+	}
+
+	meta := regEx.FindString(html)
 	url := strings.Split(
 		regexes["content"].FindString(meta),
 		`"`,
