@@ -83,9 +83,9 @@ func (cmd *UpCmd) Run(ctx context.Context) error {
 	defer cancel()
 	tunnelClient, logger, credentialsDir, err := initWorkspace(cancelCtx, cancel, workspaceInfo, cmd.Debug, true)
 	if err != nil {
-		err = clientimplementation.DeleteWorkspaceFolder(workspaceInfo.Workspace.Context, workspaceInfo.Workspace.ID, logger)
-		if err != nil {
-			return err
+		err1 := clientimplementation.DeleteWorkspaceFolder(workspaceInfo.Workspace.Context, workspaceInfo.Workspace.ID, logger)
+		if err1 != nil {
+			return errors.Wrap(err, err1.Error())
 		}
 		return err
 	} else if credentialsDir != "" {
