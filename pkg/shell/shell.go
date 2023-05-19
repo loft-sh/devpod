@@ -24,6 +24,8 @@ func ExecuteCommandWithShell(
 	stderr io.Writer,
 	environ []string,
 ) error {
+	command = strings.ReplaceAll(command, "\r", "")
+
 	// try to find a proper shell
 	if runtime.GOOS != "windows" {
 		if command2.Exists("bash") {
