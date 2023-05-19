@@ -33,6 +33,7 @@
     "react-router": "6.11.1",
     "react-router-dom": "6.11.1",
     "tauri-plugin-store-api": "https://github.com/tauri-apps/tauri-plugin-store",
+    "uuid": "9.0.0",
     "xterm": "5.1.0",
     "xterm-addon-fit": "0.7.0"
   },
@@ -42,6 +43,7 @@
     "@types/node": "18.15.3",
     "@types/react": "18.2.6",
     "@types/react-dom": "18.2.4",
+    "@types/uuid": "9.0.1",
     "@typescript-eslint/eslint-plugin": "5.59.6",
     "@typescript-eslint/parser": "5.59.6",
     "@vitejs/plugin-react": "4.0.0",

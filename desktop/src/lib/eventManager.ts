@@ -1,5 +1,7 @@
 import { TComparable, TIdentifiable, TUnsubscribeFn } from "../types"
 import { exists, isEmpty } from "./helpers"
+import { v4 as uuidv4 } from "uuid"
+
 
 type TEventHandler<TEvents, TEventName extends keyof TEvents = keyof TEvents> = THandler<
   (event: TEvents[TEventName]) => void
@@ -34,7 +36,7 @@ export class EventManager<TEvents extends TBaseEvents> implements TEventManager<
 
   public static toHandler<TFn extends Function>(
     listenerFn: TFn,
-    id: string = crypto.randomUUID()
+    id: string = uuidv4()
   ): THandler<TFn> {
     return {
       id,

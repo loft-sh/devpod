@@ -1,4 +1,5 @@
 import { Result, SingleEventManager, EventManager } from "../../../lib"
+import { v4 as uuidv4 } from "uuid"
 
 export type TActionName = "start" | "stop" | "rebuild" | "remove" | "checkStatus"
 export type TActionFn = (context: TActionContext) => Promise<Result<unknown>>
@@ -20,7 +21,7 @@ export class Action {
   private _error: Error | undefined = undefined
   private _finishedAt: number | undefined = undefined
   private readonly eventManager = new SingleEventManager<TActionStatus>()
-  public readonly id = window.crypto.randomUUID() as string
+  public readonly id = uuidv4()
   public readonly createdAt = Date.now()
 
   public static deserialize(str: string): TActionObj {
