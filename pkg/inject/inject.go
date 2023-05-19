@@ -64,6 +64,8 @@ func InjectAndExecute(
 	log.Debugf("execute inject script")
 	defer log.Debugf("done injecting")
 
+	t = strings.ReplaceAll(t, "\r", "")
+
 	// start script
 	stdinReader, stdinWriter, err := os.Pipe()
 	if err != nil {
