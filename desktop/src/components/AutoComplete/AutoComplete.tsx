@@ -51,7 +51,7 @@ export const AutoComplete = forwardRef<HTMLElement, TAutoCompleteProps>(function
   const [query, setQuery] = useState("")
 
   useEffect(() => {
-    // set value intially
+    // set value initially
     if (value) {
       onChange?.(value)
     }

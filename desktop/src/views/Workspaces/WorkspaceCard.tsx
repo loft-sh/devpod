@@ -165,7 +165,7 @@ export function WorkspaceCard({ workspaceID, onSelectionChange }: TWorkspaceCard
 
   const isOpenDisabled = workspace.data?.status === "Busy"
   const isOpenDisabledReason =
-    "Cannnot open this workspace because it is busy. If this doesn't change, try to force delete and recreate it."
+    "Cannot open this workspace because it is busy. If this doesn't change, try to force delete and recreate it."
   const [isStartWithHovering, startWithRef] = useHover()
   const [isPopoverHovering, popoverContentRef] = useHover()
 
