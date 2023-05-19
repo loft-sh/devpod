@@ -24,7 +24,7 @@ My *`devcontainer.json`*:
 ```
 
 **Local Environment:**  
-- DevPod Version: [use `devpod --version`]
+- DevPod Version: [use `devpod version`]
 - Operating System: windows | linux | mac
 - ARCH of the OS: AMD64 | ARM64 | i386 
 
