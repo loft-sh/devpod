@@ -15,7 +15,6 @@ import (
 
 	"github.com/loft-sh/devpod/pkg/log"
 	"github.com/loft-sh/devpod/pkg/template"
-	"github.com/loft-sh/devpod/scripts"
 	perrors "github.com/pkg/errors"
 )
 
@@ -63,10 +62,6 @@ func InjectAndExecute(
 		return true, err
 	}
 
-	t, err = scripts.WrapScript(t)
-	if err != nil {
-		return true, err
-	}
 	log.Debugf("execute inject script")
 	defer log.Debugf("done injecting")
 
