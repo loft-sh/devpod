@@ -18,7 +18,7 @@ import (
 func SetupContainer(setupInfo *config.Result, chownWorkspace bool, log log.Logger) error {
 	// chown user dir
 	if chownWorkspace {
-		err := ChownWorkspace(setupInfo.ContainerDetails, setupInfo.MergedConfig, setupInfo.SubstitutionContext, log)
+		err := ChownWorkspace(setupInfo, log)
 		if err != nil {
 			return errors.Wrap(err, "chown workspace")
 		}
@@ -37,6 +37,12 @@ func SetupContainer(setupInfo *config.Result, chownWorkspace bool, log log.Logge
 		return errors.Wrap(err, "patch etc profile")
 	}
 
+	// link /home/root to root if necessary
+	err = LinkRootHome(setupInfo, log)
+	if err != nil {
+		log.Errorf("Error linking /home/root: %v", err)
+	}
+
 	// run commands
 	log.Debugf("Run post create commands...")
 	err = PostCreateCommands(setupInfo, log)
@@ -48,15 +54,40 @@ func SetupContainer(setupInfo *config.Result, chownWorkspace bool, log log.Logge
 	return nil
 }
 
-func ChownWorkspace(containerDetails *config.ContainerDetails, mergedConfig *config.MergedDevContainerConfig, substitutionContext *config.SubstitutionContext, log log.Logger) error {
-	user := mergedConfig.RemoteUser
-	if mergedConfig.RemoteUser == "" && containerDetails != nil {
-		user = containerDetails.Config.User
-	}
-	if user == "" {
-		user = "root"
+func LinkRootHome(setupInfo *config.Result, log log.Logger) error {
+	user := config.GetRemoteUser(setupInfo)
+	if user != "root" {
+		return nil
 	}
 
+	home, err := command.GetHome(user)
+	if err != nil {
+		return errors.Wrap(err, "find root home")
+	} else if home == "/home/root" {
+		return nil
+	}
+
+	_, err = os.Stat("/home/root")
+	if err == nil {
+		return nil
+	}
+
+	// link /home/root to the root home
+	err = os.MkdirAll("/home", 0777)
+	if err != nil {
+		return errors.Wrap(err, "create /home folder")
+	}
+
+	err = os.Symlink(home, "/home/root")
+	if err != nil {
+		return errors.Wrap(err, "create symlink")
+	}
+
+	return nil
+}
+
+func ChownWorkspace(setupInfo *config.Result, log log.Logger) error {
+	user := config.GetRemoteUser(setupInfo)
 	exists, err := markerFileExists("chownWorkspace", "")
 	if err != nil {
 		return err
@@ -65,7 +96,7 @@ func ChownWorkspace(containerDetails *config.ContainerDetails, mergedConfig *con
 	}
 
 	log.Infof("Chown workspace...")
-	err = copy2.ChownR(substitutionContext.ContainerWorkspaceFolder, user)
+	err = copy2.ChownR(setupInfo.SubstitutionContext.ContainerWorkspaceFolder, user)
 	if err != nil {
 		return errors.Wrap(err, "chown workspace folder")
 	}
