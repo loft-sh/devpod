@@ -51,6 +51,14 @@ module.exports = {
         },
       ],
     },
+    algolia: {
+      appId: "Y3XX0IC1ZW",
+      apiKey: "cfc452201042c6b5483694d4d0492aa8",
+      indexName: "devpod",
+      algoliaOptions: {},
+      placeholder: "Search...",
+      contextualSearch: false,
+    },
     footer: {
       style: "light",
       links: [],
