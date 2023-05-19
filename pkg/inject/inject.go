@@ -15,6 +15,7 @@ import (
 
 	"github.com/loft-sh/devpod/pkg/log"
 	"github.com/loft-sh/devpod/pkg/template"
+	"github.com/loft-sh/devpod/scripts"
 	perrors "github.com/pkg/errors"
 )
 
@@ -58,6 +59,11 @@ func InjectAndExecute(
 		"DownloadAmd":     downloadAmd64,
 		"DownloadArm":     downloadArm64,
 	})
+	if err != nil {
+		return true, err
+	}
+
+	t, err = scripts.WrapScript(t)
 	if err != nil {
 		return true, err
 	}

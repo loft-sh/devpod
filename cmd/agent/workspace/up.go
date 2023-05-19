@@ -472,10 +472,17 @@ func InstallDocker(log log.Logger) error {
 		writer := log.Writer(logrus.InfoLevel, false)
 		defer writer.Close()
 
-		shellCommand := exec.Command("sh", "-c", scripts.InstallDocker)
+		log.Debug("Installing Docker...")
+
+		script, err := scripts.InstallDocker()
+		if err != nil {
+			return err
+		}
+
+		shellCommand := exec.Command("sh", "-c", script)
 		shellCommand.Stdout = writer
 		shellCommand.Stderr = writer
-		err := shellCommand.Run()
+		err = shellCommand.Run()
 		if err != nil {
 			return err
 		}
