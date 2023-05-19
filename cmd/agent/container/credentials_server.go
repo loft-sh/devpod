@@ -66,7 +66,7 @@ func (cmd *CredentialsServerCmd) Run(ctx context.Context, _ []string) error {
 
 	// create debug logger
 	log := agent.NewTunnelLogger(ctx, tunnelClient, cmd.Debug)
-	log.Infof("Start credentials server")
+	log.Debugf("Start credentials server")
 
 	// find available port
 	port, err := port.FindAvailablePort(random.InRange(12000, 18000))
