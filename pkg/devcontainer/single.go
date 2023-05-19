@@ -77,7 +77,7 @@ func (r *Runner) runSingleContainer(parsedConfig *config.SubstitutedConfig, work
 		//TODO: wait here a bit for correct startup?
 
 		// get container details
-		containerDetails, err = r.Driver.FindDevContainer(context.TODO(), labels)
+		containerDetails, err = r.Driver.FindDevContainer(context.TODO(), labels[0:1])
 		if err != nil {
 			return nil, err
 		}
