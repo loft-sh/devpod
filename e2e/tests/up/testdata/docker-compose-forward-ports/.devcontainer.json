@@ -1,0 +1,12 @@
+{
+	"name": "Go",
+	"dockerComposeFile": "./docker-compose.yaml",
+	"service": "app",
+	"runServices": ["nginx"],
+	"workspaceFolder": "/workspaces",
+	"forwardPorts": [
+		4000,
+		"3000",
+		"nginx:8080"
+	]
+}

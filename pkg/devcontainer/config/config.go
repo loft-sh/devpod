@@ -50,7 +50,7 @@ type DevContainerConfigBase struct {
 	OverrideFeatureInstallOrder []string `json:"overrideFeatureInstallOrder,omitempty"`
 
 	// Ports that are forwarded from the container to the local machine. Can be an integer port number, or a string of the format "host:port_number".
-	ForwardPorts []json.Number `json:"forwardPorts,omitempty"`
+	ForwardPorts types.StrIntArray `json:"forwardPorts,omitempty"`
 
 	// Set default properties that are applied when a specific port number is forwarded.
 	PortsAttributes map[string]PortAttribute `json:"portAttributes,omitempty"`
