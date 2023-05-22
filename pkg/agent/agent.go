@@ -239,7 +239,7 @@ func rerunAsRoot(workspaceInfo *provider2.AgentWorkspaceInfo, log log.Logger) (b
 	dockerRootRequired := false
 	if workspaceInfo == nil || workspaceInfo.Agent.Driver == "" || workspaceInfo.Agent.Driver == provider2.DockerDriver {
 		var err error
-		dockerRootRequired, err = dockerReachable()
+		dockerRootRequired, err = dockerReachable(workspaceInfo.Agent.Docker.Path, workspaceInfo.Agent.Docker.Envs)
 		if err != nil {
 			log.Debugf("Error trying to reach docker daemon: %v", err)
 			dockerRootRequired = true
@@ -321,19 +321,39 @@ func Tunnel(
 	return nil
 }
 
-func dockerReachable() (bool, error) {
-	if !command.Exists("docker") {
+func dockerReachable(dockerOverride string, envs map[string]string) (bool, error) {
+	docker := "docker"
+	if dockerOverride != "" {
+		docker = dockerOverride
+	}
+
+	if !command.Exists(docker) {
+		// if docker is overridden, we assume that there is an error as we don't know how to install the command provided
+		if dockerOverride != "" {
+			return false, fmt.Errorf("docker command '%s' not found", dockerOverride)
+		}
 		// we need root to install docker
 		return true, nil
 	}
 
-	_, err := exec.Command("docker", "ps").CombinedOutput()
+	cmd := exec.Command(docker, "ps")
+	if len(envs) > 0 {
+		newEnvs := os.Environ()
+		for k, v := range envs {
+			newEnvs = append(newEnvs, k+"="+v)
+		}
+		cmd.Env = newEnvs
+	}
+
+	_, err := cmd.CombinedOutput()
 	if err != nil {
 		if strings.Contains(err.Error(), "permission denied") {
-			return true, nil
+			if dockerOverride == "" {
+				return true, nil
+			}
 		}
 
-		return false, perrors.Wrap(err, "docker ps")
+		return false, perrors.Wrapf(err, "%s ps", docker)
 	}
 
 	return false, nil

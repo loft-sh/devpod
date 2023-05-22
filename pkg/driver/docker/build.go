@@ -305,7 +305,7 @@ func (d *dockerDriver) buildxBuild(ctx context.Context, writer io.Writer, platfo
 	args = append(args, options.Context)
 
 	// run command
-	d.Log.Debugf("Running docker command: docker %s", strings.Join(args, " "))
+	d.Log.Debugf("Running docker %s: docker %s", d.Docker.DockerCommand, strings.Join(args, " "))
 	err := d.Docker.Run(ctx, args, nil, writer, writer)
 	if err != nil {
 		return errors.Wrap(err, "build image")
