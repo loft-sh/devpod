@@ -311,8 +311,10 @@ jobs:
         with:
           script: |
             const fs = require("fs")
-
-            const msiName = "DevPod_${{ needs.create-release.outputs.package_version }}_x64_en-US.msi"
+            
+            // The .msi builder formats the version to xx.xx.xx.xxxx
+            const version = "${{ needs.create-release.outputs.package_version }}".replace("-", ".") 
+            const msiName = `DevPod_${version}_x64_en-US.msi`
             const msiPath = `desktop/src-tauri/target/${{ matrix.settings.target }}/release/bundle/msi/${msiName}`
             const msiZipName = `${msiName}.zip`
             const msiZipPath = `desktop/src-tauri/target/${{ matrix.settings.target }}/release/bundle/msi/${msiZipName}`
@@ -436,14 +438,16 @@ jobs:
             core.info(`Downloading ${latestAsset.name} (ID: ${latestAsset.id})`)
             const latestRes = await fetchAsset(latestAsset.id)
             const latest = await latestRes.json()
+            const version = latest.version
+            const winVersion = latest.version.replace("-", ".")
 
             const infos = [
-              { target: "linux-x86_64", sigFile: ".AppImage.tar.gz.sig", packageType: ".tar.gz", originalAssetName: `dev-pod_${latest.version}_amd64.AppImage`, desiredAssetName: "DevPod_linux_amd64.AppImage" },
-              { target: "darwin-aarch64", sigFile: "aarch64.app.tar.gz.sig", packageType: ".tar.gz", originalAssetName: `DevPod_${latest.version}_aarch64.dmg`, desiredAssetName: "DevPod_macos_aarch64.dmg", originalUpdaterAssetName: "DevPod_aarch64.app.tar.gz", desiredUpdaterAssetName: "DevPod_macos_aarch64.app.tar.gz" },
-              { target: "darwin-x86_64", sigFile: "x64.app.tar.gz.sig", packageType: ".tar.gz", originalAssetName: `DevPod_${latest.version}_x64.dmg`, desiredAssetName: "DevPod_macos_x64.dmg", originalUpdaterAssetName: "DevPod_x64.app.tar.gz", desiredUpdaterAssetName: "DevPod_macos_x64.app.tar.gz" },
-              { target: "windows-x86_64", sigFile: ".msi.zip.sig", packageType: ".zip", originalAssetName: `DevPod_${latest.version}_x64_en-US.msi`, desiredAssetName: "DevPod_windows_x64_en-US.msi" },
-              { originalAssetName: `dev-pod-${latest.version}-2.x86_64.rpm`, desiredAssetName: "DevPod_linux_x86_64.rpm" },
-              { originalAssetName: `dev-pod_${latest.version}_amd64.deb`, desiredAssetName: "DevPod_linux_amd64.deb" },
+              { target: "linux-x86_64", sigFile: ".AppImage.tar.gz.sig", packageType: ".tar.gz", originalAssetName: `dev-pod_${version}_amd64.AppImage`, desiredAssetName: "DevPod_linux_amd64.AppImage" },
+              { target: "darwin-aarch64", sigFile: "aarch64.app.tar.gz.sig", packageType: ".tar.gz", originalAssetName: `DevPod_${version}_aarch64.dmg`, desiredAssetName: "DevPod_macos_aarch64.dmg", originalUpdaterAssetName: "DevPod_aarch64.app.tar.gz", desiredUpdaterAssetName: "DevPod_macos_aarch64.app.tar.gz" },
+              { target: "darwin-x86_64", sigFile: "x64.app.tar.gz.sig", packageType: ".tar.gz", originalAssetName: `DevPod_${version}_x64.dmg`, desiredAssetName: "DevPod_macos_x64.dmg", originalUpdaterAssetName: "DevPod_x64.app.tar.gz", desiredUpdaterAssetName: "DevPod_macos_x64.app.tar.gz" },
+              { target: "windows-x86_64", sigFile: ".msi.zip.sig", packageType: ".zip", originalAssetName: `DevPod_${winVersion}_x64_en-US.msi`, desiredAssetName: "DevPod_windows_x64_en-US.msi" },
+              { originalAssetName: `dev-pod-${version}-2.x86_64.rpm`, desiredAssetName: "DevPod_linux_x86_64.rpm" },
+              { originalAssetName: `dev-pod_${version}_amd64.deb`, desiredAssetName: "DevPod_linux_amd64.deb" },
             ]
 
             for (const info of infos) {
