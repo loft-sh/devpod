@@ -33,16 +33,15 @@ func (sa *StrIntArray) UnmarshalJSON(data []byte) error {
 	case []interface{}:
 		s := make([]string, 0, len(obj))
 		for _, v := range obj {
-			value, ok := v.(string)
-			if !ok {
-				intValue, ok := v.(int)
-				if !ok {
-					return ErrUnsupportedType
-				} else {
-					s = append(s, strconv.Itoa(intValue))
-				}
-			} else {
+			switch value := v.(type) {
+			case string:
 				s = append(s, value)
+			case int:
+				s = append(s, strconv.Itoa(value))
+			case float64:
+				s = append(s, strconv.Itoa(int(value)))
+			default:
+				return ErrUnsupportedType
 			}
 		}
 		*sa = StrIntArray(s)

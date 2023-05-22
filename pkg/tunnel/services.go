@@ -6,6 +6,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"strconv"
+	"strings"
 
 	"github.com/docker/go-connections/nat"
 	"github.com/loft-sh/devpod/pkg/agent"
@@ -155,22 +157,27 @@ func forwardDevContainerPorts(ctx context.Context, workspaceClient client.Worksp
 	// forward ports
 	for _, port := range result.MergedConfig.ForwardPorts {
 		// convert port
-		i, err := port.Int64()
+		host, portNumber, err := parseForwardPort(port)
 		if err != nil {
-			log.Debugf("Error parsing forwardPort %s: %v", port.String(), err)
-			continue
+			log.Debugf("Error parsing forwardPort %s: %v", port, err)
 		}
 
 		// try to forward
-		go func(i int64, port json.Number) {
-			log.Debugf("Forward port %s", port.String())
-			err = devssh.PortForward(ctx, containerClient, "localhost:"+port.String(), "localhost:"+port.String(), log)
+		go func(port string) {
+			log.Debugf("Forward port %s", port)
+			err = devssh.PortForward(
+				ctx,
+				containerClient,
+				fmt.Sprintf("localhost:%d", portNumber),
+				fmt.Sprintf("%s:%d", host, portNumber),
+				log,
+			)
 			if err != nil {
-				log.Debugf("Error port forwarding %d: %v", int(i), err)
+				log.Debugf("Error port forwarding %s: %v", port, err)
 			}
-		}(i, port)
+		}(port)
 
-		forwardedPorts = append(forwardedPorts, port.String())
+		forwardedPorts = append(forwardedPorts, port)
 	}
 
 	return forwardedPorts, nil
@@ -206,4 +213,26 @@ func getDevContainerResult(ctx context.Context, workspaceClient client.Workspace
 	}
 
 	return result, nil
+}
+
+func parseForwardPort(port string) (string, int64, error) {
+	tokens := strings.Split(port, ":")
+
+	if len(tokens) == 1 {
+		port, err := strconv.ParseInt(tokens[0], 10, 64)
+		if err != nil {
+			return "", 0, err
+		}
+		return "localhost", port, nil
+	}
+
+	if len(tokens) == 2 {
+		port, err := strconv.ParseInt(tokens[1], 10, 64)
+		if err != nil {
+			return "", 0, err
+		}
+		return tokens[0], port, nil
+	}
+
+	return "", 0, fmt.Errorf("invalid forwardPorts port")
 }

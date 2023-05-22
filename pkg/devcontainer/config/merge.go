@@ -1,7 +1,6 @@
 package config
 
 import (
-	"encoding/json"
 	"strconv"
 
 	"github.com/loft-sh/devpod/pkg/types"
@@ -103,12 +102,12 @@ func mergeHostRequirements(entries []*ImageMetadata) *HostRequirements {
 	return nil
 }
 
-func mergeForwardPorts(entries []*ImageMetadata) []json.Number {
+func mergeForwardPorts(entries []*ImageMetadata) types.StrIntArray {
 	portMap := map[string]bool{}
-	retPorts := []json.Number{}
+	var retPorts types.StrIntArray
 	for _, entry := range entries {
 		for _, port := range entry.ForwardPorts {
-			portString := port.String()
+			portString := port
 			_, err := strconv.Atoi(portString)
 			if err == nil {
 				portString = "localhost:" + portString
