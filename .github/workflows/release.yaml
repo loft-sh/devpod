@@ -249,18 +249,24 @@ jobs:
             libdeflate
             gtk3-immodules
           "
-
+          rpm_version="$(echo ${{needs.create-release.outputs.package_version}} | cut -d'-' -f1)"
+          # Rename spec file
+          mv dev-pod-${rpm_version}/dev-pod-${{needs.create-release.outputs.package_version}}-*.spec dev-pod-${rpm_version}/dev-pod-${{needs.create-release.outputs.package_version}}.spec
           # Inject missing dependencies
           for dependency in ${DEPENDENCIES}; do
-            sed -i "s|Group: Converted/unknown|Group: Converted/unknown\nRequires: ${dependency}|g" "dev-pod-${{needs.create-release.outputs.package_version}}/dev-pod-${{needs.create-release.outputs.package_version}}-2.spec"
+            sed -i "s|Group: Converted/unknown|Group: Converted/unknown\nRequires: ${dependency}|g" "dev-pod-${rpm_version}/dev-pod-${{needs.create-release.outputs.package_version}}.spec"
           done
 
           # Remove unwanted dirs
-          sed -i 's|^"/usr"$||g' "dev-pod-${{needs.create-release.outputs.package_version}}/dev-pod-${{needs.create-release.outputs.package_version}}-2.spec"
-          sed -i 's|^"/usr/bin"$||g' "dev-pod-${{needs.create-release.outputs.package_version}}/dev-pod-${{needs.create-release.outputs.package_version}}-2.spec"
+          sed -i 's|^"/usr"$||g' "dev-pod-${rpm_version}/dev-pod-${{needs.create-release.outputs.package_version}}.spec"
+          sed -i 's|^"/usr/bin"$||g' "dev-pod-${rpm_version}/dev-pod-${{needs.create-release.outputs.package_version}}.spec"
 
-          cd "dev-pod-${{needs.create-release.outputs.package_version}}" || exit 1
-          rpmbuild --target=x86_64 --buildroot "$(pwd)" -bb "$(pwd)/dev-pod-${{needs.create-release.outputs.package_version}}-2.spec"
+          cd "dev-pod-${rpm_version}" || exit 1
+          rpmbuild --target=x86_64 --buildroot "$(pwd)" -bb "$(pwd)/dev-pod-${{needs.create-release.outputs.package_version}}.spec"
+
+          cd -
+          mv dev-pod-${{needs.create-release.outputs.package_version}}-*.x86_64.rpm dev-pod-${{needs.create-release.outputs.package_version}}.x86_64.rpm
+
 
       - name: Build Desktop App
         if: matrix.settings.host == 'windows-latest' && matrix.settings.cli_only == false
@@ -378,7 +384,7 @@ jobs:
             const fs = require("fs")
 
             const releaseId = "${{ needs.create-release.outputs.release_id }}"
-            const assetName = "dev-pod-${{needs.create-release.outputs.package_version}}-2.x86_64.rpm"
+            const assetName = "dev-pod-${{needs.create-release.outputs.package_version}}.x86_64.rpm"
             const assetPath = `desktop/src-tauri/target/${{ matrix.settings.target }}/release/bundle/deb/${assetName}`
 
             console.log("Attempting to upload release asset: ", assetName)
