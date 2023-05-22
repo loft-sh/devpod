@@ -197,6 +197,9 @@ func (d *dockerDriver) RunDevContainer(
 		}
 	}
 
+	// runArgs
+	args = append(args, parsedConfig.RunArgs...)
+
 	// run detached
 	args = append(args, "-d")
 
