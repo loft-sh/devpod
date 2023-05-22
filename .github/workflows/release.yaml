@@ -21,23 +21,40 @@ jobs:
         with:
           node-version: 16
 
-      - name: Get Version
-        id: get-version
-        run: |
-          PACKAGE_VERSION=$(node -p "require('./desktop/package.json').version")
-          echo "PACKAGE_VERSION=$PACKAGE_VERSION" >> $GITHUB_ENV
-          echo "package_version=$PACKAGE_VERSION" >> $GITHUB_OUTPUT
-          echo "TAG_NAME=DevPod-v$PACKAGE_VERSION" >> $GITHUB_ENV
+      - run: npm install semver
 
-      - name: Check Version
+      - name: Get Version
         uses: actions/github-script@v6
+        id: get-version
         with:
           script: |
-            const packageVersion = `${process.env.PACKAGE_VERSION}`
-            const refName = process.env.GITHUB_REF_NAME
-            if(refName.split("v")[1] !== packageVersion) {
-              core.setFailed(`Tag must match version from \`desktop/package.json\`. Ref Name: ${refName}, Package Version: ${packageVersion}`)
+            const semver = require("semver")
+            const refName = `${process.env.GITHUB_REF_NAME}`
+            let version = refName.split("v")[1]
+            const parsed = semver.parse(version);
+            const supportedPreleases = [
+              { tag: "alpha", number: 1 },
+              { tag: "beta", number: 2 },
+              { tag: "rc", number: 3 },
+            ];
+            const maybePrelease = semver.prerelease(version);
+            const maybeSupported = supportedPreleases.find(
+              (p) => p.tag === maybePrelease?.[0]
+            );
+
+            // If we have a prelease and it is in the supported range, then we can use it
+            if (maybePrelease && maybeSupported) {
+              version = `${parsed.major}.${parsed.minor}.${parsed.patch}-${
+                maybeSupported.number
+              }${maybePrelease[1] ?? 0}`;
             }
+
+            if(maybePrelease && !maybeSupported) {
+              core.setFailed(`Unsupported prerelease: ${version}`)
+            }
+
+            core.info(`Version: ${version}`)
+            core.setOutput("version", version)
 
       - name: Get Release
         uses: actions/github-script@v6
@@ -106,9 +123,14 @@ jobs:
         run: |
           git config --global core.autocrlf false
           git config --global core.eol lf
-          
+
       - name: Checkout repository
         uses: actions/checkout@v3
+
+      - name: Apply Version
+        if: matrix.settings.cli_only == false
+        run: yarn version --new-version ${{ needs.create-release.outputs.package_version }} --no-git-tag-version
+        working-directory: "./desktop"
 
       - name: Setup System Dependencies
         if: matrix.settings.host == 'ubuntu-latest' && matrix.settings.cli_only == false
@@ -452,6 +474,7 @@ jobs:
                 core.warning(`Unable to find asset: ${info.originalAssetName}`)
                 continue
               }
+              
               const assetID = a.id
               // Update the asset name
               await github.rest.repos.updateReleaseAsset({
@@ -489,6 +512,7 @@ jobs:
             const latestJSON = JSON.stringify(latest)
             const latestDestPath = "desktop/latest.json"
             core.info(`Writing latest.json to disk (${latestDestPath}): ${latestJSON}`)
+
             fs.writeFileSync(latestDestPath, latestJSON)
 
             // Attempting to upload a previously released asset results in an error so we need to clean up before

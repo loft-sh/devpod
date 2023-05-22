@@ -1,0 +1,7 @@
+{
+  "tauri": {
+    "updater": {
+      "active": false
+    }
+  }
+}

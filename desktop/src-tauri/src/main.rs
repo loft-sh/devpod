@@ -80,8 +80,11 @@ fn main() -> anyhow::Result<()> {
             action_logs::setup(&app.handle())?;
             custom_protocol.setup(app.handle());
 
-            let app_handle = app.handle();
-            check_update(app_handle);
+            #[cfg(feature = "updater")]
+            {
+                let app_handle = app.handle();
+                check_update(app_handle);
+            }
 
             let app_handle = app.handle();
             tauri::async_runtime::spawn(async move {
@@ -175,6 +178,7 @@ fn main() -> anyhow::Result<()> {
     Ok(())
 }
 
+#[cfg(feature = "updater")]
 fn check_update(app_handle: AppHandle) {
     tauri::async_runtime::spawn(async move {
         loop {
