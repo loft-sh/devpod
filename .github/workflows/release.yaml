@@ -54,7 +54,7 @@ jobs:
             }
 
             core.info(`Version: ${version}`)
-            core.setOutput("version", version)
+            core.setOutput("package_version", version)
 
       - name: Get Release
         uses: actions/github-script@v6
