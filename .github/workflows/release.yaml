@@ -238,7 +238,7 @@ jobs:
           rm -f "dev-pod-${{needs.create-release.outputs.package_version}}-2.x86_64.rpm"
 
           # Convert deb to rpm
-          alien -r -g -v "dev-pod_${{needs.create-release.outputs.package_version}}_amd64.deb"
+          alien -r -g -k -v "dev-pod_${{needs.create-release.outputs.package_version}}_amd64.deb"
 
           DEPENDENCIES="
             libappindicator-gtk3
