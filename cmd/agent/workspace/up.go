@@ -16,6 +16,7 @@ import (
 	"github.com/loft-sh/devpod/pkg/agent"
 	"github.com/loft-sh/devpod/pkg/agent/tunnel"
 	"github.com/loft-sh/devpod/pkg/binaries"
+	"github.com/loft-sh/devpod/pkg/client/clientimplementation"
 	"github.com/loft-sh/devpod/pkg/command"
 	"github.com/loft-sh/devpod/pkg/credentials"
 	"github.com/loft-sh/devpod/pkg/daemon"
@@ -82,6 +83,10 @@ func (cmd *UpCmd) Run(ctx context.Context) error {
 	defer cancel()
 	tunnelClient, logger, credentialsDir, err := initWorkspace(cancelCtx, cancel, workspaceInfo, cmd.Debug, true)
 	if err != nil {
+		err1 := clientimplementation.DeleteWorkspaceFolder(workspaceInfo.Workspace.Context, workspaceInfo.Workspace.ID, logger)
+		if err1 != nil {
+			return errors.Wrap(err, err1.Error())
+		}
 		return err
 	} else if credentialsDir != "" {
 		defer func() {
@@ -134,7 +139,7 @@ func initWorkspace(ctx context.Context, cancel context.CancelFunc, workspaceInfo
 	// prepare workspace
 	err = prepareWorkspace(ctx, workspaceInfo, tunnelClient, gitCredentialsHelper, logger)
 	if err != nil {
-		return nil, nil, "", err
+		return nil, logger, "", err
 	}
 
 	// install daemon

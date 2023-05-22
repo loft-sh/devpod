@@ -33,6 +33,43 @@ var _ = DevPodDescribe("devpod up test suite", func() {
 		framework.ExpectNoError(err)
 	})
 
+	ginkgo.Context("cleanup up on failure", func() {
+		ginkgo.It("ensure workspace cleanup when failing to create a workspace", func(ctx context.Context) {
+			f := framework.NewDefaultFramework(initialDir + "/bin")
+			_ = f.DevPodProviderAdd([]string{"docker"})
+			err := f.DevPodProviderUse(context.Background(), "docker")
+			framework.ExpectNoError(err)
+
+			initialList, err := f.DevPodList(ctx)
+			framework.ExpectNoError(err)
+			// Wait for devpod workspace to come online (deadline: 30s)
+			err = f.DevPodUp(ctx, "github.com/i/do-not-exist.git")
+			framework.ExpectError(err)
+
+			out, err := f.DevPodList(ctx)
+			framework.ExpectNoError(err)
+			framework.ExpectEqual(out, initialList)
+
+		}, ginkgo.SpecTimeout(60*time.Second))
+		ginkgo.It("ensure workspace cleanup when not a git or folder", func(ctx context.Context) {
+			f := framework.NewDefaultFramework(initialDir + "/bin")
+			_ = f.DevPodProviderAdd([]string{"docker"})
+			err := f.DevPodProviderUse(context.Background(), "docker")
+			framework.ExpectNoError(err)
+
+			initialList, err := f.DevPodList(ctx)
+			framework.ExpectNoError(err)
+			// Wait for devpod workspace to come online (deadline: 30s)
+			err = f.DevPodUp(ctx, "test1234.com")
+			framework.ExpectError(err)
+
+			out, err := f.DevPodList(ctx)
+			framework.ExpectNoError(err)
+			framework.ExpectEqual(out, initialList)
+
+		}, ginkgo.SpecTimeout(60*time.Second))
+	})
+
 	ginkgo.Context("using docker provider", func() {
 		ginkgo.Context("with docker", func() {
 			ginkgo.It("should start a new workspace with existing image", func(ctx context.Context) {
@@ -49,7 +86,6 @@ var _ = DevPodDescribe("devpod up test suite", func() {
 				err = f.DevPodUp(ctx, tempDir)
 				framework.ExpectNoError(err)
 			}, ginkgo.SpecTimeout(60*time.Second))
-
 			ginkgo.It("should start a new workspace and substitute devcontainer.json variables", func(ctx context.Context) {
 				tempDir, err := framework.CopyToTempDir("tests/up/testdata/docker-variables")
 				framework.ExpectNoError(err)
