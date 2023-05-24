@@ -17,6 +17,7 @@ export type TSettings = {
   debugFlag: boolean
   partyParrot: boolean
   fixedIDE: boolean
+  zoom: "sm" | "md" | "lg" | "xl"
 }
 type TSetting = keyof TSettings
 
@@ -32,6 +33,7 @@ const initialSettings: TSettings = {
   debugFlag: false,
   partyParrot: false,
   fixedIDE: false,
+  zoom: "md",
 }
 function getSettingKeys(): readonly TSetting[] {
   return getKeys(initialSettings)

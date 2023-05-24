@@ -1,9 +1,45 @@
-import { ChakraProvider, ColorModeScript, ToastProviderProps } from "@chakra-ui/react"
-import { ReactNode } from "react"
-import { theme } from "./theme"
+import {
+  ChakraProvider,
+  ColorModeScript,
+  Theme,
+  ToastProviderProps,
+  extendTheme,
+} from "@chakra-ui/react"
+import { ReactNode, useEffect, useState } from "react"
+import { TSettings, useSettings } from "../contexts"
+import { theme as initialTheme } from "./theme"
 const toastOptions: ToastProviderProps = { defaultOptions: { variant: "subtle" } }
 
+const fontSize: Record<TSettings["zoom"], string> = {
+  sm: "12px",
+  md: "14px",
+  lg: "16px",
+  xl: "18px",
+}
+
 export function ThemeProvider({ children }: Readonly<{ children?: ReactNode }>) {
+  const settings = useSettings()
+  const [theme, setTheme] = useState<Theme>(initialTheme)
+
+  useEffect(() => {
+    setTheme(
+      (current) =>
+        extendTheme(
+          {
+            styles: {
+              global: {
+                html: {
+                  fontSize: fontSize[settings.zoom],
+                },
+              },
+            },
+          },
+          current
+        ) as Theme
+    )
+    console.log(settings.zoom)
+  }, [settings])
+
   return (
     <>
       <ColorModeScript initialColorMode={theme.config.initialColorMode} />
