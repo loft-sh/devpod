@@ -41,7 +41,7 @@ func NewDockerDriver(workspaceInfo *provider2.AgentWorkspaceInfo, log log.Logger
 	}
 
 	log.Debugf("Using docker command '%s'", dockerCommand)
-	dockerHelper := &docker.DockerHelper{DockerCommand: dockerCommand, Environment: makeEnvironment(workspaceInfo.Agent.Docker.Envs)}
+	dockerHelper := &docker.DockerHelper{DockerCommand: dockerCommand, Environment: makeEnvironment(workspaceInfo.Agent.Docker.Env)}
 	return &dockerDriver{
 		Docker: dockerHelper,
 		Log:    log,

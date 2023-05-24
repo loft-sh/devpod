@@ -167,7 +167,7 @@ type ProviderDockerDriverConfig struct {
 	Install types.StrBool `json:"install,omitempty"`
 
 	// Environment variables to set when running docker commands
-	Envs map[string]string `json:"envs,omitempty"`
+	Env map[string]string `json:"envs,omitempty"`
 }
 
 type ProviderAgentConfigExec struct {

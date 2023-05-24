@@ -239,7 +239,7 @@ func rerunAsRoot(workspaceInfo *provider2.AgentWorkspaceInfo, log log.Logger) (b
 	dockerRootRequired := false
 	if workspaceInfo == nil || workspaceInfo.Agent.Driver == "" || workspaceInfo.Agent.Driver == provider2.DockerDriver {
 		var err error
-		dockerRootRequired, err = dockerReachable(workspaceInfo.Agent.Docker.Path, workspaceInfo.Agent.Docker.Envs)
+		dockerRootRequired, err = dockerReachable(workspaceInfo.Agent.Docker.Path, workspaceInfo.Agent.Docker.Env)
 		if err != nil {
 			log.Debugf("Error trying to reach docker daemon: %v", err)
 			dockerRootRequired = true
