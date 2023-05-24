@@ -38,20 +38,20 @@ ReactDOM.createRoot(document.getElementById("root") as HTMLElement).render(<Root
 function Root() {
   return (
     <StrictMode>
-      <ThemeProvider>
-        <QueryClientProvider client={queryClient}>
-          <SettingsProvider>
+      <SettingsProvider>
+        <ThemeProvider>
+          <QueryClientProvider client={queryClient}>
             <DevPodProvider>
               <RouterProvider router={router} />
             </DevPodProvider>
-          </SettingsProvider>
-          {/* Will be disabled in production automatically */}
-          <ReactQueryDevtools
-            position="bottom-right"
-            toggleButtonProps={{ style: { margin: "0.5em 0.5em 2rem" } }}
-          />
-        </QueryClientProvider>
-      </ThemeProvider>
+            {/* Will be disabled in production automatically */}
+            <ReactQueryDevtools
+              position="bottom-right"
+              toggleButtonProps={{ style: { margin: "0.5em 0.5em 2rem" } }}
+            />
+          </QueryClientProvider>
+        </ThemeProvider>
+      </SettingsProvider>
     </StrictMode>
   )
 }

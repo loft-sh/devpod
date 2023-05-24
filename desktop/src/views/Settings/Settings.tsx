@@ -6,6 +6,7 @@ import {
   Heading,
   HeadingProps,
   HStack,
+  Icon,
   Radio,
   RadioGroup,
   Select,
@@ -13,13 +14,14 @@ import {
   useColorModeValue,
   VStack,
 } from "@chakra-ui/react"
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { ReactNode } from "react"
+import { HiMagnifyingGlassPlus } from "react-icons/hi2"
 import { client } from "../../client"
 import { ToolbarTitle, useInstallCLI } from "../../components"
 import { TSettings, useChangeSettings } from "../../contexts"
-import { QueryKeys } from "../../queryKeys"
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { getIDEDisplayName } from "../../lib"
+import { QueryKeys } from "../../queryKeys"
 import { TIDE } from "../../types"
 import { useWelcomeModal } from "../../useWelcomeModal"
 
@@ -75,6 +77,21 @@ export function Settings() {
             </Button>
             <SettingDescription>Show the introduction to DevPod again</SettingDescription>
           </VStack>
+
+          <VStack align="start" paddingTop="2">
+            <HStack>
+              <Select
+                onChange={(e) => set("zoom", e.target.value as TSettings["zoom"])}
+                value={settings.zoom}>
+                <option value={"sm"}>Small</option>
+                <option value={"md"}>Regular</option>
+                <option value={"lg"}>Large</option>
+                <option value={"xl"}>Extra Large</option>
+              </Select>
+              <Icon as={HiMagnifyingGlassPlus} boxSize="6" color="gray.600" />
+            </HStack>
+            <SettingDescription>Adjust the zoom level</SettingDescription>
+          </VStack>
         </VStack>
 
         <VStack align="start">
@@ -106,8 +123,8 @@ export function Settings() {
             ))}
           </Select>
           <SettingDescription>
-            Select the default IDE you&apos;re using for workspaces. This will be overridden whenever
-            you create a workspace with a different IDE
+            Select the default IDE you&apos;re using for workspaces. This will be overridden
+            whenever you create a workspace with a different IDE
           </SettingDescription>
 
           <Checkbox
