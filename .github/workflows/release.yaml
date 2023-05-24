@@ -250,9 +250,10 @@ jobs:
             gtk3-immodules
           "
           rpm_version="$(echo ${{needs.create-release.outputs.package_version}} | cut -d'-' -f1)"
+
           # Rename spec file
-          ls -l
-          mv dev-pod-${rpm_version}/dev-pod-${{needs.create-release.outputs.package_version}}-*.spec dev-pod-${rpm_version}/dev-pod-${rpm_version}.spec
+          mv dev-pod-${rpm_version}/dev-pod-${{needs.create-release.outputs.package_version}}*.spec dev-pod-${rpm_version}/dev-pod-${rpm_version}.spec
+
           # Inject missing dependencies
           for dependency in ${DEPENDENCIES}; do
             sed -i "s|Group: Converted/unknown|Group: Converted/unknown\nRequires: ${dependency}|g" "dev-pod-${rpm_version}/dev-pod-${rpm_version}.spec"
@@ -266,8 +267,9 @@ jobs:
           rpmbuild --target=x86_64 --buildroot "$(pwd)" -bb "$(pwd)/dev-pod-${rpm_version}.spec"
 
           cd -
-          mv dev-pod-${{needs.create-release.outputs.package_version}}-*.x86_64.rpm dev-pod-${{needs.create-release.outputs.package_version}}.x86_64.rpm
-
+          if [ ! -e dev-pod-${{needs.create-release.outputs.package_version}}.x86_64.rpm ]; then
+            mv dev-pod-${{needs.create-release.outputs.package_version}}*.x86_64.rpm dev-pod-${{needs.create-release.outputs.package_version}}.x86_64.rpm
+          fi
 
       - name: Build Desktop App
         if: matrix.settings.host == 'windows-latest' && matrix.settings.cli_only == false
@@ -453,7 +455,7 @@ jobs:
               { target: "darwin-aarch64", sigFile: "aarch64.app.tar.gz.sig", packageType: ".tar.gz", originalAssetName: `DevPod_${version}_aarch64.dmg`, desiredAssetName: "DevPod_macos_aarch64.dmg", originalUpdaterAssetName: "DevPod_aarch64.app.tar.gz", desiredUpdaterAssetName: "DevPod_macos_aarch64.app.tar.gz" },
               { target: "darwin-x86_64", sigFile: "x64.app.tar.gz.sig", packageType: ".tar.gz", originalAssetName: `DevPod_${version}_x64.dmg`, desiredAssetName: "DevPod_macos_x64.dmg", originalUpdaterAssetName: "DevPod_x64.app.tar.gz", desiredUpdaterAssetName: "DevPod_macos_x64.app.tar.gz" },
               { target: "windows-x86_64", sigFile: ".msi.zip.sig", packageType: ".zip", originalAssetName: `DevPod_${winVersion}_x64_en-US.msi`, desiredAssetName: "DevPod_windows_x64_en-US.msi" },
-              { originalAssetName: `dev-pod-${version}-2.x86_64.rpm`, desiredAssetName: "DevPod_linux_x86_64.rpm" },
+              { originalAssetName: `dev-pod-${version}.x86_64.rpm`, desiredAssetName: "DevPod_linux_x86_64.rpm" },
               { originalAssetName: `dev-pod_${version}_amd64.deb`, desiredAssetName: "DevPod_linux_amd64.deb" },
             ]
 
