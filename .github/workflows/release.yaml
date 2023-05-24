@@ -480,6 +480,12 @@ jobs:
                   signature: await sig.text(),
                   url: `https://github.com/loft-sh/devpod/releases/download/${process.env.GITHUB_REF_NAME}/${assetName}`,
                 }
+                
+                // once we're done with the sig file, delete it
+                await github.rest.repos.deleteReleaseAsset({
+                  ...releaseArgs,
+                  asset_id: sigAsset.id
+                })
               }
 
               const a = release.data.assets.find(a => a.name === info.originalAssetName)
