@@ -235,7 +235,7 @@ jobs:
           sudo apt-get install -y alien rpm
           # Cleanup
           rm -rf "dev-pod-${{needs.create-release.outputs.package_version}}"
-          rm -f "dev-pod-${{needs.create-release.outputs.package_version}}-2.x86_64.rpm"
+          rm -f "*.rpm"
 
           # Convert deb to rpm
           alien -r -g -k -v "dev-pod_${{needs.create-release.outputs.package_version}}_amd64.deb"
@@ -251,18 +251,19 @@ jobs:
           "
           rpm_version="$(echo ${{needs.create-release.outputs.package_version}} | cut -d'-' -f1)"
           # Rename spec file
-          mv dev-pod-${rpm_version}/dev-pod-${{needs.create-release.outputs.package_version}}-*.spec dev-pod-${rpm_version}/dev-pod-${{needs.create-release.outputs.package_version}}.spec
+          ls -l
+          mv dev-pod-${rpm_version}/dev-pod-${{needs.create-release.outputs.package_version}}-*.spec dev-pod-${rpm_version}/dev-pod-${rpm_version}.spec
           # Inject missing dependencies
           for dependency in ${DEPENDENCIES}; do
-            sed -i "s|Group: Converted/unknown|Group: Converted/unknown\nRequires: ${dependency}|g" "dev-pod-${rpm_version}/dev-pod-${{needs.create-release.outputs.package_version}}.spec"
+            sed -i "s|Group: Converted/unknown|Group: Converted/unknown\nRequires: ${dependency}|g" "dev-pod-${rpm_version}/dev-pod-${rpm_version}.spec"
           done
 
           # Remove unwanted dirs
-          sed -i 's|^"/usr"$||g' "dev-pod-${rpm_version}/dev-pod-${{needs.create-release.outputs.package_version}}.spec"
-          sed -i 's|^"/usr/bin"$||g' "dev-pod-${rpm_version}/dev-pod-${{needs.create-release.outputs.package_version}}.spec"
+          sed -i 's|^"/usr"$||g' "dev-pod-${rpm_version}/dev-pod-${rpm_version}.spec"
+          sed -i 's|^"/usr/bin"$||g' "dev-pod-${rpm_version}/dev-pod-${rpm_version}.spec"
 
           cd "dev-pod-${rpm_version}" || exit 1
-          rpmbuild --target=x86_64 --buildroot "$(pwd)" -bb "$(pwd)/dev-pod-${{needs.create-release.outputs.package_version}}.spec"
+          rpmbuild --target=x86_64 --buildroot "$(pwd)" -bb "$(pwd)/dev-pod-${rpm_version}.spec"
 
           cd -
           mv dev-pod-${{needs.create-release.outputs.package_version}}-*.x86_64.rpm dev-pod-${{needs.create-release.outputs.package_version}}.x86_64.rpm
