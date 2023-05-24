@@ -21,6 +21,19 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
+func makeEnvironment(env map[string]string) []string {
+	if env == nil {
+		return nil
+	}
+
+	var ret []string
+	for k, v := range env {
+		ret = append(ret, k+"="+v)
+	}
+
+	return ret
+}
+
 func NewDockerDriver(workspaceInfo *provider2.AgentWorkspaceInfo, log log.Logger) driver.Driver {
 	dockerCommand := "docker"
 	if workspaceInfo.Agent.Docker.Path != "" {
@@ -28,7 +41,7 @@ func NewDockerDriver(workspaceInfo *provider2.AgentWorkspaceInfo, log log.Logger
 	}
 
 	log.Debugf("Using docker command '%s'", dockerCommand)
-	dockerHelper := &docker.DockerHelper{DockerCommand: dockerCommand}
+	dockerHelper := &docker.DockerHelper{DockerCommand: dockerCommand, Environment: makeEnvironment(workspaceInfo.Agent.Docker.Env)}
 	return &dockerDriver{
 		Docker: dockerHelper,
 		Log:    log,
@@ -63,7 +76,7 @@ func (d *dockerDriver) PushDevContainer(ctx context.Context, image string) error
 	}
 
 	// run command
-	d.Log.Debugf("Running docker command: docker %s", strings.Join(args, " "))
+	d.Log.Debugf("Running docker command: %s %s", d.Docker.DockerCommand, strings.Join(args, " "))
 	err := d.Docker.Run(ctx, args, nil, writer, writer)
 	if err != nil {
 		return errors.Wrap(err, "push image")
@@ -214,7 +227,7 @@ func (d *dockerDriver) RunDevContainer(
 	args = append(args, cmd...)
 
 	// run the command
-	d.Log.Debugf("Running docker command: docker %s", strings.Join(args, " "))
+	d.Log.Debugf("Running docker command: %s %s", d.Docker.DockerCommand, strings.Join(args, " "))
 	writer := d.Log.Writer(logrus.InfoLevel, false)
 	defer writer.Close()
 

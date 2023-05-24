@@ -7,6 +7,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"os"
 	"os/exec"
 	"strings"
 
@@ -18,6 +19,8 @@ import (
 
 type DockerHelper struct {
 	DockerCommand string
+	// allow command to have a custom environment
+	Environment []string
 }
 
 func (r *DockerHelper) GPUSupportEnabled() (bool, error) {
@@ -183,5 +186,9 @@ func (r *DockerHelper) FindContainer(labels []string) ([]string, error) {
 }
 
 func (r *DockerHelper) buildCmd(ctx context.Context, args ...string) *exec.Cmd {
-	return exec.CommandContext(ctx, r.DockerCommand, args...)
+	cmd := exec.CommandContext(ctx, r.DockerCommand, args...)
+	if r.Environment != nil {
+		cmd.Env = append(os.Environ(), r.Environment...)
+	}
+	return cmd
 }

@@ -186,6 +186,7 @@ func ResolveAgentConfig(devConfig *config.Config, provider *provider2.ProviderCo
 	agentConfig.Local = types.StrBool(resolveDefaultValue(string(agentConfig.Local), options))
 	agentConfig.Docker.Path = resolveDefaultValue(agentConfig.Docker.Path, options)
 	agentConfig.Docker.Install = types.StrBool(resolveDefaultValue(string(agentConfig.Docker.Install), options))
+	agentConfig.Docker.Env = resolveDefaultValues(agentConfig.Docker.Env, options)
 	agentConfig.Kubernetes.Path = resolveDefaultValue(agentConfig.Kubernetes.Path, options)
 	agentConfig.Kubernetes.HelperImage = resolveDefaultValue(agentConfig.Kubernetes.HelperImage, options)
 	agentConfig.Kubernetes.Config = resolveDefaultValue(agentConfig.Kubernetes.Config, options)
@@ -484,6 +485,15 @@ func resolveDefaultValue(val string, resolvedOptions map[string]string) string {
 
 		return s
 	})
+}
+
+// replace all value in the map with the resolved default value
+func resolveDefaultValues(vals map[string]string, resolvedOptions map[string]string) map[string]string {
+	ret := make(map[string]string)
+	for k, v := range vals {
+		ret[k] = resolveDefaultValue(v, resolvedOptions)
+	}
+	return ret
 }
 
 func addDependencies(g *graph.Graph, options map[string]*provider2.ProviderOption) error {
