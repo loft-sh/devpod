@@ -26,9 +26,6 @@ command_exists() {
   command -v "$@" >/dev/null 2>&1
 }
 
-sudo_password_required() {
-}
-
 is_arm() {
   case "$(uname -a)" in
   *arm* ) true;;
