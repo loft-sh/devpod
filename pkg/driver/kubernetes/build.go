@@ -156,9 +156,9 @@ func (k *kubernetesDriver) buildPod(
 	// get pod
 	var pod *corev1.Pod
 	if k.config.BuildkitPrivileged == "true" {
-		pod = getPrivilegedBuildKitPod(id, k.config.BuildkitImage)
+		pod = getPrivilegedBuildKitPod(id, k.config.BuildkitImage, k.config.ServiceAccount)
 	} else {
-		pod = getRootlessBuildKitPod(id, k.config.BuildkitImage)
+		pod = getRootlessBuildKitPod(id, k.config.BuildkitImage, k.config.ServiceAccount)
 	}
 
 	// delete existing pod
@@ -259,7 +259,7 @@ func newBuildKitClient(ctx context.Context, reader io.Reader, writer io.WriteClo
 	}))
 }
 
-func getPrivilegedBuildKitPod(id, buildKitImage string) *corev1.Pod {
+func getPrivilegedBuildKitPod(id, buildKitImage string, serviceAccountName string) *corev1.Pod {
 	if buildKitImage == "" {
 		buildKitImage = defaultBuildkitImage
 	}
@@ -274,6 +274,7 @@ func getPrivilegedBuildKitPod(id, buildKitImage string) *corev1.Pod {
 		},
 		Spec: corev1.PodSpec{
 			EnableServiceLinks: new(bool),
+			ServiceAccountName: serviceAccountName,
 			Containers: []corev1.Container{
 				{
 					Name:  "buildkitd",
@@ -313,7 +314,7 @@ func getPrivilegedBuildKitPod(id, buildKitImage string) *corev1.Pod {
 	}
 }
 
-func getRootlessBuildKitPod(id, buildKitImage string) *corev1.Pod {
+func getRootlessBuildKitPod(id, buildKitImage string, serviceAccountName string) *corev1.Pod {
 	if buildKitImage == "" {
 		buildKitImage = defaultRootlessBuildkitImage
 	}
@@ -331,6 +332,7 @@ func getRootlessBuildKitPod(id, buildKitImage string) *corev1.Pod {
 		},
 		Spec: corev1.PodSpec{
 			EnableServiceLinks: new(bool),
+			ServiceAccountName: serviceAccountName,
 			Containers: []corev1.Container{
 				{
 					Name:  "buildkitd",
