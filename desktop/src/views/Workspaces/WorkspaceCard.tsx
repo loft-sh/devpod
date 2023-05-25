@@ -186,10 +186,9 @@ export function WorkspaceCard({ workspaceID, onSelectionChange }: TWorkspaceCard
         variant="outline"
         maxHeight="48">
         <Image
-          objectFit="cover"
-          maxHeight={"full"}
-          minWidth="300px"
-          maxWidth="300px"
+          objectFit="contain"
+          width="18.75rem"
+          height="12rem"
           style={{ aspectRatio: "2 / 1" }}
           src={picture ?? NoWorkspaceImageSvg}
           fallbackSrc={NoWorkspaceImageSvg}
