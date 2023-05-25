@@ -29,14 +29,14 @@ func ExecuteCommandWithShell(
 	// try to find a proper shell
 	if runtime.GOOS != "windows" {
 		if command2.Exists("bash") {
-			cmd := exec.CommandContext(ctx, "bash", "-i", "-c", command)
+			cmd := exec.CommandContext(ctx, "bash", "-c", command)
 			cmd.Stdin = stdin
 			cmd.Stdout = stdout
 			cmd.Stderr = stderr
 			cmd.Env = environ
 			return cmd.Run()
 		} else if command2.Exists("sh") {
-			cmd := exec.CommandContext(ctx, "sh", "-i", "-c", command)
+			cmd := exec.CommandContext(ctx, "sh", "-c", command)
 			cmd.Stdin = stdin
 			cmd.Stdout = stdout
 			cmd.Stderr = stderr
