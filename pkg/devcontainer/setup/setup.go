@@ -97,8 +97,9 @@ func ChownWorkspace(setupInfo *config.Result, log log.Logger) error {
 
 	log.Infof("Chown workspace...")
 	err = copy2.ChownR(setupInfo.SubstitutionContext.ContainerWorkspaceFolder, user)
+	// do not exit on error, we can have non-fatal errors
 	if err != nil {
-		return errors.Wrap(err, "chown workspace folder")
+		log.Warn(err)
 	}
 
 	return nil
