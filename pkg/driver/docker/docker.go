@@ -152,6 +152,16 @@ func (d *dockerDriver) RunDevContainer(
 	if mergedConfig.Privileged != nil && *mergedConfig.Privileged {
 		args = append(args, "--privileged")
 	}
+
+	// In case we're using podman, let's use userns to keep
+	// the ID of the user (vscode) inside the container as
+	// the same of the external user.
+	// This will avoid problems of mismatching chowns on the
+	// project files.
+	if d.Docker.IsPodman() {
+		args = append(args, "--userns", "keep-id")
+	}
+
 	for _, capAdd := range mergedConfig.CapAdd {
 		args = append(args, "--cap-add", capAdd)
 	}
@@ -211,7 +221,7 @@ func (d *dockerDriver) RunDevContainer(
 	args = append(args, cmd...)
 
 	// run the command
-	d.Log.Debugf("Running docker command: docker %s", strings.Join(args, " "))
+	d.Log.Debugf("Running docker command: %s %s", d.Docker.DockerCommand, strings.Join(args, " "))
 	writer := d.Log.Writer(logrus.InfoLevel, false)
 	defer writer.Close()
 

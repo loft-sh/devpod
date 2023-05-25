@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"io"
 	"os/exec"
@@ -141,6 +140,17 @@ func (r *DockerHelper) InspectContainers(ids []string) ([]config.ContainerDetail
 	return details, nil
 }
 
+func (r *DockerHelper) IsPodman() bool {
+	args := []string{"--version"}
+
+	out, err := r.buildCmd(context.TODO(), args...).Output()
+	if err != nil {
+		return false
+	}
+
+	return strings.Contains(string(out), "podman")
+}
+
 func (r *DockerHelper) Inspect(ids []string, inspectType string, obj interface{}) error {
 	args := []string{"inspect", "--type", inspectType}
 	args = append(args, ids...)
@@ -157,6 +167,9 @@ func (r *DockerHelper) Inspect(ids []string, inspectType string, obj interface{}
 	return nil
 }
 
+// FindContainer will try to find a container based on the input labels.
+// If no container is found, it will search for the labels manually inspecting
+// containers.
 func (r *DockerHelper) FindContainer(labels []string) ([]string, error) {
 	args := []string{"ps", "-q", "-a"}
 	for _, label := range labels {
@@ -165,12 +178,8 @@ func (r *DockerHelper) FindContainer(labels []string) ([]string, error) {
 
 	out, err := r.buildCmd(context.TODO(), args...).Output()
 	if err != nil {
-		var exitError *exec.ExitError
-		if errors.As(err, &exitError) {
-			return nil, fmt.Errorf("find container: %s%s", string(out), strings.TrimSpace(string(exitError.Stderr)))
-		}
-
-		return nil, fmt.Errorf("find container: %s", strings.TrimSpace(string(out)))
+		// fallback to manual search
+		return r.FindContainerJSON(labels)
 	}
 
 	arr := []string{}
@@ -180,6 +189,42 @@ func (r *DockerHelper) FindContainer(labels []string) ([]string, error) {
 	}
 
 	return arr, nil
+}
+
+// FindContainerJSON will manually search for containers with matching labels.
+// This is useful in case the `--filter` doesn't work.
+func (r *DockerHelper) FindContainerJSON(labels []string) ([]string, error) {
+	args := []string{"ps", "-q", "-a"}
+	out, err := r.buildCmd(context.TODO(), args...).Output()
+	if err != nil {
+		return nil, perrors.Wrap(err, "find container: ")
+	}
+
+	result := []string{}
+
+	ids := strings.Split(strings.TrimSuffix(string(out), "\n"), "\n")
+	for _, id := range ids {
+		id = strings.TrimSpace(id)
+		found := true
+
+		containers, err := r.InspectContainers([]string{id})
+		if err != nil {
+			continue
+		}
+
+		for _, label := range labels {
+			key := strings.Split(label, "=")[0]
+			value := strings.Join(strings.Split(label, "=")[1:], "=")
+
+			found = containers[0].Config.Labels[key] == value
+		}
+
+		if found {
+			result = append(result, id)
+		}
+	}
+
+	return result, nil
 }
 
 func (r *DockerHelper) buildCmd(ctx context.Context, args ...string) *exec.Cmd {
