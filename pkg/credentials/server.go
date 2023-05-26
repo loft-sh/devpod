@@ -58,7 +58,7 @@ func RunCredentialsServer(
 		if configureGitUser {
 			err = configureGitUserLocally(ctx, userName, client)
 			if err != nil {
-				log.Errorf("Error configuring git user: %w", err)
+				log.Errorf("Error configuring git user: %v", err)
 			}
 		}
 
