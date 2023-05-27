@@ -37,7 +37,6 @@ export function ThemeProvider({ children }: Readonly<{ children?: ReactNode }>) 
           current
         ) as Theme
     )
-    console.log(settings.zoom)
   }, [settings])
 
   return (

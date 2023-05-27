@@ -177,14 +177,7 @@ export function WorkspaceCard({ workspaceID, onSelectionChange }: TWorkspaceCard
 
   return (
     <>
-      <Card
-        key={id}
-        direction="row"
-        width="full"
-        maxWidth="60rem"
-        overflow="hidden"
-        variant="outline"
-        maxHeight="48">
+      <Card key={id} direction="row" width="full" maxWidth="60rem" variant="outline" maxHeight="48">
         <Image
           objectFit="contain"
           width="18.75rem"
@@ -441,12 +434,19 @@ function WorkspaceCardHeader({
       : getIDEName(ide, idesQuery.data)
 
   return (
-    <CardHeader display="flex" flexDirection="column">
+    <CardHeader display="flex" flexDirection="column" overflow="hidden">
       <VStack align="start" spacing={0}>
-        <HStack justifyContent="space-between">
+        <HStack justifyContent="space-between" maxWidth="30rem">
           <Heading size="md">
             <HStack alignItems="center">
-              <Text fontWeight="bold">{id}</Text>
+              <Text
+                fontWeight="bold"
+                maxWidth="23rem"
+                overflow="hidden"
+                whiteSpace="nowrap"
+                textOverflow="ellipsis">
+                {id}
+              </Text>
               <WorkspaceStatusBadge
                 status={status}
                 isLoading={isLoading}
@@ -460,7 +460,15 @@ function WorkspaceCardHeader({
           )}
         </HStack>
         {source !== null && (
-          <Text fontSize="sm" color="gray.500" userSelect="auto">
+          <Text
+            fontSize="sm"
+            color="gray.500"
+            userSelect="auto"
+            maxWidth="30rem"
+            overflow="hidden"
+            whiteSpace="nowrap"
+            textOverflow="ellipsis"
+            _hover={{ overflow: "visible" }}>
             {getSourceName(source)}
           </Text>
         )}
