@@ -79,7 +79,7 @@ if {{ .ExistsCheck }}; then
   if [ "$user" != 'root' ]; then
     if command_exists sudo; then
       # check if sudo requires a password
-      if echo $(sudo -n uptime 2>&1) | grep -q "a password is required"; then
+      if ! sudo -nl >/dev/null 2>&1; then
         >&2 echo Error: sudo requires a password and no password is available. Please ensure your user account is configured with NOPASSWD.
         exit 1
       fi
