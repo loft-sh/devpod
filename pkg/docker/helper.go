@@ -55,6 +55,15 @@ func (r *DockerHelper) FindDevContainer(labels []string) (*config.ContainerDetai
 	return nil, nil
 }
 
+func (r *DockerHelper) DeleteVolume(ctx context.Context, volume string) error {
+	out, err := r.buildCmd(ctx, "volume", "rm", volume).CombinedOutput()
+	if err != nil {
+		return perrors.Wrapf(err, "%s", string(out))
+	}
+
+	return nil
+}
+
 func (r *DockerHelper) Stop(ctx context.Context, id string) error {
 	out, err := r.buildCmd(ctx, "stop", id).CombinedOutput()
 	if err != nil {
