@@ -124,7 +124,7 @@ func (d *Dockerfile) findValue(buildArgs map[string]string, baseImageEnv map[str
 
 		// search args
 		if considerArg {
-			for i := len(stage.Args) - 1; i >= 0; i++ {
+			for i := len(stage.Args) - 1; i >= 0; i-- {
 				if stage.Args[i].Key != variable || stage.Args[i].Line >= untilLine {
 					continue
 				}
