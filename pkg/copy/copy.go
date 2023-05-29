@@ -37,6 +37,7 @@ func ChownR(path string, userName string) error {
 	}
 
 	uid, _ := strconv.Atoi(userID.Uid)
+	gid, _ := strconv.Atoi(userID.Gid)
 	return filepath.WalkDir(path, func(name string, dirEntry fs.DirEntry, err error) error {
 		if err != nil {
 			return err
@@ -52,7 +53,7 @@ func ChownR(path string, userName string) error {
 		}
 
 		if err == nil {
-			err = os.Chown(name, uid, -1)
+			err = os.Chown(name, uid, gid)
 		}
 		return err
 	})
