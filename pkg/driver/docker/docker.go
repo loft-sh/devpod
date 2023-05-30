@@ -101,7 +101,6 @@ func (d *dockerDriver) DeleteDevContainer(ctx context.Context, id string, delete
 		volume = container[0].Config.Labels["dev.containers.id"]
 	}
 
-
 	err := d.Docker.Remove(ctx, id)
 	if err != nil {
 		return err
