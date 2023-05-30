@@ -198,6 +198,7 @@ func ResolveAgentConfig(devConfig *config.Config, provider *provider2.ProviderCo
 	agentConfig.Kubernetes.BuildkitImage = resolveDefaultValue(agentConfig.Kubernetes.BuildkitImage, options)
 	agentConfig.Kubernetes.BuildkitPrivileged = types.StrBool(resolveDefaultValue(string(agentConfig.Kubernetes.BuildkitPrivileged), options))
 	agentConfig.Kubernetes.PersistentVolumeSize = resolveDefaultValue(agentConfig.Kubernetes.PersistentVolumeSize, options)
+	agentConfig.Kubernetes.StorageClassName = resolveDefaultValue(agentConfig.Kubernetes.StorageClassName, options)
 	agentConfig.Kubernetes.CreateNamespace = types.StrBool(resolveDefaultValue(string(agentConfig.Kubernetes.CreateNamespace), options))
 	agentConfig.DataPath = resolveDefaultValue(agentConfig.DataPath, options)
 	agentConfig.Path = resolveDefaultValue(agentConfig.Path, options)
