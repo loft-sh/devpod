@@ -157,6 +157,9 @@ type ProviderKubernetesDriverConfig struct {
 
 	// PersistentVolumeSize is the size of the persistent volume in GB
 	PersistentVolumeSize string `json:"persistentVolumeSize,omitempty"`
+
+	// StorageClassName is the name of the custom storage class  
+	StorageClassName string `json:"storageClassName,omitempty"`
 }
 
 type ProviderDockerDriverConfig struct {

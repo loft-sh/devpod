@@ -29,7 +29,7 @@ func (k *kubernetesDriver) createPersistentVolumeClaim(
 		return err
 	}
 
-	k.Log.Infof("Create Persistent Volume '%s'", name)
+	k.Log.Infof("Create Persistent Volume Claim'%s'", name)
 	buf := &bytes.Buffer{}
 	err = k.runCommand(ctx, []string{"create", "-f", "-"}, strings.NewReader(pvcString), buf, buf)
 	if err != nil {
@@ -62,7 +62,7 @@ func (k *kubernetesDriver) buildPersistentVolumeClaim(
 		return "", errors.Wrapf(err, "parse persistent volume size '%s'", size)
 	}
 
-	raw, err := json.Marshal(&corev1.PersistentVolumeClaim{
+	pvc := &corev1.PersistentVolumeClaim{
 		TypeMeta: metav1.TypeMeta{
 			Kind:       "PersistentVolumeClaim",
 			APIVersion: corev1.SchemeGroupVersion.String(),
@@ -86,7 +86,14 @@ func (k *kubernetesDriver) buildPersistentVolumeClaim(
 				},
 			},
 		},
-	})
+	}
+
+	if k.config.StorageClassName != "" {
+		pvc.Spec.StorageClassName = &k.config.StorageClassName
+	}
+
+
+	raw, err := json.Marshal(pvc)
 	if err != nil {
 		return "", err
 	}

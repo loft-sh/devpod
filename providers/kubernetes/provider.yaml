@@ -26,6 +26,7 @@ optionGroups:
       - CREATE_NAMESPACE
       - KUBECTL_PATH
       - INACTIVITY_TIMEOUT
+      - STORAGE_CLASS
     name: "Advanced Options"
 options:
   BUILD_REPOSITORY:
@@ -71,6 +72,8 @@ options:
     global: true
   INACTIVITY_TIMEOUT:
     description: "If defined, will automatically stop the pod after the inactivity period. Examples: 10m, 1h"
+  STORAGE_CLASS:
+    description: If defined, DevPod will use the given storage class to create the persistent volume claim.
 agent:
   containerInactivityTimeout: ${INACTIVITY_TIMEOUT}
   local: true
@@ -88,6 +91,7 @@ agent:
     buildkitPrivileged: ${BUILDKIT_PRIVILEGED}
     persistentVolumeSize: ${DISK_SIZE}
     createNamespace: ${CREATE_NAMESPACE}
+    storageClassName: ${STORAGE_CLASS}
 exec:
   init: |-
     # Check if kubernetes is reachable
