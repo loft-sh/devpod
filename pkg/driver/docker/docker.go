@@ -90,9 +90,30 @@ func (d *dockerDriver) StartDevContainer(ctx context.Context, id string, labels 
 }
 
 func (d *dockerDriver) DeleteDevContainer(ctx context.Context, id string, deleteVolumes bool) error {
-	// TODO: implement deleteVolumes
+	var volume string
 
-	return d.Docker.Remove(ctx, id)
+	if deleteVolumes {
+		// inspect container deleteVolumes
+		container, err := d.Docker.InspectContainers([]string{id})
+		if err != nil {
+			return err
+		}
+		if len(container) == 0 {
+			return errors.Errorf("cannot find container")
+		}
+		volume = container[0].Config.Labels["dev.containers.id"]
+	}
+
+	err := d.Docker.Remove(ctx, id)
+	if err != nil {
+		return err
+	}
+
+	if deleteVolumes {
+		return d.Docker.DeleteVolume(ctx, volume)
+	}
+
+	return nil
 }
 
 func (d *dockerDriver) StopDevContainer(ctx context.Context, id string) error {
