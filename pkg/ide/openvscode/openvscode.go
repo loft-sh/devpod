@@ -36,7 +36,7 @@ var Options = ide.Options{
 	VersionOption: {
 		Name:        VersionOption,
 		Description: "The version for the open vscode binary",
-		Default:     "v1.76.2",
+		Default:     "v1.78.2",
 	},
 	OpenOption: {
 		Name:        OpenOption,
@@ -210,7 +210,7 @@ func (o *OpenVSCodeServer) installSettings() error {
 		return err
 	}
 
-	err = copy2.ChownR(settingsDir, o.userName)
+	err = copy2.ChownR(location, o.userName)
 	if err != nil {
 		return err
 	}
