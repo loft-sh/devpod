@@ -98,6 +98,9 @@ func (d *dockerDriver) DeleteDevContainer(ctx context.Context, id string, delete
 		if err != nil {
 			return err
 		}
+		if len(container) == 0 {
+			return errors.Errorf("cannot find container")
+		}
 		volume = container[0].Config.Labels["dev.containers.id"]
 	}
 
