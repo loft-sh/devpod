@@ -13,12 +13,16 @@ import { useNavigate } from "react-router-dom"
 import { Routes } from "../../routes"
 import { TProviderID } from "../../types"
 import { SetupProviderSteps } from "../Providers"
+import { TCloneProviderInfo } from "./AddProvider"
 
 export function useSetupProviderModal() {
   const navigate = useNavigate()
   const { isOpen, onClose, onOpen } = useDisclosure()
   const [isStrict, setIsStrict] = useState(true)
   const [suggestedProvider, setSuggestedProvider] = useState<TProviderID | undefined>(undefined)
+  const [cloneProviderInfo, setCloneProviderInfo] = useState<TCloneProviderInfo | undefined>(
+    undefined
+  )
   const [wasDismissed, setWasDismissed] = useState(false)
   const [currentProviderID, setCurrentProviderID] = useState<string | null>(null)
 
@@ -26,13 +30,22 @@ export function useSetupProviderModal() {
     ({
       isStrict,
       suggestedProvider,
-    }: Readonly<{ isStrict: boolean; suggestedProvider?: TProviderID }>) => {
+      cloneProviderInfo,
+    }: Readonly<{
+      isStrict: boolean
+      suggestedProvider?: TProviderID
+      cloneProviderInfo?: TCloneProviderInfo
+    }>) => {
       if (isOpen) {
         return
       }
 
       if (suggestedProvider) {
         setSuggestedProvider(suggestedProvider)
+      }
+
+      if (cloneProviderInfo) {
+        setCloneProviderInfo(cloneProviderInfo)
       }
 
       setIsStrict(isStrict)
@@ -80,6 +93,7 @@ export function useSetupProviderModal() {
             <VStack align="start" spacing="8">
               <SetupProviderSteps
                 suggestedProvider={suggestedProvider}
+                cloneProviderInfo={cloneProviderInfo}
                 onProviderIDChanged={setCurrentProviderID}
                 onFinish={onClose}
                 isModal
@@ -89,7 +103,7 @@ export function useSetupProviderModal() {
         </ModalContent>
       </Modal>
     ),
-    [onClose, isOpen, title, handleCloseClicked, suggestedProvider]
+    [onClose, isOpen, title, handleCloseClicked, suggestedProvider, cloneProviderInfo]
   )
 
   return { modal, show, isOpen, wasDismissed }

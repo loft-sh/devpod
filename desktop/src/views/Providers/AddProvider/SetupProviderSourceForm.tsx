@@ -20,7 +20,7 @@ import {
   useBreakpointValue,
 } from "@chakra-ui/react"
 import styled from "@emotion/styled"
-import { useMutation, useQueryClient } from "@tanstack/react-query"
+import { useQueryClient } from "@tanstack/react-query"
 import { AnimatePresence, motion } from "framer-motion"
 import { useCallback, useEffect, useRef, useState } from "react"
 import { Controller, ControllerRenderProps, SubmitHandler, useForm } from "react-hook-form"
@@ -33,14 +33,10 @@ import { useProviders } from "../../../contexts"
 import { CustomSvg } from "../../../images"
 import { exists, isError, randomString, useFormErrors } from "../../../lib"
 import { QueryKeys } from "../../../queryKeys"
-import {
-  TAddProviderConfig,
-  TProviderID,
-  TProviderOptionGroup,
-  TProviderOptions,
-  TWithProviderID,
-} from "../../../types"
-import { FieldName, TFormValues } from "./types"
+import { TProviderID } from "../../../types"
+import { LoadingProviderIndicator } from "./LoadingProviderIndicator"
+import { FieldName, TFormValues, TSetupProviderResult } from "./types"
+import { useAddProvider } from "./useAddProvider"
 
 const Form = styled.form`
   width: 100%;
@@ -53,10 +49,7 @@ const ALLOWED_NAMES_REGEX = /^[a-z0-9\\-]+$/
 type TSetupProviderSourceFormProps = Readonly<{
   suggestedProvider?: TProviderID
   reset: () => void
-  onFinish: (
-    result: TWithProviderID &
-      Readonly<{ options: TProviderOptions; optionGroups: TProviderOptionGroup[] }>
-  ) => void
+  onFinish: (result: TSetupProviderResult) => void
   removeDanglingProviders: VoidFunction
 }>
 export function SetupProviderSourceForm({
@@ -80,56 +73,7 @@ export function SetupProviderSourceForm({
     status,
     error,
     reset: resetAddProvider,
-  } = useMutation({
-    mutationFn: async ({
-      rawProviderSource,
-      config,
-    }: Readonly<{
-      rawProviderSource: string
-      config: TAddProviderConfig
-    }>) => {
-      // check if provider exists and is not initialized
-      const providerID = config.name || (await client.providers.newID(rawProviderSource)).unwrap()
-      if (!providerID) {
-        throw new Error(`Couldn't find provider id`)
-      }
-
-      // list all providers
-      let providers = (await client.providers.listAll()).unwrap()
-      if (providers?.[providerID]) {
-        if (!providers[providerID]?.state?.initialized) {
-          ;(await client.providers.remove(providerID)).unwrap()
-        } else {
-          throw new Error(
-            `Provider with name ${providerID} already exists, please choose a different name`
-          )
-        }
-      }
-
-      // add provider
-      ;(await client.providers.add(rawProviderSource, config)).unwrap()
-
-      // get options
-      let options: TProviderOptions | undefined
-      try {
-        options = (await client.providers.getOptions(providerID!)).unwrap()
-      } catch (e) {
-        ;(await client.providers.remove(providerID)).unwrap()
-        throw e
-      }
-
-      // check if provider could be added
-      providers = (await client.providers.listAll()).unwrap()
-      if (!providers?.[providerID!]) {
-        throw new Error(`Provider ${providerID} couldn't be found`)
-      }
-
-      return {
-        providerID: providerID!,
-        options: options!,
-        optionGroups: providers[providerID!]?.config?.optionGroups || [],
-      }
-    },
+  } = useAddProvider({
     onSuccess(result) {
       queryClient.invalidateQueries(QueryKeys.PROVIDERS)
       setValue(FieldName.PROVIDER_NAME, undefined, { shouldDirty: true })
@@ -406,7 +350,9 @@ export function SetupProviderSourceForm({
           </AnimatePresence>
 
           {status === "error" && isError(error) && <ErrorMessageBox error={error} />}
-          {isLoading && <LoadingProvider name={providerName ?? providerSource} />}
+          {isLoading && (
+            <LoadingProviderIndicator label={`Loading ${providerName ?? providerSource}`} />
+          )}
         </Stack>
       </Form>
     </>
@@ -417,9 +363,10 @@ type TCustomNameInputProps = Readonly<{
   field: ControllerRenderProps<TFormValues, (typeof FieldName)["PROVIDER_NAME"]>
   isInvalid: boolean
   onAccept: () => void
+  isDisabled?: boolean
 }> &
   InputProps
-function CustomNameInput({ field, isInvalid, onAccept }: TCustomNameInputProps) {
+export function CustomNameInput({ field, isInvalid, onAccept, isDisabled }: TCustomNameInputProps) {
   return (
     <InputGroup>
       <Input
@@ -437,7 +384,7 @@ function CustomNameInput({ field, isInvalid, onAccept }: TCustomNameInputProps) 
             variant="outline"
             aria-label="Save new name"
             colorScheme="green"
-            isDisabled={isInvalid}
+            isDisabled={isInvalid || field.value === "" || isDisabled}
             leftIcon={<CheckIcon boxSize="4" />}
             onClick={() => onAccept()}>
             Save
@@ -500,47 +447,5 @@ function CustomProviderInput({ field, isInvalid, onAccept }: TCustomProviderInpu
         </Button>
       </InputRightElement>
     </InputGroup>
-  )
-}
-
-function LoadingProvider({ name }: Readonly<{ name: string | undefined }>) {
-  return (
-    <HStack marginTop="2" justifyContent="center" alignItems="center" color="gray.600">
-      <Text fontWeight="medium">Loading {name}</Text>
-      <Box as="svg" height="3" marginInlineStart="0 !important" width="8" viewBox="0 0 48 30">
-        <circle fill="currentColor" stroke="none" cx="6" cy="24" r="6">
-          <animateTransform
-            attributeName="transform"
-            dur="1s"
-            type="translate"
-            values="0 0; 0 -12; 0 0; 0 0; 0 0; 0 0"
-            repeatCount="indefinite"
-            begin="0"
-          />
-        </circle>
-        <circle fill="currentColor" stroke="none" cx="24" cy="24" r="6">
-          <animateTransform
-            id="op"
-            attributeName="transform"
-            dur="1s"
-            type="translate"
-            values="0 0; 0 -12; 0 0; 0 0; 0 0; 0 0"
-            repeatCount="indefinite"
-            begin="0.3s"
-          />
-        </circle>
-        <circle fill="currentColor" stroke="none" cx="42" cy="24" r="6">
-          <animateTransform
-            id="op"
-            attributeName="transform"
-            dur="1s"
-            type="translate"
-            values="0 0; 0 -12; 0 0; 0 0; 0 0; 0 0"
-            repeatCount="indefinite"
-            begin="0.6s"
-          />
-        </circle>
-      </Box>
-    </HStack>
   )
 }

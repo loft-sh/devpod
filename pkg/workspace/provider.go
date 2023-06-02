@@ -99,7 +99,12 @@ func UpdateProvider(devPodConfig *config.Config, providerName, providerSourceRaw
 		}
 
 		if providerConfig.Config.Source.Internal {
-			providerSourceRaw = providerConfig.Config.Name
+			// Name could also be overridden if initial name was already taken, so prefer the raw source if available
+			if providerConfig.Config.Source.Raw == "" {
+				providerSourceRaw = providerConfig.Config.Name
+			} else {
+				providerSourceRaw = providerConfig.Config.Source.Raw
+			}
 		} else if providerConfig.Config.Source.URL != "" {
 			providerSourceRaw = providerConfig.Config.Source.URL
 		} else if providerConfig.Config.Source.File != "" {
@@ -120,10 +125,13 @@ func UpdateProvider(devPodConfig *config.Config, providerName, providerSourceRaw
 }
 
 func ResolveProvider(providerSource string, log log.Logger) ([]byte, *provider2.ProviderSource, error) {
+	retSource := &provider2.ProviderSource{Raw: strings.TrimSpace(providerSource)}
+
 	// in-built?
 	internalProviders := providers.GetBuiltInProviders()
 	if internalProviders[providerSource] != "" {
-		return []byte(internalProviders[providerSource]), &provider2.ProviderSource{Internal: true}, nil
+		retSource.Internal = true
+		return []byte(internalProviders[providerSource]), retSource, nil
 	}
 
 	// url?
@@ -133,8 +141,9 @@ func ResolveProvider(providerSource string, log log.Logger) ([]byte, *provider2.
 		if err != nil {
 			return nil, nil, err
 		}
+		retSource.URL = providerSource
 
-		return out, &provider2.ProviderSource{URL: providerSource}, nil
+		return out, retSource, nil
 	}
 
 	// local file?
@@ -147,10 +156,9 @@ func ResolveProvider(providerSource string, log log.Logger) ([]byte, *provider2.
 				if err != nil {
 					return nil, nil, err
 				}
+				retSource.File = absPath
 
-				return out, &provider2.ProviderSource{
-					File: absPath,
-				}, nil
+				return out, retSource, nil
 			}
 		}
 	}
@@ -207,6 +215,7 @@ func DownloadProviderGithub(originalPath string, log log.Logger) ([]byte, *provi
 	}
 
 	return out, &provider2.ProviderSource{
+		Raw:    originalPath,
 		Github: path,
 	}, nil
 }
@@ -383,10 +392,14 @@ func LoadAllProviders(devPodConfig *config.Config, log log.Logger) (map[string]*
 			continue
 		}
 
+		// keep source
+		originalSource := v.Config.Source
+
 		v.Config, err = provider2.ParseProvider(bytes.NewReader([]byte(providers.GetBuiltInProviders()[k])))
 		if err != nil {
 			return nil, err
 		}
+		v.Config.Source = originalSource
 	}
 
 	return retProviders, nil

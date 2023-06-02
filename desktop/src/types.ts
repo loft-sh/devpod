@@ -64,6 +64,7 @@ type TProviderSource = Readonly<{
   github: string | null
   file: string | null
   url: string | null
+  raw: string | null
 }>
 export type TProviderOptions = Record<string, TProviderOption>
 export type TProviderOption = Readonly<{

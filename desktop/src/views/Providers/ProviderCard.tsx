@@ -37,6 +37,8 @@ import { Routes } from "../../routes"
 import { TProvider, TProviderID, TRunnable, TWithProviderID } from "../../types"
 import { client } from "../../client"
 import { QueryKeys } from "../../queryKeys"
+import { HiDuplicate } from "react-icons/hi"
+import { useSetupProviderModal } from "./useSetupProviderModal"
 
 type TProviderCardProps = {
   id: string
@@ -54,6 +56,7 @@ export function ProviderCard({ id, provider, remove }: TProviderCardProps) {
     () => workspaces.filter((workspace) => workspace.provider?.name === id),
     [id, workspaces]
   )
+  const { modal: setupProviderModal, show: showSetupProviderModal } = useSetupProviderModal()
   const { mutate: updateDefaultProvider } = useMutation<
     void,
     unknown,
@@ -70,6 +73,7 @@ export function ProviderCard({ id, provider, remove }: TProviderCardProps) {
   const providerIcon = provider.config?.icon
   const isDefaultProvider = provider.default ?? false
   const providerVersion = provider.config?.version
+  const providerRawSource = provider.config?.source?.raw
 
   return (
     <>
@@ -139,13 +143,31 @@ export function ProviderCard({ id, provider, remove }: TProviderCardProps) {
               Default
             </Text>
           </HStack>
-          <ButtonGroup>
+          <ButtonGroup spacing="0">
+            {providerRawSource && (
+              <Tooltip label="Clone Provider">
+                <IconButton
+                  aria-label="Clone Provider"
+                  variant="ghost"
+                  onClick={() =>
+                    showSetupProviderModal({
+                      isStrict: false,
+                      cloneProviderInfo: {
+                        sourceProviderID: id,
+                        sourceProvider: provider,
+                        sourceProviderSource: providerRawSource,
+                      },
+                    })
+                  }
+                  icon={<Icon as={HiDuplicate} boxSize="4" />}
+                />
+              </Tooltip>
+            )}
             <Tooltip label="Edit Provider">
               <IconButton
                 aria-label="Edit Provider"
                 variant="ghost"
                 onClick={() => navigate(Routes.toProvider(id))}
-                isLoading={false}
                 icon={<Icon as={HiPencil} boxSize="4" />}
               />
             </Tooltip>
@@ -200,6 +222,8 @@ export function ProviderCard({ id, provider, remove }: TProviderCardProps) {
           </ModalFooter>
         </ModalContent>
       </Modal>
+
+      {setupProviderModal}
     </>
   )
 }
