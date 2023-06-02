@@ -46,13 +46,27 @@ func LoadProviders(devPodConfig *config.Config, log log.Logger) (*ProviderWithOp
 	return retProviders[defaultContext.DefaultProvider], retProviders, nil
 }
 
+func CloneProvider(devPodConfig *config.Config, providerName, providerSourceRaw string, log log.Logger) (*ProviderWithOptions, error) {
+	providerWithOptions, err := FindProvider(devPodConfig, providerSourceRaw, log)
+	if err != nil {
+		return nil, err
+	}
+	providerConfig, err := installProvider(devPodConfig, providerWithOptions.Config, providerName, &providerWithOptions.Config.Source, log)
+	if err != nil {
+		return nil, err
+	}
+	providerWithOptions.Config = providerConfig
+
+	return providerWithOptions, nil
+}
+
 func AddProvider(devPodConfig *config.Config, providerName, providerSourceRaw string, log log.Logger) (*provider2.ProviderConfig, error) {
 	providerRaw, providerSource, err := ResolveProvider(providerSourceRaw, log)
 	if err != nil {
 		return nil, err
 	}
 
-	providerConfig, err := installProvider(devPodConfig, providerName, providerRaw, providerSource, log)
+	providerConfig, err := installRawProvider(devPodConfig, providerName, providerRaw, providerSource, log)
 	if err != nil {
 		return nil, err
 	}
@@ -258,11 +272,15 @@ func updateProvider(devPodConfig *config.Config, providerName string, raw []byte
 	return providerConfig, nil
 }
 
-func installProvider(devPodConfig *config.Config, providerName string, raw []byte, source *provider2.ProviderSource, log log.Logger) (*provider2.ProviderConfig, error) {
+func installRawProvider(devPodConfig *config.Config, providerName string, raw []byte, source *provider2.ProviderSource, log log.Logger) (*provider2.ProviderConfig, error) {
 	providerConfig, err := provider2.ParseProvider(bytes.NewReader(raw))
 	if err != nil {
 		return nil, err
 	}
+	return installProvider(devPodConfig, providerConfig, providerName, source, log)
+}
+
+func installProvider(devPodConfig *config.Config, providerConfig *provider2.ProviderConfig, providerName string, source *provider2.ProviderSource, log log.Logger) (*provider2.ProviderConfig, error) {
 	providerConfig.Source = *source
 	if providerName != "" {
 		providerConfig.Name = providerName
