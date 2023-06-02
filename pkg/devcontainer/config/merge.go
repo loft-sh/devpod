@@ -138,7 +138,6 @@ func mergeMounts(entries []*ImageMetadata) []*Mount {
 			ret = append(ret, mount)
 			targetMap[mount.Target] = true
 		}
-
 	}
 	return ReverseSlice(ret)
 }

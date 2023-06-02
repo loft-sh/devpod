@@ -172,7 +172,7 @@ func CreateBuildOptions(
 		}
 
 		// rewrite dockerfile
-		finalDockerfileContent := dockerfile.RemoveSyntaxVersion(string(dockerfileContent))
+		finalDockerfileContent := dockerfile.RemoveSyntaxVersion(dockerfileContent)
 		finalDockerfileContent = strings.TrimSpace(strings.Join([]string{
 			featureBuildInfo.DockerfilePrefixContent,
 			strings.TrimSpace(finalDockerfileContent),

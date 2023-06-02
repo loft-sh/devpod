@@ -220,7 +220,7 @@ func WriteWorkspaceInfoAndDeleteOld(workspaceInfoEncoded string, deleteWorkspace
 	}
 
 	// write workspace config
-	err = os.WriteFile(workspaceConfig, []byte(encoded), 0666)
+	err = os.WriteFile(workspaceConfig, encoded, 0666)
 	if err != nil {
 		return false, nil, fmt.Errorf("write workspace config file: %w", err)
 	}

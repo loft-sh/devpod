@@ -2,6 +2,10 @@ linters:
   # We want to gradually introduce new linters to the project
   disable-all: true
   enable:
+    - asasalint
+    - asciicheck
+    - bidichk
+    - decorder
     - durationcheck
     - errcheck
     - errname
@@ -9,9 +13,11 @@ linters:
     - exhaustive
     - exportloopref
     - ginkgolinter
+    - gocheckcompilerdirectives
     - goimports
     - gosimple
     - govet
+    - grouper
     - importas
     - ineffassign
     - makezero
@@ -21,7 +27,10 @@ linters:
     - staticcheck
     - stylecheck
     - typecheck
+    - tagalign
+    - unconvert
     - unused
+    - whitespace
 
     # - dupl
     # - cyclop
