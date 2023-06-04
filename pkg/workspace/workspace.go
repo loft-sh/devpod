@@ -438,12 +438,16 @@ func getProjectImage(link string) string {
 	}
 
 	meta := regEx.FindString(html)
-	url := strings.Split(
+	parts := strings.Split(
 		regexes["content"].FindString(meta),
 		`"`,
-	)[1]
+	)
 
-	return url
+	if len(parts) >= 2 {
+		return parts[1]
+	}
+
+	return ""
 }
 
 func isLocalDir(name string) (bool, string) {
