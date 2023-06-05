@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"os"
 	"regexp"
 	"strconv"
 	"strings"
@@ -12,6 +13,7 @@ import (
 
 	"github.com/blang/semver"
 	"github.com/ghodss/yaml"
+	"github.com/loft-sh/devpod/pkg/telemetry"
 	"github.com/pkg/errors"
 )
 
@@ -38,7 +40,11 @@ func ParseProvider(reader io.Reader) (*ProviderConfig, error) {
 	}
 
 	decoder := json.NewDecoder(bytes.NewReader(jsonBytes))
-	decoder.DisallowUnknownFields()
+
+	// Disallow unknown fields in standalone version but allow them in the UI unti we have a versioning strategy
+	if os.Getenv(telemetry.UIEnvVar) != "true" {
+		decoder.DisallowUnknownFields()
+	}
 
 	parsedConfig := &ProviderConfig{}
 	err = decoder.Decode(parsedConfig)

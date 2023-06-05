@@ -66,6 +66,9 @@ type ProviderSource struct {
 
 	// URL where the provider was downloaded from
 	URL string `json:"url,omitempty"`
+
+	// Raw is the exact string we used to load the provider
+	Raw string `json:"raw,omitempty"`
 }
 
 type ProviderAgentConfig struct {

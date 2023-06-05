@@ -1,8 +1,8 @@
-import { Box, Text, useColorModeValue } from "@chakra-ui/react"
+import { Box, BoxProps, Text, useColorModeValue } from "@chakra-ui/react"
 import React from "react"
 
-type TErrorMessageBox = Readonly<{ error: Error }>
-export function ErrorMessageBox({ error }: TErrorMessageBox) {
+type TErrorMessageBox = Readonly<{ error: Error }> & BoxProps
+export function ErrorMessageBox({ error, ...boxProps }: TErrorMessageBox) {
   const backgroundColor = useColorModeValue("red.50", "red.100")
   const textColor = useColorModeValue("red.700", "red.800")
 
@@ -12,7 +12,8 @@ export function ErrorMessageBox({ error }: TErrorMessageBox) {
       paddingY="1"
       paddingX="2"
       borderRadius="md"
-      display="inline-block">
+      display="inline-block"
+      {...boxProps}>
       <Text userSelect="auto" color={textColor} fontFamily="monospace">
         {error.message.split("\n").map((line, index) => (
           <React.Fragment key={index}>

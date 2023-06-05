@@ -13,7 +13,6 @@ import {
   PopoverContent,
   PopoverTrigger,
   SimpleGrid,
-  Text,
   Tooltip,
   VStack,
   useBreakpointValue,
@@ -333,7 +332,9 @@ export function ConfigureProviderOptionsForm({
                 />
               </PopoverTrigger>
               <PopoverContent minWidth="96">
-                {isError(error) && <ErrorMessageBox error={error} />}
+                {isError(error) && (
+                  <ErrorMessageBox maxHeight="xl" overflowY="auto" error={error} />
+                )}
               </PopoverContent>
             </Popover>
           </HStack>
