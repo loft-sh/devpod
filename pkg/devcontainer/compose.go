@@ -461,7 +461,7 @@ func (r *Runner) buildAndExtendDockerCompose(parsedConfig *config.SubstitutedCon
 func (r *Runner) extendedDockerfile(featureBuildInfo *feature.BuildInfo, dockerfilePath, dockerfileContent string) (string, string) {
 	// extra args?
 	finalDockerfilePath := dockerfilePath
-	finalDockerfileContent := string(dockerfileContent)
+	finalDockerfileContent := dockerfileContent
 
 	// get extended build info
 	if featureBuildInfo != nil {
@@ -469,7 +469,7 @@ func (r *Runner) extendedDockerfile(featureBuildInfo *feature.BuildInfo, dockerf
 		finalDockerfilePath = filepath.Join(featureBuildInfo.FeaturesFolder, "Dockerfile-with-features")
 
 		// rewrite dockerfile
-		finalDockerfileContent = dockerfile.RemoveSyntaxVersion(string(dockerfileContent))
+		finalDockerfileContent = dockerfile.RemoveSyntaxVersion(dockerfileContent)
 		finalDockerfileContent = strings.TrimSpace(strings.Join([]string{
 			featureBuildInfo.DockerfilePrefixContent,
 			strings.TrimSpace(finalDockerfileContent),

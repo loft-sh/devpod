@@ -208,7 +208,7 @@ func inject(localFile LocalFile, stdout io.ReadCloser, stdoutOut io.Writer, stdi
 		if err != nil {
 			return false, err
 		} else if strings.TrimSpace(line) != "done" {
-			return false, fmt.Errorf("unexpected line during inject: %s", string(line))
+			return false, fmt.Errorf("unexpected line during inject: %s", line)
 		}
 
 		// close stdout

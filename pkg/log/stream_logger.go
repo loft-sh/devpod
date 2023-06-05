@@ -429,7 +429,6 @@ func (s *StreamLogger) Done(args ...interface{}) {
 	defer s.m.Unlock()
 
 	s.writeMessage(doneFn, fmt.Sprintln(args...))
-
 }
 
 func (s *StreamLogger) Donef(format string, args ...interface{}) {

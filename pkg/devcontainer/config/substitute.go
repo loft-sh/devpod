@@ -175,7 +175,7 @@ func ResolveString(val string, replace ReplaceFunction) string {
 
 		// try to separate variable arguments from variable name
 		args := []string{}
-		parts := strings.Split(string(variable), ":")
+		parts := strings.Split(variable, ":")
 		if len(parts) > 1 {
 			variable = parts[0]
 			args = parts[1:]

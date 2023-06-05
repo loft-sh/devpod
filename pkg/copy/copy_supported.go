@@ -10,7 +10,7 @@ import (
 
 func IsUID(info os.FileInfo, uid uint32) bool {
 	stat, ok := info.Sys().(*syscall.Stat_t)
-	return ok && stat.Uid == uint32(uid)
+	return ok && stat.Uid == uid
 }
 
 func Lchown(info os.FileInfo, sourcePath, destPath string) error {
