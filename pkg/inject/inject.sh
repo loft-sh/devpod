@@ -78,6 +78,12 @@ if {{ .ExistsCheck }}; then
   sh_c='sh -c'
   if [ "$user" != 'root' ]; then
     if command_exists sudo; then
+      # check if sudo requires a password
+      if ! sudo -nl >/dev/null 2>&1; then
+        >&2 echo Error: sudo requires a password and no password is available. Please ensure your user account is configured with NOPASSWD.
+        exit 1
+      fi
+
       sh_c='sudo -E sh -c'
     elif command_exists su; then
       sh_c='su -c'
