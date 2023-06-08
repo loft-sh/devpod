@@ -76,14 +76,17 @@ download() {
 if {{ .ExistsCheck }}; then
   user="$(id -un || true)"
   sh_c='sh -c'
-  if [ "$user" != 'root' ]; then
+
+  # Try to create the install dir, if we fail, we search for sudo
+  # else let's continue without sudo, we don't need it.
+  $sh_c "mkdir -p $INSTALL_DIR"
+  if [ "$?" -ne 0 ]; then
     if command_exists sudo; then
       # check if sudo requires a password
       if ! sudo -nl >/dev/null 2>&1; then
         >&2 echo Error: sudo requires a password and no password is available. Please ensure your user account is configured with NOPASSWD.
         exit 1
       fi
-
       sh_c='sudo -E sh -c'
     elif command_exists su; then
       sh_c='su -c'
@@ -92,9 +95,11 @@ if {{ .ExistsCheck }}; then
       >&2 echo We are unable to find either "sudo" or "su" available to make this happen.
       exit 1
     fi
+
+    # Now that we're sudo, try again
+    $sh_c "mkdir -p $INSTALL_DIR"
   fi
 
-  $sh_c "mkdir -p $INSTALL_DIR"
   
   if [ "$PREFER_DOWNLOAD" = "true" ]; then
     download || inject
