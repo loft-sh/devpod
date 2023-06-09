@@ -1,4 +1,4 @@
-import { Box, Container, Spinner } from "@chakra-ui/react"
+import { Container, Spinner } from "@chakra-ui/react"
 import { useQuery } from "@tanstack/react-query"
 import { useMemo } from "react"
 import { useNavigate, useParams } from "react-router"
@@ -29,7 +29,7 @@ export function Provider() {
   }
 
   return (
-    <Container width="full" maxWidth={"container.lg"}>
+    <Container width="full" maxWidth="container.lg">
       <ConfigureProviderOptionsForm
         providerID={providerID}
         isDefault={!!provider.default}

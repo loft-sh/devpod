@@ -93,27 +93,11 @@ func UpdateProvider(devPodConfig *config.Config, providerName, providerSourceRaw
 	}
 
 	if providerSourceRaw == "" {
-		providerConfig, err := FindProvider(devPodConfig, providerName, log)
+		s, err := ResolveProviderSource(devPodConfig, providerName, log)
 		if err != nil {
-			return nil, errors.Wrap(err, "find provider")
+			return nil, err
 		}
-
-		if providerConfig.Config.Source.Internal {
-			// Name could also be overridden if initial name was already taken, so prefer the raw source if available
-			if providerConfig.Config.Source.Raw == "" {
-				providerSourceRaw = providerConfig.Config.Name
-			} else {
-				providerSourceRaw = providerConfig.Config.Source.Raw
-			}
-		} else if providerConfig.Config.Source.URL != "" {
-			providerSourceRaw = providerConfig.Config.Source.URL
-		} else if providerConfig.Config.Source.File != "" {
-			providerSourceRaw = providerConfig.Config.Source.File
-		} else if providerConfig.Config.Source.Github != "" {
-			providerSourceRaw = providerConfig.Config.Source.Github
-		} else {
-			return nil, fmt.Errorf("provider %s is missing a source. Please run `devpod provider update %s SOURCE`", providerName, providerName)
-		}
+		providerSourceRaw = s
 	}
 
 	providerRaw, providerSource, err := ResolveProvider(providerSourceRaw, log)
@@ -122,6 +106,34 @@ func UpdateProvider(devPodConfig *config.Config, providerName, providerSourceRaw
 	}
 
 	return updateProvider(devPodConfig, providerName, providerRaw, providerSource, log)
+}
+
+func ResolveProviderSource(devPodConfig *config.Config, providerName string, log log.Logger) (string, error) {
+	source := ""
+
+	providerConfig, err := FindProvider(devPodConfig, providerName, log)
+	if err != nil {
+		return "", errors.Wrap(err, "find provider")
+	}
+
+	if providerConfig.Config.Source.Internal {
+		// Name could also be overridden if initial name was already taken, so prefer the raw source if available
+		if providerConfig.Config.Source.Raw == "" {
+			source = providerConfig.Config.Name
+		} else {
+			source = providerConfig.Config.Source.Raw
+		}
+	} else if providerConfig.Config.Source.URL != "" {
+		source = providerConfig.Config.Source.URL
+	} else if providerConfig.Config.Source.File != "" {
+		source = providerConfig.Config.Source.File
+	} else if providerConfig.Config.Source.Github != "" {
+		source = providerConfig.Config.Source.Github
+	} else {
+		return "", fmt.Errorf("provider %s is missing a source. Please run `devpod provider update %s SOURCE`", providerName, providerName)
+	}
+
+	return source, nil
 }
 
 func ResolveProvider(providerSource string, log log.Logger) ([]byte, *provider2.ProviderSource, error) {
