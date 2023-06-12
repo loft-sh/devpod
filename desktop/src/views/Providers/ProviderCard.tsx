@@ -25,19 +25,19 @@ import {
   Tooltip,
   useDisclosure,
 } from "@chakra-ui/react"
-import { UseMutationResult, useMutation, useQueryClient } from "@tanstack/react-query"
+import { UseMutationResult, useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { useMemo } from "react"
-import { HiPencil } from "react-icons/hi2"
+import { HiDuplicate } from "react-icons/hi"
+import { HiPencil, HiArrowPath } from "react-icons/hi2"
 import { Link as RouterLink, useNavigate } from "react-router-dom"
+import { client } from "../../client"
 import { IconTag } from "../../components"
 import { useWorkspaces } from "../../contexts"
 import { ProviderPlaceholder, Stack3D, Trash } from "../../icons"
 import { exists } from "../../lib"
-import { Routes } from "../../routes"
-import { TProvider, TProviderID, TRunnable, TWithProviderID } from "../../types"
-import { client } from "../../client"
 import { QueryKeys } from "../../queryKeys"
-import { HiDuplicate } from "react-icons/hi"
+import { Routes } from "../../routes"
+import { TProvider, TProviderID, TProviderSource, TRunnable, TWithProviderID } from "../../types"
 import { useSetupProviderModal } from "./useSetupProviderModal"
 
 type TProviderCardProps = {
@@ -57,6 +57,14 @@ export function ProviderCard({ id, provider, remove }: TProviderCardProps) {
     [id, workspaces]
   )
   const { modal: setupProviderModal, show: showSetupProviderModal } = useSetupProviderModal()
+  const { data: providerUpdate } = useQuery({
+    queryKey: QueryKeys.providerUpdate(id),
+    queryFn: async () => {
+      const result = (await client.providers.checkUpdate(id)).unwrap()
+
+      return result
+    },
+  })
   const { mutate: updateDefaultProvider } = useMutation<
     void,
     unknown,
@@ -69,21 +77,36 @@ export function ProviderCard({ id, provider, remove }: TProviderCardProps) {
       queryClient.invalidateQueries(QueryKeys.PROVIDERS)
     },
   })
+  const { mutate: updateProvider } = useMutation<
+    void,
+    unknown,
+    Readonly<{ providerID: TProviderID; source: TProviderSource }>
+  >({
+    mutationFn: async ({ providerID, source }) => {
+      ;(await client.providers.update(providerID, source)).unwrap()
+    },
+    onSettled: () => {
+      queryClient.invalidateQueries(QueryKeys.PROVIDERS)
+      queryClient.invalidateQueries(QueryKeys.providerUpdate(id))
+    },
+  })
 
   const providerIcon = provider.config?.icon
   const isDefaultProvider = provider.default ?? false
   const providerVersion = provider.config?.version
   const providerRawSource = provider.config?.source?.raw
+  const providerSource = provider.config?.source
 
   return (
     <>
       <Card variant="outline" width="72" height="96" overflow="hidden">
         <Box
           width="full"
-          height="2"
+          height="1"
           bgGradient={
             isDefaultProvider ? "linear(to-r, primary.400 30%, primary.500)" : "transparent"
           }
+          position="absolute"
         />
         <CardHeader display="flex" justifyContent="center" padding="0">
           {exists(providerIcon) ? (
@@ -108,9 +131,32 @@ export function ProviderCard({ id, provider, remove }: TProviderCardProps) {
             </Link>
           </Heading>
           {providerVersion && (
-            <Text fontFamily="monospace" color="gray.600" fontSize="sm" fontWeight="regular">
-              {providerVersion}
-            </Text>
+            <HStack spacing="0">
+              <Text
+                paddingY="1"
+                fontFamily="monospace"
+                color="gray.600"
+                fontSize="sm"
+                fontWeight="regular">
+                {providerVersion}
+              </Text>
+              {providerUpdate && providerUpdate.updateAvailable && providerSource && (
+                <Tooltip
+                  label={
+                    providerUpdate.latestVersion
+                      ? `Version ${providerUpdate.latestVersion} available`
+                      : "New version available"
+                  }>
+                  <IconButton
+                    variant="ghost"
+                    aria-label="Update provider"
+                    size="xs"
+                    icon={<Icon as={HiArrowPath} boxSize="4" />}
+                    onClick={() => updateProvider({ providerID: id, source: providerSource })}
+                  />
+                </Tooltip>
+              )}
+            </HStack>
           )}
           <HStack rowGap={2} marginTop={4} flexWrap="nowrap" alignItems="center">
             <IconTag

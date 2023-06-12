@@ -18,7 +18,6 @@ import (
 )
 
 var (
-	errVersionNotFound  = errors.New("version not found")
 	errProviderNotFound = errors.New("provider not found")
 )
 
@@ -29,7 +28,7 @@ type CheckProviderUpdateCmd struct {
 
 type providerVersionCheck struct {
 	UpdateAvailable bool   `json:"updateAvailable"`
-	LatestVersion   string `json:"latestVersion"`
+	LatestVersion   string `json:"latestVersion,omitempty"`
 }
 
 // NewCheckProviderUpdateCmd creates a new command

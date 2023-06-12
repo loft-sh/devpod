@@ -19,6 +19,9 @@ export const QueryKeys = {
   providerOptions(id: TProviderID): string[] {
     return [...QueryKeys.provider(id), "options"]
   },
+  providerUpdate(id: TProviderID): string[] {
+    return [...QueryKeys.provider(id), "update"]
+  },
 }
 
 export const MutationKeys = {

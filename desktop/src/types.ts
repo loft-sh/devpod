@@ -59,7 +59,7 @@ export type TProviderOptionGroup = Readonly<{
   options: string[] | null
   defaultVisible: boolean | null
 }>
-type TProviderSource = Readonly<{
+export type TProviderSource = Readonly<{
   internal: boolean | null
   github: string | null
   file: string | null
@@ -103,6 +103,10 @@ export type TConfigureProviderConfig = Readonly<{
 export type TProviderManager = Readonly<{
   remove: TRunnable<TWithProviderID> &
     Pick<UseMutationResult, "status" | "error"> & { target: TWithProviderID | undefined }
+}>
+export type TCheckProviderUpdateResult = Readonly<{
+  updateAvailable: boolean
+  latestVersion?: string
 }>
 //#endregion
 
