@@ -112,9 +112,12 @@ func RunInContainer(
 }
 
 func forwardDevContainerPorts(ctx context.Context, workspaceClient client.WorkspaceClient, sshClient, containerClient *ssh.Client, extraPorts []string, log log.Logger) ([]string, error) {
-	result, err := getDevContainerResult(ctx, workspaceClient, sshClient, log)
+	result, err := getDevContainerResult(ctx, workspaceClient, sshClient, log, false)
 	if err != nil {
-		return nil, fmt.Errorf("error retrieving dev container result: %w", err)
+		result, err = getDevContainerResult(ctx, workspaceClient, sshClient, log, true)
+		if err != nil {
+			return nil, fmt.Errorf("error retrieving dev container result: %w", err)
+		}
 	}
 
 	// extra ports first
@@ -183,7 +186,7 @@ func forwardDevContainerPorts(ctx context.Context, workspaceClient client.Worksp
 	return forwardedPorts, nil
 }
 
-func getDevContainerResult(ctx context.Context, workspaceClient client.WorkspaceClient, client *ssh.Client, log log.Logger) (*config2.Result, error) {
+func getDevContainerResult(ctx context.Context, workspaceClient client.WorkspaceClient, client *ssh.Client, log log.Logger, root bool) (*config2.Result, error) {
 	writer := log.Writer(logrus.InfoLevel, false)
 	defer writer.Close()
 
@@ -196,6 +199,9 @@ func getDevContainerResult(ctx context.Context, workspaceClient client.Workspace
 	}
 	if agentConfig.DataPath != "" {
 		command += fmt.Sprintf(" --agent-dir '%s'", agentConfig.DataPath)
+	}
+	if root {
+		command = "sudo " + command
 	}
 	buf := &bytes.Buffer{}
 	err := devssh.Run(ctx, client, command, nil, buf, writer)

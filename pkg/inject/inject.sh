@@ -53,7 +53,7 @@ download() {
   if is_arm; then
     DOWNLOAD_URL="{{ .DownloadArm }}"
   fi
-  
+
   while :; do
     cmd_status=""
     if command_exists curl; then
@@ -79,8 +79,7 @@ if {{ .ExistsCheck }}; then
 
   # Try to create the install dir, if we fail, we search for sudo
   # else let's continue without sudo, we don't need it.
-  $sh_c "mkdir -p $INSTALL_DIR"
-  if [ "$?" -ne 0 ]; then
+  if ! mkdir -p $INSTALL_DIR; then
     if command_exists sudo; then
       # check if sudo requires a password
       if ! sudo -nl >/dev/null 2>&1; then
@@ -100,7 +99,7 @@ if {{ .ExistsCheck }}; then
     $sh_c "mkdir -p $INSTALL_DIR"
   fi
 
-  
+
   if [ "$PREFER_DOWNLOAD" = "true" ]; then
     download || inject
   else
