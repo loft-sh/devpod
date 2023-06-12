@@ -147,7 +147,7 @@ func ResolveOptions(ctx context.Context, devConfig *config.Config, provider *pro
 		provider.Options,
 		devConfig.ProviderOptions(provider.Name),
 		userOptions,
-		provider2.Merge(provider2.GetBaseEnvironment(), binaryPaths),
+		provider2.Merge(provider2.GetBaseEnvironment(devConfig.DefaultContext, provider.Name), binaryPaths),
 		false,
 		true,
 		skipRequired,

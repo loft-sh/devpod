@@ -27,8 +27,13 @@ const (
 	MACHINE_CONTEXT          = "MACHINE_CONTEXT"
 	MACHINE_FOLDER           = "MACHINE_FOLDER"
 	MACHINE_PROVIDER         = "MACHINE_PROVIDER"
+	PROVIDER_ID              = "PROVIDER_ID"
+	PROVIDER_CONTEXT         = "PROVIDER_CONTEXT"
+	PROVIDER_FOLDER          = "PROVIDER_FOLDER"
 )
 
+// FromEnvironment retrives options from environment and fills a machine with it. This is primarily
+// used by provider implementations.
 func FromEnvironment() *Machine {
 	return &Machine{
 		ID:     os.Getenv(MACHINE_ID),
@@ -115,7 +120,7 @@ func ToOptionsWorkspace(workspace *Workspace) map[string]string {
 			retVars[MACHINE_ID] = workspace.Machine.ID
 			retVars[MACHINE_FOLDER], _ = GetMachineDir(workspace.Context, workspace.Machine.ID)
 		}
-		for k, v := range GetBaseEnvironment() {
+		for k, v := range GetBaseEnvironment(workspace.Context, workspace.Provider.Name) {
 			retVars[k] = v
 		}
 	}
@@ -137,7 +142,7 @@ func ToOptionsMachine(machine *Machine) map[string]string {
 		if machine.Provider.Name != "" {
 			retVars[MACHINE_PROVIDER] = machine.Provider.Name
 		}
-		for k, v := range GetBaseEnvironment() {
+		for k, v := range GetBaseEnvironment(machine.Context, machine.Provider.Name) {
 			retVars[k] = v
 		}
 	}
@@ -168,7 +173,7 @@ func Merge(m1 map[string]string, m2 map[string]string) map[string]string {
 	return retMap
 }
 
-func GetBaseEnvironment() map[string]string {
+func GetBaseEnvironment(context, provider string) map[string]string {
 	retVars := map[string]string{}
 
 	// devpod binary
@@ -176,6 +181,9 @@ func GetBaseEnvironment() map[string]string {
 	retVars[DEVPOD] = filepath.ToSlash(devPodBinary)
 	retVars[DEVPOD_OS] = runtime.GOOS
 	retVars[DEVPOD_ARCH] = runtime.GOARCH
+	retVars[PROVIDER_ID] = provider
+	retVars[PROVIDER_CONTEXT] = context
+	retVars[PROVIDER_FOLDER], _ = GetProviderDir(context, provider)
 	return retVars
 }
 
