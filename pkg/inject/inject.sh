@@ -79,7 +79,7 @@ if {{ .ExistsCheck }}; then
 
   # Try to create the install dir, if we fail, we search for sudo
   # else let's continue without sudo, we don't need it.
-  if ! mkdir -p $INSTALL_DIR; then
+  if ! mkdir -p $INSTALL_DIR 2>/dev/null; then
     if command_exists sudo; then
       # check if sudo requires a password
       if ! sudo -nl >/dev/null 2>&1; then

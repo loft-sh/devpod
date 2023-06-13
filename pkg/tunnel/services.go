@@ -114,6 +114,7 @@ func RunInContainer(
 func forwardDevContainerPorts(ctx context.Context, workspaceClient client.WorkspaceClient, sshClient, containerClient *ssh.Client, extraPorts []string, log log.Logger) ([]string, error) {
 	result, err := getDevContainerResult(ctx, workspaceClient, sshClient, log, false)
 	if err != nil {
+		log.Debug("error retrieving dev container result, retrying running as root")
 		result, err = getDevContainerResult(ctx, workspaceClient, sshClient, log, true)
 		if err != nil {
 			return nil, fmt.Errorf("error retrieving dev container result: %w", err)
@@ -187,7 +188,7 @@ func forwardDevContainerPorts(ctx context.Context, workspaceClient client.Worksp
 }
 
 func getDevContainerResult(ctx context.Context, workspaceClient client.WorkspaceClient, client *ssh.Client, log log.Logger, root bool) (*config2.Result, error) {
-	writer := log.Writer(logrus.InfoLevel, false)
+	writer := log.Writer(logrus.DebugLevel, false)
 	defer writer.Close()
 
 	agentConfig := workspaceClient.AgentConfig()
