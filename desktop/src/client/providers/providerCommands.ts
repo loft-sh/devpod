@@ -1,15 +1,22 @@
-import { exists, Result, ResultError, Return, getErrorFromChildProcess } from "../../lib"
-import { TAddProviderConfig, TProviderID, TProviderOptions, TProviders } from "../../types"
+import { Result, ResultError, Return, exists, getErrorFromChildProcess } from "../../lib"
+import {
+  TAddProviderConfig,
+  TCheckProviderUpdateResult,
+  TProviderSource,
+  TProviderID,
+  TProviderOptions,
+  TProviders,
+} from "../../types"
 import { Command, isOk, toFlagArg } from "../command"
 import {
   DEVPOD_COMMAND_ADD,
   DEVPOD_COMMAND_DELETE,
   DEVPOD_COMMAND_GET_PROVIDER_NAME,
-  DEVPOD_COMMAND_HELPER,
   DEVPOD_COMMAND_LIST,
   DEVPOD_COMMAND_OPTIONS,
   DEVPOD_COMMAND_PROVIDER,
   DEVPOD_COMMAND_SET_OPTIONS,
+  DEVPOD_COMMAND_UPDATE,
   DEVPOD_COMMAND_USE,
   DEVPOD_FLAG_DEBUG,
   DEVPOD_FLAG_JSON_LOG_OUTPUT,
@@ -19,6 +26,7 @@ import {
   DEVPOD_FLAG_SINGLE_MACHINE,
   DEVPOD_FLAG_USE,
 } from "../constants"
+import { DEVPOD_COMMAND_CHECK_PROVIDER_UPDATE, DEVPOD_COMMAND_HELPER } from "./../constants"
 
 export class ProviderCommands {
   static DEBUG = false
@@ -184,6 +192,42 @@ export class ProviderCommands {
     }
 
     return Return.Value(JSON.parse(result.val.stdout) as TProviderOptions)
+  }
+
+  static async CheckProviderUpdate(id: TProviderID) {
+    const result = await new Command([
+      DEVPOD_COMMAND_HELPER,
+      DEVPOD_COMMAND_CHECK_PROVIDER_UPDATE,
+      id,
+    ]).run()
+    if (result.err) {
+      return result
+    }
+
+    if (!isOk(result.val)) {
+      return getErrorFromChildProcess(result.val)
+    }
+
+    return Return.Value(JSON.parse(result.val.stdout) as TCheckProviderUpdateResult)
+  }
+
+  static async UpdateProvider(id: TProviderID, source: TProviderSource) {
+    const result = await new Command([
+      DEVPOD_COMMAND_PROVIDER,
+      DEVPOD_COMMAND_UPDATE,
+      id,
+      source.raw ?? source.github ?? source.url ?? source.file ?? "",
+      DEVPOD_FLAG_JSON_LOG_OUTPUT,
+    ]).run()
+    if (result.err) {
+      return result
+    }
+
+    if (!isOk(result.val)) {
+      return getErrorFromChildProcess(result.val)
+    }
+
+    return Return.Ok()
   }
 }
 

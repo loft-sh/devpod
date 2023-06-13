@@ -107,6 +107,7 @@ export function getActionDisplayName(action: TActionObj): string {
 }
 
 export function getIDEDisplayName(ide: TIDE) {
+  // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
   return ide.displayName ?? ide.name ?? "Unknown"
 }
 

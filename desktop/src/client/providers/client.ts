@@ -1,9 +1,12 @@
 import { FileStorageBackend, Result, ResultError, Return, Store, isEmpty } from "../../lib"
 import {
   TAddProviderConfig,
+  TCheckProviderUpdateResult,
   TConfigureProviderConfig,
+  TProviderConfig,
   TProviderID,
   TProviderOptions,
+  TProviderSource,
   TProviders,
 } from "../../types"
 import { TDebuggable } from "../types"
@@ -37,6 +40,14 @@ export class ProvidersClient implements TDebuggable {
 
   public async newID(rawSource: string): Promise<Result<string>> {
     return ProviderCommands.GetProviderID(rawSource)
+  }
+
+  public async checkUpdate(id: TProviderID): Promise<Result<TCheckProviderUpdateResult>> {
+    return ProviderCommands.CheckProviderUpdate(id)
+  }
+
+  public async update(id: TProviderID, source: TProviderSource): Promise<Result<void>> {
+    return ProviderCommands.UpdateProvider(id, source)
   }
 
   public async add(rawSource: TProviderID, config: TAddProviderConfig): Promise<ResultError> {
