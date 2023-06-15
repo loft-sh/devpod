@@ -51,8 +51,8 @@ func getDevpodProviderList() error {
 	fmt.Println("List of available providers from loft:")
 	for _, v := range jsonResult {
 		if strings.Contains(v["name"].(string), "devpod-provider") {
-			name := strings.Split(v["name"].(string), "-")
-			fmt.Println("\t", name[len(name)-1])
+			name := strings.TrimPrefix(v["name"].(string), "devpod-provider-")
+			fmt.Println("\t", name)
 		}
 	}
 
