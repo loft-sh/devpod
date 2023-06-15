@@ -16,9 +16,6 @@ import (
 // ListAvailableCmd holds the list cmd flags
 type ListAvailableCmd struct {
 	flags.GlobalFlags
-
-	Output string
-	Used   bool
 }
 
 var httpClient = &http.Client{
