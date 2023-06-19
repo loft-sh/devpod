@@ -103,7 +103,6 @@ func (cmd *GetWorkspaceConfigCommand) Run(ctx context.Context, args []string) er
 			return err
 		}
 		log.Default.Done(string(out))
-
 	}
 	defer close(done)
 
@@ -195,7 +194,10 @@ func findDevcontainerFiles(ctx context.Context, rawSource, tmpDirPath string, ma
 			}
 		}
 
-		lsCmd.Wait()
+		err = lsCmd.Wait()
+		if err != nil {
+			return nil, err
+		}
 
 		return result, nil
 	}
