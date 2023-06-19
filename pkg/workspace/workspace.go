@@ -10,13 +10,12 @@ import (
 	"path/filepath"
 	"regexp"
 	"strings"
-	"time"
 
 	"github.com/google/uuid"
 	"github.com/loft-sh/devpod/pkg/client"
 	"github.com/loft-sh/devpod/pkg/client/clientimplementation"
-	"github.com/loft-sh/devpod/pkg/command"
 	"github.com/loft-sh/devpod/pkg/config"
+	"github.com/loft-sh/devpod/pkg/file"
 	"github.com/loft-sh/devpod/pkg/git"
 	"github.com/loft-sh/devpod/pkg/ide/ideparse"
 	"github.com/loft-sh/devpod/pkg/image"
@@ -41,7 +40,7 @@ func Exists(devPodConfig *config.Config, args []string) string {
 	}
 
 	// check if workspace already exists
-	_, name := isLocalDir(args[0])
+	_, name := file.IsLocalDir(args[0])
 
 	// convert to id
 	workspaceID := ToID(name)
@@ -85,7 +84,7 @@ func GetWorkspaceName(args []string) string {
 	}
 
 	// check if workspace already exists
-	_, name := isLocalDir(args[0])
+	_, name := file.IsLocalDir(args[0])
 
 	// convert to id
 	workspaceID := ToID(name)
@@ -110,7 +109,7 @@ func getWorkspace(devPodConfig *config.Config, args []string, changeLastUsed boo
 	}
 
 	// check if workspace already exists
-	_, name := isLocalDir(args[0])
+	_, name := file.IsLocalDir(args[0])
 
 	// convert to id
 	workspaceID := ToID(name)
@@ -195,7 +194,7 @@ func resolveWorkspace(ctx context.Context, devPodConfig *config.Config, args []s
 	}
 
 	// check if workspace already exists
-	isLocalPath, name := isLocalDir(args[0])
+	isLocalPath, name := file.IsLocalDir(args[0])
 
 	// convert to id
 	workspaceID := ToID(name)
@@ -358,8 +357,8 @@ func resolve(defaultProvider *ProviderWithOptions, devPodConfig *config.Config, 
 	}
 
 	// is git?
-	gitRepository, gitBranch := normalizeGitRepository(name)
-	if strings.HasSuffix(name, ".git") || pingRepository(gitRepository) {
+	gitRepository, gitBranch := git.NormalizeRepository(name)
+	if strings.HasSuffix(name, ".git") || git.PingRepository(gitRepository) {
 		return &provider2.Workspace{
 			ID:      workspaceID,
 			UID:     uid,
@@ -447,53 +446,6 @@ func getProjectImage(link string) string {
 	}
 
 	return ""
-}
-
-func isLocalDir(name string) (bool, string) {
-	_, err := os.Stat(name)
-	if err == nil {
-		absPath, _ := filepath.Abs(name)
-		if absPath != "" {
-			return true, absPath
-		}
-	}
-
-	return false, name
-}
-
-func normalizeGitRepository(str string) (string, string) {
-	if !strings.HasPrefix(str, "ssh://") && !strings.HasPrefix(str, "git@") && !strings.HasPrefix(str, "http://") && !strings.HasPrefix(str, "https://") {
-		str = "https://" + str
-	}
-
-	// resolve branch
-	branch := ""
-	index := strings.LastIndex(str, "@")
-	if index != -1 {
-		branch = str[index+1:]
-		repo := str[:index]
-
-		// is not a valid tag / branch name?
-		if branchRegEx.MatchString(branch) {
-			branch = ""
-		} else {
-			str = repo
-		}
-	}
-
-	return str, branch
-}
-
-func pingRepository(str string) bool {
-	if !command.Exists("git") {
-		return false
-	}
-
-	timeoutCtx, cancel := context.WithTimeout(context.Background(), time.Second*10)
-	defer cancel()
-
-	_, err := git.CommandContext(timeoutCtx, "ls-remote", "--quiet", str).CombinedOutput()
-	return err == nil
 }
 
 var workspaceIDRegEx1 = regexp.MustCompile(`[^\w\-]`)
