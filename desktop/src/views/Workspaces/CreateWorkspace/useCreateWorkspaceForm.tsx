@@ -1,4 +1,19 @@
-import { FormEventHandler, useCallback, useEffect, useMemo, useState } from "react"
+import {
+  Button,
+  Code,
+  List,
+  ListItem,
+  Modal,
+  ModalBody,
+  ModalCloseButton,
+  ModalContent,
+  ModalFooter,
+  ModalHeader,
+  ModalOverlay,
+  Text,
+  useDisclosure,
+} from "@chakra-ui/react"
+import { FormEventHandler, useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { useForm } from "react-hook-form"
 import { client } from "../../../client"
 import { useSettings, useWorkspaces } from "../../../contexts"
@@ -8,6 +23,7 @@ import { TIDEs, TProviders, TWorkspace } from "../../../types"
 import { FieldName, TCreateWorkspaceArgs, TCreateWorkspaceSearchParams, TFormValues } from "./types"
 
 const DEFAULT_PREBUILD_REPOSITORY_KEY = "devpod-create-prebuild-repository"
+const DEFAULT_CONTAINER_PATH = "__internal-default"
 
 export function useCreateWorkspaceForm(
   params: TCreateWorkspaceSearchParams,
@@ -15,6 +31,7 @@ export function useCreateWorkspaceForm(
   ides: TIDEs | undefined,
   onCreateWorkspace: (args: TCreateWorkspaceArgs) => void
 ) {
+  const formRef = useRef<HTMLFormElement>(null)
   const settings = useSettings()
   const workspaces = useWorkspaces()
   const [isSubmitLoading, setIsSubmitLoading] = useState(false)
@@ -24,6 +41,7 @@ export function useCreateWorkspaceForm(
         [FieldName.PREBUILD_REPOSITORY]:
           window.localStorage.getItem(DEFAULT_PREBUILD_REPOSITORY_KEY) ?? "",
         [FieldName.PROVIDER]: Object.keys(providers ?? {})[0] ?? undefined,
+        [FieldName.DEVCONTAINER_PATH]: undefined,
       },
     })
   const currentSource = watch(FieldName.SOURCE)
@@ -32,6 +50,16 @@ export function useCreateWorkspaceForm(
     () => formState.isSubmitting || isSubmitLoading,
     [formState.isSubmitting, isSubmitLoading]
   )
+  const handleDevcontainerSelected = useCallback((selectedDevcontainer: string | undefined) => {
+    setValue(FieldName.DEVCONTAINER_PATH, selectedDevcontainer ?? DEFAULT_CONTAINER_PATH, {
+      shouldDirty: true,
+      shouldValidate: true,
+    })
+    formRef.current?.dispatchEvent(new Event("submit", { cancelable: true, bubbles: true }))
+  }, [])
+
+  const { modal: selectDevcontainerModal, show: showSelectDevcontainerModal } =
+    useSelectDevcontainerModal({ onSelected: handleDevcontainerSelected })
 
   useEffect(() => {
     const opts = {
@@ -156,6 +184,26 @@ export function useCreateWorkspaceForm(
           return
         }
 
+        let maybeDevcontainerPath = data[FieldName.DEVCONTAINER_PATH]
+        if (maybeDevcontainerPath === DEFAULT_CONTAINER_PATH) {
+          maybeDevcontainerPath = undefined
+        } else if (settings.experimental_multiDevcontainer && maybeDevcontainerPath === "") {
+          // check for multiple devcontainers
+          const checkDevcontainerSetupResult = await client.workspaces.checkDevcontainerSetup(
+            workspaceSource
+          )
+          setIsSubmitLoading(false)
+          if (!checkDevcontainerSetupResult.ok) {
+            setError(FieldName.DEVCONTAINER_PATH, {
+              message: checkDevcontainerSetupResult.val.message,
+            })
+          } else {
+            showSelectDevcontainerModal(checkDevcontainerSetupResult.val.configPaths)
+
+            return
+          }
+        }
+
         if (!settings.fixedIDE) {
           // set default ide
           const useIDEResult = await client.ides.useIDE(defaultIDE)
@@ -178,12 +226,14 @@ export function useCreateWorkspaceForm(
           prebuildRepositories,
           defaultIDE,
           workspaceSource,
+          devcontainerPath: maybeDevcontainerPath,
         })
       })(event),
     [handleSubmit, workspaces, settings.fixedIDE, onCreateWorkspace, setError]
   )
 
   return {
+    formRef,
     register,
     setValue,
     isSubmitLoading,
@@ -192,9 +242,71 @@ export function useCreateWorkspaceForm(
     isSubmitting,
     currentSource,
     control,
+    selectDevcontainerModal,
   }
 }
 
 function isWorkspaceNameAvailable(workspaceID: string, workspaces: readonly TWorkspace[]): boolean {
   return workspaces.find((workspace) => workspace.id === workspaceID) === undefined
+}
+
+function useSelectDevcontainerModal({
+  onSelected,
+}: Readonly<{ onSelected: (path: string | undefined) => void }>) {
+  const [devcontainerPaths, setDevcontainerPaths] = useState<string[]>(["foo", "bar"])
+  const { isOpen, onClose, onOpen } = useDisclosure()
+
+  const modal = useMemo(
+    () => (
+      <Modal
+        onClose={() => {
+          onSelected(undefined)
+          onClose()
+        }}
+        isOpen={isOpen}
+        isCentered
+        size="3xl"
+        scrollBehavior="inside"
+        closeOnEsc={true}
+        closeOnOverlayClick={true}>
+        <ModalOverlay />
+        <ModalContent>
+          <ModalCloseButton />
+          <ModalHeader>Select devcontainer</ModalHeader>
+          <ModalBody>
+            <Text>
+              There are multiple <Code>devcontainer.json</Code> files available. Please select one
+              or dismiss to use default.
+            </Text>
+            <List spacing="2" paddingTop="4">
+              {devcontainerPaths.map((devcontainerPath) => (
+                <ListItem key={devcontainerPath}>
+                  <Button
+                    width="full"
+                    justifyContent="start"
+                    variant="ghost"
+                    key={devcontainerPath}
+                    onClick={() => {
+                      onClose()
+                      onSelected(devcontainerPath)
+                    }}>
+                    {devcontainerPath}
+                  </Button>
+                </ListItem>
+              ))}
+            </List>
+          </ModalBody>
+          <ModalFooter />
+        </ModalContent>
+      </Modal>
+    ),
+    [isOpen, onClose]
+  )
+
+  const show = useCallback((devcontainerPaths: string[]) => {
+    setDevcontainerPaths(devcontainerPaths)
+    onOpen()
+  }, [])
+
+  return { show, modal }
 }

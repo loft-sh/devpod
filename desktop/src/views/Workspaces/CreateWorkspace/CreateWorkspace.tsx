@@ -70,10 +70,12 @@ export function CreateWorkspace() {
       prebuildRepositories,
       defaultIDE,
       workspaceSource,
+      devcontainerPath,
     }: TCreateWorkspaceArgs) => {
       const actionID = workspace.create({
         id: workspaceID,
         prebuildRepositories,
+        devcontainerPath,
         providerConfig: { providerID },
         ideConfig: { name: defaultIDE },
         sourceConfig: {
@@ -89,10 +91,25 @@ export function CreateWorkspace() {
     [navigate, workspace]
   )
 
-  const { setValue, register, onSubmit, control, formState, isSubmitting, currentSource } =
-    useCreateWorkspaceForm(searchParams, providers, ides, handleCreateWorkspace)
-  const { sourceError, providerError, defaultIDEError, idError, prebuildRepositoryError } =
-    useFormErrors(Object.values(FieldName), formState)
+  const {
+    formRef,
+    setValue,
+    register,
+    onSubmit,
+    control,
+    formState,
+    isSubmitting,
+    currentSource,
+    selectDevcontainerModal,
+  } = useCreateWorkspaceForm(searchParams, providers, ides, handleCreateWorkspace)
+  const {
+    sourceError,
+    providerError,
+    defaultIDEError,
+    idError,
+    prebuildRepositoryError,
+    devcontainerPathError,
+  } = useFormErrors(Object.values(FieldName), formState)
 
   const providerOptions = useMemo<TSelectProviderOptions>(() => {
     if (!exists(providers)) {
@@ -131,7 +148,7 @@ export function CreateWorkspace() {
 
   const {
     isOpen: isModalOpen,
-    modal,
+    modal: setupProviderModal,
     show: showSetupProviderModal,
     wasDismissed,
   } = useSetupProviderModal()
@@ -154,7 +171,7 @@ export function CreateWorkspace() {
 
   return (
     <>
-      <Form onSubmit={onSubmit}>
+      <Form ref={formRef} onSubmit={onSubmit}>
         <VStack align="start" spacing="6" alignItems="center" width="full" maxWidth="container.lg">
           <HStack
             width="full"
@@ -366,11 +383,32 @@ export function CreateWorkspace() {
                 )}
               </FormControl>
             </HStack>
+
+            <HStack spacing="8" alignItems={"top"} width={"100%"} justifyContent={"start"}>
+              <FormControl isInvalid={exists(devcontainerPathError)}>
+                <FormLabel>Devcontainer Path</FormLabel>
+                <Input
+                  spellCheck={false}
+                  placeholder=".devcontainer/service/.devcontainer.json"
+                  type="text"
+                  {...register(FieldName.DEVCONTAINER_PATH, { required: false })}
+                />
+                {exists(devcontainerPathError) ? (
+                  <FormErrorMessage>{devcontainerPathError.message ?? "Error"}</FormErrorMessage>
+                ) : (
+                  <FormHelperText>
+                    DevPod will use this path to create the dev container for this workspace.
+                  </FormHelperText>
+                )}
+              </FormControl>
+              {/* placholder box */}
+              <Box width={"full"} />
+            </HStack>
           </VStack>
 
           <HStack
             position="sticky"
-            bottom="-1.1rem"
+            bottom={{ base: "-1.1rem", xl: "0" }}
             right="0"
             width={{ base: `calc(100vw - ${SIDEBAR_WIDTH})`, xl: "full" }}
             height="20"
@@ -391,7 +429,10 @@ export function CreateWorkspace() {
           </HStack>
         </VStack>
       </Form>
-      {isModalOpen && modal}
+
+      {isModalOpen && setupProviderModal}
+
+      {selectDevcontainerModal}
     </>
   )
 }
@@ -450,7 +491,7 @@ import { NoneSvg } from "../../../images"
 type TIDEInputProps = Readonly<{
   ides: readonly TIDE[] | undefined
   field: ControllerRenderProps<TFormValues, (typeof FieldName)["DEFAULT_IDE"]>
-  onClick: (name: TIDE["name"]) => void
+  onClick: (name: NonNullable<TIDE["name"]>) => void
 }>
 function IDEInput({ ides, field, onClick }: TIDEInputProps) {
   const gridChildWidth = useToken("sizes", "12")

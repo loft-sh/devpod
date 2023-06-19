@@ -1,0 +1,4 @@
+{
+  "name": "Python 3",
+  "image": "mcr.microsoft.com/vscode/devcontainers/python:0-3"
+}

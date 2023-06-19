@@ -18,6 +18,7 @@ export type TSettings = {
   partyParrot: boolean
   fixedIDE: boolean
   zoom: "sm" | "md" | "lg" | "xl"
+  experimental_multiDevcontainer: boolean
 }
 type TSetting = keyof TSettings
 
@@ -34,6 +35,7 @@ const initialSettings: TSettings = {
   partyParrot: false,
   fixedIDE: false,
   zoom: "md",
+  experimental_multiDevcontainer: false,
 }
 function getSettingKeys(): readonly TSetting[] {
   return getKeys(initialSettings)

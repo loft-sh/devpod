@@ -9,6 +9,7 @@ import {
 import { Command, isOk, toFlagArg } from "../command"
 import {
   DEVPOD_COMMAND_DELETE,
+  DEVPOD_COMMAND_GET_WORKSPACE_CONFIG,
   DEVPOD_COMMAND_GET_WORKSPACE_NAME,
   DEVPOD_COMMAND_HELPER,
   DEVPOD_COMMAND_LIST,
@@ -16,6 +17,7 @@ import {
   DEVPOD_COMMAND_STOP,
   DEVPOD_COMMAND_UP,
   DEVPOD_FLAG_DEBUG,
+  DEVPOD_FLAG_DEVCONTAINER_PATH,
   DEVPOD_FLAG_FORCE,
   DEVPOD_FLAG_ID,
   DEVPOD_FLAG_IDE,
@@ -24,6 +26,7 @@ import {
   DEVPOD_FLAG_PREBUILD_REPOSITORY,
   DEVPOD_FLAG_PROVIDER,
   DEVPOD_FLAG_RECREATE,
+  DEVPOD_FLAG_TIMEOUT,
 } from "../constants"
 
 type TRawWorkspaces = readonly (Omit<TWorkspace, "status" | "id"> &
@@ -105,6 +108,10 @@ export class WorkspaceCommands {
       ? [toFlagArg(DEVPOD_FLAG_PREBUILD_REPOSITORY, config.prebuildRepositories.join(","))]
       : []
 
+    const maybeDevcontainerPath = config.devcontainerPath
+      ? [toFlagArg(DEVPOD_FLAG_DEVCONTAINER_PATH, config.devcontainerPath)]
+      : []
+
     const identifier = exists(maybeSource) && exists(maybeIDFlag) ? maybeSource : id
 
     return WorkspaceCommands.newCommand([
@@ -114,6 +121,7 @@ export class WorkspaceCommands {
       ...maybeIDEFlag,
       ...maybeProviderFlag,
       ...maybePrebuildRepositories,
+      ...maybeDevcontainerPath,
       DEVPOD_FLAG_JSON_LOG_OUTPUT,
     ])
   }
@@ -138,5 +146,15 @@ export class WorkspaceCommands {
     }
 
     return WorkspaceCommands.newCommand(args)
+  }
+
+  static GetDevcontainerConfig(rawSource: string) {
+    return new Command([
+      DEVPOD_COMMAND_HELPER,
+      DEVPOD_COMMAND_GET_WORKSPACE_CONFIG,
+      rawSource,
+      DEVPOD_FLAG_TIMEOUT,
+      "10s",
+    ])
   }
 }
