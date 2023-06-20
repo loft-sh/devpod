@@ -1,6 +1,7 @@
 export { default as NoWorkspaceImageSvg } from "./empty_workspace.svg"
 export { default as CppSvg } from "./cpp.svg"
 export { default as CustomSvg } from "./custom.svg"
+export { default as CommunitySvg } from "./community.svg"
 export { default as SSHSvg } from "./ssh.svg"
 export { default as DotnetcoreSvg } from "./dotnet.svg"
 export { default as GoSvg } from "./go.svg"

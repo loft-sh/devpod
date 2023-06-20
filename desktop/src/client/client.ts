@@ -3,7 +3,7 @@ import { listen } from "@tauri-apps/api/event"
 import { Command } from "@tauri-apps/api/shell"
 import { TSettings } from "../contexts"
 import { isError, Result, Return } from "../lib"
-import { TUnsubscribeFn } from "../types"
+import { TCommunityContributions, TUnsubscribeFn } from "../types"
 import { IDEsClient } from "./ides/client"
 import { ProvidersClient } from "./providers"
 import { WorkspacesClient } from "./workspaces"
@@ -68,6 +68,25 @@ class Client {
 
   public fetchArch(): Promise<TArch> {
     return os.arch()
+  }
+
+  public async fetchCommunityContributions(): Promise<Result<TCommunityContributions>> {
+    try {
+      const contributions = await invoke<TCommunityContributions>("get_contributions")
+
+      return Return.Value(contributions)
+    } catch (e) {
+      if (isError(e)) {
+        return Return.Failed(e.message)
+      }
+
+      const errMsg = "Unable to fetch community contributions"
+      if (typeof e === "string") {
+        return Return.Failed(`${errMsg}: ${e}`)
+      }
+
+      return Return.Failed(errMsg)
+    }
   }
 
   public async openDir(dir: Extract<keyof typeof fs.BaseDirectory, "AppData">): Promise<void> {

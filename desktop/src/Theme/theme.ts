@@ -19,6 +19,24 @@ const Button = defineStyleConfig({
         },
       },
     },
+    announcement({ theme }) {
+      const from = theme.colors.primary["600"]
+      const to = theme.colors.primary["900"]
+
+      return {
+        color: "white",
+        transition: "background 0.2s",
+        fontWeight: "regular",
+        background: `linear-gradient(170deg, ${from} 30%, ${to})`,
+        backgroundSize: "130% 130%",
+        _hover: {
+          backgroundPosition: "90% 50%",
+        },
+        _active: {
+          boxShadow: "inset 0 0 3px 2px rgba(0, 0, 0, 0.2)",
+        },
+      }
+    },
   },
 })
 
@@ -63,6 +81,7 @@ export const theme = extendTheme({
       500: "#BA50FF",
       600: "#AA40EE",
       800: "#8E00EB",
+      900: "#40006A",
     },
   },
   config: {

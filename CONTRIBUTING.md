@@ -1,8 +1,10 @@
+# Development
+
 ## Development Setup
 
 1. Clone the repository locally
 2. If you want to change something in DevPod agent code:
-   1. Exchange the URL in [DefaultAgentDownloadURL](./pkg/agent/agent.go) with a custom public repository release you have created. 
+   1. Exchange the URL in [DefaultAgentDownloadURL](./pkg/agent/agent.go) with a custom public repository release you have created.
    2. Build devpod via: `./hack/rebuild.sh`
    3. Upload `test/devpod-linux-amd64` and `test/devpod-linux-arm64` to the public repository release assets.
 3. Build devpod via: `./hack/rebuild.sh` (asking for sudo password)
@@ -36,3 +38,15 @@ Once installed, run
 
 The application should be in `desktop/src-tauri/target/release`
 
+## Provider
+
+Head over to [the docs](https://devpod.sh/docs/developing-providers/quickstart) for an introduction into developing your own providers
+
+### Publish your provider
+
+Once you're provider is ready, update
+
+- `community.yaml`
+- `docs/pages/managing-providers/add-provider.mdx`
+
+to get your provider featured both in the documentation and the UI

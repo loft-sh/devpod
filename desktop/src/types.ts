@@ -158,6 +158,14 @@ export type TDevcontainerSetup = Readonly<{
   isImage: boolean
   configPaths: string[]
 }>
+//#region CommunityContributions
+export type TCommunityContributions = Readonly<{
+  providers: readonly TCommunitProvider[]
+}>
+export type TCommunitProvider = Readonly<{
+  repository: string
+}>
+//#endregion
 
 export function isWithWorkspaceID(arg: unknown): arg is TWithWorkspaceID {
   return typeof arg === "object" && arg !== null && "workspaceID" in arg

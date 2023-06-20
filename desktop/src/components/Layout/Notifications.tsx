@@ -91,7 +91,7 @@ export function Notifications() {
                 {action.status === "error" && <ExclamationCircle color="red.300" />}
                 {action.status === "cancelled" && <ExclamationTriangle color="orange.300" />}
 
-                <VStack align="start">
+                <VStack align="start" spacing="0">
                   <Text fontWeight="bold">
                     <LinkOverlay
                       as={RouterLink}
@@ -102,9 +102,7 @@ export function Notifications() {
                     </LinkOverlay>
                   </Text>
                   {action.finishedAt !== undefined && (
-                    <Text marginTop={"0 !important"} color={subheadingTextColor}>
-                      {dayjs(action.finishedAt).fromNow()}
-                    </Text>
+                    <Text color={subheadingTextColor}>{dayjs(action.finishedAt).fromNow()}</Text>
                   )}
                 </VStack>
               </LinkBox>

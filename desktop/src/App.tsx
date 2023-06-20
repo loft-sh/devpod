@@ -1,6 +1,8 @@
+import { ExternalLinkIcon } from "@chakra-ui/icons"
 import {
   Box,
   BoxProps,
+  Button,
   Code,
   Container,
   Flex,
@@ -13,9 +15,11 @@ import {
   useToken,
   VStack,
 } from "@chakra-ui/react"
-import { useEffect, useMemo } from "react"
-import { Link as RouterLink, Outlet, useMatch, useNavigate, useRouteError } from "react-router-dom"
+import { useCallback, useEffect, useMemo } from "react"
+import { Outlet, Link as RouterLink, useMatch, useNavigate, useRouteError } from "react-router-dom"
+import { client } from "./client"
 import { Sidebar, SidebarMenuItem, StatusBar, Toolbar } from "./components"
+import { SIDEBAR_WIDTH, STATUS_BAR_HEIGHT } from "./constants"
 import { ToolbarProvider, useChangeSettings, useSettings } from "./contexts"
 import { Briefcase, Cog, Stack3D } from "./icons"
 import { isLinux, isMacOS } from "./lib"
@@ -23,7 +27,6 @@ import { Routes } from "./routes"
 import { useBorderColor } from "./Theme"
 import { useAppReady } from "./useAppReady"
 import { useWelcomeModal } from "./useWelcomeModal"
-import { SIDEBAR_WIDTH, STATUS_BAR_HEIGHT } from "./constants"
 
 const shouldShowTitleBar = isMacOS || isLinux
 
@@ -33,11 +36,11 @@ export function App() {
   const rootRouteMatch = useMatch(Routes.ROOT)
   const { sidebarPosition } = useSettings()
   const contentBackgroundColor = useColorModeValue("white", "black")
-  const toolbarHeight = useToken("sizes", shouldShowTitleBar ? "32" : "20")
+  const toolbarHeight = useToken("sizes", shouldShowTitleBar ? "28" : "20")
   const borderColor = useBorderColor()
 
   const titleBarSafeArea = useMemo<BoxProps["height"]>(() => {
-    return shouldShowTitleBar ? "10" : 0
+    return shouldShowTitleBar ? "12" : 0
   }, [])
 
   const mainGridProps = useMemo<GridProps>(() => {
@@ -57,6 +60,10 @@ export function App() {
   const { modal: welcomeModal } = useWelcomeModal()
   usePartyParrot()
 
+  const handleAnnouncementClicked = () => {
+    client.openLink("https://devpod.sh/engine")
+  }
+
   return (
     <>
       <Flex height="100vh" width="100vw" maxWidth="100vw" overflow="hidden">
@@ -67,14 +74,29 @@ export function App() {
             position="fixed"
             top="0"
             width="full"
+            display="grid"
+            gridTemplateColumns="1fr 1fr 1fr"
             textAlign={"center"}
-            zIndex="tooltip">
+            zIndex="tooltip"
+            justifyItems="center">
             <Text
+              gridColumn="2"
               data-tauri-drag-region // keep!
               fontWeight="bold"
               marginTop="2">
               DevPod
             </Text>
+            <Button
+              variant="announcement"
+              gridColumn="3"
+              marginTop="2"
+              width="fit-content"
+              justifySelf="end"
+              marginRight="10"
+              rightIcon={<ExternalLinkIcon />}
+              onClick={handleAnnouncementClicked}>
+              Try Loft DevPod Engine
+            </Button>
           </Box>
         )}
 
