@@ -1,0 +1,3 @@
+providers:
+  - repository: https://github.com/alexandrevilain/devpod-provider-ovhcloud
+  - repository: https://github.com/dirien/devpod-provider-scaleway
