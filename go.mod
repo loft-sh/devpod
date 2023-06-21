@@ -7,6 +7,7 @@ require (
 	github.com/PaesslerAG/jsonpath v0.1.1
 	github.com/acarl005/stripansi v0.0.0-20180116102854-5a71ef0e047d
 	github.com/alessio/shellescape v1.4.1
+	github.com/alexflint/go-filemutex v0.0.0-20171022225611-72bdc8eae2ae
 	github.com/blang/semver v3.5.1+incompatible
 	github.com/bmatcuk/doublestar/v4 v4.6.0
 	github.com/compose-spec/compose-go v1.11.0

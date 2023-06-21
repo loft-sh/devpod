@@ -36,6 +36,7 @@ func InjectAndExecute(
 	localFile LocalFile,
 	existsCheck string,
 	remotePath,
+	downloadBase,
 	downloadAmd64,
 	downloadArm64 string,
 	preferDownload,
@@ -55,6 +56,7 @@ func InjectAndExecute(
 		"InstallFilename": path.Base(remotePath),
 		"PreferDownload":  strconv.FormatBool(preferDownload),
 		"ChmodPath":       strconv.FormatBool(chmodPath),
+		"DownloadBase":    downloadBase,
 		"DownloadAmd":     downloadAmd64,
 		"DownloadArm":     downloadArm64,
 	})
@@ -143,7 +145,15 @@ func InjectAndExecute(
 	return true, exec(ctx, command, stdin, stdout, stderr)
 }
 
-func inject(localFile LocalFile, stdout io.ReadCloser, stdoutOut io.Writer, stdin io.WriteCloser, stdinOut io.Reader, timeout time.Duration, log log.Logger) (bool, error) {
+func inject(
+	localFile LocalFile,
+	stdout io.ReadCloser,
+	stdoutOut io.Writer,
+	stdin io.WriteCloser,
+	stdinOut io.Reader,
+	timeout time.Duration,
+	log log.Logger,
+) (bool, error) {
 	// wait until we read start
 	var line string
 	errChan := make(chan error)

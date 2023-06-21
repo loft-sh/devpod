@@ -9,8 +9,10 @@ import (
 	"io"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"sync"
 
+	"github.com/gofrs/flock"
 	"github.com/loft-sh/devpod/pkg/binaries"
 	"github.com/loft-sh/devpod/pkg/client"
 	"github.com/loft-sh/devpod/pkg/compress"
@@ -43,6 +45,10 @@ func NewWorkspaceClient(devPodConfig *config.Config, prov *provider.ProviderConf
 
 type workspaceClient struct {
 	m sync.Mutex
+
+	workspaceLockOnce sync.Once
+	workspaceLock     *flock.Flock
+	machineLock       *flock.Flock
 
 	devPodConfig *config.Config
 	config       *provider.ProviderConfig
@@ -156,6 +162,68 @@ func (s *workspaceClient) AgentInfo() (string, *provider.AgentWorkspaceInfo, err
 	}
 
 	return compressed, agentInfo, nil
+}
+
+func (s *workspaceClient) initLock() {
+	s.workspaceLockOnce.Do(func() {
+		s.m.Lock()
+		defer s.m.Unlock()
+
+		// get locks dir
+		workspaceLocksDir, err := provider.GetLocksDir(s.workspace.Context)
+		if err != nil {
+			panic(fmt.Errorf("get workspaces dir: %w", err))
+		}
+		_ = os.MkdirAll(workspaceLocksDir, 0777)
+
+		// create workspace lock
+		s.workspaceLock = flock.New(filepath.Join(workspaceLocksDir, s.workspace.ID+".workspace.lock"))
+
+		// create machine lock
+		if s.machine != nil {
+			s.machineLock = flock.New(filepath.Join(workspaceLocksDir, s.machine.ID+".machine.lock"))
+		}
+	})
+}
+
+func (s *workspaceClient) Lock() {
+	s.initLock()
+
+	// try to lock workspace
+	s.log.Debugf("Acquire workspace lock...")
+	err := s.workspaceLock.Lock()
+	if err != nil {
+		s.log.Warnf("Error locking workspace: %v", err)
+	}
+	s.log.Debugf("Acquired workspace lock...")
+
+	// try to lock machine
+	if s.machineLock != nil {
+		s.log.Debugf("Acquire machine lock...")
+		err := s.machineLock.Lock()
+		if err != nil {
+			s.log.Warnf("Error locking machine: %v", err)
+		}
+		s.log.Debugf("Acquired machine lock...")
+	}
+}
+
+func (s *workspaceClient) Unlock() {
+	s.initLock()
+
+	// try to unlock machine
+	if s.machineLock != nil {
+		err := s.machineLock.Unlock()
+		if err != nil {
+			s.log.Warnf("Error unlocking machine: %v", err)
+		}
+	}
+
+	// try to unlock workspace
+	err := s.workspaceLock.Unlock()
+	if err != nil {
+		s.log.Warnf("Error unlocking workspace: %v", err)
+	}
 }
 
 func (s *workspaceClient) Create(ctx context.Context, options client.CreateOptions) error {

@@ -46,6 +46,10 @@ func NewStopCmd(flags *flags.GlobalFlags) *cobra.Command {
 
 // Run runs the command logic
 func (cmd *StopCmd) Run(ctx context.Context, client client2.WorkspaceClient) error {
+	// lock workspace
+	client.Lock()
+	defer client.Unlock()
+
 	// get instance status
 	instanceStatus, err := client.Status(ctx, client2.StatusOptions{})
 	if err != nil {

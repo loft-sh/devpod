@@ -6,6 +6,7 @@ import (
 	"io"
 	"net/url"
 	"os"
+	"sync"
 
 	"github.com/loft-sh/devpod/cmd/flags"
 	"github.com/loft-sh/devpod/pkg/agent"
@@ -149,6 +150,10 @@ func startVSCodeLocally(client client2.WorkspaceClient, workspaceFolder, user st
 }
 
 func startInBrowser(ctx context.Context, devPodConfig *config.Config, client client2.WorkspaceClient, workspaceFolder, user string, ideOptions map[string]config.OptionValue, log *log.StreamLogger) error {
+	unlockOnce := sync.Once{}
+	client.Lock()
+	defer unlockOnce.Do(client.Unlock)
+
 	// determine port
 	vscodePort, err := port.FindAvailablePort(openvscode.DefaultVSCodePort)
 	if err != nil {
@@ -168,15 +173,18 @@ func startInBrowser(ctx context.Context, devPodConfig *config.Config, client cli
 		}()
 	}
 
-	// print port to console
-	log.JSON(logrus.InfoLevel, map[string]string{
-		"url":  targetURL,
-		"done": "true",
-	})
-
 	// start in browser
 	log.Infof("Starting vscode in browser mode at %s", targetURL)
-	err = tunnel.NewContainerTunnel(client, log).Run(ctx, nil, func(ctx context.Context, hostClient, containerClient *ssh.Client) error {
+	err = tunnel.NewContainerTunnel(client, log).Run(ctx, func(ctx context.Context, hostClient, containerClient *ssh.Client) error {
+		unlockOnce.Do(client.Unlock)
+
+		// print port to console
+		log.JSON(logrus.InfoLevel, map[string]string{
+			"url":  targetURL,
+			"done": "true",
+		})
+
+		// run in container
 		err := tunnel.RunInContainer(
 			ctx,
 			client,
@@ -205,6 +213,9 @@ func startInBrowser(ctx context.Context, devPodConfig *config.Config, client cli
 }
 
 func (cmd *UpCmd) devPodUp(ctx context.Context, client client2.WorkspaceClient, log log.Logger) (*config2.Result, error) {
+	client.Lock()
+	defer client.Unlock()
+
 	err := startWait(ctx, client, true, log)
 	if err != nil {
 		return nil, err

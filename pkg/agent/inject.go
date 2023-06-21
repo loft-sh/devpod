@@ -101,6 +101,7 @@ func InjectAgentAndExecute(
 			},
 			versionCheck,
 			remoteAgentPath,
+			downloadURL,
 			downloadURL+"/devpod-linux-amd64",
 			downloadURL+"/devpod-linux-arm64",
 			preferDownload,

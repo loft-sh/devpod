@@ -72,6 +72,13 @@ type WorkspaceClient interface {
 
 	// AgentInfo returns the info to send to the agent
 	AgentInfo() (string, *provider.AgentWorkspaceInfo, error)
+
+	// Lock locks the workspace. This is a file lock, which means
+	// the workspace is locked across processes.
+	Lock()
+
+	// Unlock unlocks the workspace.
+	Unlock()
 }
 
 type InitOptions struct{}
