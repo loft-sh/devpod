@@ -22,7 +22,7 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
-func makeEnvironment(env map[string]string) []string {
+func makeEnvironment(env map[string]string, log log.Logger) []string {
 	if env == nil {
 		return nil
 	}
@@ -32,6 +32,9 @@ func makeEnvironment(env map[string]string) []string {
 		ret = append(ret, k+"="+v)
 	}
 
+	if len(env) > 0 {
+		log.Debugf("Use docker environment variables: %v", ret)
+	}
 	return ret
 }
 
@@ -42,10 +45,12 @@ func NewDockerDriver(workspaceInfo *provider2.AgentWorkspaceInfo, log log.Logger
 	}
 
 	log.Debugf("Using docker command '%s'", dockerCommand)
-	dockerHelper := &docker.DockerHelper{DockerCommand: dockerCommand, Environment: makeEnvironment(workspaceInfo.Agent.Docker.Env)}
 	return &dockerDriver{
-		Docker: dockerHelper,
-		Log:    log,
+		Docker: &docker.DockerHelper{
+			DockerCommand: dockerCommand,
+			Environment:   makeEnvironment(workspaceInfo.Agent.Docker.Env, log),
+		},
+		Log: log,
 	}
 }
 

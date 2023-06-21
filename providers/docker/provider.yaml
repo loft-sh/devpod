@@ -7,6 +7,7 @@ description: |-
 optionGroups:
   - options:
       - DOCKER_PATH
+      - DOCKER_HOST
       - INACTIVITY_TIMEOUT
     name: "Advanced Options"
 options:
@@ -15,17 +16,22 @@ options:
   DOCKER_PATH:
     description: The path where to find the docker binary.
     default: docker
+  DOCKER_HOST:
+    global: true
+    description: The docker host to use.
 agent:
   containerInactivityTimeout: ${INACTIVITY_TIMEOUT}
   local: true
   docker:
     path: ${DOCKER_PATH}
     install: false
+    env:
+      DOCKER_HOST: ${DOCKER_HOST}
 exec:
   init: |-
     # Check if docker exists and is reachable
-    DOCKER_REACHABLE=$(${DOCKER_PATH} ps > /dev/null 2>&1 && echo -n "true" || echo -n "false")
-    if [ "$DOCKER_REACHABLE" = "false" ]; then
+    DOCKER_HOST=${DOCKER_HOST} ${DOCKER_PATH} ps >/dev/null 2>&1
+    if [ $? -ne 0 ]; then
       >&2 echo "Seems like docker is not reachable on your system."
       >&2 echo "Please make sure docker is installed and running."
       >&2 echo "You can verify if docker is running correctly via '${DOCKER_PATH} ps'"
