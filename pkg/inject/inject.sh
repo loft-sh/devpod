@@ -99,7 +99,7 @@ if {{ .ExistsCheck }}; then
     $sh_c "mkdir -p $INSTALL_DIR"
   fi
 
-
+  $sh_c "rm -f $INSTALL_PATH 2&> /dev/null || true"
   if [ "$PREFER_DOWNLOAD" = "true" ]; then
     download || inject
   else
