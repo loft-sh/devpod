@@ -321,17 +321,22 @@ export function CreateWorkspace() {
                   placeholder="my-workspace"
                   type="text"
                   {...register(FieldName.ID, {
-                    validate: {
-                      name: (value) => {
-                        if (/[^a-z0-9-]+/.test(value)) {
-                          return "Name can only consist of lower case letters, numbers and dashes"
-                        } else {
-                          return true
-                        }
-                      },
+                    validate: (value) => {
+                      if (/[^a-z0-9-]+/.test(value)) {
+                        return "Name can only consist of lower case letters, numbers and dashes"
+                      } else {
+                        return true
+                      }
                     },
                     maxLength: { value: 48, message: "Name cannot be longer than 48 characters" },
                   })}
+                  onChange={(e) => {
+                    // for some reason this is needed to make `validate` work...
+                    setValue(FieldName.ID, e.target.value, {
+                      shouldDirty: true,
+                      shouldValidate: true,
+                    })
+                  }}
                 />
                 {exists(idError) ? (
                   <FormErrorMessage>{idError.message ?? "Error"}</FormErrorMessage>
