@@ -237,7 +237,7 @@ func rerunAsRoot(workspaceInfo *provider2.AgentWorkspaceInfo, log log.Logger) (b
 
 	// check if we can reach docker with no problems
 	dockerRootRequired := false
-	if workspaceInfo == nil || workspaceInfo.Agent.Driver == "" || workspaceInfo.Agent.Driver == provider2.DockerDriver {
+	if workspaceInfo != nil && (workspaceInfo.Agent.Driver == "" || workspaceInfo.Agent.Driver == provider2.DockerDriver) {
 		var err error
 		dockerRootRequired, err = dockerReachable(workspaceInfo.Agent.Docker.Path, workspaceInfo.Agent.Docker.Env)
 		if err != nil {
