@@ -67,13 +67,14 @@ jobs:
         with:
           script: |
             // Find the prerelease release in our repo that triggered this workflow
+            const refName = `${process.env.GITHUB_REF_NAME}`
 
             const res = await github.rest.repos.listReleases({
               owner: context.repo.owner,
               repo: context.repo.repo,
-              per_page: 5,
+              per_page: 10,
             })
-            const release = res.data.find((r) => r.prerelease)
+            const release = res.data.find((r) => r.tag_name === refName && r.prerelease)
             if(!release) { core.setFailed("Unable to find prerelease for this workflow") }
 
             core.setOutput("id", release.id)
