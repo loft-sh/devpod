@@ -212,12 +212,15 @@ export class ProviderCommands {
   }
 
   static async UpdateProvider(id: TProviderID, source: TProviderSource) {
+    const useFlag = toFlagArg(DEVPOD_FLAG_USE, "false")
+
     const result = await new Command([
       DEVPOD_COMMAND_PROVIDER,
       DEVPOD_COMMAND_UPDATE,
       id,
       source.raw ?? source.github ?? source.url ?? source.file ?? "",
       DEVPOD_FLAG_JSON_LOG_OUTPUT,
+      useFlag,
     ]).run()
     if (result.err) {
       return result
