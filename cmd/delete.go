@@ -112,7 +112,10 @@ func (cmd *DeleteCmd) Run(ctx context.Context, devPodConfig *config.Config, args
 		GracePeriod: duration,
 	})
 	if err != nil {
-		return err
+		err2 := clientimplementation.DeleteWorkspaceFolder(client.Context(), client.Workspace(), log.Default)
+		if err2 != nil {
+			return errors.Wrap(err2, err.Error())
+		}
 	}
 
 	log.Default.Donef("Successfully deleted workspace '%s'", client.Workspace())
