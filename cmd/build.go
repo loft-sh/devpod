@@ -108,6 +108,9 @@ func (cmd *BuildCmd) Run(ctx context.Context, client client.WorkspaceClient) err
 }
 
 func (cmd *BuildCmd) build(ctx context.Context, workspaceClient client.WorkspaceClient, log log.Logger) error {
+	workspaceClient.Lock()
+	defer workspaceClient.Unlock()
+
 	err := startWait(ctx, workspaceClient, true, log)
 	if err != nil {
 		return err

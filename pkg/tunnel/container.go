@@ -34,11 +34,10 @@ type ContainerHandler struct {
 	log                  log.Logger
 }
 
-type Handler func(ctx context.Context, client *ssh.Client) error
-type RunInContainerHandler func(ctx context.Context, hostClient, containerClient *ssh.Client) error
+type Handler func(ctx context.Context, hostClient, containerClient *ssh.Client) error
 
-func (c *ContainerHandler) Run(ctx context.Context, runInHost Handler, runInContainer RunInContainerHandler) error {
-	if runInHost == nil && runInContainer == nil {
+func (c *ContainerHandler) Run(ctx context.Context, handler Handler) error {
+	if handler == nil {
 		return nil
 	}
 
@@ -106,26 +105,13 @@ func (c *ContainerHandler) Run(ctx context.Context, runInHost Handler, runInCont
 
 		// do port-forwarding etc. here with sshClient
 		waitGroup := sync.WaitGroup{}
-		if runInContainer != nil {
-			waitGroup.Add(1)
-			go func() {
-				defer waitGroup.Done()
-				defer c.log.Debugf("Run in container done")
+		waitGroup.Add(1)
+		go func() {
+			defer waitGroup.Done()
+			defer c.log.Debugf("Run in container done")
 
-				containerChan <- errors.Wrap(c.runRunInContainer(cancelCtx, sshClient, tok, privateKey, runInContainer), "run in container")
-			}()
-		}
-
-		// tunnel to host
-		if runInHost != nil {
-			waitGroup.Add(1)
-			go func() {
-				defer waitGroup.Done()
-				defer c.log.Debugf("Run in host done")
-
-				containerChan <- errors.Wrap(runInHost(cancelCtx, sshClient), "run in host")
-			}()
-		}
+			containerChan <- errors.Wrap(c.runRunInContainer(cancelCtx, sshClient, tok, privateKey, handler), "run in container")
+		}()
 
 		// update workspace remotely
 		if c.updateConfigInterval > 0 {
@@ -187,7 +173,7 @@ func (c *ContainerHandler) updateConfig(ctx context.Context, sshClient *ssh.Clie
 	}
 }
 
-func (c *ContainerHandler) runRunInContainer(ctx context.Context, sshClient *ssh.Client, tok string, privateKey []byte, runInContainer RunInContainerHandler) error {
+func (c *ContainerHandler) runRunInContainer(ctx context.Context, sshClient *ssh.Client, tok string, privateKey []byte, runInContainer Handler) error {
 	// compress info
 	workspaceInfo, _, err := c.client.AgentInfo()
 	if err != nil {
@@ -220,7 +206,7 @@ func (c *ContainerHandler) runRunInContainer(ctx context.Context, sshClient *ssh
 		c.log.Debugf("Run container tunnel")
 		defer c.log.Debugf("Container tunnel exited")
 
-		command := fmt.Sprintf("'%s' agent container-tunnel --token '%s' --workspace-info '%s'", c.client.AgentPath(), tok, workspaceInfo)
+		command := fmt.Sprintf("'%s' agent container-tunnel --start-container --token '%s' --workspace-info '%s'", c.client.AgentPath(), tok, workspaceInfo)
 		if c.log.GetLevel() == logrus.DebugLevel {
 			command += " --debug"
 		}

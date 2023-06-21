@@ -114,5 +114,8 @@ fi
 # send parent done stream
 echo "done"
 
+# set download url
+export DEVPOD_AGENT_URL={{ .DownloadBase }}
+
 # Execute command
 {{ .Command }}

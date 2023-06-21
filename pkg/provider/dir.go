@@ -25,6 +25,15 @@ func GetMachinesDir(context string) (string, error) {
 	return filepath.Join(configDir, "contexts", context, "machines"), nil
 }
 
+func GetLocksDir(context string) (string, error) {
+	configDir, err := config.GetConfigDir()
+	if err != nil {
+		return "", err
+	}
+
+	return filepath.Join(configDir, "contexts", context, "locks"), nil
+}
+
 func GetWorkspacesDir(context string) (string, error) {
 	configDir, err := config.GetConfigDir()
 	if err != nil {
