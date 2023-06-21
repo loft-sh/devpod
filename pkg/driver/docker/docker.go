@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"os"
 	"path"
 	"path/filepath"
 	"strconv"
@@ -192,7 +193,7 @@ func (d *dockerDriver) RunDevContainer(
 	// the same of the external user.
 	// This will avoid problems of mismatching chowns on the
 	// project files.
-	if d.Docker.IsPodman() {
+	if d.Docker.IsPodman() && os.Getuid() != 0 {
 		args = append(args, "--userns", "keep-id")
 	}
 
