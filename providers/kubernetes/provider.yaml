@@ -1,5 +1,5 @@
 name: kubernetes
-version: v0.0.2
+version: v0.0.1
 icon: https://devpod.sh/assets/kubernetes.svg
 home: https://github.com/loft-sh/devpod
 description: |-
