@@ -142,10 +142,13 @@ func (cmd *UpCmd) Run(ctx context.Context, devPodConfig *config.Config, client c
 
 func startVSCodeLocally(client client2.WorkspaceClient, workspaceFolder, user string, log log.Logger) error {
 	log.Infof("Starting VSCode...")
-	err := open.Start(`vscode://vscode-remote/ssh-remote+` + url.QueryEscape(user) + `@` + client.Workspace() + `.devpod/` + url.QueryEscape(workspaceFolder))
+	err := open.Run(`vscode://vscode-remote/ssh-remote+` + url.QueryEscape(user) + `@` + client.Workspace() + `.devpod/` + url.QueryEscape(workspaceFolder))
 	if err != nil {
+		log.Debugf("Starting VSCode caused error: %v", err)
+		log.Errorf("Seems like you don't have Visual Studio Code installed on your computer locally. Please install VSCode via https://code.visualstudio.com/")
 		return err
 	}
+
 	return nil
 }
 

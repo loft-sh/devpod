@@ -492,7 +492,12 @@ func resolveDefaultValue(val string, resolvedOptions map[string]string) string {
 func resolveDefaultValues(vals map[string]string, resolvedOptions map[string]string) map[string]string {
 	ret := make(map[string]string)
 	for k, v := range vals {
-		ret[k] = resolveDefaultValue(v, resolvedOptions)
+		resolvedValue := resolveDefaultValue(v, resolvedOptions)
+		if resolvedValue == "" {
+			continue
+		}
+
+		ret[k] = resolvedValue
 	}
 	return ret
 }
