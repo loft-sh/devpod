@@ -1,17 +1,15 @@
 package config
 
 import (
-	"bytes"
 	"encoding/json"
 	"fmt"
 	"os"
 	path2 "path"
 	"path/filepath"
-	"strings"
 
 	doublestar "github.com/bmatcuk/doublestar/v4"
-	"github.com/loft-sh/devpod/pkg/scanner"
 	"github.com/pkg/errors"
+	"github.com/tidwall/jsonc"
 )
 
 const DEVCONTAINER_FEATURE_FILE_NAME = "devcontainer-feature.json"
@@ -34,7 +32,7 @@ func ParseDevContainerFeature(folder string) (*FeatureConfig, error) {
 	}
 
 	featureConfig := &FeatureConfig{}
-	err = json.Unmarshal(JSONCtoJSON(data), featureConfig)
+	err = json.Unmarshal(jsonc.ToJSON(data), featureConfig)
 	if err != nil {
 		return nil, err
 	}
@@ -103,7 +101,7 @@ func ParseDevContainerJSON(folder, relativePath string) (*DevContainerConfig, er
 	}
 
 	devContainer := &DevContainerConfig{}
-	err = json.Unmarshal(JSONCtoJSON(bytes), devContainer)
+	err = json.Unmarshal(jsonc.ToJSON(bytes), devContainer)
 	if err != nil {
 		return nil, err
 	}
@@ -167,19 +165,4 @@ func Convert(from interface{}, to interface{}) error {
 	}
 
 	return json.Unmarshal(out, to)
-}
-
-func JSONCtoJSON(jsonCBytes []byte) []byte {
-	scanner := scanner.NewScanner(bytes.NewReader(jsonCBytes))
-	lines := []string{}
-	for scanner.Scan() {
-		line := scanner.Text()
-		if strings.HasPrefix(strings.TrimSpace(line), "//") {
-			continue
-		}
-
-		lines = append(lines, line)
-	}
-
-	return []byte(strings.Join(lines, "\n"))
 }

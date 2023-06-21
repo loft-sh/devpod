@@ -425,6 +425,9 @@ github.com/tadvi/systray
 # github.com/takama/daemon v1.0.0
 ## explicit; go 1.14
 github.com/takama/daemon
+# github.com/tidwall/jsonc v0.3.2
+## explicit; go 1.16
+github.com/tidwall/jsonc
 # github.com/tonistiigi/fsutil v0.0.0-20230105215944-fb433841cbfa
 ## explicit; go 1.18
 github.com/tonistiigi/fsutil
