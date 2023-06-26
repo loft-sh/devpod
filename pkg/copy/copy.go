@@ -23,7 +23,7 @@ func Chown(path string, userName string) error {
 	}
 
 	uid, _ := strconv.Atoi(userID.Uid)
-	return os.Chown(path, uid, -1)
+	return os.Lchown(path, uid, -1)
 }
 
 func ChownR(path string, userName string) error {
@@ -53,7 +53,7 @@ func ChownR(path string, userName string) error {
 		}
 
 		if err == nil {
-			err = os.Chown(name, uid, gid)
+			_ = os.Lchown(name, uid, gid)
 		}
 		return err
 	})

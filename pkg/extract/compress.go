@@ -8,7 +8,6 @@ import (
 	"path"
 	"path/filepath"
 	"runtime"
-	"strings"
 	"time"
 
 	"github.com/pkg/errors"
@@ -53,7 +52,7 @@ func WriteTar(writer io.Writer, localPath string, compress bool) error {
 type Archiver struct {
 	basePath     string
 	writer       *tar.Writer
-	writtenFiles map[string]*FileInformation
+	writtenFiles map[string]bool
 }
 
 // NewArchiver creates a new archiver
@@ -61,52 +60,51 @@ func NewArchiver(basePath string, writer *tar.Writer) *Archiver {
 	return &Archiver{
 		basePath:     basePath,
 		writer:       writer,
-		writtenFiles: map[string]*FileInformation{},
+		writtenFiles: map[string]bool{},
 	}
 }
 
 // AddToArchive adds a new path to the archive
 func (a *Archiver) AddToArchive(relativePath string) error {
 	absFilepath := path.Join(a.basePath, relativePath)
-	if a.writtenFiles[relativePath] != nil {
+	if a.writtenFiles[relativePath] {
 		return nil
 	}
 
 	// We skip files that are suddenly not there anymore
-	stat, err := os.Stat(absFilepath)
+	stat, err := os.Lstat(absFilepath)
 	if err != nil {
 		// config.Logf("[Upstream] Couldn't stat file %s: %s\n", absFilepath, err.Error())
 		return nil
 	}
 
-	fileInformation := createFileInformationFromStat(relativePath, stat)
 	if stat.IsDir() {
 		// Recursively tar folder
-		return a.tarFolder(fileInformation, stat)
+		return a.tarFolder(relativePath, stat)
 	}
 
-	return a.tarFile(fileInformation, stat)
+	return a.tarFile(relativePath, stat)
 }
 
-func (a *Archiver) tarFolder(target *FileInformation, targetStat os.FileInfo) error {
-	filePath := path.Join(a.basePath, target.Name)
+func (a *Archiver) tarFolder(target string, targetStat os.FileInfo) error {
+	filePath := path.Join(a.basePath, target)
 	files, err := os.ReadDir(filePath)
 	if err != nil {
 		// config.Logf("[Upstream] Couldn't read dir %s: %s\n", filepath, err.Error())
 		return nil
 	}
 
-	if len(files) == 0 && target.Name != "" {
+	if len(files) == 0 && target != "" {
 		// Case empty directory
 		hdr, _ := tar.FileInfoHeader(targetStat, filePath)
 		hdr.Uid = 0
 		hdr.Gid = 0
 		hdr.Mode = fillGo18FileTypeBits(int64(chmodTarEntry(os.FileMode(hdr.Mode))), targetStat)
-		hdr.Name = target.Name
+		hdr.Name = target
 		if err := a.writer.WriteHeader(hdr); err != nil {
 			return errors.Wrap(err, "tar write header")
 		}
-		a.writtenFiles[target.Name] = target
+		a.writtenFiles[target] = true
 	}
 
 	for _, dirEntry := range files {
@@ -115,11 +113,7 @@ func (a *Archiver) tarFolder(target *FileInformation, targetStat os.FileInfo) er
 			continue
 		}
 
-		if IsRecursiveSymlink(f, path.Join(filePath, f.Name())) {
-			continue
-		}
-
-		if err = a.AddToArchive(path.Join(target.Name, f.Name())); err != nil {
+		if err = a.AddToArchive(path.Join(target, f.Name())); err != nil {
 			return errors.Wrap(err, "recursive tar "+f.Name())
 		}
 	}
@@ -127,19 +121,37 @@ func (a *Archiver) tarFolder(target *FileInformation, targetStat os.FileInfo) er
 	return nil
 }
 
-func (a *Archiver) tarFile(target *FileInformation, targetStat os.FileInfo) error {
+func (a *Archiver) tarFile(target string, targetStat os.FileInfo) error {
 	var err error
-	filepath := path.Join(a.basePath, target.Name)
-	if targetStat.Mode()&os.ModeSymlink == os.ModeSymlink {
-		if filepath, err = os.Readlink(filepath); err != nil {
-			return nil
-		}
+	filepath := path.Join(a.basePath, target)
 
-		targetStat, err = os.Stat(filepath)
-		if err != nil || targetStat.IsDir() {
-			// We ignore open file and just treat it as okay
+	// don't resolve symlinks
+	linkName := ""
+	if targetStat.Mode()&os.ModeSymlink == os.ModeSymlink {
+		linkName, err = os.Readlink(filepath)
+		if err != nil {
 			return nil
 		}
+	}
+
+	hdr, err := tar.FileInfoHeader(targetStat, linkName)
+	if err != nil {
+		return errors.Wrap(err, "create tar file info header")
+	}
+	hdr.Name = target
+	hdr.Uid = 0
+	hdr.Gid = 0
+	hdr.Mode = fillGo18FileTypeBits(int64(chmodTarEntry(os.FileMode(hdr.Mode))), targetStat)
+	hdr.ModTime = time.Unix(targetStat.ModTime().Unix(), 0)
+
+	if err := a.writer.WriteHeader(hdr); err != nil {
+		return errors.Wrap(err, "tar write header")
+	}
+
+	// nothing more to do for non-regular
+	if !targetStat.Mode().IsRegular() {
+		a.writtenFiles[target] = true
+		return nil
 	}
 
 	// Case regular file
@@ -149,26 +161,6 @@ func (a *Archiver) tarFile(target *FileInformation, targetStat os.FileInfo) erro
 		return nil
 	}
 	defer f.Close()
-
-	hdr, err := tar.FileInfoHeader(targetStat, filepath)
-	if err != nil {
-		return errors.Wrap(err, "create tar file info header")
-	}
-	hdr.Name = target.Name
-	hdr.Uid = 0
-	hdr.Gid = 0
-	hdr.Mode = fillGo18FileTypeBits(int64(chmodTarEntry(os.FileMode(hdr.Mode))), targetStat)
-	hdr.ModTime = time.Unix(target.Mtime, 0)
-
-	if err := a.writer.WriteHeader(hdr); err != nil {
-		return errors.Wrap(err, "tar write header")
-	}
-
-	// nothing more to do for non-regular
-	if !targetStat.Mode().IsRegular() {
-		return nil
-	}
-
 	copied, err := io.CopyN(a.writer, f, targetStat.Size())
 	if err != nil {
 		return errors.Wrap(err, "tar copy file")
@@ -176,7 +168,7 @@ func (a *Archiver) tarFile(target *FileInformation, targetStat os.FileInfo) erro
 		return errors.New("tar: file truncated during read")
 	}
 
-	a.writtenFiles[target.Name] = target
+	a.writtenFiles[target] = true
 	return nil
 }
 
@@ -230,42 +222,4 @@ func fillGo18FileTypeBits(mode int64, fi os.FileInfo) int64 {
 		mode |= modeISSOCK
 	}
 	return mode
-}
-
-// FileInformation describes a path or file that is synced either in the remote container or locally
-type FileInformation struct {
-	Name           string
-	Size           int64
-	Mtime          int64
-	MtimeNano      int64
-	Mode           os.FileMode
-	IsDirectory    bool
-	IsSymbolicLink bool
-	ResolvedLink   bool
-	Files          int
-}
-
-func createFileInformationFromStat(relativePath string, stat os.FileInfo) *FileInformation {
-	return &FileInformation{
-		Name:        relativePath,
-		Size:        stat.Size(),
-		Mtime:       stat.ModTime().Unix(),
-		MtimeNano:   stat.ModTime().UnixNano(),
-		Mode:        stat.Mode(),
-		IsDirectory: stat.IsDir(),
-	}
-}
-
-// IsRecursiveSymlink checks if the provided non-resolved file info
-// is a recursive symlink
-func IsRecursiveSymlink(f os.FileInfo, symlinkPath string) bool {
-	// check if recursive symlink
-	if f.Mode()&os.ModeSymlink == os.ModeSymlink {
-		resolvedPath, err := filepath.EvalSymlinks(symlinkPath)
-		if err != nil || strings.HasPrefix(symlinkPath, filepath.ToSlash(resolvedPath)) {
-			return true
-		}
-	}
-
-	return false
 }

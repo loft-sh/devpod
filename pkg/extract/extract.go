@@ -30,12 +30,6 @@ func StripLevels(levels int) Option {
 	}
 }
 
-func OverridePerm(perm os.FileMode) Option {
-	return func(o *Options) {
-		o.Perm = &perm
-	}
-}
-
 func Extract(origReader io.Reader, destFolder string, options ...Option) error {
 	extractOptions := &Options{}
 	for _, o := range options {
@@ -111,18 +105,33 @@ func extractNext(tarReader *tar.Reader, destFolder string, options *Options) (bo
 		return false, err
 	}
 
+	// whats the file perm?
+	filePerm := os.FileMode(0666)
+	if options.Perm != nil {
+		filePerm = *options.Perm
+	}
+
 	// Is dir?
-	if header.FileInfo().IsDir() {
+	if header.Typeflag == tar.TypeDir {
 		if err := os.MkdirAll(outFileName, dirPerm); err != nil {
 			return false, err
 		}
 
 		return true, nil
-	}
+	} else if header.Typeflag == tar.TypeSymlink {
+		err := os.Symlink(header.Linkname, outFileName)
+		if err != nil {
+			return false, err
+		}
 
-	filePerm := os.FileMode(0666)
-	if options.Perm != nil {
-		filePerm = *options.Perm
+		return true, nil
+	} else if header.Typeflag == tar.TypeLink {
+		err := os.Link(header.Linkname, outFileName)
+		if err != nil {
+			return false, err
+		}
+
+		return true, nil
 	}
 
 	// Create / Override file
