@@ -15,8 +15,7 @@ cp test/devpod-cli-linux-arm64 desktop/src-tauri/bin/devpod-cli-aarch64-unknown-
 cp test/devpod-cli-darwin-amd64 desktop/src-tauri/bin/devpod-cli-x86_64-apple-darwin
 cp test/devpod-cli-darwin-arm64 desktop/src-tauri/bin/devpod-cli-aarch64-apple-darwin
 
-
-#upx "test/devpod-linux-amd64"
-#upx "test/devpod-linux-arm64"
-#upx "test/devpod-darwin-arm64"
 rm -R $TMPDIR/devpod-cache 2>/dev/null || true
+mkdir -p $TMPDIR/devpod-cache
+cp test/devpod-cli-linux-amd64 $TMPDIR/devpod-cache/devpod-linux-amd64
+cp test/devpod-cli-linux-arm64 $TMPDIR/devpod-cache/devpod-linux-arm64

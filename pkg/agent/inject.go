@@ -79,6 +79,7 @@ func InjectAgentAndExecute(
 	versionCheck := fmt.Sprintf(`[ "$(%s version 2>/dev/null || echo 'false')" != "%s" ]`, remoteAgentPath, version.GetVersion())
 	if version.GetVersion() == version.DevVersion {
 		versionCheck = fmt.Sprintf(`[ -z "$(%s version 2>/dev/null || true)" ]`, remoteAgentPath)
+		preferDownload = false
 	}
 
 	// install devpod into the target
@@ -183,6 +184,11 @@ func downloadAgentLocally(tryDownloadURL, targetArch string, log log.Logger) (st
 		return "", errors.Wrap(err, "create agent path")
 	}
 
+	stat, statErr := os.Stat(agentPath)
+	if version.GetVersion() == version.DevVersion && statErr == nil {
+		return agentPath, nil
+	}
+
 	httpClient := &http.Client{
 		Transport: &http.Transport{
 			TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
@@ -194,8 +200,7 @@ func downloadAgentLocally(tryDownloadURL, targetArch string, log log.Logger) (st
 	}
 	defer resp.Body.Close()
 
-	stat, err := os.Stat(agentPath)
-	if err == nil && stat.Size() == resp.ContentLength {
+	if statErr == nil && stat.Size() == resp.ContentLength {
 		return agentPath, nil
 	}
 
