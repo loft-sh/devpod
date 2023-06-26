@@ -2,6 +2,7 @@ import { invoke } from "@tauri-apps/api"
 import { TActionID, TActionName, TActionObj } from "../../contexts"
 import { Result, ResultError, Return, THandler, exists, noop } from "../../lib"
 import {
+  TDevcontainerSetup,
   TStreamID,
   TUnsubscribeFn,
   TWorkspace,
@@ -174,6 +175,21 @@ export class WorkspacesClient implements TDebuggable {
     }
 
     return Return.Ok()
+  }
+
+  public async checkDevcontainerSetup(rawSource: string): Promise<Result<TDevcontainerSetup>> {
+    const result = await WorkspaceCommands.GetDevcontainerConfig(rawSource).run()
+    if (result.err) {
+      return result
+    }
+
+    try {
+      const setup = JSON.parse(result.val.stdout) as TDevcontainerSetup
+
+      return Return.Value(setup)
+    } catch (err) {
+      return Return.Failed(`Failed to parse devcontainer setup: ${err}`)
+    }
   }
 
   public subscribe(

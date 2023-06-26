@@ -59,6 +59,13 @@ const (
 )
 
 func NewStdoutLogger(stdin io.Reader, stdout, stderr io.Writer, level logrus.Level) *StreamLogger {
+	if stdout == nil {
+		stdout = goansi.NewAnsiStdout()
+	}
+	if stderr == nil {
+		stderr = goansi.NewAnsiStderr()
+	}
+
 	return &StreamLogger{
 		m:           &sync.Mutex{},
 		level:       level,

@@ -530,7 +530,7 @@ function WorkspaceStatusBadge({
     const rippleProps: IconProps = {
       boxSize: 8,
       position: "absolute",
-      left: "-12px",
+      left: "-8px",
       zIndex: "0",
     }
 

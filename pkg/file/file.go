@@ -1,6 +1,9 @@
 package file
 
-import "os"
+import (
+	"os"
+	"path/filepath"
+)
 
 func Chown(userName string, target string) error {
 	return chown(userName, target)
@@ -18,4 +21,16 @@ func MkdirAll(userName string, dir string, perm os.FileMode) error {
 	}
 
 	return chown(userName, dir)
+}
+
+func IsLocalDir(name string) (bool, string) {
+	_, err := os.Stat(name)
+	if err == nil {
+		absPath, _ := filepath.Abs(name)
+		if absPath != "" {
+			return true, absPath
+		}
+	}
+
+	return false, name
 }

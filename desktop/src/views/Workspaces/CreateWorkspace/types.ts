@@ -8,6 +8,7 @@ export const FieldName = {
   DEFAULT_IDE: "defaultIDE",
   PROVIDER: "provider",
   PREBUILD_REPOSITORY: "prebuildRepository",
+  DEVCONTAINER_PATH: "devcontainerPath",
 } as const
 
 export type TFormValues = {
@@ -16,6 +17,7 @@ export type TFormValues = {
   [FieldName.PROVIDER]: TProviderID
   [FieldName.ID]: string
   [FieldName.PREBUILD_REPOSITORY]: string
+  [FieldName.DEVCONTAINER_PATH]?: string
 }
 
 export type TCreateWorkspaceSearchParams = ReturnType<
@@ -27,6 +29,7 @@ export type TCreateWorkspaceArgs = Readonly<{
   prebuildRepositories: string[]
   defaultIDE: string
   workspaceSource: string
+  devcontainerPath: string | undefined
 }>
 export type TSelectProviderOptions = Readonly<{
   installed: readonly TNamedProvider[]

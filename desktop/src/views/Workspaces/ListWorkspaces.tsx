@@ -1,4 +1,4 @@
-import { Button, Text, VStack, Wrap, WrapItem } from "@chakra-ui/react"
+import { Button, Text, VStack } from "@chakra-ui/react"
 import { useMemo } from "react"
 import { useNavigate } from "react-router"
 import { useWorkspaces } from "../../contexts"
@@ -38,7 +38,7 @@ export function ListWorkspaces() {
       <Button onClick={() => navigate(Routes.WORKSPACE_CREATE)}>Create Workspace</Button>
     </VStack>
   ) : (
-    <VStack alignItems={"flex-start"}>
+    <VStack alignItems={"flex-start"} paddingBottom="6">
       {workspaceCards.map((workspace) => (
         <WorkspaceCard key={workspace.id} workspaceID={workspace.id} />
       ))}

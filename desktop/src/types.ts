@@ -139,7 +139,8 @@ export type TWorkspaceStatusResult = Readonly<{
 }>
 export type TWorkspaceStartConfig = Readonly<{
   id: string
-  prebuildRepositories?: Array<string>
+  prebuildRepositories?: string[]
+  devcontainerPath?: string
   ideConfig?: TWorkspace["ide"]
   providerConfig?: Readonly<{ providerID?: TProviderID }>
   // Instead of starting a workspace just by ID, the sourceConfig starts it with a `source/ID` combination
@@ -150,6 +151,13 @@ export type TWorkspaceStartConfig = Readonly<{
 export const SUPPORTED_IDES = ["vscode", "intellj"] as const
 export type TSupportedIDE = (typeof SUPPORTED_IDES)[number]
 //#endregion
+
+export type TDevcontainerSetup = Readonly<{
+  isGitRepository: boolean
+  isLocal: boolean
+  isImage: boolean
+  configPaths: string[]
+}>
 
 export function isWithWorkspaceID(arg: unknown): arg is TWithWorkspaceID {
   return typeof arg === "object" && arg !== null && "workspaceID" in arg

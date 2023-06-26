@@ -8,6 +8,7 @@ import (
 	"github.com/loft-sh/devpod/pkg/client"
 	"github.com/loft-sh/devpod/pkg/client/clientimplementation"
 	"github.com/loft-sh/devpod/pkg/config"
+	"github.com/loft-sh/devpod/pkg/file"
 	"github.com/loft-sh/devpod/pkg/log"
 	provider2 "github.com/loft-sh/devpod/pkg/provider"
 	"github.com/loft-sh/devpod/pkg/survey"
@@ -73,7 +74,7 @@ func MachineExists(devPodConfig *config.Config, args []string) string {
 	}
 
 	// check if workspace already exists
-	_, name := isLocalDir(args[0])
+	_, name := file.IsLocalDir(args[0])
 
 	// convert to id
 	machineID := ToID(name)
@@ -94,7 +95,7 @@ func GetMachine(devPodConfig *config.Config, args []string, log log.Logger) (cli
 	}
 
 	// check if workspace already exists
-	_, name := isLocalDir(args[0])
+	_, name := file.IsLocalDir(args[0])
 
 	// convert to id
 	machineID := ToID(name)

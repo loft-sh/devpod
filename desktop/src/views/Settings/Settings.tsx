@@ -151,6 +151,20 @@ export function Settings() {
           {installCLIErrorMessage}
         </VStack>
 
+        <VStack align="start">
+          <Heading {...headingProps}>Experimental</Heading>
+
+          <Checkbox
+            isChecked={settings.experimental_multiDevcontainer}
+            onChange={(e) => set("experimental_multiDevcontainer", e.target.checked)}>
+            Check workspaces for multiple devcontainers
+          </Checkbox>
+          <SettingDescription>
+            Whenever new workspaces are created, check if there are multiple devcontainers in the
+            source. This might take a while for larger repositories.
+          </SettingDescription>
+        </VStack>
+
         <Divider />
 
         <Heading {...headingProps} color="red.600">
