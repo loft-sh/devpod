@@ -121,7 +121,8 @@ func getShell() ([]string, error) {
 }
 
 func (s *Server) handler(sess ssh.Session) {
-	cmd := s.getCommand(sess)
+	ptyReq, winCh, isPty := sess.Pty()
+	cmd := s.getCommand(sess, isPty)
 	if ssh.AgentRequested(sess) {
 		l, err := ssh.NewAgentListener()
 		if err != nil {
@@ -136,7 +137,6 @@ func (s *Server) handler(sess ssh.Session) {
 
 	// start shell session
 	var err error
-	ptyReq, winCh, isPty := sess.Pty()
 	if isPty {
 		s.log.Debugf("Execute SSH server PTY command: %s", strings.Join(cmd.Args, " "))
 		err = HandlePTY(sess, ptyReq, winCh, cmd, nil)
@@ -256,7 +256,7 @@ func HandlePTY(sess ssh.Session, ptyReq ssh.Pty, winCh <-chan ssh.Window, cmd *e
 	return nil
 }
 
-func (s *Server) getCommand(sess ssh.Session) *exec.Cmd {
+func (s *Server) getCommand(sess ssh.Session, isPty bool) *exec.Cmd {
 	var cmd *exec.Cmd
 	user := sess.User()
 	if user == s.currentUser {
@@ -265,18 +265,32 @@ func (s *Server) getCommand(sess ssh.Session) *exec.Cmd {
 
 	// has user set?
 	if user != "" {
-		if len(sess.RawCommand()) == 0 {
-			cmd = exec.Command("su", sess.User())
-		} else {
-			args := []string{sess.User(), "-c", sess.RawCommand()}
-			cmd = exec.Command("su", args...)
+		args := []string{}
+
+		// is pty?
+		if isPty {
+			args = append(args, "-")
 		}
+
+		// add user
+		args = append(args, sess.User())
+
+		// is there a command?
+		if len(sess.RawCommand()) > 0 {
+			args = append(args, "-c", sess.RawCommand())
+		}
+
+		cmd = exec.Command("su", args...)
 	} else {
+		args := []string{}
+		args = append(args, s.shell[1:]...)
+		if isPty {
+			args = append(args, "-l")
+		}
+
 		if len(sess.RawCommand()) == 0 {
-			cmd = exec.Command(s.shell[0], s.shell[1:]...)
+			cmd = exec.Command(s.shell[0], args...)
 		} else {
-			args := []string{}
-			args = append(args, s.shell[1:]...)
 			args = append(args, "-c", sess.RawCommand())
 			cmd = exec.Command(s.shell[0], args...)
 		}
