@@ -21,17 +21,21 @@ var (
 	MarkerEndPrefix   = "# DevPod End "
 )
 
-func ConfigureSSHConfig(context, workspace, user string, log log.Logger) error {
-	return configureSSHConfigSameFile(context, workspace, user, "", log)
+func ConfigureSSHConfig(configPath, context, workspace, user string, log log.Logger) error {
+	return configureSSHConfigSameFile(configPath, context, workspace, user, "", log)
 }
 
-func configureSSHConfigSameFile(context, workspace, user, command string, log log.Logger) error {
+func configureSSHConfigSameFile(configPath, context, workspace, user, command string, log log.Logger) error {
 	configLock.Lock()
 	defer configLock.Unlock()
 
-	sshConfigPath, err := getSSHConfig()
-	if err != nil {
-		return err
+	sshConfigPath := configPath
+	if sshConfigPath == "" {
+		var err error
+		sshConfigPath, err = getSSHConfig()
+		if err != nil {
+			return err
+		}
 	}
 
 	newFile, err := addHost(sshConfigPath, workspace+"."+"devpod", user, context, workspace, command)

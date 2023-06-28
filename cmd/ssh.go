@@ -203,8 +203,8 @@ func (cmd *SSHCmd) jumpContainer(ctx context.Context, devPodConfig *config.Confi
 	)
 }
 
-func configureSSH(client client2.WorkspaceClient, user string) error {
-	err := devssh.ConfigureSSHConfig(client.Context(), client.Workspace(), user, log.Default)
+func configureSSH(client client2.WorkspaceClient, configPath, user string) error {
+	err := devssh.ConfigureSSHConfig(configPath, client.Context(), client.Workspace(), user, log.Default)
 	if err != nil {
 		return err
 	}

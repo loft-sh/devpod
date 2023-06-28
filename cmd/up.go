@@ -42,7 +42,9 @@ type UpCmd struct {
 
 	DevContainerPath string
 
-	Recreate bool
+	Recreate      bool
+	ConfigureSSH  bool
+	SSHConfigPath string
 }
 
 // NewUpCmd creates a new up command
@@ -81,6 +83,8 @@ func NewUpCmd(flags *flags.GlobalFlags) *cobra.Command {
 		},
 	}
 
+	upCmd.Flags().BoolVar(&cmd.ConfigureSSH, "configure-ssh", true, "If true will configure the ssh config to include the DevPod workspace")
+	upCmd.Flags().StringVar(&cmd.SSHConfigPath, "ssh-config", "", "The path to the ssh config to modify, if empty will use ~/.ssh/config")
 	upCmd.Flags().StringSliceVar(&cmd.IDEOptions, "ide-option", []string{}, "IDE option in the form KEY=VALUE")
 	upCmd.Flags().StringVar(&cmd.DevContainerPath, "devcontainer-path", "", "The path to the devcontainer.json relative to the project")
 	upCmd.Flags().StringSliceVar(&cmd.ProviderOptions, "provider-option", []string{}, "Provider option in the form KEY=VALUE")
@@ -106,11 +110,14 @@ func (cmd *UpCmd) Run(ctx context.Context, devPodConfig *config.Config, client c
 	user := config2.GetRemoteUser(result)
 
 	// configure container ssh
-	err = configureSSH(client, user)
-	if err != nil {
-		return err
+	if cmd.ConfigureSSH {
+		err = configureSSH(client, cmd.SSHConfigPath, user)
+		if err != nil {
+			return err
+		}
+
+		log.Default.Infof("Run 'ssh %s.devpod' to ssh into the devcontainer", client.Workspace())
 	}
-	log.Default.Infof("Run 'ssh %s.devpod' to ssh into the devcontainer", client.Workspace())
 
 	// open ide
 	ideConfig := client.WorkspaceConfig().IDE
