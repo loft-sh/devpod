@@ -11,6 +11,7 @@ import (
 
 type ShellCommand struct {
 	Command string
+	Login   bool
 }
 
 // NewShellCmd creates a new command
@@ -24,6 +25,7 @@ func NewShellCmd() *cobra.Command {
 		},
 	}
 
+	shellCmd.Flags().BoolVarP(&cmd.Login, "login", "l", false, "If login shell should be used")
 	shellCmd.Flags().StringVarP(&cmd.Command, "command", "c", "", "Command to execute")
 	return shellCmd
 }
