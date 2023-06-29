@@ -1,9 +1,9 @@
 package config
 
 type Result struct {
-	ContainerDetails    *ContainerDetails
-	MergedConfig        *MergedDevContainerConfig
-	SubstitutionContext *SubstitutionContext
+	ContainerDetails    *ContainerDetails         `json:"ContainerDetails"`
+	MergedConfig        *MergedDevContainerConfig `json:"MergedConfig"`
+	SubstitutionContext *SubstitutionContext      `json:"SubstitutionContext"`
 }
 
 func GetRemoteUser(result *Result) string {

@@ -14,22 +14,22 @@ type ImageDetailsConfig struct {
 }
 
 type ContainerDetails struct {
-	ID      string
-	Created string
-	State   ContainerDetailsState
-	Config  ContainerDetailsConfig
+	ID      string                 `json:"ID,omitempty"`
+	Created string                 `json:"Created,omitempty"`
+	State   ContainerDetailsState  `json:"State,omitempty"`
+	Config  ContainerDetailsConfig `json:"Config,omitempty"`
 }
 
 type ContainerDetailsConfig struct {
-	Image  string
-	User   string
-	Env    []string
-	Labels map[string]string
+	Image  string            `json:"Image,omitempty"`
+	User   string            `json:"User,omitempty"`
+	Env    []string          `json:"Env,omitempty"`
+	Labels map[string]string `json:"Labels,omitempty"`
 }
 
 type ContainerDetailsState struct {
-	Status    string
-	StartedAt string
+	Status    string `json:"Status,omitempty"`
+	StartedAt string `json:"StartedAt,omitempty"`
 }
 
 func ContainerToImageDetails(containerDetails *ContainerDetails) *ImageDetails {
