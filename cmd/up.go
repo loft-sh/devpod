@@ -42,8 +42,11 @@ type UpCmd struct {
 
 	DevContainerPath string
 
-	Recreate      bool
-	ConfigureSSH  bool
+	Recreate bool
+
+	ConfigureSSH bool
+	OpenIDE      bool
+
 	SSHConfigPath string
 }
 
@@ -93,6 +96,7 @@ func NewUpCmd(flags *flags.GlobalFlags) *cobra.Command {
 	upCmd.Flags().StringVar(&cmd.ID, "id", "", "The id to use for the workspace")
 	upCmd.Flags().StringVar(&cmd.Machine, "machine", "", "The machine to use for this workspace. The machine needs to exist beforehand or the command will fail. If the workspace already exists, this option has no effect")
 	upCmd.Flags().StringVar(&cmd.IDE, "ide", "", "The IDE to open the workspace in. If empty will use vscode locally or in browser")
+	upCmd.Flags().BoolVar(&cmd.OpenIDE, "open-ide", true, "If this is false and an IDE is configured, DevPod will only install the IDE server backend, but not open it")
 	return upCmd
 }
 
@@ -105,6 +109,9 @@ func (cmd *UpCmd) Run(ctx context.Context, devPodConfig *config.Config, client c
 	} else if result == nil {
 		return fmt.Errorf("didn't receive a result back from agent")
 	}
+
+	// print result to log
+	log.Default.JSON(logrus.InfoLevel, result)
 
 	// get user from result
 	user := config2.GetRemoteUser(result)
@@ -120,28 +127,30 @@ func (cmd *UpCmd) Run(ctx context.Context, devPodConfig *config.Config, client c
 	}
 
 	// open ide
-	ideConfig := client.WorkspaceConfig().IDE
-	switch ideConfig.Name {
-	case string(config.IDEVSCode):
-		return startVSCodeLocally(client, result.SubstitutionContext.ContainerWorkspaceFolder, user, log.Default)
-	case string(config.IDEOpenVSCode):
-		return startInBrowser(ctx, devPodConfig, client, result.SubstitutionContext.ContainerWorkspaceFolder, user, ideConfig.Options, log.Default)
-	case string(config.IDEGoland):
-		return jetbrains.NewGolandServer(config2.GetRemoteUser(result), ideConfig.Options, log.Default).OpenGateway(result.SubstitutionContext.ContainerWorkspaceFolder, client.Workspace())
-	case string(config.IDEPyCharm):
-		return jetbrains.NewPyCharmServer(config2.GetRemoteUser(result), ideConfig.Options, log.Default).OpenGateway(result.SubstitutionContext.ContainerWorkspaceFolder, client.Workspace())
-	case string(config.IDEPhpStorm):
-		return jetbrains.NewPhpStorm(config2.GetRemoteUser(result), ideConfig.Options, log.Default).OpenGateway(result.SubstitutionContext.ContainerWorkspaceFolder, client.Workspace())
-	case string(config.IDEIntellij):
-		return jetbrains.NewIntellij(config2.GetRemoteUser(result), ideConfig.Options, log.Default).OpenGateway(result.SubstitutionContext.ContainerWorkspaceFolder, client.Workspace())
-	case string(config.IDECLion):
-		return jetbrains.NewCLionServer(config2.GetRemoteUser(result), ideConfig.Options, log.Default).OpenGateway(result.SubstitutionContext.ContainerWorkspaceFolder, client.Workspace())
-	case string(config.IDERider):
-		return jetbrains.NewRiderServer(config2.GetRemoteUser(result), ideConfig.Options, log.Default).OpenGateway(result.SubstitutionContext.ContainerWorkspaceFolder, client.Workspace())
-	case string(config.IDERubyMine):
-		return jetbrains.NewRubyMineServer(config2.GetRemoteUser(result), ideConfig.Options, log.Default).OpenGateway(result.SubstitutionContext.ContainerWorkspaceFolder, client.Workspace())
-	case string(config.IDEWebStorm):
-		return jetbrains.NewWebStormServer(config2.GetRemoteUser(result), ideConfig.Options, log.Default).OpenGateway(result.SubstitutionContext.ContainerWorkspaceFolder, client.Workspace())
+	if cmd.OpenIDE {
+		ideConfig := client.WorkspaceConfig().IDE
+		switch ideConfig.Name {
+		case string(config.IDEVSCode):
+			return startVSCodeLocally(client, result.SubstitutionContext.ContainerWorkspaceFolder, user, log.Default)
+		case string(config.IDEOpenVSCode):
+			return startInBrowser(ctx, devPodConfig, client, result.SubstitutionContext.ContainerWorkspaceFolder, user, ideConfig.Options, log.Default)
+		case string(config.IDEGoland):
+			return jetbrains.NewGolandServer(config2.GetRemoteUser(result), ideConfig.Options, log.Default).OpenGateway(result.SubstitutionContext.ContainerWorkspaceFolder, client.Workspace())
+		case string(config.IDEPyCharm):
+			return jetbrains.NewPyCharmServer(config2.GetRemoteUser(result), ideConfig.Options, log.Default).OpenGateway(result.SubstitutionContext.ContainerWorkspaceFolder, client.Workspace())
+		case string(config.IDEPhpStorm):
+			return jetbrains.NewPhpStorm(config2.GetRemoteUser(result), ideConfig.Options, log.Default).OpenGateway(result.SubstitutionContext.ContainerWorkspaceFolder, client.Workspace())
+		case string(config.IDEIntellij):
+			return jetbrains.NewIntellij(config2.GetRemoteUser(result), ideConfig.Options, log.Default).OpenGateway(result.SubstitutionContext.ContainerWorkspaceFolder, client.Workspace())
+		case string(config.IDECLion):
+			return jetbrains.NewCLionServer(config2.GetRemoteUser(result), ideConfig.Options, log.Default).OpenGateway(result.SubstitutionContext.ContainerWorkspaceFolder, client.Workspace())
+		case string(config.IDERider):
+			return jetbrains.NewRiderServer(config2.GetRemoteUser(result), ideConfig.Options, log.Default).OpenGateway(result.SubstitutionContext.ContainerWorkspaceFolder, client.Workspace())
+		case string(config.IDERubyMine):
+			return jetbrains.NewRubyMineServer(config2.GetRemoteUser(result), ideConfig.Options, log.Default).OpenGateway(result.SubstitutionContext.ContainerWorkspaceFolder, client.Workspace())
+		case string(config.IDEWebStorm):
+			return jetbrains.NewWebStormServer(config2.GetRemoteUser(result), ideConfig.Options, log.Default).OpenGateway(result.SubstitutionContext.ContainerWorkspaceFolder, client.Workspace())
+		}
 	}
 
 	return nil

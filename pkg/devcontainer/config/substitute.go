@@ -21,10 +21,10 @@ type SubstitutedConfig struct {
 }
 
 type SubstitutionContext struct {
-	DevContainerID           string
-	LocalWorkspaceFolder     string
-	ContainerWorkspaceFolder string
-	Env                      map[string]string
+	DevContainerID           string            `json:"DevContainerID,omitempty"`
+	LocalWorkspaceFolder     string            `json:"LocalWorkspaceFolder,omitempty"`
+	ContainerWorkspaceFolder string            `json:"ContainerWorkspaceFolder,omitempty"`
+	Env                      map[string]string `json:"Env,omitempty"`
 }
 
 func Substitute(substitutionCtx *SubstitutionContext, config interface{}, out interface{}) error {
