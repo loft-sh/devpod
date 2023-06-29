@@ -11,9 +11,10 @@ import (
 
 	"github.com/docker/go-connections/nat"
 	"github.com/loft-sh/devpod/pkg/agent"
-	"github.com/loft-sh/devpod/pkg/client"
+	"github.com/loft-sh/devpod/pkg/agent/tunnelserver"
 	"github.com/loft-sh/devpod/pkg/config"
 	config2 "github.com/loft-sh/devpod/pkg/devcontainer/config"
+	"github.com/loft-sh/devpod/pkg/devcontainer/setup"
 	"github.com/loft-sh/devpod/pkg/log"
 	"github.com/loft-sh/devpod/pkg/netstat"
 	devssh "github.com/loft-sh/devpod/pkg/ssh"
@@ -24,9 +25,7 @@ import (
 
 func RunInContainer(
 	ctx context.Context,
-	workspaceClient client.WorkspaceClient,
 	devPodConfig *config.Config,
-	hostClient,
 	containerClient *ssh.Client,
 	user string,
 	forwardPorts,
@@ -36,7 +35,7 @@ func RunInContainer(
 	log log.Logger,
 ) error {
 	// forward ports
-	forwardedPorts, err := forwardDevContainerPorts(ctx, workspaceClient, hostClient, containerClient, extraPorts, log)
+	forwardedPorts, err := forwardDevContainerPorts(ctx, containerClient, extraPorts, log)
 	if err != nil {
 		return errors.Wrap(err, "forward ports")
 	}
@@ -92,7 +91,7 @@ func RunInContainer(
 	}
 
 	// forward credentials to container
-	_, err = agent.RunTunnelServer(
+	_, err = tunnelserver.RunTunnelServer(
 		cancelCtx,
 		stdoutReader,
 		stdinWriter,
@@ -111,15 +110,21 @@ func RunInContainer(
 	return <-errChan
 }
 
-func forwardDevContainerPorts(ctx context.Context, workspaceClient client.WorkspaceClient, sshClient, containerClient *ssh.Client, extraPorts []string, log log.Logger) ([]string, error) {
-	result, err := getDevContainerResult(ctx, workspaceClient, sshClient, log, false)
+func forwardDevContainerPorts(ctx context.Context, containerClient *ssh.Client, extraPorts []string, log log.Logger) ([]string, error) {
+	stdout := &bytes.Buffer{}
+	stderr := &bytes.Buffer{}
+	err := devssh.Run(ctx, containerClient, "cat "+setup.ResultLocation, nil, stdout, stderr)
 	if err != nil {
-		log.Debug("error retrieving dev container result, retrying running as root")
-		result, err = getDevContainerResult(ctx, workspaceClient, sshClient, log, true)
-		if err != nil {
-			return nil, fmt.Errorf("error retrieving dev container result: %w", err)
-		}
+		return nil, fmt.Errorf("retrieve container result: %s\n%s%w", stdout.String(), stderr.String(), err)
 	}
+
+	// parse result
+	result := &config2.Result{}
+	err = json.Unmarshal(stdout.Bytes(), result)
+	if err != nil {
+		return nil, fmt.Errorf("error parsing container result %s: %w", stdout.String(), err)
+	}
+	log.Debugf("Successfully parsed result at %s", setup.ResultLocation)
 
 	// extra ports first
 	appPorts := []string{}
@@ -185,41 +190,6 @@ func forwardDevContainerPorts(ctx context.Context, workspaceClient client.Worksp
 	}
 
 	return forwardedPorts, nil
-}
-
-func getDevContainerResult(ctx context.Context, workspaceClient client.WorkspaceClient, client *ssh.Client, log log.Logger, root bool) (*config2.Result, error) {
-	writer := log.Writer(logrus.DebugLevel, false)
-	defer writer.Close()
-
-	agentConfig := workspaceClient.AgentConfig()
-
-	// retrieve devcontainer result
-	command := fmt.Sprintf("'%s' agent workspace get-result --id '%s' --context '%s'", workspaceClient.AgentPath(), workspaceClient.Workspace(), workspaceClient.Context())
-	if log.GetLevel() == logrus.DebugLevel {
-		command += " --debug"
-	}
-	if agentConfig.DataPath != "" {
-		command += fmt.Sprintf(" --agent-dir '%s'", agentConfig.DataPath)
-	}
-	if root {
-		command = "sudo " + command
-	}
-	buf := &bytes.Buffer{}
-	err := devssh.Run(ctx, client, command, nil, buf, writer)
-	if err != nil {
-		return nil, fmt.Errorf("error retrieving workspace get-result: %w", err)
-	}
-
-	// parse result
-	result := &config2.Result{}
-	err = json.Unmarshal(buf.Bytes(), result)
-	if err != nil {
-		return nil, err
-	} else if result.MergedConfig == nil {
-		return nil, fmt.Errorf("received empty devcontainer result: %v", buf.String())
-	}
-
-	return result, nil
 }
 
 func parseForwardPort(port string) (string, int64, error) {

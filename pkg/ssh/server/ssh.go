@@ -41,20 +41,6 @@ func NewServer(addr string, hostKey []byte, keys []ssh.PublicKey, log log.Logger
 		currentUser: currentUser.Username,
 		sshServer: ssh.Server{
 			Addr: addr,
-			PublicKeyHandler: func(ctx ssh.Context, key ssh.PublicKey) bool {
-				if len(keys) == 0 {
-					return true
-				}
-
-				for _, k := range keys {
-					if ssh.KeysEqual(k, key) {
-						return true
-					}
-				}
-
-				log.Debugf("Declined public key")
-				return false
-			},
 			LocalPortForwardingCallback: func(ctx ssh.Context, dhost string, dport uint32) bool {
 				log.Debugf("Accepted forward: %s:%d", dhost, dport)
 				return true
@@ -77,6 +63,19 @@ func NewServer(addr string, hostKey []byte, keys []ssh.PublicKey, log log.Logger
 				},
 			},
 		},
+	}
+
+	if len(keys) > 0 {
+		server.sshServer.PublicKeyHandler = func(ctx ssh.Context, key ssh.PublicKey) bool {
+			for _, k := range keys {
+				if ssh.KeysEqual(k, key) {
+					return true
+				}
+			}
+
+			log.Debugf("Declined public key")
+			return false
+		}
 	}
 
 	if len(hostKey) > 0 {

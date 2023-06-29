@@ -91,10 +91,6 @@ func (d *dockerDriver) PushDevContainer(ctx context.Context, image string) error
 	return nil
 }
 
-func (d *dockerDriver) StartDevContainer(ctx context.Context, id string, labels []string) error {
-	return d.Docker.StartContainer(ctx, id, labels)
-}
-
 func (d *dockerDriver) DeleteDevContainer(ctx context.Context, id string, deleteVolumes bool) error {
 	var volume string
 
@@ -120,6 +116,10 @@ func (d *dockerDriver) DeleteDevContainer(ctx context.Context, id string, delete
 	}
 
 	return nil
+}
+
+func (d *dockerDriver) StartDevContainer(ctx context.Context, id string, labels []string) error {
+	return d.Docker.StartContainer(ctx, id, labels)
 }
 
 func (d *dockerDriver) StopDevContainer(ctx context.Context, id string) error {

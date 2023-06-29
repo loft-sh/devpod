@@ -72,10 +72,8 @@ func addHost(path, host, user, context, workspace, command string) (string, erro
 	newLines = append(newLines, "Host "+host)
 	newLines = append(newLines, "  ForwardAgent yes")
 	newLines = append(newLines, "  LogLevel error")
-	newLines = append(newLines, "  IdentityFile \""+filepath.Join(GetDevPodKeysDir(), DevPodSSHPrivateKeyFile)+"\"")
 	newLines = append(newLines, "  StrictHostKeyChecking no")
 	newLines = append(newLines, "  UserKnownHostsFile /dev/null")
-	newLines = append(newLines, "  IdentitiesOnly yes")
 	if command != "" {
 		newLines = append(newLines, fmt.Sprintf("  ProxyCommand %s", command))
 	} else {

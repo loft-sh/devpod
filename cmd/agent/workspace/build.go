@@ -51,7 +51,9 @@ func (cmd *BuildCmd) Run(ctx context.Context) error {
 	}
 
 	// write workspace info
-	shouldExit, workspaceInfo, err := agent.WriteWorkspaceInfoAndDeleteOld(cmd.WorkspaceInfo, deleteWorkspace, log.Default.ErrorStreamOnly())
+	shouldExit, workspaceInfo, err := agent.WriteWorkspaceInfoAndDeleteOld(cmd.WorkspaceInfo, func(workspaceInfo *provider2.AgentWorkspaceInfo, log log.Logger) error {
+		return deleteWorkspace(ctx, workspaceInfo, log)
+	}, log.Default.ErrorStreamOnly())
 	if err != nil {
 		return err
 	} else if shouldExit {
@@ -70,7 +72,7 @@ func (cmd *BuildCmd) Run(ctx context.Context) error {
 		}()
 	}
 
-	runner, err := createRunner(workspaceInfo, logger)
+	runner, err := CreateRunner(workspaceInfo, logger)
 	if err != nil {
 		return err
 	}
@@ -84,7 +86,7 @@ func (cmd *BuildCmd) Run(ctx context.Context) error {
 	// build and push images
 	for _, platform := range cmd.Platforms {
 		// build the image
-		imageName, err := runner.Build(config.BuildOptions{
+		imageName, err := runner.Build(ctx, config.BuildOptions{
 			PushRepository: cmd.Repository,
 			Platform:       platform,
 		})
@@ -99,8 +101,8 @@ func (cmd *BuildCmd) Run(ctx context.Context) error {
 	return nil
 }
 
-func deleteWorkspace(workspaceInfo *provider2.AgentWorkspaceInfo, log log.Logger) error {
-	err := removeContainer(workspaceInfo, log)
+func deleteWorkspace(ctx context.Context, workspaceInfo *provider2.AgentWorkspaceInfo, log log.Logger) error {
+	err := removeContainer(ctx, workspaceInfo, log)
 	if err != nil {
 		return errors.Wrap(err, "remove container")
 	}

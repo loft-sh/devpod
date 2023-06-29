@@ -3,6 +3,7 @@ package devcontainer
 import (
 	"context"
 	"fmt"
+	"io"
 	"os"
 	"os/exec"
 	"path"
@@ -10,10 +11,10 @@ import (
 	"runtime"
 	"strings"
 
-	"github.com/loft-sh/devpod/pkg/agent"
 	"github.com/loft-sh/devpod/pkg/devcontainer/config"
 	"github.com/loft-sh/devpod/pkg/driver"
 	"github.com/loft-sh/devpod/pkg/driver/drivercreate"
+	"github.com/loft-sh/devpod/pkg/encoding"
 	"github.com/loft-sh/devpod/pkg/language"
 	"github.com/loft-sh/devpod/pkg/log"
 	provider2 "github.com/loft-sh/devpod/pkg/provider"
@@ -27,13 +28,15 @@ func NewRunner(agentPath, agentDownloadURL string, workspaceConfig *provider2.Ag
 		return nil, err
 	}
 
+	// we use the workspace uid as id to avoid conflicts between container names
+
 	return &Runner{
 		Driver: driver,
 
 		AgentPath:            agentPath,
 		AgentDownloadURL:     agentDownloadURL,
 		LocalWorkspaceFolder: workspaceConfig.ContentFolder,
-		ID:                   workspaceConfig.Workspace.ID,
+		ID:                   GetRunnerIDFromWorkspace(workspaceConfig.Workspace),
 		WorkspaceConfig:      workspaceConfig,
 		Log:                  log,
 	}, nil
@@ -49,7 +52,8 @@ type Runner struct {
 	LocalWorkspaceFolder string
 	SubstitutionContext  *config.SubstitutionContext
 
-	ID  string
+	ID string
+
 	Log log.Logger
 }
 
@@ -81,7 +85,7 @@ func (r *Runner) prepare() (*config.SubstitutedConfig, *WorkspaceConfig, error) 
 	configFile := rawParsedConfig.Origin
 
 	// get workspace folder within container
-	workspace := getWorkspace(r.LocalWorkspaceFolder, r.ID, rawParsedConfig)
+	workspace := getWorkspace(r.LocalWorkspaceFolder, r.WorkspaceConfig.Workspace.ID, rawParsedConfig)
 	r.SubstitutionContext = &config.SubstitutionContext{
 		DevContainerID:           config.GetDevContainerID(config.ListToObject(r.getLabels())),
 		LocalWorkspaceFolder:     r.LocalWorkspaceFolder,
@@ -108,7 +112,7 @@ func (r *Runner) prepare() (*config.SubstitutedConfig, *WorkspaceConfig, error) 
 	}, &workspace, nil
 }
 
-func (r *Runner) Up(options UpOptions) (*config.Result, error) {
+func (r *Runner) Up(ctx context.Context, options UpOptions) (*config.Result, error) {
 	substitutedConfig, workspace, err := r.prepare()
 	if err != nil {
 		return nil, err
@@ -123,12 +127,12 @@ func (r *Runner) Up(options UpOptions) (*config.Result, error) {
 	// check if its a compose devcontainer.json
 	var result *config.Result
 	if isDockerFileConfig(substitutedConfig.Config) || substitutedConfig.Config.Image != "" {
-		result, err = r.runSingleContainer(substitutedConfig, workspace.WorkspaceMount, options)
+		result, err = r.runSingleContainer(ctx, substitutedConfig, workspace.WorkspaceMount, options)
 		if err != nil {
 			return nil, err
 		}
 	} else if len(substitutedConfig.Config.DockerComposeFile) > 0 {
-		result, err = r.runDockerCompose(substitutedConfig, options)
+		result, err = r.runDockerCompose(ctx, substitutedConfig, options)
 		if err != nil {
 			return nil, err
 		}
@@ -136,14 +140,12 @@ func (r *Runner) Up(options UpOptions) (*config.Result, error) {
 		return nil, fmt.Errorf("dev container config is missing one of \"image\", \"dockerFile\" or \"dockerComposeFile\" properties")
 	}
 
-	// write result
-	err = agent.WriteAgentWorkspaceDevContainerResult(r.WorkspaceConfig.Agent.DataPath, r.WorkspaceConfig.Workspace.Context, r.WorkspaceConfig.Workspace.ID, result)
-	if err != nil {
-		r.Log.Errorf("Error writing dev container result: %v", err)
-	}
-
 	// return result
 	return result, nil
+}
+
+func (r *Runner) CommandDevContainer(ctx context.Context, containerId string, user string, command string, stdin io.Reader, stdout io.Writer, stderr io.Writer) error {
+	return r.Driver.CommandDevContainer(ctx, containerId, user, command, stdin, stdout, stderr)
 }
 
 func (r *Runner) FindDevContainer(ctx context.Context) (*config.ContainerDetails, error) {
@@ -222,4 +224,13 @@ func getWorkspace(workspaceFolder, workspaceID string, conf *config.DevContainer
 		RemoteWorkspaceFolder: containerMountFolder,
 		WorkspaceMount:        fmt.Sprintf("type=bind,source=%s,target=%s%s", workspaceFolder, containerMountFolder, consistency),
 	}
+}
+
+func GetRunnerIDFromWorkspace(workspace *provider2.Workspace) string {
+	ID := workspace.UID
+	if encoding.IsLegacyUID(workspace.UID) {
+		ID = workspace.ID
+	}
+
+	return ID
 }

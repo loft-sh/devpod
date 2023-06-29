@@ -10,6 +10,7 @@ import (
 
 	"github.com/loft-sh/devpod/cmd/flags"
 	"github.com/loft-sh/devpod/pkg/agent"
+	"github.com/loft-sh/devpod/pkg/agent/tunnelserver"
 	client2 "github.com/loft-sh/devpod/pkg/client"
 	"github.com/loft-sh/devpod/pkg/config"
 	config2 "github.com/loft-sh/devpod/pkg/devcontainer/config"
@@ -18,6 +19,7 @@ import (
 	"github.com/loft-sh/devpod/pkg/log"
 	open2 "github.com/loft-sh/devpod/pkg/open"
 	"github.com/loft-sh/devpod/pkg/port"
+	devssh "github.com/loft-sh/devpod/pkg/ssh"
 	"github.com/loft-sh/devpod/pkg/tunnel"
 	workspace2 "github.com/loft-sh/devpod/pkg/workspace"
 	"github.com/pkg/errors"
@@ -60,6 +62,7 @@ func NewUpCmd(flags *flags.GlobalFlags) *cobra.Command {
 		Short: "Starts a new workspace",
 		RunE: func(_ *cobra.Command, args []string) error {
 			ctx := context.Background()
+			logger := log.Default
 			devPodConfig, err := config.LoadConfig(cmd.Context, cmd.Provider)
 			if err != nil {
 				return err
@@ -76,13 +79,13 @@ func NewUpCmd(flags *flags.GlobalFlags) *cobra.Command {
 				cmd.ProviderOptions,
 				cmd.DevContainerPath,
 				true,
-				log.Default,
+				logger,
 			)
 			if err != nil {
 				return err
 			}
 
-			return cmd.Run(ctx, devPodConfig, client)
+			return cmd.Run(ctx, devPodConfig, client, logger)
 		},
 	}
 
@@ -101,17 +104,14 @@ func NewUpCmd(flags *flags.GlobalFlags) *cobra.Command {
 }
 
 // Run runs the command logic
-func (cmd *UpCmd) Run(ctx context.Context, devPodConfig *config.Config, client client2.WorkspaceClient) error {
+func (cmd *UpCmd) Run(ctx context.Context, devPodConfig *config.Config, client client2.WorkspaceClient, log log.Logger) error {
 	// run devpod agent up
-	result, err := cmd.devPodUp(ctx, client, log.Default)
+	result, err := cmd.devPodUp(ctx, client, log)
 	if err != nil {
 		return err
 	} else if result == nil {
 		return fmt.Errorf("didn't receive a result back from agent")
 	}
-
-	// print result to log
-	log.Default.JSON(logrus.InfoLevel, result)
 
 	// get user from result
 	user := config2.GetRemoteUser(result)
@@ -123,7 +123,7 @@ func (cmd *UpCmd) Run(ctx context.Context, devPodConfig *config.Config, client c
 			return err
 		}
 
-		log.Default.Infof("Run 'ssh %s.devpod' to ssh into the devcontainer", client.Workspace())
+		log.Infof("Run 'ssh %s.devpod' to ssh into the devcontainer", client.Workspace())
 	}
 
 	// open ide
@@ -131,25 +131,25 @@ func (cmd *UpCmd) Run(ctx context.Context, devPodConfig *config.Config, client c
 		ideConfig := client.WorkspaceConfig().IDE
 		switch ideConfig.Name {
 		case string(config.IDEVSCode):
-			return startVSCodeLocally(client, result.SubstitutionContext.ContainerWorkspaceFolder, user, log.Default)
+			return startVSCodeLocally(client, result.SubstitutionContext.ContainerWorkspaceFolder, user, log)
 		case string(config.IDEOpenVSCode):
-			return startInBrowser(ctx, devPodConfig, client, result.SubstitutionContext.ContainerWorkspaceFolder, user, ideConfig.Options, log.Default)
+			return startInBrowser(ctx, devPodConfig, client, result.SubstitutionContext.ContainerWorkspaceFolder, user, ideConfig.Options, log)
 		case string(config.IDEGoland):
-			return jetbrains.NewGolandServer(config2.GetRemoteUser(result), ideConfig.Options, log.Default).OpenGateway(result.SubstitutionContext.ContainerWorkspaceFolder, client.Workspace())
+			return jetbrains.NewGolandServer(config2.GetRemoteUser(result), ideConfig.Options, log).OpenGateway(result.SubstitutionContext.ContainerWorkspaceFolder, client.Workspace())
 		case string(config.IDEPyCharm):
-			return jetbrains.NewPyCharmServer(config2.GetRemoteUser(result), ideConfig.Options, log.Default).OpenGateway(result.SubstitutionContext.ContainerWorkspaceFolder, client.Workspace())
+			return jetbrains.NewPyCharmServer(config2.GetRemoteUser(result), ideConfig.Options, log).OpenGateway(result.SubstitutionContext.ContainerWorkspaceFolder, client.Workspace())
 		case string(config.IDEPhpStorm):
-			return jetbrains.NewPhpStorm(config2.GetRemoteUser(result), ideConfig.Options, log.Default).OpenGateway(result.SubstitutionContext.ContainerWorkspaceFolder, client.Workspace())
+			return jetbrains.NewPhpStorm(config2.GetRemoteUser(result), ideConfig.Options, log).OpenGateway(result.SubstitutionContext.ContainerWorkspaceFolder, client.Workspace())
 		case string(config.IDEIntellij):
-			return jetbrains.NewIntellij(config2.GetRemoteUser(result), ideConfig.Options, log.Default).OpenGateway(result.SubstitutionContext.ContainerWorkspaceFolder, client.Workspace())
+			return jetbrains.NewIntellij(config2.GetRemoteUser(result), ideConfig.Options, log).OpenGateway(result.SubstitutionContext.ContainerWorkspaceFolder, client.Workspace())
 		case string(config.IDECLion):
-			return jetbrains.NewCLionServer(config2.GetRemoteUser(result), ideConfig.Options, log.Default).OpenGateway(result.SubstitutionContext.ContainerWorkspaceFolder, client.Workspace())
+			return jetbrains.NewCLionServer(config2.GetRemoteUser(result), ideConfig.Options, log).OpenGateway(result.SubstitutionContext.ContainerWorkspaceFolder, client.Workspace())
 		case string(config.IDERider):
-			return jetbrains.NewRiderServer(config2.GetRemoteUser(result), ideConfig.Options, log.Default).OpenGateway(result.SubstitutionContext.ContainerWorkspaceFolder, client.Workspace())
+			return jetbrains.NewRiderServer(config2.GetRemoteUser(result), ideConfig.Options, log).OpenGateway(result.SubstitutionContext.ContainerWorkspaceFolder, client.Workspace())
 		case string(config.IDERubyMine):
-			return jetbrains.NewRubyMineServer(config2.GetRemoteUser(result), ideConfig.Options, log.Default).OpenGateway(result.SubstitutionContext.ContainerWorkspaceFolder, client.Workspace())
+			return jetbrains.NewRubyMineServer(config2.GetRemoteUser(result), ideConfig.Options, log).OpenGateway(result.SubstitutionContext.ContainerWorkspaceFolder, client.Workspace())
 		case string(config.IDEWebStorm):
-			return jetbrains.NewWebStormServer(config2.GetRemoteUser(result), ideConfig.Options, log.Default).OpenGateway(result.SubstitutionContext.ContainerWorkspaceFolder, client.Workspace())
+			return jetbrains.NewWebStormServer(config2.GetRemoteUser(result), ideConfig.Options, log).OpenGateway(result.SubstitutionContext.ContainerWorkspaceFolder, client.Workspace())
 		}
 	}
 
@@ -168,7 +168,7 @@ func startVSCodeLocally(client client2.WorkspaceClient, workspaceFolder, user st
 	return nil
 }
 
-func startInBrowser(ctx context.Context, devPodConfig *config.Config, client client2.WorkspaceClient, workspaceFolder, user string, ideOptions map[string]config.OptionValue, log *log.StreamLogger) error {
+func startInBrowser(ctx context.Context, devPodConfig *config.Config, client client2.WorkspaceClient, workspaceFolder, user string, ideOptions map[string]config.OptionValue, logger log.Logger) error {
 	unlockOnce := sync.Once{}
 	client.Lock()
 	defer unlockOnce.Do(client.Unlock)
@@ -183,42 +183,43 @@ func startInBrowser(ctx context.Context, devPodConfig *config.Config, client cli
 	targetURL := fmt.Sprintf("http://localhost:%d/?folder=%s", vscodePort, workspaceFolder)
 	if openvscode.Options.GetValue(ideOptions, openvscode.OpenOption) == "true" {
 		go func() {
-			err = open2.Open(ctx, targetURL, log)
+			err = open2.Open(ctx, targetURL, logger)
 			if err != nil {
-				log.Errorf("error opening vscode: %v", err)
+				logger.Errorf("error opening vscode: %v", err)
 			}
 
-			log.Infof("Successfully started vscode in browser mode. Please keep this terminal open as long as you use VSCode browser version")
+			logger.Infof("Successfully started vscode in browser mode. Please keep this terminal open as long as you use VSCode browser version")
 		}()
 	}
 
 	// start in browser
-	log.Infof("Starting vscode in browser mode at %s", targetURL)
-	err = tunnel.NewContainerTunnel(client, log).Run(ctx, func(ctx context.Context, hostClient, containerClient *ssh.Client) error {
+	logger.Infof("Starting vscode in browser mode at %s", targetURL)
+	err = tunnel.NewContainerTunnel(client, logger).Run(ctx, func(ctx context.Context, containerClient *ssh.Client) error {
 		unlockOnce.Do(client.Unlock)
 
 		// print port to console
-		log.JSON(logrus.InfoLevel, map[string]string{
-			"url":  targetURL,
-			"done": "true",
-		})
+		streamLogger, ok := logger.(*log.StreamLogger)
+		if ok {
+			streamLogger.JSON(logrus.InfoLevel, map[string]string{
+				"url":  targetURL,
+				"done": "true",
+			})
+		}
 
 		// run in container
 		err := tunnel.RunInContainer(
 			ctx,
-			client,
 			devPodConfig,
-			hostClient,
 			containerClient,
 			user,
 			true,
 			true,
 			true,
 			[]string{fmt.Sprintf("%d:%d", vscodePort, openvscode.DefaultVSCodePort)},
-			log,
+			logger,
 		)
 		if err != nil {
-			log.Errorf("error running credentials server: %v", err)
+			logger.Errorf("error running credentials server: %v", err)
 		}
 
 		<-ctx.Done()
@@ -289,7 +290,7 @@ func (cmd *UpCmd) devPodUpMachine(ctx context.Context, client client2.WorkspaceC
 		defer writer.Close()
 
 		log.Debugf("Inject and run command: %s", command)
-		errChan <- agent.InjectAgentAndExecute(cancelCtx, func(ctx context.Context, command string, stdin io.Reader, stdout io.Writer, stderr io.Writer) error {
+		err := agent.InjectAgentAndExecute(cancelCtx, func(ctx context.Context, command string, stdin io.Reader, stdout io.Writer, stderr io.Writer) error {
 			return client.Command(ctx, client2.CommandOptions{
 				Command: command,
 				Stdin:   stdin,
@@ -297,13 +298,18 @@ func (cmd *UpCmd) devPodUpMachine(ctx context.Context, client client2.WorkspaceC
 				Stderr:  stderr,
 			})
 		}, client.AgentLocal(), client.AgentPath(), client.AgentURL(), true, command, stdinReader, stdoutWriter, writer, log.ErrorStreamOnly())
+		if err != nil {
+			errChan <- fmt.Errorf("executing agent command: %w", err)
+		} else {
+			errChan <- nil
+		}
 	}()
 
 	// get workspace config
 	agentConfig := client.AgentConfig()
 
 	// create container etc.
-	result, err := agent.RunTunnelServer(
+	result, err := tunnelserver.RunTunnelServer(
 		cancelCtx,
 		stdoutReader,
 		stdinWriter,
@@ -320,4 +326,13 @@ func (cmd *UpCmd) devPodUpMachine(ctx context.Context, client client2.WorkspaceC
 
 	// wait until command finished
 	return result, <-errChan
+}
+
+func configureSSH(client client2.WorkspaceClient, configPath, user string) error {
+	err := devssh.ConfigureSSHConfig(configPath, client.Context(), client.Workspace(), user, log.Default)
+	if err != nil {
+		return err
+	}
+
+	return nil
 }

@@ -34,7 +34,7 @@ type ContainerHandler struct {
 	log                  log.Logger
 }
 
-type Handler func(ctx context.Context, hostClient, containerClient *ssh.Client) error
+type Handler func(ctx context.Context, containerClient *ssh.Client) error
 
 func (c *ContainerHandler) Run(ctx context.Context, handler Handler) error {
 	if handler == nil {
@@ -206,7 +206,7 @@ func (c *ContainerHandler) runRunInContainer(ctx context.Context, sshClient *ssh
 		c.log.Debugf("Run container tunnel")
 		defer c.log.Debugf("Container tunnel exited")
 
-		command := fmt.Sprintf("'%s' agent container-tunnel --start-container --token '%s' --workspace-info '%s'", c.client.AgentPath(), tok, workspaceInfo)
+		command := fmt.Sprintf("'%s' agent container-tunnel --token '%s' --workspace-info '%s'", c.client.AgentPath(), tok, workspaceInfo)
 		if c.log.GetLevel() == logrus.DebugLevel {
 			command += " --debug"
 		}
@@ -226,5 +226,5 @@ func (c *ContainerHandler) runRunInContainer(ctx context.Context, sshClient *ssh
 	c.log.Debugf("Successfully connected to container")
 
 	// start handler
-	return runInContainer(cancelCtx, sshClient, containerClient)
+	return runInContainer(cancelCtx, containerClient)
 }

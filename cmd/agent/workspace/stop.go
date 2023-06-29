@@ -46,7 +46,7 @@ func (cmd *StopCmd) Run(ctx context.Context) error {
 	}
 
 	// stop docker container
-	err = stopContainer(workspaceInfo, log.Default)
+	err = stopContainer(ctx, workspaceInfo, log.Default)
 	if err != nil {
 		return errors.Wrap(err, "stop container")
 	}
@@ -54,14 +54,14 @@ func (cmd *StopCmd) Run(ctx context.Context) error {
 	return nil
 }
 
-func stopContainer(workspaceInfo *provider2.AgentWorkspaceInfo, log log.Logger) error {
+func stopContainer(ctx context.Context, workspaceInfo *provider2.AgentWorkspaceInfo, log log.Logger) error {
 	log.Debugf("Stopping DevPod container...")
-	runner, err := createRunner(workspaceInfo, log)
+	runner, err := CreateRunner(workspaceInfo, log)
 	if err != nil {
 		return err
 	}
 
-	err = runner.Stop()
+	err = runner.Stop(ctx)
 	if err != nil {
 		return err
 	}

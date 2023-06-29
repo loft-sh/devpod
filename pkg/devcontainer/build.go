@@ -13,15 +13,15 @@ import (
 	"github.com/pkg/errors"
 )
 
-func (r *Runner) build(parsedConfig *config.SubstitutedConfig, options config.BuildOptions) (*config.BuildInfo, error) {
+func (r *Runner) build(ctx context.Context, parsedConfig *config.SubstitutedConfig, options config.BuildOptions) (*config.BuildInfo, error) {
 	if isDockerFileConfig(parsedConfig.Config) {
-		return r.buildAndExtendImage(parsedConfig, options)
+		return r.buildAndExtendImage(ctx, parsedConfig, options)
 	}
 
-	return r.extendImage(parsedConfig, options)
+	return r.extendImage(ctx, parsedConfig, options)
 }
 
-func (r *Runner) extendImage(parsedConfig *config.SubstitutedConfig, options config.BuildOptions) (*config.BuildInfo, error) {
+func (r *Runner) extendImage(ctx context.Context, parsedConfig *config.SubstitutedConfig, options config.BuildOptions) (*config.BuildInfo, error) {
 	imageBase := parsedConfig.Config.Image
 	imageBuildInfo, err := r.getImageBuildInfoFromImage(imageBase)
 	if err != nil {
@@ -44,10 +44,10 @@ func (r *Runner) extendImage(parsedConfig *config.SubstitutedConfig, options con
 	}
 
 	// build the image
-	return r.buildImage(parsedConfig, extendedBuildInfo, "", "", options)
+	return r.buildImage(ctx, parsedConfig, extendedBuildInfo, "", "", options)
 }
 
-func (r *Runner) buildAndExtendImage(parsedConfig *config.SubstitutedConfig, options config.BuildOptions) (*config.BuildInfo, error) {
+func (r *Runner) buildAndExtendImage(ctx context.Context, parsedConfig *config.SubstitutedConfig, options config.BuildOptions) (*config.BuildInfo, error) {
 	dockerFilePath, err := r.getDockerfilePath(parsedConfig.Config)
 	if err != nil {
 		return nil, err
@@ -86,7 +86,7 @@ func (r *Runner) buildAndExtendImage(parsedConfig *config.SubstitutedConfig, opt
 	}
 
 	// build the image
-	return r.buildImage(parsedConfig, extendedBuildInfo, dockerFilePath, string(dockerFileContent), options)
+	return r.buildImage(ctx, parsedConfig, extendedBuildInfo, dockerFilePath, string(dockerFileContent), options)
 }
 
 func (r *Runner) getDockerfilePath(parsedConfig *config.DevContainerConfig) (string, error) {
@@ -170,6 +170,6 @@ func (r *Runner) getImageBuildInfoFromDockerfile(dockerFileContent string, build
 	}, nil
 }
 
-func (r *Runner) buildImage(parsedConfig *config.SubstitutedConfig, extendedBuildInfo *feature.ExtendedBuildInfo, dockerfilePath, dockerfileContent string, options config.BuildOptions) (*config.BuildInfo, error) {
-	return r.Driver.BuildDevContainer(context.TODO(), r.getLabels(), parsedConfig, extendedBuildInfo, dockerfilePath, dockerfileContent, r.LocalWorkspaceFolder, options)
+func (r *Runner) buildImage(ctx context.Context, parsedConfig *config.SubstitutedConfig, extendedBuildInfo *feature.ExtendedBuildInfo, dockerfilePath, dockerfileContent string, options config.BuildOptions) (*config.BuildInfo, error) {
+	return r.Driver.BuildDevContainer(ctx, r.getLabels(), parsedConfig, extendedBuildInfo, dockerfilePath, dockerfileContent, r.LocalWorkspaceFolder, options)
 }

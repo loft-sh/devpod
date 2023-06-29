@@ -1,6 +1,7 @@
 package setup
 
 import (
+	"encoding/json"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -15,7 +16,14 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
+const (
+	ResultLocation = "/var/run/devpod/result.json"
+)
+
 func SetupContainer(setupInfo *config.Result, chownWorkspace bool, log log.Logger) error {
+	// write result to ResultLocation
+	WriteResult(setupInfo, log)
+
 	// chown user dir
 	if chownWorkspace {
 		err := ChownWorkspace(setupInfo, log)
@@ -52,6 +60,31 @@ func SetupContainer(setupInfo *config.Result, chownWorkspace bool, log log.Logge
 
 	log.Debugf("Done setting up environment")
 	return nil
+}
+
+func WriteResult(setupInfo *config.Result, log log.Logger) {
+	rawBytes, err := json.Marshal(setupInfo)
+	if err != nil {
+		log.Warnf("Error marshal result: %v", err)
+		return
+	}
+
+	existing, _ := os.ReadFile(ResultLocation)
+	if string(rawBytes) == string(existing) {
+		return
+	}
+
+	err = os.MkdirAll(filepath.Dir(ResultLocation), 0777)
+	if err != nil {
+		log.Warnf("Error create %s: %v", filepath.Dir(ResultLocation), err)
+		return
+	}
+
+	err = os.WriteFile(ResultLocation, rawBytes, 0666)
+	if err != nil {
+		log.Warnf("Error write result to %s: %v", ResultLocation, err)
+		return
+	}
 }
 
 func LinkRootHome(setupInfo *config.Result, log log.Logger) error {

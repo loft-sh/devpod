@@ -6,8 +6,8 @@ import (
 	"os"
 
 	"github.com/loft-sh/devpod/cmd/flags"
-	"github.com/loft-sh/devpod/pkg/agent"
 	"github.com/loft-sh/devpod/pkg/agent/tunnel"
+	"github.com/loft-sh/devpod/pkg/agent/tunnelserver"
 	"github.com/loft-sh/devpod/pkg/credentials"
 	"github.com/loft-sh/devpod/pkg/log"
 	"github.com/loft-sh/devpod/pkg/netstat"
@@ -53,7 +53,7 @@ func NewCredentialsServerCmd(flags *flags.GlobalFlags) *cobra.Command {
 // Run runs the command logic
 func (cmd *CredentialsServerCmd) Run(ctx context.Context, _ []string) error {
 	// create a grpc client
-	tunnelClient, err := agent.NewTunnelClient(os.Stdin, os.Stdout, true)
+	tunnelClient, err := tunnelserver.NewTunnelClient(os.Stdin, os.Stdout, true)
 	if err != nil {
 		return fmt.Errorf("error creating tunnel client: %w", err)
 	}
@@ -65,7 +65,7 @@ func (cmd *CredentialsServerCmd) Run(ctx context.Context, _ []string) error {
 	}
 
 	// create debug logger
-	log := agent.NewTunnelLogger(ctx, tunnelClient, cmd.Debug)
+	log := tunnelserver.NewTunnelLogger(ctx, tunnelClient, cmd.Debug)
 	log.Debugf("Start credentials server")
 
 	// find available port

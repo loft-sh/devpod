@@ -49,43 +49,44 @@ func NewSSHServerCmd(flags *flags.GlobalFlags) *cobra.Command {
 
 // Run runs the command logic
 func (cmd *SSHServerCmd) Run(_ *cobra.Command, _ []string) error {
-	if cmd.Token == "" {
-		return fmt.Errorf("token is missing")
-	}
-
-	// parse token
-	t, err := token.ParseToken(cmd.Token)
-	if err != nil {
-		return errors.Wrap(err, "parse token")
-	}
-
-	var keys []ssh.PublicKey
-	if t.AuthorizedKeys != "" {
-		keyBytes, err := base64.StdEncoding.DecodeString(t.AuthorizedKeys)
+	var (
+		keys    []ssh.PublicKey
+		hostKey []byte
+	)
+	if cmd.Token != "" {
+		// parse token
+		t, err := token.ParseToken(cmd.Token)
 		if err != nil {
-			return fmt.Errorf("seems like the provided encoded string is not base64 encoded")
+			return errors.Wrap(err, "parse token")
 		}
 
-		for len(keyBytes) > 0 {
-			key, _, _, rest, err := ssh.ParseAuthorizedKey(keyBytes)
+		if t.AuthorizedKeys != "" {
+			keyBytes, err := base64.StdEncoding.DecodeString(t.AuthorizedKeys)
 			if err != nil {
-				return errors.Wrap(err, "parse authorized key")
+				return fmt.Errorf("seems like the provided encoded string is not base64 encoded")
 			}
 
-			keys = append(keys, key)
-			keyBytes = rest
+			for len(keyBytes) > 0 {
+				key, _, _, rest, err := ssh.ParseAuthorizedKey(keyBytes)
+				if err != nil {
+					return errors.Wrap(err, "parse authorized key")
+				}
+
+				keys = append(keys, key)
+				keyBytes = rest
+			}
+		}
+
+		if len(t.HostKey) > 0 {
+			var err error
+			hostKey, err = base64.StdEncoding.DecodeString(t.HostKey)
+			if err != nil {
+				return fmt.Errorf("decode host key")
+			}
 		}
 	}
 
-	hostKey := []byte{}
-	if len(t.HostKey) > 0 {
-		var err error
-		hostKey, err = base64.StdEncoding.DecodeString(t.HostKey)
-		if err != nil {
-			return fmt.Errorf("decode host key")
-		}
-	}
-
+	// start the server
 	server, err := helperssh.NewServer(cmd.Address, hostKey, keys, log.Default.ErrorStreamOnly())
 	if err != nil {
 		return err

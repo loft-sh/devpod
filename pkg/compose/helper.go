@@ -112,8 +112,8 @@ func (h *ComposeHelper) Run(ctx context.Context, args []string, stdin io.Reader,
 	return cmd.Run()
 }
 
-func (h *ComposeHelper) Stop(projectName string) error {
-	out, err := h.buildCmd(context.TODO(), "--project-name", projectName, "stop").CombinedOutput()
+func (h *ComposeHelper) Stop(ctx context.Context, projectName string) error {
+	out, err := h.buildCmd(ctx, "--project-name", projectName, "stop").CombinedOutput()
 	if err != nil {
 		return errors.Wrapf(err, "%s", string(out))
 	}
@@ -121,8 +121,8 @@ func (h *ComposeHelper) Stop(projectName string) error {
 	return nil
 }
 
-func (h *ComposeHelper) Remove(projectName string) error {
-	out, err := h.buildCmd(context.TODO(), "--project-name", projectName, "down").CombinedOutput()
+func (h *ComposeHelper) Remove(ctx context.Context, projectName string) error {
+	out, err := h.buildCmd(ctx, "--project-name", projectName, "down").CombinedOutput()
 	if err != nil {
 		return errors.Wrapf(err, "%s", string(out))
 	}
@@ -148,7 +148,11 @@ func (h *ComposeHelper) GetDefaultImage(projectName, serviceName string) (string
 	return fmt.Sprintf("%s-%s", projectName, serviceName), nil
 }
 
-func (h *ComposeHelper) ToProjectName(projectName string) string {
+func (h *ComposeHelper) GetProjectName(runnerID string) string {
+	return h.toProjectName(runnerID)
+}
+
+func (h *ComposeHelper) toProjectName(projectName string) string {
 	useNewProjectNameFormat, _ := h.useNewProjectName()
 	if !useNewProjectNameFormat {
 		return regexp.MustCompile("[^a-z0-9]").ReplaceAllString(strings.ToLower(projectName), "")
