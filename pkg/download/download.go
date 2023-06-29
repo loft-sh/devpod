@@ -14,10 +14,12 @@ import (
 	"github.com/pkg/errors"
 )
 
-var httpClient = &http.Client{
-	Transport: &http.Transport{
-		TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
-	},
+var httpClient *http.Client
+
+func init() {
+	customTransport := http.DefaultTransport.(*http.Transport).Clone()
+	customTransport.TLSClientConfig = &tls.Config{InsecureSkipVerify: true}
+	httpClient = &http.Client{Transport: customTransport}
 }
 
 func Head(rawURL string) (int, error) {

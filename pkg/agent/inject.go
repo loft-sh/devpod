@@ -188,11 +188,9 @@ func downloadAgentLocally(tryDownloadURL, targetArch string, log log.Logger) (st
 		return agentPath, nil
 	}
 
-	httpClient := &http.Client{
-		Transport: &http.Transport{
-			TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
-		},
-	}
+	customTransport := http.DefaultTransport.(*http.Transport).Clone()
+	customTransport.TLSClientConfig = &tls.Config{InsecureSkipVerify: true}
+	httpClient := &http.Client{Transport: customTransport}
 	resp, err := httpClient.Get(tryDownloadURL + "/devpod-linux-" + targetArch)
 	if err != nil {
 		return "", errors.Wrap(err, "download devpod")

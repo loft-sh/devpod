@@ -34,9 +34,9 @@ func tryOpen(ctx context.Context, url string, log log.Logger) error {
 		return err
 	}
 
-	client := &http.Client{Transport: &http.Transport{
-		TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
-	}}
+	customTransport := http.DefaultTransport.(*http.Transport).Clone()
+	customTransport.TLSClientConfig = &tls.Config{InsecureSkipVerify: true}
+	client := &http.Client{Transport: customTransport}
 
 	resp, err := client.Do(req)
 	if err != nil {

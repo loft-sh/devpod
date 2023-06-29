@@ -233,11 +233,9 @@ func downloadFeatureFromURL(url string, destFile string, log log.Logger) error {
 
 	// initiate download
 	log.Debugf("Download feature from %s", url)
-	httpClient := &http.Client{
-		Transport: &http.Transport{
-			TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
-		},
-	}
+	customTransport := http.DefaultTransport.(*http.Transport).Clone()
+	customTransport.TLSClientConfig = &tls.Config{InsecureSkipVerify: true}
+	httpClient := &http.Client{Transport: customTransport}
 	resp, err := httpClient.Get(url)
 	if err != nil {
 		return errors.Wrap(err, "make request")

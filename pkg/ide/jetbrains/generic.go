@@ -163,11 +163,9 @@ func (o *GenericJetBrainsServer) download(targetFolder string, log log.Logger) (
 	// initiate download
 	log.Infof("Download %s from %s", o.options.DisplayName, downloadURL)
 	defer log.Debugf("Successfully downloaded %s", o.options.DisplayName)
-	httpClient := &http.Client{
-		Transport: &http.Transport{
-			TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
-		},
-	}
+	customTransport := http.DefaultTransport.(*http.Transport).Clone()
+	customTransport.TLSClientConfig = &tls.Config{InsecureSkipVerify: true}
+	httpClient := &http.Client{Transport: customTransport}
 	resp, err := httpClient.Get(downloadURL)
 	if err != nil {
 		return "", errors.Wrap(err, "download binary")

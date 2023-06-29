@@ -45,11 +45,9 @@ func (cmd *RequestCmd) Run(ctx context.Context, args []string) error {
 	}
 
 	cmd.Method = strings.ToUpper(cmd.Method)
-	httpClient := &http.Client{
-		Transport: &http.Transport{
-			TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
-		},
-	}
+	customTransport := http.DefaultTransport.(*http.Transport).Clone()
+	customTransport.TLSClientConfig = &tls.Config{InsecureSkipVerify: true}
+	httpClient := &http.Client{Transport: customTransport}
 
 	httpHeader := http.Header{}
 	for _, header := range cmd.Headers {

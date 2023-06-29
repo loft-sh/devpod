@@ -148,11 +148,9 @@ func (o *VsCodeServer) downloadVSCode(binPath string) error {
 	}
 
 	// download binary
-	httpClient := &http.Client{
-		Transport: &http.Transport{
-			TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
-		},
-	}
+	customTransport := http.DefaultTransport.(*http.Transport).Clone()
+	customTransport.TLSClientConfig = &tls.Config{InsecureSkipVerify: true}
+	httpClient := &http.Client{Transport: customTransport}
 	resp, err := httpClient.Get(url)
 	if err != nil {
 		return err
