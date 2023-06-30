@@ -61,7 +61,7 @@ func (cmd *DeleteCmd) Run(ctx context.Context) error {
 
 	// cleanup docker container
 	if cmd.Container {
-		err = removeContainer(workspaceInfo, log.Default)
+		err = removeContainer(ctx, workspaceInfo, log.Default)
 		if err != nil {
 			return errors.Wrap(err, "remove container")
 		}
@@ -72,14 +72,14 @@ func (cmd *DeleteCmd) Run(ctx context.Context) error {
 	return nil
 }
 
-func removeContainer(workspaceInfo *provider2.AgentWorkspaceInfo, log log.Logger) error {
+func removeContainer(ctx context.Context, workspaceInfo *provider2.AgentWorkspaceInfo, log log.Logger) error {
 	log.Debugf("Removing DevPod container from server...")
-	runner, err := createRunner(workspaceInfo, log)
+	runner, err := CreateRunner(workspaceInfo, log)
 	if err != nil {
 		return err
 	}
 
-	err = runner.Delete(nil, true)
+	err = runner.Delete(ctx, nil, true)
 	if err != nil {
 		return err
 	}

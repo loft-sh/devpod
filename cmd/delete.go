@@ -126,7 +126,7 @@ func (cmd *DeleteCmd) Run(ctx context.Context, devPodConfig *config.Config, args
 
 func (cmd *DeleteCmd) deleteSingleMachine(ctx context.Context, client client2.WorkspaceClient, devPodConfig *config.Config, duration *time.Duration) (bool, error) {
 	// check if single machine
-	singleMachineName := workspace2.SingleMachineName(client.Provider())
+	singleMachineName := workspace2.SingleMachineName(devPodConfig, client.Provider(), log.Default)
 	if !devPodConfig.Current().IsSingleMachine(client.Provider()) || client.WorkspaceConfig().Machine.ID != singleMachineName {
 		return false, nil
 	}

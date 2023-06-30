@@ -15,6 +15,7 @@ import (
 	"github.com/loft-sh/devpod/cmd/flags"
 	"github.com/loft-sh/devpod/pkg/agent"
 	"github.com/loft-sh/devpod/pkg/agent/tunnel"
+	"github.com/loft-sh/devpod/pkg/agent/tunnelserver"
 	"github.com/loft-sh/devpod/pkg/binaries"
 	"github.com/loft-sh/devpod/pkg/client/clientimplementation"
 	"github.com/loft-sh/devpod/pkg/command"
@@ -71,7 +72,9 @@ func NewUpCmd(flags *flags.GlobalFlags) *cobra.Command {
 // Run runs the command logic
 func (cmd *UpCmd) Run(ctx context.Context) error {
 	// get workspace
-	shouldExit, workspaceInfo, err := agent.WriteWorkspaceInfoAndDeleteOld(cmd.WorkspaceInfo, deleteWorkspace, log.Default.ErrorStreamOnly())
+	shouldExit, workspaceInfo, err := agent.WriteWorkspaceInfoAndDeleteOld(cmd.WorkspaceInfo, func(workspaceInfo *provider2.AgentWorkspaceInfo, log log.Logger) error {
+		return deleteWorkspace(ctx, workspaceInfo, log)
+	}, log.Default.ErrorStreamOnly())
 	if err != nil {
 		return fmt.Errorf("error parsing workspace info: %w", err)
 	} else if shouldExit {
@@ -105,13 +108,13 @@ func (cmd *UpCmd) Run(ctx context.Context) error {
 
 func initWorkspace(ctx context.Context, cancel context.CancelFunc, workspaceInfo *provider2.AgentWorkspaceInfo, debug, shouldInstallDaemon bool) (tunnel.TunnelClient, log.Logger, string, error) {
 	// create a grpc client
-	tunnelClient, err := agent.NewTunnelClient(os.Stdin, os.Stdout, true)
+	tunnelClient, err := tunnelserver.NewTunnelClient(os.Stdin, os.Stdout, true)
 	if err != nil {
 		return nil, nil, "", fmt.Errorf("error creating tunnel client: %w", err)
 	}
 
 	// create debug logger
-	logger := agent.NewTunnelLogger(ctx, tunnelClient, debug)
+	logger := tunnelserver.NewTunnelLogger(ctx, tunnelClient, debug)
 	logger.Debugf("Created logger")
 
 	// this message serves as a ping to the client
@@ -161,7 +164,7 @@ func initWorkspace(ctx context.Context, cancel context.CancelFunc, workspaceInfo
 
 func (cmd *UpCmd) up(ctx context.Context, workspaceInfo *provider2.AgentWorkspaceInfo, tunnelClient tunnel.TunnelClient, logger log.Logger) error {
 	// create devcontainer
-	result, err := cmd.devPodUp(workspaceInfo, logger)
+	result, err := cmd.devPodUp(ctx, workspaceInfo, logger)
 	if err != nil {
 		return err
 	}
@@ -345,7 +348,7 @@ func DownloadLocalFolder(ctx context.Context, workspaceDir string, client tunnel
 		return errors.Wrap(err, "read workspace")
 	}
 
-	err = extract.Extract(agent.NewStreamReader(stream), workspaceDir)
+	err = extract.Extract(tunnelserver.NewStreamReader(stream), workspaceDir)
 	if err != nil {
 		return errors.Wrap(err, "extract local folder")
 	}
@@ -365,13 +368,13 @@ func PrepareImage(workspaceDir, image string) error {
 	return nil
 }
 
-func (cmd *UpCmd) devPodUp(workspaceInfo *provider2.AgentWorkspaceInfo, log log.Logger) (*config2.Result, error) {
-	runner, err := createRunner(workspaceInfo, log)
+func (cmd *UpCmd) devPodUp(ctx context.Context, workspaceInfo *provider2.AgentWorkspaceInfo, log log.Logger) (*config2.Result, error) {
+	runner, err := CreateRunner(workspaceInfo, log)
 	if err != nil {
 		return nil, err
 	}
 
-	result, err := runner.Up(devcontainer.UpOptions{
+	result, err := runner.Up(ctx, devcontainer.UpOptions{
 		PrebuildRepositories: cmd.PrebuildRepositories,
 
 		ForceBuild: cmd.ForceBuild,
@@ -491,6 +494,6 @@ func InstallDocker(log log.Logger) error {
 	return nil
 }
 
-func createRunner(workspaceInfo *provider2.AgentWorkspaceInfo, log log.Logger) (*devcontainer.Runner, error) {
+func CreateRunner(workspaceInfo *provider2.AgentWorkspaceInfo, log log.Logger) (*devcontainer.Runner, error) {
 	return devcontainer.NewRunner(agent.ContainerDevPodHelperLocation, agent.DefaultAgentDownloadURL(), workspaceInfo, log)
 }

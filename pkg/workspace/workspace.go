@@ -11,10 +11,10 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/google/uuid"
 	"github.com/loft-sh/devpod/pkg/client"
 	"github.com/loft-sh/devpod/pkg/client/clientimplementation"
 	"github.com/loft-sh/devpod/pkg/config"
+	"github.com/loft-sh/devpod/pkg/encoding"
 	"github.com/loft-sh/devpod/pkg/file"
 	"github.com/loft-sh/devpod/pkg/git"
 	"github.com/loft-sh/devpod/pkg/ide/ideparse"
@@ -29,8 +29,18 @@ import (
 
 var branchRegEx = regexp.MustCompile(`[^a-zA-Z0-9\.\-]+`)
 
-func SingleMachineName(provider string) string {
-	return "devpod-shared-" + provider
+func SingleMachineName(devPodConfig *config.Config, provider string, log log.Logger) string {
+	legacyMachineName := "devpod-shared-" + provider
+	machines, err := listMachines(devPodConfig, log)
+	if err == nil {
+		for _, machine := range machines {
+			if machine.Provider.Name == provider && machine.ID == legacyMachineName {
+				return legacyMachineName
+			}
+		}
+	}
+
+	return encoding.SafeConcatName("devpod-shared", provider, encoding.GetMachineUIDShort(log))
 }
 
 // Exists checks if the given workspace already exists
@@ -266,9 +276,9 @@ func createWorkspace(ctx context.Context, devPodConfig *config.Config, workspace
 	if provider.Config.IsMachineProvider() && workspace.Machine.ID == "" {
 		// create a new machine
 		if provider.State != nil && provider.State.SingleMachine {
-			workspace.Machine.ID = SingleMachineName(provider.Config.Name)
+			workspace.Machine.ID = SingleMachineName(devPodConfig, provider.Config.Name, log)
 		} else {
-			workspace.Machine.ID = workspace.ID
+			workspace.Machine.ID = encoding.SafeConcatName(workspace.ID, encoding.GetMachineUIDShort(log))
 			workspace.Machine.AutoDelete = true
 		}
 
@@ -336,7 +346,7 @@ func createWorkspace(ctx context.Context, devPodConfig *config.Config, workspace
 
 func resolve(defaultProvider *ProviderWithOptions, devPodConfig *config.Config, name, workspaceID, workspaceFolder string, isLocalPath bool) (*provider2.Workspace, error) {
 	now := types.Now()
-	uid := uuid.New().String()
+	uid := encoding.CreateNewUID(devPodConfig.DefaultContext, workspaceID)
 
 	// is local folder?
 	if isLocalPath {

@@ -75,12 +75,14 @@ func ConfigFromKeyBytes(keyBytes []byte) (*ssh.ClientConfig, error) {
 	}
 
 	// key file authentication?
-	signer, err := ssh.ParsePrivateKey(keyBytes)
-	if err != nil {
-		return nil, errors.Wrap(err, "parse private key")
-	}
+	if len(keyBytes) > 0 {
+		signer, err := ssh.ParsePrivateKey(keyBytes)
+		if err != nil {
+			return nil, errors.Wrap(err, "parse private key")
+		}
 
-	clientConfig.Auth = append(clientConfig.Auth, ssh.PublicKeys(signer))
+		clientConfig.Auth = append(clientConfig.Auth, ssh.PublicKeys(signer))
+	}
 	return clientConfig, nil
 }
 

@@ -47,7 +47,7 @@ func (cmd *StatusCmd) Run(ctx context.Context, log log.Logger) error {
 	}
 
 	// create runner
-	runner, err := createRunner(workspaceInfo, log)
+	runner, err := CreateRunner(workspaceInfo, log)
 	if err != nil {
 		return err
 	}

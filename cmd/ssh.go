@@ -17,7 +17,6 @@ import (
 	"github.com/loft-sh/devpod/pkg/log"
 	devssh "github.com/loft-sh/devpod/pkg/ssh"
 	"github.com/loft-sh/devpod/pkg/terminal"
-	"github.com/loft-sh/devpod/pkg/token"
 	"github.com/loft-sh/devpod/pkg/tunnel"
 	workspace2 "github.com/loft-sh/devpod/pkg/workspace"
 	"github.com/pkg/errors"
@@ -33,6 +32,8 @@ type SSHCmd struct {
 	Stdio           bool
 	JumpContainer   bool
 	AgentForwarding bool
+
+	StartServices bool
 
 	Command string
 	User    string
@@ -66,7 +67,7 @@ func NewSSHCmd(flags *flags.GlobalFlags) *cobra.Command {
 	sshCmd.Flags().StringVar(&cmd.User, "user", "", "The user of the workspace to use")
 	sshCmd.Flags().BoolVar(&cmd.AgentForwarding, "agent-forwarding", true, "If true forward the local ssh keys to the remote machine")
 	sshCmd.Flags().BoolVar(&cmd.Stdio, "stdio", false, "If true will tunnel connection through stdout and stdin")
-	_ = sshCmd.Flags().MarkHidden("self")
+	sshCmd.Flags().BoolVar(&cmd.StartServices, "start-services", true, "If false will not start any port-forwarding or git / docker credentials helper")
 	return sshCmd
 }
 
@@ -121,18 +122,13 @@ func startWait(ctx context.Context, client client2.WorkspaceClient, create bool,
 }
 
 func (cmd *SSHCmd) jumpContainer(ctx context.Context, devPodConfig *config.Config, client client2.WorkspaceClient, log log.Logger) error {
+	// lock the workspace as long as we init the connection
 	unlockOnce := sync.Once{}
 	client.Lock()
 	defer unlockOnce.Do(client.Unlock)
 
 	// start the workspace
 	err := startWait(ctx, client, false, log)
-	if err != nil {
-		return err
-	}
-
-	// get token
-	tok, err := token.GetDevPodToken()
 	if err != nil {
 		return err
 	}
@@ -146,68 +142,58 @@ func (cmd *SSHCmd) jumpContainer(ctx context.Context, devPodConfig *config.Confi
 	}
 
 	// tunnel to container
-	return tunnel.NewContainerTunnel(client, log).Run(
-		ctx,
-		func(ctx context.Context, hostClient, containerClient *ssh.Client) error {
-			// we have a connection to the container, make sure others can connect as well
-			unlockOnce.Do(client.Unlock)
+	return tunnel.NewContainerTunnel(client, log).Run(ctx, func(ctx context.Context, containerClient *ssh.Client) error {
+		// we have a connection to the container, make sure others can connect as well
+		unlockOnce.Do(client.Unlock)
 
-			// start port-forwarding etc.
-			go func() {
-				if cmd.User != "" {
-					gitCredentials := client.WorkspaceConfig().IDE.Name != string(config.IDEVSCode)
-					err := tunnel.RunInContainer(
-						ctx,
-						client,
-						devPodConfig,
-						hostClient,
-						containerClient,
-						cmd.User,
-						false,
-						gitCredentials,
-						true,
-						nil,
-						log,
-					)
-					if err != nil {
-						log.Errorf("Error running credential server: %v", err)
-					}
-				}
-			}()
-
-			// start ssh
-			writer := log.ErrorStreamOnly().Writer(logrus.InfoLevel, false)
-			defer writer.Close()
-
-			log.Debugf("Run outer container tunnel")
-			command := fmt.Sprintf("'%s' helper ssh-server --track-activity --token '%s' --stdio", agent.ContainerDevPodHelperLocation, tok)
-			if cmd.Debug {
-				command += " --debug"
-			}
-			if cmd.User != "" {
-				command = fmt.Sprintf("su -c \"%s\" '%s'", command, cmd.User)
-			}
-			if cmd.Stdio {
-				return devssh.Run(ctx, containerClient, command, os.Stdin, os.Stdout, writer)
-			}
-
-			privateKey, err := devssh.GetDevPodPrivateKeyRaw()
-			if err != nil {
-				return err
-			}
-
-			return machine.StartSSHSession(ctx, privateKey, cmd.User, cmd.Command, cmd.AgentForwarding, func(ctx context.Context, stdin io.Reader, stdout io.Writer, stderr io.Writer) error {
-				return devssh.Run(ctx, containerClient, command, stdin, stdout, stderr)
-			}, writer)
-		},
-	)
+		// start ssh tunnel
+		return cmd.startTunnel(ctx, devPodConfig, containerClient, client.WorkspaceConfig().IDE.Name, log)
+	})
 }
 
-func configureSSH(client client2.WorkspaceClient, configPath, user string) error {
-	err := devssh.ConfigureSSHConfig(configPath, client.Context(), client.Workspace(), user, log.Default)
-	if err != nil {
-		return err
+func (cmd *SSHCmd) startTunnel(ctx context.Context, devPodConfig *config.Config, containerClient *ssh.Client, ideName string, log log.Logger) error {
+	// start port-forwarding etc.
+	if cmd.StartServices {
+		go cmd.startServices(ctx, devPodConfig, containerClient, ideName, log)
 	}
 
-	return nil
+	// start ssh
+	writer := log.ErrorStreamOnly().Writer(logrus.InfoLevel, false)
+	defer writer.Close()
+
+	log.Debugf("Run outer container tunnel")
+	command := fmt.Sprintf("'%s' helper ssh-server --track-activity --stdio", agent.ContainerDevPodHelperLocation)
+	if cmd.Debug {
+		command += " --debug"
+	}
+	if cmd.User != "" {
+		command = fmt.Sprintf("su -c \"%s\" '%s'", command, cmd.User)
+	}
+	if cmd.Stdio {
+		return devssh.Run(ctx, containerClient, command, os.Stdin, os.Stdout, writer)
+	}
+
+	return machine.StartSSHSession(ctx, cmd.User, cmd.Command, cmd.AgentForwarding, func(ctx context.Context, stdin io.Reader, stdout io.Writer, stderr io.Writer) error {
+		return devssh.Run(ctx, containerClient, command, stdin, stdout, stderr)
+	}, writer)
+}
+
+func (cmd *SSHCmd) startServices(ctx context.Context, devPodConfig *config.Config, containerClient *ssh.Client, ideName string, log log.Logger) {
+	if cmd.User != "" {
+		gitCredentials := ideName != string(config.IDEVSCode)
+		err := tunnel.RunInContainer(
+			ctx,
+			devPodConfig,
+			containerClient,
+			cmd.User,
+			false,
+			gitCredentials,
+			true,
+			nil,
+			log,
+		)
+		if err != nil {
+			log.Debugf("Error running credential server: %v", err)
+		}
+	}
 }

@@ -9,14 +9,14 @@ import (
 	"github.com/pkg/errors"
 )
 
-func (r *Runner) Build(options config.BuildOptions) (string, error) {
+func (r *Runner) Build(ctx context.Context, options config.BuildOptions) (string, error) {
 	substitutedConfig, _, err := r.prepare()
 	if err != nil {
 		return "", err
 	}
 
 	// check if we need to build container
-	buildInfo, err := r.build(substitutedConfig, options)
+	buildInfo, err := r.build(ctx, substitutedConfig, options)
 	if err != nil {
 		return "", errors.Wrap(err, "build image")
 	}

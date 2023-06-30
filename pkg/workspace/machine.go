@@ -15,6 +15,31 @@ import (
 	"github.com/loft-sh/devpod/pkg/terminal"
 )
 
+func listMachines(devPodConfig *config.Config, log log.Logger) ([]*provider2.Machine, error) {
+	machineDir, err := provider2.GetMachinesDir(devPodConfig.DefaultContext)
+	if err != nil {
+		return nil, err
+	}
+
+	entries, err := os.ReadDir(machineDir)
+	if err != nil && !os.IsNotExist(err) {
+		return nil, err
+	}
+
+	retMachines := []*provider2.Machine{}
+	for _, entry := range entries {
+		machineConfig, err := provider2.LoadMachineConfig(devPodConfig.DefaultContext, entry.Name())
+		if err != nil {
+			log.ErrorStreamOnly().Warnf("Couldn't load machine %s: %v", entry.Name(), err)
+			continue
+		}
+
+		retMachines = append(retMachines, machineConfig)
+	}
+
+	return retMachines, nil
+}
+
 func ResolveMachine(devPodConfig *config.Config, args []string, userOptions []string, log log.Logger) (client.Client, error) {
 	machineClient, err := resolveMachine(devPodConfig, args, log)
 	if err != nil {

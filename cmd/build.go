@@ -9,6 +9,7 @@ import (
 
 	"github.com/loft-sh/devpod/cmd/flags"
 	"github.com/loft-sh/devpod/pkg/agent"
+	"github.com/loft-sh/devpod/pkg/agent/tunnelserver"
 	"github.com/loft-sh/devpod/pkg/client"
 	"github.com/loft-sh/devpod/pkg/config"
 	"github.com/loft-sh/devpod/pkg/image"
@@ -178,7 +179,7 @@ func (cmd *BuildCmd) buildAgentClient(ctx context.Context, workspaceClient clien
 	agentConfig := workspaceClient.AgentConfig()
 
 	// create container etc.
-	_, err = agent.RunTunnelServer(
+	_, err = tunnelserver.RunTunnelServer(
 		cancelCtx,
 		stdoutReader,
 		stdinWriter,

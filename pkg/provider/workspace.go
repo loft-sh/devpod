@@ -58,6 +58,9 @@ type WorkspaceMachineConfig struct {
 	// ID is the machine ID to use for this workspace
 	ID string `json:"machineId,omitempty"`
 
+	// UID is the machine UID to use for this workspace
+	UID string `json:"machineUid,omitempty"`
+
 	// AutoDelete specifies if the machine should get destroyed when
 	// the workspace is destroyed
 	AutoDelete bool `json:"autoDelete,omitempty"`

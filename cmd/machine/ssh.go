@@ -12,7 +12,6 @@ import (
 	"github.com/loft-sh/devpod/pkg/config"
 	"github.com/loft-sh/devpod/pkg/log"
 	devssh "github.com/loft-sh/devpod/pkg/ssh"
-	"github.com/loft-sh/devpod/pkg/token"
 	"github.com/loft-sh/devpod/pkg/workspace"
 	"github.com/mattn/go-isatty"
 	"github.com/pkg/errors"
@@ -61,24 +60,12 @@ func (cmd *SSHCmd) Run(ctx context.Context, args []string) error {
 		return err
 	}
 
-	// get token
-	tok, err := token.GetDevPodToken()
-	if err != nil {
-		return err
-	}
-
-	// get private key
-	privateKey, err := devssh.GetDevPodPrivateKeyRaw()
-	if err != nil {
-		return err
-	}
-
 	writer := log.Default.ErrorStreamOnly().Writer(logrus.InfoLevel, false)
 	defer writer.Close()
 
 	// start the ssh session
-	return StartSSHSession(ctx, privateKey, "", cmd.Command, cmd.AgentForwarding, func(ctx context.Context, stdin io.Reader, stdout io.Writer, stderr io.Writer) error {
-		command := fmt.Sprintf("'%s' helper ssh-server --token '%s' --stdio", machineClient.AgentPath(), tok)
+	return StartSSHSession(ctx, "", cmd.Command, cmd.AgentForwarding, func(ctx context.Context, stdin io.Reader, stdout io.Writer, stderr io.Writer) error {
+		command := fmt.Sprintf("'%s' helper ssh-server --stdio", machineClient.AgentPath())
 		if cmd.Debug {
 			command += " --debug"
 		}
@@ -95,7 +82,7 @@ func (cmd *SSHCmd) Run(ctx context.Context, args []string) error {
 
 type ExecFunc func(ctx context.Context, stdin io.Reader, stdout io.Writer, stderr io.Writer) error
 
-func StartSSHSession(ctx context.Context, privateKey []byte, user, command string, agentForwarding bool, exec ExecFunc, stderr io.Writer) error {
+func StartSSHSession(ctx context.Context, user, command string, agentForwarding bool, exec ExecFunc, stderr io.Writer) error {
 	// create readers
 	stdoutReader, stdoutWriter, err := os.Pipe()
 	if err != nil {
@@ -115,7 +102,7 @@ func StartSSHSession(ctx context.Context, privateKey []byte, user, command strin
 	}()
 
 	// start ssh client as root / default user
-	sshClient, err := devssh.StdioClientFromKeyBytesWithUser(privateKey, stdoutReader, stdinWriter, user, false)
+	sshClient, err := devssh.StdioClientFromKeyBytesWithUser(nil, stdoutReader, stdinWriter, user, false)
 	if err != nil {
 		return err
 	}

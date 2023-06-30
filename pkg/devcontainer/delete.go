@@ -8,7 +8,7 @@ import (
 	"github.com/pkg/errors"
 )
 
-func (r *Runner) Delete(labels []string, deleteVolumes bool) error {
+func (r *Runner) Delete(ctx context.Context, labels []string, deleteVolumes bool) error {
 	if len(labels) == 0 {
 		labels = r.getLabels()
 	}
@@ -21,7 +21,7 @@ func (r *Runner) Delete(labels []string, deleteVolumes bool) error {
 
 	r.Log.Infof("Deleting devcontainer...")
 	if isDockerCompose, projectName := getDockerComposeProject(containerDetails); isDockerCompose {
-		err = r.deleteDockerCompose(projectName)
+		err = r.deleteDockerCompose(ctx, projectName)
 		if err != nil {
 			return err
 		}
@@ -42,9 +42,9 @@ func (r *Runner) Delete(labels []string, deleteVolumes bool) error {
 	return nil
 }
 
-func (r *Runner) Stop() error {
+func (r *Runner) Stop(ctx context.Context) error {
 	labels := r.getLabels()
-	containerDetails, err := r.Driver.FindDevContainer(context.TODO(), labels)
+	containerDetails, err := r.Driver.FindDevContainer(ctx, labels)
 	if err != nil {
 		return errors.Wrap(err, "find dev container")
 	} else if containerDetails == nil {
@@ -53,12 +53,12 @@ func (r *Runner) Stop() error {
 
 	if strings.ToLower(containerDetails.State.Status) == "running" {
 		if isDockerCompose, projectName := getDockerComposeProject(containerDetails); isDockerCompose {
-			err = r.stopDockerCompose(projectName)
+			err = r.stopDockerCompose(ctx, projectName)
 			if err != nil {
 				return err
 			}
 		} else {
-			err = r.Driver.StopDevContainer(context.TODO(), containerDetails.ID)
+			err = r.Driver.StopDevContainer(ctx, containerDetails.ID)
 			if err != nil {
 				return err
 			}

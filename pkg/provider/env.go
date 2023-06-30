@@ -15,6 +15,7 @@ const (
 	DEVPOD_OS                = "DEVPOD_OS"
 	DEVPOD_ARCH              = "DEVPOD_ARCH"
 	WORKSPACE_ID             = "WORKSPACE_ID"
+	WORKSPACE_UID            = "WORKSPACE_UID"
 	WORKSPACE_FOLDER         = "WORKSPACE_FOLDER"
 	WORKSPACE_CONTEXT        = "WORKSPACE_CONTEXT"
 	WORKSPACE_ORIGIN         = "WORKSPACE_ORIGIN"
@@ -90,6 +91,9 @@ func ToOptionsWorkspace(workspace *Workspace) map[string]string {
 	if workspace != nil {
 		if workspace.ID != "" {
 			retVars[WORKSPACE_ID] = workspace.ID
+		}
+		if workspace.UID != "" {
+			retVars[WORKSPACE_UID] = workspace.UID
 		}
 		if workspace.Folder != "" {
 			retVars[WORKSPACE_FOLDER] = filepath.ToSlash(workspace.Folder)

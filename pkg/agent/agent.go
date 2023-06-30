@@ -15,8 +15,6 @@ import (
 
 	"github.com/loft-sh/devpod/pkg/command"
 	"github.com/loft-sh/devpod/pkg/compress"
-	"github.com/loft-sh/devpod/pkg/devcontainer/config"
-	"github.com/loft-sh/devpod/pkg/driver"
 	"github.com/loft-sh/devpod/pkg/log"
 	provider2 "github.com/loft-sh/devpod/pkg/provider"
 	"github.com/loft-sh/devpod/pkg/version"
@@ -91,51 +89,6 @@ func parseAgentWorkspaceInfo(workspaceConfigFile string) (*provider2.AgentWorksp
 
 	workspaceInfo.Origin = filepath.Dir(workspaceConfigFile)
 	return workspaceInfo, nil
-}
-
-func ReadAgentWorkspaceDevContainerResult(agentFolder, context, id string) (*config.Result, error) {
-	// get workspace folder
-	workspaceDir, err := GetAgentWorkspaceDir(agentFolder, context, id)
-	if err != nil {
-		return nil, err
-	}
-
-	// read workspace config
-	out, err := os.ReadFile(filepath.Join(workspaceDir, WorkspaceDevContainerResult))
-	if err != nil {
-		return nil, err
-	}
-
-	// json unmarshal
-	workspaceResult := &config.Result{}
-	err = json.Unmarshal(out, workspaceResult)
-	if err != nil {
-		return nil, perrors.Wrap(err, "parse workspace result")
-	}
-
-	return workspaceResult, nil
-}
-
-func WriteAgentWorkspaceDevContainerResult(agentFolder, context, id string, result *config.Result) error {
-	// get workspace folder
-	workspaceDir, err := GetAgentWorkspaceDir(agentFolder, context, id)
-	if err != nil {
-		return err
-	}
-
-	// marshal result
-	out, err := json.Marshal(result)
-	if err != nil {
-		return err
-	}
-
-	// read workspace config
-	err = os.WriteFile(filepath.Join(workspaceDir, WorkspaceDevContainerResult), out, 0666)
-	if err != nil {
-		return err
-	}
-
-	return nil
 }
 
 func ReadAgentWorkspaceInfo(agentFolder, context, id string, log log.Logger) (bool, *provider2.AgentWorkspaceInfo, error) {
@@ -280,21 +233,21 @@ func rerunAsRoot(workspaceInfo *provider2.AgentWorkspaceInfo, log log.Logger) (b
 	return true, nil
 }
 
+type Exec func(ctx context.Context, user string, command string, stdin io.Reader, stdout io.Writer, stderr io.Writer) error
+
 func Tunnel(
 	ctx context.Context,
-	driver driver.Driver,
-	containerID string,
+	exec Exec,
 	token string,
 	user string,
 	stdin io.Reader,
 	stdout io.Writer,
 	stderr io.Writer,
-	trackActivity bool,
 	log log.Logger,
 ) error {
 	// inject agent
 	err := InjectAgent(ctx, func(ctx context.Context, command string, stdin io.Reader, stdout io.Writer, stderr io.Writer) error {
-		return driver.CommandDevContainer(ctx, containerID, "root", command, stdin, stdout, stderr)
+		return exec(ctx, "root", command, stdin, stdout, stderr)
 	}, false, ContainerDevPodHelperLocation, DefaultAgentDownloadURL(), false, log)
 	if err != nil {
 		return err
@@ -302,9 +255,6 @@ func Tunnel(
 
 	// build command
 	command := fmt.Sprintf("'%s' helper ssh-server --token '%s' --stdio", ContainerDevPodHelperLocation, token)
-	if trackActivity {
-		command += " --track-activity"
-	}
 	if log.GetLevel() == logrus.DebugLevel {
 		command += " --debug"
 	}
@@ -313,7 +263,7 @@ func Tunnel(
 	}
 
 	// create tunnel
-	err = driver.CommandDevContainer(ctx, containerID, user, command, stdin, stdout, stderr)
+	err = exec(ctx, user, command, stdin, stdout, stderr)
 	if err != nil {
 		return err
 	}

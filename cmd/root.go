@@ -84,6 +84,7 @@ func Execute() {
 		if globalFlags.Debug {
 			log2.Default.Fatalf("%+v", err)
 		} else {
+			log2.Default.Error("Try using the --debug flag to see a more verbose output")
 			log2.Default.Fatal(err)
 		}
 	}
