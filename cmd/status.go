@@ -8,6 +8,7 @@ import (
 
 	"github.com/loft-sh/devpod/cmd/flags"
 	client2 "github.com/loft-sh/devpod/pkg/client"
+	"github.com/loft-sh/devpod/pkg/client/clientimplementation"
 	"github.com/loft-sh/devpod/pkg/config"
 	"github.com/loft-sh/devpod/pkg/log"
 	workspace2 "github.com/loft-sh/devpod/pkg/workspace"
@@ -18,10 +19,10 @@ import (
 // StatusCmd holds the cmd flags
 type StatusCmd struct {
 	*flags.GlobalFlags
+	client2.StatusOptions
 
-	Output          string
-	Timeout         string
-	ContainerStatus bool
+	Output  string
+	Timeout string
 }
 
 // NewStatusCmd creates a new command
@@ -33,19 +34,24 @@ func NewStatusCmd(flags *flags.GlobalFlags) *cobra.Command {
 		Use:   "status",
 		Short: "Shows the status of a workspace",
 		RunE: func(_ *cobra.Command, args []string) error {
+			err := clientimplementation.DecodeOptionsFromEnv(clientimplementation.DevPodFlagsStatus, &cmd.StatusOptions)
+			if err != nil {
+				return fmt.Errorf("decode up options: %w", err)
+			}
+
 			ctx := context.Background()
 			devPodConfig, err := config.LoadConfig(cmd.Context, cmd.Provider)
 			if err != nil {
 				return err
 			}
 
-			log := log.Default.ErrorStreamOnly()
-			client, err := workspace2.GetWorkspace(devPodConfig, args, false, log)
+			logger := log.Default.ErrorStreamOnly()
+			client, err := workspace2.GetWorkspace(devPodConfig, args, false, logger)
 			if err != nil {
 				return err
 			}
 
-			return cmd.Run(ctx, client, log)
+			return cmd.Run(ctx, client, logger)
 		},
 	}
 
@@ -56,7 +62,7 @@ func NewStatusCmd(flags *flags.GlobalFlags) *cobra.Command {
 }
 
 // Run runs the command logic
-func (cmd *StatusCmd) Run(ctx context.Context, client client2.WorkspaceClient, log log.Logger) error {
+func (cmd *StatusCmd) Run(ctx context.Context, client client2.BaseWorkspaceClient, log log.Logger) error {
 	if cmd.Timeout != "" {
 		duration, err := time.ParseDuration(cmd.Timeout)
 		if err != nil {
@@ -69,7 +75,7 @@ func (cmd *StatusCmd) Run(ctx context.Context, client client2.WorkspaceClient, l
 	}
 
 	// get instance status
-	instanceStatus, err := client.Status(ctx, client2.StatusOptions{ContainerStatus: cmd.ContainerStatus})
+	instanceStatus, err := client.Status(ctx, cmd.StatusOptions)
 	if err != nil {
 		return err
 	}
@@ -85,12 +91,7 @@ func (cmd *StatusCmd) Run(ctx context.Context, client client2.WorkspaceClient, l
 			log.Infof("Workspace '%s' is '%s'", client.Workspace(), instanceStatus)
 		}
 	} else if cmd.Output == "json" {
-		out, err := json.Marshal(struct {
-			ID       string `json:"id,omitempty"`
-			Context  string `json:"context,omitempty"`
-			Provider string `json:"provider,omitempty"`
-			State    string `json:"state,omitempty"`
-		}{
+		out, err := json.Marshal(&client2.WorkspaceStatus{
 			ID:       client.Workspace(),
 			Context:  client.Context(),
 			Provider: client.Provider(),

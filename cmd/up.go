@@ -6,12 +6,13 @@ import (
 	"io"
 	"net/url"
 	"os"
-	"sync"
+	"os/exec"
 
 	"github.com/loft-sh/devpod/cmd/flags"
 	"github.com/loft-sh/devpod/pkg/agent"
 	"github.com/loft-sh/devpod/pkg/agent/tunnelserver"
 	client2 "github.com/loft-sh/devpod/pkg/client"
+	"github.com/loft-sh/devpod/pkg/client/clientimplementation"
 	"github.com/loft-sh/devpod/pkg/config"
 	config2 "github.com/loft-sh/devpod/pkg/devcontainer/config"
 	"github.com/loft-sh/devpod/pkg/ide/jetbrains"
@@ -19,6 +20,7 @@ import (
 	"github.com/loft-sh/devpod/pkg/log"
 	open2 "github.com/loft-sh/devpod/pkg/open"
 	"github.com/loft-sh/devpod/pkg/port"
+	provider2 "github.com/loft-sh/devpod/pkg/provider"
 	devssh "github.com/loft-sh/devpod/pkg/ssh"
 	"github.com/loft-sh/devpod/pkg/tunnel"
 	workspace2 "github.com/loft-sh/devpod/pkg/workspace"
@@ -31,25 +33,19 @@ import (
 
 // UpCmd holds the up cmd flags
 type UpCmd struct {
+	client2.UpBaseOptions
 	*flags.GlobalFlags
 
-	ID      string
 	Machine string
 
-	IDE        string
-	IDEOptions []string
-
-	ProviderOptions      []string
-	PrebuildRepositories []string
-
-	DevContainerPath string
-
-	Recreate bool
+	ProviderOptions []string
 
 	ConfigureSSH bool
 	OpenIDE      bool
 
 	SSHConfigPath string
+
+	Proxy bool
 }
 
 // NewUpCmd creates a new up command
@@ -61,11 +57,29 @@ func NewUpCmd(flags *flags.GlobalFlags) *cobra.Command {
 		Use:   "up",
 		Short: "Starts a new workspace",
 		RunE: func(_ *cobra.Command, args []string) error {
+			// try to parse flags from env
+			err := clientimplementation.DecodeOptionsFromEnv(clientimplementation.DevPodFlagsUp, &cmd.UpBaseOptions)
+			if err != nil {
+				return fmt.Errorf("decode up options: %w", err)
+			}
+
 			ctx := context.Background()
-			logger := log.Default
+			var logger log.Logger = log.Default
+			if cmd.Proxy {
+				logger = logger.ErrorStreamOnly()
+			}
+
 			devPodConfig, err := config.LoadConfig(cmd.Context, cmd.Provider)
 			if err != nil {
 				return err
+			}
+
+			var source *provider2.WorkspaceSource
+			if cmd.Source != "" {
+				source, err = provider2.ParseWorkspaceSource(cmd.Source)
+				if err != nil {
+					return fmt.Errorf("error parsing source: %w", err)
+				}
 			}
 
 			client, err := workspace2.ResolveWorkspace(
@@ -78,6 +92,7 @@ func NewUpCmd(flags *flags.GlobalFlags) *cobra.Command {
 				cmd.Machine,
 				cmd.ProviderOptions,
 				cmd.DevContainerPath,
+				source,
 				true,
 				logger,
 			)
@@ -100,17 +115,22 @@ func NewUpCmd(flags *flags.GlobalFlags) *cobra.Command {
 	upCmd.Flags().StringVar(&cmd.Machine, "machine", "", "The machine to use for this workspace. The machine needs to exist beforehand or the command will fail. If the workspace already exists, this option has no effect")
 	upCmd.Flags().StringVar(&cmd.IDE, "ide", "", "The IDE to open the workspace in. If empty will use vscode locally or in browser")
 	upCmd.Flags().BoolVar(&cmd.OpenIDE, "open-ide", true, "If this is false and an IDE is configured, DevPod will only install the IDE server backend, but not open it")
+
+	upCmd.Flags().StringVar(&cmd.Source, "source", "", "Optional source for the workspace. E.g. git:https://github.com/my-org/my-repo")
+	upCmd.Flags().BoolVar(&cmd.Proxy, "proxy", false, "If true will forward agent requests to stdio")
 	return upCmd
 }
 
 // Run runs the command logic
-func (cmd *UpCmd) Run(ctx context.Context, devPodConfig *config.Config, client client2.WorkspaceClient, log log.Logger) error {
+func (cmd *UpCmd) Run(ctx context.Context, devPodConfig *config.Config, client client2.BaseWorkspaceClient, log log.Logger) error {
 	// run devpod agent up
 	result, err := cmd.devPodUp(ctx, client, log)
 	if err != nil {
 		return err
 	} else if result == nil {
 		return fmt.Errorf("didn't receive a result back from agent")
+	} else if cmd.Proxy {
+		return nil
 	}
 
 	// get user from result
@@ -156,7 +176,7 @@ func (cmd *UpCmd) Run(ctx context.Context, devPodConfig *config.Config, client c
 	return nil
 }
 
-func startVSCodeLocally(client client2.WorkspaceClient, workspaceFolder, user string, log log.Logger) error {
+func startVSCodeLocally(client client2.BaseWorkspaceClient, workspaceFolder, user string, log log.Logger) error {
 	log.Infof("Starting VSCode...")
 	err := open.Run(`vscode://vscode-remote/ssh-remote+` + url.QueryEscape(user) + `@` + client.Workspace() + `.devpod/` + url.QueryEscape(workspaceFolder))
 	if err != nil {
@@ -168,10 +188,12 @@ func startVSCodeLocally(client client2.WorkspaceClient, workspaceFolder, user st
 	return nil
 }
 
-func startInBrowser(ctx context.Context, devPodConfig *config.Config, client client2.WorkspaceClient, workspaceFolder, user string, ideOptions map[string]config.OptionValue, logger log.Logger) error {
-	unlockOnce := sync.Once{}
-	client.Lock()
-	defer unlockOnce.Do(client.Unlock)
+func startInBrowser(ctx context.Context, devPodConfig *config.Config, client client2.BaseWorkspaceClient, workspaceFolder, user string, ideOptions map[string]config.OptionValue, logger log.Logger) error {
+	// create ssh command
+	execPath, err := os.Executable()
+	if err != nil {
+		return err
+	}
 
 	// determine port
 	vscodePort, err := port.FindAvailablePort(openvscode.DefaultVSCodePort)
@@ -194,37 +216,63 @@ func startInBrowser(ctx context.Context, devPodConfig *config.Config, client cli
 
 	// start in browser
 	logger.Infof("Starting vscode in browser mode at %s", targetURL)
-	err = tunnel.NewContainerTunnel(client, logger).Run(ctx, func(ctx context.Context, containerClient *ssh.Client) error {
-		unlockOnce.Do(client.Unlock)
+	err = tunnel.NewTunnel(
+		ctx,
+		func(ctx context.Context, stdin io.Reader, stdout io.Writer) error {
+			writer := logger.Writer(logrus.DebugLevel, false)
+			defer writer.Close()
 
-		// print port to console
-		streamLogger, ok := logger.(*log.StreamLogger)
-		if ok {
-			streamLogger.JSON(logrus.InfoLevel, map[string]string{
-				"url":  targetURL,
-				"done": "true",
-			})
-		}
+			args := []string{
+				"ssh",
+				"--log-output=raw",
+				"--user=root",
+				"--stdio",
+				"--agent-forwarding=false",
+				"--start-services=false",
+				"--context",
+				client.Context(),
+				client.Workspace(),
+			}
+			if logger.GetLevel() == logrus.DebugLevel {
+				args = append(args, "--debug")
+			}
 
-		// run in container
-		err := tunnel.RunInContainer(
-			ctx,
-			devPodConfig,
-			containerClient,
-			user,
-			true,
-			true,
-			true,
-			[]string{fmt.Sprintf("%d:%d", vscodePort, openvscode.DefaultVSCodePort)},
-			logger,
-		)
-		if err != nil {
-			logger.Errorf("error running credentials server: %v", err)
-		}
+			cmd := exec.CommandContext(ctx, execPath, args...)
+			cmd.Stdout = stdout
+			cmd.Stdin = stdin
+			cmd.Stderr = writer
+			return cmd.Run()
+		},
+		func(ctx context.Context, containerClient *ssh.Client) error {
+			// print port to console
+			streamLogger, ok := logger.(*log.StreamLogger)
+			if ok {
+				streamLogger.JSON(logrus.InfoLevel, map[string]string{
+					"url":  targetURL,
+					"done": "true",
+				})
+			}
 
-		<-ctx.Done()
-		return nil
-	})
+			// run in container
+			err := tunnel.RunInContainer(
+				ctx,
+				devPodConfig,
+				containerClient,
+				user,
+				true,
+				true,
+				true,
+				[]string{fmt.Sprintf("%d:%d", vscodePort, openvscode.DefaultVSCodePort)},
+				logger,
+			)
+			if err != nil {
+				logger.Errorf("error running credentials server: %v", err)
+			}
+
+			<-ctx.Done()
+			return nil
+		},
+	)
 	if err != nil {
 		return err
 	}
@@ -232,19 +280,99 @@ func startInBrowser(ctx context.Context, devPodConfig *config.Config, client cli
 	return nil
 }
 
-func (cmd *UpCmd) devPodUp(ctx context.Context, client client2.WorkspaceClient, log log.Logger) (*config2.Result, error) {
+func (cmd *UpCmd) devPodUp(ctx context.Context, client client2.BaseWorkspaceClient, log log.Logger) (*config2.Result, error) {
 	client.Lock()
 	defer client.Unlock()
 
+	// check if regular workspace client
+	workspaceClient, ok := client.(client2.WorkspaceClient)
+	if ok {
+		return cmd.devPodUpMachine(ctx, workspaceClient, log)
+	}
+
+	// check if proxy client
+	proxyClient, ok := client.(client2.ProxyClient)
+	if ok {
+		return cmd.devPodUpProxy(ctx, proxyClient, log)
+	}
+
+	return nil, nil
+}
+
+func (cmd *UpCmd) devPodUpProxy(ctx context.Context, client client2.ProxyClient, log log.Logger) (*config2.Result, error) {
+	// create pipes
+	stdoutReader, stdoutWriter, err := os.Pipe()
+	if err != nil {
+		return nil, err
+	}
+	stdinReader, stdinWriter, err := os.Pipe()
+	if err != nil {
+		return nil, err
+	}
+	defer stdoutWriter.Close()
+	defer stdinWriter.Close()
+
+	// start machine on stdio
+	cancelCtx, cancel := context.WithCancel(ctx)
+	defer cancel()
+
+	// create up command
+	errChan := make(chan error, 1)
+	go func() {
+		defer log.Debugf("Done executing up command")
+		defer cancel()
+
+		// build devpod up options
+		workspace := client.WorkspaceConfig()
+		baseOptions := cmd.UpBaseOptions
+		baseOptions.ID = workspace.ID
+		baseOptions.DevContainerPath = workspace.DevContainerPath
+		baseOptions.IDE = workspace.IDE.Name
+		baseOptions.IDEOptions = nil
+		baseOptions.Source = workspace.Source.String()
+		for optionName, optionValue := range workspace.IDE.Options {
+			baseOptions.IDEOptions = append(baseOptions.IDEOptions, optionName+"="+optionValue.Value)
+		}
+
+		// run devpod up elsewhere
+		err := client.Up(ctx, client2.UpOptions{
+			UpBaseOptions: baseOptions,
+
+			Stdin:  stdinReader,
+			Stdout: stdoutWriter,
+		})
+		if err != nil {
+			errChan <- fmt.Errorf("executing up proxy command: %w", err)
+		} else {
+			errChan <- nil
+		}
+	}()
+
+	// create container etc.
+	result, err := tunnelserver.RunTunnelServer(
+		cancelCtx,
+		stdoutReader,
+		stdinWriter,
+		true,
+		true,
+		client.WorkspaceConfig(),
+		nil,
+		log,
+	)
+	if err != nil {
+		return nil, errors.Wrap(err, "run tunnel machine")
+	}
+
+	// wait until command finished
+	return result, <-errChan
+}
+
+func (cmd *UpCmd) devPodUpMachine(ctx context.Context, client client2.WorkspaceClient, log log.Logger) (*config2.Result, error) {
 	err := startWait(ctx, client, true, log)
 	if err != nil {
 		return nil, err
 	}
 
-	return cmd.devPodUpMachine(ctx, client, log)
-}
-
-func (cmd *UpCmd) devPodUpMachine(ctx context.Context, client client2.WorkspaceClient, log log.Logger) (*config2.Result, error) {
 	// compress info
 	workspaceInfo, _, err := client.AgentInfo()
 	if err != nil {
@@ -309,26 +437,46 @@ func (cmd *UpCmd) devPodUpMachine(ctx context.Context, client client2.WorkspaceC
 	agentConfig := client.AgentConfig()
 
 	// create container etc.
-	result, err := tunnelserver.RunTunnelServer(
-		cancelCtx,
-		stdoutReader,
-		stdinWriter,
-		false,
-		string(agentConfig.InjectGitCredentials) == "true",
-		string(agentConfig.InjectDockerCredentials) == "true",
-		client.WorkspaceConfig(),
-		nil,
-		log,
-	)
-	if err != nil {
-		return nil, errors.Wrap(err, "run tunnel machine")
+	var result *config2.Result
+	if cmd.Proxy {
+		// create client on stdin & stdout
+		tunnelClient, err := tunnelserver.NewTunnelClient(os.Stdin, os.Stdout, true)
+		if err != nil {
+			return nil, errors.Wrap(err, "create tunnel client")
+		}
+
+		// create proxy server
+		result, err = tunnelserver.RunProxyServer(
+			cancelCtx,
+			tunnelClient,
+			stdoutReader,
+			stdinWriter,
+			log.GetLevel() == logrus.DebugLevel,
+		)
+		if err != nil {
+			return nil, errors.Wrap(err, "run proxy tunnel")
+		}
+	} else {
+		result, err = tunnelserver.RunTunnelServer(
+			cancelCtx,
+			stdoutReader,
+			stdinWriter,
+			string(agentConfig.InjectGitCredentials) == "true",
+			string(agentConfig.InjectDockerCredentials) == "true",
+			client.WorkspaceConfig(),
+			nil,
+			log,
+		)
+		if err != nil {
+			return nil, errors.Wrap(err, "run tunnel machine")
+		}
 	}
 
 	// wait until command finished
 	return result, <-errChan
 }
 
-func configureSSH(client client2.WorkspaceClient, configPath, user string) error {
+func configureSSH(client client2.BaseWorkspaceClient, configPath, user string) error {
 	err := devssh.ConfigureSSHConfig(configPath, client.Context(), client.Workspace(), user, log.Default)
 	if err != nil {
 		return err

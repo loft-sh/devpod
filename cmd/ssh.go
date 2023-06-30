@@ -72,8 +72,44 @@ func NewSSHCmd(flags *flags.GlobalFlags) *cobra.Command {
 }
 
 // Run runs the command logic
-func (cmd *SSHCmd) Run(ctx context.Context, devPodConfig *config.Config, client client2.WorkspaceClient) error {
-	return cmd.jumpContainer(ctx, devPodConfig, client, log.Default.ErrorStreamOnly())
+func (cmd *SSHCmd) Run(ctx context.Context, devPodConfig *config.Config, client client2.BaseWorkspaceClient) error {
+	// get user
+	if cmd.User == "" {
+		var err error
+		cmd.User, err = devssh.GetUser(client.Workspace())
+		if err != nil {
+			return err
+		}
+	}
+
+	// check if regular workspace client
+	workspaceClient, ok := client.(client2.WorkspaceClient)
+	if ok {
+		return cmd.jumpContainer(ctx, devPodConfig, workspaceClient, log.Default.ErrorStreamOnly())
+	}
+
+	// check if proxy client
+	proxyClient, ok := client.(client2.ProxyClient)
+	if ok {
+		return cmd.startProxyTunnel(ctx, devPodConfig, proxyClient, log.Default.ErrorStreamOnly())
+	}
+
+	return nil
+}
+
+func (cmd *SSHCmd) startProxyTunnel(ctx context.Context, devPodConfig *config.Config, client client2.ProxyClient, log log.Logger) error {
+	return tunnel.NewTunnel(
+		ctx,
+		func(ctx context.Context, stdin io.Reader, stdout io.Writer) error {
+			return client.Ssh(ctx, client2.SshOptions{
+				Stdin:  stdin,
+				Stdout: stdout,
+			})
+		},
+		func(ctx context.Context, containerClient *ssh.Client) error {
+			return cmd.startTunnel(ctx, devPodConfig, containerClient, client.WorkspaceConfig().IDE.Name, log)
+		},
+	)
 }
 
 func startWait(ctx context.Context, client client2.WorkspaceClient, create bool, log log.Logger) error {
@@ -131,14 +167,6 @@ func (cmd *SSHCmd) jumpContainer(ctx context.Context, devPodConfig *config.Confi
 	err := startWait(ctx, client, false, log)
 	if err != nil {
 		return err
-	}
-
-	// get user
-	if cmd.User == "" {
-		cmd.User, err = devssh.GetUser(client.Workspace())
-		if err != nil {
-			return err
-		}
 	}
 
 	// tunnel to container

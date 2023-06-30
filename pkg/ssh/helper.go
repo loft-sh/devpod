@@ -48,8 +48,12 @@ func NewSSHClient(user, addr string, keyBytes []byte) (*ssh.Client, error) {
 	return client, nil
 }
 
-func StdioClientFromKeyBytes(keyBytes []byte, reader io.Reader, writer io.WriteCloser, exitOnClose bool) (*ssh.Client, error) {
-	return StdioClientFromKeyBytesWithUser(keyBytes, reader, writer, "", exitOnClose)
+func StdioClient(reader io.Reader, writer io.WriteCloser, exitOnClose bool) (*ssh.Client, error) {
+	return StdioClientFromKeyBytesWithUser(nil, reader, writer, "", exitOnClose)
+}
+
+func StdioClientWithUser(reader io.Reader, writer io.WriteCloser, user string, exitOnClose bool) (*ssh.Client, error) {
+	return StdioClientFromKeyBytesWithUser(nil, reader, writer, user, exitOnClose)
 }
 
 func StdioClientFromKeyBytesWithUser(keyBytes []byte, reader io.Reader, writer io.WriteCloser, user string, exitOnClose bool) (*ssh.Client, error) {

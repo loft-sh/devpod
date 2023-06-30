@@ -103,13 +103,26 @@ func GetWorkspaceName(args []string) string {
 }
 
 // GetWorkspace tries to retrieve an already existing workspace
-func GetWorkspace(devPodConfig *config.Config, args []string, changeLastUsed bool, log log.Logger) (client.WorkspaceClient, error) {
+func GetWorkspace(devPodConfig *config.Config, args []string, changeLastUsed bool, log log.Logger) (client.BaseWorkspaceClient, error) {
 	provider, workspace, machine, err := getWorkspace(devPodConfig, args, changeLastUsed, log)
 	if err != nil {
 		return nil, err
 	}
 
-	return clientimplementation.NewWorkspaceClient(devPodConfig, provider, workspace, machine, log)
+	var workspaceClient client.BaseWorkspaceClient
+	if provider.IsProxyProvider() {
+		workspaceClient, err = clientimplementation.NewProxyClient(devPodConfig, provider, workspace, log)
+		if err != nil {
+			return nil, err
+		}
+	} else {
+		workspaceClient, err = clientimplementation.NewWorkspaceClient(devPodConfig, provider, workspace, machine, log)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	return workspaceClient, nil
 }
 
 func getWorkspace(devPodConfig *config.Config, args []string, changeLastUsed bool, log log.Logger) (*provider2.ProviderConfig, *provider2.Workspace, *provider2.Machine, error) {
@@ -144,9 +157,10 @@ func ResolveWorkspace(
 	desiredMachine string,
 	providerUserOptions []string,
 	devContainerPath string,
+	source *provider2.WorkspaceSource,
 	changeLastUsed bool,
 	log log.Logger,
-) (client.WorkspaceClient, error) {
+) (client.BaseWorkspaceClient, error) {
 	// verify desired id
 	if desiredID != "" {
 		if provider2.ProviderNameRegEx.MatchString(desiredID) {
@@ -157,7 +171,7 @@ func ResolveWorkspace(
 	}
 
 	// resolve workspace
-	provider, workspace, machine, err := resolveWorkspace(ctx, devPodConfig, args, desiredID, desiredMachine, providerUserOptions, changeLastUsed, log)
+	provider, workspace, machine, err := resolveWorkspace(ctx, devPodConfig, args, desiredID, desiredMachine, providerUserOptions, source, changeLastUsed, log)
 	if err != nil {
 		return nil, err
 	}
@@ -179,9 +193,17 @@ func ResolveWorkspace(
 	}
 
 	// create workspace client
-	workspaceClient, err := clientimplementation.NewWorkspaceClient(devPodConfig, provider, workspace, machine, log)
-	if err != nil {
-		return nil, err
+	var workspaceClient client.BaseWorkspaceClient
+	if provider.IsProxyProvider() {
+		workspaceClient, err = clientimplementation.NewProxyClient(devPodConfig, provider, workspace, log)
+		if err != nil {
+			return nil, err
+		}
+	} else {
+		workspaceClient, err = clientimplementation.NewWorkspaceClient(devPodConfig, provider, workspace, machine, log)
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	// refresh provider options
@@ -193,7 +215,17 @@ func ResolveWorkspace(
 	return workspaceClient, nil
 }
 
-func resolveWorkspace(ctx context.Context, devPodConfig *config.Config, args []string, desiredID, desiredMachine string, providerUserOptions []string, changeLastUsed bool, log log.Logger) (*provider2.ProviderConfig, *provider2.Workspace, *provider2.Machine, error) {
+func resolveWorkspace(
+	ctx context.Context,
+	devPodConfig *config.Config,
+	args []string,
+	desiredID,
+	desiredMachine string,
+	providerUserOptions []string,
+	source *provider2.WorkspaceSource,
+	changeLastUsed bool,
+	log log.Logger,
+) (*provider2.ProviderConfig, *provider2.Workspace, *provider2.Machine, error) {
 	// check if we have no args
 	if len(args) == 0 {
 		if desiredID != "" {
@@ -224,7 +256,7 @@ func resolveWorkspace(ctx context.Context, devPodConfig *config.Config, args []s
 	}
 
 	// create workspace
-	provider, workspace, machine, err := createWorkspace(ctx, devPodConfig, workspaceID, name, desiredMachine, providerUserOptions, isLocalPath, log)
+	provider, workspace, machine, err := createWorkspace(ctx, devPodConfig, workspaceID, name, desiredMachine, providerUserOptions, source, isLocalPath, log)
 	if err != nil {
 		_ = clientimplementation.DeleteWorkspaceFolder(devPodConfig.DefaultContext, workspaceID, log)
 		return nil, nil, nil, err
@@ -233,7 +265,17 @@ func resolveWorkspace(ctx context.Context, devPodConfig *config.Config, args []s
 	return provider, workspace, machine, nil
 }
 
-func createWorkspace(ctx context.Context, devPodConfig *config.Config, workspaceID, name, desiredMachine string, providerUserOptions []string, isLocalPath bool, log log.Logger) (*provider2.ProviderConfig, *provider2.Workspace, *provider2.Machine, error) {
+func createWorkspace(
+	ctx context.Context,
+	devPodConfig *config.Config,
+	workspaceID,
+	name,
+	desiredMachine string,
+	providerUserOptions []string,
+	source *provider2.WorkspaceSource,
+	isLocalPath bool,
+	log log.Logger,
+) (*provider2.ProviderConfig, *provider2.Workspace, *provider2.Machine, error) {
 	// get default provider
 	provider, _, err := LoadProviders(devPodConfig, log)
 	if err != nil {
@@ -249,7 +291,7 @@ func createWorkspace(ctx context.Context, devPodConfig *config.Config, workspace
 	}
 
 	// resolve workspace
-	workspace, err := resolve(provider, devPodConfig, name, workspaceID, workspaceFolder, isLocalPath)
+	workspace, err := resolve(provider, devPodConfig, name, workspaceID, workspaceFolder, source, isLocalPath)
 	if err != nil {
 		return nil, nil, nil, err
 	}
@@ -278,7 +320,7 @@ func createWorkspace(ctx context.Context, devPodConfig *config.Config, workspace
 		if provider.State != nil && provider.State.SingleMachine {
 			workspace.Machine.ID = SingleMachineName(devPodConfig, provider.Config.Name, log)
 		} else {
-			workspace.Machine.ID = encoding.SafeConcatName(workspace.ID, encoding.GetMachineUIDShort(log))
+			workspace.Machine.ID = encoding.CreateNewUIDShort(workspace.ID)
 			workspace.Machine.AutoDelete = true
 		}
 
@@ -344,75 +386,71 @@ func createWorkspace(ctx context.Context, devPodConfig *config.Config, workspace
 	return provider.Config, workspace, machineConfig, nil
 }
 
-func resolve(defaultProvider *ProviderWithOptions, devPodConfig *config.Config, name, workspaceID, workspaceFolder string, isLocalPath bool) (*provider2.Workspace, error) {
+func resolve(
+	defaultProvider *ProviderWithOptions,
+	devPodConfig *config.Config,
+	name,
+	workspaceID,
+	workspaceFolder string,
+	source *provider2.WorkspaceSource,
+	isLocalPath bool,
+) (*provider2.Workspace, error) {
 	now := types.Now()
 	uid := encoding.CreateNewUID(devPodConfig.DefaultContext, workspaceID)
+	workspace := &provider2.Workspace{
+		ID:      workspaceID,
+		UID:     uid,
+		Folder:  workspaceFolder,
+		Context: devPodConfig.DefaultContext,
+		Provider: provider2.WorkspaceProviderConfig{
+			Name: defaultProvider.Config.Name,
+		},
+		CreationTimestamp: now,
+		LastUsedTimestamp: now,
+	}
+
+	// outside source set?
+	if source != nil {
+		workspace.Source = *source
+		return workspace, nil
+	}
 
 	// is local folder?
 	if isLocalPath {
-		return &provider2.Workspace{
-			ID:      workspaceID,
-			UID:     uid,
-			Folder:  workspaceFolder,
-			Context: devPodConfig.DefaultContext,
-			Provider: provider2.WorkspaceProviderConfig{
-				Name: defaultProvider.Config.Name,
-			},
-			Source: provider2.WorkspaceSource{
-				LocalFolder: name,
-			},
-			CreationTimestamp: now,
-			LastUsedTimestamp: now,
-		}, nil
+		workspace.Source = provider2.WorkspaceSource{
+			LocalFolder: name,
+		}
+		return workspace, nil
 	}
 
 	// is git?
 	gitRepository, gitBranch := git.NormalizeRepository(name)
 	if strings.HasSuffix(name, ".git") || git.PingRepository(gitRepository) {
-		return &provider2.Workspace{
-			ID:      workspaceID,
-			UID:     uid,
-			Folder:  workspaceFolder,
-			Context: devPodConfig.DefaultContext,
-			Picture: getProjectImage(name),
-			Provider: provider2.WorkspaceProviderConfig{
-				Name: defaultProvider.Config.Name,
-			},
-			Source: provider2.WorkspaceSource{
-				GitRepository: gitRepository,
-				GitBranch:     gitBranch,
-			},
-			CreationTimestamp: now,
-			LastUsedTimestamp: now,
-		}, nil
+		workspace.Picture = getProjectImage(name)
+		workspace.Source = provider2.WorkspaceSource{
+			GitRepository: gitRepository,
+			GitBranch:     gitBranch,
+		}
+		return workspace, nil
 	}
 
 	// is image?
 	_, err := image.GetImage(name)
 	if err == nil {
-		return &provider2.Workspace{
-			ID:      workspaceID,
-			UID:     uid,
-			Folder:  workspaceFolder,
-			Context: devPodConfig.DefaultContext,
-			Provider: provider2.WorkspaceProviderConfig{
-				Name: defaultProvider.Config.Name,
-			},
-			Source: provider2.WorkspaceSource{
-				Image: name,
-			},
-			CreationTimestamp: now,
-			LastUsedTimestamp: now,
-		}, nil
+		workspace.Source = provider2.WorkspaceSource{
+			Image: name,
+		}
+		return workspace, nil
 	}
 
 	return nil, fmt.Errorf("%s is neither a local folder, git repository or docker image", name)
 }
 
+var contentRegEx = regexp.MustCompile(`content="([^"]+)"`)
+
 var regexes = map[string]*regexp.Regexp{
 	"github.com": regexp.MustCompile(`(<meta[^>]+property)="og:image" content="([^"]+)"`),
 	"gitlab.com": regexp.MustCompile(`(<meta[^>]+content)="([^"]+)" property="og:image"`),
-	"content":    regexp.MustCompile(`content="([^"]+)"`),
 }
 
 func getProjectImage(link string) string {
@@ -432,7 +470,7 @@ func getProjectImage(link string) string {
 	}
 
 	content, err := io.ReadAll(res.Body)
-	res.Body.Close()
+	_ = res.Body.Close()
 	if err != nil {
 		return ""
 	}
@@ -447,7 +485,7 @@ func getProjectImage(link string) string {
 
 	meta := regEx.FindString(html)
 	parts := strings.Split(
-		regexes["content"].FindString(meta),
+		contentRegEx.FindString(meta),
 		`"`,
 	)
 

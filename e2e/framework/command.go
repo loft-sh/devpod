@@ -6,9 +6,7 @@ import (
 	"fmt"
 	"path/filepath"
 
-	"github.com/loft-sh/devpod/cmd/flags"
-	"github.com/loft-sh/devpod/cmd/machine"
-	"github.com/loft-sh/devpod/cmd/provider"
+	"github.com/loft-sh/devpod/pkg/client"
 	provider2 "github.com/loft-sh/devpod/pkg/provider"
 	"github.com/loft-sh/devpod/pkg/workspace"
 )
@@ -67,6 +65,14 @@ func (f *Framework) DevPodUp(ctx context.Context, workspace string, additionalAr
 	return nil
 }
 
+func (f *Framework) DevPodSSH(ctx context.Context, workspace string, command string) (string, error) {
+	out, err := f.ExecCommandOutput(ctx, []string{"ssh", workspace, "--command", command})
+	if err != nil {
+		return "", fmt.Errorf("devpod ssh failed: %s", err.Error())
+	}
+	return out, nil
+}
+
 func (f *Framework) DevPodSSHEchoTestString(ctx context.Context, workspace string) error {
 	err := f.ExecCommand(ctx, true, true, "mYtEsTsTrInG", []string{"ssh", "--command", "echo 'bVl0RXNUc1RySW5H' | base64 -d", workspace})
 	if err != nil {
@@ -91,29 +97,81 @@ func (f *Framework) DevPodProviderUse(ctx context.Context, provider string) erro
 	return nil
 }
 
+func (f *Framework) DevPodStatus(ctx context.Context, workspace string) (client.WorkspaceStatus, error) {
+	baseArgs := []string{"status", "--output", "json"}
+	baseArgs = append(baseArgs, workspace)
+	stdout, err := f.ExecCommandOutput(ctx, baseArgs)
+	if err != nil {
+		return client.WorkspaceStatus{}, fmt.Errorf("devpod stop failed: %s", err.Error())
+	}
+
+	status := &client.WorkspaceStatus{}
+	err = json.Unmarshal([]byte(stdout), status)
+	if err != nil {
+		return client.WorkspaceStatus{}, err
+	}
+
+	return *status, nil
+}
+
+func (f *Framework) DevPodStop(ctx context.Context, workspace string) error {
+	baseArgs := []string{"stop"}
+	baseArgs = append(baseArgs, workspace)
+	err := f.ExecCommand(ctx, false, false, "", baseArgs)
+	if err != nil {
+		return fmt.Errorf("devpod stop failed: %s", err.Error())
+	}
+	return nil
+}
+
 func (f *Framework) DevPodProviderAdd(args []string) error {
-	addCmd := provider.NewAddCmd(&flags.GlobalFlags{})
-	return addCmd.RunE(nil, args)
+	baseArgs := []string{"provider", "add"}
+	baseArgs = append(baseArgs, args...)
+	err := f.ExecCommand(context.Background(), false, false, "", baseArgs)
+	if err != nil {
+		return fmt.Errorf("devpod provider add failed: %s", err.Error())
+	}
+	return nil
 }
 
 func (f *Framework) DevPodProviderDelete(args []string) error {
-	deleteCmd := provider.NewDeleteCmd(&flags.GlobalFlags{})
-	return deleteCmd.RunE(nil, args)
+	baseArgs := []string{"provider", "delete"}
+	baseArgs = append(baseArgs, args...)
+	err := f.ExecCommand(context.Background(), false, false, "", baseArgs)
+	if err != nil {
+		return fmt.Errorf("devpod provider delete failed: %s", err.Error())
+	}
+	return nil
 }
 
 func (f *Framework) DevPodProviderUpdate(args []string) error {
-	updateCmd := provider.NewUpdateCmd(&flags.GlobalFlags{})
-	return updateCmd.RunE(nil, args)
+	baseArgs := []string{"provider", "update"}
+	baseArgs = append(baseArgs, args...)
+	err := f.ExecCommand(context.Background(), false, false, "", baseArgs)
+	if err != nil {
+		return fmt.Errorf("devpod provider update failed: %s", err.Error())
+	}
+	return nil
 }
 
 func (f *Framework) DevPodMachineCreate(args []string) error {
-	createCmd := machine.NewCreateCmd(&flags.GlobalFlags{})
-	return createCmd.RunE(nil, args)
+	baseArgs := []string{"machine", "create"}
+	baseArgs = append(baseArgs, args...)
+	err := f.ExecCommand(context.Background(), false, false, "", baseArgs)
+	if err != nil {
+		return fmt.Errorf("devpod nachine create failed: %s", err.Error())
+	}
+	return nil
 }
 
 func (f *Framework) DevPodMachineDelete(args []string) error {
-	deleteCmd := machine.NewDeleteCmd(&flags.GlobalFlags{})
-	return deleteCmd.RunE(nil, args)
+	baseArgs := []string{"machine", "delete"}
+	baseArgs = append(baseArgs, args...)
+	err := f.ExecCommand(context.Background(), false, false, "", baseArgs)
+	if err != nil {
+		return fmt.Errorf("devpod nachine delete failed: %s", err.Error())
+	}
+	return nil
 }
 
 func (f *Framework) DevPodWorkspaceDelete(ctx context.Context, workspace string) error {

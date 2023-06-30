@@ -27,6 +27,12 @@ func CreateNewUID(context, id string) string {
 	return SafeConcatNameMax([]string{id, context, uid}, UIDLength)
 }
 
+func CreateNewUIDShort(id string) string {
+	// this returns always a UID with length 32
+	uid := strings.ReplaceAll(uuid.New().String()+uuid.New().String(), "-", "")[0:5]
+	return SafeConcatNameMax([]string{id, uid}, UIDLength)
+}
+
 func IsLegacyUID(uid string) bool {
 	return len(uid) != UIDLength
 }

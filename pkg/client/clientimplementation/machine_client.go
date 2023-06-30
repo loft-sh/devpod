@@ -229,10 +229,18 @@ func (s *machineClient) Status(ctx context.Context, options client.StatusOptions
 }
 
 func (s *machineClient) Delete(ctx context.Context, options client.DeleteOptions) error {
+	var gracePeriod *time.Duration
+	if options.GracePeriod != "" {
+		duration, err := time.ParseDuration(options.GracePeriod)
+		if err == nil {
+			gracePeriod = &duration
+		}
+	}
+
 	// kill the command after the grace period
-	if options.GracePeriod != nil {
+	if gracePeriod != nil {
 		var cancel context.CancelFunc
-		ctx, cancel = context.WithTimeout(ctx, *options.GracePeriod)
+		ctx, cancel = context.WithTimeout(ctx, *gracePeriod)
 		defer cancel()
 	}
 
@@ -283,6 +291,11 @@ func runCommand(ctx context.Context, name string, command types.StrArray, enviro
 
 	// log
 	log.Debugf("Run %s provider command: %s", name, strings.Join(command, " "))
+
+	// set debug level
+	if log.GetLevel() == logrus.DebugLevel {
+		environ = append(environ, DevPodDebug+"=true")
+	}
 
 	// run the command
 	return RunCommand(ctx, command, environ, stdin, stdout, stderr)

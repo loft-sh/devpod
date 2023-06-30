@@ -13,8 +13,8 @@ import (
 	"google.golang.org/grpc/reflection"
 )
 
-func RunProxyServer(ctx context.Context, client tunnel.TunnelClient, reader io.Reader, writer io.WriteCloser, exitOnClose, debug bool) (*config.Result, error) {
-	lis := stdio.NewStdioListener(reader, writer, exitOnClose)
+func RunProxyServer(ctx context.Context, client tunnel.TunnelClient, reader io.Reader, writer io.WriteCloser, debug bool) (*config.Result, error) {
+	lis := stdio.NewStdioListener(reader, writer, false)
 	s := grpc.NewServer()
 	tunnelServ := &proxyServer{
 		debug:  debug,

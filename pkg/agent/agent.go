@@ -238,7 +238,6 @@ type Exec func(ctx context.Context, user string, command string, stdin io.Reader
 func Tunnel(
 	ctx context.Context,
 	exec Exec,
-	token string,
 	user string,
 	stdin io.Reader,
 	stdout io.Writer,
@@ -254,7 +253,7 @@ func Tunnel(
 	}
 
 	// build command
-	command := fmt.Sprintf("'%s' helper ssh-server --token '%s' --stdio", ContainerDevPodHelperLocation, token)
+	command := fmt.Sprintf("'%s' helper ssh-server --stdio", ContainerDevPodHelperLocation)
 	if log.GetLevel() == logrus.DebugLevel {
 		command += " --debug"
 	}

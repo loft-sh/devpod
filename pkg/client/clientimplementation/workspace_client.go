@@ -11,6 +11,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"sync"
+	"time"
 
 	"github.com/gofrs/flock"
 	"github.com/loft-sh/devpod/pkg/binaries"
@@ -262,10 +263,19 @@ func (s *workspaceClient) Delete(ctx context.Context, opt client.DeleteOptions) 
 	s.m.Lock()
 	defer s.m.Unlock()
 
+	// parse duration
+	var gracePeriod *time.Duration
+	if opt.GracePeriod != "" {
+		duration, err := time.ParseDuration(opt.GracePeriod)
+		if err == nil {
+			gracePeriod = &duration
+		}
+	}
+
 	// kill the command after the grace period
-	if opt.GracePeriod != nil {
+	if gracePeriod != nil {
 		var cancel context.CancelFunc
-		ctx, cancel = context.WithTimeout(ctx, *opt.GracePeriod)
+		ctx, cancel = context.WithTimeout(ctx, *gracePeriod)
 		defer cancel()
 	}
 

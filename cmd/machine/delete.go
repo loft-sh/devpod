@@ -3,14 +3,12 @@ package machine
 import (
 	"context"
 	"fmt"
-	"time"
 
 	"github.com/loft-sh/devpod/cmd/flags"
 	"github.com/loft-sh/devpod/pkg/client"
 	"github.com/loft-sh/devpod/pkg/config"
 	"github.com/loft-sh/devpod/pkg/log"
 	"github.com/loft-sh/devpod/pkg/workspace"
-	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
 )
 
@@ -65,19 +63,9 @@ func (cmd *DeleteCmd) Run(ctx context.Context, args []string) error {
 		}
 	}
 
-	var duration *time.Duration
-	if cmd.GracePeriod != "" {
-		gracePeriod, err := time.ParseDuration(cmd.GracePeriod)
-		if err != nil {
-			return errors.Wrap(err, "parse grace-period")
-		}
-
-		duration = &gracePeriod
-	}
-
 	err = machineClient.Delete(ctx, client.DeleteOptions{
 		Force:       cmd.Force,
-		GracePeriod: duration,
+		GracePeriod: cmd.GracePeriod,
 	})
 	if err != nil {
 		return err

@@ -16,6 +16,8 @@ import (
 // DeleteCmd holds the delete cmd flags
 type DeleteCmd struct {
 	*flags.GlobalFlags
+
+	IgnoreNotFound bool
 }
 
 // NewDeleteCmd creates a new command
@@ -31,6 +33,7 @@ func NewDeleteCmd(flags *flags.GlobalFlags) *cobra.Command {
 		},
 	}
 
+	deleteCmd.Flags().BoolVar(&cmd.IgnoreNotFound, "ignore-not-found", false, "Treat \"provider not found\" as a successful delete")
 	return deleteCmd
 }
 
@@ -51,7 +54,7 @@ func (cmd *DeleteCmd) Run(ctx context.Context, args []string) error {
 		return fmt.Errorf("please specify a provider to delete")
 	}
 
-	err = deleteProvider(devPodConfig, provider)
+	err = deleteProvider(devPodConfig, provider, cmd.IgnoreNotFound)
 	if err != nil {
 		return err
 	}
@@ -60,7 +63,7 @@ func (cmd *DeleteCmd) Run(ctx context.Context, args []string) error {
 	return nil
 }
 
-func deleteProvider(devPodConfig *config.Config, provider string) error {
+func deleteProvider(devPodConfig *config.Config, provider string, ignoreNotFound bool) error {
 	if devPodConfig.Current().DefaultProvider == provider {
 		devPodConfig.Current().DefaultProvider = ""
 	}
@@ -77,6 +80,10 @@ func deleteProvider(devPodConfig *config.Config, provider string) error {
 	_, err = os.Stat(providerDir)
 	if err != nil {
 		if os.IsNotExist(err) {
+			if ignoreNotFound {
+				return nil
+			}
+
 			return fmt.Errorf("provider '%s' does not exist", provider)
 		}
 
