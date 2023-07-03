@@ -6,6 +6,7 @@ on:
       - main
     paths:
       - "**.go"
+      - "pkg/**.sh"
       - "!**_test.go" # exclude test files to ignore unit test changes
       - "e2e/**_test.go" # include test files in e2e again
       - ".github/workflows/e2e-tests.yaml"
