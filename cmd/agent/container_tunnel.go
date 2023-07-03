@@ -23,7 +23,6 @@ import (
 type ContainerTunnelCmd struct {
 	*flags.GlobalFlags
 
-	Token         string
 	WorkspaceInfo string
 	User          string
 }
@@ -43,9 +42,7 @@ func NewContainerTunnelCmd(flags *flags.GlobalFlags) *cobra.Command {
 	}
 
 	containerTunnelCmd.Flags().StringVar(&cmd.User, "user", "", "The user to create the tunnel with")
-	containerTunnelCmd.Flags().StringVar(&cmd.Token, "token", "", "The token to use for the container ssh server")
 	containerTunnelCmd.Flags().StringVar(&cmd.WorkspaceInfo, "workspace-info", "", "The workspace info")
-	_ = containerTunnelCmd.MarkFlagRequired("token")
 	_ = containerTunnelCmd.MarkFlagRequired("workspace-info")
 	return containerTunnelCmd
 }
@@ -86,7 +83,6 @@ func (cmd *ContainerTunnelCmd) Run(ctx context.Context, log log.Logger) error {
 		func(ctx context.Context, user string, command string, stdin io.Reader, stdout io.Writer, stderr io.Writer) error {
 			return runner.CommandDevContainer(ctx, containerID, user, command, stdin, stdout, stderr)
 		},
-		cmd.Token,
 		cmd.User,
 		os.Stdin,
 		os.Stdout,

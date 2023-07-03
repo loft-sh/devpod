@@ -102,7 +102,7 @@ func StartSSHSession(ctx context.Context, user, command string, agentForwarding 
 	}()
 
 	// start ssh client as root / default user
-	sshClient, err := devssh.StdioClientFromKeyBytesWithUser(nil, stdoutReader, stdinWriter, user, false)
+	sshClient, err := devssh.StdioClientWithUser(stdoutReader, stdinWriter, user, false)
 	if err != nil {
 		return err
 	}

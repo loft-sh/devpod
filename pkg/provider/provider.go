@@ -223,6 +223,26 @@ type ProviderCommands struct {
 
 	// Status retrieves the server status
 	Status types.StrArray `json:"status,omitempty"`
+
+	// Proxy proxies commands
+	Proxy *ProxyCommands `json:"proxy,omitempty"`
+}
+
+type ProxyCommands struct {
+	// Up proxies the up command
+	Up types.StrArray `json:"up,omitempty"`
+
+	// Stop proxies the stop command
+	Stop types.StrArray `json:"stop,omitempty"`
+
+	// Delete proxies the delete command
+	Delete types.StrArray `json:"delete,omitempty"`
+
+	// Ssh proxies the ssh command
+	Ssh types.StrArray `json:"ssh,omitempty"`
+
+	// Status proxies the status command
+	Status types.StrArray `json:"status,omitempty"`
 }
 
 type ProviderOption struct {
@@ -272,4 +292,8 @@ type ProviderOption struct {
 
 func (c *ProviderConfig) IsMachineProvider() bool {
 	return len(c.Exec.Create) > 0
+}
+
+func (c *ProviderConfig) IsProxyProvider() bool {
+	return c.Exec.Proxy != nil
 }

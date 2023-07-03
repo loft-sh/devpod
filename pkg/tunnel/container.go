@@ -6,14 +6,12 @@ import (
 	"fmt"
 	"io"
 	"os"
-	"sync"
 	"time"
 
 	"github.com/loft-sh/devpod/pkg/agent"
 	"github.com/loft-sh/devpod/pkg/client"
 	"github.com/loft-sh/devpod/pkg/log"
 	devssh "github.com/loft-sh/devpod/pkg/ssh"
-	"github.com/loft-sh/devpod/pkg/token"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 	"golang.org/x/crypto/ssh"
@@ -57,12 +55,6 @@ func (c *ContainerHandler) Run(ctx context.Context, handler Handler) error {
 	defer stdoutWriter.Close()
 	defer stdinWriter.Close()
 
-	// get token
-	tok, err := token.GetDevPodToken()
-	if err != nil {
-		return err
-	}
-
 	// tunnel to host
 	tunnelChan := make(chan error, 1)
 	go func() {
@@ -70,7 +62,7 @@ func (c *ContainerHandler) Run(ctx context.Context, handler Handler) error {
 		defer writer.Close()
 		defer c.log.Debugf("Tunnel to host closed")
 
-		command := fmt.Sprintf("'%s' helper ssh-server --token '%s' --stdio", c.client.AgentPath(), tok)
+		command := fmt.Sprintf("'%s' helper ssh-server --stdio", c.client.AgentPath())
 		if c.log.GetLevel() == logrus.DebugLevel {
 			command += " --debug"
 		}
@@ -84,34 +76,20 @@ func (c *ContainerHandler) Run(ctx context.Context, handler Handler) error {
 		}, c.client.AgentLocal(), c.client.AgentPath(), c.client.AgentURL(), true, command, stdinReader, stdoutWriter, writer, c.log.ErrorStreamOnly())
 	}()
 
-	privateKey, err := devssh.GetDevPodPrivateKeyRaw()
-	if err != nil {
-		return err
-	}
-
 	// connect to container
-	containerChan := make(chan error, 2)
+	containerChan := make(chan error, 1)
 	go func() {
 		// start ssh client as root / default user
-		sshClient, err := devssh.StdioClientFromKeyBytes(privateKey, stdoutReader, stdinWriter, false)
+		sshClient, err := devssh.StdioClient(stdoutReader, stdinWriter, false)
 		if err != nil {
 			containerChan <- errors.Wrap(err, "create ssh client")
 			return
 		}
+
 		defer sshClient.Close()
 		defer cancel()
 		defer c.log.Debugf("Connection to container closed")
 		c.log.Debugf("Successfully connected to host")
-
-		// do port-forwarding etc. here with sshClient
-		waitGroup := sync.WaitGroup{}
-		waitGroup.Add(1)
-		go func() {
-			defer waitGroup.Done()
-			defer c.log.Debugf("Run in container done")
-
-			containerChan <- errors.Wrap(c.runRunInContainer(cancelCtx, sshClient, tok, privateKey, handler), "run in container")
-		}()
 
 		// update workspace remotely
 		if c.updateConfigInterval > 0 {
@@ -121,7 +99,7 @@ func (c *ContainerHandler) Run(ctx context.Context, handler Handler) error {
 		}
 
 		// wait until we are done
-		waitGroup.Wait()
+		containerChan <- errors.Wrap(c.runRunInContainer(cancelCtx, sshClient, handler), "run in container")
 	}()
 
 	// wait for result
@@ -173,7 +151,7 @@ func (c *ContainerHandler) updateConfig(ctx context.Context, sshClient *ssh.Clie
 	}
 }
 
-func (c *ContainerHandler) runRunInContainer(ctx context.Context, sshClient *ssh.Client, tok string, privateKey []byte, runInContainer Handler) error {
+func (c *ContainerHandler) runRunInContainer(ctx context.Context, sshClient *ssh.Client, runInContainer Handler) error {
 	// compress info
 	workspaceInfo, _, err := c.client.AgentInfo()
 	if err != nil {
@@ -206,7 +184,7 @@ func (c *ContainerHandler) runRunInContainer(ctx context.Context, sshClient *ssh
 		c.log.Debugf("Run container tunnel")
 		defer c.log.Debugf("Container tunnel exited")
 
-		command := fmt.Sprintf("'%s' agent container-tunnel --token '%s' --workspace-info '%s'", c.client.AgentPath(), tok, workspaceInfo)
+		command := fmt.Sprintf("'%s' agent container-tunnel --workspace-info '%s'", c.client.AgentPath(), workspaceInfo)
 		if c.log.GetLevel() == logrus.DebugLevel {
 			command += " --debug"
 		}
@@ -218,7 +196,7 @@ func (c *ContainerHandler) runRunInContainer(ctx context.Context, sshClient *ssh
 	}()
 
 	// start ssh client
-	containerClient, err := devssh.StdioClientFromKeyBytes(privateKey, stdoutReader, stdinWriter, false)
+	containerClient, err := devssh.StdioClient(stdoutReader, stdinWriter, false)
 	if err != nil {
 		return err
 	}

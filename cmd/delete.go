@@ -3,7 +3,6 @@ package cmd
 import (
 	"context"
 	"fmt"
-	"time"
 
 	"github.com/loft-sh/devpod/cmd/flags"
 	client2 "github.com/loft-sh/devpod/pkg/client"
@@ -18,9 +17,7 @@ import (
 // DeleteCmd holds the delete cmd flags
 type DeleteCmd struct {
 	*flags.GlobalFlags
-
-	GracePeriod string
-	Force       bool
+	client2.DeleteOptions
 }
 
 // NewDeleteCmd creates a new command
@@ -32,6 +29,11 @@ func NewDeleteCmd(flags *flags.GlobalFlags) *cobra.Command {
 		Use:   "delete",
 		Short: "Deletes an existing workspace",
 		RunE: func(_ *cobra.Command, args []string) error {
+			err := clientimplementation.DecodeOptionsFromEnv(clientimplementation.DevPodFlagsDelete, &cmd.DeleteOptions)
+			if err != nil {
+				return fmt.Errorf("decode up options: %w", err)
+			}
+
 			ctx := context.Background()
 			devPodConfig, err := config.LoadConfig(cmd.Context, cmd.Provider)
 			if err != nil {
@@ -42,6 +44,7 @@ func NewDeleteCmd(flags *flags.GlobalFlags) *cobra.Command {
 		},
 	}
 
+	deleteCmd.Flags().BoolVar(&cmd.IgnoreNotFound, "ignore-not-found", false, "Treat \"workspace not found\" as a successful delete")
 	deleteCmd.Flags().StringVar(&cmd.GracePeriod, "grace-period", "", "The amount of time to give the command to delete the workspace")
 	deleteCmd.Flags().BoolVar(&cmd.Force, "force", false, "Delete workspace even if it is not found remotely anymore")
 	return deleteCmd
@@ -61,6 +64,10 @@ func (cmd *DeleteCmd) Run(ctx context.Context, devPodConfig *config.Config, args
 
 		workspaceID := workspace2.Exists(devPodConfig, args)
 		if workspaceID == "" {
+			if cmd.IgnoreNotFound {
+				return nil
+			}
+
 			return fmt.Errorf("couldn't find workspace %s", args[0])
 		}
 
@@ -92,19 +99,8 @@ func (cmd *DeleteCmd) Run(ctx context.Context, devPodConfig *config.Config, args
 		}
 	}
 
-	// parse grace period
-	var duration *time.Duration
-	if cmd.GracePeriod != "" {
-		gracePeriod, err := time.ParseDuration(cmd.GracePeriod)
-		if err != nil {
-			return errors.Wrap(err, "parse grace-period")
-		}
-
-		duration = &gracePeriod
-	}
-
 	// delete if single machine provider
-	wasDeleted, err := cmd.deleteSingleMachine(ctx, client, devPodConfig, duration)
+	wasDeleted, err := cmd.deleteSingleMachine(ctx, client, devPodConfig)
 	if err != nil {
 		return err
 	} else if wasDeleted {
@@ -112,10 +108,7 @@ func (cmd *DeleteCmd) Run(ctx context.Context, devPodConfig *config.Config, args
 	}
 
 	// destroy environment
-	err = client.Delete(ctx, client2.DeleteOptions{
-		Force:       cmd.Force,
-		GracePeriod: duration,
-	})
+	err = client.Delete(ctx, cmd.DeleteOptions)
 	if err != nil {
 		return err
 	}
@@ -124,7 +117,7 @@ func (cmd *DeleteCmd) Run(ctx context.Context, devPodConfig *config.Config, args
 	return nil
 }
 
-func (cmd *DeleteCmd) deleteSingleMachine(ctx context.Context, client client2.WorkspaceClient, devPodConfig *config.Config, duration *time.Duration) (bool, error) {
+func (cmd *DeleteCmd) deleteSingleMachine(ctx context.Context, client client2.BaseWorkspaceClient, devPodConfig *config.Config) (bool, error) {
 	// check if single machine
 	singleMachineName := workspace2.SingleMachineName(devPodConfig, client.Provider(), log.Default)
 	if !devPodConfig.Current().IsSingleMachine(client.Provider()) || client.WorkspaceConfig().Machine.ID != singleMachineName {
@@ -158,10 +151,7 @@ func (cmd *DeleteCmd) deleteSingleMachine(ctx context.Context, client client2.Wo
 	}
 
 	// delete the machine
-	err = machineClient.Delete(ctx, client2.DeleteOptions{
-		Force:       cmd.Force,
-		GracePeriod: duration,
-	})
+	err = machineClient.Delete(ctx, cmd.DeleteOptions)
 	if err != nil {
 		return false, errors.Wrap(err, "delete machine")
 	}

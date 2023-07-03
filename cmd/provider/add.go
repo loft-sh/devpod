@@ -47,7 +47,6 @@ func NewAddCmd(flags *flags.GlobalFlags) *cobra.Command {
 			if err != nil {
 				return err
 			}
-
 			return cmd.Run(ctx, devPodConfig, args)
 		},
 	}
@@ -100,7 +99,7 @@ func (cmd *AddCmd) Run(ctx context.Context, devPodConfig *config.Config, args []
 				return err
 			}
 
-			err = deleteProvider(devPodConfig, providerConfig.Name)
+			err = deleteProvider(devPodConfig, providerConfig.Name, true)
 			if err != nil {
 				return errors.Wrap(err, "delete provider")
 			}

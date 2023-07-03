@@ -1,8 +1,18 @@
 package provider
 
 import (
+	"fmt"
+	"strings"
+
 	"github.com/loft-sh/devpod/pkg/config"
+	"github.com/loft-sh/devpod/pkg/git"
 	"github.com/loft-sh/devpod/pkg/types"
+)
+
+var (
+	WorkspaceSourceGit   = "git:"
+	WorkspaceSourceLocal = "local:"
+	WorkspaceSourceImage = "image:"
 )
 
 type Workspace struct {
@@ -111,15 +121,35 @@ type AgentWorkspaceInfo struct {
 func (w WorkspaceSource) String() string {
 	if w.GitRepository != "" {
 		if w.GitBranch != "" {
-			return w.GitRepository + "@" + w.GitBranch
+			return WorkspaceSourceGit + w.GitRepository + "@" + w.GitBranch
 		}
 
-		return w.GitRepository
+		return WorkspaceSourceGit + w.GitRepository
 	}
 
 	if w.LocalFolder != "" {
-		return w.LocalFolder
+		return WorkspaceSourceLocal + w.LocalFolder
 	}
 
-	return w.Image
+	return WorkspaceSourceImage + w.Image
+}
+
+func ParseWorkspaceSource(source string) (*WorkspaceSource, error) {
+	if strings.HasPrefix(source, WorkspaceSourceGit) {
+		gitRepo, gitBranch := git.NormalizeRepository(strings.TrimPrefix(source, WorkspaceSourceGit))
+		return &WorkspaceSource{
+			GitRepository: gitRepo,
+			GitBranch:     gitBranch,
+		}, nil
+	} else if strings.HasPrefix(source, WorkspaceSourceLocal) {
+		return &WorkspaceSource{
+			LocalFolder: strings.TrimPrefix(source, WorkspaceSourceLocal),
+		}, nil
+	} else if strings.HasPrefix(source, WorkspaceSourceImage) {
+		return &WorkspaceSource{
+			Image: strings.TrimPrefix(source, WorkspaceSourceImage),
+		}, nil
+	}
+
+	return nil, fmt.Errorf("invalid workspace source: %s", source)
 }

@@ -17,7 +17,3 @@ BUILDDIR=bin SRCDIR=".." ../hack/build-e2e.sh
 # Install ginkgo and run in this directory
 ginkgo
 ```
-
-#### Test suites
-- `up` command
-- `ssh` command

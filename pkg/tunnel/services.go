@@ -95,7 +95,6 @@ func RunInContainer(
 		cancelCtx,
 		stdoutReader,
 		stdinWriter,
-		false,
 		gitCredentials,
 		dockerCredentials,
 		nil,

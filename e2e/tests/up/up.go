@@ -68,7 +68,6 @@ var _ = DevPodDescribe("devpod up test suite", func() {
 			out, err := f.DevPodList(ctx)
 			framework.ExpectNoError(err)
 			framework.ExpectEqual(out, initialList)
-
 		}, ginkgo.SpecTimeout(60*time.Second))
 	})
 

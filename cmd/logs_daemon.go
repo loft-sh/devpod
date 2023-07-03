@@ -41,11 +41,16 @@ func (cmd *LogsDaemonCmd) Run(ctx context.Context, args []string) error {
 		return err
 	}
 
-	workspaceClient, err := workspace.GetWorkspace(devPodConfig, args, false, log.Default)
+	baseClient, err := workspace.GetWorkspace(devPodConfig, args, false, log.Default)
 	if err != nil {
 		return err
-	} else if workspaceClient.WorkspaceConfig().Machine.ID == "" {
+	} else if baseClient.WorkspaceConfig().Machine.ID == "" {
 		return fmt.Errorf("selected workspace is not a machine provider, there is not daemon running")
+	}
+
+	workspaceClient, ok := baseClient.(client.WorkspaceClient)
+	if !ok {
+		return fmt.Errorf("this command is not supported for proxy providers")
 	}
 
 	_, agentInfo, err := workspaceClient.AgentInfo()

@@ -22,8 +22,8 @@ import (
 	"google.golang.org/grpc/reflection"
 )
 
-func RunTunnelServer(ctx context.Context, reader io.Reader, writer io.WriteCloser, exitOnClose, allowGitCredentials, allowDockerCredentials bool, workspace *provider2.Workspace, forwarder netstat.Forwarder, log log.Logger) (*config.Result, error) {
-	lis := stdio.NewStdioListener(reader, writer, exitOnClose)
+func RunTunnelServer(ctx context.Context, reader io.Reader, writer io.WriteCloser, allowGitCredentials, allowDockerCredentials bool, workspace *provider2.Workspace, forwarder netstat.Forwarder, log log.Logger) (*config.Result, error) {
+	lis := stdio.NewStdioListener(reader, writer, false)
 	s := grpc.NewServer()
 	tunnelServ := &tunnelServer{
 		workspace:              workspace,

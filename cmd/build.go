@@ -57,7 +57,7 @@ func NewBuildCmd(flags *flags.GlobalFlags) *cobra.Command {
 
 			// create a temporary workspace
 			exists := workspace2.Exists(devPodConfig, args)
-			workspaceClient, err := workspace2.ResolveWorkspace(
+			baseWorkspaceClient, err := workspace2.ResolveWorkspace(
 				ctx,
 				devPodConfig,
 				"",
@@ -67,6 +67,7 @@ func NewBuildCmd(flags *flags.GlobalFlags) *cobra.Command {
 				cmd.Machine,
 				cmd.ProviderOptions,
 				cmd.DevContainerPath,
+				nil,
 				false,
 				log.Default,
 			)
@@ -74,14 +75,20 @@ func NewBuildCmd(flags *flags.GlobalFlags) *cobra.Command {
 				return err
 			}
 
-			// delete workspace if we have created if
+			// delete workspace if we have created it
 			if exists == "" {
 				defer func() {
-					err = workspaceClient.Delete(ctx, client.DeleteOptions{})
+					err = baseWorkspaceClient.Delete(ctx, client.DeleteOptions{Force: true})
 					if err != nil {
 						log.Default.Errorf("Error deleting workspace: %v", err)
 					}
 				}()
+			}
+
+			// check if regular workspace client
+			workspaceClient, ok := baseWorkspaceClient.(client.WorkspaceClient)
+			if !ok {
+				return fmt.Errorf("building is currently not supported for proxy providers")
 			}
 
 			return cmd.Run(ctx, workspaceClient)
@@ -183,7 +190,6 @@ func (cmd *BuildCmd) buildAgentClient(ctx context.Context, workspaceClient clien
 		cancelCtx,
 		stdoutReader,
 		stdinWriter,
-		false,
 		string(agentConfig.InjectGitCredentials) == "true",
 		string(agentConfig.InjectDockerCredentials) == "true",
 		workspaceClient.WorkspaceConfig(),

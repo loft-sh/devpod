@@ -23,10 +23,8 @@ var _ = DevPodDescribe("devpod provider test suite", func() {
 		f := framework.NewDefaultFramework(initialDir + "/bin")
 
 		// Ensure that provider 1 is deleted
-		err = f.DevPodProviderDelete([]string{"provider1"})
-		if err.Error() != "provider 'provider1' does not exist" {
-			framework.ExpectNoError(err)
-		}
+		err = f.DevPodProviderDelete([]string{"provider1", "--ignore-not-found"})
+		framework.ExpectNoError(err)
 
 		// Add provider 1
 		err = f.DevPodProviderAdd([]string{tempDir + "/provider1.yaml"})
@@ -54,10 +52,8 @@ var _ = DevPodDescribe("devpod provider test suite", func() {
 		f := framework.NewDefaultFramework(initialDir + "/bin")
 
 		// Ensure that provider 2 is deleted
-		err = f.DevPodProviderDelete([]string{"provider2"})
-		if err.Error() != "provider 'provider2' does not exist" {
-			framework.ExpectNoError(err)
-		}
+		err = f.DevPodProviderDelete([]string{"provider2", "--ignore-not-found"})
+		framework.ExpectNoError(err)
 
 		// Add provider 2 and use it
 		err = f.DevPodProviderAdd([]string{tempDir + "/provider2.yaml"})

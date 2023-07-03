@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"reflect"
 	"regexp"
 	"strconv"
 	"strings"
@@ -117,17 +118,73 @@ func validate(config *ProviderConfig) error {
 		}
 	}
 
-	// validate driver
-	if config.Agent.Driver != "" && config.Agent.Driver != DockerDriver && config.Agent.Driver != KubernetesDriver {
-		return fmt.Errorf("agent.driver can only be docker or kubernetes")
-	}
-
 	// validate provider binaries
 	err := validateBinaries("binaries", config.Binaries)
 	if err != nil {
 		return err
 	}
-	err = validateBinaries("agent.binaries", config.Agent.Binaries)
+	err = validateProviderType(config)
+	if err != nil {
+		return err
+	}
+
+	err = validateOptionGroups(config)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func validateProviderType(config *ProviderConfig) error {
+	if config.Exec.Proxy != nil {
+		if !reflect.DeepEqual(config.Agent, ProviderAgentConfig{}) {
+			return fmt.Errorf("agent config is not allowed for proxy providers")
+		}
+		if len(config.Exec.Command) > 0 {
+			return fmt.Errorf("exec.command is not allowed in proxy providers")
+		}
+		if len(config.Exec.Create) > 0 {
+			return fmt.Errorf("exec.create is not allowed in proxy providers")
+		}
+		if len(config.Exec.Start) > 0 {
+			return fmt.Errorf("exec.create is not allowed in proxy providers")
+		}
+		if len(config.Exec.Stop) > 0 {
+			return fmt.Errorf("exec.create is not allowed in proxy providers")
+		}
+		if len(config.Exec.Status) > 0 {
+			return fmt.Errorf("exec.create is not allowed in proxy providers")
+		}
+		if len(config.Exec.Delete) > 0 {
+			return fmt.Errorf("exec.create is not allowed in proxy providers")
+		}
+		if len(config.Exec.Proxy.Status) == 0 {
+			return fmt.Errorf("exec.proxy.status is required for proxy providers")
+		}
+		if len(config.Exec.Proxy.Stop) == 0 {
+			return fmt.Errorf("exec.proxy.stop is required for proxy providers")
+		}
+		if len(config.Exec.Proxy.Delete) == 0 {
+			return fmt.Errorf("exec.proxy.delete is required for proxy providers")
+		}
+		if len(config.Exec.Proxy.Ssh) == 0 {
+			return fmt.Errorf("exec.proxy.ssh is required for proxy providers")
+		}
+		if len(config.Exec.Proxy.Up) == 0 {
+			return fmt.Errorf("exec.proxy.up is required for proxy providers")
+		}
+
+		return nil
+	}
+
+	// validate driver
+	if config.Agent.Driver != "" && config.Agent.Driver != DockerDriver && config.Agent.Driver != KubernetesDriver {
+		return fmt.Errorf("agent.driver can only be docker or kubernetes")
+	}
+
+	// agent binaries
+	err := validateBinaries("agent.binaries", config.Agent.Binaries)
 	if err != nil {
 		return err
 	}
@@ -153,11 +210,6 @@ func validate(config *ProviderConfig) error {
 	}
 	if len(config.Exec.Create) == 0 && len(config.Exec.Start) > 0 {
 		return fmt.Errorf("exec.create is required")
-	}
-
-	err = validateOptionGroups(config)
-	if err != nil {
-		return err
 	}
 
 	return nil

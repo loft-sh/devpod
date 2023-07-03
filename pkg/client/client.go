@@ -5,12 +5,11 @@ import (
 	"fmt"
 	"io"
 	"strings"
-	"time"
 
 	"github.com/loft-sh/devpod/pkg/provider"
 )
 
-type Client interface {
+type BaseClient interface {
 	// Provider returns the name of the provider
 	Provider() string
 
@@ -19,6 +18,19 @@ type Client interface {
 
 	// RefreshOptions updates the options
 	RefreshOptions(ctx context.Context, userOptions []string) error
+
+	// Status retrieves the workspace status
+	Status(ctx context.Context, options StatusOptions) (Status, error)
+
+	// Stop stops the workspace
+	Stop(ctx context.Context, options StopOptions) error
+
+	// Delete deletes the workspace
+	Delete(ctx context.Context, options DeleteOptions) error
+}
+
+type Client interface {
+	BaseClient
 
 	// AgentLocal returns if the agent runs locally
 	AgentLocal() bool
@@ -32,20 +44,21 @@ type Client interface {
 	// Create creates a new workspace
 	Create(ctx context.Context, options CreateOptions) error
 
-	// Delete deletes the workspace
-	Delete(ctx context.Context, options DeleteOptions) error
-
 	// Start starts the workspace
 	Start(ctx context.Context, options StartOptions) error
 
-	// Stop stops the workspace
-	Stop(ctx context.Context, options StopOptions) error
-
-	// Status retrieves the workspace status
-	Status(ctx context.Context, options StatusOptions) (Status, error)
-
 	// Command creates an SSH tunnel into the workspace
 	Command(ctx context.Context, options CommandOptions) error
+}
+
+type ProxyClient interface {
+	BaseWorkspaceClient
+
+	// Up creates a new remote workspace
+	Up(ctx context.Context, options UpOptions) error
+
+	// Ssh starts an ssh tunnel to the workspace container
+	Ssh(ctx context.Context, options SshOptions) error
 }
 
 type MachineClient interface {
@@ -58,8 +71,8 @@ type MachineClient interface {
 	MachineConfig() *provider.Machine
 }
 
-type WorkspaceClient interface {
-	Client
+type BaseWorkspaceClient interface {
+	BaseClient
 
 	// Workspace returns the workspace of this provider
 	Workspace() string
@@ -67,18 +80,23 @@ type WorkspaceClient interface {
 	// WorkspaceConfig returns the workspace config
 	WorkspaceConfig() *provider.Workspace
 
-	// AgentConfig returns the agent config to send to the agent
-	AgentConfig() provider.ProviderAgentConfig
-
-	// AgentInfo returns the info to send to the agent
-	AgentInfo() (string, *provider.AgentWorkspaceInfo, error)
-
 	// Lock locks the workspace. This is a file lock, which means
 	// the workspace is locked across processes.
 	Lock()
 
 	// Unlock unlocks the workspace.
 	Unlock()
+}
+
+type WorkspaceClient interface {
+	BaseWorkspaceClient
+	Client
+
+	// AgentConfig returns the agent config to send to the agent
+	AgentConfig() provider.ProviderAgentConfig
+
+	// AgentInfo returns the info to send to the agent
+	AgentInfo() (string, *provider.AgentWorkspaceInfo, error)
 }
 
 type InitOptions struct{}
@@ -90,14 +108,15 @@ type StartOptions struct{}
 type StopOptions struct{}
 
 type DeleteOptions struct {
-	Force       bool
-	GracePeriod *time.Duration
+	IgnoreNotFound bool   `json:"ignoreNotFound,omitempty"`
+	Force          bool   `json:"force,omitempty"`
+	GracePeriod    string `json:"gracePeriod,omitempty"`
 }
 
 type CreateOptions struct{}
 
 type StatusOptions struct {
-	ContainerStatus bool
+	ContainerStatus bool `json:"containerStatus,omitempty"`
 }
 
 type CommandOptions struct {
@@ -105,6 +124,28 @@ type CommandOptions struct {
 	Stdin   io.Reader
 	Stdout  io.Writer
 	Stderr  io.Writer
+}
+
+type UpOptions struct {
+	UpBaseOptions
+
+	Stdin  io.Reader
+	Stdout io.Writer
+}
+
+type UpBaseOptions struct {
+	ID                   string   `json:"id,omitempty"`
+	Source               string   `json:"source,omitempty"`
+	IDE                  string   `json:"ide,omitempty"`
+	IDEOptions           []string `json:"ideOptions,omitempty"`
+	DevContainerPath     string   `json:"devContainerPath,omitempty"`
+	PrebuildRepositories []string `json:"prebuildRepositories,omitempty"`
+	Recreate             bool     `json:"recreate,omitempty"`
+}
+
+type SshOptions struct {
+	Stdin  io.Reader
+	Stdout io.Writer
 }
 
 type Status string
@@ -130,4 +171,11 @@ func ParseStatus(in string) (Status, error) {
 	default:
 		return StatusNotFound, fmt.Errorf("error parsing status: '%s' unrecognized status, needs to be one of: %s", in, []string{StatusRunning, StatusBusy, StatusStopped, StatusNotFound})
 	}
+}
+
+type WorkspaceStatus struct {
+	ID       string `json:"id,omitempty"`
+	Context  string `json:"context,omitempty"`
+	Provider string `json:"provider,omitempty"`
+	State    string `json:"state,omitempty"`
 }
