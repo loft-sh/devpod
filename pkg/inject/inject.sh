@@ -2,7 +2,7 @@
 set -e
 
 if [ "$SHELL" != "${SHELL%"/zsh"*}" ]; then
-  setopt SH_WORD_SPLIT
+  setopt SH_WORD_SPLIT || :
 fi
 
 INSTALL_DIR="{{ .InstallDir }}"
