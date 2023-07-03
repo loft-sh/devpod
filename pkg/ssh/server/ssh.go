@@ -8,6 +8,7 @@ import (
 	"os"
 	"os/exec"
 	"os/user"
+	"path/filepath"
 	"runtime"
 	"strings"
 	"sync"
@@ -96,10 +97,35 @@ type Server struct {
 	log         log.Logger
 }
 
+func getUserShell() (string, error) {
+	currentUser, err := user.Current()
+	if err != nil {
+		return "", err
+	}
+	output, err := exec.Command("getent", "passwd", currentUser.Name).Output()
+	if err == nil {
+		shell := strings.Split(string(output), ":")
+		if len(shell) == 7 {
+			executable := filepath.Base(shell[6])
+			executable = strings.TrimRight(executable, "\n")
+			return executable, nil
+		}
+	}
+
+	return "", err
+}
+
 func getShell() ([]string, error) {
 	// try to get a shell
 	if runtime.GOOS != "windows" {
-		_, err := exec.LookPath("bash")
+		// infere login shell from getent
+		shell, err := getUserShell()
+		if err == nil {
+			return []string{shell}, nil
+		}
+		// fallback to path discovery if unsuccessful
+
+		_, err = exec.LookPath("bash")
 		if err == nil {
 			return []string{"bash"}, nil
 		}
