@@ -1,9 +1,8 @@
 #!/bin/sh
 set -e
 
-if [ "$SHELL" != "${SHELL%"/zsh"*}" ]; then
-  setopt SH_WORD_SPLIT
-fi
+# Compatibility fix for zsh shells
+setopt SH_WORD_SPLIT 2>/dev/null || :
 
 INSTALL_DIR="{{ .InstallDir }}"
 INSTALL_FILENAME="{{ .InstallFilename }}"
