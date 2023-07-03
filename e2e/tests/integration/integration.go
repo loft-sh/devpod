@@ -2,6 +2,7 @@ package integration
 
 import (
 	"fmt"
+	"os"
 	"os/exec"
 
 	"github.com/loft-sh/devpod/e2e/framework"
@@ -10,6 +11,40 @@ import (
 )
 
 var _ = ginkgo.Describe("[integration]: devpod provider ssh test suite", ginkgo.Ordered, func() {
+	ginkgo.It("should generate ssh keypairs", func() {
+		_, err := os.Stat(os.Getenv("HOME") + "/.ssh/id_rsa")
+		if err != nil {
+			fmt.Println("generating ssh keys")
+			cmd := exec.Command("ssh-keygen", "-q", "-t", "rsa", "-N", "", "-f", os.Getenv("HOME")+"/.ssh/id_rsa")
+			err = cmd.Run()
+			framework.ExpectNoError(err)
+
+			cmd = exec.Command("ssh-keygen", "-y", "-f", os.Getenv("HOME")+"/.ssh/id_rsa")
+			output, err := cmd.Output()
+			framework.ExpectNoError(err)
+
+			err = os.WriteFile(os.Getenv("HOME")+"/.ssh/id_rsa.pub", output, 0600)
+			framework.ExpectNoError(err)
+		}
+
+		cmd := exec.Command("ssh-keygen", "-y", "-f", os.Getenv("HOME")+"/.ssh/id_rsa")
+		publicKey, err := cmd.Output()
+		framework.ExpectNoError(err)
+
+		_, err = os.Stat(os.Getenv("HOME") + "/.ssh/authorized_keys")
+		if err != nil {
+			err = os.WriteFile(os.Getenv("HOME")+"/.ssh/authorized_keys", publicKey, 0600)
+			framework.ExpectNoError(err)
+		} else {
+			f, err := os.OpenFile(os.Getenv("HOME")+"/.ssh/authorized_keys",
+				os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0600)
+			framework.ExpectNoError(err)
+
+			defer f.Close()
+			_, err = f.Write(publicKey)
+			framework.ExpectNoError(err)
+		}
+	})
 
 	ginkgo.It("should add provider to devpod", func() {
 		// ensure we don't have the ssh provider present
