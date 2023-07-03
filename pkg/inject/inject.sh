@@ -37,7 +37,8 @@ is_arm() {
 
 inject() {
   echo "ARM-$(is_arm && echo -n 'true' || echo -n 'false')"
-  $sh_c "cat > $INSTALL_PATH"
+  $sh_c "cat > $INSTALL_PATH.$$"
+  $sh_c "mv $INSTALL_PATH.$$ $INSTALL_PATH"
 
   if [ "$CHMOD_PATH" = "true" ]; then
     $sh_c "chmod +x $INSTALL_PATH"
@@ -56,10 +57,10 @@ download() {
   while :; do
     cmd_status=""
     if command_exists curl; then
-        $sh_c "curl -fsSL $DOWNLOAD_URL -o $INSTALL_PATH" && break
+        $sh_c "curl -fsSL $DOWNLOAD_URL -o $INSTALL_PATH.$$" && break
         cmd_status=$?
     elif command_exists wget; then
-        $sh_c "wget -q $DOWNLOAD_URL -O $INSTALL_PATH" && break
+        $sh_c "wget -q $DOWNLOAD_URL -O $INSTALL_PATH.$$" && break
         cmd_status=$?
     else
         echo "error: no download tool found, please install curl or wget"
@@ -70,6 +71,8 @@ download() {
     >&2 echo "Trying again in 10 seconds..."
     sleep 10
   done
+
+  $sh_c "mv $INSTALL_PATH.$$ $INSTALL_PATH"
 }
 
 if {{ .ExistsCheck }}; then
