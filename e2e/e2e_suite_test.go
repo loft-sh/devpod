@@ -16,6 +16,7 @@ import (
 	_ "github.com/loft-sh/devpod/e2e/tests/provider"
 	_ "github.com/loft-sh/devpod/e2e/tests/ssh"
 	_ "github.com/loft-sh/devpod/e2e/tests/up"
+	_ "github.com/loft-sh/devpod/e2e/tests/integration"
 )
 
 // TestRunE2ETests checks configuration parameters (specified through flags) and then runs
