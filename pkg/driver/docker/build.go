@@ -18,9 +18,9 @@ import (
 	"github.com/loft-sh/devpod/pkg/devcontainer/metadata"
 	"github.com/loft-sh/devpod/pkg/docker"
 	"github.com/loft-sh/devpod/pkg/dockerfile"
-	"github.com/loft-sh/devpod/pkg/hash"
 	"github.com/loft-sh/devpod/pkg/id"
 	"github.com/loft-sh/devpod/pkg/image"
+	"github.com/loft-sh/log/hash"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 )

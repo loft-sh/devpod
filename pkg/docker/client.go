@@ -4,7 +4,7 @@ import (
 	"context"
 
 	dockerclient "github.com/docker/docker/client"
-	"github.com/loft-sh/devpod/pkg/log"
+	"github.com/loft-sh/log"
 	"github.com/pkg/errors"
 )
 

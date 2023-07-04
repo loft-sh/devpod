@@ -3,7 +3,7 @@ package jetbrains
 import (
 	"github.com/loft-sh/devpod/pkg/config"
 	"github.com/loft-sh/devpod/pkg/ide"
-	"github.com/loft-sh/devpod/pkg/log"
+	"github.com/loft-sh/log"
 )
 
 const PhpStormDownloadAmd64Template = "https://download.jetbrains.com/webide/PhpStorm-%s.tar.gz"

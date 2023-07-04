@@ -5,7 +5,7 @@ import (
 	"path/filepath"
 
 	"github.com/loft-sh/devpod/pkg/devcontainer/config"
-	"github.com/loft-sh/devpod/pkg/log"
+	"github.com/loft-sh/log"
 
 	detector "github.com/loft-sh/programming-language-detection/pkg/detector"
 )

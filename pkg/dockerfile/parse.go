@@ -5,7 +5,7 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/loft-sh/devpod/pkg/scanner"
+	"github.com/loft-sh/log/scanner"
 	"github.com/moby/buildkit/frontend/dockerfile/parser"
 )
 

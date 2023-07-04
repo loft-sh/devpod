@@ -16,8 +16,8 @@ import (
 	"github.com/loft-sh/devpod/pkg/binaries"
 	"github.com/loft-sh/devpod/pkg/config"
 	"github.com/loft-sh/devpod/pkg/download"
-	"github.com/loft-sh/devpod/pkg/log"
 	provider2 "github.com/loft-sh/devpod/pkg/provider"
+	"github.com/loft-sh/log"
 	"github.com/pkg/errors"
 )
 

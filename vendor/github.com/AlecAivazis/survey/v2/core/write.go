@@ -142,12 +142,12 @@ func (err errFieldNotMatch) Is(target error) bool { // implements the dynamic er
 // It returns the Question.Name that couldn't be matched with a destination field.
 //
 // Usage:
-// err := survey.Ask(qs, &v);
-// if err != nil {
-// 	if name, ok := core.IsFieldNotMatch(err); ok {
-//		[...name is the not matched question name]
-// 	}
-// }
+//
+//	if err := survey.Ask(qs, &v); err != nil {
+//		if name, ok := core.IsFieldNotMatch(err); ok {
+//			// name is the question name that did not match a field
+//		}
+//	}
 func IsFieldNotMatch(err error) (string, bool) {
 	if err != nil {
 		if v, ok := err.(errFieldNotMatch); ok {
@@ -301,6 +301,7 @@ func copy(t reflect.Value, v reflect.Value) (err error) {
 		case reflect.Float64:
 			castVal, casterr = strconv.ParseFloat(vString, 64)
 		default:
+			//lint:ignore ST1005 allow this error message to be capitalized
 			return fmt.Errorf("Unable to convert from string to type %s", t.Kind())
 		}
 
@@ -335,6 +336,7 @@ func copy(t reflect.Value, v reflect.Value) (err error) {
 		}
 
 		// we're copying an option answer to an incorrect type
+		//lint:ignore ST1005 allow this error message to be capitalized
 		return fmt.Errorf("Unable to convert from OptionAnswer to type %s", t.Kind())
 	}
 

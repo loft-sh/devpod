@@ -9,10 +9,10 @@ import (
 	"github.com/loft-sh/devpod/pkg/client/clientimplementation"
 	"github.com/loft-sh/devpod/pkg/config"
 	"github.com/loft-sh/devpod/pkg/file"
-	"github.com/loft-sh/devpod/pkg/log"
 	provider2 "github.com/loft-sh/devpod/pkg/provider"
-	"github.com/loft-sh/devpod/pkg/survey"
-	"github.com/loft-sh/devpod/pkg/terminal"
+	"github.com/loft-sh/log"
+	"github.com/loft-sh/log/survey"
+	"github.com/loft-sh/log/terminal"
 )
 
 func listMachines(devPodConfig *config.Config, log log.Logger) ([]*provider2.Machine, error) {

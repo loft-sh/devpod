@@ -6,7 +6,7 @@ import (
 	"net"
 	"sync"
 
-	"github.com/loft-sh/devpod/pkg/log"
+	"github.com/loft-sh/log"
 	"golang.org/x/crypto/ssh"
 )
 

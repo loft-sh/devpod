@@ -8,8 +8,8 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/loft-sh/devpod/pkg/log"
-	"github.com/loft-sh/devpod/pkg/scanner"
+	"github.com/loft-sh/log"
+	"github.com/loft-sh/log/scanner"
 	"github.com/mitchellh/go-homedir"
 	"github.com/pkg/errors"
 )

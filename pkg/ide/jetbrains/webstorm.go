@@ -3,7 +3,7 @@ package jetbrains
 import (
 	"github.com/loft-sh/devpod/pkg/config"
 	"github.com/loft-sh/devpod/pkg/ide"
-	"github.com/loft-sh/devpod/pkg/log"
+	"github.com/loft-sh/log"
 )
 
 const WebStormDownloadAmd64Template = "https://download.jetbrains.com/webstorm/WebStorm-%s.tar.gz"

@@ -16,7 +16,7 @@ import (
 
 	"github.com/gliderlabs/ssh"
 	"github.com/loft-sh/devpod/pkg/command"
-	"github.com/loft-sh/devpod/pkg/log"
+	"github.com/loft-sh/log"
 	perrors "github.com/pkg/errors"
 	"github.com/pkg/sftp"
 	"github.com/sirupsen/logrus"

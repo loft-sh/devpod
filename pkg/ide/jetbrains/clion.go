@@ -3,7 +3,7 @@ package jetbrains
 import (
 	"github.com/loft-sh/devpod/pkg/config"
 	"github.com/loft-sh/devpod/pkg/ide"
-	"github.com/loft-sh/devpod/pkg/log"
+	"github.com/loft-sh/log"
 )
 
 const CLionDownloadAmd64Template = "https://download.jetbrains.com/cpp/CLion-%s.tar.gz"

@@ -8,7 +8,7 @@ import (
 	"sync"
 
 	"github.com/acarl005/stripansi"
-	"github.com/loft-sh/devpod/pkg/survey"
+	"github.com/loft-sh/log/survey"
 	"github.com/sirupsen/logrus"
 	lumberjack "gopkg.in/natefinch/lumberjack.v2"
 )

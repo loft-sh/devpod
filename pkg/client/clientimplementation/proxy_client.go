@@ -14,10 +14,10 @@ import (
 	"github.com/gofrs/flock"
 	"github.com/loft-sh/devpod/pkg/client"
 	"github.com/loft-sh/devpod/pkg/config"
-	"github.com/loft-sh/devpod/pkg/log"
 	"github.com/loft-sh/devpod/pkg/options"
 	"github.com/loft-sh/devpod/pkg/provider"
-	"github.com/loft-sh/devpod/pkg/scanner"
+	"github.com/loft-sh/log"
+	"github.com/loft-sh/log/scanner"
 	perrors "github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 )

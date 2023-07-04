@@ -2,6 +2,7 @@ package survey
 
 import (
 	"errors"
+	"fmt"
 
 	"github.com/AlecAivazis/survey/v2/core"
 	"github.com/AlecAivazis/survey/v2/terminal"
@@ -31,7 +32,6 @@ type Select struct {
 	Description   func(value string, index int) string
 	filter        string
 	selectedIndex int
-	useDefault    bool
 	showingHelp   bool
 }
 
@@ -103,8 +103,6 @@ func (s *Select) OnChange(key rune, config *PromptConfig) bool {
 
 		// if the user pressed the up arrow or 'k' to emulate vim
 	} else if (key == terminal.KeyArrowUp || (s.VimMode && key == 'k')) && len(options) > 0 {
-		s.useDefault = false
-
 		// if we are at the top of the list
 		if s.selectedIndex == 0 {
 			// start from the button
@@ -116,7 +114,6 @@ func (s *Select) OnChange(key rune, config *PromptConfig) bool {
 
 		// if the user pressed down or 'j' to emulate vim
 	} else if (key == terminal.KeyTab || key == terminal.KeyArrowDown || (s.VimMode && key == 'j')) && len(options) > 0 {
-		s.useDefault = false
 		// if we are at the bottom of the list
 		if s.selectedIndex == len(options)-1 {
 			// start from the top
@@ -147,8 +144,6 @@ func (s *Select) OnChange(key rune, config *PromptConfig) bool {
 		s.filter += string(key)
 		// make sure vim mode is disabled
 		s.VimMode = false
-		// make sure that we use the current value in the filtered list
-		s.useDefault = false
 	}
 
 	s.FilterMessage = ""
@@ -207,7 +202,6 @@ func (s *Select) filterOptions(config *PromptConfig) []core.OptionAnswer {
 		filter = config.Filter
 	}
 
-	//
 	for i, opt := range s.Options {
 		// i the filter says to include the option
 		if filter(s.filter, opt, i) {
@@ -229,23 +223,29 @@ func (s *Select) Prompt(config *PromptConfig) (interface{}, error) {
 		return "", errors.New("please provide options to select from")
 	}
 
-	// start off with the first option selected
-	sel := 0
-	// if there is a default
-	if s.Default != "" {
-		// find the choice
-		for i, opt := range s.Options {
-			// if the option corresponds to the default
-			if opt == s.Default {
-				// we found our initial value
-				sel = i
-				// stop looking
-				break
+	s.selectedIndex = 0
+	if s.Default != nil {
+		switch defaultValue := s.Default.(type) {
+		case string:
+			var found bool
+			for i, opt := range s.Options {
+				if opt == defaultValue {
+					s.selectedIndex = i
+					found = true
+				}
 			}
+			if !found {
+				return "", fmt.Errorf("default value %q not found in options", defaultValue)
+			}
+		case int:
+			if defaultValue >= len(s.Options) {
+				return "", fmt.Errorf("default index %d exceeds the number of options", defaultValue)
+			}
+			s.selectedIndex = defaultValue
+		default:
+			return "", errors.New("default value of select must be an int or string")
 		}
 	}
-	// save the selected index
-	s.selectedIndex = sel
 
 	// figure out the page size
 	pageSize := s.PageSize
@@ -256,7 +256,7 @@ func (s *Select) Prompt(config *PromptConfig) (interface{}, error) {
 	}
 
 	// figure out the options and index to render
-	opts, idx := paginate(pageSize, core.OptionAnswerList(s.Options), sel)
+	opts, idx := paginate(pageSize, core.OptionAnswerList(s.Options), s.selectedIndex)
 
 	cursor := s.NewCursor()
 	cursor.Save()          // for proper cursor placement during selection
@@ -278,9 +278,6 @@ func (s *Select) Prompt(config *PromptConfig) (interface{}, error) {
 	if err != nil {
 		return "", err
 	}
-
-	// by default, use the default value
-	s.useDefault = true
 
 	rr := s.NewRuneReader()
 	_ = rr.SetTermMode()
@@ -304,45 +301,16 @@ func (s *Select) Prompt(config *PromptConfig) (interface{}, error) {
 			break
 		}
 	}
+
 	options := s.filterOptions(config)
 	s.filter = ""
 	s.FilterMessage = ""
 
-	// the index to report
-	var val string
-	// if we are supposed to use the default value
-	if s.useDefault || s.selectedIndex >= len(options) {
-		// if there is a default value
-		if s.Default != nil {
-			// if the default is a string
-			if defaultString, ok := s.Default.(string); ok {
-				// use the default value
-				val = defaultString
-				// the default value could also be an interpret which is interpretted as the index
-			} else if defaultIndex, ok := s.Default.(int); ok {
-				val = s.Options[defaultIndex]
-			} else {
-				return val, errors.New("default value of select must be an int or string")
-			}
-		} else if len(options) > 0 {
-			// there is no default value so use the first
-			val = options[0].Value
-		}
-		// otherwise the selected index points to the value
-	} else if s.selectedIndex < len(options) {
-		// the
-		val = options[s.selectedIndex].Value
+	if s.selectedIndex < len(options) {
+		return options[s.selectedIndex], err
 	}
 
-	// now that we have the value lets go hunt down the right index to return
-	idx = -1
-	for i, optionValue := range s.Options {
-		if optionValue == val {
-			idx = i
-		}
-	}
-
-	return core.OptionAnswer{Value: val, Index: idx}, err
+	return options[0], err
 }
 
 func (s *Select) Cleanup(config *PromptConfig, val interface{}) error {

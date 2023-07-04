@@ -13,9 +13,9 @@ import (
 	"time"
 
 	"github.com/loft-sh/devpod/pkg/inject"
-	"github.com/loft-sh/devpod/pkg/log"
 	"github.com/loft-sh/devpod/pkg/shell"
 	"github.com/loft-sh/devpod/pkg/version"
+	"github.com/loft-sh/log"
 	"github.com/pkg/errors"
 )
 

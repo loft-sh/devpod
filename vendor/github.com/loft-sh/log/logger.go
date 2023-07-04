@@ -1,11 +1,26 @@
 package log
 
 import (
+	"io"
+
+	"github.com/loft-sh/log/survey"
 	"github.com/sirupsen/logrus"
 )
 
-// Logger defines the common logging interface
-type Logger interface {
+// logFunctionType type
+type logFunctionType uint32
+
+const (
+	fatalFn logFunctionType = iota
+	errorFn
+	warnFn
+	infoFn
+	debugFn
+	doneFn
+)
+
+// BaseLogger defines the common logging interface
+type BaseLogger interface {
 	Debug(args ...interface{})
 	Debugf(format string, args ...interface{})
 
@@ -29,4 +44,19 @@ type Logger interface {
 
 	SetLevel(level logrus.Level)
 	GetLevel() logrus.Level
+}
+
+type SimpleLogger interface {
+	Infof(format string, args ...interface{})
+}
+
+// Logger defines the devspace common logging interface
+type Logger interface {
+	BaseLogger
+
+	Question(params *survey.QuestionOptions) (string, error)
+	ErrorStreamOnly() Logger
+
+	Writer(level logrus.Level, raw bool) io.WriteCloser
+	WriteString(level logrus.Level, message string)
 }
