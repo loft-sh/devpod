@@ -11,9 +11,9 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/loft-sh/devpod/cmd/flags"
-	"github.com/loft-sh/devpod/pkg/log"
 	"github.com/loft-sh/devpod/pkg/telemetry/serviceaccount"
 	"github.com/loft-sh/devpod/pkg/telemetry/types"
+	"github.com/loft-sh/log"
 	"github.com/spf13/cobra"
 	"gopkg.in/square/go-jose.v2/jwt"
 )

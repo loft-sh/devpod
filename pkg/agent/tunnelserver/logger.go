@@ -7,9 +7,9 @@ import (
 	"os"
 
 	"github.com/loft-sh/devpod/pkg/agent/tunnel"
-	"github.com/loft-sh/devpod/pkg/log"
-	"github.com/loft-sh/devpod/pkg/scanner"
-	"github.com/loft-sh/devpod/pkg/survey"
+	"github.com/loft-sh/log"
+	"github.com/loft-sh/log/scanner"
+	"github.com/loft-sh/log/survey"
 	"github.com/sirupsen/logrus"
 )
 

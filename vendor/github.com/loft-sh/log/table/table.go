@@ -4,8 +4,8 @@ import (
 	"io"
 	"runtime"
 
-	"github.com/loft-sh/devpod/pkg/log"
-	"github.com/loft-sh/devpod/pkg/scanner"
+	"github.com/loft-sh/log"
+	"github.com/loft-sh/log/scanner"
 	"github.com/olekukonko/tablewriter"
 	"github.com/sirupsen/logrus"
 )

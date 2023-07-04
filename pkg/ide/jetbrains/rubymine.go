@@ -3,7 +3,7 @@ package jetbrains
 import (
 	"github.com/loft-sh/devpod/pkg/config"
 	"github.com/loft-sh/devpod/pkg/ide"
-	"github.com/loft-sh/devpod/pkg/log"
+	"github.com/loft-sh/log"
 )
 
 const RubyMineDownloadAmd64Template = "https://download.jetbrains.com/ruby/RubyMine-%s.tar.gz"

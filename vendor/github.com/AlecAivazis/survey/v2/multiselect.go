@@ -29,6 +29,7 @@ type MultiSelect struct {
 	VimMode       bool
 	FilterMessage string
 	Filter        func(filter string, value string, index int) bool
+	Description   func(value string, index int) string
 	filter        string
 	selectedIndex int
 	checked       map[int]bool
@@ -43,6 +44,7 @@ type MultiSelectTemplateData struct {
 	Checked       map[int]bool
 	SelectedIndex int
 	ShowHelp      bool
+	Description   func(value string, index int) string
 	PageEntries   []core.OptionAnswer
 	Config        *PromptConfig
 
@@ -59,12 +61,19 @@ func (m MultiSelectTemplateData) IterateOption(ix int, opt core.OptionAnswer) in
 	return copy
 }
 
+func (m MultiSelectTemplateData) GetDescription(opt core.OptionAnswer) string {
+	if m.Description == nil {
+		return ""
+	}
+	return m.Description(opt.Value, opt.Index)
+}
+
 var MultiSelectQuestionTemplate = `
 {{- define "option"}}
     {{- if eq .SelectedIndex .CurrentIndex }}{{color .Config.Icons.SelectFocus.Format }}{{ .Config.Icons.SelectFocus.Text }}{{color "reset"}}{{else}} {{end}}
     {{- if index .Checked .CurrentOpt.Index }}{{color .Config.Icons.MarkedOption.Format }} {{ .Config.Icons.MarkedOption.Text }} {{else}}{{color .Config.Icons.UnmarkedOption.Format }} {{ .Config.Icons.UnmarkedOption.Text }} {{end}}
     {{- color "reset"}}
-    {{- " "}}{{- .CurrentOpt.Value}}
+    {{- " "}}{{- .CurrentOpt.Value}}{{ if ne ($.GetDescription .CurrentOpt) "" }} - {{color "cyan"}}{{ $.GetDescription .CurrentOpt }}{{color "reset"}}{{end}}
 {{end}}
 {{- if .ShowHelp }}{{- color .Config.Icons.Help.Format }}{{ .Config.Icons.Help.Text }} {{ .Help }}{{color "reset"}}{{"\n"}}{{end}}
 {{- color .Config.Icons.Question.Format }}{{ .Config.Icons.Question.Text }} {{color "reset"}}
@@ -179,6 +188,7 @@ func (m *MultiSelect) OnChange(key rune, config *PromptConfig) {
 		SelectedIndex: idx,
 		Checked:       m.checked,
 		ShowHelp:      m.showingHelp,
+		Description:   m.Description,
 		PageEntries:   opts,
 		Config:        config,
 	}
@@ -272,6 +282,7 @@ func (m *MultiSelect) Prompt(config *PromptConfig) (interface{}, error) {
 	tmplData := MultiSelectTemplateData{
 		MultiSelect:   *m,
 		SelectedIndex: idx,
+		Description:   m.Description,
 		Checked:       m.checked,
 		PageEntries:   opts,
 		Config:        config,
@@ -342,6 +353,7 @@ func (m *MultiSelect) Cleanup(config *PromptConfig, val interface{}) error {
 			Checked:       m.checked,
 			Answer:        answer,
 			ShowAnswer:    true,
+			Description:   m.Description,
 			Config:        config,
 		},
 	)

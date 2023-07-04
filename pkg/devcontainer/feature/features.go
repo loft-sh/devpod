@@ -18,8 +18,8 @@ import (
 	"github.com/google/go-containerregistry/pkg/v1/remote"
 	"github.com/loft-sh/devpod/pkg/devcontainer/config"
 	"github.com/loft-sh/devpod/pkg/extract"
-	"github.com/loft-sh/devpod/pkg/hash"
-	"github.com/loft-sh/devpod/pkg/log"
+	"github.com/loft-sh/log"
+	"github.com/loft-sh/log/hash"
 	"github.com/pkg/errors"
 )
 

@@ -13,8 +13,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/loft-sh/devpod/pkg/log"
 	"github.com/loft-sh/devpod/pkg/template"
+	"github.com/loft-sh/log"
 	perrors "github.com/pkg/errors"
 )
 

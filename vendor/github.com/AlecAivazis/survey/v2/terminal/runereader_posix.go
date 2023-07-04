@@ -1,3 +1,4 @@
+//go:build !windows
 // +build !windows
 
 // The terminal mode manipulation code is derived heavily from:

@@ -8,7 +8,7 @@ import (
 	"runtime"
 	"strings"
 
-	"github.com/loft-sh/devpod/pkg/hash"
+	"github.com/loft-sh/log/hash"
 )
 
 type ReplaceFunction func(match, variable string, args []string) string

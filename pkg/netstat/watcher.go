@@ -6,7 +6,7 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/loft-sh/devpod/pkg/log"
+	"github.com/loft-sh/log"
 )
 
 type Forwarder interface {

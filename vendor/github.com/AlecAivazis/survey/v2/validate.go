@@ -15,6 +15,7 @@ func Required(val interface{}) error {
 
 	// if the value passed in is the zero value of the appropriate type
 	if isZero(value) && value.Kind() != reflect.Bool {
+		//lint:ignore ST1005 this error message should render as capitalized
 		return errors.New("Value is required")
 	}
 	return nil

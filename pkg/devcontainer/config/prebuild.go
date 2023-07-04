@@ -4,8 +4,8 @@ import (
 	"encoding/json"
 	"strings"
 
-	"github.com/loft-sh/devpod/pkg/hash"
-	"github.com/loft-sh/devpod/pkg/log"
+	"github.com/loft-sh/log"
+	"github.com/loft-sh/log/hash"
 )
 
 func CalculatePrebuildHash(originalConfig *DevContainerConfig, platform, architecture, dockerfileContent string, log log.Logger) (string, error) {

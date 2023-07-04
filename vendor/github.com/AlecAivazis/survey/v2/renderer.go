@@ -3,8 +3,6 @@ package survey
 import (
 	"bytes"
 	"fmt"
-	"unicode/utf8"
-
 	"github.com/AlecAivazis/survey/v2/core"
 	"github.com/AlecAivazis/survey/v2/terminal"
 	"golang.org/x/term"
@@ -180,7 +178,8 @@ func (r *Renderer) countLines(buf bytes.Buffer) int {
 			delim = len(bufBytes) // no new line found, read rest of text
 		}
 
-		if lineWidth := utf8.RuneCount(bufBytes[curr:delim]); lineWidth > w {
+		str := string(bufBytes[curr:delim])
+		if lineWidth := terminal.StringWidth(str); lineWidth > w {
 			// account for word wrapping
 			count += lineWidth / w
 			if (lineWidth % w) == 0 {

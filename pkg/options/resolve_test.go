@@ -6,9 +6,9 @@ import (
 	"time"
 
 	"github.com/loft-sh/devpod/pkg/config"
-	"github.com/loft-sh/devpod/pkg/log"
 	provider2 "github.com/loft-sh/devpod/pkg/provider"
 	"github.com/loft-sh/devpod/pkg/types"
+	"github.com/loft-sh/log"
 	"gotest.tools/assert"
 )
 
