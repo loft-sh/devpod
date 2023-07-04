@@ -1,6 +1,7 @@
 package integration
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"os/exec"
@@ -11,6 +12,14 @@ import (
 )
 
 var _ = ginkgo.Describe("[integration]: devpod provider ssh test suite", ginkgo.Ordered, func() {
+	var initialDir string
+
+	ginkgo.BeforeEach(func() {
+		var err error
+		initialDir, err = os.Getwd()
+		framework.ExpectNoError(err)
+	})
+
 	ginkgo.It("should generate ssh keypairs", func() {
 		_, err := os.Stat(os.Getenv("HOME") + "/.ssh/id_rsa")
 		if err != nil {
@@ -47,27 +56,24 @@ var _ = ginkgo.Describe("[integration]: devpod provider ssh test suite", ginkgo.
 	})
 
 	ginkgo.It("should add provider to devpod", func() {
+		f := framework.NewDefaultFramework(initialDir + "/bin")
 		// ensure we don't have the ssh provider present
-		cmd := exec.Command("bin/devpod-linux-amd64", "provider", "delete", "ssh")
-		err := cmd.Run()
+		err := f.DevPodProviderDelete([]string{"ssh"})
 		if err != nil {
 			fmt.Println("warning: " + err.Error())
 		}
 
-		cmd = exec.Command("bin/devpod-linux-amd64", "provider", "add", "ssh", "-o", "HOST=localhost")
-		err = cmd.Run()
+		err = f.DevPodProviderAdd([]string{"ssh", "-o", "HOST=localhost"})
 		framework.ExpectNoError(err)
 	})
 
-	ginkgo.It("should run devpod up", func() {
-		// ensure we don't have the ssh provider present
-		cmd := exec.Command("bin/devpod-linux-amd64", "up", "--debug", "--ide=none", "tests/integration/testdata/")
-		err := cmd.Run()
+	ginkgo.It("should run devpod up", func(ctx context.Context) {
+		f := framework.NewDefaultFramework(initialDir + "/bin")
+		err := f.DevPodUp(ctx, "tests/integration/testdata/")
 		framework.ExpectNoError(err)
 	})
 
 	ginkgo.It("should run commands to workspace via ssh", func() {
-		// ensure we don't have the ssh provider present
 		cmd := exec.Command("ssh", "testdata.devpod", "echo", "test")
 		output, err := cmd.Output()
 		framework.ExpectNoError(err)
@@ -75,10 +81,9 @@ var _ = ginkgo.Describe("[integration]: devpod provider ssh test suite", ginkgo.
 		gomega.Expect(output).To(gomega.Equal([]byte("test\n")))
 	})
 
-	ginkgo.It("should cleanup devpod workspace", func() {
-		// ensure we don't have the ssh provider present
-		cmd := exec.Command("bin/devpod-linux-amd64", "delete", "--debug", "--force", "testdata")
-		err := cmd.Run()
+	ginkgo.It("should cleanup devpod workspace", func(ctx context.Context) {
+		f := framework.NewDefaultFramework(initialDir + "/bin")
+		err := f.DevPodWorkspaceDelete(ctx, "testdata")
 		framework.ExpectNoError(err)
 	})
 })
