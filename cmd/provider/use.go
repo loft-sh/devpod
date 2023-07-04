@@ -96,7 +96,7 @@ func (cmd *UseCmd) Run(ctx context.Context, providerName string) error {
 
 func configureProvider(ctx context.Context, provider *provider2.ProviderConfig, context string, userOptions []string, reconfigure, skipInit bool, singleMachine *bool) error {
 	// set options
-	devPodConfig, err := setOptions(ctx, provider, context, userOptions, reconfigure, false, skipInit, singleMachine)
+	devPodConfig, err := setOptions(ctx, provider, context, userOptions, reconfigure, false, singleMachine, true)
 	if err != nil {
 		return err
 	}
@@ -122,7 +122,7 @@ func setOptions(ctx context.Context, provider *provider2.ProviderConfig, context
 	}
 
 	// parse options
-	options, err := provider2.ParseOptions(provider, userOptions)
+	options, err := provider2.ParseOptions(devPodConfig, provider, userOptions)
 	if err != nil {
 		return nil, errors.Wrap(err, "parse options")
 	}
@@ -136,9 +136,11 @@ func setOptions(ctx context.Context, provider *provider2.ProviderConfig, context
 			}
 		}
 	}
+	// untangle user options and provider options
 
 	// fill defaults
-	devPodConfig, err = options2.ResolveOptions(ctx, devPodConfig, provider, options, skipRequired, singleMachine, log.Default)
+	devPodConfig, err = options2.ResolveOptions(ctx, devPodConfig, provider, options, skipRequired, singleMachine, init, log.Default)
+	fmt.Println("devPodConfig", devPodConfig)
 	if err != nil {
 		return nil, errors.Wrap(err, "resolve options")
 	}

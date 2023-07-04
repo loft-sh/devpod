@@ -6,7 +6,6 @@ import (
 	"time"
 
 	"github.com/loft-sh/devpod/pkg/config"
-	provider2 "github.com/loft-sh/devpod/pkg/provider"
 	"github.com/loft-sh/devpod/pkg/types"
 	"github.com/loft-sh/log"
 	"gotest.tools/assert"
@@ -14,7 +13,7 @@ import (
 
 type testCase struct {
 	Name             string
-	ProviderOptions  map[string]*provider2.ProviderOption
+	ProviderOptions  map[string]*types.Option
 	UserValues       map[string]string
 	Values           map[string]config.OptionValue
 	ExtraValues      map[string]string
@@ -33,7 +32,7 @@ func TestResolveOptions(t *testing.T) {
 			ExtraValues: map[string]string{
 				"WORKSPACE_ID": "test",
 			},
-			ProviderOptions: map[string]*provider2.ProviderOption{
+			ProviderOptions: map[string]*types.Option{
 				"TEST": {
 					Default: "${WORKSPACE_ID}-test",
 				},
@@ -47,7 +46,7 @@ func TestResolveOptions(t *testing.T) {
 			ExtraValues: map[string]string{
 				"WORKSPACE_ID": "test",
 			},
-			ProviderOptions: map[string]*provider2.ProviderOption{
+			ProviderOptions: map[string]*types.Option{
 				"TEST": {
 					Default: "${WORKSPACE_ID}-test-${COMMAND}-$COMMAND",
 				},
@@ -62,7 +61,7 @@ func TestResolveOptions(t *testing.T) {
 		},
 		{
 			Name: "No extra values",
-			ProviderOptions: map[string]*provider2.ProviderOption{
+			ProviderOptions: map[string]*types.Option{
 				"COMMAND1": {
 					Command: "echo ${COMMAND2}-test",
 				},
@@ -77,7 +76,7 @@ func TestResolveOptions(t *testing.T) {
 		},
 		{
 			Name: "Cyclic dep",
-			ProviderOptions: map[string]*provider2.ProviderOption{
+			ProviderOptions: map[string]*types.Option{
 				"COMMAND1": {
 					Command: "echo ${COMMAND2}",
 				},
@@ -95,7 +94,7 @@ func TestResolveOptions(t *testing.T) {
 					UserProvided: true,
 				},
 			},
-			ProviderOptions: map[string]*provider2.ProviderOption{
+			ProviderOptions: map[string]*types.Option{
 				"COMMAND": {
 					Command: "echo bar",
 				},
@@ -112,7 +111,7 @@ func TestResolveOptions(t *testing.T) {
 					UserProvided: true,
 				},
 			},
-			ProviderOptions: map[string]*provider2.ProviderOption{
+			ProviderOptions: map[string]*types.Option{
 				"COMMAND": {
 					Command: "echo bar",
 				},
@@ -141,7 +140,7 @@ func TestResolveOptions(t *testing.T) {
 					Filled: &[]types.Time{types.Now()}[0],
 				},
 			},
-			ProviderOptions: map[string]*provider2.ProviderOption{
+			ProviderOptions: map[string]*types.Option{
 				"EXPIRE": {
 					Command: "echo bar",
 					Cache:   "10m",
@@ -158,7 +157,7 @@ func TestResolveOptions(t *testing.T) {
 		},
 		{
 			Name: "Ignore self",
-			ProviderOptions: map[string]*provider2.ProviderOption{
+			ProviderOptions: map[string]*types.Option{
 				"SELF": {
 					Command: "SELF=test; echo ${SELF}",
 				},
@@ -184,7 +183,7 @@ func TestResolveOptions(t *testing.T) {
 					Value: "test-child2",
 				},
 			},
-			ProviderOptions: map[string]*provider2.ProviderOption{
+			ProviderOptions: map[string]*types.Option{
 				"PARENT": {},
 				"CHILD1": {
 					Command: "echo ${PARENT}-child1",
@@ -201,7 +200,7 @@ func TestResolveOptions(t *testing.T) {
 		},
 		{
 			Name: "Error local global",
-			ProviderOptions: map[string]*provider2.ProviderOption{
+			ProviderOptions: map[string]*types.Option{
 				"PARENT": {
 					Default: "test",
 				},
@@ -214,7 +213,7 @@ func TestResolveOptions(t *testing.T) {
 		},
 		{
 			Name: "Error local var",
-			ProviderOptions: map[string]*provider2.ProviderOption{
+			ProviderOptions: map[string]*types.Option{
 				"PARENT": {
 					Local:   true,
 					Default: "test",
@@ -227,7 +226,7 @@ func TestResolveOptions(t *testing.T) {
 		},
 		{
 			Name: "Don't resolve local",
-			ProviderOptions: map[string]*provider2.ProviderOption{
+			ProviderOptions: map[string]*types.Option{
 				"PARENT": {
 					Default: "test",
 				},
@@ -243,7 +242,7 @@ func TestResolveOptions(t *testing.T) {
 		},
 		{
 			Name: "Resolve",
-			ProviderOptions: map[string]*provider2.ProviderOption{
+			ProviderOptions: map[string]*types.Option{
 				"PARENT": {
 					Default: "test",
 				},
@@ -259,7 +258,7 @@ func TestResolveOptions(t *testing.T) {
 		},
 		{
 			Name: "Skip Required",
-			ProviderOptions: map[string]*provider2.ProviderOption{
+			ProviderOptions: map[string]*types.Option{
 				"PARENT": {
 					Required: true,
 				},
@@ -283,7 +282,7 @@ func TestResolveOptions(t *testing.T) {
 	}
 
 	for _, testCase := range testCases {
-		options, err := resolveOptionsGeneric(context.Background(), testCase.ProviderOptions, testCase.Values, testCase.UserValues, testCase.ExtraValues, !testCase.DontResolveLocal, testCase.ResolveGlobal, testCase.SkipRequired, log.Default)
+		options, _, err := resolveOptionsGeneric(context.Background(), testCase.ProviderOptions, testCase.Values, testCase.UserValues, testCase.ExtraValues, !testCase.DontResolveLocal, testCase.ResolveGlobal, testCase.SkipRequired, log.Default)
 		if !testCase.ExpectErr {
 			assert.NilError(t, err, testCase.Name)
 		} else if testCase.ExpectErr {

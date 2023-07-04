@@ -1,0 +1,17 @@
+{
+  "options": {
+    "BAR": {
+      "required": true,
+      "description": "whatever"
+    },
+    "BAZ": {
+      "required": true,
+      "command": "echo foo",
+      "description": "whenever"
+    },
+    "FLIP": {
+      "required": true,
+      "subOptionsCommand": "cat $(git rev-parse --show-toplevel)/examples/proxy-provider/other_suboptions.json"
+    }
+  }
+}

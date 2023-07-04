@@ -14,7 +14,9 @@ import (
 
 	"github.com/blang/semver"
 	"github.com/ghodss/yaml"
+	"github.com/loft-sh/devpod/pkg/config"
 	"github.com/loft-sh/devpod/pkg/telemetry"
+	"github.com/loft-sh/devpod/pkg/types"
 	"github.com/pkg/errors"
 )
 
@@ -42,7 +44,7 @@ func ParseProvider(reader io.Reader) (*ProviderConfig, error) {
 
 	decoder := json.NewDecoder(bytes.NewReader(jsonBytes))
 
-	// Disallow unknown fields in standalone version but allow them in the UI unti we have a versioning strategy
+	// Disallow unknown fields in standalone version but allow them in the UI until we have a versioning strategy
 	if os.Getenv(telemetry.UIEnvVar) != "true" {
 		decoder.DisallowUnknownFields()
 	}
@@ -260,14 +262,23 @@ func validateBinaries(prefix string, binaries map[string][]*ProviderBinary) erro
 	return nil
 }
 
-func ParseOptions(provider *ProviderConfig, options []string) (map[string]string, error) {
+func ParseOptions(devConfig *config.Config, provider *ProviderConfig, options []string) (map[string]string, error) {
 	providerOptions := provider.Options
+	allOptions := map[string]*types.Option{}
+	allowedOptions := []string{}
+
 	if providerOptions == nil {
 		providerOptions = map[string]*ProviderOption{}
 	}
 
-	allowedOptions := []string{}
 	for optionName := range providerOptions {
+		allOptions[optionName] = &providerOptions[optionName].Option
+	}
+	for optionName, option := range devConfig.DynamicProviderOptions(provider.Name) {
+		allOptions[optionName] = option
+	}
+
+	for optionName := range allOptions {
 		allowedOptions = append(allowedOptions, optionName)
 	}
 
@@ -280,51 +291,51 @@ func ParseOptions(provider *ProviderConfig, options []string) (map[string]string
 
 		key := strings.ToUpper(strings.TrimSpace(splitted[0]))
 		value := strings.Join(splitted[1:], "=")
-		providerOption := providerOptions[key]
-		if providerOption == nil {
+		opt := allOptions[key]
+		if opt == nil {
 			return nil, fmt.Errorf("invalid option '%s', allowed options are: %v", key, allowedOptions)
 		}
 
-		if providerOption.ValidationPattern != "" {
-			matcher, err := regexp.Compile(providerOption.ValidationPattern)
+		if opt.ValidationPattern != "" {
+			matcher, err := regexp.Compile(opt.ValidationPattern)
 			if err != nil {
 				return nil, err
 			}
 
 			if !matcher.MatchString(value) {
-				if providerOption.ValidationMessage != "" {
-					return nil, fmt.Errorf(providerOption.ValidationMessage)
+				if opt.ValidationMessage != "" {
+					return nil, fmt.Errorf(opt.ValidationMessage)
 				}
 
-				return nil, fmt.Errorf("invalid value '%s' for option '%s', has to match the following regEx: %s", value, key, providerOption.ValidationPattern)
+				return nil, fmt.Errorf("invalid value '%s' for option '%s', has to match the following regEx: %s", value, key, opt.ValidationPattern)
 			}
 		}
 
-		if len(providerOption.Enum) > 0 {
+		if len(opt.Enum) > 0 {
 			found := false
-			for _, e := range providerOption.Enum {
+			for _, e := range opt.Enum {
 				if value == e {
 					found = true
 					break
 				}
 			}
 			if !found {
-				return nil, fmt.Errorf("invalid value '%s' for option '%s', has to match one of the following values: %v", value, key, providerOption.Enum)
+				return nil, fmt.Errorf("invalid value '%s' for option '%s', has to match one of the following values: %v", value, key, opt.Enum)
 			}
 		}
 
-		if providerOption.Type != "" {
-			if providerOption.Type == "number" {
+		if opt.Type != "" {
+			if opt.Type == "number" {
 				_, err := strconv.ParseInt(value, 10, 64)
 				if err != nil {
 					return nil, fmt.Errorf("invalid value '%s' for option '%s', must be a number", value, key)
 				}
-			} else if providerOption.Type == "boolean" {
+			} else if opt.Type == "boolean" {
 				_, err := strconv.ParseBool(value)
 				if err != nil {
 					return nil, fmt.Errorf("invalid value '%s' for option '%s', must be a boolean", value, key)
 				}
-			} else if providerOption.Type == "duration" {
+			} else if opt.Type == "duration" {
 				_, err := time.ParseDuration(value)
 				if err != nil {
 					return nil, fmt.Errorf("invalid value '%s' for option '%s', must be a duration like 10s, 5m or 24h", value, key)

@@ -1,0 +1,13 @@
+name: proxy-provider
+version: 0.0.1
+description: |-
+  DevPod on DevPod
+options:
+  PARENT:
+    required: true
+    description: The namespace to use
+    subOptionsCommand: |-
+      cat $(git rev-parse --show-toplevel)/examples/proxy-provider/parent_suboptions.json
+exec:
+  command: |-
+    ${DEVPOD} helper sh -c ${COMMAND}

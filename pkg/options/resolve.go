@@ -3,6 +3,7 @@ package options
 import (
 	"bytes"
 	"context"
+	"encoding/json"
 	"fmt"
 	"os"
 	"reflect"
@@ -24,9 +25,13 @@ import (
 	"github.com/pkg/errors"
 )
 
+type HasOptionFunc func(name string) bool
+
 var variableExpression = regexp.MustCompile(`(?m)\$\{?([A-Z0-9_]+)(:(-|\+)([^\}]+))?\}?`)
 
-const rootID = "root"
+const (
+	rootID = "root"
+)
 
 func ResolveAndSaveOptionsMachine(ctx context.Context, devConfig *config.Config, provider *provider2.ProviderConfig, originalMachine *provider2.Machine, userOptions map[string]string, log log.Logger) (*provider2.Machine, error) {
 	// reload config
@@ -48,9 +53,10 @@ func ResolveAndSaveOptionsMachine(ctx context.Context, devConfig *config.Config,
 	}
 
 	// resolve options
-	resolvedOptions, err := resolveOptionsGeneric(
+	dynamicOptions := mergeProviderOptions(provider.Options, devConfig.DynamicProviderOptions(provider.Name))
+	resolvedOptions, _, err := resolveOptionsGeneric(
 		ctx,
-		provider.Options,
+		dynamicOptions,
 		provider2.CombineOptions(nil, machine, devConfig.ProviderOptions(provider.Name)),
 		userOptions,
 		provider2.Merge(provider2.ToOptionsMachine(machine), binaryPaths),
@@ -101,9 +107,10 @@ func ResolveAndSaveOptionsWorkspace(ctx context.Context, devConfig *config.Confi
 	}
 
 	// resolve options
-	resolvedOptions, err := resolveOptionsGeneric(
+	dynamicOptions := mergeProviderOptions(provider.Options, devConfig.DynamicProviderOptions(provider.Name))
+	resolvedOptions, _, err := resolveOptionsGeneric(
 		ctx,
-		provider.Options,
+		dynamicOptions,
 		provider2.CombineOptions(workspace, nil, devConfig.ProviderOptions(provider.Name)),
 		userOptions,
 		provider2.Merge(provider2.ToOptionsWorkspace(workspace), binaryPaths),
@@ -134,27 +141,53 @@ func ResolveAndSaveOptionsWorkspace(ctx context.Context, devConfig *config.Confi
 	return workspace, nil
 }
 
-func ResolveOptions(ctx context.Context, devConfig *config.Config, provider *provider2.ProviderConfig, userOptions map[string]string, skipRequired bool, singleMachine *bool, log log.Logger) (*config.Config, error) {
+func ResolveOptions(ctx context.Context, devConfig *config.Config, provider *provider2.ProviderConfig, userOptions map[string]string, skipRequired bool, singleMachine *bool, init bool, log log.Logger) (*config.Config, error) {
 	// get binary paths
 	binaryPaths, err := binaries.GetBinaries(devConfig.DefaultContext, provider)
 	if err != nil {
 		return nil, err
 	}
 
-	// resolve options
-	resolvedOptions, err := resolveOptionsGeneric(
-		ctx,
-		provider.Options,
-		devConfig.ProviderOptions(provider.Name),
-		userOptions,
-		provider2.Merge(provider2.GetBaseEnvironment(devConfig.DefaultContext, provider.Name), binaryPaths),
-		false,
-		true,
-		skipRequired,
-		log,
-	)
-	if err != nil {
-		return nil, err
+	options := mergeProviderOptions(provider.Options, devConfig.DynamicProviderOptions(provider.Name))
+	dynamicOptions := config.DynamicOptions{}
+	resolvedOptions := devConfig.ProviderOptions(provider.Name)
+
+	isDone := func() bool {
+		// check if dynamic options are all resolved
+		for k, v := range dynamicOptions {
+			resOpt, ok := resolvedOptions[k]
+
+			if v.Required && (!ok || resOpt.Value == "") {
+				return false
+			}
+		}
+
+		return true
+	}
+
+	for stop := false; !stop; stop = isDone() {
+		newResOpts, newDynOpts, err := resolveOptionsGeneric(
+			ctx,
+			options,
+			resolvedOptions,
+			userOptions,
+			provider2.Merge(provider2.GetBaseEnvironment(devConfig.DefaultContext, provider.Name), binaryPaths),
+			false,
+			true,
+			skipRequired,
+			log,
+		)
+		if err != nil {
+			return nil, err
+		}
+		dynamicOptions = mergeOptions(dynamicOptions, newDynOpts)
+		resolvedOptions = newResOpts
+
+		if !init {
+			break
+		}
+		// prepare next tick
+		options = mergeOptions(options, dynamicOptions)
 	}
 
 	// dev config
@@ -169,6 +202,11 @@ func ResolveOptions(ctx context.Context, devConfig *config.Config, provider *pro
 		devConfig.Current().Providers[provider.Name].Options = map[string]config.OptionValue{}
 		for k, v := range resolvedOptions {
 			devConfig.Current().Providers[provider.Name].Options[k] = v
+		}
+
+		devConfig.Current().Providers[provider.Name].DynamicOptions = config.DynamicOptions{}
+		for k, v := range dynamicOptions {
+			devConfig.Current().Providers[provider.Name].DynamicOptions[k] = v
 		}
 		if singleMachine != nil {
 			devConfig.Current().Providers[provider.Name].SingleMachine = *singleMachine
@@ -223,9 +261,33 @@ func ResolveAgentConfig(devConfig *config.Config, provider *provider2.ProviderCo
 	return agentConfig
 }
 
+func mergeProviderOptions(existing map[string]*provider2.ProviderOption, newOpts config.DynamicOptions) config.DynamicOptions {
+	retOptions := config.DynamicOptions{}
+	for k, v := range existing {
+		retOptions[k] = &v.Option
+	}
+	for k, v := range newOpts {
+		retOptions[k] = v
+	}
+
+	return retOptions
+}
+
+func mergeOptions[K comparable, V any](existing map[K]V, newOpts map[K]V) map[K]V {
+	retOpts := map[K]V{}
+	for k, v := range existing {
+		retOpts[k] = v
+	}
+	for k, v := range newOpts {
+		retOpts[k] = v
+	}
+
+	return retOpts
+}
+
 func resolveOptionsGeneric(
 	ctx context.Context,
-	options map[string]*provider2.ProviderOption,
+	options config.DynamicOptions,
 	optionValues map[string]config.OptionValue,
 	userOptions map[string]string,
 	extraValues map[string]string,
@@ -233,9 +295,9 @@ func resolveOptionsGeneric(
 	resolveGlobal bool,
 	skipRequired bool,
 	log log.Logger,
-) (map[string]config.OptionValue, error) {
+) (map[string]config.OptionValue, config.DynamicOptions, error) {
 	if options == nil {
-		options = map[string]*provider2.ProviderOption{}
+		options = config.DynamicOptions{}
 	}
 	if userOptions == nil {
 		userOptions = map[string]string{}
@@ -243,21 +305,19 @@ func resolveOptionsGeneric(
 
 	// create a new graph
 	g := graph.NewGraphOf(graph.NewNode(rootID, nil), "provider option")
-
-	// first add all options to the graph
 	err := addOptionsToGraph(g, options)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
 	// next add the dependencies
-	err = addDependencies(g, options)
+	err = addDependencies(g, options, optionValues)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
 	// resolve options
-	resolvedOptions, err := resolveOptions(
+	resolvedOptions, dynamicOptions, err := resolveOptions(
 		ctx,
 		g,
 		optionValues,
@@ -269,10 +329,10 @@ func resolveOptionsGeneric(
 		log,
 	)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
-	return resolvedOptions, nil
+	return resolvedOptions, dynamicOptions, nil
 }
 
 func resolveOptions(
@@ -285,7 +345,7 @@ func resolveOptions(
 	resolveGlobal bool,
 	skipRequired bool,
 	log log.Logger,
-) (map[string]config.OptionValue, error) {
+) (map[string]config.OptionValue, config.DynamicOptions, error) {
 	// copy options
 	resolvedOptions := map[string]config.OptionValue{}
 	for optionName, v := range optionValues {
@@ -300,12 +360,13 @@ func resolveOptions(
 		orderedOptions = append(orderedOptions, nextLeaf.ID)
 		err := clonedGraph.RemoveNode(nextLeaf.ID)
 		if err != nil {
-			return nil, err
+			return nil, nil, err
 		}
 
 		nextLeaf = clonedGraph.GetNextLeaf(clonedGraph.Root)
 	}
 
+	dynamicOptions := config.DynamicOptions{}
 	// resolve options in reverse order to walk from highest to lowest
 	excludedOptions := map[string]bool{}
 	for i := len(orderedOptions) - 1; i >= 0; i-- {
@@ -314,13 +375,16 @@ func resolveOptions(
 			continue
 		}
 
-		err := resolveOption(ctx, g, optionName, resolvedOptions, excludedOptions, userOptions, extraValues, resolveLocal, resolveGlobal, skipRequired, log)
+		newOpts, err := resolveOption(ctx, g, optionName, resolvedOptions, excludedOptions, userOptions, extraValues, resolveLocal, resolveGlobal, skipRequired, log)
 		if err != nil {
-			return nil, errors.Wrap(err, "resolve option "+optionName)
+			return nil, nil, errors.Wrap(err, "resolve option "+optionName)
+		}
+		for k, v := range newOpts {
+			dynamicOptions[k] = v
 		}
 	}
 
-	return resolvedOptions, nil
+	return resolvedOptions, dynamicOptions, nil
 }
 
 func resolveOption(
@@ -335,9 +399,10 @@ func resolveOption(
 	resolveGlobal bool,
 	skipRequired bool,
 	log log.Logger,
-) error {
+) (config.DynamicOptions, error) {
+	dynamicOptions := config.DynamicOptions{}
 	node := g.Nodes[optionName]
-	option := node.Data.(*provider2.ProviderOption)
+	option := node.Data.(*types.Option)
 
 	// check if user value exists
 	userValue, userValueOk := userOptions[optionName]
@@ -348,9 +413,9 @@ func resolveOption(
 		if !option.Required {
 			// skip if global
 			if !resolveGlobal && option.Global {
-				return nil
+				return dynamicOptions, nil
 			} else if !resolveLocal && option.Local {
-				return nil
+				return dynamicOptions, nil
 			}
 		}
 
@@ -358,23 +423,23 @@ func resolveOption(
 		val, ok := resolvedOptions[optionName]
 		if ok {
 			if val.UserProvided || option.Cache == "" {
-				return nil
+				return dynamicOptions, nil
 			} else if option.Cache != "" {
 				duration, err := time.ParseDuration(option.Cache)
 				if err != nil {
-					return errors.Wrapf(err, "parse cache duration of option %s", optionName)
+					return nil, errors.Wrapf(err, "parse cache duration of option %s", optionName)
 				}
 
 				// has value expired?
 				if val.Filled != nil && val.Filled.Add(duration).After(time.Now()) {
-					return nil
+					return dynamicOptions, nil
 				}
 			}
 		}
 	}
 
-	// get before value
 	beforeValue := resolvedOptions[optionName].Value
+	beforeChildren := resolvedOptions[optionName].Children
 
 	// resolve option
 	if userValueOk {
@@ -389,7 +454,7 @@ func resolveOption(
 	} else if option.Command != "" {
 		optionValue, err := resolveFromCommand(ctx, option, resolvedOptions, extraValues)
 		if err != nil {
-			return err
+			return nil, err
 		}
 
 		resolvedOptions[optionName] = optionValue
@@ -397,17 +462,22 @@ func resolveOption(
 		resolvedOptions[optionName] = config.OptionValue{}
 	}
 
+	// Preserve children
+	opt := resolvedOptions[optionName]
+	opt.Children = beforeChildren
+	resolvedOptions[optionName] = opt
+
 	// is required?
 	if !userValueOk && option.Required && resolvedOptions[optionName].Value == "" && !resolvedOptions[optionName].UserProvided {
 		if skipRequired {
 			delete(resolvedOptions, optionName)
 			excludeChildren(g.Nodes[optionName], excludedOptions)
-			return nil
+			return dynamicOptions, nil
 		}
 
 		// check if we can ask a question
 		if !terminal.IsTerminalIn {
-			return fmt.Errorf("option %s is required, but no value provided", optionName)
+			return dynamicOptions, fmt.Errorf("option %s is required, but no value provided", optionName)
 		}
 
 		log.Info(option.Description)
@@ -419,7 +489,7 @@ func resolveOption(
 			IsPassword:             option.Password,
 		})
 		if err != nil {
-			return err
+			return dynamicOptions, err
 		}
 
 		resolvedOptions[optionName] = config.OptionValue{
@@ -428,8 +498,31 @@ func resolveOption(
 		}
 	}
 
-	// has changed
 	if beforeValue != resolvedOptions[optionName].Value {
+		// Fetch dynamic options if necessary
+		if option.SubOptionsCommand != "" {
+			updatedOpt, newOpts, err := resolveSubOptions(ctx, option, optionName, resolvedOptions, extraValues)
+			if err != nil {
+				return nil, err
+			}
+			resolvedOptions[optionName] = updatedOpt
+			dynamicOptions = newOpts
+		}
+
+		children := resolvedOptions[optionName].Children
+		// remove children from graph
+		if len(children) > 0 {
+			for _, childID := range children {
+				invalidateSubGraph(g, childID, func(id string) {
+					delete(resolvedOptions, id)
+					delete(userOptions, id)
+					excludedOptions[id] = true
+				})
+			}
+		} else {
+			excludeChildren(g.Nodes[optionName], excludedOptions)
+		}
+
 		// resolve children again
 		for _, child := range node.Childs {
 			// check if value is already there
@@ -439,9 +532,43 @@ func resolveOption(
 				delete(resolvedOptions, child.ID)
 			}
 		}
+	} else {
+		// Rebuild dynamic options from children
+		resolvedChildren := resolvedOptions[optionName].Children
+		if len(resolvedChildren) > 0 {
+			for _, child := range node.Childs {
+				childOpt, ok := child.Data.(*types.Option)
+				if !ok || !contains(resolvedChildren, child.ID) {
+					continue
+				}
+				dynamicOptions[child.ID] = childOpt
+			}
+		}
 	}
 
-	return nil
+	return dynamicOptions, nil
+}
+
+func invalidateSubGraph(g *graph.Graph, id string, afterInvalidation func(id string)) {
+	node, ok := g.Nodes[id]
+	if node == nil || !ok {
+		return
+	}
+	// collect ids of children before removing the node as it mutates the graph,
+	// thus re-ordering the children in the nodes slice which then invalidates the pointer of the current iteration
+	children := []string{}
+	for _, child := range node.Childs {
+		children = append(children, child.ID)
+	}
+
+	for _, childID := range children {
+		invalidateSubGraph(g, childID, afterInvalidation)
+	}
+	err := g.RemoveNode(id)
+	if err != nil {
+		return
+	}
+	afterInvalidation(id)
 }
 
 func excludeChildren(node *graph.Node, excludedOptions map[string]bool) {
@@ -451,7 +578,7 @@ func excludeChildren(node *graph.Node, excludedOptions map[string]bool) {
 	}
 }
 
-func resolveFromCommand(ctx context.Context, option *provider2.ProviderOption, resolvedOptions map[string]config.OptionValue, extraValues map[string]string) (config.OptionValue, error) {
+func resolveFromCommand(ctx context.Context, option *types.Option, resolvedOptions map[string]config.OptionValue, extraValues map[string]string) (config.OptionValue, error) {
 	stdout := &bytes.Buffer{}
 	stderr := &bytes.Buffer{}
 	env := os.Environ()
@@ -468,6 +595,40 @@ func resolveFromCommand(ctx context.Context, option *provider2.ProviderOption, r
 	expire := types.NewTime(time.Now())
 	optionValue.Filled = &expire
 	return optionValue, nil
+}
+
+func resolveSubOptions(ctx context.Context, option *types.Option, optionName string, resolvedOptions map[string]config.OptionValue, extraValues map[string]string) (config.OptionValue, config.DynamicOptions, error) {
+	stdout := &bytes.Buffer{}
+	stderr := &bytes.Buffer{}
+	env := os.Environ()
+	for k, v := range combine(resolvedOptions, extraValues) {
+		env = append(env, k+"="+v)
+	}
+
+	err := shell.ExecuteCommandWithShell(ctx, option.SubOptionsCommand, nil, stdout, stderr, env)
+	if err != nil {
+		return config.OptionValue{}, nil, errors.Wrapf(err, "run subOptionsCommand: %s%s", stdout.String(), stderr.String())
+	}
+	subOptions := provider2.SubOptions{}
+	err = json.Unmarshal(stdout.Bytes(), &subOptions)
+	if err != nil {
+		return config.OptionValue{}, nil, errors.Wrapf(err, "parse subOptionsCommand: %s", stdout.String())
+	}
+
+	// prepare new options
+	retOpts := config.DynamicOptions{}
+	children := []string{}
+	// need to look for option in graph. should be rather easy because we don't need to traverse the whole graph
+	for k, v := range subOptions.Options {
+		cp := v
+		retOpts[k] = &cp
+		children = append(children, k)
+	}
+
+	newOpt := resolvedOptions[optionName]
+	newOpt.Children = children
+
+	return newOpt, retOpts, nil
 }
 
 func combine(resolvedOptions map[string]config.OptionValue, extraValues map[string]string) map[string]string {
@@ -507,8 +668,30 @@ func resolveDefaultValues(vals map[string]string, resolvedOptions map[string]str
 	return ret
 }
 
-func addDependencies(g *graph.Graph, options map[string]*provider2.ProviderOption) error {
+func addDependencies(g *graph.Graph, options config.DynamicOptions, optionValues map[string]config.OptionValue) error {
 	for optionName, option := range options {
+		// Always add children as dependencies
+		children := optionValues[optionName].Children
+		if len(children) > 0 {
+			for _, childName := range children {
+				dep := options[childName]
+				if dep == nil {
+					continue
+				}
+				if option.Global && !dep.Global {
+					return fmt.Errorf("cannot use a global option as a dependency of a non-global option. Option '%s' used in command of option '%s'", childName, optionName)
+				} else if !option.Local && dep.Local {
+					return fmt.Errorf("cannot use a non-local option as a dependency of a local option. Option '%s' used in default of option '%s'", childName, optionName)
+				}
+				err := g.AddEdge(optionName, childName)
+				if err != nil {
+					return err
+				}
+			}
+
+			continue
+		}
+
 		deps := FindVariables(option.Default)
 		for _, dep := range deps {
 			if options[dep] == nil || dep == optionName {
@@ -551,7 +734,7 @@ func addDependencies(g *graph.Graph, options map[string]*provider2.ProviderOptio
 	return nil
 }
 
-func addOptionsToGraph(g *graph.Graph, options map[string]*provider2.ProviderOption) error {
+func addOptionsToGraph(g *graph.Graph, options config.DynamicOptions) error {
 	for optionName, option := range options {
 		_, err := g.InsertNodeAt(rootID, optionName, option)
 		if err != nil {
@@ -562,7 +745,7 @@ func addOptionsToGraph(g *graph.Graph, options map[string]*provider2.ProviderOpt
 	return nil
 }
 
-func removeRootParent(g *graph.Graph, options map[string]*provider2.ProviderOption) {
+func removeRootParent(g *graph.Graph, options config.DynamicOptions) {
 	for optionName := range options {
 		node := g.Nodes[optionName]
 
@@ -647,4 +830,13 @@ func filterResolvedOptions(resolvedOptions, beforeConfigOptions, providerValues 
 
 		delete(resolvedOptions, k)
 	}
+}
+
+func contains(stack []string, k string) bool {
+	for _, s := range stack {
+		if s == k {
+			return true
+		}
+	}
+	return false
 }

@@ -11,6 +11,7 @@ import (
 	"github.com/loft-sh/devpod/pkg/config"
 	"github.com/loft-sh/devpod/pkg/options"
 	provider2 "github.com/loft-sh/devpod/pkg/provider"
+	"github.com/loft-sh/devpod/pkg/types"
 	"github.com/loft-sh/devpod/pkg/workspace"
 	"github.com/loft-sh/log"
 	"github.com/loft-sh/log/table"
@@ -46,7 +47,7 @@ func NewOptionsCmd(flags *flags.GlobalFlags) *cobra.Command {
 }
 
 type optionWithValue struct {
-	provider2.ProviderOption `json:",inline"`
+	types.Option `json:",inline"`
 
 	Value string `json:"value,omitempty"`
 }
@@ -71,16 +72,18 @@ func (cmd *OptionsCmd) Run(ctx context.Context, args []string) error {
 	}
 
 	if cmd.Prefill && (provider.State == nil || !provider.State.Initialized) {
-		devPodConfig, err = options.ResolveOptions(ctx, devPodConfig, provider.Config, nil, true, nil, log.Default.ErrorStreamOnly())
+		devPodConfig, err = options.ResolveOptions(ctx, devPodConfig, provider.Config, nil, true, nil, false, log.Default.ErrorStreamOnly())
 		if err != nil {
 			return err
 		}
 	}
 
 	entryOptions := devPodConfig.ProviderOptions(provider.Config.Name)
+	dynamicOptions := devPodConfig.DynamicProviderOptions(provider.Config.Name)
+	srcOptions := mergeDynamicOptions(provider.Config.Options, dynamicOptions)
 	if cmd.Output == "plain" {
 		tableEntries := [][]string{}
-		for optionName, entry := range provider.Config.Options {
+		for optionName, entry := range srcOptions {
 			if !cmd.Hidden && entry.Hidden {
 				continue
 			}
@@ -111,14 +114,14 @@ func (cmd *OptionsCmd) Run(ctx context.Context, args []string) error {
 		}, tableEntries)
 	} else if cmd.Output == "json" {
 		options := map[string]optionWithValue{}
-		for optionName, entry := range provider.Config.Options {
+		for optionName, entry := range srcOptions {
 			if !cmd.Hidden && entry.Hidden {
 				continue
 			}
 
 			options[optionName] = optionWithValue{
-				ProviderOption: *entry,
-				Value:          entryOptions[optionName].Value,
+				Option: *entry,
+				Value:  entryOptions[optionName].Value,
 			}
 		}
 
@@ -132,4 +135,18 @@ func (cmd *OptionsCmd) Run(ctx context.Context, args []string) error {
 	}
 
 	return nil
+}
+
+// mergeOptions merges the static provider options and dynamic options
+func mergeDynamicOptions(options map[string]*provider2.ProviderOption, dynamicOptions config.DynamicOptions) map[string]*types.Option {
+	retOptions := map[string]*types.Option{}
+	for k, option := range options {
+		retOptions[k] = &option.Option
+	}
+
+	for k, option := range dynamicOptions {
+		retOptions[k] = option
+	}
+
+	return retOptions
 }

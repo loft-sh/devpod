@@ -1,0 +1,13 @@
+{
+  "options": {
+    "TICK": {
+      "required": true
+    },
+    "TRICK": {
+      "required": false
+    },
+    "TRACK": {
+      "required": true
+    }
+  }
+}
