@@ -6,3 +6,4 @@ devpod
 # Unit test targets
 main
 profile.out
+tags

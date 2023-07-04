@@ -12,6 +12,7 @@ import (
 	"github.com/onsi/gomega"
 
 	// Register tests
+	_ "github.com/loft-sh/devpod/e2e/tests/integration"
 	_ "github.com/loft-sh/devpod/e2e/tests/machine"
 	_ "github.com/loft-sh/devpod/e2e/tests/provider"
 	_ "github.com/loft-sh/devpod/e2e/tests/proxyprovider"
