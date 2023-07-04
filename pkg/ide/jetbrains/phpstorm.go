@@ -13,7 +13,7 @@ var PhpStormOptions = ide.Options{
 	VersionOption: {
 		Name:        VersionOption,
 		Description: "The version for the binary",
-		Default:     "2023.1.1",
+		Default:     "2023.1.3",
 	},
 	DownloadArm64Option: {
 		Name:        DownloadArm64Option,
