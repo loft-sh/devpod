@@ -15,6 +15,7 @@ import (
 	"github.com/loft-sh/devpod/pkg/config"
 	config2 "github.com/loft-sh/devpod/pkg/devcontainer/config"
 	"github.com/loft-sh/devpod/pkg/devcontainer/setup"
+	"github.com/loft-sh/devpod/pkg/ide/openvscode"
 	"github.com/loft-sh/devpod/pkg/netstat"
 	devssh "github.com/loft-sh/devpod/pkg/ssh"
 	"github.com/loft-sh/log"
@@ -28,7 +29,7 @@ func RunInContainer(
 	devPodConfig *config.Config,
 	containerClient *ssh.Client,
 	user string,
-	forwardPorts,
+	forwardPorts bool,
 	gitCredentials,
 	dockerCredentials bool,
 	extraPorts []string,
@@ -87,7 +88,7 @@ func RunInContainer(
 	// create a port forwarder
 	var forwarder netstat.Forwarder
 	if forwardPorts {
-		forwarder = newForwarder(containerClient, forwardedPorts, log)
+		forwarder = newForwarder(containerClient, append(forwardedPorts, fmt.Sprintf("%d", openvscode.DefaultVSCodePort)), log)
 	}
 
 	// forward credentials to container

@@ -25,17 +25,33 @@ const DownloadAmd64Template = "https://github.com/gitpod-io/openvscode-server/re
 const DownloadArm64Template = "https://github.com/gitpod-io/openvscode-server/releases/download/openvscode-server-%s/openvscode-server-%s-linux-arm64.tar.gz"
 
 const (
+	ForwardPortsOption  = "FORWARD_PORTS"
 	OpenOption          = "OPEN"
+	BindAddressOption   = "BIND_ADDRESS"
 	VersionOption       = "VERSION"
 	DownloadAmd64Option = "DOWNLOAD_AMD64"
 	DownloadArm64Option = "DOWNLOAD_ARM64"
 )
 
 var Options = ide.Options{
+	ForwardPortsOption: {
+		Name:        ForwardPortsOption,
+		Description: "If DevPod should automatically do port-forwarding",
+		Default:     "true",
+		Enum: []string{
+			"true",
+			"false",
+		},
+	},
+	BindAddressOption: {
+		Name:        BindAddressOption,
+		Description: "The address to bind VSCode web to locally. E.g. 0.0.0.0:12345",
+		Default:     "",
+	},
 	VersionOption: {
 		Name:        VersionOption,
 		Description: "The version for the open vscode binary",
-		Default:     "v1.78.2",
+		Default:     "v1.79.2",
 	},
 	OpenOption: {
 		Name:        OpenOption,
