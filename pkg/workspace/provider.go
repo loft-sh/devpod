@@ -392,21 +392,5 @@ func LoadAllProviders(devPodConfig *config.Config, log log.Logger) (map[string]*
 		}
 	}
 
-	// update internal providers
-	for k, v := range retProviders {
-		if providers.GetBuiltInProviders()[k] == "" {
-			continue
-		}
-
-		// keep source
-		originalSource := v.Config.Source
-
-		v.Config, err = provider2.ParseProvider(bytes.NewReader([]byte(providers.GetBuiltInProviders()[k])))
-		if err != nil {
-			return nil, err
-		}
-		v.Config.Source = originalSource
-	}
-
 	return retProviders, nil
 }
