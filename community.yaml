@@ -1,0 +1,7 @@
+providers:
+  - repository: https://github.com/alexandrevilain/devpod-provider-ovhcloud
+  - repository: https://github.com/dirien/devpod-provider-hetzner
+  - repository: https://github.com/dirien/devpod-provider-scaleway
+  - repository: https://github.com/mrsimonemms/devpod-provider-hetzner
+  - repository: https://github.com/cloudbit-ch/devpod-provider-cloudbit
+  - repository: https://github.com/flowswiss/devpod-provider-flow

@@ -8,7 +8,7 @@ import {
   useDisclosure,
   VStack,
 } from "@chakra-ui/react"
-import { useCallback, useMemo, useState } from "react"
+import { useCallback, useMemo, useRef, useState } from "react"
 import { useNavigate } from "react-router-dom"
 import { Routes } from "../../routes"
 import { TProviderID } from "../../types"
@@ -25,6 +25,7 @@ export function useSetupProviderModal() {
   )
   const [wasDismissed, setWasDismissed] = useState(false)
   const [currentProviderID, setCurrentProviderID] = useState<string | null>(null)
+  const containerRef = useRef<HTMLDivElement>(null)
 
   const show = useCallback(
     ({
@@ -89,9 +90,10 @@ export function useSetupProviderModal() {
         <ModalContent position="relative" overflow="hidden">
           <ModalHeader>{title}</ModalHeader>
           <ModalCloseButton onClick={handleCloseClicked} />
-          <ModalBody overflowX="hidden" overflowY="auto" paddingBottom="0">
+          <ModalBody overflowX="hidden" overflowY="auto" paddingBottom="0" ref={containerRef}>
             <VStack align="start" spacing="8">
               <SetupProviderSteps
+                containerRef={containerRef}
                 suggestedProvider={suggestedProvider}
                 cloneProviderInfo={cloneProviderInfo}
                 onProviderIDChanged={setCurrentProviderID}

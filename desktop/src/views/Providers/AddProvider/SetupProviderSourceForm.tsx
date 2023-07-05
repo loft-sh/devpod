@@ -1,6 +1,5 @@
 import { CheckIcon } from "@chakra-ui/icons"
 import {
-  Box,
   Button,
   ButtonGroup,
   Code,
@@ -15,25 +14,42 @@ import {
   InputGroup,
   InputProps,
   InputRightElement,
+  Menu,
+  MenuButton,
+  MenuItem,
+  MenuList,
   Stack,
   Text,
+  Tooltip,
   useBreakpointValue,
 } from "@chakra-ui/react"
 import styled from "@emotion/styled"
 import { useQueryClient } from "@tanstack/react-query"
 import { AnimatePresence, motion } from "framer-motion"
 import { useCallback, useEffect, useRef, useState } from "react"
-import { Controller, ControllerRenderProps, SubmitHandler, useForm } from "react-hook-form"
+import {
+  Controller,
+  ControllerRenderProps,
+  SetValueConfig,
+  SubmitHandler,
+  useForm,
+} from "react-hook-form"
 import { FiFolder } from "react-icons/fi"
 import { useBorderColor } from "../../../Theme"
 import { client } from "../../../client"
 import { ErrorMessageBox, ExampleCard } from "../../../components"
 import { RECOMMENDED_PROVIDER_SOURCES } from "../../../constants"
 import { useProviders } from "../../../contexts"
-import { CustomSvg } from "../../../images"
+import { Stack3D } from "../../../icons"
+import { CustomSvg, CommunitySvg } from "../../../images"
 import { exists, isError, randomString, useFormErrors } from "../../../lib"
 import { QueryKeys } from "../../../queryKeys"
-import { TProviderID } from "../../../types"
+import {
+  TCommunitProvider,
+  TCommunitProvider as TCommunityProvider,
+  TProviderID,
+} from "../../../types"
+import { useCommunityContributions } from "../../../useCommunityContributions"
 import { LoadingProviderIndicator } from "./LoadingProviderIndicator"
 import { FieldName, TFormValues, TSetupProviderResult } from "./types"
 import { useAddProvider } from "./useAddProvider"
@@ -45,6 +61,10 @@ const Form = styled.form`
   justify-content: center;
 `
 const ALLOWED_NAMES_REGEX = /^[a-z0-9\\-]+$/
+const DEFAULT_VAL_OPTS: SetValueConfig = {
+  shouldDirty: true,
+  shouldValidate: true,
+}
 
 type TSetupProviderSourceFormProps = Readonly<{
   suggestedProvider?: TProviderID
@@ -59,7 +79,11 @@ export function SetupProviderSourceForm({
   removeDanglingProviders,
 }: TSetupProviderSourceFormProps) {
   const [[providers]] = useProviders()
-  const [showCustom, setShowCustom] = useState(false)
+  const { contributions } = useCommunityContributions()
+  const [showCustom, setShowCustom] = useState({
+    manual: false,
+    community: false,
+  })
   const { handleSubmit, formState, watch, setValue, control } = useForm<TFormValues>({
     mode: "onBlur",
   })
@@ -77,7 +101,7 @@ export function SetupProviderSourceForm({
     onSuccess(result) {
       queryClient.invalidateQueries(QueryKeys.PROVIDERS)
       setValue(FieldName.PROVIDER_NAME, undefined, { shouldDirty: true })
-      setShowCustom(false)
+      setShowCustom({ manual: false, community: false })
       onFinish(result)
     },
     onError() {
@@ -90,11 +114,6 @@ export function SetupProviderSourceForm({
       const providerSource = data[FieldName.PROVIDER_SOURCE].trim()
       const maybeProviderName = data[FieldName.PROVIDER_NAME]?.trim()
 
-      const opts = {
-        shouldDirty: true,
-        shouldValidate: true,
-      }
-
       const providerIDRes = await client.providers.newID(providerSource)
       let preferredProviderName: string | undefined
       if (providerIDRes.ok) {
@@ -104,22 +123,30 @@ export function SetupProviderSourceForm({
       removeDanglingProviders()
       // custom name taken
       if (maybeProviderName !== undefined && providers?.[maybeProviderName] !== undefined) {
-        setValue(FieldName.PROVIDER_NAME, `${maybeProviderName}-${randomString(8)}`, opts)
+        setValue(
+          FieldName.PROVIDER_NAME,
+          `${maybeProviderName}-${randomString(8)}`,
+          DEFAULT_VAL_OPTS
+        )
         // preferred ID available
       } else if (maybeProviderName === undefined && preferredProviderName !== undefined) {
         // preferred ID taken
         if (providers?.[preferredProviderName] !== undefined) {
-          setValue(FieldName.PROVIDER_NAME, `${preferredProviderName}-${randomString(8)}`, opts)
+          setValue(
+            FieldName.PROVIDER_NAME,
+            `${preferredProviderName}-${randomString(8)}`,
+            DEFAULT_VAL_OPTS
+          )
         } else {
           // preferred ID available
-          setValue(FieldName.PROVIDER_NAME, undefined, opts)
+          setValue(FieldName.PROVIDER_NAME, undefined, DEFAULT_VAL_OPTS)
           addProvider({
             rawProviderSource: providerSource,
             config: { name: preferredProviderName },
           })
         }
       } else {
-        setValue(FieldName.PROVIDER_NAME, undefined, opts)
+        setValue(FieldName.PROVIDER_NAME, undefined, DEFAULT_VAL_OPTS)
         addProvider({
           rawProviderSource: providerSource,
           config: { name: maybeProviderName ?? preferredProviderName },
@@ -147,14 +174,9 @@ export function SetupProviderSourceForm({
 
   const handleRecommendedProviderClicked = useCallback(
     (sourceName: string) => () => {
-      setShowCustom(false)
-
-      const opts = {
-        shouldDirty: true,
-        shouldValidate: true,
-      }
-      setValue(FieldName.PROVIDER_SOURCE, sourceName, opts)
-      setValue(FieldName.PROVIDER_NAME, undefined, opts)
+      setShowCustom({ manual: false, community: false })
+      setValue(FieldName.PROVIDER_SOURCE, sourceName, DEFAULT_VAL_OPTS)
+      setValue(FieldName.PROVIDER_NAME, undefined, DEFAULT_VAL_OPTS)
       if (providerSource === sourceName) {
         return
       }
@@ -184,22 +206,37 @@ export function SetupProviderSourceForm({
   }, [handleRecommendedProviderClicked, providerSource, setValue, suggestedProvider])
 
   const handleCustomProviderClicked = useCallback(() => {
-    setShowCustom(true)
-    const opts = {
-      shouldDirty: true,
-      shouldValidate: true,
-    }
-    setValue(FieldName.PROVIDER_SOURCE, "", opts)
-    setValue(FieldName.PROVIDER_NAME, undefined, opts)
+    setShowCustom({ manual: true, community: false })
+    setValue(FieldName.PROVIDER_SOURCE, "", DEFAULT_VAL_OPTS)
+    setValue(FieldName.PROVIDER_NAME, undefined, DEFAULT_VAL_OPTS)
     removeDanglingProviders()
     reset()
   }, [removeDanglingProviders, reset, setValue])
+
+  const handleCommunityProviderClicked = useCallback(
+    (communityProvider: TCommunitProvider) => {
+      setShowCustom({ manual: false, community: true })
+      let source = communityProvider.repository
+      // Github-hosted providers are special, the CLI expects them to be passed in without the `https://` prefix
+      if (source.includes("github.com")) {
+        source = communityProvider.repository.replace("https://", "")
+      }
+
+      setValue(FieldName.PROVIDER_SOURCE, source, DEFAULT_VAL_OPTS)
+      setValue(FieldName.PROVIDER_NAME, undefined, DEFAULT_VAL_OPTS)
+      removeDanglingProviders()
+      reset()
+      handleSubmit(onSubmit)()
+    },
+    [handleSubmit, onSubmit, removeDanglingProviders, reset, setValue]
+  )
 
   const isLoading = formState.isSubmitting || status === "loading"
   const exampleCardSize = useBreakpointValue<"md" | "lg">({ base: "md", xl: "lg" })
 
   const genericProviders = RECOMMENDED_PROVIDER_SOURCES.filter((p) => p.group === "generic")
   const cloudProviders = RECOMMENDED_PROVIDER_SOURCES.filter((p) => p.group === "cloud")
+  const communityProviders = contributions?.providers
 
   return (
     <>
@@ -249,21 +286,64 @@ export function SetupProviderSourceForm({
                 ))}
               </HStack>
 
-              <Box paddingX="6" marginInlineStart="0 !important">
+              <HStack height="full" paddingX="6">
+                <Menu placement="left">
+                  <MenuButton
+                    as={Button}
+                    isDisabled={isLoading || !communityProviders || communityProviders.length === 0}
+                    _disabled={{ opacity: 1, cursor: "not-allowed" }}
+                    variant="ghost"
+                    width="fit-content"
+                    height="fit-content"
+                    paddingInline="0 !important">
+                    <ExampleCard
+                      size={exampleCardSize}
+                      name="community"
+                      image={CommunitySvg}
+                      isSelected={showCustom.community}
+                      isDisabled={
+                        isLoading || !communityProviders || communityProviders.length === 0
+                      }
+                    />
+                  </MenuButton>
+                  <MenuList overflowY="auto" maxHeight="72">
+                    {communityProviders
+                      ?.map(mapCommunityProviderInfo)
+                      .filter((x): x is NonNullable<typeof x> => x !== undefined)
+                      .sort(sortCommunityProviderInfo)
+                      .map((info) => (
+                        <MenuItem
+                          key={info.repository}
+                          onClick={() => handleCommunityProviderClicked(info)}>
+                          <HStack>
+                            <Stack3D boxSize="4" />
+                            {typeof info.title === "string" ? (
+                              <Text>{info.title}</Text>
+                            ) : (
+                              <Text>
+                                {info.title.org}/<b>{info.title.name}</b>
+                              </Text>
+                            )}
+                          </HStack>
+                        </MenuItem>
+                      ))}
+                  </MenuList>
+                </Menu>
+
                 <ExampleCard
                   size={exampleCardSize}
                   name="custom"
                   image={CustomSvg}
-                  isSelected={showCustom}
+                  isSelected={showCustom.manual}
                   isDisabled={isLoading}
                   onClick={handleCustomProviderClicked}
                 />
-              </Box>
+              </HStack>
             </HStack>
           </FormControl>
 
           <Container color="gray.600" maxWidth="container.md">
-            {showCustom && (
+            {showCustom.manual && (
               <FormControl isRequired isInvalid={exists(providerSourceError)}>
                 <FormLabel>Source</FormLabel>
                 <Controller
@@ -448,4 +528,49 @@ function CustomProviderInput({ field, isInvalid, onAccept }: TCustomProviderInpu
       </InputRightElement>
     </InputGroup>
   )
+}
+
+type TCommunityProviderInfo = Readonly<{
+  title: string | { org: string; name: string }
+  repository: string
+}>
+function mapCommunityProviderInfo(
+  communityProvider: TCommunityProvider
+): TCommunityProviderInfo | undefined {
+  const repo = communityProvider.repository
+  try {
+    const url = new URL(repo)
+    const segments = url.pathname.split("/").filter((s) => s !== "")
+
+    // probably $ORG/$REPO
+    if (segments.length === 2 && segments[0] !== undefined && segments[1] !== undefined) {
+      return { title: { org: segments[0], name: stripDevpodPrefix(segments[1]) }, repository: repo }
+    }
+
+    const last = segments.pop()
+    if (last !== undefined) {
+      return { title: stripDevpodPrefix(last), repository: repo }
+    }
+
+    return undefined
+  } catch (e) {
+    console.error(`Unable to convert "${repo}" to URL: ${e}`)
+
+    return undefined
+  }
+}
+
+function stripDevpodPrefix(rawCommunityProvider: string): string {
+  return rawCommunityProvider.replace("devpod-provider-", "")
+}
+
+function sortCommunityProviderInfo(a: TCommunityProviderInfo, b: TCommunityProviderInfo): number {
+  if (typeof a.title === "string" && typeof b.title === "string") {
+    return a.title > b.title ? 1 : -1
+  }
+
+  if (typeof a.title === "string") return 1
+  if (typeof b.title === "string") return -1
+
+  return a.title.name > b.title.name ? 1 : -1
 }

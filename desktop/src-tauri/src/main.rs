@@ -6,6 +6,7 @@
 mod action_logs;
 mod commands;
 mod custom_protocol;
+mod community_contributions;
 mod install_cli;
 mod logging;
 mod providers;
@@ -15,8 +16,8 @@ mod util;
 mod window;
 mod workspaces;
 
+use community_contributions::CommunityContributions;
 use custom_protocol::{CustomProtocol, OpenWorkspaceMsg};
-use log::error;
 use serde::Serialize;
 use std::{
     collections::VecDeque,
@@ -26,12 +27,14 @@ use system_tray::SystemTray;
 use tauri::{Manager, Menu, Wry};
 use tokio::sync::mpsc::{self, Sender};
 use workspaces::WorkspacesState;
+use log::error;
 
 pub type AppHandle = tauri::AppHandle<Wry>;
 
 #[derive(Debug)]
 pub struct AppState {
     workspaces: Arc<Mutex<WorkspacesState>>,
+    community_contributions: Arc<Mutex<CommunityContributions>>,
     ui_messages: Sender<UiMessage>,
 }
 
@@ -42,7 +45,7 @@ enum UiMessage {
     ExitRequested,
     ShowDashboard,
     OpenWorkspace(OpenWorkspaceMsg),
-    OpenWorkspaceFailed(crate::custom_protocol::ParseError),
+    OpenWorkspaceFailed(custom_protocol::ParseError),
 }
 
 fn main() -> anyhow::Result<()> {
@@ -56,6 +59,7 @@ fn main() -> anyhow::Result<()> {
     };
 
     let custom_protocol = CustomProtocol::init();
+    let contributions = community_contributions::init()?;
 
     let system_tray = SystemTray::new();
     let system_tray_event_handler = system_tray.get_event_handler();
@@ -65,7 +69,8 @@ fn main() -> anyhow::Result<()> {
     tauri::Builder::default()
         .manage(AppState {
             workspaces: Arc::new(Mutex::new(WorkspacesState::default())),
-            ui_messages: tx.clone(),
+            community_contributions: Arc::new(Mutex::new(contributions)),
+            ui_messages: tx.clone()
         })
         .plugin(logging::build_plugin())
         .plugin(tauri_plugin_store::Builder::default().build())
@@ -77,6 +82,7 @@ fn main() -> anyhow::Result<()> {
             window::setup(&window);
 
             workspaces::setup(&app.handle(), app.state());
+            community_contributions::setup(app.state());
             action_logs::setup(&app.handle())?;
             custom_protocol.setup(app.handle());
 
@@ -147,6 +153,7 @@ fn main() -> anyhow::Result<()> {
             action_logs::get_action_logs,
             action_logs::sync_action_logs,
             install_cli::install_cli,
+            community_contributions::get_contributions,
         ])
         .build(ctx)
         .expect("error while building tauri application")

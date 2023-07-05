@@ -6,6 +6,7 @@ export const QueryKeys = {
   WORKSPACES: ["workspaces"],
   PROVIDERS: ["providers"],
   IDES: ["ides"],
+  COMMUNITY_CONTRIBUTIONS: ["communityContributions"],
   workspace(id: TWorkspaceID): string[] {
     return [...QueryKeys.WORKSPACES, id]
   },

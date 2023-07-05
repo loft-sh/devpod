@@ -37,7 +37,7 @@ export function Sidebar({ children, ...boxProps }: TSidebarProps) {
   return (
     <Grid
       as="aside"
-      templateRows="6rem 1fr 6rem"
+      templateRows="4rem 1fr 6rem"
       width="full"
       height="100vh"
       borderRightColor={borderColor}
@@ -50,9 +50,9 @@ export function Sidebar({ children, ...boxProps }: TSidebarProps) {
         justify="flex-start"
         width="full">
         <Box width="8" />
-        <DevpodWordmark marginTop={4} width={32} height={16} color={wordmarkColor} />
+        <DevpodWordmark marginTop={2} width={32} height={10} color={wordmarkColor} />
       </Flex>
-      <VStack as="nav" align="start">
+      <VStack marginTop="8" as="nav" align="start">
         {children}
       </VStack>
       <HStack alignSelf="end" paddingTop="4" paddingLeft="8" paddingBottom="4">

@@ -1,5 +1,5 @@
 import { Box, Container, VStack } from "@chakra-ui/react"
-import { useCallback, useEffect, useRef } from "react"
+import { RefObject, useCallback, useEffect, useRef } from "react"
 import { TProviderID } from "../../../types"
 import { SetupClonedProvider } from "./SetupClonedProvider"
 import { ConfigureProviderOptionsForm } from "./ConfigureProviderOptionsForm"
@@ -12,6 +12,7 @@ type TSetupProviderStepsProps = Readonly<{
   isModal?: boolean
   suggestedProvider?: TProviderID
   cloneProviderInfo?: TCloneProviderInfo
+  containerRef?: RefObject<HTMLDivElement>
   onProviderIDChanged?: (id: string | null) => void
 }>
 
@@ -20,6 +21,7 @@ export function SetupProviderSteps({
   suggestedProvider,
   cloneProviderInfo,
   onProviderIDChanged,
+  containerRef,
   isModal = false,
 }: TSetupProviderStepsProps) {
   const openLockRef = useRef(false)
@@ -96,6 +98,7 @@ export function SetupProviderSteps({
                 reuseMachine={true}
                 options={state.options}
                 optionGroups={state.optionGroups}
+                containerRef={containerRef}
                 onFinish={completeConfigureProvider}
               />
             </VStack>

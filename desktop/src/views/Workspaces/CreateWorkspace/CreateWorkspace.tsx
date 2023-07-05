@@ -473,7 +473,7 @@ function ProviderInput({ options, field, onAddProviderClicked }: TProviderInputP
             name={p.name}
             size="sm"
             onClick={() => field.onChange(p.name)}
-            image={p.config?.icon ?? undefined}
+            image={p.config?.icon ?? ProviderPlaceholderSvg}
           />
         </Box>
       ))}
@@ -492,7 +492,7 @@ function ProviderInput({ options, field, onAddProviderClicked }: TProviderInputP
 
 import styled from "@emotion/styled"
 import { Plus } from "../../../icons"
-import { NoneSvg } from "../../../images"
+import { NoneSvg, ProviderPlaceholderSvg } from "../../../images"
 type TIDEInputProps = Readonly<{
   ides: readonly TIDE[] | undefined
   field: ControllerRenderProps<TFormValues, (typeof FieldName)["DEFAULT_IDE"]>
