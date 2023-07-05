@@ -3,15 +3,14 @@ package agent
 import (
 	"bytes"
 	"context"
-	"crypto/tls"
 	"fmt"
 	"io"
-	"net/http"
 	"os"
 	"path/filepath"
 	"runtime"
 	"time"
 
+	devpodhttp "github.com/loft-sh/devpod/pkg/http"
 	"github.com/loft-sh/devpod/pkg/inject"
 	"github.com/loft-sh/devpod/pkg/shell"
 	"github.com/loft-sh/devpod/pkg/version"
@@ -188,10 +187,7 @@ func downloadAgentLocally(tryDownloadURL, targetArch string, log log.Logger) (st
 		return agentPath, nil
 	}
 
-	customTransport := http.DefaultTransport.(*http.Transport).Clone()
-	customTransport.TLSClientConfig = &tls.Config{InsecureSkipVerify: true}
-	httpClient := &http.Client{Transport: customTransport}
-	resp, err := httpClient.Get(tryDownloadURL + "/devpod-linux-" + targetArch)
+	resp, err := devpodhttp.GetHTTPClient().Get(tryDownloadURL + "/devpod-linux-" + targetArch)
 	if err != nil {
 		return "", errors.Wrap(err, "download devpod")
 	}

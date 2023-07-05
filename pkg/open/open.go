@@ -2,11 +2,11 @@ package open
 
 import (
 	"context"
-	"crypto/tls"
 	"fmt"
 	"net/http"
 	"time"
 
+	devpodhttp "github.com/loft-sh/devpod/pkg/http"
 	"github.com/loft-sh/log"
 	"github.com/skratchdot/open-golang/open"
 )
@@ -34,11 +34,7 @@ func tryOpen(ctx context.Context, url string, log log.Logger) error {
 		return err
 	}
 
-	customTransport := http.DefaultTransport.(*http.Transport).Clone()
-	customTransport.TLSClientConfig = &tls.Config{InsecureSkipVerify: true}
-	client := &http.Client{Transport: customTransport}
-
-	resp, err := client.Do(req)
+	resp, err := devpodhttp.GetHTTPClient().Do(req)
 	if err != nil {
 		return err
 	}
