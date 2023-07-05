@@ -20,7 +20,6 @@ import {
   MenuList,
   Stack,
   Text,
-  Tooltip,
   useBreakpointValue,
 } from "@chakra-ui/react"
 import styled from "@emotion/styled"
@@ -41,14 +40,10 @@ import { ErrorMessageBox, ExampleCard } from "../../../components"
 import { RECOMMENDED_PROVIDER_SOURCES } from "../../../constants"
 import { useProviders } from "../../../contexts"
 import { Stack3D } from "../../../icons"
-import { CustomSvg, CommunitySvg } from "../../../images"
+import { CommunitySvg, CustomSvg } from "../../../images"
 import { exists, isError, randomString, useFormErrors } from "../../../lib"
 import { QueryKeys } from "../../../queryKeys"
-import {
-  TCommunitProvider,
-  TCommunitProvider as TCommunityProvider,
-  TProviderID,
-} from "../../../types"
+import { TCommunityProvider, TProviderID } from "../../../types"
 import { useCommunityContributions } from "../../../useCommunityContributions"
 import { LoadingProviderIndicator } from "./LoadingProviderIndicator"
 import { FieldName, TFormValues, TSetupProviderResult } from "./types"
@@ -214,7 +209,7 @@ export function SetupProviderSourceForm({
   }, [removeDanglingProviders, reset, setValue])
 
   const handleCommunityProviderClicked = useCallback(
-    (communityProvider: TCommunitProvider) => {
+    (communityProvider: TCommunityProvider) => {
       setShowCustom({ manual: false, community: true })
       let source = communityProvider.repository
       // Github-hosted providers are special, the CLI expects them to be passed in without the `https://` prefix
