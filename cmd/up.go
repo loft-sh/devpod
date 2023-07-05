@@ -4,9 +4,11 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"net"
 	"net/url"
 	"os"
 	"os/exec"
+	"strconv"
 
 	"github.com/loft-sh/devpod/cmd/flags"
 	"github.com/loft-sh/devpod/pkg/agent"
@@ -196,9 +198,32 @@ func startInBrowser(ctx context.Context, devPodConfig *config.Config, client cli
 	}
 
 	// determine port
-	vscodePort, err := port.FindAvailablePort(openvscode.DefaultVSCodePort)
-	if err != nil {
-		return err
+	var (
+		vscodeAddress string
+		vscodePort    int
+	)
+	if openvscode.Options.GetValue(ideOptions, openvscode.BindAddressOption) == "" {
+		vscodePort, err = port.FindAvailablePort(openvscode.DefaultVSCodePort)
+		if err != nil {
+			return err
+		}
+
+		vscodeAddress = fmt.Sprintf("%d", vscodePort)
+	} else {
+		vscodeAddress = openvscode.Options.GetValue(ideOptions, openvscode.BindAddressOption)
+		_, port, err := net.SplitHostPort(vscodeAddress)
+		if err != nil {
+			return fmt.Errorf("parse host:port: %w", err)
+		} else if port == "" {
+			return fmt.Errorf("parse ADDRESS: expected host:port, got %s", vscodeAddress)
+		}
+
+		vscodePort, err = strconv.Atoi(port)
+		if err != nil {
+			return fmt.Errorf("parse host:port: %w", err)
+		}
+
+		logger.Infof("Bind VSCode to %s...", vscodeAddress)
 	}
 
 	// wait until reachable then open browser
@@ -259,10 +284,10 @@ func startInBrowser(ctx context.Context, devPodConfig *config.Config, client cli
 				devPodConfig,
 				containerClient,
 				user,
+				openvscode.Options.GetValue(ideOptions, openvscode.ForwardPortsOption) == "true",
 				true,
 				true,
-				true,
-				[]string{fmt.Sprintf("%d:%d", vscodePort, openvscode.DefaultVSCodePort)},
+				[]string{fmt.Sprintf("%s:%d", vscodeAddress, openvscode.DefaultVSCodePort)},
 				logger,
 			)
 			if err != nil {
