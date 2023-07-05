@@ -1,6 +1,6 @@
 import { Container, Spinner } from "@chakra-ui/react"
 import { useQuery } from "@tanstack/react-query"
-import { useMemo } from "react"
+import { useMemo, useRef } from "react"
 import { useNavigate, useParams } from "react-router"
 import { client } from "../../client"
 import { useProvider } from "../../contexts"
@@ -19,6 +19,7 @@ export function Provider() {
     queryFn: async () => (await client.providers.getOptions(providerID!)).unwrap(),
     enabled: providerID !== undefined,
   })
+  const containerRef = useRef<HTMLDivElement>(null)
 
   if (!exists(provider) || !providerOptions) {
     return <Spinner />
@@ -29,8 +30,9 @@ export function Provider() {
   }
 
   return (
-    <Container width="full" maxWidth="container.lg">
+    <Container width="full" maxWidth="container.lg" ref={containerRef}>
       <ConfigureProviderOptionsForm
+        containerRef={containerRef}
         providerID={providerID}
         isDefault={!!provider.default}
         addProvider={false}

@@ -1,5 +1,6 @@
 import {
   Box,
+  BoxProps,
   Button,
   Checkbox,
   FormControl,
@@ -21,7 +22,7 @@ import {
 import styled from "@emotion/styled"
 import { useMutation, useQueryClient } from "@tanstack/react-query"
 import { motion } from "framer-motion"
-import { ReactNode, useCallback, useEffect, useMemo, useRef } from "react"
+import { ReactNode, RefObject, useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { Controller, FormProvider, SubmitHandler, useForm, useFormContext } from "react-hook-form"
 import { useBorderColor } from "../../../Theme"
 import { client } from "../../../client"
@@ -66,10 +67,12 @@ type TConfigureProviderOptionsFormProps = Readonly<{
   optionGroups: TProviderOptionGroup[]
   isModal?: boolean
   addProvider?: boolean
+  containerRef?: RefObject<HTMLDivElement>
   onFinish?: () => void
 }>
 
 export function ConfigureProviderOptionsForm({
+  containerRef,
   providerID,
   isDefault,
   reuseMachine,
@@ -86,6 +89,7 @@ export function ConfigureProviderOptionsForm({
     () => canCreateMachine(provider?.config),
     [provider?.config]
   )
+  const { height: errorHeight } = useErrorDimensions(containerRef)
   const formMethods = useForm<TFieldValues>({
     defaultValues: {
       useAsDefault: isDefault,
@@ -331,9 +335,9 @@ export function ConfigureProviderOptionsForm({
                   isDisabled={!exists(error)}
                 />
               </PopoverTrigger>
-              <PopoverContent minWidth="96">
+              <PopoverContent minWidth="5xl">
                 {isError(error) && (
-                  <ErrorMessageBox maxHeight="xl" overflowY="auto" error={error} />
+                  <ErrorMessageBox maxHeight={errorHeight} overflowY="auto" error={error} />
                 )}
               </PopoverContent>
             </Popover>
@@ -438,4 +442,32 @@ function OptionFormField({
       )}
     </FormControl>
   )
+}
+
+function useErrorDimensions(
+  ref: RefObject<HTMLElement> | undefined,
+  defaultHeight: BoxProps["height"] = "5xl"
+) {
+  const [errorHeight, setErrorHeight] = useState<BoxProps["height"]>(defaultHeight)
+
+  useEffect(() => {
+    const curr = ref?.current
+    if (!curr) {
+      return
+    }
+    const observer = new ResizeObserver((entries) => {
+      for (const entry of entries) {
+        if (entry.target === curr) {
+          const heightPx = entry.contentRect.height
+
+          setErrorHeight(`calc(${heightPx}px - 4rem)`)
+        }
+      }
+    })
+    observer.observe(curr)
+
+    return () => observer.disconnect()
+  }, [ref])
+
+  return { height: errorHeight }
 }

@@ -25,16 +25,17 @@ pub fn setup(state: tauri::State<'_, AppState>) {
     let community_contributions_state = Arc::clone(&state.community_contributions);
 
     tauri::async_runtime::spawn(async move {
-        match fetch_community_contributions().await {
-            Ok(remote_community_contributions) => {
-                let _ = remote_community_contributions;
-                let mut community_contributions = community_contributions_state.lock().unwrap();
-                *community_contributions = remote_community_contributions;
-            }
-            Err(e) => {
-                warn!("Error fetching community contributions: {:?}", e);
-            }
-        }
+        // TODO: uncommenct once we settled on a remote strategy
+        // match fetch_community_contributions().await {
+        //     Ok(remote_community_contributions) => {
+        //         let _ = remote_community_contributions;
+        //         let mut community_contributions = community_contributions_state.lock().unwrap();
+        //         *community_contributions = remote_community_contributions;
+        //     }
+        //     Err(e) => {
+        //         warn!("Error fetching community contributions: {:?}", e);
+        //     }
+        // }
     });
 }
 
