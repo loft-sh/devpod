@@ -15,20 +15,21 @@ import {
   useToken,
   VStack,
 } from "@chakra-ui/react"
-import { useCallback, useEffect, useMemo } from "react"
+import { useEffect, useMemo } from "react"
 import { Outlet, Link as RouterLink, useMatch, useNavigate, useRouteError } from "react-router-dom"
 import { client } from "./client"
 import { Sidebar, SidebarMenuItem, StatusBar, Toolbar } from "./components"
 import { SIDEBAR_WIDTH, STATUS_BAR_HEIGHT } from "./constants"
 import { ToolbarProvider, useChangeSettings, useSettings } from "./contexts"
 import { Briefcase, Cog, Stack3D } from "./icons"
-import { isLinux, isMacOS } from "./lib"
+import { isLinux, isMacOS, isWindows } from "./lib"
 import { Routes } from "./routes"
 import { useBorderColor } from "./Theme"
 import { useAppReady } from "./useAppReady"
 import { useWelcomeModal } from "./useWelcomeModal"
 
-const shouldShowTitleBar = isMacOS || isLinux
+const showTitleBar = isMacOS || isLinux || isWindows
+const showDevPodTitle = isMacOS || isLinux
 
 export function App() {
   const { modal: appReadyModal } = useAppReady()
@@ -36,11 +37,11 @@ export function App() {
   const rootRouteMatch = useMatch(Routes.ROOT)
   const { sidebarPosition } = useSettings()
   const contentBackgroundColor = useColorModeValue("white", "black")
-  const toolbarHeight = useToken("sizes", shouldShowTitleBar ? "28" : "20")
+  const toolbarHeight = useToken("sizes", showTitleBar ? "28" : "20")
   const borderColor = useBorderColor()
 
   const titleBarSafeArea = useMemo<BoxProps["height"]>(() => {
-    return shouldShowTitleBar ? "12" : 0
+    return showTitleBar ? "12" : 0
   }, [])
 
   const mainGridProps = useMemo<GridProps>(() => {
@@ -67,7 +68,7 @@ export function App() {
   return (
     <>
       <Flex height="100vh" width="100vw" maxWidth="100vw" overflow="hidden">
-        {shouldShowTitleBar && (
+        {showTitleBar && (
           <Box
             data-tauri-drag-region // keep!
             height={titleBarSafeArea}
@@ -79,14 +80,17 @@ export function App() {
             textAlign={"center"}
             zIndex="tooltip"
             justifyItems="center">
-            <Text
-              gridColumn="2"
-              data-tauri-drag-region // keep!
-              fontWeight="bold"
-              marginTop="2">
-              DevPod
-            </Text>
+            {showDevPodTitle && (
+              <Text
+                gridColumn="2"
+                data-tauri-drag-region // keep!
+                fontWeight="bold"
+                marginTop="2">
+                DevPod
+              </Text>
+            )}
             <Button
+              data-tauri-drag-region // keep!
               variant="announcement"
               gridColumn="3"
               marginTop="2"

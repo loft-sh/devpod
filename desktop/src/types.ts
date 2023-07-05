@@ -160,9 +160,9 @@ export type TDevcontainerSetup = Readonly<{
 }>
 //#region CommunityContributions
 export type TCommunityContributions = Readonly<{
-  providers: readonly TCommunitProvider[]
+  providers: readonly TCommunityProvider[]
 }>
-export type TCommunitProvider = Readonly<{
+export type TCommunityProvider = Readonly<{
   repository: string
 }>
 //#endregion

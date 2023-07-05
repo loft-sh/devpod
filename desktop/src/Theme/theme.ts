@@ -20,14 +20,14 @@ const Button = defineStyleConfig({
       },
     },
     announcement({ theme }) {
-      const from = theme.colors.primary["600"]
-      const to = theme.colors.primary["900"]
+      const from = theme.colors.primary["900"]
+      const to = theme.colors.primary["600"]
 
       return {
         color: "white",
-        transition: "background 0.2s",
+        transition: "background 150ms",
         fontWeight: "regular",
-        background: `linear-gradient(170deg, ${from} 30%, ${to})`,
+        background: `linear-gradient(170deg, ${from} 15%, ${to})`,
         backgroundSize: "130% 130%",
         _hover: {
           backgroundPosition: "90% 50%",
