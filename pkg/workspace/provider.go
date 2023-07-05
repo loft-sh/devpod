@@ -2,14 +2,13 @@ package workspace
 
 import (
 	"bytes"
-	"crypto/tls"
 	"fmt"
 	"io"
-	"net/http"
 	"os"
 	"path/filepath"
 	"strings"
 
+	devpodhttp "github.com/loft-sh/devpod/pkg/http"
 	"github.com/loft-sh/devpod/pkg/types"
 	"github.com/loft-sh/devpod/providers"
 
@@ -234,12 +233,7 @@ func DownloadProviderGithub(originalPath string, log log.Logger) ([]byte, *provi
 
 func downloadProvider(url string) ([]byte, error) {
 	// initiate download
-	httpClient := &http.Client{
-		Transport: &http.Transport{
-			TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
-		},
-	}
-	resp, err := httpClient.Get(url)
+	resp, err := devpodhttp.GetHTTPClient().Get(url)
 	if err != nil {
 		return nil, errors.Wrap(err, "download binary")
 	}

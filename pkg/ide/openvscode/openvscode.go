@@ -1,9 +1,7 @@
 package openvscode
 
 import (
-	"crypto/tls"
 	"fmt"
-	"net/http"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -14,6 +12,7 @@ import (
 	"github.com/loft-sh/devpod/pkg/config"
 	copy2 "github.com/loft-sh/devpod/pkg/copy"
 	"github.com/loft-sh/devpod/pkg/extract"
+	devpodhttp "github.com/loft-sh/devpod/pkg/http"
 	"github.com/loft-sh/devpod/pkg/ide"
 	"github.com/loft-sh/devpod/pkg/single"
 	"github.com/loft-sh/log"
@@ -119,12 +118,7 @@ func (o *OpenVSCodeServer) Install() error {
 	}
 
 	// download tar
-	httpClient := &http.Client{
-		Transport: &http.Transport{
-			TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
-		},
-	}
-	resp, err := httpClient.Get(url)
+	resp, err := devpodhttp.GetHTTPClient().Get(url)
 	if err != nil {
 		return err
 	}

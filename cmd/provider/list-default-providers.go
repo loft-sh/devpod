@@ -2,7 +2,6 @@ package provider
 
 import (
 	"context"
-	"crypto/tls"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -10,6 +9,7 @@ import (
 	"strings"
 
 	"github.com/loft-sh/devpod/cmd/flags"
+	devpodhttp "github.com/loft-sh/devpod/pkg/http"
 	"github.com/spf13/cobra"
 )
 
@@ -18,18 +18,12 @@ type ListAvailableCmd struct {
 	flags.GlobalFlags
 }
 
-var httpClient = &http.Client{
-	Transport: &http.Transport{
-		TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
-	},
-}
-
 func getDevpodProviderList() error {
 	req, err := http.NewRequest("GET", "https://api.github.com/users/loft-sh/repos", nil)
 	if err != nil {
 		return err
 	}
-	resp, err := httpClient.Do(req)
+	resp, err := devpodhttp.GetHTTPClient().Do(req)
 	if err != nil {
 		return err
 	}

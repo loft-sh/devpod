@@ -1,7 +1,6 @@
 package download
 
 import (
-	"crypto/tls"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -10,15 +9,10 @@ import (
 	"strings"
 
 	"github.com/loft-sh/devpod/pkg/gitcredentials"
+	devpodhttp "github.com/loft-sh/devpod/pkg/http"
 	"github.com/loft-sh/log"
 	"github.com/pkg/errors"
 )
-
-var httpClient = &http.Client{
-	Transport: &http.Transport{
-		TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
-	},
-}
 
 func Head(rawURL string) (int, error) {
 	req, err := http.NewRequest("HEAD", rawURL, nil)
@@ -26,7 +20,7 @@ func Head(rawURL string) (int, error) {
 		return 0, err
 	}
 
-	resp, err := httpClient.Do(req)
+	resp, err := devpodhttp.GetHTTPClient().Do(req)
 	if err != nil {
 		return 0, errors.Wrap(err, "download file")
 	}
@@ -70,7 +64,7 @@ func File(rawURL string, log log.Logger) (io.ReadCloser, error) {
 		}
 	}
 
-	resp, err := httpClient.Do(req)
+	resp, err := devpodhttp.GetHTTPClient().Do(req)
 	if err != nil {
 		return nil, errors.Wrap(err, "download file")
 	} else if resp.StatusCode >= 400 {
@@ -104,7 +98,7 @@ func downloadGithubRelease(org, repo, release, file, token string) (io.ReadClose
 	}
 	req.Header.Set("Authorization", "Bearer "+token)
 	req.Header.Set("Accept", "application/vnd.github+json")
-	resp, err := httpClient.Do(req)
+	resp, err := devpodhttp.GetHTTPClient().Do(req)
 	if err != nil {
 		return nil, err
 	} else if resp.StatusCode >= 400 {
@@ -141,7 +135,7 @@ func downloadGithubRelease(org, repo, release, file, token string) (io.ReadClose
 	}
 	req.Header.Set("Authorization", "Bearer "+token)
 	req.Header.Set("Accept", "application/octet-stream")
-	downloadResp, err := httpClient.Do(req)
+	downloadResp, err := devpodhttp.GetHTTPClient().Do(req)
 	if err != nil {
 		return nil, err
 	} else if downloadResp.StatusCode >= 400 {

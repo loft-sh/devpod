@@ -1,10 +1,8 @@
 package jetbrains
 
 import (
-	"crypto/tls"
 	"fmt"
 	"io"
-	"net/http"
 	"net/url"
 	"os"
 	"path"
@@ -16,6 +14,7 @@ import (
 	"github.com/loft-sh/devpod/pkg/config"
 	copy2 "github.com/loft-sh/devpod/pkg/copy"
 	"github.com/loft-sh/devpod/pkg/extract"
+	devpodhttp "github.com/loft-sh/devpod/pkg/http"
 	"github.com/loft-sh/devpod/pkg/ide"
 	"github.com/loft-sh/log"
 	"github.com/mitchellh/go-homedir"
@@ -163,12 +162,7 @@ func (o *GenericJetBrainsServer) download(targetFolder string, log log.Logger) (
 	// initiate download
 	log.Infof("Download %s from %s", o.options.DisplayName, downloadURL)
 	defer log.Debugf("Successfully downloaded %s", o.options.DisplayName)
-	httpClient := &http.Client{
-		Transport: &http.Transport{
-			TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
-		},
-	}
-	resp, err := httpClient.Get(downloadURL)
+	resp, err := devpodhttp.GetHTTPClient().Get(downloadURL)
 	if err != nil {
 		return "", errors.Wrap(err, "download binary")
 	}

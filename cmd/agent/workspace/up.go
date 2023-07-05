@@ -2,7 +2,6 @@ package workspace
 
 import (
 	"context"
-	"crypto/tls"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -27,6 +26,7 @@ import (
 	"github.com/loft-sh/devpod/pkg/extract"
 	"github.com/loft-sh/devpod/pkg/git"
 	"github.com/loft-sh/devpod/pkg/gitcredentials"
+	devpodhttp "github.com/loft-sh/devpod/pkg/http"
 	"github.com/loft-sh/devpod/pkg/port"
 	provider2 "github.com/loft-sh/devpod/pkg/provider"
 	"github.com/loft-sh/devpod/pkg/random"
@@ -311,11 +311,7 @@ func PingURL(ctx context.Context, url string) error {
 		return err
 	}
 
-	client := &http.Client{Transport: &http.Transport{
-		TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
-	}}
-
-	resp, err := client.Do(req)
+	resp, err := devpodhttp.GetHTTPClient().Do(req)
 	if err != nil {
 		return err
 	}

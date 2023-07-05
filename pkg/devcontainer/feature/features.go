@@ -1,10 +1,8 @@
 package feature
 
 import (
-	"crypto/tls"
 	"fmt"
 	"io"
-	"net/http"
 	"os"
 	"os/exec"
 	"path"
@@ -18,6 +16,7 @@ import (
 	"github.com/google/go-containerregistry/pkg/v1/remote"
 	"github.com/loft-sh/devpod/pkg/devcontainer/config"
 	"github.com/loft-sh/devpod/pkg/extract"
+	devpodhttp "github.com/loft-sh/devpod/pkg/http"
 	"github.com/loft-sh/log"
 	"github.com/loft-sh/log/hash"
 	"github.com/pkg/errors"
@@ -233,12 +232,7 @@ func downloadFeatureFromURL(url string, destFile string, log log.Logger) error {
 
 	// initiate download
 	log.Debugf("Download feature from %s", url)
-	httpClient := &http.Client{
-		Transport: &http.Transport{
-			TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
-		},
-	}
-	resp, err := httpClient.Get(url)
+	resp, err := devpodhttp.GetHTTPClient().Get(url)
 	if err != nil {
 		return errors.Wrap(err, "make request")
 	}

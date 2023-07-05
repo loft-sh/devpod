@@ -1,10 +1,8 @@
 package vscode
 
 import (
-	"crypto/tls"
 	"fmt"
 	"io"
-	"net/http"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -13,6 +11,7 @@ import (
 	"github.com/loft-sh/devpod/pkg/command"
 	"github.com/loft-sh/devpod/pkg/config"
 	copy2 "github.com/loft-sh/devpod/pkg/copy"
+	devpodhttp "github.com/loft-sh/devpod/pkg/http"
 	"github.com/loft-sh/devpod/pkg/ide"
 	"github.com/loft-sh/log"
 	"github.com/mitchellh/go-homedir"
@@ -148,12 +147,7 @@ func (o *VsCodeServer) downloadVSCode(binPath string) error {
 	}
 
 	// download binary
-	httpClient := &http.Client{
-		Transport: &http.Transport{
-			TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
-		},
-	}
-	resp, err := httpClient.Get(url)
+	resp, err := devpodhttp.GetHTTPClient().Get(url)
 	if err != nil {
 		return err
 	}

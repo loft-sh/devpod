@@ -2,13 +2,13 @@ package http
 
 import (
 	"context"
-	"crypto/tls"
 	"fmt"
 	"io"
 	"net/http"
 	"os"
 	"strings"
 
+	devpodhttp "github.com/loft-sh/devpod/pkg/http"
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
 )
@@ -45,12 +45,6 @@ func (cmd *RequestCmd) Run(ctx context.Context, args []string) error {
 	}
 
 	cmd.Method = strings.ToUpper(cmd.Method)
-	httpClient := &http.Client{
-		Transport: &http.Transport{
-			TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
-		},
-	}
-
 	httpHeader := http.Header{}
 	for _, header := range cmd.Headers {
 		splitted := strings.Split(header, ":")
@@ -67,7 +61,7 @@ func (cmd *RequestCmd) Run(ctx context.Context, args []string) error {
 	}
 	request.Header = httpHeader
 
-	resp, err := httpClient.Do(request)
+	resp, err := devpodhttp.GetHTTPClient().Do(request)
 	if err != nil {
 		return err
 	}
