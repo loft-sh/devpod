@@ -160,11 +160,14 @@ func startWait(ctx context.Context, client client2.WorkspaceClient, create bool,
 func (cmd *SSHCmd) jumpContainer(ctx context.Context, devPodConfig *config.Config, client client2.WorkspaceClient, log log.Logger) error {
 	// lock the workspace as long as we init the connection
 	unlockOnce := sync.Once{}
-	client.Lock()
+	err := client.Lock(ctx)
+	if err != nil {
+		return err
+	}
 	defer unlockOnce.Do(client.Unlock)
 
 	// start the workspace
-	err := startWait(ctx, client, false, log)
+	err = startWait(ctx, client, false, log)
 	if err != nil {
 		return err
 	}

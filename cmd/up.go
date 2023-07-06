@@ -306,7 +306,10 @@ func startInBrowser(ctx context.Context, devPodConfig *config.Config, client cli
 }
 
 func (cmd *UpCmd) devPodUp(ctx context.Context, client client2.BaseWorkspaceClient, log log.Logger) (*config2.Result, error) {
-	client.Lock()
+	err := client.Lock(ctx)
+	if err != nil {
+		return nil, err
+	}
 	defer client.Unlock()
 
 	// check if regular workspace client
