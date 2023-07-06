@@ -82,7 +82,7 @@ type BaseWorkspaceClient interface {
 
 	// Lock locks the workspace. This is a file lock, which means
 	// the workspace is locked across processes.
-	Lock()
+	Lock(ctx context.Context) error
 
 	// Unlock unlocks the workspace.
 	Unlock()

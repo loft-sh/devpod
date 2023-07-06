@@ -10,6 +10,7 @@ import (
 )
 
 var _ = DevPodDescribe("devpod machine create", func() {
+	ctx := context.Background()
 	initialDir, err := os.Getwd()
 	if err != nil {
 		panic(err)
@@ -23,10 +24,10 @@ var _ = DevPodDescribe("devpod machine create", func() {
 		f := framework.NewDefaultFramework(initialDir + "/bin")
 
 		// Ensure that mock-provider is deleted
-		_ = f.DevPodProviderDelete([]string{"mock-provider"})
+		_ = f.DevPodProviderDelete(ctx, "mock-provider")
 
 		ginkgo.By("Add mock provider")
-		err = f.DevPodProviderAdd([]string{tempDir + "/mock-provider.yaml"})
+		err = f.DevPodProviderAdd(ctx, tempDir+"/mock-provider.yaml")
 		framework.ExpectNoError(err)
 
 		ginkgo.By("Use mock provier")

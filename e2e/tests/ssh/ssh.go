@@ -10,6 +10,7 @@ import (
 )
 
 var _ = DevPodDescribe("devpod ssh test suite", func() {
+	ctx := context.Background()
 	initialDir, err := os.Getwd()
 	if err != nil {
 		panic(err)
@@ -21,7 +22,7 @@ var _ = DevPodDescribe("devpod ssh test suite", func() {
 		defer framework.CleanupTempDir(initialDir, tempDir)
 
 		f := framework.NewDefaultFramework(initialDir + "/bin")
-		_ = f.DevPodProviderAdd([]string{"docker"})
+		_ = f.DevPodProviderAdd(ctx, "docker")
 		err = f.DevPodProviderUse(context.Background(), "docker")
 		framework.ExpectNoError(err)
 

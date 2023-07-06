@@ -84,7 +84,7 @@ func (s *machineClient) Context() string {
 }
 
 func (s *machineClient) Create(ctx context.Context, options client.CreateOptions) error {
-	done := printLogMessagePeriodically(s.log)
+	done := printStillRunningLogMessagePeriodically(s.log)
 	defer close(done)
 
 	writer := s.log.Writer(logrus.InfoLevel, false)
@@ -116,7 +116,7 @@ func (s *machineClient) Create(ctx context.Context, options client.CreateOptions
 }
 
 func (s *machineClient) Start(ctx context.Context, options client.StartOptions) error {
-	done := printLogMessagePeriodically(s.log)
+	done := printStillRunningLogMessagePeriodically(s.log)
 	defer close(done)
 
 	writer := s.log.Writer(logrus.InfoLevel, false)
@@ -147,7 +147,7 @@ func (s *machineClient) Start(ctx context.Context, options client.StartOptions) 
 }
 
 func (s *machineClient) Stop(ctx context.Context, options client.StopOptions) error {
-	done := printLogMessagePeriodically(s.log)
+	done := printStillRunningLogMessagePeriodically(s.log)
 	defer close(done)
 
 	writer := s.log.Writer(logrus.InfoLevel, false)
@@ -244,7 +244,7 @@ func (s *machineClient) Delete(ctx context.Context, options client.DeleteOptions
 		defer cancel()
 	}
 
-	done := printLogMessagePeriodically(s.log)
+	done := printStillRunningLogMessagePeriodically(s.log)
 	defer close(done)
 
 	writer := s.log.Writer(logrus.InfoLevel, false)
@@ -301,7 +301,11 @@ func runCommand(ctx context.Context, name string, command types.StrArray, enviro
 	return RunCommand(ctx, command, environ, stdin, stdout, stderr)
 }
 
-func printLogMessagePeriodically(log log.Logger) chan struct{} {
+func printStillRunningLogMessagePeriodically(log log.Logger) chan struct{} {
+	return printLogMessagePeriodically("Please hang on, DevPod is still running, this might take a while...", log)
+}
+
+func printLogMessagePeriodically(message string, log log.Logger) chan struct{} {
 	done := make(chan struct{})
 	go func() {
 		for {
@@ -309,7 +313,7 @@ func printLogMessagePeriodically(log log.Logger) chan struct{} {
 			case <-done:
 				return
 			case <-time.After(time.Second * 5):
-				log.Infof("Please hang on, DevPod is still running, this might take a while...")
+				log.Info(message)
 			}
 		}
 	}()

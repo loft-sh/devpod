@@ -187,26 +187,28 @@ func (s *workspaceClient) initLock() {
 	})
 }
 
-func (s *workspaceClient) Lock() {
+func (s *workspaceClient) Lock(ctx context.Context) error {
 	s.initLock()
 
 	// try to lock workspace
 	s.log.Debugf("Acquire workspace lock...")
-	err := s.workspaceLock.Lock()
+	err := tryLock(ctx, s.workspaceLock, "workspace", s.log)
 	if err != nil {
-		s.log.Warnf("Error locking workspace: %v", err)
+		return fmt.Errorf("error locking workspace: %w", err)
 	}
 	s.log.Debugf("Acquired workspace lock...")
 
 	// try to lock machine
 	if s.machineLock != nil {
 		s.log.Debugf("Acquire machine lock...")
-		err := s.machineLock.Lock()
+		err := tryLock(ctx, s.machineLock, "machine", s.log)
 		if err != nil {
-			s.log.Warnf("Error locking machine: %v", err)
+			return fmt.Errorf("error locking machine: %w", err)
 		}
 		s.log.Debugf("Acquired machine lock...")
 	}
+
+	return nil
 }
 
 func (s *workspaceClient) Unlock() {

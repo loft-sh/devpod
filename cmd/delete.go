@@ -87,7 +87,10 @@ func (cmd *DeleteCmd) Run(ctx context.Context, devPodConfig *config.Config, args
 	// get instance status
 	if !cmd.Force {
 		// lock workspace only if we don't force deletion
-		client.Lock()
+		err := client.Lock(ctx)
+		if err != nil {
+			return err
+		}
 		defer client.Unlock()
 
 		// retrieve instance status

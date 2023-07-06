@@ -57,9 +57,6 @@ func (f *Framework) ExecCommandCapture(ctx context.Context, args []string) (stri
 	cmd.Stdout = io.MultiWriter(os.Stdout, &execOut)
 	cmd.Stderr = io.MultiWriter(os.Stderr, &execErr)
 
-	if err := cmd.Run(); err != nil {
-		return "", "", err
-	}
-
-	return execOut.String(), execErr.String(), nil
+	err := cmd.Run()
+	return execOut.String(), execErr.String(), err
 }

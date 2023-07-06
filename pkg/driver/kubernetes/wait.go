@@ -3,12 +3,10 @@ package kubernetes
 import (
 	"context"
 	"encoding/json"
-	"errors"
 	"fmt"
-	"os/exec"
-	"strings"
 	"time"
 
+	"github.com/loft-sh/devpod/pkg/command"
 	perrors "github.com/pkg/errors"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/util/wait"
@@ -139,12 +137,7 @@ func (k *kubernetesDriver) getPod(ctx context.Context, id string) (*corev1.Pod, 
 	// try to find pod
 	out, err := k.buildCmd(ctx, []string{"get", "pod", id, "--ignore-not-found", "-o", "json"}).Output()
 	if err != nil {
-		var exitError *exec.ExitError
-		if errors.As(err, &exitError) {
-			return nil, fmt.Errorf("find container: %s", strings.TrimSpace(string(exitError.Stderr)))
-		}
-
-		return nil, perrors.Wrap(err, "find container")
+		return nil, fmt.Errorf("find container: %w", command.WrapCommandError(out, err))
 	} else if len(out) == 0 {
 		return nil, nil
 	}

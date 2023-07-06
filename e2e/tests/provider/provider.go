@@ -10,6 +10,7 @@ import (
 )
 
 var _ = DevPodDescribe("devpod provider test suite", func() {
+	ctx := context.Background()
 	initialDir, err := os.Getwd()
 	if err != nil {
 		panic(err)
@@ -23,11 +24,11 @@ var _ = DevPodDescribe("devpod provider test suite", func() {
 		f := framework.NewDefaultFramework(initialDir + "/bin")
 
 		// Ensure that provider 1 is deleted
-		err = f.DevPodProviderDelete([]string{"provider1", "--ignore-not-found"})
+		err = f.DevPodProviderDelete(ctx, "provider1", "--ignore-not-found")
 		framework.ExpectNoError(err)
 
 		// Add provider 1
-		err = f.DevPodProviderAdd([]string{tempDir + "/provider1.yaml"})
+		err = f.DevPodProviderAdd(ctx, tempDir+"/provider1.yaml")
 		framework.ExpectNoError(err)
 
 		// Ensure provider 1 exists but not provider X
@@ -37,13 +38,14 @@ var _ = DevPodDescribe("devpod provider test suite", func() {
 		framework.ExpectError(err)
 
 		// Cleanup: delete provider 1
-		err = f.DevPodProviderDelete([]string{"provider1"})
+		err = f.DevPodProviderDelete(ctx, "provider1")
 		framework.ExpectNoError(err)
 
 		// Cleanup: ensure provider 1 is deleted
 		err = f.DevPodProviderUse(context.Background(), "provider1")
 		framework.ExpectError(err)
 	})
+
 	ginkgo.It("should add simple provider and update it", func() {
 		tempDir, err := framework.CopyToTempDir("tests/provider/testdata/simple-k8s-provider")
 		framework.ExpectNoError(err)
@@ -52,11 +54,11 @@ var _ = DevPodDescribe("devpod provider test suite", func() {
 		f := framework.NewDefaultFramework(initialDir + "/bin")
 
 		// Ensure that provider 2 is deleted
-		err = f.DevPodProviderDelete([]string{"provider2", "--ignore-not-found"})
+		err = f.DevPodProviderDelete(ctx, "provider2", "--ignore-not-found")
 		framework.ExpectNoError(err)
 
 		// Add provider 2 and use it
-		err = f.DevPodProviderAdd([]string{tempDir + "/provider2.yaml"})
+		err = f.DevPodProviderAdd(ctx, tempDir+"/provider2.yaml")
 		framework.ExpectNoError(err)
 		err = f.DevPodProviderUse(context.Background(), "provider2")
 		framework.ExpectNoError(err)
@@ -68,7 +70,7 @@ var _ = DevPodDescribe("devpod provider test suite", func() {
 		cancel()
 
 		// Update provider 2 (change the namespace description value)
-		err = f.DevPodProviderUpdate([]string{"provider2", tempDir + "/provider2-update.yaml"})
+		err = f.DevPodProviderUpdate(context.Background(), "provider2", tempDir+"/provider2-update.yaml")
 		framework.ExpectNoError(err)
 
 		// Ensure that provider 2 was updated
@@ -78,7 +80,7 @@ var _ = DevPodDescribe("devpod provider test suite", func() {
 		cancel()
 
 		// Cleanup: delete provider 2
-		err = f.DevPodProviderDelete([]string{"provider2"})
+		err = f.DevPodProviderDelete(context.Background(), "provider2")
 		framework.ExpectNoError(err)
 
 		// Cleanup: ensure provider 2 is deleted

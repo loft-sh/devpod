@@ -92,7 +92,7 @@ func (cmd *AddCmd) Run(ctx context.Context, devPodConfig *config.Config, args []
 
 	log.Default.Donef("Successfully installed provider %s", providerConfig.Name)
 	if cmd.Use {
-		configureErr := configureProvider(ctx, providerConfig, devPodConfig.DefaultContext, options, true, &cmd.SingleMachine)
+		configureErr := configureProvider(ctx, providerConfig, devPodConfig.DefaultContext, options, true, false, &cmd.SingleMachine)
 		if configureErr != nil {
 			devPodConfig, err := config.LoadConfig(cmd.Context, "")
 			if err != nil {

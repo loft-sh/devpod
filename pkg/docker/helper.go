@@ -10,6 +10,7 @@ import (
 	"os/exec"
 	"strings"
 
+	"github.com/loft-sh/devpod/pkg/command"
 	"github.com/loft-sh/devpod/pkg/devcontainer/config"
 	"github.com/loft-sh/devpod/pkg/image"
 	"github.com/loft-sh/log/scanner"
@@ -25,7 +26,7 @@ type DockerHelper struct {
 func (r *DockerHelper) GPUSupportEnabled() (bool, error) {
 	out, err := r.buildCmd(context.TODO(), "info", "-f", "{{.Runtimes.nvidia}}").Output()
 	if err != nil {
-		return false, err
+		return false, command.WrapCommandError(out, err)
 	}
 
 	return strings.Contains(string(out), "nvidia-container-runtime"), nil
@@ -34,7 +35,7 @@ func (r *DockerHelper) GPUSupportEnabled() (bool, error) {
 func (r *DockerHelper) FindDevContainer(labels []string) (*config.ContainerDetails, error) {
 	containers, err := r.FindContainer(labels)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("docker ps: %w", err)
 	} else if len(containers) == 0 {
 		return nil, nil
 	}
@@ -181,7 +182,7 @@ func (r *DockerHelper) Inspect(ids []string, inspectType string, obj interface{}
 	args = append(args, ids...)
 	out, err := r.buildCmd(context.TODO(), args...).Output()
 	if err != nil {
-		return perrors.Wrapf(err, "inspect container: %v", string(out))
+		return fmt.Errorf("inspect container: %w", command.WrapCommandError(out, err))
 	}
 
 	err = json.Unmarshal(out, obj)
@@ -222,7 +223,7 @@ func (r *DockerHelper) FindContainerJSON(labels []string) ([]string, error) {
 	args := []string{"ps", "-q", "-a"}
 	out, err := r.buildCmd(context.TODO(), args...).Output()
 	if err != nil {
-		return nil, perrors.Wrap(err, "find container: ")
+		return nil, command.WrapCommandError(out, err)
 	}
 
 	result := []string{}

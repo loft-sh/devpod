@@ -47,40 +47,6 @@ type ContextConfig struct {
 	OriginalProvider string `json:"-"`
 }
 
-const (
-	ContextOptionInjectDockerCredentials = "INJECT_DOCKER_CREDENTIALS"
-	ContextOptionInjectGitCredentials    = "INJECT_GIT_CREDENTIALS"
-	ContextOptionAutoPortForwarding      = "AUTO_PORT_FORWARDING"
-	ContextOptionTelemetry               = "TELEMETRY"
-)
-
-var ContextOptions = []ContextOption{
-	{
-		Name:        ContextOptionInjectDockerCredentials,
-		Description: "Specifies if DevPod should inject docker credentials into the workspace",
-		Default:     "true",
-		Enum:        []string{"true", "false"},
-	},
-	{
-		Name:        ContextOptionInjectGitCredentials,
-		Description: "Specifies if DevPod should inject git credentials into the workspace",
-		Default:     "true",
-		Enum:        []string{"true", "false"},
-	},
-	{
-		Name:        ContextOptionAutoPortForwarding,
-		Description: "Specifies if DevPod should automatically try to port forward container ports",
-		Default:     "true",
-		Enum:        []string{"true", "false"},
-	},
-	{
-		Name:        ContextOptionTelemetry,
-		Description: "Specifies if DevPod should send telemetry information",
-		Default:     "true",
-		Enum:        []string{"true", "false"},
-	},
-}
-
 type ContextOption struct {
 	// Name of the context option
 	Name string `json:"name,omitempty"`
@@ -99,22 +65,6 @@ type IDEConfig struct {
 	// Options are additional ide options
 	Options map[string]OptionValue `json:"options,omitempty"`
 }
-
-type IDE string
-
-const (
-	IDENone       IDE = "none"
-	IDEVSCode     IDE = "vscode"
-	IDEOpenVSCode IDE = "openvscode"
-	IDEIntellij   IDE = "intellij"
-	IDEGoland     IDE = "goland"
-	IDEPyCharm    IDE = "pycharm"
-	IDEPhpStorm   IDE = "phpstorm"
-	IDECLion      IDE = "clion"
-	IDERubyMine   IDE = "rubymine"
-	IDERider      IDE = "rider"
-	IDEWebStorm   IDE = "webstorm"
-)
 
 type ProviderConfig struct {
 	// Initialized holds if the provider was initialized correctly.

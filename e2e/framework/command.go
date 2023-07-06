@@ -53,6 +53,18 @@ func (f *Framework) DevPodList(ctx context.Context) (string, error) {
 	return out, nil
 }
 
+func (f *Framework) DevPodUpStreams(ctx context.Context, workspace string, additionalArgs ...string) (string, string, error) {
+	upArgs := []string{"up", "--ide", "none", workspace}
+	upArgs = append(upArgs, additionalArgs...)
+
+	stdout, stderr, err := f.ExecCommandCapture(ctx, upArgs)
+	if err != nil {
+		return stdout, stderr, fmt.Errorf("devpod up failed: %s", err.Error())
+	}
+
+	return stdout, stderr, nil
+}
+
 // DevPodUp executes the `devpod up` command in the test framework
 func (f *Framework) DevPodUp(ctx context.Context, workspace string, additionalArgs ...string) error {
 	upArgs := []string{"up", "--debug", "--ide", "none", workspace}
@@ -89,8 +101,9 @@ func (f *Framework) DevPodProviderOptionsCheckNamespaceDescription(ctx context.C
 	return nil
 }
 
-func (f *Framework) DevPodProviderUse(ctx context.Context, provider string) error {
-	err := f.ExecCommand(ctx, false, true, "", []string{"provider", "use", provider})
+func (f *Framework) DevPodProviderUse(ctx context.Context, provider string, extraArgs ...string) error {
+	baseArgs := []string{"provider", "use", provider}
+	err := f.ExecCommand(ctx, false, true, "", append(baseArgs, extraArgs...))
 	if err != nil {
 		return fmt.Errorf("devpod provider use failed: %s", err.Error())
 	}
@@ -124,30 +137,30 @@ func (f *Framework) DevPodStop(ctx context.Context, workspace string) error {
 	return nil
 }
 
-func (f *Framework) DevPodProviderAdd(args []string) error {
+func (f *Framework) DevPodProviderAdd(ctx context.Context, args ...string) error {
 	baseArgs := []string{"provider", "add"}
 	baseArgs = append(baseArgs, args...)
-	err := f.ExecCommand(context.Background(), false, false, "", baseArgs)
+	err := f.ExecCommand(ctx, false, false, "", baseArgs)
 	if err != nil {
 		return fmt.Errorf("devpod provider add failed: %s", err.Error())
 	}
 	return nil
 }
 
-func (f *Framework) DevPodProviderDelete(args []string) error {
+func (f *Framework) DevPodProviderDelete(ctx context.Context, args ...string) error {
 	baseArgs := []string{"provider", "delete"}
 	baseArgs = append(baseArgs, args...)
-	err := f.ExecCommand(context.Background(), false, false, "", baseArgs)
+	err := f.ExecCommand(ctx, false, false, "", baseArgs)
 	if err != nil {
 		return fmt.Errorf("devpod provider delete failed: %s", err.Error())
 	}
 	return nil
 }
 
-func (f *Framework) DevPodProviderUpdate(args []string) error {
+func (f *Framework) DevPodProviderUpdate(ctx context.Context, args ...string) error {
 	baseArgs := []string{"provider", "update"}
 	baseArgs = append(baseArgs, args...)
-	err := f.ExecCommand(context.Background(), false, false, "", baseArgs)
+	err := f.ExecCommand(ctx, false, false, "", baseArgs)
 	if err != nil {
 		return fmt.Errorf("devpod provider update failed: %s", err.Error())
 	}
@@ -174,6 +187,9 @@ func (f *Framework) DevPodMachineDelete(args []string) error {
 	return nil
 }
 
-func (f *Framework) DevPodWorkspaceDelete(ctx context.Context, workspace string) error {
-	return f.ExecCommand(ctx, false, true, fmt.Sprintf("Successfully deleted workspace '%s'", workspace), []string{"delete", workspace})
+func (f *Framework) DevPodWorkspaceDelete(ctx context.Context, workspace string, extraArgs ...string) error {
+	baseArgs := []string{"delete", workspace}
+	baseArgs = append(baseArgs, extraArgs...)
+
+	return f.ExecCommand(ctx, false, true, fmt.Sprintf("Successfully deleted workspace '%s'", workspace), baseArgs)
 }

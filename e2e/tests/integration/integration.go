@@ -13,6 +13,7 @@ import (
 
 var _ = ginkgo.Describe("[integration]: devpod provider ssh test suite", ginkgo.Ordered, func() {
 	var initialDir string
+	ctx := context.Background()
 
 	ginkgo.BeforeEach(func() {
 		var err error
@@ -58,12 +59,12 @@ var _ = ginkgo.Describe("[integration]: devpod provider ssh test suite", ginkgo.
 	ginkgo.It("should add provider to devpod", func() {
 		f := framework.NewDefaultFramework(initialDir + "/bin")
 		// ensure we don't have the ssh provider present
-		err := f.DevPodProviderDelete([]string{"ssh"})
+		err := f.DevPodProviderDelete(ctx, "ssh")
 		if err != nil {
 			fmt.Println("warning: " + err.Error())
 		}
 
-		err = f.DevPodProviderAdd([]string{"ssh", "-o", "HOST=localhost"})
+		err = f.DevPodProviderAdd(ctx, "ssh", "-o", "HOST=localhost")
 		framework.ExpectNoError(err)
 	})
 
