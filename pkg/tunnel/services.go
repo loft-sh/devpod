@@ -41,9 +41,8 @@ func RunInContainer(
 		return errors.Wrap(err, "forward ports")
 	}
 
-	dockerCredentials = dockerCredentials && devPodConfig.ContextOption(config.ContextOptionInjectDockerCredentials) == "true"
-	gitCredentials = gitCredentials && devPodConfig.ContextOption(config.ContextOptionInjectGitCredentials) == "true"
-	forwardPorts = forwardPorts && devPodConfig.ContextOption(config.ContextOptionAutoPortForwarding) == "true"
+	dockerCredentials = dockerCredentials && devPodConfig.ContextOption(config.ContextOptionSSHInjectDockerCredentials) == "true"
+	gitCredentials = gitCredentials && devPodConfig.ContextOption(config.ContextOptionSSHInjectGitCredentials) == "true"
 
 	stdoutReader, stdoutWriter, err := os.Pipe()
 	if err != nil {

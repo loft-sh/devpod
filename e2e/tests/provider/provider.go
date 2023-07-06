@@ -70,7 +70,7 @@ var _ = DevPodDescribe("devpod provider test suite", func() {
 		cancel()
 
 		// Update provider 2 (change the namespace description value)
-		err = f.DevPodProviderUpdate(ctx, "provider2", tempDir+"/provider2-update.yaml")
+		err = f.DevPodProviderUpdate(context.Background(), "provider2", tempDir+"/provider2-update.yaml")
 		framework.ExpectNoError(err)
 
 		// Ensure that provider 2 was updated

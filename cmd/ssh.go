@@ -204,7 +204,7 @@ func (cmd *SSHCmd) startTunnel(ctx context.Context, devPodConfig *config.Config,
 		return devssh.Run(ctx, containerClient, command, os.Stdin, os.Stdout, writer)
 	}
 
-	return machine.StartSSHSession(ctx, cmd.User, cmd.Command, cmd.AgentForwarding, func(ctx context.Context, stdin io.Reader, stdout io.Writer, stderr io.Writer) error {
+	return machine.StartSSHSession(ctx, cmd.User, cmd.Command, cmd.AgentForwarding && devPodConfig.ContextOption(config.ContextOptionSSHAgentForwarding) == "true", func(ctx context.Context, stdin io.Reader, stdout io.Writer, stderr io.Writer) error {
 		return devssh.Run(ctx, containerClient, command, stdin, stdout, stderr)
 	}, writer)
 }
