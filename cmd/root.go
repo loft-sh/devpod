@@ -18,6 +18,7 @@ import (
 	"github.com/loft-sh/devpod/pkg/config"
 	"github.com/loft-sh/devpod/pkg/telemetry"
 	log2 "github.com/loft-sh/log"
+	"github.com/loft-sh/log/terminal"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 	"golang.org/x/crypto/ssh"
@@ -101,7 +102,13 @@ func Execute() {
 		if globalFlags.Debug {
 			log2.Default.Fatalf("%+v", err)
 		} else {
-			log2.Default.Error("Try using the --debug flag to see a more verbose output")
+			if rootCmd.Annotations == nil || rootCmd.Annotations[agent.AgentExecutedAnnotation] != "true" {
+				if terminal.IsTerminalIn {
+					log2.Default.Error("Try using the --debug flag to see a more verbose output")
+				} else if os.Getenv(telemetry.UIEnvVar) == "true" {
+					log2.Default.Error("Try enabling Debug mode under Settings to see a more verbose output")
+				}
+			}
 			log2.Default.Fatal(err)
 		}
 	}

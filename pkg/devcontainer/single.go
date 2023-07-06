@@ -3,6 +3,7 @@ package devcontainer
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"strings"
 
 	"github.com/loft-sh/devpod/pkg/devcontainer/config"
@@ -14,7 +15,7 @@ func (r *Runner) runSingleContainer(ctx context.Context, parsedConfig *config.Su
 	labels := r.getLabels()
 	containerDetails, err := r.Driver.FindDevContainer(ctx, labels)
 	if err != nil {
-		return nil, errors.Wrap(err, "find dev container")
+		return nil, fmt.Errorf("find dev container: %w", err)
 	}
 
 	// does the container already exist?

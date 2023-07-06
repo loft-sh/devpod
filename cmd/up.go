@@ -439,7 +439,7 @@ func (cmd *UpCmd) devPodUpMachine(ctx context.Context, client client2.WorkspaceC
 		defer log.Debugf("Done executing up command")
 		defer cancel()
 
-		writer := log.Writer(logrus.DebugLevel, false)
+		writer := log.Writer(logrus.InfoLevel, false)
 		defer writer.Close()
 
 		log.Debugf("Inject and run command: %s", command)

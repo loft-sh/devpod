@@ -13,6 +13,7 @@ import (
 )
 
 var _ = DevPodDescribe("devpod proxy provider test suite", func() {
+	ctx := context.Background()
 	var initialDir string
 	var devPodDir string
 
@@ -26,18 +27,18 @@ var _ = DevPodDescribe("devpod proxy provider test suite", func() {
 
 		// add & remove provider
 		f := framework.NewDefaultFramework(initialDir + "/bin")
-		err = f.DevPodProviderAdd([]string{"./proxy-provider.yaml", "-o", "LOCATION=" + devPodDir})
+		err = f.DevPodProviderAdd(ctx, "./proxy-provider.yaml", "-o", "LOCATION="+devPodDir)
 		framework.ExpectNoError(err)
-		err = f.DevPodProviderUse(context.Background(), "proxy-provider")
+		err = f.DevPodProviderUse(ctx, "proxy-provider")
 		framework.ExpectNoError(err)
-		err = f.DevPodProviderAdd([]string{"docker", "--devpod-home", devPodDir})
+		err = f.DevPodProviderAdd(ctx, "docker", "--devpod-home", devPodDir)
 		framework.ExpectNoError(err)
 	})
 
 	ginkgo.AfterEach(func() {
 		// run after each
 		f := framework.NewDefaultFramework(initialDir + "/bin")
-		_ = f.DevPodProviderDelete([]string{"proxy-provider"})
+		_ = f.DevPodProviderDelete(ctx, "proxy-provider")
 
 		// remove temp dir
 		framework.CleanupTempDir(initialDir, devPodDir)

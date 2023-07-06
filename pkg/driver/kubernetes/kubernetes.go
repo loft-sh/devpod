@@ -3,12 +3,12 @@ package kubernetes
 import (
 	"context"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"io"
 	"os/exec"
 	"strings"
 
+	"github.com/loft-sh/devpod/pkg/command"
 	"github.com/loft-sh/devpod/pkg/compose"
 	"github.com/loft-sh/devpod/pkg/devcontainer/config"
 	"github.com/loft-sh/devpod/pkg/driver"
@@ -75,12 +75,7 @@ func (k *kubernetesDriver) getDevContainerPvc(ctx context.Context, id string) (*
 	// try to find pvc
 	out, err := k.buildCmd(ctx, []string{"get", "pvc", id, "--ignore-not-found", "-o", "json"}).Output()
 	if err != nil {
-		var exitError *exec.ExitError
-		if errors.As(err, &exitError) {
-			return nil, nil, fmt.Errorf("find pvc: %s", strings.TrimSpace(string(exitError.Stderr)))
-		}
-
-		return nil, nil, perrors.Wrap(err, "find pvc")
+		return nil, nil, command.WrapCommandError(out, err)
 	} else if len(out) == 0 {
 		return nil, nil, nil
 	}
