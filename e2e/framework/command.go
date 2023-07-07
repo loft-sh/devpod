@@ -186,6 +186,11 @@ func (f *Framework) DevPodMachineDelete(args []string) error {
 	}
 	return nil
 }
+func (f *Framework) DevPodWorkspaceStop(ctx context.Context, extraArgs ...string) error {
+	baseArgs := []string{"stop"}
+	baseArgs = append(baseArgs, extraArgs...)
+	return f.ExecCommandStdout(ctx, baseArgs)
+}
 
 func (f *Framework) DevPodWorkspaceDelete(ctx context.Context, workspace string, extraArgs ...string) error {
 	baseArgs := []string{"delete", workspace}

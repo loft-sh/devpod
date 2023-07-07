@@ -40,6 +40,7 @@ func (k *kubernetesDriver) getInitContainer(
 			Image:        imageName,
 			Command:      []string{"/bin/sh"},
 			Args:         []string{"-c", strings.Join(commands, "\n") + "\n"},
+			Resources:    parseResources(k.config.HelperResources, k.Log),
 			VolumeMounts: volumeMounts,
 			SecurityContext: &corev1.SecurityContext{
 				RunAsUser:    &[]int64{0}[0],

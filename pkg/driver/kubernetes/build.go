@@ -156,9 +156,17 @@ func (k *kubernetesDriver) buildPod(
 	// get pod
 	var pod *corev1.Pod
 	if k.config.BuildkitPrivileged == "true" {
-		pod = getPrivilegedBuildKitPod(id, k.config.BuildkitImage)
+		pod = getPrivilegedBuildKitPod(id, k.config.BuildkitImage, parseResources(k.config.BuildkitResources, k.Log))
 	} else {
-		pod = getRootlessBuildKitPod(id, k.config.BuildkitImage)
+		pod = getRootlessBuildKitPod(id, k.config.BuildkitImage, parseResources(k.config.BuildkitResources, k.Log))
+	}
+
+	// parse node selector
+	if k.config.BuildkitNodeSelector != "" {
+		pod.Spec.NodeSelector, err = parseLabels(k.config.BuildkitNodeSelector)
+		if err != nil {
+			return nil, fmt.Errorf("parse node selector: %w", err)
+		}
 	}
 
 	// delete existing pod
@@ -259,7 +267,7 @@ func newBuildKitClient(ctx context.Context, reader io.Reader, writer io.WriteClo
 	}))
 }
 
-func getPrivilegedBuildKitPod(id, buildKitImage string) *corev1.Pod {
+func getPrivilegedBuildKitPod(id, buildKitImage string, resources corev1.ResourceRequirements) *corev1.Pod {
 	if buildKitImage == "" {
 		buildKitImage = defaultBuildkitImage
 	}
@@ -270,14 +278,16 @@ func getPrivilegedBuildKitPod(id, buildKitImage string) *corev1.Pod {
 			APIVersion: corev1.SchemeGroupVersion.String(),
 		},
 		ObjectMeta: metav1.ObjectMeta{
-			Name: id + "-" + "buildkit",
+			Name:   id + "-" + "buildkit",
+			Labels: DevPodLabels,
 		},
 		Spec: corev1.PodSpec{
 			EnableServiceLinks: new(bool),
 			Containers: []corev1.Container{
 				{
-					Name:  "buildkitd",
-					Image: buildKitImage,
+					Name:      "buildkitd",
+					Image:     buildKitImage,
+					Resources: resources,
 					LivenessProbe: &corev1.Probe{
 						Handler: corev1.Handler{
 							Exec: &corev1.ExecAction{
@@ -313,7 +323,7 @@ func getPrivilegedBuildKitPod(id, buildKitImage string) *corev1.Pod {
 	}
 }
 
-func getRootlessBuildKitPod(id, buildKitImage string) *corev1.Pod {
+func getRootlessBuildKitPod(id, buildKitImage string, resources corev1.ResourceRequirements) *corev1.Pod {
 	if buildKitImage == "" {
 		buildKitImage = defaultRootlessBuildkitImage
 	}
@@ -324,7 +334,8 @@ func getRootlessBuildKitPod(id, buildKitImage string) *corev1.Pod {
 			APIVersion: corev1.SchemeGroupVersion.String(),
 		},
 		ObjectMeta: metav1.ObjectMeta{
-			Name: id + "-" + "buildkit",
+			Name:   id + "-" + "buildkit",
+			Labels: DevPodLabels,
 			Annotations: map[string]string{
 				"container.apparmor.security.beta.kubernetes.io/buildkitd": "unconfined",
 			},
@@ -338,6 +349,7 @@ func getRootlessBuildKitPod(id, buildKitImage string) *corev1.Pod {
 					Args: []string{
 						"--oci-worker-no-process-sandbox",
 					},
+					Resources: resources,
 					LivenessProbe: &corev1.Probe{
 						Handler: corev1.Handler{
 							Exec: &corev1.ExecAction{

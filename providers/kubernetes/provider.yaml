@@ -18,7 +18,8 @@ optionGroups:
   - options:
       - BUILDKIT_IMAGE
       - BUILDKIT_PRIVILEGED
-      - HELPER_IMAGE
+      - BUILDKIT_NODE_SELECTOR
+      - BUILDKIT_RESOURCES
     name: "Building"
   - options:
       - CLUSTER_ROLE
@@ -27,6 +28,10 @@ optionGroups:
       - KUBECTL_PATH
       - INACTIVITY_TIMEOUT
       - STORAGE_CLASS
+      - RESOURCES
+      - NODE_SELECTOR
+      - HELPER_RESOURCES
+      - HELPER_IMAGE
     name: "Advanced Options"
 options:
   BUILD_REPOSITORY:
@@ -61,10 +66,15 @@ options:
     global: true
   CLUSTER_ROLE:
     description: If defined, DevPod will create a role binding for the given cluster role.
+    global: true
   SERVICE_ACCOUNT:
     description: If defined, DevPod will use the given service account for the dev container.
+    global: true
   HELPER_IMAGE:
     description: The image DevPod will use to find out the cluster architecture. Defaults to alpine.
+    global: true
+  HELPER_RESOURCES:
+    description: The resources to use for the workspace init container. E.g. requests.cpu=100m,limits.memory=1Gi
     global: true
   KUBECTL_PATH:
     description: The path where to find the kubectl binary.
@@ -74,6 +84,19 @@ options:
     description: "If defined, will automatically stop the pod after the inactivity period. Examples: 10m, 1h"
   STORAGE_CLASS:
     description: If defined, DevPod will use the given storage class to create the persistent volume claim. You will need to ensure the storage class exists in your cluster!
+    global: true
+  NODE_SELECTOR:
+    description: The node selector to use for the workspace pod. E.g. my-label=value,my-label-2=value-2
+    global: true
+  RESOURCES:
+    description: The resources to use for the workspace container. E.g. requests.cpu=500m,limits.memory=5Gi,limits.gpu-vendor.example/example-gpu=1
+    global: true
+  BUILDKIT_RESOURCES:
+    description: The resources to use for the build pod. E.g. requests.cpu=500m,limits.memory=5Gi
+    global: true
+  BUILDKIT_NODE_SELECTOR:
+    description: The node selector to use for the buildkit pod. E.g. my-label=value,my-label-2=value-2
+    global: true
 agent:
   containerInactivityTimeout: ${INACTIVITY_TIMEOUT}
   local: true
@@ -87,16 +110,21 @@ agent:
     serviceAccount: ${SERVICE_ACCOUNT}
     buildRepository: ${BUILD_REPOSITORY}
     helperImage: ${HELPER_IMAGE}
+    helperResources: ${HELPER_RESOURCES}
+    resources: ${RESOURCES}
+    nodeSelector: ${NODE_SELECTOR}
     buildkitImage: ${BUILDKIT_IMAGE}
     buildkitPrivileged: ${BUILDKIT_PRIVILEGED}
+    buildkitNodeSelector: ${BUILDKIT_NODE_SELECTOR}
+    buildkitResources: ${BUILDKIT_RESOURCES}
     persistentVolumeSize: ${DISK_SIZE}
     createNamespace: ${CREATE_NAMESPACE}
     storageClassName: ${STORAGE_CLASS}
 exec:
   init: |-
     # Check if kubernetes is reachable
-    KUBERNETES_REACHABLE=$(${KUBECTL_PATH} get pods --kubeconfig=${KUBERNETES_CONFIG} --namespace=${KUBERNETES_NAMESPACE} --context=${KUBERNETES_CONTEXT} > /dev/null 2>&1 && echo -n "true" || echo -n "false")
-    if [ "$KUBERNETES_REACHABLE" = "false" ]; then
+    ${KUBECTL_PATH} get pods --kubeconfig=${KUBERNETES_CONFIG} --namespace=${KUBERNETES_NAMESPACE} --context=${KUBERNETES_CONTEXT} >/dev/null 2>&1
+    if [ $? -ne 0 ]; then
       >&2 echo "Seems like kubernetes is not reachable on your system."
       >&2 echo "Please make sure kubectl is installed and working."
       >&2 echo "You can verify if kubectl is working correctly via: ${KUBECTL_PATH} get pods --kubeconfig=${KUBERNETES_CONFIG} --namespace=${KUBERNETES_NAMESPACE} --context=${KUBERNETES_CONTEXT}"

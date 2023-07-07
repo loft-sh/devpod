@@ -145,6 +145,12 @@ type ProviderKubernetesDriverConfig struct {
 	// ServiceAccount is the service account to use
 	ServiceAccount string `json:"serviceAccount,omitempty"`
 
+	// Resources holds the Kubernetes resources for the workspace container
+	Resources string `json:"resources,omitempty"`
+
+	// NodeSelector holds the node selector for the workspace pod
+	NodeSelector string `json:"nodeSelector,omitempty"`
+
 	// BuildRepository defines the repository to push builds. If empty,
 	// DevPod will not try to build any images at all.
 	BuildRepository string `json:"buildRepository,omitempty"`
@@ -155,8 +161,17 @@ type ProviderKubernetesDriverConfig struct {
 	// BuildkitPrivileged signals if pod should be ran in privileged mode
 	BuildkitPrivileged types.StrBool `json:"buildkitPrivileged,omitempty"`
 
+	// BuildkitResources holds the resources the buildkit container should have
+	BuildkitResources string `json:"buildkitResources,omitempty"`
+
+	// BuildkitNodeSelector holds the node selector for the build pod
+	BuildkitNodeSelector string `json:"buildkitNodeSelector,omitempty"`
+
 	// HelperImage is used to find out cluster architecture and copy files
 	HelperImage string `json:"helperImage,omitempty"`
+
+	// HelperResources holds the Kubernetes resources for the workspace init container
+	HelperResources string `json:"helperResources,omitempty"`
 
 	// PersistentVolumeSize is the size of the persistent volume in GB
 	PersistentVolumeSize string `json:"persistentVolumeSize,omitempty"`

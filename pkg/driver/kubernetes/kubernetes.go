@@ -188,14 +188,6 @@ func (k *kubernetesDriver) DeleteDevContainer(ctx context.Context, id string, de
 		if err != nil {
 			return perrors.Wrapf(err, "delete role binding: %s", string(out))
 		}
-
-		if k.config.ServiceAccount == "" {
-			k.Log.Infof("Delete service account '%s'...", id)
-			out, err = k.buildCmd(ctx, []string{"delete", "serviceaccount", id, "--ignore-not-found"}).CombinedOutput()
-			if err != nil {
-				return perrors.Wrapf(err, "delete service account: %s", string(out))
-			}
-		}
 	}
 
 	return nil
