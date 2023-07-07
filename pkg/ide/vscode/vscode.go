@@ -22,9 +22,19 @@ import (
 const (
 	DownloadAmd64Option = "DOWNLOAD_AMD64"
 	DownloadArm64Option = "DOWNLOAD_ARM64"
+	OpenSameWindow      = "OPEN_SAME_WINDOW"
 )
 
 var Options = ide.Options{
+	OpenSameWindow: {
+		Name:        OpenSameWindow,
+		Description: "If true, DevPod will open the project in the same vscode window",
+		Default:     "false",
+		Enum: []string{
+			"false",
+			"true",
+		},
+	},
 	DownloadArm64Option: {
 		Name:        DownloadArm64Option,
 		Description: "The download url for the arm64 vscode server binary",

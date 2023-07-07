@@ -104,7 +104,7 @@ func (cmd *BuildCmd) Run(ctx context.Context) error {
 func deleteWorkspace(ctx context.Context, workspaceInfo *provider2.AgentWorkspaceInfo, log log.Logger) error {
 	err := removeContainer(ctx, workspaceInfo, log)
 	if err != nil {
-		return errors.Wrap(err, "remove container")
+		log.Errorf("Removing container: %v", err)
 	}
 
 	_ = os.RemoveAll(workspaceInfo.Origin)

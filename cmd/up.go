@@ -19,6 +19,7 @@ import (
 	config2 "github.com/loft-sh/devpod/pkg/devcontainer/config"
 	"github.com/loft-sh/devpod/pkg/ide/jetbrains"
 	"github.com/loft-sh/devpod/pkg/ide/openvscode"
+	"github.com/loft-sh/devpod/pkg/ide/vscode"
 	open2 "github.com/loft-sh/devpod/pkg/open"
 	"github.com/loft-sh/devpod/pkg/port"
 	provider2 "github.com/loft-sh/devpod/pkg/provider"
@@ -153,7 +154,7 @@ func (cmd *UpCmd) Run(ctx context.Context, devPodConfig *config.Config, client c
 		ideConfig := client.WorkspaceConfig().IDE
 		switch ideConfig.Name {
 		case string(config.IDEVSCode):
-			return startVSCodeLocally(client, result.SubstitutionContext.ContainerWorkspaceFolder, user, log)
+			return startVSCodeLocally(client, result.SubstitutionContext.ContainerWorkspaceFolder, ideConfig.Options, log)
 		case string(config.IDEOpenVSCode):
 			return startInBrowser(ctx, devPodConfig, client, result.SubstitutionContext.ContainerWorkspaceFolder, user, ideConfig.Options, log)
 		case string(config.IDEGoland):
@@ -178,9 +179,14 @@ func (cmd *UpCmd) Run(ctx context.Context, devPodConfig *config.Config, client c
 	return nil
 }
 
-func startVSCodeLocally(client client2.BaseWorkspaceClient, workspaceFolder, user string, log log.Logger) error {
+func startVSCodeLocally(client client2.BaseWorkspaceClient, workspaceFolder string, ideOptions map[string]config.OptionValue, log log.Logger) error {
+	openURL := `vscode://vscode-remote/ssh-remote+` + client.Workspace() + `.devpod/` + url.QueryEscape(workspaceFolder)
+	if vscode.Options.GetValue(ideOptions, vscode.OpenSameWindow) == "false" {
+		openURL += "?windowId=_blank"
+	}
+
 	log.Infof("Starting VSCode...")
-	err := open.Run(`vscode://vscode-remote/ssh-remote+` + url.QueryEscape(user) + `@` + client.Workspace() + `.devpod/` + url.QueryEscape(workspaceFolder))
+	err := open.Run(openURL)
 	if err != nil {
 		log.Debugf("Starting VSCode caused error: %v", err)
 		log.Errorf("Seems like you don't have Visual Studio Code installed on your computer locally. Please install VSCode via https://code.visualstudio.com/")
