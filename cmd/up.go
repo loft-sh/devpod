@@ -181,7 +181,7 @@ func (cmd *UpCmd) Run(ctx context.Context, devPodConfig *config.Config, client c
 
 func startVSCodeLocally(client client2.BaseWorkspaceClient, workspaceFolder string, ideOptions map[string]config.OptionValue, log log.Logger) error {
 	openURL := `vscode://vscode-remote/ssh-remote+` + client.Workspace() + `.devpod/` + url.QueryEscape(workspaceFolder)
-	if vscode.Options.GetValue(ideOptions, vscode.OpenSameWindow) == "false" {
+	if vscode.Options.GetValue(ideOptions, vscode.OpenNewWindow) == "true" {
 		openURL += "?windowId=_blank"
 	}
 

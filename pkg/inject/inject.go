@@ -13,6 +13,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/loft-sh/devpod/pkg/command"
 	"github.com/loft-sh/devpod/pkg/template"
 	"github.com/loft-sh/log"
 	perrors "github.com/pkg/errors"
@@ -41,7 +42,7 @@ func InjectAndExecute(
 	downloadArm64 string,
 	preferDownload,
 	chmodPath bool,
-	command string,
+	commandToExecute string,
 	stdin io.Reader,
 	stdout io.Writer,
 	stderr io.Writer,
@@ -50,7 +51,7 @@ func InjectAndExecute(
 ) (bool, error) {
 	// generate script
 	t, err := template.FillTemplate(Script, map[string]string{
-		"Command":         command,
+		"Command":         commandToExecute,
 		"ExistsCheck":     existsCheck,
 		"InstallDir":      path.Dir(remotePath),
 		"InstallFilename": path.Base(remotePath),
@@ -82,6 +83,9 @@ func InjectAndExecute(
 	}
 	defer stdoutWriter.Close()
 
+	// delayed stderr
+	delayedStderr := newDelayedWriter(stderr)
+
 	// check if context is done
 	select {
 	case <-ctx.Done():
@@ -100,9 +104,9 @@ func InjectAndExecute(
 		defer stdinWriter.Close()
 		defer log.Debugf("done exec")
 
-		err := exec(cancelCtx, t, stdinReader, stdoutWriter, stderr)
+		err := exec(cancelCtx, t, stdinReader, stdoutWriter, delayedStderr)
 		if err != nil && !errors.Is(err, context.Canceled) && !strings.Contains(err.Error(), "signal: ") {
-			execErrChan <- err
+			execErrChan <- command.WrapCommandError(delayedStderr.Buffer(), err)
 		} else {
 			execErrChan <- nil
 		}
@@ -116,10 +120,10 @@ func InjectAndExecute(
 		defer log.Debugf("done inject")
 		defer cancel()
 
-		wasExecuted, err := inject(localFile, stdoutReader, stdout, stdinWriter, stdin, timeout, log)
+		wasExecuted, err := inject(localFile, stdinWriter, stdin, stdoutReader, stdout, delayedStderr, timeout, log)
 		injectChan <- injectResult{
 			wasExecuted: wasExecuted,
-			err:         err,
+			err:         command.WrapCommandError(delayedStderr.Buffer(), err),
 		}
 	}()
 
@@ -137,20 +141,22 @@ func InjectAndExecute(
 		return result.wasExecuted, result.err
 	} else if err != nil {
 		return result.wasExecuted, err
-	} else if result.wasExecuted || command == "" {
+	} else if result.wasExecuted || commandToExecute == "" {
 		return result.wasExecuted, nil
 	}
 
 	log.Debugf("Rerun command as binary was injected")
-	return true, exec(ctx, command, stdin, stdout, stderr)
+	delayedStderr.Start()
+	return true, exec(ctx, commandToExecute, stdin, stdout, delayedStderr)
 }
 
 func inject(
 	localFile LocalFile,
-	stdout io.ReadCloser,
-	stdoutOut io.Writer,
 	stdin io.WriteCloser,
 	stdinOut io.Reader,
+	stdout io.ReadCloser,
+	stdoutOut io.Writer,
+	delayedStderr *delayedWriter,
 	timeout time.Duration,
 	log log.Logger,
 ) (bool, error) {
@@ -238,9 +244,10 @@ func inject(
 	}
 
 	// now pipe reader into stdout
+	delayedStderr.Start()
 	return true, pipe(
-		stdoutOut, stdout,
 		stdin, stdinOut,
+		stdoutOut, stdout,
 	)
 }
 
@@ -262,7 +269,7 @@ func readLine(reader io.Reader) (string, error) {
 	}
 }
 
-func pipe(toStdout io.Writer, fromStdout io.Reader, toStdin io.Writer, fromStdin io.Reader) error {
+func pipe(toStdin io.Writer, fromStdin io.Reader, toStdout io.Writer, fromStdout io.Reader) error {
 	errChan := make(chan error, 2)
 	go func() {
 		_, err := io.Copy(toStdout, fromStdout)

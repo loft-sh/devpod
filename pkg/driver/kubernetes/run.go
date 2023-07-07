@@ -19,6 +19,10 @@ import (
 
 const DevContainerInfoAnnotation = "devpod.sh/info"
 
+var DevPodLabels = map[string]string{
+	"devpod.sh/created": "true",
+}
+
 type DevContainerInfo struct {
 	ParsedConfig   *config.DevContainerConfig
 	MergedConfig   *config.MergedDevContainerConfig
@@ -70,7 +74,7 @@ func (k *kubernetesDriver) RunDevContainer(
 	}
 
 	// create dev container
-	err = k.runContainer(ctx, id, parsedConfig, mergedConfig, imageName, workspaceMount, labels, imageDetails, initialize)
+	err = k.runContainer(ctx, id, parsedConfig, mergedConfig, imageName, workspaceMount, imageDetails, initialize)
 	if err != nil {
 		return err
 	}
@@ -85,7 +89,6 @@ func (k *kubernetesDriver) runContainer(
 	mergedConfig *config.MergedDevContainerConfig,
 	imageName string,
 	workspaceMount string,
-	labels []string,
 	imageDetails *config.ImageDetails,
 	initialize bool,
 ) (err error) {
@@ -141,19 +144,24 @@ func (k *kubernetesDriver) runContainer(
 	serviceAccount := ""
 	if k.config.ServiceAccount != "" {
 		serviceAccount = k.config.ServiceAccount
-	} else if k.config.ClusterRole != "" {
-		serviceAccount = id
+
+		// create service account
+		err = k.createServiceAccount(ctx, id, serviceAccount)
+		if err != nil {
+			return fmt.Errorf("create service account: %w", err)
+		}
 	}
 
 	// create the pod manifest
 	entrypoint, args := docker.GetContainerEntrypointAndArgs(mergedConfig, imageDetails)
-	podRaw, err := json.Marshal(&corev1.Pod{
+	pod := &corev1.Pod{
 		TypeMeta: metav1.TypeMeta{
 			Kind:       "Pod",
 			APIVersion: corev1.SchemeGroupVersion.String(),
 		},
 		ObjectMeta: metav1.ObjectMeta{
-			Name: id,
+			Name:   id,
+			Labels: DevPodLabels,
 		},
 		Spec: corev1.PodSpec{
 			ServiceAccountName: serviceAccount,
@@ -163,6 +171,7 @@ func (k *kubernetesDriver) runContainer(
 					Name:         "devpod",
 					Image:        imageName,
 					Command:      []string{entrypoint},
+					Resources:    parseResources(k.config.Resources, k.Log),
 					Args:         args,
 					Env:          envVars,
 					VolumeMounts: volumeMounts,
@@ -187,7 +196,18 @@ func (k *kubernetesDriver) runContainer(
 				},
 			},
 		},
-	})
+	}
+
+	// parse node selector
+	if k.config.NodeSelector != "" {
+		pod.Spec.NodeSelector, err = parseLabels(k.config.NodeSelector)
+		if err != nil {
+			return fmt.Errorf("parsing node selector: %w", err)
+		}
+	}
+
+	// marshal the pod
+	podRaw, err := json.Marshal(pod)
 	if err != nil {
 		return err
 	}
@@ -251,7 +271,6 @@ func (k *kubernetesDriver) StartDevContainer(ctx context.Context, id string, lab
 		containerInfo.MergedConfig,
 		containerInfo.ImageName,
 		containerInfo.WorkspaceMount,
-		containerInfo.Labels,
 		containerInfo.ImageDetails,
 		false,
 	)

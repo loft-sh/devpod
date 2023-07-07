@@ -22,13 +22,13 @@ import (
 const (
 	DownloadAmd64Option = "DOWNLOAD_AMD64"
 	DownloadArm64Option = "DOWNLOAD_ARM64"
-	OpenSameWindow      = "OPEN_SAME_WINDOW"
+	OpenNewWindow       = "OPEN_NEW_WINDOW"
 )
 
 var Options = ide.Options{
-	OpenSameWindow: {
-		Name:        OpenSameWindow,
-		Description: "If true, DevPod will open the project in the same vscode window",
+	OpenNewWindow: {
+		Name:        OpenNewWindow,
+		Description: "If true, DevPod will open the project in a new vscode window",
 		Default:     "false",
 		Enum: []string{
 			"false",

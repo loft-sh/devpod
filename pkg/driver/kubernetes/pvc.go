@@ -73,10 +73,8 @@ func (k *kubernetesDriver) buildPersistentVolumeClaim(
 			APIVersion: corev1.SchemeGroupVersion.String(),
 		},
 		ObjectMeta: metav1.ObjectMeta{
-			Name: name,
-			Labels: map[string]string{
-				"devpod": "true",
-			},
+			Name:   name,
+			Labels: DevPodLabels,
 			Annotations: map[string]string{
 				DevContainerInfoAnnotation: containerInfo,
 			},

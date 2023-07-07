@@ -2,6 +2,7 @@ package up
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"io"
 	"net/http"
@@ -16,6 +17,7 @@ import (
 	"github.com/loft-sh/devpod/pkg/devcontainer/config"
 	docker "github.com/loft-sh/devpod/pkg/docker"
 	"github.com/onsi/gomega"
+	corev1 "k8s.io/api/core/v1"
 
 	"github.com/loft-sh/devpod/e2e/framework"
 	"github.com/onsi/ginkgo/v2"
@@ -33,6 +35,80 @@ var _ = DevPodDescribe("devpod up test suite", func() {
 
 		dockerHelper = &docker.DockerHelper{DockerCommand: "docker"}
 		composeHelper, err = compose.NewComposeHelper("", dockerHelper)
+		framework.ExpectNoError(err)
+	})
+
+	ginkgo.It("run devpod in Kubernetes", func() {
+		ctx := context.Background()
+		f := framework.NewDefaultFramework(initialDir + "/bin")
+		tempDir, err := framework.CopyToTempDir("tests/up/testdata/kubernetes")
+		framework.ExpectNoError(err)
+		ginkgo.DeferCleanup(framework.CleanupTempDir, initialDir, tempDir)
+
+		err = f.DevPodProviderAdd(ctx, "kubernetes", "-o", "KUBERNETES_NAMESPACE=devpod")
+		framework.ExpectNoError(err)
+		ginkgo.DeferCleanup(func() {
+			err = f.DevPodProviderDelete(context.Background(), "kubernetes")
+			framework.ExpectNoError(err)
+		})
+
+		// run up
+		err = f.DevPodUp(ctx, tempDir)
+		framework.ExpectNoError(err)
+
+		// check pod is there
+		cmd := exec.Command("kubectl", "get", "pods", "-l", "devpod.sh/created=true", "-o", "json", "-n", "devpod")
+		stdout, err := cmd.Output()
+		framework.ExpectNoError(err)
+
+		// check if pod is there
+		list := &corev1.PodList{}
+		err = json.Unmarshal(stdout, list)
+		framework.ExpectNoError(err)
+		framework.ExpectEqual(len(list.Items), 1, "Expect 1 pod")
+		framework.ExpectEqual(len(list.Items[0].Spec.Containers), 1, "Expect 1 container")
+		framework.ExpectEqual(list.Items[0].Spec.Containers[0].Image, "mcr.microsoft.com/devcontainers/go:0-1.19-bullseye", "Expect container image")
+
+		// check if ssh works
+		err = f.DevPodSSHEchoTestString(ctx, tempDir)
+		framework.ExpectNoError(err)
+
+		// stop workspace
+		err = f.DevPodWorkspaceStop(ctx, tempDir)
+		framework.ExpectNoError(err)
+
+		// check pod is there
+		cmd = exec.Command("kubectl", "get", "pods", "-l", "devpod.sh/created=true", "-o", "json", "-n", "devpod")
+		stdout, err = cmd.Output()
+		framework.ExpectNoError(err)
+
+		// check if pod is there
+		list = &corev1.PodList{}
+		err = json.Unmarshal(stdout, list)
+		framework.ExpectNoError(err)
+		framework.ExpectEqual(len(list.Items), 0, "Expect no pods")
+
+		// run up
+		err = f.DevPodUp(ctx, tempDir)
+		framework.ExpectNoError(err)
+
+		// check pod is there
+		cmd = exec.Command("kubectl", "get", "pods", "-l", "devpod.sh/created=true", "-o", "json", "-n", "devpod")
+		stdout, err = cmd.Output()
+		framework.ExpectNoError(err)
+
+		// check if pod is there
+		list = &corev1.PodList{}
+		err = json.Unmarshal(stdout, list)
+		framework.ExpectNoError(err)
+		framework.ExpectEqual(len(list.Items), 1, "Expect 1 pod")
+
+		// check if ssh works
+		err = f.DevPodSSHEchoTestString(ctx, tempDir)
+		framework.ExpectNoError(err)
+
+		// delete workspace
+		err = f.DevPodWorkspaceDelete(ctx, tempDir)
 		framework.ExpectNoError(err)
 	})
 
