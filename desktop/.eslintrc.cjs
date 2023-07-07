@@ -29,7 +29,7 @@ module.exports = {
   },
   rules: {
     "react/react-in-jsx-scope": "off",
-    "no-unused-vars": "off", // overriden by `@typescript-eslint`
+    "no-unused-vars": "off", // overridden by `@typescript-eslint`
     "@typescript-eslint/no-unused-vars": ["error"],
     "padding-line-between-statements": ["warn", { blankLine: "always", prev: "*", next: "return" }],
     "no-warning-comments": ["error", { terms: ["fixme"], location: "start" }],
