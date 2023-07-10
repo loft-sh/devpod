@@ -108,6 +108,9 @@ type AgentWorkspaceInfo struct {
 	// Agent holds the agent info
 	Agent ProviderAgentConfig `json:"agent,omitempty"`
 
+	// CLIOptions holds the cli options
+	CLIOptions CLIOptions `json:"cliOptions,omitempty"`
+
 	// Options holds the filled provider options for this workspace
 	Options map[string]config.OptionValue `json:"options,omitempty"`
 
@@ -116,6 +119,22 @@ type AgentWorkspaceInfo struct {
 
 	// Origin holds the folder where this config was loaded from
 	Origin string `json:"-"`
+}
+
+type CLIOptions struct {
+	// up options
+	ID                   string   `json:"id,omitempty"`
+	Source               string   `json:"source,omitempty"`
+	IDE                  string   `json:"ide,omitempty"`
+	IDEOptions           []string `json:"ideOptions,omitempty"`
+	PrebuildRepositories []string `json:"prebuildRepositories,omitempty"`
+	DevContainerPath     string   `json:"devContainerPath,omitempty"`
+	WorkspaceEnv         []string `json:"workspaceEnv,omitempty"`
+	Recreate             bool     `json:"recreate,omitempty"`
+
+	// build options
+	Repository string   `json:"repository,omitempty"`
+	Platform   []string `json:"platform,omitempty"`
 }
 
 func (w WorkspaceSource) String() string {

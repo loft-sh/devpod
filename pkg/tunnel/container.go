@@ -10,6 +10,7 @@ import (
 
 	"github.com/loft-sh/devpod/pkg/agent"
 	"github.com/loft-sh/devpod/pkg/client"
+	"github.com/loft-sh/devpod/pkg/provider"
 	devssh "github.com/loft-sh/devpod/pkg/ssh"
 	"github.com/loft-sh/log"
 	"github.com/pkg/errors"
@@ -127,7 +128,7 @@ func (c *ContainerHandler) updateConfig(ctx context.Context, sshClient *ssh.Clie
 			}
 
 			// compress info
-			workspaceInfo, agentInfo, err := c.client.AgentInfo()
+			workspaceInfo, agentInfo, err := c.client.AgentInfo(provider.CLIOptions{})
 			if err != nil {
 				c.log.Errorf("Error compressing workspace info: %v", err)
 				break
@@ -153,7 +154,7 @@ func (c *ContainerHandler) updateConfig(ctx context.Context, sshClient *ssh.Clie
 
 func (c *ContainerHandler) runRunInContainer(ctx context.Context, sshClient *ssh.Client, runInContainer Handler) error {
 	// compress info
-	workspaceInfo, _, err := c.client.AgentInfo()
+	workspaceInfo, _, err := c.client.AgentInfo(provider.CLIOptions{})
 	if err != nil {
 		return err
 	}

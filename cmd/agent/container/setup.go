@@ -68,7 +68,7 @@ func (cmd *SetupContainerCmd) Run(_ *cobra.Command, _ []string) error {
 	}
 
 	// setting up container
-	err = setup.SetupContainer(setupInfo, cmd.ChownWorkspace, log.Default)
+	err = setup.SetupContainer(setupInfo, workspaceInfo, cmd.ChownWorkspace, log.Default)
 	if err != nil {
 		return err
 	}

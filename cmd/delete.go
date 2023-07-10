@@ -29,7 +29,7 @@ func NewDeleteCmd(flags *flags.GlobalFlags) *cobra.Command {
 		Use:   "delete",
 		Short: "Deletes an existing workspace",
 		RunE: func(_ *cobra.Command, args []string) error {
-			err := clientimplementation.DecodeOptionsFromEnv(clientimplementation.DevPodFlagsDelete, &cmd.DeleteOptions)
+			_, err := clientimplementation.DecodeOptionsFromEnv(clientimplementation.DevPodFlagsDelete, &cmd.DeleteOptions)
 			if err != nil {
 				return fmt.Errorf("decode up options: %w", err)
 			}

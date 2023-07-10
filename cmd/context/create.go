@@ -36,7 +36,7 @@ func NewCreateCmd(flags *flags.GlobalFlags) *cobra.Command {
 		},
 	}
 
-	createCmd.Flags().StringSliceVarP(&cmd.Options, "option", "o", []string{}, "context option in the form KEY=VALUE")
+	createCmd.Flags().StringArrayVarP(&cmd.Options, "option", "o", []string{}, "context option in the form KEY=VALUE")
 	return createCmd
 }
 

@@ -208,7 +208,23 @@ func GetProviderOptions(workspace *Workspace, server *Machine, devConfig *config
 	return retValues
 }
 
+func CloneAgentWorkspaceInfo(agentWorkspaceInfo *AgentWorkspaceInfo) *AgentWorkspaceInfo {
+	if agentWorkspaceInfo == nil {
+		return nil
+	}
+	out, _ := json.Marshal(agentWorkspaceInfo)
+	ret := &AgentWorkspaceInfo{}
+	_ = json.Unmarshal(out, ret)
+	ret.Origin = agentWorkspaceInfo.Origin
+	ret.Workspace = CloneWorkspace(agentWorkspaceInfo.Workspace)
+	ret.Machine = CloneMachine(agentWorkspaceInfo.Machine)
+	return ret
+}
+
 func CloneWorkspace(workspace *Workspace) *Workspace {
+	if workspace == nil {
+		return nil
+	}
 	out, _ := json.Marshal(workspace)
 	ret := &Workspace{}
 	_ = json.Unmarshal(out, ret)
@@ -217,6 +233,9 @@ func CloneWorkspace(workspace *Workspace) *Workspace {
 }
 
 func CloneMachine(server *Machine) *Machine {
+	if server == nil {
+		return nil
+	}
 	out, _ := json.Marshal(server)
 	ret := &Machine{}
 	_ = json.Unmarshal(out, ret)

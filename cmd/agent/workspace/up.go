@@ -41,11 +41,7 @@ import (
 type UpCmd struct {
 	*flags.GlobalFlags
 
-	WorkspaceInfo        string
-	PrebuildRepositories []string
-
-	ForceBuild bool
-	Recreate   bool
+	WorkspaceInfo string
 }
 
 // NewUpCmd creates a new command
@@ -61,9 +57,6 @@ func NewUpCmd(flags *flags.GlobalFlags) *cobra.Command {
 			return cmd.Run(context.Background())
 		},
 	}
-	upCmd.Flags().BoolVar(&cmd.ForceBuild, "force-build", false, "If true will rebuild the container even if there is a prebuild already")
-	upCmd.Flags().BoolVar(&cmd.Recreate, "recreate", false, "If true will remove any existing containers and recreate them")
-	upCmd.Flags().StringSliceVar(&cmd.PrebuildRepositories, "prebuild-repository", []string{}, "Docker repository that hosts devpod prebuilds for this workspace")
 	upCmd.Flags().StringVar(&cmd.WorkspaceInfo, "workspace-info", "", "The workspace info")
 	_ = upCmd.MarkFlagRequired("workspace-info")
 	return upCmd
@@ -371,10 +364,7 @@ func (cmd *UpCmd) devPodUp(ctx context.Context, workspaceInfo *provider2.AgentWo
 	}
 
 	result, err := runner.Up(ctx, devcontainer.UpOptions{
-		PrebuildRepositories: cmd.PrebuildRepositories,
-
-		ForceBuild: cmd.ForceBuild,
-		Recreate:   cmd.Recreate,
+		CLIOptions: workspaceInfo.CLIOptions,
 	})
 	if err != nil {
 		return nil, err

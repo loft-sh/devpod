@@ -1,6 +1,9 @@
 package config
 
-import "github.com/loft-sh/devpod/pkg/dockerfile"
+import (
+	"github.com/loft-sh/devpod/pkg/dockerfile"
+	provider2 "github.com/loft-sh/devpod/pkg/provider"
+)
 
 const (
 	DockerIDLabel           = "dev.containers.id"
@@ -8,11 +11,10 @@ const (
 )
 
 type BuildOptions struct {
-	NoBuild bool
+	provider2.CLIOptions
 
-	PrebuildRepositories []string
-	Platform             string
-	PushRepository       string
+	Platform string
+	NoBuild  bool
 }
 
 type BuildInfo struct {

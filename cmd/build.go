@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"io"
 	"os"
-	"strings"
 
 	"github.com/loft-sh/devpod/cmd/flags"
 	"github.com/loft-sh/devpod/pkg/agent"
@@ -13,6 +12,7 @@ import (
 	"github.com/loft-sh/devpod/pkg/client"
 	"github.com/loft-sh/devpod/pkg/config"
 	"github.com/loft-sh/devpod/pkg/image"
+	"github.com/loft-sh/devpod/pkg/provider"
 	workspace2 "github.com/loft-sh/devpod/pkg/workspace"
 	"github.com/loft-sh/log"
 	"github.com/pkg/errors"
@@ -23,15 +23,12 @@ import (
 // BuildCmd holds the cmd flags
 type BuildCmd struct {
 	*flags.GlobalFlags
+	provider.CLIOptions
 
 	ProviderOptions []string
 
 	SkipDelete bool
-	Repository string
 	Machine    string
-	Platform   []string
-
-	DevContainerPath string
 }
 
 // NewBuildCmd creates a new command
@@ -132,7 +129,7 @@ func (cmd *BuildCmd) build(ctx context.Context, workspaceClient client.Workspace
 
 func (cmd *BuildCmd) buildAgentClient(ctx context.Context, workspaceClient client.WorkspaceClient, log log.Logger) error {
 	// compress info
-	workspaceInfo, _, err := workspaceClient.AgentInfo()
+	workspaceInfo, _, err := workspaceClient.AgentInfo(cmd.CLIOptions)
 	if err != nil {
 		return err
 	}
@@ -143,12 +140,6 @@ func (cmd *BuildCmd) buildAgentClient(ctx context.Context, workspaceClient clien
 	command := fmt.Sprintf("'%s' agent workspace build --workspace-info '%s'", workspaceClient.AgentPath(), workspaceInfo)
 	if log.GetLevel() == logrus.DebugLevel {
 		command += " --debug"
-	}
-	if cmd.Repository != "" {
-		command += fmt.Sprintf(" --repository '%s'", cmd.Repository)
-	}
-	if len(cmd.Platform) > 0 {
-		command += fmt.Sprintf(" --platform '%s'", strings.Join(cmd.Platform, ","))
 	}
 
 	// create pipes
@@ -185,16 +176,13 @@ func (cmd *BuildCmd) buildAgentClient(ctx context.Context, workspaceClient clien
 		}, workspaceClient.AgentLocal(), workspaceClient.AgentPath(), workspaceClient.AgentURL(), true, command, stdinReader, stdoutWriter, writer, log.ErrorStreamOnly())
 	}()
 
-	// get workspace config
-	agentConfig := workspaceClient.AgentConfig()
-
 	// create container etc.
 	_, err = tunnelserver.RunTunnelServer(
 		cancelCtx,
 		stdoutReader,
 		stdinWriter,
-		string(agentConfig.InjectGitCredentials) == "true",
-		string(agentConfig.InjectDockerCredentials) == "true",
+		workspaceClient.AgentInjectGitCredentials(),
+		workspaceClient.AgentInjectDockerCredentials(),
 		workspaceClient.WorkspaceConfig(),
 		nil,
 		log,

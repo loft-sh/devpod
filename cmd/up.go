@@ -36,7 +36,7 @@ import (
 
 // UpCmd holds the up cmd flags
 type UpCmd struct {
-	client2.UpBaseOptions
+	provider2.CLIOptions
 	*flags.GlobalFlags
 
 	Machine string
@@ -61,9 +61,9 @@ func NewUpCmd(flags *flags.GlobalFlags) *cobra.Command {
 		Short: "Starts a new workspace",
 		RunE: func(_ *cobra.Command, args []string) error {
 			// try to parse flags from env
-			err := clientimplementation.DecodeOptionsFromEnv(clientimplementation.DevPodFlagsUp, &cmd.UpBaseOptions)
+			err := mergeDevPodUpOptions(&cmd.CLIOptions)
 			if err != nil {
-				return fmt.Errorf("decode up options: %w", err)
+				return err
 			}
 
 			ctx := context.Background()
@@ -109,11 +109,12 @@ func NewUpCmd(flags *flags.GlobalFlags) *cobra.Command {
 
 	upCmd.Flags().BoolVar(&cmd.ConfigureSSH, "configure-ssh", true, "If true will configure the ssh config to include the DevPod workspace")
 	upCmd.Flags().StringVar(&cmd.SSHConfigPath, "ssh-config", "", "The path to the ssh config to modify, if empty will use ~/.ssh/config")
-	upCmd.Flags().StringSliceVar(&cmd.IDEOptions, "ide-option", []string{}, "IDE option in the form KEY=VALUE")
+	upCmd.Flags().StringArrayVar(&cmd.IDEOptions, "ide-option", []string{}, "IDE option in the form KEY=VALUE")
 	upCmd.Flags().StringVar(&cmd.DevContainerPath, "devcontainer-path", "", "The path to the devcontainer.json relative to the project")
-	upCmd.Flags().StringSliceVar(&cmd.ProviderOptions, "provider-option", []string{}, "Provider option in the form KEY=VALUE")
+	upCmd.Flags().StringArrayVar(&cmd.ProviderOptions, "provider-option", []string{}, "Provider option in the form KEY=VALUE")
 	upCmd.Flags().BoolVar(&cmd.Recreate, "recreate", false, "If true will remove any existing containers and recreate them")
 	upCmd.Flags().StringSliceVar(&cmd.PrebuildRepositories, "prebuild-repository", []string{}, "Docker repository that hosts devpod prebuilds for this workspace")
+	upCmd.Flags().StringArrayVar(&cmd.WorkspaceEnv, "workspace-env", []string{}, "Extra env variables to put into the workspace. E.g. MY_ENV_VAR=MY_VALUE")
 	upCmd.Flags().StringVar(&cmd.ID, "id", "", "The id to use for the workspace")
 	upCmd.Flags().StringVar(&cmd.Machine, "machine", "", "The machine to use for this workspace. The machine needs to exist beforehand or the command will fail. If the workspace already exists, this option has no effect")
 	upCmd.Flags().StringVar(&cmd.IDE, "ide", "", "The IDE to open the workspace in. If empty will use vscode locally or in browser")
@@ -358,7 +359,7 @@ func (cmd *UpCmd) devPodUpProxy(ctx context.Context, client client2.ProxyClient,
 
 		// build devpod up options
 		workspace := client.WorkspaceConfig()
-		baseOptions := cmd.UpBaseOptions
+		baseOptions := cmd.CLIOptions
 		baseOptions.ID = workspace.ID
 		baseOptions.DevContainerPath = workspace.DevContainerPath
 		baseOptions.IDE = workspace.IDE.Name
@@ -370,7 +371,7 @@ func (cmd *UpCmd) devPodUpProxy(ctx context.Context, client client2.ProxyClient,
 
 		// run devpod up elsewhere
 		err := client.Up(ctx, client2.UpOptions{
-			UpBaseOptions: baseOptions,
+			CLIOptions: baseOptions,
 
 			Stdin:  stdinReader,
 			Stdout: stdoutWriter,
@@ -408,7 +409,7 @@ func (cmd *UpCmd) devPodUpMachine(ctx context.Context, client client2.WorkspaceC
 	}
 
 	// compress info
-	workspaceInfo, _, err := client.AgentInfo()
+	workspaceInfo, _, err := client.AgentInfo(cmd.CLIOptions)
 	if err != nil {
 		return nil, err
 	}
@@ -419,12 +420,6 @@ func (cmd *UpCmd) devPodUpMachine(ctx context.Context, client client2.WorkspaceC
 	command := fmt.Sprintf("'%s' agent workspace up --workspace-info '%s'", client.AgentPath(), workspaceInfo)
 	if log.GetLevel() == logrus.DebugLevel {
 		command += " --debug"
-	}
-	for _, repo := range cmd.PrebuildRepositories {
-		command += fmt.Sprintf(" --prebuild-repository '%s'", repo)
-	}
-	if cmd.Recreate {
-		command += " --recreate"
 	}
 
 	// create pipes
@@ -467,9 +462,6 @@ func (cmd *UpCmd) devPodUpMachine(ctx context.Context, client client2.WorkspaceC
 		}
 	}()
 
-	// get workspace config
-	agentConfig := client.AgentConfig()
-
 	// create container etc.
 	var result *config2.Result
 	if cmd.Proxy {
@@ -495,8 +487,8 @@ func (cmd *UpCmd) devPodUpMachine(ctx context.Context, client client2.WorkspaceC
 			cancelCtx,
 			stdoutReader,
 			stdinWriter,
-			string(agentConfig.InjectGitCredentials) == "true",
-			string(agentConfig.InjectDockerCredentials) == "true",
+			client.AgentInjectGitCredentials(),
+			client.AgentInjectDockerCredentials(),
 			client.WorkspaceConfig(),
 			nil,
 			log,
@@ -514,6 +506,20 @@ func configureSSH(client client2.BaseWorkspaceClient, configPath, user string) e
 	err := devssh.ConfigureSSHConfig(configPath, client.Context(), client.Workspace(), user, log.Default)
 	if err != nil {
 		return err
+	}
+
+	return nil
+}
+
+func mergeDevPodUpOptions(baseOptions *provider2.CLIOptions) error {
+	oldOptions := *baseOptions
+	found, err := clientimplementation.DecodeOptionsFromEnv(clientimplementation.DevPodFlagsUp, baseOptions)
+	if err != nil {
+		return fmt.Errorf("decode up options: %w", err)
+	} else if found {
+		baseOptions.WorkspaceEnv = append(oldOptions.WorkspaceEnv, baseOptions.WorkspaceEnv...)
+		baseOptions.PrebuildRepositories = append(oldOptions.PrebuildRepositories, baseOptions.PrebuildRepositories...)
+		baseOptions.IDEOptions = append(oldOptions.IDEOptions, baseOptions.IDEOptions...)
 	}
 
 	return nil

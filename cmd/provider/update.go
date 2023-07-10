@@ -40,7 +40,7 @@ func NewUpdateCmd(flags *flags.GlobalFlags) *cobra.Command {
 	}
 
 	updateCmd.Flags().BoolVar(&cmd.Use, "use", true, "If enabled will automatically activate the provider")
-	updateCmd.Flags().StringSliceVarP(&cmd.Options, "option", "o", []string{}, "Provider option in the form KEY=VALUE")
+	updateCmd.Flags().StringArrayVarP(&cmd.Options, "option", "o", []string{}, "Provider option in the form KEY=VALUE")
 	return updateCmd
 }
 

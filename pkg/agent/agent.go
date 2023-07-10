@@ -166,20 +166,36 @@ func WriteWorkspaceInfoAndDeleteOld(workspaceInfoEncoded string, deleteWorkspace
 		workspaceInfo.ContentFolder = GetAgentWorkspaceContentDir(workspaceDir)
 	}
 
-	// encode workspace info
-	encoded, err := json.Marshal(workspaceInfo)
+	// write workspace info
+	err = writeWorkspaceInfo(workspaceConfig, workspaceInfo)
 	if err != nil {
 		return false, nil, err
 	}
 
-	// write workspace config
-	err = os.WriteFile(workspaceConfig, encoded, 0666)
-	if err != nil {
-		return false, nil, fmt.Errorf("write workspace config file: %w", err)
-	}
-
 	workspaceInfo.Origin = workspaceDir
 	return false, workspaceInfo, nil
+}
+
+func writeWorkspaceInfo(file string, workspaceInfo *provider2.AgentWorkspaceInfo) error {
+	// copy workspace info
+	cloned := provider2.CloneAgentWorkspaceInfo(workspaceInfo)
+
+	// never save cli options
+	cloned.CLIOptions = provider2.CLIOptions{}
+
+	// encode workspace info
+	encoded, err := json.Marshal(workspaceInfo)
+	if err != nil {
+		return err
+	}
+
+	// write workspace config
+	err = os.WriteFile(file, encoded, 0666)
+	if err != nil {
+		return fmt.Errorf("write workspace config file: %w", err)
+	}
+
+	return nil
 }
 
 func rerunAsRoot(workspaceInfo *provider2.AgentWorkspaceInfo, log log.Logger) (bool, error) {
