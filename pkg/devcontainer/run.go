@@ -58,12 +58,10 @@ type Runner struct {
 }
 
 type UpOptions struct {
-	PrebuildRepositories []string
+	provider2.CLIOptions
 
-	NoBuild bool
-
+	NoBuild    bool
 	ForceBuild bool
-	Recreate   bool
 }
 
 func (r *Runner) prepare() (*config.SubstitutedConfig, *WorkspaceConfig, error) {

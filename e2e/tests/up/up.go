@@ -38,6 +38,60 @@ var _ = DevPodDescribe("devpod up test suite", func() {
 		framework.ExpectNoError(err)
 	})
 
+	ginkgo.It("with env vars", func() {
+		tempDir, err := framework.CopyToTempDir("tests/up/testdata/docker")
+		framework.ExpectNoError(err)
+		ginkgo.DeferCleanup(framework.CleanupTempDir, initialDir, tempDir)
+
+		ctx := context.Background()
+		f := framework.NewDefaultFramework(initialDir + "/bin")
+
+		_ = f.DevPodProviderDelete(ctx, "docker")
+		err = f.DevPodProviderAdd(ctx, "docker")
+		framework.ExpectNoError(err)
+		err = f.DevPodProviderUse(context.Background(), "docker")
+		framework.ExpectNoError(err)
+
+		ginkgo.DeferCleanup(f.DevPodWorkspaceDelete, context.Background(), tempDir)
+
+		// Wait for devpod workspace to come online (deadline: 30s)
+		err = f.DevPodUp(ctx, tempDir)
+		framework.ExpectNoError(err)
+
+		// check env var
+		out, err := f.DevPodSSH(ctx, tempDir, "echo -n $TEST_VAR")
+		framework.ExpectNoError(err)
+		framework.ExpectEqual(out, "", "should be empty")
+
+		// set env var
+		value := "test-variable"
+		err = f.DevPodUp(ctx, tempDir, "--workspace-env", "TEST_VAR="+value)
+		framework.ExpectNoError(err)
+
+		// check env var
+		out, err = f.DevPodSSH(ctx, tempDir, "echo -n $TEST_VAR")
+		framework.ExpectNoError(err)
+		framework.ExpectEqual(out, value, "should be set now")
+
+		// check env var again
+		err = f.DevPodUp(ctx, tempDir)
+		framework.ExpectNoError(err)
+
+		// check env var
+		out, err = f.DevPodSSH(ctx, tempDir, "echo -n $TEST_VAR")
+		framework.ExpectNoError(err)
+		framework.ExpectEqual(out, value, "should still be set")
+
+		// delete env var
+		err = f.DevPodUp(ctx, tempDir, "--workspace-env", "TEST_VAR=")
+		framework.ExpectNoError(err)
+
+		// check env var
+		out, err = f.DevPodSSH(ctx, tempDir, "echo -n $TEST_VAR")
+		framework.ExpectNoError(err)
+		framework.ExpectEqual(out, "", "should be empty")
+	})
+
 	ginkgo.It("run devpod in Kubernetes", func() {
 		ctx := context.Background()
 		f := framework.NewDefaultFramework(initialDir + "/bin")

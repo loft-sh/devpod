@@ -172,7 +172,7 @@ func (s *proxyClient) Up(ctx context.Context, opt client.UpOptions) error {
 		nil,
 		s.devPodConfig.ProviderOptions(s.config.Name),
 		s.config,
-		EncodeOptions(opt.UpBaseOptions, DevPodFlagsUp),
+		EncodeOptions(opt.CLIOptions, DevPodFlagsUp),
 		opt.Stdin,
 		opt.Stdout,
 		writer,
@@ -340,13 +340,13 @@ func EncodeOptions(options any, name string) map[string]string {
 	}
 }
 
-func DecodeOptionsFromEnv(name string, into any) error {
+func DecodeOptionsFromEnv(name string, into any) (bool, error) {
 	raw := os.Getenv(name)
 	if raw == "" {
-		return nil
+		return false, nil
 	}
 
-	return json.Unmarshal([]byte(raw), into)
+	return true, json.Unmarshal([]byte(raw), into)
 }
 
 func readLogStream(reader io.Reader, logger log.Logger) {

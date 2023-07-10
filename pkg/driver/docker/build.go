@@ -42,8 +42,8 @@ func (d *dockerDriver) BuildDevContainer(
 
 	// check if there is a prebuild image
 	devPodCustomizations := config.GetDevPodCustomizations(parsedConfig.Config)
-	if options.PushRepository != "" {
-		options.PrebuildRepositories = append(options.PrebuildRepositories, options.PushRepository)
+	if options.Repository != "" {
+		options.PrebuildRepositories = append(options.PrebuildRepositories, options.Repository)
 	}
 	options.PrebuildRepositories = append(options.PrebuildRepositories, devPodCustomizations.PrebuildRepository...)
 	d.Log.Debugf("Try to find prebuild image %s in repositories %s", prebuildHash, strings.Join(options.PrebuildRepositories, ","))
@@ -73,7 +73,7 @@ func (d *dockerDriver) BuildDevContainer(
 
 	// check if image build is necessary
 	imageName := getImageName(localWorkspaceFolder, prebuildHash)
-	if options.PushRepository == "" {
+	if options.Repository == "" {
 		imageDetails, err := d.Docker.InspectImage(imageName, false)
 		if err == nil && imageDetails != nil {
 			// local image found
@@ -95,7 +95,7 @@ func (d *dockerDriver) BuildDevContainer(
 	}
 
 	// get build options
-	buildOptions, deleteFolders, err := CreateBuildOptions(dockerfilePath, dockerfileContent, parsedConfig, extendedBuildInfo, imageName, options.PushRepository, prebuildHash)
+	buildOptions, deleteFolders, err := CreateBuildOptions(dockerfilePath, dockerfileContent, parsedConfig, extendedBuildInfo, imageName, options.Repository, prebuildHash)
 	if err != nil {
 		return nil, err
 	}

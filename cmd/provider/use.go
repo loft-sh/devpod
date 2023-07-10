@@ -53,7 +53,7 @@ func NewUseCmd(flags *flags.GlobalFlags) *cobra.Command {
 func AddFlags(useCmd *cobra.Command, cmd *UseCmd) {
 	useCmd.Flags().BoolVar(&cmd.SingleMachine, "single-machine", false, "If enabled will use a single machine for all workspaces")
 	useCmd.Flags().BoolVar(&cmd.Reconfigure, "reconfigure", false, "If enabled will not merge existing provider config")
-	useCmd.Flags().StringSliceVarP(&cmd.Options, "option", "o", []string{}, "Provider option in the form KEY=VALUE")
+	useCmd.Flags().StringArrayVarP(&cmd.Options, "option", "o", []string{}, "Provider option in the form KEY=VALUE")
 
 	useCmd.Flags().BoolVar(&cmd.SkipInit, "skip-init", false, "ONLY FOR TESTING: If true will skip init")
 	_ = useCmd.Flags().MarkHidden("skip-init")

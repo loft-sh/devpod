@@ -133,22 +133,31 @@ func (s *workspaceClient) RefreshOptions(ctx context.Context, userOptionsRaw []s
 	return nil
 }
 
-func (s *workspaceClient) AgentConfig() provider.ProviderAgentConfig {
+func (s *workspaceClient) AgentInjectGitCredentials() bool {
 	s.m.Lock()
 	defer s.m.Unlock()
 
-	return options.ResolveAgentConfig(s.devPodConfig, s.config, s.workspace, s.machine)
+	return options.ResolveAgentConfig(s.devPodConfig, s.config, s.workspace, s.machine).InjectGitCredentials == "true"
 }
 
-func (s *workspaceClient) AgentInfo() (string, *provider.AgentWorkspaceInfo, error) {
+func (s *workspaceClient) AgentInjectDockerCredentials() bool {
 	s.m.Lock()
 	defer s.m.Unlock()
 
+	return options.ResolveAgentConfig(s.devPodConfig, s.config, s.workspace, s.machine).InjectDockerCredentials == "true"
+}
+
+func (s *workspaceClient) AgentInfo(cliOptions provider.CLIOptions) (string, *provider.AgentWorkspaceInfo, error) {
+	s.m.Lock()
+	defer s.m.Unlock()
+
+	// build struct
 	agentInfo := &provider.AgentWorkspaceInfo{
-		Workspace: s.workspace,
-		Machine:   s.machine,
-		Agent:     options.ResolveAgentConfig(s.devPodConfig, s.config, s.workspace, s.machine),
-		Options:   s.devPodConfig.ProviderOptions(s.Provider()),
+		Workspace:  s.workspace,
+		Machine:    s.machine,
+		CLIOptions: cliOptions,
+		Agent:      options.ResolveAgentConfig(s.devPodConfig, s.config, s.workspace, s.machine),
+		Options:    s.devPodConfig.ProviderOptions(s.Provider()),
 	}
 
 	// marshal config

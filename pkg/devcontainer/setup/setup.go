@@ -5,11 +5,13 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"sort"
 	"strings"
 
 	"github.com/loft-sh/devpod/pkg/command"
 	copy2 "github.com/loft-sh/devpod/pkg/copy"
 	"github.com/loft-sh/devpod/pkg/devcontainer/config"
+	provider2 "github.com/loft-sh/devpod/pkg/provider"
 	"github.com/loft-sh/devpod/pkg/types"
 	"github.com/loft-sh/log"
 	"github.com/pkg/errors"
@@ -20,7 +22,7 @@ const (
 	ResultLocation = "/var/run/devpod/result.json"
 )
 
-func SetupContainer(setupInfo *config.Result, chownWorkspace bool, log log.Logger) error {
+func SetupContainer(setupInfo *config.Result, workspaceInfo *provider2.AgentWorkspaceInfo, chownWorkspace bool, log log.Logger) error {
 	// write result to ResultLocation
 	WriteResult(setupInfo, log)
 
@@ -37,6 +39,10 @@ func SetupContainer(setupInfo *config.Result, chownWorkspace bool, log log.Logge
 	err := PatchEtcEnvironment(setupInfo.MergedConfig)
 	if err != nil {
 		return errors.Wrap(err, "patch etc environment")
+	}
+	err = PatchEtcEnvironmentFlags(workspaceInfo)
+	if err != nil {
+		return errors.Wrap(err, "patch etc environment from flags")
 	}
 
 	// patch etc profile
@@ -154,15 +160,45 @@ func PatchEtcProfile() error {
 	return nil
 }
 
-func PatchEtcEnvironment(mergedConfig *config.MergedDevContainerConfig) error {
-	if len(mergedConfig.RemoteEnv) == 0 {
+func PatchEtcEnvironmentFlags(workspaceInfo *provider2.AgentWorkspaceInfo) error {
+	if len(workspaceInfo.CLIOptions.WorkspaceEnv) == 0 {
 		return nil
 	}
 
-	exists, err := markerFileExists("patchEtcEnvironment", "")
+	// build remote env
+	remoteEnvs := []string{}
+	for _, v := range workspaceInfo.CLIOptions.WorkspaceEnv {
+		splitted := strings.SplitN(v, "=", 2)
+		if len(splitted) != 2 {
+			continue
+		}
+
+		remoteEnvs = append(remoteEnvs, splitted[0]+"=\""+strings.Trim(splitted[1], "\"")+"\"")
+	}
+	sort.Strings(remoteEnvs)
+
+	// check if we need to update env
+	exists, err := markerFileExists("patchEtcEnvironmentFlags", strings.Join(remoteEnvs, "\n"))
 	if err != nil {
 		return err
 	} else if exists {
+		return nil
+	}
+
+	// update env
+	out, err := exec.Command("sh", "-c", `cat >> /etc/environment <<'etcEnvrionmentEOF'
+`+strings.Join(remoteEnvs, "\n")+`
+etcEnvrionmentEOF
+`).CombinedOutput()
+	if err != nil {
+		return errors.Wrapf(err, "create remote environment: %v", string(out))
+	}
+
+	return nil
+}
+
+func PatchEtcEnvironment(mergedConfig *config.MergedDevContainerConfig) error {
+	if len(mergedConfig.RemoteEnv) == 0 {
 		return nil
 	}
 
@@ -171,7 +207,17 @@ func PatchEtcEnvironment(mergedConfig *config.MergedDevContainerConfig) error {
 	for k, v := range mergedConfig.RemoteEnv {
 		remoteEnvs = append(remoteEnvs, k+"=\""+v+"\"")
 	}
+	sort.Strings(remoteEnvs)
 
+	// check if we need to update env
+	exists, err := markerFileExists("patchEtcEnvironment", strings.Join(remoteEnvs, "\n"))
+	if err != nil {
+		return err
+	} else if exists {
+		return nil
+	}
+
+	// update env
 	out, err := exec.Command("sh", "-c", `cat >> /etc/environment <<'etcEnvrionmentEOF'
 `+strings.Join(remoteEnvs, "\n")+`
 etcEnvrionmentEOF

@@ -92,11 +92,14 @@ type WorkspaceClient interface {
 	BaseWorkspaceClient
 	Client
 
-	// AgentConfig returns the agent config to send to the agent
-	AgentConfig() provider.ProviderAgentConfig
+	// AgentInjectGitCredentials returns if the credentials helper should get injected
+	AgentInjectGitCredentials() bool
+
+	// AgentInjectDockerCredentials returns if the credentials helper should get injected
+	AgentInjectDockerCredentials() bool
 
 	// AgentInfo returns the info to send to the agent
-	AgentInfo() (string, *provider.AgentWorkspaceInfo, error)
+	AgentInfo(options provider.CLIOptions) (string, *provider.AgentWorkspaceInfo, error)
 }
 
 type InitOptions struct{}
@@ -127,20 +130,10 @@ type CommandOptions struct {
 }
 
 type UpOptions struct {
-	UpBaseOptions
+	provider.CLIOptions
 
 	Stdin  io.Reader
 	Stdout io.Writer
-}
-
-type UpBaseOptions struct {
-	ID                   string   `json:"id,omitempty"`
-	Source               string   `json:"source,omitempty"`
-	IDE                  string   `json:"ide,omitempty"`
-	IDEOptions           []string `json:"ideOptions,omitempty"`
-	DevContainerPath     string   `json:"devContainerPath,omitempty"`
-	PrebuildRepositories []string `json:"prebuildRepositories,omitempty"`
-	Recreate             bool     `json:"recreate,omitempty"`
 }
 
 type SshOptions struct {

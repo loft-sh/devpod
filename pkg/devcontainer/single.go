@@ -8,6 +8,7 @@ import (
 
 	"github.com/loft-sh/devpod/pkg/devcontainer/config"
 	"github.com/loft-sh/devpod/pkg/devcontainer/metadata"
+	provider2 "github.com/loft-sh/devpod/pkg/provider"
 	"github.com/pkg/errors"
 )
 
@@ -41,8 +42,10 @@ func (r *Runner) runSingleContainer(ctx context.Context, parsedConfig *config.Su
 	} else {
 		// we need to build container
 		buildInfo, err := r.build(ctx, parsedConfig, config.BuildOptions{
-			PrebuildRepositories: options.PrebuildRepositories,
-			NoBuild:              options.NoBuild,
+			CLIOptions: provider2.CLIOptions{
+				PrebuildRepositories: options.PrebuildRepositories,
+			},
+			NoBuild: options.NoBuild,
 		})
 		if err != nil {
 			return nil, errors.Wrap(err, "build image")
@@ -92,7 +95,7 @@ func (r *Runner) runSingleContainer(ctx context.Context, parsedConfig *config.Su
 	}
 
 	// setup container
-	err = r.setupContainer(containerDetails, newMergedConfig)
+	err = r.setupContainer(containerDetails, newMergedConfig, options)
 	if err != nil {
 		return nil, errors.Wrap(err, "setup container")
 	}

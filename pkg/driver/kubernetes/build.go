@@ -65,8 +65,8 @@ func (k *kubernetesDriver) BuildDevContainer(
 
 	// check if there is a prebuild image
 	devPodCustomizations := config.GetDevPodCustomizations(parsedConfig.Config)
-	if options.PushRepository != "" {
-		options.PrebuildRepositories = append(options.PrebuildRepositories, options.PushRepository)
+	if options.Repository != "" {
+		options.PrebuildRepositories = append(options.PrebuildRepositories, options.Repository)
 	}
 	if k.config.BuildRepository != "" {
 		options.PrebuildRepositories = append(options.PrebuildRepositories, k.config.BuildRepository)
@@ -98,7 +98,7 @@ func (k *kubernetesDriver) BuildDevContainer(
 	}
 
 	// check if prebuild
-	if options.PushRepository != "" {
+	if options.Repository != "" {
 		return nil, fmt.Errorf("you cannot use Kubernetes driver to prebuild images, please use docker instead")
 	}
 

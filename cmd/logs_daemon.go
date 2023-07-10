@@ -8,6 +8,7 @@ import (
 	"github.com/loft-sh/devpod/cmd/flags"
 	"github.com/loft-sh/devpod/pkg/client"
 	"github.com/loft-sh/devpod/pkg/config"
+	provider2 "github.com/loft-sh/devpod/pkg/provider"
 	"github.com/loft-sh/devpod/pkg/workspace"
 	"github.com/loft-sh/log"
 	"github.com/spf13/cobra"
@@ -53,7 +54,7 @@ func (cmd *LogsDaemonCmd) Run(ctx context.Context, args []string) error {
 		return fmt.Errorf("this command is not supported for proxy providers")
 	}
 
-	_, agentInfo, err := workspaceClient.AgentInfo()
+	_, agentInfo, err := workspaceClient.AgentInfo(provider2.CLIOptions{})
 	if err != nil {
 		return err
 	}

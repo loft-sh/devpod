@@ -18,9 +18,7 @@ import (
 type BuildCmd struct {
 	*flags.GlobalFlags
 
-	Repository    string
 	WorkspaceInfo string
-	Platforms     []string
 }
 
 // NewBuildCmd creates a new command
@@ -36,20 +34,13 @@ func NewBuildCmd(flags *flags.GlobalFlags) *cobra.Command {
 			return cmd.Run(context.Background())
 		},
 	}
-	buildCmd.Flags().StringVar(&cmd.Repository, "repository", "", "The repository to push to")
 	buildCmd.Flags().StringVar(&cmd.WorkspaceInfo, "workspace-info", "", "The workspace info")
-	buildCmd.Flags().StringSliceVar(&cmd.Platforms, "platform", []string{}, "Set target platform for build")
 	_ = buildCmd.MarkFlagRequired("workspace-info")
-	_ = buildCmd.MarkFlagRequired("repository")
 	return buildCmd
 }
 
 // Run runs the command logic
 func (cmd *BuildCmd) Run(ctx context.Context) error {
-	if cmd.Repository == "" {
-		return fmt.Errorf("repository needs to be specified")
-	}
-
 	// write workspace info
 	shouldExit, workspaceInfo, err := agent.WriteWorkspaceInfoAndDeleteOld(cmd.WorkspaceInfo, func(workspaceInfo *provider2.AgentWorkspaceInfo, log log.Logger) error {
 		return deleteWorkspace(ctx, workspaceInfo, log)
@@ -58,6 +49,11 @@ func (cmd *BuildCmd) Run(ctx context.Context) error {
 		return err
 	} else if shouldExit {
 		return nil
+	}
+
+	// check if repository is set
+	if workspaceInfo.CLIOptions.Repository == "" {
+		return fmt.Errorf("repository needs to be specified")
 	}
 
 	// initialize the workspace
@@ -79,16 +75,18 @@ func (cmd *BuildCmd) Run(ctx context.Context) error {
 
 	// if there is no platform specified, we use empty to let
 	// the builder find out itself.
-	if len(cmd.Platforms) == 0 {
-		cmd.Platforms = []string{""}
+	platforms := workspaceInfo.CLIOptions.Platform
+	if len(platforms) == 0 {
+		platforms = []string{""}
 	}
 
 	// build and push images
-	for _, platform := range cmd.Platforms {
+	for _, platform := range platforms {
 		// build the image
 		imageName, err := runner.Build(ctx, config.BuildOptions{
-			PushRepository: cmd.Repository,
-			Platform:       platform,
+			CLIOptions: workspaceInfo.CLIOptions,
+
+			Platform: platform,
 		})
 		if err != nil {
 			logger.Errorf("Error building image: %v", err)

@@ -22,7 +22,7 @@ func (r *Runner) Build(ctx context.Context, options config.BuildOptions) (string
 	}
 
 	// prebuild already exists
-	prebuildImage := options.PushRepository + ":" + buildInfo.PrebuildHash
+	prebuildImage := options.Repository + ":" + buildInfo.PrebuildHash
 	if buildInfo.ImageName == prebuildImage {
 		return buildInfo.ImageName, nil
 	}
