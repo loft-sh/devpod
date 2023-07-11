@@ -13,6 +13,7 @@ import (
 	config2 "github.com/loft-sh/devpod/pkg/config"
 	"github.com/loft-sh/devpod/pkg/devcontainer/config"
 	"github.com/loft-sh/devpod/pkg/devcontainer/setup"
+	"github.com/loft-sh/devpod/pkg/ide/fleet"
 	"github.com/loft-sh/devpod/pkg/ide/jetbrains"
 	"github.com/loft-sh/devpod/pkg/ide/openvscode"
 	"github.com/loft-sh/devpod/pkg/ide/vscode"
@@ -122,6 +123,8 @@ func (cmd *SetupContainerCmd) installIDE(setupInfo *config.Result, workspaceInfo
 		return jetbrains.NewRubyMineServer(config.GetRemoteUser(setupInfo), workspaceInfo.Workspace.IDE.Options, log).Install()
 	case string(config2.IDEWebStorm):
 		return jetbrains.NewWebStormServer(config.GetRemoteUser(setupInfo), workspaceInfo.Workspace.IDE.Options, log).Install()
+	case string(config2.IDEFleet):
+		return fleet.NewFleetServer(config.GetRemoteUser(setupInfo), workspaceInfo.Workspace.IDE.Options, log).Install(setupInfo.SubstitutionContext.ContainerWorkspaceFolder)
 	}
 
 	return nil

@@ -9,6 +9,7 @@ import (
 	"github.com/loft-sh/devpod/pkg/command"
 	"github.com/loft-sh/devpod/pkg/config"
 	"github.com/loft-sh/devpod/pkg/ide"
+	"github.com/loft-sh/devpod/pkg/ide/fleet"
 	"github.com/loft-sh/devpod/pkg/ide/jetbrains"
 	"github.com/loft-sh/devpod/pkg/ide/openvscode"
 	"github.com/loft-sh/devpod/pkg/ide/vscode"
@@ -93,6 +94,12 @@ var AllowedIDEs = []AllowedIDE{
 		DisplayName: "WebStorm",
 		Options:     jetbrains.WebStormOptions,
 		Icon:        "https://devpod.sh/assets/webstorm.svg",
+	},
+	{
+		Name:        config.IDEFleet,
+		DisplayName: "Fleet",
+		Options:     fleet.Options,
+		Icon:        "https://resources.jetbrains.com/storage/products/company/brand/logos/Fleet.svg",
 	},
 }
 

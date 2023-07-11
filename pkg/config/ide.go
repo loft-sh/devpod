@@ -14,4 +14,5 @@ const (
 	IDERubyMine   IDE = "rubymine"
 	IDERider      IDE = "rider"
 	IDEWebStorm   IDE = "webstorm"
+	IDEFleet      IDE = "fleet"
 )

@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"bytes"
 	"context"
 	"fmt"
 	"io"
@@ -15,8 +16,10 @@ import (
 	"github.com/loft-sh/devpod/pkg/agent/tunnelserver"
 	client2 "github.com/loft-sh/devpod/pkg/client"
 	"github.com/loft-sh/devpod/pkg/client/clientimplementation"
+	"github.com/loft-sh/devpod/pkg/command"
 	"github.com/loft-sh/devpod/pkg/config"
 	config2 "github.com/loft-sh/devpod/pkg/devcontainer/config"
+	"github.com/loft-sh/devpod/pkg/ide/fleet"
 	"github.com/loft-sh/devpod/pkg/ide/jetbrains"
 	"github.com/loft-sh/devpod/pkg/ide/openvscode"
 	"github.com/loft-sh/devpod/pkg/ide/vscode"
@@ -174,7 +177,33 @@ func (cmd *UpCmd) Run(ctx context.Context, devPodConfig *config.Config, client c
 			return jetbrains.NewRubyMineServer(config2.GetRemoteUser(result), ideConfig.Options, log).OpenGateway(result.SubstitutionContext.ContainerWorkspaceFolder, client.Workspace())
 		case string(config.IDEWebStorm):
 			return jetbrains.NewWebStormServer(config2.GetRemoteUser(result), ideConfig.Options, log).OpenGateway(result.SubstitutionContext.ContainerWorkspaceFolder, client.Workspace())
+		case string(config.IDEFleet):
+			return startFleet(ctx, client, log)
 		}
+	}
+
+	return nil
+}
+
+func startFleet(ctx context.Context, client client2.BaseWorkspaceClient, logger log.Logger) error {
+	// create ssh command
+	stdout := &bytes.Buffer{}
+	cmd, err := createSSHCommand(ctx, client, logger, []string{"--command", "cat " + fleet.FleetURLFile})
+	if err != nil {
+		return err
+	}
+	cmd.Stdout = stdout
+	err = cmd.Run()
+	if err != nil {
+		return command.WrapCommandError(stdout.Bytes(), err)
+	} else if len(stdout.Bytes()) == 0 {
+		return fmt.Errorf("seems like fleet is not running within the container")
+	}
+
+	logger.Infof("Starting Fleet...")
+	err = open.Run(stdout.String())
+	if err != nil {
+		return err
 	}
 
 	return nil
@@ -198,14 +227,9 @@ func startVSCodeLocally(client client2.BaseWorkspaceClient, workspaceFolder stri
 }
 
 func startInBrowser(ctx context.Context, devPodConfig *config.Config, client client2.BaseWorkspaceClient, workspaceFolder, user string, ideOptions map[string]config.OptionValue, logger log.Logger) error {
-	// create ssh command
-	execPath, err := os.Executable()
-	if err != nil {
-		return err
-	}
-
 	// determine port
 	var (
+		err           error
 		vscodeAddress string
 		vscodePort    int
 	)
@@ -254,22 +278,10 @@ func startInBrowser(ctx context.Context, devPodConfig *config.Config, client cli
 			writer := logger.Writer(logrus.DebugLevel, false)
 			defer writer.Close()
 
-			args := []string{
-				"ssh",
-				"--log-output=raw",
-				"--user=root",
-				"--stdio",
-				"--agent-forwarding=false",
-				"--start-services=false",
-				"--context",
-				client.Context(),
-				client.Workspace(),
+			cmd, err := createSSHCommand(ctx, client, logger, nil)
+			if err != nil {
+				return err
 			}
-			if logger.GetLevel() == logrus.DebugLevel {
-				args = append(args, "--debug")
-			}
-
-			cmd := exec.CommandContext(ctx, execPath, args...)
 			cmd.Stdout = stdout
 			cmd.Stdin = stdin
 			cmd.Stderr = writer
@@ -523,4 +535,29 @@ func mergeDevPodUpOptions(baseOptions *provider2.CLIOptions) error {
 	}
 
 	return nil
+}
+
+func createSSHCommand(ctx context.Context, client client2.BaseWorkspaceClient, logger log.Logger, extraArgs []string) (*exec.Cmd, error) {
+	execPath, err := os.Executable()
+	if err != nil {
+		return nil, err
+	}
+
+	args := []string{
+		"ssh",
+		"--log-output=raw",
+		"--user=root",
+		"--stdio",
+		"--agent-forwarding=false",
+		"--start-services=false",
+		"--context",
+		client.Context(),
+		client.Workspace(),
+	}
+	if logger.GetLevel() == logrus.DebugLevel {
+		args = append(args, "--debug")
+	}
+	args = append(args, extraArgs...)
+
+	return exec.CommandContext(ctx, execPath, args...), nil
 }
