@@ -99,7 +99,7 @@ var AllowedIDEs = []AllowedIDE{
 		Name:        config.IDEFleet,
 		DisplayName: "Fleet",
 		Options:     fleet.Options,
-		Icon:        "https://resources.jetbrains.com/storage/products/company/brand/logos/Fleet.svg",
+		Icon:        "https://devpod.sh/assets/fleet.svg",
 	},
 }
 
