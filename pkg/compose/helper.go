@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"io"
-	"os"
 	"os/exec"
 	"regexp"
 	"strings"
@@ -62,8 +61,6 @@ func NewComposeHelper(dockerComposeCLI string, dockerHelper *docker.DockerHelper
 			Args:    []string{},
 			Docker:  dockerHelper,
 		}, nil
-	} else if !os.IsNotExist(err) {
-		return nil, err
 	}
 
 	out, err := exec.Command(dockerCLI, "compose", "version", "--short").Output()
