@@ -11,6 +11,7 @@ import (
 	"github.com/loft-sh/devpod/pkg/ide"
 	"github.com/loft-sh/devpod/pkg/ide/fleet"
 	"github.com/loft-sh/devpod/pkg/ide/jetbrains"
+	"github.com/loft-sh/devpod/pkg/ide/jupyter"
 	"github.com/loft-sh/devpod/pkg/ide/openvscode"
 	"github.com/loft-sh/devpod/pkg/ide/vscode"
 	"github.com/loft-sh/devpod/pkg/provider"
@@ -100,6 +101,12 @@ var AllowedIDEs = []AllowedIDE{
 		DisplayName: "Fleet",
 		Options:     fleet.Options,
 		Icon:        "https://devpod.sh/assets/fleet.svg",
+	},
+	{
+		Name:        config.IDEJupyterNotebook,
+		DisplayName: "Jupyter Notebook",
+		Options:     jupyter.Options,
+		Icon:        "https://devpod.sh/assets/jupyter.svg",
 	},
 }
 

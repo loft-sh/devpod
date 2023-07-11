@@ -28,10 +28,8 @@ func (e *Error) Error() string {
 	}
 
 	var exitError *exec.ExitError
-	if errors.As(e.err, &exitError) {
-		if len(exitError.Stderr) > 0 {
-			message += string(exitError.Stderr) + "\n"
-		}
+	if errors.As(e.err, &exitError) && len(exitError.Stderr) > 0 {
+		message += string(exitError.Stderr) + "\n"
 	}
 
 	return message + e.err.Error()
@@ -39,5 +37,16 @@ func (e *Error) Error() string {
 
 func Exists(cmd string) bool {
 	_, err := exec.LookPath(cmd)
+	return err == nil
+}
+
+func ExistsForUser(cmd, user string) bool {
+	command := "which " + cmd
+	var err error
+	if user == "" {
+		return Exists(cmd)
+	}
+
+	_, err = exec.Command("su", user, "-l", "-c", command).CombinedOutput()
 	return err == nil
 }

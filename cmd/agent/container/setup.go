@@ -15,6 +15,7 @@ import (
 	"github.com/loft-sh/devpod/pkg/devcontainer/setup"
 	"github.com/loft-sh/devpod/pkg/ide/fleet"
 	"github.com/loft-sh/devpod/pkg/ide/jetbrains"
+	"github.com/loft-sh/devpod/pkg/ide/jupyter"
 	"github.com/loft-sh/devpod/pkg/ide/openvscode"
 	"github.com/loft-sh/devpod/pkg/ide/vscode"
 	provider2 "github.com/loft-sh/devpod/pkg/provider"
@@ -125,6 +126,8 @@ func (cmd *SetupContainerCmd) installIDE(setupInfo *config.Result, workspaceInfo
 		return jetbrains.NewWebStormServer(config.GetRemoteUser(setupInfo), workspaceInfo.Workspace.IDE.Options, log).Install()
 	case string(config2.IDEFleet):
 		return fleet.NewFleetServer(config.GetRemoteUser(setupInfo), workspaceInfo.Workspace.IDE.Options, log).Install(setupInfo.SubstitutionContext.ContainerWorkspaceFolder)
+	case string(config2.IDEJupyterNotebook):
+		return jupyter.NewJupyterNotebookServer(setupInfo.SubstitutionContext.ContainerWorkspaceFolder, config.GetRemoteUser(setupInfo), workspaceInfo.Workspace.IDE.Options, log).Install()
 	}
 
 	return nil

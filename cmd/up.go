@@ -22,6 +22,7 @@ import (
 	config2 "github.com/loft-sh/devpod/pkg/devcontainer/config"
 	"github.com/loft-sh/devpod/pkg/ide/fleet"
 	"github.com/loft-sh/devpod/pkg/ide/jetbrains"
+	"github.com/loft-sh/devpod/pkg/ide/jupyter"
 	"github.com/loft-sh/devpod/pkg/ide/openvscode"
 	"github.com/loft-sh/devpod/pkg/ide/vscode"
 	open2 "github.com/loft-sh/devpod/pkg/open"
@@ -74,6 +75,7 @@ func NewUpCmd(flags *flags.GlobalFlags) *cobra.Command {
 			var logger log.Logger = log.Default
 			if cmd.Proxy {
 				logger = logger.ErrorStreamOnly()
+				logger.Debugf("Using error stream as --proxy is enabled")
 			}
 
 			devPodConfig, err := config.LoadConfig(cmd.Context, cmd.Provider)
@@ -161,7 +163,7 @@ func (cmd *UpCmd) Run(ctx context.Context, devPodConfig *config.Config, client c
 		case string(config.IDEVSCode):
 			return startVSCodeLocally(client, result.SubstitutionContext.ContainerWorkspaceFolder, ideConfig.Options, log)
 		case string(config.IDEOpenVSCode):
-			return startInBrowser(ctx, devPodConfig, client, result.SubstitutionContext.ContainerWorkspaceFolder, user, ideConfig.Options, log)
+			return startVSCodeInBrowser(ctx, devPodConfig, client, result.SubstitutionContext.ContainerWorkspaceFolder, user, ideConfig.Options, log)
 		case string(config.IDEGoland):
 			return jetbrains.NewGolandServer(config2.GetRemoteUser(result), ideConfig.Options, log).OpenGateway(result.SubstitutionContext.ContainerWorkspaceFolder, client.Workspace())
 		case string(config.IDEPyCharm):
@@ -180,10 +182,47 @@ func (cmd *UpCmd) Run(ctx context.Context, devPodConfig *config.Config, client c
 			return jetbrains.NewWebStormServer(config2.GetRemoteUser(result), ideConfig.Options, log).OpenGateway(result.SubstitutionContext.ContainerWorkspaceFolder, client.Workspace())
 		case string(config.IDEFleet):
 			return startFleet(ctx, client, log)
+		case string(config.IDEJupyterNotebook):
+			return startJupyterNotebookInBrowser(ctx, devPodConfig, client, user, ideConfig.Options, log)
 		}
 	}
 
 	return nil
+}
+
+func startJupyterNotebookInBrowser(ctx context.Context, devPodConfig *config.Config, client client2.BaseWorkspaceClient, user string, ideOptions map[string]config.OptionValue, logger log.Logger) error {
+	// determine port
+	jupyterAddress, jupyterPort, err := parseAddressAndPort(jupyter.Options.GetValue(ideOptions, jupyter.BindAddressOption), jupyter.DefaultServerPort)
+	if err != nil {
+		return err
+	}
+
+	// wait until reachable then open browser
+	targetURL := fmt.Sprintf("http://localhost:%d", jupyterPort)
+	if jupyter.Options.GetValue(ideOptions, jupyter.OpenOption) == "true" {
+		go func() {
+			err = open2.Open(ctx, targetURL, logger)
+			if err != nil {
+				logger.Errorf("error opening jupyter notebook: %v", err)
+			}
+
+			logger.Infof("Successfully started jupyter notebook in browser mode. Please keep this terminal open as long as you use Jupyter Notebook")
+		}()
+	}
+
+	// start in browser
+	logger.Infof("Starting jupyter notebook in browser mode at %s", targetURL)
+	extraPorts := []string{fmt.Sprintf("%s:%d", jupyterAddress, jupyter.DefaultServerPort)}
+	return startBrowserTunnel(
+		ctx,
+		devPodConfig,
+		client,
+		user,
+		targetURL,
+		false,
+		extraPorts,
+		logger,
+	)
 }
 
 func startFleet(ctx context.Context, client client2.BaseWorkspaceClient, logger log.Logger) error {
@@ -230,35 +269,11 @@ func startVSCodeLocally(client client2.BaseWorkspaceClient, workspaceFolder stri
 	return nil
 }
 
-func startInBrowser(ctx context.Context, devPodConfig *config.Config, client client2.BaseWorkspaceClient, workspaceFolder, user string, ideOptions map[string]config.OptionValue, logger log.Logger) error {
+func startVSCodeInBrowser(ctx context.Context, devPodConfig *config.Config, client client2.BaseWorkspaceClient, workspaceFolder, user string, ideOptions map[string]config.OptionValue, logger log.Logger) error {
 	// determine port
-	var (
-		err           error
-		vscodeAddress string
-		vscodePort    int
-	)
-	if openvscode.Options.GetValue(ideOptions, openvscode.BindAddressOption) == "" {
-		vscodePort, err = port.FindAvailablePort(openvscode.DefaultVSCodePort)
-		if err != nil {
-			return err
-		}
-
-		vscodeAddress = fmt.Sprintf("%d", vscodePort)
-	} else {
-		vscodeAddress = openvscode.Options.GetValue(ideOptions, openvscode.BindAddressOption)
-		_, port, err := net.SplitHostPort(vscodeAddress)
-		if err != nil {
-			return fmt.Errorf("parse host:port: %w", err)
-		} else if port == "" {
-			return fmt.Errorf("parse ADDRESS: expected host:port, got %s", vscodeAddress)
-		}
-
-		vscodePort, err = strconv.Atoi(port)
-		if err != nil {
-			return fmt.Errorf("parse host:port: %w", err)
-		}
-
-		logger.Infof("Bind VSCode to %s...", vscodeAddress)
+	vscodeAddress, vscodePort, err := parseAddressAndPort(openvscode.Options.GetValue(ideOptions, openvscode.BindAddressOption), openvscode.DefaultVSCodePort)
+	if err != nil {
+		return err
 	}
 
 	// wait until reachable then open browser
@@ -276,7 +291,53 @@ func startInBrowser(ctx context.Context, devPodConfig *config.Config, client cli
 
 	// start in browser
 	logger.Infof("Starting vscode in browser mode at %s", targetURL)
-	err = tunnel.NewTunnel(
+	forwardPorts := openvscode.Options.GetValue(ideOptions, openvscode.ForwardPortsOption) == "true"
+	extraPorts := []string{fmt.Sprintf("%s:%d", vscodeAddress, openvscode.DefaultVSCodePort)}
+	return startBrowserTunnel(
+		ctx,
+		devPodConfig,
+		client,
+		user,
+		targetURL,
+		forwardPorts,
+		extraPorts,
+		logger,
+	)
+}
+
+func parseAddressAndPort(bindAddressOption string, defaultPort int) (string, int, error) {
+	var (
+		err      error
+		address  string
+		portName int
+	)
+	if bindAddressOption == "" {
+		portName, err = port.FindAvailablePort(defaultPort)
+		if err != nil {
+			return "", 0, err
+		}
+
+		address = fmt.Sprintf("%d", portName)
+	} else {
+		address = bindAddressOption
+		_, port, err := net.SplitHostPort(address)
+		if err != nil {
+			return "", 0, fmt.Errorf("parse host:port: %w", err)
+		} else if port == "" {
+			return "", 0, fmt.Errorf("parse ADDRESS: expected host:port, got %s", address)
+		}
+
+		portName, err = strconv.Atoi(port)
+		if err != nil {
+			return "", 0, fmt.Errorf("parse host:port: %w", err)
+		}
+	}
+
+	return address, portName, nil
+}
+
+func startBrowserTunnel(ctx context.Context, devPodConfig *config.Config, client client2.BaseWorkspaceClient, user, targetURL string, forwardPorts bool, extraPorts []string, logger log.Logger) error {
+	err := tunnel.NewTunnel(
 		ctx,
 		func(ctx context.Context, stdin io.Reader, stdout io.Writer) error {
 			writer := logger.Writer(logrus.DebugLevel, false)
@@ -310,10 +371,10 @@ func startInBrowser(ctx context.Context, devPodConfig *config.Config, client cli
 				devPodConfig,
 				containerClient,
 				user,
-				openvscode.Options.GetValue(ideOptions, openvscode.ForwardPortsOption) == "true",
+				forwardPorts,
 				true,
 				true,
-				[]string{fmt.Sprintf("%s:%d", vscodeAddress, openvscode.DefaultVSCodePort)},
+				extraPorts,
 				logger,
 			)
 			if err != nil {
