@@ -10,6 +10,7 @@ import (
 	"os"
 	"os/exec"
 	"strconv"
+	"strings"
 
 	"github.com/loft-sh/devpod/cmd/flags"
 	"github.com/loft-sh/devpod/pkg/agent"
@@ -196,12 +197,15 @@ func startFleet(ctx context.Context, client client2.BaseWorkspaceClient, logger 
 	err = cmd.Run()
 	if err != nil {
 		return command.WrapCommandError(stdout.Bytes(), err)
-	} else if len(stdout.Bytes()) == 0 {
+	}
+
+	url := strings.TrimSpace(stdout.String())
+	if len(url) == 0 {
 		return fmt.Errorf("seems like fleet is not running within the container")
 	}
 
-	logger.Infof("Starting Fleet...")
-	err = open.Run(stdout.String())
+	logger.Infof("Starting Fleet at %s...", url)
+	err = open.Run(url)
 	if err != nil {
 		return err
 	}
@@ -278,7 +282,10 @@ func startInBrowser(ctx context.Context, devPodConfig *config.Config, client cli
 			writer := logger.Writer(logrus.DebugLevel, false)
 			defer writer.Close()
 
-			cmd, err := createSSHCommand(ctx, client, logger, nil)
+			cmd, err := createSSHCommand(ctx, client, logger, []string{
+				"--log-output=raw",
+				"--stdio",
+			})
 			if err != nil {
 				return err
 			}
@@ -545,9 +552,7 @@ func createSSHCommand(ctx context.Context, client client2.BaseWorkspaceClient, l
 
 	args := []string{
 		"ssh",
-		"--log-output=raw",
 		"--user=root",
-		"--stdio",
 		"--agent-forwarding=false",
 		"--start-services=false",
 		"--context",
