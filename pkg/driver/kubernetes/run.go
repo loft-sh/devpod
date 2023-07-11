@@ -211,6 +211,7 @@ func (k *kubernetesDriver) runContainer(
 	if err != nil {
 		return err
 	}
+	k.Log.Debugf("Create pod with: %s", string(podRaw))
 
 	// create the pod
 	k.Log.Infof("Create Pod '%s'", id)
