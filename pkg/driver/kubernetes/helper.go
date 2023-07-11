@@ -10,7 +10,8 @@ import (
 )
 
 const (
-	limitsPrefix = "limits."
+	limitsPrefix   = "limits."
+	requestsPrefix = "requests."
 )
 
 func parseResources(resourceString string, log log.Logger) corev1.ResourceRequirements {
@@ -25,8 +26,8 @@ func parseResources(resourceString string, log log.Logger) corev1.ResourceRequir
 		resourceName = strings.TrimSpace(resourceName)
 
 		// requests
-		if strings.HasPrefix(corev1.DefaultResourceRequestsPrefix, resourceName) {
-			strippedResource := strings.TrimPrefix(corev1.DefaultResourceRequestsPrefix, resourceName)
+		if strings.HasPrefix(resourceName, requestsPrefix) {
+			strippedResource := strings.TrimPrefix(resourceName, requestsPrefix)
 			name, quantity, err := parseResource(strippedResource)
 			if err != nil {
 				log.Error(err.Error())
@@ -37,8 +38,8 @@ func parseResources(resourceString string, log log.Logger) corev1.ResourceRequir
 		}
 
 		// limits
-		if strings.HasPrefix(limitsPrefix, resourceName) {
-			strippedResource := strings.TrimPrefix(limitsPrefix, resourceName)
+		if strings.HasPrefix(resourceName, limitsPrefix) {
+			strippedResource := strings.TrimPrefix(resourceName, limitsPrefix)
 			name, quantity, err := parseResource(strippedResource)
 			if err != nil {
 				log.Error(err.Error())
