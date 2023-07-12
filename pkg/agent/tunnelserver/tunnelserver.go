@@ -6,12 +6,15 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"path/filepath"
 	"strings"
+	"time"
 
 	"github.com/loft-sh/devpod/pkg/agent/tunnel"
 	"github.com/loft-sh/devpod/pkg/devcontainer/config"
 	"github.com/loft-sh/devpod/pkg/dockercredentials"
 	"github.com/loft-sh/devpod/pkg/extract"
+	"github.com/loft-sh/devpod/pkg/git"
 	"github.com/loft-sh/devpod/pkg/gitcredentials"
 	"github.com/loft-sh/devpod/pkg/netstat"
 	provider2 "github.com/loft-sh/devpod/pkg/provider"
@@ -193,6 +196,41 @@ func (t *tunnelServer) Log(ctx context.Context, message *tunnel.LogMessage) (*tu
 	}
 
 	return &tunnel.Empty{}, nil
+}
+
+func (t *tunnelServer) GitCloneAndRead(response *tunnel.Empty, stream tunnel.Tunnel_GitCloneAndReadServer) error {
+	if t.workspace == nil {
+		return fmt.Errorf("workspace is nil")
+	}
+
+	if t.workspace.Source.GitRepository == "" {
+		return fmt.Errorf("invalid repository")
+	}
+
+	gitCloneDir := filepath.Join(t.workspace.Folder, "source")
+
+	gitContext, cancel := context.WithTimeout(context.Background(), time.Minute)
+	defer cancel()
+
+	// clone here
+	// git clone --bare --depth=1 $REPO
+	cloneArgs := []string{"clone", t.workspace.Source.GitRepository, gitCloneDir}
+	if t.workspace.Source.GitBranch != "" {
+		cloneArgs = append(cloneArgs, "--branch", t.workspace.Source.GitBranch)
+	}
+	err := git.CommandContext(gitContext, cloneArgs...).Run()
+	if err != nil {
+		return err
+	}
+
+	buf := bufio.NewWriterSize(NewStreamWriter(stream, t.log), 10*1024)
+	err = extract.WriteTar(buf, gitCloneDir, false)
+	if err != nil {
+		return err
+	}
+
+	// make sure buffer is flushed
+	return buf.Flush()
 }
 
 func (t *tunnelServer) ReadWorkspace(response *tunnel.Empty, stream tunnel.Tunnel_ReadWorkspaceServer) error {
