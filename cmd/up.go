@@ -190,6 +190,196 @@ func (cmd *UpCmd) Run(ctx context.Context, devPodConfig *config.Config, client c
 	return nil
 }
 
+func (cmd *UpCmd) devPodUp(ctx context.Context, client client2.BaseWorkspaceClient, log log.Logger) (*config2.Result, error) {
+	err := client.Lock(ctx)
+	if err != nil {
+		return nil, err
+	}
+	defer client.Unlock()
+
+	// check if regular workspace client
+	workspaceClient, ok := client.(client2.WorkspaceClient)
+	if ok {
+		return cmd.devPodUpMachine(ctx, workspaceClient, log)
+	}
+
+	// check if proxy client
+	proxyClient, ok := client.(client2.ProxyClient)
+	if ok {
+		return cmd.devPodUpProxy(ctx, proxyClient, log)
+	}
+
+	return nil, nil
+}
+
+func (cmd *UpCmd) devPodUpProxy(ctx context.Context, client client2.ProxyClient, log log.Logger) (*config2.Result, error) {
+	// create pipes
+	stdoutReader, stdoutWriter, err := os.Pipe()
+	if err != nil {
+		return nil, err
+	}
+	stdinReader, stdinWriter, err := os.Pipe()
+	if err != nil {
+		return nil, err
+	}
+	defer stdoutWriter.Close()
+	defer stdinWriter.Close()
+
+	// start machine on stdio
+	cancelCtx, cancel := context.WithCancel(ctx)
+	defer cancel()
+
+	// create up command
+	errChan := make(chan error, 1)
+	go func() {
+		defer log.Debugf("Done executing up command")
+		defer cancel()
+
+		// build devpod up options
+		workspace := client.WorkspaceConfig()
+		baseOptions := cmd.CLIOptions
+		baseOptions.ID = workspace.ID
+		baseOptions.DevContainerPath = workspace.DevContainerPath
+		baseOptions.IDE = workspace.IDE.Name
+		baseOptions.IDEOptions = nil
+		baseOptions.Source = workspace.Source.String()
+		for optionName, optionValue := range workspace.IDE.Options {
+			baseOptions.IDEOptions = append(baseOptions.IDEOptions, optionName+"="+optionValue.Value)
+		}
+
+		// run devpod up elsewhere
+		err := client.Up(ctx, client2.UpOptions{
+			CLIOptions: baseOptions,
+
+			Stdin:  stdinReader,
+			Stdout: stdoutWriter,
+		})
+		if err != nil {
+			errChan <- fmt.Errorf("executing up proxy command: %w", err)
+		} else {
+			errChan <- nil
+		}
+	}()
+
+	// create container etc.
+	result, err := tunnelserver.RunTunnelServer(
+		cancelCtx,
+		stdoutReader,
+		stdinWriter,
+		true,
+		true,
+		client.WorkspaceConfig(),
+		nil,
+		log,
+	)
+	if err != nil {
+		return nil, errors.Wrap(err, "run tunnel machine")
+	}
+
+	// wait until command finished
+	return result, <-errChan
+}
+
+func (cmd *UpCmd) devPodUpMachine(ctx context.Context, client client2.WorkspaceClient, log log.Logger) (*config2.Result, error) {
+	err := startWait(ctx, client, true, log)
+	if err != nil {
+		return nil, err
+	}
+
+	// compress info
+	workspaceInfo, _, err := client.AgentInfo(cmd.CLIOptions)
+	if err != nil {
+		return nil, err
+	}
+
+	// create container etc.
+	log.Infof("Creating devcontainer...")
+	defer log.Debugf("Done creating devcontainer")
+	command := fmt.Sprintf("'%s' agent workspace up --workspace-info '%s'", client.AgentPath(), workspaceInfo)
+	if log.GetLevel() == logrus.DebugLevel {
+		command += " --debug"
+	}
+
+	// create pipes
+	stdoutReader, stdoutWriter, err := os.Pipe()
+	if err != nil {
+		return nil, err
+	}
+	stdinReader, stdinWriter, err := os.Pipe()
+	if err != nil {
+		return nil, err
+	}
+	defer stdoutWriter.Close()
+	defer stdinWriter.Close()
+
+	// start machine on stdio
+	cancelCtx, cancel := context.WithCancel(ctx)
+	defer cancel()
+
+	errChan := make(chan error, 1)
+	go func() {
+		defer log.Debugf("Done executing up command")
+		defer cancel()
+
+		writer := log.Writer(logrus.InfoLevel, false)
+		defer writer.Close()
+
+		log.Debugf("Inject and run command: %s", command)
+		err := agent.InjectAgentAndExecute(cancelCtx, func(ctx context.Context, command string, stdin io.Reader, stdout io.Writer, stderr io.Writer) error {
+			return client.Command(ctx, client2.CommandOptions{
+				Command: command,
+				Stdin:   stdin,
+				Stdout:  stdout,
+				Stderr:  stderr,
+			})
+		}, client.AgentLocal(), client.AgentPath(), client.AgentURL(), true, command, stdinReader, stdoutWriter, writer, log.ErrorStreamOnly())
+		if err != nil {
+			errChan <- fmt.Errorf("executing agent command: %w", err)
+		} else {
+			errChan <- nil
+		}
+	}()
+
+	// create container etc.
+	var result *config2.Result
+	if cmd.Proxy {
+		// create client on stdin & stdout
+		tunnelClient, err := tunnelserver.NewTunnelClient(os.Stdin, os.Stdout, true)
+		if err != nil {
+			return nil, errors.Wrap(err, "create tunnel client")
+		}
+
+		// create proxy server
+		result, err = tunnelserver.RunProxyServer(
+			cancelCtx,
+			tunnelClient,
+			stdoutReader,
+			stdinWriter,
+			log,
+		)
+		if err != nil {
+			return nil, errors.Wrap(err, "run proxy tunnel")
+		}
+	} else {
+		result, err = tunnelserver.RunTunnelServer(
+			cancelCtx,
+			stdoutReader,
+			stdinWriter,
+			client.AgentInjectGitCredentials(),
+			client.AgentInjectDockerCredentials(),
+			client.WorkspaceConfig(),
+			nil,
+			log,
+		)
+		if err != nil {
+			return nil, errors.Wrap(err, "run tunnel machine")
+		}
+	}
+
+	// wait until command finished
+	return result, <-errChan
+}
+
 func startJupyterNotebookInBrowser(ctx context.Context, devPodConfig *config.Config, client client2.BaseWorkspaceClient, user string, ideOptions map[string]config.OptionValue, logger log.Logger) error {
 	// determine port
 	jupyterAddress, jupyterPort, err := parseAddressAndPort(jupyter.Options.GetValue(ideOptions, jupyter.BindAddressOption), jupyter.DefaultServerPort)
@@ -391,197 +581,6 @@ func startBrowserTunnel(ctx context.Context, devPodConfig *config.Config, client
 
 	return nil
 }
-
-func (cmd *UpCmd) devPodUp(ctx context.Context, client client2.BaseWorkspaceClient, log log.Logger) (*config2.Result, error) {
-	err := client.Lock(ctx)
-	if err != nil {
-		return nil, err
-	}
-	defer client.Unlock()
-
-	// check if regular workspace client
-	workspaceClient, ok := client.(client2.WorkspaceClient)
-	if ok {
-		return cmd.devPodUpMachine(ctx, workspaceClient, log)
-	}
-
-	// check if proxy client
-	proxyClient, ok := client.(client2.ProxyClient)
-	if ok {
-		return cmd.devPodUpProxy(ctx, proxyClient, log)
-	}
-
-	return nil, nil
-}
-
-func (cmd *UpCmd) devPodUpProxy(ctx context.Context, client client2.ProxyClient, log log.Logger) (*config2.Result, error) {
-	// create pipes
-	stdoutReader, stdoutWriter, err := os.Pipe()
-	if err != nil {
-		return nil, err
-	}
-	stdinReader, stdinWriter, err := os.Pipe()
-	if err != nil {
-		return nil, err
-	}
-	defer stdoutWriter.Close()
-	defer stdinWriter.Close()
-
-	// start machine on stdio
-	cancelCtx, cancel := context.WithCancel(ctx)
-	defer cancel()
-
-	// create up command
-	errChan := make(chan error, 1)
-	go func() {
-		defer log.Debugf("Done executing up command")
-		defer cancel()
-
-		// build devpod up options
-		workspace := client.WorkspaceConfig()
-		baseOptions := cmd.CLIOptions
-		baseOptions.ID = workspace.ID
-		baseOptions.DevContainerPath = workspace.DevContainerPath
-		baseOptions.IDE = workspace.IDE.Name
-		baseOptions.IDEOptions = nil
-		baseOptions.Source = workspace.Source.String()
-		for optionName, optionValue := range workspace.IDE.Options {
-			baseOptions.IDEOptions = append(baseOptions.IDEOptions, optionName+"="+optionValue.Value)
-		}
-
-		// run devpod up elsewhere
-		err := client.Up(ctx, client2.UpOptions{
-			CLIOptions: baseOptions,
-
-			Stdin:  stdinReader,
-			Stdout: stdoutWriter,
-		})
-		if err != nil {
-			errChan <- fmt.Errorf("executing up proxy command: %w", err)
-		} else {
-			errChan <- nil
-		}
-	}()
-
-	// create container etc.
-	result, err := tunnelserver.RunTunnelServer(
-		cancelCtx,
-		stdoutReader,
-		stdinWriter,
-		true,
-		true,
-		client.WorkspaceConfig(),
-		nil,
-		log,
-	)
-	if err != nil {
-		return nil, errors.Wrap(err, "run tunnel machine")
-	}
-
-	// wait until command finished
-	return result, <-errChan
-}
-
-func (cmd *UpCmd) devPodUpMachine(ctx context.Context, client client2.WorkspaceClient, log log.Logger) (*config2.Result, error) {
-	err := startWait(ctx, client, true, log)
-	if err != nil {
-		return nil, err
-	}
-
-	// compress info
-	workspaceInfo, _, err := client.AgentInfo(cmd.CLIOptions)
-	if err != nil {
-		return nil, err
-	}
-
-	// create container etc.
-	log.Infof("Creating devcontainer...")
-	defer log.Debugf("Done creating devcontainer")
-	command := fmt.Sprintf("'%s' agent workspace up --workspace-info '%s'", client.AgentPath(), workspaceInfo)
-	if log.GetLevel() == logrus.DebugLevel {
-		command += " --debug"
-	}
-
-	// create pipes
-	stdoutReader, stdoutWriter, err := os.Pipe()
-	if err != nil {
-		return nil, err
-	}
-	stdinReader, stdinWriter, err := os.Pipe()
-	if err != nil {
-		return nil, err
-	}
-	defer stdoutWriter.Close()
-	defer stdinWriter.Close()
-
-	// start machine on stdio
-	cancelCtx, cancel := context.WithCancel(ctx)
-	defer cancel()
-
-	errChan := make(chan error, 1)
-	go func() {
-		defer log.Debugf("Done executing up command")
-		defer cancel()
-
-		writer := log.Writer(logrus.InfoLevel, false)
-		defer writer.Close()
-
-		log.Debugf("Inject and run command: %s", command)
-		err := agent.InjectAgentAndExecute(cancelCtx, func(ctx context.Context, command string, stdin io.Reader, stdout io.Writer, stderr io.Writer) error {
-			return client.Command(ctx, client2.CommandOptions{
-				Command: command,
-				Stdin:   stdin,
-				Stdout:  stdout,
-				Stderr:  stderr,
-			})
-		}, client.AgentLocal(), client.AgentPath(), client.AgentURL(), true, command, stdinReader, stdoutWriter, writer, log.ErrorStreamOnly())
-		if err != nil {
-			errChan <- fmt.Errorf("executing agent command: %w", err)
-		} else {
-			errChan <- nil
-		}
-	}()
-
-	// create container etc.
-	var result *config2.Result
-	if cmd.Proxy {
-		// create client on stdin & stdout
-		tunnelClient, err := tunnelserver.NewTunnelClient(os.Stdin, os.Stdout, true)
-		if err != nil {
-			return nil, errors.Wrap(err, "create tunnel client")
-		}
-
-		// create proxy server
-		result, err = tunnelserver.RunProxyServer(
-			cancelCtx,
-			tunnelClient,
-			stdoutReader,
-			stdinWriter,
-			log.GetLevel() == logrus.DebugLevel,
-		)
-		if err != nil {
-			return nil, errors.Wrap(err, "run proxy tunnel")
-		}
-	} else {
-		result, err = tunnelserver.RunTunnelServer(
-			cancelCtx,
-			stdoutReader,
-			stdinWriter,
-			client.AgentInjectGitCredentials(),
-			client.AgentInjectDockerCredentials(),
-			client.WorkspaceConfig(),
-			nil,
-			log,
-		)
-		if err != nil {
-			return nil, errors.Wrap(err, "run tunnel machine")
-		}
-	}
-
-	// wait until command finished
-	return result, <-errChan
-}
-
 func configureSSH(client client2.BaseWorkspaceClient, configPath, user string) error {
 	err := devssh.ConfigureSSHConfig(configPath, client.Context(), client.Workspace(), user, log.Default)
 	if err != nil {
