@@ -9,16 +9,17 @@ import (
 	"github.com/loft-sh/devpod/pkg/agent/tunnel"
 	"github.com/loft-sh/devpod/pkg/devcontainer/config"
 	"github.com/loft-sh/devpod/pkg/stdio"
+	"github.com/loft-sh/log"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/reflection"
 )
 
-func RunProxyServer(ctx context.Context, client tunnel.TunnelClient, reader io.Reader, writer io.WriteCloser, debug bool) (*config.Result, error) {
+func RunProxyServer(ctx context.Context, client tunnel.TunnelClient, reader io.Reader, writer io.WriteCloser, log log.Logger) (*config.Result, error) {
 	lis := stdio.NewStdioListener(reader, writer, false)
 	s := grpc.NewServer()
 	tunnelServ := &proxyServer{
-		debug:  debug,
 		client: client,
+		log:    log,
 	}
 	tunnel.RegisterTunnelServer(s, tunnelServ)
 	reflection.Register(s)
@@ -38,9 +39,9 @@ func RunProxyServer(ctx context.Context, client tunnel.TunnelClient, reader io.R
 type proxyServer struct {
 	tunnel.UnimplementedTunnelServer
 
-	debug  bool
 	client tunnel.TunnelClient
 	result *config.Result
+	log    log.Logger
 }
 
 func (t *proxyServer) ForwardPort(ctx context.Context, portRequest *tunnel.ForwardPortRequest) (*tunnel.ForwardPortResponse, error) {
@@ -83,13 +84,15 @@ func (t *proxyServer) Log(ctx context.Context, message *tunnel.LogMessage) (*tun
 }
 
 func (t *proxyServer) ReadWorkspace(response *tunnel.Empty, stream tunnel.Tunnel_ReadWorkspaceServer) error {
+	t.log.Debug("Start reading workspace")
+
 	client, err := t.client.ReadWorkspace(context.TODO(), &tunnel.Empty{})
 	if err != nil {
 		return err
 	}
 
-	buf := bufio.NewWriterSize(NewStreamWriter(stream, NewTunnelLogger(context.TODO(), t.client, t.debug)), 10*1024)
-	_, err = io.Copy(buf, NewStreamReader(client))
+	buf := bufio.NewWriterSize(NewStreamWriter(stream, t.log), 10*1024)
+	_, err = io.Copy(buf, NewStreamReader(client, t.log))
 	if err != nil {
 		return err
 	}

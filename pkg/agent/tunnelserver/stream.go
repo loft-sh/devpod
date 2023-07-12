@@ -9,10 +9,10 @@ import (
 	"github.com/loft-sh/log"
 )
 
-func NewStreamReader(stream tunnel.Tunnel_ReadWorkspaceClient) io.Reader {
+func NewStreamReader(stream tunnel.Tunnel_ReadWorkspaceClient, log log.Logger) io.Reader {
 	reader, writer := io.Pipe()
+
 	go func() {
-		defer reader.Close()
 		defer writer.Close()
 
 		for {
@@ -20,13 +20,15 @@ func NewStreamReader(stream tunnel.Tunnel_ReadWorkspaceClient) io.Reader {
 			if resp != nil && len(resp.Content) > 0 {
 				_, err = writer.Write(resp.Content)
 				if err != nil {
-					_ = writer.CloseWithError(err)
+					log.Debugf("Error writing to pipe: %v", err)
+					return
 				}
 			}
 			if errors.Is(err, io.EOF) {
 				return
 			} else if err != nil {
-				_ = writer.CloseWithError(err)
+				log.Debugf("Error receiving from stream: %v", err)
+				return
 			}
 		}
 	}()

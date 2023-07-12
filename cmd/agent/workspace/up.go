@@ -337,7 +337,7 @@ func DownloadLocalFolder(ctx context.Context, workspaceDir string, client tunnel
 		return errors.Wrap(err, "read workspace")
 	}
 
-	err = extract.Extract(tunnelserver.NewStreamReader(stream), workspaceDir)
+	err = extract.Extract(tunnelserver.NewStreamReader(stream, log), workspaceDir)
 	if err != nil {
 		return errors.Wrap(err, "extract local folder")
 	}
