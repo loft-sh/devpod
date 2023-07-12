@@ -66,7 +66,10 @@ type UpOptions struct {
 
 func (r *Runner) prepare() (*config.SubstitutedConfig, *WorkspaceConfig, error) {
 	rawParsedConfig, err := config.ParseDevContainerJSON(r.LocalWorkspaceFolder, r.WorkspaceConfig.Workspace.DevContainerPath)
-	if err != nil {
+
+	// We want to fail only in case of real errors, non-existing devcontainer.jon
+	// will be gracefully handled by the auto-detection mechanism
+	if err != nil && !os.IsNotExist(err) {
 		return nil, nil, errors.Wrap(err, "parsing devcontainer.json")
 	} else if rawParsedConfig == nil {
 		r.Log.Infof("Couldn't find a devcontainer.json")
