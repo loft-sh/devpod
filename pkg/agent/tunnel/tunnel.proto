@@ -8,6 +8,7 @@ package tunnel;
 service Tunnel {
   rpc Ping(Empty) returns (Empty) {}
   rpc Log(LogMessage) returns (Empty) {}
+  rpc GitCloneAndRead(Empty) returns (stream Chunk) {}
   rpc ReadWorkspace(Empty) returns (stream Chunk) {}
   rpc SendResult(Message) returns (Empty) {}
   rpc DockerCredentials(Message) returns (Message) {}
@@ -57,4 +58,3 @@ message LogMessage {
 message Empty {
 
 }
-
