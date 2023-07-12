@@ -79,7 +79,7 @@ func ParseDevContainerJSON(folder, relativePath string) (*DevContainerConfig, er
 			path = filepath.Join(folder, ".devcontainer.json")
 			_, err = os.Stat(path)
 			if err != nil {
-				matches, err := doublestar.FilepathGlob("./.devcontainer/**/devcontainer.json")
+				matches, err := doublestar.FilepathGlob(filepath.ToSlash(filepath.Clean(folder)) + "/.devcontainer/**/devcontainer.json")
 				if err != nil {
 					return nil, err
 				} else if len(matches) == 0 {
