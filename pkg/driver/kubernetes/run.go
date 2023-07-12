@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"path/filepath"
+	"runtime"
 	"strconv"
 	"strings"
 
@@ -232,9 +233,14 @@ func (k *kubernetesDriver) runContainer(
 	if initialize {
 		for _, copyMount := range copyFromLocal {
 			// run kubectl
+			sourcePath, err := transformPath(copyMount.Source)
+			if err != nil {
+				return fmt.Errorf("transform path %s: %w", copyMount.Source, err)
+			}
+
 			k.Log.Infof("Copy %s into DevContainer %s", copyMount.Source, copyMount.Target)
 			buf := &bytes.Buffer{}
-			err = k.runCommandWithDir(ctx, filepath.Dir(parsedConfig.Origin), []string{"cp", "-c", "devpod", strings.TrimRight(copyMount.Source, "/") + "/.", fmt.Sprintf("%s:%s", id, strings.TrimRight(copyMount.Target, "/"))}, nil, buf, buf)
+			err = k.runCommandWithDir(ctx, filepath.Dir(parsedConfig.Origin), []string{"cp", "-c", "devpod", sourcePath, fmt.Sprintf("%s:%s", id, strings.TrimRight(copyMount.Target, "/"))}, nil, buf, buf)
 			if err != nil {
 				return errors.Wrap(err, "copy to devcontainer")
 			}
@@ -242,6 +248,30 @@ func (k *kubernetesDriver) runContainer(
 	}
 
 	return nil
+}
+
+// transform creates a windows compatible path https://github.com/kubernetes/kubectl/issues/1225
+func transformPath(source string) (string, error) {
+	if runtime.GOOS != "windows" {
+		return strings.TrimRight(source, "/") + "/.", nil
+	}
+
+	var err error
+	source = filepath.FromSlash(source)
+	if !filepath.IsAbs(source) {
+		source, err = filepath.Abs(source)
+		if err != nil {
+			return "", err
+		}
+	}
+
+	volumeName := filepath.VolumeName(source)
+	if volumeName == "" {
+		return "", fmt.Errorf("no volume name in string: %s", source)
+	}
+
+	source = strings.TrimPrefix(source, volumeName)
+	return source, nil
 }
 
 func getVolumeMount(idx int, mount *config.Mount) corev1.VolumeMount {
