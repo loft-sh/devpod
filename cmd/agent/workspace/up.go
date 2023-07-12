@@ -342,7 +342,7 @@ func RemoteCloneAndDownload(ctx context.Context, workspaceDir string, client tun
 		return errors.Wrap(err, "local cloning")
 	}
 
-	err = extract.Extract(tunnelserver.NewStreamReader(stream), workspaceDir)
+	err = extract.Extract(tunnelserver.NewStreamReader(stream, log), workspaceDir)
 	if err != nil {
 		return errors.Wrap(err, "cloning local folder")
 	}

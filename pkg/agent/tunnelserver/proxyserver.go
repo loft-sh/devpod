@@ -84,13 +84,14 @@ func (t *proxyServer) Log(ctx context.Context, message *tunnel.LogMessage) (*tun
 }
 
 func (t *proxyServer) GitCloneAndRead(response *tunnel.Empty, stream tunnel.Tunnel_GitCloneAndReadServer) error {
+	t.log.Debug("Cloning and reading workspace")
 	client, err := t.client.GitCloneAndRead(context.TODO(), &tunnel.Empty{})
 	if err != nil {
 		return err
 	}
 
-	buf := bufio.NewWriterSize(NewStreamWriter(stream, NewTunnelLogger(context.TODO(), t.client, t.debug)), 10*1024)
-	_, err = io.Copy(buf, NewStreamReader(client))
+	buf := bufio.NewWriterSize(NewStreamWriter(stream, t.log), 10*1024)
+	_, err = io.Copy(buf, NewStreamReader(client, t.log))
 	if err != nil {
 		return err
 	}
