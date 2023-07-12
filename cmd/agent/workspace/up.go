@@ -209,7 +209,7 @@ func prepareWorkspace(ctx context.Context, workspaceInfo *provider2.AgentWorkspa
 		err = CloneRepository(ctx, workspaceInfo.Agent.Local == "true", workspaceInfo.ContentFolder, workspaceInfo.Workspace.Source.GitRepository, workspaceInfo.Workspace.Source.GitBranch, helper, log)
 		if err != nil {
 			// fallback
-			log.Debugf("Cloning failed, trying cloning on local machine and uploading folder")
+			log.Errorf("Cloning failed: %v. Trying cloning on local machine and uploading folder", err)
 			return RemoteCloneAndDownload(ctx, workspaceInfo.ContentFolder, client, log)
 		}
 	} else if workspaceInfo.Workspace.Source.LocalFolder != "" {
