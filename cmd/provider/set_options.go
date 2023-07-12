@@ -59,7 +59,7 @@ func (cmd *SetOptionsCmd) Run(ctx context.Context, args []string) error {
 		return err
 	}
 
-	devPodConfig, err = setOptions(ctx, providerWithOptions.Config, devPodConfig.DefaultContext, cmd.Options, cmd.Reconfigure, false, &cmd.SingleMachine, false)
+	devPodConfig, err = setOptions(ctx, providerWithOptions.Config, devPodConfig.DefaultContext, cmd.Options, cmd.Reconfigure, false, false, false, &cmd.SingleMachine)
 	if err != nil {
 		return err
 	}

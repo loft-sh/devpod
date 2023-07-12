@@ -163,7 +163,7 @@ func (c *CyclicError) Error() string {
 		what = c.What
 	}
 
-	return fmt.Sprintf("Cyclic %s found: \n%s", what, strings.Join(cycle, "\n"))
+	return fmt.Sprintf("cyclic %s found: \n%s", what, strings.Join(cycle, "\n"))
 }
 
 // AddEdge adds a new edge from a node to a node and returns an error if it would result in a cyclic graph
