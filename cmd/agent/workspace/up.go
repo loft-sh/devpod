@@ -206,7 +206,12 @@ func prepareWorkspace(ctx context.Context, workspaceInfo *provider2.AgentWorkspa
 	// check what type of workspace this is
 	if workspaceInfo.Workspace.Source.GitRepository != "" {
 		log.Debugf("Clone Repository")
-		return CloneRepository(ctx, workspaceInfo.Agent.Local == "true", workspaceInfo.ContentFolder, workspaceInfo.Workspace.Source.GitRepository, workspaceInfo.Workspace.Source.GitBranch, helper, log)
+		err = CloneRepository(ctx, workspaceInfo.Agent.Local == "true", workspaceInfo.ContentFolder, workspaceInfo.Workspace.Source.GitRepository, workspaceInfo.Workspace.Source.GitBranch, helper, log)
+		if err != nil {
+			// fallback
+			log.Debugf("Cloning failed, trying cloning on local machine and uploading folder")
+			return RemoteCloneAndDownload(ctx, workspaceInfo.ContentFolder, client, log)
+		}
 	} else if workspaceInfo.Workspace.Source.LocalFolder != "" {
 		log.Debugf("Download Local Folder")
 		return DownloadLocalFolder(ctx, workspaceInfo.ContentFolder, client, log)
@@ -325,6 +330,21 @@ func installDaemon(workspaceInfo *provider2.AgentWorkspaceInfo, log log.Logger) 
 	err := daemon.InstallDaemon(workspaceInfo.Agent.DataPath, log)
 	if err != nil {
 		return errors.Wrap(err, "install daemon")
+	}
+
+	return nil
+}
+
+func RemoteCloneAndDownload(ctx context.Context, workspaceDir string, client tunnel.TunnelClient, log log.Logger) error {
+	log.Infof("Cloning from host and upload folder to server")
+	stream, err := client.GitCloneAndRead(ctx, &tunnel.Empty{})
+	if err != nil {
+		return errors.Wrap(err, "local cloning")
+	}
+
+	err = extract.Extract(tunnelserver.NewStreamReader(stream), workspaceDir)
+	if err != nil {
+		return errors.Wrap(err, "cloning local folder")
 	}
 
 	return nil
