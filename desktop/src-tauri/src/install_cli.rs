@@ -1,9 +1,8 @@
 use crate::{commands::DEVPOD_BINARY_NAME, AppHandle};
 use log::error;
-use std::{
-    env,
-    path::PathBuf,
-};
+use std::path::Path;
+use std::str::Lines;
+use std::{env, path::PathBuf};
 use thiserror::Error;
 
 #[derive(Error, Debug)]
@@ -97,6 +96,8 @@ fn install(_app_handle: AppHandle, force: bool) -> Result<(), InstallCLIError> {
     }
 
     let mut latest_error: Option<InstallCLIError> = None;
+    let is_on_tmpfs = is_tmpfs(&cli_path.as_path());
+
     for target_path in target_paths {
         let str_target_path = target_path.to_string_lossy();
         match target_path.try_exists() {
@@ -122,7 +123,8 @@ fn install(_app_handle: AppHandle, force: bool) -> Result<(), InstallCLIError> {
             target_path.to_string_lossy()
         );
 
-        match symlink(cli_path.clone(), &target_path)
+        let operation = if is_on_tmpfs { copy } else { symlink };
+        match operation(cli_path.clone(), &target_path)
             .with_context(|| format!("path: {}", str_target_path))
             .map_err(InstallCLIError::Link)
         {
@@ -145,6 +147,39 @@ fn install(_app_handle: AppHandle, force: bool) -> Result<(), InstallCLIError> {
     }
 
     Ok(())
+}
+
+fn copy<P: AsRef<Path>, Q: AsRef<Path>>(from: P, to: Q) -> std::io::Result<()> {
+    std::fs::copy(from, to).map(|_| Ok(()))
+}
+
+#[cfg(not(target_os = "windows"))]
+fn is_tmpfs(path: &Path) -> bool {
+    let mountpoint_file = match std::fs::read_to_string("/proc/mounts") {
+        Ok(contents) => contents,
+        Err(_) => return false,
+    };
+
+    let mount_lines = mountpoint_file.lines();
+    let fs = match find_fs_type(path, &mount_lines) {
+        Some(contents) => contents,
+        None => return false,
+    };
+
+    return fs.to_string() == "tmpfs" || fs.to_string().contains("fuse");
+}
+
+#[cfg(not(target_os = "windows"))]
+fn find_fs_type(curr_path: &Path, mount_lines: &Lines) -> Option<String> {
+    for line in mount_lines.clone() {
+        let columns: Vec<&str> = line.split_whitespace().collect();
+
+        if &curr_path.to_str()? == columns.get(1)? {
+            return Some(columns.get(2)?.to_string());
+        }
+    }
+
+    return find_fs_type(curr_path.parent()?, mount_lines);
 }
 
 #[cfg(target_os = "windows")]
