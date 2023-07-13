@@ -21,6 +21,7 @@ import {
   Stack,
   Text,
   useBreakpointValue,
+  useColorModeValue,
 } from "@chakra-ui/react"
 import styled from "@emotion/styled"
 import { useQueryClient } from "@tanstack/react-query"
@@ -477,6 +478,7 @@ type TCustomProviderInputProps = Readonly<{
 }> &
   InputProps
 function CustomProviderInput({ field, isInvalid, onAccept }: TCustomProviderInputProps) {
+  const backgroundColor = useColorModeValue("white", "black")
   const handleSelectFileClicked = useCallback(async () => {
     const selected = await client.selectFromFileYaml()
     if (typeof selected === "string") {
@@ -503,6 +505,7 @@ function CustomProviderInput({ field, isInvalid, onAccept }: TCustomProviderInpu
           isDisabled={isInvalid}
           marginRight="2"
           marginLeft="3"
+          backgroundColor={backgroundColor}
           leftIcon={<CheckIcon boxSize="4" />}
           onClick={() => onAccept()}>
           Continue

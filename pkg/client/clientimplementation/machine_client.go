@@ -53,7 +53,7 @@ func (s *machineClient) MachineConfig() *provider.Machine {
 }
 
 func (s *machineClient) RefreshOptions(ctx context.Context, userOptionsRaw []string) error {
-	userOptions, err := provider.ParseOptions(s.config, userOptionsRaw)
+	userOptions, err := provider.ParseOptions(s.devPodConfig, s.config, userOptionsRaw)
 	if err != nil {
 		return errors.Wrap(err, "parse options")
 	}

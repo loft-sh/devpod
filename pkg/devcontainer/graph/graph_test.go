@@ -34,7 +34,7 @@ func TestGraph(t *testing.T) {
 	if err == nil {
 		t.Fatal("Cyclic error expected")
 	} else {
-		errMsg := `Cyclic dependency found: 
+		errMsg := `cyclic dependency found: 
 rootChild2Child1Child1
 rootChild3
 rootChild2

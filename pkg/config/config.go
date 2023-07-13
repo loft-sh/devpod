@@ -76,9 +76,14 @@ type ProviderConfig struct {
 	// Options are the configured provider options
 	Options map[string]OptionValue `json:"options,omitempty"`
 
+	// DynamicOptions are the unresolved dynamic provider options
+	DynamicOptions DynamicOptions `json:"dynamicOptions,omitempty"`
+
 	// CreationTimestamp is the timestamp when this provider was added
 	CreationTimestamp types.Time `json:"creationTimestamp,omitempty"`
 }
+
+type DynamicOptions = map[string]*types.Option
 
 type OptionValue struct {
 	// Value is the value of the option
@@ -89,6 +94,9 @@ type OptionValue struct {
 
 	// Filled is the time when this value was filled
 	Filled *types.Time `json:"filled,omitempty"`
+
+	// Children are the child options
+	Children []string `json:"children,omitempty"`
 }
 
 func (c *Config) Current() *ContextConfig {
@@ -97,6 +105,10 @@ func (c *Config) Current() *ContextConfig {
 
 func (c *Config) ProviderOptions(provider string) map[string]OptionValue {
 	return c.Current().ProviderOptions(provider)
+}
+
+func (c *Config) DynamicProviderOptions(provider string) DynamicOptions {
+	return c.Current().DynamicProviderOptions(provider)
 }
 
 func (c *Config) IDEOptions(ide string) map[string]OptionValue {
@@ -147,6 +159,18 @@ func (c *ContextConfig) ProviderOptions(provider string) map[string]OptionValue 
 	}
 
 	for k, v := range c.Providers[provider].Options {
+		retOptions[k] = v
+	}
+	return retOptions
+}
+
+func (c *ContextConfig) DynamicProviderOptions(provider string) DynamicOptions {
+	retOptions := DynamicOptions{}
+	if c.Providers == nil || c.Providers[provider] == nil {
+		return retOptions
+	}
+
+	for k, v := range c.Providers[provider].DynamicOptions {
 		retOptions[k] = v
 	}
 	return retOptions
