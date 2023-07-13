@@ -5,8 +5,8 @@
 
 mod action_logs;
 mod commands;
-mod custom_protocol;
 mod community_contributions;
+mod custom_protocol;
 mod install_cli;
 mod logging;
 mod providers;
@@ -18,6 +18,7 @@ mod workspaces;
 
 use community_contributions::CommunityContributions;
 use custom_protocol::{CustomProtocol, OpenWorkspaceMsg};
+use log::error;
 use serde::Serialize;
 use std::{
     collections::VecDeque,
@@ -27,7 +28,6 @@ use system_tray::SystemTray;
 use tauri::{Manager, Menu, Wry};
 use tokio::sync::mpsc::{self, Sender};
 use workspaces::WorkspacesState;
-use log::error;
 
 pub type AppHandle = tauri::AppHandle<Wry>;
 
@@ -70,7 +70,7 @@ fn main() -> anyhow::Result<()> {
         .manage(AppState {
             workspaces: Arc::new(Mutex::new(WorkspacesState::default())),
             community_contributions: Arc::new(Mutex::new(contributions)),
-            ui_messages: tx.clone()
+            ui_messages: tx.clone(),
         })
         .plugin(logging::build_plugin())
         .plugin(tauri_plugin_store::Builder::default().build())

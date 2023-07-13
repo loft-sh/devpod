@@ -80,7 +80,6 @@ func (cmd *OptionsCmd) Run(ctx context.Context, args []string) error {
 	} else if cmd.Output == "json" {
 		options := map[string]optionWithValue{}
 		for _, entry := range config.ContextOptions {
-
 			options[entry.Name] = optionWithValue{
 				ContextOption: entry,
 				Value:         entryOptions[entry.Name].Value,

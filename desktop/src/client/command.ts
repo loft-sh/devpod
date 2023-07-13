@@ -122,3 +122,9 @@ export function isOk(result: ChildProcess): boolean {
 export function toFlagArg(flag: string, arg: string) {
   return [flag, arg].join("=")
 }
+
+export function serializeRawOptions(rawOptions: Record<string, unknown>): string {
+  return Object.entries(rawOptions)
+    .map(([key, value]) => `${key}=${value}`)
+    .join(",")
+}

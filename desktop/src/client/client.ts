@@ -1,10 +1,10 @@
-import { clipboard, dialog, fs, invoke, os, path, process, shell } from "@tauri-apps/api"
-import { listen } from "@tauri-apps/api/event"
+import { clipboard, dialog, fs, invoke, os, path, process, shell, event } from "@tauri-apps/api"
 import { Command } from "@tauri-apps/api/shell"
 import { TSettings } from "../contexts"
-import { isError, Result, Return } from "../lib"
+import { Result, Return, isError } from "../lib"
 import { TCommunityContributions, TUnsubscribeFn } from "../types"
-import { IDEsClient } from "./ides/client"
+import { ContextClient } from "./context"
+import { IDEsClient } from "./ides"
 import { ProvidersClient } from "./providers"
 import { WorkspacesClient } from "./workspaces"
 
@@ -31,6 +31,7 @@ class Client {
   public readonly workspaces = new WorkspacesClient()
   public readonly providers = new ProvidersClient()
   public readonly ides = new IDEsClient()
+  public readonly context = new ContextClient()
 
   public setSetting<TSettingName extends keyof TClientSettings>(
     name: TSettingName,
@@ -52,7 +53,7 @@ class Client {
   ): Promise<Result<TUnsubscribeFn>> {
     // `TClient` is strictly typed so we're fine casting the response as `any`.
     try {
-      const unsubscribe = await listen<any>(channel, (event) => {
+      const unsubscribe = await event.listen<any>(channel, (event) => {
         listener(event.payload)
       })
 

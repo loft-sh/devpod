@@ -150,7 +150,7 @@ fn install(_app_handle: AppHandle, force: bool) -> Result<(), InstallCLIError> {
 }
 
 fn copy<P: AsRef<Path>, Q: AsRef<Path>>(from: P, to: Q) -> std::io::Result<()> {
-    std::fs::copy(from, to).map(|_| Ok(()))
+    std::fs::copy(from, to).map(|_| ())
 }
 
 #[cfg(not(target_os = "windows"))]

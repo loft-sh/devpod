@@ -7,7 +7,7 @@ import {
   TProviderOptions,
   TProviders,
 } from "../../types"
-import { Command, isOk, toFlagArg } from "../command"
+import { Command, isOk, serializeRawOptions, toFlagArg } from "../command"
 import {
   DEVPOD_COMMAND_ADD,
   DEVPOD_COMMAND_DELETE,
@@ -232,10 +232,4 @@ export class ProviderCommands {
 
     return Return.Ok()
   }
-}
-
-export function serializeRawOptions(rawOptions: Record<string, unknown>): string {
-  return Object.entries(rawOptions)
-    .map(([key, value]) => `${key}=${value}`)
-    .join(",")
 }

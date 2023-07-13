@@ -232,7 +232,7 @@ func ResolveAgentConfig(devConfig *config.Config, provider *provider2.ProviderCo
 	}
 	agentConfig.DownloadURL = resolver.ResolveDefaultValue(agentConfig.DownloadURL, options)
 	if agentConfig.DownloadURL == "" {
-		agentConfig.DownloadURL = agent.DefaultAgentDownloadURL()
+		agentConfig.DownloadURL = resolveAgentDownloadURL(devConfig)
 	}
 	agentConfig.Timeout = resolver.ResolveDefaultValue(agentConfig.Timeout, options)
 	agentConfig.ContainerTimeout = resolver.ResolveDefaultValue(agentConfig.ContainerTimeout, options)
@@ -243,7 +243,7 @@ func ResolveAgentConfig(devConfig *config.Config, provider *provider2.ProviderCo
 
 // resolveAgentDownloadURL resolves the agent download URL (env -> context -> default)
 func resolveAgentDownloadURL(devConfig *config.Config) string {
-	devPodAgentURL := os.Getenv("DEVPOD_AGENT_URL")
+	devPodAgentURL := os.Getenv(agent.EnvDevPodAgentURL)
 	if devPodAgentURL != "" {
 		return strings.TrimSuffix(devPodAgentURL, "/") + "/"
 	}

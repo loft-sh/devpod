@@ -14,20 +14,20 @@ import {
   useColorModeValue,
   VStack,
 } from "@chakra-ui/react"
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { ReactNode } from "react"
 import { HiMagnifyingGlassPlus } from "react-icons/hi2"
 import { client } from "../../client"
 import { ToolbarTitle, useInstallCLI } from "../../components"
 import { TSettings, useChangeSettings } from "../../contexts"
 import { getIDEDisplayName } from "../../lib"
-import { QueryKeys } from "../../queryKeys"
-import { TIDE } from "../../types"
 import { useWelcomeModal } from "../../useWelcomeModal"
+import { useAgentURLOption } from "./useContextOptions"
+import { useIDESettings } from "./useIDESettings"
 
 export function Settings() {
-  const queryClient = useQueryClient()
   const { settings, set } = useChangeSettings()
+  const { ides, defaultIDE, updateDefaultIDE } = useIDESettings()
+  const { input: agentURLInput, helpText: agentURLHelpText } = useAgentURLOption()
   const { modal: welcomeModal, show: showWelcomeModal } = useWelcomeModal()
   const {
     badge: installCLIBadge,
@@ -35,19 +35,6 @@ export function Settings() {
     helpText: installCLIHelpText,
     errorMessage: installCLIErrorMessage,
   } = useInstallCLI()
-  const idesQuery = useQuery({
-    queryKey: QueryKeys.IDES,
-    queryFn: async () => (await client.ides.listAll()).unwrap(),
-  })
-  const { mutate: updateDefaultIDE } = useMutation({
-    mutationFn: async ({ ide }: { ide: NonNullable<TIDE["name"]> }) => {
-      ;(await client.ides.useIDE(ide)).unwrap()
-    },
-    onSettled: () => {
-      queryClient.invalidateQueries(QueryKeys.IDES)
-    },
-  })
-  const defaultIDE = idesQuery.data?.find((ide) => ide.default)
   const headingProps: HeadingProps = { marginBottom: 2, as: "h4", size: "md" }
 
   return (
@@ -60,7 +47,6 @@ export function Settings() {
       <VStack align="start" spacing={6} paddingBottom={8}>
         <VStack align="start">
           <Heading {...headingProps}>General</Heading>
-
           <RadioGroup
             value={settings.sidebarPosition}
             onChange={(newValue: TSettings["sidebarPosition"]) => set("sidebarPosition", newValue)}>
@@ -92,6 +78,11 @@ export function Settings() {
             </HStack>
             <SettingDescription>Adjust the zoom level</SettingDescription>
           </VStack>
+
+          <VStack align="start" paddingTop="2">
+            {agentURLInput}
+            <SettingDescription>{agentURLHelpText}</SettingDescription>
+          </VStack>
         </VStack>
 
         <VStack align="start">
@@ -116,7 +107,7 @@ export function Settings() {
             textTransform="capitalize"
             onChange={(e) => updateDefaultIDE({ ide: e.target.value })}
             value={defaultIDE ? defaultIDE.name! : undefined}>
-            {idesQuery.data?.map((ide) => (
+            {ides.map((ide) => (
               <option key={ide.name} value={ide.name!}>
                 {getIDEDisplayName(ide)}
               </option>

@@ -34,8 +34,10 @@ const WorkspaceDevContainerResult = "result.json"
 
 const defaultAgentDownloadURL = "https://github.com/loft-sh/devpod/releases/download/"
 
+const EnvDevPodAgentURL = "DEVPOD_AGENT_URL"
+
 func DefaultAgentDownloadURL() string {
-	devPodAgentURL := os.Getenv("DEVPOD_AGENT_URL")
+	devPodAgentURL := os.Getenv(EnvDevPodAgentURL)
 	if devPodAgentURL != "" {
 		return strings.TrimSuffix(devPodAgentURL, "/") + "/"
 	}
