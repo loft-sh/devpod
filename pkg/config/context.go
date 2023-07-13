@@ -5,6 +5,7 @@ const (
 	ContextOptionSSHInjectDockerCredentials = "SSH_INJECT_DOCKER_CREDENTIALS"
 	ContextOptionSSHInjectGitCredentials    = "SSH_INJECT_GIT_CREDENTIALS"
 	ContextOptionTelemetry                  = "TELEMETRY"
+	ContextOptionAgentURL                   = "AGENT_URL"
 )
 
 var ContextOptions = []ContextOption{
@@ -31,5 +32,9 @@ var ContextOptions = []ContextOption{
 		Description: "Specifies if DevPod should send telemetry information",
 		Default:     "true",
 		Enum:        []string{"true", "false"},
+	},
+	{
+		Name:        ContextOptionAgentURL,
+		Description: "Specifies the agent url to use for DevPod",
 	},
 }
