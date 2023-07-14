@@ -1,15 +1,13 @@
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
+import { useMutation, useQueryClient } from "@tanstack/react-query"
 import { useMemo } from "react"
 import { client } from "../../client"
 import { QueryKeys } from "../../queryKeys"
 import { TIDE } from "../../types"
+import { useIDEs } from "../../useIDEs"
 
 export function useIDESettings() {
   const queryClient = useQueryClient()
-  const idesQuery = useQuery({
-    queryKey: QueryKeys.IDES,
-    queryFn: async () => (await client.ides.listAll()).unwrap(),
-  })
+  const { ides, defaultIDE } = useIDEs()
   const { mutate: updateDefaultIDE } = useMutation({
     mutationFn: async ({ ide }: { ide: NonNullable<TIDE["name"]> }) => {
       ;(await client.ides.useIDE(ide)).unwrap()
@@ -21,10 +19,10 @@ export function useIDESettings() {
 
   return useMemo(
     () => ({
-      ides: idesQuery.data ?? [],
-      defaultIDE: idesQuery.data?.find((ide) => ide.default),
+      ides,
+      defaultIDE,
       updateDefaultIDE,
     }),
-    [idesQuery.data, updateDefaultIDE]
+    [defaultIDE, ides, updateDefaultIDE]
   )
 }

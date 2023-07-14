@@ -42,7 +42,7 @@ import { useCallback, useMemo, useState } from "react"
 import { HiClock, HiOutlineCode, HiShare } from "react-icons/hi"
 import { useNavigate } from "react-router"
 import { client } from "../../client"
-import { IconTag, Ripple } from "../../components"
+import { IconTag, Ripple, IDEIcon } from "../../components"
 import {
   TActionID,
   TActionObj,
@@ -51,12 +51,13 @@ import {
   useWorkspaceActions,
 } from "../../contexts"
 import { ArrowPath, Ellipsis, Pause, Play, Stack3D, Trash } from "../../icons"
-import { NoneSvg, NoWorkspaceImageSvg } from "../../images"
+import { NoWorkspaceImageSvg } from "../../images"
 import { exists, getIDEDisplayName, useHover } from "../../lib"
 import { QueryKeys } from "../../queryKeys"
 import { Routes } from "../../routes"
 import { TIDE, TWorkspace, TWorkspaceID } from "../../types"
 import { getIDEName, getSourceName } from "./helpers"
+import { useIDEs } from "../../useIDEs"
 
 type TWorkspaceCardProps = Readonly<{
   workspaceID: TWorkspaceID
@@ -68,11 +69,7 @@ export function WorkspaceCard({ workspaceID, onSelectionChange }: TWorkspaceCard
   const navigate = useNavigate()
   const toast = useToast()
   const settings = useSettings()
-  const idesQuery = useQuery({
-    queryKey: QueryKeys.IDES,
-    queryFn: async () => (await client.ides.listAll()).unwrap(),
-  })
-  const defaultIDE = idesQuery.data?.find((ide) => ide.default)
+  const { ides, defaultIDE } = useIDEs()
   const { isOpen: isDeleteOpen, onOpen: onDeleteOpen, onClose: onDeleteClose } = useDisclosure()
   const { isOpen: isRebuildOpen, onOpen: onRebuildOpen, onClose: onRebuildClose } = useDisclosure()
   const { isOpen: isStopOpen, onOpen: onStopOpen, onClose: onStopClose } = useDisclosure()
@@ -244,12 +241,12 @@ export function WorkspaceCard({ workspaceID, onSelectionChange }: TWorkspaceCard
                         </MenuItem>
                       </PopoverTrigger>
                       <PopoverContent zIndex="popover" width="fit-content" ref={popoverContentRef}>
-                        {idesQuery.data?.map((ide) => (
+                        {ides?.map((ide) => (
                           <MenuItem
                             onClick={handleOpenWithIDEClicked(id, ide.name)}
                             key={ide.name}
                             value={ide.name!}
-                            icon={<Image width="6" height="6" src={ide.icon ?? NoneSvg} />}>
+                            icon={<IDEIcon ide={ide} width={6} height={6} size="sm" />}>
                             {getIDEDisplayName(ide)}
                           </MenuItem>
                         ))}
@@ -459,7 +456,7 @@ function WorkspaceCardHeader({
             <Checkbox onChange={(e) => onSelectionChange(e.target.checked)} />
           )}
         </HStack>
-        {source !== null && (
+        {source && (
           <Text
             fontSize="sm"
             color="gray.500"

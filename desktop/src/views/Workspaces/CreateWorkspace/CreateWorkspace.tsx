@@ -18,18 +18,16 @@ import {
   useToken,
   VStack,
 } from "@chakra-ui/react"
-import { useQuery } from "@tanstack/react-query"
 import { useCallback, useEffect, useMemo } from "react"
 import { Controller, ControllerRenderProps } from "react-hook-form"
 import { FiFolder } from "react-icons/fi"
 import { useNavigate } from "react-router"
 import { useSearchParams } from "react-router-dom"
 import { client } from "../../../client"
-import { ExampleCard } from "../../../components"
+import { ExampleCard, IDEIcon } from "../../../components"
 import { RECOMMENDED_PROVIDER_SOURCES, SIDEBAR_WIDTH } from "../../../constants"
 import { useProviders, useWorkspace } from "../../../contexts"
 import { exists, getKeys, isEmpty, useFormErrors } from "../../../lib"
-import { QueryKeys } from "../../../queryKeys"
 import { Routes } from "../../../routes"
 import { useBorderColor } from "../../../Theme"
 import { TIDE } from "../../../types"
@@ -51,12 +49,7 @@ const Form = styled.form`
 `
 
 export function CreateWorkspace() {
-  const idesQuery = useQuery({
-    queryKey: QueryKeys.IDES,
-    queryFn: async () => (await client.ides.listAll()).unwrap(),
-  })
-
-  const ides = useMemo(() => idesQuery.data, [idesQuery.data])
+  const { ides } = useIDEs()
 
   const searchParams = useCreateWorkspaceParams()
   const navigate = useNavigate()
@@ -313,11 +306,7 @@ export function CreateWorkspace() {
                   name={FieldName.DEFAULT_IDE}
                   control={control}
                   render={({ field }) => (
-                    <IDEInput
-                      field={field}
-                      ides={idesQuery.data}
-                      onClick={(name) => field.onChange(name)}
-                    />
+                    <IDEInput field={field} ides={ides} onClick={(name) => field.onChange(name)} />
                   )}
                 />
                 {exists(defaultIDEError) ? (
@@ -492,7 +481,8 @@ function ProviderInput({ options, field, onAddProviderClicked }: TProviderInputP
 
 import styled from "@emotion/styled"
 import { Plus } from "../../../icons"
-import { NoneSvg, ProviderPlaceholderSvg } from "../../../images"
+import { ProviderPlaceholderSvg } from "../../../images"
+import { useIDEs } from "../../../useIDEs"
 type TIDEInputProps = Readonly<{
   ides: readonly TIDE[] | undefined
   field: ControllerRenderProps<TFormValues, (typeof FieldName)["DEFAULT_IDE"]>
@@ -505,9 +495,9 @@ function IDEInput({ ides, field, onClick }: TIDEInputProps) {
     <Grid
       gap={2}
       gridTemplateColumns={{
-        lg: `repeat(6, ${gridChildWidth})`,
-        xl: `repeat(8, ${gridChildWidth})`,
-        "2xl": `repeat(9, ${gridChildWidth})`,
+        lg: `repeat(7, ${gridChildWidth})`,
+        xl: `repeat(9, ${gridChildWidth})`,
+        "2xl": `repeat(10, ${gridChildWidth})`,
       }}>
       {ides?.map((ide) => {
         const isSelected = field.value === ide.name
@@ -517,7 +507,7 @@ function IDEInput({ ides, field, onClick }: TIDEInputProps) {
             <ExampleCard
               name={ide.displayName}
               size="sm"
-              image={ide.icon ?? NoneSvg}
+              image={<IDEIcon ide={ide} />}
               isSelected={isSelected}
               onClick={() => onClick(ide.name!)}
             />

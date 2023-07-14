@@ -1,9 +1,18 @@
-import { BoxProps, Card, Image, Text, Tooltip, useColorModeValue, useToken } from "@chakra-ui/react"
-import React, { useId } from "react"
+import {
+  BoxProps,
+  Card,
+  Image,
+  ImageProps,
+  Text,
+  Tooltip,
+  useColorModeValue,
+  useToken,
+} from "@chakra-ui/react"
+import { ReactElement, cloneElement, useMemo } from "react"
 
 type TExampleCardProps = {
   name: string
-  image?: string
+  image?: string | ReactElement
   size?: keyof typeof sizes
 
   isSelected?: boolean
@@ -49,6 +58,18 @@ export function ExampleCard({
 
   const disabledProps = isDisabled ? { filter: "grayscale(100%)", cursor: "not-allowed" } : {}
 
+  const imageElement = useMemo(() => {
+    if (image === undefined) {
+      return null
+    }
+    const imageProps: ImageProps = { objectFit: "fill", overflow: "hidden", zIndex: "1" }
+    if (typeof image === "string") {
+      return <Image src={image} {...imageProps} />
+    }
+
+    return cloneElement(image, imageProps)
+  }, [image])
+
   return (
     <Tooltip textTransform={"capitalize"} label={name} isDisabled={size === "lg"}>
       <Card
@@ -67,7 +88,7 @@ export function ExampleCard({
         {...(onClick && !isDisabled && !isSelected ? { onClick } : {})}
         {...selectedProps}
         {...disabledProps}>
-        <Image objectFit="fill" overflow="hidden" zIndex="1" src={image} />
+        {imageElement}
         {size === "lg" && (
           <Text
             paddingBottom="1"

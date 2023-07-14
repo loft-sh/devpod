@@ -1,6 +1,7 @@
 export * from "./Animation"
 export * from "./AutoComplete"
 export * from "./Error"
+export * from "./IDEIcon"
 export * from "./ExampleCard"
 export * from "./Layout"
 export * from "./LoftOSSBadge"

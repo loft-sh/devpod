@@ -107,7 +107,7 @@ export function Settings() {
             textTransform="capitalize"
             onChange={(e) => updateDefaultIDE({ ide: e.target.value })}
             value={defaultIDE ? defaultIDE.name! : undefined}>
-            {ides.map((ide) => (
+            {ides?.map((ide) => (
               <option key={ide.name} value={ide.name!}>
                 {getIDEDisplayName(ide)}
               </option>
@@ -154,6 +154,17 @@ export function Settings() {
             Whenever new workspaces are created, check if there are multiple devcontainers in the
             source. This might take a while for larger repositories.
           </SettingDescription>
+
+          <Checkbox
+            isChecked={settings.experimental_fleet}
+            onChange={(e) => set("experimental_fleet", e.target.checked)}>
+            JetBrains Fleet
+          </Checkbox>
+          <Checkbox
+            isChecked={settings.experimental_jupyterNotebooks}
+            onChange={(e) => set("experimental_jupyterNotebooks", e.target.checked)}>
+            Jupyter Notebooks
+          </Checkbox>
         </VStack>
 
         <Divider />

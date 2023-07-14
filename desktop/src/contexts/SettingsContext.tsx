@@ -19,6 +19,8 @@ export type TSettings = {
   fixedIDE: boolean
   zoom: "sm" | "md" | "lg" | "xl"
   experimental_multiDevcontainer: boolean
+  experimental_fleet: boolean
+  experimental_jupyterNotebooks: boolean
 }
 type TSetting = keyof TSettings
 
@@ -36,6 +38,8 @@ const initialSettings: TSettings = {
   fixedIDE: false,
   zoom: "md",
   experimental_multiDevcontainer: false,
+  experimental_fleet: true,
+  experimental_jupyterNotebooks: true,
 }
 function getSettingKeys(): readonly TSetting[] {
   return getKeys(initialSettings)

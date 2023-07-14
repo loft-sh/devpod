@@ -27,6 +27,8 @@ type AllowedIDE struct {
 	Options ide.Options `json:"options,omitempty"`
 	// Icon holds an image URL that will be displayed
 	Icon string `json:"icon,omitempty"`
+	// Experimental indicates that this IDE is experimental
+	Experimental bool `json:"experimental,omitempty"`
 }
 
 var AllowedIDEs = []AllowedIDE{
@@ -97,16 +99,18 @@ var AllowedIDEs = []AllowedIDE{
 		Icon:        "https://devpod.sh/assets/webstorm.svg",
 	},
 	{
-		Name:        config.IDEFleet,
-		DisplayName: "Fleet",
-		Options:     fleet.Options,
-		Icon:        "https://devpod.sh/assets/fleet.svg",
+		Name:         config.IDEFleet,
+		DisplayName:  "Fleet",
+		Options:      fleet.Options,
+		Icon:         "https://devpod.sh/assets/fleet.svg",
+		Experimental: true,
 	},
 	{
-		Name:        config.IDEJupyterNotebook,
-		DisplayName: "Jupyter Notebook",
-		Options:     jupyter.Options,
-		Icon:        "https://devpod.sh/assets/jupyter.svg",
+		Name:         config.IDEJupyterNotebook,
+		DisplayName:  "Jupyter Notebook",
+		Options:      jupyter.Options,
+		Icon:         "https://devpod.sh/assets/jupyter.svg",
+		Experimental: true,
 	},
 }
 
