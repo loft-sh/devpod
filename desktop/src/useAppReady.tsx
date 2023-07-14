@@ -81,7 +81,7 @@ export function useAppReady() {
 
           // Try to find workspace by source
           let maybeWorkspace = workspacesResult.val.find((w) => {
-            if (w.source === null) {
+            if (!w.source) {
               return false
             }
 

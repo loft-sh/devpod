@@ -1,5 +1,6 @@
 import { UseMutationResult } from "@tanstack/react-query"
 
+type TMaybe<T> = T | null | undefined
 export type TUnsubscribeFn = VoidFunction
 export type TComparable<T> = Readonly<{ eq(b: T): boolean }>
 export type TIdentifiable = Readonly<{ id: string }>
@@ -20,10 +21,11 @@ export type TRunnable<TRunConfig> = Readonly<{ run(config: TRunConfig): void }>
 //#region IDE
 export type TIDEs = readonly TIDE[]
 export type TIDE = Readonly<{
-  name: string | null
+  name: TMaybe<string>
   displayName: string
-  default: boolean | null
-  icon: string | null
+  default: TMaybe<boolean>
+  icon: TMaybe<string>
+  experimental: TMaybe<boolean>
 }>
 //#endregion
 
@@ -33,63 +35,65 @@ export type TOptionID = string
 export type TWithProviderID = Readonly<{ providerID: TProviderID }>
 export type TProviders = Record<TProviderID, TProvider>
 export type TProvider = Readonly<{
-  config: TProviderConfig | null
-  default: boolean | null
-  state: Readonly<{
-    initialized: boolean | null
-    singleMachine: boolean | null
-    creationTimestamp: string | null
-    options: TProviderOptions | null
-  }> | null
+  config: TMaybe<TProviderConfig>
+  default: TMaybe<boolean>
+  state: TMaybe<
+    Readonly<{
+      initialized: TMaybe<boolean>
+      singleMachine: TMaybe<boolean>
+      creationTimestamp: TMaybe<string>
+      options: TMaybe<TProviderOptions>
+    }>
+  >
 }>
 export type TNamedProvider = TProvider & Readonly<{ name: string }>
 export type TProviderConfig = Readonly<{
-  name: string | null
-  version: string | null
-  source: TProviderSource | null
-  description: string | null
+  name: TMaybe<string>
+  version: TMaybe<string>
+  source: TMaybe<TProviderSource>
+  description: TMaybe<string>
   optionGroups: TProviderOptionGroup[]
   options: TProviderOptions
-  icon: string | null
-  home: string | null
-  exec: Record<string, readonly string[]> | null
+  icon: TMaybe<string>
+  home: TMaybe<string>
+  exec: TMaybe<Record<string, readonly string[]>>
 }>
 export type TProviderOptionGroup = Readonly<{
-  name: string | null
-  options: string[] | null
-  defaultVisible: boolean | null
+  name: TMaybe<string>
+  options: TMaybe<string[]>
+  defaultVisible: TMaybe<boolean>
 }>
 export type TProviderSource = Readonly<{
-  internal: boolean | null
-  github: string | null
-  file: string | null
-  url: string | null
-  raw: string | null
+  internal: TMaybe<boolean>
+  github: TMaybe<string>
+  file: TMaybe<string>
+  url: TMaybe<string>
+  raw: TMaybe<string>
 }>
 export type TProviderOptions = Record<string, TProviderOption>
 export type TProviderOption = Readonly<{
   // Value is the options current value
-  value: string | null
+  value: TMaybe<string>
   // If value is a password
-  password: boolean | null
+  password: TMaybe<boolean>
   // A description of the option displayed to the user by a supporting tool.
-  description: string | null
+  description: TMaybe<string>
   // If required is true and the user doesn't supply a value, devpod will ask the user
-  required: boolean | null
+  required: TMaybe<boolean>
   // Allowed values for this option.
-  enum: string[] | null
+  enum: TMaybe<string[]>
   // Suggestions are suggestions to show in the DevPod UI for this option
-  suggestions: string[] | null
+  suggestions: TMaybe<string[]>
   // Hidden specifies if the option should be hidden
-  hidden: boolean | null
+  hidden: TMaybe<boolean>
   // Local means the variable is not resolved immediately and instead later when the workspace / machine was created.
-  local: boolean | null
+  local: TMaybe<boolean>
   // Default value if the user omits this option from their configuration.
-  default: string | null
+  default: TMaybe<string>
   // Command is the command to run to specify an option
-  command: string | null
+  command: TMaybe<string>
   // Type is the provider option type. Can be one of: string, duration, number or boolean. Defaults to string
-  type: "string" | "duration" | "number" | "boolean" | null
+  type: TMaybe<"string" | "duration" | "number" | "boolean">
 }>
 
 export type TAddProviderConfig = Readonly<{
@@ -115,27 +119,27 @@ export type TWorkspaceID = NonNullable<TWorkspace["id"]>
 export type TWithWorkspaceID = Readonly<{ workspaceID: TWorkspaceID }>
 export type TWorkspace = Readonly<{
   id: string
-  picture: string | null
-  provider: Readonly<{ name: string | null }> | null
-  status: "Running" | "Busy" | "Stopped" | "NotFound" | undefined | null
-  ide: {
-    name: string | null
-  } | null
+  picture: TMaybe<string>
+  provider: TMaybe<Readonly<{ name: TMaybe<string> }>>
+  status: TMaybe<"Running" | "Busy" | "Stopped" | "NotFound">
+  ide: TMaybe<{
+    name: TMaybe<string>
+  }>
   creationTimestamp: string
   lastUsed: string
-  source: {
-    gitRepository: string | null
-    gitBranch: string | null
-    localFolder: string | null
-    image: string | null
-  } | null
+  source: TMaybe<{
+    gitRepository: TMaybe<string>
+    gitBranch: TMaybe<string>
+    localFolder: TMaybe<string>
+    image: TMaybe<string>
+  }>
 }>
 export type TWorkspaceWithoutStatus = Omit<TWorkspace, "status"> & Readonly<{ status: null }>
 export type TWorkspaceStatusResult = Readonly<{
-  id: string | null
-  context: string | null
-  provider: string | null
-  state: TWorkspace["status"] | null
+  id: TMaybe<string>
+  context: TMaybe<string>
+  provider: TMaybe<string>
+  state: TMaybe<TWorkspace["status"]>
 }>
 export type TWorkspaceStartConfig = Readonly<{
   id: string
