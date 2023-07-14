@@ -30,7 +30,7 @@ export function ListProviders() {
           <Button onClick={() => showSetupProvider({ isStrict: false })}>Add Provider</Button>
         </VStack>
       ) : (
-        <Wrap>
+        <Wrap paddingBottom={8}>
           {providersInfo.map(({ id, data }) => (
             <WrapItem key={id}>
               <ProviderCard id={id} provider={data} remove={remove} />

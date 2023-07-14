@@ -55,7 +55,7 @@ Tooltip.defaultProps = { ...Tooltip.defaultProps, placement: "top" }
 
 export const theme = extendTheme({
   styles: {
-    global() {
+    global({ colorMode }) {
       return {
         html: {
           fontSize: "14px",
@@ -72,6 +72,9 @@ export const theme = extendTheme({
         code: {
           userSelect: "auto",
         },
+        "input::placeholder": {
+          color: colorMode === "light" ? "gray.500" : "gray.400",
+        },
       }
     },
   },
@@ -85,8 +88,8 @@ export const theme = extendTheme({
     },
   },
   config: {
-    initialColorMode: "light",
-    useSystemColorMode: false,
+    initialColorMode: "system",
+    useSystemColorMode: true,
   },
   components: {
     Button,

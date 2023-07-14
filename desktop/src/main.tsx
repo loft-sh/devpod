@@ -9,6 +9,7 @@ import "xterm/css/xterm.css"
 import { DevPodProvider, SettingsProvider } from "./contexts"
 import { router } from "./routes"
 import { ThemeProvider } from "./Theme"
+import { ColorModeScript } from "@chakra-ui/react"
 
 dayjs.extend(relativeTime)
 
@@ -38,6 +39,7 @@ ReactDOM.createRoot(document.getElementById("root") as HTMLElement).render(<Root
 function Root() {
   return (
     <StrictMode>
+      <ColorModeScript initialColorMode="system" />
       <SettingsProvider>
         <ThemeProvider>
           <QueryClientProvider client={queryClient}>

@@ -87,6 +87,7 @@ export function SetupProviderSourceForm({
   const providerName = watch(FieldName.PROVIDER_NAME, undefined)
   const queryClient = useQueryClient()
   const borderColor = useBorderColor()
+  const hoverBackgroundColor = useColorModeValue("gray.50", "gray.800")
 
   const {
     mutate: addProvider,
@@ -288,6 +289,7 @@ export function SetupProviderSourceForm({
                     as={Button}
                     isDisabled={isLoading || !communityProviders || communityProviders.length === 0}
                     _disabled={{ opacity: 1, cursor: "not-allowed" }}
+                    _hover={{ bg: hoverBackgroundColor }}
                     variant="ghost"
                     width="fit-content"
                     height="fit-content"
@@ -367,8 +369,10 @@ export function SetupProviderSourceForm({
 
             {!formState.isDirty && (
               <>
-                <Text fontWeight="bold">Choose your provider</Text>
-                <Text marginBottom="8">
+                <Text color="gray.500" fontWeight="bold">
+                  Choose your provider
+                </Text>
+                <Text color="gray.500" marginBottom="8">
                   Providers determine how and where your workspaces run. They connect to the cloud
                   platform - or local environment - of your choice and spin up your workspaces. You
                   can choose from a number of pre-built providers, or connect your own.

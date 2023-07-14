@@ -18,6 +18,9 @@ type ProviderConfig struct {
 	// Icon holds an image URL that will be displayed
 	Icon string `json:"icon,omitempty"`
 
+	// IconDark holds an image URL that will be displayed in dark mode
+	IconDark string `json:"iconDark,omitempty"`
+
 	// Home holds the provider home URL
 	Home string `json:"home,omitempty"`
 

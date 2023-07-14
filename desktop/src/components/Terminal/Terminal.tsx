@@ -17,11 +17,8 @@ export const Terminal = forwardRef<TTerminalRef, {}>(function T(_, ref) {
   const terminalRef = useRef<XTermTerminal | null>(null)
   const termFitRef = useRef<FitAddon | null>(null)
 
-  const backgroundToken = useColorModeValue("gray.900", "gray.300")
-  const backgroundColor = useToken("colors", backgroundToken)
-
-  const textToken = useColorModeValue("gray.100", "gray.900")
-  const textColor = useToken("colors", textToken)
+  const backgroundColor = useToken("colors", "gray.900")
+  const textColor = useToken("colors", "gray.100")
 
   const scrollBarThumbToken = useColorModeValue("gray.500", "gray.200")
   const scrollBarThumbColor = useToken("colors", scrollBarThumbToken)
