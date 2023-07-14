@@ -1007,6 +1007,37 @@ var _ = DevPodDescribe("devpod up test suite", func() {
 				))
 			}, ginkgo.SpecTimeout(60*time.Second))
 
+			ginkgo.It("should start a new workspace with features", func(ctx context.Context) {
+				tempDir, err := framework.CopyToTempDir("tests/up/testdata/docker-compose-features")
+				framework.ExpectNoError(err)
+				ginkgo.DeferCleanup(framework.CleanupTempDir, initialDir, tempDir)
+
+				f := framework.NewDefaultFramework(initialDir + "/bin")
+				_ = f.DevPodProviderAdd(ctx, "docker")
+				err = f.DevPodProviderUse(context.Background(), "docker")
+				framework.ExpectNoError(err)
+
+				ginkgo.DeferCleanup(f.DevPodWorkspaceDelete, context.Background(), tempDir)
+
+				err = f.DevPodUp(ctx, tempDir, "--debug")
+				framework.ExpectNoError(err)
+
+				workspace, err := f.FindWorkspace(ctx, tempDir)
+				framework.ExpectNoError(err)
+				projectName := workspace.ID
+
+				ids, err := dockerHelper.FindContainer([]string{
+					fmt.Sprintf("%s=%s", compose.ProjectLabel, composeHelper.GetProjectName(workspace.UID)),
+					fmt.Sprintf("%s=%s", compose.ServiceLabel, "app"),
+				})
+				framework.ExpectNoError(err)
+				gomega.Expect(ids).To(gomega.HaveLen(1), "1 compose container to be created")
+
+				vclusterVersionOutput, _, err := f.ExecCommandCapture(ctx, []string{"ssh", "--command", "vcluster --version", projectName})
+				framework.ExpectNoError(err)
+				gomega.Expect(vclusterVersionOutput).To(gomega.ContainSubstring("vcluster version 0.15.2"))
+			}, ginkgo.SpecTimeout(60*time.Second))
+
 			ginkgo.Context("with lifecycle commands", func() {
 				ginkgo.It("should start a new workspace and execute array based lifecycle commands", func(ctx context.Context) {
 					tempDir, err := framework.CopyToTempDir("tests/up/testdata/docker-compose-lifecycle-array")
