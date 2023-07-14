@@ -212,6 +212,7 @@ func prepareWorkspace(ctx context.Context, workspaceInfo *provider2.AgentWorkspa
 			log.Errorf("Cloning failed: %v. Trying cloning on local machine and uploading folder", err)
 			return RemoteCloneAndDownload(ctx, workspaceInfo.ContentFolder, client, log)
 		}
+		return nil
 	} else if workspaceInfo.Workspace.Source.LocalFolder != "" {
 		log.Debugf("Download Local Folder")
 		return DownloadLocalFolder(ctx, workspaceInfo.ContentFolder, client, log)
