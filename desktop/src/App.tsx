@@ -11,12 +11,13 @@ import {
   GridProps,
   Link,
   Text,
+  VStack,
   useColorModeValue,
   useToken,
-  VStack,
 } from "@chakra-ui/react"
 import { useEffect, useMemo } from "react"
 import { Outlet, Link as RouterLink, useMatch, useNavigate, useRouteError } from "react-router-dom"
+import { useBorderColor } from "./Theme"
 import { client } from "./client"
 import { Sidebar, SidebarMenuItem, StatusBar, Toolbar } from "./components"
 import { SIDEBAR_WIDTH, STATUS_BAR_HEIGHT } from "./constants"
@@ -24,7 +25,6 @@ import { ToolbarProvider, useChangeSettings, useSettings } from "./contexts"
 import { Briefcase, Cog, Stack3D } from "./icons"
 import { isLinux, isMacOS, isWindows } from "./lib"
 import { Routes } from "./routes"
-import { useBorderColor } from "./Theme"
 import { useAppReady } from "./useAppReady"
 import { useWelcomeModal } from "./useWelcomeModal"
 

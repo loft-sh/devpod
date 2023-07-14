@@ -11,6 +11,7 @@ import {
   MenuList,
   Text,
   Tooltip,
+  useColorModeValue,
 } from "@chakra-ui/react"
 import { useMemo } from "react"
 import { FaBug } from "react-icons/fa"
@@ -25,6 +26,7 @@ export function StatusBar(boxProps: BoxProps) {
   const platform = usePlatform()
   const debug = useDebug()
   const { settings, set } = useChangeSettings()
+  const iconColor = useColorModeValue("iconColor", "gray.400")
 
   const zoomIcon = useMemo(() => {
     return { icon: <CheckIcon /> }
@@ -42,7 +44,7 @@ export function StatusBar(boxProps: BoxProps) {
             variant="ghost"
             aria-label="zoom"
             rounded="full"
-            icon={<Icon boxSize="5" color="gray.700" as={HiMagnifyingGlassPlus} />}
+            icon={<Icon boxSize="5" color="iconColor" as={HiMagnifyingGlassPlus} />}
           />
           <MenuList>
             <MenuItem
@@ -72,7 +74,7 @@ export function StatusBar(boxProps: BoxProps) {
           <IconButton
             variant="ghost"
             rounded="full"
-            icon={<StarIcon color="gray.700" />}
+            icon={<StarIcon color={iconColor} />}
             aria-label="Loving DevPod? Give us a star on Github"
             onClick={() => client.openLink("https://github.com/loft-sh/devpod")}
           />
@@ -82,7 +84,7 @@ export function StatusBar(boxProps: BoxProps) {
           <IconButton
             variant="ghost"
             rounded="full"
-            icon={<Icon as={HiDocumentMagnifyingGlass} color="gray.700" />}
+            icon={<Icon as={HiDocumentMagnifyingGlass} color={iconColor} />}
             aria-label="How to DevPod - Docs"
             onClick={() => client.openLink("https://devpod.sh/docs")}
           />
@@ -92,7 +94,7 @@ export function StatusBar(boxProps: BoxProps) {
           <IconButton
             variant="ghost"
             rounded="full"
-            icon={<Icon as={FaBug} color="gray.700" />}
+            icon={<Icon as={FaBug} color={iconColor} />}
             aria-label="Report an Issue"
             onClick={() => client.openLink("https://github.com/loft-sh/devpod/issues/new/choose")}
           />

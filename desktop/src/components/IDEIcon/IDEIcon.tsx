@@ -1,6 +1,15 @@
-import { Box, BoxProps, Icon, IconProps, Image, useToken } from "@chakra-ui/react"
+import {
+  Box,
+  BoxProps,
+  Icon,
+  IconProps,
+  Image,
+  useColorMode,
+  useColorModeValue,
+  useToken,
+} from "@chakra-ui/react"
 import { HiBeaker } from "react-icons/hi2"
-import { NoneSvg } from "../../images"
+import { NoneSvg, NoneSvgDark } from "../../images"
 import { TIDE } from "../../types"
 
 const SIZES: Record<NonNullable<TIDEIconProps["size"]>, IconProps> = {
@@ -17,8 +26,12 @@ const SIZES: Record<NonNullable<TIDEIconProps["size"]>, IconProps> = {
 type TIDEIconProps = Readonly<{ ide: TIDE; size?: "sm" | "md" }> & BoxProps
 export function IDEIcon({ ide, size = "md", ...boxProps }: TIDEIconProps) {
   const experimentalIconSizeProps = SIZES[size]
-  const primaryColorDark = useToken("colors", "primary.800")
-  const primaryColorLight = useToken("colors", "primary.400")
+  const primaryColorDarkToken = useColorModeValue("primary.800", "primary.400")
+  const primaryColorDark = useToken("colors", primaryColorDarkToken)
+  const primaryColorLightToken = useColorModeValue("primary.400", "primary.800")
+  const primaryColorLight = useToken("colors", primaryColorLightToken)
+  const backgroundColor = useColorModeValue("white", "gray.700")
+  const { colorMode } = useColorMode()
 
   const experimentalIconStylingProps =
     size === "sm"
@@ -27,13 +40,17 @@ export function IDEIcon({ ide, size = "md", ...boxProps }: TIDEIconProps) {
         }
       : {
           boxShadow: `inset 0px 0px 0px 1px ${primaryColorDark}55`,
-          background: `linear-gradient(135deg, ${primaryColorLight}55 50%, ${primaryColorDark}55, ${primaryColorDark}88)`,
+          background:
+            colorMode === "light"
+              ? `linear-gradient(135deg, ${primaryColorLight}55 50%, ${primaryColorDark}55, ${primaryColorDark}88)`
+              : `linear-gradient(135deg, ${primaryColorDark}55 50%, ${primaryColorLight}55, ${primaryColorLight}88)`,
           color: `${primaryColorDark}CC`,
         }
+  const fallbackIcon = colorMode === "light" ? NoneSvg : NoneSvgDark
 
   return (
     <Box width="full" height="full" position="relative">
-      <Image src={ide.icon ?? NoneSvg} {...boxProps} />
+      <Image src={ide.icon ?? fallbackIcon} {...boxProps} />
       {ide.experimental && (
         <>
           <Box
@@ -43,7 +60,7 @@ export function IDEIcon({ ide, size = "md", ...boxProps }: TIDEIconProps) {
             zIndex="docked"
             borderRadius="full"
             boxSize={experimentalIconSizeProps.boxSize}
-            backgroundColor="white"
+            backgroundColor={backgroundColor}
           />
           <Icon
             position="absolute"

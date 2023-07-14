@@ -40,11 +40,8 @@ export function ThemeProvider({ children }: Readonly<{ children?: ReactNode }>) 
   }, [settings])
 
   return (
-    <>
-      <ColorModeScript initialColorMode={theme.config.initialColorMode} />
-      <ChakraProvider theme={theme} toastOptions={toastOptions}>
-        {children}
-      </ChakraProvider>
-    </>
+    <ChakraProvider theme={theme} toastOptions={toastOptions}>
+      {children}
+    </ChakraProvider>
   )
 }

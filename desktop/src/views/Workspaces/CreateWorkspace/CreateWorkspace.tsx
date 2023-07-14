@@ -14,6 +14,7 @@ import {
   SimpleGrid,
   Text,
   Tooltip,
+  useColorMode,
   useColorModeValue,
   useToken,
   VStack,
@@ -161,6 +162,8 @@ export function CreateWorkspace() {
   const backgroundColor = useColorModeValue("gray.50", "gray.800")
   const borderColor = useBorderColor()
   const inputBackgroundColor = useColorModeValue("white", "black")
+  const bottomBarBackgroundColor = useColorModeValue("white", "black")
+  const { colorMode } = useColorMode()
 
   return (
     <>
@@ -205,10 +208,10 @@ export function CreateWorkspace() {
                     leftIcon={<Icon as={FiFolder} />}
                     borderTopLeftRadius={0}
                     borderBottomLeftRadius={0}
-                    borderTop={"1px solid white"}
-                    borderRight={"1px solid white"}
-                    borderBottom={"1px solid white"}
-                    borderColor={"gray.200"}
+                    borderTopWidth={"thin"}
+                    borderRightWidth={"thin"}
+                    borderBottomWidth={"thin"}
+                    borderColor={borderColor}
                     height={"42px"}
                     flex={"0 0 140px"}
                     onClick={handleSelectFolderClicked}>
@@ -263,7 +266,9 @@ export function CreateWorkspace() {
                     <ExampleCard
                       key={example.source}
                       size="sm"
-                      image={example.image}
+                      image={
+                        colorMode === "dark" ? example.imageDark ?? example.image : example.image
+                      }
                       name={example.name}
                       isSelected={currentSource === example.source}
                       onClick={() => handleExampleCardClicked(example.source)}
@@ -409,7 +414,7 @@ export function CreateWorkspace() {
             alignItems="center"
             borderTopWidth="thin"
             borderTopColor={borderColor}
-            backgroundColor="white"
+            backgroundColor={bottomBarBackgroundColor}
             paddingX={{ base: "8", xl: "0" }}
             paddingY="8"
             zIndex="overlay">

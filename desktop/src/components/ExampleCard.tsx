@@ -5,6 +5,7 @@ import {
   ImageProps,
   Text,
   Tooltip,
+  useColorMode,
   useColorModeValue,
   useToken,
 } from "@chakra-ui/react"
@@ -35,6 +36,8 @@ export function ExampleCard({
   onClick,
 }: TExampleCardProps) {
   const hoverBackgroundColor = useColorModeValue("gray.50", "gray.800")
+  const { colorMode } = useColorMode()
+
   const primaryColorLight = useToken("colors", "primary.400")
   const primaryColorDark = useToken("colors", "primary.800")
 
@@ -47,7 +50,10 @@ export function ExampleCard({
           bottom: 0,
           left: 0,
           right: 0,
-          background: `linear-gradient(135deg, ${primaryColorLight}55 30%, ${primaryColorDark}55, ${primaryColorDark}88)`,
+          background:
+            colorMode === "light"
+              ? `linear-gradient(135deg, ${primaryColorLight}55 30%, ${primaryColorDark}55, ${primaryColorDark}88)`
+              : `linear-gradient(135deg, ${primaryColorLight}AA 30%, ${primaryColorDark}AA, ${primaryColorDark}CC)`,
           opacity: 0.7,
           width: "full",
           height: "full",
@@ -93,7 +99,7 @@ export function ExampleCard({
           <Text
             paddingBottom="1"
             fontSize="11px"
-            color="gray.500"
+            color="gray.400"
             fontWeight="medium"
             overflow="hidden"
             maxWidth={sizes[size]}

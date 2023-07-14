@@ -2,11 +2,14 @@ import {
   CppSvg,
   DotnetcoreSvg,
   GoSvg,
+  GoSvgDark,
   JavaSvg,
   NodejsSvg,
   PhpSvg,
+  PhpSvgDark,
   PythonSvg,
   RustSvg,
+  RustSvgDark,
 } from "../../../images"
 
 export const WORKSPACE_EXAMPLES = [
@@ -22,11 +25,13 @@ export const WORKSPACE_EXAMPLES = [
   },
   {
     image: GoSvg,
+    imageDark: GoSvgDark,
     source: "https://github.com/microsoft/vscode-remote-try-go",
     name: "Try Go",
   },
   {
     image: RustSvg,
+    imageDark: RustSvgDark,
     source: "https://github.com/microsoft/vscode-remote-try-rust",
     name: "Try Rust",
   },
@@ -37,6 +42,7 @@ export const WORKSPACE_EXAMPLES = [
   },
   {
     image: PhpSvg,
+    imageDark: PhpSvgDark,
     source: "https://github.com/microsoft/vscode-remote-try-php",
     name: "Try PHP",
   },
