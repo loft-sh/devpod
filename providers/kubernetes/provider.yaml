@@ -54,7 +54,7 @@ options:
   KUBERNETES_NAMESPACE:
     description: The kubernetes namespace to use
     command: |-
-      NAMESPACE=$(KUBECONFIG=${KUBERNETES_CONFIG} ${KUBECTL_PATH} config view --context=${KUBERNETES_CONTEXT} --minify -o jsonpath='{..namespace}' 2>/dev/null || true)
+      NAMESPACE=$(${KUBECTL_PATH} config view --kubeconfig=${KUBERNETES_CONFIG} --context=${KUBERNETES_CONTEXT} --minify -o jsonpath='{..namespace}' 2>/dev/null || true)
       if [ -z "${NAMESPACE}" ]; then
         NAMESPACE=devpod
       fi
