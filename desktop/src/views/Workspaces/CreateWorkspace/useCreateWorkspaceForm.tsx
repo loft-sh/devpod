@@ -197,7 +197,7 @@ export function useCreateWorkspaceForm(
             setError(FieldName.DEVCONTAINER_PATH, {
               message: checkDevcontainerSetupResult.val.message,
             })
-          } else {
+          } else if (checkDevcontainerSetupResult.val.configPaths.length > 1) {
             showSelectDevcontainerModal(checkDevcontainerSetupResult.val.configPaths)
 
             return
@@ -253,7 +253,7 @@ function isWorkspaceNameAvailable(workspaceID: string, workspaces: readonly TWor
 function useSelectDevcontainerModal({
   onSelected,
 }: Readonly<{ onSelected: (path: string | undefined) => void }>) {
-  const [devcontainerPaths, setDevcontainerPaths] = useState<string[]>(["foo", "bar"])
+  const [devcontainerPaths, setDevcontainerPaths] = useState<string[]>([])
   const { isOpen, onClose, onOpen } = useDisclosure()
 
   const modal = useMemo(
@@ -300,13 +300,16 @@ function useSelectDevcontainerModal({
         </ModalContent>
       </Modal>
     ),
-    [isOpen, onClose]
+    [devcontainerPaths, isOpen, onClose, onSelected]
   )
 
-  const show = useCallback((devcontainerPaths: string[]) => {
-    setDevcontainerPaths(devcontainerPaths)
-    onOpen()
-  }, [])
+  const show = useCallback(
+    (devcontainerPaths: string[]) => {
+      setDevcontainerPaths(devcontainerPaths)
+      onOpen()
+    },
+    [onOpen]
+  )
 
   return { show, modal }
 }

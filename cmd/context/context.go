@@ -15,6 +15,7 @@ func NewContextCmd(flags *flags.GlobalFlags) *cobra.Command {
 	contextCmd.AddCommand(NewCreateCmd(flags))
 	contextCmd.AddCommand(NewDeleteCmd(flags))
 	contextCmd.AddCommand(NewUseCmd(flags))
+	contextCmd.AddCommand(NewOptionsCmd(flags))
 	contextCmd.AddCommand(NewSetOptionsCmd(flags))
 	contextCmd.AddCommand(NewListCmd(flags))
 	return contextCmd

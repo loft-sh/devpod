@@ -4,6 +4,7 @@ import (
 	"context"
 	"os"
 	"reflect"
+	"strings"
 
 	"github.com/loft-sh/devpod/pkg/agent"
 	"github.com/loft-sh/devpod/pkg/binaries"
@@ -231,13 +232,28 @@ func ResolveAgentConfig(devConfig *config.Config, provider *provider2.ProviderCo
 	}
 	agentConfig.DownloadURL = resolver.ResolveDefaultValue(agentConfig.DownloadURL, options)
 	if agentConfig.DownloadURL == "" {
-		agentConfig.DownloadURL = agent.DefaultAgentDownloadURL()
+		agentConfig.DownloadURL = resolveAgentDownloadURL(devConfig)
 	}
 	agentConfig.Timeout = resolver.ResolveDefaultValue(agentConfig.Timeout, options)
 	agentConfig.ContainerTimeout = resolver.ResolveDefaultValue(agentConfig.ContainerTimeout, options)
 	agentConfig.InjectGitCredentials = types.StrBool(resolver.ResolveDefaultValue(string(agentConfig.InjectGitCredentials), options))
 	agentConfig.InjectDockerCredentials = types.StrBool(resolver.ResolveDefaultValue(string(agentConfig.InjectDockerCredentials), options))
 	return agentConfig
+}
+
+// resolveAgentDownloadURL resolves the agent download URL (env -> context -> default)
+func resolveAgentDownloadURL(devConfig *config.Config) string {
+	devPodAgentURL := os.Getenv(agent.EnvDevPodAgentURL)
+	if devPodAgentURL != "" {
+		return strings.TrimSuffix(devPodAgentURL, "/") + "/"
+	}
+
+	contextAgentOption, ok := devConfig.Current().Options[config.ContextOptionAgentURL]
+	if ok && contextAgentOption.Value != "" {
+		return strings.TrimSuffix(contextAgentOption.Value, "/") + "/"
+	}
+
+	return agent.DefaultAgentDownloadURL()
 }
 
 func mergeProviderOptions(existing map[string]*provider2.ProviderOption, newOpts config.DynamicOptions) config.DynamicOptions {

@@ -152,6 +152,19 @@ export const SUPPORTED_IDES = ["vscode", "intellj"] as const
 export type TSupportedIDE = (typeof SUPPORTED_IDES)[number]
 //#endregion
 
+//#region Context
+export type TContextOptions = Record<TContextOptionName, TContextOption>
+// See pkg/config/context.go
+export type TContextOptionName = "AGENT_URL"
+export type TContextOption = Readonly<{
+  name: TContextOptionName
+  description: string | null | undefined
+  default: string | null | undefined
+  enum: readonly string[] | null | undefined
+  value: string | null | undefined
+}>
+//#endregion
+
 export type TDevcontainerSetup = Readonly<{
   isGitRepository: boolean
   isLocal: boolean

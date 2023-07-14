@@ -66,6 +66,10 @@ func InjectAndExecute(
 	}
 
 	log.Debugf("execute inject script")
+	if preferDownload {
+		log.Debugf("download agent from %s", downloadBase)
+	}
+
 	defer log.Debugf("done injecting")
 
 	t = strings.ReplaceAll(t, "\r", "")

@@ -53,8 +53,15 @@ download() {
   if is_arm; then
     DOWNLOAD_URL="{{ .DownloadArm }}"
   fi
+  iteration=1
+  max_iteration=3
 
   while :; do
+    if [ "$iteration" -gt "$max_iteration" ]; then
+      >&2 echo "error: failed to download devpod"
+      exit 1
+    fi
+
     cmd_status=""
     if command_exists curl; then
         $sh_c "curl -fsSL $DOWNLOAD_URL -o $INSTALL_PATH.$$" && break
@@ -69,11 +76,13 @@ download() {
     >&2 echo "error: failed to download devpod"
     >&2 echo "       command returned: ${cmd_status}"
     >&2 echo "Trying again in 10 seconds..."
+    iteration=$((iteration+1))
     sleep 10
   done
 
   $sh_c "mv $INSTALL_PATH.$$ $INSTALL_PATH"
 }
+
 
 if {{ .ExistsCheck }}; then
   user="$(id -un || true)"
@@ -110,6 +119,11 @@ if {{ .ExistsCheck }}; then
 
   if [ "$CHMOD_PATH" = "true" ]; then
     $sh_c "chmod +x $INSTALL_PATH"
+  fi
+
+  if {{ .ExistsCheck }}; then
+    >&2 echo Error: failed to install devpod
+    exit 1
   fi
 fi
 
