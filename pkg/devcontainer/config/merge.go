@@ -38,11 +38,11 @@ func MergeConfiguration(config *DevContainerConfig, imageMetadataEntries []*Imag
 	mergedConfig.SecurityOpt = unique(unionOrNil(reversed, func(entry *ImageMetadata) []string { return entry.SecurityOpt }))
 	mergedConfig.Entrypoints = collectOrNil(reversed, func(entry *ImageMetadata) string { return entry.Entrypoint })
 	mergedConfig.Mounts = mergeMounts(reversed)
-	mergedConfig.OnCreateCommands = collectOrNilArr(reversed, func(entry *ImageMetadata) types.StrArray { return entry.OnCreateCommand })
-	mergedConfig.UpdateContentCommands = collectOrNilArr(reversed, func(entry *ImageMetadata) types.StrArray { return entry.UpdateContentCommand })
-	mergedConfig.PostCreateCommands = collectOrNilArr(reversed, func(entry *ImageMetadata) types.StrArray { return entry.PostCreateCommand })
-	mergedConfig.PostStartCommands = collectOrNilArr(reversed, func(entry *ImageMetadata) types.StrArray { return entry.PostStartCommand })
-	mergedConfig.PostAttachCommands = collectOrNilArr(reversed, func(entry *ImageMetadata) types.StrArray { return entry.PostAttachCommand })
+	mergedConfig.OnCreateCommands = mergeLifestyleHooks(reversed, func(entry *ImageMetadata) types.LifecycleHook { return entry.OnCreateCommand })
+	mergedConfig.UpdateContentCommands = mergeLifestyleHooks(reversed, func(entry *ImageMetadata) types.LifecycleHook { return entry.UpdateContentCommand })
+	mergedConfig.PostCreateCommands = mergeLifestyleHooks(reversed, func(entry *ImageMetadata) types.LifecycleHook { return entry.PostCreateCommand })
+	mergedConfig.PostStartCommands = mergeLifestyleHooks(reversed, func(entry *ImageMetadata) types.LifecycleHook { return entry.PostStartCommand })
+	mergedConfig.PostAttachCommands = mergeLifestyleHooks(reversed, func(entry *ImageMetadata) types.LifecycleHook { return entry.PostAttachCommand })
 	mergedConfig.WaitFor = firstString(reversed, func(entry *ImageMetadata) string { return entry.WaitFor })
 	mergedConfig.RemoteUser = firstString(reversed, func(entry *ImageMetadata) string { return entry.RemoteUser })
 	mergedConfig.ContainerUser = firstString(reversed, func(entry *ImageMetadata) string { return entry.ContainerUser })
@@ -142,15 +142,14 @@ func mergeMounts(entries []*ImageMetadata) []*Mount {
 	return ReverseSlice(ret)
 }
 
-func collectOrNilArr(entries []*ImageMetadata, m func(entry *ImageMetadata) types.StrArray) []types.StrArray {
-	var out []types.StrArray
+func mergeLifestyleHooks(entries []*ImageMetadata, m func(entry *ImageMetadata) types.LifecycleHook) []types.LifecycleHook {
+	var out []types.LifecycleHook
 	for _, entry := range entries {
 		val := m(entry)
 		if len(val) > 0 {
 			out = append(out, m(entry))
 		}
 	}
-
 	return out
 }
 
