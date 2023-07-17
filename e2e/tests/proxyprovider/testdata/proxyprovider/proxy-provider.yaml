@@ -17,9 +17,7 @@ exec:
                                             --context ${WORKSPACE_CONTEXT} \
                                             --user=root \
                                             --log-output=json \
-                                            --agent-forwarding=false \
-                                            --stdio \
-                                            --start-services=false
+                                            --proxy
 
     stop: |-
       DEVPOD_HOME=${LOCATION} ${DEVPOD} stop ${WORKSPACE_ID} \

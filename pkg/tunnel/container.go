@@ -18,11 +18,12 @@ import (
 	"golang.org/x/crypto/ssh"
 )
 
-func NewContainerTunnel(client client.WorkspaceClient, log log.Logger) *ContainerHandler {
+func NewContainerTunnel(client client.WorkspaceClient, proxy bool, log log.Logger) *ContainerHandler {
 	updateConfigInterval := time.Second * 30
 	return &ContainerHandler{
 		client:               client,
 		updateConfigInterval: updateConfigInterval,
+		proxy:                proxy,
 		log:                  log,
 	}
 }
@@ -30,6 +31,7 @@ func NewContainerTunnel(client client.WorkspaceClient, log log.Logger) *Containe
 type ContainerHandler struct {
 	client               client.WorkspaceClient
 	updateConfigInterval time.Duration
+	proxy                bool
 	log                  log.Logger
 }
 
@@ -93,7 +95,7 @@ func (c *ContainerHandler) Run(ctx context.Context, handler Handler) error {
 		c.log.Debugf("Successfully connected to host")
 
 		// update workspace remotely
-		if c.updateConfigInterval > 0 {
+		if !c.proxy && c.updateConfigInterval > 0 {
 			go func() {
 				c.updateConfig(cancelCtx, sshClient)
 			}()
@@ -128,7 +130,7 @@ func (c *ContainerHandler) updateConfig(ctx context.Context, sshClient *ssh.Clie
 			}
 
 			// compress info
-			workspaceInfo, agentInfo, err := c.client.AgentInfo(provider.CLIOptions{})
+			workspaceInfo, agentInfo, err := c.client.AgentInfo(provider.CLIOptions{Proxy: c.proxy})
 			if err != nil {
 				c.log.Errorf("Error compressing workspace info: %v", err)
 				break
@@ -154,7 +156,7 @@ func (c *ContainerHandler) updateConfig(ctx context.Context, sshClient *ssh.Clie
 
 func (c *ContainerHandler) runRunInContainer(ctx context.Context, sshClient *ssh.Client, runInContainer Handler) error {
 	// compress info
-	workspaceInfo, _, err := c.client.AgentInfo(provider.CLIOptions{})
+	workspaceInfo, _, err := c.client.AgentInfo(provider.CLIOptions{Proxy: c.proxy})
 	if err != nil {
 		return err
 	}

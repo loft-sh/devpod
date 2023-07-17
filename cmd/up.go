@@ -52,8 +52,6 @@ type UpCmd struct {
 	OpenIDE      bool
 
 	SSHConfigPath string
-
-	Proxy bool
 }
 
 // NewUpCmd creates a new up command
