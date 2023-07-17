@@ -9,6 +9,7 @@ import (
 	"github.com/loft-sh/devpod/pkg/config"
 	workspace2 "github.com/loft-sh/devpod/pkg/workspace"
 	"github.com/loft-sh/log"
+	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
 )
 
@@ -37,7 +38,7 @@ func NewStopCmd(flags *flags.GlobalFlags) *cobra.Command {
 				return err
 			}
 
-			return cmd.Run(ctx, client)
+			return cmd.Run(ctx, devPodConfig, client)
 		},
 	}
 
@@ -45,7 +46,7 @@ func NewStopCmd(flags *flags.GlobalFlags) *cobra.Command {
 }
 
 // Run runs the command logic
-func (cmd *StopCmd) Run(ctx context.Context, client client2.BaseWorkspaceClient) error {
+func (cmd *StopCmd) Run(ctx context.Context, devPodConfig *config.Config, client client2.BaseWorkspaceClient) error {
 	// lock workspace
 	err := client.Lock(ctx)
 	if err != nil {
@@ -61,6 +62,14 @@ func (cmd *StopCmd) Run(ctx context.Context, client client2.BaseWorkspaceClient)
 		return fmt.Errorf("cannot stop workspace because it is '%s'", instanceStatus)
 	}
 
+	// stop if single machine provider
+	wasStopped, err := cmd.stopSingleMachine(ctx, client, devPodConfig)
+	if err != nil {
+		return err
+	} else if wasStopped {
+		return nil
+	}
+
 	// stop environment
 	err = client.Stop(ctx, client2.StopOptions{})
 	if err != nil {
@@ -68,4 +77,47 @@ func (cmd *StopCmd) Run(ctx context.Context, client client2.BaseWorkspaceClient)
 	}
 
 	return nil
+}
+
+func (cmd *StopCmd) stopSingleMachine(ctx context.Context, client client2.BaseWorkspaceClient, devPodConfig *config.Config) (bool, error) {
+	// check if single machine
+	singleMachineName := workspace2.SingleMachineName(devPodConfig, client.Provider(), log.Default)
+	if !devPodConfig.Current().IsSingleMachine(client.Provider()) || client.WorkspaceConfig().Machine.ID != singleMachineName {
+		return false, nil
+	}
+
+	// try to find other workspace with same machine
+	workspaces, err := workspace2.ListWorkspaces(devPodConfig, log.Default)
+	if err != nil {
+		return false, errors.Wrap(err, "list workspaces")
+	}
+
+	// loop workspaces
+	foundOther := false
+	for _, workspace := range workspaces {
+		if workspace.ID == client.Workspace() || workspace.Machine.ID != singleMachineName {
+			continue
+		}
+
+		foundOther = true
+		break
+	}
+	if foundOther {
+		return false, nil
+	}
+
+	// if we haven't found another workspace on this machine, delete the whole machine
+	machineClient, err := workspace2.GetMachine(devPodConfig, []string{singleMachineName}, log.Default)
+	if err != nil {
+		return false, errors.Wrap(err, "get machine")
+	}
+
+	// stop the machine
+	err = machineClient.Stop(ctx, client2.StopOptions{})
+	if err != nil {
+		return false, errors.Wrap(err, "delete machine")
+	}
+
+	log.Default.Donef("Successfully stopped workspace '%s'", client.Workspace())
+	return true, nil
 }
