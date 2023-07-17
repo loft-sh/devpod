@@ -172,26 +172,28 @@ func runInitializeCommand(workspaceFolder string, config *config.DevContainerCon
 		return nil
 	}
 
-	// should run in shell?
-	var args []string
-	if len(config.InitializeCommand) == 1 {
-		args = []string{"sh", "-c", config.InitializeCommand[0]}
-	} else {
-		args = config.InitializeCommand
-	}
+	for _, cmd := range config.InitializeCommand {
+		// should run in shell?
+		var args []string
+		if len(cmd) == 1 {
+			args = []string{"sh", "-c", cmd[0]}
+		} else {
+			args = cmd
+		}
 
-	// run the command
-	log.Infof("Running initializeCommand from devcontainer.json: '%s'", strings.Join(args, " "))
-	writer := log.Writer(logrus.InfoLevel, false)
-	defer writer.Close()
+		// run the command
+		log.Infof("Running initializeCommand from devcontainer.json: '%s'", strings.Join(args, " "))
+		writer := log.Writer(logrus.InfoLevel, false)
+		defer writer.Close()
 
-	cmd := exec.Command(args[0], args[1:]...)
-	cmd.Stdout = writer
-	cmd.Stderr = writer
-	cmd.Dir = workspaceFolder
-	err := cmd.Run()
-	if err != nil {
-		return err
+		cmd := exec.Command(args[0], args[1:]...)
+		cmd.Stdout = writer
+		cmd.Stderr = writer
+		cmd.Dir = workspaceFolder
+		err := cmd.Run()
+		if err != nil {
+			return err
+		}
 	}
 
 	return nil

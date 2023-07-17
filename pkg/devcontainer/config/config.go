@@ -68,7 +68,7 @@ type DevContainerConfigBase struct {
 	RemoteUser string `json:"remoteUser,omitempty"`
 
 	// A command to run locally before anything else. This command is run before "onCreateCommand". If this is a single string, it will be run in a shell. If this is an array of strings, it will be run as a single command without shell.
-	InitializeCommand types.StrArray `json:"initializeCommand,omitempty"`
+	InitializeCommand types.LifecycleHook `json:"initializeCommand,omitempty"`
 
 	// Action to take when the user disconnects from the container in their editor. The default is to stop the container.
 	ShutdownAction string `json:"shutdownAction,omitempty"`
@@ -103,24 +103,24 @@ type DevContainerConfigBase struct {
 
 type DevContainerActions struct {
 	// A command to run when creating the container. This command is run after "initializeCommand" and before "updateContentCommand". If this is a single string, it will be run in a shell. If this is an array of strings, it will be run as a single command without shell.
-	OnCreateCommand types.StrArray `json:"onCreateCommand,omitempty"`
+	OnCreateCommand types.LifecycleHook `json:"onCreateCommand,omitempty"`
 
 	// A command to run when creating the container and rerun when the workspace content was updated while creating the container.
 	// This command is run after "onCreateCommand" and before "postCreateCommand". If this is a single string, it will be run in a shell.
 	// If this is an array of strings, it will be run as a single command without shell.
-	UpdateContentCommand types.StrArray `json:"updateContentCommand,omitempty"`
+	UpdateContentCommand types.LifecycleHook `json:"updateContentCommand,omitempty"`
 
 	// A command to run after creating the container. This command is run after "updateContentCommand" and before "postStartCommand".
 	// If this is a single string, it will be run in a shell. If this is an array of strings, it will be run as a single command without shell.
-	PostCreateCommand types.StrArray `json:"postCreateCommand,omitempty"`
+	PostCreateCommand types.LifecycleHook `json:"postCreateCommand,omitempty"`
 
 	// A command to run after starting the container. This command is run after "postCreateCommand" and before "postAttachCommand".
 	// If this is a single string, it will be run in a shell. If this is an array of strings, it will be run as a single command without shell.
-	PostStartCommand types.StrArray `json:"postStartCommand,omitempty"`
+	PostStartCommand types.LifecycleHook `json:"postStartCommand,omitempty"`
 
 	// A command to run when attaching to the container. This command is run after "postStartCommand".
 	// If this is a single string, it will be run in a shell. If this is an array of strings, it will be run as a single command without shell.
-	PostAttachCommand types.StrArray `json:"postAttachCommand,omitempty"`
+	PostAttachCommand types.LifecycleHook `json:"postAttachCommand,omitempty"`
 
 	// Tool-specific configuration. Each tool should use a JSON object subproperty with a unique name to group its customizations.
 	Customizations map[string]interface{} `json:"customizations,omitempty"`
@@ -131,24 +131,24 @@ type UpdatedConfigProperties struct {
 	Entrypoints []string `json:"entrypoints,omitempty"`
 
 	// A command to run when creating the container. This command is run after "initializeCommand" and before "updateContentCommand". If this is a single string, it will be run in a shell. If this is an array of strings, it will be run as a single command without shell.
-	OnCreateCommands []types.StrArray `json:"onCreateCommand,omitempty"`
+	OnCreateCommands []types.LifecycleHook `json:"onCreateCommand,omitempty"`
 
 	// A command to run when creating the container and rerun when the workspace content was updated while creating the container.
 	// This command is run after "onCreateCommand" and before "postCreateCommand". If this is a single string, it will be run in a shell.
 	// If this is an array of strings, it will be run as a single command without shell.
-	UpdateContentCommands []types.StrArray `json:"updateContentCommand,omitempty"`
+	UpdateContentCommands []types.LifecycleHook `json:"updateContentCommand,omitempty"`
 
 	// A command to run after creating the container. This command is run after "updateContentCommand" and before "postStartCommand".
 	// If this is a single string, it will be run in a shell. If this is an array of strings, it will be run as a single command without shell.
-	PostCreateCommands []types.StrArray `json:"postCreateCommand,omitempty"`
+	PostCreateCommands []types.LifecycleHook `json:"postCreateCommand,omitempty"`
 
 	// A command to run after starting the container. This command is run after "postCreateCommand" and before "postAttachCommand".
 	// If this is a single string, it will be run in a shell. If this is an array of strings, it will be run as a single command without shell.
-	PostStartCommands []types.StrArray `json:"postStartCommand,omitempty"`
+	PostStartCommands []types.LifecycleHook `json:"postStartCommand,omitempty"`
 
 	// A command to run when attaching to the container. This command is run after "postStartCommand".
 	// If this is a single string, it will be run in a shell. If this is an array of strings, it will be run as a single command without shell.
-	PostAttachCommands []types.StrArray `json:"postAttachCommand,omitempty"`
+	PostAttachCommands []types.LifecycleHook `json:"postAttachCommand,omitempty"`
 
 	// Tool-specific configuration. Each tool should use a JSON object subproperty with a unique name to group its customizations.
 	Customizations map[string][]interface{} `json:"customizations,omitempty"`

@@ -80,6 +80,60 @@ func (sa *StrArray) UnmarshalJSON(data []byte) error {
 	return ErrUnsupportedType
 }
 
+type LifecycleHook map[string][]string
+
+func (l *LifecycleHook) UnmarshalJSON(data []byte) error {
+	*l = make(map[string][]string)
+
+	var jsonObj interface{}
+	err := json.Unmarshal(data, &jsonObj)
+	if err != nil {
+		return err
+	}
+	switch obj := jsonObj.(type) {
+	case string:
+		// Anonymous string command
+		(*l)[""] = []string{obj}
+		return nil
+	case []interface{}:
+		// Anonymous array of strings command
+		cmd := make([]string, 0)
+		for _, v := range obj {
+			value, ok := v.(string)
+			if !ok {
+				return ErrUnsupportedType
+			}
+			cmd = append(cmd, value)
+		}
+		(*l)[""] = cmd
+		return nil
+	case map[string]interface{}:
+		for k, v := range obj {
+			value, ok := v.(string)
+			if ok {
+				// Named string command
+				(*l)[k] = []string{value}
+			} else {
+				// Named array of strings command
+				stringArrayValue, ok := v.([]interface{})
+				if !ok {
+					return ErrUnsupportedType
+				}
+
+				cmd := make([]string, 0)
+				for _, v := range stringArrayValue {
+					cmd = append(cmd, v.(string))
+				}
+				(*l)[k] = cmd
+			}
+		}
+
+		return nil
+	}
+
+	return ErrUnsupportedType
+}
+
 type StrBool string
 
 // UnmarshalJSON parses fields that may be numbers or booleans.

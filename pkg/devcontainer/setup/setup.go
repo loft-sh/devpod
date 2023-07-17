@@ -285,7 +285,7 @@ func markerFileExists(markerName string, markerContent string) (bool, error) {
 	return false, nil
 }
 
-func runPostCreateCommand(commands []types.StrArray, user, dir string, remoteEnv map[string]string, name, content string, log log.Logger) error {
+func runPostCreateCommand(commands []types.LifecycleHook, user, dir string, remoteEnv map[string]string, name, content string, log log.Logger) error {
 	if len(commands) == 0 {
 		return nil
 	}
@@ -308,32 +308,38 @@ func runPostCreateCommand(commands []types.StrArray, user, dir string, remoteEnv
 	writer := log.Writer(logrus.InfoLevel, false)
 	defer writer.Close()
 
-	for _, c := range commands {
-		if len(c) == 0 {
+	for _, cmd := range commands {
+		if len(cmd) == 0 {
 			continue
 		}
 
-		log.Infof("Run command: %s...", strings.Join(c, " "))
-		args := []string{}
-		if user != "root" {
-			args = append(args, "su", user, "-c", command.Quote(c))
-		} else {
-			args = append(args, "sh", "-c", command.Quote(c))
-		}
+		for k, c := range cmd {
+			if k == "" {
+				k = "<Anonymous>"
+			}
 
-		// create command
-		cmd := exec.Command(args[0], args[1:]...)
-		cmd.Dir = dir
-		cmd.Env = os.Environ()
-		cmd.Env = append(cmd.Env, remoteEnvArr...)
-		cmd.Stdout = writer
-		cmd.Stderr = writer
-		err := cmd.Run()
-		if err != nil {
-			log.Errorf("Failed running command: %v", err)
-			return err
+			log.Infof("Run command %s: %s...", k, strings.Join(c, " "))
+			args := []string{}
+			if user != "root" {
+				args = append(args, "su", user, "-c", command.Quote(c))
+			} else {
+				args = append(args, "sh", "-c", command.Quote(c))
+			}
+
+			// create command
+			cmd := exec.Command(args[0], args[1:]...)
+			cmd.Dir = dir
+			cmd.Env = os.Environ()
+			cmd.Env = append(cmd.Env, remoteEnvArr...)
+			cmd.Stdout = writer
+			cmd.Stderr = writer
+			err := cmd.Run()
+			if err != nil {
+				log.Errorf("Failed running command %s: %v", k, err)
+				return err
+			}
+			log.Donef("Successfully ran command %s: %s", k, strings.Join(c, " "))
 		}
-		log.Donef("Successfully ran command: %s", strings.Join(c, " "))
 	}
 
 	return nil
