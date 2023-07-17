@@ -101,6 +101,7 @@ func (cmd *SSHCmd) Run(ctx context.Context, devPodConfig *config.Config, client 
 }
 
 func (cmd *SSHCmd) startProxyTunnel(ctx context.Context, devPodConfig *config.Config, client client2.ProxyClient, log log.Logger) error {
+	log.Debugf("Start proxy tunnel")
 	return tunnel.NewTunnel(
 		ctx,
 		func(ctx context.Context, stdin io.Reader, stdout io.Writer) error {
