@@ -24,7 +24,12 @@ const (
 )
 
 func LoadDockerComposeProject(paths []string, envFiles []string) (*composetypes.Project, error) {
-	projectOptions, err := composecli.NewProjectOptions(paths, composecli.WithEnvFiles(envFiles...))
+	projectOptions, err := composecli.NewProjectOptions(
+		paths,
+		composecli.WithOsEnv,
+		composecli.WithEnvFiles(envFiles...),
+		composecli.WithDotEnv,
+	)
 	if err != nil {
 		return nil, err
 	}
