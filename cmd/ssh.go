@@ -35,6 +35,8 @@ type SSHCmd struct {
 
 	StartServices bool
 
+	Proxy bool
+
 	Command string
 	User    string
 }
@@ -65,6 +67,7 @@ func NewSSHCmd(flags *flags.GlobalFlags) *cobra.Command {
 
 	sshCmd.Flags().StringVar(&cmd.Command, "command", "", "The command to execute within the workspace")
 	sshCmd.Flags().StringVar(&cmd.User, "user", "", "The user of the workspace to use")
+	sshCmd.Flags().BoolVar(&cmd.Proxy, "proxy", false, "If true will act as intermediate proxy for a proxy provider")
 	sshCmd.Flags().BoolVar(&cmd.AgentForwarding, "agent-forwarding", true, "If true forward the local ssh keys to the remote machine")
 	sshCmd.Flags().BoolVar(&cmd.Stdio, "stdio", false, "If true will tunnel connection through stdout and stdin")
 	sshCmd.Flags().BoolVar(&cmd.StartServices, "start-services", true, "If false will not start any port-forwarding or git / docker credentials helper")
@@ -173,7 +176,7 @@ func (cmd *SSHCmd) jumpContainer(ctx context.Context, devPodConfig *config.Confi
 	}
 
 	// tunnel to container
-	return tunnel.NewContainerTunnel(client, log).Run(ctx, func(ctx context.Context, containerClient *ssh.Client) error {
+	return tunnel.NewContainerTunnel(client, cmd.Proxy, log).Run(ctx, func(ctx context.Context, containerClient *ssh.Client) error {
 		// we have a connection to the container, make sure others can connect as well
 		unlockOnce.Do(client.Unlock)
 
@@ -184,7 +187,7 @@ func (cmd *SSHCmd) jumpContainer(ctx context.Context, devPodConfig *config.Confi
 
 func (cmd *SSHCmd) startTunnel(ctx context.Context, devPodConfig *config.Config, containerClient *ssh.Client, ideName string, log log.Logger) error {
 	// start port-forwarding etc.
-	if cmd.StartServices {
+	if !cmd.Proxy && cmd.StartServices {
 		go cmd.startServices(ctx, devPodConfig, containerClient, ideName, log)
 	}
 
@@ -197,14 +200,14 @@ func (cmd *SSHCmd) startTunnel(ctx context.Context, devPodConfig *config.Config,
 	if cmd.Debug {
 		command += " --debug"
 	}
-	if cmd.User != "" {
+	if cmd.User != "" && cmd.User != "root" {
 		command = fmt.Sprintf("su -c \"%s\" '%s'", command, cmd.User)
 	}
-	if cmd.Stdio {
+	if cmd.Proxy || cmd.Stdio {
 		return devssh.Run(ctx, containerClient, command, os.Stdin, os.Stdout, writer)
 	}
 
-	return machine.StartSSHSession(ctx, cmd.User, cmd.Command, cmd.AgentForwarding && devPodConfig.ContextOption(config.ContextOptionSSHAgentForwarding) == "true", func(ctx context.Context, stdin io.Reader, stdout io.Writer, stderr io.Writer) error {
+	return machine.StartSSHSession(ctx, cmd.User, cmd.Command, !cmd.Proxy && cmd.AgentForwarding && devPodConfig.ContextOption(config.ContextOptionSSHAgentForwarding) == "true", func(ctx context.Context, stdin io.Reader, stdout io.Writer, stderr io.Writer) error {
 		return devssh.Run(ctx, containerClient, command, stdin, stdout, stderr)
 	}, writer)
 }

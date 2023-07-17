@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 	"time"
 
 	"github.com/loft-sh/devpod/e2e/framework"
@@ -31,8 +32,6 @@ var _ = DevPodDescribe("devpod proxy provider test suite", func() {
 		framework.ExpectNoError(err)
 		err = f.DevPodProviderUse(ctx, "proxy-provider")
 		framework.ExpectNoError(err)
-		err = f.DevPodProviderAdd(ctx, "docker", "--devpod-home", devPodDir)
-		framework.ExpectNoError(err)
 	})
 
 	ginkgo.AfterEach(func() {
@@ -54,9 +53,18 @@ var _ = DevPodDescribe("devpod proxy provider test suite", func() {
 			_ = os.RemoveAll(tempDir)
 		})
 
+		// create docker provider
+		err = f.DevPodProviderAdd(ctx, filepath.Join(tempDir, "custom-docker-provider.yaml"), "--devpod-home", devPodDir)
+		framework.ExpectNoError(err)
+
 		// wait for devpod workspace to come online (deadline: 30s)
 		err = f.DevPodUp(ctx, tempDir, "--debug")
 		framework.ExpectNoError(err)
+
+		// expect secret to not be there
+		fileBytes, err := os.ReadFile(filepath.Join(devPodDir, "agent", "contexts", "default", "workspaces", filepath.Base(tempDir), "workspace.json"))
+		framework.ExpectNoError(err)
+		framework.ExpectEqual(strings.Contains(string(fileBytes), "my-secret-value"), false, "workspace.json shouldn't contain provider secret")
 
 		// expect workspace
 		workspace, err := f.FindWorkspace(ctx, tempDir)
@@ -81,6 +89,10 @@ var _ = DevPodDescribe("devpod proxy provider test suite", func() {
 		ginkgo.DeferCleanup(func() {
 			_ = os.RemoveAll(tempDir)
 		})
+
+		// create docker provider
+		err = f.DevPodProviderAdd(ctx, "docker", "--devpod-home", devPodDir)
+		framework.ExpectNoError(err)
 
 		// wait for devpod workspace to come online (deadline: 30s)
 		err = f.DevPodUp(ctx, tempDir, "--debug")
@@ -123,6 +135,10 @@ var _ = DevPodDescribe("devpod proxy provider test suite", func() {
 			_ = os.RemoveAll(tempDir)
 		})
 
+		// create docker provider
+		err = f.DevPodProviderAdd(ctx, "docker", "--devpod-home", devPodDir)
+		framework.ExpectNoError(err)
+
 		// wait for devpod workspace to come online (deadline: 30s)
 		err = f.DevPodUp(ctx, tempDir, "--debug")
 		framework.ExpectNoError(err)
@@ -164,6 +180,10 @@ var _ = DevPodDescribe("devpod proxy provider test suite", func() {
 		ginkgo.DeferCleanup(func() {
 			_ = os.RemoveAll(tempDir)
 		})
+
+		// create docker provider
+		err = f.DevPodProviderAdd(ctx, "docker", "--devpod-home", devPodDir)
+		framework.ExpectNoError(err)
 
 		// wait for devpod workspace to come online (deadline: 30s)
 		err = f.DevPodUp(ctx, tempDir, "--debug", "--devcontainer-path", ".devcontainer.json2")

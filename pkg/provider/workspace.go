@@ -131,6 +131,7 @@ type CLIOptions struct {
 	DevContainerPath     string   `json:"devContainerPath,omitempty"`
 	WorkspaceEnv         []string `json:"workspaceEnv,omitempty"`
 	Recreate             bool     `json:"recreate,omitempty"`
+	Proxy                bool     `json:"proxy,omitempty"`
 
 	// build options
 	Repository string   `json:"repository,omitempty"`

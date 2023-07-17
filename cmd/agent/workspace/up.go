@@ -77,7 +77,7 @@ func (cmd *UpCmd) Run(ctx context.Context) error {
 	// initialize the workspace
 	cancelCtx, cancel := context.WithCancel(ctx)
 	defer cancel()
-	tunnelClient, logger, credentialsDir, err := initWorkspace(cancelCtx, cancel, workspaceInfo, cmd.Debug, true)
+	tunnelClient, logger, credentialsDir, err := initWorkspace(cancelCtx, cancel, workspaceInfo, cmd.Debug, !workspaceInfo.CLIOptions.Proxy)
 	if err != nil {
 		err1 := clientimplementation.DeleteWorkspaceFolder(workspaceInfo.Workspace.Context, workspaceInfo.Workspace.ID, logger)
 		if err1 != nil {
@@ -212,6 +212,7 @@ func prepareWorkspace(ctx context.Context, workspaceInfo *provider2.AgentWorkspa
 			log.Errorf("Cloning failed: %v. Trying cloning on local machine and uploading folder", err)
 			return RemoteCloneAndDownload(ctx, workspaceInfo.ContentFolder, client, log)
 		}
+
 		return nil
 	} else if workspaceInfo.Workspace.Source.LocalFolder != "" {
 		log.Debugf("Download Local Folder")
