@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"path/filepath"
 
 	"github.com/loft-sh/devpod/pkg/client"
 	provider2 "github.com/loft-sh/devpod/pkg/provider"
@@ -66,11 +65,11 @@ func (f *Framework) DevPodUpStreams(ctx context.Context, workspace string, addit
 }
 
 // DevPodUp executes the `devpod up` command in the test framework
-func (f *Framework) DevPodUp(ctx context.Context, workspace string, additionalArgs ...string) error {
-	upArgs := []string{"up", "--debug", "--ide", "none", workspace}
+func (f *Framework) DevPodUp(ctx context.Context, additionalArgs ...string) error {
+	upArgs := []string{"up", "--debug", "--ide", "none"}
 	upArgs = append(upArgs, additionalArgs...)
 
-	err := f.ExecCommand(ctx, true, true, fmt.Sprintf("Run 'ssh %s.devpod' to ssh into the devcontainer", filepath.Base(workspace)), upArgs)
+	_, _, err := f.ExecCommandCapture(ctx, upArgs)
 	if err != nil {
 		return fmt.Errorf("devpod up failed: %s", err.Error())
 	}
