@@ -102,17 +102,23 @@ func getUserShell() (string, error) {
 	if err != nil {
 		return "", err
 	}
+
 	output, err := exec.Command("getent", "passwd", currentUser.Name).Output()
-	if err == nil {
-		shell := strings.Split(string(output), ":")
-		if len(shell) == 7 {
-			executable := filepath.Base(shell[6])
-			executable = strings.TrimRight(executable, "\n")
-			return executable, nil
-		}
+	if err != nil {
+		return "", err
 	}
 
-	return "", err
+	shell := strings.Split(string(output), ":")
+	if len(shell) != 7 {
+		return "", fmt.Errorf("unexpected getent format: %s", string(output))
+	}
+
+	loginShell := strings.TrimSpace(filepath.Base(shell[6]))
+	if loginShell == "nologin" {
+		return "", fmt.Errorf("no login shell configured")
+	}
+
+	return loginShell, nil
 }
 
 func getShell() ([]string, error) {
@@ -123,8 +129,8 @@ func getShell() ([]string, error) {
 		if err == nil {
 			return []string{shell}, nil
 		}
-		// fallback to path discovery if unsuccessful
 
+		// fallback to path discovery if unsuccessful
 		_, err = exec.LookPath("bash")
 		if err == nil {
 			return []string{"bash"}, nil
