@@ -74,6 +74,10 @@ func (cmd *UpCmd) Run(ctx context.Context) error {
 		return nil
 	}
 
+	// make sure daemon does shut us down while we are doing things
+	agent.CreateWorkspaceBusyFile(workspaceInfo.Origin)
+	defer agent.DeleteWorkspaceBusyFile(workspaceInfo.Origin)
+
 	// initialize the workspace
 	cancelCtx, cancel := context.WithCancel(ctx)
 	defer cancel()
@@ -329,7 +333,7 @@ func installDaemon(workspaceInfo *provider2.AgentWorkspaceInfo, log log.Logger) 
 	}
 
 	log.Debugf("Installing DevPod daemon into server...")
-	err := daemon.InstallDaemon(workspaceInfo.Agent.DataPath, log)
+	err := daemon.InstallDaemon(workspaceInfo.Agent.DataPath, workspaceInfo.CLIOptions.DaemonInterval, log)
 	if err != nil {
 		return errors.Wrap(err, "install daemon")
 	}
@@ -385,6 +389,7 @@ func (cmd *UpCmd) devPodUp(ctx context.Context, workspaceInfo *provider2.AgentWo
 		return nil, err
 	}
 
+	// start the devcontainer
 	result, err := runner.Up(ctx, devcontainer.UpOptions{
 		CLIOptions: workspaceInfo.CLIOptions,
 	})

@@ -74,7 +74,7 @@ func (d *dockerDriver) BuildDevContainer(
 	// check if image build is necessary
 	imageName := getImageName(localWorkspaceFolder, prebuildHash)
 	if options.Repository == "" {
-		imageDetails, err := d.Docker.InspectImage(imageName, false)
+		imageDetails, err := d.Docker.InspectImage(ctx, imageName, false)
 		if err == nil && imageDetails != nil {
 			// local image found
 			d.Log.Infof("Found existing local image %s", imageName)
@@ -128,7 +128,7 @@ func (d *dockerDriver) BuildDevContainer(
 	}
 
 	// inspect image
-	imageDetails, err := d.Docker.InspectImage(imageName, false)
+	imageDetails, err := d.Docker.InspectImage(ctx, imageName, false)
 	if err != nil {
 		return nil, errors.Wrap(err, "get image details")
 	}

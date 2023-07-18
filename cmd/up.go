@@ -126,6 +126,10 @@ func NewUpCmd(flags *flags.GlobalFlags) *cobra.Command {
 
 	upCmd.Flags().StringVar(&cmd.Source, "source", "", "Optional source for the workspace. E.g. git:https://github.com/my-org/my-repo")
 	upCmd.Flags().BoolVar(&cmd.Proxy, "proxy", false, "If true will forward agent requests to stdio")
+
+	// testing
+	upCmd.Flags().StringVar(&cmd.DaemonInterval, "daemon-interval", "", "TESTING ONLY")
+	_ = upCmd.Flags().MarkHidden("daemon-interval")
 	return upCmd
 }
 
@@ -579,6 +583,7 @@ func startBrowserTunnel(ctx context.Context, devPodConfig *config.Config, client
 
 	return nil
 }
+
 func configureSSH(client client2.BaseWorkspaceClient, configPath, user string) error {
 	err := devssh.ConfigureSSHConfig(configPath, client.Context(), client.Workspace(), user, log.Default)
 	if err != nil {

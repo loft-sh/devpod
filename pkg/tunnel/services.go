@@ -8,6 +8,7 @@ import (
 	"os"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/docker/go-connections/nat"
 	"github.com/loft-sh/devpod/pkg/agent"
@@ -35,8 +36,14 @@ func RunInContainer(
 	extraPorts []string,
 	log log.Logger,
 ) error {
+	// calculate exit after timeout
+	exitAfterTimeout := time.Second * 5
+	if devPodConfig.ContextOption(config.ContextOptionExitAfterTimeout) != "true" {
+		exitAfterTimeout = 0
+	}
+
 	// forward ports
-	forwardedPorts, err := forwardDevContainerPorts(ctx, containerClient, extraPorts, log)
+	forwardedPorts, err := forwardDevContainerPorts(ctx, containerClient, extraPorts, exitAfterTimeout, log)
 	if err != nil {
 		return errors.Wrap(err, "forward ports")
 	}
@@ -109,7 +116,7 @@ func RunInContainer(
 	return <-errChan
 }
 
-func forwardDevContainerPorts(ctx context.Context, containerClient *ssh.Client, extraPorts []string, log log.Logger) ([]string, error) {
+func forwardDevContainerPorts(ctx context.Context, containerClient *ssh.Client, extraPorts []string, exitAfterTimeout time.Duration, log log.Logger) ([]string, error) {
 	stdout := &bytes.Buffer{}
 	stderr := &bytes.Buffer{}
 	err := devssh.Run(ctx, containerClient, "cat "+setup.ResultLocation, nil, stdout, stderr)
@@ -125,41 +132,17 @@ func forwardDevContainerPorts(ctx context.Context, containerClient *ssh.Client, 
 	}
 	log.Debugf("Successfully parsed result at %s", setup.ResultLocation)
 
-	// extra ports first
-	appPorts := []string{}
-	appPorts = append(appPorts, result.MergedConfig.AppPort...)
-	appPorts = append(appPorts, extraPorts...)
-
 	// return forwarded ports
 	forwardedPorts := []string{}
 
+	// extra ports
+	for _, port := range extraPorts {
+		forwardedPorts = append(forwardedPorts, forwardPort(ctx, containerClient, port, exitAfterTimeout, log)...)
+	}
+
 	// app ports
-	for _, port := range appPorts {
-		parsed, err := nat.ParsePortSpec(port)
-		if err != nil {
-			log.Debugf("Error parsing appPort %s: %v", port, err)
-			continue
-		}
-
-		// try to forward
-		for _, parsedPort := range parsed {
-			if parsedPort.Binding.HostIP == "" {
-				parsedPort.Binding.HostIP = "localhost"
-			}
-			if parsedPort.Binding.HostPort == "" {
-				parsedPort.Binding.HostPort = parsedPort.Port.Port()
-			}
-			go func(parsedPort nat.PortMapping) {
-				// do the forward
-				log.Debugf("Forward port %s:%s", parsedPort.Binding.HostIP+":"+parsedPort.Binding.HostPort, "localhost:"+parsedPort.Port.Port())
-				err = devssh.PortForward(ctx, containerClient, parsedPort.Binding.HostIP+":"+parsedPort.Binding.HostPort, "localhost:"+parsedPort.Port.Port(), log)
-				if err != nil {
-					log.Debugf("Error port forwarding %s:%s:%s: %v", parsedPort.Binding.HostIP, parsedPort.Binding.HostPort, parsedPort.Port.Port(), err)
-				}
-			}(parsedPort)
-
-			forwardedPorts = append(forwardedPorts, parsedPort.Binding.HostPort)
-		}
+	for _, port := range result.MergedConfig.AppPort {
+		forwardedPorts = append(forwardedPorts, forwardPort(ctx, containerClient, port, 0, log)...)
 	}
 
 	// forward ports
@@ -178,6 +161,7 @@ func forwardDevContainerPorts(ctx context.Context, containerClient *ssh.Client, 
 				containerClient,
 				fmt.Sprintf("localhost:%d", portNumber),
 				fmt.Sprintf("%s:%d", host, portNumber),
+				0,
 				log,
 			)
 			if err != nil {
@@ -189,6 +173,37 @@ func forwardDevContainerPorts(ctx context.Context, containerClient *ssh.Client, 
 	}
 
 	return forwardedPorts, nil
+}
+
+func forwardPort(ctx context.Context, containerClient *ssh.Client, port string, exitAfterTimeout time.Duration, log log.Logger) []string {
+	parsed, err := nat.ParsePortSpec(port)
+	if err != nil {
+		log.Debugf("Error parsing appPort %s: %v", port, err)
+		return nil
+	}
+
+	// try to forward
+	forwardedPorts := []string{}
+	for _, parsedPort := range parsed {
+		if parsedPort.Binding.HostIP == "" {
+			parsedPort.Binding.HostIP = "localhost"
+		}
+		if parsedPort.Binding.HostPort == "" {
+			parsedPort.Binding.HostPort = parsedPort.Port.Port()
+		}
+		go func(parsedPort nat.PortMapping) {
+			// do the forward
+			log.Debugf("Forward port %s:%s", parsedPort.Binding.HostIP+":"+parsedPort.Binding.HostPort, "localhost:"+parsedPort.Port.Port())
+			err = devssh.PortForward(ctx, containerClient, parsedPort.Binding.HostIP+":"+parsedPort.Binding.HostPort, "localhost:"+parsedPort.Port.Port(), exitAfterTimeout, log)
+			if err != nil {
+				log.Debugf("Error port forwarding %s:%s:%s: %v", parsedPort.Binding.HostIP, parsedPort.Binding.HostPort, parsedPort.Port.Port(), err)
+			}
+		}(parsedPort)
+
+		forwardedPorts = append(forwardedPorts, parsedPort.Binding.HostPort)
+	}
+
+	return forwardedPorts
 }
 
 func parseForwardPort(port string) (string, int64, error) {

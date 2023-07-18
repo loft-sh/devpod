@@ -96,7 +96,7 @@ func (d *dockerDriver) DeleteDevContainer(ctx context.Context, id string, delete
 
 	if deleteVolumes {
 		// inspect container deleteVolumes
-		container, err := d.Docker.InspectContainers([]string{id})
+		container, err := d.Docker.InspectContainers(ctx, []string{id})
 		if err != nil {
 			return err
 		}
@@ -118,6 +118,11 @@ func (d *dockerDriver) DeleteDevContainer(ctx context.Context, id string, delete
 	return nil
 }
 
+func (d *dockerDriver) Ping(ctx context.Context) error {
+	_, err := d.Docker.FindContainer(ctx, []string{})
+	return err
+}
+
 func (d *dockerDriver) StartDevContainer(ctx context.Context, id string, labels []string) error {
 	return d.Docker.StartContainer(ctx, id, labels)
 }
@@ -127,7 +132,7 @@ func (d *dockerDriver) StopDevContainer(ctx context.Context, id string) error {
 }
 
 func (d *dockerDriver) InspectImage(ctx context.Context, imageName string) (*config.ImageDetails, error) {
-	return d.Docker.InspectImage(imageName, true)
+	return d.Docker.InspectImage(ctx, imageName, true)
 }
 
 func (d *dockerDriver) ComposeHelper() (*compose.ComposeHelper, error) {
@@ -141,7 +146,7 @@ func (d *dockerDriver) ComposeHelper() (*compose.ComposeHelper, error) {
 }
 
 func (d *dockerDriver) FindDevContainer(ctx context.Context, labels []string) (*config.ContainerDetails, error) {
-	return d.Docker.FindDevContainer(labels)
+	return d.Docker.FindDevContainer(ctx, labels)
 }
 
 func (d *dockerDriver) RunDevContainer(

@@ -314,10 +314,6 @@ func runPostCreateCommand(commands []types.LifecycleHook, user, dir string, remo
 		}
 
 		for k, c := range cmd {
-			if k == "" {
-				k = "<Anonymous>"
-			}
-
 			log.Infof("Run command %s: %s...", k, strings.Join(c, " "))
 			args := []string{}
 			if user != "root" {

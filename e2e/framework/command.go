@@ -109,9 +109,9 @@ func (f *Framework) DevPodProviderUse(ctx context.Context, provider string, extr
 	return nil
 }
 
-func (f *Framework) DevPodStatus(ctx context.Context, workspace string) (client.WorkspaceStatus, error) {
+func (f *Framework) DevPodStatus(ctx context.Context, extraArgs ...string) (client.WorkspaceStatus, error) {
 	baseArgs := []string{"status", "--output", "json"}
-	baseArgs = append(baseArgs, workspace)
+	baseArgs = append(baseArgs, extraArgs...)
 	stdout, err := f.ExecCommandOutput(ctx, baseArgs)
 	if err != nil {
 		return client.WorkspaceStatus{}, fmt.Errorf("devpod stop failed: %s", err.Error())

@@ -3,14 +3,17 @@ package daemon
 import (
 	"errors"
 	"fmt"
+	"os"
+	"os/exec"
 	"runtime"
 
+	"github.com/loft-sh/devpod/pkg/single"
 	"github.com/loft-sh/log"
 	perrors "github.com/pkg/errors"
 	"github.com/takama/daemon"
 )
 
-func InstallDaemon(agentDir string, log log.Logger) error {
+func InstallDaemon(agentDir string, interval string, log log.Logger) error {
 	if runtime.GOOS == "windows" || runtime.GOOS == "darwin" {
 		return fmt.Errorf("unsupported daemon os")
 	}
@@ -26,6 +29,9 @@ func InstallDaemon(agentDir string, log log.Logger) error {
 	if agentDir != "" {
 		args = append(args, "--agent-dir", agentDir)
 	}
+	if interval != "" {
+		args = append(args, "--interval", interval)
+	}
 	_, err = service.Install(args...)
 	if err != nil && !errors.Is(err, daemon.ErrAlreadyInstalled) {
 		return perrors.Wrap(err, "install service")
@@ -34,7 +40,20 @@ func InstallDaemon(agentDir string, log log.Logger) error {
 	// make sure daemon is started
 	_, err = service.Start()
 	if err != nil && !errors.Is(err, daemon.ErrAlreadyRunning) {
-		return perrors.Wrap(err, "start service")
+		log.Warnf("Error starting service: %v", err)
+
+		err = single.Single("daemon.pid", func() (*exec.Cmd, error) {
+			executable, err := os.Executable()
+			if err != nil {
+				return nil, err
+			}
+
+			log.Infof("Successfully started DevPod daemon into server")
+			return exec.Command(executable, args...), nil
+		})
+		if err != nil {
+			return fmt.Errorf("start daemon: %w", err)
+		}
 	} else if err == nil {
 		log.Infof("Successfully installed DevPod daemon into server")
 	}

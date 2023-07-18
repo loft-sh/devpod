@@ -57,6 +57,11 @@ type kubernetesDriver struct {
 	Log    log.Logger
 }
 
+func (k *kubernetesDriver) Ping(ctx context.Context) error {
+	_, err := k.FindDevContainer(ctx, []string{config.DockerIDLabel + "=test"})
+	return err
+}
+
 func (k *kubernetesDriver) FindDevContainer(ctx context.Context, labels []string) (*config.ContainerDetails, error) {
 	id, err := k.getID(labels)
 	if err != nil {

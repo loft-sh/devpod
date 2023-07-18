@@ -1,0 +1,30 @@
+name: docker123
+version: v0.0.1
+description: |-
+  DevPod on Docker
+options:
+  LOCATION:
+    description: The location DevPod should use
+agent:
+  local: true
+  docker:
+    install: false
+exec:
+  create: |-
+    mkdir -p ${LOCATION}/${MACHINE_ID}
+    echo "RUNNING" > ${LOCATION}/${MACHINE_ID}/status.txt 
+
+  delete: |-
+    rm -R ${LOCATION}/${MACHINE_ID}
+
+  start: |-
+    echo "RUNNING" > ${LOCATION}/${MACHINE_ID}/status.txt
+
+  stop: |-
+    echo "STOPPED" > ${LOCATION}/${MACHINE_ID}/status.txt 
+
+  status: |-
+    cat ${LOCATION}/${MACHINE_ID}/status.txt 2>/dev/null || echo "NOTFOUND"
+
+  command: |-
+    "${DEVPOD}" helper sh -c "${COMMAND}"

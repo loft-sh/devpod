@@ -82,7 +82,7 @@ func NewComposeHelper(dockerComposeCLI string, dockerHelper *docker.DockerHelper
 }
 
 func (h *ComposeHelper) FindDevContainer(projectName, serviceName string) (*config.ContainerDetails, error) {
-	containerIDs, err := h.Docker.FindContainer([]string{
+	containerIDs, err := h.Docker.FindContainer(context.TODO(), []string{
 		fmt.Sprintf("%s=%s", ProjectLabel, projectName),
 		fmt.Sprintf("%s=%s", ServiceLabel, serviceName),
 	})
@@ -92,7 +92,7 @@ func (h *ComposeHelper) FindDevContainer(projectName, serviceName string) (*conf
 		return nil, nil
 	}
 
-	containerDetails, err := h.Docker.InspectContainers(containerIDs)
+	containerDetails, err := h.Docker.InspectContainers(context.TODO(), containerIDs)
 	if err != nil {
 		return nil, err
 	}
