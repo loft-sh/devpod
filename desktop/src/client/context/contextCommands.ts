@@ -1,6 +1,6 @@
 import { Result, ResultError, Return, getErrorFromChildProcess } from "../../lib"
 import { TContextOptionName, TContextOptions } from "../../types"
-import { Command, isOk, serializeRawOptions, toFlagArg } from "../command"
+import { Command, isOk, serializeRawOptions } from "../command"
 import {
   DEVPOD_COMMAND_CONTEXT,
   DEVPOD_COMMAND_OPTIONS,
@@ -8,7 +8,6 @@ import {
   DEVPOD_FLAG_DEBUG,
   DEVPOD_FLAG_JSON_LOG_OUTPUT,
   DEVPOD_FLAG_JSON_OUTPUT,
-  DEVPOD_FLAG_OPTION,
 } from "../constants"
 
 export class ContextCommands {
@@ -19,11 +18,11 @@ export class ContextCommands {
   }
 
   static async SetOptions(rawOptions: Record<TContextOptionName, string>): Promise<ResultError> {
-    const optionsFlag = toFlagArg(DEVPOD_FLAG_OPTION, serializeRawOptions(rawOptions))
+    const optionsFlag = serializeRawOptions(rawOptions)
     const result = await ContextCommands.newCommand([
       DEVPOD_COMMAND_CONTEXT,
       DEVPOD_COMMAND_SET_OPTIONS,
-      optionsFlag,
+      ...optionsFlag,
       DEVPOD_FLAG_JSON_LOG_OUTPUT,
     ]).run()
     if (result.err) {
