@@ -520,10 +520,44 @@ var _ = DevPodDescribe("devpod up test suite", func() {
 
 				dbIDs, err := dockerHelper.FindContainer(ctx, []string{
 					fmt.Sprintf("%s=%s", compose.ProjectLabel, projectName),
-					fmt.Sprintf("%s=%s", compose.ServiceLabel, "app"),
+					fmt.Sprintf("%s=%s", compose.ServiceLabel, "db"),
 				})
 				framework.ExpectNoError(err)
 				gomega.Expect(dbIDs).To(gomega.HaveLen(1), "db container to be created")
+			}, ginkgo.SpecTimeout(60*time.Second))
+
+			ginkgo.It("should start a new workspace with specific services", func(ctx context.Context) {
+				tempDir, err := framework.CopyToTempDir("tests/up/testdata/docker-compose-run-services")
+				framework.ExpectNoError(err)
+				ginkgo.DeferCleanup(framework.CleanupTempDir, initialDir, tempDir)
+
+				f := framework.NewDefaultFramework(initialDir + "/bin")
+				_ = f.DevPodProviderAdd(ctx, "docker")
+				err = f.DevPodProviderUse(context.Background(), "docker")
+				framework.ExpectNoError(err)
+
+				ginkgo.DeferCleanup(f.DevPodWorkspaceDelete, context.Background(), tempDir)
+
+				err = f.DevPodUp(ctx, tempDir)
+				framework.ExpectNoError(err)
+
+				workspace, err := f.FindWorkspace(ctx, tempDir)
+				framework.ExpectNoError(err)
+				projectName := composeHelper.GetProjectName(workspace.UID)
+
+				appIDs, err := dockerHelper.FindContainer(ctx, []string{
+					fmt.Sprintf("%s=%s", compose.ProjectLabel, projectName),
+					fmt.Sprintf("%s=%s", compose.ServiceLabel, "app"),
+				})
+				framework.ExpectNoError(err)
+				gomega.Expect(appIDs).To(gomega.HaveLen(1), "app container to be created")
+
+				dbIDs, err := dockerHelper.FindContainer(ctx, []string{
+					fmt.Sprintf("%s=%s", compose.ProjectLabel, projectName),
+					fmt.Sprintf("%s=%s", compose.ServiceLabel, "db"),
+				})
+				framework.ExpectNoError(err)
+				gomega.Expect(dbIDs).To(gomega.BeEmpty(), "db container not to be created")
 			}, ginkgo.SpecTimeout(60*time.Second))
 
 			ginkgo.It("should start a new workspace with .devcontainer docker-compose overrides", func(ctx context.Context) {

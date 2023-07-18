@@ -296,12 +296,14 @@ func (r *Runner) startContainer(
 		upArgs = append(upArgs, "--no-recreate")
 	}
 
-	upArgs = append(upArgs, composeService.Name)
-	for _, service := range parsedConfig.Config.RunServices {
-		if service == composeService.Name {
-			continue
+	if len(parsedConfig.Config.RunServices) > 0 {
+		upArgs = append(upArgs, composeService.Name)
+		for _, service := range parsedConfig.Config.RunServices {
+			if service == composeService.Name {
+				continue
+			}
+			upArgs = append(upArgs, service)
 		}
-		upArgs = append(upArgs, service)
 	}
 
 	// start compose
@@ -421,12 +423,14 @@ func (r *Runner) buildAndExtendDockerCompose(ctx context.Context, parsedConfig *
 		buildArgs = append(buildArgs, "--pull")
 	}
 
-	buildArgs = append(buildArgs, composeService.Name)
-	for _, service := range parsedConfig.Config.RunServices {
-		if service == composeService.Name {
-			continue
+	if len(parsedConfig.Config.RunServices) > 0 {
+		buildArgs = append(buildArgs, composeService.Name)
+		for _, service := range parsedConfig.Config.RunServices {
+			if service == composeService.Name {
+				continue
+			}
+			buildArgs = append(buildArgs, service)
 		}
-		buildArgs = append(buildArgs, service)
 	}
 
 	// build image
