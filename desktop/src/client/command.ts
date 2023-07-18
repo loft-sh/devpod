@@ -1,7 +1,7 @@
 import { ChildProcess, Command as ShellCommand, EventEmitter } from "@tauri-apps/api/shell"
 import { debug, isError } from "../lib"
 import { Result, ResultError, Return } from "../lib/result"
-import { DEVPOD_BINARY, DEVPOD_UI_ENV_VAR } from "./constants"
+import { DEVPOD_BINARY, DEVPOD_FLAG_OPTION, DEVPOD_UI_ENV_VAR } from "./constants"
 import { TStreamEvent } from "./types"
 
 export type TStreamEventListenerFn = (event: TStreamEvent) => void
@@ -123,8 +123,10 @@ export function toFlagArg(flag: string, arg: string) {
   return [flag, arg].join("=")
 }
 
-export function serializeRawOptions(rawOptions: Record<string, unknown>): string {
-  return Object.entries(rawOptions)
-    .map(([key, value]) => `${key}=${value}`)
-    .join(",")
+export function serializeRawOptions(rawOptions: Record<string, unknown>): string[] {
+  if (!rawOptions) {
+    return []
+  }
+
+  return Object.entries(rawOptions).map(([key, value]) => DEVPOD_FLAG_OPTION + `=${key}=${value}`)
 }
