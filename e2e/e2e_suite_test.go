@@ -5,8 +5,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/loft-sh/devpod/e2e/framework"
-
 	"github.com/onsi/ginkgo/v2"
 
 	"github.com/onsi/gomega"
@@ -14,6 +12,7 @@ import (
 	// Register tests
 	_ "github.com/loft-sh/devpod/e2e/tests/integration"
 	_ "github.com/loft-sh/devpod/e2e/tests/machine"
+	_ "github.com/loft-sh/devpod/e2e/tests/machineprovider"
 	_ "github.com/loft-sh/devpod/e2e/tests/provider"
 	_ "github.com/loft-sh/devpod/e2e/tests/proxyprovider"
 	_ "github.com/loft-sh/devpod/e2e/tests/ssh"
@@ -28,11 +27,5 @@ import (
 func TestRunE2ETests(t *testing.T) {
 	rand.Seed(time.Now().UTC().UnixNano())
 	gomega.RegisterFailHandler(ginkgo.Fail)
-	go func() {
-		err := framework.StartAgentServer()
-		if err != nil {
-			t.Error(err)
-		}
-	}()
 	ginkgo.RunSpecs(t, "DevPod e2e suite")
 }

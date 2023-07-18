@@ -32,15 +32,15 @@ func (r *DockerHelper) GPUSupportEnabled() (bool, error) {
 	return strings.Contains(string(out), "nvidia-container-runtime"), nil
 }
 
-func (r *DockerHelper) FindDevContainer(labels []string) (*config.ContainerDetails, error) {
-	containers, err := r.FindContainer(labels)
+func (r *DockerHelper) FindDevContainer(ctx context.Context, labels []string) (*config.ContainerDetails, error) {
+	containers, err := r.FindContainer(ctx, labels)
 	if err != nil {
 		return nil, fmt.Errorf("docker ps: %w", err)
 	} else if len(containers) == 0 {
 		return nil, nil
 	}
 
-	containerDetails, err := r.InspectContainers(containers)
+	containerDetails, err := r.InspectContainers(ctx, containers)
 	if err != nil {
 		return nil, err
 	}
@@ -115,7 +115,7 @@ func (r *DockerHelper) StartContainer(ctx context.Context, id string, labels []s
 		return perrors.Wrapf(err, "start command: %v", string(out))
 	}
 
-	container, err := r.FindDevContainer(labels)
+	container, err := r.FindDevContainer(ctx, labels)
 	if err != nil {
 		return err
 	} else if container == nil {
@@ -125,9 +125,9 @@ func (r *DockerHelper) StartContainer(ctx context.Context, id string, labels []s
 	return nil
 }
 
-func (r *DockerHelper) InspectImage(imageName string, tryRemote bool) (*config.ImageDetails, error) {
+func (r *DockerHelper) InspectImage(ctx context.Context, imageName string, tryRemote bool) (*config.ImageDetails, error) {
 	imageDetails := []*config.ImageDetails{}
-	err := r.Inspect([]string{imageName}, "image", &imageDetails)
+	err := r.Inspect(ctx, []string{imageName}, "image", &imageDetails)
 	if err != nil {
 		// try remote?
 		if !tryRemote {
@@ -156,9 +156,9 @@ func (r *DockerHelper) InspectImage(imageName string, tryRemote bool) (*config.I
 	return imageDetails[0], nil
 }
 
-func (r *DockerHelper) InspectContainers(ids []string) ([]config.ContainerDetails, error) {
+func (r *DockerHelper) InspectContainers(ctx context.Context, ids []string) ([]config.ContainerDetails, error) {
 	details := []config.ContainerDetails{}
-	err := r.Inspect(ids, "container", &details)
+	err := r.Inspect(ctx, ids, "container", &details)
 	if err != nil {
 		return nil, err
 	}
@@ -177,10 +177,10 @@ func (r *DockerHelper) IsPodman() bool {
 	return strings.Contains(string(out), "podman")
 }
 
-func (r *DockerHelper) Inspect(ids []string, inspectType string, obj interface{}) error {
+func (r *DockerHelper) Inspect(ctx context.Context, ids []string, inspectType string, obj interface{}) error {
 	args := []string{"inspect", "--type", inspectType}
 	args = append(args, ids...)
-	out, err := r.buildCmd(context.TODO(), args...).Output()
+	out, err := r.buildCmd(ctx, args...).Output()
 	if err != nil {
 		return fmt.Errorf("inspect container: %w", command.WrapCommandError(out, err))
 	}
@@ -196,16 +196,16 @@ func (r *DockerHelper) Inspect(ids []string, inspectType string, obj interface{}
 // FindContainer will try to find a container based on the input labels.
 // If no container is found, it will search for the labels manually inspecting
 // containers.
-func (r *DockerHelper) FindContainer(labels []string) ([]string, error) {
+func (r *DockerHelper) FindContainer(ctx context.Context, labels []string) ([]string, error) {
 	args := []string{"ps", "-q", "-a"}
 	for _, label := range labels {
 		args = append(args, "--filter", "label="+label)
 	}
 
-	out, err := r.buildCmd(context.TODO(), args...).Output()
+	out, err := r.buildCmd(ctx, args...).Output()
 	if err != nil {
 		// fallback to manual search
-		return r.FindContainerJSON(labels)
+		return r.FindContainerJSON(ctx, labels)
 	}
 
 	arr := []string{}
@@ -219,9 +219,9 @@ func (r *DockerHelper) FindContainer(labels []string) ([]string, error) {
 
 // FindContainerJSON will manually search for containers with matching labels.
 // This is useful in case the `--filter` doesn't work.
-func (r *DockerHelper) FindContainerJSON(labels []string) ([]string, error) {
+func (r *DockerHelper) FindContainerJSON(ctx context.Context, labels []string) ([]string, error) {
 	args := []string{"ps", "-q", "-a"}
-	out, err := r.buildCmd(context.TODO(), args...).Output()
+	out, err := r.buildCmd(ctx, args...).Output()
 	if err != nil {
 		return nil, command.WrapCommandError(out, err)
 	}
@@ -233,7 +233,7 @@ func (r *DockerHelper) FindContainerJSON(labels []string) ([]string, error) {
 		id = strings.TrimSpace(id)
 		found := true
 
-		containers, err := r.InspectContainers([]string{id})
+		containers, err := r.InspectContainers(ctx, []string{id})
 		if err != nil {
 			continue
 		}

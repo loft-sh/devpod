@@ -56,6 +56,10 @@ func (cmd *BuildCmd) Run(ctx context.Context) error {
 		return fmt.Errorf("repository needs to be specified")
 	}
 
+	// make sure daemon does shut us down while we are doing things
+	agent.CreateWorkspaceBusyFile(workspaceInfo.Origin)
+	defer agent.DeleteWorkspaceBusyFile(workspaceInfo.Origin)
+
 	// initialize the workspace
 	cancelCtx, cancel := context.WithCancel(ctx)
 	defer cancel()

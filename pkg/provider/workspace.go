@@ -132,6 +132,7 @@ type CLIOptions struct {
 	WorkspaceEnv         []string `json:"workspaceEnv,omitempty"`
 	Recreate             bool     `json:"recreate,omitempty"`
 	Proxy                bool     `json:"proxy,omitempty"`
+	DaemonInterval       string   `json:"daemonInterval,omitempty"`
 
 	// build options
 	Repository string   `json:"repository,omitempty"`

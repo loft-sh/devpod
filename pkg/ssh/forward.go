@@ -5,12 +5,13 @@ import (
 	"io"
 	"net"
 	"sync"
+	"time"
 
 	"github.com/loft-sh/log"
 	"golang.org/x/crypto/ssh"
 )
 
-func PortForward(ctx context.Context, client *ssh.Client, localAddr, remoteAddr string, log log.Logger) error {
+func PortForward(ctx context.Context, client *ssh.Client, localAddr, remoteAddr string, exitAfterTimeout time.Duration, log log.Logger) error {
 	listener, err := net.Listen("tcp", localAddr)
 	if err != nil {
 		return err
@@ -28,6 +29,9 @@ func PortForward(ctx context.Context, client *ssh.Client, localAddr, remoteAddr 
 		}
 	}()
 
+	counter := newConnectionCounter(ctx, exitAfterTimeout, func() {
+		log.Fatalf("Stopping devpod up, because it stayed idle for a while. You can disable this via 'devpod context set-options -o EXIT_AFTER_TIMEOUT=false'")
+	}, log)
 	for {
 		// waiting for a new connection
 		local, err := listener.Accept()
@@ -35,8 +39,15 @@ func PortForward(ctx context.Context, client *ssh.Client, localAddr, remoteAddr 
 			return err
 		}
 
+		// tell the counter there is a connection
+		counter.Add()
+
 		// forward connection
-		go forward(local, client, remoteAddr, log)
+		go func() {
+			defer counter.Dec()
+
+			forward(local, client, remoteAddr, log)
+		}()
 	}
 }
 

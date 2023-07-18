@@ -330,7 +330,7 @@ var _ = DevPodDescribe("devpod up test suite", func() {
 				framework.ExpectNoError(err)
 
 				projectName := workspace.ID
-				ids, err := dockerHelper.FindContainer([]string{
+				ids, err := dockerHelper.FindContainer(ctx, []string{
 					fmt.Sprintf("%s=%s", config.DockerIDLabel, workspace.UID),
 				})
 				framework.ExpectNoError(err)
@@ -384,7 +384,7 @@ var _ = DevPodDescribe("devpod up test suite", func() {
 				framework.ExpectNoError(err)
 				projectName := workspace.ID
 
-				ids, err := dockerHelper.FindContainer([]string{
+				ids, err := dockerHelper.FindContainer(ctx, []string{
 					fmt.Sprintf("%s=%s", config.DockerIDLabel, workspace.UID),
 				})
 				framework.ExpectNoError(err)
@@ -434,7 +434,7 @@ var _ = DevPodDescribe("devpod up test suite", func() {
 				workspace, err := f.FindWorkspace(ctx, tempDir)
 				framework.ExpectNoError(err)
 
-				ids, err := dockerHelper.FindContainer([]string{
+				ids, err := dockerHelper.FindContainer(ctx, []string{
 					fmt.Sprintf("%s=%s", compose.ProjectLabel, composeHelper.GetProjectName(workspace.UID)),
 					fmt.Sprintf("%s=%s", compose.ServiceLabel, "app"),
 				})
@@ -442,7 +442,7 @@ var _ = DevPodDescribe("devpod up test suite", func() {
 				gomega.Expect(ids).To(gomega.HaveLen(1), "1 compose container to be created")
 
 				var containerDetails []types.ContainerJSON
-				err = dockerHelper.Inspect(ids, "container", &containerDetails)
+				err = dockerHelper.Inspect(ctx, ids, "container", &containerDetails)
 				framework.ExpectNoError(err)
 
 				containerDetail := containerDetails[0]
@@ -472,7 +472,7 @@ var _ = DevPodDescribe("devpod up test suite", func() {
 				workspace, err := f.FindWorkspace(ctx, tempDir)
 				framework.ExpectNoError(err)
 
-				ids, err := dockerHelper.FindContainer([]string{
+				ids, err := dockerHelper.FindContainer(ctx, []string{
 					fmt.Sprintf("%s=%s", compose.ProjectLabel, composeHelper.GetProjectName(workspace.UID)),
 					fmt.Sprintf("%s=%s", compose.ServiceLabel, "app"),
 				})
@@ -480,7 +480,7 @@ var _ = DevPodDescribe("devpod up test suite", func() {
 				gomega.Expect(ids).To(gomega.HaveLen(1), "1 compose container to be created")
 
 				var containerDetails []types.ContainerJSON
-				err = dockerHelper.Inspect(ids, "container", &containerDetails)
+				err = dockerHelper.Inspect(ctx, ids, "container", &containerDetails)
 				framework.ExpectNoError(err)
 
 				containerDetail := containerDetails[0]
@@ -511,14 +511,14 @@ var _ = DevPodDescribe("devpod up test suite", func() {
 				framework.ExpectNoError(err)
 				projectName := composeHelper.GetProjectName(workspace.UID)
 
-				appIDs, err := dockerHelper.FindContainer([]string{
+				appIDs, err := dockerHelper.FindContainer(ctx, []string{
 					fmt.Sprintf("%s=%s", compose.ProjectLabel, projectName),
 					fmt.Sprintf("%s=%s", compose.ServiceLabel, "app"),
 				})
 				framework.ExpectNoError(err)
 				gomega.Expect(appIDs).To(gomega.HaveLen(1), "app container to be created")
 
-				dbIDs, err := dockerHelper.FindContainer([]string{
+				dbIDs, err := dockerHelper.FindContainer(ctx, []string{
 					fmt.Sprintf("%s=%s", compose.ProjectLabel, projectName),
 					fmt.Sprintf("%s=%s", compose.ServiceLabel, "app"),
 				})
@@ -545,7 +545,7 @@ var _ = DevPodDescribe("devpod up test suite", func() {
 				framework.ExpectNoError(err)
 				projectName := composeHelper.GetProjectName(workspace.UID)
 
-				ids, err := dockerHelper.FindContainer([]string{
+				ids, err := dockerHelper.FindContainer(ctx, []string{
 					fmt.Sprintf("%s=%s", compose.ProjectLabel, projectName),
 					fmt.Sprintf("%s=%s", compose.ServiceLabel, "app"),
 				})
@@ -553,7 +553,7 @@ var _ = DevPodDescribe("devpod up test suite", func() {
 				gomega.Expect(ids).To(gomega.HaveLen(1), "1 compose container to be created")
 
 				var containerDetails []types.ContainerJSON
-				err = dockerHelper.Inspect(ids, "container", &containerDetails)
+				err = dockerHelper.Inspect(ctx, ids, "container", &containerDetails)
 				framework.ExpectNoError(err)
 
 				containerDetail := containerDetails[0]
@@ -584,7 +584,7 @@ var _ = DevPodDescribe("devpod up test suite", func() {
 				framework.ExpectNoError(err)
 				projectName := workspace.ID
 
-				ids, err := dockerHelper.FindContainer([]string{
+				ids, err := dockerHelper.FindContainer(ctx, []string{
 					fmt.Sprintf("%s=%s", compose.ProjectLabel, composeHelper.GetProjectName(workspace.UID)),
 					fmt.Sprintf("%s=%s", compose.ServiceLabel, "app"),
 				})
@@ -614,7 +614,7 @@ var _ = DevPodDescribe("devpod up test suite", func() {
 				framework.ExpectNoError(err)
 				projectName := workspace.ID
 
-				ids, err := dockerHelper.FindContainer([]string{
+				ids, err := dockerHelper.FindContainer(ctx, []string{
 					fmt.Sprintf("%s=%s", compose.ProjectLabel, composeHelper.GetProjectName(workspace.UID)),
 					fmt.Sprintf("%s=%s", compose.ServiceLabel, "app"),
 				})
@@ -643,7 +643,7 @@ var _ = DevPodDescribe("devpod up test suite", func() {
 				workspace, err := f.FindWorkspace(ctx, tempDir)
 				framework.ExpectNoError(err)
 
-				ids, err := dockerHelper.FindContainer([]string{
+				ids, err := dockerHelper.FindContainer(ctx, []string{
 					fmt.Sprintf("%s=%s", compose.ProjectLabel, composeHelper.GetProjectName(workspace.UID)),
 					fmt.Sprintf("%s=%s", compose.ServiceLabel, "app"),
 				})
@@ -651,7 +651,7 @@ var _ = DevPodDescribe("devpod up test suite", func() {
 				gomega.Expect(ids).To(gomega.HaveLen(1), "1 compose container to be created")
 
 				var containerDetails []types.ContainerJSON
-				err = dockerHelper.Inspect(ids, "container", &containerDetails)
+				err = dockerHelper.Inspect(ctx, ids, "container", &containerDetails)
 				framework.ExpectNoError(err)
 
 				containerDetail := containerDetails[0]
@@ -676,7 +676,7 @@ var _ = DevPodDescribe("devpod up test suite", func() {
 				workspace, err := f.FindWorkspace(ctx, tempDir)
 				framework.ExpectNoError(err)
 
-				ids, err := dockerHelper.FindContainer([]string{
+				ids, err := dockerHelper.FindContainer(ctx, []string{
 					fmt.Sprintf("%s=%s", compose.ProjectLabel, composeHelper.GetProjectName(workspace.UID)),
 					fmt.Sprintf("%s=%s", compose.ServiceLabel, "app"),
 				})
@@ -684,7 +684,7 @@ var _ = DevPodDescribe("devpod up test suite", func() {
 				gomega.Expect(ids).To(gomega.HaveLen(1), "1 compose container to be created")
 
 				var containerDetails []types.ContainerJSON
-				err = dockerHelper.Inspect(ids, "container", &containerDetails)
+				err = dockerHelper.Inspect(ctx, ids, "container", &containerDetails)
 				framework.ExpectNoError(err)
 
 				containerDetail := containerDetails[0]
@@ -710,7 +710,7 @@ var _ = DevPodDescribe("devpod up test suite", func() {
 				workspace, err := f.FindWorkspace(ctx, tempDir)
 				framework.ExpectNoError(err)
 
-				ids, err := dockerHelper.FindContainer([]string{
+				ids, err := dockerHelper.FindContainer(ctx, []string{
 					fmt.Sprintf("%s=%s", compose.ProjectLabel, composeHelper.GetProjectName(workspace.UID)),
 					fmt.Sprintf("%s=%s", compose.ServiceLabel, "app"),
 				})
@@ -718,7 +718,7 @@ var _ = DevPodDescribe("devpod up test suite", func() {
 				gomega.Expect(ids).To(gomega.HaveLen(1), "1 compose container to be created")
 
 				var containerDetails []types.ContainerJSON
-				err = dockerHelper.Inspect(ids, "container", &containerDetails)
+				err = dockerHelper.Inspect(ctx, ids, "container", &containerDetails)
 				framework.ExpectNoError(err)
 
 				containerDetail := containerDetails[0]
@@ -744,7 +744,7 @@ var _ = DevPodDescribe("devpod up test suite", func() {
 				workspace, err := f.FindWorkspace(ctx, tempDir)
 				framework.ExpectNoError(err)
 
-				ids, err := dockerHelper.FindContainer([]string{
+				ids, err := dockerHelper.FindContainer(ctx, []string{
 					fmt.Sprintf("%s=%s", compose.ProjectLabel, composeHelper.GetProjectName(workspace.UID)),
 					fmt.Sprintf("%s=%s", compose.ServiceLabel, "app"),
 				})
@@ -752,7 +752,7 @@ var _ = DevPodDescribe("devpod up test suite", func() {
 				gomega.Expect(ids).To(gomega.HaveLen(1), "1 compose container to be created")
 
 				var containerDetails []types.ContainerJSON
-				err = dockerHelper.Inspect(ids, "container", &containerDetails)
+				err = dockerHelper.Inspect(ctx, ids, "container", &containerDetails)
 				framework.ExpectNoError(err)
 
 				containerDetail := containerDetails[0]
@@ -779,7 +779,7 @@ var _ = DevPodDescribe("devpod up test suite", func() {
 				framework.ExpectNoError(err)
 				projectName := workspace.ID
 
-				ids, err := dockerHelper.FindContainer([]string{
+				ids, err := dockerHelper.FindContainer(ctx, []string{
 					fmt.Sprintf("%s=%s", compose.ProjectLabel, composeHelper.GetProjectName(workspace.UID)),
 					fmt.Sprintf("%s=%s", compose.ServiceLabel, "app"),
 				})
@@ -812,7 +812,7 @@ var _ = DevPodDescribe("devpod up test suite", func() {
 				framework.ExpectNoError(err)
 				projectName := workspace.ID
 
-				ids, err := dockerHelper.FindContainer([]string{
+				ids, err := dockerHelper.FindContainer(ctx, []string{
 					fmt.Sprintf("%s=%s", compose.ProjectLabel, composeHelper.GetProjectName(workspace.UID)),
 					fmt.Sprintf("%s=%s", compose.ServiceLabel, "app"),
 				})
@@ -842,7 +842,7 @@ var _ = DevPodDescribe("devpod up test suite", func() {
 				framework.ExpectNoError(err)
 				projectName := workspace.ID
 
-				ids, err := dockerHelper.FindContainer([]string{
+				ids, err := dockerHelper.FindContainer(ctx, []string{
 					fmt.Sprintf("%s=%s", compose.ProjectLabel, composeHelper.GetProjectName(workspace.UID)),
 					fmt.Sprintf("%s=%s", compose.ServiceLabel, "app"),
 				})
@@ -898,7 +898,7 @@ var _ = DevPodDescribe("devpod up test suite", func() {
 				framework.ExpectNoError(err)
 				projectName := workspace.ID
 
-				ids, err := dockerHelper.FindContainer([]string{
+				ids, err := dockerHelper.FindContainer(ctx, []string{
 					fmt.Sprintf("%s=%s", compose.ProjectLabel, composeHelper.GetProjectName(workspace.UID)),
 					fmt.Sprintf("%s=%s", compose.ServiceLabel, "app"),
 				})
@@ -955,7 +955,7 @@ var _ = DevPodDescribe("devpod up test suite", func() {
 				framework.ExpectNoError(err)
 				projectName := workspace.ID
 
-				ids, err := dockerHelper.FindContainer([]string{
+				ids, err := dockerHelper.FindContainer(ctx, []string{
 					fmt.Sprintf("%s=%s", compose.ProjectLabel, composeHelper.GetProjectName(workspace.UID)),
 					fmt.Sprintf("%s=%s", compose.ServiceLabel, "app"),
 				})
@@ -1023,7 +1023,7 @@ var _ = DevPodDescribe("devpod up test suite", func() {
 				framework.ExpectNoError(err)
 				projectName := workspace.ID
 
-				ids, err := dockerHelper.FindContainer([]string{
+				ids, err := dockerHelper.FindContainer(ctx, []string{
 					fmt.Sprintf("%s=%s", compose.ProjectLabel, composeHelper.GetProjectName(workspace.UID)),
 					fmt.Sprintf("%s=%s", compose.ServiceLabel, "app"),
 				})
@@ -1053,7 +1053,7 @@ var _ = DevPodDescribe("devpod up test suite", func() {
 				workspace, err := f.FindWorkspace(ctx, tempDir)
 				framework.ExpectNoError(err)
 
-				ids, err := dockerHelper.FindContainer([]string{
+				ids, err := dockerHelper.FindContainer(ctx, []string{
 					fmt.Sprintf("%s=%s", compose.ProjectLabel, composeHelper.GetProjectName(workspace.UID)),
 					fmt.Sprintf("%s=%s", compose.ServiceLabel, "app"),
 				})
@@ -1082,7 +1082,7 @@ var _ = DevPodDescribe("devpod up test suite", func() {
 					framework.ExpectNoError(err)
 					projectName := workspace.ID
 
-					ids, err := dockerHelper.FindContainer([]string{
+					ids, err := dockerHelper.FindContainer(ctx, []string{
 						fmt.Sprintf("%s=%s", compose.ProjectLabel, composeHelper.GetProjectName(workspace.UID)),
 						fmt.Sprintf("%s=%s", compose.ServiceLabel, "app"),
 					})
@@ -1131,7 +1131,7 @@ var _ = DevPodDescribe("devpod up test suite", func() {
 				//	projectName := composeHelper.ToProjectName(filepath.Base(tempDir))
 				//	ginkgo.DeferCleanup(f.DevPodWorkspaceDelete, context.Background(), projectName)
 				//
-				//	ids, err := dockerHelper.FindContainer([]string{
+				//	ids, err := dockerHelper.FindContainer(ctx, []string{
 				//		fmt.Sprintf("%s=%s", compose.ProjectLabel, composeHelper.GetProjectName(workspace.UID)),
 				//		fmt.Sprintf("%s=%s", compose.ServiceLabel, "app"),
 				//	})
@@ -1185,7 +1185,7 @@ var _ = DevPodDescribe("devpod up test suite", func() {
 					framework.ExpectNoError(err)
 
 					ginkgo.By("Should start a docker-compose container")
-					ids, err := dockerHelper.FindContainer([]string{
+					ids, err := dockerHelper.FindContainer(ctx, []string{
 						fmt.Sprintf("%s=%s", compose.ProjectLabel, composeHelper.GetProjectName(workspace.UID)),
 						fmt.Sprintf("%s=%s", compose.ServiceLabel, "app"),
 					})
@@ -1211,7 +1211,7 @@ var _ = DevPodDescribe("devpod up test suite", func() {
 					framework.ExpectError(err)
 
 					ginkgo.By("Should leave original container running")
-					ids2, err := dockerHelper.FindContainer([]string{
+					ids2, err := dockerHelper.FindContainer(ctx, []string{
 						fmt.Sprintf("%s=%s", compose.ProjectLabel, composeHelper.GetProjectName(workspace.UID)),
 						fmt.Sprintf("%s=%s", compose.ServiceLabel, "app"),
 					})
@@ -1239,7 +1239,7 @@ var _ = DevPodDescribe("devpod up test suite", func() {
 					framework.ExpectNoError(err)
 
 					ginkgo.By("Should start a docker-compose container")
-					ids, err := dockerHelper.FindContainer([]string{
+					ids, err := dockerHelper.FindContainer(ctx, []string{
 						fmt.Sprintf("%s=%s", compose.ProjectLabel, composeHelper.GetProjectName(workspace.UID)),
 						fmt.Sprintf("%s=%s", compose.ServiceLabel, "app"),
 					})
@@ -1251,7 +1251,7 @@ var _ = DevPodDescribe("devpod up test suite", func() {
 					framework.ExpectNoError(err)
 
 					ginkgo.By("Should start a new docker-compose container on rebuild")
-					ids2, err := dockerHelper.FindContainer([]string{
+					ids2, err := dockerHelper.FindContainer(ctx, []string{
 						fmt.Sprintf("%s=%s", compose.ProjectLabel, composeHelper.GetProjectName(workspace.UID)),
 						fmt.Sprintf("%s=%s", compose.ServiceLabel, "app"),
 					})

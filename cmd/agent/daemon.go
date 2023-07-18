@@ -23,6 +23,8 @@ import (
 // DaemonCmd holds the cmd flags
 type DaemonCmd struct {
 	*flags.GlobalFlags
+
+	Interval string
 }
 
 // NewDaemonCmd creates a new command
@@ -38,6 +40,7 @@ func NewDaemonCmd(flags *flags.GlobalFlags) *cobra.Command {
 			return cmd.Run(context.Background())
 		},
 	}
+	daemonCmd.Flags().StringVar(&cmd.Interval, "interval", "", "The interval how to poll workspaces")
 	return daemonCmd
 }
 
@@ -61,9 +64,18 @@ func (cmd *DaemonCmd) patrol(log log.Logger) {
 	// make sure we don't immediately resleep on startup
 	cmd.initialTouch(log)
 
+	// parse the daemon interval
+	interval := time.Second * 60
+	if cmd.Interval != "" {
+		parsed, err := time.ParseDuration(cmd.Interval)
+		if err == nil {
+			interval = parsed
+		}
+	}
+
 	// loop over workspace configs and check their last ModTime
 	for {
-		time.Sleep(time.Minute * 2)
+		time.Sleep(interval)
 		cmd.doOnce(log)
 	}
 }
@@ -217,20 +229,19 @@ func getActivity(workspaceConfig string, log log.Logger) (*time.Time, *provider2
 		return nil, nil, nil
 	}
 
-	// check if it was actually ever executed fully
-	_, err = os.Stat(filepath.Join(filepath.Dir(workspaceConfig), agent.WorkspaceDevContainerResult))
-	if err != nil {
-		return nil, nil, nil
-	}
-
 	// check last access time
 	stat, err := os.Stat(workspaceConfig)
 	if err != nil {
 		return nil, nil, err
 	}
 
-	// check if timeout
+	// check if workspace is locked
 	t := stat.ModTime()
+	if agent.HasWorkspaceBusyFile(filepath.Dir(workspaceConfig)) {
+		t = t.Add(time.Minute * 20)
+	}
+
+	// check if timeout
 	return &t, workspace, nil
 }
 
