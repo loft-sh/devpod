@@ -65,6 +65,17 @@ func (f *Framework) DevPodUpStreams(ctx context.Context, workspace string, addit
 }
 
 // DevPodUp executes the `devpod up` command in the test framework
+func (f *Framework) DevPodUpWithIDE(ctx context.Context, additionalArgs ...string) error {
+	upArgs := []string{"up", "--debug"}
+	upArgs = append(upArgs, additionalArgs...)
+
+	_, _, err := f.ExecCommandCapture(ctx, upArgs)
+	if err != nil {
+		return fmt.Errorf("devpod up failed: %s", err.Error())
+	}
+	return nil
+}
+
 func (f *Framework) DevPodUp(ctx context.Context, additionalArgs ...string) error {
 	upArgs := []string{"up", "--debug", "--ide", "none"}
 	upArgs = append(upArgs, additionalArgs...)
