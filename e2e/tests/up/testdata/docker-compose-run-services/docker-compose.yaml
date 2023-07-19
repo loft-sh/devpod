@@ -1,0 +1,20 @@
+version: '3'
+
+services:
+  app:
+    image: mcr.microsoft.com/devcontainers/go:0-1.19-bullseye
+    command: sleep infinity
+    volumes:
+      - .:/workspaces:cached
+  db:
+    image: postgres:latest
+    restart: unless-stopped
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    environment:
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_USER: postgres
+      POSTGRES_DB: postgres
+
+volumes:
+  postgres-data:
