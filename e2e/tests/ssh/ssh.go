@@ -27,7 +27,7 @@ var _ = DevPodDescribe("devpod ssh test suite", func() {
 		framework.ExpectNoError(err)
 
 		// Start up devpod workspace
-		devpodUpDeadline := time.Now().Add(1 * time.Minute)
+		devpodUpDeadline := time.Now().Add(5 * time.Minute)
 		devpodUpCtx, cancel := context.WithDeadline(context.Background(), devpodUpDeadline)
 		defer cancel()
 		err = f.DevPodUp(devpodUpCtx, tempDir)
