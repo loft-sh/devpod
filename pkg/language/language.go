@@ -50,7 +50,7 @@ var MapLanguages = map[ProgrammingLanguage]ProgrammingLanguage{
 var MapConfig = map[ProgrammingLanguage]*config.DevContainerConfig{
 	None: {
 		ImageContainer: config.ImageContainer{
-			Image: "mcr.microsoft.com/devcontainers/base:ubuntu",
+			Image: "mcr.microsoft.com/devcontainers/universal:linux",
 		},
 	},
 	JavaScript: {
