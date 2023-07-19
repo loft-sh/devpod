@@ -54,8 +54,12 @@ func Single(file string, createCommand CreateCommand) error {
 	if err != nil {
 		return err
 	}
-	cmd.Stderr = f
-	cmd.Stdout = f
+	if cmd.Stderr == nil {
+		cmd.Stderr = f
+	}
+	if cmd.Stdout == nil {
+		cmd.Stdout = f
+	}
 
 	// start process
 	err = cmd.Start()
