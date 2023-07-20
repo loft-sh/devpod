@@ -23,11 +23,11 @@ import { useCallback, useEffect, useMemo } from "react"
 import { Controller, ControllerRenderProps } from "react-hook-form"
 import { FiFolder } from "react-icons/fi"
 import { useNavigate } from "react-router"
-import { useSearchParams } from "react-router-dom"
+import { Link as RouterLink, useSearchParams } from "react-router-dom"
 import { client } from "../../../client"
 import { ExampleCard, IDEIcon, WarningMessageBox } from "../../../components"
 import { RECOMMENDED_PROVIDER_SOURCES, SIDEBAR_WIDTH } from "../../../constants"
-import { useProvider, useProviders, useWorkspace } from "../../../contexts"
+import { useProvider, useProviders, useWorkspace, useWorkspaces } from "../../../contexts"
 import { exists, getKeys, isEmpty, useFormErrors } from "../../../lib"
 import { Routes } from "../../../routes"
 import { useBorderColor } from "../../../Theme"
@@ -458,6 +458,16 @@ type TProviderInputProps = Readonly<{
 function ProviderInput({ options, field, onAddProviderClicked }: TProviderInputProps) {
   const gridChildWidth = useToken("sizes", "12")
   const [provider] = useProvider(field.value)
+  const workspaces = useWorkspaces()
+  const reuseWorkspace = useMemo(() => {
+    return workspaces.find((workspace) => {
+      return (
+        provider?.state?.singleMachine &&
+        workspace.provider?.name === provider.config?.name &&
+        workspace.machine?.machineId?.startsWith("devpod-shared-")
+      )
+    })?.id
+  }, [provider, workspaces])
 
   return (
     <VStack align="start" width="full">
@@ -489,11 +499,19 @@ function ProviderInput({ options, field, onAddProviderClicked }: TProviderInputP
         </Tooltip>
       </Grid>
 
-      {provider?.state?.singleMachine && (
+      {reuseWorkspace && (
         <WarningMessageBox
           variant="ghost"
           size="sm"
-          warning={"This provider reuses existing machines to create new workspaces"}
+          warning={
+            <span>
+              Will reuse the existing machine from {reuseWorkspace} and NOT create a new one. Go to{" "}
+              <Link as={RouterLink} to={Routes.toProvider(provider?.config?.name!)}>
+                <b>provider settings</b>
+              </Link>{" "}
+              to change this behaviour.
+            </span>
+          }
         />
       )}
     </VStack>
