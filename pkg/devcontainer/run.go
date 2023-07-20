@@ -138,7 +138,23 @@ func (r *Runner) Up(ctx context.Context, options UpOptions) (*config.Result, err
 			return nil, err
 		}
 	} else {
-		return nil, fmt.Errorf("dev container config is missing one of \"image\", \"dockerFile\" or \"dockerComposeFile\" properties")
+		r.Log.Warn("dev container config is missing one of \"image\", \"dockerFile\" or \"dockerComposeFile\" properties, defaulting to auto-detection")
+
+		lang, err := language.DetectLanguage(r.LocalWorkspaceFolder)
+		if err != nil {
+			return nil, fmt.Errorf("could not detect project language and dev container config is missing one of \"image\", \"dockerFile\" or \"dockerComposeFile\" properties")
+		}
+
+		if language.MapConfig[lang] == nil {
+			return nil, fmt.Errorf("could not detect project language and dev container config is missing one of \"image\", \"dockerFile\" or \"dockerComposeFile\" properties")
+		}
+
+		substitutedConfig.Config.ImageContainer = language.MapConfig[lang].ImageContainer
+
+		result, err = r.runSingleContainer(ctx, substitutedConfig, workspace.WorkspaceMount, options)
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	// return result
