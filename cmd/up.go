@@ -435,7 +435,8 @@ func startFleet(ctx context.Context, client client2.BaseWorkspaceClient, logger 
 		return fmt.Errorf("seems like fleet is not running within the container")
 	}
 
-	logger.Infof("Starting Fleet at %s...", url)
+	logger.Warnf("Fleet is exposed at a publicly reachable URL, please make sure to not disclose this URL to anyone as they will be able to reach your workspace from that")
+	logger.Infof("Starting Fleet at %s ...", url)
 	err = open.Run(url)
 	if err != nil {
 		return err
