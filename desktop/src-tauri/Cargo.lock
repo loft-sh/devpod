@@ -238,6 +238,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "cfb"
+version = "0.7.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "d38f2da7a0a2c4ccf0065be06397cc26a81f4e528be095826eee9d4adbb8c60f"
+dependencies = [
+ "byteorder",
+ "fnv",
+ "uuid 1.3.1",
+]
+
+[[package]]
 name = "cfg-expr"
 version = "0.9.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -563,10 +574,13 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "chrono",
+ "cocoa",
  "dirs",
+ "dispatch",
  "fix-path-env",
  "lazy_static",
  "log",
+ "objc",
  "regex",
  "reqwest",
  "serde",
@@ -1429,7 +1443,16 @@ version = "0.7.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "20b2b533137b9cad970793453d4f921c2e91312a6d88b1085c07bc15fc51bb3b"
 dependencies = [
- "cfb",
+ "cfb 0.6.1",
+]
+
+[[package]]
+name = "infer"
+version = "0.9.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "f178e61cdbfe084aa75a2f4f7a25a5bb09701a47ae1753608f194b15783c937a"
+dependencies = [
+ "cfb 0.7.3",
 ]
 
 [[package]]
@@ -3088,7 +3111,9 @@ dependencies = [
  "gtk",
  "heck 0.4.1",
  "http",
+ "ico",
  "ignore",
+ "infer 0.9.0",
  "objc",
  "once_cell",
  "open",
@@ -3271,7 +3296,7 @@ dependencies = [
  "glob",
  "heck 0.4.1",
  "html5ever",
- "infer",
+ "infer 0.7.0",
  "json-patch",
  "kuchiki",
  "memchr",

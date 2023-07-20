@@ -3,6 +3,10 @@
     windows_subsystem = "windows"
 )]
 
+#[cfg(target_os = "macos")]
+#[macro_use]
+extern crate objc;
+
 mod action_logs;
 mod commands;
 mod community_contributions;
@@ -18,7 +22,7 @@ mod workspaces;
 
 use community_contributions::CommunityContributions;
 use custom_protocol::{CustomProtocol, OpenWorkspaceMsg};
-use log::error;
+use log::{error, info};
 use serde::Serialize;
 use std::{
     collections::VecDeque,
@@ -66,7 +70,7 @@ fn main() -> anyhow::Result<()> {
 
     let (tx, mut rx) = mpsc::channel::<UiMessage>(10);
 
-    tauri::Builder::default()
+    let app = tauri::Builder::default()
         .manage(AppState {
             workspaces: Arc::new(Mutex::new(WorkspacesState::default())),
             community_contributions: Arc::new(Mutex::new(contributions)),
@@ -77,9 +81,13 @@ fn main() -> anyhow::Result<()> {
         .system_tray(system_tray.build_tray(vec![Box::new(&WorkspacesState::default())]))
         .menu(menu)
         .setup(move |app| {
+            info!("Setup application");
+
             providers::check_dangling_provider(&app.handle());
+            let window_helper = window::WindowHelper::new(&app.handle());
+
             let window = app.get_window("main").unwrap();
-            window::setup(&window);
+            window_helper.setup(&window);
 
             workspaces::setup(&app.handle(), app.state());
             community_contributions::setup(app.state());
@@ -116,7 +124,7 @@ fn main() -> anyhow::Result<()> {
                                 let _ = app_handle.emit_all("event", ui_msg);
                             } else {
                                 // recreate window
-                                let _ = window::new_main(&app_handle, app_name.to_string());
+                                let _ = window_helper.new_main(app_name.to_string());
                                 messages.push_back(ui_msg);
                             }
                         }
@@ -126,7 +134,7 @@ fn main() -> anyhow::Result<()> {
                                 let _ = app_handle.emit_all("event", ui_msg);
                             } else {
                                 // recreate window
-                                let _ = window::new_main(&app_handle, app_name.to_string());
+                                let _ = window_helper.new_main(app_name.to_string());
                                 messages.push_back(ui_msg);
                             }
                         }
@@ -136,7 +144,7 @@ fn main() -> anyhow::Result<()> {
                                 let _ = app_handle.emit_all("event", ui_msg);
                             } else {
                                 // recreate window
-                                let _ = window::new_main(&app_handle, app_name.to_string());
+                                let _ = window_helper.new_main(app_name.to_string());
                                 messages.push_back(ui_msg);
                             }
                         }
@@ -144,6 +152,7 @@ fn main() -> anyhow::Result<()> {
                 }
             });
 
+            info!("Setup done");
             Ok(())
         })
         .on_system_tray_event(system_tray_event_handler)
@@ -156,31 +165,43 @@ fn main() -> anyhow::Result<()> {
             community_contributions::get_contributions,
         ])
         .build(ctx)
-        .expect("error while building tauri application")
-        .run(move |app, event| {
-            let exit_requested_tx = tx.clone();
+        .expect("error while building tauri application");
 
-            match event {
-                // Prevents app from exiting when last window is closed, leaving the system tray active
-                tauri::RunEvent::ExitRequested { api, .. } => {
-                    tauri::async_runtime::block_on(async move {
-                        if let Err(err) = exit_requested_tx.send(UiMessage::ExitRequested).await {
-                            error!("Failed to broadcast UI ready message: {:?}", err);
+    info!("Run");
+
+    app.run(move |app_handle, event| {
+        let exit_requested_tx = tx.clone();
+
+        match event {
+            // Prevents app from exiting when last window is closed, leaving the system tray active
+            tauri::RunEvent::ExitRequested { api, .. } => {
+                tauri::async_runtime::block_on(async move {
+                    if let Err(err) = exit_requested_tx.send(UiMessage::ExitRequested).await {
+                        error!("Failed to broadcast UI ready message: {:?}", err);
+                    }
+                });
+                api.prevent_exit();
+            }
+            tauri::RunEvent::WindowEvent { event, label, .. } => {
+                if let tauri::WindowEvent::Destroyed = event {
+                    providers::check_dangling_provider(app_handle);
+                    #[cfg(target_os = "macos")]
+                    {
+                        let window_helper = window::WindowHelper::new(app_handle);
+                        let window_count = app_handle.windows().len();
+                        info!("Window \"{}\" destroyed, {} remaining", label, window_count);
+                        if window_count == 0 {
+                            window_helper.set_dock_icon_visibility(false);
                         }
-                    });
-                    api.prevent_exit();
-                }
-                tauri::RunEvent::WindowEvent { event, .. } => {
-                    if let tauri::WindowEvent::Destroyed = event {
-                        providers::check_dangling_provider(app);
                     }
                 }
-                tauri::RunEvent::Exit => {
-                    providers::check_dangling_provider(app);
-                }
-                _ => {}
             }
-        });
+            tauri::RunEvent::Exit => {
+                providers::check_dangling_provider(app_handle);
+            }
+            _ => {}
+        }
+    });
 
     Ok(())
 }

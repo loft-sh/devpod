@@ -9,6 +9,8 @@
 			<string>Viewer</string>
 			<key>CFBundleURLName</key>
 			<string>sh.loft.devpod</string>
+			<key>LSUIElement</key>
+			<true/>
 			<key>CFBundleURLSchemes</key>
 			<array>
 				<string>devpod</string>
