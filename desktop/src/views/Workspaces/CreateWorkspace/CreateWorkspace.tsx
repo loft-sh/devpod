@@ -25,9 +25,9 @@ import { FiFolder } from "react-icons/fi"
 import { useNavigate } from "react-router"
 import { useSearchParams } from "react-router-dom"
 import { client } from "../../../client"
-import { ExampleCard, IDEIcon } from "../../../components"
+import { ExampleCard, IDEIcon, WarningMessageBox } from "../../../components"
 import { RECOMMENDED_PROVIDER_SOURCES, SIDEBAR_WIDTH } from "../../../constants"
-import { useProviders, useWorkspace } from "../../../contexts"
+import { useProvider, useProviders, useWorkspace } from "../../../contexts"
 import { exists, getKeys, isEmpty, useFormErrors } from "../../../lib"
 import { Routes } from "../../../routes"
 import { useBorderColor } from "../../../Theme"
@@ -42,6 +42,10 @@ import {
   TSelectProviderOptions,
 } from "./types"
 import { useCreateWorkspaceForm } from "./useCreateWorkspaceForm"
+import styled from "@emotion/styled"
+import { Plus } from "../../../icons"
+import { ProviderPlaceholderSvg } from "../../../images"
+import { useIDEs } from "../../../useIDEs"
 
 const Form = styled.form`
   width: 100%;
@@ -305,6 +309,7 @@ export function CreateWorkspace() {
                   <FormHelperText>Use this provider to create the workspace.</FormHelperText>
                 )}
               </FormControl>
+
               <FormControl isRequired isInvalid={exists(defaultIDEError)}>
                 <FormLabel>Default IDE</FormLabel>
                 <Controller
@@ -452,42 +457,49 @@ type TProviderInputProps = Readonly<{
 }>
 function ProviderInput({ options, field, onAddProviderClicked }: TProviderInputProps) {
   const gridChildWidth = useToken("sizes", "12")
+  const [provider] = useProvider(field.value)
 
   return (
-    <Grid
-      templateColumns={`repeat(auto-fit, ${gridChildWidth})`}
-      gap="2"
-      height="fit-content"
-      width="full"
-      flexWrap="wrap">
-      {options.installed.map((p) => (
-        <Box key={p.name}>
-          <ExampleCard
-            isSelected={field.value === p.name}
-            name={p.name}
-            size="sm"
-            onClick={() => field.onChange(p.name)}
-            image={p.config?.icon ?? ProviderPlaceholderSvg}
+    <VStack align="start" width="full">
+      <Grid
+        templateColumns={`repeat(auto-fit, ${gridChildWidth})`}
+        gap="2"
+        height="fit-content"
+        width="full"
+        flexWrap="wrap">
+        {options.installed.map((p) => (
+          <Box key={p.name}>
+            <ExampleCard
+              isSelected={field.value === p.name}
+              name={p.name}
+              size="sm"
+              onClick={() => field.onChange(p.name)}
+              image={p.config?.icon ?? ProviderPlaceholderSvg}
+            />
+          </Box>
+        ))}
+        <Tooltip label="Add Provider">
+          <IconButton
+            variant="outline"
+            size="lg"
+            icon={<Plus />}
+            aria-label="Add Provider"
+            onClick={() => onAddProviderClicked?.()}
           />
-        </Box>
-      ))}
-      <Tooltip label="Add Provider">
-        <IconButton
-          variant="outline"
-          size="lg"
-          icon={<Plus />}
-          aria-label="Add Provider"
-          onClick={() => onAddProviderClicked?.()}
+        </Tooltip>
+      </Grid>
+
+      {provider?.state?.singleMachine && (
+        <WarningMessageBox
+          variant="ghost"
+          size="sm"
+          warning={"This provider reuses existing machines to create new workspaces"}
         />
-      </Tooltip>
-    </Grid>
+      )}
+    </VStack>
   )
 }
 
-import styled from "@emotion/styled"
-import { Plus } from "../../../icons"
-import { ProviderPlaceholderSvg } from "../../../images"
-import { useIDEs } from "../../../useIDEs"
 type TIDEInputProps = Readonly<{
   ides: readonly TIDE[] | undefined
   field: ControllerRenderProps<TFormValues, (typeof FieldName)["DEFAULT_IDE"]>
