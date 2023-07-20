@@ -87,6 +87,14 @@ func (r *Runner) runSingleContainer(ctx context.Context, parsedConfig *config.Su
 		}
 	}
 
+	// set remoteenv
+	if mergedConfig.RemoteEnv == nil {
+		mergedConfig.RemoteEnv = make(map[string]string)
+	}
+	if _, ok := mergedConfig.RemoteEnv["PATH"]; !ok {
+		mergedConfig.RemoteEnv["PATH"] = "${containerEnv:PATH}"
+	}
+
 	// substitute config with container env
 	newMergedConfig := &config.MergedDevContainerConfig{}
 	err = config.SubstituteContainerEnv(config.ListToObject(containerDetails.Config.Env), mergedConfig, newMergedConfig)

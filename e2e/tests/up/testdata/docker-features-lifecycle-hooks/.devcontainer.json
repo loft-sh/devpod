@@ -1,0 +1,8 @@
+{
+    "name": "Test Git",
+    "image": "mcr.microsoft.com/vscode/devcontainers/base:ubuntu",
+    "features": {
+      "ghcr.io/devcontainers/features/git:1": {}
+    },
+    "postStartCommand": "git version"
+}
