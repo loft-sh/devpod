@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"os"
 	"os/exec"
+	"os/user"
 	"path/filepath"
 	"sort"
 	"strings"
@@ -23,6 +24,13 @@ const (
 )
 
 func SetupContainer(setupInfo *config.Result, extraWorkspaceEnv []string, chownWorkspace bool, log log.Logger) error {
+	if chownWorkspace {
+		err := EnsureCorrectUID(setupInfo, log)
+		if err != nil {
+			return errors.Wrap(err, "ensure correct uid for remote user")
+		}
+	}
+
 	// write result to ResultLocation
 	WriteResult(setupInfo, log)
 
@@ -137,6 +145,87 @@ func ChownWorkspace(setupInfo *config.Result, log log.Logger) error {
 	log.Infof("Chown workspace...")
 	err = copy2.ChownR(setupInfo.SubstitutionContext.ContainerWorkspaceFolder, user)
 	// do not exit on error, we can have non-fatal errors
+	if err != nil {
+		log.Warn(err)
+	}
+
+	return nil
+}
+
+func EnsureCorrectUID(setupInfo *config.Result, log log.Logger) error {
+	// get host uid and gid
+	stats, err := os.Stat(setupInfo.SubstitutionContext.ContainerWorkspaceFolder)
+	if err != nil {
+		return errors.Wrap(err, "stat container workspace folder")
+	}
+	hostUID, hostGID, err := GetUserInfo(stats)
+	if err != nil {
+		return err
+	}
+
+	// get container uid and gid
+	containerUserName := config.GetRemoteUser(setupInfo)
+	containerUser, err := user.Lookup(containerUserName)
+	if err != nil {
+		return errors.Wrap(err, "get container user")
+	}
+	containerUID, containerGID := containerUser.Uid, containerUser.Gid
+
+	// if the host/container user is root or host and container uid/gid match already, do nothing
+	if hostUID == "0" || containerUID == "0" || (hostUID == containerUID && hostGID == containerGID) {
+		return nil
+	}
+
+	log.Debugf("Ensure correct uid and gid for remote user...")
+
+	// get container user group info
+	containerUserGroups, err := containerUser.GroupIds()
+	if err != nil {
+		return errors.Wrap(err, "get container user groups")
+	}
+	containerUserGroup, err := user.LookupGroupId(containerUserGroups[0])
+	if err != nil {
+		return err
+	}
+
+	// read passwd file
+	passwdFilePath := "/etc/passwd"
+	passwdFile, err := os.ReadFile(passwdFilePath)
+	if err != nil {
+		return errors.Wrap(err, "read passwd file")
+	}
+
+	// replace uid and gid for the containerUser in the passwd file
+	oldUserStr := containerUserName + ":x:" + containerUID + ":" + containerGID
+	newUserStr := containerUserName + ":x:" + hostUID + ":" + hostGID
+	newPasswdFile := strings.ReplaceAll(string(passwdFile), oldUserStr, newUserStr)
+
+	// update passwd file
+	err = os.WriteFile(passwdFilePath, []byte(newPasswdFile), 0644)
+	if err != nil {
+		return errors.Wrap(err, "write passwd file")
+	}
+
+	// read group file
+	grpFilePath := "/etc/group"
+	grpFile, err := os.ReadFile(grpFilePath)
+	if err != nil {
+		return errors.Wrap(err, "read group file")
+	}
+
+	// update gid for the containerUser in group file
+	oldGrpStr := containerUserGroup.Name + ":x:" + containerGID
+	newGrpStr := containerUserGroup.Name + ":x:" + hostGID
+	newGrpFile := strings.ReplaceAll(string(grpFile), oldGrpStr, newGrpStr)
+
+	// update group file
+	err = os.WriteFile(grpFilePath, []byte(newGrpFile), 0644)
+	if err != nil {
+		return errors.Wrap(err, "write group file")
+	}
+
+	log.Debugf("Chown user home...")
+	err = copy2.ChownR(containerUser.HomeDir, containerUserName)
 	if err != nil {
 		log.Warn(err)
 	}
