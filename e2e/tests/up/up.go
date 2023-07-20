@@ -413,6 +413,25 @@ var _ = DevPodDescribe("devpod up test suite", func() {
 				err = f.DevPodUp(ctx, tempDir, "--debug")
 				framework.ExpectNoError(err)
 			}, ginkgo.SpecTimeout(60*time.Second))
+
+			ginkgo.Context("should start a new workspace with features", func() {
+				ginkgo.It("ensure dependencies installed via features are accessible in lifecycle hooks", func(ctx context.Context) {
+					tempDir, err := framework.CopyToTempDir("tests/up/testdata/docker-features-lifecycle-hooks")
+					framework.ExpectNoError(err)
+					ginkgo.DeferCleanup(framework.CleanupTempDir, initialDir, tempDir)
+
+					f := framework.NewDefaultFramework(initialDir + "/bin")
+					_ = f.DevPodProviderAdd(ctx, "docker")
+					err = f.DevPodProviderUse(context.Background(), "docker")
+					framework.ExpectNoError(err)
+
+					ginkgo.DeferCleanup(f.DevPodWorkspaceDelete, context.Background(), tempDir)
+
+					// Wait for devpod workspace to come online (deadline: 30s)
+					err = f.DevPodUp(ctx, tempDir, "--debug")
+					framework.ExpectNoError(err)
+				}, ginkgo.SpecTimeout(60*time.Second))
+			})
 		})
 
 		ginkgo.Context("with docker-compose", func() {
