@@ -1,10 +1,9 @@
-use log::warn;
-
 use crate::AppState;
 use std::sync::Arc;
 
 const RAW_COMMUNITY_YAML: &str = include_str!("../../../community.yaml");
-const REMOTE_COMMUNITY_YAML_URL: &str = "https://raw.githubusercontent.com/loft-sh/devpod/main/community.yaml";
+const REMOTE_COMMUNITY_YAML_URL: &str =
+    "https://raw.githubusercontent.com/loft-sh/devpod/main/community.yaml";
 
 #[derive(Debug, PartialEq, Clone, serde::Serialize, serde::Deserialize)]
 pub struct CommunityContributions {
