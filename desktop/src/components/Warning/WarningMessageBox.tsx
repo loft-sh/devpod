@@ -1,19 +1,51 @@
 import { Box, Text, useColorModeValue } from "@chakra-ui/react"
 
-type TWarningMessageBox = Readonly<{ warning: string }>
-export function WarningMessageBox({ warning }: TWarningMessageBox) {
+const SIZES = {
+  sm: {
+    fontSize: "sm",
+  },
+  md: {
+    fontSize: "md",
+  },
+}
+const VARIANTS = {
+  solid: {
+    color: { light: "orange.700", dark: "orange.800" },
+  },
+  ghost: {
+    color: { light: "orange.400", dark: "orange.300" },
+  },
+}
+type TWarningMessageBoxProps = Readonly<{
+  warning: string
+  size?: keyof typeof SIZES
+  variant?: "solid" | "ghost"
+}>
+export function WarningMessageBox({
+  warning,
+  size = "md",
+  variant = "solid",
+}: TWarningMessageBoxProps) {
+  const { color } = VARIANTS[variant]
   const backgroundColor = useColorModeValue("orange.100", "orange.200")
-  const textColor = useColorModeValue("orange.700", "orange.800")
+  const textColor = useColorModeValue(color.light, color.dark)
+  const { fontSize } = SIZES[size]
 
   return (
     <Box
-      backgroundColor={backgroundColor}
-      marginTop="4"
-      padding="4"
-      borderRadius="md"
+      {...(variant === "solid"
+        ? {
+            backgroundColor,
+            marginTop: "4",
+            padding: "4",
+            borderRadius: "md",
+          }
+        : {})}
       userSelect="auto"
       display="inline-block">
-      <Text color={textColor}>{warning}</Text>
+      <Text color={textColor} fontSize={fontSize}>
+        {warning}
+      </Text>
     </Box>
   )
 }
