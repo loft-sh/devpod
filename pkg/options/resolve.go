@@ -216,6 +216,7 @@ func ResolveAgentConfig(devConfig *config.Config, provider *provider2.ProviderCo
 	agentConfig.Kubernetes.BuildkitImage = resolver.ResolveDefaultValue(agentConfig.Kubernetes.BuildkitImage, options)
 	agentConfig.Kubernetes.BuildkitPrivileged = types.StrBool(resolver.ResolveDefaultValue(string(agentConfig.Kubernetes.BuildkitPrivileged), options))
 	agentConfig.Kubernetes.PersistentVolumeSize = resolver.ResolveDefaultValue(agentConfig.Kubernetes.PersistentVolumeSize, options)
+	agentConfig.Kubernetes.PVCAccessMode = resolver.ResolveDefaultValue(agentConfig.Kubernetes.PVCAccessMode, options)
 	agentConfig.Kubernetes.StorageClassName = resolver.ResolveDefaultValue(agentConfig.Kubernetes.StorageClassName, options)
 	agentConfig.Kubernetes.NodeSelector = resolver.ResolveDefaultValue(agentConfig.Kubernetes.NodeSelector, options)
 	agentConfig.Kubernetes.BuildkitNodeSelector = resolver.ResolveDefaultValue(agentConfig.Kubernetes.BuildkitNodeSelector, options)

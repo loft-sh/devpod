@@ -181,6 +181,9 @@ type ProviderKubernetesDriverConfig struct {
 
 	// StorageClassName is the name of the custom storage class
 	StorageClassName string `json:"storageClassName,omitempty"`
+
+	// PVCAccessMode is the access mode of the PVC. ie RWO,ROX,RWX,RWOP
+	PVCAccessMode string `json:"pvcAccessMode,omitempty"`
 }
 
 type ProviderDockerDriverConfig struct {
