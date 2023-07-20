@@ -13,7 +13,7 @@ export type TDeepNonNullable<T> = {
 export type TLogOutput = Readonly<{ time: Date; message?: string; level: string }>
 export type TQueryResult<TData extends Readonly<object>> = [
   TData | undefined,
-  Pick<UseMutationResult, "status" | "error">
+  Pick<UseMutationResult, "status" | "error">,
 ]
 export type TRunnable<TRunConfig> = Readonly<{ run(config: TRunConfig): void }>
 //#endregion
@@ -120,6 +120,7 @@ export type TWithWorkspaceID = Readonly<{ workspaceID: TWorkspaceID }>
 export type TWorkspace = Readonly<{
   id: string
   picture: TMaybe<string>
+  machine: TMaybe<Readonly<{ machineId: TMaybe<string> }>>
   provider: TMaybe<Readonly<{ name: TMaybe<string> }>>
   status: TMaybe<"Running" | "Busy" | "Stopped" | "NotFound">
   ide: TMaybe<{

@@ -1,4 +1,5 @@
 import { Box, Text, useColorModeValue } from "@chakra-ui/react"
+import React from "react"
 
 const SIZES = {
   sm: {
@@ -17,7 +18,7 @@ const VARIANTS = {
   },
 }
 type TWarningMessageBoxProps = Readonly<{
-  warning: string
+  warning: React.ReactNode
   size?: keyof typeof SIZES
   variant?: "solid" | "ghost"
 }>
