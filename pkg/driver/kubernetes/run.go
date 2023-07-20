@@ -170,38 +170,50 @@ func (k *kubernetesDriver) runContainer(
 
 	// create the pod manifest
 	entrypoint, args := docker.GetContainerEntrypointAndArgs(mergedConfig, imageDetails)
-	pod := &corev1.Pod{
-		TypeMeta: metav1.TypeMeta{
-			Kind:       "Pod",
-			APIVersion: corev1.SchemeGroupVersion.String(),
-		},
-		ObjectMeta: metav1.ObjectMeta{
-			Name:   id,
-			Labels: labels,
-		},
-		Spec: corev1.PodSpec{
-			ServiceAccountName: serviceAccount,
-			InitContainers:     initContainer,
-			Containers: []corev1.Container{
-				{
-					Name:         "devpod",
-					Image:        imageName,
-					Command:      []string{entrypoint},
-					Resources:    parseResources(k.config.Resources, k.Log),
-					Args:         args,
-					Env:          envVars,
-					VolumeMounts: volumeMounts,
-					SecurityContext: &corev1.SecurityContext{
-						Capabilities: capabilities,
-						Privileged:   mergedConfig.Privileged,
-						RunAsUser:    &[]int64{0}[0],
-						RunAsGroup:   &[]int64{0}[0],
-						RunAsNonRoot: &[]bool{false}[0],
-					},
-				},
-			},
-			RestartPolicy: corev1.RestartPolicyNever,
-			Volumes: []corev1.Volume{
+
+	var podTemplate *corev1.Pod
+	devPodCustomizations := config.GetDevPodCustomizations(parsedConfig)
+	if len(devPodCustomizations.PodManifestTemplate) > 0 {
+		podManifestTemplatePath := filepath.Join(mount.Source, devPodCustomizations.PodManifestTemplate[0])
+		podTemplate, err = getPodTemplate(podManifestTemplatePath)
+		if err != nil {
+			return err
+		}
+	}
+
+	var pod *corev1.Pod
+	if podTemplate != nil {
+		pod = podTemplate
+		pod.ObjectMeta.Name = id
+		pod.ObjectMeta.Namespace = ""
+		pod.ObjectMeta.Labels = map[string]string{}
+		if len(podTemplate.ObjectMeta.Labels) > 0 {
+			for k, v := range podTemplate.ObjectMeta.Labels {
+				if _, ok := DevPodLabels[k]; !ok {
+					// make sure we don't overwrite the devpod labels
+					labels[k] = v
+				}
+			}
+		}
+		pod.Spec.ServiceAccountName = serviceAccount
+
+		pod.Spec.InitContainers = append(initContainer, podTemplate.Spec.InitContainers...)
+		pod.Spec.Containers[0].Name = "devpod"
+		pod.Spec.Containers[0].Image = imageName
+		pod.Spec.Containers[0].Command = []string{entrypoint}
+		pod.Spec.Containers[0].Args = args
+		pod.Spec.Containers[0].Env = append(envVars, podTemplate.Spec.Containers[0].Env...)
+		pod.Spec.Containers[0].VolumeMounts = append(volumeMounts, podTemplate.Spec.Containers[0].VolumeMounts...)
+		pod.Spec.Containers[0].SecurityContext = &corev1.SecurityContext{
+			Capabilities: capabilities,
+			Privileged:   mergedConfig.Privileged,
+			RunAsUser:    &[]int64{0}[0],
+			RunAsGroup:   &[]int64{0}[0],
+			RunAsNonRoot: &[]bool{false}[0],
+		}
+		pod.Spec.RestartPolicy = corev1.RestartPolicyNever
+		pod.Spec.Volumes = append(
+			[]corev1.Volume{
 				{
 					Name: "devpod",
 					VolumeSource: corev1.VolumeSource{
@@ -211,7 +223,52 @@ func (k *kubernetesDriver) runContainer(
 					},
 				},
 			},
-		},
+			podTemplate.Spec.Volumes...,
+		)
+	} else {
+		pod = &corev1.Pod{
+			TypeMeta: metav1.TypeMeta{
+				Kind:       "Pod",
+				APIVersion: corev1.SchemeGroupVersion.String(),
+			},
+			ObjectMeta: metav1.ObjectMeta{
+				Name:   id,
+				Labels: labels,
+			},
+			Spec: corev1.PodSpec{
+				ServiceAccountName: serviceAccount,
+				InitContainers:     initContainer,
+				Containers: []corev1.Container{
+					{
+						Name:         "devpod",
+						Image:        imageName,
+						Command:      []string{entrypoint},
+						Resources:    parseResources(k.config.Resources, k.Log),
+						Args:         args,
+						Env:          envVars,
+						VolumeMounts: volumeMounts,
+						SecurityContext: &corev1.SecurityContext{
+							Capabilities: capabilities,
+							Privileged:   mergedConfig.Privileged,
+							RunAsUser:    &[]int64{0}[0],
+							RunAsGroup:   &[]int64{0}[0],
+							RunAsNonRoot: &[]bool{false}[0],
+						},
+					},
+				},
+				RestartPolicy: corev1.RestartPolicyNever,
+				Volumes: []corev1.Volume{
+					{
+						Name: "devpod",
+						VolumeSource: corev1.VolumeSource{
+							PersistentVolumeClaim: &corev1.PersistentVolumeClaimVolumeSource{
+								ClaimName: id,
+							},
+						},
+					},
+				},
+			},
+		}
 	}
 
 	// parse node selector
