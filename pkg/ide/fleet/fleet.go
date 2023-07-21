@@ -149,6 +149,7 @@ func (o *FleetServer) Start(binaryPath, location, projectDir string) error {
 	// wait for the jet brains url and then exit
 	o.log.Infof("Waiting for fleet to start...")
 	s := scanner.NewScanner(readCloser)
+	stdoutBuffer := &bytes.Buffer{}
 	for s.Scan() {
 		text := s.Text()
 		if strings.Contains(text, "https://fleet.jetbrains.com/") {
@@ -160,10 +161,12 @@ func (o *FleetServer) Start(binaryPath, location, projectDir string) error {
 
 			o.log.Infof("Fleet has successfully started")
 			return nil
+		} else {
+			_, _ = stdoutBuffer.Write([]byte(text + "\n"))
 		}
 	}
 
-	return fmt.Errorf("seems like there was an error starting up fleet: %s", stderrBuffer.String())
+	return fmt.Errorf("seems like there was an error starting up fleet: %s%s", stdoutBuffer.String(), stderrBuffer.String())
 }
 
 func prepareFleetServerLocation(userName string) (string, error) {
