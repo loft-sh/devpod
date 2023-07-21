@@ -151,6 +151,9 @@ type ProviderKubernetesDriverConfig struct {
 	// Resources holds the Kubernetes resources for the workspace container
 	Resources string `json:"resources,omitempty"`
 
+	// Labels holds the Kubernetes labels for the workspace container
+	Labels string `json:"labels,omitempty"`
+
 	// NodeSelector holds the node selector for the workspace pod
 	NodeSelector string `json:"nodeSelector,omitempty"`
 
