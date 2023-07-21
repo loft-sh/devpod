@@ -172,9 +172,8 @@ func (k *kubernetesDriver) runContainer(
 	entrypoint, args := docker.GetContainerEntrypointAndArgs(mergedConfig, imageDetails)
 
 	var podTemplate *corev1.Pod
-	devPodCustomizations := config.GetDevPodCustomizations(parsedConfig)
-	if len(devPodCustomizations.PodManifestTemplate) > 0 {
-		podManifestTemplatePath := filepath.Join(mount.Source, devPodCustomizations.PodManifestTemplate[0])
+	if len(k.config.PodManifestTemplate) > 0 {
+		podManifestTemplatePath := filepath.Join(mount.Source, k.config.PodManifestTemplate)
 		podTemplate, err = getPodTemplate(podManifestTemplatePath)
 		if err != nil {
 			return err
