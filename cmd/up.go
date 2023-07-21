@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"io"
 	"net"
-	"net/url"
 	"os"
 	"os/exec"
 	"strconv"
@@ -163,7 +162,7 @@ func (cmd *UpCmd) Run(ctx context.Context, devPodConfig *config.Config, client c
 		ideConfig := client.WorkspaceConfig().IDE
 		switch ideConfig.Name {
 		case string(config.IDEVSCode):
-			return startVSCodeLocally(client, result.SubstitutionContext.ContainerWorkspaceFolder, ideConfig.Options, log)
+			return vscode.Open(ctx, client.Workspace(), result.SubstitutionContext.ContainerWorkspaceFolder, vscode.Options.GetValue(ideConfig.Options, vscode.OpenNewWindow) == "true", log)
 		case string(config.IDEOpenVSCode):
 			return startVSCodeInBrowser(ctx, devPodConfig, client, result.SubstitutionContext.ContainerWorkspaceFolder, user, ideConfig.Options, log)
 		case string(config.IDEGoland):
@@ -439,23 +438,6 @@ func startFleet(ctx context.Context, client client2.BaseWorkspaceClient, logger 
 	logger.Infof("Starting Fleet at %s ...", url)
 	err = open.Run(url)
 	if err != nil {
-		return err
-	}
-
-	return nil
-}
-
-func startVSCodeLocally(client client2.BaseWorkspaceClient, workspaceFolder string, ideOptions map[string]config.OptionValue, log log.Logger) error {
-	openURL := `vscode://vscode-remote/ssh-remote+` + client.Workspace() + `.devpod/` + url.QueryEscape(workspaceFolder)
-	if vscode.Options.GetValue(ideOptions, vscode.OpenNewWindow) == "true" {
-		openURL += "?windowId=_blank"
-	}
-
-	log.Infof("Starting VSCode...")
-	err := open.Run(openURL)
-	if err != nil {
-		log.Debugf("Starting VSCode caused error: %v", err)
-		log.Errorf("Seems like you don't have Visual Studio Code installed on your computer locally. Please install VSCode via https://code.visualstudio.com/")
 		return err
 	}
 

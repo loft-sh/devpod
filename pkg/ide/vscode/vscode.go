@@ -29,7 +29,7 @@ var Options = ide.Options{
 	OpenNewWindow: {
 		Name:        OpenNewWindow,
 		Description: "If true, DevPod will open the project in a new vscode window",
-		Default:     "false",
+		Default:     "true",
 		Enum: []string{
 			"false",
 			"true",
