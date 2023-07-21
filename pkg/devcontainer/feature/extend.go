@@ -249,6 +249,7 @@ func fetchFeatures(devContainerConfig *config.DevContainerConfig, log log.Logger
 		}
 
 		// parse feature
+		log.Debugf("Parse dev container feature in %s", featureFolder)
 		featureConfig, err := config.ParseDevContainerFeature(featureFolder)
 		if err != nil {
 			return nil, errors.Wrap(err, "parse feature "+featureID)
