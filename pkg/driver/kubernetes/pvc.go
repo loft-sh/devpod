@@ -66,20 +66,19 @@ func (k *kubernetesDriver) buildPersistentVolumeClaim(
 	if k.config.StorageClassName != "" {
 		storageClassName = &k.config.StorageClassName
 	}
-	accessNode := []corev1.PersistentVolumeAccessMode{corev1.ReadWriteOnce}
-	k.Log.Debugf("CONFIG1 %s", k.config)
+	accessMode := []corev1.PersistentVolumeAccessMode{corev1.ReadWriteOnce}
 	if k.config.PVCAccessMode != "" {
 		switch k.config.PVCAccessMode {
 		case "RWO":
-			accessNode = []corev1.PersistentVolumeAccessMode{corev1.ReadWriteOnce}
+			accessMode = []corev1.PersistentVolumeAccessMode{corev1.ReadWriteOnce}
 		case "ROX":
-			accessNode = []corev1.PersistentVolumeAccessMode{corev1.ReadOnlyMany}
+			accessMode = []corev1.PersistentVolumeAccessMode{corev1.ReadOnlyMany}
 		case "RWX":
-			accessNode = []corev1.PersistentVolumeAccessMode{corev1.ReadWriteMany}
+			accessMode = []corev1.PersistentVolumeAccessMode{corev1.ReadWriteMany}
 		case "RWOP":
-			accessNode = []corev1.PersistentVolumeAccessMode{corev1.ReadWriteOncePod}
+			accessMode = []corev1.PersistentVolumeAccessMode{corev1.ReadWriteOncePod}
 		default:
-			accessNode = []corev1.PersistentVolumeAccessMode{corev1.ReadWriteOnce}
+			accessMode = []corev1.PersistentVolumeAccessMode{corev1.ReadWriteOnce}
 		}
 	}
 
@@ -96,7 +95,7 @@ func (k *kubernetesDriver) buildPersistentVolumeClaim(
 			},
 		},
 		Spec: corev1.PersistentVolumeClaimSpec{
-			AccessModes: accessNode,
+			AccessModes: accessMode,
 			Resources: corev1.ResourceRequirements{
 				Requests: map[corev1.ResourceName]resource.Quantity{
 					corev1.ResourceStorage: quantity,
