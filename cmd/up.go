@@ -83,9 +83,9 @@ func NewUpCmd(flags *flags.GlobalFlags) *cobra.Command {
 
 			var source *provider2.WorkspaceSource
 			if cmd.Source != "" {
-				source, err = provider2.ParseWorkspaceSource(cmd.Source)
-				if err != nil {
-					return fmt.Errorf("error parsing source: %w", err)
+				source = provider2.ParseWorkspaceSource(cmd.Source)
+				if source == nil {
+					return fmt.Errorf("workspace source is missing")
 				}
 			}
 

@@ -1,7 +1,6 @@
 package provider
 
 import (
-	"fmt"
 	"strings"
 
 	"github.com/loft-sh/devpod/pkg/config"
@@ -146,31 +145,31 @@ func (w WorkspaceSource) String() string {
 		}
 
 		return WorkspaceSourceGit + w.GitRepository
-	}
-
-	if w.LocalFolder != "" {
+	} else if w.LocalFolder != "" {
 		return WorkspaceSourceLocal + w.LocalFolder
+	} else if w.Image != "" {
+		return WorkspaceSourceImage + w.Image
 	}
 
-	return WorkspaceSourceImage + w.Image
+	return ""
 }
 
-func ParseWorkspaceSource(source string) (*WorkspaceSource, error) {
+func ParseWorkspaceSource(source string) *WorkspaceSource {
 	if strings.HasPrefix(source, WorkspaceSourceGit) {
 		gitRepo, gitBranch := git.NormalizeRepository(strings.TrimPrefix(source, WorkspaceSourceGit))
 		return &WorkspaceSource{
 			GitRepository: gitRepo,
 			GitBranch:     gitBranch,
-		}, nil
+		}
 	} else if strings.HasPrefix(source, WorkspaceSourceLocal) {
 		return &WorkspaceSource{
 			LocalFolder: strings.TrimPrefix(source, WorkspaceSourceLocal),
-		}, nil
+		}
 	} else if strings.HasPrefix(source, WorkspaceSourceImage) {
 		return &WorkspaceSource{
 			Image: strings.TrimPrefix(source, WorkspaceSourceImage),
-		}, nil
+		}
 	}
 
-	return nil, fmt.Errorf("invalid workspace source: %s", source)
+	return nil
 }

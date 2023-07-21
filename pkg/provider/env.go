@@ -11,26 +11,24 @@ import (
 )
 
 const (
-	DEVPOD                   = "DEVPOD"
-	DEVPOD_OS                = "DEVPOD_OS"
-	DEVPOD_ARCH              = "DEVPOD_ARCH"
-	WORKSPACE_ID             = "WORKSPACE_ID"
-	WORKSPACE_UID            = "WORKSPACE_UID"
-	WORKSPACE_FOLDER         = "WORKSPACE_FOLDER"
-	WORKSPACE_CONTEXT        = "WORKSPACE_CONTEXT"
-	WORKSPACE_ORIGIN         = "WORKSPACE_ORIGIN"
-	WORKSPACE_GIT_REPOSITORY = "WORKSPACE_GIT_REPOSITORY"
-	WORKSPACE_GIT_BRANCH     = "WORKSPACE_GIT_BRANCH"
-	WORKSPACE_LOCAL_FOLDER   = "WORKSPACE_LOCAL_FOLDER"
-	WORKSPACE_IMAGE          = "WORKSPACE_IMAGE"
-	WORKSPACE_PROVIDER       = "WORKSPACE_PROVIDER"
-	MACHINE_ID               = "MACHINE_ID"
-	MACHINE_CONTEXT          = "MACHINE_CONTEXT"
-	MACHINE_FOLDER           = "MACHINE_FOLDER"
-	MACHINE_PROVIDER         = "MACHINE_PROVIDER"
-	PROVIDER_ID              = "PROVIDER_ID"
-	PROVIDER_CONTEXT         = "PROVIDER_CONTEXT"
-	PROVIDER_FOLDER          = "PROVIDER_FOLDER"
+	DEVPOD             = "DEVPOD"
+	DEVPOD_OS          = "DEVPOD_OS"
+	DEVPOD_ARCH        = "DEVPOD_ARCH"
+	WORKSPACE_ID       = "WORKSPACE_ID"
+	WORKSPACE_UID      = "WORKSPACE_UID"
+	WORKSPACE_PICTURE  = "WORKSPACE_PICTURE"
+	WORKSPACE_FOLDER   = "WORKSPACE_FOLDER"
+	WORKSPACE_CONTEXT  = "WORKSPACE_CONTEXT"
+	WORKSPACE_ORIGIN   = "WORKSPACE_ORIGIN"
+	WORKSPACE_SOURCE   = "WORKSPACE_SOURCE"
+	WORKSPACE_PROVIDER = "WORKSPACE_PROVIDER"
+	MACHINE_ID         = "MACHINE_ID"
+	MACHINE_CONTEXT    = "MACHINE_CONTEXT"
+	MACHINE_FOLDER     = "MACHINE_FOLDER"
+	MACHINE_PROVIDER   = "MACHINE_PROVIDER"
+	PROVIDER_ID        = "PROVIDER_ID"
+	PROVIDER_CONTEXT   = "PROVIDER_CONTEXT"
+	PROVIDER_FOLDER    = "PROVIDER_FOLDER"
 )
 
 // FromEnvironment retrives options from environment and fills a machine with it. This is primarily
@@ -105,18 +103,10 @@ func ToOptionsWorkspace(workspace *Workspace) map[string]string {
 		if workspace.Origin != "" {
 			retVars[WORKSPACE_ORIGIN] = workspace.Origin
 		}
-		if workspace.Source.LocalFolder != "" {
-			retVars[WORKSPACE_LOCAL_FOLDER] = workspace.Source.LocalFolder
+		if workspace.Picture != "" {
+			retVars[WORKSPACE_PICTURE] = workspace.Picture
 		}
-		if workspace.Source.GitRepository != "" {
-			retVars[WORKSPACE_GIT_REPOSITORY] = workspace.Source.GitRepository
-		}
-		if workspace.Source.GitBranch != "" {
-			retVars[WORKSPACE_GIT_BRANCH] = workspace.Source.GitBranch
-		}
-		if workspace.Source.Image != "" {
-			retVars[WORKSPACE_IMAGE] = workspace.Source.Image
-		}
+		retVars[WORKSPACE_SOURCE] = workspace.Source.String()
 		if workspace.Provider.Name != "" {
 			retVars[WORKSPACE_PROVIDER] = workspace.Provider.Name
 		}
