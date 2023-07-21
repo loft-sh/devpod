@@ -10,6 +10,7 @@ import (
 	"github.com/loft-sh/devpod/pkg/binaries"
 	"github.com/loft-sh/devpod/pkg/config"
 	"github.com/loft-sh/devpod/pkg/options/resolver"
+
 	provider2 "github.com/loft-sh/devpod/pkg/provider"
 	"github.com/loft-sh/devpod/pkg/types"
 	"github.com/loft-sh/log"
@@ -220,6 +221,7 @@ func ResolveAgentConfig(devConfig *config.Config, provider *provider2.ProviderCo
 	agentConfig.Kubernetes.NodeSelector = resolver.ResolveDefaultValue(agentConfig.Kubernetes.NodeSelector, options)
 	agentConfig.Kubernetes.BuildkitNodeSelector = resolver.ResolveDefaultValue(agentConfig.Kubernetes.BuildkitNodeSelector, options)
 	agentConfig.Kubernetes.Resources = resolver.ResolveDefaultValue(agentConfig.Kubernetes.Resources, options)
+	agentConfig.Kubernetes.Labels = resolver.ResolveDefaultValue(agentConfig.Kubernetes.Labels, options)
 	agentConfig.Kubernetes.HelperResources = resolver.ResolveDefaultValue(agentConfig.Kubernetes.HelperResources, options)
 	agentConfig.Kubernetes.BuildkitResources = resolver.ResolveDefaultValue(agentConfig.Kubernetes.BuildkitResources, options)
 	agentConfig.Kubernetes.CreateNamespace = types.StrBool(resolver.ResolveDefaultValue(string(agentConfig.Kubernetes.CreateNamespace), options))

@@ -153,6 +153,21 @@ func (k *kubernetesDriver) runContainer(
 		}
 	}
 
+	labels := map[string]string{}
+	if k.config.Labels != "" {
+		extraLabels, err := parseLabels(k.config.Labels)
+		if err != nil {
+			return fmt.Errorf("parse labels: %w", err)
+		}
+		for k, v := range extraLabels {
+			labels[k] = v
+		}
+	}
+	// make sure we don't overwrite the devpod labels
+	for k, v := range DevPodLabels {
+		labels[k] = v
+	}
+
 	// create the pod manifest
 	entrypoint, args := docker.GetContainerEntrypointAndArgs(mergedConfig, imageDetails)
 	pod := &corev1.Pod{
@@ -162,7 +177,7 @@ func (k *kubernetesDriver) runContainer(
 		},
 		ObjectMeta: metav1.ObjectMeta{
 			Name:   id,
-			Labels: DevPodLabels,
+			Labels: labels,
 		},
 		Spec: corev1.PodSpec{
 			ServiceAccountName: serviceAccount,

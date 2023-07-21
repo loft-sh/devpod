@@ -32,6 +32,7 @@ optionGroups:
       - NODE_SELECTOR
       - HELPER_RESOURCES
       - HELPER_IMAGE
+      - LABELS
     name: "Advanced Options"
 options:
   BUILD_REPOSITORY:
@@ -91,6 +92,9 @@ options:
   RESOURCES:
     description: The resources to use for the workspace container. E.g. requests.cpu=500m,limits.memory=5Gi,limits.gpu-vendor.example/example-gpu=1
     global: true
+  LABELS:
+    description: The labels to use for the workspace pod. E.g. devpod.sh/example=value,devpod.sh/example2=value2
+    global: true
   BUILDKIT_RESOURCES:
     description: The resources to use for the build pod. E.g. requests.cpu=500m,limits.memory=5Gi
     global: true
@@ -112,6 +116,7 @@ agent:
     helperImage: ${HELPER_IMAGE}
     helperResources: ${HELPER_RESOURCES}
     resources: ${RESOURCES}
+    labels: ${LABELS}
     nodeSelector: ${NODE_SELECTOR}
     buildkitImage: ${BUILDKIT_IMAGE}
     buildkitPrivileged: ${BUILDKIT_PRIVILEGED}
