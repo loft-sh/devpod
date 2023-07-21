@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"io"
 	"os"
-	"os/exec"
 	"path"
 	"path/filepath"
 	"regexp"
@@ -109,7 +108,14 @@ func processOCIFeature(id string, log log.Logger) (string, error) {
 	featureExtractedFolder := filepath.Join(featureFolder, "extracted")
 	_, err := os.Stat(featureExtractedFolder)
 	if err == nil {
-		return featureExtractedFolder, nil
+		// make sure feature.json is there as well
+		_, err = os.Stat(filepath.Join(featureExtractedFolder, config.DEVCONTAINER_FEATURE_FILE_NAME))
+		if err == nil {
+			return featureExtractedFolder, nil
+		} else {
+			log.Debugf("Feature folder already exists but seems to be empty")
+			_ = os.RemoveAll(featureFolder)
+		}
 	}
 
 	ref, err := name.ParseReference(id)
@@ -137,6 +143,7 @@ func processOCIFeature(id string, log log.Logger) (string, error) {
 	log.Debugf("Extract feature into %s", featureExtractedFolder)
 	err = extract.Extract(file, featureExtractedFolder)
 	if err != nil {
+		_ = os.RemoveAll(featureExtractedFolder)
 		return "", err
 	}
 
@@ -255,11 +262,5 @@ func downloadFeatureFromURL(url string, destFile string, log log.Logger) error {
 
 func getFeaturesTempFolder(id string) string {
 	hashedID := hash.String(id)[:10]
-	tempDir := os.TempDir()
-	out, err := exec.Command("id", "-u", "-n").Output()
-	if err != nil || len(out) == 0 {
-		return filepath.Join(tempDir, "devpod", "features", hashedID)
-	}
-
-	return filepath.Join(tempDir, "devpod-"+strings.TrimSpace(string(out)), "features", hashedID)
+	return filepath.Join(os.TempDir(), "devpod", "features", hashedID)
 }
