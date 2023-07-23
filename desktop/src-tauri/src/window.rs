@@ -94,6 +94,23 @@ impl WindowHelper {
         msg_send![class!(NSRunningApplication), currentApplication]
     }
 
+    unsafe fn is_current_app_active() -> bool {
+        let current_app = Self::get_current_application();
+        #[cfg(not(target_arch = "aarch64"))]
+        {
+            let is_active: BOOL = msg_send![current_app, isActive];
+
+            return is_active == cocoa::base::YES;
+        }
+
+        #[cfg(target_arch = "aarch64")]
+        {
+            let is_active: BOOL = msg_send![current_app, isActive];
+
+            return is_active;
+        }
+    }
+
     pub fn set_dock_icon_visibility(&self, visible: bool) {
         unsafe {
             let psn = ProcessSerialNumber {
@@ -112,7 +129,7 @@ impl WindowHelper {
                 return;
             }
 
-            let is_active: BOOL = msg_send![Self::get_current_application(), isActive];
+            let is_active = Self::is_current_app_active();
             if is_active {
                 let application_id = NSString::alloc(nil).init_str("com.apple.dock");
                 let running_applications: id = msg_send![
@@ -127,7 +144,6 @@ impl WindowHelper {
                     ];
                     break;
                 }
-                let is_active: BOOL = msg_send![Self::get_current_application(), isActive];
 
                 Queue::main().exec_after(Duration::from_millis(1), move || {
                     let result = TransformProcessType(
