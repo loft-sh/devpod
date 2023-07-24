@@ -27,6 +27,11 @@ func (r *Runner) Build(ctx context.Context, options config.BuildOptions) (string
 		return buildInfo.ImageName, nil
 	}
 
+	// should we push?
+	if options.SkipPush {
+		return prebuildImage, nil
+	}
+
 	// check if we can push image
 	err = image.CheckPushPermissions(prebuildImage)
 	if err != nil {

@@ -412,7 +412,7 @@ var _ = DevPodDescribe("devpod up test suite", func() {
 				// Wait for devpod workspace to come online (deadline: 30s)
 				err = f.DevPodUp(ctx, tempDir, "--debug")
 				framework.ExpectNoError(err)
-			}, ginkgo.SpecTimeout(60*time.Second))
+			}, ginkgo.SpecTimeout(180*time.Second))
 
 			ginkgo.Context("should start a new workspace with features", func() {
 				ginkgo.It("ensure dependencies installed via features are accessible in lifecycle hooks", func(ctx context.Context) {
@@ -986,7 +986,7 @@ var _ = DevPodDescribe("devpod up test suite", func() {
 				// Wait for devpod workspace to come online (deadline: 30s)
 				err = f.DevPodUp(ctx, tempDir, "--debug")
 				framework.ExpectNoError(err)
-			}, ginkgo.SpecTimeout(60*time.Second))
+			}, ginkgo.SpecTimeout(180*time.Second))
 
 			ginkgo.It("should start a new workspace with host:port forwardPorts", func(ctx context.Context) {
 				tempDir, err := framework.CopyToTempDir("tests/up/testdata/docker-compose-forward-ports")

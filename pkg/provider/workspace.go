@@ -135,6 +135,7 @@ type CLIOptions struct {
 
 	// build options
 	Repository string   `json:"repository,omitempty"`
+	SkipPush   bool     `json:"skipPush,omitempty"`
 	Platform   []string `json:"platform,omitempty"`
 }
 
