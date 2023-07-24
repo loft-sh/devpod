@@ -99,6 +99,16 @@ func (k *kubernetesDriver) runContainer(
 		return fmt.Errorf("workspace mount target is empty")
 	}
 
+	// Read podTemplate
+	var podTemplate *corev1.Pod
+	if len(k.config.PodManifestTemplate) > 0 {
+		podManifestTemplatePath := filepath.Join(mount.Source, k.config.PodManifestTemplate)
+		podTemplate, err = getPodTemplate(podManifestTemplatePath)
+		if err != nil {
+			return err
+		}
+	}
+
 	// get init container
 	var initContainer []corev1.Container
 	if initialize {
@@ -155,6 +165,9 @@ func (k *kubernetesDriver) runContainer(
 
 	labels := map[string]string{}
 	if k.config.Labels != "" {
+		for k, v := range podTemplate.ObjectMeta.Labels {
+			labels[k] = v
+		}
 		extraLabels, err := parseLabels(k.config.Labels)
 		if err != nil {
 			return fmt.Errorf("parse labels: %w", err)
@@ -171,29 +184,12 @@ func (k *kubernetesDriver) runContainer(
 	// create the pod manifest
 	entrypoint, args := docker.GetContainerEntrypointAndArgs(mergedConfig, imageDetails)
 
-	var podTemplate *corev1.Pod
-	if len(k.config.PodManifestTemplate) > 0 {
-		podManifestTemplatePath := filepath.Join(mount.Source, k.config.PodManifestTemplate)
-		podTemplate, err = getPodTemplate(podManifestTemplatePath)
-		if err != nil {
-			return err
-		}
-	}
-
 	var pod *corev1.Pod
 	if podTemplate != nil {
 		pod = podTemplate
 		pod.ObjectMeta.Name = id
 		pod.ObjectMeta.Namespace = ""
-		pod.ObjectMeta.Labels = map[string]string{}
-		if len(podTemplate.ObjectMeta.Labels) > 0 {
-			for k, v := range podTemplate.ObjectMeta.Labels {
-				if _, ok := DevPodLabels[k]; !ok {
-					// make sure we don't overwrite the devpod labels
-					labels[k] = v
-				}
-			}
-		}
+		pod.ObjectMeta.Labels = labels
 		pod.Spec.ServiceAccountName = serviceAccount
 
 		pod.Spec.InitContainers = append(initContainer, podTemplate.Spec.InitContainers...)
@@ -209,6 +205,9 @@ func (k *kubernetesDriver) runContainer(
 			RunAsUser:    &[]int64{0}[0],
 			RunAsGroup:   &[]int64{0}[0],
 			RunAsNonRoot: &[]bool{false}[0],
+		}
+		if k.config.Resources != "" {
+			pod.Spec.Containers[0].Resources = parseResources(k.config.Resources, k.Log)
 		}
 		pod.Spec.RestartPolicy = corev1.RestartPolicyNever
 		pod.Spec.Volumes = append(
