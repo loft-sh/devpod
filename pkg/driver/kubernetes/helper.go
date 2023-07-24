@@ -2,7 +2,7 @@ package kubernetes
 
 import (
 	"fmt"
-	"io/ioutil"
+	"os"
 	"strings"
 
 	"github.com/loft-sh/log"
@@ -59,21 +59,20 @@ func parseResources(resourceString string, log log.Logger) corev1.ResourceRequir
 }
 
 func getPodTemplate(manifestFilePath string) (*corev1.Pod, error) {
-	body, err := ioutil.ReadFile(manifestFilePath)
+	body, err := os.ReadFile(manifestFilePath)
 	if err != nil {
 		return nil, err
 	}
 	decode := scheme.Codecs.UniversalDeserializer().Decode
-	obj, _, err := decode([]byte(body), nil, nil)
+	obj, _, err := decode(body, nil, nil)
 	if err != nil {
 		return nil, err
 	}
-	switch obj.(type) {
+	switch resource := obj.(type) {
 	case *corev1.Pod:
-		pod := obj.(*corev1.Pod)
-		return pod, nil
+		return resource, nil
 	}
-	return nil, fmt.Errorf("No pod manifest found in file %s", manifestFilePath)
+	return nil, fmt.Errorf("no pod manifest found in file %s", manifestFilePath)
 }
 
 func parseLabels(str string) (map[string]string, error) {
