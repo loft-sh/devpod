@@ -164,10 +164,13 @@ func (k *kubernetesDriver) runContainer(
 	}
 
 	labels := map[string]string{}
-	if k.config.Labels != "" {
+	if podTemplate != nil && podTemplate.ObjectMeta.Labels != nil {
 		for k, v := range podTemplate.ObjectMeta.Labels {
 			labels[k] = v
 		}
+	}
+
+	if k.config.Labels != "" {
 		extraLabels, err := parseLabels(k.config.Labels)
 		if err != nil {
 			return fmt.Errorf("parse labels: %w", err)
