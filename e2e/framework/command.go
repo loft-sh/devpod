@@ -76,6 +76,17 @@ func (f *Framework) DevPodUpWithIDE(ctx context.Context, additionalArgs ...strin
 	return nil
 }
 
+func (f *Framework) DevPodBuild(ctx context.Context, additionalArgs ...string) error {
+	upArgs := []string{"build", "--debug"}
+	upArgs = append(upArgs, additionalArgs...)
+
+	_, _, err := f.ExecCommandCapture(ctx, upArgs)
+	if err != nil {
+		return fmt.Errorf("devpod build failed: %s", err.Error())
+	}
+	return nil
+}
+
 func (f *Framework) DevPodUp(ctx context.Context, additionalArgs ...string) error {
 	upArgs := []string{"up", "--debug", "--ide", "none"}
 	upArgs = append(upArgs, additionalArgs...)
