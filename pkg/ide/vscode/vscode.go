@@ -1,17 +1,16 @@
 package vscode
 
 import (
+	"context"
 	"fmt"
-	"io"
 	"os"
 	"os/exec"
 	"path/filepath"
-	"runtime"
+	"time"
 
 	"github.com/loft-sh/devpod/pkg/command"
 	"github.com/loft-sh/devpod/pkg/config"
 	copy2 "github.com/loft-sh/devpod/pkg/copy"
-	devpodhttp "github.com/loft-sh/devpod/pkg/http"
 	"github.com/loft-sh/devpod/pkg/ide"
 	"github.com/loft-sh/log"
 	"github.com/mitchellh/go-homedir"
@@ -20,9 +19,7 @@ import (
 )
 
 const (
-	DownloadAmd64Option = "DOWNLOAD_AMD64"
-	DownloadArm64Option = "DOWNLOAD_ARM64"
-	OpenNewWindow       = "OPEN_NEW_WINDOW"
+	OpenNewWindow = "OPEN_NEW_WINDOW"
 )
 
 var Options = ide.Options{
@@ -34,16 +31,6 @@ var Options = ide.Options{
 			"false",
 			"true",
 		},
-	},
-	DownloadArm64Option: {
-		Name:        DownloadArm64Option,
-		Description: "The download url for the arm64 vscode server binary",
-		Default:     "https://aka.ms/vscode-server-launcher/aarch64-unknown-linux-gnu",
-	},
-	DownloadAmd64Option: {
-		Name:        DownloadAmd64Option,
-		Description: "The download url for the amd64 vscode server binary",
-		Default:     "https://aka.ms/vscode-server-launcher/x86_64-unknown-linux-gnu",
 	},
 }
 
@@ -70,7 +57,37 @@ func (o *VsCodeServer) InstallExtensions() error {
 	if err != nil {
 		return err
 	}
-	binPath := filepath.Join(location, "bin", "code-server")
+
+	// wait until vscode server is installed
+	binPath := ""
+	binDir := filepath.Join(location, "bin")
+	for {
+		entries, err := os.ReadDir(binDir)
+		if err != nil {
+			o.log.Debugf("Read dir %s: %v", binDir, err)
+			o.log.Info("Wait until vscode-server is installed...")
+			time.Sleep(time.Second * 3)
+			continue
+		} else if len(entries) == 0 {
+			o.log.Debugf("Read dir %s: install dir is missing", binDir)
+			o.log.Info("Wait until vscode-server is installed...")
+			time.Sleep(time.Second * 3)
+			continue
+		}
+
+		binPath = filepath.Join(binDir, entries[0].Name(), "bin", "code-server")
+		ctx, cancel := context.WithTimeout(context.Background(), time.Second*4)
+		out, err := exec.CommandContext(ctx, binPath, "--help").CombinedOutput()
+		cancel()
+		if err != nil {
+			o.log.Infof("Execute %s: %v", binPath, command.WrapCommandError(out, err))
+			o.log.Info("Wait until vscode-server is installed...")
+			time.Sleep(time.Second * 3)
+			continue
+		}
+
+		break
+	}
 
 	// start log writer
 	writer := o.log.Writer(logrus.InfoLevel, false)
@@ -105,22 +122,6 @@ func (o *VsCodeServer) Install() error {
 		return err
 	}
 
-	// is installed
-	_, err = os.Stat(filepath.Join(location, "bin", "code-server"))
-	if err == nil {
-		return nil
-	}
-
-	// download
-	o.log.Info("Download vscode...")
-	binPath := filepath.Join(location, "bin", "code-server")
-	err = o.downloadVSCode(binPath)
-	if err != nil {
-		_ = os.RemoveAll(location)
-		return err
-	}
-	o.log.Info("Successfully downloaded vscode")
-
 	// set settings
 	settingsDir := filepath.Join(location, "data", "Machine")
 	err = os.MkdirAll(settingsDir, 0777)
@@ -128,7 +129,14 @@ func (o *VsCodeServer) Install() error {
 		return err
 	}
 
-	err = os.WriteFile(filepath.Join(settingsDir, "settings.json"), []byte(o.settings), 0666)
+	// is installed
+	settingsFile := filepath.Join(settingsDir, "settings.json")
+	_, err = os.Stat(settingsFile)
+	if err == nil {
+		return nil
+	}
+
+	err = os.WriteFile(settingsFile, []byte(o.settings), 0666)
 	if err != nil {
 		return err
 	}
@@ -139,46 +147,6 @@ func (o *VsCodeServer) Install() error {
 		if err != nil {
 			return errors.Wrap(err, "chown")
 		}
-	}
-
-	return nil
-}
-
-func (o *VsCodeServer) downloadVSCode(binPath string) error {
-	err := os.MkdirAll(filepath.Dir(binPath), 0777)
-	if err != nil {
-		return err
-	}
-
-	// check what release we need to download
-	url := Options.GetValue(o.values, DownloadAmd64Option)
-	if runtime.GOARCH == "arm64" {
-		url = Options.GetValue(o.values, DownloadArm64Option)
-	}
-
-	// download binary
-	resp, err := devpodhttp.GetHTTPClient().Get(url)
-	if err != nil {
-		return err
-	}
-	defer resp.Body.Close()
-
-	outFile, err := os.Create(binPath)
-	if err != nil {
-		return err
-	}
-	defer outFile.Close()
-
-	// Write the body to file
-	_, err = io.Copy(outFile, resp.Body)
-	if err != nil {
-		return err
-	}
-
-	// make file executable
-	err = os.Chmod(binPath, 0777)
-	if err != nil {
-		return err
 	}
 
 	return nil
