@@ -19,6 +19,7 @@ import (
 )
 
 const DevContainerInfoAnnotation = "devpod.sh/info"
+const DevContainerName = "devpod"
 
 var DevPodLabels = map[string]string{
 	"devpod.sh/created": "true",
@@ -99,11 +100,19 @@ func (k *kubernetesDriver) runContainer(
 		return fmt.Errorf("workspace mount target is empty")
 	}
 
-	// Read podTemplate
-	var podTemplate *corev1.Pod
+	// read pod template
+	pod := &corev1.Pod{
+		TypeMeta: metav1.TypeMeta{
+			Kind:       "Pod",
+			APIVersion: corev1.SchemeGroupVersion.String(),
+		},
+	}
 	if len(k.config.PodManifestTemplate) > 0 {
-		podManifestTemplatePath := filepath.Join(mount.Source, k.config.PodManifestTemplate)
-		podTemplate, err = getPodTemplate(podManifestTemplatePath)
+		podManifestTemplatePath, err := filepath.Abs(k.config.PodManifestTemplate)
+		if err != nil {
+			return err
+		}
+		pod, err = getPodTemplate(podManifestTemplatePath)
 		if err != nil {
 			return err
 		}
@@ -163,122 +172,31 @@ func (k *kubernetesDriver) runContainer(
 		}
 	}
 
-	labels := map[string]string{}
-	if podTemplate != nil && podTemplate.ObjectMeta.Labels != nil {
-		for k, v := range podTemplate.ObjectMeta.Labels {
-			labels[k] = v
-		}
+	// labels
+	labels, err := getLabels(pod, k.config.Labels)
+	if err != nil {
+		return err
 	}
 
-	if k.config.Labels != "" {
-		extraLabels, err := parseLabels(k.config.Labels)
-		if err != nil {
-			return fmt.Errorf("parse labels: %w", err)
-		}
-		for k, v := range extraLabels {
-			labels[k] = v
-		}
+	// node selector
+	nodeSelector, err := getNodeSelector(pod, k.config.NodeSelector)
+	if err != nil {
+		return err
 	}
-	// make sure we don't overwrite the devpod labels
-	for k, v := range DevPodLabels {
-		labels[k] = v
-	}
+
+	entrypoint, args := docker.GetContainerEntrypointAndArgs(mergedConfig, imageDetails)
+	resources := parseResources(k.config.Resources, k.Log)
 
 	// create the pod manifest
-	entrypoint, args := docker.GetContainerEntrypointAndArgs(mergedConfig, imageDetails)
+	pod.ObjectMeta.Name = id
+	pod.ObjectMeta.Labels = labels
 
-	var pod *corev1.Pod
-	if podTemplate != nil {
-		pod = podTemplate
-		pod.ObjectMeta.Name = id
-		pod.ObjectMeta.Namespace = ""
-		pod.ObjectMeta.Labels = labels
-		pod.Spec.ServiceAccountName = serviceAccount
-
-		pod.Spec.InitContainers = append(initContainer, podTemplate.Spec.InitContainers...)
-		pod.Spec.Containers[0].Name = "devpod"
-		pod.Spec.Containers[0].Image = imageName
-		pod.Spec.Containers[0].Command = []string{entrypoint}
-		pod.Spec.Containers[0].Args = args
-		pod.Spec.Containers[0].Env = append(envVars, podTemplate.Spec.Containers[0].Env...)
-		pod.Spec.Containers[0].VolumeMounts = append(volumeMounts, podTemplate.Spec.Containers[0].VolumeMounts...)
-		pod.Spec.Containers[0].SecurityContext = &corev1.SecurityContext{
-			Capabilities: capabilities,
-			Privileged:   mergedConfig.Privileged,
-			RunAsUser:    &[]int64{0}[0],
-			RunAsGroup:   &[]int64{0}[0],
-			RunAsNonRoot: &[]bool{false}[0],
-		}
-		if k.config.Resources != "" {
-			pod.Spec.Containers[0].Resources = parseResources(k.config.Resources, k.Log)
-		}
-		pod.Spec.RestartPolicy = corev1.RestartPolicyNever
-		pod.Spec.Volumes = append(
-			[]corev1.Volume{
-				{
-					Name: "devpod",
-					VolumeSource: corev1.VolumeSource{
-						PersistentVolumeClaim: &corev1.PersistentVolumeClaimVolumeSource{
-							ClaimName: id,
-						},
-					},
-				},
-			},
-			podTemplate.Spec.Volumes...,
-		)
-	} else {
-		pod = &corev1.Pod{
-			TypeMeta: metav1.TypeMeta{
-				Kind:       "Pod",
-				APIVersion: corev1.SchemeGroupVersion.String(),
-			},
-			ObjectMeta: metav1.ObjectMeta{
-				Name:   id,
-				Labels: labels,
-			},
-			Spec: corev1.PodSpec{
-				ServiceAccountName: serviceAccount,
-				InitContainers:     initContainer,
-				Containers: []corev1.Container{
-					{
-						Name:         "devpod",
-						Image:        imageName,
-						Command:      []string{entrypoint},
-						Resources:    parseResources(k.config.Resources, k.Log),
-						Args:         args,
-						Env:          envVars,
-						VolumeMounts: volumeMounts,
-						SecurityContext: &corev1.SecurityContext{
-							Capabilities: capabilities,
-							Privileged:   mergedConfig.Privileged,
-							RunAsUser:    &[]int64{0}[0],
-							RunAsGroup:   &[]int64{0}[0],
-							RunAsNonRoot: &[]bool{false}[0],
-						},
-					},
-				},
-				RestartPolicy: corev1.RestartPolicyNever,
-				Volumes: []corev1.Volume{
-					{
-						Name: "devpod",
-						VolumeSource: corev1.VolumeSource{
-							PersistentVolumeClaim: &corev1.PersistentVolumeClaimVolumeSource{
-								ClaimName: id,
-							},
-						},
-					},
-				},
-			},
-		}
-	}
-
-	// parse node selector
-	if k.config.NodeSelector != "" {
-		pod.Spec.NodeSelector, err = parseLabels(k.config.NodeSelector)
-		if err != nil {
-			return fmt.Errorf("parsing node selector: %w", err)
-		}
-	}
+	pod.Spec.ServiceAccountName = serviceAccount
+	pod.Spec.NodeSelector = nodeSelector
+	pod.Spec.InitContainers = append(initContainer, pod.Spec.InitContainers...)
+	pod.Spec.Containers = getContainers(pod, imageName, entrypoint, args, envVars, volumeMounts, capabilities, resources, mergedConfig.Privileged)
+	pod.Spec.Volumes = getVolumes(pod, id)
+	pod.Spec.RestartPolicy = corev1.RestartPolicyNever
 
 	// marshal the pod
 	podRaw, err := json.Marshal(pod)
@@ -347,6 +265,64 @@ func transformPath(source string) (string, error) {
 	return source, nil
 }
 
+func getContainers(pod *corev1.Pod, imageName, entrypoint string, args []string, envVars []corev1.EnvVar, volumeMounts []corev1.VolumeMount, capabilities *corev1.Capabilities, resources corev1.ResourceRequirements, privileged *bool) []corev1.Container {
+	devPodContainer := corev1.Container{
+		Name:         DevContainerName,
+		Image:        imageName,
+		Command:      []string{entrypoint},
+		Args:         args,
+		Env:          envVars,
+		Resources:    resources,
+		VolumeMounts: volumeMounts,
+		SecurityContext: &corev1.SecurityContext{
+			Capabilities: capabilities,
+			Privileged:   privileged,
+			RunAsUser:    &[]int64{0}[0],
+			RunAsGroup:   &[]int64{0}[0],
+			RunAsNonRoot: &[]bool{false}[0],
+		},
+	}
+
+	// merge with existing container if it exists
+	var existingDevPodContainer *corev1.Container
+	retContainers := []corev1.Container{}
+	retContainers = append(retContainers, devPodContainer)
+	if pod != nil {
+		for i, container := range pod.Spec.Containers {
+			if container.Name == DevContainerName {
+				existingDevPodContainer = &pod.Spec.Containers[i]
+			} else {
+				retContainers = append(retContainers, container)
+			}
+		}
+	}
+	if existingDevPodContainer != nil {
+		devPodContainer.Env = append(existingDevPodContainer.Env, devPodContainer.Env...)
+		devPodContainer.VolumeMounts = append(existingDevPodContainer.VolumeMounts, devPodContainer.VolumeMounts...)
+	}
+
+	return retContainers
+}
+
+func getVolumes(pod *corev1.Pod, id string) []corev1.Volume {
+	volumes := []corev1.Volume{
+		{
+			Name: "devpod",
+			VolumeSource: corev1.VolumeSource{
+				PersistentVolumeClaim: &corev1.PersistentVolumeClaimVolumeSource{
+					ClaimName: id,
+				},
+			},
+		},
+	}
+
+	if pod.Spec.Volumes != nil {
+		volumes = append(volumes, pod.Spec.Volumes...)
+	}
+
+	return volumes
+}
+
 func getVolumeMount(idx int, mount *config.Mount) corev1.VolumeMount {
 	subPath := strconv.Itoa(idx)
 	if mount.Type == "volume" && mount.Source != "" {
@@ -358,6 +334,51 @@ func getVolumeMount(idx int, mount *config.Mount) corev1.VolumeMount {
 		MountPath: mount.Target,
 		SubPath:   fmt.Sprintf("devpod/%s", subPath),
 	}
+}
+
+func getLabels(pod *corev1.Pod, rawLabels string) (map[string]string, error) {
+	labels := map[string]string{}
+	if pod.ObjectMeta.Labels != nil {
+		for k, v := range pod.ObjectMeta.Labels {
+			labels[k] = v
+		}
+	}
+	if rawLabels != "" {
+		extraLabels, err := parseLabels(rawLabels)
+		if err != nil {
+			return nil, fmt.Errorf("parse labels: %w", err)
+		}
+		for k, v := range extraLabels {
+			labels[k] = v
+		}
+	}
+	// make sure we don't overwrite the devpod labels
+	for k, v := range DevPodLabels {
+		labels[k] = v
+	}
+
+	return labels, nil
+}
+
+func getNodeSelector(pod *corev1.Pod, rawNodeSelector string) (map[string]string, error) {
+	nodeSelector := map[string]string{}
+	if pod.Spec.NodeSelector != nil {
+		for k, v := range pod.Spec.NodeSelector {
+			nodeSelector[k] = v
+		}
+	}
+
+	if rawNodeSelector != "" {
+		selector, err := parseLabels(rawNodeSelector)
+		if err != nil {
+			return nil, fmt.Errorf("parsing node selector: %w", err)
+		}
+		for k, v := range selector {
+			nodeSelector[k] = v
+		}
+	}
+
+	return nodeSelector, nil
 }
 
 func (k *kubernetesDriver) StartDevContainer(ctx context.Context, id string, labels []string) error {

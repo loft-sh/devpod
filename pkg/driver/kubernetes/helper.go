@@ -5,10 +5,11 @@ import (
 	"os"
 	"strings"
 
+	"github.com/ghodss/yaml"
 	"github.com/loft-sh/log"
+	"github.com/pkg/errors"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
-	"k8s.io/client-go/kubernetes/scheme"
 )
 
 const (
@@ -63,16 +64,13 @@ func getPodTemplate(manifestFilePath string) (*corev1.Pod, error) {
 	if err != nil {
 		return nil, err
 	}
-	decode := scheme.Codecs.UniversalDeserializer().Decode
-	obj, _, err := decode(body, nil, nil)
+	pod := &corev1.Pod{}
+	err = yaml.Unmarshal(body, pod)
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, "unmarshal pod template")
 	}
-	switch resource := obj.(type) {
-	case *corev1.Pod:
-		return resource, nil
-	}
-	return nil, fmt.Errorf("no pod manifest found in file %s", manifestFilePath)
+
+	return pod, nil
 }
 
 func parseLabels(str string) (map[string]string, error) {
