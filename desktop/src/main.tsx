@@ -10,11 +10,8 @@ import { DevPodProvider, SettingsProvider } from "./contexts"
 import { router } from "./routes"
 import { ThemeProvider } from "./Theme"
 import { ColorModeScript } from "@chakra-ui/react"
-import { client } from "./client"
 
 dayjs.extend(relativeTime)
-client.subscribe("event", console.warn)
-
 
 const queryClient = new QueryClient({
   logger: {
