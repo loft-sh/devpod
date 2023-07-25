@@ -348,6 +348,117 @@ var _ = DevPodDescribe("devpod up test suite", func() {
 				err = f.DevPodUp(ctx, tempDir)
 				framework.ExpectNoError(err)
 			}, ginkgo.SpecTimeout(60*time.Second))
+			ginkgo.It("should start a new workspace with non-root workspace owner and default remoteUser", func(ctx context.Context) {
+				tempDir, err := framework.CopyToTempDir("tests/up/testdata/docker")
+				framework.ExpectNoError(err)
+				ginkgo.DeferCleanup(framework.CleanupTempDir, initialDir, tempDir)
+
+				hostUID, hostGID := 1001, 1001
+
+				err = os.Lchown(tempDir, hostUID, hostGID)
+				framework.ExpectNoError(err)
+
+				f := framework.NewDefaultFramework(initialDir + "/bin")
+
+				_ = f.DevPodProviderDelete(ctx, "docker")
+				err = f.DevPodProviderAdd(ctx, "docker")
+				framework.ExpectNoError(err)
+				err = f.DevPodProviderUse(context.Background(), "docker")
+				framework.ExpectNoError(err)
+
+				ginkgo.DeferCleanup(f.DevPodWorkspaceDelete, context.Background(), tempDir)
+
+				// Wait for devpod workspace to come online (deadline: 30s)
+				err = f.DevPodUp(ctx, tempDir)
+				framework.ExpectNoError(err)
+
+				workspace, err := f.FindWorkspace(ctx, tempDir)
+				framework.ExpectNoError(err)
+
+				projectName := workspace.ID
+
+				containerUID, _, err := f.ExecCommandCapture(ctx, []string{"ssh", "--command", "id -u | xargs echo -n", projectName})
+				framework.ExpectNoError(err)
+				gomega.Expect(containerUID).To(gomega.Equal(fmt.Sprint(hostUID)))
+
+				containerGID, _, err := f.ExecCommandCapture(ctx, []string{"ssh", "--command", "id -g | xargs echo -n", projectName})
+				framework.ExpectNoError(err)
+				gomega.Expect(containerGID).To(gomega.Equal(fmt.Sprint(hostGID)))
+			}, ginkgo.SpecTimeout(60*time.Second))
+			ginkgo.It("should start a new workspace with non-root workspace owner and root remoteUser", func(ctx context.Context) {
+				tempDir, err := framework.CopyToTempDir("tests/up/testdata/docker-root")
+				framework.ExpectNoError(err)
+				ginkgo.DeferCleanup(framework.CleanupTempDir, initialDir, tempDir)
+
+				hostUID, hostGID := 1001, 1001
+
+				err = os.Lchown(tempDir, hostUID, hostGID)
+				framework.ExpectNoError(err)
+
+				f := framework.NewDefaultFramework(initialDir + "/bin")
+
+				_ = f.DevPodProviderDelete(ctx, "docker")
+				err = f.DevPodProviderAdd(ctx, "docker")
+				framework.ExpectNoError(err)
+				err = f.DevPodProviderUse(context.Background(), "docker")
+				framework.ExpectNoError(err)
+
+				ginkgo.DeferCleanup(f.DevPodWorkspaceDelete, context.Background(), tempDir)
+
+				// Wait for devpod workspace to come online (deadline: 30s)
+				err = f.DevPodUp(ctx, tempDir)
+				framework.ExpectNoError(err)
+
+				workspace, err := f.FindWorkspace(ctx, tempDir)
+				framework.ExpectNoError(err)
+
+				projectName := workspace.ID
+
+				containerUID, _, err := f.ExecCommandCapture(ctx, []string{"ssh", "--command", "id -u | xargs echo -n", projectName})
+				framework.ExpectNoError(err)
+				gomega.Expect(containerUID).To(gomega.Equal(fmt.Sprint(0)))
+
+				containerGID, _, err := f.ExecCommandCapture(ctx, []string{"ssh", "--command", "id -g | xargs echo -n", projectName})
+				framework.ExpectNoError(err)
+				gomega.Expect(containerGID).To(gomega.Equal(fmt.Sprint(0)))
+			}, ginkgo.SpecTimeout(60*time.Second))
+			ginkgo.It("should start a new workspace with non-root workspace owner and remoteUser with custom uid", func(ctx context.Context) {
+				tempDir, err := framework.CopyToTempDir("tests/up/testdata/docker-dockerfile-customuser")
+				framework.ExpectNoError(err)
+				ginkgo.DeferCleanup(framework.CleanupTempDir, initialDir, tempDir)
+
+				hostUID, hostGID := 1000, 1000
+
+				err = os.Lchown(tempDir, hostUID, hostGID)
+				framework.ExpectNoError(err)
+
+				f := framework.NewDefaultFramework(initialDir + "/bin")
+
+				_ = f.DevPodProviderDelete(ctx, "docker")
+				err = f.DevPodProviderAdd(ctx, "docker")
+				framework.ExpectNoError(err)
+				err = f.DevPodProviderUse(context.Background(), "docker")
+				framework.ExpectNoError(err)
+
+				ginkgo.DeferCleanup(f.DevPodWorkspaceDelete, context.Background(), tempDir)
+
+				// Wait for devpod workspace to come online (deadline: 30s)
+				err = f.DevPodUp(ctx, tempDir)
+				framework.ExpectNoError(err)
+
+				workspace, err := f.FindWorkspace(ctx, tempDir)
+				framework.ExpectNoError(err)
+
+				projectName := workspace.ID
+
+				containerUID, _, err := f.ExecCommandCapture(ctx, []string{"ssh", "--command", "id -u | xargs echo -n", projectName})
+				framework.ExpectNoError(err)
+				gomega.Expect(containerUID).To(gomega.Equal(fmt.Sprint(hostUID)))
+
+				containerGID, _, err := f.ExecCommandCapture(ctx, []string{"ssh", "--command", "id -g | xargs echo -n", projectName})
+				framework.ExpectNoError(err)
+				gomega.Expect(containerGID).To(gomega.Equal(fmt.Sprint(hostGID)))
+			}, ginkgo.SpecTimeout(60*time.Second))
 			ginkgo.It("should start a new workspace and substitute devcontainer.json variables", func(ctx context.Context) {
 				tempDir, err := framework.CopyToTempDir("tests/up/testdata/docker-variables")
 				framework.ExpectNoError(err)

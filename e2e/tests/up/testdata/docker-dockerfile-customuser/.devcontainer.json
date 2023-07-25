@@ -1,0 +1,6 @@
+{
+	"name": "Go",
+	"build": {
+		"dockerfile": "Dockerfile"
+	},
+}
