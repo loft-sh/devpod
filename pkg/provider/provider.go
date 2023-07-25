@@ -187,6 +187,9 @@ type ProviderKubernetesDriverConfig struct {
 
 	// PVCAccessMode is the access mode of the PVC. ie RWO,ROX,RWX,RWOP
 	PVCAccessMode string `json:"pvcAccessMode,omitempty"`
+
+	// PodManifestTemplate is the path of the pod manifest template file
+	PodManifestTemplate string `json:"podManifestTemplate,omitempty"`
 }
 
 type ProviderDockerDriverConfig struct {

@@ -2,11 +2,13 @@ package kubernetes
 
 import (
 	"fmt"
+	"os"
 	"strings"
 
 	"github.com/loft-sh/log"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
+	"k8s.io/client-go/kubernetes/scheme"
 )
 
 const (
@@ -54,6 +56,23 @@ func parseResources(resourceString string, log log.Logger) corev1.ResourceRequir
 		Limits:   limits,
 		Requests: requests,
 	}
+}
+
+func getPodTemplate(manifestFilePath string) (*corev1.Pod, error) {
+	body, err := os.ReadFile(manifestFilePath)
+	if err != nil {
+		return nil, err
+	}
+	decode := scheme.Codecs.UniversalDeserializer().Decode
+	obj, _, err := decode(body, nil, nil)
+	if err != nil {
+		return nil, err
+	}
+	switch resource := obj.(type) {
+	case *corev1.Pod:
+		return resource, nil
+	}
+	return nil, fmt.Errorf("no pod manifest found in file %s", manifestFilePath)
 }
 
 func parseLabels(str string) (map[string]string, error) {
