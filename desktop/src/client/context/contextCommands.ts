@@ -42,7 +42,6 @@ export class ContextCommands {
       DEVPOD_COMMAND_OPTIONS,
       DEVPOD_FLAG_JSON_OUTPUT,
     ]).run()
-    console.log(result)
     if (result.err) {
       return result
     }

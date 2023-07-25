@@ -57,9 +57,16 @@ export function useAppReady() {
       isReadyLockRef.current = true
       ;(async () => {
         const unsubscribe = await client.subscribe("event", async (event) => {
+          console.log(event)
           await appWindow.setFocus()
           if (event.type === "ShowDashboard") {
             navigate(Routes.WORKSPACES)
+
+            return
+          }
+
+          if (event.type === "ShowToast") {
+            console.log(event)
 
             return
           }
@@ -160,7 +167,7 @@ export function useAppReady() {
         return unsubscribe
       })()
     }
-  }, [navigate, viewID])
+  }, [])
 
   return { modal }
 }

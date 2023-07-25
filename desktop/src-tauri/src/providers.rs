@@ -33,7 +33,9 @@ pub fn check_dangling_provider(app: &AppHandle) {
                 for dangling_provider in dangling_providers.iter() {
                     if DeleteProviderCommand::new(dangling_provider.clone())
                         .exec()
-                        .is_ok() && store.delete(dangling_provider_key).is_ok() {
+                        .is_ok()
+                        && store.delete(dangling_provider_key).is_ok()
+                    {
                         info!(
                             "Successfully deleted dangling provider: {}",
                             dangling_provider
@@ -41,8 +43,6 @@ pub fn check_dangling_provider(app: &AppHandle) {
                         let _ = store.save();
                     }
                 }
-
-                
             });
 
         Ok(())

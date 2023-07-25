@@ -48,6 +48,7 @@ enum UiMessage {
     Ready,
     ExitRequested,
     ShowDashboard,
+    ShowToast(String),
     OpenWorkspace(OpenWorkspaceMsg),
     OpenWorkspaceFailed(custom_protocol::ParseError),
 }
@@ -139,6 +140,16 @@ fn main() -> anyhow::Result<()> {
                             }
                         }
                         UiMessage::ShowDashboard => {
+                            if is_ready {
+                                app_handle.get_window("main").map(|w| w.show());
+                                let _ = app_handle.emit_all("event", ui_msg);
+                            } else {
+                                // recreate window
+                                let _ = window_helper.new_main(app_name.to_string());
+                                messages.push_back(ui_msg);
+                            }
+                        }
+                        UiMessage::ShowToast(..) => {
                             if is_ready {
                                 app_handle.get_window("main").map(|w| w.show());
                                 let _ = app_handle.emit_all("event", ui_msg);

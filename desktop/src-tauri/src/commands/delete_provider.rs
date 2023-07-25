@@ -1,16 +1,14 @@
 use super::{
     config::{CommandConfig, DevpodCommandConfig, DevpodCommandError},
-    constants::{DEVPOD_BINARY_NAME, DEVPOD_COMMAND_PROVIDER, DEVPOD_COMMAND_DELETE},
+    constants::{DEVPOD_BINARY_NAME, DEVPOD_COMMAND_DELETE, DEVPOD_COMMAND_PROVIDER},
 };
 
 pub struct DeleteProviderCommand {
-    provider_id: String
+    provider_id: String,
 }
 impl DeleteProviderCommand {
     pub fn new(provider_id: String) -> Self {
-        DeleteProviderCommand {
-            provider_id
-        }
+        DeleteProviderCommand { provider_id }
     }
 }
 impl DevpodCommandConfig<()> for DeleteProviderCommand {

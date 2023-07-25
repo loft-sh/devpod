@@ -11,6 +11,7 @@ import { WorkspacesClient } from "./workspaces"
 // These types have to match the rust types! Make sure to update them as well!
 type TChannels = {
   event:
+    | Readonly<{ type: "ShowToast" }>
     | Readonly<{ type: "ShowDashboard" }>
     | Readonly<{ type: "OpenWorkspaceFailed" }>
     | Readonly<{

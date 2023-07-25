@@ -54,7 +54,6 @@ impl SystemTray {
         submenu_builders: Vec<Box<&dyn ToSystemTraySubmenu>>,
     ) -> TauriSystemTray {
         let tray_menu = self.build_menu(submenu_builders);
-        
 
         TauriSystemTray::new().with_menu(tray_menu)
     }

@@ -53,15 +53,13 @@ impl ToSystemTraySubmenu for WorkspacesState {
     fn to_submenu(&self) -> tauri::SystemTraySubmenu {
         let mut workspaces_menu = SystemTrayMenu::new();
 
-        workspaces_menu = workspaces_menu
-            .add_item(CustomMenuItem::new(
-                Self::CREATE_WORKSPACE_ID,
-                "Create Workspace",
-            ));
+        workspaces_menu = workspaces_menu.add_item(CustomMenuItem::new(
+            Self::CREATE_WORKSPACE_ID,
+            "Create Workspace",
+        ));
 
         if !self.workspaces.is_empty() {
-            workspaces_menu = workspaces_menu
-                .add_native_item(SystemTrayMenuItem::Separator);
+            workspaces_menu = workspaces_menu.add_native_item(SystemTrayMenuItem::Separator);
         }
 
         for workspace in &self.workspaces {

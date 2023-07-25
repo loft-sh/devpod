@@ -1,4 +1,4 @@
-use log::{error, info};
+use log::{error, info, warn};
 use serde::{Deserialize, Serialize};
 use tauri::{AppHandle, Manager};
 
@@ -57,13 +57,14 @@ impl CustomProtocol {
     }
 
     pub fn setup(&self, app: AppHandle) {
-        #[cfg(not(target_os = "linux"))]
-        tauri_plugin_deep_link::register(APP_URL_SCHEME, move |url_scheme| {
+        let app_handle = app.clone();
+
+        let result = tauri_plugin_deep_link::register(APP_URL_SCHEME, move |url_scheme| {
             tauri::async_runtime::block_on(async {
                 info!("App opened with URL: {:?}", url_scheme.to_string());
 
                 let msg = CustomProtocol::parse(&url_scheme.to_string());
-                let app_state = app.state::<AppState>();
+                let app_state = app_handle.state::<AppState>();
 
                 match msg {
                     Ok(msg) => {
@@ -80,24 +81,54 @@ impl CustomProtocol {
                         };
                     }
                     Err(err) => {
-                            #[cfg(not(target_os = "windows"))]
+                        #[cfg(not(target_os = "windows"))]
+                        {
+                            if let Err(err) = app_state
+                                .ui_messages
+                                .send(UiMessage::OpenWorkspaceFailed(err))
+                                .await
                             {
-                                if let Err(err) = app_state
-                                    .ui_messages
-                                    .send(UiMessage::OpenWorkspaceFailed(err))
-                                    .await
-                                {
-                                    error!(
+                                error!(
                                     "Failed to broadcast invalid custom protocol message: {:?}, {}",
                                     err.0, err
                                 );
-                                };
-                            }
-                    },
+                            };
+                        }
+                    }
                 }
             })
-        })
-        .expect("should be able to listen to custom protocols");
+        });
+
+        #[cfg(target_os = "linux")]
+        {
+            match result {
+                Ok(..) => {}
+                Err(error) => {
+                    warn!(
+                        "Unable to find command: update-desktop-database, xdg-mime: {}",
+                        error
+                    );
+                    tauri::async_runtime::block_on(async {
+                        let app_state = app.state::<AppState>();
+                        if let Err(err) = app_state
+                            .ui_messages
+                            .send(UiMessage::ShowToast(
+                                "Unable to find command: update-desktop-database or xdg-mime"
+                                    .to_string(),
+                            ))
+                            .await
+                        {
+                            error!(
+                                "Failed to broadcast custom protocol message: {:?}, {}",
+                                err.0, err
+                            );
+                        };
+                    })
+                }
+            };
+        }
+
+        let _ = result;
     }
 
     fn parse(url_scheme: &str) -> Result<OpenWorkspaceMsg, ParseError> {
