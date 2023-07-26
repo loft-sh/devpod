@@ -58,7 +58,7 @@ func TestNormalizeRepository(t *testing.T) {
 	}
 
 	for _, testCase := range testCases {
-		outRepo, outBranch := NormalizeRepository(testCase.in)
+		outRepo, outBranch, _ := NormalizeRepository(testCase.in)
 		assert.Check(t, cmp.Equal(testCase.expectedRepo, outRepo))
 		assert.Check(t, cmp.Equal(testCase.expectedBranch, outBranch))
 	}
