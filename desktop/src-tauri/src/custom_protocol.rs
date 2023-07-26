@@ -104,22 +104,23 @@ impl CustomProtocol {
             match result {
                 Ok(..) => {}
                 Err(error) => {
-                    warn!(
-                        "Unable to find command: update-desktop-database, xdg-mime: {}",
-                        error
-                    );
+                    let msg = "Either update-desktop-database or xdg-mime are missing. Please make sure they are available on your system";
+                    warn!("Custom protocol setup failed; {}: {}", msg, error);
+
                     tauri::async_runtime::block_on(async {
                         let app_state = app.state::<AppState>();
+                        let show_toast_msg = crate::ShowToastMsg {
+                            title: "Custom protocol handling needs to be configured".to_string(),
+                            message: msg.to_string(),
+                            status: crate::ToastStatus::Warning,
+                        };
                         if let Err(err) = app_state
                             .ui_messages
-                            .send(UiMessage::ShowToast(
-                                "Unable to find command: update-desktop-database or xdg-mime"
-                                    .to_string(),
-                            ))
+                            .send(UiMessage::ShowToast(show_toast_msg))
                             .await
                         {
                             error!(
-                                "Failed to broadcast custom protocol message: {:?}, {}",
+                                "Failed to broadcast show toast message: {:?}, {}",
                                 err.0, err
                             );
                         };
