@@ -89,6 +89,24 @@ var _ = DevPodDescribe("devpod up test suite", func() {
 		framework.ExpectEqual(out, "", "should be empty")
 	})
 
+	ginkgo.It("should allow checkout of a GitRepo from a commit hash", func() {
+		ctx := context.Background()
+		f := framework.NewDefaultFramework(initialDir + "/bin")
+
+		_ = f.DevPodProviderDelete(ctx, "docker")
+		err := f.DevPodProviderAdd(ctx, "docker")
+		framework.ExpectNoError(err)
+		err = f.DevPodProviderUse(context.Background(), "docker")
+		framework.ExpectNoError(err)
+
+		name := "vscode-remote-try-python-sha256-0c1547c"
+		ginkgo.DeferCleanup(f.DevPodWorkspaceDelete, context.Background(), name)
+
+		// Wait for devpod workspace to come online (deadline: 30s)
+		err = f.DevPodUp(ctx, "github.com/microsoft/vscode-remote-try-python@sha256:0c1547c")
+		framework.ExpectNoError(err)
+	})
+
 	ginkgo.It("run devpod in Kubernetes", func() {
 		ctx := context.Background()
 		f := framework.NewDefaultFramework(initialDir + "/bin")
