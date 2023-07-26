@@ -43,7 +43,7 @@ func (f *forwarder) Forward(port string) error {
 
 	go func(port string) {
 		// do the forward
-		err := devssh.PortForward(cancelCtx, f.sshClient, "localhost:"+port, "localhost:"+port, 0, f.log)
+		err := devssh.PortForward(cancelCtx, f.sshClient, "tcp", "localhost:"+port, "tcp", "localhost:"+port, 0, f.log)
 		if err != nil {
 			f.log.Errorf("Error port forwarding %s: %v", port, err)
 		}
