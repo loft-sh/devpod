@@ -180,6 +180,7 @@ export function ConfigureProviderOptionsForm({
   }, [optionGroups, optionsProp])
 
   const backgroundColor = useColorModeValue("gray.50", "gray.800")
+  const bottomBarBackgroundColor = useColorModeValue("white", "gray.700")
   const borderColor = useBorderColor()
   const translateX = useBreakpointValue({
     base: "translateX(-3rem)",
@@ -281,10 +282,9 @@ export function ConfigureProviderOptionsForm({
                 : { base: `calc(100vw - ${SIDEBAR_WIDTH})`, xl: "full" }
             }
             height="20"
-            backgroundColor="white"
             alignItems="center"
             borderTopWidth="thin"
-            borderTopColor={borderColor}
+            backgroundColor={bottomBarBackgroundColor}
             justifyContent="space-between"
             paddingX={paddingX}
             zIndex="overlay">
