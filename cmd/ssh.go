@@ -14,6 +14,7 @@ import (
 	"github.com/loft-sh/devpod/pkg/agent"
 	client2 "github.com/loft-sh/devpod/pkg/client"
 	"github.com/loft-sh/devpod/pkg/config"
+	"github.com/loft-sh/devpod/pkg/port"
 	devssh "github.com/loft-sh/devpod/pkg/ssh"
 	"github.com/loft-sh/devpod/pkg/tunnel"
 	workspace2 "github.com/loft-sh/devpod/pkg/workspace"
@@ -28,6 +29,9 @@ import (
 // SSHCmd holds the ssh cmd flags
 type SSHCmd struct {
 	*flags.GlobalFlags
+
+	ForwardPortsTimeout string
+	ForwardPorts        []string
 
 	Stdio           bool
 	JumpContainer   bool
@@ -65,6 +69,8 @@ func NewSSHCmd(flags *flags.GlobalFlags) *cobra.Command {
 		},
 	}
 
+	sshCmd.Flags().StringArrayVarP(&cmd.ForwardPorts, "forward-ports", "L", []string{}, "Specifies that connections to the given TCP port or Unix socket on the local (client) host are to be forwarded to the given host and port, or Unix socket, on the remote side.")
+	sshCmd.Flags().StringVar(&cmd.ForwardPortsTimeout, "forward-ports-timeout", "", "Specifies the timeout after which the command should terminate when the ports are unused.")
 	sshCmd.Flags().StringVar(&cmd.Command, "command", "", "The command to execute within the workspace")
 	sshCmd.Flags().StringVar(&cmd.User, "user", "", "The user of the workspace to use")
 	sshCmd.Flags().BoolVar(&cmd.Proxy, "proxy", false, "If true will act as intermediate proxy for a proxy provider")
@@ -186,7 +192,44 @@ func (cmd *SSHCmd) jumpContainer(ctx context.Context, devPodConfig *config.Confi
 	})
 }
 
+func (cmd *SSHCmd) forwardPorts(ctx context.Context, containerClient *ssh.Client, log log.Logger) error {
+	timeout := time.Duration(0)
+	if cmd.ForwardPortsTimeout != "" {
+		var err error
+		timeout, err = time.ParseDuration(cmd.ForwardPortsTimeout)
+		if err != nil {
+			return fmt.Errorf("parse forward ports timeout: %w", err)
+		}
+
+		log.Infof("Using port forwarding timeout of %s", cmd.ForwardPortsTimeout)
+	}
+
+	errChan := make(chan error, len(cmd.ForwardPorts))
+	for _, portMapping := range cmd.ForwardPorts {
+		mapping, err := port.ParsePortSpec(portMapping)
+		if err != nil {
+			return fmt.Errorf("parse port mapping: %w", err)
+		}
+
+		// start the forwarding
+		log.Infof("Forwarding local %s/%s to remote %s/%s", mapping.Host.Protocol, mapping.Host.Address, mapping.Container.Protocol, mapping.Container.Address)
+		go func(portMapping string) {
+			err := devssh.PortForward(ctx, containerClient, mapping.Host.Protocol, mapping.Host.Address, mapping.Container.Protocol, mapping.Container.Address, timeout, log)
+			if err != nil {
+				errChan <- fmt.Errorf("error forwarding %s: %w", portMapping, err)
+			}
+		}(portMapping)
+	}
+
+	return <-errChan
+}
+
 func (cmd *SSHCmd) startTunnel(ctx context.Context, devPodConfig *config.Config, containerClient *ssh.Client, ideName string, log log.Logger) error {
+	// check if we should forward ports
+	if len(cmd.ForwardPorts) > 0 {
+		return cmd.forwardPorts(ctx, containerClient, log)
+	}
+
 	// start port-forwarding etc.
 	if !cmd.Proxy && cmd.StartServices {
 		go cmd.startServices(ctx, devPodConfig, containerClient, ideName, log)

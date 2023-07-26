@@ -8,9 +8,10 @@ import (
 	"github.com/loft-sh/log"
 )
 
-func newConnectionCounter(ctx context.Context, timeout time.Duration, onTimeout func(), log log.Logger) *connectionCounter {
+func newConnectionCounter(ctx context.Context, timeout time.Duration, onTimeout func(), address string, log log.Logger) *connectionCounter {
 	return &connectionCounter{
 		ctx:       ctx,
+		address:   address,
 		timeout:   timeout,
 		onTimeout: onTimeout,
 		log:       log,
@@ -18,6 +19,8 @@ func newConnectionCounter(ctx context.Context, timeout time.Duration, onTimeout 
 }
 
 type connectionCounter struct {
+	address string
+
 	ctx       context.Context
 	timeout   time.Duration
 	onTimeout func()
@@ -33,7 +36,7 @@ func (c *connectionCounter) Add() {
 	defer c.m.Unlock()
 
 	c.connections++
-	c.log.Debugf("Total connections: %d", c.connections)
+	c.log.Debugf("New connection on %s (Total: %d)", c.address, c.connections)
 }
 
 func (c *connectionCounter) Dec() {
@@ -41,7 +44,7 @@ func (c *connectionCounter) Dec() {
 	defer c.m.Unlock()
 
 	c.connections--
-	c.log.Debugf("Total connections: %d", c.connections)
+	c.log.Debugf("Closed connection on %s (Total: %d)", c.address, c.connections)
 	if c.connections <= 0 && c.timeout > 0 {
 		c.generation++
 
