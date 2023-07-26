@@ -88,8 +88,8 @@ export const theme = extendTheme({
     },
   },
   config: {
-    initialColorMode: "system",
-    useSystemColorMode: true,
+    initialColorMode: "light",
+    useSystemColorMode: false,
   },
   components: {
     Button,
