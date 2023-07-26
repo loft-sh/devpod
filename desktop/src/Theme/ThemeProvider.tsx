@@ -1,10 +1,4 @@
-import {
-  ChakraProvider,
-  ColorModeScript,
-  Theme,
-  ToastProviderProps,
-  extendTheme,
-} from "@chakra-ui/react"
+import { ChakraProvider, Theme, ToastProviderProps, extendTheme } from "@chakra-ui/react"
 import { ReactNode, useEffect, useState } from "react"
 import { TSettings, useSettings } from "../contexts"
 import { theme as initialTheme } from "./theme"
