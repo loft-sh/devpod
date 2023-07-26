@@ -1,7 +1,7 @@
 mod config;
 pub mod constants;
-pub use constants::DEVPOD_BINARY_NAME;
 pub use config::{DevpodCommandConfig, DevpodCommandError};
+pub use constants::DEVPOD_BINARY_NAME;
 
-pub mod list_workspaces;
 pub mod delete_provider;
+pub mod list_workspaces;

@@ -1,5 +1,5 @@
-use log::error;
 use crate::{commands::DevpodCommandError, AppState, UiMessage};
+use log::error;
 
 // This command is expected to be invoked exactly once per window
 #[tauri::command]

@@ -1,16 +1,23 @@
 import { clipboard, dialog, fs, invoke, os, path, process, shell, event } from "@tauri-apps/api"
 import { Command } from "@tauri-apps/api/shell"
 import { TSettings } from "../contexts"
-import { Result, Return, isError } from "../lib"
+import { Result, Return, isError, noop } from "../lib"
 import { TCommunityContributions, TUnsubscribeFn } from "../types"
 import { ContextClient } from "./context"
 import { IDEsClient } from "./ides"
 import { ProvidersClient } from "./providers"
 import { WorkspacesClient } from "./workspaces"
+import { UseToastOptions } from "@chakra-ui/react"
 
 // These types have to match the rust types! Make sure to update them as well!
 type TChannels = {
   event:
+    | Readonly<{
+        type: "ShowToast"
+        message: string
+        title: string
+        status: NonNullable<UseToastOptions["status"]>
+      }>
     | Readonly<{ type: "ShowDashboard" }>
     | Readonly<{ type: "OpenWorkspaceFailed" }>
     | Readonly<{
@@ -50,16 +57,16 @@ class Client {
   public async subscribe<T extends TChannelName>(
     channel: T,
     listener: TClientEventListener<T>
-  ): Promise<Result<TUnsubscribeFn>> {
+  ): Promise<TUnsubscribeFn> {
     // `TClient` is strictly typed so we're fine casting the response as `any`.
     try {
       const unsubscribe = await event.listen<any>(channel, (event) => {
         listener(event.payload)
       })
 
-      return Return.Value(unsubscribe)
-    } catch (e) {
-      return Return.Failed(e + "")
+      return unsubscribe
+    } catch {
+      return noop
     }
   }
 

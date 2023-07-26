@@ -22,7 +22,7 @@ mod workspaces;
 
 use community_contributions::CommunityContributions;
 use custom_protocol::{CustomProtocol, OpenWorkspaceMsg};
-use log::{error, info};
+use log::{error, info, warn};
 use serde::Serialize;
 use std::{
     collections::VecDeque,
@@ -30,7 +30,10 @@ use std::{
 };
 use system_tray::SystemTray;
 use tauri::{Manager, Menu, Wry};
-use tokio::sync::mpsc::{self, Sender};
+use tokio::{
+    sync::mpsc::{self, Sender},
+    time::sleep,
+};
 use workspaces::WorkspacesState;
 
 pub type AppHandle = tauri::AppHandle<Wry>;
@@ -48,8 +51,27 @@ enum UiMessage {
     Ready,
     ExitRequested,
     ShowDashboard,
+    ShowToast(ShowToastMsg),
     OpenWorkspace(OpenWorkspaceMsg),
     OpenWorkspaceFailed(custom_protocol::ParseError),
+}
+
+#[derive(Debug, Serialize, Clone)]
+struct ShowToastMsg {
+    title: String,
+    message: String,
+    status: ToastStatus,
+}
+
+// WARN: Needs to match the UI's toast status
+#[derive(Debug, Serialize, Clone)]
+#[serde(rename_all = "lowercase")]
+enum ToastStatus {
+    Success,
+    Error,
+    Warning,
+    Info,
+    Loading,
 }
 
 fn main() -> anyhow::Result<()> {
@@ -112,7 +134,10 @@ fn main() -> anyhow::Result<()> {
 
                             app_handle.get_window("main").map(|w| w.show());
                             while let Some(msg) = messages.pop_front() {
-                                let _ = app_handle.emit_all("event", msg);
+                                let emit_result = app_handle.emit_all("event", msg);
+                                if let Err(err) = emit_result {
+                                    warn!("Error sending message: {}", err);
+                                }
                             }
                         }
                         UiMessage::ExitRequested => {
@@ -139,6 +164,16 @@ fn main() -> anyhow::Result<()> {
                             }
                         }
                         UiMessage::ShowDashboard => {
+                            if is_ready {
+                                app_handle.get_window("main").map(|w| w.show());
+                                let _ = app_handle.emit_all("event", ui_msg);
+                            } else {
+                                // recreate window
+                                let _ = window_helper.new_main(app_name.to_string());
+                                messages.push_back(ui_msg);
+                            }
+                        }
+                        UiMessage::ShowToast(..) => {
                             if is_ready {
                                 app_handle.get_window("main").map(|w| w.show());
                                 let _ = app_handle.emit_all("event", ui_msg);

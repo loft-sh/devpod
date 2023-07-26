@@ -7,6 +7,7 @@ import {
   ModalHeader,
   ModalOverlay,
   useDisclosure,
+  useToast,
 } from "@chakra-ui/react"
 import { appWindow } from "@tauri-apps/api/window"
 import { useEffect, useId, useMemo, useRef, useState } from "react"
@@ -23,6 +24,7 @@ export function useAppReady() {
   const navigate = useNavigate()
   const [openWorkspaceFailedMessage, setOpenWorkspaceFailedMessage] = useState<string | null>(null)
   const { isOpen, onClose, onOpen } = useDisclosure()
+  const toast = useToast()
   const modal = useMemo(() => {
     return (
       <Modal
@@ -60,6 +62,18 @@ export function useAppReady() {
           await appWindow.setFocus()
           if (event.type === "ShowDashboard") {
             navigate(Routes.WORKSPACES)
+
+            return
+          }
+
+          if (event.type === "ShowToast") {
+            toast({
+              title: event.title,
+              description: event.message,
+              status: event.status,
+              duration: 5_000,
+              isClosable: true,
+            })
 
             return
           }
@@ -160,7 +174,7 @@ export function useAppReady() {
         return unsubscribe
       })()
     }
-  }, [navigate, viewID])
+  }, [navigate, toast, viewID])
 
   return { modal }
 }
