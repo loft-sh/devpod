@@ -5,7 +5,7 @@ use tauri::{AppHandle, Manager};
 use thiserror::Error;
 use url::Url;
 
-use crate::{AppState, UiMessage};
+use crate::{AppState, UiMessage, ShowToastMsg, ToastStatus};
 
 // Should match the one from "tauri.config.json" and "Info.plist"
 const APP_IDENTIFIER: &str = "sh.loft.devpod";
@@ -113,9 +113,11 @@ impl CustomProtocol {
                         if let Err(err) = app_state
                             .ui_messages
                             .send(UiMessage::ShowToast(
-                                "Unable to find command: update-desktop-database or xdg-mime"
-                                    .to_string(),
-                            ))
+                                    ShowToastMsg{
+                                        title:"Integration error".to_string(),
+                                        message:"Unable to find command: update-desktop-database or xdg-mime".to_string(),
+                                        status: ToastStatus::Error})
+                            )
                             .await
                         {
                             error!(
