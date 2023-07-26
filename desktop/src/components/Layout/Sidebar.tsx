@@ -14,15 +14,13 @@ import { cloneElement, ReactElement, ReactNode } from "react"
 import { LinkProps, NavLink as RouterLink } from "react-router-dom"
 import { useSettings } from "../../contexts"
 import { DevpodWordmark } from "../../icons"
-import { isMacOS } from "../../lib"
 import { useBorderColor } from "../../Theme"
 import { LoftOSSBadge } from "../LoftOSSBadge"
 
 type TSidebarProps = Readonly<{ children?: readonly ReactElement[] }> & BoxProps
 export function Sidebar({ children, ...boxProps }: TSidebarProps) {
   const borderColor = useBorderColor()
-  const backgroundColor = useColorModeValue("white", "black")
-  const alternativeBackgroundColor = useColorModeValue("gray.100", "gray.900")
+  const backgroundColor = useColorModeValue("gray.100", "gray.900")
   const wordmarkColor = useColorModeValue("black", "white")
   const isLeft = useSettings().sidebarPosition === "left"
 
@@ -60,11 +58,7 @@ export function Sidebar({ children, ...boxProps }: TSidebarProps) {
       </HStack>
 
       {/* Background Material */}
-      {isMacOS ? (
-        <Box {...sharedBackgroundMaterialProps} backgroundColor={backgroundColor} opacity={0.7} />
-      ) : (
-        <Box {...sharedBackgroundMaterialProps} backgroundColor={alternativeBackgroundColor} />
-      )}
+      <Box {...sharedBackgroundMaterialProps} backgroundColor={backgroundColor} />
     </Grid>
   )
 }
