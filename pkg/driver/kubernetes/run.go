@@ -286,7 +286,6 @@ func getContainers(pod *corev1.Pod, imageName, entrypoint string, args []string,
 	// merge with existing container if it exists
 	var existingDevPodContainer *corev1.Container
 	retContainers := []corev1.Container{}
-	retContainers = append(retContainers, devPodContainer)
 	if pod != nil {
 		for i, container := range pod.Spec.Containers {
 			if container.Name == DevContainerName {
@@ -300,6 +299,7 @@ func getContainers(pod *corev1.Pod, imageName, entrypoint string, args []string,
 		devPodContainer.Env = append(existingDevPodContainer.Env, devPodContainer.Env...)
 		devPodContainer.VolumeMounts = append(existingDevPodContainer.VolumeMounts, devPodContainer.VolumeMounts...)
 	}
+	retContainers = append(retContainers, devPodContainer)
 
 	return retContainers
 }
