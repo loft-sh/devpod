@@ -26,6 +26,7 @@ optionGroups:
       - SERVICE_ACCOUNT
       - CREATE_NAMESPACE
       - KUBECTL_PATH
+      - USE_KUBECTL_CP
       - INACTIVITY_TIMEOUT
       - STORAGE_CLASS
       - PVC_ACCESS_MODE
@@ -83,6 +84,11 @@ options:
     description: The path where to find the kubectl binary.
     default: kubectl
     global: true
+  USE_KUBECTL_CP:
+    description: Use 'kubectl cp' to send files to the pod.
+    default: "true"
+    type: boolean
+    global: true
   INACTIVITY_TIMEOUT:
     description: "If defined, will automatically stop the pod after the inactivity period. Examples: 10m, 1h"
   STORAGE_CLASS:
@@ -115,6 +121,7 @@ agent:
   driver: kubernetes
   kubernetes:
     path: ${KUBECTL_PATH}
+    useKubectlCp: ${USE_KUBECTL_CP}
     namespace: ${KUBERNETES_NAMESPACE}
     context: ${KUBERNETES_CONTEXT}
     config: ${KUBERNETES_CONFIG}

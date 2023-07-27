@@ -207,6 +207,7 @@ func ResolveAgentConfig(devConfig *config.Config, provider *provider2.ProviderCo
 	agentConfig.Docker.Install = types.StrBool(resolver.ResolveDefaultValue(string(agentConfig.Docker.Install), options))
 	agentConfig.Docker.Env = resolver.ResolveDefaultValues(agentConfig.Docker.Env, options)
 	agentConfig.Kubernetes.Path = resolver.ResolveDefaultValue(agentConfig.Kubernetes.Path, options)
+	agentConfig.Kubernetes.UseKubectlCp = types.StrBool(resolver.ResolveDefaultValue(string(agentConfig.Kubernetes.UseKubectlCp), options))
 	agentConfig.Kubernetes.HelperImage = resolver.ResolveDefaultValue(agentConfig.Kubernetes.HelperImage, options)
 	agentConfig.Kubernetes.Config = resolver.ResolveDefaultValue(agentConfig.Kubernetes.Config, options)
 	agentConfig.Kubernetes.Context = resolver.ResolveDefaultValue(agentConfig.Kubernetes.Context, options)

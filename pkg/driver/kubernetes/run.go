@@ -5,6 +5,8 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"io"
+	"os/exec"
 	"path/filepath"
 	"runtime"
 	"strconv"
@@ -228,10 +230,27 @@ func (k *kubernetesDriver) runContainer(
 			if err != nil {
 				return fmt.Errorf("transform path %s: %w", copyMount.Source, err)
 			}
-
 			k.Log.Infof("Copy %s into DevContainer %s", copyMount.Source, copyMount.Target)
 			buf := &bytes.Buffer{}
-			err = k.runCommandWithDir(ctx, filepath.Dir(parsedConfig.Origin), []string{"cp", "-c", "devpod", sourcePath, fmt.Sprintf("%s:%s", id, strings.TrimRight(copyMount.Target, "/"))}, nil, buf, buf)
+			if k.config.UseKubectlCp == "true" {
+				err = k.runCommandWithDir(ctx, filepath.Dir(parsedConfig.Origin), []string{"cp", "-c", "devpod", sourcePath, fmt.Sprintf("%s:%s", id, strings.TrimRight(copyMount.Target, "/"))}, nil, buf, buf)
+			} else {
+				tarCmd := exec.CommandContext(ctx, "tar", "cf", "-", sourcePath)
+				r, w := io.Pipe()
+				tarCmd.Stdout = w
+				k.Log.Debugf("Run command and pipe it to the following one: %s %s %s %s", "tar", "cf", "-", sourcePath)
+				cmd := k.buildCmd(ctx, []string{"exec", "-i", "-c", "devpod", id, "--", "tar", "xf", "-", "-C", strings.TrimRight(copyMount.Target, "/")})
+				cmd.Dir = filepath.Dir(parsedConfig.Origin)
+				cmd.Stdin = r
+				cmd.Stdout = buf
+				cmd.Stderr = buf
+				tarCmd.Start()
+				cmd.Start()
+				tarCmd.Wait()
+				w.Close()
+				cmd.Wait()
+
+			}
 			if err != nil {
 				return errors.Wrap(err, "copy to devcontainer")
 			}

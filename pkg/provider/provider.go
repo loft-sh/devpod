@@ -129,6 +129,9 @@ type ProviderKubernetesDriverConfig struct {
 	// Path where to find the kubectl binary, defaults to 'kubectl'
 	Path string `json:"path,omitempty"`
 
+	// Use kubectl cp (or  tar ... | kubectl exec ) to send file to the ppd
+	UseKubectlCp types.StrBool `json:"useKubectlCp,omitempty"`
+
 	// Namespace is the Kubernetes namespace to use
 	Namespace string `json:"namespace,omitempty"`
 
