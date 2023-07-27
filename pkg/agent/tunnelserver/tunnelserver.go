@@ -220,6 +220,19 @@ func (t *tunnelServer) GitCloneAndRead(response *tunnel.Empty, stream tunnel.Tun
 		return err
 	}
 
+	if t.workspace.Source.GitCommit != "" {
+		// reset here
+		// git reset --hard $COMMIT_SHA
+		resetArgs := []string{"reset", "--hard", t.workspace.Source.GitCommit}
+		resetCmd := git.CommandContext(context.Background(), resetArgs...)
+		resetCmd.Dir = gitCloneDir
+
+		err = resetCmd.Run()
+		if err != nil {
+			return err
+		}
+	}
+
 	buf := bufio.NewWriterSize(NewStreamWriter(stream, t.log), 10*1024)
 	err = extract.WriteTar(buf, gitCloneDir, false)
 	if err != nil {
