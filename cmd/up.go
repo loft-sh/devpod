@@ -194,11 +194,28 @@ func (cmd *UpCmd) Run(
 	}
 
 	if dotfilesRepo != "" {
-		log.Infof("Downloading dotfiles into the devcontainer")
+		log.Infof("Dotfiles repo %s specified", dotfilesRepo)
+		log.Infof("Setting dotfiles into the devcontainer")
 
 		execPath, err := os.Executable()
 		if err != nil {
 			return err
+		}
+
+		agentArguments := []string{
+			"--debug",
+			"agent",
+			"workspace",
+			"install-dotfiles",
+			"--repository",
+			dotfilesRepo,
+		}
+
+		if dotfilesScript != "" {
+			log.Infof("Dotfiles script %s specified", dotfilesScript)
+
+			agentArguments = append(agentArguments, "--install-script")
+			agentArguments = append(agentArguments, dotfilesScript)
 		}
 
 		dotCmd := exec.Command(
@@ -213,9 +230,8 @@ func (cmd *UpCmd) Run(
 				client.Workspace(),
 				"--log-output=raw",
 				"--command",
-				"[ -e dotfiles ] || " +
-					"GIT_SSH_COMMAND='ssh -oStrictHostKeyChecking=no' git clone " +
-					dotfilesRepo + " dotfiles",
+				agent.ContainerDevPodHelperLocation + " " +
+					strings.Join(agentArguments, " "),
 			}...,
 		)
 
@@ -229,14 +245,6 @@ func (cmd *UpCmd) Run(
 		err = dotCmd.Run()
 		if err != nil {
 			return err
-		}
-
-		log.Infof("Done downloading dotfiles into the devcontainer")
-
-		log.Infof("Setting up dotfiles into the devcontainer")
-		err = setupDotfiles(dotfilesScript, client, log)
-		if err != nil {
-			fmt.Println(err)
 		}
 
 		log.Infof("Done setting up dotfiles into the devcontainer")
@@ -809,72 +817,4 @@ func createSSHCommand(
 	args = append(args, extraArgs...)
 
 	return exec.CommandContext(ctx, execPath, args...), nil
-}
-
-func setupDotfiles(script string, client client2.BaseWorkspaceClient, logger log.Logger) error {
-	execPath, err := os.Executable()
-	if err != nil {
-		return err
-	}
-
-	// always skip if we're already done
-	execScript := "[ -e setupdone ] && exit 0;"
-
-	// use first the one provided by the user if possible
-	if script != "" {
-		execScript = execScript +
-			"\n[ -e " + script + " ] && " +
-			script + " && touch setupdone && exit 0;"
-	}
-
-	// then try all possible path supported by codespaces too, as documented:
-	// https://docs.github.com/en/codespaces/customizing-your-codespace/personalizing-github-codespaces-for-your-account#dotfiles
-	scriptLocations := []string{
-		"install.sh",
-		"install",
-		"bootstrap.sh",
-		"bootstrap",
-		"script/bootstrap",
-		"setup.sh",
-		"setup",
-		"setup/setup",
-	}
-
-	// build the command
-	for _, location := range scriptLocations {
-		execScript = execScript +
-			"\n[ -e " + location + " ] && " +
-			location + " && touch setupdone && exit 0;"
-	}
-
-	// as fallback we just link dotfiles in the repo into home
-	execScript = execScript + `
-find $(pwd) -maxdepth 1 -type f -iname ".*" -exec ln -s {} ~/ \; && touch setupdone && exit 0
-exit 127
-`
-
-	dotCmd := exec.Command(
-		execPath,
-		[]string{
-			"ssh",
-			"--debug",
-			"--agent-forwarding=true",
-			"--start-services=false",
-			"--context",
-			client.Context(),
-			client.Workspace(),
-			"--log-output=raw",
-			"--command",
-			"cd $HOME/dotfiles && " + execScript,
-		}...,
-	)
-
-	logger.Debugf("Running command: %v", dotCmd.Args)
-
-	writer := logger.Writer(logrus.DebugLevel, false)
-
-	dotCmd.Stdout = writer
-	dotCmd.Stderr = writer
-
-	return dotCmd.Run()
 }

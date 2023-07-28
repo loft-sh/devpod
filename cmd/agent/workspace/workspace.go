@@ -20,5 +20,6 @@ func NewWorkspaceCmd(flags *flags.GlobalFlags) *cobra.Command {
 	workspaceCmd.AddCommand(NewUpdateConfigCmd(flags))
 	workspaceCmd.AddCommand(NewBuildCmd(flags))
 	workspaceCmd.AddCommand(NewLogsDaemonCmd(flags))
+	workspaceCmd.AddCommand(NewInstallDotfilesCmd(flags))
 	return workspaceCmd
 }
