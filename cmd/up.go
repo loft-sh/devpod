@@ -51,6 +51,9 @@ type UpCmd struct {
 	OpenIDE      bool
 
 	SSHConfigPath string
+
+	DotfilesSource string
+	DotfilesScript string
 }
 
 // NewUpCmd creates a new up command
@@ -110,22 +113,39 @@ func NewUpCmd(flags *flags.GlobalFlags) *cobra.Command {
 		},
 	}
 
-	upCmd.Flags().BoolVar(&cmd.ConfigureSSH, "configure-ssh", true, "If true will configure the ssh config to include the DevPod workspace")
-	upCmd.Flags().StringVar(&cmd.SSHConfigPath, "ssh-config", "", "The path to the ssh config to modify, if empty will use ~/.ssh/config")
-	upCmd.Flags().StringArrayVar(&cmd.IDEOptions, "ide-option", []string{}, "IDE option in the form KEY=VALUE")
-	upCmd.Flags().StringVar(&cmd.DevContainerPath, "devcontainer-path", "", "The path to the devcontainer.json relative to the project")
-	upCmd.Flags().StringArrayVar(&cmd.ProviderOptions, "provider-option", []string{}, "Provider option in the form KEY=VALUE")
-	upCmd.Flags().BoolVar(&cmd.Recreate, "recreate", false, "If true will remove any existing containers and recreate them")
-	upCmd.Flags().StringSliceVar(&cmd.PrebuildRepositories, "prebuild-repository", []string{}, "Docker repository that hosts devpod prebuilds for this workspace")
-	upCmd.Flags().StringArrayVar(&cmd.WorkspaceEnv, "workspace-env", []string{}, "Extra env variables to put into the workspace. E.g. MY_ENV_VAR=MY_VALUE")
+	upCmd.Flags().
+		BoolVar(&cmd.ConfigureSSH, "configure-ssh", true, "If true will configure the ssh config to include the DevPod workspace")
+	upCmd.Flags().
+		StringVar(&cmd.SSHConfigPath, "ssh-config", "", "The path to the ssh config to modify, if empty will use ~/.ssh/config")
+	upCmd.Flags().
+		StringVar(&cmd.DotfilesSource, "dotfiles", "", "The path or url to the dotfiles to use in the container")
+	upCmd.Flags().
+		StringVar(&cmd.DotfilesScript, "dotfiles-script", "", "The path in dotfiles directory to use to install the dotfiles, if empty will try to guess")
+	upCmd.Flags().
+		StringArrayVar(&cmd.IDEOptions, "ide-option", []string{}, "IDE option in the form KEY=VALUE")
+	upCmd.Flags().
+		StringVar(&cmd.DevContainerPath, "devcontainer-path", "", "The path to the devcontainer.json relative to the project")
+	upCmd.Flags().
+		StringArrayVar(&cmd.ProviderOptions, "provider-option", []string{}, "Provider option in the form KEY=VALUE")
+	upCmd.Flags().
+		BoolVar(&cmd.Recreate, "recreate", false, "If true will remove any existing containers and recreate them")
+	upCmd.Flags().
+		StringSliceVar(&cmd.PrebuildRepositories, "prebuild-repository", []string{}, "Docker repository that hosts devpod prebuilds for this workspace")
+	upCmd.Flags().
+		StringArrayVar(&cmd.WorkspaceEnv, "workspace-env", []string{}, "Extra env variables to put into the workspace. E.g. MY_ENV_VAR=MY_VALUE")
 	upCmd.Flags().StringVar(&cmd.ID, "id", "", "The id to use for the workspace")
-	upCmd.Flags().StringVar(&cmd.Machine, "machine", "", "The machine to use for this workspace. The machine needs to exist beforehand or the command will fail. If the workspace already exists, this option has no effect")
-	upCmd.Flags().StringVar(&cmd.IDE, "ide", "", "The IDE to open the workspace in. If empty will use vscode locally or in browser")
-	upCmd.Flags().BoolVar(&cmd.OpenIDE, "open-ide", true, "If this is false and an IDE is configured, DevPod will only install the IDE server backend, but not open it")
+	upCmd.Flags().
+		StringVar(&cmd.Machine, "machine", "", "The machine to use for this workspace. The machine needs to exist beforehand or the command will fail. If the workspace already exists, this option has no effect")
+	upCmd.Flags().
+		StringVar(&cmd.IDE, "ide", "", "The IDE to open the workspace in. If empty will use vscode locally or in browser")
+	upCmd.Flags().
+		BoolVar(&cmd.OpenIDE, "open-ide", true, "If this is false and an IDE is configured, DevPod will only install the IDE server backend, but not open it")
 
-	upCmd.Flags().StringVar(&cmd.Source, "source", "", "Optional source for the workspace. E.g. git:https://github.com/my-org/my-repo")
-	upCmd.Flags().BoolVar(&cmd.Proxy, "proxy", false, "If true will forward agent requests to stdio")
 	upCmd.Flags().BoolVar(&cmd.DisableDaemon, "disable-daemon", false, "If enabled, will not install a daemon into the target machine to track activity")
+	upCmd.Flags().
+		StringVar(&cmd.Source, "source", "", "Optional source for the workspace. E.g. git:https://github.com/my-org/my-repo")
+	upCmd.Flags().
+		BoolVar(&cmd.Proxy, "proxy", false, "If true will forward agent requests to stdio")
 
 	// testing
 	upCmd.Flags().StringVar(&cmd.DaemonInterval, "daemon-interval", "", "TESTING ONLY")
@@ -134,7 +154,12 @@ func NewUpCmd(flags *flags.GlobalFlags) *cobra.Command {
 }
 
 // Run runs the command logic
-func (cmd *UpCmd) Run(ctx context.Context, devPodConfig *config.Config, client client2.BaseWorkspaceClient, log log.Logger) error {
+func (cmd *UpCmd) Run(
+	ctx context.Context,
+	devPodConfig *config.Config,
+	client client2.BaseWorkspaceClient,
+	log log.Logger,
+) error {
 	// run devpod agent up
 	result, err := cmd.devPodUp(ctx, client, log)
 	if err != nil {
@@ -158,41 +183,133 @@ func (cmd *UpCmd) Run(ctx context.Context, devPodConfig *config.Config, client c
 		log.Infof("Run 'ssh %s.devpod' to ssh into the devcontainer", client.Workspace())
 	}
 
+	dotfilesRepo := devPodConfig.ContextOption(config.ContextOptionDotfilesURL)
+	if cmd.DotfilesSource != "" {
+		dotfilesRepo = cmd.DotfilesSource
+	}
+
+	dotfilesScript := devPodConfig.ContextOption(config.ContextOptionDotfilesScript)
+	if cmd.DotfilesScript != "" {
+		dotfilesScript = cmd.DotfilesScript
+	}
+
+	if dotfilesRepo != "" {
+		log.Infof("Downloading dotfiles into the devcontainer")
+
+		execPath, err := os.Executable()
+		if err != nil {
+			return err
+		}
+
+		dotCmd := exec.Command(
+			execPath,
+			[]string{
+				"ssh",
+				"--debug",
+				"--agent-forwarding=true",
+				"--start-services=false",
+				"--context",
+				client.Context(),
+				client.Workspace(),
+				"--log-output=raw",
+				"--command",
+				"[ -e dotfiles ] || " +
+					"GIT_SSH_COMMAND='ssh -oStrictHostKeyChecking=no' git clone " +
+					dotfilesRepo + " dotfiles",
+			}...,
+		)
+
+		log.Debugf("Running command: %v", dotCmd.Args)
+
+		writer := log.Writer(logrus.DebugLevel, false)
+
+		dotCmd.Stdout = writer
+		dotCmd.Stderr = writer
+
+		err = dotCmd.Run()
+		if err != nil {
+			return err
+		}
+
+		log.Infof("Done downloading dotfiles into the devcontainer")
+
+		log.Infof("Setting up dotfiles into the devcontainer")
+		err = setupDotfiles(dotfilesScript, client, log)
+		if err != nil {
+			fmt.Println(err)
+		}
+
+		log.Infof("Done setting up dotfiles into the devcontainer")
+	}
+
 	// open ide
 	if cmd.OpenIDE {
 		ideConfig := client.WorkspaceConfig().IDE
 		switch ideConfig.Name {
 		case string(config.IDEVSCode):
-			return vscode.Open(ctx, client.Workspace(), result.SubstitutionContext.ContainerWorkspaceFolder, vscode.Options.GetValue(ideConfig.Options, vscode.OpenNewWindow) == "true", log)
+			return vscode.Open(
+				ctx,
+				client.Workspace(),
+				result.SubstitutionContext.ContainerWorkspaceFolder,
+				vscode.Options.GetValue(ideConfig.Options, vscode.OpenNewWindow) == "true",
+				log,
+			)
 		case string(config.IDEOpenVSCode):
-			return startVSCodeInBrowser(ctx, devPodConfig, client, result.SubstitutionContext.ContainerWorkspaceFolder, user, ideConfig.Options, log)
+			return startVSCodeInBrowser(
+				ctx,
+				devPodConfig,
+				client,
+				result.SubstitutionContext.ContainerWorkspaceFolder,
+				user,
+				ideConfig.Options,
+				log,
+			)
 		case string(config.IDEGoland):
-			return jetbrains.NewGolandServer(config2.GetRemoteUser(result), ideConfig.Options, log).OpenGateway(result.SubstitutionContext.ContainerWorkspaceFolder, client.Workspace())
+			return jetbrains.NewGolandServer(config2.GetRemoteUser(result), ideConfig.Options, log).
+				OpenGateway(result.SubstitutionContext.ContainerWorkspaceFolder, client.Workspace())
 		case string(config.IDEPyCharm):
-			return jetbrains.NewPyCharmServer(config2.GetRemoteUser(result), ideConfig.Options, log).OpenGateway(result.SubstitutionContext.ContainerWorkspaceFolder, client.Workspace())
+			return jetbrains.NewPyCharmServer(config2.GetRemoteUser(result), ideConfig.Options, log).
+				OpenGateway(result.SubstitutionContext.ContainerWorkspaceFolder, client.Workspace())
 		case string(config.IDEPhpStorm):
-			return jetbrains.NewPhpStorm(config2.GetRemoteUser(result), ideConfig.Options, log).OpenGateway(result.SubstitutionContext.ContainerWorkspaceFolder, client.Workspace())
+			return jetbrains.NewPhpStorm(config2.GetRemoteUser(result), ideConfig.Options, log).
+				OpenGateway(result.SubstitutionContext.ContainerWorkspaceFolder, client.Workspace())
 		case string(config.IDEIntellij):
-			return jetbrains.NewIntellij(config2.GetRemoteUser(result), ideConfig.Options, log).OpenGateway(result.SubstitutionContext.ContainerWorkspaceFolder, client.Workspace())
+			return jetbrains.NewIntellij(config2.GetRemoteUser(result), ideConfig.Options, log).
+				OpenGateway(result.SubstitutionContext.ContainerWorkspaceFolder, client.Workspace())
 		case string(config.IDECLion):
-			return jetbrains.NewCLionServer(config2.GetRemoteUser(result), ideConfig.Options, log).OpenGateway(result.SubstitutionContext.ContainerWorkspaceFolder, client.Workspace())
+			return jetbrains.NewCLionServer(config2.GetRemoteUser(result), ideConfig.Options, log).
+				OpenGateway(result.SubstitutionContext.ContainerWorkspaceFolder, client.Workspace())
 		case string(config.IDERider):
-			return jetbrains.NewRiderServer(config2.GetRemoteUser(result), ideConfig.Options, log).OpenGateway(result.SubstitutionContext.ContainerWorkspaceFolder, client.Workspace())
+			return jetbrains.NewRiderServer(config2.GetRemoteUser(result), ideConfig.Options, log).
+				OpenGateway(result.SubstitutionContext.ContainerWorkspaceFolder, client.Workspace())
 		case string(config.IDERubyMine):
-			return jetbrains.NewRubyMineServer(config2.GetRemoteUser(result), ideConfig.Options, log).OpenGateway(result.SubstitutionContext.ContainerWorkspaceFolder, client.Workspace())
+			return jetbrains.NewRubyMineServer(config2.GetRemoteUser(result), ideConfig.Options, log).
+				OpenGateway(result.SubstitutionContext.ContainerWorkspaceFolder, client.Workspace())
 		case string(config.IDEWebStorm):
-			return jetbrains.NewWebStormServer(config2.GetRemoteUser(result), ideConfig.Options, log).OpenGateway(result.SubstitutionContext.ContainerWorkspaceFolder, client.Workspace())
+			return jetbrains.NewWebStormServer(config2.GetRemoteUser(result), ideConfig.Options, log).
+				OpenGateway(result.SubstitutionContext.ContainerWorkspaceFolder, client.Workspace())
 		case string(config.IDEFleet):
 			return startFleet(ctx, client, log)
 		case string(config.IDEJupyterNotebook):
-			return startJupyterNotebookInBrowser(ctx, devPodConfig, client, user, ideConfig.Options, log)
+			return startJupyterNotebookInBrowser(
+				ctx,
+				devPodConfig,
+				client,
+				user,
+				ideConfig.Options,
+				log,
+			)
 		}
 	}
 
 	return nil
 }
 
-func (cmd *UpCmd) devPodUp(ctx context.Context, client client2.BaseWorkspaceClient, log log.Logger) (*config2.Result, error) {
+func (cmd *UpCmd) devPodUp(
+	ctx context.Context,
+	client client2.BaseWorkspaceClient,
+	log log.Logger,
+) (*config2.Result, error) {
 	err := client.Lock(ctx)
 	if err != nil {
 		return nil, err
@@ -214,7 +331,11 @@ func (cmd *UpCmd) devPodUp(ctx context.Context, client client2.BaseWorkspaceClie
 	return nil, nil
 }
 
-func (cmd *UpCmd) devPodUpProxy(ctx context.Context, client client2.ProxyClient, log log.Logger) (*config2.Result, error) {
+func (cmd *UpCmd) devPodUpProxy(
+	ctx context.Context,
+	client client2.ProxyClient,
+	log log.Logger,
+) (*config2.Result, error) {
 	// create pipes
 	stdoutReader, stdoutWriter, err := os.Pipe()
 	if err != nil {
@@ -246,7 +367,10 @@ func (cmd *UpCmd) devPodUpProxy(ctx context.Context, client client2.ProxyClient,
 		baseOptions.IDEOptions = nil
 		baseOptions.Source = workspace.Source.String()
 		for optionName, optionValue := range workspace.IDE.Options {
-			baseOptions.IDEOptions = append(baseOptions.IDEOptions, optionName+"="+optionValue.Value)
+			baseOptions.IDEOptions = append(
+				baseOptions.IDEOptions,
+				optionName+"="+optionValue.Value,
+			)
 		}
 
 		// run devpod up elsewhere
@@ -282,7 +406,11 @@ func (cmd *UpCmd) devPodUpProxy(ctx context.Context, client client2.ProxyClient,
 	return result, <-errChan
 }
 
-func (cmd *UpCmd) devPodUpMachine(ctx context.Context, client client2.WorkspaceClient, log log.Logger) (*config2.Result, error) {
+func (cmd *UpCmd) devPodUpMachine(
+	ctx context.Context,
+	client client2.WorkspaceClient,
+	log log.Logger,
+) (*config2.Result, error) {
 	err := startWait(ctx, client, true, log)
 	if err != nil {
 		return nil, err
@@ -297,7 +425,11 @@ func (cmd *UpCmd) devPodUpMachine(ctx context.Context, client client2.WorkspaceC
 	// create container etc.
 	log.Infof("Creating devcontainer...")
 	defer log.Debugf("Done creating devcontainer")
-	command := fmt.Sprintf("'%s' agent workspace up --workspace-info '%s'", client.AgentPath(), workspaceInfo)
+	command := fmt.Sprintf(
+		"'%s' agent workspace up --workspace-info '%s'",
+		client.AgentPath(),
+		workspaceInfo,
+	)
 	if log.GetLevel() == logrus.DebugLevel {
 		command += " --debug"
 	}
@@ -327,14 +459,26 @@ func (cmd *UpCmd) devPodUpMachine(ctx context.Context, client client2.WorkspaceC
 		defer writer.Close()
 
 		log.Debugf("Inject and run command: %s", command)
-		err := agent.InjectAgentAndExecute(cancelCtx, func(ctx context.Context, command string, stdin io.Reader, stdout io.Writer, stderr io.Writer) error {
-			return client.Command(ctx, client2.CommandOptions{
-				Command: command,
-				Stdin:   stdin,
-				Stdout:  stdout,
-				Stderr:  stderr,
-			})
-		}, client.AgentLocal(), client.AgentPath(), client.AgentURL(), true, command, stdinReader, stdoutWriter, writer, log.ErrorStreamOnly())
+		err := agent.InjectAgentAndExecute(
+			cancelCtx,
+			func(ctx context.Context, command string, stdin io.Reader, stdout io.Writer, stderr io.Writer) error {
+				return client.Command(ctx, client2.CommandOptions{
+					Command: command,
+					Stdin:   stdin,
+					Stdout:  stdout,
+					Stderr:  stderr,
+				})
+			},
+			client.AgentLocal(),
+			client.AgentPath(),
+			client.AgentURL(),
+			true,
+			command,
+			stdinReader,
+			stdoutWriter,
+			writer,
+			log.ErrorStreamOnly(),
+		)
 		if err != nil {
 			errChan <- fmt.Errorf("executing agent command: %w", err)
 		} else {
@@ -382,9 +526,19 @@ func (cmd *UpCmd) devPodUpMachine(ctx context.Context, client client2.WorkspaceC
 	return result, <-errChan
 }
 
-func startJupyterNotebookInBrowser(ctx context.Context, devPodConfig *config.Config, client client2.BaseWorkspaceClient, user string, ideOptions map[string]config.OptionValue, logger log.Logger) error {
+func startJupyterNotebookInBrowser(
+	ctx context.Context,
+	devPodConfig *config.Config,
+	client client2.BaseWorkspaceClient,
+	user string,
+	ideOptions map[string]config.OptionValue,
+	logger log.Logger,
+) error {
 	// determine port
-	jupyterAddress, jupyterPort, err := parseAddressAndPort(jupyter.Options.GetValue(ideOptions, jupyter.BindAddressOption), jupyter.DefaultServerPort)
+	jupyterAddress, jupyterPort, err := parseAddressAndPort(
+		jupyter.Options.GetValue(ideOptions, jupyter.BindAddressOption),
+		jupyter.DefaultServerPort,
+	)
 	if err != nil {
 		return err
 	}
@@ -398,7 +552,9 @@ func startJupyterNotebookInBrowser(ctx context.Context, devPodConfig *config.Con
 				logger.Errorf("error opening jupyter notebook: %v", err)
 			}
 
-			logger.Infof("Successfully started jupyter notebook in browser mode. Please keep this terminal open as long as you use Jupyter Notebook")
+			logger.Infof(
+				"Successfully started jupyter notebook in browser mode. Please keep this terminal open as long as you use Jupyter Notebook",
+			)
 		}()
 	}
 
@@ -420,7 +576,12 @@ func startJupyterNotebookInBrowser(ctx context.Context, devPodConfig *config.Con
 func startFleet(ctx context.Context, client client2.BaseWorkspaceClient, logger log.Logger) error {
 	// create ssh command
 	stdout := &bytes.Buffer{}
-	cmd, err := createSSHCommand(ctx, client, logger, []string{"--command", "cat " + fleet.FleetURLFile})
+	cmd, err := createSSHCommand(
+		ctx,
+		client,
+		logger,
+		[]string{"--command", "cat " + fleet.FleetURLFile},
+	)
 	if err != nil {
 		return err
 	}
@@ -435,7 +596,9 @@ func startFleet(ctx context.Context, client client2.BaseWorkspaceClient, logger 
 		return fmt.Errorf("seems like fleet is not running within the container")
 	}
 
-	logger.Warnf("Fleet is exposed at a publicly reachable URL, please make sure to not disclose this URL to anyone as they will be able to reach your workspace from that")
+	logger.Warnf(
+		"Fleet is exposed at a publicly reachable URL, please make sure to not disclose this URL to anyone as they will be able to reach your workspace from that",
+	)
 	logger.Infof("Starting Fleet at %s ...", url)
 	err = open.Run(url)
 	if err != nil {
@@ -445,9 +608,19 @@ func startFleet(ctx context.Context, client client2.BaseWorkspaceClient, logger 
 	return nil
 }
 
-func startVSCodeInBrowser(ctx context.Context, devPodConfig *config.Config, client client2.BaseWorkspaceClient, workspaceFolder, user string, ideOptions map[string]config.OptionValue, logger log.Logger) error {
+func startVSCodeInBrowser(
+	ctx context.Context,
+	devPodConfig *config.Config,
+	client client2.BaseWorkspaceClient,
+	workspaceFolder, user string,
+	ideOptions map[string]config.OptionValue,
+	logger log.Logger,
+) error {
 	// determine port
-	vscodeAddress, vscodePort, err := parseAddressAndPort(openvscode.Options.GetValue(ideOptions, openvscode.BindAddressOption), openvscode.DefaultVSCodePort)
+	vscodeAddress, vscodePort, err := parseAddressAndPort(
+		openvscode.Options.GetValue(ideOptions, openvscode.BindAddressOption),
+		openvscode.DefaultVSCodePort,
+	)
 	if err != nil {
 		return err
 	}
@@ -461,7 +634,9 @@ func startVSCodeInBrowser(ctx context.Context, devPodConfig *config.Config, clie
 				logger.Errorf("error opening vscode: %v", err)
 			}
 
-			logger.Infof("Successfully started vscode in browser mode. Please keep this terminal open as long as you use VSCode browser version")
+			logger.Infof(
+				"Successfully started vscode in browser mode. Please keep this terminal open as long as you use VSCode browser version",
+			)
 		}()
 	}
 
@@ -512,7 +687,15 @@ func parseAddressAndPort(bindAddressOption string, defaultPort int) (string, int
 	return address, portName, nil
 }
 
-func startBrowserTunnel(ctx context.Context, devPodConfig *config.Config, client client2.BaseWorkspaceClient, user, targetURL string, forwardPorts bool, extraPorts []string, logger log.Logger) error {
+func startBrowserTunnel(
+	ctx context.Context,
+	devPodConfig *config.Config,
+	client client2.BaseWorkspaceClient,
+	user, targetURL string,
+	forwardPorts bool,
+	extraPorts []string,
+	logger log.Logger,
+) error {
 	err := tunnel.NewTunnel(
 		ctx,
 		func(ctx context.Context, stdin io.Reader, stdout io.Writer) error {
@@ -569,7 +752,13 @@ func startBrowserTunnel(ctx context.Context, devPodConfig *config.Config, client
 }
 
 func configureSSH(client client2.BaseWorkspaceClient, configPath, user string) error {
-	err := devssh.ConfigureSSHConfig(configPath, client.Context(), client.Workspace(), user, log.Default)
+	err := devssh.ConfigureSSHConfig(
+		configPath,
+		client.Context(),
+		client.Workspace(),
+		user,
+		log.Default,
+	)
 	if err != nil {
 		return err
 	}
@@ -579,7 +768,10 @@ func configureSSH(client client2.BaseWorkspaceClient, configPath, user string) e
 
 func mergeDevPodUpOptions(baseOptions *provider2.CLIOptions) error {
 	oldOptions := *baseOptions
-	found, err := clientimplementation.DecodeOptionsFromEnv(clientimplementation.DevPodFlagsUp, baseOptions)
+	found, err := clientimplementation.DecodeOptionsFromEnv(
+		clientimplementation.DevPodFlagsUp,
+		baseOptions,
+	)
 	if err != nil {
 		return fmt.Errorf("decode up options: %w", err)
 	} else if found {
@@ -591,7 +783,12 @@ func mergeDevPodUpOptions(baseOptions *provider2.CLIOptions) error {
 	return nil
 }
 
-func createSSHCommand(ctx context.Context, client client2.BaseWorkspaceClient, logger log.Logger, extraArgs []string) (*exec.Cmd, error) {
+func createSSHCommand(
+	ctx context.Context,
+	client client2.BaseWorkspaceClient,
+	logger log.Logger,
+	extraArgs []string,
+) (*exec.Cmd, error) {
 	execPath, err := os.Executable()
 	if err != nil {
 		return nil, err
@@ -612,4 +809,72 @@ func createSSHCommand(ctx context.Context, client client2.BaseWorkspaceClient, l
 	args = append(args, extraArgs...)
 
 	return exec.CommandContext(ctx, execPath, args...), nil
+}
+
+func setupDotfiles(script string, client client2.BaseWorkspaceClient, logger log.Logger) error {
+	execPath, err := os.Executable()
+	if err != nil {
+		return err
+	}
+
+	// always skip if we're already done
+	execScript := "[ -e setupdone ] && exit 0;"
+
+	// use first the one provided by the user if possible
+	if script != "" {
+		execScript = execScript +
+			"\n[ -e " + script + " ] && " +
+			script + " && touch setupdone && exit 0;"
+	}
+
+	// then try all possible path supported by codespaces too, as documented:
+	// https://docs.github.com/en/codespaces/customizing-your-codespace/personalizing-github-codespaces-for-your-account#dotfiles
+	scriptLocations := []string{
+		"install.sh",
+		"install",
+		"bootstrap.sh",
+		"bootstrap",
+		"script/bootstrap",
+		"setup.sh",
+		"setup",
+		"setup/setup",
+	}
+
+	// build the command
+	for _, location := range scriptLocations {
+		execScript = execScript +
+			"\n[ -e " + location + " ] && " +
+			location + " && touch setupdone && exit 0;"
+	}
+
+	// as fallback we just link dotfiles in the repo into home
+	execScript = execScript + `
+find $(pwd) -maxdepth 1 -type f -iname ".*" -exec ln -s {} ~/ \; && touch setupdone && exit 0
+exit 127
+`
+
+	dotCmd := exec.Command(
+		execPath,
+		[]string{
+			"ssh",
+			"--debug",
+			"--agent-forwarding=true",
+			"--start-services=false",
+			"--context",
+			client.Context(),
+			client.Workspace(),
+			"--log-output=raw",
+			"--command",
+			"cd $HOME/dotfiles && " + execScript,
+		}...,
+	)
+
+	logger.Debugf("Running command: %v", dotCmd.Args)
+
+	writer := logger.Writer(logrus.DebugLevel, false)
+
+	dotCmd.Stdout = writer
+	dotCmd.Stderr = writer
+
+	return dotCmd.Run()
 }
