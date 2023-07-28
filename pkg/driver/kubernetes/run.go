@@ -244,12 +244,23 @@ func (k *kubernetesDriver) runContainer(
 				cmd.Stdin = r
 				cmd.Stdout = buf
 				cmd.Stderr = buf
-				tarCmd.Start()
-				cmd.Start()
-				tarCmd.Wait()
+				err = tarCmd.Start()
+				if err != nil {
+					return fmt.Errorf("Error running command '%s'", tarCmd)
+				}
+				err = cmd.Start()
+				if err != nil {
+					return fmt.Errorf("Error running command '%s'", cmd)
+				}
+				err = tarCmd.Wait()
+				if err != nil {
+					return fmt.Errorf("Error waiting for command '%s'", tarCmd)
+				}
 				w.Close()
-				cmd.Wait()
-
+				err = cmd.Wait()
+				if err != nil {
+					return fmt.Errorf("Error waiting for command '%s'", cmd)
+				}
 			}
 			if err != nil {
 				return errors.Wrap(err, "copy to devcontainer")
