@@ -163,7 +163,7 @@ func (s *workspaceClient) AgentInfo(cliOptions provider.CLIOptions) (string, *pr
 	// we don't send any provider options if proxy because these could contain
 	// sensitive information and we don't want to allow privileged containers that
 	// have access to the host to save these.
-	if cliOptions.Proxy {
+	if cliOptions.Proxy || cliOptions.DisableDaemon {
 		agentInfo.Options = map[string]config.OptionValue{}
 		agentInfo.Workspace = provider.CloneWorkspace(agentInfo.Workspace)
 		agentInfo.Workspace.Provider.Options = map[string]config.OptionValue{}

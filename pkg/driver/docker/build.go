@@ -41,51 +41,54 @@ func (d *dockerDriver) BuildDevContainer(
 	}
 
 	// check if there is a prebuild image
-	devPodCustomizations := config.GetDevPodCustomizations(parsedConfig.Config)
-	if options.Repository != "" {
-		options.PrebuildRepositories = append(options.PrebuildRepositories, options.Repository)
-	}
-	options.PrebuildRepositories = append(options.PrebuildRepositories, devPodCustomizations.PrebuildRepository...)
-	d.Log.Debugf("Try to find prebuild image %s in repositories %s", prebuildHash, strings.Join(options.PrebuildRepositories, ","))
-	for _, prebuildRepo := range options.PrebuildRepositories {
-		prebuildImage := prebuildRepo + ":" + prebuildHash
-		img, err := image.GetImage(prebuildImage)
-		if err == nil && img != nil {
-			// prebuild image found
-			d.Log.Infof("Found existing prebuilt image %s", prebuildImage)
-
-			// inspect image
-			imageDetails, err := d.InspectImage(ctx, prebuildImage)
-			if err != nil {
-				return nil, errors.Wrap(err, "get image details")
-			}
-
-			return &config.BuildInfo{
-				ImageDetails:  imageDetails,
-				ImageMetadata: extendedBuildInfo.MetadataConfig,
-				ImageName:     prebuildImage,
-				PrebuildHash:  prebuildHash,
-			}, nil
-		} else if err != nil {
-			d.Log.Debugf("Error trying to find prebuild image %s: %v", prebuildImage, err)
-		}
-	}
-
-	// check if image build is necessary
 	imageName := getImageName(localWorkspaceFolder, prebuildHash)
-	if options.Repository == "" {
-		imageDetails, err := d.Docker.InspectImage(ctx, imageName, false)
-		if err == nil && imageDetails != nil {
-			// local image found
-			d.Log.Infof("Found existing local image %s", imageName)
-			return &config.BuildInfo{
-				ImageDetails:  imageDetails,
-				ImageMetadata: extendedBuildInfo.MetadataConfig,
-				ImageName:     imageName,
-				PrebuildHash:  prebuildHash,
-			}, nil
-		} else if err != nil {
-			d.Log.Debugf("Error trying to find local image %s: %v", imageName, err)
+	if !options.ForceBuild {
+		devPodCustomizations := config.GetDevPodCustomizations(parsedConfig.Config)
+		if options.Repository != "" {
+			options.PrebuildRepositories = append(options.PrebuildRepositories, options.Repository)
+		}
+		options.PrebuildRepositories = append(options.PrebuildRepositories, devPodCustomizations.PrebuildRepository...)
+
+		d.Log.Debugf("Try to find prebuild image %s in repositories %s", prebuildHash, strings.Join(options.PrebuildRepositories, ","))
+		for _, prebuildRepo := range options.PrebuildRepositories {
+			prebuildImage := prebuildRepo + ":" + prebuildHash
+			img, err := image.GetImage(prebuildImage)
+			if err == nil && img != nil {
+				// prebuild image found
+				d.Log.Infof("Found existing prebuilt image %s", prebuildImage)
+
+				// inspect image
+				imageDetails, err := d.InspectImage(ctx, prebuildImage)
+				if err != nil {
+					return nil, errors.Wrap(err, "get image details")
+				}
+
+				return &config.BuildInfo{
+					ImageDetails:  imageDetails,
+					ImageMetadata: extendedBuildInfo.MetadataConfig,
+					ImageName:     prebuildImage,
+					PrebuildHash:  prebuildHash,
+				}, nil
+			} else if err != nil {
+				d.Log.Debugf("Error trying to find prebuild image %s: %v", prebuildImage, err)
+			}
+		}
+
+		// check if image build is necessary
+		if options.Repository == "" {
+			imageDetails, err := d.Docker.InspectImage(ctx, imageName, false)
+			if err == nil && imageDetails != nil {
+				// local image found
+				d.Log.Infof("Found existing local image %s", imageName)
+				return &config.BuildInfo{
+					ImageDetails:  imageDetails,
+					ImageMetadata: extendedBuildInfo.MetadataConfig,
+					ImageName:     imageName,
+					PrebuildHash:  prebuildHash,
+				}, nil
+			} else if err != nil {
+				d.Log.Debugf("Error trying to find local image %s: %v", imageName, err)
+			}
 		}
 	}
 
@@ -113,14 +116,14 @@ func (d *dockerDriver) BuildDevContainer(
 	if options.Platform != "" {
 		d.Log.Infof("Build for platform '%s'...", options.Platform)
 	}
-	if d.buildxExists(ctx) {
-		d.Log.Infof("Build with docker buildx...")
+	if !options.ForceInternalBuildKit && d.buildxExists(ctx) {
+		d.Log.Info("Build with docker buildx...")
 		err := d.buildxBuild(ctx, writer, options.Platform, buildOptions)
 		if err != nil {
 			return nil, errors.Wrap(err, "buildx build")
 		}
 	} else {
-		d.Log.Infof("Build with internal buildkit...")
+		d.Log.Info("Build with internal buildkit...")
 		err := d.internalBuild(ctx, writer, options.Platform, buildOptions)
 		if err != nil {
 			return nil, errors.Wrap(err, "internal build")

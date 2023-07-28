@@ -20,7 +20,7 @@ var _ = DevPodDescribe("devpod build test suite", func() {
 		dockerHelper = &docker.DockerHelper{DockerCommand: "docker"}
 	})
 
-	ginkgo.It("build docker", func() {
+	ginkgo.It("build docker buildx", func() {
 		ctx := context.Background()
 
 		f := framework.NewDefaultFramework(initialDir + "/bin")
@@ -35,13 +35,55 @@ var _ = DevPodDescribe("devpod build test suite", func() {
 		framework.ExpectNoError(err)
 
 		// do the build
-		err = f.DevPodBuild(ctx, tempDir, "--platform", "linux/amd64,linux/arm64", "--repository", "test-repo", "--skip-push")
+		err = f.DevPodBuild(ctx, tempDir, "--force-build", "--platform", "linux/amd64,linux/arm64", "--repository", "test-repo", "--skip-push")
 		framework.ExpectNoError(err)
 
 		// make sure images are there
 		_, err = dockerHelper.InspectImage(ctx, "test-repo:devpod-dc8184ef6bc1e01650d714624e640101", false)
 		framework.ExpectNoError(err)
 		_, err = dockerHelper.InspectImage(ctx, "test-repo:devpod-db2ba9a28c065a6fa970268fbc2eae11", false)
+		framework.ExpectNoError(err)
+	})
+
+	ginkgo.It("build docker internal buildkit", func() {
+		ctx := context.Background()
+
+		f := framework.NewDefaultFramework(initialDir + "/bin")
+		tempDir, err := framework.CopyToTempDir("tests/build/testdata/docker")
+		framework.ExpectNoError(err)
+		ginkgo.DeferCleanup(framework.CleanupTempDir, initialDir, tempDir)
+
+		_ = f.DevPodProviderDelete(ctx, "docker")
+		err = f.DevPodProviderAdd(ctx, "docker")
+		framework.ExpectNoError(err)
+		err = f.DevPodProviderUse(context.Background(), "docker")
+		framework.ExpectNoError(err)
+
+		// do the build
+		err = f.DevPodBuild(ctx, tempDir, "--force-build", "--force-internal-buildkit", "--repository", "test-repo", "--skip-push")
+		framework.ExpectNoError(err)
+
+		// make sure images are there
+		_, err = dockerHelper.InspectImage(ctx, "test-repo:devpod-dc8184ef6bc1e01650d714624e640101", false)
+		framework.ExpectNoError(err)
+	})
+
+	ginkgo.It("build kubernetes buildkit", func() {
+		ctx := context.Background()
+
+		f := framework.NewDefaultFramework(initialDir + "/bin")
+		tempDir, err := framework.CopyToTempDir("tests/build/testdata/kubernetes")
+		framework.ExpectNoError(err)
+		ginkgo.DeferCleanup(framework.CleanupTempDir, initialDir, tempDir)
+
+		_ = f.DevPodProviderDelete(ctx, "kubernetes")
+		err = f.DevPodProviderAdd(ctx, "kubernetes")
+		framework.ExpectNoError(err)
+		err = f.DevPodProviderUse(context.Background(), "kubernetes", "-o", "BUILD_REPOSITORY=test-repo", "-o", "KUBERNETES_NAMESPACE=devpod")
+		framework.ExpectNoError(err)
+
+		// do the build
+		err = f.DevPodBuild(ctx, tempDir, "--force-build", "--repository", "test-repo", "--skip-push")
 		framework.ExpectNoError(err)
 	})
 })
