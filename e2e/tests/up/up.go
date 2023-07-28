@@ -450,6 +450,62 @@ var _ = DevPodDescribe("devpod up test suite", func() {
 					framework.ExpectNoError(err)
 				}, ginkgo.SpecTimeout(60*time.Second))
 			})
+			ginkgo.It("should start a new workspace with dotfiles - no install script", func(ctx context.Context) {
+				tempDir, err := framework.CopyToTempDir("tests/up/testdata/docker")
+				framework.ExpectNoError(err)
+				ginkgo.DeferCleanup(framework.CleanupTempDir, initialDir, tempDir)
+
+				f := framework.NewDefaultFramework(initialDir + "/bin")
+
+				_ = f.DevPodProviderDelete(ctx, "docker")
+				err = f.DevPodProviderAdd(ctx, "docker")
+				framework.ExpectNoError(err)
+				err = f.DevPodProviderUse(context.Background(), "docker")
+				framework.ExpectNoError(err)
+
+				ginkgo.DeferCleanup(f.DevPodWorkspaceDelete, context.Background(), tempDir)
+
+				// Wait for devpod workspace to come online (deadline: 30s)
+				err = f.DevPodUp(ctx, tempDir, "--dotfiles", "https://github.com/loft-sh/example-dotfiles")
+				framework.ExpectNoError(err)
+
+				out, err := f.DevPodSSH(ctx, tempDir, "ls ~/.file*")
+				framework.ExpectNoError(err)
+
+				expectedOutput := `/home/vscode/.file1
+/home/vscode/.file2
+/home/vscode/.file3
+`
+				framework.ExpectEqual(out, expectedOutput, "should match")
+
+			}, ginkgo.SpecTimeout(60*time.Second))
+			ginkgo.It("should start a new workspace with dotfiles - install script", func(ctx context.Context) {
+				tempDir, err := framework.CopyToTempDir("tests/up/testdata/docker")
+				framework.ExpectNoError(err)
+				ginkgo.DeferCleanup(framework.CleanupTempDir, initialDir, tempDir)
+
+				f := framework.NewDefaultFramework(initialDir + "/bin")
+
+				_ = f.DevPodProviderDelete(ctx, "docker")
+				err = f.DevPodProviderAdd(ctx, "docker")
+				framework.ExpectNoError(err)
+				err = f.DevPodProviderUse(context.Background(), "docker")
+				framework.ExpectNoError(err)
+
+				ginkgo.DeferCleanup(f.DevPodWorkspaceDelete, context.Background(), tempDir)
+
+				// Wait for devpod workspace to come online (deadline: 30s)
+				err = f.DevPodUp(ctx, tempDir, "--dotfiles", "https://github.com/loft-sh/example-dotfiles", "--dotfiles-script", "install-example")
+				framework.ExpectNoError(err)
+
+				out, err := f.DevPodSSH(ctx, tempDir, "ls /tmp/worked")
+				framework.ExpectNoError(err)
+
+				expectedOutput := "/tmp/worked\n"
+
+				framework.ExpectEqual(out, expectedOutput, "should match")
+
+			}, ginkgo.SpecTimeout(60*time.Second))
 		})
 
 		ginkgo.Context("with docker-compose", func() {
