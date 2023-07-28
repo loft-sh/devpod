@@ -11,7 +11,12 @@ import (
 	"github.com/loft-sh/devpod/pkg/command"
 )
 
-var branchRegEx = regexp.MustCompile(`^([^@]*(?:git@)?[^@/]+/[^@]+)@([a-zA-Z0-9\./-]+)$`)
+const CommitDelimiter string = "@sha256:"
+
+var (
+	branchRegEx = regexp.MustCompile(`^([^@]*(?:git@)?[^@/]+/[^@]+)@([a-zA-Z0-9\./-]+)$`)
+	commitRegEx = regexp.MustCompile(`^([^@]*(?:git@)?[^@/]+/[^@]+)` + regexp.QuoteMeta(CommitDelimiter) + `([a-zA-Z0-9]+)$`)
+)
 
 func CommandContext(ctx context.Context, args ...string) *exec.Cmd {
 	cmd := exec.CommandContext(ctx, "git", args...)
@@ -21,7 +26,7 @@ func CommandContext(ctx context.Context, args ...string) *exec.Cmd {
 	return cmd
 }
 
-func NormalizeRepository(str string) (string, string) {
+func NormalizeRepository(str string) (string, string, string) {
 	if !strings.HasPrefix(str, "ssh://") && !strings.HasPrefix(str, "git@") && !strings.HasPrefix(str, "http://") && !strings.HasPrefix(str, "https://") {
 		str = "https://" + str
 	}
@@ -33,7 +38,14 @@ func NormalizeRepository(str string) (string, string) {
 		branch = match[2]
 	}
 
-	return str, branch
+	// resolve commit hash
+	commit := ""
+	if match := commitRegEx.FindStringSubmatch(str); match != nil {
+		str = match[1]
+		commit = match[2]
+	}
+
+	return str, branch, commit
 }
 
 func PingRepository(str string) bool {

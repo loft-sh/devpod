@@ -146,14 +146,18 @@ func findDevcontainerFiles(ctx context.Context, rawSource, tmpDirPath string, ma
 	}
 
 	// git repo
-	gitRepository, gitBranch := git.NormalizeRepository(rawSource)
+	gitRepository, gitBranch, gitCommit := git.NormalizeRepository(rawSource)
 	if strings.HasSuffix(rawSource, ".git") || git.PingRepository(gitRepository) {
 		log.Debug("Git repository detected")
 		result.IsGitRepository = true
 
 		log.Debugf("Cloning git repository into %s", tmpDirPath)
 		// git clone --bare --depth=1 $REPO
-		cloneArgs := []string{"clone", "--bare", "--depth=1", gitRepository, tmpDirPath}
+		cloneArgs := []string{"clone"}
+		if gitCommit == "" {
+			cloneArgs = append(cloneArgs, "--bare", "--depth=1")
+		}
+		cloneArgs = append(cloneArgs, gitRepository, tmpDirPath)
 		if gitBranch != "" {
 			cloneArgs = append(cloneArgs, "--branch", gitBranch)
 		}
@@ -162,6 +166,19 @@ func findDevcontainerFiles(ctx context.Context, rawSource, tmpDirPath string, ma
 			return nil, err
 		}
 		log.Debug("Done cloning git repository")
+
+		if gitCommit != "" {
+			log.Debugf("Resetting HEAD to %s", gitCommit)
+			// git reset --hard $COMMIT_SHA
+			resetArgs := []string{"reset", "--hard", gitCommit}
+			resetCmd := git.CommandContext(ctx, resetArgs...)
+			resetCmd.Dir = tmpDirPath
+			err = resetCmd.Run()
+			if err != nil {
+				return nil, err
+			}
+			log.Debugf("HEAD is now at %s", gitCommit)
+		}
 
 		log.Debug("Listing git file tree")
 		ref := "HEAD"

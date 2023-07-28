@@ -424,12 +424,13 @@ func resolve(
 	}
 
 	// is git?
-	gitRepository, gitBranch := git.NormalizeRepository(name)
+	gitRepository, gitBranch, gitCommit := git.NormalizeRepository(name)
 	if strings.HasSuffix(name, ".git") || git.PingRepository(gitRepository) {
 		workspace.Picture = getProjectImage(name)
 		workspace.Source = provider2.WorkspaceSource{
 			GitRepository: gitRepository,
 			GitBranch:     gitBranch,
+			GitCommit:     gitCommit,
 		}
 		return workspace, nil
 	}
