@@ -64,41 +64,43 @@ func (k *kubernetesDriver) BuildDevContainer(
 	}
 
 	// check if there is a prebuild image
-	devPodCustomizations := config.GetDevPodCustomizations(parsedConfig.Config)
-	if options.Repository != "" {
-		options.PrebuildRepositories = append(options.PrebuildRepositories, options.Repository)
-	}
-	if k.config.BuildRepository != "" {
-		options.PrebuildRepositories = append(options.PrebuildRepositories, k.config.BuildRepository)
-	}
-	options.PrebuildRepositories = append(options.PrebuildRepositories, devPodCustomizations.PrebuildRepository...)
-	k.Log.Debugf("Try to find prebuild image %s in repositories %s", prebuildHash, strings.Join(options.PrebuildRepositories, ","))
-	for _, prebuildRepo := range options.PrebuildRepositories {
-		prebuildImage := prebuildRepo + ":" + prebuildHash
-		img, err := image.GetImage(prebuildImage)
-		if err == nil && img != nil {
-			// prebuild image found
-			k.Log.Infof("Found existing prebuilt image %s", prebuildImage)
+	if !options.ForceBuild {
+		devPodCustomizations := config.GetDevPodCustomizations(parsedConfig.Config)
+		if options.Repository != "" {
+			options.PrebuildRepositories = append(options.PrebuildRepositories, options.Repository)
+		}
+		if k.config.BuildRepository != "" {
+			options.PrebuildRepositories = append(options.PrebuildRepositories, k.config.BuildRepository)
+		}
+		options.PrebuildRepositories = append(options.PrebuildRepositories, devPodCustomizations.PrebuildRepository...)
+		k.Log.Debugf("Try to find prebuild image %s in repositories %s", prebuildHash, strings.Join(options.PrebuildRepositories, ","))
+		for _, prebuildRepo := range options.PrebuildRepositories {
+			prebuildImage := prebuildRepo + ":" + prebuildHash
+			img, err := image.GetImage(prebuildImage)
+			if err == nil && img != nil {
+				// prebuild image found
+				k.Log.Infof("Found existing prebuilt image %s", prebuildImage)
 
-			// inspect image
-			imageDetails, err := k.InspectImage(ctx, prebuildImage)
-			if err != nil {
-				return nil, errors.Wrap(err, "get image details")
+				// inspect image
+				imageDetails, err := k.InspectImage(ctx, prebuildImage)
+				if err != nil {
+					return nil, errors.Wrap(err, "get image details")
+				}
+
+				return &config.BuildInfo{
+					ImageDetails:  imageDetails,
+					ImageMetadata: extendedBuildInfo.MetadataConfig,
+					ImageName:     prebuildImage,
+					PrebuildHash:  prebuildHash,
+				}, nil
+			} else if err != nil {
+				k.Log.Debugf("Error trying to find prebuild image %s: %v", prebuildImage, err)
 			}
-
-			return &config.BuildInfo{
-				ImageDetails:  imageDetails,
-				ImageMetadata: extendedBuildInfo.MetadataConfig,
-				ImageName:     prebuildImage,
-				PrebuildHash:  prebuildHash,
-			}, nil
-		} else if err != nil {
-			k.Log.Debugf("Error trying to find prebuild image %s: %v", prebuildImage, err)
 		}
 	}
 
 	// check if prebuild
-	if options.Repository != "" {
+	if !options.SkipPush && options.Repository != "" {
 		return nil, fmt.Errorf("you cannot use Kubernetes driver to prebuild images, please use docker instead")
 	}
 
@@ -150,8 +152,13 @@ func (k *kubernetesDriver) buildPod(
 			_ = os.RemoveAll(folder)
 		}
 	}()
-	buildOptions.Load = false
-	buildOptions.Push = true
+	if options.SkipPush {
+		buildOptions.Load = false
+		buildOptions.Push = false
+	} else {
+		buildOptions.Load = false
+		buildOptions.Push = true
+	}
 
 	// get pod
 	var pod *corev1.Pod
@@ -247,9 +254,12 @@ func (k *kubernetesDriver) buildPod(
 
 	// check registry
 	k.Log.Infof("Done building image '%s'", imageName)
-	imageDetails, err := k.InspectImage(ctx, imageName)
-	if err != nil {
-		return nil, errors.Wrap(err, "inspect image")
+	var imageDetails *config.ImageDetails
+	if !options.SkipPush {
+		imageDetails, err = k.InspectImage(ctx, imageName)
+		if err != nil {
+			return nil, errors.Wrap(err, "inspect image")
+		}
 	}
 
 	return &config.BuildInfo{

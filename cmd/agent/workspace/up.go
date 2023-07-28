@@ -81,7 +81,7 @@ func (cmd *UpCmd) Run(ctx context.Context) error {
 	// initialize the workspace
 	cancelCtx, cancel := context.WithCancel(ctx)
 	defer cancel()
-	tunnelClient, logger, credentialsDir, err := initWorkspace(cancelCtx, cancel, workspaceInfo, cmd.Debug, !workspaceInfo.CLIOptions.Proxy)
+	tunnelClient, logger, credentialsDir, err := initWorkspace(cancelCtx, cancel, workspaceInfo, cmd.Debug, !workspaceInfo.CLIOptions.Proxy && !workspaceInfo.CLIOptions.DisableDaemon)
 	if err != nil {
 		err1 := clientimplementation.DeleteWorkspaceFolder(workspaceInfo.Workspace.Context, workspaceInfo.Workspace.ID, logger)
 		if err1 != nil {

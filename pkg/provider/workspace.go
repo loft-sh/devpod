@@ -134,12 +134,17 @@ type CLIOptions struct {
 	WorkspaceEnv         []string `json:"workspaceEnv,omitempty"`
 	Recreate             bool     `json:"recreate,omitempty"`
 	Proxy                bool     `json:"proxy,omitempty"`
+	DisableDaemon        bool     `json:"disableDaemon,omitempty"`
 	DaemonInterval       string   `json:"daemonInterval,omitempty"`
 
 	// build options
 	Repository string   `json:"repository,omitempty"`
 	SkipPush   bool     `json:"skipPush,omitempty"`
 	Platform   []string `json:"platform,omitempty"`
+
+	// TESTING
+	ForceBuild            bool `json:"forceBuild,omitempty"`
+	ForceInternalBuildKit bool `json:"forceInternalBuildKit,omitempty"`
 }
 
 func (w WorkspaceSource) String() string {
