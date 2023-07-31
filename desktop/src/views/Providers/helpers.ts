@@ -6,7 +6,7 @@ export type TOptionWithID = Readonly<{
   defaultValue: TProviderOption["default"]
   displayName: string
 }> &
-  Omit<TProviderOption, "default">
+  Omit<TProviderOption, "default" | "children">
 export function getOptionValue(option: TOptionWithID) {
   return option.value ?? option.defaultValue
 }

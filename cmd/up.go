@@ -197,29 +197,21 @@ func (cmd *UpCmd) Run(
 				log,
 			)
 		case string(config.IDEGoland):
-			return jetbrains.NewGolandServer(config2.GetRemoteUser(result), ideConfig.Options, log).
-				OpenGateway(result.SubstitutionContext.ContainerWorkspaceFolder, client.Workspace())
+			return jetbrains.NewGolandServer(config2.GetRemoteUser(result), ideConfig.Options, log).OpenGateway(result.SubstitutionContext.ContainerWorkspaceFolder, client.Workspace())
 		case string(config.IDEPyCharm):
-			return jetbrains.NewPyCharmServer(config2.GetRemoteUser(result), ideConfig.Options, log).
-				OpenGateway(result.SubstitutionContext.ContainerWorkspaceFolder, client.Workspace())
+			return jetbrains.NewPyCharmServer(config2.GetRemoteUser(result), ideConfig.Options, log).OpenGateway(result.SubstitutionContext.ContainerWorkspaceFolder, client.Workspace())
 		case string(config.IDEPhpStorm):
-			return jetbrains.NewPhpStorm(config2.GetRemoteUser(result), ideConfig.Options, log).
-				OpenGateway(result.SubstitutionContext.ContainerWorkspaceFolder, client.Workspace())
+			return jetbrains.NewPhpStorm(config2.GetRemoteUser(result), ideConfig.Options, log).OpenGateway(result.SubstitutionContext.ContainerWorkspaceFolder, client.Workspace())
 		case string(config.IDEIntellij):
-			return jetbrains.NewIntellij(config2.GetRemoteUser(result), ideConfig.Options, log).
-				OpenGateway(result.SubstitutionContext.ContainerWorkspaceFolder, client.Workspace())
+			return jetbrains.NewIntellij(config2.GetRemoteUser(result), ideConfig.Options, log).OpenGateway(result.SubstitutionContext.ContainerWorkspaceFolder, client.Workspace())
 		case string(config.IDECLion):
-			return jetbrains.NewCLionServer(config2.GetRemoteUser(result), ideConfig.Options, log).
-				OpenGateway(result.SubstitutionContext.ContainerWorkspaceFolder, client.Workspace())
+			return jetbrains.NewCLionServer(config2.GetRemoteUser(result), ideConfig.Options, log).OpenGateway(result.SubstitutionContext.ContainerWorkspaceFolder, client.Workspace())
 		case string(config.IDERider):
-			return jetbrains.NewRiderServer(config2.GetRemoteUser(result), ideConfig.Options, log).
-				OpenGateway(result.SubstitutionContext.ContainerWorkspaceFolder, client.Workspace())
+			return jetbrains.NewRiderServer(config2.GetRemoteUser(result), ideConfig.Options, log).OpenGateway(result.SubstitutionContext.ContainerWorkspaceFolder, client.Workspace())
 		case string(config.IDERubyMine):
-			return jetbrains.NewRubyMineServer(config2.GetRemoteUser(result), ideConfig.Options, log).
-				OpenGateway(result.SubstitutionContext.ContainerWorkspaceFolder, client.Workspace())
+			return jetbrains.NewRubyMineServer(config2.GetRemoteUser(result), ideConfig.Options, log).OpenGateway(result.SubstitutionContext.ContainerWorkspaceFolder, client.Workspace())
 		case string(config.IDEWebStorm):
-			return jetbrains.NewWebStormServer(config2.GetRemoteUser(result), ideConfig.Options, log).
-				OpenGateway(result.SubstitutionContext.ContainerWorkspaceFolder, client.Workspace())
+			return jetbrains.NewWebStormServer(config2.GetRemoteUser(result), ideConfig.Options, log).OpenGateway(result.SubstitutionContext.ContainerWorkspaceFolder, client.Workspace())
 		case string(config.IDEFleet):
 			return startFleet(ctx, client, log)
 		case string(config.IDEJupyterNotebook):
@@ -760,13 +752,12 @@ func setupDotfiles(
 	}
 
 	if dotfilesRepo == "" {
-		log.Info("No dotfiles repo specified, skipping")
-
+		log.Debug("No dotfiles repo specified, skipping")
 		return nil
 	}
 
-	log.Infof("Dotfiles repo %s specified", dotfilesRepo)
-	log.Infof("Setting dotfiles into the devcontainer")
+	log.Infof("Dotfiles git repository %s specified", dotfilesRepo)
+	log.Debug("Cloning dotfiles into the devcontainer...")
 
 	execPath, err := os.Executable()
 	if err != nil {
@@ -794,18 +785,15 @@ func setupDotfiles(
 
 	dotCmd := exec.Command(
 		execPath,
-		[]string{
-			"ssh",
-			"--agent-forwarding=true",
-			"--start-services=false",
-			"--context",
-			client.Context(),
-			client.Workspace(),
-			"--log-output=raw",
-			"--command",
-			agent.ContainerDevPodHelperLocation + " " +
-				strings.Join(agentArguments, " "),
-		}...,
+		"ssh",
+		"--agent-forwarding=true",
+		"--start-services=false",
+		"--context",
+		client.Context(),
+		client.Workspace(),
+		"--log-output=raw",
+		"--command",
+		agent.ContainerDevPodHelperLocation+" "+strings.Join(agentArguments, " "),
 	)
 
 	if log.GetLevel() == logrus.DebugLevel {

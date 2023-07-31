@@ -16,6 +16,8 @@ import (
 type SetOptionsCmd struct {
 	flags.GlobalFlags
 
+	Dry bool
+
 	Reconfigure   bool
 	SingleMachine bool
 	Options       []string
@@ -30,18 +32,24 @@ func NewSetOptionsCmd(flags *flags.GlobalFlags) *cobra.Command {
 		Use:   "set-options",
 		Short: "Sets options for the given provider. Similar to 'devpod provider use', but does not switch the default provider.",
 		RunE: func(_ *cobra.Command, args []string) error {
-			return cmd.Run(context.Background(), args)
+			logger := log.Logger(log.Default)
+			if cmd.Dry {
+				logger = log.Default.ErrorStreamOnly()
+			}
+
+			return cmd.Run(context.Background(), args, logger)
 		},
 	}
 
 	setOptionsCmd.Flags().BoolVar(&cmd.SingleMachine, "single-machine", false, "If enabled will use a single machine for all workspaces")
 	setOptionsCmd.Flags().BoolVar(&cmd.Reconfigure, "reconfigure", false, "If enabled will not merge existing provider config")
 	setOptionsCmd.Flags().StringArrayVarP(&cmd.Options, "option", "o", []string{}, "Provider option in the form KEY=VALUE")
+	setOptionsCmd.Flags().BoolVar(&cmd.Dry, "dry", false, "Dry will not persist the options to file and instead return the new filled options")
 	return setOptionsCmd
 }
 
 // Run runs the command logic
-func (cmd *SetOptionsCmd) Run(ctx context.Context, args []string) error {
+func (cmd *SetOptionsCmd) Run(ctx context.Context, args []string, log log.Logger) error {
 	devPodConfig, err := config.LoadConfig(cmd.Context, cmd.Provider)
 	if err != nil {
 		return err
@@ -54,23 +62,41 @@ func (cmd *SetOptionsCmd) Run(ctx context.Context, args []string) error {
 		return fmt.Errorf("please specify a provider")
 	}
 
-	providerWithOptions, err := workspace.FindProvider(devPodConfig, providerName, log.Default)
+	providerWithOptions, err := workspace.FindProvider(devPodConfig, providerName, log)
 	if err != nil {
 		return err
 	}
 
-	devPodConfig, err = setOptions(ctx, providerWithOptions.Config, devPodConfig.DefaultContext, cmd.Options, cmd.Reconfigure, false, false, false, &cmd.SingleMachine)
+	devPodConfig, err = setOptions(
+		ctx,
+		providerWithOptions.Config,
+		devPodConfig.DefaultContext,
+		cmd.Options,
+		cmd.Reconfigure,
+		cmd.Dry,
+		cmd.Dry,
+		&cmd.SingleMachine,
+		log,
+	)
 	if err != nil {
 		return err
 	}
 
 	// save provider config
-	err = config.SaveConfig(devPodConfig)
-	if err != nil {
-		return errors.Wrap(err, "save config")
+	if !cmd.Dry {
+		err = config.SaveConfig(devPodConfig)
+		if err != nil {
+			return errors.Wrap(err, "save config")
+		}
+	} else {
+		// print options to stdout
+		err = printOptions(devPodConfig, providerWithOptions, "json", true)
+		if err != nil {
+			return fmt.Errorf("print options: %w", err)
+		}
 	}
 
 	// print success message
-	log.Default.Donef("Successfully set options for provider '%s'", providerWithOptions.Config.Name)
+	log.Donef("Successfully set options for provider '%s'", providerWithOptions.Config.Name)
 	return nil
 }

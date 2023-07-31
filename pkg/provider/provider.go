@@ -34,7 +34,7 @@ type ProviderConfig struct {
 	OptionGroups []ProviderOptionGroup `json:"optionGroups,omitempty"`
 
 	// Options are the provider options.
-	Options map[string]*ProviderOption `json:"options,omitempty"`
+	Options map[string]*types.Option `json:"options,omitempty"`
 
 	// Agent allows you to override agent configuration
 	Agent ProviderAgentConfig `json:"agent,omitempty"`
@@ -272,12 +272,8 @@ type ProxyCommands struct {
 	Status types.StrArray `json:"status,omitempty"`
 }
 
-type ProviderOption struct {
-	types.Option
-}
-
 type SubOptions struct {
-	Options map[string]types.Option `json:"options,omitempty"`
+	Options map[string]*types.Option `json:"options,omitempty"`
 }
 
 func (c *ProviderConfig) IsMachineProvider() bool {

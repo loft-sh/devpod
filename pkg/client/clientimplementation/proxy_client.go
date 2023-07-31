@@ -142,7 +142,7 @@ func (s *proxyClient) RefreshOptions(ctx context.Context, userOptionsRaw []strin
 	s.m.Lock()
 	defer s.m.Unlock()
 
-	userOptions, err := provider.ParseOptions(s.devPodConfig, s.config, userOptionsRaw)
+	userOptions, err := provider.ParseOptions(userOptionsRaw)
 	if err != nil {
 		return perrors.Wrap(err, "parse options")
 	}

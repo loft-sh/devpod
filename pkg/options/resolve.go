@@ -16,7 +16,14 @@ import (
 	"github.com/loft-sh/log"
 )
 
-func ResolveAndSaveOptionsMachine(ctx context.Context, devConfig *config.Config, provider *provider2.ProviderConfig, originalMachine *provider2.Machine, userOptions map[string]string, log log.Logger) (*provider2.Machine, error) {
+func ResolveAndSaveOptionsMachine(
+	ctx context.Context,
+	devConfig *config.Config,
+	provider *provider2.ProviderConfig,
+	originalMachine *provider2.Machine,
+	userOptions map[string]string,
+	log log.Logger,
+) (*provider2.Machine, error) {
 	// reload config
 	machine, err := provider2.LoadMachineConfig(originalMachine.Context, originalMachine.ID)
 	if err != nil {
@@ -36,16 +43,15 @@ func ResolveAndSaveOptionsMachine(ctx context.Context, devConfig *config.Config,
 	}
 
 	// resolve options
-	r := resolver.New(
+	resolvedOptions, _, err := resolver.New(
 		userOptions,
 		provider2.Merge(provider2.ToOptionsMachine(machine), binaryPaths),
 		log,
 		resolver.WithResolveLocal(),
-	)
-	dynamicOptions := mergeProviderOptions(provider.Options, devConfig.DynamicProviderOptions(provider.Name))
-	resolvedOptions, _, err := r.Resolve(
+	).Resolve(
 		ctx,
-		dynamicOptions,
+		devConfig.DynamicProviderOptionDefinitions(provider.Name),
+		provider.Options,
 		provider2.CombineOptions(nil, machine, devConfig.ProviderOptions(provider.Name)),
 	)
 	if err != nil {
@@ -70,7 +76,14 @@ func ResolveAndSaveOptionsMachine(ctx context.Context, devConfig *config.Config,
 	return machine, nil
 }
 
-func ResolveAndSaveOptionsWorkspace(ctx context.Context, devConfig *config.Config, provider *provider2.ProviderConfig, originalWorkspace *provider2.Workspace, userOptions map[string]string, log log.Logger) (*provider2.Workspace, error) {
+func ResolveAndSaveOptionsWorkspace(
+	ctx context.Context,
+	devConfig *config.Config,
+	provider *provider2.ProviderConfig,
+	originalWorkspace *provider2.Workspace,
+	userOptions map[string]string,
+	log log.Logger,
+) (*provider2.Workspace, error) {
 	// reload config
 	workspace, err := provider2.LoadWorkspaceConfig(originalWorkspace.Context, originalWorkspace.ID)
 	if err != nil {
@@ -90,16 +103,15 @@ func ResolveAndSaveOptionsWorkspace(ctx context.Context, devConfig *config.Confi
 	}
 
 	// resolve options
-	r := resolver.New(
+	resolvedOptions, _, err := resolver.New(
 		userOptions,
 		provider2.Merge(provider2.ToOptionsWorkspace(workspace), binaryPaths),
 		log,
 		resolver.WithResolveLocal(),
-	)
-	dynamicOptions := mergeProviderOptions(provider.Options, devConfig.DynamicProviderOptions(provider.Name))
-	resolvedOptions, _, err := r.Resolve(
+	).Resolve(
 		ctx,
-		dynamicOptions,
+		devConfig.DynamicProviderOptionDefinitions(provider.Name),
+		provider.Options,
 		provider2.CombineOptions(workspace, nil, devConfig.ProviderOptions(provider.Name)),
 	)
 	if err != nil {
@@ -124,54 +136,43 @@ func ResolveAndSaveOptionsWorkspace(ctx context.Context, devConfig *config.Confi
 	return workspace, nil
 }
 
-func ResolveOptions(ctx context.Context, devConfig *config.Config, provider *provider2.ProviderConfig, userOptions map[string]string, skipRequired bool, singleMachine *bool, init bool, log log.Logger) (*config.Config, error) {
+func ResolveOptions(
+	ctx context.Context,
+	devConfig *config.Config,
+	provider *provider2.ProviderConfig,
+	userOptions map[string]string,
+	skipRequired bool,
+	singleMachine *bool,
+	log log.Logger,
+) (*config.Config, error) {
 	// get binary paths
 	binaryPaths, err := binaries.GetBinaries(devConfig.DefaultContext, provider)
 	if err != nil {
 		return nil, err
 	}
 
-	r := resolver.New(
+	// create new resolver
+	resolve := resolver.New(
 		userOptions,
 		provider2.Merge(provider2.GetBaseEnvironment(devConfig.DefaultContext, provider.Name), binaryPaths),
 		log,
 		resolver.WithResolveGlobal(),
+		resolver.WithResolveSubOptions(),
 		resolver.WithSkipRequired(skipRequired),
 	)
 
-	options := mergeProviderOptions(provider.Options, devConfig.DynamicProviderOptions(provider.Name))
-	dynamicOptions := config.DynamicOptions{}
-	resolvedOptions := devConfig.ProviderOptions(provider.Name)
-
-	isDone := func() bool {
-		// check if dynamic options are all resolved
-		for k := range dynamicOptions {
-			_, ok := resolvedOptions[k]
-
-			if !ok {
-				return false
-			}
-		}
-
-		return true
+	// loop and resolve options, as soon as we encounter a new dynamic option it will get filled
+	resolvedOptionValues, dynamicOptionDefinitions, err := resolve.Resolve(
+		ctx,
+		devConfig.DynamicProviderOptionDefinitions(provider.Name),
+		provider.Options,
+		devConfig.ProviderOptions(provider.Name),
+	)
+	if err != nil {
+		return nil, err
 	}
 
-	for stop := false; !stop; stop = isDone() {
-		newResOpts, newDynOpts, err := r.Resolve(ctx, options, resolvedOptions)
-		if err != nil {
-			return nil, err
-		}
-		dynamicOptions = mergeOptions(dynamicOptions, newDynOpts)
-		resolvedOptions = newResOpts
-
-		if !init {
-			break
-		}
-		// prepare next tick
-		options = mergeOptions(options, dynamicOptions)
-	}
-
-	// dev config
+	// save options in dev config
 	if devConfig != nil {
 		devConfig = config.CloneConfig(devConfig)
 		if devConfig.Current().Providers == nil {
@@ -181,12 +182,12 @@ func ResolveOptions(ctx context.Context, devConfig *config.Config, provider *pro
 			devConfig.Current().Providers[provider.Name] = &config.ProviderConfig{}
 		}
 		devConfig.Current().Providers[provider.Name].Options = map[string]config.OptionValue{}
-		for k, v := range resolvedOptions {
+		for k, v := range resolvedOptionValues {
 			devConfig.Current().Providers[provider.Name].Options[k] = v
 		}
 
-		devConfig.Current().Providers[provider.Name].DynamicOptions = config.DynamicOptions{}
-		for k, v := range dynamicOptions {
+		devConfig.Current().Providers[provider.Name].DynamicOptions = config.OptionDefinitions{}
+		for k, v := range dynamicOptionDefinitions {
 			devConfig.Current().Providers[provider.Name].DynamicOptions[k] = v
 		}
 		if singleMachine != nil {
@@ -260,31 +261,7 @@ func resolveAgentDownloadURL(devConfig *config.Config) string {
 	return agent.DefaultAgentDownloadURL()
 }
 
-func mergeProviderOptions(existing map[string]*provider2.ProviderOption, newOpts config.DynamicOptions) config.DynamicOptions {
-	retOptions := config.DynamicOptions{}
-	for k, v := range existing {
-		retOptions[k] = &v.Option
-	}
-	for k, v := range newOpts {
-		retOptions[k] = v
-	}
-
-	return retOptions
-}
-
-func mergeOptions[K comparable, V any](existing map[K]V, newOpts map[K]V) map[K]V {
-	retOpts := map[K]V{}
-	for k, v := range existing {
-		retOpts[k] = v
-	}
-	for k, v := range newOpts {
-		retOpts[k] = v
-	}
-
-	return retOpts
-}
-
-func filterResolvedOptions(resolvedOptions, beforeConfigOptions, providerValues map[string]config.OptionValue, providerOptions map[string]*provider2.ProviderOption, userOptions map[string]string) {
+func filterResolvedOptions(resolvedOptions, beforeConfigOptions, providerValues map[string]config.OptionValue, providerOptions map[string]*types.Option, userOptions map[string]string) {
 	for k := range resolvedOptions {
 		// check if user supplied
 		if userOptions != nil {
