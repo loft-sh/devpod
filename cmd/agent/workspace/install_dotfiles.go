@@ -10,6 +10,7 @@ import (
 	"github.com/loft-sh/devpod/cmd/flags"
 	"github.com/loft-sh/devpod/pkg/git"
 	"github.com/loft-sh/log"
+	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 )
 
@@ -59,7 +60,7 @@ func (cmd *InstallDotfilesCmd) Run(ctx context.Context) error {
 		return err
 	}
 
-	logger.Infof("Entering dotfiles directory")
+	logger.Debugf("Entering dotfiles directory")
 
 	err = os.Chdir("dotfiles")
 	if err != nil {
@@ -69,12 +70,19 @@ func (cmd *InstallDotfilesCmd) Run(ctx context.Context) error {
 	if cmd.InstallScript != "" {
 		logger.Infof("Executing install script %s", cmd.InstallScript)
 
-		return exec.Command("./" + cmd.InstallScript).Run()
+		scriptCmd := exec.Command("./" + cmd.InstallScript)
+
+		writer := logger.Writer(logrus.InfoLevel, false)
+
+		scriptCmd.Stdout = writer
+		scriptCmd.Stderr = writer
+
+		return scriptCmd.Run()
 	}
 
 	logger.Debugf("Install script not specified, trying known locations")
 
-	return setupDotfiles(0, logger)
+	return setupDotfiles(logger)
 }
 
 var scriptLocations = []string{
@@ -88,43 +96,50 @@ var scriptLocations = []string{
 	"./setup/setup",
 }
 
-func setupDotfiles(index int, logger log.Logger) error {
-	if index > len(scriptLocations)-1 {
-		logger.Debug("Finished script locations, trying to link the files")
+func setupDotfiles(logger log.Logger) error {
+	for _, command := range scriptLocations {
+		logger.Debugf("Trying executing %s", command)
 
-		files, err := os.ReadDir(".")
+		scriptCmd := exec.Command(command)
+
+		writer := logger.Writer(logrus.InfoLevel, false)
+
+		scriptCmd.Stdout = writer
+		scriptCmd.Stderr = writer
+		err := scriptCmd.Run()
 		if err != nil {
-			return err
+			logger.Infof("Execution of %s was unsuccessful: %v", command, err)
+			logger.Debug("Trying next location")
+
+			continue
 		}
 
-		pwd, err := os.Getwd()
-		if err != nil {
-			return err
-		}
-
-		// link dotfiles in directory to home
-		for _, file := range files {
-			if strings.HasPrefix(file.Name(), ".") && !file.IsDir() {
-				logger.Debugf("linking %s in home", file.Name())
-
-				err = os.Symlink(filepath.Join(pwd, file.Name()), filepath.Join(os.Getenv("HOME"), file.Name()))
-				if err != nil {
-					return err
-				}
-			}
-		}
-
+		// we successfully executed one of the commands, let's exit
 		return nil
 	}
 
-	logger.Debugf("Trying executing %s", scriptLocations[index])
+	logger.Info("Finished script locations, trying to link the files")
 
-	err := exec.Command(scriptLocations[index]).Run()
+	files, err := os.ReadDir(".")
 	if err != nil {
-		logger.Debugf("Execution of %s was unsuccessful: %v", scriptLocations[index], err)
-		logger.Debug("Trying next location")
+		return err
+	}
 
-		return setupDotfiles(index+1, logger)
+	pwd, err := os.Getwd()
+	if err != nil {
+		return err
+	}
+
+	// link dotfiles in directory to home
+	for _, file := range files {
+		if strings.HasPrefix(file.Name(), ".") && !file.IsDir() {
+			logger.Debugf("linking %s in home", file.Name())
+
+			err = os.Symlink(filepath.Join(pwd, file.Name()), filepath.Join(os.Getenv("HOME"), file.Name()))
+			if err != nil {
+				return err
+			}
+		}
 	}
 
 	return nil

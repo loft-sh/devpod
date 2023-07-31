@@ -113,39 +113,24 @@ func NewUpCmd(flags *flags.GlobalFlags) *cobra.Command {
 		},
 	}
 
-	upCmd.Flags().
-		BoolVar(&cmd.ConfigureSSH, "configure-ssh", true, "If true will configure the ssh config to include the DevPod workspace")
-	upCmd.Flags().
-		StringVar(&cmd.SSHConfigPath, "ssh-config", "", "The path to the ssh config to modify, if empty will use ~/.ssh/config")
-	upCmd.Flags().
-		StringVar(&cmd.DotfilesSource, "dotfiles", "", "The path or url to the dotfiles to use in the container")
-	upCmd.Flags().
-		StringVar(&cmd.DotfilesScript, "dotfiles-script", "", "The path in dotfiles directory to use to install the dotfiles, if empty will try to guess")
-	upCmd.Flags().
-		StringArrayVar(&cmd.IDEOptions, "ide-option", []string{}, "IDE option in the form KEY=VALUE")
-	upCmd.Flags().
-		StringVar(&cmd.DevContainerPath, "devcontainer-path", "", "The path to the devcontainer.json relative to the project")
-	upCmd.Flags().
-		StringArrayVar(&cmd.ProviderOptions, "provider-option", []string{}, "Provider option in the form KEY=VALUE")
-	upCmd.Flags().
-		BoolVar(&cmd.Recreate, "recreate", false, "If true will remove any existing containers and recreate them")
-	upCmd.Flags().
-		StringSliceVar(&cmd.PrebuildRepositories, "prebuild-repository", []string{}, "Docker repository that hosts devpod prebuilds for this workspace")
-	upCmd.Flags().
-		StringArrayVar(&cmd.WorkspaceEnv, "workspace-env", []string{}, "Extra env variables to put into the workspace. E.g. MY_ENV_VAR=MY_VALUE")
+	upCmd.Flags().BoolVar(&cmd.ConfigureSSH, "configure-ssh", true, "If true will configure the ssh config to include the DevPod workspace")
+	upCmd.Flags().StringVar(&cmd.SSHConfigPath, "ssh-config", "", "The path to the ssh config to modify, if empty will use ~/.ssh/config")
+	upCmd.Flags().StringVar(&cmd.DotfilesSource, "dotfiles", "", "The path or url to the dotfiles to use in the container")
+	upCmd.Flags().StringVar(&cmd.DotfilesScript, "dotfiles-script", "", "The path in dotfiles directory to use to install the dotfiles, if empty will try to guess")
+	upCmd.Flags().StringArrayVar(&cmd.IDEOptions, "ide-option", []string{}, "IDE option in the form KEY=VALUE")
+	upCmd.Flags().StringVar(&cmd.DevContainerPath, "devcontainer-path", "", "The path to the devcontainer.json relative to the project")
+	upCmd.Flags().StringArrayVar(&cmd.ProviderOptions, "provider-option", []string{}, "Provider option in the form KEY=VALUE")
+	upCmd.Flags().BoolVar(&cmd.Recreate, "recreate", false, "If true will remove any existing containers and recreate them")
+	upCmd.Flags().StringSliceVar(&cmd.PrebuildRepositories, "prebuild-repository", []string{}, "Docker repository that hosts devpod prebuilds for this workspace")
+	upCmd.Flags().StringArrayVar(&cmd.WorkspaceEnv, "workspace-env", []string{}, "Extra env variables to put into the workspace. E.g. MY_ENV_VAR=MY_VALUE")
 	upCmd.Flags().StringVar(&cmd.ID, "id", "", "The id to use for the workspace")
-	upCmd.Flags().
-		StringVar(&cmd.Machine, "machine", "", "The machine to use for this workspace. The machine needs to exist beforehand or the command will fail. If the workspace already exists, this option has no effect")
-	upCmd.Flags().
-		StringVar(&cmd.IDE, "ide", "", "The IDE to open the workspace in. If empty will use vscode locally or in browser")
-	upCmd.Flags().
-		BoolVar(&cmd.OpenIDE, "open-ide", true, "If this is false and an IDE is configured, DevPod will only install the IDE server backend, but not open it")
+	upCmd.Flags().StringVar(&cmd.Machine, "machine", "", "The machine to use for this workspace. The machine needs to exist beforehand or the command will fail. If the workspace already exists, this option has no effect")
+	upCmd.Flags().StringVar(&cmd.IDE, "ide", "", "The IDE to open the workspace in. If empty will use vscode locally or in browser")
+	upCmd.Flags().BoolVar(&cmd.OpenIDE, "open-ide", true, "If this is false and an IDE is configured, DevPod will only install the IDE server backend, but not open it")
 
 	upCmd.Flags().BoolVar(&cmd.DisableDaemon, "disable-daemon", false, "If enabled, will not install a daemon into the target machine to track activity")
-	upCmd.Flags().
-		StringVar(&cmd.Source, "source", "", "Optional source for the workspace. E.g. git:https://github.com/my-org/my-repo")
-	upCmd.Flags().
-		BoolVar(&cmd.Proxy, "proxy", false, "If true will forward agent requests to stdio")
+	upCmd.Flags().StringVar(&cmd.Source, "source", "", "Optional source for the workspace. E.g. git:https://github.com/my-org/my-repo")
+	upCmd.Flags().BoolVar(&cmd.Proxy, "proxy", false, "If true will forward agent requests to stdio")
 
 	// testing
 	upCmd.Flags().StringVar(&cmd.DaemonInterval, "daemon-interval", "", "TESTING ONLY")
@@ -183,71 +168,10 @@ func (cmd *UpCmd) Run(
 		log.Infof("Run 'ssh %s.devpod' to ssh into the devcontainer", client.Workspace())
 	}
 
-	dotfilesRepo := devPodConfig.ContextOption(config.ContextOptionDotfilesURL)
-	if cmd.DotfilesSource != "" {
-		dotfilesRepo = cmd.DotfilesSource
-	}
-
-	dotfilesScript := devPodConfig.ContextOption(config.ContextOptionDotfilesScript)
-	if cmd.DotfilesScript != "" {
-		dotfilesScript = cmd.DotfilesScript
-	}
-
-	if dotfilesRepo != "" {
-		log.Infof("Dotfiles repo %s specified", dotfilesRepo)
-		log.Infof("Setting dotfiles into the devcontainer")
-
-		execPath, err := os.Executable()
-		if err != nil {
-			return err
-		}
-
-		agentArguments := []string{
-			"--debug",
-			"agent",
-			"workspace",
-			"install-dotfiles",
-			"--repository",
-			dotfilesRepo,
-		}
-
-		if dotfilesScript != "" {
-			log.Infof("Dotfiles script %s specified", dotfilesScript)
-
-			agentArguments = append(agentArguments, "--install-script")
-			agentArguments = append(agentArguments, dotfilesScript)
-		}
-
-		dotCmd := exec.Command(
-			execPath,
-			[]string{
-				"ssh",
-				"--debug",
-				"--agent-forwarding=true",
-				"--start-services=false",
-				"--context",
-				client.Context(),
-				client.Workspace(),
-				"--log-output=raw",
-				"--command",
-				agent.ContainerDevPodHelperLocation + " " +
-					strings.Join(agentArguments, " "),
-			}...,
-		)
-
-		log.Debugf("Running command: %v", dotCmd.Args)
-
-		writer := log.Writer(logrus.DebugLevel, false)
-
-		dotCmd.Stdout = writer
-		dotCmd.Stderr = writer
-
-		err = dotCmd.Run()
-		if err != nil {
-			return err
-		}
-
-		log.Infof("Done setting up dotfiles into the devcontainer")
+	// setup dotfiles in the container
+	err = setupDotfiles(cmd.DotfilesSource, cmd.DotfilesScript, client, devPodConfig, log)
+	if err != nil {
+		return err
 	}
 
 	// open ide
@@ -817,4 +741,90 @@ func createSSHCommand(
 	args = append(args, extraArgs...)
 
 	return exec.CommandContext(ctx, execPath, args...), nil
+}
+
+func setupDotfiles(
+	dotfiles, script string,
+	client client2.BaseWorkspaceClient,
+	devPodConfig *config.Config,
+	log log.Logger,
+) error {
+	dotfilesRepo := devPodConfig.ContextOption(config.ContextOptionDotfilesURL)
+	if dotfiles != "" {
+		dotfilesRepo = dotfiles
+	}
+
+	dotfilesScript := devPodConfig.ContextOption(config.ContextOptionDotfilesScript)
+	if script != "" {
+		dotfilesScript = script
+	}
+
+	if dotfilesRepo == "" {
+		log.Info("No dotfiles repo specified, skipping")
+
+		return nil
+	}
+
+	log.Infof("Dotfiles repo %s specified", dotfilesRepo)
+	log.Infof("Setting dotfiles into the devcontainer")
+
+	execPath, err := os.Executable()
+	if err != nil {
+		return err
+	}
+
+	agentArguments := []string{
+		"agent",
+		"workspace",
+		"install-dotfiles",
+		"--repository",
+		dotfilesRepo,
+	}
+
+	if log.GetLevel() == logrus.DebugLevel {
+		agentArguments = append(agentArguments, "--debug")
+	}
+
+	if dotfilesScript != "" {
+		log.Infof("Dotfiles script %s specified", dotfilesScript)
+
+		agentArguments = append(agentArguments, "--install-script")
+		agentArguments = append(agentArguments, dotfilesScript)
+	}
+
+	dotCmd := exec.Command(
+		execPath,
+		[]string{
+			"ssh",
+			"--agent-forwarding=true",
+			"--start-services=false",
+			"--context",
+			client.Context(),
+			client.Workspace(),
+			"--log-output=raw",
+			"--command",
+			agent.ContainerDevPodHelperLocation + " " +
+				strings.Join(agentArguments, " "),
+		}...,
+	)
+
+	if log.GetLevel() == logrus.DebugLevel {
+		dotCmd.Args = append(dotCmd.Args, "--debug")
+	}
+
+	log.Debugf("Running command: %v", dotCmd.Args)
+
+	writer := log.Writer(logrus.InfoLevel, false)
+
+	dotCmd.Stdout = writer
+	dotCmd.Stderr = writer
+
+	err = dotCmd.Run()
+	if err != nil {
+		return err
+	}
+
+	log.Infof("Done setting up dotfiles into the devcontainer")
+
+	return nil
 }
