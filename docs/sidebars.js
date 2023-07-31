@@ -75,6 +75,10 @@ module.exports = {
         },
         {
           type: "doc",
+          id: "developing-in-workspaces/dotfiles-in-a-workspace",
+        },
+        {
+          type: "doc",
           id: "developing-in-workspaces/credentials",
         },
         {
