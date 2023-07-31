@@ -1,0 +1,62 @@
+---
+title: Dotfiles in a Workspace
+sidebar_label: Dotfiles in a Workspace
+---
+
+## Personalizing a Workspace
+
+You can personalize your workspace environment by using a `dotfiles` repository.
+
+Dotfiles are plain text configuration files on Unix like systems (e.g. MacOS, Linux, BSD).  
+Dotfiles store settings of almost every application, service and tool running on your system.  
+It is common practice to track dotfiles with a version control system such as Git
+to keep track of changes and synchronize dotfiles across various hosts. 
+
+You can use the `--dotfiles` flag when creating a workspace, so that DevPod will
+automatically clone and install your dotfiles in the workspace.
+
+If you only specify the dotfiles repo, DevPod will clone your selected dotfiles
+repository into the workspace, and will look into one of these locations to find
+a script to setup the environment.
+
+- install.sh
+- install
+- bootstrap.sh
+- bootstrap
+- script/bootstrap
+- setup.sh
+- setup
+- script/setup
+
+If none of the previous location are found, DevPod will just link every hidden file (files starting with `.`)
+in the `$HOME` directory of the container.
+
+If is possible to specify **custom install script locations** for your special setup. 
+If a custom install script is specified, DevPod will directly run that one instead.
+
+### Via DevPod CLI
+
+Run the following command to a workspace with a dotfiles repo:
+
+```
+devpod up https://github.com/example/repo --dotfiles https://github.com/my-user/my-dotfiles-repo
+```
+
+Specifying a custom install script:
+
+```
+devpod up https://github.com/example/repo --dotfiles https://github.com/my-user/my-dotfiles-repo --dotfiles-script custom/location/install.sh
+```
+
+#### For all Workspaces
+
+You can setup these options on a **context wide scope** so that you won't have to specify
+dotfiles ad dotfiles-script for each single workspace:
+
+Example with a real repository:
+
+```
+devpod context set-options -o DOTFILES_URL=https://github.com/89luca89/dotfiles -o DOTFILES_SCRIPT=bin/.local/bin/dotfiles
+```
+
+All new Workspaces will be created with that dotfile repository and install script.

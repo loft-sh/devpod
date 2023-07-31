@@ -7,6 +7,8 @@ const (
 	ContextOptionExitAfterTimeout           = "EXIT_AFTER_TIMEOUT"
 	ContextOptionTelemetry                  = "TELEMETRY"
 	ContextOptionAgentURL                   = "AGENT_URL"
+	ContextOptionDotfilesURL                = "DOTFILES_URL"
+	ContextOptionDotfilesScript             = "DOTFILES_SCRIPT"
 )
 
 var ContextOptions = []ContextOption{
@@ -43,5 +45,13 @@ var ContextOptions = []ContextOption{
 	{
 		Name:        ContextOptionAgentURL,
 		Description: "Specifies the agent url to use for DevPod",
+	},
+	{
+		Name:        ContextOptionDotfilesURL,
+		Description: "Specifies the dotfiles repo url to use for DevPod",
+	},
+	{
+		Name:        ContextOptionDotfilesScript,
+		Description: "Specifies the script to run after cloning dotfiles repo to install them",
 	},
 }
