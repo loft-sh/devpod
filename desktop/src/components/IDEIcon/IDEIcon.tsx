@@ -47,10 +47,11 @@ export function IDEIcon({ ide, size = "md", ...boxProps }: TIDEIconProps) {
           color: `${primaryColorDark}CC`,
         }
   const fallbackIcon = colorMode === "light" ? NoneSvg : NoneSvgDark
+  const icon = colorMode === "light" ? ide.icon : ide.iconDark ?? ide.icon
 
   return (
     <Box width="full" height="full" position="relative">
-      <Image src={ide.icon ?? fallbackIcon} {...boxProps} />
+      <Image src={icon ?? fallbackIcon} {...boxProps} />
       {ide.experimental && (
         <>
           <Box

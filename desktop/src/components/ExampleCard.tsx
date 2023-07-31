@@ -54,6 +54,7 @@ export function ExampleCard({
             colorMode === "light"
               ? `linear-gradient(135deg, ${primaryColorLight}55 30%, ${primaryColorDark}55, ${primaryColorDark}88)`
               : `linear-gradient(135deg, ${primaryColorLight}AA 30%, ${primaryColorDark}AA, ${primaryColorDark}CC)`,
+          ...(colorMode === "dark" ? { mixBlendMode: "overlay" } : {}),
           opacity: 0.7,
           width: "full",
           height: "full",

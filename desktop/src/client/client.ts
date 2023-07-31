@@ -1,4 +1,17 @@
-import { clipboard, dialog, fs, invoke, os, path, process, shell, event } from "@tauri-apps/api"
+import {
+  app,
+  clipboard,
+  dialog,
+  fs,
+  invoke,
+  os,
+  path,
+  process,
+  shell,
+  event,
+  updater,
+  window as tauriWindow,
+} from "@tauri-apps/api"
 import { Command } from "@tauri-apps/api/shell"
 import { TSettings } from "../contexts"
 import { Result, Return, isError, noop } from "../lib"
@@ -8,6 +21,7 @@ import { IDEsClient } from "./ides"
 import { ProvidersClient } from "./providers"
 import { WorkspacesClient } from "./workspaces"
 import { UseToastOptions } from "@chakra-ui/react"
+import { Release } from "../gen"
 
 // These types have to match the rust types! Make sure to update them as well!
 type TChannels = {
@@ -78,6 +92,10 @@ class Client {
     return os.arch()
   }
 
+  public fetchVersion(): Promise<string> {
+    return app.getVersion()
+  }
+
   public async fetchCommunityContributions(): Promise<Result<TCommunityContributions>> {
     try {
       const contributions = await invoke<TCommunityContributions>("get_contributions")
@@ -89,6 +107,25 @@ class Client {
       }
 
       const errMsg = "Unable to fetch community contributions"
+      if (typeof e === "string") {
+        return Return.Failed(`${errMsg}: ${e}`)
+      }
+
+      return Return.Failed(errMsg)
+    }
+  }
+
+  public async fetchReleases(): Promise<Result<readonly Release[]>> {
+    try {
+      const releases = await invoke<readonly Release[]>("get_releases")
+
+      return Return.Value(releases)
+    } catch (e) {
+      if (isError(e)) {
+        return Return.Failed(e.message)
+      }
+
+      const errMsg = "Unable to fetch releases"
       if (typeof e === "string") {
         return Return.Failed(`${errMsg}: ${e}`)
       }
@@ -180,6 +217,66 @@ class Client {
     } catch (e) {
       return Return.Failed(`Unable to write to clipboard: ${e}`)
     }
+  }
+
+  public async checkUpdates(): Promise<Result<boolean>> {
+    try {
+      const isOk = await invoke<boolean>("check_updates")
+
+      return Return.Value(isOk)
+    } catch (e) {
+      return Return.Failed(`${e}`)
+    }
+  }
+
+  public async fetchPendingUpdate(): Promise<Result<Release>> {
+    try {
+      const release = await invoke<Release>("get_pending_update")
+
+      return Return.Value(release)
+    } catch (e) {
+      return Return.Failed(`${e}`)
+    }
+  }
+
+  public async installUpdate(): Promise<Result<void>> {
+    try {
+      let unsubscribe: TUnsubscribeFn | undefined
+      // Synchronize promise state with update operation
+      await new Promise((res, rej) => {
+        updater
+          .onUpdaterEvent((event) => {
+            if (event.status === "ERROR") {
+              unsubscribe?.()
+              rej(event.error)
+
+              return
+            }
+
+            if (event.status === "DONE") {
+              unsubscribe?.()
+              res(undefined)
+
+              return
+            }
+          })
+          .then(async (u) => {
+            unsubscribe = u
+            await updater.installUpdate()
+          })
+      })
+
+      return Return.Ok()
+    } catch (e) {
+      return Return.Failed(`${e}`)
+    }
+  }
+
+  public async restart(): Promise<void> {
+    await process.relaunch()
+  }
+  public async closeCurrentWindow(): Promise<void> {
+    await tauriWindow.getCurrent().close()
   }
 }
 

@@ -15,8 +15,13 @@ pub fn build_plugin() -> TauriPlugin<Wry> {
     #[cfg(not(debug_assertions))] // only enable in release builds
     targets.push(LogTarget::LogDir);
 
-    tauri_plugin_log::Builder::default()
-        .targets(targets)
-        .level(LevelFilter::Debug)
-        .build()
+    let builder = tauri_plugin_log::Builder::default().targets(targets);
+
+    #[cfg(debug_assertions)] // only enable during development
+    let builder = builder.level(LevelFilter::Debug);
+
+    #[cfg(not(debug_assertions))] // only enable in release builds
+    let builder = builder.level(LevelFilter::Info);
+
+    builder.build()
 }

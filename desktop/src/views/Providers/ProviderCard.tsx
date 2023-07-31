@@ -23,12 +23,13 @@ import {
   Switch,
   Text,
   Tooltip,
+  useColorModeValue,
   useDisclosure,
 } from "@chakra-ui/react"
 import { UseMutationResult, useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { useMemo } from "react"
 import { HiDuplicate } from "react-icons/hi"
-import { HiPencil, HiArrowPath } from "react-icons/hi2"
+import { HiArrowPath, HiPencil } from "react-icons/hi2"
 import { Link as RouterLink, useNavigate } from "react-router-dom"
 import { client } from "../../client"
 import { IconTag } from "../../components"
@@ -91,6 +92,7 @@ export function ProviderCard({ id, provider, remove }: TProviderCardProps) {
     },
   })
 
+  const labelTextColor = useColorModeValue("gray.600", "gray.400")
   const providerIcon = provider.config?.icon
   const isDefaultProvider = provider.default ?? false
   const providerVersion = provider.config?.version
@@ -126,7 +128,10 @@ export function ProviderCard({ id, provider, remove }: TProviderCardProps) {
         </CardHeader>
         <CardBody>
           <Heading size="md">
-            <Link as={RouterLink} to={Routes.toProvider(id)}>
+            <Link
+              as={RouterLink}
+              color="var(--chakra-colors-chakra-body-text)"
+              to={Routes.toProvider(id)}>
               {id}
             </Link>
           </Heading>
@@ -135,7 +140,7 @@ export function ProviderCard({ id, provider, remove }: TProviderCardProps) {
               <Text
                 paddingY="1"
                 fontFamily="monospace"
-                color="gray.600"
+                color={labelTextColor}
                 fontSize="sm"
                 fontWeight="regular">
                 {providerVersion}
@@ -185,7 +190,7 @@ export function ProviderCard({ id, provider, remove }: TProviderCardProps) {
                 }
               }}
             />
-            <Text fontSize="sm" color="gray.700">
+            <Text fontSize="sm" color={labelTextColor}>
               Default
             </Text>
           </HStack>

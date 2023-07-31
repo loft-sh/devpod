@@ -66,15 +66,20 @@ export function OptionFormField({
         />
       )
     } else if (enumProp?.length) {
-      let placeholder: string | undefined = 'Select option'
+      let placeholder: string | undefined = "Select option"
       if (value) {
         placeholder = undefined
       }
 
       return (
-        <Select {...props} onChange={wrapFunction(props.onChange, refresh, !!subOptionsCommand)} placeholder={placeholder}>
-          {enumProp.map((val) => (
-            <option value={val}>{val}</option>
+        <Select
+          {...props}
+          onChange={wrapFunction(props.onChange, refresh, !!subOptionsCommand)}
+          placeholder={placeholder}>
+          {enumProp.map((val, i) => (
+            <option key={i} value={val}>
+              {val}
+            </option>
           ))}
         </Select>
       )
@@ -89,11 +94,23 @@ export function OptionFormField({
         )
       case "number":
         return (
-          <Input spellCheck={false} placeholder={`Enter ${displayName}`} type="number" {...props} onBlur={wrapFunction(props.onBlur, refresh, !!subOptionsCommand)} />
+          <Input
+            spellCheck={false}
+            placeholder={`Enter ${displayName}`}
+            type="number"
+            {...props}
+            onBlur={wrapFunction(props.onBlur, refresh, !!subOptionsCommand)}
+          />
         )
       case "duration":
         return (
-          <Input spellCheck={false} placeholder={`Enter ${displayName}`} type="text" {...props} onBlur={wrapFunction(props.onBlur, refresh, !!subOptionsCommand)} />
+          <Input
+            spellCheck={false}
+            placeholder={`Enter ${displayName}`}
+            type="text"
+            {...props}
+            onBlur={wrapFunction(props.onBlur, refresh, !!subOptionsCommand)}
+          />
         )
       case "string":
         return (
@@ -116,7 +133,20 @@ export function OptionFormField({
           />
         )
     }
-  }, [refreshSubOptions, enumProp, register, id, isRequired, value, defaultValue, suggestions, type, displayName, password])
+  }, [
+    register,
+    id,
+    isRequired,
+    value,
+    defaultValue,
+    suggestions,
+    enumProp,
+    type,
+    refreshSubOptions,
+    subOptionsCommand,
+    displayName,
+    password,
+  ])
 
   return (
     <FormControl isRequired={isRequired}>
@@ -131,7 +161,11 @@ export function OptionFormField({
   )
 }
 
-function wrapFunction(fn: any | undefined, wrap: (() => void) | undefined, shouldWrap: boolean): (event?: any) => void {
+function wrapFunction(
+  fn: any | undefined,
+  wrap: (() => void) | undefined,
+  shouldWrap: boolean
+): (event?: any) => void {
   return (event) => {
     if (fn) {
       fn(event)
