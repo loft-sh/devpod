@@ -114,6 +114,7 @@ var _ = DevPodDescribe("devpod up test suite", func() {
 		framework.ExpectNoError(err)
 		ginkgo.DeferCleanup(framework.CleanupTempDir, initialDir, tempDir)
 
+		_ = f.DevPodProviderDelete(ctx, "kubernetes")
 		err = f.DevPodProviderAdd(ctx, "kubernetes", "-o", "KUBERNETES_NAMESPACE=devpod")
 		framework.ExpectNoError(err)
 		ginkgo.DeferCleanup(func() {
@@ -225,7 +226,6 @@ var _ = DevPodDescribe("devpod up test suite", func() {
 			out, err := f.DevPodList(ctx)
 			framework.ExpectNoError(err)
 			framework.ExpectEqual(out, initialList)
-
 		}, ginkgo.SpecTimeout(60*time.Second))
 		ginkgo.It("ensure workspace cleanup when not a git or folder", func(ctx context.Context) {
 			f := framework.NewDefaultFramework(initialDir + "/bin")
@@ -267,7 +267,6 @@ var _ = DevPodDescribe("devpod up test suite", func() {
 
 				err = exec.Command(initialDir+"/bin/podman-rootful", "ps").Run()
 				framework.ExpectNoError(err)
-
 			}, ginkgo.SpecTimeout(60*time.Second))
 
 			ginkgo.It("should start a new workspace with existing image", func(ctx context.Context) {
@@ -477,7 +476,6 @@ var _ = DevPodDescribe("devpod up test suite", func() {
 /home/vscode/.file3
 `
 				framework.ExpectEqual(out, expectedOutput, "should match")
-
 			}, ginkgo.SpecTimeout(60*time.Second))
 			ginkgo.It("should start a new workspace with dotfiles - install script", func(ctx context.Context) {
 				tempDir, err := framework.CopyToTempDir("tests/up/testdata/docker")
@@ -504,7 +502,6 @@ var _ = DevPodDescribe("devpod up test suite", func() {
 				expectedOutput := "/tmp/worked\n"
 
 				framework.ExpectEqual(out, expectedOutput, "should match")
-
 			}, ginkgo.SpecTimeout(60*time.Second))
 		})
 
@@ -1388,5 +1385,4 @@ var _ = DevPodDescribe("devpod up test suite", func() {
 			})
 		})
 	})
-
 })
