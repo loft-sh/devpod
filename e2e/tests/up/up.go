@@ -531,6 +531,34 @@ var _ = DevPodDescribe("devpod up test suite", func() {
 				framework.ExpectEqual(out, expectedOutput, "should match")
 				framework.ExpectNotEqual(out, unexpectedOutput, "should NOT match")
 			}, ginkgo.SpecTimeout(60*time.Second))
+			ginkgo.It("should start a new workspace with custom image and skip building", func(ctx context.Context) {
+				tempDir, err := framework.CopyToTempDir("tests/up/testdata/docker-with-multi-stage-build")
+				framework.ExpectNoError(err)
+				ginkgo.DeferCleanup(framework.CleanupTempDir, initialDir, tempDir)
+
+				f := framework.NewDefaultFramework(initialDir + "/bin")
+
+				_ = f.DevPodProviderDelete(ctx, "docker")
+				err = f.DevPodProviderAdd(ctx, "docker")
+				framework.ExpectNoError(err)
+				err = f.DevPodProviderUse(ctx, "docker")
+				framework.ExpectNoError(err)
+
+				ginkgo.DeferCleanup(f.DevPodWorkspaceDelete, context.Background(), tempDir)
+
+				// Wait for devpod workspace to come online (deadline: 30s)
+				err = f.DevPodUp(ctx, tempDir, "--devcontainer-image", "mcr.microsoft.com/vscode/devcontainers/base:alpine")
+				framework.ExpectNoError(err)
+
+				out, err := f.DevPodSSH(ctx, tempDir, "grep ^ID= /etc/os-release")
+				framework.ExpectNoError(err)
+
+				expectedOutput := "ID=alpine\n"
+				unexpectedOutput := "ID=debian\n"
+
+				framework.ExpectEqual(out, expectedOutput, "should match")
+				framework.ExpectNotEqual(out, unexpectedOutput, "should NOT match")
+			}, ginkgo.SpecTimeout(60*time.Second))
 		})
 
 		ginkgo.Context("with docker-compose", func() {

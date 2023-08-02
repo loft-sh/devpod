@@ -121,6 +121,7 @@ func (r *Runner) prepare(
 	}
 
 	if options.DevContainerImage != "" {
+		parsedConfig.Build = config.ConfigBuildOptions{}
 		parsedConfig.ImageContainer = config.ImageContainer{Image: options.DevContainerImage}
 	}
 
