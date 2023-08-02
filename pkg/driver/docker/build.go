@@ -35,7 +35,7 @@ func (d *dockerDriver) BuildDevContainer(
 	localWorkspaceFolder string,
 	options config.BuildOptions,
 ) (*config.BuildInfo, error) {
-	prebuildHash, err := config.CalculatePrebuildHash(parsedConfig.Config, options.Platform, runtime.GOARCH, dockerfileContent, d.Log)
+	prebuildHash, err := config.CalculatePrebuildHash(parsedConfig.Config, options.Platform, runtime.GOARCH, GetContextPath(parsedConfig.Config), dockerfilePath, dockerfileContent, d.Log)
 	if err != nil {
 		return nil, err
 	}
@@ -218,7 +218,7 @@ func CreateBuildOptions(
 	if pushRepository != "" {
 		buildOptions.Images = append(buildOptions.Images, pushRepository+":"+prebuildHash)
 	}
-	buildOptions.Context = getContextPath(parsedConfig.Config)
+	buildOptions.Context = GetContextPath(parsedConfig.Config)
 
 	// add build arg
 	if buildOptions.BuildArgs == nil {
@@ -317,7 +317,7 @@ func (d *dockerDriver) buildxBuild(ctx context.Context, writer io.Writer, platfo
 	return nil
 }
 
-func getContextPath(parsedConfig *config.DevContainerConfig) string {
+func GetContextPath(parsedConfig *config.DevContainerConfig) string {
 	context := ""
 	dockerfilePath := ""
 	if parsedConfig.Dockerfile != "" {
