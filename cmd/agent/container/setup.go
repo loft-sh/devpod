@@ -147,15 +147,14 @@ func (cmd *SetupContainerCmd) setupVSCode(setupInfo *config.Result, workspaceInf
 	}
 
 	user := config.GetRemoteUser(setupInfo)
+	err := vscode.NewVSCodeServer(vsCodeConfiguration.Extensions, settings, user, workspaceInfo.Workspace.IDE.Options, log).Install()
+	if err != nil {
+		return err
+	}
 
 	// don't install code-server if we don't have settings or extensions
 	if len(vsCodeConfiguration.Settings) == 0 && len(vsCodeConfiguration.Extensions) == 0 {
 		return nil
-	}
-
-	err := vscode.NewVSCodeServer(vsCodeConfiguration.Extensions, settings, user, workspaceInfo.Workspace.IDE.Options, log).Install()
-	if err != nil {
-		return err
 	}
 
 	if len(vsCodeConfiguration.Extensions) == 0 {
