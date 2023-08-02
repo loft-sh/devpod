@@ -101,7 +101,7 @@ func ToOptionsWorkspace(workspace *Workspace) map[string]string {
 			retVars[MACHINE_CONTEXT] = workspace.Context
 		}
 		if workspace.Origin != "" {
-			retVars[WORKSPACE_ORIGIN] = workspace.Origin
+			retVars[WORKSPACE_ORIGIN] = filepath.ToSlash(workspace.Origin)
 		}
 		if workspace.Picture != "" {
 			retVars[WORKSPACE_PICTURE] = workspace.Picture
@@ -112,7 +112,8 @@ func ToOptionsWorkspace(workspace *Workspace) map[string]string {
 		}
 		if workspace.Machine.ID != "" {
 			retVars[MACHINE_ID] = workspace.Machine.ID
-			retVars[MACHINE_FOLDER], _ = GetMachineDir(workspace.Context, workspace.Machine.ID)
+			machineDir, _ := GetMachineDir(workspace.Context, workspace.Machine.ID)
+			retVars[MACHINE_FOLDER] = filepath.ToSlash(machineDir)
 		}
 		for k, v := range GetBaseEnvironment(workspace.Context, workspace.Provider.Name) {
 			retVars[k] = v
@@ -177,7 +178,8 @@ func GetBaseEnvironment(context, provider string) map[string]string {
 	retVars[DEVPOD_ARCH] = runtime.GOARCH
 	retVars[PROVIDER_ID] = provider
 	retVars[PROVIDER_CONTEXT] = context
-	retVars[PROVIDER_FOLDER], _ = GetProviderDir(context, provider)
+	providerFolder, _ := GetProviderDir(context, provider)
+	retVars[PROVIDER_FOLDER] = filepath.ToSlash(providerFolder)
 	return retVars
 }
 
