@@ -1,20 +1,15 @@
 package provider
 
 import (
-	"bytes"
-	"encoding/json"
 	"fmt"
 	"io"
 	"reflect"
 	"regexp"
-	"strconv"
 	"strings"
 	"time"
 
 	"github.com/blang/semver"
 	"github.com/ghodss/yaml"
-	"github.com/loft-sh/devpod/pkg/config"
-	"github.com/loft-sh/devpod/pkg/types"
 	"github.com/pkg/errors"
 )
 
@@ -35,15 +30,8 @@ func ParseProvider(reader io.Reader) (*ProviderConfig, error) {
 		return nil, err
 	}
 
-	jsonBytes, err := yaml.YAMLToJSON(payload)
-	if err != nil {
-		return nil, err
-	}
-
-	decoder := json.NewDecoder(bytes.NewReader(jsonBytes))
-
 	parsedConfig := &ProviderConfig{}
-	err = decoder.Decode(parsedConfig)
+	err = yaml.Unmarshal(payload, parsedConfig)
 	if err != nil {
 		return nil, errors.Wrap(err, "parse provider config")
 	}
@@ -211,20 +199,9 @@ func validateProviderType(config *ProviderConfig) error {
 }
 
 func validateOptionGroups(config *ProviderConfig) error {
-	foundOptions := map[string]bool{}
 	for idx, group := range config.OptionGroups {
 		if group.Name == "" {
 			return fmt.Errorf("optionGroups[%d].name cannot be empty", idx)
-		}
-
-		for _, option := range group.Options {
-			if config.Options == nil || config.Options[option] == nil {
-				return fmt.Errorf("option '%s' in option group '%s' was not found under options", option, group.Name)
-			} else if foundOptions[option] {
-				return fmt.Errorf("option '%s' is used in multiple option groups", option)
-			}
-
-			foundOptions[option] = true
 		}
 	}
 	return nil
@@ -255,26 +232,7 @@ func validateBinaries(prefix string, binaries map[string][]*ProviderBinary) erro
 	return nil
 }
 
-func ParseOptions(devConfig *config.Config, provider *ProviderConfig, options []string) (map[string]string, error) {
-	providerOptions := provider.Options
-	allOptions := map[string]*types.Option{}
-	allowedOptions := []string{}
-
-	if providerOptions == nil {
-		providerOptions = map[string]*ProviderOption{}
-	}
-
-	for optionName := range providerOptions {
-		allOptions[optionName] = &providerOptions[optionName].Option
-	}
-	for optionName, option := range devConfig.DynamicProviderOptions(provider.Name) {
-		allOptions[optionName] = option
-	}
-
-	for optionName := range allOptions {
-		allowedOptions = append(allowedOptions, optionName)
-	}
-
+func ParseOptions(options []string) (map[string]string, error) {
 	retMap := map[string]string{}
 	for _, option := range options {
 		splitted := strings.Split(option, "=")
@@ -284,57 +242,6 @@ func ParseOptions(devConfig *config.Config, provider *ProviderConfig, options []
 
 		key := strings.ToUpper(strings.TrimSpace(splitted[0]))
 		value := strings.Join(splitted[1:], "=")
-		opt := allOptions[key]
-		if opt == nil {
-			return nil, fmt.Errorf("invalid option '%s', allowed options are: %v", key, allowedOptions)
-		}
-
-		if opt.ValidationPattern != "" {
-			matcher, err := regexp.Compile(opt.ValidationPattern)
-			if err != nil {
-				return nil, err
-			}
-
-			if !matcher.MatchString(value) {
-				if opt.ValidationMessage != "" {
-					return nil, fmt.Errorf(opt.ValidationMessage)
-				}
-
-				return nil, fmt.Errorf("invalid value '%s' for option '%s', has to match the following regEx: %s", value, key, opt.ValidationPattern)
-			}
-		}
-
-		if len(opt.Enum) > 0 {
-			found := false
-			for _, e := range opt.Enum {
-				if value == e {
-					found = true
-					break
-				}
-			}
-			if !found {
-				return nil, fmt.Errorf("invalid value '%s' for option '%s', has to match one of the following values: %v", value, key, opt.Enum)
-			}
-		}
-
-		if opt.Type != "" {
-			if opt.Type == "number" {
-				_, err := strconv.ParseInt(value, 10, 64)
-				if err != nil {
-					return nil, fmt.Errorf("invalid value '%s' for option '%s', must be a number", value, key)
-				}
-			} else if opt.Type == "boolean" {
-				_, err := strconv.ParseBool(value)
-				if err != nil {
-					return nil, fmt.Errorf("invalid value '%s' for option '%s', must be a boolean", value, key)
-				}
-			} else if opt.Type == "duration" {
-				_, err := time.ParseDuration(value)
-				if err != nil {
-					return nil, fmt.Errorf("invalid value '%s' for option '%s', must be a duration like 10s, 5m or 24h", value, key)
-				}
-			}
-		}
 
 		retMap[key] = value
 	}

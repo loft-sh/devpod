@@ -2,7 +2,6 @@ import { TComparable, TIdentifiable, TUnsubscribeFn } from "../types"
 import { exists, isEmpty } from "./helpers"
 import { v4 as uuidv4 } from "uuid"
 
-
 type TEventHandler<TEvents, TEventName extends keyof TEvents = keyof TEvents> = THandler<
   (event: TEvents[TEventName]) => void
 >

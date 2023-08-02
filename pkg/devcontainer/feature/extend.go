@@ -319,7 +319,7 @@ func computeFeatureOrder(devContainer *config.DevContainerConfig, features []*co
 }
 
 func computeAutomaticFeatureOrder(features []*config.FeatureSet) ([]*config.FeatureSet, error) {
-	g := graph.NewGraph(graph.NewNode("root", nil))
+	g := graph.NewGraph[*config.FeatureSet](graph.NewNode[*config.FeatureSet]("root", nil))
 
 	// build lookup map
 	lookup := map[string]*config.FeatureSet{}
@@ -362,7 +362,7 @@ func computeAutomaticFeatureOrder(features []*config.FeatureSet) ([]*config.Feat
 			return nil, err
 		}
 
-		ordered = append(ordered, leaf.Data.(*config.FeatureSet))
+		ordered = append(ordered, leaf.Data)
 	}
 
 	return ordered, nil

@@ -66,13 +66,20 @@ export class ProvidersClient implements TDebuggable {
     return ProviderCommands.UseProvider(id)
   }
 
+  public async setOptionsDry(
+    id: TProviderID,
+    { options }: TConfigureProviderConfig
+  ): Promise<Result<TProviderOptions | undefined>> {
+    return ProviderCommands.SetProviderOptions(id, options, false, true)
+  }
+
   public async configure(
     id: TProviderID,
     { useAsDefaultProvider, reuseMachine, options }: TConfigureProviderConfig
   ): Promise<ResultError> {
-    const setResult = await ProviderCommands.SetProviderOptions(id, options, reuseMachine)
+    const setResult = await ProviderCommands.SetProviderOptions(id, options, !!reuseMachine)
     if (setResult.err) {
-      return setResult
+      return setResult as ResultError
     }
 
     if (useAsDefaultProvider) {

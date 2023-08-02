@@ -7,17 +7,16 @@ import (
 	"github.com/pkg/errors"
 )
 
-type Graph struct {
-	Nodes map[string]*Node
-
-	Root *Node
+type Graph[T comparable] struct {
+	Nodes map[string]*Node[T]
+	Root  *Node[T]
 
 	item string
 }
 
-func NewGraph(root *Node) *Graph {
-	graph := &Graph{
-		Nodes: make(map[string]*Node),
+func NewGraph[T comparable](root *Node[T]) *Graph[T] {
+	graph := &Graph[T]{
+		Nodes: make(map[string]*Node[T]),
 		Root:  root,
 	}
 
@@ -25,9 +24,9 @@ func NewGraph(root *Node) *Graph {
 	return graph
 }
 
-func NewGraphOf(root *Node, item string) *Graph {
-	graph := &Graph{
-		Nodes: make(map[string]*Node),
+func NewGraphOf[T comparable](root *Node[T], item string) *Graph[T] {
+	graph := &Graph[T]{
+		Nodes: make(map[string]*Node[T]),
 		Root:  root,
 		item:  item,
 	}
@@ -37,34 +36,36 @@ func NewGraphOf(root *Node, item string) *Graph {
 }
 
 // Node is a node in a graph
-type Node struct {
+type Node[T comparable] struct {
 	ID   string
-	Data interface{}
+	Data T
 
-	Parents []*Node
-	Childs  []*Node
+	Parents []*Node[T]
+	Childs  []*Node[T]
+
+	Done bool
 }
 
-func NewNode(id string, data interface{}) *Node {
-	return &Node{
+func NewNode[T comparable](id string, data T) *Node[T] {
+	return &Node[T]{
 		ID:   id,
 		Data: data,
 
-		Parents: []*Node{},
-		Childs:  []*Node{},
+		Parents: []*Node[T]{},
+		Childs:  []*Node[T]{},
 	}
 }
 
 // Clone returns a cloned graph
-func (g *Graph) Clone() *Graph {
-	retGraph := &Graph{
-		Nodes: map[string]*Node{},
+func (g *Graph[T]) Clone() *Graph[T] {
+	retGraph := &Graph[T]{
+		Nodes: map[string]*Node[T]{},
 		item:  g.item,
 	}
 
 	// copy nodes
 	for k, v := range g.Nodes {
-		retGraph.Nodes[k] = NewNode(v.ID, v.Data)
+		retGraph.Nodes[k] = NewNode[T](v.ID, v.Data)
 	}
 	retGraph.Root = retGraph.Nodes[g.Root.ID]
 
@@ -81,8 +82,35 @@ func (g *Graph) Clone() *Graph {
 	return retGraph
 }
 
+func (g *Graph[T]) NextFromTop() *Node[T] {
+	clonedGraph := g.Clone()
+	orderedOptions := []string{}
+	nextLeaf := clonedGraph.GetNextLeaf(clonedGraph.Root)
+	for nextLeaf != clonedGraph.Root {
+		orderedOptions = append(orderedOptions, nextLeaf.ID)
+		err := clonedGraph.RemoveNode(nextLeaf.ID)
+		if err != nil {
+			return nil
+		}
+
+		nextLeaf = clonedGraph.GetNextLeaf(clonedGraph.Root)
+	}
+
+	for i := len(orderedOptions) - 1; i >= 0; i-- {
+		nextNode := g.Nodes[orderedOptions[i]]
+		if nextNode == nil || nextNode.Done {
+			continue
+		}
+
+		nextNode.Done = true
+		return nextNode
+	}
+
+	return nil
+}
+
 // InsertNodeAt inserts a new node at the given parent position
-func (g *Graph) InsertNodeAt(parentID string, id string, data interface{}) (*Node, error) {
+func (g *Graph[T]) InsertNodeAt(parentID string, id string, data T) (*Node[T], error) {
 	parentNode, ok := g.Nodes[parentID]
 	if !ok {
 		return nil, errors.Errorf("Parent %s does not exist", parentID)
@@ -96,7 +124,7 @@ func (g *Graph) InsertNodeAt(parentID string, id string, data interface{}) (*Nod
 		return existingNode, nil
 	}
 
-	node := NewNode(id, data)
+	node := NewNode[T](id, data)
 
 	g.Nodes[node.ID] = node
 
@@ -106,8 +134,25 @@ func (g *Graph) InsertNodeAt(parentID string, id string, data interface{}) (*Nod
 	return node, nil
 }
 
+func (g *Graph[T]) RemoveSubGraph(id string) error {
+	if node, ok := g.Nodes[id]; ok {
+		// remove all childs
+		for _, child := range node.Childs {
+			err := g.RemoveSubGraph(child.ID)
+			if err != nil {
+				return err
+			}
+		}
+
+		// Remove child from parents
+		return g.RemoveNode(id)
+	}
+
+	return nil
+}
+
 // RemoveNode removes a node with no children in the graph
-func (g *Graph) RemoveNode(id string) error {
+func (g *Graph[T]) RemoveNode(id string) error {
 	if node, ok := g.Nodes[id]; ok {
 		if len(node.Childs) > 0 {
 			return errors.Errorf("Cannot remove %s from graph because it has still children", getNameOrID(node))
@@ -136,7 +181,7 @@ func (g *Graph) RemoveNode(id string) error {
 }
 
 // GetNextLeaf returns the next leaf in the graph from node start
-func (g *Graph) GetNextLeaf(start *Node) *Node {
+func (g *Graph[T]) GetNextLeaf(start *Node[T]) *Node[T] {
 	if len(start.Childs) == 0 {
 		return start
 	}
@@ -145,13 +190,13 @@ func (g *Graph) GetNextLeaf(start *Node) *Node {
 }
 
 // CyclicError is the type that is returned if a cyclic edge would be inserted
-type CyclicError struct {
+type CyclicError[T comparable] struct {
 	What string
-	path []*Node
+	path []*Node[T]
 }
 
 // Error implements error interface
-func (c *CyclicError) Error() string {
+func (c *CyclicError[T]) Error() string {
 	cycle := []string{getNameOrID(c.path[len(c.path)-1])}
 
 	for _, node := range c.path {
@@ -166,8 +211,12 @@ func (c *CyclicError) Error() string {
 	return fmt.Sprintf("cyclic %s found: \n%s", what, strings.Join(cycle, "\n"))
 }
 
+func (g *Graph[T]) AddChild(parentID string, childID string) error {
+	return g.AddEdge(parentID, childID)
+}
+
 // AddEdge adds a new edge from a node to a node and returns an error if it would result in a cyclic graph
-func (g *Graph) AddEdge(fromID string, toID string) error {
+func (g *Graph[T]) AddEdge(fromID string, toID string) error {
 	from, ok := g.Nodes[fromID]
 	if !ok {
 		return errors.Errorf("fromID %s does not exist", fromID)
@@ -177,19 +226,19 @@ func (g *Graph) AddEdge(fromID string, toID string) error {
 		return errors.Errorf("toID %s does not exist", toID)
 	}
 
-	// Check if cyclic
-	path := findFirstPath(to, from)
-	if path != nil {
-		return &CyclicError{
-			path: path,
-			What: g.item,
-		}
-	}
-
 	// Check if there is already an edge
 	for _, child := range from.Childs {
 		if child.ID == to.ID {
 			return nil
+		}
+	}
+
+	// Check if cyclic
+	path := findFirstPath(to, from)
+	if path != nil {
+		return &CyclicError[T]{
+			path: path,
+			What: g.item,
 		}
 	}
 
@@ -199,9 +248,9 @@ func (g *Graph) AddEdge(fromID string, toID string) error {
 }
 
 // find first path from node to node with DFS
-func findFirstPath(from *Node, to *Node) []*Node {
+func findFirstPath[T comparable](from *Node[T], to *Node[T]) []*Node[T] {
 	isVisited := map[string]bool{}
-	pathList := []*Node{from}
+	pathList := []*Node[T]{from}
 
 	// Call recursive utility
 	if findFirstPathRecursive(from, to, isVisited, &pathList) {
@@ -217,7 +266,7 @@ func findFirstPath(from *Node, to *Node) []*Node {
 // vertices in current path.
 // localPathList<> stores actual
 // vertices in the current path
-func findFirstPathRecursive(u *Node, d *Node, isVisited map[string]bool, localPathList *[]*Node) bool {
+func findFirstPathRecursive[T comparable](u *Node[T], d *Node[T], isVisited map[string]bool, localPathList *[]*Node[T]) bool {
 	// Mark the current node
 	isVisited[u.ID] = true
 
@@ -256,6 +305,6 @@ func findFirstPathRecursive(u *Node, d *Node, isVisited map[string]bool, localPa
 	return false
 }
 
-func getNameOrID(n *Node) string {
+func getNameOrID[T comparable](n *Node[T]) string {
 	return n.ID
 }

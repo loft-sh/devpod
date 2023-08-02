@@ -8,6 +8,7 @@ import (
 	"github.com/loft-sh/devpod/cmd/flags"
 	"github.com/loft-sh/devpod/pkg/config"
 	"github.com/loft-sh/devpod/pkg/provider"
+	"github.com/loft-sh/devpod/pkg/types"
 	"github.com/loft-sh/devpod/pkg/workspace"
 	"github.com/loft-sh/log"
 	"github.com/pkg/errors"
@@ -92,7 +93,7 @@ func (cmd *AddCmd) Run(ctx context.Context, devPodConfig *config.Config, args []
 
 	log.Default.Donef("Successfully installed provider %s", providerConfig.Name)
 	if cmd.Use {
-		configureErr := configureProvider(ctx, providerConfig, devPodConfig.DefaultContext, options, true, false, &cmd.SingleMachine)
+		configureErr := configureProvider(ctx, providerConfig, devPodConfig.DefaultContext, options, true, false, &cmd.SingleMachine, log.Default)
 		if configureErr != nil {
 			devPodConfig, err := config.LoadConfig(cmd.Context, "")
 			if err != nil {
@@ -116,7 +117,7 @@ func (cmd *AddCmd) Run(ctx context.Context, devPodConfig *config.Config, args []
 }
 
 // mergeOptions combines user options with existing options, user provided options take precedence
-func mergeOptions(desiredOptions map[string]*provider.ProviderOption, stateOptions map[string]config.OptionValue, userOptions []string) []string {
+func mergeOptions(desiredOptions map[string]*types.Option, stateOptions map[string]config.OptionValue, userOptions []string) []string {
 	retOptions := []string{}
 	for key := range desiredOptions {
 		userOption, ok := getUserOption(userOptions, key)

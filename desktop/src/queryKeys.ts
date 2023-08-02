@@ -21,6 +21,9 @@ export const QueryKeys = {
   providerOptions(id: TProviderID): string[] {
     return [...QueryKeys.provider(id), "options"]
   },
+  providerSetOptions(id: TProviderID): string[] {
+    return [...QueryKeys.provider(id), "set-options"]
+  },
   providerUpdate(id: TProviderID): string[] {
     return [...QueryKeys.provider(id), "update"]
   },

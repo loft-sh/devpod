@@ -6,14 +6,14 @@ import (
 
 func TestGraph(t *testing.T) {
 	var (
-		root                   = NewNode("root", nil)
-		rootChild1             = NewNode("rootChild1", nil)
-		rootChild2             = NewNode("rootChild2", nil)
-		rootChild3             = NewNode("rootChild3", nil)
-		rootChild2Child1       = NewNode("rootChild2Child1", nil)
-		rootChild2Child1Child1 = NewNode("rootChild2Child1Child1", nil)
+		root                   = NewNode[interface{}]("root", nil)
+		rootChild1             = NewNode[interface{}]("rootChild1", nil)
+		rootChild2             = NewNode[interface{}]("rootChild2", nil)
+		rootChild3             = NewNode[interface{}]("rootChild3", nil)
+		rootChild2Child1       = NewNode[interface{}]("rootChild2Child1", nil)
+		rootChild2Child1Child1 = NewNode[interface{}]("rootChild2Child1Child1", nil)
 
-		testGraph = NewGraph(root)
+		testGraph = NewGraph[interface{}](root)
 	)
 
 	_, err := testGraph.InsertNodeAt("does not exits", rootChild1.ID, nil)
@@ -90,5 +90,35 @@ rootChild2Child1Child1`
 	err = testGraph.RemoveNode(root.ID)
 	if err == nil {
 		t.Fatal("Expected error")
+	}
+}
+
+func TestRemoveSubGraph(t *testing.T) {
+	var (
+		root                   = NewNode[interface{}]("root", nil)
+		rootChild1             = NewNode[interface{}]("rootChild1", nil)
+		rootChild2             = NewNode[interface{}]("rootChild2", nil)
+		rootChild3             = NewNode[interface{}]("rootChild3", nil)
+		rootChild2Child1       = NewNode[interface{}]("rootChild2Child1", nil)
+		rootChild2Child1Child1 = NewNode[interface{}]("rootChild2Child1Child1", nil)
+
+		testGraph = NewGraph[interface{}](root)
+	)
+
+	_, _ = testGraph.InsertNodeAt(root.ID, rootChild1.ID, nil)
+	_, _ = testGraph.InsertNodeAt(root.ID, rootChild2.ID, nil)
+	_, _ = testGraph.InsertNodeAt(root.ID, rootChild3.ID, nil)
+
+	_, _ = testGraph.InsertNodeAt(rootChild2.ID, rootChild2Child1.ID, nil)
+	_, _ = testGraph.InsertNodeAt(rootChild2Child1.ID, rootChild2Child1Child1.ID, nil)
+	_, _ = testGraph.InsertNodeAt(rootChild3.ID, rootChild2.ID, nil)
+
+	err := testGraph.RemoveSubGraph(rootChild2.ID)
+	if err != nil {
+		t.Fatal(err)
+	} else if testGraph.Nodes["rootChild2Child1"] != nil {
+		t.Fatal("rootChild2Child1 exists")
+	} else if len(testGraph.Nodes) != 3 {
+		t.Fatal("too many nodes")
 	}
 }

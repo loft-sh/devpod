@@ -77,13 +77,13 @@ type ProviderConfig struct {
 	Options map[string]OptionValue `json:"options,omitempty"`
 
 	// DynamicOptions are the unresolved dynamic provider options
-	DynamicOptions DynamicOptions `json:"dynamicOptions,omitempty"`
+	DynamicOptions OptionDefinitions `json:"dynamicOptions,omitempty"`
 
 	// CreationTimestamp is the timestamp when this provider was added
 	CreationTimestamp types.Time `json:"creationTimestamp,omitempty"`
 }
 
-type DynamicOptions = map[string]*types.Option
+type OptionDefinitions = map[string]*types.Option
 
 type OptionValue struct {
 	// Value is the value of the option
@@ -107,8 +107,8 @@ func (c *Config) ProviderOptions(provider string) map[string]OptionValue {
 	return c.Current().ProviderOptions(provider)
 }
 
-func (c *Config) DynamicProviderOptions(provider string) DynamicOptions {
-	return c.Current().DynamicProviderOptions(provider)
+func (c *Config) DynamicProviderOptionDefinitions(provider string) OptionDefinitions {
+	return c.Current().DynamicProviderOptionDefinitions(provider)
 }
 
 func (c *Config) IDEOptions(ide string) map[string]OptionValue {
@@ -164,8 +164,8 @@ func (c *ContextConfig) ProviderOptions(provider string) map[string]OptionValue 
 	return retOptions
 }
 
-func (c *ContextConfig) DynamicProviderOptions(provider string) DynamicOptions {
-	retOptions := DynamicOptions{}
+func (c *ContextConfig) DynamicProviderOptionDefinitions(provider string) OptionDefinitions {
+	retOptions := OptionDefinitions{}
 	if c.Providers == nil || c.Providers[provider] == nil {
 		return retOptions
 	}
