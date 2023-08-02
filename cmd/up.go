@@ -100,6 +100,7 @@ func NewUpCmd(flags *flags.GlobalFlags) *cobra.Command {
 				cmd.ID,
 				cmd.Machine,
 				cmd.ProviderOptions,
+				cmd.DevContainerImage,
 				cmd.DevContainerPath,
 				source,
 				true,
@@ -118,6 +119,7 @@ func NewUpCmd(flags *flags.GlobalFlags) *cobra.Command {
 	upCmd.Flags().StringVar(&cmd.DotfilesSource, "dotfiles", "", "The path or url to the dotfiles to use in the container")
 	upCmd.Flags().StringVar(&cmd.DotfilesScript, "dotfiles-script", "", "The path in dotfiles directory to use to install the dotfiles, if empty will try to guess")
 	upCmd.Flags().StringArrayVar(&cmd.IDEOptions, "ide-option", []string{}, "IDE option in the form KEY=VALUE")
+	upCmd.Flags().StringVar(&cmd.DevContainerImage, "devcontainer-image", "", "The container image to use, this will override the devcontainer.json value in the project")
 	upCmd.Flags().StringVar(&cmd.DevContainerPath, "devcontainer-path", "", "The path to the devcontainer.json relative to the project")
 	upCmd.Flags().StringArrayVar(&cmd.ProviderOptions, "provider-option", []string{}, "Provider option in the form KEY=VALUE")
 	upCmd.Flags().BoolVar(&cmd.Recreate, "recreate", false, "If true will remove any existing containers and recreate them")
@@ -295,6 +297,7 @@ func (cmd *UpCmd) devPodUpProxy(
 		baseOptions := cmd.CLIOptions
 		baseOptions.ID = workspace.ID
 		baseOptions.DevContainerPath = workspace.DevContainerPath
+		baseOptions.DevContainerImage = workspace.DevContainerImage
 		baseOptions.IDE = workspace.IDE.Name
 		baseOptions.IDEOptions = nil
 		baseOptions.Source = workspace.Source.String()

@@ -10,7 +10,7 @@ import (
 )
 
 func (r *Runner) Build(ctx context.Context, options config.BuildOptions) (string, error) {
-	substitutedConfig, _, err := r.prepare()
+	substitutedConfig, _, err := r.prepare(options.CLIOptions)
 	if err != nil {
 		return "", err
 	}
@@ -35,7 +35,11 @@ func (r *Runner) Build(ctx context.Context, options config.BuildOptions) (string
 	// check if we can push image
 	err = image.CheckPushPermissions(prebuildImage)
 	if err != nil {
-		return "", fmt.Errorf("cannot push to repository %s. Please make sure you are logged into the registry and credentials are available. (Error: %w)", prebuildImage, err)
+		return "", fmt.Errorf(
+			"cannot push to repository %s. Please make sure you are logged into the registry and credentials are available. (Error: %w)",
+			prebuildImage,
+			err,
+		)
 	}
 
 	// push the image to the registry

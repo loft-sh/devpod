@@ -22,7 +22,11 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
-func NewRunner(agentPath, agentDownloadURL string, workspaceConfig *provider2.AgentWorkspaceInfo, log log.Logger) (*Runner, error) {
+func NewRunner(
+	agentPath, agentDownloadURL string,
+	workspaceConfig *provider2.AgentWorkspaceInfo,
+	log log.Logger,
+) (*Runner, error) {
 	driver, err := drivercreate.NewDriver(workspaceConfig, log)
 	if err != nil {
 		return nil, err
@@ -64,8 +68,13 @@ type UpOptions struct {
 	ForceBuild bool
 }
 
-func (r *Runner) prepare() (*config.SubstitutedConfig, *WorkspaceConfig, error) {
-	rawParsedConfig, err := config.ParseDevContainerJSON(r.LocalWorkspaceFolder, r.WorkspaceConfig.Workspace.DevContainerPath)
+func (r *Runner) prepare(
+	options provider2.CLIOptions,
+) (*config.SubstitutedConfig, *WorkspaceConfig, error) {
+	rawParsedConfig, err := config.ParseDevContainerJSON(
+		r.LocalWorkspaceFolder,
+		r.WorkspaceConfig.Workspace.DevContainerPath,
+	)
 
 	// We want to fail only in case of real errors, non-existing devcontainer.jon
 	// will be gracefully handled by the auto-detection mechanism
@@ -86,7 +95,11 @@ func (r *Runner) prepare() (*config.SubstitutedConfig, *WorkspaceConfig, error) 
 	configFile := rawParsedConfig.Origin
 
 	// get workspace folder within container
-	workspace := getWorkspace(r.LocalWorkspaceFolder, r.WorkspaceConfig.Workspace.ID, rawParsedConfig)
+	workspace := getWorkspace(
+		r.LocalWorkspaceFolder,
+		r.WorkspaceConfig.Workspace.ID,
+		rawParsedConfig,
+	)
 	r.SubstitutionContext = &config.SubstitutionContext{
 		DevContainerID:           config.GetDevContainerID(config.ListToObject(r.getLabels())),
 		LocalWorkspaceFolder:     r.LocalWorkspaceFolder,
@@ -106,6 +119,11 @@ func (r *Runner) prepare() (*config.SubstitutedConfig, *WorkspaceConfig, error) 
 	if parsedConfig.WorkspaceMount != "" {
 		workspace.WorkspaceMount = parsedConfig.WorkspaceMount
 	}
+
+	if options.DevContainerImage != "" {
+		parsedConfig.ImageContainer = config.ImageContainer{Image: options.DevContainerImage}
+	}
+
 	parsedConfig.Origin = configFile
 	return &config.SubstitutedConfig{
 		Config: parsedConfig,
@@ -114,7 +132,7 @@ func (r *Runner) prepare() (*config.SubstitutedConfig, *WorkspaceConfig, error) 
 }
 
 func (r *Runner) Up(ctx context.Context, options UpOptions) (*config.Result, error) {
-	substitutedConfig, workspace, err := r.prepare()
+	substitutedConfig, workspace, err := r.prepare(options.CLIOptions)
 	if err != nil {
 		return nil, err
 	}
@@ -128,7 +146,12 @@ func (r *Runner) Up(ctx context.Context, options UpOptions) (*config.Result, err
 	// check if its a compose devcontainer.json
 	var result *config.Result
 	if isDockerFileConfig(substitutedConfig.Config) || substitutedConfig.Config.Image != "" {
-		result, err = r.runSingleContainer(ctx, substitutedConfig, workspace.WorkspaceMount, options)
+		result, err = r.runSingleContainer(
+			ctx,
+			substitutedConfig,
+			workspace.WorkspaceMount,
+			options,
+		)
 		if err != nil {
 			return nil, err
 		}
@@ -161,7 +184,15 @@ func (r *Runner) Up(ctx context.Context, options UpOptions) (*config.Result, err
 	return result, nil
 }
 
-func (r *Runner) CommandDevContainer(ctx context.Context, containerId string, user string, command string, stdin io.Reader, stdout io.Writer, stderr io.Writer) error {
+func (r *Runner) CommandDevContainer(
+	ctx context.Context,
+	containerId string,
+	user string,
+	command string,
+	stdin io.Reader,
+	stdout io.Writer,
+	stderr io.Writer,
+) error {
 	return r.Driver.CommandDevContainer(ctx, containerId, user, command, stdin, stdout, stderr)
 }
 
@@ -183,7 +214,11 @@ func isDockerFileConfig(config *config.DevContainerConfig) bool {
 	return config.Dockerfile != "" || config.Build.Dockerfile != ""
 }
 
-func runInitializeCommand(workspaceFolder string, config *config.DevContainerConfig, log log.Logger) error {
+func runInitializeCommand(
+	workspaceFolder string,
+	config *config.DevContainerConfig,
+	log log.Logger,
+) error {
 	if len(config.InitializeCommand) == 0 {
 		return nil
 	}
@@ -220,7 +255,10 @@ type WorkspaceConfig struct {
 	RemoteWorkspaceFolder string
 }
 
-func getWorkspace(workspaceFolder, workspaceID string, conf *config.DevContainerConfig) WorkspaceConfig {
+func getWorkspace(
+	workspaceFolder, workspaceID string,
+	conf *config.DevContainerConfig,
+) WorkspaceConfig {
 	if conf.WorkspaceMount != "" {
 		mount := config.ParseMount(conf.WorkspaceMount)
 		return WorkspaceConfig{
@@ -241,7 +279,12 @@ func getWorkspace(workspaceFolder, workspaceID string, conf *config.DevContainer
 
 	return WorkspaceConfig{
 		RemoteWorkspaceFolder: containerMountFolder,
-		WorkspaceMount:        fmt.Sprintf("type=bind,source=%s,target=%s%s", workspaceFolder, containerMountFolder, consistency),
+		WorkspaceMount: fmt.Sprintf(
+			"type=bind,source=%s,target=%s%s",
+			workspaceFolder,
+			containerMountFolder,
+			consistency,
+		),
 	}
 }
 
