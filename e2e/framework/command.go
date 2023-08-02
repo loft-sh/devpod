@@ -214,7 +214,7 @@ func (f *Framework) DevPodWorkspaceStop(ctx context.Context, extraArgs ...string
 }
 
 func (f *Framework) DevPodWorkspaceDelete(ctx context.Context, workspace string, extraArgs ...string) error {
-	baseArgs := []string{"delete", workspace}
+	baseArgs := []string{"delete", workspace, "--ignore-not-found"}
 	baseArgs = append(baseArgs, extraArgs...)
 
 	return f.ExecCommand(ctx, false, true, fmt.Sprintf("Successfully deleted workspace '%s'", workspace), baseArgs)

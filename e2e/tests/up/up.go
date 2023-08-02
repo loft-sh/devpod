@@ -283,6 +283,8 @@ var _ = DevPodDescribe("devpod up test suite", func() {
 				err = f.DevPodProviderUse(context.Background(), "docker")
 				framework.ExpectNoError(err)
 
+				ginkgo.DeferCleanup(f.DevPodWorkspaceDelete, context.Background(), tempDir)
+
 				// Wait for devpod workspace to come online (deadline: 30s)
 				err = f.DevPodUp(ctx, tempDir)
 				framework.ExpectNoError(err)
@@ -301,6 +303,8 @@ var _ = DevPodDescribe("devpod up test suite", func() {
 				framework.ExpectNoError(err)
 				err = f.DevPodProviderUse(context.Background(), "docker")
 				framework.ExpectNoError(err)
+
+				ginkgo.DeferCleanup(f.DevPodWorkspaceDelete, context.Background(), tempDir)
 
 				// Wait for devpod workspace to come online (deadline: 30s)
 				err = f.DevPodUp(ctx, tempDir)
@@ -425,6 +429,8 @@ var _ = DevPodDescribe("devpod up test suite", func() {
 				_ = f.DevPodProviderAdd(ctx, "docker")
 				err = f.DevPodProviderUse(context.Background(), "docker")
 				framework.ExpectNoError(err)
+
+				ginkgo.DeferCleanup(f.DevPodWorkspaceDelete, context.Background(), tempDir)
 
 				// Wait for devpod workspace to come online (deadline: 30s)
 				err = f.DevPodUp(ctx, tempDir, "--debug")
@@ -1053,6 +1059,8 @@ var _ = DevPodDescribe("devpod up test suite", func() {
 				_ = f.DevPodProviderAdd(ctx, "docker")
 				err = f.DevPodProviderUse(context.Background(), "docker")
 				framework.ExpectNoError(err)
+
+				ginkgo.DeferCleanup(f.DevPodWorkspaceDelete, context.Background(), tempDir)
 
 				// Wait for devpod workspace to come online (deadline: 30s)
 				err = f.DevPodUp(ctx, tempDir, "--debug")

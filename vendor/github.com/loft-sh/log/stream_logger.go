@@ -21,7 +21,9 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
-// var startTime = time.Now()
+func GetInstance() Logger {
+	return Default
+}
 
 var Default = NewStdoutLogger(os.Stdin, stdout, stderr, logrus.InfoLevel)
 
