@@ -140,7 +140,7 @@ github.com/ghodss/yaml
 # github.com/gliderlabs/ssh v0.3.5
 ## explicit; go 1.12
 github.com/gliderlabs/ssh
-# github.com/go-logr/logr v1.2.3
+# github.com/go-logr/logr v1.2.4
 ## explicit; go 1.16
 github.com/go-logr/logr
 github.com/go-logr/logr/funcr
@@ -259,7 +259,7 @@ github.com/klauspost/compress/zstd/internal/xxhash
 # github.com/kr/fs v0.1.0
 ## explicit
 github.com/kr/fs
-# github.com/loft-sh/log v0.0.0-20230704082310-e329f20567c1
+# github.com/loft-sh/log v0.0.0-20230802151259-7b546cf62355
 ## explicit; go 1.20
 github.com/loft-sh/log
 github.com/loft-sh/log/hash
@@ -732,9 +732,14 @@ k8s.io/apimachinery/pkg/util/validation/field
 k8s.io/apimachinery/pkg/util/wait
 k8s.io/apimachinery/pkg/watch
 k8s.io/apimachinery/third_party/forked/golang/reflect
-# k8s.io/klog/v2 v2.30.0
+# k8s.io/klog/v2 v2.100.1
 ## explicit; go 1.13
 k8s.io/klog/v2
+k8s.io/klog/v2/internal/buffer
+k8s.io/klog/v2/internal/clock
+k8s.io/klog/v2/internal/dbg
+k8s.io/klog/v2/internal/serialize
+k8s.io/klog/v2/internal/severity
 # mvdan.cc/sh/v3 v3.6.0
 ## explicit; go 1.18
 mvdan.cc/sh/v3/expand

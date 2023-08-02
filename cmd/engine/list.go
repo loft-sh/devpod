@@ -1,4 +1,4 @@
-package machine
+package engine
 
 import (
 	"context"
@@ -17,22 +17,23 @@ import (
 	"github.com/spf13/cobra"
 )
 
-// ListCmd holds the configuration
+// ListCmd holds the list cmd flags
 type ListCmd struct {
-	*flags.GlobalFlags
+	flags.GlobalFlags
 
 	Output string
 }
 
-// NewListCmd creates a new destroy command
+// NewListCmd creates a new command
 func NewListCmd(flags *flags.GlobalFlags) *cobra.Command {
 	cmd := &ListCmd{
-		GlobalFlags: flags,
+		GlobalFlags: *flags,
 	}
 	listCmd := &cobra.Command{
 		Use:     "list",
 		Aliases: []string{"ls"},
-		Short:   "Lists existing machines",
+		Short:   "List available engines",
+		Args:    cobra.NoArgs,
 		RunE: func(_ *cobra.Command, args []string) error {
 			return cmd.Run(context.Background())
 		},
@@ -49,12 +50,12 @@ func (cmd *ListCmd) Run(ctx context.Context) error {
 		return err
 	}
 
-	machineDir, err := provider.GetMachinesDir(devPodConfig.DefaultContext)
+	engineDir, err := provider.GetEnginesDir(devPodConfig.DefaultContext)
 	if err != nil {
 		return err
 	}
 
-	entries, err := os.ReadDir(machineDir)
+	entries, err := os.ReadDir(engineDir)
 	if err != nil && !os.IsNotExist(err) {
 		return err
 	}
@@ -62,15 +63,15 @@ func (cmd *ListCmd) Run(ctx context.Context) error {
 	if cmd.Output == "plain" {
 		tableEntries := [][]string{}
 		for _, entry := range entries {
-			machineConfig, err := provider.LoadMachineConfig(devPodConfig.DefaultContext, entry.Name())
+			engineConfig, err := provider.LoadEngineConfig(devPodConfig.DefaultContext, entry.Name())
 			if err != nil {
-				return errors.Wrap(err, "load machine config")
+				return errors.Wrap(err, "load engine config")
 			}
 
 			tableEntries = append(tableEntries, []string{
-				machineConfig.ID,
-				machineConfig.Provider.Name,
-				time.Since(machineConfig.CreationTimestamp.Time).Round(1 * time.Second).String(),
+				engineConfig.ID,
+				engineConfig.URL,
+				time.Since(engineConfig.CreationTimestamp.Time).Round(1 * time.Second).String(),
 			})
 		}
 		sort.SliceStable(tableEntries, func(i, j int) bool {
@@ -79,18 +80,18 @@ func (cmd *ListCmd) Run(ctx context.Context) error {
 
 		table.PrintTable(log.Default, []string{
 			"Name",
-			"Provider",
+			"Url",
 			"Age",
 		}, tableEntries)
 	} else if cmd.Output == "json" {
-		tableEntries := []*provider.Machine{}
+		tableEntries := []*provider.Engine{}
 		for _, entry := range entries {
-			machineConfig, err := provider.LoadMachineConfig(devPodConfig.DefaultContext, entry.Name())
+			engineConfig, err := provider.LoadEngineConfig(devPodConfig.DefaultContext, entry.Name())
 			if err != nil {
-				return errors.Wrap(err, "load machine config")
+				return errors.Wrap(err, "load engine config")
 			}
 
-			tableEntries = append(tableEntries, machineConfig)
+			tableEntries = append(tableEntries, engineConfig)
 		}
 		sort.SliceStable(tableEntries, func(i, j int) bool {
 			return tableEntries[i].ID < tableEntries[j].ID

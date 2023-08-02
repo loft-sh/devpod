@@ -55,10 +55,7 @@ func (cmd *DeleteCmd) Run(ctx context.Context, devPodConfig *config.Config, args
 	// try to load workspace
 	client, err := workspace2.GetWorkspace(devPodConfig, args, false, log.Default)
 	if err != nil {
-		if !cmd.Force {
-			log.Default.Errorf("cannot delete workspace because there was an error loading the workspace. Run with --force to ignore this error")
-			return err
-		} else if len(args) == 0 {
+		if len(args) == 0 {
 			return fmt.Errorf("cannot delete workspace because there was an error loading the workspace: %w. Please specify the id of the workspace you want to delete. E.g. 'devpod delete my-workspace --force'", err)
 		}
 
@@ -69,6 +66,9 @@ func (cmd *DeleteCmd) Run(ctx context.Context, devPodConfig *config.Config, args
 			}
 
 			return fmt.Errorf("couldn't find workspace %s", args[0])
+		} else if !cmd.Force {
+			log.Default.Errorf("cannot delete workspace because there was an error loading the workspace. Run with --force to ignore this error")
+			return err
 		}
 
 		// print error

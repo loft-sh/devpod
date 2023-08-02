@@ -8,6 +8,7 @@ import (
 	"github.com/loft-sh/devpod/cmd/flags"
 	"github.com/loft-sh/devpod/pkg/config"
 	provider2 "github.com/loft-sh/devpod/pkg/provider"
+	"github.com/loft-sh/devpod/pkg/workspace"
 	"github.com/loft-sh/log"
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
@@ -54,7 +55,8 @@ func (cmd *DeleteCmd) Run(ctx context.Context, args []string) error {
 		return fmt.Errorf("please specify a provider to delete")
 	}
 
-	err = deleteProvider(devPodConfig, provider, cmd.IgnoreNotFound)
+	// delete the provider
+	err = DeleteProvider(devPodConfig, provider, cmd.IgnoreNotFound)
 	if err != nil {
 		return err
 	}
@@ -63,12 +65,25 @@ func (cmd *DeleteCmd) Run(ctx context.Context, args []string) error {
 	return nil
 }
 
-func deleteProvider(devPodConfig *config.Config, provider string, ignoreNotFound bool) error {
+func DeleteProvider(devPodConfig *config.Config, provider string, ignoreNotFound bool) error {
+	// check if there are workspaces that still use this machine
+	workspaces, err := workspace.ListWorkspaces(devPodConfig, log.Default)
+	if err != nil {
+		return err
+	}
+
+	// search for workspace that uses this machine
+	for _, workspace := range workspaces {
+		if workspace.Provider.Name == provider {
+			return fmt.Errorf("cannot delete provider '%s', because workspace '%s' is still using it. Please delete the workspace '%s' before deleting the provider", workspace.Provider.Name, workspace.ID, workspace.ID)
+		}
+	}
+
 	if devPodConfig.Current().DefaultProvider == provider {
 		devPodConfig.Current().DefaultProvider = ""
 	}
 	delete(devPodConfig.Current().Providers, provider)
-	err := config.SaveConfig(devPodConfig)
+	err = config.SaveConfig(devPodConfig)
 	if err != nil {
 		return errors.Wrap(err, "save config")
 	}

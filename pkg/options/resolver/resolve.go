@@ -105,6 +105,11 @@ func (r *Resolver) resolveOption(
 
 		optionValue.Children = beforeValue.Children
 		resolvedOptionValues[optionName] = optionValue
+	} else if len(option.Enum) == 1 {
+		resolvedOptionValues[optionName] = config.OptionValue{
+			Children: beforeValue.Children,
+			Value:    option.Enum[0],
+		}
 	} else {
 		resolvedOptionValues[optionName] = config.OptionValue{
 			Children: beforeValue.Children,
@@ -123,6 +128,7 @@ func (r *Resolver) resolveOption(
 			return fmt.Errorf("option %s is required, but no value provided", optionName)
 		}
 
+		// check if there is only one option
 		r.log.Info(option.Description)
 		answer, err := r.log.Question(&survey.QuestionOptions{
 			Question:               fmt.Sprintf("Please enter a value for %s", optionName),

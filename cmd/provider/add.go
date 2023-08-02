@@ -93,14 +93,14 @@ func (cmd *AddCmd) Run(ctx context.Context, devPodConfig *config.Config, args []
 
 	log.Default.Donef("Successfully installed provider %s", providerConfig.Name)
 	if cmd.Use {
-		configureErr := configureProvider(ctx, providerConfig, devPodConfig.DefaultContext, options, true, false, &cmd.SingleMachine, log.Default)
+		configureErr := ConfigureProvider(ctx, providerConfig, devPodConfig.DefaultContext, options, true, false, &cmd.SingleMachine, log.Default)
 		if configureErr != nil {
 			devPodConfig, err := config.LoadConfig(cmd.Context, "")
 			if err != nil {
 				return err
 			}
 
-			err = deleteProvider(devPodConfig, providerConfig.Name, true)
+			err = DeleteProvider(devPodConfig, providerConfig.Name, true)
 			if err != nil {
 				return errors.Wrap(err, "delete provider")
 			}

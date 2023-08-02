@@ -13,5 +13,7 @@ func NewEngineCmd(flags *flags.GlobalFlags) *cobra.Command {
 	}
 
 	engineCmd.AddCommand(NewLoginCmd(flags))
+	engineCmd.AddCommand(NewListCmd(flags))
+	engineCmd.AddCommand(NewDeleteCmd(flags))
 	return engineCmd
 }
