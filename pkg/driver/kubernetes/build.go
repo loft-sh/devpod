@@ -58,7 +58,7 @@ func (k *kubernetesDriver) BuildDevContainer(
 		return nil, err
 	}
 
-	prebuildHash, err := config.CalculatePrebuildHash(parsedConfig.Config, options.Platform, arch, dockerfileContent, k.Log)
+	prebuildHash, err := config.CalculatePrebuildHash(parsedConfig.Config, options.Platform, arch, docker.GetContextPath(parsedConfig.Config), dockerfilePath, dockerfileContent, k.Log)
 	if err != nil {
 		return nil, err
 	}
