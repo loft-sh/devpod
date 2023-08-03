@@ -1,7 +1,6 @@
 package survey
 
 import (
-	"os"
 	"regexp"
 	"sort"
 
@@ -51,10 +50,15 @@ func (s *survey) Question(params *QuestionOptions) (string, error) {
 			sort.Strings(params.Options)
 		}
 
+		var defaultValue interface{}
+		if params.DefaultValue != "" {
+			defaultValue = params.DefaultValue
+		}
+
 		prompt = &surveypkg.Select{
 			Message: params.Question,
 			Options: params.Options,
-			Default: params.DefaultValue,
+			Default: defaultValue,
 		}
 	} else if params.IsPassword {
 		prompt = &surveypkg.Password{
@@ -113,8 +117,7 @@ func (s *survey) Question(params *QuestionOptions) (string, error) {
 
 	err := surveypkg.Ask(question, &answers)
 	if err != nil {
-		// Keyboard interrupt
-		os.Exit(0)
+		return "", err
 	}
 	if answers.Question == "" && len(params.Options) > 0 {
 		answers.Question = params.Options[0]

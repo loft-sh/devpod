@@ -6,10 +6,8 @@ import {
   FormControl,
   FormErrorMessage,
   FormHelperText,
-  FormLabel,
   HStack,
   IconButton,
-  Input,
   Popover,
   PopoverContent,
   PopoverTrigger,
@@ -18,27 +16,24 @@ import {
   VStack,
   useBreakpointValue,
   useColorModeValue,
+  Spinner,
 } from "@chakra-ui/react"
 import styled from "@emotion/styled"
-import { useMutation, useQueryClient } from "@tanstack/react-query"
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { motion } from "framer-motion"
-import { ReactNode, RefObject, useCallback, useEffect, useMemo, useRef, useState } from "react"
-import { Controller, FormProvider, SubmitHandler, useForm, useFormContext } from "react-hook-form"
+import { RefObject, useCallback, useEffect, useMemo, useRef, useState } from "react"
+import {DefaultValues, FormProvider, SubmitHandler, useForm} from "react-hook-form"
 import { useBorderColor } from "../../../Theme"
 import { client } from "../../../client"
-import { AutoComplete, CollapsibleSection, ErrorMessageBox } from "../../../components"
+import { CollapsibleSection, ErrorMessageBox } from "../../../components"
 import { SIDEBAR_WIDTH } from "../../../constants"
 import { useProvider } from "../../../contexts"
 import { ExclamationCircle } from "../../../icons"
 import { Err, Failed, exists, isError, useFormErrors } from "../../../lib"
 import { QueryKeys } from "../../../queryKeys"
-import {
-  TConfigureProviderConfig,
-  TProviderID,
-  TProviderOptionGroup,
-  TProviderOptions,
-} from "../../../types"
+import { TConfigureProviderConfig, TProviderID, TProviderOptions } from "../../../types"
 import { TOptionWithID, canCreateMachine, getVisibleOptions } from "../helpers"
+import { OptionFormField } from "./OptionFormField"
 
 type TAllOptions = Readonly<{
   required: TOptionWithID[]
@@ -57,16 +52,14 @@ const FieldName = {
 type TFieldValues = Readonly<{
   [FieldName.REUSE_MACHINE]: boolean | undefined
   [FieldName.USE_AS_DEFAULT]: boolean
-  [key: string]: unknown
+  [key: string]: string | boolean | undefined
 }>
 type TConfigureProviderOptionsFormProps = Readonly<{
   providerID: TProviderID
-  isDefault: boolean
-  reuseMachine: boolean
-  options: TProviderOptions | undefined
-  optionGroups: TProviderOptionGroup[]
   isModal?: boolean
   addProvider?: boolean
+  isDefault: boolean
+  reuseMachine: boolean
   containerRef?: RefObject<HTMLDivElement>
   onFinish?: () => void
 }>
@@ -74,16 +67,22 @@ type TConfigureProviderOptionsFormProps = Readonly<{
 export function ConfigureProviderOptionsForm({
   containerRef,
   providerID,
+  onFinish,
   isDefault,
   reuseMachine,
-  onFinish,
-  options: optionsProp,
-  optionGroups,
   addProvider = false,
   isModal = false,
 }: TConfigureProviderOptionsFormProps) {
   const queryClient = useQueryClient()
   const [provider] = useProvider(providerID)
+  const { data: queryOptions, error: queryError } = useQuery({
+    queryKey: QueryKeys.providerSetOptions(providerID!),
+    queryFn: async () =>
+      (await client.providers.setOptionsDry(providerID!, { options: {} })).unwrap(),
+    enabled: true,
+  })
+  const optionGroups = provider?.config?.optionGroups || []
+
   const showDefaultField = useMemo(() => addProvider || !isDefault, [addProvider, isDefault])
   const showReuseMachineField = useMemo(
     () => canCreateMachine(provider?.config),
@@ -96,9 +95,10 @@ export function ConfigureProviderOptionsForm({
       reuseMachine: reuseMachine,
     },
   })
+
   const {
     status,
-    error,
+    error: configureError,
     mutate: configureProvider,
   } = useMutation<
     void,
@@ -114,32 +114,69 @@ export function ConfigureProviderOptionsForm({
     },
   })
 
-  const errorButtonRef = useRef<HTMLButtonElement>(null)
+  const {
+    data: refreshOptions,
+    error: refreshError,
+    status: refreshStatus,
+    mutate: refreshSubOptionsMutation,
+  } = useMutation<
+      TProviderOptions | undefined,
+      Err<Failed>,
+      Readonly<{ providerID: TProviderID; config: TConfigureProviderConfig }>
+  >({
+    mutationFn: async ({ providerID, config }) => {
+      return (await client.providers.setOptionsDry(providerID, config)).unwrap()
+    },
+    onSuccess(data) {
+      const newOptions: DefaultValues<TFieldValues> = {}
+      Object.keys(data).forEach(key => {
+        if (data?.[key]?.value) {
+          newOptions[key] = data[key]?.value
+        }
+      })
+
+      formMethods.reset(newOptions)
+    },
+  })
+
+  const error = useMemo(() => {
+    if (configureError) {
+      return configureError
+    } else if (queryError) {
+      return queryError
+    } else if (refreshError) {
+      return refreshError
+    }
+
+    return undefined
+  }, [queryError, configureError, refreshError])
+
   // Open error popover when error changes
+  const errorButtonRef = useRef<HTMLButtonElement>(null)
   useEffect(() => {
     if (error) {
       errorButtonRef.current?.click()
     }
   }, [error])
 
+  const optionsProp = useMemo(() => {
+    if (refreshOptions) {
+      return refreshOptions
+    } else if (queryOptions) {
+      return queryOptions
+    }
+
+    return undefined
+  }, [queryOptions, refreshOptions])
   const onSubmit = useCallback<SubmitHandler<TFieldValues>>(
     (data) => {
-      const { useAsDefault, reuseMachine, ...configuredOptions } = data
-
-      // filter undefined values
-      const newOptions: { [key: string]: string } = {}
-      Object.keys(configuredOptions).forEach((option) => {
-        if (exists(configuredOptions[option]) && exists(optionsProp?.[option])) {
-          newOptions[option] = configuredOptions[option] + ""
-        }
-      })
-
+      const { useAsDefault, reuseMachine } = data
       configureProvider({
         providerID,
         config: {
           reuseMachine: reuseMachine ?? false,
           useAsDefaultProvider: useAsDefault,
-          options: newOptions,
+          options: filterOptions(data, optionsProp),
         },
       })
     },
@@ -157,7 +194,11 @@ export function ConfigureProviderOptionsForm({
     }
 
     return getVisibleOptions(optionsProp).reduce<TAllOptions>((acc, option) => {
-      const optionGroup = optionGroups.find((group) => group.options?.find((o) => o === option.id))
+      const optionGroup = optionGroups.find((group) => {
+        return group.options?.find((o) => {
+          return optionMatches(o, option.id)
+        })
+      })
       if (optionGroup) {
         if (!acc.groups[optionGroup.name!]) {
           acc.groups[optionGroup.name!] = []
@@ -188,15 +229,53 @@ export function ConfigureProviderOptionsForm({
   })
   const paddingX = useBreakpointValue({ base: "3rem", xl: isModal ? "3rem" : "4" })
 
+  const refreshSubOptions = useCallback((id: string) => {
+    const filteredOptions = filterOptions(formMethods.getValues(), optionsProp)
+    stripOptionChildren(filteredOptions, optionsProp, id)
+
+    refreshSubOptionsMutation({
+      providerID,
+      config: {
+        options: filteredOptions,
+      },
+    })
+  }, [formMethods, optionsProp, providerID])
+
+  if (!exists(provider) || !optionsProp) {
+    return <Spinner style={{ margin: "0 auto 3rem auto" }} />
+  }
+
   return (
     <FormProvider {...formMethods}>
-      <Form onSubmit={formMethods.handleSubmit(onSubmit)}>
+      {refreshStatus === "loading" && (
+        <div
+          style={{
+            position: "absolute",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            top: "0",
+            left: "0",
+            right: "0",
+            bottom: "0",
+            zIndex: "99999999",
+            backgroundColor: "rgba(0,0,0,0.5)",
+          }}>
+          <Spinner style={{ margin: "auto" }} />
+        </div>
+      )}
+      <Form aria-readonly={true} onSubmit={formMethods.handleSubmit(onSubmit)}>
         <VStack align="start" spacing={8}>
           {options.required.length > 0 && (
             <Box width="full">
               <VStack align="start" spacing={4}>
                 {options.required.map((option) => (
-                  <OptionFormField key={option.id} isRequired {...option} />
+                  <OptionFormField
+                    key={option.id}
+                    refreshSubOptions={refreshSubOptions}
+                    isRequired
+                    {...option}
+                  />
                 ))}
               </VStack>
             </Box>
@@ -214,14 +293,22 @@ export function ConfigureProviderOptionsForm({
                     title={group.name}
                     isOpen={!!group.defaultVisible}>
                     <SimpleGrid minChildWidth="60" spacingX={8} spacingY={4}>
-                      {group.options?.map((optionName) => {
-                        const option = groupOptions?.find((option) => option.id === optionName)
-                        if (!option) {
-                          return undefined
-                        }
+                      {group.options?.reduce((arr: Array<JSX.Element>, optionName) => {
+                        groupOptions?.forEach((option) => {
+                          if (optionMatches(optionName, option.id)) {
+                            arr.push(
+                                <OptionFormField
+                                    key={option.id}
+                                    refreshSubOptions={refreshSubOptions}
+                                    isRequired={!!option.required}
+                                    {...option}
+                                />
+                            )
+                          }
+                        })
 
-                        return <OptionFormField key={option.id} {...option} />
-                      })}
+                        return arr
+                      }, [] as Array<JSX.Element>)}
                     </SimpleGrid>
                   </CollapsibleSection>
                 </Box>
@@ -233,7 +320,11 @@ export function ConfigureProviderOptionsForm({
               <CollapsibleSection showIcon={true} title={"Optional"} isOpen={false}>
                 <SimpleGrid minChildWidth="60" spacingX={8} spacingY={4}>
                   {options.other.map((option) => (
-                    <OptionFormField key={option.id} {...option} />
+                    <OptionFormField
+                      key={option.id}
+                      refreshSubOptions={refreshSubOptions}
+                      {...option}
+                    />
                   ))}
                 </SimpleGrid>
               </CollapsibleSection>
@@ -348,100 +439,40 @@ export function ConfigureProviderOptionsForm({
   )
 }
 
-type TOptionFormField = TOptionWithID & Readonly<{ isRequired?: boolean }>
-function OptionFormField({
-  id,
-  defaultValue,
-  value,
-  password,
-  description,
-  type,
-  displayName,
-  suggestions,
-  isRequired = false,
-}: TOptionFormField) {
-  const { register, formState } = useFormContext()
-  const optionError = formState.errors[id]
+function optionMatches(optionName: string, optionID: string): boolean {
+  if (optionName.includes("*")) {
+    const regEx = new RegExp("^" + optionName.replaceAll("*", ".*") + "$")
 
-  const input = useMemo<ReactNode>(() => {
-    const registerProps = register(id, { required: isRequired })
-    const valueProp = exists(value) ? { defaultValue: value } : {}
-    const defaultValueProp = exists(defaultValue) ? { defaultValue } : {}
-    const props = { ...defaultValueProp, ...valueProp, ...registerProps }
+    return regEx.test(optionID)
+  }
 
-    if (exists(suggestions)) {
-      return (
-        <Controller
-          name={id}
-          defaultValue={value ?? defaultValue ?? undefined}
-          rules={{ required: isRequired }}
-          render={({ field: { onChange, onBlur, value: v, ref } }) => {
-            return (
-              <AutoComplete
-                ref={ref}
-                value={v || ""}
-                onBlur={onBlur}
-                onChange={(value) => {
-                  if (value) {
-                    onChange(value)
-                  }
-                }}
-                placeholder={`Enter ${displayName}`}
-                options={suggestions.map((s) => ({ key: s, label: s }))}
-              />
-            )
-          }}
-        />
-      )
+  return optionName === optionID
+}
+
+function stripOptionChildren(
+  configuredOptions: { [key: string]: string },
+  optionsProp: TProviderOptions | undefined,
+  id: string
+) {
+  // filter children
+  optionsProp?.[id]?.children?.forEach((child) => {
+    delete configuredOptions[child]
+    stripOptionChildren(configuredOptions, optionsProp, child)
+  })
+}
+
+function filterOptions(
+  configuredOptions: TFieldValues,
+  optionsProp: TProviderOptions | undefined
+): { [key: string]: string } {
+  const newOptions: { [key: string]: string } = {}
+  Object.keys(configuredOptions).forEach((option) => {
+    if (exists(configuredOptions[option]) && exists(optionsProp?.[option])) {
+      newOptions[option] = configuredOptions[option] + ""
     }
+  })
 
-    switch (type) {
-      case "boolean":
-        return (
-          <Checkbox defaultChecked={props.defaultValue === "true"} {...props}>
-            {displayName}
-          </Checkbox>
-        )
-      case "number":
-        return (
-          <Input spellCheck={false} placeholder={`Enter ${displayName}`} type="number" {...props} />
-        )
-      case "duration":
-        return (
-          <Input spellCheck={false} placeholder={`Enter ${displayName}`} type="text" {...props} />
-        )
-      case "string":
-        return (
-          <Input
-            spellCheck={false}
-            placeholder={`Enter ${displayName}`}
-            type={password ? "password" : "text"}
-            {...props}
-          />
-        )
-      default:
-        return (
-          <Input
-            spellCheck={false}
-            placeholder={`Enter ${displayName}`}
-            type={password ? "password" : "text"}
-            {...props}
-          />
-        )
-    }
-  }, [register, id, isRequired, value, defaultValue, suggestions, type, displayName, password])
-
-  return (
-    <FormControl isRequired={isRequired}>
-      <FormLabel>{displayName}</FormLabel>
-      {input}
-      {exists(optionError) ? (
-        <FormErrorMessage>{optionError.message?.toString() ?? "Error"}</FormErrorMessage>
-      ) : (
-        exists(description) && <FormHelperText>{description}</FormHelperText>
-      )}
-    </FormControl>
-  )
+  return newOptions
 }
 
 function useErrorDimensions(

@@ -39,6 +39,8 @@ export const DEVPOD_FLAG_DEBUG = "--debug"
 export const DEVPOD_FLAG_USE = "--use"
 export const DEVPOD_FLAG_NAME = "--name"
 export const DEVPOD_FLAG_SINGLE_MACHINE = "--single-machine"
+export const DEVPOD_FLAG_DRY = "--dry"
+export const DEVPOD_FLAG_SKIP_REQUIRED = "--skip-required"
 export const DEVPOD_FLAG_TIMEOUT = "--timeout"
 export const DEVPOD_FLAG_DEVCONTAINER_PATH = "--devcontainer-path"
 

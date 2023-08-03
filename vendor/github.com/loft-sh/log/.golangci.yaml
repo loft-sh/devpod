@@ -1,0 +1,113 @@
+linters:
+  # We want to gradually introduce new linters to the project
+  disable-all: true
+  enable:
+    - asasalint
+    - asciicheck
+    - bidichk
+    - decorder
+    - durationcheck
+    - errcheck
+    - errchkjson
+    - errname
+    - errorlint
+    - exhaustive
+    - exportloopref
+    - ginkgolinter
+    - gocheckcompilerdirectives
+    - goimports
+    - gosimple
+    - govet
+    - grouper
+    - importas
+    - ineffassign
+    - makezero
+    - misspell
+    - nakedret
+    - nilnil
+    - prealloc
+    - promlinter
+    - staticcheck
+    - tagalign
+    - typecheck
+    - unconvert
+    - unused
+    - usestdlibvars
+    - whitespace
+
+    # next linters to be enabled:
+    # - revive
+    # - gocritic
+    # - interfacebloat
+
+    # linters to be enabled in the distant future:
+    # - cyclop
+    # - dupl
+    # - funlen
+    # - predeclared
+    # - stylecheck
+    # - wrapcheck
+
+linters-settings:
+  exhaustive:
+    check:
+      - switch
+      - map
+
+  # goimports:
+  #   local-prefixes: github.com/loft-sh
+
+  importas:
+    no-unaliased: true
+    alias:
+      # Kubernetes
+      - pkg: k8s\.io/api/(\w+)/(v[\w\d]+)
+        alias: $1$2
+      - pkg: k8s\.io/apimachinery/pkg/api/(\w+)/(v[\w\d]+)
+        alias: $1$2
+      - pkg: k8s.io/apimachinery/pkg/api/errors
+        alias: kerrors
+      - pkg: k8s.io/apimachinery/pkg/apis/meta/internalversion
+        alias: metainternalversion
+
+  govet:
+    enable:
+      - assign
+      - atomic
+      - atomicalign
+      - bools
+      - buildtag
+      - composites
+      - copylocks
+      - deepequalerrors
+      - errorsas
+      # - fieldalignment
+      - findcall
+      - framepointer
+      - httpresponse
+      - ifaceassert
+      - loopclosure
+      - lostcancel
+      - nilfunc
+      - sortslice
+      - stdmethods
+      - stringintconv
+      - structtag
+      - testinggoroutine
+      - tests
+      - unmarshal
+      - unreachable
+      - unusedresult
+
+  tagalign:
+    order:
+      - json
+      - yaml
+      - xml
+      - form
+
+issues:
+  # Maximum issues count per one linter. Set to 0 to disable. Default is 50.
+  max-issues-per-linter: 0
+  # Maximum count of issues with the same text. Set to 0 to disable. Default is 3.
+  max-same-issues: 0

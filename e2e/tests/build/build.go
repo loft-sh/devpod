@@ -3,9 +3,13 @@ package build
 import (
 	"context"
 	"os"
+	"path/filepath"
 
 	"github.com/loft-sh/devpod/e2e/framework"
+	"github.com/loft-sh/devpod/pkg/devcontainer/config"
 	"github.com/loft-sh/devpod/pkg/docker"
+	"github.com/loft-sh/devpod/pkg/dockerfile"
+	"github.com/loft-sh/log"
 	"github.com/onsi/ginkgo/v2"
 )
 
@@ -34,14 +38,29 @@ var _ = DevPodDescribe("devpod build test suite", func() {
 		err = f.DevPodProviderUse(context.Background(), "docker")
 		framework.ExpectNoError(err)
 
+		cfg := getDevcontainerConfig(tempDir)
+
+		dockerfilePath := tempDir + "/.devcontainer/Dockerfile"
+		dockerfileContent, err := os.ReadFile(dockerfilePath)
+		framework.ExpectNoError(err)
+		_, modifiedDockerfileContents, err := dockerfile.EnsureDockerfileHasFinalStageName(string(dockerfileContent), config.DockerfileDefaultTarget)
+		framework.ExpectNoError(err)
+
+		prebuildRepo := "test-repo"
+
 		// do the build
-		err = f.DevPodBuild(ctx, tempDir, "--force-build", "--platform", "linux/amd64,linux/arm64", "--repository", "test-repo", "--skip-push")
+		err = f.DevPodBuild(ctx, tempDir, "--force-build", "--platform", "linux/amd64,linux/arm64", "--repository", prebuildRepo, "--skip-push")
 		framework.ExpectNoError(err)
 
 		// make sure images are there
-		_, err = dockerHelper.InspectImage(ctx, "test-repo:devpod-dc8184ef6bc1e01650d714624e640101", false)
+		prebuildHash, err := config.CalculatePrebuildHash(cfg, "linux/amd64", "amd64", filepath.Dir(cfg.Origin), dockerfilePath, modifiedDockerfileContents, log.Default)
 		framework.ExpectNoError(err)
-		_, err = dockerHelper.InspectImage(ctx, "test-repo:devpod-db2ba9a28c065a6fa970268fbc2eae11", false)
+		_, err = dockerHelper.InspectImage(ctx, prebuildRepo+":"+prebuildHash, false)
+		framework.ExpectNoError(err)
+
+		prebuildHash, err = config.CalculatePrebuildHash(cfg, "linux/arm64", "arm64", filepath.Dir(cfg.Origin), dockerfilePath, modifiedDockerfileContents, log.Default)
+		framework.ExpectNoError(err)
+		_, err = dockerHelper.InspectImage(ctx, prebuildRepo+":"+prebuildHash, false)
 		framework.ExpectNoError(err)
 	})
 
@@ -59,12 +78,25 @@ var _ = DevPodDescribe("devpod build test suite", func() {
 		err = f.DevPodProviderUse(context.Background(), "docker")
 		framework.ExpectNoError(err)
 
+		cfg := getDevcontainerConfig(tempDir)
+
+		dockerfilePath := tempDir + "/.devcontainer/Dockerfile"
+		dockerfileContent, err := os.ReadFile(dockerfilePath)
+		framework.ExpectNoError(err)
+		_, modifiedDockerfileContents, err := dockerfile.EnsureDockerfileHasFinalStageName(string(dockerfileContent), config.DockerfileDefaultTarget)
+		framework.ExpectNoError(err)
+
+		prebuildRepo := "test-repo"
+
 		// do the build
-		err = f.DevPodBuild(ctx, tempDir, "--force-build", "--force-internal-buildkit", "--repository", "test-repo", "--skip-push")
+		err = f.DevPodBuild(ctx, tempDir, "--force-build", "--force-internal-buildkit", "--repository", prebuildRepo, "--skip-push")
 		framework.ExpectNoError(err)
 
 		// make sure images are there
-		_, err = dockerHelper.InspectImage(ctx, "test-repo:devpod-dc8184ef6bc1e01650d714624e640101", false)
+		prebuildHash, err := config.CalculatePrebuildHash(cfg, "linux/amd64", "amd64", filepath.Dir(cfg.Origin), dockerfilePath, modifiedDockerfileContents, log.Default)
+		framework.ExpectNoError(err)
+
+		_, err = dockerHelper.InspectImage(ctx, prebuildRepo+":"+prebuildHash, false)
 		framework.ExpectNoError(err)
 	})
 
@@ -87,3 +119,21 @@ var _ = DevPodDescribe("devpod build test suite", func() {
 		framework.ExpectNoError(err)
 	})
 })
+
+func getDevcontainerConfig(dir string) *config.DevContainerConfig {
+	return &config.DevContainerConfig{
+		DevContainerConfigBase: config.DevContainerConfigBase{
+			Name: "Build Example",
+		},
+		DevContainerActions: config.DevContainerActions{},
+		NonComposeBase:      config.NonComposeBase{},
+		ImageContainer:      config.ImageContainer{},
+		ComposeContainer:    config.ComposeContainer{},
+		DockerfileContainer: config.DockerfileContainer{
+			Dockerfile: "Dockerfile",
+			Context:    "",
+			Build:      config.ConfigBuildOptions{},
+		},
+		Origin: dir + "/.devcontainer/devcontainer.json",
+	}
+}

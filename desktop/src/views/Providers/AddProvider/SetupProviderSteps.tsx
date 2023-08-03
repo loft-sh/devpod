@@ -51,12 +51,13 @@ export function SetupProviderSteps({
   const scrollToElement = useCallback((el: HTMLElement | null) => {
     if (!openLockRef.current) {
       openLockRef.current = true
-      setTimeout(() =>
-        el?.scrollIntoView({
-          behavior: "smooth",
-          block: "start",
-          inline: "nearest",
-        })
+      setTimeout(
+        () =>
+          el?.scrollIntoView({
+            behavior: "smooth",
+            block: "start",
+            inline: "nearest",
+          })
       )
     }
   }, [])
@@ -96,8 +97,6 @@ export function SetupProviderSteps({
                 providerID={state.providerID}
                 isDefault={true}
                 reuseMachine={true}
-                options={state.options}
-                optionGroups={state.optionGroups}
                 containerRef={containerRef}
                 onFinish={completeConfigureProvider}
               />

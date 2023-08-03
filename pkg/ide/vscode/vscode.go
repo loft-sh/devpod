@@ -6,6 +6,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strings"
 	"time"
 
 	"github.com/loft-sh/devpod/pkg/command"
@@ -122,7 +123,6 @@ func (o *VsCodeServer) Install() error {
 		return err
 	}
 
-	// set settings
 	settingsDir := filepath.Join(location, "data", "Machine")
 	err = os.MkdirAll(settingsDir, 0777)
 	if err != nil {
@@ -136,6 +136,32 @@ func (o *VsCodeServer) Install() error {
 		return nil
 	}
 
+	// install requirements alpine
+	if command.Exists("apk") {
+		o.log.Debugf("Install vscode dependencies...")
+		dependencies := []string{"build-base", "gcompat"}
+		if !command.Exists("git") {
+			dependencies = append(dependencies, "git")
+		}
+		if !command.Exists("bash") {
+			dependencies = append(dependencies, "bash")
+		}
+		if !command.Exists("curl") {
+			dependencies = append(dependencies, "curl")
+		}
+
+		out, err := exec.Command("sh", "-c", "apk update && apk add "+strings.Join(dependencies, " ")).CombinedOutput()
+		if err != nil {
+			o.log.Infof("Error updating alpine: %w", command.WrapCommandError(out, err))
+		}
+	}
+
+	// add settings
+	if o.settings == "" {
+		o.settings = "{}"
+	}
+
+	// set settings
 	err = os.WriteFile(settingsFile, []byte(o.settings), 0666)
 	if err != nil {
 		return err

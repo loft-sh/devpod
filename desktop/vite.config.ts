@@ -14,7 +14,7 @@ export default defineConfig({
     strictPort: true,
   },
   esbuild: {
-    target: "safari13"
+    target: "safari13",
   },
   // to make use of `TAURI_DEBUG` and other env variables
   // https://tauri.studio/v1/api/config#buildconfig.beforedevcommand

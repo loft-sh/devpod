@@ -17,18 +17,19 @@ import (
 )
 
 type testCase struct {
-	Name             string
-	ProviderOptions  map[string]*types.Option
-	UserValues       map[string]string
-	ResolvedValues   map[string]config.OptionValue
-	ExtraValues      map[string]string
-	ResolveGlobal    bool
-	DontResolveLocal bool
-	SkipRequired     bool
+	Name                       string
+	ProviderOptions            map[string]*types.Option
+	UserValues                 map[string]string
+	ResolvedValues             map[string]config.OptionValue
+	ResolvedDynamicDefinitions config.OptionDefinitions
+	ExtraValues                map[string]string
+	ResolveGlobal              bool
+	DontResolveLocal           bool
+	SkipRequired               bool
 
 	ExpectErr              bool
 	ExpectedOptions        map[string]string
-	ExpectedDynamicOptions config.DynamicOptions
+	ExpectedDynamicOptions config.OptionDefinitions
 }
 
 func TestResolveOptions(t *testing.T) {
@@ -286,35 +287,379 @@ func TestResolveOptions(t *testing.T) {
 			},
 		},
 		{
-			Name: "Simple dynamic options (unresolved children)",
+			Name: "Nested dynamic options",
 			ProviderOptions: map[string]*types.Option{
 				"TEST": {
-					Default:           "test",
-					SubOptionsCommand: `echo '{ "options": { "FOO": { "command": "echo bar" } } }'`,
+					Default: "test",
+					SubOptionsCommand: optionsToSubCommand(config.OptionDefinitions{
+						"TEST2": &types.Option{
+							Default: "test2",
+						},
+					}),
+				},
+				"FOO": {Command: "echo bar"},
+			},
+			ExpectedOptions: map[string]string{
+				"TEST":  "test",
+				"TEST2": "test2",
+				"FOO":   "bar",
+			},
+			ExpectedDynamicOptions: config.OptionDefinitions{
+				"TEST2": &types.Option{
+					Default: "test2",
 				},
 			},
-			ExpectedOptions:        map[string]string{"TEST": "test"},
-			ExpectedDynamicOptions: config.DynamicOptions{"FOO": &types.Option{Command: "echo bar"}},
 		},
 		{
-			Name: "Dynamic option with resolved parent",
+			Name: "Dynamic options don't update",
 			ProviderOptions: map[string]*types.Option{
 				"TEST": {
-					Default:           "test",
-					SubOptionsCommand: `echo '{ "options": { "FOO": { "command": "echo bar" } } }'`,
+					Default: "test",
+					SubOptionsCommand: optionsToSubCommand(config.OptionDefinitions{
+						"TEST2": &types.Option{
+							Default: "test2",
+						},
+					}),
+				},
+				"FOO": {Command: "echo bar"},
+			},
+			ResolvedDynamicDefinitions: map[string]*types.Option{
+				"TEST2": {
+					Default: "test5",
+				},
+			},
+			ResolvedValues: map[string]config.OptionValue{
+				"TEST":  {Value: "test3", Children: []string{"TEST2"}, UserProvided: true},
+				"TEST2": {Value: "test4", UserProvided: true},
+			},
+			ExpectedOptions: map[string]string{
+				"TEST":  "test3",
+				"TEST2": "test4",
+				"FOO":   "bar",
+			},
+			ExpectedDynamicOptions: config.OptionDefinitions{
+				"TEST2": {
+					Default: "test2",
+				},
+			},
+		},
+		{
+			Name: "Dynamic options update",
+			ProviderOptions: map[string]*types.Option{
+				"TEST": {
+					Default: "test",
+					SubOptionsCommand: optionsToSubCommand(config.OptionDefinitions{
+						"TEST3": &types.Option{
+							Default: "test2",
+						},
+					}),
+				},
+				"FOO": {Command: "echo bar"},
+			},
+			UserValues: map[string]string{
+				"TEST": "test1",
+			},
+			ResolvedValues: map[string]config.OptionValue{
+				"TEST":  {Value: "test3", Children: []string{"TEST2"}},
+				"TEST2": {Value: "test4"},
+			},
+			ResolvedDynamicDefinitions: map[string]*types.Option{
+				"TEST2": {
+					Default: "test5",
+				},
+			},
+			ExpectedOptions: map[string]string{
+				"TEST":  "test1",
+				"TEST3": "test2",
+				"FOO":   "bar",
+			},
+			ExpectedDynamicOptions: config.OptionDefinitions{
+				"TEST3": &types.Option{
+					Default: "test2",
+				},
+			},
+		},
+		{
+			Name: "Nested dynamic options",
+			ProviderOptions: map[string]*types.Option{
+				"TEST": {
+					Default: "test1",
+					SubOptionsCommand: optionsToSubCommand(config.OptionDefinitions{
+						"TEST2": &types.Option{
+							Default: "test2",
+							SubOptionsCommand: optionsToSubCommand(config.OptionDefinitions{
+								"TEST3": &types.Option{
+									Default: "test3",
+									SubOptionsCommand: optionsToSubCommand(config.OptionDefinitions{
+										"TEST4": &types.Option{
+											Default: "${TEST3}-${FOO}-4",
+										},
+									}),
+								},
+							}),
+						},
+					}),
+				},
+				"FOO": {Command: "echo bar"},
+			},
+			ExpectedOptions: map[string]string{
+				"TEST":  "test1",
+				"TEST2": "test2",
+				"TEST3": "test3",
+				"TEST4": "test3-bar-4",
+				"FOO":   "bar",
+			},
+			ExpectedDynamicOptions: config.OptionDefinitions{
+				"TEST2": &types.Option{
+					Default: "test2",
+					SubOptionsCommand: optionsToSubCommand(config.OptionDefinitions{
+						"TEST3": &types.Option{
+							Default: "test3",
+							SubOptionsCommand: optionsToSubCommand(config.OptionDefinitions{
+								"TEST4": &types.Option{
+									Default: "${TEST3}-${FOO}-4",
+								},
+							}),
+						},
+					}),
+				},
+				"TEST3": &types.Option{
+					Default: "test3",
+					SubOptionsCommand: optionsToSubCommand(config.OptionDefinitions{
+						"TEST4": &types.Option{
+							Default: "${TEST3}-${FOO}-4",
+						},
+					}),
+				},
+				"TEST4": &types.Option{
+					Default: "${TEST3}-${FOO}-4",
+				},
+			},
+		},
+		{
+			Name: "Nested dynamic options skip required",
+			ProviderOptions: map[string]*types.Option{
+				"TEST": {
+					Default: "test1",
+					SubOptionsCommand: optionsToSubCommand(config.OptionDefinitions{
+						"TEST2": &types.Option{
+							Required: true,
+							SubOptionsCommand: optionsToSubCommand(config.OptionDefinitions{
+								"TEST3": &types.Option{
+									Default: "test3",
+									SubOptionsCommand: optionsToSubCommand(config.OptionDefinitions{
+										"TEST4": &types.Option{
+											Default: "${TEST3}-${FOO}-4",
+										},
+									}),
+								},
+							}),
+						},
+					}),
+				},
+				"FOO": {Command: "echo bar"},
+			},
+			SkipRequired: true,
+			ExpectedOptions: map[string]string{
+				"TEST": "test1",
+				"FOO":  "bar",
+			},
+			ExpectedDynamicOptions: config.OptionDefinitions{
+				"TEST2": &types.Option{
+					Required: true,
+					SubOptionsCommand: optionsToSubCommand(config.OptionDefinitions{
+						"TEST3": &types.Option{
+							Default: "test3",
+							SubOptionsCommand: optionsToSubCommand(config.OptionDefinitions{
+								"TEST4": &types.Option{
+									Default: "${TEST3}-${FOO}-4",
+								},
+							}),
+						},
+					}),
+				},
+			},
+		},
+		{
+			Name: "Nested dynamic options use option",
+			ProviderOptions: map[string]*types.Option{
+				"TEST": {
+					Default: "test1",
+					SubOptionsCommand: optionsToSubCommand(config.OptionDefinitions{
+						"TEST2": &types.Option{
+							Required: true,
+							SubOptionsCommand: optionsToSubCommand(config.OptionDefinitions{
+								"TEST3": &types.Option{
+									Default: "test3",
+									SubOptionsCommand: optionsToSubCommand(config.OptionDefinitions{
+										"TEST4": &types.Option{
+											Default: "${TEST2}-${FOO}-4",
+										},
+									}),
+								},
+							}),
+						},
+					}),
+				},
+				"FOO": {Command: "echo bar"},
+			},
+			SkipRequired: true,
+			UserValues: map[string]string{
+				"TEST2": "test2",
+			},
+			ExpectedOptions: map[string]string{
+				"TEST":  "test1",
+				"TEST2": "test2",
+				"TEST3": "test3",
+				"TEST4": "test2-bar-4",
+				"FOO":   "bar",
+			},
+			ExpectedDynamicOptions: config.OptionDefinitions{
+				"TEST2": &types.Option{
+					Required: true,
+					SubOptionsCommand: optionsToSubCommand(config.OptionDefinitions{
+						"TEST3": &types.Option{
+							Default: "test3",
+							SubOptionsCommand: optionsToSubCommand(config.OptionDefinitions{
+								"TEST4": &types.Option{
+									Default: "${TEST2}-${FOO}-4",
+								},
+							}),
+						},
+					}),
+				},
+				"TEST3": &types.Option{
+					Default: "test3",
+					SubOptionsCommand: optionsToSubCommand(config.OptionDefinitions{
+						"TEST4": &types.Option{
+							Default: "${TEST2}-${FOO}-4",
+						},
+					}),
+				},
+				"TEST4": &types.Option{
+					Default: "${TEST2}-${FOO}-4",
+				},
+			},
+		},
+		{
+			Name: "Nested dynamic options use option",
+			ProviderOptions: map[string]*types.Option{
+				"TEST": {
+					Default: "test1",
+					SubOptionsCommand: optionsToSubCommand(config.OptionDefinitions{
+						"TEST2": &types.Option{
+							Default: "test2",
+							SubOptionsCommand: optionsToSubCommand(config.OptionDefinitions{
+								"TEST3": &types.Option{
+									Default: "test3",
+								},
+							}),
+						},
+					}),
 				},
 				"FOO": {Command: "echo bar"},
 			},
 			ResolvedValues: map[string]config.OptionValue{
-				"TEST": {Value: "test", Children: []string{"FOO"}},
+				"TEST5": {
+					Value: "test5",
+				},
 			},
-			ExpectedOptions:        map[string]string{"TEST": "test", "FOO": "bar"},
-			ExpectedDynamicOptions: config.DynamicOptions{},
+			ExpectedOptions: map[string]string{
+				"TEST":  "test1",
+				"TEST2": "test2",
+				"TEST3": "test3",
+				"FOO":   "bar",
+			},
+			ExpectedDynamicOptions: config.OptionDefinitions{
+				"TEST2": &types.Option{
+					Default: "test2",
+					SubOptionsCommand: optionsToSubCommand(config.OptionDefinitions{
+						"TEST3": &types.Option{
+							Default: "test3",
+						},
+					}),
+				},
+				"TEST3": &types.Option{
+					Default: "test3",
+				},
+			},
+		},
+		{
+			Name: "Dynamic options unused option",
+			ProviderOptions: map[string]*types.Option{
+				"TEST": {
+					Default: "test1",
+					SubOptionsCommand: optionsToSubCommand(config.OptionDefinitions{
+						"TEST2": &types.Option{
+							Default: "test2",
+						},
+					}),
+				},
+				"FOO": {Command: "echo bar"},
+			},
+			ResolvedValues: map[string]config.OptionValue{
+				"TEST5": {
+					Value: "test5",
+				},
+			},
+			ResolvedDynamicDefinitions: map[string]*types.Option{
+				"TEST5": &types.Option{
+					Default: "test2",
+				},
+			},
+			ExpectedOptions: map[string]string{
+				"TEST":  "test1",
+				"TEST2": "test2",
+				"FOO":   "bar",
+			},
+			ExpectedDynamicOptions: config.OptionDefinitions{
+				"TEST2": &types.Option{
+					Default: "test2",
+				},
+			},
+		},
+		{
+			Name: "Dynamic options update default",
+			ProviderOptions: map[string]*types.Option{
+				"TEST": {
+					Default: "test1",
+					SubOptionsCommand: optionsToSubCommand(config.OptionDefinitions{
+						"TEST2": &types.Option{
+							Default: "test3",
+						},
+					}),
+				},
+				"FOO": {Command: "echo bar"},
+			},
+			ResolvedValues: map[string]config.OptionValue{
+				"TEST": {
+					Value: "test1",
+				},
+				"TEST2": {
+					Value: "test2",
+				},
+			},
+			ResolvedDynamicDefinitions: map[string]*types.Option{
+				"TEST2": {
+					Default: "test2",
+				},
+			},
+			ExpectedOptions: map[string]string{
+				"TEST":  "test1",
+				"TEST2": "test3",
+				"FOO":   "bar",
+			},
+			ExpectedDynamicOptions: config.OptionDefinitions{
+				"TEST2": &types.Option{
+					Default: "test3",
+				},
+			},
 		},
 	}
 
 	for _, testCase := range testCases {
-		resolverOpts := []resolver.Option{resolver.WithSkipRequired(testCase.SkipRequired)}
+		fmt.Println(testCase.Name)
+		resolverOpts := []resolver.Option{resolver.WithSkipRequired(testCase.SkipRequired), resolver.WithResolveSubOptions()}
 		if !testCase.DontResolveLocal {
 			resolverOpts = append(resolverOpts, resolver.WithResolveLocal())
 		}
@@ -322,7 +667,7 @@ func TestResolveOptions(t *testing.T) {
 			resolverOpts = append(resolverOpts, resolver.WithResolveGlobal())
 		}
 		r := resolver.New(testCase.UserValues, testCase.ExtraValues, log.Default, resolverOpts...)
-		options, dynamicOptions, err := r.Resolve(context.Background(), testCase.ProviderOptions, testCase.ResolvedValues)
+		options, dynamicOptions, err := r.Resolve(context.Background(), testCase.ResolvedDynamicDefinitions, testCase.ProviderOptions, testCase.ResolvedValues)
 		if !testCase.ExpectErr {
 			assert.NilError(t, err, testCase.Name)
 		} else if testCase.ExpectErr {
@@ -346,274 +691,14 @@ func TestResolveOptions(t *testing.T) {
 		if len(testCase.ExpectedDynamicOptions) > 0 {
 			assert.DeepEqual(t, dynamicOptions, testCase.ExpectedDynamicOptions)
 		} else {
-			assert.DeepEqual(t, dynamicOptions, config.DynamicOptions{})
+			assert.DeepEqual(t, dynamicOptions, config.OptionDefinitions{})
 		}
 	}
 }
 
-type TestCaseDevConfig struct {
-	Name           string
-	DevConfig      *config.Config
-	ProviderConfig *provider.ProviderConfig
-	Init           bool
-	SkipRequired   bool
-	UserValues     map[string]string
-
-	ExpectErr         bool
-	ExpectedDevConfig *config.Config
-}
-
-func TestResolveOptionsDevConfig(t *testing.T) {
-	singleMachine := false
-	binaries := map[string][]*provider.ProviderBinary{}
-	providerName := "test-provider"
-	testCases := []TestCaseDevConfig{}
-
-	// // No options
-	// withoutOptionsProviderConfig := provider.ProviderConfig{Name: providerName, Binaries: binaries}
-	// testCases = append(testCases, TestCaseDevConfig{
-	// 	Name:              "No options",
-	// 	UserValues:        map[string]string{},
-	// 	DevConfig:         initDevConfig(&config.Config{}, withoutOptionsProviderConfig),
-	// 	ProviderConfig:    &withoutOptionsProviderConfig,
-	// 	Init:              false,
-	// 	ExpectedDevConfig: initDevConfig(&config.Config{}, withoutOptionsProviderConfig)},
-	// )
-	//
-	// // Simple with SubOptions (init)
-	// simpleSubOptionsProviderConfig := provider.ProviderConfig{
-	// 	Name:     providerName,
-	// 	Binaries: binaries,
-	// 	Options:  map[string]*provider.ProviderOption{"TEST": {Option: types.Option{Default: "test", SubOptionsCommand: `echo '{ "options": { "BAR": { "command": "echo bar" } } }'`}}},
-	// }
-	// expectedDevConfig := initDevConfig(&config.Config{}, simpleSubOptionsProviderConfig)
-	// expectedDevConfig.Current().Providers[providerName].Options = map[string]config.OptionValue{"TEST": {Value: "test", Children: []string{"BAR"}}, "BAR": {Value: "bar"}}
-	// expectedDevConfig.Current().Providers[providerName].DynamicOptions = config.DynamicOptions{"BAR": {Command: "echo bar"}}
-	// testCases = append(testCases, TestCaseDevConfig{
-	// 	Name:              "Simple with SubOptions (init)",
-	// 	UserValues:        map[string]string{},
-	// 	DevConfig:         initDevConfig(&config.Config{}, simpleSubOptionsProviderConfig),
-	// 	ProviderConfig:    &simpleSubOptionsProviderConfig,
-	// 	Init:              true,
-	// 	ExpectedDevConfig: expectedDevConfig},
-	// )
-	//
-	// // Simple with SubOptions (no init)
-	// expectedDevConfig2 := initDevConfig(&config.Config{}, simpleSubOptionsProviderConfig)
-	// expectedDevConfig2.Current().Providers[providerName].Options = map[string]config.OptionValue{"TEST": {Value: "test", Children: []string{"BAR"}}}
-	// expectedDevConfig2.Current().Providers[providerName].DynamicOptions = config.DynamicOptions{"BAR": {Command: "echo bar"}}
-	// testCases = append(testCases, TestCaseDevConfig{
-	// 	Name:              "Simple with SubOptions (no init)",
-	// 	UserValues:        map[string]string{},
-	// 	DevConfig:         initDevConfig(&config.Config{}, simpleSubOptionsProviderConfig),
-	// 	ProviderConfig:    &simpleSubOptionsProviderConfig,
-	// 	Init:              false,
-	// 	ExpectedDevConfig: expectedDevConfig2},
-	// )
-	//
-	// // SubOption default value (init)
-	// subOptionDefaultValueProviderConfig := provider.ProviderConfig{
-	// 	Name:     providerName,
-	// 	Binaries: binaries,
-	// 	Options:  map[string]*provider.ProviderOption{"TEST": {Option: types.Option{Default: "test", SubOptionsCommand: `echo '{ "options": { "BAR": { "command": "echo bar" }, "BAZ": { "default": "baz" } } }'`}}},
-	// }
-	// expectedDevConfig3 := initDevConfig(&config.Config{}, subOptionDefaultValueProviderConfig)
-	// expectedDevConfig3.Current().Providers[providerName].Options = map[string]config.OptionValue{"TEST": {Value: "test", Children: []string{"BAR", "BAZ"}}, "BAR": {Value: "bar"}, "BAZ": {Value: "baz"}}
-	// expectedDevConfig3.Current().Providers[providerName].DynamicOptions = config.DynamicOptions{"BAR": {Command: "echo bar"}, "BAZ": {Default: "baz"}}
-	// testCases = append(testCases, TestCaseDevConfig{
-	// 	Name:              "SubOptions default value (init)",
-	// 	UserValues:        map[string]string{},
-	// 	DevConfig:         initDevConfig(&config.Config{}, subOptionDefaultValueProviderConfig),
-	// 	ProviderConfig:    &subOptionDefaultValueProviderConfig,
-	// 	Init:              true,
-	// 	ExpectedDevConfig: expectedDevConfig3},
-	// )
-	//
-	// // SubOption default value (no init)
-	// expectedDevConfig4 := initDevConfig(&config.Config{}, subOptionDefaultValueProviderConfig)
-	// expectedDevConfig4.Current().Providers[providerName].Options = map[string]config.OptionValue{"TEST": {Value: "test", Children: []string{"BAR", "BAZ"}}}
-	// expectedDevConfig4.Current().Providers[providerName].DynamicOptions = config.DynamicOptions{"BAR": {Command: "echo bar"}, "BAZ": {Default: "baz"}}
-	// testCases = append(testCases, TestCaseDevConfig{
-	// 	Name:              "SubOptions default value (no init)",
-	// 	UserValues:        map[string]string{},
-	// 	DevConfig:         initDevConfig(&config.Config{}, subOptionDefaultValueProviderConfig),
-	// 	ProviderConfig:    &subOptionDefaultValueProviderConfig,
-	// 	Init:              false,
-	// 	ExpectedDevConfig: expectedDevConfig4},
-	// )
-	//
-	// // SubOption required (init)
-	// subOptionRequiredProviderConfig := provider.ProviderConfig{
-	// 	Name:     providerName,
-	// 	Binaries: binaries,
-	// 	Options:  map[string]*provider.ProviderOption{"TEST": {Option: types.Option{Default: "test", SubOptionsCommand: `echo '{ "options": { "BAR": { "required": true, "command": "echo bar" }, "BAZ": { "required": false } } }'`}}},
-	// }
-	// expectedDevConfig5 := initDevConfig(&config.Config{}, subOptionRequiredProviderConfig)
-	// expectedDevConfig5.Current().Providers[providerName].Options = map[string]config.OptionValue{"TEST": {Value: "test", Children: []string{"BAR", "BAZ"}}, "BAR": {Value: "bar"}, "BAZ": {Value: ""}}
-	// expectedDevConfig5.Current().Providers[providerName].DynamicOptions = config.DynamicOptions{"BAR": {Required: true, Command: "echo bar"}, "BAZ": {Required: false}}
-	// testCases = append(testCases, TestCaseDevConfig{
-	// 	Name:              "SubOptions default value (init)",
-	// 	UserValues:        map[string]string{},
-	// 	DevConfig:         initDevConfig(&config.Config{}, subOptionRequiredProviderConfig),
-	// 	ProviderConfig:    &subOptionRequiredProviderConfig,
-	// 	Init:              true,
-	// 	ExpectedDevConfig: expectedDevConfig5},
-	// )
-	//
-	// // SubOptions cylcic dependency (init)
-	// subOptionCircularProviderConfig := provider.ProviderConfig{
-	// 	Name:     providerName,
-	// 	Binaries: binaries,
-	// 	Options: map[string]*provider.ProviderOption{
-	// 		"TEST":  {Option: types.Option{Default: "test", SubOptionsCommand: `echo '{ "options": { "BAR": { "required": true, "command": "echo ${TEST2}" } } }'`}},
-	// 		"TEST2": {Option: types.Option{Default: "test2", Command: "echo ${BAR}"}},
-	// 	}}
-	// expectedDevConfig6 := initDevConfig(&config.Config{}, subOptionCircularProviderConfig)
-	// expectedDevConfig6.Current().Providers[providerName].Options = map[string]config.OptionValue{"TEST": {Value: "test", Children: []string{"BAR", "BAZ"}}, "BAR": {Value: "bar"}, "BAZ": {Value: ""}}
-	// expectedDevConfig6.Current().Providers[providerName].DynamicOptions = config.DynamicOptions{"BAR": {Required: true, Command: "echo bar"}, "BAZ": {Required: false}}
-	// testCases = append(testCases, TestCaseDevConfig{
-	// 	Name:           "SubOptions cylcic dependency (init)",
-	// 	UserValues:     map[string]string{},
-	// 	DevConfig:      initDevConfig(&config.Config{}, subOptionCircularProviderConfig),
-	// 	ProviderConfig: &subOptionCircularProviderConfig,
-	// 	Init:           true,
-	// 	ExpectErr:      true,
-	// },
-	// )
-
-	// Nested SubOptions (init)
-	subOpts1 := provider.SubOptions{Options: map[string]types.Option{
-		"BAZ": {Command: "echo baz"},
-	}}
-	subOpts1Bytes, err := json.Marshal(subOpts1)
-	if err != nil {
-		t.Fatal("Nested SubOptions", err)
-	}
-	s1 := base64.StdEncoding.EncodeToString(subOpts1Bytes)
-	barSubOptionsCommand := fmt.Sprintf("echo %s | base64 -d", s1)
-	subOpts2 := provider.SubOptions{Options: map[string]types.Option{
-		"BAR": {Command: "echo bar", SubOptionsCommand: barSubOptionsCommand},
-	}}
-	subOpts2Bytes, err := json.Marshal(subOpts2)
-	if err != nil {
-		t.Fatal("Nested SubOptions", err)
-	}
-	s2 := base64.StdEncoding.EncodeToString(subOpts2Bytes)
-	subOpts3Str := fmt.Sprintf("echo %s | base64 -d", s2)
-	subOptionNestedProviderConfig := provider.ProviderConfig{
-		Name:     providerName,
-		Binaries: binaries,
-		Options: map[string]*provider.ProviderOption{
-			"TEST": {Option: types.Option{Default: "test", SubOptionsCommand: subOpts3Str}},
-		}}
-	expectedDevConfig7 := initDevConfig(&config.Config{}, subOptionNestedProviderConfig)
-	expectedDevConfig7.Current().Providers[providerName].Options = map[string]config.OptionValue{"TEST": {Value: "test", Children: []string{"BAR"}}, "BAR": {Value: "bar", Children: []string{"BAZ"}}, "BAZ": {Value: "baz"}}
-	expectedDevConfig7.Current().Providers[providerName].DynamicOptions = config.DynamicOptions{"BAR": {Command: "echo bar", SubOptionsCommand: barSubOptionsCommand}, "BAZ": {Command: "echo baz"}}
-	testCases = append(testCases, TestCaseDevConfig{
-		Name:              "Nested SubOptions (init)",
-		UserValues:        map[string]string{},
-		DevConfig:         initDevConfig(&config.Config{}, subOptionNestedProviderConfig),
-		ProviderConfig:    &subOptionNestedProviderConfig,
-		Init:              true,
-		ExpectedDevConfig: expectedDevConfig7,
-	},
-	)
-
-	for _, testCase := range testCases {
-		newConfig, err := ResolveOptions(context.Background(), testCase.DevConfig, testCase.ProviderConfig, testCase.UserValues, testCase.SkipRequired, &singleMachine, testCase.Init, log.Default)
-		if !testCase.ExpectErr {
-			assert.NilError(t, err, testCase.Name)
-		} else if testCase.ExpectErr {
-			if err == nil {
-				t.Fatalf("expected error, got nil error in test case %s", testCase.Name)
-			}
-
-			continue
-		}
-
-		assertOptions(t, newConfig, testCase.ExpectedDevConfig, providerName)
-	}
-}
-
-func TestSubOptionCyclicDependencyNoInit(t *testing.T) {
-	singleMachine := false
-	binaries := map[string][]*provider.ProviderBinary{}
-	providerName := "test-provider"
-
-	providerConfig := provider.ProviderConfig{
-		Name:     providerName,
-		Binaries: binaries,
-		Options: map[string]*provider.ProviderOption{
-			"TEST":  {Option: types.Option{Default: "test", SubOptionsCommand: `echo '{ "options": { "BAR": { "required": true, "command": "echo ${BAZ}" } } }'`}},
-			"TEST2": {Option: types.Option{Default: "test2", SubOptionsCommand: `echo '{ "options": { "BAZ": { "required": true, "command": "echo ${BAR}" } } }'`}},
-		},
-	}
-	devConfig := initDevConfig(&config.Config{}, providerConfig)
-	devConfig.Current().Providers[providerName].Options = map[string]config.OptionValue{"TEST": {Value: "test", Children: []string{"BAR"}}, "TEST2": {Value: "test2", Children: []string{"BAZ"}}}
-	devConfig.Current().Providers[providerName].DynamicOptions = config.DynamicOptions{"BAR": {Required: true, Command: "echo ${BAZ}"}, "BAZ": {Required: true, Command: "echo ${BAR}"}}
-	// First tick should not error as we can't detect cyclic dependencies without the dynamic options yet
-	newConfig, err := ResolveOptions(context.Background(), initDevConfig(&config.Config{}, providerConfig), &providerConfig, map[string]string{}, false, &singleMachine, false, log.Default)
-	assert.NilError(t, err)
-	assertOptions(t, newConfig, devConfig, providerName)
-
-	// now we have the dynamic options, we should detect the cyclic dependency
-	_, err = ResolveOptions(context.Background(), newConfig, &providerConfig, map[string]string{}, false, &singleMachine, true, log.Default)
-	assert.ErrorContains(t, err, "cyclic provider option")
-}
-
-func assertOptions(t *testing.T, newConfig *config.Config, expectedConfig *config.Config, providerName string) {
-	// options
-	gotOpts := map[string]string{}
-	gotOptsChildren := map[string][]string{}
-	for k, v := range newConfig.Current().Providers[providerName].Options {
-		gotOpts[k] = v.Value
-		gotOptsChildren[k] = v.Children
-	}
-	wantOpts := map[string]string{}
-	wantOptsChildren := map[string][]string{}
-	for k, v := range expectedConfig.Current().Providers[providerName].Options {
-		wantOpts[k] = v.Value
-		wantOptsChildren[k] = v.Children
-	}
-
-	assert.DeepEqual(t, gotOpts, wantOpts)
-	assert.DeepEqual(t, gotOptsChildren, wantOptsChildren)
-
-	// dynamic options
-	gotDynamicOpts := config.DynamicOptions{}
-	for k, v := range newConfig.Current().Providers[providerName].DynamicOptions {
-		gotDynamicOpts[k] = v
-	}
-	wantDynamicOpts := config.DynamicOptions{}
-	for k, v := range expectedConfig.Current().Providers[providerName].DynamicOptions {
-		wantDynamicOpts[k] = v
-	}
-
-	assert.DeepEqual(t, gotDynamicOpts, wantDynamicOpts)
-}
-
-func initDevConfig(devConfig *config.Config, provider provider.ProviderConfig) *config.Config {
-	if devConfig.DefaultContext == "" {
-		devConfig.DefaultContext = "default"
-	}
-	if devConfig.Contexts == nil {
-		devConfig.Contexts = map[string]*config.ContextConfig{
-			"default": {
-				DefaultProvider: provider.Name,
-				Providers:       map[string]*config.ProviderConfig{},
-				IDEs:            map[string]*config.IDEConfig{},
-				Options:         nil,
-			},
-		}
-	}
-	if devConfig.Current().Providers == nil {
-		devConfig.Current().Providers = map[string]*config.ProviderConfig{}
-	}
-	if devConfig.Current().Providers[provider.Name] == nil {
-		devConfig.Current().Providers[provider.Name] = &config.ProviderConfig{}
-	}
-	devConfig.Current().Providers[provider.Name].Options = map[string]config.OptionValue{}
-	devConfig.Current().Providers[provider.Name].DynamicOptions = config.DynamicOptions{}
-
-	return devConfig
+func optionsToSubCommand(optionDefinitions config.OptionDefinitions) string {
+	out, _ := json.Marshal(&provider.SubOptions{
+		Options: optionDefinitions,
+	})
+	return fmt.Sprintf("echo '%s' | base64 --decode", base64.StdEncoding.EncodeToString(out))
 }

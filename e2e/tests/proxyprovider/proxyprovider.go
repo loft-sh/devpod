@@ -57,6 +57,8 @@ var _ = DevPodDescribe("devpod proxy provider test suite", func() {
 		err = f.DevPodProviderAdd(ctx, filepath.Join(tempDir, "custom-docker-provider.yaml"), "--devpod-home", devPodDir)
 		framework.ExpectNoError(err)
 
+		ginkgo.DeferCleanup(f.DevPodWorkspaceDelete, context.Background(), tempDir)
+
 		// wait for devpod workspace to come online (deadline: 30s)
 		err = f.DevPodUp(ctx, tempDir, "--debug")
 		framework.ExpectNoError(err)
@@ -93,6 +95,8 @@ var _ = DevPodDescribe("devpod proxy provider test suite", func() {
 		// create docker provider
 		err = f.DevPodProviderAdd(ctx, "docker", "--devpod-home", devPodDir)
 		framework.ExpectNoError(err)
+
+		ginkgo.DeferCleanup(f.DevPodWorkspaceDelete, context.Background(), tempDir)
 
 		// wait for devpod workspace to come online (deadline: 30s)
 		err = f.DevPodUp(ctx, tempDir, "--debug")
@@ -139,6 +143,8 @@ var _ = DevPodDescribe("devpod proxy provider test suite", func() {
 		err = f.DevPodProviderAdd(ctx, "docker", "--devpod-home", devPodDir)
 		framework.ExpectNoError(err)
 
+		ginkgo.DeferCleanup(f.DevPodWorkspaceDelete, context.Background(), tempDir)
+
 		// wait for devpod workspace to come online (deadline: 30s)
 		err = f.DevPodUp(ctx, tempDir, "--debug")
 		framework.ExpectNoError(err)
@@ -184,6 +190,8 @@ var _ = DevPodDescribe("devpod proxy provider test suite", func() {
 		// create docker provider
 		err = f.DevPodProviderAdd(ctx, "docker", "--devpod-home", devPodDir)
 		framework.ExpectNoError(err)
+
+		ginkgo.DeferCleanup(f.DevPodWorkspaceDelete, context.Background(), tempDir)
 
 		// wait for devpod workspace to come online (deadline: 30s)
 		err = f.DevPodUp(ctx, tempDir, "--debug", "--devcontainer-path", ".devcontainer.json2")

@@ -26,6 +26,8 @@ var _ = DevPodDescribe("devpod ssh test suite", func() {
 		err = f.DevPodProviderUse(context.Background(), "docker")
 		framework.ExpectNoError(err)
 
+		ginkgo.DeferCleanup(f.DevPodWorkspaceDelete, context.Background(), tempDir)
+
 		// Start up devpod workspace
 		devpodUpDeadline := time.Now().Add(5 * time.Minute)
 		devpodUpCtx, cancel := context.WithDeadline(context.Background(), devpodUpDeadline)

@@ -10,11 +10,21 @@ import (
 	"github.com/loft-sh/devpod/pkg/config"
 )
 
-const WorkspaceConfigFile = "workspace.json"
+const (
+	WorkspaceConfigFile = "workspace.json"
+	MachineConfigFile   = "machine.json"
+	EngineConfigFile    = "engine.json"
+	ProviderConfigFile  = "provider.json"
+)
 
-const MachineConfigFile = "machine.json"
+func GetEnginesDir(context string) (string, error) {
+	configDir, err := config.GetConfigDir()
+	if err != nil {
+		return "", err
+	}
 
-const ProviderConfigFile = "provider.json"
+	return filepath.Join(configDir, "contexts", context, "engines"), nil
+}
 
 func GetMachinesDir(context string) (string, error) {
 	configDir, err := config.GetConfigDir()
@@ -96,6 +106,19 @@ func GetWorkspaceDir(context, workspaceID string) (string, error) {
 	return filepath.Join(configDir, "contexts", context, "workspaces", workspaceID), nil
 }
 
+func GetEngineDir(context, engineID string) (string, error) {
+	if engineID == "" {
+		return "", fmt.Errorf("engine id is empty")
+	}
+
+	configDir, err := config.GetConfigDir()
+	if err != nil {
+		return "", err
+	}
+
+	return filepath.Join(configDir, "contexts", context, "engines", engineID), nil
+}
+
 func WorkspaceExists(context, workspaceID string) bool {
 	workspaceDir, err := GetWorkspaceDir(context, workspaceID)
 	if err != nil {
@@ -103,6 +126,16 @@ func WorkspaceExists(context, workspaceID string) bool {
 	}
 
 	_, err = os.Stat(workspaceDir)
+	return err == nil
+}
+
+func EngineExists(context, engineID string) bool {
+	engineDir, err := GetEngineDir(context, engineID)
+	if err != nil {
+		return false
+	}
+
+	_, err = os.Stat(engineDir)
 	return err == nil
 }
 
@@ -124,6 +157,31 @@ func SaveProviderConfig(context string, provider *ProviderConfig) error {
 
 	providerConfigFile := filepath.Join(providerDir, ProviderConfigFile)
 	err = os.WriteFile(providerConfigFile, providerDirBytes, 0666)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func SaveEngineConfig(context string, engine *Engine) error {
+	providerDir, err := GetEngineDir(context, engine.ID)
+	if err != nil {
+		return err
+	}
+
+	err = os.MkdirAll(providerDir, 0755)
+	if err != nil {
+		return err
+	}
+
+	engineBytes, err := json.Marshal(engine)
+	if err != nil {
+		return err
+	}
+
+	engineConfigFile := filepath.Join(providerDir, EngineConfigFile)
+	err = os.WriteFile(engineConfigFile, engineBytes, 0666)
 	if err != nil {
 		return err
 	}
@@ -233,6 +291,27 @@ func LoadMachineConfig(context, machineID string) (*Machine, error) {
 	machineConfig.Context = context
 	machineConfig.Origin = machineConfigFile
 	return machineConfig, nil
+}
+
+func LoadEngineConfig(context, engineID string) (*Engine, error) {
+	engineDir, err := GetEngineDir(context, engineID)
+	if err != nil {
+		return nil, err
+	}
+
+	engineConfigFile := filepath.Join(engineDir, EngineConfigFile)
+	engineConfigBytes, err := os.ReadFile(engineConfigFile)
+	if err != nil {
+		return nil, err
+	}
+
+	engineConfig := &Engine{}
+	err = json.Unmarshal(engineConfigBytes, engineConfig)
+	if err != nil {
+		return nil, err
+	}
+
+	return engineConfig, nil
 }
 
 func LoadWorkspaceConfig(context, workspaceID string) (*Workspace, error) {

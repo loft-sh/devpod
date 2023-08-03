@@ -252,7 +252,7 @@ func updateProvider(devPodConfig *config.Config, providerName string, raw []byte
 		providerConfig.Name = providerName
 	}
 	if providerConfig.Options == nil {
-		providerConfig.Options = map[string]*provider2.ProviderOption{}
+		providerConfig.Options = map[string]*types.Option{}
 	}
 
 	// update options

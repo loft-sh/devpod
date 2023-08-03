@@ -9,8 +9,6 @@ import (
 
 	"github.com/loft-sh/devpod/cmd/flags"
 	"github.com/loft-sh/devpod/pkg/config"
-	"github.com/loft-sh/devpod/pkg/options"
-	provider2 "github.com/loft-sh/devpod/pkg/provider"
 	"github.com/loft-sh/devpod/pkg/types"
 	"github.com/loft-sh/devpod/pkg/workspace"
 	"github.com/loft-sh/log"
@@ -22,9 +20,8 @@ import (
 type OptionsCmd struct {
 	*flags.GlobalFlags
 
-	Prefill bool
-	Hidden  bool
-	Output  string
+	Hidden bool
+	Output string
 }
 
 // NewOptionsCmd creates a new command
@@ -40,7 +37,6 @@ func NewOptionsCmd(flags *flags.GlobalFlags) *cobra.Command {
 		},
 	}
 
-	optionsCmd.Flags().BoolVar(&cmd.Prefill, "prefill", true, "If provider is not initialized, will show prefilled values.")
 	optionsCmd.Flags().BoolVar(&cmd.Hidden, "hidden", false, "If true, will also show hidden options.")
 	optionsCmd.Flags().StringVar(&cmd.Output, "output", "plain", "The output format to use. Can be json or plain")
 	return optionsCmd
@@ -49,7 +45,8 @@ func NewOptionsCmd(flags *flags.GlobalFlags) *cobra.Command {
 type optionWithValue struct {
 	types.Option `json:",inline"`
 
-	Value string `json:"value,omitempty"`
+	Children []string `json:"children,omitempty"`
+	Value    string   `json:"value,omitempty"`
 }
 
 // Run runs the command logic
@@ -66,25 +63,22 @@ func (cmd *OptionsCmd) Run(ctx context.Context, args []string) error {
 		return fmt.Errorf("please specify a provider")
 	}
 
-	provider, err := workspace.FindProvider(devPodConfig, providerName, log.Default.ErrorStreamOnly())
+	providerWithOptions, err := workspace.FindProvider(devPodConfig, providerName, log.Default.ErrorStreamOnly())
 	if err != nil {
 		return err
 	}
 
-	if cmd.Prefill && (provider.State == nil || !provider.State.Initialized) {
-		devPodConfig, err = options.ResolveOptions(ctx, devPodConfig, provider.Config, nil, true, nil, false, log.Default.ErrorStreamOnly())
-		if err != nil {
-			return err
-		}
-	}
+	return printOptions(devPodConfig, providerWithOptions, cmd.Output, cmd.Hidden)
+}
 
+func printOptions(devPodConfig *config.Config, provider *workspace.ProviderWithOptions, format string, showHidden bool) error {
 	entryOptions := devPodConfig.ProviderOptions(provider.Config.Name)
-	dynamicOptions := devPodConfig.DynamicProviderOptions(provider.Config.Name)
+	dynamicOptions := devPodConfig.DynamicProviderOptionDefinitions(provider.Config.Name)
 	srcOptions := mergeDynamicOptions(provider.Config.Options, dynamicOptions)
-	if cmd.Output == "plain" {
+	if format == "plain" {
 		tableEntries := [][]string{}
 		for optionName, entry := range srcOptions {
-			if !cmd.Hidden && entry.Hidden {
+			if !showHidden && entry.Hidden {
 				continue
 			}
 
@@ -112,16 +106,17 @@ func (cmd *OptionsCmd) Run(ctx context.Context, args []string) error {
 			"Default",
 			"Value",
 		}, tableEntries)
-	} else if cmd.Output == "json" {
+	} else if format == "json" {
 		options := map[string]optionWithValue{}
 		for optionName, entry := range srcOptions {
-			if !cmd.Hidden && entry.Hidden {
+			if !showHidden && entry.Hidden {
 				continue
 			}
 
 			options[optionName] = optionWithValue{
-				Option: *entry,
-				Value:  entryOptions[optionName].Value,
+				Option:   *entry,
+				Children: entryOptions[optionName].Children,
+				Value:    entryOptions[optionName].Value,
 			}
 		}
 
@@ -131,19 +126,18 @@ func (cmd *OptionsCmd) Run(ctx context.Context, args []string) error {
 		}
 		fmt.Print(string(out))
 	} else {
-		return fmt.Errorf("unexpected output format, choose either json or plain. Got %s", cmd.Output)
+		return fmt.Errorf("unexpected output format, choose either json or plain. Got %s", format)
 	}
 
 	return nil
 }
 
 // mergeOptions merges the static provider options and dynamic options
-func mergeDynamicOptions(options map[string]*provider2.ProviderOption, dynamicOptions config.DynamicOptions) map[string]*types.Option {
+func mergeDynamicOptions(options map[string]*types.Option, dynamicOptions config.OptionDefinitions) map[string]*types.Option {
 	retOptions := map[string]*types.Option{}
 	for k, option := range options {
-		retOptions[k] = &option.Option
+		retOptions[k] = option
 	}
-
 	for k, option := range dynamicOptions {
 		retOptions[k] = option
 	}

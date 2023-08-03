@@ -101,6 +101,8 @@ func (r *Runner) runDockerCompose(ctx context.Context, parsedConfig *config.Subs
 		containerDetails, err = r.startContainer(ctx, parsedConfig, project, composeHelper, composeGlobalArgs, containerDetails, options)
 		if err != nil {
 			return nil, errors.Wrap(err, "start container")
+		} else if containerDetails == nil {
+			return nil, fmt.Errorf("couldn't find container after start")
 		}
 	}
 

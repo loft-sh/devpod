@@ -64,7 +64,7 @@ func (cmd *ListCmd) Run(ctx context.Context) error {
 		for _, entry := range entries {
 			machineConfig, err := provider.LoadMachineConfig(devPodConfig.DefaultContext, entry.Name())
 			if err != nil {
-				return errors.Wrap(err, "load workspace config")
+				return errors.Wrap(err, "load machine config")
 			}
 
 			tableEntries = append(tableEntries, []string{
@@ -85,12 +85,12 @@ func (cmd *ListCmd) Run(ctx context.Context) error {
 	} else if cmd.Output == "json" {
 		tableEntries := []*provider.Machine{}
 		for _, entry := range entries {
-			workspaceConfig, err := provider.LoadMachineConfig(devPodConfig.DefaultContext, entry.Name())
+			machineConfig, err := provider.LoadMachineConfig(devPodConfig.DefaultContext, entry.Name())
 			if err != nil {
-				return errors.Wrap(err, "load workspace config")
+				return errors.Wrap(err, "load machine config")
 			}
 
-			tableEntries = append(tableEntries, workspaceConfig)
+			tableEntries = append(tableEntries, machineConfig)
 		}
 		sort.SliceStable(tableEntries, func(i, j int) bool {
 			return tableEntries[i].ID < tableEntries[j].ID
