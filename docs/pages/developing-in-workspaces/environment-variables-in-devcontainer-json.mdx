@@ -1,0 +1,43 @@
+---
+title: Environment variables in devcontainer.json
+sidebar_label: Environment variables in devcontainer.json
+---
+
+If you're combining ssh provider with using environment variables in your `.devcontainer.json`,
+please follow the steps below to make sure that your environment variables are properly set on the remote machine.
+
+### Steps
+
+1. Prepare a `.devcontainer.json` to include `${localEnv:<VARIABLE_NAME>}` directive.<br/>
+    Example `.devcontainer.json`:
+```json
+{
+    "name": "Node.js",
+    "image": "mcr.microsoft.com/devcontainers/javascript-node:IMAGE_VERSION"
+}
+```
+
+2. Prepare an entry in a local `.ssh/config` to include `SetEnv <VARIABLE_NAME>=<VARIABLE_VALUE>` directive.<br/>
+    Example `.ssh/config`:
+```console
+Host <REMOTE-SSH-SERVER>
+   SetEnv IMAGE_VERSION=0-18-bullseye
+```
+
+3. Log to your remote machine and in the `/etc/ssh/sshd_config` add an entry `AcceptEnv <VARIABLE_NAME>`.<br/>
+    For example:
+```console
+AcceptEnv IMAGE_VERSION
+```
+
+4. Restart ssh service on your remote machine.<br/>
+For example on Debian Linux:
+```console
+systemctl restart ssh.service
+```
+
+4. Run a `devpod up` command:
+
+```console
+devpod up <GITHUB-REPOSITORY-URL> --ide=none
+```

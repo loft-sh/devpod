@@ -71,6 +71,10 @@ module.exports = {
         },
         {
           type: "doc",
+          id: "developing-in-workspaces/environment-variables-in-devcontainer-json",
+        },
+        {
+          type: "doc",
           id: "developing-in-workspaces/prebuild-a-workspace",
         },
         {
