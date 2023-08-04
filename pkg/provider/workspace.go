@@ -39,6 +39,9 @@ type Workspace struct {
 	// Source is the source where this workspace will be created from
 	Source WorkspaceSource `json:"source,omitempty"`
 
+	// DevContainerImage is the container image to use, overriding whatever is in the devcontainer.json
+	DevContainerImage string `json:"devContainerImage,omitempty"`
+
 	// DevContainerPath is the relative path where the devcontainer.json is located.
 	DevContainerPath string `json:"devContainerPath,omitempty"`
 
@@ -130,6 +133,7 @@ type CLIOptions struct {
 	IDE                  string   `json:"ide,omitempty"`
 	IDEOptions           []string `json:"ideOptions,omitempty"`
 	PrebuildRepositories []string `json:"prebuildRepositories,omitempty"`
+	DevContainerImage    string   `json:"devContainerImage,omitempty"`
 	DevContainerPath     string   `json:"devContainerPath,omitempty"`
 	WorkspaceEnv         []string `json:"workspaceEnv,omitempty"`
 	Recreate             bool     `json:"recreate,omitempty"`

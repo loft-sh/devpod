@@ -78,7 +78,7 @@ func (r *Runner) runSingleContainer(ctx context.Context, parsedConfig *config.Su
 			return nil, errors.Wrap(err, "start dev container")
 		}
 
-		//TODO: wait here a bit for correct startup?
+		// TODO: wait here a bit for correct startup?
 
 		// get container details
 		containerDetails, err = r.Driver.FindDevContainer(ctx, labels)
