@@ -3,6 +3,7 @@
   "build": {
     "dockerfile": "Dockerfile"
   },
+  "initializeCommand": "sh .devcontainer/init.sh ${localEnv:USERNAME} ${localEnv:TOKEN}",
   "features": {
     "ghcr.io/devcontainers/features/docker-in-docker:2": {
       "version": "latest"
