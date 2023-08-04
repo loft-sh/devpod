@@ -3,8 +3,8 @@
   "build": {
     "dockerfile": "Dockerfile"
   },
-  "initializeCommand": "sh -c './.devcontainer/init.sh'",
-  "onCreateCommand": "sh -c './.devcontainer/init.sh'",
+  "initializeCommand": "sh -c './.devcontainer/init.sh ${localEnv:USERNAME} ${localEnv:TOKEN}'",
+  "onCreateCommand": "sh -c './.devcontainer/init.sh ${localEnv:USERNAME} ${localEnv:TOKEN}'",
   "customizations": {
     "devpod": {
       "prebuildRepository": "ghcr.io/pbialon/devpod"
