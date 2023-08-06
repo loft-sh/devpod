@@ -75,8 +75,7 @@ func openViaCLI(ctx context.Context, workspace, folder string, newWindow bool, l
 	args := []string{
 		"--folder-uri",
 		"vscode-remote://ssh-remote+" + workspace + ".devpod/" + folder,
-		"--disable-extension",
-		"ms-vscode-remote.remote-containers",
+		
 	}
 	if newWindow {
 		args = append(args, "--new-window")
