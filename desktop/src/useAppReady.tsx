@@ -17,6 +17,7 @@ import { ErrorMessageBox } from "./components"
 import { startWorkspaceAction } from "./contexts"
 import { exists } from "./lib"
 import { Routes } from "./routes"
+import { WORKSPACE_SOURCE_BRANCH_DELIMITER, WORKSPACE_SOURCE_COMMIT_DELIMITER } from "./constants"
 
 export function useAppReady() {
   const isReadyLockRef = useRef<boolean>(false)
@@ -99,8 +100,21 @@ export function useAppReady() {
               return false
             }
 
-            // Check `repo@branch` combo first
-            if (`${w.source.gitRepository ?? ""}@${w.source.gitBranch ?? ""}` === event.source) {
+            // Check `repo@sha256:commitHash`
+            if (
+              `${w.source.gitRepository ?? ""}${WORKSPACE_SOURCE_COMMIT_DELIMITER}${
+                w.source.gitCommit ?? ""
+              }` === event.source
+            ) {
+              return true
+            }
+
+            // Check `repo@branch`
+            if (
+              `${w.source.gitRepository ?? ""}${WORKSPACE_SOURCE_BRANCH_DELIMITER}${
+                w.source.gitBranch ?? ""
+              }` === event.source
+            ) {
               return true
             }
 
