@@ -84,6 +84,7 @@ func NewSSHCmd(flags *flags.GlobalFlags) *cobra.Command {
 func (cmd *SSHCmd) Run(ctx context.Context, devPodConfig *config.Config, client client2.BaseWorkspaceClient, log log.Logger) error {
 	// add ssh keys to agent
 	if !cmd.Proxy && devPodConfig.ContextOption(config.ContextOptionSSHAgentForwarding) == "true" && devPodConfig.ContextOption(config.ContextOptionSSHAddPrivateKeys) == "true" {
+		log.Debug("Adding ssh keys to agent, disable via 'devpod context set-options -o SSH_ADD_PRIVATE_KEYS=false'")
 		err := devssh.AddPrivateKeysToAgent(ctx, log)
 		if err != nil {
 			log.Debugf("Error adding private keys to ssh-agent: %v", err)
