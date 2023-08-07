@@ -60,12 +60,12 @@ func NewSSHCmd(flags *flags.GlobalFlags) *cobra.Command {
 				return err
 			}
 
-			client, err := workspace2.GetWorkspace(devPodConfig, args, true, log.Default)
+			client, err := workspace2.GetWorkspace(devPodConfig, args, true, log.Default.ErrorStreamOnly())
 			if err != nil {
 				return err
 			}
 
-			return cmd.Run(ctx, devPodConfig, client)
+			return cmd.Run(ctx, devPodConfig, client, log.Default.ErrorStreamOnly())
 		},
 	}
 
@@ -81,7 +81,15 @@ func NewSSHCmd(flags *flags.GlobalFlags) *cobra.Command {
 }
 
 // Run runs the command logic
-func (cmd *SSHCmd) Run(ctx context.Context, devPodConfig *config.Config, client client2.BaseWorkspaceClient) error {
+func (cmd *SSHCmd) Run(ctx context.Context, devPodConfig *config.Config, client client2.BaseWorkspaceClient, log log.Logger) error {
+	// add ssh keys to agent
+	if !cmd.Proxy && devPodConfig.ContextOption(config.ContextOptionSSHAgentForwarding) == "true" && devPodConfig.ContextOption(config.ContextOptionSSHAddPrivateKeys) == "true" {
+		err := devssh.AddPrivateKeysToAgent(ctx, log)
+		if err != nil {
+			log.Debugf("Error adding private keys to ssh-agent: %v", err)
+		}
+	}
+
 	// get user
 	if cmd.User == "" {
 		var err error
@@ -94,13 +102,13 @@ func (cmd *SSHCmd) Run(ctx context.Context, devPodConfig *config.Config, client 
 	// check if regular workspace client
 	workspaceClient, ok := client.(client2.WorkspaceClient)
 	if ok {
-		return cmd.jumpContainer(ctx, devPodConfig, workspaceClient, log.Default.ErrorStreamOnly())
+		return cmd.jumpContainer(ctx, devPodConfig, workspaceClient, log)
 	}
 
 	// check if proxy client
 	proxyClient, ok := client.(client2.ProxyClient)
 	if ok {
-		return cmd.startProxyTunnel(ctx, devPodConfig, proxyClient, log.Default.ErrorStreamOnly())
+		return cmd.startProxyTunnel(ctx, devPodConfig, proxyClient, log)
 	}
 
 	return nil
