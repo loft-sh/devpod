@@ -22,7 +22,7 @@ import styled from "@emotion/styled"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { motion } from "framer-motion"
 import { RefObject, useCallback, useEffect, useMemo, useRef, useState } from "react"
-import {DefaultValues, FormProvider, SubmitHandler, useForm} from "react-hook-form"
+import { DefaultValues, FormProvider, SubmitHandler, useForm } from "react-hook-form"
 import { useBorderColor } from "../../../Theme"
 import { client } from "../../../client"
 import { CollapsibleSection, ErrorMessageBox } from "../../../components"
@@ -81,7 +81,10 @@ export function ConfigureProviderOptionsForm({
       (await client.providers.setOptionsDry(providerID!, { options: {} })).unwrap(),
     enabled: true,
   })
-  const optionGroups = provider?.config?.optionGroups || []
+  const optionGroups = useMemo(
+    () => provider?.config?.optionGroups ?? [],
+    [provider?.config?.optionGroups]
+  )
 
   const showDefaultField = useMemo(() => addProvider || !isDefault, [addProvider, isDefault])
   const showReuseMachineField = useMemo(
@@ -120,18 +123,22 @@ export function ConfigureProviderOptionsForm({
     status: refreshStatus,
     mutate: refreshSubOptionsMutation,
   } = useMutation<
-      TProviderOptions | undefined,
-      Err<Failed>,
-      Readonly<{ providerID: TProviderID; config: TConfigureProviderConfig }>
+    TProviderOptions | undefined,
+    Err<Failed>,
+    Readonly<{ providerID: TProviderID; config: TConfigureProviderConfig }>
   >({
     mutationFn: async ({ providerID, config }) => {
       return (await client.providers.setOptionsDry(providerID, config)).unwrap()
     },
     onSuccess(data) {
+      if (!data) {
+        return
+      }
+
       const newOptions: DefaultValues<TFieldValues> = {}
-      Object.keys(data).forEach(key => {
-        if (data?.[key]?.value) {
-          newOptions[key] = data[key]?.value
+      Object.keys(data).forEach((key) => {
+        if (data[key]?.value) {
+          newOptions[key] = data[key]?.value ?? undefined
         }
       })
 
@@ -229,17 +236,20 @@ export function ConfigureProviderOptionsForm({
   })
   const paddingX = useBreakpointValue({ base: "3rem", xl: isModal ? "3rem" : "4" })
 
-  const refreshSubOptions = useCallback((id: string) => {
-    const filteredOptions = filterOptions(formMethods.getValues(), optionsProp)
-    stripOptionChildren(filteredOptions, optionsProp, id)
+  const refreshSubOptions = useCallback(
+    (id: string) => {
+      const filteredOptions = filterOptions(formMethods.getValues(), optionsProp)
+      stripOptionChildren(filteredOptions, optionsProp, id)
 
-    refreshSubOptionsMutation({
-      providerID,
-      config: {
-        options: filteredOptions,
-      },
-    })
-  }, [formMethods, optionsProp, providerID])
+      refreshSubOptionsMutation({
+        providerID,
+        config: {
+          options: filteredOptions,
+        },
+      })
+    },
+    [formMethods, optionsProp, providerID, refreshSubOptionsMutation]
+  )
 
   if (!exists(provider) || !optionsProp) {
     return <Spinner style={{ margin: "0 auto 3rem auto" }} />
@@ -297,12 +307,12 @@ export function ConfigureProviderOptionsForm({
                         groupOptions?.forEach((option) => {
                           if (optionMatches(optionName, option.id)) {
                             arr.push(
-                                <OptionFormField
-                                    key={option.id}
-                                    refreshSubOptions={refreshSubOptions}
-                                    isRequired={!!option.required}
-                                    {...option}
-                                />
+                              <OptionFormField
+                                key={option.id}
+                                refreshSubOptions={refreshSubOptions}
+                                isRequired={!!option.required}
+                                {...option}
+                              />
                             )
                           }
                         })
