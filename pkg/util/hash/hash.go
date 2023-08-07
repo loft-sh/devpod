@@ -9,7 +9,7 @@ import (
 	"os"
 	"path/filepath"
 	"runtime"
-	"strconv"
+	"sort"
 	"strings"
 
 	"github.com/docker/docker/pkg/longpath"
@@ -18,19 +18,18 @@ import (
 )
 
 var (
-	maxFilesToRead             = 5000
-	errFileReadOverLimit error = errors.New("read files over limit")
+	maxFilesToRead       = 5000
+	errFileReadOverLimit = errors.New("read files over limit")
 )
 
-func DirectoryHash(srcPath string, excludePatterns []string, fast bool) (string, error) {
+func DirectoryHash(srcPath string, excludePatterns []string) (string, error) {
 	srcPath, err := filepath.Abs(srcPath)
 	if err != nil {
 		return "", err
 	}
 
-	hash := sha256.New()
-
 	// Stat dir / file
+	hash := sha256.New()
 	fileInfo, err := os.Stat(srcPath)
 	if err != nil {
 		return "", err
@@ -38,11 +37,7 @@ func DirectoryHash(srcPath string, excludePatterns []string, fast bool) (string,
 
 	// Hash file
 	if !fileInfo.IsDir() {
-		size := strconv.FormatInt(fileInfo.Size(), 10)
-		mTime := strconv.FormatInt(fileInfo.ModTime().UnixNano(), 10)
-		_, _ = io.WriteString(hash, srcPath+";"+size+";"+mTime)
-
-		return fmt.Sprintf("%x", hash.Sum(nil)), nil
+		return "", nil
 	}
 
 	// Fix the source path to work with long path names. This is a no-op
@@ -60,7 +55,6 @@ func DirectoryHash(srcPath string, excludePatterns []string, fast bool) (string,
 	// during e.g. a diff operation the container can continue
 	// mutating the filesystem and we can see transient errors
 	// from this
-
 	stat, err := os.Lstat(srcPath)
 	if err != nil {
 		return "", err
@@ -72,15 +66,15 @@ func DirectoryHash(srcPath string, excludePatterns []string, fast bool) (string,
 
 	include := "."
 	seen := make(map[string]bool)
-	filesRead := 0
 
+	retFiles := []string{}
 	walkRoot := filepath.Join(srcPath, include)
 	err = filepath.Walk(walkRoot, func(filePath string, f os.FileInfo, err error) error {
 		if err != nil {
 			return errors.Errorf("Hash: Can't stat file %s to hash: %s", srcPath, err)
 		}
 
-		if filesRead >= maxFilesToRead {
+		if len(retFiles) >= maxFilesToRead {
 			return errFileReadOverLimit
 		}
 
@@ -90,6 +84,7 @@ func DirectoryHash(srcPath string, excludePatterns []string, fast bool) (string,
 			// at the source directory path. Skip in both situations.
 			return err
 		}
+		relFilePath = filepath.ToSlash(relFilePath)
 
 		skip := false
 
@@ -120,13 +115,12 @@ func DirectoryHash(srcPath string, excludePatterns []string, fast bool) (string,
 			if !pm.Exclusions() {
 				return filepath.SkipDir
 			}
-
 			dirSlash := relFilePath + string(filepath.Separator)
-
 			for _, pat := range pm.Patterns() {
 				if !pat.Exclusion() {
 					continue
 				}
+
 				if strings.HasPrefix(pat.String()+string(filepath.Separator), dirSlash) {
 					// found a match - so can't skip this dir
 					return nil
@@ -140,30 +134,32 @@ func DirectoryHash(srcPath string, excludePatterns []string, fast bool) (string,
 		if seen[relFilePath] {
 			return nil
 		}
-		seen[relFilePath] = true
-		filesRead += 1
-		if f.IsDir() {
-			// Path is enough
-			_, _ = io.WriteString(hash, filePath)
-		} else {
-			if fast {
-				_, _ = io.WriteString(hash, filePath+";"+strconv.FormatInt(f.Size(), 10)+";"+strconv.FormatInt(f.ModTime().Unix(), 10))
-			} else {
-				// Check file change
-				checksum, err := hashFileCRC32(filePath, 0xedb88320)
-				if err != nil {
-					return nil
-				}
 
-				_, _ = io.WriteString(hash, filePath+";"+checksum)
+		// Path is enough
+		seen[relFilePath] = true
+		if !f.IsDir() {
+			// Check file change
+			checksum, err := hashFileCRC32(filePath, 0xedb88320)
+			if err != nil {
+				return nil
 			}
+
+			retFiles = append(retFiles, relFilePath+";"+checksum)
 		}
 
 		return nil
 	})
-
 	if err != nil && !errors.Is(err, errFileReadOverLimit) {
 		return "", errors.Errorf("Error hashing %s: %v", srcPath, err)
+	}
+
+	// add to hash
+	sort.Strings(retFiles)
+	for _, f := range retFiles {
+		_, _ = hash.Write([]byte(f))
+	}
+	if len(retFiles) == 0 {
+		return "", nil
 	}
 
 	return fmt.Sprintf("%x", hash.Sum(nil)), nil
