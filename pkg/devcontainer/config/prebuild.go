@@ -56,7 +56,7 @@ func CalculatePrebuildHash(originalConfig *DevContainerConfig, platform, archite
 	}
 
 	// get hash of the context directory
-	contextHash, err := util.DirectoryHash(contextPath, excludes, false)
+	contextHash, err := util.DirectoryHash(contextPath, excludes)
 	if err != nil {
 		return "", err
 	}
