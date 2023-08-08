@@ -156,6 +156,7 @@ func ResolveWorkspace(
 	desiredID,
 	desiredMachine string,
 	providerUserOptions []string,
+	devContainerImage string,
 	devContainerPath string,
 	source *provider2.WorkspaceSource,
 	changeLastUsed bool,
@@ -180,6 +181,16 @@ func ResolveWorkspace(
 	workspace, err = ideparse.RefreshIDEOptions(devPodConfig, workspace, ide, ideOptions)
 	if err != nil {
 		return nil, err
+	}
+
+	// configure dev container source
+	if devContainerImage != "" && workspace.DevContainerImage != devContainerImage {
+		workspace.DevContainerImage = devContainerImage
+
+		err = provider2.SaveWorkspaceConfig(workspace)
+		if err != nil {
+			return nil, errors.Wrap(err, "save workspace")
+		}
 	}
 
 	// configure dev container source

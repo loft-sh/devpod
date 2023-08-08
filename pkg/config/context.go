@@ -1,6 +1,7 @@
 package config
 
 const (
+	ContextOptionSSHAddPrivateKeys          = "SSH_ADD_PRIVATE_KEYS"
 	ContextOptionSSHAgentForwarding         = "SSH_AGENT_FORWARDING"
 	ContextOptionSSHInjectDockerCredentials = "SSH_INJECT_DOCKER_CREDENTIALS"
 	ContextOptionSSHInjectGitCredentials    = "SSH_INJECT_GIT_CREDENTIALS"
@@ -12,6 +13,12 @@ const (
 )
 
 var ContextOptions = []ContextOption{
+	{
+		Name:        ContextOptionSSHAddPrivateKeys,
+		Description: "Specifies if DevPod should automatically add ssh-keys to the ssh-agent",
+		Default:     "true",
+		Enum:        []string{"true", "false"},
+	},
 	{
 		Name:        ContextOptionExitAfterTimeout,
 		Description: "Specifies if DevPod should exit the process after the browser has been idle for a minute",

@@ -26,3 +26,6 @@ export const RECOMMENDED_PROVIDER_SOURCES = [
   // WARN: These are currently unstable
   // { image: TerraformSvg, name: "terraform", group: "cloud" },
 ] as const
+
+export const WORKSPACE_SOURCE_BRANCH_DELIMITER = "@"
+export const WORKSPACE_SOURCE_COMMIT_DELIMITER = "@sha256:"

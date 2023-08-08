@@ -13,7 +13,7 @@ export type TDeepNonNullable<T> = {
 export type TLogOutput = Readonly<{ time: Date; message?: string; level: string }>
 export type TQueryResult<TData extends Readonly<object>> = [
   TData | undefined,
-  Pick<UseMutationResult, "status" | "error">,
+  Pick<UseMutationResult, "status" | "error">
 ]
 export type TRunnable<TRunConfig> = Readonly<{ run(config: TRunConfig): void }>
 //#endregion
@@ -135,6 +135,7 @@ export type TWorkspace = Readonly<{
   source: TMaybe<{
     gitRepository: TMaybe<string>
     gitBranch: TMaybe<string>
+    gitCommit: TMaybe<string>
     localFolder: TMaybe<string>
     image: TMaybe<string>
   }>

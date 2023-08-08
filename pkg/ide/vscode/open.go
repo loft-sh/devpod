@@ -54,10 +54,12 @@ func openViaCLI(ctx context.Context, workspace, folder string, newWindow bool, l
 	}
 	splitted := strings.Split(string(out), "\n")
 	found := false
+	foundContainers := false
 	for _, str := range splitted {
 		if strings.TrimSpace(str) == "ms-vscode-remote.remote-ssh" {
 			found = true
-			break
+		} else if strings.TrimSpace(str) == "ms-vscode-remote.remote-containers" {
+			foundContainers = true
 		}
 	}
 
@@ -75,8 +77,9 @@ func openViaCLI(ctx context.Context, workspace, folder string, newWindow bool, l
 	args := []string{
 		"--folder-uri",
 		"vscode-remote://ssh-remote+" + workspace + ".devpod/" + folder,
-		"--disable-extension",
-		"ms-vscode-remote.remote-containers",
+	}
+	if foundContainers {
+		args = append(args, "--disable-extension", "ms-vscode-remote.remote-containers")
 	}
 	if newWindow {
 		args = append(args, "--new-window")
