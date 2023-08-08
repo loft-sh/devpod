@@ -593,7 +593,6 @@ dependencies = [
  "cocoa",
  "dirs",
  "dispatch",
- "fix-path-env",
  "lazy_static",
  "log",
  "objc",
@@ -603,6 +602,7 @@ dependencies = [
  "serde_json",
  "serde_qs",
  "serde_yaml",
+ "strip-ansi-escapes",
  "tauri",
  "tauri-build",
  "tauri-plugin-deep-link",
@@ -784,15 +784,6 @@ dependencies = [
  "libc",
  "redox_syscall 0.2.16",
  "windows-sys 0.48.0",
-]
-
-[[package]]
-name = "fix-path-env"
-version = "0.0.0"
-source = "git+https://github.com/tauri-apps/fix-path-env-rs#6c63c49e29e670343b71fee455e1a6c9145f4a8e"
-dependencies = [
- "strip-ansi-escapes",
- "thiserror",
 ]
 
 [[package]]
