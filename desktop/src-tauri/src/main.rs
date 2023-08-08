@@ -19,6 +19,7 @@ mod ui_ready;
 mod util;
 mod window;
 mod workspaces;
+mod fix_env;
 
 use community_contributions::CommunityContributions;
 use custom_protocol::{CustomProtocol, OpenWorkspaceMsg};
@@ -75,7 +76,8 @@ enum ToastStatus {
 }
 
 fn main() -> anyhow::Result<()> {
-    fix_path_env::fix()?;
+    // https://unix.stackexchange.com/questions/82620/gui-apps-dont-inherit-path-from-parent-console-apps
+    fix_env::fix_env("PATH")?;
     let ctx = tauri::generate_context!();
     let app_name = ctx.package_info().name.to_string();
     let menu = if cfg!(target_os = "macos") {
