@@ -34,14 +34,6 @@ func SetupContainer(setupInfo *config.Result, extraWorkspaceEnv []string, chownW
 	// write result to ResultLocation
 	WriteResult(setupInfo, log)
 
-	// chown user dir
-	if chownWorkspace {
-		err := ChownWorkspace(setupInfo, log)
-		if err != nil {
-			return errors.Wrap(err, "chown workspace")
-		}
-	}
-
 	// patch remote env
 	log.Debugf("Patch etc environment & profile...")
 	err := PatchEtcEnvironment(setupInfo.MergedConfig, log)
@@ -133,26 +125,14 @@ func LinkRootHome(setupInfo *config.Result) error {
 	return nil
 }
 
-func ChownWorkspace(setupInfo *config.Result, log log.Logger) error {
-	user := config.GetRemoteUser(setupInfo)
-	exists, err := markerFileExists("chownWorkspace", "")
+func EnsureCorrectUID(setupInfo *config.Result, log log.Logger) error {
+	exists, err := markerFileExists("syncUserIds", "")
 	if err != nil {
 		return err
 	} else if exists {
 		return nil
 	}
 
-	log.Infof("Chown workspace...")
-	err = copy2.ChownR(setupInfo.SubstitutionContext.ContainerWorkspaceFolder, user)
-	// do not exit on error, we can have non-fatal errors
-	if err != nil {
-		log.Warn(err)
-	}
-
-	return nil
-}
-
-func EnsureCorrectUID(setupInfo *config.Result, log log.Logger) error {
 	// get host uid and gid
 	stats, err := os.Stat(setupInfo.SubstitutionContext.ContainerWorkspaceFolder)
 	if err != nil {
@@ -226,6 +206,20 @@ func EnsureCorrectUID(setupInfo *config.Result, log log.Logger) error {
 
 	log.Debugf("Chown user home...")
 	err = copy2.ChownR(containerUser.HomeDir, containerUserName)
+	if err != nil {
+		log.Warn(err)
+	}
+
+	exists, err = markerFileExists("chownWorkspace", "")
+	if err != nil {
+		return err
+	} else if !exists {
+		return nil
+	}
+
+	log.Infof("Chown workspace...")
+	err = copy2.ChownR(setupInfo.SubstitutionContext.ContainerWorkspaceFolder, containerUserName)
+	// do not exit on error, we can have non-fatal errors
 	if err != nil {
 		log.Warn(err)
 	}
