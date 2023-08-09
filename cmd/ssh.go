@@ -30,6 +30,7 @@ type SSHCmd struct {
 
 	ForwardPortsTimeout string
 	ForwardPorts        []string
+	ReverseForwardPorts []string
 
 	Stdio           bool
 	JumpContainer   bool
@@ -68,6 +69,7 @@ func NewSSHCmd(flags *flags.GlobalFlags) *cobra.Command {
 	}
 
 	sshCmd.Flags().StringArrayVarP(&cmd.ForwardPorts, "forward-ports", "L", []string{}, "Specifies that connections to the given TCP port or Unix socket on the local (client) host are to be forwarded to the given host and port, or Unix socket, on the remote side.")
+	sshCmd.Flags().StringArrayVarP(&cmd.ReverseForwardPorts, "reverse-forward-ports", "R", []string{}, "Specifies that connections to the given TCP port or Unix socket on the local (client) host are to be reverse forwarded to the given host and port, or Unix socket, on the remote side.")
 	sshCmd.Flags().StringVar(&cmd.ForwardPortsTimeout, "forward-ports-timeout", "", "Specifies the timeout after which the command should terminate when the ports are unused.")
 	sshCmd.Flags().StringVar(&cmd.Command, "command", "", "The command to execute within the workspace")
 	sshCmd.Flags().StringVar(&cmd.User, "user", "", "The user of the workspace to use")
@@ -113,7 +115,12 @@ func (cmd *SSHCmd) Run(ctx context.Context, devPodConfig *config.Config, client 
 	return nil
 }
 
-func (cmd *SSHCmd) startProxyTunnel(ctx context.Context, devPodConfig *config.Config, client client2.ProxyClient, log log.Logger) error {
+func (cmd *SSHCmd) startProxyTunnel(
+	ctx context.Context,
+	devPodConfig *config.Config,
+	client client2.ProxyClient,
+	log log.Logger,
+) error {
 	log.Debugf("Start proxy tunnel")
 	return tunnel.NewTunnel(
 		ctx,
@@ -124,12 +131,23 @@ func (cmd *SSHCmd) startProxyTunnel(ctx context.Context, devPodConfig *config.Co
 			})
 		},
 		func(ctx context.Context, containerClient *ssh.Client) error {
-			return cmd.startTunnel(ctx, devPodConfig, containerClient, client.WorkspaceConfig().IDE.Name, log)
+			return cmd.startTunnel(
+				ctx,
+				devPodConfig,
+				containerClient,
+				client.WorkspaceConfig().IDE.Name,
+				log,
+			)
 		},
 	)
 }
 
-func startWait(ctx context.Context, client client2.WorkspaceClient, create bool, log log.Logger) error {
+func startWait(
+	ctx context.Context,
+	client client2.WorkspaceClient,
+	create bool,
+	log log.Logger,
+) error {
 	startWaiting := time.Now()
 	for {
 		instanceStatus, err := client.Status(ctx, client2.StatusOptions{})
@@ -170,7 +188,12 @@ func startWait(ctx context.Context, client client2.WorkspaceClient, create bool,
 	}
 }
 
-func (cmd *SSHCmd) jumpContainer(ctx context.Context, devPodConfig *config.Config, client client2.WorkspaceClient, log log.Logger) error {
+func (cmd *SSHCmd) jumpContainer(
+	ctx context.Context,
+	devPodConfig *config.Config,
+	client client2.WorkspaceClient,
+	log log.Logger,
+) error {
 	// lock the workspace as long as we init the connection
 	unlockOnce := sync.Once{}
 	err := client.Lock(ctx)
@@ -186,16 +209,78 @@ func (cmd *SSHCmd) jumpContainer(ctx context.Context, devPodConfig *config.Confi
 	}
 
 	// tunnel to container
-	return tunnel.NewContainerTunnel(client, cmd.Proxy, log).Run(ctx, func(ctx context.Context, containerClient *ssh.Client) error {
-		// we have a connection to the container, make sure others can connect as well
-		unlockOnce.Do(client.Unlock)
+	return tunnel.NewContainerTunnel(client, cmd.Proxy, log).
+		Run(ctx, func(ctx context.Context, containerClient *ssh.Client) error {
+			// we have a connection to the container, make sure others can connect as well
+			unlockOnce.Do(client.Unlock)
 
-		// start ssh tunnel
-		return cmd.startTunnel(ctx, devPodConfig, containerClient, client.WorkspaceConfig().IDE.Name, log)
-	})
+			// start ssh tunnel
+			return cmd.startTunnel(
+				ctx,
+				devPodConfig,
+				containerClient,
+				client.WorkspaceConfig().IDE.Name,
+				log,
+			)
+		})
 }
 
-func (cmd *SSHCmd) forwardPorts(ctx context.Context, containerClient *ssh.Client, log log.Logger) error {
+func (cmd *SSHCmd) reverseForwardPorts(
+	ctx context.Context,
+	containerClient *ssh.Client,
+	log log.Logger,
+) error {
+	timeout := time.Duration(0)
+	if cmd.ForwardPortsTimeout != "" {
+		var err error
+		timeout, err = time.ParseDuration(cmd.ForwardPortsTimeout)
+		if err != nil {
+			return fmt.Errorf("parse forward ports timeout: %w", err)
+		}
+
+		log.Infof("Using port forwarding timeout of %s", cmd.ForwardPortsTimeout)
+	}
+
+	errChan := make(chan error, len(cmd.ReverseForwardPorts))
+	for _, portMapping := range cmd.ReverseForwardPorts {
+		mapping, err := port.ParsePortSpec(portMapping)
+		if err != nil {
+			return fmt.Errorf("parse port mapping: %w", err)
+		}
+
+		// start the forwarding
+		log.Infof(
+			"Reverse forwarding local %s/%s to remote %s/%s",
+			mapping.Host.Protocol,
+			mapping.Host.Address,
+			mapping.Container.Protocol,
+			mapping.Container.Address,
+		)
+		go func(portMapping string) {
+			err := devssh.ReversePortForward(
+				ctx,
+				containerClient,
+				mapping.Host.Protocol,
+				mapping.Host.Address,
+				mapping.Container.Protocol,
+				mapping.Container.Address,
+				timeout,
+				log,
+			)
+			if err != nil {
+				errChan <- fmt.Errorf("error forwarding %s: %w", portMapping, err)
+			}
+		}(portMapping)
+	}
+
+	return <-errChan
+}
+
+func (cmd *SSHCmd) forwardPorts(
+	ctx context.Context,
+	containerClient *ssh.Client,
+	log log.Logger,
+) error {
 	timeout := time.Duration(0)
 	if cmd.ForwardPortsTimeout != "" {
 		var err error
@@ -215,9 +300,24 @@ func (cmd *SSHCmd) forwardPorts(ctx context.Context, containerClient *ssh.Client
 		}
 
 		// start the forwarding
-		log.Infof("Forwarding local %s/%s to remote %s/%s", mapping.Host.Protocol, mapping.Host.Address, mapping.Container.Protocol, mapping.Container.Address)
+		log.Infof(
+			"Forwarding local %s/%s to remote %s/%s",
+			mapping.Host.Protocol,
+			mapping.Host.Address,
+			mapping.Container.Protocol,
+			mapping.Container.Address,
+		)
 		go func(portMapping string) {
-			err := devssh.PortForward(ctx, containerClient, mapping.Host.Protocol, mapping.Host.Address, mapping.Container.Protocol, mapping.Container.Address, timeout, log)
+			err := devssh.PortForward(
+				ctx,
+				containerClient,
+				mapping.Host.Protocol,
+				mapping.Host.Address,
+				mapping.Container.Protocol,
+				mapping.Container.Address,
+				timeout,
+				log,
+			)
 			if err != nil {
 				errChan <- fmt.Errorf("error forwarding %s: %w", portMapping, err)
 			}
@@ -227,10 +327,21 @@ func (cmd *SSHCmd) forwardPorts(ctx context.Context, containerClient *ssh.Client
 	return <-errChan
 }
 
-func (cmd *SSHCmd) startTunnel(ctx context.Context, devPodConfig *config.Config, containerClient *ssh.Client, ideName string, log log.Logger) error {
+func (cmd *SSHCmd) startTunnel(
+	ctx context.Context,
+	devPodConfig *config.Config,
+	containerClient *ssh.Client,
+	ideName string,
+	log log.Logger,
+) error {
 	// check if we should forward ports
 	if len(cmd.ForwardPorts) > 0 {
 		return cmd.forwardPorts(ctx, containerClient, log)
+	}
+
+	// check if we should reverse forward ports
+	if len(cmd.ReverseForwardPorts) > 0 {
+		return cmd.reverseForwardPorts(ctx, containerClient, log)
 	}
 
 	// start port-forwarding etc.
@@ -243,7 +354,10 @@ func (cmd *SSHCmd) startTunnel(ctx context.Context, devPodConfig *config.Config,
 	defer writer.Close()
 
 	log.Debugf("Run outer container tunnel")
-	command := fmt.Sprintf("'%s' helper ssh-server --track-activity --stdio", agent.ContainerDevPodHelperLocation)
+	command := fmt.Sprintf(
+		"'%s' helper ssh-server --track-activity --stdio",
+		agent.ContainerDevPodHelperLocation,
+	)
 	if cmd.Debug {
 		command += " --debug"
 	}
@@ -254,12 +368,26 @@ func (cmd *SSHCmd) startTunnel(ctx context.Context, devPodConfig *config.Config,
 		return devssh.Run(ctx, containerClient, command, os.Stdin, os.Stdout, writer)
 	}
 
-	return machine.StartSSHSession(ctx, cmd.User, cmd.Command, !cmd.Proxy && cmd.AgentForwarding && devPodConfig.ContextOption(config.ContextOptionSSHAgentForwarding) == "true", func(ctx context.Context, stdin io.Reader, stdout io.Writer, stderr io.Writer) error {
-		return devssh.Run(ctx, containerClient, command, stdin, stdout, stderr)
-	}, writer)
+	return machine.StartSSHSession(
+		ctx,
+		cmd.User,
+		cmd.Command,
+		!cmd.Proxy && cmd.AgentForwarding &&
+			devPodConfig.ContextOption(config.ContextOptionSSHAgentForwarding) == "true",
+		func(ctx context.Context, stdin io.Reader, stdout io.Writer, stderr io.Writer) error {
+			return devssh.Run(ctx, containerClient, command, stdin, stdout, stderr)
+		},
+		writer,
+	)
 }
 
-func (cmd *SSHCmd) startServices(ctx context.Context, devPodConfig *config.Config, containerClient *ssh.Client, ideName string, log log.Logger) {
+func (cmd *SSHCmd) startServices(
+	ctx context.Context,
+	devPodConfig *config.Config,
+	containerClient *ssh.Client,
+	ideName string,
+	log log.Logger,
+) {
 	if cmd.User != "" {
 		gitCredentials := ideName != string(config.IDEVSCode)
 		err := tunnel.RunInContainer(
