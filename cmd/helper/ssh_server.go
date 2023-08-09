@@ -6,7 +6,7 @@ import (
 	"os"
 	"time"
 
-	"github.com/gliderlabs/ssh"
+	"github.com/loft-sh/ssh"
 	"github.com/loft-sh/devpod/cmd/flags"
 	"github.com/loft-sh/devpod/pkg/agent"
 	helperssh "github.com/loft-sh/devpod/pkg/ssh/server"

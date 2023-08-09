@@ -138,9 +138,6 @@ github.com/gen2brain/beeep
 # github.com/ghodss/yaml v1.0.0
 ## explicit
 github.com/ghodss/yaml
-# github.com/gliderlabs/ssh v0.3.5
-## explicit; go 1.12
-github.com/gliderlabs/ssh
 # github.com/go-logr/logr v1.2.4
 ## explicit; go 1.16
 github.com/go-logr/logr
@@ -264,6 +261,9 @@ github.com/loft-sh/log/terminal
 # github.com/loft-sh/programming-language-detection v0.0.5
 ## explicit; go 1.20
 github.com/loft-sh/programming-language-detection/pkg/detector
+# github.com/loft-sh/ssh v0.0.3
+## explicit; go 1.12
+github.com/loft-sh/ssh
 # github.com/mattn/go-colorable v0.1.2
 ## explicit
 github.com/mattn/go-colorable
