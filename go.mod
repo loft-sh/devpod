@@ -14,13 +14,13 @@ require (
 	github.com/docker/go-connections v0.4.0
 	github.com/gen2brain/beeep v0.0.0-20230307103607-6e717729cb4f
 	github.com/ghodss/yaml v1.0.0
-	github.com/gliderlabs/ssh v0.3.5
 	github.com/gofrs/flock v0.8.1
 	github.com/google/go-containerregistry v0.13.0
 	github.com/google/uuid v1.3.0
 	github.com/joho/godotenv v1.5.1
 	github.com/loft-sh/log v0.0.0-20230802151259-7b546cf62355
 	github.com/loft-sh/programming-language-detection v0.0.5
+	github.com/loft-sh/ssh v0.0.3
 	github.com/mattn/go-isatty v0.0.8
 	github.com/mitchellh/go-homedir v1.1.0
 	github.com/moby/buildkit v0.11.6

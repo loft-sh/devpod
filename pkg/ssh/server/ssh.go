@@ -14,7 +14,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/gliderlabs/ssh"
+	"github.com/loft-sh/ssh"
 	"github.com/loft-sh/devpod/pkg/command"
 	"github.com/loft-sh/log"
 	perrors "github.com/pkg/errors"
@@ -36,6 +36,7 @@ func NewServer(addr string, hostKey []byte, keys []ssh.PublicKey, workdir string
 	}
 
 	forwardHandler := &ssh.ForwardedTCPHandler{}
+	forwardedUnixHandler := &ssh.ForwardedUnixHandler{}
 	server := &Server{
 		shell:       shell,
 		workdir:     workdir,
@@ -51,13 +52,20 @@ func NewServer(addr string, hostKey []byte, keys []ssh.PublicKey, workdir string
 				log.Debugf("attempt to bind %s:%d - %s", host, port, "granted")
 				return true
 			},
+			ReverseUnixForwardingCallback: func(ctx ssh.Context, socketPath string) bool {
+				log.Debugf("attempt to bind socket %s", socketPath)
+				return true
+			},
 			ChannelHandlers: map[string]ssh.ChannelHandler{
-				"direct-tcpip": ssh.DirectTCPIPHandler,
-				"session":      ssh.DefaultSessionHandler,
+				"direct-tcpip":                   ssh.DirectTCPIPHandler,
+				"direct-streamlocal@openssh.com": ssh.DirectStreamLocalHandler,
+				"session":                        ssh.DefaultSessionHandler,
 			},
 			RequestHandlers: map[string]ssh.RequestHandler{
-				"tcpip-forward":        forwardHandler.HandleSSHRequest,
-				"cancel-tcpip-forward": forwardHandler.HandleSSHRequest,
+				"tcpip-forward":                          forwardHandler.HandleSSHRequest,
+				"streamlocal-forward@openssh.com":        forwardedUnixHandler.HandleSSHRequest,
+				"cancel-streamlocal-forward@openssh.com": forwardedUnixHandler.HandleSSHRequest,
+				"cancel-tcpip-forward":                   forwardHandler.HandleSSHRequest,
 			},
 			SubsystemHandlers: map[string]ssh.SubsystemHandler{
 				"sftp": func(s ssh.Session) {
@@ -242,7 +250,13 @@ func (s *Server) HandleNonPTY(sess ssh.Session, cmd *exec.Cmd) (err error) {
 	return nil
 }
 
-func HandlePTY(sess ssh.Session, ptyReq ssh.Pty, winCh <-chan ssh.Window, cmd *exec.Cmd, decorateReader func(reader io.Reader) io.Reader) (err error) {
+func HandlePTY(
+	sess ssh.Session,
+	ptyReq ssh.Pty,
+	winCh <-chan ssh.Window,
+	cmd *exec.Cmd,
+	decorateReader func(reader io.Reader) io.Reader,
+) (err error) {
 	cmd.Env = append(cmd.Env, fmt.Sprintf("TERM=%s", ptyReq.Term))
 	f, err := startPTY(cmd)
 	if err != nil {
