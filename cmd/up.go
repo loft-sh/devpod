@@ -116,7 +116,7 @@ func NewUpCmd(flags *flags.GlobalFlags) *cobra.Command {
 	}
 
 	upCmd.Flags().BoolVar(&cmd.ConfigureSSH, "configure-ssh", true, "If true will configure the ssh config to include the DevPod workspace")
-	upCmd.Flags().BoolVar(&cmd.GpgAgentForwarding, "gpg-agent-forwarding", true, "If true forward the local gpg-agent to the DevPod workspace")
+	upCmd.Flags().BoolVar(&cmd.GpgAgentForwarding, "gpg-agent-forwarding", false, "If true forward the local gpg-agent to the DevPod workspace")
 	upCmd.Flags().StringVar(&cmd.SSHConfigPath, "ssh-config", "", "The path to the ssh config to modify, if empty will use ~/.ssh/config")
 	upCmd.Flags().StringVar(&cmd.DotfilesSource, "dotfiles", "", "The path or url to the dotfiles to use in the container")
 	upCmd.Flags().StringVar(&cmd.DotfilesScript, "dotfiles-script", "", "The path in dotfiles directory to use to install the dotfiles, if empty will try to guess")
