@@ -47,8 +47,9 @@ type UpCmd struct {
 
 	ProviderOptions []string
 
-	ConfigureSSH bool
-	OpenIDE      bool
+	ConfigureSSH       bool
+	GpgAgentForwarding bool
+	OpenIDE            bool
 
 	SSHConfigPath string
 
@@ -115,6 +116,7 @@ func NewUpCmd(flags *flags.GlobalFlags) *cobra.Command {
 	}
 
 	upCmd.Flags().BoolVar(&cmd.ConfigureSSH, "configure-ssh", true, "If true will configure the ssh config to include the DevPod workspace")
+	upCmd.Flags().BoolVar(&cmd.GpgAgentForwarding, "gpg-agent-forwarding", true, "If true forward the local gpg-agent to the DevPod workspace")
 	upCmd.Flags().StringVar(&cmd.SSHConfigPath, "ssh-config", "", "The path to the ssh config to modify, if empty will use ~/.ssh/config")
 	upCmd.Flags().StringVar(&cmd.DotfilesSource, "dotfiles", "", "The path or url to the dotfiles to use in the container")
 	upCmd.Flags().StringVar(&cmd.DotfilesScript, "dotfiles-script", "", "The path in dotfiles directory to use to install the dotfiles, if empty will try to guess")
@@ -161,6 +163,16 @@ func (cmd *UpCmd) Run(
 
 	// get user from result
 	user := config2.GetRemoteUser(result)
+
+	// setup GpgAgentForwarding in the container
+	if cmd.GpgAgentForwarding {
+		log.Infof("GPG Agent forwarding specified")
+
+		err = setupGPGAgent(client, devPodConfig, log)
+		if err != nil {
+			return err
+		}
+	}
 
 	// configure container ssh
 	if cmd.ConfigureSSH {
@@ -228,6 +240,15 @@ func (cmd *UpCmd) Run(
 				log,
 			)
 		}
+	}
+
+	// if GpgAgentForwarding we need to keep running in order to keep the reverse tunnel
+	// functioning, or gpg-agent will drop
+	if cmd.GpgAgentForwarding {
+		log.Infof(
+			"GPG Agent forwarding specified, keep this process running to have working gpg-agent forwarding",
+		)
+		select {}
 	}
 
 	return nil
@@ -823,6 +844,225 @@ func setupDotfiles(
 	}
 
 	log.Infof("Done setting up dotfiles into the devcontainer")
+
+	return nil
+}
+
+// setupGPGAgent will forward a local gpg-agent into the remote container
+// this works by
+//
+// - stopping remote gpg-agent and removing the sockets
+// - exporting local public keys and owner trust
+// - importing those into the container
+// - ensuring the gpg-agent is stopped in the container
+// - starting a reverse-tunnel of the local unix socket to remote
+// - ensuring paths and permissions are correctly set in the remote
+//
+// this procedure uses some shell commands, in order to batch commands together
+// and speed up the process. this is ok as remotes will always be linux workspaces
+func setupGPGAgent(
+	client client2.BaseWorkspaceClient,
+	devPodConfig *config.Config,
+	log log.Logger,
+) error {
+	execPath, err := os.Executable()
+	if err != nil {
+		return err
+	}
+
+	writer := log.Writer(logrus.InfoLevel, false)
+
+	sshCmdArgs := []string{
+		"ssh",
+		"--agent-forwarding=true",
+		"--start-services=false",
+		"--context",
+		client.Context(),
+		client.Workspace(),
+		"--log-output=raw",
+	}
+
+	if log.GetLevel() == logrus.DebugLevel {
+		sshCmdArgs = append(sshCmdArgs, "--debug")
+	}
+
+	log.Debugf("Initializing gpg-agent forwarding")
+	// Check if the agent is running in the workspace already.
+	//
+	// this cose is inspired by https://github.com/coder/coder/blob/main/cli/ssh.go
+	killRemoteAgent := append(sshCmdArgs, "--command")
+	killRemoteAgent = append(killRemoteAgent, `sh -c '
+set -e
+set -x
+agent_socket=$(gpgconf --list-dir agent-socket)
+echo $agent_socket
+if [ -S $agent_socket ]; then
+  echo agent socket exists, attempting to kill it >&2
+  gpgconf --kill gpg-agent
+  rm -f $agent_socket
+  sleep 1
+fi
+
+test ! -S $agent_socket
+'`)
+
+	log.Debugf("gpg: killing gpg-agent in the container")
+	agentSocket, err := exec.Command(execPath, killRemoteAgent...).Output()
+	if err != nil {
+		return fmt.Errorf(
+			"check if agent socket is running (check if %q exists): %w",
+			agentSocket,
+			err,
+		)
+	}
+	if string(agentSocket) == "" {
+		return fmt.Errorf(
+			"agent socket path is empty, check the output of `gpgconf --list-dir agent-socket`",
+		)
+	}
+
+	log.Debugf("gpg: exporting gpg public key from host")
+
+	// Read the user's public keys and ownertrust from GPG.
+	// These commands are executed LOCALLY, the output will be imported by the remote gpg
+	pubKeyExport, err := exec.Command("gpg", "--armor", "--export").Output()
+	if err != nil {
+		return fmt.Errorf("export local public keys from GPG: %w", err)
+	}
+
+	log.Debugf("gpg: exporting gpg owner trust from host")
+
+	ownerTrustExport, err := exec.Command("gpg", "--export-ownertrust").Output()
+	if err != nil {
+		return fmt.Errorf("export local ownertrust from GPG: %w", err)
+	}
+
+	// Import public keys from LOCAL into REMOTE
+	gpgImport := append(sshCmdArgs, "--command")
+	gpgImport = append(gpgImport, "gpg --import")
+	gpgImportCmd := exec.Command(execPath, gpgImport...)
+
+	stdin, err := gpgImportCmd.StdinPipe()
+	if err != nil {
+		return err
+	}
+
+	go func() {
+		defer stdin.Close()
+		_, _ = stdin.Write(pubKeyExport)
+	}()
+
+	log.Debugf("gpg: importing gpg public key in container")
+
+	err = gpgImportCmd.Run()
+	if err != nil {
+		return err
+	}
+
+	// Import owner trust from LOCAL into REMOTE
+	gpgTrustImport := append(sshCmdArgs, "--command")
+	gpgTrustImport = append(gpgTrustImport, "gpg --import-ownertrust")
+	gpgTrustImportCmd := exec.Command(execPath, gpgTrustImport...)
+
+	stdin, err = gpgTrustImportCmd.StdinPipe()
+	if err != nil {
+		return err
+	}
+
+	go func() {
+		defer stdin.Close()
+		_, _ = stdin.Write(ownerTrustExport)
+	}()
+
+	log.Debugf("gpg: importing gpg owner trust in container")
+
+	err = gpgTrustImportCmd.Run()
+	if err != nil {
+		return err
+	}
+
+	log.Debugf("gpg: detecting gpg-agent socket path on host")
+	// Detect local agent extra socket, this will be forwarded to the remote and
+	// symlinked in multiple paths
+	gpgExtraSocketBytes, err := exec.Command("gpgconf", []string{"--list-dir", "agent-extra-socket"}...).
+		Output()
+	if err != nil {
+		return err
+	}
+
+	gpgExtraSocketPath := strings.TrimSpace(string(gpgExtraSocketBytes))
+
+	log.Debugf("gpg: detected gpg-agent socket path %s", gpgExtraSocketPath)
+
+	// Kill the agent in the workspace if it was started by one of the above
+	// commands.
+	killAgent := append(sshCmdArgs, "--command")
+	killAgent = append(
+		killAgent,
+		fmt.Sprintf("gpgconf --kill gpg-agent && rm -f %q", gpgExtraSocketPath),
+	)
+
+	log.Debugf("gpg: ensuring gpg-agent is not running in container")
+
+	err = exec.Command(execPath, killAgent...).Run()
+	if err != nil {
+		return err
+	}
+
+	// Now we forward the agent socket to the remote, and setup remote gpg to use it
+	// fix eventual permissions and so on
+	forwardAgent := append(sshCmdArgs, "--reverse-forward-ports")
+	forwardAgent = append(forwardAgent, gpgExtraSocketPath)
+
+	forwardAgentCmd := exec.Command(execPath, forwardAgent...)
+
+	forwardAgentCmd.Stdout = writer
+	forwardAgentCmd.Stderr = writer
+
+	log.Debugf(
+		"gpg: start reverse forward of gpg-agent socket %s, keeping connection open",
+		gpgExtraSocketPath,
+	)
+
+	// We use start to keep this connection alive in background (hence the use of sleep infinity)
+	err = forwardAgentCmd.Start()
+	if err != nil {
+		return err
+	}
+
+	log.Debugf("gpg: fixing agent paths and permissions")
+
+	// Permissions may not be correctly set, or paths can differ between systems
+	// so here we ensure the default user is able to read the sockets and link
+	// the socket to canonical places
+	fixAgent := append(sshCmdArgs, "--command")
+	fixAgent = append(fixAgent, `sh -c '
+set -x
+
+sleep 5
+
+sudo mkdir -p /run/user/$(id -ru)/gnupg
+sudo chmod 0700 /run/user/$(id -ru)/gnupg
+sudo chown -R  $(id -ru):$(id -rg) /run/user
+sudo chown $(id -ru):$(id -rg) `+gpgExtraSocketPath+`
+
+mkdir -p $HOME/.gnupg
+chmod 0700 $HOME/.gnupg
+
+sudo ln -sf `+gpgExtraSocketPath+` /run/user/$(id -ru)/gnupg/S.gpg-agent
+sudo ln -sf `+gpgExtraSocketPath+` $HOME/.gnupg/S.gpg-agent
+
+if ! grep -q "use-agent" "$HOME/.gnupg/gpg.conf"; then
+	echo "use-agent" >> "$HOME/.gnupg/gpg.conf"
+fi
+'`)
+
+	err = exec.Command(execPath, fixAgent...).Run()
+	if err != nil {
+		return err
+	}
+
+	log.Infof("gpg-agent forwarding done")
 
 	return nil
 }
