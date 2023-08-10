@@ -36,9 +36,7 @@ func PortForward(
 	}()
 
 	counter := newConnectionCounter(ctx, exitAfterTimeout, func() {
-		log.Fatalf(
-			"Stopping devpod up, because it stayed idle for a while. You can disable this via 'devpod context set-options -o EXIT_AFTER_TIMEOUT=false'",
-		)
+		log.Fatal("Stopping devpod up, because it stayed idle for a while. You can disable this via 'devpod context set-options -o EXIT_AFTER_TIMEOUT=false'")
 	}, localAddr, log)
 	for {
 		// waiting for a new connection
@@ -125,9 +123,7 @@ func ReversePortForward(
 	}()
 
 	counter := newConnectionCounter(ctx, exitAfterTimeout, func() {
-		log.Fatalf(
-			"Stopping devpod up, because it stayed idle for a while. You can disable this via 'devpod context set-options -o EXIT_AFTER_TIMEOUT=false'",
-		)
+		log.Fatal("Stopping devpod up, because it stayed idle for a while. You can disable this via 'devpod context set-options -o EXIT_AFTER_TIMEOUT=false'")
 	}, remoteAddr, log)
 	for {
 		// waiting for a new connection
