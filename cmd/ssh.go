@@ -336,12 +336,22 @@ func (cmd *SSHCmd) startTunnel(
 ) error {
 	// check if we should forward ports
 	if len(cmd.ForwardPorts) > 0 {
-		return cmd.forwardPorts(ctx, containerClient, log)
+		go func() {
+			err := cmd.forwardPorts(ctx, containerClient, log)
+			if err != nil {
+				log.Fatal(err)
+			}
+		}()
 	}
 
 	// check if we should reverse forward ports
 	if len(cmd.ReverseForwardPorts) > 0 {
-		return cmd.reverseForwardPorts(ctx, containerClient, log)
+		go func() {
+			err := cmd.reverseForwardPorts(ctx, containerClient, log)
+			if err != nil {
+				log.Fatal(err)
+			}
+		}()
 	}
 
 	// start port-forwarding etc.
