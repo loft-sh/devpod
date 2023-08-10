@@ -192,10 +192,11 @@ func (cmd *UpCmd) Run(
 
 	// open ide
 	if cmd.OpenIDE {
+		var ideErr error
 		ideConfig := client.WorkspaceConfig().IDE
 		switch ideConfig.Name {
 		case string(config.IDEVSCode):
-			return vscode.Open(
+			ideErr = vscode.Open(
 				ctx,
 				client.Workspace(),
 				result.SubstitutionContext.ContainerWorkspaceFolder,
@@ -203,7 +204,7 @@ func (cmd *UpCmd) Run(
 				log,
 			)
 		case string(config.IDEOpenVSCode):
-			return startVSCodeInBrowser(
+			ideErr = startVSCodeInBrowser(
 				ctx,
 				devPodConfig,
 				client,
@@ -213,25 +214,25 @@ func (cmd *UpCmd) Run(
 				log,
 			)
 		case string(config.IDEGoland):
-			return jetbrains.NewGolandServer(config2.GetRemoteUser(result), ideConfig.Options, log).OpenGateway(result.SubstitutionContext.ContainerWorkspaceFolder, client.Workspace())
+			ideErr = jetbrains.NewGolandServer(config2.GetRemoteUser(result), ideConfig.Options, log).OpenGateway(result.SubstitutionContext.ContainerWorkspaceFolder, client.Workspace())
 		case string(config.IDEPyCharm):
-			return jetbrains.NewPyCharmServer(config2.GetRemoteUser(result), ideConfig.Options, log).OpenGateway(result.SubstitutionContext.ContainerWorkspaceFolder, client.Workspace())
+			ideErr = jetbrains.NewPyCharmServer(config2.GetRemoteUser(result), ideConfig.Options, log).OpenGateway(result.SubstitutionContext.ContainerWorkspaceFolder, client.Workspace())
 		case string(config.IDEPhpStorm):
-			return jetbrains.NewPhpStorm(config2.GetRemoteUser(result), ideConfig.Options, log).OpenGateway(result.SubstitutionContext.ContainerWorkspaceFolder, client.Workspace())
+			ideErr = jetbrains.NewPhpStorm(config2.GetRemoteUser(result), ideConfig.Options, log).OpenGateway(result.SubstitutionContext.ContainerWorkspaceFolder, client.Workspace())
 		case string(config.IDEIntellij):
-			return jetbrains.NewIntellij(config2.GetRemoteUser(result), ideConfig.Options, log).OpenGateway(result.SubstitutionContext.ContainerWorkspaceFolder, client.Workspace())
+			ideErr = jetbrains.NewIntellij(config2.GetRemoteUser(result), ideConfig.Options, log).OpenGateway(result.SubstitutionContext.ContainerWorkspaceFolder, client.Workspace())
 		case string(config.IDECLion):
-			return jetbrains.NewCLionServer(config2.GetRemoteUser(result), ideConfig.Options, log).OpenGateway(result.SubstitutionContext.ContainerWorkspaceFolder, client.Workspace())
+			ideErr = jetbrains.NewCLionServer(config2.GetRemoteUser(result), ideConfig.Options, log).OpenGateway(result.SubstitutionContext.ContainerWorkspaceFolder, client.Workspace())
 		case string(config.IDERider):
-			return jetbrains.NewRiderServer(config2.GetRemoteUser(result), ideConfig.Options, log).OpenGateway(result.SubstitutionContext.ContainerWorkspaceFolder, client.Workspace())
+			ideErr = jetbrains.NewRiderServer(config2.GetRemoteUser(result), ideConfig.Options, log).OpenGateway(result.SubstitutionContext.ContainerWorkspaceFolder, client.Workspace())
 		case string(config.IDERubyMine):
-			return jetbrains.NewRubyMineServer(config2.GetRemoteUser(result), ideConfig.Options, log).OpenGateway(result.SubstitutionContext.ContainerWorkspaceFolder, client.Workspace())
+			ideErr = jetbrains.NewRubyMineServer(config2.GetRemoteUser(result), ideConfig.Options, log).OpenGateway(result.SubstitutionContext.ContainerWorkspaceFolder, client.Workspace())
 		case string(config.IDEWebStorm):
-			return jetbrains.NewWebStormServer(config2.GetRemoteUser(result), ideConfig.Options, log).OpenGateway(result.SubstitutionContext.ContainerWorkspaceFolder, client.Workspace())
+			ideErr = jetbrains.NewWebStormServer(config2.GetRemoteUser(result), ideConfig.Options, log).OpenGateway(result.SubstitutionContext.ContainerWorkspaceFolder, client.Workspace())
 		case string(config.IDEFleet):
-			return startFleet(ctx, client, log)
+			ideErr = startFleet(ctx, client, log)
 		case string(config.IDEJupyterNotebook):
-			return startJupyterNotebookInBrowser(
+			ideErr = startJupyterNotebookInBrowser(
 				ctx,
 				devPodConfig,
 				client,
@@ -239,6 +240,10 @@ func (cmd *UpCmd) Run(
 				ideConfig.Options,
 				log,
 			)
+		}
+
+		if ideErr != nil {
+			return ideErr
 		}
 	}
 
@@ -999,7 +1004,7 @@ test ! -S $agent_socket
 	killAgent := append(sshCmdArgs, "--command")
 	killAgent = append(
 		killAgent,
-		fmt.Sprintf("gpgconf --kill gpg-agent && rm -f %q", gpgExtraSocketPath),
+		fmt.Sprintf("gpgconf --kill gpg-agent && sudo rm -f %q", gpgExtraSocketPath),
 	)
 
 	log.Debugf("gpg: ensuring gpg-agent is not running in container")
