@@ -166,7 +166,10 @@ func (cmd *UpCmd) Run(
 
 	// configure container ssh
 	if cmd.ConfigureSSH {
-		err = configureSSH(client, cmd.SSHConfigPath, user, cmd.GPGAgentForwarding)
+		err = configureSSH(client, cmd.SSHConfigPath, user,
+			cmd.GPGAgentForwarding ||
+				devPodConfig.ContextOption(config.ContextOptionGPGAgentForwarding) == "true")
+
 		if err != nil {
 			return err
 		}
