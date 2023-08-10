@@ -5,6 +5,7 @@ import (
 	"fmt"
 
 	"github.com/loft-sh/devpod/pkg/devcontainer/config"
+	"github.com/loft-sh/devpod/pkg/driver/docker"
 	"github.com/loft-sh/devpod/pkg/image"
 	"github.com/pkg/errors"
 )
@@ -15,7 +16,9 @@ func (r *Runner) Build(ctx context.Context, options config.BuildOptions) (string
 		return "", err
 	}
 
-	if options.Repository == "" && len(config.GetDevPodCustomizations(substitutedConfig.Config).PrebuildRepository) == 0 {
+	prebuildRepo := getPrebuildRepository(substitutedConfig)
+
+	if !options.SkipPush && options.Repository == "" && prebuildRepo == "" {
 		return "", fmt.Errorf("repository needs to be specified")
 	}
 
@@ -29,8 +32,10 @@ func (r *Runner) Build(ctx context.Context, options config.BuildOptions) (string
 	var prebuildImage string
 	if options.Repository != "" {
 		prebuildImage = options.Repository + ":" + buildInfo.PrebuildHash
-	} else if config.GetDevPodCustomizations(substitutedConfig.Config).PrebuildRepository[0] != "" {
-		prebuildImage = config.GetDevPodCustomizations(substitutedConfig.Config).PrebuildRepository[0] + ":" + buildInfo.PrebuildHash
+	} else if prebuildRepo != "" {
+		prebuildImage = prebuildRepo + ":" + buildInfo.PrebuildHash
+	} else {
+		prebuildImage = docker.GetImageName(r.LocalWorkspaceFolder, buildInfo.PrebuildHash)
 	}
 
 	if buildInfo.ImageName == prebuildImage {
@@ -59,4 +64,12 @@ func (r *Runner) Build(ctx context.Context, options config.BuildOptions) (string
 	}
 
 	return prebuildImage, nil
+}
+
+func getPrebuildRepository(substitutedConfig *config.SubstitutedConfig) string {
+	if len(config.GetDevPodCustomizations(substitutedConfig.Config).PrebuildRepository) > 0 {
+		return config.GetDevPodCustomizations(substitutedConfig.Config).PrebuildRepository[0]
+	}
+
+	return ""
 }
