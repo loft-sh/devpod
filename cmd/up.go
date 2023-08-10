@@ -3,7 +3,6 @@ package cmd
 import (
 	"bytes"
 	"context"
-	"encoding/base64"
 	"fmt"
 	"io"
 	"net"
@@ -49,7 +48,7 @@ type UpCmd struct {
 	ProviderOptions []string
 
 	ConfigureSSH       bool
-	GpgAgentForwarding bool
+	GPGAgentForwarding bool
 	OpenIDE            bool
 
 	SSHConfigPath string
@@ -117,7 +116,7 @@ func NewUpCmd(flags *flags.GlobalFlags) *cobra.Command {
 	}
 
 	upCmd.Flags().BoolVar(&cmd.ConfigureSSH, "configure-ssh", true, "If true will configure the ssh config to include the DevPod workspace")
-	upCmd.Flags().BoolVar(&cmd.GpgAgentForwarding, "gpg-agent-forwarding", false, "If true forward the local gpg-agent to the DevPod workspace")
+	upCmd.Flags().BoolVar(&cmd.GPGAgentForwarding, "gpg-agent-forwarding", false, "If true forward the local gpg-agent to the DevPod workspace")
 	upCmd.Flags().StringVar(&cmd.SSHConfigPath, "ssh-config", "", "The path to the ssh config to modify, if empty will use ~/.ssh/config")
 	upCmd.Flags().StringVar(&cmd.DotfilesSource, "dotfiles", "", "The path or url to the dotfiles to use in the container")
 	upCmd.Flags().StringVar(&cmd.DotfilesScript, "dotfiles-script", "", "The path in dotfiles directory to use to install the dotfiles, if empty will try to guess")
@@ -165,19 +164,9 @@ func (cmd *UpCmd) Run(
 	// get user from result
 	user := config2.GetRemoteUser(result)
 
-	// setup GpgAgentForwarding in the container
-	if cmd.GpgAgentForwarding || devPodConfig.ContextOption(config.ContextOptionGPGAgentForwarding) == "true" {
-		log.Infof("GPG Agent forwarding specified")
-
-		err = setupGPGAgent(client, devPodConfig, log)
-		if err != nil {
-			return err
-		}
-	}
-
 	// configure container ssh
 	if cmd.ConfigureSSH {
-		err = configureSSH(client, cmd.SSHConfigPath, user)
+		err = configureSSH(client, cmd.SSHConfigPath, user, cmd.GPGAgentForwarding)
 		if err != nil {
 			return err
 		}
@@ -193,11 +182,10 @@ func (cmd *UpCmd) Run(
 
 	// open ide
 	if cmd.OpenIDE {
-		var ideErr error
 		ideConfig := client.WorkspaceConfig().IDE
 		switch ideConfig.Name {
 		case string(config.IDEVSCode):
-			ideErr = vscode.Open(
+			return vscode.Open(
 				ctx,
 				client.Workspace(),
 				result.SubstitutionContext.ContainerWorkspaceFolder,
@@ -205,7 +193,7 @@ func (cmd *UpCmd) Run(
 				log,
 			)
 		case string(config.IDEOpenVSCode):
-			ideErr = startVSCodeInBrowser(
+			return startVSCodeInBrowser(
 				ctx,
 				devPodConfig,
 				client,
@@ -215,25 +203,25 @@ func (cmd *UpCmd) Run(
 				log,
 			)
 		case string(config.IDEGoland):
-			ideErr = jetbrains.NewGolandServer(config2.GetRemoteUser(result), ideConfig.Options, log).OpenGateway(result.SubstitutionContext.ContainerWorkspaceFolder, client.Workspace())
+			return jetbrains.NewGolandServer(config2.GetRemoteUser(result), ideConfig.Options, log).OpenGateway(result.SubstitutionContext.ContainerWorkspaceFolder, client.Workspace())
 		case string(config.IDEPyCharm):
-			ideErr = jetbrains.NewPyCharmServer(config2.GetRemoteUser(result), ideConfig.Options, log).OpenGateway(result.SubstitutionContext.ContainerWorkspaceFolder, client.Workspace())
+			return jetbrains.NewPyCharmServer(config2.GetRemoteUser(result), ideConfig.Options, log).OpenGateway(result.SubstitutionContext.ContainerWorkspaceFolder, client.Workspace())
 		case string(config.IDEPhpStorm):
-			ideErr = jetbrains.NewPhpStorm(config2.GetRemoteUser(result), ideConfig.Options, log).OpenGateway(result.SubstitutionContext.ContainerWorkspaceFolder, client.Workspace())
+			return jetbrains.NewPhpStorm(config2.GetRemoteUser(result), ideConfig.Options, log).OpenGateway(result.SubstitutionContext.ContainerWorkspaceFolder, client.Workspace())
 		case string(config.IDEIntellij):
-			ideErr = jetbrains.NewIntellij(config2.GetRemoteUser(result), ideConfig.Options, log).OpenGateway(result.SubstitutionContext.ContainerWorkspaceFolder, client.Workspace())
+			return jetbrains.NewIntellij(config2.GetRemoteUser(result), ideConfig.Options, log).OpenGateway(result.SubstitutionContext.ContainerWorkspaceFolder, client.Workspace())
 		case string(config.IDECLion):
-			ideErr = jetbrains.NewCLionServer(config2.GetRemoteUser(result), ideConfig.Options, log).OpenGateway(result.SubstitutionContext.ContainerWorkspaceFolder, client.Workspace())
+			return jetbrains.NewCLionServer(config2.GetRemoteUser(result), ideConfig.Options, log).OpenGateway(result.SubstitutionContext.ContainerWorkspaceFolder, client.Workspace())
 		case string(config.IDERider):
-			ideErr = jetbrains.NewRiderServer(config2.GetRemoteUser(result), ideConfig.Options, log).OpenGateway(result.SubstitutionContext.ContainerWorkspaceFolder, client.Workspace())
+			return jetbrains.NewRiderServer(config2.GetRemoteUser(result), ideConfig.Options, log).OpenGateway(result.SubstitutionContext.ContainerWorkspaceFolder, client.Workspace())
 		case string(config.IDERubyMine):
-			ideErr = jetbrains.NewRubyMineServer(config2.GetRemoteUser(result), ideConfig.Options, log).OpenGateway(result.SubstitutionContext.ContainerWorkspaceFolder, client.Workspace())
+			return jetbrains.NewRubyMineServer(config2.GetRemoteUser(result), ideConfig.Options, log).OpenGateway(result.SubstitutionContext.ContainerWorkspaceFolder, client.Workspace())
 		case string(config.IDEWebStorm):
-			ideErr = jetbrains.NewWebStormServer(config2.GetRemoteUser(result), ideConfig.Options, log).OpenGateway(result.SubstitutionContext.ContainerWorkspaceFolder, client.Workspace())
+			return jetbrains.NewWebStormServer(config2.GetRemoteUser(result), ideConfig.Options, log).OpenGateway(result.SubstitutionContext.ContainerWorkspaceFolder, client.Workspace())
 		case string(config.IDEFleet):
-			ideErr = startFleet(ctx, client, log)
+			return startFleet(ctx, client, log)
 		case string(config.IDEJupyterNotebook):
-			ideErr = startJupyterNotebookInBrowser(
+			return startJupyterNotebookInBrowser(
 				ctx,
 				devPodConfig,
 				client,
@@ -242,19 +230,6 @@ func (cmd *UpCmd) Run(
 				log,
 			)
 		}
-
-		if ideErr != nil {
-			return ideErr
-		}
-	}
-
-	// if GpgAgentForwarding we need to keep running in order to keep the reverse tunnel
-	// functioning, or gpg-agent will drop
-	if cmd.GpgAgentForwarding || devPodConfig.ContextOption(config.ContextOptionGPGAgentForwarding) == "true" {
-		log.Infof(
-			"GPG Agent forwarding specified, keep this process running to have working gpg-agent forwarding",
-		)
-		select {}
 	}
 
 	return nil
@@ -705,12 +680,13 @@ func startBrowserTunnel(
 	return nil
 }
 
-func configureSSH(client client2.BaseWorkspaceClient, configPath, user string) error {
+func configureSSH(client client2.BaseWorkspaceClient, configPath, user string, gpgagent bool) error {
 	err := devssh.ConfigureSSHConfig(
 		configPath,
 		client.Context(),
 		client.Workspace(),
 		user,
+		gpgagent,
 		log.Default,
 	)
 	if err != nil {
@@ -850,106 +826,6 @@ func setupDotfiles(
 	}
 
 	log.Infof("Done setting up dotfiles into the devcontainer")
-
-	return nil
-}
-
-// setupGPGAgent will forward a local gpg-agent into the remote container
-// this works by using cmd/agent/workspace/setup_gpg
-func setupGPGAgent(
-	client client2.BaseWorkspaceClient,
-	devPodConfig *config.Config,
-	log log.Logger,
-) error {
-	execPath, err := os.Executable()
-	if err != nil {
-		return err
-	}
-
-	writer := log.Writer(logrus.InfoLevel, false)
-
-	log.Debugf("gpg: exporting gpg public key from host")
-
-	// Read the user's public keys and ownertrust from GPG.
-	// These commands are executed LOCALLY, the output will be imported by the remote gpg
-	pubKeyExport, err := exec.Command("gpg", "--armor", "--export").Output()
-	if err != nil {
-		return fmt.Errorf("export local public keys from GPG: %w", err)
-	}
-
-	log.Debugf("gpg: exporting gpg owner trust from host")
-
-	ownerTrustExport, err := exec.Command("gpg", "--export-ownertrust").Output()
-	if err != nil {
-		return fmt.Errorf("export local ownertrust from GPG: %w", err)
-	}
-
-	log.Debugf("gpg: detecting gpg-agent socket path on host")
-	// Detect local agent extra socket, this will be forwarded to the remote and
-	// symlinked in multiple paths
-	gpgExtraSocketBytes, err := exec.Command("gpgconf", []string{"--list-dir", "agent-extra-socket"}...).
-		Output()
-	if err != nil {
-		return err
-	}
-
-	gpgExtraSocketPath := strings.TrimSpace(string(gpgExtraSocketBytes))
-	log.Debugf("gpg: detected gpg-agent socket path %s", gpgExtraSocketPath)
-
-	pubKeyArgument := base64.StdEncoding.EncodeToString(pubKeyExport)
-	ownerTrustArgument := base64.StdEncoding.EncodeToString(ownerTrustExport)
-
-	// Now we forward the agent socket to the remote, and setup remote gpg to use it
-	// fix eventual permissions and so on
-	forwardAgent := []string{
-		"agent",
-		"workspace",
-		"setup-gpg",
-		"--publickey",
-		pubKeyArgument,
-		"--ownertrust",
-		ownerTrustArgument,
-		"--socketpath", gpgExtraSocketPath,
-	}
-
-	if log.GetLevel() == logrus.DebugLevel {
-		forwardAgent = append(forwardAgent, "--debug")
-	}
-
-	sshCmdArgs := []string{
-		"ssh",
-		"--agent-forwarding=true",
-		"--start-services=false",
-		"--context",
-		client.Context(),
-		client.Workspace(),
-		"--log-output=raw",
-		"--reverse-forward-ports",
-		gpgExtraSocketPath,
-		"--command",
-		agent.ContainerDevPodHelperLocation + " " + strings.Join(forwardAgent, " "),
-	}
-
-	if log.GetLevel() == logrus.DebugLevel {
-		sshCmdArgs = append(sshCmdArgs, "--debug")
-	}
-
-	forwardAgentCmd := exec.Command(execPath, sshCmdArgs...)
-	forwardAgentCmd.Stdout = writer
-	forwardAgentCmd.Stderr = writer
-
-	log.Debugf(
-		"gpg: start reverse forward of gpg-agent socket %s, keeping connection open",
-		gpgExtraSocketPath,
-	)
-
-	// We use start to keep this connection alive in background (hence the use of sleep infinity)
-	err = forwardAgentCmd.Start()
-	if err != nil {
-		return err
-	}
-
-	log.Infof("gpg-agent forwarding done")
 
 	return nil
 }

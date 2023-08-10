@@ -2,10 +2,13 @@ package cmd
 
 import (
 	"context"
+	"encoding/base64"
 	"fmt"
 	"io"
 	"os"
+	"os/exec"
 	"path/filepath"
+	"strings"
 	"sync"
 	"time"
 
@@ -33,9 +36,10 @@ type SSHCmd struct {
 	ForwardPorts        []string
 	ReverseForwardPorts []string
 
-	Stdio           bool
-	JumpContainer   bool
-	AgentForwarding bool
+	Stdio              bool
+	JumpContainer      bool
+	AgentForwarding    bool
+	GPGAgentForwarding bool
 
 	StartServices bool
 
@@ -76,6 +80,7 @@ func NewSSHCmd(flags *flags.GlobalFlags) *cobra.Command {
 	sshCmd.Flags().StringVar(&cmd.User, "user", "", "The user of the workspace to use")
 	sshCmd.Flags().BoolVar(&cmd.Proxy, "proxy", false, "If true will act as intermediate proxy for a proxy provider")
 	sshCmd.Flags().BoolVar(&cmd.AgentForwarding, "agent-forwarding", true, "If true forward the local ssh keys to the remote machine")
+	sshCmd.Flags().BoolVar(&cmd.GPGAgentForwarding, "gpg-agent-forwarding", false, "If true forward the local gpg-agent to the remote machine")
 	sshCmd.Flags().BoolVar(&cmd.Stdio, "stdio", false, "If true will tunnel connection through stdout and stdin")
 	sshCmd.Flags().BoolVar(&cmd.StartServices, "start-services", true, "If false will not start any port-forwarding or git / docker credentials helper")
 	return sshCmd
@@ -99,6 +104,11 @@ func (cmd *SSHCmd) Run(ctx context.Context, devPodConfig *config.Config, client 
 		if err != nil {
 			return err
 		}
+	}
+
+	// set default context if needed
+	if cmd.Context == "" {
+		cmd.Context = devPodConfig.DefaultContext
 	}
 
 	// check if regular workspace client
@@ -342,6 +352,29 @@ func (cmd *SSHCmd) startTunnel(ctx context.Context, devPodConfig *config.Config,
 		go cmd.startServices(ctx, devPodConfig, containerClient, ideName, log)
 	}
 
+	if cmd.GPGAgentForwarding ||
+		devPodConfig.ContextOption(config.ContextOptionGPGAgentForwarding) == "true" {
+		_, err := os.Stat(filepath.Join(os.TempDir(), cmd.Context, cmd.User, "gpg-forward.lock"))
+		if err == nil {
+			log.Debugf("gpg: exporting already running, skipping")
+		} else {
+			err := cmd.setupGPGAgent(ctx, devPodConfig, containerClient, log)
+			if err != nil {
+				return err
+			}
+
+			err = os.MkdirAll(filepath.Join(os.TempDir(), cmd.Context, cmd.User), 0o755)
+			if err != nil {
+				return err
+			}
+			_, err = os.Create(filepath.Join(os.TempDir(), cmd.Context, cmd.User, "gpg-forward.lock"))
+			if err != nil {
+				return err
+			}
+			defer os.Remove(filepath.Join(os.TempDir(), cmd.Context, cmd.User, "gpg-forward.lock"))
+		}
+	}
+
 	// start ssh
 	writer := log.ErrorStreamOnly().Writer(logrus.InfoLevel, false)
 	defer writer.Close()
@@ -395,4 +428,90 @@ func (cmd *SSHCmd) startServices(
 			log.Debugf("Error running credential server: %v", err)
 		}
 	}
+}
+
+// setupGPGAgent will forward a local gpg-agent into the remote container
+// this works by using cmd/agent/workspace/setup_gpg
+func (cmd *SSHCmd) setupGPGAgent(
+	ctx context.Context,
+	devPodConfig *config.Config,
+	containerClient *ssh.Client,
+	log log.Logger,
+) error {
+	writer := log.ErrorStreamOnly().Writer(logrus.InfoLevel, false)
+	defer writer.Close()
+
+	log.Debugf("gpg: exporting gpg public key from host")
+
+	// Read the user's public keys and ownertrust from GPG.
+	// These commands are executed LOCALLY, the output will be imported by the remote gpg
+	pubKeyExport, err := exec.Command("gpg", "--armor", "--export").Output()
+	if err != nil {
+		return fmt.Errorf("export local public keys from GPG: %w", err)
+	}
+
+	log.Debugf("gpg: exporting gpg owner trust from host")
+
+	ownerTrustExport, err := exec.Command("gpg", "--export-ownertrust").Output()
+	if err != nil {
+		return fmt.Errorf("export local ownertrust from GPG: %w", err)
+	}
+
+	log.Debugf("gpg: detecting gpg-agent socket path on host")
+	// Detect local agent extra socket, this will be forwarded to the remote and
+	// symlinked in multiple paths
+	gpgExtraSocketBytes, err := exec.Command("gpgconf", []string{"--list-dir", "agent-extra-socket"}...).
+		Output()
+	if err != nil {
+		return err
+	}
+
+	gpgExtraSocketPath := strings.TrimSpace(string(gpgExtraSocketBytes))
+	log.Debugf("gpg: detected gpg-agent socket path %s", gpgExtraSocketPath)
+
+	log.Debugf("ssh: starting reverse forwarding socket %s", gpgExtraSocketPath)
+	cmd.ReverseForwardPorts = append(cmd.ReverseForwardPorts, gpgExtraSocketPath)
+
+	go func() {
+		err := cmd.reverseForwardPorts(ctx, containerClient, log)
+		if err != nil {
+			log.Fatal(err)
+		}
+	}()
+
+	pubKeyArgument := base64.StdEncoding.EncodeToString(pubKeyExport)
+	ownerTrustArgument := base64.StdEncoding.EncodeToString(ownerTrustExport)
+
+	// Now we forward the agent socket to the remote, and setup remote gpg to use it
+	// fix eventual permissions and so on
+	forwardAgent := []string{
+		agent.ContainerDevPodHelperLocation,
+		"agent",
+		"workspace",
+		"setup-gpg",
+		"--publickey",
+		pubKeyArgument,
+		"--ownertrust",
+		ownerTrustArgument,
+		"--socketpath",
+		gpgExtraSocketPath,
+	}
+
+	if log.GetLevel() == logrus.DebugLevel {
+		forwardAgent = append(forwardAgent, "--debug")
+	}
+
+	log.Debugf(
+		"gpg: start reverse forward of gpg-agent socket %s, keeping connection open",
+		gpgExtraSocketPath,
+	)
+
+	command := strings.Join(forwardAgent, " ")
+
+	if cmd.User != "" && cmd.User != "root" {
+		command = fmt.Sprintf("su -c \"%s\" '%s'", command, cmd.User)
+	}
+
+	// We use start to keep this connection alive in background (hence the use of sleep infinity)
+	return devssh.Run(ctx, containerClient, command, nil, writer, writer)
 }

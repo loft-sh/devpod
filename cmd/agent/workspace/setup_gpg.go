@@ -8,6 +8,7 @@ import (
 	"path/filepath"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/loft-sh/devpod/cmd/flags"
 	"github.com/loft-sh/log"
@@ -184,5 +185,7 @@ func (cmd *SetupGPGCmd) Run(ctx context.Context) error {
 		}
 	}
 
-	select {}
+	time.Sleep(time.Second)
+
+	return nil
 }

@@ -21,11 +21,11 @@ var (
 	MarkerEndPrefix   = "# DevPod End "
 )
 
-func ConfigureSSHConfig(configPath, context, workspace, user string, log log.Logger) error {
-	return configureSSHConfigSameFile(configPath, context, workspace, user, "", log)
+func ConfigureSSHConfig(configPath, context, workspace, user string, gpgagent bool, log log.Logger) error {
+	return configureSSHConfigSameFile(configPath, context, workspace, user, "", gpgagent, log)
 }
 
-func configureSSHConfigSameFile(configPath, context, workspace, user, command string, log log.Logger) error {
+func configureSSHConfigSameFile(configPath, context, workspace, user, command string, gpgagent bool, log log.Logger) error {
 	configLock.Lock()
 	defer configLock.Unlock()
 
@@ -38,7 +38,7 @@ func configureSSHConfigSameFile(configPath, context, workspace, user, command st
 		}
 	}
 
-	newFile, err := addHost(sshConfigPath, workspace+"."+"devpod", user, context, workspace, command)
+	newFile, err := addHost(sshConfigPath, workspace+"."+"devpod", user, context, workspace, command, gpgagent)
 	if err != nil {
 		return errors.Wrap(err, "parse ssh config")
 	}
@@ -52,7 +52,7 @@ type DevPodSSHEntry struct {
 	Workspace string
 }
 
-func addHost(path, host, user, context, workspace, command string) (string, error) {
+func addHost(path, host, user, context, workspace, command string, gpgagent bool) (string, error) {
 	newConfig, err := removeFromConfig(path, host)
 	if err != nil {
 		return "", err
@@ -76,6 +76,8 @@ func addHost(path, host, user, context, workspace, command string) (string, erro
 	newLines = append(newLines, "  UserKnownHostsFile /dev/null")
 	if command != "" {
 		newLines = append(newLines, fmt.Sprintf("  ProxyCommand %s", command))
+	} else if gpgagent {
+		newLines = append(newLines, fmt.Sprintf("  ProxyCommand %s ssh --gpg-agent-forwarding --stdio --context %s --user %s %s", execPath, context, user, workspace))
 	} else {
 		newLines = append(newLines, fmt.Sprintf("  ProxyCommand %s ssh --stdio --context %s --user %s %s", execPath, context, user, workspace))
 	}
