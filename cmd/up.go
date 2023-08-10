@@ -3,6 +3,7 @@ package cmd
 import (
 	"bytes"
 	"context"
+	"encoding/base64"
 	"fmt"
 	"io"
 	"net"
@@ -854,17 +855,7 @@ func setupDotfiles(
 }
 
 // setupGPGAgent will forward a local gpg-agent into the remote container
-// this works by
-//
-// - stopping remote gpg-agent and removing the sockets
-// - exporting local public keys and owner trust
-// - importing those into the container
-// - ensuring the gpg-agent is stopped in the container
-// - starting a reverse-tunnel of the local unix socket to remote
-// - ensuring paths and permissions are correctly set in the remote
-//
-// this procedure uses some shell commands, in order to batch commands together
-// and speed up the process. this is ok as remotes will always be linux workspaces
+// this works by using cmd/agent/workspace/setup_gpg
 func setupGPGAgent(
 	client client2.BaseWorkspaceClient,
 	devPodConfig *config.Config,
@@ -876,55 +867,6 @@ func setupGPGAgent(
 	}
 
 	writer := log.Writer(logrus.InfoLevel, false)
-
-	sshCmdArgs := []string{
-		"ssh",
-		"--agent-forwarding=true",
-		"--start-services=false",
-		"--context",
-		client.Context(),
-		client.Workspace(),
-		"--log-output=raw",
-	}
-
-	if log.GetLevel() == logrus.DebugLevel {
-		sshCmdArgs = append(sshCmdArgs, "--debug")
-	}
-
-	log.Debugf("Initializing gpg-agent forwarding")
-	// Check if the agent is running in the workspace already.
-	//
-	// this cose is inspired by https://github.com/coder/coder/blob/main/cli/ssh.go
-	killRemoteAgent := append(sshCmdArgs, "--command")
-	killRemoteAgent = append(killRemoteAgent, `sh -c '
-set -e
-set -x
-agent_socket=$(gpgconf --list-dir agent-socket)
-echo $agent_socket
-if [ -S $agent_socket ]; then
-  echo agent socket exists, attempting to kill it >&2
-  gpgconf --kill gpg-agent
-  rm -f $agent_socket
-  sleep 1
-fi
-
-test ! -S $agent_socket
-'`)
-
-	log.Debugf("gpg: killing gpg-agent in the container")
-	agentSocket, err := exec.Command(execPath, killRemoteAgent...).Output()
-	if err != nil {
-		return fmt.Errorf(
-			"check if agent socket is running (check if %q exists): %w",
-			agentSocket,
-			err,
-		)
-	}
-	if string(agentSocket) == "" {
-		return fmt.Errorf(
-			"agent socket path is empty, check the output of `gpgconf --list-dir agent-socket`",
-		)
-	}
 
 	log.Debugf("gpg: exporting gpg public key from host")
 
@@ -942,50 +884,6 @@ test ! -S $agent_socket
 		return fmt.Errorf("export local ownertrust from GPG: %w", err)
 	}
 
-	// Import public keys from LOCAL into REMOTE
-	gpgImport := append(sshCmdArgs, "--command")
-	gpgImport = append(gpgImport, "gpg --import")
-	gpgImportCmd := exec.Command(execPath, gpgImport...)
-
-	stdin, err := gpgImportCmd.StdinPipe()
-	if err != nil {
-		return err
-	}
-
-	go func() {
-		defer stdin.Close()
-		_, _ = stdin.Write(pubKeyExport)
-	}()
-
-	log.Debugf("gpg: importing gpg public key in container")
-
-	err = gpgImportCmd.Run()
-	if err != nil {
-		return err
-	}
-
-	// Import owner trust from LOCAL into REMOTE
-	gpgTrustImport := append(sshCmdArgs, "--command")
-	gpgTrustImport = append(gpgTrustImport, "gpg --import-ownertrust")
-	gpgTrustImportCmd := exec.Command(execPath, gpgTrustImport...)
-
-	stdin, err = gpgTrustImportCmd.StdinPipe()
-	if err != nil {
-		return err
-	}
-
-	go func() {
-		defer stdin.Close()
-		_, _ = stdin.Write(ownerTrustExport)
-	}()
-
-	log.Debugf("gpg: importing gpg owner trust in container")
-
-	err = gpgTrustImportCmd.Run()
-	if err != nil {
-		return err
-	}
-
 	log.Debugf("gpg: detecting gpg-agent socket path on host")
 	// Detect local agent extra socket, this will be forwarded to the remote and
 	// symlinked in multiple paths
@@ -996,31 +894,47 @@ test ! -S $agent_socket
 	}
 
 	gpgExtraSocketPath := strings.TrimSpace(string(gpgExtraSocketBytes))
-
 	log.Debugf("gpg: detected gpg-agent socket path %s", gpgExtraSocketPath)
 
-	// Kill the agent in the workspace if it was started by one of the above
-	// commands.
-	killAgent := append(sshCmdArgs, "--command")
-	killAgent = append(
-		killAgent,
-		fmt.Sprintf("gpgconf --kill gpg-agent && sudo rm -f %q", gpgExtraSocketPath),
-	)
-
-	log.Debugf("gpg: ensuring gpg-agent is not running in container")
-
-	err = exec.Command(execPath, killAgent...).Run()
-	if err != nil {
-		return err
-	}
+	pubKeyArgument := base64.StdEncoding.EncodeToString(pubKeyExport)
+	ownerTrustArgument := base64.StdEncoding.EncodeToString(ownerTrustExport)
 
 	// Now we forward the agent socket to the remote, and setup remote gpg to use it
 	// fix eventual permissions and so on
-	forwardAgent := append(sshCmdArgs, "--reverse-forward-ports")
-	forwardAgent = append(forwardAgent, gpgExtraSocketPath)
+	forwardAgent := []string{
+		"agent",
+		"workspace",
+		"setup-gpg",
+		"--publickey",
+		pubKeyArgument,
+		"--ownertrust",
+		ownerTrustArgument,
+		"--socketpath", gpgExtraSocketPath,
+	}
 
-	forwardAgentCmd := exec.Command(execPath, forwardAgent...)
+	if log.GetLevel() == logrus.DebugLevel {
+		forwardAgent = append(forwardAgent, "--debug")
+	}
 
+	sshCmdArgs := []string{
+		"ssh",
+		"--agent-forwarding=true",
+		"--start-services=false",
+		"--context",
+		client.Context(),
+		client.Workspace(),
+		"--log-output=raw",
+		"--reverse-forward-ports",
+		gpgExtraSocketPath,
+		"--command",
+		agent.ContainerDevPodHelperLocation + " " + strings.Join(forwardAgent, " "),
+	}
+
+	if log.GetLevel() == logrus.DebugLevel {
+		sshCmdArgs = append(sshCmdArgs, "--debug")
+	}
+
+	forwardAgentCmd := exec.Command(execPath, sshCmdArgs...)
 	forwardAgentCmd.Stdout = writer
 	forwardAgentCmd.Stderr = writer
 
@@ -1031,38 +945,6 @@ test ! -S $agent_socket
 
 	// We use start to keep this connection alive in background (hence the use of sleep infinity)
 	err = forwardAgentCmd.Start()
-	if err != nil {
-		return err
-	}
-
-	log.Debugf("gpg: fixing agent paths and permissions")
-
-	// Permissions may not be correctly set, or paths can differ between systems
-	// so here we ensure the default user is able to read the sockets and link
-	// the socket to canonical places
-	fixAgent := append(sshCmdArgs, "--command")
-	fixAgent = append(fixAgent, `sh -c '
-set -x
-
-sleep 5
-
-sudo mkdir -p /run/user/$(id -ru)/gnupg
-sudo chmod 0700 /run/user/$(id -ru)/gnupg
-sudo chown -R  $(id -ru):$(id -rg) /run/user
-sudo chown $(id -ru):$(id -rg) `+gpgExtraSocketPath+`
-
-mkdir -p $HOME/.gnupg
-chmod 0700 $HOME/.gnupg
-
-sudo ln -sf `+gpgExtraSocketPath+` /run/user/$(id -ru)/gnupg/S.gpg-agent
-sudo ln -sf `+gpgExtraSocketPath+` $HOME/.gnupg/S.gpg-agent
-
-if ! grep -q "use-agent" "$HOME/.gnupg/gpg.conf"; then
-	echo "use-agent" >> "$HOME/.gnupg/gpg.conf"
-fi
-'`)
-
-	err = exec.Command(execPath, fixAgent...).Run()
 	if err != nil {
 		return err
 	}
