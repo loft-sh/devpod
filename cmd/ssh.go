@@ -319,12 +319,22 @@ func (cmd *SSHCmd) forwardPorts(
 func (cmd *SSHCmd) startTunnel(ctx context.Context, devPodConfig *config.Config, containerClient *ssh.Client, workspaceName string, ideName string, log log.Logger) error {
 	// check if we should forward ports
 	if len(cmd.ForwardPorts) > 0 {
-		return cmd.forwardPorts(ctx, containerClient, log)
+		go func() {
+			err := cmd.forwardPorts(ctx, containerClient, log)
+			if err != nil {
+				log.Fatal(err)
+			}
+		}()
 	}
 
 	// check if we should reverse forward ports
 	if len(cmd.ReverseForwardPorts) > 0 {
-		return cmd.reverseForwardPorts(ctx, containerClient, log)
+		go func() {
+			err := cmd.reverseForwardPorts(ctx, containerClient, log)
+			if err != nil {
+				log.Fatal(err)
+			}
+		}()
 	}
 
 	// start port-forwarding etc.
