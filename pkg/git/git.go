@@ -14,7 +14,7 @@ import (
 const CommitDelimiter string = "@sha256:"
 
 var (
-	branchRegEx = regexp.MustCompile(`^([^@]*(?:git@)?[^@/]+/[^@]+)@([a-zA-Z0-9\./-]+)$`)
+	branchRegEx = regexp.MustCompile(`^([^@]*(?:git@)?[^@/]+/[^@]+)@([a-zA-Z0-9\./\-\_]+)$`)
 	commitRegEx = regexp.MustCompile(`^([^@]*(?:git@)?[^@/]+/[^@]+)` + regexp.QuoteMeta(CommitDelimiter) + `([a-zA-Z0-9]+)$`)
 )
 
