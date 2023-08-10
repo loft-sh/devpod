@@ -2,7 +2,7 @@ package config
 
 const (
 	ContextOptionSSHAddPrivateKeys          = "SSH_ADD_PRIVATE_KEYS"
-	ContextOptionSSHAgentForwarding         = "SSH_AGENT_FORWARDING"
+	ContextOptionGPGAgentForwarding         = "GPG_AGENT_FORWARDING"
 	ContextOptionSSHInjectDockerCredentials = "SSH_INJECT_DOCKER_CREDENTIALS"
 	ContextOptionSSHInjectGitCredentials    = "SSH_INJECT_GIT_CREDENTIALS"
 	ContextOptionExitAfterTimeout           = "EXIT_AFTER_TIMEOUT"
@@ -10,6 +10,7 @@ const (
 	ContextOptionAgentURL                   = "AGENT_URL"
 	ContextOptionDotfilesURL                = "DOTFILES_URL"
 	ContextOptionDotfilesScript             = "DOTFILES_SCRIPT"
+	ContextOptionSSHAgentForwarding         = "SSH_AGENT_FORWARDING"
 )
 
 var ContextOptions = []ContextOption{
@@ -26,9 +27,9 @@ var ContextOptions = []ContextOption{
 		Enum:        []string{"true", "false"},
 	},
 	{
-		Name:        ContextOptionSSHAgentForwarding,
-		Description: "Specifies if DevPod should do agent forwarding by default for ssh",
-		Default:     "true",
+		Name:        ContextOptionGPGAgentForwarding,
+		Description: "Specifies if DevPod should do gpg-agent forwarding by default for ssh",
+		Default:     "false",
 		Enum:        []string{"true", "false"},
 	},
 	{
@@ -40,6 +41,12 @@ var ContextOptions = []ContextOption{
 	{
 		Name:        ContextOptionSSHInjectGitCredentials,
 		Description: "Specifies if DevPod should inject git credentials into the workspace",
+		Default:     "true",
+		Enum:        []string{"true", "false"},
+	},
+	{
+		Name:        ContextOptionSSHAgentForwarding,
+		Description: "Specifies if DevPod should do agent forwarding by default into the workspace",
 		Default:     "true",
 		Enum:        []string{"true", "false"},
 	},

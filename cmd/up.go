@@ -165,7 +165,7 @@ func (cmd *UpCmd) Run(
 	user := config2.GetRemoteUser(result)
 
 	// setup GpgAgentForwarding in the container
-	if cmd.GpgAgentForwarding {
+	if cmd.GpgAgentForwarding || devPodConfig.ContextOption(config.ContextOptionGPGAgentForwarding) == "true" {
 		log.Infof("GPG Agent forwarding specified")
 
 		err = setupGPGAgent(client, devPodConfig, log)
@@ -244,7 +244,7 @@ func (cmd *UpCmd) Run(
 
 	// if GpgAgentForwarding we need to keep running in order to keep the reverse tunnel
 	// functioning, or gpg-agent will drop
-	if cmd.GpgAgentForwarding {
+	if cmd.GpgAgentForwarding || devPodConfig.ContextOption(config.ContextOptionGPGAgentForwarding) == "true" {
 		log.Infof(
 			"GPG Agent forwarding specified, keep this process running to have working gpg-agent forwarding",
 		)
