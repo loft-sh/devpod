@@ -185,5 +185,4 @@ func (cmd *SetupGPGCmd) Run(ctx context.Context) error {
 	}
 
 	select {}
-	return nil
 }
