@@ -53,6 +53,14 @@ func NewServer(addr string, hostKey []byte, keys []ssh.PublicKey, log log.Logger
 			},
 			ReverseUnixForwardingCallback: func(ctx ssh.Context, socketPath string) bool {
 				log.Debugf("attempt to bind socket %s", socketPath)
+
+				_, err := os.Stat(socketPath)
+				if err == nil {
+					log.Debugf("%s already exists, removing", socketPath)
+
+					_ = os.Remove(socketPath)
+				}
+
 				return true
 			},
 			ChannelHandlers: map[string]ssh.ChannelHandler{
