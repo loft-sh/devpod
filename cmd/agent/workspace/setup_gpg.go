@@ -110,6 +110,11 @@ func (cmd *SetupGPGCmd) Run(ctx context.Context) error {
 		return err
 	}
 
+	err = exec.Command("sudo", "mkdir", "-p", "/run/user", filepath.Dir(cmd.SocketPath)).Run()
+	if err != nil {
+		return err
+	}
+
 	logger.Debugf("Fix paths permissions")
 	out, err := exec.Command("sudo",
 		"chown",
@@ -140,17 +145,22 @@ func (cmd *SetupGPGCmd) Run(ctx context.Context) error {
 		return err
 	}
 
+	err = exec.Command("sudo", "ln", cmd.SocketPath, "/tmp/S.gpg-agent").Run()
+	if err != nil {
+		return err
+	}
+
 	symlinks := []string{
 		filepath.Join(os.Getenv("HOME"), ".gnupg", "S.gpg-agent"),
 		"/run/user/" + strconv.Itoa(os.Getuid()) + "/gnupg/S.gpg-agent",
-		strings.ReplaceAll(cmd.SocketPath, ".extra", ""),
 	}
 
 	for _, link := range symlinks {
 		logger.Debugf("Linking extra agent to %s", link)
 		_ = os.Remove(link)
+		_ = os.MkdirAll(filepath.Dir(link), 0755)
 
-		err = os.Symlink(cmd.SocketPath, link)
+		err = os.Symlink("/tmp/S.gpg-agent", link)
 		if err != nil {
 			return err
 		}
