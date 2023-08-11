@@ -107,7 +107,7 @@ export function App() {
                   })}
               rightIcon={<ExternalLinkIcon />}
               onClick={handleAnnouncementClicked}>
-              Try Loft DevPod Engine
+              Try Loft DevPod Pro
             </Button>
           </Box>
         )}

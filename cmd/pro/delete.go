@@ -1,4 +1,4 @@
-package engine
+package pro
 
 import (
 	"context"
@@ -28,19 +28,19 @@ func NewDeleteCmd(flags *flags.GlobalFlags) *cobra.Command {
 	}
 	deleteCmd := &cobra.Command{
 		Use:   "delete",
-		Short: "Delete or logout from a Loft DevPod engine",
+		Short: "Delete or logout from a Loft DevPod Pro",
 		RunE: func(_ *cobra.Command, args []string) error {
 			return cmd.Run(context.Background(), args)
 		},
 	}
 
-	deleteCmd.Flags().BoolVar(&cmd.IgnoreNotFound, "ignore-not-found", false, "Treat \"engine not found\" as a successful delete")
+	deleteCmd.Flags().BoolVar(&cmd.IgnoreNotFound, "ignore-not-found", false, "Treat \"pro instance not found\" as a successful delete")
 	return deleteCmd
 }
 
 func (cmd *DeleteCmd) Run(ctx context.Context, args []string) error {
 	if len(args) != 1 {
-		return fmt.Errorf("please specify an engine to delete")
+		return fmt.Errorf("please specify an pro instance to delete")
 	}
 
 	devPodConfig, err := config.LoadConfig(cmd.Context, cmd.Provider)
@@ -48,35 +48,34 @@ func (cmd *DeleteCmd) Run(ctx context.Context, args []string) error {
 		return err
 	}
 
-	// load engine config
-	engineName := args[0]
-	engineConfig, err := provider2.LoadEngineConfig(devPodConfig.DefaultContext, engineName)
+	// load pro instance config
+	proInstanceName := args[0]
+	proInstanceConfig, err := provider2.LoadProInstanceConfig(devPodConfig.DefaultContext, proInstanceName)
 	if err != nil {
 		if os.IsNotExist(err) && cmd.IgnoreNotFound {
 			return nil
 		}
 
-		return fmt.Errorf("load engine %s: %w", engineName, err)
+		return fmt.Errorf("load pro instance %s: %w", proInstanceName, err)
 	}
 
 	// delete the provider
-	err = providercmd.DeleteProvider(devPodConfig, engineConfig.ID, true)
+	err = providercmd.DeleteProvider(devPodConfig, proInstanceConfig.ID, true)
 	if err != nil {
 		return err
 	}
 
-	// delete the engine dir itself
-	engineDir, err := provider2.GetEngineDir(devPodConfig.DefaultContext, engineConfig.ID)
+	// delete the pro instance dir itself
+	proInstanceDir, err := provider2.GetProInstanceDir(devPodConfig.DefaultContext, proInstanceConfig.ID)
 	if err != nil {
 		return err
 	}
 
-	// remove engine dir
-	err = os.RemoveAll(engineDir)
+	err = os.RemoveAll(proInstanceDir)
 	if err != nil {
-		return errors.Wrap(err, "delete engine dir")
+		return errors.Wrap(err, "delete pro instace dir")
 	}
 
-	log.Default.Donef("Successfully deleted engine '%s'", engineName)
+	log.Default.Donef("Successfully deleted pro instace '%s'", proInstanceName)
 	return nil
 }

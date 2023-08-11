@@ -10,7 +10,7 @@ import (
 	"github.com/loft-sh/log"
 )
 
-func ToEngineID(url string) string {
+func ToProInstanceID(url string) string {
 	url = strings.TrimPrefix(url, "https://")
 	url = strings.ToLower(url)
 	url = workspaceIDRegEx2.ReplaceAllString(workspaceIDRegEx1.ReplaceAllString(url, "-"), "")
@@ -18,27 +18,27 @@ func ToEngineID(url string) string {
 	return id.SafeConcatNameMax([]string{url}, 32)
 }
 
-func ListEngines(devPodConfig *config.Config, log log.Logger) ([]*provider2.Engine, error) {
-	engineDir, err := provider2.GetEnginesDir(devPodConfig.DefaultContext)
+func ListProInstances(devPodConfig *config.Config, log log.Logger) ([]*provider2.ProInstance, error) {
+	proInstanceDir, err := provider2.GetProInstancesDir(devPodConfig.DefaultContext)
 	if err != nil {
 		return nil, err
 	}
 
-	entries, err := os.ReadDir(engineDir)
+	entries, err := os.ReadDir(proInstanceDir)
 	if err != nil && !os.IsNotExist(err) {
 		return nil, err
 	}
 
-	retEngines := []*provider2.Engine{}
+	retProInstances := []*provider2.ProInstance{}
 	for _, entry := range entries {
-		engineConfig, err := provider2.LoadEngineConfig(devPodConfig.DefaultContext, entry.Name())
+		proInstanceConfig, err := provider2.LoadProInstanceConfig(devPodConfig.DefaultContext, entry.Name())
 		if err != nil {
-			log.ErrorStreamOnly().Warnf("Couldn't load engine %s: %v", entry.Name(), err)
+			log.ErrorStreamOnly().Warnf("Couldn't load pro instance %s: %v", entry.Name(), err)
 			continue
 		}
 
-		retEngines = append(retEngines, engineConfig)
+		retProInstances = append(retProInstances, proInstanceConfig)
 	}
 
-	return retEngines, nil
+	return retProInstances, nil
 }

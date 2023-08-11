@@ -1,4 +1,4 @@
-package engine
+package pro
 
 import (
 	"context"
@@ -48,10 +48,10 @@ func NewLoginCmd(flags *flags.GlobalFlags) *cobra.Command {
 	}
 	loginCmd := &cobra.Command{
 		Use:   "login",
-		Short: "Log into a DevPod Engine instance",
+		Short: "Log into a DevPod Pro instance",
 		RunE: func(_ *cobra.Command, args []string) error {
 			if len(args) != 1 {
-				return fmt.Errorf("please specify the engine url, e.g. devpod engine login my-engine.my-domain.com")
+				return fmt.Errorf("please specify the DevPod Pro url, e.g. devpod pro login my-pro.my-domain.com")
 			}
 
 			return cmd.Run(context.Background(), args[0], log.Default)
@@ -59,9 +59,9 @@ func NewLoginCmd(flags *flags.GlobalFlags) *cobra.Command {
 	}
 
 	loginCmd.Flags().StringVar(&cmd.AccessKey, "access-key", "", "If defined will use the given access key to login")
-	loginCmd.Flags().BoolVar(&cmd.Login, "login", true, "If enabled will automatically try to log into the Loft DevPod engine")
+	loginCmd.Flags().BoolVar(&cmd.Login, "login", true, "If enabled will automatically try to log into the Loft DevPod Pro")
 	loginCmd.Flags().BoolVar(&cmd.Use, "use", true, "If enabled will automatically activate the provider")
-	loginCmd.Flags().StringVar(&cmd.Name, "name", "", "Optional name how this DevPod engine will be referenced as")
+	loginCmd.Flags().StringVar(&cmd.Name, "name", "", "Optional name how this DevPod Pro will be referenced as")
 	loginCmd.Flags().StringVar(&cmd.Version, "version", "", "The version to use for the DevPod provider")
 	loginCmd.Flags().StringArrayVarP(&cmd.Options, "option", "o", []string{}, "Provider option in the form KEY=VALUE")
 
@@ -73,7 +73,7 @@ func NewLoginCmd(flags *flags.GlobalFlags) *cobra.Command {
 // Run runs the command logic
 func (cmd *LoginCmd) Run(ctx context.Context, url string, log log.Logger) error {
 	if strings.HasPrefix(url, "http://") {
-		return fmt.Errorf("http is not supported for DevPod Engine, please use https:// instead")
+		return fmt.Errorf("http is not supported for DevPod Pro, please use https:// instead")
 	} else if !strings.HasPrefix(url, "https://") {
 		url = "https://" + url
 	} else if cmd.Name != "" && len(cmd.Name) > 32 {
@@ -83,7 +83,7 @@ func (cmd *LoginCmd) Run(ctx context.Context, url string, log log.Logger) error 
 	if cmd.Name == "" {
 		cmd.Name = url
 	}
-	cmd.Name = workspace.ToEngineID(cmd.Name)
+	cmd.Name = workspace.ToProInstanceID(cmd.Name)
 
 	// load devpod config
 	devPodConfig, err := config.LoadConfig(cmd.Context, cmd.Provider)
@@ -91,30 +91,30 @@ func (cmd *LoginCmd) Run(ctx context.Context, url string, log log.Logger) error 
 		return err
 	}
 
-	// check if there is already a engine with that url
-	engines, err := workspace.ListEngines(devPodConfig, log)
+	// check if there is already a pro instance with that url
+	proInstances, err := workspace.ListProInstances(devPodConfig, log)
 	if err != nil {
 		return err
 	}
 
 	// check if url is found somewhere
-	var currentEngine *provider.Engine
-	for _, engine := range engines {
-		if engine.URL == url || engine.ID == cmd.Name {
-			if engine.URL != url {
-				return fmt.Errorf("engine %s already exists with a different url %s != %s", cmd.Name, engine.URL, url)
-			} else if engine.ID != cmd.Name {
-				return fmt.Errorf("engine with url %s already exists with a different name %s != %s", url, engine.ID, cmd.Name)
+	var currentInstance *provider.ProInstance
+	for _, proInstance := range proInstances {
+		if proInstance.URL == url || proInstance.ID == cmd.Name {
+			if proInstance.URL != url {
+				return fmt.Errorf("pro instance %s already exists with a different url %s != %s", cmd.Name, proInstance.URL, url)
+			} else if proInstance.ID != cmd.Name {
+				return fmt.Errorf("pro instance with url %s already exists with a different name %s != %s", url, proInstance.ID, cmd.Name)
 			}
 
-			currentEngine = engine
+			currentInstance = proInstance
 			break
 		}
 	}
 
 	// 1. Add provider
-	if currentEngine == nil {
-		currentEngine = &provider.Engine{
+	if currentInstance == nil {
+		currentInstance = &provider.ProInstance{
 			ID:                cmd.Name,
 			URL:               url,
 			CreationTimestamp: types.Now(),
@@ -125,7 +125,7 @@ func (cmd *LoginCmd) Run(ctx context.Context, url string, log log.Logger) error 
 			return err
 		}
 
-		err = provider.SaveEngineConfig(devPodConfig.DefaultContext, currentEngine)
+		err = provider.SaveProInstanceConfig(devPodConfig.DefaultContext, currentInstance)
 		if err != nil {
 			return err
 		}
@@ -159,7 +159,7 @@ func (cmd *LoginCmd) Run(ctx context.Context, url string, log log.Logger) error 
 		}
 	}
 
-	log.Donef("Successfully configured Loft DevPod engine %s", cmd.Name)
+	log.Donef("Successfully configured Loft DevPod Pro %s", cmd.Name)
 	return nil
 }
 
@@ -217,7 +217,7 @@ func (cmd *LoginCmd) addLoftProvider(devPodConfig *config.Config, url string, lo
 	}
 
 	// add the provider
-	log.Infof("Add Loft DevPod Engine provider...")
+	log.Infof("Add Loft DevPod Pro provider...")
 	_, err = workspace.AddProvider(devPodConfig, cmd.Name, cmd.ProviderSource, log)
 	if err != nil {
 		return err
