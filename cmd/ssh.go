@@ -1,13 +1,13 @@
 package cmd
 
 import (
+	"bytes"
 	"context"
 	"encoding/base64"
 	"fmt"
 	"io"
 	"os"
 	"os/exec"
-	"path/filepath"
 	"strings"
 	"sync"
 	"time"
@@ -352,32 +352,32 @@ func (cmd *SSHCmd) startTunnel(ctx context.Context, devPodConfig *config.Config,
 		go cmd.startServices(ctx, devPodConfig, containerClient, ideName, log)
 	}
 
+	// start ssh
+	writer := log.ErrorStreamOnly().Writer(logrus.InfoLevel, false)
+	defer writer.Close()
+
 	if cmd.GPGAgentForwarding ||
 		devPodConfig.ContextOption(config.ContextOptionGPGAgentForwarding) == "true" {
-		_, err := os.Stat(filepath.Join(os.TempDir(), cmd.Context, cmd.User, "gpg-forward.lock"))
-		if err == nil {
+		// Check if a forwarding is already enabled and running, in that case
+		// we skip the forwarding and keep using the original one
+		command := "gpg -K"
+		if cmd.User != "" && cmd.User != "root" {
+			command = fmt.Sprintf("su -c \"%s\" '%s'", command, cmd.User)
+		}
+
+		// capture the output, if it's empty it means we don't have gpg-forwarding
+		var out bytes.Buffer
+		err := devssh.Run(ctx, containerClient, command, os.Stdin, &out, writer)
+
+		if err == nil && len(out.Bytes()) > 1 {
 			log.Debugf("gpg: exporting already running, skipping")
 		} else {
 			err := cmd.setupGPGAgent(ctx, devPodConfig, containerClient, log)
 			if err != nil {
 				return err
 			}
-
-			err = os.MkdirAll(filepath.Join(os.TempDir(), cmd.Context, cmd.User), 0o755)
-			if err != nil {
-				return err
-			}
-			_, err = os.Create(filepath.Join(os.TempDir(), cmd.Context, cmd.User, "gpg-forward.lock"))
-			if err != nil {
-				return err
-			}
-			defer os.Remove(filepath.Join(os.TempDir(), cmd.Context, cmd.User, "gpg-forward.lock"))
 		}
 	}
-
-	// start ssh
-	writer := log.ErrorStreamOnly().Writer(logrus.InfoLevel, false)
-	defer writer.Close()
 
 	log.Debugf("Run outer container tunnel")
 	command := fmt.Sprintf("'%s' helper ssh-server --track-activity --stdio --workdir '%s'", agent.ContainerDevPodHelperLocation, filepath.Join("/workspaces", workspaceName))
