@@ -1,8 +1,6 @@
-import { ExternalLinkIcon } from "@chakra-ui/icons"
 import {
   Box,
   BoxProps,
-  Button,
   Code,
   Container,
   Flex,
@@ -18,7 +16,6 @@ import {
 import { useEffect, useMemo } from "react"
 import { Outlet, Link as RouterLink, useMatch, useNavigate, useRouteError } from "react-router-dom"
 import { useBorderColor } from "./Theme"
-import { client } from "./client"
 import { Sidebar, SidebarMenuItem, StatusBar, Toolbar } from "./components"
 import { SIDEBAR_WIDTH, STATUS_BAR_HEIGHT } from "./constants"
 import { ToolbarProvider, useChangeSettings, useSettings } from "./contexts"
@@ -61,10 +58,6 @@ export function App() {
   const { modal: welcomeModal } = useWelcomeModal()
   usePartyParrot()
 
-  const handleAnnouncementClicked = () => {
-    client.openLink("https://devpod.sh/engine")
-  }
-
   return (
     <>
       <Flex height="100vh" width="100vw" maxWidth="100vw" overflow="hidden">
@@ -75,40 +68,17 @@ export function App() {
             position="fixed"
             top="0"
             width="full"
-            display="grid"
-            gridTemplateColumns="1fr 1fr 1fr"
-            textAlign={"center"}
+            textAlign="center"
             zIndex="dropdown"
             justifyItems="center">
             {showDevPodTitle && (
               <Text
-                gridColumn="2"
                 data-tauri-drag-region // keep!
                 fontWeight="bold"
                 marginTop="2">
                 DevPod
               </Text>
             )}
-            <Button
-              data-tauri-drag-region // keep!
-              variant="announcement"
-              width="fit-content"
-              {...(sidebarPosition === "left"
-                ? {
-                    gridColumn: "3",
-                    justifySelf: "end",
-                    marginRight: "10",
-                    marginTop: "2",
-                  }
-                : {
-                    gridColumn: "1",
-                    justifySelf: "start",
-                    marginLeft: "4",
-                  })}
-              rightIcon={<ExternalLinkIcon />}
-              onClick={handleAnnouncementClicked}>
-              Try Loft DevPod Pro
-            </Button>
           </Box>
         )}
 

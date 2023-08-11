@@ -174,6 +174,7 @@ export function CreateWorkspace() {
       <Form ref={formRef} onSubmit={onSubmit}>
         <VStack align="start" spacing="6" alignItems="center" width="full" maxWidth="container.lg">
           <HStack
+            gap="0"
             width="full"
             height="full"
             borderRadius="lg"
