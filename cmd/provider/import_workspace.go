@@ -5,6 +5,9 @@ import (
 	"context"
 	"fmt"
 	"github.com/loft-sh/devpod/cmd/flags"
+	client2 "github.com/loft-sh/devpod/pkg/client"
+	"github.com/loft-sh/devpod/pkg/client/clientimplementation"
+	"github.com/loft-sh/devpod/pkg/config"
 	provider2 "github.com/loft-sh/devpod/pkg/provider"
 	"github.com/loft-sh/log"
 	"github.com/pkg/errors"
@@ -43,9 +46,16 @@ func (cmd *ImportCmd) Import(ctx context.Context, args []string) error {
 	if err != nil {
 		return err
 	}
+	devPodConfig, err := config.LoadConfig(cmd.Context, proxyProvider.Name)
+	workspace := &provider2.Workspace{
+		//todo: fill workspace data
+	}
 
-	proxyProvider.Exec.Proxy.Import()
-	return nil
+	workspaceClient, err := clientimplementation.NewProxyClient(devPodConfig, proxyProvider, workspace, cmd.log)
+	if err != nil {
+		return err
+	}
+	return workspaceClient.ImportWorkspace(ctx, client2.ImportWorkspaceOptions{})
 }
 
 type WorkspaceMetaData struct {
