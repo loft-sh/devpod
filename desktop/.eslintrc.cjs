@@ -53,5 +53,5 @@ module.exports = {
       },
     ],
   },
-  ignorePatterns: ["dist/**/*", "src-tauri/**/*", "public/**/*"],
+  ignorePatterns: ["dist/**/*", "src-tauri/**/*", "public/**/*", "src/gen/**/*"],
 }

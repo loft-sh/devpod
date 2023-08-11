@@ -1,6 +1,6 @@
 use crate::AppHandle;
 use anyhow::{Context, Result};
-use log::{debug, error};
+use log::error;
 use tauri::{Window, WindowBuilder, WindowUrl, Wry};
 
 #[derive(Clone, Debug)]
@@ -9,10 +9,8 @@ pub struct WindowHelper {
 }
 
 impl WindowHelper {
-    pub fn new(app_handle: &AppHandle) -> Self {
-        Self {
-            app_handle: app_handle.clone(),
-        }
+    pub fn new(app_handle: AppHandle) -> Self {
+        Self { app_handle }
     }
 
     pub fn setup(&self, window: &Window<Wry>) {
@@ -27,7 +25,7 @@ impl WindowHelper {
         {
             window_vibrancy::apply_vibrancy(
                 window,
-                window_vibrancy::NSVisualEffectMaterial::HudWindow,
+                window_vibrancy::NSVisualEffectMaterial::Sidebar,
                 None,
                 None,
             )
@@ -44,8 +42,7 @@ impl WindowHelper {
 
         self.app_handle
             .run_on_main_thread(move || {
-                // Config should match the config in `src-tauri/tauri.conf.json` for a consistent window
-                // appearance
+                // Config should match the config in `src-tauri/tauri.conf.json` for a consistent window appearance
                 let window_builder =
                     WindowBuilder::new(&handle, "main".to_string(), WindowUrl::default())
                         .title(app_name)
@@ -69,6 +66,30 @@ impl WindowHelper {
             })
             .context("Failed to create main window")
     }
+
+    pub fn new_update_ready_window(&self) -> Result<()> {
+        let handle = self.app_handle.clone();
+
+        self.app_handle
+            .run_on_main_thread(move || {
+                let window_builder = WindowBuilder::new(
+                    &handle,
+                    "update_ready".to_string(),
+                    WindowUrl::App("update-window/index.html".into()),
+                )
+                .title("DevPod Update")
+                .fullscreen(false)
+                .resizable(false)
+                .transparent(false)
+                .inner_size(300.0, 175.0)
+                .visible(true);
+
+                if let Err(err) = window_builder.build() {
+                    error!("Failed to create update ready window: {}", err);
+                }
+            })
+            .context("Failed to create update ready window")
+    }
 }
 
 #[cfg(target_os = "macos")]
@@ -76,7 +97,7 @@ use cocoa::{
     appkit::{
         NSApp, NSApplicationActivateIgnoringOtherApps,
         NSApplicationActivationPolicy::{self, *},
-        NSImage, NSRunningApplication,
+        NSImage,
     },
     base::{id, nil, BOOL},
     foundation::{NSArray, NSData, NSString},
@@ -89,6 +110,7 @@ use std::time::Duration;
 use tauri::ActivationPolicy;
 
 #[cfg(target_os = "macos")]
+#[allow(dead_code)]
 impl WindowHelper {
     unsafe fn get_current_application() -> cocoa::base::id {
         msg_send![class!(NSRunningApplication), currentApplication]

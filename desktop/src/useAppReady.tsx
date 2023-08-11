@@ -1,4 +1,9 @@
 import {
+  Box,
+  Button,
+  Heading,
+  Link,
+  ListItem,
   Modal,
   ModalBody,
   ModalCloseButton,
@@ -6,21 +11,29 @@ import {
   ModalFooter,
   ModalHeader,
   ModalOverlay,
+  Text,
+  UnorderedList,
   useDisclosure,
   useToast,
 } from "@chakra-ui/react"
 import { appWindow } from "@tauri-apps/api/window"
+import Markdown from "markdown-to-jsx"
 import { useEffect, useId, useMemo, useRef, useState } from "react"
 import { useNavigate } from "react-router"
 import { client } from "./client"
 import { ErrorMessageBox } from "./components"
-import { startWorkspaceAction } from "./contexts"
-import { exists } from "./lib"
-import { Routes } from "./routes"
 import { WORKSPACE_SOURCE_BRANCH_DELIMITER, WORKSPACE_SOURCE_COMMIT_DELIMITER } from "./constants"
+import { startWorkspaceAction } from "./contexts"
+import { Release } from "./gen"
+import { exists, useReleases, useVersion } from "./lib"
+import { Routes } from "./routes"
+
+const LAST_INSTALLED_VERSION_KEY = "devpod-last-installed-version"
+type TLinkClickEvent = React.MouseEvent<HTMLLinkElement> & { target: HTMLLinkElement }
 
 export function useAppReady() {
   const isReadyLockRef = useRef<boolean>(false)
+  const currentVersion = useVersion()
   const viewID = useId()
   const navigate = useNavigate()
   const [openWorkspaceFailedMessage, setOpenWorkspaceFailedMessage] = useState<string | null>(null)
@@ -46,6 +59,61 @@ export function useAppReady() {
     )
   }, [isOpen, onClose, openWorkspaceFailedMessage])
 
+  const releases = useReleases()
+  const {
+    isOpen: isChangelogModalOpen,
+    onClose: onChangelogModalClose,
+    onOpen: onChangelogModalOpen,
+  } = useDisclosure()
+  const [latestRelease, setLatestRelease] = useState<Release | null>(null)
+  const changelogModal = useMemo(
+    () =>
+      latestRelease !== null ? (
+        <Modal
+          onClose={onChangelogModalClose}
+          isOpen={isChangelogModalOpen}
+          onCloseComplete={() => setOpenWorkspaceFailedMessage(null)}
+          scrollBehavior="inside"
+          size="3xl"
+          isCentered>
+          <ModalOverlay />
+          <ModalContent>
+            <ModalCloseButton />
+            <ModalHeader>Installed Version {latestRelease.tag_name}</ModalHeader>
+            <ModalBody>
+              {latestRelease.body ? (
+                <Changelog rawMarkdown={latestRelease.body} />
+              ) : (
+                <Text>This release doesn&apos;t have a changelog</Text>
+              )}
+            </ModalBody>
+            <ModalFooter>
+              <Button onClick={onChangelogModalClose}>Done</Button>
+            </ModalFooter>
+          </ModalContent>
+        </Modal>
+      ) : null,
+    [isChangelogModalOpen, latestRelease, onChangelogModalClose]
+  )
+
+  useEffect(() => {
+    if (!isReadyLockRef.current || !currentVersion || !releases) {
+      return
+    }
+
+    const latestVersion = localStorage.getItem(LAST_INSTALLED_VERSION_KEY)
+    const maybeRelease = releases.find((r) => r.tag_name === `v${currentVersion}`)
+
+    if (latestVersion !== currentVersion) {
+      localStorage.setItem(LAST_INSTALLED_VERSION_KEY, currentVersion)
+
+      if (maybeRelease !== undefined) {
+        setLatestRelease(maybeRelease)
+        onChangelogModalOpen()
+      }
+    }
+  }, [currentVersion, navigate, onChangelogModalOpen, releases])
+
   useEffect(() => {
     if (openWorkspaceFailedMessage !== null) {
       onOpen()
@@ -53,6 +121,14 @@ export function useAppReady() {
       onClose()
     }
   }, [onClose, onOpen, openWorkspaceFailedMessage])
+
+  useEffect(() => {
+    window.addEventListener("contextmenu", (e) => {
+      e.preventDefault()
+
+      return false
+    })
+  }, [])
 
   // notifies underlying layer that ui is ready for communication
   useEffect(() => {
@@ -190,5 +266,43 @@ export function useAppReady() {
     }
   }, [navigate, toast, viewID])
 
-  return { modal }
+  return { modal, changelogModal }
+}
+
+type TChangeLogProps = Readonly<{ rawMarkdown: string }>
+function Changelog({ rawMarkdown }: TChangeLogProps) {
+  return (
+    <Box padding="2" marginBottom="4">
+      <Markdown
+        options={{
+          overrides: {
+            h2: {
+              component: Heading,
+              props: {
+                size: "md",
+                marginBottom: "2",
+                marginTop: "4",
+              },
+            },
+            a: {
+              component: Link,
+              props: {
+                onClick: (e: TLinkClickEvent) => {
+                  e.preventDefault()
+                  client.openLink(e.target.href)
+                },
+              },
+            },
+            ul: {
+              component: UnorderedList,
+            },
+            li: {
+              component: ListItem,
+            },
+          },
+        }}>
+        {rawMarkdown}
+      </Markdown>
+    </Box>
+  )
 }

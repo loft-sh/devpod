@@ -16,14 +16,14 @@ import {
 import { useMemo } from "react"
 import { FaBug } from "react-icons/fa"
 import { HiDocumentMagnifyingGlass, HiMagnifyingGlassPlus } from "react-icons/hi2"
-import { version } from "../../../package.json"
 import { client } from "../../client"
 import { useChangeSettings } from "../../contexts"
-import { Debug, useArch, useDebug, usePlatform } from "../../lib"
+import { Debug, useArch, useDebug, usePlatform, useVersion } from "../../lib"
 
 export function StatusBar(boxProps: BoxProps) {
   const arch = useArch()
   const platform = usePlatform()
+  const version = useVersion()
   const debug = useDebug()
   const { settings, set } = useChangeSettings()
   const iconColor = useColorModeValue("iconColor", "gray.400")

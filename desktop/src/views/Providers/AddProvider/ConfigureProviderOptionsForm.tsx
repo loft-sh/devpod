@@ -229,6 +229,7 @@ export function ConfigureProviderOptionsForm({
 
   const backgroundColor = useColorModeValue("gray.50", "gray.800")
   const bottomBarBackgroundColor = useColorModeValue("white", "gray.700")
+  const bottomBarBackgroundColorEdit = useColorModeValue("white", "black")
   const borderColor = useBorderColor()
   const translateX = useBreakpointValue({
     base: "translateX(-3rem)",
@@ -385,7 +386,7 @@ export function ConfigureProviderOptionsForm({
             height="20"
             alignItems="center"
             borderTopWidth="thin"
-            backgroundColor={bottomBarBackgroundColor}
+            backgroundColor={addProvider ? bottomBarBackgroundColor : bottomBarBackgroundColorEdit}
             justifyContent="space-between"
             paddingX={paddingX}
             zIndex="overlay">

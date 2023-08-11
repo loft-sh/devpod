@@ -3,7 +3,6 @@ import {
   TAddProviderConfig,
   TCheckProviderUpdateResult,
   TConfigureProviderConfig,
-  TProviderConfig,
   TProviderID,
   TProviderOptions,
   TProviderSource,

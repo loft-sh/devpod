@@ -1,0 +1,7 @@
+{
+  "image": "ubuntu",
+  "remoteUser": "auser",
+  "features": {
+    "./afeature": {}
+  }
+}

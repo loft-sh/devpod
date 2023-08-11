@@ -20,9 +20,11 @@ import { LoftOSSBadge } from "../LoftOSSBadge"
 type TSidebarProps = Readonly<{ children?: readonly ReactElement[] }> & BoxProps
 export function Sidebar({ children, ...boxProps }: TSidebarProps) {
   const borderColor = useBorderColor()
-  const backgroundColor = useColorModeValue("gray.100", "gray.900")
+  const backgroundColor = useColorModeValue("white", "black")
+  const alternativeBackgroundColor = useColorModeValue("gray.100", "gray.900")
   const wordmarkColor = useColorModeValue("black", "white")
   const isLeft = useSettings().sidebarPosition === "left"
+  const { transparency } = useSettings()
 
   const sharedBackgroundMaterialProps = {
     "aria-hidden": true,
@@ -58,7 +60,11 @@ export function Sidebar({ children, ...boxProps }: TSidebarProps) {
       </HStack>
 
       {/* Background Material */}
-      <Box {...sharedBackgroundMaterialProps} backgroundColor={backgroundColor} />
+      {transparency ? (
+        <Box {...sharedBackgroundMaterialProps} backgroundColor={backgroundColor} opacity={0.2} />
+      ) : (
+        <Box {...sharedBackgroundMaterialProps} backgroundColor={alternativeBackgroundColor} />
+      )}
     </Grid>
   )
 }
@@ -78,6 +84,7 @@ export function SidebarMenuItem({ to, children, icon: iconProps }: TSidebarMenuP
   return (
     <Box paddingX="4" width="full">
       <Link
+        variant="ghost"
         display="flex"
         paddingX="4"
         paddingY="2"

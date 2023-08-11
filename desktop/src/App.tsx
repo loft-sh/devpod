@@ -32,11 +32,11 @@ const showTitleBar = isMacOS || isLinux || isWindows
 const showDevPodTitle = isMacOS || isLinux
 
 export function App() {
-  const { modal: appReadyModal } = useAppReady()
+  const { modal: appReadyModal, changelogModal } = useAppReady()
   const navigate = useNavigate()
   const rootRouteMatch = useMatch(Routes.ROOT)
   const { sidebarPosition } = useSettings()
-  const contentBackgroundColor = useColorModeValue("white", "black")
+  const contentBackgroundColor = useColorModeValue("white", "background.darkest")
   const toolbarHeight = useToken("sizes", showTitleBar ? "28" : "20")
   const borderColor = useBorderColor()
 
@@ -78,7 +78,7 @@ export function App() {
             display="grid"
             gridTemplateColumns="1fr 1fr 1fr"
             textAlign={"center"}
-            zIndex="tooltip"
+            zIndex="dropdown"
             justifyItems="center">
             {showDevPodTitle && (
               <Text
@@ -92,11 +92,19 @@ export function App() {
             <Button
               data-tauri-drag-region // keep!
               variant="announcement"
-              gridColumn="3"
-              marginTop="2"
               width="fit-content"
-              justifySelf="end"
-              marginRight="10"
+              {...(sidebarPosition === "left"
+                ? {
+                    gridColumn: "3",
+                    justifySelf: "end",
+                    marginRight: "10",
+                    marginTop: "2",
+                  }
+                : {
+                    gridColumn: "1",
+                    justifySelf: "start",
+                    marginLeft: "4",
+                  })}
               rightIcon={<ExternalLinkIcon />}
               onClick={handleAnnouncementClicked}>
               Try Loft DevPod Engine
@@ -165,6 +173,7 @@ export function App() {
 
       {welcomeModal}
       {appReadyModal}
+      {changelogModal}
     </>
   )
 }

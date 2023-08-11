@@ -8,6 +8,11 @@ export const QueryKeys = {
   IDES: ["ides"],
   COMMUNITY_CONTRIBUTIONS: ["communityContributions"],
   CONTEXT_OPTIONS: ["contextOptions"],
+  RELEASES: ["releases"],
+  APP_VERSION: ["appVersion"],
+  UPDATE_RELEASE: ["updateRelease"],
+  PENDING_UPDATE: ["pendingUpdate"],
+  INSTALL_UPDATE: ["installUpdate"],
   workspace(id: TWorkspaceID): string[] {
     return [...QueryKeys.WORKSPACES, id]
   },

@@ -176,6 +176,7 @@ export function WorkspaceCard({ workspaceID, onSelectionChange }: TWorkspaceCard
     <>
       <Card key={id} direction="row" width="full" maxWidth="60rem" variant="outline" maxHeight="48">
         <Image
+          loading="lazy"
           objectFit="contain"
           width="18.75rem"
           height="12rem"

@@ -1,7 +1,7 @@
+import { Store as TauriPluginStore } from "tauri-plugin-store-api"
 import { TUnsubscribeFn } from "../types"
 import { EventManager } from "./eventManager"
 import { exists } from "./helpers"
-import { Store as TauriPluginStore } from "tauri-plugin-store-api"
 
 type TBaseStore = Record<string | number | symbol, unknown>
 
@@ -86,7 +86,7 @@ export class FileStorageBackend<T extends TBaseStore> implements TStorageBackend
   private readonly store: TauriPluginStore
 
   constructor(name: string) {
-    const fileName = `.${name}.dat`
+    const fileName = `.${name}.json`
     this.store = new TauriPluginStore(fileName)
   }
 
@@ -120,5 +120,51 @@ export class FileStorageBackend<T extends TBaseStore> implements TStorageBackend
   public async clear(): Promise<void> {
     await this.store.clear()
     await this.store.save()
+  }
+}
+
+export class LocalStorageToFileMigrationBackend<T extends TBaseStore>
+  implements TStorageBackend<T>
+{
+  private lsBackend: LocalStorageBackend<T>
+  private fsBackend: FileStorageBackend<T>
+
+  constructor(private storageKey: string) {
+    this.lsBackend = new LocalStorageBackend<T>(this.storageKey)
+    this.fsBackend = new FileStorageBackend<T>(this.storageKey)
+  }
+
+  public async set<TKey extends keyof T>(key: TKey, value: T[TKey]): Promise<void> {
+    await this.fsBackend.set(key, value)
+    // don't wait for removal to confirm
+    try {
+      this.lsBackend.remove(key)
+    } catch {
+      // noop
+    }
+  }
+
+  public async get<TKey extends keyof T>(key: TKey): Promise<T[TKey] | null> {
+    const fsValue = await this.fsBackend.get(key)
+    if (exists(fsValue)) {
+      return fsValue
+    }
+
+    const lsValue = await this.lsBackend.get(key)
+    if (exists(lsValue)) {
+      await this.fsBackend.set(key, lsValue)
+
+      return lsValue
+    }
+
+    return null
+  }
+
+  public async remove<TKey extends keyof T>(key: TKey): Promise<void> {
+    await Promise.all([this.lsBackend.remove(key), this.fsBackend.remove(key)])
+  }
+
+  public async clear(): Promise<void> {
+    await Promise.all([this.lsBackend.clear(), this.fsBackend.clear()])
   }
 }

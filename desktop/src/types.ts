@@ -13,7 +13,7 @@ export type TDeepNonNullable<T> = {
 export type TLogOutput = Readonly<{ time: Date; message?: string; level: string }>
 export type TQueryResult<TData extends Readonly<object>> = [
   TData | undefined,
-  Pick<UseMutationResult, "status" | "error">
+  Pick<UseMutationResult, "status" | "error">,
 ]
 export type TRunnable<TRunConfig> = Readonly<{ run(config: TRunConfig): void }>
 //#endregion
@@ -25,6 +25,7 @@ export type TIDE = Readonly<{
   displayName: string
   default: TMaybe<boolean>
   icon: TMaybe<string>
+  iconDark: TMaybe<string>
   experimental: TMaybe<boolean>
 }>
 //#endregion

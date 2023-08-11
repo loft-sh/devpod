@@ -16,12 +16,16 @@
     "resolveJsonModule": true,
     "isolatedModules": true,
     "noEmit": true,
-    "jsx": "react-jsx"
+    "jsx": "react-jsx",
+    "baseUrl": ".",
+    "paths": {
+      "@/*": ["src/*"]
+    }
   },
-  "include": ["src", ".eslintrc.cjs"],
+  "include": ["src", ".eslintrc.cjs", "update-window", "vite.config.ts"],
   "references": [
     {
-      "path": "./tsconfig.node.json"
+      "path": "tsconfig.node.json"
     }
   ]
 }
