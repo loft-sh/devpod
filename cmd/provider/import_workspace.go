@@ -17,10 +17,11 @@ import (
 type ImportCmd struct {
 	*flags.GlobalFlags
 
-	WorkspaceId  string
-	WorkspaceUid string
-	ProviderId   string
-	log          log.Logger
+	WorkspaceId      string
+	WorkspaceUid     string
+	ProviderId       string
+	WorkspaceOptions []string
+	log              log.Logger
 }
 
 // NewImportCmd creates a new command
@@ -43,8 +44,28 @@ func NewImportCmd(globalFlags *flags.GlobalFlags) *cobra.Command {
 	importCmd.Flags().StringVar(&cmd.WorkspaceUid, "workspace-uid", "", "UID of a workspace to import")
 	importCmd.Flags().StringVar(
 		&cmd.ProviderId, "provider-id", "", "Provider to use for importing. Must be a proxy provider")
+	importCmd.Flags().StringArrayVarP(
+		&cmd.WorkspaceOptions, "option", "o", []string{}, "Workspace option in the form KEY=VALUE")
 
 	return importCmd
+}
+
+func (cmd *ImportCmd) prepareImportWorkspaceOptions(options []string) (client2.ImportWorkspaceOptions, error) {
+	importWorkspaceOptions := client2.ImportWorkspaceOptions{
+		"WORKSPACE_ID":  cmd.WorkspaceId,
+		"WORKSPACE_UID": cmd.WorkspaceUid,
+	}
+
+	userOptions, err := provider2.ParseOptions(options)
+	if err != nil {
+		return nil, errors.Wrap(err, "parse options")
+	}
+
+	for key, value := range userOptions {
+		importWorkspaceOptions[key] = value
+	}
+
+	return importWorkspaceOptions, nil
 }
 
 func (cmd *ImportCmd) Import(ctx context.Context, args []string) error {
@@ -53,15 +74,21 @@ func (cmd *ImportCmd) Import(ctx context.Context, args []string) error {
 	if err != nil {
 		return err
 	}
-	w := &provider2.Workspace{
-		//todo: fill workspace data
-	}
 
-	workspaceClient, err := clientimplementation.NewProxyClient(devPodConfig, proxyProvider, w, cmd.log)
+	// todo: fill it with the data from the --options?
+	emptyWorkspaceConfig := &provider2.Workspace{}
+
+	workspaceClient, err := clientimplementation.NewProxyClient(devPodConfig, proxyProvider, emptyWorkspaceConfig, cmd.log)
 	if err != nil {
 		return err
 	}
-	return workspaceClient.ImportWorkspace(ctx, client2.ImportWorkspaceOptions{})
+
+	options, err := cmd.prepareImportWorkspaceOptions(cmd.WorkspaceOptions)
+	if err != nil {
+		return err
+	}
+
+	return workspaceClient.ImportWorkspace(ctx, options)
 }
 
 func (cmd *ImportCmd) getProxyProvider(devpodConfig *config.Config, providerID string) (*provider2.ProviderConfig, error) {

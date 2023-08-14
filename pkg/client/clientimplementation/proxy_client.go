@@ -333,7 +333,7 @@ func (s *proxyClient) Status(ctx context.Context, options client.StatusOptions) 
 	return client.ParseStatus(status.State)
 }
 
-func (s *proxyClient) ImportWorkspace(ctx context.Context, opt client.ImportWorkspaceOptions) error {
+func (s *proxyClient) ImportWorkspace(ctx context.Context, options client.ImportWorkspaceOptions) error {
 	s.m.Lock()
 	defer s.m.Unlock()
 
@@ -352,7 +352,7 @@ func (s *proxyClient) ImportWorkspace(ctx context.Context, opt client.ImportWork
 		nil,
 		s.devPodConfig.ProviderOptions(s.config.Name),
 		s.config,
-		nil,
+		options,
 		nil,
 		writer,
 		writer,

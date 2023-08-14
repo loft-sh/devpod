@@ -144,7 +144,7 @@ type SshOptions struct {
 	Stdout io.Writer
 }
 
-type ImportWorkspaceOptions struct{}
+type ImportWorkspaceOptions map[string]string
 
 type Status string
 
