@@ -26,7 +26,13 @@ func (r *Runner) Build(ctx context.Context, options config.BuildOptions) (string
 	}
 
 	// prebuild already exists
-	prebuildImage := options.Repository + ":" + buildInfo.PrebuildHash
+	var prebuildImage string
+	if options.Repository != "" {
+		prebuildImage = options.Repository + ":" + buildInfo.PrebuildHash
+	} else if config.GetDevPodCustomizations(substitutedConfig.Config).PrebuildRepository[0] != "" {
+		prebuildImage = config.GetDevPodCustomizations(substitutedConfig.Config).PrebuildRepository[0] + ":" + buildInfo.PrebuildHash
+	}
+
 	if buildInfo.ImageName == prebuildImage {
 		return buildInfo.ImageName, nil
 	}
