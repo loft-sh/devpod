@@ -272,7 +272,7 @@ type ProxyCommands struct {
 	Status types.StrArray `json:"status,omitempty"`
 
 	// ImportWorkspace proxies the import command
-	ImportWorkspace types.StrArray `json:"import_workspace,omitempty"`
+	ImportWorkspace types.StrArray `json:"import,omitempty"`
 }
 
 type SubOptions struct {
