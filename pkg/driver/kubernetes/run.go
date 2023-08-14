@@ -297,6 +297,8 @@ func getContainers(pod *corev1.Pod, imageName, entrypoint string, args []string,
 	}
 	if existingDevPodContainer != nil {
 		devPodContainer.Env = append(existingDevPodContainer.Env, devPodContainer.Env...)
+		devPodContainer.EnvFrom = existingDevPodContainer.EnvFrom
+		devPodContainer.Ports = existingDevPodContainer.Ports
 		devPodContainer.VolumeMounts = append(existingDevPodContainer.VolumeMounts, devPodContainer.VolumeMounts...)
 	}
 	retContainers = append(retContainers, devPodContainer)
