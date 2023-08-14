@@ -1,35 +1,26 @@
+import { BottomActionBar, BottomActionBarError, CollapsibleSection } from "@/components"
 import {
   Box,
-  BoxProps,
   Button,
   Checkbox,
   FormControl,
   FormErrorMessage,
   FormHelperText,
   HStack,
-  IconButton,
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
   SimpleGrid,
+  Spinner,
   Tooltip,
   VStack,
-  useBreakpointValue,
   useColorModeValue,
-  Spinner,
 } from "@chakra-ui/react"
 import styled from "@emotion/styled"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
-import { motion } from "framer-motion"
-import { RefObject, useCallback, useEffect, useMemo, useRef, useState } from "react"
+import { RefObject, useCallback, useEffect, useMemo, useRef } from "react"
 import { DefaultValues, FormProvider, SubmitHandler, useForm } from "react-hook-form"
 import { useBorderColor } from "../../../Theme"
 import { client } from "../../../client"
-import { CollapsibleSection, ErrorMessageBox } from "../../../components"
-import { SIDEBAR_WIDTH } from "../../../constants"
 import { useProvider } from "../../../contexts"
-import { ExclamationCircle } from "../../../icons"
-import { Err, Failed, exists, isError, useFormErrors } from "../../../lib"
+import { exists, useFormErrors } from "../../../lib"
 import { QueryKeys } from "../../../queryKeys"
 import { TConfigureProviderConfig, TProviderID, TProviderOptions } from "../../../types"
 import { TOptionWithID, canCreateMachine, getVisibleOptions } from "../helpers"
@@ -61,6 +52,7 @@ type TConfigureProviderOptionsFormProps = Readonly<{
   isDefault: boolean
   reuseMachine: boolean
   containerRef?: RefObject<HTMLDivElement>
+  showBottomActionBar?: boolean
   onFinish?: () => void
 }>
 
@@ -72,10 +64,11 @@ export function ConfigureProviderOptionsForm({
   reuseMachine,
   addProvider = false,
   isModal = false,
+  showBottomActionBar = true,
 }: TConfigureProviderOptionsFormProps) {
   const queryClient = useQueryClient()
   const [provider] = useProvider(providerID)
-  const { data: queryOptions, error: queryError } = useQuery({
+  const { data: queryOptions, error: queryError } = useQuery<TProviderOptions | undefined, Error>({
     queryKey: QueryKeys.providerSetOptions(providerID!),
     queryFn: async () =>
       (await client.providers.setOptionsDry(providerID!, { options: {} })).unwrap(),
@@ -91,7 +84,6 @@ export function ConfigureProviderOptionsForm({
     () => canCreateMachine(provider?.config),
     [provider?.config]
   )
-  const { height: errorHeight } = useErrorDimensions(containerRef)
   const formMethods = useForm<TFieldValues>({
     defaultValues: {
       useAsDefault: isDefault,
@@ -105,7 +97,7 @@ export function ConfigureProviderOptionsForm({
     mutate: configureProvider,
   } = useMutation<
     void,
-    Err<Failed>,
+    Error,
     Readonly<{ providerID: TProviderID; config: TConfigureProviderConfig }>
   >({
     mutationFn: async ({ providerID, config }) => {
@@ -124,7 +116,7 @@ export function ConfigureProviderOptionsForm({
     mutate: refreshSubOptionsMutation,
   } = useMutation<
     TProviderOptions | undefined,
-    Err<Failed>,
+    Error,
     Readonly<{ providerID: TProviderID; config: TConfigureProviderConfig }>
   >({
     mutationFn: async ({ providerID, config }) => {
@@ -228,14 +220,7 @@ export function ConfigureProviderOptionsForm({
   }, [optionGroups, optionsProp])
 
   const backgroundColor = useColorModeValue("gray.50", "gray.800")
-  const bottomBarBackgroundColor = useColorModeValue("white", "gray.700")
-  const bottomBarBackgroundColorEdit = useColorModeValue("white", "black")
   const borderColor = useBorderColor()
-  const translateX = useBreakpointValue({
-    base: "translateX(-3rem)",
-    xl: isModal ? "translateX(-3rem)" : "",
-  })
-  const paddingX = useBreakpointValue({ base: "3rem", xl: isModal ? "3rem" : "4" })
 
   const refreshSubOptions = useCallback(
     (id: string) => {
@@ -371,79 +356,42 @@ export function ConfigureProviderOptionsForm({
             </Box>
           )}
 
-          <HStack
-            as={motion.div}
-            initial={{ transform: `translateY(100%) ${translateX}` }}
-            animate={{ transform: `translateY(0) ${translateX}` }}
-            position="sticky"
-            bottom="0"
-            left="0"
-            width={
-              isModal
-                ? "calc(100% + 5.5rem)"
-                : { base: `calc(100vw - ${SIDEBAR_WIDTH})`, xl: "full" }
-            }
-            height="20"
-            alignItems="center"
-            borderTopWidth="thin"
-            backgroundColor={addProvider ? bottomBarBackgroundColor : bottomBarBackgroundColorEdit}
-            justifyContent="space-between"
-            paddingX={paddingX}
-            zIndex="overlay">
-            <HStack>
-              <Tooltip label="Please configure provider" isDisabled={formMethods.formState.isValid}>
-                <Button
-                  type="submit"
-                  variant="primary"
-                  isLoading={formMethods.formState.isSubmitting || status === "loading"}
-                  isDisabled={!formMethods.formState.isValid}
-                  title={addProvider ? "Add Provider" : "Update Options"}>
-                  {addProvider ? "Add Provider" : "Update Options"}
-                </Button>
-              </Tooltip>
+          {showBottomActionBar && (
+            <BottomActionBar isModal={isModal}>
+              <HStack>
+                <Tooltip
+                  label="Please configure provider"
+                  isDisabled={formMethods.formState.isValid}>
+                  <Button
+                    type="submit"
+                    variant="primary"
+                    isLoading={formMethods.formState.isSubmitting || status === "loading"}
+                    isDisabled={!formMethods.formState.isValid}
+                    title={addProvider ? "Add Provider" : "Update Options"}>
+                    {addProvider ? "Add Provider" : "Update Options"}
+                  </Button>
+                </Tooltip>
 
-              {showDefaultField && (
-                <FormControl
-                  paddingX="6"
-                  flexDirection="row"
-                  display="flex"
-                  width="fit-content"
-                  isInvalid={exists(useAsDefaultError)}>
-                  <Checkbox {...formMethods.register(FieldName.USE_AS_DEFAULT)} />
-                  <FormHelperText marginLeft="2" marginTop="0">
-                    Set as default{" "}
-                  </FormHelperText>
-                </FormControl>
-              )}
-            </HStack>
-
-            <HStack />
-
-            <Popover placement="top" computePositionOnMount>
-              <PopoverTrigger>
-                <IconButton
-                  ref={errorButtonRef}
-                  visibility={error ? "visible" : "hidden"}
-                  variant="ghost"
-                  aria-label="Show errors"
-                  icon={
-                    <motion.span
-                      key={error ? "error" : undefined}
-                      animate={{ scale: [1, 1.2, 1] }}
-                      transition={{ type: "keyframes", ease: ["easeInOut"] }}>
-                      <ExclamationCircle boxSize="8" color="red.400" />
-                    </motion.span>
-                  }
-                  isDisabled={!exists(error)}
-                />
-              </PopoverTrigger>
-              <PopoverContent minWidth="5xl">
-                {isError(error) && (
-                  <ErrorMessageBox maxHeight={errorHeight} overflowY="auto" error={error} />
+                {showDefaultField && (
+                  <FormControl
+                    paddingX="6"
+                    flexDirection="row"
+                    display="flex"
+                    width="fit-content"
+                    isInvalid={exists(useAsDefaultError)}>
+                    <Checkbox {...formMethods.register(FieldName.USE_AS_DEFAULT)} />
+                    <FormHelperText marginLeft="2" marginTop="0">
+                      Set as default{" "}
+                    </FormHelperText>
+                  </FormControl>
                 )}
-              </PopoverContent>
-            </Popover>
-          </HStack>
+              </HStack>
+
+              <HStack />
+
+              <BottomActionBarError error={error} containerRef={containerRef} />
+            </BottomActionBar>
+          )}
         </VStack>
       </Form>
     </FormProvider>
@@ -484,32 +432,4 @@ function filterOptions(
   })
 
   return newOptions
-}
-
-function useErrorDimensions(
-  ref: RefObject<HTMLElement> | undefined,
-  defaultHeight: BoxProps["height"] = "5xl"
-) {
-  const [errorHeight, setErrorHeight] = useState<BoxProps["height"]>(defaultHeight)
-
-  useEffect(() => {
-    const curr = ref?.current
-    if (!curr) {
-      return
-    }
-    const observer = new ResizeObserver((entries) => {
-      for (const entry of entries) {
-        if (entry.target === curr) {
-          const heightPx = entry.contentRect.height
-
-          setErrorHeight(`calc(${heightPx}px - 4rem)`)
-        }
-      }
-    })
-    observer.observe(curr)
-
-    return () => observer.disconnect()
-  }, [ref])
-
-  return { height: errorHeight }
 }

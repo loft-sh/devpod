@@ -8,7 +8,6 @@ export const Popover = defineMultiStyleConfig({
   baseStyle: definePartsStyle(({ theme }) => {
     return {
       content: {
-        backgroundColor: "red",
         boxShadow: theme.shadows.xl,
         _focusVisible: {
           outline: "2px solid transparent",

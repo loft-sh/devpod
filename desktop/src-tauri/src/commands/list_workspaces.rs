@@ -1,6 +1,6 @@
 use super::{
     config::{CommandConfig, DevpodCommandConfig, DevpodCommandError},
-    constants::{DEVPOD_BINARY_NAME, DEVPOD_COMMAND_LIST, OUTPUT_JSON_ARG},
+    constants::{DEVPOD_BINARY_NAME, DEVPOD_COMMAND_LIST, FLAG_OUTPUT_JSON},
 };
 use crate::workspaces::WorkspacesState;
 
@@ -18,7 +18,7 @@ impl DevpodCommandConfig<WorkspacesState> for ListWorkspacesCommand {
     fn config(&self) -> CommandConfig {
         CommandConfig {
             binary_name: DEVPOD_BINARY_NAME,
-            args: vec![DEVPOD_COMMAND_LIST, OUTPUT_JSON_ARG],
+            args: vec![DEVPOD_COMMAND_LIST, FLAG_OUTPUT_JSON],
         }
     }
 

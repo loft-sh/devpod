@@ -1,15 +1,24 @@
 import dayjs from "dayjs"
+import { Theme, useToken } from "@chakra-ui/react"
 import { useCallback, useMemo, useRef } from "react"
 import { TStreamEventListenerFn } from "../../client"
 import { TLogOutput } from "../../types"
 import { Terminal, TTerminal } from "./Terminal"
 
-export function useStreamingTerminal() {
+export function useStreamingTerminal({
+  fontSize,
+}: { fontSize?: keyof Theme["fontSizes"] } | undefined = {}) {
   const terminalRef = useRef<TTerminal | null>(null)
-  const terminal = useMemo(() => <Terminal ref={terminalRef} />, [])
+  const fontSizeToken = useToken(
+    "fontSizes",
+    useMemo(() => fontSize ?? "md", [fontSize])
+  )
+  const terminal = useMemo(
+    () => <Terminal ref={terminalRef} fontSize={fontSizeToken} />,
+    [fontSizeToken]
+  )
   const connectStream = useCallback<TStreamEventListenerFn>(
     (event) => {
-      // TODO: Message color
       switch (event.type) {
         case "data":
           if (event.data.message === undefined) {

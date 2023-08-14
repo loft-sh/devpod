@@ -264,7 +264,10 @@ function UpdateSettings() {
           onChange={(e) => set("autoUpdate", e.target.checked)}
         />
       </SettingSection>
-      <SettingSection title="Versions" description="Manage and explore DevPod versions">
+      <SettingSection
+        title="Versions"
+        description="Manage and explore DevPod versions"
+        showDivider={false}>
         <>
           <VStack align="start" width="full" marginBottom="4">
             <Text fontSize="sm">

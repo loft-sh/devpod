@@ -13,6 +13,7 @@ export const QueryKeys = {
   UPDATE_RELEASE: ["updateRelease"],
   PENDING_UPDATE: ["pendingUpdate"],
   INSTALL_UPDATE: ["installUpdate"],
+  PRO_INSTANCES: ["proInstances"],
   workspace(id: TWorkspaceID): string[] {
     return [...QueryKeys.WORKSPACES, id]
   },

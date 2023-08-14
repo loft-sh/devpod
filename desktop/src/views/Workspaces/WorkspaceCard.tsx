@@ -202,7 +202,7 @@ export function WorkspaceCard({ workspaceID, onSelectionChange }: TWorkspaceCard
 
           <CardFooter padding="none" paddingBottom={4}>
             <HStack spacing="2" width="full" justifyContent="end" paddingRight={"10px"}>
-              <ButtonGroup isAttached variant="outline">
+              <ButtonGroup isAttached variant="solid-outline">
                 <Tooltip label={isOpenDisabled ? isOpenDisabledReason : undefined}>
                   <Button
                     aria-label="Start workspace"

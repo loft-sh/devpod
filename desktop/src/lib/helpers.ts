@@ -114,3 +114,7 @@ export function getIDEDisplayName(ide: TIDE) {
 export function randomString(length: number): string {
   return [...Array(length)].map(() => (~~(Math.random() * 36)).toString(36)).join("")
 }
+
+export function remToPx(rem: string): number {
+  return parseFloat(rem) * parseFloat(getComputedStyle(document.documentElement).fontSize)
+}

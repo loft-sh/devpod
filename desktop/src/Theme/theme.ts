@@ -7,6 +7,7 @@ import { Checkbox } from "./checkbox"
 import { Radio } from "./radio"
 import { Popover } from "./popover"
 import { Button } from "./button"
+import { Tag } from "./tag"
 
 const Code = defineStyleConfig({
   variants: {
@@ -85,7 +86,7 @@ export const theme = extendTheme({
   },
   config: {
     initialColorMode: "light",
-    useSystemColorMode: true,
+    useSystemColorMode: false,
   },
   components: {
     Button,
@@ -98,5 +99,6 @@ export const theme = extendTheme({
     Link,
     FormError,
     Popover,
+    Tag,
   },
 } satisfies ThemeOverride) as Theme

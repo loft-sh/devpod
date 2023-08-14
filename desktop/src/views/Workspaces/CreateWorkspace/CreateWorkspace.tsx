@@ -25,13 +25,16 @@ import { FiFolder } from "react-icons/fi"
 import { useNavigate } from "react-router"
 import { Link as RouterLink, useSearchParams } from "react-router-dom"
 import { client } from "../../../client"
-import { ExampleCard, IDEIcon, WarningMessageBox } from "../../../components"
+import { Form, ExampleCard, IDEIcon, WarningMessageBox } from "@/components"
 import { RECOMMENDED_PROVIDER_SOURCES, SIDEBAR_WIDTH } from "../../../constants"
 import { useProvider, useProviders, useWorkspace, useWorkspaces } from "../../../contexts"
+import { Plus } from "../../../icons"
+import { ProviderPlaceholderSvg } from "../../../images"
 import { exists, getKeys, isEmpty, useFormErrors } from "../../../lib"
 import { Routes } from "../../../routes"
 import { useBorderColor } from "../../../Theme"
 import { TIDE } from "../../../types"
+import { useIDEs } from "../../../useIDEs"
 import { useSetupProviderModal } from "../../Providers"
 import { WORKSPACE_EXAMPLES } from "./constants"
 import {
@@ -42,16 +45,6 @@ import {
   TSelectProviderOptions,
 } from "./types"
 import { useCreateWorkspaceForm } from "./useCreateWorkspaceForm"
-import styled from "@emotion/styled"
-import { Plus } from "../../../icons"
-import { ProviderPlaceholderSvg } from "../../../images"
-import { useIDEs } from "../../../useIDEs"
-
-const Form = styled.form`
-  width: 100%;
-  display: flex;
-  justify-content: center;
-`
 
 export function CreateWorkspace() {
   const { ides } = useIDEs()
@@ -166,12 +159,12 @@ export function CreateWorkspace() {
   const backgroundColor = useColorModeValue("gray.50", "gray.800")
   const borderColor = useBorderColor()
   const inputBackgroundColor = useColorModeValue("white", "black")
-  const bottomBarBackgroundColor = useColorModeValue("white", "black")
+  const bottomBarBackgroundColor = useColorModeValue("white", "background.darkest")
   const { colorMode } = useColorMode()
 
   return (
     <>
-      <Form ref={formRef} onSubmit={onSubmit}>
+      <Form ref={formRef} onSubmit={onSubmit} justifyContent={"center"}>
         <VStack align="start" spacing="6" alignItems="center" width="full" maxWidth="container.lg">
           <HStack
             gap="0"

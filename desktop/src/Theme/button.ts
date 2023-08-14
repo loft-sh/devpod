@@ -18,20 +18,22 @@ export const Button = defineStyleConfig({
         },
       },
     },
-    ["primary-outline"](props) {
-      const hover = props.theme.colors.primary["500"]
-      const active = props.theme.colors.primary["800"]
-
+    ["solid-outline"](props) {
       return {
-        color: mode("primary.600", "primary.400")(props),
-        borderColor: mode("primary.600", "primary.400")(props),
+        color: mode("gray.600", "gray.400")(props),
+        borderColor: mode("gray.300", "whiteAlpha.300")(props),
         borderWidth: 1,
-        backgroundColor: "transparent",
+        ".chakra-button__group[data-attached][data-orientation=horizontal] > &:not(:last-of-type)":
+          { marginEnd: "-1px" },
+        ".chakra-button__group[data-attached][data-orientation=vertical] > &:not(:last-of-type)": {
+          marginBottom: "-1px",
+        },
+        backgroundColor: mode("gray.100", "whiteAlpha.200")(props),
         _hover: {
-          backgroundColor: `${hover}33`,
+          backgroundColor: mode("gray.200", "whiteAlpha.300")(props),
         },
         _active: {
-          backgroundColor: `${active}33`,
+          backgroundColor: mode("gray.300", "whiteAlpha.400")(props),
         },
       }
     },

@@ -74,9 +74,7 @@ func (cmd *ListCmd) Run(ctx context.Context) error {
 		}, tableEntries)
 	} else if cmd.Output == "json" {
 		tableEntries := []*provider.ProInstance{}
-		for _, proInstance := range proInstances {
-			tableEntries = append(tableEntries, proInstance)
-		}
+		tableEntries = append(tableEntries, proInstances...)
 		sort.SliceStable(tableEntries, func(i, j int) bool {
 			return tableEntries[i].ID < tableEntries[j].ID
 		})

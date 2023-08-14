@@ -1,6 +1,5 @@
 import {
   Box,
-  Button,
   ButtonGroup,
   Card,
   CardBody,
@@ -13,18 +12,10 @@ import {
   IconButton,
   Image,
   Link,
-  Modal,
-  ModalBody,
-  ModalCloseButton,
-  ModalContent,
-  ModalFooter,
-  ModalHeader,
-  ModalOverlay,
   Switch,
   Text,
   Tooltip,
   useColorModeValue,
-  useDisclosure,
 } from "@chakra-ui/react"
 import { UseMutationResult, useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { useMemo } from "react"
@@ -40,6 +31,7 @@ import { QueryKeys } from "../../queryKeys"
 import { Routes } from "../../routes"
 import { TProvider, TProviderID, TProviderSource, TRunnable, TWithProviderID } from "../../types"
 import { useSetupProviderModal } from "./useSetupProviderModal"
+import { useDeleteProviderModal } from "./useDeleteProviderModal"
 
 type TProviderCardProps = {
   id: string
@@ -52,7 +44,6 @@ export function ProviderCard({ id, provider, remove }: TProviderCardProps) {
   const navigate = useNavigate()
   const queryClient = useQueryClient()
   const workspaces = useWorkspaces()
-  const { isOpen: isDeleteOpen, onOpen: onDeleteOpen, onClose: onDeleteClose } = useDisclosure()
   const providerWorkspaces = useMemo(
     () => workspaces.filter((workspace) => workspace.provider?.name === id),
     [id, workspaces]
@@ -91,6 +82,13 @@ export function ProviderCard({ id, provider, remove }: TProviderCardProps) {
       queryClient.invalidateQueries(QueryKeys.providerUpdate(id))
     },
   })
+  const { modal: deleteProviderModal, open: openDeleteProviderModal } = useDeleteProviderModal(
+    id,
+    "provider",
+    "delete",
+    providerWorkspaces.length > 0,
+    () => remove.run({ providerID: id })
+  )
 
   const labelTextColor = useColorModeValue("gray.600", "gray.400")
   const providerIcon = provider.config?.icon
@@ -228,9 +226,7 @@ export function ProviderCard({ id, provider, remove }: TProviderCardProps) {
                 variant="ghost"
                 colorScheme="gray"
                 icon={<Trash boxSize="4" />}
-                onClick={() => {
-                  onDeleteOpen()
-                }}
+                onClick={openDeleteProviderModal}
                 isLoading={remove.status === "loading" && remove.target?.providerID === id}
               />
             </Tooltip>
@@ -238,43 +234,8 @@ export function ProviderCard({ id, provider, remove }: TProviderCardProps) {
         </CardFooter>
       </Card>
 
-      <Modal onClose={onDeleteClose} isOpen={isDeleteOpen} isCentered>
-        <ModalOverlay />
-        <ModalContent>
-          <ModalHeader>Delete Provider</ModalHeader>
-          <ModalCloseButton />
-          <ModalBody>
-            {providerWorkspaces.length === 0 ? (
-              <>
-                Deleting the provider will erase all provider state. Make sure to delete provider
-                workspaces before. Are you sure you want to delete provider {id}?
-              </>
-            ) : (
-              <>
-                Please make sure to delete all workspaces that use this provider, before deleting
-                this provider itself
-              </>
-            )}
-          </ModalBody>
-          <ModalFooter>
-            <HStack spacing={"2"}>
-              <Button onClick={onDeleteClose}>Close</Button>
-              {!providerWorkspaces.length && (
-                <Button
-                  colorScheme={"red"}
-                  onClick={async () => {
-                    remove.run({ providerID: id })
-                    onDeleteClose()
-                  }}>
-                  Delete
-                </Button>
-              )}
-            </HStack>
-          </ModalFooter>
-        </ModalContent>
-      </Modal>
-
       {setupProviderModal}
+      {deleteProviderModal}
     </>
   )
 }
