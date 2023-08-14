@@ -15,6 +15,10 @@ func (r *Runner) Build(ctx context.Context, options config.BuildOptions) (string
 		return "", err
 	}
 
+	if options.Repository == "" && len(config.GetDevPodCustomizations(substitutedConfig.Config).PrebuildRepository) == 0 {
+		return "", fmt.Errorf("repository needs to be specified")
+	}
+
 	// check if we need to build container
 	buildInfo, err := r.build(ctx, substitutedConfig, options)
 	if err != nil {
@@ -22,7 +26,13 @@ func (r *Runner) Build(ctx context.Context, options config.BuildOptions) (string
 	}
 
 	// prebuild already exists
-	prebuildImage := options.Repository + ":" + buildInfo.PrebuildHash
+	var prebuildImage string
+	if options.Repository != "" {
+		prebuildImage = options.Repository + ":" + buildInfo.PrebuildHash
+	} else if config.GetDevPodCustomizations(substitutedConfig.Config).PrebuildRepository[0] != "" {
+		prebuildImage = config.GetDevPodCustomizations(substitutedConfig.Config).PrebuildRepository[0] + ":" + buildInfo.PrebuildHash
+	}
+
 	if buildInfo.ImageName == prebuildImage {
 		return buildInfo.ImageName, nil
 	}

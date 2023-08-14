@@ -47,7 +47,7 @@ func NewBuildCmd(flags *flags.GlobalFlags) *cobra.Command {
 			}
 
 			// check permissions
-			if !cmd.SkipPush {
+			if !cmd.SkipPush && cmd.Repository != "" {
 				err = image.CheckPushPermissions(cmd.Repository)
 				if err != nil {
 					return fmt.Errorf("cannot push to %s, please make sure you have push permissions to repository %s", cmd.Repository, cmd.Repository)
@@ -103,7 +103,6 @@ func NewBuildCmd(flags *flags.GlobalFlags) *cobra.Command {
 	buildCmd.Flags().StringVar(&cmd.Repository, "repository", "", "The repository to push to")
 	buildCmd.Flags().StringSliceVar(&cmd.Platform, "platform", []string{}, "Set target platform for build")
 	buildCmd.Flags().BoolVar(&cmd.SkipPush, "skip-push", false, "If true will not push the image to the repository, useful for testing")
-	_ = buildCmd.MarkFlagRequired("repository")
 
 	// TESTING
 	buildCmd.Flags().BoolVar(&cmd.ForceBuild, "force-build", false, "TESTING ONLY")

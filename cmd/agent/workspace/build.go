@@ -2,7 +2,6 @@ package workspace
 
 import (
 	"context"
-	"fmt"
 	"os"
 
 	"github.com/loft-sh/devpod/cmd/flags"
@@ -49,11 +48,6 @@ func (cmd *BuildCmd) Run(ctx context.Context) error {
 		return err
 	} else if shouldExit {
 		return nil
-	}
-
-	// check if repository is set
-	if workspaceInfo.CLIOptions.Repository == "" {
-		return fmt.Errorf("repository needs to be specified")
 	}
 
 	// make sure daemon does shut us down while we are doing things
