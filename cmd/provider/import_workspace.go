@@ -76,10 +76,8 @@ func (cmd *ImportCmd) Import(ctx context.Context, args []string) error {
 		return err
 	}
 
-	// todo: fill it with the data from the --options?
-	emptyWorkspaceConfig := &provider2.Workspace{}
-
-	workspaceClient, err := clientimplementation.NewProxyClient(devPodConfig, proxyProvider, emptyWorkspaceConfig, cmd.log)
+	workspaceClient, err := clientimplementation.NewProxyClient(
+		devPodConfig, proxyProvider, &provider2.Workspace{}, cmd.log)
 	if err != nil {
 		return err
 	}
