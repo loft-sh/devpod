@@ -15,6 +15,10 @@ func (r *Runner) Build(ctx context.Context, options config.BuildOptions) (string
 		return "", err
 	}
 
+	if options.Repository == "" && len(config.GetDevPodCustomizations(substitutedConfig.Config).PrebuildRepository) == 0 {
+		return "", fmt.Errorf("repository needs to be specified")
+	}
+
 	// check if we need to build container
 	buildInfo, err := r.build(ctx, substitutedConfig, options)
 	if err != nil {
