@@ -41,7 +41,7 @@ func (d *dockerDriver) BuildDevContainer(
 	}
 
 	// check if there is a prebuild image
-	imageName := getImageName(localWorkspaceFolder, prebuildHash)
+	imageName := GetImageName(localWorkspaceFolder, prebuildHash)
 	if !options.ForceBuild {
 		devPodCustomizations := config.GetDevPodCustomizations(parsedConfig.Config)
 		if options.Repository != "" {
@@ -98,7 +98,7 @@ func (d *dockerDriver) BuildDevContainer(
 	}
 
 	// get build options
-	buildOptions, deleteFolders, err := CreateBuildOptions(dockerfilePath, dockerfileContent, parsedConfig, extendedBuildInfo, imageName, options.Repository, prebuildHash)
+	buildOptions, deleteFolders, err := CreateBuildOptions(dockerfilePath, dockerfileContent, parsedConfig, extendedBuildInfo, imageName, options.Repository, options.PrebuildRepositories, prebuildHash)
 	if err != nil {
 		return nil, err
 	}
@@ -150,6 +150,7 @@ func CreateBuildOptions(
 	extendedBuildInfo *feature.ExtendedBuildInfo,
 	imageName string,
 	pushRepository string,
+	prebuildRepositories []string,
 	prebuildHash string,
 ) (*build.BuildOptions, []string, error) {
 	// extra args?
@@ -218,6 +219,9 @@ func CreateBuildOptions(
 	if pushRepository != "" {
 		buildOptions.Images = append(buildOptions.Images, pushRepository+":"+prebuildHash)
 	}
+	for _, prebuildRepository := range prebuildRepositories {
+		buildOptions.Images = append(buildOptions.Images, prebuildRepository+":"+prebuildHash)
+	}
 	buildOptions.Context = GetContextPath(parsedConfig.Config)
 
 	// add build arg
@@ -228,7 +232,7 @@ func CreateBuildOptions(
 	return buildOptions, deleteFolders, nil
 }
 
-func getImageName(localWorkspaceFolder, prebuildHash string) string {
+func GetImageName(localWorkspaceFolder, prebuildHash string) string {
 	imageHash := hash.String(localWorkspaceFolder)[:5]
 	return "vsc-" + id.ToDockerImageName(filepath.Base(localWorkspaceFolder)) + "-" + imageHash + ":" + prebuildHash
 }

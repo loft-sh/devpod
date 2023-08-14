@@ -142,6 +142,7 @@ func (k *kubernetesDriver) buildPod(
 		extendedBuildInfo,
 		imageName,
 		"",
+		nil,
 		prebuildHash,
 	)
 	if err != nil {
