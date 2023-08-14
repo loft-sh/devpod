@@ -12,13 +12,15 @@ import (
 	"github.com/loft-sh/log"
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
-	"os"
 )
 
 type ImportCmd struct {
 	*flags.GlobalFlags
 
-	log log.Logger
+	WorkspaceId  string
+	WorkspaceUid string
+	ProviderId   string
+	log          log.Logger
 }
 
 // NewImportCmd creates a new command
@@ -27,22 +29,27 @@ func NewImportCmd(globalFlags *flags.GlobalFlags) *cobra.Command {
 		GlobalFlags: globalFlags,
 		log:         log.GetInstance(),
 	}
-	return &cobra.Command{
+
+	importCmd := &cobra.Command{
 		Use:   "import-workspace",
 		Short: "Imports a workspace",
 		RunE: func(cobraCmd *cobra.Command, args []string) error {
 			return cmd.Import(cobraCmd.Context(), args)
 		},
 	}
+
+	// todo: enforce usage of flags
+	importCmd.Flags().StringVar(&cmd.WorkspaceId, "workspace-id", "", "ID of a workspace to import")
+	importCmd.Flags().StringVar(&cmd.WorkspaceUid, "workspace-uid", "", "UID of a workspace to import")
+	importCmd.Flags().StringVar(
+		&cmd.ProviderId, "provider-id", "", "Provider to use for importing. Must be a proxy provider")
+
+	return importCmd
 }
 
 func (cmd *ImportCmd) Import(ctx context.Context, args []string) error {
-	workspaceMetaData, err := cmd.readWorkspaceMetaData()
-	if err != nil {
-		return err
-	}
-	devPodConfig, err := config.LoadConfig(cmd.Context, workspaceMetaData.ProviderID)
-	proxyProvider, err := cmd.getProxyProvider(devPodConfig, workspaceMetaData.ProviderID)
+	devPodConfig, err := config.LoadConfig(cmd.Context, cmd.ProviderId)
+	proxyProvider, err := cmd.getProxyProvider(devPodConfig, cmd.ProviderId)
 	if err != nil {
 		return err
 	}
@@ -57,12 +64,6 @@ func (cmd *ImportCmd) Import(ctx context.Context, args []string) error {
 	return workspaceClient.ImportWorkspace(ctx, client2.ImportWorkspaceOptions{})
 }
 
-type WorkspaceMetaData struct {
-	WorkspaceUID string `json:"workspaceUID"`
-	WorkspaceID  string `json:"workspaceID"`
-	ProviderID   string `json:"providerID"`
-}
-
 func (cmd *ImportCmd) getProxyProvider(devpodConfig *config.Config, providerID string) (*provider2.ProviderConfig, error) {
 	provider, err := workspace.FindProvider(devpodConfig, providerID, cmd.log)
 	if err != nil {
@@ -74,27 +75,4 @@ func (cmd *ImportCmd) getProxyProvider(devpodConfig *config.Config, providerID s
 	}
 
 	return provider.Config, nil
-}
-
-func (cmd *ImportCmd) readWorkspaceMetaData() (*WorkspaceMetaData, error) {
-	workspaceUID := os.Getenv("WORKSPACE_UID")
-	if workspaceUID == "" {
-		return nil, fmt.Errorf("%s is missing in environment", "WORKSPACE_UID")
-	}
-
-	workspaceID := os.Getenv("WORKSPACE_ID")
-	if workspaceID == "" {
-		return nil, fmt.Errorf("%s is missing in environment", "WORKSPACE_ID")
-	}
-
-	providerID := os.Getenv("PROVIDER_ID")
-	if providerID == "" {
-		return nil, fmt.Errorf("%s is missing in environment", "PROVIDER_ID")
-	}
-
-	return &WorkspaceMetaData{
-		WorkspaceUID: workspaceUID,
-		WorkspaceID:  workspaceID,
-		ProviderID:   providerID,
-	}, nil
 }
