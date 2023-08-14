@@ -54,6 +54,7 @@ func (cmd *ImportCmd) prepareImportWorkspaceOptions(options []string) (client2.I
 	importWorkspaceOptions := client2.ImportWorkspaceOptions{
 		"WORKSPACE_ID":  cmd.WorkspaceId,
 		"WORKSPACE_UID": cmd.WorkspaceUid,
+		"PROVIDER_ID":   cmd.ProviderId,
 	}
 
 	userOptions, err := provider2.ParseOptions(options)
