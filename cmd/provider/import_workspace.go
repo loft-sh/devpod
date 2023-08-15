@@ -37,14 +37,13 @@ func NewImportCmd(globalFlags *flags.GlobalFlags) *cobra.Command {
 		Use:   "import-workspace",
 		Short: "Imports a workspace",
 		RunE: func(cobraCmd *cobra.Command, args []string) error {
-			return cmd.Import(cobraCmd.Context(), args)
+			return cmd.Run(cobraCmd.Context(), args)
 		},
 	}
 
 	importCmd.Flags().StringVar(&cmd.WorkspaceId, "workspace-id", "", "ID of a workspace to import")
 	importCmd.Flags().StringVar(&cmd.WorkspaceUid, "workspace-uid", "", "UID of a workspace to import")
-	// todo: what is workspace-context?
-	importCmd.Flags().StringVar(&cmd.WorkspaceContext, "workspace-context", "", "????????")
+	importCmd.Flags().StringVar(&cmd.WorkspaceContext, "workspace-context", "", "Target context for a workspace")
 	importCmd.Flags().StringVar(&cmd.WorkspaceFolder, "workspace-folder", "", "Path to the directory for a new workspace")
 	importCmd.Flags().StringVar(
 		&cmd.ProviderId, "provider-id", "", "Provider to use for importing. Must be a proxy provider")
@@ -54,23 +53,32 @@ func NewImportCmd(globalFlags *flags.GlobalFlags) *cobra.Command {
 	_ = importCmd.MarkFlagRequired("workspace-id")
 	_ = importCmd.MarkFlagRequired("workspace-uid")
 	_ = importCmd.MarkFlagRequired("provider-id")
-	_ = importCmd.MarkFlagRequired("workspace-context")
 	_ = importCmd.MarkFlagRequired("workspace-folder")
 
 	return importCmd
 }
 
-func (cmd *ImportCmd) prepareWorkspaceToImportDefinition() *provider2.Workspace {
+func (cmd *ImportCmd) prepareWorkspaceToImportDefinition(devPodConfig *config.Config) (*provider2.Workspace, error) {
+	var workspaceContext string
+
+	if cmd.WorkspaceContext == "" {
+		workspaceContext = devPodConfig.DefaultContext
+	} else if devPodConfig.Contexts[cmd.WorkspaceContext] != nil {
+		workspaceContext = cmd.WorkspaceContext
+	} else {
+		return nil, fmt.Errorf("context '%s' doesn't exist", cmd.WorkspaceContext)
+	}
+
 	return &provider2.Workspace{
 		ID:       cmd.WorkspaceId,
 		UID:      cmd.WorkspaceUid,
 		Folder:   cmd.WorkspaceFolder,
 		Provider: provider2.WorkspaceProviderConfig{Name: cmd.ProviderId},
-		Context:  cmd.WorkspaceContext,
-	}
+		Context:  workspaceContext,
+	}, nil
 }
 
-func (cmd *ImportCmd) Import(ctx context.Context, args []string) error {
+func (cmd *ImportCmd) Run(ctx context.Context, args []string) error {
 	devPodConfig, err := config.LoadConfig(cmd.Context, cmd.ProviderId)
 	if err != nil {
 		return err
@@ -85,8 +93,13 @@ func (cmd *ImportCmd) Import(ctx context.Context, args []string) error {
 		return errors.Wrap(err, "parse options")
 	}
 
+	workspaceDefinition, err := cmd.prepareWorkspaceToImportDefinition(devPodConfig)
+	if err != nil {
+		return err
+	}
+
 	workspaceClient, err := clientimplementation.NewProxyClient(
-		devPodConfig, proxyProvider, cmd.prepareWorkspaceToImportDefinition(), cmd.log)
+		devPodConfig, proxyProvider, workspaceDefinition, cmd.log)
 	if err != nil {
 		return err
 	}
