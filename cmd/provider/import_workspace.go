@@ -71,6 +71,9 @@ func (cmd *ImportCmd) prepareImportWorkspaceOptions(options []string) (client2.I
 
 func (cmd *ImportCmd) Import(ctx context.Context, args []string) error {
 	devPodConfig, err := config.LoadConfig(cmd.Context, cmd.ProviderId)
+	if err != nil {
+		return err
+	}
 	proxyProvider, err := cmd.getProxyProvider(devPodConfig, cmd.ProviderId)
 	if err != nil {
 		return err
