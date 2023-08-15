@@ -153,7 +153,7 @@ export function Notifications() {
                         </LinkOverlay>
                       </Text>
                       {action.finishedAt !== undefined && (
-                        <Text color={subheadingTextColor}>
+                        <Text color={subheadingTextColor} marginTop="-1">
                           {dayjs(action.finishedAt).fromNow()}
                         </Text>
                       )}

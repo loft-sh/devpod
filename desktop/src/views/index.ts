@@ -1,4 +1,5 @@
 export * from "./Actions"
+export * from "./ProInstances"
 export * from "./Providers"
 export * from "./Settings"
 export * from "./Workspaces"

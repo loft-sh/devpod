@@ -1,3 +1,4 @@
+import { Form } from "@/components/Form"
 import { CheckIcon } from "@chakra-ui/icons"
 import {
   Button,
@@ -23,7 +24,6 @@ import {
   useBreakpointValue,
   useColorModeValue,
 } from "@chakra-ui/react"
-import styled from "@emotion/styled"
 import { useQueryClient } from "@tanstack/react-query"
 import { AnimatePresence, motion } from "framer-motion"
 import { useCallback, useEffect, useRef, useState } from "react"
@@ -50,12 +50,6 @@ import { LoadingProviderIndicator } from "./LoadingProviderIndicator"
 import { FieldName, TFormValues, TSetupProviderResult } from "./types"
 import { useAddProvider } from "./useAddProvider"
 
-const Form = styled.form`
-  width: 100%;
-  display: flex;
-  flex-flow: column nowrap;
-  justify-content: center;
-`
 const ALLOWED_NAMES_REGEX = /^[a-z0-9\\-]+$/
 const DEFAULT_VAL_OPTS: SetValueConfig = {
   shouldDirty: true,
@@ -237,7 +231,7 @@ export function SetupProviderSourceForm({
 
   return (
     <>
-      <Form onSubmit={handleSubmit(onSubmit)} spellCheck={false}>
+      <Form onSubmit={handleSubmit(onSubmit)}>
         <Stack spacing={6} width="full" alignItems="center" paddingBottom={8}>
           <FormControl
             isRequired

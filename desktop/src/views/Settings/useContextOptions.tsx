@@ -40,7 +40,6 @@ export function useAgentURLOption() {
   const handleBlur = useCallback(
     (e: FocusEvent<HTMLInputElement>) => {
       const value = e.target.value.trim()
-      console.log("blur", value)
       updateOption({ option: "AGENT_URL", value })
       setHasFocus(false)
     },

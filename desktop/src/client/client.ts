@@ -22,6 +22,7 @@ import { ProvidersClient } from "./providers"
 import { WorkspacesClient } from "./workspaces"
 import { UseToastOptions } from "@chakra-ui/react"
 import { Release } from "../gen"
+import { ProClient } from "./pro"
 
 // These types have to match the rust types! Make sure to update them as well!
 type TChannels = {
@@ -53,6 +54,7 @@ class Client {
   public readonly providers = new ProvidersClient()
   public readonly ides = new IDEsClient()
   public readonly context = new ContextClient()
+  public readonly pro = new ProClient()
 
   public setSetting<TSettingName extends keyof TClientSettings>(
     name: TSettingName,
@@ -62,6 +64,7 @@ class Client {
       this.workspaces.setDebug(value)
       this.providers.setDebug(value)
       this.ides.setDebug(value)
+      this.pro.setDebug(value)
     }
   }
   public ready(): Promise<void> {

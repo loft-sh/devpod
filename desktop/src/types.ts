@@ -1,4 +1,5 @@
 import { UseMutationResult } from "@tanstack/react-query"
+import { TStreamEventListenerFn } from "./client"
 
 type TMaybe<T> = T | null | undefined
 export type TUnsubscribeFn = VoidFunction
@@ -13,7 +14,7 @@ export type TDeepNonNullable<T> = {
 export type TLogOutput = Readonly<{ time: Date; message?: string; level: string }>
 export type TQueryResult<TData extends Readonly<object>> = [
   TData | undefined,
-  Pick<UseMutationResult, "status" | "error">,
+  Pick<UseMutationResult, "status" | "error">
 ]
 export type TRunnable<TRunConfig> = Readonly<{ run(config: TRunConfig): void }>
 //#endregion
@@ -173,6 +174,30 @@ export type TContextOption = Readonly<{
   default: string | null | undefined
   enum: readonly string[] | null | undefined
   value: string | null | undefined
+}>
+//#endregion
+
+//#region Pro
+export type TProID = string
+export type TWithProID = Readonly<{ id: TProID }>
+export type TProInstance = Readonly<{
+  id: TMaybe<string>
+  url: TMaybe<string>
+  creationTimestamp: TMaybe<string>
+}>
+export type TProInstances = readonly TProInstance[]
+export type TProInstanceManager = Readonly<{
+  login: TRunnable<TProInstanceLoginConfig> &
+    Pick<UseMutationResult<TProvider, Error, unknown>, "status" | "error" | "reset"> & {
+      provider: TProvider | undefined
+    }
+  disconnect: TRunnable<TWithProID> &
+    Pick<UseMutationResult, "status" | "error"> & { target: TWithProID | undefined }
+}>
+export type TProInstanceLoginConfig = Readonly<{
+  url: string
+  name?: string
+  streamListener?: TStreamEventListenerFn
 }>
 //#endregion
 

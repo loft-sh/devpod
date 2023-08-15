@@ -1,19 +1,18 @@
-package engine
+package pro
 
 import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"os"
 	"sort"
 	"time"
 
 	"github.com/loft-sh/devpod/cmd/flags"
 	"github.com/loft-sh/devpod/pkg/config"
 	"github.com/loft-sh/devpod/pkg/provider"
+	"github.com/loft-sh/devpod/pkg/workspace"
 	"github.com/loft-sh/log"
 	"github.com/loft-sh/log/table"
-	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
 )
 
@@ -32,7 +31,7 @@ func NewListCmd(flags *flags.GlobalFlags) *cobra.Command {
 	listCmd := &cobra.Command{
 		Use:     "list",
 		Aliases: []string{"ls"},
-		Short:   "List available engines",
+		Short:   "List available pro instances",
 		Args:    cobra.NoArgs,
 		RunE: func(_ *cobra.Command, args []string) error {
 			return cmd.Run(context.Background())
@@ -50,28 +49,18 @@ func (cmd *ListCmd) Run(ctx context.Context) error {
 		return err
 	}
 
-	engineDir, err := provider.GetEnginesDir(devPodConfig.DefaultContext)
+	proInstances, err := workspace.ListProInstances(devPodConfig, log.Default)
 	if err != nil {
-		return err
-	}
-
-	entries, err := os.ReadDir(engineDir)
-	if err != nil && !os.IsNotExist(err) {
 		return err
 	}
 
 	if cmd.Output == "plain" {
 		tableEntries := [][]string{}
-		for _, entry := range entries {
-			engineConfig, err := provider.LoadEngineConfig(devPodConfig.DefaultContext, entry.Name())
-			if err != nil {
-				return errors.Wrap(err, "load engine config")
-			}
-
+		for _, proInstance := range proInstances {
 			tableEntries = append(tableEntries, []string{
-				engineConfig.ID,
-				engineConfig.URL,
-				time.Since(engineConfig.CreationTimestamp.Time).Round(1 * time.Second).String(),
+				proInstance.ID,
+				proInstance.URL,
+				time.Since(proInstance.CreationTimestamp.Time).Round(1 * time.Second).String(),
 			})
 		}
 		sort.SliceStable(tableEntries, func(i, j int) bool {
@@ -84,15 +73,8 @@ func (cmd *ListCmd) Run(ctx context.Context) error {
 			"Age",
 		}, tableEntries)
 	} else if cmd.Output == "json" {
-		tableEntries := []*provider.Engine{}
-		for _, entry := range entries {
-			engineConfig, err := provider.LoadEngineConfig(devPodConfig.DefaultContext, entry.Name())
-			if err != nil {
-				return errors.Wrap(err, "load engine config")
-			}
-
-			tableEntries = append(tableEntries, engineConfig)
-		}
+		tableEntries := []*provider.ProInstance{}
+		tableEntries = append(tableEntries, proInstances...)
 		sort.SliceStable(tableEntries, func(i, j int) bool {
 			return tableEntries[i].ID < tableEntries[j].ID
 		})

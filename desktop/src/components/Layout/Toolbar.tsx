@@ -1,8 +1,9 @@
 import { BoxProps, Grid, GridItem } from "@chakra-ui/react"
 import { ReactNode, useEffect, useId } from "react"
-import { useToolbar } from "../../contexts"
 import { useBorderColor } from "../../Theme"
+import { useToolbar } from "../../contexts"
 import { Notifications } from "./Notifications"
+import { Pro } from "./Pro"
 
 export function Toolbar({ ...boxProps }: BoxProps) {
   const borderColor = useBorderColor()
@@ -12,7 +13,7 @@ export function Toolbar({ ...boxProps }: BoxProps) {
     <Grid
       alignContent="center"
       templateRows="1fr"
-      templateColumns="minmax(auto, 18rem) 3fr 5rem"
+      templateColumns="minmax(auto, 18rem) 3fr fit-content(15rem)"
       width="full"
       paddingX="4"
       borderBottomColor={borderColor}
@@ -26,6 +27,7 @@ export function Toolbar({ ...boxProps }: BoxProps) {
       </GridItem>
       <GridItem display="flex" alignItems="center" justifyContent="center">
         <Notifications />
+        <Pro />
       </GridItem>
     </Grid>
   )
