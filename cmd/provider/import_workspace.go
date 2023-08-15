@@ -5,7 +5,6 @@ import (
 	"fmt"
 
 	"github.com/loft-sh/devpod/cmd/flags"
-	client2 "github.com/loft-sh/devpod/pkg/client"
 	"github.com/loft-sh/devpod/pkg/client/clientimplementation"
 	"github.com/loft-sh/devpod/pkg/config"
 	provider2 "github.com/loft-sh/devpod/pkg/provider"
@@ -20,6 +19,8 @@ type ImportCmd struct {
 
 	WorkspaceId      string
 	WorkspaceUid     string
+	WorkspaceContext string
+	WorkspaceFolder  string
 	ProviderId       string
 	WorkspaceOptions []string
 	log              log.Logger
@@ -40,34 +41,33 @@ func NewImportCmd(globalFlags *flags.GlobalFlags) *cobra.Command {
 		},
 	}
 
-	// todo: enforce usage of flags
 	importCmd.Flags().StringVar(&cmd.WorkspaceId, "workspace-id", "", "ID of a workspace to import")
 	importCmd.Flags().StringVar(&cmd.WorkspaceUid, "workspace-uid", "", "UID of a workspace to import")
+	// todo: what is workspace-context?
+	importCmd.Flags().StringVar(&cmd.WorkspaceContext, "workspace-context", "", "????????")
+	importCmd.Flags().StringVar(&cmd.WorkspaceFolder, "workspace-folder", "", "Path to the directory for a new workspace")
 	importCmd.Flags().StringVar(
 		&cmd.ProviderId, "provider-id", "", "Provider to use for importing. Must be a proxy provider")
 	importCmd.Flags().StringArrayVarP(
 		&cmd.WorkspaceOptions, "option", "o", []string{}, "Workspace option in the form KEY=VALUE")
 
+	_ = importCmd.MarkFlagRequired("workspace-id")
+	_ = importCmd.MarkFlagRequired("workspace-uid")
+	_ = importCmd.MarkFlagRequired("provider-id")
+	_ = importCmd.MarkFlagRequired("workspace-context")
+	_ = importCmd.MarkFlagRequired("workspace-folder")
+
 	return importCmd
 }
 
-func (cmd *ImportCmd) prepareImportWorkspaceOptions(options []string) (client2.ImportWorkspaceOptions, error) {
-	importWorkspaceOptions := client2.ImportWorkspaceOptions{
-		"WORKSPACE_ID":  cmd.WorkspaceId,
-		"WORKSPACE_UID": cmd.WorkspaceUid,
-		"PROVIDER_ID":   cmd.ProviderId,
+func (cmd *ImportCmd) prepareWorkspaceToImportDefinition() *provider2.Workspace {
+	return &provider2.Workspace{
+		ID:       cmd.WorkspaceId,
+		UID:      cmd.WorkspaceUid,
+		Folder:   cmd.WorkspaceFolder,
+		Provider: provider2.WorkspaceProviderConfig{Name: cmd.ProviderId},
+		Context:  cmd.WorkspaceContext,
 	}
-
-	userOptions, err := provider2.ParseOptions(options)
-	if err != nil {
-		return nil, errors.Wrap(err, "parse options")
-	}
-
-	for key, value := range userOptions {
-		importWorkspaceOptions[key] = value
-	}
-
-	return importWorkspaceOptions, nil
 }
 
 func (cmd *ImportCmd) Import(ctx context.Context, args []string) error {
@@ -80,13 +80,13 @@ func (cmd *ImportCmd) Import(ctx context.Context, args []string) error {
 		return err
 	}
 
-	workspaceClient, err := clientimplementation.NewProxyClient(
-		devPodConfig, proxyProvider, &provider2.Workspace{}, cmd.log)
+	options, err := provider2.ParseOptions(cmd.WorkspaceOptions)
 	if err != nil {
-		return err
+		return errors.Wrap(err, "parse options")
 	}
 
-	options, err := cmd.prepareImportWorkspaceOptions(cmd.WorkspaceOptions)
+	workspaceClient, err := clientimplementation.NewProxyClient(
+		devPodConfig, proxyProvider, cmd.prepareWorkspaceToImportDefinition(), cmd.log)
 	if err != nil {
 		return err
 	}
