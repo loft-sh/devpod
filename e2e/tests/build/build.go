@@ -9,6 +9,7 @@ import (
 	"github.com/loft-sh/devpod/pkg/devcontainer/config"
 	"github.com/loft-sh/devpod/pkg/docker"
 	"github.com/loft-sh/devpod/pkg/dockerfile"
+	dockerdriver "github.com/loft-sh/devpod/pkg/driver/docker"
 	"github.com/loft-sh/log"
 	"github.com/onsi/ginkgo/v2"
 )
@@ -61,6 +62,39 @@ var _ = DevPodDescribe("devpod build test suite", func() {
 		prebuildHash, err = config.CalculatePrebuildHash(cfg, "linux/arm64", "arm64", filepath.Dir(cfg.Origin), dockerfilePath, modifiedDockerfileContents, log.Default)
 		framework.ExpectNoError(err)
 		_, err = dockerHelper.InspectImage(ctx, prebuildRepo+":"+prebuildHash, false)
+		framework.ExpectNoError(err)
+	})
+
+	ginkgo.It("should build image without repository specified if skip-push flag is set", func() {
+		ctx := context.Background()
+
+		f := framework.NewDefaultFramework(initialDir + "/bin")
+		tempDir, err := framework.CopyToTempDir("tests/build/testdata/docker")
+		framework.ExpectNoError(err)
+		ginkgo.DeferCleanup(framework.CleanupTempDir, initialDir, tempDir)
+
+		_ = f.DevPodProviderDelete(ctx, "docker")
+		err = f.DevPodProviderAdd(ctx, "docker")
+		framework.ExpectNoError(err)
+		err = f.DevPodProviderUse(context.Background(), "docker")
+		framework.ExpectNoError(err)
+
+		cfg := getDevcontainerConfig(tempDir)
+
+		dockerfilePath := tempDir + "/.devcontainer/Dockerfile"
+		dockerfileContent, err := os.ReadFile(dockerfilePath)
+		framework.ExpectNoError(err)
+		_, modifiedDockerfileContents, err := dockerfile.EnsureDockerfileHasFinalStageName(string(dockerfileContent), config.DockerfileDefaultTarget)
+		framework.ExpectNoError(err)
+
+		// do the build
+		err = f.DevPodBuild(ctx, tempDir, "--skip-push")
+		framework.ExpectNoError(err)
+
+		// make sure images are there
+		prebuildHash, err := config.CalculatePrebuildHash(cfg, "linux/amd64", "amd64", filepath.Dir(cfg.Origin), dockerfilePath, modifiedDockerfileContents, log.Default)
+		framework.ExpectNoError(err)
+		_, err = dockerHelper.InspectImage(ctx, dockerdriver.GetImageName(tempDir, prebuildHash), false)
 		framework.ExpectNoError(err)
 	})
 
