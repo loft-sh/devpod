@@ -91,7 +91,11 @@ func (cmd *BuildCmd) Run(ctx context.Context) error {
 			return errors.Wrap(err, "build")
 		}
 
-		logger.Donef("Successfully build and pushed image %s", imageName)
+		if workspaceInfo.CLIOptions.SkipPush {
+			logger.Donef("Successfully build image %s", imageName)
+		} else {
+			logger.Donef("Successfully build and pushed image %s", imageName)
+		}
 	}
 
 	return nil
