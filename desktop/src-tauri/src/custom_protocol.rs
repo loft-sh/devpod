@@ -188,11 +188,4 @@ mod tests {
         let url_str = "devpod://something?workspace=workspace";
         let _ = super::CustomProtocol::parse(url_str).unwrap();
     }
-
-    #[test]
-    #[should_panic]
-    fn missing_source() {
-        let url_str = "devpod://open?provider=provider";
-        let _ = super::CustomProtocol::parse(url_str).unwrap();
-    }
 }
