@@ -86,13 +86,6 @@ export function useLoginProModal() {
     }
   }, [completeSetupProvider, login.provider, login.status])
 
-  useEffect(() => {
-    console.log("setup state", state)
-    if (state.currentStep === "done") {
-      console.log("all set up!")
-    }
-  }, [state, state.currentStep])
-
   const handleModalClose = useCallback(() => {
     onClose()
     // Make sure to reset on modal close as we'll rarely unmount the hook
