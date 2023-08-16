@@ -50,7 +50,40 @@ impl OpenWorkspaceMsg {
     }
 }
 
+pub struct UrlParser {}
+
+impl UrlParser {
+    const ALLOWED_METHODS: [&'static str; 1] = ["open"];
+
+    fn get_host(url: &Url) -> String {
+        url.host_str().unwrap_or("no host").to_string()
+    }
+
+    fn parse_raw_url(url_scheme: &str) -> Result<Url, ParseError> {
+        Url::parse(url_scheme).map_err(|_| ParseError::InvalidQuery(url_scheme.to_string()))
+    }
+
+    fn is_allowed_method(host_str: &str) -> bool {
+        Self::ALLOWED_METHODS.contains(&host_str)
+    }
+
+    fn parse_query(url: &Url) -> String {
+        url.query().unwrap_or("").to_string()
+    }
+
+    pub fn parse(url_scheme: &str) -> Result<String, ParseError> {
+        let url = Self::parse_raw_url(url_scheme)?;
+        let host_str = Self::get_host(&url);
+
+        if !Self::is_allowed_method(&host_str) {
+            return Err(ParseError::UnsupportedHost(host_str));
+        }
+        return Ok(Self::parse_query(&url));
+    }
+}
+
 impl CustomProtocol {
+
     pub fn init() -> Self {
         tauri_plugin_deep_link::prepare(APP_IDENTIFIER);
         Self {}
@@ -133,16 +166,10 @@ impl CustomProtocol {
     }
 
     fn parse(url_scheme: &str) -> Result<OpenWorkspaceMsg, ParseError> {
-        let url =
-            Url::parse(url_scheme).map_err(|_| ParseError::InvalidQuery(url_scheme.to_string()))?;
-        let host_str = url.host_str().unwrap_or("no host").to_string();
-        if host_str != "open" {
-            return Err(ParseError::UnsupportedHost(host_str));
-        }
+        let query = UrlParser::parse(url_scheme)?;
 
-        let query = url.query().unwrap_or("");
-        serde_qs::from_str::<OpenWorkspaceMsg>(query)
-            .map_err(|_| ParseError::InvalidQuery(query.to_string()))
+        serde_qs::from_str::<OpenWorkspaceMsg>(query.as_str())
+            .map_err(|_| ParseError::InvalidQuery(query))
     }
 }
 
