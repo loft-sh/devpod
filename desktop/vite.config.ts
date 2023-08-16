@@ -23,6 +23,7 @@ export default defineConfig({
     target: "safari13",
   },
   define: {
+    // @ts-ignore
     "process.env.DEVPOD_PRO": process.env["DEVPOD_PRO"] === "true",
   },
   // to make use of `TAURI_DEBUG` and other env variables
