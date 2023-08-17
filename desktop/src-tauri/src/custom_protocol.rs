@@ -54,7 +54,7 @@ impl OpenWorkspaceMsg {
     }
 }
 
-pub struct UrlRequest {
+pub struct Request {
     host: String,
     query: String,
 }
@@ -63,6 +63,7 @@ pub struct UrlRequest {
 pub struct UrlParser {}
 
 impl UrlParser {
+    // todo: add import to ALLOWED_METHODS
     const ALLOWED_METHODS: [&'static str; 1] = ["open"];
 
     fn get_host(url: &Url) -> String {
@@ -81,14 +82,14 @@ impl UrlParser {
         url.query().unwrap_or("").to_string()
     }
 
-    pub fn parse(url_scheme: &str) -> Result<UrlRequest, ParseError> {
+    pub fn parse(url_scheme: &str) -> Result<Request, ParseError> {
         let url = Self::parse_raw_url(url_scheme)?;
         let host_str = Self::get_host(&url);
 
         if !Self::is_allowed_method(&host_str) {
             return Err(ParseError::UnsupportedHost(host_str));
         }
-        return Ok(UrlRequest {
+        return Ok(Request {
             host: host_str,
             query: Self::parse_query(&url),
         });
@@ -178,9 +179,27 @@ impl CustomProtocol {
             tauri::async_runtime::block_on(async {
                 info!("App opened with URL: {:?}", url_scheme.to_string());
 
-                let msg = CustomProtocol::parse(&url_scheme.to_string());
+                let request = UrlParser::parse(&url_scheme.to_string());
+                if let Err(err) = request {
+                    //todo: send message about invalid request
+                    error!("Failed to parse custom protocol message: {:?}", err);
+                    return;
+                }
+                let request = request.unwrap();
                 let app_state = app_handle.state::<AppState>();
-                OpenHandler::handle(msg, app_state).await
+
+                match request.host.as_str() {
+                    "open" => {
+                        let msg = CustomProtocol::parse_open(&request);
+                        OpenHandler::handle(msg, app_state).await
+                    }
+
+                    "import" => {
+                        let msg = CustomProtocol::parse_import(&request);
+                        ImportHandler::handle(msg, app_state).await
+                    }
+                    _ => {}
+                }
             })
         });
 
@@ -217,11 +236,16 @@ impl CustomProtocol {
         let _ = result;
     }
 
-    fn parse(url_scheme: &str) -> Result<OpenWorkspaceMsg, ParseError> {
-        let query = UrlParser::parse(url_scheme)?;
+    fn parse_open(request: &Request) -> Result<OpenWorkspaceMsg, ParseError> {
+        let query = request.query.clone();
+        serde_qs::from_str::<OpenWorkspaceMsg>(query.as_str())
+            .map_err(|_| ParseError::InvalidQuery(query))
+    }
 
-        serde_qs::from_str::<OpenWorkspaceMsg>(query.query.as_str())
-            .map_err(|_| ParseError::InvalidQuery(query.query))
+    fn parse_import(request: &Request) -> Result<ImportWorkspaceMsg, ParseError> {
+        let query = request.query.clone();
+        serde_qs::from_str::<ImportWorkspaceMsg>(query.as_str())
+            .map_err(|_| ParseError::InvalidQuery(query))
     }
 }
 
@@ -231,7 +255,8 @@ mod tests {
     fn should_parse_full() {
         let url_str =
             "devpod://open?workspace=workspace&provider=provider&source=https://github.com/test123&ide=vscode";
-        let got = super::CustomProtocol::parse(url_str).unwrap();
+        let request = super::UrlParser::parse(&url_str).unwrap();
+        let got = super::CustomProtocol::parse_open(&request).unwrap();
 
         assert_eq!(got.workspace_id, Some("workspace".to_string()));
         assert_eq!(got.provider_id, Some("provider".into()));
@@ -242,7 +267,8 @@ mod tests {
     #[test]
     fn should_parse_workspace() {
         let url_str = "devpod://open?workspace=some-workspace";
-        let got = super::CustomProtocol::parse(url_str).unwrap();
+        let request = super::UrlParser::parse(&url_str).unwrap();
+        let got = super::CustomProtocol::parse_open(&request).unwrap();
 
         assert_eq!(got.workspace_id, Some("some-workspace".to_string()));
         assert_eq!(got.provider_id, None);
@@ -253,7 +279,8 @@ mod tests {
     #[test]
     fn should_parse() {
         let url_str = "devpod://open?source=some-source";
-        let got = super::CustomProtocol::parse(url_str).unwrap();
+        let request = super::UrlParser::parse(&url_str).unwrap();
+        let got = super::CustomProtocol::parse_open(&request).unwrap();
 
         assert_eq!(got.workspace_id, None);
         assert_eq!(got.provider_id, None);
@@ -265,6 +292,7 @@ mod tests {
     #[should_panic]
     fn unsupported_host() {
         let url_str = "devpod://something?workspace=workspace";
-        let _ = super::CustomProtocol::parse(url_str).unwrap();
+        let request = super::UrlParser::parse(&url_str).unwrap();
+        let _ = super::CustomProtocol::parse_open(&request).unwrap();
     }
 }
