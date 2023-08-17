@@ -8,6 +8,7 @@ use serde::Serialize;
 use std::collections::VecDeque;
 use tauri::Manager;
 use tokio::sync::mpsc::Receiver;
+use crate::custom_protocol::ImportWorkspaceMsg;
 
 #[derive(Debug, Clone)]
 pub struct UiMessageHelper {
@@ -73,7 +74,9 @@ pub enum UiMessage {
     ShowDashboard,
     ShowToast(ShowToastMsg),
     OpenWorkspace(OpenWorkspaceMsg),
+    ImportWorkspace(ImportWorkspaceMsg),
     OpenWorkspaceFailed(ParseError),
+    ImportWorkspaceFailed(ParseError),
 }
 
 #[derive(Debug, Serialize, Clone)]

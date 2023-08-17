@@ -22,6 +22,11 @@ pub struct OpenWorkspaceMsg {
     source: Option<String>,
 }
 
+#[derive(Debug, PartialEq, Serialize, Deserialize, Clone)]
+pub struct ImportWorkspaceMsg {
+    //todo: prepare a struct for this
+}
+
 #[derive(Error, Debug, Clone, Serialize)]
 pub enum ParseError {
     #[error("Unsupported host: {0}")]
@@ -117,6 +122,41 @@ impl OpenHandler {
             if let Err(err) = app_state
                 .ui_messages
                 .send(UiMessage::OpenWorkspaceFailed(err))
+                .await
+            {
+                error!("Failed to broadcast invalid custom protocol message: {:?}, {}", err.0, err);
+            };
+        }
+    }
+}
+
+pub struct ImportHandler {}
+
+impl ImportHandler {
+    pub async fn handle(msg: Result<ImportWorkspaceMsg, ParseError>, app_state: State<'_, AppState>) {
+        match msg {
+            Ok(msg) => Self::handle_ok(msg, app_state).await,
+            Err(err) => Self::handle_error(err, app_state).await,
+        }
+    }
+
+    async fn handle_ok(msg: ImportWorkspaceMsg, app_state: State<'_, AppState>) {
+        // try to send to UI if ready, otherwise buffer and let ui_ready handle
+        if let Err(err) = app_state
+            .ui_messages
+            .send(UiMessage::ImportWorkspace(msg))
+            .await
+        {
+            error!("Failed to broadcast custom protocol message: {:?}, {}", err.0, err);
+        };
+    }
+
+    async fn handle_error(err: ParseError, app_state: State<'_, AppState>) {
+        #[cfg(not(target_os = "windows"))]
+        {
+            if let Err(err) = app_state
+                .ui_messages
+                .send(UiMessage::ImportWorkspaceFailed(err))
                 .await
             {
                 error!("Failed to broadcast invalid custom protocol message: {:?}, {}", err.0, err);
