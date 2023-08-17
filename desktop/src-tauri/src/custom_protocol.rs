@@ -50,6 +50,12 @@ impl OpenWorkspaceMsg {
     }
 }
 
+pub struct UrlRequest {
+    host: String,
+    query: String,
+}
+
+
 pub struct UrlParser {}
 
 impl UrlParser {
@@ -71,14 +77,17 @@ impl UrlParser {
         url.query().unwrap_or("").to_string()
     }
 
-    pub fn parse(url_scheme: &str) -> Result<String, ParseError> {
+    pub fn parse(url_scheme: &str) -> Result<UrlRequest, ParseError> {
         let url = Self::parse_raw_url(url_scheme)?;
         let host_str = Self::get_host(&url);
 
         if !Self::is_allowed_method(&host_str) {
             return Err(ParseError::UnsupportedHost(host_str));
         }
-        return Ok(Self::parse_query(&url));
+        return Ok(UrlRequest{
+            host: host_str,
+            query: Self::parse_query(&url),
+        })
     }
 }
 
