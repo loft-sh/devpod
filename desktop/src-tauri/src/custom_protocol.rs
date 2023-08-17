@@ -1,7 +1,6 @@
-use log::{error, info, warn};
+use log::{error, info};
 use serde::{Deserialize, Serialize};
-use tauri::{AppHandle, Manager};
-
+use tauri::{AppHandle, Manager, State};
 use thiserror::Error;
 use url::Url;
 
@@ -84,15 +83,49 @@ impl UrlParser {
         if !Self::is_allowed_method(&host_str) {
             return Err(ParseError::UnsupportedHost(host_str));
         }
-        return Ok(UrlRequest{
+        return Ok(UrlRequest {
             host: host_str,
             query: Self::parse_query(&url),
-        })
+        });
+    }
+}
+
+pub struct OpenHandler {}
+
+impl OpenHandler {
+    pub async fn handle(msg: Result<OpenWorkspaceMsg, ParseError>, app_state: State<'_, AppState>) {
+        match msg {
+            Ok(msg) => Self::handle_ok(msg, app_state).await,
+            Err(err) => Self::handle_error(err, app_state).await,
+        }
+    }
+
+    async fn handle_ok(msg: OpenWorkspaceMsg, app_state: State<'_, AppState>) {
+        // try to send to UI if ready, otherwise buffer and let ui_ready handle
+        if let Err(err) = app_state
+            .ui_messages
+            .send(UiMessage::OpenWorkspace(msg))
+            .await
+        {
+            error!("Failed to broadcast custom protocol message: {:?}, {}", err.0, err);
+        };
+    }
+
+    async fn handle_error(err: ParseError, app_state: State<'_, AppState>) {
+        #[cfg(not(target_os = "windows"))]
+        {
+            if let Err(err) = app_state
+                .ui_messages
+                .send(UiMessage::OpenWorkspaceFailed(err))
+                .await
+            {
+                error!("Failed to broadcast invalid custom protocol message: {:?}, {}", err.0, err);
+            };
+        }
     }
 }
 
 impl CustomProtocol {
-
     pub fn init() -> Self {
         tauri_plugin_deep_link::prepare(APP_IDENTIFIER);
         Self {}
@@ -107,37 +140,7 @@ impl CustomProtocol {
 
                 let msg = CustomProtocol::parse(&url_scheme.to_string());
                 let app_state = app_handle.state::<AppState>();
-
-                match msg {
-                    Ok(msg) => {
-                        // try to send to UI if ready, otherwise buffer and let ui_ready handle
-                        if let Err(err) = app_state
-                            .ui_messages
-                            .send(UiMessage::OpenWorkspace(msg))
-                            .await
-                        {
-                            error!(
-                                "Failed to broadcast custom protocol message: {:?}, {}",
-                                err.0, err
-                            );
-                        };
-                    }
-                    Err(err) => {
-                        #[cfg(not(target_os = "windows"))]
-                        {
-                            if let Err(err) = app_state
-                                .ui_messages
-                                .send(UiMessage::OpenWorkspaceFailed(err))
-                                .await
-                            {
-                                error!(
-                                    "Failed to broadcast invalid custom protocol message: {:?}, {}",
-                                    err.0, err
-                                );
-                            };
-                        }
-                    }
-                }
+                OpenHandler::handle(msg, app_state).await
             })
         });
 
@@ -177,8 +180,8 @@ impl CustomProtocol {
     fn parse(url_scheme: &str) -> Result<OpenWorkspaceMsg, ParseError> {
         let query = UrlParser::parse(url_scheme)?;
 
-        serde_qs::from_str::<OpenWorkspaceMsg>(query.as_str())
-            .map_err(|_| ParseError::InvalidQuery(query))
+        serde_qs::from_str::<OpenWorkspaceMsg>(query.query.as_str())
+            .map_err(|_| ParseError::InvalidQuery(query.query))
     }
 }
 
