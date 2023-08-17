@@ -45,3 +45,10 @@ Run `yarn types:check` to check for errors
 
 The apps version is determined by the one in `package.json`. Be careful not to add one in `tauri.conf.json` as it override the current one.
 You can upgrade the version manually or run `yarn version ...`
+
+## Build desktop app
+
+If your development environment is setup successfully and you're able to run `yarn desktop:dev` without problems, you also should be able to build the app locally by runnning `yarn desktop:build:dev`.
+Notice the `:dev` suffix, if you omit this it'll try to build with the updater enabled. This won't work on your machine as it requires sensitive information.
+
+The output of the command can be found in `desktop/src-tauri/target/release/bundle`.
