@@ -190,12 +190,12 @@ impl CustomProtocol {
 
                 match request.host.as_str() {
                     "open" => {
-                        let msg = CustomProtocol::parse_open(&request);
+                        let msg = CustomProtocol::parse(&request);
                         OpenHandler::handle(msg, app_state).await
                     }
 
                     "import" => {
-                        let msg = CustomProtocol::parse_import(&request);
+                        let msg = CustomProtocol::parse(&request);
                         ImportHandler::handle(msg, app_state).await
                     }
                     _ => {}
@@ -236,27 +236,23 @@ impl CustomProtocol {
         let _ = result;
     }
 
-    fn parse_open(request: &Request) -> Result<OpenWorkspaceMsg, ParseError> {
-        let query = request.query.clone();
-        serde_qs::from_str::<OpenWorkspaceMsg>(query.as_str())
-            .map_err(|_| ParseError::InvalidQuery(query))
-    }
-
-    fn parse_import(request: &Request) -> Result<ImportWorkspaceMsg, ParseError> {
-        let query = request.query.clone();
-        serde_qs::from_str::<ImportWorkspaceMsg>(query.as_str())
-            .map_err(|_| ParseError::InvalidQuery(query))
+    fn parse<'a, Msg>(request: &'a Request) -> Result<Msg, ParseError>
+        where Msg: Deserialize<'a> {
+        serde_qs::from_str::<Msg>(&request.query)
+            .map_err(|_| ParseError::InvalidQuery(request.query.clone()))
     }
 }
 
 #[cfg(test)]
 mod tests {
+    use crate::custom_protocol::OpenWorkspaceMsg;
+
     #[test]
     fn should_parse_full() {
         let url_str =
             "devpod://open?workspace=workspace&provider=provider&source=https://github.com/test123&ide=vscode";
         let request = super::UrlParser::parse(&url_str).unwrap();
-        let got = super::CustomProtocol::parse_open(&request).unwrap();
+        let got: OpenWorkspaceMsg = super::CustomProtocol::parse(&request).unwrap();
 
         assert_eq!(got.workspace_id, Some("workspace".to_string()));
         assert_eq!(got.provider_id, Some("provider".into()));
@@ -268,7 +264,7 @@ mod tests {
     fn should_parse_workspace() {
         let url_str = "devpod://open?workspace=some-workspace";
         let request = super::UrlParser::parse(&url_str).unwrap();
-        let got = super::CustomProtocol::parse_open(&request).unwrap();
+        let got: OpenWorkspaceMsg = super::CustomProtocol::parse(&request).unwrap();
 
         assert_eq!(got.workspace_id, Some("some-workspace".to_string()));
         assert_eq!(got.provider_id, None);
@@ -280,7 +276,7 @@ mod tests {
     fn should_parse() {
         let url_str = "devpod://open?source=some-source";
         let request = super::UrlParser::parse(&url_str).unwrap();
-        let got = super::CustomProtocol::parse_open(&request).unwrap();
+        let got: OpenWorkspaceMsg = super::CustomProtocol::parse(&request).unwrap();
 
         assert_eq!(got.workspace_id, None);
         assert_eq!(got.provider_id, None);
@@ -293,6 +289,6 @@ mod tests {
     fn unsupported_host() {
         let url_str = "devpod://something?workspace=workspace";
         let request = super::UrlParser::parse(&url_str).unwrap();
-        let _ = super::CustomProtocol::parse_open(&request).unwrap();
+        let _: OpenWorkspaceMsg = super::CustomProtocol::parse(&request).unwrap();
     }
 }
