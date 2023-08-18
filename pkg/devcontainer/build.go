@@ -6,6 +6,7 @@ import (
 	"os"
 	"path/filepath"
 
+	"github.com/loft-sh/devpod/pkg/compose"
 	"github.com/loft-sh/devpod/pkg/devcontainer/config"
 	"github.com/loft-sh/devpod/pkg/devcontainer/feature"
 	"github.com/loft-sh/devpod/pkg/devcontainer/metadata"
@@ -16,6 +17,74 @@ import (
 func (r *Runner) build(ctx context.Context, parsedConfig *config.SubstitutedConfig, options config.BuildOptions) (*config.BuildInfo, error) {
 	if isDockerFileConfig(parsedConfig.Config) {
 		return r.buildAndExtendImage(ctx, parsedConfig, options)
+	} else if isDockerComposeConfig(parsedConfig.Config) {
+		composeHelper, err := r.Driver.ComposeHelper()
+		if err != nil {
+			return nil, errors.Wrap(err, "find docker compose")
+		}
+
+		envFiles, err := r.getEnvFiles()
+		if err != nil {
+			return nil, errors.Wrap(err, "get env files")
+		}
+
+		composeFiles, err := r.getDockerComposeFilePaths(parsedConfig, envFiles)
+		if err != nil {
+			return nil, errors.Wrap(err, "get docker compose file paths")
+		}
+
+		var composeGlobalArgs []string
+		for _, configFile := range composeFiles {
+			composeGlobalArgs = append(composeGlobalArgs, "-f", configFile)
+		}
+
+		for _, envFile := range envFiles {
+			composeGlobalArgs = append(composeGlobalArgs, "--env-file", envFile)
+		}
+
+		r.Log.Debugf("Loading docker compose project %+v", composeFiles)
+		project, err := compose.LoadDockerComposeProject(composeFiles, envFiles)
+		if err != nil {
+			return nil, errors.Wrap(err, "load docker compose project")
+		}
+		project.Name = composeHelper.GetProjectName(r.ID)
+		r.Log.Debugf("Loaded project %s", project.Name)
+
+		service := parsedConfig.Config.Service
+		composeService, err := project.GetService(service)
+		if err != nil {
+			return nil, fmt.Errorf("service '%s' configured in devcontainer.json not found in Docker Compose configuration", service)
+		}
+
+		originalImageName := composeService.Image
+		if originalImageName == "" {
+			originalImageName, err = composeHelper.GetDefaultImage(project.Name, service)
+			if err != nil {
+				return nil, errors.Wrap(err, "get default image")
+			}
+		}
+
+		overrideBuildImageName, _, imageMetadata, _, err := r.buildAndExtendDockerCompose(ctx, parsedConfig, project, composeHelper, &composeService, composeGlobalArgs)
+		if err != nil {
+			return nil, errors.Wrap(err, "build and extend docker-compose")
+		}
+
+		currentImageName := overrideBuildImageName
+		if currentImageName == "" {
+			currentImageName = originalImageName
+		}
+
+		imageDetails, err := r.Driver.InspectImage(ctx, currentImageName)
+		if err != nil {
+			return nil, errors.Wrap(err, "inspect image")
+		}
+
+		return &config.BuildInfo{
+			ImageDetails:  imageDetails,
+			ImageMetadata: imageMetadata,
+			ImageName:     overrideBuildImageName,
+			PrebuildHash:  "",
+		}, nil
 	}
 
 	return r.extendImage(ctx, parsedConfig, options)

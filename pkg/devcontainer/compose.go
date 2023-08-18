@@ -823,3 +823,7 @@ func mappingToMap(mapping composetypes.MappingWithEquals) map[string]string {
 	}
 	return ret
 }
+
+func isDockerComposeConfig(config *config.DevContainerConfig) bool {
+	return len(config.DockerComposeFile) > 0
+}
