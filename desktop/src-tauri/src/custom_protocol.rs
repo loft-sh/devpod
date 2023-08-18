@@ -24,7 +24,15 @@ pub struct OpenWorkspaceMsg {
 
 #[derive(Debug, PartialEq, Serialize, Deserialize, Clone)]
 pub struct ImportWorkspaceMsg {
-    //todo: prepare a struct for this
+    // required
+    workspace_id: Option<String>,
+    workspace_uid: Option<String>,
+    provider_id: Option<String>,
+    workspace_folder: Option<String>,
+    // optional
+    workspace_context: Option<String>,
+    // todo: other options?
+    options: Option<Vec<(String, String)>>,
 }
 
 #[derive(Error, Debug, Clone, Serialize)]
@@ -280,8 +288,9 @@ mod tests {
         }
     }
 
-    mod open_handler {
+    mod custom_handler_open {
         use crate::custom_protocol::OpenWorkspaceMsg;
+
         use super::super::*;
 
         #[test]
@@ -320,16 +329,26 @@ mod tests {
             assert_eq!(got.source, Some("some-source".to_string()));
             assert_eq!(got.ide, None)
         }
-
-        #[test]
-        #[should_panic]
-        fn unsupported_host() {
-            let url_str = "devpod://something?workspace=workspace";
-            let request = UrlParser::parse(&url_str).unwrap();
-            let _: OpenWorkspaceMsg = CustomProtocol::parse(&request).unwrap();
-        }
     }
 
+    mod custom_handler_import {
+        use crate::custom_protocol::ImportWorkspaceMsg;
 
+        use super::super::*;
 
+        #[test]
+        fn should_parse_full() {
+            let url_str =
+                "devpod://import?workspace_id=workspace&workspace_uid=uid&provider_id=provider&workspace_folder=/tmp&workspace_context=default";
+            let request = UrlParser::parse(&url_str).unwrap();
+
+            let got: ImportWorkspaceMsg = CustomProtocol::parse(&request).unwrap();
+
+            assert_eq!(got.workspace_id, Some("workspace".to_string()));
+            assert_eq!(got.workspace_uid, Some("uid".to_string()));
+            assert_eq!(got.provider_id, Some("provider".into()));
+            assert_eq!(got.workspace_folder, Some("/tmp".to_string()));
+            assert_eq!(got.workspace_context, Some("default".to_string()));
+        }
+    }
 }
