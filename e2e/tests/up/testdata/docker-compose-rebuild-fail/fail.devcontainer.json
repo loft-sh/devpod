@@ -1,6 +1,6 @@
 {
 	"name": "Go",
-	"dockerComposeFile": "./docker-compose",
-	"service": "app",
+	"dockerComposeFile": "./docker-compose.yaml",
+	"service": "app1",
 	"workspaceFolder": "/workspaces"
 }
