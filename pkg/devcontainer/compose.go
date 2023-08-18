@@ -35,7 +35,17 @@ func (r *Runner) stopDockerCompose(ctx context.Context, projectName string) erro
 		return errors.Wrap(err, "find docker compose")
 	}
 
-	err = composeHelper.Stop(ctx, projectName)
+	parsedConfig, _, err := r.prepare(r.WorkspaceConfig.CLIOptions)
+	if err != nil {
+		return errors.Wrap(err, "get parsed config")
+	}
+
+	_, _, composeGlobalArgs, err := r.dockerComposeProjectFiles(parsedConfig)
+	if err != nil {
+		return errors.Wrap(err, "get compose/env files")
+	}
+
+	err = composeHelper.Stop(ctx, projectName, composeGlobalArgs)
 	if err != nil {
 		return err
 	}
@@ -49,12 +59,45 @@ func (r *Runner) deleteDockerCompose(ctx context.Context, projectName string) er
 		return errors.Wrap(err, "find docker compose")
 	}
 
-	err = composeHelper.Remove(ctx, projectName)
+	parsedConfig, _, err := r.prepare(r.WorkspaceConfig.CLIOptions)
+	if err != nil {
+		return errors.Wrap(err, "get parsed config")
+	}
+
+	_, _, composeGlobalArgs, err := r.dockerComposeProjectFiles(parsedConfig)
+	if err != nil {
+		return errors.Wrap(err, "get compose/env files")
+	}
+
+	err = composeHelper.Remove(ctx, projectName, composeGlobalArgs)
 	if err != nil {
 		return err
 	}
 
 	return nil
+}
+
+func (r *Runner) dockerComposeProjectFiles(parsedConfig *config.SubstitutedConfig) ([]string, []string, []string, error) {
+	envFiles, err := r.getEnvFiles()
+	if err != nil {
+		return nil, nil, nil, errors.Wrap(err, "get env files")
+	}
+
+	composeFiles, err := r.getDockerComposeFilePaths(parsedConfig, envFiles)
+	if err != nil {
+		return nil, nil, nil, errors.Wrap(err, "get docker compose file paths")
+	}
+
+	var args []string
+	for _, configFile := range composeFiles {
+		args = append(args, "-f", configFile)
+	}
+
+	for _, envFile := range envFiles {
+		args = append(args, "--env-file", envFile)
+	}
+
+	return composeFiles, envFiles, args, nil
 }
 
 func (r *Runner) runDockerCompose(ctx context.Context, parsedConfig *config.SubstitutedConfig, options UpOptions) (*config.Result, error) {
@@ -63,23 +106,9 @@ func (r *Runner) runDockerCompose(ctx context.Context, parsedConfig *config.Subs
 		return nil, errors.Wrap(err, "find docker compose")
 	}
 
-	envFiles, err := r.getEnvFiles()
+	composeFiles, envFiles, composeGlobalArgs, err := r.dockerComposeProjectFiles(parsedConfig)
 	if err != nil {
-		return nil, errors.Wrap(err, "get env files")
-	}
-
-	composeFiles, err := r.getDockerComposeFilePaths(parsedConfig, envFiles)
-	if err != nil {
-		return nil, errors.Wrap(err, "get docker compose file paths")
-	}
-
-	var composeGlobalArgs []string
-	for _, configFile := range composeFiles {
-		composeGlobalArgs = append(composeGlobalArgs, "-f", configFile)
-	}
-
-	for _, envFile := range envFiles {
-		composeGlobalArgs = append(composeGlobalArgs, "--env-file", envFile)
+		return nil, errors.Wrap(err, "get compose/env files")
 	}
 
 	r.Log.Debugf("Loading docker compose project %+v", composeFiles)
