@@ -1,0 +1,7 @@
+{
+	"name": "Build Example",
+	"dockerComposeFile": [
+        "docker-compose.yaml"
+    ],
+	"service": "test-service"
+}
