@@ -63,8 +63,7 @@ pub struct Request {
 pub struct UrlParser {}
 
 impl UrlParser {
-    // todo: add import to ALLOWED_METHODS
-    const ALLOWED_METHODS: [&'static str; 1] = ["open"];
+    const ALLOWED_METHODS: [&'static str; 2] = ["open", "import"];
 
     fn get_host(url: &Url) -> String {
         url.host_str().unwrap_or("no host").to_string()
@@ -246,6 +245,41 @@ impl CustomProtocol {
 #[cfg(test)]
 mod tests {
     use crate::custom_protocol::OpenWorkspaceMsg;
+
+    mod url_parser {
+        #[test]
+        fn should_parse() {
+            let url_str = "devpod://open?workspace=workspace";
+            let request = super::super::UrlParser::parse(&url_str).unwrap();
+
+            assert_eq!(request.host, "open".to_string());
+            assert_eq!(request.query, "workspace=workspace".to_string());
+        }
+
+        #[test]
+        fn should_parse_with_empty_query() {
+            let url_str = "devpod://import";
+            let request = super::super::UrlParser::parse(&url_str).unwrap();
+
+            assert_eq!(request.host, "import".to_string());
+            assert_eq!(request.query, "".to_string());
+        }
+
+        #[test]
+        #[should_panic]
+        fn should_fail_on_invalid_method() {
+            let url_str = "devpod://something";
+            let _ = super::super::UrlParser::parse(&url_str).unwrap();
+        }
+
+        #[test]
+        #[should_panic]
+        fn should_fail_on_invalid_scheme() {
+            let url_str = "invalid-scheme";
+            let _ = super::super::UrlParser::parse(&url_str).unwrap();
+        }
+    }
+
 
     #[test]
     fn should_parse_full() {
