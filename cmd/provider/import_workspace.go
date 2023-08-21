@@ -58,15 +58,22 @@ func NewImportCmd(globalFlags *flags.GlobalFlags) *cobra.Command {
 	return importCmd
 }
 
-func (cmd *ImportCmd) prepareWorkspaceToImportDefinition(devPodConfig *config.Config) (*provider2.Workspace, error) {
-	var workspaceContext string
-
+func (cmd *ImportCmd) context(devPodConfig *config.Config) (string, error) {
 	if cmd.WorkspaceContext == "" {
-		workspaceContext = devPodConfig.DefaultContext
-	} else if devPodConfig.Contexts[cmd.WorkspaceContext] != nil {
-		workspaceContext = cmd.WorkspaceContext
-	} else {
-		return nil, fmt.Errorf("context '%s' doesn't exist", cmd.WorkspaceContext)
+		return devPodConfig.DefaultContext, nil
+	}
+
+	if devPodConfig.Contexts[cmd.WorkspaceContext] != nil {
+		return cmd.WorkspaceContext, nil
+	}
+
+	return "", fmt.Errorf("context '%s' doesn't exist", cmd.WorkspaceContext)
+}
+
+func (cmd *ImportCmd) prepareWorkspaceToImportDefinition(devPodConfig *config.Config) (*provider2.Workspace, error) {
+	workspaceContext, err := cmd.context(devPodConfig)
+	if err != nil {
+		return nil, err
 	}
 
 	return &provider2.Workspace{
