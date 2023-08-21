@@ -114,8 +114,12 @@ func (h *ComposeHelper) Run(ctx context.Context, args []string, stdin io.Reader,
 	return cmd.Run()
 }
 
-func (h *ComposeHelper) Stop(ctx context.Context, projectName string) error {
-	out, err := h.buildCmd(ctx, "--project-name", projectName, "stop").CombinedOutput()
+func (h *ComposeHelper) Stop(ctx context.Context, projectName string, args []string) error {
+	buildArgs := []string{"--project-name", projectName}
+	buildArgs = append(buildArgs, args...)
+	buildArgs = append(buildArgs, "stop")
+
+	out, err := h.buildCmd(ctx, buildArgs...).CombinedOutput()
 	if err != nil {
 		return errors.Wrapf(err, "%s", string(out))
 	}
@@ -123,8 +127,12 @@ func (h *ComposeHelper) Stop(ctx context.Context, projectName string) error {
 	return nil
 }
 
-func (h *ComposeHelper) Remove(ctx context.Context, projectName string) error {
-	out, err := h.buildCmd(ctx, "--project-name", projectName, "down").CombinedOutput()
+func (h *ComposeHelper) Remove(ctx context.Context, projectName string, args []string) error {
+	buildArgs := []string{"--project-name", projectName}
+	buildArgs = append(buildArgs, args...)
+	buildArgs = append(buildArgs, "down")
+
+	out, err := h.buildCmd(ctx, buildArgs...).CombinedOutput()
 	if err != nil {
 		return errors.Wrapf(err, "%s", string(out))
 	}
