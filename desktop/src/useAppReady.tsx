@@ -155,17 +155,7 @@ export function useAppReady() {
             return
           }
 
-          if (event.type === "OpenWorkspaceFailed") {
-            const message = Object.entries(event)
-              .filter(([key]) => key !== "type")
-              .map(([key, value]) => `${key}: ${value}`)
-              .join("\n")
-            setFailedMessage(message)
-
-            return
-          }
-
-          if (event.type === "ImportWorkspaceFailed") {
+          if (event.type === "CommandFailed") {
             const message = Object.entries(event)
               .filter(([key]) => key !== "type")
               .map(([key, value]) => `${key}: ${value}`)

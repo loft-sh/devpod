@@ -34,7 +34,7 @@ type TChannels = {
         status: NonNullable<UseToastOptions["status"]>
       }>
     | Readonly<{ type: "ShowDashboard" }>
-    | Readonly<{ type: "OpenWorkspaceFailed" }>
+    | Readonly<{ type: "CommandFailed" }>
     | Readonly<{
         type: "OpenWorkspace"
         workspace_id: string | null
@@ -42,7 +42,6 @@ type TChannels = {
         ide: string | null
         source: string
       }>
-      | Readonly<{ type: "ImportWorkspaceFailed" }>
       | Readonly<{
     type: "ImportWorkspace"
     workspace_id: string | null

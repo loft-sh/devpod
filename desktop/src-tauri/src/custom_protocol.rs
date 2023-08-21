@@ -135,7 +135,7 @@ impl OpenHandler {
         #[cfg(not(target_os = "windows"))]
         send_ui_message(
             app_state,
-            UiMessage::OpenWorkspaceFailed(err),
+            UiMessage::CommandFailed(err),
             "Failed to broadcast invalid custom protocol message").await;
     }
 }
@@ -162,7 +162,7 @@ impl ImportHandler {
         #[cfg(not(target_os = "windows"))]
         send_ui_message(
             app_state,
-            UiMessage::ImportWorkspaceFailed(err),
+            UiMessage::CommandFailed(err),
             "Failed to broadcast invalid custom protocol message").await;
     }
 }
@@ -185,8 +185,7 @@ impl CustomProtocol {
                 if let Err(err) = request {
                     send_ui_message(
                         app_state,
-                        //todo: fix the message type
-                    UiMessage::OpenWorkspaceFailed(err),
+                    UiMessage::CommandFailed(err),
                         "Failed to broadcast custom protocol message").await;
                     return;
                 }

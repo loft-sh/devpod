@@ -75,8 +75,7 @@ pub enum UiMessage {
     ShowToast(ShowToastMsg),
     OpenWorkspace(OpenWorkspaceMsg),
     ImportWorkspace(ImportWorkspaceMsg),
-    OpenWorkspaceFailed(ParseError),
-    ImportWorkspaceFailed(ParseError),
+    CommandFailed(ParseError),
 }
 
 #[derive(Debug, Serialize, Clone)]
