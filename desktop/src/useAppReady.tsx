@@ -49,6 +49,7 @@ export function useAppReady() {
         <ModalOverlay />
         <ModalContent>
           <ModalCloseButton />
+          {/* todo: customize the header */}
           <ModalHeader>Failed to open workspace from URL</ModalHeader>
           <ModalBody>
             <ErrorMessageBox error={Error(failedMessage!)} />
@@ -166,6 +167,13 @@ export function useAppReady() {
           }
 
           if (event.type === "ImportWorkspace") {
+            //todo: change this debug to actual handling
+            const message = Object.entries(event)
+                .filter(([key]) => key !== "type")
+                .map(([key, value]) => `${key}: ${value}`)
+                .join("\n")
+            setFailedMessage(message)
+
             return
           }
 
