@@ -28,9 +28,11 @@ type ImportCmd struct {
 
 // NewImportCmd creates a new command
 func NewImportCmd(globalFlags *flags.GlobalFlags) *cobra.Command {
+	logger := log.GetInstance()
 	cmd := &ImportCmd{
-		GlobalFlags: globalFlags,
-		log:         log.GetInstance(),
+		GlobalFlags:      globalFlags,
+		providerResolver: &ProviderResolver{log: logger},
+		log:              logger,
 	}
 
 	importCmd := &cobra.Command{
@@ -43,8 +45,9 @@ func NewImportCmd(globalFlags *flags.GlobalFlags) *cobra.Command {
 
 	importCmd.Flags().StringVar(&cmd.WorkspaceId, "workspace-id", "", "ID of a workspace to import")
 	importCmd.Flags().StringVar(&cmd.WorkspaceUid, "workspace-uid", "", "UID of a workspace to import")
-	importCmd.Flags().StringVar(&cmd.WorkspaceContext, "workspace-context", "", "Target context for a workspace")
 	importCmd.Flags().StringVar(&cmd.DevPodProUrl, "devpod-pro-url", "", "URL of a DevPod Pro containing the workspace")
+	// optional
+	importCmd.Flags().StringVar(&cmd.WorkspaceContext, "workspace-context", "", "Target context for a workspace")
 	importCmd.Flags().StringArrayVarP(
 		&cmd.WorkspaceOptions, "option", "o", []string{}, "Workspace option in the form KEY=VALUE")
 
