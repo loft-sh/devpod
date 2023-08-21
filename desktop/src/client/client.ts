@@ -42,6 +42,12 @@ type TChannels = {
         ide: string | null
         source: string
       }>
+      | Readonly<{ type: "ImportWorkspaceFailed" }>
+      | Readonly<{
+    type: "ImportWorkspace"
+    workspace_id: string | null
+    //todo: fields
+  }>
 }
 type TChannelName = keyof TChannels
 type TClientEventListener<TChannel extends TChannelName> = (payload: TChannels[TChannel]) => void
