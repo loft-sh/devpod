@@ -1,5 +1,6 @@
+use std::collections::HashMap;
 use log::{error, info};
-use serde::{Deserialize, Serialize};
+use serde::{de, Deserialize, Serialize};
 use tauri::{AppHandle, Manager, State};
 use thiserror::Error;
 use url::Url;
@@ -22,17 +23,37 @@ pub struct OpenWorkspaceMsg {
     source: Option<String>,
 }
 
-#[derive(Debug, PartialEq, Serialize, Deserialize, Clone)]
+#[derive(Debug, PartialEq, Serialize, Clone)]
 pub struct ImportWorkspaceMsg {
-    // required
-    #[serde(rename(deserialize = "workspace-id"))]
     workspace_id: Option<String>,
-    #[serde(rename(deserialize = "workspace-uid"))]
     workspace_uid: Option<String>,
-    #[serde(rename(deserialize = "devpod-pro-url"))]
     devpod_pro_url: Option<String>,
-    // todo: other options?
-    options: Option<Vec<(String, String)>>,
+    options: HashMap<String, String>,
+}
+
+impl<'de> Deserialize<'de> for ImportWorkspaceMsg {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+        where
+            D: serde::Deserializer<'de>,
+    {
+        let mut options = HashMap::deserialize(deserializer)?;
+
+        let workspace_id = options.remove("workspace-id")
+            .ok_or_else(|| de::Error::missing_field("workspace-id"))?;
+
+        let workspace_uid = options.remove("workspace-uid")
+            .ok_or_else(|| de::Error::missing_field("workspace-uid"))?;
+
+        let devpod_pro_url = options.remove("devpod-pro-url")
+            .ok_or_else(|| de::Error::missing_field("devpod-pro-url"))?;
+
+        Ok(ImportWorkspaceMsg {
+            workspace_id: Some(workspace_id),
+            workspace_uid: Some(workspace_uid),
+            devpod_pro_url: Some(devpod_pro_url),
+            options,
+        })
+    }
 }
 
 #[derive(Error, Debug, Clone, Serialize)]
@@ -241,7 +262,6 @@ impl CustomProtocol {
 
     fn parse<'a, Msg>(request: &'a Request) -> Result<Msg, ParseError>
         where Msg: Deserialize<'a> {
-        //todo: handle other options in qs as well
         serde_qs::from_str::<Msg>(&request.query)
             .map_err(|_| ParseError::InvalidQuery(request.query.clone()))
     }
@@ -336,7 +356,7 @@ mod tests {
         #[test]
         fn should_parse_full() {
             let url_str =
-                "devpod://import?workspace-id=workspace&workspace-uid=uid&devpod-pro-url=https://devpod.pro";
+                "devpod://import?workspace-id=workspace&workspace-uid=uid&devpod-pro-url=https://devpod.pro&other=other";
             let request = UrlParser::parse(&url_str).unwrap();
 
             let got: ImportWorkspaceMsg = CustomProtocol::parse(&request).unwrap();
@@ -344,6 +364,7 @@ mod tests {
             assert_eq!(got.workspace_id, Some("workspace".to_string()));
             assert_eq!(got.workspace_uid, Some("uid".to_string()));
             assert_eq!(got.devpod_pro_url, Some("https://devpod.pro".to_string()));
+            assert_eq!(got.options.get("other"), Some(&"other".to_string()));
         }
     }
 }
