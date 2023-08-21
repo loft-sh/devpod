@@ -25,12 +25,12 @@ pub struct OpenWorkspaceMsg {
 #[derive(Debug, PartialEq, Serialize, Deserialize, Clone)]
 pub struct ImportWorkspaceMsg {
     // required
+    #[serde(rename(deserialize = "workspace-id"))]
     workspace_id: Option<String>,
+    #[serde(rename(deserialize = "workspace-uid"))]
     workspace_uid: Option<String>,
-    provider_id: Option<String>,
-    workspace_folder: Option<String>,
-    // optional
-    workspace_context: Option<String>,
+    #[serde(rename(deserialize = "devpod-pro-url"))]
+    devpod_pro_url: Option<String>,
     // todo: other options?
     options: Option<Vec<(String, String)>>,
 }
@@ -241,6 +241,7 @@ impl CustomProtocol {
 
     fn parse<'a, Msg>(request: &'a Request) -> Result<Msg, ParseError>
         where Msg: Deserialize<'a> {
+        //todo: handle other options in qs as well
         serde_qs::from_str::<Msg>(&request.query)
             .map_err(|_| ParseError::InvalidQuery(request.query.clone()))
     }
@@ -335,16 +336,14 @@ mod tests {
         #[test]
         fn should_parse_full() {
             let url_str =
-                "devpod://import?workspace_id=workspace&workspace_uid=uid&provider_id=provider&workspace_folder=/tmp&workspace_context=default";
+                "devpod://import?workspace-id=workspace&workspace-uid=uid&devpod-pro-url=https://devpod.pro";
             let request = UrlParser::parse(&url_str).unwrap();
 
             let got: ImportWorkspaceMsg = CustomProtocol::parse(&request).unwrap();
 
             assert_eq!(got.workspace_id, Some("workspace".to_string()));
             assert_eq!(got.workspace_uid, Some("uid".to_string()));
-            assert_eq!(got.provider_id, Some("provider".into()));
-            assert_eq!(got.workspace_folder, Some("/tmp".to_string()));
-            assert_eq!(got.workspace_context, Some("default".to_string()));
+            assert_eq!(got.devpod_pro_url, Some("https://devpod.pro".to_string()));
         }
     }
 }
