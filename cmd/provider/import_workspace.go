@@ -55,6 +55,36 @@ func NewImportCmd(globalFlags *flags.GlobalFlags) *cobra.Command {
 	return importCmd
 }
 
+func (cmd *ImportCmd) Run(ctx context.Context, args []string) error {
+	devPodConfig, err := config.LoadConfig(cmd.Context, "")
+	if err != nil {
+		return err
+	}
+
+	provider, err := cmd.providerResolver.Resolve(devPodConfig, cmd.DevPodProUrl)
+	if err != nil {
+		return errors.Wrap(err, "resolve provider")
+	}
+
+	options, err := provider2.ParseOptions(cmd.WorkspaceOptions)
+	if err != nil {
+		return errors.Wrap(err, "parse options")
+	}
+
+	workspaceDefinition, err := cmd.prepareWorkspaceToImportDefinition(devPodConfig, provider)
+	if err != nil {
+		return err
+	}
+
+	workspaceClient, err := clientimplementation.NewProxyClient(
+		devPodConfig, provider, workspaceDefinition, cmd.log)
+	if err != nil {
+		return err
+	}
+
+	return workspaceClient.ImportWorkspace(ctx, options)
+}
+
 func (cmd *ImportCmd) context(devPodConfig *config.Config) (string, error) {
 	if cmd.WorkspaceContext == "" {
 		return devPodConfig.DefaultContext, nil
@@ -86,36 +116,6 @@ func (cmd *ImportCmd) prepareWorkspaceToImportDefinition(
 		Provider: provider2.WorkspaceProviderConfig{Name: provider.Name},
 		Context:  workspaceContext,
 	}, nil
-}
-
-func (cmd *ImportCmd) Run(ctx context.Context, args []string) error {
-	devPodConfig, err := config.LoadConfig(cmd.Context, "")
-	if err != nil {
-		return err
-	}
-
-	provider, err := cmd.providerResolver.Resolve(devPodConfig, cmd.DevPodProUrl)
-	if err != nil {
-		return errors.Wrap(err, "resolve provider")
-	}
-
-	options, err := provider2.ParseOptions(cmd.WorkspaceOptions)
-	if err != nil {
-		return errors.Wrap(err, "parse options")
-	}
-
-	workspaceDefinition, err := cmd.prepareWorkspaceToImportDefinition(devPodConfig, provider)
-	if err != nil {
-		return err
-	}
-
-	workspaceClient, err := clientimplementation.NewProxyClient(
-		devPodConfig, provider, workspaceDefinition, cmd.log)
-	if err != nil {
-		return err
-	}
-
-	return workspaceClient.ImportWorkspace(ctx, options)
 }
 
 type ProviderResolver struct {
