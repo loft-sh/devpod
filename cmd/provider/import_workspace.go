@@ -44,7 +44,6 @@ func NewImportCmd(globalFlags *flags.GlobalFlags) *cobra.Command {
 	importCmd.Flags().StringVar(&cmd.WorkspaceId, "workspace-id", "", "ID of a workspace to import")
 	importCmd.Flags().StringVar(&cmd.WorkspaceUid, "workspace-uid", "", "UID of a workspace to import")
 	importCmd.Flags().StringVar(&cmd.WorkspaceContext, "workspace-context", "", "Target context for a workspace")
-	importCmd.Flags().StringVar(&cmd.WorkspaceFolder, "workspace-folder", "", "Path to the directory for a new workspace")
 	importCmd.Flags().StringVar(
 		&cmd.ProviderId, "provider-id", "", "Provider to use for importing. Must be a proxy provider")
 	importCmd.Flags().StringArrayVarP(
@@ -53,7 +52,6 @@ func NewImportCmd(globalFlags *flags.GlobalFlags) *cobra.Command {
 	_ = importCmd.MarkFlagRequired("workspace-id")
 	_ = importCmd.MarkFlagRequired("workspace-uid")
 	_ = importCmd.MarkFlagRequired("provider-id")
-	_ = importCmd.MarkFlagRequired("workspace-folder")
 
 	return importCmd
 }
@@ -76,10 +74,15 @@ func (cmd *ImportCmd) prepareWorkspaceToImportDefinition(devPodConfig *config.Co
 		return nil, err
 	}
 
+	workspaceFolder, err := provider2.GetWorkspaceDir(workspaceContext, cmd.WorkspaceId)
+	if err != nil {
+		return nil, err
+	}
+
 	return &provider2.Workspace{
 		ID:       cmd.WorkspaceId,
 		UID:      cmd.WorkspaceUid,
-		Folder:   cmd.WorkspaceFolder,
+		Folder:   workspaceFolder,
 		Provider: provider2.WorkspaceProviderConfig{Name: cmd.ProviderId},
 		Context:  workspaceContext,
 	}, nil
