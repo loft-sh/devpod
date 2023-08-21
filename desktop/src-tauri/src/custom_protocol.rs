@@ -103,6 +103,16 @@ impl UrlParser {
     }
 }
 
+async fn send_ui_message(app_state: State<'_, AppState>, msg: UiMessage, log_msg_on_failure: &str) {
+    if let Err(err) = app_state
+        .ui_messages
+        .send(msg)
+        .await
+    {
+        error!("{}: {:?}, {}", log_msg_on_failure, err.0, err);
+    };
+}
+
 pub struct OpenHandler {}
 
 impl OpenHandler {
@@ -115,26 +125,18 @@ impl OpenHandler {
 
     async fn handle_ok(msg: OpenWorkspaceMsg, app_state: State<'_, AppState>) {
         // try to send to UI if ready, otherwise buffer and let ui_ready handle
-        if let Err(err) = app_state
-            .ui_messages
-            .send(UiMessage::OpenWorkspace(msg))
-            .await
-        {
-            error!("Failed to broadcast custom protocol message: {:?}, {}", err.0, err);
-        };
+        send_ui_message(
+            app_state,
+            UiMessage::OpenWorkspace(msg),
+            "Failed to broadcast custom protocol message").await;
     }
 
     async fn handle_error(err: ParseError, app_state: State<'_, AppState>) {
         #[cfg(not(target_os = "windows"))]
-        {
-            if let Err(err) = app_state
-                .ui_messages
-                .send(UiMessage::OpenWorkspaceFailed(err))
-                .await
-            {
-                error!("Failed to broadcast invalid custom protocol message: {:?}, {}", err.0, err);
-            };
-        }
+        send_ui_message(
+            app_state,
+            UiMessage::OpenWorkspaceFailed(err),
+            "Failed to broadcast invalid custom protocol message").await;
     }
 }
 
@@ -150,26 +152,18 @@ impl ImportHandler {
 
     async fn handle_ok(msg: ImportWorkspaceMsg, app_state: State<'_, AppState>) {
         // try to send to UI if ready, otherwise buffer and let ui_ready handle
-        if let Err(err) = app_state
-            .ui_messages
-            .send(UiMessage::ImportWorkspace(msg))
-            .await
-        {
-            error!("Failed to broadcast custom protocol message: {:?}, {}", err.0, err);
-        };
+        send_ui_message(
+            app_state,
+            UiMessage::ImportWorkspace(msg),
+            "Failed to broadcast custom protocol message").await;
     }
 
     async fn handle_error(err: ParseError, app_state: State<'_, AppState>) {
         #[cfg(not(target_os = "windows"))]
-        {
-            if let Err(err) = app_state
-                .ui_messages
-                .send(UiMessage::ImportWorkspaceFailed(err))
-                .await
-            {
-                error!("Failed to broadcast invalid custom protocol message: {:?}, {}", err.0, err);
-            };
-        }
+        send_ui_message(
+            app_state,
+            UiMessage::ImportWorkspaceFailed(err),
+            "Failed to broadcast invalid custom protocol message").await;
     }
 }
 
@@ -187,13 +181,16 @@ impl CustomProtocol {
                 info!("App opened with URL: {:?}", url_scheme.to_string());
 
                 let request = UrlParser::parse(&url_scheme.to_string());
+                let app_state = app_handle.state::<AppState>();
                 if let Err(err) = request {
-                    //todo: send message about invalid request
-                    error!("Failed to parse custom protocol message: {:?}", err);
+                    send_ui_message(
+                        app_state,
+                        //todo: fix the message type
+                    UiMessage::OpenWorkspaceFailed(err),
+                        "Failed to broadcast custom protocol message").await;
                     return;
                 }
                 let request = request.unwrap();
-                let app_state = app_handle.state::<AppState>();
 
                 match request.host.as_str() {
                     "open" => {
