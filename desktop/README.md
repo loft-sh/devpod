@@ -4,12 +4,13 @@
 
 ## Development
 
-1. Install [NodeJS](https://nodejs.org/en/) and [Yarn](https://yarnpkg.com/getting-started/install)
-2. Install [Rust](https://www.rust-lang.org/tools/install)
-3. Install [Go](https://go.dev/doc/install)
-4. Run `./hack/rebuild.sh` from the root directory of the repo
-5. Install dependencies with `yarn` in the `desktop` directory
-6. Run `yarn tauri dev` in the `desktop` directory
+1. Install [NodeJS](https://nodejs.org/en/) 
+2. Install [Yarn](https://yarnpkg.com/getting-started/install) and make sure you use yarn v1, by running `yarn set version 1.22.1`
+3. Install [Rust](https://www.rust-lang.org/tools/install)
+4. Install [Go](https://go.dev/doc/install)
+5. Run `./hack/rebuild.sh` from the root directory of the repo
+6. Install dependencies with `yarn` in the `desktop` directory
+7. Run `yarn tauri dev` in the `desktop` directory
 
 ### Build dependencies
 
