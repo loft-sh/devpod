@@ -146,6 +146,9 @@ func (r *ProviderResolver) Resolve(devPodConfig *config.Config, devPodProUrl str
 	}
 
 	provider, err := workspace.FindProvider(devPodConfig, instance.ID, r.log)
+	if err != nil {
+		return nil, errors.Wrap(err, "find provider")
+	}
 
 	if !provider.Config.IsProxyProvider() {
 		return nil, fmt.Errorf("provider is not a proxy provider")
