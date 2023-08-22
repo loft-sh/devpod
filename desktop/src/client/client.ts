@@ -42,11 +42,13 @@ type TChannels = {
         ide: string | null
         source: string
       }>
-      | Readonly<{
-    type: "ImportWorkspace"
-    workspace_id: string | null
-    //todo: fields
-  }>
+    | Readonly<{
+        type: "ImportWorkspace"
+        workspace_id: string | null
+        workspace_uid: string | null
+        devpod_pro_url: string | null
+        options: { [key: string]: string } | null;
+      }>
 }
 type TChannelName = keyof TChannels
 type TClientEventListener<TChannel extends TChannelName> = (payload: TChannels[TChannel]) => void
