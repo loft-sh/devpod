@@ -45,6 +45,10 @@ module.exports = {
         },
         {
           type: "doc",
+          id: "getting-started/quickstart-minikube-vscode-browser",
+        },
+        {
+          type: "doc",
           id: "getting-started/update",
         },
       ],
@@ -168,7 +172,7 @@ module.exports = {
         {
           type: "doc",
           id: "telemetry",
-        },
+        }
       ],
     },
     {
