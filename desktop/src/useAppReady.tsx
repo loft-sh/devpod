@@ -23,7 +23,7 @@ import { useNavigate } from "react-router"
 import { client } from "./client"
 import { ErrorMessageBox } from "./components"
 import { WORKSPACE_SOURCE_BRANCH_DELIMITER, WORKSPACE_SOURCE_COMMIT_DELIMITER } from "./constants"
-import { startWorkspaceAction } from "./contexts"
+import {startWorkspaceAction, useWorkspace} from "./contexts"
 import { Release } from "./gen"
 import { exists, useReleases, useVersion } from "./lib"
 import { Routes } from "./routes"
@@ -96,6 +96,17 @@ export function useAppReady() {
       ) : null,
     [isChangelogModalOpen, latestRelease, onChangelogModalClose]
   )
+
+  const openWorkspace = (workspace_id: string) => {
+    const actionID = startWorkspaceAction({
+      workspaceID: workspace_id,
+      streamID: viewID,
+      config: {
+        id: workspace_id,
+      },
+    })
+    navigate(Routes.toAction(actionID))
+  }
 
   useEffect(() => {
     if (!isReadyLockRef.current || !currentVersion || !releases) {
@@ -174,14 +185,11 @@ export function useAppReady() {
               options: event.options,
             })
             if (importResult.err) {
-              // todo: inform why did we fail
-              setFailedMessage(`Failed to import workspace: ${importResult.err}, ${importResult.val}. 
-              ${event.workspace_uid}, ${event.workspace_id}, ${event.devpod_pro_url}, ${event.options}.`)
+              setFailedMessage("Failed to import workspace")
 
               return
             }
-            // todo: inform that we imported the workspace
-            setFailedMessage("Successfully imported workspace")
+            openWorkspace(event.workspace_id);
 
             return
           }
