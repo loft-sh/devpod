@@ -201,6 +201,7 @@ impl CustomProtocol {
                 let request = UrlParser::parse(&url_scheme.to_string());
                 let app_state = app_handle.state::<AppState>();
                 if let Err(err) = request {
+                    #[cfg(not(target_os = "windows"))]
                     send_ui_message(
                         app_state,
                     UiMessage::CommandFailed(err),

@@ -97,17 +97,6 @@ export function useAppReady() {
     [isChangelogModalOpen, latestRelease, onChangelogModalClose]
   )
 
-  const openWorkspace = (workspace_id: string) => {
-    const actionID = startWorkspaceAction({
-      workspaceID: workspace_id,
-      streamID: viewID,
-      config: {
-        id: workspace_id,
-      },
-    })
-    navigate(Routes.toAction(actionID))
-  }
-
   useEffect(() => {
     if (!isReadyLockRef.current || !currentVersion || !releases) {
       return
@@ -189,7 +178,14 @@ export function useAppReady() {
 
               return
             }
-            openWorkspace(event.workspace_id)
+            const actionID = startWorkspaceAction({
+              workspaceID: event.workspace_id,
+              streamID: viewID,
+              config: {
+                id: event.workspace_id,
+              },
+            })
+            navigate(Routes.toAction(actionID))
 
             return
           }
