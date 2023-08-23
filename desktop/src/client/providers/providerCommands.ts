@@ -1,32 +1,35 @@
-import { Result, ResultError, Return, exists, getErrorFromChildProcess } from "../../lib"
+import {exists, getErrorFromChildProcess, Result, ResultError, Return} from "../../lib"
 import {
   TAddProviderConfig,
   TCheckProviderUpdateResult,
-  TProviderSource,
+  TImportWorkspaceConfig,
   TProviderID,
   TProviderOptions,
   TProviders,
+  TProviderSource,
 } from "../../types"
-import { Command, isOk, serializeRawOptions, toFlagArg } from "../command"
+import {Command, isOk, serializeRawOptions, toFlagArg} from "../command"
 import {
   DEVPOD_COMMAND_ADD,
   DEVPOD_COMMAND_DELETE,
   DEVPOD_COMMAND_GET_PROVIDER_NAME,
+  DEVPOD_COMMAND_IMPORT_WORKSPACE,
   DEVPOD_COMMAND_LIST,
   DEVPOD_COMMAND_OPTIONS,
   DEVPOD_COMMAND_PROVIDER,
   DEVPOD_COMMAND_SET_OPTIONS,
   DEVPOD_COMMAND_UPDATE,
   DEVPOD_COMMAND_USE,
-  DEVPOD_FLAG_DEBUG,
+  DEVPOD_FLAG_DEBUG, DEVPOD_FLAG_DEVPOD_PRO_URL,
   DEVPOD_FLAG_DRY,
   DEVPOD_FLAG_JSON_LOG_OUTPUT,
   DEVPOD_FLAG_JSON_OUTPUT,
   DEVPOD_FLAG_NAME,
   DEVPOD_FLAG_SINGLE_MACHINE,
   DEVPOD_FLAG_USE,
+  DEVPOD_FLAG_WORKSPACE_ID, DEVPOD_FLAG_WORKSPACE_UID,
 } from "../constants"
-import { DEVPOD_COMMAND_CHECK_PROVIDER_UPDATE, DEVPOD_COMMAND_HELPER } from "./../constants"
+import {DEVPOD_COMMAND_CHECK_PROVIDER_UPDATE, DEVPOD_COMMAND_HELPER} from "./../constants"
 
 export class ProviderCommands {
   static DEBUG = false
@@ -224,6 +227,28 @@ export class ProviderCommands {
       source.raw ?? source.github ?? source.url ?? source.file ?? "",
       DEVPOD_FLAG_JSON_LOG_OUTPUT,
       useFlag,
+    ]).run()
+    if (result.err) {
+      return result
+    }
+
+    if (!isOk(result.val)) {
+      return getErrorFromChildProcess(result.val)
+    }
+
+    return Return.Ok()
+  }
+
+  static async ImportWorkspace(config: TImportWorkspaceConfig): Promise<ResultError> {
+    const optionsFlag = config.options ? serializeRawOptions(config.options) : []
+    const result = await new Command([
+      DEVPOD_COMMAND_PROVIDER,
+      DEVPOD_COMMAND_IMPORT_WORKSPACE,
+      DEVPOD_FLAG_WORKSPACE_ID, config.workspace_id,
+      DEVPOD_FLAG_WORKSPACE_UID, config.workspace_uid,
+      DEVPOD_FLAG_DEVPOD_PRO_URL, config.devpod_pro_url,
+      ...optionsFlag,
+      DEVPOD_FLAG_JSON_LOG_OUTPUT,
     ]).run()
     if (result.err) {
       return result

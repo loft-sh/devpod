@@ -167,12 +167,21 @@ export function useAppReady() {
           }
 
           if (event.type === "ImportWorkspace") {
-            //todo: change this debug to actual handling
-            const message = Object.entries(event)
-                .filter(([key]) => key !== "type")
-                .map(([key, value]) => `${key}: ${value}`)
-                .join("\n")
-            setFailedMessage(message)
+            const importResult = await client.providers.importWorkspace({
+              workspace_id: event.workspace_id,
+              workspace_uid: event.workspace_uid,
+              devpod_pro_url: event.devpod_pro_url,
+              options: event.options,
+            })
+            if (importResult.err) {
+              // todo: inform why did we fail
+              setFailedMessage(`Failed to import workspace: ${importResult.err}, ${importResult.val}. 
+              ${event.workspace_uid}, ${event.workspace_id}, ${event.devpod_pro_url}, ${event.options}.`)
+
+              return
+            }
+            // todo: inform that we imported the workspace
+            setFailedMessage("Successfully imported workspace")
 
             return
           }

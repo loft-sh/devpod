@@ -44,9 +44,9 @@ type TChannels = {
       }>
     | Readonly<{
         type: "ImportWorkspace"
-        workspace_id: string | null
-        workspace_uid: string | null
-        devpod_pro_url: string | null
+        workspace_id: string
+        workspace_uid: string
+        devpod_pro_url: string
         options: { [key: string]: string } | null;
       }>
 }

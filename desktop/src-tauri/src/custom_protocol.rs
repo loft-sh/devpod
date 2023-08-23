@@ -25,9 +25,9 @@ pub struct OpenWorkspaceMsg {
 
 #[derive(Debug, PartialEq, Serialize, Clone)]
 pub struct ImportWorkspaceMsg {
-    workspace_id: Option<String>,
-    workspace_uid: Option<String>,
-    devpod_pro_url: Option<String>,
+    workspace_id: String,
+    workspace_uid: String,
+    devpod_pro_url: String,
     options: HashMap<String, String>,
 }
 
@@ -48,10 +48,7 @@ impl<'de> Deserialize<'de> for ImportWorkspaceMsg {
             .ok_or_else(|| de::Error::missing_field("devpod-pro-url"))?;
 
         Ok(ImportWorkspaceMsg {
-            workspace_id: Some(workspace_id),
-            workspace_uid: Some(workspace_uid),
-            devpod_pro_url: Some(devpod_pro_url),
-            options,
+            workspace_id, workspace_uid, devpod_pro_url, options,
         })
     }
 }
@@ -361,9 +358,9 @@ mod tests {
 
             let got: ImportWorkspaceMsg = CustomProtocol::parse(&request).unwrap();
 
-            assert_eq!(got.workspace_id, Some("workspace".to_string()));
-            assert_eq!(got.workspace_uid, Some("uid".to_string()));
-            assert_eq!(got.devpod_pro_url, Some("https://devpod.pro".to_string()));
+            assert_eq!(got.workspace_id, "workspace".to_string());
+            assert_eq!(got.workspace_uid, "uid".to_string());
+            assert_eq!(got.devpod_pro_url, "https://devpod.pro".to_string());
             assert_eq!(got.options.get("other"), Some(&"other".to_string()));
         }
     }

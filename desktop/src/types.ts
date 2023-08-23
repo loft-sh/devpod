@@ -118,6 +118,15 @@ export type TCheckProviderUpdateResult = Readonly<{
   updateAvailable: boolean
   latestVersion?: string
 }>
+
+export type TImportWorkspaceConfig =  Readonly <{
+  workspace_id: string
+  workspace_uid: string
+  devpod_pro_url: string
+  options: { [key: string]: string } | null;
+}>
+
+
 //#endregion
 
 //#region Workspace
