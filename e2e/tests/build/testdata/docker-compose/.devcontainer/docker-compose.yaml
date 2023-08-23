@@ -1,0 +1,6 @@
+services:
+  test-service:
+    image: test-repo:latest
+    build:
+      context: ./
+      dockerfile: Dockerfile

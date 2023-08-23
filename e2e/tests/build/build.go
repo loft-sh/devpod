@@ -98,6 +98,27 @@ var _ = DevPodDescribe("devpod build test suite", func() {
 		framework.ExpectNoError(err)
 	})
 
+	ginkgo.It("should build the image of the referenced service from the docker compose file", func() {
+		ctx := context.Background()
+
+		f := framework.NewDefaultFramework(initialDir + "/bin")
+		tempDir, err := framework.CopyToTempDir("tests/build/testdata/docker-compose")
+		framework.ExpectNoError(err)
+		ginkgo.DeferCleanup(framework.CleanupTempDir, initialDir, tempDir)
+
+		_ = f.DevPodProviderDelete(ctx, "docker")
+		err = f.DevPodProviderAdd(ctx, "docker")
+		framework.ExpectNoError(err)
+		err = f.DevPodProviderUse(context.Background(), "docker")
+		framework.ExpectNoError(err)
+
+		prebuildRepo := "test-repo"
+
+		// do the build
+		err = f.DevPodBuild(ctx, tempDir, "--repository", prebuildRepo, "--skip-push")
+		framework.ExpectNoError(err)
+	})
+
 	ginkgo.It("build docker internal buildkit", func() {
 		ctx := context.Background()
 

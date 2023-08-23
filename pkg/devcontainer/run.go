@@ -158,7 +158,7 @@ func (r *Runner) Up(ctx context.Context, options UpOptions) (*config.Result, err
 		if err != nil {
 			return nil, err
 		}
-	} else if len(substitutedConfig.Config.DockerComposeFile) > 0 {
+	} else if isDockerComposeConfig(substitutedConfig.Config) {
 		result, err = r.runDockerCompose(ctx, substitutedConfig, options)
 		if err != nil {
 			return nil, err
