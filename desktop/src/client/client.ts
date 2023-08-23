@@ -47,7 +47,7 @@ type TChannels = {
         workspace_id: string
         workspace_uid: string
         devpod_pro_url: string
-        options: { [key: string]: string } | null;
+        options: { [key: string]: string } | null
       }>
 }
 type TChannelName = keyof TChannels

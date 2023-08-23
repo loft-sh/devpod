@@ -23,7 +23,7 @@ import { useNavigate } from "react-router"
 import { client } from "./client"
 import { ErrorMessageBox } from "./components"
 import { WORKSPACE_SOURCE_BRANCH_DELIMITER, WORKSPACE_SOURCE_COMMIT_DELIMITER } from "./constants"
-import {startWorkspaceAction, useWorkspace} from "./contexts"
+import { startWorkspaceAction, useWorkspace } from "./contexts"
 import { Release } from "./gen"
 import { exists, useReleases, useVersion } from "./lib"
 import { Routes } from "./routes"
@@ -189,7 +189,7 @@ export function useAppReady() {
 
               return
             }
-            openWorkspace(event.workspace_id);
+            openWorkspace(event.workspace_id)
 
             return
           }

@@ -6,7 +6,8 @@ import {
   TProviderID,
   TProviderOptions,
   TProviderSource,
-  TProviders, TImportWorkspaceConfig,
+  TProviders,
+  TImportWorkspaceConfig,
 } from "../../types"
 import { TDebuggable } from "../types"
 import { ProviderCommands } from "./providerCommands"

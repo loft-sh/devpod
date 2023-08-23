@@ -1,4 +1,4 @@
-import {exists, getErrorFromChildProcess, Result, ResultError, Return} from "../../lib"
+import { exists, getErrorFromChildProcess, Result, ResultError, Return } from "../../lib"
 import {
   TAddProviderConfig,
   TCheckProviderUpdateResult,
@@ -8,7 +8,7 @@ import {
   TProviders,
   TProviderSource,
 } from "../../types"
-import {Command, isOk, serializeRawOptions, toFlagArg} from "../command"
+import { Command, isOk, serializeRawOptions, toFlagArg } from "../command"
 import {
   DEVPOD_COMMAND_ADD,
   DEVPOD_COMMAND_DELETE,
@@ -20,16 +20,18 @@ import {
   DEVPOD_COMMAND_SET_OPTIONS,
   DEVPOD_COMMAND_UPDATE,
   DEVPOD_COMMAND_USE,
-  DEVPOD_FLAG_DEBUG, DEVPOD_FLAG_DEVPOD_PRO_URL,
+  DEVPOD_FLAG_DEBUG,
+  DEVPOD_FLAG_DEVPOD_PRO_URL,
   DEVPOD_FLAG_DRY,
   DEVPOD_FLAG_JSON_LOG_OUTPUT,
   DEVPOD_FLAG_JSON_OUTPUT,
   DEVPOD_FLAG_NAME,
   DEVPOD_FLAG_SINGLE_MACHINE,
   DEVPOD_FLAG_USE,
-  DEVPOD_FLAG_WORKSPACE_ID, DEVPOD_FLAG_WORKSPACE_UID,
+  DEVPOD_FLAG_WORKSPACE_ID,
+  DEVPOD_FLAG_WORKSPACE_UID,
 } from "../constants"
-import {DEVPOD_COMMAND_CHECK_PROVIDER_UPDATE, DEVPOD_COMMAND_HELPER} from "./../constants"
+import { DEVPOD_COMMAND_CHECK_PROVIDER_UPDATE, DEVPOD_COMMAND_HELPER } from "./../constants"
 
 export class ProviderCommands {
   static DEBUG = false
@@ -244,9 +246,12 @@ export class ProviderCommands {
     const result = await new Command([
       DEVPOD_COMMAND_PROVIDER,
       DEVPOD_COMMAND_IMPORT_WORKSPACE,
-      DEVPOD_FLAG_WORKSPACE_ID, config.workspace_id,
-      DEVPOD_FLAG_WORKSPACE_UID, config.workspace_uid,
-      DEVPOD_FLAG_DEVPOD_PRO_URL, config.devpod_pro_url,
+      DEVPOD_FLAG_WORKSPACE_ID,
+      config.workspace_id,
+      DEVPOD_FLAG_WORKSPACE_UID,
+      config.workspace_uid,
+      DEVPOD_FLAG_DEVPOD_PRO_URL,
+      config.devpod_pro_url,
       ...optionsFlag,
       DEVPOD_FLAG_JSON_LOG_OUTPUT,
     ]).run()
