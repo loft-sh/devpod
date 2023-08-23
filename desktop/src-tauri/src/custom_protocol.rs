@@ -363,5 +363,16 @@ mod tests {
             assert_eq!(got.devpod_pro_url, "https://devpod.pro".to_string());
             assert_eq!(got.options.get("other"), Some(&"other".to_string()));
         }
+
+        #[test]
+        #[should_panic]
+        fn should_fail_on_missing_workspace_id() {
+            let url_str =
+                "devpod://import?workspace-uid=uid&devpod-pro-url=https://devpod.pro&other=other";
+            let request = UrlParser::parse(&url_str).unwrap();
+
+            let got: Result<ImportWorkspaceMsg, ParseError> = CustomProtocol::parse(&request);
+            got.unwrap();
+        }
     }
 }
