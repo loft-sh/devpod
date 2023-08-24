@@ -1,5 +1,5 @@
 import { client } from "@/client"
-import { useProInstances, useWorkspaces } from "@/contexts"
+import { useProInstances, useSettings, useWorkspaces } from "@/contexts"
 import { Briefcase, DevPodProBadge, Plus } from "@/icons"
 import { exists } from "@/lib"
 import { TProID, TProInstance } from "@/types"
@@ -39,8 +39,9 @@ export function Pro() {
   const handleAnnouncementClicked = () => {
     client.openLink("https://devpod.sh/engine")
   }
+  const { experimental_devPodPro } = useSettings()
 
-  return process.env.DEVPOD_PRO ? (
+  return experimental_devPodPro ? (
     <>
       <Popover isLazy isOpen={isDeleting ? true : undefined}>
         <PopoverTrigger>

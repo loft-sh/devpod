@@ -22,10 +22,6 @@ export default defineConfig({
   esbuild: {
     target: "safari13",
   },
-  define: {
-    // @ts-ignore
-    "process.env.DEVPOD_PRO": process.env["DEVPOD_PRO"] === "true",
-  },
   // to make use of `TAURI_DEBUG` and other env variables
   // https://tauri.studio/v1/api/config#buildconfig.beforedevcommand
   envPrefix: ["VITE_", "TAURI_"],

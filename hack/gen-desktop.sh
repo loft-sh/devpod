@@ -10,13 +10,14 @@ if [ -d "$TARGET_DIR" ]; then rm -Rf $TARGET_DIR; fi
 
 echo "Generating types..."
 cd desktop/src-tauri
-cargo test --quiet &> /dev/null 2>&1
+cargo test --quiet --features enable-updater &> /dev/null 2>&1
 cd ../..
 printf "Done\n"
 
 echo "Copying generated types..."
 mkdir -p desktop/src/gen
 cp -r desktop/src-tauri/bindings/* desktop/src/gen 
+rm -rf desktop/src-tauri/bindings
 
 # Add index.ts file for easy import
 touch desktop/src/gen/index.ts
