@@ -1,6 +1,6 @@
-use std::collections::HashMap;
 use log::{error, info};
 use serde::{de, Deserialize, Serialize};
+use std::collections::HashMap;
 use tauri::{AppHandle, Manager, State};
 use thiserror::Error;
 use url::Url;
@@ -36,22 +36,28 @@ pub struct ImportWorkspaceMsg {
 
 impl<'de> Deserialize<'de> for ImportWorkspaceMsg {
     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
-        where
-            D: serde::Deserializer<'de>,
+    where
+        D: serde::Deserializer<'de>,
     {
         let mut options = HashMap::deserialize(deserializer)?;
 
-        let workspace_id = options.remove("workspace-id")
+        let workspace_id = options
+            .remove("workspace-id")
             .ok_or_else(|| de::Error::missing_field("workspace-id"))?;
 
-        let workspace_uid = options.remove("workspace-uid")
+        let workspace_uid = options
+            .remove("workspace-uid")
             .ok_or_else(|| de::Error::missing_field("workspace-uid"))?;
 
-        let devpod_pro_url = options.remove("devpod-pro-url")
+        let devpod_pro_url = options
+            .remove("devpod-pro-url")
             .ok_or_else(|| de::Error::missing_field("devpod-pro-url"))?;
 
         Ok(ImportWorkspaceMsg {
-            workspace_id, workspace_uid, devpod_pro_url, options,
+            workspace_id,
+            workspace_uid,
+            devpod_pro_url,
+            options,
         })
     }
 }
@@ -87,7 +93,6 @@ pub struct Request {
     host: String,
     query: String,
 }
-
 
 pub struct UrlParser {}
 
@@ -125,11 +130,7 @@ impl UrlParser {
 }
 
 async fn send_ui_message(app_state: State<'_, AppState>, msg: UiMessage, log_msg_on_failure: &str) {
-    if let Err(err) = app_state
-        .ui_messages
-        .send(msg)
-        .await
-    {
+    if let Err(err) = app_state.ui_messages.send(msg).await {
         error!("{}: {:?}, {}", log_msg_on_failure, err.0, err);
     };
 }
@@ -149,7 +150,9 @@ impl OpenHandler {
         send_ui_message(
             app_state,
             UiMessage::OpenWorkspace(msg),
-            "Failed to broadcast custom protocol message").await;
+            "Failed to broadcast custom protocol message",
+        )
+        .await;
     }
 
     async fn handle_error(err: ParseError, app_state: State<'_, AppState>) {
@@ -157,14 +160,19 @@ impl OpenHandler {
         send_ui_message(
             app_state,
             UiMessage::CommandFailed(err),
-            "Failed to broadcast invalid custom protocol message").await;
+            "Failed to broadcast invalid custom protocol message",
+        )
+        .await;
     }
 }
 
 pub struct ImportHandler {}
 
 impl ImportHandler {
-    pub async fn handle(msg: Result<ImportWorkspaceMsg, ParseError>, app_state: State<'_, AppState>) {
+    pub async fn handle(
+        msg: Result<ImportWorkspaceMsg, ParseError>,
+        app_state: State<'_, AppState>,
+    ) {
         match msg {
             Ok(msg) => Self::handle_ok(msg, app_state).await,
             Err(err) => Self::handle_error(err, app_state).await,
@@ -176,7 +184,9 @@ impl ImportHandler {
         send_ui_message(
             app_state,
             UiMessage::ImportWorkspace(msg),
-            "Failed to broadcast custom protocol message").await;
+            "Failed to broadcast custom protocol message",
+        )
+        .await;
     }
 
     async fn handle_error(err: ParseError, app_state: State<'_, AppState>) {
@@ -184,7 +194,9 @@ impl ImportHandler {
         send_ui_message(
             app_state,
             UiMessage::CommandFailed(err),
-            "Failed to broadcast invalid custom protocol message").await;
+            "Failed to broadcast invalid custom protocol message",
+        )
+        .await;
     }
 }
 
@@ -207,8 +219,10 @@ impl CustomProtocol {
                     #[cfg(not(target_os = "windows"))]
                     send_ui_message(
                         app_state,
-                    UiMessage::CommandFailed(err),
-                        "Failed to broadcast custom protocol message").await;
+                        UiMessage::CommandFailed(err),
+                        "Failed to broadcast custom protocol message",
+                    )
+                    .await;
                     return;
                 }
                 let request = request.unwrap();
@@ -234,7 +248,7 @@ impl CustomProtocol {
                 Ok(..) => {}
                 Err(error) => {
                     let msg = "Either update-desktop-database or xdg-mime are missing. Please make sure they are available on your system";
-                    warn!("Custom protocol setup failed; {}: {}", msg, error);
+                    log::warn!("Custom protocol setup failed; {}: {}", msg, error);
 
                     tauri::async_runtime::block_on(async {
                         let app_state = app.state::<AppState>();
@@ -248,9 +262,10 @@ impl CustomProtocol {
                             .send(UiMessage::ShowToast(show_toast_msg))
                             .await
                         {
-                            error!(
+                            log::error!(
                                 "Failed to broadcast show toast message: {:?}, {}",
-                                err.0, err
+                                err.0,
+                                err
                             );
                         };
                     })
@@ -262,7 +277,9 @@ impl CustomProtocol {
     }
 
     fn parse<'a, Msg>(request: &'a Request) -> Result<Msg, ParseError>
-        where Msg: Deserialize<'a> {
+    where
+        Msg: Deserialize<'a>,
+    {
         serde_qs::from_str::<Msg>(&request.query)
             .map_err(|_| ParseError::InvalidQuery(request.query.clone()))
     }
@@ -380,3 +397,4 @@ mod tests {
         }
     }
 }
+ 
