@@ -34,16 +34,15 @@ import {
   TextProps,
   Tooltip,
   useDisclosure,
-  useToast,
   VStack,
 } from "@chakra-ui/react"
 import { useQuery } from "@tanstack/react-query"
 import dayjs from "dayjs"
 import { useCallback, useMemo, useState } from "react"
-import { HiClock, HiOutlineCode, HiShare } from "react-icons/hi"
+import { HiClock, HiOutlineCode } from "react-icons/hi"
 import { useNavigate } from "react-router"
 import { client } from "../../client"
-import { IconTag, Ripple, IDEIcon } from "../../components"
+import { IconTag, IDEIcon, Ripple } from "../../components"
 import {
   TActionID,
   TActionObj,
@@ -53,12 +52,12 @@ import {
 } from "../../contexts"
 import { ArrowPath, Ellipsis, Pause, Play, Stack3D, Trash } from "../../icons"
 import { NoWorkspaceImageSvg } from "../../images"
-import { exists, getIDEDisplayName, useHover } from "../../lib"
+import { getIDEDisplayName, useHover } from "../../lib"
 import { QueryKeys } from "../../queryKeys"
 import { Routes } from "../../routes"
 import { TIDE, TWorkspace, TWorkspaceID } from "../../types"
-import { getIDEName, getSourceName } from "./helpers"
 import { useIDEs } from "../../useIDEs"
+import { getIDEName, getSourceName } from "./helpers"
 
 type TWorkspaceCardProps = Readonly<{
   workspaceID: TWorkspaceID
@@ -68,7 +67,6 @@ type TWorkspaceCardProps = Readonly<{
 export function WorkspaceCard({ workspaceID, onSelectionChange }: TWorkspaceCardProps) {
   const [forceDelete, setForceDelete] = useState<boolean>(false)
   const navigate = useNavigate()
-  const toast = useToast()
   const settings = useSettings()
   const { ides, defaultIDE } = useIDEs()
   const { isOpen: isDeleteOpen, onOpen: onDeleteOpen, onClose: onDeleteClose } = useDisclosure()
@@ -106,51 +104,6 @@ export function WorkspaceCard({ workspaceID, onSelectionChange }: TWorkspaceCard
       navigateToAction(actionID)
     },
     [workspace, settings.fixedIDE, navigateToAction]
-  )
-
-  const handleShareClicked = useCallback(
-    (id: TWorkspaceID) => async () => {
-      if (workspace.data === undefined) {
-        return
-      }
-
-      if (!exists(workspace.data.source)) {
-        return
-      }
-
-      const source = encodeURIComponent(getSourceName(workspace.data.source))
-      const workspaceID = encodeURIComponent(id)
-      let devpodLink = `https://devpod.sh/open#${source}&workspace=${workspaceID}`
-      const maybeProviderName = workspace.data.provider?.name
-      if (exists(maybeProviderName)) {
-        devpodLink = devpodLink.concat(`&provider=${encodeURIComponent(maybeProviderName)}`)
-      }
-      const maybeIDEName = workspace.data.ide?.name
-      if (exists(maybeIDEName)) {
-        devpodLink = devpodLink.concat(`&ide=${encodeURIComponent(maybeIDEName)}`)
-      }
-
-      const res = await client.writeToClipboard(devpodLink)
-      if (!res.ok) {
-        toast({
-          title: "Failed to share workspace",
-          description: res.val.message,
-          status: "error",
-          duration: 5_000,
-          isClosable: true,
-        })
-
-        return
-      }
-
-      toast({
-        title: "Copied workspace link to clipboard",
-        status: "success",
-        duration: 5_000,
-        isClosable: true,
-      })
-    },
-    [toast, workspace.data]
   )
 
   const isLoading = useMemo(() => {
@@ -223,7 +176,6 @@ export function WorkspaceCard({ workspaceID, onSelectionChange }: TWorkspaceCard
                   <MenuButton
                     as={IconButton}
                     aria-label="More actions"
-                    // variant="ghost"
                     colorScheme="gray"
                     isDisabled={isLoading}
                     icon={<Ellipsis transform={"rotate(90deg)"} boxSize={5} />}
@@ -257,11 +209,6 @@ export function WorkspaceCard({ workspaceID, onSelectionChange }: TWorkspaceCard
                           ))}
                         </PopoverContent>
                       </Popover>
-                      <MenuItem
-                        icon={<Icon as={HiShare} boxSize={4} />}
-                        onClick={handleShareClicked(id)}>
-                        Share Configuration
-                      </MenuItem>
                       <MenuItem icon={<ArrowPath boxSize={4} />} onClick={onRebuildOpen}>
                         Rebuild
                       </MenuItem>

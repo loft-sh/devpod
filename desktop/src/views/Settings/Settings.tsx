@@ -328,7 +328,6 @@ function ExperimentalSettings() {
       </SettingSection>
 
       <SettingSection
-        showDivider={false}
         title="Experimental IDEs"
         description=" Enable experimental IDEs. These IDEs are not officially supported by DevPod and might be unstable. We are working on making them generally available">
         <HStack>
@@ -349,6 +348,16 @@ function ExperimentalSettings() {
             Jupyter Notebooks
           </FormLabel>
         </HStack>
+      </SettingSection>
+
+      <SettingSection
+        showDivider={false}
+        title="DevPod Pro (alpha)"
+        description="Enable DevPod Pro login and creation">
+        <Switch
+          isChecked={settings.experimental_devPodPro}
+          onChange={(e) => set("experimental_devPodPro", e.target.checked)}
+        />
       </SettingSection>
     </VStack>
   )

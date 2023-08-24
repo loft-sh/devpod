@@ -13,4 +13,5 @@ export interface Settings {
   experimental_multiDevcontainer: boolean
   experimental_fleet: boolean
   experimental_jupyterNotebooks: boolean
+  experimental_devPodPro: boolean
 }
