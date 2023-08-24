@@ -23,7 +23,7 @@ import { useNavigate } from "react-router"
 import { client } from "./client"
 import { ErrorMessageBox } from "./components"
 import { WORKSPACE_SOURCE_BRANCH_DELIMITER, WORKSPACE_SOURCE_COMMIT_DELIMITER } from "./constants"
-import { startWorkspaceAction } from "./contexts"
+import { startWorkspaceAction, useWorkspace } from "./contexts"
 import { Release } from "./gen"
 import { exists, useReleases, useVersion } from "./lib"
 import { Routes } from "./routes"
@@ -36,7 +36,7 @@ export function useAppReady() {
   const currentVersion = useVersion()
   const viewID = useId()
   const navigate = useNavigate()
-  const [openWorkspaceFailedMessage, setOpenWorkspaceFailedMessage] = useState<string | null>(null)
+  const [failedMessage, setFailedMessage] = useState<string | null>(null)
   const { isOpen, onClose, onOpen } = useDisclosure()
   const toast = useToast()
   const modal = useMemo(() => {
@@ -44,20 +44,21 @@ export function useAppReady() {
       <Modal
         onClose={onClose}
         isOpen={isOpen}
-        onCloseComplete={() => setOpenWorkspaceFailedMessage(null)}
+        onCloseComplete={() => setFailedMessage(null)}
         isCentered>
         <ModalOverlay />
         <ModalContent>
           <ModalCloseButton />
+          {/* todo: customize the header */}
           <ModalHeader>Failed to open workspace from URL</ModalHeader>
           <ModalBody>
-            <ErrorMessageBox error={Error(openWorkspaceFailedMessage!)} />
+            <ErrorMessageBox error={Error(failedMessage!)} />
           </ModalBody>
           <ModalFooter />
         </ModalContent>
       </Modal>
     )
-  }, [isOpen, onClose, openWorkspaceFailedMessage])
+  }, [isOpen, onClose, failedMessage])
 
   const releases = useReleases()
   const {
@@ -72,7 +73,7 @@ export function useAppReady() {
         <Modal
           onClose={onChangelogModalClose}
           isOpen={isChangelogModalOpen}
-          onCloseComplete={() => setOpenWorkspaceFailedMessage(null)}
+          onCloseComplete={() => setFailedMessage(null)}
           scrollBehavior="inside"
           size="3xl"
           isCentered>
@@ -115,12 +116,12 @@ export function useAppReady() {
   }, [currentVersion, navigate, onChangelogModalOpen, releases])
 
   useEffect(() => {
-    if (openWorkspaceFailedMessage !== null) {
+    if (failedMessage !== null) {
       onOpen()
     } else {
       onClose()
     }
-  }, [onClose, onOpen, openWorkspaceFailedMessage])
+  }, [onClose, onOpen, failedMessage])
 
   useEffect(() => {
     window.addEventListener("contextmenu", (e) => {
@@ -155,12 +156,36 @@ export function useAppReady() {
             return
           }
 
-          if (event.type === "OpenWorkspaceFailed") {
+          if (event.type === "CommandFailed") {
             const message = Object.entries(event)
               .filter(([key]) => key !== "type")
               .map(([key, value]) => `${key}: ${value}`)
               .join("\n")
-            setOpenWorkspaceFailedMessage(message)
+            setFailedMessage(message)
+
+            return
+          }
+
+          if (event.type === "ImportWorkspace") {
+            const importResult = await client.providers.importWorkspace({
+              workspace_id: event.workspace_id,
+              workspace_uid: event.workspace_uid,
+              devpod_pro_url: event.devpod_pro_url,
+              options: event.options,
+            })
+            if (importResult.err) {
+              setFailedMessage("Failed to import workspace")
+
+              return
+            }
+            const actionID = startWorkspaceAction({
+              workspaceID: event.workspace_id,
+              streamID: viewID,
+              config: {
+                id: event.workspace_id,
+              },
+            })
+            navigate(Routes.toAction(actionID))
 
             return
           }

@@ -51,12 +51,13 @@ export function SetupProviderSteps({
   const scrollToElement = useCallback((el: HTMLElement | null) => {
     if (!openLockRef.current) {
       openLockRef.current = true
-      setTimeout(() =>
-        el?.scrollIntoView({
-          behavior: "smooth",
-          block: "start",
-          inline: "nearest",
-        })
+      setTimeout(
+        () =>
+          el?.scrollIntoView({
+            behavior: "smooth",
+            block: "start",
+            inline: "nearest",
+          })
       )
     }
   }, [])

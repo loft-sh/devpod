@@ -34,13 +34,20 @@ type TChannels = {
         status: NonNullable<UseToastOptions["status"]>
       }>
     | Readonly<{ type: "ShowDashboard" }>
-    | Readonly<{ type: "OpenWorkspaceFailed" }>
+    | Readonly<{ type: "CommandFailed" }>
     | Readonly<{
         type: "OpenWorkspace"
         workspace_id: string | null
         provider_id: string | null
         ide: string | null
         source: string
+      }>
+    | Readonly<{
+        type: "ImportWorkspace"
+        workspace_id: string
+        workspace_uid: string
+        devpod_pro_url: string
+        options: Record<string, string> | null
       }>
 }
 type TChannelName = keyof TChannels

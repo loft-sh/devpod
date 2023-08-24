@@ -7,6 +7,7 @@ import {
   TProviderOptions,
   TProviderSource,
   TProviders,
+  TImportWorkspaceConfig,
 } from "../../types"
 import { TDebuggable } from "../types"
 import { ProviderCommands } from "./providerCommands"
@@ -63,6 +64,10 @@ export class ProvidersClient implements TDebuggable {
 
   public async useProvider(id: TProviderID): Promise<ResultError> {
     return ProviderCommands.UseProvider(id)
+  }
+
+  public async importWorkspace(config: TImportWorkspaceConfig): Promise<ResultError> {
+    return ProviderCommands.ImportWorkspace(config)
   }
 
   public async setOptionsDry(
