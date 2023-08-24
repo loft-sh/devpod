@@ -83,6 +83,16 @@ pub struct ShowToastMsg {
     status: ToastStatus,
 }
 
+impl ShowToastMsg {
+    pub fn new(title: String, message: String, status: ToastStatus) -> Self {
+        Self {
+            title,
+            message,
+            status,
+        }
+    }
+}
+
 // WARN: Needs to match the UI's toast status
 #[derive(Debug, Serialize, Clone)]
 #[serde(rename_all = "lowercase")]

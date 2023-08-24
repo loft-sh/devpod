@@ -5,7 +5,10 @@ use tauri::{AppHandle, Manager};
 use thiserror::Error;
 use url::Url;
 
-use crate::{AppState, UiMessage};
+use crate::{
+    ui_messages::{ShowToastMsg, ToastStatus},
+    AppState, UiMessage,
+};
 
 // Should match the one from "tauri.config.json" and "Info.plist"
 const APP_IDENTIFIER: &str = "sh.loft.devpod";
@@ -109,11 +112,11 @@ impl CustomProtocol {
 
                     tauri::async_runtime::block_on(async {
                         let app_state = app.state::<AppState>();
-                        let show_toast_msg = crate::ShowToastMsg {
-                            title: "Custom protocol handling needs to be configured".to_string(),
-                            message: msg.to_string(),
-                            status: crate::ToastStatus::Warning,
-                        };
+                        let show_toast_msg = ShowToastMsg::new(
+                            "Custom protocol handling needs to be configured".to_string(),
+                            msg.to_string(),
+                            ToastStatus::Warning,
+                        );
                         if let Err(err) = app_state
                             .ui_messages
                             .send(UiMessage::ShowToast(show_toast_msg))
