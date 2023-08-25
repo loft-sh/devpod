@@ -1,7 +1,8 @@
 import { Result, ResultError } from "../../lib"
-import { TProID, TProInstance } from "../../types"
+import {TImportWorkspaceConfig, TProID, TProInstance} from "../../types"
 import { TDebuggable, TStreamEventListenerFn } from "../types"
 import { ProCommands } from "./proCommands"
+import {ProviderCommands} from "@/client/providers/providerCommands";
 
 export class ProClient implements TDebuggable {
   constructor() {}
@@ -28,5 +29,9 @@ export class ProClient implements TDebuggable {
 
   public async remove(id: TProID) {
     return ProCommands.RemoveProInstance(id)
+  }
+
+  public async importWorkspace(config: TImportWorkspaceConfig): Promise<ResultError> {
+    return ProCommands.ImportWorkspace(config)
   }
 }
