@@ -15,5 +15,6 @@ func NewProCmd(flags *flags.GlobalFlags) *cobra.Command {
 	proCmd.AddCommand(NewLoginCmd(flags))
 	proCmd.AddCommand(NewListCmd(flags))
 	proCmd.AddCommand(NewDeleteCmd(flags))
+	proCmd.AddCommand(NewImportCmd(flags))
 	return proCmd
 }

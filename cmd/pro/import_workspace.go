@@ -1,4 +1,4 @@
-package provider
+package pro
 
 import (
 	"context"
@@ -20,7 +20,6 @@ type ImportCmd struct {
 	WorkspaceId      string
 	WorkspaceUid     string
 	WorkspaceContext string
-	DevPodProUrl     string
 	WorkspaceOptions []string
 	providerResolver *ProviderResolver
 	log              log.Logger
@@ -45,7 +44,6 @@ func NewImportCmd(globalFlags *flags.GlobalFlags) *cobra.Command {
 
 	importCmd.Flags().StringVar(&cmd.WorkspaceId, "workspace-id", "", "ID of a workspace to import")
 	importCmd.Flags().StringVar(&cmd.WorkspaceUid, "workspace-uid", "", "UID of a workspace to import")
-	importCmd.Flags().StringVar(&cmd.DevPodProUrl, "devpod-pro-url", "", "URL of a DevPod Pro containing the workspace")
 	// optional
 	importCmd.Flags().StringVar(&cmd.WorkspaceContext, "workspace-context", "", "Target context for a workspace")
 	importCmd.Flags().StringArrayVarP(
@@ -53,18 +51,21 @@ func NewImportCmd(globalFlags *flags.GlobalFlags) *cobra.Command {
 
 	_ = importCmd.MarkFlagRequired("workspace-id")
 	_ = importCmd.MarkFlagRequired("workspace-uid")
-	_ = importCmd.MarkFlagRequired("devpod-pro-url")
 
 	return importCmd
 }
 
 func (cmd *ImportCmd) Run(ctx context.Context, args []string) error {
+	if len(args) != 1 {
+		return fmt.Errorf("usage: devpod pro import-workspace <devpod-pro-host>")
+	}
+	devPodProHost := args[0]
 	devPodConfig, err := config.LoadConfig(cmd.Context, "")
 	if err != nil {
 		return err
 	}
 
-	provider, err := cmd.providerResolver.Resolve(devPodConfig, cmd.DevPodProUrl)
+	provider, err := cmd.providerResolver.Resolve(devPodConfig, devPodProHost)
 	if err != nil {
 		return errors.Wrap(err, "resolve provider")
 	}
@@ -126,26 +127,26 @@ type ProviderResolver struct {
 }
 
 func (r *ProviderResolver) proInstance(
-	devPodConfig *config.Config, devPodProUrl string) (*provider2.ProInstance, error) {
+	devPodConfig *config.Config, devPodProHost string) (*provider2.ProInstance, error) {
 	instances, err := workspace.ListProInstances(devPodConfig, r.log)
 	if err != nil {
 		return nil, errors.Wrap(err, "list pro instances")
 	}
 	for _, instance := range instances {
-		if instance.Host == devPodProUrl {
+		if instance.Host == devPodProHost {
 			return instance, nil
 		}
 	}
-	return nil, fmt.Errorf("pro instance with url '%s' doesn't exist", devPodProUrl)
+	return nil, fmt.Errorf("pro instance with host '%s' doesn't exist", devPodProHost)
 }
 
-func (r *ProviderResolver) Resolve(devPodConfig *config.Config, devPodProUrl string) (*provider2.ProviderConfig, error) {
-	instance, err := r.proInstance(devPodConfig, devPodProUrl)
+func (r *ProviderResolver) Resolve(devPodConfig *config.Config, devPodProHost string) (*provider2.ProviderConfig, error) {
+	instance, err := r.proInstance(devPodConfig, devPodProHost)
 	if err != nil {
 		return nil, errors.Wrap(err, "pro instance")
 	}
 
-	provider, err := workspace.FindProvider(devPodConfig, instance.Host, r.log)
+	provider, err := workspace.FindProvider(devPodConfig, instance.Provider, r.log)
 	if err != nil {
 		return nil, errors.Wrap(err, "find provider")
 	}
