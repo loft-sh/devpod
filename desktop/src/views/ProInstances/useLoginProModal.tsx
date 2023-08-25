@@ -1,5 +1,5 @@
 import { BottomActionBar, BottomActionBarError, Form, useStreamingTerminal } from "@/components"
-import { useProInstances } from "@/contexts"
+import { useProInstances, useProviders } from "@/contexts"
 import { exists, useFormErrors } from "@/lib"
 import { Routes } from "@/routes"
 import {
@@ -32,17 +32,18 @@ import { ConfigureProviderOptionsForm } from "../Providers/AddProvider"
 import { useSetupProvider } from "../Providers/AddProvider/useSetupProvider"
 
 type TFormValues = {
-  [FieldName.PRO_URL]: string
-  [FieldName.PRO_NAME]: string | undefined
+  [FieldName.PRO_HOST]: string
+  [FieldName.PROVIDER_NAME]: string | undefined
 }
 const FieldName = {
-  PRO_URL: "proURL",
-  PRO_NAME: "proName",
+  PRO_HOST: "proURL",
+  PROVIDER_NAME: "proName",
 } as const
 
 export function useLoginProModal() {
   const { terminal, connectStream } = useStreamingTerminal({ fontSize: "sm" })
   const [[proInstances], { login, disconnect }] = useProInstances()
+  const [[providers]] = useProviders()
   const { isOpen, onClose, onOpen } = useDisclosure()
   const { handleSubmit, formState, register, reset } = useForm<TFormValues>({
     mode: "onBlur",
@@ -51,8 +52,8 @@ export function useLoginProModal() {
   const onSubmit = useCallback<SubmitHandler<TFormValues>>(
     (data) => {
       login.run({
-        url: data[FieldName.PRO_URL],
-        name: data[FieldName.PRO_NAME],
+        host: data[FieldName.PRO_HOST],
+        providerName: data[FieldName.PROVIDER_NAME],
         streamListener: connectStream,
       })
     },
@@ -154,7 +155,7 @@ export function useLoginProModal() {
                       <Input
                         type="text"
                         placeholder="my-pro.my-domain.com"
-                        {...register(FieldName.PRO_URL, {
+                        {...register(FieldName.PRO_HOST, {
                           required: true,
                           validate: {
                             url: (value) => {
@@ -167,12 +168,12 @@ export function useLoginProModal() {
                               }
                             },
                             unique: (value) => {
-                              const isURLTaken = proInstances?.some(
-                                (instance) => instance.url === `https://${value}`
+                              const isHostTaken = proInstances?.some(
+                                (instance) => instance.host === value
                               )
 
-                              return isURLTaken
-                                ? `URL must be unique, an instance with the URL ${value} already exists`
+                              return isHostTaken
+                                ? `URL must be unique, an instance with the URL https://${value} already exists`
                                 : true
                             },
                           },
@@ -193,22 +194,20 @@ export function useLoginProModal() {
                     flexBasis="33%"
                     isInvalid={exists(proNameError)}
                     isDisabled={areInputsDisabled}>
-                    <FormLabel>Instance Name</FormLabel>
+                    <FormLabel>Provider Name</FormLabel>
                     <InputGroup>
                       <Input
                         type="text"
                         placeholder="Loft"
-                        {...register(FieldName.PRO_NAME, {
+                        {...register(FieldName.PROVIDER_NAME, {
                           required: false,
                           validate: {
                             unique: (value) => {
                               if (value === undefined) return true
-                              const isNameTaken = proInstances?.some(
-                                (instance) => instance.id === value
-                              )
+                              const isNameTaken = providers?.[value] !== undefined
 
                               return isNameTaken
-                                ? `Name must be unique, an instance named ${value} already exists`
+                                ? `Name must be unique, a provider named ${value} already exists`
                                 : true
                             },
                           },
@@ -218,7 +217,7 @@ export function useLoginProModal() {
                     {proNameError && proNameError.message ? (
                       <FormErrorMessage>{proNameError.message}</FormErrorMessage>
                     ) : (
-                      <FormHelperText>Optionally give your instance a name</FormHelperText>
+                      <FormHelperText>Optionally give the pro provider a name</FormHelperText>
                     )}
                   </FormControl>
                 </Container>
@@ -284,6 +283,7 @@ export function useLoginProModal() {
     proInstances,
     proNameError,
     proURLError,
+    providers,
     register,
     state.currentStep,
     state.providerID,

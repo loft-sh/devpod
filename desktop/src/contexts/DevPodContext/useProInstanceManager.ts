@@ -8,30 +8,25 @@ import { TProInstanceLoginConfig, TProInstanceManager, TProvider, TWithProID } f
 export function useProInstanceManager(): TProInstanceManager {
   const queryClient = useQueryClient()
   const loginMutation = useMutation<TProvider | undefined, Error, TProInstanceLoginConfig>({
-    mutationFn: async ({ url, name, streamListener }) => {
-      if (!name) {
-        name = (await client.pro.newID(url)).unwrap()
-      }
-      if (!name) {
-        throw new Error("No name provided")
-      }
-
-      ;(await client.pro.login(url, name, streamListener)).unwrap()
+    mutationFn: async ({ host, providerName, streamListener }) => {
+      ;(await client.pro.login(host, providerName, streamListener)).unwrap()
 
       try {
         const providers = (await client.providers.listAll()).unwrap()
         if (providers === undefined || Object.keys(providers).length === 0) {
           throw new Error("No providers found")
         }
-
-        const maybeProvider = providers[name]
+        if (providerName === undefined || providerName === "") {
+          providerName = "devpod-pro"
+        }
+        const maybeProvider = providers[providerName]
         if (!maybeProvider) {
-          throw new Error(`Provider ${name} not found`)
+          throw new Error(`Provider ${providerName} not found`)
         }
 
         return maybeProvider
       } catch (e) {
-        ;(await client.pro.remove(name)).unwrap()
+        ;(await client.pro.remove(host)).unwrap()
 
         throw e
       }

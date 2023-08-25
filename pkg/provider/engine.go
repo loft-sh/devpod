@@ -7,7 +7,7 @@ type ProInstance struct {
 	Provider string `json:"provider,omitempty"`
 
 	// Host is the Loft DevPod Pro host to use
-	Host string `json:"url,omitempty"`
+	Host string `json:"host,omitempty"`
 
 	// CreationTimestamp is the timestamp when this pro instance was created
 	CreationTimestamp types.Time `json:"creationTimestamp,omitempty"`

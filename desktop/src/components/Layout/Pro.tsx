@@ -108,11 +108,11 @@ export function Pro() {
                 ) : (
                   proInstances.map(
                     (proInstance) =>
-                      proInstance.id && (
+                      proInstance.host && (
                         <ProInstaceRow
-                          key={proInstance.id}
+                          key={proInstance.host}
                           {...proInstance}
-                          id={proInstance.id}
+                          id={proInstance.host}
                           onIsDeletingChanged={setIsDeleting}
                         />
                       )
