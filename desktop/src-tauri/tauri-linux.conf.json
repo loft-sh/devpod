@@ -1,8 +1,5 @@
 {
   "tauri": {
-    "updater": {
-      "active": false
-    },
     "windows": [
       {
         "title": "DevPod",
