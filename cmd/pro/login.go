@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"net/url"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -31,7 +32,7 @@ type LoginCmd struct {
 	flags.GlobalFlags
 
 	AccessKey      string
-	Name           string
+	Provider       string
 	Version        string
 	ProviderSource string
 
@@ -51,7 +52,7 @@ func NewLoginCmd(flags *flags.GlobalFlags) *cobra.Command {
 		Short: "Log into a DevPod Pro instance",
 		RunE: func(_ *cobra.Command, args []string) error {
 			if len(args) != 1 {
-				return fmt.Errorf("please specify the DevPod Pro url, e.g. devpod pro login my-pro.my-domain.com")
+				return fmt.Errorf("please specify the DevPod Pro host, e.g. devpod pro login my-pro.my-domain.com")
 			}
 
 			return cmd.Run(context.Background(), args[0], log.Default)
@@ -61,7 +62,7 @@ func NewLoginCmd(flags *flags.GlobalFlags) *cobra.Command {
 	loginCmd.Flags().StringVar(&cmd.AccessKey, "access-key", "", "If defined will use the given access key to login")
 	loginCmd.Flags().BoolVar(&cmd.Login, "login", true, "If enabled will automatically try to log into the Loft DevPod Pro")
 	loginCmd.Flags().BoolVar(&cmd.Use, "use", true, "If enabled will automatically activate the provider")
-	loginCmd.Flags().StringVar(&cmd.Name, "name", "", "Optional name how this DevPod Pro will be referenced as")
+	loginCmd.Flags().StringVar(&cmd.Provider, "provider", "", "Optional name how the DevPod Pro provider will be named")
 	loginCmd.Flags().StringVar(&cmd.Version, "version", "", "The version to use for the DevPod provider")
 	loginCmd.Flags().StringArrayVarP(&cmd.Options, "option", "o", []string{}, "Provider option in the form KEY=VALUE")
 
@@ -71,19 +72,23 @@ func NewLoginCmd(flags *flags.GlobalFlags) *cobra.Command {
 }
 
 // Run runs the command logic
-func (cmd *LoginCmd) Run(ctx context.Context, url string, log log.Logger) error {
-	if strings.HasPrefix(url, "http://") {
+func (cmd *LoginCmd) Run(ctx context.Context, fullURL string, log log.Logger) error {
+	if strings.HasPrefix(fullURL, "http://") {
 		return fmt.Errorf("http is not supported for DevPod Pro, please use https:// instead")
-	} else if !strings.HasPrefix(url, "https://") {
-		url = "https://" + url
-	} else if cmd.Name != "" && len(cmd.Name) > 32 {
-		return fmt.Errorf("cannot use a name greater than 32 characters")
+	} else if !strings.HasPrefix(fullURL, "https://") {
+		fullURL = "https://" + fullURL
+	} else if cmd.Provider != "" && len(cmd.Provider) > 32 {
+		return fmt.Errorf("cannot use a provider name greater than 32 characters")
 	}
-	url = strings.TrimSuffix(url, "/")
-	if cmd.Name == "" {
-		cmd.Name = url
+
+	// get host from url
+	parsedURL, err := url.Parse(fullURL)
+	if err != nil {
+		return fmt.Errorf("invalid url %s: %w", fullURL, err)
 	}
-	cmd.Name = workspace.ToProInstanceID(cmd.Name)
+
+	// extract host
+	host := parsedURL.Host
 
 	// load devpod config
 	devPodConfig, err := config.LoadConfig(cmd.Context, cmd.Provider)
@@ -100,27 +105,45 @@ func (cmd *LoginCmd) Run(ctx context.Context, url string, log log.Logger) error 
 	// check if url is found somewhere
 	var currentInstance *provider.ProInstance
 	for _, proInstance := range proInstances {
-		if proInstance.URL == url || proInstance.ID == cmd.Name {
-			if proInstance.URL != url {
-				return fmt.Errorf("pro instance %s already exists with a different url %s != %s", cmd.Name, proInstance.URL, url)
-			} else if proInstance.ID != cmd.Name {
-				return fmt.Errorf("pro instance with url %s already exists with a different name %s != %s", url, proInstance.ID, cmd.Name)
-			}
-
+		if proInstance.Host == host {
 			currentInstance = proInstance
 			break
+		}
+	}
+	if currentInstance != nil {
+		cmd.Provider = currentInstance.Provider
+	} else {
+		// find a provider name
+		if cmd.Provider == "" {
+			cmd.Provider = "devpod-pro"
+		}
+		cmd.Provider = provider.ToProInstanceID(cmd.Provider)
+
+		// check if provider already exists
+		providers, err := workspace.LoadAllProviders(devPodConfig, log)
+		if err != nil {
+			return fmt.Errorf("load providers: %w", err)
+		}
+
+		// provider already exists?
+		if providers[cmd.Provider] != nil {
+			// alternative name
+			cmd.Provider = provider.ToProInstanceID("devpod-" + host)
+			if providers[cmd.Provider] != nil {
+				return fmt.Errorf("provider %s already exists, please choose a different name via --provider", cmd.Provider)
+			}
 		}
 	}
 
 	// 1. Add provider
 	if currentInstance == nil {
 		currentInstance = &provider.ProInstance{
-			ID:                cmd.Name,
-			URL:               url,
+			Provider:          cmd.Provider,
+			Host:              host,
 			CreationTimestamp: types.Now(),
 		}
 
-		err = cmd.addLoftProvider(devPodConfig, url, log)
+		err = cmd.addLoftProvider(devPodConfig, fullURL, log)
 		if err != nil {
 			return err
 		}
@@ -138,14 +161,14 @@ func (cmd *LoginCmd) Run(ctx context.Context, url string, log log.Logger) error 
 	}
 
 	// get provider config
-	providerConfig, err := provider.LoadProviderConfig(devPodConfig.DefaultContext, cmd.Name)
+	providerConfig, err := provider.LoadProviderConfig(devPodConfig.DefaultContext, cmd.Provider)
 	if err != nil {
 		return err
 	}
 
 	// 2. Login to Loft
 	if cmd.Login {
-		err = cmd.login(ctx, devPodConfig, providerConfig, url, log)
+		err = cmd.login(ctx, devPodConfig, providerConfig, fullURL, log)
 		if err != nil {
 			return err
 		}
@@ -159,7 +182,7 @@ func (cmd *LoginCmd) Run(ctx context.Context, url string, log log.Logger) error 
 		}
 	}
 
-	log.Donef("Successfully configured Loft DevPod Pro %s", cmd.Name)
+	log.Donef("Successfully configured Loft DevPod Pro")
 	return nil
 }
 
@@ -171,7 +194,7 @@ func (cmd *LoginCmd) login(ctx context.Context, devPodConfig *config.Config, pro
 		return fmt.Errorf("provider is missing %s binary", LOFT_PROVIDER_BINARY)
 	}
 
-	providerDir, err := provider.GetProviderDir(devPodConfig.DefaultContext, cmd.Name)
+	providerDir, err := provider.GetProviderDir(devPodConfig.DefaultContext, cmd.Provider)
 	if err != nil {
 		return err
 	}
@@ -218,9 +241,18 @@ func (cmd *LoginCmd) addLoftProvider(devPodConfig *config.Config, url string, lo
 
 	// add the provider
 	log.Infof("Add Loft DevPod Pro provider...")
-	_, err = workspace.AddProvider(devPodConfig, cmd.Name, cmd.ProviderSource, log)
-	if err != nil {
-		return err
+
+	// is development?
+	if cmd.ProviderSource == "loft-sh/loft@v0.0.0" {
+		_, err = workspace.AddProviderRaw(devPodConfig, cmd.Provider, &provider.ProviderSource{}, []byte(fallbackProvider), log)
+		if err != nil {
+			return err
+		}
+	} else {
+		_, err = workspace.AddProvider(devPodConfig, cmd.Provider, cmd.ProviderSource, log)
+		if err != nil {
+			return err
+		}
 	}
 
 	return nil
@@ -246,7 +278,7 @@ func (cmd *LoginCmd) getProviderSource(url string) error {
 			err = json.Unmarshal(versionRaw, version)
 			if err != nil {
 				return fmt.Errorf("parse %s: %w", url, err)
-			} else if version.Version == "" || version.Version == "v0.0.0" {
+			} else if version.Version == "" {
 				return fmt.Errorf("unexpected version '%s', please use --version to define a provider version", version.Version)
 			}
 
@@ -263,3 +295,55 @@ type versionObject struct {
 	// Version is the loft remote version
 	Version string `json:"version,omitempty"`
 }
+
+var fallbackProvider = `name: loft
+version: v0.0.0
+icon: https://devpod.sh/assets/devpod.svg
+description: DevPod on Loft DevPod Engine
+optionGroups:
+  - name: Main Options
+    defaultVisible: true
+    options:
+      - LOFT_PROJECT
+      - LOFT_TEMPLATE
+      - LOFT_TEMPLATE_VERSION
+  - name: Template Options
+    defaultVisible: true
+    options:
+      - "TEMPLATE_OPTION_*"
+  - name: Other Options
+    options:
+      - LOFT_RUNNER
+options:
+  LOFT_CONFIG:
+    hidden: true
+    required: true
+    default: "${PROVIDER_FOLDER}/loft-config.json"
+    subOptionsCommand: "${LOFT_PROVIDER} devpod list projects"
+exec:
+  proxy:
+    up: |-
+      ${LOFT_PROVIDER} devpod up
+    ssh: |-
+      ${LOFT_PROVIDER} devpod ssh
+    stop: |-
+      ${LOFT_PROVIDER} devpod stop
+    status: |-
+      ${LOFT_PROVIDER} devpod status
+    delete: |-
+      ${LOFT_PROVIDER} devpod delete
+binaries:
+  LOFT_PROVIDER:
+    - os: linux
+      arch: amd64
+      path: /usr/local/bin/loft
+    - os: linux
+      arch: arm64
+      path: /usr/local/bin/loft
+    - os: darwin
+      arch: amd64
+      path: /usr/local/bin/loft
+    - os: darwin
+      arch: arm64
+      path: /usr/local/bin/loft
+`

@@ -6,8 +6,11 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"regexp"
+	"strings"
 
 	"github.com/loft-sh/devpod/pkg/config"
+	"github.com/loft-sh/devpod/pkg/id"
 )
 
 const (
@@ -106,9 +109,9 @@ func GetWorkspaceDir(context, workspaceID string) (string, error) {
 	return filepath.Join(configDir, "contexts", context, "workspaces", workspaceID), nil
 }
 
-func GetProInstanceDir(context, proInstanceID string) (string, error) {
-	if proInstanceID == "" {
-		return "", fmt.Errorf("pro instance ID id is empty")
+func GetProInstanceDir(context, proInstanceHost string) (string, error) {
+	if proInstanceHost == "" {
+		return "", fmt.Errorf("pro instance host is empty")
 	}
 
 	configDir, err := config.GetConfigDir()
@@ -116,7 +119,18 @@ func GetProInstanceDir(context, proInstanceID string) (string, error) {
 		return "", err
 	}
 
-	return filepath.Join(configDir, "contexts", context, "pro", proInstanceID), nil
+	return filepath.Join(configDir, "contexts", context, "pro", ToProInstanceID(proInstanceHost)), nil
+}
+
+var proInstanceIDRegEx1 = regexp.MustCompile(`[^\w\-]`)
+var proInstanceIDRegEx2 = regexp.MustCompile(`[^0-9a-z\-]+`)
+
+func ToProInstanceID(url string) string {
+	url = strings.TrimPrefix(url, "https://")
+	url = strings.ToLower(url)
+	url = proInstanceIDRegEx2.ReplaceAllString(proInstanceIDRegEx1.ReplaceAllString(url, "-"), "")
+	url = strings.Trim(url, "-")
+	return id.SafeConcatNameMax([]string{url}, 32)
 }
 
 func WorkspaceExists(context, workspaceID string) bool {
@@ -165,7 +179,7 @@ func SaveProviderConfig(context string, provider *ProviderConfig) error {
 }
 
 func SaveProInstanceConfig(context string, proInstance *ProInstance) error {
-	providerDir, err := GetProInstanceDir(context, proInstance.ID)
+	providerDir, err := GetProInstanceDir(context, proInstance.Host)
 	if err != nil {
 		return err
 	}
@@ -293,8 +307,8 @@ func LoadMachineConfig(context, machineID string) (*Machine, error) {
 	return machineConfig, nil
 }
 
-func LoadProInstanceConfig(context, proID string) (*ProInstance, error) {
-	proDir, err := GetProInstanceDir(context, proID)
+func LoadProInstanceConfig(context, proInstanceHost string) (*ProInstance, error) {
+	proDir, err := GetProInstanceDir(context, proInstanceHost)
 	if err != nil {
 		return nil, err
 	}
