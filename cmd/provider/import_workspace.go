@@ -132,7 +132,7 @@ func (r *ProviderResolver) proInstance(
 		return nil, errors.Wrap(err, "list pro instances")
 	}
 	for _, instance := range instances {
-		if instance.URL == devPodProUrl {
+		if instance.Host == devPodProUrl {
 			return instance, nil
 		}
 	}
@@ -145,7 +145,7 @@ func (r *ProviderResolver) Resolve(devPodConfig *config.Config, devPodProUrl str
 		return nil, errors.Wrap(err, "pro instance")
 	}
 
-	provider, err := workspace.FindProvider(devPodConfig, instance.ID, r.log)
+	provider, err := workspace.FindProvider(devPodConfig, instance.Host, r.log)
 	if err != nil {
 		return nil, errors.Wrap(err, "find provider")
 	}

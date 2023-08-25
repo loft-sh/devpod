@@ -59,12 +59,7 @@ func CloneProvider(devPodConfig *config.Config, providerName, providerSourceRaw 
 	return providerWithOptions, nil
 }
 
-func AddProvider(devPodConfig *config.Config, providerName, providerSourceRaw string, log log.Logger) (*provider2.ProviderConfig, error) {
-	providerRaw, providerSource, err := ResolveProvider(providerSourceRaw, log)
-	if err != nil {
-		return nil, err
-	}
-
+func AddProviderRaw(devPodConfig *config.Config, providerName string, providerSource *provider2.ProviderSource, providerRaw []byte, log log.Logger) (*provider2.ProviderConfig, error) {
 	providerConfig, err := installRawProvider(devPodConfig, providerName, providerRaw, providerSource, log)
 	if err != nil {
 		return nil, err
@@ -84,6 +79,15 @@ func AddProvider(devPodConfig *config.Config, providerName, providerSourceRaw st
 	}
 
 	return providerConfig, nil
+}
+
+func AddProvider(devPodConfig *config.Config, providerName, providerSourceRaw string, log log.Logger) (*provider2.ProviderConfig, error) {
+	providerRaw, providerSource, err := ResolveProvider(providerSourceRaw, log)
+	if err != nil {
+		return nil, err
+	}
+
+	return AddProviderRaw(devPodConfig, providerName, providerSource, providerRaw, log)
 }
 
 func UpdateProvider(devPodConfig *config.Config, providerName, providerSourceRaw string, log log.Logger) (*provider2.ProviderConfig, error) {

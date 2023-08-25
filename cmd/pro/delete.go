@@ -60,13 +60,13 @@ func (cmd *DeleteCmd) Run(ctx context.Context, args []string) error {
 	}
 
 	// delete the provider
-	err = providercmd.DeleteProvider(devPodConfig, proInstanceConfig.ID, true)
+	err = providercmd.DeleteProvider(devPodConfig, proInstanceConfig.Provider, true)
 	if err != nil {
 		return err
 	}
 
 	// delete the pro instance dir itself
-	proInstanceDir, err := provider2.GetProInstanceDir(devPodConfig.DefaultContext, proInstanceConfig.ID)
+	proInstanceDir, err := provider2.GetProInstanceDir(devPodConfig.DefaultContext, proInstanceConfig.Host)
 	if err != nil {
 		return err
 	}

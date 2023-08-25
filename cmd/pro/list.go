@@ -58,8 +58,8 @@ func (cmd *ListCmd) Run(ctx context.Context) error {
 		tableEntries := [][]string{}
 		for _, proInstance := range proInstances {
 			tableEntries = append(tableEntries, []string{
-				proInstance.ID,
-				proInstance.URL,
+				proInstance.Host,
+				proInstance.Provider,
 				time.Since(proInstance.CreationTimestamp.Time).Round(1 * time.Second).String(),
 			})
 		}
@@ -68,15 +68,15 @@ func (cmd *ListCmd) Run(ctx context.Context) error {
 		})
 
 		table.PrintTable(log.Default, []string{
-			"Name",
-			"Url",
+			"Host",
+			"Provider",
 			"Age",
 		}, tableEntries)
 	} else if cmd.Output == "json" {
 		tableEntries := []*provider.ProInstance{}
 		tableEntries = append(tableEntries, proInstances...)
 		sort.SliceStable(tableEntries, func(i, j int) bool {
-			return tableEntries[i].ID < tableEntries[j].ID
+			return tableEntries[i].Host < tableEntries[j].Host
 		})
 		out, err := json.Marshal(tableEntries)
 		if err != nil {
