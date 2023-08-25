@@ -167,10 +167,10 @@ export function useAppReady() {
           }
 
           if (event.type === "ImportWorkspace") {
-            const importResult = await client.providers.importWorkspace({
+            const importResult = await client.pro.importWorkspace({
               workspace_id: event.workspace_id,
               workspace_uid: event.workspace_uid,
-              devpod_pro_url: event.devpod_pro_url,
+              devpod_pro_host: event.devpod_pro_host,
               options: event.options,
             })
             if (importResult.err) {

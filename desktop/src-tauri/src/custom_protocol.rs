@@ -30,7 +30,7 @@ pub struct OpenWorkspaceMsg {
 pub struct ImportWorkspaceMsg {
     workspace_id: String,
     workspace_uid: String,
-    devpod_pro_url: String,
+    devpod_pro_host: String,
     options: HashMap<String, String>,
 }
 
@@ -49,14 +49,14 @@ impl<'de> Deserialize<'de> for ImportWorkspaceMsg {
             .remove("workspace-uid")
             .ok_or_else(|| de::Error::missing_field("workspace-uid"))?;
 
-        let devpod_pro_url = options
-            .remove("devpod-pro-url")
-            .ok_or_else(|| de::Error::missing_field("devpod-pro-url"))?;
+        let devpod_pro_host = options
+            .remove("devpod-pro-host")
+            .ok_or_else(|| de::Error::missing_field("devpod-pro-host"))?;
 
         Ok(ImportWorkspaceMsg {
             workspace_id,
             workspace_uid,
-            devpod_pro_url,
+            devpod_pro_host,
             options,
         })
     }
@@ -374,14 +374,14 @@ mod tests {
         #[test]
         fn should_parse_full() {
             let url_str =
-                "devpod://import?workspace-id=workspace&workspace-uid=uid&devpod-pro-url=https://devpod.pro&other=other";
+                "devpod://import?workspace-id=workspace&workspace-uid=uid&devpod-pro-host=devpod.pro&other=other";
             let request = UrlParser::parse(&url_str).unwrap();
 
             let got: ImportWorkspaceMsg = CustomProtocol::parse(&request).unwrap();
 
             assert_eq!(got.workspace_id, "workspace".to_string());
             assert_eq!(got.workspace_uid, "uid".to_string());
-            assert_eq!(got.devpod_pro_url, "https://devpod.pro".to_string());
+            assert_eq!(got.devpod_pro_host, "devpod.pro".to_string());
             assert_eq!(got.options.get("other"), Some(&"other".to_string()));
         }
 
@@ -389,7 +389,7 @@ mod tests {
         #[should_panic]
         fn should_fail_on_missing_workspace_id() {
             let url_str =
-                "devpod://import?workspace-uid=uid&devpod-pro-url=https://devpod.pro&other=other";
+                "devpod://import?workspace-uid=uid&devpod-pro-host=devpod.pro&other=other";
             let request = UrlParser::parse(&url_str).unwrap();
 
             let got: Result<ImportWorkspaceMsg, ParseError> = CustomProtocol::parse(&request);

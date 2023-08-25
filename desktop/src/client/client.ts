@@ -46,7 +46,7 @@ type TChannels = {
         type: "ImportWorkspace"
         workspace_id: string
         workspace_uid: string
-        devpod_pro_url: string
+        devpod_pro_host: string
         options: Record<string, string> | null
       }>
 }

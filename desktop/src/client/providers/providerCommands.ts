@@ -21,7 +21,6 @@ import {
   DEVPOD_COMMAND_UPDATE,
   DEVPOD_COMMAND_USE,
   DEVPOD_FLAG_DEBUG,
-  DEVPOD_FLAG_DEVPOD_PRO_URL,
   DEVPOD_FLAG_DRY,
   DEVPOD_FLAG_JSON_LOG_OUTPUT,
   DEVPOD_FLAG_JSON_OUTPUT,
@@ -229,31 +228,6 @@ export class ProviderCommands {
       source.raw ?? source.github ?? source.url ?? source.file ?? "",
       DEVPOD_FLAG_JSON_LOG_OUTPUT,
       useFlag,
-    ]).run()
-    if (result.err) {
-      return result
-    }
-
-    if (!isOk(result.val)) {
-      return getErrorFromChildProcess(result.val)
-    }
-
-    return Return.Ok()
-  }
-
-  static async ImportWorkspace(config: TImportWorkspaceConfig): Promise<ResultError> {
-    const optionsFlag = config.options ? serializeRawOptions(config.options) : []
-    const result = await new Command([
-      DEVPOD_COMMAND_PROVIDER,
-      DEVPOD_COMMAND_IMPORT_WORKSPACE,
-      DEVPOD_FLAG_WORKSPACE_ID,
-      config.workspace_id,
-      DEVPOD_FLAG_WORKSPACE_UID,
-      config.workspace_uid,
-      DEVPOD_FLAG_DEVPOD_PRO_URL,
-      config.devpod_pro_url,
-      ...optionsFlag,
-      DEVPOD_FLAG_JSON_LOG_OUTPUT,
     ]).run()
     if (result.err) {
       return result
