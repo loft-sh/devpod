@@ -21,7 +21,6 @@ import {
   DEVPOD_COMMAND_UPDATE,
   DEVPOD_COMMAND_USE,
   DEVPOD_FLAG_DEBUG,
-  DEVPOD_FLAG_DEVPOD_PRO_HOST,
   DEVPOD_FLAG_DRY,
   DEVPOD_FLAG_JSON_LOG_OUTPUT,
   DEVPOD_FLAG_JSON_OUTPUT,
@@ -246,12 +245,11 @@ export class ProviderCommands {
     const result = await new Command([
       DEVPOD_COMMAND_PROVIDER,
       DEVPOD_COMMAND_IMPORT_WORKSPACE,
+      config.devpod_pro_host,
       DEVPOD_FLAG_WORKSPACE_ID,
       config.workspace_id,
       DEVPOD_FLAG_WORKSPACE_UID,
       config.workspace_uid,
-      DEVPOD_FLAG_DEVPOD_PRO_HOST,
-      config.devpod_pro_host,
       ...optionsFlag,
       DEVPOD_FLAG_JSON_LOG_OUTPUT,
     ]).run()
