@@ -145,7 +145,7 @@ func (r *ProviderResolver) Resolve(devPodConfig *config.Config, devPodProHost st
 		return nil, errors.Wrap(err, "pro instance")
 	}
 
-	provider, err := workspace.FindProvider(devPodConfig, instance.Host, r.log)
+	provider, err := workspace.FindProvider(devPodConfig, instance.Provider, r.log)
 	if err != nil {
 		return nil, errors.Wrap(err, "find provider")
 	}
