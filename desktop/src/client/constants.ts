@@ -49,6 +49,6 @@ export const DEVPOD_FLAG_TIMEOUT = "--timeout"
 export const DEVPOD_FLAG_DEVCONTAINER_PATH = "--devcontainer-path"
 export const DEVPOD_FLAG_WORKSPACE_ID = "--workspace-id"
 export const DEVPOD_FLAG_WORKSPACE_UID = "--workspace-uid"
-export const DEVPOD_FLAG_DEVPOD_PRO_URL = "--devpod-pro-url"
+export const DEVPOD_FLAG_DEVPOD_PRO_HOST = "--devpod-pro-host"
 
 export const DEVPOD_UI_ENV_VAR = "DEVPOD_UI"

@@ -122,7 +122,7 @@ export type TCheckProviderUpdateResult = Readonly<{
 export type TImportWorkspaceConfig = Readonly<{
   workspace_id: string
   workspace_uid: string
-  devpod_pro_url: string
+  devpod_pro_host: string
   options: { [key: string]: string } | null
 }>
 
