@@ -1,8 +1,8 @@
 import { Result, ResultError } from "../../lib"
-import {TImportWorkspaceConfig, TProID, TProInstance} from "../../types"
+import { TImportWorkspaceConfig, TProID, TProInstance } from "../../types"
 import { TDebuggable, TStreamEventListenerFn } from "../types"
 import { ProCommands } from "./proCommands"
-import {ProviderCommands} from "@/client/providers/providerCommands";
+import { ProviderCommands } from "@/client/providers/providerCommands"
 
 export class ProClient implements TDebuggable {
   constructor() {}

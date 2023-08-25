@@ -4,7 +4,7 @@
 
 ## Development
 
-1. Install [NodeJS](https://nodejs.org/en/) 
+1. Install [NodeJS](https://nodejs.org/en/)
 2. Install [Yarn](https://yarnpkg.com/getting-started/install) and make sure you use yarn v1, by running `yarn set version 1.22.1`
 3. Install [Rust](https://www.rust-lang.org/tools/install)
 4. Install [Go](https://go.dev/doc/install)
