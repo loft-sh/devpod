@@ -73,9 +73,9 @@ func (cmd *DeleteCmd) Run(ctx context.Context, args []string) error {
 
 	err = os.RemoveAll(proInstanceDir)
 	if err != nil {
-		return errors.Wrap(err, "delete pro instace dir")
+		return errors.Wrap(err, "delete pro instance dir")
 	}
 
-	log.Default.Donef("Successfully deleted pro instace '%s'", proInstanceName)
+	log.Default.Donef("Successfully deleted pro instance '%s'", proInstanceName)
 	return nil
 }

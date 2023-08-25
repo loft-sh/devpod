@@ -2,7 +2,6 @@ import { Result, ResultError } from "../../lib"
 import { TImportWorkspaceConfig, TProID, TProInstance } from "../../types"
 import { TDebuggable, TStreamEventListenerFn } from "../types"
 import { ProCommands } from "./proCommands"
-import { ProviderCommands } from "@/client/providers/providerCommands"
 
 export class ProClient implements TDebuggable {
   constructor() {}
@@ -11,16 +10,12 @@ export class ProClient implements TDebuggable {
     ProCommands.DEBUG = isEnabled
   }
 
-  public async newID(url: string): Promise<Result<string>> {
-    return ProCommands.GetProInstanceID(url)
-  }
-
   public async login(
-    url: string,
-    name?: string,
+    host: string,
+    providerName?: string,
     listener?: TStreamEventListenerFn
   ): Promise<ResultError> {
-    return ProCommands.Login(url, name, listener)
+    return ProCommands.Login(host, providerName, listener)
   }
 
   public async listAll(): Promise<Result<readonly TProInstance[]>> {

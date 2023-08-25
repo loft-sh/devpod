@@ -14,7 +14,7 @@ export type TDeepNonNullable<T> = {
 export type TLogOutput = Readonly<{ time: Date; message?: string; level: string }>
 export type TQueryResult<TData extends Readonly<object>> = [
   TData | undefined,
-  Pick<UseMutationResult, "status" | "error">,
+  Pick<UseMutationResult, "status" | "error">
 ]
 export type TRunnable<TRunConfig> = Readonly<{ run(config: TRunConfig): void }>
 //#endregion
@@ -120,9 +120,9 @@ export type TCheckProviderUpdateResult = Readonly<{
 }>
 
 export type TImportWorkspaceConfig = Readonly<{
-  workspace_id: string
-  workspace_uid: string
-  devpod_pro_host: string
+  workspaceID: string
+  workspaceUID: string
+  devPodProHost: string
   options: { [key: string]: string } | null
 }>
 
@@ -189,8 +189,8 @@ export type TContextOption = Readonly<{
 export type TProID = string
 export type TWithProID = Readonly<{ id: TProID }>
 export type TProInstance = Readonly<{
-  id: TMaybe<string>
-  url: TMaybe<string>
+  host: TMaybe<string>
+  provider: TMaybe<string>
   creationTimestamp: TMaybe<string>
 }>
 export type TProInstances = readonly TProInstance[]
@@ -203,8 +203,8 @@ export type TProInstanceManager = Readonly<{
     Pick<UseMutationResult, "status" | "error"> & { target: TWithProID | undefined }
 }>
 export type TProInstanceLoginConfig = Readonly<{
-  url: string
-  name?: string
+  host: string
+  providerName?: string
   streamListener?: TStreamEventListenerFn
 }>
 //#endregion

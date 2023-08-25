@@ -23,7 +23,7 @@ import { useNavigate } from "react-router"
 import { client } from "./client"
 import { ErrorMessageBox } from "./components"
 import { WORKSPACE_SOURCE_BRANCH_DELIMITER, WORKSPACE_SOURCE_COMMIT_DELIMITER } from "./constants"
-import { startWorkspaceAction, useWorkspace } from "./contexts"
+import { startWorkspaceAction } from "./contexts"
 import { Release } from "./gen"
 import { exists, useReleases, useVersion } from "./lib"
 import { Routes } from "./routes"
@@ -168,9 +168,9 @@ export function useAppReady() {
 
           if (event.type === "ImportWorkspace") {
             const importResult = await client.pro.importWorkspace({
-              workspace_id: event.workspace_id,
-              workspace_uid: event.workspace_uid,
-              devpod_pro_host: event.devpod_pro_host,
+              workspaceID: event.workspace_id,
+              workspaceUID: event.workspace_uid,
+              devPodProHost: event.devpod_pro_host,
               options: event.options,
             })
             if (importResult.err) {

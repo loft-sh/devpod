@@ -2,7 +2,6 @@ import { exists, getErrorFromChildProcess, Result, ResultError, Return } from ".
 import {
   TAddProviderConfig,
   TCheckProviderUpdateResult,
-  TImportWorkspaceConfig,
   TProviderID,
   TProviderOptions,
   TProviders,
@@ -13,7 +12,6 @@ import {
   DEVPOD_COMMAND_ADD,
   DEVPOD_COMMAND_DELETE,
   DEVPOD_COMMAND_GET_PROVIDER_NAME,
-  DEVPOD_COMMAND_IMPORT_WORKSPACE,
   DEVPOD_COMMAND_LIST,
   DEVPOD_COMMAND_OPTIONS,
   DEVPOD_COMMAND_PROVIDER,
@@ -27,8 +25,6 @@ import {
   DEVPOD_FLAG_NAME,
   DEVPOD_FLAG_SINGLE_MACHINE,
   DEVPOD_FLAG_USE,
-  DEVPOD_FLAG_WORKSPACE_ID,
-  DEVPOD_FLAG_WORKSPACE_UID,
 } from "../constants"
 import { DEVPOD_COMMAND_CHECK_PROVIDER_UPDATE, DEVPOD_COMMAND_HELPER } from "./../constants"
 
