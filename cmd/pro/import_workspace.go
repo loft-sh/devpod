@@ -20,7 +20,6 @@ type ImportCmd struct {
 	WorkspaceId      string
 	WorkspaceUid     string
 	WorkspaceContext string
-	DevPodProHost    string
 	WorkspaceOptions []string
 	providerResolver *ProviderResolver
 	log              log.Logger
@@ -45,7 +44,6 @@ func NewImportCmd(globalFlags *flags.GlobalFlags) *cobra.Command {
 
 	importCmd.Flags().StringVar(&cmd.WorkspaceId, "workspace-id", "", "ID of a workspace to import")
 	importCmd.Flags().StringVar(&cmd.WorkspaceUid, "workspace-uid", "", "UID of a workspace to import")
-	importCmd.Flags().StringVar(&cmd.DevPodProHost, "devpod-host", "", "DevPod Pro host containing the workspace")
 	// optional
 	importCmd.Flags().StringVar(&cmd.WorkspaceContext, "workspace-context", "", "Target context for a workspace")
 	importCmd.Flags().StringArrayVarP(
@@ -53,18 +51,21 @@ func NewImportCmd(globalFlags *flags.GlobalFlags) *cobra.Command {
 
 	_ = importCmd.MarkFlagRequired("workspace-id")
 	_ = importCmd.MarkFlagRequired("workspace-uid")
-	_ = importCmd.MarkFlagRequired("devpod-host")
 
 	return importCmd
 }
 
 func (cmd *ImportCmd) Run(ctx context.Context, args []string) error {
+	if len(args) != 1 {
+		return fmt.Errorf("usage: devpod pro import-workspace <devpod-pro-host>")
+	}
+	devPodProHost := args[0]
 	devPodConfig, err := config.LoadConfig(cmd.Context, "")
 	if err != nil {
 		return err
 	}
 
-	provider, err := cmd.providerResolver.Resolve(devPodConfig, cmd.DevPodProHost)
+	provider, err := cmd.providerResolver.Resolve(devPodConfig, devPodProHost)
 	if err != nil {
 		return errors.Wrap(err, "resolve provider")
 	}
