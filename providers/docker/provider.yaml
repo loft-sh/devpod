@@ -28,15 +28,5 @@ agent:
     env:
       DOCKER_HOST: ${DOCKER_HOST}
 exec:
-  init: |-
-    # Check if docker exists and is reachable
-    DOCKER_HOST=${DOCKER_HOST} ${DOCKER_PATH} ps >/dev/null 2>&1
-    if [ $? -ne 0 ]; then
-      >&2 echo "Seems like docker is not reachable on your system."
-      >&2 echo "Please make sure docker is installed and running."
-      >&2 echo "You can verify if docker is running correctly via '${DOCKER_PATH} ps'"
-      exit 1
-    fi
-
   command: |-
     "${DEVPOD}" helper sh -c "${COMMAND}"

@@ -136,15 +136,5 @@ agent:
     pvcAccessMode: ${PVC_ACCESS_MODE}
     podManifestTemplate: ${POD_MANIFEST_TEMPLATE}
 exec:
-  init: |-
-    # Check if kubernetes is reachable
-    ${KUBECTL_PATH} get pods --kubeconfig=${KUBERNETES_CONFIG} --namespace=${KUBERNETES_NAMESPACE} --context=${KUBERNETES_CONTEXT} >/dev/null 2>&1
-    if [ $? -ne 0 ]; then
-      >&2 echo "Seems like kubernetes is not reachable on your system."
-      >&2 echo "Please make sure kubectl is installed and working."
-      >&2 echo "You can verify if kubectl is working correctly via: ${KUBECTL_PATH} get pods --kubeconfig=${KUBERNETES_CONFIG} --namespace=${KUBERNETES_NAMESPACE} --context=${KUBERNETES_CONTEXT}"
-      exit 1
-    fi
-
   command: |-
     "${DEVPOD}" helper sh -c "${COMMAND}"
