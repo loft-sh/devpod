@@ -418,7 +418,7 @@ func (k *kubernetesDriver) getClusterArchitecture(ctx context.Context) (string, 
 	k.Log.Infof("Find out cluster architecture...")
 	stdout := &bytes.Buffer{}
 	stderr := &bytes.Buffer{}
-	err := k.runCommand(ctx, []string{"run", "-i", "devpod-" + random.String(6), "-q", "--rm", "--restart=Never", "--image", k.helperImage(), "--", "sh"}, strings.NewReader("uname -a; exit 0"), stdout, stderr)
+	err := k.runCommand(ctx, []string{"run", "-i", "devpod-" + random.String(6), "-q", "--pod-running-timeout=10m0s", "--rm", "--restart=Never", "--image", k.helperImage(), "--", "sh"}, strings.NewReader("uname -a; exit 0"), stdout, stderr)
 	if err != nil {
 		return "", fmt.Errorf("find out cluster architecture: %s %s %w", stdout.String(), stderr.String(), err)
 	}
