@@ -282,6 +282,11 @@ func (cmd *LoginCmd) getProviderSource(url string) error {
 				return fmt.Errorf("unexpected version '%s', please use --version to define a provider version", version.Version)
 			}
 
+			// make sure it starts with a v
+			if !strings.HasPrefix(version.Version, "v") {
+				version.Version = "v" + version.Version
+			}
+
 			cmd.ProviderSource = "loft-sh/loft@" + version.Version
 		} else {
 			cmd.ProviderSource = "loft-sh/loft@" + cmd.Version
