@@ -42,7 +42,7 @@ const FieldName = {
 } as const
 
 export function useLoginProModal() {
-  const { terminal, connectStream } = useStreamingTerminal({ fontSize: "sm" })
+  const { terminal, connectStream, clear } = useStreamingTerminal({ fontSize: "sm" })
   const [[proInstances], { login, disconnect }] = useProInstances()
   const [[providers]] = useProviders()
   const { isOpen, onClose, onOpen } = useDisclosure()
@@ -52,13 +52,14 @@ export function useLoginProModal() {
   const containerRef = useRef<HTMLDivElement>(null)
   const onSubmit = useCallback<SubmitHandler<TFormValues>>(
     (data) => {
+      clear()
       login.run({
         host: data[FieldName.PRO_HOST],
         providerName: data[FieldName.PROVIDER_NAME],
         streamListener: connectStream,
       })
     },
-    [connectStream, login]
+    [connectStream, login, clear]
   )
 
   const {
