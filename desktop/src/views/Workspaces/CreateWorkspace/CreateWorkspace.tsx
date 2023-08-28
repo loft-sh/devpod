@@ -1,3 +1,4 @@
+import { ExampleCard, Form, IDEIcon, WarningMessageBox } from "@/components"
 import {
   Box,
   Button,
@@ -25,7 +26,6 @@ import { FiFolder } from "react-icons/fi"
 import { useNavigate } from "react-router"
 import { Link as RouterLink, useSearchParams } from "react-router-dom"
 import { client } from "../../../client"
-import { Form, ExampleCard, IDEIcon, WarningMessageBox } from "@/components"
 import { RECOMMENDED_PROVIDER_SOURCES, SIDEBAR_WIDTH } from "../../../constants"
 import { useProvider, useProviders, useWorkspace, useWorkspaces } from "../../../contexts"
 import { Plus } from "../../../icons"
@@ -37,6 +37,7 @@ import { TIDE } from "../../../types"
 import { useIDEs } from "../../../useIDEs"
 import { useSetupProviderModal } from "../../Providers"
 import { WORKSPACE_EXAMPLES } from "./constants"
+import { ProviderOptionsPopover } from "./ProviderOptionsPopover"
 import {
   FieldName,
   TCreateWorkspaceArgs,
@@ -473,12 +474,18 @@ function ProviderInput({ options, field, onAddProviderClicked }: TProviderInputP
         flexWrap="wrap">
         {options.installed.map((p) => (
           <Box key={p.name}>
-            <ExampleCard
-              isSelected={field.value === p.name}
-              name={p.name}
-              size="sm"
-              onClick={() => field.onChange(p.name)}
-              image={p.config?.icon ?? ProviderPlaceholderSvg}
+            <ProviderOptionsPopover
+              provider={p}
+              trigger={
+                <ExampleCard
+                  showTooltip={false}
+                  isSelected={field.value === p.name}
+                  name={p.name}
+                  size="sm"
+                  onClick={() => field.onChange(p.name)}
+                  image={p.config?.icon ?? ProviderPlaceholderSvg}
+                />
+              }
             />
           </Box>
         ))}

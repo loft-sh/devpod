@@ -15,6 +15,7 @@ import {
 
 type TOptionFormField = TOptionWithID &
   Readonly<{ isRequired?: boolean; refreshSubOptions?: (id: string) => void }>
+
 export function OptionFormField({
   id,
   defaultValue,
@@ -161,11 +162,11 @@ export function OptionFormField({
   )
 }
 
-function wrapFunction(
-  fn: any | undefined,
+function wrapFunction<TFn extends (event: any) => any>(
+  fn: TFn | undefined,
   wrap: (() => void) | undefined,
   shouldWrap: boolean
-): (event?: any) => void {
+): (event?: Parameters<TFn>[0]) => void {
   return (event) => {
     if (fn) {
       fn(event)

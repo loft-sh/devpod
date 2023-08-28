@@ -15,6 +15,23 @@ export const Popover = defineMultiStyleConfig({
           boxShadow: theme.shadows.xl,
         },
       },
+      popper: {
+        zIndex: theme.zIndices.popover,
+      },
+      header: {
+        display: "flex",
+        alignItems: "center",
+        flexFlow: "row nowrap",
+        padding: 4,
+        spacing: 0,
+        justifyContent: "space-between",
+        borderBottomWidth: "thin",
+        borderColor: "inherit",
+        fontWeight: "bold",
+        p: {
+          fontWeight: "normal",
+        },
+      },
     }
   }),
 })
