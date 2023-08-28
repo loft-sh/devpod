@@ -187,7 +187,10 @@ export function WorkspaceCard({ workspaceID, onSelectionChange }: TWorkspaceCard
                         placement="right"
                         offset={[100, 0]}>
                         <PopoverTrigger>
-                          <MenuItem ref={startWithRef} icon={<Play boxSize={4} />}>
+                          <MenuItem
+                            ref={startWithRef}
+                            icon={<Play boxSize={4} />}
+                            isDisabled={isOpenDisabled}>
                             <HStack width="full" justifyContent="space-between">
                               <Text>Start with</Text>
                               <ChevronRightIcon boxSize={4} />
@@ -200,6 +203,7 @@ export function WorkspaceCard({ workspaceID, onSelectionChange }: TWorkspaceCard
                           ref={popoverContentRef}>
                           {ides?.map((ide) => (
                             <MenuItem
+                              isDisabled={isOpenDisabled}
                               onClick={handleOpenWithIDEClicked(id, ide.name)}
                               key={ide.name}
                               value={ide.name!}
@@ -209,7 +213,10 @@ export function WorkspaceCard({ workspaceID, onSelectionChange }: TWorkspaceCard
                           ))}
                         </PopoverContent>
                       </Popover>
-                      <MenuItem icon={<ArrowPath boxSize={4} />} onClick={onRebuildOpen}>
+                      <MenuItem
+                        icon={<ArrowPath boxSize={4} />}
+                        onClick={onRebuildOpen}
+                        isDisabled={isOpenDisabled}>
                         Rebuild
                       </MenuItem>
                       <MenuItem
