@@ -57,7 +57,6 @@ export function SetupClonedProvider({ cloneProviderInfo, onFinish, reset }: TClo
         rawProviderSource: values[FieldName.PROVIDER_SOURCE],
         config: { name: values[FieldName.PROVIDER_NAME] },
       })
-      // gotta merge the options with the existing state now
     },
     [addProvider]
   )
@@ -80,7 +79,7 @@ export function SetupClonedProvider({ cloneProviderInfo, onFinish, reset }: TClo
               rules={{
                 pattern: {
                   value: ALLOWED_NAMES_REGEX,
-                  message: "Name can only contain letters, numbers and -",
+                  message: "Name can only contain lowercase letters, numbers and -",
                 },
                 validate: {
                   unique: (value) => {

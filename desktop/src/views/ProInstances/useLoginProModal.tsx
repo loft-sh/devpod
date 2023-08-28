@@ -30,6 +30,7 @@ import { SubmitHandler, useForm } from "react-hook-form"
 import { useNavigate } from "react-router"
 import { ConfigureProviderOptionsForm } from "../Providers/AddProvider"
 import { useSetupProvider } from "../Providers/AddProvider/useSetupProvider"
+import { ALLOWED_NAMES_REGEX } from "../Providers/AddProvider/helpers"
 
 type TFormValues = {
   [FieldName.PRO_HOST]: string
@@ -37,11 +38,11 @@ type TFormValues = {
 }
 const FieldName = {
   PRO_HOST: "proURL",
-  PROVIDER_NAME: "proName",
+  PROVIDER_NAME: "providerName",
 } as const
 
 export function useLoginProModal() {
-  const { terminal, connectStream } = useStreamingTerminal({ fontSize: "sm" })
+  const { terminal, connectStream, clear } = useStreamingTerminal({ fontSize: "sm" })
   const [[proInstances], { login, disconnect }] = useProInstances()
   const [[providers]] = useProviders()
   const { isOpen, onClose, onOpen } = useDisclosure()
@@ -51,13 +52,14 @@ export function useLoginProModal() {
   const containerRef = useRef<HTMLDivElement>(null)
   const onSubmit = useCallback<SubmitHandler<TFormValues>>(
     (data) => {
+      clear()
       login.run({
         host: data[FieldName.PRO_HOST],
         providerName: data[FieldName.PROVIDER_NAME],
         streamListener: connectStream,
       })
     },
-    [connectStream, login]
+    [connectStream, login, clear]
   )
 
   const {
@@ -68,7 +70,7 @@ export function useLoginProModal() {
     removeDanglingProviders,
   } = useSetupProvider()
 
-  const { proURLError, proNameError } = useFormErrors(Object.values(FieldName), formState)
+  const { proURLError, providerNameError } = useFormErrors(Object.values(FieldName), formState)
 
   useEffect(() => {
     if (login.status === "success") {
@@ -192,7 +194,7 @@ export function useLoginProModal() {
                   </FormControl>
                   <FormControl
                     flexBasis="33%"
-                    isInvalid={exists(proNameError)}
+                    isInvalid={exists(providerNameError)}
                     isDisabled={areInputsDisabled}>
                     <FormLabel>Provider Name</FormLabel>
                     <InputGroup>
@@ -201,6 +203,10 @@ export function useLoginProModal() {
                         placeholder="Loft"
                         {...register(FieldName.PROVIDER_NAME, {
                           required: false,
+                          pattern: {
+                            value: ALLOWED_NAMES_REGEX,
+                            message: "Name can only contain lowercase letters, numbers and -",
+                          },
                           validate: {
                             unique: (value) => {
                               if (value === undefined) return true
@@ -211,11 +217,15 @@ export function useLoginProModal() {
                                 : true
                             },
                           },
+                          maxLength: {
+                            value: 48,
+                            message: "Name cannot be longer than 48 characters",
+                          },
                         })}
                       />
                     </InputGroup>
-                    {proNameError && proNameError.message ? (
-                      <FormErrorMessage>{proNameError.message}</FormErrorMessage>
+                    {providerNameError && providerNameError.message ? (
+                      <FormErrorMessage>{providerNameError.message}</FormErrorMessage>
                     ) : (
                       <FormHelperText>Optionally give the pro provider a name</FormHelperText>
                     )}
@@ -281,7 +291,7 @@ export function useLoginProModal() {
     login.status,
     onSubmit,
     proInstances,
-    proNameError,
+    providerNameError,
     proURLError,
     providers,
     register,

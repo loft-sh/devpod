@@ -112,7 +112,7 @@ export function Pro() {
                         <ProInstaceRow
                           key={proInstance.host}
                           {...proInstance}
-                          id={proInstance.host}
+                          host={proInstance.host}
                           onIsDeletingChanged={setIsDeleting}
                         />
                       )
@@ -135,25 +135,31 @@ export function Pro() {
   )
 }
 
-type TProInstaceRowProps = Omit<TProInstance, "id"> &
-  Readonly<{ id: TProID; onIsDeletingChanged: (isDeleting: boolean) => void }>
-function ProInstaceRow({ id, creationTimestamp, onIsDeletingChanged }: TProInstaceRowProps) {
+type TProInstaceRowProps = Omit<TProInstance, "host"> &
+  Readonly<{ host: TProID; onIsDeletingChanged: (isDeleting: boolean) => void }>
+function ProInstaceRow({
+  host,
+  creationTimestamp,
+  onIsDeletingChanged,
+  provider,
+}: TProInstaceRowProps) {
   const [, { disconnect }] = useProInstances()
   const workspaces = useWorkspaces()
   const proInstanceWorkspaces = useMemo(
-    () => workspaces.filter((workspace) => workspace.provider?.name === id),
-    [id, workspaces]
+    () => workspaces.filter((workspace) => workspace.provider?.name === provider),
+    [host, workspaces]
   )
+  console.log(proInstanceWorkspaces)
   const {
     modal: deleteProviderModal,
     open: openDeleteProviderModal,
     isOpen,
   } = useDeleteProviderModal(
-    id,
+    host,
     "Pro instance",
     "disconnect",
     proInstanceWorkspaces.length > 0,
-    () => disconnect.run({ id })
+    () => disconnect.run({ id: host })
   )
   useEffect(() => {
     onIsDeletingChanged(isOpen)
@@ -165,7 +171,7 @@ function ProInstaceRow({ id, creationTimestamp, onIsDeletingChanged }: TProInsta
     <>
       <HStack width="full" padding="2" justifyContent="space-between">
         <VStack align="start" spacing="0" fontSize="sm">
-          <Text fontWeight="bold">{id}</Text>
+          <Text fontWeight="bold">{host}</Text>
           <HStack>
             <IconTag
               variant="ghost"
@@ -185,7 +191,7 @@ function ProInstaceRow({ id, creationTimestamp, onIsDeletingChanged }: TProInsta
           </HStack>
         </VStack>
 
-        {exists(id) && (
+        {exists(host) && (
           <Tooltip label="Disconnect from Instance">
             <IconButton
               variant="ghost"
