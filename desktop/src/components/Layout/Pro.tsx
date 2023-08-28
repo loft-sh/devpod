@@ -18,6 +18,7 @@ import {
   PopoverArrow,
   PopoverBody,
   PopoverContent,
+  PopoverHeader,
   PopoverTrigger,
   Portal,
   Text,
@@ -52,37 +53,27 @@ export function Pro() {
         <Portal>
           <PopoverContent backgroundColor={backgroundColor} zIndex="popover">
             <PopoverArrow backgroundColor={backgroundColor} />
+            <PopoverHeader>
+              <VStack align="start" spacing="0">
+                <Heading size="sm" as="h3">
+                  Your Pro Instances
+                </Heading>
+                <Text fontSize="xs">Manage DevPod Pro</Text>
+              </VStack>
+              <ButtonGroup variant="outline">
+                <Tooltip label="Connect to Pro instance">
+                  <IconButton
+                    aria-label="Connect to Pro Instace"
+                    onClick={handleConnectClicked}
+                    icon={<Icon as={HiArrowRightOnRectangle} boxSize={5} />}
+                  />
+                </Tooltip>
+                <Tooltip label="Create new Pro instance">
+                  <IconButton aria-label="Create new Pro Instance" isDisabled icon={<Plus />} />
+                </Tooltip>
+              </ButtonGroup>
+            </PopoverHeader>
             <PopoverBody>
-              <HStack
-                paddingX="3"
-                paddingTop="1"
-                paddingBottom="2"
-                width="calc(100% + 1.5rem)"
-                transform="translateX(-0.75rem)"
-                spacing="0"
-                justifyContent="space-between"
-                borderBottomWidth="thin"
-                borderColor="inherit">
-                <VStack align="start" spacing="0">
-                  <Heading size="sm" as="h3">
-                    Your Pro Instances
-                  </Heading>
-                  <Text fontSize="xs">Manage DevPod Pro</Text>
-                </VStack>
-                <ButtonGroup variant="outline">
-                  <Tooltip label="Connect to Pro instance">
-                    <IconButton
-                      aria-label="Connect to Pro Instace"
-                      onClick={handleConnectClicked}
-                      icon={<Icon as={HiArrowRightOnRectangle} boxSize={5} />}
-                    />
-                  </Tooltip>
-                  <Tooltip label="Create new Pro instance">
-                    <IconButton aria-label="Create new Pro Instance" isDisabled icon={<Plus />} />
-                  </Tooltip>
-                </ButtonGroup>
-              </HStack>
-
               <Box
                 width="full"
                 overflowY="auto"
@@ -149,7 +140,6 @@ function ProInstaceRow({
     () => workspaces.filter((workspace) => workspace.provider?.name === provider),
     [host, workspaces]
   )
-  console.log(proInstanceWorkspaces)
   const {
     modal: deleteProviderModal,
     open: openDeleteProviderModal,

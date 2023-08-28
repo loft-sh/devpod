@@ -200,7 +200,7 @@ export function useLoginProModal() {
                     <InputGroup>
                       <Input
                         type="text"
-                        placeholder="Loft"
+                        placeholder="devpod-pro"
                         {...register(FieldName.PROVIDER_NAME, {
                           required: false,
                           pattern: {

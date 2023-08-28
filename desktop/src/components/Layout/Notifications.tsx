@@ -55,6 +55,7 @@ export function Notifications() {
             size="md"
             rounded="full"
             aria-label="Show onging operations"
+            marginRight="4"
             icon={
               <>
                 <Bell boxSize={6} position="absolute" />
@@ -80,9 +81,7 @@ export function Notifications() {
         <Box width="full" height="full" zIndex="popover" position="relative">
           <PopoverContent backgroundColor={backgroundColor} zIndex="popover">
             <PopoverArrow backgroundColor={backgroundColor} />
-            <PopoverHeader paddingY="4" fontWeight="bold">
-              Notifications
-            </PopoverHeader>
+            <PopoverHeader>Notifications</PopoverHeader>
             <PopoverBody overflow="hidden" maxHeight="20rem" paddingInline="0">
               {pendingUpdate && (
                 <HStack
