@@ -23,6 +23,7 @@ import { WorkspacesClient } from "./workspaces"
 import { UseToastOptions } from "@chakra-ui/react"
 import { Release } from "../gen"
 import { ProClient } from "./pro"
+import { Theme as TauriTheme } from "@tauri-apps/api/window"
 
 // These types have to match the rust types! Make sure to update them as well!
 type TChannels = {
@@ -287,6 +288,10 @@ class Client {
   }
   public async closeCurrentWindow(): Promise<void> {
     await tauriWindow.getCurrent().close()
+  }
+
+  public async getSystemTheme(): Promise<TauriTheme | null> {
+    return tauriWindow.appWindow.theme()
   }
 }
 
