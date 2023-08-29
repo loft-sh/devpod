@@ -10,29 +10,19 @@ import (
 	"github.com/pkg/errors"
 )
 
-func GetTag(image string) string {
-	ref, err := name.ParseReference(image)
-	if err != nil {
-		return ""
-	}
-
-	tag, ok := ref.(name.Tag)
-	if ok {
-		return tag.TagStr()
-	}
-
-	return ""
-}
-
 func GetImage(image string) (v1.Image, error) {
 	ref, err := name.ParseReference(image)
 	if err != nil {
 		return nil, err
 	}
 
-	img, err := remote.Image(ref, remote.WithAuthFromKeychain(authn.DefaultKeychain))
+	// check first without authentication
+	img, err := remote.Image(ref)
 	if err != nil {
-		return nil, err
+		img, err = remote.Image(ref, remote.WithAuthFromKeychain(authn.DefaultKeychain))
+		if err != nil {
+			return nil, errors.Wrapf(err, "retrieve image %s", image)
+		}
 	}
 
 	return img, err
@@ -53,14 +43,9 @@ func CheckPushPermissions(image string) error {
 }
 
 func GetImageConfig(image string) (*v1.ConfigFile, v1.Image, error) {
-	ref, err := name.ParseReference(image)
+	img, err := GetImage(image)
 	if err != nil {
-		return nil, nil, errors.Wrapf(err, "parse reference %s", image)
-	}
-
-	img, err := remote.Image(ref, remote.WithAuthFromKeychain(authn.DefaultKeychain))
-	if err != nil {
-		return nil, nil, errors.Wrapf(err, "retrieve image %s", image)
+		return nil, nil, err
 	}
 
 	configFile, err := img.ConfigFile()
