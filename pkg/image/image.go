@@ -16,13 +16,9 @@ func GetImage(image string) (v1.Image, error) {
 		return nil, err
 	}
 
-	// check first without authentication
-	img, err := remote.Image(ref)
+	img, err := remote.Image(ref, remote.WithAuthFromKeychain(authn.DefaultKeychain))
 	if err != nil {
-		img, err = remote.Image(ref, remote.WithAuthFromKeychain(authn.DefaultKeychain))
-		if err != nil {
-			return nil, errors.Wrapf(err, "retrieve image %s", image)
-		}
+		return nil, errors.Wrapf(err, "retrieve image %s", image)
 	}
 
 	return img, err

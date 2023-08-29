@@ -200,16 +200,12 @@ func (t *tunnelServer) Log(ctx context.Context, message *tunnel.LogMessage) (*tu
 func (t *tunnelServer) GitCloneAndRead(response *tunnel.Empty, stream tunnel.Tunnel_GitCloneAndReadServer) error {
 	if t.workspace == nil {
 		return fmt.Errorf("workspace is nil")
-	}
-
-	if t.workspace.Source.GitRepository == "" {
+	} else if t.workspace.Source.GitRepository == "" {
 		return fmt.Errorf("invalid repository")
 	}
 
-	gitCloneDir := filepath.Join(t.workspace.Folder, "source")
-
 	// clone here
-	// git clone --bare --depth=1 $REPO
+	gitCloneDir := filepath.Join(t.workspace.Folder, "source")
 	cloneArgs := []string{"clone", t.workspace.Source.GitRepository, gitCloneDir}
 	if t.workspace.Source.GitBranch != "" {
 		cloneArgs = append(cloneArgs, "--branch", t.workspace.Source.GitBranch)
