@@ -15,15 +15,7 @@ import {
 } from "@chakra-ui/react"
 import styled from "@emotion/styled"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
-import {
-  EventHandler,
-  FormEventHandler,
-  RefObject,
-  useCallback,
-  useEffect,
-  useMemo,
-  useRef,
-} from "react"
+import { FormEventHandler, RefObject, useCallback, useEffect, useMemo, useRef } from "react"
 import { DefaultValues, FormProvider, SubmitHandler, useForm } from "react-hook-form"
 import { useBorderColor } from "../../../Theme"
 import { client } from "../../../client"
@@ -34,6 +26,7 @@ import { TConfigureProviderConfig, TProviderID, TProviderOptions } from "../../.
 import { canCreateMachine } from "../helpers"
 import { OptionFormField } from "./OptionFormField"
 import { useProviderOptions } from "./useProviderOptions"
+import { CheckIcon } from "@chakra-ui/icons"
 
 const Form = styled.form`
   width: 100%;
@@ -86,8 +79,8 @@ export function ConfigureProviderOptionsForm({
   )
   const formMethods = useForm<TFieldValues>({
     defaultValues: {
+      reuseMachine,
       useAsDefault: isDefault,
-      reuseMachine: reuseMachine,
     },
   })
 
@@ -105,6 +98,10 @@ export function ConfigureProviderOptionsForm({
       await queryClient.invalidateQueries(QueryKeys.PROVIDERS)
     },
     onSuccess() {
+      formMethods.reset(
+        { reuseMachine, useAsDefault: isDefault },
+        { keepValues: true, keepDirty: false }
+      )
       onFinish?.()
     },
   })
@@ -325,6 +322,11 @@ export function ConfigureProviderOptionsForm({
                     variant="primary"
                     isLoading={formMethods.formState.isSubmitting || status === "loading"}
                     isDisabled={!formMethods.formState.isValid}
+                    rightIcon={
+                      status === "success" && !formMethods.formState.isDirty ? (
+                        <CheckIcon />
+                      ) : undefined
+                    }
                     title={addProvider ? "Add Provider" : "Update Options"}>
                     {addProvider ? "Add Provider" : "Update Options"}
                   </Button>
