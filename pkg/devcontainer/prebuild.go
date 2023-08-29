@@ -58,7 +58,7 @@ func (r *Runner) Build(ctx context.Context, options config.BuildOptions) (string
 	}
 
 	// push the image to the registry
-	err = r.Driver.PushDevContainer(context.TODO(), prebuildImage)
+	err = r.Driver.PushDevContainer(ctx, prebuildImage)
 	if err != nil {
 		return "", errors.Wrap(err, "push image")
 	}

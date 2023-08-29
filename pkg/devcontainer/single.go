@@ -13,8 +13,7 @@ import (
 )
 
 func (r *Runner) runSingleContainer(ctx context.Context, parsedConfig *config.SubstitutedConfig, workspaceMount string, options UpOptions) (*config.Result, error) {
-	labels := r.getLabels()
-	containerDetails, err := r.Driver.FindDevContainer(ctx, labels)
+	containerDetails, err := r.Driver.FindDevContainer(ctx, r.ID)
 	if err != nil {
 		return nil, fmt.Errorf("find dev container: %w", err)
 	}
@@ -24,7 +23,7 @@ func (r *Runner) runSingleContainer(ctx context.Context, parsedConfig *config.Su
 	if !options.Recreate && containerDetails != nil {
 		// start container if not running
 		if strings.ToLower(containerDetails.State.Status) != "running" {
-			err = r.Driver.StartDevContainer(ctx, containerDetails.ID, labels)
+			err = r.Driver.StartDevContainer(ctx, r.ID)
 			if err != nil {
 				return nil, err
 			}
@@ -40,7 +39,7 @@ func (r *Runner) runSingleContainer(ctx context.Context, parsedConfig *config.Su
 			return nil, errors.Wrap(err, "merge config")
 		}
 	} else {
-		// we need to build container
+		// we need to build the container
 		buildInfo, err := r.build(ctx, parsedConfig, config.BuildOptions{
 			CLIOptions: provider2.CLIOptions{
 				PrebuildRepositories: options.PrebuildRepositories,
@@ -53,7 +52,7 @@ func (r *Runner) runSingleContainer(ctx context.Context, parsedConfig *config.Su
 
 		// delete container on recreation
 		if options.Recreate {
-			err := r.Delete(ctx, labels, false)
+			err := r.Delete(ctx, false)
 			if err != nil {
 				return nil, errors.Wrap(err, "delete devcontainer")
 			}
@@ -70,10 +69,9 @@ func (r *Runner) runSingleContainer(ctx context.Context, parsedConfig *config.Su
 		if err != nil {
 			return nil, errors.Wrap(err, "marshal config")
 		}
-		labels = append(labels, metadata.ImageMetadataLabel+"="+string(marshalled))
 
 		// run dev container
-		err = r.Driver.RunDevContainer(ctx, parsedConfig.Config, mergedConfig, buildInfo.ImageName, workspaceMount, labels, r.WorkspaceConfig.Workspace.IDE.Name, r.WorkspaceConfig.Workspace.IDE.Options, buildInfo.ImageDetails)
+		err = r.Driver.RunDevContainer(ctx, r.ID, parsedConfig.Config, mergedConfig, buildInfo.ImageName, workspaceMount, []string{metadata.ImageMetadataLabel + "=" + string(marshalled)}, r.WorkspaceConfig.Workspace.IDE.Name, r.WorkspaceConfig.Workspace.IDE.Options, buildInfo.ImageDetails)
 		if err != nil {
 			return nil, errors.Wrap(err, "start dev container")
 		}
@@ -81,7 +79,7 @@ func (r *Runner) runSingleContainer(ctx context.Context, parsedConfig *config.Su
 		// TODO: wait here a bit for correct startup?
 
 		// get container details
-		containerDetails, err = r.Driver.FindDevContainer(ctx, labels)
+		containerDetails, err = r.Driver.FindDevContainer(ctx, r.ID)
 		if err != nil {
 			return nil, err
 		}
@@ -103,7 +101,7 @@ func (r *Runner) runSingleContainer(ctx context.Context, parsedConfig *config.Su
 	}
 
 	// setup container
-	err = r.setupContainer(containerDetails, newMergedConfig, options)
+	err = r.setupContainer(ctx, containerDetails, newMergedConfig)
 	if err != nil {
 		return nil, errors.Wrap(err, "setup container")
 	}

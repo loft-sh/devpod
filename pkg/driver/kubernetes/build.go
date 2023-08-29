@@ -34,7 +34,7 @@ func (k *kubernetesDriver) PushDevContainer(ctx context.Context, image string) e
 
 func (k *kubernetesDriver) BuildDevContainer(
 	ctx context.Context,
-	labels []string,
+	workspaceId string,
 	parsedConfig *config.SubstitutedConfig,
 	extendedBuildInfo *feature.ExtendedBuildInfo,
 	dockerfilePath,
@@ -109,14 +109,8 @@ func (k *kubernetesDriver) BuildDevContainer(
 		return nil, fmt.Errorf("you cannot build in this mode. Please run 'devpod up' to rebuild the container")
 	}
 
-	// get devcontainer id
-	id, err := k.getID(labels)
-	if err != nil {
-		return nil, errors.Wrap(err, "get id")
-	}
-
 	// build pod image
-	return k.buildPod(ctx, id, prebuildHash, dockerfilePath, dockerfileContent, parsedConfig, options, extendedBuildInfo)
+	return k.buildPod(ctx, workspaceId, prebuildHash, dockerfilePath, dockerfileContent, parsedConfig, options, extendedBuildInfo)
 }
 
 func (k *kubernetesDriver) buildPod(

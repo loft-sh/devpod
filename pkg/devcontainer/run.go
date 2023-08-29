@@ -101,7 +101,7 @@ func (r *Runner) prepare(
 		rawParsedConfig,
 	)
 	r.SubstitutionContext = &config.SubstitutionContext{
-		DevContainerID:           config.GetDevContainerID(config.ListToObject(r.getLabels())),
+		DevContainerID:           r.ID,
 		LocalWorkspaceFolder:     r.LocalWorkspaceFolder,
 		ContainerWorkspaceFolder: workspace.RemoteWorkspaceFolder,
 		Env:                      config.ListToObject(os.Environ()),
@@ -189,28 +189,22 @@ func (r *Runner) Up(ctx context.Context, options UpOptions) (*config.Result, err
 
 func (r *Runner) CommandDevContainer(
 	ctx context.Context,
-	containerId string,
 	user string,
 	command string,
 	stdin io.Reader,
 	stdout io.Writer,
 	stderr io.Writer,
 ) error {
-	return r.Driver.CommandDevContainer(ctx, containerId, user, command, stdin, stdout, stderr)
+	return r.Driver.CommandDevContainer(ctx, r.ID, user, command, stdin, stdout, stderr)
 }
 
 func (r *Runner) FindDevContainer(ctx context.Context) (*config.ContainerDetails, error) {
-	labels := r.getLabels()
-	containerDetails, err := r.Driver.FindDevContainer(ctx, labels)
+	containerDetails, err := r.Driver.FindDevContainer(ctx, r.ID)
 	if err != nil {
 		return nil, errors.Wrap(err, "find dev container")
 	}
 
 	return containerDetails, nil
-}
-
-func (r *Runner) getLabels() []string {
-	return []string{config.DockerIDLabel + "=" + r.ID}
 }
 
 func isDockerFileConfig(config *config.DevContainerConfig) bool {

@@ -79,7 +79,7 @@ func removeContainer(ctx context.Context, workspaceInfo *provider2.AgentWorkspac
 		return err
 	}
 
-	err = runner.Delete(ctx, nil, true)
+	err = runner.Delete(ctx, true)
 	if err != nil {
 		return err
 	}

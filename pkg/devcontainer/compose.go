@@ -119,7 +119,7 @@ func (r *Runner) runDockerCompose(ctx context.Context, parsedConfig *config.Subs
 	project.Name = composeHelper.GetProjectName(r.ID)
 	r.Log.Debugf("Loaded project %s", project.Name)
 
-	containerDetails, err := composeHelper.FindDevContainer(project.Name, parsedConfig.Config.Service)
+	containerDetails, err := composeHelper.FindDevContainer(ctx, project.Name, parsedConfig.Config.Service)
 	if err != nil {
 		return nil, errors.Wrap(err, "find dev container")
 	}
@@ -152,7 +152,7 @@ func (r *Runner) runDockerCompose(ctx context.Context, parsedConfig *config.Subs
 	}
 
 	// setup container
-	err = r.setupContainer(containerDetails, newMergedConfig, options)
+	err = r.setupContainer(ctx, containerDetails, newMergedConfig)
 	if err != nil {
 		return nil, errors.Wrap(err, "setup container")
 	}
@@ -311,11 +311,11 @@ func (r *Runner) startContainer(
 	if container != nil && options.Recreate {
 		r.Log.Debugf("Deleting dev container %s due to --recreate", container.ID)
 
-		if err := r.Driver.StopDevContainer(ctx, container.ID); err != nil {
+		if err := r.Driver.StopDevContainer(ctx, r.ID); err != nil {
 			return nil, errors.Wrap(err, "stop dev container")
 		}
 
-		if err := r.Driver.DeleteDevContainer(ctx, container.ID, false); err != nil {
+		if err := r.Driver.DeleteDevContainer(ctx, r.ID, false); err != nil {
 			return nil, errors.Wrap(err, "delete dev container")
 		}
 	}
@@ -346,7 +346,7 @@ func (r *Runner) startContainer(
 	}
 
 	// TODO wait for started event?
-	containerDetails, err := composeHelper.FindDevContainer(project.Name, composeService.Name)
+	containerDetails, err := composeHelper.FindDevContainer(ctx, project.Name, composeService.Name)
 	if err != nil {
 		return nil, errors.Wrap(err, "find dev container")
 	}
@@ -396,7 +396,7 @@ func (r *Runner) buildAndExtendDockerCompose(ctx context.Context, parsedConfig *
 			return "", "", nil, "", err
 		}
 	} else {
-		imageBuildInfo, err = r.getImageBuildInfoFromImage(composeService.Image)
+		imageBuildInfo, err = r.getImageBuildInfoFromImage(ctx, composeService.Image)
 		if err != nil {
 			return "", "", nil, "", err
 		}
@@ -687,14 +687,9 @@ while sleep 1 & wait $$!; do :; done`,
 	}
 	entrypoint = append(entrypoint, userEntrypoint...)
 
-	var labels composetypes.Labels
-	for _, v := range r.getLabels() {
-		tokens := strings.Split(v, "=")
-		if len(tokens) == 2 {
-			labels = labels.Add(tokens[0], tokens[1])
-		}
+	labels := composetypes.Labels{
+		config.DockerIDLabel: r.ID,
 	}
-
 	for k, v := range additionalLabels {
 		// Escape $ and ' to prevent substituting local environment variables!
 		label := regexp.MustCompile(`\$`).ReplaceAllString(v, "$$$$")

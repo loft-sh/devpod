@@ -15,10 +15,10 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
-func (r *Runner) setupContainer(containerDetails *config.ContainerDetails, mergedConfig *config.MergedDevContainerConfig, options UpOptions) error {
+func (r *Runner) setupContainer(ctx context.Context, containerDetails *config.ContainerDetails, mergedConfig *config.MergedDevContainerConfig) error {
 	// inject agent
-	err := agent.InjectAgent(context.TODO(), func(ctx context.Context, command string, stdin io.Reader, stdout io.Writer, stderr io.Writer) error {
-		return r.Driver.CommandDevContainer(ctx, containerDetails.ID, "root", command, stdin, stdout, stderr)
+	err := agent.InjectAgent(ctx, func(ctx context.Context, command string, stdin io.Reader, stdout io.Writer, stderr io.Writer) error {
+		return r.Driver.CommandDevContainer(ctx, r.ID, "root", command, stdin, stdout, stderr)
 	}, false, agent.ContainerDevPodHelperLocation, agent.DefaultAgentDownloadURL(), false, r.Log)
 	if err != nil {
 		return errors.Wrap(err, "inject agent")
@@ -63,7 +63,7 @@ func (r *Runner) setupContainer(containerDetails *config.ContainerDetails, merge
 		command += " --debug"
 	}
 	r.Log.Debugf("Run command: %s", command)
-	err = r.Driver.CommandDevContainer(context.TODO(), containerDetails.ID, "root", command, nil, writer, writer)
+	err = r.Driver.CommandDevContainer(ctx, r.ID, "root", command, nil, writer, writer)
 	if err != nil {
 		return err
 	}

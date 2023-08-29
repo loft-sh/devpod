@@ -61,12 +61,19 @@ type dockerDriver struct {
 	Log log.Logger
 }
 
-func (d *dockerDriver) CommandDevContainer(ctx context.Context, id, user, command string, stdin io.Reader, stdout io.Writer, stderr io.Writer) error {
+func (d *dockerDriver) CommandDevContainer(ctx context.Context, workspaceId, user, command string, stdin io.Reader, stdout io.Writer, stderr io.Writer) error {
+	container, err := d.FindDevContainer(ctx, workspaceId)
+	if err != nil {
+		return err
+	} else if container == nil {
+		return fmt.Errorf("container not found")
+	}
+
 	args := []string{"exec"}
 	if stdin != nil {
 		args = append(args, "-i")
 	}
-	args = append(args, "-u", user, id, "sh", "-c", command)
+	args = append(args, "-u", user, container.ID, "sh", "-c", command)
 	return d.Docker.Run(ctx, args, stdin, stdout, stderr)
 }
 
@@ -91,12 +98,19 @@ func (d *dockerDriver) PushDevContainer(ctx context.Context, image string) error
 	return nil
 }
 
-func (d *dockerDriver) DeleteDevContainer(ctx context.Context, id string, deleteVolumes bool) error {
+func (d *dockerDriver) DeleteDevContainer(ctx context.Context, workspaceId string, deleteVolumes bool) error {
 	var volume string
+
+	container, err := d.FindDevContainer(ctx, workspaceId)
+	if err != nil {
+		return err
+	} else if container == nil {
+		return nil
+	}
 
 	if deleteVolumes {
 		// inspect container deleteVolumes
-		container, err := d.Docker.InspectContainers(ctx, []string{id})
+		container, err := d.Docker.InspectContainers(ctx, []string{container.ID})
 		if err != nil {
 			return err
 		}
@@ -106,7 +120,7 @@ func (d *dockerDriver) DeleteDevContainer(ctx context.Context, id string, delete
 		volume = container[0].Config.Labels["dev.containers.id"]
 	}
 
-	err := d.Docker.Remove(ctx, id)
+	err = d.Docker.Remove(ctx, container.ID)
 	if err != nil {
 		return err
 	}
@@ -118,17 +132,26 @@ func (d *dockerDriver) DeleteDevContainer(ctx context.Context, id string, delete
 	return nil
 }
 
-func (d *dockerDriver) Ping(ctx context.Context) error {
-	_, err := d.Docker.FindContainer(ctx, []string{})
-	return err
+func (d *dockerDriver) StartDevContainer(ctx context.Context, workspaceId string) error {
+	container, err := d.FindDevContainer(ctx, workspaceId)
+	if err != nil {
+		return err
+	} else if container == nil {
+		return fmt.Errorf("container not found")
+	}
+
+	return d.Docker.StartContainer(ctx, container.ID)
 }
 
-func (d *dockerDriver) StartDevContainer(ctx context.Context, id string, labels []string) error {
-	return d.Docker.StartContainer(ctx, id, labels)
-}
+func (d *dockerDriver) StopDevContainer(ctx context.Context, workspaceId string) error {
+	container, err := d.FindDevContainer(ctx, workspaceId)
+	if err != nil {
+		return err
+	} else if container == nil {
+		return fmt.Errorf("container not found")
+	}
 
-func (d *dockerDriver) StopDevContainer(ctx context.Context, id string) error {
-	return d.Docker.Stop(ctx, id)
+	return d.Docker.Stop(ctx, container.ID)
 }
 
 func (d *dockerDriver) InspectImage(ctx context.Context, imageName string) (*config.ImageDetails, error) {
@@ -145,12 +168,13 @@ func (d *dockerDriver) ComposeHelper() (*compose.ComposeHelper, error) {
 	return d.Compose, err
 }
 
-func (d *dockerDriver) FindDevContainer(ctx context.Context, labels []string) (*config.ContainerDetails, error) {
-	return d.Docker.FindDevContainer(ctx, labels)
+func (d *dockerDriver) FindDevContainer(ctx context.Context, workspaceId string) (*config.ContainerDetails, error) {
+	return d.Docker.FindDevContainer(ctx, []string{config.DockerIDLabel + "=" + workspaceId})
 }
 
 func (d *dockerDriver) RunDevContainer(
 	ctx context.Context,
+	workspaceId string,
 	parsedConfig *config.DevContainerConfig,
 	mergedConfig *config.MergedDevContainerConfig,
 	imageName,
@@ -240,6 +264,7 @@ func (d *dockerDriver) RunDevContainer(
 	}
 
 	// labels
+	labels = append(config.GetDockerLabelForID(workspaceId), labels...)
 	for _, label := range labels {
 		args = append(args, "-l", label)
 	}

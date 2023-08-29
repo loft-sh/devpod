@@ -10,6 +10,10 @@ const (
 	DockerfileDefaultTarget = "dev_container_auto_added_stage_label"
 )
 
+func GetDockerLabelForID(id string) []string {
+	return []string{DockerIDLabel + "=" + id}
+}
+
 type BuildOptions struct {
 	provider2.CLIOptions
 

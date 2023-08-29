@@ -64,7 +64,7 @@ func (cmd *ContainerTunnelCmd) Run(ctx context.Context, log log.Logger) error {
 	}
 
 	// wait until devcontainer is started
-	containerID, err := startDevContainer(ctx, workspaceInfo, runner, log)
+	err = startDevContainer(ctx, workspaceInfo, runner, log)
 	if err != nil {
 		return err
 	}
@@ -81,7 +81,7 @@ func (cmd *ContainerTunnelCmd) Run(ctx context.Context, log log.Logger) error {
 	err = agent.Tunnel(
 		ctx,
 		func(ctx context.Context, user string, command string, stdin io.Reader, stdout io.Writer, stderr io.Writer) error {
-			return runner.CommandDevContainer(ctx, containerID, user, command, stdin, stdout, stderr)
+			return runner.CommandDevContainer(ctx, user, command, stdin, stdout, stderr)
 		},
 		cmd.User,
 		os.Stdin,
@@ -96,35 +96,31 @@ func (cmd *ContainerTunnelCmd) Run(ctx context.Context, log log.Logger) error {
 	return nil
 }
 
-func startDevContainer(ctx context.Context, workspaceConfig *provider2.AgentWorkspaceInfo, runner *devcontainer.Runner, log log.Logger) (string, error) {
+func startDevContainer(ctx context.Context, workspaceConfig *provider2.AgentWorkspaceInfo, runner *devcontainer.Runner, log log.Logger) error {
 	containerDetails, err := runner.FindDevContainer(ctx)
 	if err != nil {
-		return "", err
+		return err
 	}
 
 	// start container if necessary
 	if containerDetails == nil || containerDetails.State.Status != "running" {
 		// start container
-		result, err := workspace.StartContainer(ctx, runner, log)
+		_, err = workspace.StartContainer(ctx, runner, log)
 		if err != nil {
-			return "", err
+			return err
 		}
-
-		return result.ContainerDetails.ID, nil
 	} else if encoding.IsLegacyUID(workspaceConfig.Workspace.UID) {
 		// make sure workspace result is in devcontainer
 		buf := &bytes.Buffer{}
-		err = runner.CommandDevContainer(ctx, containerDetails.ID, "root", "cat "+setup.ResultLocation, nil, buf, buf)
+		err = runner.CommandDevContainer(ctx, "root", "cat "+setup.ResultLocation, nil, buf, buf)
 		if err != nil {
 			// start container
-			result, err := workspace.StartContainer(ctx, runner, log)
+			_, err = workspace.StartContainer(ctx, runner, log)
 			if err != nil {
-				return "", err
+				return err
 			}
-
-			return result.ContainerDetails.ID, nil
 		}
 	}
 
-	return containerDetails.ID, nil
+	return nil
 }

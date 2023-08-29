@@ -92,7 +92,7 @@ func (r *Runner) build(ctx context.Context, parsedConfig *config.SubstitutedConf
 
 func (r *Runner) extendImage(ctx context.Context, parsedConfig *config.SubstitutedConfig, options config.BuildOptions) (*config.BuildInfo, error) {
 	imageBase := parsedConfig.Config.Image
-	imageBuildInfo, err := r.getImageBuildInfoFromImage(imageBase)
+	imageBuildInfo, err := r.getImageBuildInfoFromImage(ctx, imageBase)
 	if err != nil {
 		return nil, errors.Wrap(err, "get image build info")
 	}
@@ -178,8 +178,8 @@ func (r *Runner) getDockerfilePath(parsedConfig *config.DevContainerConfig) (str
 	return dockerfilePath, nil
 }
 
-func (r *Runner) getImageBuildInfoFromImage(imageName string) (*config.ImageBuildInfo, error) {
-	imageDetails, err := r.Driver.InspectImage(context.TODO(), imageName)
+func (r *Runner) getImageBuildInfoFromImage(ctx context.Context, imageName string) (*config.ImageBuildInfo, error) {
+	imageDetails, err := r.Driver.InspectImage(ctx, imageName)
 	if err != nil {
 		return nil, err
 	}
@@ -240,5 +240,5 @@ func (r *Runner) getImageBuildInfoFromDockerfile(dockerFileContent string, build
 }
 
 func (r *Runner) buildImage(ctx context.Context, parsedConfig *config.SubstitutedConfig, extendedBuildInfo *feature.ExtendedBuildInfo, dockerfilePath, dockerfileContent string, options config.BuildOptions) (*config.BuildInfo, error) {
-	return r.Driver.BuildDevContainer(ctx, r.getLabels(), parsedConfig, extendedBuildInfo, dockerfilePath, dockerfileContent, r.LocalWorkspaceFolder, options)
+	return r.Driver.BuildDevContainer(ctx, r.ID, parsedConfig, extendedBuildInfo, dockerfilePath, dockerfileContent, r.LocalWorkspaceFolder, options)
 }

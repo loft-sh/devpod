@@ -36,6 +36,7 @@ type DevContainerInfo struct {
 
 func (k *kubernetesDriver) RunDevContainer(
 	ctx context.Context,
+	workspaceId string,
 	parsedConfig *config.DevContainerConfig,
 	mergedConfig *config.MergedDevContainerConfig,
 	imageName,
@@ -45,11 +46,6 @@ func (k *kubernetesDriver) RunDevContainer(
 	ideOptions map[string]config2.OptionValue,
 	imageDetails *config.ImageDetails,
 ) error {
-	id, err := k.getID(labels)
-	if err != nil {
-		return err
-	}
-
 	// namespace
 	if k.namespace != "" && k.config.CreateNamespace == "true" {
 		k.Log.Debugf("Create namespace '%s'", k.namespace)
@@ -62,12 +58,12 @@ func (k *kubernetesDriver) RunDevContainer(
 
 	// check if persistent volume claim already exists
 	initialize := false
-	pvc, _, err := k.getDevContainerPvc(ctx, id)
+	pvc, _, err := k.getDevContainerPvc(ctx, workspaceId)
 	if err != nil {
 		return err
 	} else if pvc == nil {
 		// create persistent volume claim
-		err = k.createPersistentVolumeClaim(ctx, id, parsedConfig, mergedConfig, imageName, workspaceMount, labels, imageDetails)
+		err = k.createPersistentVolumeClaim(ctx, workspaceId, parsedConfig, mergedConfig, imageName, workspaceMount, labels, imageDetails)
 		if err != nil {
 			return err
 		}
@@ -76,7 +72,7 @@ func (k *kubernetesDriver) RunDevContainer(
 	}
 
 	// create dev container
-	err = k.runContainer(ctx, id, parsedConfig, mergedConfig, imageName, workspaceMount, imageDetails, initialize)
+	err = k.runContainer(ctx, workspaceId, parsedConfig, mergedConfig, imageName, workspaceMount, imageDetails, initialize)
 	if err != nil {
 		return err
 	}
@@ -383,17 +379,17 @@ func getNodeSelector(pod *corev1.Pod, rawNodeSelector string) (map[string]string
 	return nodeSelector, nil
 }
 
-func (k *kubernetesDriver) StartDevContainer(ctx context.Context, id string, labels []string) error {
-	_, containerInfo, err := k.getDevContainerPvc(ctx, id)
+func (k *kubernetesDriver) StartDevContainer(ctx context.Context, workspaceId string) error {
+	_, containerInfo, err := k.getDevContainerPvc(ctx, workspaceId)
 	if err != nil {
 		return err
 	} else if containerInfo == nil {
-		return fmt.Errorf("persistent volume '%s' not found", id)
+		return fmt.Errorf("persistent volume '%s' not found", workspaceId)
 	}
 
 	return k.runContainer(
 		ctx,
-		id,
+		workspaceId,
 		containerInfo.ParsedConfig,
 		containerInfo.MergedConfig,
 		containerInfo.ImageName,

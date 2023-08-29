@@ -27,7 +27,7 @@ import (
 
 func (d *dockerDriver) BuildDevContainer(
 	ctx context.Context,
-	labels []string,
+	workspaceId string,
 	parsedConfig *config.SubstitutedConfig,
 	extendedBuildInfo *feature.ExtendedBuildInfo,
 	dockerfilePath,

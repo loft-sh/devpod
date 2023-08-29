@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
-	"fmt"
 	"strings"
 
 	"github.com/loft-sh/devpod/pkg/devcontainer/config"
@@ -48,6 +47,7 @@ func (k *kubernetesDriver) buildPersistentVolumeClaim(
 	labels []string,
 	imageDetails *config.ImageDetails,
 ) (string, error) {
+	labels = append(config.GetDockerLabelForID(name), labels...)
 	containerInfo, err := k.getDevContainerInformation(parsedConfig, mergedConfig, imageName, workspaceMount, labels, imageDetails)
 	if err != nil {
 		return "", err
@@ -134,13 +134,4 @@ func (k *kubernetesDriver) getDevContainerInformation(
 	}
 
 	return string(containerInfo), nil
-}
-
-func (k *kubernetesDriver) getID(labels []string) (string, error) {
-	id := config.ListToObject(labels)[config.DockerIDLabel]
-	if id == "" {
-		return "", fmt.Errorf("id label is missing")
-	}
-
-	return "devpod-" + id, nil
 }

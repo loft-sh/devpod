@@ -57,18 +57,8 @@ type kubernetesDriver struct {
 	Log    log.Logger
 }
 
-func (k *kubernetesDriver) Ping(ctx context.Context) error {
-	_, err := k.FindDevContainer(ctx, []string{config.DockerIDLabel + "=test"})
-	return err
-}
-
-func (k *kubernetesDriver) FindDevContainer(ctx context.Context, labels []string) (*config.ContainerDetails, error) {
-	id, err := k.getID(labels)
-	if err != nil {
-		return nil, perrors.Wrap(err, "get name")
-	}
-
-	pvc, containerInfo, err := k.getDevContainerPvc(ctx, id)
+func (k *kubernetesDriver) FindDevContainer(ctx context.Context, workspaceId string) (*config.ContainerDetails, error) {
+	pvc, containerInfo, err := k.getDevContainerPvc(ctx, workspaceId)
 	if err != nil {
 		return nil, err
 	}
@@ -207,12 +197,12 @@ func (k *kubernetesDriver) deletePod(ctx context.Context, podName string) error 
 	return nil
 }
 
-func (k *kubernetesDriver) CommandDevContainer(ctx context.Context, id, user, command string, stdin io.Reader, stdout io.Writer, stderr io.Writer) error {
+func (k *kubernetesDriver) CommandDevContainer(ctx context.Context, workspaceId, user, command string, stdin io.Reader, stdout io.Writer, stderr io.Writer) error {
 	args := []string{"exec", "-c", "devpod"}
 	if stdin != nil {
 		args = append(args, "-i")
 	}
-	args = append(args, id)
+	args = append(args, workspaceId)
 	if user != "" && user != "root" {
 		args = append(args, "--", "su", user, "-c", command)
 	} else {

@@ -12,14 +12,15 @@ import (
 
 type Driver interface {
 	// FindDevContainer returns a running devcontainer details
-	FindDevContainer(ctx context.Context, labels []string) (*config.ContainerDetails, error)
+	FindDevContainer(ctx context.Context, workspaceId string) (*config.ContainerDetails, error)
 
 	// CommandDevContainer runs the given command inside the devcontainer
-	CommandDevContainer(ctx context.Context, containerId, user, command string, stdin io.Reader, stdout io.Writer, stderr io.Writer) error
+	CommandDevContainer(ctx context.Context, workspaceId, user, command string, stdin io.Reader, stdout io.Writer, stderr io.Writer) error
 
 	// RunDevContainer runs a devcontainer
 	RunDevContainer(
 		ctx context.Context,
+		workspaceId string,
 		parsedConfig *config.DevContainerConfig,
 		mergedConfig *config.MergedDevContainerConfig,
 		imageName,
@@ -31,13 +32,13 @@ type Driver interface {
 	) error
 
 	// DeleteDevContainer deletes the devcontainer
-	DeleteDevContainer(ctx context.Context, containerId string, deleteVolumes bool) error
+	DeleteDevContainer(ctx context.Context, workspaceId string, deleteVolumes bool) error
 
 	// StartDevContainer starts the devcontainer
-	StartDevContainer(ctx context.Context, containerId string, labels []string) error
+	StartDevContainer(ctx context.Context, workspaceId string) error
 
 	// StopDevContainer stops the devcontainer
-	StopDevContainer(ctx context.Context, containerId string) error
+	StopDevContainer(ctx context.Context, workspaceId string) error
 
 	// InspectImage inspects the given image name
 	InspectImage(ctx context.Context, imageName string) (*config.ImageDetails, error)
@@ -45,7 +46,7 @@ type Driver interface {
 	// BuildDevContainer builds a devcontainer
 	BuildDevContainer(
 		ctx context.Context,
-		labels []string,
+		workspaceId string,
 		parsedConfig *config.SubstitutedConfig,
 		extendedBuildInfo *feature.ExtendedBuildInfo,
 		dockerfilePath,
