@@ -246,25 +246,28 @@ export function ConfigureProviderOptionsForm({
             </Box>
           )}
 
-          {options.groups.map((group) => (
-            <Box key={group.name} width="full">
-              <CollapsibleSection
-                showIcon={true}
-                title={group.name}
-                isOpen={!!group.defaultVisible}>
-                <SimpleGrid minChildWidth="60" spacingX={8} spacingY={4}>
-                  {group.options.map((option) => (
-                    <OptionFormField
-                      key={option.id}
-                      refreshSubOptions={refreshSubOptions}
-                      isRequired={!!option.required}
-                      {...option}
-                    />
-                  ))}
-                </SimpleGrid>
-              </CollapsibleSection>
-            </Box>
-          ))}
+          {options.groups.map(
+            (group) =>
+              group.options.length > 0 && (
+                <Box key={group.name} width="full">
+                  <CollapsibleSection
+                    showIcon={true}
+                    title={group.name}
+                    isOpen={!!group.defaultVisible}>
+                    <SimpleGrid minChildWidth="60" spacingX={8} spacingY={4}>
+                      {group.options.map((option) => (
+                        <OptionFormField
+                          key={option.id}
+                          refreshSubOptions={refreshSubOptions}
+                          isRequired={!!option.required}
+                          {...option}
+                        />
+                      ))}
+                    </SimpleGrid>
+                  </CollapsibleSection>
+                </Box>
+              )
+          )}
 
           {options.other.length > 0 && (
             <Box width="full">

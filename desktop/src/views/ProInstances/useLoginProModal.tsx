@@ -89,26 +89,21 @@ export function useLoginProModal() {
     }
   }, [completeSetupProvider, login.provider, login.status])
 
-  const handleModalClose = useCallback(() => {
-    onClose()
-    // Make sure to reset on modal close as we'll rarely unmount the hook
-    reset({})
-    resetSetupProvider()
+  const resetModal = useCallback(() => {
+    reset()
     login.reset()
-    removeDanglingProviders()
     if (state.currentStep !== "done" && state.providerID) {
       disconnect.run({ id: state.providerID })
     }
-  }, [
-    disconnect,
-    login,
-    onClose,
-    removeDanglingProviders,
-    reset,
-    resetSetupProvider,
-    state.currentStep,
-    state.providerID,
-  ])
+    onClose()
+  }, [disconnect, login, onClose, reset, state.currentStep, state.providerID])
+
+  useEffect(() => {
+    if (state.currentStep === "done") {
+      resetSetupProvider()
+      removeDanglingProviders()
+    }
+  }, [removeDanglingProviders, resetSetupProvider, state.currentStep])
 
   const areInputsDisabled = useMemo(
     () => login.status === "success" || login.status === "loading",
@@ -118,14 +113,14 @@ export function useLoginProModal() {
   const navigate = useNavigate()
   const completeFlow = useCallback(() => {
     completeConfigureProvider()
-    onClose()
+    resetModal()
     navigate(Routes.WORKSPACE_CREATE)
-  }, [completeConfigureProvider, navigate, onClose])
+  }, [completeConfigureProvider, navigate, resetModal])
 
   const modal = useMemo(() => {
     return (
       <Modal
-        onClose={handleModalClose}
+        onClose={resetModal}
         isOpen={isOpen}
         closeOnEsc={login.status !== "loading"}
         closeOnOverlayClick={login.status !== "loading"}
@@ -280,24 +275,24 @@ export function useLoginProModal() {
       </Modal>
     )
   }, [
-    areInputsDisabled,
-    completeFlow,
-    formState.isSubmitting,
-    formState.isValid,
-    handleModalClose,
-    handleSubmit,
+    resetModal,
     isOpen,
-    login.error,
     login.status,
+    login.error,
+    handleSubmit,
     onSubmit,
-    proInstances,
-    providerNameError,
     proURLError,
-    providers,
+    areInputsDisabled,
     register,
+    providerNameError,
     state.currentStep,
     state.providerID,
     terminal,
+    formState.isValid,
+    formState.isSubmitting,
+    completeFlow,
+    proInstances,
+    providers,
   ])
 
   return { modal, handleOpenLogin: onOpen }
