@@ -68,6 +68,7 @@ class Client {
     name: TSettingName,
     value: TSettings[TSettingName]
   ) {
+    // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
     if (name === "debugFlag") {
       this.workspaces.setDebug(value)
       this.providers.setDebug(value)

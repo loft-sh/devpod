@@ -30,8 +30,8 @@ export function ProviderOptionsPopover({ provider, trigger }: TProviderOptionsPo
   const bodyRef = useRef<HTMLDivElement | null>(null)
 
   const options = useProviderOptions(
-    provider?.state?.options ?? {},
-    provider?.config?.optionGroups ?? []
+    provider.state?.options ?? {},
+    provider.config?.optionGroups ?? []
   )
   const [isLocked, setIsLocked] = useState(false)
   const [isEditing, setIsEditing] = useState(false)
@@ -46,8 +46,7 @@ export function ProviderOptionsPopover({ provider, trigger }: TProviderOptionsPo
   }
 
   const contentRef = useRef<HTMLElement | null>(null)
-  const contentCallbackRef = useCallback((ref: HTMLElement) => {
-    contentRef.current = ref
+  const contentCallbackRef = useCallback((ref: HTMLElement | null) => {
     const handlerOpts = { capture: true }
     const handler = (event: KeyboardEvent) => {
       event.stopPropagation()
@@ -60,11 +59,13 @@ export function ProviderOptionsPopover({ provider, trigger }: TProviderOptionsPo
     }
     if (ref === null) {
       contentRef.current?.removeEventListener("keyup", handler, handlerOpts)
+      contentRef.current = ref
 
       return
     }
 
-    contentRef.current?.addEventListener("keyup", handler, handlerOpts)
+    contentRef.current = ref
+    contentRef.current.addEventListener("keyup", handler, handlerOpts)
   }, [])
 
   const handleContentAnimationEnd = () => {
@@ -162,12 +163,8 @@ function ProviderOptionList({ options }: TProviderOptionListProps) {
 
   return (
     <List width="full" marginBottom="2">
-      {options.map((option) => (
-        <ListItem
-          key={option.displayName ?? option.id}
-          width="full"
-          display="flex"
-          flexFlow="row nowrap">
+      {options.map((option, i) => (
+        <ListItem key={i} width="full" display="flex" flexFlow="row nowrap">
           <Tooltip label={option.displayName}>
             <Text
               whiteSpace="nowrap"

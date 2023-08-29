@@ -124,9 +124,5 @@ export function toFlagArg(flag: string, arg: string) {
 }
 
 export function serializeRawOptions(rawOptions: Record<string, unknown>): string[] {
-  if (!rawOptions) {
-    return []
-  }
-
   return Object.entries(rawOptions).map(([key, value]) => DEVPOD_FLAG_OPTION + `=${key}=${value}`)
 }
