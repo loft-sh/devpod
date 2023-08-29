@@ -167,7 +167,17 @@ module.exports = {
       items: [
         {
           type: "doc",
-          id: "telemetry",
+          id: "other-topics/telemetry",
+        },
+        {
+          type: "category",
+          label: "Advanced guides",
+          items: [
+            {
+              type: "doc",
+              id: "other-topics/advanced-guides/minikube-vscode-browser",
+            },
+          ]
         },
       ],
     },

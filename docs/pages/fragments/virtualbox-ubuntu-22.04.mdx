@@ -1,0 +1,112 @@
+
+
+## Create Ubuntu 22.04 Virtual machine
+
+### Download Ubuntu Desktop 22.04 ISO
+
+Download the official ISO for [Ubuntu 22.04](https://ubuntu.com/download/desktop).
+
+### New Ubuntu 22.04 Virtual machine
+
+With Virtualbox running, open the a new Virtual machine dialog. 'machine' > 'new ...'
+
+### New Virtual Machine dialog
+
+#### Step 1 - Virtual Machine Name and Operating System
+
+| Input | Suggested Value |
+|---|---|
+| Name | ubuntu-desktop-22.04 (name used through this example) |
+| Folder | default value is suitable in most cases |
+| ISO Image | browse to the path of the downloaded ubuntu 22.04 ISO |
+| Skip unnattended installation | true / ticked (this setup sudo group during installation) |
+
+Select 'Next'
+
+#### Step 2 - Hardware
+
+| Input | Suggested Value |
+|---|---|
+| Name | ubuntu-desktop-22.04 (name used through this example) |
+| Base Memory | 8192 MB (minimum recommended) |
+| Processors | 2 CPU (minimum recommended) |
+
+Select 'Next'
+
+#### Step 3 - Virtual Hard Disk
+
+| Input | Suggested Value |
+|---|---|
+| Name | ubuntu-desktop-22.04 (name used through this example) |
+| Create a new hard disk now | 30 GB (minimum recommended) |
+
+Select 'Next'
+
+#### Step 4 - Summary
+
+Review the configuration summary and click 'Finish' to commence creating the VM.
+
+### Start installation
+
+To start the Ubuntu installation, select the vm 'ubuntu-desktop-22.04' and 'Start'.
+
+<figure>
+  <img src="/docs/media/create-workspace-virtualbox-start-vm.png" alt="Virtualbox Start" />
+  <figcaption>Virtualbox Start</figcaption>
+</figure>
+
+This will power up the VM and trigger Ubuntu's installation process.
+
+#### Step 1 - Ubuntu CLI Selection
+
+Select 'Try/Install Ubuntu'
+
+#### Step 2 - Install
+
+Select Language and Install Ubuntu
+
+<figure>
+  <img src="/docs/media/create-workspace-virtualbox-install-ubuntu.png" alt="Install Ubuntu" />
+  <figcaption>Install Ubuntu</figcaption>
+</figure>
+
+#### Step 3 - Keyboard Layout
+
+Select your desired Keyboard layout, select 'Continue'.
+
+#### Step 3 - Update and Other Software
+
+| Input | Suggested Value |
+|---|---|
+| Name | ubuntu-desktop-22.04 (name used through this example) |
+| Normal or Minimal Installation  | Minimal Installation |
+| Download updates will installing Ubuntu  | yes |
+| Install third party software for graphics and WI-FI hardware and additional media formats | yes (adds closed source drivers and software that can't be included in Ubuntu). You need to understand the consequences of this option for your personal needs. |
+
+#### Step 4 - Installation Type
+
+Select 'Erase disk and install Ubuntu', click 'Install Now'
+
+Write the changes to disks?. Select 'Continue'
+
+#### Step 5 - Where are you?
+
+Select your location, click 'Continue'
+
+#### Step 6 - Who are you?
+
+| Input | Suggested value |
+|---|---|
+| Your name | dev |
+| Your computer's name | devpods |
+| Pick a username | dev |
+| Choose password | your password |
+| Confirm your password | your password |
+
+Select 'Continue'
+
+
+
+
+
+
