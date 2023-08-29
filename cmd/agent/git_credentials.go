@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"net/http"
 	"os"
 	"strconv"
 
@@ -32,7 +33,7 @@ func NewGitCredentialsCmd(flags *flags.GlobalFlags) *cobra.Command {
 		Use:   "git-credentials",
 		Short: "Retrieves git-credentials from the local machine",
 		RunE: func(_ *cobra.Command, args []string) error {
-			return cmd.Run(context.Background(), args)
+			return cmd.Run(context.Background(), args, log.Default.ErrorStreamOnly())
 		},
 	}
 	gitCredentialsCmd.Flags().IntVar(&cmd.Port, "port", 0, "If specified, will use the given port")
@@ -40,7 +41,7 @@ func NewGitCredentialsCmd(flags *flags.GlobalFlags) *cobra.Command {
 	return gitCredentialsCmd
 }
 
-func (cmd *GitCredentialsCmd) Run(ctx context.Context, args []string) error {
+func (cmd *GitCredentialsCmd) Run(ctx context.Context, args []string, log log.Logger) error {
 	if len(args) == 0 {
 		return nil
 	} else if args[0] != "get" {
@@ -64,21 +65,27 @@ func (cmd *GitCredentialsCmd) Run(ctx context.Context, args []string) error {
 
 	response, err := devpodhttp.GetHTTPClient().Post("http://localhost:"+strconv.Itoa(cmd.Port)+"/git-credentials", "application/json", bytes.NewReader(rawJSON))
 	if err != nil {
-		log.Default.ErrorStreamOnly().Errorf("Error retrieving credentials: %v", err)
+		log.Errorf("Error retrieving credentials: %v", err)
 		return nil
 	}
 	defer response.Body.Close()
 
 	raw, err = io.ReadAll(response.Body)
 	if err != nil {
-		log.Default.ErrorStreamOnly().Errorf("Error reading credentials: %v", err)
+		log.Errorf("Error reading credentials: %v", err)
+		return nil
+	}
+
+	// has the request succeeded?
+	if response.StatusCode != http.StatusOK {
+		log.Errorf("Error reading credentials (%d): %v", response.StatusCode, string(raw))
 		return nil
 	}
 
 	credentials = &gitcredentials.GitCredentials{}
 	err = json.Unmarshal(raw, credentials)
 	if err != nil {
-		log.Default.ErrorStreamOnly().Errorf("Error decoding credentials: %v", err)
+		log.Errorf("Error decoding credentials: %v", err)
 		return nil
 	}
 
