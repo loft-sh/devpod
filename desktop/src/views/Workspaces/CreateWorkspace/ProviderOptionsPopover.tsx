@@ -1,6 +1,5 @@
-import { ConfigureProviderOptionsForm } from "@/views/Providers/AddProvider"
-import { useProviderOptions } from "@/views/Providers/AddProvider/useProviderOptions"
-import { TOptionWithID } from "@/views/Providers/helpers"
+import { ConfigureProviderOptionsForm, TOptionWithID, useProviderOptions } from "@/views/Providers"
+import { ViewIcon } from "@chakra-ui/icons"
 import {
   ButtonGroup,
   Heading,
@@ -17,39 +16,79 @@ import {
   Portal,
   Text,
   Tooltip,
+  VStack,
   useColorModeValue,
   useDisclosure,
-  VStack,
 } from "@chakra-ui/react"
-import { ReactElement, useRef, useState } from "react"
+import { ReactElement, useCallback, useRef, useState } from "react"
 import { HiPencil } from "react-icons/hi2"
 import { TNamedProvider } from "../../../types"
-import { ViewIcon } from "@chakra-ui/icons"
 
 type TProviderOptionsPopoverProps = Readonly<{ provider: TNamedProvider; trigger: ReactElement }>
 export function ProviderOptionsPopover({ provider, trigger }: TProviderOptionsPopoverProps) {
   const { isOpen, onClose, onOpen } = useDisclosure()
-  const bodyRef = useRef<HTMLDivElement>(null)
+  const bodyRef = useRef<HTMLDivElement | null>(null)
+
   const options = useProviderOptions(
-    provider?.state?.options ?? {},
-    provider?.config?.optionGroups ?? []
+    provider.state?.options ?? {},
+    provider.config?.optionGroups ?? []
   )
+  const [isLocked, setIsLocked] = useState(false)
   const [isEditing, setIsEditing] = useState(false)
   const reset = () => {
-    onClose()
     setIsEditing(false)
+    setIsLocked(false)
+    onClose()
+  }
+  const handleEditClicked = () => {
+    setIsEditing((x) => !x)
+    setIsLocked(true)
+  }
+
+  const contentRef = useRef<HTMLElement | null>(null)
+  const contentCallbackRef = useCallback((ref: HTMLElement | null) => {
+    const handlerOpts = { capture: true }
+    const handler = (event: KeyboardEvent) => {
+      event.stopPropagation()
+      event.preventDefault()
+      const isCurrentTarget = event.target === contentRef.current
+      if (isCurrentTarget && event.code === "KeyE") {
+        setIsEditing((x) => !x)
+        setIsLocked(true)
+      }
+    }
+    if (ref === null) {
+      contentRef.current?.removeEventListener("keyup", handler, handlerOpts)
+      contentRef.current = ref
+
+      return
+    }
+
+    contentRef.current = ref
+    contentRef.current.addEventListener("keyup", handler, handlerOpts)
+  }, [])
+
+  const handleContentAnimationEnd = () => {
+    if (isOpen) {
+      contentRef.current?.focus()
+    }
   }
 
   return (
     <Popover
+      isOpen={isOpen}
       onClose={reset}
-      onOpen={onOpen}
-      trigger={isOpen ? "click" : "hover"}
+      trigger={isLocked ? "click" : "hover"}
       placement="top"
-      isLazy>
+      isLazy
+      onOpen={onOpen}>
       <PopoverTrigger>{trigger}</PopoverTrigger>
       <Portal>
-        <PopoverContent minWidth={isEditing ? "2xl" : "sm"} height="full">
+        <PopoverContent
+          onAnimationEnd={handleContentAnimationEnd}
+          ref={contentCallbackRef}
+          minWidth={isEditing ? "2xl" : "sm"}
+          height="full">
           <PopoverArrow />
           <PopoverHeader fontWeight="semibold">
             <VStack align="start" spacing="0">
@@ -59,10 +98,10 @@ export function ProviderOptionsPopover({ provider, trigger }: TProviderOptionsPo
               <Text fontSize="xs">Current provider configuration</Text>
             </VStack>
             <ButtonGroup variant="outline">
-              <Tooltip label={!isEditing ? "Edit Provider" : "View Configuration"}>
+              <Tooltip label={!isEditing ? "Edit Provider (e)" : "View Configuration (e)"}>
                 <IconButton
                   aria-label={!isEditing ? "Edit Provider" : "View Configuration"}
-                  onClick={() => setIsEditing((x) => !x)}
+                  onClick={handleEditClicked}
                   icon={!isEditing ? <Icon as={HiPencil} boxSize={5} /> : <ViewIcon boxSize={5} />}
                 />
               </Tooltip>
@@ -121,19 +160,18 @@ type TProviderOptionListProps = Readonly<{ options: readonly TOptionWithID[] }>
 
 function ProviderOptionList({ options }: TProviderOptionListProps) {
   const valueColor = useColorModeValue("gray.500", "gray.400")
-  const hoverBackgroundColor = useColorModeValue("white", "gray.700")
 
   return (
     <List width="full" marginBottom="2">
-      {options.map((option) => (
-        <ListItem width="full" display="flex" flexFlow="row nowrap">
+      {options.map((option, i) => (
+        <ListItem key={i} width="full" display="flex" flexFlow="row nowrap">
           <Tooltip label={option.displayName}>
             <Text
               whiteSpace="nowrap"
               wordBreak="keep-all"
               marginRight="4"
-              width="28"
-              minWidth="32"
+              width="40"
+              minWidth="40"
               overflowX="hidden"
               textOverflow="ellipsis">
               {option.displayName}

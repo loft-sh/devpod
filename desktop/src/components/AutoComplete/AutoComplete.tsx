@@ -55,6 +55,7 @@ export const AutoComplete = forwardRef<HTMLElement, TAutoCompleteProps>(function
     if (value) {
       onChange?.(value)
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   const filteredOptions =

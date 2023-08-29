@@ -1,3 +1,4 @@
+import { useSystemTheme } from "@/lib"
 import {
   Box,
   BoxProps,
@@ -6,6 +7,7 @@ import {
   HStack,
   Link,
   Text,
+  useColorMode,
   useColorModeValue,
   useToken,
   VStack,
@@ -19,6 +21,8 @@ import { LoftOSSBadge } from "../LoftOSSBadge"
 
 type TSidebarProps = Readonly<{ children?: readonly ReactElement[] }> & BoxProps
 export function Sidebar({ children, ...boxProps }: TSidebarProps) {
+  const { colorMode } = useColorMode()
+  const systemTheme = useSystemTheme()
   const borderColor = useBorderColor()
   const backgroundColor = useColorModeValue("white", "black")
   const alternativeBackgroundColor = useColorModeValue("gray.100", "gray.900")
@@ -61,7 +65,11 @@ export function Sidebar({ children, ...boxProps }: TSidebarProps) {
 
       {/* Background Material */}
       {transparency ? (
-        <Box {...sharedBackgroundMaterialProps} backgroundColor={backgroundColor} opacity={0.2} />
+        <Box
+          {...sharedBackgroundMaterialProps}
+          backgroundColor={backgroundColor}
+          opacity={systemTheme === "dark" && colorMode !== "dark" ? 0.8 : 0.2}
+        />
       ) : (
         <Box {...sharedBackgroundMaterialProps} backgroundColor={alternativeBackgroundColor} />
       )}

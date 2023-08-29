@@ -3,6 +3,7 @@ import { TProviderID, TWorkspaceID } from "./types"
 export const QueryKeys = {
   PLATFORM: ["platform"],
   ARCHITECTURE: ["architecture"],
+  SYSTEM_THEME: ["systemTheme"],
   WORKSPACES: ["workspaces"],
   PROVIDERS: ["providers"],
   IDES: ["ides"],

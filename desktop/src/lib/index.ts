@@ -10,7 +10,7 @@ export {
   FileStorageBackend,
   LocalStorageToFileMigrationBackend,
 } from "./store"
-export { useArch, usePlatform } from "./systemInfo"
+export { useArch, usePlatform, useSystemTheme } from "./systemInfo"
 export * from "./types"
 export * from "./releases"
 export { useFormErrors } from "./useFormErrors"

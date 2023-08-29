@@ -50,13 +50,16 @@ export function useCreateWorkspaceForm(
     () => formState.isSubmitting || isSubmitLoading,
     [formState.isSubmitting, isSubmitLoading]
   )
-  const handleDevcontainerSelected = useCallback((selectedDevcontainer: string | undefined) => {
-    setValue(FieldName.DEVCONTAINER_PATH, selectedDevcontainer ?? DEFAULT_CONTAINER_PATH, {
-      shouldDirty: true,
-      shouldValidate: true,
-    })
-    formRef.current?.dispatchEvent(new Event("submit", { cancelable: true, bubbles: true }))
-  }, [])
+  const handleDevcontainerSelected = useCallback(
+    (selectedDevcontainer: string | undefined) => {
+      setValue(FieldName.DEVCONTAINER_PATH, selectedDevcontainer ?? DEFAULT_CONTAINER_PATH, {
+        shouldDirty: true,
+        shouldValidate: true,
+      })
+      formRef.current?.dispatchEvent(new Event("submit", { cancelable: true, bubbles: true }))
+    },
+    [setValue]
+  )
 
   const { modal: selectDevcontainerModal, show: showSelectDevcontainerModal } =
     useSelectDevcontainerModal({ onSelected: handleDevcontainerSelected })
@@ -229,7 +232,15 @@ export function useCreateWorkspaceForm(
           devcontainerPath: maybeDevcontainerPath,
         })
       })(event),
-    [handleSubmit, workspaces, settings.fixedIDE, onCreateWorkspace, setError]
+    [
+      handleSubmit,
+      workspaces,
+      settings.experimental_multiDevcontainer,
+      settings.fixedIDE,
+      onCreateWorkspace,
+      setError,
+      showSelectDevcontainerModal,
+    ]
   )
 
   return {

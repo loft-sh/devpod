@@ -14,7 +14,7 @@ export type TDeepNonNullable<T> = {
 export type TLogOutput = Readonly<{ time: Date; message?: string; level: string }>
 export type TQueryResult<TData extends Readonly<object>> = [
   TData | undefined,
-  Pick<UseMutationResult, "status" | "error">
+  Pick<UseMutationResult, "status" | "error">,
 ]
 export type TRunnable<TRunConfig> = Readonly<{ run(config: TRunConfig): void }>
 //#endregion
@@ -123,7 +123,7 @@ export type TImportWorkspaceConfig = Readonly<{
   workspaceID: string
   workspaceUID: string
   devPodProHost: string
-  options: { [key: string]: string } | null
+  options: Record<string, string> | null
 }>
 
 //#endregion

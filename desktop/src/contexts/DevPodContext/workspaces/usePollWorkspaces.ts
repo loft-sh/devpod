@@ -44,7 +44,7 @@ export function usePollWorkspaces() {
       await updateStatus(ongoingRequests)
     }, REFETCH_INTERVAL_MS)
 
-    const initialID = setTimeout(async () => {
+    const initialTimeoutID = setTimeout(async () => {
       await listWorkspaces()
       await updateStatus(ongoingRequests)
     }, 0)
@@ -52,7 +52,7 @@ export function usePollWorkspaces() {
     return () => {
       clearInterval(workspacesIntervalID)
       clearInterval(statusIntervalID)
-      clearTimeout(initialID)
+      clearTimeout(initialTimeoutID)
     }
-  }, [])
+  }, [listWorkspaces, updateStatus])
 }

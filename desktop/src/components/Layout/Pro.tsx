@@ -138,7 +138,7 @@ function ProInstaceRow({
   const workspaces = useWorkspaces()
   const proInstanceWorkspaces = useMemo(
     () => workspaces.filter((workspace) => workspace.provider?.name === provider),
-    [host, workspaces]
+    [provider, workspaces]
   )
   const {
     modal: deleteProviderModal,
