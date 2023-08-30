@@ -26,7 +26,7 @@ FROM $_DEV_CONTAINERS_BASE_IMAGE AS dev_containers_target_stage
 
 USER root
 
-COPY ./.devpod-features /tmp/build-features/
+COPY ./` + config.DevPodContextFeatureFolder + `/ /tmp/build-features/
 RUN chmod -R 0755 /tmp/build-features && ls /tmp/build-features
 
 #{featureLayer}
@@ -93,7 +93,7 @@ func getFeatureBuildOptions(contextPath string, baseImageMetadata *config.ImageM
 	containerUser, remoteUser := findContainerUsers(baseImageMetadata, "", user)
 
 	// copy features
-	featureFolder := filepath.Join(contextPath, ".devpod-features")
+	featureFolder := filepath.Join(contextPath, config.DevPodContextFeatureFolder)
 	err := copyFeaturesToDestination(features, featureFolder)
 	if err != nil {
 		return nil, err

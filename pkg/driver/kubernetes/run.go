@@ -33,6 +33,8 @@ func (k *kubernetesDriver) RunDevContainer(
 	workspaceId string,
 	options *driver.RunOptions,
 ) error {
+	workspaceId = getID(workspaceId)
+
 	// namespace
 	if k.namespace != "" && k.config.CreateNamespace == "true" {
 		k.Log.Debugf("Create namespace '%s'", k.namespace)
@@ -327,6 +329,7 @@ func getNodeSelector(pod *corev1.Pod, rawNodeSelector string) (map[string]string
 }
 
 func (k *kubernetesDriver) StartDevContainer(ctx context.Context, workspaceId string) error {
+	workspaceId = getID(workspaceId)
 	_, containerInfo, err := k.getDevContainerPvc(ctx, workspaceId)
 	if err != nil {
 		return err
@@ -341,3 +344,8 @@ func (k *kubernetesDriver) StartDevContainer(ctx context.Context, workspaceId st
 		false,
 	)
 }
+
+func getID(workspaceID string) string {
+	return "devpod-" + workspaceID
+}
+

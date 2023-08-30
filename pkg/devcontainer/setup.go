@@ -17,7 +17,11 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
-func (r *Runner) setupContainer(ctx context.Context, containerDetails *config.ContainerDetails, mergedConfig *config.MergedDevContainerConfig) (*config.Result, error) {
+func (r *Runner) setupContainer(
+	ctx context.Context,
+	containerDetails *config.ContainerDetails,
+	mergedConfig *config.MergedDevContainerConfig,
+) (*config.Result, error) {
 	// inject agent
 	err := agent.InjectAgent(ctx, func(ctx context.Context, command string, stdin io.Reader, stdout io.Writer, stderr io.Writer) error {
 		return r.Driver.CommandDevContainer(ctx, r.ID, "root", command, stdin, stdout, stderr)

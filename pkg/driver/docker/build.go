@@ -56,15 +56,10 @@ func (d *dockerDriver) BuildDevContainer(
 	}
 
 	// get build options
-	buildOptions, deleteFolders, err := CreateBuildOptions(dockerfilePath, dockerfileContent, parsedConfig, extendedBuildInfo, imageName, options.Repository, options.PrebuildRepositories, prebuildHash)
+	buildOptions, err := CreateBuildOptions(dockerfilePath, dockerfileContent, parsedConfig, extendedBuildInfo, imageName, options.Repository, options.PrebuildRepositories, prebuildHash)
 	if err != nil {
 		return nil, err
 	}
-	defer func() {
-		for _, folder := range deleteFolders {
-			_ = os.RemoveAll(folder)
-		}
-	}()
 
 	// build image
 	writer := d.Log.Writer(logrus.InfoLevel, false)
@@ -110,48 +105,25 @@ func CreateBuildOptions(
 	pushRepository string,
 	prebuildRepositories []string,
 	prebuildHash string,
-) (*build.BuildOptions, []string, error) {
+) (*build.BuildOptions, error) {
+	var err error
+
 	// extra args?
-	finalDockerfilePath := dockerfilePath
 	buildOptions := &build.BuildOptions{
-		BuildArgs: parsedConfig.Config.Build.Args,
-		Labels:    map[string]string{},
-		Contexts:  map[string]string{},
-		Load:      true,
+		Labels:   map[string]string{},
+		Contexts: map[string]string{},
+		Load:     true,
 	}
-	if buildOptions.BuildArgs == nil {
-		buildOptions.BuildArgs = map[string]string{}
-	}
-	deleteFolders := []string{}
+
+	// get build args and target
+	buildOptions.BuildArgs, buildOptions.Target = GetBuildArgsAndTarget(parsedConfig, extendedBuildInfo)
 
 	// get extended build info
-	if extendedBuildInfo != nil && extendedBuildInfo.FeaturesBuildInfo != nil {
-		featureBuildInfo := extendedBuildInfo.FeaturesBuildInfo
-
-		// cleanup features folder after we are done building
-		if featureBuildInfo.FeaturesFolder != "" {
-			deleteFolders = append(deleteFolders, featureBuildInfo.FeaturesFolder)
-		}
-
-		// rewrite dockerfile
-		finalDockerfileContent := dockerfile.RemoveSyntaxVersion(dockerfileContent)
-		finalDockerfileContent = strings.TrimSpace(strings.Join([]string{
-			featureBuildInfo.DockerfilePrefixContent,
-			strings.TrimSpace(finalDockerfileContent),
-			featureBuildInfo.DockerfileContent,
-		}, "\n"))
-
-		// write dockerfile with features
-		finalDockerfilePath = filepath.Join(featureBuildInfo.FeaturesFolder, "Dockerfile-with-features")
-		err := os.WriteFile(finalDockerfilePath, []byte(finalDockerfileContent), 0666)
-		if err != nil {
-			return nil, nil, errors.Wrap(err, "write Dockerfile with features")
-		}
-
-		// track additional build args to include below
-		for k, v := range featureBuildInfo.BuildArgs {
-			buildOptions.BuildArgs[k] = v
-		}
+	buildOptions.Dockerfile, err = RewriteDockerfile(dockerfileContent, extendedBuildInfo)
+	if err != nil {
+		return nil, err
+	} else if buildOptions.Dockerfile == "" {
+		buildOptions.Dockerfile = dockerfilePath
 	}
 
 	// add label
@@ -159,15 +131,7 @@ func CreateBuildOptions(
 		buildOptions.Labels[metadata.ImageMetadataLabel] = extendedBuildInfo.MetadataLabel
 	}
 
-	// target
-	if extendedBuildInfo != nil && extendedBuildInfo.FeaturesBuildInfo != nil && extendedBuildInfo.FeaturesBuildInfo.OverrideTarget != "" {
-		buildOptions.Target = extendedBuildInfo.FeaturesBuildInfo.OverrideTarget
-	} else if parsedConfig.Config.Build.Target != "" {
-		buildOptions.Target = parsedConfig.Config.Build.Target
-	}
-
 	// other options
-	buildOptions.Dockerfile = finalDockerfilePath
 	if imageName != "" {
 		buildOptions.Images = append(buildOptions.Images, imageName)
 	}
@@ -184,7 +148,64 @@ func CreateBuildOptions(
 		buildOptions.BuildArgs = map[string]string{}
 	}
 	buildOptions.BuildArgs["BUILDKIT_INLINE_CACHE"] = "1"
-	return buildOptions, deleteFolders, nil
+	return buildOptions, nil
+}
+
+func RewriteDockerfile(
+	dockerfileContent string,
+	extendedBuildInfo *feature.ExtendedBuildInfo,
+) (string, error) {
+	if extendedBuildInfo != nil && extendedBuildInfo.FeaturesBuildInfo != nil {
+		featureBuildInfo := extendedBuildInfo.FeaturesBuildInfo
+
+		// rewrite dockerfile
+		finalDockerfileContent := dockerfile.RemoveSyntaxVersion(dockerfileContent)
+		finalDockerfileContent = strings.TrimSpace(strings.Join([]string{
+			featureBuildInfo.DockerfilePrefixContent,
+			strings.TrimSpace(finalDockerfileContent),
+			featureBuildInfo.DockerfileContent,
+		}, "\n"))
+
+		// write dockerfile with features
+		finalDockerfilePath := filepath.Join(featureBuildInfo.FeaturesFolder, "Dockerfile-with-features")
+		err := os.WriteFile(finalDockerfilePath, []byte(finalDockerfileContent), 0666)
+		if err != nil {
+			return "", errors.Wrap(err, "write Dockerfile with features")
+		}
+
+		return finalDockerfilePath, nil
+	}
+
+	return "", nil
+}
+
+func GetBuildArgsAndTarget(
+	parsedConfig *config.SubstitutedConfig,
+	extendedBuildInfo *feature.ExtendedBuildInfo,
+) (map[string]string, string) {
+	buildArgs := map[string]string{}
+	for k, v := range parsedConfig.Config.Build.Args {
+		buildArgs[k] = v
+	}
+
+	// get extended build info
+	if extendedBuildInfo != nil && extendedBuildInfo.FeaturesBuildInfo != nil {
+		featureBuildInfo := extendedBuildInfo.FeaturesBuildInfo
+
+		// track additional build args to include below
+		for k, v := range featureBuildInfo.BuildArgs {
+			buildArgs[k] = v
+		}
+	}
+
+	target := ""
+	if extendedBuildInfo != nil && extendedBuildInfo.FeaturesBuildInfo != nil && extendedBuildInfo.FeaturesBuildInfo.OverrideTarget != "" {
+		target = extendedBuildInfo.FeaturesBuildInfo.OverrideTarget
+	} else if parsedConfig.Config.Build.Target != "" {
+		target = parsedConfig.Config.Build.Target
+	}
+
+	return buildArgs, target
 }
 
 func GetImageName(localWorkspaceFolder, prebuildHash string) string {

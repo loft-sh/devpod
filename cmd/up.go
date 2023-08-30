@@ -136,7 +136,9 @@ func NewUpCmd(flags *flags.GlobalFlags) *cobra.Command {
 
 	// testing
 	upCmd.Flags().StringVar(&cmd.DaemonInterval, "daemon-interval", "", "TESTING ONLY")
+	upCmd.Flags().BoolVar(&cmd.ForceDockerless, "force-dockerless", false, "TESTING ONLY")
 	_ = upCmd.Flags().MarkHidden("daemon-interval")
+	_ = upCmd.Flags().MarkHidden("force-dockerless")
 	return upCmd
 }
 

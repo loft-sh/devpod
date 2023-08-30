@@ -35,7 +35,7 @@ func (k *kubernetesDriver) getInitContainer(options *driver.RunOptions) ([]corev
 		{
 			Name:         "devpod-init",
 			Image:        options.Image,
-			Command:      []string{"/bin/sh"},
+			Command:      []string{"sh"},
 			Args:         []string{"-c", strings.Join(commands, "\n") + "\n"},
 			Resources:    parseResources(k.config.HelperResources, k.Log),
 			VolumeMounts: volumeMounts,

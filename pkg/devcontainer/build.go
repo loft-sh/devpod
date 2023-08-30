@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"path"
 	"path/filepath"
 	"strings"
 
@@ -13,6 +14,7 @@ import (
 	"github.com/loft-sh/devpod/pkg/devcontainer/metadata"
 	"github.com/loft-sh/devpod/pkg/dockerfile"
 	"github.com/loft-sh/devpod/pkg/driver"
+	"github.com/loft-sh/devpod/pkg/driver/docker"
 	"github.com/loft-sh/devpod/pkg/image"
 	"github.com/pkg/errors"
 )
@@ -116,7 +118,7 @@ func (r *Runner) extendImage(ctx context.Context, parsedConfig *config.Substitut
 	}
 
 	// build the image
-	return r.buildImage(ctx, parsedConfig, extendedBuildInfo, "", "", options)
+	return r.buildImage(ctx, parsedConfig, imageBuildInfo, extendedBuildInfo, "", "", options)
 }
 
 func (r *Runner) buildAndExtendImage(ctx context.Context, parsedConfig *config.SubstitutedConfig, options config.BuildOptions) (*config.BuildInfo, error) {
@@ -158,7 +160,7 @@ func (r *Runner) buildAndExtendImage(ctx context.Context, parsedConfig *config.S
 	}
 
 	// build the image
-	return r.buildImage(ctx, parsedConfig, extendedBuildInfo, dockerFilePath, string(dockerFileContent), options)
+	return r.buildImage(ctx, parsedConfig, imageBuildInfo, extendedBuildInfo, dockerFilePath, string(dockerFileContent), options)
 }
 
 func (r *Runner) getDockerfilePath(parsedConfig *config.DevContainerConfig) (string, error) {
@@ -242,7 +244,15 @@ func (r *Runner) getImageBuildInfoFromDockerfile(dockerFileContent string, build
 	}, nil
 }
 
-func (r *Runner) buildImage(ctx context.Context, parsedConfig *config.SubstitutedConfig, extendedBuildInfo *feature.ExtendedBuildInfo, dockerfilePath, dockerfileContent string, options config.BuildOptions) (*config.BuildInfo, error) {
+func (r *Runner) buildImage(
+	ctx context.Context,
+	parsedConfig *config.SubstitutedConfig,
+	buildInfo *config.ImageBuildInfo,
+	extendedBuildInfo *feature.ExtendedBuildInfo,
+	dockerfilePath,
+	dockerfileContent string,
+	options config.BuildOptions,
+) (*config.BuildInfo, error) {
 	targetArch, err := r.Driver.TargetArchitecture(ctx, r.ID)
 	if err != nil {
 		return nil, err
@@ -254,7 +264,7 @@ func (r *Runner) buildImage(ctx context.Context, parsedConfig *config.Substitute
 	}
 
 	// check if there is a prebuild image
-	if !options.ForceBuild {
+	if !options.ForceDockerless && !options.ForceBuild {
 		devPodCustomizations := config.GetDevPodCustomizations(parsedConfig.Config)
 		if options.Repository != "" {
 			options.PrebuildRepositories = append(options.PrebuildRepositories, options.Repository)
@@ -287,10 +297,62 @@ func (r *Runner) buildImage(ctx context.Context, parsedConfig *config.Substitute
 		}
 	}
 
+	// check if we should fallback to dockerless
 	dockerDriver, ok := r.Driver.(driver.DockerDriver)
-	if !ok {
-		return nil, fmt.Errorf("building is not supported with this driver")
+	if options.ForceDockerless || !ok {
+		return dockerlessFallback(r.LocalWorkspaceFolder, r.SubstitutionContext.ContainerWorkspaceFolder, parsedConfig, buildInfo, extendedBuildInfo, dockerfileContent)
 	}
 
 	return dockerDriver.BuildDevContainer(ctx, prebuildHash, parsedConfig, extendedBuildInfo, dockerfilePath, dockerfileContent, r.LocalWorkspaceFolder, options)
+}
+
+func dockerlessFallback(
+	localWorkspaceFolder,
+	containerWorkspaceFolder string,
+	parsedConfig *config.SubstitutedConfig,
+	buildInfo *config.ImageBuildInfo,
+	extendedBuildInfo *feature.ExtendedBuildInfo,
+	dockerfileContent string,
+) (*config.BuildInfo, error) {
+	contextPath := config.GetContextPath(parsedConfig.Config)
+	devPodInternalFolder := filepath.Join(contextPath, config.DevPodContextFeatureFolder)
+	err := os.MkdirAll(devPodInternalFolder, 0777)
+	if err != nil {
+		return nil, fmt.Errorf("create devpod folder: %w", err)
+	}
+
+	// build dockerfile
+	devPodDockerfile, err := docker.RewriteDockerfile(dockerfileContent, extendedBuildInfo)
+	if err != nil {
+		return nil, fmt.Errorf("rewrite dockerfile: %w", err)
+	} else if devPodDockerfile == "" {
+		devPodDockerfile = filepath.Join(devPodInternalFolder, "Dockerfile-without-features")
+		err = os.WriteFile(devPodDockerfile, []byte(dockerfileContent), 0666)
+		if err != nil {
+			return nil, fmt.Errorf("write devpod dockerfile: %w", err)
+		}
+	}
+
+	// get build args and target
+	containerContext, containerDockerfile := getContainerContextAndDockerfile(localWorkspaceFolder, containerWorkspaceFolder, contextPath, devPodDockerfile)
+	buildArgs, target := docker.GetBuildArgsAndTarget(parsedConfig, extendedBuildInfo)
+	return &config.BuildInfo{
+		ImageMetadata: extendedBuildInfo.MetadataConfig,
+		Dockerless: &config.BuildInfoDockerless{
+			Context:    containerContext,
+			Dockerfile: containerDockerfile,
+
+			BuildArgs: buildArgs,
+			Target:    target,
+
+			User: buildInfo.User,
+		},
+	}, nil
+}
+
+func getContainerContextAndDockerfile(localWorkspaceFolder, containerWorkspaceFolder, contextPath, devPodDockerfile string) (string, string) {
+	prefixPath := path.Clean(filepath.ToSlash(localWorkspaceFolder))
+	containerContext := path.Join(containerWorkspaceFolder, strings.TrimPrefix(path.Clean(filepath.ToSlash(contextPath)), prefixPath))
+	containerDockerfile := path.Join(containerWorkspaceFolder, strings.TrimPrefix(path.Clean(filepath.ToSlash(devPodDockerfile)), prefixPath))
+	return containerContext, containerDockerfile
 }

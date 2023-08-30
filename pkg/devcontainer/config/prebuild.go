@@ -55,7 +55,7 @@ func CalculatePrebuildHash(originalConfig *DevContainerConfig, platform, archite
 	if err != nil {
 		return "", errors.Errorf("Error reading .dockerignore: %v", err)
 	}
-	excludes = append(excludes, ".devpod-features/")
+	excludes = append(excludes, DevPodContextFeatureFolder+"/")
 
 	// get hash of the context directory
 	contextHash, err := util.DirectoryHash(contextPath, excludes)

@@ -87,6 +87,9 @@ type ProviderAgentConfig struct {
 	// DownloadURL is the base url where to download the agent from
 	DownloadURL string `json:"downloadURL,omitempty"`
 
+	// DockerlessImage is the image of the dockerless container to start
+	DockerlessImage string `json:"dockerlessImage,omitempty"`
+
 	// Timeout is the timeout in minutes to wait until the agent tries
 	// to turn of the server.
 	Timeout string `json:"inactivityTimeout,omitempty"`

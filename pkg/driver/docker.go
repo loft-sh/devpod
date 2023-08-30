@@ -19,14 +19,11 @@ type DockerDriver interface {
 	RunDockerDevContainer(
 		ctx context.Context,
 		workspaceId string,
+		options *RunOptions,
 		parsedConfig *config.DevContainerConfig,
-		mergedConfig *config.MergedDevContainerConfig,
-		imageName,
-		workspaceMount string,
-		labels []string,
+		init *bool,
 		ide string,
 		ideOptions map[string]config2.OptionValue,
-		imageDetails *config.ImageDetails,
 	) error
 
 	// BuildDevContainer builds a devcontainer

@@ -22,7 +22,7 @@ type Driver interface {
 	TargetArchitecture(ctx context.Context, workspaceId string) (string, error)
 
 	// DeleteDevContainer deletes the devcontainer
-	DeleteDevContainer(ctx context.Context, workspaceId string, deleteVolumes bool) error
+	DeleteDevContainer(ctx context.Context, workspaceId string) error
 
 	// StartDevContainer starts the devcontainer
 	StartDevContainer(ctx context.Context, workspaceId string) error
@@ -50,6 +50,9 @@ type RunOptions struct {
 
 	// CapAdd are additional capabilities for the container
 	CapAdd []string `json:"capAdd,omitempty"`
+
+	// SecurityOpt are additional security options
+	SecurityOpt []string `json:"securityOpt,omitempty"`
 
 	// Labels are labels to set on the container
 	Labels []string `json:"labels,omitempty"`

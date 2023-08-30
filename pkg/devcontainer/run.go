@@ -68,6 +68,70 @@ type UpOptions struct {
 	ForceBuild bool
 }
 
+func (r *Runner) Up(ctx context.Context, options UpOptions) (*config.Result, error) {
+	// download workspace source before recreating container
+	_, isDockerDriver := r.Driver.(driver.DockerDriver)
+	if options.Recreate && !isDockerDriver {
+		// TODO: for drivers other than docker and recreate is true, we need to download the complete context here first
+	}
+
+	// prepare config
+	substitutedConfig, err := r.prepare(options.CLIOptions)
+	if err != nil {
+		return nil, err
+	}
+
+	// remove build information
+	defer func() {
+		contextPath := config.GetContextPath(substitutedConfig.Config)
+		_ = os.RemoveAll(filepath.Join(contextPath, config.DevPodContextFeatureFolder))
+	}()
+
+	// run initializeCommand
+	err = runInitializeCommand(r.LocalWorkspaceFolder, substitutedConfig.Config, r.Log)
+	if err != nil {
+		return nil, err
+	}
+
+	// check if its a compose devcontainer.json
+	var result *config.Result
+	if isDockerFileConfig(substitutedConfig.Config) || substitutedConfig.Config.Image != "" {
+		result, err = r.runSingleContainer(
+			ctx,
+			substitutedConfig,
+			options,
+		)
+		if err != nil {
+			return nil, err
+		}
+	} else if isDockerComposeConfig(substitutedConfig.Config) {
+		result, err = r.runDockerCompose(ctx, substitutedConfig, options)
+		if err != nil {
+			return nil, err
+		}
+	} else {
+		r.Log.Warn("dev container config is missing one of \"image\", \"dockerFile\" or \"dockerComposeFile\" properties, defaulting to auto-detection")
+
+		lang, err := language.DetectLanguage(r.LocalWorkspaceFolder)
+		if err != nil {
+			return nil, fmt.Errorf("could not detect project language and dev container config is missing one of \"image\", \"dockerFile\" or \"dockerComposeFile\" properties")
+		}
+
+		if language.MapConfig[lang] == nil {
+			return nil, fmt.Errorf("could not detect project language and dev container config is missing one of \"image\", \"dockerFile\" or \"dockerComposeFile\" properties")
+		}
+
+		substitutedConfig.Config.ImageContainer = language.MapConfig[lang].ImageContainer
+		result, err = r.runSingleContainer(ctx, substitutedConfig, options)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	// return result
+	return result, nil
+}
+
 func (r *Runner) prepare(
 	options provider2.CLIOptions,
 ) (*config.SubstitutedConfig, error) {
@@ -134,57 +198,6 @@ func (r *Runner) prepare(
 		Config: parsedConfig,
 		Raw:    rawParsedConfig,
 	}, nil
-}
-
-func (r *Runner) Up(ctx context.Context, options UpOptions) (*config.Result, error) {
-	substitutedConfig, err := r.prepare(options.CLIOptions)
-	if err != nil {
-		return nil, err
-	}
-
-	// run initializeCommand
-	err = runInitializeCommand(r.LocalWorkspaceFolder, substitutedConfig.Config, r.Log)
-	if err != nil {
-		return nil, err
-	}
-
-	// check if its a compose devcontainer.json
-	var result *config.Result
-	if isDockerFileConfig(substitutedConfig.Config) || substitutedConfig.Config.Image != "" {
-		result, err = r.runSingleContainer(
-			ctx,
-			substitutedConfig,
-			options,
-		)
-		if err != nil {
-			return nil, err
-		}
-	} else if isDockerComposeConfig(substitutedConfig.Config) {
-		result, err = r.runDockerCompose(ctx, substitutedConfig, options)
-		if err != nil {
-			return nil, err
-		}
-	} else {
-		r.Log.Warn("dev container config is missing one of \"image\", \"dockerFile\" or \"dockerComposeFile\" properties, defaulting to auto-detection")
-
-		lang, err := language.DetectLanguage(r.LocalWorkspaceFolder)
-		if err != nil {
-			return nil, fmt.Errorf("could not detect project language and dev container config is missing one of \"image\", \"dockerFile\" or \"dockerComposeFile\" properties")
-		}
-
-		if language.MapConfig[lang] == nil {
-			return nil, fmt.Errorf("could not detect project language and dev container config is missing one of \"image\", \"dockerFile\" or \"dockerComposeFile\" properties")
-		}
-
-		substitutedConfig.Config.ImageContainer = language.MapConfig[lang].ImageContainer
-		result, err = r.runSingleContainer(ctx, substitutedConfig, options)
-		if err != nil {
-			return nil, err
-		}
-	}
-
-	// return result
-	return result, nil
 }
 
 func (r *Runner) CommandDevContainer(

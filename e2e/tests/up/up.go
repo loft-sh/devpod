@@ -595,7 +595,7 @@ var _ = DevPodDescribe("devpod up test suite", func() {
 					})
 					framework.ExpectNoError(err)
 
-					image1 := container.Config.Image
+					image1 := container.Config.LegacyImage
 
 					scriptFile, err := os.OpenFile(tempDir+"/scripts/alias.sh",
 						os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0600)
@@ -616,7 +616,7 @@ var _ = DevPodDescribe("devpod up test suite", func() {
 					})
 					framework.ExpectNoError(err)
 
-					image2 := container.Config.Image
+					image2 := container.Config.LegacyImage
 
 					gomega.Expect(image2).ShouldNot(gomega.Equal(image1), "images should be different")
 				}, ginkgo.SpecTimeout(60*time.Second))
@@ -647,7 +647,7 @@ var _ = DevPodDescribe("devpod up test suite", func() {
 					})
 					framework.ExpectNoError(err)
 
-					image1 := container.Config.Image
+					image1 := container.Config.LegacyImage
 
 					scriptFile, err := os.OpenFile(tempDir+"/scripts/install.sh",
 						os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0600)
@@ -668,7 +668,7 @@ var _ = DevPodDescribe("devpod up test suite", func() {
 					})
 					framework.ExpectNoError(err)
 
-					image2 := container.Config.Image
+					image2 := container.Config.LegacyImage
 
 					gomega.Expect(image2).Should(gomega.Equal(image1), "image should be same")
 				}, ginkgo.SpecTimeout(60*time.Second))

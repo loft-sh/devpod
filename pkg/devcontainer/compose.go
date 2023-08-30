@@ -291,6 +291,7 @@ func (r *Runner) startContainer(
 
 		additionalLabels := map[string]string{
 			metadata.ImageMetadataLabel: metadataLabel,
+			config.UserLabel:            imageDetails.Config.User,
 		}
 		overrideComposeUpFilePath, err := r.extendedDockerComposeUp(parsedConfig, mergedConfig, composeHelper, &composeService, originalImageName, overrideBuildImageName, imageDetails, additionalLabels)
 		if err != nil {
@@ -309,7 +310,7 @@ func (r *Runner) startContainer(
 			return nil, errors.Wrap(err, "stop dev container")
 		}
 
-		if err := r.Driver.DeleteDevContainer(ctx, r.ID, false); err != nil {
+		if err := r.Driver.DeleteDevContainer(ctx, r.ID); err != nil {
 			return nil, errors.Wrap(err, "delete dev container")
 		}
 	}

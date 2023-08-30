@@ -3,6 +3,8 @@ package devcontainer
 import (
 	"context"
 	"fmt"
+	"os"
+	"path/filepath"
 
 	"github.com/loft-sh/devpod/pkg/devcontainer/config"
 	"github.com/loft-sh/devpod/pkg/driver"
@@ -27,6 +29,12 @@ func (r *Runner) Build(ctx context.Context, options config.BuildOptions) (string
 	if !options.SkipPush && options.Repository == "" && prebuildRepo == "" {
 		return "", fmt.Errorf("repository needs to be specified")
 	}
+
+	// remove build information
+	defer func() {
+		contextPath := config.GetContextPath(substitutedConfig.Config)
+		_ = os.RemoveAll(filepath.Join(contextPath, config.DevPodContextFeatureFolder))
+	}()
 
 	// check if we need to build container
 	buildInfo, err := r.build(ctx, substitutedConfig, options)

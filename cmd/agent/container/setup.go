@@ -6,17 +6,21 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"strconv"
 	"strings"
 
+	v1 "github.com/google/go-containerregistry/pkg/v1"
 	"github.com/loft-sh/devpod/cmd/flags"
 	"github.com/loft-sh/devpod/pkg/agent"
 	"github.com/loft-sh/devpod/pkg/agent/tunnel"
 	"github.com/loft-sh/devpod/pkg/agent/tunnelserver"
 	"github.com/loft-sh/devpod/pkg/compress"
 	config2 "github.com/loft-sh/devpod/pkg/config"
+	"github.com/loft-sh/devpod/pkg/copy"
 	"github.com/loft-sh/devpod/pkg/devcontainer/config"
 	"github.com/loft-sh/devpod/pkg/devcontainer/setup"
+	"github.com/loft-sh/devpod/pkg/envfile"
 	"github.com/loft-sh/devpod/pkg/extract"
 	"github.com/loft-sh/devpod/pkg/ide/fleet"
 	"github.com/loft-sh/devpod/pkg/ide/jetbrains"
@@ -27,8 +31,11 @@ import (
 	"github.com/loft-sh/devpod/pkg/single"
 	"github.com/loft-sh/log"
 	"github.com/pkg/errors"
+	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 )
+
+var DockerlessImageConfigOutput = "/.dockerless/image.json"
 
 // SetupContainerCmd holds the cmd flags
 type SetupContainerCmd struct {
@@ -97,12 +104,6 @@ func (cmd *SetupContainerCmd) Run(ctx context.Context) error {
 		return err
 	}
 
-	// fill container env
-	err = fillContainerEnv(setupInfo)
-	if err != nil {
-		return err
-	}
-
 	// sync mounts
 	if cmd.StreamMounts {
 		mounts := config.GetMounts(setupInfo)
@@ -127,7 +128,19 @@ func (cmd *SetupContainerCmd) Run(ctx context.Context) error {
 		}
 	}
 
-	// setting up container
+	// do dockerless build
+	err = dockerlessBuild(ctx, log)
+	if err != nil {
+		return fmt.Errorf("dockerless build: %w", err)
+	}
+
+	// fill container env
+	err = fillContainerEnv(setupInfo)
+	if err != nil {
+		return err
+	}
+
+	// setup container
 	err = setup.SetupContainer(setupInfo, workspaceInfo, cmd.ChownWorkspace, log)
 	if err != nil {
 		return err
@@ -184,6 +197,86 @@ func fillContainerEnv(setupInfo *config.Result) error {
 		return errors.Wrap(err, "substitute container env")
 	}
 	setupInfo.MergedConfig = newMergedConfig
+	return nil
+}
+
+func dockerlessBuild(ctx context.Context, log log.Logger) error {
+	if os.Getenv("DOCKERLESS") != "true" {
+		return nil
+	}
+
+	_, err := os.Stat(DockerlessImageConfigOutput)
+	if err == nil {
+		log.Debugf("Skip dockerless build, because container was built already")
+		return nil
+	}
+
+	buildContext := os.Getenv("DOCKERLESS_CONTEXT")
+	if buildContext == "" {
+		log.Debugf("Build context is missing for dockerless build")
+		return nil
+	}
+
+	// check if build info is there
+	fallbackDir := filepath.Join(config.DevPodDockerlessBuildInfoFolder, config.DevPodContextFeatureFolder)
+	buildInfoDir := filepath.Join(buildContext, config.DevPodContextFeatureFolder)
+	_, err = os.Stat(buildInfoDir)
+	if err != nil {
+		// try to rename from fallback dir
+		err = copy.RenameDirectory(fallbackDir, buildInfoDir)
+		if err != nil {
+			return fmt.Errorf("rename dir: %w", err)
+		}
+
+		_, err = os.Stat(buildInfoDir)
+		if err != nil {
+			return fmt.Errorf("couldn't find build dir %s: %w", buildInfoDir, err)
+		}
+	}
+
+	binaryPath, err := os.Executable()
+	if err != nil {
+		return err
+	}
+
+	log.Infof("Start dockerless building...")
+
+	writer := log.Writer(logrus.InfoLevel, false)
+	defer writer.Close()
+
+	// start building
+	cmd := exec.CommandContext(ctx, "/.dockerless/dockerless", "build", "--ignore-path", binaryPath)
+	cmd.Stdout = writer
+	cmd.Stderr = writer
+	err = cmd.Run()
+	if err != nil {
+		return err
+	}
+
+	// add container env to envfile.json
+	rawConfig, err := os.ReadFile(DockerlessImageConfigOutput)
+	if err != nil {
+		return err
+	}
+
+	// parse config file
+	configFile := &v1.ConfigFile{}
+	err = json.Unmarshal(rawConfig, configFile)
+	if err != nil {
+		return fmt.Errorf("parse container config: %w", err)
+	}
+
+	// apply env
+	envfile.MergeAndApply(config.ListToObject(configFile.Config.Env), log)
+
+	// rename build path
+	_ = os.RemoveAll(fallbackDir)
+	err = copy.RenameDirectory(buildInfoDir, fallbackDir)
+	if err != nil {
+		log.Debugf("Error renaming dir %s: %v", buildInfoDir, err)
+		return nil
+	}
+
 	return nil
 }
 

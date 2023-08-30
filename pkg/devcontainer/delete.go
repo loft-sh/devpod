@@ -8,7 +8,7 @@ import (
 	"github.com/pkg/errors"
 )
 
-func (r *Runner) Delete(ctx context.Context, deleteVolumes bool) error {
+func (r *Runner) Delete(ctx context.Context) error {
 	containerDetails, err := r.Driver.FindDevContainer(ctx, r.ID)
 	if err != nil {
 		return errors.Wrap(err, "find dev container")
@@ -30,7 +30,7 @@ func (r *Runner) Delete(ctx context.Context, deleteVolumes bool) error {
 			}
 		}
 
-		err = r.Driver.DeleteDevContainer(ctx, r.ID, deleteVolumes)
+		err = r.Driver.DeleteDevContainer(ctx, r.ID)
 		if err != nil {
 			return err
 		}

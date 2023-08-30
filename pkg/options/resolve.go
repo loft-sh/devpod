@@ -202,6 +202,7 @@ func ResolveAgentConfig(devConfig *config.Config, provider *provider2.ProviderCo
 	// fill in agent config
 	options := provider2.ToOptions(workspace, machine, devConfig.ProviderOptions(provider.Name))
 	agentConfig := provider.Agent
+	agentConfig.DockerlessImage = resolver.ResolveDefaultValue(agentConfig.DockerlessImage, options)
 	agentConfig.Driver = resolver.ResolveDefaultValue(agentConfig.Driver, options)
 	agentConfig.Local = types.StrBool(resolver.ResolveDefaultValue(string(agentConfig.Local), options))
 	agentConfig.Docker.Path = resolver.ResolveDefaultValue(agentConfig.Docker.Path, options)

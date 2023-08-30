@@ -59,6 +59,15 @@ func ChownR(path string, userName string) error {
 	})
 }
 
+func RenameDirectory(srcDir, dest string) error {
+	err := Directory(srcDir, dest)
+	if err != nil {
+		return err
+	}
+
+	return os.RemoveAll(srcDir)
+}
+
 func Directory(scrDir, dest string) error {
 	if err := CreateIfNotExists(dest, 0755); err != nil {
 		return err

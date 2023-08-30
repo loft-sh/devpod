@@ -28,14 +28,11 @@ func makeEnvironment(env map[string]string, log log.Logger) []string {
 		return nil
 	}
 
-	var ret []string
-	for k, v := range env {
-		ret = append(ret, k+"="+v)
-	}
-
+	ret := config.ObjectToList(env)
 	if len(env) > 0 {
 		log.Debugf("Use docker environment variables: %v", ret)
 	}
+
 	return ret
 }
 
@@ -103,9 +100,7 @@ func (d *dockerDriver) PushDevContainer(ctx context.Context, image string) error
 	return nil
 }
 
-func (d *dockerDriver) DeleteDevContainer(ctx context.Context, workspaceId string, deleteVolumes bool) error {
-	var volume string
-
+func (d *dockerDriver) DeleteDevContainer(ctx context.Context, workspaceId string) error {
 	container, err := d.FindDevContainer(ctx, workspaceId)
 	if err != nil {
 		return err
@@ -113,25 +108,9 @@ func (d *dockerDriver) DeleteDevContainer(ctx context.Context, workspaceId strin
 		return nil
 	}
 
-	if deleteVolumes {
-		// inspect container deleteVolumes
-		container, err := d.Docker.InspectContainers(ctx, []string{container.ID})
-		if err != nil {
-			return err
-		}
-		if len(container) == 0 {
-			return errors.Errorf("cannot find container")
-		}
-		volume = container[0].Config.Labels["dev.containers.id"]
-	}
-
 	err = d.Docker.Remove(ctx, container.ID)
 	if err != nil {
 		return err
-	}
-
-	if deleteVolumes {
-		return d.Docker.DeleteVolume(ctx, volume)
 	}
 
 	return nil
@@ -174,7 +153,23 @@ func (d *dockerDriver) ComposeHelper() (*compose.ComposeHelper, error) {
 }
 
 func (d *dockerDriver) FindDevContainer(ctx context.Context, workspaceId string) (*config.ContainerDetails, error) {
-	return d.Docker.FindDevContainer(ctx, []string{config.DockerIDLabel + "=" + workspaceId})
+	containerDetails, err := d.Docker.FindDevContainer(ctx, []string{config.DockerIDLabel + "=" + workspaceId})
+	if err != nil {
+		return nil, err
+	} else if containerDetails == nil {
+		return nil, nil
+	}
+
+	if containerDetails.Config.LegacyUser != "" {
+		if containerDetails.Config.Labels == nil {
+			containerDetails.Config.Labels = map[string]string{}
+		}
+		if containerDetails.Config.Labels[config.UserLabel] == "" {
+			containerDetails.Config.Labels[config.UserLabel] = containerDetails.Config.LegacyUser
+		}
+	}
+
+	return containerDetails, nil
 }
 
 func (d *dockerDriver) RunDevContainer(
@@ -188,14 +183,11 @@ func (d *dockerDriver) RunDevContainer(
 func (d *dockerDriver) RunDockerDevContainer(
 	ctx context.Context,
 	workspaceId string,
+	options *driver.RunOptions,
 	parsedConfig *config.DevContainerConfig,
-	mergedConfig *config.MergedDevContainerConfig,
-	imageName,
-	workspaceMount string,
-	labels []string,
+	init *bool,
 	ide string,
 	ideOptions map[string]config2.OptionValue,
-	imageDetails *config.ImageDetails,
 ) error {
 	args := []string{
 		"run",
@@ -213,25 +205,25 @@ func (d *dockerDriver) RunDockerDevContainer(
 	}
 
 	// workspace mount
-	if workspaceMount != "" {
-		args = append(args, "--mount", workspaceMount)
+	if options.WorkspaceMount != nil {
+		args = append(args, "--mount", options.WorkspaceMount.String())
 	}
 
 	// override container user
-	if mergedConfig.ContainerUser != "" {
-		args = append(args, "-u", mergedConfig.ContainerUser)
+	if options.User != "" {
+		args = append(args, "-u", options.User)
 	}
 
 	// container env
-	for k, v := range mergedConfig.ContainerEnv {
+	for k, v := range options.Env {
 		args = append(args, "-e", k+"="+v)
 	}
 
 	// security options
-	if mergedConfig.Init != nil && *mergedConfig.Init {
+	if init != nil && *init {
 		args = append(args, "--init")
 	}
-	if mergedConfig.Privileged != nil && *mergedConfig.Privileged {
+	if options.Privileged != nil && *options.Privileged {
 		args = append(args, "--privileged")
 	}
 
@@ -244,15 +236,15 @@ func (d *dockerDriver) RunDockerDevContainer(
 		args = append(args, "--userns", "keep-id")
 	}
 
-	for _, capAdd := range mergedConfig.CapAdd {
+	for _, capAdd := range options.CapAdd {
 		args = append(args, "--cap-add", capAdd)
 	}
-	for _, securityOpt := range mergedConfig.SecurityOpt {
+	for _, securityOpt := range options.SecurityOpt {
 		args = append(args, "--security-opt", securityOpt)
 	}
 
 	// mounts
-	for _, mount := range mergedConfig.Mounts {
+	for _, mount := range options.Mounts {
 		args = append(args, "--mount", mount.String())
 	}
 
@@ -277,7 +269,7 @@ func (d *dockerDriver) RunDockerDevContainer(
 	}
 
 	// labels
-	labels = append(config.GetDockerLabelForID(workspaceId), labels...)
+	labels := append(config.GetDockerLabelForID(workspaceId), options.Labels...)
 	for _, label := range labels {
 		args = append(args, "-l", label)
 	}
@@ -297,14 +289,15 @@ func (d *dockerDriver) RunDockerDevContainer(
 	args = append(args, "-d")
 
 	// add entrypoint
-	entrypoint, cmd := GetContainerEntrypointAndArgs(mergedConfig, imageDetails)
-	args = append(args, "--entrypoint", entrypoint)
+	if options.Entrypoint != "" {
+		args = append(args, "--entrypoint", options.Entrypoint)
+	}
 
 	// image name
-	args = append(args, imageName)
+	args = append(args, options.Image)
 
 	// entrypoint
-	args = append(args, cmd...)
+	args = append(args, options.Cmd...)
 
 	// run the command
 	d.Log.Debugf("Running docker command: %s %s", d.Docker.DockerCommand, strings.Join(args, " "))
@@ -317,18 +310,4 @@ func (d *dockerDriver) RunDockerDevContainer(
 	}
 
 	return nil
-}
-
-func GetContainerEntrypointAndArgs(mergedConfig *config.MergedDevContainerConfig, imageDetails *config.ImageDetails) (string, []string) {
-	customEntrypoints := mergedConfig.Entrypoints
-	cmd := []string{"-c", `echo Container started
-trap "exit 0" 15
-` + strings.Join(customEntrypoints, "\n") + `
-exec "$@"
-while sleep 1 & wait $!; do :; done`, "-"} // `wait $!` allows for the `trap` to run (synchronous `sleep` would not).
-	if mergedConfig.OverrideCommand != nil && !*mergedConfig.OverrideCommand {
-		cmd = append(cmd, imageDetails.Config.Entrypoint...)
-		cmd = append(cmd, imageDetails.Config.Cmd...)
-	}
-	return "/bin/sh", cmd
 }

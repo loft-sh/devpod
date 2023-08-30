@@ -11,6 +11,8 @@ import (
 )
 
 func (k *kubernetesDriver) TargetArchitecture(ctx context.Context, workspaceId string) (string, error) {
+	workspaceId = getID(workspaceId)
+
 	// namespace
 	if k.namespace != "" && k.config.CreateNamespace == "true" {
 		k.Log.Debugf("Create namespace '%s'", k.namespace)

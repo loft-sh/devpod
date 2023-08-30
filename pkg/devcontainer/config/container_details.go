@@ -22,7 +22,12 @@ type ContainerDetails struct {
 
 type ContainerDetailsConfig struct {
 	Labels map[string]string `json:"Labels,omitempty"`
-	User   string            `json:"User,omitempty"`
+
+	// LegacyUser shouldn't get used anymore and is only there for backwards compatibility, please
+	// use the label config.UserLabel instead
+	LegacyUser string `json:"User,omitempty"`
+	// LegacyImage shouldn't get used anymore and is only there for testing
+	LegacyImage string `json:"Image,omitempty"`
 }
 
 type ContainerDetailsState struct {

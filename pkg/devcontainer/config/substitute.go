@@ -187,6 +187,15 @@ func ResolveString(val string, replace ReplaceFunction) string {
 	}))
 }
 
+func ObjectToList(object map[string]string) []string {
+	ret := []string{}
+	for k, v := range object {
+		ret = append(ret, k+"="+v)
+	}
+
+	return ret
+}
+
 func ListToObject(list []string) map[string]string {
 	ret := map[string]string{}
 	for _, l := range list {

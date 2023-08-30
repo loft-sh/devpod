@@ -56,6 +56,8 @@ type kubernetesDriver struct {
 }
 
 func (k *kubernetesDriver) FindDevContainer(ctx context.Context, workspaceId string) (*config.ContainerDetails, error) {
+	workspaceId = getID(workspaceId)
+	
 	pvc, containerInfo, err := k.getDevContainerPvc(ctx, workspaceId)
 	if err != nil {
 		return nil, err
@@ -125,14 +127,15 @@ func (k *kubernetesDriver) infoFromObject(ctx context.Context, pvc *corev1.Persi
 		},
 		Config: config.ContainerDetailsConfig{
 			Labels: config.ListToObject(containerInfo.Options.Labels),
-			User:   containerInfo.Options.User,
 		},
 	}, nil
 }
 
-func (k *kubernetesDriver) StopDevContainer(ctx context.Context, id string) error {
+func (k *kubernetesDriver) StopDevContainer(ctx context.Context, workspaceId string) error {
+	workspaceId = getID(workspaceId)
+
 	// delete pod
-	out, err := k.buildCmd(ctx, []string{"delete", "po", id, "--ignore-not-found"}).CombinedOutput()
+	out, err := k.buildCmd(ctx, []string{"delete", "po", workspaceId, "--ignore-not-found"}).CombinedOutput()
 	if err != nil {
 		return perrors.Wrapf(err, "delete pod: %s", string(out))
 	}
@@ -140,27 +143,27 @@ func (k *kubernetesDriver) StopDevContainer(ctx context.Context, id string) erro
 	return nil
 }
 
-func (k *kubernetesDriver) DeleteDevContainer(ctx context.Context, id string, deleteVolumes bool) error {
+func (k *kubernetesDriver) DeleteDevContainer(ctx context.Context, workspaceId string) error {
+	workspaceId = getID(workspaceId)
+
 	// delete pod
-	k.Log.Infof("Delete pod '%s'...", id)
-	err := k.deletePod(ctx, id)
+	k.Log.Infof("Delete pod '%s'...", workspaceId)
+	err := k.deletePod(ctx, workspaceId)
 	if err != nil {
 		return err
 	}
 
 	// delete pvc
-	if deleteVolumes {
-		k.Log.Infof("Delete persistent volume claim '%s'...", id)
-		out, err := k.buildCmd(ctx, []string{"delete", "pvc", id, "--ignore-not-found", "--grace-period=5"}).CombinedOutput()
-		if err != nil {
-			return perrors.Wrapf(err, "delete pvc: %s", string(out))
-		}
+	k.Log.Infof("Delete persistent volume claim '%s'...", workspaceId)
+	out, err := k.buildCmd(ctx, []string{"delete", "pvc", workspaceId, "--ignore-not-found", "--grace-period=5"}).CombinedOutput()
+	if err != nil {
+		return perrors.Wrapf(err, "delete pvc: %s", string(out))
 	}
 
 	// delete role binding & service account
 	if k.config.ClusterRole != "" {
-		k.Log.Infof("Delete role binding '%s'...", id)
-		out, err := k.buildCmd(ctx, []string{"delete", "rolebinding", id, "--ignore-not-found"}).CombinedOutput()
+		k.Log.Infof("Delete role binding '%s'...", workspaceId)
+		out, err := k.buildCmd(ctx, []string{"delete", "rolebinding", workspaceId, "--ignore-not-found"}).CombinedOutput()
 		if err != nil {
 			return perrors.Wrapf(err, "delete role binding: %s", string(out))
 		}
@@ -179,6 +182,8 @@ func (k *kubernetesDriver) deletePod(ctx context.Context, podName string) error 
 }
 
 func (k *kubernetesDriver) CommandDevContainer(ctx context.Context, workspaceId, user, command string, stdin io.Reader, stdout io.Writer, stderr io.Writer) error {
+	workspaceId = getID(workspaceId)
+
 	args := []string{"exec", "-c", "devpod"}
 	if stdin != nil {
 		args = append(args, "-i")

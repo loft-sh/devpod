@@ -8,6 +8,7 @@ import (
 	"github.com/loft-sh/devpod/cmd/flags"
 	"github.com/loft-sh/devpod/pkg/client/clientimplementation"
 	"github.com/loft-sh/devpod/pkg/config"
+	"github.com/loft-sh/devpod/pkg/envfile"
 	"github.com/loft-sh/log"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
@@ -64,5 +65,7 @@ func AgentPersistentPreRunE(cobraCmd *cobra.Command, args []string, globalFlags 
 		_ = os.Setenv(config.DEVPOD_HOME, globalFlags.DevPodHome)
 	}
 
+	// apply environment
+	envfile.Apply(log.Default.ErrorStreamOnly())
 	return nil
 }

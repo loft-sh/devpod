@@ -148,6 +148,7 @@ type CLIOptions struct {
 
 	// TESTING
 	ForceBuild            bool `json:"forceBuild,omitempty"`
+	ForceDockerless       bool `json:"forceDockerless,omitempty"`
 	ForceInternalBuildKit bool `json:"forceInternalBuildKit,omitempty"`
 }
 
