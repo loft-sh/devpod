@@ -19,7 +19,7 @@ const (
 	hashingKey = "2f1uR7n8ryzFEaAm87Ec"
 )
 
-const UIDLength = 40
+const UIDLength = 20
 
 func CreateNewUID(context, id string) string {
 	// this returns always a UID with length 32
@@ -34,7 +34,7 @@ func CreateNewUIDShort(id string) string {
 }
 
 func IsLegacyUID(uid string) bool {
-	return len(uid) != UIDLength
+	return len(uid) != UIDLength && len(uid) != 40
 }
 
 func SafeConcatName(name ...string) string {
