@@ -7,6 +7,7 @@ import (
 	"github.com/loft-sh/devpod/pkg/devcontainer/config"
 )
 
+// Driver is the default interface for DevPod drivers
 type Driver interface {
 	// FindDevContainer returns a running devcontainer details
 	FindDevContainer(ctx context.Context, workspaceId string) (*config.ContainerDetails, error)

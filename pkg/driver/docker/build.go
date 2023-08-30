@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"io"
 	"os"
-	"path"
 	"path/filepath"
 	"strings"
 
@@ -150,9 +149,6 @@ func CreateBuildOptions(
 		}
 
 		// track additional build args to include below
-		for k, v := range featureBuildInfo.BuildKitContexts {
-			buildOptions.Contexts[k] = v
-		}
 		for k, v := range featureBuildInfo.BuildArgs {
 			buildOptions.BuildArgs[k] = v
 		}
@@ -181,7 +177,7 @@ func CreateBuildOptions(
 	for _, prebuildRepository := range prebuildRepositories {
 		buildOptions.Images = append(buildOptions.Images, prebuildRepository+":"+prebuildHash)
 	}
-	buildOptions.Context = GetContextPath(parsedConfig.Config)
+	buildOptions.Context = config.GetContextPath(parsedConfig.Config)
 
 	// add build arg
 	if buildOptions.BuildArgs == nil {
@@ -278,25 +274,4 @@ func (d *dockerDriver) buildxBuild(ctx context.Context, writer io.Writer, platfo
 	}
 
 	return nil
-}
-
-func GetContextPath(parsedConfig *config.DevContainerConfig) string {
-	context := ""
-	dockerfilePath := ""
-	if parsedConfig.Dockerfile != "" {
-		context = parsedConfig.Context
-		dockerfilePath = parsedConfig.Dockerfile
-	} else if parsedConfig.Build.Dockerfile != "" {
-		context = parsedConfig.Build.Context
-		dockerfilePath = parsedConfig.Build.Dockerfile
-	}
-
-	configDir := path.Dir(filepath.ToSlash(parsedConfig.Origin))
-	if context != "" {
-		return filepath.FromSlash(path.Join(configDir, context))
-	} else if dockerfilePath != "" {
-		return filepath.FromSlash(path.Join(configDir, path.Dir(dockerfilePath)))
-	}
-
-	return configDir
 }

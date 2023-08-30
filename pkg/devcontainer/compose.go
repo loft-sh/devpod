@@ -396,7 +396,7 @@ func (r *Runner) buildAndExtendDockerCompose(ctx context.Context, parsedConfig *
 		}
 	}
 
-	extendImageBuildInfo, err := feature.GetExtendedBuildInfo(r.SubstitutionContext, imageBuildInfo.Metadata, imageBuildInfo.User, buildTarget, parsedConfig, false, r.Log)
+	extendImageBuildInfo, err := feature.GetExtendedBuildInfo(r.SubstitutionContext, imageBuildInfo.Metadata, imageBuildInfo.User, buildTarget, parsedConfig, r.Log)
 	if err != nil {
 		return "", "", nil, "", err
 	}
@@ -404,10 +404,6 @@ func (r *Runner) buildAndExtendDockerCompose(ctx context.Context, parsedConfig *
 	if extendImageBuildInfo != nil && extendImageBuildInfo.FeaturesBuildInfo != nil {
 		if dockerfileContents == "" {
 			dockerfileContents = fmt.Sprintf("FROM %s AS %s\n", composeService.Image, buildTarget)
-		}
-
-		if _, err := r.buildFeatureContentImage(ctx, extendImageBuildInfo.FeaturesBuildInfo); err != nil {
-			return "", "", nil, "", errors.Wrap(err, "build feature content image")
 		}
 
 		extendedDockerfilePath, extendedDockerfileContent := r.extendedDockerfile(
@@ -472,55 +468,6 @@ func (r *Runner) buildAndExtendDockerCompose(ctx context.Context, parsedConfig *
 	}
 
 	return buildImageName, dockerComposeFilePath, imageMetadata, extendImageBuildInfo.MetadataLabel, nil
-}
-
-func (r *Runner) buildFeatureContentImage(ctx context.Context, featureBuildInfo *feature.BuildInfo) (string, error) {
-	helper, err := r.composeHelper()
-	if err != nil {
-		return "", err
-	}
-
-	tempFeatureContentImage := "dev_container_feature_content_temp"
-	tempFeatureDockerfilePath := filepath.Join(featureBuildInfo.FeaturesFolder, "Dockerfile.buildContent")
-	tempFeatureDockerfileContent := `
-FROM scratch
-COPY . /tmp/build-features/
-`
-
-	if err := os.WriteFile(
-		tempFeatureDockerfilePath,
-		[]byte(tempFeatureDockerfileContent),
-		0666,
-	); err != nil {
-		return "", err
-	}
-
-	writer := r.Log.Writer(logrus.InfoLevel, false)
-	defer writer.Close()
-
-	r.Log.Debugf(
-		"Building docker image %s, using context %s with Dockerfile: \n %s",
-		tempFeatureContentImage,
-		tempFeatureDockerfilePath,
-		tempFeatureDockerfileContent,
-	)
-
-	if err := helper.Docker.Run(
-		ctx,
-		[]string{
-			"build",
-			"-t", tempFeatureContentImage,
-			"-f", tempFeatureDockerfilePath,
-			featureBuildInfo.FeaturesFolder,
-		},
-		nil,
-		writer,
-		writer,
-	); err != nil {
-		return "", err
-	}
-
-	return tempFeatureContentImage, nil
 }
 
 func (r *Runner) extendedDockerfile(featureBuildInfo *feature.BuildInfo, dockerfilePath, dockerfileContent string) (string, string) {

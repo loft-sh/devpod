@@ -22,13 +22,11 @@ var featureSafeIDRegex1 = regexp.MustCompile(`[^\w_]`)
 var featureSafeIDRegex2 = regexp.MustCompile(`^[\d_]+`)
 
 const FEATURE_BASE_DOCKERFILE = `
-#{nonBuildKitFeatureContentFallback}
-
 FROM $_DEV_CONTAINERS_BASE_IMAGE AS dev_containers_target_stage
 
 USER root
 
-COPY --from=dev_containers_feature_content_source #{featuresContentRoot} /tmp/build-features/
+COPY ./.devpod-features /tmp/build-features/
 RUN chmod -R 0755 /tmp/build-features && ls /tmp/build-features
 
 #{featureLayer}
@@ -51,10 +49,9 @@ type BuildInfo struct {
 	OverrideTarget          string
 	DockerfilePrefixContent string
 	BuildArgs               map[string]string
-	BuildKitContexts        map[string]string
 }
 
-func GetExtendedBuildInfo(substitutionContext *config.SubstitutionContext, baseImageMetadata *config.ImageMetadataConfig, user, target string, devContainerConfig *config.SubstitutedConfig, buildKitSupported bool, log log.Logger) (*ExtendedBuildInfo, error) {
+func GetExtendedBuildInfo(substitutionContext *config.SubstitutionContext, baseImageMetadata *config.ImageMetadataConfig, user, target string, devContainerConfig *config.SubstitutedConfig, log log.Logger) (*ExtendedBuildInfo, error) {
 	features, err := fetchFeatures(devContainerConfig.Config, log)
 	if err != nil {
 		return nil, errors.Wrap(err, "fetch features")
@@ -78,7 +75,8 @@ func GetExtendedBuildInfo(substitutionContext *config.SubstitutionContext, baseI
 		}, nil
 	}
 
-	buildInfo, err := getFeatureBuildOptions(baseImageMetadata, user, target, features, buildKitSupported)
+	contextPath := config.GetContextPath(devContainerConfig.Config)
+	buildInfo, err := getFeatureBuildOptions(contextPath, baseImageMetadata, user, target, features)
 	if err != nil {
 		return nil, err
 	}
@@ -91,11 +89,12 @@ func GetExtendedBuildInfo(substitutionContext *config.SubstitutionContext, baseI
 	}, nil
 }
 
-func getFeatureBuildOptions(baseImageMetadata *config.ImageMetadataConfig, user, target string, features []*config.FeatureSet, buildKitSupported bool) (*BuildInfo, error) {
+func getFeatureBuildOptions(contextPath string, baseImageMetadata *config.ImageMetadataConfig, user, target string, features []*config.FeatureSet) (*BuildInfo, error) {
 	containerUser, remoteUser := findContainerUsers(baseImageMetadata, "", user)
 
 	// copy features
-	featureFolder, err := copyFeaturesToDestination(features)
+	featureFolder := filepath.Join(contextPath, ".devpod-features")
+	err := copyFeaturesToDestination(features, featureFolder)
 	if err != nil {
 		return nil, err
 	}
@@ -113,47 +112,31 @@ _REMOTE_USER=`+remoteUser+"\n"), 0666)
 # syntax=docker.io/docker/dockerfile:1.4
 ARG _DEV_CONTAINERS_BASE_IMAGE=placeholder`
 
-	buildKitContexts := map[string]string{}
-	buildKitContentFallback := ""
-	featuresContentRoot := "."
-	if buildKitSupported {
-		buildKitContexts["dev_containers_feature_content_source"] = featureFolder
-	} else {
-		buildKitContentFallback = "FROM dev_container_feature_content_temp as dev_containers_feature_content_source"
-		featuresContentRoot = "/tmp/build-features/"
-	}
-	dockerfileContent = strings.ReplaceAll(dockerfileContent, "#{nonBuildKitFeatureContentFallback}", buildKitContentFallback)
-	dockerfileContent = strings.ReplaceAll(dockerfileContent, "#{featuresContentRoot}", featuresContentRoot)
-
 	return &BuildInfo{
 		FeaturesFolder:          featureFolder,
 		DockerfileContent:       dockerfileContent,
-		OverrideTarget:          "",
 		DockerfilePrefixContent: dockerfilePrefix,
+		OverrideTarget:          "dev_containers_target_stage",
 		BuildArgs: map[string]string{
 			"_DEV_CONTAINERS_BASE_IMAGE": target,
 			"_DEV_CONTAINERS_IMAGE_USER": user,
 		},
-		BuildKitContexts: buildKitContexts,
 	}, nil
 }
 
-func copyFeaturesToDestination(features []*config.FeatureSet) (string, error) {
-	tempDir, err := os.MkdirTemp("", "devpod")
-	if err != nil {
-		return "", errors.Wrap(err, "make temp dir")
-	}
-
+func copyFeaturesToDestination(features []*config.FeatureSet, targetDir string) error {
+	// make sure the folder doesn't exist initially
+	_ = os.RemoveAll(targetDir)
 	for i, feature := range features {
-		featureDir := filepath.Join(tempDir, strconv.Itoa(i))
-		err = os.MkdirAll(featureDir, 0755)
+		featureDir := filepath.Join(targetDir, strconv.Itoa(i))
+		err := os.MkdirAll(featureDir, 0755)
 		if err != nil {
-			return "", err
+			return err
 		}
 
 		err = copy.Directory(feature.Folder, featureDir)
 		if err != nil {
-			return "", errors.Wrapf(err, "copy feature %s", feature.ConfigID)
+			return errors.Wrapf(err, "copy feature %s", feature.ConfigID)
 		}
 
 		// copy feature folder
@@ -161,18 +144,18 @@ func copyFeaturesToDestination(features []*config.FeatureSet) (string, error) {
 		variables := getFeatureEnvVariables(feature.Config, feature.Options)
 		err = os.WriteFile(envPath, []byte(strings.Join(variables, "\n")), 0666)
 		if err != nil {
-			return "", errors.Wrapf(err, "write variables of feature %s", feature.ConfigID)
+			return errors.Wrapf(err, "write variables of feature %s", feature.ConfigID)
 		}
 
 		installWrapperPath := filepath.Join(featureDir, "devcontainer-features-install.sh")
 		installWrapperContent := getFeatureInstallWrapperScript(feature.ConfigID, feature.Config, variables)
 		err = os.WriteFile(installWrapperPath, []byte(installWrapperContent), 0666)
 		if err != nil {
-			return "", errors.Wrapf(err, "write install wrapper script for feature %s", feature.ConfigID)
+			return errors.Wrapf(err, "write install wrapper script for feature %s", feature.ConfigID)
 		}
 	}
 
-	return tempDir, nil
+	return nil
 }
 
 func getFeatureSafeID(featureID string) string {

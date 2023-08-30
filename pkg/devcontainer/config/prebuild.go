@@ -50,10 +50,12 @@ func CalculatePrebuildHash(originalConfig *DevContainerConfig, platform, archite
 		return "", err
 	}
 
+	// find out excludes from dockerignore
 	excludes, err := readDockerignore(contextPath, dockerfilePath)
 	if err != nil {
 		return "", errors.Errorf("Error reading .dockerignore: %v", err)
 	}
+	excludes = append(excludes, ".devpod-features/")
 
 	// get hash of the context directory
 	contextHash, err := util.DirectoryHash(contextPath, excludes)
@@ -61,7 +63,11 @@ func CalculatePrebuildHash(originalConfig *DevContainerConfig, platform, archite
 		return "", err
 	}
 
-	log.Debugf("Prebuild hash from: %s %s %s\n%s", architecture, string(configStr), dockerfileContent, contextHash)
+	log.Debugf("Prebuild hash from:")
+	log.Debugf("    Arch: %s", architecture)
+	log.Debugf("    Config: %s", string(configStr))
+	log.Debugf("    DockerfileContent: %s", dockerfileContent)
+	log.Debugf("    ContextHash: %s", contextHash)
 	return "devpod-" + hash.String(architecture + string(configStr) + dockerfileContent + contextHash)[:32], nil
 }
 

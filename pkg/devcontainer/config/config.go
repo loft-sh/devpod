@@ -2,6 +2,8 @@ package config
 
 import (
 	"encoding/json"
+	"path"
+	"path/filepath"
 	"strconv"
 	"strings"
 
@@ -299,6 +301,27 @@ func (m *Mount) String() string {
 	}
 	components = append(components, m.Other...)
 	return strings.Join(components, ",")
+}
+
+func GetContextPath(parsedConfig *DevContainerConfig) string {
+	context := ""
+	dockerfilePath := ""
+	if parsedConfig.Dockerfile != "" {
+		context = parsedConfig.Context
+		dockerfilePath = parsedConfig.Dockerfile
+	} else if parsedConfig.Build.Dockerfile != "" {
+		context = parsedConfig.Build.Context
+		dockerfilePath = parsedConfig.Build.Dockerfile
+	}
+
+	configDir := path.Dir(filepath.ToSlash(parsedConfig.Origin))
+	if context != "" {
+		return filepath.FromSlash(path.Join(configDir, context))
+	} else if dockerfilePath != "" {
+		return filepath.FromSlash(path.Join(configDir, path.Dir(dockerfilePath)))
+	}
+
+	return configDir
 }
 
 func ParseMount(str string) Mount {

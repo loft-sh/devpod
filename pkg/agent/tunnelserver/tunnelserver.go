@@ -46,10 +46,9 @@ func RunUpServer(ctx context.Context, reader io.Reader, writer io.WriteCloser, a
 	return tunnelServ.RunWithResult(ctx, reader, writer)
 }
 
-func RunSetupServer(ctx context.Context, reader io.Reader, writer io.WriteCloser, allowDockerCredentials bool, baseFolder string, mounts []*config.Mount, log log.Logger) (*config.Result, error) {
+func RunSetupServer(ctx context.Context, reader io.Reader, writer io.WriteCloser, allowDockerCredentials bool, mounts []*config.Mount, log log.Logger) (*config.Result, error) {
 	tunnelServ := &tunnelServer{
 		mounts:                 mounts,
-		mountsBaseFolder:       baseFolder,
 		allowDockerCredentials: allowDockerCredentials,
 		log:                    log,
 	}
@@ -61,8 +60,7 @@ type tunnelServer struct {
 	tunnel.UnimplementedTunnelServer
 
 	// stream mounts
-	mounts           []*config.Mount
-	mountsBaseFolder string
+	mounts []*config.Mount
 
 	forwarder              netstat.Forwarder
 	allowGitCredentials    bool

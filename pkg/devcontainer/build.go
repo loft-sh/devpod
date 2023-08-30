@@ -13,7 +13,6 @@ import (
 	"github.com/loft-sh/devpod/pkg/devcontainer/metadata"
 	"github.com/loft-sh/devpod/pkg/dockerfile"
 	"github.com/loft-sh/devpod/pkg/driver"
-	"github.com/loft-sh/devpod/pkg/driver/docker"
 	"github.com/loft-sh/devpod/pkg/image"
 	"github.com/pkg/errors"
 )
@@ -102,7 +101,7 @@ func (r *Runner) extendImage(ctx context.Context, parsedConfig *config.Substitut
 	}
 
 	// get extend image build info
-	extendedBuildInfo, err := feature.GetExtendedBuildInfo(r.SubstitutionContext, imageBuildInfo.Metadata, imageBuildInfo.User, imageBase, parsedConfig, true, r.Log)
+	extendedBuildInfo, err := feature.GetExtendedBuildInfo(r.SubstitutionContext, imageBuildInfo.Metadata, imageBuildInfo.User, imageBase, parsedConfig, r.Log)
 	if err != nil {
 		return nil, errors.Wrap(err, "get extended build info")
 	}
@@ -153,7 +152,7 @@ func (r *Runner) buildAndExtendImage(ctx context.Context, parsedConfig *config.S
 	}
 
 	// get extend image build info
-	extendedBuildInfo, err := feature.GetExtendedBuildInfo(r.SubstitutionContext, imageBuildInfo.Metadata, imageBuildInfo.User, imageBase, parsedConfig, true, r.Log)
+	extendedBuildInfo, err := feature.GetExtendedBuildInfo(r.SubstitutionContext, imageBuildInfo.Metadata, imageBuildInfo.User, imageBase, parsedConfig, r.Log)
 	if err != nil {
 		return nil, errors.Wrap(err, "get extended build info")
 	}
@@ -249,7 +248,7 @@ func (r *Runner) buildImage(ctx context.Context, parsedConfig *config.Substitute
 		return nil, err
 	}
 
-	prebuildHash, err := config.CalculatePrebuildHash(parsedConfig.Config, options.Platform, targetArch, docker.GetContextPath(parsedConfig.Config), dockerfilePath, dockerfileContent, r.Log)
+	prebuildHash, err := config.CalculatePrebuildHash(parsedConfig.Config, options.Platform, targetArch, config.GetContextPath(parsedConfig.Config), dockerfilePath, dockerfileContent, r.Log)
 	if err != nil {
 		return nil, err
 	}

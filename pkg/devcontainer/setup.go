@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"io"
 	"os"
-	"path/filepath"
 	"runtime"
 
 	"github.com/loft-sh/devpod/pkg/agent"
@@ -109,7 +108,6 @@ func (r *Runner) setupContainer(ctx context.Context, containerDetails *config.Co
 		stdoutReader,
 		stdinWriter,
 		false,
-		filepath.Dir(mergedConfig.Origin),
 		config.GetMounts(result),
 		r.Log,
 	)
