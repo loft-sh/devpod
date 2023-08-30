@@ -4,10 +4,7 @@ import (
 	"context"
 	"io"
 
-	"github.com/loft-sh/devpod/pkg/compose"
-	config2 "github.com/loft-sh/devpod/pkg/config"
 	"github.com/loft-sh/devpod/pkg/devcontainer/config"
-	"github.com/loft-sh/devpod/pkg/devcontainer/feature"
 )
 
 type Driver interface {
@@ -18,18 +15,10 @@ type Driver interface {
 	CommandDevContainer(ctx context.Context, workspaceId, user, command string, stdin io.Reader, stdout io.Writer, stderr io.Writer) error
 
 	// RunDevContainer runs a devcontainer
-	RunDevContainer(
-		ctx context.Context,
-		workspaceId string,
-		parsedConfig *config.DevContainerConfig,
-		mergedConfig *config.MergedDevContainerConfig,
-		imageName,
-		workspaceMount string,
-		labels []string,
-		ide string,
-		ideOptions map[string]config2.OptionValue,
-		imageDetails *config.ImageDetails,
-	) error
+	RunDevContainer(ctx context.Context, workspaceId string, options *RunOptions) error
+
+	// TargetArchitecture returns the architecture of the container runtime. e.g. amd64 or arm64
+	TargetArchitecture(ctx context.Context, workspaceId string) (string, error)
 
 	// DeleteDevContainer deletes the devcontainer
 	DeleteDevContainer(ctx context.Context, workspaceId string, deleteVolumes bool) error
@@ -39,25 +28,39 @@ type Driver interface {
 
 	// StopDevContainer stops the devcontainer
 	StopDevContainer(ctx context.Context, workspaceId string) error
+}
 
-	// InspectImage inspects the given image name
-	InspectImage(ctx context.Context, imageName string) (*config.ImageDetails, error)
+// RunOptions are the options for running a container
+type RunOptions struct {
+	// Image is the image to run
+	Image string `json:"image,omitempty"`
 
-	// BuildDevContainer builds a devcontainer
-	BuildDevContainer(
-		ctx context.Context,
-		workspaceId string,
-		parsedConfig *config.SubstitutedConfig,
-		extendedBuildInfo *feature.ExtendedBuildInfo,
-		dockerfilePath,
-		dockerfileContent string,
-		localWorkspaceFolder string,
-		options config.BuildOptions,
-	) (*config.BuildInfo, error)
+	// User is the user to run the container as
+	User string `json:"user,omitempty"`
 
-	// PushDevContainer pushes the given image to a registry
-	PushDevContainer(ctx context.Context, image string) error
+	// Entrypoint is the entrypoint of the container
+	Entrypoint string `json:"entrypoint,omitempty"`
 
-	// ComposeHelper returns the compose helper
-	ComposeHelper() (*compose.ComposeHelper, error)
+	// Cmd are the cmd for the entrypoint
+	Cmd []string `json:"cmd,omitempty"`
+
+	// Env are additional environment variables to set
+	Env map[string]string `json:"env,omitempty"`
+
+	// CapAdd are additional capabilities for the container
+	CapAdd []string `json:"capAdd,omitempty"`
+
+	// Labels are labels to set on the container
+	Labels []string `json:"labels,omitempty"`
+
+	// Privileged indicates if the container should run with elevated permissions
+	Privileged *bool `json:"privileged,omitempty"`
+
+	// WorkspaceMount is the mount where the workspace should get mounted
+	WorkspaceMount *config.Mount `json:"workspaceMount,omitempty"`
+
+	// Mounts are additional mounts on the container. Supported are volume and bind mounts.
+	// Bind mounts are expected to get copied from local to remote once. Volume mounts are expected
+	// to be persisted for the lifetime of the container.
+	Mounts []*config.Mount `json:"mounts,omitempty"`
 }

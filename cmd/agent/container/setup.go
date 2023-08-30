@@ -1,7 +1,9 @@
 package container
 
 import (
+	"context"
 	"encoding/json"
+	"fmt"
 	"os"
 	"os/exec"
 	"strconv"
@@ -9,10 +11,13 @@ import (
 
 	"github.com/loft-sh/devpod/cmd/flags"
 	"github.com/loft-sh/devpod/pkg/agent"
+	"github.com/loft-sh/devpod/pkg/agent/tunnel"
+	"github.com/loft-sh/devpod/pkg/agent/tunnelserver"
 	"github.com/loft-sh/devpod/pkg/compress"
 	config2 "github.com/loft-sh/devpod/pkg/config"
 	"github.com/loft-sh/devpod/pkg/devcontainer/config"
 	"github.com/loft-sh/devpod/pkg/devcontainer/setup"
+	"github.com/loft-sh/devpod/pkg/extract"
 	"github.com/loft-sh/devpod/pkg/ide/fleet"
 	"github.com/loft-sh/devpod/pkg/ide/jetbrains"
 	"github.com/loft-sh/devpod/pkg/ide/jupyter"
@@ -30,19 +35,25 @@ type SetupContainerCmd struct {
 	*flags.GlobalFlags
 
 	ChownWorkspace bool
+	StreamMounts   bool
 	WorkspaceInfo  string
 	SetupInfo      string
 }
 
 // NewSetupContainerCmd creates a new command
-func NewSetupContainerCmd() *cobra.Command {
-	cmd := &SetupContainerCmd{}
+func NewSetupContainerCmd(flags *flags.GlobalFlags) *cobra.Command {
+	cmd := &SetupContainerCmd{
+		GlobalFlags: flags,
+	}
 	setupContainerCmd := &cobra.Command{
 		Use:   "setup",
 		Short: "Sets up a container",
 		Args:  cobra.NoArgs,
-		RunE:  cmd.Run,
+		RunE: func(_ *cobra.Command, args []string) error {
+			return cmd.Run(context.Background())
+		},
 	}
+	setupContainerCmd.Flags().BoolVar(&cmd.StreamMounts, "stream-mounts", false, "If true, will try to stream the bind mounts from the host")
 	setupContainerCmd.Flags().BoolVar(&cmd.ChownWorkspace, "chown-workspace", false, "If DevPod should chown the workspace to the remote user")
 	setupContainerCmd.Flags().StringVar(&cmd.WorkspaceInfo, "workspace-info", "", "The workspace info")
 	setupContainerCmd.Flags().StringVar(&cmd.SetupInfo, "setup-info", "", "The container setup info")
@@ -51,8 +62,25 @@ func NewSetupContainerCmd() *cobra.Command {
 }
 
 // Run runs the command logic
-func (cmd *SetupContainerCmd) Run(_ *cobra.Command, _ []string) error {
-	log.Default.Debugf("Start setting up container...")
+func (cmd *SetupContainerCmd) Run(ctx context.Context) error {
+	// create a grpc client
+	tunnelClient, err := tunnelserver.NewTunnelClient(os.Stdin, os.Stdout, true)
+	if err != nil {
+		return fmt.Errorf("error creating tunnel client: %w", err)
+	}
+
+	// create debug logger
+	log := tunnelserver.NewTunnelLogger(ctx, tunnelClient, cmd.Debug)
+	log.Debugf("Created logger")
+
+	// this message serves as a ping to the client
+	_, err = tunnelClient.Ping(ctx, &tunnel.Empty{})
+	if err != nil {
+		return errors.Wrap(err, "ping client")
+	}
+
+	// start setting up container
+	log.Debugf("Start setting up container...")
 	workspaceInfo, _, err := agent.DecodeWorkspaceInfo(cmd.WorkspaceInfo)
 	if err != nil {
 		return err
@@ -69,14 +97,44 @@ func (cmd *SetupContainerCmd) Run(_ *cobra.Command, _ []string) error {
 		return err
 	}
 
+	// fill container env
+	err = fillContainerEnv(setupInfo)
+	if err != nil {
+		return err
+	}
+
+	// sync mounts
+	if cmd.StreamMounts {
+		mounts := config.GetMounts(setupInfo)
+		for _, m := range mounts {
+			files, err := os.ReadDir(m.Target)
+			if err == nil && len(files) > 0 {
+				continue
+			}
+
+			// stream mount
+			log.Infof("Copy %s into DevContainer %s", m.Source, m.Target)
+			stream, err := tunnelClient.StreamMount(ctx, &tunnel.StreamMountRequest{Mount: m.String()})
+			if err != nil {
+				return fmt.Errorf("init stream mount %s: %w", m.String(), err)
+			}
+
+			// target folder
+			err = extract.Extract(tunnelserver.NewStreamReader(stream, log), m.Target)
+			if err != nil {
+				return fmt.Errorf("stream stream mount %s: %w", m.String(), err)
+			}
+		}
+	}
+
 	// setting up container
-	err = setup.SetupContainer(setupInfo, workspaceInfo, cmd.ChownWorkspace, log.Default)
+	err = setup.SetupContainer(setupInfo, workspaceInfo, cmd.ChownWorkspace, log)
 	if err != nil {
 		return err
 	}
 
 	// install IDE
-	err = cmd.installIDE(setupInfo, workspaceInfo, log.Default)
+	err = cmd.installIDE(setupInfo, workspaceInfo, log)
 	if err != nil {
 		return err
 	}
@@ -84,7 +142,7 @@ func (cmd *SetupContainerCmd) Run(_ *cobra.Command, _ []string) error {
 	// start container daemon if necessary
 	if !workspaceInfo.CLIOptions.Proxy && !workspaceInfo.CLIOptions.DisableDaemon && workspaceInfo.Agent.ContainerTimeout != "" {
 		err = single.Single("devpod.daemon.pid", func() (*exec.Cmd, error) {
-			log.Default.Debugf("Start DevPod Container Daemon with Inactivity Timeout %s", workspaceInfo.Agent.ContainerTimeout)
+			log.Debugf("Start DevPod Container Daemon with Inactivity Timeout %s", workspaceInfo.Agent.ContainerTimeout)
 			binaryPath, err := os.Executable()
 			if err != nil {
 				return nil, err
@@ -97,6 +155,35 @@ func (cmd *SetupContainerCmd) Run(_ *cobra.Command, _ []string) error {
 		}
 	}
 
+	out, err := json.Marshal(setupInfo)
+	if err != nil {
+		return fmt.Errorf("marshal setup info: %w", err)
+	}
+
+	_, err = tunnelClient.SendResult(ctx, &tunnel.Message{Message: string(out)})
+	if err != nil {
+		return fmt.Errorf("send result: %w", err)
+	}
+
+	return nil
+}
+
+func fillContainerEnv(setupInfo *config.Result) error {
+	// set remote-env
+	if setupInfo.MergedConfig.RemoteEnv == nil {
+		setupInfo.MergedConfig.RemoteEnv = make(map[string]string)
+	}
+	if _, ok := setupInfo.MergedConfig.RemoteEnv["PATH"]; !ok {
+		setupInfo.MergedConfig.RemoteEnv["PATH"] = "${containerEnv:PATH}"
+	}
+
+	// merge config
+	newMergedConfig := &config.MergedDevContainerConfig{}
+	err := config.SubstituteContainerEnv(config.ListToObject(os.Environ()), setupInfo.MergedConfig, newMergedConfig)
+	if err != nil {
+		return errors.Wrap(err, "substitute container env")
+	}
+	setupInfo.MergedConfig = newMergedConfig
 	return nil
 }
 

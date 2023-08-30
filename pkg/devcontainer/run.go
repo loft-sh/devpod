@@ -70,7 +70,7 @@ type UpOptions struct {
 
 func (r *Runner) prepare(
 	options provider2.CLIOptions,
-) (*config.SubstitutedConfig, *WorkspaceConfig, error) {
+) (*config.SubstitutedConfig, error) {
 	rawParsedConfig, err := config.ParseDevContainerJSON(
 		r.LocalWorkspaceFolder,
 		r.WorkspaceConfig.Workspace.DevContainerPath,
@@ -79,7 +79,7 @@ func (r *Runner) prepare(
 	// We want to fail only in case of real errors, non-existing devcontainer.jon
 	// will be gracefully handled by the auto-detection mechanism
 	if err != nil && !os.IsNotExist(err) {
-		return nil, nil, errors.Wrap(err, "parsing devcontainer.json")
+		return nil, errors.Wrap(err, "parsing devcontainer.json")
 	} else if rawParsedConfig == nil {
 		r.Log.Infof("Couldn't find a devcontainer.json")
 		r.Log.Infof("Try detecting project programming language...")
@@ -87,7 +87,7 @@ func (r *Runner) prepare(
 		defaultConfig.Origin = path.Join(filepath.ToSlash(r.LocalWorkspaceFolder), ".devcontainer.json")
 		err = config.SaveDevContainerJSON(defaultConfig)
 		if err != nil {
-			return nil, nil, errors.Wrap(err, "write default devcontainer.json")
+			return nil, errors.Wrap(err, "write default devcontainer.json")
 		}
 
 		rawParsedConfig = defaultConfig
@@ -95,7 +95,7 @@ func (r *Runner) prepare(
 	configFile := rawParsedConfig.Origin
 
 	// get workspace folder within container
-	workspace := getWorkspace(
+	workspaceMount, containerWorkspaceFolder := getWorkspace(
 		r.LocalWorkspaceFolder,
 		r.WorkspaceConfig.Workspace.ID,
 		rawParsedConfig,
@@ -103,21 +103,23 @@ func (r *Runner) prepare(
 	r.SubstitutionContext = &config.SubstitutionContext{
 		DevContainerID:           r.ID,
 		LocalWorkspaceFolder:     r.LocalWorkspaceFolder,
-		ContainerWorkspaceFolder: workspace.RemoteWorkspaceFolder,
+		ContainerWorkspaceFolder: containerWorkspaceFolder,
 		Env:                      config.ListToObject(os.Environ()),
+
+		WorkspaceMount: workspaceMount,
 	}
 
 	// substitute & load
 	parsedConfig := &config.DevContainerConfig{}
 	err = config.Substitute(r.SubstitutionContext, rawParsedConfig, parsedConfig)
 	if err != nil {
-		return nil, nil, err
+		return nil, err
 	}
 	if parsedConfig.WorkspaceFolder != "" {
-		workspace.RemoteWorkspaceFolder = parsedConfig.WorkspaceFolder
+		r.SubstitutionContext.ContainerWorkspaceFolder = parsedConfig.WorkspaceFolder
 	}
 	if parsedConfig.WorkspaceMount != "" {
-		workspace.WorkspaceMount = parsedConfig.WorkspaceMount
+		r.SubstitutionContext.WorkspaceMount = parsedConfig.WorkspaceMount
 	}
 
 	if options.DevContainerImage != "" {
@@ -131,11 +133,11 @@ func (r *Runner) prepare(
 	return &config.SubstitutedConfig{
 		Config: parsedConfig,
 		Raw:    rawParsedConfig,
-	}, &workspace, nil
+	}, nil
 }
 
 func (r *Runner) Up(ctx context.Context, options UpOptions) (*config.Result, error) {
-	substitutedConfig, workspace, err := r.prepare(options.CLIOptions)
+	substitutedConfig, err := r.prepare(options.CLIOptions)
 	if err != nil {
 		return nil, err
 	}
@@ -152,7 +154,6 @@ func (r *Runner) Up(ctx context.Context, options UpOptions) (*config.Result, err
 		result, err = r.runSingleContainer(
 			ctx,
 			substitutedConfig,
-			workspace.WorkspaceMount,
 			options,
 		)
 		if err != nil {
@@ -176,8 +177,7 @@ func (r *Runner) Up(ctx context.Context, options UpOptions) (*config.Result, err
 		}
 
 		substitutedConfig.Config.ImageContainer = language.MapConfig[lang].ImageContainer
-
-		result, err = r.runSingleContainer(ctx, substitutedConfig, workspace.WorkspaceMount, options)
+		result, err = r.runSingleContainer(ctx, substitutedConfig, options)
 		if err != nil {
 			return nil, err
 		}
@@ -247,21 +247,13 @@ func runInitializeCommand(
 	return nil
 }
 
-type WorkspaceConfig struct {
-	WorkspaceMount        string
-	RemoteWorkspaceFolder string
-}
-
 func getWorkspace(
 	workspaceFolder, workspaceID string,
 	conf *config.DevContainerConfig,
-) WorkspaceConfig {
+) (string, string) {
 	if conf.WorkspaceMount != "" {
 		mount := config.ParseMount(conf.WorkspaceMount)
-		return WorkspaceConfig{
-			WorkspaceMount:        conf.WorkspaceMount,
-			RemoteWorkspaceFolder: mount.Target,
-		}
+		return conf.WorkspaceMount, mount.Target
 	}
 
 	containerMountFolder := conf.WorkspaceFolder
@@ -274,15 +266,12 @@ func getWorkspace(
 		consistency = ",consistency='consistent'"
 	}
 
-	return WorkspaceConfig{
-		RemoteWorkspaceFolder: containerMountFolder,
-		WorkspaceMount: fmt.Sprintf(
-			"type=bind,source=%s,target=%s%s",
-			workspaceFolder,
-			containerMountFolder,
-			consistency,
-		),
-	}
+	return fmt.Sprintf(
+		"type=bind,source=%s,target=%s%s",
+		workspaceFolder,
+		containerMountFolder,
+		consistency,
+	), containerMountFolder
 }
 
 func GetRunnerIDFromWorkspace(workspace *provider2.Workspace) string {

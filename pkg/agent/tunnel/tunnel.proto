@@ -8,14 +8,22 @@ package tunnel;
 service Tunnel {
   rpc Ping(Empty) returns (Empty) {}
   rpc Log(LogMessage) returns (Empty) {}
-  rpc GitCloneAndRead(Empty) returns (stream Chunk) {}
-  rpc ReadWorkspace(Empty) returns (stream Chunk) {}
   rpc SendResult(Message) returns (Empty) {}
+
   rpc DockerCredentials(Message) returns (Message) {}
   rpc GitCredentials(Message) returns (Message) {}
   rpc GitUser(Empty) returns (Message) {}
+
   rpc ForwardPort(ForwardPortRequest) returns (ForwardPortResponse) {}
   rpc StopForwardPort(StopForwardPortRequest) returns (StopForwardPortResponse) {}
+
+  rpc StreamGitClone(Empty) returns (stream Chunk) {}
+  rpc StreamWorkspace(Empty) returns (stream Chunk) {}
+  rpc StreamMount(StreamMountRequest) returns (stream Chunk) {}
+}
+
+message StreamMountRequest {
+  string mount = 1;
 }
 
 message StopForwardPortRequest {

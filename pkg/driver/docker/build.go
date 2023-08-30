@@ -8,7 +8,6 @@ import (
 	"os"
 	"path"
 	"path/filepath"
-	"runtime"
 	"strings"
 
 	"github.com/loft-sh/devpod/pkg/devcontainer/build"
@@ -19,7 +18,6 @@ import (
 	"github.com/loft-sh/devpod/pkg/docker"
 	"github.com/loft-sh/devpod/pkg/dockerfile"
 	"github.com/loft-sh/devpod/pkg/id"
-	"github.com/loft-sh/devpod/pkg/image"
 	"github.com/loft-sh/log/hash"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
@@ -27,7 +25,7 @@ import (
 
 func (d *dockerDriver) BuildDevContainer(
 	ctx context.Context,
-	workspaceId string,
+	prebuildHash string,
 	parsedConfig *config.SubstitutedConfig,
 	extendedBuildInfo *feature.ExtendedBuildInfo,
 	dockerfilePath,
@@ -35,60 +33,21 @@ func (d *dockerDriver) BuildDevContainer(
 	localWorkspaceFolder string,
 	options config.BuildOptions,
 ) (*config.BuildInfo, error) {
-	prebuildHash, err := config.CalculatePrebuildHash(parsedConfig.Config, options.Platform, runtime.GOARCH, GetContextPath(parsedConfig.Config), dockerfilePath, dockerfileContent, d.Log)
-	if err != nil {
-		return nil, err
-	}
-
-	// check if there is a prebuild image
+	// check if image build is necessary
 	imageName := GetImageName(localWorkspaceFolder, prebuildHash)
-	if !options.ForceBuild {
-		devPodCustomizations := config.GetDevPodCustomizations(parsedConfig.Config)
-		if options.Repository != "" {
-			options.PrebuildRepositories = append(options.PrebuildRepositories, options.Repository)
-		}
-		options.PrebuildRepositories = append(options.PrebuildRepositories, devPodCustomizations.PrebuildRepository...)
-
-		d.Log.Debugf("Try to find prebuild image %s in repositories %s", prebuildHash, strings.Join(options.PrebuildRepositories, ","))
-		for _, prebuildRepo := range options.PrebuildRepositories {
-			prebuildImage := prebuildRepo + ":" + prebuildHash
-			img, err := image.GetImage(prebuildImage)
-			if err == nil && img != nil {
-				// prebuild image found
-				d.Log.Infof("Found existing prebuilt image %s", prebuildImage)
-
-				// inspect image
-				imageDetails, err := d.InspectImage(ctx, prebuildImage)
-				if err != nil {
-					return nil, errors.Wrap(err, "get image details")
-				}
-
-				return &config.BuildInfo{
-					ImageDetails:  imageDetails,
-					ImageMetadata: extendedBuildInfo.MetadataConfig,
-					ImageName:     prebuildImage,
-					PrebuildHash:  prebuildHash,
-				}, nil
-			} else if err != nil {
-				d.Log.Debugf("Error trying to find prebuild image %s: %v", prebuildImage, err)
-			}
-		}
-
-		// check if image build is necessary
-		if options.Repository == "" {
-			imageDetails, err := d.Docker.InspectImage(ctx, imageName, false)
-			if err == nil && imageDetails != nil {
-				// local image found
-				d.Log.Infof("Found existing local image %s", imageName)
-				return &config.BuildInfo{
-					ImageDetails:  imageDetails,
-					ImageMetadata: extendedBuildInfo.MetadataConfig,
-					ImageName:     imageName,
-					PrebuildHash:  prebuildHash,
-				}, nil
-			} else if err != nil {
-				d.Log.Debugf("Error trying to find local image %s: %v", imageName, err)
-			}
+	if options.Repository == "" {
+		imageDetails, err := d.Docker.InspectImage(ctx, imageName, false)
+		if err == nil && imageDetails != nil {
+			// local image found
+			d.Log.Infof("Found existing local image %s", imageName)
+			return &config.BuildInfo{
+				ImageDetails:  imageDetails,
+				ImageMetadata: extendedBuildInfo.MetadataConfig,
+				ImageName:     imageName,
+				PrebuildHash:  prebuildHash,
+			}, nil
+		} else if err != nil {
+			d.Log.Debugf("Error trying to find local image %s: %v", imageName, err)
 		}
 	}
 

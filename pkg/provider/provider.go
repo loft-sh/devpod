@@ -157,22 +157,6 @@ type ProviderKubernetesDriverConfig struct {
 	// NodeSelector holds the node selector for the workspace pod
 	NodeSelector string `json:"nodeSelector,omitempty"`
 
-	// BuildRepository defines the repository to push builds. If empty,
-	// DevPod will not try to build any images at all.
-	BuildRepository string `json:"buildRepository,omitempty"`
-
-	// BuildkitImage is the build kit image to use
-	BuildkitImage string `json:"buildkitImage,omitempty"`
-
-	// BuildkitPrivileged signals if pod should be ran in privileged mode
-	BuildkitPrivileged types.StrBool `json:"buildkitPrivileged,omitempty"`
-
-	// BuildkitResources holds the resources the buildkit container should have
-	BuildkitResources string `json:"buildkitResources,omitempty"`
-
-	// BuildkitNodeSelector holds the node selector for the build pod
-	BuildkitNodeSelector string `json:"buildkitNodeSelector,omitempty"`
-
 	// HelperImage is used to find out cluster architecture and copy files
 	HelperImage string `json:"helperImage,omitempty"`
 

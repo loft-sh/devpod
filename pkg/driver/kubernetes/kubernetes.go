@@ -9,10 +9,8 @@ import (
 	"strings"
 
 	"github.com/loft-sh/devpod/pkg/command"
-	"github.com/loft-sh/devpod/pkg/compose"
 	"github.com/loft-sh/devpod/pkg/devcontainer/config"
 	"github.com/loft-sh/devpod/pkg/driver"
-	"github.com/loft-sh/devpod/pkg/image"
 	provider2 "github.com/loft-sh/devpod/pkg/provider"
 	"github.com/loft-sh/log"
 	perrors "github.com/pkg/errors"
@@ -99,21 +97,6 @@ func (k *kubernetesDriver) infoFromObject(ctx context.Context, pvc *corev1.Persi
 		return nil, nil
 	}
 
-	// merge env
-	env := containerInfo.ImageDetails.Config.Env
-	for k, v := range containerInfo.MergedConfig.ContainerEnv {
-		env = append(env, k+"="+v)
-	}
-
-	// merge labels
-	labels := map[string]string{}
-	for k, v := range containerInfo.ImageDetails.Config.Labels {
-		labels[k] = v
-	}
-	for k, v := range config.ListToObject(containerInfo.Labels) {
-		labels[k] = v
-	}
-
 	// check pod
 	pod, err := k.waitPodRunning(ctx, pvc.Name)
 	if err != nil {
@@ -141,10 +124,8 @@ func (k *kubernetesDriver) infoFromObject(ctx context.Context, pvc *corev1.Persi
 			StartedAt: startedAt,
 		},
 		Config: config.ContainerDetailsConfig{
-			Image:  containerInfo.ImageName,
-			User:   containerInfo.ImageDetails.Config.User,
-			Env:    env,
-			Labels: labels,
+			Labels: config.ListToObject(containerInfo.Options.Labels),
+			User:   containerInfo.Options.User,
 		},
 	}, nil
 }
@@ -239,26 +220,4 @@ func (k *kubernetesDriver) runCommandWithDir(ctx context.Context, dir string, ar
 	cmd.Stdout = stdout
 	cmd.Stderr = stderr
 	return cmd.Run()
-}
-
-func (k *kubernetesDriver) InspectImage(ctx context.Context, imageName string) (*config.ImageDetails, error) {
-	imageConfig, _, err := image.GetImageConfig(imageName)
-	if err != nil {
-		return nil, err
-	}
-
-	return &config.ImageDetails{
-		ID: imageName,
-		Config: config.ImageDetailsConfig{
-			User:       imageConfig.Config.User,
-			Env:        imageConfig.Config.Env,
-			Labels:     imageConfig.Config.Labels,
-			Entrypoint: imageConfig.Config.Entrypoint,
-			Cmd:        imageConfig.Config.Cmd,
-		},
-	}, nil
-}
-
-func (k *kubernetesDriver) ComposeHelper() (*compose.ComposeHelper, error) {
-	return nil, fmt.Errorf("docker compose is currently not supported with Kubernetes")
 }

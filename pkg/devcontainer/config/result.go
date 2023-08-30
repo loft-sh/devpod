@@ -1,9 +1,21 @@
 package config
 
 type Result struct {
-	ContainerDetails    *ContainerDetails         `json:"ContainerDetails"`
 	MergedConfig        *MergedDevContainerConfig `json:"MergedConfig"`
 	SubstitutionContext *SubstitutionContext      `json:"SubstitutionContext"`
+	ContainerDetails    *ContainerDetails         `json:"ContainerDetails"`
+}
+
+func GetMounts(result *Result) []*Mount {
+	workspaceMount := ParseMount(result.SubstitutionContext.WorkspaceMount)
+	mounts := []*Mount{&workspaceMount}
+	for _, m := range result.MergedConfig.Mounts {
+		if m.Type == "bind" {
+			mounts = append(mounts, m)
+		}
+	}
+
+	return mounts
 }
 
 func GetRemoteUser(result *Result) string {

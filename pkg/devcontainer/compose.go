@@ -18,6 +18,7 @@ import (
 	"github.com/loft-sh/devpod/pkg/devcontainer/feature"
 	"github.com/loft-sh/devpod/pkg/devcontainer/metadata"
 	"github.com/loft-sh/devpod/pkg/dockerfile"
+	"github.com/loft-sh/devpod/pkg/driver"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 	"gopkg.in/yaml.v2"
@@ -29,13 +30,22 @@ const (
 	FeaturesStartOverrideFilePrefix = "docker-compose.devcontainer.containerFeatures"
 )
 
+func (r *Runner) composeHelper() (*compose.ComposeHelper, error) {
+	dockerDriver, ok := r.Driver.(driver.DockerDriver)
+	if !ok {
+		return nil, fmt.Errorf("docker compose is not supported by this provider, please choose a different one")
+	}
+
+	return dockerDriver.ComposeHelper()
+}
+
 func (r *Runner) stopDockerCompose(ctx context.Context, projectName string) error {
-	composeHelper, err := r.Driver.ComposeHelper()
+	composeHelper, err := r.composeHelper()
 	if err != nil {
 		return errors.Wrap(err, "find docker compose")
 	}
 
-	parsedConfig, _, err := r.prepare(r.WorkspaceConfig.CLIOptions)
+	parsedConfig, err := r.prepare(r.WorkspaceConfig.CLIOptions)
 	if err != nil {
 		return errors.Wrap(err, "get parsed config")
 	}
@@ -54,12 +64,12 @@ func (r *Runner) stopDockerCompose(ctx context.Context, projectName string) erro
 }
 
 func (r *Runner) deleteDockerCompose(ctx context.Context, projectName string) error {
-	composeHelper, err := r.Driver.ComposeHelper()
+	composeHelper, err := r.composeHelper()
 	if err != nil {
 		return errors.Wrap(err, "find docker compose")
 	}
 
-	parsedConfig, _, err := r.prepare(r.WorkspaceConfig.CLIOptions)
+	parsedConfig, err := r.prepare(r.WorkspaceConfig.CLIOptions)
 	if err != nil {
 		return errors.Wrap(err, "get parsed config")
 	}
@@ -101,7 +111,7 @@ func (r *Runner) dockerComposeProjectFiles(parsedConfig *config.SubstitutedConfi
 }
 
 func (r *Runner) runDockerCompose(ctx context.Context, parsedConfig *config.SubstitutedConfig, options UpOptions) (*config.Result, error) {
-	composeHelper, err := r.Driver.ComposeHelper()
+	composeHelper, err := r.composeHelper()
 	if err != nil {
 		return nil, errors.Wrap(err, "find docker compose")
 	}
@@ -145,24 +155,8 @@ func (r *Runner) runDockerCompose(ctx context.Context, parsedConfig *config.Subs
 		return nil, errors.Wrap(err, "merge config")
 	}
 
-	newMergedConfig := &config.MergedDevContainerConfig{}
-	err = config.SubstituteContainerEnv(config.ListToObject(containerDetails.Config.Env), mergedConfig, newMergedConfig)
-	if err != nil {
-		return nil, errors.Wrap(err, "substitute container env")
-	}
-
 	// setup container
-	err = r.setupContainer(ctx, containerDetails, newMergedConfig)
-	if err != nil {
-		return nil, errors.Wrap(err, "setup container")
-	}
-
-	// return result
-	return &config.Result{
-		ContainerDetails:    containerDetails,
-		MergedConfig:        newMergedConfig,
-		SubstitutionContext: r.SubstitutionContext,
-	}, nil
+	return r.setupContainer(ctx, containerDetails, mergedConfig)
 }
 
 func (r *Runner) getDockerComposeFilePaths(parsedConfig *config.SubstitutedConfig, envFiles []string) ([]string, error) {
@@ -285,7 +279,7 @@ func (r *Runner) startContainer(
 			currentImageName = originalImageName
 		}
 
-		imageDetails, err := r.Driver.InspectImage(ctx, currentImageName)
+		imageDetails, err := r.inspectImage(ctx, currentImageName)
 		if err != nil {
 			return nil, errors.Wrap(err, "inspect image")
 		}
@@ -481,7 +475,7 @@ func (r *Runner) buildAndExtendDockerCompose(ctx context.Context, parsedConfig *
 }
 
 func (r *Runner) buildFeatureContentImage(ctx context.Context, featureBuildInfo *feature.BuildInfo) (string, error) {
-	helper, err := r.Driver.ComposeHelper()
+	helper, err := r.composeHelper()
 	if err != nil {
 		return "", err
 	}

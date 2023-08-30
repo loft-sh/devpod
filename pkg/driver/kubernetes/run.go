@@ -6,13 +6,11 @@ import (
 	"encoding/json"
 	"fmt"
 	"path/filepath"
-	"runtime"
 	"strconv"
 	"strings"
 
-	config2 "github.com/loft-sh/devpod/pkg/config"
 	"github.com/loft-sh/devpod/pkg/devcontainer/config"
-	"github.com/loft-sh/devpod/pkg/driver/docker"
+	"github.com/loft-sh/devpod/pkg/driver"
 	"github.com/pkg/errors"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -26,25 +24,14 @@ var DevPodLabels = map[string]string{
 }
 
 type DevContainerInfo struct {
-	ParsedConfig   *config.DevContainerConfig
-	MergedConfig   *config.MergedDevContainerConfig
-	ImageDetails   *config.ImageDetails
-	ImageName      string
-	WorkspaceMount string
-	Labels         []string
+	WorkspaceID string
+	Options     *driver.RunOptions
 }
 
 func (k *kubernetesDriver) RunDevContainer(
 	ctx context.Context,
 	workspaceId string,
-	parsedConfig *config.DevContainerConfig,
-	mergedConfig *config.MergedDevContainerConfig,
-	imageName,
-	workspaceMount string,
-	labels []string,
-	ide string,
-	ideOptions map[string]config2.OptionValue,
-	imageDetails *config.ImageDetails,
+	options *driver.RunOptions,
 ) error {
 	// namespace
 	if k.namespace != "" && k.config.CreateNamespace == "true" {
@@ -63,7 +50,7 @@ func (k *kubernetesDriver) RunDevContainer(
 		return err
 	} else if pvc == nil {
 		// create persistent volume claim
-		err = k.createPersistentVolumeClaim(ctx, workspaceId, parsedConfig, mergedConfig, imageName, workspaceMount, labels, imageDetails)
+		err = k.createPersistentVolumeClaim(ctx, workspaceId, options)
 		if err != nil {
 			return err
 		}
@@ -72,7 +59,7 @@ func (k *kubernetesDriver) RunDevContainer(
 	}
 
 	// create dev container
-	err = k.runContainer(ctx, workspaceId, parsedConfig, mergedConfig, imageName, workspaceMount, imageDetails, initialize)
+	err = k.runContainer(ctx, workspaceId, options, initialize)
 	if err != nil {
 		return err
 	}
@@ -83,15 +70,11 @@ func (k *kubernetesDriver) RunDevContainer(
 func (k *kubernetesDriver) runContainer(
 	ctx context.Context,
 	id string,
-	parsedConfig *config.DevContainerConfig,
-	mergedConfig *config.MergedDevContainerConfig,
-	imageName string,
-	workspaceMount string,
-	imageDetails *config.ImageDetails,
+	options *driver.RunOptions,
 	initialize bool,
 ) (err error) {
 	// get workspace mount
-	mount := config.ParseMount(workspaceMount)
+	mount := options.WorkspaceMount
 	if mount.Target == "" {
 		return fmt.Errorf("workspace mount target is empty")
 	}
@@ -117,21 +100,17 @@ func (k *kubernetesDriver) runContainer(
 	// get init container
 	var initContainer []corev1.Container
 	if initialize {
-		initContainer, err = k.getInitContainer(mergedConfig, imageName)
+		initContainer, err = k.getInitContainer(options)
 		if err != nil {
 			return errors.Wrap(err, "build init container")
 		}
 	}
 
 	// loop over volume mounts
-	copyFromLocal := []*config.Mount{&mount}
-	volumeMounts := []corev1.VolumeMount{getVolumeMount(0, &mount)}
-	for idx, mount := range mergedConfig.Mounts {
+	volumeMounts := []corev1.VolumeMount{getVolumeMount(0, mount)}
+	for idx, mount := range options.Mounts {
 		volumeMount := getVolumeMount(idx+1, mount)
-		if mount.Type == "bind" {
-			copyFromLocal = append(copyFromLocal, mount)
-			volumeMounts = append(volumeMounts, volumeMount)
-		} else if mount.Type == "volume" {
+		if mount.Type == "bind" || mount.Type == "volume" {
 			volumeMounts = append(volumeMounts, volumeMount)
 		} else {
 			k.Log.Warnf("Unsupported mount type '%s' in mount '%s', will skip", mount.Type, mount.String())
@@ -140,16 +119,16 @@ func (k *kubernetesDriver) runContainer(
 
 	// capabilities
 	var capabilities *corev1.Capabilities
-	if len(mergedConfig.CapAdd) > 0 {
+	if len(options.CapAdd) > 0 {
 		capabilities = &corev1.Capabilities{}
-		for _, cap := range mergedConfig.CapAdd {
+		for _, cap := range options.CapAdd {
 			capabilities.Add = append(capabilities.Add, corev1.Capability(cap))
 		}
 	}
 
 	// env vars
 	envVars := []corev1.EnvVar{}
-	for k, v := range mergedConfig.ContainerEnv {
+	for k, v := range options.Env {
 		envVars = append(envVars, corev1.EnvVar{
 			Name:  k,
 			Value: v,
@@ -180,7 +159,7 @@ func (k *kubernetesDriver) runContainer(
 		return err
 	}
 
-	entrypoint, args := docker.GetContainerEntrypointAndArgs(mergedConfig, imageDetails)
+	// parse resources
 	resources := parseResources(k.config.Resources, k.Log)
 
 	// create the pod manifest
@@ -190,7 +169,7 @@ func (k *kubernetesDriver) runContainer(
 	pod.Spec.ServiceAccountName = serviceAccount
 	pod.Spec.NodeSelector = nodeSelector
 	pod.Spec.InitContainers = append(initContainer, pod.Spec.InitContainers...)
-	pod.Spec.Containers = getContainers(pod, imageName, entrypoint, args, envVars, volumeMounts, capabilities, resources, mergedConfig.Privileged)
+	pod.Spec.Containers = getContainers(pod, options.Image, options.Entrypoint, options.Cmd, envVars, volumeMounts, capabilities, resources, options.Privileged)
 	pod.Spec.Volumes = getVolumes(pod, id)
 	pod.Spec.RestartPolicy = corev1.RestartPolicyNever
 
@@ -216,52 +195,20 @@ func (k *kubernetesDriver) runContainer(
 		return err
 	}
 
-	// copy local to pod
-	if initialize {
-		for _, copyMount := range copyFromLocal {
-			// run kubectl
-			sourcePath, err := transformPath(copyMount.Source)
-			if err != nil {
-				return fmt.Errorf("transform path %s: %w", copyMount.Source, err)
-			}
-
-			k.Log.Infof("Copy %s into DevContainer %s", copyMount.Source, copyMount.Target)
-			buf := &bytes.Buffer{}
-			err = k.runCommandWithDir(ctx, filepath.Dir(parsedConfig.Origin), []string{"cp", "-c", "devpod", sourcePath, fmt.Sprintf("%s:%s", id, strings.TrimRight(copyMount.Target, "/"))}, nil, buf, buf)
-			if err != nil {
-				return errors.Wrap(err, "copy to devcontainer")
-			}
-		}
-	}
-
 	return nil
 }
 
-// transform creates a windows compatible path https://github.com/kubernetes/kubectl/issues/1225
-func transformPath(source string) (string, error) {
-	if runtime.GOOS != "windows" {
-		return strings.TrimRight(source, "/") + "/.", nil
-	}
-
-	var err error
-	source = filepath.FromSlash(source)
-	if !filepath.IsAbs(source) {
-		source, err = filepath.Abs(source)
-		if err != nil {
-			return "", err
-		}
-	}
-
-	volumeName := filepath.VolumeName(source)
-	if volumeName == "" {
-		return "", fmt.Errorf("no volume name in string: %s", source)
-	}
-
-	source = strings.TrimPrefix(source, volumeName)
-	return source, nil
-}
-
-func getContainers(pod *corev1.Pod, imageName, entrypoint string, args []string, envVars []corev1.EnvVar, volumeMounts []corev1.VolumeMount, capabilities *corev1.Capabilities, resources corev1.ResourceRequirements, privileged *bool) []corev1.Container {
+func getContainers(
+	pod *corev1.Pod,
+	imageName,
+	entrypoint string,
+	args []string,
+	envVars []corev1.EnvVar,
+	volumeMounts []corev1.VolumeMount,
+	capabilities *corev1.Capabilities,
+	resources corev1.ResourceRequirements,
+	privileged *bool,
+) []corev1.Container {
 	devPodContainer := corev1.Container{
 		Name:         DevContainerName,
 		Image:        imageName,
@@ -390,11 +337,7 @@ func (k *kubernetesDriver) StartDevContainer(ctx context.Context, workspaceId st
 	return k.runContainer(
 		ctx,
 		workspaceId,
-		containerInfo.ParsedConfig,
-		containerInfo.MergedConfig,
-		containerInfo.ImageName,
-		containerInfo.WorkspaceMount,
-		containerInfo.ImageDetails,
+		containerInfo.Options,
 		false,
 	)
 }

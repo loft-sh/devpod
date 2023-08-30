@@ -5,12 +5,16 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"github.com/loft-sh/devpod/pkg/compose"
 	"github.com/loft-sh/devpod/pkg/devcontainer/config"
 	"github.com/loft-sh/devpod/pkg/devcontainer/feature"
 	"github.com/loft-sh/devpod/pkg/devcontainer/metadata"
 	"github.com/loft-sh/devpod/pkg/dockerfile"
+	"github.com/loft-sh/devpod/pkg/driver"
+	"github.com/loft-sh/devpod/pkg/driver/docker"
+	"github.com/loft-sh/devpod/pkg/image"
 	"github.com/pkg/errors"
 )
 
@@ -18,7 +22,7 @@ func (r *Runner) build(ctx context.Context, parsedConfig *config.SubstitutedConf
 	if isDockerFileConfig(parsedConfig.Config) {
 		return r.buildAndExtendImage(ctx, parsedConfig, options)
 	} else if isDockerComposeConfig(parsedConfig.Config) {
-		composeHelper, err := r.Driver.ComposeHelper()
+		composeHelper, err := r.composeHelper()
 		if err != nil {
 			return nil, errors.Wrap(err, "find docker compose")
 		}
@@ -74,7 +78,7 @@ func (r *Runner) build(ctx context.Context, parsedConfig *config.SubstitutedConf
 			currentImageName = originalImageName
 		}
 
-		imageDetails, err := r.Driver.InspectImage(ctx, currentImageName)
+		imageDetails, err := r.inspectImage(ctx, currentImageName)
 		if err != nil {
 			return nil, errors.Wrap(err, "inspect image")
 		}
@@ -179,7 +183,7 @@ func (r *Runner) getDockerfilePath(parsedConfig *config.DevContainerConfig) (str
 }
 
 func (r *Runner) getImageBuildInfoFromImage(ctx context.Context, imageName string) (*config.ImageBuildInfo, error) {
-	imageDetails, err := r.Driver.InspectImage(ctx, imageName)
+	imageDetails, err := r.inspectImage(ctx, imageName)
 	if err != nil {
 		return nil, err
 	}
@@ -212,7 +216,7 @@ func (r *Runner) getImageBuildInfoFromDockerfile(dockerFileContent string, build
 		return nil, fmt.Errorf("find base image %s", target)
 	}
 
-	imageDetails, err := r.Driver.InspectImage(context.TODO(), baseImage)
+	imageDetails, err := r.inspectImage(context.TODO(), baseImage)
 	if err != nil {
 		return nil, errors.Wrapf(err, "inspect image %s", baseImage)
 	}
@@ -240,5 +244,54 @@ func (r *Runner) getImageBuildInfoFromDockerfile(dockerFileContent string, build
 }
 
 func (r *Runner) buildImage(ctx context.Context, parsedConfig *config.SubstitutedConfig, extendedBuildInfo *feature.ExtendedBuildInfo, dockerfilePath, dockerfileContent string, options config.BuildOptions) (*config.BuildInfo, error) {
-	return r.Driver.BuildDevContainer(ctx, r.ID, parsedConfig, extendedBuildInfo, dockerfilePath, dockerfileContent, r.LocalWorkspaceFolder, options)
+	targetArch, err := r.Driver.TargetArchitecture(ctx, r.ID)
+	if err != nil {
+		return nil, err
+	}
+
+	prebuildHash, err := config.CalculatePrebuildHash(parsedConfig.Config, options.Platform, targetArch, docker.GetContextPath(parsedConfig.Config), dockerfilePath, dockerfileContent, r.Log)
+	if err != nil {
+		return nil, err
+	}
+
+	// check if there is a prebuild image
+	if !options.ForceBuild {
+		devPodCustomizations := config.GetDevPodCustomizations(parsedConfig.Config)
+		if options.Repository != "" {
+			options.PrebuildRepositories = append(options.PrebuildRepositories, options.Repository)
+		}
+		options.PrebuildRepositories = append(options.PrebuildRepositories, devPodCustomizations.PrebuildRepository...)
+
+		r.Log.Debugf("Try to find prebuild image %s in repositories %s", prebuildHash, strings.Join(options.PrebuildRepositories, ","))
+		for _, prebuildRepo := range options.PrebuildRepositories {
+			prebuildImage := prebuildRepo + ":" + prebuildHash
+			img, err := image.GetImage(prebuildImage)
+			if err == nil && img != nil {
+				// prebuild image found
+				r.Log.Infof("Found existing prebuilt image %s", prebuildImage)
+
+				// inspect image
+				imageDetails, err := r.inspectImage(ctx, prebuildImage)
+				if err != nil {
+					return nil, errors.Wrap(err, "get image details")
+				}
+
+				return &config.BuildInfo{
+					ImageDetails:  imageDetails,
+					ImageMetadata: extendedBuildInfo.MetadataConfig,
+					ImageName:     prebuildImage,
+					PrebuildHash:  prebuildHash,
+				}, nil
+			} else if err != nil {
+				r.Log.Debugf("Error trying to find prebuild image %s: %v", prebuildImage, err)
+			}
+		}
+	}
+
+	dockerDriver, ok := r.Driver.(driver.DockerDriver)
+	if !ok {
+		return nil, fmt.Errorf("building is not supported with this driver")
+	}
+
+	return dockerDriver.BuildDevContainer(ctx, prebuildHash, parsedConfig, extendedBuildInfo, dockerfilePath, dockerfileContent, r.LocalWorkspaceFolder, options)
 }

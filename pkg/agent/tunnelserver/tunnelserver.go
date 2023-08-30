@@ -24,17 +24,58 @@ import (
 	"google.golang.org/grpc/reflection"
 )
 
-func RunTunnelServer(ctx context.Context, reader io.Reader, writer io.WriteCloser, allowGitCredentials, allowDockerCredentials bool, workspace *provider2.Workspace, forwarder netstat.Forwarder, log log.Logger) (*config.Result, error) {
-	lis := stdio.NewStdioListener(reader, writer, false)
-	s := grpc.NewServer()
+func RunServicesServer(ctx context.Context, reader io.Reader, writer io.WriteCloser, allowGitCredentials, allowDockerCredentials bool, forwarder netstat.Forwarder, log log.Logger) error {
 	tunnelServ := &tunnelServer{
-		workspace:              workspace,
 		forwarder:              forwarder,
 		allowGitCredentials:    allowGitCredentials,
 		allowDockerCredentials: allowDockerCredentials,
 		log:                    log,
 	}
-	tunnel.RegisterTunnelServer(s, tunnelServ)
+
+	return tunnelServ.Run(ctx, reader, writer)
+}
+
+func RunUpServer(ctx context.Context, reader io.Reader, writer io.WriteCloser, allowGitCredentials, allowDockerCredentials bool, workspace *provider2.Workspace, log log.Logger) (*config.Result, error) {
+	tunnelServ := &tunnelServer{
+		workspace:              workspace,
+		allowGitCredentials:    allowGitCredentials,
+		allowDockerCredentials: allowDockerCredentials,
+		log:                    log,
+	}
+
+	return tunnelServ.RunWithResult(ctx, reader, writer)
+}
+
+func RunSetupServer(ctx context.Context, reader io.Reader, writer io.WriteCloser, allowDockerCredentials bool, baseFolder string, mounts []*config.Mount, log log.Logger) (*config.Result, error) {
+	tunnelServ := &tunnelServer{
+		mounts:                 mounts,
+		mountsBaseFolder:       baseFolder,
+		allowDockerCredentials: allowDockerCredentials,
+		log:                    log,
+	}
+
+	return tunnelServ.RunWithResult(ctx, reader, writer)
+}
+
+type tunnelServer struct {
+	tunnel.UnimplementedTunnelServer
+
+	// stream mounts
+	mounts           []*config.Mount
+	mountsBaseFolder string
+
+	forwarder              netstat.Forwarder
+	allowGitCredentials    bool
+	allowDockerCredentials bool
+	result                 *config.Result
+	workspace              *provider2.Workspace
+	log                    log.Logger
+}
+
+func (t *tunnelServer) RunWithResult(ctx context.Context, reader io.Reader, writer io.WriteCloser) (*config.Result, error) {
+	lis := stdio.NewStdioListener(reader, writer, false)
+	s := grpc.NewServer()
+	tunnel.RegisterTunnelServer(s, t)
 	reflection.Register(s)
 	errChan := make(chan error, 1)
 	go func() {
@@ -45,19 +86,13 @@ func RunTunnelServer(ctx context.Context, reader io.Reader, writer io.WriteClose
 	case err := <-errChan:
 		return nil, err
 	case <-ctx.Done():
-		return tunnelServ.result, nil
+		return t.result, nil
 	}
 }
 
-type tunnelServer struct {
-	tunnel.UnimplementedTunnelServer
-
-	forwarder              netstat.Forwarder
-	allowGitCredentials    bool
-	allowDockerCredentials bool
-	result                 *config.Result
-	workspace              *provider2.Workspace
-	log                    log.Logger
+func (t *tunnelServer) Run(ctx context.Context, reader io.Reader, writer io.WriteCloser) error {
+	_, err := t.RunWithResult(ctx, reader, writer)
+	return err
 }
 
 func (t *tunnelServer) ForwardPort(ctx context.Context, portRequest *tunnel.ForwardPortRequest) (*tunnel.ForwardPortResponse, error) {
@@ -197,7 +232,7 @@ func (t *tunnelServer) Log(ctx context.Context, message *tunnel.LogMessage) (*tu
 	return &tunnel.Empty{}, nil
 }
 
-func (t *tunnelServer) GitCloneAndRead(response *tunnel.Empty, stream tunnel.Tunnel_GitCloneAndReadServer) error {
+func (t *tunnelServer) StreamGitClone(message *tunnel.Empty, stream tunnel.Tunnel_StreamGitCloneServer) error {
 	if t.workspace == nil {
 		return fmt.Errorf("workspace is nil")
 	} else if t.workspace.Source.GitRepository == "" {
@@ -239,13 +274,35 @@ func (t *tunnelServer) GitCloneAndRead(response *tunnel.Empty, stream tunnel.Tun
 	return buf.Flush()
 }
 
-func (t *tunnelServer) ReadWorkspace(response *tunnel.Empty, stream tunnel.Tunnel_ReadWorkspaceServer) error {
+func (t *tunnelServer) StreamWorkspace(message *tunnel.Empty, stream tunnel.Tunnel_StreamWorkspaceServer) error {
 	if t.workspace == nil {
 		return fmt.Errorf("workspace is nil")
 	}
 
 	buf := bufio.NewWriterSize(NewStreamWriter(stream, t.log), 10*1024)
 	err := extract.WriteTar(buf, t.workspace.Source.LocalFolder, false)
+	if err != nil {
+		return err
+	}
+
+	// make sure buffer is flushed
+	return buf.Flush()
+}
+
+func (t *tunnelServer) StreamMount(message *tunnel.StreamMountRequest, stream tunnel.Tunnel_StreamMountServer) error {
+	var mount *config.Mount
+	for _, m := range t.mounts {
+		if m.String() == message.Mount {
+			mount = m
+			break
+		}
+	}
+	if mount == nil {
+		return fmt.Errorf("mount %s is not allowed to download", message.Mount)
+	}
+
+	buf := bufio.NewWriterSize(NewStreamWriter(stream, t.log), 10*1024)
+	err := extract.WriteTar(buf, mount.Source, false)
 	if err != nil {
 		return err
 	}

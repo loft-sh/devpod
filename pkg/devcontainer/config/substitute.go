@@ -25,6 +25,8 @@ type SubstitutionContext struct {
 	LocalWorkspaceFolder     string            `json:"LocalWorkspaceFolder,omitempty"`
 	ContainerWorkspaceFolder string            `json:"ContainerWorkspaceFolder,omitempty"`
 	Env                      map[string]string `json:"Env,omitempty"`
+
+	WorkspaceMount string `json:"WorkspaceMount,omitempty"`
 }
 
 func Substitute(substitutionCtx *SubstitutionContext, config interface{}, out interface{}) error {

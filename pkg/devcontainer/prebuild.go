@@ -5,13 +5,19 @@ import (
 	"fmt"
 
 	"github.com/loft-sh/devpod/pkg/devcontainer/config"
+	"github.com/loft-sh/devpod/pkg/driver"
 	"github.com/loft-sh/devpod/pkg/driver/docker"
 	"github.com/loft-sh/devpod/pkg/image"
 	"github.com/pkg/errors"
 )
 
 func (r *Runner) Build(ctx context.Context, options config.BuildOptions) (string, error) {
-	substitutedConfig, _, err := r.prepare(options.CLIOptions)
+	dockerDriver, ok := r.Driver.(driver.DockerDriver)
+	if !ok {
+		return "", fmt.Errorf("building only supported with docker driver")
+	}
+
+	substitutedConfig, err := r.prepare(options.CLIOptions)
 	if err != nil {
 		return "", err
 	}
@@ -58,7 +64,7 @@ func (r *Runner) Build(ctx context.Context, options config.BuildOptions) (string
 	}
 
 	// push the image to the registry
-	err = r.Driver.PushDevContainer(ctx, prebuildImage)
+	err = dockerDriver.PushDevContainer(ctx, prebuildImage)
 	if err != nil {
 		return "", errors.Wrap(err, "push image")
 	}

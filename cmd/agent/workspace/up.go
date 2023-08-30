@@ -343,7 +343,7 @@ func installDaemon(workspaceInfo *provider2.AgentWorkspaceInfo, log log.Logger) 
 
 func RemoteCloneAndDownload(ctx context.Context, workspaceDir string, client tunnel.TunnelClient, log log.Logger) error {
 	log.Infof("Cloning from host and upload folder to server")
-	stream, err := client.GitCloneAndRead(ctx, &tunnel.Empty{})
+	stream, err := client.StreamGitClone(ctx, &tunnel.Empty{})
 	if err != nil {
 		return errors.Wrap(err, "local cloning")
 	}
@@ -358,7 +358,7 @@ func RemoteCloneAndDownload(ctx context.Context, workspaceDir string, client tun
 
 func DownloadLocalFolder(ctx context.Context, workspaceDir string, client tunnel.TunnelClient, log log.Logger) error {
 	log.Infof("Upload folder to server")
-	stream, err := client.ReadWorkspace(ctx, &tunnel.Empty{})
+	stream, err := client.StreamWorkspace(ctx, &tunnel.Empty{})
 	if err != nil {
 		return errors.Wrap(err, "read workspace")
 	}

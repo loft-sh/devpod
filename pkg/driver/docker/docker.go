@@ -7,6 +7,7 @@ import (
 	"os"
 	"path"
 	"path/filepath"
+	"runtime"
 	"strconv"
 	"strings"
 
@@ -38,7 +39,7 @@ func makeEnvironment(env map[string]string, log log.Logger) []string {
 	return ret
 }
 
-func NewDockerDriver(workspaceInfo *provider2.AgentWorkspaceInfo, log log.Logger) driver.Driver {
+func NewDockerDriver(workspaceInfo *provider2.AgentWorkspaceInfo, log log.Logger) driver.DockerDriver {
 	dockerCommand := "docker"
 	if workspaceInfo.Agent.Docker.Path != "" {
 		dockerCommand = workspaceInfo.Agent.Docker.Path
@@ -59,6 +60,10 @@ type dockerDriver struct {
 	Compose *compose.ComposeHelper
 
 	Log log.Logger
+}
+
+func (d *dockerDriver) TargetArchitecture(ctx context.Context, workspaceId string) (string, error) {
+	return runtime.GOARCH, nil
 }
 
 func (d *dockerDriver) CommandDevContainer(ctx context.Context, workspaceId, user, command string, stdin io.Reader, stdout io.Writer, stderr io.Writer) error {
@@ -173,6 +178,14 @@ func (d *dockerDriver) FindDevContainer(ctx context.Context, workspaceId string)
 }
 
 func (d *dockerDriver) RunDevContainer(
+	ctx context.Context,
+	workspaceId string,
+	options *driver.RunOptions,
+) error {
+	return fmt.Errorf("unsupported")
+}
+
+func (d *dockerDriver) RunDockerDevContainer(
 	ctx context.Context,
 	workspaceId string,
 	parsedConfig *config.DevContainerConfig,

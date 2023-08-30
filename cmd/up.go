@@ -315,14 +315,13 @@ func (cmd *UpCmd) devPodUpProxy(
 	}()
 
 	// create container etc.
-	result, err := tunnelserver.RunTunnelServer(
+	result, err := tunnelserver.RunUpServer(
 		cancelCtx,
 		stdoutReader,
 		stdinWriter,
 		true,
 		true,
 		client.WorkspaceConfig(),
-		nil,
 		log,
 	)
 	if err != nil {
@@ -434,14 +433,13 @@ func (cmd *UpCmd) devPodUpMachine(
 			return nil, errors.Wrap(err, "run proxy tunnel")
 		}
 	} else {
-		result, err = tunnelserver.RunTunnelServer(
+		result, err = tunnelserver.RunUpServer(
 			cancelCtx,
 			stdoutReader,
 			stdinWriter,
 			client.AgentInjectGitCredentials(),
 			client.AgentInjectDockerCredentials(),
 			client.WorkspaceConfig(),
-			nil,
 			log,
 		)
 		if err != nil {

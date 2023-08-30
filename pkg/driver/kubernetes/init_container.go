@@ -4,19 +4,16 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/loft-sh/devpod/pkg/devcontainer/config"
+	"github.com/loft-sh/devpod/pkg/driver"
 	corev1 "k8s.io/api/core/v1"
 )
 
-func (k *kubernetesDriver) getInitContainer(
-	mergedConfig *config.MergedDevContainerConfig,
-	imageName string,
-) ([]corev1.Container, error) {
+func (k *kubernetesDriver) getInitContainer(options *driver.RunOptions) ([]corev1.Container, error) {
 	commands := []string{}
 
 	// find the volume type mounts
 	volumeMounts := []corev1.VolumeMount{}
-	for idx, mount := range mergedConfig.Mounts {
+	for idx, mount := range options.Mounts {
 		if mount.Type != "volume" {
 			continue
 		}
@@ -37,7 +34,7 @@ func (k *kubernetesDriver) getInitContainer(
 	return []corev1.Container{
 		{
 			Name:         "devpod-init",
-			Image:        imageName,
+			Image:        options.Image,
 			Command:      []string{"/bin/sh"},
 			Args:         []string{"-c", strings.Join(commands, "\n") + "\n"},
 			Resources:    parseResources(k.config.HelperResources, k.Log),

@@ -9,7 +9,7 @@ import (
 	"github.com/loft-sh/log"
 )
 
-func NewStreamReader(stream tunnel.Tunnel_ReadWorkspaceClient, log log.Logger) io.Reader {
+func NewStreamReader(stream tunnel.Tunnel_StreamWorkspaceClient, log log.Logger) io.Reader {
 	reader, writer := io.Pipe()
 
 	go func() {
@@ -36,12 +36,12 @@ func NewStreamReader(stream tunnel.Tunnel_ReadWorkspaceClient, log log.Logger) i
 	return reader
 }
 
-func NewStreamWriter(stream tunnel.Tunnel_ReadWorkspaceServer, log log.Logger) io.Writer {
+func NewStreamWriter(stream tunnel.Tunnel_StreamWorkspaceServer, log log.Logger) io.Writer {
 	return &streamWriter{stream: stream, log: log, lastMessage: time.Now()}
 }
 
 type streamWriter struct {
-	stream tunnel.Tunnel_ReadWorkspaceServer
+	stream tunnel.Tunnel_StreamWorkspaceServer
 
 	lastMessage  time.Time
 	bytesWritten int64

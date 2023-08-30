@@ -6,7 +6,7 @@ import (
 	"encoding/json"
 	"strings"
 
-	"github.com/loft-sh/devpod/pkg/devcontainer/config"
+	"github.com/loft-sh/devpod/pkg/driver"
 	"github.com/pkg/errors"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
@@ -15,20 +15,15 @@ import (
 
 func (k *kubernetesDriver) createPersistentVolumeClaim(
 	ctx context.Context,
-	name string,
-	parsedConfig *config.DevContainerConfig,
-	mergedConfig *config.MergedDevContainerConfig,
-	imageName string,
-	workspaceMount string,
-	labels []string,
-	imageDetails *config.ImageDetails,
+	id string,
+	options *driver.RunOptions,
 ) error {
-	pvcString, err := k.buildPersistentVolumeClaim(name, parsedConfig, mergedConfig, imageName, workspaceMount, labels, imageDetails)
+	pvcString, err := k.buildPersistentVolumeClaim(id, options)
 	if err != nil {
 		return err
 	}
 
-	k.Log.Infof("Create Persistent Volume Claim '%s'", name)
+	k.Log.Infof("Create Persistent Volume Claim '%s'", id)
 	buf := &bytes.Buffer{}
 	err = k.runCommand(ctx, []string{"create", "-f", "-"}, strings.NewReader(pvcString), buf, buf)
 	if err != nil {
@@ -39,16 +34,10 @@ func (k *kubernetesDriver) createPersistentVolumeClaim(
 }
 
 func (k *kubernetesDriver) buildPersistentVolumeClaim(
-	name string,
-	parsedConfig *config.DevContainerConfig,
-	mergedConfig *config.MergedDevContainerConfig,
-	imageName string,
-	workspaceMount string,
-	labels []string,
-	imageDetails *config.ImageDetails,
+	id string,
+	options *driver.RunOptions,
 ) (string, error) {
-	labels = append(config.GetDockerLabelForID(name), labels...)
-	containerInfo, err := k.getDevContainerInformation(parsedConfig, mergedConfig, imageName, workspaceMount, labels, imageDetails)
+	containerInfo, err := k.getDevContainerInformation(id, options)
 	if err != nil {
 		return "", err
 	}
@@ -88,7 +77,7 @@ func (k *kubernetesDriver) buildPersistentVolumeClaim(
 			APIVersion: corev1.SchemeGroupVersion.String(),
 		},
 		ObjectMeta: metav1.ObjectMeta{
-			Name:   name,
+			Name:   id,
 			Labels: DevPodLabels,
 			Annotations: map[string]string{
 				DevContainerInfoAnnotation: containerInfo,
@@ -114,20 +103,12 @@ func (k *kubernetesDriver) buildPersistentVolumeClaim(
 }
 
 func (k *kubernetesDriver) getDevContainerInformation(
-	parsedConfig *config.DevContainerConfig,
-	mergedConfig *config.MergedDevContainerConfig,
-	imageName string,
-	workspaceMount string,
-	labels []string,
-	imageDetails *config.ImageDetails,
+	id string,
+	options *driver.RunOptions,
 ) (string, error) {
 	containerInfo, err := json.Marshal(&DevContainerInfo{
-		MergedConfig:   mergedConfig,
-		ParsedConfig:   parsedConfig,
-		ImageDetails:   imageDetails,
-		ImageName:      imageName,
-		WorkspaceMount: workspaceMount,
-		Labels:         labels,
+		WorkspaceID: id,
+		Options:     options,
 	})
 	if err != nil {
 		return "", err

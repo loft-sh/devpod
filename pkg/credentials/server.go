@@ -151,7 +151,7 @@ func configureGitUserLocally(ctx context.Context, userName string, client tunnel
 	// set git user
 	err = gitcredentials.SetUser(userName, gitUser)
 	if err != nil {
-		return fmt.Errorf("set git user: %w", err)
+		return fmt.Errorf("set git user & email: %w", err)
 	}
 
 	return nil

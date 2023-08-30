@@ -21,24 +21,11 @@ type ContainerDetails struct {
 }
 
 type ContainerDetailsConfig struct {
-	Image  string            `json:"Image,omitempty"`
-	User   string            `json:"User,omitempty"`
-	Env    []string          `json:"Env,omitempty"`
 	Labels map[string]string `json:"Labels,omitempty"`
+	User   string            `json:"User,omitempty"`
 }
 
 type ContainerDetailsState struct {
 	Status    string `json:"Status,omitempty"`
 	StartedAt string `json:"StartedAt,omitempty"`
-}
-
-func ContainerToImageDetails(containerDetails *ContainerDetails) *ImageDetails {
-	return &ImageDetails{
-		ID: containerDetails.ID,
-		Config: ImageDetailsConfig{
-			User:   containerDetails.Config.User,
-			Env:    containerDetails.Config.Env,
-			Labels: containerDetails.Config.Labels,
-		},
-	}
 }
