@@ -121,12 +121,42 @@ type ProviderAgentConfig struct {
 
 	// Docker holds docker specific configuration
 	Docker ProviderDockerDriverConfig `json:"docker,omitempty"`
+
+	// Custom holds custom driver specific configuration
+	Custom ProviderCustomDriverConfig `json:"custom,omitempty"`
+}
+
+func (a ProviderAgentConfig) IsDockerDriver() bool {
+	return a.Driver == "" || a.Driver == DockerDriver
 }
 
 const (
-	DockerDriver     = "docker"
-	KubernetesDriver = "kubernetes"
+	DockerDriver = "docker"
+	CustomDriver = "custom"
 )
+
+type ProviderCustomDriverConfig struct {
+	// FindDevContainer is used to find an existing devcontainer
+	FindDevContainer types.StrArray `json:"findDevContainer,omitempty"`
+
+	// CommandDevContainer is used to execute a command in the devcontainer
+	CommandDevContainer types.StrArray `json:"commandDevContainer,omitempty"`
+
+	// TargetArchitecture is used to find out the target architecture
+	TargetArchitecture types.StrArray `json:"targetArchitecture,omitempty"`
+
+	// RunDevContainer is used to actually run the devcontainer
+	RunDevContainer types.StrArray `json:"runDevContainer,omitempty"`
+
+	// StartDevContainer is used to start the devcontainer
+	StartDevContainer types.StrArray `json:"startDevContainer,omitempty"`
+
+	// StopDevContainer is used to stop the devcontainer
+	StopDevContainer types.StrArray `json:"stopDevContainer,omitempty"`
+
+	// DeleteDevContainer is used to delete the devcontainer
+	DeleteDevContainer types.StrArray `json:"deleteDevContainer,omitempty"`
+}
 
 type ProviderKubernetesDriverConfig struct {
 	// Path where to find the kubectl binary, defaults to 'kubectl'

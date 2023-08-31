@@ -162,8 +162,37 @@ func validateProviderType(config *ProviderConfig) error {
 	}
 
 	// validate driver
-	if config.Agent.Driver != "" && config.Agent.Driver != DockerDriver && config.Agent.Driver != KubernetesDriver {
-		return fmt.Errorf("agent.driver can only be docker or kubernetes")
+	if config.Agent.Driver != "" && config.Agent.Driver != CustomDriver && config.Agent.Driver != DockerDriver {
+		if config.Agent.Driver == "kubernetes" {
+			return fmt.Errorf("kubernetes is not an in-built provider in this DevPod version anymore, please run `devpod provider update kubernetes kubernetes` to use the latest kubernetes provider")
+		}
+
+		return fmt.Errorf("agent.driver can only be docker or custom")
+	}
+
+	// validate custom driver
+	if config.Agent.Driver == CustomDriver {
+		if len(config.Agent.Custom.TargetArchitecture) == 0 {
+			return fmt.Errorf("agent.custom.targetArchitecture is required")
+		}
+		if len(config.Agent.Custom.StartDevContainer) == 0 {
+			return fmt.Errorf("agent.custom.startDevContainer is required")
+		}
+		if len(config.Agent.Custom.StopDevContainer) == 0 {
+			return fmt.Errorf("agent.custom.stopDevContainer is required")
+		}
+		if len(config.Agent.Custom.RunDevContainer) == 0 {
+			return fmt.Errorf("agent.custom.runDevContainer is required")
+		}
+		if len(config.Agent.Custom.DeleteDevContainer) == 0 {
+			return fmt.Errorf("agent.custom.deleteDevContainer is required")
+		}
+		if len(config.Agent.Custom.FindDevContainer) == 0 {
+			return fmt.Errorf("agent.custom.findDevContainer is required")
+		}
+		if len(config.Agent.Custom.CommandDevContainer) == 0 {
+			return fmt.Errorf("agent.custom.commandDevContainer is required")
+		}
 	}
 
 	// agent binaries

@@ -73,6 +73,7 @@ func (r *Runner) Up(ctx context.Context, options UpOptions) (*config.Result, err
 	_, isDockerDriver := r.Driver.(driver.DockerDriver)
 	if options.Recreate && !isDockerDriver {
 		// TODO: for drivers other than docker and recreate is true, we need to download the complete context here first
+		return nil, fmt.Errorf("rebuilding the workspace is currently not supported for non-docker drivers")
 	}
 
 	// prepare config
