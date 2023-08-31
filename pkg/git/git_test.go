@@ -30,6 +30,13 @@ func TestNormalizeRepository(t *testing.T) {
 			expectedCommit:      "",
 		},
 		{
+			in:                  "ssh://git@github.com/loft-sh/devpod.git",
+			expectedRepo:        "ssh://git@github.com/loft-sh/devpod.git",
+			expectedPRReference: "",
+			expectedBranch:      "",
+			expectedCommit:      "",
+		},
+		{
 			in:                  "git@github.com/loft-sh/devpod-without-branch.git",
 			expectedRepo:        "git@github.com/loft-sh/devpod-without-branch.git",
 			expectedPRReference: "",
@@ -67,6 +74,13 @@ func TestNormalizeRepository(t *testing.T) {
 		{
 			in:                  "git@github.com/loft-sh/devpod-with-branch.git@test_branch",
 			expectedRepo:        "git@github.com/loft-sh/devpod-with-branch.git",
+			expectedPRReference: "",
+			expectedBranch:      "test_branch",
+			expectedCommit:      "",
+		},
+		{
+			in:                  "ssh://git@github.com/loft-sh/devpod.git@test_branch",
+			expectedRepo:        "ssh://git@github.com/loft-sh/devpod.git",
 			expectedPRReference: "",
 			expectedBranch:      "test_branch",
 			expectedCommit:      "",
