@@ -216,7 +216,27 @@ func (t *tunnelServer) GitCloneAndRead(response *tunnel.Empty, stream tunnel.Tun
 		return err
 	}
 
-	if t.workspace.Source.GitCommit != "" {
+	if t.workspace.Source.GitPRReference != "" {
+		prBranch := git.GetBranchNameForPR(t.workspace.Source.GitPRReference)
+
+		// git fetch origin pull/996/head:PR996
+		fetchArgs := []string{"fetch", "origin", t.workspace.Source.GitPRReference + ":" + prBranch}
+		fetchCmd := git.CommandContext(context.Background(), fetchArgs...)
+		fetchCmd.Dir = gitCloneDir
+		err = fetchCmd.Run()
+		if err != nil {
+			return err
+		}
+
+		// git switch PR996
+		switchArgs := []string{"switch", prBranch}
+		switchCmd := git.CommandContext(context.Background(), switchArgs...)
+		switchCmd.Dir = gitCloneDir
+		err = switchCmd.Run()
+		if err != nil {
+			return err
+		}
+	} else if t.workspace.Source.GitCommit != "" {
 		// reset here
 		// git reset --hard $COMMIT_SHA
 		resetArgs := []string{"reset", "--hard", t.workspace.Source.GitCommit}

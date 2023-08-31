@@ -96,6 +96,9 @@ type WorkspaceSource struct {
 	// GitCommit is the commit SHA to checkout
 	GitCommit string `json:"gitCommit,omitempty"`
 
+	// GitPRReference is the pull request reference to checkout
+	GitPRReference string `json:"gitPRReference,omitempty"`
+
 	// LocalFolder is the local folder to use
 	LocalFolder string `json:"localFolder,omitempty"`
 
@@ -153,7 +156,9 @@ type CLIOptions struct {
 
 func (w WorkspaceSource) String() string {
 	if w.GitRepository != "" {
-		if w.GitBranch != "" {
+		if w.GitPRReference != "" {
+			return WorkspaceSourceGit + w.GitRepository + "@" + w.GitPRReference
+		} else if w.GitBranch != "" {
 			return WorkspaceSourceGit + w.GitRepository + "@" + w.GitBranch
 		} else if w.GitCommit != "" {
 			return WorkspaceSourceGit + w.GitRepository + git.CommitDelimiter + w.GitCommit
@@ -171,11 +176,12 @@ func (w WorkspaceSource) String() string {
 
 func ParseWorkspaceSource(source string) *WorkspaceSource {
 	if strings.HasPrefix(source, WorkspaceSourceGit) {
-		gitRepo, gitBranch, gitCommit := git.NormalizeRepository(strings.TrimPrefix(source, WorkspaceSourceGit))
+		gitRepo, gitPRReference, gitBranch, gitCommit := git.NormalizeRepository(strings.TrimPrefix(source, WorkspaceSourceGit))
 		return &WorkspaceSource{
-			GitRepository: gitRepo,
-			GitBranch:     gitBranch,
-			GitCommit:     gitCommit,
+			GitRepository:  gitRepo,
+			GitPRReference: gitPRReference,
+			GitBranch:      gitBranch,
+			GitCommit:      gitCommit,
 		}
 	} else if strings.HasPrefix(source, WorkspaceSourceLocal) {
 		return &WorkspaceSource{

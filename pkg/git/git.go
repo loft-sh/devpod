@@ -11,11 +11,15 @@ import (
 	"github.com/loft-sh/devpod/pkg/command"
 )
 
-const CommitDelimiter string = "@sha256:"
+const (
+	CommitDelimiter      string = "@sha256:"
+	PullRequestReference string = "pull/([0-9]+)/head"
+)
 
 var (
-	branchRegEx = regexp.MustCompile(`^([^@]*(?:git@)?[^@/]+/[^@]+)@([a-zA-Z0-9\./\-\_]+)$`)
-	commitRegEx = regexp.MustCompile(`^([^@]*(?:git@)?[^@/]+/[^@]+)` + regexp.QuoteMeta(CommitDelimiter) + `([a-zA-Z0-9]+)$`)
+	branchRegEx      = regexp.MustCompile(`^([^@]*(?:git@)?[^@/]+/[^@]+)@([a-zA-Z0-9\./\-\_]+)$`)
+	commitRegEx      = regexp.MustCompile(`^([^@]*(?:git@)?[^@/]+/[^@]+)` + regexp.QuoteMeta(CommitDelimiter) + `([a-zA-Z0-9]+)$`)
+	prReferenceRegEx = regexp.MustCompile(`^([^@]*(?:git@)?[^@/]+/[^@]+)@(` + PullRequestReference + `)$`)
 )
 
 func CommandContext(ctx context.Context, args ...string) *exec.Cmd {
@@ -26,9 +30,18 @@ func CommandContext(ctx context.Context, args ...string) *exec.Cmd {
 	return cmd
 }
 
-func NormalizeRepository(str string) (string, string, string) {
+func NormalizeRepository(str string) (string, string, string, string) {
 	if !strings.HasPrefix(str, "ssh://") && !strings.HasPrefix(str, "git@") && !strings.HasPrefix(str, "http://") && !strings.HasPrefix(str, "https://") {
 		str = "https://" + str
+	}
+
+	// resolve pull request reference
+	prReference := ""
+	if match := prReferenceRegEx.FindStringSubmatch(str); match != nil {
+		str = match[1]
+		prReference = match[2]
+
+		return str, prReference, "", ""
 	}
 
 	// resolve branch
@@ -45,7 +58,7 @@ func NormalizeRepository(str string) (string, string, string) {
 		commit = match[2]
 	}
 
-	return str, branch, commit
+	return str, prReference, branch, commit
 }
 
 func PingRepository(str string) bool {
@@ -58,4 +71,9 @@ func PingRepository(str string) bool {
 
 	_, err := CommandContext(timeoutCtx, "ls-remote", "--quiet", str).CombinedOutput()
 	return err == nil
+}
+
+func GetBranchNameForPR(ref string) string {
+	regex := regexp.MustCompile(PullRequestReference)
+	return regex.ReplaceAllString(ref, "PR${1}")
 }
