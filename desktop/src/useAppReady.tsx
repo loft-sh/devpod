@@ -178,11 +178,28 @@ export function useAppReady() {
 
               return
             }
+            const workspacesResult = await client.workspaces.listAll()
+            if (workspacesResult.err) {
+              return
+            }
+            const maybeWorkspace = workspacesResult.val.find((w) => w.id === event.workspace_id)
+            if (!maybeWorkspace) {
+              setFailedMessage("Failed to import workspace")
+
+              return
+            }
+
             const actionID = startWorkspaceAction({
-              workspaceID: event.workspace_id,
+              workspaceID: maybeWorkspace.id,
               streamID: viewID,
               config: {
-                id: event.workspace_id,
+                id: maybeWorkspace.id,
+                providerConfig: {
+                  providerID: maybeWorkspace.provider?.name ?? undefined,
+                },
+                ideConfig: {
+                  name: maybeWorkspace.ide?.name,
+                },
               },
             })
             navigate(Routes.toAction(actionID))
