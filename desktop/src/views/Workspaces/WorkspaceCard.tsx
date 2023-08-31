@@ -34,18 +34,21 @@ import {
   TextProps,
   Tooltip,
   useDisclosure,
+  useToast,
   VStack,
 } from "@chakra-ui/react"
 import { useQuery } from "@tanstack/react-query"
 import dayjs from "dayjs"
 import { useCallback, useMemo, useState } from "react"
-import { HiClock, HiOutlineCode } from "react-icons/hi"
+import { HiClock, HiOutlineCode, HiShare } from "react-icons/hi"
 import { useNavigate } from "react-router"
 import { client } from "../../client"
 import { IconTag, IDEIcon, Ripple } from "../../components"
 import {
   TActionID,
   TActionObj,
+  useProInstances,
+  useProvider,
   useSettings,
   useWorkspace,
   useWorkspaceActions,
@@ -55,7 +58,7 @@ import { NoWorkspaceImageSvg } from "../../images"
 import { getIDEDisplayName, useHover } from "../../lib"
 import { QueryKeys } from "../../queryKeys"
 import { Routes } from "../../routes"
-import { TIDE, TWorkspace, TWorkspaceID } from "../../types"
+import { TIDE, TProInstance, TWorkspace, TWorkspaceID } from "../../types"
 import { useIDEs } from "../../useIDEs"
 import { getIDEName, getSourceName } from "./helpers"
 
@@ -73,6 +76,9 @@ export function WorkspaceCard({ workspaceID, onSelectionChange }: TWorkspaceCard
   const { isOpen: isRebuildOpen, onOpen: onRebuildOpen, onClose: onRebuildClose } = useDisclosure()
   const { isOpen: isStopOpen, onOpen: onStopOpen, onClose: onStopClose } = useDisclosure()
   const workspace = useWorkspace(workspaceID)
+  const { isEnabled: isShareEnabled, onClick: handleShareClicked } = useShareWorkspace(
+    workspace.data
+  )
   const [ideName, setIdeName] = useState<string | undefined>(() => {
     if (settings.fixedIDE && defaultIDE?.name) {
       return defaultIDE.name
@@ -81,30 +87,24 @@ export function WorkspaceCard({ workspaceID, onSelectionChange }: TWorkspaceCard
     return workspace.data?.ide?.name ?? undefined
   })
 
-  const navigateToAction = useCallback(
-    (actionID: TActionID | undefined) => {
-      if (actionID !== undefined && actionID !== "") {
-        navigate(Routes.toAction(actionID))
-      }
-    },
-    [navigate]
-  )
+  const navigateToAction = (actionID: TActionID | undefined) => {
+    if (actionID !== undefined && actionID !== "") {
+      navigate(Routes.toAction(actionID))
+    }
+  }
 
-  const handleOpenWithIDEClicked = useCallback(
-    (id: TWorkspaceID, ide: TIDE["name"]) => async () => {
-      if (!ide) {
-        return
-      }
-      setIdeName(ide)
+  const handleOpenWithIDEClicked = (id: TWorkspaceID, ide: TIDE["name"]) => async () => {
+    if (!ide) {
+      return
+    }
+    setIdeName(ide)
 
-      const actionID = workspace.start({ id, ideConfig: { name: ide } })
-      if (!settings.fixedIDE) {
-        await client.ides.useIDE(ide)
-      }
-      navigateToAction(actionID)
-    },
-    [workspace, settings.fixedIDE, navigateToAction]
-  )
+    const actionID = workspace.start({ id, ideConfig: { name: ide } })
+    if (!settings.fixedIDE) {
+      await client.ides.useIDE(ide)
+    }
+    navigateToAction(actionID)
+  }
 
   const isLoading = useMemo(() => {
     if (workspace.current?.status === "pending") {
@@ -219,6 +219,13 @@ export function WorkspaceCard({ workspaceID, onSelectionChange }: TWorkspaceCard
                         isDisabled={isOpenDisabled}>
                         Rebuild
                       </MenuItem>
+                      {isShareEnabled && (
+                        <MenuItem
+                          icon={<Icon as={HiShare} boxSize={4} />}
+                          onClick={handleShareClicked}>
+                          Share
+                        </MenuItem>
+                      )}
                       <MenuItem
                         isDisabled={status !== "Running"}
                         onClick={() => {
@@ -544,4 +551,57 @@ function WorkspaceStatusBadge({
       {badge}
     </HStack>
   )
+}
+
+function useShareWorkspace(workspace: TWorkspace | undefined) {
+  const toast = useToast()
+  const [provider] = useProvider(workspace?.provider?.name)
+  const [[proInstances]] = useProInstances()
+  const proInstance = useMemo<TProInstance | undefined>(() => {
+    if (!provider?.isProxyProvider) {
+      return undefined
+    }
+
+    return proInstances?.find((instance) => instance.provider === provider.config?.name)
+  }, [proInstances, provider?.config?.name, provider?.isProxyProvider])
+
+  const handleShareClicked = useCallback(async () => {
+    const devpodProHost = proInstance?.host
+    const workspace_id = workspace?.id
+    const workspace_uid = workspace?.uid
+    if (!devpodProHost || !workspace_id || !workspace_uid) {
+      return
+    }
+
+    const searchParams = new URLSearchParams()
+    searchParams.set("workspace-uid", workspace_uid)
+    searchParams.set("workspace-id", workspace_id)
+    searchParams.set("devpod-pro-host", devpodProHost)
+
+    const link = `https://devpod.sh/import#${searchParams.toString()}`
+    const res = await client.writeToClipboard(link)
+    if (!res.ok) {
+      toast({
+        title: "Failed to share workspace",
+        description: res.val.message,
+        status: "error",
+        duration: 5_000,
+        isClosable: true,
+      })
+
+      return
+    }
+
+    toast({
+      title: "Copied workspace link to clipboard",
+      status: "success",
+      duration: 5_000,
+      isClosable: true,
+    })
+  }, [proInstance?.host, toast, workspace?.id, workspace?.uid])
+
+  return {
+    isEnabled: workspace !== undefined && provider?.isProxyProvider && proInstance !== undefined,
+    onClick: handleShareClicked,
+  }
 }

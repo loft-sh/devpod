@@ -47,7 +47,9 @@ export type TProvider = Readonly<{
       options: TMaybe<TProviderOptions>
     }>
   >
-}>
+}> & {
+  isProxyProvider: boolean
+}
 export type TNamedProvider = TProvider & Readonly<{ name: string }>
 export type TProviderConfig = Readonly<{
   name: TMaybe<string>
@@ -119,13 +121,6 @@ export type TCheckProviderUpdateResult = Readonly<{
   latestVersion?: string
 }>
 
-export type TImportWorkspaceConfig = Readonly<{
-  workspaceID: string
-  workspaceUID: string
-  devPodProHost: string
-  options: Record<string, string> | null
-}>
-
 //#endregion
 
 //#region Workspace
@@ -133,6 +128,7 @@ export type TWorkspaceID = NonNullable<TWorkspace["id"]>
 export type TWithWorkspaceID = Readonly<{ workspaceID: TWorkspaceID }>
 export type TWorkspace = Readonly<{
   id: string
+  uid: string
   picture: TMaybe<string>
   machine: TMaybe<Readonly<{ machineId: TMaybe<string> }>>
   provider: TMaybe<Readonly<{ name: TMaybe<string> }>>
@@ -170,6 +166,13 @@ export type TWorkspaceStartConfig = Readonly<{
 }>
 export const SUPPORTED_IDES = ["vscode", "intellj"] as const
 export type TSupportedIDE = (typeof SUPPORTED_IDES)[number]
+export type TImportWorkspaceConfig = Readonly<{
+  workspaceID: string
+  workspaceUID: string
+  devPodProHost: string
+  options: Record<string, string> | null
+}>
+
 //#endregion
 
 //#region Context
