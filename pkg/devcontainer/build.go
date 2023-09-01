@@ -300,6 +300,10 @@ func (r *Runner) buildImage(
 	// check if we should fallback to dockerless
 	dockerDriver, ok := r.Driver.(driver.DockerDriver)
 	if options.ForceDockerless || !ok {
+		if r.WorkspaceConfig.Agent.DockerlessDisabled == "true" {
+			return nil, fmt.Errorf("cannot build devcontainer because driver is non-docker and dockerless fallback is disabled")
+		}
+
 		return dockerlessFallback(r.LocalWorkspaceFolder, r.SubstitutionContext.ContainerWorkspaceFolder, parsedConfig, buildInfo, extendedBuildInfo, dockerfileContent)
 	}
 

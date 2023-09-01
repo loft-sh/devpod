@@ -87,6 +87,9 @@ type ProviderAgentConfig struct {
 	// DownloadURL is the base url where to download the agent from
 	DownloadURL string `json:"downloadURL,omitempty"`
 
+	// DockerlessDisabled signals if dockerless building is disabled
+	DockerlessDisabled types.StrBool `json:"dockerlessDisabled,omitempty"`
+
 	// DockerlessImage is the image of the dockerless container to start
 	DockerlessImage string `json:"dockerlessImage,omitempty"`
 
