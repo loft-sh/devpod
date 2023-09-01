@@ -44,7 +44,6 @@ require (
 	gopkg.in/yaml.v2 v2.4.0
 	gotest.tools v2.2.0+incompatible
 	k8s.io/api v0.22.5
-	k8s.io/apimachinery v0.22.5
 	mvdan.cc/sh/v3 v3.6.0
 )
 
@@ -70,6 +69,7 @@ require (
 	go.opentelemetry.io/otel/trace v1.4.1 // indirect
 	go.opentelemetry.io/proto/otlp v0.12.0 // indirect
 	gopkg.in/natefinch/lumberjack.v2 v2.2.1 // indirect
+	k8s.io/apimachinery v0.22.5 // indirect
 	k8s.io/klog/v2 v2.100.1 // indirect
 	sigs.k8s.io/structured-merge-diff/v4 v4.1.2 // indirect
 )

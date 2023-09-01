@@ -217,7 +217,7 @@ func (r *Runner) getRunOptions(
 	entrypoint, cmd := GetContainerEntrypointAndArgs(mergedConfig, buildInfo.ImageDetails)
 	labels := []string{
 		metadata.ImageMetadataLabel + "=" + string(marshalled),
-		config.UserLabel + "=" + string(buildInfo.ImageDetails.Config.User),
+		config.UserLabel + "=" + buildInfo.ImageDetails.Config.User,
 	}
 
 	user := buildInfo.ImageDetails.Config.User

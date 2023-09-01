@@ -12,6 +12,7 @@ import (
 	"github.com/loft-sh/devpod/cmd/flags"
 	"github.com/loft-sh/devpod/pkg/agent"
 	"github.com/loft-sh/devpod/pkg/devcontainer"
+	"github.com/loft-sh/devpod/pkg/devcontainer/config"
 	"github.com/loft-sh/devpod/pkg/devcontainer/setup"
 	"github.com/loft-sh/devpod/pkg/encoding"
 	provider2 "github.com/loft-sh/devpod/pkg/provider"
@@ -105,7 +106,7 @@ func startDevContainer(ctx context.Context, workspaceConfig *provider2.AgentWork
 	// start container if necessary
 	if containerDetails == nil || containerDetails.State.Status != "running" {
 		// start container
-		_, err = workspace.StartContainer(ctx, runner, log)
+		_, err = StartContainer(ctx, runner, log)
 		if err != nil {
 			return err
 		}
@@ -115,7 +116,7 @@ func startDevContainer(ctx context.Context, workspaceConfig *provider2.AgentWork
 		err = runner.CommandDevContainer(ctx, "root", "cat "+setup.ResultLocation, nil, buf, buf)
 		if err != nil {
 			// start container
-			_, err = workspace.StartContainer(ctx, runner, log)
+			_, err = StartContainer(ctx, runner, log)
 			if err != nil {
 				return err
 			}
@@ -123,4 +124,14 @@ func startDevContainer(ctx context.Context, workspaceConfig *provider2.AgentWork
 	}
 
 	return nil
+}
+
+func StartContainer(ctx context.Context, runner *devcontainer.Runner, log log.Logger) (*config.Result, error) {
+	log.Debugf("Starting DevPod container...")
+	result, err := runner.Up(ctx, devcontainer.UpOptions{NoBuild: true})
+	if err != nil {
+		return result, err
+	}
+	log.Debugf("Successfully started DevPod container")
+	return result, err
 }

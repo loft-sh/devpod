@@ -151,6 +151,10 @@ func (s *workspaceClient) AgentInfo(cliOptions provider.CLIOptions) (string, *pr
 	s.m.Lock()
 	defer s.m.Unlock()
 
+	return s.agentInfo(cliOptions)
+}
+
+func (s *workspaceClient) agentInfo(cliOptions provider.CLIOptions) (string, *provider.AgentWorkspaceInfo, error) {
 	// build struct
 	agentInfo := &provider.AgentWorkspaceInfo{
 		Workspace:  s.workspace,
@@ -315,12 +319,12 @@ func (s *workspaceClient) Delete(ctx context.Context, opt client.DeleteOptions) 
 			defer writer.Close()
 
 			s.log.Infof("Deleting container...")
-			agentConfig := options.ResolveAgentConfig(s.devPodConfig, s.config, s.workspace, s.machine)
-			command := fmt.Sprintf("'%s' agent workspace delete --id %s --context %s", agentConfig.Path, s.workspace.ID, s.workspace.Context)
-			if agentConfig.DataPath != "" {
-				command += fmt.Sprintf(" --agent-dir '%s'", agentConfig.DataPath)
+			compressed, info, err := s.agentInfo(provider.CLIOptions{})
+			if err != nil {
+				return fmt.Errorf("agent info")
 			}
-			err := RunCommandWithBinaries(
+			command := fmt.Sprintf("'%s' agent workspace delete --workspace-info '%s'", info.Agent.Path, compressed)
+			err = RunCommandWithBinaries(
 				ctx,
 				"command",
 				s.config.Exec.Command,
@@ -412,12 +416,12 @@ func (s *workspaceClient) Stop(ctx context.Context, opt client.StopOptions) erro
 		defer writer.Close()
 
 		s.log.Infof("Stopping container...")
-		agentConfig := options.ResolveAgentConfig(s.devPodConfig, s.config, s.workspace, s.machine)
-		command := fmt.Sprintf("'%s' agent workspace stop --id '%s' --context '%s'", agentConfig.Path, s.workspace.ID, s.workspace.Context)
-		if agentConfig.DataPath != "" {
-			command += fmt.Sprintf(" --agent-dir '%s'", agentConfig.DataPath)
+		compressed, info, err := s.agentInfo(provider.CLIOptions{})
+		if err != nil {
+			return fmt.Errorf("agent info")
 		}
-		err := RunCommandWithBinaries(
+		command := fmt.Sprintf("'%s' agent workspace stop --workspace-info '%s'", info.Agent.Path, compressed)
+		err = RunCommandWithBinaries(
 			ctx,
 			"command",
 			s.config.Exec.Command,
@@ -518,12 +522,12 @@ func (s *workspaceClient) Status(ctx context.Context, options client.StatusOptio
 func (s *workspaceClient) getContainerStatus(ctx context.Context) (client.Status, error) {
 	stdout := &bytes.Buffer{}
 	buf := &bytes.Buffer{}
-	agentConfig := options.ResolveAgentConfig(s.devPodConfig, s.config, s.workspace, s.machine)
-	command := fmt.Sprintf("'%s' agent workspace status --id '%s' --context '%s'", agentConfig.Path, s.workspace.ID, s.workspace.Context)
-	if agentConfig.DataPath != "" {
-		command += fmt.Sprintf(" --agent-dir '%s'", agentConfig.DataPath)
+	compressed, info, err := s.agentInfo(provider.CLIOptions{})
+	if err != nil {
+		return "", fmt.Errorf("get agent info")
 	}
-	err := RunCommandWithBinaries(ctx, "command", s.config.Exec.Command, s.workspace.Context, s.workspace, s.machine, s.devPodConfig.ProviderOptions(s.config.Name), s.config, map[string]string{
+	command := fmt.Sprintf("'%s' agent workspace status --workspace-info '%s'", info.Agent.Path, compressed)
+	err = RunCommandWithBinaries(ctx, "command", s.config.Exec.Command, s.workspace.Context, s.workspace, s.machine, s.devPodConfig.ProviderOptions(s.config.Name), s.config, map[string]string{
 		provider.CommandEnv: command,
 	}, nil, io.MultiWriter(stdout, buf), buf, s.log.ErrorStreamOnly())
 	if err != nil {

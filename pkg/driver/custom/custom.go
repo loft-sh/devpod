@@ -235,7 +235,7 @@ func (c *customDriver) runCommand(
 	stderr io.Writer,
 	extraEnv []string,
 	log log.Logger,
-) (err error) {
+) error {
 	if len(command) == 0 {
 		return nil
 	}
@@ -246,8 +246,7 @@ func (c *customDriver) runCommand(
 	// get environ
 	environ, err := ToEnvironWithBinaries(c.workspaceInfo, log)
 	if err != nil {
-		log.Errorf("%v", err)
-		return
+		return err
 	}
 	environ = append(environ, provider2.DEVCONTAINER_ID+"="+workspaceId)
 	environ = append(environ, extraEnv...)
