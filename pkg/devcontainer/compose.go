@@ -458,6 +458,7 @@ func (r *Runner) buildAndExtendDockerCompose(ctx context.Context, parsedConfig *
 	// build image
 	writer := r.Log.Writer(logrus.InfoLevel, false)
 	defer writer.Close()
+	r.Log.Debugf("Run %s %s", composeHelper.Command, strings.Join(buildArgs, " "))
 	err = composeHelper.Run(ctx, buildArgs, nil, writer, writer)
 	if err != nil {
 		return buildImageName, "", nil, "", err
@@ -498,22 +499,12 @@ func (r *Runner) extendedDockerComposeBuild(composeService *composetypes.Service
 		Name: composeService.Name,
 		Build: &composetypes.BuildConfig{
 			Dockerfile: dockerFilePath,
+			Context:    filepath.Dir(featuresBuildInfo.FeaturesFolder),
 		},
 	}
 
 	if composeService.Build != nil && composeService.Build.Target != "" {
 		service.Build.Target = featuresBuildInfo.OverrideTarget
-	}
-
-	if composeService.Build == nil || composeService.Build.Context == "" {
-		emptyDir := getEmptyContextFolder()
-
-		err := os.MkdirAll(emptyDir, 0775)
-		if err != nil {
-			return "", err
-		}
-
-		service.Build.Context = emptyDir
 	}
 
 	service.Build.Args = composetypes.NewMappingWithEquals([]string{"BUILDKIT_INLINE_CACHE=1"})
@@ -731,10 +722,6 @@ func checkForPersistedFile(files []string, prefix string) (foundLabel bool, file
 	}
 
 	return false, false, "", nil
-}
-
-func getEmptyContextFolder() string {
-	return filepath.Join(os.TempDir(), "empty-folder")
 }
 
 func getDockerComposeFolder() string {

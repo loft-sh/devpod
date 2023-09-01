@@ -4,12 +4,10 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"net/http"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"strconv"
-	"time"
 
 	"github.com/loft-sh/devpod/cmd/flags"
 	"github.com/loft-sh/devpod/pkg/agent"
@@ -26,10 +24,7 @@ import (
 	"github.com/loft-sh/devpod/pkg/extract"
 	"github.com/loft-sh/devpod/pkg/git"
 	"github.com/loft-sh/devpod/pkg/gitcredentials"
-	devpodhttp "github.com/loft-sh/devpod/pkg/http"
-	"github.com/loft-sh/devpod/pkg/port"
 	provider2 "github.com/loft-sh/devpod/pkg/provider"
-	"github.com/loft-sh/devpod/pkg/random"
 	"github.com/loft-sh/devpod/scripts"
 	"github.com/loft-sh/log"
 	"github.com/pkg/errors"
@@ -234,7 +229,7 @@ func configureCredentials(ctx context.Context, cancel context.CancelFunc, worksp
 		return "", "", nil
 	}
 
-	serverPort, err := startCredentialsServer(ctx, cancel, client, log)
+	serverPort, err := credentials.StartCredentialsServer(ctx, cancel, client, log)
 	if err != nil {
 		return "", "", err
 	}
@@ -250,7 +245,7 @@ func configureCredentials(ctx context.Context, cancel context.CancelFunc, worksp
 
 	dockerCredentials := ""
 	if workspaceInfo.Agent.InjectDockerCredentials == "true" {
-		dockerCredentials, err = dockercredentials.ConfigureCredentialsMachine(workspaceInfo.Origin, serverPort)
+		dockerCredentials, err = dockercredentials.ConfigureCredentialsMachine(workspaceInfo.Origin, serverPort, log)
 		if err != nil {
 			return "", "", err
 		}
@@ -263,68 +258,6 @@ func configureCredentials(ctx context.Context, cancel context.CancelFunc, worksp
 	}
 
 	return dockerCredentials, gitCredentials, nil
-}
-
-func startCredentialsServer(ctx context.Context, cancel context.CancelFunc, client tunnel.TunnelClient, log log.Logger) (int, error) {
-	port, err := port.FindAvailablePort(random.InRange(13000, 17000))
-	if err != nil {
-		return 0, err
-	}
-
-	go func() {
-		defer cancel()
-
-		err := credentials.RunCredentialsServer(ctx, "", port, false, false, false, client, log)
-		if err != nil {
-			log.Errorf("Run git credentials server: %v", err)
-		}
-	}()
-
-	// wait until credentials server is up
-	maxWait := time.Second * 4
-	now := time.Now()
-Outer:
-	for {
-		err := PingURL(ctx, "http://localhost:"+strconv.Itoa(port))
-		if err != nil {
-			select {
-			case <-ctx.Done():
-				break Outer
-			case <-time.After(time.Second):
-			}
-		} else {
-			log.Debugf("Credentials server started...")
-			break
-		}
-
-		if time.Since(now) > maxWait {
-			log.Debugf("Credentials server didn't start in time...")
-			break
-		}
-	}
-
-	return port, nil
-}
-
-func PingURL(ctx context.Context, url string) error {
-	timeoutCtx, cancel := context.WithTimeout(ctx, time.Second)
-	defer cancel()
-
-	req, err := http.NewRequestWithContext(timeoutCtx, "GET", url, nil)
-	if err != nil {
-		return err
-	}
-
-	resp, err := devpodhttp.GetHTTPClient().Do(req)
-	if err != nil {
-		return err
-	}
-	defer resp.Body.Close()
-
-	if resp.StatusCode >= 400 {
-		return fmt.Errorf("unexpected status code: %d", resp.StatusCode)
-	}
-	return nil
 }
 
 func installDaemon(workspaceInfo *provider2.AgentWorkspaceInfo, log log.Logger) error {

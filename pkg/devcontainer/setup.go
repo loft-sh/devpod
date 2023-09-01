@@ -111,7 +111,7 @@ func (r *Runner) setupContainer(
 		cancelCtx,
 		stdoutReader,
 		stdinWriter,
-		false,
+		r.WorkspaceConfig.Agent.InjectDockerCredentials != "false",
 		config.GetMounts(result),
 		r.Log,
 	)

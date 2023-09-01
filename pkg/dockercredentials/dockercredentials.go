@@ -10,6 +10,7 @@ import (
 	"github.com/loft-sh/devpod/pkg/docker"
 	"github.com/loft-sh/devpod/pkg/file"
 	"github.com/loft-sh/devpod/pkg/random"
+	"github.com/loft-sh/log"
 	"github.com/pkg/errors"
 )
 
@@ -29,7 +30,7 @@ type Credentials struct {
 	Secret    string
 }
 
-func ConfigureCredentialsContainer(userName string, port int) error {
+func ConfigureCredentialsContainer(userName string, port int, log log.Logger) error {
 	userHome, err := command.GetHome(userName)
 	if err != nil {
 		return err
@@ -40,10 +41,10 @@ func ConfigureCredentialsContainer(userName string, port int) error {
 		configDir = filepath.Join(userHome, ".docker")
 	}
 
-	return configureCredentials(userName, "/usr/local/bin", configDir, port)
+	return configureCredentials(userName, "#!/bin/sh", "/usr/local/bin", configDir, port, log)
 }
 
-func configureCredentials(userName string, targetDir, configDir string, port int) error {
+func configureCredentials(userName, shebang string, targetDir, configDir string, port int, log log.Logger) error {
 	binaryPath, err := os.Executable()
 	if err != nil {
 		return err
@@ -60,8 +61,10 @@ func configureCredentials(userName string, targetDir, configDir string, port int
 	}
 
 	// write credentials helper
-	err = os.WriteFile(filepath.Join(targetDir, "docker-credential-devpod"), []byte(fmt.Sprintf(`#!/bin/sh
-'%s' agent docker-credentials --port %d "$@"`, binaryPath, port)), 0777)
+	credentialHelperPath := filepath.Join(targetDir, "docker-credential-devpod")
+	log.Debugf("Wrote docker credentials helper to %s", credentialHelperPath)
+	err = os.WriteFile(credentialHelperPath, []byte(fmt.Sprintf(shebang+`
+'%s' agent docker-credentials --port '%d' "$@"`, binaryPath, port)), 0777)
 	if err != nil {
 		return errors.Wrap(err, "write credential helper")
 	}
@@ -80,9 +83,32 @@ func configureCredentials(userName string, targetDir, configDir string, port int
 	return nil
 }
 
-func ConfigureCredentialsMachine(targetFolder string, port int) (string, error) {
+func ConfigureCredentialsDockerless(targetFolder string, port int, log log.Logger) (string, error) {
+	dockerConfigDir := filepath.Join(targetFolder, ".cache", random.String(6))
+	err := configureCredentials("", "#!/.dockerless/bin/sh", dockerConfigDir, dockerConfigDir, port, log)
+	if err != nil {
+		_ = os.RemoveAll(dockerConfigDir)
+		return "", err
+	}
+
+	err = os.Setenv("DOCKER_CONFIG", dockerConfigDir)
+	if err != nil {
+		_ = os.RemoveAll(dockerConfigDir)
+		return "", err
+	}
+
+	err = os.Setenv("PATH", os.Getenv("PATH")+":"+dockerConfigDir)
+	if err != nil {
+		_ = os.RemoveAll(dockerConfigDir)
+		return "", err
+	}
+
+	return dockerConfigDir, nil
+}
+
+func ConfigureCredentialsMachine(targetFolder string, port int, log log.Logger) (string, error) {
 	dockerConfigDir := filepath.Join(targetFolder, ".cache", random.String(12))
-	err := configureCredentials("", dockerConfigDir, dockerConfigDir, port)
+	err := configureCredentials("", "#!/bin/sh", dockerConfigDir, dockerConfigDir, port, log)
 	if err != nil {
 		_ = os.RemoveAll(dockerConfigDir)
 		return "", err

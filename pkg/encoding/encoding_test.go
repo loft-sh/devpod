@@ -36,7 +36,7 @@ func Test(t *testing.T) {
 		if testCase.max > 0 {
 			out = SafeConcatNameMax(testCase.in, testCase.max)
 		} else {
-			out = SafeConcatName(testCase.in...)
+			out = SafeConcatNameMax(testCase.in, MachineUIDLength)
 		}
 
 		assert.Equal(t, testCase.expected, out, "unequal in %s", testCase.name)

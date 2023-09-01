@@ -3,7 +3,6 @@ package agent
 import (
 	"bytes"
 	"context"
-	"encoding/json"
 	"os"
 	"path/filepath"
 	"strings"
@@ -196,7 +195,7 @@ func (cmd *DaemonCmd) initialTouch(log log.Logger) {
 }
 
 func getActivity(workspaceConfig string, log log.Logger) (*time.Time, *provider2.AgentWorkspaceInfo, error) {
-	workspace, err := parseWorkspace(workspaceConfig)
+	workspace, err := agent.ParseAgentWorkspaceInfo(workspaceConfig)
 	if err != nil {
 		log.Errorf("Error reading %s: %v", workspaceConfig, err)
 		return nil, nil, nil
@@ -221,19 +220,4 @@ func getActivity(workspaceConfig string, log log.Logger) (*time.Time, *provider2
 
 	// check if timeout
 	return &t, workspace, nil
-}
-
-func parseWorkspace(path string) (*provider2.AgentWorkspaceInfo, error) {
-	content, err := os.ReadFile(path)
-	if err != nil {
-		return nil, err
-	}
-
-	workspace := &provider2.AgentWorkspaceInfo{}
-	err = json.Unmarshal(content, workspace)
-	if err != nil {
-		return nil, err
-	}
-
-	return workspace, nil
 }

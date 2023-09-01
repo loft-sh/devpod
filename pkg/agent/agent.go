@@ -72,10 +72,10 @@ func readAgentWorkspaceInfo(agentFolder, context, id string) (*provider2.AgentWo
 	}
 
 	// parse agent workspace info
-	return parseAgentWorkspaceInfo(filepath.Join(workspaceDir, provider2.WorkspaceConfigFile))
+	return ParseAgentWorkspaceInfo(filepath.Join(workspaceDir, provider2.WorkspaceConfigFile))
 }
 
-func parseAgentWorkspaceInfo(workspaceConfigFile string) (*provider2.AgentWorkspaceInfo, error) {
+func ParseAgentWorkspaceInfo(workspaceConfigFile string) (*provider2.AgentWorkspaceInfo, error) {
 	// read workspace config
 	out, err := os.ReadFile(workspaceConfigFile)
 	if err != nil {
@@ -153,7 +153,7 @@ func decodeWorkspaceInfoAndWrite(
 	// check if workspace config already exists
 	workspaceConfig := filepath.Join(workspaceDir, provider2.WorkspaceConfigFile)
 	if deleteWorkspace != nil {
-		oldWorkspaceInfo, _ := parseAgentWorkspaceInfo(workspaceConfig)
+		oldWorkspaceInfo, _ := ParseAgentWorkspaceInfo(workspaceConfig)
 		if oldWorkspaceInfo != nil && oldWorkspaceInfo.Workspace.UID != workspaceInfo.Workspace.UID {
 			// delete the old workspace
 			log.Infof("Delete old workspace '%s'", oldWorkspaceInfo.Workspace.ID)

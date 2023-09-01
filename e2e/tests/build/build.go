@@ -155,7 +155,7 @@ var _ = DevPodDescribe("devpod build test suite", func() {
 		framework.ExpectNoError(err)
 	})
 
-	ginkgo.FIt("build kubernetes dockerless", func() {
+	ginkgo.It("build kubernetes dockerless", func() {
 		ctx := context.Background()
 
 		f := framework.NewDefaultFramework(initialDir + "/bin")

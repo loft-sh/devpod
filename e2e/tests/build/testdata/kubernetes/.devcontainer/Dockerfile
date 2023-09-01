@@ -1,4 +1,4 @@
-FROM alpine
+FROM alpine AS start
 
 ENV MY_TEST=test123
 

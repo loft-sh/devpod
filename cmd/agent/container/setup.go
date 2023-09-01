@@ -18,8 +18,10 @@ import (
 	"github.com/loft-sh/devpod/pkg/compress"
 	config2 "github.com/loft-sh/devpod/pkg/config"
 	"github.com/loft-sh/devpod/pkg/copy"
+	"github.com/loft-sh/devpod/pkg/credentials"
 	"github.com/loft-sh/devpod/pkg/devcontainer/config"
 	"github.com/loft-sh/devpod/pkg/devcontainer/setup"
+	"github.com/loft-sh/devpod/pkg/dockercredentials"
 	"github.com/loft-sh/devpod/pkg/envfile"
 	"github.com/loft-sh/devpod/pkg/extract"
 	"github.com/loft-sh/devpod/pkg/ide/fleet"
@@ -129,7 +131,7 @@ func (cmd *SetupContainerCmd) Run(ctx context.Context) error {
 	}
 
 	// do dockerless build
-	err = dockerlessBuild(ctx, log)
+	err = dockerlessBuild(ctx, workspaceInfo, tunnelClient, log)
 	if err != nil {
 		return fmt.Errorf("dockerless build: %w", err)
 	}
@@ -200,7 +202,7 @@ func fillContainerEnv(setupInfo *config.Result) error {
 	return nil
 }
 
-func dockerlessBuild(ctx context.Context, log log.Logger) error {
+func dockerlessBuild(ctx context.Context, workspaceInfo *provider2.AgentWorkspaceInfo, client tunnel.TunnelClient, log log.Logger) error {
 	if os.Getenv("DOCKERLESS") != "true" {
 		return nil
 	}
@@ -239,15 +241,34 @@ func dockerlessBuild(ctx context.Context, log log.Logger) error {
 		return err
 	}
 
-	log.Infof("Start dockerless building...")
+	// configure credentials
+	if workspaceInfo.Agent.InjectDockerCredentials != "false" {
+		var cancel context.CancelFunc
+		ctx, cancel = context.WithCancel(ctx)
+		defer cancel()
 
+		// configure the docker credentials
+		dockerCredentialsDir, err := configureDockerCredentials(ctx, cancel, client, log)
+		if err != nil {
+			log.Errorf("Error configuring docker credentials: %v", err)
+		} else {
+			defer func() {
+				_ = os.Unsetenv("DOCKER_CONFIG")
+				_ = os.RemoveAll(dockerCredentialsDir)
+			}()
+		}
+	}
+
+	// write output to log
 	writer := log.Writer(logrus.InfoLevel, false)
 	defer writer.Close()
 
 	// start building
+	log.Infof("Start dockerless building with kaniko...")
 	cmd := exec.CommandContext(ctx, "/.dockerless/dockerless", "build", "--ignore-path", binaryPath)
 	cmd.Stdout = writer
 	cmd.Stderr = writer
+	cmd.Env = os.Environ()
 	err = cmd.Run()
 	if err != nil {
 		return err
@@ -278,6 +299,25 @@ func dockerlessBuild(ctx context.Context, log log.Logger) error {
 	}
 
 	return nil
+}
+
+func configureDockerCredentials(
+	ctx context.Context,
+	cancel context.CancelFunc,
+	client tunnel.TunnelClient,
+	log log.Logger,
+) (string, error) {
+	serverPort, err := credentials.StartCredentialsServer(ctx, cancel, client, log)
+	if err != nil {
+		return "", err
+	}
+
+	dockerCredentials, err := dockercredentials.ConfigureCredentialsDockerless("/.dockerless/.docker", serverPort, log)
+	if err != nil {
+		return "", err
+	}
+
+	return dockerCredentials, nil
 }
 
 func (cmd *SetupContainerCmd) installIDE(setupInfo *config.Result, workspaceInfo *provider2.AgentWorkspaceInfo, log log.Logger) error {

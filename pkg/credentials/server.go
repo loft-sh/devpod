@@ -48,7 +48,7 @@ func RunCredentialsServer(
 		// configure docker credential helper
 		if configureDockerHelper {
 			// configure the creds store
-			err = dockercredentials.ConfigureCredentialsContainer(userName, port)
+			err = dockercredentials.ConfigureCredentialsContainer(userName, port, log)
 			if err != nil {
 				return err
 			}
