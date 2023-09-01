@@ -27,7 +27,10 @@ import (
 	"github.com/pkg/errors"
 )
 
-var branchRegEx = regexp.MustCompile(`[^a-zA-Z0-9\.\-]+`)
+var (
+	branchRegEx      = regexp.MustCompile(`[^a-zA-Z0-9\.\-]+`)
+	prReferenceRegEx = regexp.MustCompile(git.PullRequestReference)
+)
 
 func SingleMachineName(devPodConfig *config.Config, provider string, log log.Logger) string {
 	legacyMachineName := "devpod-shared-" + provider
@@ -435,13 +438,14 @@ func resolve(
 	}
 
 	// is git?
-	gitRepository, gitBranch, gitCommit := git.NormalizeRepository(name)
+	gitRepository, gitPRReference, gitBranch, gitCommit := git.NormalizeRepository(name)
 	if strings.HasSuffix(name, ".git") || git.PingRepository(gitRepository) {
 		workspace.Picture = getProjectImage(name)
 		workspace.Source = provider2.WorkspaceSource{
-			GitRepository: gitRepository,
-			GitBranch:     gitBranch,
-			GitCommit:     gitCommit,
+			GitRepository:  gitRepository,
+			GitPRReference: gitPRReference,
+			GitBranch:      gitBranch,
+			GitCommit:      gitCommit,
 		}
 		return workspace, nil
 	}
@@ -514,19 +518,21 @@ var workspaceIDRegEx2 = regexp.MustCompile(`[^0-9a-z\-]+`)
 func ToID(str string) string {
 	str = strings.ToLower(filepath.ToSlash(str))
 
+	str = prReferenceRegEx.ReplaceAllStringFunc(str, git.GetBranchNameForPR)
+
 	// get last element if we find a /
 	index := strings.LastIndex(str, "/")
 	if index != -1 {
 		str = str[index+1:]
-
-		// remove .git if there is it
-		str = strings.TrimSuffix(str, ".git")
 
 		// remove a potential tag / branch name
 		splitted := strings.Split(str, "@")
 		if len(splitted) == 2 && !branchRegEx.MatchString(splitted[1]) {
 			str = splitted[0]
 		}
+
+		// remove .git if there is it
+		str = strings.TrimSuffix(str, ".git")
 	}
 
 	str = workspaceIDRegEx2.ReplaceAllString(workspaceIDRegEx1.ReplaceAllString(str, "-"), "")

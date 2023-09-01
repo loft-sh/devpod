@@ -146,7 +146,7 @@ func findDevcontainerFiles(ctx context.Context, rawSource, tmpDirPath string, ma
 	}
 
 	// git repo
-	gitRepository, gitBranch, gitCommit := git.NormalizeRepository(rawSource)
+	gitRepository, gitPRReference, gitBranch, gitCommit := git.NormalizeRepository(rawSource)
 	if strings.HasSuffix(rawSource, ".git") || git.PingRepository(gitRepository) {
 		log.Debug("Git repository detected")
 		result.IsGitRepository = true
@@ -167,7 +167,29 @@ func findDevcontainerFiles(ctx context.Context, rawSource, tmpDirPath string, ma
 		}
 		log.Debug("Done cloning git repository")
 
-		if gitCommit != "" {
+		if gitPRReference != "" {
+			log.Debugf("Fetching pull request : %s", gitPRReference)
+
+			prBranch := git.GetBranchNameForPR(gitPRReference)
+
+			// git fetch origin pull/996/head:PR996
+			fetchArgs := []string{"fetch", "origin", gitPRReference + ":" + prBranch}
+			fetchCmd := git.CommandContext(ctx, fetchArgs...)
+			fetchCmd.Dir = tmpDirPath
+			err = fetchCmd.Run()
+			if err != nil {
+				return nil, err
+			}
+
+			// git switch PR996
+			switchArgs := []string{"switch", prBranch}
+			switchCmd := git.CommandContext(ctx, switchArgs...)
+			switchCmd.Dir = tmpDirPath
+			err = switchCmd.Run()
+			if err != nil {
+				return nil, err
+			}
+		} else if gitCommit != "" {
 			log.Debugf("Resetting HEAD to %s", gitCommit)
 			// git reset --hard $COMMIT_SHA
 			resetArgs := []string{"reset", "--hard", gitCommit}
