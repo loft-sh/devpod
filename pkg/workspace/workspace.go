@@ -43,7 +43,7 @@ func SingleMachineName(devPodConfig *config.Config, provider string, log log.Log
 		}
 	}
 
-	return encoding.SafeConcatName("devpod-shared", provider, encoding.GetMachineUIDShort(log))
+	return encoding.SafeConcatNameMax([]string{"devpod-shared", provider, encoding.GetMachineUIDShort(log)}, encoding.MachineUIDLength)
 }
 
 // Exists checks if the given workspace already exists

@@ -155,7 +155,7 @@ var _ = DevPodDescribe("devpod build test suite", func() {
 		framework.ExpectNoError(err)
 	})
 
-	ginkgo.It("build kubernetes buildkit", func() {
+	ginkgo.It("build kubernetes dockerless", func() {
 		ctx := context.Background()
 
 		f := framework.NewDefaultFramework(initialDir + "/bin")
@@ -166,12 +166,19 @@ var _ = DevPodDescribe("devpod build test suite", func() {
 		_ = f.DevPodProviderDelete(ctx, "kubernetes")
 		err = f.DevPodProviderAdd(ctx, "kubernetes")
 		framework.ExpectNoError(err)
-		err = f.DevPodProviderUse(context.Background(), "kubernetes", "-o", "BUILD_REPOSITORY=test-repo", "-o", "KUBERNETES_NAMESPACE=devpod")
+		err = f.DevPodProviderUse(context.Background(), "kubernetes", "-o", "KUBERNETES_NAMESPACE=devpod")
 		framework.ExpectNoError(err)
 
-		// do the build
-		err = f.DevPodBuild(ctx, tempDir, "--force-build", "--repository", "test-repo", "--skip-push")
+		ginkgo.DeferCleanup(f.DevPodWorkspaceDelete, context.Background(), tempDir)
+
+		// do the up
+		err = f.DevPodUp(ctx, tempDir)
 		framework.ExpectNoError(err)
+
+		// check if ssh works
+		out, err := f.DevPodSSH(ctx, tempDir, "echo -n $MY_TEST")
+		framework.ExpectNoError(err)
+		framework.ExpectEqual(out, "test456", "should contain my-test")
 	})
 })
 

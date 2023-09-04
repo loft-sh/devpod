@@ -8,11 +8,8 @@ import (
 	"github.com/pkg/errors"
 )
 
-func (r *Runner) Delete(ctx context.Context, labels []string, deleteVolumes bool) error {
-	if len(labels) == 0 {
-		labels = r.getLabels()
-	}
-	containerDetails, err := r.Driver.FindDevContainer(context.TODO(), labels)
+func (r *Runner) Delete(ctx context.Context) error {
+	containerDetails, err := r.Driver.FindDevContainer(ctx, r.ID)
 	if err != nil {
 		return errors.Wrap(err, "find dev container")
 	} else if containerDetails == nil {
@@ -27,13 +24,13 @@ func (r *Runner) Delete(ctx context.Context, labels []string, deleteVolumes bool
 		}
 	} else {
 		if strings.ToLower(containerDetails.State.Status) == "running" {
-			err = r.Driver.StopDevContainer(context.TODO(), containerDetails.ID)
+			err = r.Driver.StopDevContainer(ctx, r.ID)
 			if err != nil {
 				return err
 			}
 		}
 
-		err = r.Driver.DeleteDevContainer(context.TODO(), containerDetails.ID, deleteVolumes)
+		err = r.Driver.DeleteDevContainer(ctx, r.ID)
 		if err != nil {
 			return err
 		}
@@ -43,8 +40,7 @@ func (r *Runner) Delete(ctx context.Context, labels []string, deleteVolumes bool
 }
 
 func (r *Runner) Stop(ctx context.Context) error {
-	labels := r.getLabels()
-	containerDetails, err := r.Driver.FindDevContainer(ctx, labels)
+	containerDetails, err := r.Driver.FindDevContainer(ctx, r.ID)
 	if err != nil {
 		return errors.Wrap(err, "find dev container")
 	} else if containerDetails == nil {
@@ -58,7 +54,7 @@ func (r *Runner) Stop(ctx context.Context) error {
 				return err
 			}
 		} else {
-			err = r.Driver.StopDevContainer(ctx, containerDetails.ID)
+			err = r.Driver.StopDevContainer(ctx, r.ID)
 			if err != nil {
 				return err
 			}

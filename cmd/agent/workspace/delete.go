@@ -2,6 +2,7 @@ package workspace
 
 import (
 	"context"
+	"fmt"
 	"os"
 
 	"github.com/loft-sh/devpod/cmd/flags"
@@ -19,7 +20,8 @@ type DeleteCmd struct {
 
 	Container bool
 	Daemon    bool
-	ID        string
+
+	WorkspaceInfo string
 }
 
 // NewDeleteCmd creates a new command
@@ -37,16 +39,17 @@ func NewDeleteCmd(flags *flags.GlobalFlags) *cobra.Command {
 	}
 	deleteCmd.Flags().BoolVar(&cmd.Container, "container", true, "If enabled, cleans up the DevPod container")
 	deleteCmd.Flags().BoolVar(&cmd.Daemon, "daemon", false, "If enabled, cleans up the DevPod daemon")
-	deleteCmd.Flags().StringVar(&cmd.ID, "id", "", "The workspace id to delete on the agent side")
-	_ = deleteCmd.MarkFlagRequired("id")
+
+	deleteCmd.Flags().StringVar(&cmd.WorkspaceInfo, "workspace-info", "", "The workspace info")
+	_ = deleteCmd.MarkFlagRequired("workspace-info")
 	return deleteCmd
 }
 
 func (cmd *DeleteCmd) Run(ctx context.Context) error {
 	// get workspace
-	shouldExit, workspaceInfo, err := agent.ReadAgentWorkspaceInfo(cmd.AgentDir, cmd.Context, cmd.ID, log.Default)
+	shouldExit, workspaceInfo, err := agent.WorkspaceInfo(cmd.WorkspaceInfo, log.Default.ErrorStreamOnly())
 	if err != nil {
-		return err
+		return fmt.Errorf("error parsing workspace info: %w", err)
 	} else if shouldExit {
 		return nil
 	}
@@ -79,7 +82,7 @@ func removeContainer(ctx context.Context, workspaceInfo *provider2.AgentWorkspac
 		return err
 	}
 
-	err = runner.Delete(ctx, nil, true)
+	err = runner.Delete(ctx)
 	if err != nil {
 		return err
 	}

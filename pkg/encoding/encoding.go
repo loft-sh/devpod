@@ -19,26 +19,25 @@ const (
 	hashingKey = "2f1uR7n8ryzFEaAm87Ec"
 )
 
-const UIDLength = 40
+const (
+	WorkspaceUIDLength = 16
+	MachineUIDLength   = 40
+)
 
 func CreateNewUID(context, id string) string {
-	// this returns always a UID with length 32
+	// this returns always a UID with length 16
 	uid := strings.ReplaceAll(uuid.New().String()+uuid.New().String(), "-", "")
-	return SafeConcatNameMax([]string{id, context, uid}, UIDLength)
+	return SafeConcatNameMax([]string{id, context, uid}, WorkspaceUIDLength)
 }
 
 func CreateNewUIDShort(id string) string {
-	// this returns always a UID with length 32
+	// this returns always a UID with length 16
 	uid := strings.ReplaceAll(uuid.New().String()+uuid.New().String(), "-", "")[0:5]
-	return SafeConcatNameMax([]string{id, uid}, UIDLength)
+	return SafeConcatNameMax([]string{id, uid}, WorkspaceUIDLength)
 }
 
 func IsLegacyUID(uid string) bool {
-	return len(uid) != UIDLength
-}
-
-func SafeConcatName(name ...string) string {
-	return SafeConcatNameMax(name, UIDLength)
+	return len(uid) != WorkspaceUIDLength && len(uid) != MachineUIDLength
 }
 
 func SafeConcatNameMax(name []string, max int) string {

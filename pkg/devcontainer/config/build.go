@@ -8,7 +8,14 @@ import (
 const (
 	DockerIDLabel           = "dev.containers.id"
 	DockerfileDefaultTarget = "dev_container_auto_added_stage_label"
+
+	DevPodContextFeatureFolder      = ".devpod-internal"
+	DevPodDockerlessBuildInfoFolder = "/workspaces/.dockerless"
 )
+
+func GetDockerLabelForID(id string) []string {
+	return []string{DockerIDLabel + "=" + id}
+}
 
 type BuildOptions struct {
 	provider2.CLIOptions
@@ -22,6 +29,18 @@ type BuildInfo struct {
 	ImageMetadata *ImageMetadataConfig
 	ImageName     string
 	PrebuildHash  string
+
+	Dockerless *BuildInfoDockerless
+}
+
+type BuildInfoDockerless struct {
+	Context    string
+	Dockerfile string
+
+	BuildArgs map[string]string
+	Target    string
+
+	User string
 }
 
 type ImageBuildInfo struct {

@@ -31,6 +31,11 @@ const (
 	PROVIDER_FOLDER    = "PROVIDER_FOLDER"
 )
 
+// driver env
+const (
+	DEVCONTAINER_ID = "DEVCONTAINER_ID"
+)
+
 // FromEnvironment retrives options from environment and fills a machine with it. This is primarily
 // used by provider implementations.
 func FromEnvironment() *Machine {

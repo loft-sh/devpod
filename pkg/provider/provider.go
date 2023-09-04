@@ -87,6 +87,12 @@ type ProviderAgentConfig struct {
 	// DownloadURL is the base url where to download the agent from
 	DownloadURL string `json:"downloadURL,omitempty"`
 
+	// DockerlessDisabled signals if dockerless building is disabled
+	DockerlessDisabled types.StrBool `json:"dockerlessDisabled,omitempty"`
+
+	// DockerlessImage is the image of the dockerless container to start
+	DockerlessImage string `json:"dockerlessImage,omitempty"`
+
 	// Timeout is the timeout in minutes to wait until the agent tries
 	// to turn of the server.
 	Timeout string `json:"inactivityTimeout,omitempty"`
@@ -118,12 +124,42 @@ type ProviderAgentConfig struct {
 
 	// Docker holds docker specific configuration
 	Docker ProviderDockerDriverConfig `json:"docker,omitempty"`
+
+	// Custom holds custom driver specific configuration
+	Custom ProviderCustomDriverConfig `json:"custom,omitempty"`
+}
+
+func (a ProviderAgentConfig) IsDockerDriver() bool {
+	return a.Driver == "" || a.Driver == DockerDriver
 }
 
 const (
-	DockerDriver     = "docker"
-	KubernetesDriver = "kubernetes"
+	DockerDriver = "docker"
+	CustomDriver = "custom"
 )
+
+type ProviderCustomDriverConfig struct {
+	// FindDevContainer is used to find an existing devcontainer
+	FindDevContainer types.StrArray `json:"findDevContainer,omitempty"`
+
+	// CommandDevContainer is used to execute a command in the devcontainer
+	CommandDevContainer types.StrArray `json:"commandDevContainer,omitempty"`
+
+	// TargetArchitecture is used to find out the target architecture
+	TargetArchitecture types.StrArray `json:"targetArchitecture,omitempty"`
+
+	// RunDevContainer is used to actually run the devcontainer
+	RunDevContainer types.StrArray `json:"runDevContainer,omitempty"`
+
+	// StartDevContainer is used to start the devcontainer
+	StartDevContainer types.StrArray `json:"startDevContainer,omitempty"`
+
+	// StopDevContainer is used to stop the devcontainer
+	StopDevContainer types.StrArray `json:"stopDevContainer,omitempty"`
+
+	// DeleteDevContainer is used to delete the devcontainer
+	DeleteDevContainer types.StrArray `json:"deleteDevContainer,omitempty"`
+}
 
 type ProviderKubernetesDriverConfig struct {
 	// Path where to find the kubectl binary, defaults to 'kubectl'
@@ -156,22 +192,6 @@ type ProviderKubernetesDriverConfig struct {
 
 	// NodeSelector holds the node selector for the workspace pod
 	NodeSelector string `json:"nodeSelector,omitempty"`
-
-	// BuildRepository defines the repository to push builds. If empty,
-	// DevPod will not try to build any images at all.
-	BuildRepository string `json:"buildRepository,omitempty"`
-
-	// BuildkitImage is the build kit image to use
-	BuildkitImage string `json:"buildkitImage,omitempty"`
-
-	// BuildkitPrivileged signals if pod should be ran in privileged mode
-	BuildkitPrivileged types.StrBool `json:"buildkitPrivileged,omitempty"`
-
-	// BuildkitResources holds the resources the buildkit container should have
-	BuildkitResources string `json:"buildkitResources,omitempty"`
-
-	// BuildkitNodeSelector holds the node selector for the build pod
-	BuildkitNodeSelector string `json:"buildkitNodeSelector,omitempty"`
 
 	// HelperImage is used to find out cluster architecture and copy files
 	HelperImage string `json:"helperImage,omitempty"`

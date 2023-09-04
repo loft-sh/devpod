@@ -2,6 +2,7 @@ package workspace
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/loft-sh/devpod/cmd/flags"
 	"github.com/loft-sh/devpod/pkg/agent"
@@ -15,7 +16,7 @@ import (
 type StopCmd struct {
 	*flags.GlobalFlags
 
-	ID string
+	WorkspaceInfo string
 }
 
 // NewStopCmd creates a new command
@@ -31,16 +32,16 @@ func NewStopCmd(flags *flags.GlobalFlags) *cobra.Command {
 			return cmd.Run(context.Background())
 		},
 	}
-	stopCmd.Flags().StringVar(&cmd.ID, "id", "", "The workspace id to stop on the agent side")
-	_ = stopCmd.MarkFlagRequired("id")
+	stopCmd.Flags().StringVar(&cmd.WorkspaceInfo, "workspace-info", "", "The workspace info")
+	_ = stopCmd.MarkFlagRequired("workspace-info")
 	return stopCmd
 }
 
 func (cmd *StopCmd) Run(ctx context.Context) error {
 	// get workspace
-	shouldExit, workspaceInfo, err := agent.ReadAgentWorkspaceInfo(cmd.AgentDir, cmd.Context, cmd.ID, log.Default)
+	shouldExit, workspaceInfo, err := agent.WriteWorkspaceInfo(cmd.WorkspaceInfo, log.Default.ErrorStreamOnly())
 	if err != nil {
-		return err
+		return fmt.Errorf("error parsing workspace info: %w", err)
 	} else if shouldExit {
 		return nil
 	}

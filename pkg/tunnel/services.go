@@ -98,13 +98,12 @@ func RunInContainer(
 	}
 
 	// forward credentials to container
-	_, err = tunnelserver.RunTunnelServer(
+	err = tunnelserver.RunServicesServer(
 		cancelCtx,
 		stdoutReader,
 		stdinWriter,
 		gitCredentials,
 		dockerCredentials,
-		nil,
 		forwarder,
 		log,
 	)

@@ -142,31 +142,31 @@ func ToString(credentials *GitCredentials) string {
 
 func SetUser(userName string, user *GitUser) error {
 	if user.Name != "" {
-		command := fmt.Sprintf("git config --global user.name '%s'", user.Name)
+		shellCommand := fmt.Sprintf("git config --global user.name '%s'", user.Name)
 		args := []string{}
 		if userName != "" {
-			args = append(args, "su", userName, "-c", command)
+			args = append(args, "su", userName, "-c", shellCommand)
 		} else {
-			args = append(args, "sh", "-c", command)
+			args = append(args, "sh", "-c", shellCommand)
 		}
 
 		out, err := exec.Command(args[0], args[1:]...).CombinedOutput()
 		if err != nil {
-			return errors.Wrapf(err, "set user.name: %s", string(out))
+			return fmt.Errorf("set user.name '%s': %w", strings.Join(args, " "), command.WrapCommandError(out, err))
 		}
 	}
 	if user.Email != "" {
-		command := fmt.Sprintf("git config --global user.email '%s'", user.Email)
+		shellCommand := fmt.Sprintf("git config --global user.email '%s'", user.Email)
 		args := []string{}
 		if userName != "" {
-			args = append(args, "su", userName, "-c", command)
+			args = append(args, "su", userName, "-c", shellCommand)
 		} else {
-			args = append(args, "sh", "-c", command)
+			args = append(args, "sh", "-c", shellCommand)
 		}
 
 		out, err := exec.Command(args[0], args[1:]...).CombinedOutput()
 		if err != nil {
-			return errors.Wrapf(err, "set user.email: %s", string(out))
+			return fmt.Errorf("set user.email '%s': %w", strings.Join(args, " "), command.WrapCommandError(out, err))
 		}
 	}
 	return nil

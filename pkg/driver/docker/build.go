@@ -6,9 +6,7 @@ import (
 	"fmt"
 	"io"
 	"os"
-	"path"
 	"path/filepath"
-	"runtime"
 	"strings"
 
 	"github.com/loft-sh/devpod/pkg/devcontainer/build"
@@ -19,7 +17,6 @@ import (
 	"github.com/loft-sh/devpod/pkg/docker"
 	"github.com/loft-sh/devpod/pkg/dockerfile"
 	"github.com/loft-sh/devpod/pkg/id"
-	"github.com/loft-sh/devpod/pkg/image"
 	"github.com/loft-sh/log/hash"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
@@ -27,7 +24,7 @@ import (
 
 func (d *dockerDriver) BuildDevContainer(
 	ctx context.Context,
-	labels []string,
+	prebuildHash string,
 	parsedConfig *config.SubstitutedConfig,
 	extendedBuildInfo *feature.ExtendedBuildInfo,
 	dockerfilePath,
@@ -35,60 +32,21 @@ func (d *dockerDriver) BuildDevContainer(
 	localWorkspaceFolder string,
 	options config.BuildOptions,
 ) (*config.BuildInfo, error) {
-	prebuildHash, err := config.CalculatePrebuildHash(parsedConfig.Config, options.Platform, runtime.GOARCH, GetContextPath(parsedConfig.Config), dockerfilePath, dockerfileContent, d.Log)
-	if err != nil {
-		return nil, err
-	}
-
-	// check if there is a prebuild image
+	// check if image build is necessary
 	imageName := GetImageName(localWorkspaceFolder, prebuildHash)
-	if !options.ForceBuild {
-		devPodCustomizations := config.GetDevPodCustomizations(parsedConfig.Config)
-		if options.Repository != "" {
-			options.PrebuildRepositories = append(options.PrebuildRepositories, options.Repository)
-		}
-		options.PrebuildRepositories = append(options.PrebuildRepositories, devPodCustomizations.PrebuildRepository...)
-
-		d.Log.Debugf("Try to find prebuild image %s in repositories %s", prebuildHash, strings.Join(options.PrebuildRepositories, ","))
-		for _, prebuildRepo := range options.PrebuildRepositories {
-			prebuildImage := prebuildRepo + ":" + prebuildHash
-			img, err := image.GetImage(prebuildImage)
-			if err == nil && img != nil {
-				// prebuild image found
-				d.Log.Infof("Found existing prebuilt image %s", prebuildImage)
-
-				// inspect image
-				imageDetails, err := d.InspectImage(ctx, prebuildImage)
-				if err != nil {
-					return nil, errors.Wrap(err, "get image details")
-				}
-
-				return &config.BuildInfo{
-					ImageDetails:  imageDetails,
-					ImageMetadata: extendedBuildInfo.MetadataConfig,
-					ImageName:     prebuildImage,
-					PrebuildHash:  prebuildHash,
-				}, nil
-			} else if err != nil {
-				d.Log.Debugf("Error trying to find prebuild image %s: %v", prebuildImage, err)
-			}
-		}
-
-		// check if image build is necessary
-		if options.Repository == "" {
-			imageDetails, err := d.Docker.InspectImage(ctx, imageName, false)
-			if err == nil && imageDetails != nil {
-				// local image found
-				d.Log.Infof("Found existing local image %s", imageName)
-				return &config.BuildInfo{
-					ImageDetails:  imageDetails,
-					ImageMetadata: extendedBuildInfo.MetadataConfig,
-					ImageName:     imageName,
-					PrebuildHash:  prebuildHash,
-				}, nil
-			} else if err != nil {
-				d.Log.Debugf("Error trying to find local image %s: %v", imageName, err)
-			}
+	if options.Repository == "" {
+		imageDetails, err := d.Docker.InspectImage(ctx, imageName, false)
+		if err == nil && imageDetails != nil {
+			// local image found
+			d.Log.Infof("Found existing local image %s", imageName)
+			return &config.BuildInfo{
+				ImageDetails:  imageDetails,
+				ImageMetadata: extendedBuildInfo.MetadataConfig,
+				ImageName:     imageName,
+				PrebuildHash:  prebuildHash,
+			}, nil
+		} else if err != nil {
+			d.Log.Debugf("Error trying to find local image %s: %v", imageName, err)
 		}
 	}
 
@@ -98,15 +56,10 @@ func (d *dockerDriver) BuildDevContainer(
 	}
 
 	// get build options
-	buildOptions, deleteFolders, err := CreateBuildOptions(dockerfilePath, dockerfileContent, parsedConfig, extendedBuildInfo, imageName, options.Repository, options.PrebuildRepositories, prebuildHash)
+	buildOptions, err := CreateBuildOptions(dockerfilePath, dockerfileContent, parsedConfig, extendedBuildInfo, imageName, options.Repository, options.PrebuildRepositories, prebuildHash)
 	if err != nil {
 		return nil, err
 	}
-	defer func() {
-		for _, folder := range deleteFolders {
-			_ = os.RemoveAll(folder)
-		}
-	}()
 
 	// build image
 	writer := d.Log.Writer(logrus.InfoLevel, false)
@@ -152,28 +105,58 @@ func CreateBuildOptions(
 	pushRepository string,
 	prebuildRepositories []string,
 	prebuildHash string,
-) (*build.BuildOptions, []string, error) {
+) (*build.BuildOptions, error) {
+	var err error
+
 	// extra args?
-	finalDockerfilePath := dockerfilePath
 	buildOptions := &build.BuildOptions{
-		BuildArgs: parsedConfig.Config.Build.Args,
-		Labels:    map[string]string{},
-		Contexts:  map[string]string{},
-		Load:      true,
+		Labels:   map[string]string{},
+		Contexts: map[string]string{},
+		Load:     true,
 	}
+
+	// get build args and target
+	buildOptions.BuildArgs, buildOptions.Target = GetBuildArgsAndTarget(parsedConfig, extendedBuildInfo)
+
+	// get extended build info
+	buildOptions.Dockerfile, err = RewriteDockerfile(dockerfileContent, extendedBuildInfo)
+	if err != nil {
+		return nil, err
+	} else if buildOptions.Dockerfile == "" {
+		buildOptions.Dockerfile = dockerfilePath
+	}
+
+	// add label
+	if extendedBuildInfo != nil && extendedBuildInfo.MetadataLabel != "" {
+		buildOptions.Labels[metadata.ImageMetadataLabel] = extendedBuildInfo.MetadataLabel
+	}
+
+	// other options
+	if imageName != "" {
+		buildOptions.Images = append(buildOptions.Images, imageName)
+	}
+	if pushRepository != "" {
+		buildOptions.Images = append(buildOptions.Images, pushRepository+":"+prebuildHash)
+	}
+	for _, prebuildRepository := range prebuildRepositories {
+		buildOptions.Images = append(buildOptions.Images, prebuildRepository+":"+prebuildHash)
+	}
+	buildOptions.Context = config.GetContextPath(parsedConfig.Config)
+
+	// add build arg
 	if buildOptions.BuildArgs == nil {
 		buildOptions.BuildArgs = map[string]string{}
 	}
-	deleteFolders := []string{}
+	buildOptions.BuildArgs["BUILDKIT_INLINE_CACHE"] = "1"
+	return buildOptions, nil
+}
 
-	// get extended build info
+func RewriteDockerfile(
+	dockerfileContent string,
+	extendedBuildInfo *feature.ExtendedBuildInfo,
+) (string, error) {
 	if extendedBuildInfo != nil && extendedBuildInfo.FeaturesBuildInfo != nil {
 		featureBuildInfo := extendedBuildInfo.FeaturesBuildInfo
-
-		// cleanup features folder after we are done building
-		if featureBuildInfo.FeaturesFolder != "" {
-			deleteFolders = append(deleteFolders, featureBuildInfo.FeaturesFolder)
-		}
 
 		// rewrite dockerfile
 		finalDockerfileContent := dockerfile.RemoveSyntaxVersion(dockerfileContent)
@@ -184,52 +167,45 @@ func CreateBuildOptions(
 		}, "\n"))
 
 		// write dockerfile with features
-		finalDockerfilePath = filepath.Join(featureBuildInfo.FeaturesFolder, "Dockerfile-with-features")
+		finalDockerfilePath := filepath.Join(featureBuildInfo.FeaturesFolder, "Dockerfile-with-features")
 		err := os.WriteFile(finalDockerfilePath, []byte(finalDockerfileContent), 0666)
 		if err != nil {
-			return nil, nil, errors.Wrap(err, "write Dockerfile with features")
+			return "", errors.Wrap(err, "write Dockerfile with features")
 		}
+
+		return finalDockerfilePath, nil
+	}
+
+	return "", nil
+}
+
+func GetBuildArgsAndTarget(
+	parsedConfig *config.SubstitutedConfig,
+	extendedBuildInfo *feature.ExtendedBuildInfo,
+) (map[string]string, string) {
+	buildArgs := map[string]string{}
+	for k, v := range parsedConfig.Config.Build.Args {
+		buildArgs[k] = v
+	}
+
+	// get extended build info
+	if extendedBuildInfo != nil && extendedBuildInfo.FeaturesBuildInfo != nil {
+		featureBuildInfo := extendedBuildInfo.FeaturesBuildInfo
 
 		// track additional build args to include below
-		for k, v := range featureBuildInfo.BuildKitContexts {
-			buildOptions.Contexts[k] = v
-		}
 		for k, v := range featureBuildInfo.BuildArgs {
-			buildOptions.BuildArgs[k] = v
+			buildArgs[k] = v
 		}
 	}
 
-	// add label
-	if extendedBuildInfo != nil && extendedBuildInfo.MetadataLabel != "" {
-		buildOptions.Labels[metadata.ImageMetadataLabel] = extendedBuildInfo.MetadataLabel
-	}
-
-	// target
+	target := ""
 	if extendedBuildInfo != nil && extendedBuildInfo.FeaturesBuildInfo != nil && extendedBuildInfo.FeaturesBuildInfo.OverrideTarget != "" {
-		buildOptions.Target = extendedBuildInfo.FeaturesBuildInfo.OverrideTarget
+		target = extendedBuildInfo.FeaturesBuildInfo.OverrideTarget
 	} else if parsedConfig.Config.Build.Target != "" {
-		buildOptions.Target = parsedConfig.Config.Build.Target
+		target = parsedConfig.Config.Build.Target
 	}
 
-	// other options
-	buildOptions.Dockerfile = finalDockerfilePath
-	if imageName != "" {
-		buildOptions.Images = append(buildOptions.Images, imageName)
-	}
-	if pushRepository != "" {
-		buildOptions.Images = append(buildOptions.Images, pushRepository+":"+prebuildHash)
-	}
-	for _, prebuildRepository := range prebuildRepositories {
-		buildOptions.Images = append(buildOptions.Images, prebuildRepository+":"+prebuildHash)
-	}
-	buildOptions.Context = GetContextPath(parsedConfig.Config)
-
-	// add build arg
-	if buildOptions.BuildArgs == nil {
-		buildOptions.BuildArgs = map[string]string{}
-	}
-	buildOptions.BuildArgs["BUILDKIT_INLINE_CACHE"] = "1"
-	return buildOptions, deleteFolders, nil
+	return buildArgs, target
 }
 
 func GetImageName(localWorkspaceFolder, prebuildHash string) string {
@@ -319,25 +295,4 @@ func (d *dockerDriver) buildxBuild(ctx context.Context, writer io.Writer, platfo
 	}
 
 	return nil
-}
-
-func GetContextPath(parsedConfig *config.DevContainerConfig) string {
-	context := ""
-	dockerfilePath := ""
-	if parsedConfig.Dockerfile != "" {
-		context = parsedConfig.Context
-		dockerfilePath = parsedConfig.Dockerfile
-	} else if parsedConfig.Build.Dockerfile != "" {
-		context = parsedConfig.Build.Context
-		dockerfilePath = parsedConfig.Build.Dockerfile
-	}
-
-	configDir := path.Dir(filepath.ToSlash(parsedConfig.Origin))
-	if context != "" {
-		return filepath.FromSlash(path.Join(configDir, context))
-	} else if dockerfilePath != "" {
-		return filepath.FromSlash(path.Join(configDir, path.Dir(dockerfilePath)))
-	}
-
-	return configDir
 }

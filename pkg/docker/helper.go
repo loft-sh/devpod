@@ -40,7 +40,11 @@ func (r *DockerHelper) FindDevContainer(ctx context.Context, labels []string) (*
 		return nil, nil
 	}
 
-	containerDetails, err := r.InspectContainers(ctx, containers)
+	return r.FindContainerByID(ctx, containers)
+}
+
+func (r *DockerHelper) FindContainerByID(ctx context.Context, containerIds []string) (*config.ContainerDetails, error) {
+	containerDetails, err := r.InspectContainers(ctx, containerIds)
 	if err != nil {
 		return nil, err
 	}
@@ -109,13 +113,13 @@ func (r *DockerHelper) RunWithDir(ctx context.Context, dir string, args []string
 	return cmd.Run()
 }
 
-func (r *DockerHelper) StartContainer(ctx context.Context, id string, labels []string) error {
-	out, err := r.buildCmd(ctx, "start", id).CombinedOutput()
+func (r *DockerHelper) StartContainer(ctx context.Context, containerId string) error {
+	out, err := r.buildCmd(ctx, "start", containerId).CombinedOutput()
 	if err != nil {
 		return perrors.Wrapf(err, "start command: %v", string(out))
 	}
 
-	container, err := r.FindDevContainer(ctx, labels)
+	container, err := r.FindContainerByID(ctx, []string{containerId})
 	if err != nil {
 		return err
 	} else if container == nil {

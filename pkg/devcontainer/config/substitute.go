@@ -25,6 +25,8 @@ type SubstitutionContext struct {
 	LocalWorkspaceFolder     string            `json:"LocalWorkspaceFolder,omitempty"`
 	ContainerWorkspaceFolder string            `json:"ContainerWorkspaceFolder,omitempty"`
 	Env                      map[string]string `json:"Env,omitempty"`
+
+	WorkspaceMount string `json:"WorkspaceMount,omitempty"`
 }
 
 func Substitute(substitutionCtx *SubstitutionContext, config interface{}, out interface{}) error {
@@ -183,6 +185,15 @@ func ResolveString(val string, replace ReplaceFunction) string {
 
 		return []byte(replace(string(match), variable, args))
 	}))
+}
+
+func ObjectToList(object map[string]string) []string {
+	ret := []string{}
+	for k, v := range object {
+		ret = append(ret, k+"="+v)
+	}
+
+	return ret
 }
 
 func ListToObject(list []string) map[string]string {

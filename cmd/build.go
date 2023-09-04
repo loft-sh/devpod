@@ -187,14 +187,13 @@ func (cmd *BuildCmd) buildAgentClient(ctx context.Context, workspaceClient clien
 	}()
 
 	// create container etc.
-	_, err = tunnelserver.RunTunnelServer(
+	_, err = tunnelserver.RunUpServer(
 		cancelCtx,
 		stdoutReader,
 		stdinWriter,
 		workspaceClient.AgentInjectGitCredentials(),
 		workspaceClient.AgentInjectDockerCredentials(),
 		workspaceClient.WorkspaceConfig(),
-		nil,
 		log,
 	)
 	if err != nil {

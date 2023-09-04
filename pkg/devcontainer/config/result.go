@@ -1,9 +1,23 @@
 package config
 
+const UserLabel = "devpod.user"
+
 type Result struct {
-	ContainerDetails    *ContainerDetails         `json:"ContainerDetails"`
 	MergedConfig        *MergedDevContainerConfig `json:"MergedConfig"`
 	SubstitutionContext *SubstitutionContext      `json:"SubstitutionContext"`
+	ContainerDetails    *ContainerDetails         `json:"ContainerDetails"`
+}
+
+func GetMounts(result *Result) []*Mount {
+	workspaceMount := ParseMount(result.SubstitutionContext.WorkspaceMount)
+	mounts := []*Mount{&workspaceMount}
+	for _, m := range result.MergedConfig.Mounts {
+		if m.Type == "bind" {
+			mounts = append(mounts, m)
+		}
+	}
+
+	return mounts
 }
 
 func GetRemoteUser(result *Result) string {
@@ -11,8 +25,8 @@ func GetRemoteUser(result *Result) string {
 	if result != nil {
 		if result.MergedConfig != nil && result.MergedConfig.RemoteUser != "" {
 			user = result.MergedConfig.RemoteUser
-		} else if result.ContainerDetails != nil && result.ContainerDetails.Config.User != "" {
-			user = result.ContainerDetails.Config.User
+		} else if result.ContainerDetails != nil && result.ContainerDetails.Config.Labels != nil && result.ContainerDetails.Config.Labels[UserLabel] != "" {
+			user = result.ContainerDetails.Config.Labels[UserLabel]
 		}
 	}
 

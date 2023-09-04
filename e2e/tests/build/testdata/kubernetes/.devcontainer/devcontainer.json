@@ -1,4 +1,6 @@
 {
 	"name": "Build Example Kubernetes",
-	"dockerFile": "Dockerfile"
+	"build": {
+		"dockerfile": "Dockerfile"
+	}
 }

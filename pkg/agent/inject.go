@@ -109,7 +109,7 @@ func InjectAgentAndExecute(
 			stdin,
 			stdout,
 			stderr,
-			time.Second*10,
+			time.Second*20,
 			log,
 		)
 		if err != nil {

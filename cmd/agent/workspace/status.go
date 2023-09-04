@@ -16,7 +16,7 @@ import (
 type StatusCmd struct {
 	*flags.GlobalFlags
 
-	ID string
+	WorkspaceInfo string
 }
 
 // NewStatusCmd creates a new command
@@ -32,14 +32,14 @@ func NewStatusCmd(flags *flags.GlobalFlags) *cobra.Command {
 			return cmd.Run(context.Background(), log.Default.ErrorStreamOnly())
 		},
 	}
-	statusCmd.Flags().StringVar(&cmd.ID, "id", "", "The workspace id to print the status on the agent side")
-	_ = statusCmd.MarkFlagRequired("id")
+	statusCmd.Flags().StringVar(&cmd.WorkspaceInfo, "workspace-info", "", "The workspace info")
+	_ = statusCmd.MarkFlagRequired("workspace-info")
 	return statusCmd
 }
 
 func (cmd *StatusCmd) Run(ctx context.Context, log log.Logger) error {
 	// get workspace
-	shouldExit, workspaceInfo, err := agent.ReadAgentWorkspaceInfo(cmd.AgentDir, cmd.Context, cmd.ID, log)
+	shouldExit, workspaceInfo, err := agent.WorkspaceInfo(cmd.WorkspaceInfo, log)
 	if err != nil {
 		return err
 	} else if shouldExit {

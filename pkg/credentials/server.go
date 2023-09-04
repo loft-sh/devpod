@@ -48,7 +48,7 @@ func RunCredentialsServer(
 		// configure docker credential helper
 		if configureDockerHelper {
 			// configure the creds store
-			err = dockercredentials.ConfigureCredentialsContainer(userName, port)
+			err = dockercredentials.ConfigureCredentialsContainer(userName, port, log)
 			if err != nil {
 				return err
 			}
@@ -58,7 +58,7 @@ func RunCredentialsServer(
 		if configureGitUser {
 			err = configureGitUserLocally(ctx, userName, client)
 			if err != nil {
-				log.Errorf("Error configuring git user: %v", err)
+				log.Debugf("Error configuring git user: %v", err)
 			}
 		}
 
@@ -151,7 +151,7 @@ func configureGitUserLocally(ctx context.Context, userName string, client tunnel
 	// set git user
 	err = gitcredentials.SetUser(userName, gitUser)
 	if err != nil {
-		return fmt.Errorf("set git user: %w", err)
+		return fmt.Errorf("set git user & email: %w", err)
 	}
 
 	return nil

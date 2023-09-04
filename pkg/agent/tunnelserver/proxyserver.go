@@ -83,9 +83,9 @@ func (t *proxyServer) Log(ctx context.Context, message *tunnel.LogMessage) (*tun
 	return t.client.Log(ctx, message)
 }
 
-func (t *proxyServer) GitCloneAndRead(response *tunnel.Empty, stream tunnel.Tunnel_GitCloneAndReadServer) error {
+func (t *proxyServer) StreamGitClone(message *tunnel.Empty, stream tunnel.Tunnel_StreamGitCloneServer) error {
 	t.log.Debug("Cloning and reading workspace")
-	client, err := t.client.GitCloneAndRead(context.TODO(), &tunnel.Empty{})
+	client, err := t.client.StreamGitClone(context.TODO(), &tunnel.Empty{})
 	if err != nil {
 		return err
 	}
@@ -100,10 +100,28 @@ func (t *proxyServer) GitCloneAndRead(response *tunnel.Empty, stream tunnel.Tunn
 	return buf.Flush()
 }
 
-func (t *proxyServer) ReadWorkspace(response *tunnel.Empty, stream tunnel.Tunnel_ReadWorkspaceServer) error {
+func (t *proxyServer) StreamWorkspace(message *tunnel.Empty, stream tunnel.Tunnel_StreamWorkspaceServer) error {
 	t.log.Debug("Start reading workspace")
 
-	client, err := t.client.ReadWorkspace(context.TODO(), &tunnel.Empty{})
+	client, err := t.client.StreamWorkspace(context.TODO(), &tunnel.Empty{})
+	if err != nil {
+		return err
+	}
+
+	buf := bufio.NewWriterSize(NewStreamWriter(stream, t.log), 10*1024)
+	_, err = io.Copy(buf, NewStreamReader(client, t.log))
+	if err != nil {
+		return err
+	}
+
+	// make sure buffer is flushed
+	return buf.Flush()
+}
+
+func (t *proxyServer) StreamMount(message *tunnel.StreamMountRequest, stream tunnel.Tunnel_StreamMountServer) error {
+	t.log.Debug("Start reading mount")
+
+	client, err := t.client.StreamMount(context.TODO(), message)
 	if err != nil {
 		return err
 	}

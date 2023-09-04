@@ -3,15 +3,23 @@ package devcontainer
 import (
 	"context"
 	"fmt"
+	"os"
+	"path/filepath"
 
 	"github.com/loft-sh/devpod/pkg/devcontainer/config"
+	"github.com/loft-sh/devpod/pkg/driver"
 	"github.com/loft-sh/devpod/pkg/driver/docker"
 	"github.com/loft-sh/devpod/pkg/image"
 	"github.com/pkg/errors"
 )
 
 func (r *Runner) Build(ctx context.Context, options config.BuildOptions) (string, error) {
-	substitutedConfig, _, err := r.prepare(options.CLIOptions)
+	dockerDriver, ok := r.Driver.(driver.DockerDriver)
+	if !ok {
+		return "", fmt.Errorf("building only supported with docker driver")
+	}
+
+	substitutedConfig, err := r.prepare(options.CLIOptions)
 	if err != nil {
 		return "", err
 	}
@@ -21,6 +29,12 @@ func (r *Runner) Build(ctx context.Context, options config.BuildOptions) (string
 	if !options.SkipPush && options.Repository == "" && prebuildRepo == "" {
 		return "", fmt.Errorf("repository needs to be specified")
 	}
+
+	// remove build information
+	defer func() {
+		contextPath := config.GetContextPath(substitutedConfig.Config)
+		_ = os.RemoveAll(filepath.Join(contextPath, config.DevPodContextFeatureFolder))
+	}()
 
 	// check if we need to build container
 	buildInfo, err := r.build(ctx, substitutedConfig, options)
@@ -58,7 +72,7 @@ func (r *Runner) Build(ctx context.Context, options config.BuildOptions) (string
 	}
 
 	// push the image to the registry
-	err = r.Driver.PushDevContainer(context.TODO(), prebuildImage)
+	err = dockerDriver.PushDevContainer(ctx, prebuildImage)
 	if err != nil {
 		return "", errors.Wrap(err, "push image")
 	}

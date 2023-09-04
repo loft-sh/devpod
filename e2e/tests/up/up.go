@@ -13,14 +13,12 @@ import (
 	"time"
 
 	"github.com/docker/docker/api/types"
+	"github.com/loft-sh/devpod/e2e/framework"
 	"github.com/loft-sh/devpod/pkg/compose"
 	"github.com/loft-sh/devpod/pkg/devcontainer/config"
 	docker "github.com/loft-sh/devpod/pkg/docker"
-	"github.com/onsi/gomega"
-	corev1 "k8s.io/api/core/v1"
-
-	"github.com/loft-sh/devpod/e2e/framework"
 	"github.com/onsi/ginkgo/v2"
+	"github.com/onsi/gomega"
 )
 
 var _ = DevPodDescribe("devpod up test suite", func() {
@@ -150,7 +148,7 @@ var _ = DevPodDescribe("devpod up test suite", func() {
 		framework.ExpectNoError(err)
 
 		// check if pod is there
-		list := &corev1.PodList{}
+		list := &framework.PodList{}
 		err = json.Unmarshal(stdout, list)
 		framework.ExpectNoError(err)
 		framework.ExpectEqual(len(list.Items), 1, "Expect 1 pod")
@@ -171,7 +169,7 @@ var _ = DevPodDescribe("devpod up test suite", func() {
 		framework.ExpectNoError(err)
 
 		// check if pod is there
-		list = &corev1.PodList{}
+		list = &framework.PodList{}
 		err = json.Unmarshal(stdout, list)
 		framework.ExpectNoError(err)
 		framework.ExpectEqual(len(list.Items), 0, "Expect no pods")
@@ -186,7 +184,7 @@ var _ = DevPodDescribe("devpod up test suite", func() {
 		framework.ExpectNoError(err)
 
 		// check if pod is there
-		list = &corev1.PodList{}
+		list = &framework.PodList{}
 		err = json.Unmarshal(stdout, list)
 		framework.ExpectNoError(err)
 		framework.ExpectEqual(len(list.Items), 1, "Expect 1 pod")
@@ -613,7 +611,7 @@ var _ = DevPodDescribe("devpod up test suite", func() {
 					})
 					framework.ExpectNoError(err)
 
-					image1 := container.Config.Image
+					image1 := container.Config.LegacyImage
 
 					scriptFile, err := os.OpenFile(tempDir+"/scripts/alias.sh",
 						os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0600)
@@ -634,7 +632,7 @@ var _ = DevPodDescribe("devpod up test suite", func() {
 					})
 					framework.ExpectNoError(err)
 
-					image2 := container.Config.Image
+					image2 := container.Config.LegacyImage
 
 					gomega.Expect(image2).ShouldNot(gomega.Equal(image1), "images should be different")
 				}, ginkgo.SpecTimeout(60*time.Second))
@@ -665,7 +663,7 @@ var _ = DevPodDescribe("devpod up test suite", func() {
 					})
 					framework.ExpectNoError(err)
 
-					image1 := container.Config.Image
+					image1 := container.Config.LegacyImage
 
 					scriptFile, err := os.OpenFile(tempDir+"/scripts/install.sh",
 						os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0600)
@@ -686,7 +684,7 @@ var _ = DevPodDescribe("devpod up test suite", func() {
 					})
 					framework.ExpectNoError(err)
 
-					image2 := container.Config.Image
+					image2 := container.Config.LegacyImage
 
 					gomega.Expect(image2).Should(gomega.Equal(image1), "image should be same")
 				}, ginkgo.SpecTimeout(60*time.Second))
