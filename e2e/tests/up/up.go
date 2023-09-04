@@ -13,14 +13,12 @@ import (
 	"time"
 
 	"github.com/docker/docker/api/types"
+	"github.com/loft-sh/devpod/e2e/framework"
 	"github.com/loft-sh/devpod/pkg/compose"
 	"github.com/loft-sh/devpod/pkg/devcontainer/config"
 	docker "github.com/loft-sh/devpod/pkg/docker"
-	"github.com/onsi/gomega"
-	corev1 "k8s.io/api/core/v1"
-
-	"github.com/loft-sh/devpod/e2e/framework"
 	"github.com/onsi/ginkgo/v2"
+	"github.com/onsi/gomega"
 )
 
 var _ = DevPodDescribe("devpod up test suite", func() {
@@ -132,7 +130,7 @@ var _ = DevPodDescribe("devpod up test suite", func() {
 		framework.ExpectNoError(err)
 
 		// check if pod is there
-		list := &corev1.PodList{}
+		list := &framework.PodList{}
 		err = json.Unmarshal(stdout, list)
 		framework.ExpectNoError(err)
 		framework.ExpectEqual(len(list.Items), 1, "Expect 1 pod")
@@ -153,7 +151,7 @@ var _ = DevPodDescribe("devpod up test suite", func() {
 		framework.ExpectNoError(err)
 
 		// check if pod is there
-		list = &corev1.PodList{}
+		list = &framework.PodList{}
 		err = json.Unmarshal(stdout, list)
 		framework.ExpectNoError(err)
 		framework.ExpectEqual(len(list.Items), 0, "Expect no pods")
@@ -168,7 +166,7 @@ var _ = DevPodDescribe("devpod up test suite", func() {
 		framework.ExpectNoError(err)
 
 		// check if pod is there
-		list = &corev1.PodList{}
+		list = &framework.PodList{}
 		err = json.Unmarshal(stdout, list)
 		framework.ExpectNoError(err)
 		framework.ExpectEqual(len(list.Items), 1, "Expect 1 pod")
