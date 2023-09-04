@@ -77,7 +77,7 @@ func (cmd *ImportCmd) Run(ctx context.Context, args []string) error {
 
 	workspaceDefinition, err := cmd.prepareWorkspaceToImportDefinition(devPodConfig, provider)
 	if err != nil {
-		return err
+		return errors.Wrap(err, "prepare workspace to import definition")
 	}
 
 	workspaceClient, err := clientimplementation.NewProxyClient(

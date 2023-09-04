@@ -343,10 +343,15 @@ func (s *proxyClient) ImportWorkspace(ctx context.Context, options client.Import
 		readLogStream(reader, s.log)
 	}()
 
+	cmd := s.config.Exec.Proxy.ImportWorkspace
+	if !isCommandSpecified(cmd) {
+		return fmt.Errorf("import command not configured")
+	}
+
 	err := RunCommandWithBinaries(
 		ctx,
 		"import",
-		s.config.Exec.Proxy.ImportWorkspace,
+		cmd,
 		s.workspace.Context,
 		s.workspace,
 		nil,
@@ -363,6 +368,10 @@ func (s *proxyClient) ImportWorkspace(ctx context.Context, options client.Import
 	}
 
 	return nil
+}
+
+func isCommandSpecified(cmd []string) bool {
+	return len(cmd) > 0 && cmd[0] != ""
 }
 
 func EncodeOptions(options any, name string) map[string]string {
