@@ -108,12 +108,12 @@ jobs:
             target: x86_64-pc-windows-msvc
             arch: amd64
             cli_only: false
-          - host: ubuntu-latest
+          - host: ubuntu-20.04
             target: x86_64-unknown-linux-gnu
             os: linux
             arch: amd64
             cli_only: false
-          - host: ubuntu-latest
+          - host: ubuntu-20.04
             target: aarch64-unknown-linux-gnu
             os: linux
             arch: arm64
@@ -139,7 +139,7 @@ jobs:
         working-directory: "./desktop"
 
       - name: Setup System Dependencies
-        if: matrix.settings.host == 'ubuntu-latest' && matrix.settings.cli_only == false
+        if: matrix.settings.host == 'ubuntu-20.04' && matrix.settings.cli_only == false
         run: |
           sudo apt-get update
           sudo apt-get install -y libgtk-3-dev libwebkit2gtk-4.0-dev libayatana-appindicator3-dev librsvg2-dev
@@ -195,7 +195,7 @@ jobs:
         working-directory: "./desktop"
 
       - name: Build Desktop App
-        if: matrix.settings.host == 'ubuntu-latest' && matrix.settings.cli_only == false
+        if: matrix.settings.host == 'ubuntu-20.04' && matrix.settings.cli_only == false
         uses: tauri-apps/tauri-action@v0.4.0
         with:
           releaseId: ${{ needs.create-release.outputs.release_id }}
@@ -232,7 +232,7 @@ jobs:
           APPLE_PASSWORD: ${{ secrets.APPLE_PASSWORD }}
 
       - name: Build RPM
-        if: matrix.settings.host == 'ubuntu-latest' && matrix.settings.cli_only == false
+        if: matrix.settings.host == 'ubuntu-20.04' && matrix.settings.cli_only == false
         id: build-desktop-rpm
         run: |
           cd ./desktop/src-tauri/target/${{ matrix.settings.target }}/release/bundle/deb/ || exit 1
@@ -313,7 +313,7 @@ jobs:
 
           $destination_path = "codesigntool"
           Write-Output "Unzipping to $destination_path"
-          Expand-Archive "codesigntool.zip" -DestinationPath $destination_path 
+          Expand-Archive "codesigntool.zip" -DestinationPath $destination_path
 
           Set-Location -Path $destination_path
           Set-Location -Path (Get-ChildItem -Path . -Include CodeSignTool* | %{$_.FullName})
@@ -328,7 +328,7 @@ jobs:
             const fs = require("fs")
 
             // The .msi builder formats the version to xx.xx.xx.xxxx
-            const version = "${{ needs.create-release.outputs.package_version }}".replace("-", ".") 
+            const version = "${{ needs.create-release.outputs.package_version }}".replace("-", ".")
             const msiName = `DevPod_${version}_x64_en-US.msi`
             const msiPath = `desktop/src-tauri/target/${{ matrix.settings.target }}/release/bundle/msi/${msiName}`
             const msiZipName = `${msiName}.zip`
@@ -386,7 +386,7 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Upload RPM Asset
-        if: matrix.settings.host == 'ubuntu-latest' && matrix.settings.cli_only == false
+        if: matrix.settings.host == 'ubuntu-20.04' && matrix.settings.cli_only == false
         uses: actions/github-script@v6
         with:
           script: |
@@ -476,7 +476,7 @@ jobs:
                 }
                 core.info(`Downloading ${sigAsset.name} (ID: ${sigAsset.id})`)
                 const sig = await fetchAsset(sigAsset.id)
-                
+
                 let assetName = `${info.desiredAssetName}${info.packageType}`
                 if (info.desiredUpdaterAssetName) {
                   assetName = info.desiredUpdaterAssetName
@@ -486,7 +486,7 @@ jobs:
                   signature: await sig.text(),
                   url: `https://github.com/loft-sh/devpod/releases/download/${process.env.GITHUB_REF_NAME}/${assetName}`,
                 }
-                
+
                 // once we're done with the sig file, delete it
                 await github.rest.repos.deleteReleaseAsset({
                   ...releaseArgs,
@@ -499,7 +499,7 @@ jobs:
                 core.warning(`Unable to find asset: ${info.originalAssetName}`)
                 continue
               }
-              
+
               const assetID = a.id
               // Update the asset name
               await github.rest.repos.updateReleaseAsset({
