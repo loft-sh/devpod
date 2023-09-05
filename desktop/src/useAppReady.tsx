@@ -174,8 +174,8 @@ export function useAppReady() {
               options: event.options,
             })
             if (importResult.err) {
-              // todo: remove debug line
-              setFailedMessage("Failed to import workspace: " + importResult.val.message)
+              const cleanedMsg = importResult.val.message.split("\n").at(-1) ?? "";
+              setFailedMessage("Failed to import workspace: " + cleanedMsg)
 
               return
             }
