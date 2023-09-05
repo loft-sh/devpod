@@ -337,11 +337,8 @@ func (s *proxyClient) ImportWorkspace(ctx context.Context, options client.Import
 	s.m.Lock()
 	defer s.m.Unlock()
 
-	reader, writer := io.Pipe()
-	defer writer.Close()
-	go func() {
-		readLogStream(reader, s.log)
-	}()
+	stdout := &bytes.Buffer{}
+	buf := &bytes.Buffer{}
 
 	cmd := s.config.Exec.Proxy.ImportWorkspace
 	if !isCommandSpecified(cmd) {
@@ -359,12 +356,19 @@ func (s *proxyClient) ImportWorkspace(ctx context.Context, options client.Import
 		s.config,
 		options,
 		nil,
-		writer,
-		writer,
-		s.log,
+		io.MultiWriter(stdout, buf),
+		buf,
+		s.log.ErrorStreamOnly(),
 	)
 	if err != nil {
-		return fmt.Errorf("error importing a workspace: %w", err)
+		cmdOutput := buf.String()
+		msg, parsingError := parseLogEntry(cmdOutput)
+		if parsingError != nil {
+			s.log.Warnf("Error parsing log entry (%v): %v", cmdOutput, parsingError)
+			return fmt.Errorf("error importing a workspace: %s", err)
+		}
+
+		return fmt.Errorf("error importing a workspace: %s", msg)
 	}
 
 	return nil
@@ -416,4 +420,19 @@ func readLogStream(reader io.Reader, logger log.Logger) {
 			}
 		}
 	}
+}
+
+type LogEntry struct {
+	Time    string `json:"time"`
+	Message string `json:"message"`
+	Level   string `json:"level"`
+}
+
+func parseLogEntry(rawEntry string) (string, error) {
+	var entry LogEntry
+	err := json.Unmarshal([]byte(rawEntry), &entry)
+	if err != nil {
+		return "", err
+	}
+	return entry.Message, nil
 }
