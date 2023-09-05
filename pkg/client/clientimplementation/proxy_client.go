@@ -365,7 +365,7 @@ func (s *proxyClient) ImportWorkspace(ctx context.Context, options client.Import
 		msg, parsingError := parseLogEntry(cmdOutput)
 		if parsingError != nil {
 			s.log.Warnf("Error parsing log entry (%v): %v", cmdOutput, parsingError)
-			return fmt.Errorf("error importing a workspace: %s", err)
+			return fmt.Errorf("error importing a workspace: %w", err)
 		}
 
 		return fmt.Errorf("error importing a workspace: %s", msg)
