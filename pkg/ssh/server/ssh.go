@@ -329,7 +329,10 @@ func (s *Server) getCommand(sess ssh.Session, isPty bool) *exec.Cmd {
 
 	// switch default directory
 	home, _ := command.GetHome(user)
-	cmd.Dir = home
+	_, err := os.Stat(home)
+	if err == nil {
+		cmd.Dir = home
+	}
 	cmd.Env = append(cmd.Env, os.Environ()...)
 	cmd.Env = append(cmd.Env, sess.Environ()...)
 	return cmd

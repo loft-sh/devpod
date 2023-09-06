@@ -204,6 +204,7 @@ func ResolveAgentConfig(devConfig *config.Config, provider *provider2.ProviderCo
 	agentConfig := provider.Agent
 	agentConfig.DockerlessImage = resolver.ResolveDefaultValue(agentConfig.DockerlessImage, options)
 	agentConfig.DockerlessDisabled = types.StrBool(resolver.ResolveDefaultValue(string(agentConfig.DockerlessDisabled), options))
+	agentConfig.DockerlessIgnorePaths = resolver.ResolveDefaultValue(agentConfig.DockerlessIgnorePaths, options)
 	agentConfig.Driver = resolver.ResolveDefaultValue(agentConfig.Driver, options)
 	agentConfig.Local = types.StrBool(resolver.ResolveDefaultValue(string(agentConfig.Local), options))
 	agentConfig.Docker.Path = resolver.ResolveDefaultValue(agentConfig.Docker.Path, options)
