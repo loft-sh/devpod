@@ -93,6 +93,9 @@ type ProviderAgentConfig struct {
 	// DockerlessImage is the image of the dockerless container to start
 	DockerlessImage string `json:"dockerlessImage,omitempty"`
 
+	// DockerlessIgnorePaths are additional ignore paths that should be ignored during deletion
+	DockerlessIgnorePaths string `json:"dockerlessIgnorePaths,omitempty"`
+
 	// Timeout is the timeout in minutes to wait until the agent tries
 	// to turn of the server.
 	Timeout string `json:"inactivityTimeout,omitempty"`

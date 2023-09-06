@@ -259,13 +259,17 @@ func dockerlessBuild(ctx context.Context, workspaceInfo *provider2.AgentWorkspac
 		}
 	}
 
+	// build args
+	args := []string{"build", "--ignore-path", binaryPath}
+	args = append(args, parseIgnorePaths(workspaceInfo.Agent.DockerlessIgnorePaths)...)
+
 	// write output to log
 	writer := log.Writer(logrus.InfoLevel, false)
 	defer writer.Close()
 
 	// start building
 	log.Infof("Start dockerless building with kaniko...")
-	cmd := exec.CommandContext(ctx, "/.dockerless/dockerless", "build", "--ignore-path", binaryPath)
+	cmd := exec.CommandContext(ctx, "/.dockerless/dockerless", args...)
 	cmd.Stdout = writer
 	cmd.Stderr = writer
 	cmd.Env = os.Environ()
@@ -299,6 +303,16 @@ func dockerlessBuild(ctx context.Context, workspaceInfo *provider2.AgentWorkspac
 	}
 
 	return nil
+}
+
+func parseIgnorePaths(ignorePaths string) []string {
+	retPaths := []string{}
+	splitted := strings.Split(ignorePaths, ",")
+	for _, s := range splitted {
+		retPaths = append(retPaths, "--ignore-path", strings.TrimSpace(s))
+	}
+
+	return retPaths
 }
 
 func configureDockerCredentials(
