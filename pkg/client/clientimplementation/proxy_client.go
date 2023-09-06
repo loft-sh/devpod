@@ -337,7 +337,12 @@ func (s *proxyClient) ImportWorkspace(ctx context.Context, options client.Import
 	s.m.Lock()
 	defer s.m.Unlock()
 
-	stdout := &bytes.Buffer{}
+	reader, writer := io.Pipe()
+	defer writer.Close()
+	go func() {
+		readLogStream(reader, s.log)
+	}()
+
 	buf := &bytes.Buffer{}
 
 	cmd := s.config.Exec.Proxy.ImportWorkspace
@@ -356,8 +361,8 @@ func (s *proxyClient) ImportWorkspace(ctx context.Context, options client.Import
 		s.config,
 		options,
 		nil,
-		io.MultiWriter(stdout, buf),
-		buf,
+		io.MultiWriter(writer, buf),
+		io.MultiWriter(writer, buf),
 		s.log.ErrorStreamOnly(),
 	)
 	if err != nil {
