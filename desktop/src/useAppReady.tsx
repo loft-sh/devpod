@@ -174,7 +174,8 @@ export function useAppReady() {
               options: event.options,
             })
             if (importResult.err) {
-              setFailedMessage("Failed to import workspace")
+              const cleanedMsg = importResult.val.message.split("\n").at(-1) ?? "";
+              setFailedMessage("Failed to import workspace: " + cleanedMsg)
 
               return
             }
@@ -184,7 +185,7 @@ export function useAppReady() {
             }
             const maybeWorkspace = workspacesResult.val.find((w) => w.id === event.workspace_id)
             if (!maybeWorkspace) {
-              setFailedMessage("Failed to import workspace")
+              setFailedMessage("Could not find workspace after import")
 
               return
             }
