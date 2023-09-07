@@ -13,7 +13,7 @@ import (
 	"github.com/pkg/errors"
 )
 
-var dockerlessImage = "ghcr.io/loft-sh/dockerless:0.1.3"
+var dockerlessImage = "ghcr.io/loft-sh/dockerless:0.1.4"
 
 func (r *Runner) runSingleContainer(ctx context.Context, parsedConfig *config.SubstitutedConfig, options UpOptions) (*config.Result, error) {
 	containerDetails, err := r.Driver.FindDevContainer(ctx, r.ID)

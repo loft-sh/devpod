@@ -59,6 +59,11 @@ on_exit () {
 
 trap on_exit EXIT
 
+set -a
+. ../devcontainer-features.builtin.env
+. ./devcontainer-features.env
+set +a
+
 echo ===========================================================================
 ` + echoWarning + `
 echo 'Feature       : ` + name + `'
@@ -68,12 +73,9 @@ echo 'Version       : ` + version + `'
 echo 'Documentation : ` + documentation + `'
 echo 'Options       :'
 echo '` + optionsIndented + `'
+echo 'Environment   :'
+printenv
 echo ===========================================================================
-
-set -a
-. ../devcontainer-features.builtin.env
-. ./devcontainer-features.env
-set +a
 
 chmod +x ./install.sh
 ./install.sh
