@@ -7,6 +7,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"runtime"
 	"strconv"
 	"strings"
 
@@ -262,6 +263,8 @@ func dockerlessBuild(ctx context.Context, workspaceInfo *provider2.AgentWorkspac
 	// build args
 	args := []string{"build", "--ignore-path", binaryPath}
 	args = append(args, parseIgnorePaths(workspaceInfo.Agent.DockerlessIgnorePaths)...)
+	args = append(args, "--build-arg", "TARGETOS="+runtime.GOOS)
+	args = append(args, "--build-arg", "TARGETARCH="+runtime.GOARCH)
 
 	// write output to log
 	writer := log.Writer(logrus.InfoLevel, false)
