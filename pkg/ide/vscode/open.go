@@ -74,10 +74,7 @@ func openViaCLI(ctx context.Context, workspace, folder string, newWindow bool, l
 	}
 
 	// open vscode via cli
-	args := []string{
-		"--folder-uri",
-		"vscode-remote://ssh-remote+" + workspace + ".devpod/" + folder,
-	}
+	args := make([]string, 0, 5)
 	if foundContainers {
 		args = append(args, "--disable-extension", "ms-vscode-remote.remote-containers")
 	}
@@ -86,6 +83,7 @@ func openViaCLI(ctx context.Context, workspace, folder string, newWindow bool, l
 	} else {
 		args = append(args, "--reuse-window")
 	}
+	args = append(args, "--folder-uri", "vscode-remote://ssh-remote+"+workspace+".devpod/"+folder)
 	log.Debugf("Run vscode command %s %s", codePath, strings.Join(args, " "))
 	out, err = exec.CommandContext(ctx, codePath, args...).CombinedOutput()
 	if err != nil {
