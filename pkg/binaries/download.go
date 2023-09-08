@@ -77,8 +77,8 @@ func DownloadBinaries(binaries map[string][]*provider2.ProviderBinary, targetFol
 
 			// check if binary is correct
 			targetFolder := filepath.Join(targetFolder, strings.ToLower(binaryName))
-			binaryPath := verifyBinary(binary, targetFolder)
-			if binaryPath != "" {
+			binaryPath := getBinaryPath(binary, targetFolder)
+			if verifyBinary(binaryPath, binary.Checksum) || fromCache(binary, targetFolder, log) {
 				retBinaries[binaryName] = binaryPath
 				continue
 			}
@@ -103,6 +103,7 @@ func DownloadBinaries(binaries map[string][]*provider2.ProviderBinary, targetFol
 					}
 				}
 
+				toCache(binary, binaryPath, log)
 				retBinaries[binaryName] = binaryPath
 				break
 			}
@@ -118,23 +119,76 @@ func DownloadBinaries(binaries map[string][]*provider2.ProviderBinary, targetFol
 	return retBinaries, nil
 }
 
-func verifyBinary(binary *provider2.ProviderBinary, targetFolder string) string {
+func toCache(binary *provider2.ProviderBinary, binaryPath string, log log.Logger) {
+	if !isRemotePath(binary.Path) {
+		return
+	}
+
+	cachedBinaryPath := getCachedBinaryPath(binary.Path)
+	err := os.MkdirAll(filepath.Dir(cachedBinaryPath), 0777)
+	if err != nil {
+		return
+	}
+
+	err = copy.File(binaryPath, cachedBinaryPath, 0755)
+	if err != nil {
+		log.Warnf("Error copying binary to cache: %v", err)
+		return
+	}
+}
+
+func fromCache(binary *provider2.ProviderBinary, targetFolder string, log log.Logger) bool {
+	if !isRemotePath(binary.Path) {
+		return false
+	}
+
 	binaryPath := getBinaryPath(binary, targetFolder)
+	cachedBinaryPath := getCachedBinaryPath(binary.Path)
+	if !verifyBinary(cachedBinaryPath, binary.Checksum) {
+		return false
+	}
+
+	err := os.MkdirAll(path.Dir(binaryPath), 0755)
+	if err != nil {
+		log.Warnf("Error creating directory %s: %v", path.Dir(binaryPath), err)
+		return false
+	}
+
+	err = copy.File(cachedBinaryPath, binaryPath, 0755)
+	if err != nil {
+		log.Warnf("Error copying cached binary from %s to %s: %v", cachedBinaryPath, binaryPath, err)
+		return false
+	}
+
+	err = os.Chmod(binaryPath, 0755)
+	if err != nil {
+		log.Warnf("Error chmod binary %s: %v", binaryPath, err)
+		return false
+	}
+
+	return true
+}
+
+func getCachedBinaryPath(url string) string {
+	return filepath.Join(os.TempDir(), "devpod-binaries", hash.String(url)[:16])
+}
+
+func verifyBinary(binaryPath, checksum string) bool {
 	_, err := os.Stat(binaryPath)
 	if err != nil {
-		return ""
+		return false
 	}
 
 	// verify checksum
-	if binary.Checksum != "" {
+	if checksum != "" {
 		fileHash, err := hash.File(binaryPath)
-		if err != nil || !strings.EqualFold(fileHash, binary.Checksum) {
+		if err != nil || !strings.EqualFold(fileHash, checksum) {
 			_ = os.Remove(binaryPath)
-			return ""
+			return false
 		}
 	}
 
-	return binaryPath
+	return true
 }
 
 func getBinaryPath(binary *provider2.ProviderBinary, targetFolder string) string {
@@ -143,7 +197,7 @@ func getBinaryPath(binary *provider2.ProviderBinary, targetFolder string) string
 	}
 
 	// check if download
-	if !strings.HasPrefix(binary.Path, "http://") && !strings.HasPrefix(binary.Path, "https://") {
+	if !isRemotePath(binary.Path) {
 		return localTargetPath(binary, targetFolder)
 	}
 
@@ -162,6 +216,10 @@ func getBinaryPath(binary *provider2.ProviderBinary, targetFolder string) string
 	}
 
 	return path.Join(filepath.ToSlash(targetFolder), name)
+}
+
+func isRemotePath(path string) bool {
+	return strings.HasPrefix(path, "http://") || strings.HasPrefix(path, "https://")
 }
 
 func downloadBinary(binaryName string, binary *provider2.ProviderBinary, targetFolder string, log log.Logger) (string, error) {
