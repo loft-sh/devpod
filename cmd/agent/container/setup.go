@@ -132,7 +132,7 @@ func (cmd *SetupContainerCmd) Run(ctx context.Context) error {
 	}
 
 	// do dockerless build
-	err = dockerlessBuild(ctx, workspaceInfo, tunnelClient, log)
+	err = dockerlessBuild(ctx, setupInfo, workspaceInfo, tunnelClient, log)
 	if err != nil {
 		return fmt.Errorf("dockerless build: %w", err)
 	}
@@ -203,7 +203,13 @@ func fillContainerEnv(setupInfo *config.Result) error {
 	return nil
 }
 
-func dockerlessBuild(ctx context.Context, workspaceInfo *provider2.AgentWorkspaceInfo, client tunnel.TunnelClient, log log.Logger) error {
+func dockerlessBuild(
+	ctx context.Context,
+	setupInfo *config.Result,
+	workspaceInfo *provider2.AgentWorkspaceInfo,
+	client tunnel.TunnelClient,
+	log log.Logger,
+) error {
 	if os.Getenv("DOCKERLESS") != "true" {
 		return nil
 	}
@@ -266,12 +272,22 @@ func dockerlessBuild(ctx context.Context, workspaceInfo *provider2.AgentWorkspac
 	args = append(args, "--build-arg", "TARGETOS="+runtime.GOOS)
 	args = append(args, "--build-arg", "TARGETARCH="+runtime.GOARCH)
 
+	// ignore mounts
+	args = append(args, "--ignore-path", setupInfo.SubstitutionContext.ContainerWorkspaceFolder)
+	for _, m := range setupInfo.MergedConfig.Mounts {
+		// check if there already, then we don't touch it
+		files, err := os.ReadDir(m.Target)
+		if err == nil && len(files) > 0 {
+			args = append(args, "--ignore-path", m.Target)
+		}
+	}
+
 	// write output to log
 	writer := log.Writer(logrus.InfoLevel, false)
 	defer writer.Close()
 
 	// start building
-	log.Infof("Start dockerless building with kaniko...")
+	log.Infof("Start dockerless building %s %s", "/.dockerless/dockerless", strings.Join(args, " "))
 	cmd := exec.CommandContext(ctx, "/.dockerless/dockerless", args...)
 	cmd.Stdout = writer
 	cmd.Stderr = writer
@@ -309,6 +325,10 @@ func dockerlessBuild(ctx context.Context, workspaceInfo *provider2.AgentWorkspac
 }
 
 func parseIgnorePaths(ignorePaths string) []string {
+	if strings.TrimSpace(ignorePaths) == "" {
+		return nil
+	}
+
 	retPaths := []string{}
 	splitted := strings.Split(ignorePaths, ",")
 	for _, s := range splitted {
