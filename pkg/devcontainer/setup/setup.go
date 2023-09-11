@@ -12,7 +12,6 @@ import (
 	copy2 "github.com/loft-sh/devpod/pkg/copy"
 	"github.com/loft-sh/devpod/pkg/devcontainer/config"
 	"github.com/loft-sh/devpod/pkg/envfile"
-	provider2 "github.com/loft-sh/devpod/pkg/provider"
 	"github.com/loft-sh/devpod/pkg/types"
 	"github.com/loft-sh/log"
 	"github.com/pkg/errors"
@@ -23,7 +22,7 @@ const (
 	ResultLocation = "/var/run/devpod/result.json"
 )
 
-func SetupContainer(setupInfo *config.Result, workspaceInfo *provider2.AgentWorkspaceInfo, chownWorkspace bool, log log.Logger) error {
+func SetupContainer(setupInfo *config.Result, extraWorkspaceEnv []string, chownWorkspace bool, log log.Logger) error {
 	// write result to ResultLocation
 	WriteResult(setupInfo, log)
 
@@ -41,7 +40,7 @@ func SetupContainer(setupInfo *config.Result, workspaceInfo *provider2.AgentWork
 	if err != nil {
 		return errors.Wrap(err, "patch etc environment")
 	}
-	err = PatchEtcEnvironmentFlags(workspaceInfo, log)
+	err = PatchEtcEnvironmentFlags(extraWorkspaceEnv, log)
 	if err != nil {
 		return errors.Wrap(err, "patch etc environment from flags")
 	}
@@ -161,16 +160,16 @@ func PatchEtcProfile() error {
 	return nil
 }
 
-func PatchEtcEnvironmentFlags(workspaceInfo *provider2.AgentWorkspaceInfo, log log.Logger) error {
-	if len(workspaceInfo.CLIOptions.WorkspaceEnv) == 0 {
+func PatchEtcEnvironmentFlags(workspaceEnv []string, log log.Logger) error {
+	if len(workspaceEnv) == 0 {
 		return nil
 	}
 
 	// make sure we sort the strings
-	sort.Strings(workspaceInfo.CLIOptions.WorkspaceEnv)
+	sort.Strings(workspaceEnv)
 
 	// check if we need to update env
-	exists, err := markerFileExists("patchEtcEnvironmentFlags", strings.Join(workspaceInfo.CLIOptions.WorkspaceEnv, "\n"))
+	exists, err := markerFileExists("patchEtcEnvironmentFlags", strings.Join(workspaceEnv, "\n"))
 	if err != nil {
 		return err
 	} else if exists {
@@ -178,7 +177,7 @@ func PatchEtcEnvironmentFlags(workspaceInfo *provider2.AgentWorkspaceInfo, log l
 	}
 
 	// update env
-	envfile.MergeAndApply(config.ListToObject(workspaceInfo.CLIOptions.WorkspaceEnv), log)
+	envfile.MergeAndApply(config.ListToObject(workspaceEnv), log)
 	return nil
 }
 
