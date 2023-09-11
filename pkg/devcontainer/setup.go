@@ -18,7 +18,7 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
-func (r *Runner) setupContainer(
+func (r *runner) setupContainer(
 	ctx context.Context,
 	containerDetails *config.ContainerDetails,
 	mergedConfig *config.MergedDevContainerConfig,

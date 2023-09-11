@@ -59,9 +59,6 @@ type ProxyClient interface {
 
 	// Ssh starts an ssh tunnel to the workspace container
 	Ssh(ctx context.Context, options SshOptions) error
-
-	// ImportWorkspace imports the workspace from the remote
-	ImportWorkspace(ctx context.Context, options ImportWorkspaceOptions) error
 }
 
 type MachineClient interface {

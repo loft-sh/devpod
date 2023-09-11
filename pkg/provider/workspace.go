@@ -54,6 +54,9 @@ type Workspace struct {
 	// Context is the context where this config file was loaded from
 	Context string `json:"context,omitempty"`
 
+	// Imported signals that this workspace was imported
+	Imported bool `json:"imported,omitempty"`
+
 	// Origin is the place where this config file was loaded from
 	Origin string `json:"-"`
 }

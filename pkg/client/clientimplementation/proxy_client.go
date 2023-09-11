@@ -333,56 +333,6 @@ func (s *proxyClient) Status(ctx context.Context, options client.StatusOptions) 
 	return client.ParseStatus(status.State)
 }
 
-func (s *proxyClient) ImportWorkspace(ctx context.Context, options client.ImportWorkspaceOptions) error {
-	s.m.Lock()
-	defer s.m.Unlock()
-
-	reader, writer := io.Pipe()
-	defer writer.Close()
-	go func() {
-		readLogStream(reader, s.log)
-	}()
-
-	buf := &bytes.Buffer{}
-
-	cmd := s.config.Exec.Proxy.ImportWorkspace
-	if !isCommandSpecified(cmd) {
-		return fmt.Errorf("import command not configured")
-	}
-
-	err := RunCommandWithBinaries(
-		ctx,
-		"import",
-		cmd,
-		s.workspace.Context,
-		s.workspace,
-		nil,
-		s.devPodConfig.ProviderOptions(s.config.Name),
-		s.config,
-		options,
-		nil,
-		io.MultiWriter(writer, buf),
-		io.MultiWriter(writer, buf),
-		s.log.ErrorStreamOnly(),
-	)
-	if err != nil {
-		cmdOutput := buf.String()
-		msg, parsingError := parseLogEntry(cmdOutput)
-		if parsingError != nil {
-			s.log.Warnf("Error parsing log entry (%v): %v", cmdOutput, parsingError)
-			return fmt.Errorf("error importing a workspace: %w", err)
-		}
-
-		return fmt.Errorf("error importing a workspace: %s", msg)
-	}
-
-	return nil
-}
-
-func isCommandSpecified(cmd []string) bool {
-	return len(cmd) > 0 && cmd[0] != ""
-}
-
 func EncodeOptions(options any, name string) map[string]string {
 	raw, _ := json.Marshal(options)
 	return map[string]string{
@@ -425,19 +375,4 @@ func readLogStream(reader io.Reader, logger log.Logger) {
 			}
 		}
 	}
-}
-
-type LogEntry struct {
-	Time    string `json:"time"`
-	Message string `json:"message"`
-	Level   string `json:"level"`
-}
-
-func parseLogEntry(rawEntry string) (string, error) {
-	var entry LogEntry
-	err := json.Unmarshal([]byte(rawEntry), &entry)
-	if err != nil {
-		return "", err
-	}
-	return entry.Message, nil
 }

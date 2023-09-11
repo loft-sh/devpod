@@ -53,7 +53,7 @@ func (cmd *StatusCmd) Run(ctx context.Context, log log.Logger) error {
 	}
 
 	// find dev container
-	containerDetails, err := runner.FindDevContainer(ctx)
+	containerDetails, err := runner.Find(ctx)
 	if err != nil {
 		return err
 	} else if containerDetails == nil {

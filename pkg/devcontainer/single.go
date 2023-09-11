@@ -15,7 +15,7 @@ import (
 
 var dockerlessImage = "ghcr.io/loft-sh/dockerless:0.1.4"
 
-func (r *Runner) runSingleContainer(ctx context.Context, parsedConfig *config.SubstitutedConfig, options UpOptions) (*config.Result, error) {
+func (r *runner) runSingleContainer(ctx context.Context, parsedConfig *config.SubstitutedConfig, options UpOptions) (*config.Result, error) {
 	containerDetails, err := r.Driver.FindDevContainer(ctx, r.ID)
 	if err != nil {
 		return nil, fmt.Errorf("find dev container: %w", err)
@@ -89,7 +89,7 @@ func (r *Runner) runSingleContainer(ctx context.Context, parsedConfig *config.Su
 	return r.setupContainer(ctx, containerDetails, mergedConfig)
 }
 
-func (r *Runner) runContainer(
+func (r *runner) runContainer(
 	ctx context.Context,
 	parsedConfig *config.SubstitutedConfig,
 	mergedConfig *config.MergedDevContainerConfig,
@@ -130,7 +130,7 @@ func (r *Runner) runContainer(
 	return r.Driver.RunDevContainer(ctx, r.ID, runOptions)
 }
 
-func (r *Runner) getDockerlessRunOptions(
+func (r *runner) getDockerlessRunOptions(
 	mergedConfig *config.MergedDevContainerConfig,
 	buildInfo *config.BuildInfo,
 ) (*driver.RunOptions, error) {
@@ -200,7 +200,7 @@ func (r *Runner) getDockerlessRunOptions(
 	}, nil
 }
 
-func (r *Runner) getRunOptions(
+func (r *runner) getRunOptions(
 	mergedConfig *config.MergedDevContainerConfig,
 	buildInfo *config.BuildInfo,
 ) (*driver.RunOptions, error) {
