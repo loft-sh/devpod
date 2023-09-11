@@ -19,7 +19,7 @@ import (
 	"github.com/pkg/errors"
 )
 
-func (r *Runner) build(ctx context.Context, parsedConfig *config.SubstitutedConfig, options config.BuildOptions) (*config.BuildInfo, error) {
+func (r *runner) build(ctx context.Context, parsedConfig *config.SubstitutedConfig, options config.BuildOptions) (*config.BuildInfo, error) {
 	if isDockerFileConfig(parsedConfig.Config) {
 		return r.buildAndExtendImage(ctx, parsedConfig, options)
 	} else if isDockerComposeConfig(parsedConfig.Config) {
@@ -95,7 +95,7 @@ func (r *Runner) build(ctx context.Context, parsedConfig *config.SubstitutedConf
 	return r.extendImage(ctx, parsedConfig, options)
 }
 
-func (r *Runner) extendImage(ctx context.Context, parsedConfig *config.SubstitutedConfig, options config.BuildOptions) (*config.BuildInfo, error) {
+func (r *runner) extendImage(ctx context.Context, parsedConfig *config.SubstitutedConfig, options config.BuildOptions) (*config.BuildInfo, error) {
 	imageBase := parsedConfig.Config.Image
 	imageBuildInfo, err := r.getImageBuildInfoFromImage(ctx, imageBase)
 	if err != nil {
@@ -121,7 +121,7 @@ func (r *Runner) extendImage(ctx context.Context, parsedConfig *config.Substitut
 	return r.buildImage(ctx, parsedConfig, imageBuildInfo, extendedBuildInfo, "", "", options)
 }
 
-func (r *Runner) buildAndExtendImage(ctx context.Context, parsedConfig *config.SubstitutedConfig, options config.BuildOptions) (*config.BuildInfo, error) {
+func (r *runner) buildAndExtendImage(ctx context.Context, parsedConfig *config.SubstitutedConfig, options config.BuildOptions) (*config.BuildInfo, error) {
 	dockerFilePath, err := r.getDockerfilePath(parsedConfig.Config)
 	if err != nil {
 		return nil, err
@@ -163,7 +163,7 @@ func (r *Runner) buildAndExtendImage(ctx context.Context, parsedConfig *config.S
 	return r.buildImage(ctx, parsedConfig, imageBuildInfo, extendedBuildInfo, dockerFilePath, string(dockerFileContent), options)
 }
 
-func (r *Runner) getDockerfilePath(parsedConfig *config.DevContainerConfig) (string, error) {
+func (r *runner) getDockerfilePath(parsedConfig *config.DevContainerConfig) (string, error) {
 	if parsedConfig.Origin == "" {
 		return "", fmt.Errorf("couldn't find path where config was loaded from")
 	}
@@ -183,7 +183,7 @@ func (r *Runner) getDockerfilePath(parsedConfig *config.DevContainerConfig) (str
 	return dockerfilePath, nil
 }
 
-func (r *Runner) getImageBuildInfoFromImage(ctx context.Context, imageName string) (*config.ImageBuildInfo, error) {
+func (r *runner) getImageBuildInfoFromImage(ctx context.Context, imageName string) (*config.ImageBuildInfo, error) {
 	imageDetails, err := r.inspectImage(ctx, imageName)
 	if err != nil {
 		return nil, err
@@ -206,7 +206,7 @@ func (r *Runner) getImageBuildInfoFromImage(ctx context.Context, imageName strin
 	}, nil
 }
 
-func (r *Runner) getImageBuildInfoFromDockerfile(dockerFileContent string, buildArgs map[string]string, target string) (*config.ImageBuildInfo, error) {
+func (r *runner) getImageBuildInfoFromDockerfile(dockerFileContent string, buildArgs map[string]string, target string) (*config.ImageBuildInfo, error) {
 	parsedDockerfile, err := dockerfile.Parse(dockerFileContent)
 	if err != nil {
 		return nil, errors.Wrap(err, "parse dockerfile")
@@ -244,7 +244,7 @@ func (r *Runner) getImageBuildInfoFromDockerfile(dockerFileContent string, build
 	}, nil
 }
 
-func (r *Runner) buildImage(
+func (r *runner) buildImage(
 	ctx context.Context,
 	parsedConfig *config.SubstitutedConfig,
 	buildInfo *config.ImageBuildInfo,

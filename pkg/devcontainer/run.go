@@ -22,11 +22,32 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
+type Runner interface {
+	Up(ctx context.Context, options UpOptions) (*config.Result, error)
+
+	Build(ctx context.Context, options config.BuildOptions) (string, error)
+
+	Find(ctx context.Context) (*config.ContainerDetails, error)
+
+	Command(
+		ctx context.Context,
+		user string,
+		command string,
+		stdin io.Reader,
+		stdout io.Writer,
+		stderr io.Writer,
+	) error
+
+	Stop(ctx context.Context) error
+
+	Delete(ctx context.Context) error
+}
+
 func NewRunner(
 	agentPath, agentDownloadURL string,
 	workspaceConfig *provider2.AgentWorkspaceInfo,
 	log log.Logger,
-) (*Runner, error) {
+) (Runner, error) {
 	driver, err := drivercreate.NewDriver(workspaceConfig, log)
 	if err != nil {
 		return nil, err
@@ -34,7 +55,7 @@ func NewRunner(
 
 	// we use the workspace uid as id to avoid conflicts between container names
 
-	return &Runner{
+	return &runner{
 		Driver: driver,
 
 		AgentPath:            agentPath,
@@ -46,7 +67,7 @@ func NewRunner(
 	}, nil
 }
 
-type Runner struct {
+type runner struct {
 	Driver driver.Driver
 
 	WorkspaceConfig  *provider2.AgentWorkspaceInfo
@@ -68,7 +89,7 @@ type UpOptions struct {
 	ForceBuild bool
 }
 
-func (r *Runner) Up(ctx context.Context, options UpOptions) (*config.Result, error) {
+func (r *runner) Up(ctx context.Context, options UpOptions) (*config.Result, error) {
 	// download workspace source before recreating container
 	_, isDockerDriver := r.Driver.(driver.DockerDriver)
 	if options.Recreate && !isDockerDriver {
@@ -133,7 +154,7 @@ func (r *Runner) Up(ctx context.Context, options UpOptions) (*config.Result, err
 	return result, nil
 }
 
-func (r *Runner) prepare(
+func (r *runner) prepare(
 	options provider2.CLIOptions,
 ) (*config.SubstitutedConfig, error) {
 	rawParsedConfig, err := config.ParseDevContainerJSON(
@@ -201,7 +222,7 @@ func (r *Runner) prepare(
 	}, nil
 }
 
-func (r *Runner) CommandDevContainer(
+func (r *runner) Command(
 	ctx context.Context,
 	user string,
 	command string,
@@ -212,7 +233,7 @@ func (r *Runner) CommandDevContainer(
 	return r.Driver.CommandDevContainer(ctx, r.ID, user, command, stdin, stdout, stderr)
 }
 
-func (r *Runner) FindDevContainer(ctx context.Context) (*config.ContainerDetails, error) {
+func (r *runner) Find(ctx context.Context) (*config.ContainerDetails, error) {
 	containerDetails, err := r.Driver.FindDevContainer(ctx, r.ID)
 	if err != nil {
 		return nil, errors.Wrap(err, "find dev container")

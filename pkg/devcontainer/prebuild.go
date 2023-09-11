@@ -13,7 +13,7 @@ import (
 	"github.com/pkg/errors"
 )
 
-func (r *Runner) Build(ctx context.Context, options config.BuildOptions) (string, error) {
+func (r *runner) Build(ctx context.Context, options config.BuildOptions) (string, error) {
 	dockerDriver, ok := r.Driver.(driver.DockerDriver)
 	if !ok {
 		return "", fmt.Errorf("building only supported with docker driver")
