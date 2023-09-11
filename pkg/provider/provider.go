@@ -87,15 +87,6 @@ type ProviderAgentConfig struct {
 	// DownloadURL is the base url where to download the agent from
 	DownloadURL string `json:"downloadURL,omitempty"`
 
-	// DockerlessDisabled signals if dockerless building is disabled
-	DockerlessDisabled types.StrBool `json:"dockerlessDisabled,omitempty"`
-
-	// DockerlessImage is the image of the dockerless container to start
-	DockerlessImage string `json:"dockerlessImage,omitempty"`
-
-	// DockerlessIgnorePaths are additional ignore paths that should be ignored during deletion
-	DockerlessIgnorePaths string `json:"dockerlessIgnorePaths,omitempty"`
-
 	// Timeout is the timeout in minutes to wait until the agent tries
 	// to turn of the server.
 	Timeout string `json:"inactivityTimeout,omitempty"`
@@ -118,18 +109,32 @@ type ProviderAgentConfig struct {
 	// Binaries is an optional field to specify a binary to execute the commands
 	Binaries map[string][]*ProviderBinary `json:"binaries,omitempty"`
 
+	// Dockerless holds custom dockerless configuration
+	Dockerless ProviderDockerlessOptions `json:"dockerless,omitempty"`
+
 	// Driver is the driver to use for deploying the devcontainer. Currently supports
 	// docker (default) or kubernetes (experimental)
 	Driver string `json:"driver,omitempty"`
-
-	// Kubernetes holds kubernetes specific configuration
-	Kubernetes ProviderKubernetesDriverConfig `json:"kubernetes,omitempty"`
 
 	// Docker holds docker specific configuration
 	Docker ProviderDockerDriverConfig `json:"docker,omitempty"`
 
 	// Custom holds custom driver specific configuration
 	Custom ProviderCustomDriverConfig `json:"custom,omitempty"`
+}
+
+type ProviderDockerlessOptions struct {
+	// Disabled signals if dockerless building is disabled
+	Disabled types.StrBool `json:"disabled,omitempty"`
+
+	// Image is the image of the dockerless container to start
+	Image string `json:"image,omitempty"`
+
+	// IgnorePaths are additional ignore paths that should be ignored during deletion
+	IgnorePaths string `json:"ignorePaths,omitempty"`
+
+	// DisableDockerCredentials prevents docker credentials from getting injected
+	DisableDockerCredentials types.StrBool `json:"disableDockerCredentials,omitempty"`
 }
 
 func (a ProviderAgentConfig) IsDockerDriver() bool {
@@ -162,57 +167,6 @@ type ProviderCustomDriverConfig struct {
 
 	// DeleteDevContainer is used to delete the devcontainer
 	DeleteDevContainer types.StrArray `json:"deleteDevContainer,omitempty"`
-}
-
-type ProviderKubernetesDriverConfig struct {
-	// Path where to find the kubectl binary, defaults to 'kubectl'
-	Path string `json:"path,omitempty"`
-
-	// Namespace is the Kubernetes namespace to use
-	Namespace string `json:"namespace,omitempty"`
-
-	// CreateNamespace specifies if DevPod should try to create the namespace
-	CreateNamespace types.StrBool `json:"createNamespace,omitempty"`
-
-	// Context is the context to use
-	Context string `json:"context,omitempty"`
-
-	// Config is the path to the kube config to use
-	Config string `json:"config,omitempty"`
-
-	// ClusterRole defines a role binding with the given cluster role
-	// DevPod should create.
-	ClusterRole string `json:"clusterRole,omitempty"`
-
-	// ServiceAccount is the service account to use
-	ServiceAccount string `json:"serviceAccount,omitempty"`
-
-	// Resources holds the Kubernetes resources for the workspace container
-	Resources string `json:"resources,omitempty"`
-
-	// Labels holds the Kubernetes labels for the workspace container
-	Labels string `json:"labels,omitempty"`
-
-	// NodeSelector holds the node selector for the workspace pod
-	NodeSelector string `json:"nodeSelector,omitempty"`
-
-	// HelperImage is used to find out cluster architecture and copy files
-	HelperImage string `json:"helperImage,omitempty"`
-
-	// HelperResources holds the Kubernetes resources for the workspace init container
-	HelperResources string `json:"helperResources,omitempty"`
-
-	// PersistentVolumeSize is the size of the persistent volume in GB
-	PersistentVolumeSize string `json:"persistentVolumeSize,omitempty"`
-
-	// StorageClassName is the name of the custom storage class
-	StorageClassName string `json:"storageClassName,omitempty"`
-
-	// PVCAccessMode is the access mode of the PVC. ie RWO,ROX,RWX,RWOP
-	PVCAccessMode string `json:"pvcAccessMode,omitempty"`
-
-	// PodManifestTemplate is the path of the pod manifest template file
-	PodManifestTemplate string `json:"podManifestTemplate,omitempty"`
 }
 
 type ProviderDockerDriverConfig struct {

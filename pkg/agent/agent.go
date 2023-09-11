@@ -49,6 +49,21 @@ func DefaultAgentDownloadURL() string {
 	return defaultAgentDownloadURL + version.GetVersion()
 }
 
+func DecodeContainerWorkspaceInfo(workspaceInfoRaw string) (*provider2.ContainerWorkspaceInfo, string, error) {
+	decoded, err := compress.Decompress(workspaceInfoRaw)
+	if err != nil {
+		return nil, "", perrors.Wrap(err, "decode workspace info")
+	}
+
+	workspaceInfo := &provider2.ContainerWorkspaceInfo{}
+	err = json.Unmarshal([]byte(decoded), workspaceInfo)
+	if err != nil {
+		return nil, "", perrors.Wrap(err, "parse workspace info")
+	}
+
+	return workspaceInfo, decoded, nil
+}
+
 func DecodeWorkspaceInfo(workspaceInfoRaw string) (*provider2.AgentWorkspaceInfo, string, error) {
 	decoded, err := compress.Decompress(workspaceInfoRaw)
 	if err != nil {

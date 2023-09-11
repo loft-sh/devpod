@@ -103,6 +103,21 @@ type WorkspaceSource struct {
 	Image string `json:"image,omitempty"`
 }
 
+type ContainerWorkspaceInfo struct {
+	// IDE holds the ide config options
+	IDE WorkspaceIDEConfig `json:"ide,omitempty"`
+
+	// CLIOptions holds the cli options
+	CLIOptions CLIOptions `json:"cliOptions,omitempty"`
+
+	// Dockerless holds custom dockerless configuration
+	Dockerless ProviderDockerlessOptions `json:"dockerless,omitempty"`
+
+	// ContainerTimeout is the timeout in minutes to wait until the agent tries
+	// to delete the container.
+	ContainerTimeout string `json:"containerInactivityTimeout,omitempty"`
+}
+
 type AgentWorkspaceInfo struct {
 	// Workspace holds the workspace info
 	Workspace *Workspace `json:"workspace,omitempty"`

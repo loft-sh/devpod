@@ -44,10 +44,10 @@ var DockerlessImageConfigOutput = "/.dockerless/image.json"
 type SetupContainerCmd struct {
 	*flags.GlobalFlags
 
-	ChownWorkspace bool
-	StreamMounts   bool
-	WorkspaceInfo  string
-	SetupInfo      string
+	ChownWorkspace         bool
+	StreamMounts           bool
+	ContainerWorkspaceInfo string
+	SetupInfo              string
 }
 
 // NewSetupContainerCmd creates a new command
@@ -65,7 +65,7 @@ func NewSetupContainerCmd(flags *flags.GlobalFlags) *cobra.Command {
 	}
 	setupContainerCmd.Flags().BoolVar(&cmd.StreamMounts, "stream-mounts", false, "If true, will try to stream the bind mounts from the host")
 	setupContainerCmd.Flags().BoolVar(&cmd.ChownWorkspace, "chown-workspace", false, "If DevPod should chown the workspace to the remote user")
-	setupContainerCmd.Flags().StringVar(&cmd.WorkspaceInfo, "workspace-info", "", "The workspace info")
+	setupContainerCmd.Flags().StringVar(&cmd.ContainerWorkspaceInfo, "container-workspace-info", "", "The container workspace info")
 	setupContainerCmd.Flags().StringVar(&cmd.SetupInfo, "setup-info", "", "The container setup info")
 	_ = setupContainerCmd.MarkFlagRequired("setup-info")
 	return setupContainerCmd
@@ -80,8 +80,8 @@ func (cmd *SetupContainerCmd) Run(ctx context.Context) error {
 	}
 
 	// create debug logger
-	log := tunnelserver.NewTunnelLogger(ctx, tunnelClient, cmd.Debug)
-	log.Debugf("Created logger")
+	logger := tunnelserver.NewTunnelLogger(ctx, tunnelClient, cmd.Debug)
+	logger.Debugf("Created logger")
 
 	// this message serves as a ping to the client
 	_, err = tunnelClient.Ping(ctx, &tunnel.Empty{})
@@ -90,8 +90,8 @@ func (cmd *SetupContainerCmd) Run(ctx context.Context) error {
 	}
 
 	// start setting up container
-	log.Debugf("Start setting up container...")
-	workspaceInfo, _, err := agent.DecodeWorkspaceInfo(cmd.WorkspaceInfo)
+	logger.Debugf("Start setting up container...")
+	workspaceInfo, _, err := agent.DecodeContainerWorkspaceInfo(cmd.ContainerWorkspaceInfo)
 	if err != nil {
 		return err
 	}
@@ -117,14 +117,14 @@ func (cmd *SetupContainerCmd) Run(ctx context.Context) error {
 			}
 
 			// stream mount
-			log.Infof("Copy %s into DevContainer %s", m.Source, m.Target)
+			logger.Infof("Copy %s into DevContainer %s", m.Source, m.Target)
 			stream, err := tunnelClient.StreamMount(ctx, &tunnel.StreamMountRequest{Mount: m.String()})
 			if err != nil {
 				return fmt.Errorf("init stream mount %s: %w", m.String(), err)
 			}
 
 			// target folder
-			err = extract.Extract(tunnelserver.NewStreamReader(stream, log), m.Target)
+			err = extract.Extract(tunnelserver.NewStreamReader(stream, logger), m.Target)
 			if err != nil {
 				return fmt.Errorf("stream stream mount %s: %w", m.String(), err)
 			}
@@ -132,7 +132,7 @@ func (cmd *SetupContainerCmd) Run(ctx context.Context) error {
 	}
 
 	// do dockerless build
-	err = dockerlessBuild(ctx, setupInfo, workspaceInfo, tunnelClient, log)
+	err = dockerlessBuild(ctx, setupInfo, &workspaceInfo.Dockerless, tunnelClient, logger)
 	if err != nil {
 		return fmt.Errorf("dockerless build: %w", err)
 	}
@@ -144,27 +144,27 @@ func (cmd *SetupContainerCmd) Run(ctx context.Context) error {
 	}
 
 	// setup container
-	err = setup.SetupContainer(setupInfo, workspaceInfo, cmd.ChownWorkspace, log)
+	err = setup.SetupContainer(setupInfo, workspaceInfo.CLIOptions.WorkspaceEnv, cmd.ChownWorkspace, logger)
 	if err != nil {
 		return err
 	}
 
 	// install IDE
-	err = cmd.installIDE(setupInfo, workspaceInfo, log)
+	err = cmd.installIDE(setupInfo, &workspaceInfo.IDE, logger)
 	if err != nil {
 		return err
 	}
 
 	// start container daemon if necessary
-	if !workspaceInfo.CLIOptions.Proxy && !workspaceInfo.CLIOptions.DisableDaemon && workspaceInfo.Agent.ContainerTimeout != "" {
+	if !workspaceInfo.CLIOptions.Proxy && !workspaceInfo.CLIOptions.DisableDaemon && workspaceInfo.ContainerTimeout != "" {
 		err = single.Single("devpod.daemon.pid", func() (*exec.Cmd, error) {
-			log.Debugf("Start DevPod Container Daemon with Inactivity Timeout %s", workspaceInfo.Agent.ContainerTimeout)
+			logger.Debugf("Start DevPod Container Daemon with Inactivity Timeout %s", workspaceInfo.ContainerTimeout)
 			binaryPath, err := os.Executable()
 			if err != nil {
 				return nil, err
 			}
 
-			return exec.Command(binaryPath, "agent", "container", "daemon", "--timeout", workspaceInfo.Agent.ContainerTimeout), nil
+			return exec.Command(binaryPath, "agent", "container", "daemon", "--timeout", workspaceInfo.ContainerTimeout), nil
 		})
 		if err != nil {
 			return err
@@ -206,7 +206,7 @@ func fillContainerEnv(setupInfo *config.Result) error {
 func dockerlessBuild(
 	ctx context.Context,
 	setupInfo *config.Result,
-	workspaceInfo *provider2.AgentWorkspaceInfo,
+	dockerlessOptions *provider2.ProviderDockerlessOptions,
 	client tunnel.TunnelClient,
 	log log.Logger,
 ) error {
@@ -249,7 +249,7 @@ func dockerlessBuild(
 	}
 
 	// configure credentials
-	if workspaceInfo.Agent.InjectDockerCredentials != "false" {
+	if dockerlessOptions.DisableDockerCredentials != "true" {
 		var cancel context.CancelFunc
 		ctx, cancel = context.WithCancel(ctx)
 		defer cancel()
@@ -268,7 +268,7 @@ func dockerlessBuild(
 
 	// build args
 	args := []string{"build", "--ignore-path", binaryPath}
-	args = append(args, parseIgnorePaths(workspaceInfo.Agent.DockerlessIgnorePaths)...)
+	args = append(args, parseIgnorePaths(dockerlessOptions.IgnorePaths)...)
 	args = append(args, "--build-arg", "TARGETOS="+runtime.GOOS)
 	args = append(args, "--build-arg", "TARGETARCH="+runtime.GOARCH)
 
@@ -357,40 +357,40 @@ func configureDockerCredentials(
 	return dockerCredentials, nil
 }
 
-func (cmd *SetupContainerCmd) installIDE(setupInfo *config.Result, workspaceInfo *provider2.AgentWorkspaceInfo, log log.Logger) error {
-	switch workspaceInfo.Workspace.IDE.Name {
+func (cmd *SetupContainerCmd) installIDE(setupInfo *config.Result, ide *provider2.WorkspaceIDEConfig, log log.Logger) error {
+	switch ide.Name {
 	case string(config2.IDENone):
 		return nil
 	case string(config2.IDEVSCode):
-		return cmd.setupVSCode(setupInfo, workspaceInfo, log)
+		return cmd.setupVSCode(setupInfo, ide.Options, log)
 	case string(config2.IDEOpenVSCode):
-		return cmd.setupOpenVSCode(setupInfo, workspaceInfo, log)
+		return cmd.setupOpenVSCode(setupInfo, ide.Options, log)
 	case string(config2.IDEGoland):
-		return jetbrains.NewGolandServer(config.GetRemoteUser(setupInfo), workspaceInfo.Workspace.IDE.Options, log).Install()
+		return jetbrains.NewGolandServer(config.GetRemoteUser(setupInfo), ide.Options, log).Install()
 	case string(config2.IDEPyCharm):
-		return jetbrains.NewPyCharmServer(config.GetRemoteUser(setupInfo), workspaceInfo.Workspace.IDE.Options, log).Install()
+		return jetbrains.NewPyCharmServer(config.GetRemoteUser(setupInfo), ide.Options, log).Install()
 	case string(config2.IDEPhpStorm):
-		return jetbrains.NewPhpStorm(config.GetRemoteUser(setupInfo), workspaceInfo.Workspace.IDE.Options, log).Install()
+		return jetbrains.NewPhpStorm(config.GetRemoteUser(setupInfo), ide.Options, log).Install()
 	case string(config2.IDEIntellij):
-		return jetbrains.NewIntellij(config.GetRemoteUser(setupInfo), workspaceInfo.Workspace.IDE.Options, log).Install()
+		return jetbrains.NewIntellij(config.GetRemoteUser(setupInfo), ide.Options, log).Install()
 	case string(config2.IDECLion):
-		return jetbrains.NewCLionServer(config.GetRemoteUser(setupInfo), workspaceInfo.Workspace.IDE.Options, log).Install()
+		return jetbrains.NewCLionServer(config.GetRemoteUser(setupInfo), ide.Options, log).Install()
 	case string(config2.IDERider):
-		return jetbrains.NewRiderServer(config.GetRemoteUser(setupInfo), workspaceInfo.Workspace.IDE.Options, log).Install()
+		return jetbrains.NewRiderServer(config.GetRemoteUser(setupInfo), ide.Options, log).Install()
 	case string(config2.IDERubyMine):
-		return jetbrains.NewRubyMineServer(config.GetRemoteUser(setupInfo), workspaceInfo.Workspace.IDE.Options, log).Install()
+		return jetbrains.NewRubyMineServer(config.GetRemoteUser(setupInfo), ide.Options, log).Install()
 	case string(config2.IDEWebStorm):
-		return jetbrains.NewWebStormServer(config.GetRemoteUser(setupInfo), workspaceInfo.Workspace.IDE.Options, log).Install()
+		return jetbrains.NewWebStormServer(config.GetRemoteUser(setupInfo), ide.Options, log).Install()
 	case string(config2.IDEFleet):
-		return fleet.NewFleetServer(config.GetRemoteUser(setupInfo), workspaceInfo.Workspace.IDE.Options, log).Install(setupInfo.SubstitutionContext.ContainerWorkspaceFolder)
+		return fleet.NewFleetServer(config.GetRemoteUser(setupInfo), ide.Options, log).Install(setupInfo.SubstitutionContext.ContainerWorkspaceFolder)
 	case string(config2.IDEJupyterNotebook):
-		return jupyter.NewJupyterNotebookServer(setupInfo.SubstitutionContext.ContainerWorkspaceFolder, config.GetRemoteUser(setupInfo), workspaceInfo.Workspace.IDE.Options, log).Install()
+		return jupyter.NewJupyterNotebookServer(setupInfo.SubstitutionContext.ContainerWorkspaceFolder, config.GetRemoteUser(setupInfo), ide.Options, log).Install()
 	}
 
 	return nil
 }
 
-func (cmd *SetupContainerCmd) setupVSCode(setupInfo *config.Result, workspaceInfo *provider2.AgentWorkspaceInfo, log log.Logger) error {
+func (cmd *SetupContainerCmd) setupVSCode(setupInfo *config.Result, ideOptions map[string]config2.OptionValue, log log.Logger) error {
 	log.Debugf("Setup vscode...")
 	vsCodeConfiguration := config.GetVSCodeConfiguration(setupInfo.MergedConfig)
 	settings := ""
@@ -404,7 +404,7 @@ func (cmd *SetupContainerCmd) setupVSCode(setupInfo *config.Result, workspaceInf
 	}
 
 	user := config.GetRemoteUser(setupInfo)
-	err := vscode.NewVSCodeServer(vsCodeConfiguration.Extensions, settings, user, workspaceInfo.Workspace.IDE.Options, log).Install()
+	err := vscode.NewVSCodeServer(vsCodeConfiguration.Extensions, settings, user, ideOptions, log).Install()
 	if err != nil {
 		return err
 	}
@@ -441,7 +441,7 @@ func setupOpenVSCodeExtensions(setupInfo *config.Result, log log.Logger) error {
 	return openvscode.NewOpenVSCodeServer(vsCodeConfiguration.Extensions, "", user, "", "", nil, log).InstallExtensions()
 }
 
-func (cmd *SetupContainerCmd) setupOpenVSCode(setupInfo *config.Result, workspaceInfo *provider2.AgentWorkspaceInfo, log log.Logger) error {
+func (cmd *SetupContainerCmd) setupOpenVSCode(setupInfo *config.Result, ideOptions map[string]config2.OptionValue, log log.Logger) error {
 	log.Debugf("Setup openvscode...")
 	vsCodeConfiguration := config.GetVSCodeConfiguration(setupInfo.MergedConfig)
 	settings := ""
@@ -455,7 +455,7 @@ func (cmd *SetupContainerCmd) setupOpenVSCode(setupInfo *config.Result, workspac
 	}
 
 	user := config.GetRemoteUser(setupInfo)
-	openVSCode := openvscode.NewOpenVSCodeServer(vsCodeConfiguration.Extensions, settings, user, "0.0.0.0", strconv.Itoa(openvscode.DefaultVSCodePort), workspaceInfo.Workspace.IDE.Options, log)
+	openVSCode := openvscode.NewOpenVSCodeServer(vsCodeConfiguration.Extensions, settings, user, "0.0.0.0", strconv.Itoa(openvscode.DefaultVSCodePort), ideOptions, log)
 
 	// install open vscode
 	err := openVSCode.Install()

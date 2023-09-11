@@ -13,6 +13,7 @@ import (
 	"github.com/loft-sh/devpod/pkg/compress"
 	"github.com/loft-sh/devpod/pkg/devcontainer/config"
 	"github.com/loft-sh/devpod/pkg/driver"
+	provider2 "github.com/loft-sh/devpod/pkg/provider"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 )
@@ -47,8 +48,13 @@ func (r *Runner) setupContainer(
 		return nil, err
 	}
 
-	// compress workspace info
-	workspaceConfigRaw, err := json.Marshal(r.WorkspaceConfig)
+	// compress container workspace info
+	workspaceConfigRaw, err := json.Marshal(&provider2.ContainerWorkspaceInfo{
+		IDE:              r.WorkspaceConfig.Workspace.IDE,
+		CLIOptions:       r.WorkspaceConfig.CLIOptions,
+		Dockerless:       r.WorkspaceConfig.Agent.Dockerless,
+		ContainerTimeout: r.WorkspaceConfig.Agent.ContainerTimeout,
+	})
 	if err != nil {
 		return nil, err
 	}
@@ -62,7 +68,7 @@ func (r *Runner) setupContainer(
 
 	// setup container
 	r.Log.Infof("Setup container...")
-	command := fmt.Sprintf("'%s' agent container setup --setup-info '%s' --workspace-info '%s'", agent.ContainerDevPodHelperLocation, compressed, workspaceConfigCompressed)
+	command := fmt.Sprintf("'%s' agent container setup --setup-info '%s' --container-workspace-info '%s'", agent.ContainerDevPodHelperLocation, compressed, workspaceConfigCompressed)
 	if runtime.GOOS == "linux" || !isDockerDriver {
 		command += " --chown-workspace"
 	}

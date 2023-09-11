@@ -163,8 +163,8 @@ func (r *Runner) getDockerlessRunOptions(
 	}
 
 	image := dockerlessImage
-	if r.WorkspaceConfig != nil && r.WorkspaceConfig.Agent.DockerlessImage != "" {
-		image = r.WorkspaceConfig.Agent.DockerlessImage
+	if r.WorkspaceConfig != nil && r.WorkspaceConfig.Agent.Dockerless.Image != "" {
+		image = r.WorkspaceConfig.Agent.Dockerless.Image
 	}
 
 	// we need to add an extra mount here, because otherwise the build config might get lost
