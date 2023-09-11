@@ -8,7 +8,7 @@ import (
 	"github.com/loft-sh/devpod/pkg/image"
 )
 
-func (r *Runner) inspectImage(ctx context.Context, imageName string) (*config.ImageDetails, error) {
+func (r *runner) inspectImage(ctx context.Context, imageName string) (*config.ImageDetails, error) {
 	dockerDriver, ok := r.Driver.(driver.DockerDriver)
 	if ok {
 		return dockerDriver.InspectImage(ctx, imageName)

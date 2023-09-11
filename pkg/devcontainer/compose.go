@@ -30,7 +30,7 @@ const (
 	FeaturesStartOverrideFilePrefix = "docker-compose.devcontainer.containerFeatures"
 )
 
-func (r *Runner) composeHelper() (*compose.ComposeHelper, error) {
+func (r *runner) composeHelper() (*compose.ComposeHelper, error) {
 	dockerDriver, ok := r.Driver.(driver.DockerDriver)
 	if !ok {
 		return nil, fmt.Errorf("docker compose is not supported by this provider, please choose a different one")
@@ -39,7 +39,7 @@ func (r *Runner) composeHelper() (*compose.ComposeHelper, error) {
 	return dockerDriver.ComposeHelper()
 }
 
-func (r *Runner) stopDockerCompose(ctx context.Context, projectName string) error {
+func (r *runner) stopDockerCompose(ctx context.Context, projectName string) error {
 	composeHelper, err := r.composeHelper()
 	if err != nil {
 		return errors.Wrap(err, "find docker compose")
@@ -63,7 +63,7 @@ func (r *Runner) stopDockerCompose(ctx context.Context, projectName string) erro
 	return nil
 }
 
-func (r *Runner) deleteDockerCompose(ctx context.Context, projectName string) error {
+func (r *runner) deleteDockerCompose(ctx context.Context, projectName string) error {
 	composeHelper, err := r.composeHelper()
 	if err != nil {
 		return errors.Wrap(err, "find docker compose")
@@ -87,7 +87,7 @@ func (r *Runner) deleteDockerCompose(ctx context.Context, projectName string) er
 	return nil
 }
 
-func (r *Runner) dockerComposeProjectFiles(parsedConfig *config.SubstitutedConfig) ([]string, []string, []string, error) {
+func (r *runner) dockerComposeProjectFiles(parsedConfig *config.SubstitutedConfig) ([]string, []string, []string, error) {
 	envFiles, err := r.getEnvFiles()
 	if err != nil {
 		return nil, nil, nil, errors.Wrap(err, "get env files")
@@ -110,7 +110,7 @@ func (r *Runner) dockerComposeProjectFiles(parsedConfig *config.SubstitutedConfi
 	return composeFiles, envFiles, args, nil
 }
 
-func (r *Runner) runDockerCompose(ctx context.Context, parsedConfig *config.SubstitutedConfig, options UpOptions) (*config.Result, error) {
+func (r *runner) runDockerCompose(ctx context.Context, parsedConfig *config.SubstitutedConfig, options UpOptions) (*config.Result, error) {
 	composeHelper, err := r.composeHelper()
 	if err != nil {
 		return nil, errors.Wrap(err, "find docker compose")
@@ -159,7 +159,7 @@ func (r *Runner) runDockerCompose(ctx context.Context, parsedConfig *config.Subs
 	return r.setupContainer(ctx, containerDetails, mergedConfig)
 }
 
-func (r *Runner) getDockerComposeFilePaths(parsedConfig *config.SubstitutedConfig, envFiles []string) ([]string, error) {
+func (r *runner) getDockerComposeFilePaths(parsedConfig *config.SubstitutedConfig, envFiles []string) ([]string, error) {
 	configFileDir := filepath.Dir(parsedConfig.Config.Origin)
 
 	// Use docker compose files from config
@@ -201,7 +201,7 @@ func (r *Runner) getDockerComposeFilePaths(parsedConfig *config.SubstitutedConfi
 	return nil, nil
 }
 
-func (r *Runner) getEnvFiles() ([]string, error) {
+func (r *runner) getEnvFiles() ([]string, error) {
 	var envFiles []string
 	envFile := path.Join(r.LocalWorkspaceFolder, ".env")
 	envFileStat, err := os.Stat(envFile)
@@ -211,7 +211,7 @@ func (r *Runner) getEnvFiles() ([]string, error) {
 	return envFiles, nil
 }
 
-func (r *Runner) startContainer(
+func (r *runner) startContainer(
 	ctx context.Context,
 	parsedConfig *config.SubstitutedConfig,
 	project *composetypes.Project,
@@ -350,7 +350,7 @@ func (r *Runner) startContainer(
 }
 
 // This extends the build information for docker compose containers
-func (r *Runner) buildAndExtendDockerCompose(ctx context.Context, parsedConfig *config.SubstitutedConfig, project *composetypes.Project, composeHelper *compose.ComposeHelper, composeService *composetypes.ServiceConfig, globalArgs []string) (string, string, *config.ImageMetadataConfig, string, error) {
+func (r *runner) buildAndExtendDockerCompose(ctx context.Context, parsedConfig *config.SubstitutedConfig, project *composetypes.Project, composeHelper *compose.ComposeHelper, composeService *composetypes.ServiceConfig, globalArgs []string) (string, string, *config.ImageMetadataConfig, string, error) {
 	var dockerFilePath, dockerfileContents, dockerComposeFilePath string
 	var imageBuildInfo *config.ImageBuildInfo
 	var err error
@@ -472,7 +472,7 @@ func (r *Runner) buildAndExtendDockerCompose(ctx context.Context, parsedConfig *
 	return buildImageName, dockerComposeFilePath, imageMetadata, extendImageBuildInfo.MetadataLabel, nil
 }
 
-func (r *Runner) extendedDockerfile(featureBuildInfo *feature.BuildInfo, dockerfilePath, dockerfileContent string) (string, string) {
+func (r *runner) extendedDockerfile(featureBuildInfo *feature.BuildInfo, dockerfilePath, dockerfileContent string) (string, string) {
 	// extra args?
 	finalDockerfilePath := dockerfilePath
 	finalDockerfileContent := dockerfileContent
@@ -494,7 +494,7 @@ func (r *Runner) extendedDockerfile(featureBuildInfo *feature.BuildInfo, dockerf
 	return finalDockerfilePath, finalDockerfileContent
 }
 
-func (r *Runner) extendedDockerComposeBuild(composeService *composetypes.ServiceConfig, dockerFilePath string, featuresBuildInfo *feature.BuildInfo) (string, error) {
+func (r *runner) extendedDockerComposeBuild(composeService *composetypes.ServiceConfig, dockerFilePath string, featuresBuildInfo *feature.BuildInfo) (string, error) {
 	service := &composetypes.ServiceConfig{
 		Name: composeService.Name,
 		Build: &composetypes.BuildConfig{
@@ -545,7 +545,7 @@ func (r *Runner) extendedDockerComposeBuild(composeService *composetypes.Service
 	return dockerComposePath, nil
 }
 
-func (r *Runner) extendedDockerComposeUp(
+func (r *runner) extendedDockerComposeUp(
 	parsedConfig *config.SubstitutedConfig,
 	mergedConfig *config.MergedDevContainerConfig,
 	composeHelper *compose.ComposeHelper,
@@ -582,7 +582,7 @@ func (r *Runner) extendedDockerComposeUp(
 	return dockerComposePath, nil
 }
 
-func (r *Runner) generateDockerComposeUpProject(
+func (r *runner) generateDockerComposeUpProject(
 	parsedConfig *config.SubstitutedConfig,
 	mergedConfig *config.MergedDevContainerConfig,
 	composeHelper *compose.ComposeHelper,

@@ -82,7 +82,7 @@ func (cmd *ContainerTunnelCmd) Run(ctx context.Context, log log.Logger) error {
 	err = agent.Tunnel(
 		ctx,
 		func(ctx context.Context, user string, command string, stdin io.Reader, stdout io.Writer, stderr io.Writer) error {
-			return runner.CommandDevContainer(ctx, user, command, stdin, stdout, stderr)
+			return runner.Command(ctx, user, command, stdin, stdout, stderr)
 		},
 		cmd.User,
 		os.Stdin,
@@ -97,8 +97,8 @@ func (cmd *ContainerTunnelCmd) Run(ctx context.Context, log log.Logger) error {
 	return nil
 }
 
-func startDevContainer(ctx context.Context, workspaceConfig *provider2.AgentWorkspaceInfo, runner *devcontainer.Runner, log log.Logger) error {
-	containerDetails, err := runner.FindDevContainer(ctx)
+func startDevContainer(ctx context.Context, workspaceConfig *provider2.AgentWorkspaceInfo, runner devcontainer.Runner, log log.Logger) error {
+	containerDetails, err := runner.Find(ctx)
 	if err != nil {
 		return err
 	}
@@ -113,7 +113,7 @@ func startDevContainer(ctx context.Context, workspaceConfig *provider2.AgentWork
 	} else if encoding.IsLegacyUID(workspaceConfig.Workspace.UID) {
 		// make sure workspace result is in devcontainer
 		buf := &bytes.Buffer{}
-		err = runner.CommandDevContainer(ctx, "root", "cat "+setup.ResultLocation, nil, buf, buf)
+		err = runner.Command(ctx, "root", "cat "+setup.ResultLocation, nil, buf, buf)
 		if err != nil {
 			// start container
 			_, err = StartContainer(ctx, runner, log)
@@ -126,7 +126,7 @@ func startDevContainer(ctx context.Context, workspaceConfig *provider2.AgentWork
 	return nil
 }
 
-func StartContainer(ctx context.Context, runner *devcontainer.Runner, log log.Logger) (*config.Result, error) {
+func StartContainer(ctx context.Context, runner devcontainer.Runner, log log.Logger) (*config.Result, error) {
 	log.Debugf("Starting DevPod container...")
 	result, err := runner.Up(ctx, devcontainer.UpOptions{NoBuild: true})
 	if err != nil {
