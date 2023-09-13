@@ -84,6 +84,19 @@ func (cmd *DeleteCmd) Run(ctx context.Context, devPodConfig *config.Config, args
 		return nil
 	}
 
+	// skip deletion if imported
+	workspaceConfig := client.WorkspaceConfig()
+	if !cmd.Force && workspaceConfig.Imported {
+		// delete workspace folder
+		err = clientimplementation.DeleteWorkspaceFolder(devPodConfig.DefaultContext, client.Workspace(), log.Default)
+		if err != nil {
+			return err
+		}
+
+		log.Default.Donef("Skip remote deletion of workspace %s as it is imported, if you really want to delete this workspace also remotely, run with --force", client.Workspace())
+		return nil
+	}
+
 	// get instance status
 	if !cmd.Force {
 		// lock workspace only if we don't force deletion
