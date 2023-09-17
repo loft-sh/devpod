@@ -239,6 +239,28 @@ func downloadFeatureFromURL(url string, destFile string, log log.Logger) error {
 		return errors.Wrap(err, "create feature folder")
 	}
 
+	log.Debugf("replace environment variables in URL")
+	envVarRe := regexp.MustCompile(`(\${env:[[:word:]]*})`)
+	envVarReMatches := envVarRe.FindStringSubmatch(url)
+
+	for _, envVarToken := range envVarReMatches {
+		log.Debugf("trying to replace %s", envVarToken)
+		envVarNameRe := regexp.MustCompile(`(?:\${env:([[:word:]]*)})`)
+		envVarNameReMatches := envVarNameRe.FindStringSubmatch(envVarToken)
+
+		if envVarNameReMatches != nil {
+			envVarName := envVarNameReMatches[1]
+			envVarValue, envVarIsSet := os.LookupEnv(envVarName)
+
+			if envVarIsSet {
+				url = strings.Replace(url, envVarToken, envVarValue, -1)
+				log.Debugf("replaced '%s'", envVarToken)
+			} else {
+				log.Debugf("'%s' not replaced, env variable not set", envVarToken)
+			}
+		}
+	}
+
 	// initiate download
 	log.Debugf("Download feature from %s", url)
 	resp, err := devpodhttp.GetHTTPClient().Get(url)
