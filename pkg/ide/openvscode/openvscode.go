@@ -7,6 +7,7 @@ import (
 	"path/filepath"
 	"runtime"
 	"strconv"
+	"strings"
 
 	"github.com/loft-sh/devpod/pkg/command"
 	"github.com/loft-sh/devpod/pkg/config"
@@ -167,6 +168,28 @@ func (o *OpenVSCodeServer) getReleaseUrl() string {
 	}
 
 	return url
+}
+
+func (o *OpenVSCodeServer) installRequirementsAlpine() {
+	if !command.Exists("apk") {
+		return
+	}
+	o.log.Debugf("Install openvscode dependencies...")
+	dependencies := []string{"build-base", "gcompat"}
+	if !command.Exists("git") {
+		dependencies = append(dependencies, "git")
+	}
+	if !command.Exists("bash") {
+		dependencies = append(dependencies, "bash")
+	}
+	if !command.Exists("curl") {
+		dependencies = append(dependencies, "curl")
+	}
+
+	out, err := exec.Command("sh", "-c", "apk update && apk add "+strings.Join(dependencies, " ")).CombinedOutput()
+	if err != nil {
+		o.log.Infof("Error updating alpine: %w", command.WrapCommandError(out, err))
+	}
 }
 
 func (o *OpenVSCodeServer) installExtensions() error {
