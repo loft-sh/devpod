@@ -119,19 +119,7 @@ func (o *OpenVSCodeServer) Install() error {
 	}
 
 	// check what release we need to download
-	var url string
-	version := Options.GetValue(o.values, VersionOption)
-	if runtime.GOARCH == "arm64" {
-		url = Options.GetValue(o.values, DownloadArm64Option)
-		if url == "" {
-			url = fmt.Sprintf(DownloadArm64Template, version, version)
-		}
-	} else {
-		url = Options.GetValue(o.values, DownloadAmd64Option)
-		if url == "" {
-			url = fmt.Sprintf(DownloadAmd64Template, version, version)
-		}
-	}
+	url := o.getReleaseUrl()
 
 	// download tar
 	resp, err := devpodhttp.GetHTTPClient().Get(url)
@@ -160,6 +148,25 @@ func (o *OpenVSCodeServer) Install() error {
 	}
 
 	return nil
+}
+
+func (o *OpenVSCodeServer) getReleaseUrl() string {
+	var url string
+	version := Options.GetValue(o.values, VersionOption)
+
+	if runtime.GOARCH == "arm64" {
+		url = Options.GetValue(o.values, DownloadArm64Option)
+		if url == "" {
+			url = fmt.Sprintf(DownloadArm64Template, version, version)
+		}
+	} else {
+		url = Options.GetValue(o.values, DownloadAmd64Option)
+		if url == "" {
+			url = fmt.Sprintf(DownloadAmd64Template, version, version)
+		}
+	}
+
+	return url
 }
 
 func (o *OpenVSCodeServer) installExtensions() error {
