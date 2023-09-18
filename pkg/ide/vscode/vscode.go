@@ -136,25 +136,7 @@ func (o *VsCodeServer) Install() error {
 		return nil
 	}
 
-	// install requirements alpine
-	if command.Exists("apk") {
-		o.log.Debugf("Install vscode dependencies...")
-		dependencies := []string{"build-base", "gcompat"}
-		if !command.Exists("git") {
-			dependencies = append(dependencies, "git")
-		}
-		if !command.Exists("bash") {
-			dependencies = append(dependencies, "bash")
-		}
-		if !command.Exists("curl") {
-			dependencies = append(dependencies, "curl")
-		}
-
-		out, err := exec.Command("sh", "-c", "apk update && apk add "+strings.Join(dependencies, " ")).CombinedOutput()
-		if err != nil {
-			o.log.Infof("Error updating alpine: %w", command.WrapCommandError(out, err))
-		}
-	}
+	o.installRequirementsAlpine()
 
 	// add settings
 	if o.settings == "" {
@@ -199,4 +181,26 @@ func PrepareVSCodeServerLocation(userName string, create bool) (string, error) {
 	}
 
 	return folder, nil
+}
+
+func (o *VsCodeServer) installRequirementsAlpine() {
+	if !command.Exists("apk") {
+		return
+	}
+	o.log.Debugf("Install openvscode dependencies...")
+	dependencies := []string{"build-base", "gcompat"}
+	if !command.Exists("git") {
+		dependencies = append(dependencies, "git")
+	}
+	if !command.Exists("bash") {
+		dependencies = append(dependencies, "bash")
+	}
+	if !command.Exists("curl") {
+		dependencies = append(dependencies, "curl")
+	}
+
+	out, err := exec.Command("sh", "-c", "apk update && apk add "+strings.Join(dependencies, " ")).CombinedOutput()
+	if err != nil {
+		o.log.Infof("Error updating alpine: %w", command.WrapCommandError(out, err))
+	}
 }
