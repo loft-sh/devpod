@@ -397,7 +397,7 @@ func (r *runner) buildAndExtendDockerCompose(ctx context.Context, parsedConfig *
 		}
 	}
 
-	extendImageBuildInfo, err := feature.GetExtendedBuildInfo(r.SubstitutionContext, imageBuildInfo.Metadata, imageBuildInfo.User, buildTarget, parsedConfig, r.Log)
+	extendImageBuildInfo, err := feature.GetExtendedBuildInfo(r.SubstitutionContext, imageBuildInfo.Metadata, imageBuildInfo.User, buildTarget, parsedConfig, r.Log, false)
 	if err != nil {
 		return "", "", nil, "", err
 	}
@@ -611,10 +611,10 @@ func (r *runner) generateDockerComposeUpProject(
 	entrypoint := composetypes.ShellCommand{
 		"/bin/sh",
 		"-c",
-		`echo Container started 
+		`echo Container started
 trap "exit 0" 15
-` + strings.Join(mergedConfig.Entrypoints, "\n") + ` 
-exec "$$@" 
+` + strings.Join(mergedConfig.Entrypoints, "\n") + `
+exec "$$@"
 while sleep 1 & wait $$!; do :; done`,
 		"-",
 	}

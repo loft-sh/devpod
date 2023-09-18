@@ -90,10 +90,10 @@ func escapeQuotesForShell(str string) string {
 	return strings.ReplaceAll(str, "'", `'\''`)
 }
 
-func ProcessFeatureID(id, configDir string, log log.Logger) (string, error) {
+func ProcessFeatureID(id, configDir string, log log.Logger, forceBuild bool) (string, error) {
 	if strings.HasPrefix(id, "https://") || strings.HasPrefix(id, "http://") {
 		log.Debugf("Process url feature")
-		return processDirectTarFeature(id, log)
+		return processDirectTarFeature(id, log, forceBuild)
 	} else if strings.HasPrefix(id, "./") || strings.HasPrefix(id, "../") {
 		log.Debugf("Process local feature")
 		return filepath.Abs(path.Join(filepath.ToSlash(configDir), id))
@@ -194,7 +194,7 @@ func downloadLayer(img v1.Image, id, destFile string, log log.Logger) error {
 	return nil
 }
 
-func processDirectTarFeature(id string, log log.Logger) (string, error) {
+func processDirectTarFeature(id string, log log.Logger, forceDownload bool) (string, error) {
 	downloadBase := id[strings.LastIndex(id, "/"):]
 	if !directTarballRegEx.MatchString(downloadBase) {
 		return "", fmt.Errorf("expected tarball name to follow 'devcontainer-feature-<feature-id>.tgz' format.  Received '%s' ", downloadBase)
@@ -204,7 +204,7 @@ func processDirectTarFeature(id string, log log.Logger) (string, error) {
 	featureFolder := getFeaturesTempFolder(id)
 	featureExtractedFolder := filepath.Join(featureFolder, "extracted")
 	_, err := os.Stat(featureExtractedFolder)
-	if err == nil {
+	if err == nil && !forceDownload {
 		return featureExtractedFolder, nil
 	}
 

@@ -51,8 +51,8 @@ type BuildInfo struct {
 	BuildArgs               map[string]string
 }
 
-func GetExtendedBuildInfo(substitutionContext *config.SubstitutionContext, baseImageMetadata *config.ImageMetadataConfig, user, target string, devContainerConfig *config.SubstitutedConfig, log log.Logger) (*ExtendedBuildInfo, error) {
-	features, err := fetchFeatures(devContainerConfig.Config, log)
+func GetExtendedBuildInfo(substitutionContext *config.SubstitutionContext, baseImageMetadata *config.ImageMetadataConfig, user, target string, devContainerConfig *config.SubstitutedConfig, log log.Logger, forceBuild bool) (*ExtendedBuildInfo, error) {
+	features, err := fetchFeatures(devContainerConfig.Config, log, forceBuild)
 	if err != nil {
 		return nil, errors.Wrap(err, "fetch features")
 	}
@@ -223,10 +223,10 @@ func findContainerUsers(baseImageMetadata *config.ImageMetadataConfig, composeSe
 	return containerUser, remoteUser
 }
 
-func fetchFeatures(devContainerConfig *config.DevContainerConfig, log log.Logger) ([]*config.FeatureSet, error) {
+func fetchFeatures(devContainerConfig *config.DevContainerConfig, log log.Logger, forceBuild bool) ([]*config.FeatureSet, error) {
 	featureSets := []*config.FeatureSet{}
 	for featureID, featureOptions := range devContainerConfig.Features {
-		featureFolder, err := ProcessFeatureID(featureID, filepath.Dir(devContainerConfig.Origin), log)
+		featureFolder, err := ProcessFeatureID(featureID, filepath.Dir(devContainerConfig.Origin), log, forceBuild)
 		if err != nil {
 			return nil, errors.Wrap(err, "process feature "+featureID)
 		}
