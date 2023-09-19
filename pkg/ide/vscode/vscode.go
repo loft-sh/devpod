@@ -135,7 +135,7 @@ func (o *VsCodeServer) Install() error {
 		return nil
 	}
 
-	ide.InstallAlpineRequirements(o.log)
+	InstallAlpineRequirements(o.log)
 
 	// add settings
 	if o.settings == "" {

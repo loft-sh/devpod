@@ -14,6 +14,7 @@ import (
 	"github.com/loft-sh/devpod/pkg/extract"
 	devpodhttp "github.com/loft-sh/devpod/pkg/http"
 	"github.com/loft-sh/devpod/pkg/ide"
+	"github.com/loft-sh/devpod/pkg/ide/vscode"
 	"github.com/loft-sh/devpod/pkg/single"
 	"github.com/loft-sh/log"
 	"github.com/mitchellh/go-homedir"
@@ -121,7 +122,7 @@ func (o *OpenVSCodeServer) Install() error {
 	// check what release we need to download
 	url := o.getReleaseUrl()
 
-	ide.InstallAlpineRequirements(o.log)
+	vscode.InstallAlpineRequirements(o.log)
 
 	// download tar
 	resp, err := devpodhttp.GetHTTPClient().Get(url)

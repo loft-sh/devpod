@@ -1,4 +1,4 @@
-package ide
+package vscode
 
 import (
 	"os/exec"
