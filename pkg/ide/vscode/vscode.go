@@ -6,7 +6,6 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
-	"strings"
 	"time"
 
 	"github.com/loft-sh/devpod/pkg/command"
@@ -136,7 +135,7 @@ func (o *VsCodeServer) Install() error {
 		return nil
 	}
 
-	o.installRequirementsAlpine()
+	ide.InstallAlpineRequirements(o.log)
 
 	// add settings
 	if o.settings == "" {
@@ -181,26 +180,4 @@ func PrepareVSCodeServerLocation(userName string, create bool) (string, error) {
 	}
 
 	return folder, nil
-}
-
-func (o *VsCodeServer) installRequirementsAlpine() {
-	if !command.Exists("apk") {
-		return
-	}
-	o.log.Debugf("Install openvscode dependencies...")
-	dependencies := []string{"build-base", "gcompat"}
-	if !command.Exists("git") {
-		dependencies = append(dependencies, "git")
-	}
-	if !command.Exists("bash") {
-		dependencies = append(dependencies, "bash")
-	}
-	if !command.Exists("curl") {
-		dependencies = append(dependencies, "curl")
-	}
-
-	out, err := exec.Command("sh", "-c", "apk update && apk add "+strings.Join(dependencies, " ")).CombinedOutput()
-	if err != nil {
-		o.log.Infof("Error updating alpine: %w", command.WrapCommandError(out, err))
-	}
 }
