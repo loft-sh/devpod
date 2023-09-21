@@ -145,7 +145,7 @@ func (cmd *SetupGPGCmd) Run(ctx context.Context) error {
 		return err
 	}
 
-	err = exec.Command("sudo", "ln", cmd.SocketPath, "/tmp/S.gpg-agent").Run()
+	err = exec.Command("sudo", "ln", "-f", cmd.SocketPath, "/tmp/S.gpg-agent").Run()
 	if err != nil {
 		return err
 	}
