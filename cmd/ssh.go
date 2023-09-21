@@ -385,7 +385,7 @@ func (cmd *SSHCmd) startTunnel(
 
 		// capture the output, if it's empty it means we don't have gpg-forwarding
 		var out bytes.Buffer
-		err := devssh.Run(ctx, containerClient, command, os.Stdin, &out, writer)
+		err := devssh.Run(ctx, containerClient, command, nil, &out, writer)
 
 		if err == nil && len(out.Bytes()) > 1 {
 			log.Debugf("gpg: exporting already running, skipping")
