@@ -209,7 +209,7 @@ func (r *runner) prepare(
 	}
 
 	if options.DevContainerImage != "" {
-		parsedConfig.Build = config.ConfigBuildOptions{}
+		parsedConfig.Build = &config.ConfigBuildOptions{}
 		parsedConfig.Dockerfile = ""
 		parsedConfig.DockerfileContainer = config.DockerfileContainer{}
 		parsedConfig.ImageContainer = config.ImageContainer{Image: options.DevContainerImage}
@@ -243,7 +243,7 @@ func (r *runner) Find(ctx context.Context) (*config.ContainerDetails, error) {
 }
 
 func isDockerFileConfig(config *config.DevContainerConfig) bool {
-	return config.Dockerfile != "" || config.Build.Dockerfile != ""
+	return config.GetDockerfile() != ""
 }
 
 func runInitializeCommand(

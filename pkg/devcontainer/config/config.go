@@ -214,7 +214,48 @@ type DockerfileContainer struct {
 	Context string `json:"context,omitempty"`
 
 	// Docker build-related options.
-	Build ConfigBuildOptions `json:"build,omitempty"`
+	Build *ConfigBuildOptions `json:"build,omitempty"`
+}
+
+func (d DockerfileContainer) GetDockerfile() string {
+	if d.Dockerfile != "" {
+		return d.Dockerfile
+	}
+	if d.Build != nil && d.Build.Dockerfile != "" {
+		return d.Build.Dockerfile
+	}
+	return ""
+}
+
+func (d DockerfileContainer) GetContext() string {
+	if d.Context != "" {
+		return d.Context
+	}
+	if d.Build != nil && d.Build.Context != "" {
+		return d.Build.Context
+	}
+	return ""
+}
+
+func (d DockerfileContainer) GetTarget() string {
+	if d.Build != nil {
+		return d.Build.Target
+	}
+	return ""
+}
+
+func (d DockerfileContainer) GetArgs() map[string]string {
+	if d.Build != nil {
+		return d.Build.Args
+	}
+	return nil
+}
+
+func (d DockerfileContainer) GetCacheFrom() types.StrArray {
+	if d.Build != nil {
+		return d.Build.CacheFrom
+	}
+	return nil
 }
 
 type ConfigBuildOptions struct {
@@ -304,15 +345,8 @@ func (m *Mount) String() string {
 }
 
 func GetContextPath(parsedConfig *DevContainerConfig) string {
-	context := ""
-	dockerfilePath := ""
-	if parsedConfig.Dockerfile != "" {
-		context = parsedConfig.Context
-		dockerfilePath = parsedConfig.Dockerfile
-	} else if parsedConfig.Build.Dockerfile != "" {
-		context = parsedConfig.Build.Context
-		dockerfilePath = parsedConfig.Build.Dockerfile
-	}
+	context := parsedConfig.GetContext()
+	dockerfilePath := parsedConfig.GetDockerfile()
 
 	configDir := path.Dir(filepath.ToSlash(parsedConfig.Origin))
 	if context != "" {

@@ -194,7 +194,7 @@ func getDevcontainerConfig(dir string) *config.DevContainerConfig {
 		DockerfileContainer: config.DockerfileContainer{
 			Dockerfile: "Dockerfile",
 			Context:    "",
-			Build:      config.ConfigBuildOptions{},
+			Build:      &config.ConfigBuildOptions{},
 		},
 		Origin: dir + "/.devcontainer/devcontainer.json",
 	}

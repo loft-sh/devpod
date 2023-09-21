@@ -184,7 +184,7 @@ func GetBuildArgsAndTarget(
 	extendedBuildInfo *feature.ExtendedBuildInfo,
 ) (map[string]string, string) {
 	buildArgs := map[string]string{}
-	for k, v := range parsedConfig.Config.Build.Args {
+	for k, v := range parsedConfig.Config.GetArgs() {
 		buildArgs[k] = v
 	}
 
@@ -201,8 +201,8 @@ func GetBuildArgsAndTarget(
 	target := ""
 	if extendedBuildInfo != nil && extendedBuildInfo.FeaturesBuildInfo != nil && extendedBuildInfo.FeaturesBuildInfo.OverrideTarget != "" {
 		target = extendedBuildInfo.FeaturesBuildInfo.OverrideTarget
-	} else if parsedConfig.Config.Build.Target != "" {
-		target = parsedConfig.Config.Build.Target
+	} else if parsedConfig.Config.GetTarget() != "" {
+		target = parsedConfig.Config.GetTarget()
 	}
 
 	return buildArgs, target
