@@ -17,6 +17,7 @@ import (
 	"github.com/loft-sh/devpod/pkg/compose"
 	"github.com/loft-sh/devpod/pkg/devcontainer/config"
 	docker "github.com/loft-sh/devpod/pkg/docker"
+	"github.com/loft-sh/devpod/pkg/language"
 	"github.com/onsi/ginkgo/v2"
 	"github.com/onsi/gomega"
 )
@@ -194,6 +195,50 @@ var _ = DevPodDescribe("devpod up test suite", func() {
 		framework.ExpectNoError(err)
 
 		// delete workspace
+		err = f.DevPodWorkspaceDelete(ctx, tempDir)
+		framework.ExpectNoError(err)
+	})
+
+	ginkgo.It("create workspace without devcontainer.json", func() {
+		const providerName = "test-docker"
+		ctx := context.Background()
+
+		f := framework.NewDefaultFramework(initialDir + "/bin")
+		tempDir, err := framework.CopyToTempDir("tests/up/testdata/no-devcontainer")
+		framework.ExpectNoError(err)
+		ginkgo.DeferCleanup(framework.CleanupTempDir, initialDir, tempDir)
+
+		// provider add, use and delete afterwards
+		err = f.DevPodProviderAdd(ctx, "docker", "--name", providerName)
+		framework.ExpectNoError(err)
+		err = f.DevPodProviderUse(ctx, providerName)
+		framework.ExpectNoError(err)
+		ginkgo.DeferCleanup(func() {
+			err = f.DevPodProviderDelete(ctx, providerName)
+			framework.ExpectNoError(err)
+		})
+
+		err = f.DevPodUp(ctx, tempDir)
+		framework.ExpectNoError(err)
+
+		workspace, err := f.FindWorkspace(ctx, tempDir)
+		framework.ExpectNoError(err)
+
+		projectName := workspace.ID
+		ids, err := dockerHelper.FindContainer(ctx, []string{
+			fmt.Sprintf("%s=%s", config.DockerIDLabel, workspace.UID),
+		})
+		framework.ExpectNoError(err)
+		gomega.Expect(ids).To(gomega.HaveLen(1), "1 compose container to be created")
+
+		devcontainerPath := filepath.Join("/workspaces", projectName, ".devcontainer.json")
+
+		containerEnvPath, _, err := f.ExecCommandCapture(ctx, []string{"ssh", "--command", "cat " + devcontainerPath, projectName})
+		framework.ExpectNoError(err)
+		expectedImageName := language.MapConfig[language.Go].ImageContainer.Image
+
+		gomega.Expect(containerEnvPath).To(gomega.Equal(fmt.Sprintf("{\"image\":\"%s\"}", expectedImageName)))
+
 		err = f.DevPodWorkspaceDelete(ctx, tempDir)
 		framework.ExpectNoError(err)
 	})
