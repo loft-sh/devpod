@@ -120,6 +120,7 @@ var _ = DevPodDescribe("devpod build test suite", func() {
 	})
 
 	ginkgo.It("build docker internal buildkit", func() {
+		_ = 1
 		ctx := context.Background()
 
 		f := framework.NewDefaultFramework(initialDir + "/bin")
