@@ -31,6 +31,16 @@ type injectResult struct {
 	err         error
 }
 
+type NoexecFilesystemError struct {
+	msg string
+}
+
+func (e NoexecFilesystemError) Error() string {
+	return e.msg
+}
+
+var ErrNoExecFilesystem = NoexecFilesystemError{msg: "filesystem is noexec"}
+
 func InjectAndExecute(
 	ctx context.Context,
 	exec ExecFunc,
@@ -63,6 +73,15 @@ func InjectAndExecute(
 	})
 	if err != nil {
 		return true, err
+	}
+
+	log.Debugf("ensure agent path's filesystem is not noexec")
+	noExec, err := isNoExec(remotePath)
+	if err != nil {
+		return false, perrors.Wrapf(err, "check if filesystem is noexec")
+	}
+	if noExec {
+		return false, ErrNoExecFilesystem
 	}
 
 	log.Debugf("execute inject script")
