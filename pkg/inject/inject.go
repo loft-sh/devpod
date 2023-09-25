@@ -76,7 +76,7 @@ func InjectAndExecute(
 	}
 
 	log.Debugf("ensure agent path's filesystem is not noexec")
-	noExec, err := isNoExec(remotePath)
+	noExec, err := isNoExec(path.Dir(remotePath))
 	if err != nil {
 		return false, perrors.Wrapf(err, "check if filesystem is noexec")
 	}
