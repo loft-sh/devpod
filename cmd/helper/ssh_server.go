@@ -98,13 +98,13 @@ func (cmd *SSHServerCmd) Run(_ *cobra.Command, _ []string) error {
 			go func() {
 				_, err = os.Stat(agent.ContainerActivityFile)
 				if err != nil {
-					err = os.WriteFile(agent.ContainerActivityFile, nil, 0o777)
+					err = os.WriteFile(agent.ContainerActivityFile, nil, 0777)
 					if err != nil {
 						fmt.Fprintf(os.Stderr, "Error writing file: %v\n", err)
 						return
 					}
 
-					_ = os.Chmod(agent.ContainerActivityFile, 0o777)
+					_ = os.Chmod(agent.ContainerActivityFile, 0777)
 				}
 
 				for {

@@ -170,7 +170,7 @@ func (cmd *SetupGPGCmd) setupGpgConf() error {
 
 	if !strings.Contains(string(gpgConfig), "use-agent") {
 		f, err := os.OpenFile(filepath.Join(os.Getenv("HOME"), ".gnupg", "gpg.conf"),
-			os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0o600)
+			os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0600)
 		if err != nil {
 			return err
 		}
@@ -201,7 +201,7 @@ func (cmd *SetupGPGCmd) setupRemoteSocketDirtree() error {
 }
 
 func (cmd *SetupGPGCmd) setupLocalGpg() error {
-	err := os.MkdirAll(filepath.Join(os.Getenv("HOME"), ".gnupg"), 0o700)
+	err := os.MkdirAll(filepath.Join(os.Getenv("HOME"), ".gnupg"), 0700)
 	if err != nil {
 		return err
 	}
@@ -218,7 +218,7 @@ func (cmd *SetupGPGCmd) setupLocalGpg() error {
 
 	for _, link := range symlinks {
 		_ = os.Remove(link)
-		_ = os.MkdirAll(filepath.Dir(link), 0o755)
+		_ = os.MkdirAll(filepath.Dir(link), 0755)
 
 		err = os.Symlink("/tmp/S.gpg-agent", link)
 		if err != nil {
