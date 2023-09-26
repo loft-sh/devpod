@@ -390,7 +390,7 @@ func (cmd *SSHCmd) startTunnel(
 		if err == nil && len(out.Bytes()) > 1 {
 			log.Debugf("gpg: exporting already running, skipping")
 		} else {
-			err := cmd.setupGPGAgent(ctx, devPodConfig, containerClient, log)
+			err := cmd.setupGPGAgent(ctx, containerClient, log)
 			if err != nil {
 				return err
 			}
@@ -455,7 +455,6 @@ func (cmd *SSHCmd) startServices(
 // this works by using cmd/agent/workspace/setup_gpg
 func (cmd *SSHCmd) setupGPGAgent(
 	ctx context.Context,
-	devPodConfig *config.Config,
 	containerClient *ssh.Client,
 	log log.Logger,
 ) error {
