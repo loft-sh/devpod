@@ -511,6 +511,5 @@ func (cmd *SSHCmd) setupGPGAgent(
 		command = fmt.Sprintf("su -c \"%s\" '%s'", command, cmd.User)
 	}
 
-	// We use start to keep this connection alive in background (hence the use of sleep infinity)
 	return devssh.Run(ctx, containerClient, command, nil, writer, writer)
 }
