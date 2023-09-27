@@ -209,7 +209,7 @@ func (r *runner) prepare(
 	}
 
 	if options.DevContainerImage != "" {
-		parsedConfig.Build = &config.ConfigBuildOptions{}
+		parsedConfig.Build = nil
 		parsedConfig.Dockerfile = ""
 		parsedConfig.DockerfileContainer = config.DockerfileContainer{}
 		parsedConfig.ImageContainer = config.ImageContainer{Image: options.DevContainerImage}
