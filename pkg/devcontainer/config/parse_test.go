@@ -31,7 +31,7 @@ func TestSaveDevContainerJSON(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			tmpDir, err := os.MkdirTemp("", "test-devcontainer")
+			tmpDir, err := os.MkdirTemp(os.TempDir(), "test-devcontainer")
 			if err != nil {
 				t.Fatalf("Failed to create temp dir: %v", err)
 			}
