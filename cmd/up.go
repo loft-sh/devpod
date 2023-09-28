@@ -786,11 +786,18 @@ func setupDotfiles(
 		agentArguments = append(agentArguments, dotfilesScript)
 	}
 
+    remoteUser, err:= devssh.GetUser(client.Workspace())
+    if err != nil {
+        remoteUser = "root"
+    }
+
 	dotCmd := exec.Command(
 		execPath,
 		"ssh",
 		"--agent-forwarding=true",
 		"--start-services=false",
+		"--user",
+		remoteUser,
 		"--context",
 		client.Context(),
 		client.Workspace(),
