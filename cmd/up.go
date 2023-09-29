@@ -471,7 +471,7 @@ func startJupyterNotebookInBrowser(
 	}
 
 	// wait until reachable then open browser
-	targetURL := fmt.Sprintf("http://localhost:%d", jupyterPort)
+	targetURL := fmt.Sprintf("http://localhost:%d/lab", jupyterPort)
 	if jupyter.Options.GetValue(ideOptions, jupyter.OpenOption) == "true" {
 		go func() {
 			err = open2.Open(ctx, targetURL, logger)
