@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"os"
 	"os/exec"
+	"path"
 	"path/filepath"
 	"strings"
 	"time"
@@ -20,6 +21,7 @@ import (
 	"github.com/loft-sh/devpod/pkg/language"
 	"github.com/onsi/ginkgo/v2"
 	"github.com/onsi/gomega"
+	"github.com/onsi/gomega/ghttp"
 )
 
 var _ = DevPodDescribe("devpod up test suite", func() {
@@ -370,6 +372,56 @@ var _ = DevPodDescribe("devpod up test suite", func() {
 				// Wait for devpod workspace to come online (deadline: 30s)
 				err = f.DevPodUp(ctx, tempDir)
 				framework.ExpectNoError(err)
+			}, ginkgo.SpecTimeout(60*time.Second))
+
+			ginkgo.It("should use http headers to download feature", func(ctx context.Context) {
+				server := ghttp.NewServer()
+
+				tempDir, err := framework.CopyToTempDir("tests/up/testdata/docker-features-http-headers")
+				framework.ExpectNoError(err)
+
+				featureArchiveFilePath := path.Join(tempDir, "devcontainer-feature-hello.tgz")
+				featureFiles := []string{path.Join(tempDir, "devcontainer-feature.json"), path.Join(tempDir, "install.sh")}
+				err = createTarGzArchive(featureArchiveFilePath, featureFiles)
+				framework.ExpectNoError(err)
+
+				devContainerFileBuf, err := os.ReadFile(path.Join(tempDir, ".devcontainer.json"))
+				framework.ExpectNoError(err)
+
+				output := strings.Replace(string(devContainerFileBuf), "#{server_url}", server.URL(), -1)
+				err = os.WriteFile(path.Join(tempDir, ".devcontainer.json"), []byte(output), 0644)
+				framework.ExpectNoError(err)
+
+				ginkgo.DeferCleanup(framework.CleanupTempDir, initialDir, tempDir)
+				ginkgo.DeferCleanup(server.Close)
+
+				respHeader := http.Header{}
+				respHeader.Set("Content-Disposition", "attachment; filename=devcontainer-feature-hello.tgz")
+
+				featureArchiveFileBuf, err := os.ReadFile(featureArchiveFilePath)
+				framework.ExpectNoError(err)
+
+				f := framework.NewDefaultFramework(initialDir + "/bin")
+				server.AppendHandlers(
+					ghttp.CombineHandlers(
+						ghttp.VerifyRequest("GET", "/devcontainer-feature-hello.tgz"),
+						ghttp.VerifyHeaderKV("Foo-Header", "Foo"),
+						ghttp.RespondWith(http.StatusOK, featureArchiveFileBuf, respHeader),
+					),
+				)
+
+				_ = f.DevPodProviderDelete(ctx, "docker")
+				err = f.DevPodProviderAdd(ctx, "docker", "-o", "DOCKER_PATH=podman")
+				framework.ExpectNoError(err)
+				err = f.DevPodProviderUse(ctx, "docker")
+				framework.ExpectNoError(err)
+
+				ginkgo.DeferCleanup(f.DevPodWorkspaceDelete, context.Background(), tempDir)
+
+				// Wait for devpod workspace to come online (deadline: 30s)
+				err = f.DevPodUp(ctx, tempDir)
+				framework.ExpectNoError(err)
+				server.Close()
 			}, ginkgo.SpecTimeout(60*time.Second))
 		})
 

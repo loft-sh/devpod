@@ -309,7 +309,8 @@ type PortAttribute struct {
 }
 
 type DevPodCustomizations struct {
-	PrebuildRepository types.StrArray `json:"prebuildRepository,omitempty"`
+	PrebuildRepository         types.StrArray    `json:"prebuildRepository,omitempty"`
+	FeatureDownloadHTTPHeaders map[string]string `json:"featureDownloadHTTPHeaders,omitempty"`
 }
 
 type VSCodeCustomizations struct {

@@ -372,6 +372,7 @@ github.com/onsi/ginkgo/v2/types
 ## explicit; go 1.18
 github.com/onsi/gomega
 github.com/onsi/gomega/format
+github.com/onsi/gomega/ghttp
 github.com/onsi/gomega/internal
 github.com/onsi/gomega/internal/gutil
 github.com/onsi/gomega/matchers

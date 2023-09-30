@@ -1,9 +1,12 @@
 package up
 
 import (
+	"archive/tar"
+	"compress/gzip"
 	"encoding/json"
 	"fmt"
 	"io"
+	"os"
 	"strings"
 
 	"github.com/loft-sh/log"
@@ -43,5 +46,48 @@ func verifyLogStream(reader io.Reader) error {
 		}
 	}
 
+	return nil
+}
+
+func createTarGzArchive(outputFilePath string, filePaths []string) error {
+	outputFile, err := os.Create(outputFilePath)
+	if err != nil {
+		return err
+	}
+	defer outputFile.Close()
+
+	gzipWriter := gzip.NewWriter(outputFile)
+	defer gzipWriter.Close()
+
+	tarWriter := tar.NewWriter(gzipWriter)
+	defer gzipWriter.Close()
+
+	for _, filePath := range filePaths {
+		file, err := os.Open(filePath)
+		if err != nil {
+			return err
+		}
+		defer file.Close()
+
+		fileInfo, err := file.Stat()
+		if err != nil {
+			return err
+		}
+
+		fileInfoHdr, err := tar.FileInfoHeader(fileInfo, fileInfo.Name())
+		if err != nil {
+			return err
+		}
+
+		err = tarWriter.WriteHeader(fileInfoHdr)
+		if err != nil {
+			return err
+		}
+
+		_, err = io.Copy(tarWriter, file)
+		if err != nil {
+			return err
+		}
+	}
 	return nil
 }

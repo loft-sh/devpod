@@ -1,0 +1,14 @@
+{
+  "name": "Test hello",
+  "image": "mcr.microsoft.com/vscode/devcontainers/base:ubuntu",
+  "features": {
+    "#{server_url}/devcontainer-feature-hello.tgz": {}
+  },
+  "customizations": {
+    "devpod": {
+      "featureDownloadHTTPHeaders": {
+        "Foo-Header": "Foo"
+      }
+    }
+  }
+}
