@@ -170,6 +170,10 @@ module.exports = {
           id: "other-topics/telemetry",
         },
         {
+          type: "doc",
+          id: "other-topics/mobile-support",
+        },
+        {
           type: "category",
           label: "Advanced guides",
           items: [
@@ -177,7 +181,7 @@ module.exports = {
               type: "doc",
               id: "other-topics/advanced-guides/minikube-vscode-browser",
             },
-          ]
+          ],
         },
       ],
     },
