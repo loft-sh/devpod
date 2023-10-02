@@ -8,13 +8,10 @@ import (
 	"fmt"
 	"io"
 	"os"
-	"path"
-	"strconv"
 	"strings"
 	"time"
 
 	"github.com/loft-sh/devpod/pkg/command"
-	"github.com/loft-sh/devpod/pkg/template"
 	"github.com/loft-sh/log"
 	perrors "github.com/pkg/errors"
 )
@@ -35,44 +32,24 @@ func InjectAndExecute(
 	ctx context.Context,
 	exec ExecFunc,
 	localFile LocalFile,
-	existsCheck string,
-	remotePath,
-	downloadBase,
-	downloadAmd64,
-	downloadArm64 string,
-	preferDownload,
-	chmodPath bool,
-	commandToExecute string,
+	scriptParams *Params,
 	stdin io.Reader,
 	stdout io.Writer,
 	stderr io.Writer,
 	timeout time.Duration,
 	log log.Logger,
 ) (bool, error) {
-	// generate script
-	t, err := template.FillTemplate(Script, map[string]string{
-		"Command":         commandToExecute,
-		"ExistsCheck":     existsCheck,
-		"InstallDir":      path.Dir(remotePath),
-		"InstallFilename": path.Base(remotePath),
-		"PreferDownload":  strconv.FormatBool(preferDownload),
-		"ChmodPath":       strconv.FormatBool(chmodPath),
-		"DownloadBase":    downloadBase,
-		"DownloadAmd":     downloadAmd64,
-		"DownloadArm":     downloadArm64,
-	})
+	scriptRawCode, err := GenerateScript(Script, scriptParams)
 	if err != nil {
 		return true, err
 	}
 
 	log.Debugf("execute inject script")
-	if preferDownload {
-		log.Debugf("download agent from %s", downloadBase)
+	if scriptParams.PreferAgentDownload {
+		log.Debugf("download agent from %s", scriptParams.DownloadURLs.Base)
 	}
 
 	defer log.Debugf("done injecting")
-
-	t = strings.ReplaceAll(t, "\r", "")
 
 	// start script
 	stdinReader, stdinWriter, err := os.Pipe()
@@ -101,14 +78,14 @@ func InjectAndExecute(
 	cancelCtx, cancel := context.WithCancel(ctx)
 	defer cancel()
 
-	// start script
+	// start execution of inject.sh
 	execErrChan := make(chan error, 1)
 	go func() {
 		defer stdoutWriter.Close()
 		defer stdinWriter.Close()
 		defer log.Debugf("done exec")
 
-		err := exec(cancelCtx, t, stdinReader, stdoutWriter, delayedStderr)
+		err := exec(cancelCtx, scriptRawCode, stdinReader, stdoutWriter, delayedStderr)
 		if err != nil && !errors.Is(err, context.Canceled) && !strings.Contains(err.Error(), "signal: ") {
 			execErrChan <- command.WrapCommandError(delayedStderr.Buffer(), err)
 		} else {
@@ -145,13 +122,13 @@ func InjectAndExecute(
 		return result.wasExecuted, result.err
 	} else if err != nil {
 		return result.wasExecuted, err
-	} else if result.wasExecuted || commandToExecute == "" {
+	} else if result.wasExecuted || scriptParams.Command == "" {
 		return result.wasExecuted, nil
 	}
 
 	log.Debugf("Rerun command as binary was injected")
 	delayedStderr.Start()
-	return true, exec(ctx, commandToExecute, stdin, stdout, delayedStderr)
+	return true, exec(ctx, scriptParams.Command, stdin, stdout, delayedStderr)
 }
 
 func inject(
@@ -174,24 +151,14 @@ func inject(
 	}()
 
 	// wait for line to be read
-	select {
-	case err := <-errChan:
-		if err != nil {
-			return false, err
-		}
-	case <-time.After(timeout):
-		return false, context.DeadlineExceeded
-	}
-
-	// check for string
-	if strings.TrimSpace(line) != "ping" {
-		return false, fmt.Errorf("unexpected start line: %v", line)
-	}
-
-	// send our response
-	_, err := stdin.Write([]byte("pong\n"))
+	err := waitForMessage(errChan, timeout)
 	if err != nil {
-		return false, perrors.Wrap(err, "write to stdin")
+		return false, err
+	}
+
+	err = performMutualHandshake(line, stdin)
+	if err != nil {
+		return false, err
 	}
 
 	// wait until we read something
@@ -201,39 +168,21 @@ func inject(
 	}
 	log.Debugf("Received line after pong: %v", line)
 
-	// check if we need to inject the file
 	lineStr := strings.TrimSpace(line)
-	if strings.HasPrefix(lineStr, "ARM-") {
+	if isInjectingOfBinaryNeeded(lineStr) {
 		log.Debugf("Inject binary")
 		defer log.Debugf("Done injecting binary")
 
-		isArm := strings.TrimPrefix(lineStr, "ARM-") == "true"
-		fileReader, err := localFile(isArm)
+		fileReader, err := getFileReader(localFile, lineStr)
 		if err != nil {
 			return false, err
 		}
 		defer fileReader.Close()
-
-		// copy into writer
-		_, err = io.Copy(stdin, fileReader)
+		err = injectBinary(fileReader, stdin, stdout)
 		if err != nil {
 			return false, err
 		}
-
-		// close stdin
-		_ = stdin.Close()
-
-		// wait for done
-		line, err = readLine(stdout)
-		if err != nil {
-			return false, err
-		} else if strings.TrimSpace(line) != "done" {
-			return false, fmt.Errorf("unexpected line during inject: %s", line)
-		}
-
-		// close stdout
 		_ = stdout.Close()
-
 		// start exec with command
 		return false, nil
 	} else if lineStr != "done" {
@@ -253,6 +202,64 @@ func inject(
 		stdin, stdinOut,
 		stdoutOut, stdout,
 	)
+}
+
+func isInjectingOfBinaryNeeded(lineStr string) bool {
+	return strings.HasPrefix(lineStr, "ARM-")
+}
+
+func getFileReader(localFile LocalFile, lineStr string) (io.ReadCloser, error) {
+	isArm := strings.TrimPrefix(lineStr, "ARM-") == "true"
+	return localFile(isArm)
+}
+
+func performMutualHandshake(line string, stdin io.WriteCloser) error {
+	// check for string
+	if strings.TrimSpace(line) != "ping" {
+		return fmt.Errorf("unexpected start line: %v", line)
+	}
+
+	// send our response
+	_, err := stdin.Write([]byte("pong\n"))
+	if err != nil {
+		return perrors.Wrap(err, "write to stdin")
+	}
+
+	// successful handshake
+	return nil
+}
+
+func injectBinary(
+	fileReader io.ReadCloser,
+	stdin io.WriteCloser,
+	stdout io.ReadCloser,
+) error {
+	// copy into writer
+	_, err := io.Copy(stdin, fileReader)
+	if err != nil {
+		return err
+	}
+
+	// close stdin
+	_ = stdin.Close()
+
+	// wait for done
+	line, err := readLine(stdout)
+	if err != nil {
+		return err
+	} else if strings.TrimSpace(line) != "done" {
+		return fmt.Errorf("unexpected line during inject: %s", line)
+	}
+	return nil
+}
+
+func waitForMessage(errChannel chan error, timeout time.Duration) error {
+	select {
+	case err := <-errChannel:
+		return err
+	case <-time.After(timeout):
+		return context.DeadlineExceeded
+	}
 }
 
 func readLine(reader io.Reader) (string, error) {
