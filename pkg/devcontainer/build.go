@@ -134,8 +134,8 @@ func (r *runner) buildAndExtendImage(ctx context.Context, parsedConfig *config.S
 
 	// ensure there is a target to choose for us
 	var imageBase string
-	if parsedConfig.Config.Build.Target != "" {
-		imageBase = parsedConfig.Config.Build.Target
+	if parsedConfig.Config.GetTarget() != "" {
+		imageBase = parsedConfig.Config.GetTarget()
 	} else {
 		lastTargetName, modifiedDockerfileContents, err := dockerfile.EnsureDockerfileHasFinalStageName(string(dockerFileContent), config.DockerfileDefaultTarget)
 		if err != nil {
@@ -148,7 +148,7 @@ func (r *runner) buildAndExtendImage(ctx context.Context, parsedConfig *config.S
 	}
 
 	// get image build info
-	imageBuildInfo, err := r.getImageBuildInfoFromDockerfile(string(dockerFileContent), parsedConfig.Config.Build.Args, parsedConfig.Config.Build.Target)
+	imageBuildInfo, err := r.getImageBuildInfoFromDockerfile(string(dockerFileContent), parsedConfig.Config.GetArgs(), parsedConfig.Config.GetTarget())
 	if err != nil {
 		return nil, errors.Wrap(err, "get image build info")
 	}
@@ -169,12 +169,8 @@ func (r *runner) getDockerfilePath(parsedConfig *config.DevContainerConfig) (str
 	}
 
 	configFileDir := filepath.Dir(parsedConfig.Origin)
-	dockerfile := parsedConfig.Dockerfile
-	if dockerfile == "" {
-		dockerfile = parsedConfig.Build.Dockerfile
-	}
 
-	dockerfilePath := filepath.Join(configFileDir, dockerfile)
+	dockerfilePath := filepath.Join(configFileDir, parsedConfig.GetDockerfile())
 	_, err := os.Stat(dockerfilePath)
 	if err != nil {
 		return "", fmt.Errorf("couldn't find Dockerfile at %s", dockerfilePath)
