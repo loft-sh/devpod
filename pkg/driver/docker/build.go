@@ -34,7 +34,7 @@ func (d *dockerDriver) BuildDevContainer(
 ) (*config.BuildInfo, error) {
 	// check if image build is necessary
 	imageName := GetImageName(localWorkspaceFolder, prebuildHash)
-	if options.Repository == "" {
+	if options.Repository == "" && !options.ForceBuild {
 		imageDetails, err := d.Docker.InspectImage(ctx, imageName, false)
 		if err == nil && imageDetails != nil {
 			// local image found

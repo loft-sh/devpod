@@ -103,7 +103,7 @@ func (r *runner) extendImage(ctx context.Context, parsedConfig *config.Substitut
 	}
 
 	// get extend image build info
-	extendedBuildInfo, err := feature.GetExtendedBuildInfo(r.SubstitutionContext, imageBuildInfo.Metadata, imageBuildInfo.User, imageBase, parsedConfig, r.Log)
+	extendedBuildInfo, err := feature.GetExtendedBuildInfo(r.SubstitutionContext, imageBuildInfo.Metadata, imageBuildInfo.User, imageBase, parsedConfig, r.Log, options.ForceBuild)
 	if err != nil {
 		return nil, errors.Wrap(err, "get extended build info")
 	}
@@ -154,7 +154,7 @@ func (r *runner) buildAndExtendImage(ctx context.Context, parsedConfig *config.S
 	}
 
 	// get extend image build info
-	extendedBuildInfo, err := feature.GetExtendedBuildInfo(r.SubstitutionContext, imageBuildInfo.Metadata, imageBuildInfo.User, imageBase, parsedConfig, r.Log)
+	extendedBuildInfo, err := feature.GetExtendedBuildInfo(r.SubstitutionContext, imageBuildInfo.Metadata, imageBuildInfo.User, imageBase, parsedConfig, r.Log, options.ForceBuild)
 	if err != nil {
 		return nil, errors.Wrap(err, "get extended build info")
 	}
