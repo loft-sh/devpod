@@ -795,7 +795,7 @@ func setupDotfiles(
 		execPath,
 		"ssh",
 		"--agent-forwarding=true",
-		"--start-services=false",
+		"--start-services=true",
 		"--user",
 		remoteUser,
 		"--context",
