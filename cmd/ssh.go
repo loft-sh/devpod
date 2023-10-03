@@ -8,7 +8,6 @@ import (
 	"sync"
 	"time"
 
-	"github.com/gen2brain/beeep"
 	"github.com/loft-sh/devpod/cmd/flags"
 	"github.com/loft-sh/devpod/cmd/machine"
 	"github.com/loft-sh/devpod/pkg/agent"
@@ -19,7 +18,6 @@ import (
 	"github.com/loft-sh/devpod/pkg/tunnel"
 	workspace2 "github.com/loft-sh/devpod/pkg/workspace"
 	"github.com/loft-sh/log"
-	"github.com/loft-sh/log/terminal"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
@@ -154,10 +152,6 @@ func startWait(ctx context.Context, client client2.WorkspaceClient, create bool,
 					return errors.Wrap(err, "start workspace")
 				}
 			} else {
-				if !terminal.IsTerminalIn {
-					_ = beeep.Notify("DevPod Workspace is stopped", "DevPod Workspace is stopped, please restart the workspace", "assets/warning.png")
-				}
-
 				return fmt.Errorf("DevPod workspace is stopped")
 			}
 		} else if instanceStatus == client2.StatusNotFound {
