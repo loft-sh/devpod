@@ -113,11 +113,6 @@ func InjectAgentAndExecute(
 			log,
 		)
 		if err != nil {
-			// noexec filesystem - no need to retry
-			if errors.Is(err, inject.ErrNoExecFilesystem) {
-				return err
-			}
-
 			if time.Since(now) > waitForInstanceConnectionTimeout {
 				return errors.Wrap(err, "timeout waiting for instance connection")
 			} else if wasExecuted {
