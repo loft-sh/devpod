@@ -1,5 +1,5 @@
 # NOTE: Using 1.13 as a base to build the RISCV compiler, the resulting version is based on go1.6.
-FROM golang:1.13
+FROM golang:1.21.0
 
 # Clone and complie a riscv compatible version of the go compiler.
 RUN git clone https://review.gerrithub.io/riscv/riscv-go /riscv-go
