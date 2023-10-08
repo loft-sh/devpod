@@ -33,6 +33,16 @@ Then press `Create Workspace` to launch the workspace.
 Under the hood, the Desktop Application will call the CLI command `devpod up REPOSITORY`
 :::
 
+:::info Note
+You can set the location of your devpod home by passing the `--devpod-home={home_path}` flag, 
+or by setting the env var `DEVPOD_HOME` to your desired home directory.
+
+This can be useful if you are having trouble with a workspace trying to mount to a windows location when it should be mounting
+to a path inside the WSL VM.
+
+For example: setting `devpod-home=/mnt/c/Users/MyUser/` will result in a workspace mount path of something like `/mnt/c/Users/MyUser/.devpod/agent/contexts/default/workspaces/...`
+:::
+
 ### Via DevPod CLI
 
 Make sure to [install the DevPod CLI locally](../getting-started/install.mdx#optional-install-devpod-cli) and select a provider you would like to host the workspace on (such as local docker) via:
