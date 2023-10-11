@@ -36,6 +36,7 @@ import (
 	"github.com/skratchdot/open-golang/open"
 	"github.com/spf13/cobra"
 	"golang.org/x/crypto/ssh"
+	gosshagent "golang.org/x/crypto/ssh/agent"
 )
 
 // UpCmd holds the up cmd flags
@@ -350,16 +351,22 @@ func (cmd *UpCmd) devPodUpMachine(
 		return nil, err
 	}
 
+	// ssh tunnel
+	sshCmd := fmt.Sprintf("'%s' helper ssh-server --stdio", client.AgentPath())
+	if log.GetLevel() == logrus.DebugLevel {
+		sshCmd += " --debug"
+	}
+
 	// create container etc.
 	log.Infof("Creating devcontainer...")
 	defer log.Debugf("Done creating devcontainer")
-	command := fmt.Sprintf(
+	agentCommand := fmt.Sprintf(
 		"'%s' agent workspace up --workspace-info '%s'",
 		client.AgentPath(),
 		workspaceInfo,
 	)
 	if log.GetLevel() == logrus.DebugLevel {
-		command += " --debug"
+		agentCommand += " --debug"
 	}
 
 	// create pipes
@@ -378,15 +385,15 @@ func (cmd *UpCmd) devPodUpMachine(
 	cancelCtx, cancel := context.WithCancel(ctx)
 	defer cancel()
 
-	errChan := make(chan error, 1)
+	errChan := make(chan error, 2)
 	go func() {
-		defer log.Debugf("Done executing up command")
+		defer log.Debugf("Done executing ssh server helper command")
 		defer cancel()
 
 		writer := log.Writer(logrus.InfoLevel, false)
 		defer writer.Close()
 
-		log.Debugf("Inject and run command: %s", command)
+		log.Debugf("Inject and run command: %s", sshCmd)
 		err := agent.InjectAgentAndExecute(
 			cancelCtx,
 			func(ctx context.Context, command string, stdin io.Reader, stdout io.Writer, stderr io.Writer) error {
@@ -401,14 +408,77 @@ func (cmd *UpCmd) devPodUpMachine(
 			client.AgentPath(),
 			client.AgentURL(),
 			true,
-			command,
+			sshCmd,
 			stdinReader,
 			stdoutWriter,
 			writer,
 			log.ErrorStreamOnly(),
 		)
-		if err != nil {
+		if err != nil && !errors.Is(err, context.Canceled) && !strings.Contains(err.Error(), "signal: ") {
 			errChan <- fmt.Errorf("executing agent command: %w", err)
+		} else {
+			errChan <- nil
+		}
+	}()
+
+	// create pipes
+	stdoutReader2, stdoutWriter2, err := os.Pipe()
+	if err != nil {
+		return nil, err
+	}
+	stdinReader2, stdinWriter2, err := os.Pipe()
+	if err != nil {
+		return nil, err
+	}
+	defer stdoutWriter2.Close()
+	defer stdinWriter2.Close()
+
+	// connect to container
+	go func() {
+		defer cancel()
+
+		log.Debugf("Attempting to create SSH client")
+		// start ssh client as root / default user
+		sshClient, err := devssh.StdioClient(stdoutReader, stdinWriter, false)
+		if err != nil {
+			errChan <- errors.Wrap(err, "create ssh client")
+			return
+		}
+		defer log.Debugf("Connection to SSH Server closed")
+		defer sshClient.Close()
+
+		log.Debugf("SSH client created")
+
+		sess, err := sshClient.NewSession()
+		if err != nil {
+			errChan <- errors.Wrap(err, "create ssh session")
+		}
+		defer sess.Close()
+
+		log.Debugf("SSH session created")
+
+		var identityAgent string
+		if identityAgent == "" {
+			identityAgent = os.Getenv("SSH_AUTH_SOCK")
+		}
+
+		if identityAgent != "" {
+			err = gosshagent.ForwardToRemote(sshClient, identityAgent)
+			if err != nil {
+				errChan <- errors.Wrap(err, "forward agent")
+			}
+			err = gosshagent.RequestAgentForwarding(sess)
+			if err != nil {
+				errChan <- errors.Wrap(err, "request agent forwarding failed")
+			}
+		}
+
+		writer := log.Writer(logrus.InfoLevel, false)
+		defer writer.Close()
+
+		err = devssh.Run(ctx, sshClient, agentCommand, stdinReader2, stdoutWriter2, writer)
+		if err != nil {
+			errChan <- errors.Wrap(err, "run agent command")
 		} else {
 			errChan <- nil
 		}
@@ -427,8 +497,8 @@ func (cmd *UpCmd) devPodUpMachine(
 		result, err = tunnelserver.RunProxyServer(
 			cancelCtx,
 			tunnelClient,
-			stdoutReader,
-			stdinWriter,
+			stdoutReader2,
+			stdinWriter2,
 			log,
 		)
 		if err != nil {
@@ -437,8 +507,8 @@ func (cmd *UpCmd) devPodUpMachine(
 	} else {
 		result, err = tunnelserver.RunUpServer(
 			cancelCtx,
-			stdoutReader,
-			stdinWriter,
+			stdoutReader2,
+			stdinWriter2,
 			client.AgentInjectGitCredentials(),
 			client.AgentInjectDockerCredentials(),
 			client.WorkspaceConfig(),
@@ -450,6 +520,10 @@ func (cmd *UpCmd) devPodUpMachine(
 	}
 
 	// wait until command finished
+	if err := <-errChan; err != nil {
+		return result, err
+	}
+
 	return result, <-errChan
 }
 
