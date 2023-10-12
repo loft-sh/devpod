@@ -24,7 +24,7 @@ import (
 
 var DefaultPort = 8022
 
-func NewServer(addr string, hostKey []byte, keys []ssh.PublicKey, log log.Logger) (*Server, error) {
+func NewServer(addr string, hostKey []byte, keys []ssh.PublicKey, workdir string, log log.Logger) (*Server, error) {
 	shell, err := getShell()
 	if err != nil {
 		return nil, err
@@ -38,6 +38,7 @@ func NewServer(addr string, hostKey []byte, keys []ssh.PublicKey, log log.Logger
 	forwardHandler := &ssh.ForwardedTCPHandler{}
 	server := &Server{
 		shell:       shell,
+		workdir:     workdir,
 		log:         log,
 		currentUser: currentUser.Username,
 		sshServer: ssh.Server{
@@ -93,6 +94,7 @@ func NewServer(addr string, hostKey []byte, keys []ssh.PublicKey, log log.Logger
 type Server struct {
 	currentUser string
 	shell       []string
+	workdir     string
 	sshServer   ssh.Server
 	log         log.Logger
 }
@@ -328,10 +330,13 @@ func (s *Server) getCommand(sess ssh.Session, isPty bool) *exec.Cmd {
 	}
 
 	// switch default directory
-	home, _ := command.GetHome(user)
-	_, err := os.Stat(home)
+	workdir := s.workdir
+	if workdir == "" {
+		workdir, _ = command.GetHome(user)
+	}
+	_, err := os.Stat(workdir)
 	if err == nil {
-		cmd.Dir = home
+		cmd.Dir = workdir
 	}
 	cmd.Env = append(cmd.Env, os.Environ()...)
 	cmd.Env = append(cmd.Env, sess.Environ()...)
