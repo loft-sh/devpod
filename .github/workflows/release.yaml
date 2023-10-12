@@ -88,26 +88,6 @@ jobs:
       fail-fast: false
       matrix:
         settings:
-          - host: macos-latest
-            target: x86_64-apple-darwin
-            os: darwin
-            arch: amd64
-            cli_only: false
-          - host: macos-latest
-            target: aarch64-apple-darwin
-            os: darwin
-            arch: arm64
-            cli_only: false
-          # The WIX version we use for the installer (latest 3.something) doesn't support arm builds - if we need to support arm windows,
-          # we'd need to switch the installer toolchain to WIX 4.xx, not sure how that works out with tauri
-          # - host: windows-latest
-          #   target: aarch64-pc-windows-msvc
-          #   arch: arm64
-          #   cli-only: false
-          - host: windows-latest
-            target: x86_64-pc-windows-msvc
-            arch: amd64
-            cli_only: false
           - host: ubuntu-20.04
             target: x86_64-unknown-linux-gnu
             os: linux
@@ -200,16 +180,16 @@ jobs:
         with:
           releaseId: ${{ needs.create-release.outputs.release_id }}
           projectPath: "./desktop"
-          args: "--config src-tauri/tauri-linux.conf.json --target ${{ matrix.settings.target }} --features enable-updater"
+          args: "--config src-tauri/tauri-dev-linux.conf.json --target ${{ matrix.settings.target }} --features enable-updater --bundles appimage,updater"
           includeUpdaterJson: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          TAURI_PRIVATE_KEY: ${{ secrets.TAURI_PRIVATE_KEY }}
-          TAURI_KEY_PASSWORD: ${{ secrets.TAURI_KEY_PASSWORD }}
-          # AppImage Signing:
-          SIGN: ${{ secrets.APP_IMAGE_SIGN }}
-          SIGN_KEY: ${{ secrets.APP_IMAGE_SIGN_KEY }}
-          APPIMAGETOOL_SIGN_PASSPHRASE: ${{ secrets.APP_IMAGE_SIGN_PASSPHRASE }}
+            # TAURI_PRIVATE_KEY: ${{ secrets.TAURI_PRIVATE_KEY }}
+            # TAURI_KEY_PASSWORD: ${{ secrets.TAURI_KEY_PASSWORD }}
+            # # AppImage Signing:
+            # SIGN: ${{ secrets.APP_IMAGE_SIGN }}
+            # SIGN_KEY: ${{ secrets.APP_IMAGE_SIGN_KEY }}
+            # APPIMAGETOOL_SIGN_PASSPHRASE: ${{ secrets.APP_IMAGE_SIGN_PASSPHRASE }}
 
       - name: Build Desktop App
         if: matrix.settings.host == 'macos-latest' && matrix.settings.cli_only == false
@@ -231,51 +211,15 @@ jobs:
           APPLE_ID: ${{ secrets.APPLE_ID }}
           APPLE_PASSWORD: ${{ secrets.APPLE_PASSWORD }}
 
-      - name: Build RPM
+      - name: Build linux tar.gz
         if: matrix.settings.host == 'ubuntu-20.04' && matrix.settings.cli_only == false
-        id: build-desktop-rpm
+        id: build-desktop-targz
         run: |
-          cd ./desktop/src-tauri/target/${{ matrix.settings.target }}/release/bundle/deb/ || exit 1
+          cd ./desktop/src-tauri/target/${{ matrix.settings.target }}/release/bundle/appimage/dev-pod.AppDir || exit 1
+          tar --exclude=usr/lib --exclude=usr/share/doc -zcvf dev-pod-desktop.tar.gz usr
 
-          sudo apt-get update
-          sudo apt-get install -y alien rpm
-          # Cleanup
-          rm -rf "dev-pod-${{needs.create-release.outputs.package_version}}"
-          rm -f "*.rpm"
+          mv dev-pod-desktop.tar.gz ../../dev-pod-${{needs.create-release.outputs.package_version}}.tar.gz
 
-          # Convert deb to rpm
-          alien -r -g -k -v "dev-pod_${{needs.create-release.outputs.package_version}}_amd64.deb"
-
-          DEPENDENCIES="
-            libappindicator-gtk3
-            gdk-pixbuf2
-            libbsd
-            libXdmcp
-            libwmf
-            libdeflate
-            gtk3-immodules
-          "
-          rpm_version="$(echo ${{needs.create-release.outputs.package_version}} | cut -d'-' -f1)"
-
-          # Rename spec file
-          mv dev-pod-${rpm_version}/dev-pod-${{needs.create-release.outputs.package_version}}*.spec dev-pod-${rpm_version}/dev-pod-${rpm_version}.spec
-
-          # Inject missing dependencies
-          for dependency in ${DEPENDENCIES}; do
-            sed -i "s|Group: Converted/unknown|Group: Converted/unknown\nRequires: ${dependency}|g" "dev-pod-${rpm_version}/dev-pod-${rpm_version}.spec"
-          done
-
-          # Remove unwanted dirs
-          sed -i 's|^"/usr"$||g' "dev-pod-${rpm_version}/dev-pod-${rpm_version}.spec"
-          sed -i 's|^"/usr/bin"$||g' "dev-pod-${rpm_version}/dev-pod-${rpm_version}.spec"
-
-          cd "dev-pod-${rpm_version}" || exit 1
-          rpmbuild --target=x86_64 --buildroot "$(pwd)" -bb "$(pwd)/dev-pod-${rpm_version}.spec"
-
-          cd -
-          if [ ! -e dev-pod-${{needs.create-release.outputs.package_version}}.x86_64.rpm ]; then
-            mv dev-pod-${{needs.create-release.outputs.package_version}}*.x86_64.rpm dev-pod-${{needs.create-release.outputs.package_version}}.x86_64.rpm
-          fi
 
       - name: Build Desktop App
         if: matrix.settings.host == 'windows-latest' && matrix.settings.cli_only == false
@@ -385,7 +329,7 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Upload RPM Asset
+      - name: Upload Tar.gz Asset
         if: matrix.settings.host == 'ubuntu-20.04' && matrix.settings.cli_only == false
         uses: actions/github-script@v6
         with:
@@ -393,8 +337,8 @@ jobs:
             const fs = require("fs")
 
             const releaseId = "${{ needs.create-release.outputs.release_id }}"
-            const assetName = "dev-pod-${{needs.create-release.outputs.package_version}}.x86_64.rpm"
-            const assetPath = `desktop/src-tauri/target/${{ matrix.settings.target }}/release/bundle/deb/${assetName}`
+            const assetName = "dev-pod-${{needs.create-release.outputs.package_version}}.tar.gz"
+            const assetPath = `desktop/src-tauri/target/${{ matrix.settings.target }}/release/bundle/${assetName}`
 
             console.log("Attempting to upload release asset: ", assetName)
 
@@ -461,8 +405,6 @@ jobs:
               { target: "darwin-aarch64", sigFile: "aarch64.app.tar.gz.sig", packageType: ".tar.gz", originalAssetName: `DevPod_${version}_aarch64.dmg`, desiredAssetName: "DevPod_macos_aarch64.dmg", originalUpdaterAssetName: "DevPod_aarch64.app.tar.gz", desiredUpdaterAssetName: "DevPod_macos_aarch64.app.tar.gz" },
               { target: "darwin-x86_64", sigFile: "x64.app.tar.gz.sig", packageType: ".tar.gz", originalAssetName: `DevPod_${version}_x64.dmg`, desiredAssetName: "DevPod_macos_x64.dmg", originalUpdaterAssetName: "DevPod_x64.app.tar.gz", desiredUpdaterAssetName: "DevPod_macos_x64.app.tar.gz" },
               { target: "windows-x86_64", sigFile: ".msi.zip.sig", packageType: ".zip", originalAssetName: `DevPod_${winVersion}_x64_en-US.msi`, desiredAssetName: "DevPod_windows_x64_en-US.msi" },
-              { originalAssetName: `dev-pod-${version}.x86_64.rpm`, desiredAssetName: "DevPod_linux_x86_64.rpm" },
-              { originalAssetName: `dev-pod_${version}_amd64.deb`, desiredAssetName: "DevPod_linux_amd64.deb" },
             ]
 
             for (const info of infos) {
