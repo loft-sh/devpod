@@ -92,20 +92,22 @@ func InjectAgentAndExecute(
 			stderr = buf
 		}
 
+		scriptParams := &inject.Params{
+			Command:             command,
+			AgentRemotePath:     remoteAgentPath,
+			DownloadURLs:        inject.NewDownloadURLs(downloadURL),
+			ExistsCheck:         versionCheck,
+			PreferAgentDownload: preferDownload,
+			ShouldChmodPath:     true,
+		}
+
 		wasExecuted, err := inject.InjectAndExecute(
 			ctx,
 			exec,
 			func(arm bool) (io.ReadCloser, error) {
 				return injectBinary(arm, downloadURL, log)
 			},
-			versionCheck,
-			remoteAgentPath,
-			downloadURL,
-			downloadURL+"/devpod-linux-amd64",
-			downloadURL+"/devpod-linux-arm64",
-			preferDownload,
-			true,
-			command,
+			scriptParams,
 			stdin,
 			stdout,
 			stderr,
