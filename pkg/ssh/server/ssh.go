@@ -103,7 +103,7 @@ func getUserShell() (string, error) {
 		return "", err
 	}
 
-	output, err := exec.Command("getent", "passwd", currentUser.Name).Output()
+	output, err := exec.Command("getent", "passwd", currentUser.Username).Output()
 	if err != nil {
 		return "", err
 	}
