@@ -244,7 +244,7 @@ func (cmd *SSHCmd) startTunnel(ctx context.Context, devPodConfig *config.Config,
 	defer writer.Close()
 
 	log.Debugf("Run outer container tunnel")
-	command := fmt.Sprintf("'%s' helper ssh-server --track-activity --stdio --workdir '%s'", agent.ContainerDevPodHelperLocation, filepath.Join("workspaces", workspaceName))
+	command := fmt.Sprintf("'%s' helper ssh-server --track-activity --stdio --workdir '%s'", agent.ContainerDevPodHelperLocation, filepath.Join("/workspaces", workspaceName))
 	if cmd.Debug {
 		command += " --debug"
 	}
