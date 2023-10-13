@@ -16,12 +16,6 @@ import {
 
 export const WORKSPACE_EXAMPLES = [
   {
-    image: RubySvg,
-    imageDark: RubySvgDark,
-    source: "https://github.com/Aunali321/ruby-quickstarter-template",
-    name: "Try Ruby",
-  },
-  {
     image: PythonSvg,
     source: "https://github.com/microsoft/vscode-remote-try-python",
     name: "Try Python",
@@ -63,5 +57,14 @@ export const WORKSPACE_EXAMPLES = [
     image: DotnetcoreSvg,
     source: "https://github.com/microsoft/vscode-remote-try-dotnet",
     name: "Try Dotnet",
+  }
+]
+
+export const COMMUNITY_WORKSPACE_EXAMPLES = [
+  {
+    image: RubySvg,
+    imageDark: RubySvgDark,
+    source: "https://github.com/Aunali321/ruby-quickstarter-template",
+    name: "Try Ruby",
   }
 ]

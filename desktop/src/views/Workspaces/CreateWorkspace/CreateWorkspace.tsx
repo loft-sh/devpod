@@ -19,6 +19,13 @@ import {
   useColorModeValue,
   useToken,
   VStack,
+  Popover,
+  PopoverTrigger,
+  PopoverContent,
+  PopoverHeader,
+  PopoverBody,
+  PopoverArrow,
+  PopoverCloseButton
 } from "@chakra-ui/react"
 import { useCallback, useEffect, useMemo } from "react"
 import { Controller, ControllerRenderProps } from "react-hook-form"
@@ -36,7 +43,7 @@ import { useBorderColor } from "../../../Theme"
 import { TIDE } from "../../../types"
 import { useIDEs } from "../../../useIDEs"
 import { useSetupProviderModal } from "../../Providers"
-import { WORKSPACE_EXAMPLES } from "./constants"
+import { WORKSPACE_EXAMPLES, COMMUNITY_WORKSPACE_EXAMPLES } from "./constants"
 import { ProviderOptionsPopover } from "./ProviderOptionsPopover"
 import {
   FieldName,
@@ -252,7 +259,8 @@ export function CreateWorkspace() {
                 Or select one of our quickstart examples
               </Text>
               <FormControl
-                paddingTop="6"
+                paddingTop="2"
+                marginBottom="4"
                 width="full"
                 display="flex"
                 flexFlow="column"
@@ -260,7 +268,7 @@ export function CreateWorkspace() {
                 alignItems="center"
                 isRequired
                 isInvalid={exists(sourceError)}>
-                <SimpleGrid columns={2} spacingX={4} spacingY={4}>
+                <SimpleGrid columns={2} spacingX={4} spacingY={4} marginBottom={4}>
                   {WORKSPACE_EXAMPLES.map((example) => (
                     <ExampleCard
                       key={example.source}
@@ -274,6 +282,35 @@ export function CreateWorkspace() {
                     />
                   ))}
                 </SimpleGrid>
+                {/* Add a popover "More" for community quickstart */}
+                <Popover>
+                  <PopoverTrigger>
+                    <Button>More</Button>
+                  </PopoverTrigger>
+                  <PopoverContent>
+                    <PopoverArrow />
+                    <PopoverCloseButton />
+                    <PopoverHeader>Community Quickstart</PopoverHeader>
+                    <PopoverBody>
+                      <SimpleGrid columns={2} spacingX={4} spacingY={4}>
+                        {COMMUNITY_WORKSPACE_EXAMPLES.map((example) => (
+                          <ExampleCard
+                            key={example.source}
+                            size="sm"
+                            image={
+                              colorMode === "dark"
+                                ? example.imageDark ?? example.image
+                                : example.image
+                            }
+                            name={example.name}
+                            isSelected={currentSource === example.source}
+                            onClick={() => handleExampleCardClicked(example.source)}
+                          />
+                        ))}
+                      </SimpleGrid>
+                    </PopoverBody>
+                  </PopoverContent>
+                </Popover>
               </FormControl>
             </Box>
           </HStack>
