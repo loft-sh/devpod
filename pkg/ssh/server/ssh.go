@@ -329,15 +329,25 @@ func (s *Server) getCommand(sess ssh.Session, isPty bool) *exec.Cmd {
 		}
 	}
 
-	// switch default directory
-	workdir := s.workdir
-	if workdir == "" {
-		workdir, _ = command.GetHome(user)
+	var workdir string
+	// check if requested workdir exists
+	if s.workdir != "" {
+		if _, err := os.Stat(s.workdir); err != nil {
+			workdir = s.workdir;
+		}
 	}
-	_, err := os.Stat(workdir)
-	if err == nil {
+	// fall back to home directory
+	if workdir == "" {
+		home, _ := command.GetHome(user)
+		if _, err := os.Stat(home); err != nil {
+			workdir = home
+		}
+	}
+	// switch default directory
+	if workdir != "" {
 		cmd.Dir = workdir
 	}
+
 	cmd.Env = append(cmd.Env, os.Environ()...)
 	cmd.Env = append(cmd.Env, sess.Environ()...)
 	return cmd
