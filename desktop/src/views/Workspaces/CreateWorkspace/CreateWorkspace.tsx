@@ -2,6 +2,7 @@ import { ExampleCard, Form, IDEIcon, WarningMessageBox } from "@/components"
 import {
   Box,
   Button,
+  Flex,
   FormControl,
   FormErrorMessage,
   FormHelperText,
@@ -12,32 +13,39 @@ import {
   IconButton,
   Input,
   Link,
+  Popover,
+  PopoverArrow,
+  PopoverBody,
+  PopoverCloseButton,
+  PopoverContent,
+  PopoverHeader,
+  PopoverTrigger,
   SimpleGrid,
   Text,
   Tooltip,
+  VStack,
   useColorMode,
   useColorModeValue,
   useToken,
-  VStack,
 } from "@chakra-ui/react"
 import { useCallback, useEffect, useMemo } from "react"
 import { Controller, ControllerRenderProps } from "react-hook-form"
 import { FiFolder } from "react-icons/fi"
 import { useNavigate } from "react-router"
 import { Link as RouterLink, useSearchParams } from "react-router-dom"
+import { useBorderColor } from "../../../Theme"
 import { client } from "../../../client"
 import { RECOMMENDED_PROVIDER_SOURCES, SIDEBAR_WIDTH } from "../../../constants"
 import { useProvider, useProviders, useWorkspace, useWorkspaces } from "../../../contexts"
 import { Plus } from "../../../icons"
-import { ProviderPlaceholderSvg } from "../../../images"
+import { CommunitySvg, ProviderPlaceholderSvg } from "../../../images"
 import { exists, getKeys, isEmpty, useFormErrors } from "../../../lib"
 import { Routes } from "../../../routes"
-import { useBorderColor } from "../../../Theme"
 import { TIDE } from "../../../types"
 import { useIDEs } from "../../../useIDEs"
 import { useSetupProviderModal } from "../../Providers"
-import { WORKSPACE_EXAMPLES } from "./constants"
 import { ProviderOptionsPopover } from "./ProviderOptionsPopover"
+import { COMMUNITY_WORKSPACE_EXAMPLES, WORKSPACE_EXAMPLES } from "./constants"
 import {
   FieldName,
   TCreateWorkspaceArgs,
@@ -252,7 +260,8 @@ export function CreateWorkspace() {
                 Or select one of our quickstart examples
               </Text>
               <FormControl
-                paddingTop="6"
+                paddingTop="2"
+                marginBottom="4"
                 width="full"
                 display="flex"
                 flexFlow="column"
@@ -273,6 +282,30 @@ export function CreateWorkspace() {
                       onClick={() => handleExampleCardClicked(example.source)}
                     />
                   ))}
+                  <Popover>
+                    <PopoverTrigger>
+                      <ExampleCard name="Community Quickstart" size="sm" image={CommunitySvg} />
+                    </PopoverTrigger>
+                    <PopoverContent>
+                      <PopoverArrow />
+                      <PopoverCloseButton />
+                      <PopoverHeader>Community Quickstart</PopoverHeader>
+                      <PopoverBody>
+                        <Flex gap={4}>
+                          {COMMUNITY_WORKSPACE_EXAMPLES.map((example) => (
+                            <ExampleCard
+                              key={example.source}
+                              size="sm"
+                              image={colorMode === "dark" ? example.imageDark : example.image}
+                              name={example.name}
+                              isSelected={currentSource === example.source}
+                              onClick={() => handleExampleCardClicked(example.source)}
+                            />
+                          ))}
+                        </Flex>
+                      </PopoverBody>
+                    </PopoverContent>
+                  </Popover>
                 </SimpleGrid>
               </FormControl>
             </Box>

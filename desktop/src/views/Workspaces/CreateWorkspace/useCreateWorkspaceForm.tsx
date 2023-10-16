@@ -192,9 +192,8 @@ export function useCreateWorkspaceForm(
           maybeDevcontainerPath = undefined
         } else if (settings.experimental_multiDevcontainer && maybeDevcontainerPath === "") {
           // check for multiple devcontainers
-          const checkDevcontainerSetupResult = await client.workspaces.checkDevcontainerSetup(
-            workspaceSource
-          )
+          const checkDevcontainerSetupResult =
+            await client.workspaces.checkDevcontainerSetup(workspaceSource)
           setIsSubmitLoading(false)
           if (!checkDevcontainerSetupResult.ok) {
             setError(FieldName.DEVCONTAINER_PATH, {
