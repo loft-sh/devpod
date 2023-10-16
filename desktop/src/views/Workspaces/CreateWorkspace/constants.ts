@@ -8,10 +8,9 @@ import {
   PhpSvg,
   PhpSvgDark,
   PythonSvg,
+  RubySvg,
   RustSvg,
   RustSvgDark,
-  RubySvg,
-  RubySvgDark,
 } from "../../../images"
 
 export const WORKSPACE_EXAMPLES = [
@@ -53,18 +52,18 @@ export const WORKSPACE_EXAMPLES = [
     source: "https://github.com/microsoft/vscode-remote-try-cpp",
     name: "Try C++",
   },
-  {
-    image: DotnetcoreSvg,
-    source: "https://github.com/microsoft/vscode-remote-try-dotnet",
-    name: "Try Dotnet",
-  }
 ]
 
 export const COMMUNITY_WORKSPACE_EXAMPLES = [
   {
     image: RubySvg,
-    imageDark: RubySvgDark,
-    source: "https://github.com/Aunali321/ruby-quickstarter-template",
+    imageDark: RubySvg,
+    source: "https://github.com/loft-sh/devpod-quickstart-ruby",
     name: "Try Ruby",
-  }
+  },
+  {
+    image: DotnetcoreSvg,
+    source: "https://github.com/microsoft/vscode-remote-try-dotnet",
+    name: "Try Dotnet",
+  },
 ]

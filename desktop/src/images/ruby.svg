@@ -1,1 +1,17 @@
-<svg xmlns="http://www.w3.org/2000/svg" aria-label="Ruby" role="img" viewBox="0 0 512 512" width="128px" height="128px" fill="#000000" style="--darkreader-inline-fill: #000000;" data-darkreader-inline-fill=""><g id="SVGRepo_bgCarrier" stroke-width="0"></g><g id="SVGRepo_tracerCarrier" stroke-linecap="round" stroke-linejoin="round"></g><g id="SVGRepo_iconCarrier"><rect width="512" height="512" rx="15%" fill="#ffffff" style="--darkreader-inline-fill: #181a1b;" data-darkreader-inline-fill=""></rect><path d="M407.7 397.3l20.86-257.7L348.02 297l-196 118c80.86-5.675 171.2-11.87 255.7-17.66z" fill="#a00403" style="--darkreader-inline-fill: #800302;" data-darkreader-inline-fill=""></path><path d="M423.39 178.977L320 98l-27 93c109.797 9.317 91.763-9.646 130.39-12.023zM192 282l136 43-35-134zm-89 19c44 139 55 169 89-19l-90 21zM276 68l97 1-53 29c-11-7-36-24-44-30z M85 246l-4 99 23-43z M298 85c26 26-1 89-53 140s-118 83-144 57c-25-25.89.7-90 52.85-141s119.2-82 144.2-56z" fill="#b11205" style="--darkreader-inline-fill: #8e0e04;" data-darkreader-inline-fill=""></path><path d="M192 282l133 43c-48 45-137.5 86.5-173 90z" fill="#9f0d02" style="--darkreader-inline-fill: #7f0a02;" data-darkreader-inline-fill=""></path><path d="M293 191l33 133c40-42 76-88 94-144zm114.7 206.3L387.02 245 326 324z" fill="#891102" style="--darkreader-inline-fill: #6e0e02;" data-darkreader-inline-fill=""></path><path d="M421 181c13-41 16-101-48-112l-53 29z" fill="#aa1401" style="--darkreader-inline-fill: #881001;" data-darkreader-inline-fill=""></path><path d="M81 345c2 68 50 69 71 70l-49-113z" fill="#9e1209" style="--darkreader-inline-fill: #7e0e07;" data-darkreader-inline-fill=""></path><path d="M192 282l54 103c32-17 57-38 79-61z" fill="#900e04" style="--darkreader-inline-fill: #730b03;" data-darkreader-inline-fill=""></path><path d="M103 302l-8 91c14 20 34 21 55 20-15-37-45-112-47-111z" fill="#8b1104" style="--darkreader-inline-fill: #6f0e03;" data-darkreader-inline-fill=""></path></g></svg>
+<svg width="128" height="128" viewBox="0 0 128 128" fill="none" xmlns="http://www.w3.org/2000/svg">
+<g clip-path="url(#clip0_463_216)">
+<path d="M102.675 103.325L107.89 38.8999L87.755 78.2499L38.755 107.75C58.97 106.331 81.555 104.782 102.68 103.335L102.675 103.325Z" fill="#A00403"/>
+<path d="M106.598 48.7443L80.75 28.5L74 51.75C101.449 54.0793 96.9408 49.3385 106.598 48.7443ZM48.75 74.5L82.75 85.25L74 51.75L48.75 74.5ZM26.5 79.25C37.5 114 40.25 121.5 48.75 74.5L26.25 79.75L26.5 79.25ZM69.75 21L94 21.25L80.75 28.5C78 26.75 71.75 22.5 69.75 21ZM22 65.5L21 90.25L26.75 79.5L22 65.5ZM75.25 25.25C81.75 31.75 75 47.5 62 60.25C49 73 32.5 81 26 74.5C19.75 68.0275 26.175 52 39.2125 39.25C52.25 26.5 69.0125 18.75 75.2625 25.25H75.25Z" fill="#B11205"/>
+<path d="M48.75 74.5L82 85.25C70 96.5 47.625 106.875 38.75 107.75L48.75 74.5Z" fill="#9F0D02"/>
+<path d="M74 51.75L82.25 85C92.25 74.5 101.25 63 105.75 49L74 51.75ZM102.675 103.325L97.505 65.25L82.25 85L102.675 103.325Z" fill="#891102"/>
+<path d="M106 49.25C109.25 39 110 24 94 21.25L80.75 28.5L106 49.25Z" fill="#AA1401"/>
+<path d="M21 90.25C21.5 107.25 33.5 107.5 38.75 107.75L26.5 79.5L21 90.25Z" fill="#9E1209"/>
+<path d="M48.75 74.5L62.25 100.25C70.25 96 76.5 90.75 82 85L48.75 74.5Z" fill="#900E04"/>
+<path d="M26.5 79.5L24.5 102.25C28 107.25 33 107.5 38.25 107.25C34.5 98 27 79.25 26.5 79.5Z" fill="#8B1104"/>
+</g>
+<defs>
+<clipPath id="clip0_463_216">
+<rect width="128" height="128" fill="white"/>
+</clipPath>
+</defs>
+</svg>
