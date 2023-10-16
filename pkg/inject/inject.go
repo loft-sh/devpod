@@ -78,35 +78,8 @@ func InjectAndExecute(
 	cancelCtx, cancel := context.WithCancel(ctx)
 	defer cancel()
 
-	// start execution of inject.sh
-	execErrChan := make(chan error, 1)
-	go func() {
-		defer stdoutWriter.Close()
-		defer stdinWriter.Close()
-		defer log.Debugf("done exec")
-
-		err := exec(cancelCtx, scriptRawCode, stdinReader, stdoutWriter, delayedStderr)
-		if err != nil && !errors.Is(err, context.Canceled) && !strings.Contains(err.Error(), "signal: ") {
-			execErrChan <- command.WrapCommandError(delayedStderr.Buffer(), err)
-		} else {
-			execErrChan <- nil
-		}
-	}()
-
-	// inject file
-	injectChan := make(chan injectResult, 1)
-	go func() {
-		defer stdoutWriter.Close()
-		defer stdinWriter.Close()
-		defer log.Debugf("done inject")
-		defer cancel()
-
-		wasExecuted, err := inject(localFile, stdinWriter, stdin, stdoutReader, stdout, delayedStderr, timeout, log)
-		injectChan <- injectResult{
-			wasExecuted: wasExecuted,
-			err:         command.WrapCommandError(delayedStderr.Buffer(), err),
-		}
-	}()
+	execErrChan := runServerSide(cancelCtx, exec, stdinReader, stdinWriter, stdoutWriter, scriptRawCode, delayedStderr, log)
+	injectChan := runClientSide(cancel, localFile, stdin, stdout, stdinWriter, stdoutWriter, stdoutReader, delayedStderr, timeout, log)
 
 	// wait here
 	var result injectResult
@@ -129,6 +102,64 @@ func InjectAndExecute(
 	log.Debugf("Rerun command as binary was injected")
 	delayedStderr.Start()
 	return true, exec(ctx, scriptParams.Command, stdin, stdout, delayedStderr)
+}
+
+func runClientSide(
+	cancel context.CancelFunc,
+	localFile LocalFile,
+	stdin io.Reader,
+	stdout io.Writer,
+	stdinWriter io.WriteCloser,
+	stdoutWriter io.WriteCloser,
+	stdoutReader io.ReadCloser,
+	delayedStderr *delayedWriter,
+	timeout time.Duration,
+	log log.Logger,
+) chan injectResult {
+	// inject file
+	injectChan := make(chan injectResult, 1)
+	go func() {
+		defer stdoutWriter.Close()
+		defer stdinWriter.Close()
+		defer log.Debugf("done inject")
+		defer cancel()
+
+		wasExecuted, err := inject(localFile, stdinWriter, stdin, stdoutReader, stdout, delayedStderr, timeout, log)
+		injectChan <- injectResult{
+			wasExecuted: wasExecuted,
+			err:         command.WrapCommandError(delayedStderr.Buffer(), err),
+		}
+	}()
+
+	return injectChan
+}
+
+func runServerSide(
+	cancelCtx context.Context,
+	exec ExecFunc,
+	stdinReader io.ReadCloser,
+	stdinWriter io.WriteCloser,
+	stdoutWriter io.WriteCloser,
+	scriptRawCode string,
+	delayedStderr *delayedWriter,
+	log log.Logger,
+) chan error {
+	// start execution of inject.sh
+	execErrChan := make(chan error, 1)
+	go func() {
+		defer stdoutWriter.Close()
+		defer stdinWriter.Close()
+		defer log.Debugf("done exec")
+
+		err := exec(cancelCtx, scriptRawCode, stdinReader, stdoutWriter, delayedStderr)
+		if err != nil && !errors.Is(err, context.Canceled) && !strings.Contains(err.Error(), "signal: ") {
+			execErrChan <- command.WrapCommandError(delayedStderr.Buffer(), err)
+		} else {
+			execErrChan <- nil
+		}
+	}()
+
+	return execErrChan
 }
 
 func inject(
