@@ -51,21 +51,21 @@ func (g *GPGConf) ImportOwnerTrust() error {
 }
 
 func (g *GPGConf) SetupGpgConf() error {
-	_, err := os.Stat(filepath.Join(os.Getenv("HOME"), ".gnupg", "gpg.conf"))
+	_, err := os.Stat(g.getConfigPath())
 	if err != nil {
-		_, err = os.Create(filepath.Join(os.Getenv("HOME"), ".gnupg", "gpg.conf"))
+		_, err = os.Create(g.getConfigPath())
 		if err != nil {
 			return err
 		}
 	}
 
-	gpgConfig, err := os.ReadFile(filepath.Join(os.Getenv("HOME"), ".gnupg", "gpg.conf"))
+	gpgConfig, err := os.ReadFile(g.getConfigPath())
 	if err != nil {
 		return err
 	}
 
 	if !strings.Contains(string(gpgConfig), "use-agent") {
-		f, err := os.OpenFile(filepath.Join(os.Getenv("HOME"), ".gnupg", "gpg.conf"),
+		f, err := os.OpenFile(g.getConfigPath(),
 			os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0o600)
 		if err != nil {
 			return err
@@ -123,4 +123,8 @@ func (g *GPGConf) SetupRemoteSocketLink() error {
 	}
 
 	return nil
+}
+
+func (g *GPGConf) getConfigPath() string {
+	return filepath.Join(os.Getenv("HOME"), ".gnupg", "gpg.conf")
 }
