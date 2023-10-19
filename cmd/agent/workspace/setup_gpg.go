@@ -3,7 +3,6 @@ package workspace
 import (
 	"context"
 	"encoding/base64"
-	"time"
 
 	"github.com/loft-sh/devpod/cmd/flags"
 	"github.com/loft-sh/devpod/pkg/gpg"
@@ -90,7 +89,7 @@ func (cmd *SetupGPGCmd) Run(ctx context.Context) error {
 	}
 
 	logger.Debugf("Ensuring paths existence and permissions")
-	err = gpgConf.SetupRemoteSocketDirtree()
+	err = gpgConf.SetupRemoteSocketDirTree()
 	if err != nil {
 		return err
 	}
@@ -114,8 +113,6 @@ func (cmd *SetupGPGCmd) Run(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
-
-	time.Sleep(time.Second)
 
 	return nil
 }
