@@ -80,7 +80,7 @@ func (g *GPGConf) SetupGpgConf() error {
 	return nil
 }
 
-func (g *GPGConf) SetupRemoteSocketDirtree() error {
+func (g *GPGConf) SetupRemoteSocketDirTree() error {
 	err := exec.Command("sudo", "mkdir", "-p", "/run/user", filepath.Dir(g.SocketPath)).Run()
 	if err != nil {
 		return err
@@ -96,6 +96,11 @@ func (g *GPGConf) SetupRemoteSocketDirtree() error {
 	).Run()
 }
 
+// This function will normalize the location of the forwarded socket.
+// the forwarding that happens in pkg/ssh/forward.go will forward the socket in
+// the same path (eg. /Users/foo/.gnupg/S.gpg-agent)
+// This function will use hardlinks to normalize it to where linux usually
+// expects the socket to be.
 func (g *GPGConf) SetupRemoteSocketLink() error {
 	err := os.MkdirAll(filepath.Join(os.Getenv("HOME"), ".gnupg"), 0o700)
 	if err != nil {
