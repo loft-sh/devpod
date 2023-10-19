@@ -338,7 +338,7 @@ func (cmd *SSHCmd) startTunnel(ctx context.Context, devPodConfig *config.Config,
 	}
 
 	// check if we should reverse forward ports
-	if len(cmd.ReverseForwardPorts) > 0 {
+	if len(cmd.ReverseForwardPorts) > 0 && !cmd.GPGAgentForwarding {
 		go func() {
 			err := cmd.reverseForwardPorts(ctx, containerClient, log)
 			if err != nil {
