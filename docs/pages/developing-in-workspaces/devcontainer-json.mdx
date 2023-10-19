@@ -79,6 +79,27 @@ You can think of features as reusable Dockerfile parts that will be merged into 
 This makes it easy to reuse functionality such as `docker-in-docker` or install extra tooling such as `node` or `kubectl` without having to look up the exact Dockerfile commands.
 A list of available features can be found [here](https://containers.dev/features).
 
+Devpod is able to add HTTP headers when downloading
+feature archives as tar.gz files. To do so, add the needed headers in the `customizations`
+field of the `devcontainer.json` file as follow:
+
+```
+{
+  ...
+  "features": {
+    "https://example.com/foo_feature.tar.gz": []
+  },
+  "customizations": {
+    "devpod": {
+      "featureDownloadHTTPHeaders": {
+        "FOO_HEADER": "${env:FOO_ENV_VAR}"
+        "BAR_HEADER": "bar"
+      }
+    }
+  }
+}
+```
+
 ## devcontainer.json Development Flow
 
 When working on the `devcontainer.json` itself, it's important to understand when DevPod will apply new configuration.

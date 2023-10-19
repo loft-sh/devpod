@@ -226,7 +226,7 @@ func findContainerUsers(baseImageMetadata *config.ImageMetadataConfig, composeSe
 func fetchFeatures(devContainerConfig *config.DevContainerConfig, log log.Logger, forceBuild bool) ([]*config.FeatureSet, error) {
 	featureSets := []*config.FeatureSet{}
 	for featureID, featureOptions := range devContainerConfig.Features {
-		featureFolder, err := ProcessFeatureID(featureID, filepath.Dir(devContainerConfig.Origin), log, forceBuild)
+		featureFolder, err := ProcessFeatureID(featureID, devContainerConfig, log, forceBuild)
 		if err != nil {
 			return nil, errors.Wrap(err, "process feature "+featureID)
 		}
