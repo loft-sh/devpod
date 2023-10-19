@@ -356,7 +356,7 @@ func (cmd *SSHCmd) startTunnel(
 	}
 
 	// check if we should reverse forward ports
-	if len(cmd.ReverseForwardPorts) > 0 {
+	if len(cmd.ReverseForwardPorts) > 0 && !cmd.GPGAgentForwarding {
 		go func() {
 			err := cmd.reverseForwardPorts(ctx, containerClient, log)
 			if err != nil {
