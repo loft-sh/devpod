@@ -224,20 +224,28 @@ func (cmd *SSHCmd) jumpContainer(
 		})
 }
 
+func (cmd *SSHCmd) forwardTimeout(log log.Logger) (time.Duration, error) {
+	timeout := time.Duration(0)
+	if cmd.ForwardPortsTimeout != "" {
+		timeout, err := time.ParseDuration(cmd.ForwardPortsTimeout)
+		if err != nil {
+			return timeout, fmt.Errorf("parse forward ports timeout: %w", err)
+		}
+
+		log.Infof("Using port forwarding timeout of %s", cmd.ForwardPortsTimeout)
+	}
+
+	return timeout, nil
+}
+
 func (cmd *SSHCmd) reverseForwardPorts(
 	ctx context.Context,
 	containerClient *ssh.Client,
 	log log.Logger,
 ) error {
-	timeout := time.Duration(0)
-	if cmd.ForwardPortsTimeout != "" {
-		var err error
-		timeout, err = time.ParseDuration(cmd.ForwardPortsTimeout)
-		if err != nil {
-			return fmt.Errorf("parse forward ports timeout: %w", err)
-		}
-
-		log.Infof("Using port forwarding timeout of %s", cmd.ForwardPortsTimeout)
+	timeout, err := cmd.forwardTimeout(log)
+	if err != nil {
+		return fmt.Errorf("parse forward ports timeout: %w", err)
 	}
 
 	errChan := make(chan error, len(cmd.ReverseForwardPorts))
@@ -280,15 +288,9 @@ func (cmd *SSHCmd) forwardPorts(
 	containerClient *ssh.Client,
 	log log.Logger,
 ) error {
-	timeout := time.Duration(0)
-	if cmd.ForwardPortsTimeout != "" {
-		var err error
-		timeout, err = time.ParseDuration(cmd.ForwardPortsTimeout)
-		if err != nil {
-			return fmt.Errorf("parse forward ports timeout: %w", err)
-		}
-
-		log.Infof("Using port forwarding timeout of %s", cmd.ForwardPortsTimeout)
+	timeout, err := cmd.forwardTimeout(log)
+	if err != nil {
+		return fmt.Errorf("parse forward ports timeout: %w", err)
 	}
 
 	errChan := make(chan error, len(cmd.ForwardPorts))
