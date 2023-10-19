@@ -1,7 +1,6 @@
 package cmd
 
 import (
-	"bytes"
 	"context"
 	"encoding/base64"
 	"fmt"
@@ -17,6 +16,7 @@ import (
 	"github.com/loft-sh/devpod/pkg/agent"
 	client2 "github.com/loft-sh/devpod/pkg/client"
 	"github.com/loft-sh/devpod/pkg/config"
+	"github.com/loft-sh/devpod/pkg/gpg"
 	"github.com/loft-sh/devpod/pkg/port"
 	devssh "github.com/loft-sh/devpod/pkg/ssh"
 	"github.com/loft-sh/devpod/pkg/tunnel"
@@ -380,16 +380,7 @@ func (cmd *SSHCmd) startTunnel(
 		devPodConfig.ContextOption(config.ContextOptionGPGAgentForwarding) == "true" {
 		// Check if a forwarding is already enabled and running, in that case
 		// we skip the forwarding and keep using the original one
-		command := "gpg -K"
-		if cmd.User != "" && cmd.User != "root" {
-			command = fmt.Sprintf("su -c \"%s\" '%s'", command, cmd.User)
-		}
-
-		// capture the output, if it's empty it means we don't have gpg-forwarding
-		var out bytes.Buffer
-		err := devssh.Run(ctx, containerClient, command, nil, &out, writer)
-
-		if err == nil && len(out.Bytes()) > 1 {
+		if gpg.IsGpgTunnelRunning(cmd.User, ctx, containerClient, log) {
 			log.Debugf("gpg: exporting already running, skipping")
 		} else {
 			err := cmd.setupGPGAgent(ctx, containerClient, log)
@@ -467,14 +458,14 @@ func (cmd *SSHCmd) setupGPGAgent(
 
 	// Read the user's public keys and ownertrust from GPG.
 	// These commands are executed LOCALLY, the output will be imported by the remote gpg
-	pubKeyExport, err := exec.Command("gpg", "--armor", "--export").Output()
+	pubKeyExport, err := gpg.GetHostPubKey()
 	if err != nil {
 		return fmt.Errorf("export local public keys from GPG: %w", err)
 	}
 
 	log.Debugf("gpg: exporting gpg owner trust from host")
 
-	ownerTrustExport, err := exec.Command("gpg", "--export-ownertrust").Output()
+	ownerTrustExport, err := gpg.GetHostOwnerTrust()
 	if err != nil {
 		return fmt.Errorf("export local ownertrust from GPG: %w", err)
 	}
