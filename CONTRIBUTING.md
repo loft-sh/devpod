@@ -50,3 +50,33 @@ Once you're provider is ready, update
 - `docs/pages/managing-providers/add-provider.mdx`
 
 to get your provider featured both in the documentation and the UI
+
+
+## Deeplinks
+
+DevPod Desktop can handle deep links to perform various actions, like opening or importing workspaces.
+The scheme is:
+
+protocol: `devpod://`
+host: `command`
+searchParams: `foo=bar&fizz=buzz`
+
+resulting in a full url string of `devpod://command?foo=bar&fizz=buzz`. For more information, take a look at the indvidual command sections below.
+
+
+### Open Workspace
+
+Open a workspace based on a workspace source. Similar to `devpod up`, but shareable
+
+host: `open`
+searchParams: `source` (required), `workspace`, `provider`, `ide`
+
+`devpod://open?source=your-url-encoded-source&workspace=my-workspace&provider=docker&ide=vscode`
+
+
+### Import Workspace
+
+Import a remote DevPod.Pro workspace into your local client
+
+host: `import`
+searchParams: `workspace_id` (required), `workspace_uid` (required), `devpod_pro_host` (required), `options`
