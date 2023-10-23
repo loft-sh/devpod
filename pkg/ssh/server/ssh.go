@@ -332,14 +332,14 @@ func (s *Server) getCommand(sess ssh.Session, isPty bool) *exec.Cmd {
 	var workdir string
 	// check if requested workdir exists
 	if s.workdir != "" {
-		if _, err := os.Stat(s.workdir); err != nil {
+		if _, err := os.Stat(s.workdir); err == nil {
 			workdir = s.workdir
 		}
 	}
 	// fall back to home directory
 	if workdir == "" {
 		home, _ := command.GetHome(user)
-		if _, err := os.Stat(home); err != nil {
+		if _, err := os.Stat(home); err == nil {
 			workdir = home
 		}
 	}
