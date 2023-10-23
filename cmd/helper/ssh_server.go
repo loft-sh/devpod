@@ -26,6 +26,7 @@ type SSHServerCmd struct {
 	Address       string
 	Stdio         bool
 	TrackActivity bool
+	Workdir       string
 }
 
 // NewSSHServerCmd creates a new ssh command
@@ -44,6 +45,7 @@ func NewSSHServerCmd(flags *flags.GlobalFlags) *cobra.Command {
 	sshCmd.Flags().BoolVar(&cmd.Stdio, "stdio", false, "Will listen on stdout and stdin instead of an address")
 	sshCmd.Flags().BoolVar(&cmd.TrackActivity, "track-activity", false, "If enabled will write the last activity time to a file")
 	sshCmd.Flags().StringVar(&cmd.Token, "token", "", "Base64 encoded token to use")
+	sshCmd.Flags().StringVar(&cmd.Workdir, "workdir", "", "Directory where commands will run on the host")
 	return sshCmd
 }
 
@@ -87,7 +89,7 @@ func (cmd *SSHServerCmd) Run(_ *cobra.Command, _ []string) error {
 	}
 
 	// start the server
-	server, err := helperssh.NewServer(cmd.Address, hostKey, keys, log.Default.ErrorStreamOnly())
+	server, err := helperssh.NewServer(cmd.Address, hostKey, keys, cmd.Workdir, log.Default.ErrorStreamOnly())
 	if err != nil {
 		return err
 	}
