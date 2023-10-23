@@ -64,10 +64,10 @@ configuring or adding the provider:
 - `required`: Boolean if this option needs to be non-empty before using the provider. DevPod will ask in the CLI and make sure that this option is filled in the Desktop application.
 - `password`: Boolean to indicate this is a sensitive value. Prevents this value from showing up in the `devpod provider options` command and will be a password field in the Desktop application.
 - `suggestions`: An array of suggestions for this option. Will be shown as auto complete options in the DevPod desktop application
-- `command`: A command to retrieve the option value automatically. Can also reference other variables in the command, e.g. `echo ${MY_OTHER_VAR}-suffix`. For compatibility reasons this command will be executed in an emulated shell on windows.
+- `command`: A command to retrieve the option value automatically. Can also reference other variables in the command, e.g. `echo ${MY_OTHER_VAR}-suffix`. For compatibility reasons, this command will be executed in an emulated shell on Windows.
 - `local`: If true, the option will be filled individually for each machine / workspace
 - `global`: If true, the option will be reused for each machine / workspace
-- `cache`: If non-empty, DevPod will reexecute the command after the given timeout. E.g. if this is 5m, DevPod will reexecute the command after 5 minutes to re-fill this value. This is useful if you want to store a token or something that expires locally in a variable.
+- `cache`: If non-empty, DevPod will re-execute the command after the given timeout. E.g. if this is 5m, DevPod will re-execute the command after 5 minutes to re-fill this value. This is useful if you want to store a token or something that expires locally in a variable.
 - `hidden`: If true, DevPod will not show this option in the Desktop application or through `devpod provider options`. Can be used to calculate variables internally or save tokens or other things internally.
 
 ### Default values
@@ -77,7 +77,7 @@ to place a sensible default for any option.
 
 You can also reference other options inside the default value, e.g. `${MY_OTHER_VAR}-suffix`. DevPod will automatically figure out what options need to be resolved before this option.
 
-**If not specified, it defaults to empty string**.
+**If not specified, it defaults to an empty string**.
 
 ### Required options
 
@@ -126,7 +126,7 @@ be shown in the CLI app.
 ### Command options
 
 The command option lets you define a possible value for an option based on a shell
-command launched on your machine. Can also reference other variables in the command, e.g. `echo ${MY_OTHER_VAR}-suffix`. For compatibility reasons this command will be executed in an emulated shell on windows.
+command launched on your machine. Can also reference other variables in the command, e.g. `echo ${MY_OTHER_VAR}-suffix`. For compatibility reasons, this command will be executed in an emulated shell on Windows.
 
 One example would be to forward ENV variables from your machine to the provider,
 for example:
@@ -143,7 +143,7 @@ for example:
     command: printf "%s" "${AWS_SECRET_ACCESS_KEY:-}"
 ```
 
-Or running an helper command (defined in the binaries section), and forward the result as the option's value:
+Or running a helper command (defined in the binaries section), and forwarding the result as the option's value:
 
 ```yaml
   AWS_TOKEN:
@@ -207,5 +207,5 @@ optionGroups:
 
 Options are easily grouped by listing them, each group has a `name` and a
 `defaultVisible` property, which is **false by default**.
-If `defaultVisible` is false, then an user will need to manually expand the option
+If `defaultVisible` is false, then a user will need to manually expand the option
 group in the Desktop App.
