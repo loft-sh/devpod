@@ -3,7 +3,7 @@ title: Provider Agent
 sidebar_label: Provider Agent
 ---
 
-When DevPod connects through a Provider to an environment, it will inject itself into the environment to handle the following tasks there:
+When DevPod connects through a Provider to an environment, it will inject itself into the environment to handle the following tasks:
 - deploying the container
 - forward credentials
 - ssh server
@@ -25,7 +25,7 @@ the provider
 The following options are available in the `agent` section
 
 ```yaml
-agent: # You can also use options within this section (see injectGitCredentials as example)
+agent: # You can also use options within this section (see injectGitCredentials as an example)
   path: ${DEVPOD}
   driver: docker # Optional, default: docker
   inactivityTimeout: 10m
@@ -55,7 +55,7 @@ Breaking down the options:
 - **binaries**: this section can be used to declare additional binaries to download on the machine to use in `exec.shutdown`
 
 :::info
-The `binaries` section is useful to inject a helper binary in the machine, in order to
+The `binaries` section is useful for injecting a helper binary in the machine, in order to
 use the specific cloud's APIs to shut down the machine, if a simple `shutdown -h now` does not work
 :::
 
@@ -85,4 +85,4 @@ Official providers that use this method of automatically stopping an inactive ma
 - [devpod-provider-azure](https://github.com/loft-sh/devpod-provider-azure): Just uses `shutdown -t now` as `agent.exec.shutdown` to shutdown an unused machine.
 - [devpod-provider-aws](https://github.com/loft-sh/devpod-provider-aws): Uses the local `aws` cli tool to generate a temporary token, which is then saved in a DevPod option. This token is then used within `agent.exec.shutdown` to shutdown the machine on the agent side with an AWS api call.
 - [devpod-provider-gcloud](https://github.com/loft-sh/devpod-provider-gcloud): Uses the local `gcloud` cli tool to generate a temporary token, which is then saved in a DevPod option. This token is then used within `agent.exec.shutdown` to shutdown the machine on the agent side with an Google Cloud api call.
-- [devpod-provider-digitalocean](https://github.com/loft-sh/devpod-provider-digitalocean): Deletes the whole machine on inactivity as stopped machines are still billed by DigitalOcean. The local digital ocean token is reused on the agent side to make a API call to delete the whole machine and preserve state in an extra volume.
+- [devpod-provider-digitalocean](https://github.com/loft-sh/devpod-provider-digitalocean): Deletes the whole machine on inactivity as stopped machines are still billed by DigitalOcean. The local digital ocean token is reused on the agent side to make an API call to delete the whole machine and preserve the state in an extra volume.
