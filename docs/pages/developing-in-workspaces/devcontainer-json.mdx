@@ -9,7 +9,7 @@ Within DevPod, this container is created based on the underlying provider either
 DevPod makes sure that no matter where you use this configuration the developer experience stays the same.
 
 You can configure this development container for a certain git repository so that each workspace gives you a custom development environment
-completely configured with tooling and runtimes you need for working on that specific project.
+completely configured with the tooling and runtimes you need for working on that specific project.
 If DevPod doesn't find any configuration for the project it will automatically detect the programming language and provide a sane default configuration.
 
 :::info Compatibility with VS Code & Codespaces
@@ -25,7 +25,7 @@ This page mostly gives you an introduction on how to work with devcontainers. Fo
 :::
 
 :::warning Unsupported Properties
-Currently these `devcontainer.json` properties are not supported in DevPod. These may be implemented in future releases.
+Currently, these `devcontainer.json` properties are not supported in DevPod. These may be implemented in future releases.
 * userEnvProve
 * waitFor
 * Parallel lifecycle scripts
@@ -35,7 +35,7 @@ Currently these `devcontainer.json` properties are not supported in DevPod. Thes
 
 The primary file to configure your workspace is the `devcontainer.json`, that lives in the `.devcontainer` sub-folder of your project.
 This file includes information on what frameworks, tools, VS Code extensions and port-forwarding should be used during development.
-The file also usually references a Dockerfile or an Docker image to use as the base for the development environment.
+The file also usually references a Dockerfile or a Docker image to use as the base for the development environment.
 If DevPod doesn't find any configuration for the project, it will automatically detect the programming language and provide a sane default configuration.
 
 The `devcontainer.json` can be located at the following places within your project:
@@ -81,7 +81,7 @@ A list of available features can be found [here](https://containers.dev/features
 
 Devpod is able to add HTTP headers when downloading
 feature archives as tar.gz files. To do so, add the needed headers in the `customizations`
-field of the `devcontainer.json` file as follow:
+field of the `devcontainer.json` file as follows:
 
 ```
 {
@@ -105,7 +105,7 @@ field of the `devcontainer.json` file as follow:
 When working on the `devcontainer.json` itself, it's important to understand when DevPod will apply new configuration.
 
 A naive approach would be to delete and recreate a workspace after each `devcontainer.json` change (which obviously works), but DevPod allows you to make changes to the configuration on the fly and reapply them via `devpod up my-workspace --recreate`.
-This will apply **ALL** new configuration including Dockerfile changes as well as new mounts, new features or any other configuration that is not included in the above command. DevPod will only replace the existing running container if the command has succeeded, so if there is a mistake in the new configuration, the existing workspace should not be impacted.
+This will apply **ALL** new configurations including Dockerfile changes as well as new mounts, new features or any other configuration that is not included in the above command. DevPod will only replace the existing running container if the command has succeeded, so if there is a mistake in the new configuration, the existing workspace should not be impacted.
 The Desktop app equivalent for this is the 'Rebuild' button.
 
 :::warning Recreating / Rebuilding
