@@ -124,7 +124,7 @@ func initWorkspace(ctx context.Context, cancel context.CancelFunc, workspaceInfo
 	// install docker in background
 	errChan := make(chan error, 1)
 	go func() {
-		if workspaceInfo.Agent.IsDockerDriver() || workspaceInfo.Agent.Docker.Install == "false" {
+		if !workspaceInfo.Agent.IsDockerDriver() || workspaceInfo.Agent.Docker.Install == "false" {
 			errChan <- nil
 		} else {
 			errChan <- InstallDocker(logger)

@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"path/filepath"
 	"sync"
 	"time"
 
@@ -124,7 +125,7 @@ func (cmd *SSHCmd) startProxyTunnel(ctx context.Context, devPodConfig *config.Co
 			})
 		},
 		func(ctx context.Context, containerClient *ssh.Client) error {
-			return cmd.startTunnel(ctx, devPodConfig, containerClient, client.WorkspaceConfig().IDE.Name, log)
+			return cmd.startTunnel(ctx, devPodConfig, containerClient, client.Workspace(), client.WorkspaceConfig().IDE.Name, log)
 		},
 	)
 }
@@ -191,7 +192,7 @@ func (cmd *SSHCmd) jumpContainer(ctx context.Context, devPodConfig *config.Confi
 		unlockOnce.Do(client.Unlock)
 
 		// start ssh tunnel
-		return cmd.startTunnel(ctx, devPodConfig, containerClient, client.WorkspaceConfig().IDE.Name, log)
+		return cmd.startTunnel(ctx, devPodConfig, containerClient, client.Workspace(), client.WorkspaceConfig().IDE.Name, log)
 	})
 }
 
@@ -227,7 +228,7 @@ func (cmd *SSHCmd) forwardPorts(ctx context.Context, containerClient *ssh.Client
 	return <-errChan
 }
 
-func (cmd *SSHCmd) startTunnel(ctx context.Context, devPodConfig *config.Config, containerClient *ssh.Client, ideName string, log log.Logger) error {
+func (cmd *SSHCmd) startTunnel(ctx context.Context, devPodConfig *config.Config, containerClient *ssh.Client, workspaceName string, ideName string, log log.Logger) error {
 	// check if we should forward ports
 	if len(cmd.ForwardPorts) > 0 {
 		return cmd.forwardPorts(ctx, containerClient, log)
@@ -243,7 +244,7 @@ func (cmd *SSHCmd) startTunnel(ctx context.Context, devPodConfig *config.Config,
 	defer writer.Close()
 
 	log.Debugf("Run outer container tunnel")
-	command := fmt.Sprintf("'%s' helper ssh-server --track-activity --stdio", agent.ContainerDevPodHelperLocation)
+	command := fmt.Sprintf("'%s' helper ssh-server --track-activity --stdio --workdir '%s'", agent.ContainerDevPodHelperLocation, filepath.Join("/workspaces", workspaceName))
 	if cmd.Debug {
 		command += " --debug"
 	}
