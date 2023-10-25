@@ -1,17 +1,55 @@
 package gpg
 
 import (
+	"bytes"
+	"context"
+	"fmt"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"strconv"
 	"strings"
+
+	"github.com/loft-sh/log"
+
+	devssh "github.com/loft-sh/devpod/pkg/ssh"
+	"github.com/sirupsen/logrus"
+	"golang.org/x/crypto/ssh"
 )
 
 type GPGConf struct {
 	PublicKey  []byte
 	OwnerTrust []byte
 	SocketPath string
+}
+
+func IsGpgTunnelRunning(
+	user string,
+	ctx context.Context,
+	client *ssh.Client,
+	log log.Logger,
+) bool {
+	writer := log.ErrorStreamOnly().Writer(logrus.InfoLevel, false)
+	defer writer.Close()
+
+	command := "gpg -K"
+	if user != "" && user != "root" {
+		command = fmt.Sprintf("su -c \"%s\" '%s'", command, user)
+	}
+
+	// capture the output, if it's empty it means we don't have gpg-forwarding
+	var out bytes.Buffer
+	err := devssh.Run(ctx, client, command, nil, &out, writer)
+
+	return err == nil && len(out.Bytes()) > 1
+}
+
+func GetHostPubKey() ([]byte, error) {
+	return exec.Command("gpg", "--armor", "--export").Output()
+}
+
+func GetHostOwnerTrust() ([]byte, error) {
+	return exec.Command("gpg", "--export-ownertrust").Output()
 }
 
 func (g *GPGConf) StopGpgAgent() error {

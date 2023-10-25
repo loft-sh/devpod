@@ -3,6 +3,7 @@ package ssh
 import (
 	"context"
 	"os"
+	"os/exec"
 	"time"
 
 	"github.com/loft-sh/devpod/e2e/framework"
@@ -39,6 +40,38 @@ var _ = DevPodDescribe("devpod ssh test suite", func() {
 		devpodSSHCtx, cancelSSH := context.WithDeadline(context.Background(), devpodSSHDeadline)
 		defer cancelSSH()
 		err = f.DevPodSSHEchoTestString(devpodSSHCtx, tempDir)
+		framework.ExpectNoError(err)
+	})
+
+	ginkgo.It("should start a new workspace with a docker provider (default) and forward gpg agent into it", func() {
+		tempDir, err := framework.CopyToTempDir("tests/ssh/testdata/gpg-forwarding")
+		framework.ExpectNoError(err)
+		defer framework.CleanupTempDir(initialDir, tempDir)
+
+		f := framework.NewDefaultFramework(initialDir + "/bin")
+		_ = f.DevPodProviderAdd(ctx, "docker")
+		err = f.DevPodProviderUse(context.Background(), "docker")
+		framework.ExpectNoError(err)
+
+		ginkgo.DeferCleanup(f.DevPodWorkspaceDelete, context.Background(), tempDir)
+
+		out, err := exec.Command("gpg", "-k").Output()
+		if err != nil || len(out) == 0 {
+			err = f.SetupGPG(tempDir)
+			framework.ExpectNoError(err)
+		}
+
+		// Start up devpod workspace
+		devpodUpDeadline := time.Now().Add(5 * time.Minute)
+		devpodUpCtx, cancel := context.WithDeadline(context.Background(), devpodUpDeadline)
+		defer cancel()
+		err = f.DevPodUp(devpodUpCtx, tempDir, "--gpg-agent-forwarding")
+		framework.ExpectNoError(err)
+
+		devpodSSHDeadline := time.Now().Add(20 * time.Second)
+		devpodSSHCtx, cancelSSH := context.WithDeadline(context.Background(), devpodSSHDeadline)
+		defer cancelSSH()
+		err = f.DevPodSSHGpgTestKey(devpodSSHCtx, tempDir)
 		framework.ExpectNoError(err)
 	})
 })

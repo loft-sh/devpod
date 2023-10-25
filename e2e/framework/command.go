@@ -4,6 +4,8 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"os/exec"
+	"path/filepath"
 
 	"github.com/loft-sh/devpod/pkg/client"
 	provider2 "github.com/loft-sh/devpod/pkg/provider"
@@ -207,6 +209,7 @@ func (f *Framework) DevPodMachineDelete(args []string) error {
 	}
 	return nil
 }
+
 func (f *Framework) DevPodWorkspaceStop(ctx context.Context, extraArgs ...string) error {
 	baseArgs := []string{"stop"}
 	baseArgs = append(baseArgs, extraArgs...)
@@ -218,4 +221,57 @@ func (f *Framework) DevPodWorkspaceDelete(ctx context.Context, workspace string,
 	baseArgs = append(baseArgs, extraArgs...)
 
 	return f.ExecCommand(ctx, false, true, fmt.Sprintf("Successfully deleted workspace '%s'", workspace), baseArgs)
+}
+
+func (f *Framework) SetupGPG(tmpDir string) error {
+	if _, err := exec.LookPath("gpg"); err != nil {
+		err := exec.Command("sudo", "apt-get", " install", "gnupg2", "-y").Run()
+		if err != nil {
+			return nil
+		}
+	}
+
+	err := exec.Command("gpg", "--import", filepath.Join(tmpDir, "gpg-public.key")).Run()
+	if err != nil {
+		return nil
+	}
+
+	err = exec.Command("gpg", "--import", filepath.Join(tmpDir, "gpg-private.key")).Run()
+	if err != nil {
+		return nil
+	}
+
+	err = exec.Command("gpgconf", "--kill", "gpg-agent").Run()
+	if err != nil {
+		return nil
+	}
+
+	err = exec.Command("gpg-agent", "--homedir", "$HOME/.gnupg", "--use-standard-socket", "--daemon").Run()
+	if err != nil {
+		return nil
+	}
+
+	return exec.Command("gpg", "-k").Run()
+}
+
+func (f *Framework) DevPodSSHGpgTestKey(ctx context.Context, workspace string) error {
+	pubKeyB, err := exec.Command("sh", "-c", "gpg -k --with-colons 2>/dev/null | grep sec | base64 -w0").Output()
+	if err != nil {
+		return nil
+	}
+
+	// First run to trigger the first forwarding
+	stdout, _, _ := f.ExecCommandCapture(ctx, []string{
+		"ssh",
+		"--agent-forwarding",
+		"--gpg-agent-forwarding",
+		"--command",
+		"gpg -k --with-colons 2>/dev/null |grep sec |  base64 -w0", workspace,
+	})
+
+	if stdout != string(pubKeyB) {
+		return fmt.Errorf("devpod gpg public key forwarding failed, expected %s, got %s", string(pubKeyB), stdout)
+	}
+
+	return nil
 }
