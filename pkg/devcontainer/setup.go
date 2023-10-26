@@ -7,18 +7,15 @@ import (
 	"io"
 	"os"
 	"runtime"
-	"strings"
 
 	"github.com/loft-sh/devpod/pkg/agent"
-	"github.com/loft-sh/devpod/pkg/agent/tunnelserver"
 	"github.com/loft-sh/devpod/pkg/compress"
 	"github.com/loft-sh/devpod/pkg/devcontainer/config"
+	"github.com/loft-sh/devpod/pkg/devcontainer/sshtunnel"
 	"github.com/loft-sh/devpod/pkg/driver"
 	provider2 "github.com/loft-sh/devpod/pkg/provider"
-	devssh "github.com/loft-sh/devpod/pkg/ssh"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
-	gosshagent "golang.org/x/crypto/ssh/agent"
 )
 
 func (r *runner) setupContainer(
@@ -70,9 +67,9 @@ func (r *runner) setupContainer(
 	_, isDockerDriver := r.Driver.(driver.DockerDriver)
 
 	// ssh tunnel
-	sshCmd := fmt.Sprintf("'%s' helper ssh-server --stdio", agent.ContainerDevPodHelperLocation)
+	sshTunnelCmd := fmt.Sprintf("'%s' helper ssh-server --stdio", agent.ContainerDevPodHelperLocation)
 	if r.Log.GetLevel() == logrus.DebugLevel {
-		sshCmd += " --debug"
+		sshTunnelCmd += " --debug"
 	}
 
 	// setup container
@@ -88,118 +85,9 @@ func (r *runner) setupContainer(
 		setupCommand += " --debug"
 	}
 
-	// create pipes
-	stdoutReader, stdoutWriter, err := os.Pipe()
-	if err != nil {
-		return nil, err
-	}
-	stdinReader, stdinWriter, err := os.Pipe()
-	if err != nil {
-		return nil, err
-	}
-	defer stdoutWriter.Close()
-	defer stdinWriter.Close()
-
-	// start machine on stdio
-	cancelCtx, cancel := context.WithCancel(ctx)
-	defer cancel()
-
-	errChan := make(chan error, 2)
-	go func() {
-		defer r.Log.Debugf("Done executing ssh server helper command")
-		defer cancel()
-
-		writer := r.Log.Writer(logrus.InfoLevel, false)
-		defer writer.Close()
-
-		r.Log.Debugf("Run command in container: %s", sshCmd)
-		err = r.Driver.CommandDevContainer(cancelCtx, r.ID, "root", sshCmd, stdinReader, stdoutWriter, writer)
-		if err != nil && !errors.Is(err, context.Canceled) && !strings.Contains(err.Error(), "signal: ") {
-			errChan <- fmt.Errorf("executing container command: %w", err)
-		} else {
-			errChan <- nil
-		}
-	}()
-
-	// create pipes
-	stdoutReader2, stdoutWriter2, err := os.Pipe()
-	if err != nil {
-		return nil, err
-	}
-	stdinReader2, stdinWriter2, err := os.Pipe()
-	if err != nil {
-		return nil, err
-	}
-	defer stdoutWriter2.Close()
-	defer stdinWriter2.Close()
-
-	go func() {
-		defer cancel()
-
-		r.Log.Debugf("Attempting to create SSH client")
-		// start ssh client as root / default user
-		sshClient, err := devssh.StdioClient(stdoutReader, stdinWriter, false)
-		if err != nil {
-			errChan <- errors.Wrap(err, "create ssh client")
-			return
-		}
-		defer r.Log.Debugf("Connection to SSH Server closed")
-		defer sshClient.Close()
-
-		r.Log.Debugf("SSH client created")
-
-		sess, err := sshClient.NewSession()
-		if err != nil {
-			errChan <- errors.Wrap(err, "create ssh session")
-		}
-		defer sess.Close()
-
-		r.Log.Debugf("SSH session created")
-
-		var identityAgent string
-		if identityAgent == "" {
-			identityAgent = os.Getenv("SSH_AUTH_SOCK")
-		}
-
-		if identityAgent != "" {
-			err = gosshagent.ForwardToRemote(sshClient, identityAgent)
-			if err != nil {
-				errChan <- errors.Wrap(err, "forward agent")
-			}
-			err = gosshagent.RequestAgentForwarding(sess)
-			if err != nil {
-				errChan <- errors.Wrap(err, "request agent forwarding failed")
-			}
-		}
-
-		writer := r.Log.Writer(logrus.InfoLevel, false)
-		defer writer.Close()
-
-		err = devssh.Run(ctx, sshClient, setupCommand, stdinReader2, stdoutWriter2, writer)
-		if err != nil {
-			errChan <- errors.Wrap(err, "run agent command")
-		} else {
-			errChan <- nil
-		}
-	}()
-
-	// start server
-	result, err = tunnelserver.RunSetupServer(
-		cancelCtx,
-		stdoutReader2,
-		stdinWriter2,
-		r.WorkspaceConfig.Agent.InjectDockerCredentials != "false",
-		config.GetMounts(result),
-		r.Log,
-	)
-	if err != nil {
-		return nil, errors.Wrap(err, "run tunnel machine")
+	agentInjectFunc := func(cancelCtx context.Context, sshCmd string, sshTunnelStdinReader, sshTunnelStdoutWriter *os.File, writer io.WriteCloser) error {
+		return r.Driver.CommandDevContainer(cancelCtx, r.ID, "root", sshCmd, sshTunnelStdinReader, sshTunnelStdoutWriter, writer)
 	}
 
-	// wait until command finished
-	if err := <-errChan; err != nil {
-		return result, err
-	}
-
-	return result, <-errChan
+	return sshtunnel.ExecuteCommand(ctx, nil, agentInjectFunc, sshTunnelCmd, setupCommand, false, true, r.WorkspaceConfig.Agent.InjectDockerCredentials != "false", result, r.Log)
 }

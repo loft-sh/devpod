@@ -219,7 +219,7 @@ func ChownAgentSock(setupInfo *config.Result, log log.Logger) error {
 	if agentSockFile != "" {
 		err := copy2.ChownR(filepath.Dir(agentSockFile), user)
 		if err != nil {
-			log.Warn(err)
+			return err
 		}
 	}
 
