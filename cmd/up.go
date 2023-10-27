@@ -19,6 +19,7 @@ import (
 	"github.com/loft-sh/devpod/pkg/command"
 	"github.com/loft-sh/devpod/pkg/config"
 	config2 "github.com/loft-sh/devpod/pkg/devcontainer/config"
+	"github.com/loft-sh/devpod/pkg/devcontainer/sshtunnel"
 	"github.com/loft-sh/devpod/pkg/ide/fleet"
 	"github.com/loft-sh/devpod/pkg/ide/jetbrains"
 	"github.com/loft-sh/devpod/pkg/ide/jupyter"
@@ -353,41 +354,25 @@ func (cmd *UpCmd) devPodUpMachine(
 	// create container etc.
 	log.Infof("Creating devcontainer...")
 	defer log.Debugf("Done creating devcontainer")
-	command := fmt.Sprintf(
+
+	// ssh tunnel command
+	sshTunnelCmd := fmt.Sprintf("'%s' helper ssh-server --stdio", client.AgentPath())
+	if log.GetLevel() == logrus.DebugLevel {
+		sshTunnelCmd += " --debug"
+	}
+
+	// create agent command
+	agentCommand := fmt.Sprintf(
 		"'%s' agent workspace up --workspace-info '%s'",
 		client.AgentPath(),
 		workspaceInfo,
 	)
 	if log.GetLevel() == logrus.DebugLevel {
-		command += " --debug"
+		agentCommand += " --debug"
 	}
 
-	// create pipes
-	stdoutReader, stdoutWriter, err := os.Pipe()
-	if err != nil {
-		return nil, err
-	}
-	stdinReader, stdinWriter, err := os.Pipe()
-	if err != nil {
-		return nil, err
-	}
-	defer stdoutWriter.Close()
-	defer stdinWriter.Close()
-
-	// start machine on stdio
-	cancelCtx, cancel := context.WithCancel(ctx)
-	defer cancel()
-
-	errChan := make(chan error, 1)
-	go func() {
-		defer log.Debugf("Done executing up command")
-		defer cancel()
-
-		writer := log.Writer(logrus.InfoLevel, false)
-		defer writer.Close()
-
-		log.Debugf("Inject and run command: %s", command)
-		err := agent.InjectAgentAndExecute(
+	agentInjectFunc := func(cancelCtx context.Context, sshCmd string, sshTunnelStdinReader, sshTunnelStdoutWriter *os.File, writer io.WriteCloser) error {
+		return agent.InjectAgentAndExecute(
 			cancelCtx,
 			func(ctx context.Context, command string, stdin io.Reader, stdout io.Writer, stderr io.Writer) error {
 				return client.Command(ctx, client2.CommandOptions{
@@ -401,56 +386,15 @@ func (cmd *UpCmd) devPodUpMachine(
 			client.AgentPath(),
 			client.AgentURL(),
 			true,
-			command,
-			stdinReader,
-			stdoutWriter,
+			sshCmd,
+			sshTunnelStdinReader,
+			sshTunnelStdoutWriter,
 			writer,
 			log.ErrorStreamOnly(),
 		)
-		if err != nil {
-			errChan <- fmt.Errorf("executing agent command: %w", err)
-		} else {
-			errChan <- nil
-		}
-	}()
-
-	// create container etc.
-	var result *config2.Result
-	if cmd.Proxy {
-		// create client on stdin & stdout
-		tunnelClient, err := tunnelserver.NewTunnelClient(os.Stdin, os.Stdout, true)
-		if err != nil {
-			return nil, errors.Wrap(err, "create tunnel client")
-		}
-
-		// create proxy server
-		result, err = tunnelserver.RunProxyServer(
-			cancelCtx,
-			tunnelClient,
-			stdoutReader,
-			stdinWriter,
-			log,
-		)
-		if err != nil {
-			return nil, errors.Wrap(err, "run proxy tunnel")
-		}
-	} else {
-		result, err = tunnelserver.RunUpServer(
-			cancelCtx,
-			stdoutReader,
-			stdinWriter,
-			client.AgentInjectGitCredentials(),
-			client.AgentInjectDockerCredentials(),
-			client.WorkspaceConfig(),
-			log,
-		)
-		if err != nil {
-			return nil, errors.Wrap(err, "run tunnel machine")
-		}
 	}
 
-	// wait until command finished
-	return result, <-errChan
+	return sshtunnel.ExecuteCommand(ctx, client, agentInjectFunc, sshTunnelCmd, agentCommand, cmd.Proxy, false, false, nil, log)
 }
 
 func startJupyterNotebookInBrowser(

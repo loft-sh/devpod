@@ -57,6 +57,12 @@ func SetupContainer(setupInfo *config.Result, extraWorkspaceEnv []string, chownW
 		log.Errorf("Error linking /home/root: %v", err)
 	}
 
+	// chown agent sock file
+	err = ChownAgentSock(setupInfo, log)
+	if err != nil {
+		return errors.Wrap(err, "chown ssh agent sock file")
+	}
+
 	// run commands
 	log.Debugf("Run post create commands...")
 	err = PostCreateCommands(setupInfo, log)
@@ -203,6 +209,20 @@ func PatchEtcEnvironment(mergedConfig *config.MergedDevContainerConfig, log log.
 
 	// update env
 	envfile.MergeAndApply(mergedConfig.RemoteEnv, log)
+	return nil
+}
+
+func ChownAgentSock(setupInfo *config.Result, log log.Logger) error {
+	user := config.GetRemoteUser(setupInfo)
+
+	agentSockFile := os.Getenv("SSH_AUTH_SOCK")
+	if agentSockFile != "" {
+		err := copy2.ChownR(filepath.Dir(agentSockFile), user)
+		if err != nil {
+			return err
+		}
+	}
+
 	return nil
 }
 

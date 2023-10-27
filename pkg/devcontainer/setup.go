@@ -9,9 +9,9 @@ import (
 	"runtime"
 
 	"github.com/loft-sh/devpod/pkg/agent"
-	"github.com/loft-sh/devpod/pkg/agent/tunnelserver"
 	"github.com/loft-sh/devpod/pkg/compress"
 	"github.com/loft-sh/devpod/pkg/devcontainer/config"
+	"github.com/loft-sh/devpod/pkg/devcontainer/sshtunnel"
 	"github.com/loft-sh/devpod/pkg/driver"
 	provider2 "github.com/loft-sh/devpod/pkg/provider"
 	"github.com/pkg/errors"
@@ -66,64 +66,28 @@ func (r *runner) setupContainer(
 	// check if docker driver
 	_, isDockerDriver := r.Driver.(driver.DockerDriver)
 
+	// ssh tunnel
+	sshTunnelCmd := fmt.Sprintf("'%s' helper ssh-server --stdio", agent.ContainerDevPodHelperLocation)
+	if r.Log.GetLevel() == logrus.DebugLevel {
+		sshTunnelCmd += " --debug"
+	}
+
 	// setup container
 	r.Log.Infof("Setup container...")
-	command := fmt.Sprintf("'%s' agent container setup --setup-info '%s' --container-workspace-info '%s'", agent.ContainerDevPodHelperLocation, compressed, workspaceConfigCompressed)
+	setupCommand := fmt.Sprintf("'%s' agent container setup --setup-info '%s' --container-workspace-info '%s'", agent.ContainerDevPodHelperLocation, compressed, workspaceConfigCompressed)
 	if runtime.GOOS == "linux" || !isDockerDriver {
-		command += " --chown-workspace"
+		setupCommand += " --chown-workspace"
 	}
 	if !isDockerDriver {
-		command += " --stream-mounts"
+		setupCommand += " --stream-mounts"
 	}
 	if r.Log.GetLevel() == logrus.DebugLevel {
-		command += " --debug"
+		setupCommand += " --debug"
 	}
 
-	// create pipes
-	stdoutReader, stdoutWriter, err := os.Pipe()
-	if err != nil {
-		return nil, err
-	}
-	stdinReader, stdinWriter, err := os.Pipe()
-	if err != nil {
-		return nil, err
-	}
-	defer stdoutWriter.Close()
-	defer stdinWriter.Close()
-
-	// start machine on stdio
-	cancelCtx, cancel := context.WithCancel(ctx)
-	defer cancel()
-
-	errChan := make(chan error, 1)
-	go func() {
-		defer r.Log.Debugf("Done executing up command")
-		defer cancel()
-
-		writer := r.Log.Writer(logrus.InfoLevel, false)
-		defer writer.Close()
-
-		r.Log.Debugf("Run command in container: %s", command)
-		err = r.Driver.CommandDevContainer(cancelCtx, r.ID, "root", command, stdinReader, stdoutWriter, writer)
-		if err != nil {
-			errChan <- fmt.Errorf("executing container command: %w", err)
-		} else {
-			errChan <- nil
-		}
-	}()
-
-	// start server
-	result, err = tunnelserver.RunSetupServer(
-		cancelCtx,
-		stdoutReader,
-		stdinWriter,
-		r.WorkspaceConfig.Agent.InjectDockerCredentials != "false",
-		config.GetMounts(result),
-		r.Log,
-	)
-	if err != nil {
-		return nil, errors.Wrap(err, "run tunnel machine")
+	agentInjectFunc := func(cancelCtx context.Context, sshCmd string, sshTunnelStdinReader, sshTunnelStdoutWriter *os.File, writer io.WriteCloser) error {
+		return r.Driver.CommandDevContainer(cancelCtx, r.ID, "root", sshCmd, sshTunnelStdinReader, sshTunnelStdoutWriter, writer)
 	}
 
-	return result, <-errChan
+	return sshtunnel.ExecuteCommand(ctx, nil, agentInjectFunc, sshTunnelCmd, setupCommand, false, true, r.WorkspaceConfig.Agent.InjectDockerCredentials != "false", result, r.Log)
 }
