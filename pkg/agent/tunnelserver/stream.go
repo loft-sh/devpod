@@ -41,7 +41,7 @@ func NewStreamReader(stream tunnel.Tunnel_StreamWorkspaceClient, log log.Logger)
 	return reader
 }
 
-func newStreamWriter(stream tunnel.Tunnel_StreamWorkspaceServer, log log.Logger) *streamWriter {
+func newStreamWriter(stream tunnel.Tunnel_StreamWorkspaceServer, log log.Logger, gitIgnoreEnabled bool) *streamWriter {
 	// Parse the .gitignore file and create an IgnoreParser object
 	gitIgnore, err := gitignore.CompileIgnoreFile(".gitignore")
 	if err != nil {
@@ -50,11 +50,12 @@ func newStreamWriter(stream tunnel.Tunnel_StreamWorkspaceServer, log log.Logger)
 	}
 
 	return &streamWriter{
-		stream:       stream,
-		bytesWritten: 0,
-		lastMessage:  time.Now(),
-		log:          log,
-		gitIgnore:    gitIgnore, // Set the gitIgnore field to the IgnoreParser object
+		stream:           stream,
+		bytesWritten:     0,
+		lastMessage:      time.Now(),
+		log:              log,
+		gitIgnore:        gitIgnore, // Set the gitIgnore field to the IgnoreParser object
+		gitIgnoreEnabled: gitIgnoreEnabled,
 	}
 }
 
@@ -83,7 +84,7 @@ func (s *streamWriter) Write(p []byte) (int, error) {
 		if !strings.HasPrefix(relPath, "./") {
 			relPath = "./" + relPath
 		}
-		if !s.gitIgnore.Match(relPath, info.IsDir()) {
+		if !s.gitIgnore.Match(relPath, info.IsDir()) || !s.gitIgnoreEnabled { // Check if gitIgnoreEnabled is true
 			filesToUpload = append(filesToUpload, path)
 		}
 		return nil

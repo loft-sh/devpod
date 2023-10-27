@@ -54,6 +54,8 @@ type UpCmd struct {
 
 	DotfilesSource string
 	DotfilesScript string
+
+	gitIgnore bool
 }
 
 // NewUpCmd creates a new up command
@@ -148,7 +150,15 @@ func (cmd *UpCmd) Run(
 	devPodConfig *config.Config,
 	client client2.BaseWorkspaceClient,
 	log log.Logger,
+	options *CLIOptions,
 ) error {
+	// Create an upCmd object and set its fields based on the CLIOptions
+	up := &upCmd{
+		Proxy:      options.Proxy,
+		GitIgnore:  options.GitIgnore,
+		WorkingDir: options.WorkingDir,
+		gitIgnore:  options.GitIgnore,
+	}
 	// run devpod agent up
 	result, err := cmd.devPodUp(ctx, client, log)
 	if err != nil {

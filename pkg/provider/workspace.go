@@ -161,6 +161,7 @@ type CLIOptions struct {
 	Proxy                bool     `json:"proxy,omitempty"`
 	DisableDaemon        bool     `json:"disableDaemon,omitempty"`
 	DaemonInterval       string   `json:"daemonInterval,omitempty"`
+	GitIgnore            bool     `json:"gitIgnore,omitempty"`
 
 	// build options
 	Repository string   `json:"repository,omitempty"`
