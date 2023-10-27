@@ -6,7 +6,6 @@ import (
 	"os"
 	"time"
 
-	"github.com/gliderlabs/ssh"
 	"github.com/loft-sh/devpod/cmd/flags"
 	"github.com/loft-sh/devpod/pkg/agent"
 	helperssh "github.com/loft-sh/devpod/pkg/ssh/server"
@@ -14,6 +13,7 @@ import (
 	"github.com/loft-sh/devpod/pkg/stdio"
 	"github.com/loft-sh/devpod/pkg/token"
 	"github.com/loft-sh/log"
+	"github.com/loft-sh/ssh"
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
 )

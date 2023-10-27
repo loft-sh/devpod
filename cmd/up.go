@@ -48,8 +48,9 @@ type UpCmd struct {
 
 	ProviderOptions []string
 
-	ConfigureSSH bool
-	OpenIDE      bool
+	ConfigureSSH       bool
+	GPGAgentForwarding bool
+	OpenIDE            bool
 
 	SSHConfigPath string
 
@@ -116,6 +117,7 @@ func NewUpCmd(flags *flags.GlobalFlags) *cobra.Command {
 	}
 
 	upCmd.Flags().BoolVar(&cmd.ConfigureSSH, "configure-ssh", true, "If true will configure the ssh config to include the DevPod workspace")
+	upCmd.Flags().BoolVar(&cmd.GPGAgentForwarding, "gpg-agent-forwarding", false, "If true forward the local gpg-agent to the DevPod workspace")
 	upCmd.Flags().StringVar(&cmd.SSHConfigPath, "ssh-config", "", "The path to the ssh config to modify, if empty will use ~/.ssh/config")
 	upCmd.Flags().StringVar(&cmd.DotfilesSource, "dotfiles", "", "The path or url to the dotfiles to use in the container")
 	upCmd.Flags().StringVar(&cmd.DotfilesScript, "dotfiles-script", "", "The path in dotfiles directory to use to install the dotfiles, if empty will try to guess")
@@ -165,7 +167,10 @@ func (cmd *UpCmd) Run(
 
 	// configure container ssh
 	if cmd.ConfigureSSH {
-		err = configureSSH(client, cmd.SSHConfigPath, user)
+		err = configureSSH(client, cmd.SSHConfigPath, user,
+			cmd.GPGAgentForwarding ||
+				devPodConfig.ContextOption(config.ContextOptionGPGAgentForwarding) == "true")
+
 		if err != nil {
 			return err
 		}
@@ -622,12 +627,13 @@ func startBrowserTunnel(
 	return nil
 }
 
-func configureSSH(client client2.BaseWorkspaceClient, configPath, user string) error {
+func configureSSH(client client2.BaseWorkspaceClient, configPath, user string, gpgagent bool) error {
 	err := devssh.ConfigureSSHConfig(
 		configPath,
 		client.Context(),
 		client.Workspace(),
 		user,
+		gpgagent,
 		log.Default,
 	)
 	if err != nil {
