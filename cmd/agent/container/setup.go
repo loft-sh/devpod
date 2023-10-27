@@ -284,13 +284,15 @@ func dockerlessBuild(
 
 	// write output to log
 	writer := log.Writer(logrus.InfoLevel, false)
+	errwriter := log.Writer(logrus.ErrorLevel, false)
 	defer writer.Close()
+	defer errwriter.Close()
 
 	// start building
 	log.Infof("Start dockerless building %s %s", "/.dockerless/dockerless", strings.Join(args, " "))
 	cmd := exec.CommandContext(ctx, "/.dockerless/dockerless", args...)
 	cmd.Stdout = writer
-	cmd.Stderr = writer
+	cmd.Stderr = errwriter
 	cmd.Env = os.Environ()
 	err = cmd.Run()
 	if err != nil {

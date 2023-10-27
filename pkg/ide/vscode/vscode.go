@@ -91,7 +91,9 @@ func (o *VsCodeServer) InstallExtensions() error {
 
 	// start log writer
 	writer := o.log.Writer(logrus.InfoLevel, false)
+	errwriter := o.log.Writer(logrus.ErrorLevel, false)
 	defer writer.Close()
+	defer errwriter.Close()
 
 	// download extensions
 	for _, extension := range o.extensions {
@@ -105,7 +107,7 @@ func (o *VsCodeServer) InstallExtensions() error {
 		}
 		cmd := exec.Command(args[0], args[1:]...)
 		cmd.Stdout = writer
-		cmd.Stderr = writer
+		cmd.Stderr = errwriter
 		err := cmd.Run()
 		if err != nil {
 			o.log.Info("Failed installing extension " + extension)

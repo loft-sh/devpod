@@ -267,11 +267,13 @@ func runInitializeCommand(
 		// run the command
 		log.Infof("Running initializeCommand from devcontainer.json: '%s'", strings.Join(args, " "))
 		writer := log.Writer(logrus.InfoLevel, false)
+		errwriter := log.Writer(logrus.ErrorLevel, false)
 		defer writer.Close()
+		defer errwriter.Close()
 
 		cmd := exec.Command(args[0], args[1:]...)
 		cmd.Stdout = writer
-		cmd.Stderr = writer
+		cmd.Stderr = errwriter
 		cmd.Dir = workspaceFolder
 		err := cmd.Run()
 		if err != nil {
