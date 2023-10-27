@@ -68,7 +68,7 @@ func (o *FleetServer) Install(projectDir string) error {
 	fleetBinary := filepath.Join(location, "fleet")
 	_, err = os.Stat(fleetBinary)
 	if err == nil {
-		return nil
+		return o.Start(fleetBinary, location, projectDir)
 	}
 
 	// check what release we need to download
