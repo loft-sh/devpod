@@ -269,7 +269,7 @@ var _ = DevPodDescribe("devpod up test suite", func() {
 			framework.ExpectError(err, "expected error")
 			framework.ExpectNoError(verifyLogStream(strings.NewReader(stdout)))
 			framework.ExpectNoError(verifyLogStream(strings.NewReader(stderr)))
-			framework.ExpectNoError(findMessage(strings.NewReader(stderr), "exec: \"abc\": executable file not found in $PATH"))
+			framework.ExpectNoError(findMessage(strings.NewReader(stdout), "exec: \"abc\": executable file not found in $PATH"))
 		}, ginkgo.SpecTimeout(60*time.Second))
 	})
 
