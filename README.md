@@ -25,8 +25,6 @@ Download DevPod Desktop:
 - [MacOS Intel/AMD](https://github.com/loft-sh/devpod/releases/latest/download/DevPod_macos_x64.dmg)
 - [Windows](https://github.com/loft-sh/devpod/releases/latest/download/DevPod_windows_x64_en-US.msi)
 - [Linux AppImage](https://github.com/loft-sh/devpod/releases/latest/download/DevPod_linux_amd64.AppImage)
-- [Linux deb](https://github.com/loft-sh/devpod/releases/latest/download/DevPod_linux_amd64.deb)
-- [Linux rpm](https://github.com/loft-sh/devpod/releases/latest/download/DevPod_linux_x86_64.rpm)
 
 Take a look at the [DevPod Docs](https://devpod.sh/docs/getting-started/install) for more information.
 
