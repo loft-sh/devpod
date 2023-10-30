@@ -103,7 +103,7 @@ func ExecuteCommand(ctx context.Context, client client2.WorkspaceClient, agentIn
 			}
 		}
 
-		writer := log.Writer(logrus.ErrorLevel, false)
+		writer := log.Writer(logrus.InfoLevel, false)
 		defer writer.Close()
 
 		err = devssh.Run(ctx, sshClient, command, gRPCConnStdinReader, gRPCConnStdoutWriter, writer)
