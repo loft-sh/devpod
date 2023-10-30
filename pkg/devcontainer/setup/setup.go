@@ -332,7 +332,7 @@ func runPostCreateCommand(commands []types.LifecycleHook, user, dir string, remo
 			log.Debugf("Executing command %s: %s...", k, cmd.Args)
 			err := cmd.Run()
 			if err != nil {
-				log.Debugf("Failed running postcreate command %s: %v", cmd.Args, err)
+				log.Debugf("Failed running postCreateCommand lifecycle script %s: %v", cmd.Args, err)
 				return fmt.Errorf("failed to run: %s, error: %w", strings.Join(c, " "), err)
 			}
 			log.Donef("Successfully ran command %s: %s", k, strings.Join(c, " "))
