@@ -2,6 +2,7 @@ package setup
 
 import (
 	"encoding/json"
+	"fmt"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -236,7 +237,7 @@ func PostCreateCommands(setupInfo *config.Result, log log.Logger) error {
 		return err
 	}
 
-	//TODO: rerun when contents changed
+	// TODO: rerun when contents changed
 	err = runPostCreateCommand(mergedConfig.UpdateContentCommands, remoteUser, setupInfo.SubstitutionContext.ContainerWorkspaceFolder, setupInfo.MergedConfig.RemoteEnv, "updateContentCommands", setupInfo.ContainerDetails.Created, log)
 	if err != nil {
 		return err
@@ -303,7 +304,9 @@ func runPostCreateCommand(commands []types.LifecycleHook, user, dir string, remo
 	}
 
 	writer := log.Writer(logrus.InfoLevel, false)
+	errwriter := log.Writer(logrus.ErrorLevel, false)
 	defer writer.Close()
+	defer errwriter.Close()
 
 	for _, cmd := range commands {
 		if len(cmd) == 0 {
@@ -325,11 +328,12 @@ func runPostCreateCommand(commands []types.LifecycleHook, user, dir string, remo
 			cmd.Env = os.Environ()
 			cmd.Env = append(cmd.Env, remoteEnvArr...)
 			cmd.Stdout = writer
-			cmd.Stderr = writer
+			cmd.Stderr = errwriter
+			log.Debugf("Executing command %s: %s...", k, cmd.Args)
 			err := cmd.Run()
 			if err != nil {
-				log.Errorf("Failed running command %s: %v", k, err)
-				return err
+				log.Debugf("Failed running postCreateCommand lifecycle script %s: %v", cmd.Args, err)
+				return fmt.Errorf("failed to run: %s, error: %w", strings.Join(c, " "), err)
 			}
 			log.Donef("Successfully ran command %s: %s", k, strings.Join(c, " "))
 		}

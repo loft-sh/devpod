@@ -345,7 +345,9 @@ func CloneRepository(ctx context.Context, local bool, workspaceDir string, sourc
 	}()
 
 	writer := log.Writer(logrus.InfoLevel, false)
+	errwriter := log.Writer(logrus.ErrorLevel, false)
 	defer writer.Close()
+	defer errwriter.Close()
 
 	// check if command exists
 	if !command.Exists("git") {
@@ -363,14 +365,14 @@ func CloneRepository(ctx context.Context, local bool, workspaceDir string, sourc
 			log.Infof("Git command is missing, try to install git with apt...")
 			cmd := exec.Command("apt", "update")
 			cmd.Stdout = writer
-			cmd.Stderr = writer
+			cmd.Stderr = errwriter
 			err := cmd.Run()
 			if err != nil {
 				return errors.Wrap(err, "run apt update")
 			}
 			cmd = exec.Command("apt", "-y", "install", "git")
 			cmd.Stdout = writer
-			cmd.Stderr = writer
+			cmd.Stderr = errwriter
 			err = cmd.Run()
 			if err != nil {
 				return errors.Wrap(err, "run apt install git -y")
@@ -379,14 +381,14 @@ func CloneRepository(ctx context.Context, local bool, workspaceDir string, sourc
 			log.Infof("Git command is missing, try to install git with apk...")
 			cmd := exec.Command("apk", "update")
 			cmd.Stdout = writer
-			cmd.Stderr = writer
+			cmd.Stderr = errwriter
 			err := cmd.Run()
 			if err != nil {
 				return errors.Wrap(err, "run apk update")
 			}
 			cmd = exec.Command("apk", "add", "git")
 			cmd.Stdout = writer
-			cmd.Stderr = writer
+			cmd.Stderr = errwriter
 			err = cmd.Run()
 			if err != nil {
 				return errors.Wrap(err, "run apk add git")

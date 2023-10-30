@@ -373,7 +373,6 @@ var _ = DevPodDescribe("devpod up test suite", func() {
 				err = f.DevPodUp(ctx, tempDir)
 				framework.ExpectNoError(err)
 			}, ginkgo.SpecTimeout(60*time.Second))
-
 		})
 
 		ginkgo.Context("with docker", ginkgo.Ordered, func() {
