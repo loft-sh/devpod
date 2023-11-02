@@ -108,7 +108,7 @@ Kubernetes persistent volume [docs](https://kubernetes.io/docs/concepts/storage/
 mkdir ~/devpods
 cd ~/devpods
 touch devpod-pv.yml
-vim devpod-pv.yml # or your prefered text editor
+vim devpod-pv.yml # or your preferred text editor
 ```
 
 Edit devpod-pv.yml and save
@@ -128,7 +128,7 @@ spec:
     path: "/home/dev/devpods/share"
 ```
 
-Create a directory for the persisent volume
+Create a directory for the persistent volume
 
 ```sh
 mkdir /home/dev/devpods/share
@@ -166,9 +166,9 @@ Within the kubernetes provider the kubeconfig path will be
 ```
 
 **Note**
-This is a simplification for a production setup where a kubeconfig should be provided for a kubernetes context, namepace and users. You will also need kubectl installed where your Devpods client is running from. The kubernetes provider uses the underlying kubectl providing the locally stored kubeconfig to access a remote cluster. This setup requires kubernetes administration support.
+This is a simplification for a production setup where a kubeconfig should be provided for a kubernetes context, namespace and users. You will also need kubectl installed where your Devpods client is running from. The kubernetes provider uses the underlying kubectl providing the locally stored kubeconfig to access a remote cluster. This setup requires kubernetes administration support.
 
-### Identify your namepaces
+### Identify your namespaces
 
 The kubernetes provider requires a namespace and this example will use the 'default' namespace 
 
