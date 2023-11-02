@@ -47,7 +47,7 @@ func ExecuteCommand(ctx context.Context, client client2.WorkspaceClient, agentIn
 		defer writer.Close()
 
 		log.Debugf("Inject and run command: %s", sshCommand)
-		err := agentInject(cancelCtx, sshCommand, sshTunnelStdinReader, sshTunnelStdoutWriter, writer)
+		err := agentInject(ctx, sshCommand, sshTunnelStdinReader, sshTunnelStdoutWriter, writer)
 		if err != nil && !errors.Is(err, context.Canceled) && !strings.Contains(err.Error(), "signal: ") {
 			errChan <- fmt.Errorf("executing agent command: %w", err)
 		} else {
