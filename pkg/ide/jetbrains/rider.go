@@ -6,14 +6,16 @@ import (
 	"github.com/loft-sh/log"
 )
 
-const RiderDownloadAmd64Template = "https://download.jetbrains.com/rider/JetBrains.Rider-%s.tar.gz"
-const RiderDownloadArm64Template = "https://download.jetbrains.com/rider/JetBrains.Rider-%s-aarch64.tar.gz"
+const (
+	RiderDownloadAmd64Template = "https://download.jetbrains.com/rider/JetBrains.Rider-%s.tar.gz"
+	RiderDownloadArm64Template = "https://download.jetbrains.com/rider/JetBrains.Rider-%s-aarch64.tar.gz"
+)
 
 var RiderOptions = ide.Options{
 	VersionOption: {
 		Name:        VersionOption,
 		Description: "The version for the binary",
-		Default:     "2023.1.1",
+		Default:     "2023.2.3",
 	},
 	DownloadArm64Option: {
 		Name:        DownloadArm64Option,

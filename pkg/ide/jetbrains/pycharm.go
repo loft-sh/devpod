@@ -6,14 +6,16 @@ import (
 	"github.com/loft-sh/log"
 )
 
-const PycharmDownloadAmd64Template = "https://download.jetbrains.com/python/pycharm-professional-%s.tar.gz"
-const PycharmDownloadArm64Template = "https://download.jetbrains.com/python/pycharm-professional-%s-aarch64.tar.gz"
+const (
+	PycharmDownloadAmd64Template = "https://download.jetbrains.com/python/pycharm-professional-%s.tar.gz"
+	PycharmDownloadArm64Template = "https://download.jetbrains.com/python/pycharm-professional-%s-aarch64.tar.gz"
+)
 
 var PyCharmOptions = ide.Options{
 	VersionOption: {
 		Name:        VersionOption,
 		Description: "The version for the binary",
-		Default:     "2023.1.1",
+		Default:     "2023.2.3",
 	},
 	DownloadArm64Option: {
 		Name:        DownloadArm64Option,

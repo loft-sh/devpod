@@ -6,14 +6,16 @@ import (
 	"github.com/loft-sh/log"
 )
 
-const GolandDownloadAmd64Template = "https://download.jetbrains.com/go/goland-%s.tar.gz"
-const GolandDownloadArm64Template = "https://download.jetbrains.com/go/goland-%s-aarch64.tar.gz"
+const (
+	GolandDownloadAmd64Template = "https://download.jetbrains.com/go/goland-%s.tar.gz"
+	GolandDownloadArm64Template = "https://download.jetbrains.com/go/goland-%s-aarch64.tar.gz"
+)
 
 var GolandOptions = ide.Options{
 	VersionOption: {
 		Name:        VersionOption,
 		Description: "The version for the binary",
-		Default:     "2023.1.1",
+		Default:     "2023.2.4",
 	},
 	DownloadArm64Option: {
 		Name:        DownloadArm64Option,
