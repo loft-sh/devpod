@@ -22,8 +22,10 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
-const DownloadAmd64Template = "https://github.com/gitpod-io/openvscode-server/releases/download/openvscode-server-%s/openvscode-server-%s-linux-x64.tar.gz"
-const DownloadArm64Template = "https://github.com/gitpod-io/openvscode-server/releases/download/openvscode-server-%s/openvscode-server-%s-linux-arm64.tar.gz"
+const (
+	DownloadAmd64Template = "https://github.com/gitpod-io/openvscode-server/releases/download/openvscode-server-%s/openvscode-server-%s-linux-x64.tar.gz"
+	DownloadArm64Template = "https://github.com/gitpod-io/openvscode-server/releases/download/openvscode-server-%s/openvscode-server-%s-linux-arm64.tar.gz"
+)
 
 const (
 	ForwardPortsOption  = "FORWARD_PORTS"
@@ -52,7 +54,7 @@ var Options = ide.Options{
 	VersionOption: {
 		Name:        VersionOption,
 		Description: "The version for the open vscode binary",
-		Default:     "v1.79.2",
+		Default:     "v1.83.0",
 	},
 	OpenOption: {
 		Name:        OpenOption,

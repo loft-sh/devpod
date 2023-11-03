@@ -6,14 +6,16 @@ import (
 	"github.com/loft-sh/log"
 )
 
-const IntellijDownloadAmd64Template = "https://download.jetbrains.com/idea/ideaIU-%s.tar.gz"
-const IntellijDownloadArm64Template = "https://download.jetbrains.com/idea/ideaIU-%s-aarch64.tar.gz"
+const (
+	IntellijDownloadAmd64Template = "https://download.jetbrains.com/idea/ideaIU-%s.tar.gz"
+	IntellijDownloadArm64Template = "https://download.jetbrains.com/idea/ideaIU-%s-aarch64.tar.gz"
+)
 
 var IntellijOptions = ide.Options{
 	VersionOption: {
 		Name:        VersionOption,
 		Description: "The version for the binary",
-		Default:     "2023.1.1",
+		Default:     "2023.2.4",
 	},
 	DownloadArm64Option: {
 		Name:        DownloadArm64Option,

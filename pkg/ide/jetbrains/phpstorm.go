@@ -6,14 +6,16 @@ import (
 	"github.com/loft-sh/log"
 )
 
-const PhpStormDownloadAmd64Template = "https://download.jetbrains.com/webide/PhpStorm-%s.tar.gz"
-const PhpStormDownloadArm64Template = "https://download.jetbrains.com/webide/PhpStorm-%s-aarch64.tar.gz"
+const (
+	PhpStormDownloadAmd64Template = "https://download.jetbrains.com/webide/PhpStorm-%s.tar.gz"
+	PhpStormDownloadArm64Template = "https://download.jetbrains.com/webide/PhpStorm-%s-aarch64.tar.gz"
+)
 
 var PhpStormOptions = ide.Options{
 	VersionOption: {
 		Name:        VersionOption,
 		Description: "The version for the binary",
-		Default:     "2023.1.3",
+		Default:     "2023.2.3",
 	},
 	DownloadArm64Option: {
 		Name:        DownloadArm64Option,

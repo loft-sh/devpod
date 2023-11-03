@@ -6,14 +6,16 @@ import (
 	"github.com/loft-sh/log"
 )
 
-const CLionDownloadAmd64Template = "https://download.jetbrains.com/cpp/CLion-%s.tar.gz"
-const CLionDownloadArm64Template = "https://download.jetbrains.com/cpp/CLion-%s-aarch64.tar.gz"
+const (
+	CLionDownloadAmd64Template = "https://download.jetbrains.com/cpp/CLion-%s.tar.gz"
+	CLionDownloadArm64Template = "https://download.jetbrains.com/cpp/CLion-%s-aarch64.tar.gz"
+)
 
 var CLionOptions = ide.Options{
 	VersionOption: {
 		Name:        VersionOption,
 		Description: "The version for the binary",
-		Default:     "2023.1.2",
+		Default:     "2023.2.2",
 	},
 	DownloadArm64Option: {
 		Name:        DownloadArm64Option,
