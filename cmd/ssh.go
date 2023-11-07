@@ -332,22 +332,12 @@ func (cmd *SSHCmd) forwardPorts(
 func (cmd *SSHCmd) startTunnel(ctx context.Context, devPodConfig *config.Config, containerClient *ssh.Client, workspaceName string, ideName string, log log.Logger) error {
 	// check if we should forward ports
 	if len(cmd.ForwardPorts) > 0 {
-		go func() {
-			err := cmd.forwardPorts(ctx, containerClient, log)
-			if err != nil {
-				log.Fatal(err)
-			}
-		}()
+		return cmd.forwardPorts(ctx, containerClient, log)
 	}
 
 	// check if we should reverse forward ports
 	if len(cmd.ReverseForwardPorts) > 0 && !cmd.GPGAgentForwarding {
-		go func() {
-			err := cmd.reverseForwardPorts(ctx, containerClient, log)
-			if err != nil {
-				log.Fatal(err)
-			}
-		}()
+		return cmd.reverseForwardPorts(ctx, containerClient, log)
 	}
 
 	// start port-forwarding etc.
@@ -359,8 +349,8 @@ func (cmd *SSHCmd) startTunnel(ctx context.Context, devPodConfig *config.Config,
 	writer := log.ErrorStreamOnly().Writer(logrus.InfoLevel, false)
 	defer writer.Close()
 
-	if cmd.GPGAgentForwarding ||
-		devPodConfig.ContextOption(config.ContextOptionGPGAgentForwarding) == "true" {
+	// check if we should do gpg agent forwarding
+	if cmd.GPGAgentForwarding || devPodConfig.ContextOption(config.ContextOptionGPGAgentForwarding) == "true" {
 		// Check if a forwarding is already enabled and running, in that case
 		// we skip the forwarding and keep using the original one
 		if gpg.IsGpgTunnelRunning(cmd.User, ctx, containerClient, log) {
