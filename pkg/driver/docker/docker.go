@@ -5,8 +5,6 @@ import (
 	"fmt"
 	"io"
 	"os"
-	"path"
-	"path/filepath"
 	"runtime"
 	"strconv"
 	"strings"
@@ -304,7 +302,7 @@ func (d *dockerDriver) RunDockerDevContainer(
 	writer := d.Log.Writer(logrus.InfoLevel, false)
 	defer writer.Close()
 
-	err := d.Docker.RunWithDir(ctx, path.Dir(filepath.ToSlash(parsedConfig.Origin)), args, nil, writer, writer)
+	err := d.Docker.Run(ctx, args, nil, writer, writer)
 	if err != nil {
 		return err
 	}
