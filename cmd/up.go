@@ -184,6 +184,13 @@ func (cmd *UpCmd) Run(
 		return err
 	}
 
+	if cmd.GPGAgentForwarding {
+		err = performGpgForwarding(client, log)
+		if err != nil {
+			return err
+		}
+	}
+
 	// open ide
 	if cmd.OpenIDE {
 		ideConfig := client.WorkspaceConfig().IDE
@@ -773,6 +780,44 @@ func setupDotfiles(
 	}
 
 	log.Infof("Done setting up dotfiles into the devcontainer")
+
+	return nil
+}
+
+func performGpgForwarding(
+	client client2.BaseWorkspaceClient,
+	log log.Logger,
+) error {
+	log.Debug("gpg forwarding enabled, performing immediately")
+
+	execPath, err := os.Executable()
+	if err != nil {
+		return err
+	}
+
+	remoteUser, err := devssh.GetUser(client.Workspace())
+	if err != nil {
+		remoteUser = "root"
+	}
+
+	log.Info("forwarding gpg-agent")
+
+	// perform in background an ssh command forwarding the
+	// gpg agent, in order to have it immediately take effect
+	go exec.Command(
+		execPath,
+		"ssh",
+		"--gpg-agent-forwarding=true",
+		"--agent-forwarding=true",
+		"--start-services=true",
+		"--user",
+		remoteUser,
+		"--context",
+		client.Context(),
+		client.Workspace(),
+		"--log-output=raw",
+		"--command", "sleep infinity",
+	).Run()
 
 	return nil
 }
