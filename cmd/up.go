@@ -804,20 +804,26 @@ func performGpgForwarding(
 
 	// perform in background an ssh command forwarding the
 	// gpg agent, in order to have it immediately take effect
-	go exec.Command(
-		execPath,
-		"ssh",
-		"--gpg-agent-forwarding=true",
-		"--agent-forwarding=true",
-		"--start-services=true",
-		"--user",
-		remoteUser,
-		"--context",
-		client.Context(),
-		client.Workspace(),
-		"--log-output=raw",
-		"--command", "sleep infinity",
-	).Run()
+	go func() {
+		err = exec.Command(
+			execPath,
+			"ssh",
+			"--gpg-agent-forwarding=true",
+			"--agent-forwarding=true",
+			"--start-services=true",
+			"--user",
+			remoteUser,
+			"--context",
+			client.Context(),
+			client.Workspace(),
+			"--log-output=raw",
+			"--command", "sleep infinity",
+		).Run()
+
+		if err != nil {
+			log.Error("failure in forwarding gpg-agent")
+		}
+	}()
 
 	return nil
 }
