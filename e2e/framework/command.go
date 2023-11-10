@@ -275,3 +275,14 @@ func (f *Framework) DevPodSSHGpgTestKey(ctx context.Context, workspace string) e
 
 	return nil
 }
+
+func (f *Framework) DevpodPortTest(ctx context.Context, port string, workspace string) error {
+	// First run to trigger the first forwarding
+	_, _, err := f.ExecCommandCapture(ctx, []string{
+		"ssh",
+		"--forward-ports", port,
+		"--command",
+		"nc -nlp " + port, workspace,
+	})
+	return err
+}
