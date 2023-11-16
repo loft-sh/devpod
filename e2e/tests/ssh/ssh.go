@@ -1,9 +1,11 @@
 package ssh
 
 import (
+	"bufio"
 	"context"
 	"fmt"
 	"math/rand"
+	"net"
 	"os"
 	"os/exec"
 	"strconv"
@@ -109,18 +111,68 @@ var _ = DevPodDescribe("devpod ssh test suite", func() {
 		devpodSSHDeadline := time.Now().Add(20 * time.Second)
 		devpodSSHCtx, cancelSSH := context.WithDeadline(context.Background(), devpodSSHDeadline)
 		defer cancelSSH()
-		// start ssh with netcat server in background
+
+		fmt.Println("Starting pong service")
+		// start a ping/pong service on the port
+		cmd := exec.CommandContext(ctx, f.DevpodBinDir+"/"+f.DevpodBinName,
+			[]string{
+				"ssh", tempDir, "--command",
+				"sh -c \"while true; do echo PONG | nc -n -lk -p " + strconv.Itoa(port) + "; done\"",
+			}...,
+		)
+		err = cmd.Start()
+		framework.ExpectNoError(err)
+
+		fmt.Println("Forwarding port", port)
+		// start ssh with port forwarding in background
 		go func() {
 			_ = f.DevpodPortTest(devpodSSHCtx, strconv.Itoa(port), tempDir)
 		}()
 
-		// wait 5s just to be sure the netcat server has time to start
-		time.Sleep(time.Second * 5)
+		fmt.Println("Waiting for port", port, "to be open")
+		// wait for port to be open
+		retries := 5
+		out := ""
+		address := net.JoinHostPort("localhost", strconv.Itoa(port))
+		for retries > 0 {
+			fmt.Println("retries left", retries)
 
-		err = exec.Command("nc", "-zv", "localhost", strconv.Itoa(port)).Run()
-		if err == nil {
-			fmt.Println("forwarding successful")
+			// wait 3s between retries
+			time.Sleep(time.Second * 3)
+
+			conn, err := net.Dial("tcp", address)
+			if err != nil {
+				fmt.Println("port still closed")
+				retries = retries - 1
+			} else {
+				if conn != nil {
+					defer conn.Close()
+					fmt.Println("connecting to", port)
+
+					fmt.Println("sending PING")
+					_, err = conn.Write([]byte("PING"))
+					framework.ExpectNoError(err)
+
+					fmt.Println("waiting for response")
+					out, err = bufio.NewReader(conn).ReadString('\n')
+					if err != nil {
+						fmt.Println("invalid response")
+						retries = retries - 1
+					} else {
+						fmt.Println("received", out)
+
+						break
+					}
+				} else {
+					fmt.Println("invalid connection")
+					retries = retries - 1
+				}
+			}
 		}
-		framework.ExpectNoError(err)
+		framework.ExpectNotEqual(retries, 0)
+
+		fmt.Println("Verifying output match")
+		framework.ExpectEqual(out, "PONG\n")
+		fmt.Println("Success")
 	})
 })
