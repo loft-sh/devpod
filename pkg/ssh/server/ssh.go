@@ -173,6 +173,13 @@ func (s *Server) handler(sess ssh.Session) {
 	ptyReq, winCh, isPty := sess.Pty()
 	cmd := s.getCommand(sess, isPty)
 	if ssh.AgentRequested(sess) {
+		// on some systems (like containers) /tmp may not exists, this ensures
+		// that we have a compliant directory structure
+		err := os.MkdirAll("/tmp", 0o777)
+		if err != nil {
+			s.exitWithError(sess, perrors.Wrap(err, "creating /tmp dir"))
+			return
+		}
 		l, err := ssh.NewAgentListener()
 		if err != nil {
 			s.exitWithError(sess, perrors.Wrap(err, "start agent"))
