@@ -184,13 +184,6 @@ func (cmd *UpCmd) Run(
 		return err
 	}
 
-	if cmd.GPGAgentForwarding {
-		err = performGpgForwarding(client, log)
-		if err != nil {
-			return err
-		}
-	}
-
 	// open ide
 	if cmd.OpenIDE {
 		ideConfig := client.WorkspaceConfig().IDE
@@ -205,6 +198,7 @@ func (cmd *UpCmd) Run(
 			)
 		case string(config.IDEOpenVSCode):
 			return startVSCodeInBrowser(
+				cmd.GPGAgentForwarding,
 				ctx,
 				devPodConfig,
 				client,
@@ -233,6 +227,7 @@ func (cmd *UpCmd) Run(
 			return startFleet(ctx, client, log)
 		case string(config.IDEJupyterNotebook):
 			return startJupyterNotebookInBrowser(
+				cmd.GPGAgentForwarding,
 				ctx,
 				devPodConfig,
 				client,
@@ -410,6 +405,7 @@ func (cmd *UpCmd) devPodUpMachine(
 }
 
 func startJupyterNotebookInBrowser(
+	forwardGpg bool,
 	ctx context.Context,
 	devPodConfig *config.Config,
 	client client2.BaseWorkspaceClient,
@@ -417,6 +413,13 @@ func startJupyterNotebookInBrowser(
 	ideOptions map[string]config.OptionValue,
 	logger log.Logger,
 ) error {
+	if forwardGpg {
+		err := performGpgForwarding(client, logger)
+		if err != nil {
+			return err
+		}
+	}
+
 	// determine port
 	jupyterAddress, jupyterPort, err := parseAddressAndPort(
 		jupyter.Options.GetValue(ideOptions, jupyter.BindAddressOption),
@@ -492,6 +495,7 @@ func startFleet(ctx context.Context, client client2.BaseWorkspaceClient, logger 
 }
 
 func startVSCodeInBrowser(
+	forwardGpg bool,
 	ctx context.Context,
 	devPodConfig *config.Config,
 	client client2.BaseWorkspaceClient,
@@ -499,6 +503,13 @@ func startVSCodeInBrowser(
 	ideOptions map[string]config.OptionValue,
 	logger log.Logger,
 ) error {
+	if forwardGpg {
+		err := performGpgForwarding(client, logger)
+		if err != nil {
+			return err
+		}
+	}
+
 	// determine port
 	vscodeAddress, vscodePort, err := parseAddressAndPort(
 		openvscode.Options.GetValue(ideOptions, openvscode.BindAddressOption),
