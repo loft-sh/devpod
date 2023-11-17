@@ -25,7 +25,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       fail-fast: true
-      max-parallel: 8
+      max-parallel: 16
       matrix:
         label: ["build", "ide", "integration", "machine", "machineprovider", "provider", "proxyprovider", "ssh", "up", "up-docker", "up-podman", "up-docker-compose"]
 
