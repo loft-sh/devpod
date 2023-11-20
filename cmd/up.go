@@ -198,6 +198,7 @@ func (cmd *UpCmd) Run(
 			)
 		case string(config.IDEOpenVSCode):
 			return startVSCodeInBrowser(
+				cmd.GPGAgentForwarding,
 				ctx,
 				devPodConfig,
 				client,
@@ -226,6 +227,7 @@ func (cmd *UpCmd) Run(
 			return startFleet(ctx, client, log)
 		case string(config.IDEJupyterNotebook):
 			return startJupyterNotebookInBrowser(
+				cmd.GPGAgentForwarding,
 				ctx,
 				devPodConfig,
 				client,
@@ -403,6 +405,7 @@ func (cmd *UpCmd) devPodUpMachine(
 }
 
 func startJupyterNotebookInBrowser(
+	forwardGpg bool,
 	ctx context.Context,
 	devPodConfig *config.Config,
 	client client2.BaseWorkspaceClient,
@@ -410,6 +413,13 @@ func startJupyterNotebookInBrowser(
 	ideOptions map[string]config.OptionValue,
 	logger log.Logger,
 ) error {
+	if forwardGpg {
+		err := performGpgForwarding(client, logger)
+		if err != nil {
+			return err
+		}
+	}
+
 	// determine port
 	jupyterAddress, jupyterPort, err := parseAddressAndPort(
 		jupyter.Options.GetValue(ideOptions, jupyter.BindAddressOption),
@@ -485,6 +495,7 @@ func startFleet(ctx context.Context, client client2.BaseWorkspaceClient, logger 
 }
 
 func startVSCodeInBrowser(
+	forwardGpg bool,
 	ctx context.Context,
 	devPodConfig *config.Config,
 	client client2.BaseWorkspaceClient,
@@ -492,6 +503,13 @@ func startVSCodeInBrowser(
 	ideOptions map[string]config.OptionValue,
 	logger log.Logger,
 ) error {
+	if forwardGpg {
+		err := performGpgForwarding(client, logger)
+		if err != nil {
+			return err
+		}
+	}
+
 	// determine port
 	vscodeAddress, vscodePort, err := parseAddressAndPort(
 		openvscode.Options.GetValue(ideOptions, openvscode.BindAddressOption),
@@ -773,6 +791,50 @@ func setupDotfiles(
 	}
 
 	log.Infof("Done setting up dotfiles into the devcontainer")
+
+	return nil
+}
+
+func performGpgForwarding(
+	client client2.BaseWorkspaceClient,
+	log log.Logger,
+) error {
+	log.Debug("gpg forwarding enabled, performing immediately")
+
+	execPath, err := os.Executable()
+	if err != nil {
+		return err
+	}
+
+	remoteUser, err := devssh.GetUser(client.Workspace())
+	if err != nil {
+		remoteUser = "root"
+	}
+
+	log.Info("forwarding gpg-agent")
+
+	// perform in background an ssh command forwarding the
+	// gpg agent, in order to have it immediately take effect
+	go func() {
+		err = exec.Command(
+			execPath,
+			"ssh",
+			"--gpg-agent-forwarding=true",
+			"--agent-forwarding=true",
+			"--start-services=true",
+			"--user",
+			remoteUser,
+			"--context",
+			client.Context(),
+			client.Workspace(),
+			"--log-output=raw",
+			"--command", "sleep infinity",
+		).Run()
+
+		if err != nil {
+			log.Error("failure in forwarding gpg-agent")
+		}
+	}()
 
 	return nil
 }
