@@ -110,7 +110,7 @@ func (cmd *GetWorkspaceConfigCommand) Run(ctx context.Context, args []string) er
 }
 
 func findDevcontainerFiles(ctx context.Context, rawSource, tmpDirPath string, maxDepth int, log log.Logger) (*GetWorkspaceConfigCommandResult, error) {
-	result := &GetWorkspaceConfigCommandResult{}
+	result := &GetWorkspaceConfigCommandResult{ConfigPaths: []string{}}
 
 	// local path
 	isLocalPath, _ := file.IsLocalDir(rawSource)
