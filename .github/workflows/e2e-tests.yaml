@@ -23,6 +23,11 @@ env:
 jobs:
   test-e2e:
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: true
+      max-parallel: 16
+      matrix:
+        label: ["build", "ide", "integration", "machine", "machineprovider", "provider", "proxyprovider", "ssh", "up", "up-docker", "up-podman", "up-docker-compose"]
 
     steps:
     - name: Checkout repo
@@ -56,4 +61,4 @@ jobs:
     - name: E2E test
       working-directory: ./e2e
       run: |
-        sudo KUBECONFIG=/home/runner/.kube/config go test -v -ginkgo.v -timeout 3600s
+        sudo KUBECONFIG=/home/runner/.kube/config go test -v -ginkgo.v -timeout 3600s --ginkgo.label-filter=${{ matrix.label }}
