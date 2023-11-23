@@ -6,7 +6,6 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
-	"time"
 
 	"github.com/loft-sh/devpod/e2e/framework"
 	"github.com/loft-sh/devpod/pkg/client"
@@ -81,7 +80,7 @@ var _ = DevPodDescribe("devpod proxy provider test suite", func() {
 			// delete workspace
 			err = f.DevPodWorkspaceDelete(ctx, tempDir)
 			framework.ExpectNoError(err)
-		}, ginkgo.SpecTimeout(120*time.Second))
+		}, ginkgo.SpecTimeout(framework.GetTiemout()*2))
 
 		ginkgo.It("create & stop workspace via proxy provider", func(ctx context.Context) {
 			f := framework.NewDefaultFramework(initialDir + "/bin")
@@ -128,7 +127,7 @@ var _ = DevPodDescribe("devpod proxy provider test suite", func() {
 			// delete workspace
 			err = f.DevPodWorkspaceDelete(ctx, tempDir)
 			framework.ExpectNoError(err)
-		}, ginkgo.SpecTimeout(120*time.Second))
+		}, ginkgo.SpecTimeout(framework.GetTiemout()*2))
 
 		ginkgo.It("recreate workspace", func(ctx context.Context) {
 			f := framework.NewDefaultFramework(initialDir + "/bin")
@@ -176,7 +175,7 @@ var _ = DevPodDescribe("devpod proxy provider test suite", func() {
 			// delete workspace
 			err = f.DevPodWorkspaceDelete(ctx, tempDir)
 			framework.ExpectNoError(err)
-		}, ginkgo.SpecTimeout(120*time.Second))
+		}, ginkgo.SpecTimeout(framework.GetTiemout()*2))
 
 		ginkgo.It("devcontainer path workspace", func(ctx context.Context) {
 			f := framework.NewDefaultFramework(initialDir + "/bin")
@@ -210,6 +209,6 @@ var _ = DevPodDescribe("devpod proxy provider test suite", func() {
 			// delete workspace
 			err = f.DevPodWorkspaceDelete(ctx, tempDir)
 			framework.ExpectNoError(err)
-		}, ginkgo.SpecTimeout(120*time.Second))
+		}, ginkgo.SpecTimeout(framework.GetTiemout()*2))
 	})
 })

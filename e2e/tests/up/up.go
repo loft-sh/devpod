@@ -8,7 +8,6 @@ import (
 	"os/exec"
 	"path/filepath"
 	"strings"
-	"time"
 
 	"github.com/loft-sh/devpod/e2e/framework"
 	"github.com/loft-sh/devpod/pkg/devcontainer/config"
@@ -46,7 +45,7 @@ var _ = DevPodDescribe("devpod up test suite", func() {
 			ginkgo.DeferCleanup(f.DevPodWorkspaceDelete, context.Background(), name)
 
 			// Wait for devpod workspace to come online (deadline: 30s)
-			err = f.DevPodUp(ctx, "github.com/microsoft/vscode-remote-try-python")
+			err = f.DevPodUp(ctx, "https://github.com/microsoft/vscode-remote-try-python.git")
 			framework.ExpectNoError(err)
 
 			// check env var
@@ -263,7 +262,7 @@ var _ = DevPodDescribe("devpod up test suite", func() {
 				framework.ExpectNoError(verifyLogStream(strings.NewReader(stdout)))
 				framework.ExpectNoError(verifyLogStream(strings.NewReader(stderr)))
 				framework.ExpectNoError(findMessage(strings.NewReader(stdout), "exec: \"abc\": executable file not found in $PATH"))
-			}, ginkgo.SpecTimeout(60*time.Second))
+			}, ginkgo.SpecTimeout(framework.GetTiemout()))
 		})
 
 		ginkgo.Context("cleanup up on failure", func() {
@@ -282,7 +281,7 @@ var _ = DevPodDescribe("devpod up test suite", func() {
 				out, err := f.DevPodList(ctx)
 				framework.ExpectNoError(err)
 				framework.ExpectEqual(out, initialList)
-			}, ginkgo.SpecTimeout(60*time.Second))
+			}, ginkgo.SpecTimeout(framework.GetTiemout()))
 			ginkgo.It("ensure workspace cleanup when not a git or folder", func(ctx context.Context) {
 				f := framework.NewDefaultFramework(initialDir + "/bin")
 				_ = f.DevPodProviderAdd(ctx, "docker")
@@ -298,7 +297,7 @@ var _ = DevPodDescribe("devpod up test suite", func() {
 				out, err := f.DevPodList(ctx)
 				framework.ExpectNoError(err)
 				framework.ExpectEqual(out, initialList)
-			}, ginkgo.SpecTimeout(60*time.Second))
+			}, ginkgo.SpecTimeout(framework.GetTiemout()))
 		})
 	})
 })

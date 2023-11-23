@@ -20,6 +20,7 @@ env:
   GO111MODULE: on
   GOFLAGS: -mod=vendor
 
+# windows blocklist: "up-podman", "integration", "machineprovider", "up"
 jobs:
   test-e2e:
     runs-on: ubuntu-latest

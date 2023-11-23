@@ -7,6 +7,7 @@ import (
 	"io"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"strings"
 )
 
@@ -14,7 +15,7 @@ import (
 func (f *Framework) ExecCommandOutput(ctx context.Context, args []string) (string, error) {
 	var execOut bytes.Buffer
 
-	cmd := exec.CommandContext(ctx, f.DevpodBinDir+"/"+f.DevpodBinName, args...)
+	cmd := exec.CommandContext(ctx, filepath.Join(f.DevpodBinDir, f.DevpodBinName), args...)
 	cmd.Stdout = io.MultiWriter(os.Stdout, &execOut)
 	cmd.Stderr = os.Stderr
 
@@ -27,7 +28,7 @@ func (f *Framework) ExecCommandOutput(ctx context.Context, args []string) (strin
 
 // ExecCommandStdout executes the command string with the devpod test binary
 func (f *Framework) ExecCommandStdout(ctx context.Context, args []string) error {
-	cmd := exec.CommandContext(ctx, f.DevpodBinDir+"/"+f.DevpodBinName, args...)
+	cmd := exec.CommandContext(ctx, filepath.Join(f.DevpodBinDir, f.DevpodBinName), args...)
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
 	if err := cmd.Run(); err != nil {
@@ -41,7 +42,7 @@ func (f *Framework) ExecCommandStdout(ctx context.Context, args []string) error 
 func (f *Framework) ExecCommand(ctx context.Context, captureStdOut, searchForString bool, searchString string, args []string) error {
 	var execOut bytes.Buffer
 
-	cmd := exec.CommandContext(ctx, f.DevpodBinDir+"/"+f.DevpodBinName, args...)
+	cmd := exec.CommandContext(ctx, filepath.Join(f.DevpodBinDir, f.DevpodBinName), args...)
 	cmd.Stdout = io.MultiWriter(os.Stdout, &execOut)
 	cmd.Stderr = os.Stderr
 
@@ -65,7 +66,7 @@ func (f *Framework) ExecCommandCapture(ctx context.Context, args []string) (stri
 	var execOut bytes.Buffer
 	var execErr bytes.Buffer
 
-	cmd := exec.CommandContext(ctx, f.DevpodBinDir+"/"+f.DevpodBinName, args...)
+	cmd := exec.CommandContext(ctx, filepath.Join(f.DevpodBinDir, f.DevpodBinName), args...)
 	cmd.Stdout = io.MultiWriter(os.Stdout, &execOut)
 	cmd.Stderr = io.MultiWriter(os.Stderr, &execErr)
 

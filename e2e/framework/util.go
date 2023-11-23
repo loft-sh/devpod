@@ -1,11 +1,23 @@
 package framework
 
 import (
+	"fmt"
 	"os"
 	"path/filepath"
+	"runtime"
+	"strings"
+	"time"
 
 	"github.com/otiai10/copy"
 )
+
+func GetTiemout() time.Duration {
+	if runtime.GOOS == "windows" {
+		return 300 * time.Second
+	}
+
+	return 60 * time.Second
+}
 
 func CreateTempDir() (string, error) {
 	// Create temporary directory
@@ -78,8 +90,15 @@ func CopyToTempDir(relativePath string) (string, error) {
 
 func CleanupTempDir(initialDir, tempDir string) {
 	err := os.RemoveAll(tempDir)
-	ExpectNoError(err)
+	if err != nil {
+		fmt.Println("WARN:", err)
+	}
 
 	err = os.Chdir(initialDir)
 	ExpectNoError(err)
+}
+
+func CleanString(input string) string {
+	input = strings.ReplaceAll(input, "\\", "")
+	return strings.ReplaceAll(input, "/", "")
 }
