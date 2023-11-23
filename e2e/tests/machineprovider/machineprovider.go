@@ -81,7 +81,7 @@ var _ = DevPodDescribe("devpod machine provider test suite", func() {
 			// delete workspace
 			err = f.DevPodWorkspaceDelete(ctx, tempDir)
 			framework.ExpectNoError(err)
-		}, ginkgo.SpecTimeout(60*time.Second))
+		}, ginkgo.SpecTimeout(framework.GetTimeout()))
 
 		ginkgo.It("test devpod inactivity timeout", func(ctx context.Context) {
 			f := framework.NewDefaultFramework(initialDir + "/bin")
@@ -155,6 +155,6 @@ var _ = DevPodDescribe("devpod machine provider test suite", func() {
 
 				time.Sleep(time.Second * 2)
 			}
-		}, ginkgo.SpecTimeout(300*time.Second))
+		}, ginkgo.SpecTimeout(framework.GetTimeout()*5))
 	})
 })

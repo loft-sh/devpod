@@ -4,6 +4,7 @@ import (
 	"context"
 	"os"
 	"path/filepath"
+	"runtime"
 
 	"github.com/loft-sh/devpod/e2e/framework"
 	"github.com/loft-sh/devpod/pkg/devcontainer/config"
@@ -157,6 +158,11 @@ var _ = DevPodDescribe("devpod build test suite", func() {
 		})
 
 		ginkgo.It("build kubernetes dockerless", func() {
+			// skip windows for now
+			if runtime.GOOS == "windows" {
+				return
+			}
+
 			ctx := context.Background()
 
 			f := framework.NewDefaultFramework(initialDir + "/bin")

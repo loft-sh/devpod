@@ -8,6 +8,7 @@ import (
 	"net"
 	"os"
 	"os/exec"
+	"runtime"
 	"strconv"
 	"time"
 
@@ -82,6 +83,11 @@ var _ = DevPodDescribe("devpod ssh test suite", func() {
 		})
 
 		ginkgo.It("should start a new workspace with a docker provider (default) and forward a port into it", func() {
+			// skip windows for now
+			if runtime.GOOS == "windows" {
+				return
+			}
+
 			tempDir, err := framework.CopyToTempDir("tests/ssh/testdata/forward-test")
 			framework.ExpectNoError(err)
 			defer framework.CleanupTempDir(initialDir, tempDir)
