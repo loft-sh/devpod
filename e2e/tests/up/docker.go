@@ -50,7 +50,7 @@ var _ = DevPodDescribe("devpod up test suite", func() {
 				// Wait for devpod workspace to come online (deadline: 30s)
 				err = f.DevPodUp(ctx, tempDir)
 				framework.ExpectNoError(err)
-			}, ginkgo.SpecTimeout(framework.GetTiemout()))
+			}, ginkgo.SpecTimeout(framework.GetTimeout()))
 			ginkgo.It("should start a new workspace and substitute devcontainer.json variables", func(ctx context.Context) {
 				tempDir, err := framework.CopyToTempDir("tests/up/testdata/docker-variables")
 				framework.ExpectNoError(err)
@@ -105,7 +105,7 @@ var _ = DevPodDescribe("devpod up test suite", func() {
 				containerWorkspaceFolderBasename, _, err := f.ExecCommandCapture(ctx, []string{"ssh", "--command", "cat $HOME/container-workspace-folder-basename.out", projectName})
 				framework.ExpectNoError(err)
 				gomega.Expect(containerWorkspaceFolderBasename).To(gomega.Equal(filepath.Base(tempDir)))
-			}, ginkgo.SpecTimeout(framework.GetTiemout()))
+			}, ginkgo.SpecTimeout(framework.GetTimeout()))
 
 			ginkgo.It("should start a new workspace with mounts", func(ctx context.Context) {
 				tempDir, err := framework.CopyToTempDir("tests/up/testdata/docker-mounts")
@@ -139,7 +139,7 @@ var _ = DevPodDescribe("devpod up test suite", func() {
 				bar, _, err := f.ExecCommandCapture(ctx, []string{"ssh", "--command", "cat $HOME/mnt2/bar.txt", projectName})
 				framework.ExpectNoError(err)
 				gomega.Expect(bar).To(gomega.Equal("FOO"))
-			}, ginkgo.SpecTimeout(framework.GetTiemout()))
+			}, ginkgo.SpecTimeout(framework.GetTimeout()))
 
 			ginkgo.It("should start a new workspace with multistage build", func(ctx context.Context) {
 				tempDir, err := framework.CopyToTempDir("tests/up/testdata/docker-with-multi-stage-build")
@@ -156,7 +156,7 @@ var _ = DevPodDescribe("devpod up test suite", func() {
 				// Wait for devpod workspace to come online (deadline: 30s)
 				err = f.DevPodUp(ctx, tempDir, "--debug")
 				framework.ExpectNoError(err)
-			}, ginkgo.SpecTimeout(framework.GetTiemout()*3))
+			}, ginkgo.SpecTimeout(framework.GetTimeout()*3))
 
 			ginkgo.Context("should start a new workspace with features", func() {
 				ginkgo.It("ensure dependencies installed via features are accessible in lifecycle hooks", func(ctx context.Context) {
@@ -174,7 +174,7 @@ var _ = DevPodDescribe("devpod up test suite", func() {
 					// Wait for devpod workspace to come online (deadline: 30s)
 					err = f.DevPodUp(ctx, tempDir, "--debug")
 					framework.ExpectNoError(err)
-				}, ginkgo.SpecTimeout(framework.GetTiemout()))
+				}, ginkgo.SpecTimeout(framework.GetTimeout()))
 			})
 			ginkgo.It("should start a new workspace with dotfiles - no install script", func(ctx context.Context) {
 				tempDir, err := framework.CopyToTempDir("tests/up/testdata/docker")
@@ -203,7 +203,7 @@ var _ = DevPodDescribe("devpod up test suite", func() {
 /home/vscode/.file3
 `
 				framework.ExpectEqual(out, expectedOutput, "should match")
-			}, ginkgo.SpecTimeout(framework.GetTiemout()))
+			}, ginkgo.SpecTimeout(framework.GetTimeout()))
 			ginkgo.It("should start a new workspace with dotfiles - install script", func(ctx context.Context) {
 				tempDir, err := framework.CopyToTempDir("tests/up/testdata/docker")
 				framework.ExpectNoError(err)
@@ -229,7 +229,7 @@ var _ = DevPodDescribe("devpod up test suite", func() {
 				expectedOutput := "/tmp/worked\n"
 
 				framework.ExpectEqual(out, expectedOutput, "should match")
-			}, ginkgo.SpecTimeout(framework.GetTiemout()))
+			}, ginkgo.SpecTimeout(framework.GetTimeout()))
 
 			ginkgo.It("should start a new workspace with custom image", func(ctx context.Context) {
 				tempDir, err := framework.CopyToTempDir("tests/up/testdata/docker")
@@ -258,7 +258,7 @@ var _ = DevPodDescribe("devpod up test suite", func() {
 
 				framework.ExpectEqual(out, expectedOutput, "should match")
 				framework.ExpectNotEqual(out, unexpectedOutput, "should NOT match")
-			}, ginkgo.SpecTimeout(framework.GetTiemout()))
+			}, ginkgo.SpecTimeout(framework.GetTimeout()))
 			ginkgo.It("should start a new workspace with custom image and skip building", func(ctx context.Context) {
 				tempDir, err := framework.CopyToTempDir("tests/up/testdata/docker-with-multi-stage-build")
 				framework.ExpectNoError(err)
@@ -286,7 +286,7 @@ var _ = DevPodDescribe("devpod up test suite", func() {
 
 				framework.ExpectEqual(out, expectedOutput, "should match")
 				framework.ExpectNotEqual(out, unexpectedOutput, "should NOT match")
-			}, ginkgo.SpecTimeout(framework.GetTiemout()))
+			}, ginkgo.SpecTimeout(framework.GetTimeout()))
 
 			ginkgo.Context("should start a workspace from a Dockerfile build", func() {
 				ginkgo.It("should rebuild image in case of changes in files in build context", func(ctx context.Context) {
@@ -340,7 +340,7 @@ var _ = DevPodDescribe("devpod up test suite", func() {
 					image2 := container.Config.LegacyImage
 
 					gomega.Expect(image2).ShouldNot(gomega.Equal(image1), "images should be different")
-				}, ginkgo.SpecTimeout(framework.GetTiemout()))
+				}, ginkgo.SpecTimeout(framework.GetTimeout()))
 				ginkgo.It("should not rebuild image for changes in files mentioned in .dockerignore", func(ctx context.Context) {
 					tempDir, err := framework.CopyToTempDir("tests/up/testdata/docker-dockerfile-buildcontext")
 					framework.ExpectNoError(err)
@@ -392,7 +392,7 @@ var _ = DevPodDescribe("devpod up test suite", func() {
 					image2 := container.Config.LegacyImage
 
 					gomega.Expect(image2).Should(gomega.Equal(image1), "image should be same")
-				}, ginkgo.SpecTimeout(framework.GetTiemout()))
+				}, ginkgo.SpecTimeout(framework.GetTimeout()))
 			})
 			ginkgo.It("should use http headers to download feature", func(ctx context.Context) {
 				server := ghttp.NewServer()
@@ -442,7 +442,7 @@ var _ = DevPodDescribe("devpod up test suite", func() {
 				err = f.DevPodUp(ctx, tempDir)
 				framework.ExpectNoError(err)
 				server.Close()
-			}, ginkgo.SpecTimeout(framework.GetTiemout()))
+			}, ginkgo.SpecTimeout(framework.GetTimeout()))
 		})
 	})
 })

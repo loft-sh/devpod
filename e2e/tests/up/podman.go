@@ -41,7 +41,7 @@ var _ = DevPodDescribe("devpod up test suite", func() {
 
 					err = exec.Command(initialDir+"/bin/podman-rootful", "ps").Run()
 					framework.ExpectNoError(err)
-				}, ginkgo.SpecTimeout(framework.GetTiemout()))
+				}, ginkgo.SpecTimeout(framework.GetTimeout()))
 
 				ginkgo.It("should start a new workspace with existing image", func(ctx context.Context) {
 					tempDir, err := framework.CopyToTempDir("tests/up/testdata/docker")
@@ -62,7 +62,7 @@ var _ = DevPodDescribe("devpod up test suite", func() {
 					// Wait for devpod workspace to come online (deadline: 30s)
 					err = f.DevPodUp(ctx, tempDir)
 					framework.ExpectNoError(err)
-				}, ginkgo.SpecTimeout(framework.GetTiemout()))
+				}, ginkgo.SpecTimeout(framework.GetTimeout()))
 			})
 			ginkgo.Context("with rootless podman", ginkgo.Ordered, func() {
 				ginkgo.It("should start a new workspace with existing image", func(ctx context.Context) {
@@ -83,7 +83,7 @@ var _ = DevPodDescribe("devpod up test suite", func() {
 					// Wait for devpod workspace to come online (deadline: 30s)
 					err = f.DevPodUp(ctx, tempDir)
 					framework.ExpectNoError(err)
-				}, ginkgo.SpecTimeout(framework.GetTiemout()))
+				}, ginkgo.SpecTimeout(framework.GetTimeout()))
 			})
 		})
 	})

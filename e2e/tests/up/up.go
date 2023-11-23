@@ -262,7 +262,7 @@ var _ = DevPodDescribe("devpod up test suite", func() {
 				framework.ExpectNoError(verifyLogStream(strings.NewReader(stdout)))
 				framework.ExpectNoError(verifyLogStream(strings.NewReader(stderr)))
 				framework.ExpectNoError(findMessage(strings.NewReader(stdout), "exec: \"abc\": executable file not found in $PATH"))
-			}, ginkgo.SpecTimeout(framework.GetTiemout()))
+			}, ginkgo.SpecTimeout(framework.GetTimeout()))
 		})
 
 		ginkgo.Context("cleanup up on failure", func() {
@@ -281,7 +281,7 @@ var _ = DevPodDescribe("devpod up test suite", func() {
 				out, err := f.DevPodList(ctx)
 				framework.ExpectNoError(err)
 				framework.ExpectEqual(out, initialList)
-			}, ginkgo.SpecTimeout(framework.GetTiemout()))
+			}, ginkgo.SpecTimeout(framework.GetTimeout()))
 			ginkgo.It("ensure workspace cleanup when not a git or folder", func(ctx context.Context) {
 				f := framework.NewDefaultFramework(initialDir + "/bin")
 				_ = f.DevPodProviderAdd(ctx, "docker")
@@ -297,7 +297,7 @@ var _ = DevPodDescribe("devpod up test suite", func() {
 				out, err := f.DevPodList(ctx)
 				framework.ExpectNoError(err)
 				framework.ExpectEqual(out, initialList)
-			}, ginkgo.SpecTimeout(framework.GetTiemout()))
+			}, ginkgo.SpecTimeout(framework.GetTimeout()))
 		})
 	})
 })

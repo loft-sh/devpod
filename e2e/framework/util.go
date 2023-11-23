@@ -11,7 +11,7 @@ import (
 	"github.com/otiai10/copy"
 )
 
-func GetTiemout() time.Duration {
+func GetTimeout() time.Duration {
 	if runtime.GOOS == "windows" {
 		return 300 * time.Second
 	}

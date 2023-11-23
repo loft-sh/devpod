@@ -72,7 +72,7 @@ var _ = DevPodDescribe("devpod up test suite", func() {
 				gomega.Expect(mount.Source).To(gomega.Equal(tempDir))
 				gomega.Expect(mount.Destination).To(gomega.Equal("/workspaces"))
 				gomega.Expect(mount.RW).To(gomega.BeTrue())
-			}, ginkgo.SpecTimeout(framework.GetTiemout()))
+			}, ginkgo.SpecTimeout(framework.GetTimeout()))
 
 			ginkgo.It("should start a new workspace with sub-folder configuration", func(ctx context.Context) {
 				tempDir, err := framework.CopyToTempDir("tests/up/testdata/docker-compose-subfolder")
@@ -110,7 +110,7 @@ var _ = DevPodDescribe("devpod up test suite", func() {
 				gomega.Expect(mount.Source).To(gomega.Equal(tempDir))
 				gomega.Expect(mount.Destination).To(gomega.Equal("/workspaces"))
 				gomega.Expect(mount.RW).To(gomega.BeTrue())
-			}, ginkgo.SpecTimeout(framework.GetTiemout()))
+			}, ginkgo.SpecTimeout(framework.GetTimeout()))
 
 			ginkgo.It("should start a new workspace with multiple services", func(ctx context.Context) {
 				tempDir, err := framework.CopyToTempDir("tests/up/testdata/docker-compose-multiple-services")
@@ -144,7 +144,7 @@ var _ = DevPodDescribe("devpod up test suite", func() {
 				})
 				framework.ExpectNoError(err)
 				gomega.Expect(dbIDs).To(gomega.HaveLen(1), "db container to be created")
-			}, ginkgo.SpecTimeout(framework.GetTiemout()))
+			}, ginkgo.SpecTimeout(framework.GetTimeout()))
 
 			ginkgo.It("should start a new workspace with specific services", func(ctx context.Context) {
 				tempDir, err := framework.CopyToTempDir("tests/up/testdata/docker-compose-run-services")
@@ -178,7 +178,7 @@ var _ = DevPodDescribe("devpod up test suite", func() {
 				})
 				framework.ExpectNoError(err)
 				gomega.Expect(dbIDs).To(gomega.BeEmpty(), "db container not to be created")
-			}, ginkgo.SpecTimeout(framework.GetTiemout()))
+			}, ginkgo.SpecTimeout(framework.GetTimeout()))
 
 			ginkgo.It("should start a new workspace with .devcontainer docker-compose overrides", func(ctx context.Context) {
 				tempDir, err := framework.CopyToTempDir("tests/up/testdata/docker-compose-overrides")
@@ -217,7 +217,7 @@ var _ = DevPodDescribe("devpod up test suite", func() {
 				gomega.Expect(mount.Source).To(gomega.Equal(tempDir))
 				gomega.Expect(mount.Destination).To(gomega.Equal("/workspaces"))
 				gomega.Expect(mount.RW).To(gomega.BeTrue())
-			}, ginkgo.SpecTimeout(framework.GetTiemout()))
+			}, ginkgo.SpecTimeout(framework.GetTimeout()))
 
 			ginkgo.It("should start a new workspace with container environment variables set", func(ctx context.Context) {
 				tempDir, err := framework.CopyToTempDir("tests/up/testdata/docker-compose-container-env")
@@ -247,7 +247,7 @@ var _ = DevPodDescribe("devpod up test suite", func() {
 
 				err = f.ExecCommand(ctx, true, true, "BAR", []string{"ssh", "--command", "echo $FOO", projectName})
 				framework.ExpectNoError(err)
-			}, ginkgo.SpecTimeout(framework.GetTiemout()))
+			}, ginkgo.SpecTimeout(framework.GetTimeout()))
 
 			ginkgo.It("should start a new workspace with container user", func(ctx context.Context) {
 				tempDir, err := framework.CopyToTempDir("tests/up/testdata/docker-compose-container-user")
@@ -277,7 +277,7 @@ var _ = DevPodDescribe("devpod up test suite", func() {
 
 				err = f.ExecCommand(ctx, true, true, "root", []string{"ssh", "--command", "ps u -p 1", projectName})
 				framework.ExpectNoError(err)
-			}, ginkgo.SpecTimeout(framework.GetTiemout()))
+			}, ginkgo.SpecTimeout(framework.GetTimeout()))
 
 			ginkgo.It("should start a new workspace with privileged", func(ctx context.Context) {
 				tempDir, err := framework.CopyToTempDir("tests/up/testdata/docker-compose-privileged")
@@ -310,7 +310,7 @@ var _ = DevPodDescribe("devpod up test suite", func() {
 
 				containerDetail := containerDetails[0]
 				gomega.Expect(containerDetail.HostConfig.Privileged).To(gomega.BeTrue(), "container run with privileged true")
-			}, ginkgo.SpecTimeout(framework.GetTiemout()))
+			}, ginkgo.SpecTimeout(framework.GetTimeout()))
 
 			ginkgo.It("should start a new workspace with capAdd", func(ctx context.Context) {
 				tempDir, err := framework.CopyToTempDir("tests/up/testdata/docker-compose-capadd")
@@ -344,7 +344,7 @@ var _ = DevPodDescribe("devpod up test suite", func() {
 				containerDetail := containerDetails[0]
 				gomega.Expect(containerDetail.HostConfig.CapAdd).To(gomega.ContainElement("SYS_PTRACE"), "image capabilities are not duplicated")
 				gomega.Expect(containerDetail.HostConfig.CapAdd).To(gomega.ContainElement("NET_ADMIN"), "devcontainer configuration can add capabilities")
-			}, ginkgo.SpecTimeout(framework.GetTiemout()))
+			}, ginkgo.SpecTimeout(framework.GetTimeout()))
 
 			ginkgo.It("should start a new workspace with securityOpt", func(ctx context.Context) {
 				tempDir, err := framework.CopyToTempDir("tests/up/testdata/docker-compose-securityOpt")
@@ -378,7 +378,7 @@ var _ = DevPodDescribe("devpod up test suite", func() {
 				containerDetail := containerDetails[0]
 				gomega.Expect(containerDetail.HostConfig.SecurityOpt).To(gomega.ContainElement("seccomp=unconfined"), "securityOpts contain seccomp=unconfined")
 				gomega.Expect(containerDetail.HostConfig.SecurityOpt).To(gomega.ContainElement("apparmor=unconfined"), "securityOpts contain apparmor=unconfined")
-			}, ginkgo.SpecTimeout(framework.GetTiemout()))
+			}, ginkgo.SpecTimeout(framework.GetTimeout()))
 
 			ginkgo.It("should start a new workspace with override command", func(ctx context.Context) {
 				tempDir, err := framework.CopyToTempDir("tests/up/testdata/docker-compose-override-command")
@@ -412,7 +412,7 @@ var _ = DevPodDescribe("devpod up test suite", func() {
 				containerDetail := containerDetails[0]
 				gomega.Expect(containerDetail.Config.Entrypoint).NotTo(gomega.ContainElement("bash"), "overrides container entry point")
 				gomega.Expect(containerDetail.Config.Cmd).To(gomega.BeEmpty(), "overrides container command")
-			}, ginkgo.SpecTimeout(framework.GetTiemout()))
+			}, ginkgo.SpecTimeout(framework.GetTimeout()))
 
 			ginkgo.It("should start a new workspace with remote env", func(ctx context.Context) {
 				tempDir, err := framework.CopyToTempDir("tests/up/testdata/docker-compose-remote-env")
@@ -445,7 +445,7 @@ var _ = DevPodDescribe("devpod up test suite", func() {
 
 				err = f.ExecCommand(ctx, true, true, "BAR", []string{"ssh", "--command", "cat $HOME/remote-env.out", projectName})
 				framework.ExpectNoError(err)
-			}, ginkgo.SpecTimeout(framework.GetTiemout()))
+			}, ginkgo.SpecTimeout(framework.GetTimeout()))
 
 			ginkgo.It("should start a new workspace with remote user", func(ctx context.Context) {
 				tempDir, err := framework.CopyToTempDir("tests/up/testdata/docker-compose-remote-user")
@@ -475,7 +475,7 @@ var _ = DevPodDescribe("devpod up test suite", func() {
 
 				err = f.ExecCommand(ctx, true, true, "root", []string{"ssh", "--command", "cat $HOME/remote-user.out", projectName})
 				framework.ExpectNoError(err)
-			}, ginkgo.SpecTimeout(framework.GetTiemout()))
+			}, ginkgo.SpecTimeout(framework.GetTimeout()))
 
 			ginkgo.It("should start a new workspace and substitute devcontainer.json variables", func(ctx context.Context) {
 				tempDir, err := framework.CopyToTempDir("tests/up/testdata/docker-compose-variables")
@@ -530,7 +530,7 @@ var _ = DevPodDescribe("devpod up test suite", func() {
 				containerWorkspaceFolderBasename, _, err := f.ExecCommandCapture(ctx, []string{"ssh", "--command", "cat $HOME/container-workspace-folder-basename.out", projectName})
 				framework.ExpectNoError(err)
 				gomega.Expect(containerWorkspaceFolderBasename).To(gomega.Equal("workspaces"))
-			}, ginkgo.SpecTimeout(framework.GetTiemout()))
+			}, ginkgo.SpecTimeout(framework.GetTimeout()))
 
 			ginkgo.It("should start a new workspace with mounts", func(ctx context.Context) {
 				tempDir, err := framework.CopyToTempDir("tests/up/testdata/docker-compose-mounts")
@@ -572,7 +572,7 @@ var _ = DevPodDescribe("devpod up test suite", func() {
 				bar, _, err := f.ExecCommandCapture(ctx, []string{"ssh", "--command", "cat $HOME/mnt2/bar.txt", projectName})
 				framework.ExpectNoError(err)
 				gomega.Expect(bar).To(gomega.Equal("FOO"))
-			}, ginkgo.SpecTimeout(framework.GetTiemout()))
+			}, ginkgo.SpecTimeout(framework.GetTimeout()))
 
 			ginkgo.It("should start a new workspace with multistage build", func(ctx context.Context) {
 				tempDir, err := framework.CopyToTempDir("tests/up/testdata/docker-compose-with-multi-stage-build")
@@ -589,7 +589,7 @@ var _ = DevPodDescribe("devpod up test suite", func() {
 				// Wait for devpod workspace to come online (deadline: 30s)
 				err = f.DevPodUp(ctx, tempDir, "--debug")
 				framework.ExpectNoError(err)
-			}, ginkgo.SpecTimeout(framework.GetTiemout()*3))
+			}, ginkgo.SpecTimeout(framework.GetTimeout()*3))
 
 			ginkgo.It("should start a new workspace with host:port forwardPorts", func(ctx context.Context) {
 				tempDir, err := framework.CopyToTempDir("tests/up/testdata/docker-compose-forward-ports")
@@ -659,7 +659,7 @@ var _ = DevPodDescribe("devpod up test suite", func() {
 						gomega.MatchError(context.Canceled),
 					))
 				}
-			}, ginkgo.SpecTimeout(framework.GetTiemout()))
+			}, ginkgo.SpecTimeout(framework.GetTimeout()))
 
 			ginkgo.It("should start a new workspace with features", func(ctx context.Context) {
 				tempDir, err := framework.CopyToTempDir("tests/up/testdata/docker-compose-features")
@@ -690,7 +690,7 @@ var _ = DevPodDescribe("devpod up test suite", func() {
 				vclusterVersionOutput, _, err := f.ExecCommandCapture(ctx, []string{"ssh", "--command", "vcluster --version", projectName})
 				framework.ExpectNoError(err)
 				gomega.Expect(vclusterVersionOutput).To(gomega.ContainSubstring("vcluster version 0.15.2"))
-			}, ginkgo.SpecTimeout(framework.GetTiemout()))
+			}, ginkgo.SpecTimeout(framework.GetTimeout()))
 
 			ginkgo.It("should start a new workspace with env-file", func(ctx context.Context) {
 				tempDir, err := framework.CopyToTempDir("tests/up/testdata/docker-compose-env-file")
@@ -717,7 +717,7 @@ var _ = DevPodDescribe("devpod up test suite", func() {
 				framework.ExpectNoError(err)
 				gomega.Expect(ids).To(gomega.HaveLen(1), "1 compose container to be created")
 				gomega.Expect(devPodUpOutput).NotTo(gomega.ContainSubstring("Defaulting to a blank string."))
-			}, ginkgo.SpecTimeout(framework.GetTiemout()))
+			}, ginkgo.SpecTimeout(framework.GetTimeout()))
 
 			ginkgo.Context("with lifecycle commands", func() {
 				ginkgo.It("should start a new workspace and execute array based lifecycle commands", func(ctx context.Context) {
@@ -769,7 +769,7 @@ var _ = DevPodDescribe("devpod up test suite", func() {
 					postAttachCommand, _, err := f.ExecCommandCapture(ctx, []string{"ssh", "--command", "cat $HOME/post-attach-command.out", projectName})
 					framework.ExpectNoError(err)
 					gomega.Expect(postAttachCommand).To(gomega.Equal("postAttachCommand"))
-				}, ginkgo.SpecTimeout(framework.GetTiemout()))
+				}, ginkgo.SpecTimeout(framework.GetTimeout()))
 
 				//ginkgo.FIt("should start a new workspace and execute object based lifecycle commands", func(ctx context.Context) {
 				//	tempDir, err := framework.CopyToTempDir("tests/up/testdata/docker-compose-lifecycle-object")
@@ -818,7 +818,7 @@ var _ = DevPodDescribe("devpod up test suite", func() {
 				//	postAttachCommand, _, err := f.ExecCommandCapture(ctx, []string{"ssh", "--command", "cat $HOME/post-attach-command.out", projectName})
 				//	framework.ExpectNoError(err)
 				//	gomega.Expect(postAttachCommand).To(gomega.Equal("postAttachCommand"))
-				//}, ginkgo.SpecTimeout(framework.GetTiemout()))
+				//}, ginkgo.SpecTimeout(framework.GetTimeout()))
 			})
 
 			ginkgo.Context("with --recreate", func() {
