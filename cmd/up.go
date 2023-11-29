@@ -252,19 +252,29 @@ func (cmd *UpCmd) devPodUp(
 	}
 	defer client.Unlock()
 
-	// check if regular workspace client
-	workspaceClient, ok := client.(client2.WorkspaceClient)
-	if ok {
-		return cmd.devPodUpMachine(ctx, workspaceClient, log)
+	// get result
+	var result *config2.Result
+
+	// check what client we have
+	if workspaceClient, ok := client.(client2.WorkspaceClient); ok {
+		result, err = cmd.devPodUpMachine(ctx, workspaceClient, log)
+		if err != nil {
+			return nil, err
+		}
+	} else if proxyClient, ok := client.(client2.ProxyClient); ok {
+		result, err = cmd.devPodUpProxy(ctx, proxyClient, log)
+		if err != nil {
+			return nil, err
+		}
 	}
 
-	// check if proxy client
-	proxyClient, ok := client.(client2.ProxyClient)
-	if ok {
-		return cmd.devPodUpProxy(ctx, proxyClient, log)
+	// save result to file
+	err = provider2.SaveWorkspaceResult(client.WorkspaceConfig(), result)
+	if err != nil {
+		return nil, fmt.Errorf("save workspace result: %w", err)
 	}
 
-	return nil, nil
+	return result, nil
 }
 
 func (cmd *UpCmd) devPodUpProxy(
@@ -401,7 +411,18 @@ func (cmd *UpCmd) devPodUpMachine(
 		)
 	}
 
-	return sshtunnel.ExecuteCommand(ctx, client, agentInjectFunc, sshTunnelCmd, agentCommand, cmd.Proxy, false, false, nil, log)
+	return sshtunnel.ExecuteCommand(
+		ctx,
+		client,
+		agentInjectFunc,
+		sshTunnelCmd,
+		agentCommand,
+		cmd.Proxy,
+		false,
+		false,
+		nil,
+		log,
+	)
 }
 
 func startJupyterNotebookInBrowser(

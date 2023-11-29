@@ -21,7 +21,18 @@ import (
 type AgentInjectFunc func(context.Context, string, *os.File, *os.File, io.WriteCloser) error
 
 // ExecuteCommand runs the command in an SSH Tunnel and returns the result.
-func ExecuteCommand(ctx context.Context, client client2.WorkspaceClient, agentInject AgentInjectFunc, sshCommand, command string, proxy, setupContainer, allowDockerCredentials bool, result *config2.Result, log log.Logger) (*config2.Result, error) {
+func ExecuteCommand(
+	ctx context.Context,
+	client client2.WorkspaceClient,
+	agentInject AgentInjectFunc,
+	sshCommand,
+	command string,
+	proxy,
+	setupContainer,
+	allowDockerCredentials bool,
+	mounts []*config2.Mount,
+	log log.Logger,
+) (*config2.Result, error) {
 	// create pipes
 	sshTunnelStdoutReader, sshTunnelStdoutWriter, err := os.Pipe()
 	if err != nil {
@@ -115,6 +126,7 @@ func ExecuteCommand(ctx context.Context, client client2.WorkspaceClient, agentIn
 	}()
 
 	// create container etc.
+	var result *config2.Result
 	if proxy {
 		// create client on stdin & stdout
 		tunnelClient, err := tunnelserver.NewTunnelClient(os.Stdin, os.Stdout, true)
@@ -140,7 +152,7 @@ func ExecuteCommand(ctx context.Context, client client2.WorkspaceClient, agentIn
 			gRPCConnStdoutReader,
 			gRPCConnStdinWriter,
 			allowDockerCredentials,
-			config2.GetMounts(result),
+			mounts,
 			log,
 		)
 		if err != nil {

@@ -25,7 +25,7 @@ import (
 type Runner interface {
 	Up(ctx context.Context, options UpOptions) (*config.Result, error)
 
-	Build(ctx context.Context, options config.BuildOptions) (string, error)
+	Build(ctx context.Context, options provider2.BuildOptions) (string, error)
 
 	Find(ctx context.Context) (*config.ContainerDetails, error)
 
@@ -75,7 +75,6 @@ type runner struct {
 	AgentDownloadURL string
 
 	LocalWorkspaceFolder string
-	SubstitutionContext  *config.SubstitutionContext
 
 	ID string
 
@@ -93,12 +92,12 @@ func (r *runner) Up(ctx context.Context, options UpOptions) (*config.Result, err
 	// download workspace source before recreating container
 	_, isDockerDriver := r.Driver.(driver.DockerDriver)
 	if options.Recreate && !isDockerDriver {
-		// TODO: for drivers other than docker and recreate is true, we need to download the complete context here first
+		// TODO: implement this
 		return nil, fmt.Errorf("rebuilding the workspace is currently not supported for non-docker drivers")
 	}
 
 	// prepare config
-	substitutedConfig, err := r.prepare(options.CLIOptions)
+	substitutedConfig, substitutionContext, err := r.prepare(options.CLIOptions)
 	if err != nil {
 		return nil, err
 	}
@@ -121,13 +120,14 @@ func (r *runner) Up(ctx context.Context, options UpOptions) (*config.Result, err
 		result, err = r.runSingleContainer(
 			ctx,
 			substitutedConfig,
+			substitutionContext,
 			options,
 		)
 		if err != nil {
 			return nil, err
 		}
 	} else if isDockerComposeConfig(substitutedConfig.Config) {
-		result, err = r.runDockerCompose(ctx, substitutedConfig, options)
+		result, err = r.runDockerCompose(ctx, substitutedConfig, substitutionContext, options)
 		if err != nil {
 			return nil, err
 		}
@@ -144,7 +144,7 @@ func (r *runner) Up(ctx context.Context, options UpOptions) (*config.Result, err
 		}
 
 		substitutedConfig.Config.ImageContainer = language.MapConfig[lang].ImageContainer
-		result, err = r.runSingleContainer(ctx, substitutedConfig, options)
+		result, err = r.runSingleContainer(ctx, substitutedConfig, substitutionContext, options)
 		if err != nil {
 			return nil, err
 		}
@@ -156,27 +156,40 @@ func (r *runner) Up(ctx context.Context, options UpOptions) (*config.Result, err
 
 func (r *runner) prepare(
 	options provider2.CLIOptions,
-) (*config.SubstitutedConfig, error) {
-	rawParsedConfig, err := config.ParseDevContainerJSON(
-		r.LocalWorkspaceFolder,
-		r.WorkspaceConfig.Workspace.DevContainerPath,
-	)
-
-	// We want to fail only in case of real errors, non-existing devcontainer.jon
-	// will be gracefully handled by the auto-detection mechanism
-	if err != nil && !os.IsNotExist(err) {
-		return nil, errors.Wrap(err, "parsing devcontainer.json")
-	} else if rawParsedConfig == nil {
-		r.Log.Infof("Couldn't find a devcontainer.json")
-		r.Log.Infof("Try detecting project programming language...")
-		defaultConfig := language.DefaultConfig(r.LocalWorkspaceFolder, r.Log)
-		defaultConfig.Origin = path.Join(filepath.ToSlash(r.LocalWorkspaceFolder), ".devcontainer.json")
-		err = config.SaveDevContainerJSON(defaultConfig)
-		if err != nil {
-			return nil, errors.Wrap(err, "write default devcontainer.json")
+) (*config.SubstitutedConfig, *config.SubstitutionContext, error) {
+	var rawParsedConfig *config.DevContainerConfig
+	if r.WorkspaceConfig.Workspace.DevContainerConfig != nil {
+		rawParsedConfig = config.CloneDevContainerConfig(r.WorkspaceConfig.Workspace.DevContainerConfig)
+		if r.WorkspaceConfig.Workspace.DevContainerPath != "" {
+			rawParsedConfig.Origin = path.Join(filepath.ToSlash(r.LocalWorkspaceFolder), r.WorkspaceConfig.Workspace.DevContainerPath)
+		} else {
+			rawParsedConfig.Origin = path.Join(filepath.ToSlash(r.LocalWorkspaceFolder), ".devcontainer.devpod.json")
 		}
+	} else {
+		var err error
 
-		rawParsedConfig = defaultConfig
+		// parse the devcontainer json
+		rawParsedConfig, err = config.ParseDevContainerJSON(
+			r.LocalWorkspaceFolder,
+			r.WorkspaceConfig.Workspace.DevContainerPath,
+		)
+
+		// We want to fail only in case of real errors, non-existing devcontainer.jon
+		// will be gracefully handled by the auto-detection mechanism
+		if err != nil && !os.IsNotExist(err) {
+			return nil, nil, errors.Wrap(err, "parsing devcontainer.json")
+		} else if rawParsedConfig == nil {
+			r.Log.Infof("Couldn't find a devcontainer.json")
+			r.Log.Infof("Try detecting project programming language...")
+			defaultConfig := language.DefaultConfig(r.LocalWorkspaceFolder, r.Log)
+			defaultConfig.Origin = path.Join(filepath.ToSlash(r.LocalWorkspaceFolder), ".devcontainer.json")
+			err = config.SaveDevContainerJSON(defaultConfig)
+			if err != nil {
+				return nil, nil, errors.Wrap(err, "write default devcontainer.json")
+			}
+
+			rawParsedConfig = defaultConfig
+		}
 	}
 	configFile := rawParsedConfig.Origin
 
@@ -186,7 +199,7 @@ func (r *runner) prepare(
 		r.WorkspaceConfig.Workspace.ID,
 		rawParsedConfig,
 	)
-	r.SubstitutionContext = &config.SubstitutionContext{
+	substitutionContext := &config.SubstitutionContext{
 		DevContainerID:           r.ID,
 		LocalWorkspaceFolder:     r.LocalWorkspaceFolder,
 		ContainerWorkspaceFolder: containerWorkspaceFolder,
@@ -197,15 +210,15 @@ func (r *runner) prepare(
 
 	// substitute & load
 	parsedConfig := &config.DevContainerConfig{}
-	err = config.Substitute(r.SubstitutionContext, rawParsedConfig, parsedConfig)
+	err := config.Substitute(substitutionContext, rawParsedConfig, parsedConfig)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 	if parsedConfig.WorkspaceFolder != "" {
-		r.SubstitutionContext.ContainerWorkspaceFolder = parsedConfig.WorkspaceFolder
+		substitutionContext.ContainerWorkspaceFolder = parsedConfig.WorkspaceFolder
 	}
 	if parsedConfig.WorkspaceMount != "" {
-		r.SubstitutionContext.WorkspaceMount = parsedConfig.WorkspaceMount
+		substitutionContext.WorkspaceMount = parsedConfig.WorkspaceMount
 	}
 
 	if options.DevContainerImage != "" {
@@ -219,7 +232,7 @@ func (r *runner) prepare(
 	return &config.SubstitutedConfig{
 		Config: parsedConfig,
 		Raw:    rawParsedConfig,
-	}, nil
+	}, substitutionContext, nil
 }
 
 func (r *runner) Command(

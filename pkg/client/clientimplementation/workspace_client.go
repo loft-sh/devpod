@@ -18,6 +18,7 @@ import (
 	"github.com/loft-sh/devpod/pkg/client"
 	"github.com/loft-sh/devpod/pkg/compress"
 	"github.com/loft-sh/devpod/pkg/config"
+	config2 "github.com/loft-sh/devpod/pkg/devcontainer/config"
 	"github.com/loft-sh/devpod/pkg/options"
 	"github.com/loft-sh/devpod/pkg/provider"
 	"github.com/loft-sh/devpod/pkg/shell"
@@ -155,13 +156,29 @@ func (s *workspaceClient) AgentInfo(cliOptions provider.CLIOptions) (string, *pr
 }
 
 func (s *workspaceClient) agentInfo(cliOptions provider.CLIOptions) (string, *provider.AgentWorkspaceInfo, error) {
+	// try to load last devcontainer.json
+	var lastDevContainerConfig *config2.DevContainerConfigWithPath
+	var workspaceOrigin string
+	if s.workspace != nil {
+		result, err := provider.LoadWorkspaceResult(s.workspace.Context, s.workspace.ID)
+		if err != nil {
+			s.log.Debugf("Error loading workspace result: %v", err)
+		} else if result != nil {
+			lastDevContainerConfig = result.DevContainerConfigWithPath
+		}
+
+		workspaceOrigin = s.workspace.Origin
+	}
+
 	// build struct
 	agentInfo := &provider.AgentWorkspaceInfo{
-		Workspace:  s.workspace,
-		Machine:    s.machine,
-		CLIOptions: cliOptions,
-		Agent:      options.ResolveAgentConfig(s.devPodConfig, s.config, s.workspace, s.machine),
-		Options:    s.devPodConfig.ProviderOptions(s.Provider()),
+		WorkspaceOrigin:        workspaceOrigin,
+		Workspace:              s.workspace,
+		Machine:                s.machine,
+		LastDevContainerConfig: lastDevContainerConfig,
+		CLIOptions:             cliOptions,
+		Agent:                  options.ResolveAgentConfig(s.devPodConfig, s.config, s.workspace, s.machine),
+		Options:                s.devPodConfig.ProviderOptions(s.Provider()),
 	}
 
 	// we don't send any provider options if proxy because these could contain

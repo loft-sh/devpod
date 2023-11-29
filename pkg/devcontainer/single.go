@@ -15,7 +15,7 @@ import (
 
 var dockerlessImage = "ghcr.io/loft-sh/dockerless:0.1.4"
 
-func (r *runner) runSingleContainer(ctx context.Context, parsedConfig *config.SubstitutedConfig, options UpOptions) (*config.Result, error) {
+func (r *runner) runSingleContainer(ctx context.Context, parsedConfig *config.SubstitutedConfig, substitutionContext *config.SubstitutionContext, options UpOptions) (*config.Result, error) {
 	containerDetails, err := r.Driver.FindDevContainer(ctx, r.ID)
 	if err != nil {
 		return nil, fmt.Errorf("find dev container: %w", err)
@@ -34,7 +34,7 @@ func (r *runner) runSingleContainer(ctx context.Context, parsedConfig *config.Su
 			}
 		}
 
-		imageMetadataConfig, err := metadata.GetImageMetadataFromContainer(containerDetails, r.SubstitutionContext, r.Log)
+		imageMetadataConfig, err := metadata.GetImageMetadataFromContainer(containerDetails, substitutionContext, r.Log)
 		if err != nil {
 			return nil, err
 		}
@@ -45,7 +45,7 @@ func (r *runner) runSingleContainer(ctx context.Context, parsedConfig *config.Su
 		}
 	} else {
 		// we need to build the container
-		buildInfo, err := r.build(ctx, parsedConfig, config.BuildOptions{
+		buildInfo, err := r.build(ctx, parsedConfig, substitutionContext, provider2.BuildOptions{
 			CLIOptions: provider2.CLIOptions{
 				PrebuildRepositories: options.PrebuildRepositories,
 				ForceDockerless:      options.ForceDockerless,
@@ -71,7 +71,7 @@ func (r *runner) runSingleContainer(ctx context.Context, parsedConfig *config.Su
 		}
 
 		// run dev container
-		err = r.runContainer(ctx, parsedConfig, mergedConfig, buildInfo)
+		err = r.runContainer(ctx, parsedConfig, substitutionContext, mergedConfig, buildInfo)
 		if err != nil {
 			return nil, errors.Wrap(err, "start dev container")
 		}
@@ -86,12 +86,13 @@ func (r *runner) runSingleContainer(ctx context.Context, parsedConfig *config.Su
 	}
 
 	// setup container
-	return r.setupContainer(ctx, containerDetails, mergedConfig)
+	return r.setupContainer(ctx, parsedConfig.Raw, containerDetails, mergedConfig, substitutionContext)
 }
 
 func (r *runner) runContainer(
 	ctx context.Context,
 	parsedConfig *config.SubstitutedConfig,
+	substitutionContext *config.SubstitutionContext,
 	mergedConfig *config.MergedDevContainerConfig,
 	buildInfo *config.BuildInfo,
 ) error {
@@ -100,13 +101,13 @@ func (r *runner) runContainer(
 	// build run options for dockerless mode
 	var runOptions *driver.RunOptions
 	if buildInfo.Dockerless != nil {
-		runOptions, err = r.getDockerlessRunOptions(mergedConfig, buildInfo)
+		runOptions, err = r.getDockerlessRunOptions(mergedConfig, substitutionContext, buildInfo)
 		if err != nil {
 			return fmt.Errorf("build dockerless run options: %w", err)
 		}
 	} else {
 		// build run options
-		runOptions, err = r.getRunOptions(mergedConfig, buildInfo)
+		runOptions, err = r.getRunOptions(mergedConfig, substitutionContext, buildInfo)
 		if err != nil {
 			return fmt.Errorf("build run options: %w", err)
 		}
@@ -132,10 +133,11 @@ func (r *runner) runContainer(
 
 func (r *runner) getDockerlessRunOptions(
 	mergedConfig *config.MergedDevContainerConfig,
+	substitutionContext *config.SubstitutionContext,
 	buildInfo *config.BuildInfo,
 ) (*driver.RunOptions, error) {
 	// parse workspace mount
-	workspaceMountParsed := config.ParseMount(r.SubstitutionContext.WorkspaceMount)
+	workspaceMountParsed := config.ParseMount(substitutionContext.WorkspaceMount)
 
 	// add metadata as label here
 	marshalled, err := json.Marshal(buildInfo.ImageMetadata.Raw)
@@ -202,10 +204,11 @@ func (r *runner) getDockerlessRunOptions(
 
 func (r *runner) getRunOptions(
 	mergedConfig *config.MergedDevContainerConfig,
+	substitutionContext *config.SubstitutionContext,
 	buildInfo *config.BuildInfo,
 ) (*driver.RunOptions, error) {
 	// parse workspace mount
-	workspaceMountParsed := config.ParseMount(r.SubstitutionContext.WorkspaceMount)
+	workspaceMountParsed := config.ParseMount(substitutionContext.WorkspaceMount)
 
 	// add metadata as label here
 	marshalled, err := json.Marshal(buildInfo.ImageMetadata.Raw)

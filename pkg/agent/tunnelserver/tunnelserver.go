@@ -6,7 +6,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"path/filepath"
+	"os"
 	"strings"
 
 	"github.com/loft-sh/devpod/pkg/agent/tunnel"
@@ -238,13 +238,20 @@ func (t *tunnelServer) StreamGitClone(message *tunnel.Empty, stream tunnel.Tunne
 	}
 
 	// clone here
-	gitCloneDir := filepath.Join(t.workspace.Folder, "source")
-	cloneArgs := []string{"clone", t.workspace.Source.GitRepository, gitCloneDir}
+	tempDir, err := os.MkdirTemp("", "devpod-git-clone-*")
+	if err != nil {
+		return fmt.Errorf("create temp dir: %w", err)
+	}
+	defer os.RemoveAll(tempDir)
+
+	// clone repository
+	cloneArgs := []string{"clone", t.workspace.Source.GitRepository, tempDir}
 	if t.workspace.Source.GitBranch != "" {
 		cloneArgs = append(cloneArgs, "--branch", t.workspace.Source.GitBranch)
 	}
 
-	err := git.CommandContext(context.Background(), cloneArgs...).Run()
+	// run command
+	err = git.CommandContext(context.Background(), cloneArgs...).Run()
 	if err != nil {
 		return err
 	}
@@ -255,7 +262,7 @@ func (t *tunnelServer) StreamGitClone(message *tunnel.Empty, stream tunnel.Tunne
 		// git fetch origin pull/996/head:PR996
 		fetchArgs := []string{"fetch", "origin", t.workspace.Source.GitPRReference + ":" + prBranch}
 		fetchCmd := git.CommandContext(context.Background(), fetchArgs...)
-		fetchCmd.Dir = gitCloneDir
+		fetchCmd.Dir = tempDir
 		err = fetchCmd.Run()
 		if err != nil {
 			return err
@@ -264,7 +271,7 @@ func (t *tunnelServer) StreamGitClone(message *tunnel.Empty, stream tunnel.Tunne
 		// git switch PR996
 		switchArgs := []string{"switch", prBranch}
 		switchCmd := git.CommandContext(context.Background(), switchArgs...)
-		switchCmd.Dir = gitCloneDir
+		switchCmd.Dir = tempDir
 		err = switchCmd.Run()
 		if err != nil {
 			return err
@@ -274,7 +281,7 @@ func (t *tunnelServer) StreamGitClone(message *tunnel.Empty, stream tunnel.Tunne
 		// git reset --hard $COMMIT_SHA
 		resetArgs := []string{"reset", "--hard", t.workspace.Source.GitCommit}
 		resetCmd := git.CommandContext(context.Background(), resetArgs...)
-		resetCmd.Dir = gitCloneDir
+		resetCmd.Dir = tempDir
 
 		err = resetCmd.Run()
 		if err != nil {
@@ -283,7 +290,7 @@ func (t *tunnelServer) StreamGitClone(message *tunnel.Empty, stream tunnel.Tunne
 	}
 
 	buf := bufio.NewWriterSize(NewStreamWriter(stream, t.log), 10*1024)
-	err = extract.WriteTar(buf, gitCloneDir, false)
+	err = extract.WriteTar(buf, tempDir, false)
 	if err != nil {
 		return err
 	}

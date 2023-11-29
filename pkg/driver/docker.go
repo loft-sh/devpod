@@ -7,6 +7,7 @@ import (
 	config2 "github.com/loft-sh/devpod/pkg/config"
 	"github.com/loft-sh/devpod/pkg/devcontainer/config"
 	"github.com/loft-sh/devpod/pkg/devcontainer/feature"
+	"github.com/loft-sh/devpod/pkg/provider"
 )
 
 type DockerDriver interface {
@@ -35,7 +36,7 @@ type DockerDriver interface {
 		dockerfilePath,
 		dockerfileContent string,
 		localWorkspaceFolder string,
-		options config.BuildOptions,
+		options provider.BuildOptions,
 	) (*config.BuildInfo, error)
 
 	// PushDevContainer pushes the given image to a registry

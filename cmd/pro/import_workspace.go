@@ -99,15 +99,9 @@ func (cmd *ImportCmd) Run(ctx context.Context, args []string) error {
 }
 
 func (cmd *ImportCmd) writeWorkspaceDefinition(devPodConfig *config.Config, provider *provider2.ProviderConfig) error {
-	workspaceFolder, err := provider2.GetWorkspaceDir(devPodConfig.DefaultContext, cmd.WorkspaceId)
-	if err != nil {
-		return errors.Wrap(err, "get workspace dir")
-	}
-
 	workspaceObj := &provider2.Workspace{
-		ID:     cmd.WorkspaceId,
-		UID:    cmd.WorkspaceUid,
-		Folder: workspaceFolder,
+		ID:  cmd.WorkspaceId,
+		UID: cmd.WorkspaceUid,
 		Provider: provider2.WorkspaceProviderConfig{
 			Name:    provider.Name,
 			Options: map[string]config.OptionValue{},
@@ -122,7 +116,7 @@ func (cmd *ImportCmd) writeWorkspaceDefinition(devPodConfig *config.Config, prov
 		}
 	}
 
-	err = provider2.SaveWorkspaceConfig(workspaceObj)
+	err := provider2.SaveWorkspaceConfig(workspaceObj)
 	if err != nil {
 		return err
 	}

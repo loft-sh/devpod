@@ -4,6 +4,7 @@ import (
 	"strings"
 
 	"github.com/loft-sh/devpod/pkg/config"
+	devcontainerconfig "github.com/loft-sh/devpod/pkg/devcontainer/config"
 	"github.com/loft-sh/devpod/pkg/git"
 	"github.com/loft-sh/devpod/pkg/types"
 )
@@ -20,9 +21,6 @@ type Workspace struct {
 
 	// UID is used to identify this specific workspace
 	UID string `json:"uid,omitempty"`
-
-	// Folder is the local folder where workspace related contents will be stored
-	Folder string `json:"folder,omitempty"`
 
 	// Picture is the project social media image
 	Picture string `json:"picture,omitempty"`
@@ -44,6 +42,9 @@ type Workspace struct {
 
 	// DevContainerPath is the relative path where the devcontainer.json is located.
 	DevContainerPath string `json:"devContainerPath,omitempty"`
+
+	// DevContainerConfig holds the config for the devcontainer.json.
+	DevContainerConfig *devcontainerconfig.DevContainerConfig `json:"devContainerConfig,omitempty"`
 
 	// CreationTimestamp is the timestamp when this workspace was created
 	CreationTimestamp types.Time `json:"creationTimestamp,omitempty"`
@@ -72,9 +73,6 @@ type WorkspaceIDEConfig struct {
 type WorkspaceMachineConfig struct {
 	// ID is the machine ID to use for this workspace
 	ID string `json:"machineId,omitempty"`
-
-	// UID is the machine UID to use for this workspace
-	UID string `json:"machineUid,omitempty"`
 
 	// AutoDelete specifies if the machine should get destroyed when
 	// the workspace is destroyed
@@ -125,8 +123,15 @@ type ContainerWorkspaceInfo struct {
 }
 
 type AgentWorkspaceInfo struct {
+	// WorkspaceOrigin is the path where this workspace config originated from
+	WorkspaceOrigin string `json:"workspaceOrigin,omitempty"`
+
 	// Workspace holds the workspace info
 	Workspace *Workspace `json:"workspace,omitempty"`
+
+	// LastDevContainerConfig can be used as a fallback if the workspace was already started
+	// and we lost track of the devcontainer.json
+	LastDevContainerConfig *devcontainerconfig.DevContainerConfigWithPath `json:"lastDevContainerConfig,omitempty"`
 
 	// Machine holds the machine info
 	Machine *Machine `json:"machine,omitempty"`
@@ -171,6 +176,13 @@ type CLIOptions struct {
 	ForceBuild            bool `json:"forceBuild,omitempty"`
 	ForceDockerless       bool `json:"forceDockerless,omitempty"`
 	ForceInternalBuildKit bool `json:"forceInternalBuildKit,omitempty"`
+}
+
+type BuildOptions struct {
+	CLIOptions
+
+	Platform string
+	NoBuild  bool
 }
 
 func (w WorkspaceSource) String() string {

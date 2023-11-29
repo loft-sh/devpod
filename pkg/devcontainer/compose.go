@@ -45,7 +45,7 @@ func (r *runner) stopDockerCompose(ctx context.Context, projectName string) erro
 		return errors.Wrap(err, "find docker compose")
 	}
 
-	parsedConfig, err := r.prepare(r.WorkspaceConfig.CLIOptions)
+	parsedConfig, _, err := r.prepare(r.WorkspaceConfig.CLIOptions)
 	if err != nil {
 		return errors.Wrap(err, "get parsed config")
 	}
@@ -69,7 +69,7 @@ func (r *runner) deleteDockerCompose(ctx context.Context, projectName string) er
 		return errors.Wrap(err, "find docker compose")
 	}
 
-	parsedConfig, err := r.prepare(r.WorkspaceConfig.CLIOptions)
+	parsedConfig, _, err := r.prepare(r.WorkspaceConfig.CLIOptions)
 	if err != nil {
 		return errors.Wrap(err, "get parsed config")
 	}
@@ -110,7 +110,12 @@ func (r *runner) dockerComposeProjectFiles(parsedConfig *config.SubstitutedConfi
 	return composeFiles, envFiles, args, nil
 }
 
-func (r *runner) runDockerCompose(ctx context.Context, parsedConfig *config.SubstitutedConfig, options UpOptions) (*config.Result, error) {
+func (r *runner) runDockerCompose(
+	ctx context.Context,
+	parsedConfig *config.SubstitutedConfig,
+	substitutionContext *config.SubstitutionContext,
+	options UpOptions,
+) (*config.Result, error) {
 	composeHelper, err := r.composeHelper()
 	if err != nil {
 		return nil, errors.Wrap(err, "find docker compose")
@@ -137,7 +142,7 @@ func (r *runner) runDockerCompose(ctx context.Context, parsedConfig *config.Subs
 	// does the container already exist or is it not running?
 	if containerDetails == nil || containerDetails.State.Status != "running" || options.Recreate {
 		// Start container if not running
-		containerDetails, err = r.startContainer(ctx, parsedConfig, project, composeHelper, composeGlobalArgs, containerDetails, options)
+		containerDetails, err = r.startContainer(ctx, parsedConfig, substitutionContext, project, composeHelper, composeGlobalArgs, containerDetails, options)
 		if err != nil {
 			return nil, errors.Wrap(err, "start container")
 		} else if containerDetails == nil {
@@ -145,7 +150,7 @@ func (r *runner) runDockerCompose(ctx context.Context, parsedConfig *config.Subs
 		}
 	}
 
-	imageMetadataConfig, err := metadata.GetImageMetadataFromContainer(containerDetails, r.SubstitutionContext, r.Log)
+	imageMetadataConfig, err := metadata.GetImageMetadataFromContainer(containerDetails, substitutionContext, r.Log)
 	if err != nil {
 		return nil, errors.Wrap(err, "get image metadata from container")
 	}
@@ -156,7 +161,7 @@ func (r *runner) runDockerCompose(ctx context.Context, parsedConfig *config.Subs
 	}
 
 	// setup container
-	return r.setupContainer(ctx, containerDetails, mergedConfig)
+	return r.setupContainer(ctx, parsedConfig.Raw, containerDetails, mergedConfig, substitutionContext)
 }
 
 func (r *runner) getDockerComposeFilePaths(parsedConfig *config.SubstitutedConfig, envFiles []string) ([]string, error) {
@@ -214,6 +219,7 @@ func (r *runner) getEnvFiles() ([]string, error) {
 func (r *runner) startContainer(
 	ctx context.Context,
 	parsedConfig *config.SubstitutedConfig,
+	substitutionContext *config.SubstitutionContext,
 	project *composetypes.Project,
 	composeHelper *compose.ComposeHelper,
 	composeGlobalArgs []string,
@@ -265,7 +271,7 @@ func (r *runner) startContainer(
 	}
 
 	if container == nil || !didRestoreFromPersistedShare {
-		overrideBuildImageName, overrideComposeBuildFilePath, imageMetadata, metadataLabel, err := r.buildAndExtendDockerCompose(ctx, parsedConfig, project, composeHelper, &composeService, composeGlobalArgs)
+		overrideBuildImageName, overrideComposeBuildFilePath, imageMetadata, metadataLabel, err := r.buildAndExtendDockerCompose(ctx, parsedConfig, substitutionContext, project, composeHelper, &composeService, composeGlobalArgs)
 		if err != nil {
 			return nil, errors.Wrap(err, "build and extend docker-compose")
 		}
@@ -350,7 +356,15 @@ func (r *runner) startContainer(
 }
 
 // This extends the build information for docker compose containers
-func (r *runner) buildAndExtendDockerCompose(ctx context.Context, parsedConfig *config.SubstitutedConfig, project *composetypes.Project, composeHelper *compose.ComposeHelper, composeService *composetypes.ServiceConfig, globalArgs []string) (string, string, *config.ImageMetadataConfig, string, error) {
+func (r *runner) buildAndExtendDockerCompose(
+	ctx context.Context,
+	parsedConfig *config.SubstitutedConfig,
+	substitutionContext *config.SubstitutionContext,
+	project *composetypes.Project,
+	composeHelper *compose.ComposeHelper,
+	composeService *composetypes.ServiceConfig,
+	globalArgs []string,
+) (string, string, *config.ImageMetadataConfig, string, error) {
 	var dockerFilePath, dockerfileContents, dockerComposeFilePath string
 	var imageBuildInfo *config.ImageBuildInfo
 	var err error
@@ -386,18 +400,18 @@ func (r *runner) buildAndExtendDockerCompose(ctx context.Context, parsedConfig *
 				dockerfileContents = modifiedDockerfile
 			}
 		}
-		imageBuildInfo, err = r.getImageBuildInfoFromDockerfile(string(originalDockerfile), mappingToMap(composeService.Build.Args), originalTarget)
+		imageBuildInfo, err = r.getImageBuildInfoFromDockerfile(substitutionContext, string(originalDockerfile), mappingToMap(composeService.Build.Args), originalTarget)
 		if err != nil {
 			return "", "", nil, "", err
 		}
 	} else {
-		imageBuildInfo, err = r.getImageBuildInfoFromImage(ctx, composeService.Image)
+		imageBuildInfo, err = r.getImageBuildInfoFromImage(ctx, substitutionContext, composeService.Image)
 		if err != nil {
 			return "", "", nil, "", err
 		}
 	}
 
-	extendImageBuildInfo, err := feature.GetExtendedBuildInfo(r.SubstitutionContext, imageBuildInfo.Metadata, imageBuildInfo.User, buildTarget, parsedConfig, r.Log, false)
+	extendImageBuildInfo, err := feature.GetExtendedBuildInfo(substitutionContext, imageBuildInfo.Metadata, imageBuildInfo.User, buildTarget, parsedConfig, r.Log, false)
 	if err != nil {
 		return "", "", nil, "", err
 	}
@@ -464,7 +478,7 @@ func (r *runner) buildAndExtendDockerCompose(ctx context.Context, parsedConfig *
 		return buildImageName, "", nil, "", err
 	}
 
-	imageMetadata, err := metadata.GetDevContainerMetadata(r.SubstitutionContext, imageBuildInfo.Metadata, parsedConfig, extendImageBuildInfo.Features)
+	imageMetadata, err := metadata.GetDevContainerMetadata(substitutionContext, imageBuildInfo.Metadata, parsedConfig, extendImageBuildInfo.Features)
 	if err != nil {
 		return buildImageName, "", nil, "", err
 	}

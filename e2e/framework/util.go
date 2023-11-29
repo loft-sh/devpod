@@ -58,9 +58,9 @@ func CopyToTempDirWithoutChdir(relativePath string) (string, error) {
 	return dir, nil
 }
 
-func CopyToTempDir(relativePath string) (string, error) {
+func CopyToTempDirInDir(baseDir, relativePath string) (string, error) {
 	// Create temporary directory
-	dir, err := os.MkdirTemp("", "temp-*")
+	dir, err := os.MkdirTemp(baseDir, "temp-*")
 	if err != nil {
 		return "", err
 	}
@@ -86,6 +86,10 @@ func CopyToTempDir(relativePath string) (string, error) {
 	}
 
 	return dir, nil
+}
+
+func CopyToTempDir(relativePath string) (string, error) {
+	return CopyToTempDirInDir("", relativePath)
 }
 
 func CleanupTempDir(initialDir, tempDir string) {

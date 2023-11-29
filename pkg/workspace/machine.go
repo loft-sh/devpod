@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"path/filepath"
 
 	"github.com/loft-sh/devpod/pkg/client"
 	"github.com/loft-sh/devpod/pkg/client/clientimplementation"
@@ -85,7 +86,7 @@ func resolveMachine(devPodConfig *config.Config, args []string, log log.Logger) 
 	// create a new client
 	machineClient, err := clientimplementation.NewMachineClient(devPodConfig, defaultProvider.Config, machineObj, log)
 	if err != nil {
-		_ = os.RemoveAll(machineObj.Folder)
+		_ = os.RemoveAll(filepath.Dir(machineObj.Origin))
 		return nil, err
 	}
 

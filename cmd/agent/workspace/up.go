@@ -175,31 +175,16 @@ func (cmd *UpCmd) up(ctx context.Context, workspaceInfo *provider2.AgentWorkspac
 }
 
 func prepareWorkspace(ctx context.Context, workspaceInfo *provider2.AgentWorkspaceInfo, client tunnel.TunnelClient, helper string, log log.Logger) error {
-	// check if workspace content folder exists
-	_, err := os.Stat(workspaceInfo.ContentFolder)
-	if err == nil {
-		log.Debugf("Workspace Folder already exists")
+	// make sure content folder exists
+	err := InitContentFolder(workspaceInfo, log)
+	if err != nil {
+		return err
+	}
+
+	// check if we should init
+	if workspaceInfo.LastDevContainerConfig != nil {
+		log.Debugf("Workspace was already executed, skip downloading")
 		return nil
-	}
-
-	// make content dir
-	err = os.MkdirAll(workspaceInfo.ContentFolder, 0777)
-	if err != nil {
-		return errors.Wrap(err, "make workspace folder")
-	}
-
-	// download provider
-	binariesDir, err := agent.GetAgentBinariesDir(workspaceInfo.Agent.DataPath, workspaceInfo.Workspace.Context, workspaceInfo.Workspace.ID)
-	if err != nil {
-		_ = os.RemoveAll(workspaceInfo.ContentFolder)
-		return fmt.Errorf("error getting workspace %s binaries dir: %w", workspaceInfo.Workspace.ID, err)
-	}
-
-	// download binaries
-	_, err = binaries.DownloadBinaries(workspaceInfo.Agent.Binaries, binariesDir, log)
-	if err != nil {
-		_ = os.RemoveAll(workspaceInfo.ContentFolder)
-		return fmt.Errorf("error downloading workspace %s binaries: %w", workspaceInfo.Workspace.ID, err)
 	}
 
 	// check what type of workspace this is
@@ -222,6 +207,72 @@ func prepareWorkspace(ctx context.Context, workspaceInfo *provider2.AgentWorkspa
 	}
 
 	return fmt.Errorf("either workspace repository, image or local-folder is required")
+}
+
+func InitContentFolder(workspaceInfo *provider2.AgentWorkspaceInfo, log log.Logger) error {
+	// check if workspace content folder exists
+	_, err := os.Stat(workspaceInfo.ContentFolder)
+	if err == nil {
+		log.Debugf("Workspace Folder already exists %s", workspaceInfo.ContentFolder)
+		return nil
+	}
+
+	// make content dir
+	log.Debugf("Create content folder %s", workspaceInfo.ContentFolder)
+	err = os.MkdirAll(workspaceInfo.ContentFolder, 0777)
+	if err != nil {
+		return errors.Wrap(err, "make workspace folder")
+	}
+
+	// download provider
+	binariesDir, err := agent.GetAgentBinariesDir(workspaceInfo.Agent.DataPath, workspaceInfo.Workspace.Context, workspaceInfo.Workspace.ID)
+	if err != nil {
+		_ = os.RemoveAll(workspaceInfo.ContentFolder)
+		return fmt.Errorf("error getting workspace %s binaries dir: %w", workspaceInfo.Workspace.ID, err)
+	}
+
+	// download binaries
+	_, err = binaries.DownloadBinaries(workspaceInfo.Agent.Binaries, binariesDir, log)
+	if err != nil {
+		_ = os.RemoveAll(workspaceInfo.ContentFolder)
+		return fmt.Errorf("error downloading workspace %s binaries: %w", workspaceInfo.Workspace.ID, err)
+	}
+
+	// if workspace was already executed, we skip this part
+	if workspaceInfo.LastDevContainerConfig != nil {
+		// make sure the devcontainer.json exists
+		err = ensureLastDevContainerJson(workspaceInfo)
+		if err != nil {
+			log.Errorf("Ensure devcontainer.json: %v", err)
+		}
+	}
+
+	return nil
+}
+
+func ensureLastDevContainerJson(workspaceInfo *provider2.AgentWorkspaceInfo) error {
+	filePath := filepath.Join(workspaceInfo.ContentFolder, filepath.FromSlash(workspaceInfo.LastDevContainerConfig.Path))
+	_, err := os.Stat(filePath)
+	if os.IsNotExist(err) {
+		err = os.MkdirAll(filepath.Dir(filePath), 0755)
+		if err != nil {
+			return fmt.Errorf("create %s: %w", filepath.Dir(filePath), err)
+		}
+
+		raw, err := json.Marshal(workspaceInfo.LastDevContainerConfig.Config)
+		if err != nil {
+			return fmt.Errorf("marshal devcontainer.json: %w", err)
+		}
+
+		err = os.WriteFile(filePath, raw, 0666)
+		if err != nil {
+			return fmt.Errorf("write %s: %w", filePath, err)
+		}
+	} else if err != nil {
+		return fmt.Errorf("error stating %s: %w", filePath, err)
+	}
+
+	return nil
 }
 
 func configureCredentials(ctx context.Context, cancel context.CancelFunc, workspaceInfo *provider2.AgentWorkspaceInfo, client tunnel.TunnelClient, log log.Logger) (string, string, error) {
