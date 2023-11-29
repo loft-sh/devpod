@@ -10,16 +10,17 @@ import (
 	"github.com/loft-sh/devpod/pkg/driver"
 	"github.com/loft-sh/devpod/pkg/driver/docker"
 	"github.com/loft-sh/devpod/pkg/image"
+	"github.com/loft-sh/devpod/pkg/provider"
 	"github.com/pkg/errors"
 )
 
-func (r *runner) Build(ctx context.Context, options config.BuildOptions) (string, error) {
+func (r *runner) Build(ctx context.Context, options provider.BuildOptions) (string, error) {
 	dockerDriver, ok := r.Driver.(driver.DockerDriver)
 	if !ok {
 		return "", fmt.Errorf("building only supported with docker driver")
 	}
 
-	substitutedConfig, err := r.prepare(options.CLIOptions)
+	substitutedConfig, substitutionContext, err := r.prepare(options.CLIOptions)
 	if err != nil {
 		return "", err
 	}
@@ -37,7 +38,7 @@ func (r *runner) Build(ctx context.Context, options config.BuildOptions) (string
 	}()
 
 	// check if we need to build container
-	buildInfo, err := r.build(ctx, substitutedConfig, options)
+	buildInfo, err := r.build(ctx, substitutedConfig, substitutionContext, options)
 	if err != nil {
 		return "", errors.Wrap(err, "build image")
 	}

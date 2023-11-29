@@ -6,7 +6,6 @@ import (
 
 	"github.com/loft-sh/devpod/cmd/flags"
 	"github.com/loft-sh/devpod/pkg/agent"
-	"github.com/loft-sh/devpod/pkg/devcontainer/config"
 	provider2 "github.com/loft-sh/devpod/pkg/provider"
 	"github.com/loft-sh/log"
 	"github.com/pkg/errors"
@@ -81,7 +80,7 @@ func (cmd *BuildCmd) Run(ctx context.Context) error {
 	// build and push images
 	for _, platform := range platforms {
 		// build the image
-		imageName, err := runner.Build(ctx, config.BuildOptions{
+		imageName, err := runner.Build(ctx, provider2.BuildOptions{
 			CLIOptions: workspaceInfo.CLIOptions,
 
 			Platform: platform,

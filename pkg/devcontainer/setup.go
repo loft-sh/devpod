@@ -6,7 +6,9 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"path/filepath"
 	"runtime"
+	"strings"
 
 	"github.com/loft-sh/devpod/pkg/agent"
 	"github.com/loft-sh/devpod/pkg/compress"
@@ -20,8 +22,10 @@ import (
 
 func (r *runner) setupContainer(
 	ctx context.Context,
+	rawConfig *config.DevContainerConfig,
 	containerDetails *config.ContainerDetails,
 	mergedConfig *config.MergedDevContainerConfig,
+	substitutionContext *config.SubstitutionContext,
 ) (*config.Result, error) {
 	// inject agent
 	err := agent.InjectAgent(ctx, func(ctx context.Context, command string, stdin io.Reader, stdout io.Writer, stderr io.Writer) error {
@@ -35,8 +39,13 @@ func (r *runner) setupContainer(
 
 	// compress info
 	result := &config.Result{
+		DevContainerConfigWithPath: &config.DevContainerConfigWithPath{
+			Config: rawConfig,
+			Path:   getRelativeDevContainerJson(rawConfig.Origin, r.LocalWorkspaceFolder),
+		},
+
 		MergedConfig:        mergedConfig,
-		SubstitutionContext: r.SubstitutionContext,
+		SubstitutionContext: substitutionContext,
 		ContainerDetails:    containerDetails,
 	}
 	marshalled, err := json.Marshal(result)
@@ -89,5 +98,21 @@ func (r *runner) setupContainer(
 		return r.Driver.CommandDevContainer(cancelCtx, r.ID, "root", sshCmd, sshTunnelStdinReader, sshTunnelStdoutWriter, writer)
 	}
 
-	return sshtunnel.ExecuteCommand(ctx, nil, agentInjectFunc, sshTunnelCmd, setupCommand, false, true, r.WorkspaceConfig.Agent.InjectDockerCredentials != "false", result, r.Log)
+	return sshtunnel.ExecuteCommand(
+		ctx,
+		nil,
+		agentInjectFunc,
+		sshTunnelCmd,
+		setupCommand,
+		false,
+		true,
+		r.WorkspaceConfig.Agent.InjectDockerCredentials != "false",
+		config.GetMounts(result),
+		r.Log,
+	)
+}
+
+func getRelativeDevContainerJson(origin, localWorkspaceFolder string) string {
+	relativePath := strings.TrimPrefix(filepath.ToSlash(origin), filepath.ToSlash(localWorkspaceFolder))
+	return strings.TrimPrefix(relativePath, "/")
 }

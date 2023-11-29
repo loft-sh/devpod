@@ -187,7 +187,7 @@ func decodeWorkspaceInfoAndWrite(
 
 	// check content folder
 	if workspaceInfo.Workspace.Source.LocalFolder != "" {
-		_, err = os.Stat(workspaceInfo.Workspace.Source.LocalFolder)
+		_, err = os.Stat(workspaceInfo.WorkspaceOrigin)
 		if err == nil {
 			workspaceInfo.ContentFolder = workspaceInfo.Workspace.Source.LocalFolder
 		}

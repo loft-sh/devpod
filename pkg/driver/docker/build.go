@@ -17,6 +17,7 @@ import (
 	"github.com/loft-sh/devpod/pkg/docker"
 	"github.com/loft-sh/devpod/pkg/dockerfile"
 	"github.com/loft-sh/devpod/pkg/id"
+	"github.com/loft-sh/devpod/pkg/provider"
 	"github.com/loft-sh/log/hash"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
@@ -30,7 +31,7 @@ func (d *dockerDriver) BuildDevContainer(
 	dockerfilePath,
 	dockerfileContent string,
 	localWorkspaceFolder string,
-	options config.BuildOptions,
+	options provider.BuildOptions,
 ) (*config.BuildInfo, error) {
 	// check if image build is necessary
 	imageName := GetImageName(localWorkspaceFolder, prebuildHash)

@@ -138,5 +138,7 @@ func BuildRoot() *cobra.Command {
 	rootCmd.AddCommand(NewStatusCmd(globalFlags))
 	rootCmd.AddCommand(NewBuildCmd(globalFlags))
 	rootCmd.AddCommand(NewLogsDaemonCmd(globalFlags))
+	rootCmd.AddCommand(NewExportCmd(globalFlags))
+	rootCmd.AddCommand(NewImportCmd(globalFlags))
 	return rootCmd
 }

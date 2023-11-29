@@ -414,7 +414,6 @@ func resolve(
 	workspace := &provider2.Workspace{
 		ID:      workspaceID,
 		UID:     uid,
-		Folder:  workspaceFolder,
 		Context: devPodConfig.DefaultContext,
 		Provider: provider2.WorkspaceProviderConfig{
 			Name: defaultProvider.Config.Name,
@@ -634,12 +633,12 @@ func createMachine(context, machineID, providerName string) (*provider2.Machine,
 	// save machine config
 	machine := &provider2.Machine{
 		ID:      machineID,
-		Folder:  machineDir,
 		Context: context,
 		Provider: provider2.MachineProviderConfig{
 			Name: providerName,
 		},
 		CreationTimestamp: types.Now(),
+		Origin:            filepath.Join(machineDir, provider2.MachineConfigFile),
 	}
 
 	// create machine folder

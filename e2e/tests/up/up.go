@@ -10,6 +10,7 @@ import (
 	"strings"
 
 	"github.com/loft-sh/devpod/e2e/framework"
+	config2 "github.com/loft-sh/devpod/pkg/config"
 	"github.com/loft-sh/devpod/pkg/devcontainer/config"
 	docker "github.com/loft-sh/devpod/pkg/docker"
 	"github.com/loft-sh/devpod/pkg/language"
@@ -118,7 +119,7 @@ var _ = DevPodDescribe("devpod up test suite", func() {
 			framework.ExpectNoError(err)
 		})
 
-		ginkgo.It("run devpod in Kubernetes", func() {
+		ginkgo.FIt("run devpod in Kubernetes", func() {
 			ctx := context.Background()
 			f := framework.NewDefaultFramework(initialDir + "/bin")
 			tempDir, err := framework.CopyToTempDir("tests/up/testdata/kubernetes")
@@ -183,6 +184,45 @@ var _ = DevPodDescribe("devpod up test suite", func() {
 			err = json.Unmarshal(stdout, list)
 			framework.ExpectNoError(err)
 			framework.ExpectEqual(len(list.Items), 1, "Expect 1 pod")
+
+			// check if ssh works
+			err = f.DevPodSSHEchoTestString(ctx, tempDir)
+			framework.ExpectNoError(err)
+
+			// export workspace
+			data, err := f.ExecCommandOutput(ctx, []string{"export", tempDir})
+			framework.ExpectNoError(err)
+
+			// check if file is there
+			out, err := os.ReadFile(filepath.Join(tempDir, "test_file.txt"))
+			framework.ExpectNoError(err)
+			framework.ExpectEqual(strings.TrimSpace(string(out)), "test")
+
+			// delete devpod directory & temp dir
+			configDir, err := config2.GetConfigDir()
+			framework.ExpectNoError(err)
+			err = os.RemoveAll(configDir)
+			framework.ExpectNoError(err)
+			err = os.RemoveAll(tempDir)
+			framework.ExpectNoError(err)
+
+			// import workspace
+			_, err = f.ExecCommandOutput(ctx, []string{"import", "--data", data})
+			framework.ExpectNoError(err)
+
+			// check if ssh works
+			err = f.DevPodSSHEchoTestString(ctx, tempDir)
+			framework.ExpectNoError(err)
+
+			// make sure file is not there anymore
+			_, err = os.ReadFile(filepath.Join(tempDir, "test_file.txt"))
+			framework.ExpectError(err)
+			_, err = os.ReadFile(filepath.Join(tempDir, ".devcontainer.json"))
+			framework.ExpectNoError(err)
+
+			// run up
+			err = f.DevPodUp(ctx, tempDir)
+			framework.ExpectNoError(err)
 
 			// check if ssh works
 			err = f.DevPodSSHEchoTestString(ctx, tempDir)

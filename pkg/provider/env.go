@@ -31,23 +31,9 @@ const (
 	PROVIDER_FOLDER    = "PROVIDER_FOLDER"
 )
 
-// driver env
 const (
 	DEVCONTAINER_ID = "DEVCONTAINER_ID"
 )
-
-// FromEnvironment retrives options from environment and fills a machine with it. This is primarily
-// used by provider implementations.
-func FromEnvironment() *Machine {
-	return &Machine{
-		ID:     os.Getenv(MACHINE_ID),
-		Folder: os.Getenv(MACHINE_FOLDER),
-		Provider: MachineProviderConfig{
-			Name: os.Getenv(MACHINE_PROVIDER),
-		},
-		Context: os.Getenv(MACHINE_CONTEXT),
-	}
-}
 
 func combineOptions(resolvedOptions map[string]config.OptionValue, otherOptions map[string]config.OptionValue) map[string]config.OptionValue {
 	options := map[string]config.OptionValue{}
@@ -98,9 +84,8 @@ func ToOptionsWorkspace(workspace *Workspace) map[string]string {
 		if workspace.UID != "" {
 			retVars[WORKSPACE_UID] = workspace.UID
 		}
-		if workspace.Folder != "" {
-			retVars[WORKSPACE_FOLDER] = filepath.ToSlash(workspace.Folder)
-		}
+		retVars[WORKSPACE_FOLDER], _ = GetWorkspaceDir(workspace.Context, workspace.ID)
+		retVars[WORKSPACE_FOLDER] = filepath.ToSlash(retVars[WORKSPACE_FOLDER])
 		if workspace.Context != "" {
 			retVars[WORKSPACE_CONTEXT] = workspace.Context
 			retVars[MACHINE_CONTEXT] = workspace.Context
@@ -133,9 +118,8 @@ func ToOptionsMachine(machine *Machine) map[string]string {
 		if machine.ID != "" {
 			retVars[MACHINE_ID] = machine.ID
 		}
-		if machine.Folder != "" {
-			retVars[MACHINE_FOLDER] = filepath.ToSlash(machine.Folder)
-		}
+		retVars[MACHINE_FOLDER], _ = GetMachineDir(machine.Context, machine.ID)
+		retVars[MACHINE_FOLDER] = filepath.ToSlash(retVars[MACHINE_FOLDER])
 		if machine.Context != "" {
 			retVars[MACHINE_CONTEXT] = machine.Context
 		}
