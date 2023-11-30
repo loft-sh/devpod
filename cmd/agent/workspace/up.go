@@ -176,14 +176,11 @@ func (cmd *UpCmd) up(ctx context.Context, workspaceInfo *provider2.AgentWorkspac
 
 func prepareWorkspace(ctx context.Context, workspaceInfo *provider2.AgentWorkspaceInfo, client tunnel.TunnelClient, helper string, log log.Logger) error {
 	// make sure content folder exists
-	err := InitContentFolder(workspaceInfo, log)
+	exists, err := InitContentFolder(workspaceInfo, log)
 	if err != nil {
 		return err
-	}
-
-	// check if we should init
-	if workspaceInfo.LastDevContainerConfig != nil {
-		log.Debugf("Workspace was already executed, skip downloading")
+	} else if exists {
+		log.Debugf("Workspace exists, skip downloading")
 		return nil
 	}
 
@@ -209,33 +206,33 @@ func prepareWorkspace(ctx context.Context, workspaceInfo *provider2.AgentWorkspa
 	return fmt.Errorf("either workspace repository, image or local-folder is required")
 }
 
-func InitContentFolder(workspaceInfo *provider2.AgentWorkspaceInfo, log log.Logger) error {
+func InitContentFolder(workspaceInfo *provider2.AgentWorkspaceInfo, log log.Logger) (bool, error) {
 	// check if workspace content folder exists
 	_, err := os.Stat(workspaceInfo.ContentFolder)
 	if err == nil {
 		log.Debugf("Workspace Folder already exists %s", workspaceInfo.ContentFolder)
-		return nil
+		return true, nil
 	}
 
 	// make content dir
 	log.Debugf("Create content folder %s", workspaceInfo.ContentFolder)
 	err = os.MkdirAll(workspaceInfo.ContentFolder, 0777)
 	if err != nil {
-		return errors.Wrap(err, "make workspace folder")
+		return false, errors.Wrap(err, "make workspace folder")
 	}
 
 	// download provider
 	binariesDir, err := agent.GetAgentBinariesDir(workspaceInfo.Agent.DataPath, workspaceInfo.Workspace.Context, workspaceInfo.Workspace.ID)
 	if err != nil {
 		_ = os.RemoveAll(workspaceInfo.ContentFolder)
-		return fmt.Errorf("error getting workspace %s binaries dir: %w", workspaceInfo.Workspace.ID, err)
+		return false, fmt.Errorf("error getting workspace %s binaries dir: %w", workspaceInfo.Workspace.ID, err)
 	}
 
 	// download binaries
 	_, err = binaries.DownloadBinaries(workspaceInfo.Agent.Binaries, binariesDir, log)
 	if err != nil {
 		_ = os.RemoveAll(workspaceInfo.ContentFolder)
-		return fmt.Errorf("error downloading workspace %s binaries: %w", workspaceInfo.Workspace.ID, err)
+		return false, fmt.Errorf("error downloading workspace %s binaries: %w", workspaceInfo.Workspace.ID, err)
 	}
 
 	// if workspace was already executed, we skip this part
@@ -245,9 +242,11 @@ func InitContentFolder(workspaceInfo *provider2.AgentWorkspaceInfo, log log.Logg
 		if err != nil {
 			log.Errorf("Ensure devcontainer.json: %v", err)
 		}
+
+		return true, nil
 	}
 
-	return nil
+	return false, nil
 }
 
 func ensureLastDevContainerJson(workspaceInfo *provider2.AgentWorkspaceInfo) error {

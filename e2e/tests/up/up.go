@@ -119,7 +119,7 @@ var _ = DevPodDescribe("devpod up test suite", func() {
 			framework.ExpectNoError(err)
 		})
 
-		ginkgo.FIt("run devpod in Kubernetes", func() {
+		ginkgo.It("run devpod in Kubernetes", func() {
 			ctx := context.Background()
 			f := framework.NewDefaultFramework(initialDir + "/bin")
 			tempDir, err := framework.CopyToTempDir("tests/up/testdata/kubernetes")
