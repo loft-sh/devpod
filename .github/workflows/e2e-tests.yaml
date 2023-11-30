@@ -63,3 +63,32 @@ jobs:
       working-directory: ./e2e
       run: |
         sudo KUBECONFIG=/home/runner/.kube/config go test -v -ginkgo.v -timeout 3600s --ginkgo.label-filter=${{ matrix.label }}
+
+  test-e2e-windows:
+    runs-on: self-hosted-windows
+    strategy:
+      fail-fast: true
+      max-parallel: 4
+      matrix:
+        # windows blocklist: "up-podman", "integration", "machineprovider", "up"
+        label: ["build", "ide", "integration", "machine", "provider", "proxyprovider", "ssh", "up-docker", "up-docker-compose"]
+
+    steps:
+    - name: Checkout repo
+      uses: actions/checkout@v2
+
+    - name: Set up Go
+      uses: actions/setup-go@v2
+      with:
+        go-version: 1.20.5
+
+    - name: Build binary and copy to the E2E directory
+      run: |
+         go build -ldflags "-s -w" -o devpod-windows-amd64.exe
+         mkdir e2e\bin
+         cp devpod-windows-amd64.exe e2e\bin\
+
+    - name: E2E test
+      working-directory: .\e2e
+      run: |
+        go run github.com/onsi/ginkgo/v2/ginkgo -r --timeout=3600s --label-filter=${{ matrix.label }}
