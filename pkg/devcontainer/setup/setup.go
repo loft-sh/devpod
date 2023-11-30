@@ -59,7 +59,7 @@ func SetupContainer(setupInfo *config.Result, extraWorkspaceEnv []string, chownW
 	}
 
 	// chown agent sock file
-	err = ChownAgentSock(setupInfo, log)
+	err = ChownAgentSock(setupInfo)
 	if err != nil {
 		return errors.Wrap(err, "chown ssh agent sock file")
 	}
@@ -213,13 +213,12 @@ func PatchEtcEnvironment(mergedConfig *config.MergedDevContainerConfig, log log.
 	return nil
 }
 
-func ChownAgentSock(setupInfo *config.Result, log log.Logger) error {
+func ChownAgentSock(setupInfo *config.Result) error {
 	user := config.GetRemoteUser(setupInfo)
-
 	agentSockFile := os.Getenv("SSH_AUTH_SOCK")
 	if agentSockFile != "" {
 		err := copy2.ChownR(filepath.Dir(agentSockFile), user)
-		if err != nil {
+		if err != nil && !os.IsNotExist(err) {
 			return err
 		}
 	}

@@ -59,7 +59,7 @@ func (cmd *ContainerTunnelCmd) Run(ctx context.Context, log log.Logger) error {
 	}
 
 	// make sure content folder exists
-	err = workspace.InitContentFolder(workspaceInfo, log)
+	_, err = workspace.InitContentFolder(workspaceInfo, log)
 	if err != nil {
 		return err
 	}
