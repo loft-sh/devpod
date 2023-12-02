@@ -75,7 +75,7 @@ func (cmd *DeleteCmd) Run(ctx context.Context, devPodConfig *config.Config, args
 		log.Default.Errorf("Error retrieving workspace: %v", err)
 
 		// delete workspace folder
-		err = clientimplementation.DeleteWorkspaceFolder(devPodConfig.DefaultContext, workspaceID, log.Default)
+		err = clientimplementation.DeleteWorkspaceFolder(devPodConfig, devPodConfig.DefaultContext, workspaceID, "", log.Default)
 		if err != nil {
 			return err
 		}
@@ -88,7 +88,7 @@ func (cmd *DeleteCmd) Run(ctx context.Context, devPodConfig *config.Config, args
 	workspaceConfig := client.WorkspaceConfig()
 	if !cmd.Force && workspaceConfig.Imported {
 		// delete workspace folder
-		err = clientimplementation.DeleteWorkspaceFolder(devPodConfig.DefaultContext, client.Workspace(), log.Default)
+		err = clientimplementation.DeleteWorkspaceFolder(devPodConfig, devPodConfig.DefaultContext, client.Workspace(), workspaceConfig.SSHConfigPath, log.Default)
 		if err != nil {
 			return err
 		}
@@ -172,7 +172,8 @@ func (cmd *DeleteCmd) deleteSingleMachine(ctx context.Context, client client2.Ba
 		return false, errors.Wrap(err, "delete machine")
 	}
 
-	err = clientimplementation.DeleteWorkspaceFolder(client.Context(), client.Workspace(), log.Default)
+	// delete workspace folder
+	err = clientimplementation.DeleteWorkspaceFolder(devPodConfig, client.Context(), client.Workspace(), client.WorkspaceConfig().SSHConfigPath, log.Default)
 	if err != nil {
 		return false, err
 	}

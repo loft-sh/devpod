@@ -11,6 +11,7 @@ const (
 	ContextOptionDotfilesURL                = "DOTFILES_URL"
 	ContextOptionDotfilesScript             = "DOTFILES_SCRIPT"
 	ContextOptionSSHAgentForwarding         = "SSH_AGENT_FORWARDING"
+	ContextOptionSSHConfigPath              = "SSH_CONFIG_PATH"
 )
 
 var ContextOptions = []ContextOption{
@@ -67,5 +68,9 @@ var ContextOptions = []ContextOption{
 	{
 		Name:        ContextOptionDotfilesScript,
 		Description: "Specifies the script to run after cloning dotfiles repo to install them",
+	},
+	{
+		Name:        ContextOptionSSHConfigPath,
+		Description: "Specifies the path where the ssh config should be written to",
 	},
 }

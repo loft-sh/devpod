@@ -262,7 +262,7 @@ func (s *proxyClient) Delete(ctx context.Context, opt client.DeleteOptions) erro
 		s.log.Errorf("Error deleting workspace: %v", err)
 	}
 
-	return DeleteWorkspaceFolder(s.workspace.Context, s.workspace.ID, s.log)
+	return DeleteWorkspaceFolder(s.devPodConfig, s.workspace.Context, s.workspace.ID, s.workspace.SSHConfigPath, s.log)
 }
 
 func (s *proxyClient) Stop(ctx context.Context, opt client.StopOptions) error {

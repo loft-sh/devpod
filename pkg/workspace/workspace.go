@@ -161,6 +161,7 @@ func ResolveWorkspace(
 	providerUserOptions []string,
 	devContainerImage string,
 	devContainerPath string,
+	sshConfigPath string,
 	source *provider2.WorkspaceSource,
 	changeLastUsed bool,
 	log log.Logger,
@@ -175,7 +176,7 @@ func ResolveWorkspace(
 	}
 
 	// resolve workspace
-	provider, workspace, machine, err := resolveWorkspace(ctx, devPodConfig, args, desiredID, desiredMachine, providerUserOptions, source, changeLastUsed, log)
+	provider, workspace, machine, err := resolveWorkspace(ctx, devPodConfig, args, desiredID, desiredMachine, providerUserOptions, sshConfigPath, source, changeLastUsed, log)
 	if err != nil {
 		return nil, err
 	}
@@ -236,6 +237,7 @@ func resolveWorkspace(
 	desiredID,
 	desiredMachine string,
 	providerUserOptions []string,
+	sshConfigPath string,
 	source *provider2.WorkspaceSource,
 	changeLastUsed bool,
 	log log.Logger,
@@ -270,9 +272,9 @@ func resolveWorkspace(
 	}
 
 	// create workspace
-	provider, workspace, machine, err := createWorkspace(ctx, devPodConfig, workspaceID, name, desiredMachine, providerUserOptions, source, isLocalPath, log)
+	provider, workspace, machine, err := createWorkspace(ctx, devPodConfig, workspaceID, name, desiredMachine, providerUserOptions, sshConfigPath, source, isLocalPath, log)
 	if err != nil {
-		_ = clientimplementation.DeleteWorkspaceFolder(devPodConfig.DefaultContext, workspaceID, log)
+		_ = clientimplementation.DeleteWorkspaceFolder(devPodConfig, devPodConfig.DefaultContext, workspaceID, sshConfigPath, log)
 		return nil, nil, nil, err
 	}
 
@@ -286,6 +288,7 @@ func createWorkspace(
 	name,
 	desiredMachine string,
 	providerUserOptions []string,
+	sshConfigPath string,
 	source *provider2.WorkspaceSource,
 	isLocalPath bool,
 	log log.Logger,
@@ -305,7 +308,7 @@ func createWorkspace(
 	}
 
 	// resolve workspace
-	workspace, err := resolve(provider, devPodConfig, name, workspaceID, workspaceFolder, source, isLocalPath)
+	workspace, err := resolve(provider, devPodConfig, name, workspaceID, workspaceFolder, source, isLocalPath, sshConfigPath)
 	if err != nil {
 		return nil, nil, nil, err
 	}
@@ -408,6 +411,7 @@ func resolve(
 	workspaceFolder string,
 	source *provider2.WorkspaceSource,
 	isLocalPath bool,
+	sshConfigPath string,
 ) (*provider2.Workspace, error) {
 	now := types.Now()
 	uid := encoding.CreateNewUID(devPodConfig.DefaultContext, workspaceID)
@@ -420,6 +424,7 @@ func resolve(
 		},
 		CreationTimestamp: now,
 		LastUsedTimestamp: now,
+		SSHConfigPath:     sshConfigPath,
 	}
 
 	// outside source set?

@@ -383,7 +383,7 @@ func (s *workspaceClient) Delete(ctx context.Context, opt client.DeleteOptions) 
 		}
 	}
 
-	return DeleteWorkspaceFolder(s.workspace.Context, s.workspace.ID, s.log)
+	return DeleteWorkspaceFolder(s.devPodConfig, s.workspace.Context, s.workspace.ID, s.workspace.SSHConfigPath, s.log)
 }
 
 func (s *workspaceClient) isMachineRunning(ctx context.Context) (bool, error) {
@@ -612,8 +612,8 @@ func DeleteMachineFolder(context, machineID string) error {
 	return nil
 }
 
-func DeleteWorkspaceFolder(context, workspaceID string, log log.Logger) error {
-	err := ssh.RemoveFromConfig(workspaceID, log)
+func DeleteWorkspaceFolder(c *config.Config, context string, workspaceID string, sshConfigPath string, log log.Logger) error {
+	err := ssh.RemoveFromConfig(c, workspaceID, sshConfigPath, log)
 	if err != nil {
 		log.Errorf("Remove workspace '%s' from ssh config: %v", workspaceID, err)
 	}

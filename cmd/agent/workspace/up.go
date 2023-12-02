@@ -16,6 +16,7 @@ import (
 	"github.com/loft-sh/devpod/pkg/binaries"
 	"github.com/loft-sh/devpod/pkg/client/clientimplementation"
 	"github.com/loft-sh/devpod/pkg/command"
+	"github.com/loft-sh/devpod/pkg/config"
 	"github.com/loft-sh/devpod/pkg/credentials"
 	"github.com/loft-sh/devpod/pkg/daemon"
 	"github.com/loft-sh/devpod/pkg/devcontainer"
@@ -76,9 +77,15 @@ func (cmd *UpCmd) Run(ctx context.Context) error {
 	// initialize the workspace
 	cancelCtx, cancel := context.WithCancel(ctx)
 	defer cancel()
+
+	devPodConfig, err := config.LoadConfig(workspaceInfo.Workspace.Context, "")
+	if err != nil {
+		return err
+	}
+
 	tunnelClient, logger, credentialsDir, err := initWorkspace(cancelCtx, cancel, workspaceInfo, cmd.Debug, !workspaceInfo.CLIOptions.Proxy && !workspaceInfo.CLIOptions.DisableDaemon)
 	if err != nil {
-		err1 := clientimplementation.DeleteWorkspaceFolder(workspaceInfo.Workspace.Context, workspaceInfo.Workspace.ID, logger)
+		err1 := clientimplementation.DeleteWorkspaceFolder(devPodConfig, workspaceInfo.Workspace.Context, workspaceInfo.Workspace.ID, workspaceInfo.Workspace.SSHConfigPath, logger)
 		if err1 != nil {
 			return errors.Wrap(err, err1.Error())
 		}
