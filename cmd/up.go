@@ -93,6 +93,10 @@ func NewUpCmd(flags *flags.GlobalFlags) *cobra.Command {
 				}
 			}
 
+			if cmd.SSHConfigPath == "" {
+				cmd.SSHConfigPath = devPodConfig.ContextOption(config.ContextOptionSSHConfigPath)
+			}
+
 			client, err := workspace2.ResolveWorkspace(
 				ctx,
 				devPodConfig,
@@ -104,6 +108,7 @@ func NewUpCmd(flags *flags.GlobalFlags) *cobra.Command {
 				cmd.ProviderOptions,
 				cmd.DevContainerImage,
 				cmd.DevContainerPath,
+				cmd.SSHConfigPath,
 				source,
 				true,
 				logger,
@@ -167,7 +172,7 @@ func (cmd *UpCmd) Run(
 
 	// configure container ssh
 	if cmd.ConfigureSSH {
-		err = configureSSH(client, cmd.SSHConfigPath, user,
+		err = configureSSH(devPodConfig, client, cmd.SSHConfigPath, user,
 			cmd.GPGAgentForwarding ||
 				devPodConfig.ContextOption(config.ContextOptionGPGAgentForwarding) == "true")
 
@@ -666,8 +671,8 @@ func startBrowserTunnel(
 	return nil
 }
 
-func configureSSH(client client2.BaseWorkspaceClient, configPath, user string, gpgagent bool) error {
-	err := devssh.ConfigureSSHConfig(
+func configureSSH(c *config.Config, client client2.BaseWorkspaceClient, configPath, user string, gpgagent bool) error {
+	err := devssh.ConfigureSSHConfig(c,
 		configPath,
 		client.Context(),
 		client.Workspace(),
@@ -775,7 +780,7 @@ func setupDotfiles(
 		agentArguments = append(agentArguments, dotfilesScript)
 	}
 
-	remoteUser, err := devssh.GetUser(client.Workspace())
+	remoteUser, err := devssh.GetUser(devPodConfig, client.WorkspaceConfig().ID, client.WorkspaceConfig().SSHConfigPath)
 	if err != nil {
 		remoteUser = "root"
 	}
@@ -827,7 +832,12 @@ func performGpgForwarding(
 		return err
 	}
 
-	remoteUser, err := devssh.GetUser(client.Workspace())
+	devPodConfig, err := config.LoadConfig(client.WorkspaceConfig().Context, "")
+	if err != nil {
+		return err
+	}
+
+	remoteUser, err := devssh.GetUser(devPodConfig, client.WorkspaceConfig().ID, client.WorkspaceConfig().SSHConfigPath)
 	if err != nil {
 		remoteUser = "root"
 	}
