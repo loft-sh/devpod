@@ -1,0 +1,53 @@
+name: E2E Win full tests
+
+on:
+  release:
+    types: [prereleased]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+env:
+  GO111MODULE: on
+  GOFLAGS: -mod=vendor
+
+jobs:
+  test-e2e-windows:
+    runs-on: self-hosted-windows
+    strategy:
+      fail-fast: true
+      max-parallel: 1
+      matrix:
+        # windows blocklist: "up-podman", "integration", "machineprovider", "proxyprovider", "up"
+        label: ["build", "ide", "machine", "provider", "ssh", "up-docker", "up-docker-compose", "up-docker-build", "up-docker-compose-build"]
+
+    steps:
+    - name: Git set line ending
+      run: |
+        git config --global core.autocrlf false
+
+    - name: Checkout repo
+      uses: actions/checkout@v2
+
+    - name: Set up Go
+      uses: actions/setup-go@v2
+      with:
+        go-version: 1.20.5
+
+    - name: Build binary and copy to the E2E directory
+      run: |
+         go build -ldflags "-s -w" -o devpod-windows-amd64.exe
+         mkdir e2e\bin
+         cp devpod-windows-amd64.exe e2e\bin\
+
+    - name: E2E test
+      working-directory: .\e2e
+      run: |
+        go run github.com/onsi/ginkgo/v2/ginkgo -r -p --timeout=3600s --label-filter=${{ matrix.label }}
+
+    - name: Container cleanup
+      if: ${{ always() }}
+      run: |
+        Remove-Item -Recurse C:\Users\loft-user\.devpod\
+        sh -c "docker ps -a | cut -d' ' -f1 | tail -n+2 | xargs docker rm -f || :"

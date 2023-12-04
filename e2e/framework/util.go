@@ -13,7 +13,7 @@ import (
 
 func GetTimeout() time.Duration {
 	if runtime.GOOS == "windows" {
-		return 300 * time.Second
+		return 600 * time.Second
 	}
 
 	return 60 * time.Second
