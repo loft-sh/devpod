@@ -1,3 +1,4 @@
+import { Form } from "@/components/Form"
 import {
   Code,
   FormControl,
@@ -13,10 +14,9 @@ import { useProviders } from "../../../contexts"
 import { exists, isError, useFormErrors } from "../../../lib"
 import { LoadingProviderIndicator } from "./LoadingProviderIndicator"
 import { CustomNameInput } from "./SetupProviderSourceForm"
-import { ALLOWED_NAMES_REGEX, mergeProviderOptions } from "./helpers"
+import { ALLOWED_NAMES_REGEX } from "./helpers"
 import { FieldName, TCloneProviderInfo, TFormValues, TSetupProviderResult } from "./types"
 import { useAddProvider } from "./useAddProvider"
-import { Form } from "@/components/Form"
 
 type TCloneProviderProps = Readonly<{
   isModal?: boolean
@@ -39,12 +39,9 @@ export function SetupClonedProvider({ cloneProviderInfo, onFinish, reset }: TClo
     error,
   } = useAddProvider({
     onSuccess(result) {
-      const oldProvider = cloneProviderInfo.sourceProvider
-
       onFinish({
         providerID: result.providerID,
-        optionGroups: result.optionGroups,
-        options: mergeProviderOptions(oldProvider.state?.options, result.options),
+        suggestedOptions: {},
       })
     },
     onError() {

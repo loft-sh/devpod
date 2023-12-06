@@ -25,7 +25,7 @@ import {
   VStack,
   useDisclosure,
 } from "@chakra-ui/react"
-import { useCallback, useEffect, useMemo, useRef } from "react"
+import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { SubmitHandler, useForm } from "react-hook-form"
 import { useNavigate } from "react-router"
 import { ConfigureProviderOptionsForm } from "../Providers/AddProvider"
@@ -35,31 +35,60 @@ import { ALLOWED_NAMES_REGEX } from "../Providers/AddProvider/helpers"
 type TFormValues = {
   [FieldName.PRO_HOST]: string
   [FieldName.PROVIDER_NAME]: string | undefined
+  [FieldName.ACCESS_KEY]: string | undefined
 }
 const FieldName = {
   PRO_HOST: "proURL",
   PROVIDER_NAME: "providerName",
+  ACCESS_KEY: "accessKey",
 } as const
 
+type TSetupProInitialData = {
+  host: string
+  accessKey?: string
+  suggestedOptions: Record<string, string>
+}
+
 export function useLoginProModal() {
-  const { terminal, connectStream, clear } = useStreamingTerminal({ fontSize: "sm" })
+  const [suggestedOptions, setSuggestedOptions] = useState<
+    TSetupProInitialData["suggestedOptions"]
+  >({})
+  const { terminal, connectStream, clear: clearTerminal } = useStreamingTerminal({ fontSize: "sm" })
   const [[proInstances], { login, disconnect }] = useProInstances()
   const [[providers]] = useProviders()
   const { isOpen, onClose, onOpen } = useDisclosure()
-  const { handleSubmit, formState, register, reset } = useForm<TFormValues>({
+  const { handleSubmit, formState, register, reset, setValue } = useForm<TFormValues>({
     mode: "onBlur",
   })
   const containerRef = useRef<HTMLDivElement>(null)
   const onSubmit = useCallback<SubmitHandler<TFormValues>>(
     (data) => {
-      clear()
+      clearTerminal()
       login.run({
         host: data[FieldName.PRO_HOST],
         providerName: data[FieldName.PROVIDER_NAME],
+        accessKey: data[FieldName.ACCESS_KEY],
         streamListener: connectStream,
       })
     },
-    [connectStream, login, clear]
+    [connectStream, login, clearTerminal]
+  )
+
+  const handleOpenLogin = useCallback(
+    (data?: TSetupProInitialData) => {
+      onOpen()
+      if (data === undefined || login.status === "loading") {
+        return
+      }
+
+      setValue(FieldName.PRO_HOST, data.host)
+      if (data.accessKey) {
+        setValue(FieldName.ACCESS_KEY, data.accessKey)
+      }
+      setSuggestedOptions(data.suggestedOptions)
+      handleSubmit(onSubmit)()
+    },
+    [handleSubmit, login.status, onOpen, onSubmit, setValue]
   )
 
   const {
@@ -75,19 +104,13 @@ export function useLoginProModal() {
   useEffect(() => {
     if (login.status === "success") {
       const providerID = login.provider?.config?.name
-      const options = login.provider?.config?.options
-      const optionGroups = login.provider?.config?.optionGroups
 
       if (!exists(providerID)) {
         return
       }
-      completeSetupProvider({
-        providerID,
-        options: options ?? {},
-        optionGroups: optionGroups ?? [],
-      })
+      completeSetupProvider({ providerID, suggestedOptions })
     }
-  }, [completeSetupProvider, login.provider, login.status])
+  }, [completeSetupProvider, login.provider, login.status, suggestedOptions])
 
   const resetModal = useCallback(() => {
     reset()
@@ -265,6 +288,7 @@ export function useLoginProModal() {
                     showBottomActionBar={true}
                     providerID={state.providerID}
                     containerRef={containerRef}
+                    suggestedOptions={state.suggestedOptions}
                     onFinish={completeFlow}
                   />
                 </>
@@ -285,8 +309,7 @@ export function useLoginProModal() {
     areInputsDisabled,
     register,
     providerNameError,
-    state.currentStep,
-    state.providerID,
+    state,
     terminal,
     formState.isValid,
     formState.isSubmitting,
@@ -295,5 +318,5 @@ export function useLoginProModal() {
     providers,
   ])
 
-  return { modal, handleOpenLogin: onOpen }
+  return { modal, handleOpenLogin }
 }

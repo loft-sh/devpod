@@ -2,19 +2,18 @@ import { useCallback, useEffect, useReducer } from "react"
 import { client } from "../../../client"
 import { useProviderManager } from "../../../contexts"
 import { TAction } from "../../../lib"
-import { TProviderID, TProviderOptionGroup, TProviderOptions } from "../../../types"
+import { TProviderID } from "../../../types"
 
 export type TSetupProviderState = Readonly<
   | {
       currentStep: "select-provider"
       providerID: null
-      options: null
+      suggestedOptions: null
     }
   | {
       currentStep: "configure-provider"
       providerID: TProviderID
-      options: TProviderOptions
-      optionGroups: TProviderOptionGroup[]
+      suggestedOptions: Record<string, string>
     }
   | { currentStep: "done"; providerID: TProviderID }
 >
@@ -22,8 +21,7 @@ type TCompleteSetupProviderAction = TAction<
   "completeSetupProvider",
   Readonly<{
     providerID: TProviderID
-    options: TProviderOptions
-    optionGroups: TProviderOptionGroup[]
+    suggestedOptions: Record<string, string>
   }>
 >
 
@@ -35,7 +33,7 @@ type TActions =
 const initialState: TSetupProviderState = {
   currentStep: "select-provider",
   providerID: null,
-  options: null,
+  suggestedOptions: null,
 }
 function setupProviderReducer(state: TSetupProviderState, action: TActions): TSetupProviderState {
   switch (action.type) {
@@ -46,8 +44,7 @@ function setupProviderReducer(state: TSetupProviderState, action: TActions): TSe
         ...state,
         currentStep: "configure-provider",
         providerID: action.payload.providerID,
-        options: action.payload.options,
-        optionGroups: action.payload.optionGroups,
+        suggestedOptions: action.payload.suggestedOptions,
       }
     case "completeConfigureProvider":
       return { currentStep: "done", providerID: state.providerID! }

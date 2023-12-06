@@ -15,6 +15,7 @@ mod fix_env;
 mod install_cli;
 mod logging;
 mod providers;
+mod server;
 mod settings;
 mod system_tray;
 mod ui_messages;
@@ -49,6 +50,8 @@ pub struct AppState {
     #[cfg(feature = "enable-updater")]
     update_installed: Arc<Mutex<bool>>,
 }
+// TODO: build localhost http server
+// should have a /pro/setup endpoint and send the same UI message as the custom protocol
 
 fn main() -> anyhow::Result<()> {
     // https://unix.stackexchange.com/questions/82620/gui-apps-dont-inherit-path-from-parent-console-apps
@@ -69,6 +72,8 @@ fn main() -> anyhow::Result<()> {
     let system_tray_event_handler = system_tray.get_event_handler();
 
     let (tx, rx) = mpsc::channel::<UiMessage>(10);
+
+    let tx2 = tx.clone();
 
     let mut app_builder = tauri::Builder::default()
         .manage(AppState {
@@ -112,6 +117,13 @@ fn main() -> anyhow::Result<()> {
                 }
 
                 update_helper.poll().await;
+            });
+
+            let app_handle = app.handle();
+            tauri::async_runtime::spawn(async move {
+                if let Err(err) = server::setup(&app_handle).await {
+                    error!("Failed to start server: {}", err);
+                }
             });
 
             let app_handle = app.handle();

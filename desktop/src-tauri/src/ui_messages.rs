@@ -1,14 +1,20 @@
-use crate::{
-    custom_protocol::{OpenWorkspaceMsg, ParseError},
-    window::WindowHelper,
-    AppHandle,
-};
-use log::warn;
-use serde::Serialize;
-use std::collections::VecDeque;
-use tauri::Manager;
+use crate::AppState;
+use crate::{custom_protocol::ParseError, window::WindowHelper, AppHandle};
+use log::{error, warn};
+use serde::{de, Deserialize, Serialize};
+use std::collections::{HashMap, VecDeque};
+use tauri::{Manager, State};
 use tokio::sync::mpsc::Receiver;
-use crate::custom_protocol::ImportWorkspaceMsg;
+
+pub async fn send_ui_message(
+    app_state: State<'_, AppState>,
+    msg: UiMessage,
+    log_msg_on_failure: &str,
+) {
+    if let Err(err) = app_state.ui_messages.send(msg).await {
+        error!("{}: {:?}, {}", log_msg_on_failure, err.0, err);
+    };
+}
 
 #[derive(Debug, Clone)]
 pub struct UiMessageHelper {
@@ -74,6 +80,7 @@ pub enum UiMessage {
     ShowDashboard,
     ShowToast(ShowToastMsg),
     OpenWorkspace(OpenWorkspaceMsg),
+    SetupPro(SetupProMsg),
     ImportWorkspace(ImportWorkspaceMsg),
     CommandFailed(ParseError),
 }
@@ -105,4 +112,123 @@ pub enum ToastStatus {
     Warning,
     Info,
     Loading,
+}
+
+#[derive(Debug, PartialEq, Serialize, Deserialize, Clone)]
+#[serde(deny_unknown_fields)]
+pub struct OpenWorkspaceMsg {
+    #[serde(rename(deserialize = "workspace"))]
+    pub workspace_id: Option<String>,
+    #[serde(rename(deserialize = "provider"))]
+    pub provider_id: Option<String>,
+    pub ide: Option<String>,
+    pub source: Option<String>,
+}
+
+#[derive(Debug, PartialEq, Serialize, Clone)]
+#[serde(deny_unknown_fields)]
+pub struct ImportWorkspaceMsg {
+    pub workspace_id: String,
+    pub workspace_uid: String,
+    pub devpod_pro_host: String,
+    pub options: HashMap<String, String>,
+}
+
+impl<'de> Deserialize<'de> for ImportWorkspaceMsg {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        let mut options = HashMap::deserialize(deserializer)?;
+
+        let workspace_id = options
+            .remove("workspace-id")
+            .ok_or_else(|| de::Error::missing_field("workspace-id"))?;
+
+        let workspace_uid = options
+            .remove("workspace-uid")
+            .ok_or_else(|| de::Error::missing_field("workspace-uid"))?;
+
+        let devpod_pro_host = options
+            .remove("devpod-pro-host")
+            .ok_or_else(|| de::Error::missing_field("devpod-pro-host"))?;
+
+        Ok(ImportWorkspaceMsg {
+            workspace_id,
+            workspace_uid,
+            devpod_pro_host,
+            options,
+        })
+    }
+}
+
+#[derive(Debug, PartialEq, Serialize, Clone)]
+#[serde(deny_unknown_fields)]
+pub struct SetupProMsg {
+    pub host: String,
+    #[serde(rename(serialize = "accessKey"))]
+    pub access_key: Option<String>,
+    pub options: Option<HashMap<String, String>>,
+}
+
+impl<'de> Deserialize<'de> for SetupProMsg {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        let mut all_fields = HashMap::<String, String>::deserialize(deserializer)?;
+
+        let host = all_fields
+            .remove("host")
+            .ok_or_else(|| de::Error::missing_field("host"))?;
+
+        let mut access_key = all_fields.remove("access_key");
+        if access_key.is_none() {
+            access_key = all_fields.remove("accessKey");
+        }
+
+        // Options are urlencoded
+        let options = all_fields.remove("options");
+        if let Some(options) = options {
+            let options =
+                serde_urlencoded::from_str::<Vec<(String, String)>>(&options).map_err(|err| {
+                    de::Error::custom(format!("Failed to url decode options: {}", err))
+                })?;
+            let options =
+                serde_json::from_str::<HashMap<String, String>>(&options[0].0).map_err(|err| {
+                    de::Error::custom(format!("Failed to json parse options: {}", err))
+                })?;
+
+            Ok(SetupProMsg {
+                host,
+                access_key,
+                options: Some(options),
+            })
+        } else {
+            Ok(SetupProMsg {
+                host,
+                access_key,
+                options: None,
+            })
+        }
+    }
+}
+
+impl OpenWorkspaceMsg {
+    pub fn empty() -> OpenWorkspaceMsg {
+        OpenWorkspaceMsg {
+            workspace_id: None,
+            provider_id: None,
+            ide: None,
+            source: None,
+        }
+    }
+    pub fn with_id(id: String) -> OpenWorkspaceMsg {
+        OpenWorkspaceMsg {
+            workspace_id: Some(id),
+            provider_id: None,
+            ide: None,
+            source: None,
+        }
+    }
 }

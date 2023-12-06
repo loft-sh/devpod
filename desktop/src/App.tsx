@@ -29,7 +29,7 @@ const showTitleBar = isMacOS || isLinux || isWindows
 const showDevPodTitle = isMacOS || isLinux
 
 export function App() {
-  const { modal: appReadyModal, changelogModal } = useAppReady()
+  const { errorModal, changelogModal, proLoginModal } = useAppReady()
   const navigate = useNavigate()
   const rootRouteMatch = useMatch(Routes.ROOT)
   const { sidebarPosition } = useSettings()
@@ -142,8 +142,9 @@ export function App() {
       </Flex>
 
       {welcomeModal}
-      {appReadyModal}
+      {errorModal}
       {changelogModal}
+      {proLoginModal}
     </>
   )
 }

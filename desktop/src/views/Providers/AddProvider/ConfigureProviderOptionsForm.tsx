@@ -50,6 +50,7 @@ type TConfigureProviderOptionsFormProps = Readonly<{
   reuseMachine: boolean
   containerRef?: RefObject<HTMLDivElement>
   showBottomActionBar?: boolean
+  suggestedOptions?: Record<string, string>
   onFinish?: () => void
 }>
 
@@ -62,14 +63,15 @@ export function ConfigureProviderOptionsForm({
   addProvider = false,
   isModal = false,
   showBottomActionBar = true,
+  suggestedOptions = {},
 }: TConfigureProviderOptionsFormProps) {
   const queryClient = useQueryClient()
   const [provider] = useProvider(providerID)
   const { data: queryOptions, error: queryError } = useQuery<TProviderOptions | undefined, Error>({
     queryKey: QueryKeys.providerSetOptions(providerID),
-    queryFn: async () =>
-      (await client.providers.setOptionsDry(providerID, { options: {} })).unwrap(),
-    enabled: true,
+    queryFn: async () => {
+      return (await client.providers.setOptionsDry(providerID, { options: {} })).unwrap()
+    },
   })
 
   const showDefaultField = useMemo(() => addProvider || !isDefault, [addProvider, isDefault])
@@ -125,15 +127,32 @@ export function ConfigureProviderOptionsForm({
       }
 
       const newOptions: DefaultValues<TFieldValues> = {}
-      Object.keys(data).forEach((key) => {
-        if (data[key]?.value) {
-          newOptions[key] = data[key]?.value ?? undefined
+      for (const option in data) {
+        if (data[option]?.value) {
+          newOptions[option] = data[option]?.value ?? undefined
         }
-      })
+      }
 
-      formMethods.reset(newOptions)
+      formMethods.reset(newOptions, { keepDirty: true, keepTouched: true, keepSubmitCount: true })
     },
   })
+
+  useEffect(() => {
+    if (Object.keys(suggestedOptions).length > 0) {
+      for (const option in suggestedOptions) {
+        const { isDirty } = formMethods.getFieldState(option)
+        if (!isDirty) {
+          formMethods.setValue(option, suggestedOptions[option], {
+            shouldDirty: true,
+            shouldValidate: true,
+            shouldTouch: true,
+          })
+        }
+      }
+    }
+    // only rerun when suggestedOptions changes
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [suggestedOptions])
 
   const error = useMemo(() => {
     if (configureError) {
