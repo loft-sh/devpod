@@ -10,8 +10,8 @@ const FALLBACK_PROVIDER_NAME = "devpod-pro"
 export function useProInstanceManager(): TProInstanceManager {
   const queryClient = useQueryClient()
   const loginMutation = useMutation<TProvider | undefined, Error, TProInstanceLoginConfig>({
-    mutationFn: async ({ host, providerName, streamListener }) => {
-      ;(await client.pro.login(host, providerName, streamListener)).unwrap()
+    mutationFn: async ({ host, providerName, accessKey, streamListener }) => {
+      ;(await client.pro.login(host, providerName, accessKey, streamListener)).unwrap()
 
       // if we don't have a provider name, check for the pro instance and then use it's provider name
       const proInstances = (await client.pro.listAll()).unwrap()

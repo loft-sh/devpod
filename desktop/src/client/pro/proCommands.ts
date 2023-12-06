@@ -7,6 +7,7 @@ import {
   DEVPOD_COMMAND_LIST,
   DEVPOD_COMMAND_LOGIN,
   DEVPOD_COMMAND_PRO,
+  DEVPOD_FLAG_ACCESS_KEY,
   DEVPOD_FLAG_DEBUG,
   DEVPOD_FLAG_JSON_LOG_OUTPUT,
   DEVPOD_FLAG_JSON_OUTPUT,
@@ -27,11 +28,13 @@ export class ProCommands {
   static async Login(
     host: string,
     providerName?: string,
+    accessKey?: string,
     listener?: TStreamEventListenerFn
   ): Promise<ResultError> {
     const maybeProviderNameFlag = providerName
       ? [toFlagArg(DEVPOD_FLAG_PROVIDER, providerName)]
       : []
+    const maybeAccessKeyFlag = accessKey ? [toFlagArg(DEVPOD_FLAG_ACCESS_KEY, accessKey)] : []
     const useFlag = toFlagArg(DEVPOD_FLAG_USE, "false")
 
     const cmd = ProCommands.newCommand([
@@ -41,6 +44,7 @@ export class ProCommands {
       useFlag,
       DEVPOD_FLAG_JSON_LOG_OUTPUT,
       ...maybeProviderNameFlag,
+      ...maybeAccessKeyFlag,
     ])
     if (listener) {
       return cmd.stream(listener)

@@ -4,8 +4,8 @@ import { DevPodContext, TDevpodContext } from "./DevPodProvider"
 import { useProInstanceManager } from "./useProInstanceManager"
 
 export function useProInstances(): [TDevpodContext["proInstances"], TProInstanceManager] {
-  const providers = useContext(DevPodContext).proInstances
+  const proInstances = useContext(DevPodContext).proInstances
   const manager = useProInstanceManager()
 
-  return [providers, manager]
+  return [proInstances, manager]
 }

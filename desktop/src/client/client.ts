@@ -50,6 +50,12 @@ type TChannels = {
         devpod_pro_host: string
         options: Record<string, string> | null
       }>
+    | Readonly<{
+        type: "SetupPro"
+        host: string
+        accessKey: string | null
+        options: Record<string, string> | null
+      }>
 }
 type TChannelName = keyof TChannels
 type TClientEventListener<TChannel extends TChannelName> = (payload: TChannels[TChannel]) => void

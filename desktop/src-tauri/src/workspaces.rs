@@ -1,7 +1,7 @@
 use crate::{
     commands::{list_workspaces::ListWorkspacesCommand, DevpodCommandConfig, DevpodCommandError},
-    custom_protocol::OpenWorkspaceMsg,
     system_tray::{SystemTrayClickHandler, ToSystemTraySubmenu},
+    ui_messages::OpenWorkspaceMsg,
 };
 use crate::{system_tray::SystemTray, AppHandle, AppState, UiMessage};
 use chrono::DateTime;

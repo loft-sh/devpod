@@ -109,6 +109,7 @@ export class Command implements TCommand<ChildProcess> {
       if (isError(e)) {
         return Return.Failed(e.message)
       }
+      console.log(e)
 
       return Return.Failed("streaming failed")
     }

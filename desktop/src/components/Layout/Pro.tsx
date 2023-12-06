@@ -14,6 +14,7 @@ import {
   Heading,
   Icon,
   IconButton,
+  Link,
   Popover,
   PopoverArrow,
   PopoverBody,
@@ -38,7 +39,7 @@ export function Pro() {
 
   const backgroundColor = useColorModeValue("white", "gray.900")
   const handleAnnouncementClicked = () => {
-    client.openLink("https://devpod.sh/engine")
+    client.openLink("https://devpod.sh/pro")
   }
   const { experimental_devPodPro } = useSettings()
 
@@ -64,7 +65,7 @@ export function Pro() {
                 <Tooltip label="Connect to Pro instance">
                   <IconButton
                     aria-label="Connect to Pro Instace"
-                    onClick={handleConnectClicked}
+                    onClick={() => handleConnectClicked()}
                     icon={<Icon as={HiArrowRightOnRectangle} boxSize={5} />}
                   />
                 </Tooltip>
@@ -84,15 +85,18 @@ export function Pro() {
                 padding="1">
                 {proInstances === undefined || proInstances.length === 0 ? (
                   <VStack align="start" padding="2" spacing="0">
-                    <Text marginTop="4" fontWeight="bold">
-                      No Pro instances
-                    </Text>
+                    <Text fontWeight="bold">No Pro instances</Text>
                     <Text lineHeight={"1.2rem"} fontSize="sm" color="gray.500">
                       You don&apos;t have any Pro instances set up. Connect to an existing Instance
-                      or create a new one.
+                      or create a new one. <br />
+                      <Link
+                        color="primary.600"
+                        onClick={() => client.openLink("https://devpod.sh/pro")}>
+                        Learn more
+                      </Link>
                     </Text>
-                    <ButtonGroup width="full" marginTop="2" variant="primary">
-                      <Button onClick={handleConnectClicked}>Login to Pro</Button>
+                    <ButtonGroup width="full" marginTop="4" variant="primary">
+                      <Button onClick={() => handleConnectClicked()}>Login to Pro</Button>
                       <Button isDisabled>Create new Pro</Button>
                     </ButtonGroup>
                   </VStack>
