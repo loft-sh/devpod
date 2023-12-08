@@ -671,7 +671,7 @@ while sleep 1 & wait $$!; do :; done`,
 	}
 
 	gpuSupportEnabled, _ := composeHelper.Docker.GPUSupportEnabled()
-	if parsedConfig.Config.HostRequirements != nil && parsedConfig.Config.HostRequirements.GPU && gpuSupportEnabled {
+	if parsedConfig.Config.HostRequirements != nil && parsedConfig.Config.HostRequirements.GPU == "true" && gpuSupportEnabled {
 		overrideService.Deploy = &composetypes.DeployConfig{
 			Resources: composetypes.Resources{
 				Reservations: &composetypes.Resource{
