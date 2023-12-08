@@ -8,7 +8,6 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/loft-sh/devpod/pkg/config"
 	"github.com/loft-sh/log"
 	"github.com/loft-sh/log/scanner"
 	"github.com/mitchellh/go-homedir"
@@ -22,25 +21,13 @@ var (
 	MarkerEndPrefix   = "# DevPod End "
 )
 
-func ConfigureSSHConfig(c *config.Config, configPath, context, workspace, user string, gpgagent bool, log log.Logger) error {
-	return configureSSHConfigSameFile(c, configPath, context, workspace, user, "", gpgagent, log)
+func ConfigureSSHConfig(sshConfigPath, context, workspace, user string, gpgagent bool, log log.Logger) error {
+	return configureSSHConfigSameFile(sshConfigPath, context, workspace, user, "", gpgagent, log)
 }
 
-func configureSSHConfigSameFile(c *config.Config, sshConfigPath, context, workspace, user, command string, gpgagent bool, log log.Logger) error {
+func configureSSHConfigSameFile(sshConfigPath, context, workspace, user, command string, gpgagent bool, log log.Logger) error {
 	configLock.Lock()
 	defer configLock.Unlock()
-	var err error
-	if sshConfigPath == "" {
-		sshConfigPath, err = GetDefaultSSHConfigPath(c)
-		if err != nil {
-			return err
-		}
-	} else {
-		sshConfigPath, err = ResolveSSHConfigPath(sshConfigPath)
-		if err != nil {
-			return errors.Wrap(err, "Invalid ssh config path")
-		}
-	}
 
 	newFile, err := addHost(sshConfigPath, workspace+"."+"devpod", user, context, workspace, command, gpgagent)
 	if err != nil {
@@ -90,19 +77,12 @@ func addHost(path, host, user, context, workspace, command string, gpgagent bool
 	return strings.Join(newLines, "\n"), nil
 }
 
-func GetUser(c *config.Config, workspaceID string, sshConfigPath string) (string, error) {
-	var err error
-	if sshConfigPath == "" {
-		sshConfigPath, err = GetDefaultSSHConfigPath(c)
-		if err != nil {
-			return "", err
-		}
-	} else {
-		sshConfigPath, err = ResolveSSHConfigPath(sshConfigPath)
-		if err != nil {
-			return "", errors.Wrap(err, "Invalid ssh config path")
-		}
+func GetUser(workspaceID string, sshConfigPath string) (string, error) {
+	path, err := ResolveSSHConfigPath(sshConfigPath)
+	if err != nil {
+		return "", errors.Wrap(err, "Invalid ssh config path")
 	}
+	sshConfigPath = path
 
 	user := "root"
 	_, err = transformHostSection(sshConfigPath, workspaceID+"."+"devpod", func(line string) string {
@@ -120,21 +100,9 @@ func GetUser(c *config.Config, workspaceID string, sshConfigPath string) (string
 	return user, nil
 }
 
-func RemoveFromConfig(c *config.Config, workspaceID string, sshConfigPath string, log log.Logger) error {
+func RemoveFromConfig(workspaceID string, sshConfigPath string, log log.Logger) error {
 	configLock.Lock()
 	defer configLock.Unlock()
-	var err error
-	if sshConfigPath == "" {
-		sshConfigPath, err = GetDefaultSSHConfigPath(c)
-		if err != nil {
-			return err
-		}
-	} else {
-		sshConfigPath, err = ResolveSSHConfigPath(sshConfigPath)
-		if err != nil {
-			return errors.Wrap(err, "Invalid ssh config path")
-		}
-	}
 
 	newFile, err := removeFromConfig(sshConfigPath, workspaceID+"."+"devpod")
 	if err != nil {
@@ -163,22 +131,16 @@ func ResolveSSHConfigPath(sshConfigPath string) (string, error) {
 	if err != nil {
 		return "", errors.Wrap(err, "get home dir")
 	}
+
+	if sshConfigPath == "" {
+		return filepath.Join(homeDir, ".ssh", "config"), nil
+	}
+
 	if strings.HasPrefix(sshConfigPath, "~/") {
 		sshConfigPath = strings.Replace(sshConfigPath, "~", homeDir, 1)
 	}
-	return filepath.Abs(sshConfigPath)
-}
 
-func GetDefaultSSHConfigPath(c *config.Config) (string, error) {
-	homeDir, err := homedir.Dir()
-	if err != nil {
-		return "", errors.Wrap(err, "get home dir")
-	}
-	if c.ContextOption(config.ContextOptionSSHConfigPath) == "" {
-		return filepath.Join(homeDir, ".ssh", "config"), nil
-	} else {
-		return ResolveSSHConfigPath(c.ContextOption(config.ContextOptionSSHConfigPath))
-	}
+	return filepath.Abs(sshConfigPath)
 }
 
 func removeFromConfig(path, host string) (string, error) {
