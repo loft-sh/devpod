@@ -274,7 +274,7 @@ func resolveWorkspace(
 	// create workspace
 	provider, workspace, machine, err := createWorkspace(ctx, devPodConfig, workspaceID, name, desiredMachine, providerUserOptions, sshConfigPath, source, isLocalPath, log)
 	if err != nil {
-		_ = clientimplementation.DeleteWorkspaceFolder(devPodConfig, devPodConfig.DefaultContext, workspaceID, sshConfigPath, log)
+		_ = clientimplementation.DeleteWorkspaceFolder(devPodConfig.DefaultContext, workspaceID, sshConfigPath, log)
 		return nil, nil, nil, err
 	}
 
