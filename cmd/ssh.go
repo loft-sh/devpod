@@ -101,7 +101,7 @@ func (cmd *SSHCmd) Run(ctx context.Context, devPodConfig *config.Config, client 
 	// get user
 	if cmd.User == "" {
 		var err error
-		cmd.User, err = devssh.GetUser(devPodConfig, client.WorkspaceConfig().ID, client.WorkspaceConfig().SSHConfigPath)
+		cmd.User, err = devssh.GetUser(client.WorkspaceConfig().ID, client.WorkspaceConfig().SSHConfigPath)
 		if err != nil {
 			return err
 		}

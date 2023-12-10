@@ -671,9 +671,15 @@ func startBrowserTunnel(
 	return nil
 }
 
-func configureSSH(c *config.Config, client client2.BaseWorkspaceClient, configPath, user string, gpgagent bool) error {
-	err := devssh.ConfigureSSHConfig(c,
-		configPath,
+func configureSSH(c *config.Config, client client2.BaseWorkspaceClient, sshConfigPath, user string, gpgagent bool) error {
+	path, err := devssh.ResolveSSHConfigPath(sshConfigPath)
+	if err != nil {
+		return errors.Wrap(err, "Invalid ssh config path")
+	}
+	sshConfigPath = path
+
+	err = devssh.ConfigureSSHConfig(
+		sshConfigPath,
 		client.Context(),
 		client.Workspace(),
 		user,
@@ -780,7 +786,7 @@ func setupDotfiles(
 		agentArguments = append(agentArguments, dotfilesScript)
 	}
 
-	remoteUser, err := devssh.GetUser(devPodConfig, client.WorkspaceConfig().ID, client.WorkspaceConfig().SSHConfigPath)
+	remoteUser, err := devssh.GetUser(client.WorkspaceConfig().ID, client.WorkspaceConfig().SSHConfigPath)
 	if err != nil {
 		remoteUser = "root"
 	}
@@ -832,12 +838,7 @@ func performGpgForwarding(
 		return err
 	}
 
-	devPodConfig, err := config.LoadConfig(client.WorkspaceConfig().Context, "")
-	if err != nil {
-		return err
-	}
-
-	remoteUser, err := devssh.GetUser(devPodConfig, client.WorkspaceConfig().ID, client.WorkspaceConfig().SSHConfigPath)
+	remoteUser, err := devssh.GetUser(client.WorkspaceConfig().ID, client.WorkspaceConfig().SSHConfigPath)
 	if err != nil {
 		remoteUser = "root"
 	}
