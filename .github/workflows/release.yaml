@@ -237,7 +237,7 @@ jobs:
         id: build-desktop-targz
         run: |
           cd ./desktop/src-tauri/target/${{ matrix.settings.target }}/release/bundle/appimage/dev-pod.AppDir || exit 1
-          tar --exclude=usr/lib --exclude=usr/share/doc -zcvf dev-pod-desktop.tar.gz usr
+          tar --exclude=usr/bin/xdg-open --exclude=usr/lib --exclude=usr/share/doc --exclude=usr/share/glib-2.0 -zcvf dev-pod-desktop.tar.gz usr
 
           mv dev-pod-desktop.tar.gz ../../dev-pod-${{needs.create-release.outputs.package_version}}.tar.gz
 
