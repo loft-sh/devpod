@@ -181,6 +181,12 @@ func (s *workspaceClient) agentInfo(cliOptions provider.CLIOptions) (string, *pr
 		Options:                s.devPodConfig.ProviderOptions(s.Provider()),
 	}
 
+	// if we are running proxy mode
+	if cliOptions.Proxy {
+		agentInfo.Agent.InjectGitCredentials = "true"
+		agentInfo.Agent.InjectDockerCredentials = "true"
+	}
+
 	// we don't send any provider options if proxy because these could contain
 	// sensitive information and we don't want to allow privileged containers that
 	// have access to the host to save these.
