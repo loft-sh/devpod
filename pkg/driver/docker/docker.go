@@ -273,7 +273,7 @@ func (d *dockerDriver) RunDockerDevContainer(
 	}
 
 	// check GPU
-	if parsedConfig.HostRequirements != nil && parsedConfig.HostRequirements.GPU {
+	if parsedConfig.HostRequirements != nil && parsedConfig.HostRequirements.GPU == "true" {
 		enabled, _ := d.Docker.GPUSupportEnabled()
 		if enabled {
 			args = append(args, "--gpus", "all")

@@ -286,7 +286,7 @@ type HostRequirements struct {
 	Storage string `json:"storage,omitempty"`
 
 	// If GPU support should be enabled
-	GPU bool `json:"gpu,omitempty"`
+	GPU types.StrBool `json:"gpu,omitempty"`
 }
 
 type PortAttribute struct {
