@@ -208,6 +208,17 @@ func GetCredentials(requestObj *GitCredentials) (*GitCredentials, error) {
 	return Parse(string(stdout))
 }
 
+func SetupGpgGitKey(gitSignKey string) error {
+	gitConfigCmd := exec.Command("git", []string{"config", "--global", "user.signingKey", gitSignKey}...)
+
+	out, err := gitConfigCmd.Output()
+	if err != nil {
+		return errors.Wrap(err, "git signkey: "+string(out))
+	}
+
+	return nil
+}
+
 func removeCredentialHelper(content string) string {
 	scan := scanner.NewScanner(strings.NewReader(content))
 
