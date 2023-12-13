@@ -5,6 +5,7 @@ import (
 	"encoding/base64"
 
 	"github.com/loft-sh/devpod/cmd/flags"
+	"github.com/loft-sh/devpod/pkg/gitcredentials"
 	"github.com/loft-sh/devpod/pkg/gpg"
 	"github.com/loft-sh/log"
 	"github.com/spf13/cobra"
@@ -117,10 +118,12 @@ func (cmd *SetupGPGCmd) Run(ctx context.Context) error {
 		return err
 	}
 
-	logger.Debugf("Setup git signing key")
-	err = gpgConf.SetupGpgGitKey()
-	if err != nil {
-		return err
+	if gpgConf.GitKey != "" {
+		logger.Debugf("Setup git signing key")
+		err = gitcredentials.SetupGpgGitKey(gpgConf.GitKey)
+		if err != nil {
+			return err
+		}
 	}
 
 	return nil
