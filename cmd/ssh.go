@@ -452,6 +452,12 @@ func (cmd *SSHCmd) setupGPGAgent(
 	gpgExtraSocketPath := strings.TrimSpace(string(gpgExtraSocketBytes))
 	log.Debugf("gpg: detected gpg-agent socket path %s", gpgExtraSocketPath)
 
+	gitGpgKey, err := exec.Command("git", []string{"config", "user.signingKey"}...).Output()
+	if err != nil {
+		log.Debugf("gpg: no git signkey detected, skipping")
+	}
+	log.Debugf("gpg: detected git sign key %s", gitGpgKey)
+
 	log.Debugf("ssh: starting reverse forwarding socket %s", gpgExtraSocketPath)
 	cmd.ReverseForwardPorts = append(cmd.ReverseForwardPorts, gpgExtraSocketPath)
 
@@ -469,6 +475,13 @@ func (cmd *SSHCmd) setupGPGAgent(
 	// fix eventual permissions and so on
 	forwardAgent := []string{
 		agent.ContainerDevPodHelperLocation,
+	}
+
+	if log.GetLevel() == logrus.DebugLevel {
+		forwardAgent = append(forwardAgent, "--debug")
+	}
+
+	forwardAgent = append(forwardAgent, []string{
 		"agent",
 		"workspace",
 		"setup-gpg",
@@ -478,10 +491,11 @@ func (cmd *SSHCmd) setupGPGAgent(
 		ownerTrustArgument,
 		"--socketpath",
 		gpgExtraSocketPath,
-	}
+	}...)
 
-	if log.GetLevel() == logrus.DebugLevel {
-		forwardAgent = append(forwardAgent, "--debug")
+	if len(gitGpgKey) > 0 {
+		forwardAgent = append(forwardAgent, "--gitkey")
+		forwardAgent = append(forwardAgent, string(gitGpgKey))
 	}
 
 	log.Debugf(

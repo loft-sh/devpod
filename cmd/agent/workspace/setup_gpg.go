@@ -17,6 +17,7 @@ type SetupGPGCmd struct {
 	PublicKey  string
 	OwnerTrust string
 	SocketPath string
+	GitKey     string
 }
 
 // NewSetupGPGCmd creates a new command
@@ -35,6 +36,7 @@ func NewSetupGPGCmd(flags *flags.GlobalFlags) *cobra.Command {
 	setupGPGCmd.Flags().StringVar(&cmd.PublicKey, "publickey", "", "GPG Public keys to import in armor form")
 	setupGPGCmd.Flags().StringVar(&cmd.OwnerTrust, "ownertrust", "", "GPG Owner trust to import in armor form")
 	setupGPGCmd.Flags().StringVar(&cmd.SocketPath, "socketpath", "", "patht to the gpg socket forwarded")
+	setupGPGCmd.Flags().StringVar(&cmd.GitKey, "gitkey", "", "gpg key to use for git commit signing")
 	return setupGPGCmd
 }
 
@@ -68,6 +70,7 @@ func (cmd *SetupGPGCmd) Run(ctx context.Context) error {
 		PublicKey:  publicKey,
 		OwnerTrust: ownerTrust,
 		SocketPath: cmd.SocketPath,
+		GitKey:     cmd.GitKey,
 	}
 
 	logger.Debugf("Stopping container gpg-agent")
@@ -110,6 +113,12 @@ func (cmd *SetupGPGCmd) Run(ctx context.Context) error {
 
 	logger.Debugf("Setup gpg.conf")
 	err = gpgConf.SetupGpgConf()
+	if err != nil {
+		return err
+	}
+
+	logger.Debugf("Setup git signing key")
+	err = gpgConf.SetupGpgGitKey()
 	if err != nil {
 		return err
 	}

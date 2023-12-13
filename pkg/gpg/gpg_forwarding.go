@@ -21,6 +21,7 @@ type GPGConf struct {
 	PublicKey  []byte
 	OwnerTrust []byte
 	SocketPath string
+	GitKey     string
 }
 
 func IsGpgTunnelRunning(
@@ -86,6 +87,19 @@ func (g *GPGConf) ImportOwnerTrust() error {
 	}()
 
 	return gpgOwnerTrustCmd.Run()
+}
+
+func (g *GPGConf) SetupGpgGitKey() error {
+	if g.GitKey != "" {
+		gitConfigCmd := exec.Command("git", []string{"config", "--global", "user.signingKey", g.GitKey}...)
+
+		out, err := gitConfigCmd.Output()
+		if err != nil {
+			return fmt.Errorf("git signkey: %s", string(out))
+		}
+	}
+
+	return nil
 }
 
 func (g *GPGConf) SetupGpgConf() error {
