@@ -202,9 +202,12 @@ func prepareWorkspace(ctx context.Context, workspaceInfo *provider2.AgentWorkspa
 	} else if workspaceInfo.Workspace.Source.Image != "" {
 		log.Debugf("Prepare Image")
 		return PrepareImage(workspaceInfo.ContentFolder, workspaceInfo.Workspace.Source.Image)
+	} else if workspaceInfo.Workspace.Source.Container != "" {
+		log.Debugf("Workspace is a container, nothing to do")
+		return nil
 	}
 
-	return fmt.Errorf("either workspace repository, image or local-folder is required")
+	return fmt.Errorf("either workspace repository, image, container or local-folder is required")
 }
 
 func InitContentFolder(workspaceInfo *provider2.AgentWorkspaceInfo, log log.Logger) (bool, error) {

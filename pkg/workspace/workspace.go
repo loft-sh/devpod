@@ -207,6 +207,14 @@ func ResolveWorkspace(
 		}
 	}
 
+	// configure dev container source
+	if workspace.Source.Container != "" {
+		err = provider2.SaveWorkspaceConfig(workspace)
+		if err != nil {
+			return nil, errors.Wrap(err, "save workspace")
+		}
+	}
+
 	// create workspace client
 	var workspaceClient client.BaseWorkspaceClient
 	if provider.IsProxyProvider() {

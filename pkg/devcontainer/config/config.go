@@ -17,6 +17,7 @@ type MergedDevContainerConfig struct {
 	ImageContainer          `json:",inline"`
 	ComposeContainer        `json:",inline"`
 	DockerfileContainer     `json:",inline"`
+	RunningContainer        `json:",inline"`
 
 	// Origin is the origin from where this config was loaded
 	Origin string `json:"-"`
@@ -29,6 +30,7 @@ type DevContainerConfig struct {
 	ImageContainer         `json:",inline"`
 	ComposeContainer       `json:",inline"`
 	DockerfileContainer    `json:",inline"`
+	RunningContainer       `json:",inline"`
 
 	// Origin is the origin from where this config was loaded
 	Origin string `json:"-"`
@@ -215,6 +217,10 @@ type DockerfileContainer struct {
 
 	// Docker build-related options.
 	Build *ConfigBuildOptions `json:"build,omitempty"`
+}
+
+type RunningContainer struct {
+	ContainerID string `json:"containerID,omitempty"`
 }
 
 func (d DockerfileContainer) GetDockerfile() string {

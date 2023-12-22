@@ -116,7 +116,7 @@ func (r *runner) Up(ctx context.Context, options UpOptions) (*config.Result, err
 
 	// check if its a compose devcontainer.json
 	var result *config.Result
-	if isDockerFileConfig(substitutedConfig.Config) || substitutedConfig.Config.Image != "" {
+	if isDockerFileConfig(substitutedConfig.Config) || substitutedConfig.Config.Image != "" || substitutedConfig.Config.ContainerID != "" {
 		result, err = r.runSingleContainer(
 			ctx,
 			substitutedConfig,
@@ -164,6 +164,18 @@ func (r *runner) prepare(
 			rawParsedConfig.Origin = path.Join(filepath.ToSlash(r.LocalWorkspaceFolder), r.WorkspaceConfig.Workspace.DevContainerPath)
 		} else {
 			rawParsedConfig.Origin = path.Join(filepath.ToSlash(r.LocalWorkspaceFolder), ".devcontainer.devpod.json")
+		}
+	} else if r.WorkspaceConfig.Workspace.Source.Container != "" {
+		rawParsedConfig = &config.DevContainerConfig{
+			DevContainerConfigBase: config.DevContainerConfigBase{
+				// Default workspace directory for containers
+				// Upon inspecting the container, this would be updated to the correct folder, if found set
+				WorkspaceFolder: "/",
+			},
+			RunningContainer: config.RunningContainer{
+				ContainerID: r.WorkspaceConfig.Workspace.Source.Container,
+			},
+			Origin: "",
 		}
 	} else {
 		var err error

@@ -23,6 +23,9 @@ type ContainerDetails struct {
 type ContainerDetailsConfig struct {
 	Labels map[string]string `json:"Labels,omitempty"`
 
+	// WorkingDir specifies default working directory inside the container
+	WorkingDir string `json:"WorkingDir,omitempty"`
+
 	// LegacyUser shouldn't get used anymore and is only there for backwards compatibility, please
 	// use the label config.UserLabel instead
 	LegacyUser string `json:"User,omitempty"`

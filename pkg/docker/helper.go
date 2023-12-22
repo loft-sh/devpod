@@ -19,6 +19,7 @@ import (
 
 type DockerHelper struct {
 	DockerCommand string
+	ContainerID   string
 	// allow command to have a custom environment
 	Environment []string
 }

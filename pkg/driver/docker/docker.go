@@ -45,6 +45,7 @@ func NewDockerDriver(workspaceInfo *provider2.AgentWorkspaceInfo, log log.Logger
 		Docker: &docker.DockerHelper{
 			DockerCommand: dockerCommand,
 			Environment:   makeEnvironment(workspaceInfo.Agent.Docker.Env, log),
+			ContainerID:   workspaceInfo.Workspace.Source.Container,
 		},
 		Log: log,
 	}
@@ -151,7 +152,13 @@ func (d *dockerDriver) ComposeHelper() (*compose.ComposeHelper, error) {
 }
 
 func (d *dockerDriver) FindDevContainer(ctx context.Context, workspaceId string) (*config.ContainerDetails, error) {
-	containerDetails, err := d.Docker.FindDevContainer(ctx, []string{config.DockerIDLabel + "=" + workspaceId})
+	var containerDetails *config.ContainerDetails
+	var err error
+	if d.Docker.ContainerID != "" {
+		containerDetails, err = d.Docker.FindContainerByID(ctx, []string{d.Docker.ContainerID})
+	} else {
+		containerDetails, err = d.Docker.FindDevContainer(ctx, []string{config.DockerIDLabel + "=" + workspaceId})
+	}
 	if err != nil {
 		return nil, err
 	} else if containerDetails == nil {
