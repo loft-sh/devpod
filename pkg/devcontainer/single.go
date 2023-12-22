@@ -25,13 +25,21 @@ func (r *runner) runSingleContainer(ctx context.Context, parsedConfig *config.Su
 	var (
 		mergedConfig *config.MergedDevContainerConfig
 	)
-	if !options.Recreate && containerDetails != nil {
+	// if options.Recreate is true, and workspace is a running container, we should not rebuild
+	if options.Recreate && parsedConfig.Config.ContainerID != "" {
+		return nil, fmt.Errorf("cannot recreate container not created by DevPod")
+	} else if !options.Recreate && containerDetails != nil {
 		// start container if not running
 		if strings.ToLower(containerDetails.State.Status) != "running" {
 			err = r.Driver.StartDevContainer(ctx, r.ID)
 			if err != nil {
 				return nil, err
 			}
+		}
+
+		// if we are working with a non-managed container, and it has set workingDir, set it as the workspaceFolder
+		if parsedConfig.Config.ContainerID != "" && containerDetails.Config.WorkingDir != "" {
+			substitutionContext.ContainerWorkspaceFolder = containerDetails.Config.WorkingDir
 		}
 
 		imageMetadataConfig, err := metadata.GetImageMetadataFromContainer(containerDetails, substitutionContext, r.Log)

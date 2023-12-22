@@ -10,9 +10,10 @@ import (
 )
 
 var (
-	WorkspaceSourceGit   = "git:"
-	WorkspaceSourceLocal = "local:"
-	WorkspaceSourceImage = "image:"
+	WorkspaceSourceGit       = "git:"
+	WorkspaceSourceLocal     = "local:"
+	WorkspaceSourceImage     = "image:"
+	WorkspaceSourceContainer = "container:"
 )
 
 type Workspace struct {
@@ -108,6 +109,9 @@ type WorkspaceSource struct {
 
 	// Image is the docker image to use
 	Image string `json:"image,omitempty"`
+
+	// Container is the container to use
+	Container string `json:"container,omitempty"`
 }
 
 type ContainerWorkspaceInfo struct {
@@ -203,6 +207,8 @@ func (w WorkspaceSource) String() string {
 		return WorkspaceSourceLocal + w.LocalFolder
 	} else if w.Image != "" {
 		return WorkspaceSourceImage + w.Image
+	} else if w.Container != "" {
+		return WorkspaceSourceContainer + w.Container
 	}
 
 	return ""
@@ -224,6 +230,10 @@ func ParseWorkspaceSource(source string) *WorkspaceSource {
 	} else if strings.HasPrefix(source, WorkspaceSourceImage) {
 		return &WorkspaceSource{
 			Image: strings.TrimPrefix(source, WorkspaceSourceImage),
+		}
+	} else if strings.HasPrefix(source, WorkspaceSourceContainer) {
+		return &WorkspaceSource{
+			Container: strings.TrimPrefix(source, WorkspaceSourceContainer),
 		}
 	}
 
