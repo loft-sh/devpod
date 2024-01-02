@@ -19,7 +19,10 @@ import (
 
 type DockerHelper struct {
 	DockerCommand string
-	ContainerID   string
+	// for a running container, we cannot pass down the container ID to the driver without introducing
+	// changes in the driver interface (which we do not want to do). So, to get around this, we pass
+	// it down to the driver during docker helper initialization.
+	ContainerID string
 	// allow command to have a custom environment
 	Environment []string
 }
