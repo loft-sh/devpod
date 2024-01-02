@@ -43,26 +43,26 @@ func NewInstallDotfilesCmd(flags *flags.GlobalFlags) *cobra.Command {
 // Run runs the command logic
 func (cmd *InstallDotfilesCmd) Run(ctx context.Context) error {
 	logger := log.Default.ErrorStreamOnly()
+	targetDir := "dotfiles"
 
-	_, err := os.Stat("dotfiles")
+	_, err := os.Stat(targetDir)
 	if err == nil {
 		logger.Info("dotfiles already set up, skipping")
 
 		return nil
 	}
 
-	cloneArgs := []string{"clone", cmd.Repository, "dotfiles"}
-
 	logger.Infof("Cloning dotfiles %s", cmd.Repository)
 
-	err = git.CommandContext(ctx, cloneArgs...).Run()
+	gitInfo := git.NormalizeRepositoryGitInfo(cmd.Repository)
+	err = git.CloneRepository(ctx, gitInfo, targetDir, "", false, logger.Writer(logrus.DebugLevel, false), logger)
 	if err != nil {
 		return err
 	}
 
 	logger.Debugf("Entering dotfiles directory")
 
-	err = os.Chdir("dotfiles")
+	err = os.Chdir(targetDir)
 	if err != nil {
 		return err
 	}

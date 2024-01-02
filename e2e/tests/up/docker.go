@@ -7,6 +7,7 @@ import (
 	"os"
 	"path"
 	"path/filepath"
+	"runtime"
 	"strings"
 
 	"github.com/docker/docker/api/types"
@@ -249,6 +250,70 @@ var _ = DevPodDescribe("devpod up test suite", func() {
 
 				expectedOutput := "/tmp/worked\n"
 
+				framework.ExpectEqual(out, expectedOutput, "should match")
+			}, ginkgo.SpecTimeout(framework.GetTimeout()))
+
+			ginkgo.It("should start a new workspace with dotfiles - no install script, commit", func(ctx context.Context) {
+				// need to debug
+				if runtime.GOOS == "windows" {
+					ginkgo.Skip("skipping on windows")
+				}
+
+				tempDir, err := framework.CopyToTempDir("tests/up/testdata/docker")
+				framework.ExpectNoError(err)
+				ginkgo.DeferCleanup(framework.CleanupTempDir, initialDir, tempDir)
+
+				f := framework.NewDefaultFramework(initialDir + "/bin")
+
+				_ = f.DevPodProviderDelete(ctx, "docker")
+				err = f.DevPodProviderAdd(ctx, "docker")
+				framework.ExpectNoError(err)
+				err = f.DevPodProviderUse(ctx, "docker")
+				framework.ExpectNoError(err)
+
+				ginkgo.DeferCleanup(f.DevPodWorkspaceDelete, context.Background(), tempDir)
+
+				// Wait for devpod workspace to come online (deadline: 30s)
+				err = f.DevPodUp(ctx, tempDir, "--dotfiles", "https://github.com/loft-sh/example-dotfiles@sha256:9a0b41808bf8f50e9871b3b5c9280fe22bf46a04")
+				framework.ExpectNoError(err)
+
+				out, err := f.DevPodSSH(ctx, tempDir, "ls ~/.file*")
+				framework.ExpectNoError(err)
+
+				expectedOutput := `/home/vscode/.file1
+/home/vscode/.file2
+/home/vscode/.file3
+`
+				framework.ExpectEqual(out, expectedOutput, "should match")
+			}, ginkgo.SpecTimeout(framework.GetTimeout()))
+			ginkgo.It("should start a new workspace with dotfiles - no install script, branch", func(ctx context.Context) {
+				// need to debug
+				if runtime.GOOS == "windows" {
+					ginkgo.Skip("skipping on windows")
+				}
+
+				tempDir, err := framework.CopyToTempDir("tests/up/testdata/docker")
+				framework.ExpectNoError(err)
+				ginkgo.DeferCleanup(framework.CleanupTempDir, initialDir, tempDir)
+
+				f := framework.NewDefaultFramework(initialDir + "/bin")
+
+				_ = f.DevPodProviderDelete(ctx, "docker")
+				err = f.DevPodProviderAdd(ctx, "docker")
+				framework.ExpectNoError(err)
+				err = f.DevPodProviderUse(ctx, "docker")
+				framework.ExpectNoError(err)
+
+				ginkgo.DeferCleanup(f.DevPodWorkspaceDelete, context.Background(), tempDir)
+
+				// Wait for devpod workspace to come online (deadline: 30s)
+				err = f.DevPodUp(ctx, tempDir, "--dotfiles", "https://github.com/loft-sh/example-dotfiles@do-not-delete")
+				framework.ExpectNoError(err)
+
+				out, err := f.DevPodSSH(ctx, tempDir, "cat ~/.branch_test")
+				framework.ExpectNoError(err)
+
+				expectedOutput := "test\n"
 				framework.ExpectEqual(out, expectedOutput, "should match")
 			}, ginkgo.SpecTimeout(framework.GetTimeout()))
 
