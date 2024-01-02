@@ -2,6 +2,7 @@ package git
 
 import (
 	"context"
+	"io"
 	"os"
 	"os/exec"
 	"regexp"
@@ -9,6 +10,8 @@ import (
 	"time"
 
 	"github.com/loft-sh/devpod/pkg/command"
+	"github.com/loft-sh/log"
+	"github.com/pkg/errors"
 )
 
 const (
@@ -76,4 +79,81 @@ func PingRepository(str string) bool {
 func GetBranchNameForPR(ref string) string {
 	regex := regexp.MustCompile(PullRequestReference)
 	return regex.ReplaceAllString(ref, "PR${1}")
+}
+
+type GitInfo struct {
+	Repository string
+	Branch     string
+	Commit     string
+	PR         string
+}
+
+func NewGitInfo(repository, branch, commit, pr string) *GitInfo {
+	return &GitInfo{
+		Repository: repository,
+		Branch:     branch,
+		Commit:     commit,
+		PR:         pr,
+	}
+}
+
+func NormalizeRepositoryGitInfo(str string) *GitInfo {
+	repository, pr, branch, commit := NormalizeRepository(str)
+	return NewGitInfo(repository, branch, commit, pr)
+}
+
+func CloneRepository(ctx context.Context, gitInfo *GitInfo, targetDir string, helper string, bare bool, writer io.Writer, log log.Logger) error {
+	args := []string{"clone"}
+	if bare && gitInfo.Commit == "" {
+		args = append(args, "--bare", "--depth=1")
+	}
+	if helper != "" {
+		args = append(args, "--config", "credential.helper="+helper)
+	}
+	if gitInfo.Branch != "" {
+		args = append(args, "--branch", gitInfo.Branch)
+	}
+	args = append(args, gitInfo.Repository, targetDir)
+	gitCommand := CommandContext(ctx, args...)
+	gitCommand.Stdout = writer
+	gitCommand.Stderr = writer
+	err := gitCommand.Run()
+	if err != nil {
+		return errors.Wrap(err, "error cloning repository")
+	}
+
+	if gitInfo.PR != "" {
+		log.Debugf("Fetching pull request : %s", gitInfo.PR)
+
+		prBranch := GetBranchNameForPR(gitInfo.PR)
+
+		// git fetch origin pull/996/head:PR996
+		fetchArgs := []string{"fetch", "origin", gitInfo.PR + ":" + prBranch}
+		fetchCmd := CommandContext(ctx, fetchArgs...)
+		fetchCmd.Dir = targetDir
+		err = fetchCmd.Run()
+		if err != nil {
+			return errors.Wrap(err, "error fetching pull request reference")
+		}
+
+		// git switch PR996
+		switchArgs := []string{"switch", prBranch}
+		switchCmd := CommandContext(ctx, switchArgs...)
+		switchCmd.Dir = targetDir
+		err = switchCmd.Run()
+		if err != nil {
+			return errors.Wrap(err, "error switching to the branch")
+		}
+	} else if gitInfo.Commit != "" {
+		args := []string{"reset", "--hard", gitInfo.Commit}
+		gitCommand := CommandContext(ctx, args...)
+		gitCommand.Dir = targetDir
+		gitCommand.Stdout = writer
+		gitCommand.Stderr = writer
+		err := gitCommand.Run()
+		if err != nil {
+			return errors.Wrap(err, "error resetting head to commit")
+		}
+	}
+	return nil
 }

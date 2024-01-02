@@ -389,6 +389,7 @@ func (cmd *UpCmd) devPodUp(ctx context.Context, workspaceInfo *provider2.AgentWo
 
 func CloneRepository(ctx context.Context, local bool, workspaceDir string, source provider2.WorkspaceSource, helper string, log log.Logger) error {
 	// remove the credential helper or otherwise we will receive strange errors within the container
+
 	defer func() {
 		if helper != "" {
 			err := gitcredentials.RemoveHelperFromPath(filepath.Join(workspaceDir, ".git", "config"))
@@ -458,54 +459,10 @@ func CloneRepository(ctx context.Context, local bool, workspaceDir string, sourc
 	}
 
 	// run git command
-	args := []string{"clone"}
-	if helper != "" {
-		args = append(args, "--config", "credential.helper="+helper)
-	}
-	if source.GitBranch != "" {
-		args = append(args, "--branch", source.GitBranch)
-	}
-	args = append(args, source.GitRepository, workspaceDir)
-	gitCommand := git.CommandContext(ctx, args...)
-	gitCommand.Stdout = writer
-	gitCommand.Stderr = writer
-	err := gitCommand.Run()
+	gitInfo := git.NewGitInfo(source.GitRepository, source.GitBranch, source.GitCommit, source.GitPRReference)
+	err := git.CloneRepository(ctx, gitInfo, workspaceDir, helper, false, writer, log)
 	if err != nil {
-		return errors.Wrap(err, "error cloning repository")
-	}
-
-	if source.GitPRReference != "" {
-		log.Debugf("Fetching pull request : %s", source.GitPRReference)
-
-		prBranch := git.GetBranchNameForPR(source.GitPRReference)
-
-		// git fetch origin pull/996/head:PR996
-		fetchArgs := []string{"fetch", "origin", source.GitPRReference + ":" + prBranch}
-		fetchCmd := git.CommandContext(ctx, fetchArgs...)
-		fetchCmd.Dir = workspaceDir
-		err = fetchCmd.Run()
-		if err != nil {
-			return errors.Wrap(err, "error fetching pull request reference")
-		}
-
-		// git switch PR996
-		switchArgs := []string{"switch", prBranch}
-		switchCmd := git.CommandContext(ctx, switchArgs...)
-		switchCmd.Dir = workspaceDir
-		err = switchCmd.Run()
-		if err != nil {
-			return errors.Wrap(err, "error switching to the branch")
-		}
-	} else if source.GitCommit != "" {
-		args := []string{"reset", "--hard", source.GitCommit}
-		gitCommand := git.CommandContext(ctx, args...)
-		gitCommand.Dir = workspaceDir
-		gitCommand.Stdout = writer
-		gitCommand.Stderr = writer
-		err := gitCommand.Run()
-		if err != nil {
-			return errors.Wrap(err, "error resetting head to commit")
-		}
+		return errors.Wrap(err, "clone repository")
 	}
 
 	return nil

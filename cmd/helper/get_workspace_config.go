@@ -151,55 +151,11 @@ func findDevcontainerFiles(ctx context.Context, rawSource, tmpDirPath string, ma
 		log.Debug("Git repository detected")
 		result.IsGitRepository = true
 
+		gitInfo := git.NewGitInfo(gitRepository, gitBranch, gitCommit, gitPRReference)
 		log.Debugf("Cloning git repository into %s", tmpDirPath)
-		// git clone --bare --depth=1 $REPO
-		cloneArgs := []string{"clone"}
-		if gitCommit == "" {
-			cloneArgs = append(cloneArgs, "--bare", "--depth=1")
-		}
-		cloneArgs = append(cloneArgs, gitRepository, tmpDirPath)
-		if gitBranch != "" {
-			cloneArgs = append(cloneArgs, "--branch", gitBranch)
-		}
-		err := git.CommandContext(ctx, cloneArgs...).Run()
+		err := git.CloneRepository(ctx, gitInfo, tmpDirPath, "", true, log.Writer(logrus.DebugLevel, false), log)
 		if err != nil {
 			return nil, err
-		}
-		log.Debug("Done cloning git repository")
-
-		if gitPRReference != "" {
-			log.Debugf("Fetching pull request : %s", gitPRReference)
-
-			prBranch := git.GetBranchNameForPR(gitPRReference)
-
-			// git fetch origin pull/996/head:PR996
-			fetchArgs := []string{"fetch", "origin", gitPRReference + ":" + prBranch}
-			fetchCmd := git.CommandContext(ctx, fetchArgs...)
-			fetchCmd.Dir = tmpDirPath
-			err = fetchCmd.Run()
-			if err != nil {
-				return nil, err
-			}
-
-			// git switch PR996
-			switchArgs := []string{"switch", prBranch}
-			switchCmd := git.CommandContext(ctx, switchArgs...)
-			switchCmd.Dir = tmpDirPath
-			err = switchCmd.Run()
-			if err != nil {
-				return nil, err
-			}
-		} else if gitCommit != "" {
-			log.Debugf("Resetting HEAD to %s", gitCommit)
-			// git reset --hard $COMMIT_SHA
-			resetArgs := []string{"reset", "--hard", gitCommit}
-			resetCmd := git.CommandContext(ctx, resetArgs...)
-			resetCmd.Dir = tmpDirPath
-			err = resetCmd.Run()
-			if err != nil {
-				return nil, err
-			}
-			log.Debugf("HEAD is now at %s", gitCommit)
 		}
 
 		log.Debug("Listing git file tree")
