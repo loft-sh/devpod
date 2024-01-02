@@ -48,6 +48,7 @@ type SSHCmd struct {
 
 	Command string
 	User    string
+	WorkDir string
 }
 
 // NewSSHCmd creates a new ssh command
@@ -79,6 +80,7 @@ func NewSSHCmd(flags *flags.GlobalFlags) *cobra.Command {
 	sshCmd.Flags().StringVar(&cmd.ForwardPortsTimeout, "forward-ports-timeout", "", "Specifies the timeout after which the command should terminate when the ports are unused.")
 	sshCmd.Flags().StringVar(&cmd.Command, "command", "", "The command to execute within the workspace")
 	sshCmd.Flags().StringVar(&cmd.User, "user", "", "The user of the workspace to use")
+	sshCmd.Flags().StringVar(&cmd.WorkDir, "workdir", "", "The working directory in the container")
 	sshCmd.Flags().BoolVar(&cmd.Proxy, "proxy", false, "If true will act as intermediate proxy for a proxy provider")
 	sshCmd.Flags().BoolVar(&cmd.AgentForwarding, "agent-forwarding", true, "If true forward the local ssh keys to the remote machine")
 	sshCmd.Flags().BoolVar(&cmd.GPGAgentForwarding, "gpg-agent-forwarding", false, "If true forward the local gpg-agent to the remote machine")
@@ -363,8 +365,13 @@ func (cmd *SSHCmd) startTunnel(ctx context.Context, devPodConfig *config.Config,
 		}
 	}
 
+	workdir := filepath.Join("/workspaces", workspaceName)
+	if cmd.WorkDir != "" {
+		workdir = cmd.WorkDir
+	}
+
 	log.Debugf("Run outer container tunnel")
-	command := fmt.Sprintf("'%s' helper ssh-server --track-activity --stdio --workdir '%s'", agent.ContainerDevPodHelperLocation, filepath.Join("/workspaces", workspaceName))
+	command := fmt.Sprintf("'%s' helper ssh-server --track-activity --stdio --workdir '%s'", agent.ContainerDevPodHelperLocation, workdir)
 	if cmd.Debug {
 		command += " --debug"
 	}

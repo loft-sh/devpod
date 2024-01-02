@@ -21,15 +21,15 @@ var (
 	MarkerEndPrefix   = "# DevPod End "
 )
 
-func ConfigureSSHConfig(sshConfigPath, context, workspace, user string, gpgagent bool, log log.Logger) error {
-	return configureSSHConfigSameFile(sshConfigPath, context, workspace, user, "", gpgagent, log)
+func ConfigureSSHConfig(sshConfigPath, context, workspace, user, workdir string, gpgagent bool, log log.Logger) error {
+	return configureSSHConfigSameFile(sshConfigPath, context, workspace, user, workdir, "", gpgagent, log)
 }
 
-func configureSSHConfigSameFile(sshConfigPath, context, workspace, user, command string, gpgagent bool, log log.Logger) error {
+func configureSSHConfigSameFile(sshConfigPath, context, workspace, user, workdir, command string, gpgagent bool, log log.Logger) error {
 	configLock.Lock()
 	defer configLock.Unlock()
 
-	newFile, err := addHost(sshConfigPath, workspace+"."+"devpod", user, context, workspace, command, gpgagent)
+	newFile, err := addHost(sshConfigPath, workspace+"."+"devpod", user, context, workspace, workdir, command, gpgagent)
 	if err != nil {
 		return errors.Wrap(err, "parse ssh config")
 	}
@@ -43,7 +43,7 @@ type DevPodSSHEntry struct {
 	Workspace string
 }
 
-func addHost(path, host, user, context, workspace, command string, gpgagent bool) (string, error) {
+func addHost(path, host, user, context, workspace, workdir, command string, gpgagent bool) (string, error) {
 	newConfig, err := removeFromConfig(path, host)
 	if err != nil {
 		return "", err
@@ -70,7 +70,11 @@ func addHost(path, host, user, context, workspace, command string, gpgagent bool
 	} else if gpgagent {
 		newLines = append(newLines, fmt.Sprintf("  ProxyCommand %s ssh --gpg-agent-forwarding --stdio --context %s --user %s %s", execPath, context, user, workspace))
 	} else {
-		newLines = append(newLines, fmt.Sprintf("  ProxyCommand %s ssh --stdio --context %s --user %s %s", execPath, context, user, workspace))
+		proxyCommand := fmt.Sprintf("  ProxyCommand %s ssh --stdio --context %s --user %s %s", execPath, context, user, workspace)
+		if workdir != "" {
+			proxyCommand = fmt.Sprintf("%s --workdir %s", proxyCommand, workdir)
+		}
+		newLines = append(newLines, proxyCommand)
 	}
 	newLines = append(newLines, "  User "+user)
 	newLines = append(newLines, endMarker)

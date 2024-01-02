@@ -170,9 +170,14 @@ func (cmd *UpCmd) Run(
 	// get user from result
 	user := config2.GetRemoteUser(result)
 
+	var workdir string
+	if result.MergedConfig != nil && result.MergedConfig.WorkspaceFolder != "" {
+		workdir = result.MergedConfig.WorkspaceFolder
+	}
+
 	// configure container ssh
 	if cmd.ConfigureSSH {
-		err = configureSSH(devPodConfig, client, cmd.SSHConfigPath, user,
+		err = configureSSH(devPodConfig, client, cmd.SSHConfigPath, user, workdir,
 			cmd.GPGAgentForwarding ||
 				devPodConfig.ContextOption(config.ContextOptionGPGAgentForwarding) == "true")
 
@@ -671,7 +676,7 @@ func startBrowserTunnel(
 	return nil
 }
 
-func configureSSH(c *config.Config, client client2.BaseWorkspaceClient, sshConfigPath, user string, gpgagent bool) error {
+func configureSSH(c *config.Config, client client2.BaseWorkspaceClient, sshConfigPath, user, workdir string, gpgagent bool) error {
 	path, err := devssh.ResolveSSHConfigPath(sshConfigPath)
 	if err != nil {
 		return errors.Wrap(err, "Invalid ssh config path")
@@ -683,6 +688,7 @@ func configureSSH(c *config.Config, client client2.BaseWorkspaceClient, sshConfi
 		client.Context(),
 		client.Workspace(),
 		user,
+		workdir,
 		gpgagent,
 		log.Default,
 	)
