@@ -382,7 +382,7 @@ func LoadAllProviders(devPodConfig *config.Config, log log.Logger) (map[string]*
 	}
 
 	for _, entry := range entries {
-		if retProviders[entry.Name()] != nil {
+		if retProviders[entry.Name()] != nil || !entry.IsDir() || strings.HasPrefix(entry.Name(), ".DS_Store") {
 			continue
 		}
 
