@@ -88,5 +88,40 @@ var _ = DevPodDescribe("devpod provider test suite", func() {
 			err = f.DevPodProviderUse(context.Background(), "provider2")
 			framework.ExpectError(err)
 		})
+
+		ginkgo.It("should list all providers", func() {
+			tempDir, err := framework.CopyToTempDir("tests/provider/testdata/simple-k8s-provider")
+			framework.ExpectNoError(err)
+			ginkgo.DeferCleanup(framework.CleanupTempDir, initialDir, tempDir)
+
+			f := framework.NewDefaultFramework(initialDir + "/bin")
+
+			// Ensure that provider 1 is deleted
+			err = f.DevPodProviderDelete(ctx, "provider1", "--ignore-not-found")
+			framework.ExpectNoError(err)
+
+			// Add provider 1
+			err = f.DevPodProviderAdd(ctx, tempDir+"/provider1.yaml")
+			framework.ExpectNoError(err)
+			// Ensure provider 1 exists
+			err = f.DevPodProviderUse(context.Background(), "provider1")
+			framework.ExpectNoError(err)
+
+			// Add .DS_Store file to tempDir
+			err = os.Mkdir(tempDir+"/.DS_Store", 0755)
+			framework.ExpectNoError(err)
+
+			// List providers
+			err = f.DevPodProviderList(context.Background())
+			framework.ExpectNoError(err)
+
+			// Cleanup: delete provider 1
+			err = f.DevPodProviderDelete(ctx, "provider1")
+			framework.ExpectNoError(err)
+
+			// Cleanup: ensure provider 1 is deleted
+			err = f.DevPodProviderUse(context.Background(), "provider1")
+			framework.ExpectError(err)
+		})
 	})
 })

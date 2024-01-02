@@ -124,6 +124,15 @@ func (f *Framework) DevPodProviderOptionsCheckNamespaceDescription(ctx context.C
 	return nil
 }
 
+func (f *Framework) DevPodProviderList(ctx context.Context, extraArgs ...string) error {
+	baseArgs := []string{"provider", "list"}
+	err := f.ExecCommand(ctx, false, true, "", append(baseArgs, extraArgs...))
+	if err != nil {
+		return fmt.Errorf("devpod provider list failed: %s", err.Error())
+	}
+	return nil
+}
+
 func (f *Framework) DevPodProviderUse(ctx context.Context, provider string, extraArgs ...string) error {
 	baseArgs := []string{"provider", "use", provider}
 	err := f.ExecCommand(ctx, false, true, "", append(baseArgs, extraArgs...))
