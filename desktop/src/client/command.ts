@@ -1,4 +1,4 @@
-import { ChildProcess, Command as ShellCommand, EventEmitter } from "@tauri-apps/api/shell"
+import { ChildProcess, Command as ShellCommand, EventEmitter, Child } from "@tauri-apps/api/shell"
 import { debug, isError } from "../lib"
 import { Result, ResultError, Return } from "../lib/result"
 import { DEVPOD_BINARY, DEVPOD_FLAG_OPTION, DEVPOD_UI_ENV_VAR } from "./constants"
@@ -12,10 +12,12 @@ export type TEventListener<TEventName extends string> = Parameters<
 export type TCommand<T> = {
   run(): Promise<Result<T>>
   stream(listener: TStreamEventListenerFn): Promise<ResultError>
+  cancel(): Promise<ResultError>
 }
 
 export class Command implements TCommand<ChildProcess> {
-  private sidecarCommand
+  private sidecarCommand: ShellCommand
+  private childProcess?: Child
   private args: string[]
 
   constructor(args: string[]) {
@@ -24,20 +26,6 @@ export class Command implements TCommand<ChildProcess> {
       env: { [DEVPOD_UI_ENV_VAR]: "true" },
     })
     this.args = args
-  }
-
-  public withConversion<T>(convert: (childProcess: ChildProcess) => Result<T>): TCommand<T> {
-    return {
-      run: async () => {
-        const result = await this.run()
-        if (result.err) {
-          return result
-        }
-
-        return convert(result.val)
-      },
-      stream: this.stream,
-    }
   }
 
   public async run(): Promise<Result<ChildProcess>> {
@@ -53,7 +41,7 @@ export class Command implements TCommand<ChildProcess> {
 
   public async stream(listener: TStreamEventListenerFn): Promise<ResultError> {
     try {
-      await this.sidecarCommand.spawn()
+      this.childProcess = await this.sidecarCommand.spawn()
       await new Promise((res, rej) => {
         const stdoutListener: TEventListener<"data"> = (message) => {
           try {
@@ -87,6 +75,7 @@ export class Command implements TCommand<ChildProcess> {
         const cleanup = () => {
           this.sidecarCommand.stderr.removeListener("data", stderrListener)
           this.sidecarCommand.stdout.removeListener("data", stdoutListener)
+          this.childProcess = undefined
         }
 
         this.sidecarCommand.on("close", (arg?: { code: number }) => {
@@ -112,6 +101,24 @@ export class Command implements TCommand<ChildProcess> {
       console.log(e)
 
       return Return.Failed("streaming failed")
+    }
+  }
+
+  /**
+   * Cancel the command.
+   * Only works if it has been created with the `stream` method.
+   */
+  public async cancel(): Promise<Result<undefined>> {
+    try {
+      await this.childProcess?.kill()
+
+      return Return.Ok()
+    } catch (e) {
+      if (isError(e)) {
+        return Return.Failed(e.message)
+      }
+
+      return Return.Failed("failed to cancel command")
     }
   }
 }
