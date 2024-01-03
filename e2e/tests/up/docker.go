@@ -9,6 +9,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/docker/docker/api/types"
 	"github.com/loft-sh/devpod/e2e/framework"
 	"github.com/loft-sh/devpod/pkg/devcontainer/config"
 	docker "github.com/loft-sh/devpod/pkg/docker"
@@ -49,6 +50,43 @@ var _ = DevPodDescribe("devpod up test suite", func() {
 
 				// Wait for devpod workspace to come online (deadline: 30s)
 				err = f.DevPodUp(ctx, tempDir)
+				framework.ExpectNoError(err)
+			}, ginkgo.SpecTimeout(framework.GetTimeout()))
+			ginkgo.It("should start a new workspace with existing running container", func(ctx context.Context) {
+				tempDir, err := framework.CopyToTempDir("tests/up/testdata/no-devcontainer")
+				framework.ExpectNoError(err)
+				ginkgo.DeferCleanup(framework.CleanupTempDir, initialDir, tempDir)
+
+				f := framework.NewDefaultFramework(initialDir + "/bin")
+
+				_ = f.DevPodProviderDelete(ctx, "docker")
+				err = f.DevPodProviderAdd(ctx, "docker")
+				framework.ExpectNoError(err)
+				err = f.DevPodProviderUse(ctx, "docker")
+				framework.ExpectNoError(err)
+
+				err = dockerHelper.Run(ctx, []string{"run", "-d", "--label", "devpod-e2e-test-container=true", "-w", "/workspaces/e2e", "mcr.microsoft.com/vscode/devcontainers/base:alpine", "sleep", "infinity"}, nil, nil, nil)
+				framework.ExpectNoError(err)
+
+				ids, err := dockerHelper.FindContainer(ctx, []string{
+					"devpod-e2e-test-container=true",
+				})
+				framework.ExpectNoError(err)
+				gomega.Expect(ids).To(gomega.HaveLen(1), "1 container is created")
+				ginkgo.DeferCleanup(dockerHelper.Remove, ids[0])
+				ginkgo.DeferCleanup(dockerHelper.Stop, ids[0])
+
+				var containerDetails []types.ContainerJSON
+				err = dockerHelper.Inspect(ctx, ids, "container", &containerDetails)
+				framework.ExpectNoError(err)
+
+				containerDetail := containerDetails[0]
+				gomega.Expect(containerDetail.Config.WorkingDir).To(gomega.Equal("/workspaces/e2e"))
+
+				ginkgo.DeferCleanup(f.DevPodWorkspaceDelete, context.Background(), tempDir)
+
+				// Wait for devpod workspace to come online (deadline: 30s)
+				err = f.DevPodUp(ctx, tempDir, "--source", fmt.Sprintf("container:%s", containerDetail.ID))
 				framework.ExpectNoError(err)
 			}, ginkgo.SpecTimeout(framework.GetTimeout()))
 			ginkgo.It("should start a new workspace and substitute devcontainer.json variables", func(ctx context.Context) {
