@@ -7,9 +7,11 @@ import { TActionID, TActionObj } from "./action"
 type TActionResult = Readonly<{
   data: TActionObj
   connectOrReplay(onStream: TStreamEventListenerFn): void | VoidFunction
+  cancel(): void
 }>
 
 export function useAction(actionID: TActionID | undefined): TActionResult | undefined {
+  const isCancellingRef = useRef(false)
   const viewID = useId()
   const data = useSyncExternalStore(
     useCallback((listener) => devPodStore.subscribe(listener), []),
@@ -38,6 +40,16 @@ export function useAction(actionID: TActionID | undefined): TActionResult | unde
         }
 
         return replay(data.id, onStream)
+      },
+      cancel: () => {
+        if (isCancellingRef.current) {
+          return
+        }
+        isCancellingRef.current = true
+        // could improve by setting timeout as fallback if promise doesn't resolve, let's see if this is enough
+        client.workspaces.cancelAction(data.targetID).finally(() => {
+          isCancellingRef.current = false
+        })
       },
     }
   }, [data, connect, replay])

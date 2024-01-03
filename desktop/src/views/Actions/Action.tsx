@@ -1,8 +1,9 @@
-import { Box } from "@chakra-ui/react"
+import { Box, Button } from "@chakra-ui/react"
 import { useEffect, useMemo } from "react"
+import { HiStop } from "react-icons/hi2"
 import { useNavigate } from "react-router"
 import { useParams, useSearchParams } from "react-router-dom"
-import { useStreamingTerminal } from "../../components"
+import { ToolbarActions, useStreamingTerminal } from "../../components"
 import { useAction } from "../../contexts"
 import { Routes } from "../../routes"
 
@@ -32,8 +33,21 @@ export function Action() {
   }, [searchParams, action, navigate])
 
   return (
-    <Box height="calc(100% - 3rem)" width="full">
-      {terminal}
-    </Box>
+    <>
+      <ToolbarActions>
+        {action?.data.status === "pending" && (
+          <Button
+            variant="outline"
+            aria-label="Cancel action"
+            leftIcon={<HiStop />}
+            onClick={() => action.cancel()}>
+            Cancel
+          </Button>
+        )}
+      </ToolbarActions>
+      <Box height="calc(100% - 3rem)" width="full">
+        {terminal}
+      </Box>
+    </>
   )
 }

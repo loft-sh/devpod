@@ -240,6 +240,12 @@ export class WorkspacesClient implements TDebuggable {
     return unsubscribe
   }
 
+  public async cancelAction(actionID: TActionID): Promise<ResultError> {
+    const cmdHandler = this.commandCache.findCommandHandlerById(actionID)
+
+    return cmdHandler?.cancel?.() ?? Return.Ok()
+  }
+
   public syncActionLogs(actionIDs: readonly string[]) {
     invoke("sync_action_logs", { actions: actionIDs })
   }
