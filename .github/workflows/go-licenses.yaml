@@ -1,0 +1,47 @@
+name: go-licenses
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - .github/licenses.tmpl
+      - .github/workflows/go-licenses.yaml
+      - go.mod
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-$${{ github.head_ref || github.run_id }}
+  cancel-in-progress: true
+
+jobs:
+  update-licenses:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v4
+        with:
+          go-version-file: go.mod
+
+      - name: Install go-licenses
+        run: |
+          go install github.com/google/go-licenses@v1.6.0
+
+      - name: Run go-licenses
+        run: go-licenses report ./... > docs/pages/licenses/devpod.mdx --template .github/licenses.tmpl --ignore github.com/loft-sh
+
+      - name: Create pull request
+        uses: peter-evans/create-pull-request@v5
+        with:
+          token: ${{ secrets.GH_ACCESS_TOKEN }}
+          committer: Loft Bot <loft-bot@users.noreply.github.com>
+          branch: licenses/devpod
+          commit-message: "license(DevPod): Updated OSS licenses"
+          title: "license(DevPod): Updated OSS licenses"
+          body: Triggered by ${{ github.repository }}@${{ github.sha }}
+          signoff: true
+          delete-branch: true
