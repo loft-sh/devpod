@@ -186,6 +186,10 @@ module.exports = {
       ],
     },
     {
+      type: "doc",
+      id: "licenses/devpod",
+    },
+    {
       type: "link",
       label: "Open Sourced by Loft",
       href: "https://loft.sh/",
