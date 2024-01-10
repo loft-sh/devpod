@@ -1,0 +1,36 @@
+name: go-licenses-check
+
+on:
+  pull_request:
+    branches:
+      - main
+    paths:
+      - .github/workflows/go-licenses-check.yaml
+      - go.mod
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-$${{ github.head_ref || github.run_id }}
+  cancel-in-progress: true
+
+jobs:
+  check-licenses:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v4
+        with:
+          go-version-file: go.mod
+
+      - name: Install go-licenses
+        run: |
+          go install github.com/google/go-licenses@v1.6.0
+
+      - name: Run go-licenses check
+        run: go-licenses check ./... --ignore github.com/loft-sh
+        env:
+          GOPRIVATE: "github.com/loft-sh/*"
