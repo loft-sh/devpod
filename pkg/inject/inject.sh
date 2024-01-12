@@ -35,6 +35,22 @@ is_arm() {
   esac
 }
 
+# Detect if install_dir is noexec
+# We use this method instead of findmnt, as that command might not be present
+# on minimal images, like alpine
+check_noexec() {
+  # Find mountpoint of the install path
+  mount_path="$(df "${INSTALL_DIR}" | tail -n +2 | rev | cut -d' ' -f1 | rev)"
+
+  # Check if mountpoint is noexec, fail early
+  if mount | grep "on ${mount_path} " | grep -q noexec; then
+    echo >&2 "ERROR: installation directory $INSTALL_DIR is noexec, please choose another location"
+    return 1
+  fi
+
+  return 0
+}
+
 inject() {
   echo "ARM-$(is_arm && echo -n 'true' || echo -n 'false')"
   $sh_c "cat > $INSTALL_PATH.$$"
@@ -108,6 +124,11 @@ if {{ .ExistsCheck }}; then
 
     # Now that we're sudo, try again
     $sh_c "mkdir -p $INSTALL_DIR"
+  fi
+
+  if  ! check_noexec; then
+    echo >&2 Error: failed to install devpod, noexec filesystem detected
+    exit 1
   fi
 
   $sh_c "rm -f $INSTALL_PATH 2>/dev/null || true"
