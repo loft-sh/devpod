@@ -326,7 +326,6 @@ func (d *dockerDriver) EnsurePath(path *config.Mount) *config.Mount {
 			// we do this only is DOCKER_HOST is not docker-desktop engine, but
 			// a direct TCP connection to a docker daemon running in WSL
 			if strings.Contains(v, "DOCKER_HOST=tcp://") {
-
 				unixPath := path.Source
 				unixPath = strings.Replace(unixPath, "C:", "c", 1)
 				unixPath = strings.ReplaceAll(unixPath, "\\", "/")
