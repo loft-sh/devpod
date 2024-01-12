@@ -20,7 +20,7 @@ jobs:
       max-parallel: 1
       matrix:
         # windows blocklist: "up-podman", "integration", "machineprovider", "proxyprovider", "up"
-        label: ["build", "ide", "machine", "provider", "ssh", "up-docker", "up-docker-compose", "up-docker-build", "up-docker-compose-build"]
+        label: ["build", "ide", "machine", "provider", "ssh", "up-docker", "up-docker-compose", "up-docker-build", "up-docker-compose-build", "up-docker-wsl"]
 
     steps:
     - name: Git set line ending
