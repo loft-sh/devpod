@@ -3,6 +3,7 @@
 /test
 /e2e/bin
 devpod
+devpod.exe
 # Unit test targets
 main
 profile.out

@@ -73,7 +73,7 @@ jobs:
       fail-fast: true
       max-parallel: 1
       matrix:
-        label: ["build", "ide", "ssh", "up-docker", "up-docker-build", "up-docker-compose" ]
+        label: ["build", "ide", "ssh", "up-docker", "up-docker-build", "up-docker-compose", "up-docker-wsl"]
 
     steps:
     - name: Git set line ending
