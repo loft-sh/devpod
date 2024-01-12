@@ -211,7 +211,9 @@ func (d *dockerDriver) RunDockerDevContainer(
 
 	// workspace mount
 	if options.WorkspaceMount != nil {
-		args = append(args, "--mount", options.WorkspaceMount.String())
+		workspacePath := d.EnsurePath(options.WorkspaceMount)
+
+		args = append(args, "--mount", workspacePath.String())
 	}
 
 	// override container user
@@ -315,4 +317,26 @@ func (d *dockerDriver) RunDockerDevContainer(
 	}
 
 	return nil
+}
+
+func (d *dockerDriver) EnsurePath(path *config.Mount) *config.Mount {
+	// in case of local windows and remote linux tcp, we need to manually do the path conversion
+	if runtime.GOOS == "windows" {
+		for _, v := range d.Docker.Environment {
+			// we do this only is DOCKER_HOST is not docker-desktop engine, but
+			// a direct TCP connection to a docker daemon running in WSL
+			if strings.Contains(v, "DOCKER_HOST=tcp://") {
+
+				unixPath := path.Source
+				unixPath = strings.Replace(unixPath, "C:", "c", 1)
+				unixPath = strings.ReplaceAll(unixPath, "\\", "/")
+				unixPath = "/mnt/" + unixPath
+
+				path.Source = unixPath
+
+				return path
+			}
+		}
+	}
+	return path
 }
