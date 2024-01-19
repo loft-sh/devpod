@@ -68,6 +68,21 @@ DevPod will forward git credentials to a remote machine so that you can also pul
 Use the `--id` flag to override the name of the workspace. This allows you to create multiple workspaces from the same repository.
 :::
 
+:::info Specify a branch
+Devpod supports working on a specific branch, pull request, and SHA commit, using the following format:
+
+For a branch:
+
+`<git-uri>@<branch>`
+
+For a pull request:
+
+`<git-uri>@pull/<pr-number>/head`
+
+For a SHA commit:
+
+`<git-uri>@sha:<commit-id>`
+:::
 
 #### Local Path
 
