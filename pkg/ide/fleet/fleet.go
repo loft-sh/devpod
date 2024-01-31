@@ -160,13 +160,33 @@ func (o *FleetServer) Start(binaryPath, location, projectDir string) error {
 			}
 
 			o.log.Infof("Fleet has successfully started")
-			return nil
+			return o.startMonitor()
 		} else {
 			_, _ = stdoutBuffer.Write([]byte(text + "\n"))
 		}
 	}
 
 	return fmt.Errorf("seems like there was an error starting up fleet: %s%s", stdoutBuffer.String(), stderrBuffer.String())
+}
+
+func (o *FleetServer) startMonitor() error {
+	self, err := os.Executable()
+	if err != nil {
+		return err
+	}
+
+	return single.Single("fleet-monitor.pid", func() (*exec.Cmd, error) {
+		o.log.Infof("Starting fleet monitor in background...")
+		runCommand := fmt.Sprintf("%s helper fleet-server --workspaceid %s", self, "test")
+		args := []string{}
+		if o.userName != "" {
+			args = append(args, "su", o.userName, "-c", runCommand)
+		} else {
+			args = append(args, "sh", "-c", runCommand)
+		}
+		cmd := exec.Command(args[0], args[1:]...)
+		return cmd, nil
+	})
 }
 
 func prepareFleetServerLocation(userName string) (string, error) {
