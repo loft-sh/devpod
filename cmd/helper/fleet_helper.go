@@ -36,33 +36,38 @@ func NewFleetServerCmd(flags *flags.GlobalFlags) *cobra.Command {
 }
 
 // Run runs the command logic
-func (cmd *FleetServerCmd) Run(_ *cobra.Command, _ []string) error {
+func (c *FleetServerCmd) Run(cmd *cobra.Command, _ []string) error {
 	logFile := filepath.Join(os.Getenv("HOME"), ".cache/JetBrains/Fleet/log/fleet.log")
 	firstConnection := regexp.MustCompile(`.*Received authorization request.*`)
 	connStatus := regexp.MustCompile(`.*Notify.*`)
 
 	for {
-		time.Sleep(time.Second * 10)
+		select {
+		case <-time.After(time.Second * 10):
 
-		log, err := os.ReadFile(logFile)
-		if err != nil {
-			continue
-		}
+			log, err := os.ReadFile(logFile)
+			if err != nil {
+				continue
+			}
 
-		// check if we had at least one fleet client connection, before
-		// this point, we don't check for connected/disconnected strings
-		initialized := firstConnection.FindStringSubmatch(string(log))
-		if len(initialized) == 0 {
-			continue
-		}
+			// check if we had at least one fleet client connection, before
+			// this point, we don't check for connected/disconnected strings
+			initialized := firstConnection.FindStringSubmatch(string(log))
+			if len(initialized) == 0 {
+				continue
+			}
 
-		connString := connStatus.FindAllStringSubmatch(string(log), -1)
+			connString := connStatus.FindAllStringSubmatch(string(log), -1)
 
-		// if ouf last occurrence of notify if "Notify ID connected"
-		// we have an active session, so let's keep alive
-		if strings.Contains(connString[len(connString)-1][0], "is connected") {
-			file, _ := os.Create(agent.ContainerActivityFile)
-			file.Close()
+			// if ouf last occurrence of notify if "Notify ID connected"
+			// we have an active session, so let's keep alive
+			if strings.Contains(connString[len(connString)-1][0], "is connected") {
+				file, _ := os.Create(agent.ContainerActivityFile)
+				file.Close()
+			}
+		case <-cmd.Context().Done():
+			//context is done - either canceled or time is up for timeout
+			return nil
 		}
 	}
 }
