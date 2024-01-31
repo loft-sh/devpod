@@ -251,8 +251,18 @@ func (d *dockerDriver) RunDockerDevContainer(
 	}
 
 	// mounts
+	tmpfsMount := true
 	for _, mount := range options.Mounts {
+		// skip tmpfs mount on /tmp if devcontainer specifies another mount option
+		if strings.Contains(mount.String(), "/tmp") {
+			tmpfsMount = false
+		}
 		args = append(args, "--mount", mount.String())
+	}
+
+	// ensure /tmp is a tmpfs like on regular linux distros
+	if tmpfsMount {
+		args = append(args, "--mount", "type=tmpfs,destination=/tmp")
 	}
 
 	// add ide mounts
