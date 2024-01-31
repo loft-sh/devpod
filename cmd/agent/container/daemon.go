@@ -48,7 +48,10 @@ func (cmd *DaemonCmd) Run(_ *cobra.Command, _ []string) error {
 		return err
 	}
 
-	_ = os.Chmod(agent.ContainerActivityFile, 0o777)
+	err = os.Chmod(agent.ContainerActivityFile, 0o777)
+	if err != nil {
+		return err
+	}
 
 	// query the activity file
 	for {
