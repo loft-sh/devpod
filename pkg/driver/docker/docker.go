@@ -254,7 +254,8 @@ func (d *dockerDriver) RunDockerDevContainer(
 	tmpfsMount := true
 	for _, mount := range options.Mounts {
 		// skip tmpfs mount on /tmp if devcontainer specifies another mount option
-		if strings.Contains(mount.String(), "/tmp") {
+		if strings.Contains(mount.String(), "destination=/tmp") ||
+			strings.Contains(mount.String(), "target=/tmp") {
 			tmpfsMount = false
 		}
 		args = append(args, "--mount", mount.String())
