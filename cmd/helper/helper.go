@@ -30,5 +30,6 @@ func NewHelperCmd(globalFlags *flags.GlobalFlags) *cobra.Command {
 	helperCmd.AddCommand(NewCheckProviderUpdateCmd(globalFlags))
 	helperCmd.AddCommand(NewSSHClientCmd())
 	helperCmd.AddCommand(NewShellCmd())
+	helperCmd.AddCommand(NewFleetServerCmd(globalFlags))
 	return helperCmd
 }
