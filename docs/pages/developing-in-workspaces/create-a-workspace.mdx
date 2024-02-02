@@ -110,6 +110,8 @@ If you have a local container running, you can create a workspace from it by run
 devpod up my-workspace --source container:$CONTAINER_ID 
 ```
 
+This only works with the `docker` provider.
+
 :::info
 Using `--recreate` on a workspace based on an already existing container will be rejected.
 :::
