@@ -59,6 +59,13 @@ Run the following command in a terminal to start a new workspace:
 devpod up github.com/microsoft/vscode-remote-try-node
 ```
 
+You can check out specific states of the repository by appending a commit hash, branch or Pull Request slug to the repository url:
+```
+Branch: devpod up github.com/microsoft/vscode-remote-try-node@main
+Commit: devpod up github.com/microsoft/vscode-remote-try-node@sha256:15ba80171af11374143288fd3d54898860107323
+PR:     devpod up github.com/microsoft/vscode-remote-try-node@pull/108/head # Only works for GitHub!
+```
+
 :::info Private Git Repositories
 DevPod will forward git credentials to a remote machine so that you can also pull private repositories.
 :::
@@ -95,6 +102,17 @@ DevPod will create the following `.devcontainer.json`:
     "image": "ghcr.io/my-org/my-repo:latest"
 }
 ```
+
+#### Existing local container
+
+If you have a local container running, you can create a workspace from it by running:
+```
+devpod up my-workspace --source container:$CONTAINER_ID 
+```
+
+:::info
+Using `--recreate` on a workspace based on an already existing container will be rejected.
+:::
 
 ## Recreating a workspace
 
