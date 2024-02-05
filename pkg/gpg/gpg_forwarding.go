@@ -146,12 +146,7 @@ func (g *GPGConf) SetupRemoteSocketLink() error {
 		return err
 	}
 
-	err = os.MkdirAll(filepath.Join(os.Getenv("HOME"), ".devpod"), 0o700)
-	if err != nil {
-		return err
-	}
-
-	err = exec.Command("sudo", "ln", "-f", g.SocketPath, filepath.Join(os.Getenv("HOME"), ".devpod", "S.gpg-agent")).Run()
+	err = exec.Command("sudo", "ln", "-f", g.SocketPath, "/tmp/S.gpg-agent").Run()
 	if err != nil {
 		return err
 	}
@@ -165,7 +160,7 @@ func (g *GPGConf) SetupRemoteSocketLink() error {
 		_ = os.Remove(link)
 		_ = os.MkdirAll(filepath.Dir(link), 0o755)
 
-		err = os.Symlink(filepath.Join(os.Getenv("HOME"), ".devpod", "S.gpg-agent"), link)
+		err = os.Symlink("/tmp/S.gpg-agent", link)
 		if err != nil {
 			return err
 		}
