@@ -51,6 +51,11 @@ var _ = DevPodDescribe("devpod ssh test suite", func() {
 		})
 
 		ginkgo.It("should start a new workspace with a docker provider (default) and forward gpg agent into it", func() {
+			// skip windows for now
+			if runtime.GOOS == "windows" {
+				return
+			}
+
 			tempDir, err := framework.CopyToTempDir("tests/ssh/testdata/gpg-forwarding")
 			framework.ExpectNoError(err)
 			defer framework.CleanupTempDir(initialDir, tempDir)

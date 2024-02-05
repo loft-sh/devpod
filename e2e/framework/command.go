@@ -266,17 +266,21 @@ func (f *Framework) SetupGPG(tmpDir string) error {
 func (f *Framework) DevPodSSHGpgTestKey(ctx context.Context, workspace string) error {
 	pubKeyB, err := exec.Command("sh", "-c", "gpg -k --with-colons 2>/dev/null | grep sec | base64 -w0").Output()
 	if err != nil {
-		return nil
+		return err
 	}
 
 	// First run to trigger the first forwarding
-	stdout, _, _ := f.ExecCommandCapture(ctx, []string{
+	stdout, _, err := f.ExecCommandCapture(ctx, []string{
 		"ssh",
 		"--agent-forwarding",
 		"--gpg-agent-forwarding",
 		"--command",
 		"gpg -k --with-colons 2>/dev/null |grep sec |  base64 -w0", workspace,
 	})
+
+	if err != nil {
+		return err
+	}
 
 	if stdout != string(pubKeyB) {
 		return fmt.Errorf("devpod gpg public key forwarding failed, expected %s, got %s", string(pubKeyB), stdout)
