@@ -1,25 +1,34 @@
-use crate::{custom_protocol, ui_messages, AppHandle, AppState};
+use crate::{ui_messages, AppHandle, AppState};
 use axum::{
     extract::{
         connect_info::ConnectInfo,
         ws::{Message, WebSocket, WebSocketUpgrade},
     },
-    http::HeaderMap,
-    response::Response,
+    http::{HeaderMap, StatusCode},
+    response::{IntoResponse, Response},
     routing::get,
-    Router, ServiceExt,
+    Json, Router,
 };
+use http::Method;
 use log::{info, warn};
 use std::net::SocketAddr;
 use tauri::{Manager, State};
+use tower_http::cors::{Any, CorsLayer};
 
 pub async fn setup(app_handle: &AppHandle) -> anyhow::Result<()> {
     let handle = app_handle.clone();
+    let handle_releases = app_handle.clone();
+    let cors = CorsLayer::new()
+        .allow_methods([Method::GET, Method::POST])
+        .allow_origin(Any);
 
-    let router = Router::new().route(
-        "/ws",
-        get(move |upgrade, headers, info| ws_handler(upgrade, headers, info, handle.clone())),
-    );
+    let router = Router::new()
+        .route(
+            "/ws",
+            get(move |upgrade, headers, info| ws_handler(upgrade, headers, info, handle.clone())),
+        )
+        .route("/releases", get(move || releases_handler(handle_releases)))
+        .layer(cors);
 
     let listener = tokio::net::TcpListener::bind("127.0.0.1:25842").await?;
     info!("Listening on {}", listener.local_addr()?);
@@ -29,6 +38,21 @@ pub async fn setup(app_handle: &AppHandle) -> anyhow::Result<()> {
     )
     .await
     .map_err(anyhow::Error::from);
+}
+async fn releases_handler(app_handle: AppHandle) -> impl IntoResponse {
+    #[cfg(feature = "enable-updater")]
+    {
+        let state = app_handle.state::<AppState>();
+        let releases = state.releases.lock().unwrap();
+        let releases = releases.clone();
+
+        Json(releases)
+    }
+
+    #[cfg(not(feature = "enable-updater"))]
+    {
+        (StatusCode::NOT_FOUND, "Not found")
+    }
 }
 
 async fn ws_handler(

@@ -29,7 +29,7 @@ tauri = { version = "1.2.4", features = [
         "window-set-focus",
         "window-start-dragging",
         "icon-ico",
-] } 
+] }
 # Serde
 serde_json = "1.0"
 serde = { version = "1.0", features = ["derive"] }
@@ -62,6 +62,8 @@ ts-rs = { version = "6.2.1", features = ["serde-compat", "chrono-impl"] }
 semver = "1.0.18"
 strip-ansi-escapes = "0.1.1"
 axum = { version = "0.7.1", features = ["ws"] }
+tower-http = { version = "0.5.1", features = ["cors"] }
+http = "1.0.0"
 
 [target.'cfg(target_os = "windows")'.dependencies]
 winreg = "0.50.0"
