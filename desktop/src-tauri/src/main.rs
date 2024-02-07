@@ -147,7 +147,6 @@ fn main() -> anyhow::Result<()> {
             action_logs::sync_action_logs,
             install_cli::install_cli,
             community_contributions::get_contributions,
-            updates::get_releases,
             updates::get_pending_update,
             updates::check_updates
         ]);

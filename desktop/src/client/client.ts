@@ -135,7 +135,13 @@ class Client {
 
   public async fetchReleases(): Promise<Result<readonly Release[]>> {
     try {
-      const releases = await invoke<readonly Release[]>("get_releases")
+      // WARN: This is a workaround for a memory leak in tauri, see https://github.com/tauri-apps/tauri/issues/4026 for more details.
+      // tl;dr tauri doesn't release the memory in it's invoke api properly which is specially noticeable with larger payload, like the releases.
+      const res = await fetch("http://localhost:25842/releases")
+      if (!res.ok) {
+        return Return.Failed(`Fetch releases: ${res.statusText}`)
+      }
+      const releases = (await res.json()) as readonly Release[]
 
       return Return.Value(releases)
     } catch (e) {

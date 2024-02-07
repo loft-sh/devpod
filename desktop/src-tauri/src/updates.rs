@@ -122,13 +122,6 @@ pub struct Author {
 }
 
 #[tauri::command]
-pub async fn get_releases(state: tauri::State<'_, AppState>) -> Result<Releases, ()> {
-    let releases = state.releases.lock().unwrap();
-
-    Ok(releases.to_vec())
-}
-
-#[tauri::command]
 pub async fn get_pending_update(state: tauri::State<'_, AppState>) -> Result<Release, ()> {
     let release = state.pending_update.lock().unwrap();
     release.clone().ok_or(())

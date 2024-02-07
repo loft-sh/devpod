@@ -869,6 +869,7 @@ dependencies = [
  "cocoa",
  "dirs",
  "dispatch",
+ "http 1.0.0",
  "lazy_static",
  "log",
  "objc",
@@ -888,6 +889,7 @@ dependencies = [
  "tauri-plugin-store",
  "thiserror",
  "tokio",
+ "tower-http",
  "ts-rs",
  "url",
  "window-vibrancy",
@@ -4479,6 +4481,22 @@ dependencies = [
  "tower-layer",
  "tower-service",
  "tracing",
+]
+
+[[package]]
+name = "tower-http"
+version = "0.5.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "0da193277a4e2c33e59e09b5861580c33dd0a637c3883d0fa74ba40c0374af2e"
+dependencies = [
+ "bitflags 2.4.1",
+ "bytes",
+ "http 1.0.0",
+ "http-body 1.0.0",
+ "http-body-util",
+ "pin-project-lite",
+ "tower-layer",
+ "tower-service",
 ]
 
 [[package]]
