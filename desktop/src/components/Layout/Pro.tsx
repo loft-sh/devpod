@@ -1,9 +1,9 @@
 import { client } from "@/client"
 import { useProInstances, useSettings, useWorkspaces } from "@/contexts"
-import { Briefcase, DevPodProBadge, Plus } from "@/icons"
+import { Briefcase, CheckCircle, DevPodProBadge, ExclamationTriangle, Plus } from "@/icons"
 import { exists } from "@/lib"
 import { TProID, TProInstance } from "@/types"
-import { useLoginProModal } from "@/views/ProInstances/useLoginProModal"
+import { useLoginProModal, useReLoginProModal } from "@/views/ProInstances/useLoginProModal"
 import { useDeleteProviderModal } from "@/views/Providers/useDeleteProviderModal"
 import { ChevronDownIcon, CloseIcon } from "@chakra-ui/icons"
 import {
@@ -35,6 +35,7 @@ import { IconTag } from "../Tag"
 export function Pro() {
   const [[proInstances]] = useProInstances()
   const { modal: loginProModal, handleOpenLogin: handleConnectClicked } = useLoginProModal()
+  const { modal: reLoginProModal, handleOpenLogin: handleReLoginClicked } = useReLoginProModal()
   const [isDeleting, setIsDeleting] = useState(false)
 
   const backgroundColor = useColorModeValue("white", "gray.900")
@@ -101,17 +102,22 @@ export function Pro() {
                     </ButtonGroup>
                   </VStack>
                 ) : (
-                  proInstances.map(
-                    (proInstance) =>
-                      proInstance.host && (
-                        <ProInstaceRow
-                          key={proInstance.host}
-                          {...proInstance}
-                          host={proInstance.host}
-                          onIsDeletingChanged={setIsDeleting}
-                        />
-                      )
-                  )
+                  proInstances.map((proInstance) => {
+                    const host = proInstance.host
+                    if (!host) {
+                      return null
+                    }
+
+                    return (
+                      <ProInstanceRow
+                        key={host}
+                        {...proInstance}
+                        host={host}
+                        onIsDeletingChanged={setIsDeleting}
+                        onLoginClicked={() => handleReLoginClicked({ host })}
+                      />
+                    )
+                  })
                 )}
               </Box>
             </PopoverBody>
@@ -119,6 +125,7 @@ export function Pro() {
         </Portal>
       </Popover>
       {loginProModal}
+      {reLoginProModal}
     </>
   ) : (
     <Button
@@ -131,12 +138,18 @@ export function Pro() {
 }
 
 type TProInstaceRowProps = Omit<TProInstance, "host"> &
-  Readonly<{ host: TProID; onIsDeletingChanged: (isDeleting: boolean) => void }>
-function ProInstaceRow({
+  Readonly<{
+    host: TProID
+    onIsDeletingChanged: (isDeleting: boolean) => void
+    onLoginClicked?: VoidFunction
+  }>
+function ProInstanceRow({
   host,
   creationTimestamp,
   onIsDeletingChanged,
   provider,
+  authenticated,
+  onLoginClicked,
 }: TProInstaceRowProps) {
   const [, { disconnect }] = useProInstances()
   const workspaces = useWorkspaces()
@@ -157,7 +170,7 @@ function ProInstaceRow({
   )
   useEffect(() => {
     onIsDeletingChanged(isOpen)
-    // `onIsDeletingChanged` is expectd to be a stable reference
+    // `onIsDeletingChanged` is expected to be a stable reference
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isOpen])
 
@@ -165,7 +178,25 @@ function ProInstaceRow({
     <>
       <HStack width="full" padding="2" justifyContent="space-between">
         <VStack align="start" spacing="0" fontSize="sm">
-          <Text fontWeight="bold">{host}</Text>
+          <HStack>
+            <Text fontWeight="bold">{host}</Text>
+            {exists(authenticated) && (
+              <IconTag
+                variant="ghost"
+                icon={
+                  authenticated ? (
+                    <CheckCircle color={"green.300"} />
+                  ) : (
+                    <ExclamationTriangle color="orange.300" />
+                  )
+                }
+                label=""
+                paddingInlineStart="0"
+                infoText={authenticated ? "Authenticated" : "Not Authenticated"}
+                {...(authenticated ? {} : { onClick: onLoginClicked, cursor: "pointer" })}
+              />
+            )}
+          </HStack>
           <HStack>
             <IconTag
               variant="ghost"
@@ -178,7 +209,7 @@ function ProInstaceRow({
               <IconTag
                 variant="ghost"
                 icon={<Icon as={HiClock} />}
-                label={dayjs(new Date(creationTimestamp)).fromNow()}
+                label={dayjs(new Date(creationTimestamp)).format("MMM D, YY")}
                 infoText={`Created ${dayjs(new Date(creationTimestamp)).fromNow()}`}
               />
             )}

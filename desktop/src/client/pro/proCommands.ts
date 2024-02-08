@@ -1,5 +1,5 @@
 import { Result, ResultError, Return, getErrorFromChildProcess } from "@/lib"
-import { TImportWorkspaceConfig, TProID, TProInstance } from "@/types"
+import { TImportWorkspaceConfig, TListProInstancesConfig, TProID, TProInstance } from "@/types"
 import { Command, isOk, serializeRawOptions, toFlagArg } from "../command"
 import {
   DEVPOD_COMMAND_DELETE,
@@ -11,6 +11,7 @@ import {
   DEVPOD_FLAG_DEBUG,
   DEVPOD_FLAG_JSON_LOG_OUTPUT,
   DEVPOD_FLAG_JSON_OUTPUT,
+  DEVPOD_FLAG_LOGIN,
   DEVPOD_FLAG_PROVIDER,
   DEVPOD_FLAG_USE,
   DEVPOD_FLAG_WORKSPACE_ID,
@@ -62,11 +63,15 @@ export class ProCommands {
     }
   }
 
-  static async ListProInstances(): Promise<Result<readonly TProInstance[]>> {
+  static async ListProInstances(
+    config: TListProInstancesConfig
+  ): Promise<Result<readonly TProInstance[]>> {
+    const maybeLoginFlag = config?.authenticate ? [DEVPOD_FLAG_LOGIN] : []
     const result = await ProCommands.newCommand([
       DEVPOD_COMMAND_PRO,
       DEVPOD_COMMAND_LIST,
       DEVPOD_FLAG_JSON_OUTPUT,
+      ...maybeLoginFlag,
     ]).run()
     if (result.err) {
       return result

@@ -23,7 +23,7 @@ export function DevPodProvider({ children }: Readonly<{ children?: ReactNode }>)
 
   const proInstancesQuery = useQuery({
     queryKey: QueryKeys.PRO_INSTANCES,
-    queryFn: async () => (await client.pro.listAll()).unwrap(),
+    queryFn: async () => (await client.pro.listAll({ authenticate: true })).unwrap(),
     refetchInterval: REFETCH_INTERVAL_MS,
   })
 
