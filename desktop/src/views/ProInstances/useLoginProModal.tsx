@@ -1,5 +1,5 @@
 import { BottomActionBar, BottomActionBarError, Form, useStreamingTerminal } from "@/components"
-import { useProInstances, useProviders } from "@/contexts"
+import { useProInstanceManager, useProInstances, useProviders } from "@/contexts"
 import { exists, useFormErrors } from "@/lib"
 import { Routes } from "@/routes"
 import {
@@ -19,6 +19,7 @@ import {
   ModalBody,
   ModalCloseButton,
   ModalContent,
+  ModalFooter,
   ModalHeader,
   ModalOverlay,
   Tooltip,
@@ -153,7 +154,7 @@ export function useLoginProModal() {
         <ModalOverlay />
         <ModalContent overflow="hidden">
           {login.status !== "loading" && <ModalCloseButton />}
-          <ModalHeader>Connect to Loft DevPod Pro</ModalHeader>
+          <ModalHeader>Connect to DevPod Pro</ModalHeader>
           <ModalBody overflowX="hidden" overflowY="auto" paddingBottom="0" ref={containerRef}>
             <VStack align="start" spacing="8" paddingX="4" paddingTop="4">
               <Form onSubmit={handleSubmit(onSubmit)} justifyContent="center">
@@ -204,7 +205,7 @@ export function useLoginProModal() {
                       <FormErrorMessage>{proURLError.message}</FormErrorMessage>
                     ) : (
                       <FormHelperText>
-                        Enter a URL to the Loft DevPod Pro instance you intend to connect to. If
+                        Enter a URL to the DevPod Pro instance you intend to connect to. If
                         you&apos;re unsure about it, ask your company administrator or create a new
                         Pro instance on your local machine.
                       </FormHelperText>
@@ -317,6 +318,65 @@ export function useLoginProModal() {
     proInstances,
     providers,
   ])
+
+  return { modal, handleOpenLogin }
+}
+
+export function useReLoginProModal() {
+  const { terminal, connectStream, clear: clearTerminal } = useStreamingTerminal({ fontSize: "sm" })
+  const { login } = useProInstanceManager()
+  const { isOpen, onClose, onOpen } = useDisclosure()
+  const containerRef = useRef<HTMLDivElement>(null)
+
+  const handleOpenLogin = useCallback(
+    (data: NonNullable<Pick<TSetupProInitialData, "host">>) => {
+      onOpen()
+      login.run({ host: data.host, streamListener: connectStream })
+    },
+    [connectStream, login, onOpen]
+  )
+
+  const resetModal = useCallback(() => {
+    clearTerminal()
+    onClose()
+  }, [clearTerminal, onClose])
+
+  const modal = useMemo(() => {
+    return (
+      <Modal
+        onClose={resetModal}
+        isOpen={isOpen}
+        closeOnEsc={login.status !== "loading"}
+        closeOnOverlayClick={login.status !== "loading"}
+        isCentered
+        size="4xl"
+        scrollBehavior="inside">
+        <ModalOverlay />
+        <ModalContent overflow="hidden">
+          {login.status !== "loading" && <ModalCloseButton />}
+          <ModalHeader>Login to DevPod Pro</ModalHeader>
+          <ModalBody overflowX="hidden" overflowY="auto" paddingBottom="0" ref={containerRef}>
+            <VStack align="start" spacing="8" paddingX="4" paddingTop="4" paddingBottom="6">
+              {login.status !== "idle" && (
+                <Box width="full" height="10rem">
+                  {terminal}
+                </Box>
+              )}
+            </VStack>
+          </ModalBody>
+          <ModalFooter>
+            <Button
+              isDisabled={login.status !== "success"}
+              isLoading={login.status === "loading"}
+              variant="solid"
+              onClick={resetModal}>
+              Done
+            </Button>
+          </ModalFooter>
+        </ModalContent>
+      </Modal>
+    )
+  }, [resetModal, isOpen, login.status, terminal])
 
   return { modal, handleOpenLogin }
 }

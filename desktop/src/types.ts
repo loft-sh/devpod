@@ -195,6 +195,7 @@ export type TProInstance = Readonly<{
   host: TMaybe<string>
   provider: TMaybe<string>
   creationTimestamp: TMaybe<string>
+  authenticated: TMaybe<boolean>
 }>
 export type TProInstances = readonly TProInstance[]
 export type TProInstanceManager = Readonly<{
@@ -211,6 +212,12 @@ export type TProInstanceLoginConfig = Readonly<{
   accessKey?: string
   streamListener?: TStreamEventListenerFn
 }>
+export type TListProInstancesConfig = Readonly<
+  | {
+      authenticate?: boolean
+    }
+  | undefined
+>
 //#endregion
 
 export type TDevcontainerSetup = Readonly<{
