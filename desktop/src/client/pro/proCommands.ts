@@ -64,7 +64,7 @@ export class ProCommands {
   }
 
   static async ListProInstances(
-    config: TListProInstancesConfig
+    config?: TListProInstancesConfig
   ): Promise<Result<readonly TProInstance[]>> {
     const maybeLoginFlag = config?.authenticate ? [DEVPOD_FLAG_LOGIN] : []
     const result = await ProCommands.newCommand([

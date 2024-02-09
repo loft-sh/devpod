@@ -19,7 +19,7 @@ export class ProClient implements TDebuggable {
     return ProCommands.Login(host, providerName, accessKey, listener)
   }
 
-  public async listAll(config: TListProInstancesConfig): Promise<Result<readonly TProInstance[]>> {
+  public async listAll(config?: TListProInstancesConfig): Promise<Result<readonly TProInstance[]>> {
     return ProCommands.ListProInstances(config)
   }
 
