@@ -30,6 +30,9 @@ func (sa *StrIntArray) UnmarshalJSON(data []byte) error {
 	case int:
 		*sa = StrIntArray([]string{strconv.Itoa(obj)})
 		return nil
+	case float64:
+		*sa = StrIntArray([]string{strconv.Itoa(int(obj))})
+		return nil
 	case []interface{}:
 		s := make([]string, 0, len(obj))
 		for _, v := range obj {
