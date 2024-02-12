@@ -180,9 +180,15 @@ func (r *runner) prepare(
 	} else {
 		var err error
 
+		localWorkspaceFolder := r.LocalWorkspaceFolder
+		// if a subpath is specified, let's move to it
+		if r.WorkspaceConfig.CLIOptions.WorkspaceSubPath != "" {
+			localWorkspaceFolder = filepath.Join(r.LocalWorkspaceFolder, r.WorkspaceConfig.CLIOptions.WorkspaceSubPath)
+		}
+
 		// parse the devcontainer json
 		rawParsedConfig, err = config.ParseDevContainerJSON(
-			r.LocalWorkspaceFolder,
+			localWorkspaceFolder,
 			r.WorkspaceConfig.Workspace.DevContainerPath,
 		)
 

@@ -8,6 +8,7 @@ import (
 	"net"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"strconv"
 	"strings"
 
@@ -138,6 +139,8 @@ func NewUpCmd(flags *flags.GlobalFlags) *cobra.Command {
 	upCmd.Flags().StringVar(&cmd.IDE, "ide", "", "The IDE to open the workspace in. If empty will use vscode locally or in browser")
 	upCmd.Flags().BoolVar(&cmd.OpenIDE, "open-ide", true, "If this is false and an IDE is configured, DevPod will only install the IDE server backend, but not open it")
 
+	upCmd.Flags().StringVar(&cmd.WorkspaceSubPath, "subpath", "", "Use specific subpath in project instead of root of workspace")
+
 	upCmd.Flags().BoolVar(&cmd.DisableDaemon, "disable-daemon", false, "If enabled, will not install a daemon into the target machine to track activity")
 	upCmd.Flags().StringVar(&cmd.Source, "source", "", "Optional source for the workspace. E.g. git:https://github.com/my-org/my-repo")
 	upCmd.Flags().BoolVar(&cmd.Proxy, "proxy", false, "If true will forward agent requests to stdio")
@@ -175,12 +178,16 @@ func (cmd *UpCmd) Run(
 		workdir = result.MergedConfig.WorkspaceFolder
 	}
 
+	if cmd.WorkspaceSubPath != "" {
+		result.SubstitutionContext.ContainerWorkspaceFolder = filepath.Join(result.SubstitutionContext.ContainerWorkspaceFolder, cmd.WorkspaceSubPath)
+		workdir = result.SubstitutionContext.ContainerWorkspaceFolder
+	}
+
 	// configure container ssh
 	if cmd.ConfigureSSH {
 		err = configureSSH(devPodConfig, client, cmd.SSHConfigPath, user, workdir,
 			cmd.GPGAgentForwarding ||
 				devPodConfig.ContextOption(config.ContextOptionGPGAgentForwarding) == "true")
-
 		if err != nil {
 			return err
 		}
@@ -868,7 +875,6 @@ func performGpgForwarding(
 			"--log-output=raw",
 			"--command", "sleep infinity",
 		).Run()
-
 		if err != nil {
 			log.Error("failure in forwarding gpg-agent")
 		}
