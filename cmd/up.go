@@ -186,7 +186,6 @@ func (cmd *UpCmd) Run(
 	if client.WorkspaceConfig().Source.GitSubPath != "" {
 		result.SubstitutionContext.ContainerWorkspaceFolder = filepath.Join(result.SubstitutionContext.ContainerWorkspaceFolder, client.WorkspaceConfig().Source.GitSubPath)
 		workdir = result.SubstitutionContext.ContainerWorkspaceFolder
-
 	}
 
 	// configure container ssh

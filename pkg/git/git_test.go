@@ -13,6 +13,7 @@ type testCaseNormalizeRepository struct {
 	expectedRepo        string
 	expectedBranch      string
 	expectedCommit      string
+	expectedSubpath     string
 }
 
 type testCaseGetBranchNameForPR struct {
@@ -28,6 +29,7 @@ func TestNormalizeRepository(t *testing.T) {
 			expectedPRReference: "",
 			expectedBranch:      "",
 			expectedCommit:      "",
+			expectedSubpath:     "",
 		},
 		{
 			in:                  "ssh://git@github.com/loft-sh/devpod.git",
@@ -35,6 +37,7 @@ func TestNormalizeRepository(t *testing.T) {
 			expectedPRReference: "",
 			expectedBranch:      "",
 			expectedCommit:      "",
+			expectedSubpath:     "",
 		},
 		{
 			in:                  "git@github.com/loft-sh/devpod-without-branch.git",
@@ -42,6 +45,7 @@ func TestNormalizeRepository(t *testing.T) {
 			expectedPRReference: "",
 			expectedBranch:      "",
 			expectedCommit:      "",
+			expectedSubpath:     "",
 		},
 		{
 			in:                  "https://github.com/loft-sh/devpod.git",
@@ -49,6 +53,7 @@ func TestNormalizeRepository(t *testing.T) {
 			expectedPRReference: "",
 			expectedBranch:      "",
 			expectedCommit:      "",
+			expectedSubpath:     "",
 		},
 		{
 			in:                  "github.com/loft-sh/devpod.git",
@@ -56,6 +61,7 @@ func TestNormalizeRepository(t *testing.T) {
 			expectedPRReference: "",
 			expectedBranch:      "",
 			expectedCommit:      "",
+			expectedSubpath:     "",
 		},
 		{
 			in:                  "github.com/loft-sh/devpod.git@test-branch",
@@ -63,6 +69,7 @@ func TestNormalizeRepository(t *testing.T) {
 			expectedPRReference: "",
 			expectedBranch:      "test-branch",
 			expectedCommit:      "",
+			expectedSubpath:     "",
 		},
 		{
 			in:                  "git@github.com/loft-sh/devpod-with-branch.git@test-branch",
@@ -70,6 +77,7 @@ func TestNormalizeRepository(t *testing.T) {
 			expectedPRReference: "",
 			expectedBranch:      "test-branch",
 			expectedCommit:      "",
+			expectedSubpath:     "",
 		},
 		{
 			in:                  "git@github.com/loft-sh/devpod-with-branch.git@test_branch",
@@ -77,6 +85,7 @@ func TestNormalizeRepository(t *testing.T) {
 			expectedPRReference: "",
 			expectedBranch:      "test_branch",
 			expectedCommit:      "",
+			expectedSubpath:     "",
 		},
 		{
 			in:                  "ssh://git@github.com/loft-sh/devpod.git@test_branch",
@@ -84,6 +93,7 @@ func TestNormalizeRepository(t *testing.T) {
 			expectedPRReference: "",
 			expectedBranch:      "test_branch",
 			expectedCommit:      "",
+			expectedSubpath:     "",
 		},
 		{
 			in:                  "github.com/loft-sh/devpod-without-protocol-with-slash.git@user/branch",
@@ -91,6 +101,7 @@ func TestNormalizeRepository(t *testing.T) {
 			expectedPRReference: "",
 			expectedBranch:      "user/branch",
 			expectedCommit:      "",
+			expectedSubpath:     "",
 		},
 		{
 			in:                  "git@github.com/loft-sh/devpod-with-slash.git@user/branch",
@@ -98,6 +109,7 @@ func TestNormalizeRepository(t *testing.T) {
 			expectedPRReference: "",
 			expectedBranch:      "user/branch",
 			expectedCommit:      "",
+			expectedSubpath:     "",
 		},
 		{
 			in:                  "github.com/loft-sh/devpod.git@sha256:905ffb0",
@@ -105,6 +117,7 @@ func TestNormalizeRepository(t *testing.T) {
 			expectedPRReference: "",
 			expectedBranch:      "",
 			expectedCommit:      "905ffb0",
+			expectedSubpath:     "",
 		},
 		{
 			in:                  "git@github.com:loft-sh/devpod.git@sha256:905ffb0",
@@ -112,6 +125,7 @@ func TestNormalizeRepository(t *testing.T) {
 			expectedPRReference: "",
 			expectedBranch:      "",
 			expectedCommit:      "905ffb0",
+			expectedSubpath:     "",
 		},
 		{
 			in:                  "github.com/loft-sh/devpod.git@pull/996/head",
@@ -119,6 +133,7 @@ func TestNormalizeRepository(t *testing.T) {
 			expectedPRReference: "pull/996/head",
 			expectedBranch:      "",
 			expectedCommit:      "",
+			expectedSubpath:     "",
 		},
 		{
 			in:                  "git@github.com:loft-sh/devpod.git@pull/996/head",
@@ -126,15 +141,25 @@ func TestNormalizeRepository(t *testing.T) {
 			expectedPRReference: "pull/996/head",
 			expectedBranch:      "",
 			expectedCommit:      "",
+			expectedSubpath:     "",
+		},
+		{
+			in:                  "github.com/loft-sh/devpod-without-protocol-with-slash.git@subpath:/test/path",
+			expectedRepo:        "https://github.com/loft-sh/devpod-without-protocol-with-slash.git",
+			expectedPRReference: "",
+			expectedBranch:      "",
+			expectedCommit:      "",
+			expectedSubpath:     "/test/path",
 		},
 	}
 
 	for _, testCase := range testCases {
-		outRepo, outPRReference, outBranch, outCommit := NormalizeRepository(testCase.in)
+		outRepo, outPRReference, outBranch, outCommit, outSubpath := NormalizeRepository(testCase.in)
 		assert.Check(t, cmp.Equal(testCase.expectedRepo, outRepo))
 		assert.Check(t, cmp.Equal(testCase.expectedPRReference, outPRReference))
 		assert.Check(t, cmp.Equal(testCase.expectedBranch, outBranch))
 		assert.Check(t, cmp.Equal(testCase.expectedCommit, outCommit))
+		assert.Check(t, cmp.Equal(testCase.expectedSubpath, outSubpath))
 	}
 }
 

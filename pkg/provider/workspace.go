@@ -227,7 +227,7 @@ func ParseWorkspaceSource(source string) *WorkspaceSource {
 			GitPRReference: gitPRReference,
 			GitBranch:      gitBranch,
 			GitCommit:      gitCommit,
-			GitSubPath:      gitSubdir,
+			GitSubPath:     gitSubdir,
 		}
 	} else if strings.HasPrefix(source, WorkspaceSourceLocal) {
 		return &WorkspaceSource{

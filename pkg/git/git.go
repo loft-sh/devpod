@@ -15,16 +15,16 @@ import (
 )
 
 const (
-	CommitDelimiter       string = "@sha256:"
-	PullRequestReference  string = "pull/([0-9]+)/head"
-	SubPathDelimiter string = "@subpath:"
+	CommitDelimiter      string = "@sha256:"
+	PullRequestReference string = "pull/([0-9]+)/head"
+	SubPathDelimiter     string = "@subpath:"
 )
 
 var (
-	branchRegEx       = regexp.MustCompile(`^([^@]*(?:git@)?[^@/]+/[^@/]+/?[^@/]+)@([a-zA-Z0-9\./\-\_]+)$`)
-	commitRegEx       = regexp.MustCompile(`^([^@]*(?:git@)?[^@/]+/[^@]+)` + regexp.QuoteMeta(CommitDelimiter) + `([a-zA-Z0-9]+)$`)
-	prReferenceRegEx  = regexp.MustCompile(`^([^@]*(?:git@)?[^@/]+/[^@]+)@(` + PullRequestReference + `)$`)
-	subPathRegEx = regexp.MustCompile(`^([^@]*(?:git@)?[^@/]+/[^@]+)` + regexp.QuoteMeta(SubPathDelimiter) + `([a-zA-Z0-9\./\-\_]+)$`)
+	branchRegEx      = regexp.MustCompile(`^([^@]*(?:git@)?[^@/]+/[^@/]+/?[^@/]+)@([a-zA-Z0-9\./\-\_]+)$`)
+	commitRegEx      = regexp.MustCompile(`^([^@]*(?:git@)?[^@/]+/[^@]+)` + regexp.QuoteMeta(CommitDelimiter) + `([a-zA-Z0-9]+)$`)
+	prReferenceRegEx = regexp.MustCompile(`^([^@]*(?:git@)?[^@/]+/[^@]+)@(` + PullRequestReference + `)$`)
+	subPathRegEx     = regexp.MustCompile(`^([^@]*(?:git@)?[^@/]+/[^@]+)` + regexp.QuoteMeta(SubPathDelimiter) + `([a-zA-Z0-9\./\-\_]+)$`)
 )
 
 func CommandContext(ctx context.Context, args ...string) *exec.Cmd {
@@ -91,20 +91,20 @@ func GetBranchNameForPR(ref string) string {
 }
 
 type GitInfo struct {
-	Repository   string
-	Branch       string
-	Commit       string
-	PR           string
-	SubPath string
+	Repository string
+	Branch     string
+	Commit     string
+	PR         string
+	SubPath    string
 }
 
 func NewGitInfo(repository, branch, commit, pr, subpath string) *GitInfo {
 	return &GitInfo{
-		Repository:   repository,
-		Branch:       branch,
-		Commit:       commit,
-		PR:           pr,
-		SubPath: subpath,
+		Repository: repository,
+		Branch:     branch,
+		Commit:     commit,
+		PR:         pr,
+		SubPath:    subpath,
 	}
 }
 

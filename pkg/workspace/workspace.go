@@ -458,7 +458,7 @@ func resolve(
 			GitPRReference: gitPRReference,
 			GitBranch:      gitBranch,
 			GitCommit:      gitCommit,
-			GitSubPath:      gitSubdir,
+			GitSubPath:     gitSubdir,
 		}
 		return workspace, nil
 	}
@@ -525,8 +525,10 @@ func getProjectImage(link string) string {
 	return ""
 }
 
-var workspaceIDRegEx1 = regexp.MustCompile(`[^\w\-]`)
-var workspaceIDRegEx2 = regexp.MustCompile(`[^0-9a-z\-]+`)
+var (
+	workspaceIDRegEx1 = regexp.MustCompile(`[^\w\-]`)
+	workspaceIDRegEx2 = regexp.MustCompile(`[^0-9a-z\-]+`)
+)
 
 func ToID(str string) string {
 	str = strings.ToLower(filepath.ToSlash(str))
