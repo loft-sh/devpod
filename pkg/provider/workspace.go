@@ -104,6 +104,9 @@ type WorkspaceSource struct {
 	// GitPRReference is the pull request reference to checkout
 	GitPRReference string `json:"gitPRReference,omitempty"`
 
+	// GitSubPath is the subpath in the repo to use
+	GitSubPath string `json:"gitSubDir,omitempty"`
+
 	// LocalFolder is the local folder to use
 	LocalFolder string `json:"localFolder,omitempty"`
 
@@ -218,12 +221,13 @@ func (w WorkspaceSource) String() string {
 
 func ParseWorkspaceSource(source string) *WorkspaceSource {
 	if strings.HasPrefix(source, WorkspaceSourceGit) {
-		gitRepo, gitPRReference, gitBranch, gitCommit := git.NormalizeRepository(strings.TrimPrefix(source, WorkspaceSourceGit))
+		gitRepo, gitPRReference, gitBranch, gitCommit, gitSubdir := git.NormalizeRepository(strings.TrimPrefix(source, WorkspaceSourceGit))
 		return &WorkspaceSource{
 			GitRepository:  gitRepo,
 			GitPRReference: gitPRReference,
 			GitBranch:      gitBranch,
 			GitCommit:      gitCommit,
+			GitSubPath:      gitSubdir,
 		}
 	} else if strings.HasPrefix(source, WorkspaceSourceLocal) {
 		return &WorkspaceSource{

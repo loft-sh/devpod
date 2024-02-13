@@ -183,6 +183,12 @@ func (cmd *UpCmd) Run(
 		workdir = result.SubstitutionContext.ContainerWorkspaceFolder
 	}
 
+	if client.WorkspaceConfig().Source.GitSubPath != "" {
+		result.SubstitutionContext.ContainerWorkspaceFolder = filepath.Join(result.SubstitutionContext.ContainerWorkspaceFolder, client.WorkspaceConfig().Source.GitSubPath)
+		workdir = result.SubstitutionContext.ContainerWorkspaceFolder
+
+	}
+
 	// configure container ssh
 	if cmd.ConfigureSSH {
 		err = configureSSH(devPodConfig, client, cmd.SSHConfigPath, user, workdir,

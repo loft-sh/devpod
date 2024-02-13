@@ -186,6 +186,10 @@ func (r *runner) prepare(
 			localWorkspaceFolder = filepath.Join(r.LocalWorkspaceFolder, r.WorkspaceConfig.CLIOptions.WorkspaceSubPath)
 		}
 
+		if r.WorkspaceConfig.Workspace.Source.GitSubPath != "" {
+			localWorkspaceFolder = filepath.Join(r.LocalWorkspaceFolder, r.WorkspaceConfig.Workspace.Source.GitSubPath)
+		}
+
 		// parse the devcontainer json
 		rawParsedConfig, err = config.ParseDevContainerJSON(
 			localWorkspaceFolder,

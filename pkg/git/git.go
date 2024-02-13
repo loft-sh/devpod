@@ -15,14 +15,16 @@ import (
 )
 
 const (
-	CommitDelimiter      string = "@sha256:"
-	PullRequestReference string = "pull/([0-9]+)/head"
+	CommitDelimiter       string = "@sha256:"
+	PullRequestReference  string = "pull/([0-9]+)/head"
+	SubPathDelimiter string = "@subpath:"
 )
 
 var (
-	branchRegEx      = regexp.MustCompile(`^([^@]*(?:git@)?[^@/]+/[^@/]+/?[^@/]+)@([a-zA-Z0-9\./\-\_]+)$`)
-	commitRegEx      = regexp.MustCompile(`^([^@]*(?:git@)?[^@/]+/[^@]+)` + regexp.QuoteMeta(CommitDelimiter) + `([a-zA-Z0-9]+)$`)
-	prReferenceRegEx = regexp.MustCompile(`^([^@]*(?:git@)?[^@/]+/[^@]+)@(` + PullRequestReference + `)$`)
+	branchRegEx       = regexp.MustCompile(`^([^@]*(?:git@)?[^@/]+/[^@/]+/?[^@/]+)@([a-zA-Z0-9\./\-\_]+)$`)
+	commitRegEx       = regexp.MustCompile(`^([^@]*(?:git@)?[^@/]+/[^@]+)` + regexp.QuoteMeta(CommitDelimiter) + `([a-zA-Z0-9]+)$`)
+	prReferenceRegEx  = regexp.MustCompile(`^([^@]*(?:git@)?[^@/]+/[^@]+)@(` + PullRequestReference + `)$`)
+	subPathRegEx = regexp.MustCompile(`^([^@]*(?:git@)?[^@/]+/[^@]+)` + regexp.QuoteMeta(SubPathDelimiter) + `([a-zA-Z0-9\./\-\_]+)$`)
 )
 
 func CommandContext(ctx context.Context, args ...string) *exec.Cmd {
@@ -33,7 +35,7 @@ func CommandContext(ctx context.Context, args ...string) *exec.Cmd {
 	return cmd
 }
 
-func NormalizeRepository(str string) (string, string, string, string) {
+func NormalizeRepository(str string) (string, string, string, string, string) {
 	if !strings.HasPrefix(str, "ssh://") && !strings.HasPrefix(str, "git@") && !strings.HasPrefix(str, "http://") && !strings.HasPrefix(str, "https://") {
 		str = "https://" + str
 	}
@@ -44,7 +46,14 @@ func NormalizeRepository(str string) (string, string, string, string) {
 		str = match[1]
 		prReference = match[2]
 
-		return str, prReference, "", ""
+		return str, prReference, "", "", ""
+	}
+
+	// resolve subpath
+	subpath := ""
+	if match := subPathRegEx.FindStringSubmatch(str); match != nil {
+		str = match[1]
+		subpath = match[2]
 	}
 
 	// resolve branch
@@ -61,7 +70,7 @@ func NormalizeRepository(str string) (string, string, string, string) {
 		commit = match[2]
 	}
 
-	return str, prReference, branch, commit
+	return str, prReference, branch, commit, subpath
 }
 
 func PingRepository(str string) bool {
@@ -82,24 +91,26 @@ func GetBranchNameForPR(ref string) string {
 }
 
 type GitInfo struct {
-	Repository string
-	Branch     string
-	Commit     string
-	PR         string
+	Repository   string
+	Branch       string
+	Commit       string
+	PR           string
+	SubPath string
 }
 
-func NewGitInfo(repository, branch, commit, pr string) *GitInfo {
+func NewGitInfo(repository, branch, commit, pr, subpath string) *GitInfo {
 	return &GitInfo{
-		Repository: repository,
-		Branch:     branch,
-		Commit:     commit,
-		PR:         pr,
+		Repository:   repository,
+		Branch:       branch,
+		Commit:       commit,
+		PR:           pr,
+		SubPath: subpath,
 	}
 }
 
 func NormalizeRepositoryGitInfo(str string) *GitInfo {
-	repository, pr, branch, commit := NormalizeRepository(str)
-	return NewGitInfo(repository, branch, commit, pr)
+	repository, pr, branch, commit, subpath := NormalizeRepository(str)
+	return NewGitInfo(repository, branch, commit, pr, subpath)
 }
 
 func CloneRepository(ctx context.Context, gitInfo *GitInfo, targetDir string, helper string, bare bool, writer io.Writer, log log.Logger) error {
