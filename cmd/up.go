@@ -139,8 +139,6 @@ func NewUpCmd(flags *flags.GlobalFlags) *cobra.Command {
 	upCmd.Flags().StringVar(&cmd.IDE, "ide", "", "The IDE to open the workspace in. If empty will use vscode locally or in browser")
 	upCmd.Flags().BoolVar(&cmd.OpenIDE, "open-ide", true, "If this is false and an IDE is configured, DevPod will only install the IDE server backend, but not open it")
 
-	upCmd.Flags().StringVar(&cmd.WorkspaceSubPath, "subpath", "", "Use specific subpath in project instead of root of workspace")
-
 	upCmd.Flags().BoolVar(&cmd.DisableDaemon, "disable-daemon", false, "If enabled, will not install a daemon into the target machine to track activity")
 	upCmd.Flags().StringVar(&cmd.Source, "source", "", "Optional source for the workspace. E.g. git:https://github.com/my-org/my-repo")
 	upCmd.Flags().BoolVar(&cmd.Proxy, "proxy", false, "If true will forward agent requests to stdio")
@@ -176,11 +174,6 @@ func (cmd *UpCmd) Run(
 	var workdir string
 	if result.MergedConfig != nil && result.MergedConfig.WorkspaceFolder != "" {
 		workdir = result.MergedConfig.WorkspaceFolder
-	}
-
-	if cmd.WorkspaceSubPath != "" {
-		result.SubstitutionContext.ContainerWorkspaceFolder = filepath.Join(result.SubstitutionContext.ContainerWorkspaceFolder, cmd.WorkspaceSubPath)
-		workdir = result.SubstitutionContext.ContainerWorkspaceFolder
 	}
 
 	if client.WorkspaceConfig().Source.GitSubPath != "" {

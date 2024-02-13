@@ -182,9 +182,6 @@ func (r *runner) prepare(
 
 		localWorkspaceFolder := r.LocalWorkspaceFolder
 		// if a subpath is specified, let's move to it
-		if r.WorkspaceConfig.CLIOptions.WorkspaceSubPath != "" {
-			localWorkspaceFolder = filepath.Join(r.LocalWorkspaceFolder, r.WorkspaceConfig.CLIOptions.WorkspaceSubPath)
-		}
 
 		if r.WorkspaceConfig.Workspace.Source.GitSubPath != "" {
 			localWorkspaceFolder = filepath.Join(r.LocalWorkspaceFolder, r.WorkspaceConfig.Workspace.Source.GitSubPath)

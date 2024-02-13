@@ -177,8 +177,6 @@ type CLIOptions struct {
 	DisableDaemon        bool     `json:"disableDaemon,omitempty"`
 	DaemonInterval       string   `json:"daemonInterval,omitempty"`
 
-	WorkspaceSubPath string `json:"workspaceSubPath,omitempty"`
-
 	// build options
 	Repository string   `json:"repository,omitempty"`
 	SkipPush   bool     `json:"skipPush,omitempty"`
