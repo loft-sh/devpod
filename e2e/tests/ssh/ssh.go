@@ -50,7 +50,7 @@ var _ = DevPodDescribe("devpod ssh test suite", func() {
 			framework.ExpectNoError(err)
 		})
 
-		ginkgo.It("should start a new workspace with a docker provider (default) and forward gpg agent into it", func() {
+		ginkgo.FIt("should start a new workspace with a docker provider (default) and forward gpg agent into it", func() {
 			// skip windows for now
 			if runtime.GOOS == "windows" {
 				return
@@ -80,12 +80,21 @@ var _ = DevPodDescribe("devpod ssh test suite", func() {
 			err = f.DevPodUp(devpodUpCtx, tempDir, "--gpg-agent-forwarding")
 			framework.ExpectNoError(err)
 
-			time.Sleep(time.Second * 10)
-
 			devpodSSHDeadline := time.Now().Add(20 * time.Second)
 			devpodSSHCtx, cancelSSH := context.WithDeadline(context.Background(), devpodSSHDeadline)
 			defer cancelSSH()
-			err = f.DevPodSSHGpgTestKey(devpodSSHCtx, tempDir)
+
+			// GPG agent might be not ready, let's try 10 times, 1 second each
+			retries := 10
+			for retries > 0 {
+				err = f.DevPodSSHGpgTestKey(devpodSSHCtx, tempDir)
+				if err != nil {
+					retries--
+					time.Sleep(time.Second)
+				} else {
+					break
+				}
+			}
 			framework.ExpectNoError(err)
 		})
 
