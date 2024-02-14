@@ -80,6 +80,8 @@ var _ = DevPodDescribe("devpod ssh test suite", func() {
 			err = f.DevPodUp(devpodUpCtx, tempDir, "--gpg-agent-forwarding")
 			framework.ExpectNoError(err)
 
+			time.Sleep(time.Second * 10)
+
 			devpodSSHDeadline := time.Now().Add(20 * time.Second)
 			devpodSSHCtx, cancelSSH := context.WithDeadline(context.Background(), devpodSSHDeadline)
 			defer cancelSSH()
