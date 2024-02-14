@@ -19,6 +19,7 @@ var optionNameRegEx = regexp.MustCompile(`[^A-Z0-9_]+`)
 
 var allowedTypes = []string{
 	"string",
+	"multiline",
 	"duration",
 	"number",
 	"boolean",

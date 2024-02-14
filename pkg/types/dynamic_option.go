@@ -10,7 +10,7 @@ type Option struct {
 	// If true, will not show the value to the user
 	Password bool `json:"password,omitempty"`
 
-	// Type is the provider option type. Can be one of: string, duration, number or boolean. Defaults to string
+	// Type is the provider option type. Can be one of: string, multiline, duration, number or boolean. Defaults to string
 	Type string `json:"type,omitempty"`
 
 	// ValidationPattern is a regex pattern to validate the value
