@@ -277,6 +277,33 @@ var _ = DevPodDescribe("devpod up test suite", func() {
 			framework.ExpectNoError(err)
 		})
 
+		ginkgo.It("create workspace in a subpath", func() {
+			const providerName = "test-docker"
+			ctx := context.Background()
+
+			f := framework.NewDefaultFramework(initialDir + "/bin")
+
+			// provider add, use and delete afterwards
+			err := f.DevPodProviderAdd(ctx, "docker", "--name", providerName)
+			framework.ExpectNoError(err)
+			err = f.DevPodProviderUse(ctx, providerName)
+			framework.ExpectNoError(err)
+			ginkgo.DeferCleanup(func() {
+				err = f.DevPodProviderDelete(ctx, providerName)
+				framework.ExpectNoError(err)
+			})
+
+			err = f.DevPodUp(ctx, "https://github.com/loft-sh/examples/@subpath:/devpod/jupyter-notebook-hello-world")
+			framework.ExpectNoError(err)
+
+			out, err := f.DevPodSSH(ctx, "jupyter-notebook-hello-world", "pwd")
+			framework.ExpectNoError(err)
+			framework.ExpectEqual(out, "/workspaces/jupyter-notebook-hello-world\n", "should be subpath")
+
+			err = f.DevPodWorkspaceDelete(ctx, "jupyter-notebook-hello-world")
+			framework.ExpectNoError(err)
+		})
+
 		ginkgo.Context("print error message correctly", func() {
 			ginkgo.It("make sure devpod output is correct and log-output works correctly", func(ctx context.Context) {
 				f := framework.NewDefaultFramework(initialDir + "/bin")
