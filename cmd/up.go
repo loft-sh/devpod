@@ -8,6 +8,7 @@ import (
 	"net"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"strconv"
 	"strings"
 
@@ -175,12 +176,16 @@ func (cmd *UpCmd) Run(
 		workdir = result.MergedConfig.WorkspaceFolder
 	}
 
+	if client.WorkspaceConfig().Source.GitSubPath != "" {
+		result.SubstitutionContext.ContainerWorkspaceFolder = filepath.Join(result.SubstitutionContext.ContainerWorkspaceFolder, client.WorkspaceConfig().Source.GitSubPath)
+		workdir = result.SubstitutionContext.ContainerWorkspaceFolder
+	}
+
 	// configure container ssh
 	if cmd.ConfigureSSH {
 		err = configureSSH(devPodConfig, client, cmd.SSHConfigPath, user, workdir,
 			cmd.GPGAgentForwarding ||
 				devPodConfig.ContextOption(config.ContextOptionGPGAgentForwarding) == "true")
-
 		if err != nil {
 			return err
 		}
@@ -868,7 +873,6 @@ func performGpgForwarding(
 			"--log-output=raw",
 			"--command", "sleep infinity",
 		).Run()
-
 		if err != nil {
 			log.Error("failure in forwarding gpg-agent")
 		}

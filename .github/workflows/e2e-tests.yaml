@@ -103,5 +103,5 @@ jobs:
       if: ${{ always() }}
       run: |
         Remove-Item -Recurse C:\Users\loft-user\.devpod\
-        sh -c "docker ps -a | cut -d' ' -f1 | tail -n+2 | xargs docker rm -f || :"
-        docker system prune -a -f
+        sh -c "docker ps -q -a | xargs docker rm -f || :"
+        sh -c "docker images --format '{{.Repository}}:{{.Tag}},{{.ID}}' | grep devpod | cut -d',' -f2 | xargs docker rmi -f || :"

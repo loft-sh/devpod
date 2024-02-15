@@ -146,12 +146,12 @@ func findDevcontainerFiles(ctx context.Context, rawSource, tmpDirPath string, ma
 	}
 
 	// git repo
-	gitRepository, gitPRReference, gitBranch, gitCommit := git.NormalizeRepository(rawSource)
+	gitRepository, gitPRReference, gitBranch, gitCommit, gitSubDir := git.NormalizeRepository(rawSource)
 	if strings.HasSuffix(rawSource, ".git") || git.PingRepository(gitRepository) {
 		log.Debug("Git repository detected")
 		result.IsGitRepository = true
 
-		gitInfo := git.NewGitInfo(gitRepository, gitBranch, gitCommit, gitPRReference)
+		gitInfo := git.NewGitInfo(gitRepository, gitBranch, gitCommit, gitPRReference, gitSubDir)
 		log.Debugf("Cloning git repository into %s", tmpDirPath)
 		err := git.CloneRepository(ctx, gitInfo, tmpDirPath, "", true, log.Writer(logrus.DebugLevel, false), log)
 		if err != nil {

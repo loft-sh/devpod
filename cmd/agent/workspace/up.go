@@ -459,7 +459,7 @@ func CloneRepository(ctx context.Context, local bool, workspaceDir string, sourc
 	}
 
 	// run git command
-	gitInfo := git.NewGitInfo(source.GitRepository, source.GitBranch, source.GitCommit, source.GitPRReference)
+	gitInfo := git.NewGitInfo(source.GitRepository, source.GitBranch, source.GitCommit, source.GitPRReference, source.GitSubPath)
 	err := git.CloneRepository(ctx, gitInfo, workspaceDir, helper, false, writer, log)
 	if err != nil {
 		return errors.Wrap(err, "clone repository")

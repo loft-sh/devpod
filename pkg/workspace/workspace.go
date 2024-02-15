@@ -450,7 +450,7 @@ func resolve(
 	}
 
 	// is git?
-	gitRepository, gitPRReference, gitBranch, gitCommit := git.NormalizeRepository(name)
+	gitRepository, gitPRReference, gitBranch, gitCommit, gitSubdir := git.NormalizeRepository(name)
 	if strings.HasSuffix(name, ".git") || git.PingRepository(gitRepository) {
 		workspace.Picture = getProjectImage(name)
 		workspace.Source = provider2.WorkspaceSource{
@@ -458,6 +458,7 @@ func resolve(
 			GitPRReference: gitPRReference,
 			GitBranch:      gitBranch,
 			GitCommit:      gitCommit,
+			GitSubPath:     gitSubdir,
 		}
 		return workspace, nil
 	}
@@ -524,8 +525,10 @@ func getProjectImage(link string) string {
 	return ""
 }
 
-var workspaceIDRegEx1 = regexp.MustCompile(`[^\w\-]`)
-var workspaceIDRegEx2 = regexp.MustCompile(`[^0-9a-z\-]+`)
+var (
+	workspaceIDRegEx1 = regexp.MustCompile(`[^\w\-]`)
+	workspaceIDRegEx2 = regexp.MustCompile(`[^0-9a-z\-]+`)
+)
 
 func ToID(str string) string {
 	str = strings.ToLower(filepath.ToSlash(str))
