@@ -11,6 +11,7 @@ import {
   FormLabel,
   Input,
   Select,
+  Textarea,
 } from "@chakra-ui/react"
 
 type TOptionFormField = TOptionWithID &
@@ -119,6 +120,17 @@ export function OptionFormField({
             spellCheck={false}
             placeholder={`Enter ${displayName}`}
             type={password ? "password" : "text"}
+            {...props}
+            onBlur={wrapFunction(props.onBlur, refresh, !!subOptionsCommand)}
+          />
+        )
+      case "multiline":
+        return (
+          <Textarea
+            rows={2}
+            spellCheck={false}
+            placeholder={`Enter ${displayName}`}
+            whiteSpace="pre"
             {...props}
             onBlur={wrapFunction(props.onBlur, refresh, !!subOptionsCommand)}
           />

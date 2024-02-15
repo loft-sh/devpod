@@ -297,3 +297,12 @@ func (f *Framework) DevpodPortTest(ctx context.Context, port string, workspace s
 	})
 	return err
 }
+
+func (f *Framework) DevPodProviderFindOption(ctx context.Context, provider string, searchStr string, extraArgs ...string) error {
+	baseArgs := []string{"provider", "options", provider}
+	err := f.ExecCommand(ctx, false, true, searchStr, append(baseArgs, extraArgs...))
+	if err != nil {
+		return fmt.Errorf("devpod provider use failed: %s", err.Error())
+	}
+	return nil
+}

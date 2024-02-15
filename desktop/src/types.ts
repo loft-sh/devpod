@@ -100,8 +100,8 @@ export type TProviderOption = Readonly<{
   command: TMaybe<string>
   // SubOptionsCommand is the command to retrieve sub options
   subOptionsCommand: TMaybe<string>
-  // Type is the provider option type. Can be one of: string, duration, number or boolean. Defaults to string
-  type: TMaybe<"string" | "duration" | "number" | "boolean">
+  // Type is the provider option type. Can be one of: string, multiline, duration, number or boolean. Defaults to string
+  type: TMaybe<"string" | "duration" | "number" | "boolean" | "multiline">
 }>
 
 export type TAddProviderConfig = Readonly<{
