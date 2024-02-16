@@ -46,18 +46,16 @@ func (cmd *InstallDotfilesCmd) Run(ctx context.Context) error {
 	targetDir := "dotfiles"
 
 	_, err := os.Stat(targetDir)
-	if err == nil {
-		logger.Info("dotfiles already set up, skipping")
-
-		return nil
-	}
-
-	logger.Infof("Cloning dotfiles %s", cmd.Repository)
-
-	gitInfo := git.NormalizeRepositoryGitInfo(cmd.Repository)
-	err = git.CloneRepository(ctx, gitInfo, targetDir, "", false, logger.Writer(logrus.DebugLevel, false), logger)
 	if err != nil {
-		return err
+		logger.Infof("Cloning dotfiles %s", cmd.Repository)
+
+		gitInfo := git.NormalizeRepositoryGitInfo(cmd.Repository)
+		err = git.CloneRepository(ctx, gitInfo, targetDir, "", false, logger.Writer(logrus.DebugLevel, false), logger)
+		if err != nil {
+			return err
+		}
+	} else {
+		logger.Info("dotfiles already set up, skipping cloning")
 	}
 
 	logger.Debugf("Entering dotfiles directory")
@@ -135,6 +133,10 @@ func setupDotfiles(logger log.Logger) error {
 		if strings.HasPrefix(file.Name(), ".") && !file.IsDir() {
 			logger.Debugf("linking %s in home", file.Name())
 
+			// remove existing symlink and relink
+			if _, err := os.Lstat(filepath.Join(os.Getenv("HOME"), file.Name())); err == nil {
+				os.Remove(filepath.Join(os.Getenv("HOME"), file.Name()))
+			}
 			err = os.Symlink(filepath.Join(pwd, file.Name()), filepath.Join(os.Getenv("HOME"), file.Name()))
 			if err != nil {
 				return err
