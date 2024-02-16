@@ -199,6 +199,11 @@ func (d *dockerDriver) RunDockerDevContainer(
 		"--sig-proxy=false",
 	}
 
+	// add environment variables that signals that we are in a remote container
+	// (vscode compatibility) and specifically that we are using devpod.
+	args = append(args, "--env", "DEVPOD=true")
+	args = append(args, "--env", "REMOTE_CONTAINERS=true")
+
 	// add ports
 	for _, appPort := range parsedConfig.AppPort {
 		intPort, err := strconv.Atoi(appPort)
