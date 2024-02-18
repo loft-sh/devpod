@@ -257,6 +257,13 @@ func (d DockerfileContainer) GetArgs() map[string]string {
 	return nil
 }
 
+func (d DockerfileContainer) GetOptions() []string {
+	if d.Build != nil {
+		return d.Build.Options
+	}
+	return nil
+}
+
 func (d DockerfileContainer) GetCacheFrom() types.StrArray {
 	if d.Build != nil {
 		return d.Build.CacheFrom
@@ -279,6 +286,9 @@ type ConfigBuildOptions struct {
 
 	// The image to consider as a cache. Use an array to specify multiple images.
 	CacheFrom types.StrArray `json:"cacheFrom,omitempty"`
+
+	// Build cli options
+	Options []string `json:"options,omitempty"`
 }
 
 type HostRequirements struct {

@@ -105,6 +105,9 @@ func Build(ctx context.Context, client *buildkit.Client, writer io.Writer, platf
 		solveOptions.FrontendAttrs["build-arg:"+key] = value
 	}
 
+	// add additional build cli options
+	// TODO: convert options.CliOpts into a solveOptions.FrontendAttr
+
 	pw, err := NewPrinter(ctx, writer)
 	if err != nil {
 		return err
