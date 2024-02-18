@@ -60,9 +60,9 @@ func MergeConfiguration(config *DevContainerConfig, imageMetadataEntries []*Imag
 	return mergedConfig, nil
 }
 
-func mergeOtherPortsAttributes(entries []*ImageMetadata) map[string]PortAttribute {
+func mergeOtherPortsAttributes(entries []*ImageMetadata) *PortAttribute {
 	for _, entry := range entries {
-		if len(entry.OtherPortsAttributes) > 0 {
+		if entry.OtherPortsAttributes != nil {
 			return entry.OtherPortsAttributes
 		}
 	}

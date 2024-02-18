@@ -60,7 +60,7 @@ type DevContainerConfigBase struct {
 	PortsAttributes map[string]PortAttribute `json:"portAttributes,omitempty"`
 
 	// Set default properties that are applied to all ports that don't get properties from the setting `remote.portsAttributes`.
-	OtherPortsAttributes map[string]PortAttribute `json:"otherPortsAttributes,omitempty"`
+	OtherPortsAttributes *PortAttribute `json:"otherPortsAttributes,omitempty"`
 
 	// Controls whether on Linux the container's user should be updated with the local user's UID and GID. On by default when opening from a local folder.
 	UpdateRemoteUserUID *bool `json:"updateRemoteUserUID,omitempty"`
