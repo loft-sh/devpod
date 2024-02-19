@@ -31,6 +31,13 @@ type Driver interface {
 	StopDevContainer(ctx context.Context, workspaceId string) error
 }
 
+type ReprovisioningDriver interface {
+	Driver
+
+	// CanReprovision returns true if the driver can reprovision the devcontainer
+	CanReprovision() bool
+}
+
 // RunOptions are the options for running a container
 type RunOptions struct {
 	// Image is the image to run

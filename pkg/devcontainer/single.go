@@ -51,6 +51,20 @@ func (r *runner) runSingleContainer(ctx context.Context, parsedConfig *config.Su
 		if err != nil {
 			return nil, errors.Wrap(err, "merge config")
 		}
+
+		// If driver can reprovision, rerun the devcontainer and let the driver handle follow-up steps
+		if d, ok := r.Driver.(driver.ReprovisioningDriver); ok && d.CanReprovision() {
+			err = r.Driver.RunDevContainer(ctx, r.ID, nil)
+			if err != nil {
+				return nil, errors.Wrap(err, "start dev container")
+			}
+
+			// get from build info
+			containerDetails, err = r.Driver.FindDevContainer(ctx, r.ID)
+			if err != nil {
+				return nil, fmt.Errorf("find dev container: %w", err)
+			}
+		}
 	} else {
 		// we need to build the container
 		buildInfo, err := r.build(ctx, parsedConfig, substitutionContext, provider2.BuildOptions{

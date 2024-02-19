@@ -97,14 +97,26 @@ var scriptLocations = []string{
 func setupDotfiles(logger log.Logger) error {
 	for _, command := range scriptLocations {
 		logger.Debugf("Trying executing %s", command)
+		checkCmd := exec.Command("test", "-f", command)
+		err := checkCmd.Run()
+		if err != nil {
+			logger.Debugf("File %s not found", command)
+			continue
+		}
 
-		scriptCmd := exec.Command(command)
+		chmodCmd := exec.Command("chmod", "+x", command)
+		err = chmodCmd.Run()
+		if err != nil {
+			logger.Infof("Chmod of %s was unsuccessful: %v", command, err)
+			continue
+		}
 
 		writer := logger.Writer(logrus.InfoLevel, false)
 
+		scriptCmd := exec.Command(command)
 		scriptCmd.Stdout = writer
 		scriptCmd.Stderr = writer
-		err := scriptCmd.Run()
+		err = scriptCmd.Run()
 		if err != nil {
 			logger.Infof("Execution of %s was unsuccessful: %v", command, err)
 			logger.Debug("Trying next location")
