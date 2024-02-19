@@ -180,7 +180,7 @@ func prepareWorkspace(ctx context.Context, workspaceInfo *provider2.AgentWorkspa
 	exists, err := InitContentFolder(workspaceInfo, log)
 	if err != nil {
 		return err
-	} else if exists {
+	} else if exists && !workspaceInfo.CLIOptions.Recreate {
 		log.Debugf("Workspace exists, skip downloading")
 		return nil
 	}
