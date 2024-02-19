@@ -121,6 +121,14 @@ func (r *runner) runContainer(
 		}
 	}
 
+	// add environment variables that signals that we are in a remote container
+	// (vscode compatibility) and specifically that we are using devpod.
+	if runOptions.Env == nil {
+		runOptions.Env = make(map[string]string)
+	}
+	runOptions.Env["DEVPOD"] = "true"
+	runOptions.Env["REMOTE_CONTAINERS"] = "true"
+
 	// check if docker
 	dockerDriver, ok := r.Driver.(driver.DockerDriver)
 	if ok {
