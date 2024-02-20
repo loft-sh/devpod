@@ -277,6 +277,36 @@ var _ = DevPodDescribe("devpod up test suite", func() {
 			framework.ExpectNoError(err)
 		})
 
+		ginkgo.It("recreate a local workspace", func() {
+			const providerName = "test-docker"
+			ctx := context.Background()
+
+			f := framework.NewDefaultFramework(initialDir + "/bin")
+			tempDir, err := framework.CopyToTempDir("tests/up/testdata/no-devcontainer")
+			framework.ExpectNoError(err)
+			ginkgo.DeferCleanup(framework.CleanupTempDir, initialDir, tempDir)
+
+			// provider add, use and delete afterwards
+			err = f.DevPodProviderAdd(ctx, "docker", "--name", providerName)
+			framework.ExpectNoError(err)
+			err = f.DevPodProviderUse(ctx, providerName)
+			framework.ExpectNoError(err)
+			ginkgo.DeferCleanup(func() {
+				err = f.DevPodProviderDelete(ctx, providerName)
+				framework.ExpectNoError(err)
+			})
+
+			err = f.DevPodUp(ctx, tempDir)
+			framework.ExpectNoError(err)
+
+			// recreate
+			err = f.DevPodUpRecreate(ctx, tempDir)
+			framework.ExpectNoError(err)
+
+			err = f.DevPodWorkspaceDelete(ctx, tempDir)
+			framework.ExpectNoError(err)
+		})
+
 		ginkgo.It("create workspace in a subpath", func() {
 			const providerName = "test-docker"
 			ctx := context.Background()
@@ -299,6 +329,39 @@ var _ = DevPodDescribe("devpod up test suite", func() {
 			out, err := f.DevPodSSH(ctx, "jupyter-notebook-hello-world", "pwd")
 			framework.ExpectNoError(err)
 			framework.ExpectEqual(out, "/workspaces/jupyter-notebook-hello-world\n", "should be subpath")
+
+			err = f.DevPodWorkspaceDelete(ctx, "jupyter-notebook-hello-world")
+			framework.ExpectNoError(err)
+		})
+
+		ginkgo.It("recreate a remote workspace", func() {
+			const providerName = "test-docker"
+			ctx := context.Background()
+
+			f := framework.NewDefaultFramework(initialDir + "/bin")
+
+			// provider add, use and delete afterwards
+			err := f.DevPodProviderAdd(ctx, "docker", "--name", providerName)
+			framework.ExpectNoError(err)
+			err = f.DevPodProviderUse(ctx, providerName)
+			framework.ExpectNoError(err)
+			ginkgo.DeferCleanup(func() {
+				err = f.DevPodProviderDelete(ctx, providerName)
+				framework.ExpectNoError(err)
+			})
+
+			err = f.DevPodUp(ctx, "https://github.com/loft-sh/examples/@subpath:/devpod/jupyter-notebook-hello-world")
+			framework.ExpectNoError(err)
+
+			_, err = f.DevPodSSH(ctx, "jupyter-notebook-hello-world", "pwd")
+			framework.ExpectNoError(err)
+
+			// recreate
+			err = f.DevPodUpRecreate(ctx, "https://github.com/loft-sh/examples/@subpath:/devpod/jupyter-notebook-hello-world")
+			framework.ExpectNoError(err)
+
+			_, err = f.DevPodSSH(ctx, "jupyter-notebook-hello-world", "pwd")
+			framework.ExpectNoError(err)
 
 			err = f.DevPodWorkspaceDelete(ctx, "jupyter-notebook-hello-world")
 			framework.ExpectNoError(err)
