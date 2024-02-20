@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"github.com/docker/cli/cli/config"
 	"github.com/loft-sh/devpod/pkg/command"
@@ -43,6 +44,8 @@ func ConfigureCredentialsContainer(userName string, port int, log log.Logger) er
 
 	return configureCredentials(userName, "#!/bin/sh", "/usr/local/bin", configDir, port, log)
 }
+
+const AzureContainerRegistryUsername = "00000000-0000-0000-0000-000000000000"
 
 func configureCredentials(userName, shebang string, targetDir, configDir string, port int, log log.Logger) error {
 	binaryPath, err := os.Executable()
@@ -167,6 +170,11 @@ func GetAuthConfig(host string) (*Credentials, error) {
 			ServerURL: host,
 			Secret:    ac.IdentityToken,
 		}, nil
+	}
+
+	// In case of Azure registry we need to set the azure username to a default, in case it's not set.
+	if ac.Username == "" && strings.HasSuffix(ac.ServerAddress, "azurecr.io") {
+		ac.Username = AzureContainerRegistryUsername
 	}
 
 	return &Credentials{
