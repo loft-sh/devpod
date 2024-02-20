@@ -36,7 +36,7 @@ export function useChangelogModal(isReady: boolean) {
           <ModalOverlay />
           <ModalContent>
             <ModalCloseButton />
-            <ModalHeader>Installed Version {latestRelease.tag_name}</ModalHeader>
+            <ModalHeader>Changelog</ModalHeader>
             <ModalBody>
               {latestRelease.body ? (
                 <Changelog rawMarkdown={latestRelease.body} />
@@ -77,7 +77,7 @@ export function useChangelogModal(isReady: boolean) {
 type TChangeLogProps = Readonly<{ rawMarkdown: string }>
 function Changelog({ rawMarkdown }: TChangeLogProps) {
   return (
-    <Box padding="2" marginBottom="4">
+    <Box paddingX="6" paddingY="2" marginBottom="4">
       <Markdown
         options={{
           overrides: {
@@ -85,6 +85,14 @@ function Changelog({ rawMarkdown }: TChangeLogProps) {
               component: Heading,
               props: {
                 size: "md",
+                marginBottom: "2",
+                marginTop: "4",
+              },
+            },
+            h3: {
+              component: Heading,
+              props: {
+                size: "sm",
                 marginBottom: "2",
                 marginTop: "4",
               },
