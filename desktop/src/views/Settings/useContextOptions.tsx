@@ -1,5 +1,13 @@
 import { CloseIcon } from "@chakra-ui/icons"
-import { Code, IconButton, Input, InputGroup, InputRightElement } from "@chakra-ui/react"
+import {
+  Code,
+  IconButton,
+  Input,
+  InputGroup,
+  InputRightElement,
+  Link,
+  Switch,
+} from "@chakra-ui/react"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { FocusEvent, KeyboardEvent, useCallback, useMemo, useRef, useState } from "react"
 import { client } from "../../client"
@@ -107,6 +115,35 @@ export function useAgentURLOption() {
       <>
         Set the Agent URL. If you leave this empty, it will be pulled from{" "}
         <Code>{DEFAULT_DEVPOD_AGENT_URL}</Code>
+      </>
+    ),
+    []
+  )
+
+  return { input, helpText }
+}
+export function useTelemetryOption() {
+  const { options, updateOption } = useContextOptions()
+
+  const input = useMemo(
+    () => (
+      <Switch
+        isChecked={options?.TELEMETRY.value === "true"}
+        onChange={(e) => updateOption({ option: "TELEMETRY", value: e.target.checked.toString() })}
+      />
+    ),
+    [options?.TELEMETRY.value, updateOption]
+  )
+
+  const helpText = useMemo(
+    () => (
+      <>
+        Telemetry plays an important role in improving DevPod for everyone.{" "}
+        <strong>We never collect any actual values, only anonymized metadata!</strong> For an
+        in-depth explanation, please refer to the{" "}
+        <Link onClick={() => client.openLink("https://devpod.sh/docs/other-topics/telemetry")}>
+          documentation
+        </Link>
       </>
     ),
     []
