@@ -26,7 +26,7 @@ const Link = defineStyleConfig({
     muted(props) {
       const primary = props.theme.colors.primary
 
-      return { color: mode(primary["900"], primary["200"])(props) }
+      return { color: mode(primary["800"], primary["200"])(props) }
     },
   },
 })

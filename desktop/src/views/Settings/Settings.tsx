@@ -37,7 +37,7 @@ import {
   useVersion,
 } from "../../lib"
 import { useWelcomeModal } from "../../useWelcomeModal"
-import { useAgentURLOption } from "./useContextOptions"
+import { useAgentURLOption, useTelemetryOption } from "./useContextOptions"
 import { useIDESettings } from "./useIDESettings"
 
 const SETTINGS_TABS = [
@@ -77,6 +77,7 @@ function GeneralSettings() {
   const { settings, set } = useChangeSettings()
   const { modal: welcomeModal, show: showWelcomeModal } = useWelcomeModal()
   const { input: agentURLInput, helpText: agentURLHelpText } = useAgentURLOption()
+  const { input: telemetryInput, helpText: telemetryHelpText } = useTelemetryOption()
   const {
     badge: installCLIBadge,
     button: installCLIButton,
@@ -86,10 +87,6 @@ function GeneralSettings() {
 
   return (
     <>
-      <SettingSection title="Agent URL" description={agentURLHelpText}>
-        {agentURLInput}
-      </SettingSection>
-
       <SettingSection title="CLI" description={installCLIHelpText}>
         <HStack>
           {installCLIButton}
@@ -110,6 +107,14 @@ function GeneralSettings() {
           isChecked={settings.debugFlag}
           onChange={(e) => set("debugFlag", e.target.checked)}
         />
+      </SettingSection>
+
+      <SettingSection title="Telemetry" description={telemetryHelpText}>
+        {telemetryInput}
+      </SettingSection>
+
+      <SettingSection title="Agent URL" description={agentURLHelpText}>
+        {agentURLInput}
       </SettingSection>
 
       <SettingSection
