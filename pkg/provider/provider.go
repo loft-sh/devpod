@@ -167,6 +167,9 @@ type ProviderCustomDriverConfig struct {
 
 	// DeleteDevContainer is used to delete the devcontainer
 	DeleteDevContainer types.StrArray `json:"deleteDevContainer,omitempty"`
+
+	// CanReprovision returns true if the driver can reprovision the devcontainer
+	CanReprovision types.StrBool `json:"canReprovision,omitempty"`
 }
 
 type ProviderDockerDriverConfig struct {

@@ -225,6 +225,12 @@ func (c *customDriver) RunDevContainer(ctx context.Context, workspaceId string, 
 	return nil
 }
 
+var _ driver.ReprovisioningDriver = (*customDriver)(nil)
+
+func (c *customDriver) CanReprovision() bool {
+	return c.workspaceInfo.Agent.Custom.CanReprovision == "true"
+}
+
 func (c *customDriver) runCommand(
 	ctx context.Context,
 	workspaceId string,
