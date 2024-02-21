@@ -306,3 +306,30 @@ func (f *Framework) DevPodProviderFindOption(ctx context.Context, provider strin
 	}
 	return nil
 }
+
+func (f *Framework) DevPodContextCreate(ctx context.Context, name string, extraArgs ...string) error {
+	baseArgs := []string{"context", "create", name}
+	err := f.ExecCommand(ctx, false, true, "", append(baseArgs, extraArgs...))
+	if err != nil {
+		return fmt.Errorf("devpod context create failed: %s", err.Error())
+	}
+	return nil
+}
+
+func (f *Framework) DevPodContextUse(ctx context.Context, name string, extraArgs ...string) error {
+	baseArgs := []string{"context", "use", name}
+	err := f.ExecCommand(ctx, false, true, "", append(baseArgs, extraArgs...))
+	if err != nil {
+		return fmt.Errorf("devpod context use failed: %s", err.Error())
+	}
+	return nil
+}
+
+func (f *Framework) DevPodContextDelete(ctx context.Context, name string, extraArgs ...string) error {
+	baseArgs := []string{"context", "delete", name}
+	err := f.ExecCommand(ctx, false, true, "", append(baseArgs, extraArgs...))
+	if err != nil {
+		return fmt.Errorf("devpod context delete failed: %s", err.Error())
+	}
+	return nil
+}
