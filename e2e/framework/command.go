@@ -100,6 +100,17 @@ func (f *Framework) DevPodUp(ctx context.Context, additionalArgs ...string) erro
 	return nil
 }
 
+func (f *Framework) DevPodUpRecreate(ctx context.Context, additionalArgs ...string) error {
+	upArgs := []string{"up", "--recreate", "--debug", "--ide", "none"}
+	upArgs = append(upArgs, additionalArgs...)
+
+	_, _, err := f.ExecCommandCapture(ctx, upArgs)
+	if err != nil {
+		return fmt.Errorf("devpod up --recreate failed: %s", err.Error())
+	}
+	return nil
+}
+
 func (f *Framework) DevPodSSH(ctx context.Context, workspace string, command string) (string, error) {
 	out, err := f.ExecCommandOutput(ctx, []string{"ssh", workspace, "--command", command})
 	if err != nil {
