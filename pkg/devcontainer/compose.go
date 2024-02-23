@@ -164,7 +164,8 @@ func (r *runner) runDockerCompose(
 				upArgs = append(upArgs, "-f", existingProjectFiles)
 			}
 			upArgs = append(upArgs, "up", "-d")
-			err = composeHelper.Run(ctx, upArgs, nil, r.Log.Writer(logrus.InfoLevel, false), r.Log.Writer(logrus.ErrorLevel, false))
+			writer := r.Log.Writer(logrus.InfoLevel, false)
+			err = composeHelper.Run(ctx, upArgs, nil, writer, writer)
 			if err != nil {
 				r.Log.Errorf("Error starting project: %s", err)
 			} else {
