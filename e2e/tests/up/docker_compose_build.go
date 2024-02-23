@@ -142,6 +142,7 @@ var _ = DevPodDescribe("devpod up test suite", func() {
 					framework.ExpectNoError(err)
 					gomega.Expect(ids2[0]).NotTo(gomega.Equal(ids[0]), "Should restart container")
 				})
+
 			})
 		})
 	})
