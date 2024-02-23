@@ -15,6 +15,8 @@ import (
 	"github.com/onsi/ginkgo/v2"
 )
 
+const providerName = "docker-test"
+
 var _ = DevPodDescribe("devpod build test suite", func() {
 	ginkgo.Context("testing build", ginkgo.Label("build"), ginkgo.Ordered, func() {
 		var initialDir string
@@ -35,10 +37,10 @@ var _ = DevPodDescribe("devpod build test suite", func() {
 			framework.ExpectNoError(err)
 			ginkgo.DeferCleanup(framework.CleanupTempDir, initialDir, tempDir)
 
-			_ = f.DevPodProviderDelete(ctx, "docker")
-			err = f.DevPodProviderAdd(ctx, "docker")
+			_ = f.DevPodProviderDelete(ctx, providerName)
+			err = f.DevPodProviderAdd(ctx, "docker", "--name", providerName)
 			framework.ExpectNoError(err)
-			err = f.DevPodProviderUse(context.Background(), "docker")
+			err = f.DevPodProviderUse(context.Background(), providerName)
 			framework.ExpectNoError(err)
 
 			cfg := getDevcontainerConfig(tempDir)
@@ -65,6 +67,9 @@ var _ = DevPodDescribe("devpod build test suite", func() {
 			framework.ExpectNoError(err)
 			_, err = dockerHelper.InspectImage(ctx, prebuildRepo+":"+prebuildHash, false)
 			framework.ExpectNoError(err)
+			details, err := dockerHelper.InspectImage(ctx, prebuildRepo+":"+prebuildHash, false)
+			framework.ExpectNoError(err)
+			framework.ExpectEqual(details.Config.Labels["test"], "VALUE", "should contain test label")
 		})
 
 		ginkgo.It("should build image without repository specified if skip-push flag is set", func() {
@@ -200,9 +205,10 @@ func getDevcontainerConfig(dir string) *config.DevContainerConfig {
 		ImageContainer:      config.ImageContainer{},
 		ComposeContainer:    config.ComposeContainer{},
 		DockerfileContainer: config.DockerfileContainer{
-			Dockerfile: "Dockerfile",
-			Context:    "",
-			Build:      nil,
+			Build: &config.ConfigBuildOptions{
+				Dockerfile: "Dockerfile",
+				Context:    ".",
+				Options:    []string{"--label=test=VALUE"}},
 		},
 		Origin: dir + "/.devcontainer/devcontainer.json",
 	}
