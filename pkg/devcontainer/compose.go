@@ -141,12 +141,52 @@ func (r *runner) runDockerCompose(
 
 	// does the container already exist or is it not running?
 	if containerDetails == nil || containerDetails.State.Status != "running" || options.Recreate {
-		// Start container if not running
-		containerDetails, err = r.startContainer(ctx, parsedConfig, substitutionContext, project, composeHelper, composeGlobalArgs, containerDetails, options)
+		didStartProject := false
+		// Try to find existing project first
+		existingProjectFiles, err := composeHelper.FindProjectFiles(ctx, project.Name)
 		if err != nil {
-			return nil, errors.Wrap(err, "start container")
-		} else if containerDetails == nil {
-			return nil, fmt.Errorf("couldn't find container after start")
+			r.Log.Errorf("Error finding project files: %s", err)
+		} else if len(existingProjectFiles) > 0 && !options.Recreate {
+			r.Log.Debugf("Found existing project files: %s", existingProjectFiles)
+			// make sure all project files are still available
+			for _, file := range existingProjectFiles {
+				if _, err := os.Stat(file); err != nil {
+					r.Log.Warnf("Project file %s does not exist anymore, recreating project", file)
+					containerDetails = nil
+					break
+				}
+			}
+
+			// If project is found, we can call `up` with the project name
+			// If it fails, fall back to rebuilding
+			upArgs := []string{"--project-name", project.Name}
+			for _, existingProjectFiles := range existingProjectFiles {
+				upArgs = append(upArgs, "-f", existingProjectFiles)
+			}
+			upArgs = append(upArgs, "up", "-d")
+			err = composeHelper.Run(ctx, upArgs, nil, r.Log.Writer(logrus.InfoLevel, false), r.Log.Writer(logrus.ErrorLevel, false))
+			if err != nil {
+				r.Log.Errorf("Error starting project: %s", err)
+			} else {
+				// wait for running and get container details
+				details, err := composeHelper.FindDevContainer(ctx, project.Name, parsedConfig.Config.Service)
+				if err != nil {
+					r.Log.Errorf("Error finding dev container: %s", err)
+				} else {
+					containerDetails = details
+					didStartProject = true
+				}
+			}
+		}
+
+		// Start container if not running
+		if !didStartProject {
+			containerDetails, err = r.startContainer(ctx, parsedConfig, substitutionContext, project, composeHelper, composeGlobalArgs, containerDetails, options)
+			if err != nil {
+				return nil, errors.Wrap(err, "start container")
+			} else if containerDetails == nil {
+				return nil, fmt.Errorf("couldn't find container after start")
+			}
 		}
 	}
 

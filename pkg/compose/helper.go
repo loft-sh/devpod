@@ -2,6 +2,7 @@ package compose
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"io"
 	"os/exec"
@@ -156,6 +157,35 @@ func (h *ComposeHelper) GetDefaultImage(projectName, serviceName string) (string
 	}
 
 	return fmt.Sprintf("%s-%s", projectName, serviceName), nil
+}
+
+func (h *ComposeHelper) FindProjectFiles(ctx context.Context, projectName string) ([]string, error) {
+	buildArgs := []string{"--project-name", projectName}
+	buildArgs = append(buildArgs, "ls", "-a", "--filter", "name="+projectName, "--format", "json")
+
+	rawOut, err := h.buildCmd(ctx, buildArgs...).CombinedOutput()
+	if err != nil {
+		return nil, errors.Wrapf(err, "%s", string(rawOut))
+	}
+
+	type composeOutput struct {
+		Name        string
+		Status      string
+		ConfigFiles string
+	}
+	var composeOutputs []composeOutput
+	if err := json.Unmarshal(rawOut, &composeOutputs); err != nil {
+		return nil, errors.Wrapf(err, "parse compose output")
+	}
+
+	// no compose project found
+	if len(composeOutputs) == 0 {
+		return nil, nil
+	}
+
+	// Parse project files of first match
+	projectFiles := strings.Split(composeOutputs[0].ConfigFiles, ",")
+	return projectFiles, nil
 }
 
 func (h *ComposeHelper) GetProjectName(runnerID string) string {
