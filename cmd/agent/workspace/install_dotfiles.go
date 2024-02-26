@@ -10,6 +10,7 @@ import (
 	"github.com/loft-sh/devpod/cmd/flags"
 	"github.com/loft-sh/devpod/pkg/git"
 	"github.com/loft-sh/log"
+	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 )
@@ -43,7 +44,7 @@ func NewInstallDotfilesCmd(flags *flags.GlobalFlags) *cobra.Command {
 // Run runs the command logic
 func (cmd *InstallDotfilesCmd) Run(ctx context.Context) error {
 	logger := log.Default.ErrorStreamOnly()
-	targetDir := "dotfiles"
+	targetDir := filepath.Join(os.Getenv("HOME"), "dotfiles")
 
 	_, err := os.Stat(targetDir)
 	if err != nil {
@@ -67,11 +68,15 @@ func (cmd *InstallDotfilesCmd) Run(ctx context.Context) error {
 
 	if cmd.InstallScript != "" {
 		logger.Infof("Executing install script %s", cmd.InstallScript)
+		command := "./" + strings.TrimPrefix("./", cmd.InstallScript) + cmd.InstallScript
 
-		scriptCmd := exec.Command("./" + cmd.InstallScript)
+		err := ensureExecutable(command)
+		if err != nil {
+			return errors.Wrapf(err, "failed to make install script %s executable", command)
+		}
 
+		scriptCmd := exec.Command(command)
 		writer := logger.Writer(logrus.InfoLevel, false)
-
 		scriptCmd.Stdout = writer
 		scriptCmd.Stderr = writer
 
@@ -97,21 +102,14 @@ var scriptLocations = []string{
 func setupDotfiles(logger log.Logger) error {
 	for _, command := range scriptLocations {
 		logger.Debugf("Trying executing %s", command)
-		checkCmd := exec.Command("test", "-f", command)
-		err := checkCmd.Run()
-		if err != nil {
-			logger.Debugf("File %s not found", command)
-			continue
-		}
-
-		chmodCmd := exec.Command("chmod", "+x", command)
-		err = chmodCmd.Run()
-		if err != nil {
-			logger.Infof("Chmod of %s was unsuccessful: %v", command, err)
-			continue
-		}
-
 		writer := logger.Writer(logrus.InfoLevel, false)
+
+		err := ensureExecutable(command)
+		if err != nil {
+			logger.Infof("Failed to make install script %s executable: %v", command, err)
+			logger.Debug("Trying next location")
+			continue
+		}
 
 		scriptCmd := exec.Command(command)
 		scriptCmd.Stdout = writer
@@ -154,6 +152,22 @@ func setupDotfiles(logger log.Logger) error {
 				return err
 			}
 		}
+	}
+
+	return nil
+}
+
+func ensureExecutable(path string) error {
+	checkCmd := exec.Command("test", "-f", path)
+	err := checkCmd.Run()
+	if err != nil {
+		return errors.Wrapf(err, "install script %s not found", path)
+	}
+
+	chmodCmd := exec.Command("chmod", "+x", path)
+	err = chmodCmd.Run()
+	if err != nil {
+		return errors.Wrapf(err, "failed to make install script %s executable", path)
 	}
 
 	return nil
