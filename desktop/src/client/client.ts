@@ -24,6 +24,7 @@ import { UseToastOptions } from "@chakra-ui/react"
 import { Release } from "../gen"
 import { ProClient } from "./pro"
 import { Theme as TauriTheme } from "@tauri-apps/api/window"
+import { SettingsProvider, useChangeSettings, useSettings } from "../contexts/SettingsContext"
 
 // These types have to match the rust types! Make sure to update them as well!
 type TChannels = {

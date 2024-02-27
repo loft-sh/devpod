@@ -37,7 +37,7 @@ import {
   useVersion,
 } from "../../lib"
 import { useWelcomeModal } from "../../useWelcomeModal"
-import { useAgentURLOption, useTelemetryOption } from "./useContextOptions"
+import { useCLIFlagsOption, useAgentURLOption, useTelemetryOption } from "./useContextOptions"
 import { useIDESettings } from "./useIDESettings"
 
 const SETTINGS_TABS = [
@@ -318,6 +318,7 @@ function UpdateSettings() {
 }
 
 function ExperimentalSettings() {
+  const { input: cliFlagsInput, helpText: cliFlagsHelpText } = useCLIFlagsOption()
   const { settings, set } = useChangeSettings()
 
   return (
@@ -353,6 +354,10 @@ function ExperimentalSettings() {
             Jupyter Notebooks
           </FormLabel>
         </HStack>
+      </SettingSection>
+
+      <SettingSection title="CLI Additional Flags" description={cliFlagsHelpText}>
+        {cliFlagsInput}
       </SettingSection>
 
       <SettingSection
