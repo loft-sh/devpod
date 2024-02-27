@@ -26,6 +26,7 @@ pub struct Settings {
     experimental_jupyter_notebooks: bool,
     #[serde(rename = "experimental_devPodPro")]
     experimental_devpod_pro: bool,
+    additional_cli_flags: String,
 }
 
 #[derive(Debug, Serialize, TS)]

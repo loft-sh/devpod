@@ -35,6 +35,7 @@ const initialSettings: TSettings = {
   experimental_fleet: true,
   experimental_jupyterNotebooks: true,
   experimental_devPodPro: false,
+  additionalCliFlags: "",
 }
 function getSettingKeys(): readonly TSetting[] {
   return getKeys(initialSettings)
