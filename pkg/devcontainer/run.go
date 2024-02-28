@@ -92,8 +92,7 @@ func (r *runner) Up(ctx context.Context, options UpOptions) (*config.Result, err
 	// download workspace source before recreating container
 	_, isDockerDriver := r.Driver.(driver.DockerDriver)
 	if options.Recreate && !isDockerDriver {
-		// TODO: implement this
-		return nil, fmt.Errorf("rebuilding the workspace is currently not supported for non-docker drivers")
+		return r.recreateCustomDriver(ctx, options)
 	}
 
 	// prepare config
@@ -314,6 +313,17 @@ func runInitializeCommand(
 	}
 
 	return nil
+}
+
+func (r *runner) recreateCustomDriver(ctx context.Context, options UpOptions) (*config.Result, error) {
+	err := r.Driver.StopDevContainer(ctx, r.ID)
+	if err != nil {
+		return nil, errors.Wrap(err, "rebuilding the workspace is currently not supported for this driver")
+	}
+
+	// relaunch Up without recreate now
+	options.Recreate = false
+	return r.Up(ctx, options)
 }
 
 func getWorkspace(
