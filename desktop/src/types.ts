@@ -178,7 +178,7 @@ export type TImportWorkspaceConfig = Readonly<{
 //#region Context
 export type TContextOptions = Record<TContextOptionName, TContextOption>
 // See pkg/config/context.go
-export type TContextOptionName = "AGENT_URL" | "TELEMETRY" | "CLI_FLAGS"
+export type TContextOptionName = "AGENT_URL" | "TELEMETRY"
 export type TContextOption = Readonly<{
   name: TContextOptionName
   description: string | null | undefined
