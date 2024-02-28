@@ -91,6 +91,10 @@ export class WorkspacesClient implements TDebuggable {
     WorkspaceCommands.DEBUG = isEnabled
   }
 
+  public setAdditionalFlags(additionalFlags: string): void {
+    WorkspaceCommands.ADDITIONAL_FLAGS = additionalFlags
+  }
+
   public async listAll(): Promise<Result<readonly TWorkspaceWithoutStatus[]>> {
     return WorkspaceCommands.ListWorkspaces()
   }

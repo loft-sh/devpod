@@ -86,6 +86,10 @@ export function SettingsProvider({ children }: Readonly<{ children?: ReactNode }
     client.setSetting("debugFlag", settings.debugFlag)
   }, [settings.debugFlag])
 
+  useEffect(() => {
+    client.setSetting("additionalCliFlags", settings.additionalCliFlags)
+  }, [settings.additionalCliFlags])
+
   const set = useCallback<TSettingsContext["set"]>((key, value) => {
     settingsStore.set(key, value)
   }, [])

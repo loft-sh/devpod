@@ -60,7 +60,7 @@ type TChannels = {
 }
 type TChannelName = keyof TChannels
 type TClientEventListener<TChannel extends TChannelName> = (payload: TChannels[TChannel]) => void
-type TClientSettings = Pick<TSettings, "debugFlag">
+type TClientSettings = Pick<TSettings, "debugFlag" | "additionalCliFlags" >
 export type TPlatform = Awaited<ReturnType<typeof os.platform>>
 export type TArch = Awaited<ReturnType<typeof os.arch>>
 
@@ -77,10 +77,14 @@ class Client {
   ) {
     // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
     if (name === "debugFlag") {
-      this.workspaces.setDebug(value)
-      this.providers.setDebug(value)
-      this.ides.setDebug(value)
-      this.pro.setDebug(value)
+      const debug: boolean = value as boolean
+      this.workspaces.setDebug(debug)
+      this.providers.setDebug(debug)
+      this.ides.setDebug(debug)
+      this.pro.setDebug(debug)
+    }
+    if (name === "additionalCliFlags") {
+      this.workspaces.setAdditionalFlags(value as string)
     }
   }
   public ready(): Promise<void> {

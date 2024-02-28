@@ -6,7 +6,7 @@ import {
   TWorkspaceStatusResult,
   TWorkspaceWithoutStatus,
 } from "../../types"
-import { Command, isOk, toFlagArg } from "../command"
+import { Command, isOk, toFlagArg, toMultipleFlagArg } from "../command"
 import {
   DEVPOD_COMMAND_DELETE,
   DEVPOD_COMMAND_GET_WORKSPACE_CONFIG,
@@ -34,6 +34,7 @@ type TRawWorkspaces = readonly (Omit<TWorkspace, "status" | "id"> &
 
 export class WorkspaceCommands {
   static DEBUG = false
+  static ADDITIONAL_FLAGS = ""
 
   private static newCommand(args: string[]): Command {
     return new Command([...args, ...(WorkspaceCommands.DEBUG ? [DEVPOD_FLAG_DEBUG] : [])])
@@ -114,6 +115,10 @@ export class WorkspaceCommands {
 
     const identifier = exists(maybeSource) && exists(maybeIDFlag) ? maybeSource : id
 
+    const additionalFlags = WorkspaceCommands.ADDITIONAL_FLAGS.length !== 0
+      ? toMultipleFlagArg(WorkspaceCommands.ADDITIONAL_FLAGS)
+      : []
+
     return WorkspaceCommands.newCommand([
       DEVPOD_COMMAND_UP,
       identifier,
@@ -122,6 +127,7 @@ export class WorkspaceCommands {
       ...maybeProviderFlag,
       ...maybePrebuildRepositories,
       ...maybeDevcontainerPath,
+      ...additionalFlags,
       DEVPOD_FLAG_JSON_LOG_OUTPUT,
     ])
   }
