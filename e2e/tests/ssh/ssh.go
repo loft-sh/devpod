@@ -50,7 +50,7 @@ var _ = DevPodDescribe("devpod ssh test suite", func() {
 			framework.ExpectNoError(err)
 		})
 
-		ginkgo.FIt("should start a new workspace with a docker provider (default) and forward gpg agent into it", func() {
+		ginkgo.It("should start a new workspace with a docker provider (default) and forward gpg agent into it", func() {
 			// skip windows for now
 			if runtime.GOOS == "windows" {
 				return
