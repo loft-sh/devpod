@@ -194,7 +194,7 @@ func (d *dockerDriver) RunDockerDevContainer(
 	ide string,
 	ideOptions map[string]config2.OptionValue,
 ) error {
-	err := d.EnsureImage(ctx, workspaceId, options, parsedConfig, init, ide, ideOptions)
+	err := d.EnsureImage(ctx, options)
 	if err != nil {
 		return err
 	}
@@ -326,12 +326,7 @@ func (d *dockerDriver) RunDockerDevContainer(
 
 func (d *dockerDriver) EnsureImage(
 	ctx context.Context,
-	workspaceId string,
 	options *driver.RunOptions,
-	parsedConfig *config.DevContainerConfig,
-	init *bool,
-	ide string,
-	ideOptions map[string]config2.OptionValue,
 ) error {
 	d.Log.Infof("Inspecting image %s", options.Image)
 	_, err := d.Docker.InspectImage(ctx, options.Image, false)
