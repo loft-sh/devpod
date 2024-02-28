@@ -46,6 +46,7 @@ export function useSettingsOptions() {
   const { mutate: updateOption } = useMutation({
     mutationFn: async ({ value }: { value: string }) => {
       set("additionalCliFlags", value)
+      client.setSetting("additionalCliFlags", value)
     },
   })
 
