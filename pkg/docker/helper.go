@@ -95,6 +95,14 @@ func (r *DockerHelper) Stop(ctx context.Context, id string) error {
 	return nil
 }
 
+func (r *DockerHelper) Pull(ctx context.Context, image string, stdin io.Reader, stdout io.Writer, stderr io.Writer) error {
+	cmd := r.buildCmd(ctx, "pull", image)
+	cmd.Stdin = stdin
+	cmd.Stdout = stdout
+	cmd.Stderr = stderr
+	return cmd.Run()
+}
+
 func (r *DockerHelper) Remove(ctx context.Context, id string) error {
 	out, err := r.buildCmd(ctx, "rm", id).CombinedOutput()
 	if err != nil {
