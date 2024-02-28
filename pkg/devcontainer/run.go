@@ -318,7 +318,7 @@ func runInitializeCommand(
 func (r *runner) recreateCustomDriver(ctx context.Context, options UpOptions) (*config.Result, error) {
 	err := r.Driver.StopDevContainer(ctx, r.ID)
 	if err != nil {
-		return nil, errors.Wrap(err, "rebuilding the workspace is currently not supported for this driver")
+		return nil, err
 	}
 
 	// relaunch Up without recreate now
