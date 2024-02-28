@@ -194,6 +194,11 @@ func (d *dockerDriver) RunDockerDevContainer(
 	ide string,
 	ideOptions map[string]config2.OptionValue,
 ) error {
+	err := d.EnsureImage(ctx, workspaceId, options, parsedConfig, init, ide, ideOptions)
+	if err != nil {
+		return err
+	}
+
 	args := []string{
 		"run",
 		"--sig-proxy=false",
@@ -311,11 +316,33 @@ func (d *dockerDriver) RunDockerDevContainer(
 	writer := d.Log.Writer(logrus.InfoLevel, false)
 	defer writer.Close()
 
-	err := d.Docker.Run(ctx, args, nil, writer, writer)
+	err = d.Docker.Run(ctx, args, nil, writer, writer)
 	if err != nil {
 		return err
 	}
 
+	return nil
+}
+
+func (d *dockerDriver) EnsureImage(
+	ctx context.Context,
+	workspaceId string,
+	options *driver.RunOptions,
+	parsedConfig *config.DevContainerConfig,
+	init *bool,
+	ide string,
+	ideOptions map[string]config2.OptionValue,
+) error {
+	d.Log.Infof("Inspecting image %s", options.Image)
+	_, err := d.Docker.InspectImage(ctx, options.Image, false)
+	if err != nil {
+		d.Log.Infof("Image %s not found", options.Image)
+		d.Log.Infof("Pulling image %s", options.Image)
+		writer := d.Log.Writer(logrus.DebugLevel, false)
+		defer writer.Close()
+
+		return d.Docker.Pull(ctx, options.Image, nil, writer, writer)
+	}
 	return nil
 }
 
