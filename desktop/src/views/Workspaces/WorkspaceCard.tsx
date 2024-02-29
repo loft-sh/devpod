@@ -53,7 +53,7 @@ import {
   useWorkspace,
   useWorkspaceActions,
 } from "../../contexts"
-import { ArrowPath, Ellipsis, Pause, Play, Stack3D, Trash } from "../../icons"
+import { ArrowPath, Ellipsis, Pause, Play, Stack3D, Trash, CommandLine } from "../../icons"
 import { NoWorkspaceImageSvg } from "../../images"
 import { getIDEDisplayName, useHover } from "../../lib"
 import { QueryKeys } from "../../queryKeys"
@@ -239,6 +239,15 @@ export function WorkspaceCard({ workspaceID, onSelectionChange }: TWorkspaceCard
                         }}
                         icon={<Pause boxSize={4} />}>
                         Stop
+                      </MenuItem>
+                      <MenuItem
+                        fontWeight="normal"
+                        icon={<CommandLine boxSize={4} />}
+                        onClick={() => {
+                          const actionID = workspace.checkStatus()
+                          navigateToAction(actionID)
+                        }}>
+                        Logs
                       </MenuItem>
                       <MenuItem
                         fontWeight="normal"
