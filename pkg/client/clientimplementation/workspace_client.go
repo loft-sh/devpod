@@ -182,7 +182,7 @@ func (s *workspaceClient) agentInfo(cliOptions provider.CLIOptions) (string, *pr
 	}
 
 	// if we are running proxy mode
-	if cliOptions.Proxy {
+	if cliOptions.Proxy || cliOptions.ForceCredentials {
 		agentInfo.Agent.InjectGitCredentials = "true"
 		agentInfo.Agent.InjectDockerCredentials = "true"
 	}
