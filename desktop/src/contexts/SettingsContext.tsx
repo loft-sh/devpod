@@ -34,6 +34,7 @@ const initialSettings: TSettings = {
   experimental_multiDevcontainer: false,
   experimental_fleet: true,
   experimental_jupyterNotebooks: true,
+  experimental_vscodeInsiders: true,
   experimental_devPodPro: false,
   additionalCliFlags: "",
 }

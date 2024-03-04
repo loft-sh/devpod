@@ -189,7 +189,7 @@ export function WorkspaceCard({ workspaceID, onSelectionChange }: TWorkspaceCard
                           <MenuItem
                             ref={startWithRef}
                             icon={<Play boxSize={4} />}
-                            isDisabled={isOpenDisabled || isLoading }>
+                            isDisabled={isOpenDisabled || isLoading}>
                             <HStack width="full" justifyContent="space-between">
                               <Text>Start with</Text>
                               <ChevronRightIcon boxSize={4} />
@@ -202,7 +202,7 @@ export function WorkspaceCard({ workspaceID, onSelectionChange }: TWorkspaceCard
                           ref={popoverContentRef}>
                           {ides?.map((ide) => (
                             <MenuItem
-                              isDisabled={isOpenDisabled || isLoading }
+                              isDisabled={isOpenDisabled || isLoading}
                               onClick={handleOpenWithIDEClicked(id, ide.name)}
                               key={ide.name}
                               value={ide.name!}
@@ -215,7 +215,7 @@ export function WorkspaceCard({ workspaceID, onSelectionChange }: TWorkspaceCard
                       <MenuItem
                         icon={<ArrowPath boxSize={4} />}
                         onClick={onRebuildOpen}
-                        isDisabled={isOpenDisabled || isLoading }>
+                        isDisabled={isOpenDisabled || isLoading}>
                         Rebuild
                       </MenuItem>
                       {isShareEnabled && (
@@ -249,7 +249,7 @@ export function WorkspaceCard({ workspaceID, onSelectionChange }: TWorkspaceCard
                         Logs
                       </MenuItem>
                       <MenuItem
-                        isDisabled={isOpenDisabled || isLoading }
+                        isDisabled={isOpenDisabled || isLoading}
                         fontWeight="normal"
                         icon={<Trash boxSize={4} />}
                         onClick={() => onDeleteOpen()}>

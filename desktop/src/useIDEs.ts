@@ -7,6 +7,7 @@ import { QueryKeys } from "./queryKeys"
 // See pkg/config/ide.go for names
 const FLEET_IDE_NAME = "fleet"
 const JUPYTER_IDE_NAME = "jupyternotebook"
+const VSCODE_INSIDERS = "vscode-insiders"
 
 export function useIDEs() {
   const idesQuery = useQuery({
@@ -22,6 +23,7 @@ export function useIDEs() {
 
         if (ide.name === FLEET_IDE_NAME && settings.experimental_fleet) return true
         if (ide.name === JUPYTER_IDE_NAME && settings.experimental_jupyterNotebooks) return true
+        if (ide.name === VSCODE_INSIDERS && settings.experimental_vscodeInsiders) return true
 
         return false
       }),

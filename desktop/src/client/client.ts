@@ -60,7 +60,7 @@ type TChannels = {
 }
 type TChannelName = keyof TChannels
 type TClientEventListener<TChannel extends TChannelName> = (payload: TChannels[TChannel]) => void
-type TClientSettings = Pick<TSettings, "debugFlag" | "additionalCliFlags" >
+type TClientSettings = Pick<TSettings, "debugFlag" | "additionalCliFlags">
 export type TPlatform = Awaited<ReturnType<typeof os.platform>>
 export type TArch = Awaited<ReturnType<typeof os.arch>>
 

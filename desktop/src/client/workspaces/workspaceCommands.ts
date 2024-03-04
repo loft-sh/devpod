@@ -115,9 +115,10 @@ export class WorkspaceCommands {
 
     const identifier = exists(maybeSource) && exists(maybeIDFlag) ? maybeSource : id
 
-    const additionalFlags = WorkspaceCommands.ADDITIONAL_FLAGS.length !== 0
-      ? toMultipleFlagArg(WorkspaceCommands.ADDITIONAL_FLAGS)
-      : []
+    const additionalFlags =
+      WorkspaceCommands.ADDITIONAL_FLAGS.length !== 0
+        ? toMultipleFlagArg(WorkspaceCommands.ADDITIONAL_FLAGS)
+        : []
 
     return WorkspaceCommands.newCommand([
       DEVPOD_COMMAND_UP,

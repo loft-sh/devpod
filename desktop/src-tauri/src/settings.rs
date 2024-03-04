@@ -24,6 +24,8 @@ pub struct Settings {
     experimental_fleet: bool,
     #[serde(rename = "experimental_jupyterNotebooks")]
     experimental_jupyter_notebooks: bool,
+    #[serde(rename = "experimental_vscodeInsiders")]
+    experimental_vscode_insiders: bool,
     #[serde(rename = "experimental_devPodPro")]
     experimental_devpod_pro: bool,
     additional_cli_flags: String,

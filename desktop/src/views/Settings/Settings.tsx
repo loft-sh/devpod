@@ -354,6 +354,15 @@ function ExperimentalSettings() {
             Jupyter Notebooks
           </FormLabel>
         </HStack>
+        <HStack width="full" align="center">
+          <Switch
+            isChecked={settings.experimental_vscodeInsiders}
+            onChange={(e) => set("experimental_vscodeInsiders", e.target.checked)}
+          />
+          <FormLabel marginBottom="0" whiteSpace="nowrap" fontSize="sm">
+            VSCode Insiders
+          </FormLabel>
+        </HStack>
       </SettingSection>
 
       <SettingSection title="CLI Additional Flags" description={cliFlagsHelpText}>
