@@ -131,3 +131,4 @@ jobs:
           Remove-Item -Recurse C:\Users\loft-user\.devpod\
           sh -c "docker ps -q -a | xargs docker rm -f || :"
           sh -c "docker images --format '{{.Repository}}:{{.Tag}},{{.ID}}' | grep -E 'devpod|none|temp|^test' | cut -d',' -f2 | xargs docker rmi -f || :"
+          sh -c "docker images --format '{{.Tag}}|{{.Digest}}' | grep none | cut -d'|' -f1 | xargs docker rmi -f || :"
