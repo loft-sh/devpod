@@ -211,6 +211,16 @@ func (cmd *UpCmd) Run(
 				client.Workspace(),
 				result.SubstitutionContext.ContainerWorkspaceFolder,
 				vscode.Options.GetValue(ideConfig.Options, vscode.OpenNewWindow) == "true",
+				vscode.ReleaseChannelStable,
+				log,
+			)
+		case string(config.IDEVSCodeInsiders):
+			return vscode.Open(
+				ctx,
+				client.Workspace(),
+				result.SubstitutionContext.ContainerWorkspaceFolder,
+				vscode.Options.GetValue(ideConfig.Options, vscode.OpenNewWindow) == "true",
+				vscode.ReleaseChannelInsiders,
 				log,
 			)
 		case string(config.IDEOpenVSCode):

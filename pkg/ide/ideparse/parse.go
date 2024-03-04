@@ -116,6 +116,13 @@ var AllowedIDEs = []AllowedIDE{
 		IconDark:     "https://devpod.sh/assets/jupyter_dark.svg",
 		Experimental: true,
 	},
+	{
+		Name:         config.IDEVSCodeInsiders,
+		DisplayName:  "VSCode Insiders",
+		Options:      vscode.Options,
+		Icon:         "https://devpod.sh/assets/vscode_insiders.svg",
+		Experimental: true,
+	},
 }
 
 func RefreshIDEOptions(devPodConfig *config.Config, workspace *provider.Workspace, ide string, options []string) (*provider.Workspace, error) {

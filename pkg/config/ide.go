@@ -5,6 +5,7 @@ type IDE string
 const (
 	IDENone            IDE = "none"
 	IDEVSCode          IDE = "vscode"
+	IDEVSCodeInsiders  IDE = "vscode-insiders"
 	IDEOpenVSCode      IDE = "openvscode"
 	IDEIntellij        IDE = "intellij"
 	IDEGoland          IDE = "goland"

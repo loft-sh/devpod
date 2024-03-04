@@ -6,6 +6,7 @@ import (
 	"github.com/loft-sh/devpod/cmd/flags"
 	"github.com/loft-sh/devpod/pkg/compress"
 	"github.com/loft-sh/devpod/pkg/devcontainer/config"
+	"github.com/loft-sh/devpod/pkg/ide/vscode"
 	"github.com/loft-sh/log"
 	"github.com/spf13/cobra"
 )
@@ -14,7 +15,8 @@ import (
 type VSCodeAsyncCmd struct {
 	*flags.GlobalFlags
 
-	SetupInfo string
+	SetupInfo      string
+	ReleaseChannel string
 }
 
 // NewVSCodeAsyncCmd creates a new command
@@ -27,6 +29,7 @@ func NewVSCodeAsyncCmd() *cobra.Command {
 		RunE:  cmd.Run,
 	}
 	vsCodeAsyncCmd.Flags().StringVar(&cmd.SetupInfo, "setup-info", "", "The container setup info")
+	vsCodeAsyncCmd.Flags().StringVar(&cmd.ReleaseChannel, "release-channel", string(vscode.ReleaseChannelStable), "The release channel to use for vscode")
 	_ = vsCodeAsyncCmd.MarkFlagRequired("setup-info")
 	return vsCodeAsyncCmd
 }
@@ -46,7 +49,7 @@ func (cmd *VSCodeAsyncCmd) Run(_ *cobra.Command, _ []string) error {
 	}
 
 	// install IDE
-	err = setupVSCodeExtensions(setupInfo, log.Default)
+	err = setupVSCodeExtensions(setupInfo, vscode.ReleaseChannel(cmd.ReleaseChannel), log.Default)
 	if err != nil {
 		return err
 	}

@@ -132,7 +132,7 @@ export function toFlagArg(flag: string, arg: string) {
 }
 
 export function toMultipleFlagArg(input: string) {
-  const equaledInput = input.replace(/([a-zA-Z])\s+([a-zA-Z])/g, '$1=$2');
+  const equaledInput = input.replace(/([a-zA-Z])\s+([a-zA-Z])/g, "$1=$2")
 
   return equaledInput.split(" ")
 }

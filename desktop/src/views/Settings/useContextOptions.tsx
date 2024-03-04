@@ -129,14 +129,7 @@ export function useCLIFlagsOption() {
     ]
   )
 
-  const helpText = useMemo(
-    () => (
-      <>
-        Set the additional CLI Flags to use.
-      </>
-    ),
-    []
-  )
+  const helpText = useMemo(() => <>Set the additional CLI Flags to use.</>, [])
 
   return { input, helpText }
 }

@@ -362,7 +362,9 @@ func (cmd *SetupContainerCmd) installIDE(setupInfo *config.Result, ide *provider
 	case string(config2.IDENone):
 		return nil
 	case string(config2.IDEVSCode):
-		return cmd.setupVSCode(setupInfo, ide.Options, log)
+		return cmd.setupVSCode(setupInfo, ide.Options, vscode.ReleaseChannelStable, log)
+	case string(config2.IDEVSCodeInsiders):
+		return cmd.setupVSCode(setupInfo, ide.Options, vscode.ReleaseChannelInsiders, log)
 	case string(config2.IDEOpenVSCode):
 		return cmd.setupOpenVSCode(setupInfo, ide.Options, log)
 	case string(config2.IDEGoland):
@@ -390,7 +392,7 @@ func (cmd *SetupContainerCmd) installIDE(setupInfo *config.Result, ide *provider
 	return nil
 }
 
-func (cmd *SetupContainerCmd) setupVSCode(setupInfo *config.Result, ideOptions map[string]config2.OptionValue, log log.Logger) error {
+func (cmd *SetupContainerCmd) setupVSCode(setupInfo *config.Result, ideOptions map[string]config2.OptionValue, releaseChannel vscode.ReleaseChannel, log log.Logger) error {
 	log.Debugf("Setup vscode...")
 	vsCodeConfiguration := config.GetVSCodeConfiguration(setupInfo.MergedConfig)
 	settings := ""
@@ -404,7 +406,7 @@ func (cmd *SetupContainerCmd) setupVSCode(setupInfo *config.Result, ideOptions m
 	}
 
 	user := config.GetRemoteUser(setupInfo)
-	err := vscode.NewVSCodeServer(vsCodeConfiguration.Extensions, settings, user, ideOptions, log).Install()
+	err := vscode.NewVSCodeServer(vsCodeConfiguration.Extensions, settings, user, ideOptions, releaseChannel, log).Install()
 	if err != nil {
 		return err
 	}
@@ -425,14 +427,18 @@ func (cmd *SetupContainerCmd) setupVSCode(setupInfo *config.Result, ideOptions m
 			return nil, err
 		}
 
-		return exec.Command(binaryPath, "agent", "container", "vscode-async", "--setup-info", cmd.SetupInfo), nil
+		args := []string{"agent", "container", "vscode-async",
+			"--setup-info", cmd.SetupInfo,
+			"--release-channel", string(releaseChannel)}
+
+		return exec.Command(binaryPath, args...), nil
 	})
 }
 
-func setupVSCodeExtensions(setupInfo *config.Result, log log.Logger) error {
+func setupVSCodeExtensions(setupInfo *config.Result, releaseChannel vscode.ReleaseChannel, log log.Logger) error {
 	vsCodeConfiguration := config.GetVSCodeConfiguration(setupInfo.MergedConfig)
 	user := config.GetRemoteUser(setupInfo)
-	return vscode.NewVSCodeServer(vsCodeConfiguration.Extensions, "", user, nil, log).InstallExtensions()
+	return vscode.NewVSCodeServer(vsCodeConfiguration.Extensions, "", user, nil, releaseChannel, log).InstallExtensions()
 }
 
 func setupOpenVSCodeExtensions(setupInfo *config.Result, log log.Logger) error {
