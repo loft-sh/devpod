@@ -12,20 +12,24 @@ import (
 	"github.com/skratchdot/open-golang/open"
 )
 
-func Open(ctx context.Context, workspace, folder string, newWindow bool, log log.Logger) error {
+func Open(ctx context.Context, workspace, folder string, newWindow bool, releaseChannel ReleaseChannel, log log.Logger) error {
 	log.Infof("Starting VSCode...")
-	err := openViaCLI(ctx, workspace, folder, newWindow, log)
+	err := openViaCLI(ctx, workspace, folder, newWindow, releaseChannel, log)
 	if err != nil {
 		log.Debugf("Error opening vscode via cli: %v", err)
 	} else {
 		return nil
 	}
 
-	return openViaBrowser(workspace, folder, newWindow, log)
+	return openViaBrowser(workspace, folder, newWindow, releaseChannel, log)
 }
 
-func openViaBrowser(workspace, folder string, newWindow bool, log log.Logger) error {
-	openURL := `vscode://vscode-remote/ssh-remote+` + workspace + `.devpod/` + folder
+func openViaBrowser(workspace, folder string, newWindow bool, releaseChannel ReleaseChannel, log log.Logger) error {
+	protocol := `vscode://`
+	if releaseChannel == ReleaseChannelInsiders {
+		protocol = `vscode-insiders://`
+	}
+	openURL := protocol + `vscode-remote/ssh-remote+` + workspace + `.devpod/` + folder
 	if newWindow {
 		openURL += "?windowId=_blank"
 	}
@@ -40,9 +44,9 @@ func openViaBrowser(workspace, folder string, newWindow bool, log log.Logger) er
 	return nil
 }
 
-func openViaCLI(ctx context.Context, workspace, folder string, newWindow bool, log log.Logger) error {
+func openViaCLI(ctx context.Context, workspace, folder string, newWindow bool, releaseChannel ReleaseChannel, log log.Logger) error {
 	// try to find code cli
-	codePath := findCLI()
+	codePath := findCLI(releaseChannel)
 	if codePath == "" {
 		return fmt.Errorf("couldn't find the code binary")
 	}
@@ -95,11 +99,25 @@ func openViaCLI(ctx context.Context, workspace, folder string, newWindow bool, l
 	return nil
 }
 
-func findCLI() string {
-	if command.Exists("code") {
-		return "code"
-	} else if runtime.GOOS == "darwin" && command.Exists("/Applications/Visual Studio Code.app/Contents/Resources/app/bin/code") {
-		return "/Applications/Visual Studio Code.app/Contents/Resources/app/bin/code"
+func findCLI(releaseChannel ReleaseChannel) string {
+	if releaseChannel == ReleaseChannelStable {
+		if command.Exists("code") {
+			return "code"
+		} else if runtime.GOOS == "darwin" && command.Exists("/Applications/Visual Studio Code.app/Contents/Resources/app/bin/code") {
+			return "/Applications/Visual Studio Code.app/Contents/Resources/app/bin/code"
+		}
+
+		return ""
+	}
+
+	if releaseChannel == ReleaseChannelInsiders {
+		if command.Exists("code-insiders") {
+			return "code-insiders"
+		} else if runtime.GOOS == "darwin" && command.Exists("/Applications/Visual Studio Code - Insiders.app/Contents/Resources/app/bin/code") {
+			return "/Applications/Visual Studio Code - Insiders.app/Contents/Resources/app/bin/code"
+		}
+
+		return ""
 	}
 
 	return ""
