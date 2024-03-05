@@ -29,3 +29,4 @@ export const RECOMMENDED_PROVIDER_SOURCES = [
 
 export const WORKSPACE_SOURCE_BRANCH_DELIMITER = "@"
 export const WORKSPACE_SOURCE_COMMIT_DELIMITER = "@sha256:"
+export const WORKSPACE_STATUSES = ["Running", "Stopped", "Busy", "NotFound"] as const

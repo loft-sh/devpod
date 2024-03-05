@@ -101,7 +101,7 @@ class DevPodStore {
     }
 
     this.workspaces.set(workspaceID, { ...maybeWorkspace, status })
-    this.eventManager.publish()
+    this.workspacesDidChange()
   }
 
   public startAction({

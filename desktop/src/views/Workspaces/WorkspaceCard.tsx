@@ -1,19 +1,16 @@
+import { TWorkspaceResult } from "@/contexts/DevPodContext/workspaces/useWorkspace"
 import { ChevronRightIcon } from "@chakra-ui/icons"
 import {
   Box,
-  BoxProps,
   Button,
   ButtonGroup,
   Card,
-  CardFooter,
   CardHeader,
   Checkbox,
   Heading,
   HStack,
   Icon,
   IconButton,
-  IconProps,
-  Image,
   Menu,
   MenuButton,
   MenuItem,
@@ -29,9 +26,7 @@ import {
   PopoverContent,
   PopoverTrigger,
   Portal,
-  Stack,
   Text,
-  TextProps,
   Tooltip,
   useDisclosure,
   useToast,
@@ -39,11 +34,11 @@ import {
 } from "@chakra-ui/react"
 import { useQuery } from "@tanstack/react-query"
 import dayjs from "dayjs"
-import { useCallback, useMemo, useState } from "react"
+import { useCallback, useId, useMemo, useState } from "react"
 import { HiClock, HiOutlineCode, HiShare } from "react-icons/hi"
 import { useNavigate } from "react-router"
 import { client } from "../../client"
-import { IconTag, IDEIcon, Ripple } from "../../components"
+import { IconTag, IDEIcon } from "../../components"
 import {
   TActionID,
   TActionObj,
@@ -53,32 +48,38 @@ import {
   useWorkspace,
   useWorkspaceActions,
 } from "../../contexts"
-import { ArrowPath, Ellipsis, Pause, Play, Stack3D, Trash, CommandLine } from "../../icons"
-import { NoWorkspaceImageSvg } from "../../images"
+import { ArrowPath, CommandLine, Ellipsis, Pause, Play, Stack3D, Trash } from "../../icons"
 import { getIDEDisplayName, useHover } from "../../lib"
 import { QueryKeys } from "../../queryKeys"
 import { Routes } from "../../routes"
-import { TIDE, TProInstance, TWorkspace, TWorkspaceID } from "../../types"
+import { TIDE, TIDEs, TProInstance, TWorkspace, TWorkspaceID } from "../../types"
 import { useIDEs } from "../../useIDEs"
 import { getIDEName, getSourceName } from "./helpers"
+import { WorkspaceStatusBadge } from "./WorkspaceStatusBadge"
 
 type TWorkspaceCardProps = Readonly<{
   workspaceID: TWorkspaceID
+  isSelected?: boolean
   onSelectionChange?: (isSelected: boolean) => void
 }>
 
-export function WorkspaceCard({ workspaceID, onSelectionChange }: TWorkspaceCardProps) {
+export function WorkspaceCard({ workspaceID, isSelected, onSelectionChange }: TWorkspaceCardProps) {
+  const settings = useSettings()
   const [forceDelete, setForceDelete] = useState<boolean>(false)
   const navigate = useNavigate()
-  const settings = useSettings()
   const { ides, defaultIDE } = useIDEs()
-  const { isOpen: isDeleteOpen, onOpen: onDeleteOpen, onClose: onDeleteClose } = useDisclosure()
-  const { isOpen: isRebuildOpen, onOpen: onRebuildOpen, onClose: onRebuildClose } = useDisclosure()
-  const { isOpen: isStopOpen, onOpen: onStopOpen, onClose: onStopClose } = useDisclosure()
+  const {
+    isOpen: isDeleteOpen,
+    onOpen: handleDeleteClicked,
+    onClose: onDeleteClose,
+  } = useDisclosure()
+  const {
+    isOpen: isRebuildOpen,
+    onOpen: handleRebuildClicked,
+    onClose: onRebuildClose,
+  } = useDisclosure()
+  const { isOpen: isStopOpen, onOpen: handleStopClicked, onClose: onStopClose } = useDisclosure()
   const workspace = useWorkspace(workspaceID)
-  const { isEnabled: isShareEnabled, onClick: handleShareClicked } = useShareWorkspace(
-    workspace.data
-  )
   const [ideName, setIdeName] = useState<string | undefined>(() => {
     if (settings.fixedIDE && defaultIDE?.name) {
       return defaultIDE.name
@@ -87,181 +88,67 @@ export function WorkspaceCard({ workspaceID, onSelectionChange }: TWorkspaceCard
     return workspace.data?.ide?.name ?? undefined
   })
 
-  const navigateToAction = (actionID: TActionID | undefined) => {
-    if (actionID !== undefined && actionID !== "") {
-      navigate(Routes.toAction(actionID))
-    }
-  }
+  const navigateToAction = useCallback(
+    (actionID: TActionID | undefined) => {
+      if (actionID !== undefined && actionID !== "") {
+        navigate(Routes.toAction(actionID))
+      }
+    },
+    [navigate]
+  )
 
-  const handleOpenWithIDEClicked = (id: TWorkspaceID, ide: TIDE["name"]) => async () => {
-    if (!ide) {
-      return
+  const handleLogsClicked = useCallback(() => {
+    let actionID = workspace.current?.id
+    if (actionID === undefined) {
+      actionID = workspace.checkStatus()
     }
-    setIdeName(ide)
 
-    const actionID = workspace.start({ id, ideConfig: { name: ide } })
-    if (!settings.fixedIDE) {
-      await client.ides.useIDE(ide)
-    }
     navigateToAction(actionID)
-  }
+  }, [navigateToAction, workspace])
 
-  const isLoading = useMemo(() => {
-    if (workspace.current?.status === "pending") {
-      return true
-    }
-
-    return false
-  }, [workspace])
-
-  const isOpenDisabled = workspace.data?.status === "Busy"
-  const isOpenDisabledReason =
-    "Cannot open this workspace because it is busy. If this doesn't change, try to force delete and recreate it."
-  const [isStartWithHovering, startWithRef] = useHover()
-  const [isPopoverHovering, popoverContentRef] = useHover()
+  const isLoading = workspace.current?.status === "pending"
 
   if (workspace.data === undefined) {
     return null
   }
 
-  const { id, picture, ide, status } = workspace.data
-
   return (
     <>
-      <Card key={id} direction="row" width="full" maxWidth="60rem" variant="outline" maxHeight="48">
-        <Image
-          loading="lazy"
-          objectFit="contain"
-          width="18.75rem"
-          height="12rem"
-          style={{ aspectRatio: "2 / 1" }}
-          src={picture ?? NoWorkspaceImageSvg}
-          fallbackSrc={NoWorkspaceImageSvg}
-          alt="Project Image"
-        />
-        <Stack width="full" justifyContent={"space-between"}>
-          <WorkspaceCardHeader
-            workspace={workspace.data}
+      <Card
+        key={workspace.data.id}
+        direction="row"
+        width="full"
+        maxWidth="60rem"
+        variant="outline"
+        backgroundColor={isSelected ? "gray.50" : "transparent"}
+        marginBottom="3">
+        <WorkspaceCardHeader
+          workspace={workspace.data}
+          isLoading={isLoading}
+          currentAction={workspace.current}
+          ideName={ideName}
+          isSelected={isSelected}
+          onCheckStatusClicked={() => {
+            const actionID = workspace.checkStatus()
+            navigateToAction(actionID)
+          }}
+          onSelectionChange={onSelectionChange}
+          onActionIndicatorClicked={navigateToAction}>
+          <WorkspaceControls
+            id={workspace.data.id}
+            workspace={workspace}
             isLoading={isLoading}
-            currentAction={workspace.current}
+            isIDEFixed={settings.fixedIDE}
+            ides={ides}
             ideName={ideName}
-            onCheckStatusClicked={() => {
-              const actionID = workspace.checkStatus()
-              navigateToAction(actionID)
-            }}
-            onSelectionChange={onSelectionChange}
-            onActionIndicatorClicked={navigateToAction}
+            setIdeName={setIdeName}
+            navigateToAction={navigateToAction}
+            onRebuildClicked={handleRebuildClicked}
+            onDeleteClicked={handleDeleteClicked}
+            onStopClicked={handleStopClicked}
+            onLogsClicked={handleLogsClicked}
           />
-
-          <CardFooter padding="none" paddingBottom={4}>
-            <HStack spacing="2" width="full" justifyContent="end" paddingRight={"10px"}>
-              <ButtonGroup isAttached variant="solid-outline">
-                <Tooltip label={isOpenDisabled ? isOpenDisabledReason : undefined}>
-                  <Button
-                    aria-label="Start workspace"
-                    leftIcon={<Icon as={HiOutlineCode} boxSize={5} />}
-                    isDisabled={isOpenDisabled}
-                    onClick={() => {
-                      const actionID = workspace.start({
-                        id,
-                        ideConfig: { name: ideName ?? ide?.name ?? null },
-                      })
-                      navigateToAction(actionID)
-                    }}
-                    isLoading={isLoading}>
-                    Open
-                  </Button>
-                </Tooltip>
-                <Menu placement="top">
-                  <MenuButton
-                    as={IconButton}
-                    aria-label="More actions"
-                    colorScheme="gray"
-                    icon={<Ellipsis transform={"rotate(90deg)"} boxSize={5} />}
-                  />
-                  <Portal>
-                    <MenuList>
-                      <Popover
-                        isOpen={isStartWithHovering || isPopoverHovering}
-                        placement="right"
-                        offset={[100, 0]}>
-                        <PopoverTrigger>
-                          <MenuItem
-                            ref={startWithRef}
-                            icon={<Play boxSize={4} />}
-                            isDisabled={isOpenDisabled || isLoading}>
-                            <HStack width="full" justifyContent="space-between">
-                              <Text>Start with</Text>
-                              <ChevronRightIcon boxSize={4} />
-                            </HStack>
-                          </MenuItem>
-                        </PopoverTrigger>
-                        <PopoverContent
-                          zIndex="popover"
-                          width="fit-content"
-                          ref={popoverContentRef}>
-                          {ides?.map((ide) => (
-                            <MenuItem
-                              isDisabled={isOpenDisabled || isLoading}
-                              onClick={handleOpenWithIDEClicked(id, ide.name)}
-                              key={ide.name}
-                              value={ide.name!}
-                              icon={<IDEIcon ide={ide} width={6} height={6} size="sm" />}>
-                              {getIDEDisplayName(ide)}
-                            </MenuItem>
-                          ))}
-                        </PopoverContent>
-                      </Popover>
-                      <MenuItem
-                        icon={<ArrowPath boxSize={4} />}
-                        onClick={onRebuildOpen}
-                        isDisabled={isOpenDisabled || isLoading}>
-                        Rebuild
-                      </MenuItem>
-                      {isShareEnabled && (
-                        <MenuItem
-                          icon={<Icon as={HiShare} boxSize={4} />}
-                          onClick={handleShareClicked}>
-                          Share
-                        </MenuItem>
-                      )}
-                      <MenuItem
-                        isDisabled={status !== "Running"}
-                        onClick={() => {
-                          if (status !== "Running") {
-                            onStopOpen()
-
-                            return
-                          }
-
-                          workspace.stop()
-                        }}
-                        icon={<Pause boxSize={4} />}>
-                        Stop
-                      </MenuItem>
-                      <MenuItem
-                        fontWeight="normal"
-                        icon={<CommandLine boxSize={4} />}
-                        onClick={() => {
-                          const actionID = workspace.checkStatus()
-                          navigateToAction(actionID)
-                        }}>
-                        Logs
-                      </MenuItem>
-                      <MenuItem
-                        isDisabled={isOpenDisabled || isLoading}
-                        fontWeight="normal"
-                        icon={<Trash boxSize={4} />}
-                        onClick={() => onDeleteOpen()}>
-                        Delete
-                      </MenuItem>
-                    </MenuList>
-                  </Portal>
-                </Menu>
-              </ButtonGroup>
-            </HStack>
-          </CardFooter>
-        </Stack>
+        </WorkspaceCardHeader>
       </Card>
 
       <Modal onClose={onRebuildClose} isOpen={isRebuildOpen} isCentered>
@@ -354,20 +241,25 @@ type TWorkspaceCardHeaderProps = Readonly<{
   isLoading: boolean
   currentAction: TActionObj | undefined
   ideName: string | undefined
+  isSelected?: boolean
   onActionIndicatorClicked: (actionID: TActionID | undefined) => void
   onCheckStatusClicked?: VoidFunction
   onSelectionChange?: (isSelected: boolean) => void
+  children?: React.ReactNode
 }>
 function WorkspaceCardHeader({
   workspace,
   isLoading,
   currentAction,
   ideName,
+  isSelected,
   onSelectionChange,
   onCheckStatusClicked,
   onActionIndicatorClicked,
+  children,
 }: TWorkspaceCardHeaderProps) {
   const navigate = useNavigate()
+  const checkboxID = useId()
   const { id, status, provider, ide, lastUsed, source } = workspace
   const workspaceActions = useWorkspaceActions(id)
 
@@ -407,12 +299,21 @@ function WorkspaceCardHeader({
       : getIDEName(ide, idesQuery.data)
 
   return (
-    <CardHeader display="flex" flexDirection="column" overflow="hidden">
+    <CardHeader overflow="hidden" w="full">
       <VStack align="start" spacing={0}>
-        <HStack justifyContent="space-between" maxWidth="30rem">
+        <HStack w="full">
+          <Checkbox
+            id={checkboxID}
+            paddingRight="2"
+            isChecked={isSelected}
+            isDisabled={onSelectionChange === undefined}
+            onChange={(e) => onSelectionChange?.(e.target.checked)}
+          />
           <Heading size="md">
-            <HStack alignItems="center">
+            <HStack alignItems="baseline" justifyContent="space-between">
               <Text
+                as="label"
+                htmlFor={checkboxID}
                 fontWeight="bold"
                 maxWidth="23rem"
                 overflow="hidden"
@@ -420,20 +321,21 @@ function WorkspaceCardHeader({
                 textOverflow="ellipsis">
                 {id}
               </Text>
-              <WorkspaceStatusBadge
-                status={status}
-                isLoading={isLoading}
-                hasError={hasError}
-                onClick={handleBadgeClicked}
-              />
+              <Box transform="translateY(1px)">
+                <WorkspaceStatusBadge
+                  status={status}
+                  isLoading={isLoading}
+                  hasError={hasError}
+                  onClick={handleBadgeClicked}
+                />
+              </Box>
             </HStack>
           </Heading>
-          {onSelectionChange !== undefined && (
-            <Checkbox onChange={(e) => onSelectionChange(e.target.checked)} />
-          )}
+          <Box marginLeft="auto">{children}</Box>
         </HStack>
         {source && (
           <Text
+            paddingLeft="8"
             fontSize="sm"
             color="gray.500"
             userSelect="auto"
@@ -441,13 +343,14 @@ function WorkspaceCardHeader({
             overflow="hidden"
             whiteSpace="nowrap"
             textOverflow="ellipsis"
+            marginTop={-0.5}
             _hover={{ overflow: "visible", cursor: "text" }}>
             {getSourceName(source)}
           </Text>
         )}
       </VStack>
 
-      <HStack rowGap={2} marginTop={4} flexWrap="wrap" alignItems="center">
+      <HStack rowGap={2} marginTop={4} flexWrap="wrap" alignItems="center" paddingLeft="8">
         <IconTag
           icon={<Stack3D />}
           label={provider?.name ?? "No provider"}
@@ -475,89 +378,154 @@ function WorkspaceCardHeader({
   )
 }
 
-type TWorkspaceStatusBadgeProps = Readonly<{
-  status: TWorkspace["status"]
+type TWorkspaceControlsProps = Readonly<{
+  id: TWorkspaceID
+  workspace: TWorkspaceResult
+  isIDEFixed: boolean
   isLoading: boolean
-  hasError: boolean
-  onClick?: () => void
+  ides: TIDEs | undefined
+  ideName: TIDE["name"]
+  setIdeName: (ideName: string | undefined) => void
+  navigateToAction: (actionID: TActionID | undefined) => void
+  onRebuildClicked: VoidFunction
+  onDeleteClicked: VoidFunction
+  onStopClicked: VoidFunction
+  onLogsClicked: VoidFunction
 }>
-function WorkspaceStatusBadge({
-  onClick,
-  status,
-  hasError,
+function WorkspaceControls({
+  id,
+  workspace,
   isLoading,
-}: TWorkspaceStatusBadgeProps) {
-  const badge = useMemo(() => {
-    const sharedProps: BoxProps = {
-      as: "span",
-      borderRadius: "full",
-      width: "12px",
-      height: "12px",
-      borderWidth: "2px",
-      zIndex: "1",
-    }
-    const sharedTextProps: TextProps = {
-      fontWeight: "medium",
-      fontSize: "sm",
-    }
-    const rippleProps: IconProps = {
-      boxSize: 8,
-      position: "absolute",
-      left: "-8px",
-      zIndex: "0",
-    }
+  ides,
+  ideName,
+  isIDEFixed,
+  setIdeName,
+  navigateToAction,
+  onRebuildClicked,
+  onDeleteClicked,
+  onStopClicked,
+  onLogsClicked,
+}: TWorkspaceControlsProps) {
+  const { isEnabled: isShareEnabled, onClick: handleShareClicked } = useShareWorkspace(
+    workspace.data
+  )
 
-    if (hasError) {
-      return (
-        <>
-          <Box {...sharedProps} backgroundColor="white" borderColor="red.400" />
-          <Text {...sharedTextProps} color="red.400">
-            Error
-          </Text>
-        </>
-      )
+  const handleOpenWithIDEClicked = (id: TWorkspaceID, ide: TIDE["name"]) => async () => {
+    if (!ide) {
+      return
     }
+    setIdeName(ide)
 
-    if (isLoading) {
-      return (
-        <>
-          <Box {...sharedProps} backgroundColor="white" borderColor="yellow.500" />
-          <Ripple {...rippleProps} color="yellow.500" />
-          <Text {...sharedTextProps} color="yellow.500">
-            Loading
-          </Text>
-        </>
-      )
+    const actionID = workspace.start({ id, ideConfig: { name: ide } })
+    if (!isIDEFixed) {
+      await client.ides.useIDE(ide)
     }
-
-    if (status === "Running") {
-      return (
-        <>
-          <Box {...sharedProps} backgroundColor="green.200" borderColor="green.400" />
-          <Text {...sharedTextProps} color="green.400">
-            Running
-          </Text>
-        </>
-      )
-    }
-
-    return (
-      <>
-        <Box {...sharedProps} backgroundColor="purple.200" borderColor="purple.400" zIndex="1" />
-        <Text {...sharedTextProps} color="purple.400">
-          {status ?? "Unknown"}
-        </Text>
-      </>
-    )
-  }, [hasError, isLoading, status])
+    navigateToAction(actionID)
+  }
+  const isOpenDisabled = workspace.data?.status === "Busy"
+  const isOpenDisabledReason =
+    "Cannot open this workspace because it is busy. If this doesn't change, try to force delete and recreate it."
+  const [isStartWithHovering, startWithRef] = useHover()
+  const [isPopoverHovering, popoverContentRef] = useHover()
 
   return (
-    <HStack
-      cursor={onClick ? "pointer" : "default"}
-      onClick={onClick}
-      spacing="1"
-      position="relative">
-      {badge}
+    <HStack spacing="2" width="full" justifyContent="end">
+      <ButtonGroup isAttached variant="solid-outline">
+        <Tooltip label={isOpenDisabled ? isOpenDisabledReason : undefined}>
+          <Button
+            aria-label="Start workspace"
+            leftIcon={<Icon as={HiOutlineCode} boxSize={5} />}
+            isDisabled={isOpenDisabled}
+            onClick={() => {
+              const actionID = workspace.start({
+                id,
+                ideConfig: { name: ideName ?? ideName ?? null },
+              })
+              navigateToAction(actionID)
+            }}
+            isLoading={isLoading}>
+            Open
+          </Button>
+        </Tooltip>
+        <Menu placement="top">
+          <MenuButton
+            as={IconButton}
+            aria-label="More actions"
+            colorScheme="gray"
+            icon={<Ellipsis transform={"rotate(90deg)"} boxSize={5} />}
+          />
+          <Portal>
+            <MenuList>
+              <Popover
+                isOpen={isStartWithHovering || isPopoverHovering}
+                placement="right"
+                offset={[100, 0]}>
+                <PopoverTrigger>
+                  <MenuItem
+                    ref={startWithRef}
+                    icon={<Play boxSize={4} />}
+                    isDisabled={isOpenDisabled || isLoading}>
+                    <HStack width="full" justifyContent="space-between">
+                      <Text>Start with</Text>
+                      <ChevronRightIcon boxSize={4} />
+                    </HStack>
+                  </MenuItem>
+                </PopoverTrigger>
+                <PopoverContent zIndex="popover" width="fit-content" ref={popoverContentRef}>
+                  {ides?.map((ide) => (
+                    <MenuItem
+                      isDisabled={isOpenDisabled || isLoading}
+                      onClick={handleOpenWithIDEClicked(id, ide.name)}
+                      key={ide.name}
+                      value={ide.name!}
+                      icon={<IDEIcon ide={ide} width={6} height={6} size="sm" />}>
+                      {getIDEDisplayName(ide)}
+                    </MenuItem>
+                  ))}
+                </PopoverContent>
+              </Popover>
+              <MenuItem
+                icon={<ArrowPath boxSize={4} />}
+                onClick={onRebuildClicked}
+                isDisabled={isOpenDisabled || isLoading}>
+                Rebuild
+              </MenuItem>
+              {isShareEnabled && (
+                <MenuItem icon={<Icon as={HiShare} boxSize={4} />} onClick={handleShareClicked}>
+                  Share
+                </MenuItem>
+              )}
+              <MenuItem
+                isDisabled={workspace.data?.status !== "Running"}
+                onClick={() => {
+                  if (workspace.data?.status !== "Running") {
+                    onStopClicked()
+
+                    return
+                  }
+
+                  workspace.stop()
+                }}
+                icon={<Pause boxSize={4} />}>
+                Stop
+              </MenuItem>
+              <MenuItem
+                fontWeight="normal"
+                icon={<CommandLine boxSize={4} />}
+                onClick={onLogsClicked}>
+                Logs
+              </MenuItem>
+              <MenuItem
+                isDisabled={isOpenDisabled || isLoading}
+                fontWeight="normal"
+                icon={<Trash boxSize={4} />}
+                onClick={onDeleteClicked}>
+                Delete
+              </MenuItem>
+            </MenuList>
+          </Portal>
+        </Menu>
+      </ButtonGroup>
     </HStack>
   )
 }
