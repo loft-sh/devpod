@@ -66,7 +66,12 @@ impl UiMessageHelper {
         } else {
             // recreate window
             self.message_buffer.push_back(msg);
-            let _ = self.window_helper.new_main(self.app_name.clone());
+
+            // create a new main window if we can't find it
+            let main_window = self.app_handle.get_window("main");
+            if main_window.is_none() {
+                let _ = self.window_helper.new_main(self.app_name.clone());
+            }
         }
     }
 }
