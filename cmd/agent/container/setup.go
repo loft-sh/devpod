@@ -25,6 +25,7 @@ import (
 	"github.com/loft-sh/devpod/pkg/dockercredentials"
 	"github.com/loft-sh/devpod/pkg/envfile"
 	"github.com/loft-sh/devpod/pkg/extract"
+	"github.com/loft-sh/devpod/pkg/git"
 	"github.com/loft-sh/devpod/pkg/ide/fleet"
 	"github.com/loft-sh/devpod/pkg/ide/jetbrains"
 	"github.com/loft-sh/devpod/pkg/ide/jupyter"
@@ -46,6 +47,7 @@ type SetupContainerCmd struct {
 
 	ChownWorkspace         bool
 	StreamMounts           bool
+	InjectGitCredentials   bool
 	ContainerWorkspaceInfo string
 	SetupInfo              string
 }
@@ -65,6 +67,7 @@ func NewSetupContainerCmd(flags *flags.GlobalFlags) *cobra.Command {
 	}
 	setupContainerCmd.Flags().BoolVar(&cmd.StreamMounts, "stream-mounts", false, "If true, will try to stream the bind mounts from the host")
 	setupContainerCmd.Flags().BoolVar(&cmd.ChownWorkspace, "chown-workspace", false, "If DevPod should chown the workspace to the remote user")
+	setupContainerCmd.Flags().BoolVar(&cmd.InjectGitCredentials, "inject-git-credentials", false, "If DevPod should inject git credentials during setup")
 	setupContainerCmd.Flags().StringVar(&cmd.ContainerWorkspaceInfo, "container-workspace-info", "", "The container workspace info")
 	setupContainerCmd.Flags().StringVar(&cmd.SetupInfo, "setup-info", "", "The container setup info")
 	_ = setupContainerCmd.MarkFlagRequired("setup-info")
@@ -141,6 +144,17 @@ func (cmd *SetupContainerCmd) Run(ctx context.Context) error {
 	err = fillContainerEnv(setupInfo)
 	if err != nil {
 		return err
+	}
+
+	if cmd.InjectGitCredentials {
+		// configure git credentials
+		cancelCtx, cancel := context.WithCancel(ctx)
+		defer cancel()
+		cleanupFunc, err := configureSystemGitCredentials(cancelCtx, cancel, tunnelClient, logger)
+		if err != nil {
+			return err
+		}
+		defer cleanupFunc()
 	}
 
 	// setup container
@@ -487,4 +501,34 @@ func (cmd *SetupContainerCmd) setupOpenVSCode(setupInfo *config.Result, ideOptio
 
 	// start the server in the background
 	return openVSCode.Start()
+}
+
+func configureSystemGitCredentials(ctx context.Context, cancel context.CancelFunc, client tunnel.TunnelClient, log log.Logger) (func(), error) {
+	serverPort, err := credentials.StartCredentialsServer(ctx, cancel, client, log)
+	if err != nil {
+		return nil, err
+	}
+
+	binaryPath, err := os.Executable()
+	if err != nil {
+		return nil, err
+	}
+
+	gitCredentials := fmt.Sprintf("%s agent git-credentials --port %d", binaryPath, serverPort)
+	_ = os.Setenv("DEVPOD_GIT_HELPER_PORT", strconv.Itoa(serverPort))
+
+	err = git.CommandContext(ctx, "config", "--system", "--add", "credential.helper", gitCredentials).Run()
+	if err != nil {
+		return nil, fmt.Errorf("add git credential helper: %w", err)
+	}
+
+	cleanup := func() {
+		log.Debug("Unset setup system credential helper")
+		err = git.CommandContext(ctx, "config", "--system", "--unset", "credential.helper").Run()
+		if err != nil {
+			log.Errorf("unset system credential helper %v", err)
+		}
+	}
+
+	return cleanup, nil
 }
