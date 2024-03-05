@@ -187,6 +187,14 @@ func prepareWorkspace(ctx context.Context, workspaceInfo *provider2.AgentWorkspa
 
 	// check what type of workspace this is
 	if workspaceInfo.Workspace.Source.GitRepository != "" {
+		if workspaceInfo.CLIOptions.Recreate {
+			log.Info("Recreating git based workspace, removing old content folder")
+			err = os.RemoveAll(workspaceInfo.ContentFolder)
+			if err != nil {
+				log.Warnf("Failed to remove workspace folder, still proceeding: %v", err)
+			}
+		}
+
 		log.Debugf("Clone Repository")
 		err = CloneRepository(ctx, workspaceInfo.Agent.Local == "true", workspaceInfo.ContentFolder, workspaceInfo.Workspace.Source, helper, log)
 		if err != nil {
