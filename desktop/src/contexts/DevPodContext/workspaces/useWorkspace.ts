@@ -108,7 +108,7 @@ export function useWorkspace(workspaceID: TWorkspaceID | undefined): TWorkspaceR
     [viewID, workspaceID]
   )
 
-  const checkStatus = useCallback<TWorkspaceResult["stop"]>(
+  const checkStatus = useCallback<TWorkspaceResult["checkStatus"]>(
     (onStream) => {
       if (workspaceID === undefined) {
         return
@@ -141,23 +141,7 @@ export function useWorkspace(workspaceID: TWorkspaceID | undefined): TWorkspaceR
         return
       }
 
-      return devPodStore.startAction({
-        actionName: "stop",
-        workspaceID,
-        actionFn: async (ctx) => {
-          const result = await client.workspaces.stop(onStream, {
-            id: workspaceID,
-            actionID: ctx.id,
-            streamID: viewID,
-          })
-          if (result.err) {
-            return result
-          }
-          devPodStore.setStatus(workspaceID, result.val)
-
-          return result
-        },
-      })
+      return stopWorkspaceAction({ workspaceID, onStream, streamID: viewID })
     },
     [viewID, workspaceID]
   )
@@ -195,23 +179,7 @@ export function useWorkspace(workspaceID: TWorkspaceID | undefined): TWorkspaceR
         return
       }
 
-      return devPodStore.startAction({
-        actionName: "remove",
-        workspaceID,
-        actionFn: async (ctx) => {
-          const result = await client.workspaces.remove(force, onStream, {
-            id: workspaceID,
-            actionID: ctx.id,
-            streamID: viewID,
-          })
-          if (result.err) {
-            return result
-          }
-          devPodStore.removeWorkspace(workspaceID)
-
-          return result
-        },
-      })
+      return removeWorkspaceAction({ force, workspaceID, onStream, streamID: viewID })
     },
     [viewID, workspaceID]
   )
@@ -281,6 +249,66 @@ export function startWorkspaceAction({
         return result
       }
       devPodStore.setStatus(workspaceID, result.val)
+
+      return result
+    },
+  })
+}
+
+type TStopWorkspaceActionArgs = Readonly<{
+  onStream?: TStreamEventListenerFn
+  workspaceID: TWorkspaceID
+  streamID: TStreamID
+}>
+export function stopWorkspaceAction({
+  workspaceID,
+  onStream,
+  streamID,
+}: TStopWorkspaceActionArgs): TActionObj["id"] {
+  return devPodStore.startAction({
+    actionName: "stop",
+    workspaceID,
+    actionFn: async (ctx) => {
+      const result = await client.workspaces.stop(onStream, {
+        id: workspaceID,
+        actionID: ctx.id,
+        streamID,
+      })
+      if (result.err) {
+        return result
+      }
+      devPodStore.setStatus(workspaceID, result.val)
+
+      return result
+    },
+  })
+}
+
+type TRemoveWorkspaceActionArgs = Readonly<{
+  onStream?: TStreamEventListenerFn
+  workspaceID: TWorkspaceID
+  streamID: TStreamID
+  force: boolean
+}>
+export function removeWorkspaceAction({
+  workspaceID,
+  onStream,
+  streamID,
+  force,
+}: TRemoveWorkspaceActionArgs): TActionObj["id"] {
+  return devPodStore.startAction({
+    actionName: "remove",
+    workspaceID,
+    actionFn: async (ctx) => {
+      const result = await client.workspaces.remove(force, onStream, {
+        id: workspaceID,
+        actionID: ctx.id,
+        streamID,
+      })
+      if (result.err) {
+        return result
+      }
+      devPodStore.removeWorkspace(workspaceID)
 
       return result
     },

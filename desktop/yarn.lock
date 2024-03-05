@@ -5049,7 +5049,7 @@ supports-preserve-symlinks-flag@^1.0.0:
   resolved "https://registry.yarnpkg.com/supports-preserve-symlinks-flag/-/supports-preserve-symlinks-flag-1.0.0.tgz#6eda4bd344a3c94aea376d4cc31bc77311039e09"
   integrity sha512-ot0WnXS9fgdkgIcePe6RHNk1WA8+muPa6cSjeR3V8K27q9BB1rTE3R1p7Hv0z1ZyAc8s6Vvv8DIyWf681MAt0w==
 
-"tauri-plugin-store-api@https://github.com/tauri-apps/tauri-plugin-store", "tauri-plugin-store-api@https://github.com/tauri-apps/tauri-plugin-store#v1":
+"tauri-plugin-store-api@https://github.com/tauri-apps/tauri-plugin-store#v1":
   version "0.0.0"
   resolved "https://github.com/tauri-apps/tauri-plugin-store#6f3daa12c4f69ca1586427307f518c9ad660d168"
   dependencies:
