@@ -16,6 +16,7 @@ import (
 	"github.com/loft-sh/devpod/pkg/agent"
 	"github.com/loft-sh/devpod/pkg/agent/tunnel"
 	"github.com/loft-sh/devpod/pkg/agent/tunnelserver"
+	"github.com/loft-sh/devpod/pkg/command"
 	"github.com/loft-sh/devpod/pkg/compress"
 	config2 "github.com/loft-sh/devpod/pkg/config"
 	"github.com/loft-sh/devpod/pkg/copy"
@@ -152,9 +153,10 @@ func (cmd *SetupContainerCmd) Run(ctx context.Context) error {
 		defer cancel()
 		cleanupFunc, err := configureSystemGitCredentials(cancelCtx, cancel, tunnelClient, logger)
 		if err != nil {
-			return err
+			logger.Errorf("Error configuring git credentials: %v", err)
+		} else {
+			defer cleanupFunc()
 		}
-		defer cleanupFunc()
 	}
 
 	// setup container
@@ -504,6 +506,10 @@ func (cmd *SetupContainerCmd) setupOpenVSCode(setupInfo *config.Result, ideOptio
 }
 
 func configureSystemGitCredentials(ctx context.Context, cancel context.CancelFunc, client tunnel.TunnelClient, log log.Logger) (func(), error) {
+	if !command.Exists("git") {
+		return nil, errors.New("git not found")
+	}
+
 	serverPort, err := credentials.StartCredentialsServer(ctx, cancel, client, log)
 	if err != nil {
 		return nil, err

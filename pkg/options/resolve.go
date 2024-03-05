@@ -224,6 +224,9 @@ func ResolveAgentConfig(devConfig *config.Config, provider *provider2.ProviderCo
 	agentConfig.Timeout = resolver.ResolveDefaultValue(agentConfig.Timeout, options)
 	agentConfig.ContainerTimeout = resolver.ResolveDefaultValue(agentConfig.ContainerTimeout, options)
 	agentConfig.InjectGitCredentials = types.StrBool(resolver.ResolveDefaultValue(string(agentConfig.InjectGitCredentials), options))
+	if devConfig.ContextOption(config.ContextOptionSSHInjectGitCredentials) != "" {
+		agentConfig.InjectGitCredentials = types.StrBool(devConfig.ContextOption(config.ContextOptionSSHInjectGitCredentials))
+	}
 	agentConfig.InjectDockerCredentials = types.StrBool(resolver.ResolveDefaultValue(string(agentConfig.InjectDockerCredentials), options))
 	return agentConfig
 }
