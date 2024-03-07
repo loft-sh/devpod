@@ -7,6 +7,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"runtime"
 	"strings"
 
 	"github.com/loft-sh/devpod/e2e/framework"
@@ -117,6 +118,52 @@ var _ = DevPodDescribe("devpod up test suite", func() {
 			// Wait for devpod workspace to come online (deadline: 30s)
 			err = f.DevPodUp(ctx, "github.com/loft-sh/devpod@pull/3/head")
 			framework.ExpectNoError(err)
+		})
+
+		ginkgo.It("should allow checkout of a private GitRepo", func() {
+			// need to debug
+			if runtime.GOOS == "windows" {
+				ginkgo.Skip("skipping on windows")
+			}
+
+			ctx := context.Background()
+			f := framework.NewDefaultFramework(initialDir + "/bin")
+
+			_ = f.DevPodProviderDelete(ctx, "docker")
+			err := f.DevPodProviderAdd(ctx, "docker")
+			framework.ExpectNoError(err)
+			err = f.DevPodProviderUse(ctx, "docker")
+			framework.ExpectNoError(err)
+
+			// setup git credentials
+			err = exec.Command("git", []string{"config", "--global", "credential.helper", "store"}...).Run()
+			framework.ExpectNoError(err)
+
+			username := os.Getenv("GH_USERNAME")
+			framework.ExpectNotEqual(username, "")
+
+			token := os.Getenv("GH_ACCESS_TOKEN")
+			framework.ExpectNotEqual(token, "")
+
+			gitCredentialString := []byte("https://" + username + ":" + token + "@github.com")
+			err = os.WriteFile(
+				filepath.Join(os.Getenv("HOME"), ".git-credentials"),
+				gitCredentialString, 0o644)
+			framework.ExpectNoError(err)
+			defer os.Remove(filepath.Join(os.Getenv("HOME"), ".git-credentials"))
+
+			name := "testprivaterepo"
+			ginkgo.DeferCleanup(f.DevPodWorkspaceDelete, context.Background(), name)
+
+			// Wait for devpod workspace to come online (deadline: 30s)
+			err = f.DevPodUp(ctx, "https://github.com/"+username+"/test_private_repo.git")
+			framework.ExpectNoError(err)
+
+			// Ensure git credentials are properly forwarded by cloning the private repo
+			// from within the container
+			out, err := f.DevPodSSH(ctx, name, "git clone https://github.com/"+username+"/test_private_repo")
+			framework.ExpectNoError(err)
+			fmt.Println(out)
 		})
 
 		ginkgo.It("run devpod in Kubernetes", func() {
