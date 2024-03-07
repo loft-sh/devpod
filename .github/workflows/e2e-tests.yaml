@@ -80,7 +80,13 @@ jobs:
       - name: E2E test
         working-directory: ./e2e
         run: |
-          sudo KUBECONFIG=/home/runner/.kube/config go test -v -ginkgo.v -timeout 3600s --ginkgo.label-filter=${{ matrix.label }}
+          sudo KUBECONFIG=/home/runner/.kube/config \
+            GH_USERNAME=${GH_USERNAME} \
+            GH_ACCESS_TOKEN=${GH_ACCESS_TOKEN} \
+            go test -v -ginkgo.v -timeout 3600s --ginkgo.label-filter=${{ matrix.label }}
+        env:
+          GH_USERNAME: ${{ secrets.GH_PRIVATE_REPO_USER_TEST }}
+          GH_ACCESS_TOKEN: ${{ secrets.GH_PRIVATE_REPO_TOKEN_TEST }}
 
   test-e2e-windows:
     runs-on: self-hosted-windows
