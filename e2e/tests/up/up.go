@@ -126,6 +126,13 @@ var _ = DevPodDescribe("devpod up test suite", func() {
 				ginkgo.Skip("skipping on windows")
 			}
 
+			username := os.Getenv("GH_USERNAME")
+			token := os.Getenv("GH_ACCESS_TOKEN")
+
+			if username == "" || token == "" {
+				ginkgo.Skip("WARNING: skipping test, secrets not found")
+			}
+
 			ctx := context.Background()
 			f := framework.NewDefaultFramework(initialDir + "/bin")
 
@@ -138,12 +145,6 @@ var _ = DevPodDescribe("devpod up test suite", func() {
 			// setup git credentials
 			err = exec.Command("git", []string{"config", "--global", "credential.helper", "store"}...).Run()
 			framework.ExpectNoError(err)
-
-			username := os.Getenv("GH_USERNAME")
-			framework.ExpectNotEqual(username, "")
-
-			token := os.Getenv("GH_ACCESS_TOKEN")
-			framework.ExpectNotEqual(token, "")
 
 			gitCredentialString := []byte("https://" + username + ":" + token + "@github.com")
 			err = os.WriteFile(
