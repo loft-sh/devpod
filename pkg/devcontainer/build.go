@@ -333,7 +333,7 @@ func dockerlessFallback(
 ) (*config.BuildInfo, error) {
 	contextPath := config.GetContextPath(parsedConfig.Config)
 	devPodInternalFolder := filepath.Join(contextPath, config.DevPodContextFeatureFolder)
-	err := os.MkdirAll(devPodInternalFolder, 0777)
+	err := os.MkdirAll(devPodInternalFolder, 0755)
 	if err != nil {
 		return nil, fmt.Errorf("create devpod folder: %w", err)
 	}
@@ -344,7 +344,7 @@ func dockerlessFallback(
 		return nil, fmt.Errorf("rewrite dockerfile: %w", err)
 	} else if devPodDockerfile == "" {
 		devPodDockerfile = filepath.Join(devPodInternalFolder, "Dockerfile-without-features")
-		err = os.WriteFile(devPodDockerfile, []byte(dockerfileContent), 0666)
+		err = os.WriteFile(devPodDockerfile, []byte(dockerfileContent), 0600)
 		if err != nil {
 			return nil, fmt.Errorf("write devpod dockerfile: %w", err)
 		}

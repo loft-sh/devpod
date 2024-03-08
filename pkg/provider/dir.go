@@ -172,7 +172,7 @@ func SaveProviderConfig(context string, provider *ProviderConfig) error {
 	}
 
 	providerConfigFile := filepath.Join(providerDir, ProviderConfigFile)
-	err = os.WriteFile(providerConfigFile, providerDirBytes, 0666)
+	err = os.WriteFile(providerConfigFile, providerDirBytes, 0600)
 	if err != nil {
 		return err
 	}
@@ -197,7 +197,7 @@ func SaveProInstanceConfig(context string, proInstance *ProInstance) error {
 	}
 
 	proInstanceConfigFile := filepath.Join(providerDir, ProInstanceConfigFile)
-	err = os.WriteFile(proInstanceConfigFile, proInstanceBytes, 0666)
+	err = os.WriteFile(proInstanceConfigFile, proInstanceBytes, 0600)
 	if err != nil {
 		return err
 	}
@@ -222,7 +222,7 @@ func SaveWorkspaceResult(workspace *Workspace, result *config2.Result) error {
 	}
 
 	workspaceResultFile := filepath.Join(workspaceDir, WorkspaceResultFile)
-	err = os.WriteFile(workspaceResultFile, resultBytes, 0666)
+	err = os.WriteFile(workspaceResultFile, resultBytes, 0600)
 	if err != nil {
 		return err
 	}
@@ -247,7 +247,7 @@ func SaveWorkspaceConfig(workspace *Workspace) error {
 	}
 
 	workspaceConfigFile := filepath.Join(workspaceDir, WorkspaceConfigFile)
-	err = os.WriteFile(workspaceConfigFile, workspaceConfigBytes, 0666)
+	err = os.WriteFile(workspaceConfigFile, workspaceConfigBytes, 0600)
 	if err != nil {
 		return err
 	}
@@ -272,7 +272,7 @@ func SaveMachineConfig(machine *Machine) error {
 	}
 
 	machineConfigFile := filepath.Join(machineDir, MachineConfigFile)
-	err = os.WriteFile(machineConfigFile, machineConfigBytes, 0666)
+	err = os.WriteFile(machineConfigFile, machineConfigBytes, 0600)
 	if err != nil {
 		return err
 	}

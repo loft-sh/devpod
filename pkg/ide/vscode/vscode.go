@@ -190,7 +190,7 @@ func (o *VsCodeServer) Install() error {
 	}
 
 	settingsDir := filepath.Join(location, "data", "Machine")
-	err = os.MkdirAll(settingsDir, 0777)
+	err = os.MkdirAll(settingsDir, 0755)
 	if err != nil {
 		return err
 	}
@@ -210,7 +210,7 @@ func (o *VsCodeServer) Install() error {
 	}
 
 	// set settings
-	err = os.WriteFile(settingsFile, []byte(o.settings), 0666)
+	err = os.WriteFile(settingsFile, []byte(o.settings), 0600)
 	if err != nil {
 		return err
 	}
@@ -245,7 +245,7 @@ func prepareServerLocation(userName string, create bool, releaseChannel ReleaseC
 
 	folder := filepath.Join(homeFolder, folderName)
 	if create {
-		err = os.MkdirAll(folder, 0777)
+		err = os.MkdirAll(folder, 0755)
 		if err != nil {
 			return "", err
 		}

@@ -9,7 +9,7 @@ import (
 
 func WriteFiles(folder string, files map[string]string) error {
 	for file, content := range files {
-		err := os.WriteFile(filepath.Join(folder, file), []byte(content), 0666)
+		err := os.WriteFile(filepath.Join(folder, file), []byte(content), 0600)
 		if err != nil {
 			return err
 		}

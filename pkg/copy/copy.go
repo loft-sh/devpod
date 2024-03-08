@@ -99,7 +99,7 @@ func Directory(scrDir, dest string) error {
 				return err
 			}
 		default:
-			if err := File(sourcePath, destPath, 0666); err != nil {
+			if err := File(sourcePath, destPath, 0644); err != nil {
 				return err
 			}
 		}

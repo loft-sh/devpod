@@ -48,7 +48,7 @@ func ConfigureHelper(binaryPath, userName string, port int) error {
         helper = "%s agent git-credentials --port %d"
 `, binaryPath, port)
 
-		err = os.WriteFile(gitConfigPath, []byte(content), 0644)
+		err = os.WriteFile(gitConfigPath, []byte(content), 0600)
 		if err != nil {
 			return errors.Wrap(err, "write git config")
 		}
@@ -79,7 +79,7 @@ func RemoveHelperFromPath(gitConfigPath string) error {
 	}
 
 	if strings.Contains(string(out), "[credential]") {
-		err = os.WriteFile(gitConfigPath, []byte(removeCredentialHelper(string(out))), 0644)
+		err = os.WriteFile(gitConfigPath, []byte(removeCredentialHelper(string(out))), 0600)
 		if err != nil {
 			return errors.Wrap(err, "write git config")
 		}

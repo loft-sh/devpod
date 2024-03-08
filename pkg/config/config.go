@@ -294,12 +294,12 @@ func SaveConfig(config *Config) error {
 		return err
 	}
 
-	err = os.MkdirAll(filepath.Dir(configOrigin), 0755)
+	err = os.MkdirAll(filepath.Dir(configOrigin), 0700)
 	if err != nil {
 		return err
 	}
 
-	err = os.WriteFile(configOrigin, out, 0666)
+	err = os.WriteFile(configOrigin, out, 0600)
 	if err != nil {
 		return err
 	}

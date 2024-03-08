@@ -69,7 +69,7 @@ func MergeAndApply(env map[string]string, log log.Logger) {
 		return
 	}
 
-	err = os.WriteFile(location, out, 0666)
+	err = os.WriteFile(location, out, 0600)
 	if err != nil {
 		log.Debugf("Error writing envfile: %v", err)
 		return
