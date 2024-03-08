@@ -475,7 +475,7 @@ func (r *runner) buildAndExtendDockerCompose(
 		)
 
 		defer os.RemoveAll(filepath.Dir(extendedDockerfilePath))
-		err := os.WriteFile(extendedDockerfilePath, []byte(extendedDockerfileContent), 0666)
+		err := os.WriteFile(extendedDockerfilePath, []byte(extendedDockerfileContent), 0600)
 		if err != nil {
 			return "", "", nil, "", errors.Wrap(err, "write Dockerfile with features")
 		}
@@ -574,7 +574,7 @@ func (r *runner) extendedDockerComposeBuild(composeService *composetypes.Service
 	}
 
 	dockerComposeFolder := getDockerComposeFolder()
-	err := os.MkdirAll(dockerComposeFolder, 0775)
+	err := os.MkdirAll(dockerComposeFolder, 0755)
 	if err != nil {
 		return "", err
 	}
@@ -592,7 +592,7 @@ func (r *runner) extendedDockerComposeBuild(composeService *composetypes.Service
 		string(dockerComposeData),
 	)
 
-	err = os.WriteFile(dockerComposePath, dockerComposeData, 0666)
+	err = os.WriteFile(dockerComposePath, dockerComposeData, 0600)
 	if err != nil {
 		return "", err
 	}
@@ -617,7 +617,7 @@ func (r *runner) extendedDockerComposeUp(
 	}
 
 	dockerComposeFolder := getDockerComposeFolder()
-	err = os.MkdirAll(dockerComposeFolder, 0775)
+	err = os.MkdirAll(dockerComposeFolder, 0755)
 	if err != nil {
 		return "", err
 	}
@@ -630,7 +630,7 @@ func (r *runner) extendedDockerComposeUp(
 		string(dockerComposeData),
 	)
 
-	err = os.WriteFile(dockerComposePath, dockerComposeData, 0666)
+	err = os.WriteFile(dockerComposePath, dockerComposeData, 0600)
 	if err != nil {
 		return "", err
 	}

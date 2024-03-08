@@ -281,7 +281,7 @@ func ensureLastDevContainerJson(workspaceInfo *provider2.AgentWorkspaceInfo) err
 			return fmt.Errorf("marshal devcontainer.json: %w", err)
 		}
 
-		err = os.WriteFile(filePath, raw, 0666)
+		err = os.WriteFile(filePath, raw, 0600)
 		if err != nil {
 			return fmt.Errorf("write %s: %w", filePath, err)
 		}
@@ -376,7 +376,7 @@ func PrepareImage(workspaceDir, image string) error {
 	// create a .devcontainer.json with the image
 	err := os.WriteFile(filepath.Join(workspaceDir, ".devcontainer.json"), []byte(`{
   "image": "`+image+`"
-}`), 0666)
+}`), 0600)
 	if err != nil {
 		return err
 	}

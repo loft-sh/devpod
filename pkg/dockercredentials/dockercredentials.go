@@ -53,7 +53,7 @@ func configureCredentials(userName, shebang string, targetDir, configDir string,
 		return err
 	}
 
-	err = file.MkdirAll(userName, configDir, 0777)
+	err = file.MkdirAll(userName, configDir, 0755)
 	if err != nil {
 		return err
 	}
@@ -67,7 +67,7 @@ func configureCredentials(userName, shebang string, targetDir, configDir string,
 	credentialHelperPath := filepath.Join(targetDir, "docker-credential-devpod")
 	log.Debugf("Wrote docker credentials helper to %s", credentialHelperPath)
 	err = os.WriteFile(credentialHelperPath, []byte(fmt.Sprintf(shebang+`
-'%s' agent docker-credentials --port '%d' "$@"`, binaryPath, port)), 0777)
+'%s' agent docker-credentials --port '%d' "$@"`, binaryPath, port)), 0755)
 	if err != nil {
 		return errors.Wrap(err, "write credential helper")
 	}

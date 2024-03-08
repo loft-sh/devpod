@@ -46,7 +46,7 @@ func SaveDevContainerJSON(config *DevContainerConfig) error {
 		return fmt.Errorf("no origin in config")
 	}
 
-	err := os.MkdirAll(filepath.Dir(config.Origin), 0777)
+	err := os.MkdirAll(filepath.Dir(config.Origin), 0755)
 	if err != nil {
 		return err
 	}
@@ -56,7 +56,7 @@ func SaveDevContainerJSON(config *DevContainerConfig) error {
 		return err
 	}
 
-	err = os.WriteFile(config.Origin, out, 0666)
+	err = os.WriteFile(config.Origin, out, 0600)
 	if err != nil {
 		return err
 	}

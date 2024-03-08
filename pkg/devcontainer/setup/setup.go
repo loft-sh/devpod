@@ -93,7 +93,7 @@ func WriteResult(setupInfo *config.Result, log log.Logger) {
 		return
 	}
 
-	err = os.WriteFile(ResultLocation, rawBytes, 0666)
+	err = os.WriteFile(ResultLocation, rawBytes, 0600)
 	if err != nil {
 		log.Warnf("Error write result to %s: %v", ResultLocation, err)
 		return
@@ -274,7 +274,7 @@ func markerFileExists(markerName string, markerContent string) (bool, error) {
 
 	// write marker
 	_ = os.MkdirAll(filepath.Dir(markerName), 0777)
-	err = os.WriteFile(markerName, []byte(markerContent), 0666)
+	err = os.WriteFile(markerName, []byte(markerContent), 0644)
 	if err != nil {
 		return false, errors.Wrap(err, "write marker")
 	}

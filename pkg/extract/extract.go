@@ -38,7 +38,7 @@ func Extract(origReader io.Reader, destFolder string, options ...Option) error {
 
 	// read ahead
 	bufioReader := bufio.NewReader(origReader)
-	testBytes, err := bufioReader.Peek(2) //read 2 bytes
+	testBytes, err := bufioReader.Peek(2) // read 2 bytes
 	if err != nil {
 		return err
 	}
@@ -106,7 +106,7 @@ func extractNext(tarReader *tar.Reader, destFolder string, options *Options) (bo
 	}
 
 	// whats the file perm?
-	filePerm := os.FileMode(0666)
+	filePerm := os.FileMode(0644)
 	if options.Perm != nil {
 		filePerm = *options.Perm
 	}

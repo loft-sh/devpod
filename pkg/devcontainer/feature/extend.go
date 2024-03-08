@@ -101,7 +101,7 @@ func getFeatureBuildOptions(contextPath string, baseImageMetadata *config.ImageM
 
 	// write devcontainer-features.builtin.env, its important to have a terminating \n here as we append to that file later
 	err = os.WriteFile(filepath.Join(featureFolder, "devcontainer-features.builtin.env"), []byte(`_CONTAINER_USER=`+containerUser+`
-_REMOTE_USER=`+remoteUser+"\n"), 0666)
+_REMOTE_USER=`+remoteUser+"\n"), 0600)
 	if err != nil {
 		return nil, err
 	}
@@ -142,14 +142,14 @@ func copyFeaturesToDestination(features []*config.FeatureSet, targetDir string) 
 		// copy feature folder
 		envPath := filepath.Join(featureDir, "devcontainer-features.env")
 		variables := getFeatureEnvVariables(feature.Config, feature.Options)
-		err = os.WriteFile(envPath, []byte(strings.Join(variables, "\n")), 0666)
+		err = os.WriteFile(envPath, []byte(strings.Join(variables, "\n")), 0600)
 		if err != nil {
 			return errors.Wrapf(err, "write variables of feature %s", feature.ConfigID)
 		}
 
 		installWrapperPath := filepath.Join(featureDir, "devcontainer-features-install.sh")
 		installWrapperContent := getFeatureInstallWrapperScript(feature.ConfigID, feature.Config, variables)
-		err = os.WriteFile(installWrapperPath, []byte(installWrapperContent), 0666)
+		err = os.WriteFile(installWrapperPath, []byte(installWrapperContent), 0600)
 		if err != nil {
 			return errors.Wrapf(err, "write install wrapper script for feature %s", feature.ConfigID)
 		}
