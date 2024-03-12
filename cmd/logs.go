@@ -8,13 +8,11 @@ import (
 
 	"github.com/loft-sh/devpod/cmd/flags"
 	"github.com/loft-sh/devpod/pkg/agent"
-	"github.com/loft-sh/devpod/pkg/client"
-	client2 "github.com/loft-sh/devpod/pkg/client"
+	clientpkg "github.com/loft-sh/devpod/pkg/client"
 	"github.com/loft-sh/devpod/pkg/config"
 	"github.com/loft-sh/devpod/pkg/ssh"
 	"github.com/loft-sh/devpod/pkg/workspace"
 	"github.com/loft-sh/log"
-	logpkg "github.com/loft-sh/log"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 )
@@ -52,11 +50,11 @@ func (cmd *LogsCmd) Run(ctx context.Context, args []string) error {
 		return err
 	}
 
-	client, ok := baseClient.(client.WorkspaceClient)
+	client, ok := baseClient.(clientpkg.WorkspaceClient)
 	if !ok {
 		return fmt.Errorf("this command is not supported for proxy providers")
 	}
-	log := logpkg.Default
+	log := log.Default
 
 	// create readers
 	stdoutReader, stdoutWriter, err := os.Pipe()
@@ -82,7 +80,7 @@ func (cmd *LogsCmd) Run(ctx context.Context, args []string) error {
 		defer stderr.Close()
 
 		errChan <- agent.InjectAgentAndExecute(ctx, func(ctx context.Context, command string, stdin io.Reader, stdout io.Writer, stderr io.Writer) error {
-			return client.Command(ctx, client2.CommandOptions{
+			return client.Command(ctx, clientpkg.CommandOptions{
 				Command: command,
 				Stdin:   stdin,
 				Stdout:  stdout,
