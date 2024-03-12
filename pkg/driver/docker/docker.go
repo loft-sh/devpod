@@ -361,3 +361,14 @@ func (d *dockerDriver) EnsurePath(path *config.Mount) *config.Mount {
 	}
 	return path
 }
+
+func (d *dockerDriver) GetDevContainerLogs(ctx context.Context, workspaceId string, stdout io.Writer, stderr io.Writer) error {
+	container, err := d.FindDevContainer(ctx, workspaceId)
+	if err != nil {
+		return err
+	} else if container == nil {
+		return fmt.Errorf("container not found")
+	}
+
+	return d.Docker.GetContainerLogs(ctx, container.ID, stdout, stderr)
+}
