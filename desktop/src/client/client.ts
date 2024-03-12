@@ -1,30 +1,29 @@
+import { UseToastOptions } from "@chakra-ui/react"
 import {
   app,
   clipboard,
   dialog,
+  event,
   fs,
   invoke,
   os,
   path,
   process,
   shell,
-  event,
-  updater,
   window as tauriWindow,
+  updater,
 } from "@tauri-apps/api"
 import { Command } from "@tauri-apps/api/shell"
+import { Theme as TauriTheme } from "@tauri-apps/api/window"
 import { TSettings } from "../contexts"
+import { Release } from "../gen"
 import { Result, Return, isError, noop } from "../lib"
 import { TCommunityContributions, TUnsubscribeFn } from "../types"
 import { ContextClient } from "./context"
 import { IDEsClient } from "./ides"
+import { ProClient } from "./pro"
 import { ProvidersClient } from "./providers"
 import { WorkspacesClient } from "./workspaces"
-import { UseToastOptions } from "@chakra-ui/react"
-import { Release } from "../gen"
-import { ProClient } from "./pro"
-import { Theme as TauriTheme } from "@tauri-apps/api/window"
-import { SettingsProvider, useChangeSettings, useSettings } from "../contexts/SettingsContext"
 
 // These types have to match the rust types! Make sure to update them as well!
 type TChannels = {

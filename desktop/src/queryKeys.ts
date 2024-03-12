@@ -6,6 +6,7 @@ export const QueryKeys = {
   SYSTEM_THEME: ["systemTheme"],
   WORKSPACES: ["workspaces"],
   PROVIDERS: ["providers"],
+  PROVIDERS_CHECK_UPDATE_ALL: ["providers", "update", "all"],
   IDES: ["ides"],
   COMMUNITY_CONTRIBUTIONS: ["communityContributions"],
   CONTEXT_OPTIONS: ["contextOptions"],

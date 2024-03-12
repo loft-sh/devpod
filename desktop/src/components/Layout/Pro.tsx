@@ -43,12 +43,18 @@ export function Pro() {
     client.openLink("https://devpod.sh/pro")
   }
   const { experimental_devPodPro } = useSettings()
+  const isProUnauthenticated = proInstances?.some(({ authenticated }) => !authenticated)
 
   return experimental_devPodPro ? (
     <>
       <Popover isLazy isOpen={isDeleting ? true : undefined}>
         <PopoverTrigger>
-          <Button variant="outline" rightIcon={<ChevronDownIcon boxSize={6} />}>
+          <Button
+            variant="outline"
+            rightIcon={<ChevronDownIcon boxSize={6} />}
+            {...(isProUnauthenticated && {
+              leftIcon: <ExclamationTriangle boxSize={4} color="orange.300" />,
+            })}>
             DevPod Pro
           </Button>
         </PopoverTrigger>

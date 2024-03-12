@@ -1,5 +1,6 @@
 import {
   Box,
+  Button,
   ButtonGroup,
   Card,
   CardBody,
@@ -80,6 +81,7 @@ export function ProviderCard({ id, provider, remove }: TProviderCardProps) {
     onSettled: () => {
       queryClient.invalidateQueries(QueryKeys.PROVIDERS)
       queryClient.invalidateQueries(QueryKeys.providerUpdate(id))
+      queryClient.invalidateQueries(QueryKeys.PROVIDERS_CHECK_UPDATE_ALL)
     },
   })
   const { modal: deleteProviderModal, open: openDeleteProviderModal } = useDeleteProviderModal(
@@ -150,13 +152,15 @@ export function ProviderCard({ id, provider, remove }: TProviderCardProps) {
                       ? `Version ${providerUpdate.latestVersion} available`
                       : "New version available"
                   }>
-                  <IconButton
-                    variant="ghost"
+                  <Button
+                    marginLeft="2"
                     aria-label="Update provider"
+                    colorScheme="orange"
                     size="xs"
-                    icon={<Icon as={HiArrowPath} boxSize="4" />}
-                    onClick={() => updateProvider({ providerID: id, source: providerSource })}
-                  />
+                    leftIcon={<Icon as={HiArrowPath} boxSize="4" />}
+                    onClick={() => updateProvider({ providerID: id, source: providerSource })}>
+                    Update
+                  </Button>
                 </Tooltip>
               )}
             </HStack>
