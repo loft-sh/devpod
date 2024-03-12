@@ -11,9 +11,9 @@ import {
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { FocusEvent, KeyboardEvent, useCallback, useMemo, useRef, useState } from "react"
 import { client } from "../../client"
+import { useChangeSettings } from "../../contexts"
 import { QueryKeys } from "../../queryKeys"
 import { TContextOptionName } from "../../types"
-import { TSettings, useChangeSettings } from "../../contexts"
 
 const DEFAULT_DEVPOD_AGENT_URL = "https://github.com/loft-sh/devpod/releases/latest/download/"
 
@@ -97,7 +97,7 @@ export function useCLIFlagsOption() {
           ref={inputRef}
           spellCheck={false}
           placeholder="CLI Additional Flags"
-          defaultValue={settings.additionalCliFlags ?? undefined}
+          defaultValue={settings.additionalCliFlags}
           onBlur={handleBlur}
           onKeyUp={handleKeyUp}
           onFocus={handleFocus}
@@ -120,7 +120,7 @@ export function useCLIFlagsOption() {
       </InputGroup>
     ),
     [
-      settings?.additionalCliFlags,
+      settings.additionalCliFlags,
       handleBlur,
       handleKeyUp,
       handleFocus,
