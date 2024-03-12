@@ -269,6 +269,15 @@ func (r *DockerHelper) FindContainerJSON(ctx context.Context, labels []string) (
 	return result, nil
 }
 
+func (r *DockerHelper) GetContainerLogs(ctx context.Context, id string, stdout io.Writer, stderr io.Writer) error {
+	args := []string{"logs", id}
+	cmd := r.buildCmd(ctx, args...)
+	cmd.Stdout = stdout
+	cmd.Stderr = stderr
+
+	return cmd.Run()
+}
+
 func (r *DockerHelper) buildCmd(ctx context.Context, args ...string) *exec.Cmd {
 	cmd := exec.CommandContext(ctx, r.DockerCommand, args...)
 	if r.Environment != nil {

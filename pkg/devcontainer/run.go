@@ -41,6 +41,8 @@ type Runner interface {
 	Stop(ctx context.Context) error
 
 	Delete(ctx context.Context) error
+
+	Logs(ctx context.Context, writer io.Writer) error
 }
 
 func NewRunner(
@@ -273,6 +275,21 @@ func (r *runner) Find(ctx context.Context) (*config.ContainerDetails, error) {
 	return containerDetails, nil
 }
 
+func (r *runner) Logs(ctx context.Context, writer io.Writer) error {
+	return r.Driver.GetDevContainerLogs(ctx, r.ID, writer, writer)
+}
+
+func (r *runner) recreateCustomDriver(ctx context.Context, options UpOptions) (*config.Result, error) {
+	err := r.Driver.StopDevContainer(ctx, r.ID)
+	if err != nil {
+		return nil, err
+	}
+
+	// relaunch Up without recreate now
+	options.Recreate = false
+	return r.Up(ctx, options)
+}
+
 func isDockerFileConfig(config *config.DevContainerConfig) bool {
 	return config.GetDockerfile() != ""
 }
@@ -313,17 +330,6 @@ func runInitializeCommand(
 	}
 
 	return nil
-}
-
-func (r *runner) recreateCustomDriver(ctx context.Context, options UpOptions) (*config.Result, error) {
-	err := r.Driver.StopDevContainer(ctx, r.ID)
-	if err != nil {
-		return nil, err
-	}
-
-	// relaunch Up without recreate now
-	options.Recreate = false
-	return r.Up(ctx, options)
 }
 
 func getWorkspace(

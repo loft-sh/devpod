@@ -170,6 +170,9 @@ type ProviderCustomDriverConfig struct {
 
 	// CanReprovision returns true if the driver can reprovision the devcontainer
 	CanReprovision types.StrBool `json:"canReprovision,omitempty"`
+
+	// GetDevContainerLogs returns the logs of the devcontainer
+	GetDevContainerLogs types.StrArray `json:"getDevContainerLogs,omitempty"`
 }
 
 type ProviderDockerDriverConfig struct {
