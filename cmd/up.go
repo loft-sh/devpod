@@ -447,6 +447,7 @@ func (cmd *UpCmd) devPodUpMachine(
 		cmd.Proxy,
 		false,
 		false,
+		false,
 		nil,
 		log,
 	)

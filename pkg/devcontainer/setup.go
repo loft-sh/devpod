@@ -90,6 +90,9 @@ func (r *runner) setupContainer(
 	if !isDockerDriver {
 		setupCommand += " --stream-mounts"
 	}
+	if r.WorkspaceConfig.Agent.InjectGitCredentials != "false" {
+		setupCommand += " --inject-git-credentials"
+	}
 	if r.Log.GetLevel() == logrus.DebugLevel {
 		setupCommand += " --debug"
 	}
@@ -106,6 +109,7 @@ func (r *runner) setupContainer(
 		setupCommand,
 		false,
 		true,
+		r.WorkspaceConfig.Agent.InjectGitCredentials != "false",
 		r.WorkspaceConfig.Agent.InjectDockerCredentials != "false",
 		config.GetMounts(result),
 		r.Log,

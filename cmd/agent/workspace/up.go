@@ -403,7 +403,6 @@ func (cmd *UpCmd) devPodUp(ctx context.Context, workspaceInfo *provider2.AgentWo
 
 func CloneRepository(ctx context.Context, local bool, workspaceDir string, source provider2.WorkspaceSource, helper string, log log.Logger) error {
 	// remove the credential helper or otherwise we will receive strange errors within the container
-
 	defer func() {
 		if helper != "" {
 			err := gitcredentials.RemoveHelperFromPath(filepath.Join(workspaceDir, ".git", "config"))
