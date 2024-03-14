@@ -26,6 +26,7 @@ import {
   DEVPOD_FLAG_PREBUILD_REPOSITORY,
   DEVPOD_FLAG_PROVIDER,
   DEVPOD_FLAG_RECREATE,
+  DEVPOD_FLAG_RESET,
   DEVPOD_FLAG_TIMEOUT,
 } from "../constants"
 
@@ -143,6 +144,15 @@ export class WorkspaceCommands {
       id,
       DEVPOD_FLAG_JSON_LOG_OUTPUT,
       DEVPOD_FLAG_RECREATE,
+    ])
+  }
+
+  static ResetWorkspace(id: TWorkspaceID) {
+    return WorkspaceCommands.newCommand([
+      DEVPOD_COMMAND_UP,
+      id,
+      DEVPOD_FLAG_JSON_LOG_OUTPUT,
+      DEVPOD_FLAG_RESET,
     ])
   }
 

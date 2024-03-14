@@ -30,6 +30,7 @@ export type TWorkspaceResult = Readonly<{
   stop: (onStream?: TStreamEventListenerFn) => TActionID | undefined
   remove: (force: boolean, onStream?: TStreamEventListenerFn) => TActionID | undefined
   rebuild: (onStream?: TStreamEventListenerFn) => TActionID | undefined
+  reset: (onStream?: TStreamEventListenerFn) => TActionID | undefined
   checkStatus: (onStream?: TStreamEventListenerFn) => TActionID | undefined
 }>
 
@@ -173,6 +174,33 @@ export function useWorkspace(workspaceID: TWorkspaceID | undefined): TWorkspaceR
     [viewID, workspaceID]
   )
 
+  const reset = useCallback<TWorkspaceResult["reset"]>(
+    (onStream) => {
+      if (workspaceID === undefined) {
+        return
+      }
+
+      return devPodStore.startAction({
+        actionName: "reset",
+        workspaceID,
+        actionFn: async (ctx) => {
+          const result = await client.workspaces.reset(onStream, {
+            id: workspaceID,
+            actionID: ctx.id,
+            streamID: viewID,
+          })
+          if (result.err) {
+            return result
+          }
+          devPodStore.setStatus(workspaceID, result.val)
+
+          return result
+        },
+      })
+    },
+    [viewID, workspaceID]
+  )
+
   const remove = useCallback<TWorkspaceResult["remove"]>(
     (force, onStream) => {
       if (workspaceID === undefined) {
@@ -217,10 +245,11 @@ export function useWorkspace(workspaceID: TWorkspaceID | undefined): TWorkspaceR
       start,
       stop,
       rebuild,
+      reset,
       remove,
       checkStatus,
     }),
-    [data, isLoading, current, history, create, start, stop, rebuild, remove, checkStatus]
+    [data, isLoading, current, history, create, start, stop, rebuild, reset, remove, checkStatus]
   )
 }
 
