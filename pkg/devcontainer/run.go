@@ -91,7 +91,7 @@ type UpOptions struct {
 func (r *runner) Up(ctx context.Context, options UpOptions) (*config.Result, error) {
 	// download workspace source before recreating container
 	_, isDockerDriver := r.Driver.(driver.DockerDriver)
-	if options.Recreate && !isDockerDriver {
+	if (options.Recreate || options.Reset) && !isDockerDriver {
 		return r.recreateCustomDriver(ctx, options)
 	}
 
@@ -322,6 +322,7 @@ func (r *runner) recreateCustomDriver(ctx context.Context, options UpOptions) (*
 	}
 
 	// relaunch Up without recreate now
+	options.Reset = false
 	options.Recreate = false
 	return r.Up(ctx, options)
 }

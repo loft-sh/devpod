@@ -173,6 +173,7 @@ type CLIOptions struct {
 	DevContainerPath     string   `json:"devContainerPath,omitempty"`
 	WorkspaceEnv         []string `json:"workspaceEnv,omitempty"`
 	Recreate             bool     `json:"recreate,omitempty"`
+	Reset                bool     `json:"reset,omitempty"`
 	Proxy                bool     `json:"proxy,omitempty"`
 	DisableDaemon        bool     `json:"disableDaemon,omitempty"`
 	DaemonInterval       string   `json:"daemonInterval,omitempty"`
