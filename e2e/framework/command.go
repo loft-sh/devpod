@@ -111,6 +111,17 @@ func (f *Framework) DevPodUpRecreate(ctx context.Context, additionalArgs ...stri
 	return nil
 }
 
+func (f *Framework) DevPodUpReset(ctx context.Context, additionalArgs ...string) error {
+	upArgs := []string{"up", "--reset", "--debug", "--ide", "none"}
+	upArgs = append(upArgs, additionalArgs...)
+
+	_, _, err := f.ExecCommandCapture(ctx, upArgs)
+	if err != nil {
+		return fmt.Errorf("devpod up --reset failed: %s", err.Error())
+	}
+	return nil
+}
+
 func (f *Framework) DevPodSSH(ctx context.Context, workspace string, command string) (string, error) {
 	out, err := f.ExecCommandOutput(ctx, []string{"ssh", workspace, "--command", command})
 	if err != nil {
@@ -288,7 +299,6 @@ func (f *Framework) DevPodSSHGpgTestKey(ctx context.Context, workspace string) e
 		"--command",
 		"gpg -k --with-colons 2>/dev/null |grep sec |  base64 -w0", workspace,
 	})
-
 	if err != nil {
 		return err
 	}

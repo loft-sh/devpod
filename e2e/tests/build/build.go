@@ -235,6 +235,49 @@ var _ = DevPodDescribe("devpod build test suite", func() {
 			_, err = f.DevPodSSH(ctx, tempDir, "ls /ROOTFS")
 			framework.ExpectError(err)
 		})
+
+		ginkgo.It("reset kubernetes dockerless", func() {
+			// skip windows for now
+			if runtime.GOOS == "windows" {
+				return
+			}
+
+			ctx := context.Background()
+
+			f := framework.NewDefaultFramework(initialDir + "/bin")
+			tempDir, err := framework.CopyToTempDir("tests/build/testdata/kubernetes")
+			framework.ExpectNoError(err)
+			ginkgo.DeferCleanup(framework.CleanupTempDir, initialDir, tempDir)
+
+			_ = f.DevPodProviderDelete(ctx, "kubernetes")
+			err = f.DevPodProviderAdd(ctx, "kubernetes")
+			framework.ExpectNoError(err)
+			err = f.DevPodProviderUse(context.Background(), "kubernetes", "-o", "KUBERNETES_NAMESPACE=devpod")
+			framework.ExpectNoError(err)
+
+			ginkgo.DeferCleanup(f.DevPodWorkspaceDelete, context.Background(), tempDir)
+
+			// do the up
+			err = f.DevPodUp(ctx, tempDir)
+			framework.ExpectNoError(err)
+
+			// create files in root and in workspace, after create we expect data to still be there
+			_, err = f.DevPodSSH(ctx, tempDir, "touch /workspaces/"+filepath.Base(tempDir)+"/DATA")
+			framework.ExpectNoError(err)
+			_, err = f.DevPodSSH(ctx, tempDir, "touch /ROOTFS")
+			framework.ExpectNoError(err)
+
+			// recreate
+			err = f.DevPodUpReset(ctx, tempDir)
+			framework.ExpectNoError(err)
+
+			// this should fail! because --reset should trigger a new git clone
+			_, err = f.DevPodSSH(ctx, tempDir, "ls /workspaces/"+filepath.Base(tempDir)+"/DATA")
+			framework.ExpectNoError(err)
+			// this should fail! because --recreare should trigger a new build, so a new rootfs
+			_, err = f.DevPodSSH(ctx, tempDir, "ls /ROOTFS")
+			framework.ExpectError(err)
+		})
 	})
 })
 
