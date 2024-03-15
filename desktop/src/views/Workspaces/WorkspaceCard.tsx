@@ -48,7 +48,7 @@ import {
   useWorkspace,
   useWorkspaceActions,
 } from "../../contexts"
-import { ArrowPath, CommandLine, Ellipsis, Pause, Play, Stack3D, Trash } from "../../icons"
+import { ArrowCycle, ArrowPath, CommandLine, Ellipsis, Pause, Play, Stack3D, Trash } from "../../icons"
 import { getIDEDisplayName, useHover } from "../../lib"
 import { QueryKeys } from "../../queryKeys"
 import { Routes } from "../../routes"
@@ -78,6 +78,12 @@ export function WorkspaceCard({ workspaceID, isSelected, onSelectionChange }: TW
     onOpen: handleRebuildClicked,
     onClose: onRebuildClose,
   } = useDisclosure()
+  const {
+    isOpen: isResetOpen,
+    onOpen: handleResetClicked,
+    onClose: onResetClose,
+  } = useDisclosure()
+
   const { isOpen: isStopOpen, onOpen: handleStopClicked, onClose: onStopClose } = useDisclosure()
   const workspace = useWorkspace(workspaceID)
   const [ideName, setIdeName] = useState<string | undefined>(() => {
@@ -144,12 +150,42 @@ export function WorkspaceCard({ workspaceID, isSelected, onSelectionChange }: TW
             setIdeName={setIdeName}
             navigateToAction={navigateToAction}
             onRebuildClicked={handleRebuildClicked}
+            onResetClicked={handleResetClicked}
             onDeleteClicked={handleDeleteClicked}
             onStopClicked={handleStopClicked}
             onLogsClicked={handleLogsClicked}
           />
         </WorkspaceCardHeader>
       </Card>
+
+      <Modal onClose={onResetClose} isOpen={isResetOpen} isCentered>
+        <ModalOverlay />
+        <ModalContent>
+          <ModalHeader>Reset Workspace</ModalHeader>
+          <ModalCloseButton />
+          <ModalBody>
+            Reseting the workspace will erase all state saved in the docker container overlay and
+            DELETE ALL UNCOMMITTED CODE.
+            This means you might need to reinstall or reconfigure certain applications.
+            You will start with a fresh clone of the repository.
+            Are you sure you want to rebuild {workspace.data.id}?
+          </ModalBody>
+          <ModalFooter>
+            <HStack spacing={"2"}>
+              <Button onClick={onResetClose}>Close</Button>
+              <Button
+                colorScheme={"primary"}
+                onClick={async () => {
+                  const actionID = workspace.reset()
+                  onResetClose()
+                  navigateToAction(actionID)
+                }}>
+                Reset
+              </Button>
+            </HStack>
+          </ModalFooter>
+        </ModalContent>
+      </Modal>
 
       <Modal onClose={onRebuildClose} isOpen={isRebuildOpen} isCentered>
         <ModalOverlay />
@@ -388,6 +424,7 @@ type TWorkspaceControlsProps = Readonly<{
   setIdeName: (ideName: string | undefined) => void
   navigateToAction: (actionID: TActionID | undefined) => void
   onRebuildClicked: VoidFunction
+  onResetClicked: VoidFunction
   onDeleteClicked: VoidFunction
   onStopClicked: VoidFunction
   onLogsClicked: VoidFunction
@@ -402,6 +439,7 @@ function WorkspaceControls({
   setIdeName,
   navigateToAction,
   onRebuildClicked,
+  onResetClicked,
   onDeleteClicked,
   onStopClicked,
   onLogsClicked,
@@ -489,6 +527,12 @@ function WorkspaceControls({
                 onClick={onRebuildClicked}
                 isDisabled={isOpenDisabled || isLoading}>
                 Rebuild
+              </MenuItem>
+              <MenuItem
+                icon={<ArrowCycle boxSize={4} />}
+                onClick={onResetClicked}
+                isDisabled={isOpenDisabled || isLoading}>
+                Reset
               </MenuItem>
               {isShareEnabled && (
                 <MenuItem icon={<Icon as={HiShare} boxSize={4} />} onClick={handleShareClicked}>

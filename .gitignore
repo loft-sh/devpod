@@ -7,4 +7,5 @@ devpod.exe
 # Unit test targets
 main
 profile.out
+package-lock.json
 tags

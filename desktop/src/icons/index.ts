@@ -1,6 +1,7 @@
 export * from "./Devpod"
 export { ArrowLeft } from "./ArrowLeft"
 export { ArrowPath } from "./ArrowPath"
+export { ArrowCycle } from "./ArrowCycle"
 export { Bell } from "./Bell"
 export { Briefcase } from "./Briefcase"
 export { CheckCircle } from "./CheckCircle"

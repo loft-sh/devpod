@@ -415,6 +415,48 @@ var _ = DevPodDescribe("devpod up test suite", func() {
 			framework.ExpectNoError(err)
 		})
 
+		ginkgo.It("reset a remote workspace", func() {
+			const providerName = "test-docker"
+			ctx := context.Background()
+
+			f := framework.NewDefaultFramework(initialDir + "/bin")
+
+			// provider add, use and delete afterwards
+			err := f.DevPodProviderAdd(ctx, "docker", "--name", providerName)
+			framework.ExpectNoError(err)
+			err = f.DevPodProviderUse(ctx, providerName)
+			framework.ExpectNoError(err)
+			ginkgo.DeferCleanup(func() {
+				err = f.DevPodWorkspaceDelete(ctx, "jupyter-notebook-hello-world")
+				framework.ExpectNoError(err)
+				err = f.DevPodProviderDelete(ctx, providerName)
+				framework.ExpectNoError(err)
+			})
+
+			err = f.DevPodUp(ctx, "https://github.com/loft-sh/examples/@subpath:/devpod/jupyter-notebook-hello-world")
+			framework.ExpectNoError(err)
+
+			// create files in root and in workspace, after create we expect data to still be there
+			_, err = f.DevPodSSH(ctx, "jupyter-notebook-hello-world", "sudo touch /workspaces/jupyter-notebook-hello-world/DATA")
+			framework.ExpectNoError(err)
+			_, err = f.DevPodSSH(ctx, "jupyter-notebook-hello-world", "sudo touch /ROOTFS")
+			framework.ExpectNoError(err)
+
+			// reset
+			err = f.DevPodUpReset(ctx, "https://github.com/loft-sh/examples/@subpath:/devpod/jupyter-notebook-hello-world")
+			framework.ExpectNoError(err)
+
+			// this should fail! because --reset should trigger a new git clone
+			_, err = f.DevPodSSH(ctx, "jupyter-notebook-hello-world", "ls /workspaces/jupyter-notebook-hello-world/DATA")
+			framework.ExpectError(err)
+			// this should fail! because --recreare should trigger a new build, so a new rootfs
+			_, err = f.DevPodSSH(ctx, "jupyter-notebook-hello-world", "ls /ROOTFS")
+			framework.ExpectError(err)
+
+			err = f.DevPodWorkspaceDelete(ctx, "jupyter-notebook-hello-world")
+			framework.ExpectNoError(err)
+		})
+
 		ginkgo.Context("print error message correctly", func() {
 			ginkgo.It("make sure devpod output is correct and log-output works correctly", func(ctx context.Context) {
 				f := framework.NewDefaultFramework(initialDir + "/bin")

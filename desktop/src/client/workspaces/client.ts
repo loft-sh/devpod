@@ -154,6 +154,19 @@ export class WorkspacesClient implements TDebuggable {
     return this.getStatus(ctx.id)
   }
 
+  public async reset(
+    listener: TStreamEventListenerFn | undefined,
+    ctx: TWorkspaceClientContext
+  ): Promise<Result<TWorkspace["status"]>> {
+    const cmd = WorkspaceCommands.ResetWorkspace(ctx.id)
+    const result = await this.execActionCmd(cmd, { ...ctx, listener, actionName: "reset" })
+    if (result.err) {
+      return result
+    }
+
+    return this.getStatus(ctx.id)
+  }
+
   public async remove(
     force: boolean,
     listener: TStreamEventListenerFn | undefined,

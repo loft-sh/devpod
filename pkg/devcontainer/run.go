@@ -286,6 +286,7 @@ func (r *runner) recreateCustomDriver(ctx context.Context, options UpOptions) (*
 	}
 
 	// relaunch Up without recreate now
+	options.Reset = false
 	options.Recreate = false
 	return r.Up(ctx, options)
 }
