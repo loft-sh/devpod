@@ -90,14 +90,14 @@ func (cmd *LogsCmd) Run(ctx context.Context, args []string) error {
 	}()
 
 	// create agent command
-	agentCommand := fmt.Sprintf("sudo '%s' agent workspace logs --context '%s' --id '%s'", client.AgentPath(), client.Context(), client.Workspace())
+	agentCommand := fmt.Sprintf("'%s' agent workspace logs --context '%s' --id '%s'", client.AgentPath(), client.Context(), client.Workspace())
 	if log.GetLevel() == logrus.DebugLevel {
 		agentCommand += " --debug"
 	}
 
 	// create new ssh client
 	// start ssh client as root / default user
-	sshClient, err := ssh.StdioClientWithUser(stdoutReader, stdinWriter, "" /* root */, false)
+	sshClient, err := ssh.StdioClientWithUser(stdoutReader, stdinWriter, "" /* default */, false)
 	if err != nil {
 		return err
 	}
