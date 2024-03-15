@@ -83,6 +83,7 @@ func ResolveAndSaveOptionsWorkspace(
 	originalWorkspace *provider2.Workspace,
 	userOptions map[string]string,
 	log log.Logger,
+	options ...resolver.Option,
 ) (*provider2.Workspace, error) {
 	// reload config
 	workspace, err := provider2.LoadWorkspaceConfig(originalWorkspace.Context, originalWorkspace.ID)
@@ -101,13 +102,14 @@ func ResolveAndSaveOptionsWorkspace(
 	if err != nil {
 		return nil, err
 	}
+	options = append(options, resolver.WithResolveLocal())
 
 	// resolve options
 	resolvedOptions, _, err := resolver.New(
 		userOptions,
 		provider2.Merge(provider2.ToOptionsWorkspace(workspace), binaryPaths),
 		log,
-		resolver.WithResolveLocal(),
+		options...,
 	).Resolve(
 		ctx,
 		devConfig.DynamicProviderOptionDefinitions(provider.Name),
@@ -134,6 +136,17 @@ func ResolveAndSaveOptionsWorkspace(
 	}
 
 	return workspace, nil
+}
+
+func ResolveAndSaveOptionsProxy(
+	ctx context.Context,
+	devConfig *config.Config,
+	provider *provider2.ProviderConfig,
+	originalWorkspace *provider2.Workspace,
+	userOptions map[string]string,
+	log log.Logger,
+) (*provider2.Workspace, error) {
+	return ResolveAndSaveOptionsWorkspace(ctx, devConfig, provider, originalWorkspace, userOptions, log, resolver.WithResolveSubOptions())
 }
 
 func ResolveOptions(
