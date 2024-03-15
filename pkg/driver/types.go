@@ -10,25 +10,28 @@ import (
 // Driver is the default interface for DevPod drivers
 type Driver interface {
 	// FindDevContainer returns a running devcontainer details
-	FindDevContainer(ctx context.Context, workspaceId string) (*config.ContainerDetails, error)
+	FindDevContainer(ctx context.Context, workspaceID string) (*config.ContainerDetails, error)
 
 	// CommandDevContainer runs the given command inside the devcontainer
-	CommandDevContainer(ctx context.Context, workspaceId, user, command string, stdin io.Reader, stdout io.Writer, stderr io.Writer) error
+	CommandDevContainer(ctx context.Context, workspaceID, user, command string, stdin io.Reader, stdout io.Writer, stderr io.Writer) error
 
 	// RunDevContainer runs a devcontainer
-	RunDevContainer(ctx context.Context, workspaceId string, options *RunOptions) error
+	RunDevContainer(ctx context.Context, workspaceID string, options *RunOptions) error
 
 	// TargetArchitecture returns the architecture of the container runtime. e.g. amd64 or arm64
-	TargetArchitecture(ctx context.Context, workspaceId string) (string, error)
+	TargetArchitecture(ctx context.Context, workspaceID string) (string, error)
 
 	// DeleteDevContainer deletes the devcontainer
-	DeleteDevContainer(ctx context.Context, workspaceId string) error
+	DeleteDevContainer(ctx context.Context, workspaceID string) error
 
 	// StartDevContainer starts the devcontainer
-	StartDevContainer(ctx context.Context, workspaceId string) error
+	StartDevContainer(ctx context.Context, workspaceID string) error
 
 	// StopDevContainer stops the devcontainer
-	StopDevContainer(ctx context.Context, workspaceId string) error
+	StopDevContainer(ctx context.Context, workspaceID string) error
+
+	// GetContainerLogs returns the logs of the devcontainer
+	GetDevContainerLogs(ctx context.Context, workspaceID string, stdout io.Writer, stderr io.Writer) error
 }
 
 type ReprovisioningDriver interface {
