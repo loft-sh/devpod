@@ -110,7 +110,7 @@ func ParseAgentWorkspaceInfo(workspaceConfigFile string) (*provider2.AgentWorksp
 
 func ReadAgentWorkspaceInfo(agentFolder, context, id string, log log.Logger) (bool, *provider2.AgentWorkspaceInfo, error) {
 	workspaceInfo, err := readAgentWorkspaceInfo(agentFolder, context, id)
-	if err != nil && !errors.Is(err, ErrFindAgentHomeFolder) {
+	if err != nil && !(errors.Is(err, ErrFindAgentHomeFolder) || errors.Is(err, os.ErrPermission)) {
 		return false, nil, err
 	}
 
