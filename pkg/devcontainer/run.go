@@ -286,6 +286,7 @@ func (r *runner) recreateCustomDriver(ctx context.Context, options UpOptions) (*
 	}
 
 	// relaunch Up without recreate now
+	options.Reset = false
 	options.Recreate = false
 	return r.Up(ctx, options)
 }
@@ -330,18 +331,6 @@ func runInitializeCommand(
 	}
 
 	return nil
-}
-
-func (r *runner) recreateCustomDriver(ctx context.Context, options UpOptions) (*config.Result, error) {
-	err := r.Driver.StopDevContainer(ctx, r.ID)
-	if err != nil {
-		return nil, err
-	}
-
-	// relaunch Up without recreate now
-	options.Reset = false
-	options.Recreate = false
-	return r.Up(ctx, options)
 }
 
 func getWorkspace(
