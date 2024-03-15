@@ -427,6 +427,8 @@ var _ = DevPodDescribe("devpod up test suite", func() {
 			err = f.DevPodProviderUse(ctx, providerName)
 			framework.ExpectNoError(err)
 			ginkgo.DeferCleanup(func() {
+				err = f.DevPodWorkspaceDelete(ctx, "jupyter-notebook-hello-world")
+				framework.ExpectNoError(err)
 				err = f.DevPodProviderDelete(ctx, providerName)
 				framework.ExpectNoError(err)
 			})
@@ -435,9 +437,9 @@ var _ = DevPodDescribe("devpod up test suite", func() {
 			framework.ExpectNoError(err)
 
 			// create files in root and in workspace, after create we expect data to still be there
-			_, err = f.DevPodSSH(ctx, "jupyter-notebook-hello-world", "touch /workspaces/jupyter-notebook-hello-world/DATA")
+			_, err = f.DevPodSSH(ctx, "jupyter-notebook-hello-world", "sudo touch /workspaces/jupyter-notebook-hello-world/DATA")
 			framework.ExpectNoError(err)
-			_, err = f.DevPodSSH(ctx, "jupyter-notebook-hello-world", "touch /ROOTFS")
+			_, err = f.DevPodSSH(ctx, "jupyter-notebook-hello-world", "sudo touch /ROOTFS")
 			framework.ExpectNoError(err)
 
 			// reset
