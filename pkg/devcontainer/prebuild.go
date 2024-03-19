@@ -43,6 +43,13 @@ func (r *runner) Build(ctx context.Context, options provider.BuildOptions) (stri
 		return "", errors.Wrap(err, "build image")
 	}
 
+	// have a fallback value for PrebuildHash
+	// in some cases it may be empty, and this would lead to
+	// invalid reference format during image pushing.
+	if buildInfo.PrebuildHash == "" {
+		buildInfo.PrebuildHash = "latest"
+	}
+
 	// prebuild already exists
 	var prebuildImage string
 	if options.Repository != "" {
