@@ -90,11 +90,19 @@ func (r *runner) build(
 			return nil, errors.Wrap(err, "inspect image")
 		}
 
+		// have a fallback value for PrebuildHash
+		// we don't calculate prebuild hash on docker compose builds
+		// let's use Images :tag then
+		imageTag, err := r.getImageTag(ctx, imageDetails.ID)
+		if err != nil {
+			return nil, errors.Wrap(err, "inspect image")
+		}
+
 		return &config.BuildInfo{
 			ImageDetails:  imageDetails,
 			ImageMetadata: imageMetadata,
 			ImageName:     overrideBuildImageName,
-			PrebuildHash:  "",
+			PrebuildHash:  imageTag,
 		}, nil
 	}
 
