@@ -141,6 +141,10 @@ func (d *dockerDriver) InspectImage(ctx context.Context, imageName string) (*con
 	return d.Docker.InspectImage(ctx, imageName, true)
 }
 
+func (d *dockerDriver) GetImageTag(ctx context.Context, imageID string) (string, error) {
+	return d.Docker.GetImageTag(ctx, imageID)
+}
+
 func (d *dockerDriver) ComposeHelper() (*compose.ComposeHelper, error) {
 	if d.Compose != nil {
 		return d.Compose, nil

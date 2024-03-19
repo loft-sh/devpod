@@ -31,3 +31,12 @@ func (r *runner) inspectImage(ctx context.Context, imageName string) (*config.Im
 		},
 	}, nil
 }
+
+func (r *runner) getImageTag(ctx context.Context, imageID string) (string, error) {
+	dockerDriver, ok := r.Driver.(driver.DockerDriver)
+	if ok {
+		return dockerDriver.GetImageTag(ctx, imageID)
+	}
+
+	return "", nil
+}

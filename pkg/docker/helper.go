@@ -141,6 +141,24 @@ func (r *DockerHelper) StartContainer(ctx context.Context, containerId string) e
 	return nil
 }
 
+func (r *DockerHelper) GetImageTag(ctx context.Context, imageID string) (string, error) {
+	args := []string{"inspect", "--type", "image", "--format", "{{if .RepoTags}}{{index .RepoTags 0}}{{end}}"}
+	args = append(args, imageID)
+	out, err := r.buildCmd(ctx, args...).Output()
+	if err != nil {
+		return "", fmt.Errorf("inspect container: %w", command.WrapCommandError(out, err))
+	}
+
+	repoTag := string(out)
+	tagSplits := strings.Split(repoTag, ":")
+
+	if len(tagSplits) > 0 {
+		return tagSplits[1], nil
+	}
+
+	return "", nil
+}
+
 func (r *DockerHelper) InspectImage(ctx context.Context, imageName string, tryRemote bool) (*config.ImageDetails, error) {
 	imageDetails := []*config.ImageDetails{}
 	err := r.Inspect(ctx, []string{imageName}, "image", &imageDetails)

@@ -16,6 +16,9 @@ type DockerDriver interface {
 	// InspectImage inspects the given image name
 	InspectImage(ctx context.Context, imageName string) (*config.ImageDetails, error)
 
+	// GetImageTag returns latest tag for input image id
+	GetImageTag(ctx context.Context, imageName string) (string, error)
+
 	// RunDockerDevContainer runs a docker devcontainer
 	RunDockerDevContainer(
 		ctx context.Context,
