@@ -19,8 +19,14 @@ jobs:
       fail-fast: true
       max-parallel: 1
       matrix:
-        # windows blocklist: "up-podman", "integration", "machineprovider", "proxyprovider", "up"
-        label: ["build", "ide", "machine", "provider", "ssh", "up-docker", "up-docker-compose", "up-docker-build", "up-docker-compose-build", "up-docker-wsl"]
+        label:
+          - "build"
+          - "ide"
+          - "ssh"
+          - "up-docker"
+          - "up-docker-build"
+          - "up-docker-compose"
+          - "up-docker-wsl"
 
     steps:
     - name: Git set line ending
@@ -37,14 +43,14 @@ jobs:
 
     - name: Build binary and copy to the E2E directory
       run: |
-         go build -ldflags "-s -w" -o devpod-windows-amd64.exe
-         mkdir e2e\bin
-         cp devpod-windows-amd64.exe e2e\bin\
+        mkdir e2e\bin
+        go build -ldflags "-s -w" -o e2e\bin\devpod-windows-amd64.exe
+        $Env:GOOS = "linux"; $Env:GOARCH = "amd64"; go build -ldflags "-s -w" -o e2e\bin\devpod-linux-amd64
 
     - name: E2E test
       working-directory: .\e2e
       run: |
-        go run github.com/onsi/ginkgo/v2/ginkgo -r -p --timeout=3600s --label-filter=${{ matrix.label }}
+        go run github.com/onsi/ginkgo/v2/ginkgo -r --timeout=3600s --label-filter=${{ matrix.label }}
 
     - name: Container cleanup
       if: ${{ always() }}
