@@ -1,7 +1,6 @@
 package cmd
 
 import (
-	"bufio"
 	"bytes"
 	"context"
 	"fmt"
@@ -12,7 +11,6 @@ import (
 	"path/filepath"
 	"strconv"
 	"strings"
-	"unicode/utf8"
 
 	"github.com/loft-sh/devpod/cmd/flags"
 	"github.com/loft-sh/devpod/pkg/agent"
@@ -141,7 +139,7 @@ func NewUpCmd(flags *flags.GlobalFlags) *cobra.Command {
 	upCmd.Flags().BoolVar(&cmd.Reset, "reset", false, "If true will remove any existing containers including sources, and recreate them")
 	upCmd.Flags().StringSliceVar(&cmd.PrebuildRepositories, "prebuild-repository", []string{}, "Docker repository that hosts devpod prebuilds for this workspace")
 	upCmd.Flags().StringArrayVar(&cmd.WorkspaceEnv, "workspace-env", []string{}, "Extra env variables to put into the workspace. E.g. MY_ENV_VAR=MY_VALUE")
-	upCmd.Flags().StringArrayVar(&cmd.WorkspaceEnvFile, "workspace-env-file", []string{}, "The path to files containing a list of extra env variables to put into the workspace. E.g. MY_ENV_VAR=MY_VALUE")
+	upCmd.Flags().StringSliceVar(&cmd.WorkspaceEnvFile, "workspace-env-file", []string{}, "The path to files containing a list of extra env variables to put into the workspace. E.g. MY_ENV_VAR=MY_VALUE")
 	upCmd.Flags().StringVar(&cmd.ID, "id", "", "The id to use for the workspace")
 	upCmd.Flags().StringVar(&cmd.Machine, "machine", "", "The machine to use for this workspace. The machine needs to exist beforehand or the command will fail. If the workspace already exists, this option has no effect")
 	upCmd.Flags().StringVar(&cmd.IDE, "ide", "", "The IDE to open the workspace in. If empty will use vscode locally or in browser")
@@ -750,7 +748,7 @@ func mergeDevPodUpOptions(baseOptions *provider2.CLIOptions) error {
 func mergeEnvFromFiles(baseOptions *provider2.CLIOptions) error {
 	var variables []string
 	for _, file := range baseOptions.WorkspaceEnvFile {
-		envFromFile, err := parseKeyValueFile(file)
+		envFromFile, err := config2.ParseKeyValueFile(file)
 		if err != nil {
 			return err
 		}
@@ -759,38 +757,6 @@ func mergeEnvFromFiles(baseOptions *provider2.CLIOptions) error {
 	baseOptions.WorkspaceEnv = append(baseOptions.WorkspaceEnv, variables...)
 
 	return nil
-}
-
-func parseKeyValueFile(filename string) ([]string, error) {
-	f, err := os.Open(filename)
-	if err != nil {
-		return nil, err
-	}
-	defer f.Close()
-	keyValuePairs := []string{}
-	scanner := bufio.NewScanner(f)
-	lineNum := 1
-	for scanner.Scan() {
-		scannedBytes := scanner.Bytes()
-		if !utf8.Valid(scannedBytes) {
-			return nil, fmt.Errorf("env file %s contains invalid utf8 bytes in line %d", filename, lineNum)
-		}
-		line := string(scannedBytes)
-		// skip commented or empty lines
-		if len(line) > 0 && !strings.HasPrefix(line, "#") {
-			key, value, found := strings.Cut(line, "=")
-			if len(key) == 0 || strings.Contains(key, " ") {
-				return nil, fmt.Errorf("env file %s contains invalid variable key in line %d: %s", filename, lineNum, line)
-			} else if len(value) == 0 {
-				return nil, fmt.Errorf("env file %s contains invalid variable value in line %d: %s", filename, lineNum, line)
-			}
-			if found {
-				keyValuePairs = append(keyValuePairs, line)
-			}
-		}
-		lineNum++
-	}
-	return keyValuePairs, nil
 }
 
 func createSSHCommand(

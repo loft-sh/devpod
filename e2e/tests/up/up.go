@@ -117,6 +117,38 @@ var _ = DevPodDescribe("devpod up test suite", func() {
 			out, err = f.DevPodSSH(ctx, name, "echo -n $TEST_VAR")
 			framework.ExpectNoError(err)
 			framework.ExpectEqual(out, value, "should be set now")
+
+			// delete env var
+			err = f.DevPodUp(ctx, name, "--workspace-env", "TEST_VAR=")
+			framework.ExpectNoError(err)
+
+			// check env var
+			out, err = f.DevPodSSH(ctx, name, "echo -n $TEST_VAR")
+			framework.ExpectNoError(err)
+			framework.ExpectEqual(out, "", "should be empty")
+
+			// create a second valid env file with a different env var
+			validData = []byte("TEST_OTHER_VAR=" + value)
+			workspaceEnvFileValid2 := filepath.Join(tmpDir, ".valid2")
+			err = os.WriteFile(
+				workspaceEnvFileValid2,
+				validData, 0o644)
+			framework.ExpectNoError(err)
+			defer os.Remove(workspaceEnvFileValid2)
+
+			// set env var from both files
+			err = f.DevPodUp(ctx, name, "--workspace-env-file", fmt.Sprintf("%s,%s", workspaceEnvFileValid, workspaceEnvFileValid2))
+			framework.ExpectNoError(err)
+
+			// check env var from .valid file
+			out, err = f.DevPodSSH(ctx, name, "echo -n $TEST_VAR")
+			framework.ExpectNoError(err)
+			framework.ExpectEqual(out, value, "should be set now")
+
+			// check env var from .valid2 file
+			out, err = f.DevPodSSH(ctx, name, "echo -n $TEST_OTHER_VAR")
+			framework.ExpectNoError(err)
+			framework.ExpectEqual(out, value, "should be set now")
 		})
 
 		ginkgo.It("should allow checkout of a GitRepo from a commit hash", func() {
