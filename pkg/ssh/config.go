@@ -48,7 +48,7 @@ func addHost(path, host, user, context, workspace, workdir, command string, gpga
 	if err != nil {
 		return "", err
 	}
-	newLines := []string{newConfig}
+	newLines := []string{}
 
 	// get path to executable
 	execPath, err := os.Executable()
@@ -65,6 +65,7 @@ func addHost(path, host, user, context, workspace, workdir, command string, gpga
 	newLines = append(newLines, "  LogLevel error")
 	newLines = append(newLines, "  StrictHostKeyChecking no")
 	newLines = append(newLines, "  UserKnownHostsFile /dev/null")
+	newLines = append(newLines, "  HostKeyAlgorithms rsa-sha2-256,rsa-sha2-512,ssh-rsa")
 	if command != "" {
 		newLines = append(newLines, fmt.Sprintf("  ProxyCommand %s", command))
 	} else if gpgagent {
@@ -78,6 +79,12 @@ func addHost(path, host, user, context, workspace, workdir, command string, gpga
 	}
 	newLines = append(newLines, "  User "+user)
 	newLines = append(newLines, endMarker)
+	// add a space between blocks
+	newLines = append(newLines, "")
+
+	// now we append the original config
+	// keep our blocks on top of the file for priority reasons
+	newLines = append(newLines, newConfig)
 	return strings.Join(newLines, "\n"), nil
 }
 
@@ -189,6 +196,11 @@ func transformHostSection(path, host string, transform func(line string) string)
 	}
 	if configScanner.Err() != nil {
 		return "", errors.Wrap(err, "parse ssh config")
+	}
+
+	// remove residual empty line at start file
+	if len(newLines) > 0 && newLines[0] == "" {
+		newLines = newLines[1:]
 	}
 
 	return strings.Join(newLines, "\n"), nil
