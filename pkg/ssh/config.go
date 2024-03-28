@@ -48,7 +48,7 @@ func addHost(path, host, user, context, workspace, workdir, command string, gpga
 	if err != nil {
 		return "", err
 	}
-	newLines := []string{newConfig}
+	newLines := []string{}
 
 	// get path to executable
 	execPath, err := os.Executable()
@@ -79,6 +79,12 @@ func addHost(path, host, user, context, workspace, workdir, command string, gpga
 	}
 	newLines = append(newLines, "  User "+user)
 	newLines = append(newLines, endMarker)
+	// add a space between blocks
+	newLines = append(newLines, "")
+
+	// now we append the original config
+	// keep our blocks on top of the file for priority reasons
+	newLines = append(newLines, newConfig)
 	return strings.Join(newLines, "\n"), nil
 }
 
@@ -190,6 +196,11 @@ func transformHostSection(path, host string, transform func(line string) string)
 	}
 	if configScanner.Err() != nil {
 		return "", errors.Wrap(err, "parse ssh config")
+	}
+
+	// remove residual empty line at start file
+	if len(newLines) > 0 && newLines[0] == "" {
+		newLines = newLines[1:]
 	}
 
 	return strings.Join(newLines, "\n"), nil
