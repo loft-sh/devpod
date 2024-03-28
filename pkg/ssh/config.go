@@ -65,6 +65,7 @@ func addHost(path, host, user, context, workspace, workdir, command string, gpga
 	newLines = append(newLines, "  LogLevel error")
 	newLines = append(newLines, "  StrictHostKeyChecking no")
 	newLines = append(newLines, "  UserKnownHostsFile /dev/null")
+	newLines = append(newLines, "  HostKeyAlgorithms rsa-sha2-256,rsa-sha2-512,ssh-rsa")
 	if command != "" {
 		newLines = append(newLines, fmt.Sprintf("  ProxyCommand %s", command))
 	} else if gpgagent {
