@@ -3,13 +3,10 @@ package framework
 import (
 	"fmt"
 	"log"
-	"math/rand"
 	"net"
 	"net/http"
 	"os"
 	"path/filepath"
-	"strconv"
-	"time"
 )
 
 // serveAgent will be a simple http file server that will expose our
@@ -30,14 +27,14 @@ func ServeAgent() {
 	// Register the file server handler to serve files under the /files route
 	http.Handle("/files/", http.StripPrefix("/files", fileServer))
 
-	randomPort, err := findOpenPort(0)
+	ip := getIP()
+
+	listener, err := net.Listen("tcp", fmt.Sprintf("%v:0", ip))
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	ip := getIP()
-	addr := fmt.Sprintf("%s:%d", ip, randomPort)
-
+	addr := listener.Addr().String()
 	err = os.Setenv("DEVPOD_AGENT_URL", "http://"+addr+"/files/")
 	if err != nil {
 		log.Fatal(err)
@@ -45,31 +42,11 @@ func ServeAgent() {
 
 	// Start the HTTP server on port 8080
 	log.Printf("Server started on %s", addr)
-	err = http.ListenAndServe(addr, nil)
+
+	err = http.Serve(listener, nil)
 	if err != nil {
 		log.Fatal(err)
 	}
-}
-
-func findOpenPort(retries int) (int, error) {
-	if retries > 100 {
-		return 0, fmt.Errorf("no open port available in the range")
-	}
-	// Create a new random number generator with a custom seed (e.g., current time)
-	source := rand.NewSource(time.Now().UnixNano())
-	rng := rand.New(source)
-
-	min := 10000
-	max := 40000
-	port := rng.Intn(max-min+1) + min
-
-	conn, err := net.Dial("tcp", net.JoinHostPort("localhost", strconv.Itoa(port)))
-	if err == nil {
-		conn.Close()
-		return findOpenPort(retries + 1)
-	}
-
-	return port, nil
 }
 
 func getIP() string {
