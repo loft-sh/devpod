@@ -73,6 +73,10 @@ func NewUpCmd(flags *flags.GlobalFlags) *cobra.Command {
 			if err != nil {
 				return err
 			}
+			err = mergeEnvFromFiles(&cmd.CLIOptions)
+			if err != nil {
+				return err
+			}
 
 			ctx := context.Background()
 			var logger log.Logger = log.Default
@@ -135,6 +139,7 @@ func NewUpCmd(flags *flags.GlobalFlags) *cobra.Command {
 	upCmd.Flags().BoolVar(&cmd.Reset, "reset", false, "If true will remove any existing containers including sources, and recreate them")
 	upCmd.Flags().StringSliceVar(&cmd.PrebuildRepositories, "prebuild-repository", []string{}, "Docker repository that hosts devpod prebuilds for this workspace")
 	upCmd.Flags().StringArrayVar(&cmd.WorkspaceEnv, "workspace-env", []string{}, "Extra env variables to put into the workspace. E.g. MY_ENV_VAR=MY_VALUE")
+	upCmd.Flags().StringSliceVar(&cmd.WorkspaceEnvFile, "workspace-env-file", []string{}, "The path to files containing a list of extra env variables to put into the workspace. E.g. MY_ENV_VAR=MY_VALUE")
 	upCmd.Flags().StringVar(&cmd.ID, "id", "", "The id to use for the workspace")
 	upCmd.Flags().StringVar(&cmd.Machine, "machine", "", "The machine to use for this workspace. The machine needs to exist beforehand or the command will fail. If the workspace already exists, this option has no effect")
 	upCmd.Flags().StringVar(&cmd.IDE, "ide", "", "The IDE to open the workspace in. If empty will use vscode locally or in browser")
@@ -736,6 +741,20 @@ func mergeDevPodUpOptions(baseOptions *provider2.CLIOptions) error {
 		baseOptions.PrebuildRepositories = append(oldOptions.PrebuildRepositories, baseOptions.PrebuildRepositories...)
 		baseOptions.IDEOptions = append(oldOptions.IDEOptions, baseOptions.IDEOptions...)
 	}
+
+	return nil
+}
+
+func mergeEnvFromFiles(baseOptions *provider2.CLIOptions) error {
+	var variables []string
+	for _, file := range baseOptions.WorkspaceEnvFile {
+		envFromFile, err := config2.ParseKeyValueFile(file)
+		if err != nil {
+			return err
+		}
+		variables = append(variables, envFromFile...)
+	}
+	baseOptions.WorkspaceEnv = append(baseOptions.WorkspaceEnv, variables...)
 
 	return nil
 }
