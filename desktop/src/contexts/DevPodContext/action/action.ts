@@ -1,7 +1,7 @@
 import { Result, SingleEventManager, EventManager } from "../../../lib"
 import { v4 as uuidv4 } from "uuid"
 
-export type TActionName = "start" | "stop" | "rebuild" | "remove" | "checkStatus"
+export type TActionName = "start" | "stop" | "rebuild" | "reset" | "remove" | "checkStatus"
 export type TActionFn = (context: TActionContext) => Promise<Result<unknown>>
 export type TActionStatus = "pending" | "success" | "error" | "cancelled"
 export type TActionID = Action["id"]
