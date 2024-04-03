@@ -8,7 +8,7 @@ jobs:
     if: startsWith(github.ref, 'refs/tags/v') == true
     permissions:
       contents: write
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-22.04
     outputs:
       package_version: ${{ steps.get-version.outputs.package_version }}
       original_package_version: ${{ steps.get-version.outputs.original_package_version }}
@@ -108,12 +108,12 @@ jobs:
             target: x86_64-pc-windows-msvc
             arch: amd64
             cli_only: false
-          - host: ubuntu-20.04
+          - host: ubuntu-22.04
             target: x86_64-unknown-linux-gnu
             os: linux
             arch: amd64
             cli_only: false
-          - host: ubuntu-20.04
+          - host: ubuntu-22.04
             target: aarch64-unknown-linux-gnu
             os: linux
             arch: arm64
@@ -139,7 +139,7 @@ jobs:
         working-directory: "./desktop"
 
       - name: Setup System Dependencies
-        if: matrix.settings.host == 'ubuntu-20.04' && matrix.settings.cli_only == false
+        if: matrix.settings.host == 'ubuntu-22.04' && matrix.settings.cli_only == false
         run: |
           sudo apt-get update
           sudo apt-get install -y libgtk-3-dev libwebkit2gtk-4.0-dev libayatana-appindicator3-dev librsvg2-dev
@@ -195,7 +195,7 @@ jobs:
         working-directory: "./desktop"
 
       - name: Build Desktop App
-        if: matrix.settings.host == 'ubuntu-20.04' && matrix.settings.cli_only == false
+        if: matrix.settings.host == 'ubuntu-22.04' && matrix.settings.cli_only == false
         uses: tauri-apps/tauri-action@v0.4.0
         with:
           releaseId: ${{ needs.create-release.outputs.release_id }}
@@ -233,7 +233,7 @@ jobs:
           APPLE_PASSWORD: ${{ secrets.APPLE_PASSWORD }}
 
       - name: Build linux tar.gz
-        if: matrix.settings.host == 'ubuntu-20.04' && matrix.settings.cli_only == false
+        if: matrix.settings.host == 'ubuntu-22.04' && matrix.settings.cli_only == false
         id: build-desktop-targz
         run: |
           cd ./desktop/src-tauri/target/${{ matrix.settings.target }}/release/bundle/appimage/dev-pod.AppDir || exit 1
@@ -349,7 +349,7 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Upload Tar.gz Asset
-        if: matrix.settings.host == 'ubuntu-20.04' && matrix.settings.cli_only == false
+        if: matrix.settings.host == 'ubuntu-22.04' && matrix.settings.cli_only == false
         uses: actions/github-script@v6
         with:
           script: |
@@ -380,7 +380,7 @@ jobs:
     if: startsWith(github.ref, 'refs/tags/v') == true
     permissions:
       contents: write
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-22.04
     steps:
       - name: Checkout repository
         uses: actions/checkout@v3
