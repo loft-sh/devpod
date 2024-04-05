@@ -48,7 +48,16 @@ import {
   useWorkspace,
   useWorkspaceActions,
 } from "../../contexts"
-import { ArrowCycle, ArrowPath, CommandLine, Ellipsis, Pause, Play, Stack3D, Trash } from "../../icons"
+import {
+  ArrowCycle,
+  ArrowPath,
+  CommandLine,
+  Ellipsis,
+  Pause,
+  Play,
+  Stack3D,
+  Trash,
+} from "../../icons"
 import { getIDEDisplayName, useHover } from "../../lib"
 import { QueryKeys } from "../../queryKeys"
 import { Routes } from "../../routes"
@@ -78,11 +87,7 @@ export function WorkspaceCard({ workspaceID, isSelected, onSelectionChange }: TW
     onOpen: handleRebuildClicked,
     onClose: onRebuildClose,
   } = useDisclosure()
-  const {
-    isOpen: isResetOpen,
-    onOpen: handleResetClicked,
-    onClose: onResetClose,
-  } = useDisclosure()
+  const { isOpen: isResetOpen, onOpen: handleResetClicked, onClose: onResetClose } = useDisclosure()
 
   const { isOpen: isStopOpen, onOpen: handleStopClicked, onClose: onStopClose } = useDisclosure()
   const workspace = useWorkspace(workspaceID)
@@ -165,10 +170,9 @@ export function WorkspaceCard({ workspaceID, isSelected, onSelectionChange }: TW
           <ModalCloseButton />
           <ModalBody>
             Reseting the workspace will erase all state saved in the docker container overlay and
-            DELETE ALL UNCOMMITTED CODE.
-            This means you might need to reinstall or reconfigure certain applications.
-            You will start with a fresh clone of the repository.
-            Are you sure you want to rebuild {workspace.data.id}?
+            DELETE ALL UNCOMMITTED CODE. This means you might need to reinstall or reconfigure
+            certain applications. You will start with a fresh clone of the repository. Are you sure
+            you want to rebuild {workspace.data.id}?
           </ModalBody>
           <ModalFooter>
             <HStack spacing={"2"}>

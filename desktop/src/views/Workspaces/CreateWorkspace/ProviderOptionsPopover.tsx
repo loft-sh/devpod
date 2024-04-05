@@ -22,7 +22,7 @@ import {
 } from "@chakra-ui/react"
 import { ReactElement, useCallback, useRef, useState } from "react"
 import { HiPencil } from "react-icons/hi2"
-import { TNamedProvider } from "../../../types"
+import { TNamedProvider, TProviderOptions } from "../../../types"
 
 type TProviderOptionsPopoverProps = Readonly<{ provider: TNamedProvider; trigger: ReactElement }>
 export function ProviderOptionsPopover({ provider, trigger }: TProviderOptionsPopoverProps) {
@@ -30,7 +30,7 @@ export function ProviderOptionsPopover({ provider, trigger }: TProviderOptionsPo
   const bodyRef = useRef<HTMLDivElement | null>(null)
 
   const options = useProviderOptions(
-    provider.state?.options ?? {},
+    mergeOptionDefinitions(provider.state?.options ?? {}, provider.config?.options ?? {}),
     provider.config?.optionGroups ?? []
   )
   const [isLocked, setIsLocked] = useState(false)
@@ -163,33 +163,55 @@ function ProviderOptionList({ options }: TProviderOptionListProps) {
 
   return (
     <List width="full" marginBottom="2">
-      {options.map((option, i) => (
-        <ListItem key={i} width="full" display="flex" flexFlow="row nowrap">
-          <Tooltip label={option.displayName}>
+      {options.map((option, i) => {
+        let value = option.value ?? "-"
+        if (option.password) {
+          value = "*".repeat(value.length)
+        }
+
+        return (
+          <ListItem key={i} width="full" display="flex" flexFlow="row nowrap">
+            <Tooltip label={option.displayName}>
+              <Text
+                whiteSpace="nowrap"
+                wordBreak="keep-all"
+                marginRight="4"
+                width="40"
+                minWidth="40"
+                overflowX="hidden"
+                textOverflow="ellipsis">
+                {option.displayName}
+              </Text>
+            </Tooltip>
             <Text
-              whiteSpace="nowrap"
+              textOverflow="ellipsis"
               wordBreak="keep-all"
-              marginRight="4"
-              width="40"
-              minWidth="40"
+              whiteSpace="nowrap"
+              width="full"
               overflowX="hidden"
-              textOverflow="ellipsis">
-              {option.displayName}
+              color={valueColor}
+              userSelect="auto"
+              _hover={{ overflow: "visible", cursor: "text" }}>
+              {value}
             </Text>
-          </Tooltip>
-          <Text
-            textOverflow="ellipsis"
-            wordBreak="keep-all"
-            whiteSpace="nowrap"
-            width="full"
-            overflowX="hidden"
-            color={valueColor}
-            userSelect="auto"
-            _hover={{ overflow: "visible", cursor: "text" }}>
-            {option.value ?? "-"}
-          </Text>
-        </ListItem>
-      ))}
+          </ListItem>
+        )
+      })}
     </List>
   )
+}
+
+function mergeOptionDefinitions(
+  stateOptions: TProviderOptions,
+  configOptions: TProviderOptions
+): TProviderOptions {
+  const res: TProviderOptions = {}
+  for (const [k, v] of Object.entries(stateOptions)) {
+    const config = configOptions[k]
+    if (config) {
+      res[k] = { ...config, ...v }
+    }
+  }
+
+  return res
 }
