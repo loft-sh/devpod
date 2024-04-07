@@ -7,7 +7,7 @@ on:
     paths:
       - .github/workflows/go-licenses-check.yaml
       - go.mod
-  workflow_dispatch:
+  workflow_dispatch: {}
 
 concurrency:
   group: ${{ github.workflow }}-$${{ github.head_ref || github.run_id }}

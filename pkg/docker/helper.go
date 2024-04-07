@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"os"
@@ -17,6 +18,33 @@ import (
 	perrors "github.com/pkg/errors"
 )
 
+// DockerBuilder represents the Docker builder types.
+type DockerBuilder int
+
+// Enum values for DockerBuilder.
+const (
+	DockerBuilderDefault DockerBuilder = iota
+	DockerBuilderBuildX
+	DockerBuilderBuildKit
+)
+
+func (db DockerBuilder) String() string {
+	return [...]string{"", "buildx", "buildkit"}[db]
+}
+
+func DockerBuilderFromString(s string) (DockerBuilder, error) {
+	switch s {
+	case "":
+		return DockerBuilderDefault, nil
+	case "buildkit":
+		return DockerBuilderBuildKit, nil
+	case "buildx":
+		return DockerBuilderBuildX, nil
+	default:
+		return DockerBuilderDefault, errors.New("invalid docker builder")
+	}
+}
+
 type DockerHelper struct {
 	DockerCommand string
 	// for a running container, we cannot pass down the container ID to the driver without introducing
@@ -25,6 +53,7 @@ type DockerHelper struct {
 	ContainerID string
 	// allow command to have a custom environment
 	Environment []string
+	Builder     DockerBuilder
 }
 
 func (r *DockerHelper) GPUSupportEnabled() (bool, error) {

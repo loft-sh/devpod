@@ -9,6 +9,7 @@ optionGroups:
       - DOCKER_PATH
       - DOCKER_HOST
       - INACTIVITY_TIMEOUT
+      - DOCKER_BUILDER
     name: "Advanced Options"
 options:
   INACTIVITY_TIMEOUT:
@@ -19,11 +20,15 @@ options:
   DOCKER_HOST:
     global: true
     description: The docker host to use.
+  DOCKER_BUILDER:
+    global: true
+    description: The docker builder to use.
 agent:
   containerInactivityTimeout: ${INACTIVITY_TIMEOUT}
   local: true
   docker:
     path: ${DOCKER_PATH}
+    builder: ${DOCKER_BUILDER}
     install: false
     env:
       DOCKER_HOST: ${DOCKER_HOST}

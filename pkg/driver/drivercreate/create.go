@@ -13,7 +13,7 @@ import (
 func NewDriver(workspaceInfo *provider2.AgentWorkspaceInfo, log log.Logger) (driver.Driver, error) {
 	driver := workspaceInfo.Agent.Driver
 	if driver == "" || driver == provider2.DockerDriver {
-		return docker.NewDockerDriver(workspaceInfo, log), nil
+		return docker.NewDockerDriver(workspaceInfo, log)
 	} else if driver == provider2.CustomDriver {
 		return custom.NewCustomDriver(workspaceInfo, log), nil
 	} else if driver == "kubernetes" {
