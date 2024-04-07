@@ -3,6 +3,7 @@ name: E2E Win full tests
 on:
   release:
     types: [prereleased]
+  workflow_dispatch: {}
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}

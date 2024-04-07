@@ -182,6 +182,9 @@ type ProviderDockerDriverConfig struct {
 	// If false, DevPod will not try to install docker into the machine.
 	Install types.StrBool `json:"install,omitempty"`
 
+	// Builder to use with docker
+	Builder string `json:"builder,omitempty"`
+
 	// Environment variables to set when running docker commands
 	Env map[string]string `json:"env,omitempty"`
 }

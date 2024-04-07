@@ -187,7 +187,6 @@ type CLIOptions struct {
 	SkipPush   bool     `json:"skipPush,omitempty"`
 	Platform   []string `json:"platform,omitempty"`
 
-	// TESTING
 	ForceBuild            bool `json:"forceBuild,omitempty"`
 	ForceDockerless       bool `json:"forceDockerless,omitempty"`
 	ForceInternalBuildKit bool `json:"forceInternalBuildKit,omitempty"`

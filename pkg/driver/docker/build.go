@@ -70,18 +70,34 @@ func (d *dockerDriver) BuildDevContainer(
 	if options.Platform != "" {
 		d.Log.Infof("Build for platform '%s'...", options.Platform)
 	}
-	if !options.ForceInternalBuildKit && d.buildxExists(ctx) {
-		d.Log.Info("Build with docker buildx...")
-		err := d.buildxBuild(ctx, writer, options.Platform, buildOptions)
-		if err != nil {
-			return nil, errors.Wrap(err, "buildx build")
-		}
+
+	builder := d.Docker.Builder
+	if (builder == docker.DockerBuilderDefault || builder == docker.
+		DockerBuilderBuildX) && d.buildxExists(ctx) && !options.ForceInternalBuildKit {
+		builder = docker.DockerBuilderBuildX
 	} else {
+		builder = docker.DockerBuilderBuildKit
+	}
+
+	switch builder {
+	case docker.DockerBuilderBuildX:
+		if d.buildxExists(ctx) {
+			d.Log.Info("Build with docker buildx...")
+			err := d.buildxBuild(ctx, writer, options.Platform, buildOptions)
+			if err != nil {
+				return nil, errors.Wrap(err, "buildx build")
+			}
+		} else {
+			return nil, fmt.Errorf("buildx is not available on your host. Use buildkit builder")
+		}
+	case docker.DockerBuilderBuildKit:
 		d.Log.Info("Build with internal buildkit...")
 		err := d.internalBuild(ctx, writer, options.Platform, buildOptions)
 		if err != nil {
 			return nil, errors.Wrap(err, "internal build")
 		}
+	case docker.DockerBuilderDefault:
+		return nil, fmt.Errorf("invalid docker builder: %s", builder)
 	}
 
 	// inspect image
@@ -221,7 +237,7 @@ func (d *dockerDriver) buildxExists(ctx context.Context) bool {
 	buf := &bytes.Buffer{}
 	err := d.Docker.Run(ctx, []string{"buildx", "version"}, nil, buf, buf)
 
-	return err == nil
+	return (err == nil) || d.Docker.IsPodman()
 }
 
 func (d *dockerDriver) internalBuild(ctx context.Context, writer io.Writer, platform string, options *build.BuildOptions) error {

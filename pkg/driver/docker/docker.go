@@ -34,10 +34,17 @@ func makeEnvironment(env map[string]string, log log.Logger) []string {
 	return ret
 }
 
-func NewDockerDriver(workspaceInfo *provider2.AgentWorkspaceInfo, log log.Logger) driver.DockerDriver {
+func NewDockerDriver(workspaceInfo *provider2.AgentWorkspaceInfo, log log.Logger) (driver.DockerDriver, error) {
 	dockerCommand := "docker"
 	if workspaceInfo.Agent.Docker.Path != "" {
 		dockerCommand = workspaceInfo.Agent.Docker.Path
+	}
+
+	var builder docker.DockerBuilder
+	var err error
+	builder, err = docker.DockerBuilderFromString(workspaceInfo.Agent.Docker.Builder)
+	if err != nil {
+		return nil, err
 	}
 
 	log.Debugf("Using docker command '%s'", dockerCommand)
@@ -46,9 +53,10 @@ func NewDockerDriver(workspaceInfo *provider2.AgentWorkspaceInfo, log log.Logger
 			DockerCommand: dockerCommand,
 			Environment:   makeEnvironment(workspaceInfo.Agent.Docker.Env, log),
 			ContainerID:   workspaceInfo.Workspace.Source.Container,
+			Builder:       builder,
 		},
 		Log: log,
-	}
+	}, nil
 }
 
 type dockerDriver struct {
