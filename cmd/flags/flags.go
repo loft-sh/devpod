@@ -15,6 +15,9 @@ type GlobalFlags struct {
 	AgentDir string
 
 	DevPodHome string
+
+	GitUsername string
+	GitToken    string
 }
 
 // SetGlobalFlags applies the global flags
@@ -27,6 +30,11 @@ func SetGlobalFlags(flags *flag.FlagSet) *GlobalFlags {
 	flags.StringVar(&globalFlags.Provider, "provider", "", "The provider to use. Needs to be configured for the selected context.")
 	flags.BoolVar(&globalFlags.Debug, "debug", false, "Prints the stack trace if an error occurs")
 	flags.BoolVar(&globalFlags.Silent, "silent", false, "Run in silent mode and prevents any devpod log output except panics & fatals")
+
+	flags.StringVar(&globalFlags.GitUsername, "git-username", "", "The username to use for git operations")
+	flags.StringVar(&globalFlags.GitToken, "git-token", "", "The token to use for git operations")
+	_ = flags.MarkHidden("git-username")
+	_ = flags.MarkHidden("git-token")
 
 	flags.StringVar(&globalFlags.AgentDir, "agent-dir", "", "The data folder where agent data is stored.")
 	_ = flags.MarkHidden("agent-dir")

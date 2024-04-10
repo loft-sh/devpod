@@ -137,6 +137,8 @@ type UpOptions struct {
 }
 
 type SshOptions struct {
+	User string
+
 	Stdin  io.Reader
 	Stdout io.Writer
 }

@@ -15,7 +15,9 @@ import (
 	"github.com/loft-sh/devpod/cmd/flags"
 	"github.com/loft-sh/devpod/cmd/machine"
 	"github.com/loft-sh/devpod/pkg/agent"
+	"github.com/loft-sh/devpod/pkg/agent/tunnelserver"
 	client2 "github.com/loft-sh/devpod/pkg/client"
+	"github.com/loft-sh/devpod/pkg/client/clientimplementation"
 	"github.com/loft-sh/devpod/pkg/config"
 	"github.com/loft-sh/devpod/pkg/gpg"
 	"github.com/loft-sh/devpod/pkg/port"
@@ -61,6 +63,11 @@ func NewSSHCmd(flags *flags.GlobalFlags) *cobra.Command {
 		Short: "Starts a new ssh session to a workspace",
 		RunE: func(_ *cobra.Command, args []string) error {
 			ctx := context.Background()
+
+			err := mergeDevPodSshOptions(cmd)
+			if err != nil {
+				return err
+			}
 			devPodConfig, err := config.LoadConfig(cmd.Context, cmd.Provider)
 			if err != nil {
 				return err
@@ -140,6 +147,7 @@ func (cmd *SSHCmd) startProxyTunnel(
 		ctx,
 		func(ctx context.Context, stdin io.Reader, stdout io.Writer) error {
 			return client.Ssh(ctx, client2.SshOptions{
+				User:   cmd.User,
 				Stdin:  stdin,
 				Stdout: stdout,
 			})
@@ -344,7 +352,7 @@ func (cmd *SSHCmd) startTunnel(ctx context.Context, devPodConfig *config.Config,
 
 	// start port-forwarding etc.
 	if !cmd.Proxy && cmd.StartServices {
-		go cmd.startServices(ctx, devPodConfig, containerClient, ideName, log)
+		go cmd.startServices(ctx, devPodConfig, containerClient, ideName, cmd.GitUsername, cmd.GitToken, log)
 	}
 
 	// start ssh
@@ -375,10 +383,16 @@ func (cmd *SSHCmd) startTunnel(ctx context.Context, devPodConfig *config.Config,
 	if cmd.Debug {
 		command += " --debug"
 	}
-	if cmd.User != "" && cmd.User != "root" {
+	if !cmd.Proxy && cmd.User != "" && cmd.User != "root" {
 		command = fmt.Sprintf("su -c \"%s\" '%s'", command, cmd.User)
 	}
+
+	// Traffic is coming in from the outside, we need to forward it to the container
 	if cmd.Proxy || cmd.Stdio {
+		if cmd.Proxy {
+			go cmd.startProxyServices(ctx, devPodConfig, containerClient, ideName, log)
+		}
+
 		return devssh.Run(ctx, containerClient, command, os.Stdin, os.Stdout, writer)
 	}
 
@@ -400,6 +414,8 @@ func (cmd *SSHCmd) startServices(
 	devPodConfig *config.Config,
 	containerClient *ssh.Client,
 	ideName string,
+	gitUsername,
+	gitToken string,
 	log log.Logger,
 ) {
 	if cmd.User != "" {
@@ -413,11 +429,75 @@ func (cmd *SSHCmd) startServices(
 			gitCredentials,
 			true,
 			nil,
+			gitUsername,
+			gitToken,
 			log,
 		)
 		if err != nil {
 			log.Debugf("Error running credential server: %v", err)
 		}
+	}
+}
+
+func (cmd *SSHCmd) startProxyServices(
+	ctx context.Context,
+	devPodConfig *config.Config,
+	containerClient *ssh.Client,
+	ideName string,
+	log log.Logger,
+) {
+	if cmd.User == "" {
+		return
+	}
+
+	gitCredentials := devPodConfig.ContextOption(config.ContextOptionSSHInjectGitCredentials) == "true"
+
+	stdoutReader, stdoutWriter, err := os.Pipe()
+	if err != nil {
+		log.Debugf("Error creating stdout pipe: %v", err)
+		return
+	}
+	defer stdoutWriter.Close()
+
+	stdinReader, stdinWriter, err := os.Pipe()
+	if err != nil {
+		log.Debugf("Error creating stdin pipe: %v", err)
+		return
+	}
+	defer stdinWriter.Close()
+
+	cancelCtx, cancel := context.WithCancel(ctx)
+	defer cancel()
+	errChan := make(chan error, 1)
+	go func() {
+		defer cancel()
+		writer := log.ErrorStreamOnly().Writer(logrus.DebugLevel, false)
+		defer writer.Close()
+
+		command := fmt.Sprintf("'%s' agent container credentials-server --user '%s'", agent.ContainerDevPodHelperLocation, cmd.User)
+		if gitCredentials {
+			command += " --configure-git-helper"
+		}
+		if log.GetLevel() == logrus.DebugLevel {
+			command += " --debug"
+		}
+
+		errChan <- devssh.Run(cancelCtx, containerClient, command, stdinReader, stdoutWriter, writer)
+	}()
+
+	opts := []tunnelserver.Option{}
+	if cmd.GitUsername != "" && cmd.GitToken != "" {
+		opts = append(opts, tunnelserver.WithGitCredentialsOverride(cmd.GitUsername, cmd.GitToken))
+	}
+	err = tunnelserver.RunServicesServer(ctx, stdoutReader, stdinWriter, true, true, nil, log, opts...)
+	if err != nil {
+		log.Debugf("Error running proxy server: %v", err)
+		return
+	}
+	err = <-errChan
+	if err != nil {
+		log.Debugf("Error running credential server: %v", err)
+		return
 	}
 }
 
@@ -517,4 +597,16 @@ func (cmd *SSHCmd) setupGPGAgent(
 	}
 
 	return devssh.Run(ctx, containerClient, command, nil, writer, writer)
+}
+
+func mergeDevPodSshOptions(cmd *SSHCmd) error {
+	_, err := clientimplementation.DecodeOptionsFromEnv(
+		clientimplementation.DevPodFlagsSsh,
+		cmd,
+	)
+	if err != nil {
+		return fmt.Errorf("decode up options: %w", err)
+	}
+
+	return nil
 }

@@ -32,6 +32,8 @@ func ExecuteCommand(
 	allowGitCredentials,
 	allowDockerCredentials bool,
 	mounts []*config2.Mount,
+	gitUsername string,
+	gitToken string,
 	log log.Logger,
 ) (*config2.Result, error) {
 	// create pipes
@@ -142,6 +144,8 @@ func ExecuteCommand(
 			gRPCConnStdoutReader,
 			gRPCConnStdinWriter,
 			log,
+			gitUsername,
+			gitToken,
 		)
 		if err != nil {
 			return nil, errors.Wrap(err, "run proxy tunnel")
@@ -169,6 +173,7 @@ func ExecuteCommand(
 			client.AgentInjectDockerCredentials(),
 			client.WorkspaceConfig(),
 			log,
+			tunnelserver.WithGitCredentialsOverride(gitUsername, gitToken),
 		)
 		if err != nil {
 			return nil, errors.Wrap(err, "run tunnel machine")

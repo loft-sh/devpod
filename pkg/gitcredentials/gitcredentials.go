@@ -184,9 +184,16 @@ func GetUser() (*GitUser, error) {
 	return gitUser, nil
 }
 
-func GetCredentials(requestObj *GitCredentials) (*GitCredentials, error) {
-	var c *exec.Cmd
+func GetCredentials(requestObj *GitCredentials, username string, token string) (*GitCredentials, error) {
+	if username != "" && token != "" {
+		// we have a token and username, use that
+		requestObj.Password = token
+		requestObj.Username = username
 
+		return requestObj, nil
+	}
+
+	// run in git helper mode if we have a port
 	gitHelperPort := os.Getenv("DEVPOD_GIT_HELPER_PORT")
 	if gitHelperPort != "" {
 		binaryPath, err := os.Executable()
@@ -194,17 +201,24 @@ func GetCredentials(requestObj *GitCredentials) (*GitCredentials, error) {
 			return nil, err
 		}
 
-		c = exec.Command(binaryPath, "agent", "git-credentials", "--port", gitHelperPort, "get")
-	} else {
-		c = git.CommandContext(context.TODO(), "credential", "fill")
+		c := exec.Command(binaryPath, "agent", "git-credentials", "--port", gitHelperPort, "get")
+
+		c.Stdin = strings.NewReader(ToString(requestObj))
+		stdout, err := c.Output()
+		if err != nil {
+			return nil, err
+		}
+
+		return Parse(string(stdout))
 	}
 
+	// use local credentials if not
+	c := git.CommandContext(context.TODO(), "credential", "fill")
 	c.Stdin = strings.NewReader(ToString(requestObj))
 	stdout, err := c.Output()
 	if err != nil {
 		return nil, err
 	}
-
 	return Parse(string(stdout))
 }
 

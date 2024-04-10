@@ -79,7 +79,7 @@ func InjectAgentAndExecute(
 	if version.GetVersion() == version.DevVersion {
 		preferDownload = false
 
-		if runtime.GOOS != "linux" {
+		if runtime.GOOS == "windows" {
 			preferDownload = true
 		}
 	}

@@ -24,37 +24,48 @@ import (
 	"google.golang.org/grpc/reflection"
 )
 
-func RunServicesServer(ctx context.Context, reader io.Reader, writer io.WriteCloser, allowGitCredentials, allowDockerCredentials bool, forwarder netstat.Forwarder, log log.Logger) error {
-	tunnelServ := &tunnelServer{
-		forwarder:              forwarder,
-		allowGitCredentials:    allowGitCredentials,
-		allowDockerCredentials: allowDockerCredentials,
-		log:                    log,
-	}
+func RunServicesServer(ctx context.Context, reader io.Reader, writer io.WriteCloser, allowGitCredentials, allowDockerCredentials bool, forwarder netstat.Forwarder, log log.Logger, options ...Option) error {
+	opts := append(options, []Option{
+		WithForwarder(forwarder),
+		WithAllowGitCredentials(allowGitCredentials),
+		WithAllowDockerCredentials(allowDockerCredentials),
+	}...)
+	tunnelServ := New(log, opts...)
 
 	return tunnelServ.Run(ctx, reader, writer)
 }
 
-func RunUpServer(ctx context.Context, reader io.Reader, writer io.WriteCloser, allowGitCredentials, allowDockerCredentials bool, workspace *provider2.Workspace, log log.Logger) (*config.Result, error) {
-	tunnelServ := &tunnelServer{
-		workspace:              workspace,
-		allowGitCredentials:    allowGitCredentials,
-		allowDockerCredentials: allowDockerCredentials,
-		log:                    log,
-	}
+func RunUpServer(ctx context.Context, reader io.Reader, writer io.WriteCloser, allowGitCredentials, allowDockerCredentials bool, workspace *provider2.Workspace, log log.Logger, options ...Option) (*config.Result, error) {
+	opts := append(options, []Option{
+		WithWorkspace(workspace),
+		WithAllowGitCredentials(allowGitCredentials),
+		WithAllowDockerCredentials(allowDockerCredentials),
+	}...)
+	tunnelServ := New(log, opts...)
 
 	return tunnelServ.RunWithResult(ctx, reader, writer)
 }
 
-func RunSetupServer(ctx context.Context, reader io.Reader, writer io.WriteCloser, allowGitCredentials, allowDockerCredentials bool, mounts []*config.Mount, log log.Logger) (*config.Result, error) {
-	tunnelServ := &tunnelServer{
-		mounts:                 mounts,
-		allowDockerCredentials: allowDockerCredentials,
-		allowGitCredentials:    allowGitCredentials,
-		log:                    log,
-	}
+func RunSetupServer(ctx context.Context, reader io.Reader, writer io.WriteCloser, allowGitCredentials, allowDockerCredentials bool, mounts []*config.Mount, log log.Logger, options ...Option) (*config.Result, error) {
+	opts := append(options, []Option{
+		WithMounts(mounts),
+		WithAllowGitCredentials(allowGitCredentials),
+		WithAllowDockerCredentials(allowDockerCredentials),
+	}...)
+	tunnelServ := New(log, opts...)
 
 	return tunnelServ.RunWithResult(ctx, reader, writer)
+}
+
+func New(log log.Logger, options ...Option) *tunnelServer {
+	s := &tunnelServer{
+		log: log,
+	}
+	for _, o := range options {
+		s = o(s)
+	}
+
+	return s
 }
 
 type tunnelServer struct {
@@ -69,6 +80,12 @@ type tunnelServer struct {
 	result                 *config.Result
 	workspace              *provider2.Workspace
 	log                    log.Logger
+	gitCredentialsOverride gitCredentialsOverride
+}
+
+type gitCredentialsOverride struct {
+	username string
+	token    string
 }
 
 func (t *tunnelServer) RunWithResult(ctx context.Context, reader io.Reader, writer io.WriteCloser) (*config.Result, error) {
@@ -186,7 +203,7 @@ func (t *tunnelServer) GitCredentials(ctx context.Context, message *tunnel.Messa
 		return nil, perrors.Wrap(err, "decode git credentials request")
 	}
 
-	response, err := gitcredentials.GetCredentials(credentials)
+	response, err := gitcredentials.GetCredentials(credentials, t.gitCredentialsOverride.username, t.gitCredentialsOverride.token)
 	if err != nil {
 		return nil, perrors.Wrap(err, "get git response")
 	}
