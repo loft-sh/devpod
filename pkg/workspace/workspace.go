@@ -472,7 +472,25 @@ func resolve(
 		return workspace, nil
 	}
 
-	return nil, fmt.Errorf("%s is neither a local folder, git repository or docker image", name)
+	// fall back to git repository
+	workspace.Source = provider2.WorkspaceSource{GitRepository: name}
+	if gitRepository != "" {
+		workspace.Source.GitRepository = gitRepository
+	}
+	if gitPRReference != "" {
+		workspace.Source.GitPRReference = gitPRReference
+	}
+	if gitBranch != "" {
+		workspace.Source.GitBranch = gitBranch
+	}
+	if gitCommit != "" {
+		workspace.Source.GitCommit = gitCommit
+	}
+	if gitSubdir != "" {
+		workspace.Source.GitSubPath = gitSubdir
+	}
+
+	return workspace, nil
 }
 
 var contentRegEx = regexp.MustCompile(`content="([^"]+)"`)
