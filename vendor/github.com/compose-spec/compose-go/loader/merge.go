@@ -150,13 +150,12 @@ func unique(slice []string) []string {
 		return nil
 	}
 	uniqMap := make(map[string]struct{})
+	var uniqSlice []string
 	for _, v := range slice {
-		uniqMap[v] = struct{}{}
-	}
-
-	uniqSlice := make([]string, 0, len(uniqMap))
-	for v := range uniqMap {
-		uniqSlice = append(uniqSlice, v)
+		if _, ok := uniqMap[v]; !ok {
+			uniqSlice = append(uniqSlice, v)
+			uniqMap[v] = struct{}{}
+		}
 	}
 	return uniqSlice
 }
@@ -321,8 +320,8 @@ func mergeLoggingConfig(dst, src reflect.Value) error {
 		if getLoggingDriver(dst.Elem()) == "" {
 			dst.Elem().FieldByName("Driver").SetString(getLoggingDriver(src.Elem()))
 		}
-		dstOptions := dst.Elem().FieldByName("Options").Interface().(map[string]string)
-		srcOptions := src.Elem().FieldByName("Options").Interface().(map[string]string)
+		dstOptions := dst.Elem().FieldByName("Options").Interface().(types.Options)
+		srcOptions := src.Elem().FieldByName("Options").Interface().(types.Options)
 		return mergo.Merge(&dstOptions, srcOptions, mergo.WithOverride)
 	}
 	// Different driver, override with src

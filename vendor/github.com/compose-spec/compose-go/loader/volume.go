@@ -176,5 +176,8 @@ func isFilePath(source string) bool {
 	}
 
 	first, nextIndex := utf8.DecodeRuneInString(source)
+	if len(source) <= nextIndex {
+		return false
+	}
 	return isWindowsDrive([]rune{first}, rune(source[nextIndex]))
 }

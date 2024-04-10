@@ -1,7 +1,15 @@
-name: Full_Example_project_name
+name: full_example_project_name
 services:
-  foo:
 
+  bar:
+    build:
+      dockerfile_inline: |
+        FROM alpine
+        RUN echo "hello" > /world.txt
+
+  foo:
+    annotations:
+      - com.example.foo=bar
     build:
       context: ./dir
       dockerfile: Dockerfile
@@ -15,6 +23,8 @@ services:
         - foo
         - bar
       labels: [FOO=BAR]
+      additional_contexts:
+        foo: ./bar
       secrets:
         - secret1
         - source: secret2
@@ -171,6 +181,7 @@ services:
       timeout: 1s
       retries: 5
       start_period: 15s
+      start_interval: 5s
 
     # Any valid image reference - repo, tag, id, sha
     image: redis
@@ -224,6 +235,7 @@ services:
       other-network:
         ipv4_address: 172.16.238.10
         ipv6_address: 2001:3984:3989::10
+        mac_address: 02:42:72:98:65:08
       other-other-network:
 
     pid: "host"

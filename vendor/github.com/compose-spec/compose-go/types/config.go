@@ -34,7 +34,7 @@ type ConfigDetails struct {
 	Version     string
 	WorkingDir  string
 	ConfigFiles []ConfigFile
-	Environment map[string]string
+	Environment Mapping
 }
 
 // LookupEnv provides a lookup function for environment variables
@@ -67,16 +67,24 @@ type ConfigFile struct {
 	Config map[string]interface{}
 }
 
+func ToConfigFiles(path []string) (f []ConfigFile) {
+	for _, p := range path {
+		f = append(f, ConfigFile{Filename: p})
+	}
+	return
+}
+
 // Config is a full compose file configuration and model
 type Config struct {
-	Filename   string     `yaml:"-" json:"-"`
-	Name       string     `yaml:",omitempty" json:"name,omitempty"`
-	Services   Services   `json:"services"`
-	Networks   Networks   `yaml:",omitempty" json:"networks,omitempty"`
-	Volumes    Volumes    `yaml:",omitempty" json:"volumes,omitempty"`
-	Secrets    Secrets    `yaml:",omitempty" json:"secrets,omitempty"`
-	Configs    Configs    `yaml:",omitempty" json:"configs,omitempty"`
-	Extensions Extensions `yaml:",inline" json:"-"`
+	Filename   string          `yaml:"-" json:"-"`
+	Name       string          `yaml:"name,omitempty" json:"name,omitempty"`
+	Services   Services        `yaml:"services" json:"services"`
+	Networks   Networks        `yaml:"networks,omitempty" json:"networks,omitempty"`
+	Volumes    Volumes         `yaml:"volumes,omitempty" json:"volumes,omitempty"`
+	Secrets    Secrets         `yaml:"secrets,omitempty" json:"secrets,omitempty"`
+	Configs    Configs         `yaml:"configs,omitempty" json:"configs,omitempty"`
+	Extensions Extensions      `yaml:",inline" json:"-"`
+	Include    []IncludeConfig `yaml:"include,omitempty" json:"include,omitempty"`
 }
 
 // Volumes is a map of VolumeConfig

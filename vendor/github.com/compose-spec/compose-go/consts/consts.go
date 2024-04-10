@@ -20,4 +20,5 @@ const (
 	ComposeProjectName   = "COMPOSE_PROJECT_NAME"
 	ComposePathSeparator = "COMPOSE_PATH_SEPARATOR"
 	ComposeFilePath      = "COMPOSE_FILE"
+	ComposeProfiles      = "COMPOSE_PROFILES"
 )

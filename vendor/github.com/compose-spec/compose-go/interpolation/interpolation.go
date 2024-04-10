@@ -18,9 +18,9 @@ package interpolation
 
 import (
 	"os"
-	"strings"
 
 	"github.com/compose-spec/compose-go/template"
+	"github.com/compose-spec/compose-go/tree"
 	"github.com/pkg/errors"
 )
 
@@ -29,7 +29,7 @@ type Options struct {
 	// LookupValue from a key
 	LookupValue LookupValue
 	// TypeCastMapping maps key paths to functions to cast to a type
-	TypeCastMapping map[Path]Cast
+	TypeCastMapping map[tree.Path]Cast
 	// Substitution function to use
 	Substitute func(string, template.Mapping) (string, error)
 }
@@ -49,7 +49,7 @@ func Interpolate(config map[string]interface{}, opts Options) (map[string]interf
 		opts.LookupValue = os.LookupEnv
 	}
 	if opts.TypeCastMapping == nil {
-		opts.TypeCastMapping = make(map[Path]Cast)
+		opts.TypeCastMapping = make(map[tree.Path]Cast)
 	}
 	if opts.Substitute == nil {
 		opts.Substitute = template.Substitute
@@ -58,7 +58,7 @@ func Interpolate(config map[string]interface{}, opts Options) (map[string]interf
 	out := map[string]interface{}{}
 
 	for key, value := range config {
-		interpolatedValue, err := recursiveInterpolate(value, NewPath(key), opts)
+		interpolatedValue, err := recursiveInterpolate(value, tree.NewPath(key), opts)
 		if err != nil {
 			return out, err
 		}
@@ -68,11 +68,11 @@ func Interpolate(config map[string]interface{}, opts Options) (map[string]interf
 	return out, nil
 }
 
-func recursiveInterpolate(value interface{}, path Path, opts Options) (interface{}, error) {
+func recursiveInterpolate(value interface{}, path tree.Path, opts Options) (interface{}, error) {
 	switch value := value.(type) {
 	case string:
 		newValue, err := opts.Substitute(value, template.Mapping(opts.LookupValue))
-		if err != nil || newValue == value {
+		if err != nil {
 			return value, newPathError(path, err)
 		}
 		caster, ok := opts.getCasterForPath(path)
@@ -96,7 +96,7 @@ func recursiveInterpolate(value interface{}, path Path, opts Options) (interface
 	case []interface{}:
 		out := make([]interface{}, len(value))
 		for i, elem := range value {
-			interpolatedElem, err := recursiveInterpolate(elem, path.Next(PathMatchList), opts)
+			interpolatedElem, err := recursiveInterpolate(elem, path.Next(tree.PathMatchList), opts)
 			if err != nil {
 				return nil, err
 			}
@@ -109,7 +109,7 @@ func recursiveInterpolate(value interface{}, path Path, opts Options) (interface
 	}
 }
 
-func newPathError(path Path, err error) error {
+func newPathError(path tree.Path, err error) error {
 	switch err := err.(type) {
 	case nil:
 		return nil
@@ -122,54 +122,9 @@ func newPathError(path Path, err error) error {
 	}
 }
 
-const pathSeparator = "."
-
-// PathMatchAll is a token used as part of a Path to match any key at that level
-// in the nested structure
-const PathMatchAll = "*"
-
-// PathMatchList is a token used as part of a Path to match items in a list
-const PathMatchList = "[]"
-
-// Path is a dotted path of keys to a value in a nested mapping structure. A *
-// section in a path will match any key in the mapping structure.
-type Path string
-
-// NewPath returns a new Path
-func NewPath(items ...string) Path {
-	return Path(strings.Join(items, pathSeparator))
-}
-
-// Next returns a new path by append part to the current path
-func (p Path) Next(part string) Path {
-	return Path(string(p) + pathSeparator + part)
-}
-
-func (p Path) parts() []string {
-	return strings.Split(string(p), pathSeparator)
-}
-
-func (p Path) matches(pattern Path) bool {
-	patternParts := pattern.parts()
-	parts := p.parts()
-
-	if len(patternParts) != len(parts) {
-		return false
-	}
-	for index, part := range parts {
-		switch patternParts[index] {
-		case PathMatchAll, part:
-			continue
-		default:
-			return false
-		}
-	}
-	return true
-}
-
-func (o Options) getCasterForPath(path Path) (Cast, bool) {
+func (o Options) getCasterForPath(path tree.Path) (Cast, bool) {
 	for pattern, caster := range o.TypeCastMapping {
-		if path.matches(pattern) {
+		if path.Matches(pattern) {
 			return caster, true
 		}
 	}
