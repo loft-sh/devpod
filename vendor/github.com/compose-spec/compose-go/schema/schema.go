@@ -17,19 +17,18 @@
 package schema
 
 import (
+	// Enable support for embedded static resources
+	_ "embed"
 	"fmt"
 	"strings"
 	"time"
 
 	"github.com/xeipuuv/gojsonschema"
-
-	// Enable support for embedded static resources
-	_ "embed"
 )
 
 type portsFormatChecker struct{}
 
-func (checker portsFormatChecker) IsFormat(input interface{}) bool {
+func (checker portsFormatChecker) IsFormat(_ interface{}) bool {
 	// TODO: implement this
 	return true
 }
@@ -52,6 +51,7 @@ func init() {
 }
 
 // Schema is the compose-spec JSON schema
+//
 //go:embed compose-spec.json
 var Schema string
 

@@ -111,8 +111,13 @@ func Read(filenames ...string) (map[string]string, error) {
 
 // UnmarshalBytesWithLookup parses env file from byte slice of chars, returning a map of keys and values.
 func UnmarshalBytesWithLookup(src []byte, lookupFn LookupFn) (map[string]string, error) {
+	return UnmarshalWithLookup(string(src), lookupFn)
+}
+
+// UnmarshalWithLookup parses env file from string, returning a map of keys and values.
+func UnmarshalWithLookup(src string, lookupFn LookupFn) (map[string]string, error) {
 	out := make(map[string]string)
-	err := newParser().parseBytes(src, out, lookupFn)
+	err := newParser().parse(src, out, lookupFn)
 	return out, err
 }
 
@@ -157,10 +162,11 @@ func readFile(filename string, lookupFn LookupFn) (map[string]string, error) {
 
 func expandVariables(value string, envMap map[string]string, lookupFn LookupFn) (string, error) {
 	retVal, err := template.Substitute(value, func(k string) (string, bool) {
-		if v, ok := envMap[k]; ok {
-			return v, ok
+		if v, ok := lookupFn(k); ok {
+			return v, true
 		}
-		return lookupFn(k)
+		v, ok := envMap[k]
+		return v, ok
 	})
 	if err != nil {
 		return value, err

@@ -17,6 +17,7 @@
 package template
 
 import (
+	"errors"
 	"fmt"
 	"regexp"
 	"sort"
@@ -27,12 +28,20 @@ import (
 
 var delimiter = "\\$"
 var substitutionNamed = "[_a-z][_a-z0-9]*"
+var substitutionBraced = "[_a-z][_a-z0-9]*(?::?[-+?](.*))?"
 
-var substitutionBraced = "[_a-z][_a-z0-9]*(?::?[-+?](.*}|[^}]*))?"
+var groupEscaped = "escaped"
+var groupNamed = "named"
+var groupBraced = "braced"
+var groupInvalid = "invalid"
 
 var patternString = fmt.Sprintf(
-	"%s(?i:(?P<escaped>%s)|(?P<named>%s)|{(?:(?P<braced>%s)}|(?P<invalid>)))",
-	delimiter, delimiter, substitutionNamed, substitutionBraced,
+	"%s(?i:(?P<%s>%s)|(?P<%s>%s)|{(?:(?P<%s>%s)}|(?P<%s>)))",
+	delimiter,
+	groupEscaped, delimiter,
+	groupNamed, substitutionNamed,
+	groupBraced, substitutionBraced,
+	groupInvalid,
 )
 
 var defaultPattern = regexp.MustCompile(patternString)
@@ -47,6 +56,19 @@ func (e InvalidTemplateError) Error() string {
 	return fmt.Sprintf("Invalid template: %#v", e.Template)
 }
 
+// MissingRequiredError is returned when a variable template is missing
+type MissingRequiredError struct {
+	Variable string
+	Reason   string
+}
+
+func (e MissingRequiredError) Error() string {
+	if e.Reason != "" {
+		return fmt.Sprintf("required variable %s is missing a value: %s", e.Variable, e.Reason)
+	}
+	return fmt.Sprintf("required variable %s is missing a value", e.Variable)
+}
+
 // Mapping is a user-supplied function which maps from variable names to values.
 // Returns the value as a string and a bool indicating whether
 // the value is present, to distinguish between an empty string
@@ -58,75 +80,146 @@ type Mapping func(string) (string, bool)
 // the substitution and an error.
 type SubstituteFunc func(string, Mapping) (string, bool, error)
 
-// SubstituteWith substitute variables in the string with their values.
-// It accepts additional substitute function.
-func SubstituteWith(template string, mapping Mapping, pattern *regexp.Regexp, subsFuncs ...SubstituteFunc) (string, error) {
-	var outerErr error
+// ReplacementFunc is a user-supplied function that is apply to the matching
+// substring. Returns the value as a string and an error.
+type ReplacementFunc func(string, Mapping, *Config) (string, error)
+
+type Config struct {
+	pattern         *regexp.Regexp
+	substituteFunc  SubstituteFunc
+	replacementFunc ReplacementFunc
+	logging         bool
+}
+
+type Option func(*Config)
+
+func WithPattern(pattern *regexp.Regexp) Option {
+	return func(cfg *Config) {
+		cfg.pattern = pattern
+	}
+}
+
+func WithSubstitutionFunction(subsFunc SubstituteFunc) Option {
+	return func(cfg *Config) {
+		cfg.substituteFunc = subsFunc
+	}
+}
+
+func WithReplacementFunction(replacementFunc ReplacementFunc) Option {
+	return func(cfg *Config) {
+		cfg.replacementFunc = replacementFunc
+	}
+}
+
+func WithoutLogging(cfg *Config) {
+	cfg.logging = false
+}
+
+// SubstituteWithOptions substitute variables in the string with their values.
+// It accepts additional options such as a custom function or pattern.
+func SubstituteWithOptions(template string, mapping Mapping, options ...Option) (string, error) {
 	var returnErr error
 
-	result := pattern.ReplaceAllStringFunc(template, func(substring string) string {
-		_, subsFunc := getSubstitutionFunctionForTemplate(substring)
-		if len(subsFuncs) > 0 {
-			subsFunc = subsFuncs[0]
-		}
+	cfg := &Config{
+		pattern:         defaultPattern,
+		replacementFunc: DefaultReplacementFunc,
+		logging:         true,
+	}
+	for _, o := range options {
+		o(cfg)
+	}
 
-		closingBraceIndex := getFirstBraceClosingIndex(substring)
-		rest := ""
-		if closingBraceIndex > -1 {
-			rest = substring[closingBraceIndex+1:]
-			substring = substring[0 : closingBraceIndex+1]
-		}
-
-		matches := pattern.FindStringSubmatch(substring)
-		groups := matchGroups(matches, pattern)
-		if escaped := groups["escaped"]; escaped != "" {
-			return escaped
-		}
-
-		braced := false
-		substitution := groups["named"]
-		if substitution == "" {
-			substitution = groups["braced"]
-			braced = true
-		}
-
-		if substitution == "" {
-			outerErr = &InvalidTemplateError{Template: template}
+	result := cfg.pattern.ReplaceAllStringFunc(template, func(substring string) string {
+		replacement, err := cfg.replacementFunc(substring, mapping, cfg)
+		if err != nil {
+			// Add the template for template errors
+			var tmplErr *InvalidTemplateError
+			if errors.As(err, &tmplErr) {
+				if tmplErr.Template == "" {
+					tmplErr.Template = template
+				}
+			}
+			// Save the first error to be returned
 			if returnErr == nil {
-				returnErr = outerErr
+				returnErr = err
 			}
-			return ""
-		}
 
-		if braced {
-			var (
-				value   string
-				applied bool
-			)
-			value, applied, outerErr = subsFunc(substitution, mapping)
-			if outerErr != nil {
-				if returnErr == nil {
-					returnErr = outerErr
-				}
-				return ""
-			}
-			if applied {
-				interpolatedNested, err := SubstituteWith(rest, mapping, pattern)
-				if err != nil {
-					return ""
-				}
-				return value + interpolatedNested
-			}
 		}
-
-		value, ok := mapping(substitution)
-		if !ok {
-			logrus.Warnf("The %q variable is not set. Defaulting to a blank string.", substitution)
-		}
-		return value
+		return replacement
 	})
 
 	return result, returnErr
+}
+
+func DefaultReplacementFunc(substring string, mapping Mapping, cfg *Config) (string, error) {
+	value, _, err := DefaultReplacementAppliedFunc(substring, mapping, cfg)
+	return value, err
+}
+
+func DefaultReplacementAppliedFunc(substring string, mapping Mapping, cfg *Config) (string, bool, error) {
+	pattern := cfg.pattern
+	subsFunc := cfg.substituteFunc
+	if subsFunc == nil {
+		_, subsFunc = getSubstitutionFunctionForTemplate(substring)
+	}
+
+	closingBraceIndex := getFirstBraceClosingIndex(substring)
+	rest := ""
+	if closingBraceIndex > -1 {
+		rest = substring[closingBraceIndex+1:]
+		substring = substring[0 : closingBraceIndex+1]
+	}
+
+	matches := pattern.FindStringSubmatch(substring)
+	groups := matchGroups(matches, pattern)
+	if escaped := groups[groupEscaped]; escaped != "" {
+		return escaped, true, nil
+	}
+
+	braced := false
+	substitution := groups[groupNamed]
+	if substitution == "" {
+		substitution = groups[groupBraced]
+		braced = true
+	}
+
+	if substitution == "" {
+		return "", false, &InvalidTemplateError{}
+	}
+
+	if braced {
+		value, applied, err := subsFunc(substitution, mapping)
+		if err != nil {
+			return "", false, err
+		}
+		if applied {
+			interpolatedNested, err := SubstituteWith(rest, mapping, pattern)
+			if err != nil {
+				return "", false, err
+			}
+			return value + interpolatedNested, true, nil
+		}
+	}
+
+	value, ok := mapping(substitution)
+	if !ok && cfg.logging {
+		logrus.Warnf("The %q variable is not set. Defaulting to a blank string.", substitution)
+	}
+
+	return value, ok, nil
+}
+
+// SubstituteWith substitute variables in the string with their values.
+// It accepts additional substitute function.
+func SubstituteWith(template string, mapping Mapping, pattern *regexp.Regexp, subsFuncs ...SubstituteFunc) (string, error) {
+	options := []Option{
+		WithPattern(pattern),
+	}
+	if len(subsFuncs) > 0 {
+		options = append(options, WithSubstitutionFunction(subsFuncs[0]))
+	}
+
+	return SubstituteWithOptions(template, mapping, options...)
 }
 
 func getSubstitutionFunctionForTemplate(template string) (string, SubstituteFunc) {
@@ -237,12 +330,12 @@ func extractVariable(value interface{}, pattern *regexp.Regexp) ([]Variable, boo
 	values := []Variable{}
 	for _, match := range matches {
 		groups := matchGroups(match, pattern)
-		if escaped := groups["escaped"]; escaped != "" {
+		if escaped := groups[groupEscaped]; escaped != "" {
 			continue
 		}
-		val := groups["named"]
+		val := groups[groupNamed]
 		if val == "" {
-			val = groups["braced"]
+			val = groups[groupBraced]
 		}
 		name := val
 		var defaultValue string
@@ -351,8 +444,9 @@ func withRequired(substitution string, mapping Mapping, sep string, valid func(s
 	}
 	value, ok := mapping(name)
 	if !ok || !valid(value) {
-		return "", true, &InvalidTemplateError{
-			Template: fmt.Sprintf("required variable %s is missing a value: %s", name, errorMessage),
+		return "", true, &MissingRequiredError{
+			Reason:   errorMessage,
+			Variable: name,
 		}
 	}
 	return value, true, nil

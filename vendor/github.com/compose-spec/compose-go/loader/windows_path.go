@@ -44,7 +44,7 @@ func isAbs(path string) (b bool) {
 
 // volumeNameLen returns length of the leading volume name on Windows.
 // It returns 0 elsewhere.
-//nolint: gocyclo
+// nolint: gocyclo
 func volumeNameLen(path string) int {
 	if len(path) < 2 {
 		return 0

@@ -1,7 +1,6 @@
 package dotenv
 
 import (
-	"bytes"
 	"errors"
 	"fmt"
 	"regexp"
@@ -31,14 +30,14 @@ func newParser() *parser {
 	}
 }
 
-func (p *parser) parseBytes(src []byte, out map[string]string, lookupFn LookupFn) error {
+func (p *parser) parse(src string, out map[string]string, lookupFn LookupFn) error {
 	cutset := src
 	if lookupFn == nil {
 		lookupFn = noLookupFn
 	}
 	for {
 		cutset = p.getStatementStart(cutset)
-		if cutset == nil {
+		if cutset == "" {
 			// reached end of file
 			break
 		}
@@ -75,10 +74,10 @@ func (p *parser) parseBytes(src []byte, out map[string]string, lookupFn LookupFn
 // getStatementPosition returns position of statement begin.
 //
 // It skips any comment line or non-whitespace character.
-func (p *parser) getStatementStart(src []byte) []byte {
+func (p *parser) getStatementStart(src string) string {
 	pos := p.indexOfNonSpaceChar(src)
 	if pos == -1 {
-		return nil
+		return ""
 	}
 
 	src = src[pos:]
@@ -87,85 +86,95 @@ func (p *parser) getStatementStart(src []byte) []byte {
 	}
 
 	// skip comment section
-	pos = bytes.IndexFunc(src, isCharFunc('\n'))
+	pos = strings.IndexFunc(src, isCharFunc('\n'))
 	if pos == -1 {
-		return nil
+		return ""
 	}
 	return p.getStatementStart(src[pos:])
 }
 
 // locateKeyName locates and parses key name and returns rest of slice
-func (p *parser) locateKeyName(src []byte) (string, []byte, bool, error) {
+func (p *parser) locateKeyName(src string) (string, string, bool, error) {
 	var key string
 	var inherited bool
 	// trim "export" and space at beginning
-	src = bytes.TrimLeftFunc(exportRegex.ReplaceAll(src, nil), isSpace)
+	if exportRegex.MatchString(src) {
+		// we use a `strings.trim` to preserve the pointer to the same underlying memory.
+		// a regexp replace would copy the string.
+		src = strings.TrimLeftFunc(strings.TrimPrefix(src, "export"), isSpace)
+	}
 
 	// locate key name end and validate it in single loop
 	offset := 0
 loop:
-	for i, char := range src {
-		rchar := rune(char)
-		if isSpace(rchar) {
+	for i, rune := range src {
+		if isSpace(rune) {
 			continue
 		}
 
-		switch char {
+		switch rune {
 		case '=', ':', '\n':
 			// library also supports yaml-style value declaration
 			key = string(src[0:i])
 			offset = i + 1
-			inherited = char == '\n'
+			inherited = rune == '\n'
 			break loop
 		case '_', '.', '-', '[', ']':
 		default:
 			// variable name should match [A-Za-z0-9_.-]
-			if unicode.IsLetter(rchar) || unicode.IsNumber(rchar) {
+			if unicode.IsLetter(rune) || unicode.IsNumber(rune) {
 				continue
 			}
 
-			return "", nil, inherited, fmt.Errorf(
-				`line %d: unexpected character %q in variable name`,
-				p.line, string(char))
+			return "", "", inherited, fmt.Errorf(
+				`line %d: unexpected character %q in variable name %q`,
+				p.line, string(rune), strings.Split(src, "\n")[0])
 		}
 	}
 
-	if len(src) == 0 {
-		return "", nil, inherited, errors.New("zero length string")
+	if src == "" {
+		return "", "", inherited, errors.New("zero length string")
 	}
 
 	// trim whitespace
 	key = strings.TrimRightFunc(key, unicode.IsSpace)
-	cutset := bytes.TrimLeftFunc(src[offset:], isSpace)
+	cutset := strings.TrimLeftFunc(src[offset:], isSpace)
 	return key, cutset, inherited, nil
 }
 
 // extractVarValue extracts variable value and returns rest of slice
-func (p *parser) extractVarValue(src []byte, envMap map[string]string, lookupFn LookupFn) (string, []byte, error) {
+func (p *parser) extractVarValue(src string, envMap map[string]string, lookupFn LookupFn) (string, string, error) {
 	quote, isQuoted := hasQuotePrefix(src)
 	if !isQuoted {
 		// unquoted value - read until new line
-		value, rest, _ := bytes.Cut(src, []byte("\n"))
+		value, rest, _ := strings.Cut(src, "\n")
 		p.line++
 
 		// Remove inline comments on unquoted lines
-		value, _, _ = bytes.Cut(value, []byte(" #"))
-		value = bytes.TrimRightFunc(value, unicode.IsSpace)
+		value, _, _ = strings.Cut(value, " #")
+		value = strings.TrimRightFunc(value, unicode.IsSpace)
 		retVal, err := expandVariables(string(value), envMap, lookupFn)
 		return retVal, rest, err
 	}
 
+	previousCharIsEscape := false
 	// lookup quoted string terminator
 	for i := 1; i < len(src); i++ {
 		if src[i] == '\n' {
 			p.line++
 		}
 		if char := src[i]; char != quote {
+			if !previousCharIsEscape && char == '\\' {
+				previousCharIsEscape = true
+			} else {
+				previousCharIsEscape = false
+			}
 			continue
 		}
 
 		// skip escaped quote symbol (\" or \', depends on quote)
-		if prevChar := src[i-1]; prevChar == '\\' {
+		if previousCharIsEscape {
+			previousCharIsEscape = false
 			continue
 		}
 
@@ -176,7 +185,7 @@ func (p *parser) extractVarValue(src []byte, envMap map[string]string, lookupFn 
 			// variables on the result
 			retVal, err := expandVariables(expandEscapes(value), envMap, lookupFn)
 			if err != nil {
-				return "", nil, err
+				return "", "", err
 			}
 			value = retVal
 		}
@@ -185,12 +194,12 @@ func (p *parser) extractVarValue(src []byte, envMap map[string]string, lookupFn 
 	}
 
 	// return formatted error if quoted string is not terminated
-	valEndIndex := bytes.IndexFunc(src, isCharFunc('\n'))
+	valEndIndex := strings.IndexFunc(src, isCharFunc('\n'))
 	if valEndIndex == -1 {
 		valEndIndex = len(src)
 	}
 
-	return "", nil, fmt.Errorf("line %d: unterminated quoted value %s", p.line, src[:valEndIndex])
+	return "", "", fmt.Errorf("line %d: unterminated quoted value %s", p.line, src[:valEndIndex])
 }
 
 func expandEscapes(str string) string {
@@ -225,8 +234,8 @@ func expandEscapes(str string) string {
 	return out
 }
 
-func (p *parser) indexOfNonSpaceChar(src []byte) int {
-	return bytes.IndexFunc(src, func(r rune) bool {
+func (p *parser) indexOfNonSpaceChar(src string) int {
+	return strings.IndexFunc(src, func(r rune) bool {
 		if r == '\n' {
 			p.line++
 		}
@@ -235,8 +244,8 @@ func (p *parser) indexOfNonSpaceChar(src []byte) int {
 }
 
 // hasQuotePrefix reports whether charset starts with single or double quote and returns quote character
-func hasQuotePrefix(src []byte) (byte, bool) {
-	if len(src) == 0 {
+func hasQuotePrefix(src string) (byte, bool) {
+	if src == "" {
 		return 0, false
 	}
 
