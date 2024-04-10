@@ -243,6 +243,8 @@ func (cmd *UpCmd) Run(
 				result.SubstitutionContext.ContainerWorkspaceFolder,
 				user,
 				ideConfig.Options,
+				cmd.GitUsername,
+				cmd.GitToken,
 				log,
 			)
 		case string(config.IDEGoland):
@@ -271,6 +273,8 @@ func (cmd *UpCmd) Run(
 				client,
 				user,
 				ideConfig.Options,
+				cmd.GitUsername,
+				cmd.GitToken,
 				log,
 			)
 		}
@@ -460,6 +464,8 @@ func (cmd *UpCmd) devPodUpMachine(
 		false,
 		false,
 		nil,
+		cmd.GitUsername,
+		cmd.GitToken,
 		log,
 	)
 }
@@ -471,6 +477,7 @@ func startJupyterNotebookInBrowser(
 	client client2.BaseWorkspaceClient,
 	user string,
 	ideOptions map[string]config.OptionValue,
+	gitUsername, gitToken string,
 	logger log.Logger,
 ) error {
 	if forwardGpg {
@@ -515,6 +522,8 @@ func startJupyterNotebookInBrowser(
 		targetURL,
 		false,
 		extraPorts,
+		gitUsername,
+		gitToken,
 		logger,
 	)
 }
@@ -561,6 +570,7 @@ func startVSCodeInBrowser(
 	client client2.BaseWorkspaceClient,
 	workspaceFolder, user string,
 	ideOptions map[string]config.OptionValue,
+	gitUsername, gitToken string,
 	logger log.Logger,
 ) error {
 	if forwardGpg {
@@ -606,6 +616,8 @@ func startVSCodeInBrowser(
 		targetURL,
 		forwardPorts,
 		extraPorts,
+		gitUsername,
+		gitToken,
 		logger,
 	)
 }
@@ -648,6 +660,7 @@ func startBrowserTunnel(
 	user, targetURL string,
 	forwardPorts bool,
 	extraPorts []string,
+	gitUsername, gitToken string,
 	logger log.Logger,
 ) error {
 	err := tunnel.NewTunnel(
@@ -688,6 +701,8 @@ func startBrowserTunnel(
 				true,
 				true,
 				extraPorts,
+				gitUsername,
+				gitToken,
 				logger,
 			)
 			if err != nil {

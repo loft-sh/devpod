@@ -26,6 +26,7 @@ var (
 	DevPodDebug = "DEVPOD_DEBUG"
 
 	DevPodFlagsUp     = "DEVPOD_FLAGS_UP"
+	DevPodFlagsSsh    = "DEVPOD_FLAGS_SSH"
 	DevPodFlagsDelete = "DEVPOD_FLAGS_DELETE"
 	DevPodFlagsStatus = "DEVPOD_FLAGS_STATUS"
 )
@@ -201,7 +202,7 @@ func (s *proxyClient) Ssh(ctx context.Context, opt client.SshOptions) error {
 		nil,
 		s.devPodConfig.ProviderOptions(s.config.Name),
 		s.config,
-		nil,
+		EncodeOptions(opt, DevPodFlagsSsh),
 		opt.Stdin,
 		opt.Stdout,
 		writer,

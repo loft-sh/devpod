@@ -112,6 +112,7 @@ func (r *runner) setupContainer(
 		r.WorkspaceConfig.Agent.InjectGitCredentials != "false",
 		r.WorkspaceConfig.Agent.InjectDockerCredentials != "false",
 		config.GetMounts(result),
+		"", "",
 		r.Log,
 	)
 }

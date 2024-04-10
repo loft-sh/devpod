@@ -8,18 +8,23 @@ import (
 
 	"github.com/loft-sh/devpod/pkg/agent/tunnel"
 	"github.com/loft-sh/devpod/pkg/devcontainer/config"
+	"github.com/loft-sh/devpod/pkg/gitcredentials"
 	"github.com/loft-sh/devpod/pkg/stdio"
 	"github.com/loft-sh/log"
+	perrors "github.com/pkg/errors"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/reflection"
 )
 
-func RunProxyServer(ctx context.Context, client tunnel.TunnelClient, reader io.Reader, writer io.WriteCloser, log log.Logger) (*config.Result, error) {
+func RunProxyServer(ctx context.Context, client tunnel.TunnelClient, reader io.Reader, writer io.WriteCloser, log log.Logger, gitUsername, gitToken string) (*config.Result, error) {
 	lis := stdio.NewStdioListener(reader, writer, false)
 	s := grpc.NewServer()
 	tunnelServ := &proxyServer{
 		client: client,
 		log:    log,
+
+		gitUsername: gitUsername,
+		gitToken:    gitToken,
 	}
 	tunnel.RegisterTunnelServer(s, tunnelServ)
 	reflection.Register(s)
@@ -42,6 +47,9 @@ type proxyServer struct {
 	client tunnel.TunnelClient
 	result *config.Result
 	log    log.Logger
+
+	gitUsername string
+	gitToken    string
 }
 
 func (t *proxyServer) ForwardPort(ctx context.Context, portRequest *tunnel.ForwardPortRequest) (*tunnel.ForwardPortResponse, error) {
@@ -61,6 +69,27 @@ func (t *proxyServer) GitUser(ctx context.Context, empty *tunnel.Empty) (*tunnel
 }
 
 func (t *proxyServer) GitCredentials(ctx context.Context, message *tunnel.Message) (*tunnel.Message, error) {
+	// if we have a git token reuse that and don't ask the user
+	if t.gitToken != "" {
+		credentials := &gitcredentials.GitCredentials{}
+		err := json.Unmarshal([]byte(message.Message), credentials)
+		if err != nil {
+			return nil, perrors.Wrap(err, "decode git credentials request")
+		}
+
+		response, err := gitcredentials.GetCredentials(credentials, t.gitUsername, t.gitToken)
+		if err != nil {
+			return nil, perrors.Wrap(err, "get git response")
+		}
+
+		out, err := json.Marshal(response)
+		if err != nil {
+			return nil, err
+		}
+
+		return &tunnel.Message{Message: string(out)}, nil
+	}
+
 	return t.client.GitCredentials(ctx, message)
 }
 

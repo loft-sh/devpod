@@ -34,6 +34,8 @@ func RunInContainer(
 	gitCredentials,
 	dockerCredentials bool,
 	extraPorts []string,
+	gitUsername,
+	gitToken string,
 	log log.Logger,
 ) error {
 	// calculate exit after timeout
@@ -106,6 +108,7 @@ func RunInContainer(
 		dockerCredentials,
 		forwarder,
 		log,
+		tunnelserver.WithGitCredentialsOverride(gitUsername, gitToken),
 	)
 	if err != nil {
 		return errors.Wrap(err, "run tunnel server")
