@@ -573,7 +573,7 @@ func (r *runner) extendedDockerComposeBuild(composeService *composetypes.Service
 		*service,
 	}
 
-	dockerComposeFolder := getDockerComposeFolder()
+	dockerComposeFolder := getDockerComposeFolder(r.WorkspaceConfig.Origin)
 	err := os.MkdirAll(dockerComposeFolder, 0755)
 	if err != nil {
 		return "", err
@@ -616,7 +616,7 @@ func (r *runner) extendedDockerComposeUp(
 		return "", err
 	}
 
-	dockerComposeFolder := getDockerComposeFolder()
+	dockerComposeFolder := getDockerComposeFolder(r.WorkspaceConfig.Origin)
 	err = os.MkdirAll(dockerComposeFolder, 0755)
 	if err != nil {
 		return "", err
@@ -779,8 +779,8 @@ func checkForPersistedFile(files []string, prefix string) (foundLabel bool, file
 	return false, false, "", nil
 }
 
-func getDockerComposeFolder() string {
-	return filepath.Join(os.TempDir(), "docker-compose")
+func getDockerComposeFolder(workspaceOriginFolder string) string {
+	return filepath.Join(workspaceOriginFolder, ".docker-compose")
 }
 
 func mappingFromMap(m map[string]string) composetypes.MappingWithEquals {
