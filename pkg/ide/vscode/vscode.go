@@ -74,20 +74,23 @@ func (o *VsCodeServer) InstallExtensions() error {
 
 	binPath := ""
 	if o.releaseChannel == ReleaseChannelStable {
+		// check legacy location `$HOME/.vscode-server/bin`
 		binDir := filepath.Join(location, "bin")
-
 		for {
 			entries, err := os.ReadDir(binDir)
-			if err != nil {
+			if err != nil || len(entries) == 0 {
 				o.log.Infof("Read dir %s: %v", binDir, err)
 				o.log.Info("Wait until vscode-server is installed...")
-				time.Sleep(time.Second * 3)
-				continue
-			} else if len(entries) == 0 {
-				o.log.Infof("Read dir %s: install dir is missing", binDir)
-				o.log.Info("Wait until vscode-server (%s) is installed...")
-				time.Sleep(time.Second * 3)
-				continue
+				// check new location `$HOME/.vscode-server/cli/servers/Stable-<version>/server/bin/code-server`
+				newBinPath, err := o.findCodeServerBinary(location)
+				if err != nil {
+					o.log.Infof("Read new location %s: %v", location, err)
+					o.log.Info("Wait until vscode-server-insiders is installed...")
+					time.Sleep(time.Second * 3)
+					continue
+				}
+				binPath = newBinPath
+				break
 			}
 
 			binPath = filepath.Join(binDir, entries[0].Name(), "bin", "code-server")
@@ -107,14 +110,9 @@ func (o *VsCodeServer) InstallExtensions() error {
 		serversDir := filepath.Join(location, "cli", "servers")
 		for {
 			entries, err := os.ReadDir(serversDir)
-			if err != nil {
+			if err != nil || len(entries) == 0 {
 				o.log.Infof("Read dir %s: %v", serversDir, err)
 				o.log.Info("Wait until vscode-server-insiders is installed...")
-				time.Sleep(time.Second * 3)
-				continue
-			} else if len(entries) == 0 {
-				o.log.Infof("Read dir %s: install dir is missing", serversDir)
-				o.log.Infof("Wait until vscode-server-insiders is installed...")
 				time.Sleep(time.Second * 3)
 				continue
 			}
@@ -181,6 +179,43 @@ func (o *VsCodeServer) InstallExtensions() error {
 	}
 
 	return nil
+}
+
+func (o *VsCodeServer) findCodeServerBinary(location string) (string, error) {
+	serversDir := filepath.Join(location, "cli", "servers")
+	entries, err := os.ReadDir(serversDir)
+	if err != nil {
+		return "", fmt.Errorf("read dir %s: %w", serversDir, err)
+	} else if len(entries) == 0 {
+		return "", fmt.Errorf("read dir %s: install dir is missing", serversDir)
+	}
+
+	stableDir := ""
+	// find first entry with `Stable-` prefix
+	for _, entry := range entries {
+		if !entry.IsDir() {
+			continue
+		}
+		if !strings.HasPrefix(entry.Name(), "Stable-") {
+			continue
+		}
+
+		stableDir = filepath.Join(serversDir, entry.Name())
+	}
+
+	if stableDir == "" {
+		return "", fmt.Errorf("read dir %s: install dir is missing", serversDir)
+	}
+
+	binPath := filepath.Join(stableDir, "server", "bin", "code-server")
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second*4)
+	out, err := exec.CommandContext(ctx, binPath, "--help").CombinedOutput()
+	cancel()
+	if err != nil {
+		return "", fmt.Errorf("execute %s: %w", binPath, command.WrapCommandError(out, err))
+	}
+
+	return binPath, nil
 }
 
 func (o *VsCodeServer) Install() error {
