@@ -67,11 +67,11 @@ func addHost(path, host, user, context, workspace, workdir, command string, gpga
 	newLines = append(newLines, "  UserKnownHostsFile /dev/null")
 	newLines = append(newLines, "  HostKeyAlgorithms rsa-sha2-256,rsa-sha2-512,ssh-rsa")
 	if command != "" {
-		newLines = append(newLines, fmt.Sprintf("  ProxyCommand %s", command))
+		newLines = append(newLines, fmt.Sprintf("  ProxyCommand \"%s\"", command))
 	} else if gpgagent {
-		newLines = append(newLines, fmt.Sprintf("  ProxyCommand %s ssh --gpg-agent-forwarding --stdio --context %s --user %s %s", execPath, context, user, workspace))
+		newLines = append(newLines, fmt.Sprintf("  ProxyCommand \"%s\" ssh --gpg-agent-forwarding --stdio --context %s --user %s %s", execPath, context, user, workspace))
 	} else {
-		proxyCommand := fmt.Sprintf("  ProxyCommand %s ssh --stdio --context %s --user %s %s", execPath, context, user, workspace)
+		proxyCommand := fmt.Sprintf("  ProxyCommand \"%s\" ssh --stdio --context %s --user %s %s", execPath, context, user, workspace)
 		if workdir != "" {
 			proxyCommand = fmt.Sprintf("%s --workdir %s", proxyCommand, workdir)
 		}
