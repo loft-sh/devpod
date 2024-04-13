@@ -15,7 +15,7 @@ var IntellijOptions = ide.Options{
 	VersionOption: {
 		Name:        VersionOption,
 		Description: "The version for the binary",
-		Default:     "2023.2.4",
+		Default:     "2024.1",
 	},
 	DownloadArm64Option: {
 		Name:        DownloadArm64Option,
