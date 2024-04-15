@@ -28,15 +28,25 @@ const (
 	DownloadArm64Option = "DOWNLOAD_ARM64"
 )
 
-func getDownloadURLs(options ide.Options, values map[string]config.OptionValue, templateAmd64, templateArm64 string) (string, string) {
+func getLatestDownloadURL(code string, platform string) string {
+	return fmt.Sprintf("https://download.jetbrains.com/product?code=%s&platform=%s", code, platform)
+}
+
+func getDownloadURLs(options ide.Options, values map[string]config.OptionValue, productCode string, templateAmd64 string, templateArm64 string) (string, string) {
 	version := options.GetValue(values, VersionOption)
-	amd64Download := options.GetValue(values, DownloadAmd64Option)
-	if amd64Download == "" {
-		amd64Download = fmt.Sprintf(templateAmd64, version)
-	}
-	arm64Download := options.GetValue(values, DownloadArm64Option)
-	if arm64Download == "" {
-		arm64Download = fmt.Sprintf(templateArm64, version)
+	var amd64Download, arm64Download string
+	if version == "latest" {
+		amd64Download = getLatestDownloadURL(productCode, "linux")
+		arm64Download = getLatestDownloadURL(productCode, "linuxARM64")
+	} else {
+		amd64Download = options.GetValue(values, DownloadAmd64Option)
+		if amd64Download == "" {
+			amd64Download = fmt.Sprintf(templateAmd64, version)
+		}
+		arm64Download = options.GetValue(values, DownloadArm64Option)
+		if arm64Download == "" {
+			arm64Download = fmt.Sprintf(templateArm64, version)
+		}
 	}
 
 	return amd64Download, arm64Download
