@@ -1,4 +1,4 @@
-FROM mcr.microsoft.com/devcontainers/go:0-1.19-bullseye
+FROM mcr.microsoft.com/devcontainers/go:0-1.21-bullseye
 
 ARG TARGETOS
 ARG TARGETARCH
