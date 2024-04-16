@@ -11,6 +11,7 @@ import (
 	"github.com/loft-sh/devpod/pkg/client"
 	"github.com/loft-sh/devpod/pkg/config"
 	devssh "github.com/loft-sh/devpod/pkg/ssh"
+	devsshagent "github.com/loft-sh/devpod/pkg/ssh/agent"
 	"github.com/loft-sh/devpod/pkg/workspace"
 	"github.com/loft-sh/log"
 	"github.com/mattn/go-isatty"
@@ -18,7 +19,6 @@ import (
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 	"golang.org/x/crypto/ssh"
-	agent "golang.org/x/crypto/ssh/agent"
 	"golang.org/x/term"
 )
 
@@ -121,14 +121,14 @@ func StartSSHSession(ctx context.Context, user, command string, agentForwarding 
 	)
 
 	// request agent forwarding
-	authSock := os.Getenv("SSH_AUTH_SOCK")
+	authSock := devsshagent.GetSSHAuthSocket()
 	if agentForwarding && authSock != "" {
-		err = agent.ForwardToRemote(sshClient, authSock)
+		err = devsshagent.ForwardToRemote(sshClient, authSock)
 		if err != nil {
 			return errors.Errorf("forward agent: %v", err)
 		}
 
-		err = agent.RequestAgentForwarding(session)
+		err = devsshagent.RequestAgentForwarding(session)
 		if err != nil {
 			return errors.Errorf("request agent forwarding: %v", err)
 		}

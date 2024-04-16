@@ -9,13 +9,14 @@ import (
 	"time"
 
 	"github.com/loft-sh/devpod/pkg/command"
+	devsshagent "github.com/loft-sh/devpod/pkg/ssh/agent"
 	"github.com/loft-sh/log"
 	"github.com/mitchellh/go-homedir"
 	"golang.org/x/crypto/ssh"
 )
 
 func AddPrivateKeysToAgent(ctx context.Context, log log.Logger) error {
-	if os.Getenv("SSH_AUTH_SOCK") == "" {
+	if devsshagent.GetSSHAuthSocket() == "" {
 		return fmt.Errorf("ssh-agent is not started")
 	} else if !command.Exists("ssh-add") {
 		return fmt.Errorf("ssh-add couldn't be found")
