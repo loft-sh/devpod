@@ -13,9 +13,9 @@ import (
 	client2 "github.com/loft-sh/devpod/pkg/client"
 	config2 "github.com/loft-sh/devpod/pkg/devcontainer/config"
 	devssh "github.com/loft-sh/devpod/pkg/ssh"
+	devsshagent "github.com/loft-sh/devpod/pkg/ssh/agent"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
-	gosshagent "golang.org/x/crypto/ssh/agent"
 )
 
 type AgentInjectFunc func(context.Context, string, *os.File, *os.File, io.WriteCloser) error
@@ -105,13 +105,13 @@ func ExecuteCommand(
 
 		log.Debugf("SSH session created")
 
-		identityAgent := os.Getenv("SSH_AUTH_SOCK")
+		identityAgent := devsshagent.GetSSHAuthSocket()
 		if identityAgent != "" {
-			err = gosshagent.ForwardToRemote(sshClient, identityAgent)
+			err = devsshagent.ForwardToRemote(sshClient, identityAgent)
 			if err != nil {
 				errChan <- errors.Wrap(err, "forward agent")
 			}
-			err = gosshagent.RequestAgentForwarding(sess)
+			err = devsshagent.RequestAgentForwarding(sess)
 			if err != nil {
 				errChan <- errors.Wrap(err, "request agent forwarding failed")
 			}
