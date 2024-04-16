@@ -9,10 +9,11 @@
 package tunnel
 
 import (
-	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
-	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
 	reflect "reflect"
 	sync "sync"
+
+	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
+	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
 )
 
 const (
@@ -568,20 +569,23 @@ func file_tunnel_proto_rawDescGZIP() []byte {
 	return file_tunnel_proto_rawDescData
 }
 
-var file_tunnel_proto_enumTypes = make([]protoimpl.EnumInfo, 1)
-var file_tunnel_proto_msgTypes = make([]protoimpl.MessageInfo, 9)
-var file_tunnel_proto_goTypes = []interface{}{
-	(LogLevel)(0),                   // 0: tunnel.LogLevel
-	(*StreamMountRequest)(nil),      // 1: tunnel.StreamMountRequest
-	(*StopForwardPortRequest)(nil),  // 2: tunnel.StopForwardPortRequest
-	(*StopForwardPortResponse)(nil), // 3: tunnel.StopForwardPortResponse
-	(*ForwardPortRequest)(nil),      // 4: tunnel.ForwardPortRequest
-	(*ForwardPortResponse)(nil),     // 5: tunnel.ForwardPortResponse
-	(*Message)(nil),                 // 6: tunnel.Message
-	(*Chunk)(nil),                   // 7: tunnel.Chunk
-	(*LogMessage)(nil),              // 8: tunnel.LogMessage
-	(*Empty)(nil),                   // 9: tunnel.Empty
-}
+var (
+	file_tunnel_proto_enumTypes = make([]protoimpl.EnumInfo, 1)
+	file_tunnel_proto_msgTypes  = make([]protoimpl.MessageInfo, 9)
+	file_tunnel_proto_goTypes   = []interface{}{
+		(LogLevel)(0),                   // 0: tunnel.LogLevel
+		(*StreamMountRequest)(nil),      // 1: tunnel.StreamMountRequest
+		(*StopForwardPortRequest)(nil),  // 2: tunnel.StopForwardPortRequest
+		(*StopForwardPortResponse)(nil), // 3: tunnel.StopForwardPortResponse
+		(*ForwardPortRequest)(nil),      // 4: tunnel.ForwardPortRequest
+		(*ForwardPortResponse)(nil),     // 5: tunnel.ForwardPortResponse
+		(*Message)(nil),                 // 6: tunnel.Message
+		(*Chunk)(nil),                   // 7: tunnel.Chunk
+		(*LogMessage)(nil),              // 8: tunnel.LogMessage
+		(*Empty)(nil),                   // 9: tunnel.Empty
+	}
+)
+
 var file_tunnel_proto_depIdxs = []int32{
 	0,  // 0: tunnel.LogMessage.logLevel:type_name -> tunnel.LogLevel
 	9,  // 1: tunnel.Tunnel.Ping:input_type -> tunnel.Empty
@@ -590,24 +594,26 @@ var file_tunnel_proto_depIdxs = []int32{
 	6,  // 4: tunnel.Tunnel.DockerCredentials:input_type -> tunnel.Message
 	6,  // 5: tunnel.Tunnel.GitCredentials:input_type -> tunnel.Message
 	9,  // 6: tunnel.Tunnel.GitUser:input_type -> tunnel.Empty
-	4,  // 7: tunnel.Tunnel.ForwardPort:input_type -> tunnel.ForwardPortRequest
-	2,  // 8: tunnel.Tunnel.StopForwardPort:input_type -> tunnel.StopForwardPortRequest
-	9,  // 9: tunnel.Tunnel.StreamGitClone:input_type -> tunnel.Empty
-	9,  // 10: tunnel.Tunnel.StreamWorkspace:input_type -> tunnel.Empty
-	1,  // 11: tunnel.Tunnel.StreamMount:input_type -> tunnel.StreamMountRequest
-	9,  // 12: tunnel.Tunnel.Ping:output_type -> tunnel.Empty
-	9,  // 13: tunnel.Tunnel.Log:output_type -> tunnel.Empty
-	9,  // 14: tunnel.Tunnel.SendResult:output_type -> tunnel.Empty
-	6,  // 15: tunnel.Tunnel.DockerCredentials:output_type -> tunnel.Message
-	6,  // 16: tunnel.Tunnel.GitCredentials:output_type -> tunnel.Message
-	6,  // 17: tunnel.Tunnel.GitUser:output_type -> tunnel.Message
-	5,  // 18: tunnel.Tunnel.ForwardPort:output_type -> tunnel.ForwardPortResponse
-	3,  // 19: tunnel.Tunnel.StopForwardPort:output_type -> tunnel.StopForwardPortResponse
-	7,  // 20: tunnel.Tunnel.StreamGitClone:output_type -> tunnel.Chunk
-	7,  // 21: tunnel.Tunnel.StreamWorkspace:output_type -> tunnel.Chunk
-	7,  // 22: tunnel.Tunnel.StreamMount:output_type -> tunnel.Chunk
-	12, // [12:23] is the sub-list for method output_type
-	1,  // [1:12] is the sub-list for method input_type
+	9,  // 7: tunnel.Tunnel.DockerBuildxCredentials:input_type -> tunnel.Empty
+	4,  // 8: tunnel.Tunnel.ForwardPort:input_type -> tunnel.ForwardPortRequest
+	2,  // 9: tunnel.Tunnel.StopForwardPort:input_type -> tunnel.StopForwardPortRequest
+	9,  // 10: tunnel.Tunnel.StreamGitClone:input_type -> tunnel.Empty
+	9,  // 11: tunnel.Tunnel.StreamWorkspace:input_type -> tunnel.Empty
+	1,  // 12: tunnel.Tunnel.StreamMount:input_type -> tunnel.StreamMountRequest
+	9,  // 13: tunnel.Tunnel.Ping:output_type -> tunnel.Empty
+	9,  // 14: tunnel.Tunnel.Log:output_type -> tunnel.Empty
+	9,  // 15: tunnel.Tunnel.SendResult:output_type -> tunnel.Empty
+	6,  // 16: tunnel.Tunnel.DockerCredentials:output_type -> tunnel.Message
+	6,  // 17: tunnel.Tunnel.GitCredentials:output_type -> tunnel.Message
+	6,  // 18: tunnel.Tunnel.GitUser:output_type -> tunnel.Message
+	6,  // 19: tunnel.Tunnel.DockerBuildxCredentials:output_type -> tunnel.Message
+	5,  // 20: tunnel.Tunnel.ForwardPort:output_type -> tunnel.ForwardPortResponse
+	3,  // 21: tunnel.Tunnel.StopForwardPort:output_type -> tunnel.StopForwardPortResponse
+	7,  // 22: tunnel.Tunnel.StreamGitClone:output_type -> tunnel.Chunk
+	7,  // 23: tunnel.Tunnel.StreamWorkspace:output_type -> tunnel.Chunk
+	7,  // 24: tunnel.Tunnel.StreamMount:output_type -> tunnel.Chunk
+	12, // [13:25] is the sub-list for method output_type
+	1,  // [1:13] is the sub-list for method input_type
 	1,  // [1:1] is the sub-list for extension type_name
 	1,  // [1:1] is the sub-list for extension extendee
 	0,  // [0:1] is the sub-list for field type_name

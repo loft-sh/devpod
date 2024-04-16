@@ -64,6 +64,10 @@ func (t *proxyServer) DockerCredentials(ctx context.Context, message *tunnel.Mes
 	return t.client.DockerCredentials(ctx, message)
 }
 
+func (t *proxyServer) DockerBuildxCredentials(ctx context.Context, empty *tunnel.Empty) (*tunnel.Message, error) {
+	return t.client.DockerBuildxCredentials(ctx, empty)
+}
+
 func (t *proxyServer) GitUser(ctx context.Context, empty *tunnel.Empty) (*tunnel.Message, error) {
 	return t.client.GitUser(ctx, empty)
 }

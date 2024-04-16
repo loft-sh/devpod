@@ -8,6 +8,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"strconv"
+	"strings"
 
 	"github.com/loft-sh/devpod/cmd/flags"
 	"github.com/loft-sh/devpod/pkg/agent"
@@ -20,11 +21,13 @@ import (
 	"github.com/loft-sh/devpod/pkg/daemon"
 	"github.com/loft-sh/devpod/pkg/devcontainer"
 	config2 "github.com/loft-sh/devpod/pkg/devcontainer/config"
+	"github.com/loft-sh/devpod/pkg/docker"
 	"github.com/loft-sh/devpod/pkg/dockercredentials"
 	"github.com/loft-sh/devpod/pkg/extract"
 	"github.com/loft-sh/devpod/pkg/git"
 	"github.com/loft-sh/devpod/pkg/gitcredentials"
 	provider2 "github.com/loft-sh/devpod/pkg/provider"
+	githubreleases "github.com/loft-sh/devpod/pkg/util/github-releases"
 	"github.com/loft-sh/devpod/scripts"
 	"github.com/loft-sh/log"
 	"github.com/pkg/errors"
@@ -122,15 +125,13 @@ func initWorkspace(ctx context.Context, cancel context.CancelFunc, workspaceInfo
 		logger.Errorf("Error retrieving docker / git credentials: %v", err)
 	}
 
-	// install docker in background
-	errChan := make(chan error, 1)
-	go func() {
-		if !workspaceInfo.Agent.IsDockerDriver() || workspaceInfo.Agent.Docker.Install == "false" {
-			errChan <- nil
-		} else {
-			errChan <- InstallDocker(logger)
+	// install docker
+	if workspaceInfo.Agent.IsDockerDriver() && workspaceInfo.Agent.Docker.Install != "false" {
+		err = InstallDocker(ctx, logger, tunnelClient)
+		if err != nil {
+			return nil, nil, "", errors.Wrap(err, "install docker")
 		}
-	}()
+	}
 
 	// prepare workspace
 	err = prepareWorkspace(ctx, workspaceInfo, tunnelClient, gitCredentialsHelper, logger)
@@ -144,12 +145,6 @@ func initWorkspace(ctx context.Context, cancel context.CancelFunc, workspaceInfo
 		if err != nil {
 			logger.Errorf("Install DevPod Daemon: %v", err)
 		}
-	}
-
-	// wait until docker is installed
-	err = <-errChan
-	if err != nil {
-		return nil, nil, "", errors.Wrap(err, "install docker")
 	}
 
 	return tunnelClient, logger, dockerCredentialsDir, nil
@@ -486,7 +481,7 @@ func CloneRepository(ctx context.Context, local bool, workspaceDir string, sourc
 	return nil
 }
 
-func InstallDocker(log log.Logger) error {
+func InstallDocker(ctx context.Context, log log.Logger, tunnelClient tunnel.TunnelClient) error {
 	if !command.Exists("docker") {
 		writer := log.Writer(logrus.InfoLevel, false)
 		defer writer.Close()
@@ -499,6 +494,44 @@ func InstallDocker(log log.Logger) error {
 		err := shellCommand.Run()
 		if err != nil {
 			return err
+		}
+	}
+
+	return SetupDockerBuildCloud(ctx, log, tunnelClient)
+}
+
+func SetupDockerBuildCloud(ctx context.Context, logger log.Logger, tunnelClient tunnel.TunnelClient) error {
+	dockerBuildxCredentials, err := tunnelClient.DockerBuildxCredentials(ctx, &tunnel.Empty{})
+	if err == nil && dockerBuildxCredentials != nil && dockerBuildxCredentials.Message != "" {
+		// setup docker build cloud
+		logger.Info("Docker build cloud setup detected: downloading compatible buildx binary...")
+
+		buildxCli, err := githubreleases.DownloadLatestBuildxRelease("docker", "buildx-desktop")
+		if err != nil {
+			logger.Errorf("Error retrieving Docker build Cloud buildx build: %v", err)
+		}
+
+		logger.Info("Docker build cloud setup detected: forwarding builder setup...")
+
+		var builder docker.BuildxInstance
+		err = json.Unmarshal([]byte(dockerBuildxCredentials.Message), &builder)
+		if err != nil {
+			logger.Errorf("Error retrieving Docker build Cloud buildx build: %v", err)
+		}
+
+		driverName := strings.ReplaceAll(builder.Nodes[0].Endpoint, "_linux-amd64", "")
+		driverName = strings.ReplaceAll(driverName, "cloud://", "")
+
+		logger.Infof("Docker build cloud setup detected: creating driver %s...", driverName)
+		err = exec.Command(buildxCli, []string{"create", "--driver", "cloud", driverName}...).Run()
+		if err != nil {
+			logger.Errorf("Error retrieving Docker build Cloud buildx build: %v", err)
+		}
+
+		logger.Infof("Docker build cloud setup detected: using builder %s...", builder.Name)
+		err = exec.Command(buildxCli, []string{"use", builder.Name, "--global"}...).Run()
+		if err != nil {
+			logger.Errorf("Error retrieving Docker build Cloud buildx build: %v", err)
 		}
 	}
 

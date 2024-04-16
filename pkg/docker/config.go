@@ -12,11 +12,15 @@ import (
 
 const dockerFileFolder = ".docker"
 
-func LoadDockerConfig() (*configfile.ConfigFile, error) {
+func GetDockerConfigPath() string {
 	configDir := os.Getenv("DOCKER_CONFIG")
 	if configDir == "" {
 		configDir = filepath.Join(homedir.Get(), dockerFileFolder)
 	}
 
-	return config.Load(configDir)
+	return configDir
+}
+
+func LoadDockerConfig() (*configfile.ConfigFile, error) {
+	return config.Load(GetDockerConfigPath())
 }

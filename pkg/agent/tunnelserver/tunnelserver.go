@@ -11,6 +11,7 @@ import (
 
 	"github.com/loft-sh/devpod/pkg/agent/tunnel"
 	"github.com/loft-sh/devpod/pkg/devcontainer/config"
+	"github.com/loft-sh/devpod/pkg/docker"
 	"github.com/loft-sh/devpod/pkg/dockercredentials"
 	"github.com/loft-sh/devpod/pkg/extract"
 	"github.com/loft-sh/devpod/pkg/git"
@@ -123,6 +124,7 @@ func (t *tunnelServer) ForwardPort(ctx context.Context, portRequest *tunnel.Forw
 
 	return &tunnel.ForwardPortResponse{}, nil
 }
+
 func (t *tunnelServer) StopForwardPort(ctx context.Context, portRequest *tunnel.StopForwardPortRequest) (*tunnel.StopForwardPortResponse, error) {
 	if t.forwarder == nil {
 		return nil, fmt.Errorf("cannot forward ports")
@@ -174,6 +176,17 @@ func (t *tunnelServer) DockerCredentials(ctx context.Context, message *tunnel.Me
 	}
 
 	return &tunnel.Message{Message: string(out)}, nil
+}
+
+func (t *tunnelServer) DockerBuildxCredentials(ctx context.Context, empty *tunnel.Empty) (*tunnel.Message, error) {
+	dockerBuilder, err := docker.GetBuildxBuilder()
+	if err != nil {
+		return nil, err
+	}
+
+	return &tunnel.Message{
+		Message: string(dockerBuilder),
+	}, nil
 }
 
 func (t *tunnelServer) GitUser(ctx context.Context, empty *tunnel.Empty) (*tunnel.Message, error) {
