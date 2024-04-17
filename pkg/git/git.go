@@ -21,10 +21,10 @@ const (
 )
 
 var (
-	branchRegEx      = regexp.MustCompile(`^([^@]*(?:git@)?[^@/]+/[^@/]+/?[^@/]+)@([a-zA-Z0-9\./\-\_]+)$`)
-	commitRegEx      = regexp.MustCompile(`^([^@]*(?:git@)?[^@/]+/[^@]+)` + regexp.QuoteMeta(CommitDelimiter) + `([a-zA-Z0-9]+)$`)
-	prReferenceRegEx = regexp.MustCompile(`^([^@]*(?:git@)?[^@/]+/[^@]+)@(` + PullRequestReference + `)$`)
-	subPathRegEx     = regexp.MustCompile(`^([^@]*(?:git@)?[^@/]+/[^@]+)` + regexp.QuoteMeta(SubPathDelimiter) + `([a-zA-Z0-9\./\-\_]+)$`)
+	branchRegEx      = regexp.MustCompile(`^([^@]*(?:git@)?@?[^@/]+/[^@/]+/?[^@/]+)@([a-zA-Z0-9\./\-\_]+)$`)
+	commitRegEx      = regexp.MustCompile(`^([^@]*(?:git@)?@?[^@/]+/[^@]+)` + regexp.QuoteMeta(CommitDelimiter) + `([a-zA-Z0-9]+)$`)
+	prReferenceRegEx = regexp.MustCompile(`^([^@]*(?:git@)?@?[^@/]+/[^@]+)@(` + PullRequestReference + `)$`)
+	subPathRegEx     = regexp.MustCompile(`^([^@]*(?:git@)?@?[^@/]+/[^@]+)` + regexp.QuoteMeta(SubPathDelimiter) + `([a-zA-Z0-9\./\-\_]+)$`)
 )
 
 func CommandContext(ctx context.Context, args ...string) *exec.Cmd {
