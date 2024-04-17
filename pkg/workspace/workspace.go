@@ -163,6 +163,7 @@ func ResolveWorkspace(
 	devContainerPath string,
 	sshConfigPath string,
 	source *provider2.WorkspaceSource,
+	gitBranch, gitCommit string,
 	changeLastUsed bool,
 	log log.Logger,
 ) (client.BaseWorkspaceClient, error) {
@@ -176,7 +177,20 @@ func ResolveWorkspace(
 	}
 
 	// resolve workspace
-	provider, workspace, machine, err := resolveWorkspace(ctx, devPodConfig, args, desiredID, desiredMachine, providerUserOptions, sshConfigPath, source, changeLastUsed, log)
+	provider, workspace, machine, err := resolveWorkspace(
+		ctx,
+		devPodConfig,
+		args,
+		desiredID,
+		desiredMachine,
+		providerUserOptions,
+		sshConfigPath,
+		source,
+		gitBranch,
+		gitCommit,
+		changeLastUsed,
+		log,
+	)
 	if err != nil {
 		return nil, err
 	}
@@ -247,6 +261,7 @@ func resolveWorkspace(
 	providerUserOptions []string,
 	sshConfigPath string,
 	source *provider2.WorkspaceSource,
+	gitBranch, gitCommit string,
 	changeLastUsed bool,
 	log log.Logger,
 ) (*provider2.ProviderConfig, *provider2.Workspace, *provider2.Machine, error) {
@@ -280,7 +295,20 @@ func resolveWorkspace(
 	}
 
 	// create workspace
-	provider, workspace, machine, err := createWorkspace(ctx, devPodConfig, workspaceID, name, desiredMachine, providerUserOptions, sshConfigPath, source, isLocalPath, log)
+	provider, workspace, machine, err := createWorkspace(
+		ctx,
+		devPodConfig,
+		workspaceID,
+		name,
+		desiredMachine,
+		providerUserOptions,
+		sshConfigPath,
+		source,
+		isLocalPath,
+		gitBranch,
+		gitCommit,
+		log,
+	)
 	if err != nil {
 		_ = clientimplementation.DeleteWorkspaceFolder(devPodConfig.DefaultContext, workspaceID, sshConfigPath, log)
 		return nil, nil, nil, err
@@ -299,6 +327,7 @@ func createWorkspace(
 	sshConfigPath string,
 	source *provider2.WorkspaceSource,
 	isLocalPath bool,
+	gitBranch, gitCommit string,
 	log log.Logger,
 ) (*provider2.ProviderConfig, *provider2.Workspace, *provider2.Machine, error) {
 	// get default provider
@@ -316,7 +345,7 @@ func createWorkspace(
 	}
 
 	// resolve workspace
-	workspace, err := resolve(provider, devPodConfig, name, workspaceID, workspaceFolder, source, isLocalPath, sshConfigPath)
+	workspace, err := resolve(provider, devPodConfig, name, workspaceID, workspaceFolder, source, isLocalPath, sshConfigPath, gitBranch, gitCommit)
 	if err != nil {
 		return nil, nil, nil, err
 	}
@@ -420,6 +449,7 @@ func resolve(
 	source *provider2.WorkspaceSource,
 	isLocalPath bool,
 	sshConfigPath string,
+	fallbackGitBranch, fallbackGitCommit string,
 ) (*provider2.Workspace, error) {
 	now := types.Now()
 	uid := encoding.CreateNewUID(devPodConfig.DefaultContext, workspaceID)
@@ -460,6 +490,12 @@ func resolve(
 			GitCommit:      gitCommit,
 			GitSubPath:     gitSubdir,
 		}
+		if workspace.Source.GitCommit == "" && fallbackGitCommit != "" {
+			workspace.Source.GitCommit = fallbackGitCommit
+		}
+		if workspace.Source.GitBranch == "" && fallbackGitBranch != "" {
+			workspace.Source.GitBranch = fallbackGitBranch
+		}
 		return workspace, nil
 	}
 
@@ -480,8 +516,14 @@ func resolve(
 	if gitPRReference != "" {
 		workspace.Source.GitPRReference = gitPRReference
 	}
+	if fallbackGitBranch != "" {
+		workspace.Source.GitBranch = fallbackGitBranch
+	}
 	if gitBranch != "" {
 		workspace.Source.GitBranch = gitBranch
+	}
+	if fallbackGitCommit != "" {
+		workspace.Source.GitCommit = fallbackGitCommit
 	}
 	if gitCommit != "" {
 		workspace.Source.GitCommit = gitCommit
