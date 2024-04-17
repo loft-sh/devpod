@@ -77,6 +77,8 @@ func NewBuildCmd(flags *flags.GlobalFlags) *cobra.Command {
 				cmd.DevContainerPath,
 				sshConfigPath,
 				nil,
+				cmd.GitBranch,
+				cmd.GitCommit,
 				false,
 				log.Default,
 			)
@@ -112,6 +114,8 @@ func NewBuildCmd(flags *flags.GlobalFlags) *cobra.Command {
 	buildCmd.Flags().StringVar(&cmd.Repository, "repository", "", "The repository to push to")
 	buildCmd.Flags().StringSliceVar(&cmd.Platform, "platform", []string{}, "Set target platform for build")
 	buildCmd.Flags().BoolVar(&cmd.SkipPush, "skip-push", false, "If true will not push the image to the repository, useful for testing")
+	buildCmd.Flags().StringVar(&cmd.GitBranch, "git-branch", "", "The git branch to use")
+	buildCmd.Flags().StringVar(&cmd.GitCommit, "git-commit", "", "The git commit SHA to use")
 
 	// TESTING
 	buildCmd.Flags().BoolVar(&cmd.ForceBuild, "force-build", false, "TESTING ONLY")

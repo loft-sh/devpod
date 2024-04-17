@@ -179,6 +179,8 @@ type CLIOptions struct {
 	DisableDaemon        bool     `json:"disableDaemon,omitempty"`
 	DaemonInterval       string   `json:"daemonInterval,omitempty"`
 	ForceCredentials     bool     `json:"forceCredentials,omitempty"`
+	GitBranch            string   `json:"gitBranch,omitempty"`
+	GitCommit            string   `json:"gitCommit,omitempty"`
 
 	// build options
 	Repository string   `json:"repository,omitempty"`

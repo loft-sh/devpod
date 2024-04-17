@@ -115,6 +115,8 @@ func NewUpCmd(flags *flags.GlobalFlags) *cobra.Command {
 				cmd.DevContainerPath,
 				cmd.SSHConfigPath,
 				source,
+				cmd.GitBranch,
+				cmd.GitCommit,
 				true,
 				logger,
 			)
@@ -146,6 +148,8 @@ func NewUpCmd(flags *flags.GlobalFlags) *cobra.Command {
 	upCmd.Flags().BoolVar(&cmd.OpenIDE, "open-ide", true, "If this is false and an IDE is configured, DevPod will only install the IDE server backend, but not open it")
 	upCmd.Flags().BoolVar(&cmd.ForceCredentials, "force-credentials", false, "If true will always use local credentials")
 	_ = upCmd.Flags().MarkHidden("force-credentials")
+	upCmd.Flags().StringVar(&cmd.GitBranch, "git-branch", "", "The git branch to use")
+	upCmd.Flags().StringVar(&cmd.GitCommit, "git-commit", "", "The git commit SHA to use")
 
 	upCmd.Flags().BoolVar(&cmd.DisableDaemon, "disable-daemon", false, "If enabled, will not install a daemon into the target machine to track activity")
 	upCmd.Flags().StringVar(&cmd.Source, "source", "", "Optional source for the workspace. E.g. git:https://github.com/my-org/my-repo")
