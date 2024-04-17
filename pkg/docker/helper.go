@@ -211,6 +211,17 @@ func (r *DockerHelper) IsPodman() bool {
 	return strings.Contains(string(out), "podman")
 }
 
+func (r *DockerHelper) IsNerdctl() bool {
+	args := []string{"--version"}
+
+	out, err := r.buildCmd(context.TODO(), args...).Output()
+	if err != nil {
+		return false
+	}
+
+	return strings.Contains(string(out), "nerdctl")
+}
+
 func (r *DockerHelper) Inspect(ctx context.Context, ids []string, inspectType string, obj interface{}) error {
 	args := []string{"inspect", "--type", inspectType}
 	args = append(args, ids...)

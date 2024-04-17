@@ -7,6 +7,7 @@ import (
 	config2 "github.com/loft-sh/devpod/pkg/config"
 	"github.com/loft-sh/devpod/pkg/devcontainer/config"
 	"github.com/loft-sh/devpod/pkg/devcontainer/feature"
+	"github.com/loft-sh/devpod/pkg/docker"
 	"github.com/loft-sh/devpod/pkg/provider"
 )
 
@@ -47,4 +48,7 @@ type DockerDriver interface {
 
 	// ComposeHelper returns the compose helper
 	ComposeHelper() (*compose.ComposeHelper, error)
+
+	// DockerHellper returns the docker helper
+	DockerHelper() (*docker.DockerHelper, error)
 }
