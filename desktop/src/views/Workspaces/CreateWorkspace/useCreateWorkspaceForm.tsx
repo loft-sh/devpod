@@ -221,6 +221,8 @@ export function useCreateWorkspaceForm(
         const prebuildRepositories = data[FieldName.PREBUILD_REPOSITORY]
           ? [data[FieldName.PREBUILD_REPOSITORY]]
           : []
+        const gitBranch = data[FieldName.GIT_BRANCH]
+        const gitCommit = data[FieldName.GIT_COMMIT]
 
         onCreateWorkspace({
           workspaceID,
@@ -229,6 +231,8 @@ export function useCreateWorkspaceForm(
           defaultIDE,
           workspaceSource,
           devcontainerPath: maybeDevcontainerPath,
+          gitBranch,
+          gitCommit,
         })
       })(event),
     [

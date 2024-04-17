@@ -19,6 +19,8 @@ import {
   DEVPOD_FLAG_DEBUG,
   DEVPOD_FLAG_DEVCONTAINER_PATH,
   DEVPOD_FLAG_FORCE,
+  DEVPOD_FLAG_GIT_BRANCH,
+  DEVPOD_FLAG_GIT_COMMIT,
   DEVPOD_FLAG_ID,
   DEVPOD_FLAG_IDE,
   DEVPOD_FLAG_JSON_LOG_OUTPUT,
@@ -121,6 +123,16 @@ export class WorkspaceCommands {
         ? toMultipleFlagArg(WorkspaceCommands.ADDITIONAL_FLAGS)
         : []
 
+    const maybeGitBranch = config.sourceConfig?.gitBranch
+    const gitBranchFlag = exists(maybeGitBranch)
+      ? [toFlagArg(DEVPOD_FLAG_GIT_BRANCH, maybeGitBranch)]
+      : []
+
+    const maybeGitCommit = config.sourceConfig?.gitCommit
+    const gitCommitFlag = exists(maybeGitCommit)
+      ? [toFlagArg(DEVPOD_FLAG_GIT_COMMIT, maybeGitCommit)]
+      : []
+
     return WorkspaceCommands.newCommand([
       DEVPOD_COMMAND_UP,
       identifier,
@@ -129,6 +141,8 @@ export class WorkspaceCommands {
       ...maybeProviderFlag,
       ...maybePrebuildRepositories,
       ...maybeDevcontainerPath,
+      ...gitBranchFlag,
+      ...gitCommitFlag,
       ...additionalFlags,
       DEVPOD_FLAG_JSON_LOG_OUTPUT,
     ])

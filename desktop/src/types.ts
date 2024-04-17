@@ -162,6 +162,8 @@ export type TWorkspaceStartConfig = Readonly<{
   // Instead of starting a workspace just by ID, the sourceConfig starts it with a `source/ID` combination
   sourceConfig?: Readonly<{
     source: string
+    gitBranch: string | undefined
+    gitCommit: string | undefined
   }>
 }>
 export const SUPPORTED_IDES = ["vscode", "intellj"] as const
