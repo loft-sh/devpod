@@ -151,6 +151,14 @@ func TestNormalizeRepository(t *testing.T) {
 			expectedCommit:      "",
 			expectedSubpath:     "/test/path",
 		},
+		{
+			in:                  "https://my_prefix@github.com/loft-sh/devpod.git@test-branch",
+			expectedRepo:        "https://my_prefix@github.com/loft-sh/devpod.git",
+			expectedPRReference: "",
+			expectedBranch:      "test-branch",
+			expectedCommit:      "",
+			expectedSubpath:     "",
+		},
 	}
 
 	for _, testCase := range testCases {
