@@ -155,6 +155,14 @@ func (d *dockerDriver) ComposeHelper() (*compose.ComposeHelper, error) {
 	return d.Compose, err
 }
 
+func (d *dockerDriver) DockerHelper() (*docker.DockerHelper, error) {
+	if d.Docker == nil {
+		return nil, fmt.Errorf("no docker helper available")
+	}
+
+	return d.Docker, nil
+}
+
 func (d *dockerDriver) FindDevContainer(ctx context.Context, workspaceId string) (*config.ContainerDetails, error) {
 	var containerDetails *config.ContainerDetails
 	var err error
@@ -202,10 +210,14 @@ func (d *dockerDriver) RunDockerDevContainer(
 	if err != nil {
 		return err
 	}
+	helper, err := d.DockerHelper()
+	if err != nil {
+		return err
+	}
 
-	args := []string{
-		"run",
-		"--sig-proxy=false",
+	args := []string{"run"}
+	if !helper.IsNerdctl() {
+		args = append(args, "--sig-proxy=false")
 	}
 
 	// add ports
@@ -221,8 +233,12 @@ func (d *dockerDriver) RunDockerDevContainer(
 	// workspace mount
 	if options.WorkspaceMount != nil {
 		workspacePath := d.EnsurePath(options.WorkspaceMount)
+		mountPath := workspacePath.String()
+		if helper.IsNerdctl() && strings.Contains(mountPath, ",consistency='consistent'") {
+			mountPath = strings.Replace(mountPath, ",consistency='consistent'", "", 1)
+		}
 
-		args = append(args, "--mount", workspacePath.String())
+		args = append(args, "--mount", mountPath)
 	}
 
 	// override container user
