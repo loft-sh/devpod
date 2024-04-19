@@ -43,6 +43,9 @@ type ReprovisioningDriver interface {
 
 // RunOptions are the options for running a container
 type RunOptions struct {
+	// UID is a unique identifier for this workspace
+	UID string `json:"uid,omitempty"`
+
 	// Image is the image to run
 	Image string `json:"image,omitempty"`
 
