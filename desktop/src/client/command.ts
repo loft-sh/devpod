@@ -20,10 +20,26 @@ export class Command implements TCommand<ChildProcess> {
   private childProcess?: Child
   private args: string[]
 
+  public static ADDITIONAL_ENV_VARS: string = ""
+
   constructor(args: string[]) {
     debug("commands", "Creating Devpod command with args: ", args)
+    const extraEnvVars = Command.ADDITIONAL_ENV_VARS.split(",")
+      .map((envVarStr) => envVarStr.split("="))
+      .reduce((acc, pair) => {
+        const [key, value] = pair
+        if (key === undefined || value === undefined) {
+          return acc
+        }
+
+        return { ...acc, [key]: value }
+      }, {})
+
     this.sidecarCommand = ShellCommand.sidecar(DEVPOD_BINARY, args, {
-      env: { [DEVPOD_UI_ENV_VAR]: "true" },
+      env: {
+        ...extraEnvVars,
+        [DEVPOD_UI_ENV_VAR]: "true",
+      },
     })
     this.args = args
   }

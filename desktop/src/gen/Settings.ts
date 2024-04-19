@@ -16,4 +16,5 @@ export interface Settings {
   experimental_vscodeInsiders: boolean
   experimental_devPodPro: boolean
   additionalCliFlags: string
+  additionalEnvVars: string
 }
