@@ -3,6 +3,7 @@ package agent
 import (
 	"io"
 	"os"
+	"strings"
 	"sync"
 
 	"github.com/pkg/errors"
@@ -16,6 +17,12 @@ const (
 	defaultNamedPipe = "\\\\.\\pipe\\openssh-ssh-agent"
 )
 
+/*
+ * Cygwin/MSYS2 `SSH_AUTH_SOCK` implementations from ssh-agent(1) are performed using an
+ * emulated socket rather than a true AF_UNIX socket. As such, those implementations are
+ * incompatible and a user should either utilize the Win32-OpenSSH implementation found
+ * in Windows 10/11 or utilize another alternative that support valid AF_UNIX sockets.
+ */
 func GetSSHAuthSocket() string {
 	sshAuthSocket := os.Getenv("SSH_AUTH_SOCK")
 	if sshAuthSocket != "" {
@@ -29,27 +36,30 @@ func GetSSHAuthSocket() string {
 }
 
 func ForwardToRemote(client *ssh.Client, addr string) error {
-	channels := client.HandleChannelOpen(channelType)
-	if channels == nil {
-		return errors.New("agent: already have handler for " + channelType)
-	}
-	conn, err := npipe.Dial(addr)
-	if err != nil {
-		return err
-	}
-	conn.Close()
-
-	go func() {
-		for ch := range channels {
-			channel, reqs, err := ch.Accept()
-			if err != nil {
-				continue
-			}
-			go ssh.DiscardRequests(reqs)
-			go forwardNamedPipe(channel, addr)
+	if strings.Contains(addr, "\\\\.\\pipe\\") {
+		channels := client.HandleChannelOpen(channelType)
+		if channels == nil {
+			return errors.New("agent: already have handler for " + channelType)
 		}
-	}()
-	return nil
+		conn, err := npipe.Dial(addr)
+		if err != nil {
+			return err
+		}
+		conn.Close()
+
+		go func() {
+			for ch := range channels {
+				channel, reqs, err := ch.Accept()
+				if err != nil {
+					continue
+				}
+				go ssh.DiscardRequests(reqs)
+				go forwardNamedPipe(channel, addr)
+			}
+		}()
+		return nil
+	}
+	return gosshagent.ForwardToRemote(client, addr)
 }
 
 func RequestAgentForwarding(session *ssh.Session) error {
