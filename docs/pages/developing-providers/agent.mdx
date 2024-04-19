@@ -26,7 +26,7 @@ The following options are available in the `agent` section
 
 ```yaml
 agent: # You can also use options within this section (see injectGitCredentials as an example)
-  path: ${DEVPOD}
+  path: $\{DEVPOD\}
   driver: docker # Optional, default: docker
   inactivityTimeout: 10m
   containerInactivityTimeout: 10m
@@ -45,7 +45,7 @@ agent: # You can also use options within this section (see injectGitCredentials 
 
 Breaking down the options:
 
-- **path**: where to place the agent on the remote machine. Use ${DEVPOD} here if you want to use the local machine instead.
+- **path**: where to place the agent on the remote machine. Use $\{DEVPOD\} here if you want to use the local machine instead.
 - **driver**: which driver to use to run container, [check the Drivers section for more information](./driver.mdx)
 - **inactivityTimeout**: after how much time to shut down the machine. Use for machine providers
 - **containerInactivityTimeout**: after how much time to shut down the container. Use for non-machine providers

@@ -207,8 +207,14 @@ func (r *runner) getDockerlessRunOptions(
 		Target: "/workspaces/.dockerless",
 	})
 
+	uid := ""
+	if r.WorkspaceConfig != nil && r.WorkspaceConfig.Workspace != nil {
+		uid = r.WorkspaceConfig.Workspace.UID
+	}
+
 	// build run options
 	return &driver.RunOptions{
+		UID:        uid,
 		Image:      image,
 		User:       "root",
 		Entrypoint: "/.dockerless/dockerless",
@@ -258,7 +264,13 @@ func (r *runner) getRunOptions(
 		user = mergedConfig.ContainerUser
 	}
 
+	uid := ""
+	if r.WorkspaceConfig != nil && r.WorkspaceConfig.Workspace != nil {
+		uid = r.WorkspaceConfig.Workspace.UID
+	}
+
 	return &driver.RunOptions{
+		UID:            uid,
 		Image:          buildInfo.ImageName,
 		User:           user,
 		Entrypoint:     entrypoint,
