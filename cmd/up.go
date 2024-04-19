@@ -117,6 +117,7 @@ func NewUpCmd(flags *flags.GlobalFlags) *cobra.Command {
 				source,
 				cmd.GitBranch,
 				cmd.GitCommit,
+				cmd.UID,
 				true,
 				logger,
 			)

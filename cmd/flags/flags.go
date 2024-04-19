@@ -18,6 +18,7 @@ type GlobalFlags struct {
 
 	GitUsername string
 	GitToken    string
+	UID         string
 }
 
 // SetGlobalFlags applies the global flags
@@ -35,6 +36,8 @@ func SetGlobalFlags(flags *flag.FlagSet) *GlobalFlags {
 	flags.StringVar(&globalFlags.GitToken, "git-token", "", "The token to use for git operations")
 	_ = flags.MarkHidden("git-username")
 	_ = flags.MarkHidden("git-token")
+	flags.StringVar(&globalFlags.UID, "uid", "", "Set UID for workspace")
+	_ = flags.MarkHidden("uid")
 
 	flags.StringVar(&globalFlags.AgentDir, "agent-dir", "", "The data folder where agent data is stored.")
 	_ = flags.MarkHidden("agent-dir")

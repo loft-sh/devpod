@@ -79,6 +79,7 @@ func NewBuildCmd(flags *flags.GlobalFlags) *cobra.Command {
 				nil,
 				cmd.GitBranch,
 				cmd.GitCommit,
+				cmd.UID,
 				false,
 				log.Default,
 			)
