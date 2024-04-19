@@ -164,6 +164,7 @@ func ResolveWorkspace(
 	sshConfigPath string,
 	source *provider2.WorkspaceSource,
 	gitBranch, gitCommit string,
+	uid string,
 	changeLastUsed bool,
 	log log.Logger,
 ) (client.BaseWorkspaceClient, error) {
@@ -188,6 +189,7 @@ func ResolveWorkspace(
 		source,
 		gitBranch,
 		gitCommit,
+		uid,
 		changeLastUsed,
 		log,
 	)
@@ -262,6 +264,7 @@ func resolveWorkspace(
 	sshConfigPath string,
 	source *provider2.WorkspaceSource,
 	gitBranch, gitCommit string,
+	uid string,
 	changeLastUsed bool,
 	log log.Logger,
 ) (*provider2.ProviderConfig, *provider2.Workspace, *provider2.Machine, error) {
@@ -307,6 +310,7 @@ func resolveWorkspace(
 		isLocalPath,
 		gitBranch,
 		gitCommit,
+		uid,
 		log,
 	)
 	if err != nil {
@@ -328,6 +332,7 @@ func createWorkspace(
 	source *provider2.WorkspaceSource,
 	isLocalPath bool,
 	gitBranch, gitCommit string,
+	uid string,
 	log log.Logger,
 ) (*provider2.ProviderConfig, *provider2.Workspace, *provider2.Machine, error) {
 	// get default provider
@@ -345,7 +350,7 @@ func createWorkspace(
 	}
 
 	// resolve workspace
-	workspace, err := resolve(provider, devPodConfig, name, workspaceID, workspaceFolder, source, isLocalPath, sshConfigPath, gitBranch, gitCommit)
+	workspace, err := resolve(provider, devPodConfig, name, workspaceID, workspaceFolder, source, isLocalPath, sshConfigPath, gitBranch, gitCommit, uid)
 	if err != nil {
 		return nil, nil, nil, err
 	}
@@ -450,9 +455,12 @@ func resolve(
 	isLocalPath bool,
 	sshConfigPath string,
 	fallbackGitBranch, fallbackGitCommit string,
+	uid string,
 ) (*provider2.Workspace, error) {
 	now := types.Now()
-	uid := encoding.CreateNewUID(devPodConfig.DefaultContext, workspaceID)
+	if uid == "" {
+		uid = encoding.CreateNewUID(devPodConfig.DefaultContext, workspaceID)
+	}
 	workspace := &provider2.Workspace{
 		ID:      workspaceID,
 		UID:     uid,
