@@ -14,6 +14,7 @@ import { client } from "../../client"
 import { useChangeSettings } from "../../contexts"
 import { QueryKeys } from "../../queryKeys"
 import { TContextOptionName } from "../../types"
+import { Command } from "../../client/command"
 
 const DEFAULT_DEVPOD_AGENT_URL = "https://github.com/loft-sh/devpod/releases/latest/download/"
 
@@ -40,34 +41,22 @@ export function useContextOptions() {
     [options, updateOption]
   )
 }
-
-export function useSettingsOptions() {
+export function useCLIFlagsOption() {
   const { settings, set } = useChangeSettings()
-  const { mutate: updateOption } = useMutation({
-    mutationFn: async ({ value }: { value: string }) => {
+  const updateOption = useCallback(
+    (value: string) => {
       set("additionalCliFlags", value)
       client.setSetting("additionalCliFlags", value)
     },
-  })
-
-  return useMemo(
-    () => ({
-      settings,
-      updateOption,
-    }),
-    [settings, updateOption]
+    [set]
   )
-}
-
-export function useCLIFlagsOption() {
-  const { settings, updateOption } = useSettingsOptions()
   const [hasFocus, setHasFocus] = useState(false)
   const inputRef = useRef<HTMLInputElement>(null)
 
   const handleBlur = useCallback(
     (e: FocusEvent<HTMLInputElement>) => {
       const value = e.target.value.trim()
-      updateOption({ value })
+      updateOption(value)
       setHasFocus(false)
     },
     [updateOption]
@@ -96,7 +85,7 @@ export function useCLIFlagsOption() {
         <Input
           ref={inputRef}
           spellCheck={false}
-          placeholder="CLI Additional Flags"
+          placeholder="Additional CLI Flags"
           defaultValue={settings.additionalCliFlags}
           onBlur={handleBlur}
           onKeyUp={handleKeyUp}
@@ -129,10 +118,11 @@ export function useCLIFlagsOption() {
     ]
   )
 
-  const helpText = useMemo(() => <>Set the additional CLI Flags to use.</>, [])
+  const helpText = useMemo(() => <>Set additional CLI Flags to use.</>, [])
 
   return { input, helpText }
 }
+
 export function useAgentURLOption() {
   const { options, updateOption } = useContextOptions()
   const [hasFocus, setHasFocus] = useState(false)
@@ -237,6 +227,83 @@ export function useTelemetryOption() {
         <Link onClick={() => client.openLink("https://devpod.sh/docs/other-topics/telemetry")}>
           documentation
         </Link>
+      </>
+    ),
+    []
+  )
+
+  return { input, helpText }
+}
+
+export function useExtraEnvVarsOption() {
+  const { settings, set } = useChangeSettings()
+  const [hasFocus, setHasFocus] = useState(false)
+  const inputRef = useRef<HTMLInputElement>(null)
+
+  const handleBlur = useCallback(
+    (e: FocusEvent<HTMLInputElement>) => {
+      const value = e.target.value.trim()
+      set("additionalEnvVars", value)
+      Command.ADDITIONAL_ENV_VARS = value
+      setHasFocus(false)
+    },
+    [set]
+  )
+
+  const handleKeyUp = useCallback((e: KeyboardEvent<HTMLInputElement>) => {
+    if (e.key !== "Enter") return
+
+    e.currentTarget.blur()
+  }, [])
+
+  const handleFocus = useCallback(() => {
+    setHasFocus(true)
+  }, [])
+
+  const handleClear = useCallback(() => {
+    const el = inputRef.current
+    if (!el) return
+
+    el.value = ""
+  }, [])
+
+  const input = useMemo(
+    () => (
+      <InputGroup maxWidth="72">
+        <Input
+          ref={inputRef}
+          spellCheck={false}
+          placeholder="Additional Environment Variables"
+          defaultValue={settings.additionalEnvVars}
+          onBlur={handleBlur}
+          onKeyUp={handleKeyUp}
+          onFocus={handleFocus}
+        />
+        <InputRightElement>
+          <IconButton
+            visibility={hasFocus ? "visible" : "hidden"}
+            size="xs"
+            borderRadius="full"
+            icon={<CloseIcon />}
+            aria-label="clear"
+            onMouseDown={(e) => {
+              // needed to prevent losing focus from input
+              e.stopPropagation()
+              e.preventDefault()
+            }}
+            onClick={handleClear}
+          />
+        </InputRightElement>
+      </InputGroup>
+    ),
+    [settings.additionalEnvVars, handleBlur, handleKeyUp, handleFocus, hasFocus, handleClear]
+  )
+
+  const helpText = useMemo(
+    () => (
+      <>
+        Set additional environment variables DevPod passes to all commands. Accepts a comma
+        separated list, e.g. FOO=bar,BAZ=false
       </>
     ),
     []

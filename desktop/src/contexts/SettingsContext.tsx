@@ -37,6 +37,7 @@ const initialSettings: TSettings = {
   experimental_vscodeInsiders: true,
   experimental_devPodPro: false,
   additionalCliFlags: "",
+  additionalEnvVars: "",
 }
 function getSettingKeys(): readonly TSetting[] {
   return getKeys(initialSettings)
@@ -44,7 +45,9 @@ function getSettingKeys(): readonly TSetting[] {
 
 // WARN: needs to match the filename on the rust side
 const SETTING_STORE_KEY = "settings"
-const settingsStore = new Store(new LocalStorageToFileMigrationBackend(SETTING_STORE_KEY))
+const settingsStore = new Store<Record<TSetting, string | boolean | unknown>>(
+  new LocalStorageToFileMigrationBackend(SETTING_STORE_KEY)
+)
 
 export function SettingsProvider({ children }: Readonly<{ children?: ReactNode }>) {
   const [settings, setSettings] = useState(initialSettings)
