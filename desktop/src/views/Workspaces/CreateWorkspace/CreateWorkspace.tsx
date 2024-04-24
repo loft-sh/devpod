@@ -2,6 +2,7 @@ import { CollapsibleSection, ExampleCard, Form, IDEIcon, WarningMessageBox } fro
 import {
   Box,
   Button,
+  Code,
   Flex,
   FormControl,
   FormErrorMessage,
@@ -427,7 +428,7 @@ export function CreateWorkspace() {
                 <FormLabel>Devcontainer Path</FormLabel>
                 <Input
                   spellCheck={false}
-                  placeholder=".devcontainer/service/.devcontainer.json"
+                  placeholder="Optionally enter path to devcontainer.json"
                   type="text"
                   {...register(FieldName.DEVCONTAINER_PATH, { required: false })}
                 />
@@ -435,7 +436,10 @@ export function CreateWorkspace() {
                   <FormErrorMessage>{devcontainerPathError.message ?? "Error"}</FormErrorMessage>
                 ) : (
                   <FormHelperText>
-                    DevPod will use this path to create the dev container for this workspace.
+                    DevPod will use this path to create the dev container for this workspace. If not
+                    specified it&apos;ll use <Code>.devcontainer.json</Code> or{" "}
+                    <Code>.devcontainer/devcontainer.json</Code>. <br />
+                    Example: <Code>.devcontainer/service/devcontainer.json</Code>
                   </FormHelperText>
                 )}
               </FormControl>
