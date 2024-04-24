@@ -30,6 +30,7 @@ func LoadDockerComposeProject(paths []string, envFiles []string) (*composetypes.
 		composecli.WithOsEnv,
 		composecli.WithEnvFiles(envFiles...),
 		composecli.WithDotEnv,
+		composecli.WithDefaultProfiles(),
 	)
 	if err != nil {
 		return nil, err
