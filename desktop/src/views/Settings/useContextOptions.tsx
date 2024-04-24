@@ -311,3 +311,83 @@ export function useExtraEnvVarsOption() {
 
   return { input, helpText }
 }
+
+export function useDotfilesOption() {
+  const { settings, set } = useChangeSettings()
+  const updateOption = useCallback(
+    (value: string) => {
+      set("dotfilesURL", value)
+      client.setSetting("dotfilesURL", value)
+    },
+    [set]
+  )
+  const [hasFocus, setHasFocus] = useState(false)
+  const inputRef = useRef<HTMLInputElement>(null)
+
+  const handleBlur = useCallback(
+    (e: FocusEvent<HTMLInputElement>) => {
+      const value = e.target.value.trim()
+      updateOption(value)
+      setHasFocus(false)
+    },
+    [updateOption]
+  )
+
+  const handleKeyUp = useCallback((e: KeyboardEvent<HTMLInputElement>) => {
+    if (e.key !== "Enter") return
+
+    e.currentTarget.blur()
+  }, [])
+
+  const handleFocus = useCallback(() => {
+    setHasFocus(true)
+  }, [])
+
+  const handleClearDevPodDotfiles = useCallback(() => {
+    const el = inputRef.current
+    if (!el) return
+
+    el.value = ""
+  }, [])
+
+  const input = useMemo(
+    () => (
+      <InputGroup maxWidth="72">
+        <Input
+          ref={inputRef}
+          spellCheck={false}
+          placeholder="Dotfiles repo URL"
+          defaultValue={settings.dotfilesURL}
+          onBlur={handleBlur}
+          onKeyUp={handleKeyUp}
+          onFocus={handleFocus}
+        />
+        <InputRightElement>
+          <IconButton
+            visibility={hasFocus ? "visible" : "hidden"}
+            size="xs"
+            borderRadius="full"
+            icon={<CloseIcon />}
+            aria-label="clear"
+            onMouseDown={(e) => {
+              // needed to prevent losing focus from input
+              e.stopPropagation()
+              e.preventDefault()
+            }}
+            onClick={handleClearDevPodDotfiles}
+          />
+        </InputRightElement>
+      </InputGroup>
+    ),
+    [
+      settings.dotfilesURL,
+      handleBlur,
+      handleKeyUp,
+      handleFocus,
+      hasFocus,
+      handleClearDevPodDotfiles,
+    ]
+  )
+
+  return { input }
+}

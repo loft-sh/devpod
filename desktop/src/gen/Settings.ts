@@ -17,4 +17,5 @@ export interface Settings {
   experimental_devPodPro: boolean
   additionalCliFlags: string
   additionalEnvVars: string
+  dotfilesURL: string
 }
