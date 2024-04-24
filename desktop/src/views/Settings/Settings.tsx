@@ -38,6 +38,7 @@ import {
 } from "../../lib"
 import { useWelcomeModal } from "../../useWelcomeModal"
 import {
+  useDotfilesOption,
   useCLIFlagsOption,
   useAgentURLOption,
   useTelemetryOption,
@@ -146,13 +147,14 @@ function GeneralSettings() {
 }
 
 function CustomizationSettings() {
+  const { input: dotfilesInput , helpText: dotfilesHelpText } = useDotfilesOption()
   const { settings, set } = useChangeSettings()
   const { ides, defaultIDE, updateDefaultIDE } = useIDESettings()
 
   return (
     <>
       <SettingSection
-        showDivider={false}
+        showDivider={true}
         title="IDE"
         description="Select the default IDE you're using for workspaces. This will be overridden whenever you create a workspace with a different IDE. You can prevent this by checking the 'Always use this IDE' checkbox">
         <>
@@ -173,6 +175,12 @@ function CustomizationSettings() {
             Always use this IDE
           </Checkbox>
         </>
+      </SettingSection>
+      <SettingSection
+        showDivider={true}
+        title="Dotfiles"
+        description="Set the dotfiles git repository to use inside workspaces">
+        {dotfilesInput}
       </SettingSection>
     </>
   )

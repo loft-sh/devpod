@@ -30,6 +30,7 @@ pub struct Settings {
     experimental_devpod_pro: bool,
     additional_cli_flags: String,
     additional_env_vars: String,
+    dotfiles_url: String,
 }
 
 #[derive(Debug, Serialize, TS)]

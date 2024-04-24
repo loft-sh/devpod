@@ -38,6 +38,7 @@ const initialSettings: TSettings = {
   experimental_devPodPro: false,
   additionalCliFlags: "",
   additionalEnvVars: "",
+  dotfilesURL: "",
 }
 function getSettingKeys(): readonly TSetting[] {
   return getKeys(initialSettings)
@@ -93,6 +94,10 @@ export function SettingsProvider({ children }: Readonly<{ children?: ReactNode }
   useEffect(() => {
     client.setSetting("additionalCliFlags", settings.additionalCliFlags)
   }, [settings.additionalCliFlags])
+
+  useEffect(() => {
+    client.setSetting("dotfilesURL", settings.dotfilesURL)
+  }, [settings.dotfilesURL])
 
   const set = useCallback<TSettingsContext["set"]>((key, value) => {
     settingsStore.set(key, value)
