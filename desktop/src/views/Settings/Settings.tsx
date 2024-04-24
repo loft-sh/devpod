@@ -147,7 +147,7 @@ function GeneralSettings() {
 }
 
 function CustomizationSettings() {
-  const { input: dotfilesInput , helpText: dotfilesHelpText } = useDotfilesOption()
+  const { input: dotfilesInput } = useDotfilesOption()
   const { settings, set } = useChangeSettings()
   const { ides, defaultIDE, updateDefaultIDE } = useIDESettings()
 

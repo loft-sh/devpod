@@ -389,7 +389,5 @@ export function useDotfilesOption() {
     ]
   )
 
-  const helpText = useMemo(() => <>Set additional CLI Flags to use.</>, [])
-
-  return { input, helpText }
+  return { input }
 }
