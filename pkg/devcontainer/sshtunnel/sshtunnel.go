@@ -107,6 +107,7 @@ func ExecuteCommand(
 
 		identityAgent := devsshagent.GetSSHAuthSocket()
 		if identityAgent != "" {
+			log.Debugf("Forwarding ssh-agent using %s", identityAgent)
 			err = devsshagent.ForwardToRemote(sshClient, identityAgent)
 			if err != nil {
 				errChan <- errors.Wrap(err, "forward agent")
