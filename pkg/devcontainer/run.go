@@ -133,18 +133,26 @@ func (r *runner) Up(ctx context.Context, options UpOptions) (*config.Result, err
 			return nil, err
 		}
 	} else {
-		r.Log.Warn("dev container config is missing one of \"image\", \"dockerFile\" or \"dockerComposeFile\" properties, defaulting to auto-detection")
+		if options.FallbackImage != "" {
+			r.Log.Warn("dev container config is missing one of \"image\", \"dockerFile\" or \"dockerComposeFile\" properties, using fallback image " + options.FallbackImage)
 
-		lang, err := language.DetectLanguage(r.LocalWorkspaceFolder)
-		if err != nil {
-			return nil, fmt.Errorf("could not detect project language and dev container config is missing one of \"image\", \"dockerFile\" or \"dockerComposeFile\" properties")
+			substitutedConfig.Config.ImageContainer = config.ImageContainer{
+				Image: options.FallbackImage,
+			}
+		} else {
+			r.Log.Warn("dev container config is missing one of \"image\", \"dockerFile\" or \"dockerComposeFile\" properties, defaulting to auto-detection")
+
+			lang, err := language.DetectLanguage(r.LocalWorkspaceFolder)
+			if err != nil {
+				return nil, fmt.Errorf("could not detect project language and dev container config is missing one of \"image\", \"dockerFile\" or \"dockerComposeFile\" properties")
+			}
+
+			if language.MapConfig[lang] == nil {
+				return nil, fmt.Errorf("could not detect project language and dev container config is missing one of \"image\", \"dockerFile\" or \"dockerComposeFile\" properties")
+			}
+			substitutedConfig.Config.ImageContainer = language.MapConfig[lang].ImageContainer
 		}
 
-		if language.MapConfig[lang] == nil {
-			return nil, fmt.Errorf("could not detect project language and dev container config is missing one of \"image\", \"dockerFile\" or \"dockerComposeFile\" properties")
-		}
-
-		substitutedConfig.Config.ImageContainer = language.MapConfig[lang].ImageContainer
 		result, err = r.runSingleContainer(ctx, substitutedConfig, substitutionContext, options)
 		if err != nil {
 			return nil, err
@@ -200,8 +208,17 @@ func (r *runner) prepare(
 			return nil, nil, errors.Wrap(err, "parsing devcontainer.json")
 		} else if rawParsedConfig == nil {
 			r.Log.Infof("Couldn't find a devcontainer.json")
-			r.Log.Infof("Try detecting project programming language...")
-			defaultConfig := language.DefaultConfig(r.LocalWorkspaceFolder, r.Log)
+			defaultConfig := &config.DevContainerConfig{}
+			if options.FallbackImage != "" {
+				r.Log.Infof("Using fallback image %s", options.FallbackImage)
+				defaultConfig.ImageContainer = config.ImageContainer{
+					Image: options.FallbackImage,
+				}
+			} else {
+				r.Log.Infof("Try detecting project programming language...")
+				defaultConfig = language.DefaultConfig(r.LocalWorkspaceFolder, r.Log)
+			}
+
 			defaultConfig.Origin = path.Join(filepath.ToSlash(r.LocalWorkspaceFolder), ".devcontainer.json")
 			err = config.SaveDevContainerJSON(defaultConfig)
 			if err != nil {
