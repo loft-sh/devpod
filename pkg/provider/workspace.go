@@ -181,6 +181,7 @@ type CLIOptions struct {
 	ForceCredentials     bool     `json:"forceCredentials,omitempty"`
 	GitBranch            string   `json:"gitBranch,omitempty"`
 	GitCommit            string   `json:"gitCommit,omitempty"`
+	FallbackImage        string   `json:"fallbackImage,omitempty"`
 
 	// build options
 	Repository string   `json:"repository,omitempty"`
