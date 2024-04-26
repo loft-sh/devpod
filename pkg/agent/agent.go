@@ -288,7 +288,7 @@ func rerunAsRoot(workspaceInfo *provider2.AgentWorkspaceInfo, log log.Logger) (b
 	}
 
 	// call ourself
-	args := []string{binary}
+	args := []string{fmt.Sprintf("'%s'", binary)}
 	args = append(args, os.Args[1:]...)
 	log.Debugf("Rerun as root: %s", strings.Join(args, " "))
 	cmd := exec.Command("sudo", args...)
