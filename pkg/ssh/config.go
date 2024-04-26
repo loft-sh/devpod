@@ -73,7 +73,7 @@ func addHost(path, host, user, context, workspace, workdir, command string, gpga
 	} else {
 		proxyCommand := fmt.Sprintf("  ProxyCommand \"%s\" ssh --stdio --context %s --user %s %s", execPath, context, user, workspace)
 		if workdir != "" {
-			proxyCommand = fmt.Sprintf("%s --workdir %s", proxyCommand, workdir)
+			proxyCommand = fmt.Sprintf("'%s' --workdir '%s'", proxyCommand, workdir)
 		}
 		newLines = append(newLines, proxyCommand)
 	}
