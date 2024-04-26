@@ -182,7 +182,7 @@ func (r *DockerHelper) GetImageTag(ctx context.Context, imageID string) (string,
 	tagSplits := strings.Split(repoTag, ":")
 
 	if len(tagSplits) > 0 {
-		return tagSplits[1], nil
+		return strings.TrimSpace(tagSplits[1]), nil
 	}
 
 	return "", nil
