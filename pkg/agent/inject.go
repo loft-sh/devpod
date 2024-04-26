@@ -75,7 +75,7 @@ func InjectAgentAndExecute(
 		downloadURL = DefaultAgentDownloadURL()
 	}
 
-	versionCheck := fmt.Sprintf(`[ "$(%s version 2>/dev/null || echo 'false')" != "%s" ]`, remoteAgentPath, version.GetVersion())
+	versionCheck := fmt.Sprintf(`[ "$('%s' version 2>/dev/null || echo 'false')" != "%s" ]`, remoteAgentPath, version.GetVersion())
 	if version.GetVersion() == version.DevVersion {
 		preferDownload = false
 
