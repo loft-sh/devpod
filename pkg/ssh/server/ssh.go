@@ -166,7 +166,7 @@ func getShell() ([]string, error) {
 		return nil, err
 	}
 
-	return []string{executable, "helper", "sh"}, nil
+	return []string{fmt.Sprintf("'%s'", executable), "helper", "sh"}, nil
 }
 
 func (s *Server) handler(sess ssh.Session) {
