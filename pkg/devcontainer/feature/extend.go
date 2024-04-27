@@ -307,12 +307,12 @@ func computeAutomaticFeatureOrder(features []*config.FeatureSet) ([]*config.Feat
 	// build lookup map
 	lookup := map[string]*config.FeatureSet{}
 	for _, feature := range features {
-		lookup[feature.ConfigID] = feature
+		lookup[feature.Config.ID] = feature
 	}
 
 	// build graph
 	for _, feature := range features {
-		_, err := g.InsertNodeAt("root", feature.ConfigID, feature)
+		_, err := g.InsertNodeAt("root", feature.Config.ID, feature)
 		if err != nil {
 			return nil, err
 		}
@@ -325,7 +325,7 @@ func computeAutomaticFeatureOrder(features []*config.FeatureSet) ([]*config.Feat
 			}
 
 			// add an edge from feature to installAfterFeature
-			_, err = g.InsertNodeAt(feature.ConfigID, installAfter, installAfterFeature)
+			_, err = g.InsertNodeAt(feature.Config.ID, installAfter, installAfterFeature)
 			if err != nil {
 				return nil, err
 			}
