@@ -190,7 +190,7 @@ func (o *OpenVSCodeServer) installExtensions() error {
 	binaryPath := filepath.Join(location, "bin", "openvscode-server")
 	for _, extension := range o.extensions {
 		o.log.Info("Install extension " + extension + "...")
-		runCommand := fmt.Sprintf("%s --install-extension '%s'", binaryPath, extension)
+		runCommand := fmt.Sprintf("'%s' --install-extension '%s'", binaryPath, extension)
 		args := []string{}
 		if o.userName != "" {
 			args = append(args, "su", o.userName, "-c", runCommand)
@@ -261,7 +261,7 @@ func (o *OpenVSCodeServer) Start() error {
 
 	return single.Single("openvscode.pid", func() (*exec.Cmd, error) {
 		o.log.Infof("Starting openvscode in background...")
-		runCommand := fmt.Sprintf("%s server-local --without-connection-token --host '%s' --port '%s'", binaryPath, o.host, o.port)
+		runCommand := fmt.Sprintf("'%s' server-local --without-connection-token --host '%s' --port '%s'", binaryPath, o.host, o.port)
 		args := []string{}
 		if o.userName != "" {
 			args = append(args, "su", o.userName, "-c", runCommand)

@@ -121,7 +121,7 @@ func (o *FleetServer) Start(binaryPath, location, projectDir string) error {
 
 	err := single.Single("fleet.pid", func() (*exec.Cmd, error) {
 		o.log.Infof("Starting fleet in background...")
-		runCommand := fmt.Sprintf("%s launch workspace -- --projectDir '%s' --cache-path '%s' --auth=accept-everyone --publish --enableSmartMode", binaryPath, projectDir, location)
+		runCommand := fmt.Sprintf("'%s' launch workspace -- --projectDir '%s' --cache-path '%s' --auth=accept-everyone --publish --enableSmartMode", binaryPath, projectDir, location)
 		args := []string{}
 		if o.userName != "" {
 			args = append(args, "su", o.userName, "-c", runCommand)
@@ -177,7 +177,7 @@ func (o *FleetServer) startMonitor() error {
 
 	return single.Single("fleet-monitor.pid", func() (*exec.Cmd, error) {
 		o.log.Infof("Starting fleet monitor in background...")
-		runCommand := fmt.Sprintf("%s helper fleet-server --workspaceid %s", self, "test")
+		runCommand := fmt.Sprintf("'%s' helper fleet-server --workspaceid %s", self, "test")
 		args := []string{}
 		if o.userName != "" {
 			args = append(args, "su", o.userName, "-c", runCommand)

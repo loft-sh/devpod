@@ -326,7 +326,7 @@ func configureCredentials(ctx context.Context, cancel context.CancelFunc, worksp
 
 	gitCredentials := ""
 	if workspaceInfo.Agent.InjectGitCredentials == "true" {
-		gitCredentials = fmt.Sprintf("%s agent git-credentials --port %d", binaryPath, serverPort)
+		gitCredentials = fmt.Sprintf("'%s' agent git-credentials --port %d", binaryPath, serverPort)
 		_ = os.Setenv("DEVPOD_GIT_HELPER_PORT", strconv.Itoa(serverPort))
 	}
 
