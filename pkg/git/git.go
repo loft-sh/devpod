@@ -20,6 +20,7 @@ const (
 	SubPathDelimiter     string = "@subpath:"
 )
 
+// WARN: Make sure this matches the regex in /desktop/src/views/Workspaces/CreateWorkspace/CreateWorkspaceInput.tsx!
 var (
 	branchRegEx      = regexp.MustCompile(`^([^@]*(?:git@)?@?[^@/]+/[^@/]+/?[^@/]+)@([a-zA-Z0-9\./\-\_]+)$`)
 	commitRegEx      = regexp.MustCompile(`^([^@]*(?:git@)?@?[^@/]+/[^@]+)` + regexp.QuoteMeta(CommitDelimiter) + `([a-zA-Z0-9]+)$`)
