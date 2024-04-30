@@ -585,6 +585,8 @@ github.com/loft-sh/programming-language-detection v0.0.5 h1:XiWlxtrf4t6Z7SQiob0J
 github.com/loft-sh/programming-language-detection v0.0.5/go.mod h1:QGPQGKr9q1+rQS4OyisS5CPGY1a76SdNaZuk9oy+2cE=
 github.com/loft-sh/ssh v0.0.3 h1:EY2331cGy1VKwFvQ+rNQmxG6a4NMofDOARgNfNKf/iI=
 github.com/loft-sh/ssh v0.0.3/go.mod h1:jgAfPSNioyL2wdFesXY5Wi4pYpdNo4u7AzworofHeyU=
+github.com/loft-sh/ssh v0.0.4 h1:Ybopo9SQpkZjMQ1hbnD71ZcN1fwe5n3dS1qiFfJRIAA=
+github.com/loft-sh/ssh v0.0.4/go.mod h1:jgAfPSNioyL2wdFesXY5Wi4pYpdNo4u7AzworofHeyU=
 github.com/magiconair/properties v1.8.0/go.mod h1:PppfXfuXeibc/6YijjN8zIbojt8czPbwD3XqdrwzmxQ=
 github.com/mailru/easyjson v0.0.0-20160728113105-d5b7844b561a/go.mod h1:C1wdFJiN94OJF2b5HbByQZoLdCWB1Yqtg26g4irojpc=
 github.com/mailru/easyjson v0.0.0-20190614124828-94de47d64c63/go.mod h1:C1wdFJiN94OJF2b5HbByQZoLdCWB1Yqtg26g4irojpc=

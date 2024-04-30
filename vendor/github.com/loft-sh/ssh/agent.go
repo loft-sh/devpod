@@ -4,7 +4,7 @@ import (
 	"io"
 	"io/ioutil"
 	"net"
-	"path"
+	"path/filepath"
 	"sync"
 
 	gossh "golang.org/x/crypto/ssh"
@@ -40,7 +40,7 @@ func NewAgentListener() (net.Listener, error) {
 	if err != nil {
 		return nil, err
 	}
-	l, err := net.Listen("unix", path.Join(dir, agentListenFile))
+	l, err := net.Listen("unix", filepath.Join(dir, agentListenFile))
 	if err != nil {
 		return nil, err
 	}
