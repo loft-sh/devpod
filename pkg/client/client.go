@@ -132,6 +132,8 @@ type CommandOptions struct {
 type UpOptions struct {
 	provider.CLIOptions
 
+	Debug bool
+
 	Stdin  io.Reader
 	Stdout io.Writer
 }

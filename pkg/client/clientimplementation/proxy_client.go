@@ -164,6 +164,11 @@ func (s *proxyClient) Up(ctx context.Context, opt client.UpOptions) error {
 		readLogStream(reader, s.log.ErrorStreamOnly())
 	}()
 
+	opts := EncodeOptions(opt.CLIOptions, DevPodFlagsUp)
+	if opt.Debug {
+		opts["DEBUG"] = "true"
+	}
+
 	err := RunCommandWithBinaries(
 		ctx,
 		"up",
@@ -173,7 +178,7 @@ func (s *proxyClient) Up(ctx context.Context, opt client.UpOptions) error {
 		nil,
 		s.devPodConfig.ProviderOptions(s.config.Name),
 		s.config,
-		EncodeOptions(opt.CLIOptions, DevPodFlagsUp),
+		opts,
 		opt.Stdin,
 		opt.Stdout,
 		writer,
