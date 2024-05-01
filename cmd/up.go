@@ -371,6 +371,7 @@ func (cmd *UpCmd) devPodUpProxy(
 		// run devpod up elsewhere
 		err := client.Up(ctx, client2.UpOptions{
 			CLIOptions: baseOptions,
+			Debug:      cmd.Debug,
 
 			Stdin:  stdinReader,
 			Stdout: stdoutWriter,
