@@ -197,7 +197,7 @@ func (r *DockerHelper) InspectImage(ctx context.Context, imageName string, tryRe
 			return nil, err
 		}
 
-		imageConfig, _, err := image.GetImageConfig(imageName)
+		imageConfig, _, err := image.GetImageConfig(ctx, imageName)
 		if err != nil {
 			return nil, perrors.Wrap(err, "get image config remotely")
 		}
