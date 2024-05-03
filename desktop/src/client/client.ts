@@ -24,6 +24,7 @@ import { IDEsClient } from "./ides"
 import { ProClient } from "./pro"
 import { ProvidersClient } from "./providers"
 import { WorkspacesClient } from "./workspaces"
+import { Command as DevPodCommand } from "./command"
 
 // These types have to match the rust types! Make sure to update them as well!
 type TChannels = {
@@ -59,7 +60,10 @@ type TChannels = {
 }
 type TChannelName = keyof TChannels
 type TClientEventListener<TChannel extends TChannelName> = (payload: TChannels[TChannel]) => void
-type TClientSettings = Pick<TSettings, "debugFlag" | "additionalCliFlags" | "dotfilesURL" >
+type TClientSettings = Pick<
+  TSettings,
+  "debugFlag" | "additionalCliFlags" | "dotfilesURL" | "additionalEnvVars"
+>
 export type TPlatform = Awaited<ReturnType<typeof os.platform>>
 export type TArch = Awaited<ReturnType<typeof os.arch>>
 
@@ -87,6 +91,9 @@ class Client {
     }
     if (name === "dotfilesURL") {
       this.workspaces.setDotfilesFlag(value as string)
+    }
+    if (name === "additionalEnvVars") {
+      DevPodCommand.ADDITIONAL_ENV_VARS = value as string
     }
   }
   public ready(): Promise<void> {
