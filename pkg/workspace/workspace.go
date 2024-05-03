@@ -350,7 +350,7 @@ func createWorkspace(
 	}
 
 	// resolve workspace
-	workspace, err := resolve(provider, devPodConfig, name, workspaceID, workspaceFolder, source, isLocalPath, sshConfigPath, gitBranch, gitCommit, uid)
+	workspace, err := resolve(ctx, provider, devPodConfig, name, workspaceID, workspaceFolder, source, isLocalPath, sshConfigPath, gitBranch, gitCommit, uid)
 	if err != nil {
 		return nil, nil, nil, err
 	}
@@ -446,6 +446,7 @@ func createWorkspace(
 }
 
 func resolve(
+	ctx context.Context,
 	defaultProvider *ProviderWithOptions,
 	devPodConfig *config.Config,
 	name,
@@ -508,7 +509,7 @@ func resolve(
 	}
 
 	// is image?
-	_, err := image.GetImage(name)
+	_, err := image.GetImage(ctx, name)
 	if err == nil {
 		workspace.Source = provider2.WorkspaceSource{
 			Image: name,

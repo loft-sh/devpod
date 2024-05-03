@@ -198,7 +198,7 @@ func findDevcontainerFiles(ctx context.Context, rawSource, tmpDirPath string, ma
 	}
 
 	// container image
-	_, err := image.GetImage(rawSource)
+	_, err := image.GetImage(ctx, rawSource)
 	if err == nil {
 		log.Debug("Container image detected")
 		result.IsImage = true

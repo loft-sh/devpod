@@ -1,6 +1,8 @@
 package image
 
 import (
+	"context"
+	"fmt"
 	"net/http"
 
 	"github.com/google/go-containerregistry/pkg/authn"
@@ -10,13 +12,18 @@ import (
 	"github.com/pkg/errors"
 )
 
-func GetImage(image string) (v1.Image, error) {
+func GetImage(ctx context.Context, image string) (v1.Image, error) {
 	ref, err := name.ParseReference(image)
 	if err != nil {
 		return nil, err
 	}
 
-	img, err := remote.Image(ref, remote.WithAuthFromKeychain(authn.DefaultKeychain))
+	keychain, err := getKeychain(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("create authentication keychain: %w", err)
+	}
+
+	img, err := remote.Image(ref, remote.WithAuthFromKeychain(keychain))
 	if err != nil {
 		return nil, errors.Wrapf(err, "retrieve image %s", image)
 	}
@@ -38,8 +45,8 @@ func CheckPushPermissions(image string) error {
 	return nil
 }
 
-func GetImageConfig(image string) (*v1.ConfigFile, v1.Image, error) {
-	img, err := GetImage(image)
+func GetImageConfig(ctx context.Context, image string) (*v1.ConfigFile, v1.Image, error) {
+	img, err := GetImage(ctx, image)
 	if err != nil {
 		return nil, nil, err
 	}
