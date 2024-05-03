@@ -12,6 +12,7 @@ import { getKeys } from "../lib"
 import { LocalStorageToFileMigrationBackend, Store } from "../lib"
 import { TUnsubscribeFn } from "../types"
 import { Settings } from "../gen"
+import { Command } from "@/client/command"
 
 export type TSettings = Settings
 type TSetting = keyof TSettings
@@ -98,6 +99,10 @@ export function SettingsProvider({ children }: Readonly<{ children?: ReactNode }
   useEffect(() => {
     client.setSetting("dotfilesURL", settings.dotfilesURL)
   }, [settings.dotfilesURL])
+
+  useEffect(() => {
+    client.setSetting("additionalEnvVars", settings.additionalEnvVars)
+  }, [settings.additionalEnvVars])
 
   const set = useCallback<TSettingsContext["set"]>((key, value) => {
     settingsStore.set(key, value)
