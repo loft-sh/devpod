@@ -281,7 +281,7 @@ jobs:
 
           Set-Location -Path $destination_path
 
-          cmd.exe /c ".\CodeSignTool.bat" sign -username="$username" -password="$password" -totp_secret="$totp_secret" -credential_id="$credential_id" -input_file_path="..\..\$input_file_path" -override
+          cmd.exe /c ".\CodeSignTool.bat" sign -username="$username" -password="$password" -totp_secret="$totp_secret" -credential_id="$credential_id" -input_file_path="..\$input_file_path" -override
 
       - name: Upload Release Asset
         if: matrix.settings.host == 'windows-latest'
