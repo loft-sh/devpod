@@ -64,7 +64,7 @@ export function useChangelogModal(isReady: boolean) {
     if (latestVersion !== currentVersion) {
       localStorage.setItem(LAST_INSTALLED_VERSION_KEY, currentVersion)
 
-      if (maybeRelease !== undefined) {
+      if (maybeRelease !== undefined && !maybeRelease.name?.endsWith("[skip changelog]")) {
         setLatestRelease(maybeRelease)
         onOpen()
       }
