@@ -35,7 +35,7 @@ export function useCreateWorkspaceForm(
   const settings = useSettings()
   const workspaces = useWorkspaces()
   const [isSubmitLoading, setIsSubmitLoading] = useState(false)
-  const { register, handleSubmit, formState, watch, setError, setValue, control } =
+  const { register, handleSubmit, formState, watch, setError, setValue, control, getFieldState } =
     useForm<TFormValues>({
       defaultValues: {
         [FieldName.PREBUILD_REPOSITORY]:
@@ -95,7 +95,7 @@ export function useCreateWorkspaceForm(
     // default provider
     if (params.providerID !== undefined) {
       setValue(FieldName.PROVIDER, params.providerID, opts)
-    } else if (providers) {
+    } else if (providers && !getFieldState(FieldName.PROVIDER).isDirty) {
       const defaultProviderID = Object.keys(providers).find(
         (providerID) => providers[providerID]?.default
       )
@@ -103,7 +103,7 @@ export function useCreateWorkspaceForm(
         setValue(FieldName.PROVIDER, defaultProviderID, opts)
       }
     }
-  }, [ides, params, providers, setValue])
+  }, [ides, params, providers, setValue, getFieldState])
 
   // Handle workspace name
   useEffect(() => {
