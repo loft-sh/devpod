@@ -22,7 +22,12 @@ import { client } from "../../../client"
 import { useProvider } from "../../../contexts"
 import { exists, useFormErrors } from "../../../lib"
 import { QueryKeys } from "../../../queryKeys"
-import { TConfigureProviderConfig, TProviderID, TProviderOptions } from "../../../types"
+import {
+  TConfigureProviderConfig,
+  TProviderID,
+  TProviderOption,
+  TProviderOptions,
+} from "../../../types"
 import { canCreateMachine } from "../helpers"
 import { OptionFormField } from "./OptionFormField"
 import { useProviderOptions } from "./useProviderOptions"
@@ -63,7 +68,7 @@ export function ConfigureProviderOptionsForm({
   addProvider = false,
   isModal = false,
   showBottomActionBar = true,
-  suggestedOptions = {},
+  suggestedOptions,
 }: TConfigureProviderOptionsFormProps) {
   const queryClient = useQueryClient()
   const [provider] = useProvider(providerID)
@@ -116,10 +121,17 @@ export function ConfigureProviderOptionsForm({
   } = useMutation<
     TProviderOptions | undefined,
     Error,
-    Readonly<{ providerID: TProviderID; config: TConfigureProviderConfig }>
+    Readonly<{ targetOptionID?: string; options?: TProviderOptions }>
   >({
-    mutationFn: async ({ providerID, config }) => {
-      return (await client.providers.setOptionsDry(providerID, config)).unwrap()
+    mutationFn: async ({ targetOptionID, options }) => {
+      const filteredOptions = filterOptions(formMethods.getValues(), options ?? currentOptions)
+      if (targetOptionID) {
+        stripOptionChildren(filteredOptions, currentOptions, targetOptionID)
+      }
+
+      return (
+        await client.providers.setOptionsDry(providerID, { options: filteredOptions })
+      ).unwrap()
     },
     onSuccess(data) {
       if (!data) {
@@ -138,16 +150,28 @@ export function ConfigureProviderOptionsForm({
   })
 
   useEffect(() => {
-    if (Object.keys(suggestedOptions).length > 0) {
+    if (Object.keys(suggestedOptions ?? {}).length > 0) {
+      const opts = suggestedOptions ?? {}
+      const changedOptions = []
       for (const option in suggestedOptions) {
         const { isDirty } = formMethods.getFieldState(option)
         if (!isDirty) {
-          formMethods.setValue(option, suggestedOptions[option], {
+          formMethods.setValue(option, opts[option], {
             shouldDirty: true,
             shouldValidate: true,
             shouldTouch: true,
           })
         }
+        changedOptions.push(option)
+      }
+      if (changedOptions.length > 0) {
+        refreshSubOptionsMutation({
+          options: changedOptions.reduce((acc, o) => {
+            const option = { value: opts[o] } as unknown as TProviderOption
+
+            return { ...acc, [o]: option }
+          }, {} as TProviderOptions),
+        })
       }
     }
     // only rerun when suggestedOptions changes
@@ -202,19 +226,11 @@ export function ConfigureProviderOptionsForm({
   const backgroundColor = useColorModeValue("gray.50", "gray.800")
   const borderColor = useBorderColor()
 
-  const refreshSubOptions = useCallback(
+  const handleRefreshSubOptions = useCallback(
     (id: string) => {
-      const filteredOptions = filterOptions(formMethods.getValues(), currentOptions)
-      stripOptionChildren(filteredOptions, currentOptions, id)
-
-      refreshSubOptionsMutation({
-        providerID,
-        config: {
-          options: filteredOptions,
-        },
-      })
+      refreshSubOptionsMutation({ targetOptionID: id })
     },
-    [formMethods, currentOptions, providerID, refreshSubOptionsMutation]
+    [refreshSubOptionsMutation]
   )
 
   const handleSubmit: FormEventHandler<HTMLFormElement> = (event) => {
@@ -256,7 +272,7 @@ export function ConfigureProviderOptionsForm({
                 {options.required.map((option) => (
                   <OptionFormField
                     key={option.id}
-                    refreshSubOptions={refreshSubOptions}
+                    onRefresh={handleRefreshSubOptions}
                     isRequired
                     {...option}
                   />
@@ -277,7 +293,7 @@ export function ConfigureProviderOptionsForm({
                       {group.options.map((option) => (
                         <OptionFormField
                           key={option.id}
-                          refreshSubOptions={refreshSubOptions}
+                          onRefresh={handleRefreshSubOptions}
                           isRequired={!!option.required}
                           {...option}
                         />
@@ -295,7 +311,7 @@ export function ConfigureProviderOptionsForm({
                   {options.other.map((option) => (
                     <OptionFormField
                       key={option.id}
-                      refreshSubOptions={refreshSubOptions}
+                      onRefresh={handleRefreshSubOptions}
                       {...option}
                     />
                   ))}
