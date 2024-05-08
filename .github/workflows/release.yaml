@@ -88,16 +88,16 @@ jobs:
       fail-fast: false
       matrix:
         settings:
-          - host: macos-latest
-            target: x86_64-apple-darwin
-            os: darwin
-            arch: amd64
-            cli_only: false
-          - host: macos-latest
-            target: aarch64-apple-darwin
-            os: darwin
-            arch: arm64
-            cli_only: false
+          # - host: macos-latest
+          #   target: x86_64-apple-darwin
+          #   os: darwin
+          #   arch: amd64
+          #   cli_only: false
+          # - host: macos-latest
+          #   target: aarch64-apple-darwin
+          #   os: darwin
+          #   arch: arm64
+          #   cli_only: false
           # The WIX version we use for the installer (latest 3.something) doesn't support arm builds - if we need to support arm windows,
           # we'd need to switch the installer toolchain to WIX 4.xx, not sure how that works out with tauri
           # - host: windows-latest
@@ -108,16 +108,16 @@ jobs:
             target: x86_64-pc-windows-msvc
             arch: amd64
             cli_only: false
-          - host: ubuntu-22.04
-            target: x86_64-unknown-linux-gnu
-            os: linux
-            arch: amd64
-            cli_only: false
-          - host: ubuntu-22.04
-            target: aarch64-unknown-linux-gnu
-            os: linux
-            arch: arm64
-            cli_only: true
+          # - host: ubuntu-22.04
+          #   target: x86_64-unknown-linux-gnu
+          #   os: linux
+          #   arch: amd64
+          #   cli_only: false
+          # - host: ubuntu-22.04
+          #   target: aarch64-unknown-linux-gnu
+          #   os: linux
+          #   arch: arm64
+          #   cli_only: true
     name: ${{ matrix.settings.target }}
     runs-on: ${{ matrix.settings.host }}
     env:
@@ -244,7 +244,7 @@ jobs:
       - name: Build Desktop App
         if: matrix.settings.host == 'windows-latest' && matrix.settings.cli_only == false
         id: build-desktop-app
-        uses: tauri-apps/tauri-action@v0.4.0
+        uses: tauri-apps/tauri-action@v0.4.5
         with:
           projectPath: "./desktop"
           args: " --target ${{ matrix.settings.target }} --features enable-updater"
@@ -281,7 +281,18 @@ jobs:
 
           Set-Location -Path $destination_path
 
-          cmd.exe /c ".\CodeSignTool.bat" sign -username="$username" -password="$password" -totp_secret="$totp_secret" -credential_id="$credential_id" -input_file_path="..\$input_file_path" -override
+          Write-Output "******"
+          ls . 
+          Write-Output "******"
+          ls ..
+          Write-Output "******"
+          ls ..\..
+          Write-Output "******"
+          ls $input_file_path
+          Write-Output "******"
+          ls "..\..\$input_file_path"
+
+          cmd.exe /c ".\CodeSignTool.bat" sign -username="$username" -password="$password" -totp_secret="$totp_secret" -credential_id="$credential_id" -input_file_path="..\..\$input_file_path" -override
 
       - name: Upload Release Asset
         if: matrix.settings.host == 'windows-latest'
