@@ -113,14 +113,20 @@ export function useLoginProModal() {
     }
   }, [completeSetupProvider, login.provider, login.status, suggestedOptions])
 
-  const resetModal = useCallback(() => {
-    reset()
-    login.reset()
-    if (state.currentStep !== "done" && state.providerID) {
-      disconnect.run({ id: state.providerID })
-    }
-    onClose()
-  }, [disconnect, login, onClose, reset, state.currentStep, state.providerID])
+  const resetModal = useCallback(
+    (checkDanglingProInstance: boolean = false) => {
+      reset()
+      login.reset()
+      if (checkDanglingProInstance) {
+        const proInstanceID = proInstances?.find((pro) => pro.provider === state.providerID)?.host
+        if (proInstanceID) {
+          disconnect.run({ id: proInstanceID })
+        }
+      }
+      onClose()
+    },
+    [disconnect, login, onClose, proInstances, reset, state.providerID]
+  )
 
   useEffect(() => {
     if (state.currentStep === "done") {
@@ -144,7 +150,7 @@ export function useLoginProModal() {
   const modal = useMemo(() => {
     return (
       <Modal
-        onClose={resetModal}
+        onClose={() => resetModal(true)}
         isOpen={isOpen}
         closeOnEsc={login.status !== "loading"}
         closeOnOverlayClick={login.status !== "loading"}

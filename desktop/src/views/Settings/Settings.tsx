@@ -389,7 +389,7 @@ function ExperimentalSettings() {
 
       <SettingSection
         showDivider={false}
-        title="DevPod Pro (alpha)"
+        title="DevPod Pro (beta)"
         description="Enable DevPod Pro login and creation">
         <Switch
           isChecked={settings.experimental_devPodPro}

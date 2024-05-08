@@ -15,7 +15,7 @@ import {
 } from "@chakra-ui/react"
 
 type TOptionFormField = TOptionWithID &
-  Readonly<{ isRequired?: boolean; refreshSubOptions?: (id: string) => void }>
+  Readonly<{ isRequired?: boolean; onRefresh?: (id: string) => void }>
 
 export function OptionFormField({
   id,
@@ -27,7 +27,7 @@ export function OptionFormField({
   displayName,
   suggestions,
   enum: enumProp,
-  refreshSubOptions,
+  onRefresh,
   subOptionsCommand,
   isRequired = false,
 }: TOptionFormField) {
@@ -40,7 +40,7 @@ export function OptionFormField({
     const defaultValueProp = exists(defaultValue) ? { defaultValue } : {}
     const props = { ...defaultValueProp, ...valueProp, ...registerProps }
     const refresh = () => {
-      refreshSubOptions?.(id)
+      onRefresh?.(id)
     }
 
     if (exists(suggestions)) {
@@ -155,7 +155,7 @@ export function OptionFormField({
     suggestions,
     enumProp,
     type,
-    refreshSubOptions,
+    onRefresh,
     subOptionsCommand,
     displayName,
     password,

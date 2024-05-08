@@ -8,11 +8,9 @@ import {
   useState,
 } from "react"
 import { client } from "../client"
-import { getKeys } from "../lib"
-import { LocalStorageToFileMigrationBackend, Store } from "../lib"
-import { TUnsubscribeFn } from "../types"
 import { Settings } from "../gen"
-import { Command } from "@/client/command"
+import { getKeys, LocalStorageToFileMigrationBackend, Store } from "../lib"
+import { TUnsubscribeFn } from "../types"
 
 export type TSettings = Settings
 type TSetting = keyof TSettings
