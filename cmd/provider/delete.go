@@ -62,7 +62,7 @@ func (cmd *DeleteCmd) Run(ctx context.Context, args []string) error {
 	}
 	for _, instance := range proInstances {
 		if instance.Provider == provider {
-			return fmt.Errorf("cannot delete provider '%s', because it is connected to Pro instance '%s'. Removing the Pro instance will automatically delete this provider.", instance.Provider, instance.Host)
+			return fmt.Errorf("cannot delete provider '%s', because it is connected to Pro instance '%s'. Removing the Pro instance will automatically delete this provider", instance.Provider, instance.Host)
 		}
 	}
 
