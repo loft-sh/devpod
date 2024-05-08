@@ -28,7 +28,7 @@ import {
   useColorModeValue,
   useToken,
 } from "@chakra-ui/react"
-import { useCallback, useEffect, useMemo } from "react"
+import { useCallback, useEffect, useMemo, useState } from "react"
 import { Controller, ControllerRenderProps } from "react-hook-form"
 import { useNavigate } from "react-router"
 import { Link as RouterLink, useSearchParams } from "react-router-dom"
@@ -39,7 +39,7 @@ import { Plus } from "../../../icons"
 import { CommunitySvg, ProviderPlaceholderSvg } from "../../../images"
 import { exists, getKeys, isEmpty, useFormErrors } from "../../../lib"
 import { Routes } from "../../../routes"
-import { TIDE } from "../../../types"
+import { TIDE, TWorkspaceSourceType } from "../../../types"
 import { useIDEs } from "../../../useIDEs"
 import { useSetupProviderModal } from "../../Providers"
 import { ProviderOptionsPopover } from "./ProviderOptionsPopover"
@@ -61,6 +61,7 @@ export function CreateWorkspace() {
   const navigate = useNavigate()
   const workspace = useWorkspace(undefined)
   const [[providers]] = useProviders()
+  const [sourceType, setSourceType] = useState<TWorkspaceSourceType>("git")
 
   const handleCreateWorkspace = useCallback(
     ({
@@ -81,17 +82,18 @@ export function CreateWorkspace() {
         ideConfig: { name: defaultIDE },
         sourceConfig: {
           source: workspaceSource,
+          type: sourceType,
           gitBranch,
           gitCommit,
         },
       })
 
-      // set workspace id to show terminal
+      // set action id to show terminal
       if (!isEmpty(actionID)) {
         navigate(Routes.toAction(actionID, Routes.WORKSPACES))
       }
     },
-    [navigate, workspace]
+    [navigate, sourceType, workspace]
   )
 
   const {
@@ -105,6 +107,7 @@ export function CreateWorkspace() {
     currentSource,
     selectDevcontainerModal,
   } = useCreateWorkspaceForm(searchParams, providers, ides, handleCreateWorkspace)
+
   const {
     sourceError,
     providerError,
@@ -196,7 +199,13 @@ export function CreateWorkspace() {
                     name={FieldName.SOURCE}
                     control={control}
                     rules={{ required: true }}
-                    render={({ field }) => <WorkspaceSourceInput field={field} />}
+                    render={({ field }) => (
+                      <WorkspaceSourceInput
+                        field={field}
+                        sourceType={sourceType}
+                        onSourceTypeChanged={setSourceType}
+                      />
+                    )}
                   />
                 </HStack>
                 {exists(sourceError) && (

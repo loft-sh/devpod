@@ -73,7 +73,6 @@ func getPodMetadata(token []byte) (string, string, error) {
 	if err != nil {
 		return "", "", fmt.Errorf("failed to get claims from kubernetes service account token: %w", err)
 	}
-	fmt.Fprintf(os.Stderr, "%+v\n", privateClaims)
 
 	kubeClaim := privateClaims.Kubernetes
 	// get serviceaccount name and imagepullsecret

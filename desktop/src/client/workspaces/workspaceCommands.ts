@@ -29,6 +29,7 @@ import {
   DEVPOD_FLAG_PROVIDER,
   DEVPOD_FLAG_RECREATE,
   DEVPOD_FLAG_RESET,
+  DEVPOD_FLAG_SOURCE,
   DEVPOD_FLAG_TIMEOUT,
 } from "../constants"
 
@@ -100,6 +101,13 @@ export class WorkspaceCommands {
     const maybeSource = config.sourceConfig?.source
     const maybeIDFlag = exists(maybeSource) ? [toFlagArg(DEVPOD_FLAG_ID, id)] : []
 
+    const maybeSourceType = config.sourceConfig?.type
+    const maybeSourceFlag =
+      exists(maybeSourceType) && exists(maybeSource)
+        ? [toFlagArg(DEVPOD_FLAG_SOURCE, `${maybeSourceType}:${maybeSource}`)]
+        : []
+    const identifier = exists(maybeSource) && exists(maybeIDFlag) ? maybeSource : id
+
     const maybeIdeName = config.ideConfig?.name
     const maybeIDEFlag = exists(maybeIdeName) ? [toFlagArg(DEVPOD_FLAG_IDE, maybeIdeName)] : []
 
@@ -115,8 +123,6 @@ export class WorkspaceCommands {
     const maybeDevcontainerPath = config.devcontainerPath
       ? [toFlagArg(DEVPOD_FLAG_DEVCONTAINER_PATH, config.devcontainerPath)]
       : []
-
-    const identifier = exists(maybeSource) && exists(maybeIDFlag) ? maybeSource : id
 
     const additionalFlags =
       WorkspaceCommands.ADDITIONAL_FLAGS.length !== 0
@@ -137,6 +143,7 @@ export class WorkspaceCommands {
       DEVPOD_COMMAND_UP,
       identifier,
       ...maybeIDFlag,
+      ...maybeSourceFlag,
       ...maybeIDEFlag,
       ...maybeProviderFlag,
       ...maybePrebuildRepositories,
