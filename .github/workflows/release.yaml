@@ -282,13 +282,13 @@ jobs:
           Set-Location -Path $destination_path
 
           Write-Output "******"
-          ls . 
+          ls "..\desktop\src-tauri\target"
           Write-Output "******"
-          ls ..
+          ls "..\desktop\src-tauri\target\${{ matrix.settings.target }}"
           Write-Output "******"
-          ls ..\..
+          ls "..\desktop\src-tauri\target\${{ matrix.settings.target }}\release\bundle"
           Write-Output "******"
-          ls "..\$input_file_path"
+          ls "..\desktop\src-tauri\target\${{ matrix.settings.target }}\release\bundle\msi"
 
           cmd.exe /c ".\CodeSignTool.bat" sign -username="$username" -password="$password" -totp_secret="$totp_secret" -credential_id="$credential_id" -input_file_path="..\$input_file_path" -override
 
