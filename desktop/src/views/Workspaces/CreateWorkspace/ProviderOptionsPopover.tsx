@@ -210,7 +210,10 @@ function mergeOptionDefinitions(
     const config = configOptions[k]
     if (config) {
       res[k] = { ...config, ...v }
+      continue
     }
+
+    res[k] = v
   }
 
   return res
