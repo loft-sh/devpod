@@ -55,6 +55,17 @@ func (cmd *DeleteCmd) Run(ctx context.Context, args []string) error {
 		return fmt.Errorf("please specify a provider to delete")
 	}
 
+	// check if this provider is associated with a pro instance
+	proInstances, err := workspace.ListProInstances(devPodConfig, log.Default)
+	if err != nil {
+		return fmt.Errorf("list pro instances: %w", err)
+	}
+	for _, instance := range proInstances {
+		if instance.Provider == provider {
+			return fmt.Errorf("cannot delete provider '%s', because it is connected to Pro instance '%s'. Removing the Pro instance will automatically delete this provider.", instance.Provider, instance.Host)
+		}
+	}
+
 	// delete the provider
 	err = DeleteProvider(devPodConfig, provider, cmd.IgnoreNotFound)
 	if err != nil {
