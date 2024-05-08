@@ -24,6 +24,7 @@ import { FiFolder } from "react-icons/fi"
 import { useBorderColor } from "../../../Theme"
 import { client } from "../../../client"
 import { FieldName, TFormValues } from "./types"
+import { TWorkspaceSourceType } from "@/types"
 
 // WARN: Make sure these match the regexes in /pkg/git/git.go
 const GIT_REPOSITORY_REGEX = new RegExp("^([^@]*(?:git@)?@?[^@/]+\\/[^@/]+(\\/?[^@/]+)){2,}")
@@ -51,12 +52,30 @@ const ADVANCED_GIT_SETTING_TABS = [
 type TAdvancedGitSetting = (typeof AdvancedGitSetting)[keyof typeof AdvancedGitSetting]
 const INITIAL_ADVANCED_SETTINGS = { option: AdvancedGitSetting.BRANCH, value: "" }
 
+const SOURCE_TYPE_MAP = {
+  0: "local",
+  1: "git",
+  2: "image",
+  local: 0,
+  git: 1,
+  image: 2,
+}
 type TWorkspaceSourceInputProps = Readonly<{
   field: ControllerRenderProps<TFormValues, (typeof FieldName)["SOURCE"]>
+  sourceType: TWorkspaceSourceType
+  onSourceTypeChanged: (type: TWorkspaceSourceType) => void
 }>
-export function WorkspaceSourceInput({ field }: TWorkspaceSourceInputProps) {
+export function WorkspaceSourceInput({
+  field,
+  sourceType,
+  onSourceTypeChanged,
+}: TWorkspaceSourceInputProps) {
   const inputBackgroundColor = useColorModeValue("white", "black")
   const borderColor = useBorderColor()
+  const typeTabIndex = SOURCE_TYPE_MAP[sourceType]
+  const handleSourceTypeChanged = (index: number) => {
+    onSourceTypeChanged(SOURCE_TYPE_MAP[index as 0 | 1 | 2] as TWorkspaceSourceType)
+  }
   const [tabIndex, setTabIndex] = useState(0)
   const [advancedGitSettings, setAdvancedGitSettings] =
     useState<Readonly<{ option: TAdvancedGitSetting | null; value: string }>>(
@@ -147,7 +166,7 @@ export function WorkspaceSourceInput({ field }: TWorkspaceSourceInputProps) {
     advancedGitSettings.value.length === 0 || !isNaN(parseInt(advancedGitSettings.value))
 
   return (
-    <Tabs width="90%" variant="muted" defaultIndex={1}>
+    <Tabs width="90%" variant="muted" index={typeTabIndex} onChange={handleSourceTypeChanged}>
       <TabList>
         <Tab>Folder</Tab>
         <Tab>Git Repo</Tab>

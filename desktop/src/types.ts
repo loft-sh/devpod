@@ -153,6 +153,7 @@ export type TWorkspaceStatusResult = Readonly<{
   provider: TMaybe<string>
   state: TMaybe<TWorkspace["status"]>
 }>
+export type TWorkspaceSourceType = "local" | "git" | "image"
 export type TWorkspaceStartConfig = Readonly<{
   id: string
   prebuildRepositories?: string[]
@@ -162,6 +163,7 @@ export type TWorkspaceStartConfig = Readonly<{
   // Instead of starting a workspace just by ID, the sourceConfig starts it with a `source/ID` combination
   sourceConfig?: Readonly<{
     source: string
+    type?: TWorkspaceSourceType
     gitBranch: string | undefined
     gitCommit: string | undefined
   }>
