@@ -114,22 +114,23 @@ func NormalizeRepositoryGitInfo(str string) *GitInfo {
 	return NewGitInfo(repository, branch, commit, pr, subpath)
 }
 
-func CloneRepository(ctx context.Context, gitInfo *GitInfo, targetDir string, helper string, bare bool, writer io.Writer, log log.Logger) error {
-	args := []string{"clone"}
+func CloneRepository(ctx context.Context, gitInfo *GitInfo, targetDir string, helper string, bare bool, cloner Cloner, writer io.Writer, log log.Logger) error {
+	if cloner == nil {
+		cloner = NewCloner(FullCloneStrategy)
+	}
+
+	extraArgs := []string{}
 	if bare && gitInfo.Commit == "" {
-		args = append(args, "--bare", "--depth=1")
+		extraArgs = append(extraArgs, "--bare", "--depth=1")
 	}
 	if helper != "" {
-		args = append(args, "--config", "credential.helper="+helper)
+		extraArgs = append(extraArgs, "--config", "credential.helper="+helper)
 	}
 	if gitInfo.Branch != "" {
-		args = append(args, "--branch", gitInfo.Branch)
+		extraArgs = append(extraArgs, "--branch", gitInfo.Branch)
 	}
-	args = append(args, gitInfo.Repository, targetDir)
-	gitCommand := CommandContext(ctx, args...)
-	gitCommand.Stdout = writer
-	gitCommand.Stderr = writer
-	err := gitCommand.Run()
+
+	err := cloner.Clone(ctx, gitInfo.Repository, targetDir, extraArgs, writer, writer)
 	if err != nil {
 		return errors.Wrap(err, "error cloning repository")
 	}

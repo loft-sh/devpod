@@ -149,6 +149,7 @@ func NewUpCmd(flags *flags.GlobalFlags) *cobra.Command {
 	upCmd.Flags().BoolVar(&cmd.OpenIDE, "open-ide", true, "If this is false and an IDE is configured, DevPod will only install the IDE server backend, but not open it")
 	upCmd.Flags().StringVar(&cmd.GitBranch, "git-branch", "", "The git branch to use")
 	upCmd.Flags().StringVar(&cmd.GitCommit, "git-commit", "", "The git commit SHA to use")
+	upCmd.Flags().Var(&cmd.GitCloneStrategy, "git-clone-strategy", "The git clone strategy DevPod uses to checkout git based workspaces. Can be full (default), blobless, treeless or shallow")
 	upCmd.Flags().StringVar(&cmd.FallbackImage, "fallback-image", "", "The fallback image to use if no devcontainer configuration has been detected")
 
 	upCmd.Flags().BoolVar(&cmd.DisableDaemon, "disable-daemon", false, "If enabled, will not install a daemon into the target machine to track activity")

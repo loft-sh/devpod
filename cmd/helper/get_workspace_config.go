@@ -153,7 +153,7 @@ func findDevcontainerFiles(ctx context.Context, rawSource, tmpDirPath string, ma
 
 		gitInfo := git.NewGitInfo(gitRepository, gitBranch, gitCommit, gitPRReference, gitSubDir)
 		log.Debugf("Cloning git repository into %s", tmpDirPath)
-		err := git.CloneRepository(ctx, gitInfo, tmpDirPath, "", true, log.Writer(logrus.DebugLevel, false), log)
+		err := git.CloneRepository(ctx, gitInfo, tmpDirPath, "", true, git.NewCloner(git.ShallowCloneStrategy), log.Writer(logrus.DebugLevel, false), log)
 		if err != nil {
 			return nil, err
 		}
