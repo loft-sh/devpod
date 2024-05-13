@@ -15,6 +15,13 @@ import (
 
 var dockerlessImage = "ghcr.io/loft-sh/dockerless:0.1.4"
 
+const (
+	DevPodExtraEnvVar           = "DEVPOD"
+	RemoteContainersExtraEnvVar = "REMOTE_CONTAINERS"
+	WorkspaceIDExtraEnvVar      = "DEVPOD_WORKSPACE_ID"
+	WorkspaceUIDExtraEnvVar     = "DEVPOD_WORKSPACE_UID"
+)
+
 func (r *runner) runSingleContainer(ctx context.Context, parsedConfig *config.SubstitutedConfig, substitutionContext *config.SubstitutionContext, options UpOptions) (*config.Result, error) {
 	containerDetails, err := r.Driver.FindDevContainer(ctx, r.ID)
 	if err != nil {
@@ -135,13 +142,7 @@ func (r *runner) runContainer(
 		}
 	}
 
-	// add environment variables that signals that we are in a remote container
-	// (vscode compatibility) and specifically that we are using devpod.
-	if runOptions.Env == nil {
-		runOptions.Env = make(map[string]string)
-	}
-	runOptions.Env["DEVPOD"] = "true"
-	runOptions.Env["REMOTE_CONTAINERS"] = "true"
+	runOptions.Env = r.addExtraEnvVars(runOptions.Env)
 
 	// check if docker
 	dockerDriver, ok := r.Driver.(driver.DockerDriver)
@@ -283,6 +284,25 @@ func (r *runner) getRunOptions(
 		SecurityOpt:    mergedConfig.SecurityOpt,
 		Mounts:         mergedConfig.Mounts,
 	}, nil
+}
+
+// add environment variables that signals that we are in a remote container
+// (vscode compatibility) and specifically that we are using devpod.
+func (r *runner) addExtraEnvVars(env map[string]string) map[string]string {
+	if env == nil {
+		env = make(map[string]string)
+	}
+
+	env[DevPodExtraEnvVar] = "true"
+	env[RemoteContainersExtraEnvVar] = "true"
+	if r.WorkspaceConfig != nil && r.WorkspaceConfig.Workspace != nil && r.WorkspaceConfig.Workspace.ID != "" {
+		env[WorkspaceIDExtraEnvVar] = r.WorkspaceConfig.Workspace.ID
+	}
+	if r.WorkspaceConfig != nil && r.WorkspaceConfig.Workspace != nil && r.WorkspaceConfig.Workspace.UID != "" {
+		env[WorkspaceUIDExtraEnvVar] = r.WorkspaceConfig.Workspace.UID
+	}
+
+	return env
 }
 
 func GetStartScript(mergedConfig *config.MergedDevContainerConfig) string {
