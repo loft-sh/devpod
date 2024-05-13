@@ -392,12 +392,12 @@ jobs:
 
             const releaseId = "${{ needs.create-release.outputs.release_id }}"
 
-            const assetName = "dev-pod_${{needs.create-release.outputs.package_version}}.Appimage"
-            const assetUploadName = "dev-pod-glibc-old_${{needs.create-release.outputs.package_version}}.Appimage"
+            const assetName = "dev-pod_${{needs.create-release.outputs.package_version}}_amd64.Appimage"
+            const assetUploadName = "dev-pod-glibc-old_${{needs.create-release.outputs.package_version}}_amd64.Appimage"
             const assetPath = `desktop/src-tauri/target/${{ matrix.settings.target }}/release/bundle/appimage/${assetName}`
 
-            const tarAssetName = "dev-pod_${{needs.create-release.outputs.package_version}}.Appimage.tar.gz"
-            const tarAssetUploadName = "dev-pod-glibc-old_${{needs.create-release.outputs.package_version}}.Appimage.tar.gz"
+            const tarAssetName = "dev-pod_${{needs.create-release.outputs.package_version}}_amd64.Appimage.tar.gz"
+            const tarAssetUploadName = "dev-pod-glibc-old_${{needs.create-release.outputs.package_version}}_amd64.Appimage.tar.gz"
             const tarAssetPath = `desktop/src-tauri/target/${{ matrix.settings.target }}/release/bundle/appimage/${tarAssetName}`
 
             console.log("Attempting to upload release asset: ", assetName)
@@ -437,12 +437,12 @@ jobs:
 
             const releaseId = "${{ needs.create-release.outputs.release_id }}"
 
-            const assetName = "dev-pod_${{needs.create-release.outputs.package_version}}.Appimage"
-            const assetUploadName = "dev-pod-glibc-new_${{needs.create-release.outputs.package_version}}.Appimage"
+            const assetName = "dev-pod_${{needs.create-release.outputs.package_version}}_amd64.Appimage"
+            const assetUploadName = "dev-pod-glibc-new_${{needs.create-release.outputs.package_version}}_amd64.Appimage"
             const assetPath = `desktop/src-tauri/target/${{ matrix.settings.target }}/release/bundle/appimage/${assetName}`
 
-            const tarAssetName = "dev-pod_${{needs.create-release.outputs.package_version}}.Appimage.tar.gz"
-            const tarAssetUploadName = "dev-pod-glibc-new_${{needs.create-release.outputs.package_version}}.Appimage.tar.gz"
+            const tarAssetName = "dev-pod_${{needs.create-release.outputs.package_version}}_amd64.Appimage.tar.gz"
+            const tarAssetUploadName = "dev-pod-glibc-new_${{needs.create-release.outputs.package_version}}_amd64.Appimage.tar.gz"
             const tarAssetPath = `desktop/src-tauri/target/${{ matrix.settings.target }}/release/bundle/appimage/${tarAssetName}`
 
             console.log("Attempting to upload release asset: ", assetName)
