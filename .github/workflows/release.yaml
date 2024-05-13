@@ -108,6 +108,11 @@ jobs:
             target: x86_64-pc-windows-msvc
             arch: amd64
             cli_only: false
+          - host: ubuntu-20.04
+            target: x86_64-unknown-linux-gnu
+            os: linux
+            arch: amd64
+            cli_only: false
           - host: ubuntu-22.04
             target: x86_64-unknown-linux-gnu
             os: linux
@@ -139,7 +144,7 @@ jobs:
         working-directory: "./desktop"
 
       - name: Setup System Dependencies
-        if: matrix.settings.host == 'ubuntu-22.04' && matrix.settings.cli_only == false
+        if: ( matrix.settings.host == 'ubuntu-22.04' || matrix.settings.host == 'ubuntu-20.04' ) && matrix.settings.cli_only == false
         run: |
           sudo apt-get update
           sudo apt-get install -y libgtk-3-dev libwebkit2gtk-4.0-dev libayatana-appindicator3-dev librsvg2-dev
@@ -194,11 +199,28 @@ jobs:
         run: yarn install
         working-directory: "./desktop"
 
-      - name: Build Desktop App
+      - name: Build Desktop App (linux glibc old)
+        if: matrix.settings.host == 'ubuntu-20.04' && matrix.settings.cli_only == false
+        uses: tauri-apps/tauri-action@v0.4.0
+        with:
+          releaseId: glibc_old_${{ needs.create-release.outputs.release_id }}
+          projectPath: "./desktop"
+          args: "--config src-tauri/tauri-linux.conf.json --target ${{ matrix.settings.target }} --features enable-updater --bundles appimage,updater"
+          includeUpdaterJson: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAURI_PRIVATE_KEY: ${{ secrets.TAURI_PRIVATE_KEY }}
+          TAURI_KEY_PASSWORD: ${{ secrets.TAURI_KEY_PASSWORD }}
+          # AppImage Signing:
+          SIGN: ${{ secrets.APP_IMAGE_SIGN }}
+          SIGN_KEY: ${{ secrets.APP_IMAGE_SIGN_KEY }}
+          APPIMAGETOOL_SIGN_PASSPHRASE: ${{ secrets.APP_IMAGE_SIGN_PASSPHRASE }}
+
+      - name: Build Desktop App (linux glibc new)
         if: matrix.settings.host == 'ubuntu-22.04' && matrix.settings.cli_only == false
         uses: tauri-apps/tauri-action@v0.4.0
         with:
-          releaseId: ${{ needs.create-release.outputs.release_id }}
+          releaseId: glibc_new_${{ needs.create-release.outputs.release_id }}
           projectPath: "./desktop"
           args: "--config src-tauri/tauri-linux.conf.json --target ${{ matrix.settings.target }} --features enable-updater --bundles appimage,updater"
           includeUpdaterJson: true
@@ -232,14 +254,23 @@ jobs:
           APPLE_ID: ${{ secrets.APPLE_ID }}
           APPLE_PASSWORD: ${{ secrets.APPLE_PASSWORD }}
 
-      - name: Build linux tar.gz
-        if: matrix.settings.host == 'ubuntu-22.04' && matrix.settings.cli_only == false
-        id: build-desktop-targz
+      - name: Build linux tar.gz (glibc old)
+        if: matrix.settings.host == 'ubuntu-20.04' && matrix.settings.cli_only == false
+        id: build-desktop-targz-glibc-old
         run: |
           cd ./desktop/src-tauri/target/${{ matrix.settings.target }}/release/bundle/appimage/dev-pod.AppDir || exit 1
           tar --exclude=usr/bin/xdg-open --exclude=usr/lib --exclude=usr/share/doc --exclude=usr/share/glib-2.0 -zcvf dev-pod-desktop.tar.gz usr
 
-          mv dev-pod-desktop.tar.gz ../../dev-pod-${{needs.create-release.outputs.package_version}}.tar.gz
+          mv dev-pod-desktop.tar.gz ../../dev-pod-glibc-old-${{needs.create-release.outputs.package_version}}.tar.gz
+
+      - name: Build linux tar.gz (glibc new)
+        if: matrix.settings.host == 'ubuntu-22.04' && matrix.settings.cli_only == false
+        id: build-desktop-targz-glibc-new
+        run: |
+          cd ./desktop/src-tauri/target/${{ matrix.settings.target }}/release/bundle/appimage/dev-pod.AppDir || exit 1
+          tar --exclude=usr/bin/xdg-open --exclude=usr/lib --exclude=usr/share/doc --exclude=usr/share/glib-2.0 -zcvf dev-pod-desktop.tar.gz usr
+
+          mv dev-pod-desktop.tar.gz ../../dev-pod-glibc-new-${{needs.create-release.outputs.package_version}}.tar.gz
 
       - name: Build Desktop App
         if: matrix.settings.host == 'windows-latest' && matrix.settings.cli_only == false
@@ -352,7 +383,34 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Upload Tar.gz Asset
+      - name: Upload Tar.gz Asset (glibc old)
+        if: matrix.settings.host == 'ubuntu-20.04' && matrix.settings.cli_only == false
+        uses: actions/github-script@v6
+        with:
+          script: |
+            const fs = require("fs")
+
+            const releaseId = "${{ needs.create-release.outputs.release_id }}"
+            const assetName = "dev-pod-glibc-old-${{needs.create-release.outputs.package_version}}.tar.gz"
+            const assetPath = `desktop/src-tauri/target/${{ matrix.settings.target }}/release/bundle/${assetName}`
+
+            console.log("Attempting to upload release asset: ", assetName)
+
+            await github.rest.repos.uploadReleaseAsset({
+              headers: {
+                "content-type": "application/zip",
+                "content-length": fs.statSync(assetPath).size
+              },
+              name: assetName,
+              data: fs.readFileSync(assetPath),
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              release_id: releaseId
+            })
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Upload Tar.gz Asset (glibc new)
         if: matrix.settings.host == 'ubuntu-22.04' && matrix.settings.cli_only == false
         uses: actions/github-script@v6
         with:
@@ -360,7 +418,7 @@ jobs:
             const fs = require("fs")
 
             const releaseId = "${{ needs.create-release.outputs.release_id }}"
-            const assetName = "dev-pod-${{needs.create-release.outputs.package_version}}.tar.gz"
+            const assetName = "dev-pod-glibc-new-${{needs.create-release.outputs.package_version}}.tar.gz"
             const assetPath = `desktop/src-tauri/target/${{ matrix.settings.target }}/release/bundle/${assetName}`
 
             console.log("Attempting to upload release asset: ", assetName)
