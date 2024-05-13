@@ -167,7 +167,7 @@ jobs:
           go-version: 1.21.8
 
       - name: Build Sidecar CLI
-        if: matrix.settings.host != 'windows-latest' && matrix.settings.host != 'ubuntu-20.04'
+        if: matrix.settings.host != 'windows-latest'
         run: |
           BIN_NAME=devpod-cli-${{ matrix.settings.target }}
           GOOS=${{ matrix.settings.os }} GOARCH=${{ matrix.settings.arch }} CGO_ENABLED=0 go build -ldflags "-s -w -X github.com/loft-sh/devpod/pkg/version.version="v${{ needs.create-release.outputs.original_package_version }}" -X github.com/loft-sh/devpod/pkg/telemetry.telemetryPrivateKey=${{ secrets.DEVPOD_TELEMETRY_PRIVATE_KEY }}" -o "test/$BIN_NAME"
