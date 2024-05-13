@@ -383,6 +383,96 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
+      - name: Upload Appimage Assets (glibc old)
+        if: matrix.settings.host == 'ubuntu-20.04' && matrix.settings.cli_only == false
+        uses: actions/github-script@v6
+        with:
+          script: |
+            const fs = require("fs")
+
+            const releaseId = "${{ needs.create-release.outputs.release_id }}"
+
+            const assetName = "dev-pod-${{needs.create-release.outputs.package_version}}.Appimage"
+            const assetUploadName = "dev-pod-glibc-old-${{needs.create-release.outputs.package_version}}.Appimage"
+            const assetPath = `desktop/src-tauri/target/${{ matrix.settings.target }}/release/bundle/${assetName}`
+
+            const tarAssetName = "dev-pod-${{needs.create-release.outputs.package_version}}.Appimage.tar.gz"
+            const tarAssetUploadName = "dev-pod-glibc-old-${{needs.create-release.outputs.package_version}}.Appimage.tar.gz"
+            const tarAssetPath = `desktop/src-tauri/target/${{ matrix.settings.target }}/release/bundle/${tarAssetName}`
+
+            console.log("Attempting to upload release asset: ", assetName)
+
+            await github.rest.repos.uploadReleaseAsset({
+              headers: {
+                "content-type": "application/zip",
+                "content-length": fs.statSync(assetPath).size
+              },
+              name: assetUploadName,
+              data: fs.readFileSync(assetPath),
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              release_id: releaseId
+            })
+
+            await github.rest.repos.uploadReleaseAsset({
+              headers: {
+                "content-type": "application/zip",
+                "content-length": fs.statSync(assetPath).size
+              },
+              name: tarAssetUploadName,
+              data: fs.readFileSync(tarAssetPath),
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              release_id: releaseId
+            })
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Upload Appimage Assets (glibc new)
+        if: matrix.settings.host == 'ubuntu-22.04' && matrix.settings.cli_only == false
+        uses: actions/github-script@v6
+        with:
+          script: |
+            const fs = require("fs")
+
+            const releaseId = "${{ needs.create-release.outputs.release_id }}"
+
+            const assetName = "dev-pod-${{needs.create-release.outputs.package_version}}.Appimage"
+            const assetUploadName = "dev-pod-glibc-new-${{needs.create-release.outputs.package_version}}.Appimage"
+            const assetPath = `desktop/src-tauri/target/${{ matrix.settings.target }}/release/bundle/${assetName}`
+
+            const tarAssetName = "dev-pod-${{needs.create-release.outputs.package_version}}.Appimage.tar.gz"
+            const tarAssetUploadName = "dev-pod-glibc-new-${{needs.create-release.outputs.package_version}}.Appimage.tar.gz"
+            const tarAssetPath = `desktop/src-tauri/target/${{ matrix.settings.target }}/release/bundle/${tarAssetName}`
+
+            console.log("Attempting to upload release asset: ", assetName)
+
+            await github.rest.repos.uploadReleaseAsset({
+              headers: {
+                "content-type": "application/zip",
+                "content-length": fs.statSync(assetPath).size
+              },
+              name: assetUploadName,
+              data: fs.readFileSync(assetPath),
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              release_id: releaseId
+            })
+
+            await github.rest.repos.uploadReleaseAsset({
+              headers: {
+                "content-type": "application/zip",
+                "content-length": fs.statSync(assetPath).size
+              },
+              name: tarAssetUploadName,
+              data: fs.readFileSync(tarAssetPath),
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              release_id: releaseId
+            })
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
       - name: Upload Tar.gz Asset (glibc old)
         if: matrix.settings.host == 'ubuntu-20.04' && matrix.settings.cli_only == false
         uses: actions/github-script@v6
@@ -482,12 +572,13 @@ jobs:
             const winVersion = latest.version.replace("-", ".")
 
             const infos = [
-              { target: "linux-x86_64", sigFile: ".AppImage.tar.gz.sig", packageType: ".tar.gz", originalAssetName: `dev-pod_glibc_old_${version}_amd64.AppImage`, desiredAssetName: "DevPod_linux_glibc_old_amd64.AppImage" },
-              { target: "linux-x86_64", sigFile: ".AppImage.tar.gz.sig", packageType: ".tar.gz", originalAssetName: `dev-pod_glibc_new_${version}_amd64.AppImage`, desiredAssetName: "DevPod_linux_glibc_new_amd64.AppImage" },
+              { target: "linux-x86_64", sigFile: ".AppImage.tar.gz.sig", packageType: ".tar.gz", originalAssetName: `dev-pod-glibc-old_${version}_amd64.AppImage`, desiredAssetName: "DevPod_linux_glibc_old_amd64.AppImage" },
+              { target: "linux-x86_64", sigFile: ".AppImage.tar.gz.sig", packageType: ".tar.gz", originalAssetName: `dev-pod-glibc-new_${version}_amd64.AppImage`, desiredAssetName: "DevPod_linux_glibc_new_amd64.AppImage" },
               { target: "darwin-aarch64", sigFile: "aarch64.app.tar.gz.sig", packageType: ".tar.gz", originalAssetName: `DevPod_${version}_aarch64.dmg`, desiredAssetName: "DevPod_macos_aarch64.dmg", originalUpdaterAssetName: "DevPod_aarch64.app.tar.gz", desiredUpdaterAssetName: "DevPod_macos_aarch64.app.tar.gz" },
               { target: "darwin-x86_64", sigFile: "x64.app.tar.gz.sig", packageType: ".tar.gz", originalAssetName: `DevPod_${version}_x64.dmg`, desiredAssetName: "DevPod_macos_x64.dmg", originalUpdaterAssetName: "DevPod_x64.app.tar.gz", desiredUpdaterAssetName: "DevPod_macos_x64.app.tar.gz" },
               { target: "windows-x86_64", sigFile: ".msi.zip.sig", packageType: ".zip", originalAssetName: `DevPod_${winVersion}_x64_en-US.msi`, desiredAssetName: "DevPod_windows_x64_en-US.msi" },
-              { originalAssetName: `dev-pod-${version}.tar.gz`, desiredAssetName: "DevPod_linux_x86_64.tar.gz" },
+              { originalAssetName: `dev-pod-glibc-new-${version}.tar.gz`, desiredAssetName: "DevPod_linux_glibc_new_x86_64.tar.gz" },
+              { originalAssetName: `dev-pod-glibc-old-${version}.tar.gz`, desiredAssetName: "DevPod_linux_glibc_old_x86_64.tar.gz" },
             ]
 
             for (const info of infos) {
