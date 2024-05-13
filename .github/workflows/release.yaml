@@ -482,7 +482,8 @@ jobs:
             const winVersion = latest.version.replace("-", ".")
 
             const infos = [
-              { target: "linux-x86_64", sigFile: ".AppImage.tar.gz.sig", packageType: ".tar.gz", originalAssetName: `dev-pod_${version}_amd64.AppImage`, desiredAssetName: "DevPod_linux_amd64.AppImage" },
+              { target: "linux-x86_64", sigFile: ".AppImage.tar.gz.sig", packageType: ".tar.gz", originalAssetName: `dev-pod_glibc_old_${version}_amd64.AppImage`, desiredAssetName: "DevPod_linux_glibc_old_amd64.AppImage" },
+              { target: "linux-x86_64", sigFile: ".AppImage.tar.gz.sig", packageType: ".tar.gz", originalAssetName: `dev-pod_glibc_new_${version}_amd64.AppImage`, desiredAssetName: "DevPod_linux_glibc_new_amd64.AppImage" },
               { target: "darwin-aarch64", sigFile: "aarch64.app.tar.gz.sig", packageType: ".tar.gz", originalAssetName: `DevPod_${version}_aarch64.dmg`, desiredAssetName: "DevPod_macos_aarch64.dmg", originalUpdaterAssetName: "DevPod_aarch64.app.tar.gz", desiredUpdaterAssetName: "DevPod_macos_aarch64.app.tar.gz" },
               { target: "darwin-x86_64", sigFile: "x64.app.tar.gz.sig", packageType: ".tar.gz", originalAssetName: `DevPod_${version}_x64.dmg`, desiredAssetName: "DevPod_macos_x64.dmg", originalUpdaterAssetName: "DevPod_x64.app.tar.gz", desiredUpdaterAssetName: "DevPod_macos_x64.app.tar.gz" },
               { target: "windows-x86_64", sigFile: ".msi.zip.sig", packageType: ".zip", originalAssetName: `DevPod_${winVersion}_x64_en-US.msi`, desiredAssetName: "DevPod_windows_x64_en-US.msi" },
