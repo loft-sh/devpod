@@ -201,7 +201,8 @@ func prepareWorkspace(ctx context.Context, workspaceInfo *provider2.AgentWorkspa
 		}
 
 		log.Debugf("Clone Repository")
-		err = CloneRepository(ctx, workspaceInfo.Agent.Local == "true", workspaceInfo.ContentFolder, workspaceInfo.Workspace.Source, helper, log)
+		gitCloner := git.NewCloner(workspaceInfo.CLIOptions.GitCloneStrategy)
+		err = CloneRepository(ctx, workspaceInfo.Agent.Local == "true", workspaceInfo.ContentFolder, workspaceInfo.Workspace.Source, helper, gitCloner, log)
 		if err != nil {
 			// fallback
 			log.Errorf("Cloning failed: %v. Trying cloning on local machine and uploading folder", err)
@@ -406,7 +407,7 @@ func (cmd *UpCmd) devPodUp(ctx context.Context, workspaceInfo *provider2.AgentWo
 	return result, nil
 }
 
-func CloneRepository(ctx context.Context, local bool, workspaceDir string, source provider2.WorkspaceSource, helper string, log log.Logger) error {
+func CloneRepository(ctx context.Context, local bool, workspaceDir string, source provider2.WorkspaceSource, helper string, cloner git.Cloner, log log.Logger) error {
 	// remove the credential helper or otherwise we will receive strange errors within the container
 	defer func() {
 		if helper != "" {
@@ -478,7 +479,7 @@ func CloneRepository(ctx context.Context, local bool, workspaceDir string, sourc
 
 	// run git command
 	gitInfo := git.NewGitInfo(source.GitRepository, source.GitBranch, source.GitCommit, source.GitPRReference, source.GitSubPath)
-	err := git.CloneRepository(ctx, gitInfo, workspaceDir, helper, false, writer, log)
+	err := git.CloneRepository(ctx, gitInfo, workspaceDir, helper, false, cloner, writer, log)
 	if err != nil {
 		return errors.Wrap(err, "clone repository")
 	}

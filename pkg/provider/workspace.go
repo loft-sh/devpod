@@ -164,24 +164,25 @@ type AgentWorkspaceInfo struct {
 
 type CLIOptions struct {
 	// up options
-	ID                   string   `json:"id,omitempty"`
-	Source               string   `json:"source,omitempty"`
-	IDE                  string   `json:"ide,omitempty"`
-	IDEOptions           []string `json:"ideOptions,omitempty"`
-	PrebuildRepositories []string `json:"prebuildRepositories,omitempty"`
-	DevContainerImage    string   `json:"devContainerImage,omitempty"`
-	DevContainerPath     string   `json:"devContainerPath,omitempty"`
-	WorkspaceEnv         []string `json:"workspaceEnv,omitempty"`
-	WorkspaceEnvFile     []string `json:"workspaceEnvFile,omitempty"`
-	Recreate             bool     `json:"recreate,omitempty"`
-	Reset                bool     `json:"reset,omitempty"`
-	Proxy                bool     `json:"proxy,omitempty"`
-	DisableDaemon        bool     `json:"disableDaemon,omitempty"`
-	DaemonInterval       string   `json:"daemonInterval,omitempty"`
-	ForceCredentials     bool     `json:"forceCredentials,omitempty"`
-	GitBranch            string   `json:"gitBranch,omitempty"`
-	GitCommit            string   `json:"gitCommit,omitempty"`
-	FallbackImage        string   `json:"fallbackImage,omitempty"`
+	ID                   string            `json:"id,omitempty"`
+	Source               string            `json:"source,omitempty"`
+	IDE                  string            `json:"ide,omitempty"`
+	IDEOptions           []string          `json:"ideOptions,omitempty"`
+	PrebuildRepositories []string          `json:"prebuildRepositories,omitempty"`
+	DevContainerImage    string            `json:"devContainerImage,omitempty"`
+	DevContainerPath     string            `json:"devContainerPath,omitempty"`
+	WorkspaceEnv         []string          `json:"workspaceEnv,omitempty"`
+	WorkspaceEnvFile     []string          `json:"workspaceEnvFile,omitempty"`
+	Recreate             bool              `json:"recreate,omitempty"`
+	Reset                bool              `json:"reset,omitempty"`
+	Proxy                bool              `json:"proxy,omitempty"`
+	DisableDaemon        bool              `json:"disableDaemon,omitempty"`
+	DaemonInterval       string            `json:"daemonInterval,omitempty"`
+	ForceCredentials     bool              `json:"forceCredentials,omitempty"`
+	GitBranch            string            `json:"gitBranch,omitempty"`
+	GitCommit            string            `json:"gitCommit,omitempty"`
+	GitCloneStrategy     git.CloneStrategy `json:"gitCloneStrategy,omitempty"`
+	FallbackImage        string            `json:"fallbackImage,omitempty"`
 
 	// build options
 	Repository string   `json:"repository,omitempty"`
