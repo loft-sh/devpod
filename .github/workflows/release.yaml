@@ -394,11 +394,11 @@ jobs:
 
             const assetName = "dev-pod_${{needs.create-release.outputs.package_version}}.Appimage"
             const assetUploadName = "dev-pod-glibc-old_${{needs.create-release.outputs.package_version}}.Appimage"
-            const assetPath = `desktop/src-tauri/target/${{ matrix.settings.target }}/release/bundle/${assetName}`
+            const assetPath = `desktop/src-tauri/target/${{ matrix.settings.target }}/release/bundle/appimage/${assetName}`
 
             const tarAssetName = "dev-pod_${{needs.create-release.outputs.package_version}}.Appimage.tar.gz"
             const tarAssetUploadName = "dev-pod-glibc-old_${{needs.create-release.outputs.package_version}}.Appimage.tar.gz"
-            const tarAssetPath = `desktop/src-tauri/target/${{ matrix.settings.target }}/release/bundle/${tarAssetName}`
+            const tarAssetPath = `desktop/src-tauri/target/${{ matrix.settings.target }}/release/bundle/appimage/${tarAssetName}`
 
             console.log("Attempting to upload release asset: ", assetName)
 
@@ -439,11 +439,11 @@ jobs:
 
             const assetName = "dev-pod_${{needs.create-release.outputs.package_version}}.Appimage"
             const assetUploadName = "dev-pod-glibc-new_${{needs.create-release.outputs.package_version}}.Appimage"
-            const assetPath = `desktop/src-tauri/target/${{ matrix.settings.target }}/release/bundle/${assetName}`
+            const assetPath = `desktop/src-tauri/target/${{ matrix.settings.target }}/release/bundle/appimage/${assetName}`
 
             const tarAssetName = "dev-pod_${{needs.create-release.outputs.package_version}}.Appimage.tar.gz"
             const tarAssetUploadName = "dev-pod-glibc-new_${{needs.create-release.outputs.package_version}}.Appimage.tar.gz"
-            const tarAssetPath = `desktop/src-tauri/target/${{ matrix.settings.target }}/release/bundle/${tarAssetName}`
+            const tarAssetPath = `desktop/src-tauri/target/${{ matrix.settings.target }}/release/bundle/appimage/${tarAssetName}`
 
             console.log("Attempting to upload release asset: ", assetName)
 
