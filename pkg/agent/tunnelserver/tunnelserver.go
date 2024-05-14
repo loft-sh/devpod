@@ -344,6 +344,8 @@ func (t *tunnelServer) StreamMount(message *tunnel.StreamMountRequest, stream tu
 		return fmt.Errorf("mount %s is not allowed to download", message.Mount)
 	}
 
+	t.log.Infof("Streaming mount %+v", mount)
+
 	buf := bufio.NewWriterSize(NewStreamWriter(stream, t.log), 10*1024)
 	err := extract.WriteTar(buf, mount.Source, false)
 	if err != nil {

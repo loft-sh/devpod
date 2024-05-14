@@ -11,6 +11,7 @@ import (
 	"strings"
 
 	"github.com/loft-sh/devpod/pkg/agent"
+	"github.com/loft-sh/devpod/pkg/agent/tunnelserver"
 	"github.com/loft-sh/devpod/pkg/compress"
 	"github.com/loft-sh/devpod/pkg/devcontainer/config"
 	"github.com/loft-sh/devpod/pkg/devcontainer/sshtunnel"
@@ -101,19 +102,27 @@ func (r *runner) setupContainer(
 		return r.Driver.CommandDevContainer(cancelCtx, r.ID, "root", sshCmd, sshTunnelStdinReader, sshTunnelStdoutWriter, writer)
 	}
 
+	r.Log.Infof("isLocal: %s", r.WorkspaceConfig.Agent.Local)
+	r.Log.Infof("isProxy: %s", r.WorkspaceConfig.CLIOptions.Proxy)
+
 	return sshtunnel.ExecuteCommand(
 		ctx,
 		nil,
 		agentInjectFunc,
 		sshTunnelCmd,
 		setupCommand,
-		false,
-		true,
-		r.WorkspaceConfig.Agent.InjectGitCredentials != "false",
-		r.WorkspaceConfig.Agent.InjectDockerCredentials != "false",
-		config.GetMounts(result),
-		"", "",
 		r.Log,
+		func(ctx context.Context, stdin io.WriteCloser, stdout io.Reader) (*config.Result, error) {
+			return tunnelserver.RunSetupServer(
+				ctx,
+				stdout,
+				stdin,
+				r.WorkspaceConfig.Agent.InjectGitCredentials != "false",
+				r.WorkspaceConfig.Agent.InjectDockerCredentials != "false",
+				config.GetMounts(result),
+				r.Log,
+			)
+		},
 	)
 }
 

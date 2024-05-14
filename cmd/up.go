@@ -467,14 +467,30 @@ func (cmd *UpCmd) devPodUpMachine(
 		agentInjectFunc,
 		sshTunnelCmd,
 		agentCommand,
-		cmd.Proxy,
-		false,
-		false,
-		false,
-		nil,
-		cmd.GitUsername,
-		cmd.GitToken,
 		log,
+		func(ctx context.Context, stdin io.WriteCloser, stdout io.Reader) (*config2.Result, error) {
+			if cmd.Proxy {
+				// create client on stdin & stdout
+				tunnelClient, err := tunnelserver.NewTunnelClient(os.Stdin, os.Stdout, true)
+				if err != nil {
+					return nil, errors.Wrap(err, "create tunnel client")
+				}
+
+				// create proxy server
+				return tunnelserver.RunProxyServer(ctx, tunnelClient, stdout, stdin, log, cmd.GitUsername, cmd.GitToken)
+			}
+
+			return tunnelserver.RunUpServer(
+				ctx,
+				stdout,
+				stdin,
+				client.AgentInjectGitCredentials(),
+				client.AgentInjectDockerCredentials(),
+				client.WorkspaceConfig(),
+				log,
+				tunnelserver.WithGitCredentialsOverride(cmd.GitUsername, cmd.GitToken),
+			)
+		},
 	)
 }
 
