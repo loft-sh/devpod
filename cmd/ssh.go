@@ -446,11 +446,10 @@ func (cmd *SSHCmd) startProxyServices(
 	ideName string,
 	log log.Logger,
 ) {
-	if cmd.User == "" {
+	gitCredentials := devPodConfig.ContextOption(config.ContextOptionSSHInjectGitCredentials) == "true"
+	if !gitCredentials || cmd.User == "" || cmd.GitUsername == "" || cmd.GitToken == "" {
 		return
 	}
-
-	gitCredentials := devPodConfig.ContextOption(config.ContextOptionSSHInjectGitCredentials) == "true"
 
 	stdoutReader, stdoutWriter, err := os.Pipe()
 	if err != nil {
@@ -485,11 +484,9 @@ func (cmd *SSHCmd) startProxyServices(
 		errChan <- devssh.Run(cancelCtx, containerClient, command, stdinReader, stdoutWriter, writer)
 	}()
 
-	opts := []tunnelserver.Option{}
-	if cmd.GitUsername != "" && cmd.GitToken != "" {
-		opts = append(opts, tunnelserver.WithGitCredentialsOverride(cmd.GitUsername, cmd.GitToken))
-	}
-	err = tunnelserver.RunServicesServer(ctx, stdoutReader, stdinWriter, true, true, nil, log, opts...)
+	err = tunnelserver.RunServicesServer(ctx, stdoutReader, stdinWriter, true, true, nil, log,
+		[]tunnelserver.Option{tunnelserver.WithGitCredentialsOverride(cmd.GitUsername, cmd.GitToken)}...,
+	)
 	if err != nil {
 		log.Debugf("Error running proxy server: %v", err)
 		return
