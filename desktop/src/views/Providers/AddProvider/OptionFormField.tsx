@@ -168,7 +168,7 @@ export function OptionFormField({
       {exists(optionError) ? (
         <FormErrorMessage>{optionError.message?.toString() ?? "Error"}</FormErrorMessage>
       ) : (
-        exists(description) && <FormHelperText>{description}</FormHelperText>
+        exists(description) && <FormHelperText userSelect="auto">{description}</FormHelperText>
       )}
     </FormControl>
   )
