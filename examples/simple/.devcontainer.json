@@ -1,4 +1,7 @@
 {
   "name": "Python 3",
-  "image": "mcr.microsoft.com/vscode/devcontainers/python:0-3"
+  "image": "mcr.microsoft.com/vscode/devcontainers/python:0-3",
+  "mounts": [
+    { "source": "/var/lib/loft/runner", "target": "/root/test", "type": "bind" }
+  ]
 }

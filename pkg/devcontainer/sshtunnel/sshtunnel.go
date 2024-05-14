@@ -9,7 +9,6 @@ import (
 
 	"github.com/loft-sh/log"
 
-	"github.com/loft-sh/devpod/pkg/agent/tunnelserver"
 	client2 "github.com/loft-sh/devpod/pkg/client"
 	config2 "github.com/loft-sh/devpod/pkg/devcontainer/config"
 	devssh "github.com/loft-sh/devpod/pkg/ssh"
@@ -19,6 +18,7 @@ import (
 )
 
 type AgentInjectFunc func(context.Context, string, *os.File, *os.File, io.WriteCloser) error
+type TunnelServerFunc func(ctx context.Context, stdin io.WriteCloser, stdout io.Reader) (*config2.Result, error)
 
 // ExecuteCommand runs the command in an SSH Tunnel and returns the result.
 func ExecuteCommand(
@@ -27,14 +27,8 @@ func ExecuteCommand(
 	agentInject AgentInjectFunc,
 	sshCommand,
 	command string,
-	proxy,
-	setupContainer,
-	allowGitCredentials,
-	allowDockerCredentials bool,
-	mounts []*config2.Mount,
-	gitUsername string,
-	gitToken string,
 	log log.Logger,
+	tunnelServerFunc TunnelServerFunc,
 ) (*config2.Result, error) {
 	// create pipes
 	sshTunnelStdoutReader, sshTunnelStdoutWriter, err := os.Pipe()
@@ -129,56 +123,9 @@ func ExecuteCommand(
 		}
 	}()
 
-	// create container etc.
-	var result *config2.Result
-	if proxy {
-		// create client on stdin & stdout
-		tunnelClient, err := tunnelserver.NewTunnelClient(os.Stdin, os.Stdout, true)
-		if err != nil {
-			return nil, errors.Wrap(err, "create tunnel client")
-		}
-
-		// create proxy server
-		result, err = tunnelserver.RunProxyServer(
-			cancelCtx,
-			tunnelClient,
-			gRPCConnStdoutReader,
-			gRPCConnStdinWriter,
-			log,
-			gitUsername,
-			gitToken,
-		)
-		if err != nil {
-			return nil, errors.Wrap(err, "run proxy tunnel")
-		}
-	} else if setupContainer {
-		// start server
-		result, err = tunnelserver.RunSetupServer(
-			cancelCtx,
-			gRPCConnStdoutReader,
-			gRPCConnStdinWriter,
-			allowGitCredentials,
-			allowDockerCredentials,
-			mounts,
-			log,
-		)
-		if err != nil {
-			return nil, errors.Wrap(err, "run tunnel machine")
-		}
-	} else {
-		result, err = tunnelserver.RunUpServer(
-			cancelCtx,
-			gRPCConnStdoutReader,
-			gRPCConnStdinWriter,
-			client.AgentInjectGitCredentials(),
-			client.AgentInjectDockerCredentials(),
-			client.WorkspaceConfig(),
-			log,
-			tunnelserver.WithGitCredentialsOverride(gitUsername, gitToken),
-		)
-		if err != nil {
-			return nil, errors.Wrap(err, "run tunnel machine")
-		}
+	result, err := tunnelServerFunc(cancelCtx, gRPCConnStdinWriter, gRPCConnStdoutReader)
+	if err != nil {
+		return nil, fmt.Errorf("start tunnel server: %w", err)
 	}
 
 	// wait until command finished
