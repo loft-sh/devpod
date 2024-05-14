@@ -130,7 +130,7 @@ func (cmd *SetupContainerCmd) Run(ctx context.Context) error {
 			// target folder
 			err = extract.Extract(tunnelserver.NewStreamReader(stream, logger), m.Target)
 			if err != nil {
-				return fmt.Errorf("stream stream mount %s: %w", m.String(), err)
+				return fmt.Errorf("stream mount %s: %w", m.String(), err)
 			}
 		}
 	}

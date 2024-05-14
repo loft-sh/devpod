@@ -470,13 +470,12 @@ func (cmd *UpCmd) devPodUpMachine(
 		log,
 		func(ctx context.Context, stdin io.WriteCloser, stdout io.Reader) (*config2.Result, error) {
 			if cmd.Proxy {
-				// create client on stdin & stdout
+				// create tunnel client on stdin & stdout
 				tunnelClient, err := tunnelserver.NewTunnelClient(os.Stdin, os.Stdout, true)
 				if err != nil {
 					return nil, errors.Wrap(err, "create tunnel client")
 				}
 
-				// create proxy server
 				return tunnelserver.RunProxyServer(ctx, tunnelClient, stdout, stdin, log, cmd.GitUsername, cmd.GitToken)
 			}
 
