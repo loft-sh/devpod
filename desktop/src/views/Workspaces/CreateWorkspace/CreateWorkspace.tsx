@@ -423,7 +423,12 @@ export function CreateWorkspace() {
               <Box width={"full"} />
             </HStack>
 
-            <CollapsibleSection title="Git Options" showIcon>
+            <CollapsibleSection title="Git Options (deprecated)" showIcon>
+              <Text color="gray.600" fontSize="sm" mb="4" mt="-2">
+                Force a repository to use a git branch or a commit in cases where the
+                workspace-source@branch syntax isn&apos;t compatible, like Azure DevOps.
+              </Text>
+
               <HStack spacing="8" alignItems={"top"} width={"100%"} justifyContent={"start"}>
                 <FormControl isInvalid={exists(gitBranchError)}>
                   <FormLabel>Git Branch</FormLabel>
