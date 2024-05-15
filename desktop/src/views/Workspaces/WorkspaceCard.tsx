@@ -88,8 +88,13 @@ export function WorkspaceCard({ workspaceID, isSelected, onSelectionChange }: TW
     onClose: onRebuildClose,
   } = useDisclosure()
   const { isOpen: isResetOpen, onOpen: handleResetClicked, onClose: onResetClose } = useDisclosure()
-
   const { isOpen: isStopOpen, onOpen: handleStopClicked, onClose: onStopClose } = useDisclosure()
+  const {
+    isOpen: isChangeOptionsOpen,
+    onOpen: handleChangeOptionsClicked,
+    onClose: onChangeOptionsClose,
+  } = useDisclosure()
+
   const workspace = useWorkspace(workspaceID)
   const [ideName, setIdeName] = useState<string | undefined>(() => {
     if (settings.fixedIDE && defaultIDE?.name) {
@@ -159,6 +164,7 @@ export function WorkspaceCard({ workspaceID, isSelected, onSelectionChange }: TW
             onDeleteClicked={handleDeleteClicked}
             onStopClicked={handleStopClicked}
             onLogsClicked={handleLogsClicked}
+            onChangeOptionsClicked={handleChangeOptionsClicked}
           />
         </WorkspaceCardHeader>
       </Card>
@@ -265,6 +271,31 @@ export function WorkspaceCard({ workspaceID, isSelected, onSelectionChange }: TW
                 onClick={() => {
                   workspace.stop()
                   onStopClose()
+                }}>
+                Stop
+              </Button>
+            </HStack>
+          </ModalFooter>
+        </ModalContent>
+      </Modal>
+
+      <Modal onClose={onChangeOptionsClose} isOpen={isChangeOptionsOpen} isCentered>
+        <ModalOverlay />
+        <ModalContent>
+          <ModalHeader>Stop Workspace</ModalHeader>
+          <ModalCloseButton />
+          <ModalBody>
+            Stopping the workspace while it&apos;s not running may leave it in a corrupted state. Do
+            you want to stop it regardless?
+          </ModalBody>
+          <ModalFooter>
+            <HStack spacing={"2"}>
+              <Button onClick={onChangeOptionsClose}>Close</Button>
+              <Button
+                colorScheme={"red"}
+                onClick={() => {
+                  workspace.stop()
+                  onChangeOptionsClose()
                 }}>
                 Stop
               </Button>
@@ -432,6 +463,7 @@ type TWorkspaceControlsProps = Readonly<{
   onDeleteClicked: VoidFunction
   onStopClicked: VoidFunction
   onLogsClicked: VoidFunction
+  onChangeOptionsClicked: VoidFunction
 }>
 function WorkspaceControls({
   id,
@@ -447,9 +479,20 @@ function WorkspaceControls({
   onDeleteClicked,
   onStopClicked,
   onLogsClicked,
+  onChangeOptionsClicked,
 }: TWorkspaceControlsProps) {
+  const [provider] = useProvider(workspace.data?.provider?.name)
+  const [[proInstances]] = useProInstances()
+  const proInstance = useMemo<TProInstance | undefined>(() => {
+    if (!provider?.isProxyProvider) {
+      return undefined
+    }
+
+    return proInstances?.find((instance) => instance.provider === provider.config?.name)
+  }, [proInstances, provider?.config?.name, provider?.isProxyProvider])
   const { isEnabled: isShareEnabled, onClick: handleShareClicked } = useShareWorkspace(
-    workspace.data
+    workspace.data,
+    proInstance
   )
 
   const handleOpenWithIDEClicked = (id: TWorkspaceID, ide: TIDE["name"]) => async () => {
@@ -527,23 +570,6 @@ function WorkspaceControls({
                 </PopoverContent>
               </Popover>
               <MenuItem
-                icon={<ArrowPath boxSize={4} />}
-                onClick={onRebuildClicked}
-                isDisabled={isOpenDisabled || isLoading}>
-                Rebuild
-              </MenuItem>
-              <MenuItem
-                icon={<ArrowCycle boxSize={4} />}
-                onClick={onResetClicked}
-                isDisabled={isOpenDisabled || isLoading}>
-                Reset
-              </MenuItem>
-              {isShareEnabled && (
-                <MenuItem icon={<Icon as={HiShare} boxSize={4} />} onClick={handleShareClicked}>
-                  Share
-                </MenuItem>
-              )}
-              <MenuItem
                 isDisabled={workspace.data?.status !== "Running"}
                 onClick={() => {
                   if (workspace.data?.status !== "Running") {
@@ -557,6 +583,29 @@ function WorkspaceControls({
                 icon={<Pause boxSize={4} />}>
                 Stop
               </MenuItem>
+              <MenuItem
+                icon={<ArrowPath boxSize={4} />}
+                onClick={onRebuildClicked}
+                isDisabled={isOpenDisabled || isLoading}>
+                Rebuild
+              </MenuItem>
+              <MenuItem
+                icon={<ArrowCycle boxSize={4} />}
+                onClick={onResetClicked}
+                isDisabled={isOpenDisabled || isLoading}>
+                Reset
+              </MenuItem>
+              <MenuItem
+                icon={<Stack3D boxSize={4} />}
+                onClick={onChangeOptionsClicked}
+                isDisabled={isOpenDisabled || isLoading}>
+                Change Options
+              </MenuItem>
+              {isShareEnabled && (
+                <MenuItem icon={<Icon as={HiShare} boxSize={4} />} onClick={handleShareClicked}>
+                  Share
+                </MenuItem>
+              )}
               <MenuItem
                 fontWeight="normal"
                 icon={<CommandLine boxSize={4} />}
@@ -578,17 +627,11 @@ function WorkspaceControls({
   )
 }
 
-function useShareWorkspace(workspace: TWorkspace | undefined) {
+function useShareWorkspace(
+  workspace: TWorkspace | undefined,
+  proInstance: TProInstance | undefined
+) {
   const toast = useToast()
-  const [provider] = useProvider(workspace?.provider?.name)
-  const [[proInstances]] = useProInstances()
-  const proInstance = useMemo<TProInstance | undefined>(() => {
-    if (!provider?.isProxyProvider) {
-      return undefined
-    }
-
-    return proInstances?.find((instance) => instance.provider === provider.config?.name)
-  }, [proInstances, provider?.config?.name, provider?.isProxyProvider])
 
   const handleShareClicked = useCallback(async () => {
     const devpodProHost = proInstance?.host
@@ -626,7 +669,7 @@ function useShareWorkspace(workspace: TWorkspace | undefined) {
   }, [proInstance?.host, toast, workspace?.id, workspace?.uid])
 
   return {
-    isEnabled: workspace !== undefined && provider?.isProxyProvider && proInstance !== undefined,
+    isEnabled: workspace !== undefined && proInstance !== undefined,
     onClick: handleShareClicked,
   }
 }
