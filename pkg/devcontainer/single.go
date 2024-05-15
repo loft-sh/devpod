@@ -60,7 +60,7 @@ func (r *runner) runSingleContainer(ctx context.Context, parsedConfig *config.Su
 		}
 
 		// If driver can reprovision, rerun the devcontainer and let the driver handle follow-up steps
-		if d, ok := r.Driver.(driver.ReprovisioningDriver); ok && d.CanReprovision() {
+		if d, ok := r.Driver.(driver.ReprovisioningDriver); ok && d.CanReprovision(ctx, r.ID) {
 			err = r.Driver.RunDevContainer(ctx, r.ID, nil)
 			if err != nil {
 				return nil, errors.Wrap(err, "start dev container")
