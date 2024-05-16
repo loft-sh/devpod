@@ -213,7 +213,6 @@ function useProviderUpdates() {
     // eslint-disable-next-line @tanstack/query/exhaustive-deps
     queryKey: QueryKeys.PROVIDERS_CHECK_UPDATE_ALL,
     queryFn: async () => {
-      console.log("Checking for updates", providers)
       if (providers === undefined || Object.keys(providers).length === 0) {
         return
       }

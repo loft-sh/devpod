@@ -34,7 +34,7 @@ import {
 } from "@chakra-ui/react"
 import { useQuery } from "@tanstack/react-query"
 import dayjs from "dayjs"
-import { useCallback, useId, useMemo, useState } from "react"
+import { useCallback, useId, useMemo, useRef, useState } from "react"
 import { HiClock, HiOutlineCode, HiShare } from "react-icons/hi"
 import { useNavigate } from "react-router"
 import { client } from "../../client"
@@ -63,6 +63,7 @@ import { QueryKeys } from "../../queryKeys"
 import { Routes } from "../../routes"
 import { TIDE, TIDEs, TProInstance, TWorkspace, TWorkspaceID } from "../../types"
 import { useIDEs } from "../../useIDEs"
+import { ConfigureProviderOptionsForm } from "../Providers"
 import { getIDEName, getSourceName } from "./helpers"
 import { WorkspaceStatusBadge } from "./WorkspaceStatusBadge"
 
@@ -73,6 +74,7 @@ type TWorkspaceCardProps = Readonly<{
 }>
 
 export function WorkspaceCard({ workspaceID, isSelected, onSelectionChange }: TWorkspaceCardProps) {
+  const changeOptionsModalBodyRef = useRef<HTMLDivElement>(null)
   const settings = useSettings()
   const [forceDelete, setForceDelete] = useState<boolean>(false)
   const navigate = useNavigate()
@@ -121,6 +123,27 @@ export function WorkspaceCard({ workspaceID, isSelected, onSelectionChange }: TW
 
     navigateToAction(actionID)
   }, [navigateToAction, workspace])
+
+  const handleChangeOptionsFinishClicked = (extraProviderOptions: Record<string, string>) => {
+    // diff against current workspace options
+    let changedOptions: Record<string, string> | undefined = undefined
+    if (Object.keys(extraProviderOptions).length > 0) {
+      changedOptions = {}
+      const workspaceOptions = workspace.data?.provider?.options ?? {}
+      for (const [k, v] of Object.entries(extraProviderOptions)) {
+        // check if current workspace option doesn't contain option or it does but value is different
+        if (!workspaceOptions[k] || workspaceOptions[k]?.value !== v) {
+          changedOptions[k] = v
+        }
+      }
+    }
+    const actionID = workspace.start({
+      id: workspaceID,
+      providerConfig: { options: changedOptions },
+    })
+    onChangeOptionsClose()
+    navigateToAction(actionID)
+  }
 
   const isLoading = workspace.current?.status === "pending"
 
@@ -279,28 +302,36 @@ export function WorkspaceCard({ workspaceID, isSelected, onSelectionChange }: TW
         </ModalContent>
       </Modal>
 
-      <Modal onClose={onChangeOptionsClose} isOpen={isChangeOptionsOpen} isCentered>
+      <Modal
+        onClose={onChangeOptionsClose}
+        isOpen={isChangeOptionsOpen}
+        isCentered
+        size="4xl"
+        scrollBehavior="inside">
         <ModalOverlay />
         <ModalContent>
-          <ModalHeader>Stop Workspace</ModalHeader>
+          <ModalHeader>Change Options</ModalHeader>
           <ModalCloseButton />
-          <ModalBody>
-            Stopping the workspace while it&apos;s not running may leave it in a corrupted state. Do
-            you want to stop it regardless?
+          <ModalBody
+            ref={changeOptionsModalBodyRef}
+            overflowX="hidden"
+            overflowY="auto"
+            paddingBottom="0">
+            {workspace.data.provider?.name ? (
+              <ConfigureProviderOptionsForm
+                workspace={workspace.data}
+                showBottomActionBar
+                isModal
+                submitTitle="Update &amp; Open"
+                containerRef={changeOptionsModalBodyRef}
+                reuseMachine={false}
+                providerID={workspace.data.provider.name}
+                onFinish={handleChangeOptionsFinishClicked}
+              />
+            ) : (
+              <>Unable to find provider for this workspace</>
+            )}
           </ModalBody>
-          <ModalFooter>
-            <HStack spacing={"2"}>
-              <Button onClick={onChangeOptionsClose}>Close</Button>
-              <Button
-                colorScheme={"red"}
-                onClick={() => {
-                  workspace.stop()
-                  onChangeOptionsClose()
-                }}>
-                Stop
-              </Button>
-            </HStack>
-          </ModalFooter>
         </ModalContent>
       </Modal>
     </>
@@ -463,7 +494,7 @@ type TWorkspaceControlsProps = Readonly<{
   onDeleteClicked: VoidFunction
   onStopClicked: VoidFunction
   onLogsClicked: VoidFunction
-  onChangeOptionsClicked: VoidFunction
+  onChangeOptionsClicked?: VoidFunction
 }>
 function WorkspaceControls({
   id,
@@ -512,6 +543,8 @@ function WorkspaceControls({
     "Cannot open this workspace because it is busy. If this doesn't change, try to force delete and recreate it."
   const [isStartWithHovering, startWithRef] = useHover()
   const [isPopoverHovering, popoverContentRef] = useHover()
+  const isChangeOptionsEnabled =
+    workspace.data?.provider?.options != null && proInstance !== undefined
 
   return (
     <HStack spacing="2" width="full" justifyContent="end">
@@ -595,12 +628,14 @@ function WorkspaceControls({
                 isDisabled={isOpenDisabled || isLoading}>
                 Reset
               </MenuItem>
-              <MenuItem
-                icon={<Stack3D boxSize={4} />}
-                onClick={onChangeOptionsClicked}
-                isDisabled={isOpenDisabled || isLoading}>
-                Change Options
-              </MenuItem>
+              {isChangeOptionsEnabled && (
+                <MenuItem
+                  icon={<Stack3D boxSize={4} />}
+                  onClick={onChangeOptionsClicked}
+                  isDisabled={isOpenDisabled || isLoading}>
+                  Change Options
+                </MenuItem>
+              )}
               {isShareEnabled && (
                 <MenuItem icon={<Icon as={HiShare} boxSize={4} />} onClick={handleShareClicked}>
                   Share

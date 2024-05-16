@@ -51,7 +51,7 @@ func validate(config *ProviderConfig) error {
 		return fmt.Errorf("name is missing in provider.yaml")
 	}
 	if ProviderNameRegEx.MatchString(config.Name) {
-		return fmt.Errorf("provider name can only include smaller case letters, numbers or dashes")
+		return fmt.Errorf("provider name can only include lowercase letters, numbers or dashes")
 	} else if len(config.Name) > 32 {
 		return fmt.Errorf("provider name cannot be longer than 32 characters")
 	}
@@ -84,6 +84,10 @@ func validate(config *ProviderConfig) error {
 
 		if optionValue.Global && optionValue.Cache != "" {
 			return fmt.Errorf("global and cache cannot be used together in option '%s'", optionName)
+		}
+
+		if optionValue.Global && optionValue.Mutable {
+			return fmt.Errorf("global and mutable cannot be used together in option '%s'", optionName)
 		}
 
 		if optionValue.Cache != "" {

@@ -40,7 +40,7 @@ export function BottomActionBar({ isModal = false, children }: TModalBottomBarPr
         animate={{ transform: `translateY(0) ${translateX}` }}
         position="sticky"
         marginTop="10"
-        bottom="0"
+        bottom="-1.1rem"
         left="0"
         width={
           isModal ? "calc(100% + 5.5rem)" : { base: `calc(100vw - ${SIDEBAR_WIDTH})`, xl: "full" }

@@ -153,6 +153,9 @@ export function toMultipleFlagArg(input: string) {
   return equaledInput.split(" ")
 }
 
-export function serializeRawOptions(rawOptions: Record<string, unknown>): string[] {
-  return Object.entries(rawOptions).map(([key, value]) => DEVPOD_FLAG_OPTION + `=${key}=${value}`)
+export function serializeRawOptions(
+  rawOptions: Record<string, unknown>,
+  flag: string = DEVPOD_FLAG_OPTION
+): string[] {
+  return Object.entries(rawOptions).map(([key, value]) => flag + `=${key}=${value}`)
 }

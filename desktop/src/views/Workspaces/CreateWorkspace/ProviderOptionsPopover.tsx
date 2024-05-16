@@ -1,4 +1,8 @@
-import { ConfigureProviderOptionsForm, TOptionWithID, useProviderOptions } from "@/views/Providers"
+import {
+  ConfigureProviderOptionsForm,
+  TOptionWithID,
+  useProviderDisplayOptions,
+} from "@/views/Providers"
 import { ViewIcon } from "@chakra-ui/icons"
 import {
   ButtonGroup,
@@ -22,14 +26,15 @@ import {
 } from "@chakra-ui/react"
 import { ReactElement, useCallback, useRef, useState } from "react"
 import { HiPencil } from "react-icons/hi2"
-import { TNamedProvider, TProviderOptions } from "../../../types"
+import { TNamedProvider } from "../../../types"
+import { mergeOptionDefinitions } from "@/views/Providers/helpers"
 
 type TProviderOptionsPopoverProps = Readonly<{ provider: TNamedProvider; trigger: ReactElement }>
 export function ProviderOptionsPopover({ provider, trigger }: TProviderOptionsPopoverProps) {
   const { isOpen, onClose, onOpen } = useDisclosure()
   const bodyRef = useRef<HTMLDivElement | null>(null)
 
-  const options = useProviderOptions(
+  const options = useProviderDisplayOptions(
     mergeOptionDefinitions(provider.state?.options ?? {}, provider.config?.options ?? {}),
     provider.config?.optionGroups ?? []
   )
@@ -199,22 +204,4 @@ function ProviderOptionList({ options }: TProviderOptionListProps) {
       })}
     </List>
   )
-}
-
-function mergeOptionDefinitions(
-  stateOptions: TProviderOptions,
-  configOptions: TProviderOptions
-): TProviderOptions {
-  const res: TProviderOptions = {}
-  for (const [k, v] of Object.entries(stateOptions)) {
-    const config = configOptions[k]
-    if (config) {
-      res[k] = { ...config, ...v }
-      continue
-    }
-
-    res[k] = v
-  }
-
-  return res
 }
