@@ -34,7 +34,7 @@ import {
 } from "@chakra-ui/react"
 import { useQuery } from "@tanstack/react-query"
 import dayjs from "dayjs"
-import { useCallback, useId, useMemo, useState } from "react"
+import { useCallback, useId, useMemo, useRef, useState } from "react"
 import { HiClock, HiOutlineCode, HiShare } from "react-icons/hi"
 import { useNavigate } from "react-router"
 import { client } from "../../client"
@@ -63,6 +63,7 @@ import { QueryKeys } from "../../queryKeys"
 import { Routes } from "../../routes"
 import { TIDE, TIDEs, TProInstance, TWorkspace, TWorkspaceID } from "../../types"
 import { useIDEs } from "../../useIDEs"
+import { ConfigureProviderOptionsForm } from "../Providers"
 import { getIDEName, getSourceName } from "./helpers"
 import { WorkspaceStatusBadge } from "./WorkspaceStatusBadge"
 
@@ -73,6 +74,7 @@ type TWorkspaceCardProps = Readonly<{
 }>
 
 export function WorkspaceCard({ workspaceID, isSelected, onSelectionChange }: TWorkspaceCardProps) {
+  const changeOptionsModalBodyRef = useRef<HTMLDivElement>(null)
   const settings = useSettings()
   const [forceDelete, setForceDelete] = useState<boolean>(false)
   const navigate = useNavigate()
@@ -88,8 +90,13 @@ export function WorkspaceCard({ workspaceID, isSelected, onSelectionChange }: TW
     onClose: onRebuildClose,
   } = useDisclosure()
   const { isOpen: isResetOpen, onOpen: handleResetClicked, onClose: onResetClose } = useDisclosure()
-
   const { isOpen: isStopOpen, onOpen: handleStopClicked, onClose: onStopClose } = useDisclosure()
+  const {
+    isOpen: isChangeOptionsOpen,
+    onOpen: handleChangeOptionsClicked,
+    onClose: onChangeOptionsClose,
+  } = useDisclosure()
+
   const workspace = useWorkspace(workspaceID)
   const [ideName, setIdeName] = useState<string | undefined>(() => {
     if (settings.fixedIDE && defaultIDE?.name) {
@@ -116,6 +123,27 @@ export function WorkspaceCard({ workspaceID, isSelected, onSelectionChange }: TW
 
     navigateToAction(actionID)
   }, [navigateToAction, workspace])
+
+  const handleChangeOptionsFinishClicked = (extraProviderOptions: Record<string, string>) => {
+    // diff against current workspace options
+    let changedOptions: Record<string, string> | undefined = undefined
+    if (Object.keys(extraProviderOptions).length > 0) {
+      changedOptions = {}
+      const workspaceOptions = workspace.data?.provider?.options ?? {}
+      for (const [k, v] of Object.entries(extraProviderOptions)) {
+        // check if current workspace option doesn't contain option or it does but value is different
+        if (!workspaceOptions[k] || workspaceOptions[k]?.value !== v) {
+          changedOptions[k] = v
+        }
+      }
+    }
+    const actionID = workspace.start({
+      id: workspaceID,
+      providerConfig: { options: changedOptions },
+    })
+    onChangeOptionsClose()
+    navigateToAction(actionID)
+  }
 
   const isLoading = workspace.current?.status === "pending"
 
@@ -159,6 +187,7 @@ export function WorkspaceCard({ workspaceID, isSelected, onSelectionChange }: TW
             onDeleteClicked={handleDeleteClicked}
             onStopClicked={handleStopClicked}
             onLogsClicked={handleLogsClicked}
+            onChangeOptionsClicked={handleChangeOptionsClicked}
           />
         </WorkspaceCardHeader>
       </Card>
@@ -270,6 +299,39 @@ export function WorkspaceCard({ workspaceID, isSelected, onSelectionChange }: TW
               </Button>
             </HStack>
           </ModalFooter>
+        </ModalContent>
+      </Modal>
+
+      <Modal
+        onClose={onChangeOptionsClose}
+        isOpen={isChangeOptionsOpen}
+        isCentered
+        size="4xl"
+        scrollBehavior="inside">
+        <ModalOverlay />
+        <ModalContent>
+          <ModalHeader>Change Options</ModalHeader>
+          <ModalCloseButton />
+          <ModalBody
+            ref={changeOptionsModalBodyRef}
+            overflowX="hidden"
+            overflowY="auto"
+            paddingBottom="0">
+            {workspace.data.provider?.name ? (
+              <ConfigureProviderOptionsForm
+                workspace={workspace.data}
+                showBottomActionBar
+                isModal
+                submitTitle="Update &amp; Open"
+                containerRef={changeOptionsModalBodyRef}
+                reuseMachine={false}
+                providerID={workspace.data.provider.name}
+                onFinish={handleChangeOptionsFinishClicked}
+              />
+            ) : (
+              <>Unable to find provider for this workspace</>
+            )}
+          </ModalBody>
         </ModalContent>
       </Modal>
     </>
@@ -432,6 +494,7 @@ type TWorkspaceControlsProps = Readonly<{
   onDeleteClicked: VoidFunction
   onStopClicked: VoidFunction
   onLogsClicked: VoidFunction
+  onChangeOptionsClicked?: VoidFunction
 }>
 function WorkspaceControls({
   id,
@@ -447,9 +510,20 @@ function WorkspaceControls({
   onDeleteClicked,
   onStopClicked,
   onLogsClicked,
+  onChangeOptionsClicked,
 }: TWorkspaceControlsProps) {
+  const [provider] = useProvider(workspace.data?.provider?.name)
+  const [[proInstances]] = useProInstances()
+  const proInstance = useMemo<TProInstance | undefined>(() => {
+    if (!provider?.isProxyProvider) {
+      return undefined
+    }
+
+    return proInstances?.find((instance) => instance.provider === provider.config?.name)
+  }, [proInstances, provider?.config?.name, provider?.isProxyProvider])
   const { isEnabled: isShareEnabled, onClick: handleShareClicked } = useShareWorkspace(
-    workspace.data
+    workspace.data,
+    proInstance
   )
 
   const handleOpenWithIDEClicked = (id: TWorkspaceID, ide: TIDE["name"]) => async () => {
@@ -469,6 +543,8 @@ function WorkspaceControls({
     "Cannot open this workspace because it is busy. If this doesn't change, try to force delete and recreate it."
   const [isStartWithHovering, startWithRef] = useHover()
   const [isPopoverHovering, popoverContentRef] = useHover()
+  const isChangeOptionsEnabled =
+    workspace.data?.provider?.options != null && proInstance !== undefined
 
   return (
     <HStack spacing="2" width="full" justifyContent="end">
@@ -527,23 +603,6 @@ function WorkspaceControls({
                 </PopoverContent>
               </Popover>
               <MenuItem
-                icon={<ArrowPath boxSize={4} />}
-                onClick={onRebuildClicked}
-                isDisabled={isOpenDisabled || isLoading}>
-                Rebuild
-              </MenuItem>
-              <MenuItem
-                icon={<ArrowCycle boxSize={4} />}
-                onClick={onResetClicked}
-                isDisabled={isOpenDisabled || isLoading}>
-                Reset
-              </MenuItem>
-              {isShareEnabled && (
-                <MenuItem icon={<Icon as={HiShare} boxSize={4} />} onClick={handleShareClicked}>
-                  Share
-                </MenuItem>
-              )}
-              <MenuItem
                 isDisabled={workspace.data?.status !== "Running"}
                 onClick={() => {
                   if (workspace.data?.status !== "Running") {
@@ -557,6 +616,31 @@ function WorkspaceControls({
                 icon={<Pause boxSize={4} />}>
                 Stop
               </MenuItem>
+              <MenuItem
+                icon={<ArrowPath boxSize={4} />}
+                onClick={onRebuildClicked}
+                isDisabled={isOpenDisabled || isLoading}>
+                Rebuild
+              </MenuItem>
+              <MenuItem
+                icon={<ArrowCycle boxSize={4} />}
+                onClick={onResetClicked}
+                isDisabled={isOpenDisabled || isLoading}>
+                Reset
+              </MenuItem>
+              {isChangeOptionsEnabled && (
+                <MenuItem
+                  icon={<Stack3D boxSize={4} />}
+                  onClick={onChangeOptionsClicked}
+                  isDisabled={isOpenDisabled || isLoading}>
+                  Change Options
+                </MenuItem>
+              )}
+              {isShareEnabled && (
+                <MenuItem icon={<Icon as={HiShare} boxSize={4} />} onClick={handleShareClicked}>
+                  Share
+                </MenuItem>
+              )}
               <MenuItem
                 fontWeight="normal"
                 icon={<CommandLine boxSize={4} />}
@@ -578,17 +662,11 @@ function WorkspaceControls({
   )
 }
 
-function useShareWorkspace(workspace: TWorkspace | undefined) {
+function useShareWorkspace(
+  workspace: TWorkspace | undefined,
+  proInstance: TProInstance | undefined
+) {
   const toast = useToast()
-  const [provider] = useProvider(workspace?.provider?.name)
-  const [[proInstances]] = useProInstances()
-  const proInstance = useMemo<TProInstance | undefined>(() => {
-    if (!provider?.isProxyProvider) {
-      return undefined
-    }
-
-    return proInstances?.find((instance) => instance.provider === provider.config?.name)
-  }, [proInstances, provider?.config?.name, provider?.isProxyProvider])
 
   const handleShareClicked = useCallback(async () => {
     const devpodProHost = proInstance?.host
@@ -626,7 +704,7 @@ function useShareWorkspace(workspace: TWorkspace | undefined) {
   }, [proInstance?.host, toast, workspace?.id, workspace?.uid])
 
   return {
-    isEnabled: workspace !== undefined && provider?.isProxyProvider && proInstance !== undefined,
+    isEnabled: workspace !== undefined && proInstance !== undefined,
     onClick: handleShareClicked,
   }
 }

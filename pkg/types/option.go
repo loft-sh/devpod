@@ -1,6 +1,9 @@
 package types
 
 type Option struct {
+	// DisplayName of the option, preferred over the option name by a supporting tool.
+	DisplayName string `json:"displayName,omitempty"`
+
 	// A description of the option displayed to the user by a supporting tool.
 	Description string `json:"description,omitempty"`
 
@@ -46,4 +49,7 @@ type Option struct {
 
 	// SubOptionsCommand is the command to run to fetch sub options
 	SubOptionsCommand string `json:"subOptionsCommand,omitempty"`
+
+	// Mutable specifies if an option can be changed on the workspace or machine after creating it
+	Mutable bool `json:"mutable,omitempty"`
 }

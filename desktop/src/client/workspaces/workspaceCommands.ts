@@ -6,7 +6,7 @@ import {
   TWorkspaceStatusResult,
   TWorkspaceWithoutStatus,
 } from "../../types"
-import { Command, isOk, toFlagArg, toMultipleFlagArg } from "../command"
+import { Command, isOk, serializeRawOptions, toFlagArg, toMultipleFlagArg } from "../command"
 import {
   DEVPOD_COMMAND_DELETE,
   DEVPOD_COMMAND_GET_WORKSPACE_CONFIG,
@@ -27,6 +27,7 @@ import {
   DEVPOD_FLAG_JSON_OUTPUT,
   DEVPOD_FLAG_PREBUILD_REPOSITORY,
   DEVPOD_FLAG_PROVIDER,
+  DEVPOD_FLAG_PROVIDER_OPTION,
   DEVPOD_FLAG_RECREATE,
   DEVPOD_FLAG_RESET,
   DEVPOD_FLAG_SOURCE,
@@ -115,6 +116,10 @@ export class WorkspaceCommands {
     const maybeProviderFlag = exists(maybeProviderID)
       ? [toFlagArg(DEVPOD_FLAG_PROVIDER, maybeProviderID)]
       : []
+    const maybeProviderOptions = config.providerConfig?.options
+    const maybeProviderOptionsFlag = exists(maybeProviderOptions)
+      ? serializeRawOptions(maybeProviderOptions, DEVPOD_FLAG_PROVIDER_OPTION)
+      : []
 
     const maybePrebuildRepositories = config.prebuildRepositories?.length
       ? [toFlagArg(DEVPOD_FLAG_PREBUILD_REPOSITORY, config.prebuildRepositories.join(","))]
@@ -151,6 +156,7 @@ export class WorkspaceCommands {
       ...gitBranchFlag,
       ...gitCommitFlag,
       ...additionalFlags,
+      ...maybeProviderOptionsFlag,
       DEVPOD_FLAG_JSON_LOG_OUTPUT,
     ])
   }

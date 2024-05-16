@@ -321,6 +321,7 @@ optionGroups:
       - LOFT_RUNNER
 options:
   LOFT_CONFIG:
+    global: true
     hidden: true
     required: true
     default: "${PROVIDER_FOLDER}/loft-config.json"

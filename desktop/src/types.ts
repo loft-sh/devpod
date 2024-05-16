@@ -82,6 +82,8 @@ export type TProviderOption = Readonly<{
   children: TMaybe<string[]>
   // If value is a password
   password: TMaybe<boolean>
+  // DisplayName of the option, preferred over the option name by a supporting tool.
+  displayName: TMaybe<string>
   // A description of the option displayed to the user by a supporting tool.
   description: TMaybe<string>
   // If required is true and the user doesn't supply a value, devpod will ask the user
@@ -102,13 +104,15 @@ export type TProviderOption = Readonly<{
   subOptionsCommand: TMaybe<string>
   // Type is the provider option type. Can be one of: string, multiline, duration, number or boolean. Defaults to string
   type: TMaybe<"string" | "duration" | "number" | "boolean" | "multiline">
+  // Mutable specifies if an option can be changed on the workspace or machine after creating it
+  mutable: TMaybe<boolean>
 }>
 
 export type TAddProviderConfig = Readonly<{
   name?: TProviderConfig["name"]
 }>
 export type TConfigureProviderConfig = Readonly<{
-  options: Record<string, unknown>
+  options: Record<string, string>
   useAsDefaultProvider?: boolean
   reuseMachine?: boolean
 }>
@@ -131,7 +135,7 @@ export type TWorkspace = Readonly<{
   uid: string
   picture: TMaybe<string>
   machine: TMaybe<Readonly<{ machineId: TMaybe<string> }>>
-  provider: TMaybe<Readonly<{ name: TMaybe<string> }>>
+  provider: TMaybe<Readonly<{ name: TMaybe<string>; options: TMaybe<TProviderOptions> }>>
   status: TMaybe<"Running" | "Busy" | "Stopped" | "NotFound">
   ide: TMaybe<{
     name: TMaybe<string>
@@ -159,7 +163,7 @@ export type TWorkspaceStartConfig = Readonly<{
   prebuildRepositories?: string[]
   devcontainerPath?: string
   ideConfig?: TWorkspace["ide"]
-  providerConfig?: Readonly<{ providerID?: TProviderID }>
+  providerConfig?: Readonly<{ providerID?: TProviderID; options?: Record<string, string> }>
   // Instead of starting a workspace just by ID, the sourceConfig starts it with a `source/ID` combination
   sourceConfig?: Readonly<{
     source: string
