@@ -10,7 +10,7 @@ export function LoftOSSBadge() {
       display="flex"
       alignItems="center"
       justifyContent="start"
-      onClick={() => client.openLink("https://loft.sh/")}>
+      onClick={() => client.open("https://loft.sh/")}>
       <Text fontSize="sm" color={textColor} marginRight="2">
         Open sourced by
       </Text>

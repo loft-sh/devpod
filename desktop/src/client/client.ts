@@ -203,6 +203,10 @@ class Client {
     return dialog.open({ directory: false, multiple: false })
   }
 
+  public async copyFile(src: string, dest: string): Promise<void> {
+    return fs.copyFile(src, dest)
+  }
+
   public async installCLI(force: boolean = false): Promise<Result<void>> {
     try {
       await invoke("install_cli", { force })
@@ -233,7 +237,7 @@ class Client {
     }
   }
 
-  public openLink(link: string): void {
+  public open(link: string): void {
     shell.open(link)
   }
 

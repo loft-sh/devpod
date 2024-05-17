@@ -76,7 +76,7 @@ export function StatusBar(boxProps: BoxProps) {
             rounded="full"
             icon={<StarIcon color={iconColor} />}
             aria-label="Loving DevPod? Give us a star on Github"
-            onClick={() => client.openLink("https://github.com/loft-sh/devpod")}
+            onClick={() => client.open("https://github.com/loft-sh/devpod")}
           />
         </Tooltip>
 
@@ -86,7 +86,7 @@ export function StatusBar(boxProps: BoxProps) {
             rounded="full"
             icon={<Icon as={HiDocumentMagnifyingGlass} color={iconColor} />}
             aria-label="How to DevPod - Docs"
-            onClick={() => client.openLink("https://devpod.sh/docs")}
+            onClick={() => client.open("https://devpod.sh/docs")}
           />
         </Tooltip>
 
@@ -96,7 +96,7 @@ export function StatusBar(boxProps: BoxProps) {
             rounded="full"
             icon={<Icon as={FaBug} color={iconColor} />}
             aria-label="Report an Issue"
-            onClick={() => client.openLink("https://github.com/loft-sh/devpod/issues/new/choose")}
+            onClick={() => client.open("https://github.com/loft-sh/devpod/issues/new/choose")}
           />
         </Tooltip>
 

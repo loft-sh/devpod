@@ -224,7 +224,7 @@ export function useTelemetryOption() {
         Telemetry plays an important role in improving DevPod for everyone.{" "}
         <strong>We never collect any actual values, only anonymized metadata!</strong> For an
         in-depth explanation, please refer to the{" "}
-        <Link onClick={() => client.openLink("https://devpod.sh/docs/other-topics/telemetry")}>
+        <Link onClick={() => client.open("https://devpod.sh/docs/other-topics/telemetry")}>
           documentation
         </Link>
       </>

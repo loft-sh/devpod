@@ -100,7 +100,7 @@ export function useWelcomeModal() {
                     For more information, head over to our{" "}
                     <Link
                       color="primary.600"
-                      onClick={() => client.openLink("https://devpod.sh/docs")}>
+                      onClick={() => client.open("https://devpod.sh/docs")}>
                       documentation.
                     </Link>
                   </Text>
@@ -120,7 +120,7 @@ export function useWelcomeModal() {
                     DevPod ships with a powerful CLI that allows you to create, manage and connect
                     to your workspaces and providers. You can either{" "}
                     <Link
-                      onClick={() => client.openLink("https://github.com/loft-sh/devpod/releases")}>
+                      onClick={() => client.open("https://github.com/loft-sh/devpod/releases")}>
                       download the standalone binary
                     </Link>{" "}
                     or directly add it to your <Code>$PATH</Code>.

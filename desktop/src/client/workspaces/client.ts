@@ -1,6 +1,6 @@
 import { invoke } from "@tauri-apps/api"
 import { TActionID, TActionName, TActionObj } from "../../contexts"
-import { Result, ResultError, Return, THandler, exists, noop } from "../../lib"
+import { Result, ResultError, Return, THandler, exists, isError, noop } from "../../lib"
 import {
   TDevcontainerSetup,
   TStreamID,
@@ -270,5 +270,20 @@ export class WorkspacesClient implements TDebuggable {
 
   public syncActionLogs(actionIDs: readonly string[]) {
     invoke("sync_action_logs", { actions: actionIDs })
+  }
+
+  public async getActionLogFile(actionID: TActionID): Promise<Result<string>> {
+    try {
+      const path = await invoke<string>("get_action_log_file", { actionId: actionID })
+
+      return Return.Value(path)
+    } catch (e) {
+      if (isError(e)) {
+        return Return.Failed(e.message)
+      }
+      console.error(e)
+
+      return Return.Failed(`Unable to retrieve log file for action ${actionID}`)
+    }
   }
 }

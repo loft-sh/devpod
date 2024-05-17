@@ -71,6 +71,17 @@ pub fn get_action_logs(
 }
 
 #[tauri::command]
+pub fn get_action_log_file(
+    app_handle: AppHandle,
+    action_id: String,
+) -> Result<String, ActionLogError> {
+    let mut path = get_actions_dir(&app_handle).map_err(|_| ActionLogError::NoDir)?;
+    path.push(format!("{}.log", &action_id));
+
+    Ok(path.to_string_lossy().into())
+}
+
+#[tauri::command]
 pub fn sync_action_logs(app_handle: AppHandle, actions: Vec<String>) -> Result<(), ActionLogError> {
     let now = SystemTime::now();
     let dir_path = get_actions_dir(&app_handle).map_err(|_| ActionLogError::NoDir)?;

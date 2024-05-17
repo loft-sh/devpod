@@ -102,7 +102,7 @@ export function Notifications() {
                     <Heading size="xs">{pendingUpdate.tag_name} is available</Heading>
                     <Text fontSize="xs">
                       See{" "}
-                      <Link onClick={() => client.openLink(pendingUpdate.html_url)}>
+                      <Link onClick={() => client.open(pendingUpdate.html_url)}>
                         release notes
                       </Link>
                     </Text>

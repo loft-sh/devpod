@@ -40,7 +40,7 @@ export function Pro() {
 
   const backgroundColor = useColorModeValue("white", "gray.900")
   const handleAnnouncementClicked = () => {
-    client.openLink("https://devpod.sh/pro")
+    client.open("https://devpod.sh/pro")
   }
   const { experimental_devPodPro } = useSettings()
   const isProUnauthenticated = proInstances?.some(({ authenticated }) => !authenticated)
@@ -98,7 +98,7 @@ export function Pro() {
                       or create a new one. <br />
                       <Link
                         color="primary.600"
-                        onClick={() => client.openLink("https://devpod.sh/pro")}>
+                        onClick={() => client.open("https://devpod.sh/pro")}>
                         Learn more
                       </Link>
                     </Text>

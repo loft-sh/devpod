@@ -102,7 +102,7 @@ function Changelog({ rawMarkdown }: TChangeLogProps) {
               props: {
                 onClick: (e: TLinkClickEvent) => {
                   e.preventDefault()
-                  client.openLink(e.target.href)
+                  client.open(e.target.href)
                 },
               },
             },
