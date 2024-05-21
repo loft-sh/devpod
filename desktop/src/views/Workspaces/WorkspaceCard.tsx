@@ -589,7 +589,11 @@ function WorkspaceControls({
                     </HStack>
                   </MenuItem>
                 </PopoverTrigger>
-                <PopoverContent zIndex="popover" width="fit-content" ref={popoverContentRef}>
+                <PopoverContent
+                  marginTop="10"
+                  zIndex="popover"
+                  width="fit-content"
+                  ref={popoverContentRef}>
                   {ides?.map((ide) => (
                     <MenuItem
                       isDisabled={isOpenDisabled || isLoading}
