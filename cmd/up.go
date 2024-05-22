@@ -883,6 +883,7 @@ func setupDotfiles(
 		"ssh",
 		"--agent-forwarding=true",
 		"--start-services=true",
+		"--force-git-credential-forwarding",
 		"--user",
 		remoteUser,
 		"--context",
