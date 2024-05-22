@@ -3,6 +3,7 @@ package log
 import (
 	"io"
 
+	"github.com/go-logr/logr"
 	"github.com/loft-sh/log/survey"
 	"github.com/sirupsen/logrus"
 )
@@ -44,6 +45,8 @@ type BaseLogger interface {
 
 	SetLevel(level logrus.Level)
 	GetLevel() logrus.Level
+
+	LogrLogSink() logr.LogSink
 }
 
 type SimpleLogger interface {

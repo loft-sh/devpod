@@ -1,19 +1,13 @@
 package pro
 
 import (
-	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
-	"os"
-	"os/exec"
-	"path/filepath"
 	"sort"
-	"strings"
 	"time"
 
-	"github.com/loft-sh/devpod/cmd/flags"
-	"github.com/loft-sh/devpod/pkg/binaries"
+	proflags "github.com/loft-sh/devpod/cmd/pro/flags"
 	"github.com/loft-sh/devpod/pkg/config"
 	"github.com/loft-sh/devpod/pkg/provider"
 	"github.com/loft-sh/devpod/pkg/workspace"
@@ -24,21 +18,21 @@ import (
 
 // ListCmd holds the list cmd flags
 type ListCmd struct {
-	flags.GlobalFlags
+	proflags.GlobalFlags
 
 	Output string
 	Login  bool
 }
 
 // NewListCmd creates a new command
-func NewListCmd(flags *flags.GlobalFlags) *cobra.Command {
+func NewListCmd(flags *proflags.GlobalFlags) *cobra.Command {
 	cmd := &ListCmd{
 		GlobalFlags: *flags,
 	}
 	listCmd := &cobra.Command{
 		Use:     "list",
 		Aliases: []string{"ls"},
-		Short:   "List available pro instances",
+		Short:   "List available DevPod Pro instances",
 		Args:    cobra.NoArgs,
 		RunE: func(_ *cobra.Command, args []string) error {
 			return cmd.Run(context.Background())
@@ -126,46 +120,8 @@ type proTableEntry struct {
 }
 
 func checkLogin(ctx context.Context, devPodConfig *config.Config, proInstance *provider.ProInstance) error {
-	providerConfig, err := provider.LoadProviderConfig(devPodConfig.DefaultContext, proInstance.Provider)
-	if err != nil {
-		return err
-	}
-
-	providerBinaries, err := binaries.GetBinaries(devPodConfig.DefaultContext, providerConfig)
-	if err != nil {
-		return fmt.Errorf("get provider binaries: %w", err)
-	} else if providerBinaries[LOFT_PROVIDER_BINARY] == "" {
-		return fmt.Errorf("provider is missing %s binary", LOFT_PROVIDER_BINARY)
-	}
-
-	providerDir, err := provider.GetProviderDir(devPodConfig.DefaultContext, providerConfig.Name)
-	if err != nil {
-		return err
-	}
-
-	args := []string{
-		"login",
-		"--log-output=raw",
-	}
-
-	extraEnv := []string{
-		"LOFT_SKIP_VERSION_CHECK=true",
-		"LOFT_CONFIG=" + filepath.Join(providerDir, "loft-config.json"),
-	}
-
-	stdout := &bytes.Buffer{}
-
-	// start the command
-	loginCmd := exec.CommandContext(ctx, providerBinaries[LOFT_PROVIDER_BINARY], args...)
-	loginCmd.Env = os.Environ()
-	loginCmd.Env = append(loginCmd.Env, extraEnv...)
-	loginCmd.Stdout = stdout
-	err = loginCmd.Run()
-	if err != nil {
-		return fmt.Errorf("run login command: %w", err)
-	}
-
-	if stdout.Len() > 0 && strings.Contains(stdout.String(), "Not logged in") {
+	// for every pro instance, check auth status by calling login
+	if err := login(ctx, devPodConfig, proInstance.Host, proInstance.Provider, "", log.Default); err != nil {
 		return fmt.Errorf("not logged into %s", proInstance.Host)
 	}
 

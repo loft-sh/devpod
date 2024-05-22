@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/loft-sh/devpod/cmd/flags"
+	proflags "github.com/loft-sh/devpod/cmd/pro/flags"
 	providercmd "github.com/loft-sh/devpod/cmd/provider"
 	"github.com/loft-sh/devpod/pkg/config"
 	provider2 "github.com/loft-sh/devpod/pkg/provider"
@@ -16,19 +16,19 @@ import (
 
 // DeleteCmd holds the delete cmd flags
 type DeleteCmd struct {
-	*flags.GlobalFlags
+	*proflags.GlobalFlags
 
 	IgnoreNotFound bool
 }
 
 // NewDeleteCmd creates a new command
-func NewDeleteCmd(flags *flags.GlobalFlags) *cobra.Command {
+func NewDeleteCmd(flags *proflags.GlobalFlags) *cobra.Command {
 	cmd := &DeleteCmd{
 		GlobalFlags: flags,
 	}
 	deleteCmd := &cobra.Command{
 		Use:   "delete",
-		Short: "Delete or logout from a Loft DevPod Pro",
+		Short: "Delete or logout from a DevPod Pro Instance",
 		RunE: func(_ *cobra.Command, args []string) error {
 			return cmd.Run(context.Background(), args)
 		},

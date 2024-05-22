@@ -6,30 +6,29 @@ import (
 	"fmt"
 	"io"
 	"net/url"
-	"os"
-	"os/exec"
 	"path/filepath"
 	"strings"
 
-	"github.com/loft-sh/devpod/cmd/flags"
+	proflags "github.com/loft-sh/devpod/cmd/pro/flags"
 	providercmd "github.com/loft-sh/devpod/cmd/provider"
-	"github.com/loft-sh/devpod/pkg/binaries"
 	"github.com/loft-sh/devpod/pkg/config"
 	"github.com/loft-sh/devpod/pkg/http"
+	"github.com/loft-sh/devpod/pkg/loft/client"
 	"github.com/loft-sh/devpod/pkg/provider"
 	"github.com/loft-sh/devpod/pkg/types"
 	"github.com/loft-sh/devpod/pkg/workspace"
 	"github.com/loft-sh/log"
+	"github.com/mgutz/ansi"
 	"github.com/pkg/errors"
-	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 )
 
-const LOFT_PROVIDER_BINARY = "LOFT_PROVIDER"
+const PROVIDER_BINARY = "PRO_PROVIDER"
+const providerRepo = "loft-sh/devpod"
 
 // LoginCmd holds the login cmd flags
 type LoginCmd struct {
-	flags.GlobalFlags
+	proflags.GlobalFlags
 
 	AccessKey      string
 	Provider       string
@@ -43,7 +42,7 @@ type LoginCmd struct {
 }
 
 // NewLoginCmd creates a new command
-func NewLoginCmd(flags *flags.GlobalFlags) *cobra.Command {
+func NewLoginCmd(flags *proflags.GlobalFlags) *cobra.Command {
 	cmd := &LoginCmd{
 		GlobalFlags: *flags,
 	}
@@ -168,7 +167,7 @@ func (cmd *LoginCmd) Run(ctx context.Context, fullURL string, log log.Logger) er
 
 	// 2. Login to Loft
 	if cmd.Login {
-		err = cmd.login(ctx, devPodConfig, providerConfig, fullURL, log)
+		err = login(ctx, devPodConfig, fullURL, cmd.Provider, cmd.AccessKey, log)
 		if err != nil {
 			return err
 		}
@@ -186,64 +185,19 @@ func (cmd *LoginCmd) Run(ctx context.Context, fullURL string, log log.Logger) er
 	return nil
 }
 
-func (cmd *LoginCmd) login(ctx context.Context, devPodConfig *config.Config, providerConfig *provider.ProviderConfig, url string, log log.Logger) error {
-	providerBinaries, err := binaries.GetBinaries(devPodConfig.DefaultContext, providerConfig)
-	if err != nil {
-		return fmt.Errorf("get provider binaries: %w", err)
-	} else if providerBinaries[LOFT_PROVIDER_BINARY] == "" {
-		return fmt.Errorf("provider is missing %s binary", LOFT_PROVIDER_BINARY)
-	}
-
-	providerDir, err := provider.GetProviderDir(devPodConfig.DefaultContext, cmd.Provider)
-	if err != nil {
-		return err
-	}
-
-	args := []string{
-		"login",
-		"--insecure",
-		"--log-output=raw",
-		url,
-	}
-	if cmd.AccessKey != "" {
-		args = append(args, "--access-key", cmd.AccessKey)
-	}
-
-	extraEnv := []string{
-		"LOFT_SKIP_VERSION_CHECK=true",
-		"LOFT_CONFIG=" + filepath.Join(providerDir, "loft-config.json"),
-	}
-
-	writer := log.Writer(logrus.InfoLevel, false)
-	defer writer.Close()
-
-	// start the command
-	loginCmd := exec.CommandContext(ctx, providerBinaries[LOFT_PROVIDER_BINARY], args...)
-	loginCmd.Env = os.Environ()
-	loginCmd.Env = append(loginCmd.Env, extraEnv...)
-	loginCmd.Stdout = writer
-	loginCmd.Stderr = writer
-	err = loginCmd.Run()
-	if err != nil {
-		return fmt.Errorf("run login command: %w", err)
-	}
-
-	log.Donef("Successfully logged into %s", url)
-	return nil
-}
-
 func (cmd *LoginCmd) addLoftProvider(devPodConfig *config.Config, url string, log log.Logger) error {
 	// find out loft version
-	err := cmd.getProviderSource(url)
+	err := cmd.resolveProviderSource(url)
 	if err != nil {
 		return err
 	}
 
 	// add the provider
-	log.Infof("Add Loft DevPod Pro provider...")
+	log.Infof("Add DevPod Pro provider...")
 
 	// is development?
-	if cmd.ProviderSource == "loft-sh/loft@v0.0.0" {
+	if cmd.ProviderSource == providerRepo+"@v0.0.0" {
+		log.Debugf("Add development provider")
 		_, err = workspace.AddProviderRaw(devPodConfig, cmd.Provider, &provider.ProviderSource{}, []byte(fallbackProvider), log)
 		if err != nil {
 			return err
@@ -258,53 +212,90 @@ func (cmd *LoginCmd) addLoftProvider(devPodConfig *config.Config, url string, lo
 	return nil
 }
 
-func (cmd *LoginCmd) getProviderSource(url string) error {
-	if cmd.ProviderSource == "" {
-		if cmd.Version == "" {
-			resp, err := http.GetHTTPClient().Get(url + "/version")
-			if err != nil {
-				return fmt.Errorf("get %s: %w", url, err)
-			} else if resp.StatusCode != 200 {
-				out, _ := io.ReadAll(resp.Body)
-				return fmt.Errorf("get %s: %s (Status: %d)", url, string(out), resp.StatusCode)
-			}
-
-			versionRaw, err := io.ReadAll(resp.Body)
-			if err != nil {
-				return fmt.Errorf("read %s: %w", url, err)
-			}
-
-			version := &versionObject{}
-			err = json.Unmarshal(versionRaw, version)
-			if err != nil {
-				return fmt.Errorf("parse %s: %w", url, err)
-			} else if version.Version == "" {
-				return fmt.Errorf("unexpected version '%s', please use --version to define a provider version", version.Version)
-			}
-
-			// make sure it starts with a v
-			if !strings.HasPrefix(version.Version, "v") {
-				version.Version = "v" + version.Version
-			}
-
-			cmd.ProviderSource = "loft-sh/loft@" + version.Version
-		} else {
-			cmd.ProviderSource = "loft-sh/loft@" + cmd.Version
-		}
+func (cmd *LoginCmd) resolveProviderSource(url string) error {
+	if cmd.ProviderSource != "" {
+		return nil
 	}
+	if cmd.Version != "" {
+		cmd.ProviderSource = providerRepo + "@" + cmd.Version
+		return nil
+	}
+
+	resp, err := http.GetHTTPClient().Get(url + "/version")
+	if err != nil {
+		return fmt.Errorf("get %s: %w", url, err)
+	} else if resp.StatusCode != 200 {
+		out, _ := io.ReadAll(resp.Body)
+		return fmt.Errorf("get %s: %s (Status: %d)", url, string(out), resp.StatusCode)
+	}
+
+	versionRaw, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return fmt.Errorf("read %s: %w", url, err)
+	}
+
+	version := &versionObject{}
+	err = json.Unmarshal(versionRaw, version)
+	if err != nil {
+		return fmt.Errorf("parse %s: %w", url, err)
+	} else if version.DevPodVersion == "" {
+		return fmt.Errorf("unexpected version '%s', please use --version to define a provider version", version.DevPodVersion)
+	}
+
+	// make sure it starts with a v
+	if !strings.HasPrefix(version.DevPodVersion, "v") {
+		version.DevPodVersion = "v" + version.DevPodVersion
+	}
+
+	cmd.ProviderSource = providerRepo + "@" + version.DevPodVersion
+
+	return nil
+}
+
+func login(ctx context.Context, devPodConfig *config.Config, url string, providerName string, accessKey string, log log.Logger) error {
+	providerDir, err := provider.GetProviderDir(devPodConfig.DefaultContext, providerName)
+	if err != nil {
+		return err
+	}
+
+	configPath := filepath.Join(providerDir, "loft-config.json")
+	loader, err := client.NewClientFromPath(configPath)
+	if err != nil {
+		return err
+	}
+
+	if !strings.HasPrefix(url, "http") {
+		url = "https://" + url
+	}
+
+	if accessKey == "" {
+		accessKey = loader.Config().AccessKey
+	}
+
+	// log in
+	url = strings.TrimSuffix(url, "/")
+	if accessKey != "" {
+		err = loader.LoginWithAccessKey(url, accessKey, true)
+	} else {
+		err = loader.Login(url, true, log)
+	}
+	if err != nil {
+		return err
+	}
+	log.Donef("Successfully logged into DevPod Pro instance %s", ansi.Color(url, "white+b"))
 
 	return nil
 }
 
 type versionObject struct {
-	// Version is the loft remote version
-	Version string `json:"version,omitempty"`
+	// Version is the remote devpod version
+	DevPodVersion string `json:"devPodVersion,omitempty"`
 }
 
-var fallbackProvider = `name: loft
+var fallbackProvider = `name: devpod-pro
 version: v0.0.0
 icon: https://devpod.sh/assets/devpod.svg
-description: DevPod on Loft DevPod Engine
+description: DevPod Pro
 optionGroups:
   - name: Main Options
     defaultVisible: true
@@ -325,31 +316,31 @@ options:
     hidden: true
     required: true
     default: "${PROVIDER_FOLDER}/loft-config.json"
-    subOptionsCommand: "${LOFT_PROVIDER} devpod list projects"
+    subOptionsCommand: "${PRO_PROVIDER} pro provider list projects"
 exec:
   proxy:
     up: |-
-      ${LOFT_PROVIDER} devpod up
+      ${PRO_PROVIDER} pro provider up
     ssh: |-
-      ${LOFT_PROVIDER} devpod ssh
+      ${PRO_PROVIDER} pro provider ssh
     stop: |-
-      ${LOFT_PROVIDER} devpod stop
+      ${PRO_PROVIDER} pro provider stop
     status: |-
-      ${LOFT_PROVIDER} devpod status
+      ${PRO_PROVIDER} pro provider status
     delete: |-
-      ${LOFT_PROVIDER} devpod delete
+      ${PRO_PROVIDER} pro provider delete
 binaries:
-  LOFT_PROVIDER:
+  PRO_PROVIDER:
     - os: linux
       arch: amd64
-      path: /usr/local/bin/loft
+      path: /usr/local/bin/devpod
     - os: linux
       arch: arm64
-      path: /usr/local/bin/loft
+      path: /usr/local/bin/devpod
     - os: darwin
       arch: amd64
-      path: /usr/local/bin/loft
+      path: /usr/local/bin/devpod
     - os: darwin
       arch: arm64
-      path: /usr/local/bin/loft
+      path: /usr/local/bin/devpod
 `

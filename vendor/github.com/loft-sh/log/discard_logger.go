@@ -6,6 +6,7 @@ import (
 	"os"
 	"sync"
 
+	"github.com/go-logr/logr"
 	"github.com/loft-sh/log/survey"
 	"github.com/sirupsen/logrus"
 )
@@ -150,3 +151,29 @@ func (f *discardLogger) WithLevel(level logrus.Level) Logger {
 func (f *discardLogger) ErrorStreamOnly() Logger {
 	return f
 }
+
+// --- Logr LogSink ---
+
+type discordLogSink struct{}
+
+var _ logr.LogSink = discordLogSink{}
+
+// Enabled implements logr.LogSink.
+func (discordLogSink) Enabled(level int) bool { return false }
+
+// Error implements logr.LogSink.
+func (discordLogSink) Error(err error, msg string, keysAndValues ...interface{}) {}
+
+// Info implements logr.LogSink.
+func (discordLogSink) Info(level int, msg string, keysAndValues ...interface{}) {}
+
+// Init implements logr.LogSink.
+func (discordLogSink) Init(info logr.RuntimeInfo) {}
+
+// WithName implements logr.LogSink.
+func (a discordLogSink) WithName(name string) logr.LogSink { return a }
+
+// WithValues implements logr.LogSink.
+func (a discordLogSink) WithValues(keysAndValues ...interface{}) logr.LogSink { return a }
+
+func (f *discardLogger) LogrLogSink() logr.LogSink { return discordLogSink{} }

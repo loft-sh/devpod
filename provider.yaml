@@ -1,0 +1,61 @@
+name: devpod-pro
+version: v0.0.0
+icon: https://devpod.sh/assets/devpod.svg
+description: DevPod Pro
+optionGroups:
+  - name: Main Options
+    defaultVisible: true
+    options:
+      - LOFT_PROJECT
+      - LOFT_TEMPLATE
+      - LOFT_TEMPLATE_VERSION
+  - name: Template Options
+    defaultVisible: true
+    options:
+      - "TEMPLATE_OPTION_*"
+  - name: Other Options
+    defaultVisible: false
+    options:
+      - LOFT_RUNNER
+options:
+  LOFT_CONFIG:
+    global: true
+    hidden: true
+    required: true
+    default: "${PROVIDER_FOLDER}/loft-config.json"
+    subOptionsCommand: "${PRO_PROVIDER} pro provider list projects"
+binaries:
+  PRO_PROVIDER:
+    - os: linux
+      arch: amd64
+      path: https://github.com/loft-sh/devpod/releases/download/v0.0.0/devpod-linux-amd64
+      checksum: 4ce1bf4f649fc120ae3630482008f81f35506918e5b5bfd94b81dffeee55dfcf
+    - os: linux
+      arch: arm64
+      path: https://github.com/loft-sh/devpod/releases/download/v0.0.0/devpod-linux-arm64
+      checksum: 9857ebf3a9f5351d36f278797c8a5751c737c58b8e5972650d1557db0f03f6b8
+    - os: darwin
+      arch: amd64
+      path: https://github.com/loft-sh/devpod/releases/download/v0.0.0/devpod-darwin-amd64
+      checksum: 398c0b445539efebc146950e60d390012c1760b2794ace105234e20c4e6edef2
+    - os: darwin
+      arch: arm64
+      path: https://github.com/loft-sh/devpod/releases/download/v0.0.0/devpod-darwin-arm64
+      checksum: 7206acd0382daa7cb5260f69d8f3c61f4231334a46c4f2177e94a2103acbd6a0
+    - os: windows
+      arch: amd64
+      path: https://github.com/loft-sh/devpod/releases/download/v0.0.0/devpod-windows-amd64.exe
+      checksum: a860aeee0944ef61e3a7fb901577f596c38c1a7e4f9f00bacdd431f1a264bdc1
+exec:
+  proxy:
+    up: |-
+      ${PRO_PROVIDER} pro provider up
+    ssh: |-
+      ${PRO_PROVIDER} pro provider ssh
+    stop: |-
+      ${PRO_PROVIDER} pro provider stop
+    status: |-
+      ${PRO_PROVIDER} pro provider status
+    delete: |-
+      ${PRO_PROVIDER} pro provider delete
+
