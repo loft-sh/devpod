@@ -80,7 +80,7 @@ export function useCreateWorkspaceForm(
     // default ide
     if (params.ide !== undefined) {
       setValue(FieldName.DEFAULT_IDE, params.ide, opts)
-    } else if (ides?.length) {
+    } else if (ides?.length && !getFieldState(FieldName.DEFAULT_IDE).isDirty) {
       const defaultIDE = ides.find((ide) => ide.default)
       if (defaultIDE) {
         setValue(FieldName.DEFAULT_IDE, defaultIDE.name!, opts)
