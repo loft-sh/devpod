@@ -541,7 +541,6 @@ jobs:
         run: |
           set -e
 
-          RELEASE_ID="${{ needs.create-release.outputs.release_id }}"
           VERSION="v${{ needs.create-release.outputs.original_package_version }}"
           OUT_DIR="release"
           ASSETS="devpod-darwin-amd64 devpod-darwin-arm64 devpod-linux-amd64 devpod-linux-arm64 devpod-windows-amd64.exe"
@@ -557,7 +556,7 @@ jobs:
           echo "Download release assets into $OUT_DIR..."
           for asset in $ASSETS; do
                 printf "\t$asset\n"
-                gh release download $RELEASE_ID --pattern="$asset" --dir="$OUT_DIR"
+                gh release download $VERSION --pattern="$asset" --dir="$OUT_DIR"
                 printf "\tDone\n"
           done
           printf "Done\n\n"
@@ -567,7 +566,7 @@ jobs:
           printf "Done\n\n"
 
           echo "Upload provider.yaml..."
-          gh release upload $RELEASE_ID ./release/provider.yaml --clobber
+          gh release upload $VERSION ./release/provider.yaml --clobber
           printf "Done\n\n"
         env:
           GH_TOKEN: ${{ github.token }}
