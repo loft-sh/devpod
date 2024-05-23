@@ -15,11 +15,11 @@ import (
 var provider string
 
 var checksumMap = map[string]string{
-	"./test/devpod-cli-linux-amd64":   "##CHECKSUM_LINUX_AMD64##",
-	"./test/devpod-cli-linux-arm64":   "##CHECKSUM_LINUX_ARM64##",
-	"./test/devpod-cli-darwin-amd64":  "##CHECKSUM_DARWIN_AMD64##",
-	"./test/devpod-cli-darwin-arm64":  "##CHECKSUM_DARWIN_ARM64##",
-	"./test/devpod-cli-windows-amd64": "##CHECKSUM_WINDOWS_AMD64##",
+	"./release/devpod-linux-amd64":       "##CHECKSUM_LINUX_AMD64##",
+	"./release/devpod-linux-arm64":       "##CHECKSUM_LINUX_ARM64##",
+	"./release/devpod-darwin-amd64":      "##CHECKSUM_DARWIN_AMD64##",
+	"./release/devpod-darwin-arm64":      "##CHECKSUM_DARWIN_ARM64##",
+	"./release/devpod-windows-amd64.exe": "##CHECKSUM_WINDOWS_AMD64##",
 }
 
 func main() {
