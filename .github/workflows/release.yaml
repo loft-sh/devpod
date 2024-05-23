@@ -537,6 +537,39 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v3
 
+      - name: Release pro provider
+        run: |
+          set -e
+
+          RELEASE_ID="${{ needs.create-release.outputs.release_id }}"
+          VERSION="v${{ needs.create-release.outputs.original_package_version }}"
+          OUT_DIR="release"
+          ASSETS="devpod-darwin-amd64 devpod-darwin-arm64 devpod-linux-amd64 devpod-linux-arm64 devpod-windows-amd64.exe"
+
+          echo "Prepare output directory $OUT_DIR..."
+          if [ ! -d "$OUT_DIR" ]; then
+            mkdir "$OUT_DIR"
+          else
+            rm -rf $OUT_DIR
+          fi
+          printf "Done\n\n"
+
+          echo "Download release assets into $OUT_DIR..."
+          for asset in $ASSETS; do
+                printf "\t$asset\n"
+                gh release download $RELEASE_ID --pattern="$asset" --dir="$OUT_DIR"
+                printf "\tDone\n"
+          done
+          printf "Done\n\n"
+
+          echo "Generate provider.yaml..."
+          go run ./hack/pro/main.go $VERSION > ./release/provider.yaml
+          printf "Done\n\n"
+
+          echo "Upload provider.yaml..."
+          gh release upload $RELEASE_ID ./release/provider.yaml --clobber
+          printf "Done\n\n"
+
       - name: Update `latest.json`
         uses: actions/github-script@v6
         with:
