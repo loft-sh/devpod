@@ -143,7 +143,7 @@ func (h *ComposeHelper) Remove(ctx context.Context, projectName string, args []s
 }
 
 func (h *ComposeHelper) GetDefaultImage(projectName, serviceName string) (string, error) {
-	version, err := semver.Parse(h.Version)
+	version, err := semver.Parse(strings.TrimPrefix(h.Version, "v"))
 	if err != nil {
 		return "", err
 	}
