@@ -579,6 +579,8 @@ jobs:
               { target: "windows-x86_64", sigFile: ".msi.zip.sig", packageType: ".zip", originalAssetName: `DevPod_${winVersion}_x64_en-US.msi`, desiredAssetName: "DevPod_windows_x64_en-US.msi" },
               { originalAssetName: `dev-pod-glibc-new-${version}.tar.gz`, desiredAssetName: "DevPod_linux_glibc_new_x86_64.tar.gz" },
               { originalAssetName: `dev-pod-glibc-old-${version}.tar.gz`, desiredAssetName: "DevPod_linux_glibc_old_x86_64.tar.gz" },
+              { originalAssetName: `dev-pod-glibc-new-${version}_amd64.AppImage`, desiredAssetName: "DevPod_linux_glibc_new_x86_64.AppImage" },
+              { originalAssetName: `dev-pod-glibc-old-${version}_amd64.AppImage`, desiredAssetName: "DevPod_linux_glibc_old_x86_64.AppImage" },
             ]
 
             for (const info of infos) {
