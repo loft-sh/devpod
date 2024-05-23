@@ -520,7 +520,7 @@ func configureSystemGitCredentials(ctx context.Context, cancel context.CancelFun
 		return nil, err
 	}
 
-	gitCredentials := fmt.Sprintf("%s agent git-credentials --port %d", binaryPath, serverPort)
+	gitCredentials := fmt.Sprintf("'%s' agent git-credentials --port %d", binaryPath, serverPort)
 	_ = os.Setenv("DEVPOD_GIT_HELPER_PORT", strconv.Itoa(serverPort))
 
 	err = git.CommandContext(ctx, "config", "--system", "--add", "credential.helper", gitCredentials).Run()
