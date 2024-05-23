@@ -13,15 +13,11 @@ var prefixMux sync.RWMutex
 
 // SetProjectNamespacePrefix sets the global project namespace prefix
 // Defaulting should be handled when reading the config via ParseProjectNamespacePrefix
-func SetProjectNamespacePrefix(newPrefix *string) {
+func SetProjectNamespacePrefix(newPrefix string) {
 	prefixMux.Lock()
 	defer prefixMux.Unlock()
 
-	if newPrefix == nil {
-		return
-	}
-
-	prefix = newPrefix
+	prefix = &newPrefix
 }
 
 func GetProjectNamespacePrefix() string {

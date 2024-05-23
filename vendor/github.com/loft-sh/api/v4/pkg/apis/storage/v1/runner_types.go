@@ -6,11 +6,9 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-var (
-	RunnerConditions = []agentstoragev1.ConditionType{
-		RunnerDeployed,
-	}
-)
+var RunnerConditions = []agentstoragev1.ConditionType{
+	RunnerDeployed,
+}
 
 const (
 	RunnerDeployed agentstoragev1.ConditionType = "Deployed"
@@ -63,9 +61,9 @@ type RunnerSpec struct {
 	// +optional
 	Description string `json:"description,omitempty"`
 
-	// Endpoint is the hostname used to connect directly to the runner
+	// NetworkPeerName is the network peer name used to connect directly to the runner
 	// +optional
-	Endpoint string `json:"endpoint,omitempty"`
+	NetworkPeerName string `json:"networkPeerName,omitempty"`
 
 	// If ClusterRef is defined, Loft will schedule the runner on the given
 	// cluster.

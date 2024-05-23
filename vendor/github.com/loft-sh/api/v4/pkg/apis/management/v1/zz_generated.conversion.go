@@ -4148,6 +4148,7 @@ func autoConvert_v1_ClusterAgentConfigCommon_To_management_ClusterAgentConfigCom
 	out.DefaultImageRegistry = in.DefaultImageRegistry
 	out.TokenCaCert = *(*[]byte)(unsafe.Pointer(&in.TokenCaCert))
 	out.LoftHost = in.LoftHost
+	out.ProjectNamespacePrefix = in.ProjectNamespacePrefix
 	out.LoftInstanceID = in.LoftInstanceID
 	if err := Convert_v1_AgentAnalyticsSpec_To_management_AgentAnalyticsSpec(&in.AnalyticsSpec, &out.AnalyticsSpec, s); err != nil {
 		return err
@@ -4166,6 +4167,7 @@ func autoConvert_management_ClusterAgentConfigCommon_To_v1_ClusterAgentConfigCom
 	out.DefaultImageRegistry = in.DefaultImageRegistry
 	out.TokenCaCert = *(*[]byte)(unsafe.Pointer(&in.TokenCaCert))
 	out.LoftHost = in.LoftHost
+	out.ProjectNamespacePrefix = in.ProjectNamespacePrefix
 	out.LoftInstanceID = in.LoftInstanceID
 	if err := Convert_management_AgentAnalyticsSpec_To_v1_AgentAnalyticsSpec(&in.AnalyticsSpec, &out.AnalyticsSpec, s); err != nil {
 		return err
@@ -4848,6 +4850,7 @@ func autoConvert_v1_ConfigStatus_To_management_ConfigStatus(in *ConfigStatus, ou
 	out.Apps = (*management.Apps)(unsafe.Pointer(in.Apps))
 	out.Audit = (*management.Audit)(unsafe.Pointer(in.Audit))
 	out.LoftHost = in.LoftHost
+	out.ProjectNamespacePrefix = (*string)(unsafe.Pointer(in.ProjectNamespacePrefix))
 	out.DevPodSubDomain = in.DevPodSubDomain
 	out.UISettings = (*uiv1.UISettingsConfig)(unsafe.Pointer(in.UISettings))
 	out.VaultIntegration = (*storagev1.VaultIntegrationSpec)(unsafe.Pointer(in.VaultIntegration))
@@ -4867,6 +4870,7 @@ func autoConvert_management_ConfigStatus_To_v1_ConfigStatus(in *management.Confi
 	out.Apps = (*Apps)(unsafe.Pointer(in.Apps))
 	out.Audit = (*Audit)(unsafe.Pointer(in.Audit))
 	out.LoftHost = in.LoftHost
+	out.ProjectNamespacePrefix = (*string)(unsafe.Pointer(in.ProjectNamespacePrefix))
 	out.DevPodSubDomain = in.DevPodSubDomain
 	out.UISettings = (*uiv1.UISettingsConfig)(unsafe.Pointer(in.UISettings))
 	out.VaultIntegration = (*storagev1.VaultIntegrationSpec)(unsafe.Pointer(in.VaultIntegration))
@@ -7934,6 +7938,7 @@ func autoConvert_v1_SelfStatus_To_management_SelfStatus(in *SelfStatus, out *man
 	out.Groups = *(*[]string)(unsafe.Pointer(&in.Groups))
 	out.ChatAuthToken = in.ChatAuthToken
 	out.InstanceID = in.InstanceID
+	out.ProjectNamespacePrefix = (*string)(unsafe.Pointer(in.ProjectNamespacePrefix))
 	return nil
 }
 
@@ -7953,6 +7958,7 @@ func autoConvert_management_SelfStatus_To_v1_SelfStatus(in *management.SelfStatu
 	out.Groups = *(*[]string)(unsafe.Pointer(&in.Groups))
 	out.ChatAuthToken = in.ChatAuthToken
 	out.InstanceID = in.InstanceID
+	out.ProjectNamespacePrefix = (*string)(unsafe.Pointer(in.ProjectNamespacePrefix))
 	return nil
 }
 

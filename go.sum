@@ -818,8 +818,12 @@ github.com/loft-sh/admin-apis v0.0.0-20240203010124-3600c1c582a8 h1:nuY9Vgvabh2F
 github.com/loft-sh/admin-apis v0.0.0-20240203010124-3600c1c582a8/go.mod h1:MWczNwKvWssHo1KaeZKaWDdRLYSNbWqQBGsTLoCNd7U=
 github.com/loft-sh/agentapi/v4 v4.0.0-alpha.1 h1:LJiX7z2DQU1UHrMnkYWeLk9r9KMD2RX3733eoRAjJDo=
 github.com/loft-sh/agentapi/v4 v4.0.0-alpha.1/go.mod h1:6c1I63fh+Ku2wT7hZ1GrwfH9JZsyRb8MefocoKkojJI=
+github.com/loft-sh/agentapi/v4 v4.0.0-alpha.3 h1:/OF23kjpecZHeRKSf3cflLuzB6Miv/UUslXXBQdqOQY=
+github.com/loft-sh/agentapi/v4 v4.0.0-alpha.3/go.mod h1:6c1I63fh+Ku2wT7hZ1GrwfH9JZsyRb8MefocoKkojJI=
 github.com/loft-sh/api/v4 v4.0.0-alpha.3 h1:zZsKKzeezOv/MtuGg/PfsYQVpANDjW2MSdUXOfqhw9U=
 github.com/loft-sh/api/v4 v4.0.0-alpha.3/go.mod h1:hsFRiytpWwb9Wd/MnZrC/nCefHSCu/RoidgQipFXc2E=
+github.com/loft-sh/api/v4 v4.0.0-alpha.3.0.20240522135459-9e20254f7d4d h1:bhispdYRuiZsi7AqOsMsePz7CopSmVrSApvYjDVeFyA=
+github.com/loft-sh/api/v4 v4.0.0-alpha.3.0.20240522135459-9e20254f7d4d/go.mod h1:EQyRUQ9daLAyHgGNzTHlGMLZ9gyRjwEGQeYqb9IGSgo=
 github.com/loft-sh/apiserver v0.0.0-20240129130254-7b9a55ab1744 h1:1Yhs86ugpnEsex4kkFpyvCHNy42O5vtJjY7Loty9JkI=
 github.com/loft-sh/apiserver v0.0.0-20240129130254-7b9a55ab1744/go.mod h1:/QBF5drEoeQ0pggzT6q29+cyirRg5/MOJCq39ghku+8=
 github.com/loft-sh/jspolicy v0.2.2 h1:+7QqVumYm225mSJsGOjnbCGYzh9XyKYQab6FgLiHYJU=

@@ -1648,13 +1648,14 @@ type ClusterAgentConfig struct {
 }
 
 type ClusterAgentConfigCommon struct {
-	Cluster              string             `json:"cluster,omitempty"`
-	Audit                *AgentAuditConfig  `json:"audit,omitempty"`
-	DefaultImageRegistry string             `json:"defaultImageRegistry,omitempty"`
-	TokenCaCert          []byte             `json:"tokenCaCert,omitempty"`
-	LoftHost             string             `json:"loftHost,omitempty"`
-	LoftInstanceID       string             `json:"loftInstanceID,omitempty"`
-	AnalyticsSpec        AgentAnalyticsSpec `json:"analyticsSpec"`
+	Cluster                string             `json:"cluster,omitempty"`
+	Audit                  *AgentAuditConfig  `json:"audit,omitempty"`
+	DefaultImageRegistry   string             `json:"defaultImageRegistry,omitempty"`
+	TokenCaCert            []byte             `json:"tokenCaCert,omitempty"`
+	LoftHost               string             `json:"loftHost,omitempty"`
+	ProjectNamespacePrefix string             `json:"projectNamespacePrefix,omitempty"`
+	LoftInstanceID         string             `json:"loftInstanceID,omitempty"`
+	AnalyticsSpec          AgentAnalyticsSpec `json:"analyticsSpec"`
 }
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
@@ -1785,14 +1786,15 @@ type ConfigSpec struct {
 }
 
 type ConfigStatus struct {
-	Authentication   Authentication                  `json:"auth,omitempty"`
-	OIDC             *OIDC                           `json:"oidc,omitempty"`
-	Apps             *Apps                           `json:"apps,omitempty"`
-	Audit            *Audit                          `json:"audit,omitempty"`
-	LoftHost         string                          `json:"loftHost,omitempty"`
-	DevPodSubDomain  string                          `json:"devPodSubDomain,omitempty"`
-	UISettings       *uiv1.UISettingsConfig          `json:"uiSettings,omitempty"`
-	VaultIntegration *storagev1.VaultIntegrationSpec `json:"vault,omitempty"`
+	Authentication         Authentication                  `json:"auth,omitempty"`
+	OIDC                   *OIDC                           `json:"oidc,omitempty"`
+	Apps                   *Apps                           `json:"apps,omitempty"`
+	Audit                  *Audit                          `json:"audit,omitempty"`
+	LoftHost               string                          `json:"loftHost,omitempty"`
+	ProjectNamespacePrefix *string                         `json:"projectNamespacePrefix,omitempty"`
+	DevPodSubDomain        string                          `json:"devPodSubDomain,omitempty"`
+	UISettings             *uiv1.UISettingsConfig          `json:"uiSettings,omitempty"`
+	VaultIntegration       *storagev1.VaultIntegrationSpec `json:"vault,omitempty"`
 }
 
 type Connector struct {
@@ -2035,7 +2037,7 @@ type KioskStatus struct {
 }
 
 // +genclient
-// +genclient:nonNamespaced
+// +genclient
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 
 type License struct {
@@ -2403,16 +2405,17 @@ type SelfSpec struct {
 }
 
 type SelfStatus struct {
-	User           *UserInfo                 `json:"user,omitempty"`
-	Team           *clusterv1.EntityInfo     `json:"team,omitempty"`
-	AccessKey      string                    `json:"accessKey,omitempty"`
-	AccessKeyScope *storagev1.AccessKeyScope `json:"accessKeyScope,omitempty"`
-	AccessKeyType  storagev1.AccessKeyType   `json:"accessKeyType,omitempty"`
-	Subject        string                    `json:"subject,omitempty"`
-	UID            string                    `json:"uid,omitempty"`
-	Groups         []string                  `json:"groups,omitempty"`
-	ChatAuthToken  string                    `json:"chatAuthToken"`
-	InstanceID     string                    `json:"instanceID"`
+	User                   *UserInfo                 `json:"user,omitempty"`
+	Team                   *clusterv1.EntityInfo     `json:"team,omitempty"`
+	AccessKey              string                    `json:"accessKey,omitempty"`
+	AccessKeyScope         *storagev1.AccessKeyScope `json:"accessKeyScope,omitempty"`
+	AccessKeyType          storagev1.AccessKeyType   `json:"accessKeyType,omitempty"`
+	Subject                string                    `json:"subject,omitempty"`
+	UID                    string                    `json:"uid,omitempty"`
+	Groups                 []string                  `json:"groups,omitempty"`
+	ChatAuthToken          string                    `json:"chatAuthToken,omitempty"`
+	InstanceID             string                    `json:"instanceID,omitempty"`
+	ProjectNamespacePrefix *string                   `json:"projectNamespacePrefix,omitempty"`
 }
 
 // +genclient

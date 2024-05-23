@@ -51,6 +51,10 @@ type ConfigStatus struct {
 	// +optional
 	LoftHost string `json:"loftHost,omitempty"`
 
+	// ProjectNamespacePrefix holds the prefix for loft project namespaces. Omitted defaults to "p-"
+	// +optional
+	ProjectNamespacePrefix *string `json:"projectNamespacePrefix,omitempty"`
+
 	// DevPodSubDomain holds a subdomain in the following form *.workspace.my-domain.com
 	// +optional
 	DevPodSubDomain string `json:"devPodSubDomain,omitempty"`
