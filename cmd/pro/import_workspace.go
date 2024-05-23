@@ -4,7 +4,7 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/loft-sh/devpod/cmd/flags"
+	proflags "github.com/loft-sh/devpod/cmd/pro/flags"
 	"github.com/loft-sh/devpod/pkg/config"
 	provider2 "github.com/loft-sh/devpod/pkg/provider"
 	"github.com/loft-sh/devpod/pkg/random"
@@ -15,7 +15,7 @@ import (
 )
 
 type ImportCmd struct {
-	*flags.GlobalFlags
+	*proflags.GlobalFlags
 
 	WorkspaceId      string
 	WorkspaceUid     string
@@ -26,7 +26,7 @@ type ImportCmd struct {
 }
 
 // NewImportCmd creates a new command
-func NewImportCmd(globalFlags *flags.GlobalFlags) *cobra.Command {
+func NewImportCmd(globalFlags *proflags.GlobalFlags) *cobra.Command {
 	logger := log.GetInstance()
 	cmd := &ImportCmd{
 		GlobalFlags: globalFlags,

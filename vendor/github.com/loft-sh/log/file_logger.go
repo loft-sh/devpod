@@ -8,6 +8,7 @@ import (
 	"sync"
 
 	"github.com/acarl005/stripansi"
+	"github.com/go-logr/logr"
 	"github.com/loft-sh/log/survey"
 	"github.com/sirupsen/logrus"
 	lumberjack "gopkg.in/natefinch/lumberjack.v2"
@@ -21,6 +22,8 @@ type fileLogger struct {
 	// sinks    []Logger
 	prefixes []string
 }
+
+var _ Logger = &fileLogger{}
 
 // NewFileLogger returns a logger instance for the specified filename
 func NewFileLogger(logFile string, level logrus.Level) Logger {
@@ -308,4 +311,73 @@ func (f *fileLogger) WithPrefixColor(prefix, color string) Logger {
 
 func (f *fileLogger) ErrorStreamOnly() Logger {
 	return f
+}
+
+// --- Logr LogSink ---
+
+type fileLogSink struct {
+	logger        *fileLogger
+	name          string
+	keysAndValues []interface{}
+}
+
+var _ logr.LogSink = &fileLogSink{}
+
+// Enabled implements logr.LogSink.
+func (s *fileLogSink) Enabled(level int) bool {
+	// if the logrus level is debug or trace, we always log
+	if s.logger.level > logrus.InfoLevel {
+		return true
+	}
+
+	// if the logr level is 0, we log if the logrus level is info or higher
+	return s.logger.level <= logrus.InfoLevel && level == 0
+}
+
+// Error implements logr.LogSink.
+func (s *fileLogSink) Error(err error, msg string, keysAndValues ...interface{}) {
+	s.logger.WithPrefix(s.name).Error(err, msg, append(s.keysAndValues, keysAndValues...))
+}
+
+// Info implements logr.LogSink.
+func (s *fileLogSink) Info(level int, msg string, keysAndValues ...interface{}) {
+	if level == 0 {
+		s.logger.WithPrefix(s.name).Info(msg, append(s.keysAndValues, keysAndValues...))
+	} else {
+		s.logger.WithPrefix(s.name).Debug(msg, append(s.keysAndValues, keysAndValues...))
+	}
+}
+
+// Init implements logr.LogSink.
+func (*fileLogSink) Init(info logr.RuntimeInfo) {}
+
+// WithName implements logr.LogSink.
+func (s *fileLogSink) WithName(name string) logr.LogSink {
+	if s.name != "" {
+		name = s.name + "." + name
+	}
+
+	return &fileLogSink{
+		logger:        s.logger,
+		name:          name,
+		keysAndValues: s.keysAndValues,
+	}
+}
+
+// WithValues implements logr.LogSink.
+func (s *fileLogSink) WithValues(keysAndValues ...interface{}) logr.LogSink {
+	return &fileLogSink{
+		logger:        s.logger,
+		name:          s.name,
+		keysAndValues: append(s.keysAndValues, keysAndValues...),
+	}
+}
+
+// LogrLogSink implements Logger.
+func (f *fileLogger) LogrLogSink() logr.LogSink {
+	return &fileLogSink{
+		logger:        f,
+		name:          "",
+		keysAndValues: []interface{}{},
+	}
 }
