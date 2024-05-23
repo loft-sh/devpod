@@ -569,6 +569,8 @@ jobs:
           echo "Upload provider.yaml..."
           gh release upload $RELEASE_ID ./release/provider.yaml --clobber
           printf "Done\n\n"
+        env:
+          GH_TOKEN: ${{ github.token }}
 
       - name: Update `latest.json`
         uses: actions/github-script@v6
