@@ -44,7 +44,8 @@ type SSHCmd struct {
 	AgentForwarding    bool
 	GPGAgentForwarding bool
 
-	StartServices bool
+	StartServices                bool
+	ForceGitCredentialForwarding bool
 
 	Proxy bool
 
@@ -93,6 +94,8 @@ func NewSSHCmd(flags *flags.GlobalFlags) *cobra.Command {
 	sshCmd.Flags().BoolVar(&cmd.GPGAgentForwarding, "gpg-agent-forwarding", false, "If true forward the local gpg-agent to the remote machine")
 	sshCmd.Flags().BoolVar(&cmd.Stdio, "stdio", false, "If true will tunnel connection through stdout and stdin")
 	sshCmd.Flags().BoolVar(&cmd.StartServices, "start-services", true, "If false will not start any port-forwarding or git / docker credentials helper")
+	sshCmd.Flags().BoolVar(&cmd.ForceGitCredentialForwarding, "force-git-credential-forwarding", false, "Forces git credential forwarding")
+	_ = sshCmd.Flags().MarkHidden("force-git-credential-forwarding")
 	return sshCmd
 }
 
@@ -420,6 +423,9 @@ func (cmd *SSHCmd) startServices(
 ) {
 	if cmd.User != "" {
 		gitCredentials := ideName != string(config.IDEVSCode)
+		if cmd.ForceGitCredentialForwarding {
+			gitCredentials = true
+		}
 		err := tunnel.RunInContainer(
 			ctx,
 			devPodConfig,
