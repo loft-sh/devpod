@@ -100,7 +100,22 @@ type DevPodWorkspaceTemplateDefinition struct {
 	// UseProjectGitCredentials specifies if the project git credentials should be used instead of local ones for this workspace
 	// +optional
 	UseProjectGitCredentials bool `json:"useProjectGitCredentials,omitempty"`
+
+	// GitCloneStrategy specifies how git based workspace are being cloned. Can be "" (full, default), treeless, blobless or shallow
+	// +optional
+	GitCloneStrategy GitCloneStrategy `json:"gitCloneStrategy,omitempty"`
 }
+
+// +enum
+type GitCloneStrategy string
+
+// WARN: Need to match https://github.com/loft-sh/devpod/pkg/git/clone.go
+const (
+	FullCloneStrategy     GitCloneStrategy = ""
+	BloblessCloneStrategy GitCloneStrategy = "blobless"
+	TreelessCloneStrategy GitCloneStrategy = "treeless"
+	ShallowCloneStrategy  GitCloneStrategy = "shallow"
+)
 
 type DevPodWorkspaceProvider struct {
 	// Name is the name of the provider. This can also be an url.

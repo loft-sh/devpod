@@ -20,8 +20,8 @@ require (
 	github.com/google/uuid v1.6.0
 	github.com/gorilla/websocket v1.5.1
 	github.com/joho/godotenv v1.5.1
-	github.com/loft-sh/agentapi/v4 v4.0.0-alpha.1
-	github.com/loft-sh/api/v4 v4.0.0-alpha.3
+	github.com/loft-sh/agentapi/v4 v4.0.0-alpha.3
+	github.com/loft-sh/api/v4 v4.0.0-alpha.3.0.20240522135459-9e20254f7d4d
 	github.com/loft-sh/log v0.0.0-20240219160058-26d83ffb46ac
 	github.com/loft-sh/programming-language-detection v0.0.5
 	github.com/loft-sh/ssh v0.0.4

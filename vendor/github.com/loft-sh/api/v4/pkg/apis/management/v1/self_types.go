@@ -62,11 +62,15 @@ type SelfStatus struct {
 
 	// ChatAuthToken is the token used to authenticate with the in-product chat widget in the UI
 	// +optional
-	ChatAuthToken string `json:"chatAuthToken"`
+	ChatAuthToken string `json:"chatAuthToken,omitempty"`
 
 	// InstanceID is the loft instance id
 	// +optional
-	InstanceID string `json:"instanceID"`
+	InstanceID string `json:"instanceID,omitempty"`
+
+	// ProjectNamespacePrefix is the prefix used to name project namespaces after defaulting has been applied
+	// +optional
+	ProjectNamespacePrefix *string `json:"projectNamespacePrefix,omitempty"`
 }
 
 type UserInfo struct {

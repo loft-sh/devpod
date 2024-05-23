@@ -153,10 +153,17 @@ func (a AccessKeyScope) ContainsRole(val AccessKeyScopeRoleName) bool {
 			return true
 		}
 
-		// (ThomasK33): As the vcluster role implicitly allows network peering
-		// add a dedicated role check here
-		if entry.Role == AccessKeyScopeRoleVCluster && val == AccessKeyScopeRoleNetworkPeer {
-			return true
+		// (ThomasK33): Add implicit network peer permissions
+		if val == AccessKeyScopeRoleNetworkPeer {
+			switch entry.Role {
+			case AccessKeyScopeRoleVCluster, AccessKeyScopeRoleAgent, AccessKeyScopeRoleRunner:
+				return true
+			// (ThomasK33): Adding this so that the exhaustive linter is happy
+			case AccessKeyScopeRoleNetworkPeer:
+				return true
+			case AccessKeyScopeRoleLoftCLI:
+				return false
+			}
 		}
 	}
 
@@ -174,9 +181,11 @@ type AccessKeyScopeRole struct {
 type AccessKeyScopeRoleName string
 
 const (
+	AccessKeyScopeRoleAgent       AccessKeyScopeRoleName = "agent"
 	AccessKeyScopeRoleVCluster    AccessKeyScopeRoleName = "vcluster"
 	AccessKeyScopeRoleNetworkPeer AccessKeyScopeRoleName = "network-peer"
 	AccessKeyScopeRoleLoftCLI     AccessKeyScopeRoleName = "loft-cli"
+	AccessKeyScopeRoleRunner      AccessKeyScopeRoleName = "runner"
 )
 
 type AccessKeyScopeCluster struct {

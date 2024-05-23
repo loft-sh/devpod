@@ -23,6 +23,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/loft-sh/devpod/pkg/loft/kube"
+	"github.com/loft-sh/devpod/pkg/loft/project"
 	"github.com/loft-sh/devpod/pkg/version"
 	"github.com/loft-sh/log"
 	"github.com/mitchellh/go-homedir"
@@ -130,6 +131,13 @@ func (c *client) RefreshSelf(ctx context.Context) error {
 	if err != nil {
 		return fmt.Errorf("get self: %w", err)
 	}
+
+	projectNamespacePrefix := project.DefaultProjectNamespacePrefix
+	if c.self.Status.ProjectNamespacePrefix != nil {
+		projectNamespacePrefix = *c.self.Status.ProjectNamespacePrefix
+	}
+
+	project.SetProjectNamespacePrefix(projectNamespacePrefix)
 
 	return nil
 }
