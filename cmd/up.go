@@ -158,6 +158,9 @@ func NewUpCmd(flags *flags.GlobalFlags) *cobra.Command {
 	upCmd.Flags().BoolVar(&cmd.ForceCredentials, "force-credentials", false, "If true will always use local credentials")
 	_ = upCmd.Flags().MarkHidden("force-credentials")
 
+	upCmd.Flags().StringVar(&cmd.SSHKey, "ssh-key", "", "The ssh-key to use")
+	_ = upCmd.Flags().MarkHidden("ssh-key")
+
 	// testing
 	upCmd.Flags().StringVar(&cmd.DaemonInterval, "daemon-interval", "", "TESTING ONLY")
 	upCmd.Flags().BoolVar(&cmd.ForceDockerless, "force-dockerless", false, "TESTING ONLY")
