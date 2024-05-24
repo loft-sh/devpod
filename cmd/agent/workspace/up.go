@@ -488,7 +488,7 @@ func CloneRepository(ctx context.Context, sshkey string, local bool, workspaceDi
 	gitInfo := git.NewGitInfo(source.GitRepository, source.GitBranch, source.GitCommit, source.GitPRReference, source.GitSubPath)
 
 	if sshkey != "" {
-		key, err := os.CreateTemp("/tmp", "")
+		key, err := os.CreateTemp("", "")
 		if err != nil {
 			return err
 		}
