@@ -2,6 +2,7 @@ package workspace
 
 import (
 	"context"
+	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"os"
@@ -208,7 +209,7 @@ func prepareWorkspace(ctx context.Context, workspaceInfo *provider2.AgentWorkspa
 
 		log.Debugf("Clone Repository")
 		gitCloner := git.NewCloner(workspaceInfo.CLIOptions.GitCloneStrategy)
-		err = CloneRepository(ctx, workspaceInfo.Agent.Local == "true", workspaceInfo.ContentFolder, workspaceInfo.Workspace.Source, helper, gitCloner, log)
+		err = CloneRepository(ctx, workspaceInfo.CLIOptions.SSHKey, workspaceInfo.Agent.Local == "true", workspaceInfo.ContentFolder, workspaceInfo.Workspace.Source, helper, gitCloner, log)
 		if err != nil {
 			// fallback
 			log.Errorf("Cloning failed: %v. Trying cloning on local machine and uploading folder", err)
@@ -246,7 +247,7 @@ func InitContentFolder(workspaceInfo *provider2.AgentWorkspaceInfo, log log.Logg
 
 	// make content dir
 	log.Debugf("Create content folder %s", workspaceInfo.ContentFolder)
-	err = os.MkdirAll(workspaceInfo.ContentFolder, 0777)
+	err = os.MkdirAll(workspaceInfo.ContentFolder, 0o777)
 	if err != nil {
 		return false, errors.Wrap(err, "make workspace folder")
 	}
@@ -283,7 +284,7 @@ func ensureLastDevContainerJson(workspaceInfo *provider2.AgentWorkspaceInfo) err
 	filePath := filepath.Join(workspaceInfo.ContentFolder, filepath.FromSlash(workspaceInfo.LastDevContainerConfig.Path))
 	_, err := os.Stat(filePath)
 	if os.IsNotExist(err) {
-		err = os.MkdirAll(filepath.Dir(filePath), 0755)
+		err = os.MkdirAll(filepath.Dir(filePath), 0o755)
 		if err != nil {
 			return fmt.Errorf("create %s: %w", filepath.Dir(filePath), err)
 		}
@@ -293,7 +294,7 @@ func ensureLastDevContainerJson(workspaceInfo *provider2.AgentWorkspaceInfo) err
 			return fmt.Errorf("marshal devcontainer.json: %w", err)
 		}
 
-		err = os.WriteFile(filePath, raw, 0600)
+		err = os.WriteFile(filePath, raw, 0o600)
 		if err != nil {
 			return fmt.Errorf("write %s: %w", filePath, err)
 		}
@@ -388,7 +389,7 @@ func PrepareImage(workspaceDir, image string) error {
 	// create a .devcontainer.json with the image
 	err := os.WriteFile(filepath.Join(workspaceDir, ".devcontainer.json"), []byte(`{
   "image": "`+image+`"
-}`), 0600)
+}`), 0o600)
 	if err != nil {
 		return err
 	}
@@ -413,7 +414,7 @@ func (cmd *UpCmd) devPodUp(ctx context.Context, workspaceInfo *provider2.AgentWo
 	return result, nil
 }
 
-func CloneRepository(ctx context.Context, local bool, workspaceDir string, source provider2.WorkspaceSource, helper string, cloner git.Cloner, log log.Logger) error {
+func CloneRepository(ctx context.Context, sshkey string, local bool, workspaceDir string, source provider2.WorkspaceSource, helper string, cloner git.Cloner, log log.Logger) error {
 	// remove the credential helper or otherwise we will receive strange errors within the container
 	defer func() {
 		if helper != "" {
@@ -485,12 +486,52 @@ func CloneRepository(ctx context.Context, local bool, workspaceDir string, sourc
 
 	// run git command
 	gitInfo := git.NewGitInfo(source.GitRepository, source.GitBranch, source.GitCommit, source.GitPRReference, source.GitSubPath)
+
+	if sshkey != "" {
+		key, err := os.CreateTemp("/tmp", "")
+		if err != nil {
+			return err
+		}
+		defer os.Remove(key.Name())
+		defer key.Close()
+
+		err = writeSSHKey(key, sshkey)
+		if err != nil {
+			return err
+		}
+
+		err = os.Chmod(key.Name(), 0o400)
+		if err != nil {
+			return err
+		}
+
+
+		err = os.Setenv("GIT_TERMINAL_PROMPT", "0")
+		if err != nil {
+			return err
+		}
+		err = os.Setenv("GIT_SSH_COMMAND", "ssh -oBatchMode=yes -o IdentitiesOnly=yes -oStrictHostKeyChecking=no -o IdentityFile="+key.Name())
+		if err != nil {
+			return err
+		}
+	}
+
 	err := git.CloneRepository(ctx, gitInfo, workspaceDir, helper, false, cloner, writer, log)
 	if err != nil {
 		return errors.Wrap(err, "clone repository")
 	}
 
 	return nil
+}
+
+func writeSSHKey(key *os.File, sshKey string) error {
+	data, err := base64.StdEncoding.DecodeString(sshKey)
+	if err != nil {
+		return err
+	}
+
+	_, err = key.WriteString(string(data))
+	return err
 }
 
 func InstallDocker(log log.Logger) error {

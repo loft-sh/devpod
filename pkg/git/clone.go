@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"os"
 
 	"github.com/spf13/pflag"
 )
@@ -52,9 +53,11 @@ func (s *CloneStrategy) Set(v string) error {
 		return fmt.Errorf("CloneStrategy %s not supported", v)
 	}
 }
+
 func (s *CloneStrategy) Type() string {
 	return "cloneStrategy"
 }
+
 func (s *CloneStrategy) String() string {
 	return string(*s)
 }
@@ -107,5 +110,16 @@ func run(ctx context.Context, args []string, stdout, stderr io.Writer) error {
 	gitCommand := CommandContext(ctx, args...)
 	gitCommand.Stdout = stdout
 	gitCommand.Stderr = stderr
+
+	gitSSHCommand := os.Getenv("GIT_SSH_COMMAND")
+	gitTerminalPrompt := os.Getenv("GIT_TERMINAL_PROMPT")
+
+	if gitSSHCommand != "" {
+		gitCommand.Env = append(gitCommand.Env, "GIT_SSH_COMMAND="+gitSSHCommand)
+	}
+	if gitTerminalPrompt != "" {
+		gitCommand.Env = append(gitCommand.Env, "GIT_TERMINAL_PROMPT="+gitTerminalPrompt)
+	}
+
 	return gitCommand.Run()
 }
