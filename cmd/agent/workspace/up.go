@@ -486,6 +486,7 @@ func CloneRepository(ctx context.Context, sshkey string, local bool, workspaceDi
 
 	// run git command
 	gitInfo := git.NewGitInfo(source.GitRepository, source.GitBranch, source.GitCommit, source.GitPRReference, source.GitSubPath)
+	extraEnv := []string{}
 
 	if sshkey != "" {
 		key, err := os.CreateTemp("", "")
@@ -505,17 +506,11 @@ func CloneRepository(ctx context.Context, sshkey string, local bool, workspaceDi
 			return err
 		}
 
-		err = os.Setenv("GIT_TERMINAL_PROMPT", "0")
-		if err != nil {
-			return err
-		}
-		err = os.Setenv("GIT_SSH_COMMAND", "ssh -oBatchMode=yes -o IdentitiesOnly=yes -oStrictHostKeyChecking=no -o IdentityFile="+key.Name())
-		if err != nil {
-			return err
-		}
+		extraEnv = append(extraEnv, "GIT_TERMINAL_PROMPT=0")
+		extraEnv = append(extraEnv, "GIT_SSH_COMMAND=ssh -oBatchMode=yes -o IdentitiesOnly=yes -oStrictHostKeyChecking=no -o IdentityFile="+key.Name())
 	}
 
-	err := git.CloneRepository(ctx, gitInfo, workspaceDir, helper, false, cloner, writer, log)
+	err := git.CloneRepositoryWithEnv(ctx, gitInfo, extraEnv, workspaceDir, helper, false, cloner, writer, log)
 	if err != nil {
 		return errors.Wrap(err, "clone repository")
 	}

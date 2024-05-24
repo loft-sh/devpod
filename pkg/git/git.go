@@ -115,6 +115,10 @@ func NormalizeRepositoryGitInfo(str string) *GitInfo {
 }
 
 func CloneRepository(ctx context.Context, gitInfo *GitInfo, targetDir string, helper string, bare bool, cloner Cloner, writer io.Writer, log log.Logger) error {
+	return CloneRepositoryWithEnv(ctx, gitInfo, []string{}, targetDir, helper, bare, cloner, writer, log)
+}
+
+func CloneRepositoryWithEnv(ctx context.Context, gitInfo *GitInfo, extraEnv []string, targetDir string, helper string, bare bool, cloner Cloner, writer io.Writer, log log.Logger) error {
 	if cloner == nil {
 		cloner = NewCloner(FullCloneStrategy)
 	}
@@ -130,7 +134,7 @@ func CloneRepository(ctx context.Context, gitInfo *GitInfo, targetDir string, he
 		extraArgs = append(extraArgs, "--branch", gitInfo.Branch)
 	}
 
-	err := cloner.Clone(ctx, gitInfo.Repository, targetDir, extraArgs, writer, writer)
+	err := cloner.Clone(ctx, gitInfo.Repository, targetDir, extraArgs, extraEnv, writer, writer)
 	if err != nil {
 		return errors.Wrap(err, "error cloning repository")
 	}
