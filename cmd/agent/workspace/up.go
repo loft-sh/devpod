@@ -505,7 +505,6 @@ func CloneRepository(ctx context.Context, sshkey string, local bool, workspaceDi
 			return err
 		}
 
-
 		err = os.Setenv("GIT_TERMINAL_PROMPT", "0")
 		if err != nil {
 			return err
