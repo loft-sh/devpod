@@ -336,13 +336,14 @@ mod tests {
         #[test]
         fn should_parse_full() {
             let url_str =
-                "devpod://import?workspace-id=workspace&workspace-uid=uid&devpod-pro-host=devpod.pro&other=other";
+                "devpod://import?workspace-id=workspace&workspace-uid=uid&devpod-pro-host=devpod.pro&other=other&project=foo";
             let request = UrlParser::parse(&url_str).unwrap();
 
             let got: ImportWorkspaceMsg = CustomProtocol::parse(&request).unwrap();
 
             assert_eq!(got.workspace_id, "workspace".to_string());
             assert_eq!(got.workspace_uid, "uid".to_string());
+            assert_eq!(got.project, "foo".to_string());
             assert_eq!(got.devpod_pro_host, "devpod.pro".to_string());
             assert_eq!(got.options.get("other"), Some(&"other".to_string()));
         }

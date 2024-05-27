@@ -10,6 +10,7 @@ import (
 	managementv1 "github.com/loft-sh/api/v4/pkg/apis/management/v1"
 	storagev1 "github.com/loft-sh/api/v4/pkg/apis/storage/v1"
 	"github.com/loft-sh/devpod/cmd/pro/flags"
+	"github.com/loft-sh/devpod/pkg/loft"
 	"github.com/loft-sh/devpod/pkg/loft/client"
 	"github.com/loft-sh/devpod/pkg/loft/kube"
 	"github.com/loft-sh/log"
@@ -48,14 +49,14 @@ func (cmd *TemplateOptionsCmd) Run(ctx context.Context) error {
 		return err
 	}
 
-	projectName := os.Getenv("LOFT_PROJECT")
+	projectName := os.Getenv(loft.ProjectEnv)
 	if projectName == "" {
-		return fmt.Errorf("LOFT_PROJECT environment variable is empty")
+		return fmt.Errorf("%s environment variable is empty", loft.ProjectEnv)
 	}
 
-	templateName := os.Getenv("LOFT_TEMPLATE")
+	templateName := os.Getenv(loft.TemplateOptionEnv)
 	if templateName == "" {
-		return fmt.Errorf("LOFT_TEMPLATE environment variable is empty")
+		return fmt.Errorf("%s environment variable is empty", loft.TemplateOptionEnv)
 	}
 
 	baseClient, err := client.InitClientFromPath(ctx, cmd.Config)
@@ -82,7 +83,7 @@ func (cmd *TemplateOptionsCmd) Run(ctx context.Context) error {
 			versions = append(versions, version.Version)
 		}
 
-		options["LOFT_TEMPLATE_VERSION"] = &Option{
+		options[loft.TemplateVersionOptionEnv] = &Option{
 			DisplayName:       "Template Version",
 			Description:       "The template version. If empty will use the latest version",
 			Required:          true,

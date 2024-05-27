@@ -15,6 +15,7 @@ import {
   DEVPOD_FLAG_PROVIDER,
   DEVPOD_FLAG_USE,
   DEVPOD_FLAG_WORKSPACE_ID,
+  DEVPOD_FLAG_WORKSPACE_PROJECT,
   DEVPOD_FLAG_WORKSPACE_UID,
 } from "../constants"
 import { TStreamEventListenerFn } from "../types"
@@ -114,6 +115,8 @@ export class ProCommands {
       config.workspaceID,
       DEVPOD_FLAG_WORKSPACE_UID,
       config.workspaceUID,
+      DEVPOD_FLAG_WORKSPACE_PROJECT,
+      config.project,
       ...optionsFlag,
       DEVPOD_FLAG_JSON_LOG_OUTPUT,
     ]).run()
