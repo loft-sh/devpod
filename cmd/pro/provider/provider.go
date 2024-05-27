@@ -7,6 +7,7 @@ import (
 	"github.com/loft-sh/devpod/cmd/pro/provider/list"
 	"github.com/loft-sh/devpod/pkg/loft"
 	"github.com/loft-sh/devpod/pkg/loft/client"
+	"github.com/loft-sh/log"
 
 	"github.com/spf13/cobra"
 )
@@ -22,6 +23,8 @@ func NewProProviderCmd(globalFlags *flags.GlobalFlags) *cobra.Command {
 			if (globalFlags.Config == "" || globalFlags.Config == client.DefaultCacheConfig) && os.Getenv("LOFT_CONFIG") != "" {
 				globalFlags.Config = os.Getenv(loft.ConfigEnv)
 			}
+
+			log.Default.SetFormat(log.JSONFormat)
 		},
 	}
 
