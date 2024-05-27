@@ -22,7 +22,12 @@ export function Toolbar({ ...boxProps }: BoxProps) {
       <GridItem display="flex" alignItems="center">
         {title}
       </GridItem>
-      <GridItem display="flex" alignItems="center" justifyContent="start">
+      <GridItem
+        marginLeft={2}
+        display="flex"
+        alignItems="center"
+        justifyContent="start"
+        columnGap={4}>
         {actions}
       </GridItem>
       <GridItem display="flex" alignItems="center" justifyContent="center">
