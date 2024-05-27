@@ -43,6 +43,7 @@ func NewProCmd(flags *flags.GlobalFlags, streamLogger *log.StreamLogger) *cobra.
 	proCmd.AddCommand(NewDeleteCmd(globalFlags))
 	proCmd.AddCommand(NewImportCmd(globalFlags))
 	proCmd.AddCommand(NewStartCmd(globalFlags))
+	proCmd.AddCommand(NewRebuildCmd(globalFlags))
 	proCmd.AddCommand(reset.NewResetCmd(globalFlags))
 	proCmd.AddCommand(provider.NewProProviderCmd(globalFlags))
 	return proCmd
