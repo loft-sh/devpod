@@ -178,6 +178,7 @@ export type TImportWorkspaceConfig = Readonly<{
   workspaceID: string
   workspaceUID: string
   devPodProHost: string
+  project: string
   options: Record<string, string> | null
 }>
 

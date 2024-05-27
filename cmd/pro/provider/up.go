@@ -5,13 +5,10 @@ import (
 	"fmt"
 	"io"
 	"os"
-	"regexp"
-	"strconv"
 	"strings"
 	"time"
 
 	"github.com/ghodss/yaml"
-	"github.com/pkg/errors"
 
 	"github.com/loft-sh/devpod/cmd/pro/flags"
 	"github.com/loft-sh/devpod/cmd/pro/provider/list"
@@ -19,6 +16,7 @@ import (
 	"github.com/loft-sh/devpod/pkg/loft"
 	"github.com/loft-sh/devpod/pkg/loft/client"
 	"github.com/loft-sh/devpod/pkg/loft/kube"
+	"github.com/loft-sh/devpod/pkg/loft/parameters"
 	"github.com/loft-sh/devpod/pkg/loft/project"
 	"github.com/loft-sh/devpod/pkg/loft/remotecommand"
 	"github.com/loft-sh/log"
@@ -29,6 +27,7 @@ import (
 
 	managementv1 "github.com/loft-sh/api/v4/pkg/apis/management/v1"
 	storagev1 "github.com/loft-sh/api/v4/pkg/apis/storage/v1"
+	authorizationv1 "k8s.io/api/authorization/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -36,7 +35,14 @@ import (
 type UpCmd struct {
 	*flags.GlobalFlags
 
-	Log log.Logger
+	Log     log.Logger
+	streams streams
+}
+
+type streams struct {
+	Stdin  io.Reader
+	Stdout io.Writer
+	Stderr io.Writer
 }
 
 // NewUpCmd creates a new command
@@ -44,6 +50,11 @@ func NewUpCmd(globalFlags *flags.GlobalFlags) *cobra.Command {
 	cmd := &UpCmd{
 		GlobalFlags: globalFlags,
 		Log:         log.GetInstance(),
+		streams: streams{
+			Stdin:  os.Stdin,
+			Stdout: os.Stdout,
+			Stderr: os.Stderr,
+		},
 	}
 	c := &cobra.Command{
 		Hidden: true,
@@ -51,14 +62,14 @@ func NewUpCmd(globalFlags *flags.GlobalFlags) *cobra.Command {
 		Short:  "Runs up on a workspace",
 		Args:   cobra.NoArgs,
 		RunE: func(cobraCmd *cobra.Command, args []string) error {
-			return cmd.Run(cobraCmd.Context(), os.Stdin, os.Stdout, os.Stderr)
+			return cmd.Run(cobraCmd.Context())
 		},
 	}
 
 	return c
 }
 
-func (cmd *UpCmd) Run(ctx context.Context, stdin io.Reader, stdout io.Writer, stderr io.Writer) error {
+func (cmd *UpCmd) Run(ctx context.Context) error {
 	l := cmd.Log.ErrorStreamOnly()
 	baseClient, err := client.InitClientFromPath(ctx, cmd.Config)
 	if err != nil {
@@ -80,7 +91,12 @@ func (cmd *UpCmd) Run(ctx context.Context, stdin io.Reader, stdout io.Writer, st
 		if err != nil {
 			return fmt.Errorf("create workspace: %w", err)
 		}
-	} else if workspace.Spec.TemplateRef != nil {
+
+		return cmd.up(ctx, workspace, baseClient)
+	}
+
+	// update template if changed and user has permission
+	if workspace.Spec.TemplateRef != nil && canUpdateWorkspace(ctx, workspace, baseClient, l) {
 		oldWorkspace := workspace.DeepCopy()
 		managementClient, err := baseClient.Management()
 		if err != nil {
@@ -109,14 +125,9 @@ func (cmd *UpCmd) Run(ctx context.Context, stdin io.Reader, stdout io.Writer, st
 		workspace.Spec.Parameters = resolvedParameters
 
 		if workspaceChanged(workspace, oldWorkspace) {
-			workspace.Spec.TemplateRef.SyncOnce = true
-			// update template synced condition
-			for i, condition := range workspace.Status.Conditions {
-				if condition.Type == storagev1.InstanceTemplateResolved {
-					workspace.Status.Conditions[i].Status = corev1.ConditionFalse
-					workspace.Status.Conditions[i].Reason = "TemplateChanged"
-					workspace.Status.Conditions[i].Message = "Template has been changed"
-				}
+			// only add `SyncOnce` if version didn't change
+			if workspace.Spec.TemplateRef.Version == oldWorkspace.Spec.TemplateRef.Version {
+				workspace.Spec.TemplateRef.SyncOnce = true
 			}
 
 			// update workspace resource
@@ -149,17 +160,22 @@ func (cmd *UpCmd) Run(ctx context.Context, stdin io.Reader, stdout io.Writer, st
 			}
 		}
 	}
+
+	return cmd.up(ctx, workspace, baseClient)
+}
+
+func (cmd *UpCmd) up(ctx context.Context, workspace *managementv1.DevPodWorkspaceInstance, client client.Client) error {
 	options := OptionsFromEnv(storagev1.DevPodFlagsUp)
 	if options != nil && os.Getenv("DEBUG") == "true" {
 		options.Add("debug", "true")
 	}
 
-	conn, err := DialWorkspace(baseClient, workspace, "up", options)
+	conn, err := DialWorkspace(client, workspace, "up", options)
 	if err != nil {
 		return err
 	}
 
-	_, err = remotecommand.ExecuteConn(ctx, conn, stdin, stdout, stderr, cmd.Log.ErrorStreamOnly())
+	_, err = remotecommand.ExecuteConn(ctx, conn, cmd.streams.Stdin, cmd.streams.Stdout, cmd.streams.Stderr, cmd.Log.ErrorStreamOnly())
 	if err != nil {
 		return fmt.Errorf("error executing: %w", err)
 	}
@@ -302,7 +318,7 @@ func getParametersFromEnvironment(ctx context.Context, kubeClient kube.Interface
 	for _, parameter := range templateParameters {
 		// check if its in environment
 		val := envMap[list.VariableToEnvironmentVariable(parameter.Variable)]
-		outVal, err := verifyParameterValue(val, parameter)
+		outVal, err := parameters.VerifyValue(val, parameter)
 		if err != nil {
 			return "", fmt.Errorf("validate parameter %s: %w", parameter.Variable, err)
 		}
@@ -346,92 +362,37 @@ func workspaceChanged(newWorkspace, workspace *managementv1.DevPodWorkspaceInsta
 	return false
 }
 
-func verifyParameterValue(value string, parameter storagev1.AppParameter) (interface{}, error) {
-	switch parameter.Type {
-	case "":
-		fallthrough
-	case "password":
-		fallthrough
-	case "string":
-		fallthrough
-	case "multiline":
-		if parameter.DefaultValue != "" && value == "" {
-			value = parameter.DefaultValue
-		}
-
-		if parameter.Required && value == "" {
-			return nil, fmt.Errorf("parameter %s (%s) is required", parameter.Label, parameter.Variable)
-		}
-		for _, option := range parameter.Options {
-			if option == value {
-				return value, nil
-			}
-		}
-		if parameter.Validation != "" {
-			regEx, err := regexp.Compile(parameter.Validation)
-			if err != nil {
-				return nil, errors.Wrap(err, "compile validation regex "+parameter.Validation)
-			}
-
-			if !regEx.MatchString(value) {
-				return nil, fmt.Errorf("parameter %s (%s) needs to match regex %s", parameter.Label, parameter.Variable, parameter.Validation)
-			}
-		}
-		if parameter.Invalidation != "" {
-			regEx, err := regexp.Compile(parameter.Invalidation)
-			if err != nil {
-				return nil, errors.Wrap(err, "compile invalidation regex "+parameter.Invalidation)
-			}
-
-			if regEx.MatchString(value) {
-				return nil, fmt.Errorf("parameter %s (%s) cannot match regex %s", parameter.Label, parameter.Variable, parameter.Invalidation)
-			}
-		}
-
-		return value, nil
-	case "boolean":
-		if parameter.DefaultValue != "" && value == "" {
-			boolValue, err := strconv.ParseBool(parameter.DefaultValue)
-			if err != nil {
-				return nil, errors.Wrapf(err, "parse default value for parameter %s (%s)", parameter.Label, parameter.Variable)
-			}
-
-			return boolValue, nil
-		}
-		if parameter.Required && value == "" {
-			return nil, fmt.Errorf("parameter %s (%s) is required", parameter.Label, parameter.Variable)
-		}
-
-		boolValue, err := strconv.ParseBool(value)
-		if err != nil {
-			return nil, errors.Wrapf(err, "parse value for parameter %s (%s)", parameter.Label, parameter.Variable)
-		}
-		return boolValue, nil
-	case "number":
-		if parameter.DefaultValue != "" && value == "" {
-			intValue, err := strconv.Atoi(parameter.DefaultValue)
-			if err != nil {
-				return nil, errors.Wrapf(err, "parse default value for parameter %s (%s)", parameter.Label, parameter.Variable)
-			}
-
-			return intValue, nil
-		}
-		if parameter.Required && value == "" {
-			return nil, fmt.Errorf("parameter %s (%s) is required", parameter.Label, parameter.Variable)
-		}
-		num, err := strconv.Atoi(value)
-		if err != nil {
-			return nil, errors.Wrapf(err, "parse value for parameter %s (%s)", parameter.Label, parameter.Variable)
-		}
-		if parameter.Min != nil && num < *parameter.Min {
-			return nil, fmt.Errorf("parameter %s (%s) cannot be smaller than %d", parameter.Label, parameter.Variable, *parameter.Min)
-		}
-		if parameter.Max != nil && num > *parameter.Max {
-			return nil, fmt.Errorf("parameter %s (%s) cannot be greater than %d", parameter.Label, parameter.Variable, *parameter.Max)
-		}
-
-		return num, nil
+func canUpdateWorkspace(ctx context.Context, workspace *managementv1.DevPodWorkspaceInstance, client client.Client, log log.Logger) bool {
+	managementClient, err := client.Management()
+	if err != nil {
+		return false
 	}
 
-	return nil, fmt.Errorf("unrecognized type %s for parameter %s (%s)", parameter.Type, parameter.Label, parameter.Variable)
+	review, err := managementClient.Loft().ManagementV1().SelfSubjectAccessReviews().Create(ctx,
+		&managementv1.SelfSubjectAccessReview{
+			ObjectMeta: metav1.ObjectMeta{},
+			Spec: managementv1.SelfSubjectAccessReviewSpec{
+				SelfSubjectAccessReviewSpec: authorizationv1.SelfSubjectAccessReviewSpec{
+					ResourceAttributes: &authorizationv1.ResourceAttributes{
+						Verb:      "update",
+						Group:     managementv1.SchemeGroupVersion.Group,
+						Version:   managementv1.SchemeGroupVersion.Version,
+						Resource:  "devpodworkspaceinstances",
+						Namespace: workspace.Namespace,
+						Name:      workspace.Name,
+					},
+				},
+			},
+		},
+		metav1.CreateOptions{})
+
+	if err != nil {
+		log.Infof("self subject access review: %w", err)
+		return false
+	}
+	if !review.Status.Allowed || review.Status.Denied {
+		return false
+	}
+
+	return true
 }

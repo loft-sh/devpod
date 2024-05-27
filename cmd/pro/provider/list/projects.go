@@ -8,6 +8,7 @@ import (
 	"sort"
 
 	"github.com/loft-sh/devpod/cmd/pro/flags"
+	"github.com/loft-sh/devpod/pkg/loft"
 	"github.com/loft-sh/devpod/pkg/loft/client"
 	"github.com/loft-sh/log"
 	"github.com/spf13/cobra"
@@ -74,7 +75,7 @@ func (cmd *ProjectsCmd) Run(ctx context.Context) error {
 
 	return printOptions(&OptionsFormat{
 		Options: map[string]*Option{
-			"LOFT_PROJECT": {
+			loft.ProjectEnv: {
 				DisplayName:       "Project",
 				Description:       "The DevPod Pro project to use to create a new workspace in.",
 				Required:          true,

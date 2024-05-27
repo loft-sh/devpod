@@ -112,6 +112,7 @@ export function useAppReady() {
           workspaceID: event.workspace_id,
           workspaceUID: event.workspace_uid,
           devPodProHost: event.devpod_pro_host,
+          project: event.project,
           options: event.options,
         })
         if (importResult.err) {
