@@ -171,6 +171,7 @@ func (cmd *LoginCmd) Run(ctx context.Context, fullURL string, log log.Logger) er
 		if err != nil {
 			return err
 		}
+		log.Donef("Successfully logged into DevPod Pro instance %s", ansi.Color(fullURL, "white+b"))
 	}
 
 	// 3. Configure provider
@@ -253,12 +254,10 @@ func (cmd *LoginCmd) resolveProviderSource(url string) error {
 }
 
 func login(ctx context.Context, devPodConfig *config.Config, url string, providerName string, accessKey string, log log.Logger) error {
-	providerDir, err := provider.GetProviderDir(devPodConfig.DefaultContext, providerName)
+	configPath, err := LoftConfigPath(devPodConfig, providerName)
 	if err != nil {
 		return err
 	}
-
-	configPath := filepath.Join(providerDir, "loft-config.json")
 	loader, err := client.NewClientFromPath(configPath)
 	if err != nil {
 		return err
@@ -282,9 +281,19 @@ func login(ctx context.Context, devPodConfig *config.Config, url string, provide
 	if err != nil {
 		return err
 	}
-	log.Donef("Successfully logged into DevPod Pro instance %s", ansi.Color(url, "white+b"))
 
 	return nil
+}
+
+func LoftConfigPath(devPodConfig *config.Config, providerName string) (string, error) {
+	providerDir, err := provider.GetProviderDir(devPodConfig.DefaultContext, providerName)
+	if err != nil {
+		return "", err
+	}
+
+	configPath := filepath.Join(providerDir, "loft-config.json")
+
+	return configPath, nil
 }
 
 type versionObject struct {
