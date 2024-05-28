@@ -167,7 +167,7 @@ func (cmd *LoginCmd) Run(ctx context.Context, fullURL string, log log.Logger) er
 
 	// 2. Login to Loft
 	if cmd.Login {
-		err = login(ctx, devPodConfig, fullURL, cmd.Provider, cmd.AccessKey, log)
+		err = login(ctx, devPodConfig, fullURL, cmd.Provider, cmd.AccessKey, false, log)
 		if err != nil {
 			return err
 		}
@@ -253,7 +253,7 @@ func (cmd *LoginCmd) resolveProviderSource(url string) error {
 	return nil
 }
 
-func login(ctx context.Context, devPodConfig *config.Config, url string, providerName string, accessKey string, log log.Logger) error {
+func login(ctx context.Context, devPodConfig *config.Config, url string, providerName string, accessKey string, skipBrowserLogin bool, log log.Logger) error {
 	configPath, err := LoftConfigPath(devPodConfig, providerName)
 	if err != nil {
 		return err
@@ -276,6 +276,9 @@ func login(ctx context.Context, devPodConfig *config.Config, url string, provide
 	if accessKey != "" {
 		err = loader.LoginWithAccessKey(url, accessKey, true)
 	} else {
+		if skipBrowserLogin {
+			return fmt.Errorf("unable to login to loft host")
+		}
 		err = loader.Login(url, true, log)
 	}
 	if err != nil {

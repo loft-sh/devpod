@@ -33,6 +33,9 @@ func NewProCmd(flags *flags.GlobalFlags, streamLogger *log.StreamLogger) *cobra.
 			if os.Getenv("DEVPOD_DEBUG") == "true" {
 				log.Default.SetLevel(logrus.DebugLevel)
 			}
+			if flags.LogOutput == "json" {
+				log.Default.SetFormat(log.JSONFormat)
+			}
 
 			return nil
 		},
