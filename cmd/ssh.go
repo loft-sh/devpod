@@ -44,8 +44,7 @@ type SSHCmd struct {
 	AgentForwarding    bool
 	GPGAgentForwarding bool
 
-	StartServices                bool
-	ForceGitCredentialForwarding bool
+	StartServices bool
 
 	Proxy bool
 
@@ -94,8 +93,6 @@ func NewSSHCmd(flags *flags.GlobalFlags) *cobra.Command {
 	sshCmd.Flags().BoolVar(&cmd.GPGAgentForwarding, "gpg-agent-forwarding", false, "If true forward the local gpg-agent to the remote machine")
 	sshCmd.Flags().BoolVar(&cmd.Stdio, "stdio", false, "If true will tunnel connection through stdout and stdin")
 	sshCmd.Flags().BoolVar(&cmd.StartServices, "start-services", true, "If false will not start any port-forwarding or git / docker credentials helper")
-	sshCmd.Flags().BoolVar(&cmd.ForceGitCredentialForwarding, "force-git-credential-forwarding", false, "Forces git credential forwarding")
-	_ = sshCmd.Flags().MarkHidden("force-git-credential-forwarding")
 	return sshCmd
 }
 
@@ -156,7 +153,7 @@ func (cmd *SSHCmd) startProxyTunnel(
 			})
 		},
 		func(ctx context.Context, containerClient *ssh.Client) error {
-			return cmd.startTunnel(ctx, devPodConfig, containerClient, client.Workspace(), client.WorkspaceConfig().IDE.Name, log)
+			return cmd.startTunnel(ctx, devPodConfig, containerClient, client.Workspace(), log)
 		},
 	)
 }
@@ -234,7 +231,7 @@ func (cmd *SSHCmd) jumpContainer(
 			unlockOnce.Do(client.Unlock)
 
 			// start ssh tunnel
-			return cmd.startTunnel(ctx, devPodConfig, containerClient, client.Workspace(), client.WorkspaceConfig().IDE.Name, log)
+			return cmd.startTunnel(ctx, devPodConfig, containerClient, client.Workspace(), log)
 		})
 }
 
@@ -342,7 +339,7 @@ func (cmd *SSHCmd) forwardPorts(
 	return <-errChan
 }
 
-func (cmd *SSHCmd) startTunnel(ctx context.Context, devPodConfig *config.Config, containerClient *ssh.Client, workspaceName string, ideName string, log log.Logger) error {
+func (cmd *SSHCmd) startTunnel(ctx context.Context, devPodConfig *config.Config, containerClient *ssh.Client, workspaceName string, log log.Logger) error {
 	// check if we should forward ports
 	if len(cmd.ForwardPorts) > 0 {
 		return cmd.forwardPorts(ctx, containerClient, log)
@@ -355,7 +352,7 @@ func (cmd *SSHCmd) startTunnel(ctx context.Context, devPodConfig *config.Config,
 
 	// start port-forwarding etc.
 	if !cmd.Proxy && cmd.StartServices {
-		go cmd.startServices(ctx, devPodConfig, containerClient, ideName, cmd.GitUsername, cmd.GitToken, log)
+		go cmd.startServices(ctx, devPodConfig, containerClient, cmd.GitUsername, cmd.GitToken, log)
 	}
 
 	// start ssh
@@ -393,7 +390,7 @@ func (cmd *SSHCmd) startTunnel(ctx context.Context, devPodConfig *config.Config,
 	// Traffic is coming in from the outside, we need to forward it to the container
 	if cmd.Proxy || cmd.Stdio {
 		if cmd.Proxy {
-			go cmd.startProxyServices(ctx, devPodConfig, containerClient, ideName, log)
+			go cmd.startProxyServices(ctx, devPodConfig, containerClient, log)
 		}
 
 		return devssh.Run(ctx, containerClient, command, os.Stdin, os.Stdout, writer)
@@ -416,23 +413,18 @@ func (cmd *SSHCmd) startServices(
 	ctx context.Context,
 	devPodConfig *config.Config,
 	containerClient *ssh.Client,
-	ideName string,
 	gitUsername,
 	gitToken string,
 	log log.Logger,
 ) {
 	if cmd.User != "" {
-		gitCredentials := ideName != string(config.IDEVSCode)
-		if cmd.ForceGitCredentialForwarding {
-			gitCredentials = true
-		}
 		err := tunnel.RunInContainer(
 			ctx,
 			devPodConfig,
 			containerClient,
 			cmd.User,
 			false,
-			gitCredentials,
+			true,
 			true,
 			nil,
 			gitUsername,
@@ -449,7 +441,6 @@ func (cmd *SSHCmd) startProxyServices(
 	ctx context.Context,
 	devPodConfig *config.Config,
 	containerClient *ssh.Client,
-	ideName string,
 	log log.Logger,
 ) {
 	gitCredentials := devPodConfig.ContextOption(config.ContextOptionSSHInjectGitCredentials) == "true"
