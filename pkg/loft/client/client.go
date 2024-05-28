@@ -354,14 +354,6 @@ func (c *client) LoginWithAccessKey(host, accessKey string, insecure bool) error
 	c.config.Insecure = insecure
 	c.config.AccessKey = accessKey
 
-	if os.Getenv("DEVPOD_SKIP_VERSION_CHECK") != "true" {
-		// verify version
-		err = VerifyVersion(c)
-		if err != nil {
-			return perrors.Wrap(err, "verify version")
-		}
-	}
-
 	// verify the connection works
 	managementClient, err := c.Management()
 	if err != nil {
