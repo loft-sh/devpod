@@ -9,7 +9,7 @@ const (
 	IDEOpenVSCode      IDE = "openvscode"
 	IDEIntellij        IDE = "intellij"
 	IDEGoland          IDE = "goland"
-	IDERustRover          IDE = "rustrover"
+	IDERustRover       IDE = "rustrover"
 	IDEPyCharm         IDE = "pycharm"
 	IDEPhpStorm        IDE = "phpstorm"
 	IDECLion           IDE = "clion"
