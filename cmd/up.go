@@ -257,6 +257,8 @@ func (cmd *UpCmd) Run(
 				cmd.GitToken,
 				log,
 			)
+		case string(config.IDERustRover):
+			return jetbrains.NewRustRoverServer(config2.GetRemoteUser(result), ideConfig.Options, log).OpenGateway(result.SubstitutionContext.ContainerWorkspaceFolder, client.Workspace())
 		case string(config.IDEGoland):
 			return jetbrains.NewGolandServer(config2.GetRemoteUser(result), ideConfig.Options, log).OpenGateway(result.SubstitutionContext.ContainerWorkspaceFolder, client.Workspace())
 		case string(config.IDEPyCharm):

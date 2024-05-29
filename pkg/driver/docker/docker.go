@@ -292,6 +292,8 @@ func (d *dockerDriver) RunDockerDevContainer(
 	switch ide {
 	case string(config2.IDEGoland):
 		args = append(args, "--mount", jetbrains.NewGolandServer("", ideOptions, d.Log).GetVolume())
+	case string(config2.IDERustRover):
+		args = append(args, "--mount", jetbrains.NewRustRoverServer("", ideOptions, d.Log).GetVolume())
 	case string(config2.IDEPyCharm):
 		args = append(args, "--mount", jetbrains.NewPyCharmServer("", ideOptions, d.Log).GetVolume())
 	case string(config2.IDEPhpStorm):

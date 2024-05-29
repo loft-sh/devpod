@@ -60,6 +60,12 @@ var AllowedIDEs = []AllowedIDE{
 		Icon:        "https://devpod.sh/assets/goland.svg",
 	},
 	{
+		Name:        config.IDERustRover,
+		DisplayName: "RustRover",
+		Options:     jetbrains.RustRoverOptions,
+		Icon:        "https://devpod.sh/assets/rustrover.svg",
+	},
+	{
 		Name:        config.IDEPyCharm,
 		DisplayName: "PyCharm",
 		Options:     jetbrains.PyCharmOptions,
