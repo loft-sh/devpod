@@ -385,6 +385,8 @@ func (cmd *SetupContainerCmd) installIDE(setupInfo *config.Result, ide *provider
 		return cmd.setupOpenVSCode(setupInfo, ide.Options, log)
 	case string(config2.IDEGoland):
 		return jetbrains.NewGolandServer(config.GetRemoteUser(setupInfo), ide.Options, log).Install()
+	case string(config2.IDERustRover):
+		return jetbrains.NewRustRoverServer(config.GetRemoteUser(setupInfo), ide.Options, log).Install()
 	case string(config2.IDEPyCharm):
 		return jetbrains.NewPyCharmServer(config.GetRemoteUser(setupInfo), ide.Options, log).Install()
 	case string(config2.IDEPhpStorm):
@@ -443,9 +445,11 @@ func (cmd *SetupContainerCmd) setupVSCode(setupInfo *config.Result, ideOptions m
 			return nil, err
 		}
 
-		args := []string{"agent", "container", "vscode-async",
+		args := []string{
+			"agent", "container", "vscode-async",
 			"--setup-info", cmd.SetupInfo,
-			"--release-channel", string(releaseChannel)}
+			"--release-channel", string(releaseChannel),
+		}
 
 		return exec.Command(binaryPath, args...), nil
 	})
