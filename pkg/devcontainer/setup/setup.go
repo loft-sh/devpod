@@ -139,10 +139,14 @@ func ChownWorkspace(setupInfo *config.Result, recursive bool, log log.Logger) er
 		return nil
 	}
 
-	log.Infof("Chown workspace...")
-	err = copy2.Chown(filepath.Dir(setupInfo.SubstitutionContext.ContainerWorkspaceFolder), user)
-	if err != nil {
-		log.Warn(err)
+	workspaceRoot := filepath.Dir(setupInfo.SubstitutionContext.ContainerWorkspaceFolder)
+
+	if workspaceRoot != "/" {
+		log.Infof("Chown workspace...")
+		err = copy2.Chown(workspaceRoot, user)
+		if err != nil {
+			log.Warn(err)
+		}
 	}
 
 	if recursive {
