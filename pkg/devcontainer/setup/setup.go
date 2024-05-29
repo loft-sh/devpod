@@ -23,21 +23,19 @@ const (
 	ResultLocation = "/var/run/devpod/result.json"
 )
 
-func SetupContainer(setupInfo *config.Result, extraWorkspaceEnv []string, chownWorkspace bool, log log.Logger) error {
+func SetupContainer(setupInfo *config.Result, extraWorkspaceEnv []string, chownProjects bool, log log.Logger) error {
 	// write result to ResultLocation
 	WriteResult(setupInfo, log)
 
 	// chown user dir
-	if chownWorkspace {
-		err := ChownWorkspace(setupInfo, log)
-		if err != nil {
-			return errors.Wrap(err, "chown workspace")
-		}
+	err := ChownWorkspace(setupInfo, chownProjects, log)
+	if err != nil {
+		return errors.Wrap(err, "chown workspace")
 	}
 
 	// patch remote env
 	log.Debugf("Patch etc environment & profile...")
-	err := PatchEtcEnvironment(setupInfo.MergedConfig, log)
+	err = PatchEtcEnvironment(setupInfo.MergedConfig, log)
 	if err != nil {
 		return errors.Wrap(err, "patch etc environment")
 	}
@@ -132,7 +130,7 @@ func LinkRootHome(setupInfo *config.Result) error {
 	return nil
 }
 
-func ChownWorkspace(setupInfo *config.Result, log log.Logger) error {
+func ChownWorkspace(setupInfo *config.Result, recursive bool, log log.Logger) error {
 	user := config.GetRemoteUser(setupInfo)
 	exists, err := markerFileExists("chownWorkspace", "")
 	if err != nil {
@@ -142,10 +140,18 @@ func ChownWorkspace(setupInfo *config.Result, log log.Logger) error {
 	}
 
 	log.Infof("Chown workspace...")
-	err = copy2.ChownR(setupInfo.SubstitutionContext.ContainerWorkspaceFolder, user)
-	// do not exit on error, we can have non-fatal errors
+	err = copy2.Chown(filepath.Dir(setupInfo.SubstitutionContext.ContainerWorkspaceFolder), user)
 	if err != nil {
 		log.Warn(err)
+	}
+
+	if recursive {
+		log.Infof("Chown projects...")
+		err = copy2.ChownR(setupInfo.SubstitutionContext.ContainerWorkspaceFolder, user)
+		// do not exit on error, we can have non-fatal errors
+		if err != nil {
+			log.Warn(err)
+		}
 	}
 
 	return nil
