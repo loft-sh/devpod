@@ -49,8 +49,8 @@ Breaking down the options:
 - **driver**: which driver to use to run container, [check the Drivers section for more information](./driver.mdx)
 - **inactivityTimeout**: after how much time to shut down the machine. Use for machine providers
 - **containerInactivityTimeout**: after how much time to shut down the container. Use for non-machine providers
-- **injectGitCredentials**: weather to inject git credentials into the machine.
-- **injectDockerCredentials**: weather to inject docker credentials into the machine.
+- **injectGitCredentials**: whether to inject git credentials into the machine.
+- **injectDockerCredentials**: whether to inject docker credentials into the machine.
 - **exec.shutdown**: command to execute when shutting down the machine after DevPod has determined the `inactivityTimeout`. Option values will be available here as well. For example, you can reuse an option that stores a cloud api key within this command to terminate the machine.
 - **binaries**: this section can be used to declare additional binaries to download on the machine to use in `exec.shutdown`
 
