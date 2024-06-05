@@ -9,6 +9,7 @@ import (
 
 	"github.com/loft-sh/devpod/cmd/pro/flags"
 	"github.com/loft-sh/devpod/cmd/pro/provider"
+	"github.com/loft-sh/devpod/pkg/config"
 	"github.com/loft-sh/devpod/pkg/loft/client"
 	"github.com/loft-sh/devpod/pkg/loft/remotecommand"
 	"github.com/loft-sh/log"
@@ -23,6 +24,7 @@ type RebuildCmd struct {
 	Log log.Logger
 
 	Project string
+	Host    string
 }
 
 // NewRebuildCmd creates a new command
@@ -43,6 +45,8 @@ func NewRebuildCmd(globalFlags *flags.GlobalFlags) *cobra.Command {
 
 	c.Flags().StringVar(&cmd.Project, "project", "", "The project to use")
 	_ = c.MarkFlagRequired("project")
+	c.Flags().StringVar(&cmd.Host, "host", "", "The pro instance to use")
+	_ = c.MarkFlagRequired("host")
 
 	return c
 }
@@ -53,7 +57,20 @@ func (cmd *RebuildCmd) Run(ctx context.Context, args []string) error {
 	}
 	targetWorkspace := args[0]
 
-	baseClient, err := client.InitClientFromPath(ctx, cmd.Config)
+	devPodConfig, err := config.LoadConfig(cmd.Context, "")
+	if err != nil {
+		return err
+	}
+	providerConfig, err := resolveProInstance(devPodConfig, cmd.Host, cmd.Log)
+	if err != nil {
+		return fmt.Errorf("resolve host \"%s\": %w", cmd.Host, err)
+	}
+	configPath, err := LoftConfigPath(devPodConfig, providerConfig.Name)
+	if err != nil {
+		return fmt.Errorf("loft config path: %w", err)
+	}
+
+	baseClient, err := client.InitClientFromPath(ctx, configPath)
 	if err != nil {
 		return err
 	}
