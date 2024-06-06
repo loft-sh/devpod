@@ -165,16 +165,17 @@ func GetAuthConfig(host string) (*Credentials, error) {
 		return nil, err
 	}
 
-	if ac.IdentityToken != "" {
-		return &Credentials{
-			ServerURL: host,
-			Secret:    ac.IdentityToken,
-		}, nil
-	}
-
 	// In case of Azure registry we need to set the azure username to a default, in case it's not set.
 	if ac.Username == "" && strings.HasSuffix(ac.ServerAddress, "azurecr.io") {
 		ac.Username = AzureContainerRegistryUsername
+	}
+
+	if ac.IdentityToken != "" {
+		return &Credentials{
+			ServerURL: host,
+			Username:  ac.Username,
+			Secret:    ac.IdentityToken,
+		}, nil
 	}
 
 	return &Credentials{

@@ -10,8 +10,6 @@ import (
 	"github.com/loft-sh/devpod/pkg/agent/tunnelserver"
 	"github.com/loft-sh/devpod/pkg/credentials"
 	"github.com/loft-sh/devpod/pkg/netstat"
-	"github.com/loft-sh/devpod/pkg/port"
-	"github.com/loft-sh/devpod/pkg/random"
 	"github.com/loft-sh/log"
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
@@ -68,10 +66,9 @@ func (cmd *CredentialsServerCmd) Run(ctx context.Context, _ []string) error {
 	log := tunnelserver.NewTunnelLogger(ctx, tunnelClient, cmd.Debug)
 	log.Debugf("Start credentials server")
 
-	// find available port
-	port, err := port.FindAvailablePort(random.InRange(12000, 18000))
+	port, err := credentials.GetPort()
 	if err != nil {
-		return errors.Wrap(err, "find port")
+		return err
 	}
 
 	// forward ports

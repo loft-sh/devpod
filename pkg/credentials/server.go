@@ -1,6 +1,7 @@
 package credentials
 
 import (
+	"cmp"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -17,6 +18,9 @@ import (
 	"github.com/loft-sh/log"
 	"github.com/pkg/errors"
 )
+
+const DefaultPort = "12049"
+const CredentialsServerPortEnv = "DEVPOD_CREDENTIALS_SERVER_PORT"
 
 func RunCredentialsServer(
 	ctx context.Context,
@@ -116,6 +120,16 @@ func RunCredentialsServer(
 		_ = srv.Close()
 		return nil
 	}
+}
+
+func GetPort() (int, error) {
+	strPort := cmp.Or(os.Getenv(CredentialsServerPortEnv), DefaultPort)
+	port, err := strconv.Atoi(strPort)
+	if err != nil {
+		return 0, fmt.Errorf("convert port %s: %w", strPort, err)
+	}
+
+	return port, nil
 }
 
 func configureGitUserLocally(ctx context.Context, userName string, client tunnel.TunnelClient) error {
