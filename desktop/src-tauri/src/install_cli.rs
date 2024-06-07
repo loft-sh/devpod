@@ -92,8 +92,8 @@ fn install(_app_handle: AppHandle, force: bool) -> Result<(), InstallCLIError> {
         let mut user_local_bin = home;
         user_local_bin.push(".local/bin/devpod");
 
-        target_paths.push(user_bin);
         target_paths.push(user_local_bin);
+        target_paths.push(user_bin);
     }
 
     let mut latest_error: Option<InstallCLIError> = None;
@@ -124,21 +124,42 @@ fn install(_app_handle: AppHandle, force: bool) -> Result<(), InstallCLIError> {
             target_path.to_string_lossy()
         );
 
-        let operation = if is_on_tmpfs { copy } else { symlink };
-        match operation(cli_path.clone(), &target_path)
-            .with_context(|| format!("path: {}", str_target_path))
-            .map_err(InstallCLIError::Link)
-        {
-            Ok(..) => {
-                return Ok(());
+        if Path::new("/.flatpak-info").exists() {
+            match copy(cli_path.clone(), &target_path)
+                .with_context(|| format!("path: {}", str_target_path))
+                .map_err(InstallCLIError::Link)
+            {
+                Ok(..) => {
+                    return Ok(());
+                }
+                Err(err) => {
+                    warn!(
+                        "Failed to copy from {} to {}: {}; Retrying with other paths...",
+                        cli_path.to_string_lossy(),
+                        target_path.to_string_lossy(),
+                        err
+                    );
+                    latest_error = Some(err);
+                }
             }
-            Err(err) => {
-                warn!(
-                    "Failed to link to {}: {}; Retrying with other paths...",
-                    target_path.to_string_lossy(),
-                    err
-                );
-                latest_error = Some(err);
+        } else {
+            let operation = if is_on_tmpfs { copy } else { symlink };
+
+            match operation(cli_path.clone(), &target_path)
+                .with_context(|| format!("path: {}", str_target_path))
+                .map_err(InstallCLIError::Link)
+            {
+                Ok(..) => {
+                    return Ok(());
+                }
+                Err(err) => {
+                    warn!(
+                        "Failed to link to {}: {}; Retrying with other paths...",
+                        target_path.to_string_lossy(),
+                        err
+                    );
+                    latest_error = Some(err);
+                }
             }
         }
     }

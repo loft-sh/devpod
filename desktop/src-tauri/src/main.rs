@@ -12,6 +12,7 @@ mod commands;
 mod community_contributions;
 mod custom_protocol;
 mod fix_env;
+mod get_env;
 mod install_cli;
 mod logging;
 mod providers;
@@ -147,6 +148,7 @@ fn main() -> anyhow::Result<()> {
             action_logs::get_action_log_file,
             action_logs::sync_action_logs,
             install_cli::install_cli,
+            get_env::get_env,
             community_contributions::get_contributions,
             updates::get_pending_update,
             updates::check_updates
@@ -161,6 +163,7 @@ fn main() -> anyhow::Result<()> {
             action_logs::get_action_log_file,
             action_logs::sync_action_logs,
             install_cli::install_cli,
+            get_env::get_env,
             community_contributions::get_contributions,
         ]);
     }

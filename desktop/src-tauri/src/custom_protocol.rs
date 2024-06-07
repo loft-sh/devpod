@@ -5,6 +5,7 @@ use crate::ui_messages::{
 use crate::AppState;
 use log::{error, info};
 use serde::{Deserialize, Serialize};
+use std::path::Path;
 use tauri::{AppHandle, Manager, State};
 use thiserror::Error;
 use url::Url;
@@ -201,28 +202,30 @@ impl CustomProtocol {
             match result {
                 Ok(..) => {}
                 Err(error) => {
-                    let msg = "Either update-desktop-database or xdg-mime are missing. Please make sure they are available on your system";
-                    log::warn!("Custom protocol setup failed; {}: {}", msg, error);
+                    if !Path::new("/.flatpak-info").exists() {
+                        let msg = "Either update-desktop-database or xdg-mime are missing. Please make sure they are available on your system";
+                        log::warn!("Custom protocol setup failed; {}: {}", msg, error);
 
-                    tauri::async_runtime::block_on(async {
-                        let app_state = app.state::<AppState>();
-                        let show_toast_msg = ShowToastMsg::new(
-                            "Custom protocol handling needs to be configured".to_string(),
-                            msg.to_string(),
-                            ToastStatus::Warning,
-                        );
-                        if let Err(err) = app_state
-                            .ui_messages
-                            .send(UiMessage::ShowToast(show_toast_msg))
-                            .await
-                        {
-                            log::error!(
-                                "Failed to broadcast show toast message: {:?}, {}",
-                                err.0,
-                                err
+                        tauri::async_runtime::block_on(async {
+                            let app_state = app.state::<AppState>();
+                            let show_toast_msg = ShowToastMsg::new(
+                                "Custom protocol handling needs to be configured".to_string(),
+                                msg.to_string(),
+                                ToastStatus::Warning,
                             );
-                        };
-                    })
+                            if let Err(err) = app_state
+                                .ui_messages
+                                .send(UiMessage::ShowToast(show_toast_msg))
+                                .await
+                            {
+                                log::error!(
+                                    "Failed to broadcast show toast message: {:?}, {}",
+                                    err.0,
+                                    err
+                                );
+                            };
+                        })
+                    }
                 }
             };
         }
