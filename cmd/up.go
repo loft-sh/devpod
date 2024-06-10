@@ -12,6 +12,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/blang/semver"
 	"github.com/loft-sh/devpod/cmd/flags"
 	"github.com/loft-sh/devpod/pkg/agent"
 	"github.com/loft-sh/devpod/pkg/agent/tunnelserver"
@@ -26,6 +27,7 @@ import (
 	"github.com/loft-sh/devpod/pkg/ide/jupyter"
 	"github.com/loft-sh/devpod/pkg/ide/openvscode"
 	"github.com/loft-sh/devpod/pkg/ide/vscode"
+	"github.com/loft-sh/devpod/pkg/loft"
 	open2 "github.com/loft-sh/devpod/pkg/open"
 	"github.com/loft-sh/devpod/pkg/port"
 	provider2 "github.com/loft-sh/devpod/pkg/provider"
@@ -123,6 +125,13 @@ func NewUpCmd(flags *flags.GlobalFlags) *cobra.Command {
 			)
 			if err != nil {
 				return err
+			}
+
+			if !cmd.Proxy {
+				err = checkProviderUpdate(devPodConfig, client.Provider(), logger)
+				if err != nil {
+					return err
+				}
 			}
 
 			return cmd.Run(ctx, devPodConfig, client, logger)
@@ -959,5 +968,64 @@ func performGpgForwarding(
 		}
 	}()
 
+	return nil
+}
+
+// checkProviderUpdate currently only ensures the local provider is in sync with the remote for DevPod Pro instances
+// Potentially auto-upgrade other providers in the future.
+func checkProviderUpdate(devPodConfig *config.Config, providerName string, log log.Logger) error {
+	fmt.Printf("potentially update %s \n", providerName)
+	proInstances, err := workspace2.ListProInstances(devPodConfig, log)
+	if err != nil {
+		return fmt.Errorf("list pro instances: %w", err)
+	} else if len(proInstances) == 0 {
+		return nil
+	}
+
+	proInstance, ok := workspace2.FindProviderProInstance(proInstances, providerName)
+	if !ok {
+		return nil
+	}
+
+	// compare versions
+	newVersion, err := loft.GetProInstanceDevPodVersion(proInstance)
+	if err != nil {
+		return fmt.Errorf("version for pro instance %s: %w", proInstance.Host, err)
+	}
+
+	p, err := workspace2.FindProvider(devPodConfig, proInstance.Provider, log)
+	if err != nil {
+		return fmt.Errorf("get provider config for pro provider %s: %w", proInstance.Provider, err)
+	}
+	v1, err := semver.Parse(strings.TrimPrefix(newVersion, "v"))
+	if err != nil {
+		return fmt.Errorf("parse version %s: %w", newVersion, err)
+	}
+	v2, err := semver.Parse(strings.TrimPrefix(p.Config.Version, "v"))
+	if err != nil {
+		return fmt.Errorf("parse version %s: %w", p.Config.Version, err)
+	}
+	if v1.Compare(v2) == 0 {
+		return nil
+	}
+	log.Infof("New provider version available, attempting to update %s", proInstance.Provider)
+
+	providerSource, err := workspace2.ResolveProviderSource(devPodConfig, proInstance.Provider, log)
+	if err != nil {
+		return fmt.Errorf("resolve provider source %s: %w", proInstance.Provider, err)
+	}
+
+	splitted := strings.Split(providerSource, "@")
+	if len(splitted) == 0 {
+		return fmt.Errorf("no provider source found %s", providerSource)
+	}
+	providerSource = splitted[0] + "@" + newVersion
+
+	_, err = workspace2.UpdateProvider(devPodConfig, providerName, providerSource, log)
+	if err != nil {
+		return fmt.Errorf("update provider %s: %w", proInstance.Provider, err)
+	}
+
+	log.Donef("Successfully updated provider %s", proInstance.Provider)
 	return nil
 }
