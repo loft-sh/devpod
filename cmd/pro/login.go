@@ -2,9 +2,7 @@ package pro
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
-	"io"
 	"net/url"
 	"path/filepath"
 	"strings"
@@ -12,7 +10,7 @@ import (
 	proflags "github.com/loft-sh/devpod/cmd/pro/flags"
 	providercmd "github.com/loft-sh/devpod/cmd/provider"
 	"github.com/loft-sh/devpod/pkg/config"
-	"github.com/loft-sh/devpod/pkg/http"
+	"github.com/loft-sh/devpod/pkg/loft"
 	"github.com/loft-sh/devpod/pkg/loft/client"
 	"github.com/loft-sh/devpod/pkg/provider"
 	"github.com/loft-sh/devpod/pkg/types"
@@ -222,33 +220,11 @@ func (cmd *LoginCmd) resolveProviderSource(url string) error {
 		return nil
 	}
 
-	resp, err := http.GetHTTPClient().Get(url + "/version")
+	version, err := loft.GetDevPodVersion(url)
 	if err != nil {
-		return fmt.Errorf("get %s: %w", url, err)
-	} else if resp.StatusCode != 200 {
-		out, _ := io.ReadAll(resp.Body)
-		return fmt.Errorf("get %s: %s (Status: %d)", url, string(out), resp.StatusCode)
+		return fmt.Errorf("get version: %w", err)
 	}
-
-	versionRaw, err := io.ReadAll(resp.Body)
-	if err != nil {
-		return fmt.Errorf("read %s: %w", url, err)
-	}
-
-	version := &versionObject{}
-	err = json.Unmarshal(versionRaw, version)
-	if err != nil {
-		return fmt.Errorf("parse %s: %w", url, err)
-	} else if version.DevPodVersion == "" {
-		return fmt.Errorf("unexpected version '%s', please use --version to define a provider version", version.DevPodVersion)
-	}
-
-	// make sure it starts with a v
-	if !strings.HasPrefix(version.DevPodVersion, "v") {
-		version.DevPodVersion = "v" + version.DevPodVersion
-	}
-
-	cmd.ProviderSource = providerRepo + "@" + version.DevPodVersion
+	cmd.ProviderSource = providerRepo + "@" + version
 
 	return nil
 }
@@ -297,11 +273,6 @@ func LoftConfigPath(devPodConfig *config.Config, providerName string) (string, e
 	configPath := filepath.Join(providerDir, "loft-config.json")
 
 	return configPath, nil
-}
-
-type versionObject struct {
-	// Version is the remote devpod version
-	DevPodVersion string `json:"devPodVersion,omitempty"`
 }
 
 var fallbackProvider = `name: devpod-pro

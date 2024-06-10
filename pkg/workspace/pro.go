@@ -32,3 +32,13 @@ func ListProInstances(devPodConfig *config.Config, log log.Logger) ([]*provider2
 
 	return retProInstances, nil
 }
+
+func FindProviderProInstance(proInstances []*provider2.ProInstance, providerName string) (*provider2.ProInstance, bool) {
+	for _, instance := range proInstances {
+		if instance.Provider == providerName {
+			return instance, true
+		}
+	}
+
+	return nil, false
+}
