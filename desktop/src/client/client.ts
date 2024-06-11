@@ -232,17 +232,17 @@ class Client {
 
   public async isCLIInstalled(): Promise<Result<boolean>> {
     try {
-      const result = await new Command("run-path-devpod-cli", ["version"]).execute()
       // we're in a flatpak, we need to check in other paths.
       const isflatpak = await this.getEnv("FLATPAK_ID");
-      const home_dir = await this.getEnv("HOME");
-      if (!isflatpak) {
-        const flatpak_path_one = await fs.exists(home_dir+"/bin/devpod") as unknown as boolean;
-        const flatpak_path_two = await fs.exists(home_dir+"/.local/bin/devpod") as unknown as boolean;
+      if (isflatpak) {
+        const home_dir = await this.getEnv("HOME");
+        // this will throw if doesn't exist
+        const exists = await invoke("file_exists", {filepath: home_dir+"/.local/bin/devpod" }) as unknown as boolean;
 
-        return Return.Value(flatpak_path_one || flatpak_path_two)
+        return Return.Value(exists)
       }
 
+      const result = await new Command("run-path-devpod-cli", ["version"]).execute()
       if (result.code !== 0) {
         return Return.Value(false)
       }

@@ -3,6 +3,7 @@ import { debug, isError } from "../lib"
 import { Result, ResultError, Return } from "../lib/result"
 import { DEVPOD_BINARY, DEVPOD_FLAG_OPTION, DEVPOD_UI_ENV_VAR } from "./constants"
 import { TStreamEvent } from "./types"
+import { invoke } from "@tauri-apps/api"
 
 export type TStreamEventListenerFn = (event: TStreamEvent) => void
 export type TEventListener<TEventName extends string> = Parameters<
@@ -35,12 +36,29 @@ export class Command implements TCommand<ChildProcess> {
         return { ...acc, [key]: value }
       }, {})
 
-    this.sidecarCommand = ShellCommand.sidecar(DEVPOD_BINARY, args, {
-      env: {
-        ...extraEnvVars,
-        [DEVPOD_UI_ENV_VAR]: "true",
-      },
-    })
+    let isflatpak = false;
+    try {
+      isflatpak = invoke("get_env", { name: "FLAPTAK_ID" }) as unknown as boolean;
+    } catch {
+      isflatpak = false;
+    }
+
+    if (isflatpak) {
+      this.sidecarCommand = new ShellCommand("run-path-devpod-wrapper", args, {
+        env: {
+          ...extraEnvVars,
+          [DEVPOD_UI_ENV_VAR]: "true",
+          ["FLATPAK_ID"]: "sh.loft.devpod",
+        },
+      })
+    } else {
+      this.sidecarCommand = ShellCommand.sidecar(DEVPOD_BINARY, args, {
+        env: {
+          ...extraEnvVars,
+          [DEVPOD_UI_ENV_VAR]: "true",
+        },
+      })
+    }
     this.args = args
   }
 
