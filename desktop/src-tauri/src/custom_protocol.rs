@@ -5,6 +5,7 @@ use crate::ui_messages::{
 use crate::AppState;
 use log::{error, info};
 use serde::{Deserialize, Serialize};
+use std::env;
 use std::path::Path;
 use tauri::{AppHandle, Manager, State};
 use thiserror::Error;
@@ -202,7 +203,14 @@ impl CustomProtocol {
             match result {
                 Ok(..) => {}
                 Err(error) => {
-                    if !Path::new("/.flatpak-info").exists() {
+                    let mut is_flatpak = false;
+
+                    match env::var("FLATPAK_ID") {
+                        Ok(_) => is_flatpak = true,
+                        Err(_) => is_flatpak = false,
+                    }
+
+                    if !is_flatpak {
                         let msg = "Either update-desktop-database or xdg-mime are missing. Please make sure they are available on your system";
                         log::warn!("Custom protocol setup failed; {}: {}", msg, error);
 

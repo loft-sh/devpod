@@ -124,7 +124,14 @@ fn install(_app_handle: AppHandle, force: bool) -> Result<(), InstallCLIError> {
             target_path.to_string_lossy()
         );
 
-        if Path::new("/.flatpak-info").exists() {
+        let mut is_flatpak = false;
+
+        match env::var("FLATPAK_ID") {
+            Ok(_) => is_flatpak = true,
+            Err(_) => is_flatpak = false,
+        }
+
+        if is_flatpak {
             match copy(cli_path.clone(), &target_path)
                 .with_context(|| format!("path: {}", str_target_path))
                 .map_err(InstallCLIError::Link)
