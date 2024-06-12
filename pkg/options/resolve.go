@@ -177,7 +177,7 @@ func ResolveOptions(
 	// loop and resolve options, as soon as we encounter a new dynamic option it will get filled
 	resolvedOptionValues, dynamicOptionDefinitions, err := resolve.Resolve(
 		ctx,
-		devConfig.DynamicProviderOptionDefinitions(provider.Name),
+		nil,
 		provider.Options,
 		devConfig.ProviderOptions(provider.Name),
 	)

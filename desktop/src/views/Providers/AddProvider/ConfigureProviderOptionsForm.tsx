@@ -393,24 +393,24 @@ function ConfigureOptionsForm({
 }
 
 function stripOptionChildren(
-  configuredOptions: { [key: string]: string },
-  optionsProp: TProviderOptions | undefined,
+  configuredOptions: Record<string, string>,
+  allOptions: TProviderOptions | undefined,
   id: string
 ) {
   // filter children
-  optionsProp?.[id]?.children?.forEach((child) => {
+  allOptions?.[id]?.children?.forEach((child) => {
     delete configuredOptions[child]
-    stripOptionChildren(configuredOptions, optionsProp, child)
+    stripOptionChildren(configuredOptions, allOptions, child)
   })
 }
 
 function filterOptions(
   configuredOptions: TFieldValues,
-  optionsProp: TProviderOptions | undefined
+  allOptions: TProviderOptions | undefined
 ): Record<string, string> {
   const newOptions: Record<string, string> = {}
   Object.keys(configuredOptions).forEach((option) => {
-    if (exists(configuredOptions[option]) && exists(optionsProp?.[option])) {
+    if (exists(configuredOptions[option]) && exists(allOptions?.[option])) {
       newOptions[option] = configuredOptions[option] + ""
     }
   })
@@ -429,7 +429,9 @@ function useOptions(
   const { data: queryOptions, error: queryError } = useQuery<TProviderOptions | undefined, Error>({
     queryKey: QueryKeys.providerSetOptions(providerID),
     queryFn: async () => {
-      return (await client.providers.setOptionsDry(providerID, { options: {} })).unwrap()
+      return (
+        await client.providers.setOptionsDry(providerID, { options: {}, reconfigure: false })
+      ).unwrap()
     },
   })
 
@@ -450,7 +452,10 @@ function useOptions(
       }
 
       return (
-        await client.providers.setOptionsDry(providerID, { options: filteredOptions })
+        await client.providers.setOptionsDry(providerID, {
+          options: filteredOptions,
+          reconfigure: true,
+        })
       ).unwrap()
     },
     onSuccess(data) {
