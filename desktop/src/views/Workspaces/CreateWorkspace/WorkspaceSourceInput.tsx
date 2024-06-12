@@ -294,6 +294,7 @@ function appendGitSetting(
 
 function pruneGitSettings(value: string): string {
   return value
+    .replace(/\/$/, "")
     .replace(BRANCH_REGEX, "$1")
     .replace(COMMIT_REGEX, "$1")
     .replace(PR_REGEX, "$1")
