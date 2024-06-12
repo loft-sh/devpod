@@ -111,10 +111,5 @@ func (cmd *LogsCmd) Run(ctx context.Context, args []string) error {
 
 	session.Stdout = os.Stdout
 	session.Stderr = os.Stderr
-	err = session.Run(agentCommand)
-	if err != nil {
-		return err
-	}
-
-	return nil
+	return session.Run(agentCommand)
 }

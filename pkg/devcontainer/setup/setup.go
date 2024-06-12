@@ -265,12 +265,7 @@ func PostCreateCommands(setupInfo *config.Result, log log.Logger) error {
 	}
 
 	// run always when attaching to the container
-	err = runPostCreateCommand(mergedConfig.PostAttachCommands, remoteUser, setupInfo.SubstitutionContext.ContainerWorkspaceFolder, setupInfo.MergedConfig.RemoteEnv, "postAttachCommands", "", log)
-	if err != nil {
-		return err
-	}
-
-	return nil
+	return runPostCreateCommand(mergedConfig.PostAttachCommands, remoteUser, setupInfo.SubstitutionContext.ContainerWorkspaceFolder, setupInfo.MergedConfig.RemoteEnv, "postAttachCommands", "", log)
 }
 
 func markerFileExists(markerName string, markerContent string) (bool, error) {

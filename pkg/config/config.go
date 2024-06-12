@@ -299,10 +299,5 @@ func SaveConfig(config *Config) error {
 		return err
 	}
 
-	err = os.WriteFile(configOrigin, out, 0600)
-	if err != nil {
-		return err
-	}
-
-	return nil
+	return os.WriteFile(configOrigin, out, 0600)
 }

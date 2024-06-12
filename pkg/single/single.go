@@ -79,10 +79,5 @@ func Single(file string, createCommand CreateCommand) error {
 	}
 
 	// release process resources
-	err = cmd.Process.Release()
-	if err != nil {
-		return err
-	}
-
-	return nil
+	return cmd.Process.Release()
 }

@@ -49,10 +49,5 @@ func (cmd *VSCodeAsyncCmd) Run(_ *cobra.Command, _ []string) error {
 	}
 
 	// install IDE
-	err = setupVSCodeExtensions(setupInfo, vscode.ReleaseChannel(cmd.ReleaseChannel), log.Default)
-	if err != nil {
-		return err
-	}
-
-	return nil
+	return setupVSCodeExtensions(setupInfo, vscode.ReleaseChannel(cmd.ReleaseChannel), log.Default)
 }

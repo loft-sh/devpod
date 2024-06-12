@@ -37,12 +37,7 @@ func CheckPushPermissions(image string) error {
 		return err
 	}
 
-	err = remote.CheckPushPermission(ref, authn.DefaultKeychain, http.DefaultTransport)
-	if err != nil {
-		return err
-	}
-
-	return nil
+	return remote.CheckPushPermission(ref, authn.DefaultKeychain, http.DefaultTransport)
 }
 
 func GetImageConfig(ctx context.Context, image string) (*v1.ConfigFile, v1.Image, error) {

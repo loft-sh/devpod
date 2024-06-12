@@ -111,10 +111,5 @@ func Run(ctx context.Context, client *ssh.Client, command string, stdin io.Reade
 	sess.Stdin = stdin
 	sess.Stdout = stdout
 	sess.Stderr = stderr
-	err = sess.Run(command)
-	if err != nil {
-		return err
-	}
-
-	return nil
+	return sess.Run(command)
 }

@@ -592,12 +592,7 @@ func startFleet(ctx context.Context, client client2.BaseWorkspaceClient, logger 
 		"Fleet is exposed at a publicly reachable URL, please make sure to not disclose this URL to anyone as they will be able to reach your workspace from that",
 	)
 	logger.Infof("Starting Fleet at %s ...", url)
-	err = open.Run(url)
-	if err != nil {
-		return err
-	}
-
-	return nil
+	return open.Run(url)
 }
 
 func startVSCodeInBrowser(
@@ -750,11 +745,8 @@ func startBrowserTunnel(
 			return nil
 		},
 	)
-	if err != nil {
-		return err
-	}
 
-	return nil
+	return err
 }
 
 func configureSSH(c *config.Config, client client2.BaseWorkspaceClient, sshConfigPath, user, workdir string, gpgagent bool) error {
@@ -764,7 +756,7 @@ func configureSSH(c *config.Config, client client2.BaseWorkspaceClient, sshConfi
 	}
 	sshConfigPath = path
 
-	err = devssh.ConfigureSSHConfig(
+	return devssh.ConfigureSSHConfig(
 		sshConfigPath,
 		client.Context(),
 		client.Workspace(),
@@ -773,11 +765,6 @@ func configureSSH(c *config.Config, client client2.BaseWorkspaceClient, sshConfi
 		gpgagent,
 		log.Default,
 	)
-	if err != nil {
-		return err
-	}
-
-	return nil
 }
 
 func mergeDevPodUpOptions(baseOptions *provider2.CLIOptions) error {

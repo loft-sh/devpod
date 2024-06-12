@@ -115,12 +115,7 @@ func (d *dockerDriver) DeleteDevContainer(ctx context.Context, workspaceId strin
 		return nil
 	}
 
-	err = d.Docker.Remove(ctx, container.ID)
-	if err != nil {
-		return err
-	}
-
-	return nil
+	return d.Docker.Remove(ctx, container.ID)
 }
 
 func (d *dockerDriver) StartDevContainer(ctx context.Context, workspaceId string) error {
@@ -346,12 +341,7 @@ func (d *dockerDriver) RunDockerDevContainer(
 	writer := d.Log.Writer(logrus.InfoLevel, false)
 	defer writer.Close()
 
-	err = d.Docker.Run(ctx, args, nil, writer, writer)
-	if err != nil {
-		return err
-	}
-
-	return nil
+	return d.Docker.Run(ctx, args, nil, writer, writer)
 }
 
 func (d *dockerDriver) EnsureImage(

@@ -116,12 +116,7 @@ func validate(config *ProviderConfig) error {
 		return err
 	}
 
-	err = validateOptionGroups(config)
-	if err != nil {
-		return err
-	}
-
-	return nil
+	return validateOptionGroups(config)
 }
 
 func validateProviderType(config *ProviderConfig) error {

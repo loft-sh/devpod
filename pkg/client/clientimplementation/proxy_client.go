@@ -198,7 +198,7 @@ func (s *proxyClient) Ssh(ctx context.Context, opt client.SshOptions) error {
 		readLogStream(reader, s.log.ErrorStreamOnly())
 	}()
 
-	err := RunCommandWithBinaries(
+	return RunCommandWithBinaries(
 		ctx,
 		"ssh",
 		s.config.Exec.Proxy.Ssh,
@@ -213,11 +213,6 @@ func (s *proxyClient) Ssh(ctx context.Context, opt client.SshOptions) error {
 		writer,
 		s.log.ErrorStreamOnly(),
 	)
-	if err != nil {
-		return err
-	}
-
-	return nil
 }
 
 func (s *proxyClient) Delete(ctx context.Context, opt client.DeleteOptions) error {

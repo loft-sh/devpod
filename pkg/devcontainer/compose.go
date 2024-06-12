@@ -55,12 +55,7 @@ func (r *runner) stopDockerCompose(ctx context.Context, projectName string) erro
 		return errors.Wrap(err, "get compose/env files")
 	}
 
-	err = composeHelper.Stop(ctx, projectName, composeGlobalArgs)
-	if err != nil {
-		return err
-	}
-
-	return nil
+	return composeHelper.Stop(ctx, projectName, composeGlobalArgs)
 }
 
 func (r *runner) deleteDockerCompose(ctx context.Context, projectName string) error {
@@ -79,12 +74,7 @@ func (r *runner) deleteDockerCompose(ctx context.Context, projectName string) er
 		return errors.Wrap(err, "get compose/env files")
 	}
 
-	err = composeHelper.Remove(ctx, projectName, composeGlobalArgs)
-	if err != nil {
-		return err
-	}
-
-	return nil
+	return composeHelper.Remove(ctx, projectName, composeGlobalArgs)
 }
 
 func (r *runner) dockerComposeProjectFiles(parsedConfig *config.SubstitutedConfig) ([]string, []string, []string, error) {

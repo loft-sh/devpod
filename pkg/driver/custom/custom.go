@@ -71,7 +71,7 @@ func (c *customDriver) FindDevContainer(ctx context.Context, workspaceId string)
 // CommandDevContainer runs the given command inside the devcontainer
 func (c *customDriver) CommandDevContainer(ctx context.Context, workspaceId, user, command string, stdin io.Reader, stdout io.Writer, stderr io.Writer) error {
 	// run command
-	err := c.runCommand(
+	return c.runCommand(
 		ctx,
 		workspaceId,
 		"commandDevContainer",
@@ -85,11 +85,6 @@ func (c *customDriver) CommandDevContainer(ctx context.Context, workspaceId, use
 		},
 		c.log,
 	)
-	if err != nil {
-		return err
-	}
-
-	return nil
 }
 
 // TargetArchitecture returns the architecture of the container runtime. e.g. amd64 or arm64

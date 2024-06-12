@@ -78,12 +78,7 @@ func configureCredentials(userName, shebang string, targetDir, configDir string,
 		return err
 	}
 
-	err = file.Chown(userName, dockerConfig.Filename)
-	if err != nil {
-		return err
-	}
-
-	return nil
+	return file.Chown(userName, dockerConfig.Filename)
 }
 
 func ConfigureCredentialsDockerless(targetFolder string, port int, log log.Logger) (string, error) {

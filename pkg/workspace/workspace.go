@@ -700,12 +700,7 @@ func loadExistingWorkspace(workspaceID string, devPodConfig *config.Config, chan
 
 func saveWorkspaceConfig(workspace *provider2.Workspace) error {
 	// save config
-	err := provider2.SaveWorkspaceConfig(workspace)
-	if err != nil {
-		return err
-	}
-
-	return nil
+	return provider2.SaveWorkspaceConfig(workspace)
 }
 
 func createMachine(context, machineID, providerName string) (*provider2.Machine, error) {

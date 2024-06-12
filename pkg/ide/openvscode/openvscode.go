@@ -232,12 +232,7 @@ func (o *OpenVSCodeServer) installSettings() error {
 		return err
 	}
 
-	err = copy2.ChownR(location, o.userName)
-	if err != nil {
-		return err
-	}
-
-	return nil
+	return copy2.ChownR(location, o.userName)
 }
 
 func (o *OpenVSCodeServer) Start() error {

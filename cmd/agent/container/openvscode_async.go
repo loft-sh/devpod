@@ -46,10 +46,5 @@ func (cmd *OpenVSCodeAsyncCmd) Run(_ *cobra.Command, _ []string) error {
 	}
 
 	// install IDE
-	err = setupOpenVSCodeExtensions(setupInfo, log.Default)
-	if err != nil {
-		return err
-	}
-
-	return nil
+	return setupOpenVSCodeExtensions(setupInfo, log.Default)
 }

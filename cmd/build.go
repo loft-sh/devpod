@@ -129,12 +129,7 @@ func NewBuildCmd(flags *flags.GlobalFlags) *cobra.Command {
 
 func (cmd *BuildCmd) Run(ctx context.Context, client client.WorkspaceClient) error {
 	// build workspace
-	err := cmd.build(ctx, client, log.Default)
-	if err != nil {
-		return err
-	}
-
-	return nil
+	return cmd.build(ctx, client, log.Default)
 }
 
 func (cmd *BuildCmd) build(ctx context.Context, workspaceClient client.WorkspaceClient, log log.Logger) error {

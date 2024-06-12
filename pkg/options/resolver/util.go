@@ -109,12 +109,7 @@ func addOptionsToGraph(g *graph.Graph[*types.Option], optionDefinitions config.O
 	}
 
 	// add dependencies
-	err := addDependencies(g, optionDefinitions, optionValues)
-	if err != nil {
-		return err
-	}
-
-	return nil
+	return addDependencies(g, optionDefinitions, optionValues)
 }
 
 func deleteChildrenOf(graph *graph.Graph[*types.Option], node *graph.Node[*types.Option]) error {

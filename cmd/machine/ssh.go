@@ -188,10 +188,5 @@ func StartSSHSession(ctx context.Context, user, command string, agentForwarding 
 	}
 
 	// wait until done
-	err = session.Wait()
-	if err != nil {
-		return err
-	}
-
-	return nil
+	return session.Wait()
 }

@@ -332,12 +332,7 @@ func Tunnel(
 	}
 
 	// create tunnel
-	err = exec(ctx, user, command, stdin, stdout, stderr)
-	if err != nil {
-		return err
-	}
-
-	return nil
+	return exec(ctx, user, command, stdin, stdout, stderr)
 }
 
 func dockerReachable(dockerOverride string, envs map[string]string) (bool, error) {

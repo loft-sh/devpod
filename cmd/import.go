@@ -104,12 +104,7 @@ func (cmd *ImportCmd) Run(ctx context.Context, devPodConfig *config.Config, log 
 	}
 
 	// import workspace
-	err = cmd.importWorkspace(devPodConfig, exportConfig, log)
-	if err != nil {
-		return err
-	}
-
-	return nil
+	return cmd.importWorkspace(devPodConfig, exportConfig, log)
 }
 
 func (cmd *ImportCmd) importWorkspace(devPodConfig *config.Config, exportConfig *provider.ExportConfig, log log.Logger) error {

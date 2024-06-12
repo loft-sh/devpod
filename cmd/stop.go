@@ -71,12 +71,7 @@ func (cmd *StopCmd) Run(ctx context.Context, devPodConfig *config.Config, client
 	}
 
 	// stop environment
-	err = client.Stop(ctx, client2.StopOptions{})
-	if err != nil {
-		return err
-	}
-
-	return nil
+	return client.Stop(ctx, client2.StopOptions{})
 }
 
 func (cmd *StopCmd) stopSingleMachine(ctx context.Context, client client2.BaseWorkspaceClient, devPodConfig *config.Config) (bool, error) {

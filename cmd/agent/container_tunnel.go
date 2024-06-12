@@ -85,7 +85,7 @@ func (cmd *ContainerTunnelCmd) Run(ctx context.Context, log log.Logger) error {
 	}()
 
 	// create tunnel into container.
-	err = agent.Tunnel(
+	return agent.Tunnel(
 		ctx,
 		func(ctx context.Context, user string, command string, stdin io.Reader, stdout io.Writer, stderr io.Writer) error {
 			return runner.Command(ctx, user, command, stdin, stdout, stderr)
@@ -96,11 +96,6 @@ func (cmd *ContainerTunnelCmd) Run(ctx context.Context, log log.Logger) error {
 		os.Stderr,
 		log,
 	)
-	if err != nil {
-		return err
-	}
-
-	return nil
 }
 
 func startDevContainer(ctx context.Context, workspaceConfig *provider2.AgentWorkspaceInfo, runner devcontainer.Runner, log log.Logger) error {

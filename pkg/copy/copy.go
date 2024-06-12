@@ -139,11 +139,7 @@ func File(srcFile, dstFile string, perm os.FileMode) error {
 	defer in.Close()
 
 	_, err = io.Copy(out, in)
-	if err != nil {
-		return err
-	}
-
-	return nil
+	return err
 }
 
 func Exists(filePath string) bool {

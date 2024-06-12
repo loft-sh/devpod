@@ -152,12 +152,7 @@ func (cmd *ImportCmd) writeWorkspaceDefinition(devPodConfig *config.Config, prov
 	}
 	workspaceObj.Provider.Options = devPodConfig.Current().Providers[provider.Name].Options
 
-	err = provider2.SaveWorkspaceConfig(workspaceObj)
-	if err != nil {
-		return err
-	}
-
-	return nil
+	return provider2.SaveWorkspaceConfig(workspaceObj)
 }
 
 func resolveProInstance(devPodConfig *config.Config, devPodProHost string, log log.Logger) (*provider2.ProviderConfig, error) {
