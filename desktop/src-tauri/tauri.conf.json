@@ -28,6 +28,11 @@
             "args": true
           },
           {
+            "name": "run-path-devpod-wrapper",
+            "cmd": "/app/bin/devpod-cli",
+            "args": true
+          },
+          {
             "name": "run-path-devpod-cli",
             "cmd": "devpod",
             "args": [
@@ -46,6 +51,7 @@
       },
       "fs": {
         "scope": [
+          "$HOME/**",
           "$APPDATA/*",
           "$APPDATA/actions/*"
         ],

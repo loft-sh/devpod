@@ -30,40 +30,40 @@ import { Command as DevPodCommand } from "./command"
 type TChannels = {
   event:
     | Readonly<{
-        type: "ShowToast"
-        message: string
-        title: string
-        status: NonNullable<UseToastOptions["status"]>
-      }>
+    type: "ShowToast"
+    message: string
+    title: string
+    status: NonNullable<UseToastOptions["status"]>
+  }>
     | Readonly<{ type: "ShowDashboard" }>
-    | Readonly<{ type: "CommandFailed" }>
-    | Readonly<{
-        type: "OpenWorkspace"
-        workspace_id: string | null
-        provider_id: string | null
-        ide: string | null
-        source: string
-      }>
-    | Readonly<{
-        type: "ImportWorkspace"
-        workspace_id: string
-        workspace_uid: string
-        devpod_pro_host: string
-        project: string
-        options: Record<string, string> | null
-      }>
-    | Readonly<{
-        type: "SetupPro"
-        host: string
-        accessKey: string | null
-        options: Record<string, string> | null
-      }>
+      | Readonly<{ type: "CommandFailed" }>
+        | Readonly<{
+          type: "OpenWorkspace"
+          workspace_id: string | null
+          provider_id: string | null
+          ide: string | null
+          source: string
+        }>
+          | Readonly<{
+            type: "ImportWorkspace"
+            workspace_id: string
+            workspace_uid: string
+            devpod_pro_host: string
+            project: string
+            options: Record<string, string> | null
+          }>
+            | Readonly<{
+              type: "SetupPro"
+              host: string
+              accessKey: string | null
+              options: Record<string, string> | null
+            }>
 }
 type TChannelName = keyof TChannels
 type TClientEventListener<TChannel extends TChannelName> = (payload: TChannels[TChannel]) => void
 type TClientSettings = Pick<
-  TSettings,
-  "debugFlag" | "additionalCliFlags" | "dotfilesURL" | "additionalEnvVars"
+TSettings,
+"debugFlag" | "additionalCliFlags" | "dotfilesURL" | "additionalEnvVars"
 >
 export type TPlatform = Awaited<ReturnType<typeof os.platform>>
 export type TArch = Awaited<ReturnType<typeof os.arch>>
@@ -225,8 +225,23 @@ class Client {
       return Return.Failed("Unable to install CLI")
     }
   }
+
+  public async getEnv(name: string) {
+    return await invoke("get_env", { name });
+  }
+
   public async isCLIInstalled(): Promise<Result<boolean>> {
     try {
+      // we're in a flatpak, we need to check in other paths.
+      const isflatpak = await this.getEnv("FLATPAK_ID");
+      if (isflatpak) {
+        const home_dir = await this.getEnv("HOME");
+        // this will throw if doesn't exist
+        const exists = await invoke("file_exists", {filepath: home_dir+"/.local/bin/devpod" }) as unknown as boolean;
+
+        return Return.Value(exists)
+      }
+
       const result = await new Command("run-path-devpod-cli", ["version"]).execute()
       if (result.code !== 0) {
         return Return.Value(false)
@@ -288,25 +303,25 @@ class Client {
       // Synchronize promise state with update operation
       await new Promise((res, rej) => {
         updater
-          .onUpdaterEvent((event) => {
-            if (event.status === "ERROR") {
-              unsubscribe?.()
-              rej(event.error)
+        .onUpdaterEvent((event) => {
+          if (event.status === "ERROR") {
+            unsubscribe?.()
+            rej(event.error)
 
-              return
-            }
+            return
+          }
 
-            if (event.status === "DONE") {
-              unsubscribe?.()
-              res(undefined)
+          if (event.status === "DONE") {
+            unsubscribe?.()
+            res(undefined)
 
-              return
-            }
-          })
-          .then(async (u) => {
-            unsubscribe = u
-            await updater.installUpdate()
-          })
+            return
+          }
+        })
+        .then(async (u) => {
+          unsubscribe = u
+          await updater.installUpdate()
+        })
       })
 
       return Return.Ok()

@@ -11,8 +11,11 @@ mod action_logs;
 mod commands;
 mod community_contributions;
 mod custom_protocol;
+mod file_exists;
 mod fix_env;
+mod get_env;
 mod install_cli;
+mod log_message;
 mod logging;
 mod providers;
 mod server;
@@ -147,6 +150,9 @@ fn main() -> anyhow::Result<()> {
             action_logs::get_action_log_file,
             action_logs::sync_action_logs,
             install_cli::install_cli,
+            get_env::get_env,
+            file_exists::file_exists,
+            log_message::log_message,
             community_contributions::get_contributions,
             updates::get_pending_update,
             updates::check_updates
@@ -161,6 +167,9 @@ fn main() -> anyhow::Result<()> {
             action_logs::get_action_log_file,
             action_logs::sync_action_logs,
             install_cli::install_cli,
+            get_env::get_env,
+            file_exists::file_exists,
+            log_message::log_message,
             community_contributions::get_contributions,
         ]);
     }
