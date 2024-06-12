@@ -67,9 +67,9 @@ export class ProvidersClient implements TDebuggable {
 
   public async setOptionsDry(
     id: TProviderID,
-    { options }: TConfigureProviderConfig
+    { options, reconfigure }: TConfigureProviderConfig
   ): Promise<Result<TProviderOptions | undefined>> {
-    return ProviderCommands.SetProviderOptions(id, options, false, true)
+    return ProviderCommands.SetProviderOptions(id, options, false, true, reconfigure)
   }
 
   public async configure(

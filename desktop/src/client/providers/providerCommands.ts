@@ -23,6 +23,7 @@ import {
   DEVPOD_FLAG_JSON_LOG_OUTPUT,
   DEVPOD_FLAG_JSON_OUTPUT,
   DEVPOD_FLAG_NAME,
+  DEVPOD_FLAG_RECONFIGURE,
   DEVPOD_FLAG_SINGLE_MACHINE,
   DEVPOD_FLAG_USE,
 } from "../constants"
@@ -153,11 +154,13 @@ export class ProviderCommands {
     id: TProviderID,
     rawOptions: Record<string, unknown>,
     reuseMachine: boolean,
-    dry?: boolean
+    dry?: boolean,
+    reconfigure?: boolean
   ) {
     const optionsFlag = serializeRawOptions(rawOptions)
     const maybeResuseMachineFlag = reuseMachine ? [DEVPOD_FLAG_SINGLE_MACHINE] : []
     const maybeDry = dry ? [DEVPOD_FLAG_DRY] : []
+    const maybeReconfigure = reconfigure ? [DEVPOD_FLAG_RECONFIGURE] : []
 
     const result = await ProviderCommands.newCommand([
       DEVPOD_COMMAND_PROVIDER,
@@ -166,6 +169,7 @@ export class ProviderCommands {
       ...optionsFlag,
       ...maybeResuseMachineFlag,
       ...maybeDry,
+      ...maybeReconfigure,
       DEVPOD_FLAG_JSON_LOG_OUTPUT,
     ]).run()
     if (result.err) {

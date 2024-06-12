@@ -115,6 +115,7 @@ export type TConfigureProviderConfig = Readonly<{
   options: Record<string, string>
   useAsDefaultProvider?: boolean
   reuseMachine?: boolean
+  reconfigure?: boolean
 }>
 export type TProviderManager = Readonly<{
   remove: TRunnable<TWithProviderID> &
