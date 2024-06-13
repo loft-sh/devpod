@@ -3,7 +3,7 @@ import { debug, isError } from "../lib"
 import { Result, ResultError, Return } from "../lib/result"
 import { DEVPOD_BINARY, DEVPOD_FLAG_OPTION, DEVPOD_UI_ENV_VAR } from "./constants"
 import { TStreamEvent } from "./types"
-import { invoke } from "@tauri-apps/api"
+import { client } from "./client"
 
 export type TStreamEventListenerFn = (event: TStreamEvent) => void
 export type TEventListener<TEventName extends string> = Parameters<
@@ -36,13 +36,14 @@ export class Command implements TCommand<ChildProcess> {
         return { ...acc, [key]: value }
       }, {})
 
-    let isflatpak = false;
-    try {
-      isflatpak = invoke("get_env", { name: "FLAPTAK_ID" }) as unknown as boolean;
-    } catch {
-      isflatpak = false;
-    }
+    const isflatpak = false
+    // try {
+    //   // isflatpak = client.getEnv("FLAPTAK_ID")
+    // } catch {
+    //   isflatpak = false
+    // }
 
+    // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
     if (isflatpak) {
       this.sidecarCommand = new ShellCommand("run-path-devpod-wrapper", args, {
         env: {
