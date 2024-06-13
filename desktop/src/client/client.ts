@@ -233,8 +233,7 @@ class Client {
   public async isCLIInstalled(): Promise<Result<boolean>> {
     try {
       // we're in a flatpak, we need to check in other paths.
-      const isflatpak = await this.getEnv("FLATPAK_ID")
-      if (isflatpak) {
+      if (import.meta.env.TAURI_IS_FLATPAK === "true") {
         const home_dir = await this.getEnv("HOME")
         // this will throw if doesn't exist
         const exists = await invoke<boolean>("file_exists", {

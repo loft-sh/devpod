@@ -36,15 +36,7 @@ export class Command implements TCommand<ChildProcess> {
         return { ...acc, [key]: value }
       }, {})
 
-    const isflatpak = false
-    // try {
-    //   // isflatpak = client.getEnv("FLAPTAK_ID")
-    // } catch {
-    //   isflatpak = false
-    // }
-
-    // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
-    if (isflatpak) {
+    if (import.meta.env.TAURI_IS_FLATPAK === "true") {
       this.sidecarCommand = new ShellCommand("run-path-devpod-wrapper", args, {
         env: {
           ...extraEnvVars,
