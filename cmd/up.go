@@ -33,6 +33,7 @@ import (
 	provider2 "github.com/loft-sh/devpod/pkg/provider"
 	devssh "github.com/loft-sh/devpod/pkg/ssh"
 	"github.com/loft-sh/devpod/pkg/tunnel"
+	"github.com/loft-sh/devpod/pkg/version"
 	workspace2 "github.com/loft-sh/devpod/pkg/workspace"
 	"github.com/loft-sh/log"
 	"github.com/pkg/errors"
@@ -974,7 +975,6 @@ func performGpgForwarding(
 // checkProviderUpdate currently only ensures the local provider is in sync with the remote for DevPod Pro instances
 // Potentially auto-upgrade other providers in the future.
 func checkProviderUpdate(devPodConfig *config.Config, providerName string, log log.Logger) error {
-	fmt.Printf("potentially update %s \n", providerName)
 	proInstances, err := workspace2.ListProInstances(devPodConfig, log)
 	if err != nil {
 		return fmt.Errorf("list pro instances: %w", err)
@@ -997,6 +997,10 @@ func checkProviderUpdate(devPodConfig *config.Config, providerName string, log l
 	if err != nil {
 		return fmt.Errorf("get provider config for pro provider %s: %w", proInstance.Provider, err)
 	}
+	if p.Config.Version == version.DevVersion {
+		return nil
+	}
+
 	v1, err := semver.Parse(strings.TrimPrefix(newVersion, "v"))
 	if err != nil {
 		return fmt.Errorf("parse version %s: %w", newVersion, err)
