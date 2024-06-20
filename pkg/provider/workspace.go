@@ -173,6 +173,7 @@ type CLIOptions struct {
 	DevContainerPath     string            `json:"devContainerPath,omitempty"`
 	WorkspaceEnv         []string          `json:"workspaceEnv,omitempty"`
 	WorkspaceEnvFile     []string          `json:"workspaceEnvFile,omitempty"`
+	InitEnv              []string          `json:"initEnv,omitempty"`
 	Recreate             bool              `json:"recreate,omitempty"`
 	Reset                bool              `json:"reset,omitempty"`
 	Proxy                bool              `json:"proxy,omitempty"`
