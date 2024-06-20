@@ -110,7 +110,7 @@ func (r *runner) Up(ctx context.Context, options UpOptions) (*config.Result, err
 	}()
 
 	// run initializeCommand
-	err = runInitializeCommand(r.LocalWorkspaceFolder, substitutedConfig.Config, r.Log)
+	err = runInitializeCommand(r.LocalWorkspaceFolder, substitutedConfig.Config, options.InitEnv, r.Log)
 	if err != nil {
 		return nil, err
 	}
@@ -315,6 +315,7 @@ func isDockerFileConfig(config *config.DevContainerConfig) bool {
 func runInitializeCommand(
 	workspaceFolder string,
 	config *config.DevContainerConfig,
+	extraEnvVars []string,
 	log log.Logger,
 ) error {
 	if len(config.InitializeCommand) == 0 {
@@ -338,9 +339,13 @@ func runInitializeCommand(
 		defer errwriter.Close()
 
 		cmd := exec.Command(args[0], args[1:]...)
+		env := cmd.Environ()
+		env = append(env, extraEnvVars...)
+
 		cmd.Stdout = writer
 		cmd.Stderr = errwriter
 		cmd.Dir = workspaceFolder
+		cmd.Env = env
 		err := cmd.Run()
 		if err != nil {
 			return err
