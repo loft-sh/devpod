@@ -44,10 +44,5 @@ func (cmd *StartCmd) Run(ctx context.Context, args []string) error {
 		return err
 	}
 
-	err = machineClient.Start(ctx, client.StartOptions{})
-	if err != nil {
-		return err
-	}
-
-	return nil
+	return machineClient.Start(ctx, client.StartOptions{})
 }

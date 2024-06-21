@@ -387,14 +387,9 @@ func DownloadLocalFolder(ctx context.Context, workspaceDir string, client tunnel
 
 func PrepareImage(workspaceDir, image string) error {
 	// create a .devcontainer.json with the image
-	err := os.WriteFile(filepath.Join(workspaceDir, ".devcontainer.json"), []byte(`{
+	return os.WriteFile(filepath.Join(workspaceDir, ".devcontainer.json"), []byte(`{
   "image": "`+image+`"
 }`), 0o600)
-	if err != nil {
-		return err
-	}
-
-	return nil
 }
 
 func (cmd *UpCmd) devPodUp(ctx context.Context, workspaceInfo *provider2.AgentWorkspaceInfo, log log.Logger) (*config2.Result, error) {

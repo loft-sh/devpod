@@ -257,11 +257,8 @@ func login(ctx context.Context, devPodConfig *config.Config, url string, provide
 		}
 		err = loader.Login(url, true, log)
 	}
-	if err != nil {
-		return err
-	}
 
-	return nil
+	return err
 }
 
 func LoftConfigPath(devPodConfig *config.Config, providerName string) (string, error) {

@@ -257,12 +257,7 @@ func (s *Server) HandleNonPTY(sess ssh.Session, cmd *exec.Cmd) (err error) {
 	}()
 
 	waitGroup.Wait()
-	err = cmd.Wait()
-	if err != nil {
-		return err
-	}
-
-	return nil
+	return cmd.Wait()
 }
 
 func HandlePTY(

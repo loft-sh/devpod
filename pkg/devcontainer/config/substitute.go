@@ -55,12 +55,7 @@ func Substitute(substitutionCtx *SubstitutionContext, config interface{}, out in
 		return replaceWithContext(isWindows, substitutionCtx, match, variable, args)
 	})
 
-	err = Convert(retVal, out)
-	if err != nil {
-		return err
-	}
-
-	return nil
+	return Convert(retVal, out)
 }
 
 func SubstituteContainerEnv(containerEnv map[string]string, config interface{}, out interface{}) error {
@@ -75,12 +70,7 @@ func SubstituteContainerEnv(containerEnv map[string]string, config interface{}, 
 		return replaceWithContainerEnv(containerEnv, match, variable, args)
 	})
 
-	err = Convert(retVal, out)
-	if err != nil {
-		return err
-	}
-
-	return nil
+	return Convert(retVal, out)
 }
 
 func replaceWithContainerEnv(containerEnv map[string]string, match, variable string, args []string) string {

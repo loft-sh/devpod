@@ -55,12 +55,7 @@ func (cmd *SSHClient) Run(ctx context.Context, args []string) error {
 	sess.Stdin = os.Stdin
 	sess.Stdout = os.Stdout
 	sess.Stderr = os.Stderr
-	err = sess.Run(command2.Quote(args))
-	if err != nil {
-		return err
-	}
-
-	return nil
+	return sess.Run(command2.Quote(args))
 }
 
 func (cmd *SSHClient) getConfig() (*ssh.ClientConfig, error) {

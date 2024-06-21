@@ -115,9 +115,5 @@ func Build(ctx context.Context, client *buildkit.Client, writer io.Writer, platf
 
 	// build
 	_, err = client.Solve(ctx, nil, solveOptions, pw.Status())
-	if err != nil {
-		return err
-	}
-
-	return nil
+	return err
 }

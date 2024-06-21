@@ -276,12 +276,7 @@ func (s *machineClient) Delete(ctx context.Context, options client.DeleteOptions
 	s.log.Donef("Successfully deleted machine '%s'", s.machine.ID)
 
 	// delete machine folder
-	err = DeleteMachineFolder(s.machine.Context, s.machine.ID)
-	if err != nil {
-		return err
-	}
-
-	return nil
+	return DeleteMachineFolder(s.machine.Context, s.machine.ID)
 }
 
 func runCommand(ctx context.Context, name string, command types.StrArray, environ []string, stdin io.Reader, stdout io.Writer, stderr io.Writer, log log.Logger) (err error) {

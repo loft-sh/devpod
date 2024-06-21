@@ -59,12 +59,7 @@ func SaveDevContainerJSON(config *DevContainerConfig) error {
 		return err
 	}
 
-	err = os.WriteFile(config.Origin, out, 0600)
-	if err != nil {
-		return err
-	}
-
-	return nil
+	return os.WriteFile(config.Origin, out, 0600)
 }
 
 func ParseDevContainerJSON(folder, relativePath string) (*DevContainerConfig, error) {

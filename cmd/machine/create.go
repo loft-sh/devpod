@@ -46,10 +46,5 @@ func (cmd *CreateCmd) Run(ctx context.Context, args []string) error {
 		return err
 	}
 
-	err = machineClient.Create(ctx, client.CreateOptions{})
-	if err != nil {
-		return err
-	}
-
-	return nil
+	return machineClient.Create(ctx, client.CreateOptions{})
 }

@@ -1057,12 +1057,7 @@ func (cmd *StartCmd) login(url string) error {
 	}
 
 	// log into the UI
-	err = cmd.loginUI(url)
-	if err != nil {
-		return err
-	}
-
-	return nil
+	return cmd.loginUI(url)
 }
 
 func (cmd *StartCmd) loginViaCLI(url string) error {

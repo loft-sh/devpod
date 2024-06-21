@@ -172,12 +172,7 @@ func SaveProviderConfig(context string, provider *ProviderConfig) error {
 	}
 
 	providerConfigFile := filepath.Join(providerDir, ProviderConfigFile)
-	err = os.WriteFile(providerConfigFile, providerDirBytes, 0600)
-	if err != nil {
-		return err
-	}
-
-	return nil
+	return os.WriteFile(providerConfigFile, providerDirBytes, 0600)
 }
 
 func SaveProInstanceConfig(context string, proInstance *ProInstance) error {
@@ -197,12 +192,7 @@ func SaveProInstanceConfig(context string, proInstance *ProInstance) error {
 	}
 
 	proInstanceConfigFile := filepath.Join(providerDir, ProInstanceConfigFile)
-	err = os.WriteFile(proInstanceConfigFile, proInstanceBytes, 0600)
-	if err != nil {
-		return err
-	}
-
-	return nil
+	return os.WriteFile(proInstanceConfigFile, proInstanceBytes, 0600)
 }
 
 func SaveWorkspaceResult(workspace *Workspace, result *config2.Result) error {
@@ -222,12 +212,7 @@ func SaveWorkspaceResult(workspace *Workspace, result *config2.Result) error {
 	}
 
 	workspaceResultFile := filepath.Join(workspaceDir, WorkspaceResultFile)
-	err = os.WriteFile(workspaceResultFile, resultBytes, 0600)
-	if err != nil {
-		return err
-	}
-
-	return nil
+	return os.WriteFile(workspaceResultFile, resultBytes, 0600)
 }
 
 func SaveWorkspaceConfig(workspace *Workspace) error {
@@ -247,12 +232,7 @@ func SaveWorkspaceConfig(workspace *Workspace) error {
 	}
 
 	workspaceConfigFile := filepath.Join(workspaceDir, WorkspaceConfigFile)
-	err = os.WriteFile(workspaceConfigFile, workspaceConfigBytes, 0600)
-	if err != nil {
-		return err
-	}
-
-	return nil
+	return os.WriteFile(workspaceConfigFile, workspaceConfigBytes, 0600)
 }
 
 func SaveMachineConfig(machine *Machine) error {
@@ -272,12 +252,7 @@ func SaveMachineConfig(machine *Machine) error {
 	}
 
 	machineConfigFile := filepath.Join(machineDir, MachineConfigFile)
-	err = os.WriteFile(machineConfigFile, machineConfigBytes, 0600)
-	if err != nil {
-		return err
-	}
-
-	return nil
+	return os.WriteFile(machineConfigFile, machineConfigBytes, 0600)
 }
 
 func MachineExists(context, machineID string) bool {

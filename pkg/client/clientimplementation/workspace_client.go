@@ -595,12 +595,7 @@ func RunCommand(ctx context.Context, command types.StrArray, environ []string, s
 	cmd.Stdout = stdout
 	cmd.Stderr = stderr
 	cmd.Env = environ
-	err := cmd.Run()
-	if err != nil {
-		return err
-	}
-
-	return nil
+	return cmd.Run()
 }
 
 func DeleteMachineFolder(context, machineID string) error {
