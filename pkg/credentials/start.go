@@ -9,11 +9,13 @@ import (
 
 	"github.com/loft-sh/devpod/pkg/agent/tunnel"
 	devpodhttp "github.com/loft-sh/devpod/pkg/http"
+	portpkg "github.com/loft-sh/devpod/pkg/port"
+	"github.com/loft-sh/devpod/pkg/random"
 	"github.com/loft-sh/log"
 )
 
 func StartCredentialsServer(ctx context.Context, cancel context.CancelFunc, client tunnel.TunnelClient, log log.Logger) (int, error) {
-	port, err := GetPort()
+	port, err := portpkg.FindAvailablePort(random.InRange(13000, 17000))
 	if err != nil {
 		return 0, err
 	}
