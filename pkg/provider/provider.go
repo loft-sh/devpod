@@ -169,7 +169,7 @@ type ProviderCustomDriverConfig struct {
 	DeleteDevContainer types.StrArray `json:"deleteDevContainer,omitempty"`
 
 	// CanReprovision returns true if the driver can reprovision the devcontainer
-	CanReprovision types.StrBool `json:"canReprovision,omitempty"`
+	CanReprovision types.StrArray `json:"canReprovision,omitempty"`
 
 	// GetDevContainerLogs returns the logs of the devcontainer
 	GetDevContainerLogs types.StrArray `json:"getDevContainerLogs,omitempty"`

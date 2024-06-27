@@ -38,7 +38,7 @@ type ReprovisioningDriver interface {
 	Driver
 
 	// CanReprovision returns true if the driver can reprovision the devcontainer
-	CanReprovision() bool
+	CanReprovision(ctx context.Context, workspaceID string) bool
 }
 
 // RunOptions are the options for running a container
