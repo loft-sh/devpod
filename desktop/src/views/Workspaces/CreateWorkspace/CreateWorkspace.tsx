@@ -31,7 +31,7 @@ import {
 import { useCallback, useEffect, useMemo, useState } from "react"
 import { Controller, ControllerRenderProps } from "react-hook-form"
 import { useNavigate } from "react-router"
-import { Link as RouterLink, useSearchParams } from "react-router-dom"
+import { Link as RouterLink } from "react-router-dom"
 import { useBorderColor } from "../../../Theme"
 import { RECOMMENDED_PROVIDER_SOURCES, SIDEBAR_WIDTH } from "../../../constants"
 import { useProvider, useProviders, useWorkspace, useWorkspaces } from "../../../contexts"
@@ -43,21 +43,14 @@ import { TIDE, TWorkspaceSourceType } from "../../../types"
 import { useIDEs } from "../../../useIDEs"
 import { useSetupProviderModal } from "../../Providers"
 import { ProviderOptionsPopover } from "./ProviderOptionsPopover"
-import { COMMUNITY_WORKSPACE_EXAMPLES, WORKSPACE_EXAMPLES } from "./constants"
-import {
-  FieldName,
-  TCreateWorkspaceArgs,
-  TCreateWorkspaceSearchParams,
-  TFormValues,
-  TSelectProviderOptions,
-} from "./types"
-import { useCreateWorkspaceForm } from "./useCreateWorkspaceForm"
 import { WorkspaceSourceInput } from "./WorkspaceSourceInput"
+import { COMMUNITY_WORKSPACE_EXAMPLES, WORKSPACE_EXAMPLES } from "./constants"
+import { FieldName, TCreateWorkspaceArgs, TFormValues, TSelectProviderOptions } from "./types"
+import { useCreateWorkspaceForm } from "./useCreateWorkspaceForm"
 
 export function CreateWorkspace() {
   const { ides } = useIDEs()
 
-  const searchParams = useCreateWorkspaceParams()
   const navigate = useNavigate()
   const workspace = useWorkspace(undefined)
   const [[providers]] = useProviders()
@@ -106,7 +99,7 @@ export function CreateWorkspace() {
     isSubmitting,
     currentSource,
     selectDevcontainerModal,
-  } = useCreateWorkspaceForm(searchParams, providers, ides, handleCreateWorkspace)
+  } = useCreateWorkspaceForm(handleCreateWorkspace)
 
   const {
     sourceError,
@@ -494,15 +487,6 @@ export function CreateWorkspace() {
 
       {selectDevcontainerModal}
     </>
-  )
-}
-
-function useCreateWorkspaceParams(): TCreateWorkspaceSearchParams {
-  const [searchParams] = useSearchParams()
-
-  return useMemo(
-    () => Routes.getWorkspaceCreateParamsFromSearchParams(searchParams),
-    [searchParams]
   )
 }
 
