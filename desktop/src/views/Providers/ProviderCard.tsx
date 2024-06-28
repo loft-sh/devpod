@@ -181,7 +181,13 @@ export function ProviderCard({ id, provider, remove }: TProviderCardProps) {
             />
           </HStack>
         </CardBody>
-        <CardFooter justify="space-between">
+        <CardFooter
+          display="flex"
+          alignItems="flex-end"
+          justify="space-between"
+          paddingBottom="4"
+          paddingTop="0"
+          paddingX="4">
           <HStack>
             <Switch
               isDisabled={isDefaultProvider}
