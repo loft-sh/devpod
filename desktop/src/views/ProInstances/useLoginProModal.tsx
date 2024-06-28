@@ -147,7 +147,7 @@ export function useLoginProModal() {
     // workaround for layout shift after closing modal, no clue why
     setTimeout(() => {
       navigate(Routes.WORKSPACE_CREATE)
-    }, 100)
+    }, 0)
   }, [completeConfigureProvider, navigate, resetModal])
 
   const modal = useMemo(() => {
