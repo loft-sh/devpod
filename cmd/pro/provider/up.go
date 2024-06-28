@@ -335,6 +335,11 @@ func getParametersFromEnvironment(ctx context.Context, kubeClient kube.Interface
 }
 
 func isReady(workspace *managementv1.DevPodWorkspaceInstance) bool {
+	// Sleeping is considered ready in this context. The workspace will be woken up as soon as we connect to it
+	if workspace.Status.Phase == storagev1.InstanceSleeping {
+		return true
+	}
+
 	return workspace.Status.Phase == storagev1.InstanceReady
 }
 
