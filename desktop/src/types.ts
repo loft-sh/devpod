@@ -173,7 +173,23 @@ export type TWorkspaceStartConfig = Readonly<{
     gitCommit: string | undefined
   }>
 }>
-export const SUPPORTED_IDES = ["vscode", "intellj"] as const
+export const SUPPORTED_IDES = [
+  "none",
+  "vscode",
+  "vscode-insiders",
+  "intellj",
+  "goland",
+  "rustrover",
+  "pycharm",
+  "phpstorm",
+  "clion",
+  "rubymine",
+  "rider",
+  "webstorm",
+  "openvscode",
+  "jupyternotebook",
+  "fleet",
+] as const
 export type TSupportedIDE = (typeof SUPPORTED_IDES)[number]
 export type TImportWorkspaceConfig = Readonly<{
   workspaceID: string
