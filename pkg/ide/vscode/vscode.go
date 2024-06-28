@@ -237,7 +237,7 @@ func (o *VsCodeServer) Install() error {
 		return nil
 	}
 
-	InstallAlpineRequirements(o.log)
+	InstallAPKRequirements(o.log)
 
 	// add settings
 	if o.settings == "" {

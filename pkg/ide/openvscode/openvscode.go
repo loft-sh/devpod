@@ -124,7 +124,7 @@ func (o *OpenVSCodeServer) Install() error {
 	// check what release we need to download
 	url := o.getReleaseUrl()
 
-	vscode.InstallAlpineRequirements(o.log)
+	vscode.InstallAPKRequirements(o.log)
 
 	// download tar
 	resp, err := devpodhttp.GetHTTPClient().Get(url)
