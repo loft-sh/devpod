@@ -27,7 +27,7 @@ export const WORKSPACE_EXAMPLES = [
   {
     image: GoSvg,
     imageDark: GoSvgDark,
-    source: "https://github.com/microsoft/vscode-remote-try-go",
+    source: "https://github.com/loft-sh/devpod-example-go",
     name: "Try Go",
   },
   {
