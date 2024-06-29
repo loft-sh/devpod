@@ -20,6 +20,7 @@ import {
   Tabs,
   Text,
   VStack,
+  useColorMode,
   useColorModeValue,
 } from "@chakra-ui/react"
 import { ReactNode, useEffect, useMemo, useState } from "react"
@@ -188,6 +189,7 @@ function CustomizationSettings() {
 
 function AppearanceSettings() {
   const { settings, set } = useChangeSettings()
+  const { setColorMode } = useColorMode()
 
   return (
     <>
@@ -214,6 +216,20 @@ function AppearanceSettings() {
           </Select>
           <Icon as={HiMagnifyingGlassPlus} boxSize="6" color="gray.600" />
         </HStack>
+      </SettingSection>
+
+      <SettingSection title="Color Mode" description="">
+        <RadioGroup
+          value={settings.colorMode}
+          onChange={(newValue: TSettings["colorMode"]) => {
+            set("colorMode", newValue);
+            setColorMode(newValue)
+          }}>
+          <HStack>
+            <Radio value="light">Light</Radio>
+            <Radio value="dark">Dark</Radio>
+          </HStack>
+        </RadioGroup>
       </SettingSection>
 
       <SettingSection showDivider={false} title="Sidebar position" description="">

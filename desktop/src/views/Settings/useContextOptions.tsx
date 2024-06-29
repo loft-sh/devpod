@@ -316,8 +316,8 @@ export function useDotfilesOption() {
   const { settings, set } = useChangeSettings()
   const updateOption = useCallback(
     (value: string) => {
-      set("dotfilesURL", value)
-      client.setSetting("dotfilesURL", value)
+      set("dotfilesUrl", value)
+      client.setSetting("dotfilesUrl", value)
     },
     [set]
   )
@@ -357,7 +357,7 @@ export function useDotfilesOption() {
           ref={inputRef}
           spellCheck={false}
           placeholder="Dotfiles repo URL"
-          defaultValue={settings.dotfilesURL}
+          defaultValue={settings.dotfilesUrl}
           onBlur={handleBlur}
           onKeyUp={handleKeyUp}
           onFocus={handleFocus}
@@ -380,7 +380,7 @@ export function useDotfilesOption() {
       </InputGroup>
     ),
     [
-      settings.dotfilesURL,
+      settings.dotfilesUrl,
       handleBlur,
       handleKeyUp,
       handleFocus,

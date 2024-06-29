@@ -37,7 +37,8 @@ const initialSettings: TSettings = {
   experimental_devPodPro: false,
   additionalCliFlags: "",
   additionalEnvVars: "",
-  dotfilesURL: "",
+  dotfilesUrl: "",
+  colorMode: 'light'
 }
 function getSettingKeys(): readonly TSetting[] {
   return getKeys(initialSettings)
@@ -95,8 +96,8 @@ export function SettingsProvider({ children }: Readonly<{ children?: ReactNode }
   }, [settings.additionalCliFlags])
 
   useEffect(() => {
-    client.setSetting("dotfilesURL", settings.dotfilesURL)
-  }, [settings.dotfilesURL])
+    client.setSetting("dotfilesUrl", settings.dotfilesUrl)
+  }, [settings.dotfilesUrl])
 
   useEffect(() => {
     client.setSetting("additionalEnvVars", settings.additionalEnvVars)
