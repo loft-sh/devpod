@@ -31,6 +31,7 @@ pub struct Settings {
     additional_cli_flags: String,
     additional_env_vars: String,
     dotfiles_url: String,
+    color_mode: ColorMode
 }
 
 #[derive(Debug, Serialize, TS)]
@@ -39,6 +40,14 @@ pub struct Settings {
 enum SidebarPosition {
     Left,
     Right,
+}
+
+#[derive(Debug, Serialize, TS)]
+#[ts(rename_all = "camelCase")]
+#[ts(export)]
+enum ColorMode {
+    Dark,
+    Light
 }
 
 #[derive(Debug, Serialize, TS)]

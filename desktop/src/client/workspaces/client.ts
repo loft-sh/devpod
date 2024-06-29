@@ -91,9 +91,9 @@ export class WorkspacesClient implements TDebuggable {
     WorkspaceCommands.DEBUG = isEnabled
   }
 
-  public setDotfilesFlag(dotfilesURL: string): void {
+  public setDotfilesFlag(dotfilesUrl: string): void {
     WorkspaceCommands.ADDITIONAL_FLAGS =
-      WorkspaceCommands.ADDITIONAL_FLAGS + " --dotfiles=" + dotfilesURL
+      WorkspaceCommands.ADDITIONAL_FLAGS + " --dotfiles=" + dotfilesUrl
   }
 
   public setAdditionalFlags(additionalFlags: string): void {
