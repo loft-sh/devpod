@@ -1,4 +1,11 @@
-import { ColorMode, Theme, ThemeOverride, Tooltip, defineStyleConfig, extendTheme } from "@chakra-ui/react"
+import {
+  ColorMode,
+  Theme,
+  ThemeOverride,
+  Tooltip,
+  defineStyleConfig,
+  extendTheme,
+} from "@chakra-ui/react"
 import { mode } from "@chakra-ui/theme-tools"
 import { Menu } from "./menu"
 import { Switch } from "./switch"
@@ -44,8 +51,8 @@ const FormError = defineStyleConfig({
 // Unfortunately there is no other way of overring the default placement.
 Tooltip.defaultProps = { ...Tooltip.defaultProps, placement: "top" }
 
-const getInitialColorMode = (defaultColor: ColorMode = 'light'): ColorMode => {
-  return localStorage.getItem('chakra-ui-color-mode') as ColorMode ?? defaultColor;
+const getInitialColorMode = (defaultColor: ColorMode = "light"): ColorMode => {
+  return (localStorage.getItem("chakra-ui-color-mode") as ColorMode) ?? defaultColor
 }
 
 export const theme = extendTheme({
@@ -91,7 +98,7 @@ export const theme = extendTheme({
   },
   config: {
     // in order to prevent chakra-ui color mode screen flash, we already set initial theme color mode to the local storage color mode
-    initialColorMode: getInitialColorMode('light'),
+    initialColorMode: getInitialColorMode("light"),
     useSystemColorMode: false,
   },
   components: {

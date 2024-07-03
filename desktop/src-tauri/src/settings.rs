@@ -28,10 +28,11 @@ pub struct Settings {
     experimental_vscode_insiders: bool,
     #[serde(rename = "experimental_devPodPro")]
     experimental_devpod_pro: bool,
+    #[serde(rename = "experimental_colorMode")]
+    experimental_color_mode: ColorMode,
     additional_cli_flags: String,
     additional_env_vars: String,
     dotfiles_url: String,
-    color_mode: ColorMode
 }
 
 #[derive(Debug, Serialize, TS)]

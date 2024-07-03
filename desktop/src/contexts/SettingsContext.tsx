@@ -35,10 +35,10 @@ const initialSettings: TSettings = {
   experimental_jupyterNotebooks: true,
   experimental_vscodeInsiders: true,
   experimental_devPodPro: false,
+  experimental_colorMode: "light",
   additionalCliFlags: "",
   additionalEnvVars: "",
   dotfilesUrl: "",
-  colorMode: 'light'
 }
 function getSettingKeys(): readonly TSetting[] {
   return getKeys(initialSettings)

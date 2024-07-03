@@ -102,9 +102,7 @@ export function Notifications() {
                     <Heading size="xs">{pendingUpdate.tag_name} is available</Heading>
                     <Text fontSize="xs">
                       See{" "}
-                      <Link onClick={() => client.open(pendingUpdate.html_url)}>
-                        release notes
-                      </Link>
+                      <Link onClick={() => client.open(pendingUpdate.html_url)}>release notes</Link>
                     </Text>
                   </VStack>
                   <Button
