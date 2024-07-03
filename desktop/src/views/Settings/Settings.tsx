@@ -178,7 +178,7 @@ function CustomizationSettings() {
         </>
       </SettingSection>
       <SettingSection
-        showDivider={true}
+        showDivider={false}
         title="Dotfiles"
         description="Set the dotfiles git repository to use inside workspaces">
         {dotfilesInput}
@@ -189,7 +189,6 @@ function CustomizationSettings() {
 
 function AppearanceSettings() {
   const { settings, set } = useChangeSettings()
-  const { setColorMode } = useColorMode()
 
   return (
     <>
@@ -216,20 +215,6 @@ function AppearanceSettings() {
           </Select>
           <Icon as={HiMagnifyingGlassPlus} boxSize="6" color="gray.600" />
         </HStack>
-      </SettingSection>
-
-      <SettingSection title="Color Mode" description="">
-        <RadioGroup
-          value={settings.colorMode}
-          onChange={(newValue: TSettings["colorMode"]) => {
-            set("colorMode", newValue);
-            setColorMode(newValue)
-          }}>
-          <HStack>
-            <Radio value="light">Light</Radio>
-            <Radio value="dark">Dark</Radio>
-          </HStack>
-        </RadioGroup>
       </SettingSection>
 
       <SettingSection showDivider={false} title="Sidebar position" description="">
@@ -350,6 +335,7 @@ function ExperimentalSettings() {
   const { input: cliFlagsInput, helpText: cliFlagsHelpText } = useCLIFlagsOption()
   const { input: extraEnvVarsInput, helpText: extraEnvVarsHelpText } = useExtraEnvVarsOption()
   const { settings, set } = useChangeSettings()
+  const { setColorMode } = useColorMode()
 
   return (
     <VStack align="start">
@@ -404,13 +390,26 @@ function ExperimentalSettings() {
       </SettingSection>
 
       <SettingSection
-        showDivider={false}
         title="DevPod Pro (beta)"
         description="Enable DevPod Pro login and creation">
         <Switch
           isChecked={settings.experimental_devPodPro}
           onChange={(e) => set("experimental_devPodPro", e.target.checked)}
         />
+      </SettingSection>
+
+      <SettingSection title="Color Mode" description="" showDivider={false}>
+        <RadioGroup
+          value={settings.experimental_colorMode}
+          onChange={(newValue: TSettings["experimental_colorMode"]) => {
+            set("experimental_colorMode", newValue)
+            setColorMode(newValue)
+          }}>
+          <HStack>
+            <Radio value="light">Light</Radio>
+            <Radio value="dark">Dark</Radio>
+          </HStack>
+        </RadioGroup>
       </SettingSection>
     </VStack>
   )

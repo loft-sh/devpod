@@ -16,8 +16,8 @@ export interface Settings {
   experimental_jupyterNotebooks: boolean
   experimental_vscodeInsiders: boolean
   experimental_devPodPro: boolean
+  experimental_colorMode: ColorMode
   additionalCliFlags: string
   additionalEnvVars: string
   dotfilesUrl: string
-  colorMode: ColorMode
 }
