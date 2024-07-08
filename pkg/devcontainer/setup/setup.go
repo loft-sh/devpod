@@ -1,13 +1,16 @@
 package setup
 
 import (
+	"bufio"
 	"encoding/json"
 	"fmt"
+	"io"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"sort"
 	"strings"
+	"sync"
 
 	"github.com/loft-sh/devpod/pkg/command"
 	copy2 "github.com/loft-sh/devpod/pkg/copy"
@@ -312,11 +315,6 @@ func runPostCreateCommand(commands []types.LifecycleHook, user, dir string, remo
 		remoteEnvArr = append(remoteEnvArr, k+"="+v)
 	}
 
-	writer := log.Writer(logrus.InfoLevel, false)
-	errwriter := log.Writer(logrus.ErrorLevel, false)
-	defer writer.Close()
-	defer errwriter.Close()
-
 	for _, cmd := range commands {
 		if len(cmd) == 0 {
 			continue
@@ -336,17 +334,71 @@ func runPostCreateCommand(commands []types.LifecycleHook, user, dir string, remo
 			cmd.Dir = dir
 			cmd.Env = os.Environ()
 			cmd.Env = append(cmd.Env, remoteEnvArr...)
-			cmd.Stdout = writer
-			cmd.Stderr = errwriter
-			log.Debugf("Executing command %s: %s...", k, cmd.Args)
-			err := cmd.Run()
+
+			// Create pipes for stdout and stderr
+			stdoutPipe, err := cmd.StdoutPipe()
+			if err != nil {
+				return fmt.Errorf("failed to get stdout pipe: %w", err)
+			}
+			stderrPipe, err := cmd.StderrPipe()
+			if err != nil {
+				return fmt.Errorf("failed to get stderr pipe: %w", err)
+			}
+
+			// Start the command
+			if err := cmd.Start(); err != nil {
+				return fmt.Errorf("failed to start command: %w", err)
+			}
+
+			// Use WaitGroup to wait for both stdout and stderr processing
+			var wg sync.WaitGroup
+			wg.Add(2)
+
+			go func() {
+				defer wg.Done()
+				logPipeOutput(log, stdoutPipe, logrus.InfoLevel)
+			}()
+
+			go func() {
+				defer wg.Done()
+				logPipeOutput(log, stderrPipe, logrus.ErrorLevel)
+			}()
+
+			// Wait for command to finish
+			wg.Wait()
+			err = cmd.Wait()
 			if err != nil {
 				log.Debugf("Failed running postCreateCommand lifecycle script %s: %v", cmd.Args, err)
 				return fmt.Errorf("failed to run: %s, error: %w", strings.Join(c, " "), err)
 			}
+
 			log.Donef("Successfully ran command %s: %s", k, strings.Join(c, " "))
 		}
 	}
 
 	return nil
+}
+
+func logPipeOutput(log log.Logger, pipe io.ReadCloser, level logrus.Level) {
+	scanner := bufio.NewScanner(pipe)
+	for scanner.Scan() {
+		line := scanner.Text()
+		if level == logrus.InfoLevel {
+			log.Info(line)
+		} else if level == logrus.ErrorLevel {
+			if containsError(line) {
+				log.Error(line)
+			} else {
+				log.Warn(line)
+			}
+		}
+	}
+	if err := scanner.Err(); err != nil {
+		log.Errorf("Error reading pipe: %v", err)
+	}
+}
+
+// containsError defines what log line treated as error log should contain.
+func containsError(line string) bool {
+	return strings.Contains(strings.ToLower(line), "error")
 }
