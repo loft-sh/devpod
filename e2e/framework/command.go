@@ -169,7 +169,7 @@ func (f *Framework) DevPodStatus(ctx context.Context, extraArgs ...string) (clie
 	baseArgs = append(baseArgs, extraArgs...)
 	stdout, err := f.ExecCommandOutput(ctx, baseArgs)
 	if err != nil {
-		return client.WorkspaceStatus{}, fmt.Errorf("devpod stop failed: %s", err.Error())
+		return client.WorkspaceStatus{}, fmt.Errorf("devpod status failed: %s", err.Error())
 	}
 
 	status := &client.WorkspaceStatus{}
