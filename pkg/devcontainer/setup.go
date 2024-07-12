@@ -114,6 +114,7 @@ func (r *runner) setupContainer(
 	return sshtunnel.ExecuteCommand(
 		ctx,
 		nil,
+		false,
 		agentInjectFunc,
 		sshTunnelCmd,
 		setupCommand,

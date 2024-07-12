@@ -193,7 +193,7 @@ func (cmd *UpCmd) Run(
 	}
 
 	// run devpod agent up
-	result, err := cmd.devPodUp(ctx, client, log)
+	result, err := cmd.devPodUp(ctx, devPodConfig, client, log)
 	if err != nil {
 		return err
 	} else if result == nil {
@@ -308,6 +308,7 @@ func (cmd *UpCmd) Run(
 
 func (cmd *UpCmd) devPodUp(
 	ctx context.Context,
+	devPodConfig *config.Config,
 	client client2.BaseWorkspaceClient,
 	log log.Logger,
 ) (*config2.Result, error) {
@@ -322,7 +323,7 @@ func (cmd *UpCmd) devPodUp(
 
 	// check what client we have
 	if workspaceClient, ok := client.(client2.WorkspaceClient); ok {
-		result, err = cmd.devPodUpMachine(ctx, workspaceClient, log)
+		result, err = cmd.devPodUpMachine(ctx, devPodConfig, workspaceClient, log)
 		if err != nil {
 			return nil, err
 		}
@@ -420,6 +421,7 @@ func (cmd *UpCmd) devPodUpProxy(
 
 func (cmd *UpCmd) devPodUpMachine(
 	ctx context.Context,
+	devPodConfig *config.Config,
 	client client2.WorkspaceClient,
 	log log.Logger,
 ) (*config2.Result, error) {
@@ -480,6 +482,7 @@ func (cmd *UpCmd) devPodUpMachine(
 	return sshtunnel.ExecuteCommand(
 		ctx,
 		client,
+		devPodConfig.ContextOption(config.ContextOptionSSHAddPrivateKeys) == "true",
 		agentInjectFunc,
 		sshTunnelCmd,
 		agentCommand,
