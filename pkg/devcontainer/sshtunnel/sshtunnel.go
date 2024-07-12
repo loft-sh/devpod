@@ -24,6 +24,7 @@ type TunnelServerFunc func(ctx context.Context, stdin io.WriteCloser, stdout io.
 func ExecuteCommand(
 	ctx context.Context,
 	client client2.WorkspaceClient,
+	addPrivateKeys bool,
 	agentInject AgentInjectFunc,
 	sshCommand,
 	command string,
@@ -62,6 +63,14 @@ func ExecuteCommand(
 			errChan <- nil
 		}
 	}()
+
+	if addPrivateKeys {
+		log.Debug("Adding ssh keys to agent, disable via 'devpod context set-options -o SSH_ADD_PRIVATE_KEYS=false'")
+		err := devssh.AddPrivateKeysToAgent(ctx, log)
+		if err != nil {
+			log.Debugf("Error adding private keys to ssh-agent: %v", err)
+		}
+	}
 
 	// create pipes
 	gRPCConnStdoutReader, gRPCConnStdoutWriter, err := os.Pipe()
