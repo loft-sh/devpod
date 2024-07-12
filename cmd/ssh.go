@@ -424,8 +424,6 @@ func (cmd *SSHCmd) startServices(
 			containerClient,
 			cmd.User,
 			false,
-			true,
-			true,
 			nil,
 			gitUsername,
 			gitToken,

@@ -15,16 +15,18 @@ type StdioStream struct {
 	remote *StdinAddr
 
 	exitOnClose bool
+	exitCode    int
 }
 
 // NewStdioStream is used to implement the connection interface
-func NewStdioStream(in io.Reader, out io.WriteCloser, exitOnClose bool) *StdioStream {
+func NewStdioStream(in io.Reader, out io.WriteCloser, exitOnClose bool, exitCode int) *StdioStream {
 	return &StdioStream{
 		local:       NewStdinAddr("local"),
 		remote:      NewStdinAddr("remote"),
 		in:          in,
 		out:         out,
 		exitOnClose: exitOnClose,
+		exitCode:    exitCode,
 	}
 }
 
@@ -52,7 +54,7 @@ func (s *StdioStream) Write(b []byte) (n int, err error) {
 func (s *StdioStream) Close() error {
 	if s.exitOnClose {
 		// We kill ourself here because the streams are closed
-		os.Exit(0)
+		os.Exit(s.exitCode)
 	}
 
 	return s.out.Close()
