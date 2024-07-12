@@ -219,6 +219,7 @@ export function ProviderCard({ id, provider, remove }: TProviderCardProps) {
                     })
                   }
                   icon={<Icon as={HiDuplicate} boxSize="4" />}
+                  isDisabled={provider.isProxyProvider}
                 />
               </Tooltip>
             )}
