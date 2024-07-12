@@ -230,6 +230,19 @@ func (r *Resolver) refreshSubOptions(
 		}
 	}
 
+	// remove invalid existing user values
+	for newOptionName, newOption := range newDynamicOptions {
+		userValue, ok := r.userOptions[newOptionName]
+		if !ok {
+			continue
+		}
+
+		err := validateUserValue(newOptionName, userValue, newOption)
+		if err != nil {
+			delete(r.userOptions, newOptionName)
+		}
+	}
+
 	// set children on value
 	val := resolvedOptionValues[optionName]
 	val.Children = []string{}
