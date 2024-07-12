@@ -70,7 +70,7 @@ func (cmd *UpCmd) Run(ctx context.Context) error {
 		return nil
 	}
 
-	// make sure daemon does shut us down while we are doing things
+	// make sure daemon doesn't shut us down while we are doing things
 	agent.CreateWorkspaceBusyFile(workspaceInfo.Origin)
 	defer agent.DeleteWorkspaceBusyFile(workspaceInfo.Origin)
 
@@ -102,7 +102,7 @@ func (cmd *UpCmd) Run(ctx context.Context) error {
 
 func initWorkspace(ctx context.Context, cancel context.CancelFunc, workspaceInfo *provider2.AgentWorkspaceInfo, debug, shouldInstallDaemon bool) (tunnel.TunnelClient, log.Logger, string, error) {
 	// create a grpc client
-	tunnelClient, err := tunnelserver.NewTunnelClient(os.Stdin, os.Stdout, true)
+	tunnelClient, err := tunnelserver.NewTunnelClient(os.Stdin, os.Stdout, true, 0)
 	if err != nil {
 		return nil, nil, "", fmt.Errorf("error creating tunnel client: %w", err)
 	}

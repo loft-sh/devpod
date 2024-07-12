@@ -487,7 +487,7 @@ func (cmd *UpCmd) devPodUpMachine(
 		func(ctx context.Context, stdin io.WriteCloser, stdout io.Reader) (*config2.Result, error) {
 			if cmd.Proxy {
 				// create tunnel client on stdin & stdout
-				tunnelClient, err := tunnelserver.NewTunnelClient(os.Stdin, os.Stdout, true)
+				tunnelClient, err := tunnelserver.NewTunnelClient(os.Stdin, os.Stdout, true, 0)
 				if err != nil {
 					return nil, errors.Wrap(err, "create tunnel client")
 				}
@@ -737,8 +737,6 @@ func startBrowserTunnel(
 				containerClient,
 				user,
 				forwardPorts,
-				true,
-				true,
 				extraPorts,
 				gitUsername,
 				gitToken,

@@ -7,7 +7,7 @@ import (
 
 // NewStdioListener creates a new stdio listener
 func NewStdioListener(reader io.Reader, writer io.WriteCloser, exitOnClose bool) *StdioListener {
-	conn := NewStdioStream(reader, writer, exitOnClose)
+	conn := NewStdioStream(reader, writer, exitOnClose, 0)
 	connChan := make(chan net.Conn)
 	go func() {
 		connChan <- conn
