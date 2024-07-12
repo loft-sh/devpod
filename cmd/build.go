@@ -88,7 +88,7 @@ func NewBuildCmd(flags *flags.GlobalFlags) *cobra.Command {
 			}
 
 			// delete workspace if we have created it
-			if exists == "" {
+			if exists == "" && !cmd.SkipDelete {
 				defer func() {
 					err = baseWorkspaceClient.Delete(ctx, client.DeleteOptions{Force: true})
 					if err != nil {
