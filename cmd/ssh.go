@@ -39,10 +39,11 @@ type SSHCmd struct {
 	ForwardPorts        []string
 	ReverseForwardPorts []string
 
-	Stdio              bool
-	JumpContainer      bool
-	AgentForwarding    bool
-	GPGAgentForwarding bool
+	Stdio                     bool
+	JumpContainer             bool
+	AgentForwarding           bool
+	GPGAgentForwarding        bool
+	GitSSHSignatureForwarding bool
 
 	StartServices bool
 
@@ -472,6 +473,12 @@ func (cmd *SSHCmd) startProxyServices(
 		if gitCredentials {
 			command += " --configure-git-helper"
 		}
+
+		// check if we should enable git ssh commit signature support
+		if cmd.GitSSHSignatureForwarding || devPodConfig.ContextOption(config.ContextOptionGitSSHSignatureForwarding) == "true" {
+			command += " --configure-git-ssh-signature-helper"
+		}
+
 		if log.GetLevel() == logrus.DebugLevel {
 			command += " --debug"
 		}

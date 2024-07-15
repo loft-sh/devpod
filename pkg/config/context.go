@@ -3,6 +3,7 @@ package config
 const (
 	ContextOptionSSHAddPrivateKeys          = "SSH_ADD_PRIVATE_KEYS"
 	ContextOptionGPGAgentForwarding         = "GPG_AGENT_FORWARDING"
+	ContextOptionGitSSHSignatureForwarding  = "GIT_SSH_SIGNATURE_FORWARDING"
 	ContextOptionSSHInjectDockerCredentials = "SSH_INJECT_DOCKER_CREDENTIALS"
 	ContextOptionSSHInjectGitCredentials    = "SSH_INJECT_GIT_CREDENTIALS"
 	ContextOptionExitAfterTimeout           = "EXIT_AFTER_TIMEOUT"
@@ -31,6 +32,12 @@ var ContextOptions = []ContextOption{
 		Name:        ContextOptionGPGAgentForwarding,
 		Description: "Specifies if DevPod should do gpg-agent forwarding by default for ssh",
 		Default:     "false",
+		Enum:        []string{"true", "false"},
+	},
+	{
+		Name:        ContextOptionGitSSHSignatureForwarding,
+		Description: "Specifies if DevPod should automatically detect ssh signature git setting and inject ssh signature helper",
+		Default:     "true",
 		Enum:        []string{"true", "false"},
 	},
 	{
