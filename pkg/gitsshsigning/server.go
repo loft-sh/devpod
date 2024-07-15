@@ -12,7 +12,7 @@ type GitSSHSignatureRequest struct {
 }
 
 type GitSSHSignatureResponse struct {
-	Signature string
+	Signature []byte
 }
 
 // Sign signs the content using the private key and returns the signature
@@ -37,6 +37,6 @@ func (req *GitSSHSignatureRequest) Sign() (*GitSSHSignatureResponse, error) {
 	}
 
 	return &GitSSHSignatureResponse{
-		Signature: out.String(),
+		Signature: out.Bytes(),
 	}, nil
 }
