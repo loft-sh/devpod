@@ -39,6 +39,12 @@ func RunCredentialsServer(
 					http.Error(writer, err.Error(), http.StatusInternalServerError)
 					return
 				}
+			} else if request.URL.Path == "/git-ssh-signature" {
+				err := handleGitSSHSignatureRequest(ctx, writer, request, client, log)
+				if err != nil {
+					http.Error(writer, err.Error(), http.StatusInternalServerError)
+					return
+				}
 			}
 		}),
 	}
@@ -104,6 +110,26 @@ func handleGitCredentialsRequest(ctx context.Context, writer http.ResponseWriter
 	if err != nil {
 		log.Debugf("Error receiving git credentials: %v", err)
 		return errors.Wrap(err, "get git credentials response")
+	}
+
+	writer.Header().Set("Content-Type", "application/json")
+	writer.WriteHeader(http.StatusOK)
+	_, _ = writer.Write([]byte(response.Message))
+	log.Debugf("Successfully wrote back %d bytes", len(response.Message))
+	return nil
+}
+
+func handleGitSSHSignatureRequest(ctx context.Context, writer http.ResponseWriter, request *http.Request, client tunnel.TunnelClient, log log.Logger) error {
+	out, err := io.ReadAll(request.Body)
+	if err != nil {
+		return errors.Wrap(err, "read request body")
+	}
+
+	log.Debugf("Received git ssh signature post data: %s", string(out))
+	response, err := client.GitSSHSignature(ctx, &tunnel.Message{Message: string(out)})
+	if err != nil {
+		log.Debugf("Error receiving git ssh signature: %v", err)
+		return errors.Wrap(err, "get git ssh signature")
 	}
 
 	writer.Header().Set("Content-Type", "application/json")
