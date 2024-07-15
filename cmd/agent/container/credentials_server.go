@@ -14,6 +14,7 @@ import (
 	"github.com/loft-sh/devpod/pkg/credentials"
 	"github.com/loft-sh/devpod/pkg/dockercredentials"
 	"github.com/loft-sh/devpod/pkg/gitcredentials"
+	"github.com/loft-sh/devpod/pkg/gitsshsigning"
 	"github.com/loft-sh/devpod/pkg/netstat"
 	portpkg "github.com/loft-sh/devpod/pkg/port"
 	"github.com/loft-sh/log"
@@ -29,10 +30,12 @@ type CredentialsServerCmd struct {
 
 	User string
 
-	ConfigureGitHelper    bool
-	ConfigureDockerHelper bool
+	ConfigureGitHelper             bool
+	ConfigureGitSSHSignatureHelper bool
+	ConfigureDockerHelper          bool
 
-	ForwardPorts bool
+	ForwardPorts              bool
+	GitSSHSignatureSigningKey string
 }
 
 // NewCredentialsServerCmd creates a new command
@@ -49,9 +52,11 @@ func NewCredentialsServerCmd(flags *flags.GlobalFlags) *cobra.Command {
 		},
 	}
 	credentialsServerCmd.Flags().BoolVar(&cmd.ConfigureGitHelper, "configure-git-helper", false, "If true will configure git helper")
+	credentialsServerCmd.Flags().BoolVar(&cmd.ConfigureGitSSHSignatureHelper, "configure-git-ssh-signature-helper", false, "If true will configure git ssh signature helper")
 	credentialsServerCmd.Flags().BoolVar(&cmd.ConfigureDockerHelper, "configure-docker-helper", false, "If true will configure docker helper")
 	credentialsServerCmd.Flags().BoolVar(&cmd.ForwardPorts, "forward-ports", false, "If true will automatically try to forward open ports within the container")
 	credentialsServerCmd.Flags().StringVar(&cmd.User, "user", "", "The user to use")
+	credentialsServerCmd.Flags().StringVar(&cmd.GitSSHSignatureSigningKey, "signing-key", "", "Key to use")
 	_ = credentialsServerCmd.MarkFlagRequired("user")
 	return credentialsServerCmd
 }
@@ -126,6 +131,18 @@ func (cmd *CredentialsServerCmd) Run(ctx context.Context, _ []string) error {
 		// cleanup when we are done
 		defer func(userName string) {
 			_ = gitcredentials.RemoveHelper(userName)
+		}(cmd.User)
+	}
+
+	if cmd.ConfigureGitSSHSignatureHelper {
+		err = gitsshsigning.ConfigureHelper(binaryPath, cmd.User, cmd.GitSSHSignatureSigningKey)
+		if err != nil {
+			return errors.Wrap(err, "configure git ssh signature helper")
+		}
+
+		// cleanup when we are done
+		defer func(userName string) {
+			_ = gitsshsigning.RemoveHelper()
 		}(cmd.User)
 	}
 

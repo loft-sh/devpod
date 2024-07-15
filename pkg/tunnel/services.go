@@ -112,6 +112,7 @@ func RunInContainer(
 		command := fmt.Sprintf("'%s' agent container credentials-server --user '%s'", agent.ContainerDevPodHelperLocation, user)
 		if configureGitCredentials {
 			command += " --configure-git-helper"
+			command += " --configure-git-ssh-signature-helper"
 		}
 		if configureDockerCredentials {
 			command += " --configure-docker-helper"
