@@ -3,9 +3,7 @@ package gitsshsigning
 import (
 	"bytes"
 	"encoding/json"
-	"fmt"
 	"io"
-	"net/http"
 	"os"
 	"strconv"
 
@@ -14,75 +12,6 @@ import (
 	"github.com/loft-sh/log"
 )
 
-// extractContentFromGitBuffer extracts content from buffer passed by git for signature
-func extractContentFromGitBuffer(bufferFile string) ([]byte, error) {
-	content, err := os.ReadFile(bufferFile)
-	if err != nil {
-		return nil, err
-	}
-
-	return content, nil
-}
-
-// requestContentSignature handles http request for ssh signature to credentials server
-func requestContentSignature(content []byte, certPath, _ string, log log.Logger) ([]byte, error) {
-	request := &GitSSHSignatureRequest{
-		Content: string(content),
-		KeyPath: certPath,
-	}
-	rawJSON, err := json.Marshal(request)
-	if err != nil {
-		return nil, err
-	}
-
-	port, err := credentials.GetPort()
-	if err != nil {
-		return nil, err
-	}
-
-	response, err := devpodhttp.GetHTTPClient().Post(
-		"http://localhost:"+strconv.Itoa(port)+"/git-ssh-signature",
-		"application/json",
-		bytes.NewReader(rawJSON),
-	)
-	if err != nil {
-		log.Errorf("Error retrieving git ssh signature: %v", err)
-		return nil, err
-	}
-	defer response.Body.Close()
-
-	raw, err := io.ReadAll(response.Body)
-	if err != nil {
-		log.Errorf("Error reading git ssh signature: %v", err)
-		return nil, err
-	}
-
-	if response.StatusCode != http.StatusOK {
-		err := fmt.Errorf("error reading git ssh signature (%d): %v", response.StatusCode, string(raw))
-		return nil, err
-	}
-
-	signatureResponse := &GitSSHSignatureResponse{}
-	err = json.Unmarshal(raw, signatureResponse)
-	if err != nil {
-		log.Errorf("Error decoding git ssh signature: %v", err)
-		return nil, err
-	}
-
-	return signatureResponse.Signature, nil
-}
-
-// writeSignatureToFile writes the signed content to the .sig file
-func writeSignatureToFile(signature []byte, bufferFile string, log log.Logger) error {
-	sigFile := bufferFile + ".sig"
-	err := os.WriteFile(sigFile, signature, 0644)
-	if err != nil {
-		log.Fatalf("Failed to write signature to file: %v", err)
-		return err
-	}
-	return nil
-}
-
 // HandleGitSSHProgramCall implements logic handling call from git when signing a commit
 func HandleGitSSHProgramCall(certPath, namespace, bufferFile string, log log.Logger) error {
 	content, err := extractContentFromGitBuffer(bufferFile)
@@ -90,15 +19,82 @@ func HandleGitSSHProgramCall(certPath, namespace, bufferFile string, log log.Log
 		return err
 	}
 
-	signature, err := requestContentSignature(content, certPath, namespace, log)
+	signature, err := requestContentSignature(content, certPath, log)
 	if err != nil {
 		return err
 	}
 
-	err = writeSignatureToFile(signature, bufferFile, log)
-	if err != nil {
+	if err := writeSignatureToFile(signature, bufferFile, log); err != nil {
 		return err
 	}
 
 	return nil
+}
+
+// extractContentFromGitBuffer reads the content from the buffer file created by git
+func extractContentFromGitBuffer(bufferFile string) ([]byte, error) {
+	return os.ReadFile(bufferFile)
+}
+
+// requestContentSignature sends an HTTP request to the credentials server to sign the content
+func requestContentSignature(content []byte, certPath string, log log.Logger) ([]byte, error) {
+	requestBody, err := createSignatureRequestBody(content, certPath)
+	if err != nil {
+		return nil, err
+	}
+
+	responseBody, err := sendSignatureRequest(requestBody, log)
+	if err != nil {
+		return nil, err
+	}
+
+	return parseSignatureResponse(responseBody, log)
+}
+
+// writeSignatureToFile writes the signed content to a .sig file
+func writeSignatureToFile(signature []byte, bufferFile string, log log.Logger) error {
+	sigFile := bufferFile + ".sig"
+	if err := os.WriteFile(sigFile, signature, 0644); err != nil {
+		log.Fatalf("Failed to write signature to file: %v", err)
+		return err
+	}
+	return nil
+}
+
+func createSignatureRequestBody(content []byte, certPath string) ([]byte, error) {
+	request := &GitSSHSignatureRequest{
+		Content: string(content),
+		KeyPath: certPath,
+	}
+	return json.Marshal(request)
+}
+
+func sendSignatureRequest(requestBody []byte, log log.Logger) ([]byte, error) {
+	port, err := credentials.GetPort()
+	if err != nil {
+		return nil, err
+	}
+
+	response, err := devpodhttp.GetHTTPClient().Post(
+		"http://localhost:"+strconv.Itoa(port)+"/git-ssh-signature", // TODO: build the url, don't hardcode localhost
+		"application/json",
+		bytes.NewReader(requestBody),
+	)
+	if err != nil {
+		log.Errorf("Error retrieving git ssh signature: %v", err)
+		return nil, err
+	}
+	defer response.Body.Close()
+
+	return io.ReadAll(response.Body)
+}
+
+func parseSignatureResponse(responseBody []byte, log log.Logger) ([]byte, error) {
+	signatureResponse := &GitSSHSignatureResponse{}
+	if err := json.Unmarshal(responseBody, signatureResponse); err != nil {
+		log.Errorf("Error decoding git ssh signature: %v", err)
+		return nil, err
+	}
+
+	return signatureResponse.Signature, nil
 }
