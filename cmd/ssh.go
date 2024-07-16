@@ -483,8 +483,7 @@ func (cmd *SSHCmd) startProxyServices(
 			}
 
 			if userSigningKey != "" && format == gitsshsigning.GPGFormatSSH {
-				command += " --configure-git-ssh-signature-helper"
-				command += fmt.Sprintf(" --git-user-signingkey %s", userSigningKey)
+				command += fmt.Sprintf(" --git-user-signing-key %s", userSigningKey)
 			}
 		}
 
