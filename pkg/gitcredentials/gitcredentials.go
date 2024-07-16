@@ -30,12 +30,11 @@ type GitUser struct {
 }
 
 func ConfigureHelper(binaryPath, userName string, port int) error {
-	homeDir, err := command.GetHome(userName)
+	gitConfigPath, err := getGlobalGitConfigPath(userName)
 	if err != nil {
 		return err
 	}
 
-	gitConfigPath := filepath.Join(homeDir, ".gitconfig")
 	out, err := os.ReadFile(gitConfigPath)
 	if err != nil && !os.IsNotExist(err) {
 		return err
@@ -63,12 +62,11 @@ func ConfigureHelper(binaryPath, userName string, port int) error {
 }
 
 func RemoveHelper(userName string) error {
-	homeDir, err := command.GetHome(userName)
+	gitConfigPath, err := getGlobalGitConfigPath(userName)
 	if err != nil {
 		return err
 	}
 
-	gitConfigPath := filepath.Join(homeDir, ".gitconfig")
 	return RemoveHelperFromPath(gitConfigPath)
 }
 
@@ -172,15 +170,27 @@ func SetUser(userName string, user *GitUser) error {
 	return nil
 }
 
-func GetUser() (*GitUser, error) {
+func GetUser(userName string) (*GitUser, error) {
 	gitUser := &GitUser{}
 
+	scopeArgs := []string{"config"}
+	if userName != "" {
+		p, err := getGlobalGitConfigPath(userName)
+		if err != nil {
+			return gitUser, fmt.Errorf("get git global dir for %s: %w", userName, err)
+		}
+		scopeArgs = append(scopeArgs, "--file", p)
+	} else {
+		scopeArgs = append(scopeArgs, "--global")
+	}
+
 	// we ignore the error here, because if email is empty we don't care
-	name, _ := exec.Command("git", "config", "--global", "user.name").Output()
+	name, _ := exec.Command("git", append(scopeArgs[:], "user.name")...).Output()
 	gitUser.Name = strings.TrimSpace(string(name))
 
-	email, _ := exec.Command("git", "config", "--global", "user.email").Output()
+	email, _ := exec.Command("git", append(scopeArgs[:], "user.email")...).Output()
 	gitUser.Email = strings.TrimSpace(string(email))
+
 	return gitUser, nil
 }
 
@@ -256,4 +266,19 @@ func removeCredentialHelper(content string) string {
 	}
 
 	return strings.Join(out, "\n")
+}
+
+// getGlobalGitConfigPath resolves the global git config for the specified user according to
+// https://git-scm.com/docs/git-config/#Documentation/git-config.txt-XDGCONFIGHOMEgitconfig
+func getGlobalGitConfigPath(userName string) (string, error) {
+	if xdgConfigHome := os.Getenv("XDG_CONFIG_HOME"); xdgConfigHome != "" {
+		return filepath.Join(xdgConfigHome, ".gitconfig"), nil
+	}
+
+	home, err := command.GetHome(userName)
+	if err != nil {
+		return "", fmt.Errorf("get homedir for %s: %w", userName, err)
+	}
+
+	return filepath.Join(home, ".gitconfig"), nil
 }

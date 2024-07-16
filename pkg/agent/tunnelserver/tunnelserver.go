@@ -177,7 +177,7 @@ func (t *tunnelServer) DockerCredentials(ctx context.Context, message *tunnel.Me
 }
 
 func (t *tunnelServer) GitUser(ctx context.Context, empty *tunnel.Empty) (*tunnel.Message, error) {
-	gitUser, err := gitcredentials.GetUser()
+	gitUser, err := gitcredentials.GetUser("")
 	if err != nil {
 		return nil, err
 	}

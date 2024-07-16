@@ -134,7 +134,7 @@ func (cmd *CredentialsServerCmd) Run(ctx context.Context, _ []string) error {
 
 func configureGitUserLocally(ctx context.Context, userName string, client tunnel.TunnelClient) error {
 	// get local credentials
-	localGitUser, err := gitcredentials.GetUser()
+	localGitUser, err := gitcredentials.GetUser(userName)
 	if err != nil {
 		return err
 	} else if localGitUser.Name != "" && localGitUser.Email != "" {
