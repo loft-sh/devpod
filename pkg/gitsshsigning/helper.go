@@ -9,6 +9,7 @@ import (
 
 	"github.com/loft-sh/devpod/pkg/command"
 	"github.com/loft-sh/devpod/pkg/file"
+	"github.com/loft-sh/log"
 	"github.com/loft-sh/log/scanner"
 	"github.com/pkg/errors"
 )
@@ -30,21 +31,23 @@ devpod agent git-ssh-signature "$@"
 )
 
 // ConfigureHelper sets up the git SSH signing helper script and updates the git configuration for the specified user.
-func ConfigureHelper(binaryPath, userName, gitSigningKey string) error {
+func ConfigureHelper(userName, gitSigningKey string, log log.Logger) error {
+	log.Debug("Creating helper script")
 	if err := createHelperScript(); err != nil {
 		return err
 	}
-
+	log.Debugf("Helper script created. Making it executable.")
 	if err := makeScriptExecutable(); err != nil {
 		return err
 	}
-
+	log.Debugf("Script executable. Getting config path.")
 	gitConfigPath, err := getGitConfigPath(userName)
 	if err != nil {
 		return err
 	}
-
+	log.Debugf("Got config path: %v", gitConfigPath)
 	if err := updateGitConfig(gitConfigPath, userName, gitSigningKey); err != nil {
+		log.Errorf("Failed updating git configuration: %w", err)
 		return err
 	}
 
@@ -70,18 +73,16 @@ func RemoveHelper(userName string) error {
 }
 
 func createHelperScript() error {
-	helperScriptFile, err := os.Create(HelperScriptPath)
-	if err != nil {
+	// we do it this way instead of os.Create because we beed sudo
+	cmd := exec.Command("sudo", "bash", "-c", fmt.Sprintf("echo '%s' > %s", HelperScript, HelperScriptPath))
+	if err := cmd.Run(); err != nil {
 		return err
 	}
-	defer helperScriptFile.Close()
-
-	_, err = helperScriptFile.WriteString(HelperScript)
-	return err
+	return nil
 }
 
 func makeScriptExecutable() error {
-	return exec.Command("chmod", "+x", HelperScriptPath).Run()
+	return exec.Command("sudo", "chmod", "+x", HelperScriptPath).Run()
 }
 
 func getGitConfigPath(userName string) (string, error) {

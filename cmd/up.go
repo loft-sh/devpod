@@ -161,6 +161,7 @@ func NewUpCmd(flags *flags.GlobalFlags) *cobra.Command {
 	upCmd.Flags().StringVar(&cmd.GitBranch, "git-branch", "", "The git branch to use")
 	upCmd.Flags().StringVar(&cmd.GitCommit, "git-commit", "", "The git commit SHA to use")
 	upCmd.Flags().Var(&cmd.GitCloneStrategy, "git-clone-strategy", "The git clone strategy DevPod uses to checkout git based workspaces. Can be full (default), blobless, treeless or shallow")
+	upCmd.Flags().StringVar(&cmd.GitSSHSigningKey, "git-ssh-signing-key", "", "The ssh key to use when signing git commits. Used to explicitly setup DevPod's ssh signature forwarding with given key. Should be same format as value of `git config user.signingkey`")
 	upCmd.Flags().StringVar(&cmd.FallbackImage, "fallback-image", "", "The fallback image to use if no devcontainer configuration has been detected")
 
 	upCmd.Flags().BoolVar(&cmd.DisableDaemon, "disable-daemon", false, "If enabled, will not install a daemon into the target machine to track activity")
@@ -225,6 +226,14 @@ func (cmd *UpCmd) Run(
 		}
 
 		log.Infof("Run 'ssh %s.devpod' to ssh into the devcontainer", client.Workspace())
+	}
+
+	// setup git ssh signature
+	if cmd.GitSSHSigningKey != "" {
+		err = setupGitSSHSignature(cmd.GitSSHSigningKey, client, log)
+		if err != nil {
+			return err
+		}
 	}
 
 	// setup dotfiles in the container
@@ -929,6 +938,35 @@ func setupDotfiles(
 
 	log.Infof("Done setting up dotfiles into the devcontainer")
 
+	return nil
+}
+
+func setupGitSSHSignature(signingKey string, client client2.BaseWorkspaceClient, log log.Logger) error {
+	execPath, err := os.Executable()
+	if err != nil {
+		return err
+	}
+
+	remoteUser, err := devssh.GetUser(client.WorkspaceConfig().ID, client.WorkspaceConfig().SSHConfigPath)
+	if err != nil {
+		remoteUser = "root"
+	}
+	log.Infof("User: %v", remoteUser)
+	err = exec.Command(
+		execPath,
+		"ssh",
+		"--agent-forwarding=true",
+		"--start-services=true",
+		"--user",
+		remoteUser,
+		"--context",
+		client.Context(),
+		client.Workspace(),
+		"--command", fmt.Sprintf("devpod agent git-ssh-signature-helper %s", signingKey),
+	).Run()
+	if err != nil {
+		log.Error("failure in setting up git ssh signature helper")
+	}
 	return nil
 }
 
