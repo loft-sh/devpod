@@ -128,7 +128,7 @@ func handleGitSSHSignatureRequest(ctx context.Context, writer http.ResponseWrite
 	log.Debugf("Received git ssh signature post data: %s", string(out))
 	response, err := client.GitSSHSignature(ctx, &tunnel.Message{Message: string(out)})
 	if err != nil {
-		log.Debugf("Error receiving git ssh signature: %v", err)
+		log.Errorf("Error receiving git ssh signature: %w", err)
 		return errors.Wrap(err, "get git ssh signature")
 	}
 
