@@ -476,7 +476,21 @@ func (cmd *SSHCmd) startProxyServices(
 
 		// check if we should enable git ssh commit signature support
 		if cmd.GitSSHSignatureForwarding || devPodConfig.ContextOption(config.ContextOptionGitSSHSignatureForwarding) == "true" {
-			command += " --configure-git-ssh-signature-helper"
+			format, err := readGitConfigValue("gpg.format")
+			if err != nil {
+				return
+			}
+
+			if format == "ssh" {
+				signingKey, err := readGitConfigValue("user.signingKey")
+				if err != nil {
+					return
+				}
+
+				command += " --configure-git-ssh-signature-helper"
+				command += fmt.Sprintf(" --git-user-signingkey %s", signingKey)
+			}
+
 		}
 
 		if log.GetLevel() == logrus.DebugLevel {
@@ -608,4 +622,13 @@ func mergeDevPodSshOptions(cmd *SSHCmd) error {
 	}
 
 	return nil
+}
+
+func readGitConfigValue(key string) (string, error) {
+	cmd := exec.Command("git", "config", "--get", key)
+	output, err := cmd.Output()
+	if err != nil {
+		return "", err
+	}
+	return strings.TrimSpace(string(output)), nil
 }
