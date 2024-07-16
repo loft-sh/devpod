@@ -3,15 +3,20 @@ FROM mcr.microsoft.com/devcontainers/go:1.21-bullseye
 ARG TARGETOS
 ARG TARGETARCH
 
-RUN curl -fsSL https://deb.nodesource.com/setup_20.x | bash - && \
-    apt-get update && \
-    apt-get install -y nodejs
+# Install Node.js
+RUN curl -fsSL https://deb.nodesource.com/setup_20.x | bash - \
+    && apt-get update \
+    && apt-get install -y --no-install-recommends nodejs \
+    && apt-get clean \
+    && rm -rf /var/lib/apt/lists/*
 
+# Set environment variables for Rust
 ENV RUSTUP_HOME=/usr/local/rustup \
     CARGO_HOME=/usr/local/cargo \
     PATH=/usr/local/cargo/bin:$PATH \
     RUST_VERSION=1.69.0
 
+# Install Rust
 RUN set -eux; \
     dpkgArch="$(dpkg --print-architecture)"; \
     case "${dpkgArch##*-}" in \
@@ -30,6 +35,10 @@ RUN set -eux; \
     chmod -R a+w $RUSTUP_HOME $CARGO_HOME; \
     rustup --version; \
     cargo --version; \
-    rustc --version;
+    rustc --version
 
-RUN apt-get install -y protobuf-compiler
+# Install Protobuf compiler
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends protobuf-compiler \
+    && apt-get clean \
+    && rm -rf /var/lib/apt/lists/*
