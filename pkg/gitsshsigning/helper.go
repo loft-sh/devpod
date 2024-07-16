@@ -30,7 +30,13 @@ devpod agent git-ssh-signature "$@"
 `
 )
 
-// ConfigureHelper sets up the git SSH signing helper script and updates the git configuration for the specified user.
+// ConfigureHelper sets up the Git SSH signing helper script and updates the Git configuration for the specified user.
+//
+// This function:
+// - sets user.signingkey git config
+// - creates a wrapper script for calling git-ssh-signature
+// - users this script as gpg.ssh.program
+// This is needed since git expects `gpg.ssh.program` to be an executable.
 func ConfigureHelper(userName, gitSigningKey string, log log.Logger) error {
 	log.Debug("Creating helper script")
 	if err := createHelperScript(); err != nil {
