@@ -118,8 +118,7 @@ func RunInContainer(
 		if configureGitSSHSignatureHelper {
 			format, userSigningKey, err := gitsshsigning.ExtractGitConfiguration()
 			if err == nil && format == gitsshsigning.GPGFormatSSH && userSigningKey != "" {
-				command += " --configure-git-ssh-signature-helper"
-				command += fmt.Sprintf(" --git-user-signingkey %s", userSigningKey)
+				command += fmt.Sprintf(" --git-user-signing-key %s", userSigningKey)
 			}
 		}
 		if configureDockerCredentials {

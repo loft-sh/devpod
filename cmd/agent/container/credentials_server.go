@@ -30,9 +30,8 @@ type CredentialsServerCmd struct {
 
 	User string
 
-	ConfigureGitHelper             bool
-	ConfigureGitSSHSignatureHelper bool
-	ConfigureDockerHelper          bool
+	ConfigureGitHelper    bool
+	ConfigureDockerHelper bool
 
 	ForwardPorts      bool
 	GitUserSigningKey string
@@ -52,10 +51,9 @@ func NewCredentialsServerCmd(flags *flags.GlobalFlags) *cobra.Command {
 		},
 	}
 	credentialsServerCmd.Flags().BoolVar(&cmd.ConfigureGitHelper, "configure-git-helper", false, "If true will configure git helper")
-	credentialsServerCmd.Flags().BoolVar(&cmd.ConfigureGitSSHSignatureHelper, "configure-git-ssh-signature-helper", false, "If true will configure git ssh signature helper")
-	credentialsServerCmd.Flags().StringVar(&cmd.GitUserSigningKey, "git-user-signingkey", "", "")
 	credentialsServerCmd.Flags().BoolVar(&cmd.ConfigureDockerHelper, "configure-docker-helper", false, "If true will configure docker helper")
 	credentialsServerCmd.Flags().BoolVar(&cmd.ForwardPorts, "forward-ports", false, "If true will automatically try to forward open ports within the container")
+	credentialsServerCmd.Flags().StringVar(&cmd.GitUserSigningKey, "git-user-signing-key", "", "")
 	credentialsServerCmd.Flags().StringVar(&cmd.User, "user", "", "The user to use")
 	_ = credentialsServerCmd.MarkFlagRequired("user")
 	return credentialsServerCmd
@@ -134,7 +132,8 @@ func (cmd *CredentialsServerCmd) Run(ctx context.Context, _ []string) error {
 		}(cmd.User)
 	}
 
-	if cmd.ConfigureGitSSHSignatureHelper {
+	// configure git ssh signature helper
+	if cmd.GitUserSigningKey != "" {
 		err = gitsshsigning.ConfigureHelper(cmd.User, cmd.GitUserSigningKey, log)
 		if err != nil {
 			return errors.Wrap(err, "configure git ssh signature helper")
