@@ -951,7 +951,7 @@ func setupGitSSHSignature(signingKey string, client client2.BaseWorkspaceClient,
 	if err != nil {
 		remoteUser = "root"
 	}
-	log.Infof("User: %v", remoteUser)
+
 	err = exec.Command(
 		execPath,
 		"ssh",
