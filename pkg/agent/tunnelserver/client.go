@@ -15,11 +15,12 @@ func NewTunnelClient(reader io.Reader, writer io.WriteCloser, exitOnClose bool, 
 	pipe := stdio.NewStdioStream(reader, writer, exitOnClose, exitCode)
 
 	// Set up a connection to the server.
-	conn, err := grpc.Dial("", grpc.WithTransportCredentials(
-		insecure.NewCredentials()),
+	conn, err := grpc.NewClient("",
+		grpc.WithTransportCredentials(insecure.NewCredentials()),
 		grpc.WithContextDialer(func(ctx context.Context, addr string) (net.Conn, error) {
 			return pipe, nil
-		}))
+		}),
+	)
 	if err != nil {
 		return nil, err
 	}
