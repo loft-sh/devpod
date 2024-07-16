@@ -31,3 +31,5 @@ RUN set -eux; \
     rustup --version; \
     cargo --version; \
     rustc --version;
+
+RUN apt-get install -y protobuf-compiler
