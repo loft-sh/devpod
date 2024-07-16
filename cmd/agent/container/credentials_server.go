@@ -135,7 +135,7 @@ func (cmd *CredentialsServerCmd) Run(ctx context.Context, _ []string) error {
 	}
 
 	if cmd.ConfigureGitSSHSignatureHelper {
-		err = gitsshsigning.ConfigureHelper(binaryPath, cmd.User, cmd.GitUserSigningKey)
+		err = gitsshsigning.ConfigureHelper(cmd.User, cmd.GitUserSigningKey, log)
 		if err != nil {
 			return errors.Wrap(err, "configure git ssh signature helper")
 		}
