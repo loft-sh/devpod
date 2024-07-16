@@ -16,6 +16,17 @@ type GitSSHSignatureHelperCmd struct {
 	CertPath string
 }
 
+// NewGitSSHSignatureHelperCmd creates a new git-ssh-signature-helper command
+// This agent command can be used to inject the Git SSH signature helper.
+//
+// This command is used to set up the environment for Git SSH signature verification by configuring
+// the necessary helper using a provided signing key path.
+//
+// Example usage:
+//
+//	git-ssh-signature-helper [signing-key-path]
+//
+// The signing key path is a required argument for this command. It should be what equal to what you would have set as user.signingkey git config.
 func NewGitSSHSignatureHelperCmd(flags *flags.GlobalFlags) *cobra.Command {
 	cmd := &GitSSHSignatureCmd{
 		GlobalFlags: flags,
