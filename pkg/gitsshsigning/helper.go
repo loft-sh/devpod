@@ -1,6 +1,7 @@
 package gitsshsigning
 
 import (
+	"fmt"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -17,12 +18,14 @@ const (
 
 devpod agent git-ssh-signature "$@"
 `
-	HelperScriptPath = "/usr/local/bin/devpod-ssh-signature"
-	GitConfig        = `
+	HelperScriptPath  = "/usr/local/bin/devpod-ssh-signature"
+	GitConfigTemplate = `
 [gpg "ssh"]
 	program = devpod-ssh-signature
 [gpg]
 	format = ssh
+[user]
+	signingkey = %s
 `
 )
 
@@ -41,7 +44,7 @@ func ConfigureHelper(binaryPath, userName, gitSigningKey string) error {
 		return err
 	}
 
-	if err := updateGitConfig(gitConfigPath, userName); err != nil {
+	if err := updateGitConfig(gitConfigPath, userName, gitSigningKey); err != nil {
 		return err
 	}
 
@@ -89,14 +92,15 @@ func getGitConfigPath(userName string) (string, error) {
 	return filepath.Join(homeDir, ".gitconfig"), nil
 }
 
-func updateGitConfig(gitConfigPath, userName string) error {
+func updateGitConfig(gitConfigPath, userName, gitSigningKey string) error {
 	configContent, err := readGitConfig(gitConfigPath)
 	if err != nil {
 		return err
 	}
 
 	if !strings.Contains(configContent, "program = devpod-ssh-signature") {
-		newContent := removeSignatureHelper(configContent) + GitConfig
+		newConfig := fmt.Sprintf(GitConfigTemplate, gitSigningKey)
+		newContent := removeSignatureHelper(configContent) + newConfig
 		if err := writeGitConfig(gitConfigPath, newContent, userName); err != nil {
 			return err
 		}
