@@ -19,6 +19,7 @@ import (
 	client2 "github.com/loft-sh/devpod/pkg/client"
 	"github.com/loft-sh/devpod/pkg/client/clientimplementation"
 	"github.com/loft-sh/devpod/pkg/config"
+	"github.com/loft-sh/devpod/pkg/gitsshsigning"
 	"github.com/loft-sh/devpod/pkg/gpg"
 	"github.com/loft-sh/devpod/pkg/port"
 	devssh "github.com/loft-sh/devpod/pkg/ssh"
@@ -476,21 +477,15 @@ func (cmd *SSHCmd) startProxyServices(
 
 		// check if we should enable git ssh commit signature support
 		if cmd.GitSSHSignatureForwarding || devPodConfig.ContextOption(config.ContextOptionGitSSHSignatureForwarding) == "true" {
-			format, err := readGitConfigValue("gpg.format")
+			format, userSigningKey, err := gitsshsigning.ExtractGitConfiguration()
 			if err != nil {
 				return
 			}
 
-			if format == "ssh" {
-				signingKey, err := readGitConfigValue("user.signingKey")
-				if err != nil {
-					return
-				}
-
+			if userSigningKey != "" && format == gitsshsigning.GPGFormatSSH {
 				command += " --configure-git-ssh-signature-helper"
-				command += fmt.Sprintf(" --git-user-signingkey %s", signingKey)
+				command += fmt.Sprintf(" --git-user-signingkey %s", userSigningKey)
 			}
-
 		}
 
 		if log.GetLevel() == logrus.DebugLevel {
@@ -622,13 +617,4 @@ func mergeDevPodSshOptions(cmd *SSHCmd) error {
 	}
 
 	return nil
-}
-
-func readGitConfigValue(key string) (string, error) {
-	cmd := exec.Command("git", "config", "--get", key)
-	output, err := cmd.Output()
-	if err != nil {
-		return "", err
-	}
-	return strings.TrimSpace(string(output)), nil
 }

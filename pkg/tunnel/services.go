@@ -17,6 +17,7 @@ import (
 	"github.com/loft-sh/devpod/pkg/config"
 	config2 "github.com/loft-sh/devpod/pkg/devcontainer/config"
 	"github.com/loft-sh/devpod/pkg/devcontainer/setup"
+	"github.com/loft-sh/devpod/pkg/gitsshsigning"
 	"github.com/loft-sh/devpod/pkg/ide/openvscode"
 	"github.com/loft-sh/devpod/pkg/netstat"
 	devssh "github.com/loft-sh/devpod/pkg/ssh"
@@ -53,6 +54,7 @@ func RunInContainer(
 
 	configureDockerCredentials := devPodConfig.ContextOption(config.ContextOptionSSHInjectDockerCredentials) == "true"
 	configureGitCredentials := devPodConfig.ContextOption(config.ContextOptionSSHInjectGitCredentials) == "true"
+	configureGitSSHSignatureHelper := devPodConfig.ContextOption(config.ContextOptionGitSSHSignatureForwarding) == "true"
 
 	return retry.OnError(wait.Backoff{
 		Steps:    math.MaxInt,
@@ -112,7 +114,11 @@ func RunInContainer(
 		command := fmt.Sprintf("'%s' agent container credentials-server --user '%s'", agent.ContainerDevPodHelperLocation, user)
 		if configureGitCredentials {
 			command += " --configure-git-helper"
+		}
+		if configureGitSSHSignatureHelper {
+			_, userSigningKey, _ := gitsshsigning.ExtractGitConfiguration()
 			command += " --configure-git-ssh-signature-helper"
+			command += fmt.Sprintf(" --git-user-signingkey %s", userSigningKey)
 		}
 		if configureDockerCredentials {
 			command += " --configure-docker-helper"
