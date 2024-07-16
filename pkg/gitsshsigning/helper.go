@@ -13,12 +13,12 @@ import (
 )
 
 const (
-	HelperScript string = `#!/bin/bash
+	HelperScript = `#!/bin/bash
 
 devpod agent git-ssh-signature "$@"
 `
-	HelperScriptPath string = "/usr/local/bin/devpod-ssh-signature"
-	GitConfig        string = `
+	HelperScriptPath = "/usr/local/bin/devpod-ssh-signature"
+	GitConfig        = `
 [gpg "ssh"]
 	program = devpod-ssh-signature
 [gpg]
@@ -26,47 +26,78 @@ devpod agent git-ssh-signature "$@"
 `
 )
 
+// ConfigureHelper sets up the git SSH signing helper script and updates the git configuration for the specified user.
 func ConfigureHelper(binaryPath, userName, gitSigningKey string) error {
+	if err := createHelperScript(); err != nil {
+		return err
+	}
+
+	if err := makeScriptExecutable(); err != nil {
+		return err
+	}
+
+	gitConfigPath, err := getGitConfigPath(userName)
+	if err != nil {
+		return err
+	}
+
+	if err := updateGitConfig(gitConfigPath, userName); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+// RemoveHelper removes the git SSH signing helper script and any related configuration.
+func RemoveHelper(userName string) error {
+	if err := os.Remove(HelperScriptPath); err != nil && !os.IsNotExist(err) {
+		return err
+	}
+
+	gitConfigPath, err := getGitConfigPath(userName)
+	if err != nil {
+		return err
+	}
+
+	if err := removeGitConfigHelper(gitConfigPath, userName); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func createHelperScript() error {
 	helperScriptFile, err := os.Create(HelperScriptPath)
 	if err != nil {
 		return err
 	}
+	defer helperScriptFile.Close()
+
 	_, err = helperScriptFile.WriteString(HelperScript)
-	if err != nil {
-		return err
-	}
+	return err
+}
 
-	err = helperScriptFile.Close()
-	if err != nil {
-		return err
-	}
+func makeScriptExecutable() error {
+	return exec.Command("chmod", "+x", HelperScriptPath).Run()
+}
 
-	err = exec.Command("chmod", "+x", HelperScriptPath).Run()
-	if err != nil {
-		return err
-	}
-
+func getGitConfigPath(userName string) (string, error) {
 	homeDir, err := command.GetHome(userName)
 	if err != nil {
+		return "", err
+	}
+	return filepath.Join(homeDir, ".gitconfig"), nil
+}
+
+func updateGitConfig(gitConfigPath, userName string) error {
+	configContent, err := readGitConfig(gitConfigPath)
+	if err != nil {
 		return err
 	}
 
-	gitConfigPath := filepath.Join(homeDir, ".gitconfig")
-	out, err := os.ReadFile(gitConfigPath)
-	if err != nil && !os.IsNotExist(err) {
-		return err
-	}
-	config := string(out)
-	if !strings.Contains(config, "program = devpod-ssh-signature") {
-		content := removeSignatureHelper(config) + GitConfig
-
-		err = os.WriteFile(gitConfigPath, []byte(content), 0600)
-		if err != nil {
-			return errors.Wrap(err, "write git config")
-		}
-
-		err = file.Chown(userName, gitConfigPath)
-		if err != nil {
+	if !strings.Contains(configContent, "program = devpod-ssh-signature") {
+		newContent := removeSignatureHelper(configContent) + GitConfig
+		if err := writeGitConfig(gitConfigPath, newContent, userName); err != nil {
 			return err
 		}
 	}
@@ -74,16 +105,40 @@ func ConfigureHelper(binaryPath, userName, gitSigningKey string) error {
 	return nil
 }
 
-func RemoveHelper() error {
-	// TODO
+func readGitConfig(gitConfigPath string) (string, error) {
+	out, err := os.ReadFile(gitConfigPath)
+	if err != nil && !os.IsNotExist(err) {
+		return "", err
+	}
+	return string(out), nil
+}
+
+func writeGitConfig(gitConfigPath, content, userName string) error {
+	if err := os.WriteFile(gitConfigPath, []byte(content), 0600); err != nil {
+		return errors.Wrap(err, "write git config")
+	}
+	return file.Chown(userName, gitConfigPath)
+}
+
+func removeGitConfigHelper(gitConfigPath, userName string) error {
+	configContent, err := readGitConfig(gitConfigPath)
+	if err != nil {
+		return err
+	}
+
+	newContent := removeSignatureHelper(configContent)
+	if err := writeGitConfig(gitConfigPath, newContent, userName); err != nil {
+		return err
+	}
+
 	return nil
 }
 
 func removeSignatureHelper(content string) string {
 	scan := scanner.NewScanner(strings.NewReader(content))
-
 	isGpgSetup := false
 	out := []string{}
+
 	for scan.Scan() {
 		line := scan.Text()
 		if strings.TrimSpace(line) == "[gpg \"ssh\"]" {
@@ -99,7 +154,6 @@ func removeSignatureHelper(content string) string {
 				continue
 			}
 		}
-
 		out = append(out, line)
 	}
 
