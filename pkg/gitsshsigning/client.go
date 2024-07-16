@@ -26,7 +26,6 @@ func extractContentFromGitBuffer(bufferFile string) ([]byte, error) {
 
 // requestContentSignature handles http request for ssh signature to credentials server
 func requestContentSignature(content []byte, certPath, _ string, log log.Logger) ([]byte, error) {
-
 	request := &GitSSHSignatureRequest{
 		Content: string(content),
 		KeyPath: certPath,

@@ -15,7 +15,9 @@ type GitSSHSignatureResponse struct {
 	Signature []byte
 }
 
-// Sign signs the content using the private key and returns the signature
+// Sign signs the content using the private key and returns the signature.
+// This is intended to be a drop-in replacement for gpg.ssh.program for git,
+// so we simply execute ssh-keygen in the same way as git would do locally.
 func (req *GitSSHSignatureRequest) Sign() (*GitSSHSignatureResponse, error) {
 	// Create a buffer to store the commit content
 	var commitBuffer bytes.Buffer
@@ -33,7 +35,7 @@ func (req *GitSSHSignatureRequest) Sign() (*GitSSHSignatureResponse, error) {
 
 	err := cmd.Run()
 	if err != nil {
-		return nil, fmt.Errorf("failed to sign commit: %v, stderr: %s", err, stderr.String())
+		return nil, fmt.Errorf("failed to sign commit: %w, stderr: %s", err, stderr.String())
 	}
 
 	return &GitSSHSignatureResponse{
