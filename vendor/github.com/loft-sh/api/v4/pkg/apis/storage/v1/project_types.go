@@ -504,6 +504,11 @@ type DevPodProjectSpec struct {
 	// +optional
 	Git *GitProjectSpec `json:"git,omitempty"`
 
+	// SSH defines additional ssh related settings like private keys, to be
+	// specified as base64 encoded strings.
+	// +optional
+	SSH *SSHProjectSpec `json:"ssh,omitempty"`
+
 	// FallbackImage defines an image all workspace will fall back to if no devcontainer.json could be detected
 	// +optional
 	FallbackImage string `json:"fallbackImage,omitempty"`
@@ -515,6 +520,18 @@ type GitProjectSpec struct {
 	Token string `json:"token,omitempty"`
 
 	// TokenSecretRef defines the project secret to use for token authentication.
+	// Will be used if `Token` is not provided.
+	// +optional
+	TokenProjectSecretRef *corev1.SecretKeySelector `json:"tokenSecretRef,omitempty"`
+}
+
+type SSHProjectSpec struct {
+	// Token defines the private ssh key to use for authentication,
+	// this is a base64 encoded string.
+	// +optional
+	Token string `json:"token,omitempty"`
+
+	// TokenSecretRef defines the project secret to use as private ssh key for authentication.
 	// Will be used if `Token` is not provided.
 	// +optional
 	TokenProjectSecretRef *corev1.SecretKeySelector `json:"tokenSecretRef,omitempty"`

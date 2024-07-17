@@ -25,7 +25,6 @@ import (
 	"fmt"
 	"io"
 	"math"
-	"math/rand"
 	"net"
 	"net/http"
 	"strconv"
@@ -44,6 +43,7 @@ import (
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/credentials"
 	"google.golang.org/grpc/internal/channelz"
+	"google.golang.org/grpc/internal/grpcrand"
 	"google.golang.org/grpc/internal/grpcsync"
 	"google.golang.org/grpc/keepalive"
 	"google.golang.org/grpc/metadata"
@@ -1440,7 +1440,7 @@ func getJitter(v time.Duration) time.Duration {
 	}
 	// Generate a jitter between +/- 10% of the value.
 	r := int64(v / 10)
-	j := rand.Int63n(2*r) - r
+	j := grpcrand.Int63n(2*r) - r
 	return time.Duration(j)
 }
 

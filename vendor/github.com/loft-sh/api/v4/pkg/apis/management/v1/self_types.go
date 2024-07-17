@@ -1,7 +1,6 @@
 package v1
 
 import (
-	clusterv1 "github.com/loft-sh/agentapi/v4/pkg/apis/loft/cluster/v1"
 	storagev1 "github.com/loft-sh/api/v4/pkg/apis/storage/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
@@ -34,7 +33,7 @@ type SelfStatus struct {
 
 	// The name of the currently logged in team
 	// +optional
-	Team *clusterv1.EntityInfo `json:"team,omitempty"`
+	Team *storagev1.EntityInfo `json:"team,omitempty"`
 
 	// The name of the currently used access key
 	// +optional
@@ -74,9 +73,9 @@ type SelfStatus struct {
 }
 
 type UserInfo struct {
-	clusterv1.EntityInfo `json:",inline"`
+	storagev1.EntityInfo `json:",inline"`
 
 	// Teams are the teams the user is part of
 	// +optional
-	Teams []*clusterv1.EntityInfo `json:"teams,omitempty"`
+	Teams []*storagev1.EntityInfo `json:"teams,omitempty"`
 }

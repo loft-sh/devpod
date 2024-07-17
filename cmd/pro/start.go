@@ -27,7 +27,7 @@ import (
 
 	storagev1 "github.com/loft-sh/api/v4/pkg/apis/storage/v1"
 	"github.com/loft-sh/api/v4/pkg/auth"
-	loftclientset "github.com/loft-sh/api/v4/pkg/client/clientset_generated/clientset"
+	loftclientset "github.com/loft-sh/api/v4/pkg/clientset/versioned"
 	proflags "github.com/loft-sh/devpod/cmd/pro/flags"
 	"github.com/loft-sh/devpod/pkg/loft"
 	"github.com/loft-sh/devpod/pkg/loft/client"

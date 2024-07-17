@@ -1,7 +1,6 @@
 package v1
 
 import (
-	clusterv1 "github.com/loft-sh/agentapi/v4/pkg/apis/loft/cluster/v1"
 	storagev1 "github.com/loft-sh/api/v4/pkg/apis/storage/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
@@ -31,7 +30,7 @@ type VirtualClusterTemplateStatus struct {
 	storagev1.VirtualClusterTemplateStatus `json:",inline"`
 
 	// +optional
-	Apps []*clusterv1.EntityInfo `json:"apps,omitempty"`
+	Apps []*storagev1.EntityInfo `json:"apps,omitempty"`
 }
 
 func (a *VirtualClusterTemplate) GetVersions() []storagev1.VersionAccessor {

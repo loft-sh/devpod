@@ -68,12 +68,9 @@ func SleepModeStatusAnnotationKeys() []string {
 	}
 }
 
-// +genclient
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 
 // SleepModeConfig holds the sleepmode information
-// +k8s:openapi-gen=true
-// +resource:path=sleepmodeconfigs,rest=SleepModeConfigREST
 type SleepModeConfig struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`

@@ -21,6 +21,10 @@ type ConvertVirtualClusterConfig struct {
 
 // ConvertVirtualClusterConfigSpec holds the specification
 type ConvertVirtualClusterConfigSpec struct {
+	// Annotations are annotations on the virtual cluster
+	// +optional
+	Annotations map[string]string `json:"annotations,omitempty"`
+
 	// Distro is the distro to be used for the config
 	// +optional
 	Distro string `json:"distro,omitempty"`

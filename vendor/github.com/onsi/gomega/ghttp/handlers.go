@@ -11,11 +11,13 @@ import (
 	"reflect"
 	"strings"
 
-	"github.com/golang/protobuf/proto"
 	"github.com/onsi/gomega"
 	. "github.com/onsi/gomega"
 	"github.com/onsi/gomega/internal/gutil"
 	"github.com/onsi/gomega/types"
+	"google.golang.org/protobuf/proto"
+	"google.golang.org/protobuf/protoadapt"
+	"google.golang.org/protobuf/runtime/protoiface"
 )
 
 type GHTTPWithGomega struct {
@@ -193,7 +195,7 @@ func (g GHTTPWithGomega) VerifyFormKV(key string, values ...string) http.Handler
 // representation of the passed message.
 //
 // VerifyProtoRepresenting also verifies that the request's content type is application/x-protobuf
-func (g GHTTPWithGomega) VerifyProtoRepresenting(expected proto.Message) http.HandlerFunc {
+func (g GHTTPWithGomega) VerifyProtoRepresenting(expected protoiface.MessageV1) http.HandlerFunc {
 	return CombineHandlers(
 		g.VerifyContentType("application/x-protobuf"),
 		func(w http.ResponseWriter, req *http.Request) {
@@ -204,13 +206,14 @@ func (g GHTTPWithGomega) VerifyProtoRepresenting(expected proto.Message) http.Ha
 			expectedType := reflect.TypeOf(expected)
 			actualValuePtr := reflect.New(expectedType.Elem())
 
-			actual, ok := actualValuePtr.Interface().(proto.Message)
-			g.gomega.Expect(ok).Should(BeTrueBecause("Message value should be a proto.Message"))
+			actual, ok := actualValuePtr.Interface().(protoiface.MessageV1)
+			g.gomega.Expect(ok).Should(BeTrueBecause("Message value should be a protoiface.MessageV1"))
 
-			err = proto.Unmarshal(body, actual)
+			err = proto.Unmarshal(body, protoadapt.MessageV2Of(actual))
 			g.gomega.Expect(err).ShouldNot(HaveOccurred(), "Failed to unmarshal protobuf")
 
-			g.gomega.Expect(actual).Should(Equal(expected), "ProtoBuf Mismatch")
+			g.gomega.Expect(proto.Equal(protoadapt.MessageV2Of(expected), protoadapt.MessageV2Of(actual))).
+				Should(BeTrue(), "ProtoBuf Mismatch")
 		},
 	)
 }
@@ -328,9 +331,9 @@ func (g GHTTPWithGomega) RespondWithJSONEncodedPtr(statusCode *int, object inter
 // containing the protobuf serialization of the provided message.
 //
 // Also, RespondWithProto can be given an optional http.Header.  The headers defined therein will be added to the response headers.
-func (g GHTTPWithGomega) RespondWithProto(statusCode int, message proto.Message, optionalHeader ...http.Header) http.HandlerFunc {
+func (g GHTTPWithGomega) RespondWithProto(statusCode int, message protoadapt.MessageV1, optionalHeader ...http.Header) http.HandlerFunc {
 	return func(w http.ResponseWriter, req *http.Request) {
-		data, err := proto.Marshal(message)
+		data, err := proto.Marshal(protoadapt.MessageV2Of(message))
 		g.gomega.Expect(err).ShouldNot(HaveOccurred())
 
 		var headers http.Header
@@ -397,7 +400,7 @@ func VerifyFormKV(key string, values ...string) http.HandlerFunc {
 	return NewGHTTPWithGomega(gomega.Default).VerifyFormKV(key, values...)
 }
 
-func VerifyProtoRepresenting(expected proto.Message) http.HandlerFunc {
+func VerifyProtoRepresenting(expected protoiface.MessageV1) http.HandlerFunc {
 	return NewGHTTPWithGomega(gomega.Default).VerifyProtoRepresenting(expected)
 }
 
@@ -417,6 +420,6 @@ func RespondWithJSONEncodedPtr(statusCode *int, object interface{}, optionalHead
 	return NewGHTTPWithGomega(gomega.Default).RespondWithJSONEncodedPtr(statusCode, object, optionalHeader...)
 }
 
-func RespondWithProto(statusCode int, message proto.Message, optionalHeader ...http.Header) http.HandlerFunc {
+func RespondWithProto(statusCode int, message protoadapt.MessageV1, optionalHeader ...http.Header) http.HandlerFunc {
 	return NewGHTTPWithGomega(gomega.Default).RespondWithProto(statusCode, message, optionalHeader...)
 }

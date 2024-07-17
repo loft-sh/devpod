@@ -97,9 +97,21 @@ type DevPodWorkspaceTemplateDefinition struct {
 	// +optional
 	WorkspaceEnv map[string]DevPodProviderOption `json:"workspaceEnv,omitempty"`
 
+	// InitEnv are environment variables that should be available during the initialization phase of the created workspace.
+	// +optional
+	InitEnv map[string]DevPodProviderOption `json:"initEnv,omitempty"`
+
+	// InstanceTemplate holds the workspace instance template
+	// +optional
+	InstanceTemplate DevPodWorkspaceInstanceTemplateDefinition `json:"instanceTemplate,omitempty"`
+
 	// UseProjectGitCredentials specifies if the project git credentials should be used instead of local ones for this workspace
 	// +optional
 	UseProjectGitCredentials bool `json:"useProjectGitCredentials,omitempty"`
+
+	// UseProjectSSHCredentials specifies if the project ssh credentials should be used instead of local ones for this workspace
+	// +optional
+	UseProjectSSHCredentials bool `json:"useProjectSSHCredentials,omitempty"`
 
 	// GitCloneStrategy specifies how git based workspace are being cloned. Can be "" (full, default), treeless, blobless or shallow
 	// +optional
@@ -128,6 +140,13 @@ type DevPodWorkspaceProvider struct {
 	// Env are environment options to set when using the provider.
 	// +optional
 	Env map[string]DevPodProviderOption `json:"env,omitempty"`
+}
+
+type DevPodWorkspaceInstanceTemplateDefinition struct {
+	// The virtual cluster instance metadata
+	// +kubebuilder:pruning:PreserveUnknownFields
+	// +optional
+	TemplateMetadata `json:"metadata,omitempty"`
 }
 
 type DevPodProviderOption struct {

@@ -10,16 +10,15 @@ import (
 // +genclient
 // +genclient:noStatus
 // +genclient:method=GetKubeConfig,verb=create,subresource=kubeconfig,input=github.com/loft-sh/api/v4/pkg/apis/management/v1.VirtualClusterInstanceKubeConfig,result=github.com/loft-sh/api/v4/pkg/apis/management/v1.VirtualClusterInstanceKubeConfig
-// +genclient:method=CreateWorkloadKubeConfig,verb=create,subresource=workloadkubeconfig,input=github.com/loft-sh/api/v4/pkg/apis/management/v1.VirtualClusterInstanceWorkloadKubeConfig,result=github.com/loft-sh/api/v4/pkg/apis/management/v1.VirtualClusterInstanceWorkloadKubeConfig
-// +genclient:method=GetWorkloadKubeConfig,verb=get,subresource=workloadkubeconfig,result=github.com/loft-sh/api/v4/pkg/apis/management/v1.VirtualClusterInstanceWorkloadKubeConfig
+// +genclient:method=GetAccessKey,verb=get,subresource=accesskey,result=github.com/loft-sh/api/v4/pkg/apis/management/v1.VirtualClusterAccessKey
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 
 // VirtualClusterInstance holds the VirtualClusterInstance information
 // +k8s:openapi-gen=true
 // +resource:path=virtualclusterinstances,rest=VirtualClusterInstanceREST
-// +subresource:request=VirtualClusterInstanceWorkloadKubeConfig,path=workloadkubeconfig,kind=VirtualClusterInstanceWorkloadKubeConfig,rest=VirtualClusterInstanceWorkloadKubeConfigREST
 // +subresource:request=VirtualClusterInstanceLog,path=log,kind=VirtualClusterInstanceLog,rest=VirtualClusterInstanceLogREST
 // +subresource:request=VirtualClusterInstanceKubeConfig,path=kubeconfig,kind=VirtualClusterInstanceKubeConfig,rest=VirtualClusterInstanceKubeConfigREST
+// +subresource:request=VirtualClusterAccessKey,path=accesskey,kind=VirtualClusterAccessKey,rest=VirtualClusterAccessKeyREST
 type VirtualClusterInstance struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
