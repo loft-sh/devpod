@@ -1,7 +1,6 @@
 package v1
 
 import (
-	agentstoragev1 "github.com/loft-sh/agentapi/v4/pkg/apis/loft/storage/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -22,7 +21,7 @@ type ChartInfo struct {
 type ChartInfoSpec struct {
 	// Chart holds information about a chart that should get deployed
 	// +optional
-	Chart agentstoragev1.Chart `json:"chart,omitempty"`
+	Chart Chart `json:"chart,omitempty"`
 }
 
 type ChartInfoStatus struct {

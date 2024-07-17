@@ -21,3 +21,7 @@ var (
 	// SchemeGroupVersion is a shim that expect this to be present in the api package
 	SchemeGroupVersion = GroupVersion
 )
+
+func Resource(resource string) schema.GroupResource {
+	return SchemeGroupVersion.WithResource(resource).GroupResource()
+}

@@ -1,7 +1,6 @@
 package v1
 
 import (
-	agentstoragev1 "github.com/loft-sh/agentapi/v4/pkg/apis/loft/storage/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -65,13 +64,9 @@ type TeamSpec struct {
 	// +optional
 	ImagePullSecrets []*KindSecretRef `json:"imagePullSecrets,omitempty"`
 
-	// ClusterAccountTemplates that should be applied for the user
-	// +optional
-	ClusterAccountTemplates []UserClusterAccountTemplate `json:"clusterAccountTemplates,omitempty"`
-
 	// ClusterRoles define the cluster roles that the users should have assigned in the cluster.
 	// +optional
-	ClusterRoles []agentstoragev1.ClusterRoleRef `json:"clusterRoles,omitempty"`
+	ClusterRoles []ClusterRoleRef `json:"clusterRoles,omitempty"`
 
 	// Access holds the access rights for users and teams
 	// +optional
@@ -79,14 +74,6 @@ type TeamSpec struct {
 }
 
 type TeamStatus struct {
-	// Clusters holds information about which clusters the user has accounts in
-	// +optional
-	Clusters []AccountClusterStatus `json:"clusters,omitempty"`
-
-	// ClusterAccountTemplates holds information about which cluster account templates were applied
-	// DEPRECATED: Use status.clusters instead
-	// +optional
-	ClusterAccountTemplates []UserClusterAccountTemplateStatus `json:"clusterAccountTemplates,omitempty"`
 }
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object

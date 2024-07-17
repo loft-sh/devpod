@@ -17,10 +17,6 @@ type SharedManagerFactory interface {
 // ClusterClientAccess holds the functions for cluster access
 type ClusterClientAccess interface {
 	Config(ctx context.Context) (*rest.Config, error)
-	// FIXME(ThomasK33): This is a workaround for the direct connection issue for the
-	// remote workload vcluster pro feature. This function should be removed as
-	// soon as remote control plane feature is refactored.
-	ConfigSkippingDirectConnection(ctx context.Context) (*rest.Config, error)
 	UncachedClient(ctx context.Context) (client.Client, error)
 }
 

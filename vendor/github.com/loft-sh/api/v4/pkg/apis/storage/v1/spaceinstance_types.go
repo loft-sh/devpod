@@ -86,7 +86,7 @@ type SpaceInstanceSpec struct {
 	// ExtraAccessRules defines extra rules which users and teams should have which access to the virtual
 	// cluster.
 	// +optional
-	ExtraAccessRules []agentstoragev1.InstanceAccessRule `json:"extraAccessRules,omitempty"`
+	ExtraAccessRules []InstanceAccessRule `json:"extraAccessRules,omitempty"`
 
 	// Access holds the access rights for users and teams
 	// +optional
@@ -150,7 +150,7 @@ type SpaceInstanceStatus struct {
 
 	// SpaceObjects are the objects that were applied within the virtual cluster space
 	// +optional
-	SpaceObjects *agentstoragev1.ObjectsStatus `json:"spaceObjects,omitempty"`
+	SpaceObjects *ObjectsStatus `json:"spaceObjects,omitempty"`
 
 	// Space is the template rendered with all the parameters
 	// +optional

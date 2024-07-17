@@ -1,7 +1,6 @@
 package v1
 
 import (
-	agentstoragev1 "github.com/loft-sh/agentapi/v4/pkg/apis/loft/storage/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -69,7 +68,42 @@ type LocalClusterAccessTemplate struct {
 
 	// LocalClusterAccessSpec holds the spec of the cluster access in the cluster
 	// +optional
-	LocalClusterAccessSpec agentstoragev1.LocalClusterAccessSpec `json:"spec,omitempty"`
+	LocalClusterAccessSpec LocalClusterAccessSpec `json:"spec,omitempty"`
+}
+
+type LocalClusterAccessSpec struct {
+	// DisplayName is the name that should be shown in the UI
+	// +optional
+	DisplayName string `json:"displayName,omitempty"`
+
+	// Description is the description of this object in
+	// human-readable text.
+	// +optional
+	Description string `json:"description,omitempty"`
+
+	// Users are the users affected by this cluster access object
+	// +optional
+	Users []UserOrTeam `json:"users,omitempty"`
+
+	// Teams are the teams affected by this cluster access object
+	// +optional
+	Teams []string `json:"teams,omitempty"`
+
+	// ClusterRoles define the cluster roles that the users should have assigned in the cluster.
+	// +optional
+	ClusterRoles []ClusterRoleRef `json:"clusterRoles,omitempty"`
+
+	// Priority is a unique value that specifies the priority of this cluster access
+	// for the space constraints and quota. A higher priority means the cluster access object
+	// will override the space constraints of lower priority cluster access objects
+	// +optional
+	Priority int `json:"priority,omitempty"`
+}
+
+type ClusterRoleRef struct {
+	// Name is the cluster role to assign
+	// +optional
+	Name string `json:"name,omitempty"`
 }
 
 // ClusterAccessStatus holds the status of a user access
