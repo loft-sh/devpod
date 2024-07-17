@@ -4,7 +4,6 @@ on:
   release:
     types: [prereleased]
   workflow_dispatch: {}
-
 concurrency:
   group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: true
@@ -27,7 +26,7 @@ jobs:
           - "up-docker"
           - "up-docker-build"
           - "up-docker-compose"
-          - "up-docker-wsl"
+          # - "up-docker-wsl"
 
     steps:
       - name: Git set line ending
