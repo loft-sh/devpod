@@ -272,7 +272,7 @@ func removeCredentialHelper(content string) string {
 // https://git-scm.com/docs/git-config/#Documentation/git-config.txt-XDGCONFIGHOMEgitconfig
 func getGlobalGitConfigPath(userName string) (string, error) {
 	if xdgConfigHome := os.Getenv("XDG_CONFIG_HOME"); xdgConfigHome != "" {
-		return filepath.Join(xdgConfigHome, ".gitconfig"), nil
+		return filepath.Join(xdgConfigHome, "git", "config"), nil
 	}
 
 	home, err := command.GetHome(userName)
