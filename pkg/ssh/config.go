@@ -1,10 +1,13 @@
 package ssh
 
 import (
+	"bufio"
 	"fmt"
 	"io"
 	"os"
 	"path/filepath"
+	"runtime"
+	"slices"
 	"strings"
 	"sync"
 
@@ -48,7 +51,6 @@ func addHost(path, host, user, context, workspace, workdir, command string, gpga
 	if err != nil {
 		return "", err
 	}
-	newLines := []string{}
 
 	// get path to executable
 	execPath, err := os.Executable()
@@ -56,6 +58,11 @@ func addHost(path, host, user, context, workspace, workdir, command string, gpga
 		return "", err
 	}
 
+	return addHostSection(newConfig, execPath, host, user, context, workspace, workdir, command, gpgagent)
+}
+
+func addHostSection(config, execPath, host, user, context, workspace, workdir, command string, gpgagent bool) (string, error) {
+	newLines := []string{}
 	// add new section
 	startMarker := MarkerStartPrefix + host
 	endMarker := MarkerEndPrefix + host
@@ -79,13 +86,47 @@ func addHost(path, host, user, context, workspace, workdir, command string, gpga
 	}
 	newLines = append(newLines, "  User "+user)
 	newLines = append(newLines, endMarker)
-	// add a space between blocks
-	newLines = append(newLines, "")
 
 	// now we append the original config
-	// keep our blocks on top of the file for priority reasons
-	newLines = append(newLines, newConfig)
-	return strings.Join(newLines, "\n"), nil
+	// keep our blocks on top of the hosts for priority reasons, but below any includes
+	lineNumber := 0
+	found := false
+	lines := []string{}
+	commentLines := 0
+	scanner := bufio.NewScanner(strings.NewReader(config))
+	for scanner.Scan() {
+		line := scanner.Text()
+		// Check `Host` keyword
+		if strings.HasPrefix(strings.TrimSpace(line), "Host") && !found {
+			found = true
+			lineNumber = max(lineNumber-commentLines, 0)
+		}
+
+		// Preserve comments
+		if strings.HasPrefix(strings.TrimSpace(line), "#") {
+			commentLines++
+		} else {
+			commentLines = 0
+		}
+
+		if !found {
+			lineNumber++
+		}
+
+		lines = append(lines, line)
+	}
+	if err := scanner.Err(); err != nil {
+		return config, err
+	}
+
+	lines = slices.Insert(lines, lineNumber, newLines...)
+
+	newLineSep := "\n"
+	if runtime.GOOS == "windows" {
+		newLineSep = "\r\n"
+	}
+
+	return strings.Join(lines, newLineSep), nil
 }
 
 func GetUser(workspaceID string, sshConfigPath string) (string, error) {
