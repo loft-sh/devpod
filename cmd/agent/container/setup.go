@@ -160,7 +160,7 @@ func (cmd *SetupContainerCmd) Run(ctx context.Context) error {
 	}
 
 	// setup container
-	err = setup.SetupContainer(setupInfo, workspaceInfo.CLIOptions.WorkspaceEnv, cmd.ChownWorkspace, logger)
+	err = setup.SetupContainer(ctx, setupInfo, workspaceInfo.CLIOptions.WorkspaceEnv, cmd.ChownWorkspace, logger)
 	if err != nil {
 		return err
 	}
@@ -205,6 +205,7 @@ func fillContainerEnv(setupInfo *config.Result) error {
 	if setupInfo.MergedConfig.RemoteEnv == nil {
 		setupInfo.MergedConfig.RemoteEnv = make(map[string]string)
 	}
+
 	if _, ok := setupInfo.MergedConfig.RemoteEnv["PATH"]; !ok {
 		setupInfo.MergedConfig.RemoteEnv["PATH"] = "${containerEnv:PATH}"
 	}

@@ -1,32 +1,27 @@
 package setup
 
 import (
-	"bufio"
+	"context"
 	"encoding/json"
-	"fmt"
-	"io"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"sort"
 	"strings"
-	"sync"
 
 	"github.com/loft-sh/devpod/pkg/command"
 	copy2 "github.com/loft-sh/devpod/pkg/copy"
 	"github.com/loft-sh/devpod/pkg/devcontainer/config"
 	"github.com/loft-sh/devpod/pkg/envfile"
-	"github.com/loft-sh/devpod/pkg/types"
 	"github.com/loft-sh/log"
 	"github.com/pkg/errors"
-	"github.com/sirupsen/logrus"
 )
 
 const (
 	ResultLocation = "/var/run/devpod/result.json"
 )
 
-func SetupContainer(setupInfo *config.Result, extraWorkspaceEnv []string, chownProjects bool, log log.Logger) error {
+func SetupContainer(ctx context.Context, setupInfo *config.Result, extraWorkspaceEnv []string, chownProjects bool, log log.Logger) error {
 	// write result to ResultLocation
 	WriteResult(setupInfo, log)
 
@@ -66,10 +61,10 @@ func SetupContainer(setupInfo *config.Result, extraWorkspaceEnv []string, chownP
 	}
 
 	// run commands
-	log.Debugf("Run post create commands...")
-	err = PostCreateCommands(setupInfo, log)
+	log.Debugf("Run lifecycle hooks commands...")
+	err = RunLifecycleHooks(ctx, setupInfo, log)
 	if err != nil {
-		return errors.Wrap(err, "post create commands")
+		return errors.Wrap(err, "lifecycle hooks")
 	}
 
 	log.Debugf("Done setting up environment")
@@ -239,43 +234,6 @@ func ChownAgentSock(setupInfo *config.Result) error {
 	return nil
 }
 
-func PostCreateCommands(setupInfo *config.Result, log log.Logger) error {
-	remoteUser := config.GetRemoteUser(setupInfo)
-	mergedConfig := setupInfo.MergedConfig
-
-	// only run once per container run
-	err := runPostCreateCommand(mergedConfig.OnCreateCommands, remoteUser, setupInfo.SubstitutionContext.ContainerWorkspaceFolder, setupInfo.MergedConfig.RemoteEnv, "onCreateCommands", setupInfo.ContainerDetails.Created, log)
-	if err != nil {
-		return err
-	}
-
-	// TODO: rerun when contents changed
-	err = runPostCreateCommand(mergedConfig.UpdateContentCommands, remoteUser, setupInfo.SubstitutionContext.ContainerWorkspaceFolder, setupInfo.MergedConfig.RemoteEnv, "updateContentCommands", setupInfo.ContainerDetails.Created, log)
-	if err != nil {
-		return err
-	}
-
-	// only run once per container run
-	err = runPostCreateCommand(mergedConfig.PostCreateCommands, remoteUser, setupInfo.SubstitutionContext.ContainerWorkspaceFolder, setupInfo.MergedConfig.RemoteEnv, "postCreateCommands", setupInfo.ContainerDetails.Created, log)
-	if err != nil {
-		return err
-	}
-
-	// run when the container was restarted
-	err = runPostCreateCommand(mergedConfig.PostStartCommands, remoteUser, setupInfo.SubstitutionContext.ContainerWorkspaceFolder, setupInfo.MergedConfig.RemoteEnv, "postStartCommands", setupInfo.ContainerDetails.State.StartedAt, log)
-	if err != nil {
-		return err
-	}
-
-	// run always when attaching to the container
-	err = runPostCreateCommand(mergedConfig.PostAttachCommands, remoteUser, setupInfo.SubstitutionContext.ContainerWorkspaceFolder, setupInfo.MergedConfig.RemoteEnv, "postAttachCommands", "", log)
-	if err != nil {
-		return err
-	}
-
-	return nil
-}
-
 func markerFileExists(markerName string, markerContent string) (bool, error) {
 	markerName = filepath.Join("/var/devpod", markerName+".marker")
 	t, err := os.ReadFile(markerName)
@@ -293,112 +251,4 @@ func markerFileExists(markerName string, markerContent string) (bool, error) {
 	}
 
 	return false, nil
-}
-
-func runPostCreateCommand(commands []types.LifecycleHook, user, dir string, remoteEnv map[string]string, name, content string, log log.Logger) error {
-	if len(commands) == 0 {
-		return nil
-	}
-
-	// check marker file
-	if content != "" {
-		exists, err := markerFileExists(name, content)
-		if err != nil {
-			return err
-		} else if exists {
-			return nil
-		}
-	}
-
-	remoteEnvArr := []string{}
-	for k, v := range remoteEnv {
-		remoteEnvArr = append(remoteEnvArr, k+"="+v)
-	}
-
-	for _, cmd := range commands {
-		if len(cmd) == 0 {
-			continue
-		}
-
-		for k, c := range cmd {
-			log.Infof("Run command %s: %s...", k, strings.Join(c, " "))
-			args := []string{}
-			if user != "root" {
-				args = append(args, "su", user, "-c", command.Quote(c))
-			} else {
-				args = append(args, "sh", "-c", command.Quote(c))
-			}
-
-			// create command
-			cmd := exec.Command(args[0], args[1:]...)
-			cmd.Dir = dir
-			cmd.Env = os.Environ()
-			cmd.Env = append(cmd.Env, remoteEnvArr...)
-
-			// Create pipes for stdout and stderr
-			stdoutPipe, err := cmd.StdoutPipe()
-			if err != nil {
-				return fmt.Errorf("failed to get stdout pipe: %w", err)
-			}
-			stderrPipe, err := cmd.StderrPipe()
-			if err != nil {
-				return fmt.Errorf("failed to get stderr pipe: %w", err)
-			}
-
-			// Start the command
-			if err := cmd.Start(); err != nil {
-				return fmt.Errorf("failed to start command: %w", err)
-			}
-
-			// Use WaitGroup to wait for both stdout and stderr processing
-			var wg sync.WaitGroup
-			wg.Add(2)
-
-			go func() {
-				defer wg.Done()
-				logPipeOutput(log, stdoutPipe, logrus.InfoLevel)
-			}()
-
-			go func() {
-				defer wg.Done()
-				logPipeOutput(log, stderrPipe, logrus.ErrorLevel)
-			}()
-
-			// Wait for command to finish
-			wg.Wait()
-			err = cmd.Wait()
-			if err != nil {
-				log.Debugf("Failed running postCreateCommand lifecycle script %s: %v", cmd.Args, err)
-				return fmt.Errorf("failed to run: %s, error: %w", strings.Join(c, " "), err)
-			}
-
-			log.Donef("Successfully ran command %s: %s", k, strings.Join(c, " "))
-		}
-	}
-
-	return nil
-}
-
-func logPipeOutput(log log.Logger, pipe io.ReadCloser, level logrus.Level) {
-	scanner := bufio.NewScanner(pipe)
-	for scanner.Scan() {
-		line := scanner.Text()
-		if level == logrus.InfoLevel {
-			log.Info(line)
-		} else if level == logrus.ErrorLevel {
-			if containsError(line) {
-				log.Error(line)
-			} else {
-				log.Warn(line)
-			}
-		}
-	}
-	if err := scanner.Err(); err != nil {
-		log.Errorf("Error reading pipe: %v", err)
-	}
-}
-
-// containsError defines what log line treated as error log should contain.
-func containsError(line string) bool {
-	return strings.Contains(strings.ToLower(line), "error")
 }

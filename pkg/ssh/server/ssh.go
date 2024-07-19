@@ -8,13 +8,12 @@ import (
 	"os"
 	"os/exec"
 	"os/user"
-	"path/filepath"
-	"runtime"
 	"strings"
 	"sync"
 	"time"
 
 	"github.com/loft-sh/devpod/pkg/command"
+	"github.com/loft-sh/devpod/pkg/shell"
 	"github.com/loft-sh/log"
 	"github.com/loft-sh/ssh"
 	perrors "github.com/pkg/errors"
@@ -25,7 +24,7 @@ import (
 var DefaultPort = 8022
 
 func NewServer(addr string, hostKey []byte, keys []ssh.PublicKey, workdir string, log log.Logger) (*Server, error) {
-	shell, err := getShell()
+	sh, err := shell.GetShell("")
 	if err != nil {
 		return nil, err
 	}
@@ -38,7 +37,7 @@ func NewServer(addr string, hostKey []byte, keys []ssh.PublicKey, workdir string
 	forwardHandler := &ssh.ForwardedTCPHandler{}
 	forwardedUnixHandler := &ssh.ForwardedUnixHandler{}
 	server := &Server{
-		shell:       shell,
+		shell:       sh,
 		workdir:     workdir,
 		log:         log,
 		currentUser: currentUser.Username,
@@ -113,60 +112,6 @@ type Server struct {
 	workdir     string
 	sshServer   ssh.Server
 	log         log.Logger
-}
-
-func getUserShell() (string, error) {
-	currentUser, err := user.Current()
-	if err != nil {
-		return "", err
-	}
-
-	output, err := exec.Command("getent", "passwd", currentUser.Username).Output()
-	if err != nil {
-		return "", err
-	}
-
-	shell := strings.Split(string(output), ":")
-	if len(shell) != 7 {
-		return "", fmt.Errorf("unexpected getent format: %s", string(output))
-	}
-
-	loginShell := strings.TrimSpace(filepath.Base(shell[6]))
-	if loginShell == "nologin" {
-		return "", fmt.Errorf("no login shell configured")
-	}
-
-	return loginShell, nil
-}
-
-func getShell() ([]string, error) {
-	// try to get a shell
-	if runtime.GOOS != "windows" {
-		// infere login shell from getent
-		shell, err := getUserShell()
-		if err == nil {
-			return []string{shell}, nil
-		}
-
-		// fallback to path discovery if unsuccessful
-		_, err = exec.LookPath("bash")
-		if err == nil {
-			return []string{"bash"}, nil
-		}
-
-		_, err = exec.LookPath("sh")
-		if err == nil {
-			return []string{"sh"}, nil
-		}
-	}
-
-	// fallback to our in-built shell
-	executable, err := os.Executable()
-	if err != nil {
-		return nil, err
-	}
-
-	return []string{executable, "helper", "sh"}, nil
 }
 
 func (s *Server) handler(sess ssh.Session) {
