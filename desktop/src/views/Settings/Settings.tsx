@@ -40,6 +40,7 @@ import {
 import { useWelcomeModal } from "../../useWelcomeModal"
 import {
   useDotfilesOption,
+  useSSHKeySignatureOption,
   useCLIFlagsOption,
   useAgentURLOption,
   useTelemetryOption,
@@ -149,6 +150,7 @@ function GeneralSettings() {
 
 function CustomizationSettings() {
   const { input: dotfilesInput } = useDotfilesOption()
+  const { input: gitSSHSignatureInput } = useSSHKeySignatureOption()
   const { settings, set } = useChangeSettings()
   const { ides, defaultIDE, updateDefaultIDE } = useIDESettings()
 
@@ -178,10 +180,16 @@ function CustomizationSettings() {
         </>
       </SettingSection>
       <SettingSection
-        showDivider={false}
+        showDivider={true}
         title="Dotfiles"
         description="Set the dotfiles git repository to use inside workspaces">
         {dotfilesInput}
+      </SettingSection>
+      <SettingSection
+        showDivider={false}
+        title="SSH Key for Git commit signing"
+        description="Set path of your SSH key you want to use for signing Git commits">
+        {gitSSHSignatureInput}
       </SettingSection>
     </>
   )
