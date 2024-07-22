@@ -20,4 +20,5 @@ export interface Settings {
   additionalCliFlags: string
   additionalEnvVars: string
   dotfilesUrl: string
+  sshKeyPath: string
 }
