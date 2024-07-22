@@ -391,3 +391,85 @@ export function useDotfilesOption() {
 
   return { input }
 }
+
+
+
+export function useSSHKeySignatureOption() {
+  const { settings, set } = useChangeSettings()
+  const updateOption = useCallback(
+    (value: string) => {
+      set("sshKeyPath", value)
+      client.setSetting("sshKeyPath", value)
+    },
+    [set]
+  )
+  const [hasFocus, setHasFocus] = useState(false)
+  const inputRef = useRef<HTMLInputElement>(null)
+
+  const handleBlur = useCallback(
+    (e: FocusEvent<HTMLInputElement>) => {
+      const value = e.target.value.trim()
+      updateOption(value)
+      setHasFocus(false)
+    },
+    [updateOption]
+  )
+
+  const handleKeyUp = useCallback((e: KeyboardEvent<HTMLInputElement>) => {
+    if (e.key !== "Enter") return
+
+    e.currentTarget.blur()
+  }, [])
+
+  const handleFocus = useCallback(() => {
+    setHasFocus(true)
+  }, [])
+
+  const handleClearSSHKeyPath = useCallback(() => {
+    const el = inputRef.current
+    if (!el) return
+
+    el.value = ""
+  }, [])
+
+  const input = useMemo(
+    () => (
+      <InputGroup maxWidth="72">
+        <Input
+          ref={inputRef}
+          spellCheck={false}
+          placeholder="SSH key path"
+          defaultValue={settings.sshKeyPath}
+          onBlur={handleBlur}
+          onKeyUp={handleKeyUp}
+          onFocus={handleFocus}
+        />
+        <InputRightElement>
+          <IconButton
+            visibility={hasFocus ? "visible" : "hidden"}
+            size="xs"
+            borderRadius="full"
+            icon={<CloseIcon />}
+            aria-label="clear"
+            onMouseDown={(e) => {
+              // needed to prevent losing focus from input
+              e.stopPropagation()
+              e.preventDefault()
+            }}
+            onClick={handleClearSSHKeyPath}
+          />
+        </InputRightElement>
+      </InputGroup>
+    ),
+    [
+      settings.sshKeyPath,
+      handleBlur,
+      handleKeyUp,
+      handleFocus,
+      hasFocus,
+      handleClearSSHKeyPath,
+    ]
+  )
+
+  return { input }
+}

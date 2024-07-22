@@ -39,6 +39,7 @@ const initialSettings: TSettings = {
   additionalCliFlags: "",
   additionalEnvVars: "",
   dotfilesUrl: "",
+  sshKeyPath: "",
 }
 function getSettingKeys(): readonly TSetting[] {
   return getKeys(initialSettings)
