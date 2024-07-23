@@ -96,6 +96,9 @@ class Client {
     if (name === "additionalEnvVars") {
       DevPodCommand.ADDITIONAL_ENV_VARS = value as string
     }
+    if (name === "sshKeyPath") {
+      this.workspaces.setSSHKeyPath(value as string)
+    }
   }
   public ready(): Promise<void> {
     return invoke("ui_ready")
