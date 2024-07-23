@@ -100,6 +100,11 @@ export class WorkspacesClient implements TDebuggable {
     WorkspaceCommands.ADDITIONAL_FLAGS = additionalFlags
   }
 
+  public setSSHKeyPath(sshKeyPath: string): void {
+    WorkspaceCommands.ADDITIONAL_FLAGS =
+      WorkspaceCommands.ADDITIONAL_FLAGS + " --git-ssh-signing-key="+sshKeyPath
+  }
+
   public async listAll(): Promise<Result<readonly TWorkspaceWithoutStatus[]>> {
     return WorkspaceCommands.ListWorkspaces()
   }
