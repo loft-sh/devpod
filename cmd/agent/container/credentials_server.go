@@ -95,7 +95,7 @@ func (cmd *CredentialsServerCmd) Run(ctx context.Context, _ []string) error {
 
 	addr := net.JoinHostPort("localhost", strconv.Itoa(port))
 	if ok, err := portpkg.IsAvailable(addr); !ok || err != nil {
-		log.Infof("Port %d not available, exiting", port)
+		log.Debugf("Port %d not available, exiting", port)
 		return nil
 	}
 
