@@ -5,6 +5,7 @@ import {
   useContext,
   useEffect,
   useMemo,
+  useRef,
   useState,
 } from "react"
 import { client } from "../client"
@@ -40,6 +41,9 @@ const initialSettings: TSettings = {
   additionalEnvVars: "",
   dotfilesUrl: "",
   sshKeyPath: "",
+  httpProxyUrl: "",
+  httpsProxyUrl: "",
+  noProxy: "",
 }
 function getSettingKeys(): readonly TSetting[] {
   return getKeys(initialSettings)
@@ -103,6 +107,12 @@ export function SettingsProvider({ children }: Readonly<{ children?: ReactNode }
   useEffect(() => {
     client.setSetting("additionalEnvVars", settings.additionalEnvVars)
   }, [settings.additionalEnvVars])
+
+  useEffect(() => {
+    client.setSetting("httpProxyUrl", settings.httpProxyUrl)
+    client.setSetting("httpsProxyUrl", settings.httpsProxyUrl)
+    client.setSetting("noProxy", settings.noProxy)
+  }, [settings.httpProxyUrl, settings.httpsProxyUrl, settings.noProxy])
 
   const set = useCallback<TSettingsContext["set"]>((key, value) => {
     settingsStore.set(key, value)

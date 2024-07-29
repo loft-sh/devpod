@@ -63,7 +63,14 @@ type TChannelName = keyof TChannels
 type TClientEventListener<TChannel extends TChannelName> = (payload: TChannels[TChannel]) => void
 type TClientSettings = Pick<
   TSettings,
-  "debugFlag" | "additionalCliFlags" | "dotfilesUrl" | "additionalEnvVars" | "sshKeyPath"
+  | "debugFlag"
+  | "additionalCliFlags"
+  | "dotfilesUrl"
+  | "additionalEnvVars"
+  | "sshKeyPath"
+  | "httpProxyUrl"
+  | "httpsProxyUrl"
+  | "noProxy"
 >
 export type TPlatform = Awaited<ReturnType<typeof os.platform>>
 export type TArch = Awaited<ReturnType<typeof os.arch>>
@@ -93,11 +100,20 @@ class Client {
     if (name === "dotfilesUrl") {
       this.workspaces.setDotfilesFlag(value as string)
     }
+    if (name === "sshKeyPath") {
+      this.workspaces.setSSHKeyPath(value as string)
+    }
     if (name === "additionalEnvVars") {
       DevPodCommand.ADDITIONAL_ENV_VARS = value as string
     }
-    if (name === "sshKeyPath") {
-      this.workspaces.setSSHKeyPath(value as string)
+    if (name === "httpProxyUrl") {
+      DevPodCommand.HTTP_PROXY = value as string
+    }
+    if (name === "httpsProxyUrl") {
+      DevPodCommand.HTTPS_PROXY = value as string
+    }
+    if (name === "noProxy") {
+      DevPodCommand.NO_PROXY = value as string
     }
   }
   public ready(): Promise<void> {
