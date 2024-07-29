@@ -121,7 +121,7 @@ type proTableEntry struct {
 
 func checkLogin(ctx context.Context, devPodConfig *config.Config, proInstance *provider.ProInstance) error {
 	// for every pro instance, check auth status by calling login
-	if err := login(ctx, devPodConfig, proInstance.Host, proInstance.Provider, "", true, log.Default); err != nil {
+	if err := login(ctx, devPodConfig, proInstance.Host, proInstance.Provider, "", true, false, log.Default); err != nil {
 		return fmt.Errorf("not logged into %s", proInstance.Host)
 	}
 

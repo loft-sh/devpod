@@ -35,8 +35,9 @@ type LoginCmd struct {
 
 	Options []string
 
-	Login bool
-	Use   bool
+	Login        bool
+	Use          bool
+	ForceBrowser bool
 }
 
 // NewLoginCmd creates a new command
@@ -62,6 +63,7 @@ func NewLoginCmd(flags *proflags.GlobalFlags) *cobra.Command {
 	loginCmd.Flags().StringVar(&cmd.Provider, "provider", "", "Optional name how the DevPod Pro provider will be named")
 	loginCmd.Flags().StringVar(&cmd.Version, "version", "", "The version to use for the DevPod provider")
 	loginCmd.Flags().StringArrayVarP(&cmd.Options, "option", "o", []string{}, "Provider option in the form KEY=VALUE")
+	loginCmd.Flags().BoolVar(&cmd.ForceBrowser, "force-browser", false, "Force login through browser")
 
 	loginCmd.Flags().StringVar(&cmd.ProviderSource, "provider-source", "", "The source of the provider")
 	_ = loginCmd.Flags().MarkHidden("provider-source")
@@ -165,7 +167,7 @@ func (cmd *LoginCmd) Run(ctx context.Context, fullURL string, log log.Logger) er
 
 	// 2. Login to Loft
 	if cmd.Login {
-		err = login(ctx, devPodConfig, fullURL, cmd.Provider, cmd.AccessKey, false, log)
+		err = login(ctx, devPodConfig, fullURL, cmd.Provider, cmd.AccessKey, false, cmd.ForceBrowser, log)
 		if err != nil {
 			return err
 		}
@@ -229,7 +231,7 @@ func (cmd *LoginCmd) resolveProviderSource(url string) error {
 	return nil
 }
 
-func login(ctx context.Context, devPodConfig *config.Config, url string, providerName string, accessKey string, skipBrowserLogin bool, log log.Logger) error {
+func login(ctx context.Context, devPodConfig *config.Config, url string, providerName string, accessKey string, skipBrowserLogin, forceBrowser bool, log log.Logger) error {
 	configPath, err := LoftConfigPath(devPodConfig, providerName)
 	if err != nil {
 		return err
@@ -249,8 +251,8 @@ func login(ctx context.Context, devPodConfig *config.Config, url string, provide
 
 	// log in
 	url = strings.TrimSuffix(url, "/")
-	if accessKey != "" {
-		err = loader.LoginWithAccessKey(url, accessKey, true)
+	if accessKey != "" && !forceBrowser {
+		err = loader.LoginWithAccessKey(url, accessKey, true, true)
 	} else {
 		if skipBrowserLogin {
 			return fmt.Errorf("unable to login to loft host")

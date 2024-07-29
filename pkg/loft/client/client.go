@@ -64,7 +64,7 @@ type Client interface {
 	Self() *managementv1.Self
 
 	Login(host string, insecure bool, log log.Logger) error
-	LoginWithAccessKey(host, accessKey string, insecure bool) error
+	LoginWithAccessKey(host, accessKey string, insecure bool, force bool) error
 	LoginRaw(host, accessKey string, insecure bool) error
 
 	Logout(ctx context.Context) error
@@ -316,7 +316,7 @@ func (c *client) Login(host string, insecure bool, log log.Logger) error {
 	}()
 
 	close(keyChannel)
-	return c.LoginWithAccessKey(host, key.Key, insecure)
+	return c.LoginWithAccessKey(host, key.Key, insecure, false)
 }
 
 func (c *client) LoginRaw(host, accessKey string, insecure bool) error {
@@ -330,17 +330,17 @@ func (c *client) LoginRaw(host, accessKey string, insecure bool) error {
 	return c.Save()
 }
 
-func (c *client) LoginWithAccessKey(host, accessKey string, insecure bool) error {
+func (c *client) LoginWithAccessKey(host, accessKey string, insecure bool, force bool) error {
 	err := verifyHost(host)
 	if err != nil {
 		return err
 	}
-	if c.config.Host == host && c.config.AccessKey == accessKey {
+	if !force && c.config.Host == host && c.config.AccessKey == accessKey {
 		return nil
 	}
 
 	// delete old access key if were logged in before
-	if c.config.AccessKey != "" {
+	if !force && c.config.AccessKey != "" {
 		managementClient, err := c.Management()
 		if err == nil {
 			self, err := managementClient.Loft().ManagementV1().Selves().Create(context.TODO(), &managementv1.Self{}, metav1.CreateOptions{})
