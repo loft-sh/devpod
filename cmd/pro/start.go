@@ -1106,7 +1106,7 @@ func (cmd *StartCmd) loginViaCLI(url string) error {
 	}
 
 	url = strings.TrimSuffix(url, "/")
-	err = loader.LoginWithAccessKey(url, accessKey.AccessKey, true)
+	err = loader.LoginWithAccessKey(url, accessKey.AccessKey, true, false)
 	if err != nil {
 		return err
 	}
