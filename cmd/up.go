@@ -1016,6 +1016,10 @@ func performGpgForwarding(
 // checkProviderUpdate currently only ensures the local provider is in sync with the remote for DevPod Pro instances
 // Potentially auto-upgrade other providers in the future.
 func checkProviderUpdate(devPodConfig *config.Config, providerName string, log log.Logger) error {
+	if version.GetVersion() == version.DevVersion {
+		log.Debugf("Skipping provider check during development")
+		return nil
+	}
 	proInstances, err := workspace2.ListProInstances(devPodConfig, log)
 	if err != nil {
 		return fmt.Errorf("list pro instances: %w", err)
