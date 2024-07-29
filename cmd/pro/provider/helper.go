@@ -108,6 +108,13 @@ func DialWorkspace(baseClient client.Client, workspace *managementv1.DevPodWorks
 	}
 
 	host := restConfig.Host
+
+	// check if this workspace has been scheduled to run on a specific runner
+	if workspace.Annotations != nil && workspace.Annotations[storagev1.DevPodWorkspaceRunnerNetworkPeerAnnotation] != "" {
+		networkPeerName := workspace.Annotations[storagev1.DevPodWorkspaceRunnerNetworkPeerAnnotation]
+		host = networkPeerName + ".ts.loft" // tailscale.BaseDomain
+	}
+
 	parsedURL, _ := url.Parse(host)
 	if parsedURL != nil && parsedURL.Host != "" {
 		host = parsedURL.Host
@@ -118,10 +125,13 @@ func DialWorkspace(baseClient client.Client, workspace *managementv1.DevPodWorks
 		loftURL += "?" + values.Encode()
 	}
 
+	// TODO: probably need the tailscale transport here
 	dialer := websocket.Dialer{
 		TLSClientConfig:  &tls.Config{InsecureSkipVerify: true},
 		Proxy:            http.ProxyFromEnvironment,
 		HandshakeTimeout: 45 * time.Second,
+		// FIXME: this should be controlPlane.instance.DialFunc(),
+		NetDialContext: "",
 	}
 
 	conn, response, err := dialer.Dial(loftURL, map[string][]string{
