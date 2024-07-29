@@ -45,6 +45,7 @@ import {
   useAgentURLOption,
   useTelemetryOption,
   useExtraEnvVarsOption,
+  useProxyOptions,
 } from "./useContextOptions"
 import { useIDESettings } from "./useIDESettings"
 
@@ -85,6 +86,7 @@ function GeneralSettings() {
   const { settings, set } = useChangeSettings()
   const { modal: welcomeModal, show: showWelcomeModal } = useWelcomeModal()
   const { input: agentURLInput, helpText: agentURLHelpText } = useAgentURLOption()
+  const { input: proxyInput, helpText: proxyHelpText } = useProxyOptions()
   const { input: telemetryInput, helpText: telemetryHelpText } = useTelemetryOption()
   const {
     badge: installCLIBadge,
@@ -117,12 +119,16 @@ function GeneralSettings() {
         />
       </SettingSection>
 
-      <SettingSection title="Telemetry" description={telemetryHelpText}>
-        {telemetryInput}
-      </SettingSection>
-
       <SettingSection title="Agent URL" description={agentURLHelpText}>
         {agentURLInput}
+      </SettingSection>
+
+      <SettingSection title="Proxy Configuration" description={proxyHelpText}>
+        {proxyInput}
+      </SettingSection>
+
+      <SettingSection title="Telemetry" description={telemetryHelpText}>
+        {telemetryInput}
       </SettingSection>
 
       <SettingSection
@@ -397,9 +403,7 @@ function ExperimentalSettings() {
         {extraEnvVarsInput}
       </SettingSection>
 
-      <SettingSection
-        title="DevPod Pro (beta)"
-        description="Enable DevPod Pro login and creation">
+      <SettingSection title="DevPod Pro (beta)" description="Enable DevPod Pro login and creation">
         <Switch
           isChecked={settings.experimental_devPodPro}
           onChange={(e) => set("experimental_devPodPro", e.target.checked)}

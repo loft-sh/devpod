@@ -1,9 +1,7 @@
-import { ChildProcess, Command as ShellCommand, EventEmitter, Child } from "@tauri-apps/api/shell"
-import { debug, isError } from "../lib"
-import { Result, ResultError, Return } from "../lib/result"
+import { Child, ChildProcess, EventEmitter, Command as ShellCommand } from "@tauri-apps/api/shell"
+import { debug, isError, Result, ResultError, Return } from "../lib"
 import { DEVPOD_BINARY, DEVPOD_FLAG_OPTION, DEVPOD_UI_ENV_VAR } from "./constants"
 import { TStreamEvent } from "./types"
-import { client } from "./client"
 
 export type TStreamEventListenerFn = (event: TStreamEvent) => void
 export type TEventListener<TEventName extends string> = Parameters<
@@ -22,35 +20,46 @@ export class Command implements TCommand<ChildProcess> {
   private args: string[]
 
   public static ADDITIONAL_ENV_VARS: string = ""
+  public static HTTP_PROXY: string = ""
+  public static HTTPS_PROXY: string = ""
+  public static NO_PROXY: string = ""
 
   constructor(args: string[]) {
     debug("commands", "Creating Devpod command with args: ", args)
     const extraEnvVars = Command.ADDITIONAL_ENV_VARS.split(",")
       .map((envVarStr) => envVarStr.split("="))
-      .reduce((acc, pair) => {
-        const [key, value] = pair
-        if (key === undefined || value === undefined) {
-          return acc
-        }
+      .reduce(
+        (acc, pair) => {
+          const [key, value] = pair
+          if (key === undefined || value === undefined) {
+            return acc
+          }
 
-        return { ...acc, [key]: value }
-      }, {})
+          return { ...acc, [key]: value }
+        },
+        {} as Record<string, string>
+      )
+
+    // set proxy related environment variables
+    if (Command.HTTP_PROXY) {
+      extraEnvVars["HTTP_PROXY"] = Command.HTTP_PROXY
+    }
+    if (Command.HTTPS_PROXY) {
+      extraEnvVars["HTTPS_PROXY"] = Command.HTTPS_PROXY
+    }
+    if (Command.NO_PROXY) {
+      extraEnvVars["NO_PROXY"] = Command.NO_PROXY
+    }
+
+    // allows the CLI to detect if commands have been invoked from the UI
+    extraEnvVars[DEVPOD_UI_ENV_VAR] = "true"
 
     if (import.meta.env.TAURI_IS_FLATPAK === "true") {
       this.sidecarCommand = new ShellCommand("run-path-devpod-wrapper", args, {
-        env: {
-          ...extraEnvVars,
-          [DEVPOD_UI_ENV_VAR]: "true",
-          ["FLATPAK_ID"]: "sh.loft.devpod",
-        },
+        env: { ...extraEnvVars, ["FLATPAK_ID"]: "sh.loft.devpod" },
       })
     } else {
-      this.sidecarCommand = ShellCommand.sidecar(DEVPOD_BINARY, args, {
-        env: {
-          ...extraEnvVars,
-          [DEVPOD_UI_ENV_VAR]: "true",
-        },
-      })
+      this.sidecarCommand = ShellCommand.sidecar(DEVPOD_BINARY, args, { env: extraEnvVars })
     }
     this.args = args
   }

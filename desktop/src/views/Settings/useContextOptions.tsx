@@ -4,17 +4,18 @@ import {
   IconButton,
   Input,
   InputGroup,
+  InputLeftAddon,
   InputRightElement,
   Link,
   Switch,
 } from "@chakra-ui/react"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
-import { FocusEvent, KeyboardEvent, useCallback, useMemo, useRef, useState } from "react"
+import { FocusEvent, KeyboardEvent, ReactNode, useCallback, useMemo, useRef, useState } from "react"
 import { client } from "../../client"
-import { useChangeSettings } from "../../contexts"
+import { Command } from "../../client/command"
+import { TSettings, useChangeSettings } from "../../contexts"
 import { QueryKeys } from "../../queryKeys"
 import { TContextOptionName } from "../../types"
-import { Command } from "../../client/command"
 
 const DEFAULT_DEVPOD_AGENT_URL = "https://github.com/loft-sh/devpod/releases/latest/download/"
 
@@ -43,79 +44,25 @@ export function useContextOptions() {
 }
 export function useCLIFlagsOption() {
   const { settings, set } = useChangeSettings()
-  const updateOption = useCallback(
-    (value: string) => {
+
+  const handleChanged = useCallback(
+    (newValue: string) => {
+      const value = newValue.trim()
       set("additionalCliFlags", value)
       client.setSetting("additionalCliFlags", value)
     },
     [set]
   )
-  const [hasFocus, setHasFocus] = useState(false)
-  const inputRef = useRef<HTMLInputElement>(null)
-
-  const handleBlur = useCallback(
-    (e: FocusEvent<HTMLInputElement>) => {
-      const value = e.target.value.trim()
-      updateOption(value)
-      setHasFocus(false)
-    },
-    [updateOption]
-  )
-
-  const handleKeyUp = useCallback((e: KeyboardEvent<HTMLInputElement>) => {
-    if (e.key !== "Enter") return
-
-    e.currentTarget.blur()
-  }, [])
-
-  const handleFocus = useCallback(() => {
-    setHasFocus(true)
-  }, [])
-
-  const handleClearDevPodCLIFlags = useCallback(() => {
-    const el = inputRef.current
-    if (!el) return
-
-    el.value = ""
-  }, [])
 
   const input = useMemo(
     () => (
-      <InputGroup maxWidth="72">
-        <Input
-          ref={inputRef}
-          spellCheck={false}
-          placeholder="Additional CLI Flags"
-          defaultValue={settings.additionalCliFlags}
-          onBlur={handleBlur}
-          onKeyUp={handleKeyUp}
-          onFocus={handleFocus}
-        />
-        <InputRightElement>
-          <IconButton
-            visibility={hasFocus ? "visible" : "hidden"}
-            size="xs"
-            borderRadius="full"
-            icon={<CloseIcon />}
-            aria-label="clear"
-            onMouseDown={(e) => {
-              // needed to prevent losing focus from input
-              e.stopPropagation()
-              e.preventDefault()
-            }}
-            onClick={handleClearDevPodCLIFlags}
-          />
-        </InputRightElement>
-      </InputGroup>
+      <ClearableInput
+        placeholder="Additional CLI Flags"
+        defaultValue={settings.additionalCliFlags}
+        onChange={handleChanged}
+      />
     ),
-    [
-      settings.additionalCliFlags,
-      handleBlur,
-      handleKeyUp,
-      handleFocus,
-      hasFocus,
-      handleClearDevPodCLIFlags,
-    ]
+    [handleChanged, settings.additionalCliFlags]
   )
 
   const helpText = useMemo(() => <>Set additional CLI Flags to use.</>, [])
@@ -125,72 +72,24 @@ export function useCLIFlagsOption() {
 
 export function useAgentURLOption() {
   const { options, updateOption } = useContextOptions()
-  const [hasFocus, setHasFocus] = useState(false)
-  const inputRef = useRef<HTMLInputElement>(null)
 
-  const handleBlur = useCallback(
-    (e: FocusEvent<HTMLInputElement>) => {
-      const value = e.target.value.trim()
+  const handleChanged = useCallback(
+    (newValue: string) => {
+      const value = newValue.trim()
       updateOption({ option: "AGENT_URL", value })
-      setHasFocus(false)
     },
     [updateOption]
   )
 
-  const handleKeyUp = useCallback((e: KeyboardEvent<HTMLInputElement>) => {
-    if (e.key !== "Enter") return
-
-    e.currentTarget.blur()
-  }, [])
-
-  const handleFocus = useCallback(() => {
-    setHasFocus(true)
-  }, [])
-
-  const handleClearDevPodAgent = useCallback(() => {
-    const el = inputRef.current
-    if (!el) return
-
-    el.value = ""
-  }, [])
-
   const input = useMemo(
     () => (
-      <InputGroup maxWidth="72">
-        <Input
-          ref={inputRef}
-          spellCheck={false}
-          placeholder="Override Agent URL"
-          defaultValue={options?.AGENT_URL.value ?? undefined}
-          onBlur={handleBlur}
-          onKeyUp={handleKeyUp}
-          onFocus={handleFocus}
-        />
-        <InputRightElement>
-          <IconButton
-            visibility={hasFocus ? "visible" : "hidden"}
-            size="xs"
-            borderRadius="full"
-            icon={<CloseIcon />}
-            aria-label="clear"
-            onMouseDown={(e) => {
-              // needed to prevent losing focus from input
-              e.stopPropagation()
-              e.preventDefault()
-            }}
-            onClick={handleClearDevPodAgent}
-          />
-        </InputRightElement>
-      </InputGroup>
+      <ClearableInput
+        placeholder="Override Agent URL"
+        defaultValue={options?.AGENT_URL.value ?? ""}
+        onChange={handleChanged}
+      />
     ),
-    [
-      options?.AGENT_URL.value,
-      handleBlur,
-      handleKeyUp,
-      handleFocus,
-      hasFocus,
-      handleClearDevPodAgent,
-    ]
+    [handleChanged, options?.AGENT_URL.value]
   )
 
   const helpText = useMemo(
@@ -237,66 +136,25 @@ export function useTelemetryOption() {
 
 export function useExtraEnvVarsOption() {
   const { settings, set } = useChangeSettings()
-  const [hasFocus, setHasFocus] = useState(false)
-  const inputRef = useRef<HTMLInputElement>(null)
 
-  const handleBlur = useCallback(
-    (e: FocusEvent<HTMLInputElement>) => {
-      const value = e.target.value.trim()
+  const handleChanged = useCallback(
+    (newValue: string) => {
+      const value = newValue.trim()
       set("additionalEnvVars", value)
       Command.ADDITIONAL_ENV_VARS = value
-      setHasFocus(false)
     },
     [set]
   )
 
-  const handleKeyUp = useCallback((e: KeyboardEvent<HTMLInputElement>) => {
-    if (e.key !== "Enter") return
-
-    e.currentTarget.blur()
-  }, [])
-
-  const handleFocus = useCallback(() => {
-    setHasFocus(true)
-  }, [])
-
-  const handleClear = useCallback(() => {
-    const el = inputRef.current
-    if (!el) return
-
-    el.value = ""
-  }, [])
-
   const input = useMemo(
     () => (
-      <InputGroup maxWidth="72">
-        <Input
-          ref={inputRef}
-          spellCheck={false}
-          placeholder="Additional Environment Variables"
-          defaultValue={settings.additionalEnvVars}
-          onBlur={handleBlur}
-          onKeyUp={handleKeyUp}
-          onFocus={handleFocus}
-        />
-        <InputRightElement>
-          <IconButton
-            visibility={hasFocus ? "visible" : "hidden"}
-            size="xs"
-            borderRadius="full"
-            icon={<CloseIcon />}
-            aria-label="clear"
-            onMouseDown={(e) => {
-              // needed to prevent losing focus from input
-              e.stopPropagation()
-              e.preventDefault()
-            }}
-            onClick={handleClear}
-          />
-        </InputRightElement>
-      </InputGroup>
+      <ClearableInput
+        placeholder="Additional Environment Variables"
+        defaultValue={settings.additionalEnvVars}
+        onChange={handleChanged}
+      />
     ),
-    [settings.additionalEnvVars, handleBlur, handleKeyUp, handleFocus, hasFocus, handleClear]
+    [handleChanged, settings.additionalEnvVars]
   )
 
   const helpText = useMemo(
@@ -321,78 +179,20 @@ export function useDotfilesOption() {
     },
     [set]
   )
-  const [hasFocus, setHasFocus] = useState(false)
-  const inputRef = useRef<HTMLInputElement>(null)
-
-  const handleBlur = useCallback(
-    (e: FocusEvent<HTMLInputElement>) => {
-      const value = e.target.value.trim()
-      updateOption(value)
-      setHasFocus(false)
-    },
-    [updateOption]
-  )
-
-  const handleKeyUp = useCallback((e: KeyboardEvent<HTMLInputElement>) => {
-    if (e.key !== "Enter") return
-
-    e.currentTarget.blur()
-  }, [])
-
-  const handleFocus = useCallback(() => {
-    setHasFocus(true)
-  }, [])
-
-  const handleClearDevPodDotfiles = useCallback(() => {
-    const el = inputRef.current
-    if (!el) return
-
-    el.value = ""
-  }, [])
 
   const input = useMemo(
     () => (
-      <InputGroup maxWidth="72">
-        <Input
-          ref={inputRef}
-          spellCheck={false}
-          placeholder="Dotfiles repo URL"
-          defaultValue={settings.dotfilesUrl}
-          onBlur={handleBlur}
-          onKeyUp={handleKeyUp}
-          onFocus={handleFocus}
-        />
-        <InputRightElement>
-          <IconButton
-            visibility={hasFocus ? "visible" : "hidden"}
-            size="xs"
-            borderRadius="full"
-            icon={<CloseIcon />}
-            aria-label="clear"
-            onMouseDown={(e) => {
-              // needed to prevent losing focus from input
-              e.stopPropagation()
-              e.preventDefault()
-            }}
-            onClick={handleClearDevPodDotfiles}
-          />
-        </InputRightElement>
-      </InputGroup>
+      <ClearableInput
+        placeholder="Dotfiles repo URL"
+        defaultValue={settings.dotfilesUrl}
+        onChange={updateOption}
+      />
     ),
-    [
-      settings.dotfilesUrl,
-      handleBlur,
-      handleKeyUp,
-      handleFocus,
-      hasFocus,
-      handleClearDevPodDotfiles,
-    ]
+    [settings.dotfilesUrl, updateOption]
   )
 
   return { input }
 }
-
-
 
 export function useSSHKeySignatureOption() {
   const { settings, set } = useChangeSettings()
@@ -403,16 +203,88 @@ export function useSSHKeySignatureOption() {
     },
     [set]
   )
+
+  const input = useMemo(
+    () => (
+      <ClearableInput
+        placeholder="SSH key path"
+        defaultValue={settings.sshKeyPath}
+        onChange={updateOption}
+      />
+    ),
+    [settings.sshKeyPath, updateOption]
+  )
+
+  return { input }
+}
+
+export function useProxyOptions() {
+  const { settings, set } = useChangeSettings()
+
+  const handleChanged = useCallback(
+    (s: keyof Pick<TSettings, "httpProxyUrl" | "httpsProxyUrl" | "noProxy">) =>
+      (newValue: string) => {
+        set(s, newValue)
+        client.setSetting(s, newValue)
+      },
+    [set]
+  )
+
+  const input = useMemo(() => {
+    return (
+      <>
+        <ClearableInput
+          defaultValue={settings.httpProxyUrl}
+          onChange={handleChanged("httpProxyUrl")}
+          placeholder="Set HTTP_PROXY"
+          label="HTTP"
+        />
+        <ClearableInput
+          defaultValue={settings.httpsProxyUrl}
+          onChange={handleChanged("httpsProxyUrl")}
+          placeholder="Set HTTPS_PROXY"
+          label="HTTPS"
+        />
+        <ClearableInput
+          defaultValue={settings.noProxy}
+          onChange={handleChanged("noProxy")}
+          placeholder="Set NO_PROXY"
+          label="NO_PROXY"
+        />
+      </>
+    )
+  }, [handleChanged, settings.httpProxyUrl, settings.httpsProxyUrl, settings.noProxy])
+
+  const helpText = useMemo(
+    () => (
+      <>
+        Set HTTP(S) proxy configuration. These settings will only be used by DevPod itself and not
+        be available within your workspace.
+      </>
+    ),
+    []
+  )
+
+  return { input, helpText }
+}
+
+type TClearableInputProps = Readonly<{
+  defaultValue: string
+  placeholder: string
+  label?: ReactNode
+  onChange: (newValue: string) => void
+}>
+function ClearableInput({ defaultValue, placeholder, label, onChange }: TClearableInputProps) {
   const [hasFocus, setHasFocus] = useState(false)
   const inputRef = useRef<HTMLInputElement>(null)
 
   const handleBlur = useCallback(
     (e: FocusEvent<HTMLInputElement>) => {
       const value = e.target.value.trim()
-      updateOption(value)
+      onChange(value)
       setHasFocus(false)
     },
-    [updateOption]
+    [onChange]
   )
 
   const handleKeyUp = useCallback((e: KeyboardEvent<HTMLInputElement>) => {
@@ -425,51 +297,40 @@ export function useSSHKeySignatureOption() {
     setHasFocus(true)
   }, [])
 
-  const handleClearSSHKeyPath = useCallback(() => {
+  const handleClearClicked = useCallback(() => {
     const el = inputRef.current
     if (!el) return
 
     el.value = ""
   }, [])
 
-  const input = useMemo(
-    () => (
-      <InputGroup maxWidth="72">
-        <Input
-          ref={inputRef}
-          spellCheck={false}
-          placeholder="SSH key path"
-          defaultValue={settings.sshKeyPath}
-          onBlur={handleBlur}
-          onKeyUp={handleKeyUp}
-          onFocus={handleFocus}
+  return (
+    <InputGroup maxWidth="96">
+      {label && <InputLeftAddon>{label}</InputLeftAddon>}
+      <Input
+        ref={inputRef}
+        spellCheck={false}
+        placeholder={placeholder}
+        defaultValue={defaultValue}
+        onBlur={handleBlur}
+        onKeyUp={handleKeyUp}
+        onFocus={handleFocus}
+      />
+      <InputRightElement>
+        <IconButton
+          visibility={hasFocus ? "visible" : "hidden"}
+          size="xs"
+          borderRadius="full"
+          icon={<CloseIcon />}
+          aria-label="clear"
+          onMouseDown={(e) => {
+            // needed to prevent losing focus from input
+            e.stopPropagation()
+            e.preventDefault()
+          }}
+          onClick={handleClearClicked}
         />
-        <InputRightElement>
-          <IconButton
-            visibility={hasFocus ? "visible" : "hidden"}
-            size="xs"
-            borderRadius="full"
-            icon={<CloseIcon />}
-            aria-label="clear"
-            onMouseDown={(e) => {
-              // needed to prevent losing focus from input
-              e.stopPropagation()
-              e.preventDefault()
-            }}
-            onClick={handleClearSSHKeyPath}
-          />
-        </InputRightElement>
-      </InputGroup>
-    ),
-    [
-      settings.sshKeyPath,
-      handleBlur,
-      handleKeyUp,
-      handleFocus,
-      hasFocus,
-      handleClearSSHKeyPath,
-    ]
+      </InputRightElement>
+    </InputGroup>
   )
-
-  return { input }
 }

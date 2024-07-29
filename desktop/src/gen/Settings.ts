@@ -21,4 +21,7 @@ export interface Settings {
   additionalEnvVars: string
   dotfilesUrl: string
   sshKeyPath: string
+  httpProxyUrl: string
+  httpsProxyUrl: string
+  noProxy: string
 }

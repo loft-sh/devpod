@@ -34,6 +34,9 @@ pub struct Settings {
     additional_env_vars: String,
     dotfiles_url: String,
     ssh_key_path: String,
+    http_proxy_url: String,
+    https_proxy_url: String,
+    no_proxy: String,
 }
 
 #[derive(Debug, Serialize, TS)]
