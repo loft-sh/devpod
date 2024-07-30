@@ -194,6 +194,7 @@ func configureGitUserLocally(ctx context.Context, userName string, client tunnel
 }
 
 func configureLoftPlatformAccess(ctx context.Context, client tunnel.TunnelClient, log log.Logger) error {
+	log.Infof("Start configuring Loft platform access")
 	response, err := client.LoftConfig(ctx, &tunnel.Empty{})
 	if err != nil {
 		return fmt.Errorf("retrieve loft config: %w", err)
