@@ -15,6 +15,7 @@ import (
 	"github.com/loft-sh/devpod/pkg/dockercredentials"
 	"github.com/loft-sh/devpod/pkg/gitcredentials"
 	"github.com/loft-sh/devpod/pkg/gitsshsigning"
+	"github.com/loft-sh/devpod/pkg/loftconfig"
 	"github.com/loft-sh/devpod/pkg/netstat"
 	portpkg "github.com/loft-sh/devpod/pkg/port"
 	"github.com/loft-sh/log"
@@ -119,6 +120,11 @@ func (cmd *CredentialsServerCmd) Run(ctx context.Context, _ []string) error {
 		log.Debugf("Error configuring git user: %v", err)
 	}
 
+	err = configureLoftPlatformAccess(ctx, tunnelClient, log)
+	if err != nil {
+		log.Debugf("Error configuring Loft Platform access: %v", err)
+	}
+
 	// configure git credential helper
 	if cmd.ConfigureGitHelper {
 		err = gitcredentials.ConfigureHelper(binaryPath, cmd.User, port)
@@ -183,6 +189,24 @@ func configureGitUserLocally(ctx context.Context, userName string, client tunnel
 	if err != nil {
 		return fmt.Errorf("set git user & email: %w", err)
 	}
+
+	return nil
+}
+
+func configureLoftPlatformAccess(ctx context.Context, client tunnel.TunnelClient, log log.Logger) error {
+	response, err := client.LoftConfig(ctx, &tunnel.Empty{})
+	if err != nil {
+		return fmt.Errorf("retrieve loft config: %w", err)
+	}
+
+	loftConfigResponse := &loftconfig.LoftConfigResponse{}
+	err = json.Unmarshal([]byte(response.Message), loftConfigResponse)
+	if err != nil {
+		return fmt.Errorf("decode loft config response: %w", err)
+	}
+
+	log.Infof("Successfully read loft config: %v", loftConfigResponse.Config)
+	// TODO: setup config file in workspace
 
 	return nil
 }

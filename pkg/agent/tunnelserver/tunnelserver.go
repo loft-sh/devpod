@@ -10,12 +10,14 @@ import (
 	"strings"
 
 	"github.com/loft-sh/devpod/pkg/agent/tunnel"
+	devpodConfig "github.com/loft-sh/devpod/pkg/config"
 	"github.com/loft-sh/devpod/pkg/devcontainer/config"
 	"github.com/loft-sh/devpod/pkg/dockercredentials"
 	"github.com/loft-sh/devpod/pkg/extract"
 	"github.com/loft-sh/devpod/pkg/git"
 	"github.com/loft-sh/devpod/pkg/gitcredentials"
 	"github.com/loft-sh/devpod/pkg/gitsshsigning"
+	"github.com/loft-sh/devpod/pkg/loftconfig"
 	"github.com/loft-sh/devpod/pkg/netstat"
 	provider2 "github.com/loft-sh/devpod/pkg/provider"
 	"github.com/loft-sh/devpod/pkg/stdio"
@@ -230,6 +232,25 @@ func (t *tunnelServer) GitSSHSignature(ctx context.Context, message *tunnel.Mess
 	}
 
 	out, err := json.Marshal(signatureResponse)
+	if err != nil {
+		return nil, err
+	}
+
+	return &tunnel.Message{Message: string(out)}, nil
+}
+
+func (t *tunnelServer) LoftConfig(ctx context.Context, empty *tunnel.Empty) (*tunnel.Message, error) {
+	devPodConfig, err := devpodConfig.LoadConfig("default", "devpod-pro") // TODO: don't hardcode
+	if err != nil {
+		return nil, err
+	}
+
+	response, err := loftconfig.Read(devPodConfig)
+	if err != nil {
+		return nil, perrors.Wrap(err, "read loft config")
+	}
+
+	out, err := json.Marshal(response)
 	if err != nil {
 		return nil, err
 	}
