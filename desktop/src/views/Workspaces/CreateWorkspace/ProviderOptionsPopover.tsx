@@ -188,17 +188,31 @@ function ProviderOptionList({ options }: TProviderOptionListProps) {
                 {option.displayName}
               </Text>
             </Tooltip>
-            <Text
-              textOverflow="ellipsis"
-              wordBreak="keep-all"
-              whiteSpace="nowrap"
-              width="full"
-              overflowX="hidden"
-              color={valueColor}
-              userSelect="auto"
-              _hover={{ overflow: "visible", cursor: "text" }}>
-              {value}
-            </Text>
+            {option.enum ? (
+              <Text
+                textOverflow="ellipsis"
+                wordBreak="keep-all"
+                whiteSpace="nowrap"
+                width="full"
+                overflowX="hidden"
+                color={valueColor}
+                userSelect="auto"
+                _hover={{ overflow: "visible", cursor: "text" }}>
+                {option.enum.find((e) => e.value === value)?.displayName ?? value}
+              </Text>
+            ) : (
+              <Text
+                textOverflow="ellipsis"
+                wordBreak="keep-all"
+                whiteSpace="nowrap"
+                width="full"
+                overflowX="hidden"
+                color={valueColor}
+                userSelect="auto"
+                _hover={{ overflow: "visible", cursor: "text" }}>
+                {value}
+              </Text>
+            )}
           </ListItem>
         )
       })}

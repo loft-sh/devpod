@@ -220,7 +220,17 @@ var (
 	NewLoftUpgradeREST = func(getter generic.RESTOptionsGetter) rest.Storage {
 		return NewLoftUpgradeRESTFunc(Factory)
 	}
-	NewLoftUpgradeRESTFunc          NewRESTFunc
+	NewLoftUpgradeRESTFunc      NewRESTFunc
+	ManagementOIDCClientStorage = builders.NewApiResourceWithStorage( // Resource status endpoint
+		InternalOIDCClient,
+		func() runtime.Object { return &OIDCClient{} },     // Register versioned resource
+		func() runtime.Object { return &OIDCClientList{} }, // Register versioned resource list
+		NewOIDCClientREST,
+	)
+	NewOIDCClientREST = func(getter generic.RESTOptionsGetter) rest.Storage {
+		return NewOIDCClientRESTFunc(Factory)
+	}
+	NewOIDCClientRESTFunc           NewRESTFunc
 	ManagementOwnedAccessKeyStorage = builders.NewApiResourceWithStorage( // Resource status endpoint
 		InternalOwnedAccessKey,
 		func() runtime.Object { return &OwnedAccessKey{} },     // Register versioned resource
@@ -783,6 +793,18 @@ var (
 		func() runtime.Object { return &LoftUpgrade{} },
 		func() runtime.Object { return &LoftUpgradeList{} },
 	)
+	InternalOIDCClient = builders.NewInternalResource(
+		"oidcclients",
+		"OIDCClient",
+		func() runtime.Object { return &OIDCClient{} },
+		func() runtime.Object { return &OIDCClientList{} },
+	)
+	InternalOIDCClientStatus = builders.NewInternalResourceStatus(
+		"oidcclients",
+		"OIDCClientStatus",
+		func() runtime.Object { return &OIDCClient{} },
+		func() runtime.Object { return &OIDCClientList{} },
+	)
 	InternalOwnedAccessKey = builders.NewInternalResource(
 		"ownedaccesskeys",
 		"OwnedAccessKey",
@@ -863,7 +885,15 @@ var (
 		return NewProjectMigrateVirtualClusterInstanceRESTFunc(Factory)
 	}
 	NewProjectMigrateVirtualClusterInstanceRESTFunc NewRESTFunc
-	InternalProjectTemplatesREST                    = builders.NewInternalSubresource(
+	InternalProjectRunnersREST                      = builders.NewInternalSubresource(
+		"projects", "ProjectRunners", "runners",
+		func() runtime.Object { return &ProjectRunners{} },
+	)
+	NewProjectRunnersREST = func(getter generic.RESTOptionsGetter) rest.Storage {
+		return NewProjectRunnersRESTFunc(Factory)
+	}
+	NewProjectRunnersRESTFunc    NewRESTFunc
+	InternalProjectTemplatesREST = builders.NewInternalSubresource(
 		"projects", "ProjectTemplates", "templates",
 		func() runtime.Object { return &ProjectTemplates{} },
 	)
@@ -1228,6 +1258,8 @@ var (
 		InternalLicenseTokenStatus,
 		InternalLoftUpgrade,
 		InternalLoftUpgradeStatus,
+		InternalOIDCClient,
+		InternalOIDCClientStatus,
 		InternalOwnedAccessKey,
 		InternalOwnedAccessKeyStatus,
 		InternalProject,
@@ -1239,6 +1271,7 @@ var (
 		InternalProjectMembersREST,
 		InternalProjectMigrateSpaceInstanceREST,
 		InternalProjectMigrateVirtualClusterInstanceREST,
+		InternalProjectRunnersREST,
 		InternalProjectTemplatesREST,
 		InternalProjectSecret,
 		InternalProjectSecretStatus,
@@ -1979,7 +2012,7 @@ type KioskStatus struct {
 }
 
 // +genclient
-// +genclient:nonNamespaced
+// +genclient
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 
 type License struct {
@@ -2056,16 +2089,30 @@ type LoftUpgradeStatus struct {
 }
 
 type OIDC struct {
-	Enabled          bool         `json:"enabled,omitempty"`
-	WildcardRedirect bool         `json:"wildcardRedirect,omitempty"`
-	Clients          []OIDCClient `json:"clients,omitempty"`
+	Enabled          bool             `json:"enabled,omitempty"`
+	WildcardRedirect bool             `json:"wildcardRedirect,omitempty"`
+	Clients          []OIDCClientSpec `json:"clients,omitempty"`
 }
 
+// +genclient
+// +genclient:nonNamespaced
+// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
+
 type OIDCClient struct {
+	metav1.TypeMeta   `json:",inline"`
+	metav1.ObjectMeta `json:"metadata,omitempty"`
+	Spec              OIDCClientSpec   `json:"spec,omitempty"`
+	Status            OIDCClientStatus `json:"status,omitempty"`
+}
+
+type OIDCClientSpec struct {
 	Name         string   `json:"name,omitempty"`
 	ClientID     string   `json:"clientId,omitempty"`
 	ClientSecret string   `json:"clientSecret,omitempty"`
 	RedirectURIs []string `json:"redirectURIs"`
+}
+
+type OIDCClientStatus struct {
 }
 
 // +genclient
@@ -2194,6 +2241,14 @@ type ProjectMigrateVirtualClusterInstance struct {
 type ProjectMigrateVirtualClusterInstanceSource struct {
 	Name      string `json:"name,omitempty"`
 	Namespace string `json:"namespace,omitempty"`
+}
+
+// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
+
+type ProjectRunners struct {
+	metav1.TypeMeta   `json:",inline"`
+	metav1.ObjectMeta `json:"metadata,omitempty"`
+	Runners           []Runner `json:"runners,omitempty"`
 }
 
 // +genclient
@@ -5092,6 +5147,125 @@ func (s *storageLoftUpgrade) DeleteLoftUpgrade(ctx context.Context, id string) (
 	return sync, err
 }
 
+// OIDCClient Functions and Structs
+//
+// +k8s:deepcopy-gen=false
+type OIDCClientStrategy struct {
+	builders.DefaultStorageStrategy
+}
+
+// +k8s:deepcopy-gen=false
+type OIDCClientStatusStrategy struct {
+	builders.DefaultStatusStorageStrategy
+}
+
+// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
+
+type OIDCClientList struct {
+	metav1.TypeMeta `json:",inline"`
+	metav1.ListMeta `json:"metadata,omitempty"`
+	Items           []OIDCClient `json:"items"`
+}
+
+func (OIDCClient) NewStatus() interface{} {
+	return OIDCClientStatus{}
+}
+
+func (pc *OIDCClient) GetStatus() interface{} {
+	return pc.Status
+}
+
+func (pc *OIDCClient) SetStatus(s interface{}) {
+	pc.Status = s.(OIDCClientStatus)
+}
+
+func (pc *OIDCClient) GetSpec() interface{} {
+	return pc.Spec
+}
+
+func (pc *OIDCClient) SetSpec(s interface{}) {
+	pc.Spec = s.(OIDCClientSpec)
+}
+
+func (pc *OIDCClient) GetObjectMeta() *metav1.ObjectMeta {
+	return &pc.ObjectMeta
+}
+
+func (pc *OIDCClient) SetGeneration(generation int64) {
+	pc.ObjectMeta.Generation = generation
+}
+
+func (pc OIDCClient) GetGeneration() int64 {
+	return pc.ObjectMeta.Generation
+}
+
+// Registry is an interface for things that know how to store OIDCClient.
+// +k8s:deepcopy-gen=false
+type OIDCClientRegistry interface {
+	ListOIDCClients(ctx context.Context, options *internalversion.ListOptions) (*OIDCClientList, error)
+	GetOIDCClient(ctx context.Context, id string, options *metav1.GetOptions) (*OIDCClient, error)
+	CreateOIDCClient(ctx context.Context, id *OIDCClient) (*OIDCClient, error)
+	UpdateOIDCClient(ctx context.Context, id *OIDCClient) (*OIDCClient, error)
+	DeleteOIDCClient(ctx context.Context, id string) (bool, error)
+}
+
+// NewRegistry returns a new Registry interface for the given Storage. Any mismatched types will panic.
+func NewOIDCClientRegistry(sp builders.StandardStorageProvider) OIDCClientRegistry {
+	return &storageOIDCClient{sp}
+}
+
+// Implement Registry
+// storage puts strong typing around storage calls
+// +k8s:deepcopy-gen=false
+type storageOIDCClient struct {
+	builders.StandardStorageProvider
+}
+
+func (s *storageOIDCClient) ListOIDCClients(ctx context.Context, options *internalversion.ListOptions) (*OIDCClientList, error) {
+	if options != nil && options.FieldSelector != nil && !options.FieldSelector.Empty() {
+		return nil, fmt.Errorf("field selector not supported yet")
+	}
+	st := s.GetStandardStorage()
+	obj, err := st.List(ctx, options)
+	if err != nil {
+		return nil, err
+	}
+	return obj.(*OIDCClientList), err
+}
+
+func (s *storageOIDCClient) GetOIDCClient(ctx context.Context, id string, options *metav1.GetOptions) (*OIDCClient, error) {
+	st := s.GetStandardStorage()
+	obj, err := st.Get(ctx, id, options)
+	if err != nil {
+		return nil, err
+	}
+	return obj.(*OIDCClient), nil
+}
+
+func (s *storageOIDCClient) CreateOIDCClient(ctx context.Context, object *OIDCClient) (*OIDCClient, error) {
+	st := s.GetStandardStorage()
+	obj, err := st.Create(ctx, object, nil, &metav1.CreateOptions{})
+	if err != nil {
+		return nil, err
+	}
+	return obj.(*OIDCClient), nil
+}
+
+func (s *storageOIDCClient) UpdateOIDCClient(ctx context.Context, object *OIDCClient) (*OIDCClient, error) {
+	st := s.GetStandardStorage()
+	obj, _, err := st.Update(ctx, object.Name, rest.DefaultUpdatedObjectInfo(object), nil, nil, false, &metav1.UpdateOptions{})
+	if err != nil {
+		return nil, err
+	}
+	return obj.(*OIDCClient), nil
+}
+
+func (s *storageOIDCClient) DeleteOIDCClient(ctx context.Context, id string) (bool, error) {
+	st := s.GetStandardStorage()
+	_, sync, err := st.Delete(ctx, id, nil, &metav1.DeleteOptions{})
+	return sync, err
+}
+
 // OwnedAccessKey Functions and Structs
 //
 // +k8s:deepcopy-gen=false
@@ -5285,6 +5459,14 @@ type ProjectMigrateVirtualClusterInstanceList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:"metadata,omitempty"`
 	Items           []ProjectMigrateVirtualClusterInstance `json:"items"`
+}
+
+// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
+
+type ProjectRunnersList struct {
+	metav1.TypeMeta `json:",inline"`
+	metav1.ListMeta `json:"metadata,omitempty"`
+	Items           []ProjectRunners `json:"items"`
 }
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object

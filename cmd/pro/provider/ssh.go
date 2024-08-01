@@ -57,7 +57,7 @@ func (cmd *SshCmd) Run(ctx context.Context, stdin io.Reader, stdout io.Writer, s
 		return fmt.Errorf("couldn't find workspace")
 	}
 
-	conn, err := DialWorkspace(baseClient, workspace, "ssh", OptionsFromEnv(storagev1.DevPodFlagsSsh))
+	conn, err := DialWorkspace(baseClient, workspace, "ssh", OptionsFromEnv(storagev1.DevPodFlagsSsh), cmd.Log)
 	if err != nil {
 		return err
 	}

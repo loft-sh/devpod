@@ -1,4 +1,4 @@
-package sshfx
+package filexfer
 
 // FileMode represents a file’s mode and permission bits.
 // The bits are defined according to POSIX standards,

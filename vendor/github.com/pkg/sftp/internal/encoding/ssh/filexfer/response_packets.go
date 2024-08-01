@@ -1,4 +1,4 @@
-package sshfx
+package filexfer
 
 import (
 	"fmt"
@@ -6,7 +6,7 @@ import (
 
 // StatusPacket defines the SSH_FXP_STATUS packet.
 //
-// Specified in https://filezilla-project.org/specs/draft-ietf-secsh-filexfer-02.txt#section-7
+// Specified in https://tools.ietf.org/html/draft-ietf-secsh-filexfer-02#section-7
 type StatusPacket struct {
 	StatusCode   Status
 	ErrorMessage string
@@ -19,7 +19,7 @@ func (p *StatusPacket) Error() string {
 		return "sftp: " + p.StatusCode.String()
 	}
 
-	return fmt.Sprintf("sftp: %s: %q", p.StatusCode, p.ErrorMessage)
+	return fmt.Sprintf("sftp: %q (%s)", p.ErrorMessage, p.StatusCode)
 }
 
 // Is returns true if target is a StatusPacket with the same StatusCode,
@@ -57,13 +57,21 @@ func (p *StatusPacket) MarshalPacket(reqid uint32, b []byte) (header, payload []
 // UnmarshalPacketBody unmarshals the packet body from the given Buffer.
 // It is assumed that the uint32(request-id) has already been consumed.
 func (p *StatusPacket) UnmarshalPacketBody(buf *Buffer) (err error) {
-	*p = StatusPacket{
-		StatusCode:   Status(buf.ConsumeUint32()),
-		ErrorMessage: buf.ConsumeString(),
-		LanguageTag:  buf.ConsumeString(),
+	statusCode, err := buf.ConsumeUint32()
+	if err != nil {
+		return err
+	}
+	p.StatusCode = Status(statusCode)
+
+	if p.ErrorMessage, err = buf.ConsumeString(); err != nil {
+		return err
 	}
 
-	return buf.Err
+	if p.LanguageTag, err = buf.ConsumeString(); err != nil {
+		return err
+	}
+
+	return nil
 }
 
 // HandlePacket defines the SSH_FXP_HANDLE packet.
@@ -93,11 +101,11 @@ func (p *HandlePacket) MarshalPacket(reqid uint32, b []byte) (header, payload []
 // UnmarshalPacketBody unmarshals the packet body from the given Buffer.
 // It is assumed that the uint32(request-id) has already been consumed.
 func (p *HandlePacket) UnmarshalPacketBody(buf *Buffer) (err error) {
-	*p = HandlePacket{
-		Handle: buf.ConsumeString(),
+	if p.Handle, err = buf.ConsumeString(); err != nil {
+		return err
 	}
 
-	return buf.Err
+	return nil
 }
 
 // DataPacket defines the SSH_FXP_DATA packet.
@@ -135,11 +143,18 @@ func (p *DataPacket) MarshalPacket(reqid uint32, b []byte) (header, payload []by
 //
 // This means this _does not_ alias any of the data buffer that is passed in.
 func (p *DataPacket) UnmarshalPacketBody(buf *Buffer) (err error) {
-	*p = DataPacket{
-		Data: buf.ConsumeByteSliceCopy(p.Data),
+	data, err := buf.ConsumeByteSlice()
+	if err != nil {
+		return err
 	}
 
-	return buf.Err
+	if len(p.Data) < len(data) {
+		p.Data = make([]byte, len(data))
+	}
+
+	n := copy(p.Data, data)
+	p.Data = p.Data[:n]
+	return nil
 }
 
 // NamePacket defines the SSH_FXP_NAME packet.
@@ -178,16 +193,14 @@ func (p *NamePacket) MarshalPacket(reqid uint32, b []byte) (header, payload []by
 // UnmarshalPacketBody unmarshals the packet body from the given Buffer.
 // It is assumed that the uint32(request-id) has already been consumed.
 func (p *NamePacket) UnmarshalPacketBody(buf *Buffer) (err error) {
-	count := buf.ConsumeCount()
-	if buf.Err != nil {
-		return buf.Err
+	count, err := buf.ConsumeUint32()
+	if err != nil {
+		return err
 	}
 
-	*p = NamePacket{
-		Entries: make([]*NameEntry, 0, count),
-	}
+	p.Entries = make([]*NameEntry, 0, count)
 
-	for i := 0; i < count; i++ {
+	for i := uint32(0); i < count; i++ {
 		var e NameEntry
 		if err := e.UnmarshalFrom(buf); err != nil {
 			return err
@@ -196,7 +209,7 @@ func (p *NamePacket) UnmarshalPacketBody(buf *Buffer) (err error) {
 		p.Entries = append(p.Entries, &e)
 	}
 
-	return buf.Err
+	return nil
 }
 
 // AttrsPacket defines the SSH_FXP_ATTRS packet.

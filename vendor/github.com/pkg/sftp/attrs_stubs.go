@@ -1,4 +1,3 @@
-//go:build plan9 || windows || android
 // +build plan9 windows android
 
 package sftp

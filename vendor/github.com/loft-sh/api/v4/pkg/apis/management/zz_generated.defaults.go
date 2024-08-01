@@ -15,6 +15,8 @@ import (
 func RegisterDefaults(scheme *runtime.Scheme) error {
 	scheme.AddTypeDefaultingFunc(&ProjectClusters{}, func(obj interface{}) { SetObjectDefaults_ProjectClusters(obj.(*ProjectClusters)) })
 	scheme.AddTypeDefaultingFunc(&ProjectClustersList{}, func(obj interface{}) { SetObjectDefaults_ProjectClustersList(obj.(*ProjectClustersList)) })
+	scheme.AddTypeDefaultingFunc(&ProjectRunners{}, func(obj interface{}) { SetObjectDefaults_ProjectRunners(obj.(*ProjectRunners)) })
+	scheme.AddTypeDefaultingFunc(&ProjectRunnersList{}, func(obj interface{}) { SetObjectDefaults_ProjectRunnersList(obj.(*ProjectRunnersList)) })
 	scheme.AddTypeDefaultingFunc(&Runner{}, func(obj interface{}) { SetObjectDefaults_Runner(obj.(*Runner)) })
 	scheme.AddTypeDefaultingFunc(&RunnerList{}, func(obj interface{}) { SetObjectDefaults_RunnerList(obj.(*RunnerList)) })
 	return nil
@@ -31,6 +33,20 @@ func SetObjectDefaults_ProjectClustersList(in *ProjectClustersList) {
 	for i := range in.Items {
 		a := &in.Items[i]
 		SetObjectDefaults_ProjectClusters(a)
+	}
+}
+
+func SetObjectDefaults_ProjectRunners(in *ProjectRunners) {
+	for i := range in.Runners {
+		a := &in.Runners[i]
+		SetObjectDefaults_Runner(a)
+	}
+}
+
+func SetObjectDefaults_ProjectRunnersList(in *ProjectRunnersList) {
+	for i := range in.Items {
+		a := &in.Items[i]
+		SetObjectDefaults_ProjectRunners(a)
 	}
 }
 

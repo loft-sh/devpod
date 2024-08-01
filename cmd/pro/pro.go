@@ -4,6 +4,7 @@ import (
 	"os"
 
 	"github.com/loft-sh/devpod/cmd/flags"
+	"github.com/loft-sh/devpod/cmd/pro/add"
 	proflags "github.com/loft-sh/devpod/cmd/pro/flags"
 	"github.com/loft-sh/devpod/cmd/pro/provider"
 	"github.com/loft-sh/devpod/cmd/pro/reset"
@@ -51,5 +52,6 @@ func NewProCmd(flags *flags.GlobalFlags, streamLogger *log.StreamLogger) *cobra.
 	proCmd.AddCommand(NewWakeupCmd(globalFlags))
 	proCmd.AddCommand(reset.NewResetCmd(globalFlags))
 	proCmd.AddCommand(provider.NewProProviderCmd(globalFlags))
+	proCmd.AddCommand(add.NewAddCmd(globalFlags))
 	return proCmd
 }

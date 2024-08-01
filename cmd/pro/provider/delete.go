@@ -57,7 +57,7 @@ func (cmd *DeleteCmd) Run(ctx context.Context, stdin io.Reader, stdout io.Writer
 		return fmt.Errorf("couldn't find workspace")
 	}
 
-	conn, err := DialWorkspace(baseClient, workspace, "delete", OptionsFromEnv(storagev1.DevPodFlagsDelete))
+	conn, err := DialWorkspace(baseClient, workspace, "delete", OptionsFromEnv(storagev1.DevPodFlagsDelete), cmd.Log)
 	if err != nil {
 		return err
 	}

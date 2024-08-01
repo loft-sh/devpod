@@ -170,7 +170,7 @@ func (cmd *UpCmd) up(ctx context.Context, workspace *managementv1.DevPodWorkspac
 		options.Add("debug", "true")
 	}
 
-	conn, err := DialWorkspace(client, workspace, "up", options)
+	conn, err := DialWorkspace(client, workspace, "up", options, cmd.Log)
 	if err != nil {
 		return err
 	}
@@ -268,6 +268,11 @@ func createWorkspace(ctx context.Context, baseClient client.Client, log log.Logg
 			return false, nil
 		}
 
+		if !isRunnerReady(workspace, storagev1.BuiltinRunnerName) {
+			log.Debugf("Runner is not ready yet, waiting until its ready", workspace.Name, workspace.Status.Phase)
+			return false, nil
+		}
+
 		log.Debugf("Workspace %s is ready", workspace.Name)
 		return true, nil
 	})
@@ -341,6 +346,19 @@ func isReady(workspace *managementv1.DevPodWorkspaceInstance) bool {
 	}
 
 	return workspace.Status.Phase == storagev1.InstanceReady
+}
+
+func isRunnerReady(workspace *managementv1.DevPodWorkspaceInstance, builtinRunnerName string) bool {
+	if workspace.Spec.RunnerRef.Runner == "" {
+		return true
+	}
+
+	if workspace.Spec.RunnerRef.Runner == builtinRunnerName {
+		return true
+	}
+
+	return workspace.GetAnnotations() != nil &&
+		workspace.GetAnnotations()[storagev1.DevPodWorkspaceRunnerEndpointAnnotation] != ""
 }
 
 func templateSynced(workspace *managementv1.DevPodWorkspaceInstance) bool {

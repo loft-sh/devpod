@@ -58,7 +58,7 @@ func (cmd *StopCmd) Run(ctx context.Context, stdin io.Reader, stdout io.Writer, 
 		return fmt.Errorf("couldn't find workspace")
 	}
 
-	conn, err := DialWorkspace(baseClient, workspace, "stop", OptionsFromEnv(storagev1.DevPodFlagsStop))
+	conn, err := DialWorkspace(baseClient, workspace, "stop", OptionsFromEnv(storagev1.DevPodFlagsStop), cmd.Log)
 	if err != nil {
 		return err
 	}

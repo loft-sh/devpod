@@ -78,11 +78,14 @@ export function OptionFormField({
           {...props}
           onChange={wrapFunction(props.onChange, refresh, !!subOptionsCommand)}
           placeholder={placeholder}>
-          {enumProp.map((val, i) => (
-            <option key={i} value={val}>
-              {val}
-            </option>
-          ))}
+          {enumProp.map(
+            (opt, i) =>
+              opt.value && (
+                <option key={i} value={opt.value}>
+                  {opt.displayName ?? opt.value}
+                </option>
+              )
+          )}
         </Select>
       )
     }

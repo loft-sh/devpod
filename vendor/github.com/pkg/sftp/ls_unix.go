@@ -1,4 +1,3 @@
-//go:build aix || darwin || dragonfly || freebsd || (!android && linux) || netbsd || openbsd || solaris || js
 // +build aix darwin dragonfly freebsd !android,linux netbsd openbsd solaris js
 
 package sftp

@@ -53,7 +53,7 @@ type defaultKeychain struct {
 
 var (
 	// DefaultKeychain implements Keychain by interpreting the docker config file.
-	DefaultKeychain = &defaultKeychain{}
+	DefaultKeychain = RefreshingKeychain(&defaultKeychain{}, 5*time.Minute)
 )
 
 const (

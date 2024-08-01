@@ -43,7 +43,7 @@ func (m *match) estBits(bitsPerByte int32) {
 	if m.rep < 0 {
 		ofc = ofCode(uint32(m.s-m.offset) + 3)
 	} else {
-		ofc = ofCode(uint32(m.rep) & 3)
+		ofc = ofCode(uint32(m.rep))
 	}
 	// Cost, excluding
 	ofTT, mlTT := fsePredefEnc[tableOffsets].ct.symbolTT[ofc], fsePredefEnc[tableMatchLengths].ct.symbolTT[mlc]
@@ -197,13 +197,12 @@ encodeLoop:
 
 		// Set m to a match at offset if it looks like that will improve compression.
 		improve := func(m *match, offset int32, s int32, first uint32, rep int32) {
-			delta := s - offset
-			if delta >= e.maxMatchOff || delta <= 0 || load3232(src, offset) != first {
+			if s-offset >= e.maxMatchOff || load3232(src, offset) != first {
 				return
 			}
 			if debugAsserts {
-				if offset >= s {
-					panic(fmt.Sprintf("offset: %d - s:%d - rep: %d - cur :%d - max: %d", offset, s, rep, e.cur, e.maxMatchOff))
+				if offset <= 0 {
+					panic(offset)
 				}
 				if !bytes.Equal(src[s:s+4], src[offset:offset+4]) {
 					panic(fmt.Sprintf("first match mismatch: %v != %v, first: %08x", src[s:s+4], src[offset:offset+4], first))
@@ -227,7 +226,7 @@ encodeLoop:
 				}
 			}
 			l := 4 + e.matchlen(s+4, offset+4, src)
-			if true {
+			if rep < 0 {
 				// Extend candidate match backwards as far as possible.
 				tMin := s - e.maxMatchOff
 				if tMin < 0 {
@@ -282,7 +281,6 @@ encodeLoop:
 		// Load next and check...
 		e.longTable[nextHashL] = prevEntry{offset: s + e.cur, prev: candidateL.offset}
 		e.table[nextHashS] = prevEntry{offset: s + e.cur, prev: candidateS.offset}
-		index0 := s + 1
 
 		// Look far ahead, unless we have a really long match already...
 		if best.length < goodEnough {
@@ -345,8 +343,8 @@ encodeLoop:
 		if best.rep > 0 {
 			var seq seq
 			seq.matchLen = uint32(best.length - zstdMinMatch)
-			if debugAsserts && s < nextEmit {
-				panic("s < nextEmit")
+			if debugAsserts && s <= nextEmit {
+				panic("s <= nextEmit")
 			}
 			addLiterals(&seq, best.s)
 
@@ -358,16 +356,19 @@ encodeLoop:
 			blk.sequences = append(blk.sequences, seq)
 
 			// Index old s + 1 -> s - 1
+			index0 := s + 1
 			s = best.s + best.length
-			nextEmit = s
 
-			// Index skipped...
-			end := s
-			if s > sLimit+4 {
-				end = sLimit + 4
+			nextEmit = s
+			if s >= sLimit {
+				if debugEncoder {
+					println("repeat ended", s, best.length)
+				}
+				break encodeLoop
 			}
+			// Index skipped...
 			off := index0 + e.cur
-			for index0 < end {
+			for index0 < s {
 				cv0 := load6432(src, index0)
 				h0 := hashLen(cv0, bestLongTableBits, bestLongLen)
 				h1 := hashLen(cv0, bestShortTableBits, bestShortLen)
@@ -376,7 +377,6 @@ encodeLoop:
 				off++
 				index0++
 			}
-
 			switch best.rep {
 			case 2, 4 | 1:
 				offset1, offset2 = offset2, offset1
@@ -385,17 +385,12 @@ encodeLoop:
 			case 4 | 3:
 				offset1, offset2, offset3 = offset1-1, offset1, offset2
 			}
-			if s >= sLimit {
-				if debugEncoder {
-					println("repeat ended", s, best.length)
-				}
-				break encodeLoop
-			}
 			continue
 		}
 
 		// A 4-byte match has been found. Update recent offsets.
 		// We'll later see if more than 4 bytes.
+		index0 := s + 1
 		s = best.s
 		t := best.offset
 		offset1, offset2, offset3 = s-t, offset1, offset2
@@ -423,25 +418,19 @@ encodeLoop:
 		}
 		blk.sequences = append(blk.sequences, seq)
 		nextEmit = s
-
-		// Index old s + 1 -> s - 1 or sLimit
-		end := s
-		if s > sLimit-4 {
-			end = sLimit - 4
+		if s >= sLimit {
+			break encodeLoop
 		}
 
-		off := index0 + e.cur
-		for index0 < end {
+		// Index old s + 1 -> s - 1
+		for index0 < s {
 			cv0 := load6432(src, index0)
 			h0 := hashLen(cv0, bestLongTableBits, bestLongLen)
 			h1 := hashLen(cv0, bestShortTableBits, bestShortLen)
+			off := index0 + e.cur
 			e.longTable[h0] = prevEntry{offset: off, prev: e.longTable[h0].offset}
 			e.table[h1] = prevEntry{offset: off, prev: e.table[h1].offset}
 			index0++
-			off++
-		}
-		if s >= sLimit {
-			break encodeLoop
 		}
 	}
 

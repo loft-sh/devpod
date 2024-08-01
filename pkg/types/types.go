@@ -156,3 +156,60 @@ func (f *StrBool) UnmarshalJSON(data []byte) error {
 	}
 	return ErrUnsupportedType
 }
+
+type OptionEnum struct {
+	Value       string `json:"value,omitempty"`
+	DisplayName string `json:"displayName,omitempty"`
+}
+
+type OptionEnumArray []OptionEnum
+
+func (e *OptionEnumArray) UnmarshalJSON(data []byte) error {
+	var jsonObj interface{}
+	err := json.Unmarshal(data, &jsonObj)
+	if err != nil {
+		return err
+	}
+	switch obj := jsonObj.(type) {
+	case []interface{}:
+		if len(obj) == 0 {
+			*e = OptionEnumArray{}
+			return nil
+		}
+		ret := make([]OptionEnum, 0, len(obj))
+		switch obj[0].(type) {
+		case string:
+			for _, v := range obj {
+				if s, ok := v.(string); ok {
+					ret = append(ret, OptionEnum{Value: s})
+				}
+			}
+		case map[string]interface{}:
+			for _, v := range obj {
+				m, ok := v.(map[string]interface{})
+				if !ok {
+					return ErrUnsupportedType
+				}
+				value := ""
+				if s, ok := m["value"].(string); ok {
+					value = s
+				}
+				displayName := ""
+				if s, ok := m["displayName"].(string); ok {
+					displayName = s
+				}
+				ret = append(ret, OptionEnum{
+					Value:       value,
+					DisplayName: displayName,
+				})
+			}
+		default:
+			return ErrUnsupportedType
+		}
+
+		*e = OptionEnumArray(ret)
+		return nil
+	}
+
+	return ErrUnsupportedType
+}

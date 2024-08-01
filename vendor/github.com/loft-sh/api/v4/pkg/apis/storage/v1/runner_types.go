@@ -12,6 +12,9 @@ var RunnerConditions = []agentstoragev1.ConditionType{
 
 const (
 	RunnerDeployed agentstoragev1.ConditionType = "Deployed"
+
+	// BuiltinRunnerName is the name for the control plane runner
+	BuiltinRunnerName = "local"
 )
 
 // +genclient
@@ -65,6 +68,10 @@ type RunnerSpec struct {
 	// +optional
 	NetworkPeerName string `json:"networkPeerName,omitempty"`
 
+	// Endpoint is the hostname used to connect directly to the runner
+	// +optional
+	Endpoint string `json:"endpoint,omitempty"`
+
 	// If ClusterRef is defined, Loft will schedule the runner on the given
 	// cluster.
 	// +optional
@@ -99,6 +106,10 @@ type RunnerClusterRef struct {
 	// PodTemplate holds additional options for the runner pod
 	// +optional
 	PodTemplate *RunnerPodTemplate `json:"podTemplate,omitempty"`
+
+	// ServiceTemplate holds additional options for the service
+	// +optional
+	ServiceTemplate *RunnerServiceTemplate `json:"serviceTemplate,omitempty"`
 }
 
 type RunnerPodTemplate struct {
@@ -187,6 +198,22 @@ type RunnerPersistentVolumeClaimTemplateSpec struct {
 	// storageSize is the size of the storage to reserve for the pvc
 	// +optional
 	StorageSize string `json:"storageSize,omitempty"`
+}
+
+type RunnerServiceTemplate struct {
+	// Metadata holds the template metadata
+	// +optional
+	Metadata TemplateMetadata `json:"metadata,omitempty"`
+
+	// Spec holds the template spec
+	// +optional
+	Spec RunnerServiceTemplateSpec `json:"spec,omitempty"`
+}
+
+type RunnerServiceTemplateSpec struct {
+	// type determines how the Service is exposed. Defaults to ClusterIP
+	// +optional
+	Type corev1.ServiceType `json:"type,omitempty"`
 }
 
 type RunnerStatus struct {

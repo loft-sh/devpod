@@ -43,7 +43,7 @@ func validateUserValue(optionName, userValue string, option *types.Option) error
 	if len(option.Enum) > 0 {
 		found := false
 		for _, e := range option.Enum {
-			if userValue == e {
+			if userValue == e.Value {
 				found = true
 				break
 			}

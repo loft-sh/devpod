@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"net/url"
-	"path/filepath"
 	"strings"
 
 	proflags "github.com/loft-sh/devpod/cmd/pro/flags"
@@ -12,6 +11,7 @@ import (
 	"github.com/loft-sh/devpod/pkg/config"
 	"github.com/loft-sh/devpod/pkg/loft"
 	"github.com/loft-sh/devpod/pkg/loft/client"
+	"github.com/loft-sh/devpod/pkg/pro"
 	"github.com/loft-sh/devpod/pkg/provider"
 	"github.com/loft-sh/devpod/pkg/types"
 	"github.com/loft-sh/devpod/pkg/workspace"
@@ -232,7 +232,7 @@ func (cmd *LoginCmd) resolveProviderSource(url string) error {
 }
 
 func login(ctx context.Context, devPodConfig *config.Config, url string, providerName string, accessKey string, skipBrowserLogin, forceBrowser bool, log log.Logger) error {
-	configPath, err := LoftConfigPath(devPodConfig, providerName)
+	configPath, err := pro.LoftConfigPath(devPodConfig, providerName)
 	if err != nil {
 		return err
 	}
@@ -266,35 +266,10 @@ func login(ctx context.Context, devPodConfig *config.Config, url string, provide
 	return nil
 }
 
-func LoftConfigPath(devPodConfig *config.Config, providerName string) (string, error) {
-	providerDir, err := provider.GetProviderDir(devPodConfig.DefaultContext, providerName)
-	if err != nil {
-		return "", err
-	}
-
-	configPath := filepath.Join(providerDir, "loft-config.json")
-
-	return configPath, nil
-}
-
 var fallbackProvider = `name: devpod-pro
 version: v0.0.0
 icon: https://devpod.sh/assets/devpod.svg
 description: DevPod Pro
-optionGroups:
-  - name: Main Options
-    defaultVisible: true
-    options:
-      - LOFT_PROJECT
-      - LOFT_TEMPLATE
-      - LOFT_TEMPLATE_VERSION
-  - name: Template Options
-    defaultVisible: true
-    options:
-      - "TEMPLATE_OPTION_*"
-  - name: Other Options
-    options:
-      - LOFT_RUNNER
 options:
   LOFT_CONFIG:
     global: true

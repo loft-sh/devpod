@@ -12,8 +12,8 @@ import (
 	"github.com/loft-sh/devpod/cmd/pro/provider"
 	"github.com/loft-sh/devpod/pkg/config"
 	"github.com/loft-sh/devpod/pkg/loft"
-	"github.com/loft-sh/devpod/pkg/loft/client"
 	"github.com/loft-sh/devpod/pkg/loft/project"
+	"github.com/loft-sh/devpod/pkg/pro"
 	"github.com/loft-sh/log"
 	"github.com/spf13/cobra"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -66,16 +66,8 @@ func (cmd *SleepCmd) Run(ctx context.Context, args []string) error {
 	if err != nil {
 		return err
 	}
-	providerConfig, err := resolveProInstance(devPodConfig, cmd.Host, cmd.Log)
-	if err != nil {
-		return fmt.Errorf("resolve host \"%s\": %w", cmd.Host, err)
-	}
-	configPath, err := LoftConfigPath(devPodConfig, providerConfig.Name)
-	if err != nil {
-		return fmt.Errorf("loft config path: %w", err)
-	}
 
-	baseClient, err := client.InitClientFromPath(ctx, configPath)
+	baseClient, err := pro.InitClientFromHost(ctx, devPodConfig, cmd.Host, cmd.Log)
 	if err != nil {
 		return err
 	}

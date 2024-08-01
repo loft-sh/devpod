@@ -7,8 +7,7 @@ if [[ -z "${BUILD_PLATFORMS}" ]]; then
 fi
 
 for os in $BUILD_PLATFORMS; do
-    # FIXME: for arch in amd64 arm64; do
-    for arch in arm64; do
+    for arch in amd64 arm64; do
         # don't build for arm on windows
         if [[ "$os" == "windows" && "$arch" == "arm64" ]]; then
             continue

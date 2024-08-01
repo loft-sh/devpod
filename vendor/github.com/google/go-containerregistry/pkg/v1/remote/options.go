@@ -96,8 +96,7 @@ var defaultRetryStatusCodes = []int{
 	http.StatusBadGateway,
 	http.StatusServiceUnavailable,
 	http.StatusGatewayTimeout,
-	499, // nginx-specific, client closed request
-	522, // Cloudflare-specific, connection timeout
+	499,
 }
 
 const (
