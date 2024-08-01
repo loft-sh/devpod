@@ -13,6 +13,7 @@ import (
 	"github.com/loft-sh/devpod/pkg/loft"
 	"github.com/loft-sh/devpod/pkg/loft/client"
 	"github.com/loft-sh/devpod/pkg/loft/kube"
+	"github.com/loft-sh/devpod/pkg/types"
 	"github.com/loft-sh/log"
 	"github.com/spf13/cobra"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -76,14 +77,14 @@ func (cmd *TemplateOptionsCmd) Run(ctx context.Context) error {
 	}
 
 	// is template versioned?
-	options := map[string]*Option{}
+	options := map[string]*types.Option{}
 	if len(template.Spec.Versions) > 0 {
-		versions := []string{"latest"}
+		versions := []types.OptionEnum{{Value: "latest", DisplayName: "Latest"}}
 		for _, version := range template.Spec.Versions {
-			versions = append(versions, version.Version)
+			versions = append(versions, types.OptionEnum{Value: version.Version})
 		}
 
-		options[loft.TemplateVersionOptionEnv] = &Option{
+		options[loft.TemplateVersionOptionEnv] = &types.Option{
 			DisplayName:       "Template Version",
 			Description:       "The template version. If empty will use the latest version",
 			Required:          true,
@@ -103,19 +104,23 @@ func (cmd *TemplateOptionsCmd) Run(ctx context.Context) error {
 
 var replaceRegEx = regexp.MustCompile("[^a-zA-Z0-9]+")
 
-func parametersToOptions(parameters []storagev1.AppParameter) map[string]*Option {
-	options := map[string]*Option{}
+func parametersToOptions(parameters []storagev1.AppParameter) map[string]*types.Option {
+	options := map[string]*types.Option{}
 	for _, parameter := range parameters {
 		optionName := VariableToEnvironmentVariable(parameter.Variable)
 		displayName := parameter.Label
 		if displayName == "" {
 			displayName = optionName
 		}
-		options[optionName] = &Option{
+		paramOpts := []types.OptionEnum{}
+		for _, opt := range parameter.Options {
+			paramOpts = append(paramOpts, types.OptionEnum{Value: opt})
+		}
+		options[optionName] = &types.Option{
 			DisplayName: displayName,
 			Description: parameter.Description,
 			Required:    parameter.Required,
-			Enum:        parameter.Options,
+			Enum:        paramOpts,
 			Default:     parameter.DefaultValue,
 			Mutable:     true,
 		}

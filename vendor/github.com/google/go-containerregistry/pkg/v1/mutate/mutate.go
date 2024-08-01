@@ -402,9 +402,7 @@ func Time(img v1.Image, t time.Time) (v1.Image, error) {
 			historyIdx++
 			break
 		}
-		if addendumIdx < len(addendums) {
-			addendums[addendumIdx].Layer = newLayer
-		}
+		addendums[addendumIdx].Layer = newLayer
 	}
 
 	// add all leftover History entries

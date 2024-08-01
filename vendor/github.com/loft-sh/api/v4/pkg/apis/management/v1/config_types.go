@@ -35,6 +35,7 @@ type ConfigStatus struct {
 	// +optional
 	Authentication Authentication `json:"auth,omitempty"`
 
+	// DEPRECATED: Use OIDC Client secrets instead.
 	// OIDC holds oidc provider relevant information
 	// +optional
 	OIDC *OIDC `json:"oidc,omitempty"`
@@ -288,23 +289,7 @@ type OIDC struct {
 	WildcardRedirect bool `json:"wildcardRedirect,omitempty"`
 
 	// The clients that are allowed to request loft tokens
-	Clients []OIDCClient `json:"clients,omitempty"`
-}
-
-// OIDCClient holds information about a client
-type OIDCClient struct {
-	// The client name
-	Name string `json:"name,omitempty"`
-
-	// The client id of the client
-	ClientID string `json:"clientId,omitempty"`
-
-	// The client secret of the client
-	ClientSecret string `json:"clientSecret,omitempty"`
-
-	// A registered set of redirect URIs. When redirecting from dex to the client, the URI
-	// requested to redirect to MUST match one of these values, unless the client is "public".
-	RedirectURIs []string `json:"redirectURIs"`
+	Clients []OIDCClientSpec `json:"clients,omitempty"`
 }
 
 // Authentication holds authentication relevant information

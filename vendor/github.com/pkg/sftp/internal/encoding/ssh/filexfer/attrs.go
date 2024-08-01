@@ -1,4 +1,4 @@
-package sshfx
+package filexfer
 
 // Attributes related flags.
 const (
@@ -12,7 +12,7 @@ const (
 
 // Attributes defines the file attributes type defined in draft-ietf-secsh-filexfer-02
 //
-// Defined in: https://filezilla-project.org/specs/draft-ietf-secsh-filexfer-02.txt#section-5
+// Defined in: https://tools.ietf.org/html/draft-ietf-secsh-filexfer-02#section-5
 type Attributes struct {
 	Flags uint32
 
@@ -116,32 +116,32 @@ func (a *Attributes) Len() int {
 }
 
 // MarshalInto marshals e onto the end of the given Buffer.
-func (a *Attributes) MarshalInto(buf *Buffer) {
-	buf.AppendUint32(a.Flags)
+func (a *Attributes) MarshalInto(b *Buffer) {
+	b.AppendUint32(a.Flags)
 
 	if a.Flags&AttrSize != 0 {
-		buf.AppendUint64(a.Size)
+		b.AppendUint64(a.Size)
 	}
 
 	if a.Flags&AttrUIDGID != 0 {
-		buf.AppendUint32(a.UID)
-		buf.AppendUint32(a.GID)
+		b.AppendUint32(a.UID)
+		b.AppendUint32(a.GID)
 	}
 
 	if a.Flags&AttrPermissions != 0 {
-		buf.AppendUint32(uint32(a.Permissions))
+		b.AppendUint32(uint32(a.Permissions))
 	}
 
 	if a.Flags&AttrACModTime != 0 {
-		buf.AppendUint32(a.ATime)
-		buf.AppendUint32(a.MTime)
+		b.AppendUint32(a.ATime)
+		b.AppendUint32(a.MTime)
 	}
 
 	if a.Flags&AttrExtended != 0 {
-		buf.AppendUint32(uint32(len(a.ExtendedAttributes)))
+		b.AppendUint32(uint32(len(a.ExtendedAttributes)))
 
 		for _, ext := range a.ExtendedAttributes {
-			ext.MarshalInto(buf)
+			ext.MarshalInto(b)
 		}
 	}
 }
@@ -156,51 +156,74 @@ func (a *Attributes) MarshalBinary() ([]byte, error) {
 // UnmarshalFrom unmarshals an Attributes from the given Buffer into e.
 //
 // NOTE: The values of fields not covered in the a.Flags are explicitly undefined.
-func (a *Attributes) UnmarshalFrom(buf *Buffer) (err error) {
-	flags := buf.ConsumeUint32()
+func (a *Attributes) UnmarshalFrom(b *Buffer) (err error) {
+	flags, err := b.ConsumeUint32()
+	if err != nil {
+		return err
+	}
 
-	return a.XXX_UnmarshalByFlags(flags, buf)
+	return a.XXX_UnmarshalByFlags(flags, b)
 }
 
 // XXX_UnmarshalByFlags uses the pre-existing a.Flags field to determine which fields to decode.
 // DO NOT USE THIS: it is an anti-corruption function to implement existing internal usage in pkg/sftp.
 // This function is not a part of any compatibility promise.
-func (a *Attributes) XXX_UnmarshalByFlags(flags uint32, buf *Buffer) (err error) {
+func (a *Attributes) XXX_UnmarshalByFlags(flags uint32, b *Buffer) (err error) {
 	a.Flags = flags
 
 	// Short-circuit dummy attributes.
 	if a.Flags == 0 {
-		return buf.Err
+		return nil
 	}
 
 	if a.Flags&AttrSize != 0 {
-		a.Size = buf.ConsumeUint64()
-	}
-
-	if a.Flags&AttrUIDGID != 0 {
-		a.UID = buf.ConsumeUint32()
-		a.GID = buf.ConsumeUint32()
-	}
-
-	if a.Flags&AttrPermissions != 0 {
-		a.Permissions = FileMode(buf.ConsumeUint32())
-	}
-
-	if a.Flags&AttrACModTime != 0 {
-		a.ATime = buf.ConsumeUint32()
-		a.MTime = buf.ConsumeUint32()
-	}
-
-	if a.Flags&AttrExtended != 0 {
-		count := buf.ConsumeCount()
-
-		a.ExtendedAttributes = make([]ExtendedAttribute, count)
-		for i := range a.ExtendedAttributes {
-			a.ExtendedAttributes[i].UnmarshalFrom(buf)
+		if a.Size, err = b.ConsumeUint64(); err != nil {
+			return err
 		}
 	}
 
-	return buf.Err
+	if a.Flags&AttrUIDGID != 0 {
+		if a.UID, err = b.ConsumeUint32(); err != nil {
+			return err
+		}
+
+		if a.GID, err = b.ConsumeUint32(); err != nil {
+			return err
+		}
+	}
+
+	if a.Flags&AttrPermissions != 0 {
+		m, err := b.ConsumeUint32()
+		if err != nil {
+			return err
+		}
+
+		a.Permissions = FileMode(m)
+	}
+
+	if a.Flags&AttrACModTime != 0 {
+		if a.ATime, err = b.ConsumeUint32(); err != nil {
+			return err
+		}
+
+		if a.MTime, err = b.ConsumeUint32(); err != nil {
+			return err
+		}
+	}
+
+	if a.Flags&AttrExtended != 0 {
+		count, err := b.ConsumeUint32()
+		if err != nil {
+			return err
+		}
+
+		a.ExtendedAttributes = make([]ExtendedAttribute, count)
+		for i := range a.ExtendedAttributes {
+			a.ExtendedAttributes[i].UnmarshalFrom(b)
+		}
+	}
+
+	return nil
 }
 
 // UnmarshalBinary decodes the binary encoding of Attributes into e.
@@ -210,7 +233,7 @@ func (a *Attributes) UnmarshalBinary(data []byte) error {
 
 // ExtendedAttribute defines the extended file attribute type defined in draft-ietf-secsh-filexfer-02
 //
-// Defined in: https://filezilla-project.org/specs/draft-ietf-secsh-filexfer-02.txt#section-5
+// Defined in: https://tools.ietf.org/html/draft-ietf-secsh-filexfer-02#section-5
 type ExtendedAttribute struct {
 	Type string
 	Data string
@@ -222,9 +245,9 @@ func (e *ExtendedAttribute) Len() int {
 }
 
 // MarshalInto marshals e onto the end of the given Buffer.
-func (e *ExtendedAttribute) MarshalInto(buf *Buffer) {
-	buf.AppendString(e.Type)
-	buf.AppendString(e.Data)
+func (e *ExtendedAttribute) MarshalInto(b *Buffer) {
+	b.AppendString(e.Type)
+	b.AppendString(e.Data)
 }
 
 // MarshalBinary returns e as the binary encoding of e.
@@ -235,13 +258,16 @@ func (e *ExtendedAttribute) MarshalBinary() ([]byte, error) {
 }
 
 // UnmarshalFrom unmarshals an ExtendedAattribute from the given Buffer into e.
-func (e *ExtendedAttribute) UnmarshalFrom(buf *Buffer) (err error) {
-	*e = ExtendedAttribute{
-		Type: buf.ConsumeString(),
-		Data: buf.ConsumeString(),
+func (e *ExtendedAttribute) UnmarshalFrom(b *Buffer) (err error) {
+	if e.Type, err = b.ConsumeString(); err != nil {
+		return err
 	}
 
-	return buf.Err
+	if e.Data, err = b.ConsumeString(); err != nil {
+		return err
+	}
+
+	return nil
 }
 
 // UnmarshalBinary decodes the binary encoding of ExtendedAttribute into e.
@@ -264,11 +290,11 @@ func (e *NameEntry) Len() int {
 }
 
 // MarshalInto marshals e onto the end of the given Buffer.
-func (e *NameEntry) MarshalInto(buf *Buffer) {
-	buf.AppendString(e.Filename)
-	buf.AppendString(e.Longname)
+func (e *NameEntry) MarshalInto(b *Buffer) {
+	b.AppendString(e.Filename)
+	b.AppendString(e.Longname)
 
-	e.Attrs.MarshalInto(buf)
+	e.Attrs.MarshalInto(b)
 }
 
 // MarshalBinary returns e as the binary encoding of e.
@@ -281,13 +307,16 @@ func (e *NameEntry) MarshalBinary() ([]byte, error) {
 // UnmarshalFrom unmarshals an NameEntry from the given Buffer into e.
 //
 // NOTE: The values of fields not covered in the a.Flags are explicitly undefined.
-func (e *NameEntry) UnmarshalFrom(buf *Buffer) (err error) {
-	*e = NameEntry{
-		Filename: buf.ConsumeString(),
-		Longname: buf.ConsumeString(),
+func (e *NameEntry) UnmarshalFrom(b *Buffer) (err error) {
+	if e.Filename, err = b.ConsumeString(); err != nil {
+		return err
 	}
 
-	return e.Attrs.UnmarshalFrom(buf)
+	if e.Longname, err = b.ConsumeString(); err != nil {
+		return err
+	}
+
+	return e.Attrs.UnmarshalFrom(b)
 }
 
 // UnmarshalBinary decodes the binary encoding of NameEntry into e.

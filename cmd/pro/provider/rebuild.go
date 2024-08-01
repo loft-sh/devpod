@@ -70,7 +70,7 @@ func (cmd *RebuildCmd) Run(ctx context.Context, args []string) error {
 		return err
 	}
 	values := url.Values{"options": []string{string(rawOpts)}, "cliMode": []string{"true"}}
-	conn, err := DialWorkspace(baseClient, workspace, "up", values)
+	conn, err := DialWorkspace(baseClient, workspace, "up", values, cmd.Log)
 	if err != nil {
 		return err
 	}

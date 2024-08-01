@@ -70,7 +70,7 @@ func (cmd *StatusCmd) Run(ctx context.Context, stdin io.Reader, stdout io.Writer
 		return nil
 	}
 
-	conn, err := DialWorkspace(baseClient, workspace, "getstatus", OptionsFromEnv(storagev1.DevPodFlagsStatus))
+	conn, err := DialWorkspace(baseClient, workspace, "getstatus", OptionsFromEnv(storagev1.DevPodFlagsStatus), cmd.Log)
 	if err != nil {
 		return err
 	}

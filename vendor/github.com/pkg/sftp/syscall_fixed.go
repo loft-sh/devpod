@@ -1,4 +1,3 @@
-//go:build plan9 || windows || (js && wasm)
 // +build plan9 windows js,wasm
 
 // Go defines S_IFMT on windows, plan9 and js/wasm as 0x1f000 instead of

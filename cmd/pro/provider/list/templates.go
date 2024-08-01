@@ -1,14 +1,16 @@
 package list
 
 import (
+	"cmp"
 	"context"
 	"fmt"
 	"os"
-	"sort"
+	"slices"
 
 	"github.com/loft-sh/devpod/cmd/pro/flags"
 	"github.com/loft-sh/devpod/pkg/loft"
 	"github.com/loft-sh/devpod/pkg/loft/client"
+	"github.com/loft-sh/devpod/pkg/types"
 	"github.com/loft-sh/log"
 	"github.com/spf13/cobra"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -68,11 +70,16 @@ func (cmd *TemplatesCmd) Run(ctx context.Context) error {
 	}
 
 	// collect templates
-	templates := []string{}
+	templates := []types.OptionEnum{}
 	for _, template := range templateList.DevPodWorkspaceTemplates {
-		templates = append(templates, template.Name)
+		templates = append(templates, types.OptionEnum{
+			Value:       template.Name,
+			DisplayName: loft.DisplayName(template.Name, template.Spec.DisplayName),
+		})
 	}
-	sort.Strings(templates)
+	slices.SortFunc(templates, func(a types.OptionEnum, b types.OptionEnum) int {
+		return cmp.Compare(a.Value, b.Value)
+	})
 
 	runnerList, err := managementClient.Loft().ManagementV1().Projects().ListClusters(ctx, projectName, metav1.GetOptions{})
 	if err != nil {
@@ -82,18 +89,25 @@ func (cmd *TemplatesCmd) Run(ctx context.Context) error {
 	}
 
 	// collect runners
-	runners := []string{}
+	runners := []types.OptionEnum{}
 	for _, runner := range runnerList.Runners {
-		runners = append(runners, runner.Name)
+		runners = append(runners, types.OptionEnum{
+			Value:       runner.Name,
+			DisplayName: loft.DisplayName(runner.Name, runner.Spec.DisplayName),
+		})
 	}
-	sort.Strings(runners)
+	slices.SortFunc(runners, func(a types.OptionEnum, b types.OptionEnum) int {
+		return cmp.Compare(a.Value, b.Value)
+	})
 
 	return printOptions(&OptionsFormat{
-		Options: map[string]*Option{
+		Options: map[string]*types.Option{
 			loft.RunnerEnv: {
 				DisplayName: "Runner",
-				Description: "The DevPod.Pro runner to use for a new workspace.",
+				Description: "The DevPod Pro runner to use for a new workspace.",
 				Enum:        runners,
+				Required:    true,
+				Mutable:     false,
 			},
 			loft.TemplateOptionEnv: {
 				DisplayName:       "Template",

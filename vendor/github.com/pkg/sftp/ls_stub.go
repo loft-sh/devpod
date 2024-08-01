@@ -1,4 +1,3 @@
-//go:build windows || android
 // +build windows android
 
 package sftp

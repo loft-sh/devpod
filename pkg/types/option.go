@@ -26,7 +26,7 @@ type Option struct {
 	Suggestions []string `json:"suggestions,omitempty"`
 
 	// Allowed values for this option.
-	Enum []string `json:"enum,omitempty"`
+	Enum OptionEnumArray `json:"enum,omitempty"`
 
 	// Hidden specifies if the option should be hidden
 	Hidden bool `json:"hidden,omitempty"`

@@ -10,8 +10,8 @@ import (
 	"github.com/loft-sh/devpod/cmd/pro/flags"
 	"github.com/loft-sh/devpod/cmd/pro/provider"
 	"github.com/loft-sh/devpod/pkg/config"
-	"github.com/loft-sh/devpod/pkg/loft/client"
 	"github.com/loft-sh/devpod/pkg/loft/remotecommand"
+	"github.com/loft-sh/devpod/pkg/pro"
 	"github.com/loft-sh/log"
 	"github.com/spf13/cobra"
 )
@@ -61,18 +61,10 @@ func (cmd *RebuildCmd) Run(ctx context.Context, args []string) error {
 	if err != nil {
 		return err
 	}
-	providerConfig, err := resolveProInstance(devPodConfig, cmd.Host, cmd.Log)
+
+	baseClient, err := pro.InitClientFromHost(ctx, devPodConfig, cmd.Host, cmd.Log)
 	if err != nil {
 		return fmt.Errorf("resolve host \"%s\": %w", cmd.Host, err)
-	}
-	configPath, err := LoftConfigPath(devPodConfig, providerConfig.Name)
-	if err != nil {
-		return fmt.Errorf("loft config path: %w", err)
-	}
-
-	baseClient, err := client.InitClientFromPath(ctx, configPath)
-	if err != nil {
-		return err
 	}
 
 	workspace, err := provider.FindWorkspaceByName(ctx, baseClient, targetWorkspace, cmd.Project)
@@ -88,7 +80,7 @@ func (cmd *RebuildCmd) Run(ctx context.Context, args []string) error {
 		return err
 	}
 	values := url.Values{"options": []string{string(rawOpts)}, "cliMode": []string{"true"}}
-	conn, err := provider.DialWorkspace(baseClient, workspace, "up", values)
+	conn, err := provider.DialWorkspace(baseClient, workspace, "up", values, cmd.Log)
 	if err != nil {
 		return err
 	}

@@ -32,12 +32,6 @@ import (
 	"github.com/google/go-containerregistry/pkg/v1/types"
 )
 
-const (
-	kib           = 1024
-	mib           = 1024 * kib
-	manifestLimit = 100 * mib
-)
-
 // fetcher implements methods for reading from a registry.
 type fetcher struct {
 	target resource
@@ -136,7 +130,7 @@ func (f *fetcher) fetchManifest(ctx context.Context, ref name.Reference, accepta
 		return nil, nil, err
 	}
 
-	manifest, err := io.ReadAll(io.LimitReader(resp.Body, manifestLimit))
+	manifest, err := io.ReadAll(resp.Body)
 	if err != nil {
 		return nil, nil, err
 	}

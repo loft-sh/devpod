@@ -1,15 +1,17 @@
 package list
 
 import (
+	"cmp"
 	"context"
 	"encoding/json"
 	"fmt"
 	"os"
-	"sort"
+	"slices"
 
 	"github.com/loft-sh/devpod/cmd/pro/flags"
 	"github.com/loft-sh/devpod/pkg/loft"
 	"github.com/loft-sh/devpod/pkg/loft/client"
+	"github.com/loft-sh/devpod/pkg/types"
 	"github.com/loft-sh/log"
 	"github.com/spf13/cobra"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -60,27 +62,32 @@ func (cmd *ProjectsCmd) Run(ctx context.Context) error {
 	if err != nil {
 		return fmt.Errorf("list projects: %w", err)
 	} else if len(projectList.Items) == 0 {
-		return fmt.Errorf("you don't have access to any projects within DevPod.Pro, please make sure you have at least access to 1 project")
+		return fmt.Errorf("you don't have access to any projects within DevPod Pro, please make sure you have at least access to 1 project")
 	}
 
-	enum := []string{}
+	enum := []types.OptionEnum{}
 	for _, project := range projectList.Items {
 		// Filter out projects that don't have allowed runners
 		if project.Spec.AllowedRunners == nil || len(project.Spec.AllowedRunners) == 0 {
 			continue
 		}
-		enum = append(enum, project.Name)
+		enum = append(enum, types.OptionEnum{
+			Value:       project.Name,
+			DisplayName: loft.DisplayName(project.Name, project.Spec.DisplayName),
+		})
 	}
-	sort.Strings(enum)
+	slices.SortFunc(enum, func(a types.OptionEnum, b types.OptionEnum) int {
+		return cmp.Compare(a.Value, b.Value)
+	})
 
 	return printOptions(&OptionsFormat{
-		Options: map[string]*Option{
+		Options: map[string]*types.Option{
 			loft.ProjectEnv: {
 				DisplayName:       "Project",
 				Description:       "The DevPod Pro project to use to create a new workspace in.",
 				Required:          true,
 				Enum:              enum,
-				Default:           enum[0],
+				Default:           enum[0].Value,
 				SubOptionsCommand: fmt.Sprintf("'%s' pro provider list templates", executable),
 			},
 		},
@@ -99,31 +106,5 @@ func printOptions(options *OptionsFormat) error {
 
 type OptionsFormat struct {
 	// Options holds the provider options
-	Options map[string]*Option `json:"options,omitempty"`
-}
-
-type Option struct {
-	// DisplayName of the option, preferred over the option name by a supporting tool.
-	DisplayName string `json:"displayName,omitempty"`
-
-	// A description of the option displayed to the user by a supporting tool.
-	Description string `json:"description,omitempty"`
-
-	// If required is true and the user doesn't supply a value, devpod will ask the user
-	Required bool `json:"required,omitempty"`
-
-	// Suggestions are suggestions to show in the DevPod UI for this option
-	Suggestions []string `json:"suggestions,omitempty"`
-
-	// Allowed values for this option.
-	Enum []string `json:"enum,omitempty"`
-
-	// Default value if the user omits this option from their configuration.
-	Default string `json:"default,omitempty"`
-
-	// SubOptionsCommand is the command to run to fetch sub options
-	SubOptionsCommand string `json:"subOptionsCommand,omitempty"`
-
-	// Mutable specifies if an option can be changed on the workspace or machine after creating it
-	Mutable bool `json:"mutable,omitempty"`
+	Options map[string]*types.Option `json:"options,omitempty"`
 }

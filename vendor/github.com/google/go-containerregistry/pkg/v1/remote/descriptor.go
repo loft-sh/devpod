@@ -16,7 +16,6 @@ package remote
 
 import (
 	"context"
-	"errors"
 	"fmt"
 
 	"github.com/google/go-containerregistry/pkg/logs"
@@ -34,11 +33,20 @@ var allManifestMediaTypes = append(append([]types.MediaType{
 // ErrSchema1 indicates that we received a schema1 manifest from the registry.
 // This library doesn't have plans to support this legacy image format:
 // https://github.com/google/go-containerregistry/issues/377
-var ErrSchema1 = errors.New("see https://github.com/google/go-containerregistry/issues/377")
+type ErrSchema1 struct {
+	schema string
+}
 
 // newErrSchema1 returns an ErrSchema1 with the unexpected MediaType.
 func newErrSchema1(schema types.MediaType) error {
-	return fmt.Errorf("unsupported MediaType: %q, %w", schema, ErrSchema1)
+	return &ErrSchema1{
+		schema: string(schema),
+	}
+}
+
+// Error implements error.
+func (e *ErrSchema1) Error() string {
+	return fmt.Sprintf("unsupported MediaType: %q, see https://github.com/google/go-containerregistry/issues/377", e.schema)
 }
 
 // Descriptor provides access to metadata about remote artifact and accessors

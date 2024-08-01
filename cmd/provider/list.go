@@ -95,6 +95,12 @@ func (cmd *ListCmd) Run(ctx context.Context) error {
 	} else if cmd.Output == "json" {
 		retMap := map[string]ProviderWithDefault{}
 		for k, entry := range providers {
+			if cmd.Used && configuredProviders[entry.Config.Name] == nil {
+				continue
+			}
+
+			srcOptions := mergeDynamicOptions(entry.Config.Options, configuredProviders[entry.Config.Name].DynamicOptions)
+			entry.Config.Options = srcOptions
 			retMap[k] = ProviderWithDefault{
 				ProviderWithOptions: *entry,
 				Default:             devPodConfig.Current().DefaultProvider == entry.Config.Name,

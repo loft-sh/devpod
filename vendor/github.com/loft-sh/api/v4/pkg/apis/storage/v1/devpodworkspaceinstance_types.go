@@ -24,7 +24,7 @@ var (
 	DevPodWorkspaceSourceAnnotation = "loft.sh/workspace-source"
 
 	// DevPodWorkspaceRunnerNetworkPeerAnnotation holds the workspace runner network peer name of the devpod workspace
-	DevPodWorkspaceRunnerNetworkPeerAnnotation = "loft.sh/runner-network-peer-name"
+	DevPodWorkspaceRunnerEndpointAnnotation = "loft.sh/runner-endpoint"
 )
 
 var (

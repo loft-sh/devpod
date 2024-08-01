@@ -30,6 +30,7 @@ type ManagementV1Interface interface {
 	LicensesGetter
 	LicenseTokensGetter
 	LoftUpgradesGetter
+	OIDCClientsGetter
 	OwnedAccessKeysGetter
 	ProjectsGetter
 	ProjectSecretsGetter
@@ -126,6 +127,10 @@ func (c *ManagementV1Client) LicenseTokens() LicenseTokenInterface {
 
 func (c *ManagementV1Client) LoftUpgrades() LoftUpgradeInterface {
 	return newLoftUpgrades(c)
+}
+
+func (c *ManagementV1Client) OIDCClients() OIDCClientInterface {
+	return newOIDCClients(c)
 }
 
 func (c *ManagementV1Client) OwnedAccessKeys() OwnedAccessKeyInterface {

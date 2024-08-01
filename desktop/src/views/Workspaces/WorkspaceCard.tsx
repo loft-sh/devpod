@@ -36,6 +36,7 @@ import { useQuery } from "@tanstack/react-query"
 import dayjs from "dayjs"
 import { useCallback, useId, useMemo, useRef, useState } from "react"
 import { HiClock, HiOutlineCode, HiShare } from "react-icons/hi"
+import { HiServerStack } from "react-icons/hi2"
 import { useNavigate } from "react-router"
 import { client } from "../../client"
 import { IconTag, IDEIcon } from "../../components"
@@ -400,6 +401,8 @@ function WorkspaceCardHeader({
       ? getIDEName({ name: ideName }, idesQuery.data)
       : getIDEName(ide, idesQuery.data)
 
+  const maybeRunnerName = getRunnerName(workspace)
+
   return (
     <CardHeader overflow="hidden" w="full">
       <VStack align="start" spacing={0}>
@@ -475,6 +478,13 @@ function WorkspaceCardHeader({
           label={dayjs(new Date(lastUsed)).fromNow()}
           infoText={`Last used ${dayjs(new Date(lastUsed)).fromNow()}`}
         />
+        {maybeRunnerName && (
+          <IconTag
+            icon={<Icon as={HiServerStack} />}
+            label={maybeRunnerName}
+            infoText={`Running on ${maybeRunnerName}`}
+          />
+        )}
       </HStack>
     </CardHeader>
   )
@@ -711,4 +721,14 @@ function useShareWorkspace(
     isEnabled: workspace !== undefined && proInstance !== undefined,
     onClick: handleShareClicked,
   }
+}
+
+function getRunnerName(workspace: TWorkspace): string | undefined {
+  const maybeRunnerOption = workspace.provider?.options?.["LOFT_RUNNER"]
+  if (!maybeRunnerOption) {
+    return undefined
+  }
+  const value = maybeRunnerOption.value
+
+  return maybeRunnerOption.enum?.find((e) => e.value === value)?.displayName ?? value ?? undefined
 }

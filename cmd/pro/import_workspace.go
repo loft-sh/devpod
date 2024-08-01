@@ -14,9 +14,9 @@ import (
 	"github.com/loft-sh/devpod/pkg/loft/parameters"
 	"github.com/loft-sh/devpod/pkg/loft/project"
 	"github.com/loft-sh/devpod/pkg/options"
+	"github.com/loft-sh/devpod/pkg/pro"
 	provider2 "github.com/loft-sh/devpod/pkg/provider"
 	"github.com/loft-sh/devpod/pkg/random"
-	"github.com/loft-sh/devpod/pkg/workspace"
 	"github.com/loft-sh/log"
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
@@ -96,17 +96,12 @@ func (cmd *ImportCmd) Run(ctx context.Context, args []string) error {
 		cmd.WorkspaceId = newWorkspaceId
 	}
 
-	provider, err := resolveProInstance(devPodConfig, devPodProHost, cmd.log)
+	provider, err := pro.ProviderFromHost(ctx, devPodConfig, devPodProHost, cmd.log)
 	if err != nil {
-		return errors.Wrap(err, "resolve provider")
+		return fmt.Errorf("resolve provider: %w", err)
 	}
 
-	// find devpodworkspaceinstance
-	configPath, err := LoftConfigPath(devPodConfig, provider.Name)
-	if err != nil {
-		return fmt.Errorf("loft config path: %w", err)
-	}
-	baseClient, err := client.InitClientFromPath(ctx, configPath)
+	baseClient, err := pro.InitClientFromProvider(ctx, devPodConfig, provider.Name, cmd.log)
 	if err != nil {
 		return fmt.Errorf("base client: %w", err)
 	}
@@ -158,22 +153,6 @@ func (cmd *ImportCmd) writeWorkspaceDefinition(devPodConfig *config.Config, prov
 	}
 
 	return nil
-}
-
-func resolveProInstance(devPodConfig *config.Config, devPodProHost string, log log.Logger) (*provider2.ProviderConfig, error) {
-	proInstanceConfig, err := provider2.LoadProInstanceConfig(devPodConfig.DefaultContext, devPodProHost)
-	if err != nil {
-		return nil, fmt.Errorf("load pro instance %s: %w", devPodProHost, err)
-	}
-
-	provider, err := workspace.FindProvider(devPodConfig, proInstanceConfig.Provider, log)
-	if err != nil {
-		return nil, errors.Wrap(err, "find provider")
-	} else if !provider.Config.IsProxyProvider() {
-		return nil, fmt.Errorf("provider is not a proxy provider")
-	}
-
-	return provider.Config, nil
 }
 
 func resolveInstanceOptions(ctx context.Context, instance *managementv1.DevPodWorkspaceInstance, baseClient client.Client) (map[string]string, error) {

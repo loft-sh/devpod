@@ -53,10 +53,6 @@ func main() {
 }
 ```
 
-## Documentation
-
-You can find the full documentation at [pkg.go.dev](https://pkg.go.dev/github.com/ulikunitz/xz).
-
 ## Using the gxz compression tool
 
 The package includes a gxz command line utility for compression and

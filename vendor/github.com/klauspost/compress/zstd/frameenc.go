@@ -22,7 +22,7 @@ type frameHeader struct {
 
 const maxHeaderSize = 14
 
-func (f frameHeader) appendTo(dst []byte) []byte {
+func (f frameHeader) appendTo(dst []byte) ([]byte, error) {
 	dst = append(dst, frameMagic...)
 	var fhd uint8
 	if f.Checksum {
@@ -88,7 +88,7 @@ func (f frameHeader) appendTo(dst []byte) []byte {
 	default:
 		panic("invalid fcs")
 	}
-	return dst
+	return dst, nil
 }
 
 const skippableFrameHeader = 4 + 4
