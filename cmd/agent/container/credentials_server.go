@@ -120,7 +120,7 @@ func (cmd *CredentialsServerCmd) Run(ctx context.Context, _ []string) error {
 		log.Debugf("Error configuring git user: %v", err)
 	}
 
-	err = configureLoftPlatformAccess(ctx, tunnelClient, log)
+	err = configureLoftPlatformAccess(ctx, cmd.User, tunnelClient, log)
 	if err != nil {
 		log.Debugf("Error configuring Loft Platform access: %v", err)
 	}
@@ -193,21 +193,31 @@ func configureGitUserLocally(ctx context.Context, userName string, client tunnel
 	return nil
 }
 
-func configureLoftPlatformAccess(ctx context.Context, client tunnel.TunnelClient, log log.Logger) error {
+func configureLoftPlatformAccess(ctx context.Context, userName string, client tunnel.TunnelClient, log log.Logger) error {
 	log.Infof("Start configuring Loft platform access")
-	response, err := client.LoftConfig(ctx, &tunnel.Empty{})
+	request := &loftconfig.LoftConfigRequest{
+		Context:  "todo",
+		Provider: "todo",
+	}
+	message, err := json.Marshal(request)
 	if err != nil {
-		return fmt.Errorf("retrieve loft config: %w", err)
+		return err
+	}
+
+	response, err := client.LoftConfig(ctx, &tunnel.Message{Message: string(message)})
+	if err != nil {
+		return err
 	}
 
 	loftConfigResponse := &loftconfig.LoftConfigResponse{}
 	err = json.Unmarshal([]byte(response.Message), loftConfigResponse)
 	if err != nil {
-		return fmt.Errorf("decode loft config response: %w", err)
+		return err
 	}
 
 	log.Infof("Successfully read loft config: %v", loftConfigResponse.Config)
-	// TODO: setup config file in workspace
+
+	// TODO: wrap this up
 
 	return nil
 }

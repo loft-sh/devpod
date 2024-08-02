@@ -10,7 +10,6 @@ import (
 	"strings"
 
 	"github.com/loft-sh/devpod/pkg/agent/tunnel"
-	devpodConfig "github.com/loft-sh/devpod/pkg/config"
 	"github.com/loft-sh/devpod/pkg/devcontainer/config"
 	"github.com/loft-sh/devpod/pkg/dockercredentials"
 	"github.com/loft-sh/devpod/pkg/extract"
@@ -239,13 +238,14 @@ func (t *tunnelServer) GitSSHSignature(ctx context.Context, message *tunnel.Mess
 	return &tunnel.Message{Message: string(out)}, nil
 }
 
-func (t *tunnelServer) LoftConfig(ctx context.Context, empty *tunnel.Empty) (*tunnel.Message, error) {
-	devPodConfig, err := devpodConfig.LoadConfig("default", "devpod-pro") // TODO: don't hardcode
+func (t *tunnelServer) LoftConfig(ctx context.Context, message *tunnel.Message) (*tunnel.Message, error) {
+	loftConfigRequest := &loftconfig.LoftConfigRequest{}
+	err := json.Unmarshal([]byte(message.Message), loftConfigRequest)
 	if err != nil {
-		return nil, err
+		return nil, perrors.Wrap(err, "loft platform config request")
 	}
 
-	response, err := loftconfig.Read(devPodConfig)
+	response, err := loftconfig.Read(loftConfigRequest)
 	if err != nil {
 		return nil, perrors.Wrap(err, "read loft config")
 	}

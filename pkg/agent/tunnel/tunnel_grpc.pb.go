@@ -47,7 +47,7 @@ type TunnelClient interface {
 	GitCredentials(ctx context.Context, in *Message, opts ...grpc.CallOption) (*Message, error)
 	GitSSHSignature(ctx context.Context, in *Message, opts ...grpc.CallOption) (*Message, error)
 	GitUser(ctx context.Context, in *Empty, opts ...grpc.CallOption) (*Message, error)
-	LoftConfig(ctx context.Context, in *Empty, opts ...grpc.CallOption) (*Message, error)
+	LoftConfig(ctx context.Context, in *Message, opts ...grpc.CallOption) (*Message, error)
 	ForwardPort(ctx context.Context, in *ForwardPortRequest, opts ...grpc.CallOption) (*ForwardPortResponse, error)
 	StopForwardPort(ctx context.Context, in *StopForwardPortRequest, opts ...grpc.CallOption) (*StopForwardPortResponse, error)
 	StreamGitClone(ctx context.Context, in *Empty, opts ...grpc.CallOption) (grpc.ServerStreamingClient[Chunk], error)
@@ -133,7 +133,7 @@ func (c *tunnelClient) GitUser(ctx context.Context, in *Empty, opts ...grpc.Call
 	return out, nil
 }
 
-func (c *tunnelClient) LoftConfig(ctx context.Context, in *Empty, opts ...grpc.CallOption) (*Message, error) {
+func (c *tunnelClient) LoftConfig(ctx context.Context, in *Message, opts ...grpc.CallOption) (*Message, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(Message)
 	err := c.cc.Invoke(ctx, Tunnel_LoftConfig_FullMethodName, in, out, cOpts...)
@@ -231,7 +231,7 @@ type TunnelServer interface {
 	GitCredentials(context.Context, *Message) (*Message, error)
 	GitSSHSignature(context.Context, *Message) (*Message, error)
 	GitUser(context.Context, *Empty) (*Message, error)
-	LoftConfig(context.Context, *Empty) (*Message, error)
+	LoftConfig(context.Context, *Message) (*Message, error)
 	ForwardPort(context.Context, *ForwardPortRequest) (*ForwardPortResponse, error)
 	StopForwardPort(context.Context, *StopForwardPortRequest) (*StopForwardPortResponse, error)
 	StreamGitClone(*Empty, grpc.ServerStreamingServer[Chunk]) error
@@ -268,7 +268,7 @@ func (UnimplementedTunnelServer) GitSSHSignature(context.Context, *Message) (*Me
 func (UnimplementedTunnelServer) GitUser(context.Context, *Empty) (*Message, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GitUser not implemented")
 }
-func (UnimplementedTunnelServer) LoftConfig(context.Context, *Empty) (*Message, error) {
+func (UnimplementedTunnelServer) LoftConfig(context.Context, *Message) (*Message, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method LoftConfig not implemented")
 }
 func (UnimplementedTunnelServer) ForwardPort(context.Context, *ForwardPortRequest) (*ForwardPortResponse, error) {
@@ -434,7 +434,7 @@ func _Tunnel_GitUser_Handler(srv interface{}, ctx context.Context, dec func(inte
 }
 
 func _Tunnel_LoftConfig_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(Empty)
+	in := new(Message)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
@@ -446,7 +446,7 @@ func _Tunnel_LoftConfig_Handler(srv interface{}, ctx context.Context, dec func(i
 		FullMethod: Tunnel_LoftConfig_FullMethodName,
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(TunnelServer).LoftConfig(ctx, req.(*Empty))
+		return srv.(TunnelServer).LoftConfig(ctx, req.(*Message))
 	}
 	return interceptor(ctx, in, info, handler)
 }

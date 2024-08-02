@@ -4,16 +4,20 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/loft-sh/devpod/pkg/config"
 	"github.com/loft-sh/devpod/pkg/provider"
 )
+
+type LoftConfigRequest struct {
+	Context  string
+	Provider string
+}
 
 type LoftConfigResponse struct {
 	Config []byte
 }
 
-func Read(devPodConfig *config.Config) (*LoftConfigResponse, error) {
-	providerDir, err := provider.GetProviderDir(devPodConfig.DefaultContext, "devpod-pro") // TODO: deduplicate with implementation in caller
+func Read(request *LoftConfigRequest) (*LoftConfigResponse, error) {
+	providerDir, err := provider.GetProviderDir(request.Context, request.Provider)
 	if err != nil {
 		return nil, err
 	}
