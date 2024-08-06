@@ -54,7 +54,7 @@ func (r *runner) setupContainer(
 	// Ensure workspace mounts cannot escape their content folder for local agents in proxy mode.
 	// There _might_ be a use-case that requires an allowlist for certain directories
 	// when running as a standalone runner with docker-in-docker set up. Let's add it when/if the time comes.
-	if r.WorkspaceConfig.Agent.Local == "true" && r.WorkspaceConfig.CLIOptions.Proxy {
+	if r.WorkspaceConfig.Agent.Local == "true" && r.WorkspaceConfig.CLIOptions.Pro {
 		result.MergedConfig.Mounts = filterWorkspaceMounts(result.MergedConfig.Mounts, r.WorkspaceConfig.ContentFolder, r.Log)
 	}
 

@@ -12,10 +12,54 @@ import (
 
 	"github.com/loft-sh/log"
 
+	client2 "github.com/loft-sh/devpod/pkg/client"
 	devssh "github.com/loft-sh/devpod/pkg/ssh"
 	"github.com/sirupsen/logrus"
 	"golang.org/x/crypto/ssh"
 )
+
+func StartForwarding(
+	client client2.BaseWorkspaceClient,
+	log log.Logger,
+) error {
+	log.Debug("gpg forwarding enabled, performing immediately")
+
+	execPath, err := os.Executable()
+	if err != nil {
+		return err
+	}
+
+	remoteUser, err := devssh.GetUser(client.WorkspaceConfig().ID, client.WorkspaceConfig().SSHConfigPath)
+	if err != nil {
+		remoteUser = "root"
+	}
+
+	log.Info("forwarding gpg-agent")
+
+	// perform in background an ssh command forwarding the
+	// gpg agent, in order to have it immediately take effect
+	go func() {
+		err = exec.Command(
+			execPath,
+			"ssh",
+			"--gpg-agent-forwarding=true",
+			"--agent-forwarding=true",
+			"--start-services=true",
+			"--user",
+			remoteUser,
+			"--context",
+			client.Context(),
+			client.Workspace(),
+			"--log-output=raw",
+			"--command", "sleep infinity",
+		).Run()
+		if err != nil {
+			log.Error("failure in forwarding gpg-agent")
+		}
+	}()
+
+	return nil
+}
 
 type GPGConf struct {
 	PublicKey  []byte
