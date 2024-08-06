@@ -17,7 +17,8 @@ type LoftConfigRequest struct {
 }
 
 type LoftConfigResponse struct {
-	Config []byte
+	LoftConfig []byte
+	Provider   []byte
 }
 
 func Read(request *LoftConfigRequest) (*LoftConfigResponse, error) {
@@ -31,7 +32,7 @@ func Read(request *LoftConfigRequest) (*LoftConfigResponse, error) {
 	// Check if given context and provider have Loft Platform configuration
 	if _, err := os.Stat(configPath); os.IsNotExist(err) {
 		// If not just return empty response
-		return &LoftConfigResponse{Config: []byte{}}, nil
+		return &LoftConfigResponse{LoftConfig: []byte{}}, nil
 	}
 
 	content, err := os.ReadFile(configPath)
@@ -39,5 +40,5 @@ func Read(request *LoftConfigRequest) (*LoftConfigResponse, error) {
 		return nil, err
 	}
 
-	return &LoftConfigResponse{Config: content}, nil
+	return &LoftConfigResponse{LoftConfig: content}, nil
 }

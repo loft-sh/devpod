@@ -3,6 +3,8 @@ package agent
 import (
 	"bytes"
 	"encoding/json"
+	"io"
+	"net/http"
 	"strconv"
 
 	"github.com/loft-sh/devpod/cmd/flags"
@@ -54,6 +56,7 @@ func (c *SetupLoftPlatformAccessCmd) Run(_ *cobra.Command, args []string) error 
 	rawJson, err := json.Marshal(request)
 	if err != nil {
 		logger.Errorf("Error parsing request: %w", err)
+		return err
 	}
 
 	response, err := devpodhttp.GetHTTPClient().Post(
@@ -63,11 +66,39 @@ func (c *SetupLoftPlatformAccessCmd) Run(_ *cobra.Command, args []string) error 
 	)
 	if err != nil {
 		logger.Errorf("Error retrieving credentials: %v", err)
-		return nil
+		return err
 	}
 	defer response.Body.Close()
 
-	// TODO: setup files
+	raw, err := io.ReadAll(response.Body)
+	if err != nil {
+		logger.Errorf("Error reading loft config: %w", err)
+		return err
+	}
+
+	// has the request succeeded?
+	if response.StatusCode != http.StatusOK {
+		logger.Errorf("Error reading loft config (%d): %w", response.StatusCode, string(raw))
+		return err
+	}
+
+	configResponse := &loftconfig.LoftConfigResponse{}
+	err = json.Unmarshal(raw, configResponse)
+	if err != nil {
+		logger.Errorf("Error decoding loft config: %s %w", string(raw), err)
+		return nil
+	}
+
+	configPath, err := loftconfig.LoftConfigPath(c.Context, c.Provider)
+	if err != nil {
+		return err
+	}
+
+	err = loftconfig.StoreLoftConfig(configResponse, configPath)
+	if err != nil {
+		logger.Errorf("Failed saving loft config: %w", err)
+		return err
+	}
 
 	return nil
 }

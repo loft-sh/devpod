@@ -20,6 +20,7 @@ import (
 	"github.com/loft-sh/devpod/pkg/client/clientimplementation"
 	"github.com/loft-sh/devpod/pkg/command"
 	"github.com/loft-sh/devpod/pkg/config"
+	"github.com/loft-sh/devpod/pkg/credentials"
 	config2 "github.com/loft-sh/devpod/pkg/devcontainer/config"
 	"github.com/loft-sh/devpod/pkg/devcontainer/sshtunnel"
 	"github.com/loft-sh/devpod/pkg/ide/fleet"
@@ -239,8 +240,9 @@ func (cmd *UpCmd) Run(
 	}
 
 	// setup loft platform access
+	context := devPodConfig.Current()
 	if cmd.SetupLoftPlatformAccess {
-		err = setupLoftPlatformAccess(cmd.Context, cmd.Provider, client, log)
+		err = setupLoftPlatformAccess(devPodConfig.DefaultContext, context.DefaultProvider, client, log)
 		if err != nil {
 			return err
 		}
@@ -981,6 +983,7 @@ func setupGitSSHSignature(signingKey string, client client2.BaseWorkspaceClient,
 }
 
 func setupLoftPlatformAccess(context, provider string, client client2.BaseWorkspaceClient, log log.Logger) error {
+	log.Infof("Setting up Loft Platform access")
 	execPath, err := os.Executable()
 	if err != nil {
 		return err
@@ -991,8 +994,14 @@ func setupLoftPlatformAccess(context, provider string, client client2.BaseWorksp
 		remoteUser = "root"
 	}
 
-	command := fmt.Sprintf("devpod agent setup-loft-platform-access --context %v --provider %v", context, provider)
+	port, err := credentials.GetPort()
+	if err != nil {
+		return fmt.Errorf("get port: %w", err)
+	}
 
+	command := fmt.Sprintf("devpod agent setup-loft-platform-access --context %v --provider %v --port %v", context, provider, port)
+
+	log.Infof("Executing command -> %v", command)
 	err = exec.Command(
 		execPath,
 		"ssh",

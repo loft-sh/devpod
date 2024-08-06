@@ -151,7 +151,15 @@ func handleLoftPlatformCredentialsRequest(ctx context.Context, writer http.Respo
 	}
 
 	log.Debugf("Received loft platform credentials post data: %s", string(out))
-	// response, err := client.LoftConfig()
+	response, err := client.LoftConfig(ctx, &tunnel.Message{Message: string(out)})
+	if err != nil {
+		log.Errorf("Error receiving git ssh signature: %w", err)
+		return errors.Wrap(err, "get git ssh signature")
+	}
 
+	writer.Header().Set("Content-Type", "application/json")
+	writer.WriteHeader(http.StatusOK)
+	_, _ = writer.Write([]byte(response.Message))
+	log.Debugf("Successfully wrote back %d bytes", len(response.Message))
 	return nil
 }
