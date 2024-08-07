@@ -1,14 +1,7 @@
-package agent
+package container
 
 import (
-	"bytes"
-	"encoding/json"
-	"io"
-	"net/http"
-	"strconv"
-
 	"github.com/loft-sh/devpod/cmd/flags"
-	devpodhttp "github.com/loft-sh/devpod/pkg/http"
 	"github.com/loft-sh/devpod/pkg/loftconfig"
 	"github.com/loft-sh/log"
 
@@ -48,55 +41,21 @@ func NewSetupLoftPlatformAccessCmd(flags *flags.GlobalFlags) *cobra.Command {
 func (c *SetupLoftPlatformAccessCmd) Run(_ *cobra.Command, args []string) error {
 	logger := log.Default.ErrorStreamOnly()
 
-	request := &loftconfig.LoftConfigRequest{
-		Context:  c.Context,
-		Provider: c.Provider,
-	}
-
-	rawJson, err := json.Marshal(request)
+	loftConfig, err := loftconfig.GetLoftConfig(c.Context, c.Provider, c.Port, logger)
 	if err != nil {
-		logger.Errorf("Error parsing request: %w", err)
 		return err
 	}
 
-	response, err := devpodhttp.GetHTTPClient().Post(
-		"http://localhost:"+strconv.Itoa(c.Port)+"/loft-platform-credentials",
-		"application/json",
-		bytes.NewReader(rawJson),
-	)
-	if err != nil {
-		logger.Errorf("Error retrieving credentials: %v", err)
-		return err
-	}
-	defer response.Body.Close()
-
-	raw, err := io.ReadAll(response.Body)
-	if err != nil {
-		logger.Errorf("Error reading loft config: %w", err)
-		return err
-	}
-
-	// has the request succeeded?
-	if response.StatusCode != http.StatusOK {
-		logger.Errorf("Error reading loft config (%d): %w", response.StatusCode, string(raw))
-		return err
-	}
-
-	configResponse := &loftconfig.LoftConfigResponse{}
-	err = json.Unmarshal(raw, configResponse)
-	if err != nil {
-		logger.Errorf("Error decoding loft config: %s %w", string(raw), err)
+	if loftConfig == nil {
+		logger.Debug("Got empty loft config response, Loft Platform acces won't be set up.")
 		return nil
 	}
 
-	configPath, err := loftconfig.LoftConfigPath(c.Context, c.Provider)
-	if err != nil {
+	if err := loftconfig.AuthDevpodCliToPlatform(loftConfig, logger); err != nil {
 		return err
 	}
 
-	err = loftconfig.StoreLoftConfig(configResponse, configPath)
-	if err != nil {
-		logger.Errorf("Failed saving loft config: %w", err)
+	if err := loftconfig.AuthVClusterCliToPlatform(loftConfig, logger); err != nil {
 		return err
 	}
 

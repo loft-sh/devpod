@@ -1,9 +1,11 @@
 package loftconfig
 
 import (
+	"encoding/json"
 	"os"
 	"path/filepath"
 
+	"github.com/loft-sh/devpod/pkg/loft/client"
 	"github.com/loft-sh/devpod/pkg/provider"
 )
 
@@ -17,8 +19,7 @@ type LoftConfigRequest struct {
 }
 
 type LoftConfigResponse struct {
-	LoftConfig []byte
-	Provider   []byte
+	LoftConfig *client.Config
 }
 
 func Read(request *LoftConfigRequest) (*LoftConfigResponse, error) {
@@ -32,7 +33,7 @@ func Read(request *LoftConfigRequest) (*LoftConfigResponse, error) {
 	// Check if given context and provider have Loft Platform configuration
 	if _, err := os.Stat(configPath); os.IsNotExist(err) {
 		// If not just return empty response
-		return &LoftConfigResponse{LoftConfig: []byte{}}, nil
+		return &LoftConfigResponse{}, nil
 	}
 
 	content, err := os.ReadFile(configPath)
@@ -40,5 +41,11 @@ func Read(request *LoftConfigRequest) (*LoftConfigResponse, error) {
 		return nil, err
 	}
 
-	return &LoftConfigResponse{LoftConfig: content}, nil
+	loftConfig := &client.Config{}
+	err = json.Unmarshal(content, loftConfig)
+	if err != nil {
+		return nil, err
+	}
+
+	return &LoftConfigResponse{LoftConfig: loftConfig}, nil
 }

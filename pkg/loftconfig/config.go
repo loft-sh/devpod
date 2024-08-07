@@ -1,41 +1,37 @@
 package loftconfig
 
 import (
-	"encoding/json"
-	"os"
-	"path/filepath"
+	"fmt"
+	"os/exec"
 
 	"github.com/loft-sh/devpod/pkg/loft/client"
-	"github.com/loft-sh/devpod/pkg/provider"
+	"github.com/loft-sh/log"
 )
 
-func LoftConfigPath(context, providerName string) (string, error) {
-	providerDir, err := provider.GetProviderDir(context, providerName)
+func AuthDevpodCliToPlatform(config *client.Config, logger log.Logger) error {
+	cmd := exec.Command("devpod", "pro", "login", "--access-key", config.AccessKey, config.Host)
+	out, err := cmd.CombinedOutput()
 	if err != nil {
-		return "", err
+		logger.Debugf("Failed executing `devpod pro login` : %w, output: %s", err, out)
+		return fmt.Errorf("error executing 'devpod pro login' command")
 	}
 
-	configPath := filepath.Join(providerDir, "loft-config.json")
-
-	return configPath, nil
+	return nil
 }
 
-func StoreLoftConfig(configResponse *LoftConfigResponse, configPath string) error {
-	config := &client.Config{}
-	err := json.Unmarshal(configResponse.LoftConfig, config)
-	if err != nil {
-		return err
+func AuthVClusterCliToPlatform(config *client.Config, logger log.Logger) error {
+	// Check if vcluster is available inside the workspace
+	if _, err := exec.LookPath("vcluster"); err != nil {
+		logger.Debugf("'vcluster' command is not available")
+		return nil
 	}
 
-	err = os.MkdirAll(filepath.Dir(configPath), 0o755)
+	cmd := exec.Command("vcluster", "login", "--access-key", config.AccessKey, config.Host)
+	out, err := cmd.CombinedOutput()
 	if err != nil {
-		return err
+		logger.Debugf("Failed executing `vcluster login` : %w, output: %s", err, out)
+		return fmt.Errorf("error executing 'vcluster login' command")
 	}
 
-	out, err := json.Marshal(config)
-	if err != nil {
-		return err
-	}
-
-	return os.WriteFile(configPath, out, 0o660)
+	return nil
 }

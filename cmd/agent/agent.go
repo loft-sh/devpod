@@ -35,7 +35,6 @@ func NewAgentCmd(globalFlags *flags.GlobalFlags) *cobra.Command {
 	agentCmd.AddCommand(NewGitSSHSignatureCmd(globalFlags))
 	agentCmd.AddCommand(NewGitSSHSignatureHelperCmd(globalFlags))
 	agentCmd.AddCommand(NewDockerCredentialsCmd(globalFlags))
-	agentCmd.AddCommand(NewSetupLoftPlatformAccessCmd(globalFlags))
 	return agentCmd
 }
 
