@@ -54,7 +54,7 @@ func NewClusterCmd(globalFlags *proflags.GlobalFlags) *cobra.Command {
 	}
 
 	c := &cobra.Command{
-		Use:   "cluster",
+		Use:   "cluster <cluster-name>",
 		Short: "add current cluster to DevPod Pro",
 		Args:  cobra.ExactArgs(1),
 		RunE: func(cobraCmd *cobra.Command, args []string) error {
