@@ -176,7 +176,7 @@ type CLIOptions struct {
 	InitEnv              []string          `json:"initEnv,omitempty"`
 	Recreate             bool              `json:"recreate,omitempty"`
 	Reset                bool              `json:"reset,omitempty"`
-	Proxy                bool              `json:"proxy,omitempty"`
+	Pro                  bool              `json:"pro,omitempty"`
 	DisableDaemon        bool              `json:"disableDaemon,omitempty"`
 	DaemonInterval       string            `json:"daemonInterval,omitempty"`
 	ForceCredentials     bool              `json:"forceCredentials,omitempty"`

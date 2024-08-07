@@ -182,7 +182,7 @@ func (s *workspaceClient) agentInfo(cliOptions provider.CLIOptions) (string, *pr
 	}
 
 	// if we are running proxy mode
-	if cliOptions.Proxy || cliOptions.ForceCredentials {
+	if cliOptions.Pro || cliOptions.ForceCredentials {
 		agentInfo.Agent.InjectGitCredentials = "true"
 		agentInfo.Agent.InjectDockerCredentials = "true"
 	}
@@ -190,7 +190,7 @@ func (s *workspaceClient) agentInfo(cliOptions provider.CLIOptions) (string, *pr
 	// we don't send any provider options if proxy because these could contain
 	// sensitive information and we don't want to allow privileged containers that
 	// have access to the host to save these.
-	if agentInfo.Agent.Driver != provider.CustomDriver && (cliOptions.Proxy || cliOptions.DisableDaemon) {
+	if agentInfo.Agent.Driver != provider.CustomDriver && (cliOptions.Pro || cliOptions.DisableDaemon) {
 		agentInfo.Options = map[string]config.OptionValue{}
 		agentInfo.Workspace = provider.CloneWorkspace(agentInfo.Workspace)
 		agentInfo.Workspace.Provider.Options = map[string]config.OptionValue{}

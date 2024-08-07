@@ -130,7 +130,7 @@ func (c *ContainerHandler) updateConfig(ctx context.Context, sshClient *ssh.Clie
 			}
 
 			// compress info
-			workspaceInfo, agentInfo, err := c.client.AgentInfo(provider.CLIOptions{Proxy: c.proxy})
+			workspaceInfo, agentInfo, err := c.client.AgentInfo(provider.CLIOptions{Pro: c.proxy})
 			if err != nil {
 				c.log.Errorf("Error compressing workspace info: %v", err)
 				break
@@ -156,7 +156,7 @@ func (c *ContainerHandler) updateConfig(ctx context.Context, sshClient *ssh.Clie
 
 func (c *ContainerHandler) runRunInContainer(ctx context.Context, sshClient *ssh.Client, runInContainer Handler) error {
 	// compress info
-	workspaceInfo, _, err := c.client.AgentInfo(provider.CLIOptions{Proxy: c.proxy})
+	workspaceInfo, _, err := c.client.AgentInfo(provider.CLIOptions{Pro: c.proxy})
 	if err != nil {
 		return err
 	}
