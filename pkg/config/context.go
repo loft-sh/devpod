@@ -13,6 +13,7 @@ const (
 	ContextOptionDotfilesScript             = "DOTFILES_SCRIPT"
 	ContextOptionSSHAgentForwarding         = "SSH_AGENT_FORWARDING"
 	ContextOptionSSHConfigPath              = "SSH_CONFIG_PATH"
+	ContextOptionExecuteTimeout             = "EXECUTE_TIMEOUT"
 )
 
 var ContextOptions = []ContextOption{
@@ -79,5 +80,10 @@ var ContextOptions = []ContextOption{
 	{
 		Name:        ContextOptionSSHConfigPath,
 		Description: "Specifies the path where the ssh config should be written to",
+	},
+	{
+		Name:        ContextOptionExecuteTimeout,
+		Description: "Specifies the timeout in seconds used when injecting and executing devpod's agent binary",
+		Default:     "20",
 	},
 }
