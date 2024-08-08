@@ -8,8 +8,10 @@ import (
 	"os"
 	"path/filepath"
 	"runtime"
+	"strconv"
 	"time"
 
+	"github.com/loft-sh/devpod/pkg/config"
 	devpodhttp "github.com/loft-sh/devpod/pkg/http"
 	"github.com/loft-sh/devpod/pkg/inject"
 	"github.com/loft-sh/devpod/pkg/shell"
@@ -105,6 +107,16 @@ func InjectAgentAndExecute(
 			ShouldChmodPath:     true,
 		}
 
+		// Get the timeout from the context options
+		var timeout int64 = 20
+		devPodConfig := config.Get()
+		if devPodConfig != nil {
+			t, err := strconv.ParseInt(devPodConfig.ContextOption(config.ContextOptionExitAfterTimeout), 10, 64)
+			if err == nil {
+				timeout = t
+			}
+		}
+
 		wasExecuted, err := inject.InjectAndExecute(
 			ctx,
 			exec,
@@ -115,7 +127,7 @@ func InjectAgentAndExecute(
 			stdin,
 			stdout,
 			stderr,
-			time.Second*20,
+			time.Second*time.Duration(timeout),
 			log,
 		)
 		if err != nil {
