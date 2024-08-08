@@ -220,7 +220,7 @@ func LoadConfig(contextOverride string, providerOverride string) (*Config, error
 			context = DefaultContext
 		}
 
-		return &Config{
+		config := &Config{
 			DefaultContext: context,
 			Contexts: map[string]*ContextConfig{
 				context: {
@@ -231,7 +231,9 @@ func LoadConfig(contextOverride string, providerOverride string) (*Config, error
 				},
 			},
 			Origin: configOrigin,
-		}, nil
+		}
+		env = config
+		return config, nil
 	}
 
 	config := &Config{}
