@@ -604,19 +604,29 @@ func ToID(str string) string {
 
 	str = prReferenceRegEx.ReplaceAllStringFunc(str, git.GetBranchNameForPR)
 
-	// get last element if we find a /
-	index := strings.LastIndex(str, "/")
-	if index != -1 {
-		str = str[index+1:]
-
-		// remove a potential tag / branch name
-		splitted := strings.Split(str, "@")
-		if len(splitted) == 2 && !branchRegEx.MatchString(splitted[1]) {
+	// Check if a branch name has been specified, if so use this for the ID
+	// If not, then parse the repo name as ID
+	splitted := strings.Split(str, "@")
+	if len(splitted) == 2 {
+		str = strings.TrimSuffix(splitted[1], ".git")
+		// Check if branch name matches expected regex
+		if !branchRegEx.MatchString(str) {
 			str = splitted[0]
 		}
+	} else {
+		// get last element if we find a /
+		index := strings.LastIndex(str, "/")
+		if index != -1 {
+			str = str[index+1:]
 
-		// remove .git if there is it
-		str = strings.TrimSuffix(str, ".git")
+			// remove a potential tag / branch name
+			if len(splitted) == 2 && !branchRegEx.MatchString(splitted[1]) {
+				str = splitted[0]
+			}
+
+			// remove .git if there is it
+			str = strings.TrimSuffix(str, ".git")
+		}
 	}
 
 	str = workspaceIDRegEx2.ReplaceAllString(workspaceIDRegEx1.ReplaceAllString(str, "-"), "")
