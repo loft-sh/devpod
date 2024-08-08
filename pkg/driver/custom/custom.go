@@ -249,8 +249,26 @@ func (c *customDriver) GetDevContainerLogs(ctx context.Context, workspaceID stri
 
 var _ driver.ReprovisioningDriver = (*customDriver)(nil)
 
-func (c *customDriver) CanReprovision() bool {
-	return c.workspaceInfo.Agent.Custom.CanReprovision == "true"
+func (c *customDriver) CanReprovision(ctx context.Context, workspaceID string) bool {
+	// backwards compatibility with older custom drivers
+	if len(c.workspaceInfo.Agent.Custom.CanReprovision) == 1 {
+		return c.workspaceInfo.Agent.Custom.CanReprovision[0] == "true"
+	}
+
+	stdout := &bytes.Buffer{}
+	err := c.runCommand(
+		ctx,
+		workspaceID,
+		"canReprovision",
+		c.workspaceInfo.Agent.Custom.CanReprovision,
+		nil,
+		stdout,
+		stdout,
+		nil,
+		c.log,
+	)
+
+	return err == nil
 }
 
 func (c *customDriver) runCommand(
