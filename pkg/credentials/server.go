@@ -45,6 +45,11 @@ func RunCredentialsServer(
 					http.Error(writer, err.Error(), http.StatusInternalServerError)
 					return
 				}
+			} else if request.URL.Path == "/loft-platform-credentials" {
+				err := handleLoftPlatformCredentialsRequest(ctx, writer, request, client, log)
+				if err != nil {
+					http.Error(writer, err.Error(), http.StatusInternalServerError)
+				}
 			}
 		}),
 	}
@@ -127,6 +132,26 @@ func handleGitSSHSignatureRequest(ctx context.Context, writer http.ResponseWrite
 
 	log.Debugf("Received git ssh signature post data: %s", string(out))
 	response, err := client.GitSSHSignature(ctx, &tunnel.Message{Message: string(out)})
+	if err != nil {
+		log.Errorf("Error receiving git ssh signature: %w", err)
+		return errors.Wrap(err, "get git ssh signature")
+	}
+
+	writer.Header().Set("Content-Type", "application/json")
+	writer.WriteHeader(http.StatusOK)
+	_, _ = writer.Write([]byte(response.Message))
+	log.Debugf("Successfully wrote back %d bytes", len(response.Message))
+	return nil
+}
+
+func handleLoftPlatformCredentialsRequest(ctx context.Context, writer http.ResponseWriter, request *http.Request, client tunnel.TunnelClient, log log.Logger) error {
+	out, err := io.ReadAll(request.Body)
+	if err != nil {
+		return errors.Wrap(err, "read request body")
+	}
+
+	log.Debugf("Received loft platform credentials post data: %s", string(out))
+	response, err := client.LoftConfig(ctx, &tunnel.Message{Message: string(out)})
 	if err != nil {
 		log.Errorf("Error receiving git ssh signature: %w", err)
 		return errors.Wrap(err, "get git ssh signature")

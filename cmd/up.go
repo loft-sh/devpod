@@ -20,6 +20,7 @@ import (
 	"github.com/loft-sh/devpod/pkg/client/clientimplementation"
 	"github.com/loft-sh/devpod/pkg/command"
 	"github.com/loft-sh/devpod/pkg/config"
+	"github.com/loft-sh/devpod/pkg/credentials"
 	config2 "github.com/loft-sh/devpod/pkg/devcontainer/config"
 	"github.com/loft-sh/devpod/pkg/devcontainer/sshtunnel"
 	"github.com/loft-sh/devpod/pkg/ide/fleet"
@@ -52,9 +53,10 @@ type UpCmd struct {
 
 	ProviderOptions []string
 
-	ConfigureSSH       bool
-	GPGAgentForwarding bool
-	OpenIDE            bool
+	ConfigureSSH            bool
+	GPGAgentForwarding      bool
+	OpenIDE                 bool
+	SetupLoftPlatformAccess bool
 
 	SSHConfigPath string
 
@@ -168,6 +170,7 @@ func NewUpCmd(flags *flags.GlobalFlags) *cobra.Command {
 	upCmd.Flags().StringVar(&cmd.Source, "source", "", "Optional source for the workspace. E.g. git:https://github.com/my-org/my-repo")
 	upCmd.Flags().BoolVar(&cmd.Proxy, "proxy", false, "If true will forward agent requests to stdio")
 	upCmd.Flags().BoolVar(&cmd.ForceCredentials, "force-credentials", false, "If true will always use local credentials")
+	upCmd.Flags().BoolVar(&cmd.SetupLoftPlatformAccess, "setup-loft-platform-access", true, "If true will setup Loft Platform access based on local configuration")
 	_ = upCmd.Flags().MarkHidden("force-credentials")
 
 	upCmd.Flags().StringVar(&cmd.SSHKey, "ssh-key", "", "The ssh-key to use")
@@ -231,6 +234,15 @@ func (cmd *UpCmd) Run(
 	// setup git ssh signature
 	if cmd.GitSSHSigningKey != "" {
 		err = setupGitSSHSignature(cmd.GitSSHSigningKey, client, log)
+		if err != nil {
+			return err
+		}
+	}
+
+	// setup loft platform access
+	context := devPodConfig.Current()
+	if cmd.SetupLoftPlatformAccess {
+		err = setupLoftPlatformAccess(devPodConfig.DefaultContext, context.DefaultProvider, user, client, log)
 		if err != nil {
 			return err
 		}
@@ -967,6 +979,40 @@ func setupGitSSHSignature(signingKey string, client client2.BaseWorkspaceClient,
 	if err != nil {
 		log.Error("failure in setting up git ssh signature helper")
 	}
+	return nil
+}
+
+func setupLoftPlatformAccess(context, provider, user string, client client2.BaseWorkspaceClient, log log.Logger) error {
+	log.Infof("Setting up Loft Platform access")
+	execPath, err := os.Executable()
+	if err != nil {
+		return err
+	}
+
+	port, err := credentials.GetPort()
+	if err != nil {
+		return fmt.Errorf("get port: %w", err)
+	}
+
+	command := fmt.Sprintf("%v agent container setup-loft-platform-access --context %v --provider %v --port %v", agent.ContainerDevPodHelperLocation, context, provider, port)
+
+	log.Infof("Executing command -> %v", command)
+	err = exec.Command(
+		execPath,
+		"ssh",
+		"--agent-forwarding=true",
+		"--start-services=true",
+		"--user",
+		user,
+		"--context",
+		client.Context(),
+		client.Workspace(),
+		"--command", command,
+	).Run()
+	if err != nil {
+		log.Error("failure in setting up Loft Platform access")
+	}
+
 	return nil
 }
 

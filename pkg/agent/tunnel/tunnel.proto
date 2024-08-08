@@ -14,6 +14,7 @@ service Tunnel {
   rpc GitCredentials(Message) returns (Message) {}
   rpc GitSSHSignature(Message) returns (Message) {}
   rpc GitUser(Empty) returns (Message) {}
+  rpc LoftConfig(Message) returns (Message) {}
 
   rpc ForwardPort(ForwardPortRequest) returns (ForwardPortResponse) {}
   rpc StopForwardPort(StopForwardPortRequest) returns (StopForwardPortResponse) {}

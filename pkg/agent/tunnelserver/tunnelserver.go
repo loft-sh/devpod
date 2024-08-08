@@ -16,6 +16,7 @@ import (
 	"github.com/loft-sh/devpod/pkg/git"
 	"github.com/loft-sh/devpod/pkg/gitcredentials"
 	"github.com/loft-sh/devpod/pkg/gitsshsigning"
+	"github.com/loft-sh/devpod/pkg/loftconfig"
 	"github.com/loft-sh/devpod/pkg/netstat"
 	provider2 "github.com/loft-sh/devpod/pkg/provider"
 	"github.com/loft-sh/devpod/pkg/stdio"
@@ -230,6 +231,26 @@ func (t *tunnelServer) GitSSHSignature(ctx context.Context, message *tunnel.Mess
 	}
 
 	out, err := json.Marshal(signatureResponse)
+	if err != nil {
+		return nil, err
+	}
+
+	return &tunnel.Message{Message: string(out)}, nil
+}
+
+func (t *tunnelServer) LoftConfig(ctx context.Context, message *tunnel.Message) (*tunnel.Message, error) {
+	loftConfigRequest := &loftconfig.LoftConfigRequest{}
+	err := json.Unmarshal([]byte(message.Message), loftConfigRequest)
+	if err != nil {
+		return nil, perrors.Wrap(err, "loft platform config request")
+	}
+
+	response, err := loftconfig.Read(loftConfigRequest)
+	if err != nil {
+		return nil, perrors.Wrap(err, "read loft config")
+	}
+
+	out, err := json.Marshal(response)
 	if err != nil {
 		return nil, err
 	}
