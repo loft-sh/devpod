@@ -161,7 +161,7 @@ var _ = DevPodDescribe("devpod up test suite", func() {
 			err = f.DevPodProviderUse(ctx, "docker")
 			framework.ExpectNoError(err)
 
-			name := "vscode-remote-try-python-sha256-0c1547c"
+			name := "sha256-0c1547c"
 			ginkgo.DeferCleanup(f.DevPodWorkspaceDelete, context.Background(), name)
 
 			// Wait for devpod workspace to come online (deadline: 30s)
@@ -179,7 +179,7 @@ var _ = DevPodDescribe("devpod up test suite", func() {
 			err = f.DevPodProviderUse(ctx, "docker")
 			framework.ExpectNoError(err)
 
-			name := "devpod"
+			name := "pull-3-head"
 			ginkgo.DeferCleanup(f.DevPodWorkspaceDelete, context.Background(), name)
 
 			// Wait for devpod workspace to come online (deadline: 30s)
@@ -441,11 +441,12 @@ var _ = DevPodDescribe("devpod up test suite", func() {
 			err = f.DevPodUp(ctx, "https://github.com/loft-sh/examples/@subpath:/devpod/jupyter-notebook-hello-world")
 			framework.ExpectNoError(err)
 
-			out, err := f.DevPodSSH(ctx, "jupyter-notebook-hello-world", "pwd")
+			id := "subpath--devpod-jupyter-notebook-hello-world"
+			out, err := f.DevPodSSH(ctx, id, "pwd")
 			framework.ExpectNoError(err)
-			framework.ExpectEqual(out, "/workspaces/jupyter-notebook-hello-world\n", "should be subpath")
+			framework.ExpectEqual(out, fmt.Sprintf("/workspaces/%s\n", id), "should be subpath")
 
-			err = f.DevPodWorkspaceDelete(ctx, "jupyter-notebook-hello-world")
+			err = f.DevPodWorkspaceDelete(ctx, id)
 			framework.ExpectNoError(err)
 		})
 
@@ -465,20 +466,21 @@ var _ = DevPodDescribe("devpod up test suite", func() {
 				framework.ExpectNoError(err)
 			})
 
+			id := "subpath--devpod-jupyter-notebook-hello-world"
 			err = f.DevPodUp(ctx, "https://github.com/loft-sh/examples/@subpath:/devpod/jupyter-notebook-hello-world")
 			framework.ExpectNoError(err)
 
-			_, err = f.DevPodSSH(ctx, "jupyter-notebook-hello-world", "pwd")
+			_, err = f.DevPodSSH(ctx, id, "pwd")
 			framework.ExpectNoError(err)
 
 			// recreate
 			err = f.DevPodUpRecreate(ctx, "https://github.com/loft-sh/examples/@subpath:/devpod/jupyter-notebook-hello-world")
 			framework.ExpectNoError(err)
 
-			_, err = f.DevPodSSH(ctx, "jupyter-notebook-hello-world", "pwd")
+			_, err = f.DevPodSSH(ctx, id, "pwd")
 			framework.ExpectNoError(err)
 
-			err = f.DevPodWorkspaceDelete(ctx, "jupyter-notebook-hello-world")
+			err = f.DevPodWorkspaceDelete(ctx, id)
 			framework.ExpectNoError(err)
 		})
 
@@ -500,13 +502,14 @@ var _ = DevPodDescribe("devpod up test suite", func() {
 				framework.ExpectNoError(err)
 			})
 
+			id := "subpath--devpod-jupyter-notebook-hello-world"
 			err = f.DevPodUp(ctx, "https://github.com/loft-sh/examples/@subpath:/devpod/jupyter-notebook-hello-world")
 			framework.ExpectNoError(err)
 
 			// create files in root and in workspace, after create we expect data to still be there
-			_, err = f.DevPodSSH(ctx, "jupyter-notebook-hello-world", "sudo touch /workspaces/jupyter-notebook-hello-world/DATA")
+			_, err = f.DevPodSSH(ctx, id, fmt.Sprintf("sudo touch /workspaces/%s/DATA", id))
 			framework.ExpectNoError(err)
-			_, err = f.DevPodSSH(ctx, "jupyter-notebook-hello-world", "sudo touch /ROOTFS")
+			_, err = f.DevPodSSH(ctx, id, "sudo touch /ROOTFS")
 			framework.ExpectNoError(err)
 
 			// reset
@@ -514,13 +517,13 @@ var _ = DevPodDescribe("devpod up test suite", func() {
 			framework.ExpectNoError(err)
 
 			// this should fail! because --reset should trigger a new git clone
-			_, err = f.DevPodSSH(ctx, "jupyter-notebook-hello-world", "ls /workspaces/jupyter-notebook-hello-world/DATA")
+			_, err = f.DevPodSSH(ctx, id, fmt.Sprintf("ls /workspaces/%s/DATA", id))
 			framework.ExpectError(err)
 			// this should fail! because --recreare should trigger a new build, so a new rootfs
-			_, err = f.DevPodSSH(ctx, "jupyter-notebook-hello-world", "ls /ROOTFS")
+			_, err = f.DevPodSSH(ctx, id, "ls /ROOTFS")
 			framework.ExpectError(err)
 
-			err = f.DevPodWorkspaceDelete(ctx, "jupyter-notebook-hello-world")
+			err = f.DevPodWorkspaceDelete(ctx, id)
 			framework.ExpectNoError(err)
 		})
 
