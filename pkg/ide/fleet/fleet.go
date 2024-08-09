@@ -142,6 +142,8 @@ func (o *FleetServer) Start(binaryPath, location, projectDir string) error {
 			)
 		}
 
+		o.log.Infof("version set to %s using command %s \n", version, runCommand)
+
 		args := []string{}
 		if o.userName != "" {
 			args = append(args, "su", o.userName, "-c", runCommand)
