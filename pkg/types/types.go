@@ -140,7 +140,7 @@ func (l *LifecycleHook) UnmarshalJSON(data []byte) error {
 type StrBool string
 
 // UnmarshalJSON parses fields that may be numbers or booleans.
-func (f *StrBool) UnmarshalJSON(data []byte) error {
+func (s *StrBool) UnmarshalJSON(data []byte) error {
 	var jsonObj interface{}
 	err := json.Unmarshal(data, &jsonObj)
 	if err != nil {
@@ -148,13 +148,21 @@ func (f *StrBool) UnmarshalJSON(data []byte) error {
 	}
 	switch obj := jsonObj.(type) {
 	case string:
-		*f = StrBool(obj)
+		*s = StrBool(obj)
 		return nil
 	case bool:
-		*f = StrBool(strconv.FormatBool(obj))
+		*s = StrBool(strconv.FormatBool(obj))
 		return nil
 	}
 	return ErrUnsupportedType
+}
+
+func (s *StrBool) Bool() (bool, error) {
+	if s == nil {
+		return false, nil
+	}
+
+	return strconv.ParseBool(string(*s))
 }
 
 type OptionEnum struct {
