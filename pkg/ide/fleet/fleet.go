@@ -27,11 +27,17 @@ const (
 )
 
 const (
+	VersionOption       = "VERSION"
 	DownloadAmd64Option = "DOWNLOAD_AMD64"
 	DownloadArm64Option = "DOWNLOAD_ARM64"
 )
 
 var Options = ide.Options{
+	VersionOption: {
+		Name:        VersionOption,
+		Description: "The version of fleet to install",
+		Default:     "latest",
+	},
 	DownloadArm64Option: {
 		Name:        DownloadArm64Option,
 		Description: "The download url for the arm64 install script",
@@ -121,7 +127,21 @@ func (o *FleetServer) Start(binaryPath, location, projectDir string) error {
 
 	err := single.Single("fleet.pid", func() (*exec.Cmd, error) {
 		o.log.Infof("Starting fleet in background...")
-		runCommand := fmt.Sprintf("%s launch workspace -- --projectDir '%s' --cache-path '%s' --auth=accept-everyone --publish --enableSmartMode", binaryPath, projectDir, location)
+		// Determine version of fleet to use
+		var runCommand string
+		version := Options.GetValue(o.values, VersionOption)
+		if version == "latest" {
+			runCommand = fmt.Sprintf(
+				"%s launch workspace -- --projectDir '%s' --cache-path '%s' --auth=accept-everyone --publish --enableSmartMode",
+				binaryPath, projectDir, location,
+			)
+		} else {
+			runCommand = fmt.Sprintf(
+				"%s launch workspace --workspace-version %s -- --projectDir '%s' --cache-path '%s' --auth=accept-everyone --publish --enableSmartMode",
+				version, binaryPath, projectDir, location,
+			)
+		}
+
 		args := []string{}
 		if o.userName != "" {
 			args = append(args, "su", o.userName, "-c", runCommand)
