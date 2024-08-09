@@ -168,8 +168,7 @@ func (cmd *UpCmd) up(
 	workspaceInfo *provider2.AgentWorkspaceInfo,
 	tunnelClient tunnel.TunnelClient,
 	logger log.Logger,
-	devPodConfig *config.Config,
-) error {
+	devPodConfig *config.Config) error {
 
 	// create devcontainer
 	result, err := cmd.devPodUp(ctx, workspaceInfo, logger, devPodConfig)

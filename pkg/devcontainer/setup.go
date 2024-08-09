@@ -29,8 +29,7 @@ func (r *runner) setupContainer(
 	containerDetails *config.ContainerDetails,
 	mergedConfig *config.MergedDevContainerConfig,
 	substitutionContext *config.SubstitutionContext,
-	devPodConfig *conf.Config,
-) (*config.Result, error) {
+	devPodConfig *conf.Config) (*config.Result, error) {
 
 	// inject agent
 	err := agent.InjectAgent(
