@@ -29,7 +29,6 @@ func (r *runner) runSingleContainer(
 	substitutionContext *config.SubstitutionContext,
 	options UpOptions,
 	devPodConfig *conf.Config) (*config.Result, error) {
-
 	containerDetails, err := r.Driver.FindDevContainer(ctx, r.ID)
 	if err != nil {
 		return nil, fmt.Errorf("find dev container: %w", err)

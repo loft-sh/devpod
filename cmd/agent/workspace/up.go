@@ -169,7 +169,6 @@ func (cmd *UpCmd) up(
 	tunnelClient tunnel.TunnelClient,
 	logger log.Logger,
 	devPodConfig *config.Config) error {
-
 	// create devcontainer
 	result, err := cmd.devPodUp(ctx, workspaceInfo, logger, devPodConfig)
 	if err != nil {

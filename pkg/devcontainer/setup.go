@@ -30,7 +30,6 @@ func (r *runner) setupContainer(
 	mergedConfig *config.MergedDevContainerConfig,
 	substitutionContext *config.SubstitutionContext,
 	devPodConfig *conf.Config) (*config.Result, error) {
-
 	// inject agent
 	err := agent.InjectAgent(
 		ctx,
