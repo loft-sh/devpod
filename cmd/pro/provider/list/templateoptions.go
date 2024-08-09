@@ -116,6 +116,7 @@ func parametersToOptions(parameters []storagev1.AppParameter) map[string]*types.
 		for _, opt := range parameter.Options {
 			paramOpts = append(paramOpts, types.OptionEnum{Value: opt})
 		}
+
 		options[optionName] = &types.Option{
 			DisplayName: displayName,
 			Description: parameter.Description,
@@ -123,9 +124,27 @@ func parametersToOptions(parameters []storagev1.AppParameter) map[string]*types.
 			Enum:        paramOpts,
 			Default:     parameter.DefaultValue,
 			Mutable:     true,
+			Type:        getOptionType(parameter),
+			Password:    parameter.Type == "password",
 		}
 	}
 	return options
+}
+
+var parameterToOptionTypeMap = map[string]string{
+	"string":    "string",
+	"multiline": "multiline",
+	"number":    "number",
+	"boolean":   "boolean",
+}
+
+func getOptionType(parameter storagev1.AppParameter) string {
+	t, ok := parameterToOptionTypeMap[parameter.Type]
+	if !ok {
+		return ""
+	}
+
+	return t
 }
 
 func FindTemplate(ctx context.Context, managementClient kube.Interface, projectName, templateName string) (*managementv1.DevPodWorkspaceTemplate, error) {
