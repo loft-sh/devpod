@@ -161,7 +161,7 @@ var _ = DevPodDescribe("devpod up test suite", func() {
 			err = f.DevPodProviderUse(ctx, "docker")
 			framework.ExpectNoError(err)
 
-			name := "vscode-remote-try-python-sha256-0c1547c"
+			name := "sha256-0c1547c"
 			ginkgo.DeferCleanup(f.DevPodWorkspaceDelete, context.Background(), name)
 
 			// Wait for devpod workspace to come online (deadline: 30s)
@@ -179,7 +179,7 @@ var _ = DevPodDescribe("devpod up test suite", func() {
 			err = f.DevPodProviderUse(ctx, "docker")
 			framework.ExpectNoError(err)
 
-			name := "devpod"
+			name := "pull-3-head"
 			ginkgo.DeferCleanup(f.DevPodWorkspaceDelete, context.Background(), name)
 
 			// Wait for devpod workspace to come online (deadline: 30s)
