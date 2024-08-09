@@ -2,21 +2,6 @@ name: devpod-pro
 version: ##VERSION##
 icon: https://devpod.sh/assets/devpod.svg
 description: DevPod Pro
-optionGroups:
-  - name: Main Options
-    defaultVisible: true
-    options:
-      - LOFT_PROJECT
-      - LOFT_TEMPLATE
-      - LOFT_TEMPLATE_VERSION
-  - name: Template Options
-    defaultVisible: true
-    options:
-      - "TEMPLATE_OPTION_*"
-  - name: Other Options
-    defaultVisible: false
-    options:
-      - LOFT_RUNNER
 options:
   LOFT_CONFIG:
     global: true

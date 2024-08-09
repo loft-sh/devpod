@@ -38,7 +38,11 @@ export function OptionFormField({
     const registerProps = register(id, { required: isRequired })
     const valueProp = exists(value) ? { defaultValue: value } : {}
     const defaultValueProp = exists(defaultValue) ? { defaultValue } : {}
-    const props = { ...defaultValueProp, ...valueProp, ...registerProps }
+    const props = {
+      ...defaultValueProp,
+      ...valueProp,
+      ...registerProps,
+    }
     const refresh = () => {
       onRefresh?.(id)
     }
@@ -67,7 +71,8 @@ export function OptionFormField({
           }}
         />
       )
-    } else if (enumProp?.length) {
+    }
+    if (enumProp?.length) {
       let placeholder: string | undefined = "Select option"
       if (value) {
         placeholder = undefined
@@ -77,6 +82,7 @@ export function OptionFormField({
         <Select
           {...props}
           onChange={wrapFunction(props.onChange, refresh, !!subOptionsCommand)}
+          onBlur={wrapFunction(props.onChange, refresh, !!subOptionsCommand)}
           placeholder={placeholder}>
           {enumProp.map(
             (opt, i) =>
@@ -92,11 +98,7 @@ export function OptionFormField({
 
     switch (type) {
       case "boolean":
-        return (
-          <Checkbox defaultChecked={props.defaultValue === "true"} {...props}>
-            {displayName}
-          </Checkbox>
-        )
+        return <Checkbox {...props}>{displayName}</Checkbox>
       case "number":
         return (
           <Input
