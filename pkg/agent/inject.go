@@ -30,6 +30,7 @@ func InjectAgent(
 	downloadURL string,
 	preferDownload bool,
 	log log.Logger,
+	devPodConfig *config.Config,
 ) error {
 	return InjectAgentAndExecute(
 		ctx,
@@ -43,6 +44,7 @@ func InjectAgent(
 		nil,
 		nil,
 		log,
+		devPodConfig,
 	)
 }
 
@@ -58,6 +60,7 @@ func InjectAgentAndExecute(
 	stdout io.Writer,
 	stderr io.Writer,
 	log log.Logger,
+	devPodConfig *config.Config,
 ) error {
 	// should execute locally?
 	if local {
@@ -108,13 +111,9 @@ func InjectAgentAndExecute(
 		}
 
 		// Get the timeout from the context options
-		var timeout int64 = 20
-		devPodConfig := config.Get()
-		if devPodConfig != nil {
-			t, err := strconv.ParseInt(devPodConfig.ContextOption(config.ContextOptionExitAfterTimeout), 10, 64)
-			if err == nil {
-				timeout = t
-			}
+		timeout, err := strconv.ParseInt(devPodConfig.ContextOption(config.ContextOptionAgentInjectExecuteTimeout), 10, 64)
+		if err != nil {
+			timeout = 20
 		}
 
 		wasExecuted, err := inject.InjectAndExecute(

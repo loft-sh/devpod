@@ -14,6 +14,7 @@ import (
 	composetypes "github.com/compose-spec/compose-go/types"
 	"github.com/joho/godotenv"
 	"github.com/loft-sh/devpod/pkg/compose"
+	conf "github.com/loft-sh/devpod/pkg/config"
 	"github.com/loft-sh/devpod/pkg/devcontainer/config"
 	"github.com/loft-sh/devpod/pkg/devcontainer/feature"
 	"github.com/loft-sh/devpod/pkg/devcontainer/metadata"
@@ -115,6 +116,7 @@ func (r *runner) runDockerCompose(
 	parsedConfig *config.SubstitutedConfig,
 	substitutionContext *config.SubstitutionContext,
 	options UpOptions,
+	devPodConfig *conf.Config,
 ) (*config.Result, error) {
 	composeHelper, err := r.composeHelper()
 	if err != nil {
@@ -202,7 +204,7 @@ func (r *runner) runDockerCompose(
 	}
 
 	// setup container
-	return r.setupContainer(ctx, parsedConfig.Raw, containerDetails, mergedConfig, substitutionContext)
+	return r.setupContainer(ctx, parsedConfig.Raw, containerDetails, mergedConfig, substitutionContext, devPodConfig)
 }
 
 func (r *runner) getDockerComposeFilePaths(parsedConfig *config.SubstitutedConfig, envFiles []string) ([]string, error) {

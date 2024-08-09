@@ -103,7 +103,7 @@ func NewBuildCmd(flags *flags.GlobalFlags) *cobra.Command {
 				return fmt.Errorf("building is currently not supported for proxy providers")
 			}
 
-			return cmd.Run(ctx, workspaceClient)
+			return cmd.Run(ctx, workspaceClient, devPodConfig)
 		},
 	}
 
@@ -127,9 +127,9 @@ func NewBuildCmd(flags *flags.GlobalFlags) *cobra.Command {
 	return buildCmd
 }
 
-func (cmd *BuildCmd) Run(ctx context.Context, client client.WorkspaceClient) error {
+func (cmd *BuildCmd) Run(ctx context.Context, client client.WorkspaceClient, devPodConfig *config.Config) error {
 	// build workspace
-	err := cmd.build(ctx, client, log.Default)
+	err := cmd.build(ctx, client, log.Default, devPodConfig)
 	if err != nil {
 		return err
 	}
@@ -137,7 +137,7 @@ func (cmd *BuildCmd) Run(ctx context.Context, client client.WorkspaceClient) err
 	return nil
 }
 
-func (cmd *BuildCmd) build(ctx context.Context, workspaceClient client.WorkspaceClient, log log.Logger) error {
+func (cmd *BuildCmd) build(ctx context.Context, workspaceClient client.WorkspaceClient, log log.Logger, devPodConfig *config.Config) error {
 	err := workspaceClient.Lock(ctx)
 	if err != nil {
 		return err
@@ -149,10 +149,14 @@ func (cmd *BuildCmd) build(ctx context.Context, workspaceClient client.Workspace
 		return err
 	}
 
-	return cmd.buildAgentClient(ctx, workspaceClient, log)
+	return cmd.buildAgentClient(ctx, workspaceClient, log, devPodConfig)
 }
 
-func (cmd *BuildCmd) buildAgentClient(ctx context.Context, workspaceClient client.WorkspaceClient, log log.Logger) error {
+func (cmd *BuildCmd) buildAgentClient(
+	ctx context.Context,
+	workspaceClient client.WorkspaceClient,
+	log log.Logger,
+	devPodConfig *config.Config) error {
 	// compress info
 	workspaceInfo, _, err := workspaceClient.AgentInfo(cmd.CLIOptions)
 	if err != nil {
@@ -184,22 +188,35 @@ func (cmd *BuildCmd) buildAgentClient(ctx context.Context, workspaceClient clien
 	defer cancel()
 
 	errChan := make(chan error, 1)
-	go func() {
+	go func(cfg *config.Config) {
 		defer log.Debugf("Done executing up command")
 		defer cancel()
 
 		writer := log.ErrorStreamOnly().Writer(logrus.InfoLevel, false)
 		defer writer.Close()
 
-		errChan <- agent.InjectAgentAndExecute(cancelCtx, func(ctx context.Context, command string, stdin io.Reader, stdout io.Writer, stderr io.Writer) error {
-			return workspaceClient.Command(ctx, client.CommandOptions{
-				Command: command,
-				Stdin:   stdin,
-				Stdout:  stdout,
-				Stderr:  stderr,
-			})
-		}, workspaceClient.AgentLocal(), workspaceClient.AgentPath(), workspaceClient.AgentURL(), true, command, stdinReader, stdoutWriter, writer, log.ErrorStreamOnly())
-	}()
+		errChan <- agent.InjectAgentAndExecute(
+			cancelCtx,
+			func(ctx context.Context, command string, stdin io.Reader, stdout io.Writer, stderr io.Writer) error {
+				return workspaceClient.Command(ctx, client.CommandOptions{
+					Command: command,
+					Stdin:   stdin,
+					Stdout:  stdout,
+					Stderr:  stderr,
+				})
+			},
+			workspaceClient.AgentLocal(),
+			workspaceClient.AgentPath(),
+			workspaceClient.AgentURL(),
+			true,
+			command,
+			stdinReader,
+			stdoutWriter,
+			writer,
+			log.ErrorStreamOnly(),
+			cfg,
+		)
+	}(devPodConfig)
 
 	// create container etc.
 	_, err = tunnelserver.RunUpServer(

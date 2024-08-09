@@ -15,6 +15,7 @@ import (
 
 	"github.com/loft-sh/devpod/pkg/command"
 	"github.com/loft-sh/devpod/pkg/compress"
+	"github.com/loft-sh/devpod/pkg/config"
 	provider2 "github.com/loft-sh/devpod/pkg/provider"
 	"github.com/loft-sh/devpod/pkg/version"
 	"github.com/loft-sh/log"
@@ -313,11 +314,12 @@ func Tunnel(
 	stdout io.Writer,
 	stderr io.Writer,
 	log log.Logger,
+	devPodConfig *config.Config,
 ) error {
 	// inject agent
 	err := InjectAgent(ctx, func(ctx context.Context, command string, stdin io.Reader, stdout io.Writer, stderr io.Writer) error {
 		return exec(ctx, "root", command, stdin, stdout, stderr)
-	}, false, ContainerDevPodHelperLocation, DefaultAgentDownloadURL(), false, log)
+	}, false, ContainerDevPodHelperLocation, DefaultAgentDownloadURL(), false, log, devPodConfig)
 	if err != nil {
 		return err
 	}
