@@ -497,6 +497,7 @@ func (cmd *UpCmd) devPodUpMachine(
 			sshTunnelStdoutWriter,
 			writer,
 			log.ErrorStreamOnly(),
+			devPodConfig,
 		)
 	}
 

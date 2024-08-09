@@ -8,8 +8,10 @@ import (
 	"os"
 	"path/filepath"
 	"runtime"
+	"strconv"
 	"time"
 
+	"github.com/loft-sh/devpod/pkg/config"
 	devpodhttp "github.com/loft-sh/devpod/pkg/http"
 	"github.com/loft-sh/devpod/pkg/inject"
 	"github.com/loft-sh/devpod/pkg/shell"
@@ -28,6 +30,7 @@ func InjectAgent(
 	downloadURL string,
 	preferDownload bool,
 	log log.Logger,
+	devPodConfig *config.Config,
 ) error {
 	return InjectAgentAndExecute(
 		ctx,
@@ -41,6 +44,7 @@ func InjectAgent(
 		nil,
 		nil,
 		log,
+		devPodConfig,
 	)
 }
 
@@ -56,6 +60,7 @@ func InjectAgentAndExecute(
 	stdout io.Writer,
 	stderr io.Writer,
 	log log.Logger,
+	devPodConfig *config.Config,
 ) error {
 	// should execute locally?
 	if local {
@@ -105,6 +110,12 @@ func InjectAgentAndExecute(
 			ShouldChmodPath:     true,
 		}
 
+		// Get the timeout from the context options
+		timeout, err := strconv.ParseInt(devPodConfig.ContextOption(config.ContextOptionAgentInjectExecuteTimeout), 10, 64)
+		if err != nil {
+			timeout = 20
+		}
+
 		wasExecuted, err := inject.InjectAndExecute(
 			ctx,
 			exec,
@@ -115,7 +126,7 @@ func InjectAgentAndExecute(
 			stdin,
 			stdout,
 			stderr,
-			time.Second*20,
+			time.Second*time.Duration(timeout),
 			log,
 		)
 		if err != nil {

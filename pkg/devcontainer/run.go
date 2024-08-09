@@ -11,6 +11,7 @@ import (
 	"runtime"
 	"strings"
 
+	conf "github.com/loft-sh/devpod/pkg/config"
 	"github.com/loft-sh/devpod/pkg/devcontainer/config"
 	"github.com/loft-sh/devpod/pkg/driver"
 	"github.com/loft-sh/devpod/pkg/driver/drivercreate"
@@ -23,7 +24,7 @@ import (
 )
 
 type Runner interface {
-	Up(ctx context.Context, options UpOptions) (*config.Result, error)
+	Up(ctx context.Context, options UpOptions, devPodConfig *conf.Config) (*config.Result, error)
 
 	Build(ctx context.Context, options provider2.BuildOptions) (string, error)
 
@@ -90,11 +91,11 @@ type UpOptions struct {
 	ForceBuild bool
 }
 
-func (r *runner) Up(ctx context.Context, options UpOptions) (*config.Result, error) {
+func (r *runner) Up(ctx context.Context, options UpOptions, devPodConfig *conf.Config) (*config.Result, error) {
 	// download workspace source before recreating container
 	_, isDockerDriver := r.Driver.(driver.DockerDriver)
 	if options.Recreate && !isDockerDriver {
-		return r.recreateCustomDriver(ctx, options)
+		return r.recreateCustomDriver(ctx, options, devPodConfig)
 	}
 
 	// prepare config
@@ -123,12 +124,13 @@ func (r *runner) Up(ctx context.Context, options UpOptions) (*config.Result, err
 			substitutedConfig,
 			substitutionContext,
 			options,
+			devPodConfig,
 		)
 		if err != nil {
 			return nil, err
 		}
 	} else if isDockerComposeConfig(substitutedConfig.Config) {
-		result, err = r.runDockerCompose(ctx, substitutedConfig, substitutionContext, options)
+		result, err = r.runDockerCompose(ctx, substitutedConfig, substitutionContext, options, devPodConfig)
 		if err != nil {
 			return nil, err
 		}
@@ -153,7 +155,7 @@ func (r *runner) Up(ctx context.Context, options UpOptions) (*config.Result, err
 			substitutedConfig.Config.ImageContainer = language.MapConfig[lang].ImageContainer
 		}
 
-		result, err = r.runSingleContainer(ctx, substitutedConfig, substitutionContext, options)
+		result, err = r.runSingleContainer(ctx, substitutedConfig, substitutionContext, options, devPodConfig)
 		if err != nil {
 			return nil, err
 		}
@@ -296,7 +298,7 @@ func (r *runner) Logs(ctx context.Context, writer io.Writer) error {
 	return r.Driver.GetDevContainerLogs(ctx, r.ID, writer, writer)
 }
 
-func (r *runner) recreateCustomDriver(ctx context.Context, options UpOptions) (*config.Result, error) {
+func (r *runner) recreateCustomDriver(ctx context.Context, options UpOptions, devPodConfig *conf.Config) (*config.Result, error) {
 	err := r.Driver.StopDevContainer(ctx, r.ID)
 	if err != nil {
 		return nil, err
@@ -305,7 +307,7 @@ func (r *runner) recreateCustomDriver(ctx context.Context, options UpOptions) (*
 	// relaunch Up without recreate now
 	options.Reset = false
 	options.Recreate = false
-	return r.Up(ctx, options)
+	return r.Up(ctx, options, devPodConfig)
 }
 
 func isDockerFileConfig(config *config.DevContainerConfig) bool {

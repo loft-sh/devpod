@@ -234,7 +234,7 @@ func (cmd *SSHCmd) jumpContainer(
 
 			// start ssh tunnel
 			return cmd.startTunnel(ctx, devPodConfig, containerClient, client.Workspace(), log)
-		})
+		}, devPodConfig)
 }
 
 func (cmd *SSHCmd) forwardTimeout(log log.Logger) (time.Duration, error) {

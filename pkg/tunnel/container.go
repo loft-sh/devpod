@@ -10,6 +10,7 @@ import (
 
 	"github.com/loft-sh/devpod/pkg/agent"
 	"github.com/loft-sh/devpod/pkg/client"
+	"github.com/loft-sh/devpod/pkg/config"
 	"github.com/loft-sh/devpod/pkg/provider"
 	devssh "github.com/loft-sh/devpod/pkg/ssh"
 	"github.com/loft-sh/log"
@@ -37,7 +38,7 @@ type ContainerHandler struct {
 
 type Handler func(ctx context.Context, containerClient *ssh.Client) error
 
-func (c *ContainerHandler) Run(ctx context.Context, handler Handler) error {
+func (c *ContainerHandler) Run(ctx context.Context, handler Handler, devPodConfig *config.Config) error {
 	if handler == nil {
 		return nil
 	}
@@ -60,7 +61,7 @@ func (c *ContainerHandler) Run(ctx context.Context, handler Handler) error {
 
 	// tunnel to host
 	tunnelChan := make(chan error, 1)
-	go func() {
+	go func(cfg *config.Config) {
 		writer := c.log.ErrorStreamOnly().Writer(logrus.InfoLevel, false)
 		defer writer.Close()
 		defer c.log.Debugf("Tunnel to host closed")
@@ -69,15 +70,28 @@ func (c *ContainerHandler) Run(ctx context.Context, handler Handler) error {
 		if c.log.GetLevel() == logrus.DebugLevel {
 			command += " --debug"
 		}
-		tunnelChan <- agent.InjectAgentAndExecute(cancelCtx, func(ctx context.Context, command string, stdin io.Reader, stdout io.Writer, stderr io.Writer) error {
-			return c.client.Command(ctx, client.CommandOptions{
-				Command: command,
-				Stdin:   stdin,
-				Stdout:  stdout,
-				Stderr:  stderr,
-			})
-		}, c.client.AgentLocal(), c.client.AgentPath(), c.client.AgentURL(), true, command, stdinReader, stdoutWriter, writer, c.log.ErrorStreamOnly())
-	}()
+		tunnelChan <- agent.InjectAgentAndExecute(
+			cancelCtx,
+			func(ctx context.Context, command string, stdin io.Reader, stdout io.Writer, stderr io.Writer) error {
+				return c.client.Command(ctx, client.CommandOptions{
+					Command: command,
+					Stdin:   stdin,
+					Stdout:  stdout,
+					Stderr:  stderr,
+				})
+			},
+			c.client.AgentLocal(),
+			c.client.AgentPath(),
+			c.client.AgentURL(),
+			true,
+			command,
+			stdinReader,
+			stdoutWriter,
+			writer,
+			c.log.ErrorStreamOnly(),
+			cfg,
+		)
+	}(devPodConfig)
 
 	// connect to container
 	containerChan := make(chan error, 1)

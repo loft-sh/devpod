@@ -69,14 +69,27 @@ func (cmd *SSHCmd) Run(ctx context.Context, args []string) error {
 		if cmd.Debug {
 			command += " --debug"
 		}
-		return devagent.InjectAgentAndExecute(ctx, func(ctx context.Context, command string, stdin io.Reader, stdout io.Writer, stderr io.Writer) error {
-			return machineClient.Command(ctx, client.CommandOptions{
-				Command: command,
-				Stdin:   stdin,
-				Stdout:  stdout,
-				Stderr:  stderr,
-			})
-		}, machineClient.AgentLocal(), machineClient.AgentPath(), machineClient.AgentURL(), true, command, stdin, stdout, stderr, log.Default.ErrorStreamOnly())
+		return devagent.InjectAgentAndExecute(
+			ctx,
+			func(ctx context.Context, command string, stdin io.Reader, stdout io.Writer, stderr io.Writer) error {
+				return machineClient.Command(ctx, client.CommandOptions{
+					Command: command,
+					Stdin:   stdin,
+					Stdout:  stdout,
+					Stderr:  stderr,
+				})
+			},
+			machineClient.AgentLocal(),
+			machineClient.AgentPath(),
+			machineClient.AgentURL(),
+			true,
+			command,
+			stdin,
+			stdout,
+			stderr,
+			log.Default.ErrorStreamOnly(),
+			devPodConfig,
+		)
 	}, writer)
 }
 
