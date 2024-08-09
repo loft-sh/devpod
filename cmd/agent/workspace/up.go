@@ -17,6 +17,7 @@ import (
 	"github.com/loft-sh/devpod/pkg/binaries"
 	"github.com/loft-sh/devpod/pkg/client/clientimplementation"
 	"github.com/loft-sh/devpod/pkg/command"
+	"github.com/loft-sh/devpod/pkg/config"
 	"github.com/loft-sh/devpod/pkg/credentials"
 	"github.com/loft-sh/devpod/pkg/daemon"
 	"github.com/loft-sh/devpod/pkg/devcontainer"
@@ -91,8 +92,14 @@ func (cmd *UpCmd) Run(ctx context.Context) error {
 		}()
 	}
 
+	// Load context's config options
+	devPodConfig, err := config.LoadConfig(cmd.Context, cmd.Provider)
+	if err != nil {
+		return err
+	}
+
 	// start up
-	err = cmd.up(ctx, workspaceInfo, tunnelClient, logger)
+	err = cmd.up(ctx, workspaceInfo, tunnelClient, logger, devPodConfig)
 	if err != nil {
 		return errors.Wrap(err, "devcontainer up")
 	}
@@ -156,9 +163,16 @@ func initWorkspace(ctx context.Context, cancel context.CancelFunc, workspaceInfo
 	return tunnelClient, logger, dockerCredentialsDir, nil
 }
 
-func (cmd *UpCmd) up(ctx context.Context, workspaceInfo *provider2.AgentWorkspaceInfo, tunnelClient tunnel.TunnelClient, logger log.Logger) error {
+func (cmd *UpCmd) up(
+	ctx context.Context,
+	workspaceInfo *provider2.AgentWorkspaceInfo,
+	tunnelClient tunnel.TunnelClient,
+	logger log.Logger,
+	devPodConfig *config.Config,
+) error {
+
 	// create devcontainer
-	result, err := cmd.devPodUp(ctx, workspaceInfo, logger)
+	result, err := cmd.devPodUp(ctx, workspaceInfo, logger, devPodConfig)
 	if err != nil {
 		return err
 	}
@@ -396,7 +410,10 @@ func PrepareImage(workspaceDir, image string) error {
 	return nil
 }
 
-func (cmd *UpCmd) devPodUp(ctx context.Context, workspaceInfo *provider2.AgentWorkspaceInfo, log log.Logger) (*config2.Result, error) {
+func (cmd *UpCmd) devPodUp(
+	ctx context.Context,
+	workspaceInfo *provider2.AgentWorkspaceInfo,
+	log log.Logger, devPodConfig *config.Config) (*config2.Result, error) {
 	runner, err := CreateRunner(workspaceInfo, log)
 	if err != nil {
 		return nil, err
@@ -405,7 +422,7 @@ func (cmd *UpCmd) devPodUp(ctx context.Context, workspaceInfo *provider2.AgentWo
 	// start the devcontainer
 	result, err := runner.Up(ctx, devcontainer.UpOptions{
 		CLIOptions: workspaceInfo.CLIOptions,
-	})
+	}, devPodConfig)
 	if err != nil {
 		return nil, err
 	}

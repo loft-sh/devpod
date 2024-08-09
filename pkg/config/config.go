@@ -13,8 +13,6 @@ import (
 	"github.com/pkg/errors"
 )
 
-var env *Config
-
 type Config struct {
 	// DefaultContext is the default context to use. Defaults to "default"
 	DefaultContext string `json:"defaultContext,omitempty"`
@@ -220,7 +218,7 @@ func LoadConfig(contextOverride string, providerOverride string) (*Config, error
 			context = DefaultContext
 		}
 
-		config := &Config{
+		return &Config{
 			DefaultContext: context,
 			Contexts: map[string]*ContextConfig{
 				context: {
@@ -231,9 +229,7 @@ func LoadConfig(contextOverride string, providerOverride string) (*Config, error
 				},
 			},
 			Origin: configOrigin,
-		}
-		env = config
-		return config, nil
+		}, nil
 	}
 
 	config := &Config{}
@@ -276,7 +272,6 @@ func LoadConfig(contextOverride string, providerOverride string) (*Config, error
 		}()
 	}
 
-	env = config
 	return config, nil
 }
 
@@ -310,9 +305,4 @@ func SaveConfig(config *Config) error {
 	}
 
 	return nil
-}
-
-// Get returns the environment's context options, it assumes LoadConfig has been called previously to populate env
-func Get() *Config {
-	return env
 }

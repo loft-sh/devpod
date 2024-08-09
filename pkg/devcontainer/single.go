@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"strings"
 
+	conf "github.com/loft-sh/devpod/pkg/config"
 	"github.com/loft-sh/devpod/pkg/devcontainer/config"
 	"github.com/loft-sh/devpod/pkg/devcontainer/metadata"
 	"github.com/loft-sh/devpod/pkg/driver"
@@ -22,16 +23,21 @@ const (
 	WorkspaceUIDExtraEnvVar     = "DEVPOD_WORKSPACE_UID"
 )
 
-func (r *runner) runSingleContainer(ctx context.Context, parsedConfig *config.SubstitutedConfig, substitutionContext *config.SubstitutionContext, options UpOptions) (*config.Result, error) {
+func (r *runner) runSingleContainer(
+	ctx context.Context,
+	parsedConfig *config.SubstitutedConfig,
+	substitutionContext *config.SubstitutionContext,
+	options UpOptions,
+	devPodConfig *conf.Config,
+) (*config.Result, error) {
+
 	containerDetails, err := r.Driver.FindDevContainer(ctx, r.ID)
 	if err != nil {
 		return nil, fmt.Errorf("find dev container: %w", err)
 	}
 
 	// does the container already exist?
-	var (
-		mergedConfig *config.MergedDevContainerConfig
-	)
+	var mergedConfig *config.MergedDevContainerConfig
 	// if options.Recreate is true, and workspace is a running container, we should not rebuild
 	if options.Recreate && parsedConfig.Config.ContainerID != "" {
 		return nil, fmt.Errorf("cannot recreate container not created by DevPod")
@@ -115,7 +121,7 @@ func (r *runner) runSingleContainer(ctx context.Context, parsedConfig *config.Su
 	}
 
 	// setup container
-	return r.setupContainer(ctx, parsedConfig.Raw, containerDetails, mergedConfig, substitutionContext)
+	return r.setupContainer(ctx, parsedConfig.Raw, containerDetails, mergedConfig, substitutionContext, devPodConfig)
 }
 
 func (r *runner) runContainer(
