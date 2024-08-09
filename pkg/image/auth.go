@@ -7,6 +7,7 @@ import (
 	"os"
 
 	"github.com/google/go-containerregistry/pkg/authn"
+	"github.com/google/go-containerregistry/pkg/authn/k8schain"
 	kubernetesauth "github.com/google/go-containerregistry/pkg/authn/kubernetes"
 	"gopkg.in/square/go-jose.v2/jwt"
 )
@@ -46,14 +47,14 @@ func getKeychain(ctx context.Context) (authn.Keychain, error) {
 	}
 
 	// in-cluster auth
-	serviceAccountName, namespace, err := getPodMetadata(tokenBytes)
+	m, err := getPodMetadata(tokenBytes)
 	if err != nil {
 		return nil, err
 	}
 
-	keychain, err = kubernetesauth.NewInCluster(ctx, kubernetesauth.Options{
-		ServiceAccountName: serviceAccountName,
-		Namespace:          namespace,
+	keychain, err = k8schain.NewInCluster(ctx, kubernetesauth.Options{
+		ServiceAccountName: m.serviceAccountName,
+		Namespace:          m.namespace,
 	})
 	if err != nil {
 		return nil, fmt.Errorf("authenticate: %w", err)
@@ -62,23 +63,31 @@ func getKeychain(ctx context.Context) (authn.Keychain, error) {
 	return keychain, nil
 }
 
-func getPodMetadata(token []byte) (string, string, error) {
+type podMetadata struct {
+	serviceAccountName string
+	namespace          string
+}
+
+func getPodMetadata(token []byte) (podMetadata, error) {
 	t, err := jwt.ParseSigned(string(token))
 	if err != nil {
-		return "", "", fmt.Errorf("failed to parse kubernetes service account token: %w", err)
+		return podMetadata{}, fmt.Errorf("failed to parse kubernetes service account token: %w", err)
 	}
 
 	privateClaims := privateClaims{}
 	err = t.UnsafeClaimsWithoutVerification(&privateClaims)
 	if err != nil {
-		return "", "", fmt.Errorf("failed to get claims from kubernetes service account token: %w", err)
+		return podMetadata{}, fmt.Errorf("failed to get claims from kubernetes service account token: %w", err)
 	}
 
 	kubeClaim := privateClaims.Kubernetes
 	// get serviceaccount name and imagepullsecret
 	if kubeClaim.Namespace == "" || kubeClaim.Svcacct.Name == "" {
-		return "", "", fmt.Errorf("failed to retrieve pod metadata from kubernetes service account token: %w", err)
+		return podMetadata{}, fmt.Errorf("failed to retrieve pod metadata from kubernetes service account token: %w", err)
 	}
 
-	return kubeClaim.Namespace, kubeClaim.Svcacct.Name, nil
+	return podMetadata{
+		namespace:          kubeClaim.Namespace,
+		serviceAccountName: kubeClaim.Svcacct.Name,
+	}, nil
 }
