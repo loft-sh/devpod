@@ -441,11 +441,11 @@ var _ = DevPodDescribe("devpod up test suite", func() {
 			err = f.DevPodUp(ctx, "https://github.com/loft-sh/examples/@subpath:/devpod/jupyter-notebook-hello-world")
 			framework.ExpectNoError(err)
 
-			out, err := f.DevPodSSH(ctx, "jupyter-notebook-hello-world", "pwd")
+			out, err := f.DevPodSSH(ctx, "subpath-devpod-jupyter-notebook-hello-world", "pwd")
 			framework.ExpectNoError(err)
-			framework.ExpectEqual(out, "/workspaces/jupyter-notebook-hello-world\n", "should be subpath")
+			framework.ExpectEqual(out, "/workspaces/subpath-devpod-jupyter-notebook-hello-world\n", "should be subpath")
 
-			err = f.DevPodWorkspaceDelete(ctx, "jupyter-notebook-hello-world")
+			err = f.DevPodWorkspaceDelete(ctx, "subpath-devpod-jupyter-notebook-hello-world")
 			framework.ExpectNoError(err)
 		})
 
