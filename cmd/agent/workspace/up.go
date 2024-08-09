@@ -208,8 +208,7 @@ func prepareWorkspace(ctx context.Context, workspaceInfo *provider2.AgentWorkspa
 		}
 
 		log.Debugf("Clone Repository")
-		gitCloner := git.NewCloner(workspaceInfo.CLIOptions.GitCloneStrategy)
-		err = CloneRepository(ctx, workspaceInfo.CLIOptions.SSHKey, workspaceInfo.Agent.Local == "true", workspaceInfo.ContentFolder, workspaceInfo.Workspace.Source, helper, gitCloner, log)
+		err = CloneRepository(ctx, workspaceInfo, helper, log)
 		if err != nil {
 			// fallback
 			log.Errorf("Cloning failed: %v. Trying cloning on local machine and uploading folder", err)
@@ -414,7 +413,8 @@ func (cmd *UpCmd) devPodUp(ctx context.Context, workspaceInfo *provider2.AgentWo
 	return result, nil
 }
 
-func CloneRepository(ctx context.Context, sshkey string, local bool, workspaceDir string, source provider2.WorkspaceSource, helper string, cloner git.Cloner, log log.Logger) error {
+func CloneRepository(ctx context.Context, workspaceInfo *provider2.AgentWorkspaceInfo, helper string, log log.Logger) error {
+	workspaceDir := workspaceInfo.ContentFolder
 	// remove the credential helper or otherwise we will receive strange errors within the container
 	defer func() {
 		if helper != "" {
@@ -432,6 +432,7 @@ func CloneRepository(ctx context.Context, sshkey string, local bool, workspaceDi
 
 	// check if command exists
 	if !command.Exists("git") {
+		local, _ := workspaceInfo.Agent.Local.Bool()
 		if local {
 			return fmt.Errorf("seems like git isn't installed on your system. Please make sure to install git and make it available in the PATH")
 		}
@@ -485,10 +486,11 @@ func CloneRepository(ctx context.Context, sshkey string, local bool, workspaceDi
 	}
 
 	// run git command
-	gitInfo := git.NewGitInfo(source.GitRepository, source.GitBranch, source.GitCommit, source.GitPRReference, source.GitSubPath)
+	s := workspaceInfo.Workspace.Source
+	gitInfo := git.NewGitInfo(s.GitRepository, s.GitBranch, s.GitCommit, s.GitPRReference, s.GitSubPath)
 	extraEnv := []string{}
 
-	if sshkey != "" {
+	if workspaceInfo.CLIOptions.SSHKey != "" {
 		key, err := os.CreateTemp("", "")
 		if err != nil {
 			return err
@@ -496,7 +498,7 @@ func CloneRepository(ctx context.Context, sshkey string, local bool, workspaceDi
 		defer os.Remove(key.Name())
 		defer key.Close()
 
-		err = writeSSHKey(key, sshkey)
+		err = writeSSHKey(key, workspaceInfo.CLIOptions.SSHKey)
 		if err != nil {
 			return err
 		}
@@ -507,9 +509,11 @@ func CloneRepository(ctx context.Context, sshkey string, local bool, workspaceDi
 		}
 
 		extraEnv = append(extraEnv, "GIT_TERMINAL_PROMPT=0")
-		extraEnv = append(extraEnv, "GIT_SSH_COMMAND=ssh -oBatchMode=yes -o IdentitiesOnly=yes -oStrictHostKeyChecking=no -o IdentityFile="+key.Name())
+		gitSSHCmd := []string{workspaceInfo.Agent.Path, "helper", "ssh-git-clone", "--key-file=" + key.Name()}
+		extraEnv = append(extraEnv, "GIT_SSH_COMMAND="+command.Quote(gitSSHCmd))
 	}
 
+	cloner := git.NewCloner(workspaceInfo.CLIOptions.GitCloneStrategy)
 	err := git.CloneRepositoryWithEnv(ctx, gitInfo, extraEnv, workspaceDir, helper, false, cloner, writer, log)
 	if err != nil {
 		return errors.Wrap(err, "clone repository")
