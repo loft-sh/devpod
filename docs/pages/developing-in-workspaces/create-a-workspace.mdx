@@ -133,3 +133,19 @@ Run the following command to rebuild an existing workspace:
 devpod up my-workspace --recreate
 ```
 
+## Resetting a workspace
+
+Some scenarios require pulling in the latest changes from a git repository or re-uploading your local folder. If instead of recreating the devcontainer you need to completely restart your workspace from a clean slate, use `Reset` over `Recreate`.
+
+** When recreating a workspace, no changes be preserved! **
+
+### Via DevPod Desktop Application
+
+Navigate to the 'Workspaces' view and press on the 'More Options' button on the workspace you want to recreate. Then press 'Reset' and confirm to rebuild the workspace.
+
+### Via DevPod CLI
+
+Run the following command to rebuild an existing workspace:
+```
+devpod up my-workspace --reset
+```
