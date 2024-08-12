@@ -3,6 +3,7 @@ package jetbrains
 import (
 	"fmt"
 	"io"
+	"net/http"
 	"net/url"
 	"os"
 	"path"
@@ -177,6 +178,10 @@ func (o *GenericJetBrainsServer) download(targetFolder string, log log.Logger) (
 		return "", errors.Wrap(err, "download binary")
 	}
 	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK && resp.StatusCode != http.StatusCreated {
+		return "", errors.Wrapf(err, "download binary returned status code %d", resp.StatusCode)
+	}
 
 	stat, err := os.Stat(targetPath)
 	if err == nil && stat.Size() == resp.ContentLength {
