@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"strconv"
+	"time"
 
 	"github.com/loft-sh/devpod/cmd/flags"
 	"github.com/loft-sh/devpod/pkg/agent"
@@ -73,20 +75,37 @@ func (cmd *LogsCmd) Run(ctx context.Context, args []string) error {
 		sshServerCmd += " --debug"
 	}
 
+	// Get the timeout from the context options
+	timeout, err := strconv.ParseInt(devPodConfig.ContextOption(config.ContextOptionAgentInjectTimeout), 10, 64)
+	if err != nil {
+		timeout = 20
+	}
+
 	// start ssh server in background
 	errChan := make(chan error, 1)
 	go func() {
 		stderr := log.ErrorStreamOnly().Writer(logrus.DebugLevel, false)
 		defer stderr.Close()
 
-		errChan <- agent.InjectAgentAndExecute(ctx, func(ctx context.Context, command string, stdin io.Reader, stdout io.Writer, stderr io.Writer) error {
-			return client.Command(ctx, clientpkg.CommandOptions{
-				Command: command,
-				Stdin:   stdin,
-				Stdout:  stdout,
-				Stderr:  stderr,
-			})
-		}, client.AgentLocal(), client.AgentPath(), client.AgentURL(), true, sshServerCmd, stdinReader, stdoutWriter, stderr, log.ErrorStreamOnly())
+		errChan <- agent.InjectAgentAndExecute(
+			ctx,
+			func(ctx context.Context, command string, stdin io.Reader, stdout io.Writer, stderr io.Writer) error {
+				return client.Command(ctx, clientpkg.CommandOptions{
+					Command: command,
+					Stdin:   stdin,
+					Stdout:  stdout,
+					Stderr:  stderr,
+				})
+			},
+			client.AgentLocal(),
+			client.AgentPath(),
+			client.AgentURL(),
+			true,
+			sshServerCmd,
+			stdinReader,
+			stdoutWriter,
+			stderr,
+			log.ErrorStreamOnly(), time.Duration(timeout)*time.Second)
 	}()
 
 	// create agent command

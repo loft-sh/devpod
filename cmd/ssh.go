@@ -99,7 +99,11 @@ func NewSSHCmd(flags *flags.GlobalFlags) *cobra.Command {
 }
 
 // Run runs the command logic
-func (cmd *SSHCmd) Run(ctx context.Context, devPodConfig *config.Config, client client2.BaseWorkspaceClient, log log.Logger) error {
+func (cmd *SSHCmd) Run(
+	ctx context.Context,
+	devPodConfig *config.Config,
+	client client2.BaseWorkspaceClient,
+	log log.Logger) error {
 	// add ssh keys to agent
 	if !cmd.Proxy && devPodConfig.ContextOption(config.ContextOptionSSHAgentForwarding) == "true" && devPodConfig.ContextOption(config.ContextOptionSSHAddPrivateKeys) == "true" {
 		log.Debug("Adding ssh keys to agent, disable via 'devpod context set-options -o SSH_ADD_PRIVATE_KEYS=false'")
@@ -234,7 +238,7 @@ func (cmd *SSHCmd) jumpContainer(
 
 			// start ssh tunnel
 			return cmd.startTunnel(ctx, devPodConfig, containerClient, client.Workspace(), log)
-		})
+		}, devPodConfig)
 }
 
 func (cmd *SSHCmd) forwardTimeout(log log.Logger) (time.Duration, error) {

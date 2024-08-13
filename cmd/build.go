@@ -29,6 +29,7 @@ type BuildCmd struct {
 
 	SkipDelete bool
 	Machine    string
+	cfg        *config.Config
 }
 
 // NewBuildCmd creates a new command
@@ -154,7 +155,7 @@ func (cmd *BuildCmd) build(ctx context.Context, workspaceClient client.Workspace
 
 func (cmd *BuildCmd) buildAgentClient(ctx context.Context, workspaceClient client.WorkspaceClient, log log.Logger) error {
 	// compress info
-	workspaceInfo, _, err := workspaceClient.AgentInfo(cmd.CLIOptions)
+	workspaceInfo, wInfo, err := workspaceClient.AgentInfo(cmd.CLIOptions, cmd.cfg)
 	if err != nil {
 		return err
 	}
@@ -191,14 +192,26 @@ func (cmd *BuildCmd) buildAgentClient(ctx context.Context, workspaceClient clien
 		writer := log.ErrorStreamOnly().Writer(logrus.InfoLevel, false)
 		defer writer.Close()
 
-		errChan <- agent.InjectAgentAndExecute(cancelCtx, func(ctx context.Context, command string, stdin io.Reader, stdout io.Writer, stderr io.Writer) error {
-			return workspaceClient.Command(ctx, client.CommandOptions{
-				Command: command,
-				Stdin:   stdin,
-				Stdout:  stdout,
-				Stderr:  stderr,
-			})
-		}, workspaceClient.AgentLocal(), workspaceClient.AgentPath(), workspaceClient.AgentURL(), true, command, stdinReader, stdoutWriter, writer, log.ErrorStreamOnly())
+		errChan <- agent.InjectAgentAndExecute(
+			cancelCtx,
+			func(ctx context.Context, command string, stdin io.Reader, stdout io.Writer, stderr io.Writer) error {
+				return workspaceClient.Command(ctx, client.CommandOptions{
+					Command: command,
+					Stdin:   stdin,
+					Stdout:  stdout,
+					Stderr:  stderr,
+				})
+			},
+			workspaceClient.AgentLocal(),
+			workspaceClient.AgentPath(),
+			workspaceClient.AgentURL(),
+			true,
+			command,
+			stdinReader,
+			stdoutWriter,
+			writer,
+			log.ErrorStreamOnly(),
+			wInfo.InjectTimeout)
 	}()
 
 	// create container etc.

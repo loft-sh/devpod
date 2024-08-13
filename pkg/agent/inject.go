@@ -28,6 +28,7 @@ func InjectAgent(
 	downloadURL string,
 	preferDownload bool,
 	log log.Logger,
+	timeout time.Duration,
 ) error {
 	return InjectAgentAndExecute(
 		ctx,
@@ -41,6 +42,7 @@ func InjectAgent(
 		nil,
 		nil,
 		log,
+		timeout,
 	)
 }
 
@@ -56,6 +58,7 @@ func InjectAgentAndExecute(
 	stdout io.Writer,
 	stderr io.Writer,
 	log log.Logger,
+	timeout time.Duration,
 ) error {
 	// should execute locally?
 	if local {
@@ -115,7 +118,7 @@ func InjectAgentAndExecute(
 			stdin,
 			stdout,
 			stderr,
-			time.Second*20,
+			timeout,
 			log,
 		)
 		if err != nil {

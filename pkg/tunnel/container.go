@@ -6,10 +6,12 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"strconv"
 	"time"
 
 	"github.com/loft-sh/devpod/pkg/agent"
 	"github.com/loft-sh/devpod/pkg/client"
+	"github.com/loft-sh/devpod/pkg/config"
 	"github.com/loft-sh/devpod/pkg/provider"
 	devssh "github.com/loft-sh/devpod/pkg/ssh"
 	"github.com/loft-sh/log"
@@ -37,7 +39,7 @@ type ContainerHandler struct {
 
 type Handler func(ctx context.Context, containerClient *ssh.Client) error
 
-func (c *ContainerHandler) Run(ctx context.Context, handler Handler) error {
+func (c *ContainerHandler) Run(ctx context.Context, handler Handler, cfg *config.Config) error {
 	if handler == nil {
 		return nil
 	}
@@ -58,6 +60,12 @@ func (c *ContainerHandler) Run(ctx context.Context, handler Handler) error {
 	defer stdoutWriter.Close()
 	defer stdinWriter.Close()
 
+	// Get the timeout from the context options
+	timeout, err := strconv.ParseInt(cfg.ContextOption(config.ContextOptionAgentInjectTimeout), 10, 64)
+	if err != nil {
+		timeout = 20
+	}
+
 	// tunnel to host
 	tunnelChan := make(chan error, 1)
 	go func() {
@@ -69,14 +77,26 @@ func (c *ContainerHandler) Run(ctx context.Context, handler Handler) error {
 		if c.log.GetLevel() == logrus.DebugLevel {
 			command += " --debug"
 		}
-		tunnelChan <- agent.InjectAgentAndExecute(cancelCtx, func(ctx context.Context, command string, stdin io.Reader, stdout io.Writer, stderr io.Writer) error {
-			return c.client.Command(ctx, client.CommandOptions{
-				Command: command,
-				Stdin:   stdin,
-				Stdout:  stdout,
-				Stderr:  stderr,
-			})
-		}, c.client.AgentLocal(), c.client.AgentPath(), c.client.AgentURL(), true, command, stdinReader, stdoutWriter, writer, c.log.ErrorStreamOnly())
+		tunnelChan <- agent.InjectAgentAndExecute(
+			cancelCtx,
+			func(ctx context.Context, command string, stdin io.Reader, stdout io.Writer, stderr io.Writer) error {
+				return c.client.Command(ctx, client.CommandOptions{
+					Command: command,
+					Stdin:   stdin,
+					Stdout:  stdout,
+					Stderr:  stderr,
+				})
+			},
+			c.client.AgentLocal(),
+			c.client.AgentPath(),
+			c.client.AgentURL(),
+			true,
+			command,
+			stdinReader,
+			stdoutWriter,
+			writer,
+			c.log.ErrorStreamOnly(),
+			time.Duration(timeout)*time.Second)
 	}()
 
 	// connect to container
@@ -97,12 +117,12 @@ func (c *ContainerHandler) Run(ctx context.Context, handler Handler) error {
 		// update workspace remotely
 		if !c.proxy && c.updateConfigInterval > 0 {
 			go func() {
-				c.updateConfig(cancelCtx, sshClient)
+				c.updateConfig(cancelCtx, sshClient, cfg)
 			}()
 		}
 
 		// wait until we are done
-		containerChan <- errors.Wrap(c.runRunInContainer(cancelCtx, sshClient, handler), "run in container")
+		containerChan <- errors.Wrap(c.runRunInContainer(cancelCtx, sshClient, handler, cfg), "run in container")
 	}()
 
 	// wait for result
@@ -114,7 +134,7 @@ func (c *ContainerHandler) Run(ctx context.Context, handler Handler) error {
 	}
 }
 
-func (c *ContainerHandler) updateConfig(ctx context.Context, sshClient *ssh.Client) {
+func (c *ContainerHandler) updateConfig(ctx context.Context, sshClient *ssh.Client, cfg *config.Config) {
 	for {
 		select {
 		case <-ctx.Done():
@@ -130,7 +150,7 @@ func (c *ContainerHandler) updateConfig(ctx context.Context, sshClient *ssh.Clie
 			}
 
 			// compress info
-			workspaceInfo, agentInfo, err := c.client.AgentInfo(provider.CLIOptions{Proxy: c.proxy})
+			workspaceInfo, agentInfo, err := c.client.AgentInfo(provider.CLIOptions{Proxy: c.proxy}, cfg)
 			if err != nil {
 				c.log.Errorf("Error compressing workspace info: %v", err)
 				break
@@ -154,9 +174,9 @@ func (c *ContainerHandler) updateConfig(ctx context.Context, sshClient *ssh.Clie
 	}
 }
 
-func (c *ContainerHandler) runRunInContainer(ctx context.Context, sshClient *ssh.Client, runInContainer Handler) error {
+func (c *ContainerHandler) runRunInContainer(ctx context.Context, sshClient *ssh.Client, runInContainer Handler, cfg *config.Config) error {
 	// compress info
-	workspaceInfo, _, err := c.client.AgentInfo(provider.CLIOptions{Proxy: c.proxy})
+	workspaceInfo, _, err := c.client.AgentInfo(provider.CLIOptions{Proxy: c.proxy}, cfg)
 	if err != nil {
 		return err
 	}

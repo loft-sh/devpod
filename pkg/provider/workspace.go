@@ -2,6 +2,7 @@ package provider
 
 import (
 	"strings"
+	"time"
 
 	"github.com/loft-sh/devpod/pkg/config"
 	devcontainerconfig "github.com/loft-sh/devpod/pkg/devcontainer/config"
@@ -160,6 +161,9 @@ type AgentWorkspaceInfo struct {
 
 	// Origin holds the folder where this config was loaded from
 	Origin string `json:"-"`
+
+	// InjectTimeout specifies how long to wait for the agent to be injected into the dev container
+	InjectTimeout time.Duration `json:"inject_timeout,omitempty"`
 }
 
 type CLIOptions struct {

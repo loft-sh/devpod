@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"strings"
+	"time"
 
 	"github.com/loft-sh/devpod/pkg/devcontainer/config"
 	"github.com/loft-sh/devpod/pkg/devcontainer/metadata"
@@ -22,7 +23,13 @@ const (
 	WorkspaceUIDExtraEnvVar     = "DEVPOD_WORKSPACE_UID"
 )
 
-func (r *runner) runSingleContainer(ctx context.Context, parsedConfig *config.SubstitutedConfig, substitutionContext *config.SubstitutionContext, options UpOptions) (*config.Result, error) {
+func (r *runner) runSingleContainer(
+	ctx context.Context,
+	parsedConfig *config.SubstitutedConfig,
+	substitutionContext *config.SubstitutionContext,
+	options UpOptions,
+	timeout time.Duration,
+) (*config.Result, error) {
 	containerDetails, err := r.Driver.FindDevContainer(ctx, r.ID)
 	if err != nil {
 		return nil, fmt.Errorf("find dev container: %w", err)
@@ -115,7 +122,7 @@ func (r *runner) runSingleContainer(ctx context.Context, parsedConfig *config.Su
 	}
 
 	// setup container
-	return r.setupContainer(ctx, parsedConfig.Raw, containerDetails, mergedConfig, substitutionContext)
+	return r.setupContainer(ctx, parsedConfig.Raw, containerDetails, mergedConfig, substitutionContext, timeout)
 }
 
 func (r *runner) runContainer(

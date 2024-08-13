@@ -9,6 +9,7 @@ import (
 	"path/filepath"
 	"runtime"
 	"strings"
+	"time"
 
 	"github.com/loft-sh/devpod/pkg/agent"
 	"github.com/loft-sh/devpod/pkg/agent/tunnelserver"
@@ -28,11 +29,12 @@ func (r *runner) setupContainer(
 	containerDetails *config.ContainerDetails,
 	mergedConfig *config.MergedDevContainerConfig,
 	substitutionContext *config.SubstitutionContext,
+	timeout time.Duration,
 ) (*config.Result, error) {
 	// inject agent
 	err := agent.InjectAgent(ctx, func(ctx context.Context, command string, stdin io.Reader, stdout io.Writer, stderr io.Writer) error {
 		return r.Driver.CommandDevContainer(ctx, r.ID, "root", command, stdin, stdout, stderr)
-	}, false, agent.ContainerDevPodHelperLocation, agent.DefaultAgentDownloadURL(), false, r.Log)
+	}, false, agent.ContainerDevPodHelperLocation, agent.DefaultAgentDownloadURL(), false, r.Log, timeout)
 	if err != nil {
 		return nil, errors.Wrap(err, "inject agent")
 	}
