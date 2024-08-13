@@ -41,7 +41,11 @@ func TestRunE2ETests(t *testing.T) {
 				DefaultProvider: "",
 				Providers:       map[string]*config.ProviderConfig{},
 				IDEs:            map[string]*config.IDEConfig{},
-				Options:         map[string]config.OptionValue{},
+				Options: map[string]config.OptionValue{
+					config.ContextOptionAgentInjectTimeout: {
+						Value: "20",
+					},
+				},
 			},
 		},
 		Origin: configOrigin,
