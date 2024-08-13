@@ -232,6 +232,12 @@ func (r *runner) getImageBuildInfoFromDockerfile(substitutionContext *config.Sub
 		return nil, errors.Wrap(err, "parse dockerfile")
 	}
 
+	// Check that the build target specified in the devcontainer.json exists in the Dockerfile
+	_, ok := parsedDockerfile.StagesByTarget[target]
+	if !ok {
+		return nil, errors.Wrap(err, "build target does not exist")
+	}
+
 	baseImage := parsedDockerfile.FindBaseImage(buildArgs, target)
 	if baseImage == "" {
 		return nil, fmt.Errorf("find base image %s", target)
