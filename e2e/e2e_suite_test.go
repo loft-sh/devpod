@@ -11,6 +11,7 @@ import (
 	"github.com/onsi/gomega"
 
 	"github.com/loft-sh/devpod/e2e/framework"
+	"github.com/loft-sh/devpod/pkg/config"
 
 	// Register tests
 	_ "github.com/loft-sh/devpod/e2e/tests/build"
@@ -31,6 +32,22 @@ import (
 // generated in this directory, and cluster logs will also be saved.
 // This function is called on each Ginkgo node in parallel mode.
 func TestRunE2ETests(t *testing.T) {
+	// Set up config file
+	configOrigin, _ := config.GetConfigPath()
+	cfg := &config.Config{
+		DefaultContext: config.DefaultContext,
+		Contexts: map[string]*config.ContextConfig{
+			config.DefaultContext: {
+				DefaultProvider: "",
+				Providers:       map[string]*config.ProviderConfig{},
+				IDEs:            map[string]*config.IDEConfig{},
+				Options:         map[string]config.OptionValue{},
+			},
+		},
+		Origin: configOrigin,
+	}
+	config.SaveConfig(cfg)
+
 	if runtime.GOOS != "linux" {
 		go framework.ServeAgent()
 
