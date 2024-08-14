@@ -68,7 +68,7 @@ func (cmd *ProjectsCmd) Run(ctx context.Context) error {
 	enum := []types.OptionEnum{}
 	for _, project := range projectList.Items {
 		// Filter out projects that don't have allowed runners
-		if project.Spec.AllowedRunners == nil || len(project.Spec.AllowedRunners) == 0 {
+		if len(project.Spec.AllowedRunners) == 0 {
 			continue
 		}
 		enum = append(enum, types.OptionEnum{

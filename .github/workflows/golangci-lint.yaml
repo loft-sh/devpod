@@ -28,7 +28,7 @@ jobs:
           go-version: "1.21.8"
       - uses: actions/checkout@v3
       - name: golangci-lint
-        uses: golangci/golangci-lint-action@v3
+        uses: golangci/golangci-lint-action@v6
         with:
-          version: latest
-          args: --modules-download-mode vendor --timeout 15m
+          version: v1.60.1
+          args: --timeout 30m
