@@ -217,23 +217,7 @@ func LoadConfig(contextOverride string, providerOverride string) (*Config, error
 			return nil, errors.Wrap(err, "read config")
 		}
 
-		context := contextOverride
-		if context == "" {
-			context = DefaultContext
-		}
-
-		return &Config{
-			DefaultContext: context,
-			Contexts: map[string]*ContextConfig{
-				context: {
-					DefaultProvider: providerOverride,
-					Providers:       map[string]*ProviderConfig{},
-					IDEs:            map[string]*IDEConfig{},
-					Options:         map[string]OptionValue{},
-				},
-			},
-			Origin: configOrigin,
-		}, nil
+		return nil, fmt.Errorf("config file not found at %s", configOrigin)
 	}
 
 	config := &Config{}
