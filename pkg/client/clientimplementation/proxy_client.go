@@ -220,7 +220,7 @@ func (s *proxyClient) Ssh(ctx context.Context, opt client.SshOptions) error {
 	return nil
 }
 
-func (s *proxyClient) Delete(ctx context.Context, opt client.DeleteOptions) error {
+func (s *proxyClient) Delete(ctx context.Context, opt client.DeleteOptions, devPodConfig *config.Config) error {
 	s.m.Lock()
 	defer s.m.Unlock()
 
@@ -271,7 +271,7 @@ func (s *proxyClient) Delete(ctx context.Context, opt client.DeleteOptions) erro
 	return DeleteWorkspaceFolder(s.workspace.Context, s.workspace.ID, s.workspace.SSHConfigPath, s.log)
 }
 
-func (s *proxyClient) Stop(ctx context.Context, opt client.StopOptions) error {
+func (s *proxyClient) Stop(ctx context.Context, opt client.StopOptions, devPodConfig *config.Config) error {
 	s.m.Lock()
 	defer s.m.Unlock()
 
@@ -303,7 +303,7 @@ func (s *proxyClient) Stop(ctx context.Context, opt client.StopOptions) error {
 	return nil
 }
 
-func (s *proxyClient) Status(ctx context.Context, options client.StatusOptions) (client.Status, error) {
+func (s *proxyClient) Status(ctx context.Context, options client.StatusOptions, devPodConfig *config.Config) (client.Status, error) {
 	s.m.Lock()
 	defer s.m.Unlock()
 

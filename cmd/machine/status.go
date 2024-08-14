@@ -50,7 +50,7 @@ func (cmd *StatusCmd) Run(ctx context.Context, args []string) error {
 	}
 
 	// get status
-	machineStatus, err := machineClient.Status(ctx, client.StatusOptions{})
+	machineStatus, err := machineClient.Status(ctx, client.StatusOptions{}, devPodConfig)
 	if err != nil {
 		return err
 	}

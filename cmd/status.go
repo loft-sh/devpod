@@ -51,7 +51,7 @@ func NewStatusCmd(flags *flags.GlobalFlags) *cobra.Command {
 				return err
 			}
 
-			return cmd.Run(ctx, client, logger)
+			return cmd.Run(ctx, client, logger, devPodConfig)
 		},
 	}
 
@@ -62,7 +62,7 @@ func NewStatusCmd(flags *flags.GlobalFlags) *cobra.Command {
 }
 
 // Run runs the command logic
-func (cmd *StatusCmd) Run(ctx context.Context, client client2.BaseWorkspaceClient, log log.Logger) error {
+func (cmd *StatusCmd) Run(ctx context.Context, client client2.BaseWorkspaceClient, log log.Logger, devPodConfig *config.Config) error {
 	// parse timeout
 	if cmd.Timeout != "" {
 		duration, err := time.ParseDuration(cmd.Timeout)
@@ -76,7 +76,7 @@ func (cmd *StatusCmd) Run(ctx context.Context, client client2.BaseWorkspaceClien
 	}
 
 	// get instance status
-	instanceStatus, err := client.Status(ctx, cmd.StatusOptions)
+	instanceStatus, err := client.Status(ctx, cmd.StatusOptions, devPodConfig)
 	if err != nil {
 		return err
 	}

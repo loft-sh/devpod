@@ -169,10 +169,11 @@ func startWait(
 	client client2.WorkspaceClient,
 	create bool,
 	log log.Logger,
+	devPodConfig *config.Config,
 ) error {
 	startWaiting := time.Now()
 	for {
-		instanceStatus, err := client.Status(ctx, client2.StatusOptions{})
+		instanceStatus, err := client.Status(ctx, client2.StatusOptions{}, devPodConfig)
 		if err != nil {
 			return err
 		} else if instanceStatus == client2.StatusBusy {
@@ -225,7 +226,7 @@ func (cmd *SSHCmd) jumpContainer(
 	defer unlockOnce.Do(client.Unlock)
 
 	// start the workspace
-	err = startWait(ctx, client, false, log)
+	err = startWait(ctx, client, false, log, devPodConfig)
 	if err != nil {
 		return err
 	}

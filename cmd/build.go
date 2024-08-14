@@ -91,7 +91,7 @@ func NewBuildCmd(flags *flags.GlobalFlags) *cobra.Command {
 			// delete workspace if we have created it
 			if exists == "" && !cmd.SkipDelete {
 				defer func() {
-					err = baseWorkspaceClient.Delete(ctx, client.DeleteOptions{Force: true})
+					err = baseWorkspaceClient.Delete(ctx, client.DeleteOptions{Force: true}, devPodConfig)
 					if err != nil {
 						log.Default.Errorf("Error deleting workspace: %v", err)
 					}
@@ -104,7 +104,7 @@ func NewBuildCmd(flags *flags.GlobalFlags) *cobra.Command {
 				return fmt.Errorf("building is currently not supported for proxy providers")
 			}
 
-			return cmd.Run(ctx, workspaceClient)
+			return cmd.Run(ctx, workspaceClient, devPodConfig)
 		},
 	}
 
@@ -128,9 +128,9 @@ func NewBuildCmd(flags *flags.GlobalFlags) *cobra.Command {
 	return buildCmd
 }
 
-func (cmd *BuildCmd) Run(ctx context.Context, client client.WorkspaceClient) error {
+func (cmd *BuildCmd) Run(ctx context.Context, client client.WorkspaceClient, devPodConfig *config.Config) error {
 	// build workspace
-	err := cmd.build(ctx, client, log.Default)
+	err := cmd.build(ctx, client, log.Default, devPodConfig)
 	if err != nil {
 		return err
 	}
@@ -138,14 +138,14 @@ func (cmd *BuildCmd) Run(ctx context.Context, client client.WorkspaceClient) err
 	return nil
 }
 
-func (cmd *BuildCmd) build(ctx context.Context, workspaceClient client.WorkspaceClient, log log.Logger) error {
+func (cmd *BuildCmd) build(ctx context.Context, workspaceClient client.WorkspaceClient, log log.Logger, devPodConfig *config.Config) error {
 	err := workspaceClient.Lock(ctx)
 	if err != nil {
 		return err
 	}
 	defer workspaceClient.Unlock()
 
-	err = startWait(ctx, workspaceClient, true, log)
+	err = startWait(ctx, workspaceClient, true, log, devPodConfig)
 	if err != nil {
 		return err
 	}

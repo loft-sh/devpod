@@ -307,7 +307,7 @@ func (s *workspaceClient) Create(ctx context.Context, options client.CreateOptio
 	}
 
 	// get status
-	machineStatus, err := machineClient.Status(ctx, client.StatusOptions{})
+	machineStatus, err := machineClient.Status(ctx, client.StatusOptions{}, &config.Config{})
 	if err != nil {
 		return err
 	} else if machineStatus != client.StatusNotFound {
@@ -318,7 +318,7 @@ func (s *workspaceClient) Create(ctx context.Context, options client.CreateOptio
 	return machineClient.Create(ctx, client.CreateOptions{})
 }
 
-func (s *workspaceClient) Delete(ctx context.Context, opt client.DeleteOptions) error {
+func (s *workspaceClient) Delete(ctx context.Context, opt client.DeleteOptions, cfg *config.Config) error {
 	s.m.Lock()
 	defer s.m.Unlock()
 
@@ -350,7 +350,7 @@ func (s *workspaceClient) Delete(ctx context.Context, opt client.DeleteOptions) 
 			defer writer.Close()
 
 			s.log.Infof("Deleting container...")
-			compressed, info, err := s.agentInfo(provider.CLIOptions{}, &config.Config{})
+			compressed, info, err := s.agentInfo(provider.CLIOptions{}, cfg)
 			if err != nil {
 				return fmt.Errorf("agent info")
 			}
@@ -391,7 +391,7 @@ func (s *workspaceClient) Delete(ctx context.Context, opt client.DeleteOptions) 
 			}
 		}
 
-		err = machineClient.Delete(ctx, opt)
+		err = machineClient.Delete(ctx, opt, &config.Config{})
 		if err != nil {
 			return err
 		}
@@ -412,7 +412,7 @@ func (s *workspaceClient) isMachineRunning(ctx context.Context) (bool, error) {
 	}
 
 	// retrieve status
-	status, err := machineClient.Status(ctx, client.StatusOptions{})
+	status, err := machineClient.Status(ctx, client.StatusOptions{}, &config.Config{})
 	if err != nil {
 		return false, perrors.Wrap(err, "retrieve machine status")
 	} else if status == client.StatusRunning {
@@ -438,7 +438,7 @@ func (s *workspaceClient) Start(ctx context.Context, options client.StartOptions
 	return machineClient.Start(ctx, options)
 }
 
-func (s *workspaceClient) Stop(ctx context.Context, opt client.StopOptions) error {
+func (s *workspaceClient) Stop(ctx context.Context, opt client.StopOptions, cfg *config.Config) error {
 	s.m.Lock()
 	defer s.m.Unlock()
 
@@ -447,7 +447,7 @@ func (s *workspaceClient) Stop(ctx context.Context, opt client.StopOptions) erro
 		defer writer.Close()
 
 		s.log.Infof("Stopping container...")
-		compressed, info, err := s.agentInfo(provider.CLIOptions{}, &config.Config{})
+		compressed, info, err := s.agentInfo(provider.CLIOptions{}, cfg)
 		if err != nil {
 			return fmt.Errorf("agent info")
 		}
@@ -482,7 +482,7 @@ func (s *workspaceClient) Stop(ctx context.Context, opt client.StopOptions) erro
 		return err
 	}
 
-	return machineClient.Stop(ctx, opt)
+	return machineClient.Stop(ctx, opt, &config.Config{})
 }
 
 func (s *workspaceClient) Command(ctx context.Context, commandOptions client.CommandOptions) (err error) {
@@ -500,7 +500,7 @@ func (s *workspaceClient) Command(ctx context.Context, commandOptions client.Com
 	return runCommand(ctx, "command", s.config.Exec.Command, environ, commandOptions.Stdin, commandOptions.Stdout, commandOptions.Stderr, s.log.ErrorStreamOnly())
 }
 
-func (s *workspaceClient) Status(ctx context.Context, options client.StatusOptions) (client.Status, error) {
+func (s *workspaceClient) Status(ctx context.Context, options client.StatusOptions, cfg *config.Config) (client.Status, error) {
 	s.m.Lock()
 	defer s.m.Unlock()
 
@@ -515,14 +515,14 @@ func (s *workspaceClient) Status(ctx context.Context, options client.StatusOptio
 			return client.StatusNotFound, err
 		}
 
-		status, err := machineClient.Status(ctx, options)
+		status, err := machineClient.Status(ctx, options, &config.Config{})
 		if err != nil {
 			return status, err
 		}
 
 		// try to check container status and if that fails check workspace folder
 		if status == client.StatusRunning && options.ContainerStatus {
-			return s.getContainerStatus(ctx)
+			return s.getContainerStatus(ctx, cfg)
 		}
 
 		return status, err
@@ -530,7 +530,7 @@ func (s *workspaceClient) Status(ctx context.Context, options client.StatusOptio
 
 	// try to check container status and if that fails check workspace folder
 	if options.ContainerStatus {
-		return s.getContainerStatus(ctx)
+		return s.getContainerStatus(ctx, cfg)
 	}
 
 	// logic:
@@ -550,10 +550,10 @@ func (s *workspaceClient) Status(ctx context.Context, options client.StatusOptio
 	return client.StatusNotFound, nil
 }
 
-func (s *workspaceClient) getContainerStatus(ctx context.Context) (client.Status, error) {
+func (s *workspaceClient) getContainerStatus(ctx context.Context, cfg *config.Config) (client.Status, error) {
 	stdout := &bytes.Buffer{}
 	buf := &bytes.Buffer{}
-	compressed, info, err := s.agentInfo(provider.CLIOptions{}, &config.Config{})
+	compressed, info, err := s.agentInfo(provider.CLIOptions{}, cfg)
 	if err != nil {
 		return "", fmt.Errorf("get agent info")
 	}

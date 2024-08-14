@@ -107,7 +107,7 @@ func (cmd *DeleteCmd) Run(ctx context.Context, devPodConfig *config.Config, args
 		defer client.Unlock()
 
 		// retrieve instance status
-		instanceStatus, err := client.Status(ctx, client2.StatusOptions{})
+		instanceStatus, err := client.Status(ctx, client2.StatusOptions{}, devPodConfig)
 		if err != nil {
 			return err
 		} else if instanceStatus == client2.StatusNotFound {
@@ -124,7 +124,7 @@ func (cmd *DeleteCmd) Run(ctx context.Context, devPodConfig *config.Config, args
 	}
 
 	// destroy environment
-	err = client.Delete(ctx, cmd.DeleteOptions)
+	err = client.Delete(ctx, cmd.DeleteOptions, devPodConfig)
 	if err != nil {
 		return err
 	}
@@ -167,7 +167,7 @@ func (cmd *DeleteCmd) deleteSingleMachine(ctx context.Context, client client2.Ba
 	}
 
 	// delete the machine
-	err = machineClient.Delete(ctx, cmd.DeleteOptions)
+	err = machineClient.Delete(ctx, cmd.DeleteOptions, devPodConfig)
 	if err != nil {
 		return false, errors.Wrap(err, "delete machine")
 	}

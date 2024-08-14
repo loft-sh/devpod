@@ -446,7 +446,7 @@ func (cmd *UpCmd) devPodUpMachine(
 	client client2.WorkspaceClient,
 	log log.Logger,
 ) (*config2.Result, error) {
-	err := startWait(ctx, client, true, log)
+	err := startWait(ctx, client, true, log, devPodConfig)
 	if err != nil {
 		return nil, err
 	}
