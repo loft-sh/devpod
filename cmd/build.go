@@ -29,7 +29,6 @@ type BuildCmd struct {
 
 	SkipDelete bool
 	Machine    string
-	cfg        *config.Config
 }
 
 // NewBuildCmd creates a new command
@@ -150,12 +149,12 @@ func (cmd *BuildCmd) build(ctx context.Context, workspaceClient client.Workspace
 		return err
 	}
 
-	return cmd.buildAgentClient(ctx, workspaceClient, log)
+	return cmd.buildAgentClient(ctx, workspaceClient, log, devPodConfig)
 }
 
-func (cmd *BuildCmd) buildAgentClient(ctx context.Context, workspaceClient client.WorkspaceClient, log log.Logger) error {
+func (cmd *BuildCmd) buildAgentClient(ctx context.Context, workspaceClient client.WorkspaceClient, log log.Logger, devPodConfig *config.Config) error {
 	// compress info
-	workspaceInfo, wInfo, err := workspaceClient.AgentInfo(cmd.CLIOptions, cmd.cfg)
+	workspaceInfo, wInfo, err := workspaceClient.AgentInfo(cmd.CLIOptions, devPodConfig)
 	if err != nil {
 		return err
 	}
