@@ -116,7 +116,7 @@ func (c *Config) IDEOptions(ide string) map[string]OptionValue {
 }
 
 func (c *Config) ContextOption(option string) string {
-	if c.Current() != nil && c.Current().Options != nil {
+	if c.Contexts != nil && c.Current().Options != nil {
 		if _, ok := c.Current().Options[option]; ok && c.Current().Options[option].Value != "" {
 			return c.Current().Options[option].Value
 		}
