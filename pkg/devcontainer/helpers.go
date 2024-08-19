@@ -22,20 +22,20 @@ type GetWorkspaceConfigResult struct {
 }
 
 func FindDevcontainerFiles(ctx context.Context, rawSource, tmpDirPath string, maxDepth int, log log.Logger) (*GetWorkspaceConfigResult, error) {
-	result := &GetWorkspaceConfigResult{ConfigPaths: []string{}}
-
 	// local path
 	isLocalPath, _ := file.IsLocalDir(rawSource)
 	if isLocalPath {
-		return FindFilesInLocalDir(result, rawSource, maxDepth, log)
+		return FindFilesInLocalDir(rawSource, maxDepth, log)
 	}
 
 	// git repo
 	gitRepository, gitPRReference, gitBranch, gitCommit, gitSubDir := git.NormalizeRepository(rawSource)
 	if strings.HasSuffix(rawSource, ".git") || git.PingRepository(gitRepository) {
 		log.Debug("Git repository detected")
-		return FindFilesInGitRepo(ctx, result, gitRepository, gitPRReference, gitBranch, gitCommit, gitSubDir, tmpDirPath, maxDepth, log)
+		return FindFilesInGitRepo(ctx, gitRepository, gitPRReference, gitBranch, gitCommit, gitSubDir, tmpDirPath, maxDepth, log)
 	}
+
+	result := &GetWorkspaceConfigResult{ConfigPaths: []string{}}
 
 	// container image
 	_, err := image.GetImage(ctx, rawSource)
@@ -50,8 +50,9 @@ func FindDevcontainerFiles(ctx context.Context, rawSource, tmpDirPath string, ma
 	return result, nil
 }
 
-func FindFilesInLocalDir(result *GetWorkspaceConfigResult, rawSource string, maxDepth int, log log.Logger) (*GetWorkspaceConfigResult, error) {
+func FindFilesInLocalDir(rawSource string, maxDepth int, log log.Logger) (*GetWorkspaceConfigResult, error) {
 	log.Debug("Local directory detected")
+	result := &GetWorkspaceConfigResult{ConfigPaths: []string{}}
 	result.IsLocal = true
 	initialDepth := strings.Count(rawSource, string(filepath.Separator))
 	err := filepath.WalkDir(rawSource, func(path string, info fs.DirEntry, err error) error {
@@ -81,8 +82,11 @@ func FindFilesInLocalDir(result *GetWorkspaceConfigResult, rawSource string, max
 	return result, nil
 }
 
-func FindFilesInGitRepo(ctx context.Context, result *GetWorkspaceConfigResult, gitRepository, gitPRReference, gitBranch, gitCommit, gitSubDir, tmpDirPath string, maxDepth int, log log.Logger) (*GetWorkspaceConfigResult, error) {
-	result.IsGitRepository = true
+func FindFilesInGitRepo(ctx context.Context, gitRepository, gitPRReference, gitBranch, gitCommit, gitSubDir, tmpDirPath string, maxDepth int, log log.Logger) (*GetWorkspaceConfigResult, error) {
+	result := &GetWorkspaceConfigResult{
+		ConfigPaths:     []string{},
+		IsGitRepository: true,
+	}
 
 	gitInfo := git.NewGitInfo(gitRepository, gitBranch, gitCommit, gitPRReference, gitSubDir)
 	log.Debugf("Cloning git repository into %s", tmpDirPath)
