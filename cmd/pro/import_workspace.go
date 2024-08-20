@@ -163,6 +163,9 @@ func resolveInstanceOptions(ctx context.Context, instance *managementv1.DevPodWo
 	if instance.Spec.TemplateRef == nil {
 		return opts, nil
 	}
+	if instance.Spec.RunnerRef.Runner != "" {
+		opts[loft.RunnerEnv] = instance.Spec.RunnerRef.Runner
+	}
 	opts[loft.TemplateOptionEnv] = instance.Spec.TemplateRef.Name
 
 	if instance.Spec.TemplateRef.Version != "" {
@@ -180,9 +183,12 @@ func resolveInstanceOptions(ctx context.Context, instance *managementv1.DevPodWo
 	if err != nil {
 		return nil, fmt.Errorf("find template: %w", err)
 	}
-	templateParameters, err := list.GetTemplateParameters(template, instance.Spec.TemplateRef.Version)
-	if err != nil {
-		return nil, fmt.Errorf("get template parameters: %w", err)
+	templateParameters := template.Spec.Parameters
+	if len(template.Spec.Versions) > 0 {
+		templateParameters, err = list.GetTemplateParameters(template, instance.Spec.TemplateRef.Version)
+		if err != nil {
+			return nil, fmt.Errorf("get template parameters: %w", err)
+		}
 	}
 	err = fillParameterOptions(opts, templateParameters, instance.Spec.Parameters)
 	if err != nil {
