@@ -327,13 +327,16 @@ func (d *dockerDriver) RunDockerDevContainer(
 
 	// runArgs
 	// check if we need to add --gpus=all to the run args based on the dev container's host requirments
-	usesGpu, err := parsedConfig.HostRequirements.GPU.Bool()
-	if err != nil && usesGpu {
-		// check if the user manually add --gpus=all, if not then add it
-		if !slices.Contains(parsedConfig.RunArgs, "--gpus=all") {
-			args = append(args, "--gpus=all")
+	if parsedConfig.HostRequirements != nil {
+		usesGpu, err := parsedConfig.HostRequirements.GPU.Bool()
+		if err != nil && usesGpu {
+			// check if the user manually add --gpus=all, if not then add it
+			if !slices.Contains(parsedConfig.RunArgs, "--gpus=all") {
+				args = append(args, "--gpus=all")
+			}
 		}
 	}
+
 	args = append(args, parsedConfig.RunArgs...)
 
 	// run detached
