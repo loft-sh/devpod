@@ -60,7 +60,7 @@ func (c *ContainerHandler) Run(ctx context.Context, handler Handler, cfg *config
 	defer stdinWriter.Close()
 
 	// Get the timeout from the context options
-	timeout := config.ParseTimeOption(cfg, config.ContextOptionAgentInjectTimeout)
+	timeout := config.ParseTimeOption(cfg, config.ContextOptionAgentInjectTimeout) * time.Second
 
 	// tunnel to host
 	tunnelChan := make(chan error, 1)
@@ -92,7 +92,7 @@ func (c *ContainerHandler) Run(ctx context.Context, handler Handler, cfg *config
 			stdoutWriter,
 			writer,
 			c.log.ErrorStreamOnly(),
-			time.Duration(timeout)*time.Second)
+			timeout)
 	}()
 
 	// connect to container

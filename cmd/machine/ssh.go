@@ -65,7 +65,7 @@ func (cmd *SSHCmd) Run(ctx context.Context, args []string) error {
 	defer writer.Close()
 
 	// Get the timeout from the context options
-	timeout := config.ParseTimeOption(devPodConfig, config.ContextOptionAgentInjectTimeout)
+	timeout := config.ParseTimeOption(devPodConfig, config.ContextOptionAgentInjectTimeout) * time.Second
 
 	// start the ssh session
 	return StartSSHSession(
@@ -95,7 +95,7 @@ func (cmd *SSHCmd) Run(ctx context.Context, args []string) error {
 				stdout,
 				stderr,
 				log.Default.ErrorStreamOnly(),
-				time.Duration(timeout)*time.Second)
+				timeout)
 		}, writer)
 }
 

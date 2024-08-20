@@ -75,7 +75,7 @@ func (cmd *LogsCmd) Run(ctx context.Context, args []string) error {
 	}
 
 	// Get the timeout from the context options
-	timeout := config.ParseTimeOption(devPodConfig, config.ContextOptionAgentInjectTimeout)
+	timeout := config.ParseTimeOption(devPodConfig, config.ContextOptionAgentInjectTimeout) * time.Second
 
 	// start ssh server in background
 	errChan := make(chan error, 1)
@@ -101,7 +101,7 @@ func (cmd *LogsCmd) Run(ctx context.Context, args []string) error {
 			stdinReader,
 			stdoutWriter,
 			stderr,
-			log.ErrorStreamOnly(), time.Duration(timeout)*time.Second)
+			log.ErrorStreamOnly(), timeout)
 	}()
 
 	// create agent command
