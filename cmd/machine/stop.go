@@ -44,7 +44,7 @@ func (cmd *StopCmd) Run(ctx context.Context, args []string) error {
 		return err
 	}
 
-	err = machineClient.Stop(ctx, client.StopOptions{}, devPodConfig)
+	err = machineClient.Stop(ctx, client.StopOptions{})
 	if err != nil {
 		return err
 	}

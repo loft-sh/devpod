@@ -21,13 +21,13 @@ type BaseClient interface {
 	RefreshOptions(ctx context.Context, userOptions []string) error
 
 	// Status retrieves the workspace status
-	Status(ctx context.Context, options StatusOptions, cfg *config.Config) (Status, error)
+	Status(ctx context.Context, options StatusOptions) (Status, error)
 
 	// Stop stops the workspace
-	Stop(ctx context.Context, options StopOptions, cfg *config.Config) error
+	Stop(ctx context.Context, options StopOptions) error
 
 	// Delete deletes the workspace
-	Delete(ctx context.Context, options DeleteOptions, cfg *config.Config) error
+	Delete(ctx context.Context, options DeleteOptions) error
 }
 
 type Client interface {

@@ -76,7 +76,7 @@ func (cmd *StatusCmd) Run(ctx context.Context, client client2.BaseWorkspaceClien
 	}
 
 	// get instance status
-	instanceStatus, err := client.Status(ctx, cmd.StatusOptions, devPodConfig)
+	instanceStatus, err := client.Status(ctx, cmd.StatusOptions)
 	if err != nil {
 		return err
 	}

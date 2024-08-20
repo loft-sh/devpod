@@ -66,7 +66,7 @@ func (cmd *DeleteCmd) Run(ctx context.Context, args []string) error {
 	err = machineClient.Delete(ctx, client.DeleteOptions{
 		Force:       cmd.Force,
 		GracePeriod: cmd.GracePeriod,
-	}, devPodConfig)
+	})
 	if err != nil {
 		return err
 	}

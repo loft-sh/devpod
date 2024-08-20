@@ -173,7 +173,7 @@ func startWait(
 ) error {
 	startWaiting := time.Now()
 	for {
-		instanceStatus, err := client.Status(ctx, client2.StatusOptions{}, devPodConfig)
+		instanceStatus, err := client.Status(ctx, client2.StatusOptions{})
 		if err != nil {
 			return err
 		} else if instanceStatus == client2.StatusBusy {

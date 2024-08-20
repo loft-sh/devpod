@@ -56,7 +56,7 @@ func (cmd *StopCmd) Run(ctx context.Context, devPodConfig *config.Config, client
 	defer client.Unlock()
 
 	// get instance status
-	instanceStatus, err := client.Status(ctx, client2.StatusOptions{}, devPodConfig)
+	instanceStatus, err := client.Status(ctx, client2.StatusOptions{})
 	if err != nil {
 		return err
 	} else if instanceStatus != client2.StatusRunning {
@@ -72,7 +72,7 @@ func (cmd *StopCmd) Run(ctx context.Context, devPodConfig *config.Config, client
 	}
 
 	// stop environment
-	err = client.Stop(ctx, client2.StopOptions{}, devPodConfig)
+	err = client.Stop(ctx, client2.StopOptions{})
 	if err != nil {
 		return err
 	}
@@ -114,7 +114,7 @@ func (cmd *StopCmd) stopSingleMachine(ctx context.Context, client client2.BaseWo
 	}
 
 	// stop the machine
-	err = machineClient.Stop(ctx, client2.StopOptions{}, devPodConfig)
+	err = machineClient.Stop(ctx, client2.StopOptions{})
 	if err != nil {
 		return false, errors.Wrap(err, "delete machine")
 	}

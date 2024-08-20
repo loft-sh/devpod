@@ -146,7 +146,7 @@ func (s *machineClient) Start(ctx context.Context, options client.StartOptions) 
 	return nil
 }
 
-func (s *machineClient) Stop(ctx context.Context, options client.StopOptions, cfg *config.Config) error {
+func (s *machineClient) Stop(ctx context.Context, options client.StopOptions) error {
 	done := printStillRunningLogMessagePeriodically(s.log)
 	defer close(done)
 
@@ -197,7 +197,7 @@ func (s *machineClient) Command(ctx context.Context, commandOptions client.Comma
 	)
 }
 
-func (s *machineClient) Status(ctx context.Context, options client.StatusOptions, cfg *config.Config) (client.Status, error) {
+func (s *machineClient) Status(ctx context.Context, options client.StatusOptions) (client.Status, error) {
 	stdout := &bytes.Buffer{}
 	stderr := &bytes.Buffer{}
 	err := RunCommandWithBinaries(
@@ -228,7 +228,7 @@ func (s *machineClient) Status(ctx context.Context, options client.StatusOptions
 	return parsedStatus, nil
 }
 
-func (s *machineClient) Delete(ctx context.Context, options client.DeleteOptions, cfg *config.Config) error {
+func (s *machineClient) Delete(ctx context.Context, options client.DeleteOptions) error {
 	var gracePeriod *time.Duration
 	if options.GracePeriod != "" {
 		duration, err := time.ParseDuration(options.GracePeriod)
