@@ -318,5 +318,5 @@ func ParseTimeOption(cfg *Config, opt string) time.Duration {
 	if err != nil {
 		timeout = 20
 	}
-	return time.Duration(timeout)
+	return time.Duration(timeout) * time.Second
 }

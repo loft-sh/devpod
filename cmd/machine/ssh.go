@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"io"
 	"os"
-	"time"
 
 	"github.com/loft-sh/devpod/cmd/flags"
 	devagent "github.com/loft-sh/devpod/pkg/agent"
@@ -65,7 +64,7 @@ func (cmd *SSHCmd) Run(ctx context.Context, args []string) error {
 	defer writer.Close()
 
 	// Get the timeout from the context options
-	timeout := config.ParseTimeOption(devPodConfig, config.ContextOptionAgentInjectTimeout) * time.Second
+	timeout := config.ParseTimeOption(devPodConfig, config.ContextOptionAgentInjectTimeout)
 
 	// start the ssh session
 	return StartSSHSession(

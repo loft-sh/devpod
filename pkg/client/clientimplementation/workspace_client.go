@@ -201,7 +201,7 @@ func (s *workspaceClient) agentInfo(cliOptions provider.CLIOptions) (string, *pr
 	}
 
 	// Get the timeout from the context options
-	agentInfo.InjectTimeout = config.ParseTimeOption(s.devPodConfig, config.ContextOptionAgentInjectTimeout) * time.Second
+	agentInfo.InjectTimeout = config.ParseTimeOption(s.devPodConfig, config.ContextOptionAgentInjectTimeout)
 
 	// marshal config
 	out, err := json.Marshal(agentInfo)
