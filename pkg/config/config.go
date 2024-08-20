@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strconv"
+	"time"
 
 	"github.com/ghodss/yaml"
 	"github.com/loft-sh/devpod/pkg/telemetry"
@@ -309,4 +311,12 @@ func SaveConfig(config *Config) error {
 	}
 
 	return nil
+}
+
+func ParseTimeOption(cfg *Config, opt string) time.Duration {
+	timeout, err := strconv.ParseInt(cfg.ContextOption(opt), 10, 64)
+	if err != nil {
+		timeout = 20
+	}
+	return time.Duration(timeout)
 }

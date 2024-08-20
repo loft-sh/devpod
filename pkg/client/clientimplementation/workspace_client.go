@@ -10,7 +10,6 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
-	"strconv"
 	"sync"
 	"time"
 
@@ -202,11 +201,7 @@ func (s *workspaceClient) agentInfo(cliOptions provider.CLIOptions) (string, *pr
 	}
 
 	// Get the timeout from the context options
-	timeout, err := strconv.ParseInt(s.devPodConfig.ContextOption(config.ContextOptionAgentInjectTimeout), 10, 64)
-	if err != nil {
-		timeout = 20
-	}
-	agentInfo.InjectTimeout = time.Duration(timeout) * time.Second
+	agentInfo.InjectTimeout = config.ParseTimeOption(s.devPodConfig, config.ContextOptionAgentInjectTimeout) * time.Second
 
 	// marshal config
 	out, err := json.Marshal(agentInfo)

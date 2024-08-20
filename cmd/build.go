@@ -103,7 +103,7 @@ func NewBuildCmd(flags *flags.GlobalFlags) *cobra.Command {
 				return fmt.Errorf("building is currently not supported for proxy providers")
 			}
 
-			return cmd.Run(ctx, workspaceClient, devPodConfig)
+			return cmd.Run(ctx, workspaceClient)
 		},
 	}
 
@@ -127,9 +127,9 @@ func NewBuildCmd(flags *flags.GlobalFlags) *cobra.Command {
 	return buildCmd
 }
 
-func (cmd *BuildCmd) Run(ctx context.Context, client client.WorkspaceClient, devPodConfig *config.Config) error {
+func (cmd *BuildCmd) Run(ctx context.Context, client client.WorkspaceClient) error {
 	// build workspace
-	err := cmd.build(ctx, client, log.Default, devPodConfig)
+	err := cmd.build(ctx, client, log.Default)
 	if err != nil {
 		return err
 	}
@@ -137,22 +137,22 @@ func (cmd *BuildCmd) Run(ctx context.Context, client client.WorkspaceClient, dev
 	return nil
 }
 
-func (cmd *BuildCmd) build(ctx context.Context, workspaceClient client.WorkspaceClient, log log.Logger, devPodConfig *config.Config) error {
+func (cmd *BuildCmd) build(ctx context.Context, workspaceClient client.WorkspaceClient, log log.Logger) error {
 	err := workspaceClient.Lock(ctx)
 	if err != nil {
 		return err
 	}
 	defer workspaceClient.Unlock()
 
-	err = startWait(ctx, workspaceClient, true, log, devPodConfig)
+	err = startWait(ctx, workspaceClient, true, log)
 	if err != nil {
 		return err
 	}
 
-	return cmd.buildAgentClient(ctx, workspaceClient, log, devPodConfig)
+	return cmd.buildAgentClient(ctx, workspaceClient, log)
 }
 
-func (cmd *BuildCmd) buildAgentClient(ctx context.Context, workspaceClient client.WorkspaceClient, log log.Logger, devPodConfig *config.Config) error {
+func (cmd *BuildCmd) buildAgentClient(ctx context.Context, workspaceClient client.WorkspaceClient, log log.Logger) error {
 	// compress info
 	workspaceInfo, wInfo, err := workspaceClient.AgentInfo(cmd.CLIOptions)
 	if err != nil {

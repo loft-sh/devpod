@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"io"
 	"os"
-	"strconv"
 	"time"
 
 	"github.com/loft-sh/devpod/cmd/flags"
@@ -66,10 +65,7 @@ func (cmd *SSHCmd) Run(ctx context.Context, args []string) error {
 	defer writer.Close()
 
 	// Get the timeout from the context options
-	timeout, err := strconv.ParseInt(devPodConfig.ContextOption(config.ContextOptionAgentInjectTimeout), 10, 64)
-	if err != nil {
-		timeout = 20
-	}
+	timeout := config.ParseTimeOption(devPodConfig, config.ContextOptionAgentInjectTimeout)
 
 	// start the ssh session
 	return StartSSHSession(
