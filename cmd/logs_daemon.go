@@ -54,7 +54,7 @@ func (cmd *LogsDaemonCmd) Run(ctx context.Context, args []string) error {
 		return fmt.Errorf("this command is not supported for proxy providers")
 	}
 
-	_, agentInfo, err := workspaceClient.AgentInfo(provider2.CLIOptions{}, devPodConfig)
+	_, agentInfo, err := workspaceClient.AgentInfo(provider2.CLIOptions{})
 	if err != nil {
 		return err
 	}

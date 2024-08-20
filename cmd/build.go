@@ -154,7 +154,7 @@ func (cmd *BuildCmd) build(ctx context.Context, workspaceClient client.Workspace
 
 func (cmd *BuildCmd) buildAgentClient(ctx context.Context, workspaceClient client.WorkspaceClient, log log.Logger, devPodConfig *config.Config) error {
 	// compress info
-	workspaceInfo, wInfo, err := workspaceClient.AgentInfo(cmd.CLIOptions, devPodConfig)
+	workspaceInfo, wInfo, err := workspaceClient.AgentInfo(cmd.CLIOptions)
 	if err != nil {
 		return err
 	}

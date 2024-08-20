@@ -452,7 +452,7 @@ func (cmd *UpCmd) devPodUpMachine(
 	}
 
 	// compress info
-	workspaceInfo, wInfo, err := client.AgentInfo(cmd.CLIOptions, devPodConfig)
+	workspaceInfo, wInfo, err := client.AgentInfo(cmd.CLIOptions)
 	if err != nil {
 		return nil, err
 	}

@@ -6,7 +6,6 @@ import (
 	"io"
 	"strings"
 
-	"github.com/loft-sh/devpod/pkg/config"
 	"github.com/loft-sh/devpod/pkg/provider"
 )
 
@@ -100,7 +99,7 @@ type WorkspaceClient interface {
 	AgentInjectDockerCredentials() bool
 
 	// AgentInfo returns the info to send to the agent
-	AgentInfo(options provider.CLIOptions, cfg *config.Config) (string, *provider.AgentWorkspaceInfo, error)
+	AgentInfo(options provider.CLIOptions) (string, *provider.AgentWorkspaceInfo, error)
 }
 
 type InitOptions struct{}

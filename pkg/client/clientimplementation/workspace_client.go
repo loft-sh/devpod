@@ -149,14 +149,14 @@ func (s *workspaceClient) AgentInjectDockerCredentials() bool {
 	return options.ResolveAgentConfig(s.devPodConfig, s.config, s.workspace, s.machine).InjectDockerCredentials == "true"
 }
 
-func (s *workspaceClient) AgentInfo(cliOptions provider.CLIOptions, cfg *config.Config) (string, *provider.AgentWorkspaceInfo, error) {
+func (s *workspaceClient) AgentInfo(cliOptions provider.CLIOptions) (string, *provider.AgentWorkspaceInfo, error) {
 	s.m.Lock()
 	defer s.m.Unlock()
 
-	return s.agentInfo(cliOptions, cfg)
+	return s.agentInfo(cliOptions)
 }
 
-func (s *workspaceClient) agentInfo(cliOptions provider.CLIOptions, cfg *config.Config) (string, *provider.AgentWorkspaceInfo, error) {
+func (s *workspaceClient) agentInfo(cliOptions provider.CLIOptions) (string, *provider.AgentWorkspaceInfo, error) {
 	// try to load last devcontainer.json
 	var lastDevContainerConfig *config2.DevContainerConfigWithPath
 	var workspaceOrigin string
@@ -202,7 +202,7 @@ func (s *workspaceClient) agentInfo(cliOptions provider.CLIOptions, cfg *config.
 	}
 
 	// Get the timeout from the context options
-	timeout, err := strconv.ParseInt(cfg.ContextOption(config.ContextOptionAgentInjectTimeout), 10, 64)
+	timeout, err := strconv.ParseInt(s.devPodConfig.ContextOption(config.ContextOptionAgentInjectTimeout), 10, 64)
 	if err != nil {
 		timeout = 20
 	}
@@ -350,7 +350,7 @@ func (s *workspaceClient) Delete(ctx context.Context, opt client.DeleteOptions) 
 			defer writer.Close()
 
 			s.log.Infof("Deleting container...")
-			compressed, info, err := s.agentInfo(provider.CLIOptions{}, s.devPodConfig)
+			compressed, info, err := s.agentInfo(provider.CLIOptions{})
 			if err != nil {
 				return fmt.Errorf("agent info")
 			}
@@ -447,7 +447,7 @@ func (s *workspaceClient) Stop(ctx context.Context, opt client.StopOptions) erro
 		defer writer.Close()
 
 		s.log.Infof("Stopping container...")
-		compressed, info, err := s.agentInfo(provider.CLIOptions{}, s.devPodConfig)
+		compressed, info, err := s.agentInfo(provider.CLIOptions{})
 		if err != nil {
 			return fmt.Errorf("agent info")
 		}
@@ -522,7 +522,7 @@ func (s *workspaceClient) Status(ctx context.Context, options client.StatusOptio
 
 		// try to check container status and if that fails check workspace folder
 		if status == client.StatusRunning && options.ContainerStatus {
-			return s.getContainerStatus(ctx, s.devPodConfig)
+			return s.getContainerStatus(ctx)
 		}
 
 		return status, err
@@ -530,7 +530,7 @@ func (s *workspaceClient) Status(ctx context.Context, options client.StatusOptio
 
 	// try to check container status and if that fails check workspace folder
 	if options.ContainerStatus {
-		return s.getContainerStatus(ctx, s.devPodConfig)
+		return s.getContainerStatus(ctx)
 	}
 
 	// logic:
@@ -550,10 +550,10 @@ func (s *workspaceClient) Status(ctx context.Context, options client.StatusOptio
 	return client.StatusNotFound, nil
 }
 
-func (s *workspaceClient) getContainerStatus(ctx context.Context, cfg *config.Config) (client.Status, error) {
+func (s *workspaceClient) getContainerStatus(ctx context.Context) (client.Status, error) {
 	stdout := &bytes.Buffer{}
 	buf := &bytes.Buffer{}
-	compressed, info, err := s.agentInfo(provider.CLIOptions{}, cfg)
+	compressed, info, err := s.agentInfo(provider.CLIOptions{})
 	if err != nil {
 		return "", fmt.Errorf("get agent info")
 	}

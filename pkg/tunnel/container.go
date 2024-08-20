@@ -117,12 +117,12 @@ func (c *ContainerHandler) Run(ctx context.Context, handler Handler, cfg *config
 		// update workspace remotely
 		if !c.proxy && c.updateConfigInterval > 0 {
 			go func() {
-				c.updateConfig(cancelCtx, sshClient, cfg)
+				c.updateConfig(cancelCtx, sshClient)
 			}()
 		}
 
 		// wait until we are done
-		containerChan <- errors.Wrap(c.runRunInContainer(cancelCtx, sshClient, handler, cfg), "run in container")
+		containerChan <- errors.Wrap(c.runRunInContainer(cancelCtx, sshClient, handler), "run in container")
 	}()
 
 	// wait for result
@@ -134,7 +134,7 @@ func (c *ContainerHandler) Run(ctx context.Context, handler Handler, cfg *config
 	}
 }
 
-func (c *ContainerHandler) updateConfig(ctx context.Context, sshClient *ssh.Client, cfg *config.Config) {
+func (c *ContainerHandler) updateConfig(ctx context.Context, sshClient *ssh.Client) {
 	for {
 		select {
 		case <-ctx.Done():
@@ -150,7 +150,7 @@ func (c *ContainerHandler) updateConfig(ctx context.Context, sshClient *ssh.Clie
 			}
 
 			// compress info
-			workspaceInfo, agentInfo, err := c.client.AgentInfo(provider.CLIOptions{Proxy: c.proxy}, cfg)
+			workspaceInfo, agentInfo, err := c.client.AgentInfo(provider.CLIOptions{Proxy: c.proxy})
 			if err != nil {
 				c.log.Errorf("Error compressing workspace info: %v", err)
 				break
@@ -174,9 +174,9 @@ func (c *ContainerHandler) updateConfig(ctx context.Context, sshClient *ssh.Clie
 	}
 }
 
-func (c *ContainerHandler) runRunInContainer(ctx context.Context, sshClient *ssh.Client, runInContainer Handler, cfg *config.Config) error {
+func (c *ContainerHandler) runRunInContainer(ctx context.Context, sshClient *ssh.Client, runInContainer Handler) error {
 	// compress info
-	workspaceInfo, _, err := c.client.AgentInfo(provider.CLIOptions{Proxy: c.proxy}, cfg)
+	workspaceInfo, _, err := c.client.AgentInfo(provider.CLIOptions{Proxy: c.proxy})
 	if err != nil {
 		return err
 	}
