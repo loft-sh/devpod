@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"github.com/loft-sh/devpod/pkg/devcontainer/config"
+	"github.com/loft-sh/devpod/pkg/devcontainer/crane"
 	"github.com/loft-sh/devpod/pkg/driver"
 	"github.com/loft-sh/devpod/pkg/driver/drivercreate"
 	"github.com/loft-sh/devpod/pkg/encoding"
@@ -86,8 +87,89 @@ type runner struct {
 type UpOptions struct {
 	provider2.CLIOptions
 
-	NoBuild    bool
-	ForceBuild bool
+	NoBuild      bool
+	ForceBuild   bool
+	ConfigSource string
+}
+
+func (r *runner) prepareWithCrane(ctx context.Context, options UpOptions) (*config.SubstitutedConfig, *config.SubstitutionContext, error) {
+	workspaceConfigFolderPath, err := crane.PullConfigFromSource(options.ConfigSource, r.Log)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	// parse the devcontainer json
+	rawParsedConfig, err := config.ParseDevContainerJSON(
+		string(workspaceConfigFolderPath),
+		"",
+	)
+
+	if err != nil && !os.IsNotExist(err) {
+		return nil, nil, errors.Wrap(err, "parsing devcontainer.json")
+	} else if rawParsedConfig == nil {
+		r.Log.Infof("Couldn't find a devcontainer.json")
+		defaultConfig := &config.DevContainerConfig{}
+		if options.FallbackImage != "" {
+			r.Log.Infof("Using fallback image %s", options.FallbackImage)
+			defaultConfig.ImageContainer = config.ImageContainer{
+				Image: options.FallbackImage,
+			}
+		} else {
+			r.Log.Infof("Try detecting project programming language...")
+			defaultConfig = language.DefaultConfig(r.LocalWorkspaceFolder, r.Log)
+		}
+
+		defaultConfig.Origin = path.Join(filepath.ToSlash(r.LocalWorkspaceFolder), ".devcontainer.json")
+		err = config.SaveDevContainerJSON(defaultConfig)
+		if err != nil {
+			return nil, nil, errors.Wrap(err, "write default devcontainer.json")
+		}
+
+		rawParsedConfig = defaultConfig
+	}
+
+	configFile := rawParsedConfig.Origin
+
+	// get workspace folder within container
+	workspaceMount, containerWorkspaceFolder := getWorkspace(
+		r.LocalWorkspaceFolder,
+		r.WorkspaceConfig.Workspace.ID,
+		rawParsedConfig,
+	)
+	substitutionContext := &config.SubstitutionContext{
+		DevContainerID:           r.ID,
+		LocalWorkspaceFolder:     r.LocalWorkspaceFolder,
+		ContainerWorkspaceFolder: containerWorkspaceFolder,
+		Env:                      config.ListToObject(os.Environ()),
+
+		WorkspaceMount: workspaceMount,
+	}
+
+	// substitute & load
+	parsedConfig := &config.DevContainerConfig{}
+	err = config.Substitute(substitutionContext, rawParsedConfig, parsedConfig)
+	if err != nil {
+		return nil, nil, err
+	}
+	if parsedConfig.WorkspaceFolder != "" {
+		substitutionContext.ContainerWorkspaceFolder = parsedConfig.WorkspaceFolder
+	}
+	if parsedConfig.WorkspaceMount != "" {
+		substitutionContext.WorkspaceMount = parsedConfig.WorkspaceMount
+	}
+
+	if options.DevContainerImage != "" {
+		parsedConfig.Build = nil
+		parsedConfig.Dockerfile = ""
+		parsedConfig.DockerfileContainer = config.DockerfileContainer{}
+		parsedConfig.ImageContainer = config.ImageContainer{Image: options.DevContainerImage}
+	}
+
+	parsedConfig.Origin = configFile
+	return &config.SubstitutedConfig{
+		Config: parsedConfig,
+		Raw:    rawParsedConfig,
+	}, substitutionContext, nil
 }
 
 func (r *runner) Up(ctx context.Context, options UpOptions, timeout time.Duration) (*config.Result, error) {
@@ -97,10 +179,22 @@ func (r *runner) Up(ctx context.Context, options UpOptions, timeout time.Duratio
 		return r.recreateCustomDriver(ctx, options, timeout)
 	}
 
-	// prepare config
-	substitutedConfig, substitutionContext, err := r.prepare(options.CLIOptions)
-	if err != nil {
-		return nil, err
+	var substitutedConfig *config.SubstitutedConfig
+	var substitutionContext *config.SubstitutionContext
+	var err error
+
+	if options.ConfigSource != "" && crane.IsAvailable() {
+		r.Log.Debugf("Prepare config from external source")
+		substitutedConfig, substitutionContext, err = r.prepareWithCrane(ctx, options)
+		if err != nil {
+			return nil, err
+		}
+	} else {
+		r.Log.Debugf("Prepare config")
+		substitutedConfig, substitutionContext, err = r.prepare(options.CLIOptions)
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	// remove build information

@@ -149,6 +149,7 @@ func NewUpCmd(flags *flags.GlobalFlags) *cobra.Command {
 	upCmd.Flags().StringArrayVar(&cmd.IDEOptions, "ide-option", []string{}, "IDE option in the form KEY=VALUE")
 	upCmd.Flags().StringVar(&cmd.DevContainerImage, "devcontainer-image", "", "The container image to use, this will override the devcontainer.json value in the project")
 	upCmd.Flags().StringVar(&cmd.DevContainerPath, "devcontainer-path", "", "The path to the devcontainer.json relative to the project")
+	upCmd.Flags().StringVar(&cmd.DevContainerSource, "devcontainer-source", "", "External devcontainer.json source")
 	upCmd.Flags().StringArrayVar(&cmd.ProviderOptions, "provider-option", []string{}, "Provider option in the form KEY=VALUE")
 	upCmd.Flags().BoolVar(&cmd.Recreate, "recreate", false, "If true will remove any existing containers and recreate them")
 	upCmd.Flags().BoolVar(&cmd.Reset, "reset", false, "If true will remove any existing containers including sources, and recreate them")
@@ -475,6 +476,11 @@ func (cmd *UpCmd) devPodUpMachine(
 		client.AgentPath(),
 		workspaceInfo,
 	)
+
+	if cmd.DevContainerSource != "" {
+		agentCommand = fmt.Sprintf("%s --config-source '%s'", agentCommand, cmd.DevContainerSource)
+	}
+
 	if log.GetLevel() == logrus.DebugLevel {
 		agentCommand += " --debug"
 	}
