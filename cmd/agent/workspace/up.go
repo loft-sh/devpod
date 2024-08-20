@@ -38,6 +38,7 @@ type UpCmd struct {
 	*flags.GlobalFlags
 
 	WorkspaceInfo string
+	ConfigSource  string
 }
 
 // NewUpCmd creates a new command
@@ -54,6 +55,7 @@ func NewUpCmd(flags *flags.GlobalFlags) *cobra.Command {
 		},
 	}
 	upCmd.Flags().StringVar(&cmd.WorkspaceInfo, "workspace-info", "", "The workspace info")
+	upCmd.Flags().StringVar(&cmd.ConfigSource, "config-source", "", "Custom devcontainer config source")
 	_ = upCmd.MarkFlagRequired("workspace-info")
 	return upCmd
 }
@@ -404,7 +406,8 @@ func (cmd *UpCmd) devPodUp(ctx context.Context, workspaceInfo *provider2.AgentWo
 
 	// start the devcontainer
 	result, err := runner.Up(ctx, devcontainer.UpOptions{
-		CLIOptions: workspaceInfo.CLIOptions,
+		CLIOptions:   workspaceInfo.CLIOptions,
+		ConfigSource: cmd.ConfigSource,
 	}, workspaceInfo.InjectTimeout)
 	if err != nil {
 		return nil, err
