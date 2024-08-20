@@ -996,7 +996,7 @@ func setupLoftPlatformAccess(context, provider, user string, client client2.Base
 
 	command := fmt.Sprintf("%v agent container setup-loft-platform-access --context %v --provider %v --port %v", agent.ContainerDevPodHelperLocation, context, provider, port)
 
-	log.Infof("Executing command -> %v", command)
+	log.Debugf("Executing command -> %v", command)
 	err = exec.Command(
 		execPath,
 		"ssh",

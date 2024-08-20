@@ -6,12 +6,11 @@ import (
 	"io"
 	"os"
 
-	storagev1 "github.com/loft-sh/api/v4/pkg/apis/storage/v1"
 	"github.com/loft-sh/devpod/cmd/pro/flags"
 	"github.com/loft-sh/devpod/pkg/loft/client"
-	"github.com/loft-sh/devpod/pkg/loft/remotecommand"
 	"github.com/loft-sh/log"
 	"github.com/spf13/cobra"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 // DeleteCmd holds the cmd flags
@@ -57,14 +56,14 @@ func (cmd *DeleteCmd) Run(ctx context.Context, stdin io.Reader, stdout io.Writer
 		return fmt.Errorf("couldn't find workspace")
 	}
 
-	conn, err := DialWorkspace(baseClient, workspace, "delete", OptionsFromEnv(storagev1.DevPodFlagsDelete), cmd.Log)
+	managementClient, err := baseClient.Management()
 	if err != nil {
 		return err
 	}
 
-	_, err = remotecommand.ExecuteConn(ctx, conn, stdin, stdout, stderr, cmd.Log.ErrorStreamOnly())
+	err = managementClient.Loft().ManagementV1().DevPodWorkspaceInstances(workspace.Namespace).Delete(ctx, workspace.Name, metav1.DeleteOptions{})
 	if err != nil {
-		return fmt.Errorf("error executing: %w", err)
+		return fmt.Errorf("delete workspace: %w", err)
 	}
 
 	return nil

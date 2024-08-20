@@ -139,7 +139,7 @@ func DialWorkspace(baseClient client.Client, workspace *managementv1.DevPodWorks
 		if response != nil {
 			out, _ := io.ReadAll(response.Body)
 			headers, _ := json.Marshal(response.Header)
-			return nil, fmt.Errorf("error dialing websocket %s (code %d): headers - %s, response - %s, error - %w", loftURL, response.StatusCode, string(headers), string(out), err)
+			return nil, fmt.Errorf("%s: error dialing websocket %s (code %d): headers - %s, error - %w", string(out), loftURL, response.StatusCode, string(headers), err)
 		}
 
 		return nil, fmt.Errorf("error dialing websocket %s: %w", loftURL, err)
