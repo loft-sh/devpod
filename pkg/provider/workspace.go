@@ -163,7 +163,7 @@ type AgentWorkspaceInfo struct {
 	Origin string `json:"-"`
 
 	// InjectTimeout specifies how long to wait for the agent to be injected into the dev container
-	InjectTimeout time.Duration `json:"inject_timeout,omitempty"`
+	InjectTimeout time.Duration `json:"injectTimeout,omitempty"`
 }
 
 type CLIOptions struct {
