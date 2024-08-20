@@ -342,17 +342,19 @@ func (cmd *UpCmd) devPodUp(
 	// get result
 	var result *config2.Result
 
-	// check what client we have
-	if workspaceClient, ok := client.(client2.WorkspaceClient); ok {
-		result, err = cmd.devPodUpMachine(ctx, devPodConfig, workspaceClient, log)
+	switch client := client.(type) {
+	case client2.WorkspaceClient:
+		result, err = cmd.devPodUpMachine(ctx, devPodConfig, client, log)
 		if err != nil {
 			return nil, err
 		}
-	} else if proxyClient, ok := client.(client2.ProxyClient); ok {
-		result, err = cmd.devPodUpProxy(ctx, proxyClient, log)
+	case client2.ProxyClient:
+		result, err = cmd.devPodUpProxy(ctx, client, log)
 		if err != nil {
 			return nil, err
 		}
+	default:
+		return nil, fmt.Errorf("unsupported client type: %T", client)
 	}
 
 	// save result to file
