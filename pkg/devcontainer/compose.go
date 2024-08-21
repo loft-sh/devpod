@@ -45,7 +45,7 @@ func (r *runner) stopDockerCompose(ctx context.Context, projectName string) erro
 		return errors.Wrap(err, "find docker compose")
 	}
 
-	parsedConfig, _, err := r.prepare(r.WorkspaceConfig.CLIOptions)
+	parsedConfig, _, err := r.getSubstitutedConfig(r.WorkspaceConfig.CLIOptions)
 	if err != nil {
 		return errors.Wrap(err, "get parsed config")
 	}
@@ -69,7 +69,7 @@ func (r *runner) deleteDockerCompose(ctx context.Context, projectName string) er
 		return errors.Wrap(err, "find docker compose")
 	}
 
-	parsedConfig, _, err := r.prepare(r.WorkspaceConfig.CLIOptions)
+	parsedConfig, _, err := r.getSubstitutedConfig(r.WorkspaceConfig.CLIOptions)
 	if err != nil {
 		return errors.Wrap(err, "get parsed config")
 	}
