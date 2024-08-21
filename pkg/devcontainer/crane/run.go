@@ -26,8 +26,6 @@ const (
 	tmpDirTemplate = "devpod-crane-*"
 )
 
-type DevContainerConfigPath string
-
 type Content struct {
 	Files map[string]string `json:"files"`
 }
@@ -52,7 +50,7 @@ func runCommand(command string, args ...string) (string, error) {
 	return outBuf.String(), nil
 }
 
-func PullConfigFromSource(configSource string, log log.Logger) (DevContainerConfigPath, error) {
+func PullConfigFromSource(configSource string, log log.Logger) (string, error) {
 	data, err := runCommand(PullCommand, GitCrane, configSource)
 	if err != nil {
 		return "", err
@@ -73,7 +71,7 @@ func PullConfigFromSource(configSource string, log log.Logger) (DevContainerConf
 	return createContentDirectory(content)
 }
 
-func createContentDirectory(content *Content) (DevContainerConfigPath, error) {
+func createContentDirectory(content *Content) (string, error) {
 	tmpDir, err := os.MkdirTemp("", tmpDirTemplate)
 	if err != nil {
 		return "", fmt.Errorf("failed to create temporary directory: %w", err)
@@ -94,5 +92,5 @@ func createContentDirectory(content *Content) (DevContainerConfigPath, error) {
 		}
 	}
 
-	return DevContainerConfigPath(tmpDir), nil
+	return tmpDir, nil
 }

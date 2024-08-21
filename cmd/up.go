@@ -477,10 +477,6 @@ func (cmd *UpCmd) devPodUpMachine(
 		workspaceInfo,
 	)
 
-	if cmd.DevContainerSource != "" {
-		agentCommand = fmt.Sprintf("%s --config-source '%s'", agentCommand, cmd.DevContainerSource)
-	}
-
 	if log.GetLevel() == logrus.DebugLevel {
 		agentCommand += " --debug"
 	}
