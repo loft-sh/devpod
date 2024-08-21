@@ -2,11 +2,7 @@ package crane
 
 import (
 	"bytes"
-	"crypto/aes"
-	"crypto/cipher"
-	"encoding/base64"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"os"
 	"os/exec"
@@ -15,10 +11,17 @@ import (
 	"github.com/loft-sh/log"
 )
 
+var (
+	craneSigningKey string
+)
+
 const (
-	PullCommand = "pull"
-	GitSource   = "git"
-	BinPath     = "devpod-crane" // FIXME
+	PullCommand    = "pull"
+	DecryptCommand = "decrypt"
+
+	GitCrane = "git"
+
+	BinPath = "devpod-crane" // FIXME
 
 	tmpDirTemplate = "devpod-crane-*"
 )
@@ -50,69 +53,46 @@ func runCommand(command string, args ...string) (string, error) {
 }
 
 func PullConfigFromSource(configSource string, log log.Logger) (DevContainerConfigPath, error) {
-	out, err := runCommand(PullCommand, GitSource, configSource)
+	data, err := runCommand(PullCommand, GitCrane, configSource)
 	if err != nil {
 		return "", err
 	}
 
-	decryptedData, err := decrypt(out, "")
-	if err != nil {
-		return "", err
+	if craneSigningKey != "" {
+		data, err = runCommand(DecryptCommand, data, "--key", craneSigningKey)
+		if err != nil {
+			return "", err
+		}
 	}
 
 	content := &Content{}
-	if err := json.Unmarshal(decryptedData, content); err != nil {
+	if err := json.Unmarshal([]byte(data), content); err != nil {
 		return "", err
 	}
 
+	return createContentDirectory(content)
+}
+
+func createContentDirectory(content *Content) (DevContainerConfigPath, error) {
 	tmpDir, err := os.MkdirTemp("", tmpDirTemplate)
 	if err != nil {
 		return "", fmt.Errorf("failed to create temporary directory: %w", err)
 	}
 
-	devcontainerDir := filepath.Join(tmpDir, ".devcontainer") // FIXME
-
-	if err := os.Mkdir(devcontainerDir, 0777); err != nil {
-		return "", err
-	}
-
 	for filename, fileContent := range content.Files {
-		filePath := filepath.Join(devcontainerDir, filename)
-		err := os.WriteFile(filePath, []byte(fileContent), 0777)
+		filePath := filepath.Join(tmpDir, filename)
+
+		dir := filepath.Dir(filePath)
+		if err := os.MkdirAll(dir, os.ModePerm); err != nil {
+			return "", err
+		}
+
+		err := os.WriteFile(filePath, []byte(fileContent), os.ModePerm)
 		if err != nil {
-			log.Debugf("Failed creating file %v : %w", filename, err)
 			os.RemoveAll(tmpDir)
 			return "", fmt.Errorf("failed to write file %s: %w", filename, err)
 		}
 	}
 
 	return DevContainerConfigPath(tmpDir), nil
-}
-
-func decrypt(encryptedData, key string) ([]byte, error) {
-	if key == "" { // FIXME
-		return []byte(encryptedData), nil
-	}
-
-	ciphertext, err := base64.URLEncoding.DecodeString(encryptedData)
-	if err != nil {
-		return nil, err
-	}
-
-	block, err := aes.NewCipher([]byte(key))
-	if err != nil {
-		return nil, err
-	}
-
-	if len(ciphertext) < aes.BlockSize {
-		return nil, errors.New("ciphertext too short")
-	}
-
-	iv := ciphertext[:aes.BlockSize]
-	ciphertext = ciphertext[aes.BlockSize:]
-
-	stream := cipher.NewCFBDecrypter(block, iv)
-	stream.XORKeyStream(ciphertext, ciphertext)
-
-	return ciphertext, nil
 }
