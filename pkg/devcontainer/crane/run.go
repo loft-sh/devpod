@@ -30,6 +30,7 @@ type Content struct {
 	Files map[string]string `json:"files"`
 }
 
+// IsAvailable checks if devpod crane is installed in host system
 func IsAvailable() bool {
 	_, err := exec.LookPath(BinPath)
 	return err == nil
@@ -42,14 +43,14 @@ func runCommand(command string, args ...string) (string, error) {
 	cmd.Stdout = &outBuf
 	cmd.Stderr = &errBuf
 
-	err := cmd.Run()
-	if err != nil {
+	if err := cmd.Run(); err != nil {
 		return "", fmt.Errorf("failed to execute command: %v, error: %w", errBuf.String(), err)
 	}
 
 	return outBuf.String(), nil
 }
 
+// PullConfigFromSource pulls devcontainer config from configSource using git crane and returns config path
 func PullConfigFromSource(configSource string, log log.Logger) (string, error) {
 	data, err := runCommand(PullCommand, GitCrane, configSource)
 	if err != nil {
