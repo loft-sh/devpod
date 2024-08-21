@@ -452,7 +452,7 @@ func (cmd *UpCmd) devPodUpMachine(
 	}
 
 	// compress info
-	workspaceInfo, _, err := client.AgentInfo(cmd.CLIOptions)
+	workspaceInfo, wInfo, err := client.AgentInfo(cmd.CLIOptions)
 	if err != nil {
 		return nil, err
 	}
@@ -497,6 +497,7 @@ func (cmd *UpCmd) devPodUpMachine(
 			sshTunnelStdoutWriter,
 			writer,
 			log.ErrorStreamOnly(),
+			wInfo.InjectTimeout,
 		)
 	}
 

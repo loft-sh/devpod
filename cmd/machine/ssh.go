@@ -63,21 +63,39 @@ func (cmd *SSHCmd) Run(ctx context.Context, args []string) error {
 	writer := log.Default.ErrorStreamOnly().Writer(logrus.InfoLevel, false)
 	defer writer.Close()
 
+	// Get the timeout from the context options
+	timeout := config.ParseTimeOption(devPodConfig, config.ContextOptionAgentInjectTimeout)
+
 	// start the ssh session
-	return StartSSHSession(ctx, "", cmd.Command, cmd.AgentForwarding, func(ctx context.Context, stdin io.Reader, stdout io.Writer, stderr io.Writer) error {
-		command := fmt.Sprintf("'%s' helper ssh-server --stdio", machineClient.AgentPath())
-		if cmd.Debug {
-			command += " --debug"
-		}
-		return devagent.InjectAgentAndExecute(ctx, func(ctx context.Context, command string, stdin io.Reader, stdout io.Writer, stderr io.Writer) error {
-			return machineClient.Command(ctx, client.CommandOptions{
-				Command: command,
-				Stdin:   stdin,
-				Stdout:  stdout,
-				Stderr:  stderr,
-			})
-		}, machineClient.AgentLocal(), machineClient.AgentPath(), machineClient.AgentURL(), true, command, stdin, stdout, stderr, log.Default.ErrorStreamOnly())
-	}, writer)
+	return StartSSHSession(
+		ctx,
+		"",
+		cmd.Command,
+		cmd.AgentForwarding,
+		func(ctx context.Context, stdin io.Reader, stdout io.Writer, stderr io.Writer) error {
+			command := fmt.Sprintf("'%s' helper ssh-server --stdio", machineClient.AgentPath())
+			if cmd.Debug {
+				command += " --debug"
+			}
+			return devagent.InjectAgentAndExecute(ctx, func(ctx context.Context, command string, stdin io.Reader, stdout io.Writer, stderr io.Writer) error {
+				return machineClient.Command(ctx, client.CommandOptions{
+					Command: command,
+					Stdin:   stdin,
+					Stdout:  stdout,
+					Stderr:  stderr,
+				})
+			},
+				machineClient.AgentLocal(),
+				machineClient.AgentPath(),
+				machineClient.AgentURL(),
+				true,
+				command,
+				stdin,
+				stdout,
+				stderr,
+				log.Default.ErrorStreamOnly(),
+				timeout)
+		}, writer)
 }
 
 type ExecFunc func(ctx context.Context, stdin io.Reader, stdout io.Writer, stderr io.Writer) error
