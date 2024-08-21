@@ -6,14 +6,12 @@ import (
 	"io"
 	"os"
 	"os/exec"
-	"path"
 	"path/filepath"
 	"runtime"
 	"strings"
 	"time"
 
 	"github.com/loft-sh/devpod/pkg/devcontainer/config"
-	"github.com/loft-sh/devpod/pkg/devcontainer/crane"
 	"github.com/loft-sh/devpod/pkg/driver"
 	"github.com/loft-sh/devpod/pkg/driver/drivercreate"
 	"github.com/loft-sh/devpod/pkg/encoding"
@@ -101,7 +99,7 @@ func (r *runner) Up(ctx context.Context, options UpOptions, timeout time.Duratio
 		return nil, err
 	}
 
-	defer removeBuildInformation(substitutedConfig.Config)
+	defer cleanupBuildInformation(substitutedConfig.Config)
 
 	// run initializeCommand
 	err = runInitializeCommand(r.LocalWorkspaceFolder, substitutedConfig.Config, options.InitEnv, r.Log)
@@ -150,137 +148,6 @@ func (r *runner) shouldRecreateWorkspace(options UpOptions) bool {
 	return options.Recreate && !isDockerDriver
 }
 
-func (r *runner) getRawConfig(options provider2.CLIOptions) (*config.DevContainerConfig, error) {
-	if r.WorkspaceConfig.Workspace.DevContainerConfig != nil {
-		rawParsedConfig := config.CloneDevContainerConfig(r.WorkspaceConfig.Workspace.DevContainerConfig)
-		if r.WorkspaceConfig.Workspace.DevContainerPath != "" {
-			rawParsedConfig.Origin = path.Join(filepath.ToSlash(r.LocalWorkspaceFolder), r.WorkspaceConfig.Workspace.DevContainerPath)
-		} else {
-			rawParsedConfig.Origin = path.Join(filepath.ToSlash(r.LocalWorkspaceFolder), ".devcontainer.devpod.json")
-		}
-		return rawParsedConfig, nil
-	} else if r.WorkspaceConfig.Workspace.Source.Container != "" {
-		return &config.DevContainerConfig{
-			DevContainerConfigBase: config.DevContainerConfigBase{
-				// Default workspace directory for containers
-				// Upon inspecting the container, this would be updated to the correct folder, if found set
-				WorkspaceFolder: "/",
-			},
-			RunningContainer: config.RunningContainer{
-				ContainerID: r.WorkspaceConfig.Workspace.Source.Container,
-			},
-			Origin: "",
-		}, nil
-	} else if options.DevContainerSource != "" && crane.IsAvailable() {
-		localWorkspaceFolder, err := crane.PullConfigFromSource(options.DevContainerSource, r.Log)
-		if err != nil {
-			return nil, err
-		}
-
-		return config.ParseDevContainerJSON(
-			localWorkspaceFolder,
-			r.WorkspaceConfig.Workspace.DevContainerPath,
-		)
-	}
-
-	localWorkspaceFolder := r.LocalWorkspaceFolder
-	// if a subpath is specified, let's move to it
-
-	if r.WorkspaceConfig.Workspace.Source.GitSubPath != "" {
-		localWorkspaceFolder = filepath.Join(r.LocalWorkspaceFolder, r.WorkspaceConfig.Workspace.Source.GitSubPath)
-	}
-
-	// parse the devcontainer json
-	rawParsedConfig, err := config.ParseDevContainerJSON(
-		localWorkspaceFolder,
-		r.WorkspaceConfig.Workspace.DevContainerPath,
-	)
-
-	// We want to fail only in case of real errors, non-existing devcontainer.jon
-	// will be gracefully handled by the auto-detection mechanism
-	if err != nil && !os.IsNotExist(err) {
-		return nil, errors.Wrap(err, "parsing devcontainer.json")
-	} else if rawParsedConfig == nil {
-		r.Log.Infof("Couldn't find a devcontainer.json")
-		defaultConfig := &config.DevContainerConfig{}
-		if options.FallbackImage != "" {
-			r.Log.Infof("Using fallback image %s", options.FallbackImage)
-			defaultConfig.ImageContainer = config.ImageContainer{
-				Image: options.FallbackImage,
-			}
-		} else {
-			r.Log.Infof("Try detecting project programming language...")
-			defaultConfig = language.DefaultConfig(r.LocalWorkspaceFolder, r.Log)
-		}
-
-		defaultConfig.Origin = path.Join(filepath.ToSlash(r.LocalWorkspaceFolder), ".devcontainer.json")
-		err = config.SaveDevContainerJSON(defaultConfig)
-		if err != nil {
-			return nil, errors.Wrap(err, "write default devcontainer.json")
-		}
-
-		rawParsedConfig = defaultConfig
-	}
-	return rawParsedConfig, nil
-}
-
-func (r *runner) getSubstitutedConfig(options provider2.CLIOptions) (*config.SubstitutedConfig, *config.SubstitutionContext, error) {
-	rawConfig, err := r.getRawConfig(options)
-	if err != nil {
-		return nil, nil, err
-	}
-
-	return r.substitute(options, rawConfig)
-}
-
-func (r *runner) substitute(
-	options provider2.CLIOptions,
-	rawParsedConfig *config.DevContainerConfig,
-) (*config.SubstitutedConfig, *config.SubstitutionContext, error) {
-	configFile := rawParsedConfig.Origin
-
-	// get workspace folder within container
-	workspaceMount, containerWorkspaceFolder := getWorkspace(
-		r.LocalWorkspaceFolder,
-		r.WorkspaceConfig.Workspace.ID,
-		rawParsedConfig,
-	)
-	substitutionContext := &config.SubstitutionContext{
-		DevContainerID:           r.ID,
-		LocalWorkspaceFolder:     r.LocalWorkspaceFolder,
-		ContainerWorkspaceFolder: containerWorkspaceFolder,
-		Env:                      config.ListToObject(os.Environ()),
-
-		WorkspaceMount: workspaceMount,
-	}
-
-	// substitute & load
-	parsedConfig := &config.DevContainerConfig{}
-	err := config.Substitute(substitutionContext, rawParsedConfig, parsedConfig)
-	if err != nil {
-		return nil, nil, err
-	}
-	if parsedConfig.WorkspaceFolder != "" {
-		substitutionContext.ContainerWorkspaceFolder = parsedConfig.WorkspaceFolder
-	}
-	if parsedConfig.WorkspaceMount != "" {
-		substitutionContext.WorkspaceMount = parsedConfig.WorkspaceMount
-	}
-
-	if options.DevContainerImage != "" {
-		parsedConfig.Build = nil
-		parsedConfig.Dockerfile = ""
-		parsedConfig.DockerfileContainer = config.DockerfileContainer{}
-		parsedConfig.ImageContainer = config.ImageContainer{Image: options.DevContainerImage}
-	}
-
-	parsedConfig.Origin = configFile
-	return &config.SubstitutedConfig{
-		Config: parsedConfig,
-		Raw:    rawParsedConfig,
-	}, substitutionContext, nil
-}
-
 func (r *runner) Command(
 	ctx context.Context,
 	user string,
@@ -317,7 +184,7 @@ func (r *runner) recreateCustomDriver(ctx context.Context, options UpOptions, ti
 	return r.Up(ctx, options, timeout)
 }
 
-func removeBuildInformation(c *config.DevContainerConfig) {
+func cleanupBuildInformation(c *config.DevContainerConfig) {
 	contextPath := config.GetContextPath(c)
 	_ = os.RemoveAll(filepath.Join(contextPath, config.DevPodContextFeatureFolder))
 }
