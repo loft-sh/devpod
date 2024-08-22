@@ -6,7 +6,6 @@ import (
 	"io"
 	"os"
 	"os/exec"
-	"path"
 	"path/filepath"
 	"runtime"
 	"strings"
@@ -91,23 +90,16 @@ type UpOptions struct {
 }
 
 func (r *runner) Up(ctx context.Context, options UpOptions, timeout time.Duration) (*config.Result, error) {
-	// download workspace source before recreating container
-	_, isDockerDriver := r.Driver.(driver.DockerDriver)
-	if options.Recreate && !isDockerDriver {
+	if r.shouldRecreateWorkspace(options) {
 		return r.recreateCustomDriver(ctx, options, timeout)
 	}
 
-	// prepare config
-	substitutedConfig, substitutionContext, err := r.prepare(options.CLIOptions)
+	substitutedConfig, substitutionContext, err := r.getSubstitutedConfig(options.CLIOptions)
 	if err != nil {
 		return nil, err
 	}
 
-	// remove build information
-	defer func() {
-		contextPath := config.GetContextPath(substitutedConfig.Config)
-		_ = os.RemoveAll(filepath.Join(contextPath, config.DevPodContextFeatureFolder))
-	}()
+	defer cleanupBuildInformation(substitutedConfig.Config)
 
 	// run initializeCommand
 	err = runInitializeCommand(r.LocalWorkspaceFolder, substitutedConfig.Config, options.InitEnv, r.Log)
@@ -116,161 +108,44 @@ func (r *runner) Up(ctx context.Context, options UpOptions, timeout time.Duratio
 	}
 
 	// check if its a compose devcontainer.json
-	var result *config.Result
 	if isDockerFileConfig(substitutedConfig.Config) || substitutedConfig.Config.Image != "" || substitutedConfig.Config.ContainerID != "" {
-		result, err = r.runSingleContainer(
+		return r.runSingleContainer(
 			ctx,
 			substitutedConfig,
 			substitutionContext,
 			options,
 			timeout,
 		)
-		if err != nil {
-			return nil, err
-		}
 	} else if isDockerComposeConfig(substitutedConfig.Config) {
-		result, err = r.runDockerCompose(ctx, substitutedConfig, substitutionContext, options, timeout)
-		if err != nil {
-			return nil, err
-		}
-	} else {
-		if options.FallbackImage != "" {
-			r.Log.Warn("dev container config is missing one of \"image\", \"dockerFile\" or \"dockerComposeFile\" properties, using fallback image " + options.FallbackImage)
-
-			substitutedConfig.Config.ImageContainer = config.ImageContainer{
-				Image: options.FallbackImage,
-			}
-		} else {
-			r.Log.Warn("dev container config is missing one of \"image\", \"dockerFile\" or \"dockerComposeFile\" properties, defaulting to auto-detection")
-
-			lang, err := language.DetectLanguage(r.LocalWorkspaceFolder)
-			if err != nil {
-				return nil, fmt.Errorf("could not detect project language and dev container config is missing one of \"image\", \"dockerFile\" or \"dockerComposeFile\" properties")
-			}
-
-			if language.MapConfig[lang] == nil {
-				return nil, fmt.Errorf("could not detect project language and dev container config is missing one of \"image\", \"dockerFile\" or \"dockerComposeFile\" properties")
-			}
-			substitutedConfig.Config.ImageContainer = language.MapConfig[lang].ImageContainer
-		}
-
-		result, err = r.runSingleContainer(ctx, substitutedConfig, substitutionContext, options, timeout)
-		if err != nil {
-			return nil, err
-		}
+		return r.runDockerCompose(ctx, substitutedConfig, substitutionContext, options, timeout)
 	}
 
-	// return result
-	return result, nil
+	if options.FallbackImage != "" {
+		r.Log.Warn("dev container config is missing one of \"image\", \"dockerFile\" or \"dockerComposeFile\" properties, using fallback image " + options.FallbackImage)
+
+		substitutedConfig.Config.ImageContainer = config.ImageContainer{
+			Image: options.FallbackImage,
+		}
+	} else {
+		r.Log.Warn("dev container config is missing one of \"image\", \"dockerFile\" or \"dockerComposeFile\" properties, defaulting to auto-detection")
+
+		lang, err := language.DetectLanguage(r.LocalWorkspaceFolder)
+		if err != nil {
+			return nil, fmt.Errorf("could not detect project language and dev container config is missing one of \"image\", \"dockerFile\" or \"dockerComposeFile\" properties")
+		}
+
+		if language.MapConfig[lang] == nil {
+			return nil, fmt.Errorf("could not detect project language and dev container config is missing one of \"image\", \"dockerFile\" or \"dockerComposeFile\" properties")
+		}
+		substitutedConfig.Config.ImageContainer = language.MapConfig[lang].ImageContainer
+	}
+
+	return r.runSingleContainer(ctx, substitutedConfig, substitutionContext, options, timeout)
 }
 
-func (r *runner) prepare(
-	options provider2.CLIOptions,
-) (*config.SubstitutedConfig, *config.SubstitutionContext, error) {
-	var rawParsedConfig *config.DevContainerConfig
-	if r.WorkspaceConfig.Workspace.DevContainerConfig != nil {
-		rawParsedConfig = config.CloneDevContainerConfig(r.WorkspaceConfig.Workspace.DevContainerConfig)
-		if r.WorkspaceConfig.Workspace.DevContainerPath != "" {
-			rawParsedConfig.Origin = path.Join(filepath.ToSlash(r.LocalWorkspaceFolder), r.WorkspaceConfig.Workspace.DevContainerPath)
-		} else {
-			rawParsedConfig.Origin = path.Join(filepath.ToSlash(r.LocalWorkspaceFolder), ".devcontainer.devpod.json")
-		}
-	} else if r.WorkspaceConfig.Workspace.Source.Container != "" {
-		rawParsedConfig = &config.DevContainerConfig{
-			DevContainerConfigBase: config.DevContainerConfigBase{
-				// Default workspace directory for containers
-				// Upon inspecting the container, this would be updated to the correct folder, if found set
-				WorkspaceFolder: "/",
-			},
-			RunningContainer: config.RunningContainer{
-				ContainerID: r.WorkspaceConfig.Workspace.Source.Container,
-			},
-			Origin: "",
-		}
-	} else {
-		var err error
-
-		localWorkspaceFolder := r.LocalWorkspaceFolder
-		// if a subpath is specified, let's move to it
-
-		if r.WorkspaceConfig.Workspace.Source.GitSubPath != "" {
-			localWorkspaceFolder = filepath.Join(r.LocalWorkspaceFolder, r.WorkspaceConfig.Workspace.Source.GitSubPath)
-		}
-
-		// parse the devcontainer json
-		rawParsedConfig, err = config.ParseDevContainerJSON(
-			localWorkspaceFolder,
-			r.WorkspaceConfig.Workspace.DevContainerPath,
-		)
-
-		// We want to fail only in case of real errors, non-existing devcontainer.jon
-		// will be gracefully handled by the auto-detection mechanism
-		if err != nil && !os.IsNotExist(err) {
-			return nil, nil, errors.Wrap(err, "parsing devcontainer.json")
-		} else if rawParsedConfig == nil {
-			r.Log.Infof("Couldn't find a devcontainer.json")
-			defaultConfig := &config.DevContainerConfig{}
-			if options.FallbackImage != "" {
-				r.Log.Infof("Using fallback image %s", options.FallbackImage)
-				defaultConfig.ImageContainer = config.ImageContainer{
-					Image: options.FallbackImage,
-				}
-			} else {
-				r.Log.Infof("Try detecting project programming language...")
-				defaultConfig = language.DefaultConfig(r.LocalWorkspaceFolder, r.Log)
-			}
-
-			defaultConfig.Origin = path.Join(filepath.ToSlash(r.LocalWorkspaceFolder), ".devcontainer.json")
-			err = config.SaveDevContainerJSON(defaultConfig)
-			if err != nil {
-				return nil, nil, errors.Wrap(err, "write default devcontainer.json")
-			}
-
-			rawParsedConfig = defaultConfig
-		}
-	}
-	configFile := rawParsedConfig.Origin
-
-	// get workspace folder within container
-	workspaceMount, containerWorkspaceFolder := getWorkspace(
-		r.LocalWorkspaceFolder,
-		r.WorkspaceConfig.Workspace.ID,
-		rawParsedConfig,
-	)
-	substitutionContext := &config.SubstitutionContext{
-		DevContainerID:           r.ID,
-		LocalWorkspaceFolder:     r.LocalWorkspaceFolder,
-		ContainerWorkspaceFolder: containerWorkspaceFolder,
-		Env:                      config.ListToObject(os.Environ()),
-
-		WorkspaceMount: workspaceMount,
-	}
-
-	// substitute & load
-	parsedConfig := &config.DevContainerConfig{}
-	err := config.Substitute(substitutionContext, rawParsedConfig, parsedConfig)
-	if err != nil {
-		return nil, nil, err
-	}
-	if parsedConfig.WorkspaceFolder != "" {
-		substitutionContext.ContainerWorkspaceFolder = parsedConfig.WorkspaceFolder
-	}
-	if parsedConfig.WorkspaceMount != "" {
-		substitutionContext.WorkspaceMount = parsedConfig.WorkspaceMount
-	}
-
-	if options.DevContainerImage != "" {
-		parsedConfig.Build = nil
-		parsedConfig.Dockerfile = ""
-		parsedConfig.DockerfileContainer = config.DockerfileContainer{}
-		parsedConfig.ImageContainer = config.ImageContainer{Image: options.DevContainerImage}
-	}
-
-	parsedConfig.Origin = configFile
-	return &config.SubstitutedConfig{
-		Config: parsedConfig,
-		Raw:    rawParsedConfig,
-	}, substitutionContext, nil
+func (r *runner) shouldRecreateWorkspace(options UpOptions) bool {
+	_, isDockerDriver := r.Driver.(driver.DockerDriver)
+	return options.Recreate && !isDockerDriver
 }
 
 func (r *runner) Command(
@@ -307,6 +182,11 @@ func (r *runner) recreateCustomDriver(ctx context.Context, options UpOptions, ti
 	options.Reset = false
 	options.Recreate = false
 	return r.Up(ctx, options, timeout)
+}
+
+func cleanupBuildInformation(c *config.DevContainerConfig) {
+	contextPath := config.GetContextPath(c)
+	_ = os.RemoveAll(filepath.Join(contextPath, config.DevPodContextFeatureFolder))
 }
 
 func isDockerFileConfig(config *config.DevContainerConfig) bool {
