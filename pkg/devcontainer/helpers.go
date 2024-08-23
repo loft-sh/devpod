@@ -11,7 +11,6 @@ import (
 	"github.com/loft-sh/devpod/pkg/git"
 	"github.com/loft-sh/devpod/pkg/image"
 	"github.com/loft-sh/log"
-	"github.com/sirupsen/logrus"
 )
 
 type GetWorkspaceConfigResult struct {
@@ -90,7 +89,7 @@ func FindFilesInGitRepo(ctx context.Context, gitRepository, gitPRReference, gitB
 
 	gitInfo := git.NewGitInfo(gitRepository, gitBranch, gitCommit, gitPRReference, gitSubDir)
 	log.Debugf("Cloning git repository into %s", tmpDirPath)
-	err := git.CloneRepository(ctx, gitInfo, tmpDirPath, "", true, git.NewCloner(git.ShallowCloneStrategy), log.Writer(logrus.DebugLevel, false), log)
+	err := git.CloneRepository(ctx, gitInfo, tmpDirPath, "", git.NewCloner(git.BareCloneStrategy), log)
 	if err != nil {
 		return nil, err
 	}

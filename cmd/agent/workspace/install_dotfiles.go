@@ -51,8 +51,8 @@ func (cmd *InstallDotfilesCmd) Run(ctx context.Context) error {
 		logger.Infof("Cloning dotfiles %s", cmd.Repository)
 
 		gitInfo := git.NormalizeRepositoryGitInfo(cmd.Repository)
-		err = git.CloneRepository(ctx, gitInfo, targetDir, "", false, nil, logger.Writer(logrus.DebugLevel, false), logger)
-		if err != nil {
+
+		if err := git.CloneRepository(ctx, gitInfo, targetDir, "", nil, logger); err != nil {
 			return err
 		}
 	} else {

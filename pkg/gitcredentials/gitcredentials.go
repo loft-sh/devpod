@@ -282,3 +282,8 @@ func getGlobalGitConfigPath(userName string) (string, error) {
 
 	return filepath.Join(home, ".gitconfig"), nil
 }
+
+// GetLocalGitConfigPath resolves the local git config for the specified repository path
+func GetLocalGitConfigPath(repoPath string) string {
+	return filepath.Join(repoPath, ".git", "config")
+}
