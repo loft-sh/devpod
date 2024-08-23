@@ -185,8 +185,6 @@ type CLIOptions struct {
 	DisableDaemon        bool              `json:"disableDaemon,omitempty"`
 	DaemonInterval       string            `json:"daemonInterval,omitempty"`
 	ForceCredentials     bool              `json:"forceCredentials,omitempty"`
-	GitBranch            string            `json:"gitBranch,omitempty"`
-	GitCommit            string            `json:"gitCommit,omitempty"`
 	GitCloneStrategy     git.CloneStrategy `json:"gitCloneStrategy,omitempty"`
 	FallbackImage        string            `json:"fallbackImage,omitempty"`
 	GitSSHSigningKey     string            `json:"gitSshSigningKey,omitempty"`

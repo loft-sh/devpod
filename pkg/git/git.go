@@ -22,19 +22,13 @@ const (
 
 // WARN: Make sure this matches the regex in /desktop/src/views/Workspaces/CreateWorkspace/CreateWorkspaceInput.tsx!
 var (
-	branchRegEx      = regexp.MustCompile(`^([^@]*(?:git@)?@?[^@/]+/[^@/]+/?[^@/]+)@([a-zA-Z0-9\./\-\_]+)$`)
-	commitRegEx      = regexp.MustCompile(`^([^@]*(?:git@)?@?[^@/]+/[^@]+)` + regexp.QuoteMeta(CommitDelimiter) + `([a-zA-Z0-9]+)$`)
-	prReferenceRegEx = regexp.MustCompile(`^([^@]*(?:git@)?@?[^@/]+/[^@]+)@(` + PullRequestReference + `)$`)
-	subPathRegEx     = regexp.MustCompile(`^([^@]*(?:git@)?@?[^@/]+/[^@]+)` + regexp.QuoteMeta(SubPathDelimiter) + `([a-zA-Z0-9\./\-\_]+)$`)
+	// Updated regex pattern to support SSH-style Git URLs
+	repoBaseRegEx    = `((?:(?:https?|git|ssh):\/\/)?(?:[^@\/\n]+@)?(?:[^:\/\n]+)(?:[:\/][^\/\n]+)+(?:\.git)?)`
+	branchRegEx      = regexp.MustCompile(`^` + repoBaseRegEx + `@([a-zA-Z0-9\./\-\_]+)$`)
+	commitRegEx      = regexp.MustCompile(`^` + repoBaseRegEx + regexp.QuoteMeta(CommitDelimiter) + `([a-zA-Z0-9]+)$`)
+	prReferenceRegEx = regexp.MustCompile(`^` + repoBaseRegEx + `@(` + PullRequestReference + `)$`)
+	subPathRegEx     = regexp.MustCompile(`^` + repoBaseRegEx + regexp.QuoteMeta(SubPathDelimiter) + `([a-zA-Z0-9\./\-\_]+)$`)
 )
-
-func CommandContext(ctx context.Context, args ...string) *exec.Cmd {
-	cmd := exec.CommandContext(ctx, "git", args...)
-	cmd.Env = os.Environ()
-	cmd.Env = append(cmd.Env, "GIT_TERMINAL_PROMPT=0")
-	cmd.Env = append(cmd.Env, "GIT_SSH_COMMAND=ssh -oBatchMode=yes -oStrictHostKeyChecking=no")
-	return cmd
-}
 
 func NormalizeRepository(str string) (string, string, string, string, string) {
 	if !strings.HasPrefix(str, "ssh://") && !strings.HasPrefix(str, "git@") && !strings.HasPrefix(str, "http://") && !strings.HasPrefix(str, "https://") {
@@ -54,7 +48,7 @@ func NormalizeRepository(str string) (string, string, string, string, string) {
 	subpath := ""
 	if match := subPathRegEx.FindStringSubmatch(str); match != nil {
 		str = match[1]
-		subpath = match[2]
+		subpath = strings.TrimSuffix(match[2], "/")
 	}
 
 	// resolve branch
@@ -72,6 +66,14 @@ func NormalizeRepository(str string) (string, string, string, string, string) {
 	}
 
 	return str, prReference, branch, commit, subpath
+}
+
+func CommandContext(ctx context.Context, args ...string) *exec.Cmd {
+	cmd := exec.CommandContext(ctx, "git", args...)
+	cmd.Env = os.Environ()
+	cmd.Env = append(cmd.Env, "GIT_TERMINAL_PROMPT=0")
+	cmd.Env = append(cmd.Env, "GIT_SSH_COMMAND=ssh -oBatchMode=yes -oStrictHostKeyChecking=no")
+	return cmd
 }
 
 func PingRepository(str string) bool {

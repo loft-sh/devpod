@@ -27,15 +27,13 @@ import { FieldName, TFormValues } from "./types"
 import { TWorkspaceSourceType } from "@/types"
 
 // WARN: Make sure these match the regexes in /pkg/git/git.go
-const GIT_REPOSITORY_REGEX = new RegExp("^([^@]*(?:git@)?@?[^@/]+\\/[^@/]+(\\/?[^@/]+)){2,}")
-const BRANCH_REGEX = new RegExp(
-  "^([^@]*(?:git@)?@?[^@/]+\\/[^@/]+\\/?[^@/]+)@([a-zA-Z0-9\\./\\-\\_]+)$"
-)
-const COMMIT_REGEX = new RegExp("^([^@]*(?:git@)?@?[^@/]+/[^@]+)@sha256:([a-zA-Z0-9]+)$")
-const PR_REGEX = new RegExp("^([^@]*(?:git@)?@?[^@/]+\\/[^@]+)@pull\\/([0-9]+)\\/head$")
-const SUBPATH_REGEX = new RegExp(
-  "^([^@]*(?:git@)?@?[^@/]+\\/[^@]+)@subpath:([a-zA-Z0-9\\./\\-\\_]+)$"
-)
+const GIT_REPOSITORY_PATTERN =
+  "((?:(?:https?|git|ssh)://)?(?:[^@/\\n]+@)?(?:[^:/\\n]+)(?:[:/][^/\\n]+)+(?:\\.git)?)"
+const GIT_REPOSITORY_REGEX = new RegExp(GIT_REPOSITORY_PATTERN)
+const BRANCH_REGEX = new RegExp(`^${GIT_REPOSITORY_PATTERN}@([a-zA-Z0-9\\./\\-\\_]+)$`)
+const COMMIT_REGEX = new RegExp(`^${GIT_REPOSITORY_PATTERN}@sha256:([a-zA-Z0-9]+)$`)
+const PR_REGEX = new RegExp(`^${GIT_REPOSITORY_PATTERN}@pull\\/([0-9]+)\\/head$`)
+const SUBPATH_REGEX = new RegExp(`^${GIT_REPOSITORY_PATTERN}@subpath:([a-zA-Z0-9\\./\\-\\_]+)$`)
 
 const AdvancedGitSetting = {
   BRANCH: "branch",

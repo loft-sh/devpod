@@ -1,4 +1,4 @@
-import { CollapsibleSection, ExampleCard, Form, IDEIcon, WarningMessageBox } from "@/components"
+import { ExampleCard, Form, IDEIcon, WarningMessageBox } from "@/components"
 import {
   Box,
   Button,
@@ -64,8 +64,6 @@ export function CreateWorkspace() {
       defaultIDE,
       workspaceSource,
       devcontainerPath,
-      gitBranch,
-      gitCommit,
     }: TCreateWorkspaceArgs) => {
       const actionID = workspace.create({
         id: workspaceID,
@@ -76,8 +74,6 @@ export function CreateWorkspace() {
         sourceConfig: {
           source: workspaceSource,
           type: sourceType,
-          gitBranch,
-          gitCommit,
         },
       })
 
@@ -108,8 +104,6 @@ export function CreateWorkspace() {
     idError,
     prebuildRepositoryError,
     devcontainerPathError,
-    gitBranchError,
-    gitCommitError,
   } = useFormErrors(Object.values(FieldName), formState)
 
   const providerOptions = useMemo<TSelectProviderOptions>(() => {
@@ -415,48 +409,6 @@ export function CreateWorkspace() {
               {/* placholder box */}
               <Box width={"full"} />
             </HStack>
-
-            <CollapsibleSection title="Git Options (deprecated)" showIcon>
-              <Text color="gray.600" fontSize="sm" mb="4" mt="-2">
-                Force a repository to use a git branch or a commit in cases where the
-                workspace-source@branch syntax isn&apos;t compatible, like Azure DevOps.
-              </Text>
-
-              <HStack spacing="8" alignItems={"top"} width={"100%"} justifyContent={"start"}>
-                <FormControl isInvalid={exists(gitBranchError)}>
-                  <FormLabel>Git Branch</FormLabel>
-                  <Input
-                    spellCheck={false}
-                    placeholder="main"
-                    type="text"
-                    {...register(FieldName.GIT_BRANCH)}
-                  />
-                  {exists(gitBranchError) ? (
-                    <FormErrorMessage>{gitBranchError.message ?? "Error"}</FormErrorMessage>
-                  ) : (
-                    <FormHelperText>
-                      Optionally specify the branch name for this workspace.
-                    </FormHelperText>
-                  )}
-                </FormControl>
-                <FormControl isInvalid={exists(gitCommitError)}>
-                  <FormLabel>Git Commit</FormLabel>
-                  <Input
-                    spellCheck={false}
-                    placeholder="SHA256"
-                    type="text"
-                    {...register(FieldName.GIT_COMMIT)}
-                  />
-                  {exists(gitCommitError) ? (
-                    <FormErrorMessage>{gitCommitError.message ?? "Error"}</FormErrorMessage>
-                  ) : (
-                    <FormHelperText>
-                      Optionally specify the commit SHA256 for this workspace.
-                    </FormHelperText>
-                  )}
-                </FormControl>
-              </HStack>
-            </CollapsibleSection>
           </VStack>
 
           <HStack

@@ -438,7 +438,7 @@ var _ = DevPodDescribe("devpod up test suite", func() {
 				framework.ExpectNoError(err)
 			})
 
-			err = f.DevPodUp(ctx, "https://github.com/loft-sh/examples/@subpath:/devpod/jupyter-notebook-hello-world")
+			err = f.DevPodUp(ctx, "https://github.com/loft-sh/examples@subpath:/devpod/jupyter-notebook-hello-world")
 			framework.ExpectNoError(err)
 
 			id := "subpath--devpod-jupyter-notebook-hello-world"
@@ -467,14 +467,14 @@ var _ = DevPodDescribe("devpod up test suite", func() {
 			})
 
 			id := "subpath--devpod-jupyter-notebook-hello-world"
-			err = f.DevPodUp(ctx, "https://github.com/loft-sh/examples/@subpath:/devpod/jupyter-notebook-hello-world")
+			err = f.DevPodUp(ctx, "https://github.com/loft-sh/examples@subpath:/devpod/jupyter-notebook-hello-world")
 			framework.ExpectNoError(err)
 
 			_, err = f.DevPodSSH(ctx, id, "pwd")
 			framework.ExpectNoError(err)
 
 			// recreate
-			err = f.DevPodUpRecreate(ctx, "https://github.com/loft-sh/examples/@subpath:/devpod/jupyter-notebook-hello-world")
+			err = f.DevPodUpRecreate(ctx, "https://github.com/loft-sh/examples@subpath:/devpod/jupyter-notebook-hello-world")
 			framework.ExpectNoError(err)
 
 			_, err = f.DevPodSSH(ctx, id, "pwd")
@@ -503,7 +503,7 @@ var _ = DevPodDescribe("devpod up test suite", func() {
 			})
 
 			id := "subpath--devpod-jupyter-notebook-hello-world"
-			err = f.DevPodUp(ctx, "https://github.com/loft-sh/examples/@subpath:/devpod/jupyter-notebook-hello-world")
+			err = f.DevPodUp(ctx, "https://github.com/loft-sh/examples@subpath:/devpod/jupyter-notebook-hello-world")
 			framework.ExpectNoError(err)
 
 			// create files in root and in workspace, after create we expect data to still be there
@@ -513,7 +513,7 @@ var _ = DevPodDescribe("devpod up test suite", func() {
 			framework.ExpectNoError(err)
 
 			// reset
-			err = f.DevPodUpReset(ctx, "https://github.com/loft-sh/examples/@subpath:/devpod/jupyter-notebook-hello-world")
+			err = f.DevPodUpReset(ctx, "https://github.com/loft-sh/examples@subpath:/devpod/jupyter-notebook-hello-world")
 			framework.ExpectNoError(err)
 
 			// this should fail! because --reset should trigger a new git clone

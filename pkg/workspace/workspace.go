@@ -163,7 +163,6 @@ func ResolveWorkspace(
 	devContainerPath string,
 	sshConfigPath string,
 	source *provider2.WorkspaceSource,
-	gitBranch, gitCommit string,
 	uid string,
 	changeLastUsed bool,
 	log log.Logger,
@@ -187,8 +186,6 @@ func ResolveWorkspace(
 		providerUserOptions,
 		sshConfigPath,
 		source,
-		gitBranch,
-		gitCommit,
 		uid,
 		changeLastUsed,
 		log,
@@ -263,7 +260,6 @@ func resolveWorkspace(
 	providerUserOptions []string,
 	sshConfigPath string,
 	source *provider2.WorkspaceSource,
-	gitBranch, gitCommit string,
 	uid string,
 	changeLastUsed bool,
 	log log.Logger,
@@ -308,8 +304,6 @@ func resolveWorkspace(
 		sshConfigPath,
 		source,
 		isLocalPath,
-		gitBranch,
-		gitCommit,
 		uid,
 		log,
 	)
@@ -331,7 +325,6 @@ func createWorkspace(
 	sshConfigPath string,
 	source *provider2.WorkspaceSource,
 	isLocalPath bool,
-	gitBranch, gitCommit string,
 	uid string,
 	log log.Logger,
 ) (*provider2.ProviderConfig, *provider2.Workspace, *provider2.Machine, error) {
@@ -350,7 +343,7 @@ func createWorkspace(
 	}
 
 	// resolve workspace
-	workspace, err := resolve(ctx, provider, devPodConfig, name, workspaceID, workspaceFolder, source, isLocalPath, sshConfigPath, gitBranch, gitCommit, uid)
+	workspace, err := resolve(ctx, provider, devPodConfig, name, workspaceID, workspaceFolder, source, isLocalPath, sshConfigPath, uid)
 	if err != nil {
 		return nil, nil, nil, err
 	}
@@ -455,7 +448,6 @@ func resolve(
 	source *provider2.WorkspaceSource,
 	isLocalPath bool,
 	sshConfigPath string,
-	fallbackGitBranch, fallbackGitCommit string,
 	uid string,
 ) (*provider2.Workspace, error) {
 	now := types.Now()
@@ -499,12 +491,7 @@ func resolve(
 			GitCommit:      gitCommit,
 			GitSubPath:     gitSubdir,
 		}
-		if workspace.Source.GitCommit == "" && fallbackGitCommit != "" {
-			workspace.Source.GitCommit = fallbackGitCommit
-		}
-		if workspace.Source.GitBranch == "" && fallbackGitBranch != "" {
-			workspace.Source.GitBranch = fallbackGitBranch
-		}
+
 		return workspace, nil
 	}
 
@@ -525,14 +512,8 @@ func resolve(
 	if gitPRReference != "" {
 		workspace.Source.GitPRReference = gitPRReference
 	}
-	if fallbackGitBranch != "" {
-		workspace.Source.GitBranch = fallbackGitBranch
-	}
 	if gitBranch != "" {
 		workspace.Source.GitBranch = gitBranch
-	}
-	if fallbackGitCommit != "" {
-		workspace.Source.GitCommit = fallbackGitCommit
 	}
 	if gitCommit != "" {
 		workspace.Source.GitCommit = gitCommit
