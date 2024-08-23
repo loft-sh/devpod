@@ -173,8 +173,6 @@ export type TWorkspaceStartConfig = Readonly<{
   sourceConfig?: Readonly<{
     source: string
     type?: TWorkspaceSourceType
-    gitBranch: string | undefined
-    gitCommit: string | undefined
   }>
 }>
 export const SUPPORTED_IDES = [
