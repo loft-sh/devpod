@@ -35,6 +35,7 @@ const initialSettings: TSettings = {
   experimental_fleet: true,
   experimental_jupyterNotebooks: true,
   experimental_vscodeInsiders: true,
+  experimental_cursor: true,
   experimental_devPodPro: false,
   experimental_colorMode: "light",
   additionalCliFlags: "",

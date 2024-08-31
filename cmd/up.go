@@ -267,7 +267,7 @@ func (cmd *UpCmd) Run(
 				client.Workspace(),
 				result.SubstitutionContext.ContainerWorkspaceFolder,
 				vscode.Options.GetValue(ideConfig.Options, vscode.OpenNewWindow) == "true",
-				vscode.ReleaseChannelStable,
+				vscode.FlavorStable,
 				log,
 			)
 		case string(config.IDEVSCodeInsiders):
@@ -276,7 +276,16 @@ func (cmd *UpCmd) Run(
 				client.Workspace(),
 				result.SubstitutionContext.ContainerWorkspaceFolder,
 				vscode.Options.GetValue(ideConfig.Options, vscode.OpenNewWindow) == "true",
-				vscode.ReleaseChannelInsiders,
+				vscode.FlavorInsiders,
+				log,
+			)
+		case string(config.IDECursor):
+			return vscode.Open(
+				ctx,
+				client.Workspace(),
+				result.SubstitutionContext.ContainerWorkspaceFolder,
+				vscode.Options.GetValue(ideConfig.Options, vscode.OpenNewWindow) == "true",
+				vscode.FlavorCursor,
 				log,
 			)
 		case string(config.IDEOpenVSCode):

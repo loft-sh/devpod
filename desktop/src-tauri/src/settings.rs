@@ -26,6 +26,8 @@ pub struct Settings {
     experimental_jupyter_notebooks: bool,
     #[serde(rename = "experimental_vscodeInsiders")]
     experimental_vscode_insiders: bool,
+    #[serde(rename = "experimental_cursor")]
+    experimental_cursor: bool,
     #[serde(rename = "experimental_devPodPro")]
     experimental_devpod_pro: bool,
     #[serde(rename = "experimental_colorMode")]

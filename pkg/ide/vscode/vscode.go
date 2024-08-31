@@ -23,17 +23,18 @@ const (
 	OpenNewWindow = "OPEN_NEW_WINDOW"
 )
 
-type ReleaseChannel string
+type Flavor string
 
 const (
-	ReleaseChannelStable   ReleaseChannel = "stable"
-	ReleaseChannelInsiders ReleaseChannel = "insiders"
+	FlavorStable   Flavor = "stable"
+	FlavorInsiders Flavor = "insiders"
+	FlavorCursor   Flavor = "cursor"
 )
 
 var Options = ide.Options{
 	OpenNewWindow: {
 		Name:        OpenNewWindow,
-		Description: "If true, DevPod will open the project in a new vscode window",
+		Description: "If true, DevPod will open the project in a new window",
 		Default:     "true",
 		Enum: []string{
 			"false",
@@ -42,116 +43,40 @@ var Options = ide.Options{
 	},
 }
 
-func NewVSCodeServer(extensions []string, settings string, userName string, values map[string]config.OptionValue, releaseChannel ReleaseChannel, log log.Logger) *VsCodeServer {
-	if releaseChannel == "" {
-		releaseChannel = ReleaseChannelStable
+func NewVSCodeServer(extensions []string, settings string, userName string, values map[string]config.OptionValue, flavor Flavor, log log.Logger) *VsCodeServer {
+	if flavor == "" {
+		flavor = FlavorStable
 	}
 
 	return &VsCodeServer{
-		values:         values,
-		extensions:     extensions,
-		settings:       settings,
-		userName:       userName,
-		log:            log,
-		releaseChannel: releaseChannel,
+		values:     values,
+		extensions: extensions,
+		settings:   settings,
+		userName:   userName,
+		log:        log,
+		flavor:     flavor,
 	}
 }
 
 type VsCodeServer struct {
-	values         map[string]config.OptionValue
-	extensions     []string
-	settings       string
-	userName       string
-	releaseChannel ReleaseChannel
-	log            log.Logger
+	values     map[string]config.OptionValue
+	extensions []string
+	settings   string
+	userName   string
+	flavor     Flavor
+	log        log.Logger
 }
 
 func (o *VsCodeServer) InstallExtensions() error {
-	location, err := prepareServerLocation(o.userName, false, o.releaseChannel)
+	location, err := prepareServerLocation(o.userName, false, o.flavor)
 	if err != nil {
 		return err
 	}
 
-	binPath := ""
-	if o.releaseChannel == ReleaseChannelStable {
-		// check legacy location `$HOME/.vscode-server/bin`
-		binDir := filepath.Join(location, "bin")
-		for {
-			entries, err := os.ReadDir(binDir)
-			if err != nil || len(entries) == 0 {
-				o.log.Infof("Read dir %s: %v", binDir, err)
-				o.log.Info("Wait until vscode-server is installed...")
-				// check new location `$HOME/.vscode-server/cli/servers/Stable-<version>/server/bin/code-server`
-				newBinPath, err := o.findCodeServerBinary(location)
-				if err != nil {
-					o.log.Infof("Read new location %s: %v", location, err)
-					o.log.Info("Wait until vscode-server-insiders is installed...")
-					time.Sleep(time.Second * 3)
-					continue
-				}
-				binPath = newBinPath
-				break
-			}
-
-			binPath = filepath.Join(binDir, entries[0].Name(), "bin", "code-server")
-			ctx, cancel := context.WithTimeout(context.Background(), time.Second*4)
-			out, err := exec.CommandContext(ctx, binPath, "--help").CombinedOutput()
-			cancel()
-			if err != nil {
-				o.log.Infof("Execute %s: %v", binPath, command.WrapCommandError(out, err))
-				o.log.Info("Wait until vscode-server is installed...")
-				time.Sleep(time.Second * 3)
-				continue
-			}
-
-			break
-		}
-	} else if o.releaseChannel == ReleaseChannelInsiders {
-		serversDir := filepath.Join(location, "cli", "servers")
-		for {
-			entries, err := os.ReadDir(serversDir)
-			if err != nil || len(entries) == 0 {
-				o.log.Infof("Read dir %s: %v", serversDir, err)
-				o.log.Info("Wait until vscode-server-insiders is installed...")
-				time.Sleep(time.Second * 3)
-				continue
-			}
-
-			insidersDir := ""
-			// find first entry with `Insiders-` prefix
-			for _, entry := range entries {
-				if !entry.IsDir() {
-					continue
-				}
-				if !strings.HasPrefix(entry.Name(), "Insiders-") {
-					continue
-				}
-
-				insidersDir = filepath.Join(serversDir, entry.Name())
-			}
-
-			if insidersDir == "" {
-				o.log.Infof("Read dir %s: install dir is missing", serversDir)
-				o.log.Infof("Wait until vscode-server-insiders is installed...")
-				time.Sleep(time.Second * 3)
-				continue
-			}
-
-			binPath = filepath.Join(insidersDir, "server", "bin", "code-server-insiders")
-			ctx, cancel := context.WithTimeout(context.Background(), time.Second*4)
-			out, err := exec.CommandContext(ctx, binPath, "--help").CombinedOutput()
-			cancel()
-			if err != nil {
-				o.log.Infof("Execute %s: %v", binPath, command.WrapCommandError(out, err))
-				o.log.Info("Wait until vscode-server-insiders  is installed...")
-				time.Sleep(time.Second * 3)
-				continue
-			}
-
-			break
-		}
+	binPath := o.findServerBinaryPath(location)
+	if binPath == "" {
+		return fmt.Errorf("unable to locate server binary in workspace")
 	}
-
 	// start log writer
 	writer := o.log.Writer(logrus.InfoLevel, false)
 	errwriter := o.log.Writer(logrus.ErrorLevel, false)
@@ -173,7 +98,7 @@ func (o *VsCodeServer) InstallExtensions() error {
 		cmd.Stderr = errwriter
 		err := cmd.Run()
 		if err != nil {
-			o.log.Info("Failed installing extension " + extension)
+			o.log.Warn("Failed installing extension " + extension)
 		}
 		o.log.Info("Successfully installed extension " + extension)
 	}
@@ -181,45 +106,8 @@ func (o *VsCodeServer) InstallExtensions() error {
 	return nil
 }
 
-func (o *VsCodeServer) findCodeServerBinary(location string) (string, error) {
-	serversDir := filepath.Join(location, "cli", "servers")
-	entries, err := os.ReadDir(serversDir)
-	if err != nil {
-		return "", fmt.Errorf("read dir %s: %w", serversDir, err)
-	} else if len(entries) == 0 {
-		return "", fmt.Errorf("read dir %s: install dir is missing", serversDir)
-	}
-
-	stableDir := ""
-	// find first entry with `Stable-` prefix
-	for _, entry := range entries {
-		if !entry.IsDir() {
-			continue
-		}
-		if !strings.HasPrefix(entry.Name(), "Stable-") {
-			continue
-		}
-
-		stableDir = filepath.Join(serversDir, entry.Name())
-	}
-
-	if stableDir == "" {
-		return "", fmt.Errorf("read dir %s: install dir is missing", serversDir)
-	}
-
-	binPath := filepath.Join(stableDir, "server", "bin", "code-server")
-	ctx, cancel := context.WithTimeout(context.Background(), time.Second*4)
-	out, err := exec.CommandContext(ctx, binPath, "--help").CombinedOutput()
-	cancel()
-	if err != nil {
-		return "", fmt.Errorf("execute %s: %w", binPath, command.WrapCommandError(out, err))
-	}
-
-	return binPath, nil
-}
-
 func (o *VsCodeServer) Install() error {
-	location, err := prepareServerLocation(o.userName, true, o.releaseChannel)
+	location, err := prepareServerLocation(o.userName, true, o.flavor)
 	if err != nil {
 		return err
 	}
@@ -261,7 +149,188 @@ func (o *VsCodeServer) Install() error {
 	return nil
 }
 
-func prepareServerLocation(userName string, create bool, releaseChannel ReleaseChannel) (string, error) {
+func (o *VsCodeServer) findServerBinaryPath(location string) string {
+	binPath := ""
+	// Limit time we spend to look for code server binary.
+	// Potentially expose as context option in the future if problems arise
+	deadline := time.Now().Add(time.Minute * 10)
+
+	if o.flavor == FlavorStable {
+		// check legacy location `$HOME/.vscode-server/bin`
+		binDir := filepath.Join(location, "bin")
+		for {
+			if time.Now().After(deadline) {
+				o.log.Warn("Timed out installing vscode-server")
+				break
+			}
+			entries, err := os.ReadDir(binDir)
+			if err != nil || len(entries) == 0 {
+				o.log.Infof("Read dir %s: %v", binDir, err)
+				o.log.Info("Wait until vscode-server is installed...")
+				// check new location `$HOME/.vscode-server/cli/servers/Stable-<version>/server/bin/code-server`
+				newBinPath, err := o.findCodeServerBinary(location)
+				if err != nil {
+					o.log.Infof("Read new location %s: %v", location, err)
+					o.log.Info("Wait until vscode-server-insiders is installed...")
+					time.Sleep(time.Second * 3)
+					continue
+				}
+
+				binPath = newBinPath
+				break
+			}
+
+			binPath = filepath.Join(binDir, entries[0].Name(), "bin", "code-server")
+			ctx, cancel := context.WithTimeout(context.Background(), time.Second*4)
+			out, err := exec.CommandContext(ctx, binPath, "--help").CombinedOutput()
+			cancel()
+			if err != nil {
+				o.log.Infof("Execute %s: %v", binPath, command.WrapCommandError(out, err))
+				o.log.Info("Wait until vscode-server is installed...")
+				time.Sleep(time.Second * 3)
+				continue
+			}
+
+			break
+		}
+
+		return binPath
+	}
+
+	if o.flavor == FlavorCursor {
+		// check legacy location `$HOME/.cursor-server/bin`
+		binDir := filepath.Join(location, "bin")
+		for {
+			if time.Now().After(deadline) {
+				o.log.Warn("Timed out installing cursor-server")
+				break
+			}
+			entries, err := os.ReadDir(binDir)
+			if err != nil || len(entries) == 0 {
+				o.log.Infof("Read dir %s: %v", binDir, err)
+				o.log.Info("Wait until cursor-server is installed...")
+				// check new location `$HOME/.cursor-server/cli/servers/Stable-<version>/server/bin/cursor-server`
+				newBinPath, err := o.findCodeServerBinary(location)
+				if err != nil {
+					o.log.Infof("Read new location %s: %v", location, err)
+					o.log.Info("Wait until cursor-server is installed...")
+					time.Sleep(time.Second * 3)
+					continue
+				}
+				binPath = newBinPath
+				break
+			}
+
+			binPath = filepath.Join(binDir, entries[0].Name(), "bin", "cursor-server")
+			ctx, cancel := context.WithTimeout(context.Background(), time.Second*4)
+			out, err := exec.CommandContext(ctx, binPath, "--help").CombinedOutput()
+			cancel()
+			if err != nil {
+				o.log.Infof("Execute %s: %v", binPath, command.WrapCommandError(out, err))
+				o.log.Info("Wait until cursor-server is installed...")
+				time.Sleep(time.Second * 3)
+				continue
+			}
+
+			break
+		}
+
+		return binPath
+	}
+
+	if o.flavor == FlavorInsiders {
+		serversDir := filepath.Join(location, "cli", "servers")
+		for {
+			if time.Now().After(deadline) {
+				o.log.Warn("Timed out installing vscode-server-insiders")
+				break
+			}
+			entries, err := os.ReadDir(serversDir)
+			if err != nil || len(entries) == 0 {
+				o.log.Infof("Read dir %s: %v", serversDir, err)
+				o.log.Info("Wait until vscode-server-insiders is installed...")
+				time.Sleep(time.Second * 3)
+				continue
+			}
+
+			insidersDir := ""
+			// find first entry with `Insiders-` prefix
+			for _, entry := range entries {
+				if !entry.IsDir() {
+					continue
+				}
+				if !strings.HasPrefix(entry.Name(), "Insiders-") {
+					continue
+				}
+
+				insidersDir = filepath.Join(serversDir, entry.Name())
+			}
+
+			if insidersDir == "" {
+				o.log.Infof("Read dir %s: install dir is missing", serversDir)
+				o.log.Infof("Wait until vscode-server-insiders is installed...")
+				time.Sleep(time.Second * 3)
+				continue
+			}
+
+			binPath = filepath.Join(insidersDir, "server", "bin", "code-server-insiders")
+			ctx, cancel := context.WithTimeout(context.Background(), time.Second*4)
+			out, err := exec.CommandContext(ctx, binPath, "--help").CombinedOutput()
+			cancel()
+			if err != nil {
+				o.log.Infof("Execute %s: %v", binPath, command.WrapCommandError(out, err))
+				o.log.Info("Wait until vscode-server-insiders  is installed...")
+				time.Sleep(time.Second * 3)
+				continue
+			}
+
+			break
+		}
+
+		return binPath
+	}
+
+	return binPath
+}
+
+func (o *VsCodeServer) findCodeServerBinary(location string) (string, error) {
+	serversDir := filepath.Join(location, "cli", "servers")
+	entries, err := os.ReadDir(serversDir)
+	if err != nil {
+		return "", fmt.Errorf("read dir %s: %w", serversDir, err)
+	} else if len(entries) == 0 {
+		return "", fmt.Errorf("read dir %s: install dir is missing", serversDir)
+	}
+
+	stableDir := ""
+	// find first entry with `Stable-` prefix
+	for _, entry := range entries {
+		if !entry.IsDir() {
+			continue
+		}
+		if !strings.HasPrefix(entry.Name(), "Stable-") {
+			continue
+		}
+
+		stableDir = filepath.Join(serversDir, entry.Name())
+	}
+
+	if stableDir == "" {
+		return "", fmt.Errorf("read dir %s: install dir is missing", serversDir)
+	}
+
+	binPath := filepath.Join(stableDir, "server", "bin", "code-server")
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second*4)
+	out, err := exec.CommandContext(ctx, binPath, "--help").CombinedOutput()
+	cancel()
+	if err != nil {
+		return "", fmt.Errorf("execute %s: %w", binPath, command.WrapCommandError(out, err))
+	}
+
+	return binPath, nil
+}
+
+func prepareServerLocation(userName string, create bool, flavor Flavor) (string, error) {
 	var err error
 	homeFolder := ""
 	if userName != "" {
@@ -274,8 +343,13 @@ func prepareServerLocation(userName string, create bool, releaseChannel ReleaseC
 	}
 
 	folderName := ".vscode-server"
-	if releaseChannel == ReleaseChannelInsiders {
+	switch flavor {
+	case FlavorStable:
+		folderName = ".vscode-server"
+	case FlavorInsiders:
 		folderName = ".vscode-server-insiders"
+	case FlavorCursor:
+		folderName = ".cursor-server"
 	}
 
 	folder := filepath.Join(homeFolder, folderName)
