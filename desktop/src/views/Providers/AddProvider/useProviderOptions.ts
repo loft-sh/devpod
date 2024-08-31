@@ -24,7 +24,7 @@ export function useProviderDisplayOptions(
 // processProviderOptions reads, parses and groups all options into a displayable format.
 // Option groups can contain wildcard options `MY_PREFIX_*`. All options matching the wildcard will be added to this group.
 // The first group to claim a wildcard takes precendence.
-function processDisplayOptions(
+export function processDisplayOptions(
   options: TProviderOptions | undefined,
   optionGroups: TProviderOptionGroup[],
   edit?: boolean

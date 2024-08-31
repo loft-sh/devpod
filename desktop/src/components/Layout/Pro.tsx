@@ -198,7 +198,7 @@ function ProInstanceRow({
                 }
                 label=""
                 paddingInlineStart="0"
-                infoText={authenticated ? "Authenticated" : "Not Authenticated"}
+                info={authenticated ? "Authenticated" : "Not Authenticated"}
                 {...(authenticated ? {} : { onClick: onLoginClicked, cursor: "pointer" })}
               />
             )}
@@ -209,14 +209,14 @@ function ProInstanceRow({
               icon={<Briefcase />}
               paddingInlineStart="0"
               label={proInstanceWorkspaces.length.toString(10)}
-              infoText={`${proInstanceWorkspaces.length} workspaces`}
+              info={`${proInstanceWorkspaces.length} workspaces`}
             />
             {exists(creationTimestamp) && (
               <IconTag
                 variant="ghost"
                 icon={<Icon as={HiClock} />}
                 label={dayjs(new Date(creationTimestamp)).format("MMM D, YY")}
-                infoText={`Created ${dayjs(new Date(creationTimestamp)).fromNow()}`}
+                info={`Created ${dayjs(new Date(creationTimestamp)).fromNow()}`}
               />
             )}
           </HStack>
