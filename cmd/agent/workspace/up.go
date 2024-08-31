@@ -100,62 +100,6 @@ func (cmd *UpCmd) Run(ctx context.Context) error {
 	return nil
 }
 
-func initWorkspace(ctx context.Context, cancel context.CancelFunc, workspaceInfo *provider2.AgentWorkspaceInfo, debug, shouldInstallDaemon bool) (tunnel.TunnelClient, log.Logger, string, error) {
-	// create a grpc client
-	tunnelClient, err := tunnelserver.NewTunnelClient(os.Stdin, os.Stdout, true, 0)
-	if err != nil {
-		return nil, nil, "", fmt.Errorf("error creating tunnel client: %w", err)
-	}
-
-	// create debug logger
-	logger := tunnelserver.NewTunnelLogger(ctx, tunnelClient, debug)
-	logger.Debugf("Created logger")
-
-	// this message serves as a ping to the client
-	_, err = tunnelClient.Ping(ctx, &tunnel.Empty{})
-	if err != nil {
-		return nil, nil, "", errors.Wrap(err, "ping client")
-	}
-
-	// get docker credentials
-	dockerCredentialsDir, gitCredentialsHelper, err := configureCredentials(ctx, cancel, workspaceInfo, tunnelClient, logger)
-	if err != nil {
-		logger.Errorf("Error retrieving docker / git credentials: %v", err)
-	}
-
-	// install docker in background
-	errChan := make(chan error, 1)
-	go func() {
-		if !workspaceInfo.Agent.IsDockerDriver() || workspaceInfo.Agent.Docker.Install == "false" {
-			errChan <- nil
-		} else {
-			errChan <- InstallDocker(logger)
-		}
-	}()
-
-	// prepare workspace
-	err = prepareWorkspace(ctx, workspaceInfo, tunnelClient, gitCredentialsHelper, logger)
-	if err != nil {
-		return nil, logger, "", err
-	}
-
-	// install daemon
-	if shouldInstallDaemon {
-		err = installDaemon(workspaceInfo, logger)
-		if err != nil {
-			logger.Errorf("Install DevPod Daemon: %v", err)
-		}
-	}
-
-	// wait until docker is installed
-	err = <-errChan
-	if err != nil {
-		return nil, nil, "", errors.Wrap(err, "install docker")
-	}
-
-	return tunnelClient, logger, dockerCredentialsDir, nil
-}
-
 func (cmd *UpCmd) up(ctx context.Context, workspaceInfo *provider2.AgentWorkspaceInfo, tunnelClient tunnel.TunnelClient, logger log.Logger) error {
 	// create devcontainer
 	result, err := cmd.devPodUp(ctx, workspaceInfo, logger)
@@ -176,64 +120,25 @@ func (cmd *UpCmd) up(ctx context.Context, workspaceInfo *provider2.AgentWorkspac
 	return nil
 }
 
-func prepareWorkspace(ctx context.Context, workspaceInfo *provider2.AgentWorkspaceInfo, client tunnel.TunnelClient, helper string, log log.Logger) error {
-	// change content folder if source is local folder in proxy mode
-	// to a folder that's known ahead of time inside of DEVPOD_HOME
-	if workspaceInfo.CLIOptions.Proxy && workspaceInfo.Workspace.Source.LocalFolder != "" {
-		workspaceInfo.ContentFolder = agent.GetAgentWorkspaceContentDir(workspaceInfo.Origin)
-	}
-
-	// make sure content folder exists
-	exists, err := InitContentFolder(workspaceInfo, log)
+func (cmd *UpCmd) devPodUp(ctx context.Context, workspaceInfo *provider2.AgentWorkspaceInfo, log log.Logger) (*config2.Result, error) {
+	runner, err := CreateRunner(workspaceInfo, log)
 	if err != nil {
-		return err
-	} else if exists && !workspaceInfo.CLIOptions.Recreate {
-		log.Debugf("Workspace exists, skip downloading")
-		return nil
+		return nil, err
 	}
 
-	// check what type of workspace this is
-	if workspaceInfo.Workspace.Source.GitRepository != "" {
-		if workspaceInfo.CLIOptions.Reset {
-			log.Info("Resetting git based workspace, removing old content folder")
-			err = os.RemoveAll(workspaceInfo.ContentFolder)
-			if err != nil {
-				log.Warnf("Failed to remove workspace folder, still proceeding: %v", err)
-			}
-		}
-
-		if workspaceInfo.CLIOptions.Recreate && !workspaceInfo.CLIOptions.Reset {
-			log.Info("Rebuiling without resetting a git based workspace, keeping old content folder")
-			return nil
-		}
-
-		log.Debugf("Clone Repository")
-		err = CloneRepository(ctx, workspaceInfo, helper, log)
-		if err != nil {
-			// fallback
-			log.Errorf("Cloning failed: %v. Trying cloning on local machine and uploading folder", err)
-			return RemoteCloneAndDownload(ctx, workspaceInfo.ContentFolder, client, log)
-		}
-
-		return nil
-	} else if workspaceInfo.Workspace.Source.LocalFolder != "" {
-		// if we're not sending this to a remote machine, we're already done
-		if workspaceInfo.ContentFolder == workspaceInfo.Workspace.Source.LocalFolder {
-			log.Debugf("Local folder with local provider; skip downloading")
-			return nil
-		}
-
-		log.Debugf("Download Local Folder")
-		return DownloadLocalFolder(ctx, workspaceInfo.ContentFolder, client, log)
-	} else if workspaceInfo.Workspace.Source.Image != "" {
-		log.Debugf("Prepare Image")
-		return PrepareImage(workspaceInfo.ContentFolder, workspaceInfo.Workspace.Source.Image)
-	} else if workspaceInfo.Workspace.Source.Container != "" {
-		log.Debugf("Workspace is a container, nothing to do")
-		return nil
+	// start the devcontainer
+	result, err := runner.Up(ctx, devcontainer.UpOptions{
+		CLIOptions: workspaceInfo.CLIOptions,
+	}, workspaceInfo.InjectTimeout)
+	if err != nil {
+		return nil, err
 	}
 
-	return fmt.Errorf("either workspace repository, image, container or local-folder is required")
+	return result, nil
+}
+
+func CreateRunner(workspaceInfo *provider2.AgentWorkspaceInfo, log log.Logger) (devcontainer.Runner, error) {
+	return devcontainer.NewRunner(agent.ContainerDevPodHelperLocation, agent.DefaultAgentDownloadURL(), workspaceInfo, log)
 }
 
 func InitContentFolder(workspaceInfo *provider2.AgentWorkspaceInfo, log log.Logger) (bool, error) {
@@ -277,6 +182,120 @@ func InitContentFolder(workspaceInfo *provider2.AgentWorkspaceInfo, log log.Logg
 	}
 
 	return false, nil
+}
+
+func initWorkspace(ctx context.Context, cancel context.CancelFunc, workspaceInfo *provider2.AgentWorkspaceInfo, debug, shouldInstallDaemon bool) (tunnel.TunnelClient, log.Logger, string, error) {
+	// create a grpc client
+	tunnelClient, err := tunnelserver.NewTunnelClient(os.Stdin, os.Stdout, true, 0)
+	if err != nil {
+		return nil, nil, "", fmt.Errorf("error creating tunnel client: %w", err)
+	}
+
+	// create debug logger
+	logger := tunnelserver.NewTunnelLogger(ctx, tunnelClient, debug)
+	logger.Debugf("Created logger")
+
+	// this message serves as a ping to the client
+	_, err = tunnelClient.Ping(ctx, &tunnel.Empty{})
+	if err != nil {
+		return nil, nil, "", errors.Wrap(err, "ping client")
+	}
+
+	// get docker credentials
+	dockerCredentialsDir, gitCredentialsHelper, err := configureCredentials(ctx, cancel, workspaceInfo, tunnelClient, logger)
+	if err != nil {
+		logger.Errorf("Error retrieving docker / git credentials: %v", err)
+	}
+
+	// install docker in background
+	errChan := make(chan error, 1)
+	go func() {
+		if !workspaceInfo.Agent.IsDockerDriver() || workspaceInfo.Agent.Docker.Install == "false" {
+			errChan <- nil
+		} else {
+			errChan <- installDocker(logger)
+		}
+	}()
+
+	// prepare workspace
+	err = prepareWorkspace(ctx, workspaceInfo, tunnelClient, gitCredentialsHelper, logger)
+	if err != nil {
+		return nil, logger, "", err
+	}
+
+	// install daemon
+	if shouldInstallDaemon {
+		err = installDaemon(workspaceInfo, logger)
+		if err != nil {
+			logger.Errorf("Install DevPod Daemon: %v", err)
+		}
+	}
+
+	// wait until docker is installed
+	err = <-errChan
+	if err != nil {
+		return nil, nil, "", errors.Wrap(err, "install docker")
+	}
+
+	return tunnelClient, logger, dockerCredentialsDir, nil
+}
+
+func prepareWorkspace(ctx context.Context, workspaceInfo *provider2.AgentWorkspaceInfo, client tunnel.TunnelClient, helper string, log log.Logger) error {
+	// change content folder if source is local folder in proxy mode
+	// to a folder that's known ahead of time inside of DEVPOD_HOME
+	if workspaceInfo.CLIOptions.Proxy && workspaceInfo.Workspace.Source.LocalFolder != "" {
+		workspaceInfo.ContentFolder = agent.GetAgentWorkspaceContentDir(workspaceInfo.Origin)
+	}
+
+	// make sure content folder exists
+	exists, err := InitContentFolder(workspaceInfo, log)
+	if err != nil {
+		return err
+	} else if exists && !workspaceInfo.CLIOptions.Recreate {
+		log.Debugf("Workspace exists, skip downloading")
+		return nil
+	}
+
+	// check what type of workspace this is
+	if workspaceInfo.Workspace.Source.GitRepository != "" {
+		if workspaceInfo.CLIOptions.Reset {
+			log.Info("Resetting git based workspace, removing old content folder")
+			err = os.RemoveAll(workspaceInfo.ContentFolder)
+			if err != nil {
+				log.Warnf("Failed to remove workspace folder, still proceeding: %v", err)
+			}
+		}
+
+		if workspaceInfo.CLIOptions.Recreate && !workspaceInfo.CLIOptions.Reset {
+			log.Info("Rebuiling without resetting a git based workspace, keeping old content folder")
+			return nil
+		}
+
+		return cloneRepository(ctx, workspaceInfo, helper, log)
+	}
+
+	if workspaceInfo.Workspace.Source.LocalFolder != "" {
+		// if we're not sending this to a remote machine, we're already done
+		if workspaceInfo.ContentFolder == workspaceInfo.Workspace.Source.LocalFolder {
+			log.Debugf("Local folder with local provider; skip downloading")
+			return nil
+		}
+
+		log.Debugf("Download Local Folder")
+		return downloadLocalFolder(ctx, workspaceInfo.ContentFolder, client, log)
+	}
+
+	if workspaceInfo.Workspace.Source.Image != "" {
+		log.Debugf("Prepare Image")
+		return prepareImage(workspaceInfo.ContentFolder, workspaceInfo.Workspace.Source.Image)
+	}
+
+	if workspaceInfo.Workspace.Source.Container != "" {
+		log.Debugf("Workspace is a container, nothing to do")
+		return nil
+	}
+
+	return fmt.Errorf("either workspace repository, image, container or local-folder is required")
 }
 
 func ensureLastDevContainerJson(workspaceInfo *provider2.AgentWorkspaceInfo) error {
@@ -354,22 +373,7 @@ func installDaemon(workspaceInfo *provider2.AgentWorkspaceInfo, log log.Logger) 
 	return nil
 }
 
-func RemoteCloneAndDownload(ctx context.Context, workspaceDir string, client tunnel.TunnelClient, log log.Logger) error {
-	log.Infof("Cloning from host and upload folder to server")
-	stream, err := client.StreamGitClone(ctx, &tunnel.Empty{})
-	if err != nil {
-		return errors.Wrap(err, "local cloning")
-	}
-
-	err = extract.Extract(tunnelserver.NewStreamReader(stream, log), workspaceDir)
-	if err != nil {
-		return errors.Wrap(err, "cloning local folder")
-	}
-
-	return nil
-}
-
-func DownloadLocalFolder(ctx context.Context, workspaceDir string, client tunnel.TunnelClient, log log.Logger) error {
+func downloadLocalFolder(ctx context.Context, workspaceDir string, client tunnel.TunnelClient, log log.Logger) error {
 	log.Infof("Upload folder to server")
 	stream, err := client.StreamWorkspace(ctx, &tunnel.Empty{})
 	if err != nil {
@@ -384,7 +388,7 @@ func DownloadLocalFolder(ctx context.Context, workspaceDir string, client tunnel
 	return nil
 }
 
-func PrepareImage(workspaceDir, image string) error {
+func prepareImage(workspaceDir, image string) error {
 	// create a .devcontainer.json with the image
 	err := os.WriteFile(filepath.Join(workspaceDir, ".devcontainer.json"), []byte(`{
   "image": "`+image+`"
@@ -396,39 +400,32 @@ func PrepareImage(workspaceDir, image string) error {
 	return nil
 }
 
-func (cmd *UpCmd) devPodUp(ctx context.Context, workspaceInfo *provider2.AgentWorkspaceInfo, log log.Logger) (*config2.Result, error) {
-	runner, err := CreateRunner(workspaceInfo, log)
-	if err != nil {
-		return nil, err
+func cloneRepository(ctx context.Context, workspaceInfo *provider2.AgentWorkspaceInfo, helper string, log log.Logger) error {
+	s := workspaceInfo.Workspace.Source
+	log.Info("Clone repository")
+	log.Infof("URL: %s\n", s.GitRepository)
+	if s.GitBranch != "" {
+		log.Infof("Branch: %s\n", s.GitBranch)
+	}
+	if s.GitCommit != "" {
+		log.Infof("Commit: %s\n", s.GitCommit)
+	}
+	if s.GitSubPath != "" {
+		log.Infof("Subpath: %s\n", s.GitSubPath)
+	}
+	if s.GitPRReference != "" {
+		log.Infof("PR: %s\n", s.GitPRReference)
 	}
 
-	// start the devcontainer
-	result, err := runner.Up(ctx, devcontainer.UpOptions{
-		CLIOptions: workspaceInfo.CLIOptions,
-	}, workspaceInfo.InjectTimeout)
-	if err != nil {
-		return nil, err
-	}
-
-	return result, nil
-}
-
-func CloneRepository(ctx context.Context, workspaceInfo *provider2.AgentWorkspaceInfo, helper string, log log.Logger) error {
 	workspaceDir := workspaceInfo.ContentFolder
 	// remove the credential helper or otherwise we will receive strange errors within the container
 	defer func() {
 		if helper != "" {
-			err := gitcredentials.RemoveHelperFromPath(filepath.Join(workspaceDir, ".git", "config"))
-			if err != nil {
+			if err := gitcredentials.RemoveHelperFromPath(gitcredentials.GetLocalGitConfigPath(workspaceDir)); err != nil {
 				log.Errorf("Remove git credential helper: %v", err)
 			}
 		}
 	}()
-
-	writer := log.Writer(logrus.InfoLevel, false)
-	errwriter := log.Writer(logrus.ErrorLevel, false)
-	defer writer.Close()
-	defer errwriter.Close()
 
 	// check if command exists
 	if !command.Exists("git") {
@@ -436,90 +433,55 @@ func CloneRepository(ctx context.Context, workspaceInfo *provider2.AgentWorkspac
 		if local {
 			return fmt.Errorf("seems like git isn't installed on your system. Please make sure to install git and make it available in the PATH")
 		}
-
-		// try to install git via apt / apk
-		if !command.Exists("apt") && !command.Exists("apk") {
-			// TODO: use golang git implementation
-			return fmt.Errorf("couldn't find a package manager to install git")
+		if err := git.InstallBinary(log); err != nil {
+			return err
 		}
+	}
 
-		if command.Exists("apt") {
-			log.Infof("Git command is missing, try to install git with apt...")
-			cmd := exec.Command("apt", "update")
-			cmd.Stdout = writer
-			cmd.Stderr = errwriter
-			err := cmd.Run()
-			if err != nil {
-				return errors.Wrap(err, "run apt update")
-			}
-			cmd = exec.Command("apt", "-y", "install", "git")
-			cmd.Stdout = writer
-			cmd.Stderr = errwriter
-			err = cmd.Run()
-			if err != nil {
-				return errors.Wrap(err, "run apt install git -y")
-			}
-		} else if command.Exists("apk") {
-			log.Infof("Git command is missing, try to install git with apk...")
-			cmd := exec.Command("apk", "update")
-			cmd.Stdout = writer
-			cmd.Stderr = errwriter
-			err := cmd.Run()
-			if err != nil {
-				return errors.Wrap(err, "run apk update")
-			}
-			cmd = exec.Command("apk", "add", "git")
-			cmd.Stdout = writer
-			cmd.Stderr = errwriter
-			err = cmd.Run()
-			if err != nil {
-				return errors.Wrap(err, "run apk add git")
-			}
+	// setup private ssh key if passed in
+	extraEnv := []string{}
+	if workspaceInfo.CLIOptions.SSHKey != "" {
+		sshExtraEnv, err := setupSSHKey(workspaceInfo.CLIOptions.SSHKey, workspaceInfo.Agent.Path)
+		if err != nil {
+			return err
 		}
-
-		// is git available now?
-		if !command.Exists("git") {
-			return fmt.Errorf("couldn't install git")
-		}
-
-		log.Donef("Successfully installed git")
+		extraEnv = append(extraEnv, sshExtraEnv...)
 	}
 
 	// run git command
-	s := workspaceInfo.Workspace.Source
-	gitInfo := git.NewGitInfo(s.GitRepository, s.GitBranch, s.GitCommit, s.GitPRReference, s.GitSubPath)
-	extraEnv := []string{}
-
-	if workspaceInfo.CLIOptions.SSHKey != "" {
-		key, err := os.CreateTemp("", "")
-		if err != nil {
-			return err
-		}
-		defer os.Remove(key.Name())
-		defer key.Close()
-
-		err = writeSSHKey(key, workspaceInfo.CLIOptions.SSHKey)
-		if err != nil {
-			return err
-		}
-
-		err = os.Chmod(key.Name(), 0o400)
-		if err != nil {
-			return err
-		}
-
-		extraEnv = append(extraEnv, "GIT_TERMINAL_PROMPT=0")
-		gitSSHCmd := []string{workspaceInfo.Agent.Path, "helper", "ssh-git-clone", "--key-file=" + key.Name()}
-		extraEnv = append(extraEnv, "GIT_SSH_COMMAND="+command.Quote(gitSSHCmd))
-	}
-
 	cloner := git.NewCloner(workspaceInfo.CLIOptions.GitCloneStrategy)
-	err := git.CloneRepositoryWithEnv(ctx, gitInfo, extraEnv, workspaceDir, helper, false, cloner, writer, log)
+	gitInfo := git.NewGitInfo(s.GitRepository, s.GitBranch, s.GitCommit, s.GitPRReference, s.GitSubPath)
+	err := git.CloneRepositoryWithEnv(ctx, gitInfo, extraEnv, workspaceDir, helper, cloner, log)
 	if err != nil {
-		return errors.Wrap(err, "clone repository")
+		return fmt.Errorf("clone repository: %w", err)
 	}
+
+	log.Done("Successfully cloned repository")
 
 	return nil
+}
+
+func setupSSHKey(key string, agentPath string) ([]string, error) {
+	keyFile, err := os.CreateTemp("", "")
+	if err != nil {
+		return nil, err
+	}
+	defer os.Remove(keyFile.Name())
+	defer keyFile.Close()
+
+	if err := writeSSHKey(keyFile, key); err != nil {
+		return nil, err
+	}
+
+	if err := os.Chmod(keyFile.Name(), 0o400); err != nil {
+		return nil, err
+	}
+
+	env := []string{"GIT_TERMINAL_PROMPT=0"}
+	gitSSHCmd := []string{agentPath, "helper", "ssh-git-clone", "--key-file=" + keyFile.Name()}
+	env = append(env, "GIT_SSH_COMMAND="+command.Quote(gitSSHCmd))
+
+	return env, nil
 }
 
 func writeSSHKey(key *os.File, sshKey string) error {
@@ -532,7 +494,7 @@ func writeSSHKey(key *os.File, sshKey string) error {
 	return err
 }
 
-func InstallDocker(log log.Logger) error {
+func installDocker(log log.Logger) error {
 	if !command.Exists("docker") {
 		writer := log.Writer(logrus.InfoLevel, false)
 		defer writer.Close()
@@ -549,8 +511,4 @@ func InstallDocker(log log.Logger) error {
 	}
 
 	return nil
-}
-
-func CreateRunner(workspaceInfo *provider2.AgentWorkspaceInfo, log log.Logger) (devcontainer.Runner, error) {
-	return devcontainer.NewRunner(agent.ContainerDevPodHelperLocation, agent.DefaultAgentDownloadURL(), workspaceInfo, log)
 }
