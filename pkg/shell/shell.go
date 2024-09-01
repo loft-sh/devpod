@@ -134,7 +134,13 @@ func GetShell(userName string) ([]string, error) {
 			return []string{shell}, nil
 		}
 
-		// fallback to path discovery if unsuccessful
+		// fallback to $SHELL env var
+		shell, ok := os.LookupEnv("SHELL")
+		if ok {
+			return []string{shell}, nil
+		}
+
+		// fallback to path discovery
 		_, err = exec.LookPath("bash")
 		if err == nil {
 			return []string{"bash"}, nil
