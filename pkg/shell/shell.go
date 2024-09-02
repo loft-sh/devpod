@@ -166,6 +166,10 @@ func getUserShell(userName string) (string, error) {
 	if err != nil {
 		return "", err
 	}
+	if shell := os.Getenv("SHELL"); shell != "" {
+		return shell, nil
+	}
+
 	output, err := exec.Command("getent", "passwd", currentUser.Username).Output()
 	if err != nil {
 		return "", err
