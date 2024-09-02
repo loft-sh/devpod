@@ -197,7 +197,7 @@ func downloadAgentLocally(tryDownloadURL, targetArch string, log log.Logger) (st
 	}
 
 	fullDownloadURL := tryDownloadURL + "/devpod-linux-" + targetArch
-	log.Infof("Attempting to download DevPod agent from: %s", fullDownloadURL)
+	log.Debugf("Attempting to download DevPod agent from: %s", fullDownloadURL)
 
 	resp, err := devpodhttp.GetHTTPClient().Get(fullDownloadURL)
 	if err != nil {
