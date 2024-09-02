@@ -636,7 +636,11 @@ func selectWorkspace(devPodConfig *config.Config, changeLastUsed bool, log log.L
 	}
 
 	for _, workspace := range workspacesDirs {
-		workspaceIDs = append(workspaceIDs, workspace.Name())
+		name := workspace.Name()
+		// filter out hidden files
+		if !strings.HasPrefix(name, ".") {
+			workspaceIDs = append(workspaceIDs, name)
+		}
 	}
 	if len(workspaceIDs) == 0 {
 		return nil, nil, nil, errProvideWorkspaceArg
