@@ -196,7 +196,10 @@ func downloadAgentLocally(tryDownloadURL, targetArch string, log log.Logger) (st
 		return agentPath, nil
 	}
 
-	resp, err := devpodhttp.GetHTTPClient().Get(tryDownloadURL + "/devpod-linux-" + targetArch)
+	fullDownloadURL := tryDownloadURL + "/devpod-linux-" + targetArch
+	log.Debugf("Attempting to download DevPod agent from: %s", fullDownloadURL)
+
+	resp, err := devpodhttp.GetHTTPClient().Get(fullDownloadURL)
 	if err != nil {
 		return "", errors.Wrap(err, "download devpod")
 	}
@@ -216,7 +219,7 @@ func downloadAgentLocally(tryDownloadURL, targetArch string, log log.Logger) (st
 	_, err = io.Copy(file, resp.Body)
 	if err != nil {
 		_ = os.Remove(agentPath)
-		return "", errors.Wrap(err, "download devpod")
+		return "", errors.Wrapf(err, "failed to download devpod from URL: %s", fullDownloadURL)
 	}
 
 	return agentPath, nil
