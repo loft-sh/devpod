@@ -393,6 +393,15 @@ function ExperimentalSettings() {
             VSCode Insiders
           </FormLabel>
         </HStack>
+        <HStack width="full" align="center">
+          <Switch
+            isChecked={settings.experimental_cursor}
+            onChange={(e) => set("experimental_cursor", e.target.checked)}
+          />
+          <FormLabel marginBottom="0" whiteSpace="nowrap" fontSize="sm">
+            Cursor
+          </FormLabel>
+        </HStack>
       </SettingSection>
 
       <SettingSection title="Additional CLI Flags" description={cliFlagsHelpText}>

@@ -15,6 +15,7 @@ export interface Settings {
   experimental_fleet: boolean
   experimental_jupyterNotebooks: boolean
   experimental_vscodeInsiders: boolean
+  experimental_cursor: boolean
   experimental_devPodPro: boolean
   experimental_colorMode: ColorMode
   additionalCliFlags: string

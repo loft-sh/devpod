@@ -12,23 +12,29 @@ import (
 	"github.com/skratchdot/open-golang/open"
 )
 
-func Open(ctx context.Context, workspace, folder string, newWindow bool, releaseChannel ReleaseChannel, log log.Logger) error {
+func Open(ctx context.Context, workspace, folder string, newWindow bool, flavor Flavor, log log.Logger) error {
 	log.Infof("Starting VSCode...")
-	err := openViaCLI(ctx, workspace, folder, newWindow, releaseChannel, log)
+	err := openViaCLI(ctx, workspace, folder, newWindow, flavor, log)
 	if err != nil {
 		log.Debugf("Error opening vscode via cli: %v", err)
 	} else {
 		return nil
 	}
 
-	return openViaBrowser(workspace, folder, newWindow, releaseChannel, log)
+	return openViaBrowser(workspace, folder, newWindow, flavor, log)
 }
 
-func openViaBrowser(workspace, folder string, newWindow bool, releaseChannel ReleaseChannel, log log.Logger) error {
+func openViaBrowser(workspace, folder string, newWindow bool, flavor Flavor, log log.Logger) error {
 	protocol := `vscode://`
-	if releaseChannel == ReleaseChannelInsiders {
+	switch flavor {
+	case FlavorStable:
+		protocol = `vscode://`
+	case FlavorInsiders:
 		protocol = `vscode-insiders://`
+	case FlavorCursor:
+		protocol = `cursor://`
 	}
+
 	openURL := protocol + `vscode-remote/ssh-remote+` + workspace + `.devpod/` + folder
 	if newWindow {
 		openURL += "?windowId=_blank"
@@ -36,17 +42,17 @@ func openViaBrowser(workspace, folder string, newWindow bool, releaseChannel Rel
 
 	err := open.Run(openURL)
 	if err != nil {
-		log.Debugf("Starting VSCode caused error: %v", err)
-		log.Errorf("Seems like you don't have Visual Studio Code installed on your computer locally. Please install VSCode via https://code.visualstudio.com/")
+		log.Debugf("Starting %s caused error: %v", flavor, err)
+		log.Errorf("Seems like you don't have %s installed on your computer locally", flavor)
 		return err
 	}
 
 	return nil
 }
 
-func openViaCLI(ctx context.Context, workspace, folder string, newWindow bool, releaseChannel ReleaseChannel, log log.Logger) error {
+func openViaCLI(ctx context.Context, workspace, folder string, newWindow bool, flavor Flavor, log log.Logger) error {
 	// try to find code cli
-	codePath := findCLI(releaseChannel)
+	codePath := findCLI(flavor)
 	if codePath == "" {
 		return fmt.Errorf("couldn't find the code binary")
 	}
@@ -99,8 +105,8 @@ func openViaCLI(ctx context.Context, workspace, folder string, newWindow bool, r
 	return nil
 }
 
-func findCLI(releaseChannel ReleaseChannel) string {
-	if releaseChannel == ReleaseChannelStable {
+func findCLI(flavor Flavor) string {
+	if flavor == FlavorStable {
 		if command.Exists("code") {
 			return "code"
 		} else if runtime.GOOS == "darwin" && command.Exists("/Applications/Visual Studio Code.app/Contents/Resources/app/bin/code") {
@@ -110,11 +116,21 @@ func findCLI(releaseChannel ReleaseChannel) string {
 		return ""
 	}
 
-	if releaseChannel == ReleaseChannelInsiders {
+	if flavor == FlavorInsiders {
 		if command.Exists("code-insiders") {
 			return "code-insiders"
 		} else if runtime.GOOS == "darwin" && command.Exists("/Applications/Visual Studio Code - Insiders.app/Contents/Resources/app/bin/code") {
 			return "/Applications/Visual Studio Code - Insiders.app/Contents/Resources/app/bin/code"
+		}
+
+		return ""
+	}
+
+	if flavor == FlavorInsiders {
+		if command.Exists("cursor") {
+			return "cursor"
+		} else if runtime.GOOS == "darwin" && command.Exists("/Applications/Cursor.app/Contents/Resources/app/bin/cursor") {
+			return "/Applications/Cursor.app/Contents/Resources/app/bin/cursor"
 		}
 
 		return ""

@@ -129,6 +129,13 @@ var AllowedIDEs = []AllowedIDE{
 		Icon:         "https://devpod.sh/assets/vscode_insiders.svg",
 		Experimental: true,
 	},
+	{
+		Name:         config.IDECursor,
+		DisplayName:  "Cursor",
+		Options:      vscode.Options,
+		Icon:         "https://devpod.sh/assets/cursor.svg",
+		Experimental: true,
+	},
 }
 
 func RefreshIDEOptions(devPodConfig *config.Config, workspace *provider.Workspace, ide string, options []string) (*provider.Workspace, error) {
