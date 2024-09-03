@@ -86,7 +86,8 @@ func (r *runner) runSingleContainer(
 				PrebuildRepositories: options.PrebuildRepositories,
 				ForceDockerless:      options.ForceDockerless,
 			},
-			NoBuild: options.NoBuild,
+			NoBuild:       options.NoBuild,
+			RegistryCache: options.RegistryCache,
 		})
 		if err != nil {
 			return nil, errors.Wrap(err, "build image")

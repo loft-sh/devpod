@@ -61,6 +61,7 @@ func (d *dockerDriver) BuildDevContainer(
 	if err != nil {
 		return nil, err
 	}
+	d.Log.Info("registry cache", options.RegistryCache)
 
 	// build image
 	writer := d.Log.Writer(logrus.InfoLevel, false)
@@ -170,7 +171,7 @@ func CreateBuildOptions(
 	// define cache args
 	if options.RegistryCache != "" {
 		buildOptions.CacheFrom = []string{fmt.Sprintf("type=registry,ref=%s", options.RegistryCache)}
-		buildOptions.CacheTo = []string{fmt.Sprintf("type=registry,ref=%s,mode=max", options.RegistryCache)}
+		buildOptions.CacheTo = []string{fmt.Sprintf("type=registry,ref=%s,mode=max,image-manifest=true", options.RegistryCache)}
 	} else {
 		buildOptions.BuildArgs["BUILDKIT_INLINE_CACHE"] = "1"
 	}
@@ -310,8 +311,8 @@ func (d *dockerDriver) buildxBuild(ctx context.Context, writer io.Writer, platfo
 	for _, cacheFrom := range options.CacheFrom {
 		args = append(args, "--cache-from", cacheFrom)
 	}
-	for _, cacheFrom := range options.CacheTo {
-		args = append(args, "--cache-to", cacheFrom)
+	for _, cacheTo := range options.CacheTo {
+		args = append(args, "--cache-to", cacheTo)
 	}
 
 	// add additional build cli options

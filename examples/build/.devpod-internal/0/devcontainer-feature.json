@@ -1,0 +1,27 @@
+{
+    "id": "github-cli",
+    "version": "1.0.13",
+    "name": "GitHub CLI",
+    "documentationURL": "https://github.com/devcontainers/features/tree/main/src/github-cli",
+    "description": "Installs the GitHub CLI. Auto-detects latest version and installs needed dependencies.",
+    "options": {
+        "version": {
+            "type": "string",
+            "proposals": [
+                "latest",
+                "none"
+            ],
+            "default": "latest",
+            "description": "Select version of the GitHub CLI, if not latest."
+        },
+        "installDirectlyFromGitHubRelease": {
+            "type": "boolean",
+            "default": true
+        }
+    },
+    "installsAfter": [
+        "ghcr.io/devcontainers/features/common-utils",
+        "ghcr.io/devcontainers/features/git"
+    ]
+}
+
