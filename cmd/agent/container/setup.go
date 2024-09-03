@@ -51,7 +51,6 @@ type SetupContainerCmd struct {
 	InjectGitCredentials   bool
 	ContainerWorkspaceInfo string
 	SetupInfo              string
-	Repo                   string
 }
 
 // NewSetupContainerCmd creates a new command
@@ -72,7 +71,6 @@ func NewSetupContainerCmd(flags *flags.GlobalFlags) *cobra.Command {
 	setupContainerCmd.Flags().BoolVar(&cmd.InjectGitCredentials, "inject-git-credentials", false, "If DevPod should inject git credentials during setup")
 	setupContainerCmd.Flags().StringVar(&cmd.ContainerWorkspaceInfo, "container-workspace-info", "", "The container workspace info")
 	setupContainerCmd.Flags().StringVar(&cmd.SetupInfo, "setup-info", "", "The container setup info")
-	setupContainerCmd.Flags().StringVar(&cmd.SetupInfo, "repository", "", "The repository to use as a remote cache")
 	_ = setupContainerCmd.MarkFlagRequired("setup-info")
 	return setupContainerCmd
 }

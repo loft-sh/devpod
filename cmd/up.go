@@ -62,7 +62,7 @@ type UpCmd struct {
 
 	DotfilesSource string
 	DotfilesScript string
-	RegistryCache  string
+	// RegistryCache  string
 }
 
 // NewUpCmd creates a new up command

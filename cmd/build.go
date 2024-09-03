@@ -27,9 +27,9 @@ type BuildCmd struct {
 
 	ProviderOptions []string
 
-	SkipDelete    bool
-	Machine       string
-	RegistryCache string
+	SkipDelete bool
+	Machine    string
+	// RegistryCache string
 }
 
 // NewBuildCmd creates a new command
