@@ -27,8 +27,9 @@ type BuildCmd struct {
 
 	ProviderOptions []string
 
-	SkipDelete bool
-	Machine    string
+	SkipDelete    bool
+	Machine       string
+	RegistryCache string
 }
 
 // NewBuildCmd creates a new command
@@ -114,6 +115,7 @@ func NewBuildCmd(flags *flags.GlobalFlags) *cobra.Command {
 	buildCmd.Flags().StringSliceVar(&cmd.Platform, "platform", []string{}, "Set target platform for build")
 	buildCmd.Flags().BoolVar(&cmd.SkipPush, "skip-push", false, "If true will not push the image to the repository, useful for testing")
 	buildCmd.Flags().Var(&cmd.GitCloneStrategy, "git-clone-strategy", "The git clone strategy DevPod uses to checkout git based workspaces. Can be full (default), blobless, treeless or shallow")
+	// buildCmd.Flags().StringVar(&cmd.RegistryCache, "registry-cache", "", "The registry to use as a build cache")
 
 	// TESTING
 	buildCmd.Flags().BoolVar(&cmd.ForceBuild, "force-build", false, "TESTING ONLY")

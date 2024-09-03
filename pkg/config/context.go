@@ -14,6 +14,7 @@ const (
 	ContextOptionSSHAgentForwarding         = "SSH_AGENT_FORWARDING"
 	ContextOptionSSHConfigPath              = "SSH_CONFIG_PATH"
 	ContextOptionAgentInjectTimeout         = "AGENT_INJECT_TIMEOUT"
+	ContextOptionRegistryCache              = "REGISTRY_CACHE"
 )
 
 var ContextOptions = []ContextOption{
@@ -85,5 +86,10 @@ var ContextOptions = []ContextOption{
 		Name:        ContextOptionAgentInjectTimeout,
 		Description: "Specifies the timeout to inject the agent",
 		Default:     "20",
+	},
+	{
+		Name:        ContextOptionRegistryCache,
+		Description: "Specifies the registry to use as a build cache",
+		Default:     "gcr.io/pascal-project-387807/my-dev-env", // todo remove
 	},
 }

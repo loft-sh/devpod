@@ -57,7 +57,7 @@ func (d *dockerDriver) BuildDevContainer(
 	}
 
 	// get build options
-	buildOptions, err := CreateBuildOptions(dockerfilePath, dockerfileContent, parsedConfig, extendedBuildInfo, imageName, options.Repository, options.PrebuildRepositories, prebuildHash)
+	buildOptions, err := CreateBuildOptions(dockerfilePath, dockerfileContent, parsedConfig, extendedBuildInfo, imageName, options, prebuildHash)
 	if err != nil {
 		return nil, err
 	}
@@ -119,8 +119,7 @@ func CreateBuildOptions(
 	parsedConfig *config.SubstitutedConfig,
 	extendedBuildInfo *feature.ExtendedBuildInfo,
 	imageName string,
-	pushRepository string,
-	prebuildRepositories []string,
+	options provider.BuildOptions,
 	prebuildHash string,
 ) (*build.BuildOptions, error) {
 	var err error
@@ -155,10 +154,10 @@ func CreateBuildOptions(
 	if imageName != "" {
 		buildOptions.Images = append(buildOptions.Images, imageName)
 	}
-	if pushRepository != "" {
-		buildOptions.Images = append(buildOptions.Images, pushRepository+":"+prebuildHash)
+	if options.Repository != "" {
+		buildOptions.Images = append(buildOptions.Images, options.Repository+":"+prebuildHash)
 	}
-	for _, prebuildRepository := range prebuildRepositories {
+	for _, prebuildRepository := range options.PrebuildRepositories {
 		buildOptions.Images = append(buildOptions.Images, prebuildRepository+":"+prebuildHash)
 	}
 	buildOptions.Context = config.GetContextPath(parsedConfig.Config)
@@ -167,7 +166,15 @@ func CreateBuildOptions(
 	if buildOptions.BuildArgs == nil {
 		buildOptions.BuildArgs = map[string]string{}
 	}
-	buildOptions.BuildArgs["BUILDKIT_INLINE_CACHE"] = "1"
+
+	// define cache args
+	if options.RegistryCache != "" {
+		buildOptions.CacheFrom = []string{fmt.Sprintf("type=registry,ref=%s", options.RegistryCache)}
+		buildOptions.CacheTo = []string{fmt.Sprintf("type=registry,ref=%s,mode=max", options.RegistryCache)}
+	} else {
+		buildOptions.BuildArgs["BUILDKIT_INLINE_CACHE"] = "1"
+	}
+
 	return buildOptions, nil
 }
 
@@ -302,6 +309,9 @@ func (d *dockerDriver) buildxBuild(ctx context.Context, writer io.Writer, platfo
 	// cache
 	for _, cacheFrom := range options.CacheFrom {
 		args = append(args, "--cache-from", cacheFrom)
+	}
+	for _, cacheFrom := range options.CacheTo {
+		args = append(args, "--cache-to", cacheFrom)
 	}
 
 	// add additional build cli options

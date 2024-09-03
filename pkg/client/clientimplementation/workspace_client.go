@@ -203,6 +203,9 @@ func (s *workspaceClient) agentInfo(cliOptions provider.CLIOptions) (string, *pr
 	// Get the timeout from the context options
 	agentInfo.InjectTimeout = config.ParseTimeOption(s.devPodConfig, config.ContextOptionAgentInjectTimeout)
 
+	// Set registry cache from context option
+	agentInfo.RegistryCache = s.devPodConfig.ContextOption(config.ContextOptionRegistryCache)
+
 	// marshal config
 	out, err := json.Marshal(agentInfo)
 	if err != nil {
