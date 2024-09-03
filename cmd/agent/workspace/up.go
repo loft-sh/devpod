@@ -21,6 +21,7 @@ import (
 	"github.com/loft-sh/devpod/pkg/daemon"
 	"github.com/loft-sh/devpod/pkg/devcontainer"
 	config2 "github.com/loft-sh/devpod/pkg/devcontainer/config"
+	"github.com/loft-sh/devpod/pkg/devcontainer/crane"
 	"github.com/loft-sh/devpod/pkg/dockercredentials"
 	"github.com/loft-sh/devpod/pkg/extract"
 	"github.com/loft-sh/devpod/pkg/git"
@@ -268,6 +269,11 @@ func prepareWorkspace(ctx context.Context, workspaceInfo *provider2.AgentWorkspa
 
 		if workspaceInfo.CLIOptions.Recreate && !workspaceInfo.CLIOptions.Reset {
 			log.Info("Rebuiling without resetting a git based workspace, keeping old content folder")
+			return nil
+		}
+
+		if workspaceInfo.CLIOptions.DevContainerSource != "" && crane.IsAvailable() {
+			log.Infof("Pulling devcontainer spec from %v", workspaceInfo.CLIOptions.DevContainerSource)
 			return nil
 		}
 

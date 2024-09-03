@@ -8,6 +8,7 @@ import (
 	"os/exec"
 	"path/filepath"
 
+	provider2 "github.com/loft-sh/devpod/pkg/provider"
 	"github.com/loft-sh/log"
 )
 
@@ -51,8 +52,8 @@ func runCommand(command string, args ...string) (string, error) {
 }
 
 // PullConfigFromSource pulls devcontainer config from configSource using git crane and returns config path
-func PullConfigFromSource(configSource string, log log.Logger) (string, error) {
-	data, err := runCommand(PullCommand, GitCrane, configSource)
+func PullConfigFromSource(workspaceInfo *provider2.AgentWorkspaceInfo, log log.Logger) (string, error) {
+	data, err := runCommand(PullCommand, GitCrane, workspaceInfo.CLIOptions.DevContainerSource)
 	if err != nil {
 		return "", err
 	}
@@ -69,17 +70,32 @@ func PullConfigFromSource(configSource string, log log.Logger) (string, error) {
 		return "", err
 	}
 
-	return createContentDirectory(content)
+	return writeContentToDirectory(workspaceInfo, content, log)
 }
 
-func createContentDirectory(content *Content) (string, error) {
+func writeContentToDirectory(workspaceInfo *provider2.AgentWorkspaceInfo, content *Content, _ log.Logger) (string, error) {
+	path := workspaceInfo.ContentFolder
+	if path == "" {
+		path = createContentDirectory()
+		if path == "" {
+			return path, fmt.Errorf("failed to create temporary directory")
+		}
+	}
+	return storeFilesInDirectory(content, path)
+}
+
+func createContentDirectory() string {
 	tmpDir, err := os.MkdirTemp("", tmpDirTemplate)
 	if err != nil {
-		return "", fmt.Errorf("failed to create temporary directory: %w", err)
+		return ""
 	}
 
+	return tmpDir
+}
+
+func storeFilesInDirectory(content *Content, path string) (string, error) {
 	for filename, fileContent := range content.Files {
-		filePath := filepath.Join(tmpDir, filename)
+		filePath := filepath.Join(path, filename)
 
 		dir := filepath.Dir(filePath)
 		if err := os.MkdirAll(dir, os.ModePerm); err != nil {
@@ -88,10 +104,10 @@ func createContentDirectory(content *Content) (string, error) {
 
 		err := os.WriteFile(filePath, []byte(fileContent), os.ModePerm)
 		if err != nil {
-			os.RemoveAll(tmpDir)
+			os.RemoveAll(path)
 			return "", fmt.Errorf("failed to write file %s: %w", filename, err)
 		}
 	}
 
-	return tmpDir, nil
+	return path, nil
 }
