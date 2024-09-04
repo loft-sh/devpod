@@ -173,7 +173,10 @@ func CreateBuildOptions(
 	// define cache args
 	if options.RegistryCache != "" {
 		buildOptions.CacheFrom = []string{fmt.Sprintf("type=registry,ref=%s", options.RegistryCache)}
-		buildOptions.CacheTo = []string{fmt.Sprintf("type=registry,ref=%s,mode=max,image-manifest=true", options.RegistryCache)}
+		// only export cache on build not up, otherwise we slow down the workspace start time
+		if options.ExportCache {
+			buildOptions.CacheTo = []string{fmt.Sprintf("type=registry,ref=%s,mode=max,image-manifest=true", options.RegistryCache)}
+		}
 	} else {
 		buildOptions.BuildArgs["BUILDKIT_INLINE_CACHE"] = "1"
 	}

@@ -220,6 +220,7 @@ type BuildOptions struct {
 
 	Platform      string
 	RegistryCache string
+	ExportCache   bool
 	NoBuild       bool
 }
 

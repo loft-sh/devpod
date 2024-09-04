@@ -88,6 +88,7 @@ func (r *runner) runSingleContainer(
 			},
 			NoBuild:       options.NoBuild,
 			RegistryCache: options.RegistryCache,
+			ExportCache:   false,
 		})
 		if err != nil {
 			return nil, errors.Wrap(err, "build image")
