@@ -23,7 +23,7 @@ const (
 // WARN: Make sure this matches the regex in /desktop/src/views/Workspaces/CreateWorkspace/CreateWorkspaceInput.tsx!
 var (
 	// Updated regex pattern to support SSH-style Git URLs
-	repoBaseRegEx    = `((?:(?:https?|git|ssh):\/\/)?(?:[^@\/\n]+@)?(?:[^:\/\n]+)(?:[:\/][^\/\n]+)+(?:\.git)?)`
+	repoBaseRegEx    = `((?:(?:https?|git|ssh|file):\/\/)?\/?(?:[^@\/\n]+@)?(?:[^:\/\n]+)(?:[:\/][^\/\n]+)+(?:\.git)?)`
 	branchRegEx      = regexp.MustCompile(`^` + repoBaseRegEx + `@([a-zA-Z0-9\./\-\_]+)$`)
 	commitRegEx      = regexp.MustCompile(`^` + repoBaseRegEx + regexp.QuoteMeta(CommitDelimiter) + `([a-zA-Z0-9]+)$`)
 	prReferenceRegEx = regexp.MustCompile(`^` + repoBaseRegEx + `@(` + PullRequestReference + `)$`)
@@ -31,7 +31,11 @@ var (
 )
 
 func NormalizeRepository(str string) (string, string, string, string, string) {
-	if !strings.HasPrefix(str, "ssh://") && !strings.HasPrefix(str, "git@") && !strings.HasPrefix(str, "http://") && !strings.HasPrefix(str, "https://") {
+	if !strings.HasPrefix(str, "ssh://") &&
+		!strings.HasPrefix(str, "git@") &&
+		!strings.HasPrefix(str, "http://") &&
+		!strings.HasPrefix(str, "https://") &&
+		!strings.HasPrefix(str, "file://") {
 		str = "https://" + str
 	}
 
