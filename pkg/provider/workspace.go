@@ -131,6 +131,18 @@ type ContainerWorkspaceInfo struct {
 	// ContainerTimeout is the timeout in minutes to wait until the agent tries
 	// to delete the container.
 	ContainerTimeout string `json:"containerInactivityTimeout,omitempty"`
+
+	// Source is a WorkspaceSource to be used inside the container
+	Source WorkspaceSource `json:"source,omitempty"`
+
+	// ContentFolder holds the folder where the content is stored
+	ContentFolder string `json:"contentFolder,omitempty"`
+
+	// PullFromInsideContainer determines if project should be pulled from Source when container starts
+	PullFromInsideContainer types.StrBool `json:"pullFromInsideContainer,omitempty"`
+
+	// Agent holds the agent info
+	Agent ProviderAgentConfig `json:"agent,omitempty"`
 }
 
 type AgentWorkspaceInfo struct {

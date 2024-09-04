@@ -101,14 +101,14 @@ func (r *runner) Up(ctx context.Context, options UpOptions, timeout time.Duratio
 
 	defer cleanupBuildInformation(substitutedConfig.Config)
 
-	// run initializeCommand
-	err = runInitializeCommand(r.LocalWorkspaceFolder, substitutedConfig.Config, options.InitEnv, r.Log)
-	if err != nil {
+	if err := runInitializeCommand(r.LocalWorkspaceFolder, substitutedConfig.Config, options.InitEnv, r.Log); err != nil {
 		return nil, err
 	}
 
-	// check if its a compose devcontainer.json
-	if isDockerFileConfig(substitutedConfig.Config) || substitutedConfig.Config.Image != "" || substitutedConfig.Config.ContainerID != "" {
+	switch {
+	case isDockerFileConfig(substitutedConfig.Config),
+		substitutedConfig.Config.Image != "",
+		substitutedConfig.Config.ContainerID != "":
 		return r.runSingleContainer(
 			ctx,
 			substitutedConfig,
@@ -116,10 +116,14 @@ func (r *runner) Up(ctx context.Context, options UpOptions, timeout time.Duratio
 			options,
 			timeout,
 		)
-	} else if isDockerComposeConfig(substitutedConfig.Config) {
+	case isDockerComposeConfig(substitutedConfig.Config):
 		return r.runDockerCompose(ctx, substitutedConfig, substitutionContext, options, timeout)
+	default:
+		return r.runDefaultContainer(ctx, options, substitutedConfig, substitutionContext, timeout)
 	}
+}
 
+func (r *runner) runDefaultContainer(ctx context.Context, options UpOptions, substitutedConfig *config.SubstitutedConfig, substitutionContext *config.SubstitutionContext, timeout time.Duration) (*config.Result, error) {
 	if options.FallbackImage != "" {
 		r.Log.Warn("dev container config is missing one of \"image\", \"dockerFile\" or \"dockerComposeFile\" properties, using fallback image " + options.FallbackImage)
 

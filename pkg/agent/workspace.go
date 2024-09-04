@@ -1,6 +1,8 @@
 package agent
 
 import (
+	"context"
+	"encoding/base64"
 	"fmt"
 	"os"
 	"os/exec"
@@ -10,6 +12,10 @@ import (
 
 	"github.com/loft-sh/devpod/pkg/command"
 	"github.com/loft-sh/devpod/pkg/config"
+	"github.com/loft-sh/devpod/pkg/git"
+	"github.com/loft-sh/devpod/pkg/gitcredentials"
+	provider2 "github.com/loft-sh/devpod/pkg/provider"
+	"github.com/loft-sh/log"
 	"github.com/mitchellh/go-homedir"
 )
 
@@ -223,4 +229,132 @@ func CreateAgentWorkspaceDir(agentFolder, context, workspaceID string) (string, 
 	}
 
 	return workspaceDir, nil
+}
+
+func CloneRepositoryForWorkspace(
+	ctx context.Context,
+	source *provider2.WorkspaceSource,
+	agentConfig *provider2.ProviderAgentConfig,
+	workspaceDir, helper string,
+	options provider2.CLIOptions,
+	overwriteContent bool,
+	log log.Logger,
+) error {
+	log.Info("Clone repository")
+	log.Infof("URL: %s\n", source.GitRepository)
+	if source.GitBranch != "" {
+		log.Infof("Branch: %s\n", source.GitBranch)
+	}
+	if source.GitCommit != "" {
+		log.Infof("Commit: %s\n", source.GitCommit)
+	}
+	if source.GitSubPath != "" {
+		log.Infof("Subpath: %s\n", source.GitSubPath)
+	}
+	if source.GitPRReference != "" {
+		log.Infof("PR: %s\n", source.GitPRReference)
+	}
+
+	// remove the credential helper or otherwise we will receive strange errors within the container
+	defer func() {
+		if helper != "" {
+			if err := gitcredentials.RemoveHelperFromPath(gitcredentials.GetLocalGitConfigPath(workspaceDir)); err != nil {
+				log.Errorf("Remove git credential helper: %v", err)
+			}
+		}
+	}()
+
+	// check if command exists
+	if !command.Exists("git") {
+		local, _ := agentConfig.Local.Bool()
+		if local {
+			return fmt.Errorf("seems like git isn't installed on your system. Please make sure to install git and make it available in the PATH")
+		}
+		if err := git.InstallBinary(log); err != nil {
+			return err
+		}
+	}
+
+	if overwriteContent {
+		if err := removeDirContents(workspaceDir); err != nil {
+			log.Infof("Failed cleanup")
+			return err
+		}
+	}
+
+	// setup private ssh key if passed in
+	extraEnv := []string{}
+	if options.SSHKey != "" {
+		sshExtraEnv, err := setupSSHKey(options.SSHKey, agentConfig.Path)
+		if err != nil {
+			return err
+		}
+		extraEnv = append(extraEnv, sshExtraEnv...)
+	}
+
+	// run git command
+	cloner := git.NewCloner(options.GitCloneStrategy)
+	gitInfo := git.NewGitInfo(source.GitRepository, source.GitBranch, source.GitCommit, source.GitPRReference, source.GitSubPath)
+	err := git.CloneRepositoryWithEnv(ctx, gitInfo, extraEnv, workspaceDir, helper, cloner, log)
+	if err != nil {
+		return fmt.Errorf("clone repository: %w", err)
+	}
+
+	log.Done("Successfully cloned repository")
+
+	return nil
+}
+
+func setupSSHKey(key string, agentPath string) ([]string, error) {
+	keyFile, err := os.CreateTemp("", "")
+	if err != nil {
+		return nil, err
+	}
+	defer os.Remove(keyFile.Name())
+	defer keyFile.Close()
+
+	if err := writeSSHKey(keyFile, key); err != nil {
+		return nil, err
+	}
+
+	if err := os.Chmod(keyFile.Name(), 0o400); err != nil {
+		return nil, err
+	}
+
+	env := []string{"GIT_TERMINAL_PROMPT=0"}
+	gitSSHCmd := []string{agentPath, "helper", "ssh-git-clone", "--key-file=" + keyFile.Name()}
+	env = append(env, "GIT_SSH_COMMAND="+command.Quote(gitSSHCmd))
+
+	return env, nil
+}
+
+func writeSSHKey(key *os.File, sshKey string) error {
+	data, err := base64.StdEncoding.DecodeString(sshKey)
+	if err != nil {
+		return err
+	}
+
+	_, err = key.WriteString(string(data))
+	return err
+}
+
+func removeDirContents(dirPath string) error {
+	entries, err := os.ReadDir(dirPath)
+	if err != nil {
+		return err
+	}
+
+	for _, entry := range entries {
+		entryPath := filepath.Join(dirPath, entry.Name())
+		if entry.IsDir() {
+			err = os.RemoveAll(entryPath)
+		} else {
+			err = os.Remove(entryPath)
+		}
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
 }

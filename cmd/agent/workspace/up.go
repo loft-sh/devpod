@@ -2,7 +2,6 @@ package workspace
 
 import (
 	"context"
-	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"os"
@@ -21,10 +20,9 @@ import (
 	"github.com/loft-sh/devpod/pkg/daemon"
 	"github.com/loft-sh/devpod/pkg/devcontainer"
 	config2 "github.com/loft-sh/devpod/pkg/devcontainer/config"
+	"github.com/loft-sh/devpod/pkg/devcontainer/crane"
 	"github.com/loft-sh/devpod/pkg/dockercredentials"
 	"github.com/loft-sh/devpod/pkg/extract"
-	"github.com/loft-sh/devpod/pkg/git"
-	"github.com/loft-sh/devpod/pkg/gitcredentials"
 	provider2 "github.com/loft-sh/devpod/pkg/provider"
 	"github.com/loft-sh/devpod/scripts"
 	"github.com/loft-sh/log"
@@ -271,7 +269,19 @@ func prepareWorkspace(ctx context.Context, workspaceInfo *provider2.AgentWorkspa
 			return nil
 		}
 
-		return cloneRepository(ctx, workspaceInfo, helper, log)
+		if workspaceInfo.CLIOptions.DevContainerSource != "" && crane.IsAvailable() {
+			log.Infof("Pulling devcontainer spec from %v", workspaceInfo.CLIOptions.DevContainerSource)
+			return nil
+		}
+		return agent.CloneRepositoryForWorkspace(ctx,
+			&workspaceInfo.Workspace.Source,
+			&workspaceInfo.Agent,
+			workspaceInfo.ContentFolder,
+			helper,
+			workspaceInfo.CLIOptions,
+			false,
+			log,
+		)
 	}
 
 	if workspaceInfo.Workspace.Source.LocalFolder != "" {
@@ -398,100 +408,6 @@ func prepareImage(workspaceDir, image string) error {
 	}
 
 	return nil
-}
-
-func cloneRepository(ctx context.Context, workspaceInfo *provider2.AgentWorkspaceInfo, helper string, log log.Logger) error {
-	s := workspaceInfo.Workspace.Source
-	log.Info("Clone repository")
-	log.Infof("URL: %s\n", s.GitRepository)
-	if s.GitBranch != "" {
-		log.Infof("Branch: %s\n", s.GitBranch)
-	}
-	if s.GitCommit != "" {
-		log.Infof("Commit: %s\n", s.GitCommit)
-	}
-	if s.GitSubPath != "" {
-		log.Infof("Subpath: %s\n", s.GitSubPath)
-	}
-	if s.GitPRReference != "" {
-		log.Infof("PR: %s\n", s.GitPRReference)
-	}
-
-	workspaceDir := workspaceInfo.ContentFolder
-	// remove the credential helper or otherwise we will receive strange errors within the container
-	defer func() {
-		if helper != "" {
-			if err := gitcredentials.RemoveHelperFromPath(gitcredentials.GetLocalGitConfigPath(workspaceDir)); err != nil {
-				log.Errorf("Remove git credential helper: %v", err)
-			}
-		}
-	}()
-
-	// check if command exists
-	if !command.Exists("git") {
-		local, _ := workspaceInfo.Agent.Local.Bool()
-		if local {
-			return fmt.Errorf("seems like git isn't installed on your system. Please make sure to install git and make it available in the PATH")
-		}
-		if err := git.InstallBinary(log); err != nil {
-			return err
-		}
-	}
-
-	// setup private ssh key if passed in
-	extraEnv := []string{}
-	if workspaceInfo.CLIOptions.SSHKey != "" {
-		sshExtraEnv, err := setupSSHKey(workspaceInfo.CLIOptions.SSHKey, workspaceInfo.Agent.Path)
-		if err != nil {
-			return err
-		}
-		extraEnv = append(extraEnv, sshExtraEnv...)
-	}
-
-	// run git command
-	cloner := git.NewCloner(workspaceInfo.CLIOptions.GitCloneStrategy)
-	gitInfo := git.NewGitInfo(s.GitRepository, s.GitBranch, s.GitCommit, s.GitPRReference, s.GitSubPath)
-	err := git.CloneRepositoryWithEnv(ctx, gitInfo, extraEnv, workspaceDir, helper, cloner, log)
-	if err != nil {
-		return fmt.Errorf("clone repository: %w", err)
-	}
-
-	log.Done("Successfully cloned repository")
-
-	return nil
-}
-
-func setupSSHKey(key string, agentPath string) ([]string, error) {
-	keyFile, err := os.CreateTemp("", "")
-	if err != nil {
-		return nil, err
-	}
-	defer os.Remove(keyFile.Name())
-	defer keyFile.Close()
-
-	if err := writeSSHKey(keyFile, key); err != nil {
-		return nil, err
-	}
-
-	if err := os.Chmod(keyFile.Name(), 0o400); err != nil {
-		return nil, err
-	}
-
-	env := []string{"GIT_TERMINAL_PROMPT=0"}
-	gitSSHCmd := []string{agentPath, "helper", "ssh-git-clone", "--key-file=" + keyFile.Name()}
-	env = append(env, "GIT_SSH_COMMAND="+command.Quote(gitSSHCmd))
-
-	return env, nil
-}
-
-func writeSSHKey(key *os.File, sshKey string) error {
-	data, err := base64.StdEncoding.DecodeString(sshKey)
-	if err != nil {
-		return err
-	}
-
-	_, err = key.WriteString(string(data))
-	return err
 }
 
 func installDocker(log log.Logger) error {

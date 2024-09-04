@@ -159,6 +159,20 @@ func (cmd *SetupContainerCmd) Run(ctx context.Context) error {
 		}
 	}
 
+	if b, err := workspaceInfo.PullFromInsideContainer.Bool(); err == nil && b {
+		if err := agent.CloneRepositoryForWorkspace(ctx,
+			&workspaceInfo.Source,
+			&workspaceInfo.Agent,
+			workspaceInfo.ContentFolder,
+			"",
+			workspaceInfo.CLIOptions,
+			true,
+			logger,
+		); err != nil {
+			return err
+		}
+	}
+
 	// setup container
 	err = setup.SetupContainer(ctx, setupInfo, workspaceInfo.CLIOptions.WorkspaceEnv, cmd.ChownWorkspace, logger)
 	if err != nil {
