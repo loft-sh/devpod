@@ -160,7 +160,15 @@ func (cmd *SetupContainerCmd) Run(ctx context.Context) error {
 	}
 
 	if b, err := workspaceInfo.PullFromInsideContainer.Bool(); err == nil && b {
-		if err := cloneRepository(ctx, workspaceInfo, "", logger); err != nil {
+		if err := agent.CloneRepositoryForWorkspace(ctx,
+			&workspaceInfo.Source,
+			&workspaceInfo.Agent,
+			workspaceInfo.ContentFolder,
+			"",
+			workspaceInfo.CLIOptions,
+			true,
+			logger,
+		); err != nil {
 			return err
 		}
 	}
@@ -201,74 +209,6 @@ func (cmd *SetupContainerCmd) Run(ctx context.Context) error {
 	_, err = tunnelClient.SendResult(ctx, &tunnel.Message{Message: string(out)})
 	if err != nil {
 		return fmt.Errorf("send result: %w", err)
-	}
-
-	return nil
-}
-
-func cloneRepository(ctx context.Context, workspaceInfo *provider2.ContainerWorkspaceInfo, helper string, log log.Logger) error {
-	s := workspaceInfo.Source
-	log.Info("Clone repository")
-	log.Infof("URL: %s\n", s.GitRepository)
-	if s.GitBranch != "" {
-		log.Infof("Branch: %s\n", s.GitBranch)
-	}
-	if s.GitCommit != "" {
-		log.Infof("Commit: %s\n", s.GitCommit)
-	}
-	if s.GitSubPath != "" {
-		log.Infof("Subpath: %s\n", s.GitSubPath)
-	}
-	if s.GitPRReference != "" {
-		log.Infof("PR: %s\n", s.GitPRReference)
-	}
-
-	// check if command exists
-	if !command.Exists("git") {
-		local, _ := workspaceInfo.Local.Bool()
-		if local {
-			return fmt.Errorf("seems like git isn't installed on your system. Please make sure to install git and make it available in the PATH")
-		}
-		if err := git.InstallBinary(log); err != nil {
-			return err
-		}
-	}
-
-	path := fmt.Sprintf("/workspaces/%v", workspaceInfo.ID)
-	if err := removeDirContents(path); err != nil {
-		log.Infof("Failed cleanup")
-		return err
-	}
-
-	// run git command
-	cloner := git.NewCloner(workspaceInfo.CLIOptions.GitCloneStrategy)
-	gitInfo := git.NewGitInfo(s.GitRepository, s.GitBranch, s.GitCommit, s.GitPRReference, s.GitSubPath)
-	err := git.CloneRepositoryWithEnv(ctx, gitInfo, []string{}, path, helper, cloner, log)
-	if err != nil {
-		return fmt.Errorf("clone repository: %w", err)
-	}
-
-	log.Done("Successfully cloned repository")
-
-	return nil
-}
-
-func removeDirContents(dirPath string) error {
-	entries, err := os.ReadDir(dirPath)
-	if err != nil {
-		return err
-	}
-
-	for _, entry := range entries {
-		entryPath := filepath.Join(dirPath, entry.Name())
-		if entry.IsDir() {
-			err = os.RemoveAll(entryPath)
-		} else {
-			err = os.Remove(entryPath)
-		}
-		if err != nil {
-			return err
-		}
 	}
 
 	return nil

@@ -76,8 +76,8 @@ func (r *runner) setupContainer(
 		Dockerless:       r.WorkspaceConfig.Agent.Dockerless,
 		ContainerTimeout: r.WorkspaceConfig.Agent.ContainerTimeout,
 		Source:           r.WorkspaceConfig.Workspace.Source,
-		Local:            r.WorkspaceConfig.Agent.Local,
-		ID:               r.WorkspaceConfig.Workspace.ID,
+		Agent:            r.WorkspaceConfig.Agent,
+		ContentFolder:    r.WorkspaceConfig.ContentFolder,
 	}
 	if r.WorkspaceConfig.CLIOptions.DevContainerSource != "" && crane.IsAvailable() {
 		workspaceConfig.PullFromInsideContainer = "true"

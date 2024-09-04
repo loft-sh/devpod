@@ -135,13 +135,14 @@ type ContainerWorkspaceInfo struct {
 	// Source is a WorkspaceSource to be used inside the container
 	Source WorkspaceSource `json:"source,omitempty"`
 
-	// Local indicates is container is running on local runner
-	Local types.StrBool `json:"local,omitempty"`
-
-	ID string `json:"id,omitempty"`
+	// ContentFolder holds the folder where the content is stored
+	ContentFolder string `json:"contentFolder,omitempty"`
 
 	// PullFromInsideContainer determines if project should be pulled from Source when container starts
 	PullFromInsideContainer types.StrBool `json:"pullFromInsideContainer,omitempty"`
+
+	// Agent holds the agent info
+	Agent ProviderAgentConfig `json:"agent,omitempty"`
 }
 
 type AgentWorkspaceInfo struct {
