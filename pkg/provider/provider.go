@@ -133,6 +133,9 @@ type ProviderDockerlessOptions struct {
 	// IgnorePaths are additional ignore paths that should be ignored during deletion
 	IgnorePaths string `json:"ignorePaths,omitempty"`
 
+	// Registry to use as remote cache
+	RegistryCache string `json:"registryCache,omitempty"`
+
 	// DisableDockerCredentials prevents docker credentials from getting injected
 	DisableDockerCredentials types.StrBool `json:"disableDockerCredentials,omitempty"`
 }

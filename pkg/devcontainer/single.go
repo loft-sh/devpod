@@ -14,7 +14,7 @@ import (
 	"github.com/pkg/errors"
 )
 
-var dockerlessImage = "gcr.io/pascal-project-387807/dockerless:0.2.0" // "ghcr.io/loft-sh/dockerless:0.1.4" // "gcr.io/pascal-project-387807/dockerless:0.2.0" //
+var dockerlessImage = "gcr.io/pascal-project-387807/dockerless:0.2.0-alpha-7" // "ghcr.io/loft-sh/dockerless:0.1.4"
 
 const (
 	DevPodExtraEnvVar           = "DEVPOD"
