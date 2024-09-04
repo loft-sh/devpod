@@ -217,11 +217,10 @@ func initWorkspace(ctx context.Context, cancel context.CancelFunc, workspaceInfo
 		} else {
 			errChan <- installDocker(logger)
 		}
+		// If we are provisioning the machine, ensure the daemon has required options
 		if workspaceInfo.Machine != nil {
 			errChan <- configureDockerDaemon(ctx, logger)
 		} else {
-			logger.Warn("Using existing docker installation, please ensure containerd snapshotter is enabled in the docker daemon")
-			logger.Warn("See https://docs.docker.com/engine/storage/containerd/")
 			errChan <- nil
 		}
 	}()
