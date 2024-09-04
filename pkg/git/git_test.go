@@ -191,6 +191,38 @@ func TestNormalizeRepository(t *testing.T) {
 			expectedCommit:      "",
 			expectedSubpath:     "",
 		},
+		{
+			in:                  "file:///workspace/projects/project",
+			expectedRepo:        "file:///workspace/projects/project",
+			expectedPRReference: "",
+			expectedBranch:      "",
+			expectedCommit:      "",
+			expectedSubpath:     "",
+		},
+		{
+			in:                  "file:///workspace/projects/project@dev",
+			expectedRepo:        "file:///workspace/projects/project",
+			expectedPRReference: "",
+			expectedBranch:      "dev",
+			expectedCommit:      "",
+			expectedSubpath:     "",
+		},
+		{
+			in:                  "file:///workspace/projects/project@sha256:905ffb0",
+			expectedRepo:        "file:///workspace/projects/project",
+			expectedPRReference: "",
+			expectedBranch:      "",
+			expectedCommit:      "905ffb0",
+			expectedSubpath:     "",
+		},
+		{
+			in:                  "file:///workspace/projects/project@subpath:/test/path",
+			expectedRepo:        "file:///workspace/projects/project",
+			expectedPRReference: "",
+			expectedBranch:      "",
+			expectedCommit:      "",
+			expectedSubpath:     "/test/path",
+		},
 	}
 
 	for _, testCase := range testCases {
