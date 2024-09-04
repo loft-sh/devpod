@@ -2,6 +2,7 @@ package workspace
 
 import (
 	"context"
+	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"os"
@@ -23,6 +24,8 @@ import (
 	"github.com/loft-sh/devpod/pkg/devcontainer/crane"
 	"github.com/loft-sh/devpod/pkg/dockercredentials"
 	"github.com/loft-sh/devpod/pkg/extract"
+	"github.com/loft-sh/devpod/pkg/git"
+	"github.com/loft-sh/devpod/pkg/gitcredentials"
 	provider2 "github.com/loft-sh/devpod/pkg/provider"
 	"github.com/loft-sh/devpod/scripts"
 	"github.com/loft-sh/log"
@@ -207,13 +210,14 @@ func initWorkspace(ctx context.Context, cancel context.CancelFunc, workspaceInfo
 	}
 
 	// install docker in background
-	errChan := make(chan error, 1)
+	errChan := make(chan error, 2)
 	go func() {
 		if !workspaceInfo.Agent.IsDockerDriver() || workspaceInfo.Agent.Docker.Install == "false" {
 			errChan <- nil
 		} else {
 			errChan <- installDocker(logger)
 		}
+		errChan <- configureDockerDaemon(ctx, logger)
 	}()
 
 	// prepare workspace
@@ -234,6 +238,11 @@ func initWorkspace(ctx context.Context, cancel context.CancelFunc, workspaceInfo
 	err = <-errChan
 	if err != nil {
 		return nil, nil, "", errors.Wrap(err, "install docker")
+	}
+	// wait until daemon is configured
+	err = <-errChan
+	if err != nil {
+		return nil, nil, "", errors.Wrap(err, "configure docker")
 	}
 
 	return tunnelClient, logger, dockerCredentialsDir, nil
@@ -411,7 +420,101 @@ func prepareImage(workspaceDir, image string) error {
 	return nil
 }
 
-func installDocker(log log.Logger) error {
+func cloneRepository(ctx context.Context, workspaceInfo *provider2.AgentWorkspaceInfo, helper string, log log.Logger) error {
+	s := workspaceInfo.Workspace.Source
+	log.Info("Clone repository")
+	log.Infof("URL: %s\n", s.GitRepository)
+	if s.GitBranch != "" {
+		log.Infof("Branch: %s\n", s.GitBranch)
+	}
+	if s.GitCommit != "" {
+		log.Infof("Commit: %s\n", s.GitCommit)
+	}
+	if s.GitSubPath != "" {
+		log.Infof("Subpath: %s\n", s.GitSubPath)
+	}
+	if s.GitPRReference != "" {
+		log.Infof("PR: %s\n", s.GitPRReference)
+	}
+
+	workspaceDir := workspaceInfo.ContentFolder
+	// remove the credential helper or otherwise we will receive strange errors within the container
+	defer func() {
+		if helper != "" {
+			if err := gitcredentials.RemoveHelperFromPath(gitcredentials.GetLocalGitConfigPath(workspaceDir)); err != nil {
+				log.Errorf("Remove git credential helper: %v", err)
+			}
+		}
+	}()
+
+	// check if command exists
+	if !command.Exists("git") {
+		local, _ := workspaceInfo.Agent.Local.Bool()
+		if local {
+			return fmt.Errorf("seems like git isn't installed on your system. Please make sure to install git and make it available in the PATH")
+		}
+		if err := git.InstallBinary(log); err != nil {
+			return err
+		}
+	}
+
+	// setup private ssh key if passed in
+	extraEnv := []string{}
+	if workspaceInfo.CLIOptions.SSHKey != "" {
+		sshExtraEnv, err := setupSSHKey(workspaceInfo.CLIOptions.SSHKey, workspaceInfo.Agent.Path)
+		if err != nil {
+			return err
+		}
+		extraEnv = append(extraEnv, sshExtraEnv...)
+	}
+
+	// run git command
+	cloner := git.NewCloner(workspaceInfo.CLIOptions.GitCloneStrategy)
+	gitInfo := git.NewGitInfo(s.GitRepository, s.GitBranch, s.GitCommit, s.GitPRReference, s.GitSubPath)
+	err := git.CloneRepositoryWithEnv(ctx, gitInfo, extraEnv, workspaceDir, helper, cloner, log)
+	if err != nil {
+		return fmt.Errorf("clone repository: %w", err)
+	}
+
+	log.Done("Successfully cloned repository")
+
+	return nil
+}
+
+func setupSSHKey(key string, agentPath string) ([]string, error) {
+	keyFile, err := os.CreateTemp("", "")
+	if err != nil {
+		return nil, err
+	}
+	defer os.Remove(keyFile.Name())
+	defer keyFile.Close()
+
+	if err := writeSSHKey(keyFile, key); err != nil {
+		return nil, err
+	}
+
+	if err := os.Chmod(keyFile.Name(), 0o400); err != nil {
+		return nil, err
+	}
+
+	env := []string{"GIT_TERMINAL_PROMPT=0"}
+	gitSSHCmd := []string{agentPath, "helper", "ssh-git-clone", "--key-file=" + keyFile.Name()}
+	env = append(env, "GIT_SSH_COMMAND="+command.Quote(gitSSHCmd))
+
+	return env, nil
+}
+
+func writeSSHKey(key *os.File, sshKey string) error {
+	data, err := base64.StdEncoding.DecodeString(sshKey)
+	if err != nil {
+		return err
+	}
+
+	_, err = key.WriteString(string(data))
+	return err
+}
+
+func installDocker(log log.Logger) (err error) {
 	if !command.Exists("docker") {
 		writer := log.Writer(logrus.InfoLevel, false)
 		defer writer.Close()
@@ -421,11 +524,33 @@ func installDocker(log log.Logger) error {
 		shellCommand := exec.Command("sh", "-c", scripts.InstallDocker)
 		shellCommand.Stdout = writer
 		shellCommand.Stderr = writer
-		err := shellCommand.Run()
-		if err != nil {
+		err = shellCommand.Run()
+	}
+	return err
+}
+
+func configureDockerDaemon(ctx context.Context, log log.Logger) (err error) {
+	log.Info("Configuring docker daemon ...")
+	// Enable image snapshotter in the dameon
+	var daemonConfig = []byte(`{
+		"features": {
+			"containerd-snapshotter": true
+		}
+	}`)
+	// Check rootless docker
+	homeDir, err := os.UserHomeDir()
+	if err != nil {
+		return err
+	}
+	if _, err = os.Stat(fmt.Sprintf("%s/.config/docker", homeDir)); !errors.Is(err, os.ErrNotExist) {
+		err = os.WriteFile(fmt.Sprintf("%s/.config/docker/daemon.json", homeDir), daemonConfig, 0644)
+	}
+	// otherwise assume default
+	if err != nil {
+		if err = os.WriteFile("/etc/docker/daemon.json", daemonConfig, 0644); err != nil {
 			return err
 		}
 	}
-
-	return nil
+	// reload docker daemon
+	return exec.CommandContext(ctx, "pkill", "-HUP", "dockerd").Run()
 }
