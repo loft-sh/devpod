@@ -62,7 +62,7 @@ func (d *dockerDriver) BuildDevContainer(
 	if err != nil {
 		return nil, err
 	}
-	d.Log.Info("registry cache", options.RegistryCache)
+	d.Log.Debug("Using registry cache", options.RegistryCache)
 
 	// build image
 	writer := d.Log.Writer(logrus.InfoLevel, false)

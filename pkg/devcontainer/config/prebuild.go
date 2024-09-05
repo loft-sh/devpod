@@ -68,7 +68,7 @@ func CalculatePrebuildHash(
 	log.Debug("Build context files to use for hash are ", includes)
 
 	// get hash of the context directory
-	contextHash, err := util.DirectoryHash(contextPath, excludes, includes, log)
+	contextHash, err := util.DirectoryHash(contextPath, excludes, includes)
 	if err != nil {
 		return "", err
 	}
