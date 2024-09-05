@@ -14,7 +14,7 @@ import (
 	"github.com/pkg/errors"
 )
 
-var dockerlessImage = "gcr.io/pascal-project-387807/dockerless:0.2.0-alpha-7" // "ghcr.io/loft-sh/dockerless:0.1.4"
+var dockerlessImage = "gcr.io/pascal-project-387807/dockerless:0.2.0-alpha-7" // "ghcr.io/loft-sh/dockerless:0.1.4"  todo update once dockerless PR is merged
 
 const (
 	DevPodExtraEnvVar           = "DEVPOD"

@@ -62,7 +62,6 @@ type UpCmd struct {
 
 	DotfilesSource string
 	DotfilesScript string
-	// RegistryCache  string
 }
 
 // NewUpCmd creates a new up command
@@ -168,7 +167,6 @@ func NewUpCmd(flags *flags.GlobalFlags) *cobra.Command {
 	upCmd.Flags().Var(&cmd.GitCloneStrategy, "git-clone-strategy", "The git clone strategy DevPod uses to checkout git based workspaces. Can be full (default), blobless, treeless or shallow")
 	upCmd.Flags().StringVar(&cmd.GitSSHSigningKey, "git-ssh-signing-key", "", "The ssh key to use when signing git commits. Used to explicitly setup DevPod's ssh signature forwarding with given key. Should be same format as value of `git config user.signingkey`")
 	upCmd.Flags().StringVar(&cmd.FallbackImage, "fallback-image", "", "The fallback image to use if no devcontainer configuration has been detected")
-	// upCmd.Flags().StringVar(&cmd.RegistryCache, "registry-cache", "", "The registry to use as a build cache")
 
 	upCmd.Flags().BoolVar(&cmd.DisableDaemon, "disable-daemon", false, "If enabled, will not install a daemon into the target machine to track activity")
 	upCmd.Flags().StringVar(&cmd.Source, "source", "", "Optional source for the workspace. E.g. git:https://github.com/my-org/my-repo")
