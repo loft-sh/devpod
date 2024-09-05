@@ -29,7 +29,4 @@ RUN \
 COPY app /app
 COPY files /files
 
-RUN echo test
-RUN echo layer
-
 RUN echo hello
