@@ -90,6 +90,6 @@ var ContextOptions = []ContextOption{
 	{
 		Name:        ContextOptionRegistryCache,
 		Description: "Specifies the registry to use as a build cache",
-		Default:     "gcr.io/pascal-project-387807/my-dev-env", // todo remove
+		Default:     "",
 	},
 }
