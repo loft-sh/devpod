@@ -89,7 +89,7 @@ var ContextOptions = []ContextOption{
 	},
 	{
 		Name:        ContextOptionRegistryCache,
-		Description: "Specifies the registry to use as a build cache",
+		Description: "Specifies the registry to use as a build cache, e.g. gcr.io/my-project/my-dev-env",
 		Default:     "",
 	},
 }

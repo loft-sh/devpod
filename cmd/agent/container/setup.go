@@ -303,7 +303,7 @@ func dockerlessBuild(
 	args = append(args, "--build-arg", "TARGETOS="+runtime.GOOS)
 	args = append(args, "--build-arg", "TARGETARCH="+runtime.GOARCH)
 	if dockerlessOptions.RegistryCache != "" {
-		log.Info("Appending registry cache to dockerless build arguments ", dockerlessOptions.RegistryCache)
+		log.Debug("Appending registry cache to dockerless build arguments ", dockerlessOptions.RegistryCache)
 		args = append(args, "--registry-cache", dockerlessOptions.RegistryCache)
 	}
 

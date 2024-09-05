@@ -63,12 +63,12 @@ var _ = DevPodDescribe("devpod build test suite", func() {
 			info := &config.ImageBuildInfo{Dockerfile: file}
 
 			// make sure images are there
-			prebuildHash, err := config.CalculatePrebuildHash(cfg, "linux/amd64", "amd64", filepath.Dir(cfg.Origin), dockerfilePath, modifiedDockerfileContents, log.Default, info)
+			prebuildHash, err := config.CalculatePrebuildHash(cfg, "linux/amd64", "amd64", filepath.Dir(cfg.Origin), dockerfilePath, modifiedDockerfileContents, info, log.Default)
 			framework.ExpectNoError(err)
 			_, err = dockerHelper.InspectImage(ctx, prebuildRepo+":"+prebuildHash, false)
 			framework.ExpectNoError(err)
 
-			prebuildHash, err = config.CalculatePrebuildHash(cfg, "linux/arm64", "arm64", filepath.Dir(cfg.Origin), dockerfilePath, modifiedDockerfileContents, log.Default, info)
+			prebuildHash, err = config.CalculatePrebuildHash(cfg, "linux/arm64", "arm64", filepath.Dir(cfg.Origin), dockerfilePath, modifiedDockerfileContents, info, log.Default)
 			framework.ExpectNoError(err)
 			_, err = dockerHelper.InspectImage(ctx, prebuildRepo+":"+prebuildHash, false)
 			framework.ExpectNoError(err)
@@ -109,7 +109,7 @@ var _ = DevPodDescribe("devpod build test suite", func() {
 			info := &config.ImageBuildInfo{Dockerfile: file}
 
 			// make sure images are there
-			prebuildHash, err := config.CalculatePrebuildHash(cfg, "linux/amd64", "amd64", filepath.Dir(cfg.Origin), dockerfilePath, modifiedDockerfileContents, log.Default, info)
+			prebuildHash, err := config.CalculatePrebuildHash(cfg, "linux/amd64", "amd64", filepath.Dir(cfg.Origin), dockerfilePath, modifiedDockerfileContents, info, log.Default)
 			framework.ExpectNoError(err)
 			_, err = dockerHelper.InspectImage(ctx, dockerdriver.GetImageName(tempDir, prebuildHash), false)
 			framework.ExpectNoError(err)
@@ -170,7 +170,7 @@ var _ = DevPodDescribe("devpod build test suite", func() {
 			info := &config.ImageBuildInfo{Dockerfile: file}
 
 			// make sure images are there
-			prebuildHash, err := config.CalculatePrebuildHash(cfg, "linux/amd64", "amd64", filepath.Dir(cfg.Origin), dockerfilePath, modifiedDockerfileContents, log.Default, info)
+			prebuildHash, err := config.CalculatePrebuildHash(cfg, "linux/amd64", "amd64", filepath.Dir(cfg.Origin), dockerfilePath, modifiedDockerfileContents, info, log.Default)
 			framework.ExpectNoError(err)
 
 			_, err = dockerHelper.InspectImage(ctx, prebuildRepo+":"+prebuildHash, false)

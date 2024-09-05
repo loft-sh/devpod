@@ -18,8 +18,8 @@ import (
 func CalculatePrebuildHash(
 	originalConfig *DevContainerConfig,
 	platform, architecture, contextPath, dockerfilePath, dockerfileContent string,
-	log log.Logger,
-	buildInfo *ImageBuildInfo) (string, error) {
+	buildInfo *ImageBuildInfo,
+	log log.Logger) (string, error) {
 	parsedConfig := CloneDevContainerConfig(originalConfig)
 
 	if platform != "" {

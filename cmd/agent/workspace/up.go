@@ -215,7 +215,8 @@ func initWorkspace(ctx context.Context, cancel context.CancelFunc, workspaceInfo
 			errChan <- installDocker(logger)
 		}
 		// If we are provisioning the machine, ensure the daemon has required options
-		if workspaceInfo.Machine != nil {
+		local, err := workspaceInfo.Agent.Local.Bool()
+		if workspaceInfo.Agent.IsDockerDriver() && err != nil && local {
 			errChan <- configureDockerDaemon(ctx, logger)
 		} else {
 			errChan <- nil
