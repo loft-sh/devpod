@@ -76,7 +76,7 @@ func (d *Dockerfile) FindBaseImage(buildArgs map[string]string, target string) s
 // BuildContextFiles traverses a build stage and returns a list of any file path that would affect the build context
 func (d *Dockerfile) BuildContextFiles() (files []string) {
 	// Iterate over all build stages
-	for _, stage := range d.StagesByTarget {
+	for _, stage := range d.Stages {
 		// Add the values of any ADD or COPY instructions
 		for _, in := range stage.Instructions {
 			if strings.HasPrefix(in.Value, "ADD") || strings.HasPrefix(in.Value, "COPY") {

@@ -14,7 +14,7 @@ import (
 	"github.com/pkg/errors"
 )
 
-var dockerlessImage = "gcr.io/pascal-project-387807/dockerless:0.2.0-alpha-7" // "ghcr.io/loft-sh/dockerless:0.1.4"  todo update once dockerless PR is merged
+var dockerlessImage = "gcr.io/pascal-project-387807/dockerless:0.2.0-alpha-8" // "ghcr.io/loft-sh/dockerless:0.1.4"  todo update once dockerless PR is merged
 
 const (
 	DevPodExtraEnvVar           = "DEVPOD"
@@ -188,6 +188,7 @@ func (r *runner) getDockerlessRunOptions(
 		"DOCKERLESS":            "true",
 		"DOCKERLESS_CONTEXT":    buildInfo.Dockerless.Context,
 		"DOCKERLESS_DOCKERFILE": buildInfo.Dockerless.Dockerfile,
+		"GODEBUG":               "http2client=0",
 	}
 	for k, v := range mergedConfig.ContainerEnv {
 		env[k] = v
