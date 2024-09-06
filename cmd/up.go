@@ -1079,7 +1079,11 @@ func performGpgForwarding(
 // Potentially auto-upgrade other providers in the future.
 func checkProviderUpdate(devPodConfig *config.Config, proInstance *provider2.ProInstance, log log.Logger) error {
 	if version.GetVersion() == version.DevVersion {
-		log.Debugf("Skipping provider check during development")
+		log.Debugf("Skipping provider upgrade check during development")
+		return nil
+	}
+	if proInstance == nil {
+		log.Debugf("No pro instance available, skipping provider upgrade check")
 		return nil
 	}
 
