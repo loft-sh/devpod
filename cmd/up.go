@@ -846,6 +846,34 @@ func mergeDevPodUpOptions(baseOptions *provider2.CLIOptions) error {
 	return nil
 }
 
+func mergeContextOptions(contextConfig *config.ContextConfig, environ []string) {
+	envVars := map[string]string{}
+	for _, v := range environ {
+		t := strings.SplitN(v, "=", 2)
+		if len(t) != 2 {
+			continue
+		}
+		envVars[t[0]] = t[1]
+	}
+
+	for _, o := range config.ContextOptions {
+		// look up in env
+		envVal, ok := envVars[o.Name]
+		if !ok {
+			continue
+		}
+		// look up in current context options, skip if already exists
+		if _, ok := contextConfig.Options[o.Name]; ok {
+			continue
+		}
+		contextConfig.Options[o.Name] = config.OptionValue{
+			Value:        envVal,
+			UserProvided: true,
+			Filled:       &[]types.Time{types.Now()}[0],
+		}
+	}
+}
+
 func mergeEnvFromFiles(baseOptions *provider2.CLIOptions) error {
 	var variables []string
 	for _, file := range baseOptions.WorkspaceEnvFile {
