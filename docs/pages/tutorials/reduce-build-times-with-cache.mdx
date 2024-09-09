@@ -1,0 +1,27 @@
+---
+title: Reduce build times with remote caching
+sidebar_label: Reduce build times
+---
+
+Devpod provides the ability to use a registry as a remote backend cache for your container builds. To enable it perform
+
+```bash
+./devpod-cli context set-options -o REGISTRY_CACHE={registry}
+```
+where registry follows the syntax {domain}/{project}/{repo}, such as gcr.io/my-project/my-dev-env
+```
+
+Then prebuild your image to populate the cache
+
+```bash
+devpod build my-workspace
+```
+
+Now the next time you or anyone in your team needs to build an image, it can pull from the cache. If you've made changes to your environment, then devpod will detect these changes are 
+build on top of the existing image layers.
+
+#### How does devpod detect changes?
+
+Devpod parses your Dockerfile and .devcontainer.json to detect file paths that can affect your build context. Devpod traverses these files and makes a hash of the file contents to use as the 
+container's image tag. When you make changes to these files, the hash will change causing a rebuild. Thanks to the remote cache the previous layers will be built so only changes are needed. To 
+reduce build times it is recommened to follow docker's best practices when writing Dockerfiles.
