@@ -1,0 +1,35 @@
+@startuml
+!include https://raw.githubusercontent.com/plantuml-stdlib/C4-PlantUML/master/C4_Container.puml
+!include <material/common>
+!include <material/sync>
+HIDE_STEREOTYPE()
+LAYOUT_TOP_DOWN()
+
+Person(user, "DevPod", "Uses kubectl")
+
+System_Boundary(host, "Kubernetes Cluster") {
+    Container(controlPlane, "kube API server", "Manages the cluster")
+
+    System_Boundary(devpodns, "devpod namespace") {
+        ContainerDb(cache, "Build Cache", "Volume", "build cache")
+
+        System_Boundary(kaniko1, "Workspace") {
+            Container(kb1, "Kaniko Builder", "kaniko executor", "Resources")
+            ContainerDb(dir, "Workspace Directory", "Volume", "workspace dir")
+            Container(kr1, "Kaniko Runner", "kaniko executor", "Resources")
+        }
+    }
+}
+
+System_Boundary(registry, "Registry") {
+    ContainerDb(registryCache, "Build layers cache", "Volume", "Images")
+}
+
+BiRel(user, controlPlane, "kubectl ...")
+Rel(controlPlane, kb1, " ")
+Rel(cache, kb1, "")
+Rel(registryCache, kb1, "")
+Rel(dir, kr1, "")
+Rel(dir, kb1, "")
+Rel(kb1, kr1, "image")
+@enduml
