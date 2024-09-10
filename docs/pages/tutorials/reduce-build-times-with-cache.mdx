@@ -5,15 +5,26 @@ sidebar_label: Reduce build times
 
 Devpod provides the ability to use a registry as a remote backend cache for your container builds. To enable it perform
 
-```bash
+```
 ./devpod-cli context set-options -o REGISTRY_CACHE={registry}
 ```
-where registry follows the syntax {domain}/{project}/{repo}, such as gcr.io/my-project/my-dev-env
+where registry follows the syntax "\{domain\}/\{project\}/\{repo\}", such as gcr.io/my-project/my-dev-env
+
+
+Ensure your docker environment has the image snap shotter enabled in your daemon (https://docs.docker.com/engine/storage/containerd/)
+```
+cat /etc/docker/daemon.json
+
+{
+  "features": {
+    "containerd-snapshotter": true
+  }
+}
 ```
 
 Then prebuild your image to populate the cache
 
-```bash
+```
 devpod build my-workspace
 ```
 

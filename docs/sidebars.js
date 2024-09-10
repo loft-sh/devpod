@@ -12,6 +12,10 @@ module.exports = {
       id: "what-is-devpod",
     },
     {
+      type: "doc",
+      id: "how-it-works",
+    },
+    {
       type: "category",
       label: "Getting Started",
       items: [
@@ -132,6 +136,20 @@ module.exports = {
         {
           type: "doc",
           id: "managing-providers/delete-provider",
+        },
+      ],
+    },
+    {
+      type: "category",
+      label: "Tutorials",
+      items: [
+        {
+          type: "doc",
+          id: "tutorials/minikube-vscode-browser",
+        },
+        {
+          type: "doc",
+          id: "tutorials/reduce-build-times-with-cache",
         },
       ],
     },
