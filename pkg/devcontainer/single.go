@@ -188,7 +188,7 @@ func (r *runner) getDockerlessRunOptions(
 		"DOCKERLESS":            "true",
 		"DOCKERLESS_CONTEXT":    buildInfo.Dockerless.Context,
 		"DOCKERLESS_DOCKERFILE": buildInfo.Dockerless.Dockerfile,
-		"GODEBUG":               "http2client=0",
+		"GODEBUG":               "http2client=0", // https://github.com/GoogleContainerTools/kaniko/issues/875
 	}
 	for k, v := range mergedConfig.ContainerEnv {
 		env[k] = v
