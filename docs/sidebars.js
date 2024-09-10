@@ -190,17 +190,7 @@ module.exports = {
         {
           type: "doc",
           id: "other-topics/mobile-support",
-        },
-        {
-          type: "category",
-          label: "Advanced guides",
-          items: [
-            {
-              type: "doc",
-              id: "other-topics/advanced-guides/minikube-vscode-browser",
-            },
-          ],
-        },
+        }
       ],
     },
     {
