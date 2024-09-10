@@ -241,13 +241,15 @@ func initWorkspace(ctx context.Context, cancel context.CancelFunc, workspaceInfo
 	if workspaceInfo.Agent.IsDockerDriver() && err != nil && !local {
 		errChan <- configureDockerDaemon(ctx, logger)
 	} else {
+		logger.Debug("Skipping configuring daemon")
 		errChan <- nil
 	}
 
 	// wait until docker daemon is configured
 	err = <-errChan
 	if err != nil {
-		return nil, nil, "", errors.Wrap(err, "configure docker")
+		logger.Warn("Could not find docker daemon config file, if using the registry cache, please ensure the daemon is configured with containerd-snapshotter=true")
+		logger.Warn("More info at https://docs.docker.com/engine/storage/containerd/")
 	}
 
 	return tunnelClient, logger, dockerCredentialsDir, nil
