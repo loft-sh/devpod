@@ -214,13 +214,6 @@ func initWorkspace(ctx context.Context, cancel context.CancelFunc, workspaceInfo
 		} else {
 			errChan <- installDocker(logger)
 		}
-		// If we are provisioning the machine, ensure the daemon has required options
-		local, err := workspaceInfo.Agent.Local.Bool()
-		if workspaceInfo.Agent.IsDockerDriver() && err != nil && !local {
-			errChan <- nil // configureDockerDaemon(ctx, logger) todo clean up
-		} else {
-			errChan <- nil
-		}
 	}()
 
 	// prepare workspace
@@ -237,12 +230,21 @@ func initWorkspace(ctx context.Context, cancel context.CancelFunc, workspaceInfo
 		}
 	}
 
-	// wait until docker is installed
+	// wait until docker is installed before configuring docker daemon
 	err = <-errChan
 	if err != nil {
 		return nil, nil, "", errors.Wrap(err, "install docker")
 	}
-	// wait until daemon is configured
+
+	// If we are provisioning the machine, ensure the daemon has required options
+	local, err := workspaceInfo.Agent.Local.Bool()
+	if workspaceInfo.Agent.IsDockerDriver() && err != nil && !local {
+		errChan <- configureDockerDaemon(ctx, logger)
+	} else {
+		errChan <- nil
+	}
+
+	// wait until docker daemon is configured
 	err = <-errChan
 	if err != nil {
 		return nil, nil, "", errors.Wrap(err, "configure docker")
