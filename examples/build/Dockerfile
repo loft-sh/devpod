@@ -5,7 +5,6 @@ ARG TARGETARCH
 
 # Install Node.js
 RUN \
-    --mount=type=cache,target=/var/cache/apt \
     curl -fsSL https://deb.nodesource.com/setup_20.x | bash - \
     && apt-get update \
     && apt-get install -y --no-install-recommends nodejs \
@@ -20,7 +19,6 @@ ENV RUSTUP_HOME=/usr/local/rustup \
 
 # Install Protobuf compiler
 RUN \
-    --mount=type=cache,target=/var/cache/apt \
     apt-get update \
     && apt-get install -y --no-install-recommends protobuf-compiler \
     && apt-get clean \
