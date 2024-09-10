@@ -64,7 +64,10 @@ func CalculatePrebuildHash(
 	// find exact files to hash
 	// todo pass down target or search all
 	// todo update DirectoryHash function
-	includes := buildInfo.Dockerfile.BuildContextFiles()
+	var includes []string
+	if buildInfo.Dockerfile != nil {
+		includes = buildInfo.Dockerfile.BuildContextFiles()
+	}
 	log.Debug("Build context files to use for hash are ", includes)
 
 	// get hash of the context directory
