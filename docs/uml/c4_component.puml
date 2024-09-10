@@ -1,0 +1,37 @@
+@startuml
+!include https://raw.githubusercontent.com/plantuml-stdlib/C4-PlantUML/master/C4_Component.puml
+' uncomment the following line and comment the first to use locally
+' !include C4_Component.puml
+
+title Component diagram for Internet Banking System - API Application
+
+Person(user, "DevPod", "Uses kubectl")
+Component(ide, "IDE", "Developer env")
+Component(ctx, "Context", "Config, working dir etc.")
+
+System_Boundary(cluster, "Kubernetes Cluster") {
+  System(controlPlane, "kube API server", "Manages the cluster")
+  System_Boundary(ns, "devpod namespace") {
+    Container_Boundary(ws, "Workspace A") {
+      Component(runner, "Kaniko runner", "")
+      Component(agent, "Agent", "")
+      ContainerDb(dir, "Workspace Directory", "Volume", "")
+    }
+    Container_Boundary(wsb, "Workspace B") {
+      Component(runnerb, "Kaniko runner", "")
+      Component(agentb, "Agent", "")
+      ContainerDb(dirb, "Workspace Directory", "Volume", "")
+    }
+  }
+}
+
+BiRel(user, controlPlane, "kubectl ...")
+Rel(controlPlane, ws, " ")
+Rel(agent, runner, " ")
+Rel(controlPlane, wsb, " ")
+Rel(agentb, runnerb, " ")
+BiRel(agent, ide, "port forwarding")
+BiRel(agentb, ide, "port forwarding")
+Rel(user, ide, " ")
+Rel(user, ctx, " ")
+@enduml

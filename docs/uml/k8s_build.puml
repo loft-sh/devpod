@@ -13,7 +13,7 @@ System_Boundary(host, "Kubernetes Cluster") {
     System_Boundary(devpodns, "devpod namespace") {
         ContainerDb(cache, "Build Cache", "Volume", "build cache")
 
-        System_Boundary(kaniko1, "Workspace") {
+        Container_Boundary(kaniko1, "Workspace A") {
             Container(kb1, "Kaniko Builder", "kaniko executor", "Resources")
             ContainerDb(dir, "Workspace Directory", "Volume", "workspace dir")
             Container(kr1, "Kaniko Runner", "kaniko executor", "Resources")
@@ -29,7 +29,5 @@ BiRel(user, controlPlane, "kubectl ...")
 Rel(controlPlane, kb1, " ")
 Rel(cache, kb1, "")
 Rel(registryCache, kb1, "")
-Rel(dir, kr1, "")
-Rel(dir, kb1, "")
 Rel(kb1, kr1, "image")
 @enduml
