@@ -191,6 +191,7 @@ type CLIOptions struct {
 	DevContainerImage    string            `json:"devContainerImage,omitempty"`
 	DevContainerPath     string            `json:"devContainerPath,omitempty"`
 	DevContainerSource   string            `json:"devContainerSource,omitempty"`
+	EnvironmentTemplate  string            `json:"environmentTemplate,omitempty"`
 	WorkspaceEnv         []string          `json:"workspaceEnv,omitempty"`
 	WorkspaceEnvFile     []string          `json:"workspaceEnvFile,omitempty"`
 	InitEnv              []string          `json:"initEnv,omitempty"`

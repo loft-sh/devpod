@@ -79,7 +79,7 @@ func (r *runner) setupContainer(
 		Agent:            r.WorkspaceConfig.Agent,
 		ContentFolder:    r.WorkspaceConfig.ContentFolder,
 	}
-	if r.WorkspaceConfig.CLIOptions.DevContainerSource != "" && crane.IsAvailable() {
+	if crane.ShouldUse(&r.WorkspaceConfig.CLIOptions) {
 		workspaceConfig.PullFromInsideContainer = "true"
 	}
 	// compress container workspace info

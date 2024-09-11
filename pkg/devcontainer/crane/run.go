@@ -31,6 +31,12 @@ type Content struct {
 	Files map[string]string `json:"files"`
 }
 
+// ShouldUse takes CLIOptions and returns true if crane should be used
+func ShouldUse(cliOptions *provider2.CLIOptions) bool {
+	return IsAvailable() && (cliOptions.DevContainerSource != "" ||
+		cliOptions.EnvironmentTemplate != "")
+}
+
 // IsAvailable checks if devpod crane is installed in host system
 func IsAvailable() bool {
 	_, err := exec.LookPath(BinPath)
