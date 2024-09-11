@@ -39,15 +39,19 @@ import {
 } from "../../lib"
 import { useWelcomeModal } from "../../useWelcomeModal"
 import {
-  useDotfilesOption,
-  useSSHKeySignatureOption,
-  useCLIFlagsOption,
   useAgentURLOption,
+  useDockerCredentialsForwardingOption,
+  useGitCredentialsForwardingOption,
   useTelemetryOption,
-  useExtraEnvVarsOption,
-  useProxyOptions,
 } from "./useContextOptions"
 import { useIDESettings } from "./useIDESettings"
+import {
+  useCLIFlagsOption,
+  useDotfilesOption,
+  useExtraEnvVarsOption,
+  useProxyOptions,
+  useSSHKeySignatureOption,
+} from "./useSettingsOptions"
 
 const SETTINGS_TABS = [
   { label: "General", component: <GeneralSettings /> },
@@ -159,11 +163,14 @@ function CustomizationSettings() {
   const { input: gitSSHSignatureInput } = useSSHKeySignatureOption()
   const { settings, set } = useChangeSettings()
   const { ides, defaultIDE, updateDefaultIDE } = useIDESettings()
+  const { input: dockerCredentialForwardingInput, helpText: dockerCredentialForwardingHelpText } =
+    useDockerCredentialsForwardingOption()
+  const { input: gitCredentialForwardingInput, helpText: gitCredentialForwardingHelpText } =
+    useGitCredentialsForwardingOption()
 
   return (
     <>
       <SettingSection
-        showDivider={true}
         title="IDE"
         description="Select the default IDE you're using for workspaces. This will be overridden whenever you create a workspace with a different IDE. You can prevent this by checking the 'Always use this IDE' checkbox">
         <>
@@ -185,17 +192,30 @@ function CustomizationSettings() {
           </Checkbox>
         </>
       </SettingSection>
+
       <SettingSection
-        showDivider={true}
         title="Dotfiles"
         description="Set the dotfiles git repository to use inside workspaces">
         {dotfilesInput}
       </SettingSection>
+
       <SettingSection
-        showDivider={false}
         title="SSH Key for Git commit signing"
         description="Set path of your SSH key you want to use for signing Git commits">
         {gitSSHSignatureInput}
+      </SettingSection>
+
+      <SettingSection
+        title="Docker credentials forwarding"
+        description={dockerCredentialForwardingHelpText}>
+        {dockerCredentialForwardingInput}
+      </SettingSection>
+
+      <SettingSection
+        showDivider={false}
+        title="Git credentials forwarding"
+        description={gitCredentialForwardingHelpText}>
+        {gitCredentialForwardingInput}
       </SettingSection>
     </>
   )
