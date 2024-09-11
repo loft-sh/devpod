@@ -224,9 +224,14 @@ func (cmd *UpCmd) Run(
 
 	// configure container ssh
 	if cmd.ConfigureSSH {
-		err = configureSSH(devPodConfig, client, cmd.SSHConfigPath, user, workdir,
-			cmd.GPGAgentForwarding ||
-				devPodConfig.ContextOption(config.ContextOptionGPGAgentForwarding) == "true")
+		devPodHome := ""
+		envDevPodHome, ok := os.LookupEnv("DEVPOD_HOME")
+		if ok {
+			devPodHome = envDevPodHome
+		}
+		setupGPGAgentForwarding := cmd.GPGAgentForwarding || devPodConfig.ContextOption(config.ContextOptionGPGAgentForwarding) == "true"
+
+		err = configureSSH(devPodConfig, client, cmd.SSHConfigPath, user, workdir, setupGPGAgentForwarding, devPodHome)
 		if err != nil {
 			return err
 		}
@@ -797,7 +802,7 @@ func startBrowserTunnel(
 	return nil
 }
 
-func configureSSH(c *config.Config, client client2.BaseWorkspaceClient, sshConfigPath, user, workdir string, gpgagent bool) error {
+func configureSSH(c *config.Config, client client2.BaseWorkspaceClient, sshConfigPath, user, workdir string, gpgagent bool, devPodHome string) error {
 	path, err := devssh.ResolveSSHConfigPath(sshConfigPath)
 	if err != nil {
 		return errors.Wrap(err, "Invalid ssh config path")
@@ -811,6 +816,7 @@ func configureSSH(c *config.Config, client client2.BaseWorkspaceClient, sshConfi
 		user,
 		workdir,
 		gpgagent,
+		devPodHome,
 		log.Default,
 	)
 	if err != nil {
