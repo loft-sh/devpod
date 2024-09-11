@@ -34,7 +34,7 @@ func (r *runner) getRawConfig(options provider2.CLIOptions) (*config.DevContaine
 			Origin: "",
 		}, nil
 	} else if crane.ShouldUse(&options) {
-		localWorkspaceFolder, err := crane.PullConfigFromSource(r.WorkspaceConfig, r.Log)
+		localWorkspaceFolder, err := crane.PullConfigFromSource(r.WorkspaceConfig, &options, r.Log)
 		if err != nil {
 			return nil, err
 		}

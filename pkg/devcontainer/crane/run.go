@@ -20,7 +20,8 @@ const (
 	PullCommand    = "pull"
 	DecryptCommand = "decrypt"
 
-	GitCrane = "git"
+	GitCrane         = "git"
+	EnvironmentCrane = "environment"
 
 	BinPath = "devpod-crane" // FIXME
 
@@ -58,8 +59,18 @@ func runCommand(command string, args ...string) (string, error) {
 }
 
 // PullConfigFromSource pulls devcontainer config from configSource using git crane and returns config path
-func PullConfigFromSource(workspaceInfo *provider2.AgentWorkspaceInfo, log log.Logger) (string, error) {
-	data, err := runCommand(PullCommand, GitCrane, workspaceInfo.CLIOptions.DevContainerSource)
+func PullConfigFromSource(workspaceInfo *provider2.AgentWorkspaceInfo, options *provider2.CLIOptions, log log.Logger) (string, error) {
+	var data string
+	var err error
+
+	switch {
+	case options.EnvironmentTemplate != "":
+		data, err = runCommand(PullCommand, EnvironmentCrane, options.EnvironmentTemplate)
+	case options.DevContainerSource != "":
+		data, err = runCommand(PullCommand, GitCrane, options.DevContainerSource)
+	default:
+		err = fmt.Errorf("failed to pull config from source based on options")
+	}
 	if err != nil {
 		return "", err
 	}
