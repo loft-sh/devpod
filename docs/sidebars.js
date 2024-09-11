@@ -12,8 +12,18 @@ module.exports = {
       id: "what-is-devpod",
     },
     {
-      type: "doc",
-      id: "how-it-works",
+      type: "category",
+      label: "How it works",
+      items: [
+        {
+          type: "doc",
+          id: "how-it-works",
+        },
+        {
+          type: "doc",
+          id: "how-it-works-k8s",
+        },
+      ],
     },
     {
       type: "category",

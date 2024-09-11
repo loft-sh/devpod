@@ -5,33 +5,29 @@
 
 title Component diagram for Internet Banking System - API Application
 
-Person(user, "DevPod", "Uses kubectl")
-Component(ide, "IDE", "Developer env")
+Person(user, "DevPod", "CLI or UI")
+System(prov, "Kubernetes Provider", "Devpod Provider")
+Component(ide, "IDE", "Local IDE")
 Component(ctx, "Context", "Config, working dir etc.")
+Component(env, "Local Env", "Shell variables, git credentials etc.")
 
 System_Boundary(cluster, "Kubernetes Cluster") {
   System(controlPlane, "kube API server", "Manages the cluster")
   System_Boundary(ns, "devpod namespace") {
-    Container_Boundary(ws, "Workspace A") {
+    Container_Boundary(ws, "Workspace") {
       Component(runner, "Kaniko runner", "")
       Component(agent, "Agent", "")
       ContainerDb(dir, "Workspace Directory", "Volume", "")
     }
-    Container_Boundary(wsb, "Workspace B") {
-      Component(runnerb, "Kaniko runner", "")
-      Component(agentb, "Agent", "")
-      ContainerDb(dirb, "Workspace Directory", "Volume", "")
-    }
   }
 }
 
-BiRel(user, controlPlane, "kubectl ...")
+BiRel(user, prov, "")
+BiRel(prov, controlPlane, "kubectl ...")
 Rel(controlPlane, ws, " ")
 Rel(agent, runner, " ")
-Rel(controlPlane, wsb, " ")
-Rel(agentb, runnerb, " ")
-BiRel(agent, ide, "port forwarding")
-BiRel(agentb, ide, "port forwarding")
+BiRel(agent, ide, "SSH port forwarding")
 Rel(user, ide, " ")
 Rel(user, ctx, " ")
+Rel(user, env, " ")
 @enduml
