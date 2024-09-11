@@ -67,6 +67,9 @@ type ConfigStatus struct {
 	// VaultIntegration holds the vault integration configuration
 	// +optional
 	VaultIntegration *storagev1.VaultIntegrationSpec `json:"vault,omitempty"`
+
+	// DisableLoftConfigEndpoint will disable setting config via the UI and config.management.loft.sh endpoint
+	DisableConfigEndpoint bool `json:"disableConfigEndpoint,omitempty"`
 }
 
 // Audit holds the audit configuration options for loft. Changing any options will require a loft restart

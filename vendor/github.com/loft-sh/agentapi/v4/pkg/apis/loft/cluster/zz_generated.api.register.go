@@ -8,6 +8,7 @@ import (
 
 	pkglicenseapi "github.com/loft-sh/admin-apis/pkg/licenseapi"
 	"github.com/loft-sh/apiserver/pkg/builders"
+	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/internalversion"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -122,9 +123,11 @@ func Resource(resource string) schema.GroupResource {
 type Status string
 
 type Bash struct {
-	Script      string `json:"script,omitempty"`
-	Image       string `json:"image,omitempty"`
-	ClusterRole string `json:"clusterRole,omitempty"`
+	Script             string                     `json:"script,omitempty"`
+	Image              string                     `json:"image,omitempty"`
+	ClusterRole        string                     `json:"clusterRole,omitempty"`
+	PodSecurityContext *corev1.PodSecurityContext `json:"podSecurityContext,omitempty"`
+	SecurityContext    *corev1.SecurityContext    `json:"securityContext,omitempty"`
 }
 
 type Chart struct {

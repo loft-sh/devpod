@@ -187,7 +187,7 @@ func (cm *controllerManager) AddMetricsServerExtraHandler(path string, handler h
 		return fmt.Errorf("unable to add new metrics handler because metrics endpoint has already been created")
 	}
 	if cm.metricsServer == nil {
-		cm.GetLogger().Info("warn: metrics server is currently disabled, registering extra handler %q will be ignored", path)
+		cm.GetLogger().Info("warn: metrics server is currently disabled, registering extra handler will be ignored", "path", path)
 		return nil
 	}
 	if err := cm.metricsServer.AddExtraHandler(path, handler); err != nil {

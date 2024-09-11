@@ -1,6 +1,7 @@
 package v1
 
 import (
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -139,6 +140,14 @@ type Bash struct {
 	// ClusterRole is the cluster role to use for this job
 	// +optional
 	ClusterRole string `json:"clusterRole,omitempty"`
+
+	// PodSecurityContext for the bash pod.
+	// +optional
+	PodSecurityContext *corev1.PodSecurityContext `json:"podSecurityContext,omitempty"`
+
+	// SecurityContext for the bash container.
+	// +optional
+	SecurityContext *corev1.SecurityContext `json:"securityContext,omitempty"`
 }
 
 // Info describes release information.

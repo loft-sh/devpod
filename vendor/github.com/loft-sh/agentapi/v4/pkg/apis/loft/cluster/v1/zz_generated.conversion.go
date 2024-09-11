@@ -9,6 +9,7 @@ import (
 	unsafe "unsafe"
 
 	cluster "github.com/loft-sh/agentapi/v4/pkg/apis/loft/cluster"
+	corev1 "k8s.io/api/core/v1"
 	conversion "k8s.io/apimachinery/pkg/conversion"
 	runtime "k8s.io/apimachinery/pkg/runtime"
 )
@@ -227,6 +228,8 @@ func autoConvert_v1_Bash_To_cluster_Bash(in *Bash, out *cluster.Bash, s conversi
 	out.Script = in.Script
 	out.Image = in.Image
 	out.ClusterRole = in.ClusterRole
+	out.PodSecurityContext = (*corev1.PodSecurityContext)(unsafe.Pointer(in.PodSecurityContext))
+	out.SecurityContext = (*corev1.SecurityContext)(unsafe.Pointer(in.SecurityContext))
 	return nil
 }
 
@@ -239,6 +242,8 @@ func autoConvert_cluster_Bash_To_v1_Bash(in *cluster.Bash, out *Bash, s conversi
 	out.Script = in.Script
 	out.Image = in.Image
 	out.ClusterRole = in.ClusterRole
+	out.PodSecurityContext = (*corev1.PodSecurityContext)(unsafe.Pointer(in.PodSecurityContext))
+	out.SecurityContext = (*corev1.SecurityContext)(unsafe.Pointer(in.SecurityContext))
 	return nil
 }
 
