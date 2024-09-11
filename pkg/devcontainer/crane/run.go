@@ -23,9 +23,9 @@ const (
 	GitCrane         = "git"
 	EnvironmentCrane = "environment"
 
-	BinPath = "devpod-crane" // FIXME
-
-	tmpDirTemplate = "devpod-crane-*"
+	defaultBinName     = "devpod-crane"
+	envDevPodCraneName = "DEVPOD_CRANE_NAME"
+	tmpDirTemplate     = "devpod-crane-*"
 )
 
 type Content struct {
@@ -40,12 +40,12 @@ func ShouldUse(cliOptions *provider2.CLIOptions) bool {
 
 // IsAvailable checks if devpod crane is installed in host system
 func IsAvailable() bool {
-	_, err := exec.LookPath(BinPath)
+	_, err := exec.LookPath(getBinName())
 	return err == nil
 }
 
 func runCommand(command string, args ...string) (string, error) {
-	cmd := exec.Command(BinPath, append([]string{command}, args...)...)
+	cmd := exec.Command(getBinName(), append([]string{command}, args...)...)
 
 	var outBuf, errBuf bytes.Buffer
 	cmd.Stdout = &outBuf
@@ -127,4 +127,11 @@ func storeFilesInDirectory(content *Content, path string) (string, error) {
 	}
 
 	return path, nil
+}
+
+func getBinName() string {
+	if name := os.Getenv(envDevPodCraneName); name != "" {
+		return name
+	}
+	return defaultBinName
 }
