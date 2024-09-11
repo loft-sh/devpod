@@ -32,20 +32,27 @@ type Content struct {
 	Files map[string]string `json:"files"`
 }
 
-// ShouldUse takes CLIOptions and returns true if crane should be used
-func ShouldUse(cliOptions *provider2.CLIOptions) bool {
-	return IsAvailable() && (cliOptions.DevContainerSource != "" ||
-		cliOptions.EnvironmentTemplate != "")
+type command struct {
+	cmd  string
+	args []string
 }
 
-// IsAvailable checks if devpod crane is installed in host system
-func IsAvailable() bool {
-	_, err := exec.LookPath(getBinName())
-	return err == nil
+func New(cmd string) *command {
+	return &command{cmd: cmd}
 }
 
-func runCommand(command string, args ...string) (string, error) {
-	cmd := exec.Command(getBinName(), append([]string{command}, args...)...)
+func (c *command) WithFlag(flag, val string) *command {
+	c.args = append(c.args, flag, val)
+	return c
+}
+
+func (c *command) WithArg(arg string) *command {
+	c.args = append(c.args, arg)
+	return c
+}
+
+func (c *command) Run() (string, error) {
+	cmd := exec.Command(c.cmd, c.args...)
 
 	var outBuf, errBuf bytes.Buffer
 	cmd.Stdout = &outBuf
@@ -58,6 +65,18 @@ func runCommand(command string, args ...string) (string, error) {
 	return outBuf.String(), nil
 }
 
+// ShouldUse takes CLIOptions and returns true if crane should be used
+func ShouldUse(cliOptions *provider2.CLIOptions) bool {
+	return IsAvailable() && (cliOptions.DevContainerSource != "" ||
+		cliOptions.EnvironmentTemplate != "")
+}
+
+// IsAvailable checks if devpod crane is installed in host system
+func IsAvailable() bool {
+	_, err := exec.LookPath(getBinName())
+	return err == nil
+}
+
 // PullConfigFromSource pulls devcontainer config from configSource using git crane and returns config path
 func PullConfigFromSource(workspaceInfo *provider2.AgentWorkspaceInfo, options *provider2.CLIOptions, log log.Logger) (string, error) {
 	var data string
@@ -65,9 +84,9 @@ func PullConfigFromSource(workspaceInfo *provider2.AgentWorkspaceInfo, options *
 
 	switch {
 	case options.EnvironmentTemplate != "":
-		data, err = runCommand(PullCommand, EnvironmentCrane, options.EnvironmentTemplate)
+		data, err = New(PullCommand).WithArg(EnvironmentCrane).WithArg(options.EnvironmentTemplate).Run()
 	case options.DevContainerSource != "":
-		data, err = runCommand(PullCommand, GitCrane, options.DevContainerSource)
+		data, err = New(PullCommand).WithArg(GitCrane).WithArg(options.DevContainerSource).Run()
 	default:
 		err = fmt.Errorf("failed to pull config from source based on options")
 	}
@@ -76,7 +95,7 @@ func PullConfigFromSource(workspaceInfo *provider2.AgentWorkspaceInfo, options *
 	}
 
 	if craneSigningKey != "" {
-		data, err = runCommand(DecryptCommand, data, "--key", craneSigningKey)
+		data, err = New(DecryptCommand).WithArg(data).WithFlag("--key", craneSigningKey).Run()
 		if err != nil {
 			return "", err
 		}
