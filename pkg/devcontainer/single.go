@@ -217,11 +217,6 @@ func (r *runner) getDockerlessRunOptions(
 		Source: "dockerless-" + r.ID,
 		Target: "/workspaces/.dockerless",
 	})
-	mounts = append(mounts, &config.Mount{
-		Type:   "volume",
-		Source: "dockerless-cache",
-		Target: "/.dockerless/cache",
-	})
 
 	uid := ""
 	if r.WorkspaceConfig != nil && r.WorkspaceConfig.Workspace != nil {
