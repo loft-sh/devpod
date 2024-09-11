@@ -3,6 +3,7 @@
 !include <material/common>
 !include <material/sync>
 
+HIDE_STEREOTYPE()
 LAYOUT_TOP_DOWN()
 
 Person(user, "DevPod", "Uses kubectl")
@@ -14,22 +15,22 @@ System_Boundary(host, "Kubernetes Cluster") {
     System_Boundary(devpodns, "devpod namespace") {
         
         Container_Boundary(kaniko1, "Workspace") {
-            Container(kb1, "Kaniko Builder", "kaniko executor", "Resources")
-            ContainerDb(cache, "Build Cache", "Volume", "local registry mirror")
-            ContainerDb(dir, "Workspace Directory", "Volume", "workspace dir")
-            Container(kr1, "Kaniko Runner", "kaniko executor", "Resources")
+            Container(kb1, "Kaniko Builder", "kaniko:executor", "Builds image in userspace")
+            ContainerDb(cache, "Build Cache", "Volume", "Local registry mirror")
+            ContainerDb(dir, "Workspace Directory", "Volume", "Build context")
+            Container(kr1, "Kaniko Runner", "kaniko:executor", "Runs container as linux process")
         }
     }
 }
 
-System_Boundary(registry, "External Registry") {
+System_Boundary(registry, "Container Registry") {
     System(registryCache, "Image Repository", "")
-    System(cacheRepo, "Cache Repository", "")
+    System(cacheRepo, "Cached Layer Repositories", "")
 }
 
-BiRel(user, prov, "")
-BiRel(prov, controlPlane, "kubectl ...")
+BiRel(user, prov, " devpod up ...")
+BiRel(prov, controlPlane, " kubectl ...")
 Rel(controlPlane, kb1, " ")
-Rel(registry, kb1, "")
+BiRel(registry, kb1, "")
 Rel(kb1, kr1, "image")
 @enduml

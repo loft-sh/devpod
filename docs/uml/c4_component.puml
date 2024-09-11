@@ -3,7 +3,10 @@
 ' uncomment the following line and comment the first to use locally
 ' !include C4_Component.puml
 
-title Component diagram for Internet Banking System - API Application
+HIDE_STEREOTYPE()
+LAYOUT_TOP_DOWN()
+
+title Component diagram for DevPod with kubernetes
 
 Person(user, "DevPod", "CLI or UI")
 System(prov, "Kubernetes Provider", "Devpod Provider")
@@ -17,17 +20,19 @@ System_Boundary(cluster, "Kubernetes Cluster") {
     Container_Boundary(ws, "Workspace") {
       Component(runner, "Kaniko runner", "")
       Component(agent, "Agent", "")
+      Component(ssh, "SSH server", "")
       ContainerDb(dir, "Workspace Directory", "Volume", "")
     }
   }
 }
 
-BiRel(user, prov, "")
-BiRel(prov, controlPlane, "kubectl ...")
-Rel(controlPlane, ws, " ")
+BiRel_Right(user, prov, "devpod up ...")
+BiRel(prov, controlPlane, " kubectl ...")
+BiRel(controlPlane, agent, " ")
+BiRel_Left(agent, ssh, "Tunnelled STDIO")
 Rel(agent, runner, " ")
-BiRel(agent, ide, "SSH port forwarding")
+BiRel(ssh, ide, "SSH port forwarding")
 Rel(user, ide, " ")
-Rel(user, ctx, " ")
-Rel(user, env, " ")
+Rel_Up(user, ctx, " ")
+Rel_Left(user, env, " ")
 @enduml

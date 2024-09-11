@@ -3,6 +3,9 @@
 ' uncomment the following line and comment the first to use locally
 ' !include C4_Component.puml
 
+HIDE_STEREOTYPE()
+LAYOUT_TOP_DOWN()
+
 title Component diagram for DevPod with machine providers
 
 Person(user, "DevPod", "CLI or UI")
@@ -17,18 +20,20 @@ System_Boundary(cluster, "Virtual Machine") {
   Container_Boundary(ws, "Workspace") {
     Component(runner, "devcontainer", "")
     Component(agent, "DevPod Container Agent", "")
+    Component(ssh, "SSH server", "")
     ContainerDb(dir, "Workspace Directory", "Volume", "")
   }
 }
 
-BiRel(user, prov, "")
+BiRel(user, prov, "devpod up ...")
 BiRel(prov, controlPlane, "secure provider specific tunnel")
 Rel(controlPlane, dockerd, "docker run ...")
 Rel(dockerd, ws, " ")
+Rel(agent, ssh, " ")
 Rel(agent, runner, " ")
-BiRel(agent, ide, "SSH port forwarding")
+BiRel_Right(ide, ssh, "SSH port forwarding")
 Rel(user, ide, " ")
-Rel(user, ctx, " ")
-Rel(user, env, " ")
-BiRel(controlPlane, agent, "SSH")
+Rel_Right(user, ctx, " ")
+Rel_Up(user, env, " ")
+BiRel(controlPlane, agent, " SSH")
 @enduml
