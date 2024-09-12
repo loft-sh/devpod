@@ -8,7 +8,7 @@ to be run on the kubernetes node. Instead devpod-provider-kubernetes simply wrap
 
 <figure>
   <img src="/docs/media/arch_c4.png" alt="DevPod Architecture" />
-  <figcaption>DevPod - Component Diagram Kubernetes</figcaption>
+  <figcaption>DevPod - Container Diagram Kubernetes</figcaption>
 </figure>
 
 DevPod often has to build workspaces even when an "image" is specified in .devcontainer.json. This is because the devcontainer can contain "features" the cause the Dockerfile to be extended.
@@ -18,5 +18,5 @@ existing build layers from the registry to reduce the overall build time.
 
 <figure>
   <img src="/docs/media/build_c4.png" alt="DevPod Architecture 2" />
-  <figcaption>DevPod - Component Diagram VMs</figcaption>
+  <figcaption>DevPod - Component Diagram Kubernetes Build Process</figcaption>
 </figure>
