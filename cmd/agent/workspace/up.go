@@ -126,7 +126,8 @@ func (cmd *UpCmd) devPodUp(ctx context.Context, workspaceInfo *provider2.AgentWo
 
 	// start the devcontainer
 	result, err := runner.Up(ctx, devcontainer.UpOptions{
-		CLIOptions: workspaceInfo.CLIOptions,
+		CLIOptions:    workspaceInfo.CLIOptions,
+		RegistryCache: workspaceInfo.RegistryCache,
 	}, workspaceInfo.InjectTimeout)
 	if err != nil {
 		return nil, err
@@ -206,7 +207,7 @@ func initWorkspace(ctx context.Context, cancel context.CancelFunc, workspaceInfo
 	}
 
 	// install docker in background
-	errChan := make(chan error, 1)
+	errChan := make(chan error, 2)
 	go func() {
 		if !workspaceInfo.Agent.IsDockerDriver() || workspaceInfo.Agent.Docker.Install == "false" {
 			errChan <- nil
@@ -229,10 +230,26 @@ func initWorkspace(ctx context.Context, cancel context.CancelFunc, workspaceInfo
 		}
 	}
 
-	// wait until docker is installed
+	// wait until docker is installed before configuring docker daemon
 	err = <-errChan
 	if err != nil {
 		return nil, nil, "", errors.Wrap(err, "install docker")
+	}
+
+	// If we are provisioning the machine, ensure the daemon has required options
+	local, err := workspaceInfo.Agent.Local.Bool()
+	if workspaceInfo.Agent.IsDockerDriver() && err != nil && !local {
+		errChan <- configureDockerDaemon(ctx, logger)
+	} else {
+		logger.Debug("Skipping configuring daemon")
+		errChan <- nil
+	}
+
+	// wait until docker daemon is configured
+	err = <-errChan
+	if err != nil {
+		logger.Warn("Could not find docker daemon config file, if using the registry cache, please ensure the daemon is configured with containerd-snapshotter=true")
+		logger.Warn("More info at https://docs.docker.com/engine/storage/containerd/")
 	}
 
 	return tunnelClient, logger, dockerCredentialsDir, nil
@@ -410,7 +427,7 @@ func prepareImage(workspaceDir, image string) error {
 	return nil
 }
 
-func installDocker(log log.Logger) error {
+func installDocker(log log.Logger) (err error) {
 	if !command.Exists("docker") {
 		writer := log.Writer(logrus.InfoLevel, false)
 		defer writer.Close()
@@ -420,11 +437,33 @@ func installDocker(log log.Logger) error {
 		shellCommand := exec.Command("sh", "-c", scripts.InstallDocker)
 		shellCommand.Stdout = writer
 		shellCommand.Stderr = writer
-		err := shellCommand.Run()
-		if err != nil {
+		err = shellCommand.Run()
+	}
+	return err
+}
+
+func configureDockerDaemon(ctx context.Context, log log.Logger) (err error) {
+	log.Info("Configuring docker daemon ...")
+	// Enable image snapshotter in the dameon
+	var daemonConfig = []byte(`{
+		"features": {
+			"containerd-snapshotter": true
+		}
+	}`)
+	// Check rootless docker
+	homeDir, err := os.UserHomeDir()
+	if err != nil {
+		return err
+	}
+	if _, err = os.Stat(fmt.Sprintf("%s/.config/docker", homeDir)); !errors.Is(err, os.ErrNotExist) {
+		err = os.WriteFile(fmt.Sprintf("%s/.config/docker/daemon.json", homeDir), daemonConfig, 0644)
+	}
+	// otherwise assume default
+	if err != nil {
+		if err = os.WriteFile("/etc/docker/daemon.json", daemonConfig, 0644); err != nil {
 			return err
 		}
 	}
-
-	return nil
+	// reload docker daemon
+	return exec.CommandContext(ctx, "pkill", "-HUP", "dockerd").Run()
 }

@@ -45,6 +45,7 @@ func (d *dockerDriver) BuildDevContainer(
 				ImageMetadata: extendedBuildInfo.MetadataConfig,
 				ImageName:     imageName,
 				PrebuildHash:  prebuildHash,
+				RegistryCache: options.RegistryCache,
 			}, nil
 		} else if err != nil {
 			d.Log.Debugf("Error trying to find local image %s: %v", imageName, err)
@@ -57,10 +58,11 @@ func (d *dockerDriver) BuildDevContainer(
 	}
 
 	// get build options
-	buildOptions, err := CreateBuildOptions(dockerfilePath, dockerfileContent, parsedConfig, extendedBuildInfo, imageName, options.Repository, options.PrebuildRepositories, prebuildHash)
+	buildOptions, err := CreateBuildOptions(dockerfilePath, dockerfileContent, parsedConfig, extendedBuildInfo, imageName, options, prebuildHash)
 	if err != nil {
 		return nil, err
 	}
+	d.Log.Debug("Using registry cache", options.RegistryCache)
 
 	// build image
 	writer := d.Log.Writer(logrus.InfoLevel, false)
@@ -111,6 +113,7 @@ func (d *dockerDriver) BuildDevContainer(
 		ImageMetadata: extendedBuildInfo.MetadataConfig,
 		ImageName:     imageName,
 		PrebuildHash:  prebuildHash,
+		RegistryCache: options.RegistryCache,
 	}, nil
 }
 
@@ -119,8 +122,7 @@ func CreateBuildOptions(
 	parsedConfig *config.SubstitutedConfig,
 	extendedBuildInfo *feature.ExtendedBuildInfo,
 	imageName string,
-	pushRepository string,
-	prebuildRepositories []string,
+	options provider.BuildOptions,
 	prebuildHash string,
 ) (*build.BuildOptions, error) {
 	var err error
@@ -155,10 +157,10 @@ func CreateBuildOptions(
 	if imageName != "" {
 		buildOptions.Images = append(buildOptions.Images, imageName)
 	}
-	if pushRepository != "" {
-		buildOptions.Images = append(buildOptions.Images, pushRepository+":"+prebuildHash)
+	if options.Repository != "" {
+		buildOptions.Images = append(buildOptions.Images, options.Repository+":"+prebuildHash)
 	}
-	for _, prebuildRepository := range prebuildRepositories {
+	for _, prebuildRepository := range options.PrebuildRepositories {
 		buildOptions.Images = append(buildOptions.Images, prebuildRepository+":"+prebuildHash)
 	}
 	buildOptions.Context = config.GetContextPath(parsedConfig.Config)
@@ -167,7 +169,18 @@ func CreateBuildOptions(
 	if buildOptions.BuildArgs == nil {
 		buildOptions.BuildArgs = map[string]string{}
 	}
-	buildOptions.BuildArgs["BUILDKIT_INLINE_CACHE"] = "1"
+
+	// define cache args
+	if options.RegistryCache != "" {
+		buildOptions.CacheFrom = []string{fmt.Sprintf("type=registry,ref=%s", options.RegistryCache)}
+		// only export cache on build not up, otherwise we slow down the workspace start time
+		if options.ExportCache {
+			buildOptions.CacheTo = []string{fmt.Sprintf("type=registry,ref=%s,mode=max,image-manifest=true", options.RegistryCache)}
+		}
+	} else {
+		buildOptions.BuildArgs["BUILDKIT_INLINE_CACHE"] = "1"
+	}
+
 	return buildOptions, nil
 }
 
@@ -302,6 +315,9 @@ func (d *dockerDriver) buildxBuild(ctx context.Context, writer io.Writer, platfo
 	// cache
 	for _, cacheFrom := range options.CacheFrom {
 		args = append(args, "--cache-from", cacheFrom)
+	}
+	for _, cacheTo := range options.CacheTo {
+		args = append(args, "--cache-to", cacheTo)
 	}
 
 	// add additional build cli options

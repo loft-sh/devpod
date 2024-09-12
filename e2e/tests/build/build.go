@@ -57,13 +57,18 @@ var _ = DevPodDescribe("devpod build test suite", func() {
 			err = f.DevPodBuild(ctx, tempDir, "--force-build", "--platform", "linux/amd64,linux/arm64", "--repository", prebuildRepo, "--skip-push")
 			framework.ExpectNoError(err)
 
+			// parse the dockerfile
+			file, err := dockerfile.Parse(modifiedDockerfileContents)
+			framework.ExpectNoError(err)
+			info := &config.ImageBuildInfo{Dockerfile: file}
+
 			// make sure images are there
-			prebuildHash, err := config.CalculatePrebuildHash(cfg, "linux/amd64", "amd64", filepath.Dir(cfg.Origin), dockerfilePath, modifiedDockerfileContents, log.Default)
+			prebuildHash, err := config.CalculatePrebuildHash(cfg, "linux/amd64", "amd64", filepath.Dir(cfg.Origin), dockerfilePath, modifiedDockerfileContents, info, log.Default)
 			framework.ExpectNoError(err)
 			_, err = dockerHelper.InspectImage(ctx, prebuildRepo+":"+prebuildHash, false)
 			framework.ExpectNoError(err)
 
-			prebuildHash, err = config.CalculatePrebuildHash(cfg, "linux/arm64", "arm64", filepath.Dir(cfg.Origin), dockerfilePath, modifiedDockerfileContents, log.Default)
+			prebuildHash, err = config.CalculatePrebuildHash(cfg, "linux/arm64", "arm64", filepath.Dir(cfg.Origin), dockerfilePath, modifiedDockerfileContents, info, log.Default)
 			framework.ExpectNoError(err)
 			_, err = dockerHelper.InspectImage(ctx, prebuildRepo+":"+prebuildHash, false)
 			framework.ExpectNoError(err)
@@ -98,8 +103,13 @@ var _ = DevPodDescribe("devpod build test suite", func() {
 			err = f.DevPodBuild(ctx, tempDir, "--skip-push")
 			framework.ExpectNoError(err)
 
+			// parse the dockerfile
+			file, err := dockerfile.Parse(modifiedDockerfileContents)
+			framework.ExpectNoError(err)
+			info := &config.ImageBuildInfo{Dockerfile: file}
+
 			// make sure images are there
-			prebuildHash, err := config.CalculatePrebuildHash(cfg, "linux/amd64", "amd64", filepath.Dir(cfg.Origin), dockerfilePath, modifiedDockerfileContents, log.Default)
+			prebuildHash, err := config.CalculatePrebuildHash(cfg, "linux/amd64", "amd64", filepath.Dir(cfg.Origin), dockerfilePath, modifiedDockerfileContents, info, log.Default)
 			framework.ExpectNoError(err)
 			_, err = dockerHelper.InspectImage(ctx, dockerdriver.GetImageName(tempDir, prebuildHash), false)
 			framework.ExpectNoError(err)
@@ -154,8 +164,13 @@ var _ = DevPodDescribe("devpod build test suite", func() {
 			err = f.DevPodBuild(ctx, tempDir, "--force-build", "--force-internal-buildkit", "--repository", prebuildRepo, "--skip-push")
 			framework.ExpectNoError(err)
 
+			// parse the dockerfile
+			file, err := dockerfile.Parse(modifiedDockerfileContents)
+			framework.ExpectNoError(err)
+			info := &config.ImageBuildInfo{Dockerfile: file}
+
 			// make sure images are there
-			prebuildHash, err := config.CalculatePrebuildHash(cfg, "linux/amd64", "amd64", filepath.Dir(cfg.Origin), dockerfilePath, modifiedDockerfileContents, log.Default)
+			prebuildHash, err := config.CalculatePrebuildHash(cfg, "linux/amd64", "amd64", filepath.Dir(cfg.Origin), dockerfilePath, modifiedDockerfileContents, info, log.Default)
 			framework.ExpectNoError(err)
 
 			_, err = dockerHelper.InspectImage(ctx, prebuildRepo+":"+prebuildHash, false)

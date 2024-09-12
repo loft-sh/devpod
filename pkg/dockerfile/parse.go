@@ -73,6 +73,24 @@ func (d *Dockerfile) FindBaseImage(buildArgs map[string]string, target string) s
 	return ""
 }
 
+// BuildContextFiles traverses a build stage and returns a list of any file path that would affect the build context
+func (d *Dockerfile) BuildContextFiles() (files []string) {
+	// Iterate over all build stages
+	for _, stage := range d.Stages {
+		// Add the values of any ADD or COPY instructions
+		for _, in := range stage.Instructions {
+			if strings.HasPrefix(in.Value, "ADD") || strings.HasPrefix(in.Value, "COPY") {
+				// Take all parts except the first (ADD/COPY) and the last (destination on remote), e.g. "COPY src files /app", we want src and files
+				parts := strings.Split(in.Original, " ")
+				if len(parts) > 2 {
+					files = append(files, parts[1:len(parts)-1]...)
+				}
+			}
+		}
+	}
+	return files
+}
+
 func (d *Dockerfile) replaceVariables(val string, buildArgs map[string]string, baseImageEnv map[string]string, stage *BaseStage, untilLine int) string {
 	newVal := argumentExpression.ReplaceAllFunc([]byte(val), func(match []byte) []byte {
 		subMatches := argumentExpression.FindStringSubmatch(string(match))

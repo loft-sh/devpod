@@ -28,6 +28,10 @@ func Build(ctx context.Context, client *buildkit.Client, writer io.Writer, platf
 	if err != nil {
 		return err
 	}
+	cacheTo, err := ParseCacheEntry(options.CacheTo)
+	if err != nil {
+		return err
+	}
 
 	// is context stream?
 	attachable := []session.Attachable{}
@@ -42,6 +46,7 @@ func Build(ctx context.Context, client *buildkit.Client, writer io.Writer, platf
 		},
 		Session:      attachable,
 		CacheImports: cacheFrom,
+		CacheExports: cacheTo,
 	}
 
 	// set options target

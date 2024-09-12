@@ -8,6 +8,7 @@ type BuildOptions struct {
 
 	Images    []string
 	CacheFrom []string
+	CacheTo   []string
 
 	Dockerfile string
 	Context    string

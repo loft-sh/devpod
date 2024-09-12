@@ -14,7 +14,7 @@ import (
 	"github.com/pkg/errors"
 )
 
-var dockerlessImage = "ghcr.io/loft-sh/dockerless:0.1.4"
+var dockerlessImage = "ghcr.io/loft-sh/dockerless:0.2.0"
 
 const (
 	DevPodExtraEnvVar           = "DEVPOD"
@@ -86,7 +86,9 @@ func (r *runner) runSingleContainer(
 				PrebuildRepositories: options.PrebuildRepositories,
 				ForceDockerless:      options.ForceDockerless,
 			},
-			NoBuild: options.NoBuild,
+			NoBuild:       options.NoBuild,
+			RegistryCache: options.RegistryCache,
+			ExportCache:   false,
 		})
 		if err != nil {
 			return nil, errors.Wrap(err, "build image")
@@ -186,6 +188,7 @@ func (r *runner) getDockerlessRunOptions(
 		"DOCKERLESS":            "true",
 		"DOCKERLESS_CONTEXT":    buildInfo.Dockerless.Context,
 		"DOCKERLESS_DOCKERFILE": buildInfo.Dockerless.Dockerfile,
+		"GODEBUG":               "http2client=0", // https://github.com/GoogleContainerTools/kaniko/issues/875
 	}
 	for k, v := range mergedConfig.ContainerEnv {
 		env[k] = v
