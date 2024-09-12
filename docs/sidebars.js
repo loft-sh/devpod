@@ -27,6 +27,10 @@ module.exports = {
           type: "doc",
           id: "how-it-works/deploy-k8s",
         },
+        {
+          type: "doc",
+          id: "how-it-works/building-workspaces",
+        },
       ],
     },
     {

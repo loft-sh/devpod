@@ -3,11 +3,37 @@ title: How it works
 sidebar_label: Overview
 ---
 
-Devpod provides the ability to provision workspaces on any infrastructure. It does so by wrapping your conventential CLI tools such as kubectl, docker, gcloud etc to deploy your development environment and set up everything required to run the dev container. While creating the workspace devpod deploys an agent to the machine running the container as well as to the container itself to provide useful functions such as port forwarding, log streaming and more. Doing so it provides a minimal control plane across your development environment for better observability.
+Devpod provides the ability to provision workspaces on any infrastructure. It does so by wrapping your conventential CLI tools such as kubectl, docker, gcloud etc to deploy your development environment 
+and set up everything required to run the dev container. While creating the workspace devpod deploys an agent to the machine running the container as well as to the container itself to provide useful 
+functions such as port forwarding, log streaming and more. Doing so it provides a minimal control plane across your development environment. DevPod can be thought of as a minimal service mesh, specifically
+designed to connect your local environment securely to your development container running in your cloud infrastructure.
 
-Devpod implements various providers to deploy dev containers too. This is analogous to kubernetes cloud control manager where vendors can easily implement there own providers to deploy dev containers to
+Devpod implements various providers to deploy dev containers to. This is analogous to kubernetes cloud control manager where vendors can easily implement there own providers to deploy dev containers to
+custom infrastructure.
+
+Devpod is a client only CLI tool to enable developers to create development enviornment's based on a "workspace" spec (see diagram, the spec is the totality of the inputs to devpod).
+
+Devpod uses a client-agent architecture, where the client deploys it's own agent to act as a server, such as a grpc server or SSH server. 
+In this regard the system is not unlike a browser server architecture where the front end is deployed and executed on a remote host. There are several improvements this brings to our specific context:
+ - There can be no conflict of versions between client and server, since you install only one version of the client
+ - There is no infrastructure to manage for users
+ 
+To simplify debugging, devpod connects your local shell with the agent's STDIO so you can see what's happening locally and in the container at all times.
+ 
+Devpod establishes a connection to the workspace using a vendor specific API. This vendor specific communication channel is referred to as the "tunnel". All traffic between your local machine
+and the workspace is tunneled through, ensuring secure communication using the cloud vendor's API.
+
+Below is a high level overview of how DevPod uses your local environment, a source repo and a devcontainer to deploy your workspace to the cloud.
 
 <figure>
   <img src="/docs/media/workspace_c4.png" alt="DevPod Architecture" />
   <figcaption>DevPod - Component Diagram Kubernetes</figcaption>
 </figure>
+
+When you installed devpod a default "context" was created for you. This context is like a kubernetes context where devpod will use the config values you specify based on the context you are currently using.
+This allows you to manage various workspaces across different providers.
+
+When you run a `devpod up` command, devpod selects a provider based on your context and starts your devcontainer. If using a machine provider, devpod will check if it should create a VM first. Once the devcontainer
+is running devpod deploys an agent to the container. The way in which devpod communicates with the workspace depends on the provider, this is known as the "tunnel". For AWS this is instance connect, kubernetes uses
+the kubernetes control plane (kubectl), this connection is secured based on this tunnel. The dedvpod agent starts a SSH server using the STDIO of the secure tunnel in order for you local devpod CLI/UI to forward
+ports over the SSH connection. Once this is done devpod starts your local IDE and connects it to the devcontainer via SSH.

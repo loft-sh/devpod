@@ -36,3 +36,9 @@ build on top of the existing image layers.
 Devpod parses your Dockerfile and .devcontainer.json to detect file paths that can affect your build context. Devpod traverses these files and makes a hash of the file contents to use as the 
 container's image tag. When you make changes to these files, the hash will change causing a rebuild. Thanks to the remote cache the previous layers will be built so only changes are needed. To 
 reduce build times it is recommened to follow docker's best practices when writing Dockerfiles.
+
+#### Why Kaniko?
+
+When DevPod uses the kubernetes driver and needs to build a devcontainer but your local environment does not have a container runtime, it builds the container in the cluster. It does so using
+a tool "kaniko", this effecitvely builds the container in userspace as not to require super user priveledges. This is much more secure than say docker in docker, where the docker daemon
+is either mounted locally on the container or over a network within the cluster, neither being ideal.
