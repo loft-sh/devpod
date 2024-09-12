@@ -1,0 +1,13 @@
+---
+title: How it works
+sidebar_label: Overview
+---
+
+Devpod provides the ability to provision workspaces on any infrastructure. It does so by wrapping your conventential CLI tools such as kubectl, docker, gcloud etc to deploy your development environment and set up everything required to run the dev container. While creating the workspace devpod deploys an agent to the machine running the container as well as to the container itself to provide useful functions such as port forwarding, log streaming and more. Doing so it provides a minimal control plane across your development environment for better observability.
+
+Devpod implements various providers to deploy dev containers too. This is analogous to kubernetes cloud control manager where vendors can easily implement there own providers to deploy dev containers to
+
+<figure>
+  <img src="/docs/media/workspace_c4.png" alt="DevPod Architecture" />
+  <figcaption>DevPod - Component Diagram Kubernetes</figcaption>
+</figure>

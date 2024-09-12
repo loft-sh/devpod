@@ -17,11 +17,15 @@ module.exports = {
       items: [
         {
           type: "doc",
-          id: "how-it-works",
+          id: "how-it-works/overview",
         },
         {
           type: "doc",
-          id: "how-it-works-k8s",
+          id: "how-it-works/deploy-machines",
+        },
+        {
+          type: "doc",
+          id: "how-it-works/deploy-k8s",
         },
       ],
     },
