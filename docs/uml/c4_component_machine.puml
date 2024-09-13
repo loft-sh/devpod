@@ -23,15 +23,15 @@ System_Boundary(cluster, "Virtual Machine") {
   }
 }
 
-BiRel(user, prov, "devpod up ...")
+BiRel(user, prov, " devpod up ...")
 BiRel(prov, controlPlane, "secure provider specific tunnel")
 Rel(controlPlane, dockerd, "docker run ...")
-Rel(dockerd, ws, " ")
-Rel(agent, ssh, " ")
-Rel(agent, runner, " ")
+Rel(dockerd, ws, "")
+Rel(agent, ssh, "")
+Rel(agent, runner, "")
 BiRel_Right(ide, ssh, "SSH port forwarding")
-Rel(user, ide, " ")
-Rel_Right(user, ctx, " ")
-Rel_Up(user, env, " ")
+Rel(user, ide, "")
+Rel(ctx, user, "")
+Rel(env, user, "")
 BiRel(controlPlane, agent, " SSH")
 @enduml

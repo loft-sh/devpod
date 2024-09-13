@@ -22,11 +22,11 @@ Boundary(cluster, "Dev Container Spec") {
   Component(fb, "Feature B", "git stuff")
 }
 
-Rel(repo, user, "1")
-Rel(dc, user, "2")
-Rel(fa, user, "3")
-Rel(fb, user, "3")
-Rel_Right(ctx, user, "4")
-Rel(user, cdf, "5")
-Rel(cdf, reg, "6")
+Rel(repo, user, " 1")
+Rel(dc, user, " 2")
+Rel(fa, user, " 3")
+Rel(fb, user, " 3")
+Rel_Right(ctx, user, " 4")
+Rel(user, cdf, " 5")
+Rel(cdf, reg, " 6")
 @enduml
