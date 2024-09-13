@@ -20,8 +20,8 @@ require (
 	github.com/google/uuid v1.6.0
 	github.com/gorilla/websocket v1.5.1
 	github.com/joho/godotenv v1.5.1
-	github.com/loft-sh/agentapi/v4 v4.1.0-alpha.1
-	github.com/loft-sh/api/v4 v4.1.0-alpha.1
+	github.com/loft-sh/agentapi/v4 v4.1.0-alpha.10
+	github.com/loft-sh/api/v4 v4.1.0-alpha.10
 	github.com/loft-sh/log v0.0.0-20240219160058-26d83ffb46ac
 	github.com/loft-sh/programming-language-detection v0.0.5
 	github.com/loft-sh/ssh v0.0.4
@@ -50,14 +50,14 @@ require (
 	gopkg.in/square/go-jose.v2 v2.6.0
 	gopkg.in/yaml.v2 v2.4.0
 	gotest.tools v2.2.0+incompatible
-	k8s.io/api v0.30.1
-	k8s.io/apimachinery v0.30.1
-	k8s.io/client-go v0.30.1
+	k8s.io/api v0.30.4
+	k8s.io/apimachinery v0.30.4
+	k8s.io/client-go v0.30.4
 	k8s.io/klog/v2 v2.120.1
 	k8s.io/kube-aggregator v0.30.1
 	k8s.io/kubectl v0.29.1
 	mvdan.cc/sh/v3 v3.6.0
-	sigs.k8s.io/controller-runtime v0.18.4
+	sigs.k8s.io/controller-runtime v0.18.5
 )
 
 require (
@@ -131,7 +131,7 @@ require (
 	github.com/json-iterator/go v1.1.12 // indirect
 	github.com/k0kubun/go-ansi v0.0.0-20180517002512-3bf9e2903213 // indirect
 	github.com/liggitt/tabwriter v0.0.0-20181228230101-89fcab3d43de // indirect
-	github.com/loft-sh/admin-apis v0.0.0-20240203010124-3600c1c582a8 // indirect
+	github.com/loft-sh/admin-apis v0.0.0-20240814093917-dc663916b354 // indirect
 	github.com/loft-sh/apiserver v0.0.0-20240607231110-634aeeab2b36 // indirect
 	github.com/mailru/easyjson v0.7.7 // indirect
 	github.com/mitchellh/go-wordwrap v1.0.1 // indirect
@@ -176,10 +176,10 @@ require (
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20240604185151-ef581f913117 // indirect
 	gopkg.in/inf.v0 v0.9.1 // indirect
 	gopkg.in/natefinch/lumberjack.v2 v2.2.1 // indirect
-	k8s.io/apiextensions-apiserver v0.30.1 // indirect
-	k8s.io/apiserver v0.30.1 // indirect
+	k8s.io/apiextensions-apiserver v0.30.4 // indirect
+	k8s.io/apiserver v0.30.4 // indirect
 	k8s.io/cli-runtime v0.29.1 // indirect
-	k8s.io/component-base v0.30.1 // indirect
+	k8s.io/component-base v0.30.4 // indirect
 	k8s.io/kube-openapi v0.0.0-20240521193020-835d969ad83a // indirect
 	k8s.io/utils v0.0.0-20240502163921-fe8a2dddb1d0 // indirect
 	sigs.k8s.io/apiserver-network-proxy/konnectivity-client v0.29.0 // indirect

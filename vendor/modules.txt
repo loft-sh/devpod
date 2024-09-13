@@ -526,15 +526,15 @@ github.com/kr/fs
 # github.com/liggitt/tabwriter v0.0.0-20181228230101-89fcab3d43de
 ## explicit
 github.com/liggitt/tabwriter
-# github.com/loft-sh/admin-apis v0.0.0-20240203010124-3600c1c582a8
+# github.com/loft-sh/admin-apis v0.0.0-20240814093917-dc663916b354
 ## explicit; go 1.21.1
 github.com/loft-sh/admin-apis/pkg/licenseapi
-# github.com/loft-sh/agentapi/v4 v4.1.0-alpha.1
+# github.com/loft-sh/agentapi/v4 v4.1.0-alpha.10
 ## explicit; go 1.22.5
 github.com/loft-sh/agentapi/v4/pkg/apis/loft/cluster
 github.com/loft-sh/agentapi/v4/pkg/apis/loft/cluster/v1
 github.com/loft-sh/agentapi/v4/pkg/apis/loft/storage/v1
-# github.com/loft-sh/api/v4 v4.1.0-alpha.1
+# github.com/loft-sh/api/v4 v4.1.0-alpha.10
 ## explicit; go 1.22.5
 github.com/loft-sh/api/v4/pkg/apis/audit/v1
 github.com/loft-sh/api/v4/pkg/apis/management
@@ -1182,7 +1182,7 @@ gotest.tools/assert/cmp
 gotest.tools/internal/difflib
 gotest.tools/internal/format
 gotest.tools/internal/source
-# k8s.io/api v0.30.1
+# k8s.io/api v0.30.4
 ## explicit; go 1.22.0
 k8s.io/api/admission/v1
 k8s.io/api/admission/v1beta1
@@ -1240,11 +1240,11 @@ k8s.io/api/storage/v1
 k8s.io/api/storage/v1alpha1
 k8s.io/api/storage/v1beta1
 k8s.io/api/storagemigration/v1alpha1
-# k8s.io/apiextensions-apiserver v0.30.1
+# k8s.io/apiextensions-apiserver v0.30.4
 ## explicit; go 1.22.0
 k8s.io/apiextensions-apiserver/pkg/apis/apiextensions
 k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1
-# k8s.io/apimachinery v0.30.1
+# k8s.io/apimachinery v0.30.4
 ## explicit; go 1.22.0
 k8s.io/apimachinery/pkg/api/equality
 k8s.io/apimachinery/pkg/api/errors
@@ -1309,7 +1309,7 @@ k8s.io/apimachinery/pkg/watch
 k8s.io/apimachinery/third_party/forked/golang/json
 k8s.io/apimachinery/third_party/forked/golang/netutil
 k8s.io/apimachinery/third_party/forked/golang/reflect
-# k8s.io/apiserver v0.30.1
+# k8s.io/apiserver v0.30.4
 ## explicit; go 1.22.0
 k8s.io/apiserver/pkg/admission
 k8s.io/apiserver/pkg/admission/configuration
@@ -1434,7 +1434,7 @@ k8s.io/apiserver/plugin/pkg/authenticator/token/webhook
 # k8s.io/cli-runtime v0.29.1
 ## explicit; go 1.21
 k8s.io/cli-runtime/pkg/printers
-# k8s.io/client-go v0.30.1
+# k8s.io/client-go v0.30.4
 ## explicit; go 1.22.0
 k8s.io/client-go/applyconfigurations/admissionregistration/v1
 k8s.io/client-go/applyconfigurations/admissionregistration/v1alpha1
@@ -1758,7 +1758,7 @@ k8s.io/client-go/util/jsonpath
 k8s.io/client-go/util/keyutil
 k8s.io/client-go/util/retry
 k8s.io/client-go/util/workqueue
-# k8s.io/component-base v0.30.1
+# k8s.io/component-base v0.30.4
 ## explicit; go 1.22.0
 k8s.io/component-base/cli/flag
 k8s.io/component-base/featuregate
@@ -1849,7 +1849,7 @@ sigs.k8s.io/apiserver-network-proxy/konnectivity-client/pkg/client
 sigs.k8s.io/apiserver-network-proxy/konnectivity-client/pkg/client/metrics
 sigs.k8s.io/apiserver-network-proxy/konnectivity-client/pkg/common/metrics
 sigs.k8s.io/apiserver-network-proxy/konnectivity-client/proto/client
-# sigs.k8s.io/controller-runtime v0.18.4
+# sigs.k8s.io/controller-runtime v0.18.5
 ## explicit; go 1.22.0
 sigs.k8s.io/controller-runtime
 sigs.k8s.io/controller-runtime/pkg/builder

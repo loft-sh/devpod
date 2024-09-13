@@ -286,7 +286,7 @@ func prepareWorkspace(ctx context.Context, workspaceInfo *provider2.AgentWorkspa
 			return nil
 		}
 
-		if workspaceInfo.CLIOptions.DevContainerSource != "" && crane.IsAvailable() {
+		if crane.ShouldUse(&workspaceInfo.CLIOptions) {
 			log.Infof("Pulling devcontainer spec from %v", workspaceInfo.CLIOptions.DevContainerSource)
 			return nil
 		}

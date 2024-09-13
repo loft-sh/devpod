@@ -17,6 +17,7 @@ type StorageV1Interface interface {
 	ClustersGetter
 	ClusterAccessesGetter
 	ClusterRoleTemplatesGetter
+	DevPodEnvironmentTemplatesGetter
 	DevPodWorkspaceInstancesGetter
 	DevPodWorkspaceTemplatesGetter
 	NetworkPeersGetter
@@ -55,6 +56,10 @@ func (c *StorageV1Client) ClusterAccesses() ClusterAccessInterface {
 
 func (c *StorageV1Client) ClusterRoleTemplates() ClusterRoleTemplateInterface {
 	return newClusterRoleTemplates(c)
+}
+
+func (c *StorageV1Client) DevPodEnvironmentTemplates() DevPodEnvironmentTemplateInterface {
+	return newDevPodEnvironmentTemplates(c)
 }
 
 func (c *StorageV1Client) DevPodWorkspaceInstances(namespace string) DevPodWorkspaceInstanceInterface {

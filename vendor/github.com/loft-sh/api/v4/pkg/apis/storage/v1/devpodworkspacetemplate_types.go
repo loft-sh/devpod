@@ -93,6 +93,16 @@ type DevPodWorkspaceTemplateDefinition struct {
 	// +optional
 	SpaceTemplate *SpaceTemplateDefinition `json:"spaceTemplate,omitempty"`
 
+	// VirtualClusterTemplateRef is a reference to the virtual cluster that should get created for this DevPod.
+	// If this is specified, the kubernetes provider will be selected automatically.
+	// +optional
+	VirtualClusterTemplateRef *TemplateRef `json:"virtualClusterTemplateRef,omitempty"`
+
+	// VirtualClusterTemplate is the inline template for a virtual cluster that should get created for this DevPod.
+	// If this is specified, the kubernetes provider will be selected automatically.
+	// +optional
+	VirtualClusterTemplate *VirtualClusterTemplateDefinition `json:"virtualClusterTemplate,omitempty"`
+
 	// WorkspaceEnv are environment variables that should be available within the created workspace.
 	// +optional
 	WorkspaceEnv map[string]DevPodProviderOption `json:"workspaceEnv,omitempty"`

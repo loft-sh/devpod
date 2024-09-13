@@ -146,6 +146,10 @@ type DevPodWorkspaceInstanceStatus struct {
 	// IgnoreReconciliation ignores reconciliation for this object
 	// +optional
 	IgnoreReconciliation bool `json:"ignoreReconciliation,omitempty"`
+
+	// ClusterRef holds the runners cluster if the workspace is scheduled
+	// on kubernetes based runner
+	ClusterRef *ClusterRef `json:"clusterRef,omitempty"`
 }
 
 type WorkspaceStatusResult struct {

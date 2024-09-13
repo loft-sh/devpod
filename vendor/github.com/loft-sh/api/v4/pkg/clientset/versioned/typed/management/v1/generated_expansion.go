@@ -20,6 +20,8 @@ type ConfigExpansion interface{}
 
 type ConvertVirtualClusterConfigExpansion interface{}
 
+type DevPodEnvironmentTemplateExpansion interface{}
+
 type DevPodWorkspaceInstanceExpansion interface{}
 
 type DevPodWorkspaceTemplateExpansion interface{}

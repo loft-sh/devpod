@@ -7,6 +7,8 @@ package licenseapi
 type License struct {
 	// InstanceID contains the instance id of the Loft instance
 	InstanceID string `json:"instance,omitempty"`
+	// Entity holds a name for an organization, person or entity this product is licensed for. This will be displayed to the user.
+	Entity string `json:"entity,omitempty"`
 
 	// Analytics indicates the analytics endpoints and which requests should be sent to the
 	// analytics server.

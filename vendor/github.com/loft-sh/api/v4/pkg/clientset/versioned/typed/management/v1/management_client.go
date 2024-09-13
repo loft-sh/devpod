@@ -21,6 +21,7 @@ type ManagementV1Interface interface {
 	ClusterRoleTemplatesGetter
 	ConfigsGetter
 	ConvertVirtualClusterConfigsGetter
+	DevPodEnvironmentTemplatesGetter
 	DevPodWorkspaceInstancesGetter
 	DevPodWorkspaceTemplatesGetter
 	DirectClusterEndpointTokensGetter
@@ -91,6 +92,10 @@ func (c *ManagementV1Client) Configs() ConfigInterface {
 
 func (c *ManagementV1Client) ConvertVirtualClusterConfigs() ConvertVirtualClusterConfigInterface {
 	return newConvertVirtualClusterConfigs(c)
+}
+
+func (c *ManagementV1Client) DevPodEnvironmentTemplates() DevPodEnvironmentTemplateInterface {
+	return newDevPodEnvironmentTemplates(c)
 }
 
 func (c *ManagementV1Client) DevPodWorkspaceInstances(namespace string) DevPodWorkspaceInstanceInterface {

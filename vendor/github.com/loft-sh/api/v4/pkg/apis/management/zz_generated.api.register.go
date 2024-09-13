@@ -116,7 +116,17 @@ var (
 	NewConvertVirtualClusterConfigREST = func(getter generic.RESTOptionsGetter) rest.Storage {
 		return NewConvertVirtualClusterConfigRESTFunc(Factory)
 	}
-	NewConvertVirtualClusterConfigRESTFunc   NewRESTFunc
+	NewConvertVirtualClusterConfigRESTFunc     NewRESTFunc
+	ManagementDevPodEnvironmentTemplateStorage = builders.NewApiResourceWithStorage( // Resource status endpoint
+		InternalDevPodEnvironmentTemplate,
+		func() runtime.Object { return &DevPodEnvironmentTemplate{} },     // Register versioned resource
+		func() runtime.Object { return &DevPodEnvironmentTemplateList{} }, // Register versioned resource list
+		NewDevPodEnvironmentTemplateREST,
+	)
+	NewDevPodEnvironmentTemplateREST = func(getter generic.RESTOptionsGetter) rest.Storage {
+		return NewDevPodEnvironmentTemplateRESTFunc(Factory)
+	}
+	NewDevPodEnvironmentTemplateRESTFunc     NewRESTFunc
 	ManagementDevPodWorkspaceInstanceStorage = builders.NewApiResourceWithStorage( // Resource status endpoint
 		InternalDevPodWorkspaceInstance,
 		func() runtime.Object { return &DevPodWorkspaceInstance{} },     // Register versioned resource
@@ -616,6 +626,18 @@ var (
 		"ConvertVirtualClusterConfigStatus",
 		func() runtime.Object { return &ConvertVirtualClusterConfig{} },
 		func() runtime.Object { return &ConvertVirtualClusterConfigList{} },
+	)
+	InternalDevPodEnvironmentTemplate = builders.NewInternalResource(
+		"devpodenvironmenttemplate",
+		"DevPodEnvironmentTemplate",
+		func() runtime.Object { return &DevPodEnvironmentTemplate{} },
+		func() runtime.Object { return &DevPodEnvironmentTemplateList{} },
+	)
+	InternalDevPodEnvironmentTemplateStatus = builders.NewInternalResourceStatus(
+		"devpodenvironmenttemplate",
+		"DevPodEnvironmentTemplateStatus",
+		func() runtime.Object { return &DevPodEnvironmentTemplate{} },
+		func() runtime.Object { return &DevPodEnvironmentTemplateList{} },
 	)
 	InternalDevPodWorkspaceInstance = builders.NewInternalResource(
 		"devpodworkspaceinstances",
@@ -1231,6 +1253,8 @@ var (
 		InternalConfigStatus,
 		InternalConvertVirtualClusterConfig,
 		InternalConvertVirtualClusterConfigStatus,
+		InternalDevPodEnvironmentTemplate,
+		InternalDevPodEnvironmentTemplateStatus,
 		InternalDevPodWorkspaceInstance,
 		InternalDevPodWorkspaceInstanceStatus,
 		InternalDevPodDeleteOptionsREST,
@@ -1599,7 +1623,7 @@ type BackupStatus struct {
 }
 
 // +genclient
-// +genclient
+// +genclient:nonNamespaced
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 
 type Cluster struct {
@@ -1780,6 +1804,7 @@ type ConfigStatus struct {
 	DevPodSubDomain        string                          `json:"devPodSubDomain,omitempty"`
 	UISettings             *uiv1.UISettingsConfig          `json:"uiSettings,omitempty"`
 	VaultIntegration       *storagev1.VaultIntegrationSpec `json:"vault,omitempty"`
+	DisableConfigEndpoint  bool                            `json:"disableConfigEndpoint,omitempty"`
 }
 
 type Connector struct {
@@ -1824,6 +1849,24 @@ type ConvertVirtualClusterConfigStatus struct {
 type DevPodDeleteOptions struct {
 	metav1.TypeMeta `json:",inline"`
 	Options         string `json:"options,omitempty"`
+}
+
+// +genclient
+// +genclient:nonNamespaced
+// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
+
+type DevPodEnvironmentTemplate struct {
+	metav1.TypeMeta   `json:",inline"`
+	metav1.ObjectMeta `json:"metadata,omitempty"`
+	Spec              DevPodEnvironmentTemplateSpec   `json:"spec,omitempty"`
+	Status            DevPodEnvironmentTemplateStatus `json:"status,omitempty"`
+}
+
+type DevPodEnvironmentTemplateSpec struct {
+	storagev1.DevPodEnvironmentTemplateSpec `json:",inline"`
+}
+
+type DevPodEnvironmentTemplateStatus struct {
 }
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
@@ -2012,7 +2055,7 @@ type KioskStatus struct {
 }
 
 // +genclient
-// +genclient
+// +genclient:nonNamespaced
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 
 type License struct {
@@ -3896,6 +3939,125 @@ func (s *storageConvertVirtualClusterConfig) UpdateConvertVirtualClusterConfig(c
 }
 
 func (s *storageConvertVirtualClusterConfig) DeleteConvertVirtualClusterConfig(ctx context.Context, id string) (bool, error) {
+	st := s.GetStandardStorage()
+	_, sync, err := st.Delete(ctx, id, nil, &metav1.DeleteOptions{})
+	return sync, err
+}
+
+// DevPodEnvironmentTemplate Functions and Structs
+//
+// +k8s:deepcopy-gen=false
+type DevPodEnvironmentTemplateStrategy struct {
+	builders.DefaultStorageStrategy
+}
+
+// +k8s:deepcopy-gen=false
+type DevPodEnvironmentTemplateStatusStrategy struct {
+	builders.DefaultStatusStorageStrategy
+}
+
+// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
+
+type DevPodEnvironmentTemplateList struct {
+	metav1.TypeMeta `json:",inline"`
+	metav1.ListMeta `json:"metadata,omitempty"`
+	Items           []DevPodEnvironmentTemplate `json:"items"`
+}
+
+func (DevPodEnvironmentTemplate) NewStatus() interface{} {
+	return DevPodEnvironmentTemplateStatus{}
+}
+
+func (pc *DevPodEnvironmentTemplate) GetStatus() interface{} {
+	return pc.Status
+}
+
+func (pc *DevPodEnvironmentTemplate) SetStatus(s interface{}) {
+	pc.Status = s.(DevPodEnvironmentTemplateStatus)
+}
+
+func (pc *DevPodEnvironmentTemplate) GetSpec() interface{} {
+	return pc.Spec
+}
+
+func (pc *DevPodEnvironmentTemplate) SetSpec(s interface{}) {
+	pc.Spec = s.(DevPodEnvironmentTemplateSpec)
+}
+
+func (pc *DevPodEnvironmentTemplate) GetObjectMeta() *metav1.ObjectMeta {
+	return &pc.ObjectMeta
+}
+
+func (pc *DevPodEnvironmentTemplate) SetGeneration(generation int64) {
+	pc.ObjectMeta.Generation = generation
+}
+
+func (pc DevPodEnvironmentTemplate) GetGeneration() int64 {
+	return pc.ObjectMeta.Generation
+}
+
+// Registry is an interface for things that know how to store DevPodEnvironmentTemplate.
+// +k8s:deepcopy-gen=false
+type DevPodEnvironmentTemplateRegistry interface {
+	ListDevPodEnvironmentTemplates(ctx context.Context, options *internalversion.ListOptions) (*DevPodEnvironmentTemplateList, error)
+	GetDevPodEnvironmentTemplate(ctx context.Context, id string, options *metav1.GetOptions) (*DevPodEnvironmentTemplate, error)
+	CreateDevPodEnvironmentTemplate(ctx context.Context, id *DevPodEnvironmentTemplate) (*DevPodEnvironmentTemplate, error)
+	UpdateDevPodEnvironmentTemplate(ctx context.Context, id *DevPodEnvironmentTemplate) (*DevPodEnvironmentTemplate, error)
+	DeleteDevPodEnvironmentTemplate(ctx context.Context, id string) (bool, error)
+}
+
+// NewRegistry returns a new Registry interface for the given Storage. Any mismatched types will panic.
+func NewDevPodEnvironmentTemplateRegistry(sp builders.StandardStorageProvider) DevPodEnvironmentTemplateRegistry {
+	return &storageDevPodEnvironmentTemplate{sp}
+}
+
+// Implement Registry
+// storage puts strong typing around storage calls
+// +k8s:deepcopy-gen=false
+type storageDevPodEnvironmentTemplate struct {
+	builders.StandardStorageProvider
+}
+
+func (s *storageDevPodEnvironmentTemplate) ListDevPodEnvironmentTemplates(ctx context.Context, options *internalversion.ListOptions) (*DevPodEnvironmentTemplateList, error) {
+	if options != nil && options.FieldSelector != nil && !options.FieldSelector.Empty() {
+		return nil, fmt.Errorf("field selector not supported yet")
+	}
+	st := s.GetStandardStorage()
+	obj, err := st.List(ctx, options)
+	if err != nil {
+		return nil, err
+	}
+	return obj.(*DevPodEnvironmentTemplateList), err
+}
+
+func (s *storageDevPodEnvironmentTemplate) GetDevPodEnvironmentTemplate(ctx context.Context, id string, options *metav1.GetOptions) (*DevPodEnvironmentTemplate, error) {
+	st := s.GetStandardStorage()
+	obj, err := st.Get(ctx, id, options)
+	if err != nil {
+		return nil, err
+	}
+	return obj.(*DevPodEnvironmentTemplate), nil
+}
+
+func (s *storageDevPodEnvironmentTemplate) CreateDevPodEnvironmentTemplate(ctx context.Context, object *DevPodEnvironmentTemplate) (*DevPodEnvironmentTemplate, error) {
+	st := s.GetStandardStorage()
+	obj, err := st.Create(ctx, object, nil, &metav1.CreateOptions{})
+	if err != nil {
+		return nil, err
+	}
+	return obj.(*DevPodEnvironmentTemplate), nil
+}
+
+func (s *storageDevPodEnvironmentTemplate) UpdateDevPodEnvironmentTemplate(ctx context.Context, object *DevPodEnvironmentTemplate) (*DevPodEnvironmentTemplate, error) {
+	st := s.GetStandardStorage()
+	obj, _, err := st.Update(ctx, object.Name, rest.DefaultUpdatedObjectInfo(object), nil, nil, false, &metav1.UpdateOptions{})
+	if err != nil {
+		return nil, err
+	}
+	return obj.(*DevPodEnvironmentTemplate), nil
+}
+
+func (s *storageDevPodEnvironmentTemplate) DeleteDevPodEnvironmentTemplate(ctx context.Context, id string) (bool, error) {
 	st := s.GetStandardStorage()
 	_, sync, err := st.Delete(ctx, id, nil, &metav1.DeleteOptions{})
 	return sync, err

@@ -153,6 +153,8 @@ func NewUpCmd(flags *flags.GlobalFlags) *cobra.Command {
 	upCmd.Flags().StringVar(&cmd.DevContainerImage, "devcontainer-image", "", "The container image to use, this will override the devcontainer.json value in the project")
 	upCmd.Flags().StringVar(&cmd.DevContainerPath, "devcontainer-path", "", "The path to the devcontainer.json relative to the project")
 	upCmd.Flags().StringVar(&cmd.DevContainerSource, "devcontainer-source", "", "External devcontainer.json source")
+	upCmd.Flags().StringVar(&cmd.EnvironmentTemplate, "environment-template", "", "Environment template to use")
+	_ = upCmd.Flags().MarkHidden("environment-template")
 	upCmd.Flags().StringArrayVar(&cmd.ProviderOptions, "provider-option", []string{}, "Provider option in the form KEY=VALUE")
 	upCmd.Flags().BoolVar(&cmd.Recreate, "recreate", false, "If true will remove any existing containers and recreate them")
 	upCmd.Flags().BoolVar(&cmd.Reset, "reset", false, "If true will remove any existing containers including sources, and recreate them")
