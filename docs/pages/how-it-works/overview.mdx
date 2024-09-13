@@ -11,8 +11,6 @@ designed to connect your local environment securely to your development containe
 Devpod implements various providers to deploy dev containers to. This is analogous to kubernetes cloud control manager where vendors can easily implement there own providers to deploy dev containers to
 custom infrastructure.
 
-Devpod is a client only CLI tool to enable developers to create development enviornment's based on a "workspace" spec (see diagram, the spec is the totality of the inputs to devpod).
-
 Devpod uses a client-agent architecture, where the client deploys it's own agent to act as a server, such as a grpc server or SSH server. 
 In this regard the system is not unlike a browser server architecture where the front end is deployed and executed on a remote host. There are several improvements this brings to our specific context:
  - There can be no conflict of versions between client and server, since you install only one version of the client

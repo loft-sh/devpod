@@ -23,15 +23,15 @@ System_Boundary(cluster, "Machine / Cluster") {
   }
 }
 
-BiRel_Right(user, prov, "devpod up ...")
+BiRel(user, prov, "devpod up ...")
 BiRel(prov, controlPlane, "")
 BiRel(controlPlane, agent, " gRPC")
 BiRel_Left(agent, ssh, "Tunnelled STDIO")
 Rel(agent, runner, " ")
 BiRel(ssh, ide, "SSH port forwarding")
-Rel(user, ide, " ")
-Rel_Up(user, ctx, " ")
-Rel_Left(user, env, " ")
-Rel_Up(user, git, " ")
-Rel_Up(user, dc, " ")
+Rel_Left(ide, user, " ")
+Rel(ctx, user, " ")
+Rel(env, user, " ")
+Rel(git, user, " ")
+Rel(dc, user,, " ")
 @enduml
