@@ -207,6 +207,8 @@ func createWorkspace(ctx context.Context, baseClient client.Client, log log.Logg
 		templateVersion = ""
 	}
 
+	environmentName := os.Getenv(loft.EnvironmentTemplateOptionEnv)
+
 	// find parameters
 	resolvedParameters, err := getParametersFromEnvironment(ctx, managementClient, workspaceInfo.ProjectName, template, templateVersion)
 	if err != nil {
@@ -238,6 +240,9 @@ func createWorkspace(ctx context.Context, baseClient client.Client, log log.Logg
 				TemplateRef: &storagev1.TemplateRef{
 					Name:    template,
 					Version: templateVersion,
+				},
+				EnvironmentRef: storagev1.EnvironmentRef{
+					Name: environmentName,
 				},
 			},
 		},

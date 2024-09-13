@@ -13,5 +13,7 @@ const (
 	TemplateOptionEnv        = "LOFT_TEMPLATE"
 	TemplateVersionOptionEnv = "LOFT_TEMPLATE_VERSION"
 
+	EnvironmentTemplateOptionEnv = "LOFT_ENVIRONMENT_TEMPLATE"
+
 	TimeoutEnv = "LOFT_TIMEOUT"
 )
