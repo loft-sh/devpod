@@ -583,7 +583,9 @@ var (
 func ToID(str string) string {
 	str = strings.ToLower(filepath.ToSlash(str))
 
-	str = prReferenceRegEx.ReplaceAllStringFunc(str, git.GetBranchNameForPR)
+	if prReferenceRegEx.MatchString(str) {
+		return prReferenceRegEx.ReplaceAllStringFunc(str, git.GetBranchNameForPR)
+	}
 
 	// Check if a branch name has been specified, if so use this for the ID
 	// If not, then parse the repo name as ID
