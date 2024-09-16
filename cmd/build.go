@@ -25,10 +25,10 @@ type BuildCmd struct {
 	*flags.GlobalFlags
 	provider.CLIOptions
 
-	ProviderOptions []string
+	ProviderOptions []string // provider specific options overriding the context
 
-	SkipDelete bool
-	Machine    string
+	SkipDelete bool   // the command requires a workspace to run, setting true leaves this workspace running after building
+	Machine    string // optional CLI arg to specify which machine to deploy devcontainer
 }
 
 // NewBuildCmd creates a new command
@@ -101,7 +101,7 @@ func NewBuildCmd(flags *flags.GlobalFlags) *cobra.Command {
 				return fmt.Errorf("building is currently not supported for proxy providers")
 			}
 
-			return cmd.Run(ctx, workspaceClient)
+			return cmd.Build(ctx, workspaceClient, log.Default)
 		},
 	}
 
@@ -123,32 +123,17 @@ func NewBuildCmd(flags *flags.GlobalFlags) *cobra.Command {
 	return buildCmd
 }
 
-func (cmd *BuildCmd) Run(ctx context.Context, client client.WorkspaceClient) error {
-	// build workspace
-	err := cmd.build(ctx, client, log.Default)
-	if err != nil {
-		return err
-	}
-
-	return nil
-}
-
-func (cmd *BuildCmd) build(ctx context.Context, workspaceClient client.WorkspaceClient, log log.Logger) error {
-	err := workspaceClient.Lock(ctx)
-	if err != nil {
+// Build uses a workspaceClient to execute a build pipeline remotely in the workspace
+func (cmd *BuildCmd) Build(ctx context.Context, workspaceClient client.WorkspaceClient, log log.Logger) (err error) {
+	if err = workspaceClient.Lock(ctx); err != nil {
 		return err
 	}
 	defer workspaceClient.Unlock()
 
-	err = startWait(ctx, workspaceClient, true, log)
-	if err != nil {
+	if err = startWait(ctx, workspaceClient, true, log); err != nil {
 		return err
 	}
 
-	return cmd.buildAgentClient(ctx, workspaceClient, log)
-}
-
-func (cmd *BuildCmd) buildAgentClient(ctx context.Context, workspaceClient client.WorkspaceClient, log log.Logger) error {
 	// compress info
 	workspaceInfo, wInfo, err := workspaceClient.AgentInfo(cmd.CLIOptions)
 	if err != nil {
