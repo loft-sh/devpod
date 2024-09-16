@@ -582,22 +582,20 @@ var (
 
 func ToID(str string) string {
 	str = strings.ToLower(filepath.ToSlash(str))
-
-	if prReferenceRegEx.MatchString(str) {
-		return prReferenceRegEx.ReplaceAllStringFunc(str, git.GetBranchNameForPR)
-	}
-
-	// Check if a branch name has been specified, if so use this for the ID
-	// If not, then parse the repo name as ID
 	splitted := strings.Split(str, "@")
-	if len(splitted) == 2 {
+
+	// 1. Check if PR was specified
+	if prReferenceRegEx.MatchString(str) {
+		str = prReferenceRegEx.ReplaceAllStringFunc(str, git.GetBranchNameForPR)
+	} else if len(splitted) == 2 {
+		// 2. Check if a branch name has been specified, if so use this for the ID
 		str = strings.TrimSuffix(splitted[1], ".git")
 		// Check if branch name matches expected regex
 		if !branchRegEx.MatchString(str) {
 			str = splitted[0]
 		}
 	} else {
-		// get last element if we find a /
+		// 3. If not, then parse the repo name as ID
 		index := strings.LastIndex(str, "/")
 		if index != -1 {
 			str = str[index+1:]
