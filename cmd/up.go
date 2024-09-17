@@ -254,6 +254,7 @@ func (cmd *UpCmd) Run(
 	if cmd.SetupLoftPlatformAccess {
 		err = setupLoftPlatformAccess(devPodConfig.DefaultContext, context.DefaultProvider, user, client, log)
 		if err != nil {
+			log.Error(err)
 			return err
 		}
 	}
@@ -1034,7 +1035,7 @@ func setupLoftPlatformAccess(context, provider, user string, client client2.Base
 		"--command", command,
 	).Run()
 	if err != nil {
-		log.Error("failure in setting up Loft Platform access")
+		return fmt.Errorf("failure in setting up Loft Platform access: %w", err)
 	}
 
 	return nil
