@@ -1533,7 +1533,6 @@ func upgradeRelease(chartName, chartRepo, kubeContext, namespace string, extraAr
 		defaultReleaseName,
 		chartName,
 		"--install",
-		"--reuse-values",
 		"--create-namespace",
 		"--repository-config=''",
 		"--kube-context",
