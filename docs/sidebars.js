@@ -31,6 +31,10 @@ module.exports = {
           type: "doc",
           id: "how-it-works/building-workspaces",
         },
+        {
+          type: "doc",
+          id: "how-it-works/deploying-workspaces",
+        },
       ],
     },
     {
