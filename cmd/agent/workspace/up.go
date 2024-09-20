@@ -136,7 +136,7 @@ func (cmd *UpCmd) devPodUp(ctx context.Context, workspaceInfo *provider2.AgentWo
 }
 
 func CreateRunner(workspaceInfo *provider2.AgentWorkspaceInfo, log log.Logger) (devcontainer.Runner, error) {
-	return devcontainer.NewRunner(agent.ContainerDevPodHelperLocation, agent.DefaultAgentDownloadURL(), workspaceInfo, log)
+	return devcontainer.NewRunner(agent.DevPodBinary, agent.DefaultAgentDownloadURL(), workspaceInfo, log)
 }
 
 // InitContentFolder creates the working directory for the devpod agent to store binaries / config

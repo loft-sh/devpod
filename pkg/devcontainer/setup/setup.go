@@ -196,7 +196,7 @@ func PatchEtcEnvironmentFlags(workspaceEnv []string, log log.Logger) error {
 	return nil
 }
 
-func PatchEtcEnvironment(mergedConfig *config.MergedDevContainerConfig, log log.Logger) error {
+func PatchEtcEnvironment(mergedConfig *config.MergedConfig, log log.Logger) error {
 	if len(mergedConfig.RemoteEnv) == 0 {
 		return nil
 	}

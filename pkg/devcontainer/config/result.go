@@ -4,14 +4,14 @@ const UserLabel = "devpod.user"
 
 type Result struct {
 	DevContainerConfigWithPath *DevContainerConfigWithPath `json:"DevContainerConfigWithPath"`
-	MergedConfig               *MergedDevContainerConfig   `json:"MergedConfig"`
+	MergedConfig               *MergedConfig               `json:"MergedConfig"`
 	SubstitutionContext        *SubstitutionContext        `json:"SubstitutionContext"`
 	ContainerDetails           *ContainerDetails           `json:"ContainerDetails"`
 }
 
 type DevContainerConfigWithPath struct {
 	// Config is the devcontainer.json config
-	Config *DevContainerConfig `json:"config,omitempty"`
+	Config *Config `json:"config,omitempty"`
 
 	// Path is the relative path to the devcontainer.json from the workspace folder
 	Path string `json:"path,omitempty"`
@@ -42,7 +42,7 @@ func GetRemoteUser(result *Result) string {
 	return user
 }
 
-func GetDevPodCustomizations(parsedConfig *DevContainerConfig) *DevPodCustomizations {
+func GetDevPodCustomizations(parsedConfig *Config) *DevPodCustomizations {
 	if parsedConfig.Customizations == nil || parsedConfig.Customizations["devpod"] == nil {
 		return &DevPodCustomizations{}
 	}
@@ -56,7 +56,7 @@ func GetDevPodCustomizations(parsedConfig *DevContainerConfig) *DevPodCustomizat
 	return devPod
 }
 
-func GetVSCodeConfiguration(mergedConfig *MergedDevContainerConfig) *VSCodeCustomizations {
+func GetVSCodeConfiguration(mergedConfig *MergedConfig) *VSCodeCustomizations {
 	if mergedConfig.Customizations == nil || mergedConfig.Customizations["vscode"] == nil {
 		return &VSCodeCustomizations{}
 	}

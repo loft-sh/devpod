@@ -225,7 +225,7 @@ func fillContainerEnv(setupInfo *config.Result) error {
 	}
 
 	// merge config
-	newMergedConfig := &config.MergedDevContainerConfig{}
+	newMergedConfig := &config.MergedConfig{}
 	err := config.SubstituteContainerEnv(config.ListToObject(os.Environ()), setupInfo.MergedConfig, newMergedConfig)
 	if err != nil {
 		return errors.Wrap(err, "substitute container env")

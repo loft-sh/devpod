@@ -189,18 +189,18 @@ func (r *runner) recreateCustomDriver(ctx context.Context, options UpOptions, ti
 	return r.Up(ctx, options, timeout)
 }
 
-func cleanupBuildInformation(c *config.DevContainerConfig) {
+func cleanupBuildInformation(c *config.Config) {
 	contextPath := config.GetContextPath(c)
 	_ = os.RemoveAll(filepath.Join(contextPath, config.DevPodContextFeatureFolder))
 }
 
-func isDockerFileConfig(config *config.DevContainerConfig) bool {
+func isDockerFileConfig(config *config.Config) bool {
 	return config.GetDockerfile() != ""
 }
 
 func runInitializeCommand(
 	workspaceFolder string,
-	config *config.DevContainerConfig,
+	config *config.Config,
 	extraEnvVars []string,
 	log log.Logger,
 ) error {
@@ -243,7 +243,7 @@ func runInitializeCommand(
 
 func getWorkspace(
 	workspaceFolder, workspaceID string,
-	conf *config.DevContainerConfig,
+	conf *config.Config,
 ) (string, string) {
 	if conf.WorkspaceMount != "" {
 		mount := config.ParseMount(conf.WorkspaceMount)

@@ -15,13 +15,13 @@ import (
 	"github.com/tidwall/jsonc"
 )
 
-const DEVCONTAINER_FEATURE_FILE_NAME = "devcontainer-feature.json"
+const FEATURE_FILE_NAME = "devcontainer-feature.json"
 
-func ParseDevContainerFeature(folder string) (*FeatureConfig, error) {
-	path := filepath.Join(folder, DEVCONTAINER_FEATURE_FILE_NAME)
+func ParseFeature(folder string) (*FeatureConfig, error) {
+	path := filepath.Join(folder, FEATURE_FILE_NAME)
 	_, err := os.Stat(path)
 	if err != nil {
-		return nil, fmt.Errorf("%s is missing in feature folder", DEVCONTAINER_FEATURE_FILE_NAME)
+		return nil, fmt.Errorf("%s is missing in feature folder", FEATURE_FILE_NAME)
 	}
 
 	path, err = filepath.Abs(path)
@@ -44,7 +44,7 @@ func ParseDevContainerFeature(folder string) (*FeatureConfig, error) {
 	return featureConfig, nil
 }
 
-func SaveDevContainerJSON(config *DevContainerConfig) error {
+func Save(config *Config) error {
 	if config.Origin == "" {
 		return fmt.Errorf("no origin in config")
 	}
@@ -67,7 +67,7 @@ func SaveDevContainerJSON(config *DevContainerConfig) error {
 	return nil
 }
 
-func ParseDevContainerJSON(folder, relativePath string) (*DevContainerConfig, error) {
+func Parse(folder, relativePath string) (*Config, error) {
 	path := ""
 	if relativePath != "" {
 		path = path2.Join(filepath.ToSlash(folder), relativePath)
@@ -103,7 +103,7 @@ func ParseDevContainerJSON(folder, relativePath string) (*DevContainerConfig, er
 		return nil, err
 	}
 
-	devContainer := &DevContainerConfig{}
+	devContainer := &Config{}
 	err = json.Unmarshal(jsonc.ToJSON(bytes), devContainer)
 	if err != nil {
 		return nil, err
@@ -113,7 +113,7 @@ func ParseDevContainerJSON(folder, relativePath string) (*DevContainerConfig, er
 	return replaceLegacy(devContainer)
 }
 
-func replaceLegacy(config *DevContainerConfig) (*DevContainerConfig, error) {
+func replaceLegacy(config *Config) (*Config, error) {
 	if len(config.Extensions) == 0 && len(config.Settings) == 0 && config.DevPort == 0 {
 		return config, nil
 	}

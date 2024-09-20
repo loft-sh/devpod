@@ -12,9 +12,9 @@ import (
 	"github.com/pkg/errors"
 )
 
-func (r *runner) getRawConfig(options provider2.CLIOptions) (*config.DevContainerConfig, error) {
+func (r *runner) getRawConfig(options provider2.CLIOptions) (*config.Config, error) {
 	if r.WorkspaceConfig.Workspace.DevContainerConfig != nil {
-		rawParsedConfig := config.CloneDevContainerConfig(r.WorkspaceConfig.Workspace.DevContainerConfig)
+		rawParsedConfig := config.CloneConfig(r.WorkspaceConfig.Workspace.DevContainerConfig)
 		if r.WorkspaceConfig.Workspace.DevContainerPath != "" {
 			rawParsedConfig.Origin = path.Join(filepath.ToSlash(r.LocalWorkspaceFolder), r.WorkspaceConfig.Workspace.DevContainerPath)
 		} else {
@@ -22,8 +22,8 @@ func (r *runner) getRawConfig(options provider2.CLIOptions) (*config.DevContaine
 		}
 		return rawParsedConfig, nil
 	} else if r.WorkspaceConfig.Workspace.Source.Container != "" {
-		return &config.DevContainerConfig{
-			DevContainerConfigBase: config.DevContainerConfigBase{
+		return &config.Config{
+			ConfigBase: config.ConfigBase{
 				// Default workspace directory for containers
 				// Upon inspecting the container, this would be updated to the correct folder, if found set
 				WorkspaceFolder: "/",
@@ -39,7 +39,7 @@ func (r *runner) getRawConfig(options provider2.CLIOptions) (*config.DevContaine
 			return nil, err
 		}
 
-		return config.ParseDevContainerJSON(
+		return config.Parse(
 			localWorkspaceFolder,
 			r.WorkspaceConfig.Workspace.DevContainerPath,
 		)
@@ -53,7 +53,7 @@ func (r *runner) getRawConfig(options provider2.CLIOptions) (*config.DevContaine
 	}
 
 	// parse the devcontainer json
-	rawParsedConfig, err := config.ParseDevContainerJSON(
+	rawParsedConfig, err := config.Parse(
 		localWorkspaceFolder,
 		r.WorkspaceConfig.Workspace.DevContainerPath,
 	)
@@ -69,8 +69,8 @@ func (r *runner) getRawConfig(options provider2.CLIOptions) (*config.DevContaine
 	return rawParsedConfig, nil
 }
 
-func (r *runner) getDefaultConfig(options provider2.CLIOptions) (*config.DevContainerConfig, error) {
-	defaultConfig := &config.DevContainerConfig{}
+func (r *runner) getDefaultConfig(options provider2.CLIOptions) (*config.Config, error) {
+	defaultConfig := &config.Config{}
 	if options.FallbackImage != "" {
 		r.Log.Infof("Using fallback image %s", options.FallbackImage)
 		defaultConfig.ImageContainer = config.ImageContainer{
@@ -82,7 +82,7 @@ func (r *runner) getDefaultConfig(options provider2.CLIOptions) (*config.DevCont
 	}
 
 	defaultConfig.Origin = path.Join(filepath.ToSlash(r.LocalWorkspaceFolder), ".devcontainer.json")
-	err := config.SaveDevContainerJSON(defaultConfig)
+	err := config.Save(defaultConfig)
 	if err != nil {
 		return nil, errors.Wrap(err, "write default devcontainer.json")
 	}
@@ -100,7 +100,7 @@ func (r *runner) getSubstitutedConfig(options provider2.CLIOptions) (*config.Sub
 
 func (r *runner) substitute(
 	options provider2.CLIOptions,
-	rawParsedConfig *config.DevContainerConfig,
+	rawParsedConfig *config.Config,
 ) (*config.SubstitutedConfig, *config.SubstitutionContext, error) {
 	configFile := rawParsedConfig.Origin
 
@@ -120,7 +120,7 @@ func (r *runner) substitute(
 	}
 
 	// substitute & load
-	parsedConfig := &config.DevContainerConfig{}
+	parsedConfig := &config.Config{}
 	err := config.Substitute(substitutionContext, rawParsedConfig, parsedConfig)
 	if err != nil {
 		return nil, nil, err

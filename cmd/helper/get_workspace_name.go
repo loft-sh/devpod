@@ -34,6 +34,6 @@ func (cmd *GetWorkspaceNameCommand) Run(ctx context.Context, args []string) erro
 		return fmt.Errorf("workspace is missing")
 	}
 
-	fmt.Print(workspace.GetWorkspaceName(args))
+	fmt.Print(workspace.GetName(args))
 	return nil
 }

@@ -603,7 +603,7 @@ func (r *runner) extendedDockerComposeBuild(composeService *composetypes.Service
 
 func (r *runner) extendedDockerComposeUp(
 	parsedConfig *config.SubstitutedConfig,
-	mergedConfig *config.MergedDevContainerConfig,
+	mergedConfig *config.MergedConfig,
 	composeHelper *compose.ComposeHelper,
 	composeService *composetypes.ServiceConfig,
 	originalImageName,
@@ -640,7 +640,7 @@ func (r *runner) extendedDockerComposeUp(
 
 func (r *runner) generateDockerComposeUpProject(
 	parsedConfig *config.SubstitutedConfig,
-	mergedConfig *config.MergedDevContainerConfig,
+	mergedConfig *config.MergedConfig,
 	composeHelper *compose.ComposeHelper,
 	composeService *composetypes.ServiceConfig,
 	originalImageName,
@@ -804,6 +804,6 @@ func mappingToMap(mapping composetypes.MappingWithEquals) map[string]string {
 	return ret
 }
 
-func isDockerComposeConfig(config *config.DevContainerConfig) bool {
+func isDockerComposeConfig(config *config.Config) bool {
 	return len(config.DockerComposeFile) > 0
 }

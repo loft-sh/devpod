@@ -8,7 +8,7 @@ import (
 
 func TestSaveDevContainerJSON(t *testing.T) {
 	type args struct {
-		config *DevContainerConfig
+		config *Config
 	}
 	tests := []struct {
 		name     string
@@ -19,7 +19,7 @@ func TestSaveDevContainerJSON(t *testing.T) {
 		{
 			name: "test omit build field in devcontainer.json",
 			args: args{
-				config: &DevContainerConfig{
+				config: &Config{
 					ImageContainer: ImageContainer{
 						Image: "test",
 					},
@@ -39,7 +39,7 @@ func TestSaveDevContainerJSON(t *testing.T) {
 
 			tt.args.config.Origin = filepath.Join(tmpDir, "devcontainer.json")
 
-			if err := SaveDevContainerJSON(tt.args.config); (err != nil) != tt.wantErr {
+			if err := Save(tt.args.config); (err != nil) != tt.wantErr {
 				t.Errorf("SaveDevContainerJSON() error = %v, wantErr %v", err, tt.wantErr)
 			}
 

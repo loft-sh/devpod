@@ -38,7 +38,7 @@ func GetDevContainerMetadata(substitutionContext *config.SubstitutionContext, ba
 func FeatureConfigToImageMetadata(feature *config.FeatureConfig) *config.ImageMetadata {
 	return &config.ImageMetadata{
 		Entrypoint: feature.Entrypoint,
-		DevContainerActions: config.DevContainerActions{
+		Actions: config.Actions{
 			Customizations: feature.Customizations,
 		},
 		NonComposeBase: config.NonComposeBase{
@@ -51,9 +51,9 @@ func FeatureConfigToImageMetadata(feature *config.FeatureConfig) *config.ImageMe
 	}
 }
 
-func DevContainerConfigToImageMetadata(devConfig *config.DevContainerConfig) *config.ImageMetadata {
+func DevContainerConfigToImageMetadata(devConfig *config.Config) *config.ImageMetadata {
 	return &config.ImageMetadata{
-		DevContainerConfigBase: config.DevContainerConfigBase{
+		ConfigBase: config.ConfigBase{
 			ForwardPorts:         devConfig.ForwardPorts,
 			PortsAttributes:      devConfig.PortsAttributes,
 			OtherPortsAttributes: devConfig.OtherPortsAttributes,
@@ -66,7 +66,7 @@ func DevContainerConfigToImageMetadata(devConfig *config.DevContainerConfig) *co
 			HostRequirements:     devConfig.HostRequirements,
 			OverrideCommand:      devConfig.OverrideCommand,
 		},
-		DevContainerActions: config.DevContainerActions{
+		Actions: config.Actions{
 			OnCreateCommand:      devConfig.OnCreateCommand,
 			UpdateContentCommand: devConfig.UpdateContentCommand,
 			PostCreateCommand:    devConfig.PostCreateCommand,

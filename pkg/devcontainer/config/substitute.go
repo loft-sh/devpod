@@ -16,8 +16,8 @@ type ReplaceFunction func(match, variable string, args []string) string
 var VariableRegExp = regexp.MustCompile(`\${(.*?)}`)
 
 type SubstitutedConfig struct {
-	Config *DevContainerConfig
-	Raw    *DevContainerConfig
+	Config *Config
+	Raw    *Config
 }
 
 type SubstitutionContext struct {

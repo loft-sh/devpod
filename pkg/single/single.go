@@ -14,6 +14,7 @@ import (
 
 type CreateCommand func() (*exec.Cmd, error)
 
+// Single ensures that certain commands are executed only once at a time, using a file-based locking mechanism
 func Single(file string, createCommand CreateCommand) error {
 	file = filepath.Join(os.TempDir(), file)
 	fileLock := flock.New(file + ".lock")

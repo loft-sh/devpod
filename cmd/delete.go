@@ -53,7 +53,7 @@ func NewDeleteCmd(flags *flags.GlobalFlags) *cobra.Command {
 // Run runs the command logic
 func (cmd *DeleteCmd) Run(ctx context.Context, devPodConfig *config.Config, args []string) error {
 	// try to load workspace
-	client, err := workspace2.GetWorkspace(devPodConfig, args, false, log.Default)
+	client, err := workspace2.Get(devPodConfig, args, false, log.Default)
 	if err != nil {
 		if len(args) == 0 {
 			return fmt.Errorf("cannot delete workspace because there was an error loading the workspace: %w. Please specify the id of the workspace you want to delete. E.g. 'devpod delete my-workspace --force'", err)
@@ -141,7 +141,7 @@ func (cmd *DeleteCmd) deleteSingleMachine(ctx context.Context, client client2.Ba
 	}
 
 	// try to find other workspace with same machine
-	workspaces, err := workspace2.ListWorkspaces(devPodConfig, log.Default)
+	workspaces, err := workspace2.List(devPodConfig, log.Default)
 	if err != nil {
 		return false, errors.Wrap(err, "list workspaces")
 	}

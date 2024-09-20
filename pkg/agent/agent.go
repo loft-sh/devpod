@@ -24,7 +24,7 @@ import (
 
 const DefaultInactivityTimeout = time.Minute * 20
 
-const ContainerDevPodHelperLocation = "/usr/local/bin/devpod"
+const DevPodBinary = "/usr/local/bin/devpod"
 
 const RemoteDevPodHelperLocation = "/tmp/devpod"
 
@@ -316,15 +316,16 @@ func Tunnel(
 	timeout time.Duration,
 ) error {
 	// inject agent
-	err := InjectAgent(ctx, func(ctx context.Context, command string, stdin io.Reader, stdout io.Writer, stderr io.Writer) error {
+	execFn := func(ctx context.Context, command string, stdin io.Reader, stdout io.Writer, stderr io.Writer) error {
 		return exec(ctx, "root", command, stdin, stdout, stderr)
-	}, false, ContainerDevPodHelperLocation, DefaultAgentDownloadURL(), false, log, timeout)
+	}
+	err := Inject(ctx, execFn, false, DevPodBinary, DefaultAgentDownloadURL(), false, "", nil, nil, nil, log, timeout)
 	if err != nil {
 		return err
 	}
 
 	// build command
-	command := fmt.Sprintf("'%s' helper ssh-server --stdio", ContainerDevPodHelperLocation)
+	command := fmt.Sprintf("'%s' helper ssh-server --stdio", DevPodBinary)
 	if log.GetLevel() == logrus.DebugLevel {
 		command += " --debug"
 	}

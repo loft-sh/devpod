@@ -223,7 +223,7 @@ func findContainerUsers(baseImageMetadata *config.ImageMetadataConfig, composeSe
 	return containerUser, remoteUser
 }
 
-func fetchFeatures(devContainerConfig *config.DevContainerConfig, log log.Logger, forceBuild bool) ([]*config.FeatureSet, error) {
+func fetchFeatures(devContainerConfig *config.Config, log log.Logger, forceBuild bool) ([]*config.FeatureSet, error) {
 	featureSets := []*config.FeatureSet{}
 	for featureID, featureOptions := range devContainerConfig.Features {
 		featureFolder, err := ProcessFeatureID(featureID, devContainerConfig, log, forceBuild)
@@ -233,7 +233,7 @@ func fetchFeatures(devContainerConfig *config.DevContainerConfig, log log.Logger
 
 		// parse feature
 		log.Debugf("Parse dev container feature in %s", featureFolder)
-		featureConfig, err := config.ParseDevContainerFeature(featureFolder)
+		featureConfig, err := config.ParseFeature(featureFolder)
 		if err != nil {
 			return nil, errors.Wrap(err, "parse feature "+featureID)
 		}
@@ -270,7 +270,7 @@ func NormalizeFeatureID(featureID string) string {
 	return ref.String()
 }
 
-func computeFeatureOrder(devContainer *config.DevContainerConfig, features []*config.FeatureSet) ([]*config.FeatureSet, error) {
+func computeFeatureOrder(devContainer *config.Config, features []*config.FeatureSet) ([]*config.FeatureSet, error) {
 	if len(devContainer.OverrideFeatureInstallOrder) == 0 {
 		return computeAutomaticFeatureOrder(features)
 	}

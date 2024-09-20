@@ -24,7 +24,7 @@ import (
 var DefaultPort = 8022
 
 func NewServer(addr string, hostKey []byte, keys []ssh.PublicKey, workdir string, log log.Logger) (*Server, error) {
-	sh, err := shell.GetShell("")
+	sh, err := shell.Get("")
 	if err != nil {
 		return nil, err
 	}

@@ -6,9 +6,9 @@ type ImageMetadataConfig struct {
 }
 
 type ImageMetadata struct {
-	ID                     string `json:"id,omitempty"`
-	Entrypoint             string `json:"entrypoint,omitempty"`
-	DevContainerConfigBase `json:",inline"`
-	DevContainerActions    `json:",inline"`
-	NonComposeBase         `json:",inline"`
+	ID             string `json:"id,omitempty"`
+	Entrypoint     string `json:"entrypoint,omitempty"`
+	ConfigBase     `json:",inline"`
+	Actions        `json:",inline"`
+	NonComposeBase `json:",inline"`
 }

@@ -46,7 +46,7 @@ type Workspace struct {
 	DevContainerPath string `json:"devContainerPath,omitempty"`
 
 	// DevContainerConfig holds the config for the devcontainer.json.
-	DevContainerConfig *devcontainerconfig.DevContainerConfig `json:"devContainerConfig,omitempty"`
+	DevContainerConfig *devcontainerconfig.Config `json:"devContainerConfig,omitempty"`
 
 	// CreationTimestamp is the timestamp when this workspace was created
 	CreationTimestamp types.Time `json:"creationTimestamp,omitempty"`

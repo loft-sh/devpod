@@ -45,7 +45,7 @@ func (cmd *LogsCmd) Run(ctx context.Context, args []string) error {
 		return err
 	}
 
-	baseClient, err := workspace.GetWorkspace(devPodConfig, args, false, log.Default)
+	baseClient, err := workspace.Get(devPodConfig, args, false, log.Default)
 	if err != nil {
 		return err
 	}
@@ -82,7 +82,7 @@ func (cmd *LogsCmd) Run(ctx context.Context, args []string) error {
 		stderr := log.ErrorStreamOnly().Writer(logrus.DebugLevel, false)
 		defer stderr.Close()
 
-		errChan <- agent.InjectAgentAndExecute(
+		errChan <- agent.Inject(
 			ctx,
 			func(ctx context.Context, command string, stdin io.Reader, stdout io.Writer, stderr io.Writer) error {
 				return client.Command(ctx, clientpkg.CommandOptions{

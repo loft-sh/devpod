@@ -115,7 +115,7 @@ func NewUpCmd(flags *flags.GlobalFlags) *cobra.Command {
 			}
 
 			ctx := context.Background()
-			client, err := workspace2.ResolveWorkspace(
+			client, err := workspace2.Resolve(
 				ctx,
 				devPodConfig,
 				cmd.IDE,
@@ -509,7 +509,7 @@ func (cmd *UpCmd) devPodUpMachine(
 	}
 
 	agentInjectFunc := func(cancelCtx context.Context, sshCmd string, sshTunnelStdinReader, sshTunnelStdoutWriter *os.File, writer io.WriteCloser) error {
-		return agent.InjectAgentAndExecute(
+		return agent.Inject(
 			cancelCtx,
 			func(ctx context.Context, command string, stdin io.Reader, stdout io.Writer, stderr io.Writer) error {
 				return client.Command(ctx, client2.CommandOptions{
@@ -787,7 +787,7 @@ func startBrowserTunnel(
 			}
 
 			// run in container
-			err := tunnel.RunInContainer(
+			err := tunnel.StartCredentialsServer(
 				ctx,
 				devPodConfig,
 				containerClient,
@@ -966,7 +966,7 @@ func setupDotfiles(
 		client.Workspace(),
 		"--log-output=raw",
 		"--command",
-		agent.ContainerDevPodHelperLocation+" "+strings.Join(agentArguments, " "),
+		agent.DevPodBinary+" "+strings.Join(agentArguments, " "),
 	)
 
 	if log.GetLevel() == logrus.DebugLevel {
@@ -1032,7 +1032,7 @@ func setupLoftPlatformAccess(context, provider, user string, client client2.Base
 		return fmt.Errorf("get port: %w", err)
 	}
 
-	command := fmt.Sprintf("\"%s\" agent container setup-loft-platform-access --context %s --provider %s --port %d", agent.ContainerDevPodHelperLocation, context, provider, port)
+	command := fmt.Sprintf("\"%s\" agent container setup-loft-platform-access --context %s --provider %s --port %d", agent.DevPodBinary, context, provider, port)
 
 	log.Debugf("Executing command: %v", command)
 	var errb bytes.Buffer

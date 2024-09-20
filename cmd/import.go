@@ -261,7 +261,7 @@ func (cmd *ImportCmd) importProvider(devPodConfig *config.Config, exportConfig *
 }
 
 func (cmd *ImportCmd) checkForConflictingIDs(exportConfig *provider.ExportConfig, devPodConfig *config.Config, log log.Logger) error {
-	workspaces, err := workspace.ListWorkspaces(devPodConfig, log)
+	workspaces, err := workspace.List(devPodConfig, log)
 	if err != nil {
 		return fmt.Errorf("error listing workspaces: %w", err)
 	}

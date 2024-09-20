@@ -10,8 +10,8 @@ import (
 	"github.com/loft-sh/devpod/pkg/types"
 )
 
-type MergedDevContainerConfig struct {
-	DevContainerConfigBase  `json:",inline"`
+type MergedConfig struct {
+	ConfigBase              `json:",inline"`
 	UpdatedConfigProperties `json:",inline"`
 	NonComposeBase          `json:",inline"`
 	ImageContainer          `json:",inline"`
@@ -23,27 +23,27 @@ type MergedDevContainerConfig struct {
 	Origin string `json:"-"`
 }
 
-type DevContainerConfig struct {
-	DevContainerConfigBase `json:",inline"`
-	DevContainerActions    `json:",inline"`
-	NonComposeBase         `json:",inline"`
-	ImageContainer         `json:",inline"`
-	ComposeContainer       `json:",inline"`
-	DockerfileContainer    `json:",inline"`
-	RunningContainer       `json:",inline"`
+type Config struct {
+	ConfigBase          `json:",inline"`
+	Actions             `json:",inline"`
+	NonComposeBase      `json:",inline"`
+	ImageContainer      `json:",inline"`
+	ComposeContainer    `json:",inline"`
+	DockerfileContainer `json:",inline"`
+	RunningContainer    `json:",inline"`
 
 	// Origin is the origin from where this config was loaded
 	Origin string `json:"-"`
 }
 
-func CloneDevContainerConfig(config *DevContainerConfig) *DevContainerConfig {
-	out := &DevContainerConfig{}
+func CloneConfig(config *Config) *Config {
+	out := &Config{}
 	_ = Convert(config, out)
 	out.Origin = config.Origin
 	return out
 }
 
-type DevContainerConfigBase struct {
+type ConfigBase struct {
 	// A name for the dev container which can be displayed to the user.
 	Name string `json:"name,omitempty"`
 
@@ -105,7 +105,7 @@ type DevContainerConfigBase struct {
 	DevPort int `json:"devPort,omitempty"`
 }
 
-type DevContainerActions struct {
+type Actions struct {
 	// A command to run when creating the container. This command is run after "initializeCommand" and before "updateContentCommand". If this is a single string, it will be run in a shell. If this is an array of strings, it will be run as a single command without shell.
 	OnCreateCommand types.LifecycleHook `json:"onCreateCommand,omitempty"`
 
@@ -361,7 +361,7 @@ func (m *Mount) String() string {
 	return strings.Join(components, ",")
 }
 
-func GetContextPath(parsedConfig *DevContainerConfig) string {
+func GetContextPath(parsedConfig *Config) string {
 	context := parsedConfig.GetContext()
 	dockerfilePath := parsedConfig.GetDockerfile()
 

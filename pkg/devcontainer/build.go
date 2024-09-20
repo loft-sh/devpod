@@ -189,7 +189,7 @@ func (r *runner) buildAndExtendImage(
 	return r.buildImage(ctx, parsedConfig, substitutionContext, imageBuildInfo, extendedBuildInfo, dockerFilePath, string(dockerFileContent), options)
 }
 
-func (r *runner) getDockerfilePath(parsedConfig *config.DevContainerConfig) (string, error) {
+func (r *runner) getDockerfilePath(parsedConfig *config.Config) (string, error) {
 	if parsedConfig.Origin == "" {
 		return "", fmt.Errorf("couldn't find path where config was loaded from")
 	}

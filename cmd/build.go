@@ -64,7 +64,7 @@ func NewBuildCmd(flags *flags.GlobalFlags) *cobra.Command {
 			// defer removal of temporary ssh config file
 			defer os.Remove(sshConfigPath)
 
-			baseWorkspaceClient, err := workspace2.ResolveWorkspace(
+			baseWorkspaceClient, err := workspace2.Resolve(
 				ctx,
 				devPodConfig,
 				"",
@@ -172,7 +172,7 @@ func (cmd *BuildCmd) Build(ctx context.Context, workspaceClient client.Workspace
 		writer := log.ErrorStreamOnly().Writer(logrus.InfoLevel, false)
 		defer writer.Close()
 
-		errChan <- agent.InjectAgentAndExecute(
+		errChan <- agent.Inject(
 			cancelCtx,
 			func(ctx context.Context, command string, stdin io.Reader, stdout io.Writer, stderr io.Writer) error {
 				return workspaceClient.Command(ctx, client.CommandOptions{

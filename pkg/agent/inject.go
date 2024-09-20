@@ -18,35 +18,9 @@ import (
 	"github.com/pkg/errors"
 )
 
-var waitForInstanceConnectionTimeout = time.Minute * 5
+var connectionTimeout = time.Minute * 5
 
-func InjectAgent(
-	ctx context.Context,
-	exec inject.ExecFunc,
-	local bool,
-	remoteAgentPath,
-	downloadURL string,
-	preferDownload bool,
-	log log.Logger,
-	timeout time.Duration,
-) error {
-	return InjectAgentAndExecute(
-		ctx,
-		exec,
-		local,
-		remoteAgentPath,
-		downloadURL,
-		preferDownload,
-		"",
-		nil,
-		nil,
-		nil,
-		log,
-		timeout,
-	)
-}
-
-func InjectAgentAndExecute(
+func Inject(
 	ctx context.Context,
 	exec inject.ExecFunc,
 	local bool,
@@ -67,7 +41,7 @@ func InjectAgentAndExecute(
 		}
 
 		log.Debugf("Execute command locally")
-		return shell.ExecuteCommandWithShell(ctx, command, stdin, stdout, stderr, nil)
+		return shell.Execute(ctx, command, stdin, stdout, stderr, nil)
 	}
 
 	defer log.Debugf("Done InjectAgentAndExecute")
@@ -122,7 +96,7 @@ func InjectAgentAndExecute(
 			log,
 		)
 		if err != nil {
-			if time.Since(now) > waitForInstanceConnectionTimeout {
+			if time.Since(now) > connectionTimeout {
 				return errors.Wrap(err, "timeout waiting for instance connection")
 			} else if wasExecuted {
 				return errors.Wrapf(err, "agent error: %s", buf.String())

@@ -53,7 +53,7 @@ func (cmd *ListCmd) Run(ctx context.Context) error {
 		return err
 	}
 
-	workspaces, err := workspace.ListWorkspaces(devPodConfig, log.Default)
+	workspaces, err := workspace.List(devPodConfig, log.Default)
 	if err != nil {
 		return err
 	}

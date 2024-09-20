@@ -26,19 +26,21 @@ import (
 
 func (r *runner) setupContainer(
 	ctx context.Context,
-	rawConfig *config.DevContainerConfig,
+	rawConfig *config.Config,
 	containerDetails *config.ContainerDetails,
-	mergedConfig *config.MergedDevContainerConfig,
+	mergedConfig *config.MergedConfig,
 	substitutionContext *config.SubstitutionContext,
 	timeout time.Duration,
 ) (*config.Result, error) {
 	// inject agent
-	err := agent.InjectAgent(ctx, func(ctx context.Context, command string, stdin io.Reader, stdout io.Writer, stderr io.Writer) error {
+	execFn := func(ctx context.Context, command string, stdin io.Reader, stdout io.Writer, stderr io.Writer) error {
 		return r.Driver.CommandDevContainer(ctx, r.ID, "root", command, stdin, stdout, stderr)
-	}, false, agent.ContainerDevPodHelperLocation, agent.DefaultAgentDownloadURL(), false, r.Log, timeout)
+	}
+	err := agent.Inject(ctx, execFn, false, agent.DevPodBinary, agent.DefaultAgentDownloadURL(), false, "", nil, nil, nil, r.Log, timeout)
 	if err != nil {
 		return nil, errors.Wrap(err, "inject agent")
 	}
+
 	r.Log.Debugf("Injected into container")
 	defer r.Log.Debugf("Done setting up container")
 
@@ -96,14 +98,14 @@ func (r *runner) setupContainer(
 	_, isDockerDriver := r.Driver.(driver.DockerDriver)
 
 	// ssh tunnel
-	sshTunnelCmd := fmt.Sprintf("'%s' helper ssh-server --stdio", agent.ContainerDevPodHelperLocation)
+	sshTunnelCmd := fmt.Sprintf("'%s' helper ssh-server --stdio", agent.DevPodBinary)
 	if r.Log.GetLevel() == logrus.DebugLevel {
 		sshTunnelCmd += " --debug"
 	}
 
 	// setup container
 	r.Log.Infof("Setup container...")
-	setupCommand := fmt.Sprintf("'%s' agent container setup --setup-info '%s' --container-workspace-info '%s'", agent.ContainerDevPodHelperLocation, compressed, workspaceConfigCompressed)
+	setupCommand := fmt.Sprintf("'%s' agent container setup --setup-info '%s' --container-workspace-info '%s'", agent.DevPodBinary, compressed, workspaceConfigCompressed)
 	if runtime.GOOS == "linux" || !isDockerDriver {
 		setupCommand += " --chown-workspace"
 	}
