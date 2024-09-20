@@ -3,7 +3,7 @@ title: How it works using kubernetes
 sidebar_label: Deploying kubernetes
 ---
 
-DevPod works the same with kubernetes as with Machines, the key difference is the "tunnel" is set up using the kubernetes control plane (e.g. kubectl ...) so an agent is not necessary
+DevPod works the same with kubernetes as with Machines, the key difference is the secure tunnel is set up using the kubernetes control plane (e.g. kubectl ...) so an agent is not necessary
 to be run on the kubernetes node. Instead devpod-provider-kubernetes simply wraps the appropriate `kubectl` commands to start and connect a workspace using a devcontainer.
 
 <figure>

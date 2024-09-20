@@ -8,10 +8,11 @@ Devpod provides the ability to use a registry as a remote backend cache for your
 ```
 ./devpod-cli context set-options -o REGISTRY_CACHE={registry}
 ```
+
 where registry follows the syntax "\{domain\}/\{project\}/\{repo\}", such as gcr.io/my-project/my-dev-env
 
 
-Ensure your docker environment has the image snap shotter enabled in your daemon (https://docs.docker.com/engine/storage/containerd/)
+Ensure your docker environment has the image snapshotter enabled in your daemon (https://docs.docker.com/engine/storage/containerd/)
 ```
 cat /etc/docker/daemon.json
 
@@ -39,6 +40,6 @@ reduce build times it is recommened to follow docker's best practices when writi
 
 #### Why Kaniko?
 
-When DevPod uses the kubernetes driver and needs to build a devcontainer but your local environment does not have a container runtime, it builds the container in the cluster. It does so using
-a tool "kaniko", this effecitvely builds the container in userspace as not to require super user priveledges. This is much more secure than say docker in docker, where the docker daemon
-is either mounted locally on the container or over a network within the cluster, neither being ideal.
+When DevPod uses the kubernetes driver and needs to build a devcontainer, but your local environment does not have a container runtime, it builds the container in the cluster. It does so using
+kaniko, kaniko builds the container in userspace and does not require super user priveledges. This is much more secure than docker in docker, where the docker daemon is either mounted locally on 
+the container or over a network within the cluster, neither being ideal.
