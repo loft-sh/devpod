@@ -13,7 +13,7 @@ module.exports = {
     },
     {
       type: "category",
-      label: "How it works",
+      label: "Concepts",
       items: [
         {
           type: "doc",
