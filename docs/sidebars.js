@@ -47,31 +47,37 @@ module.exports = {
         },
         {
           type: "doc",
-          id: "getting-started/quickstart-vscode-browser",
-        },
-        {
-          type: "doc",
-          id: "getting-started/quickstart-vscode",
-        },
-        {
-          type: "doc",
-          id: "getting-started/quickstart-jetbrains",
-        },
-        {
-          type: "doc",
-          id: "getting-started/quickstart-ssh",
-        },
-        {
-          type: "doc",
-          id: "getting-started/quickstart-vim",
-        },
-        {
-          type: "doc",
-          id: "getting-started/quickstart-devpod-cli",
-        },
-        {
-          type: "doc",
           id: "getting-started/update",
+        },
+        {
+          type: "category",
+          label: "Quick Start",
+          items: [
+            {
+              type: "doc",
+              id: "quickstart/browser",
+            },
+            {
+              type: "doc",
+              id: "quickstart/vscode",
+            },
+            {
+              type: "doc",
+              id: "quickstart/jetbrains",
+            },
+            {
+              type: "doc",
+              id: "quickstart/ssh",
+            },
+            {
+              type: "doc",
+              id: "quickstart/vim",
+            },
+            {
+              type: "doc",
+              id: "quickstart/devpod-cli",
+            },
+          ],
         },
       ],
     },
