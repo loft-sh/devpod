@@ -1,6 +1,11 @@
 @startuml
 !include https://raw.githubusercontent.com/plantuml-stdlib/C4-PlantUML/master/C4_Component.puml
 
+skinparam linetype ortho
+skinparam nodesep 100
+skinparam ranksep 150
+scale 1920x1080
+
 HIDE_STEREOTYPE()
 LAYOUT_TOP_DOWN()
 
@@ -33,5 +38,5 @@ BiRel_Right(ide, ssh, "SSH port forwarding")
 Rel(user, ide, "")
 Rel(ctx, user, "")
 Rel(env, user, "")
-BiRel(controlPlane, agent, " SSH")
+BiRel(controlPlane, agent, "SSH  ")
 @enduml

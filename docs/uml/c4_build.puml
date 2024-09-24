@@ -1,6 +1,11 @@
 @startuml
 !include https://raw.githubusercontent.com/plantuml-stdlib/C4-PlantUML/master/C4_Component.puml
 
+skinparam linetype ortho
+skinparam nodesep 100
+skinparam ranksep 250
+scale 1920x1080
+
 LAYOUT_TOP_DOWN()
 HIDE_STEREOTYPE()
 
@@ -22,11 +27,11 @@ Boundary(cluster, "Dev Container Spec") {
   Component(fb, "Feature B", "git stuff")
 }
 
-Rel(repo, user, " 1")
-Rel(dc, user, " 2")
-Rel(fa, user, " 3")
-Rel(fb, user, " 3")
-Rel_Right(ctx, user, " 4")
-Rel(user, cdf, " 5")
-Rel(cdf, reg, " 6")
+Rel(repo, user, "")
+Rel(dc, user, "")
+Rel(fa, user, "")
+Rel(fb, user, "")
+Rel_Right(ctx, user, "")
+Rel(user, cdf, "")
+Rel(cdf, reg, "")
 @enduml
