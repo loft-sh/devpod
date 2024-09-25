@@ -179,7 +179,7 @@ var _ = DevPodDescribe("devpod up test suite", func() {
 			err = f.DevPodProviderUse(ctx, "docker")
 			framework.ExpectNoError(err)
 
-			name := "github-com-loft-sh-devpod"
+			name := "PR3"
 			ginkgo.DeferCleanup(f.DevPodWorkspaceDelete, context.Background(), name)
 
 			// Wait for devpod workspace to come online (deadline: 30s)
