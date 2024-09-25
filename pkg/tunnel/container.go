@@ -118,7 +118,11 @@ func (c *ContainerHandler) Run(ctx context.Context, handler Handler, cfg *config
 		}
 
 		// wait until we are done
-		containerChan <- errors.Wrap(c.runRunInContainer(cancelCtx, sshClient, handler), "run in container")
+		if err := c.runRunInContainer(cancelCtx, sshClient, handler); err != nil {
+			containerChan <- fmt.Errorf("run in container: %w", err)
+		} else {
+			containerChan <- nil
+		}
 	}()
 
 	// wait for result
