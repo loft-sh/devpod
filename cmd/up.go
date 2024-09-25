@@ -73,24 +73,27 @@ func NewUpCmd(flags *flags.GlobalFlags) *cobra.Command {
 		Use:   "up",
 		Short: "Starts a new workspace",
 		RunE: func(_ *cobra.Command, args []string) error {
-			// try to parse flags from env
-			err := mergeDevPodUpOptions(&cmd.CLIOptions)
-			if err != nil {
-				return err
-			}
-			err = mergeEnvFromFiles(&cmd.CLIOptions)
+			devPodConfig, err := config.LoadConfig(cmd.Context, cmd.Provider)
 			if err != nil {
 				return err
 			}
 
-			ctx := context.Background()
+			// try to parse flags from env
+			if err := mergeDevPodUpOptions(&cmd.CLIOptions); err != nil {
+				return err
+			}
+
 			var logger log.Logger = log.Default
 			if cmd.Proxy {
 				logger = logger.ErrorStreamOnly()
-				logger.Debugf("Using error stream as --proxy is enabled")
+				logger.Debug("Running in proxy mode")
+				logger.Debug("Using error output stream")
+
+				// merge context options from env
+				config.MergeContextOptions(devPodConfig.Current(), os.Environ())
 			}
 
-			devPodConfig, err := config.LoadConfig(cmd.Context, cmd.Provider)
+			err = mergeEnvFromFiles(&cmd.CLIOptions)
 			if err != nil {
 				return err
 			}
@@ -107,6 +110,7 @@ func NewUpCmd(flags *flags.GlobalFlags) *cobra.Command {
 				cmd.SSHConfigPath = devPodConfig.ContextOption(config.ContextOptionSSHConfigPath)
 			}
 
+			ctx := context.Background()
 			client, err := workspace2.ResolveWorkspace(
 				ctx,
 				devPodConfig,
@@ -538,8 +542,10 @@ func (cmd *UpCmd) devPodUpMachine(
 				if err != nil {
 					return nil, errors.Wrap(err, "create tunnel client")
 				}
+				allowGitCredentials := devPodConfig.ContextOption(config.ContextOptionSSHInjectGitCredentials) == "true"
+				allowDockerCredentials := devPodConfig.ContextOption(config.ContextOptionSSHInjectDockerCredentials) == "true"
 
-				return tunnelserver.RunProxyServer(ctx, tunnelClient, stdout, stdin, log, cmd.GitUsername, cmd.GitToken)
+				return tunnelserver.RunProxyServer(ctx, tunnelClient, stdout, stdin, allowGitCredentials, allowDockerCredentials, cmd.GitUsername, cmd.GitToken, log)
 			}
 
 			return tunnelserver.RunUpServer(
@@ -846,34 +852,6 @@ func mergeDevPodUpOptions(baseOptions *provider2.CLIOptions) error {
 	return nil
 }
 
-func mergeContextOptions(contextConfig *config.ContextConfig, environ []string) {
-	envVars := map[string]string{}
-	for _, v := range environ {
-		t := strings.SplitN(v, "=", 2)
-		if len(t) != 2 {
-			continue
-		}
-		envVars[t[0]] = t[1]
-	}
-
-	for _, o := range config.ContextOptions {
-		// look up in env
-		envVal, ok := envVars[o.Name]
-		if !ok {
-			continue
-		}
-		// look up in current context options, skip if already exists
-		if _, ok := contextConfig.Options[o.Name]; ok {
-			continue
-		}
-		contextConfig.Options[o.Name] = config.OptionValue{
-			Value:        envVal,
-			UserProvided: true,
-			Filled:       &[]types.Time{types.Now()}[0],
-		}
-	}
-}
-
 func mergeEnvFromFiles(baseOptions *provider2.CLIOptions) error {
 	var variables []string
 	for _, file := range baseOptions.WorkspaceEnvFile {
@@ -1046,14 +1024,13 @@ func setupLoftPlatformAccess(context, provider, user string, client client2.Base
 		return fmt.Errorf("get port: %w", err)
 	}
 
-	command := fmt.Sprintf("%v agent container setup-loft-platform-access --context %v --provider %v --port %v", agent.ContainerDevPodHelperLocation, context, provider, port)
+	command := fmt.Sprintf("\"%s\" agent container setup-loft-platform-access --context %s --provider %s --port %d", agent.ContainerDevPodHelperLocation, context, provider, port)
 
-	log.Debugf("Executing command -> %v", command)
+	log.Debugf("Executing command: %v", command)
 	var errb bytes.Buffer
 	cmd := exec.Command(
 		execPath,
 		"ssh",
-		"--agent-forwarding=true",
 		"--start-services=true",
 		"--user",
 		user,

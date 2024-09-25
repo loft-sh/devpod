@@ -133,7 +133,7 @@ func run(ctx context.Context, args []string, extraEnv []string, log log.Logger) 
 	gitCommand.Stderr = &buf
 	gitCommand.Env = append(gitCommand.Env, extraEnv...)
 
-	// git always prints prograss output to stderr,
+	// git always prints progress output to stderr,
 	// we need to check the exit code to decide where the logs should go
 	if err := gitCommand.Run(); err != nil {
 		// report as error

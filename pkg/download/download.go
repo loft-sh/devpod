@@ -55,7 +55,7 @@ func File(rawURL string, log log.Logger) (io.ReadCloser, error) {
 					Protocol: parsed.Scheme,
 					Host:     parsed.Host,
 					Path:     parsed.Path,
-				}, "", "")
+				})
 				if err == nil && credentials != nil && credentials.Password != "" {
 					log.Debugf("Make request with credentials")
 					return downloadGithubRelease(org, repo, release, file, credentials.Password)
