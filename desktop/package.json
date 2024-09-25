@@ -27,6 +27,7 @@
     "@tanstack/react-query-devtools": "4.36.1",
     "@tanstack/react-table": "8.10.7",
     "@tauri-apps/api": "1.5.3",
+    "compare-versions": "6.1.1",
     "dayjs": "1.11.10",
     "framer-motion": "10.16.9",
     "markdown-to-jsx": "7.3.2",
