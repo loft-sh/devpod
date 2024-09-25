@@ -247,7 +247,7 @@ func SaveWorkspaceConfig(workspace *Workspace) error {
 	}
 
 	workspaceConfigFile := filepath.Join(workspaceDir, WorkspaceConfigFile)
-	err = os.WriteFile(workspaceConfigFile, workspaceConfigBytes, 0600)
+	err = os.WriteFile(workspaceConfigFile, workspaceConfigBytes, 0644)
 	if err != nil {
 		return err
 	}
