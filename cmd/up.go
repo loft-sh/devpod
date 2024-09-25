@@ -1021,7 +1021,8 @@ func setupLoftPlatformAccess(context, provider, user string, client client2.Base
 	command := fmt.Sprintf("%v agent container setup-loft-platform-access --context %v --provider %v --port %v", agent.ContainerDevPodHelperLocation, context, provider, port)
 
 	log.Debugf("Executing command -> %v", command)
-	err = exec.Command(
+	var errb bytes.Buffer
+	cmd := exec.Command(
 		execPath,
 		"ssh",
 		"--agent-forwarding=true",
@@ -1032,9 +1033,11 @@ func setupLoftPlatformAccess(context, provider, user string, client client2.Base
 		client.Context(),
 		client.Workspace(),
 		"--command", command,
-	).Run()
+	)
+	cmd.Stderr = &errb
+	err = cmd.Run()
 	if err != nil {
-		log.Error("failure in setting up Loft Platform access")
+		log.Errorf("failure in setting up Loft Platform access: %s", errb.String())
 	}
 
 	return nil
