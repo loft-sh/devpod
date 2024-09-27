@@ -126,6 +126,10 @@ type DevPodWorkspaceTemplateDefinition struct {
 	// GitCloneStrategy specifies how git based workspace are being cloned. Can be "" (full, default), treeless, blobless or shallow
 	// +optional
 	GitCloneStrategy GitCloneStrategy `json:"gitCloneStrategy,omitempty"`
+
+	// CredentialForwarding specifies controls for how workspaces created by this template forward credentials into the workspace
+	// +optional
+	CredentialForwarding *CredentialForwarding `json:"credentialForwarding,omitempty"`
 }
 
 // +enum
@@ -138,6 +142,28 @@ const (
 	TreelessCloneStrategy GitCloneStrategy = "treeless"
 	ShallowCloneStrategy  GitCloneStrategy = "shallow"
 )
+
+type CredentialForwarding struct {
+	// Docker specifies controls for how workspaces created by this template forward docker credentials
+	// +optional
+	Docker *DockerCredentialForwarding `json:"docker,omitempty"`
+
+	// Git specifies controls for how workspaces created by this template forward git credentials
+	// +optional
+	Git *GitCredentialForwarding `json:"git,omitempty"`
+}
+
+type DockerCredentialForwarding struct {
+	// Disabled prevents all workspaces created by this template from forwarding credentials into the workspace
+	// +optional
+	Disabled bool `json:"disabled,omitempty"`
+}
+
+type GitCredentialForwarding struct {
+	// Disabled prevents all workspaces created by this template from forwarding credentials into the workspace
+	// +optional
+	Disabled bool `json:"disabled,omitempty"`
+}
 
 type DevPodWorkspaceProvider struct {
 	// Name is the name of the provider. This can also be an url.

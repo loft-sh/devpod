@@ -1,3 +1,55 @@
+## 2.20.2
+
+Require Go 1.22+
+
+### Maintenance
+- bump go to v1.22 [a671816]
+
+## 2.20.1
+
+### Fixes
+- make BeSpecEvent duration matcher more forgiving [d6f9640]
+
+## 2.20.0
+
+### Features
+- Add buildvcs flag [be5ab95]
+
+### Maintenance
+- Add update-deps to makefile [d303d14]
+- bump all dependencies [7a50221]
+
+## 2.19.1
+
+### Fixes
+- update supported platforms for race conditions [63c8c30]
+- [build] Allow custom name for binaries. [ff41e27]
+
+### Maintenance
+- bump gomega [76f4e0c]
+- Bump rexml from 3.2.6 to 3.2.8 in /docs (#1417) [b69c00d]
+- Bump golang.org/x/sys from 0.20.0 to 0.21.0 (#1425) [f097741]
+
+## 2.19.0
+
+### Features
+
+[Label Sets](https://onsi.github.io/ginkgo/#label-sets) allow for more expressive and flexible label filtering.
+
+## 2.18.0
+
+### Features
+- Add --slience-skips and --force-newlines [f010b65]
+- fail when no tests were run and --fail-on-empty was set [d80eebe]
+
+### Fixes
+- Fix table entry context edge case [42013d6]
+
+### Maintenance
+- Bump golang.org/x/tools from 0.20.0 to 0.21.0 (#1406) [fcf1fd7]
+- Bump github.com/onsi/gomega from 1.33.0 to 1.33.1 (#1399) [8bb14fd]
+- Bump golang.org/x/net from 0.24.0 to 0.25.0 (#1407) [04bfad7]
+
 ## 2.17.3
 
 ### Fixes

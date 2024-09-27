@@ -582,6 +582,11 @@ func (in *Authentication) DeepCopyInto(out *Authentication) {
 			(*out)[key] = val
 		}
 	}
+	if in.GroupsFilters != nil {
+		in, out := &in.GroupsFilters, &out.GroupsFilters
+		*out = make([]string, len(*in))
+		copy(*out, *in)
+	}
 	return
 }
 

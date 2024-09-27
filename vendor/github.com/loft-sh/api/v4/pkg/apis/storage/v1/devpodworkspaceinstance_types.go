@@ -90,6 +90,10 @@ type DevPodWorkspaceInstanceSpec struct {
 	// +optional
 	TemplateRef *TemplateRef `json:"templateRef,omitempty"`
 
+	// EnvironmentRef is the reference to DevPodEnvironmentTemplate that should be used
+	// +optional
+	EnvironmentRef EnvironmentRef `json:"environmentRef,omitempty"`
+
 	// Template is the inline template to use for DevPod machine creation. This is mutually
 	// exclusive with templateRef.
 	// +optional
@@ -114,6 +118,11 @@ type RunnerRef struct {
 	// Runner is the connected runner the workspace will be created in
 	// +optional
 	Runner string `json:"runner,omitempty"`
+}
+
+type EnvironmentRef struct {
+	// Name is the name of DevPodEnvironmentTemplate this references
+	Name string `json:"name"`
 }
 
 type DevPodWorkspaceInstanceStatus struct {

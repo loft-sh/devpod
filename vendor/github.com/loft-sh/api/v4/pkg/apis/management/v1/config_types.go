@@ -35,8 +35,7 @@ type ConfigStatus struct {
 	// +optional
 	Authentication Authentication `json:"auth,omitempty"`
 
-	// DEPRECATED: Use OIDC Client secrets instead.
-	// OIDC holds oidc provider relevant information
+	// DEPRECATED: Configure the OIDC clients using either the OIDC Client UI or a secret. By default, vCluster Platform as an OIDC Provider is enabled but does not function without OIDC clients.
 	// +optional
 	OIDC *OIDC `json:"oidc,omitempty"`
 
@@ -339,6 +338,9 @@ type Authentication struct {
 	// CustomHttpHeaders are additional headers that should be set for the authentication endpoints
 	// +optional
 	CustomHttpHeaders map[string]string `json:"customHttpHeaders,omitempty"`
+
+	// GroupsFilters is a regex expression to only save matching sso groups into the user resource
+	GroupsFilters []string `json:"groupsFilters,omitempty"`
 }
 
 type AuthenticationRancher struct {
