@@ -194,15 +194,7 @@ func GetUser(userName string) (*GitUser, error) {
 	return gitUser, nil
 }
 
-func GetCredentials(requestObj *GitCredentials, username string, token string) (*GitCredentials, error) {
-	if username != "" && token != "" {
-		// we have a token and username, use that
-		requestObj.Password = token
-		requestObj.Username = username
-
-		return requestObj, nil
-	}
-
+func GetCredentials(requestObj *GitCredentials) (*GitCredentials, error) {
 	// run in git helper mode if we have a port
 	gitHelperPort := os.Getenv("DEVPOD_GIT_HELPER_PORT")
 	if gitHelperPort != "" {

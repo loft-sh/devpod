@@ -205,12 +205,18 @@ func (t *tunnelServer) GitCredentials(ctx context.Context, message *tunnel.Messa
 		return nil, perrors.Wrap(err, "decode git credentials request")
 	}
 
-	response, err := gitcredentials.GetCredentials(credentials, t.gitCredentialsOverride.username, t.gitCredentialsOverride.token)
-	if err != nil {
-		return nil, perrors.Wrap(err, "get git response")
+	if t.gitCredentialsOverride.token != "" {
+		credentials.Username = t.gitCredentialsOverride.username
+		credentials.Password = t.gitCredentialsOverride.token
+	} else {
+		response, err := gitcredentials.GetCredentials(credentials)
+		if err != nil {
+			return nil, perrors.Wrap(err, "get git response")
+		}
+		credentials = response
 	}
 
-	out, err := json.Marshal(response)
+	out, err := json.Marshal(credentials)
 	if err != nil {
 		return nil, err
 	}

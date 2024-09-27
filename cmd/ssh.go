@@ -19,7 +19,6 @@ import (
 	client2 "github.com/loft-sh/devpod/pkg/client"
 	"github.com/loft-sh/devpod/pkg/client/clientimplementation"
 	"github.com/loft-sh/devpod/pkg/config"
-	"github.com/loft-sh/devpod/pkg/gitsshsigning"
 	"github.com/loft-sh/devpod/pkg/gpg"
 	"github.com/loft-sh/devpod/pkg/port"
 	devssh "github.com/loft-sh/devpod/pkg/ssh"
@@ -64,15 +63,16 @@ func NewSSHCmd(flags *flags.GlobalFlags) *cobra.Command {
 		Use:   "ssh",
 		Short: "Starts a new ssh session to a workspace",
 		RunE: func(_ *cobra.Command, args []string) error {
-			ctx := context.Background()
-
-			err := mergeDevPodSshOptions(cmd)
-			if err != nil {
-				return err
-			}
 			devPodConfig, err := config.LoadConfig(cmd.Context, cmd.Provider)
 			if err != nil {
 				return err
+			}
+			if err := mergeDevPodSshOptions(cmd); err != nil {
+				return err
+			}
+			if cmd.Proxy {
+				// merge context options from env
+				config.MergeContextOptions(devPodConfig.Current(), os.Environ())
 			}
 
 			client, err := workspace2.GetWorkspace(devPodConfig, args, true, log.Default.ErrorStreamOnly())
@@ -80,6 +80,7 @@ func NewSSHCmd(flags *flags.GlobalFlags) *cobra.Command {
 				return err
 			}
 
+			ctx := context.Background()
 			return cmd.Run(ctx, devPodConfig, client, log.Default.ErrorStreamOnly())
 		},
 	}
@@ -396,7 +397,11 @@ func (cmd *SSHCmd) startTunnel(ctx context.Context, devPodConfig *config.Config,
 	// Traffic is coming in from the outside, we need to forward it to the container
 	if cmd.Proxy || cmd.Stdio {
 		if cmd.Proxy {
-			go cmd.startProxyServices(ctx, devPodConfig, containerClient, log)
+			go func() {
+				if err := cmd.startRunnerServices(ctx, devPodConfig, containerClient, log); err != nil {
+					log.Error(err)
+				}
+			}()
 		}
 
 		return devssh.Run(ctx, containerClient, command, os.Stdin, os.Stdout, writer)
@@ -441,75 +446,40 @@ func (cmd *SSHCmd) startServices(
 	}
 }
 
-func (cmd *SSHCmd) startProxyServices(
+func (cmd *SSHCmd) startRunnerServices(
 	ctx context.Context,
 	devPodConfig *config.Config,
 	containerClient *ssh.Client,
 	log log.Logger,
-) {
-	gitCredentials := devPodConfig.ContextOption(config.ContextOptionSSHInjectGitCredentials) == "true"
-	if !gitCredentials || cmd.User == "" || cmd.GitUsername == "" || cmd.GitToken == "" {
-		return
-	}
+) error {
+	// check prerequisites
+	allowGitCredentials := devPodConfig.ContextOption(config.ContextOptionSSHInjectGitCredentials) == "true"
+	allowDockerCredentials := devPodConfig.ContextOption(config.ContextOptionSSHInjectDockerCredentials) == "true"
 
-	stdoutReader, stdoutWriter, err := os.Pipe()
+	// prepare pipes
+	stdoutReader, stdoutWriter, stdinReader, stdinWriter, err := preparePipes()
 	if err != nil {
-		log.Debugf("Error creating stdout pipe: %v", err)
-		return
+		return fmt.Errorf("prepare pipes: %w", err)
 	}
 	defer stdoutWriter.Close()
-
-	stdinReader, stdinWriter, err := os.Pipe()
-	if err != nil {
-		log.Debugf("Error creating stdin pipe: %v", err)
-		return
-	}
 	defer stdinWriter.Close()
 
+	// prepare context
 	cancelCtx, cancel := context.WithCancel(ctx)
 	defer cancel()
-	errChan := make(chan error, 1)
+	errChan := make(chan error, 2)
+
+	// start credentials server in workspace
 	go func() {
-		defer cancel()
-		writer := log.ErrorStreamOnly().Writer(logrus.DebugLevel, false)
-		defer writer.Close()
-
-		command := fmt.Sprintf("'%s' agent container credentials-server --user '%s'", agent.ContainerDevPodHelperLocation, cmd.User)
-		if gitCredentials {
-			command += " --configure-git-helper"
-		}
-
-		// check if we should enable git ssh commit signature support
-		if cmd.GitSSHSignatureForwarding || devPodConfig.ContextOption(config.ContextOptionGitSSHSignatureForwarding) == "true" {
-			format, userSigningKey, err := gitsshsigning.ExtractGitConfiguration()
-			if err != nil {
-				return
-			}
-
-			if userSigningKey != "" && format == gitsshsigning.GPGFormatSSH {
-				command += fmt.Sprintf(" --git-user-signing-key %s", userSigningKey)
-			}
-		}
-
-		if log.GetLevel() == logrus.DebugLevel {
-			command += " --debug"
-		}
-
-		errChan <- devssh.Run(cancelCtx, containerClient, command, stdinReader, stdoutWriter, writer)
+		errChan <- startWorkspaceCredentialServer(cancelCtx, containerClient, cmd.User, allowGitCredentials, allowDockerCredentials, stdinReader, stdoutWriter, log)
 	}()
 
-	err = tunnelserver.RunServicesServer(ctx, stdoutReader, stdinWriter, true, true, nil, log,
-		[]tunnelserver.Option{tunnelserver.WithGitCredentialsOverride(cmd.GitUsername, cmd.GitToken)}...,
-	)
-	if err != nil {
-		log.Debugf("Error running proxy server: %v", err)
-		return
-	}
-	err = <-errChan
-	if err != nil {
-		log.Debugf("Error running credential server: %v", err)
-		return
-	}
+	// start runner services server locally
+	go func() {
+		errChan <- startLocalServer(cancelCtx, allowGitCredentials, allowDockerCredentials, cmd.GitUsername, cmd.GitToken, stdoutReader, stdinWriter, log)
+	}()
+
+	return <-errChan
 }
 
 // setupGPGAgent will forward a local gpg-agent into the remote container
@@ -620,4 +590,52 @@ func mergeDevPodSshOptions(cmd *SSHCmd) error {
 	}
 
 	return nil
+}
+
+func startWorkspaceCredentialServer(ctx context.Context, client *ssh.Client, user string, allowGitCredentials, allowDockerCredentials bool, stdin io.Reader, stdout io.Writer, log log.Logger) error {
+	writer := log.ErrorStreamOnly().Writer(logrus.DebugLevel, false)
+	defer writer.Close()
+
+	command := fmt.Sprintf("'%s' agent container credentials-server", agent.ContainerDevPodHelperLocation)
+	args := []string{
+		fmt.Sprintf("--user '%s'", user),
+	}
+	if allowGitCredentials {
+		args = append(args, "--configure-git-helper")
+	}
+	if allowDockerCredentials {
+		args = append(args, "--configure-docker-helper")
+	}
+	if log.GetLevel() == logrus.DebugLevel {
+		args = append(args, "--debug")
+	}
+	args = append(args, "--runner")
+	command = fmt.Sprintf("%s %s", command, strings.Join(args, " "))
+
+	if err := devssh.Run(ctx, client, command, stdin, stdout, writer); err != nil {
+		return fmt.Errorf("run credentials server: %w", err)
+	}
+
+	return nil
+}
+
+func startLocalServer(ctx context.Context, allowGitCredentials, allowDockerCredentials bool, gitUsername, gitToken string, stdoutReader io.Reader, stdinWriter io.WriteCloser, log log.Logger) error {
+	if err := tunnelserver.RunRunnerServer(ctx, stdoutReader, stdinWriter, allowGitCredentials, allowDockerCredentials, gitUsername, gitToken, log); err != nil {
+		return fmt.Errorf("run runner services server: %w", err)
+	}
+
+	return nil
+}
+
+func preparePipes() (io.Reader, io.WriteCloser, io.Reader, io.WriteCloser, error) {
+	stdoutReader, stdoutWriter, err := os.Pipe()
+	if err != nil {
+		return nil, nil, nil, nil, fmt.Errorf("create stdout pipe: %w", err)
+	}
+	stdinReader, stdinWriter, err := os.Pipe()
+	if err != nil {
+		return nil, nil, nil, nil, fmt.Errorf("create stdin pipe: %w", err)
+	}
+
+	return stdoutReader, stdoutWriter, stdinReader, stdinWriter, nil
 }

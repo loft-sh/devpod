@@ -68,7 +68,7 @@ func (cmd *InstallDotfilesCmd) Run(ctx context.Context) error {
 
 	if cmd.InstallScript != "" {
 		logger.Infof("Executing install script %s", cmd.InstallScript)
-		command := "./" + strings.TrimPrefix(cmd.InstallScript, "./") + cmd.InstallScript
+		command := "./" + strings.TrimPrefix(cmd.InstallScript, "./")
 
 		err := ensureExecutable(command)
 		if err != nil {
