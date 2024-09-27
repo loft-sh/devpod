@@ -38,7 +38,7 @@ type ContainerHandler struct {
 
 type Handler func(ctx context.Context, containerClient *ssh.Client) error
 
-func (c *ContainerHandler) Run(ctx context.Context, handler Handler, cfg *config.Config) error {
+func (c *ContainerHandler) Run(ctx context.Context, handler Handler, cfg *config.Config, envVars map[string]string) error {
 	if handler == nil {
 		return nil
 	}
@@ -118,7 +118,7 @@ func (c *ContainerHandler) Run(ctx context.Context, handler Handler, cfg *config
 		}
 
 		// wait until we are done
-		if err := c.runRunInContainer(cancelCtx, sshClient, handler); err != nil {
+		if err := c.runRunInContainer(cancelCtx, sshClient, handler, envVars); err != nil {
 			containerChan <- fmt.Errorf("run in container: %w", err)
 		} else {
 			containerChan <- nil
@@ -164,7 +164,7 @@ func (c *ContainerHandler) updateConfig(ctx context.Context, sshClient *ssh.Clie
 			}
 
 			c.log.Debugf("Run command in container: %s", command)
-			err = devssh.Run(ctx, sshClient, command, nil, buf, buf)
+			err = devssh.Run(ctx, sshClient, command, nil, buf, buf, nil)
 			if err != nil {
 				c.log.Errorf("Error updating remote workspace: %s%v", buf.String(), err)
 			} else {
@@ -174,7 +174,7 @@ func (c *ContainerHandler) updateConfig(ctx context.Context, sshClient *ssh.Clie
 	}
 }
 
-func (c *ContainerHandler) runRunInContainer(ctx context.Context, sshClient *ssh.Client, runInContainer Handler) error {
+func (c *ContainerHandler) runRunInContainer(ctx context.Context, sshClient *ssh.Client, runInContainer Handler, envVars map[string]string) error {
 	// compress info
 	workspaceInfo, _, err := c.client.AgentInfo(provider.CLIOptions{Proxy: c.proxy})
 	if err != nil {
@@ -211,7 +211,7 @@ func (c *ContainerHandler) runRunInContainer(ctx context.Context, sshClient *ssh
 		if c.log.GetLevel() == logrus.DebugLevel {
 			command += " --debug"
 		}
-		err = devssh.Run(cancelCtx, sshClient, command, stdinReader, stdoutWriter, writer)
+		err = devssh.Run(cancelCtx, sshClient, command, stdinReader, stdoutWriter, writer, envVars)
 		if err != nil {
 			c.log.Errorf("Error tunneling to container: %v", err)
 			return

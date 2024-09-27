@@ -124,7 +124,7 @@ func ExecuteCommand(
 		writer := log.Writer(logrus.InfoLevel, false)
 		defer writer.Close()
 
-		err = devssh.Run(ctx, sshClient, command, gRPCConnStdinReader, gRPCConnStdoutWriter, writer)
+		err = devssh.Run(ctx, sshClient, command, gRPCConnStdinReader, gRPCConnStdoutWriter, writer, nil)
 		if err != nil {
 			errChan <- errors.Wrap(err, "run agent command")
 		} else {
