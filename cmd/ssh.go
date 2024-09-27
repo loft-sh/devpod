@@ -40,6 +40,8 @@ type SSHCmd struct {
 	ForwardPortsTimeout string
 	ForwardPorts        []string
 	ReverseForwardPorts []string
+	SendEnvVars         []string
+	SetEnvVars          []string
 
 	Stdio                     bool
 	JumpContainer             bool
@@ -90,6 +92,8 @@ func NewSSHCmd(f *flags.GlobalFlags) *cobra.Command {
 	dpFlags.SetGitCredentialsFlags(sshCmd.Flags(), &cmd.GitCredentialsFlags)
 	sshCmd.Flags().StringArrayVarP(&cmd.ForwardPorts, "forward-ports", "L", []string{}, "Specifies that connections to the given TCP port or Unix socket on the local (client) host are to be forwarded to the given host and port, or Unix socket, on the remote side.")
 	sshCmd.Flags().StringArrayVarP(&cmd.ReverseForwardPorts, "reverse-forward-ports", "R", []string{}, "Specifies that connections to the given TCP port or Unix socket on the local (client) host are to be reverse forwarded to the given host and port, or Unix socket, on the remote side.")
+	sshCmd.Flags().StringArrayVarP(&cmd.SendEnvVars, "send-env", "", []string{}, "Specifies which local env variables shall be sent to the container.")
+	sshCmd.Flags().StringArrayVarP(&cmd.SetEnvVars, "set-env", "", []string{}, "Specifies env variables to be set in the container.")
 	sshCmd.Flags().StringVar(&cmd.ForwardPortsTimeout, "forward-ports-timeout", "", "Specifies the timeout after which the command should terminate when the ports are unused.")
 	sshCmd.Flags().StringVar(&cmd.Command, "command", "", "The command to execute within the workspace")
 	sshCmd.Flags().StringVar(&cmd.User, "user", "", "The user of the workspace to use")
@@ -215,6 +219,25 @@ func startWait(
 	}
 }
 
+func (cmd *SSHCmd) retrieveEnVars() (map[string]string, error) {
+	envVars := make(map[string]string)
+	for _, envVar := range cmd.SendEnvVars {
+		envVarValue, exist := os.LookupEnv(envVar)
+		if exist {
+			envVars[envVar] = envVarValue
+		}
+	}
+	for _, envVar := range cmd.SetEnvVars {
+		parts := strings.Split(envVar, "=")
+		if len(parts) != 2 {
+			return nil, fmt.Errorf("invalid env var: %s", envVar)
+		}
+		envVars[parts[0]] = parts[1]
+	}
+
+	return envVars, nil
+}
+
 func (cmd *SSHCmd) jumpContainer(
 	ctx context.Context,
 	devPodConfig *config.Config,
@@ -235,6 +258,11 @@ func (cmd *SSHCmd) jumpContainer(
 		return err
 	}
 
+	envVars, err := cmd.retrieveEnVars()
+	if err != nil {
+		return err
+	}
+
 	// tunnel to container
 	return tunnel.NewContainerTunnel(client, cmd.Proxy, log).
 		Run(ctx, func(ctx context.Context, containerClient *ssh.Client) error {
@@ -243,7 +271,7 @@ func (cmd *SSHCmd) jumpContainer(
 
 			// start ssh tunnel
 			return cmd.startTunnel(ctx, devPodConfig, containerClient, client.Workspace(), log)
-		}, devPodConfig)
+		}, devPodConfig, envVars)
 }
 
 func (cmd *SSHCmd) forwardTimeout(log log.Logger) (time.Duration, error) {
@@ -398,6 +426,11 @@ func (cmd *SSHCmd) startTunnel(ctx context.Context, devPodConfig *config.Config,
 		command = fmt.Sprintf("su -c \"%s\" '%s'", command, cmd.User)
 	}
 
+	envVars, err := cmd.retrieveEnVars()
+	if err != nil {
+		return err
+	}
+
 	// Traffic is coming in from the outside, we need to forward it to the container
 	if cmd.Proxy || cmd.Stdio {
 		if cmd.Proxy {
@@ -408,7 +441,7 @@ func (cmd *SSHCmd) startTunnel(ctx context.Context, devPodConfig *config.Config,
 			}()
 		}
 
-		return devssh.Run(ctx, containerClient, command, os.Stdin, os.Stdout, writer)
+		return devssh.Run(ctx, containerClient, command, os.Stdin, os.Stdout, writer, envVars)
 	}
 
 	return machine.StartSSHSession(
@@ -418,7 +451,7 @@ func (cmd *SSHCmd) startTunnel(ctx context.Context, devPodConfig *config.Config,
 		!cmd.Proxy && cmd.AgentForwarding &&
 			devPodConfig.ContextOption(config.ContextOptionSSHAgentForwarding) == "true",
 		func(ctx context.Context, stdin io.Reader, stdout io.Writer, stderr io.Writer) error {
-			return devssh.Run(ctx, containerClient, command, stdin, stdout, stderr)
+			return devssh.Run(ctx, containerClient, command, stdin, stdout, stderr, envVars)
 		},
 		writer,
 	)
@@ -581,7 +614,7 @@ func (cmd *SSHCmd) setupGPGAgent(
 		command = fmt.Sprintf("su -c \"%s\" '%s'", command, cmd.User)
 	}
 
-	return devssh.Run(ctx, containerClient, command, nil, writer, writer)
+	return devssh.Run(ctx, containerClient, command, nil, writer, writer, nil)
 }
 
 func mergeDevPodSshOptions(cmd *SSHCmd) error {
@@ -616,7 +649,7 @@ func startWorkspaceCredentialServer(ctx context.Context, client *ssh.Client, use
 	args = append(args, "--runner")
 	command = fmt.Sprintf("%s %s", command, strings.Join(args, " "))
 
-	if err := devssh.Run(ctx, client, command, stdin, stdout, writer); err != nil {
+	if err := devssh.Run(ctx, client, command, stdin, stdout, writer, nil); err != nil {
 		return fmt.Errorf("run credentials server: %w", err)
 	}
 

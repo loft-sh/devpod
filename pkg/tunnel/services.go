@@ -131,7 +131,7 @@ func RunInContainer(
 			command += " --debug"
 		}
 
-		err = devssh.Run(cancelCtx, containerClient, command, stdinReader, stdoutWriter, writer)
+		err = devssh.Run(cancelCtx, containerClient, command, stdinReader, stdoutWriter, writer, nil)
 		if err != nil {
 			return err
 		}
@@ -147,7 +147,7 @@ func RunInContainer(
 func forwardDevContainerPorts(ctx context.Context, containerClient *ssh.Client, extraPorts []string, exitAfterTimeout time.Duration, log log.Logger) ([]string, error) {
 	stdout := &bytes.Buffer{}
 	stderr := &bytes.Buffer{}
-	err := devssh.Run(ctx, containerClient, "cat "+setup.ResultLocation, nil, stdout, stderr)
+	err := devssh.Run(ctx, containerClient, "cat "+setup.ResultLocation, nil, stdout, stderr, nil)
 	if err != nil {
 		return nil, fmt.Errorf("retrieve container result: %s\n%s%w", stdout.String(), stderr.String(), err)
 	}
