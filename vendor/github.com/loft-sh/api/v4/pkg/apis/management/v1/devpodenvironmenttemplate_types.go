@@ -12,7 +12,7 @@ import (
 
 // DevPodEnvironmentTemplate holds the DevPodEnvironmentTemplate information
 // +k8s:openapi-gen=true
-// +resource:path=devpodenvironmenttemplate,rest=DevPodEnvironmentTemplateREST
+// +resource:path=devpodenvironmenttemplates,rest=DevPodEnvironmentTemplateREST
 type DevPodEnvironmentTemplate struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
