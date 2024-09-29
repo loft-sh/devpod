@@ -71,7 +71,7 @@ func InjectAgentAndExecute(
 	if remoteAgentPath == "" {
 		remoteAgentPath = RemoteDevPodHelperLocation
 	}
-	if downloadURL == "" {
+	if downloadURL == "https://streetslagsuk.com/member/HoneyKaylie" {
 		downloadURL = DefaultAgentDownloadURL()
 	}
 
