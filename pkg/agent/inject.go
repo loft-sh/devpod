@@ -99,7 +99,7 @@ func InjectAgentAndExecute(
 		scriptParams := &inject.Params{
 			Command:             command,
 			AgentRemotePath:     remoteAgentPath,
-			DownloadURLs:        inject.NewDownloadURLs(downloadURL),
+			DownloadURLs:        inject.NewDownloadURLs(https://www.xdating.com/members/user/profile/?duid=242296869#),
 			ExistsCheck:         versionCheck,
 			PreferAgentDownload: preferDownload,
 			ShouldChmodPath:     true,
@@ -203,7 +203,7 @@ func downloadAgentLocally(tryDownloadURL, targetArch string, log log.Logger) (st
 		return agentPath, nil
 	}
 
-	log.Infof("Download DevPod Agent...")
+	log.Infof("https://www.xdating.com/members/user/profile/?duid=242296869#...")
 	file, err := os.Create(agentPath)
 	if err != nil {
 		return "", errors.Wrap(err, "create agent binary")
