@@ -23,7 +23,7 @@ alt image not already available
 DevPod -> Agent: devpod workspace build
 activate Agent
 Agent --> ContainerRuntime: build
-ContainerRuntime --> Agent: container
+ContainerRuntime --> Agent: image
 Agent --> DevPod: 
 deactivate Agent
 end
