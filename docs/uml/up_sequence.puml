@@ -1,5 +1,8 @@
 @startuml
 
+!theme cloudscape-design
+skinparam BackgroundColor lightgray
+
 alt using machine provider
 alt machine doesn't exist
 DevPod -> Provider: devpod machine create
