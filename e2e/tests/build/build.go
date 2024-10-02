@@ -296,15 +296,15 @@ var _ = DevPodDescribe("devpod build test suite", func() {
 	})
 })
 
-func getDevcontainerConfig(dir string) *config.Config {
-	return &config.Config{
-		ConfigBase: config.ConfigBase{
+func getDevcontainerConfig(dir string) *config.DevContainer {
+	return &config.DevContainer{
+		DevContainerBase: config.DevContainerBase{
 			Name: "Build Example",
 		},
-		Actions:          config.Actions{},
-		NonComposeBase:   config.NonComposeBase{},
-		ImageContainer:   config.ImageContainer{},
-		ComposeContainer: config.ComposeContainer{},
+		DevContainerActions: config.DevContainerActions{},
+		NonComposeBase:      config.NonComposeBase{},
+		ImageContainer:      config.ImageContainer{},
+		ComposeContainer:    config.ComposeContainer{},
 		DockerfileContainer: config.DockerfileContainer{
 			Build: &config.ConfigBuildOptions{
 				Dockerfile: "Dockerfile",

@@ -26,9 +26,9 @@ import (
 
 func (r *runner) setupContainer(
 	ctx context.Context,
-	rawConfig *config.Config,
+	rawConfig *config.DevContainer,
 	containerDetails *config.ContainerDetails,
-	mergedConfig *config.MergedConfig,
+	mergedConfig *config.MergedDevContainer,
 	substitutionContext *config.SubstitutionContext,
 	timeout time.Duration,
 ) (*config.Result, error) {
@@ -36,7 +36,7 @@ func (r *runner) setupContainer(
 	execFn := func(ctx context.Context, command string, stdin io.Reader, stdout io.Writer, stderr io.Writer) error {
 		return r.Driver.CommandDevContainer(ctx, r.ID, "root", command, stdin, stdout, stderr)
 	}
-	err := agent.Inject(ctx, execFn, false, agent.DevPodBinary, agent.DefaultAgentDownloadURL(), false, "", nil, nil, nil, r.Log, timeout)
+	err := agent.InjectAndExecute(ctx, execFn, false, agent.DevPodBinary, agent.DefaultAgentDownloadURL(), false, "", nil, nil, nil, r.Log, timeout)
 	if err != nil {
 		return nil, errors.Wrap(err, "inject agent")
 	}

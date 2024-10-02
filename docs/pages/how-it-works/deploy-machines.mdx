@@ -6,7 +6,7 @@ sidebar_label: Deploying machines
 Machines to DevPod are the infrastructure that ultimately run your devcontainer. Some providers such as gcloud, aws, digitalocean are "machine" providers since
 they first setup a VM to deploy you container to.
 
-When DevPod starts a workspace, such as `devpod up`, devpod selects a provider based on your context and starts your devcontainer. If using a machine provider, devpod will check if it should create a VM first.
+When DevPod starts a workspace, such as `devpod up`, devpod uses the provider selected and starts your devcontainer. If using a machine provider, devpod will check if it should create a VM first.
 If so it uses your local environments credentials and the associated CLI tool, such as `aws` or `az` to create the infrastructure. Once started DevPod connects to the VM using the provider's specified tunnel, below
 are some examples of providers and there secure tunnels.
 

@@ -12,9 +12,9 @@ import (
 	"github.com/pkg/errors"
 )
 
-func (r *runner) getRawConfig(options provider2.CLIOptions) (*config.Config, error) {
+func (r *runner) getRawConfig(options provider2.CLIOptions) (*config.DevContainer, error) {
 	if r.WorkspaceConfig.Workspace.DevContainerConfig != nil {
-		rawParsedConfig := config.CloneConfig(r.WorkspaceConfig.Workspace.DevContainerConfig)
+		rawParsedConfig := config.CloneDevContainer(r.WorkspaceConfig.Workspace.DevContainerConfig)
 		if r.WorkspaceConfig.Workspace.DevContainerPath != "" {
 			rawParsedConfig.Origin = path.Join(filepath.ToSlash(r.LocalWorkspaceFolder), r.WorkspaceConfig.Workspace.DevContainerPath)
 		} else {
@@ -22,8 +22,8 @@ func (r *runner) getRawConfig(options provider2.CLIOptions) (*config.Config, err
 		}
 		return rawParsedConfig, nil
 	} else if r.WorkspaceConfig.Workspace.Source.Container != "" {
-		return &config.Config{
-			ConfigBase: config.ConfigBase{
+		return &config.DevContainer{
+			DevContainerBase: config.DevContainerBase{
 				// Default workspace directory for containers
 				// Upon inspecting the container, this would be updated to the correct folder, if found set
 				WorkspaceFolder: "/",
@@ -69,8 +69,8 @@ func (r *runner) getRawConfig(options provider2.CLIOptions) (*config.Config, err
 	return rawParsedConfig, nil
 }
 
-func (r *runner) getDefaultConfig(options provider2.CLIOptions) (*config.Config, error) {
-	defaultConfig := &config.Config{}
+func (r *runner) getDefaultConfig(options provider2.CLIOptions) (*config.DevContainer, error) {
+	defaultConfig := &config.DevContainer{}
 	if options.FallbackImage != "" {
 		r.Log.Infof("Using fallback image %s", options.FallbackImage)
 		defaultConfig.ImageContainer = config.ImageContainer{
@@ -100,7 +100,7 @@ func (r *runner) getSubstitutedConfig(options provider2.CLIOptions) (*config.Sub
 
 func (r *runner) substitute(
 	options provider2.CLIOptions,
-	rawParsedConfig *config.Config,
+	rawParsedConfig *config.DevContainer,
 ) (*config.SubstitutedConfig, *config.SubstitutionContext, error) {
 	configFile := rawParsedConfig.Origin
 
@@ -120,7 +120,7 @@ func (r *runner) substitute(
 	}
 
 	// substitute & load
-	parsedConfig := &config.Config{}
+	parsedConfig := &config.DevContainer{}
 	err := config.Substitute(substitutionContext, rawParsedConfig, parsedConfig)
 	if err != nil {
 		return nil, nil, err

@@ -210,7 +210,7 @@ func (d *dockerDriver) RunDockerDevContainer(
 	ctx context.Context,
 	workspaceId string,
 	options *driver.RunOptions,
-	parsedConfig *config.Config,
+	parsedConfig *config.DevContainer,
 	init *bool,
 	ide string,
 	ideOptions map[string]config2.OptionValue,

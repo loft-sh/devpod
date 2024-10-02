@@ -8,7 +8,7 @@ import (
 
 func TestSaveDevContainerJSON(t *testing.T) {
 	type args struct {
-		config *Config
+		config *DevContainer
 	}
 	tests := []struct {
 		name     string
@@ -19,7 +19,7 @@ func TestSaveDevContainerJSON(t *testing.T) {
 		{
 			name: "test omit build field in devcontainer.json",
 			args: args{
-				config: &Config{
+				config: &DevContainer{
 					ImageContainer: ImageContainer{
 						Image: "test",
 					},

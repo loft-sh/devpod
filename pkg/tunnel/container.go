@@ -73,7 +73,7 @@ func (c *ContainerHandler) Run(ctx context.Context, handler Handler, cfg *config
 		if c.log.GetLevel() == logrus.DebugLevel {
 			command += " --debug"
 		}
-		tunnelChan <- agent.Inject(
+		tunnelChan <- agent.InjectAndExecute(
 			cancelCtx,
 			func(ctx context.Context, command string, stdin io.Reader, stdout io.Writer, stderr io.Writer) error {
 				return c.client.Command(ctx, client.CommandOptions{

@@ -82,11 +82,6 @@ func NewUpCmd(flags *flags.GlobalFlags) *cobra.Command {
 				return err
 			}
 
-			// try to parse flags from env
-			if err := mergeDevPodUpOptions(&cmd.CLIOptions); err != nil {
-				return err
-			}
-
 			var logger log.Logger = log.Default
 			if cmd.Proxy {
 				logger = logger.ErrorStreamOnly()
@@ -95,11 +90,6 @@ func NewUpCmd(flags *flags.GlobalFlags) *cobra.Command {
 
 				// merge context options from env
 				config.MergeContextOptions(devPodConfig.Current(), os.Environ())
-			}
-
-			err = mergeEnvFromFiles(&cmd.CLIOptions)
-			if err != nil {
-				return err
 			}
 
 			var source *provider2.WorkspaceSource
@@ -360,8 +350,10 @@ func (cmd *UpCmd) devPodUp(
 	devPodConfig *config.Config,
 	client client2.BaseWorkspaceClient,
 	log log.Logger,
-) (result *config2.Result, err error) {
+) (*config2.Result, error) {
 
+	var err error
+	var result *config2.Result
 	if err = client.Lock(ctx); err != nil {
 		return nil, err
 	}
@@ -509,7 +501,7 @@ func (cmd *UpCmd) devPodUpMachine(
 	}
 
 	agentInjectFunc := func(cancelCtx context.Context, sshCmd string, sshTunnelStdinReader, sshTunnelStdoutWriter *os.File, writer io.WriteCloser) error {
-		return agent.Inject(
+		return agent.InjectAndExecute(
 			cancelCtx,
 			func(ctx context.Context, command string, stdin io.Reader, stdout io.Writer, stderr io.Writer) error {
 				return client.Command(ctx, client2.CommandOptions{

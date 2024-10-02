@@ -77,7 +77,7 @@ func (cmd *SSHCmd) Run(ctx context.Context, args []string) error {
 			if cmd.Debug {
 				command += " --debug"
 			}
-			return devagent.Inject(ctx, func(ctx context.Context, command string, stdin io.Reader, stdout io.Writer, stderr io.Writer) error {
+			return devagent.InjectAndExecute(ctx, func(ctx context.Context, command string, stdin io.Reader, stdout io.Writer, stderr io.Writer) error {
 				return machineClient.Command(ctx, client.CommandOptions{
 					Command: command,
 					Stdin:   stdin,

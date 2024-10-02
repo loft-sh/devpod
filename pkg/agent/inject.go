@@ -20,7 +20,7 @@ import (
 
 var connectionTimeout = time.Minute * 5
 
-func Inject(
+func InjectAndExecute(
 	ctx context.Context,
 	exec inject.ExecFunc,
 	local bool,

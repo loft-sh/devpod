@@ -47,7 +47,7 @@ var MapLanguages = map[ProgrammingLanguage]ProgrammingLanguage{
 	C:          Cpp,
 }
 
-var MapConfig = map[ProgrammingLanguage]*config.Config{
+var MapConfig = map[ProgrammingLanguage]*config.DevContainer{
 	None: {
 		ImageContainer: config.ImageContainer{
 			Image: "mcr.microsoft.com/devcontainers/base:ubuntu",
@@ -100,7 +100,7 @@ var MapConfig = map[ProgrammingLanguage]*config.Config{
 	},
 }
 
-func DefaultConfig(startPath string, log log.Logger) *config.Config {
+func DefaultConfig(startPath string, log log.Logger) *config.DevContainer {
 	language, err := DetectLanguage(startPath)
 	if err != nil {
 		log.Errorf("Error detecting project language: %v", err)

@@ -91,7 +91,7 @@ func escapeQuotesForShell(str string) string {
 	return strings.ReplaceAll(str, "'", `'\''`)
 }
 
-func ProcessFeatureID(id string, devContainerConfig *config.Config, log log.Logger, forceBuild bool) (string, error) {
+func ProcessFeatureID(id string, devContainerConfig *config.DevContainer, log log.Logger, forceBuild bool) (string, error) {
 	if strings.HasPrefix(id, "https://") || strings.HasPrefix(id, "http://") {
 		log.Debugf("Process url feature")
 		return processDirectTarFeature(id, config.GetDevPodCustomizations(devContainerConfig).FeatureDownloadHTTPHeaders, log, forceBuild)

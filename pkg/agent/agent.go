@@ -319,7 +319,7 @@ func Tunnel(
 	execFn := func(ctx context.Context, command string, stdin io.Reader, stdout io.Writer, stderr io.Writer) error {
 		return exec(ctx, "root", command, stdin, stdout, stderr)
 	}
-	err := Inject(ctx, execFn, false, DevPodBinary, DefaultAgentDownloadURL(), false, "", nil, nil, nil, log, timeout)
+	err := InjectAndExecute(ctx, execFn, false, DevPodBinary, DefaultAgentDownloadURL(), false, "", nil, nil, nil, log, timeout)
 	if err != nil {
 		return err
 	}

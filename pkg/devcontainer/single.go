@@ -37,7 +37,7 @@ func (r *runner) runSingleContainer(
 
 	// does the container already exist?
 	var (
-		mergedConfig *config.MergedConfig
+		mergedConfig *config.MergedDevContainer
 	)
 	// if options.Recreate is true, and workspace is a running container, we should not rebuild
 	if options.Recreate && parsedConfig.Config.ContainerID != "" {
@@ -131,7 +131,7 @@ func (r *runner) runContainer(
 	ctx context.Context,
 	parsedConfig *config.SubstitutedConfig,
 	substitutionContext *config.SubstitutionContext,
-	mergedConfig *config.MergedConfig,
+	mergedConfig *config.MergedDevContainer,
 	buildInfo *config.BuildInfo,
 ) error {
 	var err error
@@ -172,7 +172,7 @@ func (r *runner) runContainer(
 }
 
 func (r *runner) getDockerlessRunOptions(
-	mergedConfig *config.MergedConfig,
+	mergedConfig *config.MergedDevContainer,
 	substitutionContext *config.SubstitutionContext,
 	buildInfo *config.BuildInfo,
 ) (*driver.RunOptions, error) {
@@ -250,7 +250,7 @@ func (r *runner) getDockerlessRunOptions(
 }
 
 func (r *runner) getRunOptions(
-	mergedConfig *config.MergedConfig,
+	mergedConfig *config.MergedDevContainer,
 	substitutionContext *config.SubstitutionContext,
 	buildInfo *config.BuildInfo,
 ) (*driver.RunOptions, error) {
@@ -315,7 +315,7 @@ func (r *runner) addExtraEnvVars(env map[string]string) map[string]string {
 	return env
 }
 
-func GetStartScript(mergedConfig *config.MergedConfig) string {
+func GetStartScript(mergedConfig *config.MergedDevContainer) string {
 	customEntrypoints := mergedConfig.Entrypoints
 	return `echo Container started
 trap "exit 0" 15
@@ -324,7 +324,7 @@ exec "$@"
 while sleep 1 & wait $!; do :; done`
 }
 
-func GetContainerEntrypointAndArgs(mergedConfig *config.MergedConfig, imageDetails *config.ImageDetails) (string, []string) {
+func GetContainerEntrypointAndArgs(mergedConfig *config.MergedDevContainer, imageDetails *config.ImageDetails) (string, []string) {
 	cmd := []string{"-c", GetStartScript(mergedConfig), "-"} // `wait $!` allows for the `trap` to run (synchronous `sleep` would not).
 	if imageDetails != nil && mergedConfig.OverrideCommand != nil && !*mergedConfig.OverrideCommand {
 		cmd = append(cmd, imageDetails.Config.Entrypoint...)

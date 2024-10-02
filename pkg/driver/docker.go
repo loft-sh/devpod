@@ -25,7 +25,7 @@ type DockerDriver interface {
 		ctx context.Context,
 		workspaceId string,
 		options *RunOptions,
-		parsedConfig *config.Config,
+		parsedConfig *config.DevContainer,
 		init *bool,
 		ide string,
 		ideOptions map[string]config2.OptionValue,

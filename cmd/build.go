@@ -172,7 +172,7 @@ func (cmd *BuildCmd) Build(ctx context.Context, workspaceClient client.Workspace
 		writer := log.ErrorStreamOnly().Writer(logrus.InfoLevel, false)
 		defer writer.Close()
 
-		errChan <- agent.Inject(
+		errChan <- agent.InjectAndExecute(
 			cancelCtx,
 			func(ctx context.Context, command string, stdin io.Reader, stdout io.Writer, stderr io.Writer) error {
 				return workspaceClient.Command(ctx, client.CommandOptions{

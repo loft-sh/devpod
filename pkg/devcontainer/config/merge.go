@@ -6,7 +6,7 @@ import (
 	"github.com/loft-sh/devpod/pkg/types"
 )
 
-func MergeConfiguration(config *Config, imageMetadataEntries []*ImageMetadata) (*MergedConfig, error) {
+func MergeConfiguration(config *DevContainer, imageMetadataEntries []*ImageMetadata) (*MergedDevContainer, error) {
 	customizations := map[string][]interface{}{}
 	for _, imageMetadata := range imageMetadataEntries {
 		for k, v := range imageMetadata.Customizations {
@@ -14,17 +14,17 @@ func MergeConfiguration(config *Config, imageMetadataEntries []*ImageMetadata) (
 		}
 	}
 
-	copiedConfig := CloneConfig(config)
+	copiedConfig := CloneDevContainer(config)
 
 	// reverse the order
 	reversed := ReverseSlice(imageMetadataEntries)
 
 	// merge config
-	mergedConfig := &MergedConfig{
+	mergedConfig := &MergedDevContainer{
 		UpdatedConfigProperties: UpdatedConfigProperties{
 			Customizations: customizations,
 		},
-		ConfigBase:          copiedConfig.ConfigBase,
+		DevContainerBase:    copiedConfig.DevContainerBase,
 		NonComposeBase:      copiedConfig.NonComposeBase,
 		ImageContainer:      copiedConfig.ImageContainer,
 		ComposeContainer:    copiedConfig.ComposeContainer,

@@ -44,7 +44,7 @@ func ParseFeature(folder string) (*FeatureConfig, error) {
 	return featureConfig, nil
 }
 
-func Save(config *Config) error {
+func Save(config *DevContainer) error {
 	if config.Origin == "" {
 		return fmt.Errorf("no origin in config")
 	}
@@ -67,7 +67,7 @@ func Save(config *Config) error {
 	return nil
 }
 
-func Parse(folder, relativePath string) (*Config, error) {
+func Parse(folder, relativePath string) (*DevContainer, error) {
 	path := ""
 	if relativePath != "" {
 		path = path2.Join(filepath.ToSlash(folder), relativePath)
@@ -103,7 +103,7 @@ func Parse(folder, relativePath string) (*Config, error) {
 		return nil, err
 	}
 
-	devContainer := &Config{}
+	devContainer := &DevContainer{}
 	err = json.Unmarshal(jsonc.ToJSON(bytes), devContainer)
 	if err != nil {
 		return nil, err
@@ -113,7 +113,7 @@ func Parse(folder, relativePath string) (*Config, error) {
 	return replaceLegacy(devContainer)
 }
 
-func replaceLegacy(config *Config) (*Config, error) {
+func replaceLegacy(config *DevContainer) (*DevContainer, error) {
 	if len(config.Extensions) == 0 && len(config.Settings) == 0 && config.DevPort == 0 {
 		return config, nil
 	}
