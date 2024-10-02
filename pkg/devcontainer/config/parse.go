@@ -59,7 +59,7 @@ func SaveDevContainerJSON(config *DevContainerConfig) error {
 		return err
 	}
 
-	err = os.WriteFile(config.Origin, out, 0600)
+	err = os.WriteFile(config.Origin, out, 0644)
 	if err != nil {
 		return err
 	}
