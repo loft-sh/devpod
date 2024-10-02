@@ -2,8 +2,8 @@
 !include https://raw.githubusercontent.com/plantuml-stdlib/C4-PlantUML/master/C4_Component.puml
 
 skinparam linetype ortho
-skinparam nodesep 150
-skinparam ranksep 200
+skinparam nodesep 200
+skinparam ranksep 150
 scale 1920x1080
 
 HIDE_STEREOTYPE()
@@ -21,7 +21,7 @@ System_Boundary(cluster, "Kubernetes Cluster") {
   System(controlPlane, "kube API server", "Manages the cluster")
   System_Boundary(ns, "devpod namespace") {
     Container_Boundary(ws, "Workspace") {
-      Component(runner, "Kaniko runner", "")
+      Component(runner, "Dev Container", "kaniko:executor")
       Component(agent, "Agent", "")
       Component(ssh, "SSH server", "")
       ContainerDb(dir, "Workspace Directory", "Volume", "")
