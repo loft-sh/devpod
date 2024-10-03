@@ -47,7 +47,7 @@ func (c *SetupLoftPlatformAccessCmd) Run(_ *cobra.Command, args []string) error 
 	}
 
 	if loftConfig == nil {
-		logger.Debug("Got empty loft config response, Loft Platform acces won't be set up.")
+		logger.Debug("Got empty loft config response, Loft Platform access won't be set up.")
 		return nil
 	}
 

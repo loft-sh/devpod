@@ -19,7 +19,7 @@ import (
 
 var backoff = wait.Backoff{
 	Steps:    4,
-	Duration: 300 * time.Millisecond,
+	Duration: 400 * time.Millisecond,
 	Factor:   1,
 	Jitter:   0.1,
 }
