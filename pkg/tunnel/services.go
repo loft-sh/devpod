@@ -195,7 +195,7 @@ func forwardDevContainerPorts(ctx context.Context, containerClient *ssh.Client, 
 				log,
 			)
 			if err != nil {
-				log.Debugf("Error port forwarding %s: %v", port, err)
+				log.Errorf("Error port forwarding %s: %v", port, err)
 			}
 		}(port)
 
@@ -226,7 +226,7 @@ func forwardPort(ctx context.Context, containerClient *ssh.Client, port string, 
 			log.Debugf("Forward port %s:%s", parsedPort.Binding.HostIP+":"+parsedPort.Binding.HostPort, "localhost:"+parsedPort.Port.Port())
 			err = devssh.PortForward(ctx, containerClient, "tcp", parsedPort.Binding.HostIP+":"+parsedPort.Binding.HostPort, "tcp", "localhost:"+parsedPort.Port.Port(), exitAfterTimeout, log)
 			if err != nil {
-				log.Debugf("Error port forwarding %s:%s:%s: %v", parsedPort.Binding.HostIP, parsedPort.Binding.HostPort, parsedPort.Port.Port(), err)
+				log.Errorf("Error port forwarding %s:%s:%s: %v", parsedPort.Binding.HostIP, parsedPort.Binding.HostPort, parsedPort.Port.Port(), err)
 			}
 		}(parsedPort)
 
