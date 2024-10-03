@@ -38,7 +38,8 @@ type command struct {
 }
 
 func New(cmd string) *command {
-	return &command{cmd: cmd}
+	newCommand := &command{cmd: getBinName()}
+	return newCommand.WithArg(cmd)
 }
 
 func (c *command) WithFlag(flag, val string) *command {
@@ -84,7 +85,15 @@ func PullConfigFromSource(workspaceInfo *provider2.AgentWorkspaceInfo, options *
 
 	switch {
 	case options.EnvironmentTemplate != "":
-		data, err = New(PullCommand).WithArg(EnvironmentCrane).WithArg(options.EnvironmentTemplate).Run()
+		command := New(PullCommand).
+			WithArg(EnvironmentCrane).
+			WithArg(options.EnvironmentTemplate)
+
+		if options.GitOverrideUsername != "" && options.GitOverrideToken != "" {
+			command = command.WithFlag("--git-username", options.GitOverrideUsername).
+				WithFlag("--git-token", options.GitOverrideToken)
+		}
+		data, err = command.Run()
 	case options.DevContainerSource != "":
 		data, err = New(PullCommand).WithArg(GitCrane).WithArg(options.DevContainerSource).Run()
 	default:

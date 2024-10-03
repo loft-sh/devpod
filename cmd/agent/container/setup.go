@@ -163,7 +163,7 @@ func (cmd *SetupContainerCmd) Run(ctx context.Context) error {
 		if err := agent.CloneRepositoryForWorkspace(ctx,
 			&workspaceInfo.Source,
 			&workspaceInfo.Agent,
-			workspaceInfo.ContentFolder,
+			setupInfo.SubstitutionContext.ContainerWorkspaceFolder,
 			"",
 			workspaceInfo.CLIOptions,
 			true,
