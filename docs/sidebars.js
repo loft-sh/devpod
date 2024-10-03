@@ -13,32 +13,6 @@ module.exports = {
     },
     {
       type: "category",
-      label: "Concepts",
-      items: [
-        {
-          type: "doc",
-          id: "how-it-works/overview",
-        },
-        {
-          type: "doc",
-          id: "how-it-works/deploy-machines",
-        },
-        {
-          type: "doc",
-          id: "how-it-works/deploy-k8s",
-        },
-        {
-          type: "doc",
-          id: "how-it-works/building-workspaces",
-        },
-        {
-          type: "doc",
-          id: "how-it-works/deploying-workspaces",
-        },
-      ],
-    },
-    {
-      type: "category",
       label: "Getting Started",
       items: [
         {
@@ -164,6 +138,32 @@ module.exports = {
         {
           type: "doc",
           id: "managing-providers/delete-provider",
+        },
+      ],
+    },
+    {
+      type: "category",
+      label: "Architecture",
+      items: [
+        {
+          type: "doc",
+          id: "how-it-works/overview",
+        },
+        {
+          type: "doc",
+          id: "how-it-works/deploy-machines",
+        },
+        {
+          type: "doc",
+          id: "how-it-works/deploy-k8s",
+        },
+        {
+          type: "doc",
+          id: "how-it-works/building-workspaces",
+        },
+        {
+          type: "doc",
+          id: "how-it-works/deploying-workspaces",
         },
       ],
     },
