@@ -29,11 +29,11 @@ Then prebuild your image, this will populate the registry cache so that develope
 devpod build my-workspace
 ```
 
-Now the next time you or anyone in your team needs to build an image, it can pull from the cache. If you've made changes to your environment, then devpod will detect these changes and are 
+Now the next time you or anyone in your team needs to build an image, it can pull from the cache. If you've made changes to your environment, then DevPod will detect these changes and are 
 built on top of the existing image layers.
 
 
-#### How does devpod detect changes?
+#### How does DevPod detect changes?
 
 Devpod parses your Dockerfile and .devcontainer.json to detect file paths that can affect your build context. Devpod traverses these files and makes a hash of the file contents to use as the 
 container's image tag. When you make changes to these files, the hash will change causing a rebuild. Thanks to the remote cache the previous layers will be built so only changes are needed. To 
