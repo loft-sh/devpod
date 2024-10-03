@@ -50,6 +50,10 @@ type DevPodEnvironmentTemplateSpec struct {
 	// Access to the DevPod machine instance object itself
 	// +optional
 	Access []Access `json:"access,omitempty"`
+
+	// Versions are different versions of the template that can be referenced as well
+	// +optional
+	Versions []DevPodEnvironmentTemplateVersion `json:"versions,omitempty"`
 }
 
 // GitEnvironmentTemplate stores configuration of Git environment template source
@@ -64,6 +68,20 @@ type GitEnvironmentTemplate struct {
 	// SubPath stores subpath within Repositor where environment spec is
 	// +optional
 	SubPath string `json:"subpath,omitempty"`
+
+	// UseProjectGitCredentials specifies if the project git credentials should be used instead of local ones for this environment
+	// +optional
+	UseProjectGitCredentials bool `json:"useProjectGitCredentials,omitempty"`
+}
+
+type DevPodEnvironmentTemplateVersion struct {
+	// Git holds the GitEnvironmentTemplate
+	// +optional
+	Git GitEnvironmentTemplate `json:"git,omitempty"`
+
+	// Version is the version. Needs to be in X.X.X format.
+	// +optional
+	Version string `json:"version,omitempty"`
 }
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object

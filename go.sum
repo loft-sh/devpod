@@ -692,6 +692,8 @@ github.com/loft-sh/agentapi/v4 v4.1.0-alpha.13 h1:sX8D091Nz1vVtAJL8z7XLUri5aUp3K
 github.com/loft-sh/agentapi/v4 v4.1.0-alpha.13/go.mod h1:cak14ySJvMXIcPqG4l9MAqC8WFqqtXg9BwbOauK3r7Y=
 github.com/loft-sh/agentapi/v4 v4.1.0-alpha.14 h1:/CsbWFxVKu23ubk8s/1z0LBRAdAV1pAzmW4LhVXJkHg=
 github.com/loft-sh/agentapi/v4 v4.1.0-alpha.14/go.mod h1:cak14ySJvMXIcPqG4l9MAqC8WFqqtXg9BwbOauK3r7Y=
+github.com/loft-sh/agentapi/v4 v4.1.0-alpha.16 h1:z2dl4P/ZeB5asCqEdy63RXa+2bMuHfutRBaevkZRKV4=
+github.com/loft-sh/agentapi/v4 v4.1.0-alpha.16/go.mod h1:cak14ySJvMXIcPqG4l9MAqC8WFqqtXg9BwbOauK3r7Y=
 github.com/loft-sh/api/v4 v4.1.0-alpha.1 h1:SLOhaRlJE3fkZfllaTeOiNnuOQMe/7u14wJXfqgkMio=
 github.com/loft-sh/api/v4 v4.1.0-alpha.1/go.mod h1:1p5qVavAJC/gVZZpJ/x1YQQt91fux7wZaqSixCX5QlI=
 github.com/loft-sh/api/v4 v4.1.0-alpha.10 h1:vUIQ7PgaLOA0wTOu1uPkHjgXvcO6myh2ersBsdxZo1c=
@@ -700,6 +702,8 @@ github.com/loft-sh/api/v4 v4.1.0-alpha.13 h1:s046dp5jqbbgA8aVNHJ15EF2U4CLHdDtrn8
 github.com/loft-sh/api/v4 v4.1.0-alpha.13/go.mod h1:Nd30PyvSHmfVGjrPWCPzlR4k3JRBkat2y3XsphGZl9c=
 github.com/loft-sh/api/v4 v4.1.0-alpha.14 h1:/++b0Ew6NNj6O2BDiF21rFS4PfDXaCjm0df4ENLt6JM=
 github.com/loft-sh/api/v4 v4.1.0-alpha.14/go.mod h1:Id5kStfEPGE4ghp2QW5DDMy+Mqbv2QFZdJpYvRXHfSY=
+github.com/loft-sh/api/v4 v4.1.0-alpha.16 h1:7t+MRIP901J+sDtctBS45FRgLLCakoxW731f5cLfvdM=
+github.com/loft-sh/api/v4 v4.1.0-alpha.16/go.mod h1:R3mfgoTKhgFUql8z6rJ3i5FUYnkjQbkQWgGV4ec4yZM=
 github.com/loft-sh/apiserver v0.0.0-20240607231110-634aeeab2b36 h1:1euJ7mNHMI2MMA+g+jEYYKtoMrHZTkUMapHnmjHb9lM=
 github.com/loft-sh/apiserver v0.0.0-20240607231110-634aeeab2b36/go.mod h1:XxI95azXiqXHiIDRiyDTpZcxdtXQlUqeU5VMMDz8INA=
 github.com/loft-sh/log v0.0.0-20240219160058-26d83ffb46ac h1:Gz/7Lb7WgdgIv+KJz87ORA1zvQW52tUqKPGyunlp4dQ=

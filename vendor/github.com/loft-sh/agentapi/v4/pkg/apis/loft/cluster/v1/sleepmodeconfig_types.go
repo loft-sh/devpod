@@ -113,6 +113,7 @@ type SleepModeConfigSpec struct {
 	// Timezone specifies time zone used for scheduled space operations. Defaults to UTC.
 	// Accepts the same format as time.LoadLocation() in Go (https://pkg.go.dev/time#LoadLocation).
 	// The value should be a location name corresponding to a file in the IANA Time Zone database, such as "America/New_York".
+	// See also: https://en.wikipedia.org/wiki/List_of_tz_database_time_zones
 	// +optional
 	Timezone string `json:"timezone,omitempty"`
 
