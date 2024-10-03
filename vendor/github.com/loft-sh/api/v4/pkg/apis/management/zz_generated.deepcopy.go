@@ -4788,6 +4788,13 @@ func (in *ProjectTemplates) DeepCopyInto(out *ProjectTemplates) {
 			(*in)[i].DeepCopyInto(&(*out)[i])
 		}
 	}
+	if in.DevPodEnvironmentTemplates != nil {
+		in, out := &in.DevPodEnvironmentTemplates, &out.DevPodEnvironmentTemplates
+		*out = make([]DevPodEnvironmentTemplate, len(*in))
+		for i := range *in {
+			(*in)[i].DeepCopyInto(&(*out)[i])
+		}
+	}
 	return
 }
 

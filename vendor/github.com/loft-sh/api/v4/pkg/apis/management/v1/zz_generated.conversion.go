@@ -7409,6 +7409,8 @@ func autoConvert_v1_ProjectTemplates_To_management_ProjectTemplates(in *ProjectT
 	out.SpaceTemplates = *(*[]management.SpaceTemplate)(unsafe.Pointer(&in.SpaceTemplates))
 	out.DefaultDevPodWorkspaceTemplate = in.DefaultDevPodWorkspaceTemplate
 	out.DevPodWorkspaceTemplates = *(*[]management.DevPodWorkspaceTemplate)(unsafe.Pointer(&in.DevPodWorkspaceTemplates))
+	out.DevPodEnvironmentTemplates = *(*[]management.DevPodEnvironmentTemplate)(unsafe.Pointer(&in.DevPodEnvironmentTemplates))
+	out.DefaultDevPodEnvironmentTemplate = in.DefaultDevPodEnvironmentTemplate
 	return nil
 }
 
@@ -7425,6 +7427,8 @@ func autoConvert_management_ProjectTemplates_To_v1_ProjectTemplates(in *manageme
 	out.SpaceTemplates = *(*[]SpaceTemplate)(unsafe.Pointer(&in.SpaceTemplates))
 	out.DefaultDevPodWorkspaceTemplate = in.DefaultDevPodWorkspaceTemplate
 	out.DevPodWorkspaceTemplates = *(*[]DevPodWorkspaceTemplate)(unsafe.Pointer(&in.DevPodWorkspaceTemplates))
+	out.DevPodEnvironmentTemplates = *(*[]DevPodEnvironmentTemplate)(unsafe.Pointer(&in.DevPodEnvironmentTemplates))
+	out.DefaultDevPodEnvironmentTemplate = in.DefaultDevPodEnvironmentTemplate
 	return nil
 }
 
