@@ -476,6 +476,9 @@ func (cmd *UpCmd) devPodUpMachine(
 		return nil, err
 	}
 
+	cmd.CLIOptions.GitOverrideUsername = cmd.GitUsername
+	cmd.CLIOptions.GitOverrideToken = cmd.GitToken
+
 	// compress info
 	workspaceInfo, wInfo, err := client.AgentInfo(cmd.CLIOptions)
 	if err != nil {

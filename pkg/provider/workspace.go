@@ -204,6 +204,8 @@ type CLIOptions struct {
 	GitCloneStrategy     git.CloneStrategy `json:"gitCloneStrategy,omitempty"`
 	FallbackImage        string            `json:"fallbackImage,omitempty"`
 	GitSSHSigningKey     string            `json:"gitSshSigningKey,omitempty"`
+	GitOverrideUsername  string            `json:"gitUsername,omitempty"`
+	GitOverrideToken     string            `json:"gitToken,omitempty"`
 
 	// build options
 	Repository string   `json:"repository,omitempty"`
