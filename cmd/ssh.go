@@ -64,7 +64,7 @@ func NewSSHCmd(f *flags.GlobalFlags) *cobra.Command {
 		GlobalFlags: f,
 	}
 	sshCmd := &cobra.Command{
-		Use:   "ssh",
+		Use:   "ssh [flags] [workspace-folder|workspace-name]",
 		Short: "Starts a new ssh session to a workspace",
 		RunE: func(_ *cobra.Command, args []string) error {
 			devPodConfig, err := config.LoadConfig(cmd.Context, cmd.Provider)

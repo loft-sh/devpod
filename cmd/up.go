@@ -71,7 +71,7 @@ func NewUpCmd(f *flags.GlobalFlags) *cobra.Command {
 		GlobalFlags: f,
 	}
 	upCmd := &cobra.Command{
-		Use:   "up",
+		Use:   "up [flags] [workspace-path|workspace-name]",
 		Short: "Starts a new workspace",
 		RunE: func(_ *cobra.Command, args []string) error {
 			devPodConfig, err := config.LoadConfig(cmd.Context, cmd.Provider)
