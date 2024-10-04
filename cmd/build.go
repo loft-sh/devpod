@@ -37,7 +37,7 @@ func NewBuildCmd(flags *flags.GlobalFlags) *cobra.Command {
 		GlobalFlags: flags,
 	}
 	buildCmd := &cobra.Command{
-		Use:   "build",
+		Use:   "build [flags] [workspace-path|workspace-name]",
 		Short: "Builds a workspace",
 		RunE: func(_ *cobra.Command, args []string) error {
 			ctx := context.Background()

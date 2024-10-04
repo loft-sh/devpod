@@ -28,7 +28,7 @@ func NewLogsCmd(flags *flags.GlobalFlags) *cobra.Command {
 		GlobalFlags: flags,
 	}
 	startCmd := &cobra.Command{
-		Use:   "logs",
+		Use:   "logs [flags] [workspace-path|workspace-name]",
 		Short: "Prints the workspace logs on the machine",
 		RunE: func(_ *cobra.Command, args []string) error {
 			return cmd.Run(context.Background(), args)
