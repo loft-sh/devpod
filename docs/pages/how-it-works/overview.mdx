@@ -5,8 +5,7 @@ sidebar_label: Overview
 
 Devpod provides the ability to provision workspaces on any infrastructure. It does so by wrapping your conventional CLI tools such as kubectl, docker, gcloud etc to deploy your development environment 
 and set up everything required to run the dev container. While creating the workspace DevPod deploys an agent to the machine running the container as well as to the container itself to provide useful 
-functions such as port forwarding, credential forwarding and log streaming. Doing so it provides a control plane across your development environment. DevPod can be thought of as a minimal service mesh, specifically
-designed to connect your local environment securely to your development container running in your cloud infrastructure.
+functions such as port forwarding, credential forwarding and log streaming. Doing so it provides a control plane across your development environment.
 
 Devpod uses a client-agent architecture, where the client deploys it's own agent to host various servers, such as a grpc server or SSH server. 
 In this regard the system is not unlike a browser server architecture where the front end is deployed and executed on a remote host. There are several improvements this brings to our specific context:
