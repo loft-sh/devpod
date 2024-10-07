@@ -218,6 +218,10 @@ module.exports = {
         {
           type: "doc",
           id: "other-topics/mobile-support",
+        },
+        {
+          type: "doc",
+          id: "other-topics/linux-troubleshooting",
         }
       ],
     },
