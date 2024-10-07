@@ -11,7 +11,7 @@ import (
 	"strings"
 	"time"
 
-	composetypes "github.com/compose-spec/compose-go/types"
+	composetypes "github.com/compose-spec/compose-go/v2/types"
 	"github.com/joho/godotenv"
 	"github.com/loft-sh/devpod/pkg/compose"
 	"github.com/loft-sh/devpod/pkg/devcontainer/config"
@@ -128,7 +128,7 @@ func (r *runner) runDockerCompose(
 	}
 
 	r.Log.Debugf("Loading docker compose project %+v", composeFiles)
-	project, err := compose.LoadDockerComposeProject(composeFiles, envFiles)
+	project, err := compose.LoadDockerComposeProject(ctx, composeFiles, envFiles)
 	if err != nil {
 		return nil, errors.Wrap(err, "load docker compose project")
 	}
@@ -570,8 +570,8 @@ func (r *runner) extendedDockerComposeBuild(composeService *composetypes.Service
 	}
 
 	project := &composetypes.Project{}
-	project.Services = composetypes.Services{
-		*service,
+	project.Services = map[string]composetypes.ServiceConfig{
+		service.Name: *service,
 	}
 
 	dockerComposeFolder := getDockerComposeFolder(r.WorkspaceConfig.Origin)
@@ -736,8 +736,8 @@ while sleep 1 & wait $$!; do :; done`,
 	}
 
 	project := &composetypes.Project{}
-	project.Services = composetypes.Services{
-		*overrideService,
+	project.Services = map[string]composetypes.ServiceConfig{
+		overrideService.Name: *overrideService,
 	}
 
 	// Configure volumes
@@ -745,10 +745,8 @@ while sleep 1 & wait $$!; do :; done`,
 	for _, m := range mergedConfig.Mounts {
 		if m.Type == "volume" {
 			volumeMounts = append(volumeMounts, composetypes.VolumeConfig{
-				Name: m.Source,
-				External: composetypes.External{
-					External: m.External,
-				},
+				Name:     m.Source,
+				External: composetypes.External(m.External),
 			})
 		}
 	}

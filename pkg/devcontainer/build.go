@@ -54,7 +54,7 @@ func (r *runner) build(
 		}
 
 		r.Log.Debugf("Loading docker compose project %+v", composeFiles)
-		project, err := compose.LoadDockerComposeProject(composeFiles, envFiles)
+		project, err := compose.LoadDockerComposeProject(ctx, composeFiles, envFiles)
 		if err != nil {
 			return nil, errors.Wrap(err, "load docker compose project")
 		}

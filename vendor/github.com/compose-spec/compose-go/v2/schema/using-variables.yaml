@@ -1,0 +1,123 @@
+name: ${VARIABLE}
+services:
+  foo:
+    deploy:
+      mode: ${VARIABLE}
+      replicas: ${VARIABLE}
+      rollback_config:
+        parallelism: ${VARIABLE}
+        delay: ${VARIABLE}
+        failure_action: ${VARIABLE}
+        monitor: ${VARIABLE}
+        max_failure_ratio: ${VARIABLE}
+      update_config:
+        parallelism: ${VARIABLE}
+        delay: ${VARIABLE}
+        failure_action: ${VARIABLE}
+        monitor: ${VARIABLE}
+        max_failure_ratio: ${VARIABLE}
+      resources:
+        limits:
+          memory: ${VARIABLE}
+        reservations:
+          memory: ${VARIABLE}
+          generic_resources:
+            - discrete_resource_spec:
+                kind: ${VARIABLE}
+                value: ${VARIABLE}
+            - discrete_resource_spec:
+                kind: ${VARIABLE}
+                value: ${VARIABLE}
+      restart_policy:
+        condition: ${VARIABLE}
+        delay: ${VARIABLE}
+        max_attempts: ${VARIABLE}
+        window: ${VARIABLE}
+      placement:
+        max_replicas_per_node: ${VARIABLE}
+        preferences:
+          - spread: ${VARIABLE}
+      endpoint_mode: ${VARIABLE}
+    expose:
+      - ${VARIABLE}
+    external_links:
+      - ${VARIABLE}
+    extra_hosts:
+      - ${VARIABLE}
+    hostname: ${VARIABLE}
+
+    healthcheck:
+      test: ${VARIABLE}
+      interval: ${VARIABLE}
+      timeout: ${VARIABLE}
+      retries: ${VARIABLE}
+      start_period: ${VARIABLE}
+      start_interval: ${VARIABLE}
+    image: ${VARIABLE}
+    mac_address: ${VARIABLE}
+    networks:
+      some-network:
+        aliases:
+          - ${VARIABLE}
+      other-network:
+        ipv4_address: ${VARIABLE}
+        ipv6_address: ${VARIABLE}
+        mac_address: ${VARIABLE}
+    ports:
+      - ${VARIABLE}
+    privileged: ${VARIABLE}
+    read_only: ${VARIABLE}
+    restart: ${VARIABLE}
+    secrets:
+      - source: ${VARIABLE}
+        target: ${VARIABLE}
+        uid: ${VARIABLE}
+        gid: ${VARIABLE}
+        mode: ${VARIABLE}
+    stdin_open: ${VARIABLE}
+    stop_grace_period: ${VARIABLE}
+    stop_signal: ${VARIABLE}
+    storage_opt:
+      size: ${VARIABLE}
+    sysctls:
+      net.core.somaxconn: ${VARIABLE}
+    tmpfs:
+      - ${VARIABLE}
+    tty: ${VARIABLE}
+    ulimits:
+      nproc: ${VARIABLE}
+      nofile:
+        soft: ${VARIABLE}
+        hard: ${VARIABLE}
+    user: ${VARIABLE}
+    volumes:
+      - ${VARIABLE}:${VARIABLE}
+      - type: tmpfs
+        target: ${VARIABLE}
+        tmpfs:
+          size: ${VARIABLE}
+
+networks:
+  network:
+    ipam:
+      driver: ${VARIABLE}
+      config:
+        - subnet: ${VARIABLE}
+          ip_range: ${VARIABLE}
+          gateway: ${VARIABLE}
+          aux_addresses:
+            host1: ${VARIABLE}
+  external-network:
+    external: ${VARIABLE}
+
+volumes:
+  external-volume:
+    external: ${VARIABLE}
+
+configs:
+  config1:
+    external: ${VARIABLE}
+
+secrets:
+  secret1:
+    external: ${VARIABLE}

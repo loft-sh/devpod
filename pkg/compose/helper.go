@@ -10,8 +10,8 @@ import (
 	"strings"
 
 	"github.com/blang/semver"
-	composecli "github.com/compose-spec/compose-go/cli"
-	composetypes "github.com/compose-spec/compose-go/types"
+	composecli "github.com/compose-spec/compose-go/v2/cli"
+	composetypes "github.com/compose-spec/compose-go/v2/types"
 	"github.com/loft-sh/devpod/pkg/devcontainer/config"
 	"github.com/loft-sh/devpod/pkg/docker"
 	"github.com/pkg/errors"
@@ -24,7 +24,7 @@ const (
 	ServiceLabel         = "com.docker.compose.service"
 )
 
-func LoadDockerComposeProject(paths []string, envFiles []string) (*composetypes.Project, error) {
+func LoadDockerComposeProject(ctx context.Context, paths []string, envFiles []string) (*composetypes.Project, error) {
 	projectOptions, err := composecli.NewProjectOptions(
 		paths,
 		composecli.WithOsEnv,
@@ -36,7 +36,7 @@ func LoadDockerComposeProject(paths []string, envFiles []string) (*composetypes.
 		return nil, err
 	}
 
-	project, err := composecli.ProjectFromOptions(projectOptions)
+	project, err := composecli.ProjectFromOptions(ctx, projectOptions)
 	if err != nil {
 		return nil, err
 	}
