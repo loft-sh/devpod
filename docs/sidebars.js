@@ -222,6 +222,10 @@ module.exports = {
         {
           type: "doc",
           id: "other-topics/linux-troubleshooting",
+        },
+        {
+          type: "doc",
+          id: "other-topics/ide-troubleshooting",
         }
       ],
     },

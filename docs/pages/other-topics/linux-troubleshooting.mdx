@@ -1,0 +1,34 @@
+---
+title: Linux Troubleshooting
+sidebar_label: Linux Troubleshooting
+---
+
+This purpose of this page is to outline any known issues with using devpod on Linux and provide known workarounds / fixes.
+
+### Using FISH shell
+
+Custom configurations in config.fish file run every time a fish -c command is called, so this processes somewhat get on the way of devpod agent workspace up.
+
+The solution is to move the customizations inside the if status is-interactive case.
+
+From this
+
+```
+if status is-interactive
+    # Commands to run in interactive sessions can go here
+end
+eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)"
+
+# customizations
+```
+
+to this
+
+```
+if status is-interactive
+    # Commands to run in interactive sessions can go here
+    eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)"
+    
+    # customizations
+end
+```
