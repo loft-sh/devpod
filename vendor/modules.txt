@@ -196,19 +196,25 @@ github.com/cespare/xxhash/v2
 github.com/chrismellard/docker-credential-acr-env/pkg/credhelper
 github.com/chrismellard/docker-credential-acr-env/pkg/registry
 github.com/chrismellard/docker-credential-acr-env/pkg/token
-# github.com/compose-spec/compose-go v1.20.2
-## explicit; go 1.19
-github.com/compose-spec/compose-go/cli
-github.com/compose-spec/compose-go/consts
-github.com/compose-spec/compose-go/dotenv
-github.com/compose-spec/compose-go/errdefs
-github.com/compose-spec/compose-go/interpolation
-github.com/compose-spec/compose-go/loader
-github.com/compose-spec/compose-go/schema
-github.com/compose-spec/compose-go/template
-github.com/compose-spec/compose-go/tree
-github.com/compose-spec/compose-go/types
-github.com/compose-spec/compose-go/utils
+# github.com/compose-spec/compose-go/v2 v2.2.0
+## explicit; go 1.21
+github.com/compose-spec/compose-go/v2/cli
+github.com/compose-spec/compose-go/v2/consts
+github.com/compose-spec/compose-go/v2/dotenv
+github.com/compose-spec/compose-go/v2/errdefs
+github.com/compose-spec/compose-go/v2/format
+github.com/compose-spec/compose-go/v2/graph
+github.com/compose-spec/compose-go/v2/interpolation
+github.com/compose-spec/compose-go/v2/loader
+github.com/compose-spec/compose-go/v2/override
+github.com/compose-spec/compose-go/v2/paths
+github.com/compose-spec/compose-go/v2/schema
+github.com/compose-spec/compose-go/v2/template
+github.com/compose-spec/compose-go/v2/transform
+github.com/compose-spec/compose-go/v2/tree
+github.com/compose-spec/compose-go/v2/types
+github.com/compose-spec/compose-go/v2/utils
+github.com/compose-spec/compose-go/v2/validation
 # github.com/containerd/console v1.0.3
 ## explicit; go 1.13
 github.com/containerd/console
@@ -355,6 +361,10 @@ github.com/go-openapi/swag
 # github.com/go-task/slim-sprig/v3 v3.0.0
 ## explicit; go 1.20
 github.com/go-task/slim-sprig/v3
+# github.com/go-viper/mapstructure/v2 v2.0.0
+## explicit; go 1.18
+github.com/go-viper/mapstructure/v2
+github.com/go-viper/mapstructure/v2/internal/errors
 # github.com/gofrs/flock v0.8.1
 ## explicit
 github.com/gofrs/flock
@@ -595,7 +605,6 @@ github.com/mitchellh/go-homedir
 github.com/mitchellh/go-wordwrap
 # github.com/mitchellh/mapstructure v1.5.0
 ## explicit; go 1.14
-github.com/mitchellh/mapstructure
 # github.com/moby/buildkit v0.11.6
 ## explicit; go 1.18
 github.com/moby/buildkit/api/services/control
