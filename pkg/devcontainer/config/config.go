@@ -424,6 +424,14 @@ func (m *Mount) UnmarshalJSON(data []byte) error {
 		if ok {
 			m.External = externalStr
 		}
+		otherInterface, ok := obj["other"].([]interface{})
+		if ok {
+			otherStr := make([]string, len(otherInterface))
+			for i, _ := range otherInterface {
+				otherStr[i] = otherInterface[i].(string)
+			}
+			m.Other = otherStr
+		}
 		return nil
 	}
 	return types.ErrUnsupportedType
