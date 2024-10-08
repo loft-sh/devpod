@@ -89,9 +89,9 @@ func PullConfigFromSource(workspaceInfo *provider2.AgentWorkspaceInfo, options *
 			WithArg(EnvironmentCrane).
 			WithArg(options.EnvironmentTemplate)
 
-		if options.GitOverrideUsername != "" && options.GitOverrideToken != "" {
-			command = command.WithFlag("--git-username", options.GitOverrideUsername).
-				WithFlag("--git-token", options.GitOverrideToken)
+		if options.GitUsername != "" && options.GitToken != "" {
+			command = command.WithFlag("--git-username", options.GitUsername).
+				WithFlag("--git-token", options.GitToken)
 		}
 		data, err = command.Run()
 	case options.DevContainerSource != "":

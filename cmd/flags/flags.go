@@ -16,9 +16,7 @@ type GlobalFlags struct {
 
 	DevPodHome string
 
-	GitUsername string
-	GitToken    string
-	UID         string
+	UID string
 }
 
 // SetGlobalFlags applies the global flags
@@ -32,8 +30,6 @@ func SetGlobalFlags(flags *flag.FlagSet) *GlobalFlags {
 	flags.BoolVar(&globalFlags.Debug, "debug", false, "Prints the stack trace if an error occurs")
 	flags.BoolVar(&globalFlags.Silent, "silent", false, "Run in silent mode and prevents any devpod log output except panics & fatals")
 
-	flags.StringVar(&globalFlags.GitUsername, "git-username", "", "The username to use for git operations")
-	flags.StringVar(&globalFlags.GitToken, "git-token", "", "The token to use for git operations")
 	_ = flags.MarkHidden("git-username")
 	_ = flags.MarkHidden("git-token")
 	flags.StringVar(&globalFlags.UID, "uid", "", "Set UID for workspace")
