@@ -19,6 +19,7 @@ import (
 	client2 "github.com/loft-sh/devpod/pkg/client"
 	"github.com/loft-sh/devpod/pkg/client/clientimplementation"
 	"github.com/loft-sh/devpod/pkg/config"
+	dpFlags "github.com/loft-sh/devpod/pkg/flags"
 	"github.com/loft-sh/devpod/pkg/gpg"
 	"github.com/loft-sh/devpod/pkg/port"
 	devssh "github.com/loft-sh/devpod/pkg/ssh"
@@ -34,6 +35,7 @@ import (
 // SSHCmd holds the ssh cmd flags
 type SSHCmd struct {
 	*flags.GlobalFlags
+	dpFlags.GitCredentialsFlags
 
 	ForwardPortsTimeout string
 	ForwardPorts        []string
@@ -55,9 +57,9 @@ type SSHCmd struct {
 }
 
 // NewSSHCmd creates a new ssh command
-func NewSSHCmd(flags *flags.GlobalFlags) *cobra.Command {
+func NewSSHCmd(f *flags.GlobalFlags) *cobra.Command {
 	cmd := &SSHCmd{
-		GlobalFlags: flags,
+		GlobalFlags: f,
 	}
 	sshCmd := &cobra.Command{
 		Use:   "ssh",
@@ -85,6 +87,7 @@ func NewSSHCmd(flags *flags.GlobalFlags) *cobra.Command {
 		},
 	}
 
+	dpFlags.SetGitCredentialsFlags(sshCmd.Flags(), &cmd.GitCredentialsFlags)
 	sshCmd.Flags().StringArrayVarP(&cmd.ForwardPorts, "forward-ports", "L", []string{}, "Specifies that connections to the given TCP port or Unix socket on the local (client) host are to be forwarded to the given host and port, or Unix socket, on the remote side.")
 	sshCmd.Flags().StringArrayVarP(&cmd.ReverseForwardPorts, "reverse-forward-ports", "R", []string{}, "Specifies that connections to the given TCP port or Unix socket on the local (client) host are to be reverse forwarded to the given host and port, or Unix socket, on the remote side.")
 	sshCmd.Flags().StringVar(&cmd.ForwardPortsTimeout, "forward-ports-timeout", "", "Specifies the timeout after which the command should terminate when the ports are unused.")
@@ -96,6 +99,7 @@ func NewSSHCmd(flags *flags.GlobalFlags) *cobra.Command {
 	sshCmd.Flags().BoolVar(&cmd.GPGAgentForwarding, "gpg-agent-forwarding", false, "If true forward the local gpg-agent to the remote machine")
 	sshCmd.Flags().BoolVar(&cmd.Stdio, "stdio", false, "If true will tunnel connection through stdout and stdin")
 	sshCmd.Flags().BoolVar(&cmd.StartServices, "start-services", true, "If false will not start any port-forwarding or git / docker credentials helper")
+
 	return sshCmd
 }
 

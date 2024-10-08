@@ -23,6 +23,7 @@ import (
 	"github.com/loft-sh/devpod/pkg/credentials"
 	config2 "github.com/loft-sh/devpod/pkg/devcontainer/config"
 	"github.com/loft-sh/devpod/pkg/devcontainer/sshtunnel"
+	dpFlags "github.com/loft-sh/devpod/pkg/flags"
 	"github.com/loft-sh/devpod/pkg/ide/fleet"
 	"github.com/loft-sh/devpod/pkg/ide/jetbrains"
 	"github.com/loft-sh/devpod/pkg/ide/jupyter"
@@ -65,9 +66,9 @@ type UpCmd struct {
 }
 
 // NewUpCmd creates a new up command
-func NewUpCmd(flags *flags.GlobalFlags) *cobra.Command {
+func NewUpCmd(f *flags.GlobalFlags) *cobra.Command {
 	cmd := &UpCmd{
-		GlobalFlags: flags,
+		GlobalFlags: f,
 	}
 	upCmd := &cobra.Command{
 		Use:   "up",
@@ -147,7 +148,7 @@ func NewUpCmd(flags *flags.GlobalFlags) *cobra.Command {
 			return cmd.Run(ctx, devPodConfig, client, logger)
 		},
 	}
-
+	dpFlags.SetGitCredentialsFlags(upCmd.Flags(), &cmd.GitCredentialsFlags)
 	upCmd.Flags().BoolVar(&cmd.ConfigureSSH, "configure-ssh", true, "If true will configure the ssh config to include the DevPod workspace")
 	upCmd.Flags().BoolVar(&cmd.GPGAgentForwarding, "gpg-agent-forwarding", false, "If true forward the local gpg-agent to the DevPod workspace")
 	upCmd.Flags().StringVar(&cmd.SSHConfigPath, "ssh-config", "", "The path to the ssh config to modify, if empty will use ~/.ssh/config")
@@ -475,9 +476,6 @@ func (cmd *UpCmd) devPodUpMachine(
 	if err != nil {
 		return nil, err
 	}
-
-	cmd.CLIOptions.GitOverrideUsername = cmd.GitUsername
-	cmd.CLIOptions.GitOverrideToken = cmd.GitToken
 
 	// compress info
 	workspaceInfo, wInfo, err := client.AgentInfo(cmd.CLIOptions)
