@@ -32,3 +32,21 @@ if status is-interactive
     # customizations
 end
 ```
+
+### Using SELinux
+
+If you are running SELinux and try to start a workspace with a mounted volume, you may recieve a "Permission Denied" even if the ownership of the files are correct. To resolve
+append `:Z` to your volume definitions, like so
+
+```
+{
+    // some fields
+
+    "workspaceMount": "",
+    "workspaceFolder": "/workspaces/${localWorkspaceFolderBasename}",
+    "runArgs": [
+        // other args
+        "--volume=${localWorkspaceFolder}:/workspaces/${localWorkspaceFolderBasename}:Z"
+    ]
+}
+```
