@@ -1,0 +1,232 @@
+---
+title: Kubernetes Provider with Minikube and VS Code Browser
+sidebar_label: Kubernetes Provider with Minikube
+---
+
+import SetupVirtualbox from '../fragments/setup-virtualbox.mdx'
+
+import VirtualboxUbuntu2204 from '../fragments/virtualbox-ubuntu-22.04.mdx'
+
+## Purpose
+
+The purpose of this quickstart is to provide a small scale representation of on-premise Kubernetes and guide a new user through the configuration of a Kubernetes provider.
+
+<SetupVirtualbox />
+
+<VirtualboxUbuntu2204 />
+
+## Install Minikube on Ubuntu 22.04
+
+Install dependencies for installing minikube and vscode
+```sh
+sudo apt update
+sudo apt install git vim gpg wget -y
+```
+
+### Install VSCODE
+
+Follow instructions from VSCODE Docs > [Linux Setup](https://code.visualstudio.com/docs/setup/linux)
+
+### Install Minikube
+
+Clone Sander van Vugt's Ubuntu CKAD repository for his CKAD course [Certified Kubernetes Application Developer (CKAD), 2nd Edition, 4.3 Installing Minikube on Ubuntu. O'Reilly Course](https://learning.oreilly.com/videos/certified-kubernetes-application/9780137841509/9780137841509-CKAD_01_04_03/)
+
+```sh
+git clone https://github.com/sandervanvugt/ckad.git
+cd ./ckad
+./minikube-docker-setup.sh
+```
+
+#### Create startup script
+
+```sh
+cd ~
+touch minikube-start.sh
+sudo chmod u+x minikube-start.sh
+```
+
+Add the following contents to minikube-start.sh:
+
+```bash
+#!/bin/bash
+
+minikube start --vm-driver=docker --cni=calico
+```
+
+Now to start minikube from home:
+
+```sh
+~./minikube-start.sh
+```
+
+Note: you need to start minikube between vm shutdown/reboots
+
+#### Test your install
+
+Test your install with the following command
+```sh
+kubectl get all
+```
+
+Example Result:
+```sh
+kubectl get all
+NAME                 TYPE        CLUSTER-IP   EXTERNAL-IP   PORT(S)   AGE
+service/kubernetes   ClusterIP   xxx.yyy.zzz.qqq    <none>        443/TCP   4d14h
+```
+
+## Install Devpods
+
+Using the Devpods install for Linux deb [docs](https://devpod.sh/docs/getting-started/install)
+
+Download the deb install
+
+```sh
+
+cd ~/
+wget https://github.com/loft-sh/devpod/releases/latest/download/DevPod_linux_amd64.deb?_gl=1*76i3lz*_ga*MTczNjE4NzI1My4xNjkxNDQ1ODU1*_ga_4RQQZ3WGE9*MTY5MjY4MTU4NS45LjAuMTY5MjY4MTU4Ny41OC4wLjA. -O DevPod_linux_amd64.deb
+sudo dpkg -i DevPod_linux_amd64.deb
+```
+
+### Test the Devpods install 
+
+Start Devpods:
+
+```sh
+dev-pod
+```
+
+## Configure Minikube for the provider
+
+Before configuring the kubernetes provider we need to create a persistent volume for the devcontainer and ensure we have a kubeconfig for the provider.
+
+### Create Kubernetes Persistent Volume for devcontainers
+
+Kubernetes persistent volume [docs](https://kubernetes.io/docs/concepts/storage/persistent-volumes/)
+
+```
+mkdir ~/devpods
+cd ~/devpods
+touch devpod-pv.yml
+vim devpod-pv.yml # or your preferred text editor
+```
+
+Edit devpod-pv.yml and save
+```yaml
+kind: PersistentVolume
+apiVersion: v1
+metadata:
+  name: devpod-pv
+  labels:
+    type: devpod
+spec:
+  capacity:
+    storage: 1Gi
+  accessModes:
+    - ReadWriteOnce
+  hostPath:
+    path: "/home/dev/devpods/share"
+```
+
+Create a directory for the persistent volume
+
+```sh
+mkdir /home/dev/devpods/share
+```
+
+Create the persisent volume for the Kubernetes Provider.
+
+```sh
+kubectl create -f ~/devpods/devpod-pv.yml
+```
+
+Confirm the persisent volume has been created.
+
+```sh
+kubectl get pv
+NAME                                       CAPACITY   ACCESS MODES   RECLAIM POLICY   STATUS      CLAIM   STORAGECLASS   REASON   AGE
+devpod-pv                                  1Gi        RWO            Retain           Available                                   12d
+```
+
+### Locate your kubeconfig
+
+List the director ~/.kube
+
+```sh
+ls ~/.kube
+cache  completion.bash.inc  config
+```
+
+Within .minikube the config file is the kubeconfig that can be used by Devpods kubernetes provider.
+
+Within the kubernetes provider the kubeconfig path will be
+
+```
+/home/dev/.kube/config
+```
+
+**Note**
+This is a simplification for a production setup where a kubeconfig should be provided for a kubernetes context, namespace and users. You will also need kubectl installed where your Devpods client is running from. The kubernetes provider uses the underlying kubectl providing the locally stored kubeconfig to access a remote cluster. This setup requires kubernetes administration support.
+
+### Identify your namespaces
+
+The kubernetes provider requires a namespace and this example will use the 'default' namespace 
+
+```sh
+kubectl get ns
+NAME              STATUS   AGE
+default           Active   12d
+kube-node-lease   Active   12d
+kube-public       Active   12d
+kube-system       Active   12d
+```
+
+## Add Provider
+
+Add a provider via 'Providers' > '+ Add'. Select the kubernetes provider.
+
+<figure>
+  <img src="/docs/media/add-provider-1.png" alt="DevPod Flow" />
+  <figcaption>Select Provider</figcaption>
+</figure>
+
+
+### Configure the Kubernetes Provider
+
+| Setting | Value |
+|---|---|
+| Kubernetes Namespace | default |
+| Disk Size | 1Gi |
+| Kubernetes Config | /home/dev/.kube/config |
+
+<figure>
+  <img src="/docs/media/create-workspace-virtualbox-kubernetes-provider-configuration.png" alt="DevPod Flow" />
+  <figcaption>Kubernetes Provider Configuration</figcaption>
+</figure>
+
+Select **Add Provider**
+
+### Add a Workspace
+
+#### Start a Workspace with VS Code Browser
+
+Navigate to 'Workspaces' > '+ Create'. Enter your project url or choose one of the quickstart examples. Make sure to select 'VS Code Browser' under 'Default IDE'
+
+<figure>
+  <img src="/docs/media/create-workspace-virtualbox-workspace.png" alt="DevPod Flow" />
+  <figcaption>Create Workspace</figcaption>
+</figure>
+
+Then press 'Create Workspace'.
+
+<figure>
+  <img src="/docs/media/create-workspace-virtualbox-workspace-create.png" alt="DevPod Flow" />
+  <figcaption>Create Workspace</figcaption>
+</figure>
+
+A new window appears showing DevPod starting the workspace. After the workspace was created, VS Code should open automatically connected to the DevContainer.
+
+<figure>
+  <img src="/docs/media/create-workspace-vscode-browser-2.png" alt="DevPod Flow" />
+  <figcaption>VS Code opens automatically in the browser</figcaption>
+</figure>

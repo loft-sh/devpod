@@ -1,0 +1,52 @@
+---
+title: Linux Troubleshooting
+sidebar_label: Linux Troubleshooting
+---
+
+This purpose of this page is to outline any known issues with using devpod on Linux and provide known workarounds / fixes.
+
+### Using FISH shell
+
+Custom configurations in config.fish file run every time a fish -c command is called, so this processes somewhat get on the way of devpod agent workspace up.
+
+The solution is to move the customizations inside the if status is-interactive case.
+
+From this
+
+```
+if status is-interactive
+    # Commands to run in interactive sessions can go here
+end
+eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)"
+
+# customizations
+```
+
+to this
+
+```
+if status is-interactive
+    # Commands to run in interactive sessions can go here
+    eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)"
+    
+    # customizations
+end
+```
+
+### Using SELinux
+
+If you are running SELinux and try to start a workspace with a mounted volume, you may recieve a "Permission Denied" even if the ownership of the files are correct. To resolve
+append `:Z` to your volume definitions, like so
+
+```
+{
+    // some fields
+
+    "workspaceMount": "",
+    "workspaceFolder": "/workspaces/${localWorkspaceFolderBasename}",
+    "runArgs": [
+        // other args
+        "--volume=${localWorkspaceFolder}:/workspaces/${localWorkspaceFolderBasename}:Z"
+    ]
+}
+```
