@@ -66,7 +66,7 @@ func Exists(devPodConfig *config.Config, args []string) string {
 	return workspaceID
 }
 
-func ListWorkspaces(devPodConfig *config.Config, log log.Logger) ([]*provider2.Workspace, error) {
+func List(devPodConfig *config.Config, log log.Logger) ([]*provider2.Workspace, error) {
 	workspaceDir, err := provider2.GetWorkspacesDir(devPodConfig.DefaultContext)
 	if err != nil {
 		return nil, err
@@ -91,7 +91,7 @@ func ListWorkspaces(devPodConfig *config.Config, log log.Logger) ([]*provider2.W
 	return retWorkspaces, nil
 }
 
-func GetWorkspaceName(args []string) string {
+func GetName(args []string) string {
 	if len(args) == 0 {
 		return ""
 	}
@@ -105,8 +105,8 @@ func GetWorkspaceName(args []string) string {
 	return workspaceID
 }
 
-// GetWorkspace tries to retrieve an already existing workspace
-func GetWorkspace(devPodConfig *config.Config, args []string, changeLastUsed bool, log log.Logger) (client.BaseWorkspaceClient, error) {
+// Get tries to retrieve an already existing workspace
+func Get(devPodConfig *config.Config, args []string, changeLastUsed bool, log log.Logger) (client.BaseWorkspaceClient, error) {
 	provider, workspace, machine, err := getWorkspace(devPodConfig, args, changeLastUsed, log)
 	if err != nil {
 		return nil, err
@@ -149,8 +149,8 @@ func getWorkspace(devPodConfig *config.Config, args []string, changeLastUsed boo
 	return loadExistingWorkspace(workspaceID, devPodConfig, changeLastUsed, log)
 }
 
-// ResolveWorkspace tries to retrieve an already existing workspace or creates a new one
-func ResolveWorkspace(
+// Resolve tries to retrieve an already existing workspace or creates a new one
+func Resolve(
 	ctx context.Context,
 	devPodConfig *config.Config,
 	ide string,
@@ -336,14 +336,8 @@ func createWorkspace(
 		return nil, nil, nil, fmt.Errorf("provider '%s' is not initialized, please make sure to run 'devpod provider use %s' at least once before using this provider", provider.Config.Name, provider.Config.Name)
 	}
 
-	// get workspace folder
-	workspaceFolder, err := provider2.GetWorkspaceDir(devPodConfig.DefaultContext, workspaceID)
-	if err != nil {
-		return nil, nil, nil, err
-	}
-
 	// resolve workspace
-	workspace, err := resolve(ctx, provider, devPodConfig, name, workspaceID, workspaceFolder, source, isLocalPath, sshConfigPath, uid)
+	workspace, err := resolve(ctx, provider, devPodConfig, name, workspaceID, source, isLocalPath, sshConfigPath, uid)
 	if err != nil {
 		return nil, nil, nil, err
 	}
@@ -443,8 +437,7 @@ func resolve(
 	defaultProvider *ProviderWithOptions,
 	devPodConfig *config.Config,
 	name,
-	workspaceID,
-	workspaceFolder string,
+	workspaceID string,
 	source *provider2.WorkspaceSource,
 	isLocalPath bool,
 	sshConfigPath string,

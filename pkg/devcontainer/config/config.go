@@ -10,8 +10,8 @@ import (
 	"github.com/loft-sh/devpod/pkg/types"
 )
 
-type MergedDevContainerConfig struct {
-	DevContainerConfigBase  `json:",inline"`
+type MergedDevContainer struct {
+	DevContainerBase        `json:",inline"`
 	UpdatedConfigProperties `json:",inline"`
 	NonComposeBase          `json:",inline"`
 	ImageContainer          `json:",inline"`
@@ -23,27 +23,27 @@ type MergedDevContainerConfig struct {
 	Origin string `json:"-"`
 }
 
-type DevContainerConfig struct {
-	DevContainerConfigBase `json:",inline"`
-	DevContainerActions    `json:",inline"`
-	NonComposeBase         `json:",inline"`
-	ImageContainer         `json:",inline"`
-	ComposeContainer       `json:",inline"`
-	DockerfileContainer    `json:",inline"`
-	RunningContainer       `json:",inline"`
+type DevContainer struct {
+	DevContainerBase    `json:",inline"`
+	DevContainerActions `json:",inline"`
+	NonComposeBase      `json:",inline"`
+	ImageContainer      `json:",inline"`
+	ComposeContainer    `json:",inline"`
+	DockerfileContainer `json:",inline"`
+	RunningContainer    `json:",inline"`
 
 	// Origin is the origin from where this config was loaded
 	Origin string `json:"-"`
 }
 
-func CloneDevContainerConfig(config *DevContainerConfig) *DevContainerConfig {
-	out := &DevContainerConfig{}
+func CloneDevContainer(config *DevContainer) *DevContainer {
+	out := &DevContainer{}
 	_ = Convert(config, out)
 	out.Origin = config.Origin
 	return out
 }
 
-type DevContainerConfigBase struct {
+type DevContainerBase struct {
 	// A name for the dev container which can be displayed to the user.
 	Name string `json:"name,omitempty"`
 
@@ -361,7 +361,7 @@ func (m *Mount) String() string {
 	return strings.Join(components, ",")
 }
 
-func GetContextPath(parsedConfig *DevContainerConfig) string {
+func GetContextPath(parsedConfig *DevContainer) string {
 	context := parsedConfig.GetContext()
 	dockerfilePath := parsedConfig.GetDockerfile()
 

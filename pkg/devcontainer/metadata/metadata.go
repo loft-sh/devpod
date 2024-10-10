@@ -51,9 +51,9 @@ func FeatureConfigToImageMetadata(feature *config.FeatureConfig) *config.ImageMe
 	}
 }
 
-func DevContainerConfigToImageMetadata(devConfig *config.DevContainerConfig) *config.ImageMetadata {
+func DevContainerConfigToImageMetadata(devConfig *config.DevContainer) *config.ImageMetadata {
 	return &config.ImageMetadata{
-		DevContainerConfigBase: config.DevContainerConfigBase{
+		DevContainerBase: config.DevContainerBase{
 			ForwardPorts:         devConfig.ForwardPorts,
 			PortsAttributes:      devConfig.PortsAttributes,
 			OtherPortsAttributes: devConfig.OtherPortsAttributes,

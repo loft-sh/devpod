@@ -90,8 +90,7 @@ func (cmd *UpCmd) Run(ctx context.Context) error {
 	}
 
 	// start up
-	err = cmd.up(ctx, workspaceInfo, tunnelClient, logger)
-	if err != nil {
+	if err = cmd.up(ctx, workspaceInfo, tunnelClient, logger); err != nil {
 		return errors.Wrap(err, "devcontainer up")
 	}
 
@@ -137,9 +136,10 @@ func (cmd *UpCmd) devPodUp(ctx context.Context, workspaceInfo *provider2.AgentWo
 }
 
 func CreateRunner(workspaceInfo *provider2.AgentWorkspaceInfo, log log.Logger) (devcontainer.Runner, error) {
-	return devcontainer.NewRunner(agent.ContainerDevPodHelperLocation, agent.DefaultAgentDownloadURL(), workspaceInfo, log)
+	return devcontainer.NewRunner(agent.DevPodBinary, agent.DefaultAgentDownloadURL(), workspaceInfo, log)
 }
 
+// InitContentFolder creates the working directory for the devpod agent to store binaries / config
 func InitContentFolder(workspaceInfo *provider2.AgentWorkspaceInfo, log log.Logger) (bool, error) {
 	// check if workspace content folder exists
 	_, err := os.Stat(workspaceInfo.ContentFolder)
@@ -183,6 +183,7 @@ func InitContentFolder(workspaceInfo *provider2.AgentWorkspaceInfo, log log.Logg
 	return false, nil
 }
 
+// initWorkspace sets up a fresh workspace so it can run the devcontainer via devpod, setting up credentials, container runtime etc.
 func initWorkspace(ctx context.Context, cancel context.CancelFunc, workspaceInfo *provider2.AgentWorkspaceInfo, debug, shouldInstallDaemon bool) (tunnel.TunnelClient, log.Logger, string, error) {
 	// create a grpc client
 	tunnelClient, err := tunnelserver.NewTunnelClient(os.Stdin, os.Stdout, true, 0)

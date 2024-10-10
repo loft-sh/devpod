@@ -49,7 +49,7 @@ func (cmd *LogsCmd) Run(ctx context.Context) error {
 	logger := log.Default.ErrorStreamOnly()
 
 	// create new runner
-	runner, err := devcontainer.NewRunner(agent.ContainerDevPodHelperLocation, agent.DefaultAgentDownloadURL(), workspaceInfo, logger)
+	runner, err := devcontainer.NewRunner(agent.DevPodBinary, agent.DefaultAgentDownloadURL(), workspaceInfo, logger)
 	if err != nil {
 		return fmt.Errorf("create runner: %w", err)
 	}

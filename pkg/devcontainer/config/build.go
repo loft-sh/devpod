@@ -16,6 +16,7 @@ func GetDockerLabelForID(id string) []string {
 	return []string{DockerIDLabel + "=" + id}
 }
 
+// BuildInfo is returned once an image has been built and contains details about the image
 type BuildInfo struct {
 	ImageDetails  *ImageDetails
 	ImageMetadata *ImageMetadataConfig
@@ -26,6 +27,7 @@ type BuildInfo struct {
 	Dockerless *BuildInfoDockerless
 }
 
+// BuildInfoDockerless is the specific config used by kaniko to build a "dockerless image"
 type BuildInfoDockerless struct {
 	Context    string
 	Dockerfile string
@@ -36,6 +38,7 @@ type BuildInfoDockerless struct {
 	User string
 }
 
+// ImageBuildInfo contains the spec to use when building an image
 type ImageBuildInfo struct {
 	User     string
 	Metadata *ImageMetadataConfig

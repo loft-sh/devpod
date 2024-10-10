@@ -58,7 +58,7 @@ func ProbeUserEnv(ctx context.Context, probe string, userName string, log log.Lo
 		return map[string]string{}, nil
 	}
 
-	preferredShell, err := shell.GetShell(userName)
+	preferredShell, err := shell.Get(userName)
 	if err != nil {
 		return nil, fmt.Errorf("find shell for user %s: %w", userName, err)
 	}

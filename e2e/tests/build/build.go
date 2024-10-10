@@ -296,9 +296,9 @@ var _ = DevPodDescribe("devpod build test suite", func() {
 	})
 })
 
-func getDevcontainerConfig(dir string) *config.DevContainerConfig {
-	return &config.DevContainerConfig{
-		DevContainerConfigBase: config.DevContainerConfigBase{
+func getDevcontainerConfig(dir string) *config.DevContainer {
+	return &config.DevContainer{
+		DevContainerBase: config.DevContainerBase{
 			Name: "Build Example",
 		},
 		DevContainerActions: config.DevContainerActions{},

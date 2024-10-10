@@ -29,7 +29,7 @@ import (
 	"k8s.io/client-go/util/retry"
 )
 
-func RunInContainer(
+func StartCredentialsServer(
 	ctx context.Context,
 	devPodConfig *config.Config,
 	containerClient *ssh.Client,
@@ -111,7 +111,7 @@ func RunInContainer(
 		writer := log.ErrorStreamOnly().Writer(logrus.DebugLevel, false)
 		defer writer.Close()
 
-		command := fmt.Sprintf("'%s' agent container credentials-server --user '%s'", agent.ContainerDevPodHelperLocation, user)
+		command := fmt.Sprintf("'%s' agent container credentials-server --user '%s'", agent.DevPodBinary, user)
 		if configureGitCredentials {
 			command += " --configure-git-helper"
 		}

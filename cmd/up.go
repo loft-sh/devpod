@@ -49,9 +49,6 @@ import (
 type UpCmd struct {
 	provider2.CLIOptions
 	*flags.GlobalFlags
-
-	Machine string
-
 	ProviderOptions []string
 
 	ConfigureSSH            bool
@@ -59,8 +56,8 @@ type UpCmd struct {
 	OpenIDE                 bool
 	SetupLoftPlatformAccess bool
 
-	SSHConfigPath string
-
+	Machine        string
+	SSHConfigPath  string
 	DotfilesSource string
 	DotfilesScript string
 }
@@ -78,9 +75,11 @@ func NewUpCmd(f *flags.GlobalFlags) *cobra.Command {
 			if err != nil {
 				return err
 			}
-
 			// try to parse flags from env
 			if err := mergeDevPodUpOptions(&cmd.CLIOptions); err != nil {
+				return err
+			}
+			if err = mergeEnvFromFiles(&cmd.CLIOptions); err != nil {
 				return err
 			}
 
@@ -92,11 +91,6 @@ func NewUpCmd(f *flags.GlobalFlags) *cobra.Command {
 
 				// merge context options from env
 				config.MergeContextOptions(devPodConfig.Current(), os.Environ())
-			}
-
-			err = mergeEnvFromFiles(&cmd.CLIOptions)
-			if err != nil {
-				return err
 			}
 
 			var source *provider2.WorkspaceSource
@@ -112,7 +106,7 @@ func NewUpCmd(f *flags.GlobalFlags) *cobra.Command {
 			}
 
 			ctx := context.Background()
-			client, err := workspace2.ResolveWorkspace(
+			client, err := workspace2.Resolve(
 				ctx,
 				devPodConfig,
 				cmd.IDE,
@@ -238,7 +232,7 @@ func (cmd *UpCmd) Run(
 		}
 		setupGPGAgentForwarding := cmd.GPGAgentForwarding || devPodConfig.ContextOption(config.ContextOptionGPGAgentForwarding) == "true"
 
-		err = configureSSH(devPodConfig, client, cmd.SSHConfigPath, user, workdir, setupGPGAgentForwarding, devPodHome)
+		err = configureSSH(client, cmd.SSHConfigPath, user, workdir, devPodHome, setupGPGAgentForwarding)
 		if err != nil {
 			return err
 		}
@@ -351,21 +345,22 @@ func (cmd *UpCmd) Run(
 	return nil
 }
 
+// devPodUp calls devPodUpProxy or devPodUpMachine based on the workspaceClient type
 func (cmd *UpCmd) devPodUp(
 	ctx context.Context,
 	devPodConfig *config.Config,
 	client client2.BaseWorkspaceClient,
 	log log.Logger,
 ) (*config2.Result, error) {
-	err := client.Lock(ctx)
-	if err != nil {
+
+	var err error
+	var result *config2.Result
+	if err = client.Lock(ctx); err != nil {
 		return nil, err
 	}
 	defer client.Unlock()
 
 	// get result
-	var result *config2.Result
-
 	switch client := client.(type) {
 	case client2.WorkspaceClient:
 		result, err = cmd.devPodUpMachine(ctx, devPodConfig, client, log)
@@ -390,6 +385,7 @@ func (cmd *UpCmd) devPodUp(
 	return result, nil
 }
 
+// devPodUpProxy runs "devpod agent workspace up" proxied by a local command, such as kubectl, based on the provider
 func (cmd *UpCmd) devPodUpProxy(
 	ctx context.Context,
 	client client2.ProxyClient,
@@ -466,6 +462,7 @@ func (cmd *UpCmd) devPodUpProxy(
 	return result, <-errChan
 }
 
+// devPodUpMachine runs "devpod agent workspace up ..." on a remote machine to start the devcontainer
 func (cmd *UpCmd) devPodUpMachine(
 	ctx context.Context,
 	devPodConfig *config.Config,
@@ -505,7 +502,7 @@ func (cmd *UpCmd) devPodUpMachine(
 	}
 
 	agentInjectFunc := func(cancelCtx context.Context, sshCmd string, sshTunnelStdinReader, sshTunnelStdoutWriter *os.File, writer io.WriteCloser) error {
-		return agent.InjectAgentAndExecute(
+		return agent.InjectAndExecute(
 			cancelCtx,
 			func(ctx context.Context, command string, stdin io.Reader, stdout io.Writer, stderr io.Writer) error {
 				return client.Command(ctx, client2.CommandOptions{
@@ -574,8 +571,7 @@ func startJupyterNotebookInBrowser(
 	logger log.Logger,
 ) error {
 	if forwardGpg {
-		err := performGpgForwarding(client, logger)
-		if err != nil {
+		if err := performGpgForwarding(client, logger); err != nil {
 			return err
 		}
 	}
@@ -593,8 +589,7 @@ func startJupyterNotebookInBrowser(
 	targetURL := fmt.Sprintf("http://localhost:%d/lab", jupyterPort)
 	if jupyter.Options.GetValue(ideOptions, jupyter.OpenOption) == "true" {
 		go func() {
-			err = open2.Open(ctx, targetURL, logger)
-			if err != nil {
+			if err = open2.Open(ctx, targetURL, logger); err != nil {
 				logger.Errorf("error opening jupyter notebook: %v", err)
 			}
 
@@ -785,7 +780,7 @@ func startBrowserTunnel(
 			}
 
 			// run in container
-			err := tunnel.RunInContainer(
+			err := tunnel.StartCredentialsServer(
 				ctx,
 				devPodConfig,
 				containerClient,
@@ -811,7 +806,8 @@ func startBrowserTunnel(
 	return nil
 }
 
-func configureSSH(c *config.Config, client client2.BaseWorkspaceClient, sshConfigPath, user, workdir string, gpgagent bool, devPodHome string) error {
+// configureSSH updates the local SSH config to inject Host aliases and config needed for the tunnel
+func configureSSH(client client2.BaseWorkspaceClient, sshConfigPath, user, workdir, devPodHome string, gpgagent bool) error {
 	path, err := devssh.ResolveSSHConfigPath(sshConfigPath)
 	if err != nil {
 		return errors.Wrap(err, "Invalid ssh config path")
@@ -835,6 +831,7 @@ func configureSSH(c *config.Config, client client2.BaseWorkspaceClient, sshConfi
 	return nil
 }
 
+// mergeDevPodUpOptions overrides the CLI arguments with environment variable options
 func mergeDevPodUpOptions(baseOptions *provider2.CLIOptions) error {
 	oldOptions := *baseOptions
 	found, err := clientimplementation.DecodeOptionsFromEnv(
@@ -853,6 +850,7 @@ func mergeDevPodUpOptions(baseOptions *provider2.CLIOptions) error {
 	return nil
 }
 
+// mergeEnvFromFiles overrides the CLI arguments with devpod's config home files
 func mergeEnvFromFiles(baseOptions *provider2.CLIOptions) error {
 	var variables []string
 	for _, file := range baseOptions.WorkspaceEnvFile {
@@ -895,6 +893,7 @@ func createSSHCommand(
 	return exec.CommandContext(ctx, execPath, args...), nil
 }
 
+// setupDotfiles download and source dot files from a repo or script on the remote workspace
 func setupDotfiles(
 	dotfiles, script string,
 	client client2.BaseWorkspaceClient,
@@ -960,7 +959,7 @@ func setupDotfiles(
 		client.Workspace(),
 		"--log-output=raw",
 		"--command",
-		agent.ContainerDevPodHelperLocation+" "+strings.Join(agentArguments, " "),
+		agent.DevPodBinary+" "+strings.Join(agentArguments, " "),
 	)
 
 	if log.GetLevel() == logrus.DebugLevel {
@@ -1013,6 +1012,7 @@ func setupGitSSHSignature(signingKey string, client client2.BaseWorkspaceClient,
 	return nil
 }
 
+// setupLoftPlatformAccess authenticates to loft platform if devpod pro is enabled
 func setupLoftPlatformAccess(context, provider, user string, client client2.BaseWorkspaceClient, log log.Logger) error {
 	log.Infof("Setting up platform access")
 	execPath, err := os.Executable()
@@ -1025,7 +1025,7 @@ func setupLoftPlatformAccess(context, provider, user string, client client2.Base
 		return fmt.Errorf("get port: %w", err)
 	}
 
-	command := fmt.Sprintf("\"%s\" agent container setup-loft-platform-access --context %s --provider %s --port %d", agent.ContainerDevPodHelperLocation, context, provider, port)
+	command := fmt.Sprintf("\"%s\" agent container setup-loft-platform-access --context %s --provider %s --port %d", agent.DevPodBinary, context, provider, port)
 
 	log.Debugf("Executing command: %v", command)
 	var errb bytes.Buffer

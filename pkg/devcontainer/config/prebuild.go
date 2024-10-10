@@ -16,11 +16,11 @@ import (
 )
 
 func CalculatePrebuildHash(
-	originalConfig *DevContainerConfig,
+	originalConfig *DevContainer,
 	platform, architecture, contextPath, dockerfilePath, dockerfileContent string,
 	buildInfo *ImageBuildInfo,
 	log log.Logger) (string, error) {
-	parsedConfig := CloneDevContainerConfig(originalConfig)
+	parsedConfig := CloneDevContainer(originalConfig)
 
 	if platform != "" {
 		splitted := strings.Split(platform, "/")
@@ -33,7 +33,7 @@ func CalculatePrebuildHash(
 	parsedConfig.Origin = ""
 	parsedConfig.DevContainerActions = DevContainerActions{}
 	parsedConfig.NonComposeBase = NonComposeBase{}
-	parsedConfig.DevContainerConfigBase = DevContainerConfigBase{
+	parsedConfig.DevContainerBase = DevContainerBase{
 		Name:                        parsedConfig.Name,
 		Features:                    parsedConfig.Features,
 		OverrideFeatureInstallOrder: parsedConfig.OverrideFeatureInstallOrder,

@@ -41,6 +41,7 @@ func listMachines(devPodConfig *config.Config, log log.Logger) ([]*provider2.Mac
 	return retMachines, nil
 }
 
+// ResolveMachine uses the given args to either find or create a machine
 func ResolveMachine(devPodConfig *config.Config, args []string, userOptions []string, log log.Logger) (client.Client, error) {
 	machineClient, err := resolveMachine(devPodConfig, args, log)
 	if err != nil {

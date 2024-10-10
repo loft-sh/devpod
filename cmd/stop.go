@@ -34,7 +34,7 @@ func NewStopCmd(flags *flags.GlobalFlags) *cobra.Command {
 				return err
 			}
 
-			client, err := workspace2.GetWorkspace(devPodConfig, args, false, log.Default)
+			client, err := workspace2.Get(devPodConfig, args, false, log.Default)
 			if err != nil {
 				return err
 			}
@@ -88,7 +88,7 @@ func (cmd *StopCmd) stopSingleMachine(ctx context.Context, client client2.BaseWo
 	}
 
 	// try to find other workspace with same machine
-	workspaces, err := workspace2.ListWorkspaces(devPodConfig, log.Default)
+	workspaces, err := workspace2.List(devPodConfig, log.Default)
 	if err != nil {
 		return false, errors.Wrap(err, "list workspaces")
 	}

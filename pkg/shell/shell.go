@@ -19,7 +19,8 @@ import (
 	"mvdan.cc/sh/v3/syntax"
 )
 
-func ExecuteCommandWithShell(
+// Execute runs a given command using a shell appropriate for the OS, for windows it will emulate a shell
+func Execute(
 	ctx context.Context,
 	command string,
 	stdin io.Reader,
@@ -49,10 +50,11 @@ func ExecuteCommandWithShell(
 	}
 
 	// run emulated shell
-	return RunEmulatedShell(ctx, command, stdin, stdout, stderr, environ)
+	return RunEmulated(ctx, command, stdin, stdout, stderr, environ)
 }
 
-func RunEmulatedShell(ctx context.Context, command string, stdin io.Reader, stdout io.Writer, stderr io.Writer, env []string) error {
+// RunEmulated emulates a shell for windows to execute commands in
+func RunEmulated(ctx context.Context, command string, stdin io.Reader, stdout io.Writer, stderr io.Writer, env []string) error {
 	// Let's parse the complete command
 	parsed, err := syntax.NewParser().Parse(strings.NewReader(command), "")
 	if err != nil {
@@ -125,7 +127,8 @@ func (devNull) Close() error {
 	return nil
 }
 
-func GetShell(userName string) ([]string, error) {
+// Get returns a list of available shells found on the system
+func Get(userName string) ([]string, error) {
 	// try to get a shell
 	if runtime.GOOS != "windows" {
 		// infere login shell from getent

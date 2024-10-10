@@ -1,0 +1,46 @@
+---
+title: Reduce build times with remote caching
+sidebar_label: Reduce build times
+---
+
+Devpod provides the ability to use a registry as a remote backend cache for your container builds. To enable it perform
+
+```
+devpod context set-options -o REGISTRY_CACHE={registry}
+```
+
+where registry follows the syntax "\{domain\}/\{project\}/\{repo\}", such as gcr.io/my-project/my-dev-env
+
+
+If using the docker provider, ensure your docker environment has the image snapshotter enabled in your daemon (https://docs.docker.com/engine/storage/containerd/)
+```
+cat /etc/docker/daemon.json
+
+{
+  "features": {
+    "containerd-snapshotter": true
+  }
+}
+```
+
+Then prebuild your image, this will populate the registry cache so that developers that need to build updates can build on top of the existing pre build.
+
+```
+devpod build my-workspace
+```
+
+Now the next time you or anyone in your team needs to build an image, it can pull from the cache. If you've made changes to your environment, then DevPod will detect these changes and are 
+built on top of the existing image layers.
+
+
+#### How does DevPod detect changes?
+
+Devpod parses your Dockerfile and .devcontainer.json to detect file paths that can affect your build context. Devpod traverses these files and makes a hash of the file contents to use as the 
+container's image tag. When you make changes to these files, the hash will change causing a rebuild. Thanks to the remote cache the previous layers will be built so only changes are needed. To 
+reduce build times it is recommened to follow docker's best practices when writing Dockerfiles.
+
+#### Why Kaniko?
+
+When DevPod uses the kubernetes driver and needs to build a devcontainer, but your local environment does not have a container runtime, it builds the container in the cluster. It does so using
+Kaniko, Kaniko builds the container in userspace and does not require super user priveleges. This is much more secure than docker in docker, where the docker daemon is either mounted locally on 
+the container or over a network within the cluster, neither being ideal.

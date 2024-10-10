@@ -592,7 +592,7 @@ func RunCommand(ctx context.Context, command types.StrArray, environ []string, s
 
 	// use shell if command length is equal 1
 	if len(command) == 1 {
-		return shell.ExecuteCommandWithShell(ctx, command[0], stdin, stdout, stderr, environ)
+		return shell.Execute(ctx, command[0], stdin, stdout, stderr, environ)
 	}
 
 	// run command

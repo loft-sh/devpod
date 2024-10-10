@@ -1,0 +1,22 @@
+---
+title: How it works using kubernetes
+sidebar_label: Deploying kubernetes
+---
+
+DevPod works the same with kubernetes as with Machines, the key difference is the secure tunnel is set up using the kubernetes control plane (e.g. kubectl ...) so an agent is not necessary
+to be run on the kubernetes node. Instead devpod-provider-kubernetes simply wraps the appropriate `kubectl` commands to start and connect a workspace using a devcontainer.
+
+<figure>
+  <img src="/docs/media/c4_k8s.png" alt="DevPod Architecture" />
+  <figcaption>DevPod - Container Diagram Kubernetes</figcaption>
+</figure>
+
+DevPod often has to build workspaces even when an "image" is specified in .devcontainer.json. This is because the devcontainer can contain "features" the cause the Dockerfile to be extended.
+When this happens, or simply when "build" is used in .devcontainer.json, DevPod deploys an init container to the workspace that uses kaniko to first build your image (see #tutorials/reduce-build-times
+for more details on kaniko) then executes the container's entrypoint in the pod's main container. While building, if REGISTRY_CACHE has been specified in the context options, kaniko will download
+existing build layers from the registry to reduce the overall build time.
+
+<figure>
+  <img src="/docs/media/c4_build_k8s.png" alt="DevPod Architecture 2" />
+  <figcaption>DevPod - Component Diagram Kubernetes Build Process</figcaption>
+</figure>

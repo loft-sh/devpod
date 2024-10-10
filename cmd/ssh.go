@@ -79,7 +79,7 @@ func NewSSHCmd(f *flags.GlobalFlags) *cobra.Command {
 				config.MergeContextOptions(devPodConfig.Current(), os.Environ())
 			}
 
-			client, err := workspace2.GetWorkspace(devPodConfig, args, true, log.Default.ErrorStreamOnly())
+			client, err := workspace2.Get(devPodConfig, args, true, log.Default.ErrorStreamOnly())
 			if err != nil {
 				return err
 			}
@@ -418,7 +418,7 @@ func (cmd *SSHCmd) startTunnel(ctx context.Context, devPodConfig *config.Config,
 	}
 
 	log.Debugf("Run outer container tunnel")
-	command := fmt.Sprintf("'%s' helper ssh-server --track-activity --stdio --workdir '%s'", agent.ContainerDevPodHelperLocation, workdir)
+	command := fmt.Sprintf("'%s' helper ssh-server --track-activity --stdio --workdir '%s'", agent.DevPodBinary, workdir)
 	if cmd.Debug {
 		command += " --debug"
 	}
@@ -466,7 +466,7 @@ func (cmd *SSHCmd) startServices(
 	log log.Logger,
 ) {
 	if cmd.User != "" {
-		err := tunnel.RunInContainer(
+		err := tunnel.StartCredentialsServer(
 			ctx,
 			devPodConfig,
 			containerClient,
@@ -579,7 +579,7 @@ func (cmd *SSHCmd) setupGPGAgent(
 	// Now we forward the agent socket to the remote, and setup remote gpg to use it
 	// fix eventual permissions and so on
 	forwardAgent := []string{
-		agent.ContainerDevPodHelperLocation,
+		agent.DevPodBinary,
 	}
 
 	if log.GetLevel() == logrus.DebugLevel {
@@ -633,7 +633,7 @@ func startWorkspaceCredentialServer(ctx context.Context, client *ssh.Client, use
 	writer := log.ErrorStreamOnly().Writer(logrus.DebugLevel, false)
 	defer writer.Close()
 
-	command := fmt.Sprintf("'%s' agent container credentials-server", agent.ContainerDevPodHelperLocation)
+	command := fmt.Sprintf("'%s' agent container credentials-server", agent.DevPodBinary)
 	args := []string{
 		fmt.Sprintf("--user '%s'", user),
 	}

@@ -19,6 +19,7 @@ func newForwarder(sshClient *ssh.Client, forwardedPorts []string, log log.Logger
 	}
 }
 
+// forwarder manages which ports to forward using a ssh client
 type forwarder struct {
 	m sync.Mutex
 
