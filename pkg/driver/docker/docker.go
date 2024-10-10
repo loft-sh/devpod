@@ -1,10 +1,13 @@
 package docker
 
 import (
+	"bufio"
 	"context"
 	"fmt"
 	"io"
 	"os"
+	"os/user"
+	"regexp"
 	"runtime"
 	"slices"
 	"strconv"
@@ -361,6 +364,183 @@ func (d *dockerDriver) RunDockerDevContainer(
 	err = d.Docker.Run(ctx, args, nil, writer, writer)
 	if err != nil {
 		return err
+	}
+
+	if runtime.GOOS != "windows" && ((parsedConfig.ContainerUser != "" || parsedConfig.RemoteUser != "") &&
+		(parsedConfig.UpdateRemoteUserUID == nil || *parsedConfig.UpdateRemoteUserUID)) {
+		// Retrieve local user UID and GID
+		localUser, err := user.Current()
+		if err != nil {
+			return err
+		}
+		localUid := localUser.Uid
+		localGid := localUser.Gid
+
+		// Retrieve user to update
+		containerUser := parsedConfig.RemoteUser
+		if containerUser == "" {
+			containerUser = parsedConfig.ContainerUser
+		}
+		if containerUser == "" {
+			return nil
+		}
+		container, err := d.FindDevContainer(ctx, workspaceId)
+		if err != nil {
+			return err
+		} else if container == nil {
+			return nil
+		}
+
+		// Create temporary files to store /etc/passwd and /etc/group
+		containerPasswdFileIn, err := os.CreateTemp("", "devpod_container_passwd_in")
+		if err != nil {
+			return err
+		}
+		defer os.Remove(containerPasswdFileIn.Name())
+
+		containerGroupFileIn, err := os.CreateTemp("", "devpod_container_group_in")
+		if err != nil {
+			return err
+		}
+		defer os.Remove(containerGroupFileIn.Name())
+
+		containerPasswdFileOut, err := os.CreateTemp("", "devpod_container_passwd_out")
+		if err != nil {
+			return err
+		}
+		defer os.Remove(containerPasswdFileOut.Name())
+
+		containerGroupFileOut, err := os.CreateTemp("", "devpod_container_group_out")
+		if err != nil {
+			return err
+		}
+		defer os.Remove(containerGroupFileOut.Name())
+
+		// Copy /etc/passwd and /etc/group from the container to the temporary files
+		args = []string{"cp", fmt.Sprintf("%s:/etc/passwd", container.ID), containerPasswdFileIn.Name()}
+		d.Log.Debugf("Running docker command: %s %s", d.Docker.DockerCommand, strings.Join(args, " "))
+		err = d.Docker.Run(ctx, args, nil, writer, writer)
+		if err != nil {
+			return err
+		}
+
+		args = []string{"cp", fmt.Sprintf("%s:/etc/group", container.ID), containerGroupFileIn.Name()}
+		d.Log.Debugf("Running docker command: %s %s", d.Docker.DockerCommand, strings.Join(args, " "))
+		err = d.Docker.Run(ctx, args, nil, writer, writer)
+		if err != nil {
+			return err
+		}
+
+		containerPasswdFileIn, err = os.Open(containerPasswdFileIn.Name())
+		if err != nil {
+			return err
+		}
+		defer containerPasswdFileIn.Close()
+		// Update /etc/passwd and /etc/group with the new user UID and GID
+		scanner := bufio.NewScanner(containerPasswdFileIn)
+		containerUid := ""
+		containerGid := ""
+		containerHome := ""
+
+		re := regexp.MustCompile(fmt.Sprintf(`^%s:(?P<password>x?):(?P<uid>.*):(?P<gid>.*):(?P<gcos>.*):(?P<home>.*):(?P<shell>.*)$`, containerUser))
+		for scanner.Scan() {
+			match := re.FindStringSubmatch(scanner.Text())
+			if match == nil {
+				_, err := containerPasswdFileOut.WriteString(fmt.Sprintf("%s\n", scanner.Text()))
+				if err != nil {
+					return err
+				}
+				continue
+			}
+			result := make(map[string]string)
+			for i, name := range re.SubexpNames() {
+				if i != 0 && name != "" {
+					result[name] = match[i]
+				}
+			}
+			containerUid = result["uid"]
+			containerGid = result["gid"]
+			containerHome = result["home"]
+
+			_, err := containerPasswdFileOut.WriteString(fmt.Sprintf("%s:%s:%s:%s:%s:%s:%s\n", containerUser, result["password"], localUid, localGid, result["gcos"], result["home"], result["shell"]))
+			if err != nil {
+				return err
+			}
+		}
+
+		if err := scanner.Err(); err != nil {
+			return err
+		}
+
+		if localUid == "0" || containerUid == "0" || (localUid == containerUid && localGid == containerGid) {
+			return nil
+		}
+
+		containerGroupFileIn, err = os.Open(containerGroupFileIn.Name())
+		if err != nil {
+			return err
+		}
+		defer containerGroupFileIn.Close()
+
+		scanner = bufio.NewScanner(containerGroupFileIn)
+
+		re = regexp.MustCompile(fmt.Sprintf(`^(?P<group>.*):(?P<password>x?):%s:(?P<group_list>.*)$`, containerGid))
+		for scanner.Scan() {
+			match := re.FindStringSubmatch(scanner.Text())
+			if match == nil {
+				_, err := containerGroupFileOut.WriteString(fmt.Sprintf("%s\n", scanner.Text()))
+				if err != nil {
+					return err
+				}
+				continue
+			}
+			result := make(map[string]string)
+			for i, name := range re.SubexpNames() {
+				if i != 0 && name != "" {
+					result[name] = match[i]
+				}
+			}
+
+			_, err := containerGroupFileOut.WriteString(fmt.Sprintf("%s:%s:%s:%s\n", result["group"], result["password"], localGid, result["group_list"]))
+			if err != nil {
+				return err
+			}
+		}
+
+		if err := scanner.Err(); err != nil {
+			return err
+		}
+
+		d.Log.Debugf("Updating container user uid")
+
+		// Copy /etc/passwd and /etc/group back to the container
+		args = []string{"cp", containerPasswdFileOut.Name(), fmt.Sprintf("%s:/etc/passwd", container.ID)}
+		d.Log.Debugf("Running docker command: %s %s", d.Docker.DockerCommand, strings.Join(args, " "))
+		err = d.Docker.Run(ctx, args, nil, writer, writer)
+		if err != nil {
+			return err
+		}
+
+		args = []string{"cp", containerGroupFileOut.Name(), fmt.Sprintf("%s:/etc/group", container.ID)}
+		d.Log.Debugf("Running docker command: %s %s", d.Docker.DockerCommand, strings.Join(args, " "))
+		err = d.Docker.Run(ctx, args, nil, writer, writer)
+		if err != nil {
+			return err
+		}
+
+		args = []string{"exec", "-u", "root", container.ID, "chmod", "644", "/etc/passwd", "/etc/group"}
+		d.Log.Debugf("Running docker command: %s %s", d.Docker.DockerCommand, strings.Join(args, " "))
+		err = d.Docker.Run(ctx, args, nil, writer, writer)
+		if err != nil {
+			return err
+		}
+
+		args = []string{"exec", "-u", "root", container.ID, "chown", "-R", fmt.Sprintf("%s:%s", localUid, localGid), containerHome}
+		d.Log.Debugf("Running docker command: %s %s", d.Docker.DockerCommand, strings.Join(args, " "))
+		err = d.Docker.Run(ctx, args, nil, writer, writer)
+		if err != nil {
+			return err
+		}
 	}
 
 	return nil
