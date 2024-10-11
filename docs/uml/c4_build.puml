@@ -19,12 +19,12 @@ Component(cdf, "Compiled Dockerfile", "")
 Boundary(repo, "Git repo") {
   Component(bctx, "Build context", "Source code, dot files etc.")
   Component(df, "Dockerfile", "")
-}
 
-Boundary(cluster, "Dev Container Spec") {
-  Component(dc, ".devcontainer.json", "Define dev env")
-  Component(fa, "Feature A", "docker in docker")
-  Component(fb, "Feature B", "git stuff")
+  Boundary(cluster, "Dev Container Spec") {
+    Component(dc, ".devcontainer.json", "Define dev env")
+    Component(fa, "Feature A", "docker in docker")
+    Component(fb, "Feature B", "git stuff")
+  }
 }
 
 Rel(repo, user, "")

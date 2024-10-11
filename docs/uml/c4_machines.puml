@@ -2,7 +2,7 @@
 !include https://raw.githubusercontent.com/plantuml-stdlib/C4-PlantUML/master/C4_Component.puml
 
 skinparam linetype ortho
-skinparam nodesep 100
+skinparam nodesep 150
 skinparam ranksep 150
 scale 1920x1080
 
@@ -34,8 +34,7 @@ Rel(controlPlane, dockerd, "docker run ...")
 Rel(dockerd, ws, "")
 Rel(agent, ssh, "")
 Rel(agent, runner, "")
-BiRel_Right(ide, ssh, "SSH port forwarding")
-Rel(user, ide, "")
+BiRel_Right(user, ide, "SSH port forwarding")
 Rel(ctx, user, "")
 Rel(env, user, "")
 BiRel(controlPlane, agent, "SSH  ")
