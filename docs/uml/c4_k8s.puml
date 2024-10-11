@@ -1,0 +1,40 @@
+@startuml
+!include https://raw.githubusercontent.com/plantuml-stdlib/C4-PlantUML/master/C4_Component.puml
+
+skinparam linetype ortho
+skinparam nodesep 200
+skinparam ranksep 150
+scale 1920x1080
+
+HIDE_STEREOTYPE()
+LAYOUT_TOP_DOWN()
+
+title Component diagram for DevPod with kubernetes
+
+Person(user, "DevPod", "CLI or UI")
+System(prov, "Kubernetes Provider", "Devpod Provider")
+Component(ide, "IDE", "Local IDE")
+Component(ctx, "Context", "Config, working dir etc.")
+Component(env, "Local Env", "Shell variables, git credentials etc.")
+
+System_Boundary(cluster, "Kubernetes Cluster") {
+  System(controlPlane, "kube API server", "Manages the cluster")
+  System_Boundary(ns, "devpod namespace") {
+    Container_Boundary(ws, "Workspace") {
+      Component(runner, "Dev Container", "kaniko:executor")
+      Component(agent, "Agent", "")
+      Component(ssh, "SSH server", "")
+      ContainerDb(dir, "Workspace Directory", "Volume", "")
+    }
+  }
+}
+
+BiRel_Right(user, prov, "devpod up ...")
+BiRel(prov, controlPlane, " kubectl ...")
+BiRel(controlPlane, agent, " ")
+BiRel_Left(agent, ssh, "Tunnelled STDIO")
+Rel(agent, runner, " ")
+BiRel(user, ide, "SSH port forwarding")
+Rel_Up(user, ctx, "")
+Rel_Left(user, env, "")
+@enduml

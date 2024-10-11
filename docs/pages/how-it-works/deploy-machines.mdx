@@ -1,0 +1,25 @@
+---
+title: How it works using VMs
+sidebar_label: Deploying machines
+---
+
+Machines to DevPod are the infrastructure that ultimately run your devcontainer. Some providers such as gcloud, aws, digitalocean are "machine" providers since
+they first setup a VM to deploy you container to.
+
+When DevPod starts a workspace, such as `devpod up`, DevPod uses the provider selected and starts your devcontainer. If using a machine provider, DevPod will check if it should create a VM first.
+If so it uses your local environments credentials and the associated CLI tool, such as `aws` or `az` to create the infrastructure. Once started DevPod connects to the VM using the provider's specified tunnel, below
+are some examples of providers and there secure tunnels.
+
+
+- AWS: Instance connect
+- GCloud:
+- Azure:
+ 
+The dedvpod agent starts a SSH server using the STDIO of the secure tunnel in order for you local DevPod CLI/UI to forward ports over the SSH connection. Once this is done DevPod starts your local 
+IDE and connects it to the devcontainer via SSH.
+
+<figure>
+  <img src="/docs/media/c4_machines.png" alt="DevPod Architecture" />
+  <figcaption>DevPod - Component Diagram</figcaption>
+</figure>
+

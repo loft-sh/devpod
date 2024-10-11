@@ -1,0 +1,67 @@
+@startuml
+
+!theme cloudscape-design
+skinparam BackgroundColor lightgray
+
+alt using machine provider
+alt machine doesn't exist
+DevPod -> Provider: devpod machine create
+Provider --> DevPod: machine id
+end
+DevPod -> Provider: devpod machine start
+Provider --> DevPod: machine id
+end
+
+DevPod -> Repo: git pull
+Repo --> DevPod: source code
+
+alt image not already available
+DevPod -> Agent: devpod workspace build
+activate Agent
+Agent --> ContainerRuntime: build
+ContainerRuntime --> Agent: image
+Agent --> DevPod: 
+deactivate Agent
+end
+
+DevPod -> Agent: devpod helper ssh-server --stdio
+activate Agent
+DevPod -> Agent: devpod agent daemon
+DevPod -> Agent: devpod agent workspace up --workspace-info
+
+Agent -> ContainerRuntime: run
+ContainerRuntime --> Agent: container id
+
+Agent -> ContainerAgent: devpod helper ssh-server --stdio
+activate ContainerAgent
+
+Agent -> ContainerAgent: devpod agent container setup
+Agent -> ContainerAgent: devpod agent container credentials-server
+alt if EXIT_AFTER_TIMEOUT
+Agent -> ContainerAgent: devpod agent container daemon
+end
+
+alt if pro user
+Agent -> ContainerAgent: devpod agent container setup-loft-platform-access
+ContainerAgent -> Platform: Setup pro
+Platform --> ContainerAgent: platform creds
+end
+
+alt if GIT_SSH_SIGNATURE_FORWARDING
+Agent -> DevPod: devpod agent git-credentials
+DevPod --> Agent: git creds
+end
+alt if SSH_INJECT_DOCKER_CREDENTIALS
+Agent -> DevPod: devpod agent docker-credentials
+DevPod --> Agent: docker creds
+end
+
+Agent -> ContainerAgent: Run life cycle hooks
+
+ContainerAgent --> Agent: 
+deactivate ContainerAgent
+Agent --> DevPod: 
+deactivate Agent
+
+DevPod -> IDE: Start
+@enduml

@@ -1,0 +1,41 @@
+@startuml
+!include https://raw.githubusercontent.com/plantuml-stdlib/C4-PlantUML/master/C4_Component.puml
+
+skinparam linetype ortho
+skinparam nodesep 150
+skinparam ranksep 150
+scale 1920x1080
+
+HIDE_STEREOTYPE()
+LAYOUT_TOP_DOWN()
+
+title Component diagram for DevPod with machine providers
+
+Person(user, "DevPod", "CLI or UI")
+System(prov, "DevPod Provider", "aws, gcloud etc.")
+Component(ide, "IDE", "Local IDE")
+Component(ctx, "Context", "Config, working dir etc.")
+Component(env, "Local Env", "Shell variables, git credentials etc.")
+
+System_Boundary(cluster, "Virtual Machine") {
+  System(controlPlane, "DevPod Agent", "Manages the machine")
+  System(dockerd, "Docker daemon", "Manages the containers")
+  Container_Boundary(ws, "Workspace") {
+    Component(runner, "devcontainer", "")
+    Component(agent, "DevPod Container Agent", "")
+    Component(ssh, "SSH server", "")
+    ContainerDb(dir, "Workspace Directory", "Volume", "")
+  }
+}
+
+BiRel(user, prov, " devpod up ...")
+BiRel(prov, controlPlane, "secure provider specific tunnel")
+Rel(controlPlane, dockerd, "docker run ...")
+Rel(dockerd, ws, "")
+Rel(agent, ssh, "")
+Rel(agent, runner, "")
+BiRel_Right(user, ide, "SSH port forwarding")
+Rel(ctx, user, "")
+Rel(env, user, "")
+BiRel(controlPlane, agent, "SSH  ")
+@enduml
