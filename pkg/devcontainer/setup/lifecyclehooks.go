@@ -98,7 +98,7 @@ func run(commands []types.LifecycleHook, user, dir string, remoteEnv map[string]
 			log.Infof("Run command %s: %s...", k, strings.Join(c, " "))
 			args := []string{}
 			if user != "root" {
-				args = append(args, "su", user, "-c", command.Quote(c))
+				args = append(args, "sudo", "su", user, "-c", command.Quote(c))
 			} else {
 				args = append(args, "sh", "-c", command.Quote(c))
 			}
