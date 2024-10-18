@@ -146,7 +146,7 @@ func (g *GPGConf) SetupRemoteSocketLink() error {
 		return err
 	}
 
-	err = exec.Command("sudo", "ln", "-f", g.SocketPath, "/tmp/S.gpg-agent").Run()
+	err = exec.Command("sudo", "ln", "-s", "-f", g.SocketPath, "/tmp/S.gpg-agent").Run()
 	if err != nil {
 		return err
 	}
