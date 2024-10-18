@@ -74,7 +74,8 @@ func ShouldUse(cliOptions *provider2.CLIOptions) bool {
 
 // IsAvailable checks if devpod crane is installed in host system
 func IsAvailable() bool {
-	_, err := exec.LookPath(getBinName())
+	path, err := exec.LookPath(getBinName())
+	log.Default.Infof("Path found -> %v", path)
 	return err == nil
 }
 
