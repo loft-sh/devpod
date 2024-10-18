@@ -1,0 +1,16 @@
+---
+title: Troubleshooting
+sidebar_label: Troubleshooting
+---
+
+This purpose of this page is to outline any known issues with using devpod and provide known workarounds / fixes.
+
+### Utilities not found in PATH
+
+If DevPod Desktop reports that it cannot find utilities in the PATH, you may need to wrap the call in a shell. Something like
+
+```
+#! /usr/bin/env sh
+
+exec $SHELL -c 'exec /Applications/DevPod.app/Contents/MacOS/DevPod'
+```

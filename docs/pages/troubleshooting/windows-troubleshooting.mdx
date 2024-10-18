@@ -1,0 +1,14 @@
+---
+title: Windows Troubleshooting
+sidebar_label: Windows Troubleshooting
+---
+
+This purpose of this page is to outline any known issues with using devpod on Windows and provide known workarounds / fixes.
+
+### line 2: $'\r': command not found
+
+Errors like this are caused from windows line endings, to fix add the following to `.gitattributes`
+
+```
+*.sh eol=lf
+```

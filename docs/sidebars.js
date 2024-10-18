@@ -209,6 +209,28 @@ module.exports = {
     },
     {
       type: "category",
+      label: "Troubleshooting",
+      items: [
+        {
+          type: "doc",
+          id: "troubleshooting/troubleshooting",
+        },
+        {
+          type: "doc",
+          id: "troubleshooting/linux-troubleshooting",
+        },
+        {
+          type: "doc",
+          id: "troubleshooting/windows-troubleshooting",
+        },
+        {
+          type: "doc",
+          id: "troubleshooting/ide-troubleshooting",
+        },
+      ],
+    },
+    {
+      type: "category",
       label: "Other topics",
       items: [
         {
@@ -218,14 +240,6 @@ module.exports = {
         {
           type: "doc",
           id: "other-topics/mobile-support",
-        },
-        {
-          type: "doc",
-          id: "other-topics/linux-troubleshooting",
-        },
-        {
-          type: "doc",
-          id: "other-topics/ide-troubleshooting",
         }
       ],
     },
