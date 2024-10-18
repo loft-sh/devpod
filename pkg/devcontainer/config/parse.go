@@ -10,6 +10,7 @@ import (
 	"strings"
 	"unicode/utf8"
 
+	"dario.cat/mergo"
 	doublestar "github.com/bmatcuk/doublestar/v4"
 	"github.com/pkg/errors"
 	"github.com/tidwall/jsonc"
@@ -109,6 +110,30 @@ func ParseDevContainerJSON(folder, relativePath string) (*DevContainerConfig, er
 		return nil, err
 	}
 
+	filename := filepath.Base(path)
+	filename = strings.TrimSuffix(filename, filepath.Ext(filename))
+
+	userFilename := fmt.Sprintf("%s.user.json", filename)
+	userfilePath, err := filepath.Abs(filepath.Join(filepath.Dir(path), userFilename))
+	if err != nil {
+		return nil, errors.Wrap(err, "make path absolute")
+	}
+	_, err = os.Stat(userfilePath)
+	if err == nil {
+		bytes, err = os.ReadFile(userfilePath)
+		if err != nil {
+			return nil, err
+		}
+
+		devContainerUser := &DevContainerConfig{}
+		err = json.Unmarshal(jsonc.ToJSON(bytes), devContainerUser)
+		if err != nil {
+			return nil, err
+		}
+		if err := mergo.Merge(devContainer, devContainerUser, mergo.WithAppendSlice, mergo.WithOverride); err != nil {
+			return nil, errors.Wrap(err, fmt.Sprintf("unable to update devcontainer.json with %s", userFilename))
+		}
+	}
 	devContainer.Origin = path
 	return replaceLegacy(devContainer)
 }
