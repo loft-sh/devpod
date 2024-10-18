@@ -3,7 +3,7 @@ use crate::ui_messages::{
     UiMessage,
 };
 use crate::AppState;
-use log::{error, info};
+use log::{error, info, warn};
 use serde::{Deserialize, Serialize};
 use std::env;
 use std::path::Path;
@@ -169,13 +169,7 @@ impl CustomProtocol {
                 let request = UrlParser::parse(&url_scheme.to_string());
                 let app_state = app_handle.state::<AppState>();
                 if let Err(err) = request {
-                    #[cfg(not(target_os = "windows"))]
-                    send_ui_message(
-                        app_state,
-                        UiMessage::CommandFailed(err),
-                        "Failed to broadcast custom protocol message",
-                    )
-                    .await;
+                    warn!("Failed to broadcast custom protocol message: {:?}", err);
                     return;
                 }
                 let request = request.unwrap();
