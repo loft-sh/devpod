@@ -7,6 +7,7 @@ import (
 	"io"
 	"os"
 	"os/exec"
+	"os/user"
 	"regexp"
 	"slices"
 	"strings"
@@ -69,7 +70,7 @@ func RunLifecycleHooks(ctx context.Context, setupInfo *config.Result, log log.Lo
 	return nil
 }
 
-func run(commands []types.LifecycleHook, user, dir string, remoteEnv map[string]string, name, content string, log log.Logger) error {
+func run(commands []types.LifecycleHook, remoteUser, dir string, remoteEnv map[string]string, name, content string, log log.Logger) error {
 	if len(commands) == 0 {
 		return nil
 	}
@@ -96,9 +97,13 @@ func run(commands []types.LifecycleHook, user, dir string, remoteEnv map[string]
 
 		for k, c := range cmd {
 			log.Infof("Run command %s: %s...", k, strings.Join(c, " "))
+			currentUser, err := user.Current()
+			if err != nil {
+				log.Fatalf("Error fetching the current user: %v", err)
+			}
 			args := []string{}
-			if user != "root" {
-				args = append(args, "su", user, "-c", command.Quote(c))
+			if remoteUser != currentUser.Username {
+				args = append(args, "su", remoteUser, "-c", command.Quote(c))
 			} else {
 				args = append(args, "sh", "-c", command.Quote(c))
 			}
