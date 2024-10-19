@@ -99,7 +99,7 @@ func run(commands []types.LifecycleHook, remoteUser, dir string, remoteEnv map[s
 			log.Infof("Run command %s: %s...", k, strings.Join(c, " "))
 			currentUser, err := user.Current()
 			if err != nil {
-				log.Fatalf("Error fetching the current user: %v", err)
+				return err
 			}
 			args := []string{}
 			if remoteUser != currentUser.Username {
