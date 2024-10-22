@@ -136,7 +136,7 @@ func (cmd *SetupContainerCmd) Run(ctx context.Context) error {
 	}
 
 	// do dockerless build
-	err = dockerlessBuild(ctx, setupInfo, &workspaceInfo.Dockerless, tunnelClient, logger)
+	err = dockerlessBuild(ctx, setupInfo, &workspaceInfo.Dockerless, tunnelClient, cmd.Debug, logger)
 	if err != nil {
 		return fmt.Errorf("dockerless build: %w", err)
 	}
@@ -239,6 +239,7 @@ func dockerlessBuild(
 	setupInfo *config.Result,
 	dockerlessOptions *provider2.ProviderDockerlessOptions,
 	client tunnel.TunnelClient,
+	debug bool,
 	log log.Logger,
 ) error {
 	if os.Getenv("DOCKERLESS") != "true" {
@@ -318,14 +319,19 @@ func dockerlessBuild(
 	}
 
 	// write output to log
-	writer := log.Writer(logrus.InfoLevel, false)
-	defer writer.Close()
+	errWriter := log.Writer(logrus.InfoLevel, false)
+	defer errWriter.Close()
 
 	// start building
 	log.Infof("Start dockerless building %s %s", "/.dockerless/dockerless", strings.Join(args, " "))
 	cmd := exec.CommandContext(ctx, "/.dockerless/dockerless", args...)
-	cmd.Stdout = writer
-	cmd.Stderr = writer
+
+	if debug {
+		debugWriter := log.Writer(logrus.DebugLevel, false)
+		defer debugWriter.Close()
+		cmd.Stdout = debugWriter
+	}
+	cmd.Stderr = errWriter
 	cmd.Env = os.Environ()
 	err = cmd.Run()
 	if err != nil {
