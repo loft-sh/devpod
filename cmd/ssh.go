@@ -612,6 +612,8 @@ func (cmd *SSHCmd) setupGPGAgent(
 
 	writer := log.ErrorStreamOnly().Writer(logrus.InfoLevel, false)
 	defer writer.Close()
+
+	log.Infof("[GPG] running setup command: \"%s\"", command)
 	go func() {
 		err := devssh.Run(cancelCtx, containerClient, command, nil, writer, writer, nil)
 		if err != nil {
