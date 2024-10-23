@@ -427,7 +427,7 @@ func (m *Mount) UnmarshalJSON(data []byte) error {
 		otherInterface, ok := obj["other"].([]interface{})
 		if ok {
 			otherStr := make([]string, len(otherInterface))
-			for i, _ := range otherInterface {
+			for i := range otherInterface {
 				otherStr[i] = otherInterface[i].(string)
 			}
 			m.Other = otherStr
