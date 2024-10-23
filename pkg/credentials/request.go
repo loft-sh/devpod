@@ -43,8 +43,7 @@ func PostWithRetry(port int, endpoint string, body io.Reader, log log.Logger) ([
 
 		// has the request succeeded?
 		if response.StatusCode != http.StatusOK {
-			log.Errorf("Error calling %s (%d): %w", endpoint, response.StatusCode, string(raw))
-			return err
+			return fmt.Errorf("call %s (%d): %s", endpoint, response.StatusCode, string(raw))
 		}
 
 		out = raw

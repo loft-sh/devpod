@@ -56,6 +56,7 @@ func (cmd *SetupGPGCmd) Run(ctx context.Context, log log.Logger) error {
 	log.Debugf("Fetching public key")
 	rawPublicKeys, err := getPublicKeys(log)
 	if err != nil {
+		log.Errorf("Fetch public key: %w", err)
 		return err
 	}
 
