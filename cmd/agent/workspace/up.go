@@ -287,7 +287,7 @@ func prepareWorkspace(ctx context.Context, workspaceInfo *provider2.AgentWorkspa
 		}
 
 		if crane.ShouldUse(&workspaceInfo.CLIOptions) {
-			log.Infof("Pulling devcontainer spec from %v", workspaceInfo.CLIOptions.DevContainerSource)
+			log.Infof("Pulling devcontainer spec from %v", workspaceInfo.CLIOptions.EnvironmentTemplate)
 			return nil
 		}
 		return agent.CloneRepositoryForWorkspace(ctx,
