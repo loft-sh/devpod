@@ -70,7 +70,12 @@ func (g *GPGConf) ImportGpgKey() error {
 		_, _ = stdin.Write(g.PublicKey)
 	}()
 
-	return gpgImportCmd.Run()
+	out, err := gpgImportCmd.CombinedOutput()
+	if err != nil {
+		return fmt.Errorf("import gpg public key: %s %w", out, err)
+	}
+
+	return nil
 }
 
 func (g *GPGConf) ImportOwnerTrust() error {
