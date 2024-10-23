@@ -403,7 +403,7 @@ func (cmd *SSHCmd) startTunnel(ctx context.Context, devPodConfig *config.Config,
 		// Check if a forwarding is already enabled and running, in that case
 		// we skip the forwarding and keep using the original one
 		if gpg.IsGpgTunnelRunning(cmd.User, ctx, containerClient, log) {
-			log.Debugf("gpg: exporting already running, skipping")
+			log.Debugf("[GPG] exporting already running, skipping")
 		} else {
 			err := cmd.setupGPGAgent(ctx, containerClient, log)
 			if err != nil {
@@ -526,21 +526,12 @@ func (cmd *SSHCmd) setupGPGAgent(
 	containerClient *ssh.Client,
 	log log.Logger,
 ) error {
-	log.Debugf("[GPG] exporting gpg public key from host")
-
-	// Read the user's public keys and ownertrust from GPG.
-	// These commands are executed LOCALLY, the output will be imported by the remote gpg
-	pubKeyExport, err := gpg.GetHostPubKey()
-	if err != nil {
-		return fmt.Errorf("export local public keys from GPG: %w", err)
-	}
-
 	log.Debugf("[GPG] exporting gpg owner trust from host")
-
 	ownerTrustExport, err := gpg.GetHostOwnerTrust()
 	if err != nil {
 		return fmt.Errorf("export local ownertrust from GPG: %w", err)
 	}
+	ownerTrustArgument := base64.StdEncoding.EncodeToString(ownerTrustExport)
 
 	log.Debugf("[GPG] detecting gpg-agent socket path on host")
 	// Detect local agent extra socket, this will be forwarded to the remote and
@@ -561,35 +552,33 @@ func (cmd *SSHCmd) setupGPGAgent(
 		log.Debugf("[GPG] detected git sign key %s", gitGpgKey)
 	}
 
-	log.Debugf("ssh: starting reverse forwarding socket %s", gpgExtraSocketPath)
 	cmd.ReverseForwardPorts = append(cmd.ReverseForwardPorts, gpgExtraSocketPath)
 
-	pubKeyArgument := base64.StdEncoding.EncodeToString(pubKeyExport)
-	ownerTrustArgument := base64.StdEncoding.EncodeToString(ownerTrustExport)
-
 	// Now we forward the agent socket to the remote, and setup remote gpg to use it
-	// fix eventual permissions and so on
-	forwardAgent := []string{agent.ContainerDevPodHelperLocation}
+	forwardAgent := []string{
+		agent.ContainerDevPodHelperLocation,
+		"agent",
+		"workspace",
+		"setup-gpg",
+		"--ownertrust",
+		ownerTrustArgument,
+		"--socketpath",
+		gpgExtraSocketPath,
+	}
 
 	if log.GetLevel() == logrus.DebugLevel {
 		forwardAgent = append(forwardAgent, "--debug")
 	}
 
-	forwardAgent = append(forwardAgent, []string{
-		"agent",
-		"workspace",
-		"setup-gpg",
-		"--publickey",
-		pubKeyArgument,
-		"--ownertrust",
-		ownerTrustArgument,
-		"--socketpath",
-		gpgExtraSocketPath,
-	}...)
-
 	if len(gitGpgKey) > 0 {
+		gitKey := strings.TrimSpace(string(gitGpgKey))
 		forwardAgent = append(forwardAgent, "--gitkey")
-		forwardAgent = append(forwardAgent, string(gitGpgKey))
+		forwardAgent = append(forwardAgent, gitKey)
+	}
+
+	command := strings.Join(forwardAgent, " ")
+	if cmd.User != "" && cmd.User != "root" {
+		command = fmt.Sprintf("su -c \"%s\" '%s'", command, cmd.User)
 	}
 
 	log.Debugf(
@@ -597,29 +586,16 @@ func (cmd *SSHCmd) setupGPGAgent(
 		gpgExtraSocketPath,
 	)
 
-	command := strings.Join(forwardAgent, " ")
-
-	if cmd.User != "" && cmd.User != "root" {
-		command = fmt.Sprintf("su -c \"%s\" '%s'", command, cmd.User)
-	}
-
-	cancelCtx, cancel := context.WithCancel(ctx)
-	defer cancel()
-	errChan := make(chan error, 2)
 	go func() {
-		errChan <- cmd.reverseForwardPorts(cancelCtx, containerClient, log)
+		log.Error(cmd.reverseForwardPorts(ctx, containerClient, log))
 	}()
 
 	writer := log.ErrorStreamOnly().Writer(logrus.InfoLevel, false)
 	defer writer.Close()
-	go func() {
-		err := devssh.Run(cancelCtx, containerClient, command, nil, writer, writer, nil)
-		if err != nil {
-			errChan <- fmt.Errorf("[GPG] run agent setup command: %w", err)
-			return
-		}
-		errChan <- nil
-	}()
+	err = devssh.Run(ctx, containerClient, command, nil, writer, writer, nil)
+	if err != nil {
+		return fmt.Errorf("run gpg agent setup command: %w", err)
+	}
 
 	return nil
 }

@@ -3,6 +3,7 @@ package tunnelserver
 import (
 	"bufio"
 	"context"
+	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -16,6 +17,7 @@ import (
 	"github.com/loft-sh/devpod/pkg/git"
 	"github.com/loft-sh/devpod/pkg/gitcredentials"
 	"github.com/loft-sh/devpod/pkg/gitsshsigning"
+	"github.com/loft-sh/devpod/pkg/gpg"
 	"github.com/loft-sh/devpod/pkg/loftconfig"
 	"github.com/loft-sh/devpod/pkg/netstat"
 	provider2 "github.com/loft-sh/devpod/pkg/provider"
@@ -262,6 +264,17 @@ func (t *tunnelServer) LoftConfig(ctx context.Context, message *tunnel.Message) 
 	}
 
 	return &tunnel.Message{Message: string(out)}, nil
+}
+
+func (t *tunnelServer) GPGPublicKeys(ctx context.Context, message *tunnel.Message) (*tunnel.Message, error) {
+	rawPubKeys, err := gpg.GetHostPubKey()
+	if err != nil {
+		return nil, fmt.Errorf("get gpg host public keys: %w", err)
+	}
+
+	pubKeyArgument := base64.StdEncoding.EncodeToString(rawPubKeys)
+
+	return &tunnel.Message{Message: pubKeyArgument}, nil
 }
 
 func (t *tunnelServer) SendResult(ctx context.Context, result *tunnel.Message) (*tunnel.Empty, error) {

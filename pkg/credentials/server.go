@@ -55,6 +55,11 @@ func RunCredentialsServer(
 			if err != nil {
 				http.Error(writer, err.Error(), http.StatusInternalServerError)
 			}
+		} else if request.URL.Path == "/gpg-public-keys" {
+			err := handleGPGPublicKeysRequest(ctx, writer, request, client, log)
+			if err != nil {
+				http.Error(writer, err.Error(), http.StatusInternalServerError)
+			}
 		}
 	})
 
@@ -242,8 +247,22 @@ func handleLoftPlatformCredentialsRequest(ctx context.Context, writer http.Respo
 	log.Debugf("Received loft platform credentials post data: %s", string(out))
 	response, err := client.LoftConfig(ctx, &tunnel.Message{Message: string(out)})
 	if err != nil {
-		log.Errorf("Error receiving git ssh signature: %w", err)
-		return errors.Wrap(err, "get git ssh signature")
+		log.Errorf("Error receiving platform credentials: %w", err)
+		return errors.Wrap(err, "get platform credentials")
+	}
+
+	writer.Header().Set("Content-Type", "application/json")
+	writer.WriteHeader(http.StatusOK)
+	_, _ = writer.Write([]byte(response.Message))
+	log.Debugf("Successfully wrote back %d bytes", len(response.Message))
+	return nil
+}
+
+func handleGPGPublicKeysRequest(ctx context.Context, writer http.ResponseWriter, request *http.Request, client tunnel.TunnelClient, log log.Logger) error {
+	response, err := client.GPGPublicKeys(ctx, &tunnel.Message{})
+	if err != nil {
+		log.Errorf("Error receiving gpg public keys: %w", err)
+		return errors.Wrap(err, "get gpg public keys")
 	}
 
 	writer.Header().Set("Content-Type", "application/json")
