@@ -100,24 +100,50 @@ func (cmd *TemplatesCmd) Run(ctx context.Context) error {
 		return cmp.Compare(a.Value, b.Value)
 	})
 
-	return printOptions(&OptionsFormat{
-		Options: map[string]*types.Option{
-			loft.RunnerEnv: {
-				DisplayName: "Runner",
-				Description: "The DevPod Pro runner to use for a new workspace.",
-				Enum:        runners,
-				Required:    true,
-				Mutable:     false,
-			},
-			loft.TemplateOptionEnv: {
-				DisplayName:       "Template",
-				Description:       "The template to use for a new workspace.",
-				Required:          true,
-				Enum:              templates,
-				Default:           templateList.DefaultDevPodWorkspaceTemplate,
-				SubOptionsCommand: fmt.Sprintf("'%s' pro provider list templateoptions", executable),
-				Mutable:           true,
-			},
+	//collect environments
+	environmentsList, err := managementClient.Loft().ManagementV1().DevPodEnvironmentTemplates().List(ctx, metav1.ListOptions{})
+	if err != nil {
+		return fmt.Errorf("list environments: %w", err)
+	}
+
+	environments := []types.OptionEnum{}
+	for _, env := range environmentsList.Items {
+		environments = append(environments, types.OptionEnum{
+			Value:       env.Name,
+			DisplayName: loft.DisplayName(env.Name, env.Spec.DisplayName),
+		})
+	}
+
+	options := map[string]*types.Option{
+		loft.RunnerEnv: {
+			DisplayName: "Runner",
+			Description: "The DevPod Pro runner to use for a new workspace.",
+			Enum:        runners,
+			Required:    true,
+			Mutable:     false,
 		},
+		loft.TemplateOptionEnv: {
+			DisplayName:       "Template",
+			Description:       "The template to use for a new workspace.",
+			Required:          true,
+			Enum:              templates,
+			Default:           templateList.DefaultDevPodWorkspaceTemplate,
+			SubOptionsCommand: fmt.Sprintf("'%s' pro provider list templateoptions", executable),
+			Mutable:           true,
+		},
+	}
+
+	if len(environments) > 0 {
+		options[loft.EnvironmentTemplateOptionEnv] = &types.Option{
+			DisplayName: "Environment Template",
+			Description: "The template to use for creating environment",
+			Enum:        environments,
+			Required:    true,
+			Mutable:     false,
+		}
+	}
+
+	return printOptions(&OptionsFormat{
+		Options: options,
 	})
 }
