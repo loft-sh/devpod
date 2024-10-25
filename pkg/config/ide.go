@@ -19,4 +19,5 @@ const (
 	IDEFleet           IDE = "fleet"
 	IDEJupyterNotebook IDE = "jupyternotebook"
 	IDECursor          IDE = "cursor"
+	IDEPositron        IDE = "positron"
 )

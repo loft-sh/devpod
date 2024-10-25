@@ -18,6 +18,17 @@ pub struct Settings {
     zoom: Zoom,
     transparency: bool,
     auto_update: bool,
+    additional_cli_flags: String,
+    additional_env_vars: String,
+    dotfiles_url: String,
+    ssh_key_path: String,
+    http_proxy_url: String,
+    https_proxy_url: String,
+    no_proxy: String,
+
+    // Experimental settings
+    #[serde(rename = "experimental_colorMode")]
+    experimental_color_mode: ColorMode,
     #[serde(rename = "experimental_multiDevcontainer")]
     experimental_multi_devcontainer: bool,
     #[serde(rename = "experimental_fleet")]
@@ -28,17 +39,10 @@ pub struct Settings {
     experimental_vscode_insiders: bool,
     #[serde(rename = "experimental_cursor")]
     experimental_cursor: bool,
+    #[serde(rename = "experimental_positron")]
+    experimental_positron: bool,
     #[serde(rename = "experimental_devPodPro")]
     experimental_devpod_pro: bool,
-    #[serde(rename = "experimental_colorMode")]
-    experimental_color_mode: ColorMode,
-    additional_cli_flags: String,
-    additional_env_vars: String,
-    dotfiles_url: String,
-    ssh_key_path: String,
-    http_proxy_url: String,
-    https_proxy_url: String,
-    no_proxy: String,
 }
 
 #[derive(Debug, Serialize, TS)]
@@ -54,7 +58,7 @@ enum SidebarPosition {
 #[ts(export)]
 enum ColorMode {
     Dark,
-    Light
+    Light,
 }
 
 #[derive(Debug, Serialize, TS)]

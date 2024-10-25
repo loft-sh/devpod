@@ -33,6 +33,8 @@ func openViaBrowser(workspace, folder string, newWindow bool, flavor Flavor, log
 		protocol = `vscode-insiders://`
 	case FlavorCursor:
 		protocol = `cursor://`
+	case FlavorPositron:
+		protocol = `positron://`
 	}
 
 	openURL := protocol + `vscode-remote/ssh-remote+` + workspace + `.devpod/` + folder

@@ -406,6 +406,10 @@ func (cmd *SetupContainerCmd) installIDE(setupInfo *config.Result, ide *provider
 		return cmd.setupVSCode(setupInfo, ide.Options, vscode.FlavorStable, log)
 	case string(config2.IDEVSCodeInsiders):
 		return cmd.setupVSCode(setupInfo, ide.Options, vscode.FlavorInsiders, log)
+	case string(config2.IDECursor):
+		return cmd.setupVSCode(setupInfo, ide.Options, vscode.FlavorCursor, log)
+	case string(config2.IDEPositron):
+		return cmd.setupVSCode(setupInfo, ide.Options, vscode.FlavorPositron, log)
 	case string(config2.IDEOpenVSCode):
 		return cmd.setupOpenVSCode(setupInfo, ide.Options, log)
 	case string(config2.IDEGoland):
@@ -436,7 +440,7 @@ func (cmd *SetupContainerCmd) installIDE(setupInfo *config.Result, ide *provider
 }
 
 func (cmd *SetupContainerCmd) setupVSCode(setupInfo *config.Result, ideOptions map[string]config2.OptionValue, flavor vscode.Flavor, log log.Logger) error {
-	log.Debugf("Setup vscode...")
+	log.Debugf("Setup %s...", flavor)
 	vsCodeConfiguration := config.GetVSCodeConfiguration(setupInfo.MergedConfig)
 	settings := ""
 	if len(vsCodeConfiguration.Settings) > 0 {
@@ -463,7 +467,7 @@ func (cmd *SetupContainerCmd) setupVSCode(setupInfo *config.Result, ideOptions m
 		return nil
 	}
 
-	return single.Single("vscode-async.pid", func() (*exec.Cmd, error) {
+	return single.Single(fmt.Sprintf("%s-async.pid", flavor), func() (*exec.Cmd, error) {
 		log.Infof("Install extensions '%s' in the background", strings.Join(vsCodeConfiguration.Extensions, ","))
 		binaryPath, err := os.Executable()
 		if err != nil {
