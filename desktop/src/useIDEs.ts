@@ -9,6 +9,7 @@ const FLEET_IDE_NAME = "fleet"
 const JUPYTER_IDE_NAME = "jupyternotebook"
 const VSCODE_INSIDERS = "vscode-insiders"
 const CURSOR = "cursor"
+const POSITRON = "positron"
 
 export function useIDEs() {
   const idesQuery = useQuery({
@@ -26,6 +27,7 @@ export function useIDEs() {
         if (ide.name === JUPYTER_IDE_NAME && settings.experimental_jupyterNotebooks) return true
         if (ide.name === VSCODE_INSIDERS && settings.experimental_vscodeInsiders) return true
         if (ide.name === CURSOR && settings.experimental_cursor) return true
+        if (ide.name === POSITRON && settings.experimental_positron) return true
 
         return false
       }),

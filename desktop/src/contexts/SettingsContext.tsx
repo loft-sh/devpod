@@ -5,7 +5,6 @@ import {
   useContext,
   useEffect,
   useMemo,
-  useRef,
   useState,
 } from "react"
 import { client } from "../client"
@@ -31,13 +30,6 @@ const initialSettings: TSettings = {
   zoom: "md",
   transparency: false,
   autoUpdate: true,
-  experimental_multiDevcontainer: false,
-  experimental_fleet: true,
-  experimental_jupyterNotebooks: true,
-  experimental_vscodeInsiders: true,
-  experimental_cursor: true,
-  experimental_devPodPro: false,
-  experimental_colorMode: "light",
   additionalCliFlags: "",
   additionalEnvVars: "",
   dotfilesUrl: "",
@@ -45,6 +37,15 @@ const initialSettings: TSettings = {
   httpProxyUrl: "",
   httpsProxyUrl: "",
   noProxy: "",
+
+  experimental_colorMode: "light",
+  experimental_multiDevcontainer: false,
+  experimental_fleet: true,
+  experimental_jupyterNotebooks: true,
+  experimental_vscodeInsiders: true,
+  experimental_cursor: true,
+  experimental_positron: false,
+  experimental_devPodPro: false,
 }
 function getSettingKeys(): readonly TSetting[] {
   return getKeys(initialSettings)

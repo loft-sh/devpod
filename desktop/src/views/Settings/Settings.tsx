@@ -425,6 +425,15 @@ function ExperimentalSettings() {
             Cursor
           </FormLabel>
         </HStack>
+        <HStack width="full" align="center">
+          <Switch
+            isChecked={settings.experimental_positron}
+            onChange={(e) => set("experimental_positron", e.target.checked)}
+          />
+          <FormLabel marginBottom="0" whiteSpace="nowrap" fontSize="sm">
+            Positron
+          </FormLabel>
+        </HStack>
       </SettingSection>
 
       <SettingSection title="Additional CLI Flags" description={cliFlagsHelpText}>

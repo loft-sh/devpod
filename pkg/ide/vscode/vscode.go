@@ -29,6 +29,7 @@ const (
 	FlavorStable   Flavor = "stable"
 	FlavorInsiders Flavor = "insiders"
 	FlavorCursor   Flavor = "cursor"
+	FlavorPositron Flavor = "positron"
 )
 
 var Options = ide.Options{
@@ -238,6 +239,47 @@ func (o *VsCodeServer) findServerBinaryPath(location string) string {
 		return binPath
 	}
 
+	if o.flavor == FlavorPositron {
+		// check legacy location `$HOME/.positron-server/bin`
+		binDir := filepath.Join(location, "bin")
+		for {
+			if time.Now().After(deadline) {
+				o.log.Warn("Timed out installing positron-server")
+				break
+			}
+			entries, err := os.ReadDir(binDir)
+			if err != nil || len(entries) == 0 {
+				o.log.Infof("Read dir %s: %v", binDir, err)
+				o.log.Info("Wait until positron-server is installed...")
+				// check new location `$HOME/.positron-server/cli/servers/Stable-<version>/server/bin/positron-server`
+				newBinPath, err := o.findCodeServerBinary(location)
+				if err != nil {
+					o.log.Infof("Read new location %s: %v", location, err)
+					o.log.Info("Wait until positron-server is installed...")
+					time.Sleep(time.Second * 3)
+					continue
+				}
+				binPath = newBinPath
+				break
+			}
+
+			binPath = filepath.Join(binDir, entries[0].Name(), "bin", "positron-server")
+			ctx, cancel := context.WithTimeout(context.Background(), time.Second*4)
+			out, err := exec.CommandContext(ctx, binPath, "--help").CombinedOutput()
+			cancel()
+			if err != nil {
+				o.log.Infof("Execute %s: %v", binPath, command.WrapCommandError(out, err))
+				o.log.Info("Wait until positron-server is installed...")
+				time.Sleep(time.Second * 3)
+				continue
+			}
+
+			break
+		}
+
+		return binPath
+	}
+
 	if o.flavor == FlavorInsiders {
 		serversDir := filepath.Join(location, "cli", "servers")
 		for {
@@ -350,6 +392,8 @@ func prepareServerLocation(userName string, create bool, flavor Flavor) (string,
 		folderName = ".vscode-server-insiders"
 	case FlavorCursor:
 		folderName = ".cursor-server"
+	case FlavorPositron:
+		folderName = ".positron-server"
 	}
 
 	folder := filepath.Join(homeFolder, folderName)

@@ -136,6 +136,13 @@ var AllowedIDEs = []AllowedIDE{
 		Icon:         "https://devpod.sh/assets/cursor.svg",
 		Experimental: true,
 	},
+	{
+		Name:         config.IDEPositron,
+		DisplayName:  "Positron",
+		Options:      vscode.Options,
+		Icon:         "https://devpod.sh/assets/positron.svg",
+		Experimental: true,
+	},
 }
 
 func RefreshIDEOptions(devPodConfig *config.Config, workspace *provider.Workspace, ide string, options []string) (*provider.Workspace, error) {
