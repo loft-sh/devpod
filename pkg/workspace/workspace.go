@@ -586,7 +586,7 @@ func ToID(str string) string {
 	if len(splitted) == 2 {
 		// 1. Check if PR was specified
 		if prReferenceRegEx.MatchString(str) {
-			str = prReferenceRegEx.ReplaceAllStringFunc(splitted[1], git.GetBranchNameForPR)
+			str = prReferenceRegEx.ReplaceAllStringFunc(splitted[1], git.GetIDForPR)
 		} else {
 			// 2. Check if a branch name has been specified, if so use this for the ID
 			str = strings.TrimSuffix(splitted[1], ".git")

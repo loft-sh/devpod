@@ -206,7 +206,7 @@ func (f *Framework) DevPodProviderDelete(ctx context.Context, args ...string) er
 	baseArgs = append(baseArgs, args...)
 	err := f.ExecCommand(ctx, false, false, "", baseArgs)
 	if err != nil {
-		return fmt.Errorf("devpod provider delete failed: %s", err.Error())
+		return err
 	}
 	return nil
 }
