@@ -97,6 +97,11 @@ func GetBranchNameForPR(ref string) string {
 	return regex.ReplaceAllString(ref, "PR${1}")
 }
 
+func GetIDForPR(ref string) string {
+	regex := regexp.MustCompile(PullRequestReference)
+	return regex.ReplaceAllString(ref, "pr${1}")
+}
+
 type GitInfo struct {
 	Repository string
 	Branch     string

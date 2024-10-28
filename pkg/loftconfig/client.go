@@ -23,8 +23,10 @@ func GetLoftConfig(context, provider string, port int, logger log.Logger) (*clie
 	}
 
 	configResponse := &LoftConfigResponse{}
-
 	out, err := credentials.PostWithRetry(port, "loft-platform-credentials", bytes.NewReader(rawJson), logger)
+	if err != nil {
+		return nil, err
+	}
 	err = json.Unmarshal(out, configResponse)
 	if err != nil {
 		return nil, fmt.Errorf("decode loft config %s: %w", string(out), err)
