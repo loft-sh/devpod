@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"path/filepath"
 	"strings"
 
 	"github.com/loft-sh/devpod/pkg/agent/tunnel"
@@ -21,6 +22,7 @@ import (
 	provider2 "github.com/loft-sh/devpod/pkg/provider"
 	"github.com/loft-sh/devpod/pkg/stdio"
 	"github.com/loft-sh/log"
+	"github.com/moby/buildkit/frontend/dockerfile/dockerignore"
 	perrors "github.com/pkg/errors"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/reflection"
@@ -370,8 +372,18 @@ func (t *tunnelServer) StreamWorkspace(message *tunnel.Empty, stream tunnel.Tunn
 		return fmt.Errorf("workspace is nil")
 	}
 
+	// Get .devpodignore files to exclude
+	f, err := os.Open(filepath.Join(t.workspace.Source.LocalFolder, ".devpodignore"))
+	if err != nil {
+		return err
+	}
+	excludes, err := dockerignore.ReadAll(f)
+	if err != nil {
+		return err
+	}
+
 	buf := bufio.NewWriterSize(NewStreamWriter(stream, t.log), 10*1024)
-	err := extract.WriteTar(buf, t.workspace.Source.LocalFolder, false)
+	err = extract.WriteTarExclude(buf, t.workspace.Source.LocalFolder, false, excludes)
 	if err != nil {
 		return err
 	}
@@ -392,8 +404,18 @@ func (t *tunnelServer) StreamMount(message *tunnel.StreamMountRequest, stream tu
 		return fmt.Errorf("mount %s is not allowed to download", message.Mount)
 	}
 
+	// Get .devpodignore files to exclude
+	f, err := os.Open(filepath.Join(mount.Source, ".devpodignore"))
+	if err != nil {
+		return err
+	}
+	excludes, err := dockerignore.ReadAll(f)
+	if err != nil {
+		return err
+	}
+
 	buf := bufio.NewWriterSize(NewStreamWriter(stream, t.log), 10*1024)
-	err := extract.WriteTar(buf, mount.Source, false)
+	err = extract.WriteTarExclude(buf, mount.Source, false, excludes)
 	if err != nil {
 		return err
 	}
