@@ -108,6 +108,28 @@ func (d *dockerDriver) PushDevContainer(ctx context.Context, image string) error
 	return nil
 }
 
+func (d *dockerDriver) TagDevContainer(ctx context.Context, image, tag string) error {
+	// push image
+	writer := d.Log.Writer(logrus.InfoLevel, false)
+	defer writer.Close()
+
+	// build args
+	args := []string{
+		"tag",
+		image,
+		tag,
+	}
+
+	// run command
+	d.Log.Debugf("Running docker command: %s %s", d.Docker.DockerCommand, strings.Join(args, " "))
+	err := d.Docker.Run(ctx, args, nil, writer, writer)
+	if err != nil {
+		return errors.Wrap(err, "push image")
+	}
+
+	return nil
+}
+
 func (d *dockerDriver) DeleteDevContainer(ctx context.Context, workspaceId string) error {
 	container, err := d.FindDevContainer(ctx, workspaceId)
 	if err != nil {
