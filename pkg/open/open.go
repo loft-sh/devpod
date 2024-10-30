@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"net/http"
+	"os/exec"
 	"time"
 
 	devpodhttp "github.com/loft-sh/devpod/pkg/http"
@@ -17,7 +18,7 @@ func Open(ctx context.Context, url string, log log.Logger) error {
 		case <-ctx.Done():
 			return nil
 		case <-time.After(time.Second):
-			err := tryOpen(ctx, url, log)
+			err := tryOpen(ctx, url, open.Start, log)
 			if err == nil {
 				return nil
 			}
@@ -25,7 +26,25 @@ func Open(ctx context.Context, url string, log log.Logger) error {
 	}
 }
 
-func tryOpen(ctx context.Context, url string, log log.Logger) error {
+func jlabOpen(url string) error {
+	return exec.Command("jlab", url).Run()
+}
+
+func JLabDesktop(ctx context.Context, url string, log log.Logger) error {
+	for {
+		select {
+		case <-ctx.Done():
+			return nil
+		case <-time.After(time.Second):
+			err := tryOpen(ctx, url, jlabOpen, log)
+			if err == nil {
+				return nil
+			}
+		}
+	}
+}
+
+func tryOpen(ctx context.Context, url string, fn func(string) error, log log.Logger) error {
 	timeoutCtx, cancel := context.WithTimeout(ctx, time.Second)
 	defer cancel()
 
@@ -48,7 +67,7 @@ func tryOpen(ctx context.Context, url string, log log.Logger) error {
 				return nil
 			case <-time.After(time.Second):
 			}
-			_ = open.Start(url)
+			_ = fn(url)
 			log.Donef("Successfully opened %s", url)
 			return nil
 		}

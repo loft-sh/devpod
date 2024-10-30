@@ -354,6 +354,18 @@ func (cmd *UpCmd) Run(
 				cmd.GitToken,
 				log,
 			)
+		case string(config.IDEJupyterDesktop):
+			return startJupyterDesktopInBrowser(
+				cmd.GPGAgentForwarding,
+				ctx,
+				devPodConfig,
+				client,
+				user,
+				ideConfig.Options,
+				cmd.GitUsername,
+				cmd.GitToken,
+				log,
+			)
 		}
 	}
 
@@ -615,6 +627,61 @@ func startJupyterNotebookInBrowser(
 
 	// start in browser
 	logger.Infof("Starting jupyter notebook in browser mode at %s", targetURL)
+	extraPorts := []string{fmt.Sprintf("%s:%d", jupyterAddress, jupyter.DefaultServerPort)}
+	return startBrowserTunnel(
+		ctx,
+		devPodConfig,
+		client,
+		user,
+		targetURL,
+		false,
+		extraPorts,
+		gitUsername,
+		gitToken,
+		logger,
+	)
+}
+
+func startJupyterDesktopInBrowser(
+	forwardGpg bool,
+	ctx context.Context,
+	devPodConfig *config.Config,
+	client client2.BaseWorkspaceClient,
+	user string,
+	ideOptions map[string]config.OptionValue,
+	gitUsername, gitToken string,
+	logger log.Logger,
+) error {
+	if forwardGpg {
+		err := performGpgForwarding(client, logger)
+		if err != nil {
+			return err
+		}
+	}
+
+	// determine port
+	jupyterAddress, jupyterPort, err := parseAddressAndPort(
+		jupyter.Options.GetValue(ideOptions, jupyter.BindAddressOption),
+		jupyter.DefaultServerPort,
+	)
+	if err != nil {
+		return err
+	}
+
+	// wait until reachable then open browser
+	targetURL := fmt.Sprintf("http://localhost:%d/lab", jupyterPort)
+	if jupyter.Options.GetValue(ideOptions, jupyter.OpenOption) == "true" {
+		go func() {
+			err = open2.JLabDesktop(ctx, targetURL, logger)
+			if err != nil {
+				logger.Errorf("error opening jupyter desktop: %v", err)
+			}
+			logger.Infof("Successfully started jupyter desktop")
+		}()
+	}
+
+	// start in browser
+	logger.Infof("Starting jupyter desktop using server %s", targetURL)
 	extraPorts := []string{fmt.Sprintf("%s:%d", jupyterAddress, jupyter.DefaultServerPort)}
 	return startBrowserTunnel(
 		ctx,
