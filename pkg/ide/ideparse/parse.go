@@ -171,6 +171,13 @@ var AllowedIDEs = []AllowedIDE{
 		Icon:         "https://devpod.sh/assets/codium.svg",
 		Experimental: true,
 	},
+	{
+		Name:         config.IDEZed,
+		DisplayName:  "Zed",
+		Options:      ide.Options{},
+		Icon:         "https://devpod.sh/assets/positron.svg",
+		Experimental: true,
+	},
 }
 
 func RefreshIDEOptions(devPodConfig *config.Config, workspace *provider.Workspace, ide string, options []string) (*provider.Workspace, error) {

@@ -330,6 +330,9 @@ func (cmd *UpCmd) Run(
 				cmd.GitUsername,
 				cmd.GitToken,
 				log)
+
+		case string(config.IDEZed):
+			return zed.Open(ctx, ideConfig.Options, config2.GetRemoteUser(result), result.SubstitutionContext.ContainerWorkspaceFolder, client.Workspace(), log)
 		}
 	}
 
