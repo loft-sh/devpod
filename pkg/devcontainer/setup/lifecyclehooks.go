@@ -38,12 +38,20 @@ func RunLifecycleHooks(ctx context.Context, setupInfo *config.Result, log log.Lo
 	if err != nil {
 		return err
 	}
+	if mergedConfig.WaitFor == "onCreateCommands" {
+		log.Info("waited for onCreateCommands to finish, completed lifecycle hooks")
+		return nil
+	}
 
 	// TODO: rerun when contents changed
 	err = run(mergedConfig.UpdateContentCommands, remoteUser, workspaceFolder, remoteEnv,
 		"updateContentCommands", containerDetails.Created, log)
 	if err != nil {
 		return err
+	}
+	if mergedConfig.WaitFor == "updateContentCommands" {
+		log.Info("waited for updateContentCommands to finish, completed lifecycle hooks")
+		return nil
 	}
 
 	// only run once per container run
@@ -52,6 +60,10 @@ func RunLifecycleHooks(ctx context.Context, setupInfo *config.Result, log log.Lo
 	if err != nil {
 		return err
 	}
+	if mergedConfig.WaitFor == "postCreateCommands" {
+		log.Info("waited for postCreateCommands to finish, completed lifecycle hooks")
+		return nil
+	}
 
 	// run when the container was restarted
 	err = run(mergedConfig.PostStartCommands, remoteUser, workspaceFolder, remoteEnv,
@@ -59,12 +71,20 @@ func RunLifecycleHooks(ctx context.Context, setupInfo *config.Result, log log.Lo
 	if err != nil {
 		return err
 	}
+	if mergedConfig.WaitFor == "postStartCommands" {
+		log.Info("waited for postStartCommands to finish, completed lifecycle hooks")
+		return nil
+	}
 
 	// run always when attaching to the container
 	err = run(mergedConfig.PostAttachCommands, remoteUser, workspaceFolder, remoteEnv,
 		"postAttachCommands", "", log)
 	if err != nil {
 		return err
+	}
+	if mergedConfig.WaitFor == "postAttachCommands" {
+		log.Info("waited for postAttachCommands to finish, completed lifecycle hooks")
+		return nil
 	}
 
 	return nil
