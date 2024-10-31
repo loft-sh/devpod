@@ -151,6 +151,13 @@ var AllowedIDEs = []AllowedIDE{
 		Icon:         "https://devpod.sh/assets/positron.svg",
 		Experimental: true,
 	},
+	{
+		Name:         config.IDEMarimo,
+		DisplayName:  "Marimo",
+		Options:      vscode.Options,
+		Icon:         "https://devpod.sh/assets/marimo.svg",
+		Experimental: true,
+	},
 }
 
 func RefreshIDEOptions(devPodConfig *config.Config, workspace *provider.Workspace, ide string, options []string) (*provider.Workspace, error) {

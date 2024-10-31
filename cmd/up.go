@@ -27,6 +27,7 @@ import (
 	"github.com/loft-sh/devpod/pkg/ide/fleet"
 	"github.com/loft-sh/devpod/pkg/ide/jetbrains"
 	"github.com/loft-sh/devpod/pkg/ide/jupyter"
+	"github.com/loft-sh/devpod/pkg/ide/marimo"
 	"github.com/loft-sh/devpod/pkg/ide/openvscode"
 	"github.com/loft-sh/devpod/pkg/ide/vscode"
 	"github.com/loft-sh/devpod/pkg/loft"
@@ -364,8 +365,18 @@ func (cmd *UpCmd) Run(
 				ideConfig.Options,
 				cmd.GitUsername,
 				cmd.GitToken,
-				log,
-			)
+				log)
+		case string(config.IDEMarimo):
+			return startMarimoInBrowser(
+				cmd.GPGAgentForwarding,
+				ctx,
+				devPodConfig,
+				client,
+				user,
+				ideConfig.Options,
+				cmd.GitUsername,
+				cmd.GitToken,
+				log)
 		}
 	}
 
@@ -581,6 +592,64 @@ func (cmd *UpCmd) devPodUpMachine(
 				tunnelserver.WithGitCredentialsOverride(cmd.GitUsername, cmd.GitToken),
 			)
 		},
+	)
+}
+
+func startMarimoInBrowser(
+	forwardGpg bool,
+	ctx context.Context,
+	devPodConfig *config.Config,
+	client client2.BaseWorkspaceClient,
+	user string,
+	ideOptions map[string]config.OptionValue,
+	gitUsername, gitToken string,
+	logger log.Logger,
+) error {
+	if forwardGpg {
+		err := performGpgForwarding(client, logger)
+		if err != nil {
+			return err
+		}
+	}
+
+	// determine port
+	address, port, err := parseAddressAndPort(
+		marimo.Options.GetValue(ideOptions, marimo.BindAddressOption),
+		marimo.DefaultServerPort,
+	)
+	if err != nil {
+		return err
+	}
+
+	// wait until reachable then open browser
+	targetURL := fmt.Sprintf("http://localhost:%d?access_token=%s", port, marimo.Options.GetValue(ideOptions, marimo.AccessToken))
+	if marimo.Options.GetValue(ideOptions, marimo.OpenOption) == "true" {
+		go func() {
+			err = open2.Open(ctx, targetURL, logger)
+			if err != nil {
+				logger.Errorf("error opening marimo: %v", err)
+			}
+
+			logger.Infof(
+				"Successfully started marimo in browser mode. Please keep this terminal open as long as you use Marimo",
+			)
+		}()
+	}
+
+	// start in browser
+	logger.Infof("Starting marimo in browser mode at %s", targetURL)
+	extraPorts := []string{fmt.Sprintf("%s:%d", address, marimo.DefaultServerPort)}
+	return startBrowserTunnel(
+		ctx,
+		devPodConfig,
+		client,
+		user,
+		targetURL,
+		false,
+		extraPorts,
+		gitUsername,
+		gitToken,
+		logger,
 	)
 }
 
