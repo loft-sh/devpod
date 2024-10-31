@@ -82,14 +82,14 @@ func (s *Server) Install() error {
 	s.log.Infof("Installing marimo...")
 	out, err := exec.Command(args[0], args[1:]...).CombinedOutput()
 	if err != nil {
-		return fmt.Errorf("error installing jupyter notebook: %w", command.WrapCommandError(out, err))
+		return fmt.Errorf("error installing marimo: %w", command.WrapCommandError(out, err))
 	}
 	return s.start()
 }
 
 func (s *Server) start() error {
 	return single.Single("marimo.pid", func() (*exec.Cmd, error) {
-		s.log.Infof("Starting jupyter notebook in background...")
+		s.log.Infof("Starting marimo in background...")
 		runCommand := fmt.Sprintf("marimo edit --headless --host 0.0.0.0 --port %s --token-password %s", strconv.Itoa(DefaultServerPort), s.token)
 		args := []string{}
 		if s.userName != "" {
