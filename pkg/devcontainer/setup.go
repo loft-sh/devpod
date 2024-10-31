@@ -30,7 +30,6 @@ func (r *runner) setupContainer(
 	containerDetails *config.ContainerDetails,
 	mergedConfig *config.MergedDevContainerConfig,
 	substitutionContext *config.SubstitutionContext,
-	options UpOptions,
 	timeout time.Duration,
 ) (*config.Result, error) {
 	// inject agent
@@ -113,9 +112,6 @@ func (r *runner) setupContainer(
 	}
 	if r.WorkspaceConfig.Agent.InjectGitCredentials != "false" {
 		setupCommand += " --inject-git-credentials"
-	}
-	if options.Token != "" {
-		setupCommand += " --token " + options.Token
 	}
 	if r.Log.GetLevel() == logrus.DebugLevel {
 		setupCommand += " --debug"
