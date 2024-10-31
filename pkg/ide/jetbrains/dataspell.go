@@ -8,8 +8,8 @@ import (
 
 const (
 	DataSpellProductCode           = "DS"
-	DataSpellDownloadAmd64Template = "https://download.jetbrains.com/go/goland-%s.tar.gz"
-	DataSpellDownloadArm64Template = "https://download.jetbrains.com/go/goland-%s-aarch64.tar.gz"
+	DataSpellDownloadAmd64Template = "https://download.jetbrains.com/ds/dataspell-%s.tar.gz"
+	DataSpellDownloadArm64Template = "https://download.jetbrains.com/ds/dataspell-%s-aarch64.tar.gz"
 )
 
 var DataSpellOptions = ide.Options{
@@ -29,7 +29,7 @@ var DataSpellOptions = ide.Options{
 }
 
 func NewDataSpellServer(userName string, values map[string]config.OptionValue, log log.Logger) *GenericJetBrainsServer {
-	amd64Download, arm64Download := getDownloadURLs(GolandOptions, values, DataSpellProductCode, GolandDownloadAmd64Template, GolandDownloadArm64Template)
+	amd64Download, arm64Download := getDownloadURLs(DataSpellOptions, values, DataSpellProductCode, DataSpellDownloadAmd64Template, DataSpellDownloadArm64Template)
 	return newGenericServer(userName, &GenericOptions{
 		ID:            "dataspell",
 		DisplayName:   "DataSpell",
