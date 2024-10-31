@@ -13,10 +13,10 @@ import (
 )
 
 func Open(ctx context.Context, workspace, folder string, newWindow bool, flavor Flavor, log log.Logger) error {
-	log.Infof("Starting VSCode...")
+	log.Infof("Starting %s...", flavor)
 	err := openViaCLI(ctx, workspace, folder, newWindow, flavor, log)
 	if err != nil {
-		log.Debugf("Error opening vscode via cli: %v", err)
+		log.Debugf("Error opening %s via cli: %v", flavor, err)
 	} else {
 		return nil
 	}
@@ -56,7 +56,7 @@ func openViaCLI(ctx context.Context, workspace, folder string, newWindow bool, f
 	// try to find code cli
 	codePath := findCLI(flavor)
 	if codePath == "" {
-		return fmt.Errorf("couldn't find the code binary")
+		return fmt.Errorf("couldn't find the %s binary", flavor)
 	}
 
 	// make sure ms-vscode-remote.remote-ssh is installed
@@ -98,7 +98,7 @@ func openViaCLI(ctx context.Context, workspace, folder string, newWindow bool, f
 	// Needs to be separated by `=` because of windows
 	folderUriArg := fmt.Sprintf("--folder-uri=vscode-remote://ssh-remote+%s.devpod/%s", workspace, folder)
 	args = append(args, folderUriArg)
-	log.Debugf("Run vscode command %s %s", codePath, strings.Join(args, " "))
+	log.Debugf("Run %s command %s %s", flavor, codePath, strings.Join(args, " "))
 	out, err = exec.CommandContext(ctx, codePath, args...).CombinedOutput()
 	if err != nil {
 		return command.WrapCommandError(out, err)
@@ -128,11 +128,21 @@ func findCLI(flavor Flavor) string {
 		return ""
 	}
 
-	if flavor == FlavorInsiders {
+	if flavor == FlavorCursor {
 		if command.Exists("cursor") {
 			return "cursor"
 		} else if runtime.GOOS == "darwin" && command.Exists("/Applications/Cursor.app/Contents/Resources/app/bin/cursor") {
 			return "/Applications/Cursor.app/Contents/Resources/app/bin/cursor"
+		}
+
+		return ""
+	}
+
+	if flavor == FlavorPositron {
+		if command.Exists("positron") {
+			return "positron"
+		} else if runtime.GOOS == "darwin" && command.Exists("/Applications/Positron.app/Contents/Resources/app/bin/positron") {
+			return "/Applications/Positron.app/Contents/Resources/app/bin/positron"
 		}
 
 		return ""
