@@ -108,6 +108,12 @@ var AllowedIDEs = []AllowedIDE{
 		Icon:        "https://devpod.sh/assets/webstorm.svg",
 	},
 	{
+		Name:        config.IDEDataSpell,
+		DisplayName: "DataSpell",
+		Options:     jetbrains.DataSpellOptions,
+		Icon:        "https://devpod.sh/assets/dataspell.svg",
+	},
+	{
 		Name:         config.IDEFleet,
 		DisplayName:  "Fleet",
 		Options:      fleet.Options,

@@ -7,12 +7,12 @@ import (
 )
 
 const (
-	GolandProductCode           = "GO"
-	GolandDownloadAmd64Template = "https://download.jetbrains.com/go/goland-%s.tar.gz"
-	GolandDownloadArm64Template = "https://download.jetbrains.com/go/goland-%s-aarch64.tar.gz"
+	DataSpellProductCode           = "DS"
+	DataSpellDownloadAmd64Template = "https://download.jetbrains.com/go/goland-%s.tar.gz"
+	DataSpellDownloadArm64Template = "https://download.jetbrains.com/go/goland-%s-aarch64.tar.gz"
 )
 
-var GolandOptions = ide.Options{
+var DataSpellOptions = ide.Options{
 	VersionOption: {
 		Name:        VersionOption,
 		Description: "The version for the binary",
@@ -28,11 +28,11 @@ var GolandOptions = ide.Options{
 	},
 }
 
-func NewGolandServer(userName string, values map[string]config.OptionValue, log log.Logger) *GenericJetBrainsServer {
+func NewDataSpellServer(userName string, values map[string]config.OptionValue, log log.Logger) *GenericJetBrainsServer {
 	amd64Download, arm64Download := getDownloadURLs(GolandOptions, values, DataSpellProductCode, GolandDownloadAmd64Template, GolandDownloadArm64Template)
 	return newGenericServer(userName, &GenericOptions{
-		ID:            "goland",
-		DisplayName:   "Goland",
+		ID:            "dataspell",
+		DisplayName:   "DataSpell",
 		DownloadAmd64: amd64Download,
 		DownloadArm64: arm64Download,
 	}, log)
