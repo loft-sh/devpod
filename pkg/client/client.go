@@ -133,7 +133,6 @@ type UpOptions struct {
 	provider.CLIOptions
 
 	Debug bool
-	Token string
 
 	Stdin  io.Reader
 	Stdout io.Writer

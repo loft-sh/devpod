@@ -36,7 +36,6 @@ type UpCmd struct {
 	*flags.GlobalFlags
 
 	WorkspaceInfo string
-	Token         string
 }
 
 // NewUpCmd creates a new command
@@ -53,7 +52,6 @@ func NewUpCmd(flags *flags.GlobalFlags) *cobra.Command {
 		},
 	}
 	upCmd.Flags().StringVar(&cmd.WorkspaceInfo, "workspace-info", "", "The workspace info")
-	upCmd.Flags().StringVar(&cmd.Token, "token", "", "Token for browser based ide")
 	_ = upCmd.MarkFlagRequired("workspace-info")
 	return upCmd
 }
@@ -130,7 +128,6 @@ func (cmd *UpCmd) devPodUp(ctx context.Context, workspaceInfo *provider2.AgentWo
 	result, err := runner.Up(ctx, devcontainer.UpOptions{
 		CLIOptions:    workspaceInfo.CLIOptions,
 		RegistryCache: workspaceInfo.RegistryCache,
-		Token:         cmd.Token,
 	}, workspaceInfo.InjectTimeout)
 	if err != nil {
 		return nil, err

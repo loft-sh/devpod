@@ -16,6 +16,7 @@ import (
 const DefaultServerPort = 10710
 const (
 	OpenOption        = "OPEN"
+	AccessToken       = "ACCESS_TOKEN"
 	BindAddressOption = "BIND_ADDRESS"
 )
 
@@ -24,6 +25,11 @@ var Options = ide.Options{
 		Name:        BindAddressOption,
 		Description: "The address to bind the server to locally. E.g. 0.0.0.0:12345",
 		Default:     "",
+	},
+	AccessToken: {
+		Name:        AccessToken,
+		Description: "Access token to authenticate with the server",
+		Default:     "NhLpVl4re5PFd3QRFxvQ",
 	},
 	OpenOption: {
 		Name:        OpenOption,
@@ -40,17 +46,15 @@ type Server struct {
 	opts            map[string]config.OptionValue
 	userName        string
 	workspaceFolder string
-	token           string
 	log             log.Logger
 }
 
-func NewServer(workspaceFolder, userName, token string, opts map[string]config.OptionValue, log log.Logger) *Server {
+func NewServer(workspaceFolder, userName string, opts map[string]config.OptionValue, log log.Logger) *Server {
 	return &Server{
 		opts:            opts,
 		workspaceFolder: workspaceFolder,
 		userName:        userName,
 		log:             log,
-		token:           token,
 	}
 }
 
@@ -90,7 +94,8 @@ func (s *Server) Install() error {
 func (s *Server) start() error {
 	return single.Single("marimo.pid", func() (*exec.Cmd, error) {
 		s.log.Infof("Starting marimo in background...")
-		runCommand := fmt.Sprintf("marimo edit --headless --host 0.0.0.0 --port %s --token-password %s", strconv.Itoa(DefaultServerPort), s.token)
+		token := Options.GetValue(s.opts, AccessToken)
+		runCommand := fmt.Sprintf("marimo edit --headless --host 0.0.0.0 --port %s --token-password %s", strconv.Itoa(DefaultServerPort), token)
 		args := []string{}
 		if s.userName != "" {
 			args = append(args, "su", s.userName, "-l", "-c", runCommand)

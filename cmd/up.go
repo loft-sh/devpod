@@ -5,14 +5,12 @@ import (
 	"context"
 	"fmt"
 	"io"
-	"math/rand"
 	"net"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"strconv"
 	"strings"
-	"time"
 
 	"github.com/blang/semver"
 	"github.com/loft-sh/devpod/cmd/flags"
@@ -66,7 +64,6 @@ type UpCmd struct {
 
 	DotfilesSource string
 	DotfilesScript string
-	Token          string
 }
 
 // NewUpCmd creates a new up command
@@ -208,11 +205,6 @@ func (cmd *UpCmd) Run(
 	// a reset implies a recreate
 	if cmd.Reset {
 		cmd.Recreate = true
-	}
-
-	// Generate auth token
-	if cmd.IDE == string(config.IDEMarimo) {
-		cmd.Token = token(20)
 	}
 
 	// run devpod agent up
@@ -477,7 +469,6 @@ func (cmd *UpCmd) devPodUpProxy(
 		err := client.Up(ctx, client2.UpOptions{
 			CLIOptions: baseOptions,
 			Debug:      cmd.Debug,
-			Token:      cmd.Token,
 
 			Stdin:  stdinReader,
 			Stdout: stdoutWriter,
@@ -540,10 +531,6 @@ func (cmd *UpCmd) devPodUpMachine(
 		client.AgentPath(),
 		workspaceInfo,
 	)
-
-	if cmd.IDE == string(config.IDEMarimo) {
-		agentCommand += " --token " + cmd.Token
-	}
 
 	if log.GetLevel() == logrus.DebugLevel {
 		agentCommand += " --debug"
@@ -635,7 +622,7 @@ func startMarimoInBrowser(
 	}
 
 	// wait until reachable then open browser
-	targetURL := fmt.Sprintf("http://localhost:%d?access_token=%s", port, token)
+	targetURL := fmt.Sprintf("http://localhost:%d?access_token=%s", port, marimo.Options.GetValue(ideOptions, marimo.AccessToken))
 	if marimo.Options.GetValue(ideOptions, marimo.OpenOption) == "true" {
 		go func() {
 			err = open2.Open(ctx, targetURL, logger)
@@ -1323,18 +1310,4 @@ func getProInstance(devPodConfig *config.Config, providerName string, log log.Lo
 	}
 
 	return proInstance
-}
-
-func init() {
-	rand.Seed(time.Now().UnixNano())
-}
-
-var letterRunes = []rune("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ")
-
-func token(n int) string {
-	b := make([]rune, n)
-	for i := range b {
-		b[i] = letterRunes[rand.Intn(len(letterRunes))]
-	}
-	return string(b)
 }
