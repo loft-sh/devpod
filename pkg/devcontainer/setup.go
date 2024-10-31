@@ -30,6 +30,7 @@ func (r *runner) setupContainer(
 	containerDetails *config.ContainerDetails,
 	mergedConfig *config.MergedDevContainerConfig,
 	substitutionContext *config.SubstitutionContext,
+	options UpOptions,
 	timeout time.Duration,
 ) (*config.Result, error) {
 	// inject agent
@@ -104,6 +105,9 @@ func (r *runner) setupContainer(
 	// setup container
 	r.Log.Infof("Setup container...")
 	setupCommand := fmt.Sprintf("'%s' agent container setup --setup-info '%s' --container-workspace-info '%s'", agent.ContainerDevPodHelperLocation, compressed, workspaceConfigCompressed)
+	if options.SkipNonBlocking {
+		setupCommand += " --skip-non-blocking"
+	}
 	if runtime.GOOS == "linux" || !isDockerDriver {
 		setupCommand += " --chown-workspace"
 	}

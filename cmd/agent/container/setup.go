@@ -50,6 +50,7 @@ type SetupContainerCmd struct {
 	ChownWorkspace         bool
 	StreamMounts           bool
 	InjectGitCredentials   bool
+	SkipNonBlocking        bool
 	ContainerWorkspaceInfo string
 	SetupInfo              string
 }
@@ -72,6 +73,7 @@ func NewSetupContainerCmd(flags *flags.GlobalFlags) *cobra.Command {
 	setupContainerCmd.Flags().BoolVar(&cmd.InjectGitCredentials, "inject-git-credentials", false, "If DevPod should inject git credentials during setup")
 	setupContainerCmd.Flags().StringVar(&cmd.ContainerWorkspaceInfo, "container-workspace-info", "", "The container workspace info")
 	setupContainerCmd.Flags().StringVar(&cmd.SetupInfo, "setup-info", "", "The container setup info")
+	setupContainerCmd.Flags().BoolVar(&cmd.SkipNonBlocking, "skip-non-blocking-commands", false, "Stop running user commands after running the command configured with waitFor or the updateContentCommand by default.")
 	_ = setupContainerCmd.MarkFlagRequired("setup-info")
 	return setupContainerCmd
 }
@@ -175,7 +177,7 @@ func (cmd *SetupContainerCmd) Run(ctx context.Context) error {
 	}
 
 	// setup container
-	err = setup.SetupContainer(ctx, setupInfo, workspaceInfo.CLIOptions.WorkspaceEnv, cmd.ChownWorkspace, logger)
+	err = setup.SetupContainer(ctx, setupInfo, workspaceInfo.CLIOptions.WorkspaceEnv, cmd.ChownWorkspace, cmd.SkipNonBlocking, logger)
 	if err != nil {
 		return err
 	}

@@ -21,7 +21,7 @@ const (
 	ResultLocation = "/var/run/devpod/result.json"
 )
 
-func SetupContainer(ctx context.Context, setupInfo *config.Result, extraWorkspaceEnv []string, chownProjects bool, log log.Logger) error {
+func SetupContainer(ctx context.Context, setupInfo *config.Result, extraWorkspaceEnv []string, chownProjects, skipNonBlocking bool, log log.Logger) error {
 	// write result to ResultLocation
 	WriteResult(setupInfo, log)
 
@@ -62,7 +62,7 @@ func SetupContainer(ctx context.Context, setupInfo *config.Result, extraWorkspac
 
 	// run commands
 	log.Debugf("Run lifecycle hooks commands...")
-	err = RunLifecycleHooks(ctx, setupInfo, log)
+	err = RunLifecycleHooks(ctx, setupInfo, skipNonBlocking, log)
 	if err != nil {
 		return errors.Wrap(err, "lifecycle hooks")
 	}
