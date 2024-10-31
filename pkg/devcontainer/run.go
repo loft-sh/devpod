@@ -88,6 +88,7 @@ type UpOptions struct {
 	NoBuild       bool
 	ForceBuild    bool
 	RegistryCache string
+	Token         string
 }
 
 func (r *runner) Up(ctx context.Context, options UpOptions, timeout time.Duration) (*config.Result, error) {

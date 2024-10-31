@@ -30,6 +30,7 @@ import (
 	"github.com/loft-sh/devpod/pkg/ide/fleet"
 	"github.com/loft-sh/devpod/pkg/ide/jetbrains"
 	"github.com/loft-sh/devpod/pkg/ide/jupyter"
+	"github.com/loft-sh/devpod/pkg/ide/marimo"
 	"github.com/loft-sh/devpod/pkg/ide/openvscode"
 	"github.com/loft-sh/devpod/pkg/ide/vscode"
 	provider2 "github.com/loft-sh/devpod/pkg/provider"
@@ -51,6 +52,7 @@ type SetupContainerCmd struct {
 	InjectGitCredentials   bool
 	ContainerWorkspaceInfo string
 	SetupInfo              string
+	Token                  string
 }
 
 // NewSetupContainerCmd creates a new command
@@ -71,6 +73,7 @@ func NewSetupContainerCmd(flags *flags.GlobalFlags) *cobra.Command {
 	setupContainerCmd.Flags().BoolVar(&cmd.InjectGitCredentials, "inject-git-credentials", false, "If DevPod should inject git credentials during setup")
 	setupContainerCmd.Flags().StringVar(&cmd.ContainerWorkspaceInfo, "container-workspace-info", "", "The container workspace info")
 	setupContainerCmd.Flags().StringVar(&cmd.SetupInfo, "setup-info", "", "The container setup info")
+	setupContainerCmd.Flags().StringVar(&cmd.Token, "token", "", "Token to use to authenticate with browser IDEs")
 	_ = setupContainerCmd.MarkFlagRequired("setup-info")
 	return setupContainerCmd
 }
@@ -436,6 +439,8 @@ func (cmd *SetupContainerCmd) installIDE(setupInfo *config.Result, ide *provider
 		return jupyter.NewJupyterNotebookServer(setupInfo.SubstitutionContext.ContainerWorkspaceFolder, config.GetRemoteUser(setupInfo), ide.Options, log).Install()
 	case string(config2.IDEJupyterDesktop):
 		return jupyter.NewJupyterNotebookServer(setupInfo.SubstitutionContext.ContainerWorkspaceFolder, config.GetRemoteUser(setupInfo), ide.Options, log).Install()
+	case string(config2.IDEMarimo):
+		return marimo.NewServer(setupInfo.SubstitutionContext.ContainerWorkspaceFolder, config.GetRemoteUser(setupInfo), cmd.Token, ide.Options, log).Install()
 	}
 
 	return nil

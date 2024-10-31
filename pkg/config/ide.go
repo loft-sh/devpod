@@ -21,4 +21,5 @@ const (
 	IDEJupyterDesktop  IDE = "jupyterdesktop"
 	IDECursor          IDE = "cursor"
 	IDEPositron        IDE = "positron"
+	IDEMarimo          IDE = "marimo"
 )

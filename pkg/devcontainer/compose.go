@@ -203,7 +203,7 @@ func (r *runner) runDockerCompose(
 	}
 
 	// setup container
-	return r.setupContainer(ctx, parsedConfig.Raw, containerDetails, mergedConfig, substitutionContext, timeout)
+	return r.setupContainer(ctx, parsedConfig.Raw, containerDetails, mergedConfig, substitutionContext, options, timeout)
 }
 
 func (r *runner) getDockerComposeFilePaths(parsedConfig *config.SubstitutedConfig, envFiles []string) ([]string, error) {

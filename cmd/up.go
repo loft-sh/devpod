@@ -5,12 +5,14 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"math/rand"
 	"net"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/blang/semver"
 	"github.com/loft-sh/devpod/cmd/flags"
@@ -27,6 +29,7 @@ import (
 	"github.com/loft-sh/devpod/pkg/ide/fleet"
 	"github.com/loft-sh/devpod/pkg/ide/jetbrains"
 	"github.com/loft-sh/devpod/pkg/ide/jupyter"
+	"github.com/loft-sh/devpod/pkg/ide/marimo"
 	"github.com/loft-sh/devpod/pkg/ide/openvscode"
 	"github.com/loft-sh/devpod/pkg/ide/vscode"
 	"github.com/loft-sh/devpod/pkg/loft"
@@ -63,6 +66,7 @@ type UpCmd struct {
 
 	DotfilesSource string
 	DotfilesScript string
+	Token          string
 }
 
 // NewUpCmd creates a new up command
@@ -204,6 +208,11 @@ func (cmd *UpCmd) Run(
 	// a reset implies a recreate
 	if cmd.Reset {
 		cmd.Recreate = true
+	}
+
+	// Generate auth token
+	if cmd.IDE == string(config.IDEMarimo) {
+		cmd.Token = token(20)
 	}
 
 	// run devpod agent up
@@ -364,8 +373,18 @@ func (cmd *UpCmd) Run(
 				ideConfig.Options,
 				cmd.GitUsername,
 				cmd.GitToken,
-				log,
-			)
+				log)
+		case string(config.IDEMarimo):
+			return startMarimoInBrowser(
+				cmd.GPGAgentForwarding,
+				ctx,
+				devPodConfig,
+				client,
+				user,
+				ideConfig.Options,
+				cmd.GitUsername,
+				cmd.GitToken,
+				log)
 		}
 	}
 
@@ -458,6 +477,7 @@ func (cmd *UpCmd) devPodUpProxy(
 		err := client.Up(ctx, client2.UpOptions{
 			CLIOptions: baseOptions,
 			Debug:      cmd.Debug,
+			Token:      cmd.Token,
 
 			Stdin:  stdinReader,
 			Stdout: stdoutWriter,
@@ -521,6 +541,10 @@ func (cmd *UpCmd) devPodUpMachine(
 		workspaceInfo,
 	)
 
+	if cmd.IDE == string(config.IDEMarimo) {
+		agentCommand += " --token " + cmd.Token
+	}
+
 	if log.GetLevel() == logrus.DebugLevel {
 		agentCommand += " --debug"
 	}
@@ -581,6 +605,64 @@ func (cmd *UpCmd) devPodUpMachine(
 				tunnelserver.WithGitCredentialsOverride(cmd.GitUsername, cmd.GitToken),
 			)
 		},
+	)
+}
+
+func startMarimoInBrowser(
+	forwardGpg bool,
+	ctx context.Context,
+	devPodConfig *config.Config,
+	client client2.BaseWorkspaceClient,
+	user string,
+	ideOptions map[string]config.OptionValue,
+	gitUsername, gitToken string,
+	logger log.Logger,
+) error {
+	if forwardGpg {
+		err := performGpgForwarding(client, logger)
+		if err != nil {
+			return err
+		}
+	}
+
+	// determine port
+	address, port, err := parseAddressAndPort(
+		marimo.Options.GetValue(ideOptions, marimo.BindAddressOption),
+		marimo.DefaultServerPort,
+	)
+	if err != nil {
+		return err
+	}
+
+	// wait until reachable then open browser
+	targetURL := fmt.Sprintf("http://localhost:%d?access_token=%s", port, token)
+	if marimo.Options.GetValue(ideOptions, marimo.OpenOption) == "true" {
+		go func() {
+			err = open2.Open(ctx, targetURL, logger)
+			if err != nil {
+				logger.Errorf("error opening marimo: %v", err)
+			}
+
+			logger.Infof(
+				"Successfully started marimo in browser mode. Please keep this terminal open as long as you use Marimo",
+			)
+		}()
+	}
+
+	// start in browser
+	logger.Infof("Starting marimo in browser mode at %s", targetURL)
+	extraPorts := []string{fmt.Sprintf("%s:%d", address, marimo.DefaultServerPort)}
+	return startBrowserTunnel(
+		ctx,
+		devPodConfig,
+		client,
+		user,
+		targetURL,
+		false,
+		extraPorts,
+		gitUsername,
+		gitToken,
+		logger,
 	)
 }
 
@@ -1241,4 +1323,18 @@ func getProInstance(devPodConfig *config.Config, providerName string, log log.Lo
 	}
 
 	return proInstance
+}
+
+func init() {
+	rand.Seed(time.Now().UnixNano())
+}
+
+var letterRunes = []rune("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ")
+
+func token(n int) string {
+	b := make([]rune, n)
+	for i := range b {
+		b[i] = letterRunes[rand.Intn(len(letterRunes))]
+	}
+	return string(b)
 }
