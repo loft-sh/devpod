@@ -155,7 +155,7 @@ var AllowedIDEs = []AllowedIDE{
 		Name:         config.IDEMarimo,
 		DisplayName:  "Marimo",
 		Options:      vscode.Options,
-		Icon:         "https://devpod.sh/assets/positron.svg",
+		Icon:         "https://devpod.sh/assets/marimo.svg",
 		Experimental: true,
 	},
 }
