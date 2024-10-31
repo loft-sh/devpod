@@ -38,7 +38,7 @@ func RunLifecycleHooks(ctx context.Context, setupInfo *config.Result, skipNonBlo
 	if err != nil {
 		return err
 	}
-	if skipNonBlocking && mergedConfig.WaitFor == "onCreateCommands" {
+	if skipNonBlocking && mergedConfig.WaitFor == "onCreateCommand" {
 		log.Info("waited for onCreateCommands to finish, completed lifecycle hooks")
 		return nil
 	}
@@ -49,7 +49,7 @@ func RunLifecycleHooks(ctx context.Context, setupInfo *config.Result, skipNonBlo
 	if err != nil {
 		return err
 	}
-	if skipNonBlocking && mergedConfig.WaitFor == "updateContentCommands" {
+	if skipNonBlocking && mergedConfig.WaitFor == "updateContentCommand" {
 		log.Info("waited for updateContentCommands to finish, completed lifecycle hooks")
 		return nil
 	}
@@ -60,7 +60,7 @@ func RunLifecycleHooks(ctx context.Context, setupInfo *config.Result, skipNonBlo
 	if err != nil {
 		return err
 	}
-	if skipNonBlocking && mergedConfig.WaitFor == "postCreateCommands" {
+	if skipNonBlocking && mergedConfig.WaitFor == "postCreateCommand" {
 		log.Info("waited for postCreateCommands to finish, completed lifecycle hooks")
 		return nil
 	}
@@ -71,7 +71,7 @@ func RunLifecycleHooks(ctx context.Context, setupInfo *config.Result, skipNonBlo
 	if err != nil {
 		return err
 	}
-	if skipNonBlocking && mergedConfig.WaitFor == "postStartCommands" {
+	if skipNonBlocking && mergedConfig.WaitFor == "postStartCommand" {
 		log.Info("waited for postStartCommands to finish, completed lifecycle hooks")
 		return nil
 	}
@@ -82,7 +82,7 @@ func RunLifecycleHooks(ctx context.Context, setupInfo *config.Result, skipNonBlo
 	if err != nil {
 		return err
 	}
-	if skipNonBlocking && mergedConfig.WaitFor == "postAttachCommands" {
+	if skipNonBlocking && mergedConfig.WaitFor == "postAttachCommand" {
 		log.Info("waited for postAttachCommands to finish, completed lifecycle hooks")
 		return nil
 	}

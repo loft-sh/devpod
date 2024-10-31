@@ -469,8 +469,9 @@ func (cmd *UpCmd) devPodUpProxy(
 
 		// run devpod up elsewhere
 		err := client.Up(ctx, client2.UpOptions{
-			CLIOptions: baseOptions,
-			Debug:      cmd.Debug,
+			CLIOptions:      baseOptions,
+			Debug:           cmd.Debug,
+			SkipNonBlocking: cmd.SkipNonBlocking,
 
 			Stdin:  stdinReader,
 			Stdout: stdoutWriter,
@@ -533,6 +534,10 @@ func (cmd *UpCmd) devPodUpMachine(
 		client.AgentPath(),
 		workspaceInfo,
 	)
+
+	if cmd.SkipNonBlocking {
+		agentCommand += " --skip-non-blocking-commands"
+	}
 
 	if log.GetLevel() == logrus.DebugLevel {
 		agentCommand += " --debug"

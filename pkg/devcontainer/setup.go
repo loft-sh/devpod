@@ -106,7 +106,7 @@ func (r *runner) setupContainer(
 	r.Log.Infof("Setup container...")
 	setupCommand := fmt.Sprintf("'%s' agent container setup --setup-info '%s' --container-workspace-info '%s'", agent.ContainerDevPodHelperLocation, compressed, workspaceConfigCompressed)
 	if options.SkipNonBlocking {
-		setupCommand += " --skip-non-blocking"
+		setupCommand += " --skip-non-blocking-commands"
 	}
 	if runtime.GOOS == "linux" || !isDockerDriver {
 		setupCommand += " --chown-workspace"

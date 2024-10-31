@@ -35,7 +35,8 @@ import (
 type UpCmd struct {
 	*flags.GlobalFlags
 
-	WorkspaceInfo string
+	WorkspaceInfo   string
+	SkipNonBlocking bool
 }
 
 // NewUpCmd creates a new command
@@ -52,6 +53,7 @@ func NewUpCmd(flags *flags.GlobalFlags) *cobra.Command {
 		},
 	}
 	upCmd.Flags().StringVar(&cmd.WorkspaceInfo, "workspace-info", "", "The workspace info")
+	upCmd.Flags().BoolVar(&cmd.SkipNonBlocking, "skip-non-blocking-commands", false, "Stop running user commands after running the command configured with waitFor or the updateContentCommand by default.")
 	_ = upCmd.MarkFlagRequired("workspace-info")
 	return upCmd
 }
@@ -126,8 +128,9 @@ func (cmd *UpCmd) devPodUp(ctx context.Context, workspaceInfo *provider2.AgentWo
 
 	// start the devcontainer
 	result, err := runner.Up(ctx, devcontainer.UpOptions{
-		CLIOptions:    workspaceInfo.CLIOptions,
-		RegistryCache: workspaceInfo.RegistryCache,
+		CLIOptions:      workspaceInfo.CLIOptions,
+		RegistryCache:   workspaceInfo.RegistryCache,
+		SkipNonBlocking: cmd.SkipNonBlocking,
 	}, workspaceInfo.InjectTimeout)
 	if err != nil {
 		return nil, err

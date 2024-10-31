@@ -169,6 +169,10 @@ func (s *proxyClient) Up(ctx context.Context, opt client.UpOptions) error {
 		opts["DEBUG"] = "true"
 	}
 
+	if opt.SkipNonBlocking {
+		s.config.Exec.Proxy.Up = append(s.config.Exec.Proxy.Up, "--skip-non-blocking-commands")
+	}
+
 	err := RunCommandWithBinaries(
 		ctx,
 		"up",
