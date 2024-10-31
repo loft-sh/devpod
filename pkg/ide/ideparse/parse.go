@@ -123,6 +123,14 @@ var AllowedIDEs = []AllowedIDE{
 		Experimental: true,
 	},
 	{
+		Name:         config.IDEJupyterDesktop,
+		DisplayName:  "Jupyter Desktop",
+		Options:      jupyter.Options,
+		Icon:         "https://devpod.sh/assets/jupyter.svg",
+		IconDark:     "https://devpod.sh/assets/jupyter_dark.svg",
+		Experimental: true,
+	},
+	{
 		Name:         config.IDEVSCodeInsiders,
 		DisplayName:  "VSCode Insiders",
 		Options:      vscode.Options,
