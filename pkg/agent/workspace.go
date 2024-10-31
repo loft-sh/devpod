@@ -17,6 +17,7 @@ import (
 	provider2 "github.com/loft-sh/devpod/pkg/provider"
 	"github.com/loft-sh/log"
 	"github.com/mitchellh/go-homedir"
+	"github.com/moby/buildkit/frontend/dockerfile/dockerignore"
 )
 
 var extraSearchLocations = []string{"/home/devpod/.devpod/agent", "/opt/devpod/agent", "/var/lib/devpod/agent", "/var/devpod/agent"}
@@ -302,6 +303,22 @@ func CloneRepositoryForWorkspace(
 	}
 
 	log.Done("Successfully cloned repository")
+
+	// Get .devpodignore files to exclude
+	f, err := os.Open(filepath.Join(workspaceDir, ".devpodignore"))
+	if err != nil {
+		return nil
+	}
+	excludes, err := dockerignore.ReadAll(f)
+	if err != nil {
+		log.Warn(".devpodignore file is invalid : ", err)
+		return nil
+	}
+	// Remove files from workspace content folder
+	for _, exclude := range excludes {
+		os.RemoveAll(filepath.Join(workspaceDir, exclude))
+	}
+	log.Debug("Ignore files from .devpodignore ", excludes)
 
 	return nil
 }
