@@ -412,6 +412,10 @@ func (r *runner) buildAndExtendDockerCompose(
 	var err error
 
 	buildImageName := composeService.Image
+	// If Image is empty then we are building the dev container and use the default name docker-compose uses
+	if buildImageName == "" {
+		buildImageName = fmt.Sprintf("%s-%s", project.Name, composeService.Name)
+	}
 	buildTarget := "dev_container_auto_added_stage_label"
 
 	// Determine base imageName for generated features build

@@ -69,6 +69,14 @@ func (r *runner) Build(ctx context.Context, options provider.BuildOptions) (stri
 		return prebuildImage, nil
 	}
 
+	if isDockerComposeConfig(substitutedConfig.Config) {
+		r.Log.Debug("Tagging image prebuild=%s buildInfo=%s", prebuildImage, buildInfo.ImageName)
+		err = dockerDriver.TagDevContainer(ctx, buildInfo.ImageName, prebuildImage)
+		if err != nil {
+			return "", errors.Wrap(err, "tag image")
+		}
+	}
+
 	// check if we can push image
 	err = image.CheckPushPermissions(prebuildImage)
 	if err != nil {

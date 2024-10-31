@@ -46,6 +46,8 @@ type DockerDriver interface {
 	// PushDevContainer pushes the given image to a registry
 	PushDevContainer(ctx context.Context, image string) error
 
+	TagDevContainer(ctx context.Context, image, tag string) error
+
 	// ComposeHelper returns the compose helper
 	ComposeHelper() (*compose.ComposeHelper, error)
 
