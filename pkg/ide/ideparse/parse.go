@@ -175,7 +175,7 @@ var AllowedIDEs = []AllowedIDE{
 		Name:         config.IDEZed,
 		DisplayName:  "Zed",
 		Options:      ide.Options{},
-		Icon:         "https://devpod.sh/assets/positron.svg",
+		Icon:         "https://devpod.sh/assets/zed.svg",
 		Experimental: true,
 	},
 }
