@@ -355,7 +355,7 @@ func (cmd *UpCmd) Run(
 				log,
 			)
 		case string(config.IDEJupyterDesktop):
-			return startJupyterDesktopInBrowser(
+			return startJupyterDesktop(
 				cmd.GPGAgentForwarding,
 				ctx,
 				devPodConfig,
@@ -642,7 +642,7 @@ func startJupyterNotebookInBrowser(
 	)
 }
 
-func startJupyterDesktopInBrowser(
+func startJupyterDesktop(
 	forwardGpg bool,
 	ctx context.Context,
 	devPodConfig *config.Config,
