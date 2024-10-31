@@ -128,9 +128,8 @@ func (cmd *UpCmd) devPodUp(ctx context.Context, workspaceInfo *provider2.AgentWo
 
 	// start the devcontainer
 	result, err := runner.Up(ctx, devcontainer.UpOptions{
-		CLIOptions:      workspaceInfo.CLIOptions,
-		RegistryCache:   workspaceInfo.RegistryCache,
-		SkipNonBlocking: cmd.SkipNonBlocking,
+		CLIOptions:    workspaceInfo.CLIOptions,
+		RegistryCache: workspaceInfo.RegistryCache,
 	}, workspaceInfo.InjectTimeout)
 	if err != nil {
 		return nil, err

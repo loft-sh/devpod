@@ -85,10 +85,9 @@ type runner struct {
 type UpOptions struct {
 	provider2.CLIOptions
 
-	NoBuild         bool
-	ForceBuild      bool
-	SkipNonBlocking bool
-	RegistryCache   string
+	NoBuild       bool
+	ForceBuild    bool
+	RegistryCache string
 }
 
 func (r *runner) Up(ctx context.Context, options UpOptions, timeout time.Duration) (*config.Result, error) {

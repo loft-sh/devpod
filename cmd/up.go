@@ -59,7 +59,6 @@ type UpCmd struct {
 	GPGAgentForwarding      bool
 	OpenIDE                 bool
 	SetupLoftPlatformAccess bool
-	SkipNonBlocking         bool
 
 	SSHConfigPath string
 
@@ -469,9 +468,8 @@ func (cmd *UpCmd) devPodUpProxy(
 
 		// run devpod up elsewhere
 		err := client.Up(ctx, client2.UpOptions{
-			CLIOptions:      baseOptions,
-			Debug:           cmd.Debug,
-			SkipNonBlocking: cmd.SkipNonBlocking,
+			CLIOptions: baseOptions,
+			Debug:      cmd.Debug,
 
 			Stdin:  stdinReader,
 			Stdout: stdoutWriter,

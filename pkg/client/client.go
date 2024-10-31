@@ -132,8 +132,7 @@ type CommandOptions struct {
 type UpOptions struct {
 	provider.CLIOptions
 
-	Debug           bool
-	SkipNonBlocking bool
+	Debug bool
 
 	Stdin  io.Reader
 	Stdout io.Writer
