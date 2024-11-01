@@ -176,7 +176,6 @@ func NewUpCmd(f *flags.GlobalFlags) *cobra.Command {
 	upCmd.Flags().StringVar(&cmd.GitSSHSigningKey, "git-ssh-signing-key", "", "The ssh key to use when signing git commits. Used to explicitly setup DevPod's ssh signature forwarding with given key. Should be same format as value of `git config user.signingkey`")
 	upCmd.Flags().StringVar(&cmd.FallbackImage, "fallback-image", "", "The fallback image to use if no devcontainer configuration has been detected")
 
-	upCmd.Flags().BoolVar(&cmd.SkipNonBlocking, "skip-non-blocking-commands", false, "Stop running user commands after running the command configured with waitFor or the updateContentCommand by default.")
 	upCmd.Flags().BoolVar(&cmd.DisableDaemon, "disable-daemon", false, "If enabled, will not install a daemon into the target machine to track activity")
 	upCmd.Flags().StringVar(&cmd.Source, "source", "", "Optional source for the workspace. E.g. git:https://github.com/my-org/my-repo")
 	upCmd.Flags().BoolVar(&cmd.Proxy, "proxy", false, "If true will forward agent requests to stdio")
@@ -532,10 +531,6 @@ func (cmd *UpCmd) devPodUpMachine(
 		client.AgentPath(),
 		workspaceInfo,
 	)
-
-	if cmd.SkipNonBlocking {
-		agentCommand += " --skip-non-blocking-commands"
-	}
 
 	if log.GetLevel() == logrus.DebugLevel {
 		agentCommand += " --debug"

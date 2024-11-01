@@ -20,7 +20,7 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
-func RunLifecycleHooks(ctx context.Context, setupInfo *config.Result, skipNonBlocking bool, log log.Logger) error {
+func RunLifecycleHooks(ctx context.Context, setupInfo *config.Result, log log.Logger) error {
 	mergedConfig := setupInfo.MergedConfig
 	remoteUser := config.GetRemoteUser(setupInfo)
 	probedEnv, err := config.ProbeUserEnv(ctx, mergedConfig.UserEnvProbe, remoteUser, log)
@@ -38,7 +38,7 @@ func RunLifecycleHooks(ctx context.Context, setupInfo *config.Result, skipNonBlo
 	if err != nil {
 		return err
 	}
-	if skipNonBlocking && mergedConfig.WaitFor == "onCreateCommand" {
+	if mergedConfig.WaitFor == "onCreateCommand" {
 		log.Info("waited for onCreateCommands to finish, completed lifecycle hooks")
 		return nil
 	}
@@ -49,7 +49,7 @@ func RunLifecycleHooks(ctx context.Context, setupInfo *config.Result, skipNonBlo
 	if err != nil {
 		return err
 	}
-	if skipNonBlocking && mergedConfig.WaitFor == "updateContentCommand" {
+	if mergedConfig.WaitFor == "updateContentCommand" {
 		log.Info("waited for updateContentCommands to finish, completed lifecycle hooks")
 		return nil
 	}
@@ -60,7 +60,7 @@ func RunLifecycleHooks(ctx context.Context, setupInfo *config.Result, skipNonBlo
 	if err != nil {
 		return err
 	}
-	if skipNonBlocking && mergedConfig.WaitFor == "postCreateCommand" {
+	if mergedConfig.WaitFor == "postCreateCommand" {
 		log.Info("waited for postCreateCommands to finish, completed lifecycle hooks")
 		return nil
 	}
@@ -71,7 +71,7 @@ func RunLifecycleHooks(ctx context.Context, setupInfo *config.Result, skipNonBlo
 	if err != nil {
 		return err
 	}
-	if skipNonBlocking && mergedConfig.WaitFor == "postStartCommand" {
+	if mergedConfig.WaitFor == "postStartCommand" {
 		log.Info("waited for postStartCommands to finish, completed lifecycle hooks")
 		return nil
 	}
@@ -82,7 +82,7 @@ func RunLifecycleHooks(ctx context.Context, setupInfo *config.Result, skipNonBlo
 	if err != nil {
 		return err
 	}
-	if skipNonBlocking && mergedConfig.WaitFor == "postAttachCommand" {
+	if mergedConfig.WaitFor == "postAttachCommand" {
 		log.Info("waited for postAttachCommands to finish, completed lifecycle hooks")
 		return nil
 	}
