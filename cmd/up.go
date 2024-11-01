@@ -301,6 +301,15 @@ func (cmd *UpCmd) Run(
 				vscode.FlavorCursor,
 				log,
 			)
+		case string(config.IDECodium):
+			return vscode.Open(
+				ctx,
+				client.Workspace(),
+				result.SubstitutionContext.ContainerWorkspaceFolder,
+				vscode.Options.GetValue(ideConfig.Options, vscode.OpenNewWindow) == "true",
+				vscode.FlavorCodium,
+				log,
+			)
 		case string(config.IDEPositron):
 			return vscode.Open(
 				ctx,

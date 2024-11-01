@@ -22,4 +22,5 @@ const (
 	IDECursor          IDE = "cursor"
 	IDEPositron        IDE = "positron"
 	IDEMarimo          IDE = "marimo"
+	IDECodium          IDE = "codium"
 )

@@ -35,6 +35,8 @@ func openViaBrowser(workspace, folder string, newWindow bool, flavor Flavor, log
 		protocol = `cursor://`
 	case FlavorPositron:
 		protocol = `positron://`
+	case FlavorCodium:
+		protocol = `codium://`
 	}
 
 	openURL := protocol + `vscode-remote/ssh-remote+` + workspace + `.devpod/` + folder
@@ -59,6 +61,11 @@ func openViaCLI(ctx context.Context, workspace, folder string, newWindow bool, f
 		return fmt.Errorf("couldn't find the %s binary", flavor)
 	}
 
+	sshExtension := "ms-vscode-remote.remote-ssh"
+	if flavor == FlavorCodium {
+		sshExtension = "jeanp413.open-remote-ssh"
+	}
+
 	// make sure ms-vscode-remote.remote-ssh is installed
 	out, err := exec.Command(codePath, "--list-extensions").Output()
 	if err != nil {
@@ -68,7 +75,7 @@ func openViaCLI(ctx context.Context, workspace, folder string, newWindow bool, f
 	found := false
 	foundContainers := false
 	for _, str := range splitted {
-		if strings.TrimSpace(str) == "ms-vscode-remote.remote-ssh" {
+		if strings.TrimSpace(str) == sshExtension {
 			found = true
 		} else if strings.TrimSpace(str) == "ms-vscode-remote.remote-containers" {
 			foundContainers = true
@@ -77,7 +84,7 @@ func openViaCLI(ctx context.Context, workspace, folder string, newWindow bool, f
 
 	// install remote-ssh extension
 	if !found {
-		args := []string{"--install-extension", "ms-vscode-remote.remote-ssh"}
+		args := []string{"--install-extension", sshExtension}
 		log.Debugf("Run vscode command %s %s", codePath, strings.Join(args, " "))
 		out, err := exec.CommandContext(ctx, codePath, args...).Output()
 		if err != nil {
@@ -143,6 +150,16 @@ func findCLI(flavor Flavor) string {
 			return "positron"
 		} else if runtime.GOOS == "darwin" && command.Exists("/Applications/Positron.app/Contents/Resources/app/bin/positron") {
 			return "/Applications/Positron.app/Contents/Resources/app/bin/positron"
+		}
+
+		return ""
+	}
+
+	if flavor == FlavorCodium {
+		if command.Exists("codium") {
+			return "codium"
+		} else if runtime.GOOS == "darwin" && command.Exists("/Applications/Codium.app/Contents/Resources/app/bin/codium") {
+			return "/Applications/Codium.app/Contents/Resources/app/bin/codium"
 		}
 
 		return ""

@@ -30,6 +30,7 @@ const (
 	FlavorInsiders Flavor = "insiders"
 	FlavorCursor   Flavor = "cursor"
 	FlavorPositron Flavor = "positron"
+	FlavorCodium   Flavor = "codium"
 )
 
 var Options = ide.Options{
@@ -280,6 +281,48 @@ func (o *VsCodeServer) findServerBinaryPath(location string) string {
 		return binPath
 	}
 
+	if o.flavor == FlavorCodium {
+		// check legacy location `$HOME/.vscode-server/bin`
+		binDir := filepath.Join(location, "bin")
+		for {
+			if time.Now().After(deadline) {
+				o.log.Warn("Timed out installing vscode-server")
+				break
+			}
+			entries, err := os.ReadDir(binDir)
+			if err != nil || len(entries) == 0 {
+				o.log.Infof("Read dir %s: %v", binDir, err)
+				o.log.Info("Wait until vscode-server is installed...")
+				// check new location `$HOME/.vscode-server/cli/servers/Stable-<version>/server/bin/code-server`
+				newBinPath, err := o.findCodeServerBinary(location)
+				if err != nil {
+					o.log.Infof("Read new location %s: %v", location, err)
+					o.log.Info("Wait until vscode-server-insiders is installed...")
+					time.Sleep(time.Second * 3)
+					continue
+				}
+
+				binPath = newBinPath
+				break
+			}
+
+			binPath = filepath.Join(binDir, entries[0].Name(), "bin", "code-server")
+			ctx, cancel := context.WithTimeout(context.Background(), time.Second*4)
+			out, err := exec.CommandContext(ctx, binPath, "--help").CombinedOutput()
+			cancel()
+			if err != nil {
+				o.log.Infof("Execute %s: %v", binPath, command.WrapCommandError(out, err))
+				o.log.Info("Wait until vscode-server is installed...")
+				time.Sleep(time.Second * 3)
+				continue
+			}
+
+			break
+		}
+
+		return binPath
+	}
+
 	if o.flavor == FlavorInsiders {
 		serversDir := filepath.Join(location, "cli", "servers")
 		for {
@@ -394,6 +437,8 @@ func prepareServerLocation(userName string, create bool, flavor Flavor) (string,
 		folderName = ".cursor-server"
 	case FlavorPositron:
 		folderName = ".positron-server"
+	case FlavorCodium:
+		folderName = ".vscode-server"
 	}
 
 	folder := filepath.Join(homeFolder, folderName)
