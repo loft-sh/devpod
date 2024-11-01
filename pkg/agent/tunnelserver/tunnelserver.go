@@ -419,16 +419,18 @@ func (t *tunnelServer) StreamMount(message *tunnel.StreamMountRequest, stream tu
 
 	// Get .devpodignore files to exclude
 	excludes := []string{}
-	f, err := os.Open(filepath.Join(t.workspace.Source.LocalFolder, ".devpodignore"))
-	if err == nil {
-		excludes, err = dockerignore.ReadAll(f)
-		if err != nil {
-			t.log.Warnf("Error reading .devpodignore file: %v", err)
+	if t.workspace != nil {
+		f, err := os.Open(filepath.Join(t.workspace.Source.LocalFolder, ".devpodignore"))
+		if err == nil {
+			excludes, err = dockerignore.ReadAll(f)
+			if err != nil {
+				t.log.Warnf("Error reading .devpodignore file: %v", err)
+			}
 		}
 	}
 
 	buf := bufio.NewWriterSize(NewStreamWriter(stream, t.log), 10*1024)
-	err = extract.WriteTarExclude(buf, mount.Source, false, excludes)
+	err := extract.WriteTarExclude(buf, mount.Source, false, excludes)
 	if err != nil {
 		return err
 	}
