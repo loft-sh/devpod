@@ -30,7 +30,6 @@ func (r *runner) setupContainer(
 	containerDetails *config.ContainerDetails,
 	mergedConfig *config.MergedDevContainerConfig,
 	substitutionContext *config.SubstitutionContext,
-	options UpOptions,
 	timeout time.Duration,
 ) (*config.Result, error) {
 	// inject agent

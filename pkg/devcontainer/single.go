@@ -124,7 +124,7 @@ func (r *runner) runSingleContainer(
 	}
 
 	// setup container
-	return r.setupContainer(ctx, parsedConfig.Raw, containerDetails, mergedConfig, substitutionContext, options, timeout)
+	return r.setupContainer(ctx, parsedConfig.Raw, containerDetails, mergedConfig, substitutionContext, timeout)
 }
 
 func (r *runner) runContainer(
