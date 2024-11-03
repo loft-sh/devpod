@@ -10,15 +10,20 @@ You can create a workspace either from the DevPod CLI or through the DevPod desk
 Upon successful creation, DevPod will make the development container available through the ssh host `WORKSPACE_NAME.devpod`. Alternatively, DevPod can automatically open the workspace in a locally installed IDE, such as VS Code or Intellij.
 
 :::info
-A workspace is defined through a `devcontainer.json`. If DevPod can't find one, it will automatically try to guess the programming language of your project and provide a fitting template.
+A workspace is defined through a `devcontainer.json`. If DevPod can’t find one, it will automatically try to guess the programming language of your project and provide a fitting template.
+:::
+
+:::info
+It is possible to override a `devcontainer.json` with specific user settings such as mounts by creating a file named  `devcontainer.user.json` in the same directory as the `devcontainer.json` of the workspace.
+This can be useful when customization of a versioned devcontainer is needed.
 :::
 
 ### Via DevPod Desktop Application
 
-Navigate to the 'Workspaces' view and click on the 'Create' button in the title. Enter the git repository you want to work on or select a local folder.
+Navigate to the ‘Workspaces’ view and click on the ‘Create’ button in the title. Enter the git repository you want to work on or select a local folder.
 
 :::info Add Provider
-If you haven't configured a provider yet, DevPod will automatically open the provider modal for you. You can later add providers in the same way by navigating to 'Providers' > 'Add'
+If you haven’t configured a provider yet, DevPod will automatically open the provider modal for you. You can later add providers in the same way by navigating to ‘Providers’ > ‘Add’
 :::
 
 You can also configure one of the additional settings:
@@ -34,19 +39,19 @@ Under the hood, the Desktop Application will call the CLI command `devpod up REP
 :::
 
 :::info Note
-You can set the location of your devpod home by passing the `--devpod-home={home_path}` flag, 
+You can set the location of your devpod home by passing the `--devpod-home={home_path}` flag,
 or by setting the env var `DEVPOD_HOME` to your desired home directory.
 
 This can be useful if you are having trouble with a workspace trying to mount to a windows location when it should be mounting to a path inside the WSL VM.
 
-For example: setting `devpod-home=/mnt/c/Users/MyUser/` will result in a workspace path of something like `/mnt/c/Users/MyUser/.devpod/contexts/default/workspaces/...`
+For example: setting `devpod-home=/mnt/c/Users/MyUser/` will result in a workspace path of something like `/mnt/c/Users/MyUser/.devpod/contexts/default/workspaces/…`
 :::
 
 ### Via DevPod CLI
 
 Make sure to [install the DevPod CLI locally](../getting-started/install.mdx#optional-install-devpod-cli) and select a provider you would like to host the workspace on (such as local docker) via:
 ```
-# Add a provider if you haven't already
+# Add a provider if you haven’t already
 devpod provider add docker
 ```
 
@@ -99,7 +104,7 @@ devpod up ghcr.io/my-org/my-repo:latest
 DevPod will create the following `.devcontainer.json`:
 ```
 {
-    "image": "ghcr.io/my-org/my-repo:latest"
+    “image”: “ghcr.io/my-org/my-repo:latest”
 }
 ```
 
@@ -107,7 +112,7 @@ DevPod will create the following `.devcontainer.json`:
 
 If you have a local container running, you can create a workspace from it by running:
 ```
-devpod up my-workspace --source container:$CONTAINER_ID 
+devpod up my-workspace --source container:$CONTAINER_ID
 ```
 
 This only works with the `docker` provider.
@@ -124,7 +129,7 @@ When recreating a workspace, changes only to the project path or mounted volumes
 
 ### Via DevPod Desktop Application
 
-Navigate to the 'Workspaces' view and press on the 'More Options' button on the workspace you want to recreate. Then press 'Rebuild' and confirm to rebuild the workspace.
+Navigate to the ‘Workspaces’ view and press on the ‘More Options’ button on the workspace you want to recreate. Then press ‘Rebuild’ and confirm to rebuild the workspace.
 
 ### Via DevPod CLI
 
@@ -141,7 +146,7 @@ Some scenarios require pulling in the latest changes from a git repository or re
 
 ### Via DevPod Desktop Application
 
-Navigate to the 'Workspaces' view and press on the 'More Options' button on the workspace you want to reset. Then press 'Reset' and confirm.
+Navigate to the ‘Workspaces’ view and press on the ‘More Options’ button on the workspace you want to reset. Then press ‘Reset’ and confirm.
 
 ### Via DevPod CLI
 
