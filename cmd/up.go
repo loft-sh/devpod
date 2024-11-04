@@ -28,6 +28,7 @@ import (
 	"github.com/loft-sh/devpod/pkg/ide/jetbrains"
 	"github.com/loft-sh/devpod/pkg/ide/jupyter"
 	"github.com/loft-sh/devpod/pkg/ide/marimo"
+	"github.com/loft-sh/devpod/pkg/ide/neovim"
 	"github.com/loft-sh/devpod/pkg/ide/openvscode"
 	"github.com/loft-sh/devpod/pkg/ide/vscode"
 	"github.com/loft-sh/devpod/pkg/loft"
@@ -343,6 +344,18 @@ func (cmd *UpCmd) Run(
 			return jetbrains.NewWebStormServer(config2.GetRemoteUser(result), ideConfig.Options, log).OpenGateway(result.SubstitutionContext.ContainerWorkspaceFolder, client.Workspace())
 		case string(config.IDEFleet):
 			return startFleet(ctx, client, log)
+		case string(config.IDENeoVim):
+			return startNeoVim(
+				cmd.GPGAgentForwarding,
+				ctx,
+				devPodConfig,
+				client,
+				user,
+				ideConfig.Options,
+				cmd.GitUsername,
+				cmd.GitToken,
+				log,
+			)
 		case string(config.IDEJupyterNotebook):
 			return startJupyterNotebookInBrowser(
 				cmd.GPGAgentForwarding,
@@ -639,6 +652,51 @@ func startMarimoInBrowser(
 	// start in browser
 	logger.Infof("Starting marimo in browser mode at %s", targetURL)
 	extraPorts := []string{fmt.Sprintf("%s:%d", address, marimo.DefaultServerPort)}
+	return startBrowserTunnel(
+		ctx,
+		devPodConfig,
+		client,
+		user,
+		targetURL,
+		false,
+		extraPorts,
+		gitUsername,
+		gitToken,
+		logger,
+	)
+}
+
+func startNeoVim(
+	forwardGpg bool,
+	ctx context.Context,
+	devPodConfig *config.Config,
+	client client2.BaseWorkspaceClient,
+	user string,
+	ideOptions map[string]config.OptionValue,
+	gitUsername, gitToken string,
+	logger log.Logger,
+) error {
+	if forwardGpg {
+		err := performGpgForwarding(client, logger)
+		if err != nil {
+			return err
+		}
+	}
+	// determine port
+	address, port, err := parseAddressAndPort(
+		neovim.Options.GetValue(ideOptions, neovim.BindAddressOption),
+		marimo.DefaultServerPort,
+	)
+	if err != nil {
+		return err
+	}
+	// start tunnel
+	targetURL := fmt.Sprintf("http://127.0.0.1:%d", port)
+	logger.Info("======================================================================")
+	logger.Info("NeoVim has started on the remote, connect to it in a terminal using:")
+	logger.Infof("nvim --server %s --remote-ui", neovim.Options.GetValue(ideOptions, neovim.BindAddressOption))
+	logger.Info("======================================================================")
+	extraPorts := []string{fmt.Sprintf("%s:%d", address, neovim.DefaultServerPort)}
 	return startBrowserTunnel(
 		ctx,
 		devPodConfig,
