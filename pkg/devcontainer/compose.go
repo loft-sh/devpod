@@ -197,6 +197,21 @@ func (r *runner) runDockerCompose(
 		return nil, errors.Wrap(err, "get image metadata from container")
 	}
 
+	userConfig, err := config.ParseDevContainerUserJSON(parsedConfig.Config)
+	if err != nil {
+		return nil, err
+	} else if userConfig != nil {
+		config.AddConfigToImageMetadata(userConfig, imageMetadataConfig)
+	}
+
+	for _, v := range options.ExtraDevContainerPaths {
+		extraConfig, err := config.ParseDevContainerJSONFile(v)
+		if err != nil {
+			return nil, err
+		}
+		config.AddConfigToImageMetadata(extraConfig, imageMetadataConfig)
+	}
+
 	mergedConfig, err := config.MergeConfiguration(parsedConfig.Config, imageMetadataConfig.Config)
 	if err != nil {
 		return nil, errors.Wrap(err, "merge config")
@@ -330,6 +345,21 @@ func (r *runner) startContainer(
 		imageDetails, err := r.inspectImage(ctx, currentImageName)
 		if err != nil {
 			return nil, errors.Wrap(err, "inspect image")
+		}
+
+		userConfig, err := config.ParseDevContainerUserJSON(parsedConfig.Config)
+		if err != nil {
+			return nil, err
+		} else if userConfig != nil {
+			config.AddConfigToImageMetadata(userConfig, imageMetadata)
+		}
+
+		for _, v := range options.ExtraDevContainerPaths {
+			extraConfig, err := config.ParseDevContainerJSONFile(v)
+			if err != nil {
+				return nil, err
+			}
+			config.AddConfigToImageMetadata(extraConfig, imageMetadata)
 		}
 
 		mergedConfig, err := config.MergeConfiguration(parsedConfig.Config, imageMetadata.Config)
