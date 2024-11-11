@@ -1,5 +1,5 @@
 {
-  "tauri": {
+  "app": {
     "windows": [
       {
         "title": "DevPod",
