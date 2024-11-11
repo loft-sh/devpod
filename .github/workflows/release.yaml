@@ -247,7 +247,7 @@ jobs:
         uses: tauri-apps/tauri-action@v0.4.5
         with:
           projectPath: "./desktop"
-          args: " --target ${{ matrix.settings.target }} --features enable-updater"
+          args: " --target ${{ matrix.settings.target }}"
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           TAURI_PRIVATE_KEY: ${{ secrets.TAURI_PRIVATE_KEY }}
