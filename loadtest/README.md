@@ -27,3 +27,16 @@ kubectl -n devpod-pro port-forward loft-55df4d875f-j9vnd 8080:8080 &
 
 curl -s -v http://localhost:8080/debug/pprof/heap > $(date '+%Y-%m-%d-%H:%M:%S').out
 ```
+
+### Profile the server every 30 seconds
+
+```
+while true; do curl -s -v http://localhost:8080/debug/pprof/heap > $(date '+%Y-%m-%d-%H:%M:%S').out; sleep 30; done
+```
+
+
+### Results
+
+20 workspaces issuein'g 20 cat bootsxtrap.log got 1 timeout, took around 6:37 going up to 7:11 total time for each workspace
+
+10 x 10 worked fine
