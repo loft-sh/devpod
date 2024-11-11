@@ -28,8 +28,8 @@ import (
 	"github.com/loft-sh/api/v4/pkg/auth"
 	loftclientset "github.com/loft-sh/api/v4/pkg/clientset/versioned"
 	proflags "github.com/loft-sh/devpod/cmd/pro/flags"
-	"github.com/loft-sh/devpod/pkg/loft"
-	"github.com/loft-sh/devpod/pkg/loft/client"
+	"github.com/loft-sh/devpod/pkg/platform"
+	"github.com/loft-sh/devpod/pkg/platform/client"
 	"github.com/loft-sh/log"
 	"github.com/loft-sh/log/hash"
 	"github.com/loft-sh/log/scanner"
@@ -392,7 +392,7 @@ The command will wait until DevPod Pro is reachable under the host.
 `)
 
 	cmd.Log.Info("Waiting for you to configure DNS, so DevPod Pro can be reached on https://" + host)
-	err = wait.PollUntilContextTimeout(ctx, 5*time.Second, loft.Timeout(), true, func(ctx context.Context) (done bool, err error) {
+	err = wait.PollUntilContextTimeout(ctx, 5*time.Second, platform.Timeout(), true, func(ctx context.Context) (done bool, err error) {
 		return isHostReachable(ctx, host)
 	})
 	if err != nil {
@@ -930,7 +930,7 @@ func (cmd *StartCmd) handleAlreadyExistingInstallation(ctx context.Context) erro
 func (cmd *StartCmd) waitForDeployment(ctx context.Context) (*corev1.Pod, error) {
 	// wait for loft pod to start
 	cmd.Log.Info("Waiting for DevPod Pro pod to be running...")
-	loftPod, err := loft.WaitForPodReady(ctx, cmd.KubeClient, cmd.Namespace, cmd.Log)
+	loftPod, err := platform.WaitForPodReady(ctx, cmd.KubeClient, cmd.Namespace, cmd.Log)
 	cmd.Log.Donef("Release Pod successfully started")
 	if err != nil {
 		return nil, err

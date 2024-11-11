@@ -1,18 +1,12 @@
 import { useCallback, useId, useMemo, useRef, useSyncExternalStore } from "react"
-import { client, TStreamEventListenerFn } from "../../../client"
+import { TStreamEventListenerFn, client } from "../../../client"
 import { exists } from "../../../lib"
-import {
-  TDeepNonNullable,
-  TStreamID,
-  TWorkspace,
-  TWorkspaceID,
-  TWorkspaceStartConfig,
-} from "../../../types"
+import { TIdentifiable, TStreamID, TWorkspaceID, TWorkspaceStartConfig } from "../../../types"
 import { TActionID, TActionObj, useConnectAction, useReplayAction } from "../action"
-import { devPodStore } from "../devPodStore"
+import { IWorkspaceStore, useWorkspaceStore } from "../workspaceStore"
 
-export type TWorkspaceResult = Readonly<{
-  data: TWorkspace | undefined
+export type TWorkspaceResult<T> = Readonly<{
+  data: T | undefined
   isLoading: boolean
   current:
     | (TActionObj & Readonly<{ connect: (listener: TStreamEventListenerFn) => void }>)
@@ -24,7 +18,8 @@ export type TWorkspaceResult = Readonly<{
   start: (config: TWorkspaceStartConfig, onStream?: TStreamEventListenerFn) => TActionID | undefined
   create: (
     config: Omit<TWorkspaceStartConfig, "sourceConfig"> &
-      Pick<TDeepNonNullable<TWorkspaceStartConfig>, "sourceConfig">,
+      Pick<TWorkspaceStartConfig, "sourceConfig"> &
+      Readonly<{ workspaceKey?: string }>,
     onStream?: TStreamEventListenerFn
   ) => TActionID
   stop: (onStream?: TStreamEventListenerFn) => TActionID | undefined
@@ -37,15 +32,16 @@ export type TWorkspaceResult = Readonly<{
 export function useWorkspaceActions(
   workspaceID: TWorkspaceID | undefined
 ): TActionObj[] | undefined {
+  const { store } = useWorkspaceStore()
   const dataCache = useRef<TActionObj[]>()
   const data = useSyncExternalStore(
-    useCallback((listener) => devPodStore.subscribe(listener), []),
+    useCallback((listener) => store.subscribe(listener), [store]),
     () => {
       if (workspaceID === undefined) {
         return undefined
       }
 
-      const workspaceActions = devPodStore.getWorkspaceActions(workspaceID)
+      const workspaceActions = store.getWorkspaceActions(workspaceID)
       if (!dataCache.current || dataCache.current.length !== workspaceActions.length) {
         dataCache.current = workspaceActions
 
@@ -69,17 +65,28 @@ export function useWorkspaceActions(
   return data
 }
 
-export function useWorkspace(workspaceID: TWorkspaceID | undefined): TWorkspaceResult {
+export function useWorkspace<TW extends TIdentifiable>(
+  workspaceKey: string | undefined
+): TWorkspaceResult<TW> {
+  const { store } = useWorkspaceStore<IWorkspaceStore<string, TW>>()
   const viewID = useId()
   const data = useSyncExternalStore(
-    useCallback((listener) => devPodStore.subscribe(listener), []),
-    () => (workspaceID !== undefined ? devPodStore.get(workspaceID) : undefined)
+    useCallback((listener) => store.subscribe(listener), [store]),
+    () => (workspaceKey !== undefined ? store.get(workspaceKey) : undefined)
   )
-  const create = useCallback<TWorkspaceResult["create"]>(
+  const workspaceID = useMemo(() => {
+    if (!data) {
+      return undefined
+    }
+
+    return data.id
+  }, [data])
+
+  const create = useCallback<TWorkspaceResult<TW>["create"]>(
     (config, onStream) => {
-      return devPodStore.startAction({
+      return store.startAction({
         actionName: "start",
-        workspaceID: config.id,
+        workspaceKey: config.workspaceKey ?? config.id,
         actionFn: async (ctx) => {
           const result = await client.workspaces.start(config, onStream, {
             id: config.id,
@@ -89,35 +96,35 @@ export function useWorkspace(workspaceID: TWorkspaceID | undefined): TWorkspaceR
           if (result.err) {
             return result
           }
-          devPodStore.setStatus(config.id, result.val)
+          store.setStatus(config.id, result.val)
 
           return result
         },
       })
     },
-    [viewID]
+    [store, viewID]
   )
 
-  const start = useCallback<TWorkspaceResult["start"]>(
+  const start = useCallback<TWorkspaceResult<TW>["start"]>(
     (config, onStream) => {
       if (workspaceID === undefined) {
         return
       }
 
-      return startWorkspaceAction({ workspaceID, config, onStream, streamID: viewID })
+      return startWorkspaceAction({ workspaceID, config, onStream, streamID: viewID, store })
     },
-    [viewID, workspaceID]
+    [store, viewID, workspaceID]
   )
 
-  const checkStatus = useCallback<TWorkspaceResult["checkStatus"]>(
+  const checkStatus = useCallback<TWorkspaceResult<TW>["checkStatus"]>(
     (onStream) => {
       if (workspaceID === undefined) {
         return
       }
 
-      return devPodStore.startAction({
+      return store.startAction({
         actionName: "checkStatus",
-        workspaceID,
+        workspaceKey: workspaceID,
         actionFn: async (ctx) => {
           const result = await client.workspaces.checkStatus(onStream, {
             id: workspaceID,
@@ -127,35 +134,35 @@ export function useWorkspace(workspaceID: TWorkspaceID | undefined): TWorkspaceR
           if (result.err) {
             return result
           }
-          devPodStore.setStatus(workspaceID, result.val)
+          store.setStatus(workspaceID, result.val)
 
           return result
         },
       })
     },
-    [viewID, workspaceID]
+    [store, viewID, workspaceID]
   )
 
-  const stop = useCallback<TWorkspaceResult["stop"]>(
+  const stop = useCallback<TWorkspaceResult<TW>["stop"]>(
     (onStream) => {
       if (workspaceID === undefined) {
         return
       }
 
-      return stopWorkspaceAction({ workspaceID, onStream, streamID: viewID })
+      return stopWorkspaceAction({ workspaceID, onStream, streamID: viewID, store })
     },
-    [viewID, workspaceID]
+    [store, viewID, workspaceID]
   )
 
-  const rebuild = useCallback<TWorkspaceResult["rebuild"]>(
+  const rebuild = useCallback<TWorkspaceResult<TW>["rebuild"]>(
     (onStream) => {
       if (workspaceID === undefined) {
         return
       }
 
-      return devPodStore.startAction({
+      return store.startAction({
         actionName: "rebuild",
-        workspaceID,
+        workspaceKey: workspaceID,
         actionFn: async (ctx) => {
           const result = await client.workspaces.rebuild(onStream, {
             id: workspaceID,
@@ -165,24 +172,24 @@ export function useWorkspace(workspaceID: TWorkspaceID | undefined): TWorkspaceR
           if (result.err) {
             return result
           }
-          devPodStore.setStatus(workspaceID, result.val)
+          store.setStatus(workspaceID, result.val)
 
           return result
         },
       })
     },
-    [viewID, workspaceID]
+    [store, viewID, workspaceID]
   )
 
-  const reset = useCallback<TWorkspaceResult["reset"]>(
+  const reset = useCallback<TWorkspaceResult<TW>["reset"]>(
     (onStream) => {
       if (workspaceID === undefined) {
         return
       }
 
-      return devPodStore.startAction({
+      return store.startAction({
         actionName: "reset",
-        workspaceID,
+        workspaceKey: workspaceID,
         actionFn: async (ctx) => {
           const result = await client.workspaces.reset(onStream, {
             id: workspaceID,
@@ -192,34 +199,34 @@ export function useWorkspace(workspaceID: TWorkspaceID | undefined): TWorkspaceR
           if (result.err) {
             return result
           }
-          devPodStore.setStatus(workspaceID, result.val)
+          store.setStatus(workspaceID, result.val)
 
           return result
         },
       })
     },
-    [viewID, workspaceID]
+    [store, viewID, workspaceID]
   )
 
-  const remove = useCallback<TWorkspaceResult["remove"]>(
+  const remove = useCallback<TWorkspaceResult<TW>["remove"]>(
     (force, onStream) => {
       if (workspaceID === undefined) {
         return
       }
 
-      return removeWorkspaceAction({ force, workspaceID, onStream, streamID: viewID })
+      return removeWorkspaceAction({ force, workspaceID, onStream, streamID: viewID, store })
     },
-    [viewID, workspaceID]
+    [store, viewID, workspaceID]
   )
 
   const currentAction = useSyncExternalStore(
-    useCallback((listener) => devPodStore.subscribe(listener), []),
-    () => (workspaceID !== undefined ? devPodStore.getCurrentAction(workspaceID) : undefined)
+    useCallback((listener) => store.subscribe(listener), [store]),
+    () => (workspaceID !== undefined ? store.getCurrentAction(workspaceID) : undefined)
   )
   const isLoading = useMemo(() => exists(currentAction), [currentAction])
 
   const connect = useConnectAction(currentAction, viewID)
-  const current = useMemo<TWorkspaceResult["current"]>(() => {
+  const current = useMemo<TWorkspaceResult<TW>["current"]>(() => {
     if (currentAction === undefined) {
       return undefined
     }
@@ -231,7 +238,7 @@ export function useWorkspace(workspaceID: TWorkspaceID | undefined): TWorkspaceR
   }, [currentAction, connect])
 
   const replay = useReplayAction()
-  const history = useMemo<TWorkspaceResult["history"]>(() => {
+  const history = useMemo<TWorkspaceResult<TW>["history"]>(() => {
     return { replay }
   }, [replay])
 
@@ -258,16 +265,18 @@ type TStartWorkspaceActionArgs = Readonly<{
   onStream?: TStreamEventListenerFn
   workspaceID: TWorkspaceID
   streamID: TStreamID
+  store: IWorkspaceStore<string, unknown>
 }>
 export function startWorkspaceAction({
   workspaceID,
   streamID,
   config,
   onStream,
+  store,
 }: TStartWorkspaceActionArgs): TActionObj["id"] {
-  return devPodStore.startAction({
+  return store.startAction({
     actionName: "start",
-    workspaceID,
+    workspaceKey: workspaceID,
     actionFn: async (ctx) => {
       const result = await client.workspaces.start(config, onStream, {
         id: workspaceID,
@@ -277,7 +286,7 @@ export function startWorkspaceAction({
       if (result.err) {
         return result
       }
-      devPodStore.setStatus(workspaceID, result.val)
+      store.setStatus(workspaceID, result.val)
 
       return result
     },
@@ -288,15 +297,17 @@ type TStopWorkspaceActionArgs = Readonly<{
   onStream?: TStreamEventListenerFn
   workspaceID: TWorkspaceID
   streamID: TStreamID
+  store: IWorkspaceStore<string, unknown>
 }>
 export function stopWorkspaceAction({
   workspaceID,
   onStream,
   streamID,
+  store,
 }: TStopWorkspaceActionArgs): TActionObj["id"] {
-  return devPodStore.startAction({
+  return store.startAction({
     actionName: "stop",
-    workspaceID,
+    workspaceKey: workspaceID,
     actionFn: async (ctx) => {
       const result = await client.workspaces.stop(onStream, {
         id: workspaceID,
@@ -306,7 +317,7 @@ export function stopWorkspaceAction({
       if (result.err) {
         return result
       }
-      devPodStore.setStatus(workspaceID, result.val)
+      store.setStatus(workspaceID, result.val)
 
       return result
     },
@@ -318,16 +329,18 @@ type TRemoveWorkspaceActionArgs = Readonly<{
   workspaceID: TWorkspaceID
   streamID: TStreamID
   force: boolean
+  store: IWorkspaceStore<string, unknown>
 }>
 export function removeWorkspaceAction({
   workspaceID,
   onStream,
   streamID,
   force,
+  store,
 }: TRemoveWorkspaceActionArgs): TActionObj["id"] {
-  return devPodStore.startAction({
+  return store.startAction({
     actionName: "remove",
-    workspaceID,
+    workspaceKey: workspaceID,
     actionFn: async (ctx) => {
       const result = await client.workspaces.remove(force, onStream, {
         id: workspaceID,
@@ -337,7 +350,7 @@ export function removeWorkspaceAction({
       if (result.err) {
         return result
       }
-      devPodStore.removeWorkspace(workspaceID)
+      store.removeWorkspace(workspaceID)
 
       return result
     },

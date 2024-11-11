@@ -5,18 +5,19 @@ import (
 	"github.com/spf13/cobra"
 )
 
-// NewListCmd creates a new cobra command
-func NewListCmd(globalFlags *flags.GlobalFlags) *cobra.Command {
+// NewCmd creates a new cobra command
+func NewCmd(globalFlags *flags.GlobalFlags) *cobra.Command {
 	c := &cobra.Command{
 		Use:    "list",
-		Short:  "DevPod Pro Provider List commands",
+		Short:  "DevPod Pro Provider list commands",
 		Args:   cobra.NoArgs,
 		Hidden: true,
 	}
 
+	c.AddCommand(NewWorkspacesCmd(globalFlags))
 	c.AddCommand(NewProjectsCmd(globalFlags))
 	c.AddCommand(NewTemplatesCmd(globalFlags))
-	c.AddCommand(NewTemplateOptionsCmd(globalFlags))
-	c.AddCommand(NewTemplateOptionsVersionCmd(globalFlags))
+	c.AddCommand(NewClustersCmd(globalFlags))
+
 	return c
 }

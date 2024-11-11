@@ -45,7 +45,7 @@ func (cmd *LogsCmd) Run(ctx context.Context, args []string) error {
 		return err
 	}
 
-	baseClient, err := workspace.GetWorkspace(devPodConfig, args, false, log.Default)
+	baseClient, err := workspace.Get(ctx, devPodConfig, args, false, log.Default)
 	if err != nil {
 		return err
 	}

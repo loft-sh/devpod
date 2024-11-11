@@ -1,7 +1,9 @@
 #![allow(dead_code)]
 
-use crate::{util::with_data_store, AppHandle};
+use crate::AppHandle;
+use log::error;
 use serde::Serialize;
+use tauri_plugin_store::StoreExt;
 use ts_rs::TS;
 
 const SETTINGS_FILE_NAME: &str = ".settings.json";
@@ -25,10 +27,6 @@ pub struct Settings {
     http_proxy_url: String,
     https_proxy_url: String,
     no_proxy: String,
-
-    // Experimental settings
-    #[serde(rename = "experimental_colorMode")]
-    experimental_color_mode: ColorMode,
     #[serde(rename = "experimental_multiDevcontainer")]
     experimental_multi_devcontainer: bool,
     #[serde(rename = "experimental_fleet")]
@@ -43,6 +41,10 @@ pub struct Settings {
     experimental_positron: bool,
     #[serde(rename = "experimental_devPodPro")]
     experimental_devpod_pro: bool,
+    #[serde(rename = "experimental_devPodProDesktop")]
+    experimental_devpod_pro_desktop: bool,
+    #[serde(rename = "experimental_colorMode")]
+    experimental_color_mode: ColorMode,
 }
 
 #[derive(Debug, Serialize, TS)]
@@ -73,16 +75,17 @@ enum Zoom {
 
 impl Settings {
     pub fn auto_update_enabled(app_handle: &AppHandle) -> bool {
-        let mut is_enabled = false;
-        let _ = with_data_store(&app_handle, SETTINGS_FILE_NAME, |store| {
-            is_enabled = store
-                .get("autoUpdate")
-                .and_then(|v| v.as_bool())
-                .unwrap_or(false);
+        // check something in auto updates
+        let store = app_handle.store(SETTINGS_FILE_NAME);
+        if store.is_err() {
+            error!("unable to open store {}", SETTINGS_FILE_NAME);
+            return false;
+        }
 
-            Ok(())
-        });
-
-        return is_enabled;
+        store
+            .unwrap()
+            .get("autoUpdate")
+            .and_then(|v| v.as_bool())
+            .unwrap_or(false)
     }
 }

@@ -17,7 +17,7 @@ type BaseClient interface {
 	Context() string
 
 	// RefreshOptions updates the options
-	RefreshOptions(ctx context.Context, userOptions []string) error
+	RefreshOptions(ctx context.Context, userOptions []string, reconfigure bool) error
 
 	// Status retrieves the workspace status
 	Status(ctx context.Context, options StatusOptions) (Status, error)

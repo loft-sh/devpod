@@ -30,7 +30,7 @@ const DEFAULT_CONTAINER_PATH = "__internal-default"
 export function useCreateWorkspaceForm(onCreateWorkspace: (args: TCreateWorkspaceArgs) => void) {
   const formRef = useRef<HTMLFormElement>(null)
   const settings = useSettings()
-  const workspaces = useWorkspaces()
+  const workspaces = useWorkspaces<TWorkspace>()
   const [isSubmitLoading, setIsSubmitLoading] = useState(false)
   const { register, handleSubmit, formState, watch, setError, setValue, control, getFieldState } =
     useForm<TFormValues>({

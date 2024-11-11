@@ -1,9 +1,9 @@
 use crate::{
     commands::{list_workspaces::ListWorkspacesCommand, DevpodCommandConfig, DevpodCommandError},
-    system_tray::{SystemTrayClickHandler, ToSystemTraySubmenu},
+    system_tray::{SystemTray, SystemTrayClickHandler, ToSystemTraySubmenu},
     ui_messages::OpenWorkspaceMsg,
 };
-use crate::{system_tray::SystemTray, AppHandle, AppState, UiMessage};
+use crate::{AppHandle, AppState, UiMessage};
 use chrono::DateTime;
 use log::error;
 use serde::{Deserialize, Serialize};
@@ -12,7 +12,10 @@ use std::{
     sync::{mpsc, Arc},
     thread, time,
 };
-use tauri::{CustomMenuItem, SystemTrayMenu, SystemTrayMenuItem, SystemTraySubmenu};
+use tauri::{
+    menu::{MenuItem, SubmenuBuilder},
+    Wry,
+};
 use tokio::sync::OnceCell;
 
 static INIT: OnceCell<()> = OnceCell::const_new();
@@ -40,65 +43,71 @@ impl WorkspacesState {
 }
 
 impl WorkspacesState {
-    pub fn load() -> Result<Self, DevpodCommandError> {
+    pub fn load(app_handle: &AppHandle) -> Result<Self, DevpodCommandError> {
         let list_workspaces_cmd = ListWorkspacesCommand::new();
 
-        list_workspaces_cmd.exec()
+        list_workspaces_cmd.exec(app_handle)
     }
 }
 
 impl WorkspacesState {}
 
 impl ToSystemTraySubmenu for WorkspacesState {
-    fn to_submenu(&self) -> tauri::SystemTraySubmenu {
-        let mut workspaces_menu = SystemTrayMenu::new();
+    fn to_submenu(&self, app_handle: &AppHandle) -> anyhow::Result<tauri::menu::Submenu<Wry>> {
+        let mut submenu = SubmenuBuilder::with_id(app_handle, "workspace", "Workspaces");
 
-        workspaces_menu = workspaces_menu.add_item(CustomMenuItem::new(
+        let create_workspace = MenuItem::with_id(
+            app_handle,
             Self::CREATE_WORKSPACE_ID,
             "Create Workspace",
-        ));
+            true,
+            None::<&str>,
+        )?;
+        submenu = submenu.item(&create_workspace);
 
         if !self.workspaces.is_empty() {
-            workspaces_menu = workspaces_menu.add_native_item(SystemTrayMenuItem::Separator);
+            submenu = submenu.separator();
         }
 
         for workspace in &self.workspaces {
             if let Some(id) = workspace.id() {
-                let item = CustomMenuItem::new(Self::item_id(id), id);
-                workspaces_menu = workspaces_menu.add_item(item);
+                let item =
+                    MenuItem::with_id(app_handle, Self::item_id(id), id, true, None::<&str>)?;
+                submenu = submenu.item(&item);
             }
         }
+        let m = submenu.build()?;
 
-        SystemTraySubmenu::new("Workspaces", workspaces_menu)
+        Ok(m)
     }
 
     fn on_tray_item_clicked(&self, id: &str) -> Option<SystemTrayClickHandler> {
-        let id = id.clone().to_string();
+            let id = id.to_string();
 
-        Some(Box::new(move |_app_handle, state| {
-            tauri::async_runtime::block_on(async {
-                let tx = &state.ui_messages;
+            Some(Box::new(move |_app_handle, state| {
+                tauri::async_runtime::block_on(async {
+                    let tx = &state.ui_messages;
 
-                if id == Self::CREATE_WORKSPACE_ID {
-                    if let Err(err) = tx
-                        .send(UiMessage::OpenWorkspace(OpenWorkspaceMsg::empty()))
-                        .await
-                    {
-                        error!("Failed to send create workspace message: {:?}", err);
-                    };
-                } else {
-                    let workspace_id = id.replace(Self::IDENTIFIER_PREFIX, "");
-                    if let Err(err) = tx
-                        .send(UiMessage::OpenWorkspace(OpenWorkspaceMsg::with_id(
-                            workspace_id,
-                        )))
-                        .await
-                    {
-                        error!("Failed to send create workspace message: {:?}", err);
-                    };
-                }
-            })
-        }))
+                    if id == Self::CREATE_WORKSPACE_ID {
+                        if let Err(err) = tx
+                            .send(UiMessage::OpenWorkspace(OpenWorkspaceMsg::empty()))
+                            .await
+                        {
+                            error!("Failed to send create workspace message: {:?}", err);
+                        };
+                    } else {
+                        let workspace_id = id.replace(Self::IDENTIFIER_PREFIX, "");
+                        if let Err(err) = tx
+                            .send(UiMessage::OpenWorkspace(OpenWorkspaceMsg::with_id(
+                                workspace_id,
+                            )))
+                            .await
+                        {
+                            error!("Failed to send create workspace message: {:?}", err);
+                        };
+                    }
+                })
+            }))
     }
 }
 
@@ -155,21 +164,22 @@ struct ProviderOption {
 pub fn setup(app_handle: &AppHandle, state: tauri::State<'_, AppState>) {
     tauri::async_runtime::block_on(async {
         INIT.get_or_init(|| async {
-            let sleep_duration = time::Duration::from_millis(1_000);
+            let sleep_duration = time::Duration::from_millis(5_000);
             let (tx, rx) = mpsc::channel::<Update>();
 
             let workspaces_tx = tx;
 
+            let ws_app_handle = app_handle.clone();
             thread::spawn(move || loop {
-                let workspaces = WorkspacesState::load().unwrap();
+                let workspaces = WorkspacesState::load(&ws_app_handle).unwrap();
                 workspaces_tx.send(Update::Workspaces(workspaces)).unwrap();
 
                 thread::sleep(sleep_duration);
             });
 
             let workspaces_state = Arc::clone(&state.workspaces);
-            let tray_handle = app_handle.tray_handle();
 
+            let main_app_handle = app_handle.clone();
             // Handle updates from background threads.
             thread::spawn(move || {
                 while let Ok(msg) = rx.recv() {
@@ -180,11 +190,16 @@ pub fn setup(app_handle: &AppHandle, state: tauri::State<'_, AppState>) {
                             if current_workspaces != &workspaces {
                                 *current_workspaces = workspaces;
 
+                                let tray = main_app_handle.tray_by_id("main");
+                                if tray.is_none() {
+                                    return;
+                                }
+                                let tray = tray.unwrap();
+
                                 // rebuild menu
                                 let new_menu = SystemTray::new()
-                                    .build_menu(vec![Box::new(current_workspaces)]);
-                                tray_handle
-                                    .set_menu(new_menu)
+                                    .build_menu(&main_app_handle, Box::new(current_workspaces));
+                                tray.set_menu(new_menu.ok())
                                     .expect("should be able to set menu");
                             }
                         }

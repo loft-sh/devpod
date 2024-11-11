@@ -6,11 +6,12 @@ import {
   TWorkspaceStatusResult,
   TWorkspaceWithoutStatus,
 } from "../../types"
-import { Command, isOk, serializeRawOptions, toFlagArg, toMultipleFlagArg } from "../command"
+import { Command, isOk, serializeRawOptions, toFlagArg } from "../command"
 import {
   DEVPOD_COMMAND_DELETE,
   DEVPOD_COMMAND_GET_WORKSPACE_CONFIG,
   DEVPOD_COMMAND_GET_WORKSPACE_NAME,
+  DEVPOD_COMMAND_GET_WORKSPACE_UID,
   DEVPOD_COMMAND_HELPER,
   DEVPOD_COMMAND_LIST,
   DEVPOD_COMMAND_STATUS,
@@ -28,8 +29,10 @@ import {
   DEVPOD_FLAG_PROVIDER_OPTION,
   DEVPOD_FLAG_RECREATE,
   DEVPOD_FLAG_RESET,
+  DEVPOD_FLAG_SKIP_PRO,
   DEVPOD_FLAG_SOURCE,
   DEVPOD_FLAG_TIMEOUT,
+  WORKSPACE_COMMAND_ADDITIONAL_FLAGS_KEY,
 } from "../constants"
 
 type TRawWorkspaces = readonly (Omit<TWorkspace, "status" | "id"> &
@@ -37,14 +40,25 @@ type TRawWorkspaces = readonly (Omit<TWorkspace, "status" | "id"> &
 
 export class WorkspaceCommands {
   static DEBUG = false
-  static ADDITIONAL_FLAGS = ""
+  static ADDITIONAL_FLAGS = new Map<string, string>()
 
   private static newCommand(args: string[]): Command {
-    return new Command([...args, ...(WorkspaceCommands.DEBUG ? [DEVPOD_FLAG_DEBUG] : [])])
+    const extraFlags = []
+    if (WorkspaceCommands.DEBUG) {
+      extraFlags.push(DEVPOD_FLAG_DEBUG)
+    }
+
+    return new Command([...args, ...extraFlags])
   }
 
-  static async ListWorkspaces(): Promise<Result<TWorkspaceWithoutStatus[]>> {
-    const result = await new Command([DEVPOD_COMMAND_LIST, DEVPOD_FLAG_JSON_OUTPUT]).run()
+  static async ListWorkspaces(skipPro: boolean): Promise<Result<TWorkspaceWithoutStatus[]>> {
+    const maybeSkipProFlag = skipPro ? [DEVPOD_FLAG_SKIP_PRO] : []
+
+    const result = await new Command([
+      DEVPOD_COMMAND_LIST,
+      DEVPOD_FLAG_JSON_OUTPUT,
+      ...maybeSkipProFlag,
+    ]).run()
     if (result.err) {
       return result
     }
@@ -92,6 +106,22 @@ export class WorkspaceCommands {
     return Return.Value(result.val.stdout)
   }
 
+  static async GetWorkspaceUID() {
+    const result = await new Command([
+      DEVPOD_COMMAND_HELPER,
+      DEVPOD_COMMAND_GET_WORKSPACE_UID,
+    ]).run()
+    if (result.err) {
+      return result
+    }
+
+    if (!isOk(result.val)) {
+      return Return.Failed(`Failed to get UID: ${result.val.stderr}`)
+    }
+
+    return Return.Value(result.val.stdout)
+  }
+
   static GetStatusLogs(id: string) {
     return new Command([DEVPOD_COMMAND_STATUS, id, DEVPOD_FLAG_JSON_LOG_OUTPUT])
   }
@@ -127,10 +157,17 @@ export class WorkspaceCommands {
       ? [toFlagArg(DEVPOD_FLAG_DEVCONTAINER_PATH, config.devcontainerPath)]
       : []
 
-    const additionalFlags =
-      WorkspaceCommands.ADDITIONAL_FLAGS.length !== 0
-        ? toMultipleFlagArg(WorkspaceCommands.ADDITIONAL_FLAGS)
-        : []
+    const additionalFlags = []
+    if (WorkspaceCommands.ADDITIONAL_FLAGS.size > 0) {
+      for (const [key, value] of WorkspaceCommands.ADDITIONAL_FLAGS.entries()) {
+        if (key === WORKSPACE_COMMAND_ADDITIONAL_FLAGS_KEY) {
+          additionalFlags.push(value)
+          continue
+        }
+
+        additionalFlags.push(toFlagArg(key, value))
+      }
+    }
 
     return WorkspaceCommands.newCommand([
       DEVPOD_COMMAND_UP,

@@ -1,29 +1,19 @@
-import { createBrowserRouter, Params, Path } from "react-router-dom"
+import { Outlet, Params, Path, createBrowserRouter } from "react-router-dom"
 import { App, ErrorPage } from "./App"
 import { TActionID } from "./contexts"
-import { exists } from "./lib"
+import { TProInstanceDetail, exists } from "./lib"
 import { TProviderID, TSupportedIDE, TWorkspaceID } from "./types"
-import {
-  Action,
-  Actions,
-  CreateWorkspace,
-  ListProviders,
-  ListWorkspaces,
-  Provider,
-  Providers,
-  Settings,
-  Workspaces,
-} from "./views"
+import { Actions, Pro, Providers, Settings, Workspaces } from "./views"
 
 export const Routes = {
   ROOT: "/",
   SETTINGS: "/settings",
   WORKSPACES: "/workspaces",
   ACTIONS: "/actions",
-  get ACTION() {
+  get ACTION(): string {
     return `${Routes.ACTIONS}/:action`
   },
-  get WORKSPACE_CREATE() {
+  get WORKSPACE_CREATE(): string {
     return `${Routes.WORKSPACES}/new`
   },
   toWorkspaceCreate(
@@ -46,7 +36,7 @@ export const Routes = {
       search: searchParams.toString(),
     }
   },
-  toAction(actionID: TActionID, onSuccess?: string) {
+  toAction(actionID: TActionID, onSuccess?: string): string {
     if (onSuccess) {
       return `${Routes.ACTIONS}/${actionID}?onSuccess=${encodeURIComponent(onSuccess)}`
     }
@@ -73,15 +63,51 @@ export const Routes = {
     }
   },
   PROVIDERS: "/providers",
-  get PROVIDER() {
+  get PROVIDER(): string {
     return `${Routes.PROVIDERS}/:provider`
   },
-  toProvider(providerID: string) {
+  toProvider(providerID: string): string {
     return `${Routes.PROVIDERS}/${providerID}`
   },
   getProviderId(params: Params<string>): string | undefined {
     // Needs to match `:provider` from detail route exactly!
     return params["provider"]
+  },
+  PRO: "/pro",
+  PRO_INSTANCE: "/pro/:host",
+  PRO_WORKSPACE: "/pro/:host/:workspace",
+  PRO_WORKSPACE_CREATE: "/pro/:host/new",
+  PRO_SETTINGS: "/pro/:host/settings",
+  toProInstance(host: string): string {
+    // This is a workaround for react-routers interaction with hostnames as path components
+    const h = host.replaceAll(".", "-")
+
+    return `/pro/${h}`
+  },
+  toProWorkspace(host: string, instanceID: string): string {
+    const base = this.toProInstance(host)
+
+    return `${base}/${instanceID}`
+  },
+  toProWorkspaceCreate(host: string): string {
+    const base = this.toProInstance(host)
+
+    return `${base}/new`
+  },
+  toProWorkspaceDetail(host: string, instanceID: string, detail: TProInstanceDetail): string {
+    const base = this.toProInstance(host)
+
+    return `${base}/${instanceID}?tab=${detail}`
+  },
+  toProSettings(host: string): string {
+    const base = this.toProInstance(host)
+
+    return `${base}/settings`
+  },
+  getProWorkspaceDetailsParams(
+    searchParams: URLSearchParams
+  ): Partial<Readonly<{ tab: TProInstanceDetail | null }>> {
+    return { tab: searchParams.get("tab") as TProInstanceDetail | null }
   },
 } as const
 
@@ -92,36 +118,65 @@ export const router = createBrowserRouter([
     errorElement: <ErrorPage />,
     children: [
       {
+        path: Routes.PRO,
+        element: <ProRoot />,
+        children: [
+          {
+            path: Routes.PRO_INSTANCE,
+            element: <Pro.ProInstance />,
+            children: [
+              {
+                index: true,
+                element: <Pro.ListWorkspaces />,
+              },
+              {
+                path: Routes.PRO_WORKSPACE,
+                element: <Pro.Workspace />,
+              },
+              {
+                path: Routes.PRO_WORKSPACE_CREATE,
+                element: <Pro.CreateWorkspace />,
+              },
+              { path: Routes.PRO_SETTINGS, element: <Pro.Settings /> },
+            ],
+          },
+        ],
+      },
+      {
         path: Routes.WORKSPACES,
-        element: <Workspaces />,
+        element: <Workspaces.Workspaces />,
         children: [
           {
             index: true,
-            element: <ListWorkspaces />,
+            element: <Workspaces.ListWorkspaces />,
           },
           {
             path: Routes.WORKSPACE_CREATE,
-            element: <CreateWorkspace />,
+            element: <Workspaces.CreateWorkspace />,
           },
         ],
       },
       {
         path: Routes.PROVIDERS,
-        element: <Providers />,
+        element: <Providers.Providers />,
         children: [
-          { index: true, element: <ListProviders /> },
+          { index: true, element: <Providers.ListProviders /> },
           {
             path: Routes.PROVIDER,
-            element: <Provider />,
+            element: <Providers.Provider />,
           },
         ],
       },
       {
         path: Routes.ACTIONS,
-        element: <Actions />,
-        children: [{ path: Routes.ACTION, element: <Action /> }],
+        element: <Actions.Actions />,
+        children: [{ path: Routes.ACTION, element: <Actions.Action /> }],
       },
-      { path: Routes.SETTINGS, element: <Settings /> },
+      { path: Routes.SETTINGS, element: <Settings.Settings /> },
     ],
   },
 ])
+
+function ProRoot() {
+  return <Outlet />
+}

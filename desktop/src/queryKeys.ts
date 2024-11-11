@@ -1,4 +1,4 @@
-import { TProviderID, TWorkspaceID } from "./types"
+import { TProInstances, TProviderID, TWorkspaceID } from "./types"
 
 export const QueryKeys = {
   PLATFORM: ["platform"],
@@ -34,6 +34,21 @@ export const QueryKeys = {
   },
   providerUpdate(id: TProviderID): string[] {
     return [...QueryKeys.provider(id), "update"]
+  },
+  proWorkspaceTemplates(host: string, project: string): string[] {
+    return ["workspaceTemplates", host, project]
+  },
+  proClusters(host: string, project: string): string[] {
+    return ["clusters", host, project]
+  },
+  connectionStatus(host: string): string[] {
+    return ["connectionStatus", host]
+  },
+  versionInfo(host: string): string[] {
+    return ["versionInfo", host]
+  },
+  proProviderUpdates(proInstances: TProInstances | undefined) {
+    return ["check-pro-provider-updates", proInstances]
   },
 }
 

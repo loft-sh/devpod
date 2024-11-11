@@ -9,9 +9,9 @@ import (
 
 	storagev1 "github.com/loft-sh/api/v4/pkg/apis/storage/v1"
 	"github.com/loft-sh/devpod/cmd/pro/flags"
-	"github.com/loft-sh/devpod/pkg/loft"
-	"github.com/loft-sh/devpod/pkg/loft/client"
-	"github.com/loft-sh/devpod/pkg/loft/remotecommand"
+	"github.com/loft-sh/devpod/pkg/platform"
+	"github.com/loft-sh/devpod/pkg/platform/client"
+	"github.com/loft-sh/devpod/pkg/platform/remotecommand"
 	"github.com/loft-sh/log"
 	"github.com/spf13/cobra"
 )
@@ -48,19 +48,19 @@ func (cmd *StatusCmd) Run(ctx context.Context, stdin io.Reader, stdout io.Writer
 		return err
 	}
 
-	info, err := GetWorkspaceInfoFromEnv()
+	info, err := platform.GetWorkspaceInfoFromEnv()
 	if err != nil {
 		return err
 	}
-	workspace, err := FindWorkspace(ctx, baseClient, info.UID, info.ProjectName)
+	workspace, err := platform.FindInstanceInProject(ctx, baseClient, info.UID, info.ProjectName)
 	if err != nil {
 		return err
 	} else if workspace == nil {
 		out, err := json.Marshal(&storagev1.WorkspaceStatusResult{
-			ID:       os.Getenv(loft.WorkspaceIDEnv),
-			Context:  os.Getenv(loft.WorkspaceContextEnv),
+			ID:       os.Getenv(platform.WorkspaceIDEnv),
+			Context:  os.Getenv(platform.WorkspaceContextEnv),
 			State:    string(storagev1.WorkspaceStatusNotFound),
-			Provider: os.Getenv(loft.WorkspaceProviderEnv),
+			Provider: os.Getenv(platform.WorkspaceProviderEnv),
 		})
 		if err != nil {
 			return err
@@ -70,7 +70,7 @@ func (cmd *StatusCmd) Run(ctx context.Context, stdin io.Reader, stdout io.Writer
 		return nil
 	}
 
-	conn, err := DialWorkspace(baseClient, workspace, "getstatus", OptionsFromEnv(storagev1.DevPodFlagsStatus), cmd.Log)
+	conn, err := platform.DialInstance(baseClient, workspace, "getstatus", platform.OptionsFromEnv(storagev1.DevPodFlagsStatus), cmd.Log)
 	if err != nil {
 		return err
 	}

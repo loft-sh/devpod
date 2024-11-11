@@ -1,14 +1,15 @@
-use std::collections::HashMap;
-
 use crate::{settings::Settings, window::WindowHelper, AppHandle, AppState};
 use anyhow::Context;
 use chrono::{DateTime, Utc};
 use lazy_static::lazy_static;
-use log::{debug, error, warn};
+use log::{debug, error, info, warn};
 use regex::Regex;
 use reqwest::{Client, Method};
 use serde::{Deserialize, Serialize};
-use tauri::{api::notification::Notification, Manager};
+use std::collections::HashMap;
+use tauri::Manager;
+use tauri_plugin_notification::NotificationExt;
+use tauri_plugin_updater::UpdaterExt;
 use thiserror::Error;
 use tokio::fs::File;
 use ts_rs::TS;
@@ -21,7 +22,7 @@ pub enum UpdateError {
     #[error("unable to get latest release {0}")]
     NoReleaseFound(String),
     #[error("failed to check for updates {0}")]
-    CheckUpdate(#[from] tauri::updater::Error),
+    CheckUpdate(#[from] tauri_plugin_updater::Error),
     #[error("failed to fetch releases {0}")]
     FetchRelease(#[from] anyhow::Error),
 }
@@ -129,9 +130,12 @@ pub async fn get_pending_update(state: tauri::State<'_, AppState>) -> Result<Rel
 
 #[tauri::command]
 pub async fn check_updates(app_handle: AppHandle) -> Result<bool, UpdateError> {
-    match tauri::updater::builder(app_handle).check().await {
+    let updater = app_handle
+        .updater()
+        .map_err(|e| UpdateError::CheckUpdate(e))?;
+    match updater.check().await {
         Ok(update) => {
-            let update_available = update.is_update_available();
+            let update_available = update.is_some();
             debug!(
                 "Update check completed, update available: {}",
                 update_available
@@ -161,27 +165,85 @@ impl<'a> UpdateHelper<'a> {
 
     pub async fn poll(&self) {
         {
+            #[cfg(debug_assertions)] // disable during development
+            {
+                return
+            }
+
             loop {
                 // check if we have updated the app recently
                 // if so, show changelog in app
 
                 let app_handle = self.app_handle.clone();
-                if let Ok(update) = tauri::updater::builder(app_handle).check().await {
-                    if update.is_update_available() {
-                        let new_version = update.latest_version();
+                let updater = app_handle.updater();
+                if updater.is_err() {
+                    error!("Failed to get updater");
+
+                    continue;
+                }
+                if let Ok(update) = updater.unwrap().check().await {
+                    if let Some(update) = update {
+                        let state = self.app_handle.state::<AppState>();
+                        let update_installed_state = *state.update_installed.lock().unwrap();
+                        // prevent ourselves from installing the same update multiple times
+                        if update_installed_state {
+                            return;
+                        }
+
+                        let new_version = update.version.as_str();
                         let update_helper = UpdateHelper::new(&self.app_handle);
                         if let Err(e) = update_helper.update_app_releases(new_version).await {
                             error!("Failed to update app releases: {}", e);
                         }
+
                         if Settings::auto_update_enabled(&self.app_handle) {
-                            if let Err(err) = update.download_and_install().await {
+                            let on_chunk = |_, _| {};
+                            let on_download_fininshed = || {
+                                info!("Download for version {} finished", new_version);
+                            };
+                            info!(
+                                "Update available, current: {}, new: {}",
+                                update.current_version, new_version,
+                            );
+                            info!("Starting to download");
+                            if let Err(err) = update
+                                .download_and_install(on_chunk, on_download_fininshed)
+                                .await
+                            {
                                 error!("Failed to download and install update: {}", err);
+                            }
+
+                            let window_helper = WindowHelper::new(self.app_handle.clone());
+                            let _ = window_helper.new_update_ready_window();
+
+                            let state = self.app_handle.state::<AppState>();
+                            let mut pending_update_state = state.pending_update.lock().unwrap();
+                            *pending_update_state = None;
+
+                            let mut update_installed_state = state.update_installed.lock().unwrap();
+                            *update_installed_state = true;
+                        } else {
+                            match self.update_app_releases(new_version).await {
+                                Ok(release) => {
+                                    if let Err(err) = self.notify_update_available(&release).await {
+                                        warn!("Failed to send update notification: {}", err);
+                                    }
+
+                                    // display update available in the UI
+                                    let state = self.app_handle.state::<AppState>();
+                                    let mut pending_update_state =
+                                        state.pending_update.lock().unwrap();
+                                    *pending_update_state = Some(release);
+                                }
+                                Err(e) => {
+                                    error!("Failed to update app releases: {}", e);
+                                }
                             }
                         }
                     }
                 }
                 tokio::time::sleep(UPDATE_POLL_INTERVAL).await;
-            }
+            };
         }
     }
 
@@ -245,82 +307,8 @@ impl<'a> UpdateHelper<'a> {
         Ok(releases)
     }
 
-    pub async fn handle_event(&self, updater_event: tauri::UpdaterEvent, app_identifier: &str) {
-        match updater_event {
-            tauri::UpdaterEvent::UpdateAvailable { version, .. } => {
-                let state = self.app_handle.state::<AppState>();
-                let update_installed_state = *state.update_installed.lock().unwrap();
-
-                if Settings::auto_update_enabled(self.app_handle) || update_installed_state {
-                    return;
-                }
-
-                match self.update_app_releases(&version).await {
-                    Ok(release) => {
-                        if let Err(err) =
-                            self.notify_update_available(&release, app_identifier).await
-                        {
-                            warn!("Failed to send update notification: {}", err);
-                        }
-
-                        // display update available in the UI
-                        let state = self.app_handle.state::<AppState>();
-                        let mut pending_update_state = state.pending_update.lock().unwrap();
-                        *pending_update_state = Some(release);
-                    }
-                    Err(e) => {
-                        error!("Failed to update app releases: {}", e);
-                    }
-                }
-            }
-            // Emitted when the download is about to be started.
-            tauri::UpdaterEvent::Pending => {
-                debug!("update is pending");
-            }
-            tauri::UpdaterEvent::DownloadProgress { .. } => {}
-            // Emtted when the download has finished and the update is about to be installed.
-            tauri::UpdaterEvent::Downloaded => {
-                debug!("update has been downloaded");
-            }
-            // Emitted when the update was installed. You can then ask to restart the app.
-            tauri::UpdaterEvent::Updated => {
-                let window_helper = WindowHelper::new(self.app_handle.clone());
-                let _ = window_helper.new_update_ready_window();
-
-                let state = self.app_handle.state::<AppState>();
-                let mut pending_update_state = state.pending_update.lock().unwrap();
-                *pending_update_state = None;
-
-                let mut update_installed_state = state.update_installed.lock().unwrap();
-                *update_installed_state = true;
-
-                debug!("update has been installed");
-            }
-            // Emitted when the app already has the latest version installed and an update is not needed.
-            tauri::UpdaterEvent::AlreadyUpToDate => {
-                debug!("app is already up to date");
-            }
-            // Emitted when there is an error with the updater. We suggest to listen to this event even if the default dialog is enabled.
-            tauri::UpdaterEvent::Error(error) => {
-                error!("failed to update: {}", error);
-            }
-        }
-    }
-}
-
-impl UpdateHelper<'_> {
-    fn build_update_notification(&self, release: &Release, app_identifier: &str) -> Notification {
-        Notification::new(app_identifier)
-            .title("Update available")
-            .body(&format!("Version {} is available", release.tag_name))
-    }
-
-    async fn notify_update_available(
-        &self,
-        release: &Release,
-        app_identifier: &str,
-    ) -> anyhow::Result<()> {
-        if let Some(mut target) = self.app_handle.path_resolver().app_cache_dir() {
+    async fn notify_update_available(&self, release: &Release) -> anyhow::Result<()> {
+        if let Ok(mut target) = self.app_handle.path().app_cache_dir() {
             target.push(format!("update_{}", release.tag_name.clone()));
 
             if target.exists() {
@@ -329,8 +317,10 @@ impl UpdateHelper<'_> {
             let _ = File::create(target).await?;
         }
 
-        let _ = self
-            .build_update_notification(release, app_identifier)
+        let builder = self.app_handle.notification().builder();
+        _ = builder
+            .title("Update available")
+            .body(&format!("Version {} is available", release.tag_name))
             .show()?;
 
         Ok(())

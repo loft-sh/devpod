@@ -39,8 +39,8 @@ func NewBuildCmd(flags *flags.GlobalFlags) *cobra.Command {
 	buildCmd := &cobra.Command{
 		Use:   "build [flags] [workspace-path|workspace-name]",
 		Short: "Builds a workspace",
-		RunE: func(_ *cobra.Command, args []string) error {
-			ctx := context.Background()
+		RunE: func(cobraCmd *cobra.Command, args []string) error {
+			ctx := cobraCmd.Context()
 			devPodConfig, err := config.LoadConfig(cmd.Context, cmd.Provider)
 			if err != nil {
 				return err
@@ -55,7 +55,7 @@ func NewBuildCmd(flags *flags.GlobalFlags) *cobra.Command {
 			}
 
 			// create a temporary workspace
-			exists := workspace2.Exists(devPodConfig, args)
+			exists := workspace2.Exists(ctx, devPodConfig, args, "", log.Default)
 			sshConfigFile, err := os.CreateTemp("", "devpodssh.config")
 			if err != nil {
 				return err
@@ -64,7 +64,7 @@ func NewBuildCmd(flags *flags.GlobalFlags) *cobra.Command {
 			// defer removal of temporary ssh config file
 			defer os.Remove(sshConfigPath)
 
-			baseWorkspaceClient, err := workspace2.ResolveWorkspace(
+			baseWorkspaceClient, err := workspace2.Resolve(
 				ctx,
 				devPodConfig,
 				"",
@@ -73,6 +73,7 @@ func NewBuildCmd(flags *flags.GlobalFlags) *cobra.Command {
 				"",
 				cmd.Machine,
 				cmd.ProviderOptions,
+				false,
 				cmd.DevContainerImage,
 				cmd.DevContainerPath,
 				sshConfigPath,

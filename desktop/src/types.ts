@@ -60,7 +60,9 @@ export type TProviderConfig = Readonly<{
   options: TProviderOptions
   icon: TMaybe<string>
   home: TMaybe<string>
-  exec: TMaybe<Record<string, readonly string[]>>
+  exec:
+    | TMaybe<Record<string, readonly string[]> & { proxy: never }>
+    | TMaybe<{ proxy: TMaybe<Record<string, readonly string[]>> }>
 }>
 export type TProviderOptionGroup = Readonly<{
   name: TMaybe<string>
@@ -147,13 +149,7 @@ export type TWorkspace = Readonly<{
   }>
   creationTimestamp: string
   lastUsed: string
-  source: TMaybe<{
-    gitRepository: TMaybe<string>
-    gitBranch: TMaybe<string>
-    gitCommit: TMaybe<string>
-    localFolder: TMaybe<string>
-    image: TMaybe<string>
-  }>
+  source: TMaybe<TWorkspaceSource>
 }>
 export type TWorkspaceWithoutStatus = Omit<TWorkspace, "status"> & Readonly<{ status: null }>
 export type TWorkspaceStatusResult = Readonly<{
@@ -175,6 +171,15 @@ export type TWorkspaceStartConfig = Readonly<{
     type?: TWorkspaceSourceType
   }>
 }>
+export type TWorkspaceSource = {
+  gitRepository: TMaybe<string>
+  gitBranch: TMaybe<string>
+  gitCommit: TMaybe<string>
+  gitPRReference: TMaybe<string>
+  gitSubPath: TMaybe<string>
+  localFolder: TMaybe<string>
+  image: TMaybe<string>
+}
 export const SUPPORTED_IDES = [
   "none",
   "vscode",
@@ -240,7 +245,6 @@ export type TProInstanceManager = Readonly<{
 }>
 export type TProInstanceLoginConfig = Readonly<{
   host: string
-  providerName?: string
   accessKey?: string
   streamListener?: TStreamEventListenerFn
 }>
@@ -250,6 +254,11 @@ export type TListProInstancesConfig = Readonly<
     }
   | undefined
 >
+export type TPlatformVersionInfo = Readonly<{
+  serverVersion: TMaybe<string>
+  remoteProviderVersion: TMaybe<string>
+  currentProviderVersion: TMaybe<string>
+}>
 //#endregion
 
 export type TDevcontainerSetup = Readonly<{
@@ -266,6 +275,13 @@ export type TCommunityProvider = Readonly<{
   repository: string
 }>
 //#endregion
+export type TPlatformHealthCheck = Readonly<{
+  healthy: TMaybe<boolean>
+}>
+export type TPlatformUpdateCheck = Readonly<{
+  available: TMaybe<boolean>
+  newVersion: TMaybe<string>
+}>
 
 export function isWithWorkspaceID(arg: unknown): arg is TWithWorkspaceID {
   return typeof arg === "object" && arg !== null && "workspaceID" in arg

@@ -1,6 +1,7 @@
 import { WORKSPACE_STATUSES } from "@/constants"
 import { removeWorkspaceAction, stopWorkspaceAction } from "@/contexts/DevPodContext/workspaces"
-import { Pause, Stack3D, Status, Trash } from "@/icons"
+import { Pause, Stack3D, Trash, WorkspaceStatus } from "@/icons"
+import { ChevronDownIcon } from "@chakra-ui/icons"
 import {
   Box,
   Button,
@@ -27,13 +28,12 @@ import {
 } from "@chakra-ui/react"
 import { useId, useMemo, useState } from "react"
 import { useNavigate } from "react-router"
-import { useProviders, useWorkspaces } from "../../contexts"
+import { useProviders, useWorkspaceStore, useWorkspaces } from "../../contexts"
 import { exists } from "../../lib"
 import { Routes } from "../../routes"
 import { TProviderID, TWorkspace } from "../../types"
 import { WorkspaceCard } from "./WorkspaceCard"
 import { WorkspaceStatusBadge } from "./WorkspaceStatusBadge"
-import { ChevronDownIcon } from "@chakra-ui/icons"
 
 const SORT_OPTIONS = [
   "Recently Used",
@@ -48,10 +48,11 @@ type TWorkspacesInfo = Readonly<{
 }>
 
 export function ListWorkspaces() {
+  const { store } = useWorkspaceStore()
   const viewID = useId()
   const navigate = useNavigate()
   const [[providers]] = useProviders()
-  const workspaces = useWorkspaces()
+  const workspaces = useWorkspaces<TWorkspace>()
   const [selectedWorkspaces, setSelectedWorkspaces] = useState(new Set<string>())
   const [forceDelete, setForceDelete] = useState(false)
   const {
@@ -145,6 +146,7 @@ export function ListWorkspaces() {
       stopWorkspaceAction({
         workspaceID: w.id,
         streamID: viewID,
+        store,
       })
     }
 
@@ -158,6 +160,7 @@ export function ListWorkspaces() {
         workspaceID: w.id,
         streamID: viewID,
         force: forceDelete,
+        store,
       })
     }
   }
@@ -245,7 +248,7 @@ export function ListWorkspaces() {
               <MenuButton
                 as={Button}
                 variant="outline"
-                leftIcon={<Status boxSize={4} color="gray.600" />}>
+                leftIcon={<WorkspaceStatus boxSize={4} color="gray.600" />}>
                 Status ({getCurrentFilterCount(statusFilter, WORKSPACE_STATUSES.length)}/
                 {WORKSPACE_STATUSES.length})
               </MenuButton>

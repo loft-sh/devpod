@@ -2,7 +2,7 @@ package flags
 
 import (
 	"github.com/loft-sh/devpod/cmd/flags"
-	"github.com/loft-sh/devpod/pkg/loft/client"
+	"github.com/loft-sh/devpod/pkg/platform/client"
 	flag "github.com/spf13/pflag"
 )
 

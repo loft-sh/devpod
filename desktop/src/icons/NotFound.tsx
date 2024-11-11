@@ -1,0 +1,15 @@
+import { createIcon } from "@chakra-ui/react"
+import { defaultProps } from "./defaultProps"
+
+export const NotFound = createIcon({
+  displayName: "NotFound",
+  viewBox: "0 0 12 14",
+  defaultProps,
+  path: (
+    <path
+      fillRule="evenodd"
+      clipRule="evenodd"
+      d="M0.325745 0H7.86359L11.6742 3.81064V14H0.325745V0ZM1.38635 1.06061V12.9394H10.6136V5.51515H5.94696V1.06061H1.38635ZM7.00756 1.06061V4.45455H10.6136V4.24996L7.42427 1.06061H7.00756ZM2.97726 5.51515V3.39394H4.03787V5.51515H2.97726ZM7.70772 11.0704C6.94361 9.65675 4.94482 9.57688 4.07036 10.925L3.95247 11.1068L3.06266 10.5296L3.18056 10.3478C4.49325 8.32411 7.49371 8.444 8.64074 10.566L7.70772 11.0704Z"
+    />
+  ),
+})

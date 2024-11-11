@@ -1,3 +1,5 @@
+use tauri::AppHandle;
+
 use super::{
     config::{CommandConfig, DevpodCommandConfig, DevpodCommandError},
     constants::{
@@ -26,10 +28,10 @@ impl DevpodCommandConfig<()> for DeleteProInstanceCommand {
         }
     }
 
-    fn exec(self) -> Result<(), DevpodCommandError> {
-        let cmd = self.new_command()?;
+    fn exec(self, app_handle: &AppHandle) -> Result<(), DevpodCommandError> {
+        let cmd = self.new_command(app_handle)?;
 
-        cmd.status()
+        tauri::async_runtime::block_on(async move { cmd.status().await })
             .map_err(DevpodCommandError::Failed)?
             .success()
             .then_some(())

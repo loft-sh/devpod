@@ -139,7 +139,7 @@ func (s *proxyClient) Context() string {
 	return s.workspace.Context
 }
 
-func (s *proxyClient) RefreshOptions(ctx context.Context, userOptionsRaw []string) error {
+func (s *proxyClient) RefreshOptions(ctx context.Context, userOptionsRaw []string, reconfigure bool) error {
 	s.m.Lock()
 	defer s.m.Unlock()
 
@@ -151,6 +151,13 @@ func (s *proxyClient) RefreshOptions(ctx context.Context, userOptionsRaw []strin
 	workspace, err := options.ResolveAndSaveOptionsProxy(ctx, s.devPodConfig, s.config, s.workspace, userOptions, s.log)
 	if err != nil {
 		return err
+	}
+
+	if reconfigure {
+		err := s.updateInstance(ctx)
+		if err != nil {
+			return err
+		}
 	}
 
 	s.workspace = workspace
@@ -337,6 +344,29 @@ func (s *proxyClient) Status(ctx context.Context, options client.StatusOptions) 
 
 	// parse status
 	return client.ParseStatus(status.State)
+}
+
+func (s *proxyClient) updateInstance(ctx context.Context) error {
+	err := RunCommandWithBinaries(
+		ctx,
+		"updateWorkspace",
+		s.config.Exec.Proxy.Update.Workspace,
+		s.workspace.Context,
+		s.workspace,
+		nil,
+		s.devPodConfig.ProviderOptions(s.config.Name),
+		s.config,
+		nil,
+		os.Stdin,
+		os.Stdout,
+		os.Stderr,
+		s.log.ErrorStreamOnly(),
+	)
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
 
 func EncodeOptions(options any, name string) map[string]string {

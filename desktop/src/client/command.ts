@@ -1,12 +1,25 @@
-import { Child, ChildProcess, EventEmitter, Command as ShellCommand } from "@tauri-apps/api/shell"
-import { debug, isError, Result, ResultError, Return } from "../lib"
+import {
+  Child,
+  ChildProcess,
+  EventEmitter,
+  Command as ShellCommand,
+} from "@tauri-apps/plugin-shell"
+import { debug, ErrorTypeCancelled, isError, Result, ResultError, Return, sleep } from "../lib"
 import { DEVPOD_BINARY, DEVPOD_FLAG_OPTION, DEVPOD_UI_ENV_VAR } from "./constants"
 import { TStreamEvent } from "./types"
 
 export type TStreamEventListenerFn = (event: TStreamEvent) => void
 export type TEventListener<TEventName extends string> = Parameters<
-  EventEmitter<TEventName>["addListener"]
+  EventEmitter<Record<TEventName, string>>["addListener"]
 >[1]
+type TStreamOptions = Readonly<{
+  ignoreStdoutError?: boolean
+  ignoreStderrError?: boolean
+}>
+const defaultStreamOptions: TStreamOptions = {
+  ignoreStdoutError: false,
+  ignoreStderrError: false,
+}
 
 export type TCommand<T> = {
   run(): Promise<Result<T>>
@@ -14,10 +27,11 @@ export type TCommand<T> = {
   cancel(): Promise<ResultError>
 }
 
-export class Command implements TCommand<ChildProcess> {
-  private sidecarCommand: ShellCommand
+export class Command implements TCommand<ChildProcess<string>> {
+  private sidecarCommand: ShellCommand<string>
   private childProcess?: Child
   private args: string[]
+  private cancelled = false
 
   public static ADDITIONAL_ENV_VARS: string = ""
   public static HTTP_PROXY: string = ""
@@ -55,7 +69,7 @@ export class Command implements TCommand<ChildProcess> {
     extraEnvVars[DEVPOD_UI_ENV_VAR] = "true"
 
     if (import.meta.env.TAURI_IS_FLATPAK === "true") {
-      this.sidecarCommand = new ShellCommand("run-path-devpod-wrapper", args, {
+      this.sidecarCommand = ShellCommand.create("run-path-devpod-wrapper", args, {
         env: { ...extraEnvVars, ["FLATPAK_ID"]: "sh.loft.devpod" },
       })
     } else {
@@ -64,7 +78,7 @@ export class Command implements TCommand<ChildProcess> {
     this.args = args
   }
 
-  public async run(): Promise<Result<ChildProcess>> {
+  public async run(): Promise<Result<ChildProcess<string>>> {
     try {
       const rawResult = await this.sidecarCommand.execute()
       debug("commands", `Result for command with args ${this.args}:`, rawResult)
@@ -75,9 +89,23 @@ export class Command implements TCommand<ChildProcess> {
     }
   }
 
-  public async stream(listener: TStreamEventListenerFn): Promise<ResultError> {
+  public async stream(
+    listener: TStreamEventListenerFn,
+    streamOptions?: TStreamOptions
+  ): Promise<ResultError> {
+    let opts = defaultStreamOptions
+    if (streamOptions) {
+      opts = { ...defaultStreamOptions, ...streamOptions }
+    }
+
     try {
       this.childProcess = await this.sidecarCommand.spawn()
+      if (this.cancelled) {
+        await this.childProcess.kill()
+
+        return Return.Failed("Command already cancelled", "", ErrorTypeCancelled)
+      }
+
       await new Promise((res, rej) => {
         const stdoutListener: TEventListener<"data"> = (message) => {
           try {
@@ -93,7 +121,9 @@ export class Command implements TCommand<ChildProcess> {
               listener({ type: "data", data })
             }
           } catch (error) {
-            console.error("Failed to parse stdout message ", message, error)
+            if (!opts.ignoreStdoutError) {
+              console.error("Failed to parse stdout message ", message, error)
+            }
           }
         }
         const stderrListener: TEventListener<"data"> = (message) => {
@@ -101,7 +131,9 @@ export class Command implements TCommand<ChildProcess> {
             const error = JSON.parse(message)
             listener({ type: "error", error })
           } catch (error) {
-            console.error("Failed to parse stderr message ", message, error)
+            if (!opts.ignoreStderrError) {
+              console.error("Failed to parse stderr message ", message, error)
+            }
           }
         }
 
@@ -114,10 +146,10 @@ export class Command implements TCommand<ChildProcess> {
           this.childProcess = undefined
         }
 
-        this.sidecarCommand.on("close", (arg?: { code: number }) => {
+        this.sidecarCommand.on("close", ({ code }) => {
           cleanup()
-          if (arg?.code !== 0) {
-            rej(new Error("exit code: " + arg?.code))
+          if (code !== 0) {
+            rej(new Error("exit code: " + code))
           } else {
             res(Return.Ok())
           }
@@ -132,9 +164,13 @@ export class Command implements TCommand<ChildProcess> {
       return Return.Ok()
     } catch (e) {
       if (isError(e)) {
+        if (this.cancelled) {
+          return Return.Failed(e.message, "", ErrorTypeCancelled)
+        }
+
         return Return.Failed(e.message)
       }
-      console.log(e)
+      console.error(e)
 
       return Return.Failed("streaming failed")
     }
@@ -146,7 +182,29 @@ export class Command implements TCommand<ChildProcess> {
    */
   public async cancel(): Promise<Result<undefined>> {
     try {
-      await this.childProcess?.kill()
+      this.cancelled = true
+      if (!this.childProcess) {
+        // nothing to clean up
+        return Return.Ok()
+      }
+      // Try to send signal first before force killing process
+      await fetch("http://localhost:25842/child-process/signal", {
+        method: "POST",
+        headers: {
+          "content-type": "application/json",
+        },
+        body: JSON.stringify({
+          processId: this.childProcess.pid,
+          signal: 2, // SIGINT
+        }),
+      })
+
+      await sleep(2_000)
+      // the actual child process could be gone after sending a SIGINT
+      // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
+      if (this.childProcess) {
+        await this.childProcess.kill()
+      }
 
       return Return.Ok()
     } catch (e) {
@@ -159,18 +217,12 @@ export class Command implements TCommand<ChildProcess> {
   }
 }
 
-export function isOk(result: ChildProcess): boolean {
+export function isOk(result: ChildProcess<string>): boolean {
   return result.code === 0
 }
 
 export function toFlagArg(flag: string, arg: string) {
   return [flag, arg].join("=")
-}
-
-export function toMultipleFlagArg(input: string) {
-  const equaledInput = input.replace(/([a-zA-Z])\s+([a-zA-Z])/g, "$1=$2")
-
-  return equaledInput.split(" ")
 }
 
 export function serializeRawOptions(

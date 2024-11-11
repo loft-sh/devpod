@@ -1,3 +1,4 @@
+import React from "react"
 import { Ripple } from "@/components"
 import { TWorkspace } from "@/types"
 import { Box, BoxProps, HStack, IconProps, Text, TextProps } from "@chakra-ui/react"

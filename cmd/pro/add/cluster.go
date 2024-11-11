@@ -19,9 +19,8 @@ import (
 	storagev1 "github.com/loft-sh/api/v4/pkg/apis/storage/v1"
 	proflags "github.com/loft-sh/devpod/cmd/pro/flags"
 	"github.com/loft-sh/devpod/pkg/config"
-	"github.com/loft-sh/devpod/pkg/loft"
-	"github.com/loft-sh/devpod/pkg/loft/client"
-	"github.com/loft-sh/devpod/pkg/pro"
+	"github.com/loft-sh/devpod/pkg/platform"
+	"github.com/loft-sh/devpod/pkg/platform/client"
 	"github.com/loft-sh/devpod/pkg/workspace"
 	"github.com/spf13/cobra"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -91,7 +90,7 @@ func (cmd *ClusterCmd) Run(ctx context.Context, args []string) error {
 	// Get clusterName from command argument
 	clusterName := args[0]
 
-	baseClient, err := pro.InitClientFromHost(ctx, devPodConfig, cmd.Host, cmd.Log)
+	baseClient, err := platform.InitClientFromHost(ctx, devPodConfig, cmd.Host, cmd.Log)
 	if err != nil {
 		return err
 	}
@@ -238,7 +237,7 @@ func (cmd *ClusterCmd) Run(ctx context.Context, args []string) error {
 		close(errChan)
 	}()
 
-	_, err = loft.WaitForPodReady(ctx, clientset, namespace, cmd.Log)
+	_, err = platform.WaitForPodReady(ctx, clientset, namespace, cmd.Log)
 	if err = errors.Join(err, <-errChan); err != nil {
 		return fmt.Errorf("wait for pod: %w", err)
 	}

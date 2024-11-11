@@ -1,5 +1,5 @@
 {
-  "tauri": {
+  "plugins": {
     "updater": {
       "active": false
     }

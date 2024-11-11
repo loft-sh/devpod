@@ -8,9 +8,10 @@ use std::{
     time::{Duration, SystemTime},
 };
 use thiserror::Error;
+use tauri::Manager;
 
 const ACTION_LOGS_DIR: &str = "action_logs";
-const ONE_DAY: Duration = Duration::new(60 * 60 * 24, 0);
+const THIRTY_DAYS: Duration = Duration::new(60 * 60 * 24 * 30, 0);
 
 #[derive(Error, Debug)]
 pub enum ActionLogError {
@@ -81,50 +82,47 @@ pub fn get_action_log_file(
     Ok(path.to_string_lossy().into())
 }
 
-#[tauri::command]
-pub fn sync_action_logs(app_handle: AppHandle, actions: Vec<String>) -> Result<(), ActionLogError> {
+pub fn setup(app_handle: &AppHandle) -> anyhow::Result<()> {
+    let dir_path = get_actions_dir(app_handle)?;
+    let _ = fs::create_dir_all(&dir_path); // Make sure we have the action logs dir
+
+    // delete all actions older than a month
     let now = SystemTime::now();
-    let dir_path = get_actions_dir(&app_handle).map_err(|_| ActionLogError::NoDir)?;
-    let paths_to_delete = fs::read_dir(dir_path)
-        .map_err(ActionLogError::FileOpen)?
-        .filter_map(|r| {
-            let entry = r.ok()?;
-            let path = entry.path();
-            let file_stem = path.file_stem()?.to_str()?;
-            if actions.contains(&file_stem.to_string()) {
-                return None;
-            }
+    let dir = fs::read_dir(dir_path);
+    let paths_to_delete = dir?.filter_map(|r| {
+        if !r.is_ok() {
+            return None;
+        }
+        let entry = r.unwrap();
+        let path = entry.path();
 
-            let metadata = entry.metadata().ok()?;
-            let created = metadata.created().ok()?;
+        let metadata = entry.metadata();
+        if !metadata.is_ok() {
+            return None;
+        };
+        let created = metadata.unwrap().created();
+        if !created.is_ok() {
+            return None;
+        };
 
-            let elapsed = now.duration_since(created).ok()?;
-            // older than a day
-            if elapsed < ONE_DAY {
-                return None;
-            }
-
-            Some(path)
-        });
+        let elapsed = now.duration_since(created.unwrap());
+        if !elapsed.is_ok() || elapsed.unwrap() < THIRTY_DAYS {
+            return None;
+        }
+        return Some(path);
+    });
 
     for path in paths_to_delete {
         info!("Deleting {:?}", path);
-        fs::remove_file(path).map_err(ActionLogError::FileDelete)?;
+        let _ = fs::remove_file(path);
     }
-
-    Ok(())
-}
-
-pub fn setup(app_handle: &AppHandle) -> anyhow::Result<()> {
-    let dir_path = get_actions_dir(app_handle)?;
-    let _ = fs::create_dir_all(dir_path); // Make sure we have the action logs dir
 
     Ok(())
 }
 
 fn get_actions_dir(app_handle: &AppHandle) -> anyhow::Result<PathBuf> {
     let mut dir_path = app_handle
-        .path_resolver()
+        .path()
         .app_data_dir()
         .context("App data dir not found")?;
     dir_path.push(ACTION_LOGS_DIR);

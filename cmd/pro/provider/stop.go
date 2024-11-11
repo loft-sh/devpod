@@ -9,8 +9,9 @@ import (
 	storagev1 "github.com/loft-sh/api/v4/pkg/apis/storage/v1"
 
 	"github.com/loft-sh/devpod/cmd/pro/flags"
-	"github.com/loft-sh/devpod/pkg/loft/client"
-	"github.com/loft-sh/devpod/pkg/loft/remotecommand"
+	"github.com/loft-sh/devpod/pkg/platform"
+	"github.com/loft-sh/devpod/pkg/platform/client"
+	"github.com/loft-sh/devpod/pkg/platform/remotecommand"
 	"github.com/loft-sh/log"
 	"github.com/spf13/cobra"
 )
@@ -47,18 +48,18 @@ func (cmd *StopCmd) Run(ctx context.Context, stdin io.Reader, stdout io.Writer, 
 		return err
 	}
 
-	info, err := GetWorkspaceInfoFromEnv()
+	info, err := platform.GetWorkspaceInfoFromEnv()
 	if err != nil {
 		return err
 	}
-	workspace, err := FindWorkspace(ctx, baseClient, info.UID, info.ProjectName)
+	workspace, err := platform.FindInstanceInProject(ctx, baseClient, info.UID, info.ProjectName)
 	if err != nil {
 		return err
 	} else if workspace == nil {
 		return fmt.Errorf("couldn't find workspace")
 	}
 
-	conn, err := DialWorkspace(baseClient, workspace, "stop", OptionsFromEnv(storagev1.DevPodFlagsStop), cmd.Log)
+	conn, err := platform.DialInstance(baseClient, workspace, "stop", platform.OptionsFromEnv(storagev1.DevPodFlagsStop), cmd.Log)
 	if err != nil {
 		return err
 	}
