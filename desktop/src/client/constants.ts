@@ -4,6 +4,8 @@ export const DEFAULT_STATIC_COMMAND_CONFIG = {
   streamResponse: false,
   debug: false,
 } as const
+/** placeholder for arbitrary additional flags */
+export const WORKSPACE_COMMAND_ADDITIONAL_FLAGS_KEY = "additionalFlags"
 
 export const DEVPOD_BINARY = "bin/devpod-cli"
 export const DEVPOD_COMMAND_LIST = "list"
@@ -25,6 +27,7 @@ export const DEVPOD_COMMAND_CONTEXT = "context"
 export const DEVPOD_COMMAND_LOGIN = "login"
 export const DEVPOD_COMMAND_IMPORT_WORKSPACE = "import-workspace"
 export const DEVPOD_COMMAND_GET_WORKSPACE_NAME = "get-workspace-name"
+export const DEVPOD_COMMAND_GET_WORKSPACE_UID = "get-workspace-uid"
 export const DEVPOD_COMMAND_GET_WORKSPACE_CONFIG = "get-workspace-config"
 export const DEVPOD_COMMAND_GET_PROVIDER_NAME = "get-provider-name"
 export const DEVPOD_COMMAND_GET_PRO_NAME = "get-pro-name"
@@ -56,5 +59,12 @@ export const DEVPOD_FLAG_WORKSPACE_ID = "--workspace-id"
 export const DEVPOD_FLAG_WORKSPACE_UID = "--workspace-uid"
 export const DEVPOD_FLAG_WORKSPACE_PROJECT = "--workspace-project"
 export const DEVPOD_FLAG_LOGIN = "--login"
+export const DEVPOD_FLAG_HOST = "--host"
+export const DEVPOD_FLAG_INSTANCE = "--instance"
+export const DEVPOD_FLAG_PROJECT = "--project"
+export const DEVPOD_FLAG_SKIP_PRO = "--skip-pro"
+export const DEVPOD_FLAG_DOTFILES = "--dotfiles"
+export const DEVPOD_FLAG_GIT_SIGNING_KEY = "--git-ssh-signing-key"
+export const DEVPOD_FLAG_FORCE_BROWSER = "--force-browser"
 
 export const DEVPOD_UI_ENV_VAR = "DEVPOD_UI"

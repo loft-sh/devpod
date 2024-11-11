@@ -5,6 +5,7 @@ import (
 	"fmt"
 
 	"github.com/loft-sh/devpod/cmd/flags"
+	"github.com/loft-sh/devpod/pkg/file"
 	"github.com/loft-sh/devpod/pkg/workspace"
 	"github.com/spf13/cobra"
 )
@@ -34,6 +35,8 @@ func (cmd *GetWorkspaceNameCommand) Run(ctx context.Context, args []string) erro
 		return fmt.Errorf("workspace is missing")
 	}
 
-	fmt.Print(workspace.GetWorkspaceName(args))
+	_, name := file.IsLocalDir(args[0])
+	workspaceID := workspace.ToID(name)
+	fmt.Print(workspaceID)
 	return nil
 }

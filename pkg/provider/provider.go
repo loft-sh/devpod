@@ -259,6 +259,64 @@ type ProxyCommands struct {
 
 	// Status proxies the status command
 	Status types.StrArray `json:"status,omitempty"`
+
+	// Health checks the health of the platform
+	Health types.StrArray `json:"health,omitempty"`
+
+	// Create creates entities associated with this provider
+	Create CreateProxyCommands `json:"create,omitempty"`
+
+	// Get gets entities associated with this provider
+	Get GetProxyCommands `json:"get,omitempty"`
+
+	// List lists all entities associated with this provider
+	List ListProxyCommands `json:"list,omitempty"`
+
+	// Watch lists all entities associated with this provider and then watches for changes
+	Watch WatchProxyCommands `json:"watch,omitempty"`
+
+	// Update updates entities associated with this provider
+	Update UpdateProxyCommands `json:"update,omitempty"`
+}
+
+type ListProxyCommands struct {
+	// Workspaces lists all workspaces
+	Workspaces types.StrArray `json:"workspaces,omitempty"`
+
+	// Projects lists all projects
+	Projects types.StrArray `json:"projects,omitempty"`
+
+	// Templates lists all templates in a project
+	Templates types.StrArray `json:"templates,omitempty"`
+
+	// Clusters lists all clusters and runners in a project
+	Clusters types.StrArray `json:"clusters,omitempty"`
+}
+
+type WatchProxyCommands struct {
+	// Workspaces watches all workspaces and updates on changes
+	Workspaces types.StrArray `json:"workspaces,omitempty"`
+}
+
+type CreateProxyCommands struct {
+	// Workspace creates a workspace instance
+	Workspace types.StrArray `json:"workspace,omitempty"`
+}
+
+type GetProxyCommands struct {
+	// Workspace gets a workspace instance
+	Workspace types.StrArray `json:"workspace,omitempty"`
+
+	// Self gets self for this provider
+	Self types.StrArray `json:"self,omitempty"`
+
+	// Version gets the for this pro instance
+	Version types.StrArray `json:"version,omitempty"`
+}
+
+type UpdateProxyCommands struct {
+	// Workspace updates a workspace instance
+	Workspace types.StrArray `json:"workspace,omitempty"`
 }
 
 type SubOptions struct {
@@ -271,4 +329,8 @@ func (c *ProviderConfig) IsMachineProvider() bool {
 
 func (c *ProviderConfig) IsProxyProvider() bool {
 	return c.Exec.Proxy != nil
+}
+
+func (c *ProviderConfig) HasHealthCheck() bool {
+	return c.Exec.Proxy != nil && len(c.Exec.Proxy.Health) > 0
 }

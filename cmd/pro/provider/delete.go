@@ -7,7 +7,8 @@ import (
 	"os"
 
 	"github.com/loft-sh/devpod/cmd/pro/flags"
-	"github.com/loft-sh/devpod/pkg/loft/client"
+	"github.com/loft-sh/devpod/pkg/platform"
+	"github.com/loft-sh/devpod/pkg/platform/client"
 	"github.com/loft-sh/log"
 	"github.com/spf13/cobra"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -45,11 +46,11 @@ func (cmd *DeleteCmd) Run(ctx context.Context, stdin io.Reader, stdout io.Writer
 		return err
 	}
 
-	info, err := GetWorkspaceInfoFromEnv()
+	info, err := platform.GetWorkspaceInfoFromEnv()
 	if err != nil {
 		return err
 	}
-	workspace, err := FindWorkspace(ctx, baseClient, info.UID, info.ProjectName)
+	workspace, err := platform.FindInstanceInProject(ctx, baseClient, info.UID, info.ProjectName)
 	if err != nil {
 		return err
 	} else if workspace == nil {

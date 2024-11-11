@@ -1,0 +1,8 @@
+coverage.txt
+<<<<<<< HEAD
+
+dist/
+=======
+_examples/catppuccin
+_examples/frames/
+>>>>>>> 448501b (feat: documentation, better examples)

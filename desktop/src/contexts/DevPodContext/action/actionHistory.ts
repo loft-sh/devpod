@@ -8,8 +8,16 @@ export class ActionHistory {
   private active = new Map<string, Action>()
   private history: TActionObj[]
 
-  constructor() {
-    const maybeHistory = localStorage.getItem(HISTORY_KEY)
+  private localStorageKey: string
+
+  constructor(keySuffix?: string) {
+    let localStorageKey = HISTORY_KEY
+    if (keySuffix) {
+      localStorageKey = `${localStorageKey}-${keySuffix}`
+    }
+    this.localStorageKey = localStorageKey
+
+    const maybeHistory = localStorage.getItem(this.localStorageKey)
     if (maybeHistory === null) {
       this.history = []
 
@@ -53,7 +61,6 @@ export class ActionHistory {
       this.history.splice(0, overflow)
     }
 
-    window.localStorage.setItem(HISTORY_KEY, JSON.stringify(this.history))
-    client.workspaces.syncActionLogs(this.history.map((a) => a.id))
+    window.localStorage.setItem(this.localStorageKey, JSON.stringify(this.history))
   }
 }

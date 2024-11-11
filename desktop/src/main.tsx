@@ -4,36 +4,30 @@ import dayjs from "dayjs"
 import relativeTime from "dayjs/plugin/relativeTime"
 import { StrictMode } from "react"
 import ReactDOM from "react-dom/client"
-import { RouterProvider } from "react-router"
+import { Location, RouterProvider } from "react-router"
 import "xterm/css/xterm.css"
-import { DevPodProvider, SettingsProvider } from "./contexts"
-import { router } from "./routes"
 import { ThemeProvider } from "./Theme"
+import { SettingsProvider } from "./contexts"
+import { router } from "./routes"
 
 dayjs.extend(relativeTime)
 
-const queryClient = new QueryClient({
-  logger: {
-    log(...args) {
-      console.log(args)
-    },
-    warn(...args) {
-      console.warn(args)
-    },
-    error(...args) {
-      const maybeError = args[0]
-      if (maybeError instanceof Error) {
-        console.error(maybeError.name, maybeError.message, maybeError.cause, maybeError)
+const queryClient = new QueryClient()
 
-        return
-      }
+// TODO: Clean up :)
+let render = true
+const l = localStorage.getItem("devpod-location-current")
+if (l) {
+  const loc = JSON.parse(l) as Location
+  if (window.location.pathname !== loc.pathname) {
+    window.location.pathname = loc.pathname
+    render = false
+  }
+}
 
-      console.error(args)
-    },
-  },
-})
-
-ReactDOM.createRoot(document.getElementById("root") as HTMLElement).render(<Root />)
+if (render) {
+  ReactDOM.createRoot(document.getElementById("root") as HTMLElement).render(<Root />)
+}
 
 function Root() {
   return (
@@ -41,9 +35,7 @@ function Root() {
       <SettingsProvider>
         <ThemeProvider>
           <QueryClientProvider client={queryClient}>
-            <DevPodProvider>
-              <RouterProvider router={router} />
-            </DevPodProvider>
+            <RouterProvider router={router} />
             {/* Will be disabled in production automatically */}
             <ReactQueryDevtools
               position="bottom-right"

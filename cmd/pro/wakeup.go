@@ -9,11 +9,9 @@ import (
 	clusterv1 "github.com/loft-sh/agentapi/v4/pkg/apis/loft/cluster/v1"
 	storagev1 "github.com/loft-sh/api/v4/pkg/apis/storage/v1"
 	"github.com/loft-sh/devpod/cmd/pro/flags"
-	"github.com/loft-sh/devpod/cmd/pro/provider"
 	"github.com/loft-sh/devpod/pkg/config"
-	"github.com/loft-sh/devpod/pkg/loft"
-	"github.com/loft-sh/devpod/pkg/loft/project"
-	"github.com/loft-sh/devpod/pkg/pro"
+	"github.com/loft-sh/devpod/pkg/platform"
+	"github.com/loft-sh/devpod/pkg/platform/project"
 	"github.com/loft-sh/log"
 	"github.com/spf13/cobra"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -65,12 +63,12 @@ func (cmd *WakeupCmd) Run(ctx context.Context, args []string) error {
 		return err
 	}
 
-	baseClient, err := pro.InitClientFromHost(ctx, devPodConfig, cmd.Host, cmd.Log)
+	baseClient, err := platform.InitClientFromHost(ctx, devPodConfig, cmd.Host, cmd.Log)
 	if err != nil {
 		return err
 	}
 
-	workspaceInstance, err := provider.FindWorkspaceByName(ctx, baseClient, targetWorkspace, cmd.Project)
+	workspaceInstance, err := platform.FindInstanceByName(ctx, baseClient, targetWorkspace, cmd.Project)
 	if err != nil {
 		return err
 	}
@@ -106,7 +104,7 @@ func (cmd *WakeupCmd) Run(ctx context.Context, args []string) error {
 
 	// wait for sleeping
 	cmd.Log.Info("Wait until workspace wakes up...")
-	err = wait.PollUntilContextTimeout(ctx, time.Second, loft.Timeout(), false, func(ctx context.Context) (done bool, err error) {
+	err = wait.PollUntilContextTimeout(ctx, time.Second, platform.Timeout(), false, func(ctx context.Context) (done bool, err error) {
 		workspaceInstance, err := managementClient.Loft().ManagementV1().DevPodWorkspaceInstances(project.ProjectNamespace(cmd.Project)).Get(ctx, workspaceInstance.Name, metav1.GetOptions{})
 		if err != nil {
 			return false, err

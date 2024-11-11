@@ -39,7 +39,7 @@ import { Plus } from "../../../icons"
 import { CommunitySvg, ProviderPlaceholderSvg } from "../../../images"
 import { exists, getKeys, isEmpty, useFormErrors } from "../../../lib"
 import { Routes } from "../../../routes"
-import { TIDE, TWorkspaceSourceType } from "../../../types"
+import { TIDE, TWorkspace, TWorkspaceSourceType } from "../../../types"
 import { useIDEs } from "../../../useIDEs"
 import { useSetupProviderModal } from "../../Providers"
 import { ProviderOptionsPopover } from "./ProviderOptionsPopover"
@@ -52,7 +52,7 @@ export function CreateWorkspace() {
   const { ides } = useIDEs()
 
   const navigate = useNavigate()
-  const workspace = useWorkspace(undefined)
+  const workspace = useWorkspace<TWorkspace>(undefined)
   const [[providers]] = useProviders()
   const [sourceType, setSourceType] = useState<TWorkspaceSourceType>("git")
 
@@ -450,7 +450,7 @@ type TProviderInputProps = Readonly<{
 function ProviderInput({ options, field, onAddProviderClicked }: TProviderInputProps) {
   const gridChildWidth = useToken("sizes", "12")
   const [provider] = useProvider(field.value)
-  const workspaces = useWorkspaces()
+  const workspaces = useWorkspaces<TWorkspace>()
   const reuseWorkspace = useMemo(() => {
     return workspaces.find((workspace) => {
       return (

@@ -1,0 +1,81 @@
+{
+  "identifier": "main",
+  "description": "Main capabilities",
+  "local": true,
+  "windows": [
+    "main"
+  ],
+  "permissions": [
+    "core:default",
+    "process:allow-exit",
+    "process:allow-restart",
+    "os:default",
+    "shell:allow-open",
+    "shell:allow-kill",
+    "shell:allow-spawn",
+    {
+      "identifier": "shell:allow-execute",
+      "allow": [
+        {
+          "name": "bin/devpod-cli",
+          "sidecar": true,
+          "args": true
+        },
+        {
+          "name": "bin/devpod-cli",
+          "cmd": "/app/bin/devpod-cli",
+          "args": true
+        },
+        {
+          "name": "run-path-devpod-cli",
+          "cmd": "devpod",
+          "args": [
+            "version"
+          ]
+        }
+      ]
+    },
+    {
+      "identifier": "shell:allow-spawn",
+      "allow": [
+        {
+          "name": "bin/devpod-cli",
+          "sidecar": true,
+          "args": true
+        }
+      ]
+    },
+    {
+      "identifier": "shell:allow-kill",
+      "allow": [
+        {
+          "name": "bin/devpod-cli",
+          "sidecar": true,
+          "args": true
+        }
+      ]
+    },
+    "fs:default",
+    "fs:allow-app-read-recursive",
+    "fs:allow-app-write-recursive",
+    "fs:allow-app-meta-recursive",
+    "fs:allow-appdata-write-recursive",
+    "fs:allow-appdata-read-recursive",
+    "fs:allow-home-read-recursive",
+    "fs:allow-home-write-recursive",
+    "fs:allow-home-meta-recursive",
+    "clipboard-manager:allow-write-text",
+    "updater:default",
+    "core:window:default",
+    "core:window:allow-start-dragging",
+    "core:window:allow-close",
+    "core:window:allow-set-focus",
+    "notification:default",
+    "store:allow-load",
+    "store:default",
+    "dialog:allow-save",
+    "dialog:default",
+    "log:default",
+    "log:allow-log"
+  ]
+}

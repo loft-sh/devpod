@@ -1,15 +1,13 @@
-import { Box, Button, IconButton, Tooltip, useToast } from "@chakra-ui/react"
+import { useDownloadLogs } from "@/lib"
+import { DownloadIcon } from "@chakra-ui/icons"
+import { Box, Button, IconButton, Tooltip } from "@chakra-ui/react"
 import { useEffect, useMemo } from "react"
 import { HiStop } from "react-icons/hi2"
 import { useNavigate } from "react-router"
 import { useParams, useSearchParams } from "react-router-dom"
 import { ToolbarActions, useStreamingTerminal } from "../../components"
-import { TActionID, useAction } from "../../contexts"
+import { useAction } from "../../contexts"
 import { Routes } from "../../routes"
-import { DownloadIcon } from "@chakra-ui/icons"
-import { client } from "@/client"
-import { useMutation } from "@tanstack/react-query"
-import { dialog } from "@tauri-apps/api"
 
 export function Action() {
   const [searchParams] = useSearchParams()
@@ -18,6 +16,7 @@ export function Action() {
   const actionID = useMemo(() => Routes.getActionID(params), [params])
   const action = useAction(actionID)
   const { terminal, connectStream, clear } = useStreamingTerminal()
+  const { download, isDownloading: isDownloadingLogs } = useDownloadLogs()
 
   useEffect(() => {
     if (action === undefined) {
@@ -35,38 +34,6 @@ export function Action() {
       navigate(onSuccess)
     }
   }, [searchParams, action, navigate])
-
-  const toast = useToast()
-  const { mutate: handleDownloadLogsClicked, isLoading: isDownloadingLogs } = useMutation({
-    mutationFn: async ({ actionID }: { actionID: TActionID }) => {
-      const actionLogFile = (await client.workspaces.getActionLogFile(actionID)).unwrap()
-
-      if (actionLogFile === undefined) {
-        throw new Error(`Unable to retrieve file for action ${actionID}`)
-      }
-
-      const targetFile = await dialog.save({
-        title: "Save Logs",
-        filters: [{ name: "format", extensions: ["log", "txt"] }],
-      })
-
-      // user cancelled "save file" dialog
-      if (targetFile === null) {
-        return
-      }
-
-      await client.copyFile(actionLogFile, targetFile)
-      client.open(targetFile)
-    },
-    onError(error) {
-      toast({
-        title: `Failed to save logs: ${error}`,
-        status: "error",
-        isClosable: true,
-        duration: 30_000, // 30 sec
-      })
-    },
-  })
 
   return (
     <>
@@ -88,7 +55,7 @@ export function Action() {
               variant="outline"
               aria-label="Save Logs"
               icon={<DownloadIcon />}
-              onClick={() => handleDownloadLogsClicked({ actionID })}
+              onClick={() => download({ actionID })}
             />
           </Tooltip>
         )}

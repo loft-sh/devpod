@@ -1,5 +1,6 @@
 export * from "./Animation"
 export * from "./AutoComplete"
+export * from "./CardHeader"
 export * from "./Error"
 export * from "./Form"
 export * from "./IDEIcon"

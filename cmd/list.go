@@ -9,7 +9,6 @@ import (
 
 	"github.com/loft-sh/devpod/cmd/flags"
 	"github.com/loft-sh/devpod/pkg/config"
-	provider2 "github.com/loft-sh/devpod/pkg/provider"
 	"github.com/loft-sh/devpod/pkg/workspace"
 	"github.com/loft-sh/log"
 	"github.com/loft-sh/log/table"
@@ -20,7 +19,8 @@ import (
 type ListCmd struct {
 	*flags.GlobalFlags
 
-	Output string
+	Output  string
+	SkipPro bool
 }
 
 // NewListCmd creates a new destroy command
@@ -43,6 +43,7 @@ func NewListCmd(flags *flags.GlobalFlags) *cobra.Command {
 	}
 
 	listCmd.Flags().StringVar(&cmd.Output, "output", "plain", "The output format to use. Can be json or plain")
+	listCmd.Flags().BoolVar(&cmd.SkipPro, "skip-pro", false, "Don't list pro workspaces")
 	return listCmd
 }
 
@@ -53,7 +54,7 @@ func (cmd *ListCmd) Run(ctx context.Context) error {
 		return err
 	}
 
-	workspaces, err := workspace.ListWorkspaces(devPodConfig, log.Default)
+	workspaces, err := workspace.List(ctx, devPodConfig, cmd.SkipPro, log.Default)
 	if err != nil {
 		return err
 	}
@@ -70,22 +71,18 @@ func (cmd *ListCmd) Run(ctx context.Context) error {
 	} else if cmd.Output == "plain" {
 		tableEntries := [][]string{}
 		for _, entry := range workspaces {
-			workspaceConfig, err := provider2.LoadWorkspaceConfig(devPodConfig.DefaultContext, entry.ID)
-			if err != nil {
-				log.Default.ErrorStreamOnly().Warnf("Couldn't load workspace %s: %v", entry.ID, err)
-				continue
-			}
-
 			tableEntries = append(tableEntries, []string{
-				workspaceConfig.ID,
-				workspaceConfig.Source.String(),
-				workspaceConfig.Machine.ID,
-				workspaceConfig.Provider.Name,
-				workspaceConfig.IDE.Name,
-				time.Since(workspaceConfig.LastUsedTimestamp.Time).Round(1 * time.Second).String(),
-				time.Since(workspaceConfig.CreationTimestamp.Time).Round(1 * time.Second).String(),
+				entry.ID,
+				entry.Source.String(),
+				entry.Machine.ID,
+				entry.Provider.Name,
+				entry.IDE.Name,
+				time.Since(entry.LastUsedTimestamp.Time).Round(1 * time.Second).String(),
+				time.Since(entry.CreationTimestamp.Time).Round(1 * time.Second).String(),
+				fmt.Sprintf("%t", entry.IsPro()),
 			})
 		}
+
 		sort.SliceStable(tableEntries, func(i, j int) bool {
 			return tableEntries[i][0] < tableEntries[j][0]
 		})
@@ -97,6 +94,7 @@ func (cmd *ListCmd) Run(ctx context.Context) error {
 			"IDE",
 			"Last Used",
 			"Age",
+			"Pro",
 		}, tableEntries)
 	} else {
 		return fmt.Errorf("unexpected output format, choose either json or plain. Got %s", cmd.Output)

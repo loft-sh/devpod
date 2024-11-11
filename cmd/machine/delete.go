@@ -51,7 +51,7 @@ func (cmd *DeleteCmd) Run(ctx context.Context, args []string) error {
 	}
 
 	// check if there are workspaces that still use this machine
-	workspaces, err := workspace.ListWorkspaces(devPodConfig, log.Default)
+	workspaces, err := workspace.List(ctx, devPodConfig, false, log.Default)
 	if err != nil {
 		return err
 	}

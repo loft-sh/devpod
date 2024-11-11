@@ -3,31 +3,42 @@ use axum::{
     extract::{
         connect_info::ConnectInfo,
         ws::{Message, WebSocket, WebSocketUpgrade},
+        State as AxumState,
     },
     http::{HeaderMap, StatusCode},
     response::{IntoResponse, Response},
-    routing::get,
+    routing::{get, post},
     Json, Router,
 };
 use http::Method;
-use log::{info, warn};
+use log::{error, info, warn};
+use nix::sys::signal::{self, kill, Signal};
+use nix::unistd::Pid;
+use serde::{Deserialize, Serialize};
 use std::net::SocketAddr;
 use tauri::{Manager, State};
 use tower_http::cors::{Any, CorsLayer};
 
+#[derive(Clone)]
+struct ServerState {
+    app_handle: AppHandle,
+}
+
 pub async fn setup(app_handle: &AppHandle) -> anyhow::Result<()> {
-    let handle = app_handle.clone();
-    let handle_releases = app_handle.clone();
+    let state = ServerState {
+        app_handle: app_handle.clone(),
+    };
+
     let cors = CorsLayer::new()
         .allow_methods([Method::GET, Method::POST])
+        .allow_headers(Any)
         .allow_origin(Any);
 
     let router = Router::new()
-        .route(
-            "/ws",
-            get(move |upgrade, headers, info| ws_handler(upgrade, headers, info, handle.clone())),
-        )
-        .route("/releases", get(move || releases_handler(handle_releases)))
+        .route("/ws", get(ws_handler))
+        .route("/releases", get(releases_handler))
+        .route("/child-process/signal", post(signal_handler))
+        .with_state(state)
         .layer(cors);
 
     let listener = tokio::net::TcpListener::bind("127.0.0.1:25842").await?;
@@ -39,28 +50,47 @@ pub async fn setup(app_handle: &AppHandle) -> anyhow::Result<()> {
     .await
     .map_err(anyhow::Error::from);
 }
-async fn releases_handler(app_handle: AppHandle) -> impl IntoResponse {
-    #[cfg(feature = "enable-updater")]
-    {
-        let state = app_handle.state::<AppState>();
-        let releases = state.releases.lock().unwrap();
-        let releases = releases.clone();
 
-        Json(releases)
+#[derive(Debug, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct SendSignalMessage {
+    process_id: i32,
+    signal: i32, // should match nix::sys::signal::Signal
+}
+
+async fn signal_handler(
+    AxumState(server): AxumState<ServerState>,
+    Json(payload): Json<SendSignalMessage>,
+) -> impl IntoResponse {
+    let pid = Pid::from_raw(payload.process_id);
+    // TODO: convert payload.signal into signal
+    let signal = Signal::SIGINT;
+    info!("sending signal {} to process {}", signal, pid.to_string());
+    if let Err(err) = signal::kill(pid, signal) {
+        error!("Failed to kill process: {}", err);
+        return StatusCode::INTERNAL_SERVER_ERROR;
     }
 
-    #[cfg(not(feature = "enable-updater"))]
-    {
-        (StatusCode::NOT_FOUND, "Not found")
-    }
+    info!("successfully killed process");
+
+    return StatusCode::OK;
+}
+
+async fn releases_handler(AxumState(server): AxumState<ServerState>) -> impl IntoResponse {
+    let state = server.app_handle.state::<AppState>();
+    let releases = state.releases.lock().unwrap();
+    let releases = releases.clone();
+
+    Json(releases)
 }
 
 async fn ws_handler(
     ws: WebSocketUpgrade,
     headers: HeaderMap,
     ConnectInfo(addr): ConnectInfo<SocketAddr>,
-    app_handle: AppHandle,
+    AxumState(server): AxumState<ServerState>,
 ) -> Response {
+    let app_handle = server.app_handle;
     let user_agent = if let Some(user_agent) = headers.get("user-agent") {
         user_agent.to_str().unwrap_or("Unknown browser")
     } else {

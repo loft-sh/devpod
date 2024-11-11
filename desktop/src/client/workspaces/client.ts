@@ -1,4 +1,3 @@
-import { invoke } from "@tauri-apps/api"
 import { TActionID, TActionName, TActionObj } from "../../contexts"
 import { Result, ResultError, Return, THandler, exists, isError, noop } from "../../lib"
 import {
@@ -14,6 +13,12 @@ import { TCommand, TStreamEventListenerFn } from "../command"
 import { CommandCache, TCommandCacheInfo } from "../commandCache"
 import { TDebuggable, TStreamEvent } from "../types"
 import { WorkspaceCommands } from "./workspaceCommands"
+import {
+  DEVPOD_FLAG_DOTFILES,
+  DEVPOD_FLAG_GIT_SIGNING_KEY,
+  WORKSPACE_COMMAND_ADDITIONAL_FLAGS_KEY,
+} from "../constants"
+import { invoke } from "@tauri-apps/api/core"
 
 // Every workspace can have one active action at a time,
 // but multiple views might need to listen to the same action.
@@ -92,21 +97,27 @@ export class WorkspacesClient implements TDebuggable {
   }
 
   public setDotfilesFlag(dotfilesUrl: string): void {
-    WorkspaceCommands.ADDITIONAL_FLAGS =
-      WorkspaceCommands.ADDITIONAL_FLAGS + " --dotfiles=" + dotfilesUrl
+    if (!dotfilesUrl) {
+      return
+    }
+    WorkspaceCommands.ADDITIONAL_FLAGS.set(DEVPOD_FLAG_DOTFILES, dotfilesUrl)
   }
 
   public setAdditionalFlags(additionalFlags: string): void {
-    WorkspaceCommands.ADDITIONAL_FLAGS = additionalFlags
+    WorkspaceCommands.ADDITIONAL_FLAGS.set(WORKSPACE_COMMAND_ADDITIONAL_FLAGS_KEY, additionalFlags)
   }
 
   public setSSHKeyPath(sshKeyPath: string): void {
-    WorkspaceCommands.ADDITIONAL_FLAGS =
-      WorkspaceCommands.ADDITIONAL_FLAGS + " --git-ssh-signing-key=" + sshKeyPath
+    if (!sshKeyPath) {
+      return
+    }
+    WorkspaceCommands.ADDITIONAL_FLAGS.set(DEVPOD_FLAG_GIT_SIGNING_KEY, sshKeyPath)
   }
 
-  public async listAll(): Promise<Result<readonly TWorkspaceWithoutStatus[]>> {
-    return WorkspaceCommands.ListWorkspaces()
+  public async listAll(
+    skipPro: boolean = true
+  ): Promise<Result<readonly TWorkspaceWithoutStatus[]>> {
+    return WorkspaceCommands.ListWorkspaces(skipPro)
   }
 
   public async getStatus(id: TWorkspaceID): Promise<Result<TWorkspace["status"]>> {
@@ -122,6 +133,10 @@ export class WorkspacesClient implements TDebuggable {
 
   public async newID(rawSource: string): Promise<Result<string>> {
     return WorkspaceCommands.GetWorkspaceID(rawSource)
+  }
+
+  public async newUID(): Promise<Result<string>> {
+    return WorkspaceCommands.GetWorkspaceUID()
   }
 
   public async start(
@@ -271,10 +286,6 @@ export class WorkspacesClient implements TDebuggable {
     const cmdHandler = this.commandCache.findCommandHandlerById(actionID)
 
     return cmdHandler?.cancel?.() ?? Return.Ok()
-  }
-
-  public syncActionLogs(actionIDs: readonly string[]) {
-    invoke("sync_action_logs", { actions: actionIDs })
   }
 
   public async getActionLogFile(actionID: TActionID): Promise<Result<string>> {

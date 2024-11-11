@@ -66,8 +66,6 @@ export class Action {
   }
 
   public run() {
-    // TODO: Cancel somehow?
-
     this.actionFn({ id: this.id }).then((result) => {
       if (result.err) {
         this.failed(result.val)

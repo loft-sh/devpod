@@ -2,12 +2,13 @@ import { IconButton } from "@chakra-ui/react"
 import { useMemo } from "react"
 import { useLocation, useMatch, useNavigate } from "react-router-dom"
 import { TViewTitle } from "../../components"
-import { getAction } from "../../contexts"
+import { getAction, useWorkspaceStore } from "../../contexts"
 import { ArrowLeft } from "../../icons"
 import { exists, getActionDisplayName } from "../../lib"
 import { Routes } from "../../routes"
 
 export function useActionTitle(): TViewTitle | null {
+  const { store } = useWorkspaceStore()
   const navigate = useNavigate()
   const location = useLocation()
 
@@ -21,7 +22,7 @@ export function useActionTitle(): TViewTitle | null {
     if (!maybeActionID) {
       return null
     }
-    const maybeAction = getAction(maybeActionID)
+    const maybeAction = getAction(maybeActionID, store)
     if (maybeAction === undefined) {
       return null
     }
@@ -46,5 +47,5 @@ export function useActionTitle(): TViewTitle | null {
         />
       ),
     }
-  }, [location.state, matchAction, navigate])
+  }, [location.state?.origin, matchAction, navigate, store])
 }

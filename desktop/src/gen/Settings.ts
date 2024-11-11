@@ -18,7 +18,6 @@ export interface Settings {
   httpProxyUrl: string
   httpsProxyUrl: string
   noProxy: string
-  experimental_colorMode: ColorMode
   experimental_multiDevcontainer: boolean
   experimental_fleet: boolean
   experimental_jupyterNotebooks: boolean
@@ -26,4 +25,6 @@ export interface Settings {
   experimental_cursor: boolean
   experimental_positron: boolean
   experimental_devPodPro: boolean
+  experimental_devPodProDesktop: boolean
+  experimental_colorMode: ColorMode
 }

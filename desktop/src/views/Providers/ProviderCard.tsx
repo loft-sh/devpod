@@ -30,7 +30,14 @@ import { ProviderPlaceholder, Stack3D, Trash } from "../../icons"
 import { exists } from "../../lib"
 import { QueryKeys } from "../../queryKeys"
 import { Routes } from "../../routes"
-import { TProvider, TProviderID, TProviderSource, TRunnable, TWithProviderID } from "../../types"
+import {
+  TProvider,
+  TProviderID,
+  TProviderSource,
+  TRunnable,
+  TWithProviderID,
+  TWorkspace,
+} from "../../types"
 import { useSetupProviderModal } from "./useSetupProviderModal"
 import { useDeleteProviderModal } from "./useDeleteProviderModal"
 
@@ -44,7 +51,7 @@ type TProviderCardProps = {
 export function ProviderCard({ id, provider, remove }: TProviderCardProps) {
   const navigate = useNavigate()
   const queryClient = useQueryClient()
-  const workspaces = useWorkspaces()
+  const workspaces = useWorkspaces<TWorkspace>()
   const providerWorkspaces = useMemo(
     () => workspaces.filter((workspace) => workspace.provider?.name === id),
     [id, workspaces]
@@ -88,7 +95,6 @@ export function ProviderCard({ id, provider, remove }: TProviderCardProps) {
     id,
     "provider",
     "delete",
-    providerWorkspaces.length > 0,
     () => remove.run({ providerID: id })
   )
 

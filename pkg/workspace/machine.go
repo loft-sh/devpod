@@ -9,15 +9,17 @@ import (
 	"github.com/loft-sh/devpod/pkg/client"
 	"github.com/loft-sh/devpod/pkg/client/clientimplementation"
 	"github.com/loft-sh/devpod/pkg/config"
+	"github.com/loft-sh/devpod/pkg/encoding"
 	"github.com/loft-sh/devpod/pkg/file"
-	provider2 "github.com/loft-sh/devpod/pkg/provider"
+	providerpkg "github.com/loft-sh/devpod/pkg/provider"
+	"github.com/loft-sh/devpod/pkg/types"
 	"github.com/loft-sh/log"
 	"github.com/loft-sh/log/survey"
 	"github.com/loft-sh/log/terminal"
 )
 
-func listMachines(devPodConfig *config.Config, log log.Logger) ([]*provider2.Machine, error) {
-	machineDir, err := provider2.GetMachinesDir(devPodConfig.DefaultContext)
+func listMachines(devPodConfig *config.Config, log log.Logger) ([]*providerpkg.Machine, error) {
+	machineDir, err := providerpkg.GetMachinesDir(devPodConfig.DefaultContext)
 	if err != nil {
 		return nil, err
 	}
@@ -27,9 +29,9 @@ func listMachines(devPodConfig *config.Config, log log.Logger) ([]*provider2.Mac
 		return nil, err
 	}
 
-	retMachines := []*provider2.Machine{}
+	retMachines := []*providerpkg.Machine{}
 	for _, entry := range entries {
-		machineConfig, err := provider2.LoadMachineConfig(devPodConfig.DefaultContext, entry.Name())
+		machineConfig, err := providerpkg.LoadMachineConfig(devPodConfig.DefaultContext, entry.Name())
 		if err != nil {
 			log.ErrorStreamOnly().Warnf("Couldn't load machine %s: %v", entry.Name(), err)
 			continue
@@ -48,7 +50,7 @@ func ResolveMachine(devPodConfig *config.Config, args []string, userOptions []st
 	}
 
 	// refresh options
-	err = machineClient.RefreshOptions(context.TODO(), userOptions)
+	err = machineClient.RefreshOptions(context.TODO(), userOptions, false)
 	if err != nil {
 		return nil, err
 	}
@@ -66,7 +68,7 @@ func resolveMachine(devPodConfig *config.Config, args []string, log log.Logger) 
 	machineID := ToID(args[0])
 
 	// check if desired id already exists
-	if provider2.MachineExists(devPodConfig.DefaultContext, machineID) {
+	if providerpkg.MachineExists(devPodConfig.DefaultContext, machineID) {
 		log.Infof("Machine %s already exists", machineID)
 		return loadExistingMachine(machineID, devPodConfig, log)
 	}
@@ -106,7 +108,7 @@ func MachineExists(devPodConfig *config.Config, args []string) string {
 	machineID := ToID(name)
 
 	// already exists?
-	if !provider2.MachineExists(devPodConfig.DefaultContext, machineID) {
+	if !providerpkg.MachineExists(devPodConfig.DefaultContext, machineID) {
 		return ""
 	}
 
@@ -127,7 +129,7 @@ func GetMachine(devPodConfig *config.Config, args []string, log log.Logger) (cli
 	machineID := ToID(name)
 
 	// already exists?
-	if !provider2.MachineExists(devPodConfig.DefaultContext, machineID) {
+	if !providerpkg.MachineExists(devPodConfig.DefaultContext, machineID) {
 		return nil, fmt.Errorf("machine %s doesn't exist", machineID)
 	}
 
@@ -141,7 +143,7 @@ func selectMachine(devPodConfig *config.Config, log log.Logger) (client.MachineC
 	}
 
 	// ask which machine to use
-	machinesDir, err := provider2.GetMachinesDir(devPodConfig.DefaultContext)
+	machinesDir, err := providerpkg.GetMachinesDir(devPodConfig.DefaultContext)
 	if err != nil {
 		return nil, err
 	}
@@ -174,7 +176,7 @@ func selectMachine(devPodConfig *config.Config, log log.Logger) (client.MachineC
 }
 
 func loadExistingMachine(machineID string, devPodConfig *config.Config, log log.Logger) (client.MachineClient, error) {
-	machineConfig, err := provider2.LoadMachineConfig(devPodConfig.DefaultContext, machineID)
+	machineConfig, err := providerpkg.LoadMachineConfig(devPodConfig.DefaultContext, machineID)
 	if err != nil {
 		return nil, err
 	}
@@ -185,4 +187,46 @@ func loadExistingMachine(machineID string, devPodConfig *config.Config, log log.
 	}
 
 	return clientimplementation.NewMachineClient(devPodConfig, providerWithOptions.Config, machineConfig, log)
+}
+
+func createMachine(context, machineID, providerName string) (*providerpkg.Machine, error) {
+	// get the machine dir
+	machineDir, err := providerpkg.GetMachineDir(context, machineID)
+	if err != nil {
+		return nil, err
+	}
+
+	// save machine config
+	machine := &providerpkg.Machine{
+		ID:      machineID,
+		Context: context,
+		Provider: providerpkg.MachineProviderConfig{
+			Name: providerName,
+		},
+		CreationTimestamp: types.Now(),
+		Origin:            filepath.Join(machineDir, providerpkg.MachineConfigFile),
+	}
+
+	// create machine folder
+	err = providerpkg.SaveMachineConfig(machine)
+	if err != nil {
+		_ = os.RemoveAll(machineDir)
+		return nil, err
+	}
+
+	return machine, nil
+}
+
+func SingleMachineName(devPodConfig *config.Config, provider string, log log.Logger) string {
+	legacyMachineName := "devpod-shared-" + provider
+	machines, err := listMachines(devPodConfig, log)
+	if err == nil {
+		for _, machine := range machines {
+			if machine.Provider.Name == provider && machine.ID == legacyMachineName {
+				return legacyMachineName
+			}
+		}
+	}
+
+	return encoding.SafeConcatNameMax([]string{"devpod-shared", provider, encoding.GetMachineUIDShort(log)}, encoding.MachineUIDLength)
 }

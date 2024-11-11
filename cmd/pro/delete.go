@@ -60,7 +60,7 @@ func (cmd *DeleteCmd) Run(ctx context.Context, args []string) error {
 	}
 
 	// delete the provider
-	err = providercmd.DeleteProvider(devPodConfig, proInstanceConfig.Provider, true)
+	err = providercmd.DeleteProvider(ctx, devPodConfig, proInstanceConfig.Provider, true, true, log.Default)
 	if err != nil {
 		return err
 	}

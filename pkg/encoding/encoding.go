@@ -27,7 +27,15 @@ const (
 func CreateNewUID(context, id string) string {
 	// this returns always a UID with length 16
 	uid := strings.ReplaceAll(uuid.New().String()+uuid.New().String(), "-", "")
-	return SafeConcatNameMax([]string{id, context, uid}, WorkspaceUIDLength)
+	args := []string{}
+	if context != "" {
+		args = append(args, context)
+	}
+	if id != "" {
+		args = append(args, id)
+	}
+	args = append(args, uid)
+	return SafeConcatNameMax(args, WorkspaceUIDLength)
 }
 
 func CreateNewUIDShort(id string) string {

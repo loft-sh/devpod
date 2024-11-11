@@ -22,6 +22,7 @@ export function useUpdate() {
   const { data: pendingUpdate } = useQuery({
     queryKey: QueryKeys.PENDING_UPDATE,
     queryFn: async () => (await client.fetchPendingUpdate()).unwrap(),
+    enabled: false,
   })
 
   const { mutate: installMutate, isLoading: isInstalling } = useMutation({

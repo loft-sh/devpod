@@ -102,7 +102,7 @@ func (s *workspaceClient) Context() string {
 	return s.workspace.Context
 }
 
-func (s *workspaceClient) RefreshOptions(ctx context.Context, userOptionsRaw []string) error {
+func (s *workspaceClient) RefreshOptions(ctx context.Context, userOptionsRaw []string, reconfigure bool) error {
 	s.m.Lock()
 	defer s.m.Unlock()
 

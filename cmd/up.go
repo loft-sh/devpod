@@ -30,8 +30,8 @@ import (
 	"github.com/loft-sh/devpod/pkg/ide/marimo"
 	"github.com/loft-sh/devpod/pkg/ide/openvscode"
 	"github.com/loft-sh/devpod/pkg/ide/vscode"
-	"github.com/loft-sh/devpod/pkg/loft"
 	open2 "github.com/loft-sh/devpod/pkg/open"
+	"github.com/loft-sh/devpod/pkg/platform"
 	"github.com/loft-sh/devpod/pkg/port"
 	provider2 "github.com/loft-sh/devpod/pkg/provider"
 	devssh "github.com/loft-sh/devpod/pkg/ssh"
@@ -59,6 +59,7 @@ type UpCmd struct {
 	GPGAgentForwarding      bool
 	OpenIDE                 bool
 	SetupLoftPlatformAccess bool
+	Reconfigure             bool
 
 	SSHConfigPath string
 
@@ -74,76 +75,16 @@ func NewUpCmd(f *flags.GlobalFlags) *cobra.Command {
 	upCmd := &cobra.Command{
 		Use:   "up [flags] [workspace-path|workspace-name]",
 		Short: "Starts a new workspace",
-		RunE: func(_ *cobra.Command, args []string) error {
+		RunE: func(cobraCmd *cobra.Command, args []string) error {
 			devPodConfig, err := config.LoadConfig(cmd.Context, cmd.Provider)
 			if err != nil {
 				return err
 			}
 
-			// try to parse flags from env
-			if err := mergeDevPodUpOptions(&cmd.CLIOptions); err != nil {
-				return err
-			}
-
-			var logger log.Logger = log.Default
-			if cmd.Proxy {
-				logger = logger.ErrorStreamOnly()
-				logger.Debug("Running in proxy mode")
-				logger.Debug("Using error output stream")
-
-				// merge context options from env
-				config.MergeContextOptions(devPodConfig.Current(), os.Environ())
-			}
-
-			err = mergeEnvFromFiles(&cmd.CLIOptions)
+			ctx := cobraCmd.Context()
+			client, logger, err := cmd.prepareClient(ctx, devPodConfig, args)
 			if err != nil {
-				return err
-			}
-
-			var source *provider2.WorkspaceSource
-			if cmd.Source != "" {
-				source = provider2.ParseWorkspaceSource(cmd.Source)
-				if source == nil {
-					return fmt.Errorf("workspace source is missing")
-				}
-			}
-
-			if cmd.SSHConfigPath == "" {
-				cmd.SSHConfigPath = devPodConfig.ContextOption(config.ContextOptionSSHConfigPath)
-			}
-
-			ctx := context.Background()
-			client, err := workspace2.ResolveWorkspace(
-				ctx,
-				devPodConfig,
-				cmd.IDE,
-				cmd.IDEOptions,
-				args,
-				cmd.ID,
-				cmd.Machine,
-				cmd.ProviderOptions,
-				cmd.DevContainerImage,
-				cmd.DevContainerPath,
-				cmd.SSHConfigPath,
-				source,
-				cmd.UID,
-				true,
-				logger,
-			)
-			if err != nil {
-				return err
-			}
-
-			if !cmd.Proxy {
-				proInstance := getProInstance(devPodConfig, client.Provider(), logger)
-				if proInstance != nil {
-					cmd.SetupLoftPlatformAccess = true
-				}
-
-				err = checkProviderUpdate(devPodConfig, proInstance, logger)
-				if err != nil {
-					return err
-				}
+				return fmt.Errorf("prepare workspace client: %w", err)
 			}
 
 			return cmd.Run(ctx, devPodConfig, client, logger)
@@ -162,6 +103,7 @@ func NewUpCmd(f *flags.GlobalFlags) *cobra.Command {
 	upCmd.Flags().StringVar(&cmd.EnvironmentTemplate, "environment-template", "", "Environment template to use")
 	_ = upCmd.Flags().MarkHidden("environment-template")
 	upCmd.Flags().StringArrayVar(&cmd.ProviderOptions, "provider-option", []string{}, "Provider option in the form KEY=VALUE")
+	upCmd.Flags().BoolVar(&cmd.Reconfigure, "reconfigure", false, "Reconfigure the options for this workspace. Only supported in DevPod Pro right now.")
 	upCmd.Flags().BoolVar(&cmd.Recreate, "recreate", false, "If true will remove any existing containers and recreate them")
 	upCmd.Flags().BoolVar(&cmd.Reset, "reset", false, "If true will remove any existing containers including sources, and recreate them")
 	upCmd.Flags().StringSliceVar(&cmd.PrebuildRepositories, "prebuild-repository", []string{}, "Docker repository that hosts devpod prebuilds for this workspace")
@@ -466,7 +408,7 @@ func (cmd *UpCmd) devPodUpProxy(
 		}
 
 		// run devpod up elsewhere
-		err := client.Up(ctx, client2.UpOptions{
+		err = client.Up(ctx, client2.UpOptions{
 			CLIOptions: baseOptions,
 			Debug:      cmd.Debug,
 
@@ -1250,7 +1192,7 @@ func checkProviderUpdate(devPodConfig *config.Config, proInstance *provider2.Pro
 	}
 
 	// compare versions
-	newVersion, err := loft.GetProInstanceDevPodVersion(proInstance)
+	newVersion, err := platform.GetProInstanceDevPodVersion(proInstance)
 	if err != nil {
 		return fmt.Errorf("version for pro instance %s: %w", proInstance.Host, err)
 	}
@@ -1310,4 +1252,73 @@ func getProInstance(devPodConfig *config.Config, providerName string, log log.Lo
 	}
 
 	return proInstance
+}
+
+func (cmd *UpCmd) prepareClient(ctx context.Context, devPodConfig *config.Config, args []string) (client2.BaseWorkspaceClient, log.Logger, error) {
+	// try to parse flags from env
+	if err := mergeDevPodUpOptions(&cmd.CLIOptions); err != nil {
+		return nil, nil, err
+	}
+
+	var logger log.Logger = log.Default
+	if cmd.Proxy {
+		logger = logger.ErrorStreamOnly()
+		logger.Debug("Running in proxy mode")
+		logger.Debug("Using error output stream")
+
+		// merge context options from env
+		config.MergeContextOptions(devPodConfig.Current(), os.Environ())
+	}
+
+	if err := mergeEnvFromFiles(&cmd.CLIOptions); err != nil {
+		return nil, logger, err
+	}
+
+	var source *provider2.WorkspaceSource
+	if cmd.Source != "" {
+		source = provider2.ParseWorkspaceSource(cmd.Source)
+		if source == nil {
+			return nil, nil, fmt.Errorf("workspace source is missing")
+		}
+	}
+
+	if cmd.SSHConfigPath == "" {
+		cmd.SSHConfigPath = devPodConfig.ContextOption(config.ContextOptionSSHConfigPath)
+	}
+
+	client, err := workspace2.Resolve(
+		ctx,
+		devPodConfig,
+		cmd.IDE,
+		cmd.IDEOptions,
+		args,
+		cmd.ID,
+		cmd.Machine,
+		cmd.ProviderOptions,
+		cmd.Reconfigure,
+		cmd.DevContainerImage,
+		cmd.DevContainerPath,
+		cmd.SSHConfigPath,
+		source,
+		cmd.UID,
+		true,
+		logger,
+	)
+	if err != nil {
+		return nil, logger, err
+	}
+
+	if !cmd.Proxy {
+		proInstance := getProInstance(devPodConfig, client.Provider(), logger)
+		if proInstance != nil {
+			cmd.SetupLoftPlatformAccess = true
+		}
+
+		err = checkProviderUpdate(devPodConfig, proInstance, logger)
+		if err != nil {
+			return nil, logger, err
+		}
+	}
+
+	return client, logger, nil
 }

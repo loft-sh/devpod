@@ -3,7 +3,7 @@ use crate::{custom_protocol::ParseError, window::WindowHelper, AppHandle};
 use log::{error, warn};
 use serde::{de, Deserialize, Serialize};
 use std::collections::{HashMap, VecDeque};
-use tauri::{Manager, State};
+use tauri::{Manager, State, Emitter};
 use tokio::sync::mpsc::Receiver;
 
 pub async fn send_ui_message(
@@ -42,9 +42,9 @@ impl UiMessageHelper {
                 UiMessage::Ready => {
                     self.is_ready = true;
 
-                    self.app_handle.get_window("main").map(|w| w.show());
+                    self.app_handle.get_webview_window("main").map(|w| w.show());
                     while let Some(msg) = self.message_buffer.pop_front() {
-                        let emit_result = self.app_handle.emit_all("event", msg);
+                        let emit_result = self.app_handle.emit("event", msg);
                         if let Err(err) = emit_result {
                             warn!("Error sending message: {}", err);
                         }
@@ -61,14 +61,14 @@ impl UiMessageHelper {
 
     fn handle_msg(&mut self, msg: UiMessage) {
         if self.is_ready {
-            self.app_handle.get_window("main").map(|w| w.show());
-            let _ = self.app_handle.emit_all("event", msg);
+            self.app_handle.get_webview_window("main").map(|w| w.show());
+            let _ = self.app_handle.emit("event", msg);
         } else {
             // recreate window
             self.message_buffer.push_back(msg);
 
             // create a new main window if we can't find it
-            let main_window = self.app_handle.get_window("main");
+            let main_window = self.app_handle.get_webview_window("main");
             if main_window.is_none() {
                 let _ = self.window_helper.new_main(self.app_name.clone());
             }
