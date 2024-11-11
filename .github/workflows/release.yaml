@@ -200,7 +200,7 @@ jobs:
         with:
           releaseId: ${{ needs.create-release.outputs.release_id }}
           projectPath: "./desktop"
-          args: "--config src-tauri/tauri-linux.conf.json --target ${{ matrix.settings.target }} --features enable-updater --bundles appimage,updater"
+          args: "--config src-tauri/tauri-linux.conf.json --target ${{ matrix.settings.target }} --bundles appimage,updater"
           includeUpdaterJson: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -217,7 +217,7 @@ jobs:
         with:
           releaseId: ${{ needs.create-release.outputs.release_id }}
           projectPath: "./desktop"
-          args: "--target ${{ matrix.settings.target }} --features enable-updater"
+          args: "--target ${{ matrix.settings.target }}"
           includeUpdaterJson: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

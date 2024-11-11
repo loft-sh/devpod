@@ -10,7 +10,7 @@ if [ -d "$TARGET_DIR" ]; then rm -Rf $TARGET_DIR; fi
 
 echo "Generating types..."
 cd desktop/src-tauri
-cargo test --quiet --features enable-updater &> /dev/null 2>&1
+cargo test --quiet &> /dev/null 2>&1
 cd ../..
 printf "Done\n"
 

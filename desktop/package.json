@@ -12,7 +12,7 @@
     "desktop:dev:debug": "export DEBUG=true; yarn desktop:dev",
     "desktop:build:dev": "DEBUG=true tauri build --config src-tauri/tauri-dev.conf.json",
     "desktop:build:debug": "tauri build --debug",
-    "desktop:build": "tauri build --features enable-updater",
+    "desktop:build": "tauri build",
     "format:check": "prettier --check .",
     "format:fix": "prettier --write .",
     "types:check": "tsc -p ./tsconfig.json --noEmit"
