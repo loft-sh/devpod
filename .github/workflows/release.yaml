@@ -318,11 +318,11 @@ jobs:
             const msiZipSigPath = `desktop/src-tauri/target/${{ matrix.settings.target }}/release/bundle/msi/${msiZipSigName}`
 
             // prepare NSIS vars
-            const nsisName = `DevPod_${version}_x64-setup.exe`
-            const nsisPath = `desktop/src-tauri/target/${{ matrix.settings.target }}/release/bundle/nsis/${nsisName}`
-            const nsisZipName = `${nsisName}.zip`
+            const nsisName = `DevPod_${version}_x64-setup`
+            const nsisPath = `desktop/src-tauri/target/${{ matrix.settings.target }}/release/bundle/nsis/${nsisName}.exe`
+            const nsisZipName = `${nsisName}.nsis.zip`
             const nsisZipPath = `desktop/src-tauri/target/${{ matrix.settings.target }}/release/bundle/nsis/${nsisZipName}`
-            const nsisZipSigName = `${nsisName}.zip.sig`
+            const nsisZipSigName = `${nsisName}.nsis.zip.sig`
             const nsisZipSigPath = `desktop/src-tauri/target/${{ matrix.settings.target }}/release/bundle/nsis/${nsisZipSigName}`
 
             const cliName = "devpod-windows-${{ matrix.settings.arch }}.exe"
