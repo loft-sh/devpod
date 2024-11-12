@@ -281,7 +281,8 @@ jobs:
           $credential_id = "$Env:CODESIGNTOOL_CREDENTIAL_ID"
           $download_url = "$Env:CODESIGNTOOL_DOWNLOAD_URL"
 
-          $input_file_path = "desktop\src-tauri\target\${{ matrix.settings.target }}\release\bundle\msi\DevPod_${{ needs.create-release.outputs.package_version }}_x64_en-US.msi"
+          $msi_input_file_path = "desktop\src-tauri\target\${{ matrix.settings.target }}\release\bundle\msi\DevPod_${{ needs.create-release.outputs.package_version }}_x64_en-US.msi"
+          $nsis_input_file_path = "desktop\src-tauri\target\${{ matrix.settings.target }}\release\bundle\msi\DevPod_${{ needs.create-release.outputs.package_version }}_x64_setup.exe"
 
           Write-Output "Starting to download CodeSignTool from $download_url"
 
@@ -293,10 +294,11 @@ jobs:
 
           Set-Location -Path $destination_path
 
-          $input_file_path = Resolve-Path  "..\$input_file_path" | select -ExpandProperty Path
-          ls $input_file_path
+          $msi_input_file_path = Resolve-Path  "..\$msi_input_file_path" | select -ExpandProperty Path
+          $nsis_input_file_path = Resolve-Path  "..\$nsis_input_file_path" | select -ExpandProperty Path
 
-          cmd.exe /c ".\CodeSignTool.bat" sign -username="$username" -password="$password" -totp_secret="$totp_secret" -credential_id="$credential_id" -input_file_path="$input_file_path" -override
+          cmd.exe /c ".\CodeSignTool.bat" sign -username="$username" -password="$password" -totp_secret="$totp_secret" -credential_id="$credential_id" -input_file_path="$msi_input_file_path" -override
+          cmd.exe /c ".\CodeSignTool.bat" sign -username="$username" -password="$password" -totp_secret="$totp_secret" -credential_id="$credential_id" -input_file_path="$nsis_input_file_path" -override
 
       - name: Upload Release Asset
         if: matrix.settings.host == 'windows-latest'
@@ -306,18 +308,39 @@ jobs:
             const fs = require("fs")
 
             const version = "${{ needs.create-release.outputs.package_version }}"
+            
+            // prepare MSI vars
             const msiName = `DevPod_${version}_x64_en-US.msi`
             const msiPath = `desktop/src-tauri/target/${{ matrix.settings.target }}/release/bundle/msi/${msiName}`
             const msiZipName = `${msiName}.zip`
             const msiZipPath = `desktop/src-tauri/target/${{ matrix.settings.target }}/release/bundle/msi/${msiZipName}`
             const msiZipSigName = `${msiName}.zip.sig`
             const msiZipSigPath = `desktop/src-tauri/target/${{ matrix.settings.target }}/release/bundle/msi/${msiZipSigName}`
+
+            // prepare NSIS vars
+            const nsisName = `DevPod_${version}_x64_setup.exe`
+            const nsisPath = `desktop/src-tauri/target/${{ matrix.settings.target }}/release/bundle/nsis/${nsisName}`
+            const nsisZipName = `${nsisName}.zip`
+            const nsisZipPath = `desktop/src-tauri/target/${{ matrix.settings.target }}/release/bundle/nsis/${nsisZipName}`
+            const nsisZipSigName = `${nsisName}.zip.sig`
+            const nsisZipSigPath = `desktop/src-tauri/target/${{ matrix.settings.target }}/release/bundle/nsis/${nsisZipSigName}`
+
             const cliName = "devpod-windows-${{ matrix.settings.arch }}.exe"
             const cliPath = "desktop/src-tauri/bin/devpod-cli-${{ matrix.settings.target }}.exe"
 
             const releaseId = "${{ needs.create-release.outputs.release_id }}"
 
-            const releaseAssets = [{ name: msiName, path: msiPath }, { name: cliName, path: cliPath }, { name: msiZipName, path: msiZipPath }, { name: msiZipSigName, path: msiZipSigPath }]
+            const releaseAssets = [
+              { name: cliName, path: cliPath },
+
+              { name: msiName, path: msiPath },
+              { name: msiZipName, path: msiZipPath }, 
+              { name: msiZipSigName, path: msiZipSigPath },
+
+              { name: nsisName, path: nsisPath },
+              { name: nsisZipName, path: nsisZipPath }, 
+              { name: nsisZipSigName, path: nsisZipSigPath },
+            ]
             for (const asset of releaseAssets) {
               console.log("Attempting to upload release asset: ", asset)
               await github.rest.repos.uploadReleaseAsset({

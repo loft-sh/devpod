@@ -10,7 +10,11 @@
     "windows": {
       "certificateThumbprint": null,
       "digestAlgorithm": "sha256",
-      "timestampUrl": ""
+      "timestampUrl": "",
+      "nsis": {
+        "displayLanguageSelector": false,
+        "installMode": "currentUser"
+      }
     },
     "category": "DeveloperTool",
     "copyright": "",
