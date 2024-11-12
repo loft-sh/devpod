@@ -198,7 +198,7 @@ jobs:
         if: matrix.settings.host == 'ubuntu-22.04'
         run: |
           sudo apt-get update
-          sudo apt-get install -y libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf
+          sudo apt-get install -y libwebkit2gtk-4.1-dev librsvg2-dev patchelf
 
       - name: Build Desktop App
         if: matrix.settings.host == 'ubuntu-22.04' && matrix.settings.cli_only == false
