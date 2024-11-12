@@ -282,7 +282,7 @@ jobs:
           $download_url = "$Env:CODESIGNTOOL_DOWNLOAD_URL"
 
           $msi_input_file_path = "desktop\src-tauri\target\${{ matrix.settings.target }}\release\bundle\msi\DevPod_${{ needs.create-release.outputs.package_version }}_x64_en-US.msi"
-          $nsis_input_file_path = "desktop\src-tauri\target\${{ matrix.settings.target }}\release\bundle\nsis\DevPod_${{ needs.create-release.outputs.package_version }}_x64_setup.exe"
+          $nsis_input_file_path = "desktop\src-tauri\target\${{ matrix.settings.target }}\release\bundle\nsis\DevPod_${{ needs.create-release.outputs.package_version }}_x64-setup.exe"
 
           Write-Output "Starting to download CodeSignTool from $download_url"
 
@@ -318,7 +318,7 @@ jobs:
             const msiZipSigPath = `desktop/src-tauri/target/${{ matrix.settings.target }}/release/bundle/msi/${msiZipSigName}`
 
             // prepare NSIS vars
-            const nsisName = `DevPod_${version}_x64_setup.exe`
+            const nsisName = `DevPod_${version}_x64-setup.exe`
             const nsisPath = `desktop/src-tauri/target/${{ matrix.settings.target }}/release/bundle/nsis/${nsisName}`
             const nsisZipName = `${nsisName}.zip`
             const nsisZipPath = `desktop/src-tauri/target/${{ matrix.settings.target }}/release/bundle/nsis/${nsisZipName}`
