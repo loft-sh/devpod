@@ -194,9 +194,15 @@ jobs:
         run: yarn install
         working-directory: "./desktop"
 
+      - name: Install additional ubuntu dependencies
+        if: matrix.settings.host == 'ubuntu-22.04'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libwebkit2gtk-4.0-dev libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf
+
       - name: Build Desktop App
         if: matrix.settings.host == 'ubuntu-22.04' && matrix.settings.cli_only == false
-        uses: tauri-apps/tauri-action@v0.4.0
+        uses: tauri-apps/tauri-action@v0.5.15
         with:
           releaseId: ${{ needs.create-release.outputs.release_id }}
           projectPath: "./desktop"
@@ -207,6 +213,7 @@ jobs:
           TAURI_PRIVATE_KEY: ${{ secrets.TAURI_PRIVATE_KEY }}
           TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_PRIVATE_KEY }}
           TAURI_KEY_PASSWORD: ${{ secrets.TAURI_KEY_PASSWORD }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_KEY_PASSWORD }}
           # AppImage Signing:
           SIGN: ${{ secrets.APP_IMAGE_SIGN }}
           SIGN_KEY: ${{ secrets.APP_IMAGE_SIGN_KEY }}
@@ -214,7 +221,7 @@ jobs:
 
       - name: Build Desktop App
         if: matrix.settings.host == 'macos-latest' && matrix.settings.cli_only == false
-        uses: tauri-apps/tauri-action@v0.4.0
+        uses: tauri-apps/tauri-action@v0.5.15
         with:
           releaseId: ${{ needs.create-release.outputs.release_id }}
           projectPath: "./desktop"
@@ -225,6 +232,7 @@ jobs:
           TAURI_PRIVATE_KEY: ${{ secrets.TAURI_PRIVATE_KEY }}
           TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_PRIVATE_KEY }}
           TAURI_KEY_PASSWORD: ${{ secrets.TAURI_KEY_PASSWORD }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_KEY_PASSWORD }}
           # MacOS Signing:
           ENABLE_CODE_SIGNING: ${{ secrets.APPLE_CERTIFICATE }}
           APPLE_CERTIFICATE: ${{ secrets.APPLE_CERTIFICATE }}
@@ -246,7 +254,7 @@ jobs:
       - name: Build Desktop App
         if: matrix.settings.host == 'windows-latest' && matrix.settings.cli_only == false
         id: build-desktop-app
-        uses: tauri-apps/tauri-action@v0.4.5
+        uses: tauri-apps/tauri-action@v0.5.15
         with:
           projectPath: "./desktop"
           args: " --target ${{ matrix.settings.target }}"
@@ -255,6 +263,7 @@ jobs:
           TAURI_PRIVATE_KEY: ${{ secrets.TAURI_PRIVATE_KEY }}
           TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_PRIVATE_KEY }}
           TAURI_KEY_PASSWORD: ${{ secrets.TAURI_KEY_PASSWORD }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_KEY_PASSWORD }}
 
       - name: Sign Windows App
         if: matrix.settings.host == 'windows-latest'
