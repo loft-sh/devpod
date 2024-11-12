@@ -214,6 +214,7 @@ fn find_fs_type(curr_path: &Path, mount_lines: &Lines) -> Option<String> {
 #[cfg(target_os = "windows")]
 fn install(app_handle: AppHandle, force: bool) -> Result<(), InstallCLIError> {
     use log::error;
+    use tauri::Manager;
     use std::fs;
     use windows::Win32::{
         Foundation::{GetLastError, HWND, LPARAM},
@@ -231,9 +232,9 @@ fn install(app_handle: AppHandle, force: bool) -> Result<(), InstallCLIError> {
 
     let cli_path = get_cli_path().map_err(|e| InstallCLIError::NoExePath(e))?;
     let mut bin_dir = app_handle
-        .path_resolver()
+        .path()
         .app_data_dir()
-        .ok_or(InstallCLIError::DataDir)?;
+        .map_err(|_|InstallCLIError::DataDir)?;
     bin_dir.push("bin");
 
     // Create binary directory in app dir and write bin_files to disk

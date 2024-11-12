@@ -12,8 +12,6 @@ use axum::{
 };
 use http::Method;
 use log::{error, info, warn};
-use nix::sys::signal::{self, kill, Signal};
-use nix::unistd::Pid;
 use serde::{Deserialize, Serialize};
 use std::net::SocketAddr;
 use tauri::{Manager, State};
@@ -62,13 +60,38 @@ async fn signal_handler(
     AxumState(server): AxumState<ServerState>,
     Json(payload): Json<SendSignalMessage>,
 ) -> impl IntoResponse {
-    let pid = Pid::from_raw(payload.process_id);
-    // TODO: convert payload.signal into signal
-    let signal = Signal::SIGINT;
-    info!("sending signal {} to process {}", signal, pid.to_string());
-    if let Err(err) = signal::kill(pid, signal) {
-        error!("Failed to kill process: {}", err);
-        return StatusCode::INTERNAL_SERVER_ERROR;
+    info!("received request to send signa {} to process {}", payload.signal, payload.process_id.to_string());
+    #[cfg(not(windows))]
+    {
+        use nix::sys::signal::{self, kill, Signal};
+        use nix::unistd::Pid;
+        let pid = Pid::from_raw(payload.process_id);
+        // TODO: convert payload.signal into signal
+        let signal = Signal::SIGINT;
+        if let Err(err) = signal::kill(pid, signal) {
+            error!("Failed to kill process: {}", err);
+            return StatusCode::INTERNAL_SERVER_ERROR;
+        }
+    }
+    #[cfg(windows)]
+    {
+        use windows::Win32::System::Threading::{OpenProcess, TerminateProcess, PROCESS_TERMINATE};
+        use windows::Win32::Foundation::{HANDLE, CloseHandle};
+        unsafe {
+            let handle: windows::core::Result<HANDLE> = OpenProcess(PROCESS_TERMINATE, false, payload.process_id.try_into().unwrap());
+            if handle.is_err() {
+                error!("unable to open process {}: {:?}", payload.process_id, handle.unwrap_err());
+                return StatusCode::INTERNAL_SERVER_ERROR;
+            }
+            let handle: HANDLE = handle.unwrap();
+
+            let result = TerminateProcess(handle, 1);
+            CloseHandle(handle);
+            if !result.as_bool() {
+                error!("unable to terminate process {}", payload.process_id);
+                return StatusCode::INTERNAL_SERVER_ERROR;
+            }
+        }
     }
 
     info!("successfully killed process");
