@@ -451,17 +451,6 @@ function ExperimentalSettings() {
         />
       </SettingSection>
 
-      {settings.experimental_devPodPro && (
-        <SettingSection
-          title="DevPod Pro Desktop"
-          description="Enable the new DevPod Desktop for Pro">
-          <Switch
-            isChecked={settings.experimental_devPodProDesktop}
-            onChange={(e) => set("experimental_devPodProDesktop", e.target.checked)}
-          />
-        </SettingSection>
-      )}
-
       <SettingSection title="Color Mode" description="" showDivider={false}>
         <RadioGroup
           value={settings.experimental_colorMode}
