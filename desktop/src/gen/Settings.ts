@@ -25,6 +25,5 @@ export interface Settings {
   experimental_cursor: boolean
   experimental_positron: boolean
   experimental_devPodPro: boolean
-  experimental_devPodProDesktop: boolean
   experimental_colorMode: ColorMode
 }
