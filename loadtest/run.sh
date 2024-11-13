@@ -1,7 +1,7 @@
 #!/bin/zsh
 
-export NUM_WORKSPACES=20
-export NUM_COMMANDS_PER_WORKSPACE=1
+export NUM_WORKSPACES=9
+export NUM_COMMANDS_PER_WORKSPACE=5
 
 echo "Running $NUM_WORKSPACES workspaces with $NUM_COMMANDS_PER_WORKSPACE commands each ..."
 
