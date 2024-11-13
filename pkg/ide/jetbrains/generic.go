@@ -9,16 +9,14 @@ import (
 	"path"
 	"path/filepath"
 	"runtime"
-	"time"
 
-	"github.com/loft-sh/devpod/pkg/command"
 	"github.com/loft-sh/devpod/pkg/config"
 	copy2 "github.com/loft-sh/devpod/pkg/copy"
 	"github.com/loft-sh/devpod/pkg/extract"
 	devpodhttp "github.com/loft-sh/devpod/pkg/http"
 	"github.com/loft-sh/devpod/pkg/ide"
+	"github.com/loft-sh/devpod/pkg/util"
 	"github.com/loft-sh/log"
-	"github.com/mitchellh/go-homedir"
 	"github.com/pkg/errors"
 	"github.com/skratchdot/open-golang/open"
 )
@@ -96,7 +94,7 @@ func (o *GenericJetBrainsServer) getDownloadFolder() string {
 
 func (o *GenericJetBrainsServer) Install() error {
 	o.log.Debugf("Setup %s...", o.options.DisplayName)
-	baseFolder, err := getBaseFolder(o.userName)
+	baseFolder, err := util.GetBaseFolder(o.userName)
 	if err != nil {
 		return err
 	}
@@ -126,21 +124,6 @@ func (o *GenericJetBrainsServer) Install() error {
 	}
 	o.log.Infof("Successfully installed %s backend", o.options.DisplayName)
 	return nil
-}
-
-func getBaseFolder(userName string) (string, error) {
-	var err error
-	homeFolder := ""
-	if userName != "" {
-		homeFolder, err = command.GetHome(userName)
-	} else {
-		homeFolder, err = homedir.Dir()
-	}
-	if err != nil {
-		return "", err
-	}
-
-	return homeFolder, nil
 }
 
 func (o *GenericJetBrainsServer) getDirectory(baseFolder string) string {
@@ -194,34 +177,10 @@ func (o *GenericJetBrainsServer) download(targetFolder string, log log.Logger) (
 	}
 	defer file.Close()
 
-	_, err = io.Copy(file, &progressReader{
-		reader:    resp.Body,
-		totalSize: resp.ContentLength,
-		log:       log,
-	})
+	_, err = io.Copy(file, util.NewProgressReader(resp, log))
 	if err != nil {
 		return "", errors.Wrap(err, "download file")
 	}
 
 	return targetPath, nil
-}
-
-type progressReader struct {
-	reader io.Reader
-
-	lastMessage time.Time
-	bytesRead   int64
-	totalSize   int64
-	log         log.Logger
-}
-
-func (p *progressReader) Read(b []byte) (n int, err error) {
-	n, err = p.reader.Read(b)
-	p.bytesRead += int64(n)
-	if time.Since(p.lastMessage) > time.Second*1 {
-		p.log.Infof("Downloaded %.2f / %.2f MB", float64(p.bytesRead)/1024/1024, float64(p.totalSize/1024/1024))
-		p.lastMessage = time.Now()
-	}
-
-	return n, err
 }

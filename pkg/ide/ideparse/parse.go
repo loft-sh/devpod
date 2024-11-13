@@ -158,6 +158,13 @@ var AllowedIDEs = []AllowedIDE{
 		Icon:         "https://devpod.sh/assets/marimo.svg",
 		Experimental: true,
 	},
+	{
+		Name:         config.IDENeoVim,
+		DisplayName:  "NeoVim",
+		Options:      vscode.Options,
+		Icon:         "https://devpod.sh/assets/nvim.svg",
+		Experimental: true,
+	},
 }
 
 func RefreshIDEOptions(devPodConfig *config.Config, workspace *provider.Workspace, ide string, options []string) (*provider.Workspace, error) {
