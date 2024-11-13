@@ -334,6 +334,8 @@ func (d *dockerDriver) RunDockerDevContainer(
 		args = append(args, "--mount", jetbrains.NewRubyMineServer("", ideOptions, d.Log).GetVolume())
 	case string(config2.IDEWebStorm):
 		args = append(args, "--mount", jetbrains.NewWebStormServer("", ideOptions, d.Log).GetVolume())
+	case string(config2.IDEDataSpell):
+		args = append(args, "--mount", jetbrains.NewDataSpellServer("", ideOptions, d.Log).GetVolume())
 	}
 
 	// labels

@@ -16,6 +16,7 @@ const (
 	IDERubyMine        IDE = "rubymine"
 	IDERider           IDE = "rider"
 	IDEWebStorm        IDE = "webstorm"
+	IDEDataSpell       IDE = "dataspell"
 	IDEFleet           IDE = "fleet"
 	IDEJupyterNotebook IDE = "jupyternotebook"
 	IDEJupyterDesktop  IDE = "jupyterdesktop"
