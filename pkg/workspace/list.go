@@ -172,7 +172,7 @@ func listProWorkspaces(ctx context.Context, devPodConfig *config.Config, log log
 				if instance.Annotations != nil {
 					if val, ok := instance.Annotations["sleepmode.loft.sh/last-activity"]; ok {
 						if ts, err = strconv.ParseInt(val, 10, 64); err != nil {
-							log.Warn("recieved invalid sleepmode.loft.sh/last-activity from ", instance.GetName())
+							log.Warn("received invalid sleepmode.loft.sh/last-activity from ", instance.GetName())
 						}
 					}
 				}
