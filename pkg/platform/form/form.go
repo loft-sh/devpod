@@ -55,7 +55,7 @@ func CreateInstance(ctx context.Context, baseClient client.Client, id, uid strin
 			huh.NewSelect[string]().
 				Title("Template Version").
 				OptionsFunc(func() []huh.Option[string] {
-					return getTemplateVersionOptions(ctx, selectedTemplate, cancelForm, log)
+					return getTemplateVersionOptions(selectedTemplate)
 				}, &selectedTemplate).
 				Value(&selectedTemplateVersion).
 				WithHeight(8),
@@ -158,7 +158,7 @@ func UpdateInstance(ctx context.Context, baseClient client.Client, instance *man
 			huh.NewSelect[string]().
 				Title("Template Version").
 				OptionsFunc(func() []huh.Option[string] {
-					return getTemplateVersionOptions(ctx, selectedTemplate, cancelForm, log)
+					return getTemplateVersionOptions(selectedTemplate)
 				}, &selectedTemplate).
 				Value(&selectedTemplateVersion).
 				WithHeight(8),
@@ -320,7 +320,7 @@ func getTemplateOptions(ctx context.Context, client client.Client, project *mana
 	return opts
 }
 
-func getTemplateVersionOptions(ctx context.Context, template *managementv1.DevPodWorkspaceTemplate, cancel CancelFunc, log log.Logger) []huh.Option[string] {
+func getTemplateVersionOptions(template *managementv1.DevPodWorkspaceTemplate) []huh.Option[string] {
 	opts := []huh.Option[string]{latestTemplateVersion}
 	if template == nil {
 		return opts
@@ -382,20 +382,39 @@ func parameterFields(fieldParameters []*FieldParameter) []huh.Field {
 		case "number":
 			fallthrough
 		case "string":
-			input := huh.NewInput().Title(title).
-				Description(param.Description).
-				Value(&param.StringValue)
+			// display a select field if param has options
+			if len(param.Options) > 0 {
+				opts := []huh.Option[string]{}
+				for _, o := range param.Options {
+					huhOption := huh.Option[string]{
+						Key:   o,
+						Value: o,
+					}
+					if o == param.DefaultValue {
+						huhOption = huhOption.Selected(true)
+					}
+					opts = append(opts, huhOption)
+				}
+				field = huh.NewSelect[string]().
+					Title(title).
+					Options(opts...).
+					Value(&param.StringValue)
+			} else {
+				input := huh.NewInput().Title(title).
+					Description(param.Description).
+					Value(&param.StringValue)
 
-			if param.Type == "password" {
-				input.EchoMode(huh.EchoModePassword)
+				if param.Type == "password" {
+					input.EchoMode(huh.EchoModePassword)
+				}
+				if param.Type == "number" {
+					input.Validate(func(s string) error {
+						_, err := strconv.ParseFloat(s, 64)
+						return err
+					})
+				}
+				field = input
 			}
-			if param.Type == "number" {
-				input.Validate(func(s string) error {
-					_, err := strconv.ParseFloat(s, 64)
-					return err
-				})
-			}
-			field = input
 		case "boolean":
 			field = huh.NewConfirm().
 				Title(title).
