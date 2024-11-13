@@ -308,7 +308,7 @@ jobs:
             const fs = require("fs")
 
             const version = "${{ needs.create-release.outputs.package_version }}"
-            
+
             // prepare MSI vars
             const msiName = `DevPod_${version}_x64_en-US.msi`
             const msiPath = `desktop/src-tauri/target/${{ matrix.settings.target }}/release/bundle/msi/${msiName}`
@@ -318,12 +318,15 @@ jobs:
             const msiZipSigPath = `desktop/src-tauri/target/${{ matrix.settings.target }}/release/bundle/msi/${msiZipSigName}`
 
             // prepare NSIS vars
+            // the installer itself is suffixed with `.exe` but updater artifacts end with `.nsis.*`
             const nsisName = `DevPod_${version}_x64-setup`
             const nsisPath = `desktop/src-tauri/target/${{ matrix.settings.target }}/release/bundle/nsis/${nsisName}.exe`
-            const nsisZipName = `${nsisName}.nsis.zip`
-            const nsisZipPath = `desktop/src-tauri/target/${{ matrix.settings.target }}/release/bundle/nsis/${nsisZipName}`
-            const nsisZipSigName = `${nsisName}.nsis.zip.sig`
-            const nsisZipSigPath = `desktop/src-tauri/target/${{ matrix.settings.target }}/release/bundle/nsis/${nsisZipSigName}`
+
+            // Let's skip uploading the updater artifacts until we've figured out auto updating for both nsis and msi
+            // const nsisZipName = `${nsisName}.nsis.zip`
+            // const nsisZipPath = `desktop/src-tauri/target/${{ matrix.settings.target }}/release/bundle/nsis/${nsisZipName}`
+            // const nsisZipSigName = `${nsisName}.nsis.zip.sig`
+            // const nsisZipSigPath = `desktop/src-tauri/target/${{ matrix.settings.target }}/release/bundle/nsis/${nsisZipSigName}`
 
             const cliName = "devpod-windows-${{ matrix.settings.arch }}.exe"
             const cliPath = "desktop/src-tauri/bin/devpod-cli-${{ matrix.settings.target }}.exe"
@@ -337,9 +340,9 @@ jobs:
               { name: msiZipName, path: msiZipPath }, 
               { name: msiZipSigName, path: msiZipSigPath },
 
-              { name: nsisName, path: nsisPath },
-              { name: nsisZipName, path: nsisZipPath }, 
-              { name: nsisZipSigName, path: nsisZipSigPath },
+              { name: `${nsisName}.exe`, path: nsisPath },
+              // { name: nsisZipName, path: nsisZipPath }, 
+              // { name: nsisZipSigName, path: nsisZipSigPath },
             ]
             for (const asset of releaseAssets) {
               console.log("Attempting to upload release asset: ", asset)
