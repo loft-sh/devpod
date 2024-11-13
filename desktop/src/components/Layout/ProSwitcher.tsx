@@ -128,7 +128,6 @@ function ProPopoverContent({
 
               return acc
             }
-            console.log(curr)
             if (!canHealthCheck(curr.providerConfig)) {
               acc.legacyProInstances.push(curr)
 
