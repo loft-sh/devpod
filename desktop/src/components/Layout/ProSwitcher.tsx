@@ -1,7 +1,7 @@
 import { client } from "@/client"
 import { useProInstances, useProviders, useSettings } from "@/contexts"
 import { CheckCircle, CircleWithArrow, DevPodProBadge, ExclamationTriangle, Plus } from "@/icons"
-import { exists, useLoginProModal, useReLoginProModal } from "@/lib"
+import { canHealthCheck, exists, useLoginProModal, useReLoginProModal } from "@/lib"
 import { Routes } from "@/routes"
 import { TProID, TProInstance, TProInstances, TProviderConfig } from "@/types"
 import { useDeleteProviderModal } from "@/views/Providers/useDeleteProviderModal"
@@ -128,7 +128,7 @@ function ProPopoverContent({
 
               return acc
             }
-            if (!curr.providerConfig.exec?.proxy?.["health"]) {
+            if (!canHealthCheck(curr.providerConfig)) {
               acc.legacyProInstances.push(curr)
 
               return acc
@@ -148,7 +148,6 @@ function ProPopoverContent({
       }
     )
   }, [proInstances, providers])
-  // TODO: Filter pro instances by the ones that support health check
 
   return (
     <>

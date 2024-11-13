@@ -1230,7 +1230,7 @@ func checkProviderUpdate(devPodConfig *config.Config, proInstance *provider2.Pro
 	if v1.Compare(v2) == 0 {
 		return nil
 	}
-	log.Infof("New provider version available, attempting to update %s", proInstance.Provider)
+	log.Infof("New provider version available, attempting to update %s from %s to %s", proInstance.Provider, p.Config.Version, newVersion)
 
 	providerSource, err := workspace2.ResolveProviderSource(devPodConfig, proInstance.Provider, log)
 	if err != nil {

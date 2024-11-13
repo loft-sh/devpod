@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"github.com/loft-sh/devpod/cmd/pro/flags"
+	providercmd "github.com/loft-sh/devpod/cmd/provider"
 	"github.com/loft-sh/devpod/pkg/config"
 	"github.com/loft-sh/devpod/pkg/platform"
 	"github.com/loft-sh/devpod/pkg/workspace"
@@ -71,6 +72,11 @@ func (cmd *UpdateProviderCmd) Run(ctx context.Context, args []string) error {
 	_, err = workspace.UpdateProvider(devPodConfig, provider.Name, providerSource, cmd.Log)
 	if err != nil {
 		return fmt.Errorf("update provider %s: %w", provider.Name, err)
+	}
+
+	err = providercmd.ConfigureProvider(ctx, provider, devPodConfig.DefaultContext, []string{}, false, false, nil, log.Discard)
+	if err != nil {
+		return fmt.Errorf("configure provider, please retry with 'devpod provider use %s --reconfigure': %w", provider.Name, err)
 	}
 
 	return nil

@@ -1,4 +1,4 @@
-import { TIDE, TLogOutput } from "../types"
+import { TIDE, TLogOutput, TProvider } from "../types"
 import { ChildProcess } from "@tauri-apps/plugin-shell"
 import { Err, Failed, Return } from "./result"
 import { TActionObj } from "../contexts"
@@ -163,4 +163,8 @@ export function deepCopy<T>(obj: T): T | undefined {
   }
 
   return JSON.parse(JSON.stringify(obj))
+}
+
+export function canHealthCheck(providerConfig: TProvider["config"]): boolean {
+  return !!providerConfig?.exec?.proxy?.["health"]
 }

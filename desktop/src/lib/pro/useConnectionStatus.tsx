@@ -13,7 +13,6 @@ export function useConnectionStatus(): TConnectionStatus {
     queryFn: async () => {
       try {
         const res = await client.checkHealth()
-        console.log(res)
         let state: TConnectionStatus["state"] = "disconnected"
         if (res.err) {
           return { state }

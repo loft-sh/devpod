@@ -1,7 +1,7 @@
 import { Button, Text, VStack, Wrap, WrapItem } from "@chakra-ui/react"
 import { useMemo } from "react"
 import { useProviders } from "../../contexts"
-import { exists } from "../../lib"
+import { canHealthCheck, exists } from "../../lib"
 import { TProvider, TProviderID } from "../../types"
 import { useSetupProviderModal } from "../Providers/useSetupProviderModal"
 import { ProviderCard } from "./ProviderCard"
@@ -16,7 +16,7 @@ export function ListProviders() {
     }
 
     return Object.entries(providers)
-      .filter(([, details]) => details.state?.initialized)
+      .filter(([, details]) => details.state?.initialized && !canHealthCheck(details.config))
       .map(([id, data]) => {
         return { id, data }
       })
