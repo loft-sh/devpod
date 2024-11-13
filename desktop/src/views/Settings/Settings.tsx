@@ -398,6 +398,7 @@ function ExperimentalSettings() {
             JetBrains Fleet
           </FormLabel>
         </HStack>
+
         <HStack width="full" align="center">
           <Switch
             isChecked={settings.experimental_jupyterNotebooks}
@@ -407,6 +408,17 @@ function ExperimentalSettings() {
             Jupyter Notebooks
           </FormLabel>
         </HStack>
+
+        <HStack width="full" align="center">
+          <Switch
+            isChecked={settings.experimental_jupyterDesktop}
+            onChange={(e) => set("experimental_jupyterDesktop", e.target.checked)}
+          />
+          <FormLabel marginBottom="0" whiteSpace="nowrap" fontSize="sm">
+            Jupyter Desktop
+          </FormLabel>
+        </HStack>
+
         <HStack width="full" align="center">
           <Switch
             isChecked={settings.experimental_vscodeInsiders}
@@ -416,6 +428,7 @@ function ExperimentalSettings() {
             VSCode Insiders
           </FormLabel>
         </HStack>
+
         <HStack width="full" align="center">
           <Switch
             isChecked={settings.experimental_cursor}
@@ -425,6 +438,17 @@ function ExperimentalSettings() {
             Cursor
           </FormLabel>
         </HStack>
+
+        <HStack width="full" align="center">
+          <Switch
+            isChecked={settings.experimental_marimo}
+            onChange={(e) => set("experimental_marimo", e.target.checked)}
+          />
+          <FormLabel marginBottom="0" whiteSpace="nowrap" fontSize="sm">
+            Marimo
+          </FormLabel>
+        </HStack>
+
         <HStack width="full" align="center">
           <Switch
             isChecked={settings.experimental_positron}
@@ -432,6 +456,26 @@ function ExperimentalSettings() {
           />
           <FormLabel marginBottom="0" whiteSpace="nowrap" fontSize="sm">
             Positron
+          </FormLabel>
+        </HStack>
+
+        <HStack width="full" align="center">
+          <Switch
+            isChecked={settings.experimental_codium}
+            onChange={(e) => set("experimental_codium", e.target.checked)}
+          />
+          <FormLabel marginBottom="0" whiteSpace="nowrap" fontSize="sm">
+            Codium
+          </FormLabel>
+        </HStack>
+
+        <HStack width="full" align="center">
+          <Switch
+            isChecked={settings.experimental_zed}
+            onChange={(e) => set("experimental_zed", e.target.checked)}
+          />
+          <FormLabel marginBottom="0" whiteSpace="nowrap" fontSize="sm">
+            Zed
           </FormLabel>
         </HStack>
       </SettingSection>
