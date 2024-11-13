@@ -44,7 +44,11 @@ const initialSettings: TSettings = {
   experimental_jupyterNotebooks: true,
   experimental_vscodeInsiders: true,
   experimental_cursor: true,
-  experimental_positron: false,
+  experimental_positron: true,
+  experimental_jupyterDesktop: true,
+  experimental_zed: true,
+  experimental_codium: true,
+  experimental_marimo: true,
   experimental_devPodPro: false,
 }
 function getSettingKeys(): readonly TSetting[] {

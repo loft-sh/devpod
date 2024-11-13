@@ -37,6 +37,14 @@ pub struct Settings {
     experimental_vscode_insiders: bool,
     #[serde(rename = "experimental_cursor")]
     experimental_cursor: bool,
+    #[serde(rename = "experimental_jupyterDesktop")]
+    experimental_jupyter_desktop: bool,
+    #[serde(rename = "experimental_marimo")]
+    experimental_marimo: bool,
+    #[serde(rename = "experimental_codium")]
+    experimental_codium: bool,
+    #[serde(rename = "experimental_zed")]
+    experimental_zed: bool,
     #[serde(rename = "experimental_positron")]
     experimental_positron: bool,
     #[serde(rename = "experimental_devPodPro")]
