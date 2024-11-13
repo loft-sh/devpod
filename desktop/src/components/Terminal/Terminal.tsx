@@ -55,11 +55,20 @@ export const Terminal = forwardRef<TTerminalRef, TTerminalProps>(function T({ fo
       termFitRef.current = termFit
       terminal.loadAddon(termFit)
 
+      // Perform initial fit. Dimensions are only available after the terminal has been rendered once.
+      const disposable = terminal.onRender(() => {
+        if (termFit.proposeDimensions()) {
+          termFit.fit()
+          disposable.dispose()
+        }
+      })
+
       terminal.open(containerRef.current!)
-      termFit.fit()
 
       // Clean up aaaall the things :)
       return () => {
+        disposable.dispose()
+
         termFitRef.current?.dispose()
         termFitRef.current = null
 
