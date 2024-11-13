@@ -151,13 +151,6 @@ var AllowedIDEs = []AllowedIDE{
 		Experimental: true,
 	},
 	{
-		Name:         config.IDEPositron,
-		DisplayName:  "Positron",
-		Options:      vscode.Options,
-		Icon:         "https://devpod.sh/assets/positron.svg",
-		Experimental: true,
-	},
-	{
 		Name:         config.IDEMarimo,
 		DisplayName:  "Marimo",
 		Options:      vscode.Options,
@@ -169,6 +162,20 @@ var AllowedIDEs = []AllowedIDE{
 		DisplayName:  "Codium",
 		Options:      vscode.Options,
 		Icon:         "https://devpod.sh/assets/codium.svg",
+		Experimental: true,
+	},
+	{
+		Name:         config.IDEPositron,
+		DisplayName:  "Positron",
+		Options:      vscode.Options,
+		Icon:         "https://devpod.sh/assets/positron.svg",
+		Experimental: true,
+	},
+	{
+		Name:         config.IDEZed,
+		DisplayName:  "Zed",
+		Options:      ide.Options{},
+		Icon:         "https://devpod.sh/assets/zed.svg",
 		Experimental: true,
 	},
 }

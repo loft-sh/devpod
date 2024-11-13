@@ -24,4 +24,5 @@ const (
 	IDEPositron        IDE = "positron"
 	IDEMarimo          IDE = "marimo"
 	IDECodium          IDE = "codium"
+	IDEZed             IDE = "zed"
 )

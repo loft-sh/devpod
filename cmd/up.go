@@ -30,6 +30,7 @@ import (
 	"github.com/loft-sh/devpod/pkg/ide/marimo"
 	"github.com/loft-sh/devpod/pkg/ide/openvscode"
 	"github.com/loft-sh/devpod/pkg/ide/vscode"
+	"github.com/loft-sh/devpod/pkg/ide/zed"
 	open2 "github.com/loft-sh/devpod/pkg/open"
 	"github.com/loft-sh/devpod/pkg/platform"
 	"github.com/loft-sh/devpod/pkg/port"
@@ -296,6 +297,8 @@ func (cmd *UpCmd) Run(
 			return jetbrains.NewDataSpellServer(config2.GetRemoteUser(result), ideConfig.Options, log).OpenGateway(result.SubstitutionContext.ContainerWorkspaceFolder, client.Workspace())
 		case string(config.IDEFleet):
 			return startFleet(ctx, client, log)
+		case string(config.IDEZed):
+			return zed.Open(ctx, ideConfig.Options, config2.GetRemoteUser(result), result.SubstitutionContext.ContainerWorkspaceFolder, client.Workspace(), log)
 		case string(config.IDEJupyterNotebook):
 			return startJupyterNotebookInBrowser(
 				cmd.GPGAgentForwarding,
