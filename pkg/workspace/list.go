@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"strconv"
 	"strings"
 
 	managementv1 "github.com/loft-sh/api/v4/pkg/apis/management/v1"
@@ -162,10 +163,20 @@ func listProWorkspaces(ctx context.Context, devPodConfig *config.Config, log log
 			}
 
 			// last used timestamp
-			lastUsedTimestamp := types.Time{}
+			var lastUsedTimestamp types.Time
 			sleepModeConfig := instance.Status.SleepModeConfig
 			if sleepModeConfig != nil {
 				lastUsedTimestamp = types.Unix(sleepModeConfig.Status.LastActivity, 0)
+			} else {
+				var ts int64
+				if instance.Annotations != nil {
+					if val, ok := instance.Annotations["sleepmode.loft.sh/last-activity"]; ok {
+						if ts, err = strconv.ParseInt(val, 10, 64); err != nil {
+							log.Warn("received invalid sleepmode.loft.sh/last-activity from ", instance.GetName())
+						}
+					}
+				}
+				lastUsedTimestamp = types.Unix(ts, 0)
 			}
 
 			// creation timestamp
