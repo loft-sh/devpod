@@ -158,59 +158,6 @@ function ActionTerminal({ actionID }: TActionTerminalProps) {
   )
 }
 
-// {actions && actions.length > 0 && (
-//   <CollapsibleSection title="All logs" showIcon>
-//     <VStack align="start" h="72" w="full" overflowY="auto">
-//       {actions.map((action) => {
-//         if (action.status === "pending") {
-//           return null
-//         }
-//
-//         return (
-//           <LinkBox
-//             key={action.id}
-//             padding={2}
-//             fontSize="sm"
-//             borderRadius="md"
-//             width="full"
-//             display="flex"
-//             flexFlow="row nowrap"
-//             alignItems="center"
-//             gap={3}
-//             _hover={{ backgroundColor: actionHoverColor }}>
-//             {action.status === "success" && <CheckCircle color="green.300" />}
-//             {action.status === "error" && <ExclamationCircle color="red.300" />}
-//             {action.status === "cancelled" && <ExclamationTriangle color="orange.300" />}
-//
-//             <VStack align="start" spacing="0">
-//               <Text fontWeight="bold">
-//                 <LinkOverlay
-//                   as={RouterLink}
-//                   to={Routes.toProWorkspaceDetail(host, instance.id, "logs")}
-//                   state={{ origin: location.pathname, actionID: action.id }}
-//                   textTransform="capitalize">
-//                   {getActionDisplayName(action)}
-//                 </LinkOverlay>
-//               </Text>
-//               {action.finishedAt !== undefined && (
-//                 <Text color={subheadingTextColor} marginTop="-1">
-//                   {dayjs(action.finishedAt).fromNow()}
-//                 </Text>
-//               )}
-//             </VStack>
-//
-//             <DownloadLogsButton actionID={action.id} />
-//           </LinkBox>
-//         )
-//       })}
-//     </VStack>
-//   </CollapsibleSection>
-// )}
-//
-// <Box h="50vh" w="full" mb="8" mt="8">
-//   {terminal}
-// </Box>
-
 type TDownloadLogsButtonProps = Readonly<{ actionID: string }>
 function DownloadLogsButton({ actionID }: TDownloadLogsButtonProps) {
   const { download, isDownloading } = useDownloadLogs()
