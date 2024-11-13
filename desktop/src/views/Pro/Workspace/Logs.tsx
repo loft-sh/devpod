@@ -148,7 +148,8 @@ function ActionTerminal({ actionID }: TActionTerminalProps) {
 
   useEffect(() => {
     clearTerminal()
-    action?.connectOrReplay(connectStream)
+
+    return action?.connectOrReplay(connectStream)
   }, [action, clearTerminal, connectStream])
 
   return (
