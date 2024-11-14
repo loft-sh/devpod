@@ -155,6 +155,7 @@ func ResolveOptions(
 	provider *provider2.ProviderConfig,
 	userOptions map[string]string,
 	skipRequired bool,
+	skipSubOptions bool,
 	singleMachine *bool,
 	log log.Logger,
 ) (*config.Config, error) {
@@ -164,14 +165,20 @@ func ResolveOptions(
 		return nil, err
 	}
 
+	resolverOpts := []resolver.Option{
+		resolver.WithResolveGlobal(),
+		resolver.WithSkipRequired(skipRequired),
+	}
+	if !skipSubOptions {
+		resolverOpts = append(resolverOpts, resolver.WithResolveSubOptions())
+	}
+
 	// create new resolver
 	resolve := resolver.New(
 		userOptions,
 		provider2.Merge(provider2.GetBaseEnvironment(devConfig.DefaultContext, provider.Name), binaryPaths),
 		log,
-		resolver.WithResolveGlobal(),
-		resolver.WithResolveSubOptions(),
-		resolver.WithSkipRequired(skipRequired),
+		resolverOpts...,
 	)
 
 	// loop and resolve options, as soon as we encounter a new dynamic option it will get filled
