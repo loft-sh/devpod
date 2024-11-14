@@ -52,13 +52,14 @@ func NewBuildCmd(flags *flags.GlobalFlags) *cobra.Command {
 				if err != nil {
 					return fmt.Errorf("cannot push to %s, please make sure you have push permissions to repository %s", cmd.Repository, cmd.Repository)
 				}
+			}
 
-				if cmd.Tag != nil {
-					err = image.ValidateTags(cmd.Tag)
+			// validate tags
+			if cmd.Tag != nil {
+				err = image.ValidateTags(cmd.Tag)
 
-					if err != nil {
-						return fmt.Errorf("cannot build image, invalid tag defined %s", cmd.Tag)
-					}
+				if err != nil {
+					return fmt.Errorf("cannot build image, %v", err)
 				}
 			}
 
