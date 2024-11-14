@@ -23,7 +23,16 @@ import { HiOutlineCode, HiShare } from "react-icons/hi"
 import { client } from "../../client"
 import { IDEIcon } from "../../components"
 import { TActionID, useProInstances } from "../../contexts"
-import { ArrowCycle, ArrowPath, CommandLine, Ellipsis, Pause, Play, Trash } from "../../icons"
+import {
+  ArrowCycle,
+  ArrowPath,
+  CommandLine,
+  Ellipsis,
+  Pause,
+  Play,
+  Stack3D,
+  Trash,
+} from "../../icons"
 import { getIDEDisplayName, useHover } from "../../lib"
 import { TIDE, TIDEs, TProInstance, TProvider, TWorkspace, TWorkspaceID } from "../../types"
 
@@ -42,6 +51,7 @@ type TWorkspaceControlsProps = Readonly<{
   onDeleteClicked: VoidFunction
   onStopClicked: VoidFunction
   onLogsClicked: VoidFunction
+  onChangeOptionsClicked?: VoidFunction
 }>
 export function WorkspaceControls({
   id,
@@ -58,6 +68,7 @@ export function WorkspaceControls({
   onDeleteClicked,
   onStopClicked,
   onLogsClicked,
+  onChangeOptionsClicked,
 }: TWorkspaceControlsProps) {
   const [[proInstances]] = useProInstances()
   const proInstance = useMemo<TProInstance | undefined>(() => {
@@ -89,6 +100,8 @@ export function WorkspaceControls({
     "Cannot open this workspace because it is busy. If this doesn't change, try to force delete and recreate it."
   const [isStartWithHovering, startWithRef] = useHover()
   const [isPopoverHovering, popoverContentRef] = useHover()
+  const isChangeOptionsEnabled =
+    workspace.data?.provider?.options != null && proInstance !== undefined
 
   return (
     <HStack spacing="2" width="full" justifyContent="end">
@@ -176,6 +189,14 @@ export function WorkspaceControls({
                 isDisabled={isOpenDisabled || isLoading}>
                 Reset
               </MenuItem>
+              {isChangeOptionsEnabled && (
+                <MenuItem
+                  icon={<Stack3D boxSize={4} />}
+                  onClick={onChangeOptionsClicked}
+                  isDisabled={isOpenDisabled || isLoading}>
+                  Change Options
+                </MenuItem>
+              )}
               {isShareEnabled && (
                 <MenuItem icon={<Icon as={HiShare} boxSize={4} />} onClick={handleShareClicked}>
                   Share
