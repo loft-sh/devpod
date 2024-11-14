@@ -75,6 +75,7 @@ func (cmd *SetOptionsCmd) Run(ctx context.Context, args []string, log log.Logger
 		cmd.Reconfigure,
 		cmd.Dry,
 		cmd.Dry,
+		false,
 		&cmd.SingleMachine,
 		log,
 	)

@@ -53,8 +53,6 @@ export function useAppReady() {
         proInstances
           .filter((instance) => instance.provider && instance.host)
           .map(async (instance) => {
-            client.log("info", `[${instance.host ?? ""}] Checking for update`)
-
             const proClient = client.getProClient(instance.host!)
             const checkUpdateRes = await proClient.checkUpdate()
             if (checkUpdateRes.err) {
@@ -81,7 +79,10 @@ export function useAppReady() {
 
             const updateRes = await proClient.update(newVersion)
             if (updateRes.err) {
-              client.log("error", `[${instance.host ?? ""}] Failed to upgrade: ${updateRes.val}`)
+              client.log(
+                "error",
+                `[${instance.host ?? ""}] Failed to upgrade: ${updateRes.val.message}`
+              )
 
               return null
             }

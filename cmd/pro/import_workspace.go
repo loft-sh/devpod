@@ -168,7 +168,7 @@ func (cmd *ImportCmd) writeWorkspaceDefinition(devPodConfig *config.Config, prov
 		},
 	}
 
-	devPodConfig, err := options.ResolveOptions(context.Background(), devPodConfig, provider, instanceOpts, false, nil, cmd.log)
+	devPodConfig, err := options.ResolveOptions(context.Background(), devPodConfig, provider, instanceOpts, false, false, nil, cmd.log)
 	if err != nil {
 		return fmt.Errorf("resolve options: %w", err)
 	}

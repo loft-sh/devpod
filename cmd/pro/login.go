@@ -175,7 +175,7 @@ func (cmd *LoginCmd) Run(ctx context.Context, fullURL string, log log.Logger) er
 
 	// 3. Configure provider
 	if cmd.Use {
-		err := providercmd.ConfigureProvider(ctx, providerConfig, devPodConfig.DefaultContext, cmd.Options, false, false, nil, log)
+		err := providercmd.ConfigureProvider(ctx, providerConfig, devPodConfig.DefaultContext, cmd.Options, false, false, false, nil, log)
 		if err != nil {
 			return errors.Wrap(err, "configure provider")
 		}
