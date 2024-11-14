@@ -3,13 +3,18 @@ package image
 import (
 	"context"
 	"fmt"
-	"net/http"
-
 	"github.com/google/go-containerregistry/pkg/authn"
 	"github.com/google/go-containerregistry/pkg/name"
 	v1 "github.com/google/go-containerregistry/pkg/v1"
 	"github.com/google/go-containerregistry/pkg/v1/remote"
 	"github.com/pkg/errors"
+	"net/http"
+	"regexp"
+)
+
+var (
+	dockerTagRegexp  = regexp.MustCompile(`^[\w][\w.-]*$`)
+	DockerTagMaxSize = 128
 )
 
 func GetImage(ctx context.Context, image string) (v1.Image, error) {
@@ -57,4 +62,28 @@ func GetImageConfig(ctx context.Context, image string) (*v1.ConfigFile, v1.Image
 	}
 
 	return configFile, img, nil
+}
+
+func ValidateTags(tags []string) error {
+	for _, tag := range tags {
+		if !IsValidDockerTag(tag) {
+			return fmt.Errorf(`%q is not a valid docker tag
+
+ - a tag name must be valid ASCII and may contain lowercase and uppercase letters, digits, underscores, periods and dashes;
+ - a tag name may not start with a period or a dash and may contain a maximum of 128 characters.`, tag)
+		}
+	}
+	return nil
+}
+
+func IsValidDockerTag(tag string) bool {
+	if shouldNotBeSlugged(tag, dockerTagRegexp, DockerTagMaxSize) {
+		return true
+	}
+
+	return false
+}
+
+func shouldNotBeSlugged(data string, regexp *regexp.Regexp, maxSize int) bool {
+	return len(data) == 0 || regexp.Match([]byte(data)) && len(data) <= maxSize
 }

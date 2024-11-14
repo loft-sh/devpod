@@ -104,6 +104,7 @@ func (r *runner) build(
 			ImageName:     overrideBuildImageName,
 			PrebuildHash:  imageTag,
 			RegistryCache: options.RegistryCache,
+			Tags:          options.Tag,
 		}, nil
 	}
 
@@ -135,6 +136,7 @@ func (r *runner) extendImage(
 			ImageMetadata: extendedBuildInfo.MetadataConfig,
 			ImageName:     imageBase,
 			RegistryCache: options.RegistryCache,
+			Tags:          options.Tag,
 		}, nil
 	}
 
@@ -322,6 +324,7 @@ func (r *runner) buildImage(
 					ImageName:     prebuildImage,
 					PrebuildHash:  prebuildHash,
 					RegistryCache: options.RegistryCache,
+					Tags:          options.Tag,
 				}, nil
 			} else if err != nil {
 				r.Log.Debugf("Error trying to find prebuild image %s: %v", prebuildImage, err)
@@ -385,6 +388,7 @@ func dockerlessFallback(
 			User: buildInfo.User,
 		},
 		RegistryCache: options.RegistryCache,
+		Tags:          options.Tag,
 	}, nil
 }
 

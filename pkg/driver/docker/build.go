@@ -46,6 +46,7 @@ func (d *dockerDriver) BuildDevContainer(
 				ImageName:     imageName,
 				PrebuildHash:  prebuildHash,
 				RegistryCache: options.RegistryCache,
+				Tags:          options.Tag,
 			}, nil
 		} else if err != nil {
 			d.Log.Debugf("Error trying to find local image %s: %v", imageName, err)
@@ -114,6 +115,7 @@ func (d *dockerDriver) BuildDevContainer(
 		ImageName:     imageName,
 		PrebuildHash:  prebuildHash,
 		RegistryCache: options.RegistryCache,
+		Tags:          options.Tag,
 	}, nil
 }
 

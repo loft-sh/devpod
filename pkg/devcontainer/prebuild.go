@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"github.com/loft-sh/devpod/pkg/devcontainer/config"
 	"github.com/loft-sh/devpod/pkg/driver"
@@ -70,7 +71,6 @@ func (r *runner) Build(ctx context.Context, options provider.BuildOptions) (stri
 	}
 
 	if isDockerComposeConfig(substitutedConfig.Config) {
-		r.Log.Debug("Tagging image prebuild=%s buildInfo=%s", prebuildImage, buildInfo.ImageName)
 		err = dockerDriver.TagDevContainer(ctx, buildInfo.ImageName, prebuildImage)
 		if err != nil {
 			return "", errors.Wrap(err, "tag image")
@@ -87,10 +87,27 @@ func (r *runner) Build(ctx context.Context, options provider.BuildOptions) (stri
 		)
 	}
 
+	// Setup all image tags (prebuild and any user defined tags)
+	ImageRefs := []string{prebuildImage}
+
+	imageRepoName := strings.Split(prebuildImage, ":")
+	if buildInfo.Tags != nil {
+		for _, tag := range buildInfo.Tags {
+			ImageRefs = append(ImageRefs, imageRepoName[0]+":"+tag)
+		}
+	}
+
+	// tag the image
+	for _, imageRef := range ImageRefs {
+		err = dockerDriver.TagDevContainer(ctx, prebuildImage, imageRef)
+	}
+
 	// push the image to the registry
-	err = dockerDriver.PushDevContainer(ctx, prebuildImage)
-	if err != nil {
-		return "", errors.Wrap(err, "push image")
+	for _, imageRef := range ImageRefs {
+		err = dockerDriver.PushDevContainer(ctx, imageRef)
+		if err != nil {
+			return "", errors.Wrap(err, "push image")
+		}
 	}
 
 	return prebuildImage, nil

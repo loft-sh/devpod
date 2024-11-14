@@ -222,6 +222,7 @@ type CLIOptions struct {
 	Repository string   `json:"repository,omitempty"`
 	SkipPush   bool     `json:"skipPush,omitempty"`
 	Platform   []string `json:"platform,omitempty"`
+	Tag        []string `json:"tag,omitempty"`
 
 	ForceBuild            bool   `json:"forceBuild,omitempty"`
 	ForceDockerless       bool   `json:"forceDockerless,omitempty"`
