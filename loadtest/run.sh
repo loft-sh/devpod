@@ -1,7 +1,7 @@
 #!/bin/zsh
 
-export NUM_WORKSPACES=9
-export NUM_COMMANDS_PER_WORKSPACE=5
+export NUM_WORKSPACES=10
+export NUM_COMMANDS_PER_WORKSPACE=20
 
 echo "Running $NUM_WORKSPACES workspaces with $NUM_COMMANDS_PER_WORKSPACE commands each ..."
 
@@ -9,7 +9,7 @@ echo "Running $NUM_WORKSPACES workspaces with $NUM_COMMANDS_PER_WORKSPACE comman
 for j in $(seq 1 $NUM_WORKSPACES);
 do
     time ./emulateTraffic.sh $j &
-    sleep 0.5
+    sleep 10
 done
 
 # Keep the session active to allow the commands to execute and use STDOUT
