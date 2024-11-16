@@ -30,7 +30,7 @@ func NewOptionsCmd(flags *flags.GlobalFlags) *cobra.Command {
 		GlobalFlags: flags,
 	}
 	optionsCmd := &cobra.Command{
-		Use:   "options",
+		Use:   "options [provider]",
 		Short: "Show options of an existing provider",
 		RunE: func(_ *cobra.Command, args []string) error {
 			return cmd.Run(context.Background(), args)
