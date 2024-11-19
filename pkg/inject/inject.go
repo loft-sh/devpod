@@ -9,9 +9,11 @@ import (
 	"io"
 	"os"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/loft-sh/devpod/pkg/command"
+	"github.com/loft-sh/devpod/pkg/util"
 	"github.com/loft-sh/log"
 	perrors "github.com/pkg/errors"
 )
@@ -114,7 +116,8 @@ func InjectAndExecute(
 	case err = <-execErrChan:
 		result = <-injectChan
 	case result = <-injectChan:
-		// we don't wait for the command termination here and will just retry on error
+		// give exec some time to properly terminate and clean up
+		util.WaitForChan(execErrChan, 2*time.Second)
 	}
 
 	// prefer result error
@@ -126,7 +129,7 @@ func InjectAndExecute(
 		return result.wasExecuted, nil
 	}
 
-	log.Debugf("Rerun command as binary was injected")
+	log.Debug("Rerun command as binary was injected")
 	delayedStderr.Start()
 	return true, exec(ctx, scriptParams.Command, stdin, stdout, delayedStderr)
 }
@@ -281,14 +284,19 @@ func readLine(reader io.Reader) (string, error) {
 }
 
 func pipe(toStdin io.Writer, fromStdin io.Reader, toStdout io.Writer, fromStdout io.Reader) error {
-	errChan := make(chan error, 2)
+	var err error
+	wg := sync.WaitGroup{}
+	wg.Add(1)
 	go func() {
-		_, err := io.Copy(toStdout, fromStdout)
-		errChan <- err
+		defer wg.Done()
+		_, err = io.Copy(toStdout, fromStdout)
 	}()
+	wg.Add(1)
 	go func() {
-		_, err := io.Copy(toStdin, fromStdin)
-		errChan <- err
+		defer wg.Done()
+		_, err = io.Copy(toStdin, fromStdin)
 	}()
-	return <-errChan
+
+	wg.Wait()
+	return err
 }

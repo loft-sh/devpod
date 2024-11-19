@@ -146,7 +146,7 @@ func (s *Server) handler(sess ssh.Session) {
 	start := time.Now()
 	if isPty {
 		s.log.Debugf("Execute SSH server PTY command: %s", strings.Join(cmd.Args, " "))
-		err = HandlePTY(sess, ptyReq, winCh, cmd, nil)
+		err = s.HandlePTY(sess, ptyReq, winCh, cmd, nil)
 	} else {
 		s.log.Debugf("Execute SSH server command TEST: %s", strings.Join(cmd.Args, " "))
 		err = s.HandleNonPTY(sess, cmd)
@@ -211,8 +211,9 @@ func (s *Server) HandleNonPTY(sess ssh.Session, cmd *exec.Cmd) (err error) {
 		}
 	}()
 
-	waitGroup.Wait()
+	// order is important here!
 	err = cmd.Wait()
+	waitGroup.Wait()
 	if err != nil {
 		return err
 	}
@@ -220,7 +221,7 @@ func (s *Server) HandleNonPTY(sess ssh.Session, cmd *exec.Cmd) (err error) {
 	return nil
 }
 
-func HandlePTY(
+func (s *Server) HandlePTY(
 	sess ssh.Session,
 	ptyReq ssh.Pty,
 	winCh <-chan ssh.Window,

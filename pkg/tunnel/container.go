@@ -14,6 +14,7 @@ import (
 	"github.com/loft-sh/devpod/pkg/metrics"
 	"github.com/loft-sh/devpod/pkg/provider"
 	devssh "github.com/loft-sh/devpod/pkg/ssh"
+	"github.com/loft-sh/devpod/pkg/util"
 	"github.com/loft-sh/log"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
@@ -140,8 +141,10 @@ func (c *ContainerHandler) Run(ctx context.Context, handler Handler, cfg *config
 	// wait for result
 	select {
 	case err := <-containerChan:
+		util.WaitForChan(tunnelChan, 2*time.Second)
 		return errors.Wrap(err, "tunnel to container")
 	case err := <-tunnelChan:
+		util.WaitForChan(containerChan, 2*time.Second)
 		return errors.Wrap(err, "connect to server")
 	}
 }
@@ -215,9 +218,6 @@ func (c *ContainerHandler) runRunInContainer(ctx context.Context, sshClient *ssh
 		defer writer.Close()
 		defer stdoutWriter.Close()
 		defer cancel()
-
-		c.log.Debugf("Run container tunnel")
-		defer c.log.Debugf("Container tunnel exited")
 
 		command := fmt.Sprintf("'%s' agent container-tunnel --workspace-info '%s'", c.client.AgentPath(), workspaceInfo)
 		if c.log.GetLevel() == logrus.DebugLevel {
