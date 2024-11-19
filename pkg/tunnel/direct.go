@@ -4,8 +4,10 @@ import (
 	"context"
 	"io"
 	"os"
+	"time"
 
 	devssh "github.com/loft-sh/devpod/pkg/ssh"
+	"github.com/loft-sh/devpod/pkg/util"
 	"github.com/pkg/errors"
 )
 
@@ -52,8 +54,10 @@ func NewTunnel(ctx context.Context, tunnel Tunnel, handler Handler) error {
 	// wait for result
 	select {
 	case err := <-innerTunnelChan:
+		util.WaitForChan(outerTunnelChan, 2*time.Second)
 		return errors.Wrap(err, "inner tunnel")
 	case err := <-outerTunnelChan:
+		util.WaitForChan(innerTunnelChan, 2*time.Second)
 		return errors.Wrap(err, "outer tunnel")
 	}
 }
