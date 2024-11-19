@@ -4,7 +4,11 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"os"
+	"time"
 
+	"github.com/google/uuid"
+	"github.com/loft-sh/devpod/pkg/metrics"
 	"github.com/loft-sh/devpod/pkg/stdio"
 	"github.com/pkg/errors"
 	"golang.org/x/crypto/ssh"
@@ -103,6 +107,15 @@ func Run(ctx context.Context, client *ssh.Client, command string, stdin io.Reade
 			return err
 		}
 	}
+	traceId := os.Getenv("LOFT_TRACE_ID")
+	if traceId == "" {
+		traceId = uuid.New().String()
+		_ = os.Setenv("LOFT_TRACE_ID", traceId)
+	}
+	err = sess.Setenv("LOFT_TRACE_ID", traceId)
+	if err != nil {
+		return err
+	}
 
 	exit := make(chan struct{})
 	defer close(exit)
@@ -118,6 +131,12 @@ func Run(ctx context.Context, client *ssh.Client, command string, stdin io.Reade
 	sess.Stdin = stdin
 	sess.Stdout = stdout
 	sess.Stderr = stderr
+
+	start := time.Now()
+	defer func() {
+		metrics.ObserveSSHSessionWithID(traceId, "ssh", time.Since(start).Milliseconds())
+	}()
+
 	err = sess.Run(command)
 	if err != nil {
 		return err

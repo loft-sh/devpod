@@ -11,6 +11,7 @@ import (
 	"path/filepath"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/blang/semver"
 	"github.com/loft-sh/devpod/cmd/flags"
@@ -31,6 +32,7 @@ import (
 	"github.com/loft-sh/devpod/pkg/ide/openvscode"
 	"github.com/loft-sh/devpod/pkg/ide/vscode"
 	"github.com/loft-sh/devpod/pkg/ide/zed"
+	"github.com/loft-sh/devpod/pkg/metrics"
 	open2 "github.com/loft-sh/devpod/pkg/open"
 	"github.com/loft-sh/devpod/pkg/platform"
 	"github.com/loft-sh/devpod/pkg/port"
@@ -491,6 +493,12 @@ func (cmd *UpCmd) devPodUpMachine(
 	if log.GetLevel() == logrus.DebugLevel {
 		agentCommand += " --debug"
 	}
+
+	start := time.Now()
+	defer func() {
+		log.Info("finished injecting agent ")
+		metrics.ObserveSSHSession("inject_agent_local", time.Since(start).Milliseconds())
+	}()
 
 	agentInjectFunc := func(cancelCtx context.Context, sshCmd string, sshTunnelStdinReader, sshTunnelStdoutWriter *os.File, writer io.WriteCloser) error {
 		return agent.InjectAgentAndExecute(

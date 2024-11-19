@@ -6,11 +6,13 @@ import (
 	"io"
 	"os"
 	"strings"
+	"time"
 
 	"github.com/loft-sh/log"
 
 	client2 "github.com/loft-sh/devpod/pkg/client"
 	config2 "github.com/loft-sh/devpod/pkg/devcontainer/config"
+	"github.com/loft-sh/devpod/pkg/metrics"
 	devssh "github.com/loft-sh/devpod/pkg/ssh"
 	devsshagent "github.com/loft-sh/devpod/pkg/ssh/agent"
 	"github.com/pkg/errors"
@@ -54,6 +56,12 @@ func ExecuteCommand(
 
 		writer := log.Writer(logrus.InfoLevel, false)
 		defer writer.Close()
+
+		start := time.Now()
+		defer func() {
+			log.Info("finished injecting agent ")
+			metrics.ObserveSSHSession("inject_agent_command", time.Since(start).Milliseconds())
+		}()
 
 		log.Debugf("Inject and run command: %s", sshCommand)
 		err := agentInject(ctx, sshCommand, sshTunnelStdinReader, sshTunnelStdoutWriter, writer)
@@ -130,6 +138,12 @@ func ExecuteCommand(
 		} else {
 			errChan <- nil
 		}
+	}()
+
+	start := time.Now()
+	defer func() {
+		log.Info("finished tunnel func")
+		metrics.ObserveSSHSession("tunnel", time.Since(start).Milliseconds())
 	}()
 
 	result, err := tunnelServerFunc(cancelCtx, gRPCConnStdinWriter, gRPCConnStdoutReader)

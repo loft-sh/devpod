@@ -11,6 +11,7 @@ import (
 	"github.com/loft-sh/devpod/pkg/agent"
 	"github.com/loft-sh/devpod/pkg/client"
 	"github.com/loft-sh/devpod/pkg/config"
+	"github.com/loft-sh/devpod/pkg/metrics"
 	"github.com/loft-sh/devpod/pkg/provider"
 	devssh "github.com/loft-sh/devpod/pkg/ssh"
 	"github.com/loft-sh/log"
@@ -73,6 +74,11 @@ func (c *ContainerHandler) Run(ctx context.Context, handler Handler, cfg *config
 		if c.log.GetLevel() == logrus.DebugLevel {
 			command += " --debug"
 		}
+		start := time.Now()
+		defer func() {
+			c.log.Info("finished injecting agent ")
+			metrics.ObserveSSHSession("inject_agent_tunnel", time.Since(start).Milliseconds())
+		}()
 		tunnelChan <- agent.InjectAgentAndExecute(
 			cancelCtx,
 			func(ctx context.Context, command string, stdin io.Reader, stdout io.Writer, stderr io.Writer) error {
@@ -116,6 +122,12 @@ func (c *ContainerHandler) Run(ctx context.Context, handler Handler, cfg *config
 				c.updateConfig(cancelCtx, sshClient)
 			}()
 		}
+
+		start := time.Now()
+		defer func() {
+			c.log.Info("finished connecting to container ")
+			metrics.ObserveSSHSession("container_connect", time.Since(start).Milliseconds())
+		}()
 
 		// wait until we are done
 		if err := c.runRunInContainer(cancelCtx, sshClient, handler, envVars); err != nil {

@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"github.com/loft-sh/devpod/pkg/command"
+	"github.com/loft-sh/devpod/pkg/metrics"
 	"github.com/loft-sh/devpod/pkg/shell"
 	"github.com/loft-sh/log"
 	"github.com/loft-sh/ssh"
@@ -138,13 +139,18 @@ func (s *Server) handler(sess ssh.Session) {
 
 	// start shell session
 	var err error
+	start := time.Now()
 	if isPty {
 		s.log.Debugf("Execute SSH server PTY command: %s", strings.Join(cmd.Args, " "))
 		err = HandlePTY(sess, ptyReq, winCh, cmd, nil)
 	} else {
-		s.log.Debugf("Execute SSH server command: %s", strings.Join(cmd.Args, " "))
+		s.log.Debugf("Execute SSH server command TEST: %s", strings.Join(cmd.Args, " "))
 		err = s.HandleNonPTY(sess, cmd)
 	}
+	defer func() {
+		s.log.Info("Shell inner session ended for command ", cmd)
+		metrics.ObserveShellSession(time.Since(start).Milliseconds())
+	}()
 
 	// exit session
 	s.exitWithError(sess, err)

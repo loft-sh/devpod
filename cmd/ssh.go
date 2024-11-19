@@ -21,6 +21,7 @@ import (
 	"github.com/loft-sh/devpod/pkg/config"
 	dpFlags "github.com/loft-sh/devpod/pkg/flags"
 	"github.com/loft-sh/devpod/pkg/gpg"
+	"github.com/loft-sh/devpod/pkg/metrics"
 	"github.com/loft-sh/devpod/pkg/port"
 	devssh "github.com/loft-sh/devpod/pkg/ssh"
 	"github.com/loft-sh/devpod/pkg/tunnel"
@@ -161,6 +162,11 @@ func (cmd *SSHCmd) startProxyTunnel(
 	return tunnel.NewTunnel(
 		ctx,
 		func(ctx context.Context, stdin io.Reader, stdout io.Writer) error {
+			start := time.Now()
+			defer func() {
+				log.Info("SSH session recorded for command ", cmd)
+				metrics.ObserveSSHSession("inner_tunnel", time.Since(start).Milliseconds())
+			}()
 			return client.Ssh(ctx, client2.SshOptions{
 				User:   cmd.User,
 				Stdin:  stdin,
@@ -441,6 +447,11 @@ func (cmd *SSHCmd) startTunnel(ctx context.Context, devPodConfig *config.Config,
 			}()
 		}
 
+		start := time.Now()
+		defer func() {
+			log.Info("SSH outer session recorded for command ", cmd)
+			metrics.ObserveSSHSession("outer_tunnel", time.Since(start).Milliseconds())
+		}()
 		return devssh.Run(ctx, containerClient, command, os.Stdin, os.Stdout, writer, envVars)
 	}
 
