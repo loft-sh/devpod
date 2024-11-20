@@ -53,7 +53,13 @@ export function ProProvider({ host, children }: { host: string; children: ReactN
     }
     setIsLoadingWorkspaces(true)
 
-    return client.watchWorkspaces(currentProject.metadata.name, (workspaces) => {
+    let canceled = false
+
+    const toCancel = client.watchWorkspaces(currentProject.metadata.name, (workspaces) => {
+      if (canceled) {
+        return
+      }
+
       // sort by last activity (newest > oldest)
       const sorted = workspaces.slice().sort((a, b) => {
         const lastActivityA = a.metadata?.annotations?.[Annotations.SleepModeLastActivity]
@@ -70,6 +76,11 @@ export function ProProvider({ host, children }: { host: string; children: ReactN
         setIsLoadingWorkspaces(false)
       }, 1_000)
     })
+
+    return () => {
+      canceled = true
+      toCancel()
+    }
   }, [client, store, currentProject])
 
   const handleProjectChanged = (newProject: ManagementV1Project) => {
