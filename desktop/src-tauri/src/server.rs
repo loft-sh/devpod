@@ -60,7 +60,7 @@ async fn signal_handler(
     AxumState(server): AxumState<ServerState>,
     Json(payload): Json<SendSignalMessage>,
 ) -> impl IntoResponse {
-    info!("received request to send signa {} to process {}", payload.signal, payload.process_id.to_string());
+    info!("received request to send signal {} to process {}", payload.signal, payload.process_id.to_string());
     #[cfg(not(windows))]
     {
         use nix::sys::signal::{self, kill, Signal};
