@@ -137,6 +137,10 @@ func (s *Server) handler(sess ssh.Session) {
 		cmd.Env = append(cmd.Env, fmt.Sprintf("%s=%s", "SSH_AUTH_SOCK", l.Addr().String()))
 	}
 
+	if os.Getenv("LOFT_TRACE_ID") != "" {
+		cmd.Env = append(cmd.Env, fmt.Sprintf("LOFT_TRACE_ID=%s", os.Getenv("LOFT_TRACE_ID")))
+	}
+
 	// start shell session
 	var err error
 	start := time.Now()

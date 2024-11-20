@@ -14,6 +14,7 @@ import (
 	"github.com/gofrs/flock"
 	"github.com/loft-sh/devpod/pkg/client"
 	"github.com/loft-sh/devpod/pkg/config"
+	"github.com/loft-sh/devpod/pkg/metrics"
 	"github.com/loft-sh/devpod/pkg/options"
 	"github.com/loft-sh/devpod/pkg/provider"
 	"github.com/loft-sh/log"
@@ -176,6 +177,12 @@ func (s *proxyClient) Up(ctx context.Context, opt client.UpOptions) error {
 		opts["DEBUG"] = "true"
 	}
 
+	start := time.Now()
+	defer func() {
+		s.log.Info("proxy client up finished ", s.config.Exec.Command)
+		metrics.ObserveSSHSession("up", time.Since(start).Milliseconds())
+	}()
+
 	err := RunCommandWithBinaries(
 		ctx,
 		"up",
@@ -203,6 +210,12 @@ func (s *proxyClient) Ssh(ctx context.Context, opt client.SshOptions) error {
 	defer writer.Close()
 	go func() {
 		readLogStream(reader, s.log.ErrorStreamOnly())
+	}()
+
+	start := time.Now()
+	defer func() {
+		s.log.Info("proxy client ssh finished ", s.config.Exec.Command)
+		metrics.ObserveSSHSession("proxy_ssh", time.Since(start).Milliseconds())
 	}()
 
 	err := RunCommandWithBinaries(
@@ -371,9 +384,13 @@ func (s *proxyClient) updateInstance(ctx context.Context) error {
 
 func EncodeOptions(options any, name string) map[string]string {
 	raw, _ := json.Marshal(options)
-	return map[string]string{
+	opts := map[string]string{
 		name: string(raw),
 	}
+	if os.Getenv("LOFT_TRACE_ID") != "" {
+		opts["LOFT_TRACE_ID"] = os.Getenv("LOFT_TRACE_ID")
+	}
+	return opts
 }
 
 func DecodeOptionsFromEnv(name string, into any) (bool, error) {

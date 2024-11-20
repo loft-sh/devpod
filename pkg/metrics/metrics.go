@@ -4,6 +4,7 @@ import (
 	"encoding/csv"
 	"fmt"
 	"os"
+	"time"
 )
 
 const filename = "/tmp/metrics.csv"
@@ -38,7 +39,7 @@ func writeToCSV(traceId, sessionType string, length int64) (err error) {
 	}
 	defer file.Close()
 
-	data := []string{traceId, sessionType, fmt.Sprintf("%dms", length)}
+	data := []string{traceId, sessionType, fmt.Sprintf("%dms", length), time.Now().Format("2006-01-02-15:04:05")}
 
 	writer := csv.NewWriter(file)
 	defer writer.Flush()

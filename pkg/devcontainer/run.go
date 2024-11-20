@@ -16,6 +16,7 @@ import (
 	"github.com/loft-sh/devpod/pkg/driver/drivercreate"
 	"github.com/loft-sh/devpod/pkg/encoding"
 	"github.com/loft-sh/devpod/pkg/language"
+	"github.com/loft-sh/devpod/pkg/metrics"
 	provider2 "github.com/loft-sh/devpod/pkg/provider"
 	"github.com/loft-sh/log"
 	"github.com/pkg/errors"
@@ -161,6 +162,12 @@ func (r *runner) Command(
 	stdout io.Writer,
 	stderr io.Writer,
 ) error {
+	start := time.Now()
+	defer func() {
+		r.Log.Info("runner command finished ", command)
+		metrics.ObserveSSHSession("command", time.Since(start).Milliseconds())
+	}()
+
 	return r.Driver.CommandDevContainer(ctx, r.ID, user, command, stdin, stdout, stderr)
 }
 

@@ -1152,7 +1152,7 @@ func setupLoftPlatformAccess(context, provider, user string, client client2.Base
 	cmd.Stderr = &errb
 	err = cmd.Run()
 	if err != nil {
-		log.Debugf("failed to set up platform access in workspace: %s", errb.String())
+		log.Debugf("failed to set up platform access in workspace: %w stderr %s", err, errb.String())
 	}
 
 	return nil

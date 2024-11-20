@@ -19,6 +19,7 @@ import (
 	"github.com/loft-sh/devpod/pkg/compress"
 	"github.com/loft-sh/devpod/pkg/config"
 	config2 "github.com/loft-sh/devpod/pkg/devcontainer/config"
+	"github.com/loft-sh/devpod/pkg/metrics"
 	"github.com/loft-sh/devpod/pkg/options"
 	"github.com/loft-sh/devpod/pkg/provider"
 	"github.com/loft-sh/devpod/pkg/shell"
@@ -493,6 +494,12 @@ func (s *workspaceClient) Command(ctx context.Context, commandOptions client.Com
 		return err
 	}
 	s.m.Unlock()
+
+	start := time.Now()
+	defer func() {
+		s.log.Info("workspace client command finished ", s.config.Exec.Command)
+		metrics.ObserveSSHSession("command", time.Since(start).Milliseconds())
+	}()
 
 	// resolve options
 	return runCommand(ctx, "command", s.config.Exec.Command, environ, commandOptions.Stdin, commandOptions.Stdout, commandOptions.Stderr, s.log.ErrorStreamOnly())
