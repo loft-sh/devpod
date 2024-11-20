@@ -60,6 +60,8 @@ func (cmd *SshCmd) Run(ctx context.Context, stdin io.Reader, stdout io.Writer, s
 		return fmt.Errorf("couldn't find workspace")
 	}
 
+	cmd.Log.Info("=================== trace id ", os.Getenv("LOFT_TRACE_ID"))
+
 	conn, err := platform.DialInstance(baseClient, workspace, "ssh", platform.OptionsFromEnv(storagev1.DevPodFlagsSsh), cmd.Log)
 	if err != nil {
 		return err

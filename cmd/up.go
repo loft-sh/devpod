@@ -496,7 +496,7 @@ func (cmd *UpCmd) devPodUpMachine(
 
 	start := time.Now()
 	defer func() {
-		log.Info("finished injecting agent ")
+		log.Info("finished injecting agent local")
 		metrics.ObserveSSHSession("inject_agent_local", time.Since(start).Milliseconds())
 	}()
 

@@ -76,7 +76,7 @@ func (c *ContainerHandler) Run(ctx context.Context, handler Handler, cfg *config
 		}
 		start := time.Now()
 		defer func() {
-			c.log.Info("finished injecting agent ")
+			c.log.Info("finished injecting agent tunnel")
 			metrics.ObserveSSHSession("inject_agent_tunnel", time.Since(start).Milliseconds())
 		}()
 		tunnelChan <- agent.InjectAgentAndExecute(

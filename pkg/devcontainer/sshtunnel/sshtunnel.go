@@ -59,7 +59,7 @@ func ExecuteCommand(
 
 		start := time.Now()
 		defer func() {
-			log.Info("finished injecting agent ")
+			log.Info("finished injecting agent command")
 			metrics.ObserveSSHSession("inject_agent_command", time.Since(start).Milliseconds())
 		}()
 
