@@ -14,6 +14,7 @@ import (
 	"time"
 
 	"github.com/blang/semver"
+	"github.com/google/uuid"
 	"github.com/loft-sh/devpod/cmd/flags"
 	"github.com/loft-sh/devpod/pkg/agent"
 	"github.com/loft-sh/devpod/pkg/agent/tunnelserver"
@@ -150,6 +151,10 @@ func (cmd *UpCmd) Run(
 	// a reset implies a recreate
 	if cmd.Reset {
 		cmd.Recreate = true
+	}
+
+	if os.Getenv("LOFT_TRACE_ID") == "" {
+		_ = os.Setenv("LOFT_TRACE_ID", uuid.New().String())
 	}
 
 	// run devpod agent up

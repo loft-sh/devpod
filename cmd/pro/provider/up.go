@@ -79,9 +79,7 @@ func (cmd *UpCmd) up(ctx context.Context, workspace *managementv1.DevPodWorkspac
 	if options != nil && os.Getenv("DEBUG") == "true" {
 		options.Add("debug", "true")
 	}
-	// return fmt.Errorf("error executing imaginary")
-	return os.WriteFile("/tmp/loft-debug", []byte(fmt.Sprintf("%s", os.Getenv("LOFT_TRACE_ID"))), 0644)
-	// cmd.Log.Info("=================== trace id ", os.Getenv("LOFT_TRACE_ID"))
+	os.WriteFile("/tmp/loft-debug", []byte(os.Getenv("LOFT_TRACE_ID")), 0777)
 
 	conn, err := platform.DialInstance(client, workspace, "up", options, cmd.Log)
 	if err != nil {
