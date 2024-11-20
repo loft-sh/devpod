@@ -1,0 +1,125 @@
+{
+  // Use IntelliSense to learn about possible attributes.
+  // Hover to view descriptions of existing attributes.
+  // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "type": "lldb",
+      "request": "launch",
+      "name": "Debug unit tests in library 'ztunnel'",
+      "cargo": {
+        "args": [
+          "test",
+          "--no-run",
+          "--lib",
+          "--package=ztunnel"
+        ],
+        "filter": {
+          "name": "ztunnel",
+          "kind": "lib"
+        }
+      },
+      "args": [],
+      "cwd": "${workspaceFolder}"
+    },
+    {
+      "type": "lldb",
+      "request": "launch",
+      "name": "Debug executable 'ztunnel'",
+      "cargo": {
+        "args": [
+          "build",
+          "--bin=ztunnel",
+          "--package=ztunnel"
+        ],
+        "filter": {
+          "name": "ztunnel",
+          "kind": "bin"
+        }
+      },
+      "args": [],
+      "cwd": "${workspaceFolder}",
+      "env": {
+        "RUST_LOG": "debug",
+        "CARGO_TARGET_X86_64_UNKNOWN_LINUX_GNU_RUNNER": "sudo -E",
+      }
+    },
+    {
+      "type": "lldb",
+      "request": "launch",
+      "name": "Debug unit tests in executable 'ztunnel'",
+      "cargo": {
+        "args": [
+          "test",
+          "--no-run",
+          "--bin=ztunnel",
+          "--package=ztunnel"
+        ],
+        "filter": {
+          "name": "ztunnel",
+          "kind": "bin"
+        }
+      },
+      "args": [],
+      "cwd": "${workspaceFolder}"
+    },
+    {
+      "type": "lldb",
+      "request": "launch",
+      "name": "Debug integration test 'namespaced'",
+      "cargo": {
+        "args": [
+          "test",
+          "--no-run",
+          "--test=namespaced",
+          "--package=ztunnel"
+        ],
+        "filter": {
+          "name": "namespaced",
+          "kind": "test"
+        }
+      },
+      "args": [],
+      "cwd": "${workspaceFolder}"
+    },
+    {
+      "type": "lldb",
+      "request": "launch",
+      "name": "Debug integration test 'direct'",
+      "cargo": {
+        "args": [
+          "test",
+          "--no-run",
+          "--test=direct",
+          "--package=ztunnel"
+        ],
+        "filter": {
+          "name": "direct",
+          "kind": "test"
+        }
+      },
+      "args": [],
+      "cwd": "${workspaceFolder}"
+    },
+    {
+      "type": "lldb",
+      "request": "launch",
+      "name": "Debug benchmark 'throughput'",
+      "cargo": {
+        "args": [
+          "test",
+          "--no-run",
+          "--bench=throughput",
+          "--package=ztunnel"
+        ],
+        "filter": {
+          "name": "throughput",
+          "kind": "bench"
+        }
+      },
+      "args": [],
+      "cwd": "${workspaceFolder}"
+    }
+  ]
+}
