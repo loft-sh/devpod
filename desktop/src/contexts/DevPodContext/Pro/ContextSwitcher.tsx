@@ -23,6 +23,7 @@ import {
   Portal,
   Text,
   VStack,
+  Tooltip,
 } from "@chakra-ui/react"
 import { ManagementV1Project } from "@loft-enterprise/client/gen/models/managementV1Project"
 import { ReactNode, useMemo } from "react"
@@ -86,7 +87,7 @@ export function ContextSwitcher({
           </Button>
         </PopoverTrigger>
         <Portal>
-          <PopoverContent>
+          <PopoverContent minWidth={"25rem"}>
             <PopoverBody p="0">
               <List>
                 {proInstances.map(({ host, authenticated, image }) => (
@@ -188,7 +189,12 @@ function PlatformDetails({
               borderBottomWidth: "thin",
             }
           : {})}>
-        <HStack w="full" justify="space-between">
+        <HStack
+          w="full"
+          overflow="hidden"
+          textOverflow="ellipsis"
+          whiteSpace="nowrap"
+          justify="space-between">
           {image ? (
             typeof image === "string" ? (
               <Image src={image} />
@@ -196,22 +202,37 @@ function PlatformDetails({
               image
             )
           ) : (
-            <Text
-              maxW="50%"
-              fontWeight="semibold"
-              fontSize="sm"
-              overflow="hidden"
-              textOverflow="ellipsis">
-              {host}
-            </Text>
+            <Tooltip maxW={"25rem"} label={host} openDelay={0} closeDelay={0}>
+              <Text
+                maxW="50%"
+                fontWeight="semibold"
+                fontSize="sm"
+                overflow="hidden"
+                textOverflow="ellipsis">
+                {host}
+              </Text>
+            </Tooltip>
           )}
-          <HStack>
+          <HStack maxW="50%">
             {authenticated != null && (
-              <Box boxSize="2" bg={authenticated ? "green.400" : "orange.400"} rounded="full" />
+              <Box
+                flexShrink="0"
+                boxSize="2"
+                bg={authenticated ? "green.400" : "orange.400"}
+                rounded="full"
+              />
             )}
-            <Text fontSize="xs" fontWeight="normal">
-              {host}
-            </Text>
+            <Tooltip maxW={"25rem"} label={host} openDelay={0} closeDelay={0}>
+              <Text
+                overflow="hidden"
+                textOverflow="ellipsis"
+                whiteSpace="nowrap"
+                marginTop="1px"
+                fontSize="xs"
+                fontWeight="normal">
+                {host}
+              </Text>
+            </Tooltip>
             {host !== HOST_OSS && (
               <Menu>
                 <MenuButton
