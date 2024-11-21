@@ -20,6 +20,11 @@ const (
 	VirtualClusterProDistroGenericSync                 FeatureName = "vcp-distro-generic-sync"
 	VirtualClusterProDistroTranslatePatches            FeatureName = "vcp-distro-translate-patches"
 	VirtualClusterEnterprisePlugins                    FeatureName = "vcluster-enterprise-plugins"
+	VirtualClusterProDistroFips                        FeatureName = "vcp-distro-fips"
+	VirtualClusterProDistroIntegrationsExternalSecrets FeatureName = "vcp-distro-integrations-external-secrets"
+	VirtualClusterProDistroIntegrationsKubeVirt        FeatureName = "vcp-distro-integrations-kube-virt"
+	VirtualClusterProDistroExternalDatabase            FeatureName = "vcp-distro-external-database"
+	VirtualClusterProDistroDatabaseConnector           FeatureName = "connector-external-database"
 
 	// Spaces & Clusters
 	ConnectedClusters  FeatureName = "connected-clusters"
@@ -79,5 +84,10 @@ func GetVClusterFeatures() []FeatureName {
 		VirtualClusterProDistroGenericSync,
 		VirtualClusterProDistroTranslatePatches,
 		VirtualClusterEnterprisePlugins,
+		VirtualClusterProDistroFips,
+		VirtualClusterProDistroIntegrationsKubeVirt,
+		VirtualClusterProDistroIntegrationsExternalSecrets,
+		VirtualClusterProDistroExternalDatabase,
+		VirtualClusterProDistroDatabaseConnector,
 	}
 }

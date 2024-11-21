@@ -22,6 +22,8 @@ type Interface interface {
 	DevPodEnvironmentTemplates() DevPodEnvironmentTemplateInformer
 	// DevPodWorkspaceInstances returns a DevPodWorkspaceInstanceInformer.
 	DevPodWorkspaceInstances() DevPodWorkspaceInstanceInformer
+	// DevPodWorkspacePresets returns a DevPodWorkspacePresetInformer.
+	DevPodWorkspacePresets() DevPodWorkspacePresetInformer
 	// DevPodWorkspaceTemplates returns a DevPodWorkspaceTemplateInformer.
 	DevPodWorkspaceTemplates() DevPodWorkspaceTemplateInformer
 	// NetworkPeers returns a NetworkPeerInformer.
@@ -92,6 +94,11 @@ func (v *version) DevPodEnvironmentTemplates() DevPodEnvironmentTemplateInformer
 // DevPodWorkspaceInstances returns a DevPodWorkspaceInstanceInformer.
 func (v *version) DevPodWorkspaceInstances() DevPodWorkspaceInstanceInformer {
 	return &devPodWorkspaceInstanceInformer{factory: v.factory, namespace: v.namespace, tweakListOptions: v.tweakListOptions}
+}
+
+// DevPodWorkspacePresets returns a DevPodWorkspacePresetInformer.
+func (v *version) DevPodWorkspacePresets() DevPodWorkspacePresetInformer {
+	return &devPodWorkspacePresetInformer{factory: v.factory, tweakListOptions: v.tweakListOptions}
 }
 
 // DevPodWorkspaceTemplates returns a DevPodWorkspaceTemplateInformer.

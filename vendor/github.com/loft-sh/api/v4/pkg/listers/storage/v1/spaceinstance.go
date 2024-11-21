@@ -4,8 +4,8 @@ package v1
 
 import (
 	v1 "github.com/loft-sh/api/v4/pkg/apis/storage/v1"
-	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/labels"
+	"k8s.io/client-go/listers"
 	"k8s.io/client-go/tools/cache"
 )
 
@@ -22,25 +22,17 @@ type SpaceInstanceLister interface {
 
 // spaceInstanceLister implements the SpaceInstanceLister interface.
 type spaceInstanceLister struct {
-	indexer cache.Indexer
+	listers.ResourceIndexer[*v1.SpaceInstance]
 }
 
 // NewSpaceInstanceLister returns a new SpaceInstanceLister.
 func NewSpaceInstanceLister(indexer cache.Indexer) SpaceInstanceLister {
-	return &spaceInstanceLister{indexer: indexer}
-}
-
-// List lists all SpaceInstances in the indexer.
-func (s *spaceInstanceLister) List(selector labels.Selector) (ret []*v1.SpaceInstance, err error) {
-	err = cache.ListAll(s.indexer, selector, func(m interface{}) {
-		ret = append(ret, m.(*v1.SpaceInstance))
-	})
-	return ret, err
+	return &spaceInstanceLister{listers.New[*v1.SpaceInstance](indexer, v1.Resource("spaceinstance"))}
 }
 
 // SpaceInstances returns an object that can list and get SpaceInstances.
 func (s *spaceInstanceLister) SpaceInstances(namespace string) SpaceInstanceNamespaceLister {
-	return spaceInstanceNamespaceLister{indexer: s.indexer, namespace: namespace}
+	return spaceInstanceNamespaceLister{listers.NewNamespaced[*v1.SpaceInstance](s.ResourceIndexer, namespace)}
 }
 
 // SpaceInstanceNamespaceLister helps list and get SpaceInstances.
@@ -58,26 +50,5 @@ type SpaceInstanceNamespaceLister interface {
 // spaceInstanceNamespaceLister implements the SpaceInstanceNamespaceLister
 // interface.
 type spaceInstanceNamespaceLister struct {
-	indexer   cache.Indexer
-	namespace string
-}
-
-// List lists all SpaceInstances in the indexer for a given namespace.
-func (s spaceInstanceNamespaceLister) List(selector labels.Selector) (ret []*v1.SpaceInstance, err error) {
-	err = cache.ListAllByNamespace(s.indexer, s.namespace, selector, func(m interface{}) {
-		ret = append(ret, m.(*v1.SpaceInstance))
-	})
-	return ret, err
-}
-
-// Get retrieves the SpaceInstance from the indexer for a given namespace and name.
-func (s spaceInstanceNamespaceLister) Get(name string) (*v1.SpaceInstance, error) {
-	obj, exists, err := s.indexer.GetByKey(s.namespace + "/" + name)
-	if err != nil {
-		return nil, err
-	}
-	if !exists {
-		return nil, errors.NewNotFound(v1.Resource("spaceinstance"), name)
-	}
-	return obj.(*v1.SpaceInstance), nil
+	listers.ResourceIndexer[*v1.SpaceInstance]
 }

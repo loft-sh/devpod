@@ -4,8 +4,8 @@ package v1
 
 import (
 	v1 "github.com/loft-sh/api/v4/pkg/apis/management/v1"
-	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/labels"
+	"k8s.io/client-go/listers"
 	"k8s.io/client-go/tools/cache"
 )
 
@@ -23,30 +23,10 @@ type ConfigLister interface {
 
 // configLister implements the ConfigLister interface.
 type configLister struct {
-	indexer cache.Indexer
+	listers.ResourceIndexer[*v1.Config]
 }
 
 // NewConfigLister returns a new ConfigLister.
 func NewConfigLister(indexer cache.Indexer) ConfigLister {
-	return &configLister{indexer: indexer}
-}
-
-// List lists all Configs in the indexer.
-func (s *configLister) List(selector labels.Selector) (ret []*v1.Config, err error) {
-	err = cache.ListAll(s.indexer, selector, func(m interface{}) {
-		ret = append(ret, m.(*v1.Config))
-	})
-	return ret, err
-}
-
-// Get retrieves the Config from the index for a given name.
-func (s *configLister) Get(name string) (*v1.Config, error) {
-	obj, exists, err := s.indexer.GetByKey(name)
-	if err != nil {
-		return nil, err
-	}
-	if !exists {
-		return nil, errors.NewNotFound(v1.Resource("config"), name)
-	}
-	return obj.(*v1.Config), nil
+	return &configLister{listers.New[*v1.Config](indexer, v1.Resource("config"))}
 }

@@ -34,11 +34,16 @@ type UISettingsSpec struct {
 	// +optional
 	Offline bool `json:"offline,omitempty"`
 
-	// HasHelmRelease indicates whether loft has been installed via Helm
+	// HasHelmRelease indicates whether the vCluster Platform instance
+	// has been installed via Helm
 	HasHelmRelease bool `json:"hasHelmRelease,omitempty"`
 
 	// DefaultVClusterVersion is the default version of vClusters
 	DefaultVClusterVersion string `json:"defaultVClusterVersion,omitempty"`
+
+	// LoftHosted indicates whether the vCluster Platform instance
+	// is hosted and operated by Loft Labs Inc.
+	LoftHosted bool `json:"loftHosted,omitempty"`
 }
 
 type UISettingsConfig struct {

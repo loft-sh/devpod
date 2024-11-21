@@ -4,8 +4,8 @@ package v1
 
 import (
 	v1 "github.com/loft-sh/api/v4/pkg/apis/storage/v1"
-	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/labels"
+	"k8s.io/client-go/listers"
 	"k8s.io/client-go/tools/cache"
 )
 
@@ -22,25 +22,17 @@ type SharedSecretLister interface {
 
 // sharedSecretLister implements the SharedSecretLister interface.
 type sharedSecretLister struct {
-	indexer cache.Indexer
+	listers.ResourceIndexer[*v1.SharedSecret]
 }
 
 // NewSharedSecretLister returns a new SharedSecretLister.
 func NewSharedSecretLister(indexer cache.Indexer) SharedSecretLister {
-	return &sharedSecretLister{indexer: indexer}
-}
-
-// List lists all SharedSecrets in the indexer.
-func (s *sharedSecretLister) List(selector labels.Selector) (ret []*v1.SharedSecret, err error) {
-	err = cache.ListAll(s.indexer, selector, func(m interface{}) {
-		ret = append(ret, m.(*v1.SharedSecret))
-	})
-	return ret, err
+	return &sharedSecretLister{listers.New[*v1.SharedSecret](indexer, v1.Resource("sharedsecret"))}
 }
 
 // SharedSecrets returns an object that can list and get SharedSecrets.
 func (s *sharedSecretLister) SharedSecrets(namespace string) SharedSecretNamespaceLister {
-	return sharedSecretNamespaceLister{indexer: s.indexer, namespace: namespace}
+	return sharedSecretNamespaceLister{listers.NewNamespaced[*v1.SharedSecret](s.ResourceIndexer, namespace)}
 }
 
 // SharedSecretNamespaceLister helps list and get SharedSecrets.
@@ -58,26 +50,5 @@ type SharedSecretNamespaceLister interface {
 // sharedSecretNamespaceLister implements the SharedSecretNamespaceLister
 // interface.
 type sharedSecretNamespaceLister struct {
-	indexer   cache.Indexer
-	namespace string
-}
-
-// List lists all SharedSecrets in the indexer for a given namespace.
-func (s sharedSecretNamespaceLister) List(selector labels.Selector) (ret []*v1.SharedSecret, err error) {
-	err = cache.ListAllByNamespace(s.indexer, s.namespace, selector, func(m interface{}) {
-		ret = append(ret, m.(*v1.SharedSecret))
-	})
-	return ret, err
-}
-
-// Get retrieves the SharedSecret from the indexer for a given namespace and name.
-func (s sharedSecretNamespaceLister) Get(name string) (*v1.SharedSecret, error) {
-	obj, exists, err := s.indexer.GetByKey(s.namespace + "/" + name)
-	if err != nil {
-		return nil, err
-	}
-	if !exists {
-		return nil, errors.NewNotFound(v1.Resource("sharedsecret"), name)
-	}
-	return obj.(*v1.SharedSecret), nil
+	listers.ResourceIndexer[*v1.SharedSecret]
 }

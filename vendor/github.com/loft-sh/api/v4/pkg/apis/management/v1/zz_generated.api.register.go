@@ -51,6 +51,8 @@ func addKnownTypes(scheme *runtime.Scheme) error {
 		&DevPodWorkspaceInstanceState{},
 		&DevPodStopOptions{},
 		&DevPodUpOptions{},
+		&DevPodWorkspacePreset{},
+		&DevPodWorkspacePresetList{},
 		&DevPodWorkspaceTemplate{},
 		&DevPodWorkspaceTemplateList{},
 		&DirectClusterEndpointToken{},
@@ -127,6 +129,7 @@ func addKnownTypes(scheme *runtime.Scheme) error {
 		&VirtualClusterInstance{},
 		&VirtualClusterInstanceList{},
 		&VirtualClusterAccessKey{},
+		&VirtualClusterExternalDatabase{},
 		&VirtualClusterInstanceKubeConfig{},
 		&VirtualClusterInstanceLog{},
 		&VirtualClusterTemplate{},
@@ -228,6 +231,7 @@ var (
 			func() runtime.Object { return &DevPodUpOptions{} }, // Register versioned resource
 			nil,
 			management.NewDevPodUpOptionsREST),
+		management.ManagementDevPodWorkspacePresetStorage,
 		management.ManagementDevPodWorkspaceTemplateStorage,
 		management.ManagementDirectClusterEndpointTokenStorage,
 		management.ManagementEventStorage,
@@ -371,6 +375,11 @@ var (
 			func() runtime.Object { return &VirtualClusterAccessKey{} }, // Register versioned resource
 			nil,
 			management.NewVirtualClusterAccessKeyREST),
+		builders.NewApiResourceWithStorage(
+			management.InternalVirtualClusterExternalDatabaseREST,
+			func() runtime.Object { return &VirtualClusterExternalDatabase{} }, // Register versioned resource
+			nil,
+			management.NewVirtualClusterExternalDatabaseREST),
 		builders.NewApiResourceWithStorage(
 			management.InternalVirtualClusterInstanceKubeConfigREST,
 			func() runtime.Object { return &VirtualClusterInstanceKubeConfig{} }, // Register versioned resource
@@ -627,6 +636,14 @@ type DevPodUpOptionsList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:"metadata,omitempty"`
 	Items           []DevPodUpOptions `json:"items"`
+}
+
+// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
+
+type DevPodWorkspacePresetList struct {
+	metav1.TypeMeta `json:",inline"`
+	metav1.ListMeta `json:"metadata,omitempty"`
+	Items           []DevPodWorkspacePreset `json:"items"`
 }
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
@@ -1011,6 +1028,14 @@ type VirtualClusterAccessKeyList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:"metadata,omitempty"`
 	Items           []VirtualClusterAccessKey `json:"items"`
+}
+
+// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
+
+type VirtualClusterExternalDatabaseList struct {
+	metav1.TypeMeta `json:",inline"`
+	metav1.ListMeta `json:"metadata,omitempty"`
+	Items           []VirtualClusterExternalDatabase `json:"items"`
 }
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object

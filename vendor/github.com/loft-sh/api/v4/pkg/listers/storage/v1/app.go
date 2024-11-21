@@ -4,8 +4,8 @@ package v1
 
 import (
 	v1 "github.com/loft-sh/api/v4/pkg/apis/storage/v1"
-	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/labels"
+	"k8s.io/client-go/listers"
 	"k8s.io/client-go/tools/cache"
 )
 
@@ -23,30 +23,10 @@ type AppLister interface {
 
 // appLister implements the AppLister interface.
 type appLister struct {
-	indexer cache.Indexer
+	listers.ResourceIndexer[*v1.App]
 }
 
 // NewAppLister returns a new AppLister.
 func NewAppLister(indexer cache.Indexer) AppLister {
-	return &appLister{indexer: indexer}
-}
-
-// List lists all Apps in the indexer.
-func (s *appLister) List(selector labels.Selector) (ret []*v1.App, err error) {
-	err = cache.ListAll(s.indexer, selector, func(m interface{}) {
-		ret = append(ret, m.(*v1.App))
-	})
-	return ret, err
-}
-
-// Get retrieves the App from the index for a given name.
-func (s *appLister) Get(name string) (*v1.App, error) {
-	obj, exists, err := s.indexer.GetByKey(name)
-	if err != nil {
-		return nil, err
-	}
-	if !exists {
-		return nil, errors.NewNotFound(v1.Resource("app"), name)
-	}
-	return obj.(*v1.App), nil
+	return &appLister{listers.New[*v1.App](indexer, v1.Resource("app"))}
 }

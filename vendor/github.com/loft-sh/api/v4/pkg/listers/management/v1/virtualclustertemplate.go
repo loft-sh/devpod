@@ -4,8 +4,8 @@ package v1
 
 import (
 	v1 "github.com/loft-sh/api/v4/pkg/apis/management/v1"
-	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/labels"
+	"k8s.io/client-go/listers"
 	"k8s.io/client-go/tools/cache"
 )
 
@@ -23,30 +23,10 @@ type VirtualClusterTemplateLister interface {
 
 // virtualClusterTemplateLister implements the VirtualClusterTemplateLister interface.
 type virtualClusterTemplateLister struct {
-	indexer cache.Indexer
+	listers.ResourceIndexer[*v1.VirtualClusterTemplate]
 }
 
 // NewVirtualClusterTemplateLister returns a new VirtualClusterTemplateLister.
 func NewVirtualClusterTemplateLister(indexer cache.Indexer) VirtualClusterTemplateLister {
-	return &virtualClusterTemplateLister{indexer: indexer}
-}
-
-// List lists all VirtualClusterTemplates in the indexer.
-func (s *virtualClusterTemplateLister) List(selector labels.Selector) (ret []*v1.VirtualClusterTemplate, err error) {
-	err = cache.ListAll(s.indexer, selector, func(m interface{}) {
-		ret = append(ret, m.(*v1.VirtualClusterTemplate))
-	})
-	return ret, err
-}
-
-// Get retrieves the VirtualClusterTemplate from the index for a given name.
-func (s *virtualClusterTemplateLister) Get(name string) (*v1.VirtualClusterTemplate, error) {
-	obj, exists, err := s.indexer.GetByKey(name)
-	if err != nil {
-		return nil, err
-	}
-	if !exists {
-		return nil, errors.NewNotFound(v1.Resource("virtualclustertemplate"), name)
-	}
-	return obj.(*v1.VirtualClusterTemplate), nil
+	return &virtualClusterTemplateLister{listers.New[*v1.VirtualClusterTemplate](indexer, v1.Resource("virtualclustertemplate"))}
 }

@@ -24,6 +24,8 @@ type DevPodEnvironmentTemplateExpansion interface{}
 
 type DevPodWorkspaceInstanceExpansion interface{}
 
+type DevPodWorkspacePresetExpansion interface{}
+
 type DevPodWorkspaceTemplateExpansion interface{}
 
 type DirectClusterEndpointTokenExpansion interface{}

@@ -4,8 +4,8 @@ package v1
 
 import (
 	v1 "github.com/loft-sh/api/v4/pkg/apis/management/v1"
-	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/labels"
+	"k8s.io/client-go/listers"
 	"k8s.io/client-go/tools/cache"
 )
 
@@ -23,30 +23,10 @@ type OIDCClientLister interface {
 
 // oIDCClientLister implements the OIDCClientLister interface.
 type oIDCClientLister struct {
-	indexer cache.Indexer
+	listers.ResourceIndexer[*v1.OIDCClient]
 }
 
 // NewOIDCClientLister returns a new OIDCClientLister.
 func NewOIDCClientLister(indexer cache.Indexer) OIDCClientLister {
-	return &oIDCClientLister{indexer: indexer}
-}
-
-// List lists all OIDCClients in the indexer.
-func (s *oIDCClientLister) List(selector labels.Selector) (ret []*v1.OIDCClient, err error) {
-	err = cache.ListAll(s.indexer, selector, func(m interface{}) {
-		ret = append(ret, m.(*v1.OIDCClient))
-	})
-	return ret, err
-}
-
-// Get retrieves the OIDCClient from the index for a given name.
-func (s *oIDCClientLister) Get(name string) (*v1.OIDCClient, error) {
-	obj, exists, err := s.indexer.GetByKey(name)
-	if err != nil {
-		return nil, err
-	}
-	if !exists {
-		return nil, errors.NewNotFound(v1.Resource("oidcclient"), name)
-	}
-	return obj.(*v1.OIDCClient), nil
+	return &oIDCClientLister{listers.New[*v1.OIDCClient](indexer, v1.Resource("oidcclient"))}
 }

@@ -4,8 +4,8 @@ package v1
 
 import (
 	v1 "github.com/loft-sh/api/v4/pkg/apis/management/v1"
-	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/labels"
+	"k8s.io/client-go/listers"
 	"k8s.io/client-go/tools/cache"
 )
 
@@ -23,30 +23,10 @@ type DevPodEnvironmentTemplateLister interface {
 
 // devPodEnvironmentTemplateLister implements the DevPodEnvironmentTemplateLister interface.
 type devPodEnvironmentTemplateLister struct {
-	indexer cache.Indexer
+	listers.ResourceIndexer[*v1.DevPodEnvironmentTemplate]
 }
 
 // NewDevPodEnvironmentTemplateLister returns a new DevPodEnvironmentTemplateLister.
 func NewDevPodEnvironmentTemplateLister(indexer cache.Indexer) DevPodEnvironmentTemplateLister {
-	return &devPodEnvironmentTemplateLister{indexer: indexer}
-}
-
-// List lists all DevPodEnvironmentTemplates in the indexer.
-func (s *devPodEnvironmentTemplateLister) List(selector labels.Selector) (ret []*v1.DevPodEnvironmentTemplate, err error) {
-	err = cache.ListAll(s.indexer, selector, func(m interface{}) {
-		ret = append(ret, m.(*v1.DevPodEnvironmentTemplate))
-	})
-	return ret, err
-}
-
-// Get retrieves the DevPodEnvironmentTemplate from the index for a given name.
-func (s *devPodEnvironmentTemplateLister) Get(name string) (*v1.DevPodEnvironmentTemplate, error) {
-	obj, exists, err := s.indexer.GetByKey(name)
-	if err != nil {
-		return nil, err
-	}
-	if !exists {
-		return nil, errors.NewNotFound(v1.Resource("devpodenvironmenttemplate"), name)
-	}
-	return obj.(*v1.DevPodEnvironmentTemplate), nil
+	return &devPodEnvironmentTemplateLister{listers.New[*v1.DevPodEnvironmentTemplate](indexer, v1.Resource("devpodenvironmenttemplate"))}
 }

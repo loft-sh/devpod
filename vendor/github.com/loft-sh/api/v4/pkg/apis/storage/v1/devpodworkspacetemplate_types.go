@@ -130,6 +130,10 @@ type DevPodWorkspaceTemplateDefinition struct {
 	// CredentialForwarding specifies controls for how workspaces created by this template forward credentials into the workspace
 	// +optional
 	CredentialForwarding *CredentialForwarding `json:"credentialForwarding,omitempty"`
+
+	// PreventWakeUpOnConnection is used to prevent workspace that uses sleep mode from waking up on incomming ssh connection.
+	// +optional
+	PreventWakeUpOnConnection bool `json:"preventWakeUpOnConnection,omitempty"`
 }
 
 // +enum

@@ -4,14 +4,13 @@ package v1
 
 import (
 	"context"
-	"time"
 
 	v1 "github.com/loft-sh/api/v4/pkg/apis/management/v1"
 	scheme "github.com/loft-sh/api/v4/pkg/clientset/versioned/scheme"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	types "k8s.io/apimachinery/pkg/types"
 	watch "k8s.io/apimachinery/pkg/watch"
-	rest "k8s.io/client-go/rest"
+	gentype "k8s.io/client-go/gentype"
 )
 
 // OIDCClientsGetter has a method to return a OIDCClientInterface.
@@ -24,6 +23,7 @@ type OIDCClientsGetter interface {
 type OIDCClientInterface interface {
 	Create(ctx context.Context, oIDCClient *v1.OIDCClient, opts metav1.CreateOptions) (*v1.OIDCClient, error)
 	Update(ctx context.Context, oIDCClient *v1.OIDCClient, opts metav1.UpdateOptions) (*v1.OIDCClient, error)
+	// Add a +genclient:noStatus comment above the type to avoid generating UpdateStatus().
 	UpdateStatus(ctx context.Context, oIDCClient *v1.OIDCClient, opts metav1.UpdateOptions) (*v1.OIDCClient, error)
 	Delete(ctx context.Context, name string, opts metav1.DeleteOptions) error
 	DeleteCollection(ctx context.Context, opts metav1.DeleteOptions, listOpts metav1.ListOptions) error
@@ -36,133 +36,18 @@ type OIDCClientInterface interface {
 
 // oIDCClients implements OIDCClientInterface
 type oIDCClients struct {
-	client rest.Interface
+	*gentype.ClientWithList[*v1.OIDCClient, *v1.OIDCClientList]
 }
 
 // newOIDCClients returns a OIDCClients
 func newOIDCClients(c *ManagementV1Client) *oIDCClients {
 	return &oIDCClients{
-		client: c.RESTClient(),
+		gentype.NewClientWithList[*v1.OIDCClient, *v1.OIDCClientList](
+			"oidcclients",
+			c.RESTClient(),
+			scheme.ParameterCodec,
+			"",
+			func() *v1.OIDCClient { return &v1.OIDCClient{} },
+			func() *v1.OIDCClientList { return &v1.OIDCClientList{} }),
 	}
-}
-
-// Get takes name of the oIDCClient, and returns the corresponding oIDCClient object, and an error if there is any.
-func (c *oIDCClients) Get(ctx context.Context, name string, options metav1.GetOptions) (result *v1.OIDCClient, err error) {
-	result = &v1.OIDCClient{}
-	err = c.client.Get().
-		Resource("oidcclients").
-		Name(name).
-		VersionedParams(&options, scheme.ParameterCodec).
-		Do(ctx).
-		Into(result)
-	return
-}
-
-// List takes label and field selectors, and returns the list of OIDCClients that match those selectors.
-func (c *oIDCClients) List(ctx context.Context, opts metav1.ListOptions) (result *v1.OIDCClientList, err error) {
-	var timeout time.Duration
-	if opts.TimeoutSeconds != nil {
-		timeout = time.Duration(*opts.TimeoutSeconds) * time.Second
-	}
-	result = &v1.OIDCClientList{}
-	err = c.client.Get().
-		Resource("oidcclients").
-		VersionedParams(&opts, scheme.ParameterCodec).
-		Timeout(timeout).
-		Do(ctx).
-		Into(result)
-	return
-}
-
-// Watch returns a watch.Interface that watches the requested oIDCClients.
-func (c *oIDCClients) Watch(ctx context.Context, opts metav1.ListOptions) (watch.Interface, error) {
-	var timeout time.Duration
-	if opts.TimeoutSeconds != nil {
-		timeout = time.Duration(*opts.TimeoutSeconds) * time.Second
-	}
-	opts.Watch = true
-	return c.client.Get().
-		Resource("oidcclients").
-		VersionedParams(&opts, scheme.ParameterCodec).
-		Timeout(timeout).
-		Watch(ctx)
-}
-
-// Create takes the representation of a oIDCClient and creates it.  Returns the server's representation of the oIDCClient, and an error, if there is any.
-func (c *oIDCClients) Create(ctx context.Context, oIDCClient *v1.OIDCClient, opts metav1.CreateOptions) (result *v1.OIDCClient, err error) {
-	result = &v1.OIDCClient{}
-	err = c.client.Post().
-		Resource("oidcclients").
-		VersionedParams(&opts, scheme.ParameterCodec).
-		Body(oIDCClient).
-		Do(ctx).
-		Into(result)
-	return
-}
-
-// Update takes the representation of a oIDCClient and updates it. Returns the server's representation of the oIDCClient, and an error, if there is any.
-func (c *oIDCClients) Update(ctx context.Context, oIDCClient *v1.OIDCClient, opts metav1.UpdateOptions) (result *v1.OIDCClient, err error) {
-	result = &v1.OIDCClient{}
-	err = c.client.Put().
-		Resource("oidcclients").
-		Name(oIDCClient.Name).
-		VersionedParams(&opts, scheme.ParameterCodec).
-		Body(oIDCClient).
-		Do(ctx).
-		Into(result)
-	return
-}
-
-// UpdateStatus was generated because the type contains a Status member.
-// Add a +genclient:noStatus comment above the type to avoid generating UpdateStatus().
-func (c *oIDCClients) UpdateStatus(ctx context.Context, oIDCClient *v1.OIDCClient, opts metav1.UpdateOptions) (result *v1.OIDCClient, err error) {
-	result = &v1.OIDCClient{}
-	err = c.client.Put().
-		Resource("oidcclients").
-		Name(oIDCClient.Name).
-		SubResource("status").
-		VersionedParams(&opts, scheme.ParameterCodec).
-		Body(oIDCClient).
-		Do(ctx).
-		Into(result)
-	return
-}
-
-// Delete takes name of the oIDCClient and deletes it. Returns an error if one occurs.
-func (c *oIDCClients) Delete(ctx context.Context, name string, opts metav1.DeleteOptions) error {
-	return c.client.Delete().
-		Resource("oidcclients").
-		Name(name).
-		Body(&opts).
-		Do(ctx).
-		Error()
-}
-
-// DeleteCollection deletes a collection of objects.
-func (c *oIDCClients) DeleteCollection(ctx context.Context, opts metav1.DeleteOptions, listOpts metav1.ListOptions) error {
-	var timeout time.Duration
-	if listOpts.TimeoutSeconds != nil {
-		timeout = time.Duration(*listOpts.TimeoutSeconds) * time.Second
-	}
-	return c.client.Delete().
-		Resource("oidcclients").
-		VersionedParams(&listOpts, scheme.ParameterCodec).
-		Timeout(timeout).
-		Body(&opts).
-		Do(ctx).
-		Error()
-}
-
-// Patch applies the patch and returns the patched oIDCClient.
-func (c *oIDCClients) Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts metav1.PatchOptions, subresources ...string) (result *v1.OIDCClient, err error) {
-	result = &v1.OIDCClient{}
-	err = c.client.Patch(pt).
-		Resource("oidcclients").
-		Name(name).
-		SubResource(subresources...).
-		VersionedParams(&opts, scheme.ParameterCodec).
-		Body(data).
-		Do(ctx).
-		Into(result)
-	return
 }

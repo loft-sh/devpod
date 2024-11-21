@@ -231,6 +231,11 @@ func (in *InstanceCreateInput) DeepCopyInto(out *InstanceCreateInput) {
 			(*out)[key] = val
 		}
 	}
+	if in.DebugInstanceID != nil {
+		in, out := &in.DebugInstanceID, &out.DebugInstanceID
+		*out = new(string)
+		**out = **in
+	}
 	return
 }
 

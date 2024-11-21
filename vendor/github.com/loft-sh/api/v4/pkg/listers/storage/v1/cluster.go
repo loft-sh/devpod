@@ -4,8 +4,8 @@ package v1
 
 import (
 	v1 "github.com/loft-sh/api/v4/pkg/apis/storage/v1"
-	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/labels"
+	"k8s.io/client-go/listers"
 	"k8s.io/client-go/tools/cache"
 )
 
@@ -23,30 +23,10 @@ type ClusterLister interface {
 
 // clusterLister implements the ClusterLister interface.
 type clusterLister struct {
-	indexer cache.Indexer
+	listers.ResourceIndexer[*v1.Cluster]
 }
 
 // NewClusterLister returns a new ClusterLister.
 func NewClusterLister(indexer cache.Indexer) ClusterLister {
-	return &clusterLister{indexer: indexer}
-}
-
-// List lists all Clusters in the indexer.
-func (s *clusterLister) List(selector labels.Selector) (ret []*v1.Cluster, err error) {
-	err = cache.ListAll(s.indexer, selector, func(m interface{}) {
-		ret = append(ret, m.(*v1.Cluster))
-	})
-	return ret, err
-}
-
-// Get retrieves the Cluster from the index for a given name.
-func (s *clusterLister) Get(name string) (*v1.Cluster, error) {
-	obj, exists, err := s.indexer.GetByKey(name)
-	if err != nil {
-		return nil, err
-	}
-	if !exists {
-		return nil, errors.NewNotFound(v1.Resource("cluster"), name)
-	}
-	return obj.(*v1.Cluster), nil
+	return &clusterLister{listers.New[*v1.Cluster](indexer, v1.Resource("cluster"))}
 }
