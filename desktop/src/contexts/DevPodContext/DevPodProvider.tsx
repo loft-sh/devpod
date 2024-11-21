@@ -9,7 +9,7 @@ import { usePollWorkspaces } from "./workspaces"
 export type TDevpodContext = Readonly<{
   providers: TQueryResult<TProviders>
 }>
-export const DevPodContext = createContext<TDevpodContext>(null!)
+export const DevPodContext = createContext<TDevpodContext | null>(null)
 
 export function DevPodProvider({ children }: Readonly<{ children?: ReactNode }>) {
   usePollWorkspaces()
