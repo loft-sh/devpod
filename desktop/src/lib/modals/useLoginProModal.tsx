@@ -30,6 +30,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { SubmitHandler, useForm } from "react-hook-form"
 import { useNavigate } from "react-router"
 import { ConfigureProviderOptionsForm, useSetupProvider } from "@/views/Providers"
+import { To } from "react-router-dom"
 
 type TFormValues = {
   [FieldName.PRO_HOST]: string
@@ -145,14 +146,25 @@ export function useLoginProModal() {
 
     const provider = providers?.[state.providerID]
 
+    let route: To
+
     // We only redirect to the new experience if the provider supports it.
     // Support can be determined via canHealthCheck.
     if (provider && canHealthCheck(provider.config)) {
-      // workaround for layout shift after closing modal, no clue why
-      setTimeout(() => {
-        navigate(Routes.toProInstance(proInstanceID))
-      }, 0)
+      route = Routes.toProInstance(proInstanceID)
+    } else {
+      route = Routes.toWorkspaceCreate({
+        workspaceID: null,
+        ide: null,
+        rawSource: null,
+        providerID: state.providerID,
+      })
     }
+
+    // workaround for layout shift after closing modal, no clue why
+    setTimeout(() => {
+      navigate(route)
+    }, 0)
   }, [completeConfigureProvider, navigate, providers, proInstances, resetModal, state.providerID])
 
   const modal = useMemo(() => {
