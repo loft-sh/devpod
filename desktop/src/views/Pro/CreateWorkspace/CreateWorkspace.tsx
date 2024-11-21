@@ -146,6 +146,11 @@ async function buildWorkspaceInstance(
     name: template,
     version: templateVersion,
   }
+
+  instance.spec.runnerRef = {
+    runner: values.runner,
+  }
+
   try {
     instance.spec.parameters = jsyaml.dump(parameters)
   } catch (err) {
