@@ -502,7 +502,7 @@ func (cmd *UpCmd) devPodUpMachine(
 	start := time.Now()
 	defer func() {
 		log.Info("finished injecting agent local")
-		metrics.ObserveSSHSession("inject_agent_local", time.Since(start).Milliseconds())
+		metrics.ObserveSession("inject_agent_local", time.Since(start).Milliseconds())
 	}()
 
 	agentInjectFunc := func(cancelCtx context.Context, sshCmd string, sshTunnelStdinReader, sshTunnelStdoutWriter *os.File, writer io.WriteCloser) error {
@@ -1006,7 +1006,12 @@ func createSSHCommand(
 	}
 	args = append(args, extraArgs...)
 
-	return exec.CommandContext(ctx, execPath, args...), nil
+	cmd := exec.CommandContext(ctx, execPath, args...)
+
+	if os.Getenv("LOFT_TRACE_ID") != "" {
+		cmd.Env = append(cmd.Env, "LOFT_TRACE_ID="+os.Getenv("LOFT_TRACE_ID"))
+	}
+	return cmd, nil
 }
 
 func setupDotfiles(
@@ -1081,6 +1086,10 @@ func setupDotfiles(
 		dotCmd.Args = append(dotCmd.Args, "--debug")
 	}
 
+	if os.Getenv("LOFT_TRACE_ID") != "" {
+		dotCmd.Env = append(dotCmd.Env, "LOFT_TRACE_ID="+os.Getenv("LOFT_TRACE_ID"))
+	}
+
 	log.Debugf("Running command: %v", dotCmd.Args)
 
 	writer := log.Writer(logrus.InfoLevel, false)
@@ -1109,7 +1118,7 @@ func setupGitSSHSignature(signingKey string, client client2.BaseWorkspaceClient,
 		remoteUser = "root"
 	}
 
-	err = exec.Command(
+	cmd := exec.Command(
 		execPath,
 		"ssh",
 		"--agent-forwarding=true",
@@ -1120,7 +1129,13 @@ func setupGitSSHSignature(signingKey string, client client2.BaseWorkspaceClient,
 		client.Context(),
 		client.Workspace(),
 		"--command", fmt.Sprintf("devpod agent git-ssh-signature-helper %s", signingKey),
-	).Run()
+	)
+
+	if os.Getenv("LOFT_TRACE_ID") != "" {
+		cmd.Env = append(cmd.Env, "LOFT_TRACE_ID="+os.Getenv("LOFT_TRACE_ID"))
+	}
+
+	err = cmd.Run()
 	if err != nil {
 		log.Error("failure in setting up git ssh signature helper")
 	}
@@ -1154,10 +1169,13 @@ func setupLoftPlatformAccess(context, provider, user string, client client2.Base
 		client.Workspace(),
 		"--command", command,
 	)
+	if os.Getenv("LOFT_TRACE_ID") != "" {
+		cmd.Env = append(cmd.Env, "LOFT_TRACE_ID="+os.Getenv("LOFT_TRACE_ID"))
+	}
 	cmd.Stderr = &errb
 	err = cmd.Run()
 	if err != nil {
-		log.Debugf("failed to set up platform access in workspace: %w stderr %s", err, errb.String())
+		log.Debugf("failed to set up platform access in workspace: %v stderr %s", err, errb.String())
 	}
 
 	return nil
@@ -1184,7 +1202,7 @@ func performGpgForwarding(
 	// perform in background an ssh command forwarding the
 	// gpg agent, in order to have it immediately take effect
 	go func() {
-		err = exec.Command(
+		cmd := exec.Command(
 			execPath,
 			"ssh",
 			"--gpg-agent-forwarding=true",
@@ -1197,7 +1215,11 @@ func performGpgForwarding(
 			client.Workspace(),
 			"--log-output=raw",
 			"--command", "sleep infinity",
-		).Run()
+		)
+		if os.Getenv("LOFT_TRACE_ID") != "" {
+			cmd.Env = append(cmd.Env, "LOFT_TRACE_ID="+os.Getenv("LOFT_TRACE_ID"))
+		}
+		err = cmd.Run()
 		if err != nil {
 			log.Error("failure in forwarding gpg-agent")
 		}

@@ -60,9 +60,13 @@ func (cmd *SshCmd) Run(ctx context.Context, stdin io.Reader, stdout io.Writer, s
 		return fmt.Errorf("couldn't find workspace")
 	}
 
-	cmd.Log.Info("=================== trace id ", os.Getenv("LOFT_TRACE_ID"))
+	opts := platform.OptionsFromEnv(storagev1.DevPodFlagsSsh)
+	if os.Getenv("LOFT_TRACE_ID") != "" {
+		opts.Add("LOFT_TRACE_ID", os.Getenv("LOFT_TRACE_ID"))
+	}
+	os.WriteFile("/tmp/loft-ssh-debug", []byte(os.Getenv("LOFT_TRACE_ID")), 0777)
 
-	conn, err := platform.DialInstance(baseClient, workspace, "ssh", platform.OptionsFromEnv(storagev1.DevPodFlagsSsh), cmd.Log)
+	conn, err := platform.DialInstance(baseClient, workspace, "ssh", opts, cmd.Log)
 	if err != nil {
 		return err
 	}
@@ -70,7 +74,7 @@ func (cmd *SshCmd) Run(ctx context.Context, stdin io.Reader, stdout io.Writer, s
 	start := time.Now()
 	defer func() {
 		cmd.Log.Info("pro provider ", cmd)
-		metrics.ObserveSSHSession("pro_ssh", time.Since(start).Milliseconds())
+		metrics.ObserveSession("pro_ssh", time.Since(start).Milliseconds())
 	}()
 
 	_, err = remotecommand.ExecuteConn(ctx, conn, stdin, stdout, stderr, cmd.Log.ErrorStreamOnly())

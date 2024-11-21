@@ -3,6 +3,7 @@ package vscode
 import (
 	"context"
 	"fmt"
+	"os"
 	"os/exec"
 	"runtime"
 	"strings"
@@ -106,7 +107,14 @@ func openViaCLI(ctx context.Context, workspace, folder string, newWindow bool, f
 	folderUriArg := fmt.Sprintf("--folder-uri=vscode-remote://ssh-remote+%s.devpod/%s", workspace, folder)
 	args = append(args, folderUriArg)
 	log.Debugf("Run %s command %s %s", flavor, codePath, strings.Join(args, " "))
-	out, err = exec.CommandContext(ctx, codePath, args...).CombinedOutput()
+
+	// Build command
+	cmd := exec.CommandContext(ctx, codePath, args...)
+	if os.Getenv("LOFT_TRACE_ID") != "" {
+		cmd.Env = append(cmd.Env, "LOFT_TRACE_ID="+os.Getenv("LOFT_TRACE_ID"))
+	}
+
+	out, err = cmd.CombinedOutput()
 	if err != nil {
 		return command.WrapCommandError(out, err)
 	}

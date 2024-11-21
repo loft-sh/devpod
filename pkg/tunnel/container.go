@@ -77,7 +77,7 @@ func (c *ContainerHandler) Run(ctx context.Context, handler Handler, cfg *config
 		start := time.Now()
 		defer func() {
 			c.log.Info("finished injecting agent tunnel")
-			metrics.ObserveSSHSession("inject_agent_tunnel", time.Since(start).Milliseconds())
+			metrics.ObserveSession("inject_agent_tunnel", time.Since(start).Milliseconds())
 		}()
 		tunnelChan <- agent.InjectAgentAndExecute(
 			cancelCtx,
@@ -126,7 +126,7 @@ func (c *ContainerHandler) Run(ctx context.Context, handler Handler, cfg *config
 		start := time.Now()
 		defer func() {
 			c.log.Info("finished connecting to container ")
-			metrics.ObserveSSHSession("container_connect", time.Since(start).Milliseconds())
+			metrics.ObserveSession("container_connect", time.Since(start).Milliseconds())
 		}()
 
 		// wait until we are done

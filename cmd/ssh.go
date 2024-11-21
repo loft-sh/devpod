@@ -57,6 +57,7 @@ type SSHCmd struct {
 	Command string
 	User    string
 	WorkDir string
+	TraceID string
 }
 
 // NewSSHCmd creates a new ssh command
@@ -86,6 +87,10 @@ func NewSSHCmd(f *flags.GlobalFlags) *cobra.Command {
 				return err
 			}
 
+			if cmd.TraceID != "" {
+				os.Setenv("LOFT_TRACE_ID", cmd.TraceID)
+			}
+
 			return cmd.Run(ctx, devPodConfig, client, log.Default.ErrorStreamOnly())
 		},
 	}
@@ -99,6 +104,7 @@ func NewSSHCmd(f *flags.GlobalFlags) *cobra.Command {
 	sshCmd.Flags().StringVar(&cmd.Command, "command", "", "The command to execute within the workspace")
 	sshCmd.Flags().StringVar(&cmd.User, "user", "", "The user of the workspace to use")
 	sshCmd.Flags().StringVar(&cmd.WorkDir, "workdir", "", "The working directory in the container")
+	sshCmd.Flags().StringVar(&cmd.TraceID, "trace-id", "", "The trace ID to use for the command")
 	sshCmd.Flags().BoolVar(&cmd.Proxy, "proxy", false, "If true will act as intermediate proxy for a proxy provider")
 	sshCmd.Flags().BoolVar(&cmd.AgentForwarding, "agent-forwarding", true, "If true forward the local ssh keys to the remote machine")
 	sshCmd.Flags().BoolVar(&cmd.GPGAgentForwarding, "gpg-agent-forwarding", false, "If true forward the local gpg-agent to the remote machine")
@@ -165,7 +171,7 @@ func (cmd *SSHCmd) startProxyTunnel(
 			start := time.Now()
 			defer func() {
 				log.Info("SSH session recorded for command ", cmd)
-				metrics.ObserveSSHSession("inner_tunnel", time.Since(start).Milliseconds())
+				metrics.ObserveSession("inner_tunnel", time.Since(start).Milliseconds())
 			}()
 			return client.Ssh(ctx, client2.SshOptions{
 				User:   cmd.User,
@@ -450,10 +456,16 @@ func (cmd *SSHCmd) startTunnel(ctx context.Context, devPodConfig *config.Config,
 		start := time.Now()
 		defer func() {
 			log.Info("SSH outer session recorded for command ", cmd)
-			metrics.ObserveSSHSession("outer_tunnel", time.Since(start).Milliseconds())
+			metrics.ObserveSession("outer_tunnel", time.Since(start).Milliseconds())
 		}()
 		return devssh.Run(ctx, containerClient, command, os.Stdin, os.Stdout, writer, envVars)
 	}
+
+	start := time.Now()
+	defer func() {
+		log.Info("SSH outer session recorded for command ", cmd)
+		metrics.ObserveSession(fmt.Sprintf("machine_ssh: %s", cmd.Command), time.Since(start).Milliseconds())
+	}()
 
 	return machine.StartSSHSession(
 		ctx,

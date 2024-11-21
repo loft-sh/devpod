@@ -7,22 +7,16 @@ import (
 	"time"
 )
 
-const filename = "/tmp/metrics.csv"
-
-func ObserveShellSession(length int64) {
-	writeToCSV(os.Getenv("LOFT_TRACE_ID"), "shell", length)
-}
-
-func ObserveSSHSession(t string, length int64) {
+func ObserveSession(t string, length int64) {
 	writeToCSV(os.Getenv("LOFT_TRACE_ID"), t, length)
-}
-
-func ObserveSSHSessionWithID(traceId, t string, length int64) {
-	writeToCSV(traceId, t, length)
 }
 
 func writeToCSV(traceId, sessionType string, length int64) (err error) {
 	var file *os.File
+	if traceId == "" {
+		traceId = "unknown"
+	}
+	filename := fmt.Sprintf("/tmp/%s", traceId)
 	// Check file exists
 	if _, err = os.Stat(filename); err != nil {
 		// Create if not
@@ -39,7 +33,7 @@ func writeToCSV(traceId, sessionType string, length int64) (err error) {
 	}
 	defer file.Close()
 
-	data := []string{traceId, sessionType, fmt.Sprintf("%dms", length), time.Now().Format("2006-01-02-15:04:05")}
+	data := []string{time.Now().Add(time.Duration(-length * int64(time.Millisecond))).Format("2006-01-02-15:04:05"), fmt.Sprintf("%dms", length), short(sessionType)}
 
 	writer := csv.NewWriter(file)
 	defer writer.Flush()
@@ -50,4 +44,11 @@ func writeToCSV(traceId, sessionType string, length int64) (err error) {
 	}
 
 	return nil
+}
+
+func short(str string) string {
+	if len(str) <= 80 {
+		return str
+	}
+	return str[:80] + "..."
 }

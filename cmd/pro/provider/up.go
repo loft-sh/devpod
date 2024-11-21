@@ -79,6 +79,9 @@ func (cmd *UpCmd) up(ctx context.Context, workspace *managementv1.DevPodWorkspac
 	if options != nil && os.Getenv("DEBUG") == "true" {
 		options.Add("debug", "true")
 	}
+	if os.Getenv("LOFT_TRACE_ID") != "" {
+		options.Add("LOFT_TRACE_ID", os.Getenv("LOFT_TRACE_ID"))
+	}
 	os.WriteFile("/tmp/loft-debug", []byte(os.Getenv("LOFT_TRACE_ID")), 0777)
 
 	conn, err := platform.DialInstance(client, workspace, "up", options, cmd.Log)

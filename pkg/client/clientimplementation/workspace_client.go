@@ -498,7 +498,7 @@ func (s *workspaceClient) Command(ctx context.Context, commandOptions client.Com
 	start := time.Now()
 	defer func() {
 		s.log.Info("workspace client command finished ", s.config.Exec.Command)
-		metrics.ObserveSSHSession("command", time.Since(start).Milliseconds())
+		metrics.ObserveSession(fmt.Sprintf("command: %s", s.config.Exec.Command), time.Since(start).Milliseconds())
 	}()
 
 	// resolve options

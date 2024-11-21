@@ -153,7 +153,7 @@ func (s *Server) handler(sess ssh.Session) {
 	}
 	defer func() {
 		s.log.Info("Shell inner session ended for command ", cmd)
-		metrics.ObserveShellSession(time.Since(start).Milliseconds())
+		metrics.ObserveSession(fmt.Sprintf("ssh_server %s", cmd), time.Since(start).Milliseconds())
 	}()
 
 	// exit session

@@ -90,6 +90,9 @@ func addHostSection(config, execPath, host, user, context, workspace, workdir, c
 	if gpgagent {
 		proxyCommand = fmt.Sprintf("%s --gpg-agent-forwarding", proxyCommand)
 	}
+	if os.Getenv("LOFT_TRACE_ID") != "" {
+		proxyCommand = fmt.Sprintf("%s --trace-id \"%s\"", proxyCommand, os.Getenv("LOFT_TRACE_ID"))
+	}
 	newLines = append(newLines, proxyCommand)
 	newLines = append(newLines, "  User "+user)
 	newLines = append(newLines, endMarker)

@@ -165,7 +165,7 @@ func (r *runner) Command(
 	start := time.Now()
 	defer func() {
 		r.Log.Info("runner command finished ", command)
-		metrics.ObserveSSHSession("command", time.Since(start).Milliseconds())
+		metrics.ObserveSession(fmt.Sprintf("command: %s", command), time.Since(start).Milliseconds())
 	}()
 
 	return r.Driver.CommandDevContainer(ctx, r.ID, user, command, stdin, stdout, stderr)

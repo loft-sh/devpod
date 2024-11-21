@@ -134,7 +134,7 @@ func Run(ctx context.Context, client *ssh.Client, command string, stdin io.Reade
 
 	start := time.Now()
 	defer func() {
-		metrics.ObserveSSHSessionWithID(traceId, "ssh", time.Since(start).Milliseconds())
+		metrics.ObserveSession(fmt.Sprintf("ssh_client: %s", command), time.Since(start).Milliseconds())
 	}()
 
 	err = sess.Run(command)
