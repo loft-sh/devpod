@@ -202,7 +202,7 @@ func (e *Encoder) nextBlock(final bool) error {
 			return nil
 		}
 		if final && len(s.filling) > 0 {
-			s.current = e.EncodeAll(s.filling, s.current[:0])
+			s.current = e.encodeAll(s.encoder, s.filling, s.current[:0])
 			var n2 int
 			n2, s.err = s.w.Write(s.current)
 			if s.err != nil {
@@ -227,10 +227,7 @@ func (e *Encoder) nextBlock(final bool) error {
 			DictID:        e.o.dict.ID(),
 		}
 
-		dst, err := fh.appendTo(tmp[:0])
-		if err != nil {
-			return err
-		}
+		dst := fh.appendTo(tmp[:0])
 		s.headerWritten = true
 		s.wWg.Wait()
 		var n2 int
@@ -472,6 +469,15 @@ func (e *Encoder) Close() error {
 // Data compressed with EncodeAll can be decoded with the Decoder,
 // using either a stream or DecodeAll.
 func (e *Encoder) EncodeAll(src, dst []byte) []byte {
+	e.init.Do(e.initialize)
+	enc := <-e.encoders
+	defer func() {
+		e.encoders <- enc
+	}()
+	return e.encodeAll(enc, src, dst)
+}
+
+func (e *Encoder) encodeAll(enc encoder, src, dst []byte) []byte {
 	if len(src) == 0 {
 		if e.o.fullZero {
 			// Add frame header.
@@ -483,7 +489,7 @@ func (e *Encoder) EncodeAll(src, dst []byte) []byte {
 				Checksum: false,
 				DictID:   0,
 			}
-			dst, _ = fh.appendTo(dst)
+			dst = fh.appendTo(dst)
 
 			// Write raw block as last one only.
 			var blk blockHeader
@@ -494,13 +500,7 @@ func (e *Encoder) EncodeAll(src, dst []byte) []byte {
 		}
 		return dst
 	}
-	e.init.Do(e.initialize)
-	enc := <-e.encoders
-	defer func() {
-		// Release encoder reference to last block.
-		// If a non-single block is needed the encoder will reset again.
-		e.encoders <- enc
-	}()
+
 	// Use single segments when above minimum window and below window size.
 	single := len(src) <= e.o.windowSize && len(src) > MinWindowSize
 	if e.o.single != nil {
@@ -518,10 +518,7 @@ func (e *Encoder) EncodeAll(src, dst []byte) []byte {
 	if len(dst) == 0 && cap(dst) == 0 && len(src) < 1<<20 && !e.o.lowMem {
 		dst = make([]byte, 0, len(src))
 	}
-	dst, err := fh.appendTo(dst)
-	if err != nil {
-		panic(err)
-	}
+	dst = fh.appendTo(dst)
 
 	// If we can do everything in one block, prefer that.
 	if len(src) <= e.o.blockSize {
@@ -581,6 +578,7 @@ func (e *Encoder) EncodeAll(src, dst []byte) []byte {
 	// Add padding with content from crypto/rand.Reader
 	if e.o.pad > 0 {
 		add := calcSkippableFrame(int64(len(dst)), int64(e.o.pad))
+		var err error
 		dst, err = skippableFrame(dst, add, rand.Reader)
 		if err != nil {
 			panic(err)

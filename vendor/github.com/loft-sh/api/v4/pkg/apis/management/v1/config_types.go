@@ -69,6 +69,10 @@ type ConfigStatus struct {
 
 	// DisableLoftConfigEndpoint will disable setting config via the UI and config.management.loft.sh endpoint
 	DisableConfigEndpoint bool `json:"disableConfigEndpoint,omitempty"`
+
+	// Cloud holkds the settings to be used exclusively in vCluster Cloud based
+	// environments and deployments.
+	Cloud *Cloud `json:"cloud,omitempty"`
 }
 
 // Audit holds the audit configuration options for loft. Changing any options will require a loft restart
@@ -691,4 +695,24 @@ type AuthenticationOIDC struct {
 	// Type of the OIDC to show in the UI. Only for displaying purposes
 	// +optional
 	Type string `json:"type,omitempty"`
+}
+
+type Cloud struct {
+	// ReleaseChannel specifies the release channel for the cloud configuration.
+	// This can be used to determine which updates or versions are applied.
+	ReleaseChannel string `json:"releaseChannel,omitempty"`
+
+	// MaintenanceWindow specifies the maintenance window for the cloud configuration.
+	// This is a structured representation of the time window during which maintenance can occur.
+	MaintenanceWindow MaintenanceWindow `json:"maintenanceWindow,omitempty"`
+}
+
+type MaintenanceWindow struct {
+	// DayOfWeek specifies the day of the week for the maintenance window.
+	// It should be a string representing the day, e.g., "Monday", "Tuesday", etc.
+	DayOfWeek string `json:"dayOfWeek,omitempty"`
+
+	// TimeWindow specifies the time window for the maintenance.
+	// It should be a string representing the time range in 24-hour format, in UTC, e.g., "02:00-03:00".
+	TimeWindow string `json:"timeWindow,omitempty"`
 }

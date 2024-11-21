@@ -4,8 +4,8 @@ package v1
 
 import (
 	v1 "github.com/loft-sh/api/v4/pkg/apis/management/v1"
-	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/labels"
+	"k8s.io/client-go/listers"
 	"k8s.io/client-go/tools/cache"
 )
 
@@ -23,30 +23,10 @@ type LicenseLister interface {
 
 // licenseLister implements the LicenseLister interface.
 type licenseLister struct {
-	indexer cache.Indexer
+	listers.ResourceIndexer[*v1.License]
 }
 
 // NewLicenseLister returns a new LicenseLister.
 func NewLicenseLister(indexer cache.Indexer) LicenseLister {
-	return &licenseLister{indexer: indexer}
-}
-
-// List lists all Licenses in the indexer.
-func (s *licenseLister) List(selector labels.Selector) (ret []*v1.License, err error) {
-	err = cache.ListAll(s.indexer, selector, func(m interface{}) {
-		ret = append(ret, m.(*v1.License))
-	})
-	return ret, err
-}
-
-// Get retrieves the License from the index for a given name.
-func (s *licenseLister) Get(name string) (*v1.License, error) {
-	obj, exists, err := s.indexer.GetByKey(name)
-	if err != nil {
-		return nil, err
-	}
-	if !exists {
-		return nil, errors.NewNotFound(v1.Resource("license"), name)
-	}
-	return obj.(*v1.License), nil
+	return &licenseLister{listers.New[*v1.License](indexer, v1.Resource("license"))}
 }

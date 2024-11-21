@@ -4,8 +4,8 @@ package v1
 
 import (
 	v1 "github.com/loft-sh/api/v4/pkg/apis/management/v1"
-	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/labels"
+	"k8s.io/client-go/listers"
 	"k8s.io/client-go/tools/cache"
 )
 
@@ -23,30 +23,10 @@ type RegisterVirtualClusterLister interface {
 
 // registerVirtualClusterLister implements the RegisterVirtualClusterLister interface.
 type registerVirtualClusterLister struct {
-	indexer cache.Indexer
+	listers.ResourceIndexer[*v1.RegisterVirtualCluster]
 }
 
 // NewRegisterVirtualClusterLister returns a new RegisterVirtualClusterLister.
 func NewRegisterVirtualClusterLister(indexer cache.Indexer) RegisterVirtualClusterLister {
-	return &registerVirtualClusterLister{indexer: indexer}
-}
-
-// List lists all RegisterVirtualClusters in the indexer.
-func (s *registerVirtualClusterLister) List(selector labels.Selector) (ret []*v1.RegisterVirtualCluster, err error) {
-	err = cache.ListAll(s.indexer, selector, func(m interface{}) {
-		ret = append(ret, m.(*v1.RegisterVirtualCluster))
-	})
-	return ret, err
-}
-
-// Get retrieves the RegisterVirtualCluster from the index for a given name.
-func (s *registerVirtualClusterLister) Get(name string) (*v1.RegisterVirtualCluster, error) {
-	obj, exists, err := s.indexer.GetByKey(name)
-	if err != nil {
-		return nil, err
-	}
-	if !exists {
-		return nil, errors.NewNotFound(v1.Resource("registervirtualcluster"), name)
-	}
-	return obj.(*v1.RegisterVirtualCluster), nil
+	return &registerVirtualClusterLister{listers.New[*v1.RegisterVirtualCluster](indexer, v1.Resource("registervirtualcluster"))}
 }

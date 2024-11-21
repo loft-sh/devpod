@@ -4,8 +4,8 @@ package v1
 
 import (
 	v1 "github.com/loft-sh/api/v4/pkg/apis/management/v1"
-	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/labels"
+	"k8s.io/client-go/listers"
 	"k8s.io/client-go/tools/cache"
 )
 
@@ -23,30 +23,10 @@ type TranslateVClusterResourceNameLister interface {
 
 // translateVClusterResourceNameLister implements the TranslateVClusterResourceNameLister interface.
 type translateVClusterResourceNameLister struct {
-	indexer cache.Indexer
+	listers.ResourceIndexer[*v1.TranslateVClusterResourceName]
 }
 
 // NewTranslateVClusterResourceNameLister returns a new TranslateVClusterResourceNameLister.
 func NewTranslateVClusterResourceNameLister(indexer cache.Indexer) TranslateVClusterResourceNameLister {
-	return &translateVClusterResourceNameLister{indexer: indexer}
-}
-
-// List lists all TranslateVClusterResourceNames in the indexer.
-func (s *translateVClusterResourceNameLister) List(selector labels.Selector) (ret []*v1.TranslateVClusterResourceName, err error) {
-	err = cache.ListAll(s.indexer, selector, func(m interface{}) {
-		ret = append(ret, m.(*v1.TranslateVClusterResourceName))
-	})
-	return ret, err
-}
-
-// Get retrieves the TranslateVClusterResourceName from the index for a given name.
-func (s *translateVClusterResourceNameLister) Get(name string) (*v1.TranslateVClusterResourceName, error) {
-	obj, exists, err := s.indexer.GetByKey(name)
-	if err != nil {
-		return nil, err
-	}
-	if !exists {
-		return nil, errors.NewNotFound(v1.Resource("translatevclusterresourcename"), name)
-	}
-	return obj.(*v1.TranslateVClusterResourceName), nil
+	return &translateVClusterResourceNameLister{listers.New[*v1.TranslateVClusterResourceName](indexer, v1.Resource("translatevclusterresourcename"))}
 }

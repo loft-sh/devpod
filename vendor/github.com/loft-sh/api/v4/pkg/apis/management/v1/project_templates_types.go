@@ -32,6 +32,9 @@ type ProjectTemplates struct {
 	// DevPodEnvironmentTemplates holds all the allowed environment templates
 	DevPodEnvironmentTemplates []DevPodEnvironmentTemplate `json:"devPodEnvironmentTemplates,omitempty"`
 
+	// DevPodWorkspacePresets holds all the allowed workspace presets
+	DevPodWorkspacePresets []DevPodWorkspacePreset `json:"devPodWorkspacePresets,omitempty"`
+
 	// DefaultDevPodEnvironmentTemplate
 	DefaultDevPodEnvironmentTemplate string `json:"defaultDevPodEnvironmentTemplate,omitempty"`
 }

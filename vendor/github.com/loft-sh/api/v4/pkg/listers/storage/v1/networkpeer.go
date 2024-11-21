@@ -4,8 +4,8 @@ package v1
 
 import (
 	v1 "github.com/loft-sh/api/v4/pkg/apis/storage/v1"
-	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/labels"
+	"k8s.io/client-go/listers"
 	"k8s.io/client-go/tools/cache"
 )
 
@@ -23,30 +23,10 @@ type NetworkPeerLister interface {
 
 // networkPeerLister implements the NetworkPeerLister interface.
 type networkPeerLister struct {
-	indexer cache.Indexer
+	listers.ResourceIndexer[*v1.NetworkPeer]
 }
 
 // NewNetworkPeerLister returns a new NetworkPeerLister.
 func NewNetworkPeerLister(indexer cache.Indexer) NetworkPeerLister {
-	return &networkPeerLister{indexer: indexer}
-}
-
-// List lists all NetworkPeers in the indexer.
-func (s *networkPeerLister) List(selector labels.Selector) (ret []*v1.NetworkPeer, err error) {
-	err = cache.ListAll(s.indexer, selector, func(m interface{}) {
-		ret = append(ret, m.(*v1.NetworkPeer))
-	})
-	return ret, err
-}
-
-// Get retrieves the NetworkPeer from the index for a given name.
-func (s *networkPeerLister) Get(name string) (*v1.NetworkPeer, error) {
-	obj, exists, err := s.indexer.GetByKey(name)
-	if err != nil {
-		return nil, err
-	}
-	if !exists {
-		return nil, errors.NewNotFound(v1.Resource("networkpeer"), name)
-	}
-	return obj.(*v1.NetworkPeer), nil
+	return &networkPeerLister{listers.New[*v1.NetworkPeer](indexer, v1.Resource("networkpeer"))}
 }

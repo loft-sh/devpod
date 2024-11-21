@@ -4,8 +4,8 @@ package v1
 
 import (
 	v1 "github.com/loft-sh/api/v4/pkg/apis/management/v1"
-	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/labels"
+	"k8s.io/client-go/listers"
 	"k8s.io/client-go/tools/cache"
 )
 
@@ -23,30 +23,10 @@ type SubjectAccessReviewLister interface {
 
 // subjectAccessReviewLister implements the SubjectAccessReviewLister interface.
 type subjectAccessReviewLister struct {
-	indexer cache.Indexer
+	listers.ResourceIndexer[*v1.SubjectAccessReview]
 }
 
 // NewSubjectAccessReviewLister returns a new SubjectAccessReviewLister.
 func NewSubjectAccessReviewLister(indexer cache.Indexer) SubjectAccessReviewLister {
-	return &subjectAccessReviewLister{indexer: indexer}
-}
-
-// List lists all SubjectAccessReviews in the indexer.
-func (s *subjectAccessReviewLister) List(selector labels.Selector) (ret []*v1.SubjectAccessReview, err error) {
-	err = cache.ListAll(s.indexer, selector, func(m interface{}) {
-		ret = append(ret, m.(*v1.SubjectAccessReview))
-	})
-	return ret, err
-}
-
-// Get retrieves the SubjectAccessReview from the index for a given name.
-func (s *subjectAccessReviewLister) Get(name string) (*v1.SubjectAccessReview, error) {
-	obj, exists, err := s.indexer.GetByKey(name)
-	if err != nil {
-		return nil, err
-	}
-	if !exists {
-		return nil, errors.NewNotFound(v1.Resource("subjectaccessreview"), name)
-	}
-	return obj.(*v1.SubjectAccessReview), nil
+	return &subjectAccessReviewLister{listers.New[*v1.SubjectAccessReview](indexer, v1.Resource("subjectaccessreview"))}
 }

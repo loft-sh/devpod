@@ -4,8 +4,8 @@ package v1
 
 import (
 	v1 "github.com/loft-sh/api/v4/pkg/apis/management/v1"
-	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/labels"
+	"k8s.io/client-go/listers"
 	"k8s.io/client-go/tools/cache"
 )
 
@@ -23,30 +23,10 @@ type DirectClusterEndpointTokenLister interface {
 
 // directClusterEndpointTokenLister implements the DirectClusterEndpointTokenLister interface.
 type directClusterEndpointTokenLister struct {
-	indexer cache.Indexer
+	listers.ResourceIndexer[*v1.DirectClusterEndpointToken]
 }
 
 // NewDirectClusterEndpointTokenLister returns a new DirectClusterEndpointTokenLister.
 func NewDirectClusterEndpointTokenLister(indexer cache.Indexer) DirectClusterEndpointTokenLister {
-	return &directClusterEndpointTokenLister{indexer: indexer}
-}
-
-// List lists all DirectClusterEndpointTokens in the indexer.
-func (s *directClusterEndpointTokenLister) List(selector labels.Selector) (ret []*v1.DirectClusterEndpointToken, err error) {
-	err = cache.ListAll(s.indexer, selector, func(m interface{}) {
-		ret = append(ret, m.(*v1.DirectClusterEndpointToken))
-	})
-	return ret, err
-}
-
-// Get retrieves the DirectClusterEndpointToken from the index for a given name.
-func (s *directClusterEndpointTokenLister) Get(name string) (*v1.DirectClusterEndpointToken, error) {
-	obj, exists, err := s.indexer.GetByKey(name)
-	if err != nil {
-		return nil, err
-	}
-	if !exists {
-		return nil, errors.NewNotFound(v1.Resource("directclusterendpointtoken"), name)
-	}
-	return obj.(*v1.DirectClusterEndpointToken), nil
+	return &directClusterEndpointTokenLister{listers.New[*v1.DirectClusterEndpointToken](indexer, v1.Resource("directclusterendpointtoken"))}
 }

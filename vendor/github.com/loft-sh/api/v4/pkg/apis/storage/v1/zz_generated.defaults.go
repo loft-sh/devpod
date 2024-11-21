@@ -6,6 +6,7 @@
 package v1
 
 import (
+	v1 "k8s.io/api/core/v1"
 	runtime "k8s.io/apimachinery/pkg/runtime"
 )
 
@@ -21,6 +22,51 @@ func RegisterDefaults(scheme *runtime.Scheme) error {
 func SetObjectDefaults_Runner(in *Runner) {
 	if in.Spec.ClusterRef != nil {
 		if in.Spec.ClusterRef.PodTemplate != nil {
+			for i := range in.Spec.ClusterRef.PodTemplate.Spec.Volumes {
+				a := &in.Spec.ClusterRef.PodTemplate.Spec.Volumes[i]
+				if a.VolumeSource.ISCSI != nil {
+					if a.VolumeSource.ISCSI.ISCSIInterface == "" {
+						a.VolumeSource.ISCSI.ISCSIInterface = "default"
+					}
+				}
+				if a.VolumeSource.RBD != nil {
+					if a.VolumeSource.RBD.RBDPool == "" {
+						a.VolumeSource.RBD.RBDPool = "rbd"
+					}
+					if a.VolumeSource.RBD.RadosUser == "" {
+						a.VolumeSource.RBD.RadosUser = "admin"
+					}
+					if a.VolumeSource.RBD.Keyring == "" {
+						a.VolumeSource.RBD.Keyring = "/etc/ceph/keyring"
+					}
+				}
+				if a.VolumeSource.AzureDisk != nil {
+					if a.VolumeSource.AzureDisk.CachingMode == nil {
+						ptrVar1 := v1.AzureDataDiskCachingMode(v1.AzureDataDiskCachingReadWrite)
+						a.VolumeSource.AzureDisk.CachingMode = &ptrVar1
+					}
+					if a.VolumeSource.AzureDisk.FSType == nil {
+						var ptrVar1 string = "ext4"
+						a.VolumeSource.AzureDisk.FSType = &ptrVar1
+					}
+					if a.VolumeSource.AzureDisk.ReadOnly == nil {
+						var ptrVar1 bool = false
+						a.VolumeSource.AzureDisk.ReadOnly = &ptrVar1
+					}
+					if a.VolumeSource.AzureDisk.Kind == nil {
+						ptrVar1 := v1.AzureDataDiskKind(v1.AzureSharedBlobDisk)
+						a.VolumeSource.AzureDisk.Kind = &ptrVar1
+					}
+				}
+				if a.VolumeSource.ScaleIO != nil {
+					if a.VolumeSource.ScaleIO.StorageMode == "" {
+						a.VolumeSource.ScaleIO.StorageMode = "ThinProvisioned"
+					}
+					if a.VolumeSource.ScaleIO.FSType == "" {
+						a.VolumeSource.ScaleIO.FSType = "xfs"
+					}
+				}
+			}
 			for i := range in.Spec.ClusterRef.PodTemplate.Spec.InitContainers {
 				a := &in.Spec.ClusterRef.PodTemplate.Spec.InitContainers[i]
 				for j := range a.Ports {

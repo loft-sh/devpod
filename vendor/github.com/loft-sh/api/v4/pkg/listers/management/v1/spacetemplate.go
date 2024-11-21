@@ -4,8 +4,8 @@ package v1
 
 import (
 	v1 "github.com/loft-sh/api/v4/pkg/apis/management/v1"
-	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/labels"
+	"k8s.io/client-go/listers"
 	"k8s.io/client-go/tools/cache"
 )
 
@@ -23,30 +23,10 @@ type SpaceTemplateLister interface {
 
 // spaceTemplateLister implements the SpaceTemplateLister interface.
 type spaceTemplateLister struct {
-	indexer cache.Indexer
+	listers.ResourceIndexer[*v1.SpaceTemplate]
 }
 
 // NewSpaceTemplateLister returns a new SpaceTemplateLister.
 func NewSpaceTemplateLister(indexer cache.Indexer) SpaceTemplateLister {
-	return &spaceTemplateLister{indexer: indexer}
-}
-
-// List lists all SpaceTemplates in the indexer.
-func (s *spaceTemplateLister) List(selector labels.Selector) (ret []*v1.SpaceTemplate, err error) {
-	err = cache.ListAll(s.indexer, selector, func(m interface{}) {
-		ret = append(ret, m.(*v1.SpaceTemplate))
-	})
-	return ret, err
-}
-
-// Get retrieves the SpaceTemplate from the index for a given name.
-func (s *spaceTemplateLister) Get(name string) (*v1.SpaceTemplate, error) {
-	obj, exists, err := s.indexer.GetByKey(name)
-	if err != nil {
-		return nil, err
-	}
-	if !exists {
-		return nil, errors.NewNotFound(v1.Resource("spacetemplate"), name)
-	}
-	return obj.(*v1.SpaceTemplate), nil
+	return &spaceTemplateLister{listers.New[*v1.SpaceTemplate](indexer, v1.Resource("spacetemplate"))}
 }

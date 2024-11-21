@@ -4,8 +4,8 @@ package v1
 
 import (
 	v1 "github.com/loft-sh/api/v4/pkg/apis/management/v1"
-	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/labels"
+	"k8s.io/client-go/listers"
 	"k8s.io/client-go/tools/cache"
 )
 
@@ -22,25 +22,17 @@ type ProjectSecretLister interface {
 
 // projectSecretLister implements the ProjectSecretLister interface.
 type projectSecretLister struct {
-	indexer cache.Indexer
+	listers.ResourceIndexer[*v1.ProjectSecret]
 }
 
 // NewProjectSecretLister returns a new ProjectSecretLister.
 func NewProjectSecretLister(indexer cache.Indexer) ProjectSecretLister {
-	return &projectSecretLister{indexer: indexer}
-}
-
-// List lists all ProjectSecrets in the indexer.
-func (s *projectSecretLister) List(selector labels.Selector) (ret []*v1.ProjectSecret, err error) {
-	err = cache.ListAll(s.indexer, selector, func(m interface{}) {
-		ret = append(ret, m.(*v1.ProjectSecret))
-	})
-	return ret, err
+	return &projectSecretLister{listers.New[*v1.ProjectSecret](indexer, v1.Resource("projectsecret"))}
 }
 
 // ProjectSecrets returns an object that can list and get ProjectSecrets.
 func (s *projectSecretLister) ProjectSecrets(namespace string) ProjectSecretNamespaceLister {
-	return projectSecretNamespaceLister{indexer: s.indexer, namespace: namespace}
+	return projectSecretNamespaceLister{listers.NewNamespaced[*v1.ProjectSecret](s.ResourceIndexer, namespace)}
 }
 
 // ProjectSecretNamespaceLister helps list and get ProjectSecrets.
@@ -58,26 +50,5 @@ type ProjectSecretNamespaceLister interface {
 // projectSecretNamespaceLister implements the ProjectSecretNamespaceLister
 // interface.
 type projectSecretNamespaceLister struct {
-	indexer   cache.Indexer
-	namespace string
-}
-
-// List lists all ProjectSecrets in the indexer for a given namespace.
-func (s projectSecretNamespaceLister) List(selector labels.Selector) (ret []*v1.ProjectSecret, err error) {
-	err = cache.ListAllByNamespace(s.indexer, s.namespace, selector, func(m interface{}) {
-		ret = append(ret, m.(*v1.ProjectSecret))
-	})
-	return ret, err
-}
-
-// Get retrieves the ProjectSecret from the indexer for a given namespace and name.
-func (s projectSecretNamespaceLister) Get(name string) (*v1.ProjectSecret, error) {
-	obj, exists, err := s.indexer.GetByKey(s.namespace + "/" + name)
-	if err != nil {
-		return nil, err
-	}
-	if !exists {
-		return nil, errors.NewNotFound(v1.Resource("projectsecret"), name)
-	}
-	return obj.(*v1.ProjectSecret), nil
+	listers.ResourceIndexer[*v1.ProjectSecret]
 }

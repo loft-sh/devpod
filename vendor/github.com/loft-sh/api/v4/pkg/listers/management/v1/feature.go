@@ -4,8 +4,8 @@ package v1
 
 import (
 	v1 "github.com/loft-sh/api/v4/pkg/apis/management/v1"
-	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/labels"
+	"k8s.io/client-go/listers"
 	"k8s.io/client-go/tools/cache"
 )
 
@@ -23,30 +23,10 @@ type FeatureLister interface {
 
 // featureLister implements the FeatureLister interface.
 type featureLister struct {
-	indexer cache.Indexer
+	listers.ResourceIndexer[*v1.Feature]
 }
 
 // NewFeatureLister returns a new FeatureLister.
 func NewFeatureLister(indexer cache.Indexer) FeatureLister {
-	return &featureLister{indexer: indexer}
-}
-
-// List lists all Features in the indexer.
-func (s *featureLister) List(selector labels.Selector) (ret []*v1.Feature, err error) {
-	err = cache.ListAll(s.indexer, selector, func(m interface{}) {
-		ret = append(ret, m.(*v1.Feature))
-	})
-	return ret, err
-}
-
-// Get retrieves the Feature from the index for a given name.
-func (s *featureLister) Get(name string) (*v1.Feature, error) {
-	obj, exists, err := s.indexer.GetByKey(name)
-	if err != nil {
-		return nil, err
-	}
-	if !exists {
-		return nil, errors.NewNotFound(v1.Resource("feature"), name)
-	}
-	return obj.(*v1.Feature), nil
+	return &featureLister{listers.New[*v1.Feature](indexer, v1.Resource("feature"))}
 }

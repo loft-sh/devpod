@@ -26,18 +26,17 @@ type DevPodEnvironmentTemplateSpec struct {
 	storagev1.DevPodEnvironmentTemplateSpec `json:",inline"`
 }
 
-// GitEnvironmentTemplate stores configuration of Git environment template source
-type GitEnvironmentTemplate struct {
-	// Repository stores repository URL for Git environment spec source
-	Repository string `json:"repository"`
+// DevPodEnvironmentTemplateStatus holds the status
+type DevPodEnvironmentTemplateStatus struct{}
 
-	// Revision stores revision to checkout in repository
-	// +optional
-	Revision string `json:"revision,omitempty"`
+func (a *DevPodEnvironmentTemplate) GetVersions() []storagev1.VersionAccessor {
+	var retVersions []storagev1.VersionAccessor
+	for _, v := range a.Spec.Versions {
+		b := v
+		retVersions = append(retVersions, &b)
+	}
 
-	// SubPath stores subpath within Repositor where environment spec is
-	// +optional
-	SubPath string `json:"subpath,omitempty"`
+	return retVersions
 }
 
 func (a *DevPodEnvironmentTemplate) GetOwner() *storagev1.UserOrTeam {
@@ -55,6 +54,3 @@ func (a *DevPodEnvironmentTemplate) GetAccess() []storagev1.Access {
 func (a *DevPodEnvironmentTemplate) SetAccess(access []storagev1.Access) {
 	a.Spec.Access = access
 }
-
-// DevPodEnvironmentTemplateStatus holds the status
-type DevPodEnvironmentTemplateStatus struct{}

@@ -106,6 +106,10 @@ type ProjectSpec struct {
 	// +optional
 	RequireTemplate RequireTemplate `json:"requireTemplate,omitempty"`
 
+	// RequirePreset configures if a preset is required for instance creation.
+	// +optional
+	RequirePreset RequirePreset `json:"requirePreset,omitempty"`
+
 	// Members are the users and teams that are part of this project
 	// +optional
 	Members []Member `json:"members,omitempty"`
@@ -142,6 +146,13 @@ type RequireTemplate struct {
 	Disabled bool `json:"disabled,omitempty"`
 }
 
+type RequirePreset struct {
+	// If true, all users within the project will not be allowed to create a new instance without a preset.
+	// By default, all users are allowed to create a new instance without a preset.
+	// +optional
+	Enabled bool `json:"disabled,omitempty"`
+}
+
 type NamespacePattern struct {
 	// Space holds the namespace pattern to use for space instances
 	// +optional
@@ -165,6 +176,7 @@ var (
 	SpaceTemplateKind           = "SpaceTemplate"
 	VirtualClusterTemplateKind  = "VirtualClusterTemplate"
 	DevPodWorkspaceTemplateKind = "DevPodWorkspaceTemplate"
+	DevPodWorkspacePresetKind   = "DevPodWorkspacePreset"
 )
 
 type AllowedTemplate struct {

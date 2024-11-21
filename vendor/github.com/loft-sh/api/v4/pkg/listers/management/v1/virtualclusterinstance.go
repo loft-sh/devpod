@@ -4,8 +4,8 @@ package v1
 
 import (
 	v1 "github.com/loft-sh/api/v4/pkg/apis/management/v1"
-	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/labels"
+	"k8s.io/client-go/listers"
 	"k8s.io/client-go/tools/cache"
 )
 
@@ -22,25 +22,17 @@ type VirtualClusterInstanceLister interface {
 
 // virtualClusterInstanceLister implements the VirtualClusterInstanceLister interface.
 type virtualClusterInstanceLister struct {
-	indexer cache.Indexer
+	listers.ResourceIndexer[*v1.VirtualClusterInstance]
 }
 
 // NewVirtualClusterInstanceLister returns a new VirtualClusterInstanceLister.
 func NewVirtualClusterInstanceLister(indexer cache.Indexer) VirtualClusterInstanceLister {
-	return &virtualClusterInstanceLister{indexer: indexer}
-}
-
-// List lists all VirtualClusterInstances in the indexer.
-func (s *virtualClusterInstanceLister) List(selector labels.Selector) (ret []*v1.VirtualClusterInstance, err error) {
-	err = cache.ListAll(s.indexer, selector, func(m interface{}) {
-		ret = append(ret, m.(*v1.VirtualClusterInstance))
-	})
-	return ret, err
+	return &virtualClusterInstanceLister{listers.New[*v1.VirtualClusterInstance](indexer, v1.Resource("virtualclusterinstance"))}
 }
 
 // VirtualClusterInstances returns an object that can list and get VirtualClusterInstances.
 func (s *virtualClusterInstanceLister) VirtualClusterInstances(namespace string) VirtualClusterInstanceNamespaceLister {
-	return virtualClusterInstanceNamespaceLister{indexer: s.indexer, namespace: namespace}
+	return virtualClusterInstanceNamespaceLister{listers.NewNamespaced[*v1.VirtualClusterInstance](s.ResourceIndexer, namespace)}
 }
 
 // VirtualClusterInstanceNamespaceLister helps list and get VirtualClusterInstances.
@@ -58,26 +50,5 @@ type VirtualClusterInstanceNamespaceLister interface {
 // virtualClusterInstanceNamespaceLister implements the VirtualClusterInstanceNamespaceLister
 // interface.
 type virtualClusterInstanceNamespaceLister struct {
-	indexer   cache.Indexer
-	namespace string
-}
-
-// List lists all VirtualClusterInstances in the indexer for a given namespace.
-func (s virtualClusterInstanceNamespaceLister) List(selector labels.Selector) (ret []*v1.VirtualClusterInstance, err error) {
-	err = cache.ListAllByNamespace(s.indexer, s.namespace, selector, func(m interface{}) {
-		ret = append(ret, m.(*v1.VirtualClusterInstance))
-	})
-	return ret, err
-}
-
-// Get retrieves the VirtualClusterInstance from the indexer for a given namespace and name.
-func (s virtualClusterInstanceNamespaceLister) Get(name string) (*v1.VirtualClusterInstance, error) {
-	obj, exists, err := s.indexer.GetByKey(s.namespace + "/" + name)
-	if err != nil {
-		return nil, err
-	}
-	if !exists {
-		return nil, errors.NewNotFound(v1.Resource("virtualclusterinstance"), name)
-	}
-	return obj.(*v1.VirtualClusterInstance), nil
+	listers.ResourceIndexer[*v1.VirtualClusterInstance]
 }

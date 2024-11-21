@@ -4,8 +4,8 @@ package v1
 
 import (
 	v1 "github.com/loft-sh/api/v4/pkg/apis/storage/v1"
-	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/labels"
+	"k8s.io/client-go/listers"
 	"k8s.io/client-go/tools/cache"
 )
 
@@ -22,25 +22,17 @@ type DevPodWorkspaceInstanceLister interface {
 
 // devPodWorkspaceInstanceLister implements the DevPodWorkspaceInstanceLister interface.
 type devPodWorkspaceInstanceLister struct {
-	indexer cache.Indexer
+	listers.ResourceIndexer[*v1.DevPodWorkspaceInstance]
 }
 
 // NewDevPodWorkspaceInstanceLister returns a new DevPodWorkspaceInstanceLister.
 func NewDevPodWorkspaceInstanceLister(indexer cache.Indexer) DevPodWorkspaceInstanceLister {
-	return &devPodWorkspaceInstanceLister{indexer: indexer}
-}
-
-// List lists all DevPodWorkspaceInstances in the indexer.
-func (s *devPodWorkspaceInstanceLister) List(selector labels.Selector) (ret []*v1.DevPodWorkspaceInstance, err error) {
-	err = cache.ListAll(s.indexer, selector, func(m interface{}) {
-		ret = append(ret, m.(*v1.DevPodWorkspaceInstance))
-	})
-	return ret, err
+	return &devPodWorkspaceInstanceLister{listers.New[*v1.DevPodWorkspaceInstance](indexer, v1.Resource("devpodworkspaceinstance"))}
 }
 
 // DevPodWorkspaceInstances returns an object that can list and get DevPodWorkspaceInstances.
 func (s *devPodWorkspaceInstanceLister) DevPodWorkspaceInstances(namespace string) DevPodWorkspaceInstanceNamespaceLister {
-	return devPodWorkspaceInstanceNamespaceLister{indexer: s.indexer, namespace: namespace}
+	return devPodWorkspaceInstanceNamespaceLister{listers.NewNamespaced[*v1.DevPodWorkspaceInstance](s.ResourceIndexer, namespace)}
 }
 
 // DevPodWorkspaceInstanceNamespaceLister helps list and get DevPodWorkspaceInstances.
@@ -58,26 +50,5 @@ type DevPodWorkspaceInstanceNamespaceLister interface {
 // devPodWorkspaceInstanceNamespaceLister implements the DevPodWorkspaceInstanceNamespaceLister
 // interface.
 type devPodWorkspaceInstanceNamespaceLister struct {
-	indexer   cache.Indexer
-	namespace string
-}
-
-// List lists all DevPodWorkspaceInstances in the indexer for a given namespace.
-func (s devPodWorkspaceInstanceNamespaceLister) List(selector labels.Selector) (ret []*v1.DevPodWorkspaceInstance, err error) {
-	err = cache.ListAllByNamespace(s.indexer, s.namespace, selector, func(m interface{}) {
-		ret = append(ret, m.(*v1.DevPodWorkspaceInstance))
-	})
-	return ret, err
-}
-
-// Get retrieves the DevPodWorkspaceInstance from the indexer for a given namespace and name.
-func (s devPodWorkspaceInstanceNamespaceLister) Get(name string) (*v1.DevPodWorkspaceInstance, error) {
-	obj, exists, err := s.indexer.GetByKey(s.namespace + "/" + name)
-	if err != nil {
-		return nil, err
-	}
-	if !exists {
-		return nil, errors.NewNotFound(v1.Resource("devpodworkspaceinstance"), name)
-	}
-	return obj.(*v1.DevPodWorkspaceInstance), nil
+	listers.ResourceIndexer[*v1.DevPodWorkspaceInstance]
 }

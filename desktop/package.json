@@ -23,7 +23,7 @@
     "@emotion/react": "11.11.1",
     "@emotion/styled": "11.11.0",
     "@headlessui/react": "1.7.17",
-    "@loft-enterprise/client": "https://github.com/loft-sh/loft-javascript-client#v4.1.0-alpha.16",
+    "@loft-enterprise/client": "https://github.com/loft-sh/loft-javascript-client#v4.2.0-alpha.3",
     "@tanstack/react-query": "4.36.1",
     "@tanstack/react-query-devtools": "4.36.1",
     "@tanstack/react-table": "8.10.7",

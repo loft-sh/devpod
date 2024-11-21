@@ -4,8 +4,8 @@ package v1
 
 import (
 	v1 "github.com/loft-sh/api/v4/pkg/apis/virtualcluster/v1"
-	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/labels"
+	"k8s.io/client-go/listers"
 	"k8s.io/client-go/tools/cache"
 )
 
@@ -22,25 +22,17 @@ type HelmReleaseLister interface {
 
 // helmReleaseLister implements the HelmReleaseLister interface.
 type helmReleaseLister struct {
-	indexer cache.Indexer
+	listers.ResourceIndexer[*v1.HelmRelease]
 }
 
 // NewHelmReleaseLister returns a new HelmReleaseLister.
 func NewHelmReleaseLister(indexer cache.Indexer) HelmReleaseLister {
-	return &helmReleaseLister{indexer: indexer}
-}
-
-// List lists all HelmReleases in the indexer.
-func (s *helmReleaseLister) List(selector labels.Selector) (ret []*v1.HelmRelease, err error) {
-	err = cache.ListAll(s.indexer, selector, func(m interface{}) {
-		ret = append(ret, m.(*v1.HelmRelease))
-	})
-	return ret, err
+	return &helmReleaseLister{listers.New[*v1.HelmRelease](indexer, v1.Resource("helmrelease"))}
 }
 
 // HelmReleases returns an object that can list and get HelmReleases.
 func (s *helmReleaseLister) HelmReleases(namespace string) HelmReleaseNamespaceLister {
-	return helmReleaseNamespaceLister{indexer: s.indexer, namespace: namespace}
+	return helmReleaseNamespaceLister{listers.NewNamespaced[*v1.HelmRelease](s.ResourceIndexer, namespace)}
 }
 
 // HelmReleaseNamespaceLister helps list and get HelmReleases.
@@ -58,26 +50,5 @@ type HelmReleaseNamespaceLister interface {
 // helmReleaseNamespaceLister implements the HelmReleaseNamespaceLister
 // interface.
 type helmReleaseNamespaceLister struct {
-	indexer   cache.Indexer
-	namespace string
-}
-
-// List lists all HelmReleases in the indexer for a given namespace.
-func (s helmReleaseNamespaceLister) List(selector labels.Selector) (ret []*v1.HelmRelease, err error) {
-	err = cache.ListAllByNamespace(s.indexer, s.namespace, selector, func(m interface{}) {
-		ret = append(ret, m.(*v1.HelmRelease))
-	})
-	return ret, err
-}
-
-// Get retrieves the HelmRelease from the indexer for a given namespace and name.
-func (s helmReleaseNamespaceLister) Get(name string) (*v1.HelmRelease, error) {
-	obj, exists, err := s.indexer.GetByKey(s.namespace + "/" + name)
-	if err != nil {
-		return nil, err
-	}
-	if !exists {
-		return nil, errors.NewNotFound(v1.Resource("helmrelease"), name)
-	}
-	return obj.(*v1.HelmRelease), nil
+	listers.ResourceIndexer[*v1.HelmRelease]
 }
