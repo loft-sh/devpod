@@ -10,6 +10,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strings"
 	"sync"
 	"time"
 
@@ -497,8 +498,7 @@ func (s *workspaceClient) Command(ctx context.Context, commandOptions client.Com
 
 	start := time.Now()
 	defer func() {
-		s.log.Info("workspace client command finished ", s.config.Exec.Command)
-		metrics.ObserveSession(fmt.Sprintf("command: %s", s.config.Exec.Command), time.Since(start).Milliseconds())
+		s.log.Infof("======== EVENT workspace client command %s took %dms to finish ", metrics.Short(strings.Join(s.config.Exec.Command, " ")), time.Since(start).Milliseconds())
 	}()
 
 	// resolve options

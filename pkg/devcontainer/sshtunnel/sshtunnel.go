@@ -59,8 +59,7 @@ func ExecuteCommand(
 
 		start := time.Now()
 		defer func() {
-			log.Info("finished injecting agent command")
-			metrics.ObserveSession("inject_agent_command", time.Since(start).Milliseconds())
+			log.Infof("========== EVENT injecting agent over SSH tunnel took %dms", time.Since(start).Milliseconds())
 		}()
 
 		log.Debugf("Inject and run command: %s", sshCommand)
@@ -132,6 +131,11 @@ func ExecuteCommand(
 		writer := log.Writer(logrus.InfoLevel, false)
 		defer writer.Close()
 
+		start := time.Now()
+		defer func() {
+			log.Infof("======== EVENT ssh command %s took %dms", metrics.Short(command), time.Since(start).Milliseconds())
+		}()
+
 		err = devssh.Run(ctx, sshClient, command, gRPCConnStdinReader, gRPCConnStdoutWriter, writer, nil)
 		if err != nil {
 			errChan <- errors.Wrap(err, "run agent command")
@@ -142,8 +146,7 @@ func ExecuteCommand(
 
 	start := time.Now()
 	defer func() {
-		log.Info("finished tunnel func")
-		metrics.ObserveSession("tunnel", time.Since(start).Milliseconds())
+		log.Infof("======== EVENT tunnel server func took %dms", time.Since(start).Milliseconds())
 	}()
 
 	result, err := tunnelServerFunc(cancelCtx, gRPCConnStdinWriter, gRPCConnStdoutReader)

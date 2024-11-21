@@ -164,8 +164,7 @@ func (r *runner) Command(
 ) error {
 	start := time.Now()
 	defer func() {
-		r.Log.Info("runner command finished ", command)
-		metrics.ObserveSession(fmt.Sprintf("command: %s", command), time.Since(start).Milliseconds())
+		r.Log.Infof("======== EVENT runner command %s finished took %dms", metrics.Short(command), time.Since(start).Milliseconds())
 	}()
 
 	return r.Driver.CommandDevContainer(ctx, r.ID, user, command, stdin, stdout, stderr)

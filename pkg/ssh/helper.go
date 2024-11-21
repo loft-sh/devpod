@@ -5,10 +5,8 @@ import (
 	"fmt"
 	"io"
 	"os"
-	"time"
 
 	"github.com/google/uuid"
-	"github.com/loft-sh/devpod/pkg/metrics"
 	"github.com/loft-sh/devpod/pkg/stdio"
 	"github.com/pkg/errors"
 	"golang.org/x/crypto/ssh"
@@ -131,11 +129,6 @@ func Run(ctx context.Context, client *ssh.Client, command string, stdin io.Reade
 	sess.Stdin = stdin
 	sess.Stdout = stdout
 	sess.Stderr = stderr
-
-	start := time.Now()
-	defer func() {
-		metrics.ObserveSession(fmt.Sprintf("ssh_client: %s", command), time.Since(start).Milliseconds())
-	}()
 
 	err = sess.Run(command)
 	if err != nil {

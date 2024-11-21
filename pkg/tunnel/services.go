@@ -19,6 +19,7 @@ import (
 	"github.com/loft-sh/devpod/pkg/devcontainer/setup"
 	"github.com/loft-sh/devpod/pkg/gitsshsigning"
 	"github.com/loft-sh/devpod/pkg/ide/openvscode"
+	"github.com/loft-sh/devpod/pkg/metrics"
 	"github.com/loft-sh/devpod/pkg/netstat"
 	devssh "github.com/loft-sh/devpod/pkg/ssh"
 	"github.com/loft-sh/log"
@@ -131,6 +132,11 @@ func RunInContainer(
 			command += " --debug"
 		}
 
+		start := time.Now()
+		defer func() {
+			log.Infof("======== EVENT ssh command %s took %dms", metrics.Short(command), time.Since(start).Milliseconds())
+		}()
+
 		err = devssh.Run(cancelCtx, containerClient, command, stdinReader, stdoutWriter, writer, nil)
 		if err != nil {
 			return err
@@ -147,10 +153,12 @@ func RunInContainer(
 func forwardDevContainerPorts(ctx context.Context, containerClient *ssh.Client, extraPorts []string, exitAfterTimeout time.Duration, log log.Logger) ([]string, error) {
 	stdout := &bytes.Buffer{}
 	stderr := &bytes.Buffer{}
+	start := time.Now()
 	err := devssh.Run(ctx, containerClient, "cat "+setup.ResultLocation, nil, stdout, stderr, nil)
 	if err != nil {
 		return nil, fmt.Errorf("retrieve container result: %s\n%s%w", stdout.String(), stderr.String(), err)
 	}
+	log.Infof("======== EVENT ssh command %s took %dms", metrics.Short("cat "+setup.ResultLocation), time.Since(start).Milliseconds())
 
 	// parse result
 	result := &config2.Result{}

@@ -76,8 +76,7 @@ func (c *ContainerHandler) Run(ctx context.Context, handler Handler, cfg *config
 		}
 		start := time.Now()
 		defer func() {
-			c.log.Info("finished injecting agent tunnel")
-			metrics.ObserveSession("inject_agent_tunnel", time.Since(start).Milliseconds())
+			c.log.Info("====== EVENT finished injecting agent tunnel took %dms", time.Since(start).Milliseconds())
 		}()
 		tunnelChan <- agent.InjectAgentAndExecute(
 			cancelCtx,
@@ -125,8 +124,7 @@ func (c *ContainerHandler) Run(ctx context.Context, handler Handler, cfg *config
 
 		start := time.Now()
 		defer func() {
-			c.log.Info("finished connecting to container ")
-			metrics.ObserveSession("container_connect", time.Since(start).Milliseconds())
+			c.log.Infof("======== EVENT finished connecting to container took %dms", time.Since(start).Milliseconds())
 		}()
 
 		// wait until we are done
@@ -175,6 +173,7 @@ func (c *ContainerHandler) updateConfig(ctx context.Context, sshClient *ssh.Clie
 				command += fmt.Sprintf(" --agent-dir '%s'", agentInfo.Agent.DataPath)
 			}
 
+			start := time.Now()
 			c.log.Debugf("Run command in container: %s", command)
 			err = devssh.Run(ctx, sshClient, command, nil, buf, buf, nil)
 			if err != nil {
@@ -182,6 +181,7 @@ func (c *ContainerHandler) updateConfig(ctx context.Context, sshClient *ssh.Clie
 			} else {
 				c.log.Debugf("Out: %s", buf.String())
 			}
+			c.log.Infof("======== EVENT ssh command %s took %dms", metrics.Short(command), time.Since(start).Milliseconds())
 		}
 	}
 }
@@ -223,6 +223,12 @@ func (c *ContainerHandler) runRunInContainer(ctx context.Context, sshClient *ssh
 		if c.log.GetLevel() == logrus.DebugLevel {
 			command += " --debug"
 		}
+
+		start := time.Now()
+		defer func() {
+			c.log.Infof("======== EVENT ssh command %s took %dms", metrics.Short(command), time.Since(start).Milliseconds())
+		}()
+
 		err = devssh.Run(cancelCtx, sshClient, command, stdinReader, stdoutWriter, writer, envVars)
 		if err != nil {
 			c.log.Errorf("Error tunneling to container: %v", err)

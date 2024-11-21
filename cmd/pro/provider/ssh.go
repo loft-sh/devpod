@@ -9,7 +9,6 @@ import (
 
 	storagev1 "github.com/loft-sh/api/v4/pkg/apis/storage/v1"
 	"github.com/loft-sh/devpod/cmd/pro/flags"
-	"github.com/loft-sh/devpod/pkg/metrics"
 	"github.com/loft-sh/devpod/pkg/platform"
 	"github.com/loft-sh/devpod/pkg/platform/client"
 	"github.com/loft-sh/devpod/pkg/platform/remotecommand"
@@ -73,8 +72,7 @@ func (cmd *SshCmd) Run(ctx context.Context, stdin io.Reader, stdout io.Writer, s
 
 	start := time.Now()
 	defer func() {
-		cmd.Log.Info("pro provider ", cmd)
-		metrics.ObserveSession("pro_ssh", time.Since(start).Milliseconds())
+		cmd.Log.Infof("pro provider took %dms", time.Since(start).Milliseconds())
 	}()
 
 	_, err = remotecommand.ExecuteConn(ctx, conn, stdin, stdout, stderr, cmd.Log.ErrorStreamOnly())

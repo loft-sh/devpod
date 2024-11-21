@@ -180,8 +180,7 @@ func (s *proxyClient) Up(ctx context.Context, opt client.UpOptions) error {
 
 	start := time.Now()
 	defer func() {
-		s.log.Info("proxy client up finished ", s.config.Exec.Command)
-		metrics.ObserveSession("up", time.Since(start).Milliseconds())
+		s.log.Infof("======= EVENT proxy up command %s took %dms to finish", strings.Join(s.config.Exec.Command, " "), time.Since(start).Milliseconds())
 	}()
 
 	err := RunCommandWithBinaries(
@@ -215,8 +214,7 @@ func (s *proxyClient) Ssh(ctx context.Context, opt client.SshOptions) error {
 
 	start := time.Now()
 	defer func() {
-		s.log.Info("proxy client ssh finished ", s.config.Exec.Command)
-		metrics.ObserveSession(fmt.Sprintf("proxy_ssh: %s", strings.Join(s.config.Exec.Proxy.Ssh, " ")), time.Since(start).Milliseconds())
+		s.log.Infof("======== EVENT proxy client ssh %s took %dms to finish ", metrics.Short(strings.Join(s.config.Exec.Command, " ")), time.Since(start).Milliseconds())
 	}()
 
 	err := RunCommandWithBinaries(

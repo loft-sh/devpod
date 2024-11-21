@@ -151,9 +151,9 @@ func (s *Server) handler(sess ssh.Session) {
 		s.log.Debugf("Execute SSH server command TEST: %s", strings.Join(cmd.Args, " "))
 		err = s.HandleNonPTY(sess, cmd)
 	}
+
 	defer func() {
-		s.log.Info("Shell inner session ended for command ", cmd)
-		metrics.ObserveSession(fmt.Sprintf("ssh_server %s", cmd), time.Since(start).Milliseconds())
+		s.log.Infof("======== EVENT ssh server command %s took %dms", metrics.Short(cmd.String()), time.Since(start).Milliseconds())
 	}()
 
 	// exit session

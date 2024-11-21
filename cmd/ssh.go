@@ -170,8 +170,7 @@ func (cmd *SSHCmd) startProxyTunnel(
 		func(ctx context.Context, stdin io.Reader, stdout io.Writer) error {
 			start := time.Now()
 			defer func() {
-				log.Info("SSH session recorded for command ", cmd)
-				metrics.ObserveSession("inner_tunnel", time.Since(start).Milliseconds())
+				log.Infof("======== EVENT proxy tunnel command %s took %dms", metrics.Short(cmd.Command), time.Since(start).Milliseconds())
 			}()
 			return client.Ssh(ctx, client2.SshOptions{
 				User:   cmd.User,
@@ -455,16 +454,14 @@ func (cmd *SSHCmd) startTunnel(ctx context.Context, devPodConfig *config.Config,
 
 		start := time.Now()
 		defer func() {
-			log.Info("SSH outer session recorded for command ", cmd)
-			metrics.ObserveSession("outer_tunnel", time.Since(start).Milliseconds())
+			log.Infof("======== EVENT ssh command %s took %dms", metrics.Short(command), time.Since(start).Milliseconds())
 		}()
 		return devssh.Run(ctx, containerClient, command, os.Stdin, os.Stdout, writer, envVars)
 	}
 
 	start := time.Now()
 	defer func() {
-		log.Info("SSH outer session recorded for command ", cmd)
-		metrics.ObserveSession(fmt.Sprintf("machine_ssh: %s", cmd.Command), time.Since(start).Milliseconds())
+		log.Infof("======== EVENT machine ssh session command %s took %dms", metrics.Short(command), time.Since(start).Milliseconds())
 	}()
 
 	return machine.StartSSHSession(
@@ -474,6 +471,10 @@ func (cmd *SSHCmd) startTunnel(ctx context.Context, devPodConfig *config.Config,
 		!cmd.Proxy && cmd.AgentForwarding &&
 			devPodConfig.ContextOption(config.ContextOptionSSHAgentForwarding) == "true",
 		func(ctx context.Context, stdin io.Reader, stdout io.Writer, stderr io.Writer) error {
+			start := time.Now()
+			defer func() {
+				log.Infof("======== EVENT ssh command %s took %dms", metrics.Short(command), time.Since(start).Milliseconds())
+			}()
 			return devssh.Run(ctx, containerClient, command, stdin, stdout, stderr, envVars)
 		},
 		writer,
@@ -615,6 +616,12 @@ func (cmd *SSHCmd) setupGPGAgent(
 
 	writer := log.ErrorStreamOnly().Writer(logrus.InfoLevel, false)
 	defer writer.Close()
+
+	start := time.Now()
+	defer func() {
+		log.Infof("======== EVENT ssh command %s took %dms", metrics.Short(command), time.Since(start).Milliseconds())
+	}()
+
 	err = devssh.Run(ctx, containerClient, command, nil, writer, writer, nil)
 	if err != nil {
 		return fmt.Errorf("run gpg agent setup command: %w", err)
@@ -654,6 +661,11 @@ func startWorkspaceCredentialServer(ctx context.Context, client *ssh.Client, use
 	}
 	args = append(args, "--runner")
 	command = fmt.Sprintf("%s %s", command, strings.Join(args, " "))
+
+	start := time.Now()
+	defer func() {
+		log.Infof("======== EVENT ssh command %s took %dms", metrics.Short(command), time.Since(start).Milliseconds())
+	}()
 
 	if err := devssh.Run(ctx, client, command, stdin, stdout, writer, nil); err != nil {
 		return fmt.Errorf("run credentials server: %w", err)

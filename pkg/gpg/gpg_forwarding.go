@@ -9,9 +9,11 @@ import (
 	"path/filepath"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/loft-sh/log"
 
+	"github.com/loft-sh/devpod/pkg/metrics"
 	devssh "github.com/loft-sh/devpod/pkg/ssh"
 	"github.com/sirupsen/logrus"
 	"golang.org/x/crypto/ssh"
@@ -37,6 +39,11 @@ func IsGpgTunnelRunning(
 	if user != "" && user != "root" {
 		command = fmt.Sprintf("su -c \"%s\" '%s'", command, user)
 	}
+
+	start := time.Now()
+	defer func() {
+		log.Infof("======== EVENT ssh command %s took %dms", metrics.Short(command), time.Since(start).Milliseconds())
+	}()
 
 	// capture the output, if it's empty it means we don't have gpg-forwarding
 	var out bytes.Buffer
