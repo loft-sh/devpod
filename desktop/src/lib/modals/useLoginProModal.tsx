@@ -1,6 +1,6 @@
 import { BottomActionBar, BottomActionBarError, Form, useStreamingTerminal } from "@/components"
-import { useProInstanceManager, useProInstances } from "@/contexts"
-import { exists, useFormErrors } from "@/lib"
+import { useProInstanceManager, useProInstances, useProviders } from "@/contexts"
+import { canHealthCheck, exists, useFormErrors } from "@/lib"
 import { Routes } from "@/routes"
 import {
   Box,
@@ -52,6 +52,7 @@ export function useLoginProModal() {
   >({})
   const { terminal, connectStream, clear: clearTerminal } = useStreamingTerminal({ fontSize: "sm" })
   const [[proInstances], { login, disconnect }] = useProInstances()
+  const [[providers]] = useProviders()
   const { isOpen, onClose, onOpen } = useDisclosure()
   const { handleSubmit, formState, register, reset, setValue } = useForm<TFormValues>({
     mode: "onBlur",
@@ -140,13 +141,19 @@ export function useLoginProModal() {
     resetModal()
 
     const proInstanceID = proInstances?.find((pro) => pro.provider === state.providerID)?.host
-    if (!proInstanceID) return
+    if (!proInstanceID || !state.providerID) return
 
-    // workaround for layout shift after closing modal, no clue why
-    setTimeout(() => {
-      navigate(Routes.toProInstance(proInstanceID))
-    }, 0)
-  }, [completeConfigureProvider, navigate, proInstances, resetModal, state.providerID])
+    const provider = providers?.[state.providerID]
+
+    // We only redirect to the new experience if the provider supports it.
+    // Support can be determined via canHealthCheck.
+    if (provider && canHealthCheck(provider.config)) {
+      // workaround for layout shift after closing modal, no clue why
+      setTimeout(() => {
+        navigate(Routes.toProInstance(proInstanceID))
+      }, 0)
+    }
+  }, [completeConfigureProvider, navigate, providers, proInstances, resetModal, state.providerID])
 
   const modal = useMemo(() => {
     return (

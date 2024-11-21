@@ -29,6 +29,11 @@ if [[ $BUILD_PLATFORMS == *"linux"* ]]; then
     cp test/devpod-cli-linux-amd64 desktop/src-tauri/bin/devpod-cli-x86_64-unknown-linux-gnu
     cp test/devpod-cli-linux-arm64 desktop/src-tauri/bin/devpod-cli-aarch64-unknown-linux-gnu
 fi
+
+if [[ $BUILD_PLATFORMS == *"windows"* ]]; then
+    cp test/devpod-cli-windows-amd64 desktop/src-tauri/bin/devpod-cli-x86_64-pc-windows-msvc.exe
+fi
+
 # only copy if darwin is in BUILD_PLATFORMS
 if [[ $BUILD_PLATFORMS == *"darwin"* ]]; then
     cp test/devpod-cli-darwin-amd64 desktop/src-tauri/bin/devpod-cli-x86_64-apple-darwin
