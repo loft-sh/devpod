@@ -5,6 +5,7 @@ export const FieldName = {
   SOURCE_TYPE: "sourceType",
   NAME: "name",
   DEFAULT_IDE: "defaultIDE",
+  RUNNER: "runner",
   DEVCONTAINER_JSON: "devcontainerJSON",
   DEVCONTAINER_TYPE: "devcontainerType",
   OPTIONS: "options",
@@ -16,6 +17,7 @@ export type TFormValues = {
   [FieldName.DEFAULT_IDE]: string
   [FieldName.NAME]: string
   [FieldName.DEVCONTAINER_JSON]: string
+  [FieldName.RUNNER]: string
   [FieldName.DEVCONTAINER_TYPE]: TDevContainerType
   [FieldName.OPTIONS]: TOptions
 }

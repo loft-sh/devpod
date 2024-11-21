@@ -1,5 +1,5 @@
 import { BottomActionBar, BottomActionBarError, Form } from "@/components"
-import { ProWorkspaceInstance } from "@/contexts"
+import { ProWorkspaceInstance, useProjectClusters } from "@/contexts"
 import { Code, Laptop, Parameters } from "@/icons"
 import {
   Annotations,
@@ -33,6 +33,7 @@ import { OptionsInput } from "./OptionsInput"
 import { SourceInput } from "./SourceInput"
 import { FieldName, TFormValues } from "./types"
 import { useTemplates } from "@/contexts"
+import { RunnerInput } from "@/views/Pro/CreateWorkspace/RunnerInput"
 
 type TCreateWorkspaceFormProps = Readonly<{
   instance?: ProWorkspaceInstance
@@ -52,9 +53,18 @@ export function CreateWorkspaceForm({
   const containerRef = useRef<HTMLDivElement>(null)
   const { ides, defaultIDE } = useIDEs()
   const { data: templates, isLoading: isTemplatesLoading } = useTemplates()
+
+  const { data: projectClusterData, isLoading: projectClusterDataLoading } = useProjectClusters()
+
   const form = useForm<TFormValues>({ mode: "onChange", defaultValues })
-  const { sourceError, defaultIDEError, nameError, devcontainerJSONError, optionsError } =
-    useFormErrors(Object.values(FieldName), form.formState)
+  const {
+    sourceError,
+    defaultIDEError,
+    nameError,
+    devcontainerJSONError,
+    optionsError,
+    runnerError,
+  } = useFormErrors(Object.values(FieldName), form.formState)
 
   useEffect(() => {
     if (!form.getFieldState(FieldName.DEFAULT_IDE).isDirty && defaultIDE && defaultIDE.name) {
@@ -104,6 +114,26 @@ export function CreateWorkspaceForm({
 
               {exists(optionsError) && (
                 <FormErrorMessage>{optionsError.message ?? "Error"}</FormErrorMessage>
+              )}
+            </CreateWorkspaceRow>
+          </FormControl>
+
+          <FormControl isDisabled={!!instance} isRequired isInvalid={exists(runnerError)}>
+            <CreateWorkspaceRow
+              label={
+                <FormLabel>
+                  <Code boxSize={5} mr="1" />
+                  Runner
+                </FormLabel>
+              }>
+              {projectClusterDataLoading ? (
+                <Spinner />
+              ) : (
+                <RunnerInput runners={projectClusterData?.runners} />
+              )}
+
+              {exists(runnerError) && (
+                <FormErrorMessage>{runnerError.message ?? "Error"}</FormErrorMessage>
               )}
             </CreateWorkspaceRow>
           </FormControl>
@@ -226,6 +256,7 @@ function getDefaultValues(
   }
   const defaultValues: DefaultValues<TFormValues> = {
     defaultIDE: instance.status?.ide?.name ?? "none",
+    runner: instance.spec?.runnerRef?.runner,
   }
 
   // source
