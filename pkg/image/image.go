@@ -67,21 +67,14 @@ func GetImageConfig(ctx context.Context, image string) (*v1.ConfigFile, v1.Image
 func ValidateTags(tags []string) error {
 	for _, tag := range tags {
 		if !IsValidDockerTag(tag) {
-			return fmt.Errorf(`%q is not a valid docker tag
-
- - a tag name must be valid ASCII and may contain lowercase and uppercase letters, digits, underscores, periods and dashes;
- - a tag name may not start with a period or a dash and may contain a maximum of 128 characters.`, tag)
+			return fmt.Errorf(`%q is not a valid docker tag`, tag)
 		}
 	}
 	return nil
 }
 
 func IsValidDockerTag(tag string) bool {
-	if shouldNotBeSlugged(tag, dockerTagRegexp, DockerTagMaxSize) {
-		return true
-	}
-
-	return false
+	return shouldNotBeSlugged(tag, dockerTagRegexp, DockerTagMaxSize)
 }
 
 func shouldNotBeSlugged(data string, regexp *regexp.Regexp, maxSize int) bool {

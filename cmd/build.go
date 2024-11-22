@@ -55,11 +55,9 @@ func NewBuildCmd(flags *flags.GlobalFlags) *cobra.Command {
 			}
 
 			// validate tags
-			if cmd.Tag != nil {
-				err = image.ValidateTags(cmd.Tag)
-
-				if err != nil {
-					return fmt.Errorf("cannot build image, %v", err)
+			if len(cmd.Tag) > 0 {
+				if err := image.ValidateTags(cmd.Tag); err != nil {
+					return fmt.Errorf("cannot build image, %w", err)
 				}
 			}
 

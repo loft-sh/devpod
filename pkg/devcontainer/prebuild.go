@@ -71,15 +71,13 @@ func (r *runner) Build(ctx context.Context, options provider.BuildOptions) (stri
 	}
 
 	if isDockerComposeConfig(substitutedConfig.Config) {
-		err = dockerDriver.TagDevContainer(ctx, buildInfo.ImageName, prebuildImage)
-		if err != nil {
+		if err := dockerDriver.TagDevContainer(ctx, buildInfo.ImageName, prebuildImage); err != nil {
 			return "", errors.Wrap(err, "tag image")
 		}
 	}
 
 	// check if we can push image
-	err = image.CheckPushPermissions(prebuildImage)
-	if err != nil {
+	if err := image.CheckPushPermissions(prebuildImage); err != nil {
 		return "", fmt.Errorf(
 			"cannot push to repository %s. Please make sure you are logged into the registry and credentials are available. (Error: %w)",
 			prebuildImage,
@@ -88,24 +86,25 @@ func (r *runner) Build(ctx context.Context, options provider.BuildOptions) (stri
 	}
 
 	// Setup all image tags (prebuild and any user defined tags)
-	ImageRefs := []string{prebuildImage}
+	imageRefs := []string{prebuildImage}
 
 	imageRepoName := strings.Split(prebuildImage, ":")
 	if buildInfo.Tags != nil {
 		for _, tag := range buildInfo.Tags {
-			ImageRefs = append(ImageRefs, imageRepoName[0]+":"+tag)
+			imageRefs = append(imageRefs, imageRepoName[0]+":"+tag)
 		}
 	}
 
 	// tag the image
-	for _, imageRef := range ImageRefs {
-		err = dockerDriver.TagDevContainer(ctx, prebuildImage, imageRef)
+	for _, imageRef := range imageRefs {
+		if err := dockerDriver.TagDevContainer(ctx, prebuildImage, imageRef); err != nil {
+			return "", errors.Wrap(err, "tag image")
+		}
 	}
 
 	// push the image to the registry
-	for _, imageRef := range ImageRefs {
-		err = dockerDriver.PushDevContainer(ctx, imageRef)
-		if err != nil {
+	for _, imageRef := range imageRefs {
+		if err := dockerDriver.PushDevContainer(ctx, imageRef); err != nil {
 			return "", errors.Wrap(err, "push image")
 		}
 	}
