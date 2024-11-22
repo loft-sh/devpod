@@ -39,6 +39,7 @@ use tauri::{
 use tokio::sync::mpsc::{self, Sender};
 use ui_messages::UiMessage;
 use workspaces::WorkspacesState;
+use util::{kill_child_processes, QUIT_EXIT_CODE};
 
 pub type AppHandle = tauri::AppHandle<Wry>;
 
@@ -155,19 +156,32 @@ fn main() -> anyhow::Result<()> {
         .build(ctx)
         .expect("error while building tauri application");
 
-    info!("Run");
 
     app.run(move |app_handle, event| {
         let exit_requested_tx = tx.clone();
 
         match event {
             // Prevents app from exiting when last window is closed, leaving the system tray active
-            tauri::RunEvent::ExitRequested { api, .. } => {
+            tauri::RunEvent::ExitRequested { api, code, .. } => {
+                info!("Handling ExitRequested event.");
+
+                // On windows, we want to kill all existing child processes to prevent dangling processes later down the line.
+                kill_child_processes(std::process::id());
+
                 tauri::async_runtime::block_on(async move {
                     if let Err(err) = exit_requested_tx.send(UiMessage::ExitRequested).await {
                         error!("Failed to broadcast UI ready message: {:?}", err);
                     }
                 });
+
+                // Check if the user clicked "Quit" in the system tray, in which case we have to actually close.
+                if let Some(code) = code {
+                    if code == QUIT_EXIT_CODE {
+                        return
+                    }
+                }
+
+                // Otherwise, we stay alive in the system tray.
                 api.prevent_exit();
             }
             tauri::RunEvent::WindowEvent { event, label, .. } => {

@@ -1,10 +1,11 @@
-use crate::{workspaces::WorkspacesState, AppHandle, AppState, UiMessage};
+use crate::{util, workspaces::WorkspacesState, AppHandle, AppState, UiMessage};
 use log::{error, warn};
 use tauri::{
     menu::{Menu, MenuBuilder, MenuEvent, MenuItem, Submenu, SubmenuBuilder},
     tray::{TrayIcon, TrayIconEvent},
     EventLoopMessage, Manager, State, Wry,
 };
+use util::QUIT_EXIT_CODE;
 
 pub trait SystemTrayIdentifier {}
 pub type SystemTrayClickHandler = Box<dyn Fn(&AppHandle, State<AppState>)>;
@@ -69,7 +70,7 @@ impl SystemTray {
     pub fn get_event_handler(&self) -> impl Fn(&AppHandle, MenuEvent) + Send + Sync {
         |app, event| match event.id.as_ref() {
             Self::QUIT_ID => {
-                std::process::exit(0);
+                app.exit(QUIT_EXIT_CODE)
             }
             Self::SHOW_DASHBOARD_ID => {
                 let app_state = app.state::<AppState>();
