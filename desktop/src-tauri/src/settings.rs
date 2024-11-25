@@ -92,6 +92,6 @@ impl Settings {
             .unwrap()
             .get("autoUpdate")
             .and_then(|v| v.as_bool())
-            .unwrap_or(false)
+            .unwrap_or(true)
     }
 }
