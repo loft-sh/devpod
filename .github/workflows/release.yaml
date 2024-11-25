@@ -322,7 +322,7 @@ jobs:
 
           Write-Output "Re-compressing updater"
           Set-Location -Path ".."
-          Compress-Archive -Path "$updater_extraction_folder_path\*" -DestinationPath "$updater_zip_file_path"
+          Compress-Archive -CompressionLevel NoCompression -Path "$updater_extraction_folder_path\*" -DestinationPath "$updater_zip_file_path"
           Remove-Item "$updater_zip_file_path.sig"
 
           Write-Output "Re-signing updater zip"
