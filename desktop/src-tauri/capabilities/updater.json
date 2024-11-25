@@ -1,0 +1,14 @@
+{
+  "identifier": "updater",
+  "description": "Updater Capabilities",
+  "local": true,
+  "windows": [
+    "update_ready"
+  ],
+  "permissions": [
+    "core:default",
+    "process:allow-exit",
+    "process:allow-restart",
+    "os:default"
+  ]
+}
