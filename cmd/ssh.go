@@ -5,6 +5,7 @@ import (
 	"encoding/base64"
 	"fmt"
 	"io"
+	"math"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -30,6 +31,8 @@ import (
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 	"golang.org/x/crypto/ssh"
+	"k8s.io/apimachinery/pkg/util/wait"
+	"k8s.io/client-go/util/retry"
 )
 
 const (
@@ -647,11 +650,20 @@ func startWorkspaceCredentialServer(ctx context.Context, client *ssh.Client, use
 	args = append(args, "--runner")
 	command = fmt.Sprintf("%s %s", command, strings.Join(args, " "))
 
-	if err := devssh.Run(ctx, client, command, stdin, stdout, writer, nil); err != nil {
-		return fmt.Errorf("run credentials server: %w", err)
-	}
-
-	return nil
+	return retry.OnError(wait.Backoff{
+		Steps:    math.MaxInt,
+		Duration: 500 * time.Millisecond,
+		Factor:   1,
+		Jitter:   0.1,
+	}, func(err error) bool {
+		if ctx.Err() != nil {
+			log.Infof("Context canceled, stopping credentials server: %v", ctx.Err())
+			return false
+		}
+		return true
+	}, func() error {
+		return devssh.Run(ctx, client, command, stdin, stdout, writer, nil)
+	})
 }
 
 func startLocalServer(ctx context.Context, allowGitCredentials, allowDockerCredentials bool, gitUsername, gitToken string, stdoutReader io.Reader, stdinWriter io.WriteCloser, log log.Logger) error {
