@@ -163,7 +163,7 @@ impl<'a> UpdateHelper<'a> {
     pub async fn poll(&self) {
         #[cfg(debug_assertions)] // disable during development
         {
-            return
+            return;
         }
 
         loop {
@@ -181,7 +181,7 @@ impl<'a> UpdateHelper<'a> {
             if let Ok(update) = updater.unwrap().check().await {
                 match update {
                     Some(..) => info!("update available"),
-                    None => info!("no update available")
+                    None => info!("no update available"),
                 };
 
                 if let Some(update) = update {
