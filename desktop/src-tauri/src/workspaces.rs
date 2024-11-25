@@ -82,32 +82,32 @@ impl ToSystemTraySubmenu for WorkspacesState {
     }
 
     fn on_tray_item_clicked(&self, id: &str) -> Option<SystemTrayClickHandler> {
-            let id = id.to_string();
+        let id = id.to_string();
 
-            Some(Box::new(move |_app_handle, state| {
-                tauri::async_runtime::block_on(async {
-                    let tx = &state.ui_messages;
+        Some(Box::new(move |_app_handle, state| {
+            tauri::async_runtime::block_on(async {
+                let tx = &state.ui_messages;
 
-                    if id == Self::CREATE_WORKSPACE_ID {
-                        if let Err(err) = tx
-                            .send(UiMessage::OpenWorkspace(OpenWorkspaceMsg::empty()))
-                            .await
-                        {
-                            error!("Failed to send create workspace message: {:?}", err);
-                        };
-                    } else {
-                        let workspace_id = id.replace(Self::IDENTIFIER_PREFIX, "");
-                        if let Err(err) = tx
-                            .send(UiMessage::OpenWorkspace(OpenWorkspaceMsg::with_id(
-                                workspace_id,
-                            )))
-                            .await
-                        {
-                            error!("Failed to send create workspace message: {:?}", err);
-                        };
-                    }
-                })
-            }))
+                if id == Self::CREATE_WORKSPACE_ID {
+                    if let Err(err) = tx
+                        .send(UiMessage::OpenWorkspace(OpenWorkspaceMsg::empty()))
+                        .await
+                    {
+                        error!("Failed to send create workspace message: {:?}", err);
+                    };
+                } else {
+                    let workspace_id = id.replace(Self::IDENTIFIER_PREFIX, "");
+                    if let Err(err) = tx
+                        .send(UiMessage::OpenWorkspace(OpenWorkspaceMsg::with_id(
+                            workspace_id,
+                        )))
+                        .await
+                    {
+                        error!("Failed to send create workspace message: {:?}", err);
+                    };
+                }
+            })
+        }))
     }
 }
 
@@ -171,8 +171,9 @@ pub fn setup(app_handle: &AppHandle, state: tauri::State<'_, AppState>) {
 
             let ws_app_handle = app_handle.clone();
             thread::spawn(move || loop {
-                let workspaces = WorkspacesState::load(&ws_app_handle).unwrap();
-                workspaces_tx.send(Update::Workspaces(workspaces)).unwrap();
+                if let Ok(workspaces) = WorkspacesState::load(&ws_app_handle) {
+                    workspaces_tx.send(Update::Workspaces(workspaces)).unwrap();
+                }
 
                 thread::sleep(sleep_duration);
             });
