@@ -288,7 +288,7 @@ jobs:
           $msi_file_name = "DevPod_${{ needs.create-release.outputs.package_version }}_x64_en-US"
           $msi_input_file_path = "desktop\src-tauri\target\${{ matrix.settings.target }}\release\bundle\msi\$msi_file_name.msi"
 
-          $updater_zip_file_path = "desktop\src-tauri\target\${{ matrix.settings.target }}\release\bundle\msi\$msi_file_name.zip"
+          $updater_zip_file_path = "desktop\src-tauri\target\${{ matrix.settings.target }}\release\bundle\msi\$msi_file_name.msi.zip"
           $updater_extraction_folder_path = "desktop\src-tauri\target\${{ matrix.settings.target }}\release\bundle\msi\updater"
           $updater_input_file_path = "$updater_extraction_folder_path\$msi_file_name.msi"
 
