@@ -32,6 +32,10 @@ import (
 	"golang.org/x/crypto/ssh"
 )
 
+const (
+	DisableSSHKeepAlive time.Duration = 0 * time.Second
+)
+
 // SSHCmd holds the ssh cmd flags
 type SSHCmd struct {
 	*flags.GlobalFlags
@@ -48,6 +52,9 @@ type SSHCmd struct {
 	AgentForwarding           bool
 	GPGAgentForwarding        bool
 	GitSSHSignatureForwarding bool
+
+	// ssh keepalive options
+	SSHKeepAliveInterval time.Duration `json:"sshKeepAliveInterval,omitempty"`
 
 	StartServices bool
 
@@ -103,6 +110,7 @@ func NewSSHCmd(f *flags.GlobalFlags) *cobra.Command {
 	sshCmd.Flags().BoolVar(&cmd.GPGAgentForwarding, "gpg-agent-forwarding", false, "If true forward the local gpg-agent to the remote machine")
 	sshCmd.Flags().BoolVar(&cmd.Stdio, "stdio", false, "If true will tunnel connection through stdout and stdin")
 	sshCmd.Flags().BoolVar(&cmd.StartServices, "start-services", true, "If false will not start any port-forwarding or git / docker credentials helper")
+	sshCmd.Flags().DurationVar(&cmd.SSHKeepAliveInterval, "ssh-keepalive-interval", 55*time.Second, "How often should keepalive request be made (55s)")
 
 	return sshCmd
 }
@@ -434,6 +442,10 @@ func (cmd *SSHCmd) startTunnel(ctx context.Context, devPodConfig *config.Config,
 	// Traffic is coming in from the outside, we need to forward it to the container
 	if cmd.Proxy || cmd.Stdio {
 		if cmd.Proxy {
+			if cmd.SSHKeepAliveInterval != DisableSSHKeepAlive {
+				go startSSHKeepAlive(ctx, containerClient, cmd.SSHKeepAliveInterval, log)
+			}
+
 			go func() {
 				if err := cmd.startRunnerServices(ctx, devPodConfig, containerClient, log); err != nil {
 					log.Error(err)
@@ -451,6 +463,9 @@ func (cmd *SSHCmd) startTunnel(ctx context.Context, devPodConfig *config.Config,
 		!cmd.Proxy && cmd.AgentForwarding &&
 			devPodConfig.ContextOption(config.ContextOptionSSHAgentForwarding) == "true",
 		func(ctx context.Context, stdin io.Reader, stdout io.Writer, stderr io.Writer) error {
+			if cmd.SSHKeepAliveInterval != DisableSSHKeepAlive {
+				go startSSHKeepAlive(ctx, containerClient, cmd.SSHKeepAliveInterval, log)
+			}
 			return devssh.Run(ctx, containerClient, command, stdin, stdout, stderr, envVars)
 		},
 		writer,
@@ -658,4 +673,21 @@ func preparePipes() (io.Reader, io.WriteCloser, io.Reader, io.WriteCloser, error
 	}
 
 	return stdoutReader, stdoutWriter, stdinReader, stdinWriter, nil
+}
+
+func startSSHKeepAlive(ctx context.Context, client *ssh.Client, interval time.Duration, log log.Logger) {
+	ticker := time.NewTicker(interval)
+	defer ticker.Stop()
+
+	for {
+		select {
+		case <-ctx.Done():
+			return
+		case <-ticker.C:
+			_, _, err := client.SendRequest("keepalive@openssh.com", true, nil)
+			if err != nil {
+				log.Errorf("Failed to send keepalive: %w", err)
+			}
+		}
+	}
 }
