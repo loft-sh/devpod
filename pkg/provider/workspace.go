@@ -195,28 +195,28 @@ type AgentWorkspaceInfo struct {
 
 type CLIOptions struct {
 	// up options
-	flags.GitCredentialsFlags `json:",inline"`
-	ID                        string            `json:"id,omitempty"`
-	Source                    string            `json:"source,omitempty"`
-	IDE                       string            `json:"ide,omitempty"`
-	IDEOptions                []string          `json:"ideOptions,omitempty"`
-	PrebuildRepositories      []string          `json:"prebuildRepositories,omitempty"`
-	DevContainerImage         string            `json:"devContainerImage,omitempty"`
-	DevContainerPath          string            `json:"devContainerPath,omitempty"`
-	DevContainerSource        string            `json:"devContainerSource,omitempty"`
-	EnvironmentTemplate       string            `json:"environmentTemplate,omitempty"`
-	WorkspaceEnv              []string          `json:"workspaceEnv,omitempty"`
-	WorkspaceEnvFile          []string          `json:"workspaceEnvFile,omitempty"`
-	InitEnv                   []string          `json:"initEnv,omitempty"`
-	Recreate                  bool              `json:"recreate,omitempty"`
-	Reset                     bool              `json:"reset,omitempty"`
-	Proxy                     bool              `json:"proxy,omitempty"`
-	DisableDaemon             bool              `json:"disableDaemon,omitempty"`
-	DaemonInterval            string            `json:"daemonInterval,omitempty"`
-	ForceCredentials          bool              `json:"forceCredentials,omitempty"`
-	GitCloneStrategy          git.CloneStrategy `json:"gitCloneStrategy,omitempty"`
-	FallbackImage             string            `json:"fallbackImage,omitempty"`
-	GitSSHSigningKey          string            `json:"gitSshSigningKey,omitempty"`
+	flags.GitCredentialsFlags  `json:",inline"`
+	ID                         string            `json:"id,omitempty"`
+	Source                     string            `json:"source,omitempty"`
+	IDE                        string            `json:"ide,omitempty"`
+	IDEOptions                 []string          `json:"ideOptions,omitempty"`
+	PrebuildRepositories       []string          `json:"prebuildRepositories,omitempty"`
+	DevContainerImage          string            `json:"devContainerImage,omitempty"`
+	DevContainerPath           string            `json:"devContainerPath,omitempty"`
+	EnvironmentTemplate        string            `json:"environmentTemplate,omitempty"`
+	EnvironmentTemplateVersion string            `json:"environmentTemplateVersion,omitempty"`
+	WorkspaceEnv               []string          `json:"workspaceEnv,omitempty"`
+	WorkspaceEnvFile           []string          `json:"workspaceEnvFile,omitempty"`
+	InitEnv                    []string          `json:"initEnv,omitempty"`
+	Recreate                   bool              `json:"recreate,omitempty"`
+	Reset                      bool              `json:"reset,omitempty"`
+	Proxy                      bool              `json:"proxy,omitempty"`
+	DisableDaemon              bool              `json:"disableDaemon,omitempty"`
+	DaemonInterval             string            `json:"daemonInterval,omitempty"`
+	ForceCredentials           bool              `json:"forceCredentials,omitempty"`
+	GitCloneStrategy           git.CloneStrategy `json:"gitCloneStrategy,omitempty"`
+	FallbackImage              string            `json:"fallbackImage,omitempty"`
+	GitSSHSigningKey           string            `json:"gitSshSigningKey,omitempty"`
 
 	// build options
 	Repository string   `json:"repository,omitempty"`

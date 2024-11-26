@@ -20,7 +20,6 @@ const (
 	PullCommand    = "pull"
 	DecryptCommand = "decrypt"
 
-	GitCrane         = "git"
 	EnvironmentCrane = "environment"
 
 	defaultBinName     = "devpod-crane"
@@ -68,8 +67,7 @@ func (c *command) Run() (string, error) {
 
 // ShouldUse takes CLIOptions and returns true if crane should be used
 func ShouldUse(cliOptions *provider2.CLIOptions) bool {
-	return IsAvailable() && (cliOptions.DevContainerSource != "" ||
-		cliOptions.EnvironmentTemplate != "")
+	return IsAvailable() && cliOptions.EnvironmentTemplate != ""
 }
 
 // IsAvailable checks if devpod crane is installed in host system
@@ -82,23 +80,24 @@ func IsAvailable() bool {
 func PullConfigFromSource(workspaceInfo *provider2.AgentWorkspaceInfo, options *provider2.CLIOptions, log log.Logger) (string, error) {
 	var data string
 	var err error
-
-	switch {
-	case options.EnvironmentTemplate != "":
-		command := New(PullCommand).
-			WithArg(EnvironmentCrane).
-			WithArg(options.EnvironmentTemplate)
-
-		if options.GitUsername != "" && options.GitToken != "" {
-			command = command.WithFlag("--git-username", options.GitUsername).
-				WithFlag("--git-token", options.GitToken)
-		}
-		data, err = command.Run()
-	case options.DevContainerSource != "":
-		data, err = New(PullCommand).WithArg(GitCrane).WithArg(options.DevContainerSource).Run()
-	default:
-		err = fmt.Errorf("failed to pull config from source based on options")
+	if options.EnvironmentTemplate == "" {
+		return "", fmt.Errorf("failed to pull config from source based on options")
 	}
+
+	command := New(PullCommand).
+		WithArg(EnvironmentCrane).
+		WithArg(options.EnvironmentTemplate)
+
+	if options.GitUsername != "" && options.GitToken != "" {
+		command = command.WithFlag("--git-username", options.GitUsername).
+			WithFlag("--git-token", options.GitToken)
+	}
+
+	if options.EnvironmentTemplateVersion != "" {
+		command = command.WithFlag("--version", options.EnvironmentTemplateVersion)
+	}
+
+	data, err = command.Run()
 	if err != nil {
 		return "", err
 	}
