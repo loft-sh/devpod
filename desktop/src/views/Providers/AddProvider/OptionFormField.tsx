@@ -98,7 +98,11 @@ export function OptionFormField({
 
     switch (type) {
       case "boolean":
-        return <Checkbox {...props}>{displayName}</Checkbox>
+        return (
+          <Checkbox {...props} defaultChecked={props.defaultValue === "true"}>
+            {displayName}
+          </Checkbox>
+        )
       case "number":
         return (
           <Input
