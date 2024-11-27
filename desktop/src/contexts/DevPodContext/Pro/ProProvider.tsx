@@ -1,6 +1,6 @@
 import { ProClient, client as globalClient } from "@/client"
 import { ToolbarActions, ToolbarTitle } from "@/components"
-import { Annotations } from "@/lib"
+import { Annotations, Result } from "@/lib"
 import { Routes } from "@/routes"
 import { Text } from "@chakra-ui/react"
 import { ManagementV1Project } from "@loft-enterprise/client/gen/models/managementV1Project"
@@ -47,6 +47,12 @@ export function ProProvider({ host, children }: { host: string; children: ReactN
     return projectsQuery.data?.[0]
   }, [projectsQuery, selectedProject])
 
+  const [cancelWatch, setCancelWatch] = useState<
+    { fn: () => Promise<Result<undefined>> } | undefined
+  >(undefined)
+
+  const [waitingForCancel, setWaitingForCancel] = useState<boolean>(false)
+
   useEffect(() => {
     if (!currentProject?.metadata?.name) {
       return
@@ -77,11 +83,20 @@ export function ProProvider({ host, children }: { host: string; children: ReactN
       }, 1_000)
     })
 
-    return () => {
+    const canceler = () => {
       canceled = true
-      toCancel()
+      setCancelWatch(undefined)
+      setWaitingForCancel(true)
+
+      return toCancel().finally(() => setWaitingForCancel(false))
     }
-  }, [client, store, currentProject])
+
+    setCancelWatch({ fn: canceler })
+
+    return () => {
+      canceler()
+    }
+  }, [client, store, currentProject, setCancelWatch, setWaitingForCancel])
 
   const handleProjectChanged = (newProject: ManagementV1Project) => {
     setSelectedProject(newProject)
@@ -123,6 +138,8 @@ export function ProProvider({ host, children }: { host: string; children: ReactN
           projects={projectsQuery.data ?? []}
           currentProject={currentProject!}
           onProjectChange={handleProjectChanged}
+          onCancelWatch={cancelWatch?.fn}
+          waitingForCancel={waitingForCancel}
         />
       </ToolbarActions>
       {children}

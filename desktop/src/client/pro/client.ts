@@ -87,7 +87,8 @@ export class ProClient implements TDebuggable {
 
     // Don't await here, we want to return the unsubscribe function
     return () => {
-      cmd.cancel()
+      // Still, return the promise so someone can choose to await if necessary.
+      return cmd.cancel()
     }
   }
 
