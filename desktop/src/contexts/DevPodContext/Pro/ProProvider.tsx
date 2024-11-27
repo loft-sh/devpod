@@ -96,7 +96,7 @@ export function ProProvider({ host, children }: { host: string; children: ReactN
     return () => {
       canceler()
     }
-  }, [client, store, currentProject, setCancelWatch, setWaitingForCancel])
+  }, [client, store, currentProject])
 
   const handleProjectChanged = (newProject: ManagementV1Project) => {
     setSelectedProject(newProject)
