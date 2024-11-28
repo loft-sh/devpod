@@ -137,6 +137,11 @@ func New(product ProductName) *License {
 						Status:      virtualClusterStatus,
 					},
 					{
+						DisplayName: "Cert Manager Integration",
+						Name:        string(VirtualClusterProDistroIntegrationsCertManager),
+						Status:      virtualClusterStatus,
+					},
+					{
 						DisplayName: "FIPS",
 						Name:        string(VirtualClusterProDistroFips),
 						Status:      virtualClusterStatus,
@@ -148,6 +153,11 @@ func New(product ProductName) *License {
 					{
 						DisplayName: "Database Connector",
 						Name:        string(VirtualClusterProDistroDatabaseConnector),
+						Status:      virtualClusterStatus,
+					},
+					{
+						DisplayName: "SleepMode",
+						Name:        string(VirtualClusterProDistroSleepMode),
 						Status:      virtualClusterStatus,
 					},
 				},
@@ -326,6 +336,10 @@ func New(product ProductName) *License {
 						Status:      allowedStatus,
 					},
 				},
+			},
+			{
+				DisplayName: "vCluster Sleep Mode",
+				Name:        string(VirtualClusterSleepMode),
 			},
 		},
 	}

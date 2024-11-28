@@ -99,7 +99,7 @@ func (cmd *ListCmd) Run(ctx context.Context) error {
 				continue
 			}
 
-			srcOptions := mergeDynamicOptions(entry.Config.Options, configuredProviders[entry.Config.Name].DynamicOptions)
+			srcOptions := MergeDynamicOptions(entry.Config.Options, configuredProviders[entry.Config.Name].DynamicOptions)
 			entry.Config.Options = srcOptions
 			retMap[k] = ProviderWithDefault{
 				ProviderWithOptions: *entry,

@@ -50,6 +50,7 @@ func addKnownTypes(scheme *runtime.Scheme) error {
 		&DevPodSshOptions{},
 		&DevPodWorkspaceInstanceState{},
 		&DevPodStopOptions{},
+		&DevPodWorkspaceInstanceTroubleshoot{},
 		&DevPodUpOptions{},
 		&DevPodWorkspacePreset{},
 		&DevPodWorkspacePresetList{},
@@ -156,6 +157,11 @@ var (
 			management.NewBackupApplyREST),
 		management.ManagementClusterStorage,
 		builders.NewApiResourceWithStorage(
+			management.InternalClusterStatus,
+			func() runtime.Object { return &Cluster{} },     // Register versioned resource
+			func() runtime.Object { return &ClusterList{} }, // Register versioned resource list
+			management.NewClusterStatusREST),
+		builders.NewApiResourceWithStorage(
 			management.InternalClusterAccessKeyREST,
 			func() runtime.Object { return &ClusterAccessKey{} }, // Register versioned resource
 			nil,
@@ -226,6 +232,11 @@ var (
 			func() runtime.Object { return &DevPodStopOptions{} }, // Register versioned resource
 			nil,
 			management.NewDevPodStopOptionsREST),
+		builders.NewApiResourceWithStorage(
+			management.InternalDevPodWorkspaceInstanceTroubleshootREST,
+			func() runtime.Object { return &DevPodWorkspaceInstanceTroubleshoot{} }, // Register versioned resource
+			nil,
+			management.NewDevPodWorkspaceInstanceTroubleshootREST),
 		builders.NewApiResourceWithStorage(
 			management.InternalDevPodUpOptionsREST,
 			func() runtime.Object { return &DevPodUpOptions{} }, // Register versioned resource
@@ -628,6 +639,14 @@ type DevPodStopOptionsList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:"metadata,omitempty"`
 	Items           []DevPodStopOptions `json:"items"`
+}
+
+// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
+
+type DevPodWorkspaceInstanceTroubleshootList struct {
+	metav1.TypeMeta `json:",inline"`
+	metav1.ListMeta `json:"metadata,omitempty"`
+	Items           []DevPodWorkspaceInstanceTroubleshoot `json:"items"`
 }
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object

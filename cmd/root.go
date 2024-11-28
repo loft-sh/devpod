@@ -25,9 +25,7 @@ import (
 	"golang.org/x/crypto/ssh"
 )
 
-var (
-	globalFlags *flags.GlobalFlags
-)
+var globalFlags *flags.GlobalFlags
 
 // NewRootCmd returns a new root command
 func NewRootCmd() *cobra.Command {
@@ -142,5 +140,6 @@ func BuildRoot() *cobra.Command {
 	rootCmd.AddCommand(NewImportCmd(globalFlags))
 	rootCmd.AddCommand(NewLogsCmd(globalFlags))
 	rootCmd.AddCommand(NewUpgradeCmd())
+	rootCmd.AddCommand(NewTroubleshootCmd(globalFlags))
 	return rootCmd
 }

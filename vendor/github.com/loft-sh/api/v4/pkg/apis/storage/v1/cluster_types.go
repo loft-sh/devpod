@@ -2,7 +2,26 @@ package v1
 
 import (
 	clusterv1 "github.com/loft-sh/agentapi/v4/pkg/apis/loft/cluster/v1"
+	agentstoragev1 "github.com/loft-sh/agentapi/v4/pkg/apis/loft/storage/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+)
+
+const (
+	MetricsFederationServiceNamespaceAnnotation = "loft.sh/metrics-federation-service-namespace"
+	MetricsFederationServiceNameAnnotation      = "loft.sh/metrics-federation-service-name"
+	MetricsFederationServicePortAnnotation      = "loft.sh/metrics-federation-service-port"
+
+	PrometheusLastAppliedHashAnnotation                              = "loft.sh/prometheus-last-applied-hash"
+	PrometheusDeployed                  agentstoragev1.ConditionType = "PrometheusDeployed"
+	PrometheusAvailable                 agentstoragev1.ConditionType = "PrometheusAvailable"
+
+	GlobalPrometheusLastAppliedHashAnnotation                              = "loft.sh/global-prometheus-last-applied-hash"
+	GlobalPrometheusDeployed                  agentstoragev1.ConditionType = "GlobalPrometheusDeployed"
+	GlobalPrometheusAvailable                 agentstoragev1.ConditionType = "GlobalPrometheusAvailable"
+
+	OpenCostLastAppliedHashAnnotation                              = "loft.sh/opencost-last-applied-hash"
+	OpenCostDeployed                  agentstoragev1.ConditionType = "OpenCostDeployed"
+	OpenCostAvailable                 agentstoragev1.ConditionType = "OpenCostAvailable"
 )
 
 // +genclient
@@ -33,6 +52,14 @@ func (a *Cluster) GetAccess() []Access {
 
 func (a *Cluster) SetAccess(access []Access) {
 	a.Spec.Access = access
+}
+
+func (a *Cluster) GetConditions() agentstoragev1.Conditions {
+	return a.Status.Conditions
+}
+
+func (a *Cluster) SetConditions(conditions agentstoragev1.Conditions) {
+	a.Status.Conditions = conditions
 }
 
 // ClusterSpec holds the cluster specification
@@ -72,6 +99,9 @@ type ClusterSpec struct {
 	// Access holds the access rights for users and teams
 	// +optional
 	Access []Access `json:"access,omitempty"`
+
+	// Metrics holds the cluster's metrics backend configuration
+	Metrics *Metrics `json:"metrics,omitempty"`
 }
 
 type AllowedClusterAccountTemplate struct {
@@ -90,6 +120,10 @@ type ClusterStatus struct {
 
 	// +optional
 	Message string `json:"message,omitempty"`
+
+	// Conditions holds several conditions the cluster might be in
+	// +optional
+	Conditions agentstoragev1.Conditions `json:"conditions,omitempty"`
 }
 
 // ClusterStatusPhase describes the phase of a cluster
@@ -172,4 +206,19 @@ type Chart struct {
 	// The password that is required for this repository
 	// +optional
 	Password string `json:"password,omitempty"`
+}
+
+type Metrics struct {
+	// Storage contains settings related to the metrics backend's persistent volume configuration
+	Storage `json:"storage,omitempty"`
+}
+
+type Storage struct {
+	// StorageClass the storage class to use when provisioning the metrics backend's persistent volume
+	// If set to "-" or "" dynamic provisioning is disabled
+	// If set to undefined or null (the default), the cluster's default storage class is used for provisioning
+	StorageClass *string `json:"storageClass,omitempty"`
+
+	// Size the size of the metrics backend's persistent volume
+	Size string `json:"size,omitempty"`
 }
