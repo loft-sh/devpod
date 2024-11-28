@@ -74,7 +74,7 @@ func (cmd *OptionsCmd) Run(ctx context.Context, args []string) error {
 func printOptions(devPodConfig *config.Config, provider *workspace.ProviderWithOptions, format string, showHidden bool) error {
 	entryOptions := devPodConfig.ProviderOptions(provider.Config.Name)
 	dynamicOptions := devPodConfig.DynamicProviderOptionDefinitions(provider.Config.Name)
-	srcOptions := mergeDynamicOptions(provider.Config.Options, dynamicOptions)
+	srcOptions := MergeDynamicOptions(provider.Config.Options, dynamicOptions)
 	if format == "plain" {
 		tableEntries := [][]string{}
 		for optionName, entry := range srcOptions {
@@ -133,7 +133,7 @@ func printOptions(devPodConfig *config.Config, provider *workspace.ProviderWithO
 }
 
 // mergeOptions merges the static provider options and dynamic options
-func mergeDynamicOptions(options map[string]*types.Option, dynamicOptions config.OptionDefinitions) map[string]*types.Option {
+func MergeDynamicOptions(options map[string]*types.Option, dynamicOptions config.OptionDefinitions) map[string]*types.Option {
 	retOptions := map[string]*types.Option{}
 	for k, option := range options {
 		retOptions[k] = option

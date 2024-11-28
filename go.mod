@@ -22,8 +22,8 @@ require (
 	github.com/google/uuid v1.6.0
 	github.com/gorilla/websocket v1.5.3
 	github.com/joho/godotenv v1.5.1
-	github.com/loft-sh/agentapi/v4 v4.2.0-alpha.3
-	github.com/loft-sh/api/v4 v4.2.0-alpha.3
+	github.com/loft-sh/agentapi/v4 v4.2.0-alpha.6
+	github.com/loft-sh/api/v4 v4.0.0-alpha.6.0.20241129074910-a24d4104d586
 	github.com/loft-sh/log v0.0.0-20240219160058-26d83ffb46ac
 	github.com/loft-sh/programming-language-detection v0.0.5
 	github.com/loft-sh/ssh v0.0.4
@@ -154,7 +154,7 @@ require (
 	github.com/k0kubun/go-ansi v0.0.0-20180517002512-3bf9e2903213 // indirect
 	github.com/kylelemons/godebug v1.1.0 // indirect
 	github.com/liggitt/tabwriter v0.0.0-20181228230101-89fcab3d43de // indirect
-	github.com/loft-sh/admin-apis v0.0.0-20241105163154-88dd686aaba0 // indirect
+	github.com/loft-sh/admin-apis v0.0.0-20241127134028-9cfb6b23ec44 // indirect
 	github.com/loft-sh/apiserver v0.0.0-20241008120650-f17d504a4d0d // indirect
 	github.com/lucasb-eyer/go-colorful v1.2.0 // indirect
 	github.com/mailru/easyjson v0.7.7 // indirect
@@ -175,7 +175,7 @@ require (
 	github.com/olekukonko/tablewriter v0.0.5 // indirect
 	github.com/opencontainers/image-spec v1.1.0 // indirect
 	github.com/planetscale/vtprotobuf v0.6.1-0.20240319094008-0393e58bdf10 // indirect
-	github.com/prometheus/client_golang v1.20.4 // indirect
+	github.com/prometheus/client_golang v1.20.5 // indirect
 	github.com/prometheus/client_model v0.6.1 // indirect
 	github.com/prometheus/common v0.60.0 // indirect
 	github.com/prometheus/procfs v0.15.1 // indirect

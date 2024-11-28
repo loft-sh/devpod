@@ -36,7 +36,7 @@ func NewStatusCmd(flags *flags.GlobalFlags) *cobra.Command {
 		RunE: func(cobraCmd *cobra.Command, args []string) error {
 			_, err := clientimplementation.DecodeOptionsFromEnv(clientimplementation.DevPodFlagsStatus, &cmd.StatusOptions)
 			if err != nil {
-				return fmt.Errorf("decode up options: %w", err)
+				return fmt.Errorf("decode status options: %w", err)
 			}
 
 			ctx := cobraCmd.Context()

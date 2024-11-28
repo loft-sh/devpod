@@ -625,15 +625,15 @@ github.com/kylelemons/godebug/diff
 # github.com/liggitt/tabwriter v0.0.0-20181228230101-89fcab3d43de
 ## explicit
 github.com/liggitt/tabwriter
-# github.com/loft-sh/admin-apis v0.0.0-20241105163154-88dd686aaba0
+# github.com/loft-sh/admin-apis v0.0.0-20241127134028-9cfb6b23ec44
 ## explicit; go 1.21.1
 github.com/loft-sh/admin-apis/pkg/licenseapi
-# github.com/loft-sh/agentapi/v4 v4.2.0-alpha.3
+# github.com/loft-sh/agentapi/v4 v4.2.0-alpha.6
 ## explicit; go 1.22.5
 github.com/loft-sh/agentapi/v4/pkg/apis/loft/cluster
 github.com/loft-sh/agentapi/v4/pkg/apis/loft/cluster/v1
 github.com/loft-sh/agentapi/v4/pkg/apis/loft/storage/v1
-# github.com/loft-sh/api/v4 v4.2.0-alpha.3
+# github.com/loft-sh/api/v4 v4.0.0-alpha.6.0.20241129074910-a24d4104d586
 ## explicit; go 1.22.5
 github.com/loft-sh/api/v4/pkg/apis/audit/v1
 github.com/loft-sh/api/v4/pkg/apis/management
@@ -726,7 +726,6 @@ github.com/moby/buildkit/errdefs
 github.com/moby/buildkit/exporter/containerimage/exptypes
 github.com/moby/buildkit/exporter/exptypes
 github.com/moby/buildkit/frontend/dockerfile/command
-github.com/moby/buildkit/frontend/dockerfile/dockerignore
 github.com/moby/buildkit/frontend/dockerfile/parser
 github.com/moby/buildkit/frontend/dockerfile/shell
 github.com/moby/buildkit/frontend/gateway/client
@@ -872,7 +871,7 @@ github.com/pkg/sftp/internal/encoding/ssh/filexfer
 github.com/planetscale/vtprotobuf/protohelpers
 github.com/planetscale/vtprotobuf/types/known/timestamppb
 github.com/planetscale/vtprotobuf/vtproto
-# github.com/prometheus/client_golang v1.20.4
+# github.com/prometheus/client_golang v1.20.5
 ## explicit; go 1.20
 github.com/prometheus/client_golang/internal/github.com/golang/gddo/httputil
 github.com/prometheus/client_golang/internal/github.com/golang/gddo/httputil/header

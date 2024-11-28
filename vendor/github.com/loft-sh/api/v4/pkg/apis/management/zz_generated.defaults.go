@@ -14,6 +14,12 @@ import (
 // Public to allow building arbitrary schemes.
 // All generated defaulters are covering - they call all nested defaulters.
 func RegisterDefaults(scheme *runtime.Scheme) error {
+	scheme.AddTypeDefaultingFunc(&DevPodWorkspaceInstanceTroubleshoot{}, func(obj interface{}) {
+		SetObjectDefaults_DevPodWorkspaceInstanceTroubleshoot(obj.(*DevPodWorkspaceInstanceTroubleshoot))
+	})
+	scheme.AddTypeDefaultingFunc(&DevPodWorkspaceInstanceTroubleshootList{}, func(obj interface{}) {
+		SetObjectDefaults_DevPodWorkspaceInstanceTroubleshootList(obj.(*DevPodWorkspaceInstanceTroubleshootList))
+	})
 	scheme.AddTypeDefaultingFunc(&ProjectClusters{}, func(obj interface{}) { SetObjectDefaults_ProjectClusters(obj.(*ProjectClusters)) })
 	scheme.AddTypeDefaultingFunc(&ProjectClustersList{}, func(obj interface{}) { SetObjectDefaults_ProjectClustersList(obj.(*ProjectClustersList)) })
 	scheme.AddTypeDefaultingFunc(&ProjectRunners{}, func(obj interface{}) { SetObjectDefaults_ProjectRunners(obj.(*ProjectRunners)) })
@@ -21,6 +27,163 @@ func RegisterDefaults(scheme *runtime.Scheme) error {
 	scheme.AddTypeDefaultingFunc(&Runner{}, func(obj interface{}) { SetObjectDefaults_Runner(obj.(*Runner)) })
 	scheme.AddTypeDefaultingFunc(&RunnerList{}, func(obj interface{}) { SetObjectDefaults_RunnerList(obj.(*RunnerList)) })
 	return nil
+}
+
+func SetObjectDefaults_DevPodWorkspaceInstanceTroubleshoot(in *DevPodWorkspaceInstanceTroubleshoot) {
+	for i := range in.Pods {
+		a := &in.Pods[i]
+		for j := range a.Spec.Volumes {
+			b := &a.Spec.Volumes[j]
+			if b.VolumeSource.ISCSI != nil {
+				if b.VolumeSource.ISCSI.ISCSIInterface == "" {
+					b.VolumeSource.ISCSI.ISCSIInterface = "default"
+				}
+			}
+			if b.VolumeSource.RBD != nil {
+				if b.VolumeSource.RBD.RBDPool == "" {
+					b.VolumeSource.RBD.RBDPool = "rbd"
+				}
+				if b.VolumeSource.RBD.RadosUser == "" {
+					b.VolumeSource.RBD.RadosUser = "admin"
+				}
+				if b.VolumeSource.RBD.Keyring == "" {
+					b.VolumeSource.RBD.Keyring = "/etc/ceph/keyring"
+				}
+			}
+			if b.VolumeSource.AzureDisk != nil {
+				if b.VolumeSource.AzureDisk.CachingMode == nil {
+					ptrVar1 := v1.AzureDataDiskCachingMode(v1.AzureDataDiskCachingReadWrite)
+					b.VolumeSource.AzureDisk.CachingMode = &ptrVar1
+				}
+				if b.VolumeSource.AzureDisk.FSType == nil {
+					var ptrVar1 string = "ext4"
+					b.VolumeSource.AzureDisk.FSType = &ptrVar1
+				}
+				if b.VolumeSource.AzureDisk.ReadOnly == nil {
+					var ptrVar1 bool = false
+					b.VolumeSource.AzureDisk.ReadOnly = &ptrVar1
+				}
+				if b.VolumeSource.AzureDisk.Kind == nil {
+					ptrVar1 := v1.AzureDataDiskKind(v1.AzureSharedBlobDisk)
+					b.VolumeSource.AzureDisk.Kind = &ptrVar1
+				}
+			}
+			if b.VolumeSource.ScaleIO != nil {
+				if b.VolumeSource.ScaleIO.StorageMode == "" {
+					b.VolumeSource.ScaleIO.StorageMode = "ThinProvisioned"
+				}
+				if b.VolumeSource.ScaleIO.FSType == "" {
+					b.VolumeSource.ScaleIO.FSType = "xfs"
+				}
+			}
+		}
+		for j := range a.Spec.InitContainers {
+			b := &a.Spec.InitContainers[j]
+			for k := range b.Ports {
+				c := &b.Ports[k]
+				if c.Protocol == "" {
+					c.Protocol = "TCP"
+				}
+			}
+			if b.LivenessProbe != nil {
+				if b.LivenessProbe.ProbeHandler.GRPC != nil {
+					if b.LivenessProbe.ProbeHandler.GRPC.Service == nil {
+						var ptrVar1 string = ""
+						b.LivenessProbe.ProbeHandler.GRPC.Service = &ptrVar1
+					}
+				}
+			}
+			if b.ReadinessProbe != nil {
+				if b.ReadinessProbe.ProbeHandler.GRPC != nil {
+					if b.ReadinessProbe.ProbeHandler.GRPC.Service == nil {
+						var ptrVar1 string = ""
+						b.ReadinessProbe.ProbeHandler.GRPC.Service = &ptrVar1
+					}
+				}
+			}
+			if b.StartupProbe != nil {
+				if b.StartupProbe.ProbeHandler.GRPC != nil {
+					if b.StartupProbe.ProbeHandler.GRPC.Service == nil {
+						var ptrVar1 string = ""
+						b.StartupProbe.ProbeHandler.GRPC.Service = &ptrVar1
+					}
+				}
+			}
+		}
+		for j := range a.Spec.Containers {
+			b := &a.Spec.Containers[j]
+			for k := range b.Ports {
+				c := &b.Ports[k]
+				if c.Protocol == "" {
+					c.Protocol = "TCP"
+				}
+			}
+			if b.LivenessProbe != nil {
+				if b.LivenessProbe.ProbeHandler.GRPC != nil {
+					if b.LivenessProbe.ProbeHandler.GRPC.Service == nil {
+						var ptrVar1 string = ""
+						b.LivenessProbe.ProbeHandler.GRPC.Service = &ptrVar1
+					}
+				}
+			}
+			if b.ReadinessProbe != nil {
+				if b.ReadinessProbe.ProbeHandler.GRPC != nil {
+					if b.ReadinessProbe.ProbeHandler.GRPC.Service == nil {
+						var ptrVar1 string = ""
+						b.ReadinessProbe.ProbeHandler.GRPC.Service = &ptrVar1
+					}
+				}
+			}
+			if b.StartupProbe != nil {
+				if b.StartupProbe.ProbeHandler.GRPC != nil {
+					if b.StartupProbe.ProbeHandler.GRPC.Service == nil {
+						var ptrVar1 string = ""
+						b.StartupProbe.ProbeHandler.GRPC.Service = &ptrVar1
+					}
+				}
+			}
+		}
+		for j := range a.Spec.EphemeralContainers {
+			b := &a.Spec.EphemeralContainers[j]
+			for k := range b.EphemeralContainerCommon.Ports {
+				c := &b.EphemeralContainerCommon.Ports[k]
+				if c.Protocol == "" {
+					c.Protocol = "TCP"
+				}
+			}
+			if b.EphemeralContainerCommon.LivenessProbe != nil {
+				if b.EphemeralContainerCommon.LivenessProbe.ProbeHandler.GRPC != nil {
+					if b.EphemeralContainerCommon.LivenessProbe.ProbeHandler.GRPC.Service == nil {
+						var ptrVar1 string = ""
+						b.EphemeralContainerCommon.LivenessProbe.ProbeHandler.GRPC.Service = &ptrVar1
+					}
+				}
+			}
+			if b.EphemeralContainerCommon.ReadinessProbe != nil {
+				if b.EphemeralContainerCommon.ReadinessProbe.ProbeHandler.GRPC != nil {
+					if b.EphemeralContainerCommon.ReadinessProbe.ProbeHandler.GRPC.Service == nil {
+						var ptrVar1 string = ""
+						b.EphemeralContainerCommon.ReadinessProbe.ProbeHandler.GRPC.Service = &ptrVar1
+					}
+				}
+			}
+			if b.EphemeralContainerCommon.StartupProbe != nil {
+				if b.EphemeralContainerCommon.StartupProbe.ProbeHandler.GRPC != nil {
+					if b.EphemeralContainerCommon.StartupProbe.ProbeHandler.GRPC.Service == nil {
+						var ptrVar1 string = ""
+						b.EphemeralContainerCommon.StartupProbe.ProbeHandler.GRPC.Service = &ptrVar1
+					}
+				}
+			}
+		}
+	}
+}
+
+func SetObjectDefaults_DevPodWorkspaceInstanceTroubleshootList(in *DevPodWorkspaceInstanceTroubleshootList) {
+	for i := range in.Items {
+		a := &in.Items[i]
+		SetObjectDefaults_DevPodWorkspaceInstanceTroubleshoot(a)
+	}
 }
 
 func SetObjectDefaults_ProjectClusters(in *ProjectClusters) {

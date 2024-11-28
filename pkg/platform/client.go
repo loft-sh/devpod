@@ -10,7 +10,6 @@ import (
 	"github.com/loft-sh/devpod/pkg/provider"
 	"github.com/loft-sh/devpod/pkg/workspace"
 	"github.com/loft-sh/log"
-	"github.com/pkg/errors"
 )
 
 func InitClientFromHost(ctx context.Context, devPodConfig *config.Config, devPodProHost string, log log.Logger) (client.Client, error) {
@@ -39,7 +38,7 @@ func ProviderFromHost(ctx context.Context, devPodConfig *config.Config, devPodPr
 
 	provider, err := workspace.FindProvider(devPodConfig, proInstanceConfig.Provider, log)
 	if err != nil {
-		return nil, errors.Wrap(err, "find provider")
+		return nil, fmt.Errorf("find provider: %w", err)
 	} else if !provider.Config.IsProxyProvider() {
 		return nil, fmt.Errorf("provider is not a proxy provider")
 	}

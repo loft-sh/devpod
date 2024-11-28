@@ -31,6 +31,7 @@ type DevPodWorkspaceInstanceInterface interface {
 	Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts metav1.PatchOptions, subresources ...string) (result *v1.DevPodWorkspaceInstance, err error)
 	GetState(ctx context.Context, devPodWorkspaceInstanceName string, options metav1.GetOptions) (*v1.DevPodWorkspaceInstanceState, error)
 	SetState(ctx context.Context, devPodWorkspaceInstanceName string, devPodWorkspaceInstanceState *v1.DevPodWorkspaceInstanceState, opts metav1.CreateOptions) (*v1.DevPodWorkspaceInstanceState, error)
+	Troubleshoot(ctx context.Context, devPodWorkspaceInstanceName string, options metav1.GetOptions) (*v1.DevPodWorkspaceInstanceTroubleshoot, error)
 
 	DevPodWorkspaceInstanceExpansion
 }
@@ -77,6 +78,20 @@ func (c *devPodWorkspaceInstances) SetState(ctx context.Context, devPodWorkspace
 		SubResource("state").
 		VersionedParams(&opts, scheme.ParameterCodec).
 		Body(devPodWorkspaceInstanceState).
+		Do(ctx).
+		Into(result)
+	return
+}
+
+// Troubleshoot takes name of the devPodWorkspaceInstance, and returns the corresponding v1.DevPodWorkspaceInstanceTroubleshoot object, and an error if there is any.
+func (c *devPodWorkspaceInstances) Troubleshoot(ctx context.Context, devPodWorkspaceInstanceName string, options metav1.GetOptions) (result *v1.DevPodWorkspaceInstanceTroubleshoot, err error) {
+	result = &v1.DevPodWorkspaceInstanceTroubleshoot{}
+	err = c.GetClient().Get().
+		Namespace(c.GetNamespace()).
+		Resource("devpodworkspaceinstances").
+		Name(devPodWorkspaceInstanceName).
+		SubResource("troubleshoot").
+		VersionedParams(&options, scheme.ParameterCodec).
 		Do(ctx).
 		Into(result)
 	return

@@ -70,9 +70,12 @@ type ConfigStatus struct {
 	// DisableLoftConfigEndpoint will disable setting config via the UI and config.management.loft.sh endpoint
 	DisableConfigEndpoint bool `json:"disableConfigEndpoint,omitempty"`
 
-	// Cloud holkds the settings to be used exclusively in vCluster Cloud based
+	// Cloud holds the settings to be used exclusively in vCluster Cloud based
 	// environments and deployments.
 	Cloud *Cloud `json:"cloud,omitempty"`
+
+	// CostControl holds the settings related to the Cost Control ROI dashboard and its metrics gathering infrastructure
+	CostControl *CostControl `json:"costControl,omitempty"`
 }
 
 // Audit holds the audit configuration options for loft. Changing any options will require a loft restart
@@ -715,4 +718,43 @@ type MaintenanceWindow struct {
 	// TimeWindow specifies the time window for the maintenance.
 	// It should be a string representing the time range in 24-hour format, in UTC, e.g., "02:00-03:00".
 	TimeWindow string `json:"timeWindow,omitempty"`
+}
+
+type CostControl struct {
+	// Enabled specifies whether the ROI dashboard should be available in the UI, and if the metrics infrastructure
+	// that provides dashboard data is deployed
+	Enabled *bool `json:"enabled,omitempty"`
+
+	// GlobalMetrics are settings for the global metrics backend. This aggregates metrics for the Cost Control Dashboard
+	// across all connected clusters
+	GlobalMetrics *storagev1.Metrics `json:"globalMetrics,omitempty"`
+
+	// ClusterMetrics are settings for each cluster's metrics backend. These settings apply all connected clusters
+	// unless overridden by modifying the Cluster's spec.
+	ClusterMetrics *storagev1.Metrics `json:"clusterMetrics,omitempty"`
+
+	// Settings specify price-related settings that are taken into account for the ROI dashboard calculations.
+	Settings *CostControlSettings `json:"settings,omitempty"`
+}
+
+type CostControlSettings struct {
+	// PriceCurrency specifies the currency.
+	PriceCurrency string `json:"priceCurrency,omitempty"`
+
+	// AvgCPUPricePerNode specifies the average CPU price per node.
+	AvgCPUPricePerNode *CostControlResourcePrice `json:"averageCPUPricePerNode,omitempty"`
+
+	// AvgRAMPricePerNode specifies the average RAM price per node.
+	AvgRAMPricePerNode *CostControlResourcePrice `json:"averageRAMPricePerNode,omitempty"`
+
+	// ControlPlanePricePerCluster specifies the price of one physical cluster.
+	ControlPlanePricePerCluster *CostControlResourcePrice `json:"controlPlanePricePerCluster,omitempty"`
+}
+
+type CostControlResourcePrice struct {
+	// Price specifies the price.
+	Price float64 `json:"price,omitempty"`
+
+	// TimePeriod specifies the time period for the price.
+	TimePeriod string `json:"timePeriod,omitempty"`
 }

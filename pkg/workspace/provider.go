@@ -20,7 +20,10 @@ import (
 	"github.com/pkg/errors"
 )
 
-var errProvideWorkspaceArg = errors.New("please provide a workspace name. E.g. 'devpod up ./my-folder', 'devpod up github.com/my-org/my-repo' or 'devpod up ubuntu'")
+var (
+	ErrNoWorkspaceFound    = errors.New("no workspace found")
+	errProvideWorkspaceArg = errors.New("please provide a workspace name. E.g. 'devpod up ./my-folder', 'devpod up github.com/my-org/my-repo' or 'devpod up ubuntu'")
+)
 
 type ProviderWithOptions struct {
 	Config *provider2.ProviderConfig `json:"config,omitempty"`
