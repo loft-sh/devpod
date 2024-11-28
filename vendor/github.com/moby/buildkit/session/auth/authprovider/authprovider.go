@@ -5,9 +5,11 @@ import (
 	"crypto/ed25519"
 	"crypto/hmac"
 	"crypto/sha256"
+	"crypto/tls"
+	"crypto/x509"
 	"fmt"
-	"net/http"
 	"os"
+	"runtime"
 	"strconv"
 	"strings"
 	"sync"
@@ -18,9 +20,11 @@ import (
 	"github.com/docker/cli/cli/config"
 	"github.com/docker/cli/cli/config/configfile"
 	"github.com/docker/cli/cli/config/types"
+	http "github.com/hashicorp/go-cleanhttp"
 	"github.com/moby/buildkit/session"
 	"github.com/moby/buildkit/session/auth"
 	"github.com/moby/buildkit/util/progress/progresswriter"
+	"github.com/moby/buildkit/util/tracing"
 	"github.com/pkg/errors"
 	"golang.org/x/crypto/nacl/sign"
 	"google.golang.org/grpc"
@@ -28,14 +32,19 @@ import (
 	"google.golang.org/grpc/status"
 )
 
-const defaultExpiration = 60
+const (
+	defaultExpiration      = 60
+	dockerHubConfigfileKey = "https://index.docker.io/v1/"
+	dockerHubRegistryHost  = "registry-1.docker.io"
+)
 
-func NewDockerAuthProvider(cfg *configfile.ConfigFile) session.Attachable {
+func NewDockerAuthProvider(cfg *configfile.ConfigFile, tlsConfigs map[string]*AuthTLSConfig) session.Attachable {
 	return &authProvider{
 		authConfigCache: map[string]*types.AuthConfig{},
 		config:          cfg,
 		seeds:           &tokenSeeds{dir: config.Dir()},
 		loggerCache:     map[string]struct{}{},
+		tlsConfigs:      tlsConfigs,
 	}
 }
 
@@ -45,6 +54,7 @@ type authProvider struct {
 	seeds           *tokenSeeds
 	logger          progresswriter.Logger
 	loggerCache     map[string]struct{}
+	tlsConfigs      map[string]*AuthTLSConfig
 
 	// The need for this mutex is not well understood.
 	// Without it, the docker cli on OS X hangs when
@@ -64,7 +74,7 @@ func (ap *authProvider) Register(server *grpc.Server) {
 }
 
 func (ap *authProvider) FetchToken(ctx context.Context, req *auth.FetchTokenRequest) (rr *auth.FetchTokenResponse, err error) {
-	ac, err := ap.getAuthConfig(req.Host)
+	ac, err := ap.getAuthConfig(ctx, req.Host)
 	if err != nil {
 		return nil, err
 	}
@@ -74,7 +84,7 @@ func (ap *authProvider) FetchToken(ctx context.Context, req *auth.FetchTokenRequ
 		return toTokenResponse(ac.RegistryToken, time.Time{}, 0), nil
 	}
 
-	creds, err := ap.credentials(req.Host)
+	creds, err := ap.credentials(ctx, req.Host)
 	if err != nil {
 		return nil, err
 	}
@@ -85,6 +95,13 @@ func (ap *authProvider) FetchToken(ctx context.Context, req *auth.FetchTokenRequ
 		Scopes:   req.Scopes,
 		Username: creds.Username,
 		Secret:   creds.Secret,
+	}
+
+	httpClient := tracing.DefaultClient
+	if tc, err := ap.tlsConfig(req.Host); err == nil && tc != nil {
+		transport := http.DefaultTransport()
+		transport.TLSClientConfig = tc
+		httpClient.Transport = tracing.NewTransport(transport)
 	}
 
 	if creds.Secret != "" {
@@ -101,7 +118,7 @@ func (ap *authProvider) FetchToken(ctx context.Context, req *auth.FetchTokenRequ
 		}
 		ap.mu.Unlock()
 		// credential information is provided, use oauth POST endpoint
-		resp, err := authutil.FetchTokenWithOAuth(ctx, http.DefaultClient, nil, "buildkit-client", to)
+		resp, err := authutil.FetchTokenWithOAuth(ctx, httpClient, nil, "buildkit-client", to)
 		if err != nil {
 			var errStatus remoteserrors.ErrUnexpectedStatus
 			if errors.As(err, &errStatus) {
@@ -109,7 +126,7 @@ func (ap *authProvider) FetchToken(ctx context.Context, req *auth.FetchTokenRequ
 				// As of September 2017, GCR is known to return 404.
 				// As of February 2018, JFrog Artifactory is known to return 401.
 				if (errStatus.StatusCode == 405 && to.Username != "") || errStatus.StatusCode == 404 || errStatus.StatusCode == 401 {
-					resp, err := authutil.FetchToken(ctx, http.DefaultClient, nil, to)
+					resp, err := authutil.FetchToken(ctx, httpClient, nil, to)
 					if err != nil {
 						return nil, err
 					}
@@ -121,15 +138,57 @@ func (ap *authProvider) FetchToken(ctx context.Context, req *auth.FetchTokenRequ
 		return toTokenResponse(resp.AccessToken, resp.IssuedAt, resp.ExpiresIn), nil
 	}
 	// do request anonymously
-	resp, err := authutil.FetchToken(ctx, http.DefaultClient, nil, to)
+	resp, err := authutil.FetchToken(ctx, httpClient, nil, to)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to fetch anonymous token")
 	}
 	return toTokenResponse(resp.Token, resp.IssuedAt, resp.ExpiresIn), nil
 }
 
-func (ap *authProvider) credentials(host string) (*auth.CredentialsResponse, error) {
-	ac, err := ap.getAuthConfig(host)
+func (ap *authProvider) tlsConfig(host string) (*tls.Config, error) {
+	if ap.tlsConfigs == nil {
+		return nil, nil
+	}
+	c, ok := ap.tlsConfigs[host]
+	if !ok {
+		return nil, nil
+	}
+	tc := &tls.Config{}
+	if len(c.RootCAs) > 0 {
+		systemPool, err := x509.SystemCertPool()
+		if err != nil {
+			if runtime.GOOS == "windows" {
+				systemPool = x509.NewCertPool()
+			} else {
+				return nil, errors.Wrapf(err, "unable to get system cert pool")
+			}
+		}
+		tc.RootCAs = systemPool
+	}
+
+	for _, p := range c.RootCAs {
+		dt, err := os.ReadFile(p)
+		if err != nil {
+			return nil, errors.Wrapf(err, "failed to read %s", p)
+		}
+		tc.RootCAs.AppendCertsFromPEM(dt)
+	}
+
+	for _, kp := range c.KeyPairs {
+		cert, err := tls.LoadX509KeyPair(kp.Certificate, kp.Key)
+		if err != nil {
+			return nil, errors.Wrapf(err, "failed to load keypair for %s", kp.Certificate)
+		}
+		tc.Certificates = append(tc.Certificates, cert)
+	}
+	if c.Insecure {
+		tc.InsecureSkipVerify = true
+	}
+	return tc, nil
+}
+
+func (ap *authProvider) credentials(ctx context.Context, host string) (*auth.CredentialsResponse, error) {
+	ac, err := ap.getAuthConfig(ctx, host)
 	if err != nil {
 		return nil, err
 	}
@@ -144,13 +203,13 @@ func (ap *authProvider) credentials(host string) (*auth.CredentialsResponse, err
 }
 
 func (ap *authProvider) Credentials(ctx context.Context, req *auth.CredentialsRequest) (*auth.CredentialsResponse, error) {
-	resp, err := ap.credentials(req.Host)
+	resp, err := ap.credentials(ctx, req.Host)
 	if err != nil || resp.Secret != "" {
 		ap.mu.Lock()
 		defer ap.mu.Unlock()
 		_, ok := ap.loggerCache[req.Host]
 		ap.loggerCache[req.Host] = struct{}{}
-		if !ok {
+		if !ok && ap.logger != nil {
 			return resp, progresswriter.Wrap(fmt.Sprintf("[auth] sharing credentials for %s", req.Host), ap.logger, func(progresswriter.SubLogger) error {
 				return err
 			})
@@ -160,7 +219,7 @@ func (ap *authProvider) Credentials(ctx context.Context, req *auth.CredentialsRe
 }
 
 func (ap *authProvider) GetTokenAuthority(ctx context.Context, req *auth.GetTokenAuthorityRequest) (*auth.GetTokenAuthorityResponse, error) {
-	key, err := ap.getAuthorityKey(req.Host, req.Salt)
+	key, err := ap.getAuthorityKey(ctx, req.Host, req.Salt)
 	if err != nil {
 		return nil, err
 	}
@@ -169,7 +228,7 @@ func (ap *authProvider) GetTokenAuthority(ctx context.Context, req *auth.GetToke
 }
 
 func (ap *authProvider) VerifyTokenAuthority(ctx context.Context, req *auth.VerifyTokenAuthorityRequest) (*auth.VerifyTokenAuthorityResponse, error) {
-	key, err := ap.getAuthorityKey(req.Host, req.Salt)
+	key, err := ap.getAuthorityKey(ctx, req.Host, req.Salt)
 	if err != nil {
 		return nil, err
 	}
@@ -180,14 +239,18 @@ func (ap *authProvider) VerifyTokenAuthority(ctx context.Context, req *auth.Veri
 	return &auth.VerifyTokenAuthorityResponse{Signed: sign.Sign(nil, req.Payload, priv)}, nil
 }
 
-func (ap *authProvider) getAuthConfig(host string) (*types.AuthConfig, error) {
+func (ap *authProvider) getAuthConfig(ctx context.Context, host string) (*types.AuthConfig, error) {
 	ap.mu.Lock()
 	defer ap.mu.Unlock()
+
+	if host == dockerHubRegistryHost {
+		host = dockerHubConfigfileKey
+	}
+
 	if _, exists := ap.authConfigCache[host]; !exists {
-		if host == "registry-1.docker.io" {
-			host = "https://index.docker.io/v1/"
-		}
+		span, _ := tracing.StartSpan(ctx, fmt.Sprintf("load credentials for %s", host))
 		ac, err := ap.config.GetAuthConfig(host)
+		tracing.FinishWithError(span, err)
 		if err != nil {
 			return nil, err
 		}
@@ -197,12 +260,12 @@ func (ap *authProvider) getAuthConfig(host string) (*types.AuthConfig, error) {
 	return ap.authConfigCache[host], nil
 }
 
-func (ap *authProvider) getAuthorityKey(host string, salt []byte) (ed25519.PrivateKey, error) {
+func (ap *authProvider) getAuthorityKey(ctx context.Context, host string, salt []byte) (ed25519.PrivateKey, error) {
 	if v, err := strconv.ParseBool(os.Getenv("BUILDKIT_NO_CLIENT_TOKEN")); err == nil && v {
 		return nil, status.Errorf(codes.Unavailable, "client side tokens disabled")
 	}
 
-	creds, err := ap.credentials(host)
+	creds, err := ap.credentials(ctx, host)
 	if err != nil {
 		return nil, err
 	}
