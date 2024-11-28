@@ -24,7 +24,7 @@ import (
 	provider2 "github.com/loft-sh/devpod/pkg/provider"
 	"github.com/loft-sh/devpod/pkg/stdio"
 	"github.com/loft-sh/log"
-	"github.com/moby/buildkit/frontend/dockerfile/dockerignore"
+	"github.com/moby/patternmatcher/ignorefile"
 	perrors "github.com/pkg/errors"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/reflection"
@@ -389,7 +389,7 @@ func (t *tunnelServer) StreamWorkspace(message *tunnel.Empty, stream tunnel.Tunn
 	excludes := []string{}
 	f, err := os.Open(filepath.Join(t.workspace.Source.LocalFolder, ".devpodignore"))
 	if err == nil {
-		excludes, err = dockerignore.ReadAll(f)
+		excludes, err = ignorefile.ReadAll(f)
 		if err != nil {
 			t.log.Warnf("Error reading .devpodignore file: %v", err)
 		}
@@ -422,7 +422,7 @@ func (t *tunnelServer) StreamMount(message *tunnel.StreamMountRequest, stream tu
 	if t.workspace != nil {
 		f, err := os.Open(filepath.Join(t.workspace.Source.LocalFolder, ".devpodignore"))
 		if err == nil {
-			excludes, err = dockerignore.ReadAll(f)
+			excludes, err = ignorefile.ReadAll(f)
 			if err != nil {
 				t.log.Warnf("Error reading .devpodignore file: %v", err)
 			}

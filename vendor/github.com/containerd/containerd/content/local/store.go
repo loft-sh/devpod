@@ -20,7 +20,6 @@ import (
 	"context"
 	"fmt"
 	"io"
-	"math/rand"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -28,11 +27,13 @@ import (
 	"sync"
 	"time"
 
+	"github.com/containerd/log"
+	"github.com/sirupsen/logrus"
+
 	"github.com/containerd/containerd/content"
 	"github.com/containerd/containerd/errdefs"
 	"github.com/containerd/containerd/filters"
-	"github.com/containerd/containerd/log"
-	"github.com/sirupsen/logrus"
+	"github.com/containerd/containerd/pkg/randutil"
 
 	"github.com/opencontainers/go-digest"
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
@@ -66,6 +67,8 @@ type LabelStore interface {
 type store struct {
 	root string
 	ls   LabelStore
+
+	ensureIngestRootOnce func() error
 }
 
 // NewStore returns a local content store
@@ -79,14 +82,13 @@ func NewStore(root string) (content.Store, error) {
 // require labels and should use `NewStore`. `NewLabeledStore` is primarily
 // useful for tests or standalone implementations.
 func NewLabeledStore(root string, ls LabelStore) (content.Store, error) {
-	if err := os.MkdirAll(filepath.Join(root, "ingest"), 0777); err != nil {
-		return nil, err
-	}
-
-	return &store{
+	s := &store{
 		root: root,
 		ls:   ls,
-	}, nil
+	}
+
+	s.ensureIngestRootOnce = sync.OnceValue(s.ensureIngestRoot)
+	return s, nil
 }
 
 func (s *store) Info(ctx context.Context, dgst digest.Digest) (content.Info, error) {
@@ -262,7 +264,7 @@ func (s *store) Walk(ctx context.Context, fn content.WalkFunc, fs ...string) err
 			return nil
 		}
 
-		dgst := digest.NewDigestFromHex(alg.String(), filepath.Base(path))
+		dgst := digest.NewDigestFromEncoded(alg, filepath.Base(path))
 		if err := dgst.Validate(); err != nil {
 			// log error but don't report
 			log.L.WithError(err).WithField("path", path).Error("invalid digest for blob path")
@@ -293,6 +295,9 @@ func (s *store) Status(ctx context.Context, ref string) (content.Status, error) 
 func (s *store) ListStatuses(ctx context.Context, fs ...string) ([]content.Status, error) {
 	fp, err := os.Open(filepath.Join(s.root, "ingest"))
 	if err != nil {
+		if os.IsNotExist(err) {
+			return nil, nil
+		}
 		return nil, err
 	}
 
@@ -343,6 +348,9 @@ func (s *store) ListStatuses(ctx context.Context, fs ...string) ([]content.Statu
 func (s *store) WalkStatusRefs(ctx context.Context, fn func(string) error) error {
 	fp, err := os.Open(filepath.Join(s.root, "ingest"))
 	if err != nil {
+		if os.IsNotExist(err) {
+			return nil
+		}
 		return err
 	}
 
@@ -473,7 +481,7 @@ func (s *store) Writer(ctx context.Context, opts ...content.WriterOpt) (content.
 			lockErr = nil
 			break
 		}
-		time.Sleep(time.Millisecond * time.Duration(rand.Intn(1<<count)))
+		time.Sleep(time.Millisecond * time.Duration(randutil.Intn(1<<count)))
 	}
 
 	if lockErr != nil {
@@ -544,6 +552,11 @@ func (s *store) writer(ctx context.Context, ref string, total int64, expected di
 	)
 
 	foundValidIngest := false
+
+	if err := s.ensureIngestRootOnce(); err != nil {
+		return nil, err
+	}
+
 	// ensure that the ingest path has been created.
 	if err := os.Mkdir(path, 0755); err != nil {
 		if !os.IsExist(err) {
@@ -629,14 +642,14 @@ func (s *store) blobPath(dgst digest.Digest) (string, error) {
 		return "", fmt.Errorf("cannot calculate blob path from invalid digest: %v: %w", err, errdefs.ErrInvalidArgument)
 	}
 
-	return filepath.Join(s.root, "blobs", dgst.Algorithm().String(), dgst.Hex()), nil
+	return filepath.Join(s.root, "blobs", dgst.Algorithm().String(), dgst.Encoded()), nil
 }
 
 func (s *store) ingestRoot(ref string) string {
 	// we take a digest of the ref to keep the ingest paths constant length.
 	// Note that this is not the current or potential digest of incoming content.
 	dgst := digest.FromString(ref)
-	return filepath.Join(s.root, "ingest", dgst.Hex())
+	return filepath.Join(s.root, "ingest", dgst.Encoded())
 }
 
 // ingestPaths are returned. The paths are the following:
@@ -652,6 +665,10 @@ func (s *store) ingestPaths(ref string) (string, string, string) {
 	)
 
 	return fp, rp, dp
+}
+
+func (s *store) ensureIngestRoot() error {
+	return os.MkdirAll(filepath.Join(s.root, "ingest"), 0777)
 }
 
 func readFileString(path string) (string, error) {

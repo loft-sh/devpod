@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"container/ring"
 	"context"
+	"encoding/json"
 	"fmt"
 	"io"
 	"os"
@@ -16,23 +17,67 @@ import (
 	"github.com/moby/buildkit/client"
 	"github.com/morikuni/aec"
 	digest "github.com/opencontainers/go-digest"
+	"github.com/pkg/errors"
 	"github.com/tonistiigi/units"
 	"github.com/tonistiigi/vt100"
 	"golang.org/x/time/rate"
 )
 
-func DisplaySolveStatus(ctx context.Context, phase string, c console.Console, w io.Writer, ch chan *client.SolveStatus) ([]client.VertexWarning, error) {
-	modeConsole := c != nil
+type displayOpts struct {
+	phase       string
+	textDesc    string
+	consoleDesc string
+}
 
-	disp := &display{c: c, phase: phase}
-	printer := &textMux{w: w}
-
-	if disp.phase == "" {
-		disp.phase = "Building"
+func newDisplayOpts(opts ...DisplayOpt) *displayOpts {
+	dsso := &displayOpts{}
+	for _, opt := range opts {
+		opt(dsso)
 	}
+	return dsso
+}
 
-	t := newTrace(w, modeConsole)
+type DisplayOpt func(b *displayOpts)
 
+func WithPhase(phase string) DisplayOpt {
+	return func(b *displayOpts) {
+		b.phase = phase
+	}
+}
+
+func WithDesc(text string, console string) DisplayOpt {
+	return func(b *displayOpts) {
+		b.textDesc = text
+		b.consoleDesc = console
+	}
+}
+
+type Display struct {
+	disp display
+}
+
+type display interface {
+	// init initializes the display and opens any resources
+	// that are required.
+	init(displayLimiter *rate.Limiter)
+
+	// update sends the signal to update the display.
+	// Some displays will have buffered output and will not
+	// display changes for every status update.
+	update(ss *client.SolveStatus)
+
+	// refresh updates the display with the latest state.
+	// This method only does something with displays that
+	// have buffered output.
+	refresh()
+
+	// done is invoked when the display will be closed.
+	// This method should flush any buffers and close any open
+	// resources that were opened by init.
+	done()
+}
+
+func (d Display) UpdateFrom(ctx context.Context, ch chan *client.SolveStatus) ([]client.VertexWarning, error) {
 	tickerTimeout := 150 * time.Millisecond
 	displayTimeout := 100 * time.Millisecond
 
@@ -43,56 +88,227 @@ func DisplaySolveStatus(ctx context.Context, phase string, c console.Console, w 
 		}
 	}
 
-	var done bool
-	ticker := time.NewTicker(tickerTimeout)
-	// implemented as closure because "ticker" can change
-	defer func() {
-		ticker.Stop()
-	}()
-
 	displayLimiter := rate.NewLimiter(rate.Every(displayTimeout), 1)
+	d.disp.init(displayLimiter)
+	defer d.disp.done()
 
-	var height int
-	width, _ := disp.getSize()
+	ticker := time.NewTicker(tickerTimeout)
+	defer ticker.Stop()
+
+	var warnings []client.VertexWarning
 	for {
 		select {
 		case <-ctx.Done():
-			return nil, ctx.Err()
+			return nil, context.Cause(ctx)
 		case <-ticker.C:
+			d.disp.refresh()
 		case ss, ok := <-ch:
-			if ok {
-				t.update(ss, width)
-			} else {
-				done = true
+			if !ok {
+				return warnings, nil
 			}
-		}
 
-		if modeConsole {
-			width, height = disp.getSize()
-			if done {
-				disp.print(t.displayInfo(), width, height, true)
-				t.printErrorLogs(c)
-				return t.warnings(), nil
-			} else if displayLimiter.Allow() {
-				ticker.Stop()
-				ticker = time.NewTicker(tickerTimeout)
-				disp.print(t.displayInfo(), width, height, false)
+			d.disp.update(ss)
+			for _, w := range ss.Warnings {
+				warnings = append(warnings, *w)
 			}
-		} else {
-			if done || displayLimiter.Allow() {
-				printer.print(t)
-				if done {
-					t.printErrorLogs(w)
-					return t.warnings(), nil
-				}
-				ticker.Stop()
-				ticker = time.NewTicker(tickerTimeout)
-			}
+			ticker.Reset(tickerTimeout)
 		}
 	}
 }
 
-const termHeight = 6
+type DisplayMode string
+
+const (
+	// DefaultMode is the default value for the DisplayMode.
+	// This is effectively the same as AutoMode.
+	DefaultMode DisplayMode = ""
+	// AutoMode will choose TtyMode or PlainMode depending on if the output is
+	// a tty.
+	AutoMode DisplayMode = "auto"
+	// QuietMode discards all output.
+	QuietMode DisplayMode = "quiet"
+	// TtyMode enforces the output is a tty and will otherwise cause an error if it isn't.
+	TtyMode DisplayMode = "tty"
+	// PlainMode is the human-readable plain text output. This mode is not meant to be read
+	// by machines.
+	PlainMode DisplayMode = "plain"
+	// RawJSONMode is the raw JSON text output. It will marshal the various solve status events
+	// to JSON to be read by an external program.
+	RawJSONMode DisplayMode = "rawjson"
+)
+
+// NewDisplay constructs a Display that outputs to the given io.Writer with the given DisplayMode.
+//
+// This method will return an error when the DisplayMode is invalid or if TtyMode is used but the io.Writer
+// does not refer to a tty. AutoMode will choose TtyMode or PlainMode depending on if the output is a tty or not.
+//
+// For TtyMode to work, the io.Writer should also implement console.File.
+func NewDisplay(out io.Writer, mode DisplayMode, opts ...DisplayOpt) (Display, error) {
+	switch mode {
+	case AutoMode, TtyMode, DefaultMode:
+		if c, err := consoleFromWriter(out); err == nil {
+			return newConsoleDisplay(c, opts...), nil
+		} else if mode == "tty" {
+			return Display{}, errors.Wrap(err, "failed to get console")
+		}
+		fallthrough
+	case PlainMode:
+		return newPlainDisplay(out, opts...), nil
+	case RawJSONMode:
+		return newRawJSONDisplay(out), nil
+	case QuietMode:
+		return newDiscardDisplay(), nil
+	default:
+		return Display{}, errors.Errorf("invalid progress mode %s", mode)
+	}
+}
+
+// consoleFromWriter retrieves a console.Console from an io.Writer.
+func consoleFromWriter(out io.Writer) (console.Console, error) {
+	f, ok := out.(console.File)
+	if !ok {
+		return nil, errors.New("output is not a file")
+	}
+	return console.ConsoleFromFile(f)
+}
+
+type discardDisplay struct{}
+
+func newDiscardDisplay() Display {
+	return Display{disp: &discardDisplay{}}
+}
+
+func (d *discardDisplay) init(displayLimiter *rate.Limiter) {}
+func (d *discardDisplay) update(ss *client.SolveStatus)     {}
+func (d *discardDisplay) refresh()                          {}
+func (d *discardDisplay) done()                             {}
+
+type consoleDisplay struct {
+	t              *trace
+	disp           *ttyDisplay
+	width, height  int
+	displayLimiter *rate.Limiter
+}
+
+// newConsoleDisplay creates a new Display that prints a TTY
+// friendly output.
+func newConsoleDisplay(c console.Console, opts ...DisplayOpt) Display {
+	dsso := newDisplayOpts(opts...)
+	if dsso.phase == "" {
+		dsso.phase = "Building"
+	}
+	return Display{
+		disp: &consoleDisplay{
+			t:    newTrace(c, true),
+			disp: &ttyDisplay{c: c, phase: dsso.phase, desc: dsso.consoleDesc},
+		},
+	}
+}
+
+func (d *consoleDisplay) init(displayLimiter *rate.Limiter) {
+	d.displayLimiter = displayLimiter
+}
+
+func (d *consoleDisplay) update(ss *client.SolveStatus) {
+	d.width, d.height = d.disp.getSize()
+	d.t.update(ss, d.width)
+	if !d.displayLimiter.Allow() {
+		// Exit early as we are not allowed to update the display.
+		return
+	}
+	d.refresh()
+}
+
+func (d *consoleDisplay) refresh() {
+	d.disp.print(d.t.displayInfo(), d.width, d.height, false)
+}
+
+func (d *consoleDisplay) done() {
+	d.width, d.height = d.disp.getSize()
+	d.disp.print(d.t.displayInfo(), d.width, d.height, true)
+	d.t.printErrorLogs(d.t.w)
+}
+
+type plainDisplay struct {
+	t              *trace
+	printer        *textMux
+	displayLimiter *rate.Limiter
+}
+
+// newPlainDisplay creates a new Display that outputs the status
+// in a human-readable plain-text format.
+func newPlainDisplay(w io.Writer, opts ...DisplayOpt) Display {
+	dsso := newDisplayOpts(opts...)
+	return Display{
+		disp: &plainDisplay{
+			t: newTrace(w, false),
+			printer: &textMux{
+				w:    w,
+				desc: dsso.textDesc,
+			},
+		},
+	}
+}
+
+func (d *plainDisplay) init(displayLimiter *rate.Limiter) {
+	d.displayLimiter = displayLimiter
+}
+
+func (d *plainDisplay) update(ss *client.SolveStatus) {
+	if ss != nil {
+		d.t.update(ss, 80)
+		if !d.displayLimiter.Allow() {
+			// Exit early as we are not allowed to update the display.
+			return
+		}
+	}
+	d.refresh()
+}
+
+func (d *plainDisplay) refresh() {
+	d.printer.print(d.t)
+}
+
+func (d *plainDisplay) done() {
+	// Force the display to refresh.
+	d.refresh()
+	// Print error logs.
+	d.t.printErrorLogs(d.t.w)
+}
+
+type rawJSONDisplay struct {
+	enc *json.Encoder
+	w   io.Writer
+}
+
+// newRawJSONDisplay creates a new Display that outputs an unbuffered
+// output of status update events.
+func newRawJSONDisplay(w io.Writer) Display {
+	enc := json.NewEncoder(w)
+	return Display{
+		disp: &rawJSONDisplay{
+			enc: enc,
+			w:   w,
+		},
+	}
+}
+
+func (d *rawJSONDisplay) init(displayLimiter *rate.Limiter) {
+	// Initialization parameters are ignored for this display.
+}
+
+func (d *rawJSONDisplay) update(ss *client.SolveStatus) {
+	_ = d.enc.Encode(ss)
+}
+
+func (d *rawJSONDisplay) refresh() {
+	// Unbuffered display doesn't have anything to refresh.
+}
+
+func (d *rawJSONDisplay) done() {
+	// No actions needed.
+}
+
 const termPad = 10
 
 type displayInfo struct {
@@ -360,14 +576,6 @@ func newTrace(w io.Writer, modeConsole bool) *trace {
 	}
 }
 
-func (t *trace) warnings() []client.VertexWarning {
-	var out []client.VertexWarning
-	for _, v := range t.vertexes {
-		out = append(out, v.warnings...)
-	}
-	return out
-}
-
 func (t *trace) triggerVertexEvent(v *client.Vertex) {
 	if v.Started == nil {
 		return
@@ -535,6 +743,7 @@ func (t *trace) update(s *client.SolveStatus, termWidth int) {
 		v.jobCached = false
 		if v.term != nil {
 			if v.term.Width != termWidth {
+				termHeight = max(termHeightMin, min(termHeightInitial, v.term.Height-termHeightMin-1))
 				v.term.Resize(termHeight, termWidth-termPad)
 			}
 			v.termBytes += len(l.Data)
@@ -556,7 +765,7 @@ func (t *trace) update(s *client.SolveStatus, termWidth int) {
 				} else if sec < 100 {
 					prec = 2
 				}
-				v.logs = append(v.logs, []byte(fmt.Sprintf("#%d %s %s", v.index, fmt.Sprintf("%.[2]*[1]f", sec, prec), dt)))
+				v.logs = append(v.logs, []byte(fmt.Sprintf("%s %s", fmt.Sprintf("%.[2]*[1]f", sec, prec), dt)))
 			}
 			i++
 		})
@@ -614,7 +823,7 @@ func (t *trace) displayInfo() (d displayInfo) {
 		}
 		var jobs []*job
 		j := &job{
-			name:        strings.Replace(v.Name, "\t", " ", -1),
+			name:        strings.ReplaceAll(v.Name, "\t", " "),
 			vertex:      v,
 			isCompleted: true,
 		}
@@ -704,18 +913,19 @@ func addTime(tm *time.Time, d time.Duration) *time.Time {
 	if tm == nil {
 		return nil
 	}
-	t := (*tm).Add(d)
+	t := tm.Add(d)
 	return &t
 }
 
-type display struct {
+type ttyDisplay struct {
 	c         console.Console
 	phase     string
+	desc      string
 	lineCount int
 	repeated  bool
 }
 
-func (disp *display) getSize() (int, int) {
+func (disp *ttyDisplay) getSize() (int, int) {
 	width := 80
 	height := 10
 	if disp.c != nil {
@@ -747,6 +957,7 @@ func setupTerminals(jobs []*job, height int, all bool) []*job {
 
 	numFree := height - 2 - numInUse
 	numToHide := 0
+	termHeight = max(termHeightMin, min(termHeightInitial, height-termHeightMin-1))
 	termLimit := termHeight + 3
 
 	for i := 0; numFree > termLimit && i < len(candidates); i++ {
@@ -762,7 +973,7 @@ func setupTerminals(jobs []*job, height int, all bool) []*job {
 	return jobs
 }
 
-func (disp *display) print(d displayInfo, width, height int, all bool) {
+func (disp *ttyDisplay) print(d displayInfo, width, height int, all bool) {
 	// this output is inspired by Buck
 	d.jobs = setupTerminals(d.jobs, height, all)
 	b := aec.EmptyBuilder
@@ -784,7 +995,11 @@ func (disp *display) print(d displayInfo, width, height int, all bool) {
 	defer fmt.Fprint(disp.c, aec.Show)
 
 	out := fmt.Sprintf("[+] %s %.1fs (%d/%d) %s", disp.phase, time.Since(d.startTime).Seconds(), d.countCompleted, d.countTotal, statusStr)
-	out = align(out, "", width)
+	if disp.desc != "" {
+		out = align(out, disp.desc, width-1)
+	} else {
+		out = align(out, "", width)
+	}
 	fmt.Fprintln(disp.c, out)
 	lineCount := 0
 	for _, j := range d.jobs {
