@@ -4,7 +4,7 @@ import { useWorkspaceActions } from "@/contexts/DevPodContext/workspaces/useWork
 import { CheckCircle, ExclamationCircle, ExclamationTriangle } from "@/icons"
 import { exists, useDownloadLogs } from "@/lib"
 import { Routes } from "@/routes"
-import { DownloadIcon } from "@chakra-ui/icons"
+import { DownloadIcon, SearchIcon } from "@chakra-ui/icons"
 import {
   Accordion,
   AccordionButton,
@@ -15,6 +15,10 @@ import {
   Button,
   HStack,
   IconButton,
+  Input,
+  InputGroup,
+  InputLeftElement,
+  InputRightElement,
   LinkBox,
   LinkOverlay,
   Spinner,
@@ -23,10 +27,11 @@ import {
   VStack,
 } from "@chakra-ui/react"
 import dayjs from "dayjs"
-import { useEffect, useState } from "react"
+import { JSXElementConstructor, ReactElement, useEffect, useMemo, useRef, useState } from "react"
 import { HiStop } from "react-icons/hi"
 import { Link as RouterLink, useLocation } from "react-router-dom"
 import { TTabProps } from "./types"
+import { AiOutlineDown, AiOutlineUp } from "react-icons/ai"
 
 export function Logs({ host, instance }: TTabProps) {
   const [accordionIndex, setAccordionIndex] = useState<number>(0)
@@ -144,18 +149,161 @@ type TActionTerminalProps = Readonly<{
 }>
 function ActionTerminal({ actionID }: TActionTerminalProps) {
   const action = useAction(actionID)
-  const { terminal, connectStream, clear: clearTerminal } = useStreamingTerminal()
+
+  const [searchString, setSearchString] = useState<string | undefined>(undefined)
+  const [debouncedSearchString, setDebouncedSearchString] = useState<string | undefined>(undefined)
+  const [caseSensitive, setCaseSensitive] = useState<boolean>(false)
+  const [wholeWordSearch, setWholeWordSearch] = useState<boolean>(false)
+
+  const searchInputRef = useRef<HTMLInputElement | null>(null)
+
+  // Debounce to prevent stutter when having a huge amount of results.
+  useEffect(() => {
+    // Sneaky heuristic:
+    // If we have more than two characters, we're likely to have a more sane amount of results, so we can skip debouncing.
+    const len = searchString?.length ?? 0
+    if (len > 2) {
+      setDebouncedSearchString(searchString)
+
+      return
+    }
+
+    const timeout = setTimeout(() => {
+      setDebouncedSearchString(searchString)
+    }, 200)
+
+    return () => clearTimeout(timeout)
+  }, [searchString])
+
+  const searchOptions = useMemo(
+    () => ({ searchString: debouncedSearchString, caseSensitive, wholeWordSearch }),
+    [debouncedSearchString, wholeWordSearch, caseSensitive]
+  )
+
+  const {
+    terminal,
+    connectStream,
+    clear: clearTerminal,
+    search: { totalSearchResults, nextSearchResult, prevSearchResult, activeSearchResult },
+  } = useStreamingTerminal({ searchOptions })
 
   useEffect(() => {
     clearTerminal()
 
-    return action?.connectOrReplay(connectStream)
+    return action?.connectOrReplay((e) => {
+      connectStream(e)
+    })
   }, [action, clearTerminal, connectStream])
 
   return (
-    <Box h="50vh" w="full" mb="8">
-      {terminal}
-    </Box>
+    <VStack w={"full"} mb={"8"}>
+      <HStack w={"full"} alignItems={"center"}>
+        <InputGroup>
+          <InputLeftElement cursor={"text"} onClick={() => searchInputRef.current?.focus()}>
+            <SearchIcon />
+          </InputLeftElement>
+          <Input
+            ref={searchInputRef}
+            value={searchString ?? ""}
+            placeholder={"Search..."}
+            spellCheck={false}
+            bg={"white"}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") {
+                if (e.shiftKey) {
+                  prevSearchResult()
+                } else {
+                  nextSearchResult()
+                }
+              }
+            }}
+            onChange={(e) => {
+              setSearchString(e.target.value ? e.target.value : undefined)
+            }}
+          />
+          <InputRightElement w={"fit-content"} paddingX={"4"}>
+            <HStack alignItems={"center"} w={"fit-content"}>
+              {totalSearchResults > 0 ? (
+                <Box marginRight={"1"} color={"gray.400"}>
+                  {activeSearchResult + 1} / {totalSearchResults}
+                </Box>
+              ) : searchString ? (
+                <Box marginRight={"1"} color={"gray.400"}>
+                  0 / 0
+                </Box>
+              ) : (
+                <></>
+              )}
+
+              <ToggleButton
+                label={"Case sensitive"}
+                icon={<Box>Cc</Box>}
+                value={caseSensitive}
+                setValue={setCaseSensitive}
+              />
+              <ToggleButton
+                label={"Whole word"}
+                icon={<Box>W</Box>}
+                value={wholeWordSearch}
+                setValue={setWholeWordSearch}
+              />
+            </HStack>
+          </InputRightElement>
+        </InputGroup>
+        <Tooltip label={"Previous search result"}>
+          <IconButton
+            variant={"ghost"}
+            onClick={prevSearchResult}
+            aria-label={"Previous search result"}
+            disabled={!totalSearchResults}
+            icon={<AiOutlineUp />}
+          />
+        </Tooltip>
+
+        <Tooltip label={"Next search result"}>
+          <IconButton
+            variant={"ghost"}
+            onClick={nextSearchResult}
+            aria-label={"Next search result"}
+            disabled={!totalSearchResults}
+            icon={<AiOutlineDown />}
+          />
+        </Tooltip>
+      </HStack>
+
+      <Box h="50vh" w="full" mb="8">
+        {terminal}
+      </Box>
+    </VStack>
+  )
+}
+
+function ToggleButton({
+  label,
+  icon,
+  value,
+  setValue,
+}: {
+  label: string
+  icon: ReactElement | undefined
+  value: boolean
+  setValue: (value: boolean) => void
+}) {
+  return (
+    <Tooltip label={label}>
+      <IconButton
+        variant={"ghost"}
+        color={value ? "white" : undefined}
+        backgroundColor={value ? "primary.400" : undefined}
+        _hover={{
+          bg: value ? "primary.600" : "gray.100",
+        }}
+        aria-label={label}
+        fontFamily={"mono"}
+        icon={icon}
+        onClick={() => setValue(!value)}
+      />
+    </Tooltip>
   )
 }
 

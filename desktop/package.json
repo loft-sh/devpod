@@ -10,9 +10,9 @@
     "tauri": "tauri",
     "desktop:dev": "tauri dev --config src-tauri/tauri-dev.conf.json",
     "desktop:dev:debug": "export DEBUG=true; yarn desktop:dev",
-    "desktop:build:dev": "DEBUG=true tauri build --config src-tauri/tauri-dev.conf.json",
+    "desktop:build:dev": "tauri build --config src-tauri/tauri-dev.conf.json",
     "desktop:build:debug": "tauri build --debug",
-    "desktop:build": "tauri build",
+    "desktop:build": "tauri build -v --target x86_64-pc-windows-msvc",
     "format:check": "prettier --check .",
     "format:fix": "prettier --write .",
     "types:check": "tsc -p ./tsconfig.json --noEmit"
@@ -38,6 +38,8 @@
     "@tauri-apps/plugin-store": "2.1.0",
     "@tauri-apps/plugin-updater": "2.0.0",
     "@types/lodash.debounce": "4.0.9",
+    "@xterm/addon-fit": "0.10.0",
+    "@xterm/xterm": "5.5.0",
     "compare-versions": "6.1.1",
     "dayjs": "1.11.10",
     "framer-motion": "10.16.9",
@@ -52,9 +54,7 @@
     "react-router": "6.20.0",
     "react-router-dom": "6.20.0",
     "tauri-plugin-store-api": "https://github.com/tauri-apps/tauri-plugin-store#v1",
-    "uuid": "9.0.1",
-    "xterm": "5.3.0",
-    "xterm-addon-fit": "0.7.0"
+    "uuid": "9.0.1"
   },
   "devDependencies": {
     "@tanstack/eslint-plugin-query": "4.36.1",
