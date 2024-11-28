@@ -45,14 +45,7 @@ type Taggable interface {
 
 // Write pushes the provided img to the specified image reference.
 func Write(ref name.Reference, img v1.Image, options ...Option) (rerr error) {
-	o, err := makeOptions(options...)
-	if err != nil {
-		return err
-	}
-	if o.progress != nil {
-		defer func() { o.progress.Close(rerr) }()
-	}
-	return newPusher(o).Push(o.context, ref, img)
+	return Push(ref, img, options...)
 }
 
 // writer writes the elements of an image to a remote image reference.
@@ -76,7 +69,7 @@ type writer struct {
 func makeWriter(ctx context.Context, repo name.Repository, ls []v1.Layer, o *options) (*writer, error) {
 	auth := o.auth
 	if o.keychain != nil {
-		kauth, err := o.keychain.Resolve(repo)
+		kauth, err := authn.Resolve(ctx, o.keychain, repo)
 		if err != nil {
 			return nil, err
 		}
@@ -210,7 +203,7 @@ func (w *writer) initiateUpload(ctx context.Context, from, mount, origin string)
 	req.Header.Set("Content-Type", "application/json")
 	resp, err := w.client.Do(req.WithContext(ctx))
 	if err != nil {
-		if origin != "" && origin != w.repo.RegistryStr() {
+		if from != "" {
 			// https://github.com/google/go-containerregistry/issues/1679
 			logs.Warn.Printf("retrying without mount: %v", err)
 			return w.initiateUpload(ctx, "", "", "")
@@ -220,7 +213,7 @@ func (w *writer) initiateUpload(ctx context.Context, from, mount, origin string)
 	defer resp.Body.Close()
 
 	if err := transport.CheckError(resp, http.StatusCreated, http.StatusAccepted); err != nil {
-		if origin != "" && origin != w.repo.RegistryStr() {
+		if from != "" {
 			// https://github.com/google/go-containerregistry/issues/1404
 			logs.Warn.Printf("retrying without mount: %v", err)
 			return w.initiateUpload(ctx, "", "", "")
@@ -280,6 +273,11 @@ func (w *writer) streamBlob(ctx context.Context, layer v1.Layer, streamLocation 
 	if _, ok := layer.(*stream.Layer); !ok {
 		// We can't retry streaming layers.
 		req.GetBody = getBody
+
+		// If we know the size, set it.
+		if size, err := layer.Size(); err == nil {
+			req.ContentLength = size
+		}
 	}
 	req.Header.Set("Content-Type", "application/octet-stream")
 
@@ -360,8 +358,16 @@ func (w *writer) uploadOne(ctx context.Context, l v1.Layer) error {
 			if err := w.maybeUpdateScopes(ctx, ml); err != nil {
 				return err
 			}
+
 			from = ml.Reference.Context().RepositoryStr()
 			origin = ml.Reference.Context().RegistryStr()
+
+			// This keeps breaking with DockerHub.
+			// https://github.com/google/go-containerregistry/issues/1741
+			if w.repo.RegistryStr() == name.DefaultRegistry && origin != w.repo.RegistryStr() {
+				from = ""
+				origin = ""
+			}
 		}
 
 		location, mounted, err := w.initiateUpload(ctx, from, mount, origin)
@@ -643,14 +649,7 @@ func scopesForUploadingImage(repo name.Repository, layers []v1.Layer) []string {
 // WriteIndex will attempt to push all of the referenced manifests before
 // attempting to push the ImageIndex, to retain referential integrity.
 func WriteIndex(ref name.Reference, ii v1.ImageIndex, options ...Option) (rerr error) {
-	o, err := makeOptions(options...)
-	if err != nil {
-		return err
-	}
-	if o.progress != nil {
-		defer func() { o.progress.Close(rerr) }()
-	}
-	return newPusher(o).Push(o.context, ref, ii)
+	return Push(ref, ii, options...)
 }
 
 // WriteLayer uploads the provided Layer to the specified repo.
@@ -695,6 +694,18 @@ func Put(ref name.Reference, t Taggable, options ...Option) error {
 	o, err := makeOptions(options...)
 	if err != nil {
 		return err
+	}
+	return newPusher(o).Put(o.context, ref, t)
+}
+
+// Push uploads the given Taggable to the specified reference.
+func Push(ref name.Reference, t Taggable, options ...Option) (rerr error) {
+	o, err := makeOptions(options...)
+	if err != nil {
+		return err
+	}
+	if o.progress != nil {
+		defer func() { o.progress.Close(rerr) }()
 	}
 	return newPusher(o).Push(o.context, ref, t)
 }

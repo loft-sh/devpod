@@ -7,8 +7,8 @@ import (
 	"strings"
 
 	util "github.com/loft-sh/devpod/pkg/util/hash"
-	"github.com/moby/buildkit/frontend/dockerfile/dockerignore"
 	"github.com/moby/patternmatcher"
+	"github.com/moby/patternmatcher/ignorefile"
 	"github.com/pkg/errors"
 
 	"github.com/loft-sh/log"
@@ -113,7 +113,7 @@ func readDockerignore(contextDir string, dockerfile string) ([]string, error) {
 
 	defer f.Close()
 
-	excludes, err = dockerignore.ReadAll(f)
+	excludes, err = ignorefile.ReadAll(f)
 	if err != nil {
 		return nil, err
 	}

@@ -1,19 +1,19 @@
 package grpcerrors
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 
-	"github.com/containerd/typeurl"
-	rpc "github.com/gogo/googleapis/google/rpc"
-	gogotypes "github.com/gogo/protobuf/types"
-	"github.com/golang/protobuf/proto" //nolint:staticcheck
+	"github.com/containerd/typeurl/v2"
 	"github.com/golang/protobuf/ptypes/any"
+	"github.com/moby/buildkit/errdefs"
+	"github.com/moby/buildkit/util/bklog"
 	"github.com/moby/buildkit/util/stack"
-	"github.com/sirupsen/logrus"
 	spb "google.golang.org/genproto/googleapis/rpc/status"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
+	"google.golang.org/protobuf/proto"
 )
 
 type TypedError interface {
@@ -25,7 +25,7 @@ type TypedErrorProto interface {
 	WrapError(error) error
 }
 
-func ToGRPC(err error) error {
+func ToGRPC(ctx context.Context, err error) error {
 	if err == nil {
 		return nil
 	}
@@ -64,7 +64,7 @@ func ToGRPC(err error) error {
 	})
 
 	if len(details) > 0 {
-		if st2, err := withDetails(st, details...); err == nil {
+		if st2, err := withDetails(ctx, st, details...); err == nil {
 			st = st2
 		}
 	}
@@ -72,7 +72,7 @@ func ToGRPC(err error) error {
 	return st.Err()
 }
 
-func withDetails(s *status.Status, details ...proto.Message) (*status.Status, error) {
+func withDetails(ctx context.Context, s *status.Status, details ...proto.Message) (*status.Status, error) {
 	if s.Code() == codes.OK {
 		return nil, errors.New("no error details for status with code OK")
 	}
@@ -80,7 +80,7 @@ func withDetails(s *status.Status, details ...proto.Message) (*status.Status, er
 	for _, detail := range details {
 		url, err := typeurl.TypeURL(detail)
 		if err != nil {
-			logrus.Warnf("ignoring typed error %T: not registered", detail)
+			bklog.G(ctx).Warnf("ignoring typed error %T: not registered", detail)
 			continue
 		}
 		dt, err := json.Marshal(detail)
@@ -93,6 +93,13 @@ func withDetails(s *status.Status, details ...proto.Message) (*status.Status, er
 }
 
 func Code(err error) codes.Code {
+	if errdefs.IsInternal(err) {
+		if errdefs.IsResourceExhausted(err) {
+			return codes.ResourceExhausted
+		}
+		return codes.Internal
+	}
+
 	if se, ok := err.(interface {
 		Code() codes.Code
 	}); ok {
@@ -163,7 +170,7 @@ func FromGRPC(err error) error {
 
 	// details that we don't understand are copied as proto
 	for _, d := range pb.Details {
-		m, err := typeurl.UnmarshalAny(gogoAny(d))
+		m, err := typeurl.UnmarshalAny(d)
 		if err != nil {
 			continue
 		}
@@ -195,20 +202,6 @@ func FromGRPC(err error) error {
 	}
 
 	return stack.Enable(err)
-}
-
-func ToRPCStatus(st *spb.Status) *rpc.Status {
-	details := make([]*gogotypes.Any, len(st.Details))
-
-	for i, d := range st.Details {
-		details[i] = gogoAny(d)
-	}
-
-	return &rpc.Status{
-		Code:    int32(st.Code),
-		Message: st.Message,
-		Details: details,
-	}
 }
 
 type grpcStatusError struct {
@@ -245,12 +238,5 @@ func each(err error, fn func(error)) {
 		Unwrap() error
 	}); ok {
 		each(wrapped.Unwrap(), fn)
-	}
-}
-
-func gogoAny(in *any.Any) *gogotypes.Any {
-	return &gogotypes.Any{
-		TypeUrl: in.TypeUrl,
-		Value:   in.Value,
 	}
 }

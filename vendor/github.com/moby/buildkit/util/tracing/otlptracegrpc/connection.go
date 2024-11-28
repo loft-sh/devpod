@@ -22,6 +22,7 @@ import (
 	"time"
 	"unsafe"
 
+	"github.com/pkg/errors"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/metadata"
 )
@@ -65,7 +66,7 @@ func (c *Connection) StartConnection(ctx context.Context) error {
 	c.disconnectedCh = make(chan bool, 1)
 	c.backgroundConnectionDoneCh = make(chan struct{})
 
-	if err := c.connect(ctx); err == nil {
+	if err := c.connect(); err == nil {
 		c.setStateConnected()
 	} else {
 		c.SetStateDisconnected(err)
@@ -147,7 +148,7 @@ func (c *Connection) indefiniteBackgroundConnection() {
 			// Normal scenario that we'll wait for
 		}
 
-		if err := c.connect(context.Background()); err == nil {
+		if err := c.connect(); err == nil {
 			c.setStateConnected()
 		} else {
 			// this code is unreachable in most cases
@@ -167,7 +168,7 @@ func (c *Connection) indefiniteBackgroundConnection() {
 	}
 }
 
-func (c *Connection) connect(ctx context.Context) error {
+func (c *Connection) connect() error {
 	c.newConnectionHandler(c.cc)
 	return nil
 }
@@ -185,7 +186,7 @@ func (c *Connection) Shutdown(ctx context.Context) error {
 	select {
 	case <-c.backgroundConnectionDoneCh:
 	case <-ctx.Done():
-		return ctx.Err()
+		return context.Cause(ctx)
 	}
 
 	c.mu.Lock()
@@ -200,17 +201,17 @@ func (c *Connection) Shutdown(ctx context.Context) error {
 	return nil
 }
 
-func (c *Connection) ContextWithStop(ctx context.Context) (context.Context, context.CancelFunc) {
+func (c *Connection) ContextWithStop(ctx context.Context) (context.Context, context.CancelCauseFunc) {
 	// Unify the parent context Done signal with the Connection's
 	// stop channel.
-	ctx, cancel := context.WithCancel(ctx)
-	go func(ctx context.Context, cancel context.CancelFunc) {
+	ctx, cancel := context.WithCancelCause(ctx)
+	go func(ctx context.Context, cancel context.CancelCauseFunc) {
 		select {
 		case <-ctx.Done():
 			// Nothing to do, either cancelled or deadline
 			// happened.
 		case <-c.stopCh:
-			cancel()
+			cancel(errors.WithStack(context.Canceled))
 		}
 	}(ctx, cancel)
 	return ctx, cancel

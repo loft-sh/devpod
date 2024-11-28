@@ -21,18 +21,16 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"math/rand"
 	"sync"
 	"time"
 
-	"github.com/containerd/containerd/errdefs"
-	"github.com/containerd/containerd/log"
+	"github.com/containerd/log"
 	"github.com/opencontainers/go-digest"
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
-)
 
-// maxResets is the no.of times the Copy() method can tolerate a reset of the body
-const maxResets = 5
+	"github.com/containerd/containerd/errdefs"
+	"github.com/containerd/containerd/pkg/randutil"
+)
 
 var ErrReset = errors.New("writer has been reset")
 
@@ -43,16 +41,26 @@ var bufPool = sync.Pool{
 	},
 }
 
+type reader interface {
+	Reader() io.Reader
+}
+
 // NewReader returns a io.Reader from a ReaderAt
 func NewReader(ra ReaderAt) io.Reader {
-	rd := io.NewSectionReader(ra, 0, ra.Size())
-	return rd
+	if rd, ok := ra.(reader); ok {
+		return rd.Reader()
+	}
+	return io.NewSectionReader(ra, 0, ra.Size())
 }
 
 // ReadBlob retrieves the entire contents of the blob from the provider.
 //
 // Avoid using this for large blobs, such as layers.
 func ReadBlob(ctx context.Context, provider Provider, desc ocispec.Descriptor) ([]byte, error) {
+	if int64(len(desc.Data)) == desc.Size && digest.FromBytes(desc.Data) == desc.Digest {
+		return desc.Data, nil
+	}
+
 	ra, err := provider.ReaderAt(ctx, desc)
 	if err != nil {
 		return nil, err
@@ -113,7 +121,7 @@ func OpenWriter(ctx context.Context, cs Ingester, opts ...WriterOpt) (Writer, er
 			// error or abort. Requires asserting for an ingest manager
 
 			select {
-			case <-time.After(time.Millisecond * time.Duration(rand.Intn(retry))):
+			case <-time.After(time.Millisecond * time.Duration(randutil.Intn(retry))):
 				if retry < 2048 {
 					retry = retry << 1
 				}
@@ -150,7 +158,7 @@ func Copy(ctx context.Context, cw Writer, or io.Reader, size int64, expected dig
 		}
 	}
 
-	for i := 0; i < maxResets; i++ {
+	for i := 0; ; i++ {
 		if i >= 1 {
 			log.G(ctx).WithField("digest", expected).Debugf("retrying copy due to reset")
 		}
@@ -191,9 +199,6 @@ func Copy(ctx context.Context, cw Writer, or io.Reader, size int64, expected dig
 		}
 		return nil
 	}
-
-	log.G(ctx).WithField("digest", expected).Errorf("failed to copy after %d retries", maxResets)
-	return fmt.Errorf("failed to copy after %d retries", maxResets)
 }
 
 // CopyReaderAt copies to a writer from a given reader at for the given
@@ -321,4 +326,15 @@ func copyWithBuffer(dst io.Writer, src io.Reader) (written int64, err error) {
 		}
 	}
 	return
+}
+
+// Exists returns whether an attempt to access the content would not error out
+// with an ErrNotFound error. It will return an encountered error if it was
+// different than ErrNotFound.
+func Exists(ctx context.Context, provider InfoProvider, desc ocispec.Descriptor) (bool, error) {
+	_, err := provider.Info(ctx, desc.Digest)
+	if errdefs.IsNotFound(err) {
+		return false, nil
+	}
+	return err == nil, err
 }
