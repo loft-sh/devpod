@@ -10,9 +10,9 @@
     "tauri": "tauri",
     "desktop:dev": "tauri dev --config src-tauri/tauri-dev.conf.json",
     "desktop:dev:debug": "export DEBUG=true; yarn desktop:dev",
-    "desktop:build:dev": "tauri build --config src-tauri/tauri-dev.conf.json",
+    "desktop:build:dev": "DEBUG=true tauri build --config src-tauri/tauri-dev.conf.json",
     "desktop:build:debug": "tauri build --debug",
-    "desktop:build": "tauri build -v --target x86_64-pc-windows-msvc",
+    "desktop:build": "tauri build",
     "format:check": "prettier --check .",
     "format:fix": "prettier --write .",
     "types:check": "tsc -p ./tsconfig.json --noEmit"
