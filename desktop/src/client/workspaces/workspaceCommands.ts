@@ -17,6 +17,7 @@ import {
   DEVPOD_COMMAND_STATUS,
   DEVPOD_COMMAND_STOP,
   DEVPOD_COMMAND_UP,
+  DEVPOD_COMMAND_TROUBLESHOOT,
   DEVPOD_FLAG_DEBUG,
   DEVPOD_FLAG_DEVCONTAINER_PATH,
   DEVPOD_FLAG_FORCE,
@@ -204,6 +205,10 @@ export class WorkspaceCommands {
       DEVPOD_FLAG_JSON_LOG_OUTPUT,
       DEVPOD_FLAG_RESET,
     ])
+  }
+
+  static TroubleshootWorkspace(id: TWorkspaceID) {
+    return WorkspaceCommands.newCommand([DEVPOD_COMMAND_TROUBLESHOOT, id])
   }
 
   static RemoveWorkspace(id: TWorkspaceID, force?: boolean) {

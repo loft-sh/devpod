@@ -42,6 +42,7 @@ import { Template } from "@/icons"
 import { HiServerStack } from "react-icons/hi2"
 import { TOptionWithID, mergeOptionDefinitions } from "../Providers/helpers"
 import { processDisplayOptions } from "../Providers/AddProvider/useProviderOptions"
+import { useStoreTroubleshoot } from "@/lib/useStoreTroubleshoot"
 
 type TWorkspaceCardProps = Readonly<{
   workspaceID: TWorkspaceID
@@ -111,6 +112,7 @@ export function WorkspaceCard({ workspaceID, isSelected, onSelectionChange }: TW
     onOpen: handleChangeOptionsClicked,
     onClose: onChangeOptionsClose,
   } = useDisclosure()
+  const { store: storeTroubleshoot } = useStoreTroubleshoot()
 
   const [provider] = useProvider(workspace.data?.provider?.name)
   const [ideName, setIdeName] = useState<string | undefined>(() => {
@@ -133,6 +135,15 @@ export function WorkspaceCard({ workspaceID, isSelected, onSelectionChange }: TW
 
     navigateToAction(actionID)
   }, [navigateToAction, workspace])
+
+  const handleTroubleshootClicked = useCallback(() => {
+    if (workspaceActions && workspace.data) {
+      storeTroubleshoot({
+        workspace: workspace.data,
+        workspaceActions: workspaceActions,
+      })
+    }
+  }, [storeTroubleshoot, workspace.data, workspaceActions])
 
   const hasError = useMemo<boolean>(() => {
     if (!workspaceActions?.length || workspaceActions[0]?.status !== "error") {
@@ -246,6 +257,7 @@ export function WorkspaceCard({ workspaceID, isSelected, onSelectionChange }: TW
                 onDeleteClicked={openDeleteModal}
                 onStopClicked={openStopModal}
                 onLogsClicked={handleLogsClicked}
+                onTroubleshootClicked={handleTroubleshootClicked}
                 onChangeOptionsClicked={handleChangeOptionsClicked}
               />
             }>

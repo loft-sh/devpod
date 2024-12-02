@@ -179,6 +179,11 @@ export class WorkspacesClient implements TDebuggable {
     return this.getStatus(ctx.id)
   }
 
+  public async troubleshoot(ctx: TWorkspaceClientContext) {
+    const cmd = WorkspaceCommands.TroubleshootWorkspace(ctx.id)
+    return cmd.run()
+  }
+
   public async reset(
     listener: TStreamEventListenerFn | undefined,
     ctx: TWorkspaceClientContext

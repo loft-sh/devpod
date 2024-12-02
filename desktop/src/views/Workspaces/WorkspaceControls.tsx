@@ -27,6 +27,7 @@ import {
   ArrowCycle,
   ArrowPath,
   CommandLine,
+  Cog,
   Ellipsis,
   Pause,
   Play,
@@ -51,6 +52,7 @@ type TWorkspaceControlsProps = Readonly<{
   onDeleteClicked: VoidFunction
   onStopClicked: VoidFunction
   onLogsClicked: VoidFunction
+  onTroubleshootClicked: VoidFunction
   onChangeOptionsClicked?: VoidFunction
 }>
 export function WorkspaceControls({
@@ -68,6 +70,7 @@ export function WorkspaceControls({
   onDeleteClicked,
   onStopClicked,
   onLogsClicked,
+  onTroubleshootClicked,
   onChangeOptionsClicked,
 }: TWorkspaceControlsProps) {
   const [[proInstances]] = useProInstances()
@@ -207,6 +210,12 @@ export function WorkspaceControls({
                 icon={<CommandLine boxSize={4} />}
                 onClick={onLogsClicked}>
                 Logs
+              </MenuItem>
+              <MenuItem
+                fontWeight="normal"
+                icon={<Cog boxSize={4} />}
+                onClick={onTroubleshootClicked}>
+                Troubleshoot
               </MenuItem>
               <MenuItem
                 isDisabled={isOpenDisabled || isLoading}

@@ -5,6 +5,7 @@ import {
   useProjectClusters,
   useTemplates,
   useWorkspace,
+  useWorkspaceActions,
 } from "@/contexts"
 import { Clock, Folder, Git, Globe, Image, Status } from "@/icons"
 import {
@@ -27,6 +28,7 @@ import { BackToWorkspaces } from "../BackToWorkspaces"
 import { WorkspaceTabs } from "./Tabs"
 import { WorkspaceCardHeader } from "./WorkspaceCardHeader"
 import { WorkspaceStatus } from "./WorkspaceStatus"
+import { useStoreTroubleshoot } from "@/lib/useStoreTroubleshoot"
 
 export function Workspace() {
   const params = useParams<{ workspace: string }>()
@@ -37,6 +39,7 @@ export function Workspace() {
   const workspace = useWorkspace<ProWorkspaceInstance>(params.workspace)
   const instance = workspace.data
   const instanceDisplayName = getDisplayName(instance)
+  const workspaceActions = useWorkspaceActions(instance?.id)
 
   const { modal: stopModal, open: openStopModal } = useStopWorkspaceModal(
     useCallback(
@@ -115,6 +118,8 @@ export function Workspace() {
     )
   }
 
+  const { store: storeTroubleshoot } = useStoreTroubleshoot()
+
   const canStop =
     instance.status?.lastWorkspaceStatus != "Busy" &&
     instance.status?.lastWorkspaceStatus != "Stopped"
@@ -130,6 +135,15 @@ export function Workspace() {
 
   const lastActivity = getLastActivity(instance)
 
+  const handleTroubleshootClicked = useCallback(() => {
+    if (workspace.data && workspaceActions) {
+      storeTroubleshoot({
+        workspace: workspace.data,
+        workspaceActions: workspaceActions,
+      })
+    }
+  }, [storeTroubleshoot, workspace.data, workspaceActions])
+
   return (
     <>
       <VStack align="start" width="full" height="full">
@@ -143,6 +157,7 @@ export function Workspace() {
                 onRebuildClicked={openRebuildModal}
                 onResetClicked={openResetModal}
                 onStopClicked={!canStop ? openStopModal : workspace.stop}
+                onTroubleshootClicked={handleTroubleshootClicked}
               />
             </WorkspaceCardHeader>
           </Box>

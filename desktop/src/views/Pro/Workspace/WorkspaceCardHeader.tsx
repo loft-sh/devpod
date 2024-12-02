@@ -3,6 +3,7 @@ import { ProWorkspaceInstance, useSettings } from "@/contexts"
 import {
   ArrowCycle,
   ArrowPath,
+  Cog,
   Ellipsis,
   GitBranch,
   GitCommit,
@@ -80,6 +81,7 @@ type TControlsProps = Readonly<{
   onResetClicked: VoidFunction
   onRebuildClicked: VoidFunction
   onDeleteClicked: VoidFunction
+  onTroubleshootClicked: VoidFunction
 }>
 export function Controls({
   onOpenClicked,
@@ -87,6 +89,7 @@ export function Controls({
   onResetClicked,
   onRebuildClicked,
   onDeleteClicked,
+  onTroubleshootClicked,
 }: TControlsProps) {
   const { ides, defaultIDE } = useIDEs()
   const settings = useSettings()
@@ -150,6 +153,12 @@ export function Controls({
             </MenuItem>
             <MenuItem icon={<ArrowCycle boxSize={4} />} onClick={onResetClicked} isDisabled={false}>
               Reset...
+            </MenuItem>
+            <MenuItem
+              fontWeight="normal"
+              icon={<Cog boxSize={4} />}
+              onClick={onTroubleshootClicked}>
+              Troubleshoot
             </MenuItem>
             <MenuItem
               isDisabled={false}
