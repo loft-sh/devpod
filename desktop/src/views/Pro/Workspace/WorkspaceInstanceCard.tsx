@@ -1,4 +1,4 @@
-import { ProWorkspaceInstance, useTemplates, useWorkspace } from "@/contexts"
+import { ProWorkspaceInstance, useTemplates, useWorkspace, useWorkspaceActions } from "@/contexts"
 import { CogOutlined, Status } from "@/icons"
 import {
   TParameterWithValue,
@@ -27,6 +27,7 @@ import { useCallback, useMemo, ReactElement, ReactNode, cloneElement } from "rea
 import { useNavigate } from "react-router"
 import { WorkspaceCardHeader } from "./WorkspaceCardHeader"
 import { WorkspaceStatus } from "./WorkspaceStatus"
+import { useStoreTroubleshoot } from "@/lib/useStoreTroubleshoot"
 
 type TWorkspaceInstanceCardProps = Readonly<{
   host: string
@@ -39,6 +40,8 @@ export function WorkspaceInstanceCard({ instanceName, host }: TWorkspaceInstance
   const workspace = useWorkspace<ProWorkspaceInstance>(instanceName)
   const instance = workspace.data
   const instanceDisplayName = getDisplayName(instance)
+  const workspaceActions = useWorkspaceActions(instance?.id)
+
   const navigate = useNavigate()
 
   const { modal: stopModal, open: openStopModal } = useStopWorkspaceModal(
@@ -85,6 +88,8 @@ export function WorkspaceInstanceCard({ instanceName, host }: TWorkspaceInstance
     )
   )
 
+  const { store: storeTroubleshoot } = useStoreTroubleshoot()
+
   const { parameters, template } = useMemo<{
     parameters: readonly TParameterWithValue[]
     template: ManagementV1DevPodWorkspaceTemplate | undefined
@@ -115,6 +120,15 @@ export function WorkspaceInstanceCard({ instanceName, host }: TWorkspaceInstance
     navigate(Routes.toProWorkspace(host, instance.id))
   }
 
+  const handleTroubleshootClicked = useCallback(() => {
+    if (instance && workspaceActions) {
+      storeTroubleshoot({
+        workspace: instance,
+        workspaceActions: workspaceActions,
+      })
+    }
+  }, [storeTroubleshoot, instance, workspaceActions])
+
   const templateRef = instance.spec?.templateRef
   const isRunning = instance.status?.lastWorkspaceStatus === "Running" // TODO: Types
 
@@ -137,6 +151,7 @@ export function WorkspaceInstanceCard({ instanceName, host }: TWorkspaceInstance
               onRebuildClicked={openRebuildModal}
               onResetClicked={openResetModal}
               onStopClicked={isRunning ? openStopModal : workspace.stop}
+              onTroubleshootClicked={handleTroubleshootClicked}
             />
           </WorkspaceCardHeader>
         </CardHeader>

@@ -205,8 +205,8 @@ class Client {
     }
   }
 
-  public async selectFromDir(): Promise<string | string[] | null> {
-    return dialog.open({ directory: true, multiple: false })
+  public async selectFromDir(title?: string): Promise<string | null> {
+    return dialog.open({ title, directory: true, multiple: false })
   }
 
   public async selectFromFileYaml(): Promise<string | string[] | null> {
@@ -223,6 +223,14 @@ class Client {
 
   public async copyFile(src: string, dest: string): Promise<void> {
     return fs.copyFile(src, dest)
+  }
+
+  public async copyFilePaths(src: string[], dest: string[]) {
+    return this.copyFile(await path.join(...src), await path.join(...dest))
+  }
+
+  public async writeTextFile(targetPath: string[], data: string) {
+    return fs.writeTextFile(await path.join(...targetPath), data)
   }
 
   public async installCLI(force: boolean = false): Promise<Result<void>> {
