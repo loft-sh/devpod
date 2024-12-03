@@ -9,7 +9,7 @@ import (
 	"path/filepath"
 )
 
-// serveAgent will be a simple http file server that will expose our
+// ServeAgent will be a simple http file server that will expose our
 // freshly compiled devpod binaries to be downloaded as agents.
 // useful for non-linux runners
 func ServeAgent() {

@@ -23,7 +23,7 @@ type UpdateProviderCmd struct {
 	Instance string
 }
 
-// NewListworkspacesCmd creates a new command
+// NewUpdateProviderCmd creates a new command
 func NewUpdateProviderCmd(globalFlags *flags.GlobalFlags) *cobra.Command {
 	cmd := &UpdateProviderCmd{
 		GlobalFlags: globalFlags,
