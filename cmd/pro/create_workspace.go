@@ -23,7 +23,7 @@ type CreateWorkspaceCmd struct {
 	Instance string
 }
 
-// NewListworkspacesCmd creates a new command
+// NewCreateWorkspaceCmd creates a new command
 func NewCreateWorkspaceCmd(globalFlags *flags.GlobalFlags) *cobra.Command {
 	cmd := &CreateWorkspaceCmd{
 		GlobalFlags: globalFlags,

@@ -132,7 +132,7 @@ func printOptions(devPodConfig *config.Config, provider *workspace.ProviderWithO
 	return nil
 }
 
-// mergeOptions merges the static provider options and dynamic options
+// MergeDynamicOptions merges the static provider options and dynamic options
 func MergeDynamicOptions(options map[string]*types.Option, dynamicOptions config.OptionDefinitions) map[string]*types.Option {
 	retOptions := map[string]*types.Option{}
 	for k, option := range options {
