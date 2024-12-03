@@ -7,6 +7,7 @@ export const FieldName = {
   DEFAULT_IDE: "defaultIDE",
   RUNNER: "runner",
   DEVCONTAINER_JSON: "devcontainerJSON",
+  ENV_TEMPLATE_VERSION: "envTemplateVersion",
   DEVCONTAINER_TYPE: "devcontainerType",
   OPTIONS: "options",
 } as const
@@ -18,6 +19,7 @@ export type TFormValues = {
   [FieldName.NAME]: string
   [FieldName.DEVCONTAINER_JSON]: string
   [FieldName.RUNNER]: string
+  [FieldName.ENV_TEMPLATE_VERSION]: string
   [FieldName.DEVCONTAINER_TYPE]: TDevContainerType
   [FieldName.OPTIONS]: TOptions
 }

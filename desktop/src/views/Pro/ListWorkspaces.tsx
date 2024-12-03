@@ -24,7 +24,7 @@ export function ListWorkspaces() {
   const navigate = useNavigate()
 
   const handleCreateClicked = () => {
-    navigate(Routes.toProWorkspaceCreate(host))
+    navigate(Routes.toProSelectPreset(host))
   }
 
   const hasWorkspaces = instances.length > 0

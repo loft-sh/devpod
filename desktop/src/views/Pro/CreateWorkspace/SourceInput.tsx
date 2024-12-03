@@ -23,8 +23,8 @@ import debounce from "lodash.debounce"
 import { useCallback, useMemo, useState } from "react"
 import { useFormContext } from "react-hook-form"
 import { FiFolder } from "react-icons/fi"
-import { useBorderColor } from "../../../Theme"
-import { client } from "../../../client"
+import { useBorderColor } from "@/Theme"
+import { client } from "@/client"
 import { FieldName, TFormValues } from "./types"
 
 // WARN: Make sure these match the regexes in /pkg/git/git.go
@@ -51,8 +51,8 @@ const ADVANCED_GIT_SETTING_TABS = [
 type TAdvancedGitSetting = (typeof AdvancedGitSetting)[keyof typeof AdvancedGitSetting]
 const INITIAL_ADVANCED_SETTINGS = { option: AdvancedGitSetting.BRANCH, value: "" }
 
-type TSourceInputProps = Readonly<{ isDisabled: boolean }>
-export function SourceInput({ isDisabled }: TSourceInputProps) {
+type TSourceInputProps = Readonly<{ isDisabled: boolean; resetPreset: VoidFunction }>
+export function SourceInput({ isDisabled, resetPreset }: TSourceInputProps) {
   const { register, formState, watch, setValue, trigger: validate } = useFormContext<TFormValues>()
   const currentValue = watch(FieldName.SOURCE)
   const sourceType = watch(FieldName.SOURCE_TYPE, "git")
@@ -94,10 +94,12 @@ export function SourceInput({ isDisabled }: TSourceInputProps) {
           })
         }
 
+        resetPreset()
+
         return newSettings
       })
     },
-    [currentValue, setValue]
+    [currentValue, setValue, resetPreset]
   )
 
   const handleSelectFolderClicked = useCallback(async () => {
@@ -108,8 +110,9 @@ export function SourceInput({ isDisabled }: TSourceInputProps) {
         shouldValidate: true,
         shouldTouch: true,
       })
+      resetPreset()
     }
-  }, [setValue])
+  }, [setValue, resetPreset])
 
   const handleAdvancedOptionTabChanged = useCallback(
     (index: number) => {
@@ -267,7 +270,12 @@ export function SourceInput({ isDisabled }: TSourceInputProps) {
     <InputGroup zIndex="docked">
       <InputLeftAddon padding="0" h="10">
         <Select
-          {...register(FieldName.SOURCE_TYPE, { onChange: () => validate(FieldName.SOURCE) })}
+          {...register(FieldName.SOURCE_TYPE, {
+            onChange: () => {
+              validate(FieldName.SOURCE)
+              resetPreset()
+            },
+          })}
           _invalid={{
             borderStyle: "solid",
             borderWidth: "1px",
@@ -297,6 +305,9 @@ export function SourceInput({ isDisabled }: TSourceInputProps) {
                 return res(true)
               }, 700)()
             })
+          },
+          onChange: () => {
+            resetPreset()
           },
         })}
         _invalid={{
