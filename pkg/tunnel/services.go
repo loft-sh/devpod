@@ -75,7 +75,6 @@ func RunInContainer(
 		if err != nil {
 			return err
 		}
-		defer stdinWriter.Close()
 
 		// start server on stdio
 		cancelCtx, cancel := context.WithCancel(ctx)
@@ -90,8 +89,9 @@ func RunInContainer(
 		errChan := make(chan error, 1)
 		go func() {
 			defer cancel()
+			defer stdinWriter.Close()
 			// forward credentials to container
-			err = tunnelserver.RunServicesServer(
+			err := tunnelserver.RunServicesServer(
 				cancelCtx,
 				stdoutReader,
 				stdinWriter,
