@@ -136,8 +136,8 @@ jobs:
       - name: Build binary and copy to the E2E directory
         working-directory: ./e2e
         run: |
-          chmod +x ../hack/build-e2e.sh
-          BUILDDIR=bin SRCDIR=".." ../hack/build-e2e.sh
+          chmod +x ../hack/build-e2e-race.sh
+          BUILDDIR=bin SRCDIR=".." ../hack/build-e2e-race.sh
 
       - name: E2E test with race detector
         working-directory: ./e2e
