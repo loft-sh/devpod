@@ -57,6 +57,10 @@ func (t *runnerServer) GitCredentials(ctx context.Context, message *tunnel.Messa
 	return &tunnel.Message{}, nil
 }
 
+func (t *runnerServer) GPGPublicKeys(ctx context.Context, message *tunnel.Message) (*tunnel.Message, error) {
+	return &tunnel.Message{}, nil
+}
+
 func (t *runnerServer) GitUser(ctx context.Context, empty *tunnel.Empty) (*tunnel.Message, error) {
 	return &tunnel.Message{}, nil
 }
