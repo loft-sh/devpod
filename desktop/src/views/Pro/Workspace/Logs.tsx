@@ -13,7 +13,7 @@ import {
 } from "@/icons"
 import { exists, useDownloadLogs } from "@/lib"
 import { Routes } from "@/routes"
-import { DownloadIcon, SearchIcon } from "@chakra-ui/icons"
+import { DownloadIcon } from "@chakra-ui/icons"
 import {
   Accordion,
   AccordionButton,
@@ -36,7 +36,7 @@ import {
   VStack,
 } from "@chakra-ui/react"
 import dayjs from "dayjs"
-import { ReactElement, useCallback, useEffect, useMemo, useRef, useState } from "react"
+import { ReactElement, useEffect, useMemo, useRef, useState } from "react"
 import { HiStop } from "react-icons/hi"
 import { Link as RouterLink, useLocation } from "react-router-dom"
 import { TTabProps } from "./types"
