@@ -92,6 +92,15 @@ export const theme = extendTheme({
       800: "#8E00EB",
       900: "#40006A",
     },
+    text: {
+      secondary: "#465E75",
+      tertiary: "#5C7997",
+    },
+    divider: {
+      main: "#B0C3D6",
+      light: "#DCE5EE",
+      dark: "#465E75",
+    },
     background: {
       darkest: "rgb(16, 18, 20)",
     },

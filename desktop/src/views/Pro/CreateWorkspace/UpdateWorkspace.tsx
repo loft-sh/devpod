@@ -2,6 +2,7 @@ import {
   ProWorkspaceInstance,
   ProWorkspaceStore,
   useProContext,
+  useTemplates,
   useWorkspace,
   useWorkspaceStore,
 } from "@/contexts"
@@ -9,7 +10,7 @@ import { Failed, Result, Return } from "@/lib"
 import { Routes } from "@/routes"
 import { ManagementV1DevPodWorkspaceTemplate } from "@loft-enterprise/client/gen/models/managementV1DevPodWorkspaceTemplate"
 import jsyaml from "js-yaml"
-import { useState } from "react"
+import { useEffect, useMemo, useState } from "react"
 import { useNavigate } from "react-router"
 import { CreateWorkspaceForm } from "./CreateWorkspaceForm"
 import { TFormValues } from "./types"
@@ -26,10 +27,28 @@ export function UpdateWorkspace({ instance, template }: TUpdateWorkspaceProps) {
   const { host, client } = useProContext()
   const [globalError, setGlobalError] = useState<Failed | null>(null)
 
+  const { data: templates, isLoading: isTemplatesLoading } = useTemplates()
+
+  const presets = templates?.presets
+
+  const [presetId, setPresetId] = useState<string | undefined>(instance.spec?.presetRef?.name)
+
+  useEffect(() => {
+    setPresetId(instance.spec?.presetRef?.name)
+  }, [instance.spec?.presetRef?.name])
+
+  const preset = useMemo(() => {
+    if (!presetId) {
+      return undefined
+    }
+
+    return (presets ?? []).find((p) => p.metadata?.name === presetId)
+  }, [presetId, presets])
+
   const handleSubmit = async (values: TFormValues) => {
     setGlobalError(null)
 
-    const res = updateWorkspaceInstance(instance, values)
+    const res = updateWorkspaceInstance(instance, values, presetId)
     if (res.err) {
       setGlobalError(res.val)
 
@@ -59,8 +78,12 @@ export function UpdateWorkspace({ instance, template }: TUpdateWorkspaceProps) {
     <Box mb="40">
       <CreateWorkspaceForm
         instance={instance}
+        presets={presets}
+        preset={preset}
+        loading={isTemplatesLoading}
         template={template}
         onSubmit={handleSubmit}
+        setPreset={setPresetId}
         onReset={handleReset}
         error={globalError}
       />
@@ -70,7 +93,8 @@ export function UpdateWorkspace({ instance, template }: TUpdateWorkspaceProps) {
 
 function updateWorkspaceInstance(
   instance: ProWorkspaceInstance,
-  values: TFormValues
+  values: TFormValues,
+  preset: string | undefined
 ): Result<ProWorkspaceInstance> {
   const newInstance = new ProWorkspaceInstance(instance)
   if (!newInstance.spec) {
@@ -81,17 +105,22 @@ function updateWorkspaceInstance(
 
   // template
   const { workspaceTemplate: template, workspaceTemplateVersion, ...parameters } = values.options
-  let templateVersion = workspaceTemplateVersion
-  if (templateVersion === "latest") {
-    templateVersion = ""
-  }
-  if (
-    newInstance.spec.templateRef?.name !== template ||
-    newInstance.spec.templateRef?.version !== workspaceTemplateVersion
-  ) {
-    newInstance.spec.templateRef = {
-      name: template,
-      version: templateVersion,
+
+  if (preset) {
+    newInstance.spec.presetRef = { name: preset }
+  } else {
+    let templateVersion = workspaceTemplateVersion
+    if (templateVersion === "latest") {
+      templateVersion = ""
+    }
+    if (
+      newInstance.spec.templateRef?.name !== template ||
+      newInstance.spec.templateRef?.version !== workspaceTemplateVersion
+    ) {
+      newInstance.spec.templateRef = {
+        name: template,
+        version: templateVersion,
+      }
     }
   }
 

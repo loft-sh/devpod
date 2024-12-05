@@ -76,6 +76,7 @@ export const Routes = {
   PRO: "/pro",
   PRO_INSTANCE: "/pro/:host",
   PRO_WORKSPACE: "/pro/:host/:workspace",
+  PRO_WORKSPACE_SELECT_PRESET: "/pro/:host/select-preset",
   PRO_WORKSPACE_CREATE: "/pro/:host/new",
   PRO_SETTINGS: "/pro/:host/settings",
   toProInstance(host: string): string {
@@ -89,10 +90,15 @@ export const Routes = {
 
     return `${base}/${instanceID}`
   },
-  toProWorkspaceCreate(host: string): string {
+  toProWorkspaceCreate(host: string, fromPreset?: string): string {
     const base = this.toProInstance(host)
 
-    return `${base}/new`
+    return `${base}/new${fromPreset ? `?fromPreset=${fromPreset}` : ""}`
+  },
+  toProSelectPreset(host: string): string {
+    const base = this.toProInstance(host)
+
+    return `${base}/select-preset`
   },
   toProWorkspaceDetail(host: string, instanceID: string, detail: TProInstanceDetail): string {
     const base = this.toProInstance(host)
@@ -136,6 +142,10 @@ export const router = createBrowserRouter([
               {
                 path: Routes.PRO_WORKSPACE_CREATE,
                 element: <Pro.CreateWorkspace />,
+              },
+              {
+                path: Routes.PRO_WORKSPACE_SELECT_PRESET,
+                element: <Pro.SelectPreset />,
               },
               { path: Routes.PRO_SETTINGS, element: <Pro.Settings /> },
             ],

@@ -22,17 +22,19 @@ import { ChangeHandler, Controller, useFormContext } from "react-hook-form"
 import { FieldName, TFormValues } from "./types"
 
 type TOptionsInputProps = Readonly<{
-  workspaceTemplates: readonly ManagementV1DevPodWorkspaceTemplate[]
-  defaultWorkspaceTemplate: ManagementV1DevPodWorkspaceTemplate | undefined
+  resetPreset?: VoidFunction
+  infraTemplates: readonly ManagementV1DevPodWorkspaceTemplate[]
+  defaultInfraTemplate: ManagementV1DevPodWorkspaceTemplate | undefined
 }>
-export function OptionsInput({
-  workspaceTemplates: templates,
-  defaultWorkspaceTemplate,
+export function InfrastructureTemplateInput({
+  infraTemplates: templates,
+  defaultInfraTemplate,
+  resetPreset,
 }: TOptionsInputProps) {
   const { getValues, watch, resetField, formState } = useFormContext<TFormValues>()
   const borderColor = useBorderColor()
 
-  const defaultTemplate = defaultWorkspaceTemplate ?? templates[0]
+  const defaultTemplate = defaultInfraTemplate ?? templates[0]
   const selectedTemplateName = watch(
     `${FieldName.OPTIONS}.workspaceTemplate`,
     defaultTemplate?.metadata?.name
@@ -56,6 +58,8 @@ export function OptionsInput({
   }, [currentTemplate?.spec?.versions])
 
   const resetTemplate = () => {
+    resetPreset?.()
+
     // reset all other options, including version
     const options = getValues("options")
     for (const [k] of Object.entries(options)) {
@@ -73,6 +77,8 @@ export function OptionsInput({
   }
 
   const resetTemplateVersion = () => {
+    resetPreset?.()
+
     const resetOptions: Parameters<typeof resetField>[1] = {
       defaultValue: undefined,
     }

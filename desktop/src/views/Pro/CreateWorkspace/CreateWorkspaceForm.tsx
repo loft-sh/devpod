@@ -1,13 +1,13 @@
 import { BottomActionBar, BottomActionBarError, Form } from "@/components"
-import { ProWorkspaceInstance, useProjectClusters } from "@/contexts"
+import { ProWorkspaceInstance, useProjectClusters, useTemplates } from "@/contexts"
 import { Code, Laptop, Parameters } from "@/icons"
 import {
   Annotations,
+  exists,
   Failed,
+  getParametersWithValues,
   Labels,
   Source,
-  exists,
-  getParametersWithValues,
   useFormErrors,
 } from "@/lib"
 import { useIDEs } from "@/useIDEs"
@@ -25,15 +25,17 @@ import {
   VStack,
 } from "@chakra-ui/react"
 import { ManagementV1DevPodWorkspaceTemplate } from "@loft-enterprise/client/gen/models/managementV1DevPodWorkspaceTemplate"
-import { ReactNode, useEffect, useMemo, useRef } from "react"
+import { ReactNode, useCallback, useEffect, useMemo, useRef } from "react"
 import { Controller, DefaultValues, FormProvider, useForm } from "react-hook-form"
 import { DevContainerInput } from "./DevContainerInput"
 import { IDEInput } from "./IDEInput"
-import { OptionsInput } from "./OptionsInput"
+import { InfrastructureTemplateInput } from "./InfrastructureTemplateInput"
 import { SourceInput } from "./SourceInput"
 import { FieldName, TFormValues } from "./types"
-import { useTemplates } from "@/contexts"
 import { RunnerInput } from "@/views/Pro/CreateWorkspace/RunnerInput"
+import { ManagementV1DevPodWorkspacePreset } from "@loft-enterprise/client/gen/models/managementV1DevPodWorkspacePreset"
+import { Gold } from "@/icons/Gold"
+import { PresetInput } from "@/views/Pro/CreateWorkspace/PresetInput"
 
 type TCreateWorkspaceFormProps = Readonly<{
   instance?: ProWorkspaceInstance
@@ -41,6 +43,10 @@ type TCreateWorkspaceFormProps = Readonly<{
   onSubmit: (data: TFormValues) => void
   onReset: VoidFunction
   error: Failed | null
+  preset?: ManagementV1DevPodWorkspacePreset
+  presets?: readonly ManagementV1DevPodWorkspacePreset[]
+  setPreset?: (preset: string | undefined) => void
+  loading?: boolean
 }>
 export function CreateWorkspaceForm({
   instance,
@@ -48,9 +54,14 @@ export function CreateWorkspaceForm({
   onSubmit,
   onReset,
   error,
+  preset,
+  presets,
+  loading,
+  setPreset,
 }: TCreateWorkspaceFormProps) {
   const defaultValues = useMemo(() => getDefaultValues(instance, template), [instance, template])
   const containerRef = useRef<HTMLDivElement>(null)
+
   const { ides, defaultIDE } = useIDEs()
   const { data: templates, isLoading: isTemplatesLoading } = useTemplates()
 
@@ -66,6 +77,14 @@ export function CreateWorkspaceForm({
     runnerError,
   } = useFormErrors(Object.values(FieldName), form.formState)
 
+  const isUpdate = useMemo(() => {
+    return !!instance
+  }, [instance])
+
+  const resetPreset = useCallback(() => {
+    setPreset?.(undefined)
+  }, [setPreset])
+
   useEffect(() => {
     if (!form.getFieldState(FieldName.DEFAULT_IDE).isDirty && defaultIDE && defaultIDE.name) {
       form.setValue(FieldName.DEFAULT_IDE, defaultIDE.name, {
@@ -75,11 +94,67 @@ export function CreateWorkspaceForm({
     }
   }, [defaultIDE, form])
 
+  useEffect(() => {
+    if (!isUpdate && preset) {
+      const opts = { shouldDirty: true } // To enable the create workspace button.
+
+      const sourceType = preset.spec?.source.image ? "image" : "git"
+      const source = preset.spec?.source.image ?? preset.spec?.source.git
+
+      form.setValue(FieldName.SOURCE_TYPE, sourceType, opts)
+      form.setValue(FieldName.SOURCE, source ?? "", opts)
+
+      if (preset.spec?.infrastructureRef.name) {
+        form.setValue(
+          `${FieldName.OPTIONS}.workspaceTemplate`,
+          preset.spec.infrastructureRef.name,
+          opts
+        )
+        form.setValue(
+          `${FieldName.OPTIONS}.workspaceTemplateVersion`,
+          preset.spec.infrastructureRef.version ?? "latest",
+          opts
+        )
+      }
+
+      if (preset.spec?.environmentRef?.name) {
+        form.setValue(FieldName.DEVCONTAINER_TYPE, "external", opts)
+        form.setValue(FieldName.DEVCONTAINER_JSON, preset.spec.environmentRef.name, opts)
+        form.setValue(
+          FieldName.ENV_TEMPLATE_VERSION,
+          preset.spec.environmentRef.version ?? "latest",
+          opts
+        )
+      } else {
+        form.setValue(FieldName.DEVCONTAINER_TYPE, "path", opts)
+        form.setValue(FieldName.ENV_TEMPLATE_VERSION, "latest", opts)
+        form.setValue(FieldName.DEVCONTAINER_JSON, "", opts)
+      }
+    }
+  }, [preset, form, isUpdate])
+
   return (
     <Form onSubmit={form.handleSubmit(onSubmit)}>
       <FormProvider {...form}>
         <VStack w="full" gap="8" ref={containerRef}>
-          <FormControl isDisabled={!!instance} isRequired isInvalid={exists(sourceError)}>
+          <FormControl isDisabled={isUpdate}>
+            <CreateWorkspaceRow
+              label={
+                <FormLabel>
+                  <Gold boxSize={5} mr="1" />
+                  Workspace Preset
+                </FormLabel>
+              }>
+              <PresetInput
+                preset={preset}
+                presets={presets}
+                loading={loading}
+                setPreset={setPreset}
+                isUpdate={isUpdate}
+              />
+            </CreateWorkspaceRow>
+          </FormControl>
+          <FormControl isDisabled={isUpdate} isRequired isInvalid={exists(sourceError)}>
             <CreateWorkspaceRow
               label={
                 <FormLabel>
@@ -87,7 +162,7 @@ export function CreateWorkspaceForm({
                   Source Code
                 </FormLabel>
               }>
-              <SourceInput isDisabled={!!instance} />
+              <SourceInput isDisabled={isUpdate} resetPreset={resetPreset} />
 
               {exists(sourceError) && (
                 <FormErrorMessage>{sourceError.message ?? "Error"}</FormErrorMessage>
@@ -106,9 +181,10 @@ export function CreateWorkspaceForm({
               {isTemplatesLoading ? (
                 <Spinner />
               ) : (
-                <OptionsInput
-                  workspaceTemplates={templates!.workspace}
-                  defaultWorkspaceTemplate={templates!.default}
+                <InfrastructureTemplateInput
+                  resetPreset={resetPreset}
+                  infraTemplates={templates!.workspace}
+                  defaultInfraTemplate={templates!.default}
                 />
               )}
 
@@ -178,7 +254,10 @@ export function CreateWorkspaceForm({
                   </FormHelperText>
                 </VStack>
               }>
-              <DevContainerInput environmentTemplates={templates?.environment ?? []} />
+              <DevContainerInput
+                resetPreset={resetPreset}
+                environmentTemplates={templates?.environment ?? []}
+              />
 
               {exists(devcontainerJSONError) && (
                 <FormErrorMessage>{devcontainerJSONError.message ?? "Error"}</FormErrorMessage>
@@ -292,6 +371,7 @@ function getDefaultValues(
   if (environmentRefName) {
     defaultValues.devcontainerType = "external"
     defaultValues.devcontainerJSON = environmentRefName
+    defaultValues.envTemplateVersion = instance.spec?.environmentRef?.version ?? "latest"
   }
 
   // name

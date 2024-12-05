@@ -3,11 +3,13 @@ import { useQuery, UseQueryResult } from "@tanstack/react-query"
 import { QueryKeys } from "@/queryKeys"
 import { ManagementV1DevPodWorkspaceTemplate } from "@loft-enterprise/client/gen/models/managementV1DevPodWorkspaceTemplate"
 import { ManagementV1DevPodEnvironmentTemplate } from "@loft-enterprise/client/gen/models/managementV1DevPodEnvironmentTemplate"
+import { ManagementV1DevPodWorkspacePreset } from "@loft-enterprise/client/gen/models/managementV1DevPodWorkspacePreset"
 
 type TTemplates = Readonly<{
   default: ManagementV1DevPodWorkspaceTemplate | undefined
   workspace: readonly ManagementV1DevPodWorkspaceTemplate[]
   environment: readonly ManagementV1DevPodEnvironmentTemplate[]
+  presets: readonly ManagementV1DevPodWorkspacePreset[]
 }>
 export function useTemplates(): UseQueryResult<TTemplates> {
   const { host, currentProject, client } = useProContext()
@@ -31,6 +33,7 @@ export function useTemplates(): UseQueryResult<TTemplates> {
         default: defaultTemplate,
         workspace: projectTemplates?.devPodWorkspaceTemplates ?? [],
         environment: projectTemplates?.devPodEnvironmentTemplates ?? [],
+        presets: projectTemplates?.devPodWorkspacePresets ?? [],
       }
     },
     enabled: !!currentProject,
