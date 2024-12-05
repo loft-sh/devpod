@@ -8,10 +8,12 @@ import { TSearchOptions, useTerminalSearch } from "@/components/Terminal/useTerm
 
 export function useStreamingTerminal({
   fontSize,
+  borderRadius,
   searchOptions,
 }:
   | {
       fontSize?: keyof Theme["fontSizes"]
+      borderRadius?: keyof Theme["radii"]
       searchOptions?: TSearchOptions
     }
   | undefined = {}) {
@@ -27,9 +29,21 @@ export function useStreamingTerminal({
     useMemo(() => fontSize ?? "md", [fontSize])
   )
 
+  const borderRadiusToken = useToken(
+    "radii",
+    useMemo(() => borderRadius ?? "md", [borderRadius])
+  )
+
   const terminal = useMemo(
-    () => <Terminal ref={terminalRef} fontSize={fontSizeToken} onResize={onResize} />,
-    [fontSizeToken, onResize]
+    () => (
+      <Terminal
+        ref={terminalRef}
+        fontSize={fontSizeToken}
+        borderRadius={borderRadiusToken}
+        onResize={onResize}
+      />
+    ),
+    [fontSizeToken, onResize, borderRadiusToken]
   )
 
   const connectStream = useCallback<TStreamEventListenerFn>(

@@ -1,7 +1,16 @@
 import { useStreamingTerminal } from "@/components"
 import { useAction } from "@/contexts"
 import { useWorkspaceActions } from "@/contexts/DevPodContext/workspaces/useWorkspace"
-import { CheckCircle, ExclamationCircle, ExclamationTriangle } from "@/icons"
+import {
+  ArrowDown,
+  ArrowUp,
+  CheckCircle,
+  ExclamationCircle,
+  ExclamationTriangle,
+  MatchCase,
+  Search,
+  WholeWord,
+} from "@/icons"
 import { exists, useDownloadLogs } from "@/lib"
 import { Routes } from "@/routes"
 import { DownloadIcon, SearchIcon } from "@chakra-ui/icons"
@@ -27,11 +36,10 @@ import {
   VStack,
 } from "@chakra-ui/react"
 import dayjs from "dayjs"
-import { JSXElementConstructor, ReactElement, useEffect, useMemo, useRef, useState } from "react"
+import { ReactElement, useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { HiStop } from "react-icons/hi"
 import { Link as RouterLink, useLocation } from "react-router-dom"
 import { TTabProps } from "./types"
-import { AiOutlineDown, AiOutlineUp } from "react-icons/ai"
 
 export function Logs({ host, instance }: TTabProps) {
   const [accordionIndex, setAccordionIndex] = useState<number>(0)
@@ -58,7 +66,7 @@ export function Logs({ host, instance }: TTabProps) {
         index={accordionIndex}
         onChange={(idx) => setAccordionIndex(idx as number)}>
         {actions?.map((action) => (
-          <AccordionItem key={action.id} w="full">
+          <AccordionItem mb={"2"} key={action.id} w="full" border={"none"}>
             {({ isExpanded }) => (
               <ActionAccordionItem
                 actionID={action.id}
@@ -90,15 +98,21 @@ function ActionAccordionItem({
 
   return action?.data ? (
     <>
-      <h2>
+      <h2 role={"heading"}>
         <AccordionButton
           as={LinkBox}
           w="full"
           display="flex"
           alignItems="center"
           gap="2"
-          padding={2}
+          paddingY={2}
+          paddingX={3}
+          border={"1px solid"}
           borderRadius="md"
+          boxSizing={"border-box"}
+          borderColor={"divider.main"}
+          borderBottomRadius={isExpanded ? 0 : undefined}
+          backgroundColor={"white"}
           width="full"
           flexFlow="row nowrap">
           {action.data.status === "pending" && <Spinner color="blue.300" size="sm" />}
@@ -140,7 +154,15 @@ function ActionAccordionItem({
           </HStack>
         </AccordionButton>
       </h2>
-      <AccordionPanel>{isExpanded && <ActionTerminal actionID={actionID} />}</AccordionPanel>
+      <AccordionPanel
+        bgColor={"white"}
+        border={isExpanded ? "1px solid" : "none"}
+        borderTop={"none"}
+        borderBottomRadius={"md"}
+        padding={0}
+        borderColor={"divider.main"}>
+        {isExpanded && <ActionTerminal actionID={actionID} />}
+      </AccordionPanel>
     </>
   ) : null
 }
@@ -185,7 +207,7 @@ function ActionTerminal({ actionID }: TActionTerminalProps) {
     connectStream,
     clear: clearTerminal,
     search: { totalSearchResults, nextSearchResult, prevSearchResult, activeSearchResult },
-  } = useStreamingTerminal({ searchOptions })
+  } = useStreamingTerminal({ searchOptions, borderRadius: "none" })
 
   useEffect(() => {
     clearTerminal()
@@ -196,11 +218,11 @@ function ActionTerminal({ actionID }: TActionTerminalProps) {
   }, [action, clearTerminal, connectStream])
 
   return (
-    <VStack w={"full"} mb={"8"}>
-      <HStack w={"full"} alignItems={"center"}>
+    <VStack w={"full"}>
+      <HStack w={"full"} alignItems={"center"} paddingX={4} paddingY={3}>
         <InputGroup>
           <InputLeftElement cursor={"text"} onClick={() => searchInputRef.current?.focus()}>
-            <SearchIcon />
+            <Search boxSize={5} color={"text.tertiary"} />
           </InputLeftElement>
           <Input
             ref={searchInputRef}
@@ -223,40 +245,48 @@ function ActionTerminal({ actionID }: TActionTerminalProps) {
           />
           <InputRightElement w={"fit-content"} paddingX={"4"}>
             <HStack alignItems={"center"} w={"fit-content"}>
-              {totalSearchResults > 0 ? (
-                <Box marginRight={"1"} color={"gray.400"}>
-                  {activeSearchResult + 1} / {totalSearchResults}
-                </Box>
-              ) : searchString ? (
-                <Box marginRight={"1"} color={"gray.400"}>
-                  0 / 0
-                </Box>
-              ) : (
-                <></>
-              )}
-
               <ToggleButton
                 label={"Case sensitive"}
-                icon={<Box>Cc</Box>}
+                icon={<MatchCase boxSize={5} />}
                 value={caseSensitive}
                 setValue={setCaseSensitive}
               />
               <ToggleButton
                 label={"Whole word"}
-                icon={<Box>W</Box>}
+                icon={<WholeWord boxSize={5} />}
                 value={wholeWordSearch}
                 setValue={setWholeWordSearch}
               />
             </HStack>
           </InputRightElement>
         </InputGroup>
+
+        <Box
+          flexShrink={0}
+          minWidth={16}
+          flexDirection={"row"}
+          display={"flex"}
+          justifyContent={"center"}>
+          {totalSearchResults > 0 ? (
+            <Box marginLeft={2} marginRight={"1"} color={"text.tertiary"}>
+              {activeSearchResult + 1} of {totalSearchResults}
+            </Box>
+          ) : searchString ? (
+            <Box marginLeft={2} marginRight={"1"} color={"text.tertiary"}>
+              0 of 0
+            </Box>
+          ) : (
+            <></>
+          )}
+        </Box>
+
         <Tooltip label={"Previous search result"}>
           <IconButton
             variant={"ghost"}
             onClick={prevSearchResult}
             aria-label={"Previous search result"}
             disabled={!totalSearchResults}
-            icon={<AiOutlineUp />}
+            icon={<ArrowUp boxSize={5} />}
           />
         </Tooltip>
 
@@ -266,12 +296,12 @@ function ActionTerminal({ actionID }: TActionTerminalProps) {
             onClick={nextSearchResult}
             aria-label={"Next search result"}
             disabled={!totalSearchResults}
-            icon={<AiOutlineDown />}
+            icon={<ArrowDown boxSize={5} />}
           />
         </Tooltip>
       </HStack>
 
-      <Box h="50vh" w="full" mb="8">
+      <Box h="50vh" w="full" mb="4">
         {terminal}
       </Box>
     </VStack>
@@ -292,6 +322,7 @@ function ToggleButton({
   return (
     <Tooltip label={label}>
       <IconButton
+        borderRadius={"100%"}
         variant={"ghost"}
         color={value ? "white" : undefined}
         backgroundColor={value ? "primary.400" : undefined}

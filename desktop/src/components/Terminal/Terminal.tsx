@@ -27,12 +27,13 @@ type TTerminalRef = Readonly<{
 }>
 type TTerminalProps = Readonly<{
   fontSize: string
+  borderRadius?: string
   onResize?: (cols: number, rows: number) => void
 }>
 export type TTerminal = TTerminalRef
 
 export const Terminal = forwardRef<TTerminalRef, TTerminalProps>(function T(
-  { fontSize, onResize },
+  { fontSize, onResize, borderRadius },
   ref
 ) {
   const containerRef = useRef<HTMLDivElement>(null)
@@ -212,7 +213,7 @@ export const Terminal = forwardRef<TTerminalRef, TTerminalProps>(function T(
         height="full"
         as="div"
         backgroundColor={terminalTheme.background}
-        borderRadius="md"
+        borderRadius={borderRadius ?? "md"}
         borderWidth={8}
         boxSizing="content-box" // needs to be set to accommodate for the way xterm measures it's container
         borderColor={terminalTheme.background}
