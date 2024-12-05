@@ -22,6 +22,7 @@ import { Routes } from "@/routes"
 import { SearchIcon } from "@chakra-ui/icons"
 import { BackToWorkspaces } from "@/views/Pro/BackToWorkspaces"
 import { AiOutlineCloseCircle } from "react-icons/ai"
+import { presetDisplayName } from "@/views/Pro/helpers"
 
 export function SelectPreset() {
   const gridChildWidth = useToken("sizes", "96")
@@ -39,7 +40,7 @@ export function SelectPreset() {
         return true
       }
 
-      if ((preset.spec?.displayName ?? preset.metadata?.name ?? "").includes(searchString)) {
+      if ((presetDisplayName(preset) ?? "").includes(searchString)) {
         return true
       }
 
@@ -121,13 +122,13 @@ export function SelectPreset() {
               </Button>
             </Box>
           )}
-          {filteredPresets.map((preset, index) => (
+          {filteredPresets.map((preset) => (
             <PresetBox
-              key={index}
+              key={preset.metadata!.name!}
               preset={preset.metadata?.name ?? ""}
               host={host}
               height={gridChildHeight}
-              name={preset.spec?.displayName ?? preset.metadata?.name ?? ""}
+              name={presetDisplayName(preset) ?? ""}
               source={preset.spec?.source.image ?? preset.spec?.source.git ?? ""}
             />
           ))}

@@ -10,6 +10,7 @@ import {
   useToken,
 } from "@chakra-ui/react"
 import { AiOutlineCodeSandbox } from "react-icons/ai"
+import { presetDisplayName } from "@/views/Pro/helpers"
 
 type TPresetInputProps = Readonly<{
   preset?: ManagementV1DevPodWorkspacePreset
@@ -22,7 +23,7 @@ export function PresetInput({ preset, presets, loading, isUpdate, setPreset }: T
   const primaryColor = useToken("colors", "primary.500")
   const unusedColor = useToken("colors", "divider.main")
 
-  const displayName = preset?.spec?.displayName ?? preset?.metadata?.name
+  const displayName = presetDisplayName(preset)
 
   return loading ? (
     <Spinner />
@@ -68,7 +69,7 @@ export function PresetInput({ preset, presets, loading, isUpdate, setPreset }: T
                     onClick={() => {
                       setPreset?.(p.metadata?.name)
                     }}>
-                    {p.spec?.displayName ?? p.metadata?.name ?? ""}
+                    {presetDisplayName(p) ?? ""}
                   </MenuItem>
                 ))}
               </MenuList>
