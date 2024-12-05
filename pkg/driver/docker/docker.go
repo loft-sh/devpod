@@ -112,7 +112,7 @@ func (d *dockerDriver) PushDevContainer(ctx context.Context, image string) error
 }
 
 func (d *dockerDriver) TagDevContainer(ctx context.Context, image, tag string) error {
-	// push image
+	// Tag image
 	writer := d.Log.Writer(logrus.InfoLevel, false)
 	defer writer.Close()
 
@@ -127,7 +127,7 @@ func (d *dockerDriver) TagDevContainer(ctx context.Context, image, tag string) e
 	d.Log.Debugf("Running docker command: %s %s", d.Docker.DockerCommand, strings.Join(args, " "))
 	err := d.Docker.Run(ctx, args, nil, writer, writer)
 	if err != nil {
-		return errors.Wrap(err, "push image")
+		return errors.Wrap(err, "tag image")
 	}
 
 	return nil

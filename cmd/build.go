@@ -54,6 +54,13 @@ func NewBuildCmd(flags *flags.GlobalFlags) *cobra.Command {
 				}
 			}
 
+			// validate tags
+			if len(cmd.Tag) > 0 {
+				if err := image.ValidateTags(cmd.Tag); err != nil {
+					return fmt.Errorf("cannot build image, %w", err)
+				}
+			}
+
 			// create a temporary workspace
 			exists := workspace2.Exists(ctx, devPodConfig, args, "", log.Default)
 			sshConfigFile, err := os.CreateTemp("", "devpodssh.config")
@@ -112,6 +119,7 @@ func NewBuildCmd(flags *flags.GlobalFlags) *cobra.Command {
 	buildCmd.Flags().BoolVar(&cmd.SkipDelete, "skip-delete", false, "If true will not delete the workspace after building it")
 	buildCmd.Flags().StringVar(&cmd.Machine, "machine", "", "The machine to use for this workspace. The machine needs to exist beforehand or the command will fail. If the workspace already exists, this option has no effect")
 	buildCmd.Flags().StringVar(&cmd.Repository, "repository", "", "The repository to push to")
+	buildCmd.Flags().StringSliceVar(&cmd.Tag, "tag", []string{}, "Image Tag(s) in the form of a comma separated list --tag latest,arm64 or multiple flags --tag latest --tag arm64")
 	buildCmd.Flags().StringSliceVar(&cmd.Platform, "platform", []string{}, "Set target platform for build")
 	buildCmd.Flags().BoolVar(&cmd.SkipPush, "skip-push", false, "If true will not push the image to the repository, useful for testing")
 	buildCmd.Flags().Var(&cmd.GitCloneStrategy, "git-clone-strategy", "The git clone strategy DevPod uses to checkout git based workspaces. Can be full (default), blobless, treeless or shallow")
