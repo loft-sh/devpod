@@ -70,8 +70,8 @@ export function useTerminalSearch(
 
   const clearDisposables = useCallback(() => {
     const toClear = searchStateRef.current.disposables
-    searchStateRef.current.disposables = []
     toClear.forEach((disposable) => disposable())
+    searchStateRef.current.disposables = []
   }, [searchStateRef])
 
   const repaintHighlights = useCallback(
@@ -109,10 +109,8 @@ export function useTerminalSearch(
   // as these have to be positioned per wrapped line.
   const onResize = useCallback(
     (cols: number) => {
-      const displayLines = (searchStateRef.current.preWrappedLines = wrapLines(
-        searchStateRef.current.searchableLines,
-        cols
-      ))
+      const displayLines = wrapLines(searchStateRef.current.searchableLines, cols)
+      searchStateRef.current.preWrappedLines = displayLines
 
       const [highlights, jumpMap] = generateHighlights(
         searchStateRef.current.searchResults,

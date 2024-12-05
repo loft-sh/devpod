@@ -172,7 +172,7 @@ export const Terminal = forwardRef<TTerminalRef, TTerminalProps>(function T(
           terminalRef.current?.writeln(data)
           termFitRef.current?.fit()
         },
-        highlight(row: number, col: number, len: number, color: string, invertText: boolean) {
+        highlight(row: number, startCol: number, len: number, color: string, invertText: boolean) {
           const terminal = terminalRef.current
 
           if (!terminal) {
@@ -184,7 +184,7 @@ export const Terminal = forwardRef<TTerminalRef, TTerminalProps>(function T(
           const marker = terminal.registerMarker(rowRelative)
           const decoration = terminal.registerDecoration({
             marker,
-            x: col,
+            x: startCol,
             width: len,
             backgroundColor: color,
             foregroundColor: invertText ? "#000000" : "#FFFFFF",
