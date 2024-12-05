@@ -1,16 +1,7 @@
-import { useStreamingTerminal } from "@/components"
+import { TerminalSearchBar, useStreamingTerminal } from "@/components"
 import { useAction } from "@/contexts"
 import { useWorkspaceActions } from "@/contexts/DevPodContext/workspaces/useWorkspace"
-import {
-  ArrowDown,
-  ArrowUp,
-  CheckCircle,
-  ExclamationCircle,
-  ExclamationTriangle,
-  MatchCase,
-  Search,
-  WholeWord,
-} from "@/icons"
+import { CheckCircle, ExclamationCircle, ExclamationTriangle } from "@/icons"
 import { exists, useDownloadLogs } from "@/lib"
 import { Routes } from "@/routes"
 import { DownloadIcon } from "@chakra-ui/icons"
@@ -24,10 +15,6 @@ import {
   Button,
   HStack,
   IconButton,
-  Input,
-  InputGroup,
-  InputLeftElement,
-  InputRightElement,
   LinkBox,
   LinkOverlay,
   Spinner,
@@ -36,10 +23,11 @@ import {
   VStack,
 } from "@chakra-ui/react"
 import dayjs from "dayjs"
-import { ReactElement, useEffect, useMemo, useRef, useState } from "react"
+import { useEffect, useState } from "react"
 import { HiStop } from "react-icons/hi"
 import { Link as RouterLink, useLocation } from "react-router-dom"
 import { TTabProps } from "./types"
+import { TSearchOptions } from "@/components/Terminal/useTerminalSearch"
 
 export function Logs({ host, instance }: TTabProps) {
   const [accordionIndex, setAccordionIndex] = useState<number>(0)
@@ -172,35 +160,7 @@ type TActionTerminalProps = Readonly<{
 function ActionTerminal({ actionID }: TActionTerminalProps) {
   const action = useAction(actionID)
 
-  const [searchString, setSearchString] = useState<string | undefined>(undefined)
-  const [debouncedSearchString, setDebouncedSearchString] = useState<string | undefined>(undefined)
-  const [caseSensitive, setCaseSensitive] = useState<boolean>(false)
-  const [wholeWordSearch, setWholeWordSearch] = useState<boolean>(false)
-
-  const searchInputRef = useRef<HTMLInputElement | null>(null)
-
-  // Debounce to prevent stutter when having a huge amount of results.
-  useEffect(() => {
-    // Sneaky heuristic:
-    // If we have more than two characters, we're likely to have a more sane amount of results, so we can skip debouncing.
-    const len = searchString?.length ?? 0
-    if (len > 2) {
-      setDebouncedSearchString(searchString)
-
-      return
-    }
-
-    const timeout = setTimeout(() => {
-      setDebouncedSearchString(searchString)
-    }, 200)
-
-    return () => clearTimeout(timeout)
-  }, [searchString])
-
-  const searchOptions = useMemo(
-    () => ({ searchString: debouncedSearchString, caseSensitive, wholeWordSearch }),
-    [debouncedSearchString, wholeWordSearch, caseSensitive]
-  )
+  const [searchOptions, setSearchOptions] = useState<TSearchOptions>({})
 
   const {
     terminal,
@@ -219,122 +179,18 @@ function ActionTerminal({ actionID }: TActionTerminalProps) {
 
   return (
     <VStack w={"full"}>
-      <HStack w={"full"} alignItems={"center"} paddingX={4} paddingY={3}>
-        <InputGroup>
-          <InputLeftElement cursor={"text"} onClick={() => searchInputRef.current?.focus()}>
-            <Search boxSize={5} color={"text.tertiary"} />
-          </InputLeftElement>
-          <Input
-            ref={searchInputRef}
-            value={searchString ?? ""}
-            placeholder={"Search..."}
-            spellCheck={false}
-            bg={"white"}
-            onKeyDown={(e) => {
-              if (e.key === "Enter") {
-                if (e.shiftKey) {
-                  prevSearchResult()
-                } else {
-                  nextSearchResult()
-                }
-              }
-            }}
-            onChange={(e) => {
-              setSearchString(e.target.value ? e.target.value : undefined)
-            }}
-          />
-          <InputRightElement w={"fit-content"} paddingX={"4"}>
-            <HStack alignItems={"center"} w={"fit-content"}>
-              <ToggleButton
-                label={"Case sensitive"}
-                icon={<MatchCase boxSize={5} />}
-                value={caseSensitive}
-                setValue={setCaseSensitive}
-              />
-              <ToggleButton
-                label={"Whole word"}
-                icon={<WholeWord boxSize={5} />}
-                value={wholeWordSearch}
-                setValue={setWholeWordSearch}
-              />
-            </HStack>
-          </InputRightElement>
-        </InputGroup>
-
-        <Box
-          flexShrink={0}
-          minWidth={16}
-          flexDirection={"row"}
-          display={"flex"}
-          justifyContent={"center"}>
-          {totalSearchResults > 0 ? (
-            <Box marginLeft={2} marginRight={"1"} color={"text.tertiary"}>
-              {activeSearchResult + 1} of {totalSearchResults}
-            </Box>
-          ) : searchString ? (
-            <Box marginLeft={2} marginRight={"1"} color={"text.tertiary"}>
-              0 of 0
-            </Box>
-          ) : (
-            <></>
-          )}
-        </Box>
-
-        <Tooltip label={"Previous search result"}>
-          <IconButton
-            variant={"ghost"}
-            onClick={prevSearchResult}
-            aria-label={"Previous search result"}
-            disabled={!totalSearchResults}
-            icon={<ArrowUp boxSize={5} />}
-          />
-        </Tooltip>
-
-        <Tooltip label={"Next search result"}>
-          <IconButton
-            variant={"ghost"}
-            onClick={nextSearchResult}
-            aria-label={"Next search result"}
-            disabled={!totalSearchResults}
-            icon={<ArrowDown boxSize={5} />}
-          />
-        </Tooltip>
-      </HStack>
+      <TerminalSearchBar
+        prevSearchResult={prevSearchResult}
+        nextSearchResult={nextSearchResult}
+        totalSearchResults={totalSearchResults}
+        activeSearchResult={activeSearchResult}
+        onUpdateSearchOptions={setSearchOptions}
+      />
 
       <Box h="50vh" w="full" mb="4">
         {terminal}
       </Box>
     </VStack>
-  )
-}
-
-function ToggleButton({
-  label,
-  icon,
-  value,
-  setValue,
-}: {
-  label: string
-  icon: ReactElement | undefined
-  value: boolean
-  setValue: (value: boolean) => void
-}) {
-  return (
-    <Tooltip label={label}>
-      <IconButton
-        borderRadius={"100%"}
-        variant={"ghost"}
-        color={value ? "white" : undefined}
-        backgroundColor={value ? "primary.400" : undefined}
-        _hover={{
-          bg: value ? "primary.600" : "gray.100",
-        }}
-        aria-label={label}
-        fontFamily={"mono"}
-        icon={icon}
-        onClick={() => setValue(!value)}
-      />
-    </Tooltip>
   )
 }
 
