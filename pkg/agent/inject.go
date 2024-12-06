@@ -81,10 +81,6 @@ func InjectAgentAndExecute(
 	versionCheck := fmt.Sprintf(`[ "$(%s version 2>/dev/null || echo 'false')" != "%s" ]`, remoteAgentPath, version.GetVersion())
 	if version.GetVersion() == version.DevVersion {
 		preferDownload = false
-
-		if runtime.GOOS == "windows" {
-			preferDownload = true
-		}
 	}
 
 	// install devpod into the target
