@@ -13,7 +13,7 @@ func AuthDevpodCliToPlatform(config *client.Config, logger log.Logger) error {
 	out, err := cmd.CombinedOutput()
 	if err != nil {
 		logger.Debugf("Failed executing `devpod pro login`: %w, output: %s", err, out)
-		return fmt.Errorf("error executing 'devpod pro login' command")
+		return fmt.Errorf("error executing 'devpod pro login' command: %w", err)
 	}
 
 	return nil
@@ -30,7 +30,7 @@ func AuthVClusterCliToPlatform(config *client.Config, logger log.Logger) error {
 	out, err := cmd.CombinedOutput()
 	if err != nil {
 		logger.Debugf("Failed executing `vcluster login` : %w, output: %s", err, out)
-		return fmt.Errorf("error executing 'vcluster login' command")
+		return fmt.Errorf("error executing 'vcluster login' command: %w", err)
 	}
 
 	return nil
