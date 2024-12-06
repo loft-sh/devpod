@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"bytes"
 	"context"
 	"encoding/base64"
 	"fmt"
@@ -21,6 +22,7 @@ import (
 	client2 "github.com/loft-sh/devpod/pkg/client"
 	"github.com/loft-sh/devpod/pkg/client/clientimplementation"
 	"github.com/loft-sh/devpod/pkg/config"
+	"github.com/loft-sh/devpod/pkg/credentials"
 	dpFlags "github.com/loft-sh/devpod/pkg/flags"
 	"github.com/loft-sh/devpod/pkg/gpg"
 	"github.com/loft-sh/devpod/pkg/port"
@@ -60,6 +62,8 @@ type SSHCmd struct {
 
 	// ssh keepalive options
 	SSHKeepAliveInterval time.Duration `json:"sshKeepAliveInterval,omitempty"`
+
+	SetupLoftPlatformAccess bool
 
 	StartServices bool
 
@@ -116,6 +120,7 @@ func NewSSHCmd(f *flags.GlobalFlags) *cobra.Command {
 	sshCmd.Flags().BoolVar(&cmd.Stdio, "stdio", false, "If true will tunnel connection through stdout and stdin")
 	sshCmd.Flags().BoolVar(&cmd.StartServices, "start-services", true, "If false will not start any port-forwarding or git / docker credentials helper")
 	sshCmd.Flags().DurationVar(&cmd.SSHKeepAliveInterval, "ssh-keepalive-interval", 55*time.Second, "How often should keepalive request be made (55s)")
+	sshCmd.Flags().BoolVar(&cmd.SetupLoftPlatformAccess, "setup-loft-platform-access", false, "should setup loft platform access")
 
 	return sshCmd
 }
@@ -181,7 +186,7 @@ func (cmd *SSHCmd) startProxyTunnel(
 			})
 		},
 		func(ctx context.Context, containerClient *ssh.Client) error {
-			return cmd.startTunnel(ctx, devPodConfig, containerClient, client.Workspace(), log)
+			return cmd.startTunnel(ctx, devPodConfig, containerClient, client, log)
 		},
 	)
 }
@@ -295,7 +300,7 @@ func (cmd *SSHCmd) jumpContainer(
 			unlockOnce.Do(client.Unlock)
 
 			// start ssh tunnel
-			return cmd.startTunnel(ctx, devPodConfig, containerClient, client.Workspace(), log)
+			return cmd.startTunnel(ctx, devPodConfig, containerClient, client, log)
 		}, devPodConfig, envVars)
 }
 
@@ -403,7 +408,7 @@ func (cmd *SSHCmd) forwardPorts(
 	return <-errChan
 }
 
-func (cmd *SSHCmd) startTunnel(ctx context.Context, devPodConfig *config.Config, containerClient *ssh.Client, workspaceName string, log log.Logger) error {
+func (cmd *SSHCmd) startTunnel(ctx context.Context, devPodConfig *config.Config, containerClient *ssh.Client, workspaceClient client2.BaseWorkspaceClient, log log.Logger) error {
 	// check if we should forward ports
 	if len(cmd.ForwardPorts) > 0 {
 		return cmd.forwardPorts(ctx, containerClient, log)
@@ -437,7 +442,7 @@ func (cmd *SSHCmd) startTunnel(ctx context.Context, devPodConfig *config.Config,
 		}
 	}
 
-	workdir := filepath.Join("/workspaces", workspaceName)
+	workdir := filepath.Join("/workspaces", workspaceClient.Workspace())
 	if cmd.WorkDir != "" {
 		workdir = cmd.WorkDir
 	}
@@ -456,6 +461,10 @@ func (cmd *SSHCmd) startTunnel(ctx context.Context, devPodConfig *config.Config,
 		return err
 	}
 
+	if cmd.Provider == "" {
+		cmd.Provider = "devpod-pro"
+	}
+
 	// Traffic is coming in from the outside, we need to forward it to the container
 	if cmd.Proxy || cmd.Stdio {
 		if cmd.Proxy {
@@ -468,8 +477,13 @@ func (cmd *SSHCmd) startTunnel(ctx context.Context, devPodConfig *config.Config,
 					log.Error(err)
 				}
 			}()
-		}
 
+			go func() {
+				if err := cmd.setupLoftPlatformAccess(ctx, containerClient, cmd.Context, cmd.Provider, log); err != nil {
+					log.Error(err)
+				}
+			}()
+		}
 		return devssh.Run(ctx, containerClient, command, os.Stdin, os.Stdout, writer, envVars)
 	}
 
@@ -487,6 +501,22 @@ func (cmd *SSHCmd) startTunnel(ctx context.Context, devPodConfig *config.Config,
 		},
 		writer,
 	)
+}
+
+func (cmd *SSHCmd) setupLoftPlatformAccess(ctx context.Context, sshClient *ssh.Client, context, provider string, log log.Logger) error {
+	port, err := credentials.GetPort()
+	if err != nil {
+		return fmt.Errorf("get port: %w", err)
+	}
+
+	buf := &bytes.Buffer{}
+	command := fmt.Sprintf("'%s'  agent container setup-loft-platform-access --context %s --provider %s --port %d", agent.ContainerDevPodHelperLocation, context, provider, port)
+	err = devssh.Run(ctx, sshClient, command, nil, buf, buf, nil)
+	if err != nil {
+		log.Debugf("Failed to setup platform access: %s%v", buf.String(), err)
+	}
+
+	return nil
 }
 
 func (cmd *SSHCmd) startServices(
