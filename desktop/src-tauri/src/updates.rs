@@ -15,7 +15,7 @@ use tokio::fs::File;
 use ts_rs::TS;
 
 const UPDATE_POLL_INTERVAL: std::time::Duration = std::time::Duration::from_secs(60 * 10);
-const RELEASES_URL: &str = "https://api.github.com/repos/loft-sh/devpod/releases";
+const RELEASES_URL: &str = "https://devpod-update-server.loft.host/releases";
 
 #[derive(Error, Debug)]
 pub enum UpdateError {
@@ -266,13 +266,9 @@ impl<'a> UpdateHelper<'a> {
     }
 
     pub async fn fetch_releases(&self) -> anyhow::Result<Releases> {
-        let per_page = 50;
-        let page = 1;
-
         let client = Client::builder().user_agent("loft-sh/devpod").build()?;
         let request = client
             .request(Method::GET, RELEASES_URL)
-            .query(&[("per_page", per_page), ("page", page)])
             .header("Accept", "application/vnd.github+json")
             .header("X-GitHub-Api-Version", "2022-11-28");
 
