@@ -1,5 +1,5 @@
 import { BottomActionBar, BottomActionBarError, Form, useStreamingTerminal } from "@/components"
-import { useProInstanceManager, useProInstances, useProvider, useProviders } from "@/contexts"
+import { useProInstanceManager, useProInstances, useProviders } from "@/contexts"
 import { canHealthCheck, exists, useFormErrors } from "@/lib"
 import { Routes } from "@/routes"
 import {
@@ -23,17 +23,14 @@ import {
   ModalHeader,
   ModalOverlay,
   Tooltip,
-  useDisclosure,
   VStack,
+  useDisclosure,
 } from "@chakra-ui/react"
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { SubmitHandler, useForm } from "react-hook-form"
 import { useNavigate } from "react-router"
 import { ConfigureProviderOptionsForm, useSetupProvider } from "@/views/Providers"
 import { To } from "react-router-dom"
-import { useQueryClient } from "@tanstack/react-query"
-import { client } from "@/client"
-import { QueryKeys } from "@/queryKeys"
 
 type TFormValues = {
   [FieldName.PRO_HOST]: string
@@ -101,6 +98,17 @@ export function useLoginProModal() {
 
   const { proURLError } = useFormErrors(Object.values(FieldName), formState)
 
+  useEffect(() => {
+    if (login.status === "success") {
+      const providerID = login.provider?.config?.name
+
+      if (!exists(providerID)) {
+        return
+      }
+      completeSetupProvider({ providerID, suggestedOptions })
+    }
+  }, [completeSetupProvider, login.provider, login.status, suggestedOptions])
+
   const resetModal = useCallback(
     (checkDanglingProInstance: boolean = false) => {
       reset()
@@ -158,54 +166,6 @@ export function useLoginProModal() {
       navigate(route)
     }, 0)
   }, [completeConfigureProvider, navigate, providers, proInstances, resetModal, state.providerID])
-
-  const [provider] = useProvider(state.providerID)
-
-  const supportsProFlow = useMemo(() => {
-    return canHealthCheck(provider?.config)
-  }, [provider])
-
-  const queryClient = useQueryClient()
-
-  const saveAndSkipForm = useCallback(async () => {
-    if (!state.providerID) {
-      return
-    }
-
-    ;(
-      await client.providers.configure(state.providerID, {
-        useAsDefaultProvider: true,
-        reuseMachine: false,
-        options: {},
-      })
-    ).unwrap()
-
-    await queryClient.invalidateQueries(QueryKeys.PROVIDERS)
-
-    completeFlow()
-  }, [queryClient, state.providerID, completeFlow])
-
-  useEffect(() => {
-    if (login.status === "success") {
-      const providerID = login.provider?.config?.name
-
-      if (!exists(providerID)) {
-        return
-      }
-      completeSetupProvider({ providerID, suggestedOptions })
-
-      if (supportsProFlow) {
-        saveAndSkipForm()
-      }
-    }
-  }, [
-    completeSetupProvider,
-    supportsProFlow,
-    saveAndSkipForm,
-    login.provider,
-    login.status,
-    suggestedOptions,
-  ])
 
   const modal = useMemo(() => {
     return (
@@ -295,7 +255,7 @@ export function useLoginProModal() {
                   </BottomActionBar>
                 )}
               </Form>
-              {!supportsProFlow && state.currentStep === "configure-provider" && (
+              {state.currentStep === "configure-provider" && (
                 <>
                   <Divider />
                   <Heading size="md" as="h2">
