@@ -63,6 +63,14 @@ func (cmd *OptionsCmd) Run(ctx context.Context, args []string) error {
 		return fmt.Errorf("please specify a provider")
 	}
 
+	if providerName != "" && cmd.GlobalFlags.Provider != "" {
+		if providerName != cmd.GlobalFlags.Provider {
+			log.Default.Infof("providerName=%+v", providerName)
+			log.Default.Infof("GlobalFlags.Provider=%+v", cmd.GlobalFlags.Provider)
+			return fmt.Errorf("ambiguous provider configuration detected")
+		}
+	}
+
 	providerWithOptions, err := workspace.FindProvider(devPodConfig, providerName, log.Default.ErrorStreamOnly())
 	if err != nil {
 		return err
