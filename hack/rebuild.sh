@@ -13,7 +13,12 @@ for os in $BUILD_PLATFORMS; do
             continue
         fi
         echo "[INFO] Building for $os/$arch"
-        CGO_ENABLED=0 GOOS=$os GOARCH=$arch go build -ldflags "-s -w" -o test/devpod-cli-$os-$arch
+        if [[ $RACE == "yes" ]]; then
+            echo "Building devpod with race detector"
+            CGO_ENABLED=1 GOOS=$os GOARCH=$arch go build -race -ldflags "-s -w" -o test/devpod-cli-$os-$arch
+        else
+            CGO_ENABLED=0 GOOS=$os GOARCH=$arch go build -ldflags "-s -w" -o test/devpod-cli-$os-$arch
+        fi
     done
 done
 
