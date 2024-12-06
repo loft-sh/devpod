@@ -19,7 +19,11 @@ done
 
 echo "[INFO] Built binaries for all platforms in test/ directory"
 if [[ -z "${SKIP_INSTALL}" ]]; then
-    go build -o test/devpod && sudo mv test/devpod /usr/local/bin/
+    if command -v sudo &> /dev/null; then
+        go build -o test/devpod && sudo mv test/devpod /usr/local/bin/
+    else 
+        go install .
+    fi
 fi
 
 echo "[INFO] Built devpod binary and moved to /usr/local/bin"
