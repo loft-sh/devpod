@@ -1,4 +1,4 @@
-import { useStreamingTerminal } from "@/components"
+import { TerminalSearchBar, useStreamingTerminal } from "@/components"
 import { useAction } from "@/contexts"
 import { useWorkspaceActions } from "@/contexts/DevPodContext/workspaces/useWorkspace"
 import { CheckCircle, ExclamationCircle, ExclamationTriangle } from "@/icons"
@@ -27,6 +27,7 @@ import { useEffect, useState } from "react"
 import { HiStop } from "react-icons/hi"
 import { Link as RouterLink, useLocation } from "react-router-dom"
 import { TTabProps } from "./types"
+import { TSearchOptions } from "@/components/Terminal/useTerminalSearch"
 
 export function Logs({ host, instance }: TTabProps) {
   const [accordionIndex, setAccordionIndex] = useState<number>(0)
@@ -53,7 +54,7 @@ export function Logs({ host, instance }: TTabProps) {
         index={accordionIndex}
         onChange={(idx) => setAccordionIndex(idx as number)}>
         {actions?.map((action) => (
-          <AccordionItem key={action.id} w="full">
+          <AccordionItem mb={"2"} key={action.id} w="full" border={"none"}>
             {({ isExpanded }) => (
               <ActionAccordionItem
                 actionID={action.id}
@@ -85,15 +86,21 @@ function ActionAccordionItem({
 
   return action?.data ? (
     <>
-      <h2>
+      <h2 role={"heading"}>
         <AccordionButton
           as={LinkBox}
           w="full"
           display="flex"
           alignItems="center"
           gap="2"
-          padding={2}
+          paddingY={2}
+          paddingX={3}
+          border={"1px solid"}
           borderRadius="md"
+          boxSizing={"border-box"}
+          borderColor={"divider.main"}
+          borderBottomRadius={isExpanded ? 0 : undefined}
+          backgroundColor={"white"}
           width="full"
           flexFlow="row nowrap">
           {action.data.status === "pending" && <Spinner color="blue.300" size="sm" />}
@@ -135,7 +142,15 @@ function ActionAccordionItem({
           </HStack>
         </AccordionButton>
       </h2>
-      <AccordionPanel>{isExpanded && <ActionTerminal actionID={actionID} />}</AccordionPanel>
+      <AccordionPanel
+        bgColor={"white"}
+        border={isExpanded ? "1px solid" : "none"}
+        borderTop={"none"}
+        borderBottomRadius={"md"}
+        padding={0}
+        borderColor={"divider.main"}>
+        {isExpanded && <ActionTerminal actionID={actionID} />}
+      </AccordionPanel>
     </>
   ) : null
 }
@@ -144,18 +159,40 @@ type TActionTerminalProps = Readonly<{
 }>
 function ActionTerminal({ actionID }: TActionTerminalProps) {
   const action = useAction(actionID)
-  const { terminal, connectStream, clear: clearTerminal } = useStreamingTerminal()
+
+  const [searchOptions, setSearchOptions] = useState<TSearchOptions>({})
+
+  const {
+    terminal,
+    connectStream,
+    clear: clearTerminal,
+    search: { totalSearchResults, nextSearchResult, prevSearchResult, activeSearchResult },
+  } = useStreamingTerminal({ searchOptions, borderRadius: "none" })
 
   useEffect(() => {
     clearTerminal()
 
-    return action?.connectOrReplay(connectStream)
+    return action?.connectOrReplay((e) => {
+      connectStream(e)
+    })
   }, [action, clearTerminal, connectStream])
 
   return (
-    <Box h="50vh" w="full" mb="8">
-      {terminal}
-    </Box>
+    <VStack w={"full"}>
+      <TerminalSearchBar
+        paddingX={4}
+        paddingY={3}
+        prevSearchResult={prevSearchResult}
+        nextSearchResult={nextSearchResult}
+        totalSearchResults={totalSearchResults}
+        activeSearchResult={activeSearchResult}
+        onUpdateSearchOptions={setSearchOptions}
+      />
+
+      <Box h="50vh" w="full" mb="4">
+        {terminal}
+      </Box>
+    </VStack>
   )
 }
 

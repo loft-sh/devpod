@@ -1,19 +1,41 @@
 import { Box, useColorModeValue, useToken } from "@chakra-ui/react"
 import { css } from "@emotion/react"
-import { forwardRef, useEffect, useImperativeHandle, useLayoutEffect, useMemo, useRef } from "react"
-import { Terminal as XTermTerminal, ITheme as IXTermTheme } from "xterm"
-import { FitAddon } from "xterm-addon-fit"
-import { exists, remToPx } from "../../lib"
+import React, {
+  forwardRef,
+  useEffect,
+  useImperativeHandle,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+} from "react"
+import { ITerminalAddon, ITheme as IXTermTheme, Terminal as XTermTerminal } from "@xterm/xterm"
+import { FitAddon } from "@xterm/addon-fit"
+import { exists, remToPx } from "@/lib"
 
 type TTerminalRef = Readonly<{
   clear: VoidFunction
   write: (data: string) => void
   writeln: (data: string) => void
+  highlight: (
+    row: number,
+    col: number,
+    len: number,
+    color: string,
+    invertText: boolean
+  ) => (() => void) | undefined
+  getTerminal: () => XTermTerminal | null
 }>
-type TTerminalProps = Readonly<{ fontSize: string }>
+type TTerminalProps = Readonly<{
+  fontSize: string
+  borderRadius?: string
+  onResize?: (cols: number, rows: number) => void
+}>
 export type TTerminal = TTerminalRef
 
-export const Terminal = forwardRef<TTerminalRef, TTerminalProps>(function T({ fontSize }, ref) {
+export const Terminal = forwardRef<TTerminalRef, TTerminalProps>(function T(
+  { fontSize, onResize, borderRadius },
+  ref
+) {
   const containerRef = useRef<HTMLDivElement>(null)
   const terminalRef = useRef<XTermTerminal | null>(null)
   const termFitRef = useRef<FitAddon | null>(null)
@@ -38,6 +60,7 @@ export const Terminal = forwardRef<TTerminalRef, TTerminalProps>(function T({ fo
         convertEol: true,
         scrollback: 25_000,
         theme: terminalTheme,
+        allowProposedApi: true,
         cursorStyle: "underline",
         disableStdin: true,
         cursorBlink: false,
@@ -51,9 +74,18 @@ export const Terminal = forwardRef<TTerminalRef, TTerminalProps>(function T({ fo
         }
       })
 
-      const termFit = new FitAddon()
-      termFitRef.current = termFit
-      terminal.loadAddon(termFit)
+      const loadAddon = <T extends ITerminalAddon>(
+        AddonClass: new () => T,
+        ref: React.MutableRefObject<T | null>
+      ) => {
+        const addon = new AddonClass()
+        ref.current = addon
+        terminal.loadAddon(addon)
+
+        return addon
+      }
+
+      const termFit = loadAddon(FitAddon, termFitRef)
 
       // Perform initial fit. Dimensions are only available after the terminal has been rendered once.
       const disposable = terminal.onRender(() => {
@@ -80,6 +112,22 @@ export const Terminal = forwardRef<TTerminalRef, TTerminalProps>(function T({ fo
     // Don't initialize more than once! Use imperative api to update terminal state
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
+
+  // Apply outer resize handler to the terminal here.
+  // Terminal should be guaranteed to be present by the time we get here.
+  useEffect(() => {
+    if (!onResize) {
+      return
+    }
+
+    const disposable = terminalRef.current?.onResize((event) => {
+      onResize(event.cols, event.rows)
+    })
+
+    return () => {
+      disposable?.dispose()
+    }
+  }, [onResize])
 
   useEffect(() => {
     const resizeHandler = () => {
@@ -124,6 +172,36 @@ export const Terminal = forwardRef<TTerminalRef, TTerminalProps>(function T({ fo
           terminalRef.current?.writeln(data)
           termFitRef.current?.fit()
         },
+        highlight(row: number, startCol: number, len: number, color: string, invertText: boolean) {
+          const terminal = terminalRef.current
+
+          if (!terminal) {
+            return undefined
+          }
+
+          const rowRelative = -terminal.buffer.active.baseY - terminal.buffer.active.cursorY + row
+
+          const marker = terminal.registerMarker(rowRelative)
+          const decoration = terminal.registerDecoration({
+            marker,
+            x: startCol,
+            width: len,
+            backgroundColor: color,
+            foregroundColor: invertText ? "#000000" : "#FFFFFF",
+            layer: "top",
+            overviewRulerOptions: {
+              color: color,
+            },
+          })
+
+          return () => {
+            marker.dispose()
+            decoration?.dispose()
+          }
+        },
+        getTerminal() {
+          return terminalRef.current
+        },
       }
     },
     [terminalRef]
@@ -135,7 +213,7 @@ export const Terminal = forwardRef<TTerminalRef, TTerminalProps>(function T({ fo
         height="full"
         as="div"
         backgroundColor={terminalTheme.background}
-        borderRadius="md"
+        borderRadius={borderRadius ?? "md"}
         borderWidth={8}
         boxSizing="content-box" // needs to be set to accommodate for the way xterm measures it's container
         borderColor={terminalTheme.background}

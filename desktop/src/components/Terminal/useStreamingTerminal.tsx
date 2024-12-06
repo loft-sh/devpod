@@ -1,47 +1,113 @@
 import dayjs from "dayjs"
 import { Theme, useToken } from "@chakra-ui/react"
-import { useCallback, useMemo, useRef } from "react"
-import { TStreamEventListenerFn } from "../../client"
-import { TLogOutput } from "../../types"
+import React, { useCallback, useMemo, useRef } from "react"
+import { TStreamEventListenerFn } from "@/client"
+import { TLogOutput } from "@/types"
 import { Terminal, TTerminal } from "./Terminal"
+import { TSearchOptions, useTerminalSearch } from "@/components/Terminal/useTerminalSearch"
 
 export function useStreamingTerminal({
   fontSize,
-}: { fontSize?: keyof Theme["fontSizes"] } | undefined = {}) {
+  borderRadius,
+  searchOptions,
+}:
+  | {
+      fontSize?: keyof Theme["fontSizes"]
+      borderRadius?: keyof Theme["radii"]
+      searchOptions?: TSearchOptions
+    }
+  | undefined = {}) {
   const terminalRef = useRef<TTerminal | null>(null)
+
+  const {
+    internals: { searchStateRef, debounceSearchResults, resetSearch, onResize },
+    searchApi,
+  } = useTerminalSearch(terminalRef, searchOptions)
+
   const fontSizeToken = useToken(
     "fontSizes",
     useMemo(() => fontSize ?? "md", [fontSize])
   )
-  const terminal = useMemo(
-    () => <Terminal ref={terminalRef} fontSize={fontSizeToken} />,
-    [fontSizeToken]
+
+  const borderRadiusToken = useToken(
+    "radii",
+    useMemo(() => borderRadius ?? "md", [borderRadius])
   )
+
+  const terminal = useMemo(
+    () => (
+      <Terminal
+        ref={terminalRef}
+        fontSize={fontSizeToken}
+        borderRadius={borderRadiusToken}
+        onResize={onResize}
+      />
+    ),
+    [fontSizeToken, onResize, borderRadiusToken]
+  )
+
   const connectStream = useCallback<TStreamEventListenerFn>(
     (event) => {
       switch (event.type) {
-        case "data":
+        case "data": {
           if (event.data.message === undefined) {
             return
           }
-          terminalRef.current?.writeln(formatLine(event.data))
+
+          const formattedLine = formatLine(event.data)
+          terminalRef.current?.writeln(formattedLine.ansi)
+
+          searchStateRef.current.preWrappedLines = undefined
+          searchStateRef.current.searchableLines.push(...processInputLine(formattedLine.plain))
+
+          debounceSearchResults(searchStateRef.current.searchOptions)
+
           break
-        case "error":
+        }
+        case "error": {
           if (event.error.message === undefined) {
             return
           }
-          terminalRef.current?.writeln(formatLine(event.error))
+
+          const formattedLine = formatLine(event.error)
+          terminalRef.current?.writeln(formattedLine.ansi)
+
+          searchStateRef.current.preWrappedLines = undefined
+          searchStateRef.current.searchableLines.push(...processInputLine(formattedLine.plain))
+
+          debounceSearchResults(searchStateRef.current.searchOptions)
+
           break
+        }
       }
     },
-    [terminalRef]
+    [terminalRef, searchStateRef, debounceSearchResults]
   )
 
   const clear = useCallback(() => {
+    resetSearch()
     terminalRef.current?.clear()
-  }, [terminalRef])
+  }, [terminalRef, resetSearch])
 
-  return { terminal, connectStream, clear }
+  return {
+    terminal,
+    connectStream,
+    clear,
+    search: searchApi,
+  }
+}
+
+function processInputLine(line: string) {
+  // Default tabStopWidth is 8.
+  const withoutTabs = line.replaceAll(/\t/g, " ".repeat(8))
+
+  const subLines = withoutTabs.split(/\r\n|\n/)
+
+  return subLines.map((sl) => {
+    const splitByCR = sl.split("\r")
+
+    return splitByCR[splitByCR.length - 1]!
+  })
 }
 
 const ANSI_COLOR = {
@@ -87,9 +153,11 @@ function formatLine({ level, message, time }: TLogOutput) {
     levelColor = LOG_COLORS[level as keyof typeof LOG_COLORS]
   }
 
-  const date = `\x1b[${ANSI_COLOR.DarkWhite}m[${dayjs(time).format("HH:mm:ss")}]`
+  const formattedTime = dayjs(time).format("HH:mm:ss")
+
+  const date = `\x1b[${ANSI_COLOR.DarkWhite}m[${formattedTime}]`
   const prefix = `\x1b[${ANSI_TEXT.Bold};${levelColor}m${level}`
   const data = `\x1b[${ANSI_COLOR.Reset}m${message}`
 
-  return `${date} ${prefix} ${data}`
+  return { ansi: `${date} ${prefix} ${data}`, plain: `[${formattedTime}] ${level} ${message}` }
 }
