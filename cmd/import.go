@@ -38,9 +38,10 @@ func NewImportCmd(flags *flags.GlobalFlags) *cobra.Command {
 		GlobalFlags: flags,
 	}
 	importCmd := &cobra.Command{
-		Use:   "import",
-		Short: "Imports a workspace configuration",
-		Args:  cobra.NoArgs,
+		Use:    "import",
+		Short:  "Imports a workspace configuration",
+		Args:   cobra.NoArgs,
+		Hidden: true,
 		RunE: func(_ *cobra.Command, args []string) error {
 			ctx := context.Background()
 			devPodConfig, err := config.LoadConfig(cmd.Context, cmd.Provider)

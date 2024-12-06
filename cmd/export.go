@@ -24,8 +24,9 @@ func NewExportCmd(flags *flags.GlobalFlags) *cobra.Command {
 		GlobalFlags: flags,
 	}
 	exportCmd := &cobra.Command{
-		Use:   "export [flags] [workspace-path|workspace-name]",
-		Short: "Exports a workspace configuration",
+		Use:    "export [flags] [workspace-path|workspace-name]",
+		Short:  "Exports a workspace configuration",
+		Hidden: true,
 		RunE: func(_ *cobra.Command, args []string) error {
 			ctx := context.Background()
 			devPodConfig, err := config.LoadConfig(cmd.Context, cmd.Provider)
