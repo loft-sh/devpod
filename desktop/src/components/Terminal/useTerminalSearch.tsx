@@ -364,19 +364,25 @@ function wrapLines(inputLines: string[], cols: number) {
 
     const displayLines: TDisplayLine[] = []
 
-    while (startCharIndex < line.length) {
-      const endCharIndex = Math.min(startCharIndex + cols, line.length)
-      const text = line.substring(startCharIndex, endCharIndex)
+    // Special case: There may be lines with 0 length.
+    // While no displayLine is required for this, we still need to increment the counter.
+    if (line.length === 0) {
+      count++
+    } else {
+      while (startCharIndex < line.length) {
+        const endCharIndex = Math.min(startCharIndex + cols, line.length)
+        const text = line.substring(startCharIndex, endCharIndex)
 
-      displayLines.push({
-        index: count++,
-        text: text,
-        inputLine: inputLineIndex,
-        startCol: startCharIndex,
-        endCol: endCharIndex,
-      })
+        displayLines.push({
+          index: count++,
+          text: text,
+          inputLine: inputLineIndex,
+          startCol: startCharIndex,
+          endCol: endCharIndex,
+        })
 
-      startCharIndex = endCharIndex
+        startCharIndex = endCharIndex
+      }
     }
 
     result[inputLineIndex] = displayLines

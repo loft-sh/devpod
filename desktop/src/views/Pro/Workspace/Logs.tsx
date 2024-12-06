@@ -180,6 +180,8 @@ function ActionTerminal({ actionID }: TActionTerminalProps) {
   return (
     <VStack w={"full"}>
       <TerminalSearchBar
+        paddingX={4}
+        paddingY={3}
         prevSearchResult={prevSearchResult}
         nextSearchResult={nextSearchResult}
         totalSearchResults={totalSearchResults}

@@ -98,7 +98,10 @@ export function useStreamingTerminal({
 }
 
 function processInputLine(line: string) {
-  const subLines = line.split(/\r\n|\n/)
+  // Default tabStopWidth is 8.
+  const withoutTabs = line.replaceAll(/\t/g, " ".repeat(8))
+
+  const subLines = withoutTabs.split(/\r\n|\n/)
 
   return subLines.map((sl) => {
     const splitByCR = sl.split("\r")

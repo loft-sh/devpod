@@ -18,6 +18,8 @@ type TTerminalSearchBarProps = {
   totalSearchResults: number
   activeSearchResult: number
   onUpdateSearchOptions: (searchOptions: TSearchOptions) => void
+  paddingX?: number
+  paddingY?: number
 }
 
 export function TerminalSearchBar({
@@ -26,6 +28,8 @@ export function TerminalSearchBar({
   totalSearchResults,
   activeSearchResult,
   onUpdateSearchOptions,
+  paddingY,
+  paddingX,
 }: TTerminalSearchBarProps) {
   const [searchString, setSearchString] = useState<string | undefined>(undefined)
   const [debouncedSearchString, setDebouncedSearchString] = useState<string | undefined>(undefined)
@@ -58,7 +62,7 @@ export function TerminalSearchBar({
   }, [debouncedSearchString, wholeWordSearch, caseSensitive, onUpdateSearchOptions])
 
   return (
-    <HStack w={"full"} alignItems={"center"} paddingX={4} paddingY={3}>
+    <HStack w={"full"} alignItems={"center"} paddingX={paddingX} paddingY={paddingY}>
       <InputGroup>
         <InputLeftElement cursor={"text"} onClick={() => searchInputRef.current?.focus()}>
           <Search boxSize={5} color={"text.tertiary"} />

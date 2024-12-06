@@ -77,7 +77,7 @@ export function Action() {
         activeSearchResult={activeSearchResult}
         onUpdateSearchOptions={setSearchOptions}
       />
-      <Box height="calc(100% - 3rem)" width="full">
+      <Box height="calc(100% - 8rem)" mt={8} width="full">
         {terminal}
       </Box>
     </>
