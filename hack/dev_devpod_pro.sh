@@ -10,11 +10,11 @@ if [[ ! $PWD == *"/go/src/devpod"* ]]; then
   exit 1
 fi
 
-if [[ $RACE == "no" ]]; then
-  CGO_ENABLED=0 go build -ldflags "-s -w" -tags profile -o devpod-cli
-else
+if [[ $RACE == "yes" ]]; then
   echo "Building devpod with race detector"
   CGO_ENABLED=1 go build -ldflags "-s -w" -tags profile -race -o devpod-cli
+else
+  CGO_ENABLED=0 go build -ldflags "-s -w" -tags profile -o devpod-cli
 fi
 
 kubectl -n $NS cp --no-preserve=true ./devpod-cli $(kubectl -n $NS get pods -l app=loft -o jsonpath="{.items[0].metadata.name}"):/usr/local/bin/devpod
