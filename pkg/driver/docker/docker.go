@@ -390,7 +390,7 @@ func (d *dockerDriver) RunDockerDevContainer(
 		return err
 	}
 
-	if runtime.GOOS != "windows" && ((parsedConfig.ContainerUser != "" || parsedConfig.RemoteUser != "") &&
+	if runtime.GOOS == "linux" && ((parsedConfig.ContainerUser != "" || parsedConfig.RemoteUser != "") &&
 		(parsedConfig.UpdateRemoteUserUID == nil || *parsedConfig.UpdateRemoteUserUID)) {
 		// Retrieve local user UID and GID
 		localUser, err := user.Current()
