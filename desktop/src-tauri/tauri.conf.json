@@ -57,7 +57,7 @@
         "installMode": "passive"
       },
       "endpoints": [
-        "https://github.com/loft-sh/devpod/releases/latest/download/latest.json"
+        "https://devpod-update-server.loft.host/latest"
       ]
     }
   },
