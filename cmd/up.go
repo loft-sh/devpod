@@ -20,7 +20,6 @@ import (
 	"github.com/loft-sh/devpod/pkg/client/clientimplementation"
 	"github.com/loft-sh/devpod/pkg/command"
 	"github.com/loft-sh/devpod/pkg/config"
-	"github.com/loft-sh/devpod/pkg/credentials"
 	config2 "github.com/loft-sh/devpod/pkg/devcontainer/config"
 	"github.com/loft-sh/devpod/pkg/devcontainer/sshtunnel"
 	dpFlags "github.com/loft-sh/devpod/pkg/flags"
@@ -194,15 +193,6 @@ func (cmd *UpCmd) Run(
 	// setup git ssh signature
 	if cmd.GitSSHSigningKey != "" {
 		err = setupGitSSHSignature(cmd.GitSSHSigningKey, client, log)
-		if err != nil {
-			return err
-		}
-	}
-
-	// setup loft platform access
-	context := devPodConfig.Current()
-	if cmd.SetupLoftPlatformAccess {
-		err = setupLoftPlatformAccess(devPodConfig.DefaultContext, context.DefaultProvider, user, client, log)
 		if err != nil {
 			return err
 		}
@@ -1112,42 +1102,6 @@ func setupGitSSHSignature(signingKey string, client client2.BaseWorkspaceClient,
 	if err != nil {
 		log.Error("failure in setting up git ssh signature helper")
 	}
-	return nil
-}
-
-func setupLoftPlatformAccess(context, provider, user string, client client2.BaseWorkspaceClient, log log.Logger) error {
-	log.Infof("Setting up platform access")
-	execPath, err := os.Executable()
-	if err != nil {
-		return err
-	}
-
-	port, err := credentials.GetPort()
-	if err != nil {
-		return fmt.Errorf("get port: %w", err)
-	}
-
-	command := fmt.Sprintf("\"%s\" agent container setup-loft-platform-access --context %s --provider %s --port %d", agent.ContainerDevPodHelperLocation, context, provider, port)
-
-	log.Debugf("Executing command: %v", command)
-	var errb bytes.Buffer
-	cmd := exec.Command(
-		execPath,
-		"ssh",
-		"--start-services=true",
-		"--user",
-		user,
-		"--context",
-		client.Context(),
-		client.Workspace(),
-		"--command", command,
-	)
-	cmd.Stderr = &errb
-	err = cmd.Run()
-	if err != nil {
-		log.Debugf("failed to set up platform access in workspace: %s", errb.String())
-	}
-
 	return nil
 }
 
