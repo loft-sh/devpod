@@ -185,16 +185,20 @@ export function useLoginProModal() {
     completeFlow()
   }, [queryClient, state.providerID, completeFlow])
 
+  const skippedConfigurationRef = useRef<boolean>(false)
+
   useEffect(() => {
-    if (login.status === "success") {
+    if (login.status === "success" && !skippedConfigurationRef.current) {
       const providerID = login.provider?.config?.name
 
       if (!exists(providerID)) {
         return
       }
+
       completeSetupProvider({ providerID, suggestedOptions })
 
       if (supportsProFlow) {
+        skippedConfigurationRef.current = true
         saveAndSkipForm()
       }
     }
