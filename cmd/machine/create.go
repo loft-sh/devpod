@@ -18,13 +18,13 @@ type CreateCmd struct {
 	ProviderOptions []string
 }
 
-// NewCreateCmd creates a new destroy command
+// NewCreateCmd creates a new create command
 func NewCreateCmd(flags *flags.GlobalFlags) *cobra.Command {
 	cmd := &CreateCmd{
 		GlobalFlags: flags,
 	}
 	createCmd := &cobra.Command{
-		Use:   "create",
+		Use:   "create [name]",
 		Short: "Creates a new machine",
 		RunE: func(_ *cobra.Command, args []string) error {
 			return cmd.Run(context.Background(), args)

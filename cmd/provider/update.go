@@ -26,7 +26,7 @@ func NewUpdateCmd(flags *flags.GlobalFlags) *cobra.Command {
 		GlobalFlags: flags,
 	}
 	updateCmd := &cobra.Command{
-		Use:   "update",
+		Use:   "update [name] [URL or path]",
 		Short: "Updates a provider in DevPod",
 		RunE: func(_ *cobra.Command, args []string) error {
 			ctx := context.Background()

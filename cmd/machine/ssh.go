@@ -36,7 +36,7 @@ func NewSSHCmd(flags *flags.GlobalFlags) *cobra.Command {
 		GlobalFlags: flags,
 	}
 	sshCmd := &cobra.Command{
-		Use:   "ssh",
+		Use:   "ssh [name]",
 		Short: "SSH into the machine",
 		RunE: func(c *cobra.Command, args []string) error {
 			return cmd.Run(context.Background(), args)

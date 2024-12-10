@@ -33,7 +33,7 @@ func NewAddCmd(flags *flags.GlobalFlags) *cobra.Command {
 		GlobalFlags: flags,
 	}
 	addCmd := &cobra.Command{
-		Use:   "add",
+		Use:   "add [URL or path]",
 		Short: "Adds a new provider to DevPod",
 		PreRunE: func(cobraCommand *cobra.Command, args []string) error {
 			if cmd.FromExisting != "" {

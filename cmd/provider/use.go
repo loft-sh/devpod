@@ -35,7 +35,7 @@ func NewUseCmd(flags *flags.GlobalFlags) *cobra.Command {
 		GlobalFlags: *flags,
 	}
 	useCmd := &cobra.Command{
-		Use:   "use",
+		Use:   "use [name]",
 		Short: "Configure an existing provider and set as default",
 		RunE: func(_ *cobra.Command, args []string) error {
 			if len(args) != 1 {
