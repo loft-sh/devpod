@@ -1,4 +1,4 @@
-import { ProWorkspaceInstance, useProContext, useWorkspaces } from "@/contexts"
+import { ProWorkspaceInstance, useProContext, useTemplates, useWorkspaces } from "@/contexts"
 import { DevPodIcon } from "@/icons"
 import emptyWorkspacesImage from "@/images/empty_workspaces.svg"
 import { Routes } from "@/routes"
@@ -17,15 +17,21 @@ import {
 } from "@chakra-ui/react"
 import { useNavigate } from "react-router"
 import { WorkspaceInstanceCard } from "./Workspace"
+import { useCallback } from "react"
 
 export function ListWorkspaces() {
   const instances = useWorkspaces<ProWorkspaceInstance>()
   const { host, isLoadingWorkspaces } = useProContext()
   const navigate = useNavigate()
+  const { data: templates } = useTemplates()
 
-  const handleCreateClicked = () => {
-    navigate(Routes.toProSelectPreset(host))
-  }
+  const handleCreateClicked = useCallback(() => {
+    if (templates?.presets.length) {
+      navigate(Routes.toProSelectPreset(host))
+    } else {
+      navigate(Routes.toProWorkspaceCreate(host))
+    }
+  }, [navigate, templates, host])
 
   const hasWorkspaces = instances.length > 0
 

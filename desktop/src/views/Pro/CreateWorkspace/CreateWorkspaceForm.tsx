@@ -137,23 +137,27 @@ export function CreateWorkspaceForm({
     <Form onSubmit={form.handleSubmit(onSubmit)}>
       <FormProvider {...form}>
         <VStack w="full" gap="8" ref={containerRef}>
-          <FormControl isDisabled={isUpdate}>
-            <CreateWorkspaceRow
-              label={
-                <FormLabel>
-                  <Gold boxSize={5} mr="1" />
-                  Workspace Preset
-                </FormLabel>
-              }>
-              <PresetInput
-                preset={preset}
-                presets={presets}
-                loading={loading}
-                setPreset={setPreset}
-                isUpdate={isUpdate}
-              />
-            </CreateWorkspaceRow>
-          </FormControl>
+          {presets?.length ? (
+            <FormControl isDisabled={isUpdate}>
+              <CreateWorkspaceRow
+                label={
+                  <FormLabel>
+                    <Gold boxSize={5} mr="1" />
+                    Workspace Preset
+                  </FormLabel>
+                }>
+                <PresetInput
+                  preset={preset}
+                  presets={presets}
+                  loading={loading}
+                  setPreset={setPreset}
+                  isUpdate={isUpdate}
+                />
+              </CreateWorkspaceRow>
+            </FormControl>
+          ) : (
+            <></>
+          )}
           <FormControl isDisabled={isUpdate} isRequired isInvalid={exists(sourceError)}>
             <CreateWorkspaceRow
               label={
