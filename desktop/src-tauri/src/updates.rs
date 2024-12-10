@@ -15,7 +15,7 @@ use tokio::fs::File;
 use ts_rs::TS;
 
 const UPDATE_POLL_INTERVAL: std::time::Duration = std::time::Duration::from_secs(60 * 10);
-const RELEASES_URL: &str = "https://devpod-update-server.loft.host/releases";
+const RELEASES_URL: &str = "https://update-server.devpod.sh/releases";
 
 #[derive(Error, Debug)]
 pub enum UpdateError {

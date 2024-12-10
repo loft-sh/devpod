@@ -57,7 +57,7 @@
         "installMode": "passive"
       },
       "endpoints": [
-        "https://devpod-update-server.loft.host/latest"
+        "https://update-server.devpod.sh/latest"
       ]
     }
   },
