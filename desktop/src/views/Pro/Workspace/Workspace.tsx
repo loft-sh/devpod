@@ -103,6 +103,17 @@ export function Workspace() {
     }
   }, [host, navigate, workspace])
 
+  const { store: storeTroubleshoot } = useStoreTroubleshoot()
+
+  const handleTroubleshootClicked = useCallback(() => {
+    if (workspace.data && workspaceActions) {
+      storeTroubleshoot({
+        workspace: workspace.data,
+        workspaceActions: workspaceActions,
+      })
+    }
+  }, [storeTroubleshoot, workspace.data, workspaceActions])
+
   if (!instance) {
     return (
       <VStack align="start" gap="4">
@@ -117,9 +128,6 @@ export function Workspace() {
       </VStack>
     )
   }
-
-  const { store: storeTroubleshoot } = useStoreTroubleshoot()
-
   const canStop =
     instance.status?.lastWorkspaceStatus != "Busy" &&
     instance.status?.lastWorkspaceStatus != "Stopped"
@@ -134,15 +142,6 @@ export function Workspace() {
   )
 
   const lastActivity = getLastActivity(instance)
-
-  const handleTroubleshootClicked = useCallback(() => {
-    if (workspace.data && workspaceActions) {
-      storeTroubleshoot({
-        workspace: workspace.data,
-        workspaceActions: workspaceActions,
-      })
-    }
-  }, [storeTroubleshoot, workspace.data, workspaceActions])
 
   return (
     <>
