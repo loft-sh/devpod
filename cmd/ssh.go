@@ -461,10 +461,6 @@ func (cmd *SSHCmd) startTunnel(ctx context.Context, devPodConfig *config.Config,
 		return err
 	}
 
-	if cmd.Provider == "" {
-		cmd.Provider = "devpod-pro"
-	}
-
 	// Traffic is coming in from the outside, we need to forward it to the container
 	if cmd.Proxy || cmd.Stdio {
 		if cmd.Proxy {
@@ -479,7 +475,7 @@ func (cmd *SSHCmd) startTunnel(ctx context.Context, devPodConfig *config.Config,
 			}()
 
 			go func() {
-				if err := cmd.setupLoftPlatformAccess(ctx, containerClient, cmd.Context, cmd.Provider, log); err != nil {
+				if err := cmd.setupLoftPlatformAccess(ctx, containerClient, workspaceClient.Context(), workspaceClient.Provider(), log); err != nil {
 					log.Error(err)
 				}
 			}()
