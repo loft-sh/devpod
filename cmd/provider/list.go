@@ -9,6 +9,7 @@ import (
 
 	"github.com/loft-sh/devpod/cmd/flags"
 	"github.com/loft-sh/devpod/pkg/config"
+	"github.com/loft-sh/devpod/pkg/types"
 	"github.com/loft-sh/devpod/pkg/workspace"
 	"github.com/loft-sh/log"
 	"github.com/loft-sh/log/table"
@@ -20,7 +21,6 @@ type ListCmd struct {
 	flags.GlobalFlags
 
 	Output string
-	Used   bool
 }
 
 // NewListCmd creates a new command
@@ -39,7 +39,6 @@ func NewListCmd(flags *flags.GlobalFlags) *cobra.Command {
 	}
 
 	listCmd.Flags().StringVar(&cmd.Output, "output", "plain", "The output format to use. Can be json or plain")
-	listCmd.Flags().BoolVar(&cmd.Used, "used", false, "If enabled, will only show used providers")
 	return listCmd
 }
 
@@ -69,10 +68,6 @@ func (cmd *ListCmd) Run(ctx context.Context) error {
 	if cmd.Output == "plain" {
 		tableEntries := [][]string{}
 		for _, entry := range providers {
-			if cmd.Used && configuredProviders[entry.Config.Name] == nil {
-				continue
-			}
-
 			tableEntries = append(tableEntries, []string{
 				entry.Config.Name,
 				entry.Config.Version,
@@ -95,11 +90,12 @@ func (cmd *ListCmd) Run(ctx context.Context) error {
 	} else if cmd.Output == "json" {
 		retMap := map[string]ProviderWithDefault{}
 		for k, entry := range providers {
-			if cmd.Used && configuredProviders[entry.Config.Name] == nil {
-				continue
+			var dynamicOptions map[string]*types.Option
+			if configuredProviders[entry.Config.Name] != nil {
+				dynamicOptions = configuredProviders[entry.Config.Name].DynamicOptions
 			}
 
-			srcOptions := MergeDynamicOptions(entry.Config.Options, configuredProviders[entry.Config.Name].DynamicOptions)
+			srcOptions := MergeDynamicOptions(entry.Config.Options, dynamicOptions)
 			entry.Config.Options = srcOptions
 			retMap[k] = ProviderWithDefault{
 				ProviderWithOptions: *entry,
