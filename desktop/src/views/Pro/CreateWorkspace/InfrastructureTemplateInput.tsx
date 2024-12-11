@@ -309,6 +309,7 @@ function OptionFormField({
     onChange,
     placeholder,
     displayName,
+    control,
   ])
 
   return (

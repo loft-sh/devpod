@@ -111,15 +111,6 @@ export function WorkspaceInstanceCard({ instanceName, host }: TWorkspaceInstance
     return { parameters, template: currentTemplate }
   }, [instance, templates])
 
-  if (!instance) {
-    return null
-  }
-
-  const handleOpenClicked = (ideName: string) => {
-    workspace.start({ id: instance.id, ideConfig: { name: ideName } })
-    navigate(Routes.toProWorkspace(host, instance.id))
-  }
-
   const handleTroubleshootClicked = useCallback(() => {
     if (instance && workspaceActions) {
       storeTroubleshoot({
@@ -128,6 +119,15 @@ export function WorkspaceInstanceCard({ instanceName, host }: TWorkspaceInstance
       })
     }
   }, [storeTroubleshoot, instance, workspaceActions])
+
+  if (!instance) {
+    return null
+  }
+
+  const handleOpenClicked = (ideName: string) => {
+    workspace.start({ id: instance.id, ideConfig: { name: ideName } })
+    navigate(Routes.toProWorkspace(host, instance.id))
+  }
 
   const templateRef = instance.spec?.templateRef
   const isRunning = instance.status?.lastWorkspaceStatus === "Running" // TODO: Types

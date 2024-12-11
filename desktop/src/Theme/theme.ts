@@ -52,7 +52,7 @@ const FormError = defineStyleConfig({
 Tooltip.defaultProps = { ...Tooltip.defaultProps, placement: "top" }
 
 const getInitialColorMode = (defaultColor: ColorMode = "light"): ColorMode => {
-  return (localStorage.getItem("chakra-ui-color-mode") as ColorMode) ?? defaultColor
+  return (localStorage.getItem("chakra-ui-color-mode") as ColorMode | undefined) ?? defaultColor
 }
 
 export const theme = extendTheme({

@@ -1,4 +1,3 @@
-import { client } from "../../../client"
 import { Action, TActionObj, TActions } from "./action"
 
 const HISTORY_KEY = "devpod-workspace-action-history"
