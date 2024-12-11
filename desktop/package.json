@@ -15,7 +15,8 @@
     "desktop:build": "tauri build",
     "format:check": "prettier --check .",
     "format:fix": "prettier --write .",
-    "types:check": "tsc -p ./tsconfig.json --noEmit"
+    "types:check": "tsc -p ./tsconfig.json --noEmit",
+    "lint:ci": "eslint . --ext '.ts,.tsx'"
   },
   "dependencies": {
     "@chakra-ui/icons": "2.1.1",
