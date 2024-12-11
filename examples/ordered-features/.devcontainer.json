@@ -1,0 +1,7 @@
+{
+  "image": "ubuntu",
+  "features": {
+    "./afeature1": {},
+    "./afeature2": {}
+  }
+}
