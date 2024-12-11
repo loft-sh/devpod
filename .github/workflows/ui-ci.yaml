@@ -1,0 +1,41 @@
+name: UI CI
+
+on:
+  workflow_dispatch: {}
+  pull_request:
+    branches:
+      - main
+      - release-*
+    paths:
+      - desktop/
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ./desktop
+    steps:
+      - name: checkout
+        uses: actions/checkout@v4
+
+      - name: setup node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: install dependencies
+        run: yarn install --frozen-lockfile
+
+      - name: lint
+        run: yarn lint:ci
+
+      - name: check format
+        run: yarn format:check
+
+      - name: check types
+        run: yarn types:check
+
+        # This only builds the frontend assets, not the full DevPod Desktop app to make it quicker
+      - name: build
+        run: yarn build
