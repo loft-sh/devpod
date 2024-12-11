@@ -2,7 +2,7 @@ import { useProContext } from "@/contexts"
 import { Routes } from "@/routes"
 import { ChevronLeftIcon } from "@chakra-ui/icons"
 import { Link } from "@chakra-ui/react"
-import { Link as RouterLink, useNavigate } from "react-router-dom"
+import { Link as RouterLink } from "react-router-dom"
 
 export function BackToWorkspaces() {
   const { host } = useProContext()

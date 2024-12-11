@@ -181,6 +181,7 @@ export class WorkspacesClient implements TDebuggable {
 
   public async troubleshoot(ctx: TWorkspaceClientContext) {
     const cmd = WorkspaceCommands.TroubleshootWorkspace(ctx.id)
+
     return cmd.run()
   }
 
