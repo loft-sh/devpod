@@ -839,7 +839,7 @@ func parseAddressAndPort(bindAddressOption string, defaultPort int) (string, int
 	return address, portName, nil
 }
 
-// setupBackhaul sets up a long running command in the container to keep the SSH agent alive
+// setupBackhaul sets up a long running command in the container to ensure an SSH connection is kept alive
 func setupBackhaul(
 	client client2.BaseWorkspaceClient,
 	log log.Logger,
