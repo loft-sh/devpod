@@ -15,7 +15,8 @@ use tokio::fs::File;
 use ts_rs::TS;
 
 const UPDATE_POLL_INTERVAL: std::time::Duration = std::time::Duration::from_secs(60 * 10);
-const RELEASES_URL: &str = "https://api.github.com/repos/loft-sh/devpod/releases";
+const RELEASES_URL: &str = "https://update-server.devpod.sh/releases";
+const FALLBACK_RELEASES_URL: &str = "https://api.github.com/repos/loft-sh/devpod/releases";
 
 #[derive(Error, Debug)]
 pub enum UpdateError {
@@ -265,23 +266,47 @@ impl<'a> UpdateHelper<'a> {
             .clone())
     }
 
-    pub async fn fetch_releases(&self) -> anyhow::Result<Releases> {
-        let per_page = 50;
-        let page = 1;
-
+    pub async fn fetch_releases_from_url(&self, url: &str) -> anyhow::Result<Vec<Release>> {
         let client = Client::builder().user_agent("loft-sh/devpod").build()?;
-        let request = client
-            .request(Method::GET, RELEASES_URL)
-            .query(&[("per_page", per_page), ("page", page)])
-            .header("Accept", "application/vnd.github+json")
-            .header("X-GitHub-Api-Version", "2022-11-28");
 
-        let releases = request
+        let response = client
+            .request(Method::GET, url)
+            .header("Accept", "application/vnd.github+json")
+            .header("X-GitHub-Api-Version", "2022-11-28")
             .send()
-            .await?
+            .await
+            .with_context(|| format!("Fetch releases from {}", url))?;
+
+        if !response.status().is_success() {
+            return Err(anyhow::anyhow!(
+                "Status code {} from {}",
+                response.status(),
+                url
+            ));
+        }
+
+        let releases = response
             .json::<Vec<Release>>()
             .await
-            .with_context(|| format!("Fetch releases from {}", RELEASES_URL))?;
+            .with_context(|| format!("Parse JSON from {}", url))?;
+
+        Ok(releases)
+    }
+
+    pub async fn fetch_releases(&self) -> anyhow::Result<Releases> {
+        debug!("Querying releases from update server: {}", RELEASES_URL);
+        let releases = match self.fetch_releases_from_url(RELEASES_URL).await {
+            Ok(releases) => releases,
+            Err(_) => {
+                debug!("Query from main update server failed. Querying from fallback URL: {}", FALLBACK_RELEASES_URL);
+                match self.fetch_releases_from_url(FALLBACK_RELEASES_URL).await {
+                    Ok(releases) => releases,
+                    Err(e2) => {
+                        return Err(e2).context("No endpoint delivered updates.");
+                    }
+                }
+            }
+        };
 
         let releases = &releases
             .into_iter()
