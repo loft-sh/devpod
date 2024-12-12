@@ -839,6 +839,59 @@ func parseAddressAndPort(bindAddressOption string, defaultPort int) (string, int
 	return address, portName, nil
 }
 
+// setupBackhaul sets up a long running command in the container to keep the SSH agent alive
+func setupBackhaul(
+	client client2.BaseWorkspaceClient,
+	log log.Logger,
+) error {
+
+	execPath, err := os.Executable()
+	if err != nil {
+		return err
+	}
+
+	remoteUser, err := devssh.GetUser(client.WorkspaceConfig().ID, client.WorkspaceConfig().SSHConfigPath)
+	if err != nil {
+		remoteUser = "root"
+	}
+
+	dotCmd := exec.Command(
+		execPath,
+		"ssh",
+		"--agent-forwarding=true",
+		"--reuse-sock=true",
+		"--start-services=false",
+		"--user",
+		remoteUser,
+		"--context",
+		client.Context(),
+		client.Workspace(),
+		"--log-output=raw",
+		"--command",
+		"while true; do sleep 6000000; done", // sleep infinity is not available on all systems
+	)
+
+	if log.GetLevel() == logrus.DebugLevel {
+		dotCmd.Args = append(dotCmd.Args, "--debug")
+	}
+
+	log.Info("Setting up backhaul SSH connection")
+
+	writer := log.Writer(logrus.InfoLevel, false)
+
+	dotCmd.Stdout = writer
+	dotCmd.Stderr = writer
+
+	err = dotCmd.Run()
+	if err != nil {
+		return err
+	}
+
+	log.Infof("Done setting up backhaul")
+
+	return nil
+}
+
 func startBrowserTunnel(
 	ctx context.Context,
 	devPodConfig *config.Config,
@@ -849,6 +902,13 @@ func startBrowserTunnel(
 	gitUsername, gitToken string,
 	logger log.Logger,
 ) error {
+	// Setup a backhaul SSH connection using the remote user so there is an AUTH SOCK to use
+	// With normal IDEs this would be the SSH connection made by the IDE
+	go func() {
+		if err := setupBackhaul(client, logger); err != nil {
+			logger.Error("Failed to setup backhaul SSH connection: ", err)
+		}
+	}()
 	err := tunnel.NewTunnel(
 		ctx,
 		func(ctx context.Context, stdin io.Reader, stdout io.Writer) error {
@@ -857,6 +917,7 @@ func startBrowserTunnel(
 
 			cmd, err := createSSHCommand(ctx, client, logger, []string{
 				"--log-output=raw",
+				"--reuse-sock=true",
 				"--stdio",
 			})
 			if err != nil {
@@ -985,6 +1046,8 @@ func createSSHCommand(
 		args = append(args, "--debug")
 	}
 	args = append(args, extraArgs...)
+
+	logger.Debug("Connecting with SSH command ", execPath, args)
 
 	return exec.CommandContext(ctx, execPath, args...), nil
 }

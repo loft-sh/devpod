@@ -26,6 +26,7 @@ type SSHServerCmd struct {
 	Address       string
 	Stdio         bool
 	TrackActivity bool
+	ReuseAuthSock bool
 	Workdir       string
 }
 
@@ -44,6 +45,8 @@ func NewSSHServerCmd(flags *flags.GlobalFlags) *cobra.Command {
 	sshCmd.Flags().StringVar(&cmd.Address, "address", fmt.Sprintf("0.0.0.0:%d", helperssh.DefaultPort), "Address to listen to")
 	sshCmd.Flags().BoolVar(&cmd.Stdio, "stdio", false, "Will listen on stdout and stdin instead of an address")
 	sshCmd.Flags().BoolVar(&cmd.TrackActivity, "track-activity", false, "If enabled will write the last activity time to a file")
+	sshCmd.Flags().BoolVar(&cmd.ReuseAuthSock, "reuse-sock", false, "If true a SSH_AUTH_SOCK is expected to already be available in the workspace and the connection reuses this instead of creating another")
+	_ = sshCmd.Flags().MarkHidden("reuse-sock")
 	sshCmd.Flags().StringVar(&cmd.Token, "token", "", "Base64 encoded token to use")
 	sshCmd.Flags().StringVar(&cmd.Workdir, "workdir", "", "Directory where commands will run on the host")
 	return sshCmd
@@ -89,7 +92,7 @@ func (cmd *SSHServerCmd) Run(_ *cobra.Command, _ []string) error {
 	}
 
 	// start the server
-	server, err := helperssh.NewServer(cmd.Address, hostKey, keys, cmd.Workdir, log.Default.ErrorStreamOnly())
+	server, err := helperssh.NewServer(cmd.Address, hostKey, keys, cmd.Workdir, cmd.ReuseAuthSock, log.Default.ErrorStreamOnly())
 	if err != nil {
 		return err
 	}

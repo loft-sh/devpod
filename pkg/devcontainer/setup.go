@@ -97,6 +97,9 @@ func (r *runner) setupContainer(
 
 	// ssh tunnel
 	sshTunnelCmd := fmt.Sprintf("'%s' helper ssh-server --stdio", agent.ContainerDevPodHelperLocation)
+	if reusesAuthSock(r.WorkspaceConfig.Workspace.IDE.Name) {
+		sshTunnelCmd += " --reuse-sock=true"
+	}
 	if r.Log.GetLevel() == logrus.DebugLevel {
 		sshTunnelCmd += " --debug"
 	}
@@ -161,4 +164,10 @@ func filterWorkspaceMounts(mounts []*config.Mount, baseFolder string, log log.Lo
 	}
 
 	return retMounts
+}
+
+// reusesAuthSock determines if the --reuse-sock flag should be passed to the ssh server helper based on the IDE.
+// Browser based IDEs use a browser tunnel to communicate with the remote server instead of an independent ssh connection
+func reusesAuthSock(ide string) bool {
+	return ide == "openvscode" || ide == "marimo" || ide == "zed" || ide == "jupyternotebook" || ide == "jlab"
 }
