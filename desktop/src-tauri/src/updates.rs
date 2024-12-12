@@ -294,9 +294,11 @@ impl<'a> UpdateHelper<'a> {
     }
 
     pub async fn fetch_releases(&self) -> anyhow::Result<Releases> {
+        debug!("Querying releases from update server: {}", RELEASES_URL);
         let releases = match self.fetch_releases_from_url(RELEASES_URL).await {
             Ok(releases) => releases,
             Err(_) => {
+                debug!("Query from main update server failed. Querying from fallback URL: {}", FALLBACK_RELEASES_URL);
                 match self.fetch_releases_from_url(FALLBACK_RELEASES_URL).await {
                     Ok(releases) => releases,
                     Err(e2) => {
