@@ -41,7 +41,7 @@ const Link = defineStyleConfig({
 const FormError = defineStyleConfig({
   baseStyle: {
     text: {
-      userSelect: "auto",
+      userSelect: "text",
       cursor: "text",
     },
   },
@@ -71,10 +71,10 @@ export const theme = extendTheme({
           cursor: "default",
         },
         td: {
-          userSelect: "auto",
+          userSelect: "text",
         },
         code: {
-          userSelect: "auto",
+          userSelect: "text",
           cursor: "text",
         },
         "input::placeholder": {
