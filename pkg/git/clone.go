@@ -93,7 +93,7 @@ func (c *cloner) initialArgs() []string {
 	case ShallowCloneStrategy:
 		return []string{"clone", "--depth=1"}
 	case BareCloneStrategy:
-		return []string{"clone", "bare", "--depth=1"}
+		return []string{"clone", "--bare", "--depth=1"}
 	case FullCloneStrategy:
 	default:
 	}
