@@ -10,7 +10,6 @@ import (
 	"github.com/loft-sh/devpod/cmd/flags"
 	"github.com/loft-sh/devpod/pkg/devcontainer"
 	"github.com/loft-sh/log"
-	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 )
@@ -75,6 +74,9 @@ func (cmd *GetWorkspaceConfigCommand) Run(ctx context.Context, args []string) er
 	if err != nil {
 		return err
 	}
+	defer func() {
+		_ = os.RemoveAll(tmpDir)
+	}()
 	go func() {
 		result, err := devcontainer.FindDevcontainerFiles(ctx, rawSource, tmpDir, cmd.maxDepth, logger)
 		if err != nil {
@@ -86,11 +88,9 @@ func (cmd *GetWorkspaceConfigCommand) Run(ctx context.Context, args []string) er
 
 	select {
 	case err := <-errChan:
-		_ = os.RemoveAll(tmpDir)
-		return errors.WithMessage(err, "unable to find devcontainer files")
+		return fmt.Errorf("unable to find devcontainer files: %w", err)
 	case <-ctx.Done():
-		_ = os.RemoveAll(tmpDir)
-		return errors.WithMessage(ctx.Err(), "timeout while searching for devcontainer files")
+		return fmt.Errorf("timeout while searching for devcontainer files")
 	case result := <-done:
 		out, err := json.Marshal(result)
 		if err != nil {
