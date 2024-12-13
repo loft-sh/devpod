@@ -196,7 +196,7 @@ function ProviderOptionList({ options }: TProviderOptionListProps) {
                 width="full"
                 overflowX="hidden"
                 color={valueColor}
-                userSelect="auto"
+                userSelect="text"
                 _hover={{ overflow: "visible", cursor: "text" }}>
                 {option.enum.find((e) => e.value === value)?.displayName ?? value}
               </Text>
@@ -208,7 +208,7 @@ function ProviderOptionList({ options }: TProviderOptionListProps) {
                 width="full"
                 overflowX="hidden"
                 color={valueColor}
-                userSelect="auto"
+                userSelect="text"
                 _hover={{ overflow: "visible", cursor: "text" }}>
                 {value}
               </Text>

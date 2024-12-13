@@ -220,7 +220,7 @@ export function WorkspaceCard({ workspaceID, isSelected, onSelectionChange }: TW
                 <Text
                   fontSize="sm"
                   color="gray.500"
-                  userSelect="auto"
+                  userSelect="text"
                   maxWidth="30rem"
                   overflow="hidden"
                   whiteSpace="nowrap"

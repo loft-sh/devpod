@@ -14,7 +14,7 @@ export function ErrorMessageBox({ error, ...boxProps }: TErrorMessageBox) {
       borderRadius="md"
       display="inline-block"
       {...boxProps}>
-      <Text userSelect="auto" cursor="text" color={textColor} fontFamily="monospace">
+      <Text userSelect="text" cursor="text" color={textColor} fontFamily="monospace">
         {error.message.split("\n").map((line, index) => (
           <React.Fragment key={index}>
             {line}
