@@ -841,7 +841,6 @@ func parseAddressAndPort(bindAddressOption string, defaultPort int) (string, int
 
 // setupBackhaul sets up a long running command in the container to ensure an SSH connection is kept alive
 func setupBackhaul(client client2.BaseWorkspaceClient, log log.Logger) error {
-
 	execPath, err := os.Executable()
 	if err != nil {
 		return err
