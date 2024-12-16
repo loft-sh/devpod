@@ -24,6 +24,7 @@ import (
 	config2 "github.com/loft-sh/devpod/pkg/devcontainer/config"
 	"github.com/loft-sh/devpod/pkg/devcontainer/sshtunnel"
 	dpFlags "github.com/loft-sh/devpod/pkg/flags"
+	"github.com/loft-sh/devpod/pkg/ide"
 	"github.com/loft-sh/devpod/pkg/ide/fleet"
 	"github.com/loft-sh/devpod/pkg/ide/jetbrains"
 	"github.com/loft-sh/devpod/pkg/ide/jupyter"
@@ -162,7 +163,13 @@ func (cmd *UpCmd) Run(
 		cmd.Recreate = true
 	}
 
-	if cmd.IDE == "openvscode" {
+	// check if we are a browser IDE and need to reuse the SSH_AUTH_SOCK
+	targetIDE := client.WorkspaceConfig().IDE.Name
+	// Check override
+	if cmd.IDE != "" {
+		targetIDE = cmd.IDE
+	}
+	if ide.ReusesAuthSock(targetIDE) {
 		cmd.AuthSockID = RandStringBytes(10)
 	}
 
