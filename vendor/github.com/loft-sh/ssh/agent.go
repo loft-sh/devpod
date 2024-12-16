@@ -33,8 +33,9 @@ func AgentRequested(sess Session) bool {
 	return sess.Context().Value(contextKeyAgentRequest) == true
 }
 
-// NewAgentListener sets up a temporary Unix socket that can be communicated
-// to the session environment and used for forwarding connections.
+// NewAgentListener sets up a temporary Unix socket, if dir is not specified, that can be communicated
+// to the session environment and used for forwarding connections. If dir is specified, it will use the directory
+// to create the socket file.
 func NewAgentListener(dir string) (net.Listener, string, error) {
 	var err error
 	if dir == "" {
