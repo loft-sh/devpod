@@ -5,6 +5,7 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"math/rand"
 	"net"
 	"os"
 	"os/exec"
@@ -139,6 +140,16 @@ func NewUpCmd(f *flags.GlobalFlags) *cobra.Command {
 	return upCmd
 }
 
+const letterBytes = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
+
+func RandStringBytes(n int) string {
+	b := make([]byte, n)
+	for i := range b {
+		b[i] = letterBytes[rand.Intn(len(letterBytes))]
+	}
+	return string(b)
+}
+
 // Run runs the command logic
 func (cmd *UpCmd) Run(
 	ctx context.Context,
@@ -149,6 +160,10 @@ func (cmd *UpCmd) Run(
 	// a reset implies a recreate
 	if cmd.Reset {
 		cmd.Recreate = true
+	}
+
+	if cmd.IDE == "openvscode" {
+		cmd.AuthSockID = RandStringBytes(10)
 	}
 
 	// run devpod agent up
@@ -274,6 +289,7 @@ func (cmd *UpCmd) Run(
 				ideConfig.Options,
 				cmd.GitUsername,
 				cmd.GitToken,
+				cmd.AuthSockID,
 				log,
 			)
 		case string(config.IDERustRover):
@@ -606,6 +622,7 @@ func startMarimoInBrowser(
 		extraPorts,
 		gitUsername,
 		gitToken,
+		"",
 		logger,
 	)
 }
@@ -664,6 +681,7 @@ func startJupyterNotebookInBrowser(
 		extraPorts,
 		gitUsername,
 		gitToken,
+		"",
 		logger,
 	)
 }
@@ -719,6 +737,7 @@ func startJupyterDesktop(
 		extraPorts,
 		gitUsername,
 		gitToken,
+		"",
 		logger,
 	)
 }
@@ -765,7 +784,7 @@ func startVSCodeInBrowser(
 	client client2.BaseWorkspaceClient,
 	workspaceFolder, user string,
 	ideOptions map[string]config.OptionValue,
-	gitUsername, gitToken string,
+	gitUsername, gitToken, authSockID string,
 	logger log.Logger,
 ) error {
 	if forwardGpg {
@@ -813,6 +832,7 @@ func startVSCodeInBrowser(
 		extraPorts,
 		gitUsername,
 		gitToken,
+		authSockID,
 		logger,
 	)
 }
@@ -849,7 +869,7 @@ func parseAddressAndPort(bindAddressOption string, defaultPort int) (string, int
 }
 
 // setupBackhaul sets up a long running command in the container to ensure an SSH connection is kept alive
-func setupBackhaul(client client2.BaseWorkspaceClient, log log.Logger) error {
+func setupBackhaul(client client2.BaseWorkspaceClient, authSockId string, log log.Logger) error {
 	execPath, err := os.Executable()
 	if err != nil {
 		return err
@@ -864,7 +884,7 @@ func setupBackhaul(client client2.BaseWorkspaceClient, log log.Logger) error {
 		execPath,
 		"ssh",
 		"--agent-forwarding=true",
-		"--reuse-sock=true",
+		fmt.Sprintf("--reuse-sock=%s", authSockId),
 		"--start-services=false",
 		"--user",
 		remoteUser,
@@ -904,13 +924,13 @@ func startBrowserTunnel(
 	user, targetURL string,
 	forwardPorts bool,
 	extraPorts []string,
-	gitUsername, gitToken string,
+	gitUsername, gitToken, authSockID string,
 	logger log.Logger,
 ) error {
 	// Setup a backhaul SSH connection using the remote user so there is an AUTH SOCK to use
 	// With normal IDEs this would be the SSH connection made by the IDE
 	go func() {
-		if err := setupBackhaul(client, logger); err != nil {
+		if err := setupBackhaul(client, authSockID, logger); err != nil {
 			logger.Error("Failed to setup backhaul SSH connection: ", err)
 		}
 	}()
@@ -922,7 +942,7 @@ func startBrowserTunnel(
 
 			cmd, err := createSSHCommand(ctx, client, logger, []string{
 				"--log-output=raw",
-				"--reuse-sock=true",
+				fmt.Sprintf("--reuse-sock=%s", authSockID),
 				"--stdio",
 			})
 			if err != nil {

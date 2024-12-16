@@ -206,6 +206,10 @@ func (s *workspaceClient) agentInfo(cliOptions provider.CLIOptions) (string, *pr
 	// Set registry cache from context option
 	agentInfo.RegistryCache = s.devPodConfig.ContextOption(config.ContextOptionRegistryCache)
 
+	if cliOptions.AuthSockID != "" {
+		agentInfo.AuthSockID = cliOptions.AuthSockID
+	}
+
 	// marshal config
 	out, err := json.Marshal(agentInfo)
 	if err != nil {
