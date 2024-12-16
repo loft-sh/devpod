@@ -520,7 +520,7 @@ func (cmd *SSHCmd) startServices(
 	log log.Logger,
 ) {
 	if cmd.User != "" {
-		err := tunnel.RunInContainer(
+		err := tunnel.RunServices(
 			ctx,
 			devPodConfig,
 			containerClient,

@@ -962,7 +962,7 @@ func startBrowserTunnel(
 			}
 
 			// run in container
-			err := tunnel.RunInContainer(
+			err := tunnel.RunServices(
 				ctx,
 				devPodConfig,
 				containerClient,
