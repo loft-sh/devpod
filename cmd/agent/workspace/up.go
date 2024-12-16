@@ -128,6 +128,7 @@ func (cmd *UpCmd) devPodUp(ctx context.Context, workspaceInfo *provider2.AgentWo
 	result, err := runner.Up(ctx, devcontainer.UpOptions{
 		CLIOptions:    workspaceInfo.CLIOptions,
 		RegistryCache: workspaceInfo.RegistryCache,
+		AuthSockID:    workspaceInfo.AuthSockID,
 	}, workspaceInfo.InjectTimeout)
 	if err != nil {
 		return nil, err

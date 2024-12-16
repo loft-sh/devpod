@@ -24,7 +24,7 @@ import (
 
 var DefaultPort = 8022
 
-func NewServer(addr string, hostKey []byte, keys []ssh.PublicKey, workdir string, reuseSock bool, log log.Logger) (*Server, error) {
+func NewServer(addr string, hostKey []byte, keys []ssh.PublicKey, workdir string, reuseSock string, log log.Logger) (*Server, error) {
 	sh, err := shell.GetShell("")
 	if err != nil {
 		return nil, err
@@ -112,7 +112,7 @@ type Server struct {
 	currentUser string
 	shell       []string
 	workdir     string
-	reuseSock   bool
+	reuseSock   string
 	sshServer   ssh.Server
 	log         log.Logger
 }
@@ -132,8 +132,8 @@ func (s *Server) handler(sess ssh.Session) {
 		// Check if we should create a "shared" socket to be reused by clients
 		// used for browser tunnels such as openvscode, since the IDE itself doesn't create an SSH connection it uses a "backhaul" connection and uses the existing socket
 		dir := ""
-		if s.reuseSock {
-			dir = filepath.Join(os.TempDir(), "shared-auth-agent")
+		if s.reuseSock != "" {
+			dir = filepath.Join(os.TempDir(), s.reuseSock)
 			err = os.MkdirAll(dir, 0777)
 			if err != nil {
 				s.exitWithError(sess, perrors.Wrap(err, "creating SSH_AUTH_SOCK dir in /tmp"))
