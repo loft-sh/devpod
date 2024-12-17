@@ -102,7 +102,7 @@ func (o *JupyterNotbookServer) Start() error {
 		runCommand := fmt.Sprintf("jupyter notebook --ip='*' --NotebookApp.notebook_dir='%s' --NotebookApp.token='' --NotebookApp.password='' --no-browser --port '%s' --allow-root", o.workspaceFolder, strconv.Itoa(DefaultServerPort))
 		args := []string{}
 		if o.userName != "" {
-			args = append(args, "su", o.userName, "-l", "-c", runCommand)
+			args = append(args, "su", o.userName, "-w", "SSH_AUTH_SOCK", "-l", "-c", runCommand)
 		} else {
 			args = append(args, "sh", "-l", "-c", runCommand)
 		}
