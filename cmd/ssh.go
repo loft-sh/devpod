@@ -507,34 +507,47 @@ func (cmd *SSHCmd) startRunnerServices(
 	containerClient *ssh.Client,
 	log log.Logger,
 ) error {
-	// check prerequisites
-	allowGitCredentials := devPodConfig.ContextOption(config.ContextOptionSSHInjectGitCredentials) == "true"
-	allowDockerCredentials := devPodConfig.ContextOption(config.ContextOptionSSHInjectDockerCredentials) == "true"
+	return retry.OnError(wait.Backoff{
+		Steps:    math.MaxInt,
+		Duration: 200 * time.Millisecond,
+		Factor:   1,
+		Jitter:   0.1,
+	}, func(err error) bool {
+		if ctx.Err() != nil {
+			log.Infof("Context canceled, stopping credentials server: %v", ctx.Err())
+			return false
+		}
+		return true
+	}, func() error {
+		// check prerequisites
+		allowGitCredentials := devPodConfig.ContextOption(config.ContextOptionSSHInjectGitCredentials) == "true"
+		allowDockerCredentials := devPodConfig.ContextOption(config.ContextOptionSSHInjectDockerCredentials) == "true"
 
-	// prepare pipes
-	stdoutReader, stdoutWriter, stdinReader, stdinWriter, err := preparePipes()
-	if err != nil {
-		return fmt.Errorf("prepare pipes: %w", err)
-	}
-	defer stdoutWriter.Close()
-	defer stdinWriter.Close()
+		// prepare pipes
+		stdoutReader, stdoutWriter, stdinReader, stdinWriter, err := preparePipes()
+		if err != nil {
+			return fmt.Errorf("prepare pipes: %w", err)
+		}
+		defer stdoutWriter.Close()
+		defer stdinWriter.Close()
 
-	// prepare context
-	cancelCtx, cancel := context.WithCancel(ctx)
-	defer cancel()
-	errChan := make(chan error, 2)
+		// prepare context
+		cancelCtx, cancel := context.WithCancel(ctx)
+		defer cancel()
+		errChan := make(chan error, 2)
 
-	// start credentials server in workspace
-	go func() {
-		errChan <- startWorkspaceCredentialServer(cancelCtx, containerClient, cmd.User, allowGitCredentials, allowDockerCredentials, stdinReader, stdoutWriter, log)
-	}()
+		// start credentials server in workspace
+		go func() {
+			errChan <- startWorkspaceCredentialServer(cancelCtx, containerClient, cmd.User, allowGitCredentials, allowDockerCredentials, stdinReader, stdoutWriter, log)
+		}()
 
-	// start runner services server locally
-	go func() {
-		errChan <- startLocalServer(cancelCtx, allowGitCredentials, allowDockerCredentials, cmd.GitUsername, cmd.GitToken, stdoutReader, stdinWriter, log)
-	}()
+		// start runner services server locally
+		go func() {
+			errChan <- startLocalServer(cancelCtx, allowGitCredentials, allowDockerCredentials, cmd.GitUsername, cmd.GitToken, stdoutReader, stdinWriter, log)
+		}()
 
-	return <-errChan
+		return <-errChan
+	})
 }
 
 // setupGPGAgent will forward a local gpg-agent into the remote container
@@ -650,24 +663,13 @@ func startWorkspaceCredentialServer(ctx context.Context, client *ssh.Client, use
 	args = append(args, "--runner")
 	command = fmt.Sprintf("%s %s", command, strings.Join(args, " "))
 
-	return retry.OnError(wait.Backoff{
-		Steps:    math.MaxInt,
-		Duration: 500 * time.Millisecond,
-		Factor:   1,
-		Jitter:   0.1,
-	}, func(err error) bool {
-		if ctx.Err() != nil {
-			log.Infof("Context canceled, stopping credentials server: %v", ctx.Err())
-			return false
-		}
-		return true
-	}, func() error {
-		return devssh.Run(ctx, client, command, stdin, stdout, writer, nil)
-	})
+	return devssh.Run(ctx, client, command, stdin, stdout, writer, nil)
+
 }
 
 func startLocalServer(ctx context.Context, allowGitCredentials, allowDockerCredentials bool, gitUsername, gitToken string, stdoutReader io.Reader, stdinWriter io.WriteCloser, log log.Logger) error {
-	if err := tunnelserver.RunRunnerServer(ctx, stdoutReader, stdinWriter, allowGitCredentials, allowDockerCredentials, gitUsername, gitToken, log); err != nil {
+	err := tunnelserver.RunRunnerServer(ctx, stdoutReader, stdinWriter, allowGitCredentials, allowDockerCredentials, gitUsername, gitToken, log)
+	if err != nil {
 		return fmt.Errorf("run runner services server: %w", err)
 	}
 
