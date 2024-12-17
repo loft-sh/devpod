@@ -114,7 +114,7 @@ func listProWorkspaces(ctx context.Context, devPodConfig *config.Config, log log
 			providerConfig,
 			nil, nil, &buf, log.ErrorStreamOnly().Writer(logrus.ErrorLevel, false), log,
 		); err != nil {
-			log.ErrorStreamOnly().Errorf("list workspaces for provider \"%s\": %v", provider, err)
+			log.ErrorStreamOnly().Debugf("list workspaces for provider \"%s\": %v", provider, err)
 			continue
 		}
 		if buf.Len() == 0 {
