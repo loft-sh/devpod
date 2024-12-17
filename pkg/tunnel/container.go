@@ -34,7 +34,7 @@ func NewContainerTunnel(client client.WorkspaceClient, proxy bool, log log.Logge
 	}
 }
 
-// ContainerTunnel is a struct that contains the workspace client to use, if proxy is
+// ContainerTunnel manages the state of the tunnel to the container
 type ContainerTunnel struct {
 	client               client.WorkspaceClient
 	updateConfigInterval time.Duration
@@ -184,7 +184,7 @@ func (c *ContainerTunnel) updateConfig(ctx context.Context, sshClient *ssh.Clien
 }
 
 // runInContainer uses the connected SSH client to execute runInContainer on the remote
-func (c *ContainerTunnel) runInContainer(ctx context.Context, sshClient *ssh.Client, runInContainer Handler, envVars map[string]string) error {
+func (c *ContainerTunnel) runInContainer(ctx context.Context, sshClient *ssh.Client, handler Handler, envVars map[string]string) error {
 	// compress info
 	workspaceInfo, _, err := c.client.AgentInfo(provider.CLIOptions{Proxy: c.proxy})
 	if err != nil {
@@ -237,5 +237,5 @@ func (c *ContainerTunnel) runInContainer(ctx context.Context, sshClient *ssh.Cli
 	c.log.Debugf("Successfully connected to container")
 
 	// start handler
-	return runInContainer(cancelCtx, containerClient)
+	return handler(cancelCtx, containerClient)
 }
