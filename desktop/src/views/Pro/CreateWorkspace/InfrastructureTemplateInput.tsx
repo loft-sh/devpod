@@ -17,7 +17,7 @@ import {
 } from "@chakra-ui/react"
 import { ManagementV1DevPodWorkspaceTemplate } from "@loft-enterprise/client/gen/models/managementV1DevPodWorkspaceTemplate"
 import { StorageV1AppParameter } from "@loft-enterprise/client/gen/models/storageV1AppParameter"
-import { ReactNode, useMemo } from "react"
+import { ReactNode, useEffect, useMemo } from "react"
 import { ChangeHandler, Controller, useFormContext } from "react-hook-form"
 import { FieldName, TFormValues } from "./types"
 
@@ -31,7 +31,8 @@ export function InfrastructureTemplateInput({
   defaultInfraTemplate,
   resetPreset,
 }: TOptionsInputProps) {
-  const { getValues, watch, resetField, formState } = useFormContext<TFormValues>()
+  const { getValues, watch, resetField, formState, unregister, setValue } =
+    useFormContext<TFormValues>()
   const borderColor = useBorderColor()
 
   const defaultTemplate = defaultInfraTemplate ?? templates[0]
@@ -50,8 +51,34 @@ export function InfrastructureTemplateInput({
       v = ""
     }
 
-    return getParameters(currentTemplate, v)
+    const params = getParameters(currentTemplate, v)
+
+    return !params ? params : [...params]
   }, [currentTemplate, selectedTemplateVersion])
+
+  useEffect(() => {
+    const value = getValues()
+
+    // Apply default values manually when the set of parameters changes.
+    currentParameters?.forEach((p) => {
+      if (!p.variable) {
+        return
+      }
+
+      const paramValue = getDeepValue(value.options, p.variable)
+      if (paramValue == null && p.defaultValue != null) {
+        setValue(`${FieldName.OPTIONS}.${p.variable}`, p.defaultValue)
+      }
+    })
+
+    // resetField won't properly delete the keys when you switch templates,
+    // so it's probably best to clean it up every time the set of parameters changes...
+    return () => {
+      currentParameters?.forEach((p) => {
+        unregister(`${FieldName.OPTIONS}.${p.variable?.split(/\./)[0]}`)
+      })
+    }
+  }, [currentParameters, unregister, getValues, setValue])
 
   const currentTemplateVersions = useMemo(() => {
     return currentTemplate?.spec?.versions?.slice().sort(sortByVersionDesc)
@@ -346,4 +373,26 @@ function convertParameterType(paramType: StorageV1AppParameter["type"]): TProvid
     default:
       return undefined
   }
+}
+
+function createTraversablePropertyPath(path: string): string[] {
+  path = path.replace(/\[(\w+)\]/g, ".$1")
+  path = path.replace(/^\./, "")
+
+  return path.split(".")
+}
+
+export function getDeepValue<T>(obj: any, path: string): T | undefined {
+  if (!obj) return undefined
+
+  const a = createTraversablePropertyPath(path)
+  let o = obj
+  while (a.length) {
+    const n = a.shift()
+    if (!n) continue
+    if (o == null || !(n in o)) return undefined
+    o = o[n]
+  }
+
+  return o
 }
