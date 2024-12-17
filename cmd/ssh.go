@@ -13,6 +13,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/loft-sh/devpod/cmd/agent/workspace"
 	"github.com/loft-sh/devpod/cmd/flags"
 	"github.com/loft-sh/devpod/cmd/machine"
 	"github.com/loft-sh/devpod/pkg/agent"
@@ -23,6 +24,7 @@ import (
 	dpFlags "github.com/loft-sh/devpod/pkg/flags"
 	"github.com/loft-sh/devpod/pkg/gpg"
 	"github.com/loft-sh/devpod/pkg/port"
+	"github.com/loft-sh/devpod/pkg/provider"
 	devssh "github.com/loft-sh/devpod/pkg/ssh"
 	"github.com/loft-sh/devpod/pkg/tunnel"
 	workspace2 "github.com/loft-sh/devpod/pkg/workspace"
@@ -272,6 +274,18 @@ func (cmd *SSHCmd) jumpContainer(
 	envVars, err := cmd.retrieveEnVars()
 	if err != nil {
 		return err
+	}
+
+	// We can optimize if we know we're on pro and the client is local
+	if cmd.Proxy && client.AgentLocal() {
+		return cmd.jumpLocalProxyContainer(ctx, devPodConfig, client, log, func(ctx context.Context, command string, sshClient *ssh.Client) error {
+			// we have a connection to the container, make sure others can connect as well
+			unlockOnce.Do(client.Unlock)
+			writer := log.Writer(logrus.InfoLevel, false)
+			defer writer.Close()
+
+			return devssh.Run(ctx, sshClient, command, os.Stdin, os.Stdout, writer, nil)
+		})
 	}
 
 	// tunnel to container
@@ -631,6 +645,85 @@ func (cmd *SSHCmd) setupGPGAgent(
 	return nil
 }
 
+// jumpLocalProxyContainer is a shortcut we can take if we have a local provider and we're in proxy mode.
+// This completely skips the agent.
+//
+// WARN: This is considered experimental for the time being!
+func (cmd *SSHCmd) jumpLocalProxyContainer(ctx context.Context, devPodConfig *config.Config, client client2.WorkspaceClient, log log.Logger, exec func(ctx context.Context, command string, sshClient *ssh.Client) error) error {
+	_, workspaceInfo, err := client.AgentInfo(provider.CLIOptions{Proxy: true})
+	if err != nil {
+		return fmt.Errorf("prepare workspace info: %w", err)
+	}
+
+	workspaceDir, err := agent.CreateAgentWorkspaceDir(workspaceInfo.Agent.DataPath, workspaceInfo.Workspace.Context, workspaceInfo.Workspace.ID)
+	if err != nil {
+		return fmt.Errorf("create agent workspace dir: %w", err)
+	}
+	workspaceInfo.Origin = workspaceDir
+	runner, err := workspace.CreateRunner(workspaceInfo, log)
+	if err != nil {
+		return err
+	}
+
+	// create readers
+	stdoutReader, stdoutWriter, err := os.Pipe()
+	if err != nil {
+		return err
+	}
+	stdinReader, stdinWriter, err := os.Pipe()
+	if err != nil {
+		return err
+	}
+	defer stdoutWriter.Close()
+	defer stdinWriter.Close()
+
+	cancelCtx, cancel := context.WithCancel(ctx)
+	defer cancel()
+
+	errChan := make(chan error, 1)
+	go func() {
+		writer := log.Writer(logrus.InfoLevel, false)
+		command := fmt.Sprintf("'%s' helper ssh-server --stdio", agent.ContainerDevPodHelperLocation)
+		if log.GetLevel() == logrus.DebugLevel {
+			command += " --debug"
+		}
+
+		err := runner.Command(cancelCtx, "root", command, stdinReader, stdoutWriter, writer)
+		if err != nil {
+			errChan <- err
+		}
+	}()
+
+	containerClient, err := devssh.StdioClient(stdoutReader, stdinWriter, false)
+	if err != nil {
+		return err
+	}
+	defer containerClient.Close()
+	log.Info("Successfully connected to container")
+
+	go startSSHKeepAlive(ctx, containerClient, cmd.SSHKeepAliveInterval, log)
+
+	go func() {
+		if err := cmd.startRunnerServices(ctx, devPodConfig, containerClient, log); err != nil {
+			log.Error(err)
+		}
+	}()
+
+	workdir := filepath.Join("/workspaces", client.Workspace())
+	if cmd.WorkDir != "" {
+		workdir = cmd.WorkDir
+	}
+	command := fmt.Sprintf("'%s' helper ssh-server --track-activity --stdio --workdir '%s'", agent.ContainerDevPodHelperLocation, workdir)
+	if cmd.Debug {
+		command += " --debug"
+	}
+	go func() {
+		errChan <- exec(cancelCtx, command, containerClient)
+	}()
+
+	return <-errChan
+}
+
 func mergeDevPodSshOptions(cmd *SSHCmd) error {
 	_, err := clientimplementation.DecodeOptionsFromEnv(
 		clientimplementation.DevPodFlagsSsh,
@@ -664,7 +757,6 @@ func startWorkspaceCredentialServer(ctx context.Context, client *ssh.Client, use
 	command = fmt.Sprintf("%s %s", command, strings.Join(args, " "))
 
 	return devssh.Run(ctx, client, command, stdin, stdout, writer, nil)
-
 }
 
 func startLocalServer(ctx context.Context, allowGitCredentials, allowDockerCredentials bool, gitUsername, gitToken string, stdoutReader io.Reader, stdinWriter io.WriteCloser, log log.Logger) error {
