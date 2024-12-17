@@ -324,6 +324,7 @@ func (cmd *UpCmd) Run(
 				ideConfig.Options,
 				cmd.GitUsername,
 				cmd.GitToken,
+				cmd.AuthSockID,
 				log,
 			)
 		case string(config.IDEJupyterDesktop):
@@ -336,6 +337,7 @@ func (cmd *UpCmd) Run(
 				ideConfig.Options,
 				cmd.GitUsername,
 				cmd.GitToken,
+				cmd.AuthSockID,
 				log)
 		case string(config.IDEMarimo):
 			return startMarimoInBrowser(
@@ -347,6 +349,7 @@ func (cmd *UpCmd) Run(
 				ideConfig.Options,
 				cmd.GitUsername,
 				cmd.GitToken,
+				cmd.AuthSockID,
 				log)
 		}
 	}
@@ -573,7 +576,7 @@ func startMarimoInBrowser(
 	client client2.BaseWorkspaceClient,
 	user string,
 	ideOptions map[string]config.OptionValue,
-	gitUsername, gitToken string,
+	gitUsername, gitToken, authSockID string,
 	logger log.Logger,
 ) error {
 	if forwardGpg {
@@ -620,7 +623,7 @@ func startMarimoInBrowser(
 		extraPorts,
 		gitUsername,
 		gitToken,
-		"",
+		authSockID,
 		logger,
 	)
 }
@@ -632,7 +635,7 @@ func startJupyterNotebookInBrowser(
 	client client2.BaseWorkspaceClient,
 	user string,
 	ideOptions map[string]config.OptionValue,
-	gitUsername, gitToken string,
+	gitUsername, gitToken, authSockID string,
 	logger log.Logger,
 ) error {
 	if forwardGpg {
@@ -679,7 +682,7 @@ func startJupyterNotebookInBrowser(
 		extraPorts,
 		gitUsername,
 		gitToken,
-		"",
+		authSockID,
 		logger,
 	)
 }
@@ -691,7 +694,7 @@ func startJupyterDesktop(
 	client client2.BaseWorkspaceClient,
 	user string,
 	ideOptions map[string]config.OptionValue,
-	gitUsername, gitToken string,
+	gitUsername, gitToken, authSockID string,
 	logger log.Logger,
 ) error {
 	if forwardGpg {
@@ -735,7 +738,7 @@ func startJupyterDesktop(
 		extraPorts,
 		gitUsername,
 		gitToken,
-		"",
+		authSockID,
 		logger,
 	)
 }
