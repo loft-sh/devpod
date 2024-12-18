@@ -295,7 +295,7 @@ func CloneRepositoryForWorkspace(
 	}
 
 	// run git command
-	cloner := git.NewCloner(options.GitCloneStrategy)
+	cloner := git.NewClonerWithOpts(getGitOptions(options)...)
 	gitInfo := git.NewGitInfo(source.GitRepository, source.GitBranch, source.GitCommit, source.GitPRReference, source.GitSubPath)
 	err := git.CloneRepositoryWithEnv(ctx, gitInfo, extraEnv, workspaceDir, helper, cloner, log)
 	if err != nil {
@@ -321,6 +321,14 @@ func CloneRepositoryForWorkspace(
 	log.Debug("Ignore files from .devpodignore ", excludes)
 
 	return nil
+}
+
+func getGitOptions(options provider2.CLIOptions) []git.Option {
+	gitOpts := []git.Option{git.WithCloneStrategy(options.GitCloneStrategy)}
+	if options.GitCloneRecursiveSubmodules {
+		gitOpts = append(gitOpts, git.WithRecursiveSubmodules())
+	}
+	return gitOpts
 }
 
 func setupSSHKey(key string, agentPath string) ([]string, func(), error) {
