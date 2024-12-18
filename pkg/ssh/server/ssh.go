@@ -133,7 +133,7 @@ func (s *Server) handler(sess ssh.Session) {
 		// used for browser tunnels such as openvscode, since the IDE itself doesn't create an SSH connection it uses a "backhaul" connection and uses the existing socket
 		dir := ""
 		if s.reuseSock != "" {
-			dir = filepath.Join(os.TempDir(), s.reuseSock)
+			dir = filepath.Join(os.TempDir(), fmt.Sprintf("auth-agent-%s", s.reuseSock))
 			err = os.MkdirAll(dir, 0777)
 			if err != nil {
 				s.exitWithError(sess, perrors.Wrap(err, "creating SSH_AUTH_SOCK dir in /tmp"))

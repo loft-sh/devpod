@@ -5,7 +5,6 @@ import (
 	"context"
 	"fmt"
 	"io"
-	"math/rand"
 	"net"
 	"os"
 	"os/exec"
@@ -38,6 +37,7 @@ import (
 	provider2 "github.com/loft-sh/devpod/pkg/provider"
 	devssh "github.com/loft-sh/devpod/pkg/ssh"
 	"github.com/loft-sh/devpod/pkg/tunnel"
+	"github.com/loft-sh/devpod/pkg/util"
 	"github.com/loft-sh/devpod/pkg/version"
 	workspace2 "github.com/loft-sh/devpod/pkg/workspace"
 	"github.com/loft-sh/log"
@@ -141,16 +141,6 @@ func NewUpCmd(f *flags.GlobalFlags) *cobra.Command {
 	return upCmd
 }
 
-const letterBytes = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
-
-func RandStringBytes(n int) string {
-	b := make([]byte, n)
-	for i := range b {
-		b[i] = letterBytes[rand.Intn(len(letterBytes))]
-	}
-	return string(b)
-}
-
 // Run runs the command logic
 func (cmd *UpCmd) Run(
 	ctx context.Context,
@@ -170,7 +160,7 @@ func (cmd *UpCmd) Run(
 		targetIDE = cmd.IDE
 	}
 	if !cmd.Proxy && ide.ReusesAuthSock(targetIDE) {
-		cmd.SSHAuthSockID = RandStringBytes(10)
+		cmd.SSHAuthSockID = util.RandStringBytes(10)
 		log.Debug("Reusing SSH_AUTH_SOCK", cmd.SSHAuthSockID)
 	} else if cmd.Proxy && ide.ReusesAuthSock(targetIDE) {
 		log.Info("Reusing SSH_AUTH_SOCK is not supported with proxy mode, consider launching the IDE from the platform UI")
@@ -888,7 +878,7 @@ func setupBackhaul(client client2.BaseWorkspaceClient, authSockId string, log lo
 		execPath,
 		"ssh",
 		"--agent-forwarding=true",
-		fmt.Sprintf("--reuse-sock=%s", authSockId),
+		fmt.Sprintf("--reuse-ssh-auth-sock=%s", authSockId),
 		"--start-services=false",
 		"--user",
 		remoteUser,
@@ -946,7 +936,7 @@ func startBrowserTunnel(
 
 			cmd, err := createSSHCommand(ctx, client, logger, []string{
 				"--log-output=raw",
-				fmt.Sprintf("--reuse-sock=%s", authSockID),
+				fmt.Sprintf("--reuse-ssh-auth-sock=%s", authSockID),
 				"--stdio",
 			})
 			if err != nil {

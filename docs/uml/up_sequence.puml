@@ -64,7 +64,7 @@ Agent --> DevPod:
 deactivate Agent
 
 alt if using browser based IDE (openvscode, marimo, jupyter)
-DevPod -> ContainerAgent: devpod ssh --reuse-sock
+DevPod -> ContainerAgent: devpod ssh --reuse-ssh-auth-sock
 end
 
 DevPod -> IDE: Start
