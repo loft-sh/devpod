@@ -25,21 +25,30 @@ type Cloner interface {
 	Clone(ctx context.Context, repository string, targetDir string, extraArgs, extraEnv []string, log log.Logger) error
 }
 
-func NewCloner(strategy CloneStrategy) Cloner {
-	switch strategy {
-	case BloblessCloneStrategy:
-		return &bloblessClone{}
-	case TreelessCloneStrategy:
-		return &treelessClone{}
-	case ShallowCloneStrategy:
-		return &shallowClone{}
-	case BareCloneStrategy:
-		return &bareClone{}
-	case FullCloneStrategy:
-		return &fullClone{}
-	default:
-		return &fullClone{}
+type Option func(*cloner)
+
+func WithCloneStrategy(strategy CloneStrategy) Option {
+	return func(c *cloner) {
+		c.cloneStrategy = strategy
 	}
+}
+
+func WithRecursiveSubmodules() Option {
+	return func(c *cloner) {
+		c.extraArgs = append(c.extraArgs, "--recurse-submodules")
+	}
+}
+
+func NewClonerWithOpts(options ...Option) Cloner {
+	cloner := &cloner{}
+	for _, opt := range options {
+		opt(cloner)
+	}
+	return cloner
+}
+
+func NewCloner(strategy CloneStrategy) Cloner {
+	return NewClonerWithOpts(WithCloneStrategy(strategy))
 }
 
 var _ pflag.Value = (*CloneStrategy)(nil)
@@ -68,57 +77,33 @@ func (s *CloneStrategy) String() string {
 	return string(*s)
 }
 
-type fullClone struct{}
-
-var _ Cloner = &fullClone{}
-
-func (c *fullClone) Clone(ctx context.Context, repository string, targetDir string, extraArgs, extraEnv []string, log log.Logger) error {
-	args := []string{"clone"}
-	args = append(args, extraArgs...)
-	args = append(args, repository, targetDir)
-	return run(ctx, args, extraEnv, log)
+type cloner struct {
+	extraArgs     []string
+	cloneStrategy CloneStrategy
 }
 
-type bloblessClone struct{}
+var _ Cloner = &cloner{}
 
-var _ Cloner = &bloblessClone{}
-
-func (c *bloblessClone) Clone(ctx context.Context, repository string, targetDir string, extraArgs, extraEnv []string, log log.Logger) error {
-	args := []string{"clone", "--filter=blob:none"}
-	args = append(args, extraArgs...)
-	args = append(args, repository, targetDir)
-	return run(ctx, args, extraEnv, log)
+func (c *cloner) initialArgs() []string {
+	switch c.cloneStrategy {
+	case BloblessCloneStrategy:
+		return []string{"clone", "--filter=blob:none"}
+	case TreelessCloneStrategy:
+		return []string{"clone", "--filter=tree:0"}
+	case ShallowCloneStrategy:
+		return []string{"clone", "--depth=1"}
+	case BareCloneStrategy:
+		return []string{"clone", "bare", "--depth=1"}
+	case FullCloneStrategy:
+	default:
+	}
+	return []string{"clone"}
 }
 
-type treelessClone struct{}
-
-var _ Cloner = treelessClone{}
-
-func (c treelessClone) Clone(ctx context.Context, repository string, targetDir string, extraArgs, extraEnv []string, log log.Logger) error {
-	args := []string{"clone", "--filter=tree:0"}
+func (c *cloner) Clone(ctx context.Context, repository string, targetDir string, extraArgs, extraEnv []string, log log.Logger) error {
+	args := c.initialArgs()
 	args = append(args, extraArgs...)
-	args = append(args, repository, targetDir)
-	return run(ctx, args, extraEnv, log)
-}
-
-type shallowClone struct{}
-
-var _ Cloner = shallowClone{}
-
-func (c shallowClone) Clone(ctx context.Context, repository string, targetDir string, extraArgs, extraEnv []string, log log.Logger) error {
-	args := []string{"clone", "--depth=1"}
-	args = append(args, extraArgs...)
-	args = append(args, repository, targetDir)
-	return run(ctx, args, extraEnv, log)
-}
-
-type bareClone struct{}
-
-var _ Cloner = bareClone{}
-
-func (c bareClone) Clone(ctx context.Context, repository string, targetDir string, extraArgs, extraEnv []string, log log.Logger) error {
-	args := []string{"clone", "bare", "--depth=1"}
-	args = append(args, extraArgs...)
+	args = append(args, c.extraArgs...)
 	args = append(args, repository, targetDir)
 	return run(ctx, args, extraEnv, log)
 }
