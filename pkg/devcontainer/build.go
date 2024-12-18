@@ -181,6 +181,8 @@ func (r *runner) buildAndExtendImage(
 		return nil, errors.Wrap(err, "get image build info")
 	}
 
+	r.Log.Info("============= Building image dockerfile syntax ", imageBuildInfo.Dockerfile.Syntax)
+
 	// get extend image build info
 	extendedBuildInfo, err := feature.GetExtendedBuildInfo(substitutionContext, imageBuildInfo.Metadata, imageBuildInfo.User, imageBase, parsedConfig, r.Log, options.ForceBuild)
 	if err != nil {
