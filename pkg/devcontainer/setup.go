@@ -99,7 +99,7 @@ func (r *runner) setupContainer(
 	// ssh tunnel
 	sshTunnelCmd := fmt.Sprintf("'%s' helper ssh-server --stdio", agent.ContainerDevPodHelperLocation)
 	if ide.ReusesAuthSock(r.WorkspaceConfig.Workspace.IDE.Name) {
-		sshTunnelCmd += fmt.Sprintf(" --reuse-sock=%s", r.WorkspaceConfig.AuthSockID)
+		sshTunnelCmd += fmt.Sprintf(" --reuse-sock=%s", r.WorkspaceConfig.CLIOptions.SSHAuthSockID)
 	}
 	if r.Log.GetLevel() == logrus.DebugLevel {
 		sshTunnelCmd += " --debug"
