@@ -99,6 +99,7 @@ func (cmd *UpCmd) Run(ctx context.Context) error {
 }
 
 func (cmd *UpCmd) up(ctx context.Context, workspaceInfo *provider2.AgentWorkspaceInfo, tunnelClient tunnel.TunnelClient, logger log.Logger) error {
+
 	// create devcontainer
 	result, err := cmd.devPodUp(ctx, workspaceInfo, logger)
 	if err != nil {
@@ -128,7 +129,6 @@ func (cmd *UpCmd) devPodUp(ctx context.Context, workspaceInfo *provider2.AgentWo
 	result, err := runner.Up(ctx, devcontainer.UpOptions{
 		CLIOptions:    workspaceInfo.CLIOptions,
 		RegistryCache: workspaceInfo.RegistryCache,
-		AuthSockID:    workspaceInfo.AuthSockID,
 	}, workspaceInfo.InjectTimeout)
 	if err != nil {
 		return nil, err

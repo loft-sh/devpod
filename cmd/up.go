@@ -169,8 +169,11 @@ func (cmd *UpCmd) Run(
 	if cmd.IDE != "" {
 		targetIDE = cmd.IDE
 	}
-	if ide.ReusesAuthSock(targetIDE) {
-		cmd.AuthSockID = RandStringBytes(10)
+	if !cmd.Proxy && ide.ReusesAuthSock(targetIDE) {
+		cmd.SSHAuthSockID = RandStringBytes(10)
+		log.Debug("Reusing SSH_AUTH_SOCK", cmd.SSHAuthSockID)
+	} else if cmd.Proxy && ide.ReusesAuthSock(targetIDE) {
+		log.Info("Reusing SSH_AUTH_SOCK is not supported with proxy mode, consider launching the IDE from the platform UI")
 	}
 
 	// run devpod agent up
@@ -287,7 +290,7 @@ func (cmd *UpCmd) Run(
 				ideConfig.Options,
 				cmd.GitUsername,
 				cmd.GitToken,
-				cmd.AuthSockID,
+				cmd.SSHAuthSockID,
 				log,
 			)
 		case string(config.IDERustRover):
@@ -324,7 +327,7 @@ func (cmd *UpCmd) Run(
 				ideConfig.Options,
 				cmd.GitUsername,
 				cmd.GitToken,
-				cmd.AuthSockID,
+				cmd.SSHAuthSockID,
 				log,
 			)
 		case string(config.IDEJupyterDesktop):
@@ -337,7 +340,7 @@ func (cmd *UpCmd) Run(
 				ideConfig.Options,
 				cmd.GitUsername,
 				cmd.GitToken,
-				cmd.AuthSockID,
+				cmd.SSHAuthSockID,
 				log)
 		case string(config.IDEMarimo):
 			return startMarimoInBrowser(
@@ -349,7 +352,7 @@ func (cmd *UpCmd) Run(
 				ideConfig.Options,
 				cmd.GitUsername,
 				cmd.GitToken,
-				cmd.AuthSockID,
+				cmd.SSHAuthSockID,
 				log)
 		}
 	}

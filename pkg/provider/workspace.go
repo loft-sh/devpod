@@ -191,9 +191,6 @@ type AgentWorkspaceInfo struct {
 
 	// RegistryCache defines the registry to use for caching builds
 	RegistryCache string `json:"registryCache,omitempty"`
-
-	// ID to use when looking for SSH_AUTH_SOCK, defaults to a new random ID if not set (only used for browser IDEs)
-	AuthSockID string `json:"authSockID,omitempty"`
 }
 
 type CLIOptions struct {
@@ -221,6 +218,7 @@ type CLIOptions struct {
 	GitCloneRecursiveSubmodules bool              `json:"gitCloneRecursive,omitempty"`
 	FallbackImage               string            `json:"fallbackImage,omitempty"`
 	GitSSHSigningKey            string            `json:"gitSshSigningKey,omitempty"`
+	SSHAuthSockID               string            `json:"sshAuthSockID,omitempty"` // ID to use when looking for SSH_AUTH_SOCK, defaults to a new random ID if not set (only used for browser IDEs)
 
 	// build options
 	Repository string   `json:"repository,omitempty"`
@@ -232,7 +230,6 @@ type CLIOptions struct {
 	ForceDockerless       bool   `json:"forceDockerless,omitempty"`
 	ForceInternalBuildKit bool   `json:"forceInternalBuildKit,omitempty"`
 	SSHKey                string `json:"sshkey,omitempty"`
-	AuthSockID            string `json:"authSockID,omitempty"`
 }
 
 type BuildOptions struct {

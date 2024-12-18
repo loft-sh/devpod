@@ -135,7 +135,7 @@ func startDevContainer(ctx context.Context, workspaceConfig *provider2.AgentWork
 
 func StartContainer(ctx context.Context, runner devcontainer.Runner, log log.Logger, workspaceConfig *provider2.AgentWorkspaceInfo) (*config.Result, error) {
 	log.Debugf("Starting DevPod container...")
-	result, err := runner.Up(ctx, devcontainer.UpOptions{NoBuild: true, AuthSockID: workspaceConfig.AuthSockID}, workspaceConfig.InjectTimeout)
+	result, err := runner.Up(ctx, devcontainer.UpOptions{NoBuild: true}, workspaceConfig.InjectTimeout)
 	if err != nil {
 		return result, err
 	}
