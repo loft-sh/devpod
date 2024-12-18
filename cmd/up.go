@@ -923,11 +923,14 @@ func startBrowserTunnel(
 ) error {
 	// Setup a backhaul SSH connection using the remote user so there is an AUTH SOCK to use
 	// With normal IDEs this would be the SSH connection made by the IDE
-	go func() {
-		if err := setupBackhaul(client, authSockID, logger); err != nil {
-			logger.Error("Failed to setup backhaul SSH connection: ", err)
-		}
-	}()
+	// authSockID is not set when in proxy mode since we cannot use the proxies ssh-agent
+	if authSockID != "" {
+		go func() {
+			if err := setupBackhaul(client, authSockID, logger); err != nil {
+				logger.Error("Failed to setup backhaul SSH connection: ", err)
+			}
+		}()
+	}
 	err := tunnel.NewTunnel(
 		ctx,
 		func(ctx context.Context, stdin io.Reader, stdout io.Writer) error {
