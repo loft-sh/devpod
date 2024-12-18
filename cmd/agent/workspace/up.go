@@ -99,7 +99,6 @@ func (cmd *UpCmd) Run(ctx context.Context) error {
 }
 
 func (cmd *UpCmd) up(ctx context.Context, workspaceInfo *provider2.AgentWorkspaceInfo, tunnelClient tunnel.TunnelClient, logger log.Logger) error {
-
 	// create devcontainer
 	result, err := cmd.devPodUp(ctx, workspaceInfo, logger)
 	if err != nil {
