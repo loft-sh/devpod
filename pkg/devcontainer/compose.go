@@ -457,7 +457,7 @@ func (r *runner) buildAndExtendDockerCompose(
 		}
 	}
 
-	extendImageBuildInfo, err := feature.GetExtendedBuildInfo(substitutionContext, imageBuildInfo.Metadata, imageBuildInfo.User, buildTarget, parsedConfig, r.Log, false)
+	extendImageBuildInfo, err := feature.GetExtendedBuildInfo(substitutionContext, imageBuildInfo, buildTarget, parsedConfig, r.Log, false)
 	if err != nil {
 		return "", "", nil, "", err
 	}

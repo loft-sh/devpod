@@ -259,7 +259,7 @@ type Dockerfile struct {
 
 	Directives []*parser.Directive
 	Preamble   *Preamble
-	Syntax     string
+	Syntax     string // https://docs.docker.com/build/concepts/dockerfile/#dockerfile-syntax
 
 	Stages         []*Stage
 	StagesByTarget map[string]*Stage
@@ -335,7 +335,7 @@ func Parse(dockerfileContent string) (*Dockerfile, error) {
 	}
 	d.Directives = directives
 
-	// parse syntax
+	// parse build syntax
 	for _, directive := range directives {
 		if directive.Name == "syntax" {
 			d.Syntax = directive.Value
