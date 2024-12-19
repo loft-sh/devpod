@@ -662,6 +662,11 @@ func (cmd *SSHCmd) jumpLocalProxyContainer(ctx context.Context, devPodConfig *co
 		return nil
 	}
 
+	_, err = workspace.InitContentFolder(workspaceInfo, log)
+	if err != nil {
+		return err
+	}
+
 	runner, err := workspace.CreateRunner(workspaceInfo, log)
 	if err != nil {
 		return err
@@ -674,9 +679,7 @@ func (cmd *SSHCmd) jumpLocalProxyContainer(ctx context.Context, devPodConfig *co
 
 	if containerDetails == nil || containerDetails.State.Status != "running" {
 		log.Info("Workspace isn't running, starting up...")
-		_, err := runner.Up(ctx, devcontainer.UpOptions{
-			CLIOptions: workspaceInfo.CLIOptions,
-			NoBuild:    true}, workspaceInfo.InjectTimeout)
+		_, err := runner.Up(ctx, devcontainer.UpOptions{NoBuild: true}, workspaceInfo.InjectTimeout)
 		if err != nil {
 			return err
 		}
