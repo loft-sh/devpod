@@ -3,6 +3,7 @@ package tunnel
 import (
 	"bytes"
 	"context"
+	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"math"
@@ -121,7 +122,8 @@ func RunInContainer(
 		if configureGitSSHSignatureHelper {
 			format, userSigningKey, err := gitsshsigning.ExtractGitConfiguration()
 			if err == nil && format == gitsshsigning.GPGFormatSSH && userSigningKey != "" {
-				command += fmt.Sprintf(" --git-user-signing-key %s", userSigningKey)
+				encodedKey := base64.StdEncoding.EncodeToString([]byte(userSigningKey))
+				command += fmt.Sprintf(" --git-user-signing-key %s", encodedKey)
 			}
 		}
 		if configureDockerCredentials {
