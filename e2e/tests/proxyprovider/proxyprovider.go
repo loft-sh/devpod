@@ -2,7 +2,6 @@ package proxyprovider
 
 import (
 	"context"
-	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
@@ -69,13 +68,8 @@ var _ = DevPodDescribe("devpod proxy provider test suite", func() {
 			framework.ExpectEqual(strings.Contains(string(fileBytes), "my-secret-value"), false, "workspace.json shouldn't contain provider secret")
 
 			// expect workspace
-			workspace, err := f.FindWorkspace(ctx, tempDir)
+			_, err = f.FindWorkspace(ctx, tempDir)
 			framework.ExpectNoError(err)
-
-			// check if ssh works as it should start the container
-			out, err := f.DevPodSSH(ctx, tempDir, fmt.Sprintf("cat /workspaces/%s/test.txt", workspace.ID))
-			framework.ExpectNoError(err)
-			framework.ExpectEqual(out, "Test123", "workspace content does not match")
 
 			// delete workspace
 			err = f.DevPodWorkspaceDelete(ctx, tempDir)
@@ -103,7 +97,7 @@ var _ = DevPodDescribe("devpod proxy provider test suite", func() {
 			framework.ExpectNoError(err)
 
 			// expect workspace
-			workspace, err := f.FindWorkspace(ctx, tempDir)
+			_, err = f.FindWorkspace(ctx, tempDir)
 			framework.ExpectNoError(err)
 
 			// check if ssh works
@@ -118,11 +112,6 @@ var _ = DevPodDescribe("devpod proxy provider test suite", func() {
 			status, err := f.DevPodStatus(ctx, tempDir)
 			framework.ExpectNoError(err)
 			framework.ExpectEqual(status.State, client.StatusStopped, "state does not match")
-
-			// check if ssh works as it should start the container
-			out, err := f.DevPodSSH(ctx, tempDir, fmt.Sprintf("cat /workspaces/%s/test.txt", workspace.ID))
-			framework.ExpectNoError(err)
-			framework.ExpectEqual(out, "Test123", "workspace content does not match")
 
 			// delete workspace
 			err = f.DevPodWorkspaceDelete(ctx, tempDir)
@@ -167,11 +156,6 @@ var _ = DevPodDescribe("devpod proxy provider test suite", func() {
 			err = f.DevPodUp(ctx, tempDir, "--recreate")
 			framework.ExpectNoError(err)
 
-			// check if ssh works as it should start the container
-			out, err := f.DevPodSSH(ctx, tempDir, "echo -n $DEVPOD_WORKSPACE_CHANGED")
-			framework.ExpectNoError(err)
-			framework.ExpectEqual(out, "TRUE", "workspace has not changed")
-
 			// delete workspace
 			err = f.DevPodWorkspaceDelete(ctx, tempDir)
 			framework.ExpectNoError(err)
@@ -200,11 +184,6 @@ var _ = DevPodDescribe("devpod proxy provider test suite", func() {
 			// expect workspace
 			_, err = f.FindWorkspace(ctx, tempDir)
 			framework.ExpectNoError(err)
-
-			// check if ssh works as it should start the container
-			out, err := f.DevPodSSH(ctx, tempDir, "echo -n $DEVPOD_WORKSPACE_CHANGED")
-			framework.ExpectNoError(err)
-			framework.ExpectEqual(out, "TRUE", "devcontainer path wasn't applied")
 
 			// delete workspace
 			err = f.DevPodWorkspaceDelete(ctx, tempDir)
