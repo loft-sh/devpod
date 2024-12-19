@@ -699,7 +699,14 @@ func (cmd *SSHCmd) jumpLocalProxyContainer(ctx context.Context, devPodConfig *co
 		return err
 	}
 	defer containerClient.Close()
-	log.Info("Successfully connected to container")
+
+	if len(cmd.ForwardPorts) > 0 {
+		return cmd.forwardPorts(ctx, containerClient, log)
+	}
+
+	if len(cmd.ReverseForwardPorts) > 0 && !cmd.GPGAgentForwarding {
+		return cmd.reverseForwardPorts(ctx, containerClient, log)
+	}
 
 	go startSSHKeepAlive(ctx, containerClient, cmd.SSHKeepAliveInterval, log)
 
