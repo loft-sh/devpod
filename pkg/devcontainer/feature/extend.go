@@ -51,13 +51,13 @@ type BuildInfo struct {
 	BuildArgs               map[string]string
 }
 
-func GetExtendedBuildInfo(substitutionContext *config.SubstitutionContext, baseImageMetadata *config.ImageMetadataConfig, user, target string, devContainerConfig *config.SubstitutedConfig, log log.Logger, forceBuild bool) (*ExtendedBuildInfo, error) {
+func GetExtendedBuildInfo(ctx *config.SubstitutionContext, imageBuildInfo *config.ImageBuildInfo, target string, devContainerConfig *config.SubstitutedConfig, log log.Logger, forceBuild bool) (*ExtendedBuildInfo, error) {
 	features, err := fetchFeatures(devContainerConfig.Config, log, forceBuild)
 	if err != nil {
 		return nil, errors.Wrap(err, "fetch features")
 	}
 
-	mergedImageMetadataConfig, err := metadata.GetDevContainerMetadata(substitutionContext, baseImageMetadata, devContainerConfig, features)
+	mergedImageMetadataConfig, err := metadata.GetDevContainerMetadata(ctx, imageBuildInfo.Metadata, devContainerConfig, features)
 	if err != nil {
 		return nil, errors.Wrap(err, "get dev container metadata")
 	}
@@ -76,7 +76,7 @@ func GetExtendedBuildInfo(substitutionContext *config.SubstitutionContext, baseI
 	}
 
 	contextPath := config.GetContextPath(devContainerConfig.Config)
-	buildInfo, err := getFeatureBuildOptions(contextPath, baseImageMetadata, user, target, features)
+	buildInfo, err := getFeatureBuildOptions(contextPath, imageBuildInfo, target, features)
 	if err != nil {
 		return nil, err
 	}
@@ -89,8 +89,8 @@ func GetExtendedBuildInfo(substitutionContext *config.SubstitutionContext, baseI
 	}, nil
 }
 
-func getFeatureBuildOptions(contextPath string, baseImageMetadata *config.ImageMetadataConfig, user, target string, features []*config.FeatureSet) (*BuildInfo, error) {
-	containerUser, remoteUser := findContainerUsers(baseImageMetadata, "", user)
+func getFeatureBuildOptions(contextPath string, imageBuildInfo *config.ImageBuildInfo, target string, features []*config.FeatureSet) (*BuildInfo, error) {
+	containerUser, remoteUser := findContainerUsers(imageBuildInfo.Metadata, "", imageBuildInfo.User)
 
 	// copy features
 	featureFolder := filepath.Join(contextPath, config.DevPodContextFeatureFolder)
@@ -108,9 +108,14 @@ _REMOTE_USER=`+remoteUser+"\n"), 0600)
 
 	// prepare dockerfile
 	dockerfileContent := strings.ReplaceAll(FEATURE_BASE_DOCKERFILE, "#{featureLayer}", getFeatureLayers(containerUser, remoteUser, features))
-	dockerfilePrefix := `
-# syntax=docker.io/docker/dockerfile:1.4
-ARG _DEV_CONTAINERS_BASE_IMAGE=placeholder`
+	// get build syntax from Dockerfile or use default
+	syntax := "docker.io/docker/dockerfile:1.4"
+	if imageBuildInfo.Dockerfile != nil && imageBuildInfo.Dockerfile.Syntax != "" {
+		syntax = imageBuildInfo.Dockerfile.Syntax
+	}
+	dockerfilePrefix := fmt.Sprintf(`
+# syntax=%s
+ARG _DEV_CONTAINERS_BASE_IMAGE=placeholder`, syntax)
 
 	return &BuildInfo{
 		FeaturesFolder:          featureFolder,
@@ -119,7 +124,7 @@ ARG _DEV_CONTAINERS_BASE_IMAGE=placeholder`
 		OverrideTarget:          "dev_containers_target_stage",
 		BuildArgs: map[string]string{
 			"_DEV_CONTAINERS_BASE_IMAGE": target,
-			"_DEV_CONTAINERS_IMAGE_USER": user,
+			"_DEV_CONTAINERS_IMAGE_USER": imageBuildInfo.User,
 		},
 	}, nil
 }

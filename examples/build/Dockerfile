@@ -1,3 +1,4 @@
+# syntax=docker/dockerfile:1
 FROM mcr.microsoft.com/devcontainers/go:1.22-bullseye
 
 ARG TARGETOS
