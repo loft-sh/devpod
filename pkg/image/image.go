@@ -37,6 +37,30 @@ func GetImage(ctx context.Context, image string) (v1.Image, error) {
 	return img, err
 }
 
+func GetImageForArch(ctx context.Context, image, arch string) (v1.Image, error) {
+	ref, err := name.ParseReference(image)
+	if err != nil {
+		return nil, err
+	}
+
+	keychain, err := getKeychain(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("create authentication keychain: %w", err)
+	}
+
+	remoteOptions := []remote.Option{
+		remote.WithAuthFromKeychain(keychain),
+		remote.WithPlatform(v1.Platform{Architecture: arch, OS: "linux"}),
+	}
+
+	img, err := remote.Image(ref, remoteOptions...)
+	if err != nil {
+		return nil, errors.Wrapf(err, "retrieve image %s", image)
+	}
+
+	return img, err
+}
+
 func CheckPushPermissions(image string) error {
 	ref, err := name.ParseReference(image)
 	if err != nil {
