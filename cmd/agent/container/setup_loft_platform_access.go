@@ -1,7 +1,10 @@
 package container
 
 import (
+	"fmt"
+
 	"github.com/loft-sh/devpod/cmd/flags"
+	"github.com/loft-sh/devpod/pkg/credentials"
 	"github.com/loft-sh/devpod/pkg/loftconfig"
 	"github.com/loft-sh/log"
 
@@ -30,8 +33,13 @@ func NewSetupLoftPlatformAccessCmd(flags *flags.GlobalFlags) *cobra.Command {
 	}
 
 	setupLoftPlatformAccessCmd.Flags().StringVar(&cmd.Context, "context", "", "context to use")
+	_ = setupLoftPlatformAccessCmd.Flags().MarkDeprecated("context", "Information should be provided by services server, don't use this flag anymore")
+
 	setupLoftPlatformAccessCmd.Flags().StringVar(&cmd.Provider, "provider", "", "provider to use")
+	_ = setupLoftPlatformAccessCmd.Flags().MarkDeprecated("provider", "Information should be provided by services server, don't use this flag anymore")
+
 	setupLoftPlatformAccessCmd.Flags().IntVar(&cmd.Port, "port", 0, "If specified, will use the given port")
+	_ = setupLoftPlatformAccessCmd.Flags().MarkDeprecated("port", "")
 
 	return setupLoftPlatformAccessCmd
 }
@@ -41,7 +49,16 @@ func NewSetupLoftPlatformAccessCmd(flags *flags.GlobalFlags) *cobra.Command {
 func (c *SetupLoftPlatformAccessCmd) Run(_ *cobra.Command, args []string) error {
 	logger := log.Default.ErrorStreamOnly()
 
-	loftConfig, err := loftconfig.GetLoftConfig(c.Context, c.Provider, c.Port, logger)
+	port, err := credentials.GetPort()
+	if err != nil {
+		return fmt.Errorf("get port: %w", err)
+	}
+	// backwards compatibility, remove in future release
+	if c.Port > 0 {
+		port = c.Port
+	}
+
+	loftConfig, err := loftconfig.GetLoftConfig(c.Context, c.Provider, port, logger)
 	if err != nil {
 		return err
 	}
@@ -51,12 +68,16 @@ func (c *SetupLoftPlatformAccessCmd) Run(_ *cobra.Command, args []string) error 
 		return nil
 	}
 
-	if err := loftconfig.AuthDevpodCliToPlatform(loftConfig, logger); err != nil {
-		return err
+	err = loftconfig.AuthDevpodCliToPlatform(loftConfig, logger)
+	if err != nil {
+		// log error but don't return to allow other CLIs to install as well
+		logger.Warn("unable to authenticate devpod cli: %v", err)
 	}
 
-	if err := loftconfig.AuthVClusterCliToPlatform(loftConfig, logger); err != nil {
-		return err
+	err = loftconfig.AuthVClusterCliToPlatform(loftConfig, logger)
+	if err != nil {
+		// log error but don't return to allow other CLIs to install as well
+		logger.Warn("unable to authenticate vcluster cli: %v", err)
 	}
 
 	return nil

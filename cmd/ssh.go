@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"bytes"
 	"context"
 	"encoding/base64"
 	"fmt"
@@ -181,7 +182,7 @@ func (cmd *SSHCmd) startProxyTunnel(
 			})
 		},
 		func(ctx context.Context, containerClient *ssh.Client) error {
-			return cmd.startTunnel(ctx, devPodConfig, containerClient, client.Workspace(), log)
+			return cmd.startTunnel(ctx, devPodConfig, containerClient, client, log)
 		},
 	)
 }
@@ -295,7 +296,7 @@ func (cmd *SSHCmd) jumpContainer(
 			unlockOnce.Do(client.Unlock)
 
 			// start ssh tunnel
-			return cmd.startTunnel(ctx, devPodConfig, containerClient, client.Workspace(), log)
+			return cmd.startTunnel(ctx, devPodConfig, containerClient, client, log)
 		}, devPodConfig, envVars)
 }
 
@@ -403,7 +404,7 @@ func (cmd *SSHCmd) forwardPorts(
 	return <-errChan
 }
 
-func (cmd *SSHCmd) startTunnel(ctx context.Context, devPodConfig *config.Config, containerClient *ssh.Client, workspaceName string, log log.Logger) error {
+func (cmd *SSHCmd) startTunnel(ctx context.Context, devPodConfig *config.Config, containerClient *ssh.Client, workspaceClient client2.BaseWorkspaceClient, log log.Logger) error {
 	// check if we should forward ports
 	if len(cmd.ForwardPorts) > 0 {
 		return cmd.forwardPorts(ctx, containerClient, log)
@@ -416,7 +417,7 @@ func (cmd *SSHCmd) startTunnel(ctx context.Context, devPodConfig *config.Config,
 
 	// start port-forwarding etc.
 	if !cmd.Proxy && cmd.StartServices {
-		go cmd.startServices(ctx, devPodConfig, containerClient, cmd.GitUsername, cmd.GitToken, log)
+		go cmd.startServices(ctx, devPodConfig, containerClient, cmd.GitUsername, cmd.GitToken, workspaceClient.WorkspaceConfig(), log)
 	}
 
 	// start ssh
@@ -437,7 +438,7 @@ func (cmd *SSHCmd) startTunnel(ctx context.Context, devPodConfig *config.Config,
 		}
 	}
 
-	workdir := filepath.Join("/workspaces", workspaceName)
+	workdir := filepath.Join("/workspaces", workspaceClient.Workspace())
 	if cmd.WorkDir != "" {
 		workdir = cmd.WorkDir
 	}
@@ -468,8 +469,11 @@ func (cmd *SSHCmd) startTunnel(ctx context.Context, devPodConfig *config.Config,
 					log.Error(err)
 				}
 			}()
-		}
 
+			go func() {
+				cmd.setupPlatformAccess(ctx, containerClient, log)
+			}()
+		}
 		return devssh.Run(ctx, containerClient, command, os.Stdin, os.Stdout, writer, envVars)
 	}
 
@@ -489,12 +493,22 @@ func (cmd *SSHCmd) startTunnel(ctx context.Context, devPodConfig *config.Config,
 	)
 }
 
+func (cmd *SSHCmd) setupPlatformAccess(ctx context.Context, sshClient *ssh.Client, log log.Logger) {
+	buf := &bytes.Buffer{}
+	command := fmt.Sprintf("'%s' agent container setup-loft-platform-access", agent.ContainerDevPodHelperLocation)
+	err := devssh.Run(ctx, sshClient, command, nil, buf, buf, nil)
+	if err != nil {
+		log.Debugf("Failed to setup platform access: %s%v", buf.String(), err)
+	}
+}
+
 func (cmd *SSHCmd) startServices(
 	ctx context.Context,
 	devPodConfig *config.Config,
 	containerClient *ssh.Client,
 	gitUsername,
 	gitToken string,
+	workspace *provider.Workspace,
 	log log.Logger,
 ) {
 	if cmd.User != "" {
@@ -507,6 +521,7 @@ func (cmd *SSHCmd) startServices(
 			nil,
 			gitUsername,
 			gitToken,
+			workspace,
 			log,
 		)
 		if err != nil {
@@ -709,7 +724,7 @@ func (cmd *SSHCmd) jumpLocalProxyContainer(ctx context.Context, devPodConfig *co
 	}
 
 	go startSSHKeepAlive(ctx, containerClient, cmd.SSHKeepAliveInterval, log)
-
+	go cmd.setupPlatformAccess(ctx, containerClient, log)
 	go func() {
 		if err := cmd.startRunnerServices(ctx, devPodConfig, containerClient, log); err != nil {
 			log.Error(err)
