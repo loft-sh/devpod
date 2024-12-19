@@ -21,6 +21,7 @@ import (
 	client2 "github.com/loft-sh/devpod/pkg/client"
 	"github.com/loft-sh/devpod/pkg/client/clientimplementation"
 	"github.com/loft-sh/devpod/pkg/config"
+	"github.com/loft-sh/devpod/pkg/devcontainer"
 	dpFlags "github.com/loft-sh/devpod/pkg/flags"
 	"github.com/loft-sh/devpod/pkg/gpg"
 	"github.com/loft-sh/devpod/pkg/port"
@@ -650,19 +651,36 @@ func (cmd *SSHCmd) setupGPGAgent(
 //
 // WARN: This is considered experimental for the time being!
 func (cmd *SSHCmd) jumpLocalProxyContainer(ctx context.Context, devPodConfig *config.Config, client client2.WorkspaceClient, log log.Logger, exec func(ctx context.Context, command string, sshClient *ssh.Client) error) error {
-	_, workspaceInfo, err := client.AgentInfo(provider.CLIOptions{Proxy: true})
+	encodedWorkspaceInfo, _, err := client.AgentInfo(provider.CLIOptions{Proxy: true})
 	if err != nil {
 		return fmt.Errorf("prepare workspace info: %w", err)
 	}
-
-	workspaceDir, err := agent.CreateAgentWorkspaceDir(workspaceInfo.Agent.DataPath, workspaceInfo.Workspace.Context, workspaceInfo.Workspace.ID)
+	shouldExit, workspaceInfo, err := agent.WorkspaceInfo(encodedWorkspaceInfo, log)
 	if err != nil {
-		return fmt.Errorf("create agent workspace dir: %w", err)
+		return err
+	} else if shouldExit {
+		return nil
 	}
-	workspaceInfo.Origin = workspaceDir
+
 	runner, err := workspace.CreateRunner(workspaceInfo, log)
 	if err != nil {
 		return err
+	}
+
+	containerDetails, err := runner.Find(ctx)
+	if err != nil {
+		return err
+	}
+
+	if containerDetails == nil || containerDetails.State.Status != "running" {
+		log.Info("Workspace isn't running, starting up...")
+		_, err := runner.Up(ctx, devcontainer.UpOptions{
+			CLIOptions: workspaceInfo.CLIOptions,
+			NoBuild:    true}, workspaceInfo.InjectTimeout)
+		if err != nil {
+			return err
+		}
+		log.Info("Successfully started workspace")
 	}
 
 	// create readers
