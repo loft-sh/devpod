@@ -307,7 +307,7 @@ func (r *runner) buildImage(
 		r.Log.Debugf("Try to find prebuild image %s in repositories %s", prebuildHash, strings.Join(options.PrebuildRepositories, ","))
 		for _, prebuildRepo := range options.PrebuildRepositories {
 			prebuildImage := prebuildRepo + ":" + prebuildHash
-			img, err := image.GetImage(ctx, prebuildImage)
+			img, err := image.GetImageForArch(ctx, prebuildImage, targetArch)
 			if err == nil && img != nil {
 				// prebuild image found
 				r.Log.Infof("Found existing prebuilt image %s", prebuildImage)
