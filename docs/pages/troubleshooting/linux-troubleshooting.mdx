@@ -59,3 +59,8 @@ append `:Z` to your volume definitions, like so
     ]
 }
 ```
+
+### ENAMETOOLONG error when opening a workspace in vscode
+
+There is a [known issue](https://github.com/loft-sh/devpod/issues/1045) where some linux distros use a large PATH to find SSH and causes the connection string to be too long. The workaround is to specify
+the SSH binary explicitly in vscode.
