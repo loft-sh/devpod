@@ -886,6 +886,7 @@ func startBrowserTunnel(
 				extraPorts,
 				gitUsername,
 				gitToken,
+				client.WorkspaceConfig(),
 				logger,
 			)
 			if err != nil {

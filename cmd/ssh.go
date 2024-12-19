@@ -22,7 +22,6 @@ import (
 	client2 "github.com/loft-sh/devpod/pkg/client"
 	"github.com/loft-sh/devpod/pkg/client/clientimplementation"
 	"github.com/loft-sh/devpod/pkg/config"
-	"github.com/loft-sh/devpod/pkg/credentials"
 	dpFlags "github.com/loft-sh/devpod/pkg/flags"
 	"github.com/loft-sh/devpod/pkg/gpg"
 	"github.com/loft-sh/devpod/pkg/port"
@@ -62,8 +61,6 @@ type SSHCmd struct {
 
 	// ssh keepalive options
 	SSHKeepAliveInterval time.Duration `json:"sshKeepAliveInterval,omitempty"`
-
-	SetupLoftPlatformAccess bool
 
 	StartServices bool
 
@@ -120,7 +117,6 @@ func NewSSHCmd(f *flags.GlobalFlags) *cobra.Command {
 	sshCmd.Flags().BoolVar(&cmd.Stdio, "stdio", false, "If true will tunnel connection through stdout and stdin")
 	sshCmd.Flags().BoolVar(&cmd.StartServices, "start-services", true, "If false will not start any port-forwarding or git / docker credentials helper")
 	sshCmd.Flags().DurationVar(&cmd.SSHKeepAliveInterval, "ssh-keepalive-interval", 55*time.Second, "How often should keepalive request be made (55s)")
-	sshCmd.Flags().BoolVar(&cmd.SetupLoftPlatformAccess, "setup-loft-platform-access", false, "should setup loft platform access")
 
 	return sshCmd
 }
@@ -421,7 +417,7 @@ func (cmd *SSHCmd) startTunnel(ctx context.Context, devPodConfig *config.Config,
 
 	// start port-forwarding etc.
 	if !cmd.Proxy && cmd.StartServices {
-		go cmd.startServices(ctx, devPodConfig, containerClient, cmd.GitUsername, cmd.GitToken, log)
+		go cmd.startServices(ctx, devPodConfig, containerClient, cmd.GitUsername, cmd.GitToken, workspaceClient.WorkspaceConfig(), log)
 	}
 
 	// start ssh
@@ -475,9 +471,7 @@ func (cmd *SSHCmd) startTunnel(ctx context.Context, devPodConfig *config.Config,
 			}()
 
 			go func() {
-				if err := cmd.setupLoftPlatformAccess(ctx, containerClient, workspaceClient.Context(), workspaceClient.Provider(), log); err != nil {
-					log.Error(err)
-				}
+				cmd.setupPlatformAccess(ctx, containerClient, log)
 			}()
 		}
 		return devssh.Run(ctx, containerClient, command, os.Stdin, os.Stdout, writer, envVars)
@@ -499,20 +493,13 @@ func (cmd *SSHCmd) startTunnel(ctx context.Context, devPodConfig *config.Config,
 	)
 }
 
-func (cmd *SSHCmd) setupLoftPlatformAccess(ctx context.Context, sshClient *ssh.Client, context, provider string, log log.Logger) error {
-	port, err := credentials.GetPort()
-	if err != nil {
-		return fmt.Errorf("get port: %w", err)
-	}
-
+func (cmd *SSHCmd) setupPlatformAccess(ctx context.Context, sshClient *ssh.Client, log log.Logger) {
 	buf := &bytes.Buffer{}
-	command := fmt.Sprintf("'%s'  agent container setup-loft-platform-access --context %s --provider %s --port %d", agent.ContainerDevPodHelperLocation, context, provider, port)
-	err = devssh.Run(ctx, sshClient, command, nil, buf, buf, nil)
+	command := fmt.Sprintf("'%s' agent container setup-loft-platform-access", agent.ContainerDevPodHelperLocation)
+	err := devssh.Run(ctx, sshClient, command, nil, buf, buf, nil)
 	if err != nil {
 		log.Debugf("Failed to setup platform access: %s%v", buf.String(), err)
 	}
-
-	return nil
 }
 
 func (cmd *SSHCmd) startServices(
@@ -521,6 +508,7 @@ func (cmd *SSHCmd) startServices(
 	containerClient *ssh.Client,
 	gitUsername,
 	gitToken string,
+	workspace *provider.Workspace,
 	log log.Logger,
 ) {
 	if cmd.User != "" {
@@ -533,6 +521,7 @@ func (cmd *SSHCmd) startServices(
 			nil,
 			gitUsername,
 			gitToken,
+			workspace,
 			log,
 		)
 		if err != nil {
@@ -735,7 +724,7 @@ func (cmd *SSHCmd) jumpLocalProxyContainer(ctx context.Context, devPodConfig *co
 	}
 
 	go startSSHKeepAlive(ctx, containerClient, cmd.SSHKeepAliveInterval, log)
-
+	go cmd.setupPlatformAccess(ctx, containerClient, log)
 	go func() {
 		if err := cmd.startRunnerServices(ctx, devPodConfig, containerClient, log); err != nil {
 			log.Error(err)

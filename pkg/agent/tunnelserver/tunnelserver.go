@@ -30,11 +30,12 @@ import (
 	"google.golang.org/grpc/reflection"
 )
 
-func RunServicesServer(ctx context.Context, reader io.Reader, writer io.WriteCloser, allowGitCredentials, allowDockerCredentials bool, forwarder netstat.Forwarder, log log.Logger, options ...Option) error {
+func RunServicesServer(ctx context.Context, reader io.Reader, writer io.WriteCloser, allowGitCredentials, allowDockerCredentials bool, forwarder netstat.Forwarder, workspace *provider2.Workspace, log log.Logger, options ...Option) error {
 	opts := append(options, []Option{
 		WithForwarder(forwarder),
 		WithAllowGitCredentials(allowGitCredentials),
 		WithAllowDockerCredentials(allowDockerCredentials),
+		WithWorkspace(workspace),
 	}...)
 	tunnelServ := New(log, opts...)
 
@@ -255,9 +256,17 @@ func (t *tunnelServer) LoftConfig(ctx context.Context, message *tunnel.Message) 
 		return nil, perrors.Wrap(err, "loft platform config request")
 	}
 
-	response, err := loftconfig.Read(loftConfigRequest)
-	if err != nil {
-		return nil, perrors.Wrap(err, "read loft config")
+	var response *loftconfig.LoftConfigResponse
+	if t.workspace != nil {
+		response, err = loftconfig.ReadFromWorkspace(t.workspace)
+		if err != nil {
+			return nil, fmt.Errorf("read loft config: %w", err)
+		}
+	} else {
+		response, err = loftconfig.Read(loftConfigRequest)
+		if err != nil {
+			return nil, fmt.Errorf("read loft config: %w", err)
+		}
 	}
 
 	out, err := json.Marshal(response)

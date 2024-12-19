@@ -14,7 +14,9 @@ const (
 )
 
 type LoftConfigRequest struct {
-	Context  string
+	// Deprecated. Do not use anymore
+	Context string
+	// Deprecated. Do not use anymore
 	Provider string
 }
 
@@ -23,7 +25,25 @@ type LoftConfigResponse struct {
 }
 
 func Read(request *LoftConfigRequest) (*LoftConfigResponse, error) {
-	providerDir, err := provider.GetProviderDir(request.Context, request.Provider)
+	loftConfig, err := readConfig(request.Context, request.Provider)
+	if err != nil {
+		return nil, err
+	}
+
+	return &LoftConfigResponse{LoftConfig: loftConfig}, nil
+}
+
+func ReadFromWorkspace(workspace *provider.Workspace) (*LoftConfigResponse, error) {
+	loftConfig, err := readConfig(workspace.Context, workspace.Provider.Name)
+	if err != nil {
+		return nil, err
+	}
+
+	return &LoftConfigResponse{LoftConfig: loftConfig}, nil
+}
+
+func readConfig(contextName string, providerName string) (*client.Config, error) {
+	providerDir, err := provider.GetProviderDir(contextName, providerName)
 	if err != nil {
 		return nil, err
 	}
@@ -33,7 +53,7 @@ func Read(request *LoftConfigRequest) (*LoftConfigResponse, error) {
 	// Check if given context and provider have Loft Platform configuration
 	if _, err := os.Stat(configPath); os.IsNotExist(err) {
 		// If not just return empty response
-		return &LoftConfigResponse{}, nil
+		return &client.Config{}, nil
 	}
 
 	content, err := os.ReadFile(configPath)
@@ -47,5 +67,5 @@ func Read(request *LoftConfigRequest) (*LoftConfigResponse, error) {
 		return nil, err
 	}
 
-	return &LoftConfigResponse{LoftConfig: loftConfig}, nil
+	return loftConfig, nil
 }

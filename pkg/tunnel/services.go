@@ -20,6 +20,7 @@ import (
 	"github.com/loft-sh/devpod/pkg/gitsshsigning"
 	"github.com/loft-sh/devpod/pkg/ide/openvscode"
 	"github.com/loft-sh/devpod/pkg/netstat"
+	"github.com/loft-sh/devpod/pkg/provider"
 	devssh "github.com/loft-sh/devpod/pkg/ssh"
 	"github.com/loft-sh/log"
 	"github.com/pkg/errors"
@@ -38,6 +39,7 @@ func RunInContainer(
 	extraPorts []string,
 	gitUsername,
 	gitToken string,
+	workspace *provider.Workspace,
 	log log.Logger,
 ) error {
 	// calculate exit after timeout
@@ -98,6 +100,7 @@ func RunInContainer(
 				configureGitCredentials,
 				configureDockerCredentials,
 				forwarder,
+				workspace,
 				log,
 				tunnelserver.WithGitCredentialsOverride(gitUsername, gitToken),
 			)
