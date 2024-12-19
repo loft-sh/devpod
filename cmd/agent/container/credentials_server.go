@@ -3,6 +3,7 @@ package container
 import (
 	"bytes"
 	"context"
+	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"net"
@@ -147,7 +148,11 @@ func (cmd *CredentialsServerCmd) Run(ctx context.Context, port int, runnerPort i
 
 	// configure git ssh signature helper
 	if cmd.GitUserSigningKey != "" {
-		err = gitsshsigning.ConfigureHelper(cmd.User, cmd.GitUserSigningKey, log)
+		decodedKey, err := base64.StdEncoding.DecodeString(cmd.GitUserSigningKey)
+		if err != nil {
+			return fmt.Errorf("decode git ssh signature key: %w", err)
+		}
+		err = gitsshsigning.ConfigureHelper(cmd.User, string(decodedKey), log)
 		if err != nil {
 			return fmt.Errorf("configure git ssh signature helper: %w", err)
 		}
