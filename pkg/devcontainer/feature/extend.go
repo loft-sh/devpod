@@ -110,7 +110,7 @@ _REMOTE_USER=`+remoteUser+"\n"), 0600)
 	dockerfileContent := strings.ReplaceAll(FEATURE_BASE_DOCKERFILE, "#{featureLayer}", getFeatureLayers(containerUser, remoteUser, features))
 	// get build syntax from Dockerfile or use default
 	syntax := "docker.io/docker/dockerfile:1.4"
-	if imageBuildInfo.Dockerfile.Syntax != "" {
+	if imageBuildInfo.Dockerfile != nil && imageBuildInfo.Dockerfile.Syntax != "" {
 		syntax = imageBuildInfo.Dockerfile.Syntax
 	}
 	dockerfilePrefix := fmt.Sprintf(`
