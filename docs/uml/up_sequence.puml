@@ -63,5 +63,20 @@ deactivate ContainerAgent
 Agent --> DevPod: 
 deactivate Agent
 
+alt if using browser based IDE (openvscode, marimo, jupyter)
+DevPod -> ContainerAgent: devpod ssh --reuse-ssh-auth-sock
+end
+
 DevPod -> IDE: Start
+
+alt if using normal IDE (vscode, intilliJ)
+IDE -> ContainerAgent: devpod ssh
+ContainerAgent --> IDE: ssh close
+end
+
+alt if using browser based IDE (openvscode, marimo, jupyter)
+ContainerAgent -> DevPod: ssh close
+end
+
+
 @enduml

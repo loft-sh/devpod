@@ -18,6 +18,7 @@ import (
 	"github.com/loft-sh/devpod/pkg/devcontainer/crane"
 	"github.com/loft-sh/devpod/pkg/devcontainer/sshtunnel"
 	"github.com/loft-sh/devpod/pkg/driver"
+	"github.com/loft-sh/devpod/pkg/ide"
 	provider2 "github.com/loft-sh/devpod/pkg/provider"
 	"github.com/loft-sh/log"
 	"github.com/pkg/errors"
@@ -97,6 +98,9 @@ func (r *runner) setupContainer(
 
 	// ssh tunnel
 	sshTunnelCmd := fmt.Sprintf("'%s' helper ssh-server --stdio", agent.ContainerDevPodHelperLocation)
+	if ide.ReusesAuthSock(r.WorkspaceConfig.Workspace.IDE.Name) {
+		sshTunnelCmd += fmt.Sprintf(" --reuse-ssh-auth-sock=%s", r.WorkspaceConfig.CLIOptions.SSHAuthSockID)
+	}
 	if r.Log.GetLevel() == logrus.DebugLevel {
 		sshTunnelCmd += " --debug"
 	}
