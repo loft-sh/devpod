@@ -1,13 +1,13 @@
-//go:build !linux
+//go:build !windows && !darwin
 
 package zed
 
 import (
 	"context"
 	"fmt"
+	"os/exec"
 
 	"github.com/loft-sh/log"
-	"github.com/skratchdot/open-golang/open"
 
 	"github.com/loft-sh/devpod/pkg/config"
 )
@@ -18,9 +18,10 @@ func Open(ctx context.Context, values map[string]config.OptionValue, userName, w
 
 	sshHost := fmt.Sprintf("%s.devpod/%s", workspaceID, workspaceFolder)
 	openURL := fmt.Sprintf("zed://ssh/%s", sshHost)
-	err := open.Run(openURL)
+	out, err := exec.Command("xdg-open", openURL).CombinedOutput()
 	if err != nil {
 		log.Debugf("Starting Zed caused error: %v", err)
+		log.Debugf("xdg-open %s output: %s", err, openURL, string(out))
 		log.Errorf("Seems like you don't have Zed installed on your computer locally")
 		return err
 	}
