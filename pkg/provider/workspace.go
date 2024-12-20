@@ -16,6 +16,7 @@ var (
 	WorkspaceSourceLocal     = "local:"
 	WorkspaceSourceImage     = "image:"
 	WorkspaceSourceContainer = "container:"
+	WorkspaceSourceUnknown   = "unknown:"
 )
 
 type Workspace struct {
@@ -260,6 +261,28 @@ func (w WorkspaceSource) String() string {
 	}
 
 	return ""
+}
+
+func (w WorkspaceSource) Type() string {
+	if w.GitRepository != "" {
+		if w.GitPRReference != "" {
+			return WorkspaceSourceGit + "pr"
+		} else if w.GitBranch != "" {
+			return WorkspaceSourceGit + "branch"
+		} else if w.GitCommit != "" {
+			return WorkspaceSourceGit + "commit"
+		}
+
+		return WorkspaceSourceGit
+	} else if w.LocalFolder != "" {
+		return WorkspaceSourceLocal
+	} else if w.Image != "" {
+		return WorkspaceSourceImage
+	} else if w.Container != "" {
+		return WorkspaceSourceContainer
+	}
+
+	return WorkspaceSourceUnknown
 }
 
 func ParseWorkspaceSource(source string) *WorkspaceSource {

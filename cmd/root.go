@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
-	"runtime/debug"
 
 	"github.com/loft-sh/devpod/cmd/agent"
 	"github.com/loft-sh/devpod/cmd/context"
@@ -35,8 +34,6 @@ func NewRootCmd() *cobra.Command {
 		SilenceUsage:  true,
 		SilenceErrors: true,
 		PersistentPreRunE: func(cobraCmd *cobra.Command, args []string) error {
-			telemetry.Collector.SetCLIData(cobraCmd, globalFlags)
-
 			if globalFlags.LogOutput == "json" {
 				log2.Default.SetFormat(log2.JSONFormat)
 			} else if globalFlags.LogOutput == "raw" {
@@ -57,6 +54,11 @@ func NewRootCmd() *cobra.Command {
 				_ = os.Setenv(config.DEVPOD_HOME, globalFlags.DevPodHome)
 			}
 
+			devPodConfig, err := config.LoadConfig(globalFlags.Context, globalFlags.Provider)
+			if err == nil {
+				telemetry.StartCLI(devPodConfig, cobraCmd)
+			}
+
 			return nil
 		},
 		PersistentPostRunE: func(cmd *cobra.Command, args []string) error {
@@ -72,21 +74,13 @@ func NewRootCmd() *cobra.Command {
 // Execute adds all child commands to the root command and sets flags appropriately.
 // This is called by main.main(). It only needs to happen once to the rootCmd.
 func Execute() {
-	defer func() {
-		// recover from panic in order to log it via telemetry
-		if err := recover(); err != nil {
-			retErr := fmt.Errorf("panic: %v %s", err, debug.Stack())
-			telemetry.Collector.RecordEndEvent(retErr)
-			log2.Default.Fatal(retErr)
-		}
-	}()
-
 	// build the root command
 	rootCmd := BuildRoot()
 
 	// execute command
 	err := rootCmd.Execute()
-	telemetry.Collector.RecordEndEvent(err)
+	telemetry.CollectorCLI.RecordCLI(err)
+	telemetry.CollectorCLI.Flush()
 	if err != nil {
 		//nolint:all
 		if sshExitErr, ok := err.(*ssh.ExitError); ok {
