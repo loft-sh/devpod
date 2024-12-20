@@ -9,9 +9,7 @@ import (
 	"time"
 
 	"github.com/ghodss/yaml"
-	"github.com/loft-sh/devpod/pkg/telemetry"
 	"github.com/loft-sh/devpod/pkg/types"
-	"github.com/loft-sh/devpod/pkg/version"
 	"github.com/pkg/errors"
 )
 
@@ -270,13 +268,6 @@ func LoadConfig(contextOverride string, providerOverride string) (*Config, error
 	}
 
 	config.Origin = configOrigin
-
-	// make sure to not send telemetry if disabled or in dev mode
-	if config.ContextOption(ContextOptionTelemetry) != "false" && version.GetVersion() != version.DevVersion {
-		go func() {
-			telemetry.Collector.RecordStartEvent(config.Current().DefaultProvider)
-		}()
-	}
 
 	return config, nil
 }

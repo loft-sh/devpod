@@ -35,6 +35,7 @@ import (
 	"github.com/loft-sh/devpod/pkg/port"
 	provider2 "github.com/loft-sh/devpod/pkg/provider"
 	devssh "github.com/loft-sh/devpod/pkg/ssh"
+	"github.com/loft-sh/devpod/pkg/telemetry"
 	"github.com/loft-sh/devpod/pkg/tunnel"
 	"github.com/loft-sh/devpod/pkg/version"
 	workspace2 "github.com/loft-sh/devpod/pkg/workspace"
@@ -86,6 +87,7 @@ func NewUpCmd(f *flags.GlobalFlags) *cobra.Command {
 			if err != nil {
 				return fmt.Errorf("prepare workspace client: %w", err)
 			}
+			telemetry.CollectorCLI.SetClient(client)
 
 			return cmd.Run(ctx, devPodConfig, client, logger)
 		},
