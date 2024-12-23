@@ -3,16 +3,16 @@
   "build": {
     "dockerfile": "Dockerfile"
   },
+  "remoteUser": "vscode",
   "features": {
     "ghcr.io/devcontainers/features/docker-in-docker:2": {
       "version": "latest"
+    },
+    "ghcr.io/devcontainers/features/kubectl-helm-minikube:1": {
+      "version": "latest"
+    },
+    "ghcr.io/dhoeric/features/k9s:1": {
+      "version": "latest"
     }
-  },
-  "mounts": [
-    {
-      "type": "volume",
-      "source": "devpod",
-      "target": "/home/vscode"
-    }
-  ]
+  }
 }
