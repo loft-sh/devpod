@@ -9,6 +9,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"slices"
 	"strconv"
 	"strings"
 
@@ -64,8 +65,10 @@ type UpCmd struct {
 
 	SSHConfigPath string
 
-	DotfilesSource string
-	DotfilesScript string
+	DotfilesSource        string
+	DotfilesScript        string
+	DotfilesScriptEnv     []string // Key=Value to pass to install script
+	DotfilesScriptEnvFile []string // Paths to files containing Key=Value pairs to pass to install script
 }
 
 // NewUpCmd creates a new up command
@@ -98,6 +101,8 @@ func NewUpCmd(f *flags.GlobalFlags) *cobra.Command {
 	upCmd.Flags().StringVar(&cmd.SSHConfigPath, "ssh-config", "", "The path to the ssh config to modify, if empty will use ~/.ssh/config")
 	upCmd.Flags().StringVar(&cmd.DotfilesSource, "dotfiles", "", "The path or url to the dotfiles to use in the container")
 	upCmd.Flags().StringVar(&cmd.DotfilesScript, "dotfiles-script", "", "The path in dotfiles directory to use to install the dotfiles, if empty will try to guess")
+	upCmd.Flags().StringSliceVar(&cmd.DotfilesScriptEnv, "dotfiles-script-env", []string{}, "Extra environment variables to put into the dotfiles install script. E.g. MY_ENV_VAR=MY_VALUE")
+	upCmd.Flags().StringSliceVar(&cmd.DotfilesScriptEnvFile, "dotfiles-script-env-file", []string{}, "The path to files containing environment variables to set for the dotfiles install script")
 	upCmd.Flags().StringArrayVar(&cmd.IDEOptions, "ide-option", []string{}, "IDE option in the form KEY=VALUE")
 	upCmd.Flags().StringVar(&cmd.DevContainerImage, "devcontainer-image", "", "The container image to use, this will override the devcontainer.json value in the project")
 	upCmd.Flags().StringVar(&cmd.DevContainerPath, "devcontainer-path", "", "The path to the devcontainer.json relative to the project")
@@ -202,7 +207,7 @@ func (cmd *UpCmd) Run(
 	}
 
 	// setup dotfiles in the container
-	err = setupDotfiles(cmd.DotfilesSource, cmd.DotfilesScript, client, devPodConfig, log)
+	err = setupDotfiles(cmd.DotfilesSource, cmd.DotfilesScript, cmd.DotfilesScriptEnvFile, cmd.DotfilesScriptEnv, client, devPodConfig, log)
 	if err != nil {
 		return err
 	}
@@ -993,6 +998,7 @@ func createSSHCommand(
 
 func setupDotfiles(
 	dotfiles, script string,
+	envFiles, envKeyValuePairs []string,
 	client client2.BaseWorkspaceClient,
 	devPodConfig *config.Config,
 	log log.Logger,
@@ -1015,50 +1021,10 @@ func setupDotfiles(
 	log.Infof("Dotfiles git repository %s specified", dotfilesRepo)
 	log.Debug("Cloning dotfiles into the devcontainer...")
 
-	execPath, err := os.Executable()
+	dotCmd, err := buildDotCmd(dotfilesRepo, dotfilesScript, envFiles, envKeyValuePairs, devPodConfig, client, log)
 	if err != nil {
 		return err
 	}
-
-	agentArguments := []string{
-		"agent",
-		"workspace",
-		"install-dotfiles",
-		"--repository",
-		dotfilesRepo,
-	}
-
-	if log.GetLevel() == logrus.DebugLevel {
-		agentArguments = append(agentArguments, "--debug")
-	}
-
-	if dotfilesScript != "" {
-		log.Infof("Dotfiles script %s specified", dotfilesScript)
-
-		agentArguments = append(agentArguments, "--install-script")
-		agentArguments = append(agentArguments, dotfilesScript)
-	}
-
-	remoteUser, err := devssh.GetUser(client.WorkspaceConfig().ID, client.WorkspaceConfig().SSHConfigPath)
-	if err != nil {
-		remoteUser = "root"
-	}
-
-	dotCmd := exec.Command(
-		execPath,
-		"ssh",
-		"--agent-forwarding=true",
-		"--start-services=true",
-		"--user",
-		remoteUser,
-		"--context",
-		client.Context(),
-		client.Workspace(),
-		"--log-output=raw",
-		"--command",
-		agent.ContainerDevPodHelperLocation+" "+strings.Join(agentArguments, " "),
-	)
-
 	if log.GetLevel() == logrus.DebugLevel {
 		dotCmd.Args = append(dotCmd.Args, "--debug")
 	}
@@ -1078,6 +1044,100 @@ func setupDotfiles(
 	log.Infof("Done setting up dotfiles into the devcontainer")
 
 	return nil
+}
+
+func buildDotCmdAgentArguments(dotfilesRepo, dotfilesScript string, log log.Logger) []string {
+	agentArguments := []string{
+		"agent",
+		"workspace",
+		"install-dotfiles",
+		"--repository",
+		dotfilesRepo,
+	}
+
+	if log.GetLevel() == logrus.DebugLevel {
+		agentArguments = append(agentArguments, "--debug")
+	}
+
+	if dotfilesScript != "" {
+		log.Infof("Dotfiles script %s specified", dotfilesScript)
+		agentArguments = append(agentArguments, "--install-script", dotfilesScript)
+	}
+
+	return agentArguments
+}
+
+func buildDotCmd(dotfilesRepo, dotfilesScript string, envFiles, envKeyValuePairs []string, devPodConfig *config.Config, client client2.BaseWorkspaceClient, log log.Logger) (*exec.Cmd, error) {
+	sshCmd := []string{
+		"ssh",
+		"--agent-forwarding=true",
+		"--start-services=true",
+	}
+
+	envFilesKeyValuePairs, err := collectDotfilesScriptEnvKeyvaluePairs(envFiles)
+	if err != nil {
+		return nil, err
+	}
+
+	// Collect file-based and CLI options env variables names (aka keys) and
+	// configure ssh env var passthrough with send-env
+	allEnvKeyValuesPairs := slices.Concat(envFilesKeyValuePairs, envKeyValuePairs)
+	allEnvKeys := extractKeysFromEnvKeyValuePairs(allEnvKeyValuesPairs)
+	for _, envKey := range allEnvKeys {
+		sshCmd = append(sshCmd, "--send-env", envKey)
+	}
+
+	remoteUser, err := devssh.GetUser(client.WorkspaceConfig().ID, client.WorkspaceConfig().SSHConfigPath)
+	if err != nil {
+		remoteUser = "root"
+	}
+
+	agentArguments := buildDotCmdAgentArguments(dotfilesRepo, dotfilesScript, log)
+	sshCmd = append(sshCmd,
+		"--user",
+		remoteUser,
+		"--context",
+		client.Context(),
+		client.Workspace(),
+		"--log-output=raw",
+		"--command",
+		agent.ContainerDevPodHelperLocation+" "+strings.Join(agentArguments, " "),
+	)
+	execPath, err := os.Executable()
+	if err != nil {
+		return nil, err
+	}
+
+	dotCmd := exec.Command(
+		execPath,
+		sshCmd...,
+	)
+
+	dotCmd.Env = append(os.Environ(), allEnvKeyValuesPairs...)
+	return dotCmd, nil
+}
+
+func extractKeysFromEnvKeyValuePairs(envKeyValuePairs []string) []string {
+	keys := []string{}
+	for _, env := range envKeyValuePairs {
+		keyValue := strings.SplitN(env, "=", 2)
+		if len(keyValue) == 2 {
+			keys = append(keys, keyValue[0])
+		}
+	}
+	return keys
+}
+
+func collectDotfilesScriptEnvKeyvaluePairs(envFiles []string) ([]string, error) {
+	keyValues := []string{}
+	for _, file := range envFiles {
+		envFromFile, err := config2.ParseKeyValueFile(file)
+		if err != nil {
+			return nil, err
+		}
+		keyValues = append(keyValues, envFromFile...)
+	}
+	return keyValues, nil
 }
 
 func setupGitSSHSignature(signingKey string, client client2.BaseWorkspaceClient, log log.Logger) error {
