@@ -2,6 +2,10 @@
 
 set -e
 
+if [[ -z "${TMPDIR}" ]]; then
+    TMPDIR="/tmp"
+fi
+
 if [[ -z "${BUILD_PLATFORMS}" ]]; then
     BUILD_PLATFORMS="linux windows darwin"
 fi
