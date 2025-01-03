@@ -1,0 +1,2 @@
+rootProject.name = 'DevPod'
+include ':app'
