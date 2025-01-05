@@ -47,7 +47,7 @@ Below you can find an example of the payload that DevPod CLI would send to our t
 
 ### Telemetry opt-out process
 
-To disable the telemetry execute the following command:
+To disable the telemetry, set the environment variable `DEVPOD_DISABLE_TELEMETRY=true`. It can also be opted out for individual context by executing the following command:
 
 ```bash
 devpod context set-options -o TELEMETRY=false
