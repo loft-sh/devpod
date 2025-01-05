@@ -26,7 +26,6 @@ import (
 	"github.com/loft-sh/devpod/pkg/platform/project"
 	"github.com/loft-sh/devpod/pkg/version"
 	"github.com/loft-sh/log"
-	"github.com/mitchellh/go-homedir"
 	perrors "github.com/pkg/errors"
 	"github.com/skratchdot/open-golang/open"
 	"k8s.io/client-go/rest"
@@ -48,7 +47,7 @@ const (
 )
 
 func init() {
-	hd, _ := homedir.Dir()
+	hd, _ := os.UserHomeDir()
 	if folder, ok := os.LookupEnv("LOFT_CACHE_FOLDER"); ok {
 		CacheFolder = filepath.Join(hd, folder)
 	} else {

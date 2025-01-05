@@ -1,14 +1,13 @@
 package command
 
 import (
+	"os"
 	"os/user"
-
-	"github.com/mitchellh/go-homedir"
 )
 
 func GetHome(userName string) (string, error) {
 	if userName == "" {
-		return homedir.Dir()
+		return os.UserHomeDir()
 	}
 
 	u, err := user.Lookup(userName)

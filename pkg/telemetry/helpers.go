@@ -4,9 +4,9 @@ import (
 	"crypto/hmac"
 	"crypto/sha256"
 	"fmt"
+	"os"
 
 	"github.com/denisbrodbeck/machineid"
-	"github.com/mitchellh/go-homedir"
 )
 
 // GetMachineID retrieves machine ID and encodes it together with users $HOME path and
@@ -19,7 +19,7 @@ func GetMachineID() string {
 
 	// get $HOME to distinguish two users on the same machine
 	// will be hashed later together with the ID
-	home, err := homedir.Dir()
+	home, err := os.UserHomeDir()
 	if err != nil {
 		home = "error"
 	}

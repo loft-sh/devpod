@@ -3,8 +3,6 @@ package config
 import (
 	"os"
 	"path/filepath"
-
-	homedir "github.com/mitchellh/go-homedir"
 )
 
 // Override devpod home
@@ -19,7 +17,7 @@ func GetConfigDir() (string, error) {
 		return homeDir, nil
 	}
 
-	homeDir, err := homedir.Dir()
+	homeDir, err := os.UserHomeDir()
 	if err != nil {
 		return "", err
 	}

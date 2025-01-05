@@ -16,7 +16,6 @@ import (
 	"github.com/loft-sh/devpod/pkg/gitcredentials"
 	provider2 "github.com/loft-sh/devpod/pkg/provider"
 	"github.com/loft-sh/log"
-	"github.com/mitchellh/go-homedir"
 	"github.com/moby/patternmatcher/ignorefile"
 )
 
@@ -50,7 +49,7 @@ func findDir(agentFolder string, validate func(path string) bool) string {
 	}
 
 	// check home folder first
-	homeDir, _ := homedir.Dir()
+	homeDir, _ := os.UserHomeDir()
 	if homeDir != "" {
 		homeDir = filepath.Join(homeDir, ".devpod", "agent")
 		if validate(homeDir) {

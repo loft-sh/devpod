@@ -13,7 +13,6 @@ import (
 
 	"github.com/loft-sh/log"
 	"github.com/loft-sh/log/scanner"
-	"github.com/mitchellh/go-homedir"
 	"github.com/pkg/errors"
 )
 
@@ -186,7 +185,7 @@ func writeSSHConfig(path, content string, log log.Logger) error {
 }
 
 func ResolveSSHConfigPath(sshConfigPath string) (string, error) {
-	homeDir, err := homedir.Dir()
+	homeDir, err := os.UserHomeDir()
 	if err != nil {
 		return "", errors.Wrap(err, "get home dir")
 	}

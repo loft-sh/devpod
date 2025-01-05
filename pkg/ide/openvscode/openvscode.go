@@ -17,7 +17,6 @@ import (
 	"github.com/loft-sh/devpod/pkg/ide/vscode"
 	"github.com/loft-sh/devpod/pkg/single"
 	"github.com/loft-sh/log"
-	"github.com/mitchellh/go-homedir"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 )
@@ -280,7 +279,7 @@ func prepareOpenVSCodeServerLocation(userName string) (string, error) {
 	if userName != "" {
 		homeFolder, err = command.GetHome(userName)
 	} else {
-		homeFolder, err = homedir.Dir()
+		homeFolder, err = os.UserHomeDir()
 	}
 	if err != nil {
 		return "", err

@@ -5,12 +5,12 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"fmt"
+	"os"
 	"strings"
 
 	"github.com/denisbrodbeck/machineid"
 	"github.com/google/uuid"
 	"github.com/loft-sh/log"
-	"github.com/mitchellh/go-homedir"
 )
 
 const (
@@ -81,7 +81,7 @@ func GetMachineUID(log log.Logger) string {
 	}
 	// get $HOME to distinguish two users on the same machine
 	// will be hashed later together with the ID
-	home, err := homedir.Dir()
+	home, err := os.UserHomeDir()
 	if err != nil {
 		home = "error"
 		if log != nil {
