@@ -183,7 +183,7 @@ func (c *ContainerTunnel) updateConfig(ctx context.Context, sshClient *ssh.Clien
 	}
 }
 
-// runInContainer uses the connected SSH client to execute runInContainer on the remote
+// runInContainer uses the connected SSH client to execute handler on the remote
 func (c *ContainerTunnel) runInContainer(ctx context.Context, sshClient *ssh.Client, handler Handler, envVars map[string]string) error {
 	// compress info
 	workspaceInfo, _, err := c.client.AgentInfo(provider.CLIOptions{Proxy: c.proxy})
