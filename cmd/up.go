@@ -1069,8 +1069,6 @@ func createSSHCommand(
 	}
 	args = append(args, extraArgs...)
 
-	logger.Debug("Connecting with SSH command ", execPath, args)
-
 	return exec.CommandContext(ctx, execPath, args...), nil
 }
 
