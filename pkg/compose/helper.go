@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"os"
 	"os/exec"
 	"regexp"
 	"strings"
@@ -190,6 +191,10 @@ func (h *ComposeHelper) FindProjectFiles(ctx context.Context, projectName string
 }
 
 func (h *ComposeHelper) GetProjectName(runnerID string) string {
+	// Check for project name override - https://docs.docker.com/compose/how-tos/project-name/
+	if projectNameOverride := os.Getenv("COMPOSE_PROJECT_NAME"); projectNameOverride != "" {
+		return projectNameOverride
+	}
 	return h.toProjectName(runnerID)
 }
 
