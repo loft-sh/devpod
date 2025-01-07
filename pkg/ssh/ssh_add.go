@@ -10,6 +10,7 @@ import (
 
 	"github.com/loft-sh/devpod/pkg/command"
 	devsshagent "github.com/loft-sh/devpod/pkg/ssh/agent"
+	"github.com/loft-sh/devpod/pkg/util"
 	"github.com/loft-sh/log"
 	"golang.org/x/crypto/ssh"
 )
@@ -40,7 +41,7 @@ func AddPrivateKeysToAgent(ctx context.Context, log log.Logger) error {
 }
 
 func FindPrivateKeys() ([]string, error) {
-	homeDir, err := os.UserHomeDir()
+	homeDir, err := util.UserHomeDir()
 	if err != nil {
 		return nil, err
 	}

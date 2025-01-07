@@ -4,9 +4,9 @@ import (
 	"crypto/hmac"
 	"crypto/sha256"
 	"fmt"
-	"os"
 
 	"github.com/denisbrodbeck/machineid"
+	"github.com/loft-sh/devpod/pkg/util"
 )
 
 // GetMachineID retrieves machine ID and encodes it together with users $HOME path and
@@ -19,7 +19,7 @@ func GetMachineID() string {
 
 	// get $HOME to distinguish two users on the same machine
 	// will be hashed later together with the ID
-	home, err := os.UserHomeDir()
+	home, err := util.UserHomeDir()
 	if err != nil {
 		home = "error"
 	}

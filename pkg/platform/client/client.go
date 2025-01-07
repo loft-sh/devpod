@@ -24,6 +24,7 @@ import (
 
 	"github.com/loft-sh/devpod/pkg/platform/kube"
 	"github.com/loft-sh/devpod/pkg/platform/project"
+	"github.com/loft-sh/devpod/pkg/util"
 	"github.com/loft-sh/devpod/pkg/version"
 	"github.com/loft-sh/log"
 	perrors "github.com/pkg/errors"
@@ -47,7 +48,7 @@ const (
 )
 
 func init() {
-	hd, _ := os.UserHomeDir()
+	hd, _ := util.UserHomeDir()
 	if folder, ok := os.LookupEnv("LOFT_CACHE_FOLDER"); ok {
 		CacheFolder = filepath.Join(hd, folder)
 	} else {

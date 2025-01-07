@@ -12,6 +12,7 @@ import (
 	"sync"
 
 	"github.com/loft-sh/devpod/pkg/provider"
+	"github.com/loft-sh/devpod/pkg/util"
 
 	"github.com/pkg/errors"
 	"golang.org/x/crypto/ssh"
@@ -79,7 +80,7 @@ func GetPrivateKeyRaw(context, workspaceID string) ([]byte, error) {
 }
 
 func GetDevPodKeysDir() string {
-	dir, err := os.UserHomeDir()
+	dir, err := util.UserHomeDir()
 	if err == nil {
 		tempDir := filepath.Join(dir, ".devpod", "keys")
 		err = os.MkdirAll(tempDir, 0755)

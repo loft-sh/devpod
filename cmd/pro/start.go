@@ -29,6 +29,7 @@ import (
 	proflags "github.com/loft-sh/devpod/cmd/pro/flags"
 	"github.com/loft-sh/devpod/pkg/platform"
 	"github.com/loft-sh/devpod/pkg/platform/client"
+	"github.com/loft-sh/devpod/pkg/util"
 	"github.com/loft-sh/log"
 	"github.com/loft-sh/log/hash"
 	"github.com/loft-sh/log/scanner"
@@ -1692,7 +1693,7 @@ func getMachineUID(log log.Logger) string {
 	}
 	// get $HOME to distinguish two users on the same machine
 	// will be hashed later together with the ID
-	home, err := os.UserHomeDir()
+	home, err := util.UserHomeDir()
 	if err != nil {
 		home = "error"
 		if log != nil {

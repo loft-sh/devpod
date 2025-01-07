@@ -3,6 +3,8 @@ package config
 import (
 	"os"
 	"path/filepath"
+
+	"github.com/loft-sh/devpod/pkg/util"
 )
 
 // Override devpod home
@@ -17,7 +19,7 @@ func GetConfigDir() (string, error) {
 		return homeDir, nil
 	}
 
-	homeDir, err := os.UserHomeDir()
+	homeDir, err := util.UserHomeDir()
 	if err != nil {
 		return "", err
 	}
