@@ -23,8 +23,8 @@ const (
 // WARN: Make sure this matches the regex in /desktop/src/views/Workspaces/CreateWorkspace/CreateWorkspaceInput.tsx!
 var (
 	// Updated regex pattern to support SSH-style Git URLs
-	repoBaseRegEx    = `((?:(?:https?|git|ssh|file):\/\/)?\/?(?:[^@\/\n]+@)?(?:[^:\/\n]+)(?:[:\/][^\/\n]+)+(?:\.git)?)`
-	branchRegEx      = regexp.MustCompile(`^` + repoBaseRegEx + `@([a-zA-Z0-9\./\-\_]+)$`)
+	repoBaseRegEx    = `((?:(?:https?|git|ssh|file):\/\/)?(?:[^:@\/\n]+(?::[^@\/\n]+)?@)?(?:[^:\/\n]+|(?:\/[^\/\n]+)+)(?:[:\/][^\/\n]+)+(?:\.git))`
+	branchRegEx      = regexp.MustCompile(`^` + repoBaseRegEx + `(?:@([a-zA-Z0-9\./\-\_]+))?$`)
 	commitRegEx      = regexp.MustCompile(`^` + repoBaseRegEx + regexp.QuoteMeta(CommitDelimiter) + `([a-zA-Z0-9]+)$`)
 	prReferenceRegEx = regexp.MustCompile(`^` + repoBaseRegEx + `@(` + PullRequestReference + `)$`)
 	subPathRegEx     = regexp.MustCompile(`^` + repoBaseRegEx + regexp.QuoteMeta(SubPathDelimiter) + `([a-zA-Z0-9\./\-\_]+)$`)
@@ -58,17 +58,8 @@ func NormalizeRepository(str string) (string, string, string, string, string) {
 	// resolve branch
 	branch := ""
 	if match := branchRegEx.FindStringSubmatch(str); match != nil {
-		// Check if basic auth is used, if so concat the user info and URL
-		if strings.Contains(match[1], ":") {
-			str = match[1] + "@" + match[2]
-			if innerMatch := branchRegEx.FindStringSubmatch(str); innerMatch != nil {
-				str = innerMatch[1]
-				branch = innerMatch[2]
-			}
-		} else {
-			str = match[1]
-			branch = match[2]
-		}
+		str = match[1]
+		branch = match[2]
 	}
 
 	// resolve commit hash
