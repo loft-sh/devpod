@@ -58,8 +58,17 @@ func NormalizeRepository(str string) (string, string, string, string, string) {
 	// resolve branch
 	branch := ""
 	if match := branchRegEx.FindStringSubmatch(str); match != nil {
-		str = match[1]
-		branch = match[2]
+		// Check if basic auth is used, if so concat the user info and URL
+		if strings.Contains(match[1], ":") {
+			str = match[1] + "@" + match[2]
+			if innerMatch := branchRegEx.FindStringSubmatch(str); innerMatch != nil {
+				str = innerMatch[1]
+				branch = innerMatch[2]
+			}
+		} else {
+			str = match[1]
+			branch = match[2]
+		}
 	}
 
 	// resolve commit hash
