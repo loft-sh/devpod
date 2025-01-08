@@ -426,10 +426,12 @@ func (r *runner) buildAndExtendDockerCompose(
 		} else {
 			dockerFilePath = filepath.Join(composeService.Build.Context, composeService.Build.Dockerfile)
 		}
+
 		originalDockerfile, err := os.ReadFile(dockerFilePath)
 		if err != nil {
 			return "", "", nil, "", err
 		}
+
 		// Determine build target, if a multi stage build ensure it is valid and modify the Dockerfile if necessary
 		originalTarget := composeService.Build.Target
 		if originalTarget != "" {
@@ -439,6 +441,7 @@ func (r *runner) buildAndExtendDockerCompose(
 			if err != nil {
 				return "", "", nil, "", err
 			}
+
 			buildTarget = lastStageName
 			// Override Dockerfile if it was modified, otherwise use the original
 			if modifiedDockerfile != "" {
@@ -468,6 +471,7 @@ func (r *runner) buildAndExtendDockerCompose(
 		if dockerfileContents == "" {
 			dockerfileContents = fmt.Sprintf("FROM %s AS %s\n", composeService.Image, buildTarget)
 		}
+
 		// Write the final Dockerfile with features
 		extendedDockerfilePath, extendedDockerfileContent := r.extendedDockerfile(
 			extendImageBuildInfo.FeaturesBuildInfo,
@@ -486,6 +490,7 @@ func (r *runner) buildAndExtendDockerCompose(
 		if err != nil {
 			return "", "", nil, "", errors.Wrap(err, "write Dockerfile with features")
 		}
+
 		// Write the final docker-compose referencing the modified Dockerfile or Image
 		dockerComposeFilePath, err = r.extendedDockerComposeBuild(
 			composeService,
@@ -496,6 +501,7 @@ func (r *runner) buildAndExtendDockerCompose(
 			return buildImageName, "", nil, "", err
 		}
 	}
+
 	// Prepare the docker-compose build arguments
 	buildArgs := []string{"--project-name", project.Name}
 	buildArgs = append(buildArgs, globalArgs...)
@@ -506,6 +512,7 @@ func (r *runner) buildAndExtendDockerCompose(
 	if extendImageBuildInfo == nil {
 		buildArgs = append(buildArgs, "--pull")
 	}
+
 	// Only run the services defined in .devcontainer.json runServices
 	if len(parsedConfig.Config.RunServices) > 0 {
 		buildArgs = append(buildArgs, composeService.Name)
