@@ -98,7 +98,7 @@ func (s *Server) start() error {
 		runCommand := fmt.Sprintf("marimo edit --headless --host 0.0.0.0 --port %s --token-password %s", strconv.Itoa(DefaultServerPort), token)
 		args := []string{}
 		if s.userName != "" {
-			args = append(args, "su", s.userName, "-l", "-c", runCommand)
+			args = append(args, "su", s.userName, "-w", "SSH_AUTH_SOCK", "-l", "-c", runCommand)
 		} else {
 			args = append(args, "sh", "-l", "-c", runCommand)
 		}

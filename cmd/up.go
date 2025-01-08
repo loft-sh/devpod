@@ -23,6 +23,7 @@ import (
 	config2 "github.com/loft-sh/devpod/pkg/devcontainer/config"
 	"github.com/loft-sh/devpod/pkg/devcontainer/sshtunnel"
 	dpFlags "github.com/loft-sh/devpod/pkg/flags"
+	"github.com/loft-sh/devpod/pkg/ide"
 	"github.com/loft-sh/devpod/pkg/ide/fleet"
 	"github.com/loft-sh/devpod/pkg/ide/jetbrains"
 	"github.com/loft-sh/devpod/pkg/ide/jupyter"
@@ -37,6 +38,7 @@ import (
 	devssh "github.com/loft-sh/devpod/pkg/ssh"
 	"github.com/loft-sh/devpod/pkg/telemetry"
 	"github.com/loft-sh/devpod/pkg/tunnel"
+	"github.com/loft-sh/devpod/pkg/util"
 	"github.com/loft-sh/devpod/pkg/version"
 	workspace2 "github.com/loft-sh/devpod/pkg/workspace"
 	"github.com/loft-sh/log"
@@ -153,6 +155,19 @@ func (cmd *UpCmd) Run(
 		cmd.Recreate = true
 	}
 
+	// check if we are a browser IDE and need to reuse the SSH_AUTH_SOCK
+	targetIDE := client.WorkspaceConfig().IDE.Name
+	// Check override
+	if cmd.IDE != "" {
+		targetIDE = cmd.IDE
+	}
+	if !cmd.Proxy && ide.ReusesAuthSock(targetIDE) {
+		cmd.SSHAuthSockID = util.RandStringBytes(10)
+		log.Debug("Reusing SSH_AUTH_SOCK", cmd.SSHAuthSockID)
+	} else if cmd.Proxy && ide.ReusesAuthSock(targetIDE) {
+		log.Debug("Reusing SSH_AUTH_SOCK is not supported with proxy mode, consider launching the IDE from the platform UI")
+	}
+
 	// run devpod agent up
 	result, err := cmd.devPodUp(ctx, devPodConfig, client, log)
 	if err != nil {
@@ -267,6 +282,7 @@ func (cmd *UpCmd) Run(
 				ideConfig.Options,
 				cmd.GitUsername,
 				cmd.GitToken,
+				cmd.SSHAuthSockID,
 				log,
 			)
 		case string(config.IDERustRover):
@@ -303,6 +319,7 @@ func (cmd *UpCmd) Run(
 				ideConfig.Options,
 				cmd.GitUsername,
 				cmd.GitToken,
+				cmd.SSHAuthSockID,
 				log,
 			)
 		case string(config.IDEJupyterDesktop):
@@ -315,6 +332,7 @@ func (cmd *UpCmd) Run(
 				ideConfig.Options,
 				cmd.GitUsername,
 				cmd.GitToken,
+				cmd.SSHAuthSockID,
 				log)
 		case string(config.IDEMarimo):
 			return startMarimoInBrowser(
@@ -326,6 +344,7 @@ func (cmd *UpCmd) Run(
 				ideConfig.Options,
 				cmd.GitUsername,
 				cmd.GitToken,
+				cmd.SSHAuthSockID,
 				log)
 		}
 	}
@@ -552,7 +571,7 @@ func startMarimoInBrowser(
 	client client2.BaseWorkspaceClient,
 	user string,
 	ideOptions map[string]config.OptionValue,
-	gitUsername, gitToken string,
+	gitUsername, gitToken, authSockID string,
 	logger log.Logger,
 ) error {
 	if forwardGpg {
@@ -599,6 +618,7 @@ func startMarimoInBrowser(
 		extraPorts,
 		gitUsername,
 		gitToken,
+		authSockID,
 		logger,
 	)
 }
@@ -610,7 +630,7 @@ func startJupyterNotebookInBrowser(
 	client client2.BaseWorkspaceClient,
 	user string,
 	ideOptions map[string]config.OptionValue,
-	gitUsername, gitToken string,
+	gitUsername, gitToken, authSockID string,
 	logger log.Logger,
 ) error {
 	if forwardGpg {
@@ -657,6 +677,7 @@ func startJupyterNotebookInBrowser(
 		extraPorts,
 		gitUsername,
 		gitToken,
+		authSockID,
 		logger,
 	)
 }
@@ -668,7 +689,7 @@ func startJupyterDesktop(
 	client client2.BaseWorkspaceClient,
 	user string,
 	ideOptions map[string]config.OptionValue,
-	gitUsername, gitToken string,
+	gitUsername, gitToken, authSockID string,
 	logger log.Logger,
 ) error {
 	if forwardGpg {
@@ -712,6 +733,7 @@ func startJupyterDesktop(
 		extraPorts,
 		gitUsername,
 		gitToken,
+		authSockID,
 		logger,
 	)
 }
@@ -758,7 +780,7 @@ func startVSCodeInBrowser(
 	client client2.BaseWorkspaceClient,
 	workspaceFolder, user string,
 	ideOptions map[string]config.OptionValue,
-	gitUsername, gitToken string,
+	gitUsername, gitToken, authSockID string,
 	logger log.Logger,
 ) error {
 	if forwardGpg {
@@ -806,6 +828,7 @@ func startVSCodeInBrowser(
 		extraPorts,
 		gitUsername,
 		gitToken,
+		authSockID,
 		logger,
 	)
 }
@@ -841,6 +864,55 @@ func parseAddressAndPort(bindAddressOption string, defaultPort int) (string, int
 	return address, portName, nil
 }
 
+// setupBackhaul sets up a long running command in the container to ensure an SSH connection is kept alive
+func setupBackhaul(client client2.BaseWorkspaceClient, authSockId string, log log.Logger) error {
+	execPath, err := os.Executable()
+	if err != nil {
+		return err
+	}
+
+	remoteUser, err := devssh.GetUser(client.WorkspaceConfig().ID, client.WorkspaceConfig().SSHConfigPath)
+	if err != nil {
+		remoteUser = "root"
+	}
+
+	dotCmd := exec.Command(
+		execPath,
+		"ssh",
+		"--agent-forwarding=true",
+		fmt.Sprintf("--reuse-ssh-auth-sock=%s", authSockId),
+		"--start-services=false",
+		"--user",
+		remoteUser,
+		"--context",
+		client.Context(),
+		client.Workspace(),
+		"--log-output=raw",
+		"--command",
+		"while true; do sleep 6000000; done", // sleep infinity is not available on all systems
+	)
+
+	if log.GetLevel() == logrus.DebugLevel {
+		dotCmd.Args = append(dotCmd.Args, "--debug")
+	}
+
+	log.Info("Setting up backhaul SSH connection")
+
+	writer := log.Writer(logrus.InfoLevel, false)
+
+	dotCmd.Stdout = writer
+	dotCmd.Stderr = writer
+
+	err = dotCmd.Run()
+	if err != nil {
+		return err
+	}
+
+	log.Infof("Done setting up backhaul")
+
+	return nil
+}
+
 func startBrowserTunnel(
 	ctx context.Context,
 	devPodConfig *config.Config,
@@ -848,9 +920,19 @@ func startBrowserTunnel(
 	user, targetURL string,
 	forwardPorts bool,
 	extraPorts []string,
-	gitUsername, gitToken string,
+	gitUsername, gitToken, authSockID string,
 	logger log.Logger,
 ) error {
+	// Setup a backhaul SSH connection using the remote user so there is an AUTH SOCK to use
+	// With normal IDEs this would be the SSH connection made by the IDE
+	// authSockID is not set when in proxy mode since we cannot use the proxies ssh-agent
+	if authSockID != "" {
+		go func() {
+			if err := setupBackhaul(client, authSockID, logger); err != nil {
+				logger.Error("Failed to setup backhaul SSH connection: ", err)
+			}
+		}()
+	}
 	err := tunnel.NewTunnel(
 		ctx,
 		func(ctx context.Context, stdin io.Reader, stdout io.Writer) error {
@@ -859,6 +941,7 @@ func startBrowserTunnel(
 
 			cmd, err := createSSHCommand(ctx, client, logger, []string{
 				"--log-output=raw",
+				fmt.Sprintf("--reuse-ssh-auth-sock=%s", authSockID),
 				"--stdio",
 			})
 			if err != nil {
@@ -880,7 +963,7 @@ func startBrowserTunnel(
 			}
 
 			// run in container
-			err := tunnel.RunInContainer(
+			err := tunnel.RunServices(
 				ctx,
 				devPodConfig,
 				containerClient,

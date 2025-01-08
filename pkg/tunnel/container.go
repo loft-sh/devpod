@@ -1,3 +1,6 @@
+// Package tunnel provides the functions used by the CLI to tunnel into a container using either
+// a tunneled connection from the workspace client (using a machine provider) or a direct SSH connection
+// from the proxy client (Ssh, k8s or docker provider)
 package tunnel
 
 import (
@@ -19,9 +22,11 @@ import (
 	"golang.org/x/crypto/ssh"
 )
 
-func NewContainerTunnel(client client.WorkspaceClient, proxy bool, log log.Logger) *ContainerHandler {
+// NewContainerTunnel constructs a ContainerTunnel using the workspace client, if proxy is True then
+// the workspace's agent config is not periodically updated
+func NewContainerTunnel(client client.WorkspaceClient, proxy bool, log log.Logger) *ContainerTunnel {
 	updateConfigInterval := time.Second * 30
-	return &ContainerHandler{
+	return &ContainerTunnel{
 		client:               client,
 		updateConfigInterval: updateConfigInterval,
 		proxy:                proxy,
@@ -29,16 +34,19 @@ func NewContainerTunnel(client client.WorkspaceClient, proxy bool, log log.Logge
 	}
 }
 
-type ContainerHandler struct {
+// ContainerTunnel manages the state of the tunnel to the container
+type ContainerTunnel struct {
 	client               client.WorkspaceClient
 	updateConfigInterval time.Duration
 	proxy                bool
 	log                  log.Logger
 }
 
+// Handler defines what to do once the tunnel has a client established
 type Handler func(ctx context.Context, containerClient *ssh.Client) error
 
-func (c *ContainerHandler) Run(ctx context.Context, handler Handler, cfg *config.Config, envVars map[string]string) error {
+// Run creates an "outer" tunnel to the host to start the SSH server so that the "inner" tunnel can connect to the container over SSH
+func (c *ContainerTunnel) Run(ctx context.Context, handler Handler, cfg *config.Config, envVars map[string]string) error {
 	if handler == nil {
 		return nil
 	}
@@ -118,7 +126,7 @@ func (c *ContainerHandler) Run(ctx context.Context, handler Handler, cfg *config
 		}
 
 		// wait until we are done
-		if err := c.runRunInContainer(cancelCtx, sshClient, handler, envVars); err != nil {
+		if err := c.runInContainer(cancelCtx, sshClient, handler, envVars); err != nil {
 			containerChan <- fmt.Errorf("run in container: %w", err)
 		} else {
 			containerChan <- nil
@@ -134,7 +142,8 @@ func (c *ContainerHandler) Run(ctx context.Context, handler Handler, cfg *config
 	}
 }
 
-func (c *ContainerHandler) updateConfig(ctx context.Context, sshClient *ssh.Client) {
+// updateConfig is called periodically to keep the workspace agent config up to date
+func (c *ContainerTunnel) updateConfig(ctx context.Context, sshClient *ssh.Client) {
 	for {
 		select {
 		case <-ctx.Done():
@@ -174,7 +183,8 @@ func (c *ContainerHandler) updateConfig(ctx context.Context, sshClient *ssh.Clie
 	}
 }
 
-func (c *ContainerHandler) runRunInContainer(ctx context.Context, sshClient *ssh.Client, runInContainer Handler, envVars map[string]string) error {
+// runInContainer uses the connected SSH client to execute handler on the remote
+func (c *ContainerTunnel) runInContainer(ctx context.Context, sshClient *ssh.Client, handler Handler, envVars map[string]string) error {
 	// compress info
 	workspaceInfo, _, err := c.client.AgentInfo(provider.CLIOptions{Proxy: c.proxy})
 	if err != nil {
@@ -227,5 +237,5 @@ func (c *ContainerHandler) runRunInContainer(ctx context.Context, sshClient *ssh
 	c.log.Debugf("Successfully connected to container")
 
 	// start handler
-	return runInContainer(cancelCtx, containerClient)
+	return handler(cancelCtx, containerClient)
 }

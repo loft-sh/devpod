@@ -56,6 +56,7 @@ type SSHCmd struct {
 
 	Stdio                     bool
 	JumpContainer             bool
+	ReuseSSHAuthSock          string
 	AgentForwarding           bool
 	GPGAgentForwarding        bool
 	GitSSHSignatureForwarding bool
@@ -114,6 +115,8 @@ func NewSSHCmd(f *flags.GlobalFlags) *cobra.Command {
 	sshCmd.Flags().StringVar(&cmd.WorkDir, "workdir", "", "The working directory in the container")
 	sshCmd.Flags().BoolVar(&cmd.Proxy, "proxy", false, "If true will act as intermediate proxy for a proxy provider")
 	sshCmd.Flags().BoolVar(&cmd.AgentForwarding, "agent-forwarding", true, "If true forward the local ssh keys to the remote machine")
+	sshCmd.Flags().StringVar(&cmd.ReuseSSHAuthSock, "reuse-ssh-auth-sock", "", "If set, the SSH_AUTH_SOCK is expected to already be available in the workspace (under /tmp using the key provided) and the connection reuses this instead of creating a new one")
+	_ = sshCmd.Flags().MarkHidden("reuse-ssh-auth-sock")
 	sshCmd.Flags().BoolVar(&cmd.GPGAgentForwarding, "gpg-agent-forwarding", false, "If true forward the local gpg-agent to the remote machine")
 	sshCmd.Flags().BoolVar(&cmd.Stdio, "stdio", false, "If true will tunnel connection through stdout and stdin")
 	sshCmd.Flags().BoolVar(&cmd.StartServices, "start-services", true, "If false will not start any port-forwarding or git / docker credentials helper")
@@ -446,6 +449,10 @@ func (cmd *SSHCmd) startTunnel(ctx context.Context, devPodConfig *config.Config,
 
 	log.Debugf("Run outer container tunnel")
 	command := fmt.Sprintf("'%s' helper ssh-server --track-activity --stdio --workdir '%s'", agent.ContainerDevPodHelperLocation, workdir)
+	if cmd.ReuseSSHAuthSock != "" {
+		log.Debug("Reusing SSH_AUTH_SOCK")
+		command += fmt.Sprintf(" --reuse-ssh-auth-sock=%s", cmd.ReuseSSHAuthSock)
+	}
 	if cmd.Debug {
 		command += " --debug"
 	}
@@ -513,7 +520,7 @@ func (cmd *SSHCmd) startServices(
 	log log.Logger,
 ) {
 	if cmd.User != "" {
-		err := tunnel.RunInContainer(
+		err := tunnel.RunServices(
 			ctx,
 			devPodConfig,
 			containerClient,

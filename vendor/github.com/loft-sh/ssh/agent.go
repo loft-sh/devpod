@@ -2,8 +2,8 @@ package ssh
 
 import (
 	"io"
-	"io/ioutil"
 	"net"
+	"os"
 	"path/filepath"
 	"sync"
 
@@ -33,18 +33,22 @@ func AgentRequested(sess Session) bool {
 	return sess.Context().Value(contextKeyAgentRequest) == true
 }
 
-// NewAgentListener sets up a temporary Unix socket that can be communicated
-// to the session environment and used for forwarding connections.
-func NewAgentListener() (net.Listener, error) {
-	dir, err := ioutil.TempDir("", agentTempDir)
-	if err != nil {
-		return nil, err
+// NewAgentListener sets up a temporary Unix socket, if dir is not specified, that can be communicated
+// to the session environment and used for forwarding connections. If dir is specified, it will use the directory
+// to create the socket file.
+func NewAgentListener(dir string) (net.Listener, string, error) {
+	var err error
+	if dir == "" {
+		dir, err = os.MkdirTemp("", agentTempDir)
+		if err != nil {
+			return nil, "", err
+		}
 	}
 	l, err := net.Listen("unix", filepath.Join(dir, agentListenFile))
 	if err != nil {
-		return nil, err
+		return nil, "", err
 	}
-	return l, nil
+	return l, dir, nil
 }
 
 // ForwardAgentConnections takes connections from a listener to proxy into the

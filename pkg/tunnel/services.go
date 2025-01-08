@@ -31,7 +31,8 @@ import (
 	"k8s.io/client-go/util/retry"
 )
 
-func RunInContainer(
+// RunServices forwards the ports for a given workspace and uses it's SSH client to run the credentials server remotely and the services server locally to communicate with the container
+func RunServices(
 	ctx context.Context,
 	devPodConfig *config.Config,
 	containerClient *ssh.Client,
@@ -149,6 +150,7 @@ func RunInContainer(
 	})
 }
 
+// forwardDevContainerPorts forwards all the ports defined in the devcontainer.json
 func forwardDevContainerPorts(ctx context.Context, containerClient *ssh.Client, extraPorts []string, exitAfterTimeout time.Duration, log log.Logger) ([]string, error) {
 	stdout := &bytes.Buffer{}
 	stderr := &bytes.Buffer{}
