@@ -420,17 +420,17 @@ func (r *runner) buildAndExtendDockerCompose(
 
 	// Determine base imageName for generated features build
 	if composeService.Build != nil {
+		// Read Dockerfile
 		if path.IsAbs(composeService.Build.Dockerfile) {
 			dockerFilePath = composeService.Build.Dockerfile
 		} else {
 			dockerFilePath = filepath.Join(composeService.Build.Context, composeService.Build.Dockerfile)
 		}
-
 		originalDockerfile, err := os.ReadFile(dockerFilePath)
 		if err != nil {
 			return "", "", nil, "", err
 		}
-
+		// Determine build target, if a multi stage build ensure it is valid and modify the Dockerfile if necessary
 		originalTarget := composeService.Build.Target
 		if originalTarget != "" {
 			buildTarget = originalTarget
@@ -439,11 +439,12 @@ func (r *runner) buildAndExtendDockerCompose(
 			if err != nil {
 				return "", "", nil, "", err
 			}
-
 			buildTarget = lastStageName
-
+			// Override Dockerfile if it was modified, otherwise use the original
 			if modifiedDockerfile != "" {
 				dockerfileContents = modifiedDockerfile
+			} else {
+				dockerfileContents = string(originalDockerfile)
 			}
 		}
 		imageBuildInfo, err = r.getImageBuildInfoFromDockerfile(substitutionContext, string(originalDockerfile), mappingToMap(composeService.Build.Args), originalTarget)
@@ -463,10 +464,11 @@ func (r *runner) buildAndExtendDockerCompose(
 	}
 
 	if extendImageBuildInfo != nil && extendImageBuildInfo.FeaturesBuildInfo != nil {
+		// If the dockerfile is empty (because an Image was used) reference that image as the build target after the features / modified contents
 		if dockerfileContents == "" {
 			dockerfileContents = fmt.Sprintf("FROM %s AS %s\n", composeService.Image, buildTarget)
 		}
-
+		// Write the final Dockerfile with features
 		extendedDockerfilePath, extendedDockerfileContent := r.extendedDockerfile(
 			extendImageBuildInfo.FeaturesBuildInfo,
 			dockerFilePath,
@@ -484,7 +486,7 @@ func (r *runner) buildAndExtendDockerCompose(
 		if err != nil {
 			return "", "", nil, "", errors.Wrap(err, "write Dockerfile with features")
 		}
-
+		// Write the final docker-compose referencing the modified Dockerfile or Image
 		dockerComposeFilePath, err = r.extendedDockerComposeBuild(
 			composeService,
 			extendedDockerfilePath,
@@ -494,7 +496,7 @@ func (r *runner) buildAndExtendDockerCompose(
 			return buildImageName, "", nil, "", err
 		}
 	}
-
+	// Prepare the docker-compose build arguments
 	buildArgs := []string{"--project-name", project.Name}
 	buildArgs = append(buildArgs, globalArgs...)
 	if dockerComposeFilePath != "" {
@@ -504,7 +506,7 @@ func (r *runner) buildAndExtendDockerCompose(
 	if extendImageBuildInfo == nil {
 		buildArgs = append(buildArgs, "--pull")
 	}
-
+	// Only run the services defined in .devcontainer.json runServices
 	if len(parsedConfig.Config.RunServices) > 0 {
 		buildArgs = append(buildArgs, composeService.Name)
 		for _, service := range parsedConfig.Config.RunServices {
