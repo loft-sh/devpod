@@ -186,7 +186,7 @@ export function useAppReady() {
 
           return
         }
-        const workspacesResult = await client.workspaces.listAll()
+        const workspacesResult = await client.workspaces.listAll(false)
         if (workspacesResult.err) {
           return
         }
