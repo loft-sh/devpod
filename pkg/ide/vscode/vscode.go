@@ -13,8 +13,8 @@ import (
 	"github.com/loft-sh/devpod/pkg/config"
 	copy2 "github.com/loft-sh/devpod/pkg/copy"
 	"github.com/loft-sh/devpod/pkg/ide"
+	"github.com/loft-sh/devpod/pkg/util"
 	"github.com/loft-sh/log"
-	"github.com/mitchellh/go-homedir"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 )
@@ -421,7 +421,7 @@ func prepareServerLocation(userName string, create bool, flavor Flavor) (string,
 	if userName != "" {
 		homeFolder, err = command.GetHome(userName)
 	} else {
-		homeFolder, err = homedir.Dir()
+		homeFolder, err = util.UserHomeDir()
 	}
 	if err != nil {
 		return "", err

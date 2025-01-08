@@ -17,8 +17,8 @@ import (
 	"github.com/loft-sh/devpod/pkg/extract"
 	devpodhttp "github.com/loft-sh/devpod/pkg/http"
 	"github.com/loft-sh/devpod/pkg/ide"
+	"github.com/loft-sh/devpod/pkg/util"
 	"github.com/loft-sh/log"
-	"github.com/mitchellh/go-homedir"
 	"github.com/pkg/errors"
 	"github.com/skratchdot/open-golang/open"
 )
@@ -134,7 +134,7 @@ func getBaseFolder(userName string) (string, error) {
 	if userName != "" {
 		homeFolder, err = command.GetHome(userName)
 	} else {
-		homeFolder, err = homedir.Dir()
+		homeFolder, err = util.UserHomeDir()
 	}
 	if err != nil {
 		return "", err
