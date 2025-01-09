@@ -4,6 +4,7 @@ import { TWorkspace } from "@/types"
 import { useToast } from "@chakra-ui/react"
 import { useMutation } from "@tanstack/react-query"
 import { ProWorkspaceInstance } from "@/contexts"
+import JSZip from "jszip"
 
 export function useStoreTroubleshoot() {
   const toast = useToast()
@@ -26,36 +27,41 @@ export function useStoreTroubleshoot() {
         return
       }
 
-      const unwrappedLogFiles = logFiles
+      const unwrappedLogFiles: [src: [string], targetFolder: string][] = logFiles
         .filter((f) => f.ok)
         .map((f) => f.unwrap() ?? "")
-        .map((f) => [[f], [targetFolder, f.split("/").pop() ?? ""]])
-      // poor mans zip
-      await Promise.all(
-        unwrappedLogFiles.map(([src, target]) => client.copyFilePaths(src ?? [], target ?? []))
+        .map((f) => [[f], f.split(client.pathSeparator()).pop() ?? ""])
+
+      const zip = new JSZip()
+
+      const logFilesData = await Promise.all(
+        unwrappedLogFiles.map(async ([src, target]) => {
+          const data = await client.readFile(src)
+
+          return { fileName: target, data }
+        })
       )
 
-      await client.writeTextFile(
-        [targetFolder, "workspace_actions.json"],
-        JSON.stringify(workspaceActions, null, 2)
-      )
+      logFilesData.forEach((logFile) => {
+        zip.file(logFile.fileName, logFile.data)
+      })
 
-      await client.writeTextFile(
-        [targetFolder, "workspace.json"],
-        JSON.stringify(workspace, null, 2)
-      )
+      zip.file("workspace_actions.json", JSON.stringify(workspaceActions, null, 2))
+      zip.file("workspace.json", JSON.stringify(workspace, null, 2))
 
       const troubleshootOutput = await client.workspaces.troubleshoot({
         id: workspace.id,
         actionID: "",
         streamID: "",
       })
+
       if (troubleshootOutput.ok) {
-        await client.writeTextFile(
-          [targetFolder, "cli_troubleshoot.json"],
-          troubleshootOutput.unwrap().stdout
-        )
+        zip.file("cli_troubleshoot.json", troubleshootOutput.unwrap().stdout)
       }
+
+      const out = await zip.generateAsync({ type: "uint8array" })
+
+      await client.writeFile([targetFolder, "devpod_troubleshoot.zip"], out)
 
       client.open(targetFolder)
     },

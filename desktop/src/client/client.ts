@@ -137,6 +137,10 @@ class Client {
     return os.platform()
   }
 
+  public pathSeparator(): string {
+    return path.sep()
+  }
+
   public fetchArch(): TArch {
     return os.arch()
   }
@@ -231,6 +235,14 @@ class Client {
 
   public async writeTextFile(targetPath: string[], data: string) {
     return fs.writeTextFile(await path.join(...targetPath), data)
+  }
+
+  public async readFile(targetPath: string[]) {
+    return fs.readFile(await path.join(...targetPath))
+  }
+
+  public async writeFile(targetPath: string[], data: Uint8Array) {
+    return fs.writeFile(await path.join(...targetPath), data)
   }
 
   public async installCLI(force: boolean = false): Promise<Result<void>> {
