@@ -33,6 +33,11 @@ var UIEventsExceptions []string = []string{
 	"devpod pro list",
 	"devpod pro check-health",
 	"devpod pro check-update",
+	"devpod ide list",
+	"devpod ide use",
+	"devpod provider use",
+	"devpod version",
+	"devpod context options",
 }
 
 // skip everything in pro mode
