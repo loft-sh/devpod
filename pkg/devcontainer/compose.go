@@ -397,6 +397,56 @@ func (r *runner) startContainer(
 	return containerDetails, nil
 }
 
+// prepareComposeBuildInfo modifies a compose project's devcontainer Dockerfile to ensure it can be extended with features
+// If an Image is specified instead of a Build, the metadata from the Image is used to populate the build info
+func (r *runner) prepareComposeBuildInfo(ctx context.Context, subCtx *config.SubstitutionContext, composeService *composetypes.ServiceConfig, buildTarget string) (*config.ImageBuildInfo, string, string, error) {
+	var dockerFilePath, dockerfileContents string
+	var imageBuildInfo *config.ImageBuildInfo
+	var err error
+	if composeService.Build != nil {
+		// Read Dockerfile
+		if path.IsAbs(composeService.Build.Dockerfile) {
+			dockerFilePath = composeService.Build.Dockerfile
+		} else {
+			dockerFilePath = filepath.Join(composeService.Build.Context, composeService.Build.Dockerfile)
+		}
+
+		originalDockerfile, err := os.ReadFile(dockerFilePath)
+		if err != nil {
+			return nil, "", "", err
+		}
+
+		// Determine build target, if a multi stage build ensure it is valid and modify the Dockerfile if necessary
+		originalTarget := composeService.Build.Target
+		if originalTarget != "" {
+			buildTarget = originalTarget
+		} else {
+			lastStageName, modifiedDockerfile, err := dockerfile.EnsureDockerfileHasFinalStageName(string(originalDockerfile), config.DockerfileDefaultTarget)
+			if err != nil {
+				return nil, "", "", err
+			}
+
+			buildTarget = lastStageName
+			// Override Dockerfile if it was modified, otherwise use the original
+			if modifiedDockerfile != "" {
+				dockerfileContents = modifiedDockerfile
+			} else {
+				dockerfileContents = string(originalDockerfile)
+			}
+		}
+		imageBuildInfo, err = r.getImageBuildInfoFromDockerfile(subCtx, string(originalDockerfile), mappingToMap(composeService.Build.Args), originalTarget)
+		if err != nil {
+			return nil, "", "", err
+		}
+	} else {
+		imageBuildInfo, err = r.getImageBuildInfoFromImage(ctx, subCtx, composeService.Image)
+		if err != nil {
+			return nil, "", "", err
+		}
+	}
+	return imageBuildInfo, dockerfileContents, buildTarget, nil
+}
+
 // This extends the build information for docker compose containers
 func (r *runner) buildAndExtendDockerCompose(
 	ctx context.Context,
@@ -419,46 +469,9 @@ func (r *runner) buildAndExtendDockerCompose(
 	buildTarget := "dev_container_auto_added_stage_label"
 
 	// Determine base imageName for generated features build
-	if composeService.Build != nil {
-		// Read Dockerfile
-		if path.IsAbs(composeService.Build.Dockerfile) {
-			dockerFilePath = composeService.Build.Dockerfile
-		} else {
-			dockerFilePath = filepath.Join(composeService.Build.Context, composeService.Build.Dockerfile)
-		}
-
-		originalDockerfile, err := os.ReadFile(dockerFilePath)
-		if err != nil {
-			return "", "", nil, "", err
-		}
-
-		// Determine build target, if a multi stage build ensure it is valid and modify the Dockerfile if necessary
-		originalTarget := composeService.Build.Target
-		if originalTarget != "" {
-			buildTarget = originalTarget
-		} else {
-			lastStageName, modifiedDockerfile, err := dockerfile.EnsureDockerfileHasFinalStageName(string(originalDockerfile), config.DockerfileDefaultTarget)
-			if err != nil {
-				return "", "", nil, "", err
-			}
-
-			buildTarget = lastStageName
-			// Override Dockerfile if it was modified, otherwise use the original
-			if modifiedDockerfile != "" {
-				dockerfileContents = modifiedDockerfile
-			} else {
-				dockerfileContents = string(originalDockerfile)
-			}
-		}
-		imageBuildInfo, err = r.getImageBuildInfoFromDockerfile(substitutionContext, string(originalDockerfile), mappingToMap(composeService.Build.Args), originalTarget)
-		if err != nil {
-			return "", "", nil, "", err
-		}
-	} else {
-		imageBuildInfo, err = r.getImageBuildInfoFromImage(ctx, substitutionContext, composeService.Image)
-		if err != nil {
-			return "", "", nil, "", err
-		}
+	imageBuildInfo, dockerfileContents, buildTarget, err = r.prepareComposeBuildInfo(ctx, substitutionContext, composeService, buildTarget)
+	if err != nil {
+		return "", "", nil, "", err
 	}
 
 	extendImageBuildInfo, err := feature.GetExtendedBuildInfo(substitutionContext, imageBuildInfo, buildTarget, parsedConfig, r.Log, false)
