@@ -130,6 +130,7 @@ fn main() -> anyhow::Result<()> {
 
             let _tray = TrayIconBuilder::with_id("main")
                 .icon(app.default_window_icon().unwrap().clone())
+                .icon_as_template(true)
                 .menu(&menu)
                 .menu_on_left_click(true)
                 .on_menu_event(system_tray.get_event_handler())
