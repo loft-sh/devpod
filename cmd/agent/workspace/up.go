@@ -281,7 +281,7 @@ func prepareWorkspace(ctx context.Context, workspaceInfo *provider2.AgentWorkspa
 			}
 		}
 
-		if workspaceInfo.CLIOptions.Recreate && !workspaceInfo.CLIOptions.Reset {
+		if workspaceInfo.CLIOptions.Recreate && !workspaceInfo.CLIOptions.Reset && exists {
 			log.Info("Rebuiling without resetting a git based workspace, keeping old content folder")
 			return nil
 		}
