@@ -2,6 +2,7 @@ package vscode
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"os/exec"
 	"runtime"
@@ -14,14 +15,13 @@ import (
 
 func Open(ctx context.Context, workspace, folder string, newWindow bool, flavor Flavor, log log.Logger) error {
 	log.Infof("Starting %s...", flavor)
-	err := openViaCLI(ctx, workspace, folder, newWindow, flavor, log)
-	if err != nil {
-		log.Debugf("Error opening %s via cli: %v", flavor, err)
-	} else {
+	cliErr := openViaCLI(ctx, workspace, folder, newWindow, flavor, log)
+	if cliErr == nil {
 		return nil
 	}
 
-	return openViaBrowser(workspace, folder, newWindow, flavor, log)
+	browserErr := openViaBrowser(workspace, folder, newWindow, flavor, log)
+	return errors.Join(cliErr, browserErr)
 }
 
 func openViaBrowser(workspace, folder string, newWindow bool, flavor Flavor, log log.Logger) error {
