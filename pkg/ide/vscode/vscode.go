@@ -33,6 +33,23 @@ const (
 	FlavorCodium   Flavor = "codium"
 )
 
+func (f Flavor) DisplayName() string {
+	switch f {
+	case FlavorStable:
+		return "VSCode"
+	case FlavorInsiders:
+		return "VSCode Insiders"
+	case FlavorCursor:
+		return "Cursor"
+	case FlavorPositron:
+		return "positron"
+	case FlavorCodium:
+		return "VSCodium"
+	default:
+		return "VSCode"
+	}
+}
+
 var Options = ide.Options{
 	OpenNewWindow: {
 		Name:        OpenNewWindow,

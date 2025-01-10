@@ -14,13 +14,17 @@ import (
 )
 
 func Open(ctx context.Context, workspace, folder string, newWindow bool, flavor Flavor, log log.Logger) error {
-	log.Infof("Starting %s...", flavor)
+	log.Infof("Starting %s...", flavor.DisplayName())
 	cliErr := openViaCLI(ctx, workspace, folder, newWindow, flavor, log)
 	if cliErr == nil {
 		return nil
 	}
 
 	browserErr := openViaBrowser(workspace, folder, newWindow, flavor, log)
+	if browserErr == nil {
+		return nil
+	}
+
 	return errors.Join(cliErr, browserErr)
 }
 
