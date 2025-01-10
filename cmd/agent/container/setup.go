@@ -449,7 +449,7 @@ func (cmd *SetupContainerCmd) installIDE(setupInfo *config.Result, ide *provider
 }
 
 func (cmd *SetupContainerCmd) setupVSCode(setupInfo *config.Result, ideOptions map[string]config2.OptionValue, flavor vscode.Flavor, log log.Logger) error {
-	log.Debugf("Setup %s...", flavor)
+	log.Debugf("Setup %s...", flavor.DisplayName())
 	vsCodeConfiguration := config.GetVSCodeConfiguration(setupInfo.MergedConfig)
 	settings := ""
 	if len(vsCodeConfiguration.Settings) > 0 {
