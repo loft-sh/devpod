@@ -299,6 +299,10 @@ func CloneRepositoryForWorkspace(
 	gitInfo := git.NewGitInfo(source.GitRepository, source.GitBranch, source.GitCommit, source.GitPRReference, source.GitSubPath)
 	err := git.CloneRepositoryWithEnv(ctx, gitInfo, extraEnv, workspaceDir, helper, cloner, log)
 	if err != nil {
+		// cleanup workspace dir if clone failed, otherwise we won't try to clone again when rebuilding this workspace
+		if cleanupErr := cleanupWorkspaceDir(workspaceDir); cleanupErr != nil {
+			return fmt.Errorf("clone repository: %w, cleanup workspace: %w", err, cleanupErr)
+		}
 		return fmt.Errorf("clone repository: %w", err)
 	}
 
@@ -329,6 +333,10 @@ func getGitOptions(options provider2.CLIOptions) []git.Option {
 		gitOpts = append(gitOpts, git.WithRecursiveSubmodules())
 	}
 	return gitOpts
+}
+
+func cleanupWorkspaceDir(workspaceDir string) error {
+	return os.RemoveAll(workspaceDir)
 }
 
 func setupSSHKey(key string, agentPath string) ([]string, func(), error) {
