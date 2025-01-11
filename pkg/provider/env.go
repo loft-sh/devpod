@@ -8,13 +8,15 @@ import (
 	"strings"
 
 	"github.com/loft-sh/devpod/pkg/config"
+	log2 "github.com/loft-sh/log"
 )
 
 const (
 	// general
-	DEVPOD      = "DEVPOD"
-	DEVPOD_OS   = "DEVPOD_OS"
-	DEVPOD_ARCH = "DEVPOD_ARCH"
+	DEVPOD           = "DEVPOD"
+	DEVPOD_OS        = "DEVPOD_OS"
+	DEVPOD_ARCH      = "DEVPOD_ARCH"
+	DEVPOD_LOG_LEVEL = "DEVPOD_LOG_LEVEL"
 
 	// workspace
 	WORKSPACE_ID       = "WORKSPACE_ID"
@@ -183,6 +185,7 @@ func GetBaseEnvironment(context, provider string) map[string]string {
 	retVars[PROVIDER_CONTEXT] = context
 	providerFolder, _ := GetProviderDir(context, provider)
 	retVars[PROVIDER_FOLDER] = filepath.ToSlash(providerFolder)
+	retVars[DEVPOD_LOG_LEVEL] = log2.Default.GetLevel().String()
 	return retVars
 }
 
