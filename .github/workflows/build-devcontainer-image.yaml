@@ -42,14 +42,22 @@ jobs:
 
       - name: "Build and push image"
         run: |
-          devpod build . --devcontainer-path .github/devcontainer/devcontainer.json --platform linux/amd64,linux/arm64 --skip-push
-          ID=$(docker images --format "{{.ID}} {{.CreatedAt}} {{.Tag}}" | sort -rk 2 | grep "devpod" | awk 'NR==1{print $1}')
-          echo "found image: $ID"
-          if [ -z "${ID}" ]; then
-            echo "Image ID empty, exiting"
-            exit 0 
-          fi 
-          # Change tag to `dev`
-          docker image ls
-          docker tag $ID ghcr.io/loft-sh/devpod:dev
-          docker push ghcr.io/loft-sh/devpod:dev
+          for ARCH in amd64 arm64; do
+            # Build for $ARCH
+            devpod build . --devcontainer-path .github/devcontainer/devcontainer.json --platform linux/$ARCH --skip-push
+            ID=$(docker images --format "{{.ID}} {{.CreatedAt}} {{.Tag}}" | sort -rk 2 | grep "devpod" | awk 'NR==1{print $1}')
+            echo "found image: $ID"
+            if [ -z "${ID}" ]; then
+              echo "Image ID empty, exiting"
+              exit 0 
+            fi 
+            docker image ls
+            docker tag $ID ghcr.io/loft-sh/devpod:dev-$ARCH
+          done
+
+          # Combine into multi-arch image
+          docker manifest create ghcr.io/loft-sh/devpod:dev \
+                 --amend ghcr.io/loft-sh/devpod:dev-amd64 \
+                 --amend ghcr.io/loft-sh/devpod:dev-arm64
+
+          docker manifest push ghcr.io/loft-sh/devpod:dev
