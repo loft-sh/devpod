@@ -19,6 +19,20 @@ jobs:
         id: checkout
         uses: actions/checkout@v1
 
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v2
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v1
+
+      - name: Set up Docker Buildx
+        id: buildx
+        uses: docker/setup-buildx-action@v1
+
       - name: Prepare DevPod
         run: |
           curl -L -o devpod "https://github.com/loft-sh/devpod/releases/latest/download/devpod-linux-amd64" \
@@ -29,13 +43,13 @@ jobs:
       - name: "Build and push image"
         run: |
           devpod build . --devcontainer-path .github/devcontainer/devcontainer.json --platform linux/amd64,linux/arm64 --skip-push
-          # Change tag to `latest`
           ID=$(docker images --format "{{.ID}} {{.CreatedAt}} {{.Tag}}" | sort -rk 2 | grep "devpod" | awk 'NR==1{print $1}')
           echo "found image: $ID"
           if [ -z "${ID}" ]; then
             echo "Image ID empty, exiting"
             exit 0 
           fi 
+          # Change tag to `dev`
           docker image ls
           docker tag $ID ghcr.io/loft-sh/devpod:dev
           docker push ghcr.io/loft-sh/devpod:dev
