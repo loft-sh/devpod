@@ -2,5 +2,7 @@
   "name": "DevPod Development",
   "image": "ghcr.io/loft-sh/devpod:dev",
   "remoteUser": "devpod",
-  "postCreateCommand": "bash ./.devcontainer/post_create.sh"
+  "postCreateCommand": "bash ./.devcontainer/post_create.sh",
+  // Required for DinD
+  "privileged": true
 }

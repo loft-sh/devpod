@@ -14,6 +14,9 @@ if [[ ! -f "$REBUILD_SCRIPT" ]]; then
   exit 1
 fi
 
+# Start docker daemon. The script should've been put here by the DinD devcontainer feature
+log "Starting Docker Daemon"
+sudo /usr/local/share/docker-init.sh
 
 log "Building initial version of devpod binary"
 chmod +x "$REBUILD_SCRIPT"
