@@ -53,6 +53,7 @@ jobs:
             fi 
             docker image ls
             docker tag $ID ghcr.io/loft-sh/devpod:dev-$ARCH
+            docker push ghcr.io/loft-sh/devpod:dev-$ARCH
           done
 
           # Combine into multi-arch image
