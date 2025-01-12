@@ -1,0 +1,41 @@
+name: Build Dev Container
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - "main"
+    paths:
+      - ".github/devcontainer/**"
+
+jobs:
+  build-and-push:
+    runs-on: ubuntu-latest
+    permissions:
+      packages: "write"
+      contents: "read"
+    steps:
+      - name: Checkout
+        id: checkout
+        uses: actions/checkout@v1
+
+      - name: Prepare DevPod
+        run: |
+          curl -L -o devpod "https://github.com/loft-sh/devpod/releases/latest/download/devpod-linux-amd64" \
+            && sudo install -c -m 0755 devpod /usr/local/bin \
+            && rm -f devpod
+          devpod provider add docker
+
+      - name: "Build and push image"
+        run: |
+          devpod build . --devcontainer-path .github/devcontainer/devcontainer.json --platform linux/amd64,linux/arm64 --skip-push
+          # Change tag to `latest`
+          ID=$(docker images --format "{{.ID}} {{.CreatedAt}} {{.Tag}}" | sort -rk 2 | grep "devpod" | awk 'NR==1{print $1}')
+          echo "found image: $ID"
+          if [ -z "${ID}" ]; then
+            echo "Image ID empty, exiting"
+            exit 0 
+          fi 
+          docker image ls
+          docker tag $ID ghcr.io/loft-sh/devpod:dev
+          docker push ghcr.io/loft-sh/devpod:dev

@@ -1,18 +1,6 @@
 {
-  "name": "Go",
-  "build": {
-    "dockerfile": "Dockerfile"
-  },
-  "remoteUser": "vscode",
-  "features": {
-    "ghcr.io/devcontainers/features/docker-in-docker:2": {
-      "version": "latest"
-    },
-    "ghcr.io/devcontainers/features/kubectl-helm-minikube:1": {
-      "version": "latest"
-    },
-    "ghcr.io/dhoeric/features/k9s:1": {
-      "version": "latest"
-    }
-  }
+  "name": "DevPod Development",
+  "image": "ghcr.io/loft-sh/devpod:dev",
+  "remoteUser": "devpod",
+  "postCreateCommand": "bash ./.devcontainer/post_create.sh"
 }
