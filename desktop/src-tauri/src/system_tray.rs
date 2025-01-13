@@ -2,7 +2,7 @@ use crate::{util, workspaces::WorkspacesState, AppHandle, AppState, UiMessage};
 use log::{error, warn};
 use tauri::{
     menu::{Menu, MenuBuilder, MenuEvent, MenuItem, Submenu, SubmenuBuilder},
-    tray::{TrayIcon, TrayIconEvent},
+    tray::{TrayIcon, TrayIconEvent, MouseButton},
     EventLoopMessage, Manager, State, Wry,
 };
 use util::QUIT_EXIT_CODE;
@@ -67,7 +67,7 @@ impl SystemTray {
     //     TauriSystemTray::new().with_menu(tray_menu)
     // }
 
-    pub fn get_event_handler(&self) -> impl Fn(&AppHandle, MenuEvent) + Send + Sync {
+    pub fn get_menu_event_handler(&self) -> impl Fn(&AppHandle, MenuEvent) + Send + Sync {
         |app, event| match event.id.as_ref() {
             Self::QUIT_ID => {
                 app.exit(QUIT_EXIT_CODE)
@@ -96,6 +96,23 @@ impl SystemTray {
                     handler(app, app_state);
                 }
             }
+        }
+    }
+
+    pub fn get_tray_icon_event_handler(&self) -> impl Fn(&TrayIcon, TrayIconEvent) + Send + Sync {
+        |icon, event| match event {
+            TrayIconEvent::DoubleClick { button, .. }=> {
+                if button == MouseButton::Left {
+                    let app_state = icon.app_handle().state::<AppState>();
+
+                    tauri::async_runtime::block_on(async move {
+                        if let Err(err) = app_state.ui_messages.send(UiMessage::ShowDashboard).await {
+                            error!("Failed to broadcast show dashboard message: {}", err);
+                        };
+                    });
+                }
+            }
+            _ => {}
         }
     }
 }
