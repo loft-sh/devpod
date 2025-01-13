@@ -13,6 +13,7 @@ import (
 	"github.com/loft-sh/devpod/pkg/util"
 	"github.com/loft-sh/log"
 	"golang.org/x/crypto/ssh"
+	"golang.org/x/term"
 )
 
 func AddPrivateKeysToAgent(ctx context.Context, log log.Logger) error {
@@ -22,25 +23,28 @@ func AddPrivateKeysToAgent(ctx context.Context, log log.Logger) error {
 		return fmt.Errorf("ssh-add couldn't be found")
 	}
 
-	privateKeys, err := FindPrivateKeys()
+	privateKeys, err := findPrivateKeys()
 	if err != nil {
 		return err
 	}
 
 	for _, privateKey := range privateKeys {
-		timeoutCtx, cancel := context.WithTimeout(ctx, time.Second*2)
-		log.Debugf("Run ssh-add %s", privateKey)
-		out, err := exec.CommandContext(timeoutCtx, "ssh-add", privateKey).CombinedOutput()
-		cancel()
+		log.Debugf("Adding key to SSH Agent: %s", privateKey.path)
+		err := addKeyToAgent(ctx, privateKey)
 		if err != nil {
-			log.Debugf("Error adding key %s to agent: %v", privateKey, command.WrapCommandError(out, err))
+			log.Debugf("%v", err)
 		}
 	}
 
 	return nil
 }
 
-func FindPrivateKeys() ([]string, error) {
+type privateKey struct {
+	path               string
+	requiresPassphrase bool
+}
+
+func findPrivateKeys() ([]privateKey, error) {
 	homeDir, err := util.UserHomeDir()
 	if err != nil {
 		return nil, err
@@ -52,21 +56,51 @@ func FindPrivateKeys() ([]string, error) {
 		return nil, err
 	}
 
-	privateKeys := []string{}
+	keys := []privateKey{}
+	passphraseMissingErr := &ssh.PassphraseMissingError{}
 	for _, entry := range entries {
 		if entry.IsDir() {
 			continue
 		}
-
 		keyPath := filepath.Join(sshDir, entry.Name())
 		out, err := os.ReadFile(keyPath)
 		if err == nil {
 			_, err = ssh.ParsePrivateKey(out)
 			if err == nil {
-				privateKeys = append(privateKeys, keyPath)
+				keys = append(keys, privateKey{path: keyPath})
+			} else if err.Error() == passphraseMissingErr.Error() {
+				// we can check for the passphrase later
+				keys = append(keys, privateKey{path: keyPath, requiresPassphrase: true})
 			}
 		}
 	}
 
-	return privateKeys, nil
+	return keys, nil
+}
+
+func addKeyToAgent(ctx context.Context, privateKey privateKey) error {
+	timeoutCtx, cancel := context.WithTimeout(ctx, time.Minute*5)
+	defer cancel()
+
+	// Let users enter the passphrase if the key requires it and we're in an interactive session
+	if privateKey.requiresPassphrase && term.IsTerminal(int(os.Stdin.Fd())) {
+		cmd := exec.CommandContext(timeoutCtx, "ssh-add", privateKey.path)
+		cmd.Stdin = os.Stdin
+		out, err := cmd.CombinedOutput()
+		if err != nil {
+			return fmt.Errorf("Add key %s to agent: %w", privateKey.path, command.WrapCommandError(out, err))
+		}
+
+		return nil
+	}
+
+	// Normal non-interactive mode
+	timeoutCtx, cancel = context.WithTimeout(ctx, time.Second*1)
+	defer cancel()
+	out, err := exec.CommandContext(timeoutCtx, "ssh-add", privateKey.path).CombinedOutput()
+	if err != nil {
+		return fmt.Errorf("Add key %s to agent: %w", privateKey.path, command.WrapCommandError(out, err))
+	}
+
+	return nil
 }
