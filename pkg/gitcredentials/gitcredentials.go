@@ -3,6 +3,7 @@ package gitcredentials
 import (
 	"context"
 	"fmt"
+	netUrl "net/url"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -222,6 +223,41 @@ func GetCredentials(requestObj *GitCredentials) (*GitCredentials, error) {
 		return nil, err
 	}
 	return Parse(string(stdout))
+}
+
+type GetHttpPathParameters struct {
+	Host        string
+	Protocol    string
+	CurrentPath string
+	Repository  string
+}
+
+// GetHTTPPath checks for gits `credential.useHttpPath` setting for a given host+protocol and returns the path component
+// of `GitCredential` if the setting is true
+func GetHTTPPath(ctx context.Context, params GetHttpPathParameters) (string, error) {
+	// No need to look up the HTTP Path if we already have one
+	if params.CurrentPath != "" {
+		return params.CurrentPath, nil
+	}
+
+	// Check if we need to respect gits `credential.useHttpPath`
+	// The actual format for the key is `credential.$PROTOCOL://$HOST.useHttpPath`, i.e. `credential.https://github.com.useHttpPath`
+	configKey := fmt.Sprintf("credential.%s://%s.useHttpPath", params.Protocol, params.Host)
+	out, err := git.CommandContext(ctx, "config", "--get", configKey).Output()
+	if err != nil {
+		return "", fmt.Errorf("inspect useHttpPath for host %s: %w", params.Host, err)
+	}
+	if strings.TrimSpace(string(out)) != "true" {
+		return "", nil
+	}
+	// We can assume the GitRepository is always HTTP(S) based as otherwise we wouldn't
+	// request credentials for it
+	url, err := netUrl.Parse(params.Repository)
+	if err != nil {
+		return "", fmt.Errorf("parse workspace repository: %w", err)
+	}
+
+	return url.Path, nil
 }
 
 func SetupGpgGitKey(gitSignKey string) error {
