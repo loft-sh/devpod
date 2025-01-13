@@ -133,7 +133,8 @@ fn main() -> anyhow::Result<()> {
                 .icon_as_template(true)
                 .menu(&menu)
                 .menu_on_left_click(true)
-                .on_menu_event(system_tray.get_event_handler())
+                .on_menu_event(system_tray.get_menu_event_handler())
+                .on_tray_icon_event(system_tray.get_tray_icon_event_handler())
                 .build(app)?;
 
             info!("Setup done");
