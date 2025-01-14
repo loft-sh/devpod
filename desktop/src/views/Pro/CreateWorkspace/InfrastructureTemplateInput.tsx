@@ -284,6 +284,11 @@ function OptionFormField({
             spellCheck={false}
             placeholder={placeholder ?? `Enter ${displayName}`}
             type="number"
+            onWheel={(e) => {
+              // This prevents the input field from increasing/decreasing the numbers when the scroll event is captured
+              // while this input field is focused
+              ;(e.target as HTMLInputElement).blur()
+            }}
             {...props}
           />
         )
