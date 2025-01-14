@@ -12,6 +12,7 @@ import (
 	"github.com/loft-sh/devpod/pkg/config"
 	"github.com/loft-sh/devpod/pkg/version"
 	"github.com/loft-sh/log"
+	"github.com/moby/term"
 	"github.com/spf13/cobra"
 )
 
@@ -114,11 +115,23 @@ func (d *cliCollector) RecordCLI(err error) {
 		}
 	}
 
+	isCI := false
+	if !isUI {
+		isCI = isCIEnvironment()
+	}
+
+	isInteractive := false
+	if !isUI {
+		isInteractive = isInteractiveShell()
+	}
+
 	timezone, _ := time.Now().Zone()
 	eventProperties := map[string]interface{}{
-		"command": cmd,
-		"version": version.GetVersion(),
-		"desktop": isUI,
+		"command":        cmd,
+		"version":        version.GetVersion(),
+		"desktop":        isUI,
+		"is_ci":          isCI,
+		"is_interactive": isInteractive,
 	}
 	if d.client != nil {
 		eventProperties["provider"] = d.client.Provider()
@@ -166,4 +179,30 @@ func (d *cliCollector) RecordCLI(err error) {
 			"timestamp":  time.Now().Unix(),
 		},
 	})
+}
+
+// isCIEnvironment looks up a couple of well-known CI env vars
+func isCIEnvironment() bool {
+	ciIndicators := []string{
+		"CI",                     // Generic CI variable
+		"TRAVIS",                 // Travis CI
+		"GITHUB_ACTIONS",         // GitHub Actions
+		"GITLAB_CI",              // GitLab CI
+		"CIRCLECI",               // CircleCI
+		"TEAMCITY_VERSION",       // TeamCity
+		"BITBUCKET_BUILD_NUMBER", // Bitbucket
+	}
+
+	for _, key := range ciIndicators {
+		if _, exists := os.LookupEnv(key); exists {
+			return true
+		}
+	}
+	return false
+}
+
+// isInteractiveShell checks if the current shell is in interactive mode or not.
+// Can be combined with `isCi` to narrow down usage
+func isInteractiveShell() bool {
+	return term.IsTerminal(os.Stdin.Fd())
 }
