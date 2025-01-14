@@ -242,11 +242,9 @@ func GetHTTPPath(ctx context.Context, params GetHttpPathParameters) (string, err
 
 	// Check if we need to respect gits `credential.useHttpPath`
 	// The actual format for the key is `credential.$PROTOCOL://$HOST.useHttpPath`, i.e. `credential.https://github.com.useHttpPath`
+	// We need to ignore the error as git will always exit with 1 if the key doesn't exist
 	configKey := fmt.Sprintf("credential.%s://%s.useHttpPath", params.Protocol, params.Host)
-	out, err := git.CommandContext(ctx, "config", "--get", configKey).Output()
-	if err != nil {
-		return "", fmt.Errorf("inspect useHttpPath for host %s: %w", params.Host, err)
-	}
+	out, _ := git.CommandContext(ctx, "config", "--get", configKey).Output()
 	if strings.TrimSpace(string(out)) != "true" {
 		return "", nil
 	}
