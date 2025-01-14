@@ -208,11 +208,23 @@ func runInitializeCommand(
 		return nil
 	}
 
+	shellArgs := []string{"sh", "-c"}
+	// According to the devcontainer spec, `initializeCommand` needs to be run on the host.
+	// On Windows we can't assume everyone has `sh` added to their PATH so we need to use Windows default shell (usually cmd.exe)
+	if runtime.GOOS == "windows" {
+		comSpec := os.Getenv("COMSPEC")
+		if comSpec != "" {
+			shellArgs = []string{comSpec, "/c"}
+		} else {
+			shellArgs = []string{"cmd.exe", "/c"}
+		}
+	}
+
 	for _, cmd := range config.InitializeCommand {
 		// should run in shell?
 		var args []string
 		if len(cmd) == 1 {
-			args = []string{"sh", "-c", cmd[0]}
+			args = []string{shellArgs[0], shellArgs[1], cmd[0]}
 		} else {
 			args = cmd
 		}
