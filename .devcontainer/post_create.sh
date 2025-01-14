@@ -7,16 +7,16 @@ log() {
   echo "[POST_CREATE] $*"
 }
 
+# Start docker daemon. The script should've been put here by the DinD devcontainer feature
+log "Starting Docker Daemon"
+sudo /usr/local/share/docker-init.sh
+
 REBUILD_SCRIPT="./hack/rebuild.sh"
 
 if [[ ! -f "$REBUILD_SCRIPT" ]]; then
   log "Error: Rebuild script not found at $REBUILD_SCRIPT" >&2
   exit 1
 fi
-
-# Start docker daemon. The script should've been put here by the DinD devcontainer feature
-log "Starting Docker Daemon"
-sudo /usr/local/share/docker-init.sh
 
 log "Building initial version of devpod binary"
 chmod +x "$REBUILD_SCRIPT"

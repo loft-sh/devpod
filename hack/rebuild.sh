@@ -25,8 +25,8 @@ for os in $BUILD_PLATFORMS; do
         fi
     done
 done
-
 echo "[INFO] Built binaries for all platforms in test/ directory"
+
 if [[ -z "${SKIP_INSTALL}" ]]; then
     if command -v sudo &> /dev/null; then
         go build -o test/devpod && sudo mv test/devpod /usr/local/bin/
@@ -34,25 +34,27 @@ if [[ -z "${SKIP_INSTALL}" ]]; then
         go install .
     fi
 fi
-
 echo "[INFO] Built devpod binary and moved to /usr/local/bin"
+
 if [[ $BUILD_PLATFORMS == *"linux"* ]]; then
     cp test/devpod-cli-linux-amd64 test/devpod-linux-amd64 
     cp test/devpod-cli-linux-arm64 test/devpod-linux-arm64
-    cp test/devpod-cli-linux-amd64 desktop/src-tauri/bin/devpod-cli-x86_64-unknown-linux-gnu
-    cp test/devpod-cli-linux-arm64 desktop/src-tauri/bin/devpod-cli-aarch64-unknown-linux-gnu
 fi
 
-if [[ $BUILD_PLATFORMS == *"windows"* ]]; then
-    cp test/devpod-cli-windows-amd64 desktop/src-tauri/bin/devpod-cli-x86_64-pc-windows-msvc.exe
-fi
-
-# only copy if darwin is in BUILD_PLATFORMS
-if [[ $BUILD_PLATFORMS == *"darwin"* ]]; then
-    cp test/devpod-cli-darwin-amd64 desktop/src-tauri/bin/devpod-cli-x86_64-apple-darwin
-    cp test/devpod-cli-darwin-arm64 desktop/src-tauri/bin/devpod-cli-aarch64-apple-darwin
-fi
+if [ -d "desktop/src-tauri/bin" ]; then
+    if [[ $BUILD_PLATFORMS == *"linux"* ]]; then
+        cp test/devpod-cli-linux-amd64 desktop/src-tauri/bin/devpod-cli-x86_64-unknown-linux-gnu
+        cp test/devpod-cli-linux-arm64 desktop/src-tauri/bin/devpod-cli-aarch64-unknown-linux-gnu
+    fi
+    if [[ $BUILD_PLATFORMS == *"windows"* ]]; then
+        cp test/devpod-cli-windows-amd64 desktop/src-tauri/bin/devpod-cli-x86_64-pc-windows-msvc.exe
+    fi
+    if [[ $BUILD_PLATFORMS == *"darwin"* ]]; then
+        cp test/devpod-cli-darwin-amd64 desktop/src-tauri/bin/devpod-cli-x86_64-apple-darwin
+        cp test/devpod-cli-darwin-arm64 desktop/src-tauri/bin/devpod-cli-aarch64-apple-darwin
+    fi
 echo "[INFO] Copied binaries to desktop/src-tauri/bin"
+fi
 
 if [[ $BUILD_PLATFORMS == *"linux"* ]]; then
     rm -R $TMPDIR/devpod-cache 2>/dev/null || true
