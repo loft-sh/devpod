@@ -10,3 +10,5 @@ main
 profile.out
 package-lock.json
 tags
+desktop/src-tauri/.flatpak-builder/
+desktop/src-tauri/repo/

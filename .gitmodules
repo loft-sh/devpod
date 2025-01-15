@@ -1,0 +1,3 @@
+[submodule "desktop/src-tauri/shared-modules"]
+	path = desktop/src-tauri/shared-modules
+	url = https://github.com/flathub/shared-modules.git

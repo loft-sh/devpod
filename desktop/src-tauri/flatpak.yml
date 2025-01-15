@@ -1,0 +1,34 @@
+id: org.loft.devpod
+
+runtime: org.gnome.Platform
+runtime-version: '46'
+sdk: org.gnome.Sdk
+
+command: DevPod
+finish-args:
+  - --socket=wayland # Permission needed to show the window
+  - --socket=fallback-x11 # Permission needed to show the window
+  - --device=dri # OpenGL, not necessary for all projects
+  - --share=ipc
+
+modules:
+  - shared-modules/libayatana-appindicator/libayatana-appindicator-gtk3.json
+  - name: binary
+    buildsystem: simple
+    sources:
+      - type: file
+        url: https://github.com/loft-sh/devpod/releases/download/v0.6.9%2Btest2/DevPod_0.6.9+test2_amd64.deb
+        sha256: 26ba2aad8a04dfaed6382ee3f6ac806f6c586dc7f276de3113cd3ebc98fa4834 # This is required if you are using a remote source
+        only-arches: [x86_64] #This source is only used on x86_64 Computers
+        # This path points to the binary file which was created in the .deb bundle.
+        # Tauri also creates a folder which corresponds to the content of the unpacked .deb.
+    build-commands:
+      - ar -x *.deb
+      - tar -xf data.tar.gz
+      - 'install -Dm755 usr/bin/devpod-cli /app/bin/devpod'
+      - 'install -Dm755 usr/bin/DevPod /app/bin/DevPod'
+      - install -Dm644 usr/share/applications/DevPod.desktop /app/share/applications/org.loft.devpod.desktop
+      - install -Dm644 usr/share/icons/hicolor/128x128/apps/DevPod.png /app/share/icons/hicolor/128x128/apps/org.loft.devpod.png
+      - install -Dm644 usr/share/icons/hicolor/32x32/apps/DevPod.png /app/share/icons/hicolor/32x32/apps/org.loft.devpod.png
+      - install -Dm644 usr/share/icons/hicolor/256x256@2/apps/DevPod.png /app/share/icons/hicolor/256x256@2/apps/org.loft.devpod.png
+      # - install -Dm644 org.loft.devpod.metainfo.xml /app/share/metainfo/org.loft.devpod.rosary.metainfo.xml
