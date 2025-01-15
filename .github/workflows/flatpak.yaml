@@ -12,6 +12,8 @@ jobs:
       options: --privileged
     steps:
     - uses: actions/checkout@v4
+      with:
+        submodules: 'true'
     - uses: flatpak/flatpak-github-actions/flatpak-builder@v6
       with:
         bundle: devpod.flatpak
