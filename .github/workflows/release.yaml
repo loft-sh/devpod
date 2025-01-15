@@ -206,7 +206,7 @@ jobs:
         with:
           releaseId: ${{ needs.create-release.outputs.release_id }}
           projectPath: "./desktop"
-          args: "--config src-tauri/tauri-linux.conf.json --target ${{ matrix.settings.target }} --bundles appimage,updater"
+          args: "--config src-tauri/tauri-linux.conf.json --target ${{ matrix.settings.target }} --bundles appimage,deb,updater"
           includeUpdaterJson: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -431,6 +431,33 @@ jobs:
             const releaseId = "${{ needs.create-release.outputs.release_id }}"
             const assetName = "DevPod-${{needs.create-release.outputs.package_version}}.tar.gz"
             const assetPath = `desktop/src-tauri/target/${{ matrix.settings.target }}/release/bundle/${assetName}`
+
+            console.log("Attempting to upload release asset: ", assetName)
+
+            await github.rest.repos.uploadReleaseAsset({
+              headers: {
+                "content-type": "application/zip",
+                "content-length": fs.statSync(assetPath).size
+              },
+              name: assetName,
+              data: fs.readFileSync(assetPath),
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              release_id: releaseId
+            })
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Upload deb Asset
+        if: matrix.settings.host == 'ubuntu-22.04' && matrix.settings.cli_only == false
+        uses: actions/github-script@v6
+        with:
+          script: |
+            const fs = require("fs")
+
+            const releaseId = "${{ needs.create-release.outputs.release_id }}"
+            const assetName = "DevPod_${{needs.create-release.outputs.package_version}}_${{ matrix.settings.arch }}.deb"
+            const assetPath = `desktop/src-tauri/target/${{ matrix.settings.target }}/release/bundle/deb/${assetName}`
 
             console.log("Attempting to upload release asset: ", assetName)
 
