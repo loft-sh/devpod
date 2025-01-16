@@ -1,11 +1,13 @@
 package container
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/loft-sh/devpod/cmd/flags"
 	"github.com/loft-sh/devpod/pkg/credentials"
 	"github.com/loft-sh/devpod/pkg/loftconfig"
+	"github.com/loft-sh/devpod/pkg/tailscale"
 	"github.com/loft-sh/log"
 
 	"github.com/spf13/cobra"
@@ -60,6 +62,7 @@ func (c *SetupLoftPlatformAccessCmd) Run(_ *cobra.Command, args []string) error 
 
 	loftConfig, err := loftconfig.GetLoftConfig(c.Context, c.Provider, port, logger)
 	if err != nil {
+		logger.Warn("DEBUG CANT GET LOFT CONFIG FROM CREDENTIALS SERVER")
 		return err
 	}
 
@@ -71,14 +74,33 @@ func (c *SetupLoftPlatformAccessCmd) Run(_ *cobra.Command, args []string) error 
 	err = loftconfig.AuthDevpodCliToPlatform(loftConfig, logger)
 	if err != nil {
 		// log error but don't return to allow other CLIs to install as well
-		logger.Warn("unable to authenticate devpod cli: %v", err)
+		logger.Warnf("unable to authenticate devpod cli: %w", err)
 	}
 
 	err = loftconfig.AuthVClusterCliToPlatform(loftConfig, logger)
 	if err != nil {
 		// log error but don't return to allow other CLIs to install as well
-		logger.Warn("unable to authenticate vcluster cli: %v", err)
+		logger.Warnf("unable to authenticate vcluster cli: %w", err)
 	}
+
+	tsNet := tailscale.NewTSNet(context.TODO())
+	if err := tsNet.Start(context.TODO(), &tailscale.Connection{
+		AccessKey:     loftConfig.AccessKey,
+		Host:          tailscale.RemoveProtocol(loftConfig.Host),
+		Project:       "default",
+		Context:       "default",
+		Provider:      "devpod-pro",
+		WorkspaceName: "dummy-workspace-name",
+		CaData:        []byte{},
+		Insecure:      true,
+	}); err != nil {
+		return fmt.Errorf("cannot start tsNet server: %w", err)
+	}
+
+	// err = tailscale.ConnectToPlatform(context.TODO(), loftConfig)
+	// if err != nil {
+	// 	logger.Warnf("cant connect to platform tailnet: %w", err)
+	// }
 
 	return nil
 }

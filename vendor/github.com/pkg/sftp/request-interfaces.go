@@ -75,7 +75,7 @@ type StatVFSFileCmder interface {
 // Note in cases of an error, the error text will be sent to the client.
 // Called for Methods: List, Stat, Readlink
 //
-// Since Filelist returns an os.FileInfo, this can make it non-ideal for impelmenting Readlink.
+// Since Filelist returns an os.FileInfo, this can make it non-ideal for implementing Readlink.
 // This is because the Name receiver method defined by that interface defines that it should only return the base name.
 // However, Readlink is required to be capable of returning essentially any arbitrary valid path relative or absolute.
 // In order to implement this more expressive requirement, implement [ReadlinkFileLister] which will then be used instead.
@@ -131,11 +131,19 @@ type NameLookupFileLister interface {
 	LookupGroupName(string) string
 }
 
-// ListerAt does for file lists what io.ReaderAt does for files.
-// ListAt should return the number of entries copied and an io.EOF
-// error if at end of list. This is testable by comparing how many you
-// copied to how many could be copied (eg. n < len(ls) below).
+// ListerAt does for file lists what io.ReaderAt does for files, i.e. a []os.FileInfo buffer is passed to the ListAt function
+// and the entries that are populated in the buffer will be passed to the client.
+//
+// ListAt should return the number of entries copied and an io.EOF error if at end of list.
+// This is testable by comparing how many you copied to how many could be copied (eg. n < len(ls) below).
 // The copy() builtin is best for the copying.
+//
+// Uid and gid information will on unix systems be retrieved from [os.FileInfo.Sys]
+// if this function returns a [syscall.Stat_t] when called on a populated entry.
+// Alternatively, if the entry implements [FileInfoUidGid], it will be used for uid and gid information.
+//
+// If a populated entry implements [FileInfoExtendedData], extended attributes will also be returned to the client.
+//
 // Note in cases of an error, the error text will be sent to the client.
 type ListerAt interface {
 	ListAt([]os.FileInfo, int64) (int, error)
