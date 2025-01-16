@@ -1,0 +1,14 @@
+linters:
+  disable:
+    - gosimple
+    - unused
+  enable:
+    - gci
+    - gofmt
+    - misspell
+linters-settings:
+  gci:
+    sections:
+      - standard
+      - default
+      - prefix(github.com/safchain/ethtool)
