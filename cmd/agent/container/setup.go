@@ -52,6 +52,9 @@ type SetupContainerCmd struct {
 	InjectGitCredentials   bool
 	ContainerWorkspaceInfo string
 	SetupInfo              string
+	AccessKey              string
+	PlatformHost           string
+	NetworkHostname        string
 }
 
 // NewSetupContainerCmd creates a new command
@@ -72,6 +75,8 @@ func NewSetupContainerCmd(flags *flags.GlobalFlags) *cobra.Command {
 	setupContainerCmd.Flags().BoolVar(&cmd.InjectGitCredentials, "inject-git-credentials", false, "If DevPod should inject git credentials during setup")
 	setupContainerCmd.Flags().StringVar(&cmd.ContainerWorkspaceInfo, "container-workspace-info", "", "The container workspace info")
 	setupContainerCmd.Flags().StringVar(&cmd.SetupInfo, "setup-info", "", "The container setup info")
+	setupContainerCmd.Flags().StringVar(&cmd.AccessKey, "access-key", "", "Access Key to use")
+	setupContainerCmd.Flags().StringVar(&cmd.NetworkHostname, "network-hostname", "", "Network hostname to use")
 	_ = setupContainerCmd.MarkFlagRequired("setup-info")
 	return setupContainerCmd
 }
@@ -201,6 +206,35 @@ func (cmd *SetupContainerCmd) Run(ctx context.Context) error {
 			}
 
 			return exec.Command(binaryPath, "agent", "container", "daemon", "--timeout", workspaceInfo.ContainerTimeout), nil
+		})
+		if err != nil {
+			return err
+		}
+	}
+
+	// start tailscale networking daemon
+	if (cmd.AccessKey != "" && cmd.NetworkHostname != "") || true { // FIXME
+		err = single.Single("network.daemon.pid", func() (*exec.Cmd, error) {
+			logger.Infof("Start DevPod Networking Daemon")
+			binaryPath, err := os.Executable()
+			if err != nil {
+				return nil, err
+			}
+
+			return exec.Command(binaryPath, "agent", "container", "network-daemon", "--access-key", cmd.AccessKey, "--host", "host.docker.internal:8080", "--hostname", cmd.NetworkHostname), nil
+		})
+		if err != nil {
+			return err
+		}
+
+		err = single.Single("ssh.daemon.pid", func() (*exec.Cmd, error) {
+			logger.Infof("Start DevPod Networking Daemon")
+			binaryPath, err := os.Executable()
+			if err != nil {
+				return nil, err
+			}
+
+			return exec.Command(binaryPath, "helper", "ssh-server"), nil
 		})
 		if err != nil {
 			return err
