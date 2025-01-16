@@ -40,6 +40,7 @@ func Resolve(
 	uid string,
 	changeLastUsed bool,
 	log log.Logger,
+	hostname string,
 ) (client.BaseWorkspaceClient, error) {
 	// verify desired id
 	if desiredID != "" {
@@ -63,6 +64,7 @@ func Resolve(
 		uid,
 		changeLastUsed,
 		log,
+		hostname,
 	)
 	if err != nil {
 		return nil, err
@@ -189,6 +191,7 @@ func resolveWorkspace(
 	uid string,
 	changeLastUsed bool,
 	log log.Logger,
+	hostname string,
 ) (*providerpkg.ProviderConfig, *providerpkg.Workspace, *providerpkg.Machine, error) {
 	// check if we have no args
 	if len(args) == 0 {
@@ -236,6 +239,7 @@ func resolveWorkspace(
 		isLocalPath,
 		uid,
 		log,
+		hostname,
 	)
 	if err != nil {
 		_ = clientimplementation.DeleteWorkspaceFolder(devPodConfig.DefaultContext, workspaceID, sshConfigPath, log)
@@ -257,6 +261,7 @@ func createWorkspace(
 	isLocalPath bool,
 	uid string,
 	log log.Logger,
+	hostname string,
 ) (*providerpkg.ProviderConfig, *providerpkg.Workspace, *providerpkg.Machine, error) {
 	// get default provider
 	provider, _, err := LoadProviders(devPodConfig, log)
@@ -267,7 +272,7 @@ func createWorkspace(
 	}
 
 	// resolve workspace
-	workspace, err := resolveWorkspaceConfig(ctx, provider, devPodConfig, name, workspaceID, source, isLocalPath, sshConfigPath, uid)
+	workspace, err := resolveWorkspaceConfig(ctx, provider, devPodConfig, name, workspaceID, source, isLocalPath, sshConfigPath, uid, hostname)
 	if err != nil {
 		return nil, nil, nil, err
 	}
@@ -389,6 +394,7 @@ func resolveWorkspaceConfig(
 	isLocalPath bool,
 	sshConfigPath string,
 	uid string,
+	hostname string,
 ) (*providerpkg.Workspace, error) {
 	now := types.Now()
 	if uid == "" {
@@ -460,6 +466,10 @@ func resolveWorkspaceConfig(
 	}
 	if gitSubdir != "" {
 		workspace.Source.GitSubPath = gitSubdir
+	}
+
+	if hostname != "" {
+		workspace.Hostname = hostname
 	}
 
 	return workspace, nil

@@ -88,6 +88,7 @@ func NewBuildCmd(flags *flags.GlobalFlags) *cobra.Command {
 				cmd.UID,
 				false,
 				log.Default,
+				"",
 			)
 			if err != nil {
 				return err
