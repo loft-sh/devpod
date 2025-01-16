@@ -107,7 +107,15 @@ func (r *runner) setupContainer(
 
 	// setup container
 	r.Log.Infof("Setup container...")
-	setupCommand := fmt.Sprintf("'%s' agent container setup --setup-info '%s' --container-workspace-info '%s'", agent.ContainerDevPodHelperLocation, compressed, workspaceConfigCompressed)
+	r.Log.Infof("GOT ACCESS KEY HOSTNAME AND HOST -> %s %s %s", r.WorkspaceConfig.CLIOptions.AccessKey, r.WorkspaceConfig.CLIOptions.NetworkHostname, r.WorkspaceConfig.CLIOptions.PlatformHost)
+	setupCommand := fmt.Sprintf(
+		"'%s' agent container setup --setup-info '%s' --container-workspace-info '%s' --access-key '%s' --network-hostname '%s'",
+		agent.ContainerDevPodHelperLocation,
+		compressed,
+		workspaceConfigCompressed,
+		r.WorkspaceConfig.CLIOptions.AccessKey,
+		r.WorkspaceConfig.CLIOptions.NetworkHostname,
+	)
 	if runtime.GOOS == "linux" || !isDockerDriver {
 		setupCommand += " --chown-workspace"
 	}
