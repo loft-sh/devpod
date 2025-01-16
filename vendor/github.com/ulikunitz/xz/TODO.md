@@ -44,52 +44,47 @@
 
 ### v0.6
 
-* Rewrite Encoder into a simple greedy one-op-at-a-time encoder including
-  * simple scan at the dictionary head for the same byte
-  * use the killer byte (requiring matches to get longer, the first test should be the byte that would make the match longer)
+- Rewrite Encoder into a simple greedy one-op-at-a-time encoder including
+  - simple scan at the dictionary head for the same byte
+  - use the killer byte (requiring matches to get longer, the first test should be the byte that would make the match longer)
 
 ## Optimizations
 
-* There may be a lot of false sharing in lzma. State; check whether this  can be improved by reorganizing the internal structure of it.
+- There may be a lot of false sharing in lzma. State; check whether this can be improved by reorganizing the internal structure of it.
 
-* Check whether batching encoding and decoding improves speed.
+- Check whether batching encoding and decoding improves speed.
 
 ### DAG optimizations
 
-* Use full buffer to create minimal bit-length above range encoder.
-* Might be too slow (see v0.4)
+- Use full buffer to create minimal bit-length above range encoder.
+- Might be too slow (see v0.4)
 
 ### Different match finders
 
-* hashes with 2, 3 characters additional to 4 characters
-* binary trees with 2-7 characters (uint64 as key, use uint32 as
+- hashes with 2, 3 characters additional to 4 characters
+- binary trees with 2-7 characters (uint64 as key, use uint32 as
 
   pointers into a an array)
 
-* rb-trees with 2-7 characters (uint64 as key, use uint32 as pointers
+- rb-trees with 2-7 characters (uint64 as key, use uint32 as pointers
 
   into an array with bit-steeling for the colors)
 
 ## Release Procedure
 
-* execute goch -l for all packages; probably with lower param like 0.5.
-* check orthography with gospell
-* Write release notes in doc/relnotes.
-* Update README.md
-* xb copyright . in xz directory to ensure all new files have Copyright header
-* `VERSION=<version> go generate github.com/ulikunitz/xz/...` to update version files
-* Execute test for Linux/amd64, Linux/x86 and Windows/amd64.
-* Update TODO.md - write short log entry
-* `git checkout master && git merge dev`
-* `git tag -a <version>`
-* `git push`
+- execute goch -l for all packages; probably with lower param like 0.5.
+- check orthography with gospell
+- Write release notes in doc/relnotes.
+- Update README.md
+- xb copyright . in xz directory to ensure all new files have Copyright header
+- `VERSION=<version> go generate github.com/ulikunitz/xz/...` to update version files
+- Execute test for Linux/amd64, Linux/x86 and Windows/amd64.
+- Update TODO.md - write short log entry
+- `git checkout master && git merge dev`
+- `git tag -a <version>`
+- `git push`
 
 ## Log
-
-### 2024-04-03
-
-Release v0.5.12 updates README.md and SECURITY.md to address the supply chain
-attack on the original xz implementation.
 
 ### 2022-12-12
 
@@ -104,7 +99,7 @@ it.
 
 Mituo Heijo has fuzzed xz and found a bug in the function readIndexBody. The
 function allocated a slice of records immediately after reading the value
-without further checks. Since the number has been too large the make function
+without further checks. Sincex the number has been too large the make function
 did panic. The fix is to check the number against the expected number of records
 before allocating the records.
 
@@ -367,11 +362,11 @@ and the opCodec.
 
 1. Implemented simple lzmago tool
 2. Tested tool against large 4.4G file
-   * compression worked correctly; tested decompression with lzma
-   * decompression hits a full buffer condition
+   - compression worked correctly; tested decompression with lzma
+   - decompression hits a full buffer condition
 3. Fixed a bug in the compressor and wrote a test for it
 4. Executed full cycle for 4.4 GB file; performance can be improved ;-)
 
 ### 2015-01-11
 
-* Release v0.2 because of the working LZMA encoder and decoder
+- Release v0.2 because of the working LZMA encoder and decoder

@@ -13,7 +13,7 @@ func AuthDevpodCliToPlatform(config *client.Config, logger log.Logger) error {
 	out, err := cmd.CombinedOutput()
 	if err != nil {
 		logger.Debugf("Failed executing `devpod pro login`: %w, output: %s", err, out)
-		return fmt.Errorf("error executing 'devpod pro login' command: %w", err)
+		return fmt.Errorf("error executing 'devpod pro login' command: %w, access key: %v, host: %v", err, config.AccessKey, config.Host)
 	}
 
 	return nil
