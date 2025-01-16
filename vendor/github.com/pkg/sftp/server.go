@@ -24,7 +24,7 @@ const (
 // Server is an SSH File Transfer Protocol (sftp) server.
 // This is intended to provide the sftp subsystem to an ssh server daemon.
 // This implementation currently supports most of sftp server protocol version 3,
-// as specified at http://tools.ietf.org/html/draft-ietf-secsh-filexfer-02
+// as specified at https://filezilla-project.org/specs/draft-ietf-secsh-filexfer-02.txt
 type Server struct {
 	*serverConn
 	debugStream   io.Writer
@@ -327,7 +327,7 @@ func handlePacket(s *Server, p orderedRequest) error {
 }
 
 // Serve serves SFTP connections until the streams stop or the SFTP subsystem
-// is stopped.
+// is stopped. It returns nil if the server exits cleanly.
 func (svr *Server) Serve() error {
 	defer func() {
 		if svr.pktMgr.alloc != nil {
@@ -353,6 +353,10 @@ func (svr *Server) Serve() error {
 	for {
 		pktType, pktBytes, err = svr.serverConn.recvPacket(svr.pktMgr.getNextOrderID())
 		if err != nil {
+			// Check whether the connection terminated cleanly in-between packets.
+			if err == io.EOF {
+				err = nil
+			}
 			// we don't care about releasing allocated pages here, the server will quit and the allocator freed
 			break
 		}

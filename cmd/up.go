@@ -129,6 +129,10 @@ func NewUpCmd(f *flags.GlobalFlags) *cobra.Command {
 	upCmd.Flags().StringVar(&cmd.GitSSHSigningKey, "git-ssh-signing-key", "", "The ssh key to use when signing git commits. Used to explicitly setup DevPod's ssh signature forwarding with given key. Should be same format as value of `git config user.signingkey`")
 	upCmd.Flags().StringVar(&cmd.FallbackImage, "fallback-image", "", "The fallback image to use if no devcontainer configuration has been detected")
 
+	upCmd.Flags().StringVar(&cmd.AccessKey, "access-key", "", "AccessKey")
+	upCmd.Flags().StringVar(&cmd.NetworkHostname, "network-hostname", "", "hostname")
+	upCmd.Flags().StringVar(&cmd.PlatformHost, "host", "", "platform host")
+
 	upCmd.Flags().BoolVar(&cmd.DisableDaemon, "disable-daemon", false, "If enabled, will not install a daemon into the target machine to track activity")
 	upCmd.Flags().StringVar(&cmd.Source, "source", "", "Optional source for the workspace. E.g. git:https://github.com/my-org/my-repo")
 	upCmd.Flags().BoolVar(&cmd.Proxy, "proxy", false, "If true will forward agent requests to stdio")
@@ -172,6 +176,9 @@ func (cmd *UpCmd) Run(
 	} else if cmd.Proxy && ide.ReusesAuthSock(targetIDE) {
 		log.Debug("Reusing SSH_AUTH_SOCK is not supported with proxy mode, consider launching the IDE from the platform UI")
 	}
+
+	log.Infof("DEBUG -> GOT %v hostname %v platform %v", cmd.AccessKey, cmd.NetworkHostname, cmd.PlatformHost)
+	log.Infof("DEBUG -> BUT on devpodconfig object -> %v", client.WorkspaceConfig())
 
 	// run devpod agent up
 	result, err := cmd.devPodUp(ctx, devPodConfig, client, log)
@@ -1419,6 +1426,7 @@ func (cmd *UpCmd) prepareClient(ctx context.Context, devPodConfig *config.Config
 		cmd.UID,
 		true,
 		logger,
+		cmd.NetworkHostname,
 	)
 	if err != nil {
 		return nil, logger, err

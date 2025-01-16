@@ -4,9 +4,11 @@ import (
 	"bytes"
 	"context"
 	"encoding/base64"
+	"encoding/json"
 	"fmt"
 	"io"
 	"math"
+	"net"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -25,9 +27,11 @@ import (
 	"github.com/loft-sh/devpod/pkg/devcontainer"
 	dpFlags "github.com/loft-sh/devpod/pkg/flags"
 	"github.com/loft-sh/devpod/pkg/gpg"
+	"github.com/loft-sh/devpod/pkg/platform/client"
 	"github.com/loft-sh/devpod/pkg/port"
 	"github.com/loft-sh/devpod/pkg/provider"
 	devssh "github.com/loft-sh/devpod/pkg/ssh"
+	"github.com/loft-sh/devpod/pkg/tailscale"
 	"github.com/loft-sh/devpod/pkg/tunnel"
 	workspace2 "github.com/loft-sh/devpod/pkg/workspace"
 	"github.com/loft-sh/log"
@@ -35,6 +39,7 @@ import (
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 	"golang.org/x/crypto/ssh"
+	"golang.org/x/term"
 	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/client-go/util/retry"
 )
@@ -68,9 +73,10 @@ type SSHCmd struct {
 
 	Proxy bool
 
-	Command string
-	User    string
-	WorkDir string
+	Command      string
+	User         string
+	WorkDir      string
+	UseTailscale bool
 }
 
 // NewSSHCmd creates a new ssh command
@@ -121,6 +127,7 @@ func NewSSHCmd(f *flags.GlobalFlags) *cobra.Command {
 	sshCmd.Flags().BoolVar(&cmd.Stdio, "stdio", false, "If true will tunnel connection through stdout and stdin")
 	sshCmd.Flags().BoolVar(&cmd.StartServices, "start-services", true, "If false will not start any port-forwarding or git / docker credentials helper")
 	sshCmd.Flags().DurationVar(&cmd.SSHKeepAliveInterval, "ssh-keepalive-interval", 55*time.Second, "How often should keepalive request be made (55s)")
+	sshCmd.Flags().BoolVar(&cmd.UseTailscale, "use-tailscale", true, "")
 
 	return sshCmd
 }
@@ -152,6 +159,10 @@ func (cmd *SSHCmd) Run(
 	// set default context if needed
 	if cmd.Context == "" {
 		cmd.Context = devPodConfig.DefaultContext
+	}
+
+	if cmd.UseTailscale {
+		return cmd.startTailscaleTunnel(ctx, devPodConfig, client, log)
 	}
 
 	// check if regular workspace client
@@ -189,6 +200,196 @@ func (cmd *SSHCmd) startProxyTunnel(
 			return cmd.startTunnel(ctx, devPodConfig, containerClient, client, log)
 		},
 	)
+}
+func (cmd *SSHCmd) startTailscaleTunnel(
+	ctx context.Context,
+	devPodConfig *config.Config,
+	client client2.BaseWorkspaceClient,
+	log log.Logger,
+) error {
+	log.Infof("Starting Tailscale connection")
+	if cmd.Provider == "" {
+		cmd.Provider = devPodConfig.Current().DefaultProvider
+	}
+
+	config, err := readConfig(cmd.Context, cmd.Provider)
+	if err != nil {
+		return err
+	}
+
+	osHostname, err := os.Hostname()
+	if err != nil {
+		fmt.Printf("Failed to get hostname: %v\n", err)
+		return err
+	}
+	osHostname = strings.ReplaceAll(osHostname, ".", "-")
+
+	network := tailscale.NewTSNet(&tailscale.TSNetConfig{
+		AccessKey:    config.AccessKey,
+		Host:         tailscale.RemoveProtocol(config.Host),
+		Hostname:     fmt.Sprintf("devpod.%v.client", osHostname),
+		LogF:         func(format string, args ...any) {}, // No-op logger
+		PortHandlers: map[string]func(net.Listener){},
+	})
+
+	// Start TSNet in a separate goroutine
+	startCtx, cancel := context.WithCancel(ctx)
+	defer cancel()
+	errChan := make(chan error, 1)
+	go func() {
+		err := network.Start(startCtx)
+		if err != nil {
+			errChan <- fmt.Errorf("failed to start TSNet: %w", err)
+		}
+		close(errChan)
+	}()
+	// Wait for the host to become reachable
+	reachableHost := fmt.Sprintf(
+		"devpod.%v.%v.test.workspace",
+		client.WorkspaceConfig().Pro.DisplayName,
+		client.WorkspaceConfig().Pro.Project,
+	)
+	waitUntilReachable(ctx, network, reachableHost, log)
+
+	log.Infof("Host %s is reachable. Proceeding with SSH session...", reachableHost)
+	return cmd.StartSSHSession(ctx, network, reachableHost, cmd.User, "", devPodConfig, client, log)
+}
+
+// waitUntilReachable polls until the given host is reachable via Tailscale.
+func waitUntilReachable(ctx context.Context, ts tailscale.TSNet, host string, log log.Logger) error {
+	const retryInterval = time.Second
+	const maxRetries = 60
+
+	for i := 0; i < maxRetries; i++ {
+		conn, err := ts.Dial(ctx, "tcp", fmt.Sprintf("%s.ts.loft:8022", host))
+		if err == nil {
+			_ = conn.Close()
+			return nil // Host is reachable
+		}
+		log.Infof("Host %s not reachable, retrying... (%d/%d)", host, i+1, maxRetries)
+
+		select {
+		case <-ctx.Done():
+			return ctx.Err()
+		case <-time.After(retryInterval):
+		}
+	}
+
+	return fmt.Errorf("host %s not reachable after %d attempts", host, maxRetries)
+}
+
+const (
+	LoftPlatformConfigFileName = "loft-config.json" // TODO: move somewhere else, replace hardoced strings with usage of this const
+)
+
+func readConfig(contextName string, providerName string) (*client.Config, error) {
+	if contextName == "" {
+
+	}
+	providerDir, err := provider.GetProviderDir(contextName, providerName)
+	if err != nil {
+		return nil, err
+	}
+
+	configPath := filepath.Join(providerDir, LoftPlatformConfigFileName)
+
+	// Check if given context and provider have Loft Platform configuration
+	if _, err := os.Stat(configPath); os.IsNotExist(err) {
+		// If not just return empty response
+		return &client.Config{}, nil
+	}
+
+	content, err := os.ReadFile(configPath)
+	if err != nil {
+		return nil, err
+	}
+
+	loftConfig := &client.Config{}
+	err = json.Unmarshal(content, loftConfig)
+	if err != nil {
+		return nil, err
+	}
+
+	return loftConfig, nil
+}
+
+const loftTSNetDomain = "ts.loft"
+
+// StartSSHSession establishes an SSH session over tsnet.
+func (cmd *SSHCmd) StartSSHSession(
+	ctx context.Context,
+	ts tailscale.TSNet,
+	addr, username, password string,
+	devPodConfig *config.Config,
+	workspaceClient client2.BaseWorkspaceClient,
+	log log.Logger,
+) error {
+	workdir := filepath.Join("/workspaces", workspaceClient.Workspace())
+	if cmd.WorkDir != "" {
+		workdir = cmd.WorkDir
+	}
+
+	clientConfig := &ssh.ClientConfig{
+		User: username,
+		Auth: []ssh.AuthMethod{
+			ssh.Password(password), // FIXME - use keys
+		},
+		HostKeyCallback: ssh.InsecureIgnoreHostKey(), // FIXME
+	}
+
+	// Dial the SSH server through TSNet
+	serverAddress := fmt.Sprintf("%v.%v:8022", addr, loftTSNetDomain) // FIXME
+	conn, err := ts.Dial(ctx, "tcp", serverAddress)
+	if err != nil {
+		return fmt.Errorf("failed to connect to %s: %w", serverAddress, err)
+	}
+	defer conn.Close()
+
+	// Establish an SSH client connection
+	sshConn, channels, requests, err := ssh.NewClientConn(conn, serverAddress, clientConfig)
+	if err != nil {
+		return fmt.Errorf("failed to establish SSH connection: %w", err)
+	}
+	client := ssh.NewClient(sshConn, channels, requests)
+	defer client.Close()
+
+	// Start an SSH session
+	session, err := client.NewSession()
+	if err != nil {
+		return fmt.Errorf("failed to create SSH session: %w", err)
+	}
+	defer session.Close()
+
+	// Configure terminal for interactive shell
+	fd := int(os.Stdin.Fd())
+	if term.IsTerminal(fd) {
+		oldState, err := term.MakeRaw(fd)
+		if err != nil {
+			return fmt.Errorf("failed to set terminal raw mode: %w", err)
+		}
+		defer term.Restore(fd, oldState)
+
+		session.Stdout = os.Stdout
+		session.Stderr = os.Stderr
+		session.Stdin = os.Stdin
+
+		termModes := ssh.TerminalModes{
+			ssh.ECHO:          1,
+			ssh.TTY_OP_ISPEED: 14400,
+			ssh.TTY_OP_OSPEED: 14400,
+		}
+		err = session.RequestPty("xterm", 80, 24, termModes)
+		if err != nil {
+			return fmt.Errorf("failed to request PTY: %w", err)
+		}
+
+		err = session.Run(fmt.Sprintf("cd %s; exec $SHELL --noediting -i", workdir))
+		if err != nil {
+			return fmt.Errorf("failed to start shell: %w", err)
+		}
+	}
+
+	return nil
 }
 
 func startWait(
