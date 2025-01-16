@@ -71,6 +71,15 @@ func marshalFileInfo(b []byte, fi os.FileInfo) []byte {
 		b = marshalUint32(b, fileStat.Mtime)
 	}
 
+	if flags&sshFileXferAttrExtended != 0 {
+		b = marshalUint32(b, uint32(len(fileStat.Extended)))
+
+		for _, attr := range fileStat.Extended {
+			b = marshalString(b, attr.ExtType)
+			b = marshalString(b, attr.ExtData)
+		}
+	}
+
 	return b
 }
 
@@ -281,6 +290,11 @@ func recvPacket(r io.Reader, alloc *allocator, orderID uint32) (uint8, []byte, e
 		b = make([]byte, length)
 	}
 	if _, err := io.ReadFull(r, b[:length]); err != nil {
+		// ReadFull only returns EOF if it has read no bytes.
+		// In this case, that means a partial packet, and thus unexpected.
+		if err == io.EOF {
+			err = io.ErrUnexpectedEOF
+		}
 		debug("recv packet %d bytes: err %v", length, err)
 		return 0, nil, err
 	}

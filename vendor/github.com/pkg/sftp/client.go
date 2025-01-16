@@ -259,11 +259,11 @@ func (c *Client) Create(path string) (*File, error) {
 	return c.open(path, flags(os.O_RDWR|os.O_CREATE|os.O_TRUNC))
 }
 
-const sftpProtocolVersion = 3 // http://tools.ietf.org/html/draft-ietf-secsh-filexfer-02
+const sftpProtocolVersion = 3 // https://filezilla-project.org/specs/draft-ietf-secsh-filexfer-02.txt
 
 func (c *Client) sendInit() error {
 	return c.clientConn.conn.sendPacket(&sshFxInitPacket{
-		Version: sftpProtocolVersion, // http://tools.ietf.org/html/draft-ietf-secsh-filexfer-02
+		Version: sftpProtocolVersion, // https://filezilla-project.org/specs/draft-ietf-secsh-filexfer-02.txt
 	})
 }
 
@@ -922,6 +922,45 @@ func (c *Client) MkdirAll(path string) error {
 		return err
 	}
 	return nil
+}
+
+// RemoveAll delete files recursively in the directory and Recursively delete subdirectories.
+// An error will be returned if no file or directory with the specified path exists
+func (c *Client) RemoveAll(path string) error {
+
+	// Get the file/directory information
+	fi, err := c.Stat(path)
+	if err != nil {
+		return err
+	}
+
+	if fi.IsDir() {
+		// Delete files recursively in the directory
+		files, err := c.ReadDir(path)
+		if err != nil {
+			return err
+		}
+
+		for _, file := range files {
+			if file.IsDir() {
+				// Recursively delete subdirectories
+				err = c.RemoveAll(path + "/" + file.Name())
+				if err != nil {
+					return err
+				}
+			} else {
+				// Delete individual files
+				err = c.Remove(path + "/" + file.Name())
+				if err != nil {
+					return err
+				}
+			}
+		}
+
+	}
+
+	return c.Remove(path)
+
 }
 
 // File represents a remote file.

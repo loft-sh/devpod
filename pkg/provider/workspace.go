@@ -70,6 +70,8 @@ type Workspace struct {
 
 	// Path to the file where the SSH config to access the workspace is stored
 	SSHConfigPath string `json:"sshConfigPath,omitempty"`
+
+	Hostname string `json:"hostname,omitempty"`
 }
 
 type ProMetadata struct {
@@ -221,6 +223,11 @@ type CLIOptions struct {
 	GitSSHSigningKey            string            `json:"gitSshSigningKey,omitempty"`
 	SSHAuthSockID               string            `json:"sshAuthSockID,omitempty"` // ID to use when looking for SSH_AUTH_SOCK, defaults to a new random ID if not set (only used for browser IDEs)
 	StrictHostKeyChecking       bool              `json:"strictHostKeyChecking,omitempty"`
+
+	// Tailscale specific options
+	AccessKey       string `json:"accessKey,omitempty"`
+	NetworkHostname string `json:"networkHostname,omitempty"`
+	PlatformHost    string `json:"platformHost,omitempty"`
 
 	// build options
 	Repository string   `json:"repository,omitempty"`
