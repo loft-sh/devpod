@@ -17,8 +17,10 @@ import (
 	"github.com/loft-sh/devpod/pkg/platform/client"
 	"github.com/loft-sh/devpod/pkg/platform/project"
 	"github.com/loft-sh/log"
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/wait"
+	ctrlclient "sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 type WorkspaceInfo struct {
@@ -159,6 +161,32 @@ func DialInstance(baseClient client.Client, workspace *managementv1.DevPodWorksp
 	return conn, nil
 }
 
+// UpdateInstance diffs two versions of a DevPodWorkspaceInstance, applies changes via a patch to reduce conflicts.
+// Afterwards it waits until the instance is ready to be used.
+func UpdateInstance(ctx context.Context, client client.Client, oldInstance *managementv1.DevPodWorkspaceInstance, newInstance *managementv1.DevPodWorkspaceInstance, log log.Logger) (*managementv1.DevPodWorkspaceInstance, error) {
+	managementClient, err := client.Management()
+	if err != nil {
+		return nil, err
+	}
+
+	patch := ctrlclient.MergeFrom(oldInstance)
+	data, err := patch.Data(newInstance)
+	if err != nil {
+		return nil, err
+	} else if len(data) == 0 || string(data) == "{}" {
+		return newInstance, nil
+	}
+
+	res, err := managementClient.Loft().ManagementV1().
+		DevPodWorkspaceInstances(oldInstance.GetNamespace()).
+		Patch(ctx, oldInstance.GetName(), patch.Type(), data, metav1.PatchOptions{})
+	if err != nil {
+		return nil, err
+	}
+
+	return WaitForInstance(ctx, client, res, log)
+}
+
 func WaitForInstance(ctx context.Context, client client.Client, instance *managementv1.DevPodWorkspaceInstance, log log.Logger) (*managementv1.DevPodWorkspaceInstance, error) {
 	managementClient, err := client.Management()
 	if err != nil {
@@ -182,8 +210,18 @@ func WaitForInstance(ctx context.Context, client client.Client, instance *manage
 			return false, nil
 		}
 
+		if !isTemplateSynced(updatedInstance) {
+			log.Debugf("Workspace template is not ready yet")
+			for _, cond := range updatedInstance.Status.Conditions {
+				if cond.Status != corev1.ConditionTrue {
+					log.Debugf("%s is %s (%s): %s", cond.Type, cond.Status, cond.Reason, cond.Message)
+				}
+			}
+			return false, nil
+		}
+
 		if !isRunnerReady(updatedInstance, storagev1.BuiltinRunnerName) {
-			log.Debugf("Runner is not ready yet, waiting until its ready", name, status.Phase)
+			log.Debugf("Runner is not ready yet", name, status.Phase)
 			return false, nil
 		}
 
@@ -217,4 +255,20 @@ func isRunnerReady(workspace *managementv1.DevPodWorkspaceInstance, builtinRunne
 
 	return workspace.GetAnnotations() != nil &&
 		workspace.GetAnnotations()[storagev1.DevPodWorkspaceRunnerEndpointAnnotation] != ""
+}
+
+func isTemplateSynced(workspace *managementv1.DevPodWorkspaceInstance) bool {
+	// We're still waiting for the sync to happen
+	// The controller will remove this field once it's done syncing
+	if workspace.Spec.TemplateRef != nil && workspace.Spec.TemplateRef.SyncOnce {
+		return false
+	}
+
+	for _, condition := range workspace.Status.Conditions {
+		if condition.Type == storagev1.InstanceTemplateResolved {
+			return condition.Status == corev1.ConditionTrue
+		}
+	}
+
+	return false
 }

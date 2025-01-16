@@ -17,7 +17,6 @@ import (
 	"github.com/loft-sh/log/terminal"
 	"github.com/spf13/cobra"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	ctrlclient "sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 // WorkspaceCmd holds the cmd flags
@@ -112,25 +111,10 @@ func (cmd *WorkspaceCmd) Run(ctx context.Context, stdin io.Reader, stdout io.Wri
 }
 
 func updateInstance(ctx context.Context, client client.Client, oldInstance *managementv1.DevPodWorkspaceInstance, newInstance *managementv1.DevPodWorkspaceInstance, log log.Logger) (*managementv1.DevPodWorkspaceInstance, error) {
-	managementClient, err := client.Management()
-	if err != nil {
-		return nil, err
+	// This ensures the template is kept up to date with configuration changes
+	if newInstance.Spec.TemplateRef != nil {
+		newInstance.Spec.TemplateRef.SyncOnce = true
 	}
 
-	patch := ctrlclient.MergeFrom(oldInstance)
-	data, err := patch.Data(newInstance)
-	if err != nil {
-		return nil, err
-	} else if len(data) == 0 || string(data) == "{}" {
-		return newInstance, nil
-	}
-
-	res, err := managementClient.Loft().ManagementV1().
-		DevPodWorkspaceInstances(oldInstance.GetNamespace()).
-		Patch(ctx, oldInstance.GetName(), patch.Type(), data, metav1.PatchOptions{})
-	if err != nil {
-		return nil, err
-	}
-
-	return platform.WaitForInstance(ctx, client, res, log)
+	return platform.UpdateInstance(ctx, client, oldInstance, newInstance, log)
 }

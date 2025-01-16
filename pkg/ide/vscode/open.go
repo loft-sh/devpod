@@ -109,7 +109,7 @@ func openViaCLI(ctx context.Context, workspace, folder string, newWindow bool, f
 	// Needs to be separated by `=` because of windows
 	folderUriArg := fmt.Sprintf("--folder-uri=vscode-remote://ssh-remote+%s.devpod/%s", workspace, folder)
 	args = append(args, folderUriArg)
-	log.Debugf("Run %s command %s %s", flavor, codePath, strings.Join(args, " "))
+	log.Debugf("Run %s command %s %s", flavor.DisplayName(), codePath, strings.Join(args, " "))
 	out, err = exec.CommandContext(ctx, codePath, args...).CombinedOutput()
 	if err != nil {
 		return command.WrapCommandError(out, err)
