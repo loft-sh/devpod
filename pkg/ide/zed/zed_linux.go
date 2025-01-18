@@ -16,7 +16,11 @@ import (
 func Open(ctx context.Context, values map[string]config.OptionValue, userName, workspaceFolder, workspaceID string, log log.Logger) error {
 	log.Info("Opening Zed editor...")
 
-	sshHost := fmt.Sprintf("%s.devpod/%s", workspaceID, workspaceFolder)
+	if len(workspaceFolder) == 0 || workspaceFolder[0] != '/' {
+		workspaceFolder = fmt.Sprintf("/%s", workspaceFolder)
+	}
+
+	sshHost := fmt.Sprintf("%s.devpod%s", workspaceID, workspaceFolder)
 	openURL := fmt.Sprintf("zed://ssh/%s", sshHost)
 	out, err := exec.Command("xdg-open", openURL).CombinedOutput()
 	if err != nil {
