@@ -26,11 +26,12 @@ const (
 type Flavor string
 
 const (
-	FlavorStable   Flavor = "stable"
-	FlavorInsiders Flavor = "insiders"
-	FlavorCursor   Flavor = "cursor"
-	FlavorPositron Flavor = "positron"
-	FlavorCodium   Flavor = "codium"
+	FlavorStable         Flavor = "stable"
+	FlavorInsiders       Flavor = "insiders"
+	FlavorCursor         Flavor = "cursor"
+	FlavorPositron       Flavor = "positron"
+	FlavorCodium         Flavor = "codium"
+	FlavorCodiumInsiders Flavor = "codium-insiders"
 )
 
 func (f Flavor) DisplayName() string {

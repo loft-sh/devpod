@@ -197,6 +197,7 @@ func (cmd *UpCmd) Run(
 	}
 
 	// configure container ssh
+	var sshConfigPath string
 	if cmd.ConfigureSSH {
 		devPodHome := ""
 		envDevPodHome, ok := os.LookupEnv("DEVPOD_HOME")
@@ -205,7 +206,7 @@ func (cmd *UpCmd) Run(
 		}
 		setupGPGAgentForwarding := cmd.GPGAgentForwarding || devPodConfig.ContextOption(config.ContextOptionGPGAgentForwarding) == "true"
 
-		err = configureSSH(devPodConfig, client, cmd.SSHConfigPath, user, workdir, setupGPGAgentForwarding, devPodHome)
+		sshConfigPath, err = configureSSH(devPodConfig, client, cmd.SSHConfigPath, user, workdir, setupGPGAgentForwarding, devPodHome)
 		if err != nil {
 			return err
 		}
@@ -238,6 +239,7 @@ func (cmd *UpCmd) Run(
 				result.SubstitutionContext.ContainerWorkspaceFolder,
 				vscode.Options.GetValue(ideConfig.Options, vscode.OpenNewWindow) == "true",
 				vscode.FlavorStable,
+				sshConfigPath,
 				log,
 			)
 		case string(config.IDEVSCodeInsiders):
@@ -247,6 +249,7 @@ func (cmd *UpCmd) Run(
 				result.SubstitutionContext.ContainerWorkspaceFolder,
 				vscode.Options.GetValue(ideConfig.Options, vscode.OpenNewWindow) == "true",
 				vscode.FlavorInsiders,
+				sshConfigPath,
 				log,
 			)
 		case string(config.IDECursor):
@@ -256,6 +259,7 @@ func (cmd *UpCmd) Run(
 				result.SubstitutionContext.ContainerWorkspaceFolder,
 				vscode.Options.GetValue(ideConfig.Options, vscode.OpenNewWindow) == "true",
 				vscode.FlavorCursor,
+				sshConfigPath,
 				log,
 			)
 		case string(config.IDECodium):
@@ -265,6 +269,17 @@ func (cmd *UpCmd) Run(
 				result.SubstitutionContext.ContainerWorkspaceFolder,
 				vscode.Options.GetValue(ideConfig.Options, vscode.OpenNewWindow) == "true",
 				vscode.FlavorCodium,
+				sshConfigPath,
+				log,
+			)
+		case string(config.IDECodiumInsiders):
+			return vscode.Open(
+				ctx,
+				client.Workspace(),
+				result.SubstitutionContext.ContainerWorkspaceFolder,
+				vscode.Options.GetValue(ideConfig.Options, vscode.OpenNewWindow) == "true",
+				vscode.FlavorCodiumInsiders,
+				sshConfigPath,
 				log,
 			)
 		case string(config.IDEPositron):
@@ -274,6 +289,7 @@ func (cmd *UpCmd) Run(
 				result.SubstitutionContext.ContainerWorkspaceFolder,
 				vscode.Options.GetValue(ideConfig.Options, vscode.OpenNewWindow) == "true",
 				vscode.FlavorPositron,
+				sshConfigPath,
 				log,
 			)
 		case string(config.IDEOpenVSCode):
@@ -995,10 +1011,10 @@ func startBrowserTunnel(
 	return nil
 }
 
-func configureSSH(c *config.Config, client client2.BaseWorkspaceClient, sshConfigPath, user, workdir string, gpgagent bool, devPodHome string) error {
+func configureSSH(c *config.Config, client client2.BaseWorkspaceClient, sshConfigPath, user, workdir string, gpgagent bool, devPodHome string) (string, error) {
 	path, err := devssh.ResolveSSHConfigPath(sshConfigPath)
 	if err != nil {
-		return errors.Wrap(err, "Invalid ssh config path")
+		return "", errors.Wrap(err, "Invalid ssh config path")
 	}
 	sshConfigPath = path
 
@@ -1013,10 +1029,10 @@ func configureSSH(c *config.Config, client client2.BaseWorkspaceClient, sshConfi
 		log.Default,
 	)
 	if err != nil {
-		return err
+		return "", err
 	}
 
-	return nil
+	return sshConfigPath, nil
 }
 
 func mergeDevPodUpOptions(baseOptions *provider2.CLIOptions) error {
