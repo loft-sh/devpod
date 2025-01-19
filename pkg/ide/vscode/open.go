@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"os/exec"
 	"runtime"
+	"slices"
 	"strings"
 
 	"github.com/loft-sh/devpod/pkg/command"
@@ -13,9 +14,16 @@ import (
 	"github.com/skratchdot/open-golang/open"
 )
 
-func Open(ctx context.Context, workspace, folder string, newWindow bool, flavor Flavor, log log.Logger) error {
+const (
+	FlatpakStable         string = "com.visualstudio.code"
+	FlatpakInsiders       string = "com.visualstudio.code.insiders"
+	FlatpakCodium         string = "com.vscodium.codium"
+	FlatpakCodiumInsiders string = "com.vscodium.codium-insiders"
+)
+
+func Open(ctx context.Context, workspace, folder string, newWindow bool, flavor Flavor, sshConfigPath string, log log.Logger) error {
 	log.Infof("Starting %s...", flavor.DisplayName())
-	cliErr := openViaCLI(ctx, workspace, folder, newWindow, flavor, log)
+	cliErr := openViaCLI(ctx, workspace, folder, newWindow, flavor, sshConfigPath, log)
 	if cliErr == nil {
 		return nil
 	}
@@ -41,6 +49,8 @@ func openViaBrowser(workspace, folder string, newWindow bool, flavor Flavor, log
 		protocol = `positron://`
 	case FlavorCodium:
 		protocol = `codium://`
+	case FlavorCodiumInsiders:
+		protocol = `codium-insiders://`
 	}
 
 	openURL := protocol + `vscode-remote/ssh-remote+` + workspace + `.devpod/` + folder
@@ -58,20 +68,44 @@ func openViaBrowser(workspace, folder string, newWindow bool, flavor Flavor, log
 	return nil
 }
 
-func openViaCLI(ctx context.Context, workspace, folder string, newWindow bool, flavor Flavor, log log.Logger) error {
+func openViaCLI(ctx context.Context, workspace, folder string, newWindow bool, flavor Flavor, sshConfigPath string, log log.Logger) error {
 	// try to find code cli
-	codePath := findCLI(flavor)
-	if codePath == "" {
+	codePath := findCLI(flavor, log)
+	if codePath == nil {
 		return fmt.Errorf("couldn't find the %s binary", flavor)
 	}
 
+	if codePath[0] == "flatpak" {
+		log.Debugf("Running with Flatpak suing the package %s.", codePath[2])
+		out, err := exec.Command(codePath[0], "ps", "--columns=application").Output()
+		if err != nil {
+			return command.WrapCommandError(out, err)
+		}
+		splitted := strings.Split(string(out), "\n")
+		foundRunning := false
+		// Ignore the header
+		for _, str := range splitted[1:] {
+			if strings.TrimSpace(str) == codePath[2] {
+				foundRunning = true
+				break
+			}
+		}
+
+		if foundRunning {
+			log.Warnf("The IDE is already running via Flatpak. If you are encountering SSH connectivity issues, make sure to give read access to your SSH config file (e.g flatpak override %s --filesystem=%s) and restart your IDE.", codePath[2], sshConfigPath)
+		}
+
+		codePath = slices.Insert(codePath, 2, fmt.Sprintf("--filesystem=%s:ro", sshConfigPath))
+	}
+
 	sshExtension := "ms-vscode-remote.remote-ssh"
-	if flavor == FlavorCodium {
+	if flavor == FlavorCodium || flavor == FlavorCodiumInsiders {
 		sshExtension = "jeanp413.open-remote-ssh"
 	}
 
 	// make sure ms-vscode-remote.remote-ssh is installed
-	out, err := exec.Command(codePath, "--list-extensions").Output()
+	listArgs := append(codePath, "--list-extensions")
+	out, err := exec.Command(listArgs[0], listArgs[1:]...).Output()
 	if err != nil {
 		return command.WrapCommandError(out, err)
 	}
@@ -88,9 +122,9 @@ func openViaCLI(ctx context.Context, workspace, folder string, newWindow bool, f
 
 	// install remote-ssh extension
 	if !found {
-		args := []string{"--install-extension", sshExtension}
-		log.Debugf("Run vscode command %s %s", codePath, strings.Join(args, " "))
-		out, err := exec.CommandContext(ctx, codePath, args...).Output()
+		args := append(codePath, "--install-extension", sshExtension)
+		log.Debugf("Run vscode command %s %s", args[0], strings.Join(args[1:], " "))
+		out, err := exec.CommandContext(ctx, args[0], args[1:]...).Output()
 		if err != nil {
 			return fmt.Errorf("install ssh extension: %w", command.WrapCommandError(out, err))
 		}
@@ -108,9 +142,10 @@ func openViaCLI(ctx context.Context, workspace, folder string, newWindow bool, f
 	}
 	// Needs to be separated by `=` because of windows
 	folderUriArg := fmt.Sprintf("--folder-uri=vscode-remote://ssh-remote+%s.devpod/%s", workspace, folder)
+	args = append(codePath, args...)
 	args = append(args, folderUriArg)
-	log.Debugf("Run %s command %s %s", flavor.DisplayName(), codePath, strings.Join(args, " "))
-	out, err = exec.CommandContext(ctx, codePath, args...).CombinedOutput()
+	log.Debugf("Run %s command %s %s", flavor.DisplayName(), args[0], strings.Join(args[1:], " "))
+	out, err = exec.CommandContext(ctx, args[0], args[1:]...).CombinedOutput()
 	if err != nil {
 		return command.WrapCommandError(out, err)
 	}
@@ -118,56 +153,45 @@ func openViaCLI(ctx context.Context, workspace, folder string, newWindow bool, f
 	return nil
 }
 
-func findCLI(flavor Flavor) string {
-	if flavor == FlavorStable {
-		if command.Exists("code") {
-			return "code"
-		} else if runtime.GOOS == "darwin" && command.Exists("/Applications/Visual Studio Code.app/Contents/Resources/app/bin/code") {
-			return "/Applications/Visual Studio Code.app/Contents/Resources/app/bin/code"
-		}
+func existsInFlatpak(packageName string, log log.Logger) bool {
+	if err := exec.Command("flatpak", "info", packageName).Run(); err == nil {
+		return true
+	} else {
+		log.Debugf("Flatpak command for %s returned: %s", packageName, err)
+	}
+	return false
+}
 
-		return ""
+func getCommandArgs(execName, macOSPath, flatpakPackage string, log log.Logger) []string {
+	if command.Exists(execName) {
+		return []string{execName}
 	}
 
-	if flavor == FlavorInsiders {
-		if command.Exists("code-insiders") {
-			return "code-insiders"
-		} else if runtime.GOOS == "darwin" && command.Exists("/Applications/Visual Studio Code - Insiders.app/Contents/Resources/app/bin/code") {
-			return "/Applications/Visual Studio Code - Insiders.app/Contents/Resources/app/bin/code"
-		}
-
-		return ""
+	if runtime.GOOS == "darwin" && command.Exists(macOSPath) {
+		return []string{macOSPath}
 	}
 
-	if flavor == FlavorCursor {
-		if command.Exists("cursor") {
-			return "cursor"
-		} else if runtime.GOOS == "darwin" && command.Exists("/Applications/Cursor.app/Contents/Resources/app/bin/cursor") {
-			return "/Applications/Cursor.app/Contents/Resources/app/bin/cursor"
-		}
-
-		return ""
+	if runtime.GOOS == "linux" && flatpakPackage != "" && command.Exists("flatpak") && existsInFlatpak(flatpakPackage, log) {
+		return []string{"flatpak", "run", flatpakPackage}
 	}
 
-	if flavor == FlavorPositron {
-		if command.Exists("positron") {
-			return "positron"
-		} else if runtime.GOOS == "darwin" && command.Exists("/Applications/Positron.app/Contents/Resources/app/bin/positron") {
-			return "/Applications/Positron.app/Contents/Resources/app/bin/positron"
-		}
+	return nil
+}
 
-		return ""
+func findCLI(flavor Flavor, log log.Logger) []string {
+	switch flavor {
+	case FlavorStable:
+		return getCommandArgs("code", "/Applications/Visual Studio Code.app/Contents/Resources/app/bin/code", FlatpakStable, log)
+	case FlavorInsiders:
+		return getCommandArgs("code-insiders", "/Applications/Visual Studio Code - Insiders.app/Contents/Resources/app/bin/code", FlatpakInsiders, log)
+	case FlavorCursor:
+		return getCommandArgs("cursor", "/Applications/Cursor.app/Contents/Resources/app/bin/cursor", "", log)
+	case FlavorPositron:
+		return getCommandArgs("positron", "/Applications/Positron.app/Contents/Resources/app/bin/positron", "", log)
+	case FlavorCodium:
+		return getCommandArgs("codium", "/Applications/Codium.app/Contents/Resources/app/bin/codium", FlatpakCodium, log)
+	case FlavorCodiumInsiders:
+		return getCommandArgs("codium-insiders", "/Applications/CodiumInsiders.app/Contents/Resources/app/bin/codium-insiders", FlatpakCodiumInsiders, log)
 	}
-
-	if flavor == FlavorCodium {
-		if command.Exists("codium") {
-			return "codium"
-		} else if runtime.GOOS == "darwin" && command.Exists("/Applications/Codium.app/Contents/Resources/app/bin/codium") {
-			return "/Applications/Codium.app/Contents/Resources/app/bin/codium"
-		}
-
-		return ""
-	}
-
-	return ""
+	return nil
 }

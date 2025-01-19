@@ -165,6 +165,13 @@ var AllowedIDEs = []AllowedIDE{
 		Experimental: true,
 	},
 	{
+		Name:         config.IDECodiumInsiders,
+		DisplayName:  "Codium Insiders",
+		Options:      vscode.Options,
+		Icon:         "https://devpod.sh/assets/codium_insiders.svg", // TODO to be uploaded
+		Experimental: true,
+	},
+	{
 		Name:         config.IDEPositron,
 		DisplayName:  "Positron",
 		Options:      vscode.Options,
