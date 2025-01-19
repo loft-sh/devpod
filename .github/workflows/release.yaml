@@ -448,8 +448,52 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-  publish-updates:
+  flatpak:
     needs: [build-app, create-release]
+    runs-on: ubuntu-latest
+    container:
+      image: bilelmoussaoui/flatpak-github-actions:gnome-46
+      options: --privileged
+    steps:
+    - uses: actions/checkout@v4
+      with:
+        submodules: 'true'
+    - uses: flatpak/flatpak-github-actions/flatpak-builder@v6
+      with:
+        bundle: devpod.flatpak
+        manifest-path: desktop/src-tauri/org.loft.devpod.yaml
+        cache-key: flatpak-builder-${{ github.sha }}
+    - name: Build single file bundle of flatpak
+      run: flatpak build-bundle ./repo devpod.flatpak org.loft.devpod
+    - name: Upload bundle
+      if: matrix.settings.host != 'windows-latest'
+      uses: actions/github-script@v6
+      with:
+        script: |
+          const fs = require("fs")
+
+          const releaseId = "${{ needs.flatpak.outputs.release_id }}"
+          const assetName = "devpod-${{ matrix.settings.os }}-${{ matrix.settings.arch }}"
+          const assetPath = "desktop/src-tauri/devpod.flatpak"
+
+          console.log("Attempting to upload release asset: ", assetName)
+
+          await github.rest.repos.uploadReleaseAsset({
+            headers: {
+              "content-type": "application/zip",
+              "content-length": fs.statSync(assetPath).size
+            },
+            name: assetName,
+            data: fs.readFileSync(assetPath),
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            release_id: releaseId
+          })
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  publish-updates:
+    needs: [build-app, create-release, flatpak]
     if: startsWith(github.ref, 'refs/tags/v') == true
     permissions:
       contents: write
