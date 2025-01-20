@@ -93,13 +93,13 @@ func CopyToTempDir(relativePath string) (string, error) {
 }
 
 func CleanupTempDir(initialDir, tempDir string) {
-	err := os.RemoveAll(tempDir)
+	err := os.Chdir(initialDir)
+	ExpectNoError(err)
+
+	err = os.RemoveAll(tempDir)
 	if err != nil {
 		fmt.Println("WARN:", err)
 	}
-
-	err = os.Chdir(initialDir)
-	ExpectNoError(err)
 }
 
 func CleanString(input string) string {
