@@ -115,10 +115,15 @@ func (cmd *SetupContainerCmd) Run(ctx context.Context) error {
 	// sync mounts
 	if cmd.StreamMounts {
 		mounts := config.GetMounts(setupInfo)
+		logger.Debug("Syncing mounts... ", mounts)
 		for _, m := range mounts {
-			files, err := os.ReadDir(m.Target)
-			if err == nil && len(files) > 0 {
-				continue
+			// If we are resetting the workspace and it's sources, always re stream the mounts
+			if !workspaceInfo.CLIOptions.Reset {
+				files, err := os.ReadDir(m.Target)
+				if err == nil && len(files) > 0 {
+					logger.Debug("Skip stream mount ", m.Target, " because it's not empty")
+					continue
+				}
 			}
 
 			// stream mount
