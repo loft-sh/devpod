@@ -305,11 +305,11 @@ func prepareWorkspace(ctx context.Context, workspaceInfo *provider2.AgentWorkspa
 	if workspaceInfo.Workspace.Source.LocalFolder != "" {
 		// if we're not sending this to a remote machine, we're already done
 		if workspaceInfo.ContentFolder == workspaceInfo.Workspace.Source.LocalFolder {
-			log.Debugf("Local folder with local provider; skip downloading")
+			log.Debugf("Local folder %s with local provider; skip downloading", workspaceInfo.ContentFolder)
 			return nil
 		}
 
-		log.Debugf("Download Local Folder")
+		log.Debugf("Download Local Folder %s", workspaceInfo.ContentFolder)
 		return downloadLocalFolder(ctx, workspaceInfo.ContentFolder, client, log)
 	}
 

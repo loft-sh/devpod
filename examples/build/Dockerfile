@@ -26,6 +26,5 @@ RUN \
     && rm -rf /var/lib/apt/lists/*
 
 COPY app /app
-COPY files /files
 
 RUN echo hello
