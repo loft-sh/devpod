@@ -21,9 +21,6 @@ import (
 )
 
 func List(ctx context.Context, devPodConfig *config.Config, skipPro bool, log log.Logger) ([]*providerpkg.Workspace, error) {
-	// Set indexed by UID for deduplication
-	workspaces := map[string]*providerpkg.Workspace{}
-
 	// list local workspaces
 	localWorkspaces, err := ListLocalWorkspaces(devPodConfig.DefaultContext, skipPro, log)
 	if err != nil {
@@ -37,7 +34,32 @@ func List(ctx context.Context, devPodConfig *config.Config, skipPro bool, log lo
 		if err != nil {
 			return nil, err
 		}
+		proWorkspacesByUID := map[string]*providerpkg.Workspace{}
+		for _, w := range proWorkspaces {
+			proWorkspacesByUID[w.UID] = w
+		}
+
+		// Check if every local file based workspace has a remote counterpart
+		// If not, mark `exists` as false and allow consumers of this function to take necessary measures
+		cleanedLocalWorkspaces := []*providerpkg.Workspace{}
+		for _, localWorkspace := range localWorkspaces {
+			if localWorkspace.IsPro() {
+				if _, ok := proWorkspacesByUID[localWorkspace.UID]; !ok {
+					err = clientimplementation.DeleteWorkspaceFolder(devPodConfig.DefaultContext, localWorkspace.ID, "", log)
+					if err != nil {
+						log.Debugf("failed to delete local workspace %s: %v", localWorkspace.ID, err)
+					}
+					continue
+				}
+			}
+
+			cleanedLocalWorkspaces = append(cleanedLocalWorkspaces, localWorkspaces...)
+		}
+		localWorkspaces = cleanedLocalWorkspaces
 	}
+
+	// Set indexed by UID for deduplication
+	workspaces := map[string]*providerpkg.Workspace{}
 	// merge pro into local with pro taking precedence if UID matches
 	for _, workspace := range append(localWorkspaces, proWorkspaces...) {
 		workspaces[workspace.UID] = workspace
