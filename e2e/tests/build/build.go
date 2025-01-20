@@ -15,8 +15,6 @@ import (
 	"github.com/onsi/ginkgo/v2"
 )
 
-const providerName = "docker-test"
-
 var _ = DevPodDescribe("devpod build test suite", func() {
 	ginkgo.Context("testing build", ginkgo.Label("build"), ginkgo.Ordered, func() {
 		var initialDir string
@@ -37,10 +35,10 @@ var _ = DevPodDescribe("devpod build test suite", func() {
 			framework.ExpectNoError(err)
 			ginkgo.DeferCleanup(framework.CleanupTempDir, initialDir, tempDir)
 
-			_ = f.DevPodProviderDelete(ctx, providerName)
-			err = f.DevPodProviderAdd(ctx, "docker", "--name", providerName)
+			_ = f.DevPodProviderDelete(ctx, "docker")
+			err = f.DevPodProviderAdd(ctx, "docker")
 			framework.ExpectNoError(err)
-			err = f.DevPodProviderUse(context.Background(), providerName)
+			err = f.DevPodProviderUse(context.Background(), "docker")
 			framework.ExpectNoError(err)
 
 			cfg := getDevcontainerConfig(tempDir)
@@ -90,6 +88,7 @@ var _ = DevPodDescribe("devpod build test suite", func() {
 			framework.ExpectNoError(err)
 			err = f.DevPodProviderUse(context.Background(), "docker")
 			framework.ExpectNoError(err)
+			ginkgo.DeferCleanup(f.DevPodWorkspaceDelete, context.Background(), tempDir)
 
 			cfg := getDevcontainerConfig(tempDir)
 
@@ -129,6 +128,8 @@ var _ = DevPodDescribe("devpod build test suite", func() {
 			err = f.DevPodProviderUse(context.Background(), "docker")
 			framework.ExpectNoError(err)
 
+			ginkgo.DeferCleanup(f.DevPodWorkspaceDelete, context.Background(), tempDir)
+
 			prebuildRepo := "test-repo"
 
 			// do the build
@@ -149,6 +150,8 @@ var _ = DevPodDescribe("devpod build test suite", func() {
 			framework.ExpectNoError(err)
 			err = f.DevPodProviderUse(context.Background(), "docker")
 			framework.ExpectNoError(err)
+
+			ginkgo.DeferCleanup(f.DevPodWorkspaceDelete, context.Background(), tempDir)
 
 			cfg := getDevcontainerConfig(tempDir)
 
