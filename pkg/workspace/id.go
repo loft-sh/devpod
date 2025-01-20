@@ -32,6 +32,8 @@ func ToID(str string) string {
 			}
 		}
 	} else {
+		// Ensure we don't have a single trailing slash
+		str = strings.TrimSuffix(str, "/")
 		// 3. If not, then parse the repo name as ID
 		index := strings.LastIndex(str, "/")
 		if index != -1 {
