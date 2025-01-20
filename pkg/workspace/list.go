@@ -8,6 +8,7 @@ import (
 	"os"
 	"strconv"
 	"strings"
+	"sync"
 
 	managementv1 "github.com/loft-sh/api/v4/pkg/apis/management/v1"
 	storagev1 "github.com/loft-sh/api/v4/pkg/apis/storage/v1"
@@ -108,122 +109,146 @@ func ListLocalWorkspaces(contextName string, skipPro bool, log log.Logger) ([]*p
 
 func listProWorkspaces(ctx context.Context, devPodConfig *config.Config, log log.Logger) ([]*providerpkg.Workspace, error) {
 	retWorkspaces := []*providerpkg.Workspace{}
+	// lock around `retWorkspaces`
+	var mu sync.Mutex
+	wg := sync.WaitGroup{}
+
 	for provider, providerContextConfig := range devPodConfig.Current().Providers {
 		if !providerContextConfig.Initialized {
 			continue
 		}
-
+		l := log.ErrorStreamOnly()
 		providerConfig, err := providerpkg.LoadProviderConfig(devPodConfig.DefaultContext, provider)
 		if err != nil {
-			return retWorkspaces, fmt.Errorf("load provider config for provider \"%s\": %w", provider, err)
+			l.Warnf("load provider config for provider \"%s\": %v", provider, err)
+			continue
 		}
 		// only get pro providers
 		if !providerConfig.IsProxyProvider() {
 			continue
 		}
 
-		opts := devPodConfig.ProviderOptions(provider)
-		opts[providerpkg.LOFT_FILTER_BY_OWNER] = config.OptionValue{Value: "true"}
-		var buf bytes.Buffer
-		if err := clientimplementation.RunCommandWithBinaries(
-			ctx,
-			"listWorkspaces",
-			providerConfig.Exec.Proxy.List.Workspaces,
-			devPodConfig.DefaultContext,
-			nil,
-			nil,
-			opts,
-			providerConfig,
-			nil, nil, &buf, log.ErrorStreamOnly().Writer(logrus.ErrorLevel, false), log,
-		); err != nil {
-			log.ErrorStreamOnly().Debugf("list workspaces for provider \"%s\": %v", provider, err)
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			workspaces, err := listProWorkspacesForProvider(ctx, devPodConfig, provider, providerConfig, log)
+			if err != nil {
+				log.ErrorStreamOnly().Warn(err)
+				return
+			}
+			mu.Lock()
+			defer mu.Unlock()
+			retWorkspaces = append(retWorkspaces, workspaces...)
+		}()
+	}
+	wg.Wait()
+
+	return retWorkspaces, nil
+}
+
+func listProWorkspacesForProvider(ctx context.Context, devPodConfig *config.Config, provider string, providerConfig *providerpkg.ProviderConfig, log log.Logger) ([]*providerpkg.Workspace, error) {
+	opts := devPodConfig.ProviderOptions(provider)
+	opts[providerpkg.LOFT_FILTER_BY_OWNER] = config.OptionValue{Value: "true"}
+	var buf bytes.Buffer
+	if err := clientimplementation.RunCommandWithBinaries(
+		ctx,
+		"listWorkspaces",
+		providerConfig.Exec.Proxy.List.Workspaces,
+		devPodConfig.DefaultContext,
+		nil,
+		nil,
+		opts,
+		providerConfig,
+		nil, nil, &buf, log.ErrorStreamOnly().Writer(logrus.ErrorLevel, false), log,
+	); err != nil {
+		return nil, fmt.Errorf("list workspaces for provider \"%s\": %w", provider, err)
+	}
+	if buf.Len() == 0 {
+		return nil, nil
+	}
+
+	instances := []managementv1.DevPodWorkspaceInstance{}
+	if err := json.Unmarshal(buf.Bytes(), &instances); err != nil {
+		log.ErrorStreamOnly().Errorf("unmarshal devpod workspace instances: %w", err)
+	}
+
+	retWorkspaces := []*providerpkg.Workspace{}
+	for _, instance := range instances {
+		if instance.GetLabels() == nil {
+			log.Debugf("no labels for pro workspace \"%s\" found, skipping", instance.GetName())
 			continue
 		}
-		if buf.Len() == 0 {
+
+		// id
+		id := instance.GetLabels()[storagev1.DevPodWorkspaceIDLabel]
+		if id == "" {
+			log.Debugf("no ID label for pro workspace \"%s\" found, skipping", instance.GetName())
 			continue
 		}
 
-		instances := []managementv1.DevPodWorkspaceInstance{}
-		if err := json.Unmarshal(buf.Bytes(), &instances); err != nil {
-			log.ErrorStreamOnly().Errorf("unmarshal devpod workspace instances: %w", err)
+		// uid
+		uid := instance.GetLabels()[storagev1.DevPodWorkspaceUIDLabel]
+		if uid == "" {
+			log.Debugf("no UID label for pro workspace \"%s\" found, skipping", instance.GetName())
+			continue
 		}
 
-		for _, instance := range instances {
-			if instance.GetLabels() == nil {
-				log.Debugf("no labels for pro workspace \"%s\" found, skipping", instance.GetName())
-				continue
-			}
+		// project
+		projectName := instance.GetLabels()[labels.ProjectLabel]
 
-			// id
-			id := instance.GetLabels()[storagev1.DevPodWorkspaceIDLabel]
-			if id == "" {
-				log.Debugf("no ID label for pro workspace \"%s\" found, skipping", instance.GetName())
-				continue
-			}
-
-			// uid
-			uid := instance.GetLabels()[storagev1.DevPodWorkspaceUIDLabel]
-			if uid == "" {
-				log.Debugf("no UID label for pro workspace \"%s\" found, skipping", instance.GetName())
-				continue
-			}
-
-			// project
-			projectName := instance.GetLabels()[labels.ProjectLabel]
-
-			// source
-			source := providerpkg.WorkspaceSource{}
-			if instance.Annotations != nil && instance.Annotations[storagev1.DevPodWorkspaceSourceAnnotation] != "" {
-				// source to workspace config source
-				rawSource := instance.Annotations[storagev1.DevPodWorkspaceSourceAnnotation]
-				s := providerpkg.ParseWorkspaceSource(rawSource)
-				if s == nil {
-					log.ErrorStreamOnly().Warnf("unable to parse workspace source \"%s\": %v", rawSource, err)
-				} else {
-					source = *s
-				}
-			}
-
-			// last used timestamp
-			var lastUsedTimestamp types.Time
-			sleepModeConfig := instance.Status.SleepModeConfig
-			if sleepModeConfig != nil {
-				lastUsedTimestamp = types.Unix(sleepModeConfig.Status.LastActivity, 0)
+		// source
+		source := providerpkg.WorkspaceSource{}
+		if instance.Annotations != nil && instance.Annotations[storagev1.DevPodWorkspaceSourceAnnotation] != "" {
+			// source to workspace config source
+			rawSource := instance.Annotations[storagev1.DevPodWorkspaceSourceAnnotation]
+			s := providerpkg.ParseWorkspaceSource(rawSource)
+			if s == nil {
+				log.ErrorStreamOnly().Warnf("unable to parse workspace source \"%s\": %v", rawSource)
 			} else {
-				var ts int64
-				if instance.Annotations != nil {
-					if val, ok := instance.Annotations["sleepmode.loft.sh/last-activity"]; ok {
-						if ts, err = strconv.ParseInt(val, 10, 64); err != nil {
-							log.Warn("received invalid sleepmode.loft.sh/last-activity from ", instance.GetName())
-						}
+				source = *s
+			}
+		}
+
+		// last used timestamp
+		var lastUsedTimestamp types.Time
+		sleepModeConfig := instance.Status.SleepModeConfig
+		if sleepModeConfig != nil {
+			lastUsedTimestamp = types.Unix(sleepModeConfig.Status.LastActivity, 0)
+		} else {
+			var ts int64
+			if instance.Annotations != nil {
+				if val, ok := instance.Annotations["sleepmode.loft.sh/last-activity"]; ok {
+					var err error
+					if ts, err = strconv.ParseInt(val, 10, 64); err != nil {
+						log.Warn("received invalid sleepmode.loft.sh/last-activity from ", instance.GetName())
 					}
 				}
-				lastUsedTimestamp = types.Unix(ts, 0)
 			}
-
-			// creation timestamp
-			creationTimestamp := types.Time{}
-			if !instance.CreationTimestamp.IsZero() {
-				creationTimestamp = types.NewTime(instance.CreationTimestamp.Time)
-			}
-
-			workspace := providerpkg.Workspace{
-				ID:      id,
-				UID:     uid,
-				Context: devPodConfig.DefaultContext,
-				Source:  source,
-				Provider: providerpkg.WorkspaceProviderConfig{
-					Name: provider,
-				},
-				LastUsedTimestamp: lastUsedTimestamp,
-				CreationTimestamp: creationTimestamp,
-				Pro: &providerpkg.ProMetadata{
-					Project:     projectName,
-					DisplayName: instance.Spec.DisplayName,
-				},
-			}
-			retWorkspaces = append(retWorkspaces, &workspace)
+			lastUsedTimestamp = types.Unix(ts, 0)
 		}
+
+		// creation timestamp
+		creationTimestamp := types.Time{}
+		if !instance.CreationTimestamp.IsZero() {
+			creationTimestamp = types.NewTime(instance.CreationTimestamp.Time)
+		}
+
+		workspace := providerpkg.Workspace{
+			ID:      id,
+			UID:     uid,
+			Context: devPodConfig.DefaultContext,
+			Source:  source,
+			Provider: providerpkg.WorkspaceProviderConfig{
+				Name: provider,
+			},
+			LastUsedTimestamp: lastUsedTimestamp,
+			CreationTimestamp: creationTimestamp,
+			Pro: &providerpkg.ProMetadata{
+				Project:     projectName,
+				DisplayName: instance.Spec.DisplayName,
+			},
+		}
+		retWorkspaces = append(retWorkspaces, &workspace)
 	}
 
 	return retWorkspaces, nil

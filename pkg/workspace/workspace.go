@@ -492,7 +492,8 @@ func findWorkspace(ctx context.Context, devPodConfig *config.Config, args []stri
 		}
 
 		if workspace.IsPro() {
-			if err := providerpkg.SaveWorkspaceConfig(workspace); err != nil {
+			err = providerpkg.SaveWorkspaceConfig(workspace)
+			if err != nil {
 				log.Debugf("failed to save workspace config for workspace \"%s\" with provider \"%s\": %v", workspace.ID, workspace.Provider.Name, err)
 				return nil
 			}
