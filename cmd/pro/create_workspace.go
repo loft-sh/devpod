@@ -68,7 +68,7 @@ func (cmd *CreateWorkspaceCmd) Run(ctx context.Context) error {
 	// ignore --debug because we tunnel json through stdio
 	cmd.Log.SetLevel(logrus.InfoLevel)
 
-	if err := clientimplementation.RunCommandWithBinaries(
+	err = clientimplementation.RunCommandWithBinaries(
 		ctx,
 		"createWorkspace",
 		provider.Exec.Proxy.Create.Workspace,
@@ -81,9 +81,7 @@ func (cmd *CreateWorkspaceCmd) Run(ctx context.Context) error {
 		nil,
 		&buf,
 		cmd.Log.ErrorStreamOnly().Writer(logrus.ErrorLevel, true),
-		cmd.Log); err != nil {
-		return fmt.Errorf("create workspace with provider \"%s\": %w", provider.Name, err)
-	}
+		cmd.Log)
 	if err != nil {
 		return fmt.Errorf("create workspace: %w", err)
 	}

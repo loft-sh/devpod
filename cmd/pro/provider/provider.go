@@ -3,6 +3,7 @@ package provider
 import (
 	"os"
 
+	"github.com/loft-sh/devpod/cmd/agent"
 	"github.com/loft-sh/devpod/cmd/pro/flags"
 	"github.com/loft-sh/devpod/cmd/pro/provider/create"
 	"github.com/loft-sh/devpod/cmd/pro/provider/get"
@@ -11,6 +12,7 @@ import (
 	"github.com/loft-sh/devpod/cmd/pro/provider/watch"
 	"github.com/loft-sh/devpod/pkg/platform"
 	"github.com/loft-sh/devpod/pkg/platform/client"
+	"github.com/loft-sh/devpod/pkg/telemetry"
 	"github.com/loft-sh/log"
 
 	"github.com/spf13/cobra"
@@ -29,6 +31,20 @@ func NewProProviderCmd(globalFlags *flags.GlobalFlags) *cobra.Command {
 			}
 
 			log.Default.SetFormat(log.JSONFormat)
+
+			// Disable debug hints if we execute pro commands from DevPod Desktop
+			// We're reusing the agent.AgentExecutedAnnotation for simplicity, could rename in the future
+			if os.Getenv(telemetry.UIEnvVar) == "true" {
+				cmd.VisitParents(func(c *cobra.Command) {
+					// find the root command
+					if c.Name() == "devpod" {
+						if c.Annotations == nil {
+							c.Annotations = map[string]string{}
+						}
+						c.Annotations[agent.AgentExecutedAnnotation] = "true"
+					}
+				})
+			}
 		},
 	}
 
