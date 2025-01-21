@@ -211,9 +211,9 @@ func (r *runner) runDockerCompose(
 
 // onlyRunServices appends the services defined in .devcontainer.json runServices to the upArgs
 func (r *runner) onlyRunServices(upArgs []string, parsedConfig *config.SubstitutedConfig) []string {
+	// Always run the main devcontainer
+	upArgs = append(upArgs, parsedConfig.Config.Service)
 	if len(parsedConfig.Config.RunServices) > 0 {
-		// Run the main devcontainer
-		upArgs = append(upArgs, parsedConfig.Config.Service)
 		// Run the services defined in .devcontainer.json runServices
 		for _, service := range parsedConfig.Config.RunServices {
 			if service == parsedConfig.Config.Service {
