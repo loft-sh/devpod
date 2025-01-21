@@ -165,6 +165,9 @@ func (r *runner) runDockerCompose(
 				upArgs = append(upArgs, "-f", existingProjectFiles)
 			}
 			upArgs = append(upArgs, "up", "-d")
+			upArgs = r.onlyRunServices(upArgs, parsedConfig)
+
+			// Run docker-compose
 			writer := r.Log.Writer(logrus.InfoLevel, false)
 			err = composeHelper.Run(ctx, upArgs, nil, writer, writer)
 			if err != nil {
@@ -204,6 +207,22 @@ func (r *runner) runDockerCompose(
 
 	// setup container
 	return r.setupContainer(ctx, parsedConfig.Raw, containerDetails, mergedConfig, substitutionContext, timeout)
+}
+
+// onlyRunServices appends the services defined in .devcontainer.json runServices to the upArgs
+func (r *runner) onlyRunServices(upArgs []string, parsedConfig *config.SubstitutedConfig) []string {
+	// Always run the main devcontainer
+	upArgs = append(upArgs, parsedConfig.Config.Service)
+	if len(parsedConfig.Config.RunServices) > 0 {
+		// Run the services defined in .devcontainer.json runServices
+		for _, service := range parsedConfig.Config.RunServices {
+			if service == parsedConfig.Config.Service {
+				continue
+			}
+			upArgs = append(upArgs, service)
+		}
+	}
+	return upArgs
 }
 
 func (r *runner) getDockerComposeFilePaths(parsedConfig *config.SubstitutedConfig, envFiles []string) ([]string, error) {
@@ -369,16 +388,7 @@ func (r *runner) startContainer(
 	if container != nil {
 		upArgs = append(upArgs, "--no-recreate")
 	}
-
-	if len(parsedConfig.Config.RunServices) > 0 {
-		upArgs = append(upArgs, composeService.Name)
-		for _, service := range parsedConfig.Config.RunServices {
-			if service == composeService.Name {
-				continue
-			}
-			upArgs = append(upArgs, service)
-		}
-	}
+	upArgs = r.onlyRunServices(upArgs, parsedConfig)
 
 	// start compose
 	writer := r.Log.Writer(logrus.InfoLevel, false)
