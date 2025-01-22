@@ -5,6 +5,7 @@ import (
 	"crypto/tls"
 	"fmt"
 	"io"
+	"log"
 	"net"
 	"net/http"
 	"net/url"
@@ -13,6 +14,7 @@ import (
 	"time"
 
 	"k8s.io/klog/v2"
+	"tailscale.com/client/tailscale"
 	"tailscale.com/envknob"
 	"tailscale.com/ipn/store/mem"
 	"tailscale.com/tsnet"
@@ -24,6 +26,7 @@ type TSNet interface {
 	Start(ctx context.Context) error
 	Stop()
 	Dial(ctx context.Context, network, addr string) (net.Conn, error)
+	LocalClient() (*tailscale.LocalClient, error)
 }
 
 // tsNet is the implementation of TSNet
@@ -123,6 +126,68 @@ func (t *tsNet) Dial(ctx context.Context, network, addr string) (net.Conn, error
 		return nil, fmt.Errorf("Tailscale server is not running")
 	}
 	return t.tsServer.Dial(ctx, network, addr)
+}
+
+// LocalClient returns the tailscale API client to the caller
+func (t *tsNet) LocalClient() (*tailscale.LocalClient, error) {
+	if t.tsServer == nil {
+		return nil, fmt.Errorf("Tailscale server is not running")
+	}
+	return t.tsServer.LocalClient()
+}
+
+// NetCheck aims to simulate the `tailscale netcheck` command to provide useful debug information
+func (t *tsNet) NetCheck(ctx context.Context, log log.Logger) error {
+	if t.tsServer == nil {
+		return fmt.Errorf("Tailscale server is not running")
+	}
+	// Get underlying tailscale API client
+	lc, err := t.tsServer.LocalClient()
+	if err != nil {
+		return fmt.Errorf("failed to get local client: %w", err)
+	}
+	// Generate list of DERP servers
+	derpMap, err := lc.CurrentDERPMap(ctx)
+	if err != nil {
+		return fmt.Errorf("failed to get DERP map: %w", err)
+	}
+	log.Println("DERP map:")
+	log.Println(derpMap)
+	// Iterate over regions and nodes and generate a debug report for each region
+	for _, region := range derpMap.Regions {
+		log.Println("Region:", region.RegionCode)
+		for _, node := range region.Nodes {
+			log.Println("Node:", node)
+		}
+		report, err := lc.DebugDERPRegion(ctx, region.RegionCode)
+		if err != nil {
+			return fmt.Errorf("failed to debug DERP region: %w", err)
+		}
+		log.Println("DERP report")
+		log.Println(report)
+	}
+	return nil
+}
+
+func (t *tsNet) Metrics(ctx context.Context, log log.Logger) error {
+	if t.tsServer == nil {
+		return fmt.Errorf("Tailscale server is not running")
+	}
+
+	lc, err := t.tsServer.LocalClient()
+	if err != nil {
+		return fmt.Errorf("failed to get local client: %w", err)
+	}
+
+	promMetrics, err := lc.DaemonMetrics(ctx)
+	if err != nil {
+		return fmt.Errorf("failed to get daemon metrics: %w", err)
+	}
+
+	log.Println("Daemon metrics:")
+	log.Println(promMetrics)
+
+	return nil
 }
 
 // checkDerpConnection validates the DERP connection
