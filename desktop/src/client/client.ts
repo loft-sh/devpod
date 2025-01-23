@@ -133,6 +133,12 @@ class Client {
     }
   }
 
+  // emitEvent publishes to a given channel and invokes the corresponding handler.
+  // This is only intended to be used for debugging right now.
+  public emitEvent<T extends TChannelName>(e: TChannels[T]) {
+    event.emit("event", e)
+  }
+
   public fetchPlatform(): TPlatform {
     return os.platform()
   }
