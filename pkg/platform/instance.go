@@ -4,6 +4,7 @@ import (
 	"context"
 	"crypto/tls"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -229,7 +230,25 @@ func WaitForInstance(ctx context.Context, client client.Client, instance *manage
 		return true, nil
 	})
 	if err != nil {
-		return nil, fmt.Errorf("wait for instance to get ready: %w", err)
+		// let's build a proper error message here
+		msg := "Timed out waiting for workspace to get ready \n\n "
+		// basic status
+		msg += fmt.Sprintf("ready: %t\n", isReady(updatedInstance))
+		msg += fmt.Sprintf("template synced: %t\n", isTemplateSynced(updatedInstance))
+		msg += fmt.Sprintf("runner ready: %t\n", isRunnerReady(updatedInstance, storagev1.BuiltinRunnerName))
+		msg += "\n"
+
+		// CRD conditions
+		msg += "Conditions:\n"
+		for _, cond := range updatedInstance.Status.Conditions {
+			msg += fmt.Sprintf("%s is %s (%s): %s\n", cond.Type, cond.Status, cond.Reason, cond.Message)
+		}
+		msg += "\n"
+
+		// error message, usually context timeout
+		msg += fmt.Sprintf("Error: %s", err.Error())
+
+		return nil, errors.New(msg)
 	}
 
 	return updatedInstance, nil
