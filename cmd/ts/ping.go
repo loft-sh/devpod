@@ -57,26 +57,26 @@ func NewPingCmd() *cobra.Command {
 		),
 		RunE: func(cobraCmd *cobra.Command, args []string) error {
 			ctx := cobraCmd.Context()
+			// Create network
 			tsNet := tailscale.NewTSNet(&tailscale.TSNetConfig{
 				AccessKey: cmd.AccessKey,
 				Host:      tailscale.RemoveProtocol(cmd.PlatformHost),
 				Hostname:  cmd.NetworkHostname,
 			})
-
+			// Run tailscale up and wait until we have a connected client
 			done := make(chan bool)
-
 			go func() {
 				err := tsNet.Start(ctx, done)
 				if err != nil {
 					log.Fatalf("cannot start tsNet server: %v", err)
 				}
 			}()
+			<-done
 
-			time.Sleep(5 * time.Second)
-
+			// Get tailscale API client
 			localClient, err := tsNet.LocalClient()
 			if err != nil {
-				return fmt.Errorf("cannot create local client: %w", err)
+				return fmt.Errorf("cannot get local client: %w", err)
 			}
 			return cmd.runPing(ctx, args, localClient)
 		},

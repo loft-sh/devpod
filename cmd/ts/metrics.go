@@ -45,28 +45,29 @@ func NewMetricsCmd() *cobra.Command {
 
 func (cmd *MetricsCmd) Run(_ *cobra.Command, _ []string) error {
 	ctx := context.Background()
+	// Create network
 	tsNet := tailscale.NewTSNet(&tailscale.TSNetConfig{
 		AccessKey: cmd.AccessKey,
 		Host:      tailscale.RemoveProtocol(cmd.PlatformHost),
 		Hostname:  cmd.NetworkHostname,
 	})
-
+	// Run tailscale up and wait until we have a connected client
 	done := make(chan bool)
-
 	go func() {
 		err := tsNet.Start(ctx, done)
 		if err != nil {
 			log.Fatalf("cannot start tsNet server: %v", err)
 		}
 	}()
-
 	<-done
 
+	// Get tailscale API client
 	localClient, err := tsNet.LocalClient()
 	if err != nil {
 		return fmt.Errorf("cannot get local client: %w", err)
 	}
 
+	// Print metrics
 	out, err := localClient.DaemonMetrics(ctx)
 	if err != nil {
 		return err

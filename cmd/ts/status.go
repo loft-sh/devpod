@@ -52,12 +52,13 @@ func NewStatusCmd() *cobra.Command {
 				return errors.New("unexpected non-flag arguments to 'tailscale status'")
 			}
 
+			// Create network
 			tsNet := tailscale.NewTSNet(&tailscale.TSNetConfig{
 				AccessKey: cmd.AccessKey,
 				Host:      tailscale.RemoveProtocol(cmd.PlatformHost),
 				Hostname:  cmd.NetworkHostname,
 			})
-
+			// Run tailscale up and wait until we have a connected client
 			done := make(chan bool)
 			go func() {
 				err := tsNet.Start(ctx, done)
@@ -67,9 +68,10 @@ func NewStatusCmd() *cobra.Command {
 			}()
 			<-done
 
+			// Get tailscale API client
 			localClient, err := tsNet.LocalClient()
 			if err != nil {
-				return fmt.Errorf("cannot create local client: %w", err)
+				return fmt.Errorf("cannot get local client: %w", err)
 			}
 			return cmd.runStatus(ctx, localClient)
 		},
