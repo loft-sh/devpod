@@ -5,7 +5,6 @@ import (
 	"crypto/tls"
 	"fmt"
 	"io"
-	"log"
 	"net"
 	"net/http"
 	"net/url"
@@ -27,7 +26,6 @@ type TSNet interface {
 	Stop()
 	Dial(ctx context.Context, network, addr string) (net.Conn, error)
 	LocalClient() (*tailscale.LocalClient, error)
-	WaitUntilReachable(ctx context.Context) error
 }
 
 // tsNet is the implementation of TSNet
@@ -141,60 +139,6 @@ func (t *tsNet) LocalClient() (*tailscale.LocalClient, error) {
 	return t.tsServer.LocalClient()
 }
 
-// NetCheck aims to simulate the `tailscale netcheck` command to provide useful debug information
-func (t *tsNet) NetCheck(ctx context.Context, log log.Logger) error {
-	if t.tsServer == nil {
-		return fmt.Errorf("Tailscale server is not running")
-	}
-	// Get underlying tailscale API client
-	lc, err := t.tsServer.LocalClient()
-	if err != nil {
-		return fmt.Errorf("failed to get local client: %w", err)
-	}
-	// Generate list of DERP servers
-	derpMap, err := lc.CurrentDERPMap(ctx)
-	if err != nil {
-		return fmt.Errorf("failed to get DERP map: %w", err)
-	}
-	log.Println("DERP map:")
-	log.Println(derpMap)
-	// Iterate over regions and nodes and generate a debug report for each region
-	for _, region := range derpMap.Regions {
-		log.Println("Region:", region.RegionCode)
-		for _, node := range region.Nodes {
-			log.Println("Node:", node)
-		}
-		report, err := lc.DebugDERPRegion(ctx, region.RegionCode)
-		if err != nil {
-			return fmt.Errorf("failed to debug DERP region: %w", err)
-		}
-		log.Println("DERP report")
-		log.Println(report)
-	}
-	return nil
-}
-
-func (t *tsNet) Metrics(ctx context.Context, log log.Logger) error {
-	if t.tsServer == nil {
-		return fmt.Errorf("Tailscale server is not running")
-	}
-
-	lc, err := t.tsServer.LocalClient()
-	if err != nil {
-		return fmt.Errorf("failed to get local client: %w", err)
-	}
-
-	promMetrics, err := lc.DaemonMetrics(ctx)
-	if err != nil {
-		return fmt.Errorf("failed to get daemon metrics: %w", err)
-	}
-
-	log.Println("Daemon metrics:")
-	log.Println(promMetrics)
-
-	return nil
-}
-
 // checkDerpConnection validates the DERP connection
 func checkDerpConnection(ctx context.Context, baseUrl *url.URL) error {
 	newTransport := http.DefaultTransport.(*http.Transport).Clone()
@@ -272,27 +216,4 @@ func RemoveProtocol(hostPath string) string {
 		return hostPath[idx+3:]
 	}
 	return hostPath
-}
-
-// WaitUntilReachable polls until the given host is reachable via Tailscale.
-func (ts *tsNet) WaitUntilReachable(ctx context.Context) error {
-	const retryInterval = time.Second
-	const maxRetries = 60
-
-	for i := 0; i < maxRetries; i++ {
-		conn, err := ts.Dial(ctx, "tcp", fmt.Sprintf("%s.ts.loft:8022", ts.config.Host))
-		if err == nil {
-			_ = conn.Close()
-			return nil // Host is reachable
-		}
-		log.Printf("Host %s not reachable, retrying... (%d/%d)", ts.config.Host, i+1, maxRetries)
-
-		select {
-		case <-ctx.Done():
-			return ctx.Err()
-		case <-time.After(retryInterval):
-		}
-	}
-
-	return fmt.Errorf("host %s not reachable after %d attempts", ts.config.Host, maxRetries)
 }
