@@ -85,3 +85,7 @@ var Stdout io.Writer = os.Stdout
 func printf(format string, a ...any) {
 	fmt.Fprintf(Stdout, format, a...)
 }
+
+func errf(format string, a ...any) {
+	fmt.Fprintf(Stderr, format, a...)
+}

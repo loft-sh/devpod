@@ -1,6 +1,3 @@
-// This file is copied from the tailscale project, and it is used to check the network conditions of the local machine.
-// Effectively we copied runNetcheck from `cmd/tailscale/cli/netcheck.go` then used our `pkg/tailscale/tsnet.go` join the tsnet
-// and return it's LocalClient to be used in the runNetcheck function.
 package ts
 
 import (
@@ -15,7 +12,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/loft-sh/devpod/cmd/flags"
 	"github.com/loft-sh/devpod/pkg/tailscale"
 	"github.com/spf13/cobra"
 	"tailscale.com/envknob"
@@ -29,21 +25,15 @@ import (
 )
 
 type NetcheckCmd struct {
-	*flags.GlobalFlags
+	*TsNetFlags
 
-	AccessKey       string
-	PlatformHost    string
-	NetworkHostname string
-	format          string
-	every           time.Duration
-	verbose         bool
+	format  string
+	every   time.Duration
+	verbose bool
 }
 
-// NewDaemonCmd creates a new command
-func NewNetcheckCmd(flags *flags.GlobalFlags) *cobra.Command {
-	cmd := &NetcheckCmd{
-		GlobalFlags: flags,
-	}
+func NewNetcheckCmd() *cobra.Command {
+	cmd := &NetcheckCmd{TsNetFlags: &TsNetFlags{}}
 	netcheckCmd := &cobra.Command{
 		Use:   "netcheck",
 		Short: "Print an analysis of local network conditions",
@@ -55,13 +45,10 @@ func NewNetcheckCmd(flags *flags.GlobalFlags) *cobra.Command {
 	netcheckCmd.Flags().DurationVar(&cmd.every, "every", 0, "if non-zero, do an incremental report with the given frequency")
 	netcheckCmd.Flags().BoolVar(&cmd.verbose, "verbose", false, "verbose logs")
 
-	netcheckCmd.Flags().StringVar(&cmd.AccessKey, "access-key", "", "")
-	netcheckCmd.Flags().StringVar(&cmd.PlatformHost, "host", "", "")
-	netcheckCmd.Flags().StringVar(&cmd.NetworkHostname, "hostname", "", "")
+	cmd.ParseFlags(netcheckCmd)
 	return netcheckCmd
 }
 
-// Run runs the command logic
 func (cmd *NetcheckCmd) Run(_ *cobra.Command, _ []string) error {
 	ctx := context.Background()
 	tsNet := tailscale.NewTSNet(&tailscale.TSNetConfig{
@@ -92,10 +79,6 @@ func (cmd *NetcheckCmd) Run(_ *cobra.Command, _ []string) error {
 	if err != nil {
 		return err
 	}
-
-	logf(cmd.AccessKey)
-	logf(cmd.NetworkHostname)
-	logf(cmd.PlatformHost)
 
 	// Ensure that we close the portmapper after running a netcheck; this
 	// will release any port mappings created.

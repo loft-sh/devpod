@@ -27,6 +27,7 @@ type TSNet interface {
 	Stop()
 	Dial(ctx context.Context, network, addr string) (net.Conn, error)
 	LocalClient() (*tailscale.LocalClient, error)
+	WaitUntilReachable(ctx context.Context) error
 }
 
 // tsNet is the implementation of TSNet
@@ -267,4 +268,27 @@ func RemoveProtocol(hostPath string) string {
 		return hostPath[idx+3:]
 	}
 	return hostPath
+}
+
+// WaitUntilReachable polls until the given host is reachable via Tailscale.
+func (ts *tsNet) WaitUntilReachable(ctx context.Context) error {
+	const retryInterval = time.Second
+	const maxRetries = 60
+
+	for i := 0; i < maxRetries; i++ {
+		conn, err := ts.Dial(ctx, "tcp", fmt.Sprintf("%s.ts.loft:8022", ts.config.Host))
+		if err == nil {
+			_ = conn.Close()
+			return nil // Host is reachable
+		}
+		log.Printf("Host %s not reachable, retrying... (%d/%d)", ts.config.Host, i+1, maxRetries)
+
+		select {
+		case <-ctx.Done():
+			return ctx.Err()
+		case <-time.After(retryInterval):
+		}
+	}
+
+	return fmt.Errorf("host %s not reachable after %d attempts", ts.config.Host, maxRetries)
 }

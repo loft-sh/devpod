@@ -11,7 +11,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/loft-sh/devpod/cmd/flags"
 	"github.com/loft-sh/devpod/pkg/tailscale"
 
 	"github.com/spf13/cobra"
@@ -21,11 +20,7 @@ import (
 )
 
 type PingCmd struct {
-	*flags.GlobalFlags
-
-	AccessKey       string
-	PlatformHost    string
-	NetworkHostname string
+	*TsNetFlags
 
 	num         int
 	size        int
@@ -37,10 +32,8 @@ type PingCmd struct {
 	timeout     time.Duration
 }
 
-func NewPingCmd(flags *flags.GlobalFlags) *cobra.Command {
-	cmd := &PingCmd{
-		GlobalFlags: flags,
-	}
+func NewPingCmd() *cobra.Command {
+	cmd := &PingCmd{TsNetFlags: &TsNetFlags{}}
 	var pingCmd = &cobra.Command{
 		Use:     "ping",
 		Example: "tailscale ping <hostname-or-IP>",
@@ -99,9 +92,7 @@ func NewPingCmd(flags *flags.GlobalFlags) *cobra.Command {
 	pingCmd.Flags().DurationVar(&cmd.timeout, "timeout", 5*time.Second, "timeout before giving up on a ping")
 	pingCmd.Flags().IntVar(&cmd.size, "size", 0, "size of the ping message (disco pings only). 0 for minimum size.")
 
-	pingCmd.Flags().StringVar(&cmd.AccessKey, "access-key", "", "")
-	pingCmd.Flags().StringVar(&cmd.PlatformHost, "host", "", "")
-	pingCmd.Flags().StringVar(&cmd.NetworkHostname, "hostname", "", "")
+	cmd.ParseFlags(pingCmd)
 
 	return pingCmd
 }

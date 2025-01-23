@@ -1,6 +1,3 @@
-// Copyright (c) Tailscale Inc & AUTHORS
-// SPDX-License-Identifier: BSD-3-Clause
-
 package ts
 
 import (
@@ -19,7 +16,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/loft-sh/devpod/cmd/flags"
 	open2 "github.com/loft-sh/devpod/pkg/open"
 	"github.com/loft-sh/devpod/pkg/tailscale"
 	"github.com/spf13/cobra"
@@ -32,11 +28,7 @@ import (
 )
 
 type StatusCmd struct {
-	*flags.GlobalFlags
-
-	AccessKey       string
-	PlatformHost    string
-	NetworkHostname string
+	*TsNetFlags
 
 	json    bool   // JSON output mode
 	web     bool   // run webserver
@@ -47,8 +39,8 @@ type StatusCmd struct {
 	peers   bool   // in CLI mode, show status of peer machines
 }
 
-func NewStatusCmd(flags *flags.GlobalFlags) *cobra.Command {
-	cmd := &StatusCmd{GlobalFlags: flags}
+func NewStatusCmd() *cobra.Command {
+	cmd := &StatusCmd{TsNetFlags: &TsNetFlags{}}
 
 	var statusCmd = &cobra.Command{
 		Use:     "status",
@@ -92,6 +84,10 @@ func NewStatusCmd(flags *flags.GlobalFlags) *cobra.Command {
 				}
 			}()
 
+			// err := tsNet.WaitUntilReachable(ctx)
+			// if err != nil {
+			// 	return fmt.Errorf("cannot reach tailscaled: %w", err)
+			// }
 			time.Sleep(5 * time.Second)
 
 			localClient, err := tsNet.LocalClient()
@@ -110,9 +106,7 @@ func NewStatusCmd(flags *flags.GlobalFlags) *cobra.Command {
 	statusCmd.Flags().StringVar(&cmd.listen, "listen", "127.0.0.1:8384", "listen address for web mode; use port 0 for automatic")
 	statusCmd.Flags().BoolVar(&cmd.browser, "browser", true, "Open a browser in web mode")
 
-	statusCmd.Flags().StringVar(&cmd.AccessKey, "access-key", "", "")
-	statusCmd.Flags().StringVar(&cmd.PlatformHost, "host", "", "")
-	statusCmd.Flags().StringVar(&cmd.NetworkHostname, "hostname", "", "")
+	cmd.ParseFlags(statusCmd)
 
 	return statusCmd
 }

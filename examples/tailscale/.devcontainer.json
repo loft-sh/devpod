@@ -1,0 +1,9 @@
+{
+    "image": "ubuntu",
+    "features": {
+      "./tailscale": {}
+    },
+    "forwardPorts": [4004],
+    // "postStartCommand": "/usr/local/sbin/tailscaled-entrypoint"
+}
+  
