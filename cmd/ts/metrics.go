@@ -4,9 +4,7 @@ import (
 	"context"
 	"fmt"
 	"log"
-	"net"
 	"strings"
-	"time"
 
 	"github.com/loft-sh/devpod/pkg/tailscale"
 	"github.com/spf13/cobra"
@@ -51,19 +49,18 @@ func (cmd *MetricsCmd) Run(_ *cobra.Command, _ []string) error {
 		AccessKey: cmd.AccessKey,
 		Host:      tailscale.RemoveProtocol(cmd.PlatformHost),
 		Hostname:  cmd.NetworkHostname,
-		PortHandlers: map[string]func(net.Listener){
-			"8022": tailscale.ReverseProxyHandler("127.0.0.1:8022"),
-		},
 	})
 
+	done := make(chan bool)
+
 	go func() {
-		err := tsNet.Start(ctx)
+		err := tsNet.Start(ctx, done)
 		if err != nil {
 			log.Fatalf("cannot start tsNet server: %v", err)
 		}
 	}()
 
-	time.Sleep(5 * time.Second)
+	<-done
 
 	localClient, err := tsNet.LocalClient()
 	if err != nil {

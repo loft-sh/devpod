@@ -61,13 +61,12 @@ func NewPingCmd() *cobra.Command {
 				AccessKey: cmd.AccessKey,
 				Host:      tailscale.RemoveProtocol(cmd.PlatformHost),
 				Hostname:  cmd.NetworkHostname,
-				PortHandlers: map[string]func(net.Listener){
-					"8022": tailscale.ReverseProxyHandler("127.0.0.1:8022"),
-				},
 			})
 
+			done := make(chan bool)
+
 			go func() {
-				err := tsNet.Start(ctx)
+				err := tsNet.Start(ctx, done)
 				if err != nil {
 					log.Fatalf("cannot start tsNet server: %v", err)
 				}

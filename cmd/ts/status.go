@@ -14,7 +14,6 @@ import (
 	"os"
 	"strconv"
 	"strings"
-	"time"
 
 	open2 "github.com/loft-sh/devpod/pkg/open"
 	"github.com/loft-sh/devpod/pkg/tailscale"
@@ -47,21 +46,6 @@ func NewStatusCmd() *cobra.Command {
 		Example: "tailscale status [--active] [--web] [--json]",
 		Short:   "Show state of tailscaled and its connections",
 		Args:    cobra.NoArgs,
-		Long: strings.TrimSpace(`
-
-		JSON FORMAT
-		
-		Warning: this format has changed between releases and might change more
-		in the future.
-		
-		For a description of the fields, see the "type Status" declaration at:
-		
-		https://github.com/tailscale/tailscale/blob/main/ipn/ipnstate/ipnstate.go
-		
-		(and be sure to select branch/tag that corresponds to the version
-		 of Tailscale you're running)
-		
-		`),
 		RunE: func(cobraCmd *cobra.Command, args []string) error {
 			ctx := cobraCmd.Context()
 			if len(args) > 0 {
@@ -72,23 +56,16 @@ func NewStatusCmd() *cobra.Command {
 				AccessKey: cmd.AccessKey,
 				Host:      tailscale.RemoveProtocol(cmd.PlatformHost),
 				Hostname:  cmd.NetworkHostname,
-				PortHandlers: map[string]func(net.Listener){
-					"8022": tailscale.ReverseProxyHandler("127.0.0.1:8022"),
-				},
 			})
 
+			done := make(chan bool)
 			go func() {
-				err := tsNet.Start(ctx)
+				err := tsNet.Start(ctx, done)
 				if err != nil {
 					log.Fatalf("cannot start tsNet server: %v", err)
 				}
 			}()
-
-			// err := tsNet.WaitUntilReachable(ctx)
-			// if err != nil {
-			// 	return fmt.Errorf("cannot reach tailscaled: %w", err)
-			// }
-			time.Sleep(5 * time.Second)
+			<-done
 
 			localClient, err := tsNet.LocalClient()
 			if err != nil {

@@ -240,7 +240,7 @@ func (cmd *SSHCmd) startTSProxyTunnel(
 	startCtx, cancel := context.WithCancel(ctx)
 	defer cancel()
 	go func() {
-		if err := network.Start(startCtx); err != nil {
+		if err := network.Start(startCtx, nil); err != nil {
 			log.Errorf("failed to start TSNet: %v", err)
 			cancel()
 		}

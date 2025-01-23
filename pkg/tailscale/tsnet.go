@@ -23,7 +23,7 @@ import (
 
 // TSNet is the main interface
 type TSNet interface {
-	Start(ctx context.Context) error
+	Start(ctx context.Context, done chan bool) error
 	Stop()
 	Dial(ctx context.Context, network, addr string) (net.Conn, error)
 	LocalClient() (*tailscale.LocalClient, error)
@@ -54,7 +54,7 @@ func NewTSNet(config *TSNetConfig) TSNet {
 }
 
 // Start starts the TSNet server and binds port handlers
-func (t *tsNet) Start(ctx context.Context) error {
+func (t *tsNet) Start(ctx context.Context, done chan bool) error {
 	if t.config.AccessKey == "" || t.config.Host == "" {
 		return fmt.Errorf("access key or host cannot be empty")
 	}
@@ -85,7 +85,7 @@ func (t *tsNet) Start(ctx context.Context) error {
 	}
 
 	// Start the server
-	if err := t.tsServer.Start(); err != nil {
+	if _, err := t.tsServer.Up(ctx); err != nil {
 		return fmt.Errorf("failed to start tsnet server: %w", err)
 	}
 
@@ -101,6 +101,10 @@ func (t *tsNet) Start(ctx context.Context) error {
 		klog.Infof("Port %s bound with handler", port)
 	}
 
+	// Notify any listeners that the server has started
+	if done != nil {
+		done <- true
+	}
 	<-ctx.Done()
 	return nil
 }
