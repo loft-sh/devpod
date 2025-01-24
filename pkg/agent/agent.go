@@ -185,8 +185,12 @@ func decodeWorkspaceInfoAndWrite(
 		}
 	}
 
-	// check content folder
-	if workspaceInfo.Workspace.Source.LocalFolder != "" {
+	// check content folder for local folder workspace source
+	//
+	// We don't want to initialize the content folder with the value of the local workspace folder
+	// if we're running in proxy mode.
+	// We only have write access to /var/lib/loft/* by default causing nearly all local folders to run into permissions issues
+	if workspaceInfo.Workspace.Source.LocalFolder != "" && !workspaceInfo.CLIOptions.Proxy {
 		_, err = os.Stat(workspaceInfo.WorkspaceOrigin)
 		if err == nil {
 			workspaceInfo.ContentFolder = workspaceInfo.Workspace.Source.LocalFolder
