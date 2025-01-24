@@ -132,7 +132,11 @@ func (cmd *StatusCmd) runStatus(ctx context.Context, localClient *ts.LocalClient
 			ln.Close()
 		}()
 		if cmd.browser {
-			go open2.Open(ctx, statusURL, nil)
+			go func() {
+				if err = open2.Open(ctx, statusURL, nil); err != nil {
+					errf("Could not open: %w", err)
+				}
+			}()
 		}
 		err = http.Serve(ln, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			if r.RequestURI != "/" {
@@ -319,7 +323,7 @@ func isRunningOrStarting(st *ipnstate.Status) (description string, ok bool) {
 }
 
 func dnsOrQuoteHostname(st *ipnstate.Status, ps *ipnstate.PeerStatus) string {
-	baseName := dnsname.TrimSuffix(ps.DNSName, st.MagicDNSSuffix)
+	baseName := dnsname.TrimSuffix(ps.DNSName, st.CurrentTailnet.MagicDNSSuffix)
 	if baseName != "" {
 		if strings.HasPrefix(baseName, "xn-") {
 			if u, err := idna.ToUnicode(baseName); err == nil {

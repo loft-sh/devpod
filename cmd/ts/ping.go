@@ -240,7 +240,7 @@ func (cmd *PingCmd) tailscaleIPFromArg(ctx context.Context, hostOrIP string, loc
 	// Finally, use DNS.
 	var res net.Resolver
 	if addrs, err := res.LookupHost(ctx, hostOrIP); err != nil {
-		return "", false, fmt.Errorf("error looking up IP of %q: %v", hostOrIP, err)
+		return "", false, fmt.Errorf("error looking up IP of %q: %w", hostOrIP, err)
 	} else if len(addrs) == 0 {
 		return "", false, fmt.Errorf("no IPs found for %q", hostOrIP)
 	} else {

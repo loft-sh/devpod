@@ -79,5 +79,4 @@ func (cmd *MetricsCmd) Run(_ *cobra.Command, _ []string) error {
 	}
 	Stdout.Write(out)
 	return nil
-
 }

@@ -65,10 +65,14 @@ func isSystemdSystem() bool {
 	switch distro.Get() {
 	case distro.QNAP, distro.Gokrazy, distro.Synology, distro.Unraid:
 		return false
+		//nolint:exhaustive
 	}
 	_, err := exec.LookPath("systemctl")
 	return err == nil
 }
+
+var Stderr io.Writer = os.Stderr
+var Stdout io.Writer = os.Stdout
 
 // outln is like fmt.Println in the common case, except when Stdout is
 // changed (as in js/wasm).
@@ -78,9 +82,6 @@ func isSystemdSystem() bool {
 func outln(a ...any) {
 	fmt.Fprintln(Stdout, a...)
 }
-
-var Stderr io.Writer = os.Stderr
-var Stdout io.Writer = os.Stdout
 
 func printf(format string, a ...any) {
 	fmt.Fprintf(Stdout, format, a...)
