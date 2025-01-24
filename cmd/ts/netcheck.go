@@ -1,3 +1,4 @@
+// Inspired by: https://github.com/tailscale/tailscale/blob/v1.78.1/cmd/tailscale/cli/netcheck.go
 package ts
 
 import (
@@ -7,8 +8,11 @@ import (
 	"io"
 	"log"
 	"net/http"
+	"os"
+	"os/signal"
 	"sort"
 	"strings"
+	"syscall"
 	"time"
 
 	"github.com/loft-sh/devpod/pkg/tailscale"
@@ -49,7 +53,8 @@ func NewNetcheckCmd() *cobra.Command {
 }
 
 func (cmd *NetcheckCmd) Run(_ *cobra.Command, _ []string) error {
-	ctx := context.Background()
+	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
+	defer stop()
 	// Create network
 	tsNet := tailscale.NewTSNet(&tailscale.TSNetConfig{
 		AccessKey: cmd.AccessKey,

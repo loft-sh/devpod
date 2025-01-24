@@ -1,3 +1,4 @@
+// Inspired by: https://github.com/tailscale/tailscale/blob/v1.78.1/cmd/tailscale/cli/status.go
 package ts
 
 import (
@@ -12,8 +13,10 @@ import (
 	"net/http"
 	"net/netip"
 	"os"
+	"os/signal"
 	"strconv"
 	"strings"
+	"syscall"
 
 	open2 "github.com/loft-sh/devpod/pkg/open"
 	"github.com/loft-sh/devpod/pkg/tailscale"
@@ -46,35 +49,7 @@ func NewStatusCmd() *cobra.Command {
 		Example: "tailscale status [--active] [--web] [--json]",
 		Short:   "Show state of tailscaled and its connections",
 		Args:    cobra.NoArgs,
-		RunE: func(cobraCmd *cobra.Command, args []string) error {
-			ctx := cobraCmd.Context()
-			if len(args) > 0 {
-				return errors.New("unexpected non-flag arguments to 'tailscale status'")
-			}
-
-			// Create network
-			tsNet := tailscale.NewTSNet(&tailscale.TSNetConfig{
-				AccessKey: cmd.AccessKey,
-				Host:      tailscale.RemoveProtocol(cmd.PlatformHost),
-				Hostname:  cmd.NetworkHostname,
-			})
-			// Run tailscale up and wait until we have a connected client
-			done := make(chan bool)
-			go func() {
-				err := tsNet.Start(ctx, done)
-				if err != nil {
-					log.Fatalf("cannot start tsNet server: %v", err)
-				}
-			}()
-			<-done
-
-			// Get tailscale API client
-			localClient, err := tsNet.LocalClient()
-			if err != nil {
-				return fmt.Errorf("cannot get local client: %w", err)
-			}
-			return cmd.runStatus(ctx, localClient)
-		},
+		RunE:    cmd.Run,
 	}
 
 	statusCmd.Flags().BoolVar(&cmd.json, "json", false, "output in JSON format (WARNING: format subject to change)")
@@ -88,6 +63,37 @@ func NewStatusCmd() *cobra.Command {
 	cmd.ParseFlags(statusCmd)
 
 	return statusCmd
+}
+
+func (cmd *StatusCmd) Run(cobraCmd *cobra.Command, args []string) error {
+	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
+	defer stop()
+	if len(args) > 0 {
+		return errors.New("unexpected non-flag arguments to 'tailscale status'")
+	}
+
+	// Create network
+	tsNet := tailscale.NewTSNet(&tailscale.TSNetConfig{
+		AccessKey: cmd.AccessKey,
+		Host:      tailscale.RemoveProtocol(cmd.PlatformHost),
+		Hostname:  cmd.NetworkHostname,
+	})
+	// Run tailscale up and wait until we have a connected client
+	done := make(chan bool)
+	go func() {
+		err := tsNet.Start(ctx, done)
+		if err != nil {
+			log.Fatalf("cannot start tsNet server: %v", err)
+		}
+	}()
+	<-done
+
+	// Get tailscale API client
+	localClient, err := tsNet.LocalClient()
+	if err != nil {
+		return fmt.Errorf("cannot get local client: %w", err)
+	}
+	return cmd.runStatus(ctx, localClient)
 }
 
 func (cmd *StatusCmd) runStatus(ctx context.Context, localClient *ts.LocalClient) error {

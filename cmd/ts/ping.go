@@ -1,3 +1,4 @@
+// Inspired by: https://github.com/tailscale/tailscale/blob/v1.78.1/cmd/tailscale/cli/ping.go
 package ts
 
 import (
@@ -8,11 +9,12 @@ import (
 	"net"
 	"net/netip"
 	"os"
+	"os/signal"
 	"strings"
+	"syscall"
 	"time"
 
 	"github.com/loft-sh/devpod/pkg/tailscale"
-
 	"github.com/spf13/cobra"
 	ts "tailscale.com/client/tailscale"
 	"tailscale.com/ipn/ipnstate"
@@ -55,31 +57,7 @@ func NewPingCmd() *cobra.Command {
 			(e.g. 100.x.y.z) or a subnet IP advertised by a Tailscale
 			relay node.`,
 		),
-		RunE: func(cobraCmd *cobra.Command, args []string) error {
-			ctx := cobraCmd.Context()
-			// Create network
-			tsNet := tailscale.NewTSNet(&tailscale.TSNetConfig{
-				AccessKey: cmd.AccessKey,
-				Host:      tailscale.RemoveProtocol(cmd.PlatformHost),
-				Hostname:  cmd.NetworkHostname,
-			})
-			// Run tailscale up and wait until we have a connected client
-			done := make(chan bool)
-			go func() {
-				err := tsNet.Start(ctx, done)
-				if err != nil {
-					log.Fatalf("cannot start tsNet server: %v", err)
-				}
-			}()
-			<-done
-
-			// Get tailscale API client
-			localClient, err := tsNet.LocalClient()
-			if err != nil {
-				return fmt.Errorf("cannot get local client: %w", err)
-			}
-			return cmd.runPing(ctx, args, localClient)
-		},
+		RunE: cmd.Run,
 	}
 
 	pingCmd.Flags().BoolVar(&cmd.verbose, "verbose", false, "verbose output")
@@ -94,6 +72,33 @@ func NewPingCmd() *cobra.Command {
 	cmd.ParseFlags(pingCmd)
 
 	return pingCmd
+}
+
+func (cmd *PingCmd) Run(cobraCmd *cobra.Command, args []string) error {
+	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
+	defer stop()
+	// Create network
+	tsNet := tailscale.NewTSNet(&tailscale.TSNetConfig{
+		AccessKey: cmd.AccessKey,
+		Host:      tailscale.RemoveProtocol(cmd.PlatformHost),
+		Hostname:  cmd.NetworkHostname,
+	})
+	// Run tailscale up and wait until we have a connected client
+	done := make(chan bool)
+	go func() {
+		err := tsNet.Start(ctx, done)
+		if err != nil {
+			log.Fatalf("cannot start tsNet server: %v", err)
+		}
+	}()
+	<-done
+
+	// Get tailscale API client
+	localClient, err := tsNet.LocalClient()
+	if err != nil {
+		return fmt.Errorf("cannot get local client: %w", err)
+	}
+	return cmd.runPing(ctx, args, localClient)
 }
 
 func (cmd *PingCmd) pingType() tailcfg.PingType {

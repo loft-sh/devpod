@@ -1,10 +1,14 @@
+// Inspired by: https://github.com/tailscale/tailscale/blob/v1.78.1/cmd/tailscale/cli/metrics.go
 package ts
 
 import (
 	"context"
 	"fmt"
 	"log"
+	"os"
+	"os/signal"
 	"strings"
+	"syscall"
 
 	"github.com/loft-sh/devpod/pkg/tailscale"
 	"github.com/spf13/cobra"
@@ -44,7 +48,8 @@ func NewMetricsCmd() *cobra.Command {
 }
 
 func (cmd *MetricsCmd) Run(_ *cobra.Command, _ []string) error {
-	ctx := context.Background()
+	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
+	defer stop()
 	// Create network
 	tsNet := tailscale.NewTSNet(&tailscale.TSNetConfig{
 		AccessKey: cmd.AccessKey,
