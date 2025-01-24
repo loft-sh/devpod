@@ -13,7 +13,7 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       packages: "write"
-      contents: "read"
+      contents: "write"
     steps:
       - name: Checkout
         id: checkout
@@ -55,10 +55,28 @@ jobs:
             docker tag $ID ghcr.io/loft-sh/devpod:dev-$ARCH
             docker push ghcr.io/loft-sh/devpod:dev-$ARCH
           done
-
+          SUFFIX="${{github.sha}}"
+          IMAGE_NAME="devpod:dev-$SUFFIX"
+          echo "IMAGE_NAME=$IMAGE_NAME" >> $GITHUB_ENV
           # Combine into multi-arch image
-          docker manifest create ghcr.io/loft-sh/devpod:dev \
+          docker manifest create ghcr.io/loft-sh/$IMAGE_NAME \
                  --amend ghcr.io/loft-sh/devpod:dev-amd64 \
                  --amend ghcr.io/loft-sh/devpod:dev-arm64
 
-          docker manifest push ghcr.io/loft-sh/devpod:dev
+          docker manifest push ghcr.io/loft-sh/$IMAGE_NAME
+
+      - name: Update devcontainer.json
+        if: ${{ success() }}
+        run: |
+          sed -i "s|\(\"image\": \"\).*|\1ghcr.io/loft-sh/${IMAGE_NAME}\",|" .devcontainer/devcontainer.json
+
+      - name: Create Pull Request
+        if: ${{ success() }}
+        uses: peter-evans/create-pull-request@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          commit-message: "Update devcontainer image to ghcr.io/loft-sh/${{ env.IMAGE_NAME }}"
+          title: "Update devcontainer image"
+          body: "This PR updates the devcontainer image to ghcr.io/loft-sh/${{ env.IMAGE_NAME }}"
+          branch: "update-devcontainer-${{ github.sha }}"
+          base: "main"
