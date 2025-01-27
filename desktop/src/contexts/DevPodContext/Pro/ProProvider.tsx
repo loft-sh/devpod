@@ -110,6 +110,7 @@ export function ProProvider({ host, children }: { host: string; children: ReactN
       return
     }
 
+    setSelectedProject(null) // reset selected project
     navigate(Routes.toProInstance(newHost))
   }
 
