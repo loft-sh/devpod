@@ -4,8 +4,8 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
-	"fmt"
 	"os"
+	"slices"
 	"strconv"
 	"strings"
 	"sync"
@@ -18,6 +18,7 @@ import (
 	providerpkg "github.com/loft-sh/devpod/pkg/provider"
 	"github.com/loft-sh/devpod/pkg/types"
 	"github.com/loft-sh/log"
+	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 )
 
@@ -31,21 +32,23 @@ func List(ctx context.Context, devPodConfig *config.Config, skipPro bool, log lo
 	proWorkspaces := []*providerpkg.Workspace{}
 	if !skipPro {
 		// list remote workspaces
-		proWorkspaces, err = listProWorkspaces(ctx, devPodConfig, log)
+		proWorkspaceResults, err := listProWorkspaces(ctx, devPodConfig, log)
 		if err != nil {
 			return nil, err
 		}
-		proWorkspacesByUID := map[string]*providerpkg.Workspace{}
-		for _, w := range proWorkspaces {
-			proWorkspacesByUID[w.UID] = w
+		// extract pure workspace list first
+		for _, result := range proWorkspaceResults {
+			proWorkspaces = append(proWorkspaces, result.workspaces...)
 		}
 
 		// Check if every local file based workspace has a remote counterpart
-		// If not, mark `exists` as false and allow consumers of this function to take necessary measures
+		// If not, delete it
+		// However, we need to differentiate between workspaces that are legitimately not available anymore
+		// and the ones where we were temporarily not able to reach the host
 		cleanedLocalWorkspaces := []*providerpkg.Workspace{}
 		for _, localWorkspace := range localWorkspaces {
 			if localWorkspace.IsPro() {
-				if _, ok := proWorkspacesByUID[localWorkspace.UID]; !ok {
+				if shouldDeleteLocalWorkspace(localWorkspace, proWorkspaceResults) {
 					err = clientimplementation.DeleteWorkspaceFolder(devPodConfig.DefaultContext, localWorkspace.ID, "", log)
 					if err != nil {
 						log.Debugf("failed to delete local workspace %s: %v", localWorkspace.ID, err)
@@ -107,9 +110,16 @@ func ListLocalWorkspaces(contextName string, skipPro bool, log log.Logger) ([]*p
 	return retWorkspaces, nil
 }
 
-func listProWorkspaces(ctx context.Context, devPodConfig *config.Config, log log.Logger) ([]*providerpkg.Workspace, error) {
-	retWorkspaces := []*providerpkg.Workspace{}
-	// lock around `retWorkspaces`
+var errListProWorkspaces = errors.New("list pro workspaces")
+
+type listProWorkspacesResult struct {
+	workspaces []*providerpkg.Workspace
+	err        error
+}
+
+func listProWorkspaces(ctx context.Context, devPodConfig *config.Config, log log.Logger) (map[string]listProWorkspacesResult, error) {
+	results := map[string]listProWorkspacesResult{}
+	// lock around `results`
 	var mu sync.Mutex
 	wg := sync.WaitGroup{}
 
@@ -132,24 +142,23 @@ func listProWorkspaces(ctx context.Context, devPodConfig *config.Config, log log
 		go func() {
 			defer wg.Done()
 			workspaces, err := listProWorkspacesForProvider(ctx, devPodConfig, provider, providerConfig, log)
-			if err != nil {
-				log.ErrorStreamOnly().Warn(err)
-				return
-			}
 			mu.Lock()
 			defer mu.Unlock()
-			retWorkspaces = append(retWorkspaces, workspaces...)
+			results[provider] = listProWorkspacesResult{
+				workspaces: workspaces,
+				err:        err,
+			}
 		}()
 	}
 	wg.Wait()
 
-	return retWorkspaces, nil
+	return results, nil
 }
 
 func listProWorkspacesForProvider(ctx context.Context, devPodConfig *config.Config, provider string, providerConfig *providerpkg.ProviderConfig, log log.Logger) ([]*providerpkg.Workspace, error) {
 	opts := devPodConfig.ProviderOptions(provider)
 	opts[providerpkg.LOFT_FILTER_BY_OWNER] = config.OptionValue{Value: "true"}
-	var buf bytes.Buffer
+	var stdout bytes.Buffer
 	if err := clientimplementation.RunCommandWithBinaries(
 		ctx,
 		"listWorkspaces",
@@ -159,16 +168,16 @@ func listProWorkspacesForProvider(ctx context.Context, devPodConfig *config.Conf
 		nil,
 		opts,
 		providerConfig,
-		nil, nil, &buf, log.ErrorStreamOnly().Writer(logrus.ErrorLevel, false), log,
+		nil, nil, &stdout, log.ErrorStreamOnly().Writer(logrus.ErrorLevel, false), log,
 	); err != nil {
-		return nil, fmt.Errorf("list workspaces for provider \"%s\": %w", provider, err)
+		return nil, errListProWorkspaces
 	}
-	if buf.Len() == 0 {
+	if stdout.Len() == 0 {
 		return nil, nil
 	}
 
 	instances := []managementv1.DevPodWorkspaceInstance{}
-	if err := json.Unmarshal(buf.Bytes(), &instances); err != nil {
+	if err := json.Unmarshal(stdout.Bytes(), &instances); err != nil {
 		log.ErrorStreamOnly().Errorf("unmarshal devpod workspace instances: %w", err)
 	}
 
@@ -252,4 +261,23 @@ func listProWorkspacesForProvider(ctx context.Context, devPodConfig *config.Conf
 	}
 
 	return retWorkspaces, nil
+}
+
+func shouldDeleteLocalWorkspace(localWorkspace *providerpkg.Workspace, proWorkspaceResults map[string]listProWorkspacesResult) bool {
+	// get the correct result for this local workspace
+	res, ok := proWorkspaceResults[localWorkspace.Provider.Name]
+	if !ok {
+		return false
+	}
+	if isTransientError(res.err) {
+		return false
+	}
+	hasProCounterpart := slices.ContainsFunc(res.workspaces, func(w *providerpkg.Workspace) bool {
+		return localWorkspace.UID == w.UID
+	})
+	return !hasProCounterpart
+}
+
+func isTransientError(err error) bool {
+	return errors.Is(err, errListProWorkspaces)
 }
