@@ -43,6 +43,7 @@ func (cmd *NetworkDaemonCmd) Run(_ *cobra.Command, _ []string) error {
 		Host:      tailscale.RemoveProtocol(cmd.PlatformHost),
 		Hostname:  cmd.NetworkHostname,
 		PortHandlers: map[string]func(net.Listener){
+			"8023": tailscale.ReverseProxyHandler("127.0.0.1:8023"),
 			"8022": tailscale.ReverseProxyHandler("127.0.0.1:8022"),
 		},
 	})
