@@ -22,7 +22,10 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
-var DefaultPort = 8022
+const (
+	DefaultPort     int = 8022
+	DefaultUserPort int = 12023
+)
 
 func NewServer(addr string, hostKey []byte, keys []ssh.PublicKey, workdir string, reuseSock string, log log.Logger) (*Server, error) {
 	sh, err := shell.GetShell("")

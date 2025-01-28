@@ -6,6 +6,7 @@ import (
 	"net"
 
 	"github.com/loft-sh/devpod/cmd/flags"
+	sshServer "github.com/loft-sh/devpod/pkg/ssh/server"
 	"github.com/loft-sh/devpod/pkg/tailscale"
 	"github.com/spf13/cobra"
 )
@@ -43,8 +44,8 @@ func (cmd *NetworkDaemonCmd) Run(_ *cobra.Command, _ []string) error {
 		Host:      tailscale.RemoveProtocol(cmd.PlatformHost),
 		Hostname:  cmd.NetworkHostname,
 		PortHandlers: map[string]func(net.Listener){
-			"8023": tailscale.ReverseProxyHandler("127.0.0.1:8023"),
-			"8022": tailscale.ReverseProxyHandler("127.0.0.1:8022"),
+			fmt.Sprintf("%d", sshServer.DefaultPort):     tailscale.ReverseProxyHandler(fmt.Sprintf("127.0.0.1:%d", sshServer.DefaultPort)),
+			fmt.Sprintf("%d", sshServer.DefaultUserPort): tailscale.ReverseProxyHandler(fmt.Sprintf("127.0.0.1:%d", sshServer.DefaultUserPort)),
 		},
 	})
 	if err := tsNet.Start(context.TODO()); err != nil {
