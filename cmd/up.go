@@ -181,9 +181,6 @@ func (cmd *UpCmd) Run(
 		log.Debug("Reusing SSH_AUTH_SOCK is not supported with proxy mode, consider launching the IDE from the platform UI")
 	}
 
-	log.Infof("DEBUG -> GOT %v hostname %v platform %v", cmd.AccessKey, cmd.NetworkHostname, cmd.PlatformHost)
-	log.Infof("DEBUG -> BUT on devpodconfig object -> %v", client.WorkspaceConfig())
-
 	// run devpod agent up
 	result, err := cmd.devPodUp(ctx, devPodConfig, client, log)
 	if err != nil {
