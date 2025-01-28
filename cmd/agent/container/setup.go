@@ -234,7 +234,7 @@ func (cmd *SetupContainerCmd) Run(ctx context.Context) error {
 				return nil, err
 			}
 
-			return exec.Command(binaryPath, "helper", "ssh-server"), nil
+			return exec.Command(binaryPath, "helper", "ssh-server", "--track-activity"), nil
 		})
 		if err != nil {
 			return err
