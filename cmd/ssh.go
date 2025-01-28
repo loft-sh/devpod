@@ -4,11 +4,9 @@ import (
 	"bytes"
 	"context"
 	"encoding/base64"
-	"encoding/json"
 	"fmt"
 	"io"
 	"math"
-	"net"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -26,10 +24,11 @@ import (
 	"github.com/loft-sh/devpod/pkg/devcontainer"
 	dpFlags "github.com/loft-sh/devpod/pkg/flags"
 	"github.com/loft-sh/devpod/pkg/gpg"
-	"github.com/loft-sh/devpod/pkg/platform/client"
+	"github.com/loft-sh/devpod/pkg/platform"
 	"github.com/loft-sh/devpod/pkg/port"
 	"github.com/loft-sh/devpod/pkg/provider"
 	devssh "github.com/loft-sh/devpod/pkg/ssh"
+	sshServer "github.com/loft-sh/devpod/pkg/ssh/server"
 	"github.com/loft-sh/devpod/pkg/tailscale"
 	"github.com/loft-sh/devpod/pkg/tunnel"
 	workspace2 "github.com/loft-sh/devpod/pkg/workspace"
@@ -38,7 +37,6 @@ import (
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 	"golang.org/x/crypto/ssh"
-	"golang.org/x/term"
 	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/client-go/util/retry"
 )
@@ -161,7 +159,11 @@ func (cmd *SSHCmd) Run(
 	}
 
 	if cmd.UseTailscale {
-		return cmd.startTailscaleTunnel(ctx, devPodConfig, client, log)
+		proxyClient, ok := client.(client2.ProxyClient)
+		if !ok {
+			return fmt.Errorf("tailscale is only accessible to DevPod Pro workspaces")
+		}
+		return cmd.startTSProxyTunnel(ctx, devPodConfig, proxyClient, log)
 	}
 
 	// check if regular workspace client
@@ -200,72 +202,249 @@ func (cmd *SSHCmd) startProxyTunnel(
 		},
 	)
 }
-func (cmd *SSHCmd) startTailscaleTunnel(
+
+func (cmd *SSHCmd) startTSProxyTunnel(
 	ctx context.Context,
 	devPodConfig *config.Config,
-	client client2.BaseWorkspaceClient,
+	client client2.ProxyClient,
 	log log.Logger,
 ) error {
-	log.Infof("Starting Tailscale connection")
+	log.Debugf("Starting proxy connection")
+
 	if cmd.Provider == "" {
 		cmd.Provider = devPodConfig.Current().DefaultProvider
 	}
 
-	config, err := readConfig(cmd.Context, cmd.Provider)
+	// Load configuration
+	config, err := platform.ReadConfig(cmd.Context, cmd.Provider)
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to read devpod configuration: %w", err)
 	}
 
-	osHostname, err := os.Hostname()
+	// Get client hostname
+	hostname, err := tailscale.GetHostname()
 	if err != nil {
-		fmt.Printf("Failed to get hostname: %v\n", err)
-		return err
+		return fmt.Errorf("failed to get hostname: %w", err)
 	}
-	osHostname = strings.ReplaceAll(osHostname, ".", "-")
 
+	// Initialize Tailscale network
 	network := tailscale.NewTSNet(&tailscale.TSNetConfig{
-		AccessKey:    config.AccessKey,
-		Host:         tailscale.RemoveProtocol(config.Host),
-		Hostname:     fmt.Sprintf("devpod.%v.client", osHostname),
-		LogF:         func(format string, args ...any) {}, // No-op logger
-		PortHandlers: map[string]func(net.Listener){},
+		AccessKey: config.AccessKey,
+		Host:      tailscale.RemoveProtocol(config.Host),
+		Hostname:  hostname,
+		LogF:      func(format string, args ...any) {},
 	})
 
-	// Start TSNet in a separate goroutine
+	// Start Tailscale network
 	startCtx, cancel := context.WithCancel(ctx)
 	defer cancel()
-	errChan := make(chan error, 1)
 	go func() {
-		err := network.Start(startCtx)
-		if err != nil {
-			errChan <- fmt.Errorf("failed to start TSNet: %w", err)
+		if err := network.Start(startCtx); err != nil {
+			log.Errorf("failed to start TSNet: %v", err)
+			cancel()
 		}
-		close(errChan)
 	}()
+
 	// Wait for the host to become reachable
 	reachableHost := fmt.Sprintf(
 		"devpod.%v.%v.test.workspace",
 		client.WorkspaceConfig().Pro.DisplayName,
 		client.WorkspaceConfig().Pro.Project,
 	)
-	waitUntilReachable(ctx, network, reachableHost, log)
+	if err := waitUntilReachable(ctx, network, reachableHost, log); err != nil {
+		return fmt.Errorf("failed to reach TSNet host: %w", err)
+	}
 
-	log.Infof("Host %s is reachable. Proceeding with SSH session...", reachableHost)
-	return cmd.StartSSHSession(ctx, network, reachableHost, cmd.User, "", devPodConfig, client, log)
+	log.Debugf("Host %s is reachable. Proceeding with SSH session...", reachableHost)
+
+	return runTSTunnel(
+		ctx,
+		network,
+		reachableHost,
+		cmd,
+		devPodConfig,
+		client,
+		log,
+	)
+}
+
+// TODO: move this to pkg/tunnel
+func runTSTunnel(
+	ctx context.Context,
+	network tailscale.TSNet,
+	host string,
+	cmd *SSHCmd, // FIXME: ???
+	devPodConfig *config.Config,
+	workspaceClient client2.ProxyClient,
+	log log.Logger,
+) error {
+	return establishOuterTunnel(ctx, network, host, log, func(outerSshClient *ssh.Client) error {
+		log.Debugf("Outer tunnel established. Starting inner server...")
+
+		// Start the inner SSH server
+		if err := startInnerServer(outerSshClient, cmd.User, cmd.WorkDir, log); err != nil {
+			log.Errorf("Failed to start inner SSH server: %v", err)
+			return fmt.Errorf("failed to start inner SSH server: %w", err)
+		}
+
+		// Wait for the inner server to be reachable
+		// FIXME: Ensure this works correctly, considering the reverse proxy server on this port.
+		if err := waitForInnerServer(ctx, network, host, sshServer.DefaultUserPort); err != nil {
+			log.Errorf("Inner server not reachable: %v", err)
+			return fmt.Errorf("inner SSH server not reachable: %w", err)
+		}
+
+		log.Debugf("Inner server reachable. Establishing user session...")
+
+		// Create an SSH client for the inner server
+		sshClient, err := devssh.TailscaleClientWithUser(
+			ctx, network, tailscale.GetURL(host, sshServer.DefaultUserPort), cmd.User, log)
+		if err != nil {
+			return fmt.Errorf("failed to create SSH client for inner server: %w", err)
+		}
+		defer sshClient.Close()
+
+		// Forward ports if specified
+		if len(cmd.ForwardPorts) > 0 {
+			return cmd.forwardPorts(ctx, outerSshClient, log)
+		}
+
+		// Reverse forward ports if specified
+		if len(cmd.ReverseForwardPorts) > 0 && !cmd.GPGAgentForwarding {
+			return cmd.reverseForwardPorts(ctx, outerSshClient, log)
+		}
+
+		// Start port-forwarding and services if enabled
+		if cmd.StartServices {
+			go cmd.startServices(ctx, devPodConfig, outerSshClient, cmd.GitUsername, cmd.GitToken, workspaceClient.WorkspaceConfig(), log)
+		}
+
+		// Handle GPG agent forwarding
+		if cmd.GPGAgentForwarding || devPodConfig.ContextOption(config.ContextOptionGPGAgentForwarding) == "true" {
+			if gpg.IsGpgTunnelRunning(cmd.User, ctx, sshClient, log) {
+				log.Debugf("[GPG] exporting already running, skipping")
+			} else if err := cmd.setupGPGAgent(ctx, sshClient, log); err != nil {
+				return err
+			}
+		}
+
+		// Retrieve environment variables
+		// envVars, err := cmd.retrieveEnVars()
+		// if err != nil {
+		// 	return err
+		// }
+
+		// Handle ssh remote proxy mode
+		if cmd.Stdio {
+			if cmd.SSHKeepAliveInterval != DisableSSHKeepAlive {
+				go startSSHKeepAlive(ctx, outerSshClient, cmd.SSHKeepAliveInterval, log)
+			}
+
+			go func() {
+				if err := cmd.startRunnerServices(ctx, devPodConfig, outerSshClient, log); err != nil {
+					log.Error(err)
+				}
+			}()
+
+			go func() {
+				cmd.setupPlatformAccess(ctx, sshClient, log) // FIXME: for whatever reason this doesn't work but when running command from inside the container it works just fine
+			}()
+
+			return tailscale.DirectTunnel(ctx, network, host, sshServer.DefaultUserPort, os.Stdin, os.Stdout)
+		}
+
+		// Connect to the inner server and handle user session
+		return machine.RunSSHSession(
+			ctx,
+			sshClient,
+			cmd.AgentForwarding,
+			cmd.Command,
+			os.Stderr,
+		)
+	})
+}
+
+// establishOuterTunnel establishes the root-level connection.
+func establishOuterTunnel(ctx context.Context, network tailscale.TSNet, host string, log log.Logger, onReady func(*ssh.Client) error) error {
+	log.Debugf("Estabilishing outer connection")
+	address := tailscale.GetURL(host, sshServer.DefaultPort)
+	conn, err := network.Dial(ctx, "tcp", address)
+	if err != nil {
+		return fmt.Errorf("failed to connect to outer tunnel: %w", err)
+	}
+	defer conn.Close()
+
+	sshConfig := &ssh.ClientConfig{
+		User:            "root",
+		Auth:            []ssh.AuthMethod{},
+		HostKeyCallback: ssh.InsecureIgnoreHostKey(),
+	}
+	clientConn, chans, reqs, err := ssh.NewClientConn(conn, address, sshConfig)
+	if err != nil {
+		return fmt.Errorf("failed to establish SSH connection: %w", err)
+	}
+	client := ssh.NewClient(clientConn, chans, reqs)
+	defer client.Close()
+
+	log.Debugf("Outer connection ready")
+	return onReady(client)
+}
+
+// startInnerServer starts the user-level SSH server.
+func startInnerServer(sshClient *ssh.Client, user, workDir string, log log.Logger) error {
+	command := fmt.Sprintf(
+		"/usr/local/bin/devpod helper ssh-server --workdir '%s' --address 0.0.0.0:%d",
+		workDir, sshServer.DefaultUserPort,
+	)
+	// if user != "root" {
+	// 	command = fmt.Sprintf("su -c \"%s\" '%s'", command, user)
+	// }
+
+	session, err := sshClient.NewSession()
+	if err != nil {
+		return fmt.Errorf("failed to create SSH session: %w", err)
+	}
+	defer session.Close()
+
+	var stderr bytes.Buffer
+	session.Stderr = &stderr
+
+	if err := session.Run(command); err != nil {
+		return fmt.Errorf("inner server start failed: %w (stderr: %s)", err, stderr.String())
+	}
+
+	return nil
+}
+
+// waitForInnerServer waits for the inner server to become reachable.
+func waitForInnerServer(ctx context.Context, network tailscale.TSNet, host string, port int) error {
+	address := tailscale.GetURL(host, port)
+	deadline := time.Now().Add(10 * time.Second)
+
+	for time.Now().Before(deadline) {
+		conn, err := network.Dial(ctx, "tcp", address)
+		if err == nil {
+			conn.Close()
+			return nil
+		}
+		time.Sleep(100 * time.Millisecond)
+	}
+
+	return fmt.Errorf("inner server not reachable at %s", address)
 }
 
 // waitUntilReachable polls until the given host is reachable via Tailscale.
 func waitUntilReachable(ctx context.Context, ts tailscale.TSNet, host string, log log.Logger) error {
-	const retryInterval = time.Second
+	const retryInterval = 100 * time.Millisecond
 	const maxRetries = 60
 
 	for i := 0; i < maxRetries; i++ {
-		conn, err := ts.Dial(ctx, "tcp", fmt.Sprintf("%s.ts.loft:8022", host))
+		conn, err := ts.Dial(ctx, "tcp", tailscale.GetURL(host, sshServer.DefaultPort))
 		if err == nil {
 			_ = conn.Close()
 			return nil // Host is reachable
 		}
-		log.Infof("Host %s not reachable, retrying... (%d/%d)", host, i+1, maxRetries)
+		log.Debugf("Host %s not reachable, retrying... (%d/%d)", host, i+1, maxRetries)
 
 		select {
 		case <-ctx.Done():
@@ -275,120 +454,6 @@ func waitUntilReachable(ctx context.Context, ts tailscale.TSNet, host string, lo
 	}
 
 	return fmt.Errorf("host %s not reachable after %d attempts", host, maxRetries)
-}
-
-const (
-	LoftPlatformConfigFileName = "loft-config.json" // TODO: move somewhere else, replace hardoced strings with usage of this const
-)
-
-func readConfig(contextName string, providerName string) (*client.Config, error) {
-	if contextName == "" {
-
-	}
-	providerDir, err := provider.GetProviderDir(contextName, providerName)
-	if err != nil {
-		return nil, err
-	}
-
-	configPath := filepath.Join(providerDir, LoftPlatformConfigFileName)
-
-	// Check if given context and provider have Loft Platform configuration
-	if _, err := os.Stat(configPath); os.IsNotExist(err) {
-		// If not just return empty response
-		return &client.Config{}, nil
-	}
-
-	content, err := os.ReadFile(configPath)
-	if err != nil {
-		return nil, err
-	}
-
-	loftConfig := &client.Config{}
-	err = json.Unmarshal(content, loftConfig)
-	if err != nil {
-		return nil, err
-	}
-
-	return loftConfig, nil
-}
-
-const loftTSNetDomain = "ts.loft"
-
-// StartSSHSession establishes an SSH session over tsnet.
-func (cmd *SSHCmd) StartSSHSession(
-	ctx context.Context,
-	ts tailscale.TSNet,
-	addr, username, password string,
-	devPodConfig *config.Config,
-	workspaceClient client2.BaseWorkspaceClient,
-	log log.Logger,
-) error {
-	workdir := filepath.Join("/workspaces", workspaceClient.Workspace())
-	if cmd.WorkDir != "" {
-		workdir = cmd.WorkDir
-	}
-
-	clientConfig := &ssh.ClientConfig{
-		User: username,
-		Auth: []ssh.AuthMethod{
-			ssh.Password(password), // FIXME - use keys
-		},
-		HostKeyCallback: ssh.InsecureIgnoreHostKey(), // FIXME
-	}
-
-	// Dial the SSH server through TSNet
-	serverAddress := fmt.Sprintf("%v.%v:8022", addr, loftTSNetDomain) // FIXME
-	conn, err := ts.Dial(ctx, "tcp", serverAddress)
-	if err != nil {
-		return fmt.Errorf("failed to connect to %s: %w", serverAddress, err)
-	}
-	defer conn.Close()
-
-	// Establish an SSH client connection
-	sshConn, channels, requests, err := ssh.NewClientConn(conn, serverAddress, clientConfig)
-	if err != nil {
-		return fmt.Errorf("failed to establish SSH connection: %w", err)
-	}
-	client := ssh.NewClient(sshConn, channels, requests)
-	defer client.Close()
-
-	// Start an SSH session
-	session, err := client.NewSession()
-	if err != nil {
-		return fmt.Errorf("failed to create SSH session: %w", err)
-	}
-	defer session.Close()
-
-	// Configure terminal for interactive shell
-	fd := int(os.Stdin.Fd())
-	if term.IsTerminal(fd) {
-		oldState, err := term.MakeRaw(fd)
-		if err != nil {
-			return fmt.Errorf("failed to set terminal raw mode: %w", err)
-		}
-		defer term.Restore(fd, oldState)
-
-		session.Stdout = os.Stdout
-		session.Stderr = os.Stderr
-		session.Stdin = os.Stdin
-
-		termModes := ssh.TerminalModes{
-			ssh.ECHO:          1,
-			ssh.TTY_OP_ISPEED: 14400,
-			ssh.TTY_OP_OSPEED: 14400,
-		}
-		err = session.RequestPty("xterm", 80, 24, termModes)
-		if err != nil {
-			return fmt.Errorf("failed to request PTY: %w", err)
-		}
-
-		err = session.Run(fmt.Sprintf("cd %s; exec $SHELL --noediting -i", workdir))
-		if err != nil {
-			return fmt.Errorf("failed to start shell: %w", err)
-		}
-	}
-
-	return nil
 }
 
 func startWait(
@@ -659,7 +724,7 @@ func (cmd *SSHCmd) startTunnel(ctx context.Context, devPodConfig *config.Config,
 	}
 
 	log.Debugf("Run outer container tunnel")
-	command := fmt.Sprintf("'%s' helper ssh-server --track-activity --stdio --workdir '%s'", agent.ContainerDevPodHelperLocation, workdir)
+	command := fmt.Sprintf("'%s' helper ssh-server --track-activity --workdir '%s'", agent.ContainerDevPodHelperLocation, workdir)
 	if cmd.ReuseSSHAuthSock != "" {
 		log.Debug("Reusing SSH_AUTH_SOCK")
 		command += fmt.Sprintf(" --reuse-ssh-auth-sock=%s", cmd.ReuseSSHAuthSock)
