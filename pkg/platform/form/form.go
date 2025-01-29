@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"slices"
 	"strconv"
 	"strings"
 
@@ -109,6 +110,9 @@ func CreateInstance(ctx context.Context, baseClient client.Client, id, uid strin
 				TemplateRef: &storagev1.TemplateRef{
 					Name:    selectedTemplate.GetName(),
 					Version: selectedTemplateVersion,
+				},
+				RunnerRef: storagev1.RunnerRef{
+					Runner: selectedRunner.GetName(),
 				},
 				Parameters: renderedParameters,
 			},
@@ -306,6 +310,7 @@ func getTemplateOptions(ctx context.Context, client client.Client, project *mana
 		return nil
 	}
 
+	var defaultOpt huh.Option[*managementv1.DevPodWorkspaceTemplate]
 	for _, template := range templates.DevPodWorkspaceTemplates {
 		t := &template
 		opt := huh.Option[*managementv1.DevPodWorkspaceTemplate]{
@@ -313,10 +318,14 @@ func getTemplateOptions(ctx context.Context, client client.Client, project *mana
 			Value: t,
 		}
 		if t.GetName() == templates.DefaultDevPodWorkspaceTemplate {
-			opt = opt.Selected(true)
+			defaultOpt = opt
+			continue
 		}
 		opts = append(opts, opt)
 	}
+	// make sure the default template is the first
+	opts = slices.Insert(opts, 0, defaultOpt)
+
 	return opts
 }
 
