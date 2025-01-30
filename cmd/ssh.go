@@ -641,7 +641,7 @@ func (cmd *SSHCmd) setupGPGAgent(
 	if len(gitGpgKey) > 0 {
 		gitKey := strings.TrimSpace(string(gitGpgKey))
 		forwardAgent = append(forwardAgent, "--gitkey")
-		forwardAgent = append(forwardAgent, gitKey)
+		forwardAgent = append(forwardAgent, fmt.Sprintf("'%s'", gitKey))
 	}
 
 	command := strings.Join(forwardAgent, " ")
