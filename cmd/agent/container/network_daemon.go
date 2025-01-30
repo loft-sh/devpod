@@ -48,7 +48,7 @@ func (cmd *NetworkDaemonCmd) Run(_ *cobra.Command, _ []string) error {
 			fmt.Sprintf("%d", sshServer.DefaultUserPort): tailscale.ReverseProxyHandler(fmt.Sprintf("127.0.0.1:%d", sshServer.DefaultUserPort)),
 		},
 	})
-	if err := tsNet.Start(context.TODO(), nil); err != nil {
+	if err := tsNet.Start(context.TODO()); err != nil {
 		return fmt.Errorf("cannot start tsNet server: %w", err)
 	}
 

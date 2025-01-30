@@ -1,6 +1,5 @@
-// Package ts provides the tailscale commands within the DevPod CLI useful for debugging the network.
-// These file were copied from the tailscale project https://github.com/tailscale/tailscale/tree/v1.78.3/cmd/tailscale/cli
-// and modified to work with our `pkg/tailscale` package that connects tsnet to loft's control plane & custom DERP.
+// Package tailscale embeds the tailscale CLI into the DevPod CLI. This allows users to run tailscale commands by prefixing them
+// with 'devpod tailscale'.
 package ts
 
 import (

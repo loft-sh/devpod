@@ -13,7 +13,7 @@ import (
 	"github.com/loft-sh/devpod/cmd/machine"
 	"github.com/loft-sh/devpod/cmd/pro"
 	"github.com/loft-sh/devpod/cmd/provider"
-	"github.com/loft-sh/devpod/cmd/ts"
+	ts "github.com/loft-sh/devpod/cmd/tailscale"
 	"github.com/loft-sh/devpod/cmd/use"
 	"github.com/loft-sh/devpod/pkg/client/clientimplementation"
 	"github.com/loft-sh/devpod/pkg/config"
