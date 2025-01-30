@@ -323,8 +323,10 @@ func getTemplateOptions(ctx context.Context, client client.Client, project *mana
 		}
 		opts = append(opts, opt)
 	}
-	// make sure the default template is the first
-	opts = slices.Insert(opts, 0, defaultOpt)
+	if defaultOpt.Key != "" {
+		// make sure the default template is the first
+		opts = slices.Insert(opts, 0, defaultOpt)
+	}
 
 	return opts
 }
