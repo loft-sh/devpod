@@ -27,7 +27,7 @@ import (
 )
 
 // beforeSave is invoked by stateify.
-func (e *endpoint) beforeSave() {
+func (e *Endpoint) beforeSave() {
 	// Stop incoming packets.
 	e.segmentQueue.freeze()
 
@@ -57,26 +57,28 @@ func (e *endpoint) beforeSave() {
 	default:
 		panic(fmt.Sprintf("endpoint in unknown state %v", e.EndpointState()))
 	}
+
+	e.stack.RegisterResumableEndpoint(e)
 }
 
 // saveEndpoints is invoked by stateify.
-func (a *acceptQueue) saveEndpoints() []*endpoint {
-	acceptedEndpoints := make([]*endpoint, a.endpoints.Len())
+func (a *acceptQueue) saveEndpoints() []*Endpoint {
+	acceptedEndpoints := make([]*Endpoint, a.endpoints.Len())
 	for i, e := 0, a.endpoints.Front(); e != nil; i, e = i+1, e.Next() {
-		acceptedEndpoints[i] = e.Value.(*endpoint)
+		acceptedEndpoints[i] = e.Value.(*Endpoint)
 	}
 	return acceptedEndpoints
 }
 
 // loadEndpoints is invoked by stateify.
-func (a *acceptQueue) loadEndpoints(acceptedEndpoints []*endpoint) {
+func (a *acceptQueue) loadEndpoints(_ context.Context, acceptedEndpoints []*Endpoint) {
 	for _, ep := range acceptedEndpoints {
 		a.endpoints.PushBack(ep)
 	}
 }
 
 // saveState is invoked by stateify.
-func (e *endpoint) saveState() EndpointState {
+func (e *Endpoint) saveState() EndpointState {
 	return e.EndpointState()
 }
 
@@ -90,7 +92,7 @@ var connectingLoading sync.WaitGroup
 // Bound endpoint loading happens last.
 
 // loadState is invoked by stateify.
-func (e *endpoint) loadState(epState EndpointState) {
+func (e *Endpoint) loadState(_ context.Context, epState EndpointState) {
 	// This is to ensure that the loading wait groups include all applicable
 	// endpoints before any asynchronous calls to the Wait() methods.
 	// For restore purposes we treat TimeWait like a connected endpoint.
@@ -110,7 +112,7 @@ func (e *endpoint) loadState(epState EndpointState) {
 }
 
 // afterLoad is invoked by stateify.
-func (e *endpoint) afterLoad(ctx context.Context) {
+func (e *Endpoint) afterLoad(ctx context.Context) {
 	// RacyLoad() can be used because we are initializing e.
 	e.origEndpointState = e.state.RacyLoad()
 	// Restore the endpoint to InitialState as it will be moved to
@@ -120,7 +122,7 @@ func (e *endpoint) afterLoad(ctx context.Context) {
 }
 
 // Restore implements tcpip.RestoredEndpoint.Restore.
-func (e *endpoint) Restore(s *stack.Stack) {
+func (e *Endpoint) Restore(s *stack.Stack) {
 	if !e.EndpointState().closed() {
 		e.keepalive.timer.init(s.Clock(), timerHandler(e, e.keepaliveTimerExpired))
 	}
@@ -128,6 +130,7 @@ func (e *endpoint) Restore(s *stack.Stack) {
 		snd.resendTimer.init(s.Clock(), timerHandler(e, e.snd.retransmitTimerExpired))
 		snd.reorderTimer.init(s.Clock(), timerHandler(e, e.snd.rc.reorderTimerExpired))
 		snd.probeTimer.init(s.Clock(), timerHandler(e, e.snd.probeTimerExpired))
+		snd.corkTimer.init(s.Clock(), timerHandler(e, e.snd.corkTimerExpired))
 	}
 	e.stack = s
 	e.protocol = protocolFromStack(s)
@@ -137,7 +140,7 @@ func (e *endpoint) Restore(s *stack.Stack) {
 	bind := func() {
 		e.mu.Lock()
 		defer e.mu.Unlock()
-		addr, _, err := e.checkV4MappedLocked(tcpip.FullAddress{Addr: e.BindAddr, Port: e.TransportEndpointInfo.ID.LocalPort})
+		addr, _, err := e.checkV4MappedLocked(tcpip.FullAddress{Addr: e.BindAddr, Port: e.TransportEndpointInfo.ID.LocalPort}, true /* bind */)
 		if err != nil {
 			panic("unable to parse BindAddr: " + err.String())
 		}
@@ -194,6 +197,11 @@ func (e *endpoint) Restore(s *stack.Stack) {
 			e.timeWaitTimer = e.stack.Clock().AfterFunc(e.getTimeWaitDuration(), e.timeWaitTimerExpired)
 		}
 
+		if e.ops.GetCorkOption() {
+			// Rearm the timer if TCP_CORK is enabled which will
+			// drain all the segments in the queue after restore.
+			e.snd.corkTimer.enable(MinRTO)
+		}
 		e.mu.Unlock()
 		connectedLoading.Done()
 	case epState == StateListen:
@@ -269,4 +277,9 @@ func (e *endpoint) Restore(s *stack.Stack) {
 		e.stack.CompleteTransportEndpointCleanup(e)
 		tcpip.DeleteDanglingEndpoint(e)
 	}
+}
+
+// Resume implements tcpip.ResumableEndpoint.Resume.
+func (e *Endpoint) Resume() {
+	e.segmentQueue.thaw()
 }

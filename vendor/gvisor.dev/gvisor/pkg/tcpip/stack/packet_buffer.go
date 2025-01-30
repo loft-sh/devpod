@@ -276,13 +276,23 @@ func (pk *PacketBuffer) Data() PacketData {
 }
 
 // AsSlices returns the underlying storage of the whole packet.
+//
+// Note that AsSlices can allocate a lot. In hot paths it may be preferable to
+// iterate over a PacketBuffer's data via AsViewList.
 func (pk *PacketBuffer) AsSlices() [][]byte {
-	var views [][]byte
+	vl := pk.buf.AsViewList()
+	views := make([][]byte, 0, vl.Len())
 	offset := pk.headerOffset()
 	pk.buf.SubApply(offset, int(pk.buf.Size())-offset, func(v *buffer.View) {
 		views = append(views, v.AsSlice())
 	})
 	return views
+}
+
+// AsViewList returns the list of Views backing the PacketBuffer along with the
+// header offset into them. Users may not save or modify the ViewList returned.
+func (pk *PacketBuffer) AsViewList() (buffer.ViewList, int) {
+	return pk.buf.AsViewList(), pk.headerOffset()
 }
 
 // ToBuffer returns a caller-owned copy of the underlying storage of the whole
@@ -457,11 +467,6 @@ func (pk *PacketBuffer) DeepCopyForForwarding(reservedHeaderBytes int) *PacketBu
 	newPk.tuple = pk.tuple
 
 	return newPk
-}
-
-// IsNil returns whether the pointer is logically nil.
-func (pk *PacketBuffer) IsNil() bool {
-	return pk == nil
 }
 
 // headerInfo stores metadata about a header in a packet.

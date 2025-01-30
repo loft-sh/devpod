@@ -60,6 +60,8 @@ var (
 )
 
 // FragmentID is the identifier for a fragment.
+//
+// +stateify savable
 type FragmentID struct {
 	// Source is the source address of the fragment.
 	Source tcpip.Address
@@ -78,8 +80,10 @@ type FragmentID struct {
 
 // Fragmentation is the main structure that other modules
 // of the stack should use to implement IP Fragmentation.
+//
+// +stateify savable
 type Fragmentation struct {
-	mu             sync.Mutex
+	mu             sync.Mutex `state:"nosave"`
 	highLimit      int
 	lowLimit       int
 	reassemblers   map[FragmentID]*reassembler
@@ -251,12 +255,12 @@ func (f *Fragmentation) release(r *reassembler, timedOut bool) {
 	if h := f.timeoutHandler; timedOut && h != nil {
 		h.OnReassemblyTimeout(r.pkt)
 	}
-	if !r.pkt.IsNil() {
+	if r.pkt != nil {
 		r.pkt.DecRef()
 		r.pkt = nil
 	}
 	for _, h := range r.holes {
-		if !h.pkt.IsNil() {
+		if h.pkt != nil {
 			h.pkt.DecRef()
 			h.pkt = nil
 		}

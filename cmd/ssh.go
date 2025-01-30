@@ -213,7 +213,7 @@ func (cmd *SSHCmd) startTSProxyTunnel(
 	log.Debugf("Starting proxy connection")
 
 	if cmd.Provider == "" {
-		cmd.Provider = devPodConfig.Current().DefaultProvider
+		cmd.Provider = client.WorkspaceConfig().Provider.Name
 	}
 
 	// Load configuration

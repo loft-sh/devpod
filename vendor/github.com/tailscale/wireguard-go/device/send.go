@@ -506,6 +506,7 @@ func (peer *Peer) RoutineSequentialSender(maxBatchSize int) {
 				device.PutMessageBuffer(elem.buffer)
 				device.PutOutboundElement(elem)
 			}
+			device.PutOutboundElementsContainer(elemsContainer)
 			continue
 		}
 		dataSent := false
