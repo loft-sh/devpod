@@ -17,4 +17,4 @@ before_script:
   - sudo modprobe sch_sfq
 install:
   - go get -v -t ./...
-go_import_path: github.com/vishvananda/netlink
+go_import_path: github.com/tailscale/netlink

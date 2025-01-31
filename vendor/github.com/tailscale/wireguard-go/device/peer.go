@@ -283,6 +283,9 @@ func (peer *Peer) SetEndpointFromPacket(endpoint conn.Endpoint) {
 		return
 	}
 	peer.endpoint.clearSrcOnTx = false
+	if ep, ok := endpoint.(conn.PeerAwareEndpoint); ok {
+		endpoint = ep.GetPeerEndpoint(peer.handshake.remoteStatic)
+	}
 	peer.endpoint.val = endpoint
 }
 

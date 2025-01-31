@@ -30,7 +30,7 @@ func (p *udpPacket) saveReceivedAt() int64 {
 }
 
 // loadReceivedAt is invoked by stateify.
-func (p *udpPacket) loadReceivedAt(nsec int64) {
+func (p *udpPacket) loadReceivedAt(_ context.Context, nsec int64) {
 	p.receivedAt = time.Unix(0, nsec)
 }
 
@@ -42,6 +42,7 @@ func (e *endpoint) afterLoad(ctx context.Context) {
 // beforeSave is invoked by stateify.
 func (e *endpoint) beforeSave() {
 	e.freeze()
+	e.stack.RegisterResumableEndpoint(e)
 }
 
 // Restore implements tcpip.RestoredEndpoint.Restore.
@@ -75,4 +76,9 @@ func (e *endpoint) Restore(s *stack.Stack) {
 	default:
 		panic(fmt.Sprintf("unhandled state = %s", state))
 	}
+}
+
+// Resume implements tcpip.ResumableEndpoint.Resume.
+func (e *endpoint) Resume() {
+	e.thaw()
 }

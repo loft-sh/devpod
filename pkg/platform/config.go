@@ -40,7 +40,7 @@ func ReadConfig(contextName string, providerName string) (*client.Config, error)
 	// Check if given context and provider have Loft Platform configuration
 	if _, err := os.Stat(configPath); os.IsNotExist(err) {
 		// If not just return empty response
-		return &client.Config{}, nil
+		return nil, err
 	}
 
 	content, err := os.ReadFile(configPath)

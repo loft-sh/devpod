@@ -9,6 +9,7 @@ import (
 	"encoding/binary"
 	"errors"
 	"fmt"
+	"iter"
 	"math"
 	"math/rand/v2"
 	"net"
@@ -20,7 +21,6 @@ import (
 	"sync/atomic"
 	"time"
 
-	"golang.org/x/crypto/poly1305"
 	xmaps "golang.org/x/exp/maps"
 	"golang.org/x/net/ipv4"
 	"golang.org/x/net/ipv6"
@@ -961,25 +961,39 @@ func (de *endpoint) send(buffs [][]byte) error {
 			de.noteBadEndpoint(udpAddr)
 		}
 
+		var txBytes int
+		for _, b := range buffs {
+			txBytes += len(b)
+		}
+
+		switch {
+		case udpAddr.Addr().Is4():
+			de.c.metrics.outboundPacketsIPv4Total.Add(int64(len(buffs)))
+			de.c.metrics.outboundBytesIPv4Total.Add(int64(txBytes))
+		case udpAddr.Addr().Is6():
+			de.c.metrics.outboundPacketsIPv6Total.Add(int64(len(buffs)))
+			de.c.metrics.outboundBytesIPv6Total.Add(int64(txBytes))
+		}
+
 		// TODO(raggi): needs updating for accuracy, as in error conditions we may have partial sends.
 		if stats := de.c.stats.Load(); err == nil && stats != nil {
-			var txBytes int
-			for _, b := range buffs {
-				txBytes += len(b)
-			}
-			stats.UpdateTxPhysical(de.nodeAddr, udpAddr, txBytes)
+			stats.UpdateTxPhysical(de.nodeAddr, udpAddr, len(buffs), txBytes)
 		}
 	}
 	if derpAddr.IsValid() {
 		allOk := true
+		var txBytes int
 		for _, buff := range buffs {
-			ok, _ := de.c.sendAddr(derpAddr, de.publicKey, buff)
-			if stats := de.c.stats.Load(); stats != nil {
-				stats.UpdateTxPhysical(de.nodeAddr, derpAddr, len(buff))
-			}
+			const isDisco = false
+			ok, _ := de.c.sendAddr(derpAddr, de.publicKey, buff, isDisco)
+			txBytes += len(buff)
 			if !ok {
 				allOk = false
 			}
+		}
+
+		if stats := de.c.stats.Load(); stats != nil {
+			stats.UpdateTxPhysical(de.nodeAddr, derpAddr, len(buffs), txBytes)
 		}
 		if allOk {
 			return nil
@@ -1067,9 +1081,14 @@ func (de *endpoint) removeSentDiscoPingLocked(txid stun.TxID, sp sentPing, resul
 	delete(de.sentPing, txid)
 }
 
+// poly1305AuthenticatorSize is the size, in bytes, of a poly1305 authenticator.
+// It's the same as golang.org/x/crypto/poly1305.TagSize, but that
+// page is deprecated and we only need this one constant, so we copy it.
+const poly1305AuthenticatorSize = 16
+
 // discoPingSize is the size of a complete disco ping packet, without any padding.
 const discoPingSize = len(disco.Magic) + key.DiscoPublicRawLen + disco.NonceLen +
-	poly1305.TagSize + disco.MessageHeaderLen + disco.PingLen
+	poly1305AuthenticatorSize + disco.MessageHeaderLen + disco.PingLen
 
 // sendDiscoPing sends a ping with the provided txid to ep using de's discoKey. size
 // is the desired disco message size, including all disco headers but excluding IP/UDP
@@ -1366,20 +1385,18 @@ func (de *endpoint) updateFromNode(n tailcfg.NodeView, heartbeatDisabled bool, p
 }
 
 func (de *endpoint) setEndpointsLocked(eps interface {
-	Len() int
-	At(i int) netip.AddrPort
+	All() iter.Seq2[int, netip.AddrPort]
 }) {
 	for _, st := range de.endpointState {
 		st.index = indexSentinelDeleted // assume deleted until updated in next loop
 	}
 
 	var newIpps []netip.AddrPort
-	for i := range eps.Len() {
+	for i, ipp := range eps.All() {
 		if i > math.MaxInt16 {
 			// Seems unlikely.
 			break
 		}
-		ipp := eps.At(i)
 		if !ipp.IsValid() {
 			de.c.logf("magicsock: bogus netmap endpoint from %v", eps)
 			continue

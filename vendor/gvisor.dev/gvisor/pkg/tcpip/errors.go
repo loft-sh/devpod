@@ -32,6 +32,8 @@ type Error interface {
 	fmt.Stringer
 }
 
+const maxErrno = 134
+
 // LINT.IfChange
 
 // ErrAborted indicates the operation was aborted.
@@ -273,6 +275,19 @@ func (*ErrDuplicateNICID) IgnoreStats() bool {
 	return false
 }
 func (*ErrDuplicateNICID) String() string { return "duplicate nic id" }
+
+// ErrInvalidNICID indicates the operation used an invalid NIC ID.
+//
+// +stateify savable
+type ErrInvalidNICID struct{}
+
+func (*ErrInvalidNICID) isError() {}
+
+// IgnoreStats implements Error.
+func (*ErrInvalidNICID) IgnoreStats() bool {
+	return false
+}
+func (*ErrInvalidNICID) String() string { return "invalid nic id" }
 
 // ErrInvalidEndpointState indicates the endpoint is in an invalid state.
 //
