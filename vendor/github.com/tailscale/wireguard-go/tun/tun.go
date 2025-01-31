@@ -52,10 +52,25 @@ type Device interface {
 	BatchSize() int
 }
 
-type LinuxDevice interface {
+// GRODevice is a Device extended with methods for disabling GRO. Certain OS
+// versions may have offload bugs. Where these bugs negatively impact throughput
+// or break connectivity entirely we can use these methods to disable the
+// related offload.
+//
+// Linux has the following known, GRO bugs.
+//
+// torvalds/linux@e269d79c7d35aa3808b1f3c1737d63dab504ddc8 broke virtio_net
+// TCP & UDP GRO causing GRO writes to return EINVAL. The bug was then
+// resolved later in
+// torvalds/linux@89add40066f9ed9abe5f7f886fe5789ff7e0c50e. The offending
+// commit was pulled into various LTS releases.
+//
+// UDP GRO writes end up blackholing/dropping packets destined for a
+// vxlan/geneve interface on kernel versions prior to 6.8.5.
+type GRODevice interface {
 	Device
-	// DisableUDPGRO disables UDP GRO if it is enabled. Certain device drivers
-	// (e.g. vxlan, geneve) do not properly handle coalesced UDP packets later
-	// in the stack, resulting in packet loss.
+	// DisableUDPGRO disables UDP GRO if it is enabled.
 	DisableUDPGRO()
+	// DisableTCPGRO disables TCP GRO if it is enabled.
+	DisableTCPGRO()
 }

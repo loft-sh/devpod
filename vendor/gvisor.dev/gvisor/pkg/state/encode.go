@@ -16,6 +16,7 @@ package state
 
 import (
 	"context"
+	"io"
 	"reflect"
 	"sort"
 
@@ -61,7 +62,7 @@ type encodeState struct {
 	ctx context.Context
 
 	// w is the output stream.
-	w wire.Writer
+	w io.Writer
 
 	// types is the type database.
 	types typeEncodeDatabase
@@ -771,7 +772,7 @@ func (es *encodeState) Save(obj reflect.Value) {
 		}
 	}); err != nil {
 		// Include the object in the error message.
-		Failf("encoding error at object %#v: %w", oes.obj.Interface(), err)
+		Failf("encoding error: %w\nfor object %#v", err, oes.obj.Interface())
 	}
 
 	// Check that we have objects to serialize.
@@ -824,7 +825,7 @@ const objectFlag uint64 = 1 << 63
 // order to generate statefiles that play nicely with debugging tools, raw
 // writes should be prefixed with a header with object set to false and the
 // appropriate length. This will allow tools to skip these regions.
-func WriteHeader(w wire.Writer, length uint64, object bool) error {
+func WriteHeader(w io.Writer, length uint64, object bool) error {
 	// Sanity check the length.
 	if length&objectFlag != 0 {
 		Failf("impossibly huge length: %d", length)

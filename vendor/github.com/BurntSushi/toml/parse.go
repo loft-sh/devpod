@@ -65,7 +65,7 @@ func parse(data string) (p *parser, err error) {
 	if i := strings.IndexRune(data[:ex], 0); i > -1 {
 		return nil, ParseError{
 			Message:  "files cannot contain NULL bytes; probably using UTF-16; TOML files must be UTF-8",
-			Position: Position{Line: 1, Start: i, Len: 1},
+			Position: Position{Line: 1, Col: 1, Start: i, Len: 1},
 			Line:     1,
 			input:    data,
 		}
@@ -92,8 +92,9 @@ func parse(data string) (p *parser, err error) {
 
 func (p *parser) panicErr(it item, err error) {
 	panic(ParseError{
+		Message:  err.Error(),
 		err:      err,
-		Position: it.pos,
+		Position: it.pos.withCol(p.lx.input),
 		Line:     it.pos.Len,
 		LastKey:  p.current(),
 	})
@@ -102,7 +103,7 @@ func (p *parser) panicErr(it item, err error) {
 func (p *parser) panicItemf(it item, format string, v ...any) {
 	panic(ParseError{
 		Message:  fmt.Sprintf(format, v...),
-		Position: it.pos,
+		Position: it.pos.withCol(p.lx.input),
 		Line:     it.pos.Len,
 		LastKey:  p.current(),
 	})
@@ -111,7 +112,7 @@ func (p *parser) panicItemf(it item, format string, v ...any) {
 func (p *parser) panicf(format string, v ...any) {
 	panic(ParseError{
 		Message:  fmt.Sprintf(format, v...),
-		Position: p.pos,
+		Position: p.pos.withCol(p.lx.input),
 		Line:     p.pos.Line,
 		LastKey:  p.current(),
 	})
@@ -123,10 +124,11 @@ func (p *parser) next() item {
 	if it.typ == itemError {
 		if it.err != nil {
 			panic(ParseError{
-				Position: it.pos,
+				Message:  it.err.Error(),
+				err:      it.err,
+				Position: it.pos.withCol(p.lx.input),
 				Line:     it.pos.Line,
 				LastKey:  p.current(),
-				err:      it.err,
 			})
 		}
 

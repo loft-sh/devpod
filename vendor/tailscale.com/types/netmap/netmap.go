@@ -18,7 +18,7 @@ import (
 	"tailscale.com/types/key"
 	"tailscale.com/types/views"
 	"tailscale.com/util/set"
-	"tailscale.com/wgengine/filter"
+	"tailscale.com/wgengine/filter/filtertype"
 )
 
 // NetworkMap is the current state of the world.
@@ -40,7 +40,7 @@ type NetworkMap struct {
 	Peers []tailcfg.NodeView // sorted by Node.ID
 	DNS   tailcfg.DNSConfig
 
-	PacketFilter      []filter.Match
+	PacketFilter      []filtertype.Match
 	PacketFilterRules views.Slice[tailcfg.FilterRule]
 	SSHPolicy         *tailcfg.SSHPolicy // or nil, if not enabled/allowed
 
@@ -279,15 +279,14 @@ func (a *NetworkMap) equalConciseHeader(b *NetworkMap) bool {
 // in nodeConciseEqual in sync.
 func printPeerConcise(buf *strings.Builder, p tailcfg.NodeView) {
 	aip := make([]string, p.AllowedIPs().Len())
-	for i := range aip {
-		a := p.AllowedIPs().At(i)
-		s := strings.TrimSuffix(fmt.Sprint(a), "/32")
+	for i, a := range p.AllowedIPs().All() {
+		s := strings.TrimSuffix(a.String(), "/32")
 		aip[i] = s
 	}
 
-	ep := make([]string, p.Endpoints().Len())
-	for i := range ep {
-		e := p.Endpoints().At(i).String()
+	epStrs := make([]string, p.Endpoints().Len())
+	for i, ep := range p.Endpoints().All() {
+		e := ep.String()
 		// Align vertically on the ':' between IP and port
 		colon := strings.IndexByte(e, ':')
 		spaces := 0
@@ -295,7 +294,7 @@ func printPeerConcise(buf *strings.Builder, p tailcfg.NodeView) {
 			spaces++
 			colon--
 		}
-		ep[i] = fmt.Sprintf("%21v", e+strings.Repeat(" ", spaces))
+		epStrs[i] = fmt.Sprintf("%21v", e+strings.Repeat(" ", spaces))
 	}
 
 	derp := p.DERP()
@@ -316,7 +315,7 @@ func printPeerConcise(buf *strings.Builder, p tailcfg.NodeView) {
 		discoShort,
 		derp,
 		strings.Join(aip, " "),
-		strings.Join(ep, " "))
+		strings.Join(epStrs, " "))
 }
 
 // nodeConciseEqual reports whether a and b are equal for the fields accessed by printPeerConcise.

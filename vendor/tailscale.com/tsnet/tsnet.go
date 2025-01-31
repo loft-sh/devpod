@@ -2,8 +2,6 @@
 // SPDX-License-Identifier: BSD-3-Clause
 
 // Package tsnet provides Tailscale as a library.
-//
-// It is an experimental work in progress.
 package tsnet
 
 import (
@@ -129,6 +127,7 @@ type Server struct {
 	initOnce         sync.Once
 	initErr          error
 	lb               *ipnlocal.LocalBackend
+	sys              *tsd.System
 	netstack         *netstack.Impl
 	netMon           *netmon.Monitor
 	rootPath         string // the state directory
@@ -435,8 +434,7 @@ func (s *Server) TailscaleIPs() (ip4, ip6 netip.Addr) {
 		return
 	}
 	addrs := nm.GetAddresses()
-	for i := range addrs.Len() {
-		addr := addrs.At(i)
+	for _, addr := range addrs.All() {
 		ip := addr.Addr()
 		if ip.Is6() {
 			ip6 = ip
@@ -521,6 +519,7 @@ func (s *Server) start() (reterr error) {
 	}
 
 	sys := new(tsd.System)
+	s.sys = sys
 	if err := s.startLogger(&closePool, sys.HealthTracker(), tsLogf); err != nil {
 		return err
 	}
@@ -539,17 +538,19 @@ func (s *Server) start() (reterr error) {
 		SetSubsystem:  sys.Set,
 		ControlKnobs:  sys.ControlKnobs(),
 		HealthTracker: sys.HealthTracker(),
+		Metrics:       sys.UserMetricsRegistry(),
 	})
 	if err != nil {
 		return err
 	}
 	closePool.add(s.dialer)
 	sys.Set(eng)
+	sys.HealthTracker().SetMetricsRegistry(sys.UserMetricsRegistry())
 
 	s.dialer.UserDialCustomResolver = dns.Quad100Resolver(context.Background(), sys.DNSManager.Get())
 
 	// TODO(oxtoacart): do we need to support Taildrive on tsnet, and if so, how?
-	ns, err := netstack.Create(tsLogf, sys.Tun.Get(), eng, sys.MagicSock.Get(), s.dialer, sys.DNSManager.Get(), sys.ProxyMapper(), nil)
+	ns, err := netstack.Create(tsLogf, sys.Tun.Get(), eng, sys.MagicSock.Get(), s.dialer, sys.DNSManager.Get(), sys.ProxyMapper())
 	if err != nil {
 		return fmt.Errorf("netstack.Create: %w", err)
 	}
@@ -648,7 +649,7 @@ func (s *Server) start() (reterr error) {
 	s.localAPIServer = &http.Server{Handler: lah}
 	s.lb.ConfigureWebClient(s.localClient)
 	go func() {
-		if err := s.localAPIServer.Serve(lal); err != nil {
+		if err := s.localAPIServer.Serve(lal); err != nil && err != http.ErrServerClosed {
 			s.logf("localapi serve error: %v", err)
 		}
 	}()
@@ -906,6 +907,7 @@ func (s *Server) APIClient() (*tailscale.Client, error) {
 	}
 
 	c := tailscale.NewClient("-", nil)
+	c.UserAgent = "tailscale-tsnet"
 	c.HTTPClient = &http.Client{Transport: s.lb.KeyProvingNoiseRoundTripper()}
 	return c, nil
 }
@@ -1227,6 +1229,13 @@ func (s *Server) CapturePcap(ctx context.Context, pcapFile string) error {
 	}(stream, f)
 
 	return nil
+}
+
+// Sys returns a handle to the Tailscale subsystems of this node.
+//
+// This is not a stable API, nor are the APIs of the returned subsystems.
+func (s *Server) Sys() *tsd.System {
+	return s.sys
 }
 
 type listenKey struct {

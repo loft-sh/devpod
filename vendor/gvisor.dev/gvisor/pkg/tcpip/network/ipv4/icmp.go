@@ -232,8 +232,7 @@ func (e *endpoint) checkLocalAddress(addr tcpip.Address) bool {
 		return true
 	}
 
-	if addressEndpoint := e.AcquireAssignedAddress(addr, false, stack.NeverPrimaryEndpoint); addressEndpoint != nil {
-		addressEndpoint.DecRef()
+	if addressEndpoint := e.AcquireAssignedAddress(addr, false, stack.NeverPrimaryEndpoint, true /* readOnly */); addressEndpoint != nil {
 		return true
 	}
 	return false
@@ -816,7 +815,7 @@ func (p *protocol) OnReassemblyTimeout(pkt *stack.PacketBuffer) {
 	//
 	//   If fragment zero is not available then no time exceeded need be sent at
 	//   all.
-	if !pkt.IsNil() {
+	if pkt != nil {
 		p.returnError(&icmpReasonReassemblyTimeout{}, pkt, true /* deliveredLocally */)
 	}
 }

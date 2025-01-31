@@ -19,7 +19,7 @@ $(call goroot,$(DEPS)):
 
 .PHONY: $(call testdirs,$(DIRS))
 $(call testdirs,$(DIRS)):
-	go test -test.exec sudo -test.parallel 4 -timeout 60s -test.v github.com/vishvananda/netlink/$@
+	go test -test.exec sudo -test.parallel 4 -timeout 60s -test.v github.com/tailscale/netlink/$@
 
 $(call fmt,$(call testdirs,$(DIRS))):
 	! gofmt -l $(subst fmt-,,$@)/*.go | grep -q .
