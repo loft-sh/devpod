@@ -170,6 +170,7 @@ func (d *Dialer) Close() error {
 		c.Close()
 	}
 	d.activeSysConns = nil
+	d.PeerAPITransport().CloseIdleConnections()
 	return nil
 }
 
@@ -430,7 +431,7 @@ func (d *Dialer) UserDial(ctx context.Context, network, addr string) (net.Conn, 
 	}
 
 	if routes := d.routes.Load(); routes != nil {
-		if isTailscaleRoute, _ := routes.Get(ipp.Addr()); isTailscaleRoute {
+		if isTailscaleRoute, _ := routes.Lookup(ipp.Addr()); isTailscaleRoute {
 			return d.getPeerDialer().DialContext(ctx, network, ipp.String())
 		}
 

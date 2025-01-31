@@ -50,7 +50,7 @@ func (p *rawPacket) StateLoad(ctx context.Context, stateSourceObject state.Sourc
 	stateSourceObject.Load(4, &p.packetInfo)
 	stateSourceObject.Load(5, &p.tosOrTClass)
 	stateSourceObject.Load(6, &p.ttlOrHopLimit)
-	stateSourceObject.LoadValue(2, new(int64), func(y any) { p.loadReceivedAt(y.(int64)) })
+	stateSourceObject.LoadValue(2, new(int64), func(y any) { p.loadReceivedAt(ctx, y.(int64)) })
 }
 
 func (e *endpoint) StateTypeName() string {
@@ -109,6 +109,48 @@ func (e *endpoint) StateLoad(ctx context.Context, stateSourceObject state.Source
 	stateSourceObject.Load(11, &e.ipv6ChecksumOffset)
 	stateSourceObject.Load(12, &e.icmpv6Filter)
 	stateSourceObject.AfterLoad(func() { e.afterLoad(ctx) })
+}
+
+func (e *EndpointFactory) StateTypeName() string {
+	return "pkg/tcpip/transport/raw.EndpointFactory"
+}
+
+func (e *EndpointFactory) StateFields() []string {
+	return []string{}
+}
+
+func (e *EndpointFactory) beforeSave() {}
+
+// +checklocksignore
+func (e *EndpointFactory) StateSave(stateSinkObject state.Sink) {
+	e.beforeSave()
+}
+
+func (e *EndpointFactory) afterLoad(context.Context) {}
+
+// +checklocksignore
+func (e *EndpointFactory) StateLoad(ctx context.Context, stateSourceObject state.Source) {
+}
+
+func (c *CreateOnlyFactory) StateTypeName() string {
+	return "pkg/tcpip/transport/raw.CreateOnlyFactory"
+}
+
+func (c *CreateOnlyFactory) StateFields() []string {
+	return []string{}
+}
+
+func (c *CreateOnlyFactory) beforeSave() {}
+
+// +checklocksignore
+func (c *CreateOnlyFactory) StateSave(stateSinkObject state.Sink) {
+	c.beforeSave()
+}
+
+func (c *CreateOnlyFactory) afterLoad(context.Context) {}
+
+// +checklocksignore
+func (c *CreateOnlyFactory) StateLoad(ctx context.Context, stateSourceObject state.Source) {
 }
 
 func (l *rawPacketList) StateTypeName() string {
@@ -170,6 +212,8 @@ func (e *rawPacketEntry) StateLoad(ctx context.Context, stateSourceObject state.
 func init() {
 	state.Register((*rawPacket)(nil))
 	state.Register((*endpoint)(nil))
+	state.Register((*EndpointFactory)(nil))
+	state.Register((*CreateOnlyFactory)(nil))
 	state.Register((*rawPacketList)(nil))
 	state.Register((*rawPacketEntry)(nil))
 }

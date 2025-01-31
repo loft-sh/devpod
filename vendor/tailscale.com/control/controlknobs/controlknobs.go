@@ -19,10 +19,6 @@ type Knobs struct {
 	// DisableUPnP indicates whether to attempt UPnP mapping.
 	DisableUPnP atomic.Bool
 
-	// DisableDRPO is whether control says to disable the
-	// DERP route optimization (Issue 150).
-	DisableDRPO atomic.Bool
-
 	// KeepFullWGConfig is whether we should disable the lazy wireguard
 	// programming and instead give WireGuard the full netmap always, even for
 	// idle peers.
@@ -90,6 +86,23 @@ type Knobs struct {
 	// This is for now (2024-06-06) an iOS-specific battery life optimization,
 	// and this knob allows us to disable the optimization remotely if needed.
 	DisableSplitDNSWhenNoCustomResolvers atomic.Bool
+
+	// DisableLocalDNSOverrideViaNRPT indicates that the node's DNS manager should not
+	// create a default (catch-all) Windows NRPT rule when "Override local DNS" is enabled.
+	// Without this rule, Windows 8.1 and newer devices issue parallel DNS requests to DNS servers
+	// associated with all network adapters, even when "Override local DNS" is enabled and/or
+	// a Mullvad exit node is being used, resulting in DNS leaks.
+	// We began creating this rule on 2024-06-14, and this knob
+	// allows us to disable the new behavior remotely if needed.
+	DisableLocalDNSOverrideViaNRPT atomic.Bool
+
+	// DisableCryptorouting indicates that the node should not use the
+	// magicsock crypto routing feature.
+	DisableCryptorouting atomic.Bool
+
+	// DisableCaptivePortalDetection is whether the node should not perform captive portal detection
+	// automatically when the network state changes.
+	DisableCaptivePortalDetection atomic.Bool
 }
 
 // UpdateFromNodeAttributes updates k (if non-nil) based on the provided self
@@ -101,7 +114,6 @@ func (k *Knobs) UpdateFromNodeAttributes(capMap tailcfg.NodeCapMap) {
 	has := capMap.Contains
 	var (
 		keepFullWG                           = has(tailcfg.NodeAttrDebugDisableWGTrim)
-		disableDRPO                          = has(tailcfg.NodeAttrDebugDisableDRPO)
 		disableUPnP                          = has(tailcfg.NodeAttrDisableUPnP)
 		randomizeClientPort                  = has(tailcfg.NodeAttrRandomizeClientPort)
 		disableDeltaUpdates                  = has(tailcfg.NodeAttrDisableDeltaUpdates)
@@ -117,6 +129,9 @@ func (k *Knobs) UpdateFromNodeAttributes(capMap tailcfg.NodeCapMap) {
 		appCStoreRoutes                      = has(tailcfg.NodeAttrStoreAppCRoutes)
 		userDialUseRoutes                    = has(tailcfg.NodeAttrUserDialUseRoutes)
 		disableSplitDNSWhenNoCustomResolvers = has(tailcfg.NodeAttrDisableSplitDNSWhenNoCustomResolvers)
+		disableLocalDNSOverrideViaNRPT       = has(tailcfg.NodeAttrDisableLocalDNSOverrideViaNRPT)
+		disableCryptorouting                 = has(tailcfg.NodeAttrDisableMagicSockCryptoRouting)
+		disableCaptivePortalDetection        = has(tailcfg.NodeAttrDisableCaptivePortalDetection)
 	)
 
 	if has(tailcfg.NodeAttrOneCGNATEnable) {
@@ -126,7 +141,6 @@ func (k *Knobs) UpdateFromNodeAttributes(capMap tailcfg.NodeCapMap) {
 	}
 
 	k.KeepFullWGConfig.Store(keepFullWG)
-	k.DisableDRPO.Store(disableDRPO)
 	k.DisableUPnP.Store(disableUPnP)
 	k.RandomizeClientPort.Store(randomizeClientPort)
 	k.OneCGNAT.Store(oneCGNAT)
@@ -142,6 +156,9 @@ func (k *Knobs) UpdateFromNodeAttributes(capMap tailcfg.NodeCapMap) {
 	k.AppCStoreRoutes.Store(appCStoreRoutes)
 	k.UserDialUseRoutes.Store(userDialUseRoutes)
 	k.DisableSplitDNSWhenNoCustomResolvers.Store(disableSplitDNSWhenNoCustomResolvers)
+	k.DisableLocalDNSOverrideViaNRPT.Store(disableLocalDNSOverrideViaNRPT)
+	k.DisableCryptorouting.Store(disableCryptorouting)
+	k.DisableCaptivePortalDetection.Store(disableCaptivePortalDetection)
 }
 
 // AsDebugJSON returns k as something that can be marshalled with json.Marshal
@@ -152,7 +169,6 @@ func (k *Knobs) AsDebugJSON() map[string]any {
 	}
 	return map[string]any{
 		"DisableUPnP":                          k.DisableUPnP.Load(),
-		"DisableDRPO":                          k.DisableDRPO.Load(),
 		"KeepFullWGConfig":                     k.KeepFullWGConfig.Load(),
 		"RandomizeClientPort":                  k.RandomizeClientPort.Load(),
 		"OneCGNAT":                             k.OneCGNAT.Load(),
@@ -168,5 +184,8 @@ func (k *Knobs) AsDebugJSON() map[string]any {
 		"AppCStoreRoutes":                      k.AppCStoreRoutes.Load(),
 		"UserDialUseRoutes":                    k.UserDialUseRoutes.Load(),
 		"DisableSplitDNSWhenNoCustomResolvers": k.DisableSplitDNSWhenNoCustomResolvers.Load(),
+		"DisableLocalDNSOverrideViaNRPT":       k.DisableLocalDNSOverrideViaNRPT.Load(),
+		"DisableCryptorouting":                 k.DisableCryptorouting.Load(),
+		"DisableCaptivePortalDetection":        k.DisableCaptivePortalDetection.Load(),
 	}
 }

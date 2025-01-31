@@ -180,6 +180,28 @@ var _ stack.NDPEndpoint = (*endpoint)(nil)
 var _ MLDEndpoint = (*endpoint)(nil)
 var _ NDPEndpoint = (*endpoint)(nil)
 
+// +stateify savable
+type endpointMu struct {
+	sync.RWMutex `state:"nosave"`
+
+	addressableEndpointState stack.AddressableEndpointState
+	ndp                      ndpState
+	mld                      mldState
+}
+
+// +stateify savable
+type dadMu struct {
+	sync.Mutex `state:"nosave"`
+
+	dad ip.DAD
+}
+
+// +stateify savable
+type endpointDAD struct {
+	mu dadMu
+}
+
+// +stateify savable
 type endpoint struct {
 	nic        stack.NetworkInterface
 	dispatcher stack.TransportDispatcher
@@ -196,18 +218,9 @@ type endpoint struct {
 
 	// multicastForwarding is set to forwardingEnabled when the endpoint has
 	// forwarding enabled and forwardingDisabled when it is disabled.
-	//
-	// TODO(https://gvisor.dev/issue/7338): Implement support for multicast
-	// forwarding. Currently, setting this value to true is a no-op.
 	multicastForwarding atomicbitops.Uint32
 
-	mu struct {
-		sync.RWMutex
-
-		addressableEndpointState stack.AddressableEndpointState
-		ndp                      ndpState
-		mld                      mldState
-	}
+	mu endpointMu
 
 	// dad is used to check if an arbitrary address is already assigned to some
 	// neighbor.
@@ -218,13 +231,7 @@ type endpoint struct {
 	// not be called with the actual DAD result.
 	//
 	// LOCK ORDERING: mu > dad.mu.
-	dad struct {
-		mu struct {
-			sync.Mutex
-
-			dad ip.DAD
-		}
-	}
+	dad endpointDAD
 }
 
 // NICNameFromID is a function that returns a stable name for the specified NIC,
@@ -238,12 +245,14 @@ type NICNameFromID func(tcpip.NICID, string) string
 
 // OpaqueInterfaceIdentifierOptions holds the options related to the generation
 // of opaque interface identifiers (IIDs) as defined by RFC 7217.
+//
+// +stateify savable
 type OpaqueInterfaceIdentifierOptions struct {
 	// NICNameFromID is a function that returns a stable name for a specified NIC,
 	// even if the NIC ID changes over time.
 	//
 	// Must be specified to generate the opaque IID.
-	NICNameFromID NICNameFromID
+	NICNameFromID NICNameFromID `state:"nosave"`
 
 	// SecretKey is a pseudo-random number used as the secret key when generating
 	// opaque IIDs as defined by RFC 7217. The key SHOULD be at least
@@ -1105,10 +1114,8 @@ func (e *endpoint) HandlePacket(pkt *stack.PacketBuffer) {
 		}
 
 		if e.protocol.stack.HandleLocal() {
-			addressEndpoint := e.AcquireAssignedAddress(header.IPv6(pkt.NetworkHeader().Slice()).SourceAddress(), e.nic.Promiscuous(), stack.CanBePrimaryEndpoint)
+			addressEndpoint := e.AcquireAssignedAddress(header.IPv6(pkt.NetworkHeader().Slice()).SourceAddress(), e.nic.Promiscuous(), stack.CanBePrimaryEndpoint, true /* readOnly */)
 			if addressEndpoint != nil {
-				addressEndpoint.DecRef()
-
 				// The source address is one of our own, so we never should have gotten
 				// a packet like this unless HandleLocal is false or our NIC is the
 				// loopback interface.
@@ -1348,8 +1355,7 @@ func (e *endpoint) handleValidatedPacket(h header.IPv6, pkt *stack.PacketBuffer,
 
 	// The destination address should be an address we own for us to receive the
 	// packet. Otherwise, attempt to forward the packet.
-	if addressEndpoint := e.AcquireAssignedAddress(dstAddr, e.nic.Promiscuous(), stack.CanBePrimaryEndpoint); addressEndpoint != nil {
-		addressEndpoint.DecRef()
+	if addressEndpoint := e.AcquireAssignedAddress(dstAddr, e.nic.Promiscuous(), stack.CanBePrimaryEndpoint, true /* readOnly */); addressEndpoint != nil {
 		e.deliverPacketLocally(h, pkt, inNICName)
 	} else if e.Forwarding() {
 		e.handleForwardingError(e.forwardUnicastPacket(pkt))
@@ -2036,18 +2042,18 @@ func (e *endpoint) MainAddress() tcpip.AddressWithPrefix {
 }
 
 // AcquireAssignedAddress implements stack.AddressableEndpoint.
-func (e *endpoint) AcquireAssignedAddress(localAddr tcpip.Address, allowTemp bool, tempPEB stack.PrimaryEndpointBehavior) stack.AddressEndpoint {
+func (e *endpoint) AcquireAssignedAddress(localAddr tcpip.Address, allowTemp bool, tempPEB stack.PrimaryEndpointBehavior, readOnly bool) stack.AddressEndpoint {
 	e.mu.RLock()
 	defer e.mu.RUnlock()
-	return e.acquireAddressOrCreateTempLocked(localAddr, allowTemp, tempPEB)
+	return e.acquireAddressOrCreateTempLocked(localAddr, allowTemp, tempPEB, readOnly)
 }
 
 // acquireAddressOrCreateTempLocked is like AcquireAssignedAddress but with
 // locking requirements.
 //
 // Precondition: e.mu must be write locked.
-func (e *endpoint) acquireAddressOrCreateTempLocked(localAddr tcpip.Address, allowTemp bool, tempPEB stack.PrimaryEndpointBehavior) stack.AddressEndpoint {
-	return e.mu.addressableEndpointState.AcquireAssignedAddress(localAddr, allowTemp, tempPEB)
+func (e *endpoint) acquireAddressOrCreateTempLocked(localAddr tcpip.Address, allowTemp bool, tempPEB stack.PrimaryEndpointBehavior, readOnly bool) stack.AddressEndpoint {
+	return e.mu.addressableEndpointState.AcquireAssignedAddress(localAddr, allowTemp, tempPEB, readOnly)
 }
 
 // AcquireOutgoingPrimaryAddress implements stack.AddressableEndpoint.
@@ -2267,25 +2273,29 @@ var _ stack.MulticastForwardingNetworkProtocol = (*protocol)(nil)
 var _ stack.RejectIPv6WithHandler = (*protocol)(nil)
 var _ fragmentation.TimeoutHandler = (*protocol)(nil)
 
+// +stateify savable
+type protocolMu struct {
+	sync.RWMutex `state:"nosave"`
+
+	// eps is keyed by NICID to allow protocol methods to retrieve an endpoint
+	// when handling a packet, by looking at which NIC handled the packet.
+	eps map[tcpip.NICID]*endpoint
+
+	// ICMP types for which the stack's global rate limiting must apply.
+	icmpRateLimitedTypes map[header.ICMPv6Type]struct{}
+
+	// multicastForwardingDisp is the multicast forwarding event dispatcher that
+	// an integrator can provide to receive multicast forwarding events. Note
+	// that multicast packets will only be forwarded if this is non-nil.
+	multicastForwardingDisp stack.MulticastForwardingEventDispatcher
+}
+
+// +stateify savable
 type protocol struct {
 	stack   *stack.Stack
 	options Options
 
-	mu struct {
-		sync.RWMutex
-
-		// eps is keyed by NICID to allow protocol methods to retrieve an endpoint
-		// when handling a packet, by looking at which NIC handled the packet.
-		eps map[tcpip.NICID]*endpoint
-
-		// ICMP types for which the stack's global rate limiting must apply.
-		icmpRateLimitedTypes map[header.ICMPv6Type]struct{}
-
-		// multicastForwardingDisp is the multicast forwarding event dispatcher that
-		// an integrator can provide to receive multicast forwarding events. Note
-		// that multicast packets will only be forwarded if this is non-nil.
-		multicastForwardingDisp stack.MulticastForwardingEventDispatcher
-	}
+	mu protocolMu
 
 	// defaultTTL is the current default TTL for the protocol. Only the
 	// uint8 portion of it is meaningful.
@@ -2369,8 +2379,7 @@ func (p *protocol) findEndpointWithAddress(addr tcpip.Address) *endpoint {
 	defer p.mu.RUnlock()
 
 	for _, e := range p.mu.eps {
-		if addressEndpoint := e.AcquireAssignedAddress(addr, false /* allowTemp */, stack.NeverPrimaryEndpoint); addressEndpoint != nil {
-			addressEndpoint.DecRef()
+		if addressEndpoint := e.AcquireAssignedAddress(addr, false /* allowTemp */, stack.NeverPrimaryEndpoint, true /* readOnly */); addressEndpoint != nil {
 			return e
 		}
 	}
@@ -2691,6 +2700,8 @@ func calculateNetworkMTU(linkMTU, networkHeadersLen uint32) (uint32, tcpip.Error
 }
 
 // Options holds options to configure a new protocol.
+//
+// +stateify savable
 type Options struct {
 	// NDPConfigs is the default NDP configurations used by interfaces.
 	NDPConfigs NDPConfigurations

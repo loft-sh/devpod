@@ -84,6 +84,20 @@ type Endpoint interface {
 	SrcIP() netip.Addr
 }
 
+// PeerAwareEndpoint is an optional Endpoint specialization for
+// integrations that want to know about the outcome of cryptorouting
+// identification.
+//
+// If they receive a packet from a source they had not pre-identified,
+// to learn the identification WireGuard can derive from the session
+// or handshake.
+//
+// If GetPeerEndpoint returns nil, WireGuard will be unable to respond
+// to the peer until a new endpoint is written by a later packet.
+type PeerAwareEndpoint interface {
+	GetPeerEndpoint(peerPublicKey [32]byte) Endpoint
+}
+
 var (
 	ErrBindAlreadyOpen   = errors.New("bind is already open")
 	ErrWrongEndpointType = errors.New("endpoint type does not correspond with bind type")

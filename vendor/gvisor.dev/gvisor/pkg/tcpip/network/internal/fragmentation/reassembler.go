@@ -23,6 +23,7 @@ import (
 	"gvisor.dev/gvisor/pkg/tcpip/stack"
 )
 
+// +stateify savable
 type hole struct {
 	first  uint16
 	last   uint16
@@ -33,12 +34,13 @@ type hole struct {
 	pkt *stack.PacketBuffer
 }
 
+// +stateify savable
 type reassembler struct {
 	reassemblerEntry
 	id        FragmentID
 	memSize   int
 	proto     uint8
-	mu        sync.Mutex
+	mu        sync.Mutex `state:"nosave"`
 	holes     []hole
 	filled    int
 	done      bool
@@ -145,7 +147,7 @@ func (r *reassembler) process(first, last uint16, more bool, proto uint8, pkt *s
 		// options received in the first fragment should be used - and they should
 		// override options from following fragments.
 		if first == 0 {
-			if !r.pkt.IsNil() {
+			if r.pkt != nil {
 				r.pkt.DecRef()
 			}
 			r.pkt = pkt.IncRef()

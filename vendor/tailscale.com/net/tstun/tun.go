@@ -18,7 +18,7 @@ import (
 )
 
 // createTAP is non-nil on Linux.
-var createTAP func(tapName, bridgeName string) (tun.Device, error)
+var createTAP func(logf logger.Logf, tapName, bridgeName string) (tun.Device, error)
 
 // New returns a tun.Device for the requested device name, along with
 // the OS-dependent name that was allocated to the device.
@@ -42,7 +42,7 @@ func New(logf logger.Logf, tunName string) (tun.Device, string, error) {
 		default:
 			return nil, "", errors.New("bogus tap argument")
 		}
-		dev, err = createTAP(tapName, bridgeName)
+		dev, err = createTAP(logf, tapName, bridgeName)
 	} else {
 		dev, err = tun.CreateTUN(tunName, int(DefaultTUNMTU()))
 	}
@@ -52,9 +52,6 @@ func New(logf logger.Logf, tunName string) (tun.Device, string, error) {
 	if err := waitInterfaceUp(dev, 90*time.Second, logf); err != nil {
 		dev.Close()
 		return nil, "", err
-	}
-	if err := setLinkFeatures(dev); err != nil {
-		logf("setting link features: %v", err)
 	}
 	if err := setLinkAttrs(dev); err != nil {
 		logf("setting link attributes: %v", err)

@@ -77,7 +77,11 @@ func (src *Node) Clone() *Node {
 	if src.ExitNodeDNSResolvers != nil {
 		dst.ExitNodeDNSResolvers = make([]*dnstype.Resolver, len(src.ExitNodeDNSResolvers))
 		for i := range dst.ExitNodeDNSResolvers {
-			dst.ExitNodeDNSResolvers[i] = src.ExitNodeDNSResolvers[i].Clone()
+			if src.ExitNodeDNSResolvers[i] == nil {
+				dst.ExitNodeDNSResolvers[i] = nil
+			} else {
+				dst.ExitNodeDNSResolvers[i] = src.ExitNodeDNSResolvers[i].Clone()
+			}
 		}
 	}
 	return dst
@@ -179,6 +183,7 @@ var _HostinfoCloneNeedsRegeneration = Hostinfo(struct {
 	Userspace       opt.Bool
 	UserspaceRouter opt.Bool
 	AppConnector    opt.Bool
+	ServicesHash    string
 	Location        *Location
 }{})
 
@@ -244,7 +249,11 @@ func (src *DNSConfig) Clone() *DNSConfig {
 	if src.Resolvers != nil {
 		dst.Resolvers = make([]*dnstype.Resolver, len(src.Resolvers))
 		for i := range dst.Resolvers {
-			dst.Resolvers[i] = src.Resolvers[i].Clone()
+			if src.Resolvers[i] == nil {
+				dst.Resolvers[i] = nil
+			} else {
+				dst.Resolvers[i] = src.Resolvers[i].Clone()
+			}
 		}
 	}
 	if dst.Routes != nil {
@@ -256,7 +265,11 @@ func (src *DNSConfig) Clone() *DNSConfig {
 	if src.FallbackResolvers != nil {
 		dst.FallbackResolvers = make([]*dnstype.Resolver, len(src.FallbackResolvers))
 		for i := range dst.FallbackResolvers {
-			dst.FallbackResolvers[i] = src.FallbackResolvers[i].Clone()
+			if src.FallbackResolvers[i] == nil {
+				dst.FallbackResolvers[i] = nil
+			} else {
+				dst.FallbackResolvers[i] = src.FallbackResolvers[i].Clone()
+			}
 		}
 	}
 	dst.Domains = append(src.Domains[:0:0], src.Domains...)
@@ -393,7 +406,11 @@ func (src *DERPRegion) Clone() *DERPRegion {
 	if src.Nodes != nil {
 		dst.Nodes = make([]*DERPNode, len(src.Nodes))
 		for i := range dst.Nodes {
-			dst.Nodes[i] = src.Nodes[i].Clone()
+			if src.Nodes[i] == nil {
+				dst.Nodes[i] = nil
+			} else {
+				dst.Nodes[i] = ptr.To(*src.Nodes[i])
+			}
 		}
 	}
 	return dst
@@ -422,7 +439,11 @@ func (src *DERPMap) Clone() *DERPMap {
 	if dst.Regions != nil {
 		dst.Regions = map[int]*DERPRegion{}
 		for k, v := range src.Regions {
-			dst.Regions[k] = v.Clone()
+			if v == nil {
+				dst.Regions[k] = nil
+			} else {
+				dst.Regions[k] = v.Clone()
+			}
 		}
 	}
 	return dst
@@ -476,11 +497,16 @@ func (src *SSHRule) Clone() *SSHRule {
 	if src.Principals != nil {
 		dst.Principals = make([]*SSHPrincipal, len(src.Principals))
 		for i := range dst.Principals {
-			dst.Principals[i] = src.Principals[i].Clone()
+			if src.Principals[i] == nil {
+				dst.Principals[i] = nil
+			} else {
+				dst.Principals[i] = src.Principals[i].Clone()
+			}
 		}
 	}
 	dst.SSHUsers = maps.Clone(src.SSHUsers)
 	dst.Action = src.Action.Clone()
+	dst.AcceptEnv = append(src.AcceptEnv[:0:0], src.AcceptEnv...)
 	return dst
 }
 
@@ -490,6 +516,7 @@ var _SSHRuleCloneNeedsRegeneration = SSHRule(struct {
 	Principals  []*SSHPrincipal
 	SSHUsers    map[string]string
 	Action      *SSHAction
+	AcceptEnv   []string
 }{})
 
 // Clone makes a deep copy of SSHAction.
