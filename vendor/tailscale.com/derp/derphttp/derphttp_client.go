@@ -283,11 +283,7 @@ func (c *Client) urlString(node *tailcfg.DERPNode) string {
 	if debugUseDERPHTTP() {
 		proto = "http"
 	}
-	port := 443
-	if node.DERPPort != 0 {
-		port = node.DERPPort
-	}
-	return fmt.Sprintf("%s://%s:%d/derp", proto, node.HostName, port)
+	return fmt.Sprintf("%s://%s/derp", proto, node.HostName)
 }
 
 // AddressFamilySelector decides whether IPv6 is preferred for
@@ -327,7 +323,7 @@ func useWebsockets() bool {
 		return true
 	}
 	if dialWebsocketFunc != nil {
-		return true
+		return envknob.Bool("TS_DEBUG_DERP_WS_CLIENT")
 	}
 	return false
 }
@@ -420,12 +416,6 @@ func (c *Client) connect(ctx context.Context, caller string) (client *derp.Clien
 		}
 		if c.preferred {
 			if err := derpClient.NotePreferred(true); err != nil {
-				go conn.Close()
-				return nil, 0, err
-			}
-		}
-		if c.WatchConnectionChanges {
-			if err := derpClient.WatchConnectionChanges(); err != nil {
 				go conn.Close()
 				return nil, 0, err
 			}
@@ -773,6 +763,9 @@ func (c *Client) dialNode(ctx context.Context, n *tailcfg.DERPNode) (net.Conn, e
 			}
 			dst := cmp.Or(dstPrimary, n.HostName)
 			port := "443"
+			if !c.useHTTPS() {
+				port = "3340"
+			}
 			if n.DERPPort != 0 {
 				port = fmt.Sprint(n.DERPPort)
 			}

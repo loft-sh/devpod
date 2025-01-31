@@ -9,15 +9,17 @@ import (
 	"github.com/go-json-experiment/json/internal/jsonwire"
 )
 
-var errInvalidUTF8 = &SyntacticError{str: "invalid UTF-8 within string"}
-
 // AppendQuote appends a double-quoted JSON string literal representing src
 // to dst and returns the extended buffer.
 // It uses the minimal string representation per RFC 8785, section 3.2.2.2.
 // Invalid UTF-8 bytes are replaced with the Unicode replacement character
 // and an error is returned at the end indicating the presence of invalid UTF-8.
 func AppendQuote[Bytes ~[]byte | ~string](dst []byte, src Bytes) ([]byte, error) {
-	return jsonwire.AppendQuote(dst, src, &jsonflags.Flags{})
+	dst, err := jsonwire.AppendQuote(dst, src, &jsonflags.Flags{})
+	if err != nil {
+		err = &SyntacticError{Err: err}
+	}
+	return dst, err
 }
 
 // AppendUnquote appends the decoded interpretation of src as a
@@ -27,5 +29,9 @@ func AppendQuote[Bytes ~[]byte | ~string](dst []byte, src Bytes) ([]byte, error)
 // and an error is returned at the end indicating the presence of invalid UTF-8.
 // Any trailing bytes after the JSON string literal results in an error.
 func AppendUnquote[Bytes ~[]byte | ~string](dst []byte, src Bytes) ([]byte, error) {
-	return jsonwire.AppendUnquote(dst, src)
+	dst, err := jsonwire.AppendUnquote(dst, src)
+	if err != nil {
+		err = &SyntacticError{Err: err}
+	}
+	return dst, err
 }

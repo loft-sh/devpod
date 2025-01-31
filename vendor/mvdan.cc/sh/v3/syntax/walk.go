@@ -244,7 +244,7 @@ type debugPrinter struct {
 	err   error
 }
 
-func (p *debugPrinter) printf(format string, args ...interface{}) {
+func (p *debugPrinter) printf(format string, args ...any) {
 	_, err := fmt.Fprintf(p.out, format, args...)
 	if err != nil && p.err == nil {
 		p.err = err

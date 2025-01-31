@@ -23,7 +23,7 @@ var (
 // It does not return an error; malformed brace expansions are simply skipped.
 // For example, the literal word "a{b" is left unchanged.
 func SplitBraces(word *Word) bool {
-	any := false
+	toSplit := false
 	top := &Word{}
 	acc := top
 	var cur *BraceExp
@@ -90,7 +90,7 @@ func SplitBraces(word *Word) bool {
 				if cur == nil {
 					continue
 				}
-				any = true
+				toSplit = true
 				addlitidx()
 				br := pop()
 				if len(br.Elems) == 1 {
@@ -154,7 +154,7 @@ func SplitBraces(word *Word) bool {
 			addLit(&left)
 		}
 	}
-	if !any {
+	if !toSplit {
 		return false
 	}
 	// open braces that were never closed fall back to non-braces

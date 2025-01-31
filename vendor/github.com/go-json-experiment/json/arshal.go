@@ -6,16 +6,15 @@ package json
 
 import (
 	"bytes"
-	"errors"
 	"io"
 	"reflect"
 	"slices"
+	"strings"
 	"sync"
 
 	"github.com/go-json-experiment/json/internal"
 	"github.com/go-json-experiment/json/internal/jsonflags"
 	"github.com/go-json-experiment/json/internal/jsonopts"
-	"github.com/go-json-experiment/json/internal/jsonwire"
 	"github.com/go-json-experiment/json/jsontext"
 )
 
@@ -90,11 +89,12 @@ func putStructOptions(o *jsonopts.Struct) {
 //     where each byte is recursively JSON-encoded as each JSON array element.
 //
 //   - A Go integer is encoded as a JSON number without fractions or exponents.
-//     If [StringifyNumbers] is specified, then the JSON number is
-//     encoded within a JSON string. It does not support any custom format flags.
+//     If [StringifyNumbers] is specified or encoding a JSON object name,
+//     then the JSON number is encoded within a JSON string.
+//     It does not support any custom format flags.
 //
 //   - A Go float is encoded as a JSON number.
-//     If [StringifyNumbers] is specified,
+//     If [StringifyNumbers] is specified or encoding a JSON object name,
 //     then the JSON number is encoded within a JSON string.
 //     If the format is "nonfinite", then NaN, +Inf, and -Inf are encoded as
 //     the JSON strings "NaN", "Infinity", and "-Infinity", respectively.
@@ -103,9 +103,7 @@ func putStructOptions(o *jsonopts.Struct) {
 //   - A Go map is encoded as a JSON object, where each Go map key and value
 //     is recursively encoded as a name and value pair in the JSON object.
 //     The Go map key must encode as a JSON string, otherwise this results
-//     in a [SemanticError]. When encoding keys, [StringifyNumbers]
-//     is automatically applied so that numeric keys encode as JSON strings.
-//     The Go map is traversed in a non-deterministic order.
+//     in a [SemanticError]. The Go map is traversed in a non-deterministic order.
 //     For deterministic encoding, consider using [jsontext.Value.Canonicalize].
 //     If the format is "emitnull", then a nil map is encoded as a JSON null.
 //     If the format is "emitempty", then a nil map is encoded as an empty JSON object,
@@ -166,6 +164,9 @@ func Marshal(in any, opts ...Options) (out []byte, err error) {
 	xe := export.Encoder(enc)
 	xe.Flags.Set(jsonflags.OmitTopLevelNewline | 1)
 	err = marshalEncode(enc, in, &xe.Struct)
+	if err != nil && xe.Flags.Get(jsonflags.ReportErrorsWithLegacySemantics) {
+		return nil, internal.TransformMarshalError(in, err)
+	}
 	return bytes.Clone(xe.Buf), err
 }
 
@@ -178,7 +179,11 @@ func MarshalWrite(out io.Writer, in any, opts ...Options) (err error) {
 	defer export.PutStreamingEncoder(enc)
 	xe := export.Encoder(enc)
 	xe.Flags.Set(jsonflags.OmitTopLevelNewline | 1)
-	return marshalEncode(enc, in, &xe.Struct)
+	err = marshalEncode(enc, in, &xe.Struct)
+	if err != nil && xe.Flags.Get(jsonflags.ReportErrorsWithLegacySemantics) {
+		return internal.TransformMarshalError(in, err)
+	}
+	return err
 }
 
 // MarshalEncode serializes a Go value into an [jsontext.Encoder] according to
@@ -192,7 +197,11 @@ func MarshalEncode(out *jsontext.Encoder, in any, opts ...Options) (err error) {
 	mo.Join(opts...)
 	xe := export.Encoder(out)
 	mo.CopyCoderOptions(&xe.Struct)
-	return marshalEncode(out, in, mo)
+	err = marshalEncode(out, in, mo)
+	if err != nil && xe.Flags.Get(jsonflags.ReportErrorsWithLegacySemantics) {
+		return internal.TransformMarshalError(in, err)
+	}
+	return err
 }
 
 func marshalEncode(out *jsontext.Encoder, in any, mo *jsonopts.Struct) (err error) {
@@ -202,12 +211,13 @@ func marshalEncode(out *jsontext.Encoder, in any, mo *jsonopts.Struct) (err erro
 	}
 	// Shallow copy non-pointer values to obtain an addressable value.
 	// It is beneficial to performance to always pass pointers to avoid this.
-	if v.Kind() != reflect.Pointer {
+	forceAddr := v.Kind() != reflect.Pointer
+	if forceAddr {
 		v2 := reflect.New(v.Type())
 		v2.Elem().Set(v)
 		v = v2
 	}
-	va := addressableValue{v.Elem()} // dereferenced pointer is always addressable
+	va := addressableValue{v.Elem(), forceAddr} // dereferenced pointer is always addressable
 	t := va.Type()
 
 	// Lookup and call the marshal function for this type.
@@ -216,9 +226,8 @@ func marshalEncode(out *jsontext.Encoder, in any, mo *jsonopts.Struct) (err erro
 		marshal, _ = mo.Marshalers.(*Marshalers).lookup(marshal, t)
 	}
 	if err := marshal(out, va, mo); err != nil {
-		xe := export.Encoder(out)
-		if !xe.Flags.Get(jsonflags.AllowDuplicateNames) {
-			xe.Tokens.InvalidateDisabledNamespaces()
+		if !mo.Flags.Get(jsonflags.AllowDuplicateNames) {
+			export.Encoder(out).Tokens.InvalidateDisabledNamespaces()
 		}
 		return err
 	}
@@ -293,16 +302,16 @@ func marshalEncode(out *jsontext.Encoder, in any, mo *jsonopts.Struct) (err erro
 //     otherwise it fails with a [SemanticError].
 //
 //   - A Go integer is decoded from a JSON number.
-//     It may also be decoded from a JSON string containing a JSON number
-//     if [StringifyNumbers] is specified.
+//     It must be decoded from a JSON string containing a JSON number
+//     if [StringifyNumbers] is specified or decoding a JSON object name.
 //     It fails with a [SemanticError] if the JSON number
 //     has a fractional or exponent component.
 //     It also fails if it overflows the representation of the Go integer type.
 //     It does not support any custom format flags.
 //
 //   - A Go float is decoded from a JSON number.
-//     It may also be decoded from a JSON string containing a JSON number
-//     if [StringifyNumbers] is specified.
+//     It must be decoded from a JSON string containing a JSON number
+//     if [StringifyNumbers] is specified or decoding a JSON object name.
 //     The JSON number is parsed as the closest representable Go float value.
 //     If the format is "nonfinite", then the JSON strings
 //     "NaN", "Infinity", and "-Infinity" are decoded as NaN, +Inf, and -Inf.
@@ -310,9 +319,7 @@ func marshalEncode(out *jsontext.Encoder, in any, mo *jsonopts.Struct) (err erro
 //
 //   - A Go map is decoded from a JSON object,
 //     where each JSON object name and value pair is recursively decoded
-//     as the Go map key and value. When decoding keys,
-//     [StringifyNumbers] is automatically applied so that
-//     numeric keys can decode from JSON strings. Maps are not cleared.
+//     as the Go map key and value. Maps are not cleared.
 //     If the Go map is nil, then a new map is allocated to decode into.
 //     If the decoded key matches an existing Go map entry, the entry value
 //     is reused by decoding the JSON object value into it.
@@ -384,7 +391,11 @@ func Unmarshal(in []byte, out any, opts ...Options) (err error) {
 	dec := export.GetBufferedDecoder(in, opts...)
 	defer export.PutBufferedDecoder(dec)
 	xd := export.Decoder(dec)
-	return unmarshalFull(dec, out, &xd.Struct)
+	err = unmarshalFull(dec, out, &xd.Struct)
+	if err != nil && xd.Flags.Get(jsonflags.ReportErrorsWithLegacySemantics) {
+		return internal.TransformUnmarshalError(out, err)
+	}
+	return err
 }
 
 // UnmarshalRead deserializes a Go value from an [io.Reader] according to the
@@ -397,7 +408,11 @@ func UnmarshalRead(in io.Reader, out any, opts ...Options) (err error) {
 	dec := export.GetStreamingDecoder(in, opts...)
 	defer export.PutStreamingDecoder(dec)
 	xd := export.Decoder(dec)
-	return unmarshalFull(dec, out, &xd.Struct)
+	err = unmarshalFull(dec, out, &xd.Struct)
+	if err != nil && xd.Flags.Get(jsonflags.ReportErrorsWithLegacySemantics) {
+		return internal.TransformUnmarshalError(out, err)
+	}
+	return err
 }
 
 func unmarshalFull(in *jsontext.Decoder, out any, uo *jsonopts.Struct) error {
@@ -425,24 +440,28 @@ func UnmarshalDecode(in *jsontext.Decoder, out any, opts ...Options) (err error)
 	uo.Join(opts...)
 	xd := export.Decoder(in)
 	uo.CopyCoderOptions(&xd.Struct)
-	return unmarshalDecode(in, out, uo)
+	err = unmarshalDecode(in, out, uo)
+	if err != nil && uo.Flags.Get(jsonflags.ReportErrorsWithLegacySemantics) {
+		return internal.TransformUnmarshalError(out, err)
+	}
+	return err
 }
 
 func unmarshalDecode(in *jsontext.Decoder, out any, uo *jsonopts.Struct) (err error) {
 	v := reflect.ValueOf(out)
-	if !v.IsValid() || v.Kind() != reflect.Pointer || v.IsNil() {
-		var t reflect.Type
-		if v.IsValid() {
-			t = v.Type()
-			if t.Kind() == reflect.Pointer {
-				t = t.Elem()
-			}
-		}
-		err := errors.New("value must be passed as a non-nil pointer reference")
-		return &SemanticError{action: "unmarshal", GoType: t, Err: err}
+	if v.Kind() != reflect.Pointer || v.IsNil() {
+		return &SemanticError{action: "unmarshal", GoType: reflect.TypeOf(out), Err: internal.ErrNonNilReference}
 	}
-	va := addressableValue{v.Elem()} // dereferenced pointer is always addressable
+	va := addressableValue{v.Elem(), false} // dereferenced pointer is always addressable
 	t := va.Type()
+
+	// In legacy semantics, the entirety of the next JSON value
+	// was validated before attempting to unmarshal it.
+	if uo.Flags.Get(jsonflags.ReportErrorsWithLegacySemantics) {
+		if err := export.Decoder(in).CheckNextValue(); err != nil {
+			return err
+		}
+	}
 
 	// Lookup and call the unmarshal function for this type.
 	unmarshal := lookupArshaler(t).unmarshal
@@ -450,9 +469,8 @@ func unmarshalDecode(in *jsontext.Decoder, out any, uo *jsonopts.Struct) (err er
 		unmarshal, _ = uo.Unmarshalers.(*Unmarshalers).lookup(unmarshal, t)
 	}
 	if err := unmarshal(in, va, uo); err != nil {
-		xd := export.Decoder(in)
-		if !xd.Flags.Get(jsonflags.AllowDuplicateNames) {
-			xd.Tokens.InvalidateDisabledNamespaces()
+		if !uo.Flags.Get(jsonflags.AllowDuplicateNames) {
+			export.Decoder(in).Tokens.InvalidateDisabledNamespaces()
 		}
 		return err
 	}
@@ -465,11 +483,18 @@ func unmarshalDecode(in *jsontext.Decoder, out any, uo *jsonopts.Struct) (err er
 // There is no compile magic that enforces this property,
 // but rather the need to construct this type makes it easier to examine each
 // construction site to ensure that this property is upheld.
-type addressableValue struct{ reflect.Value }
+type addressableValue struct {
+	reflect.Value
+
+	// forcedAddr reports whether this value is addressable
+	// only through the use of [newAddressableValue].
+	// This is only used for [jsonflags.CallMethodsWithLegacySemantics].
+	forcedAddr bool
+}
 
 // newAddressableValue constructs a new addressable value of type t.
 func newAddressableValue(t reflect.Type) addressableValue {
-	return addressableValue{reflect.New(t).Elem()}
+	return addressableValue{reflect.New(t).Elem(), true}
 }
 
 // All marshal and unmarshal behavior is implemented using these signatures.
@@ -525,7 +550,6 @@ func putStrings(s *stringSlice) {
 	stringsPools.Put(s)
 }
 
-// Sort sorts the string slice according to RFC 8785, section 3.2.3.
 func (ss *stringSlice) Sort() {
-	slices.SortFunc(*ss, func(x, y string) int { return jsonwire.CompareUTF16(x, y) })
+	slices.SortFunc(*ss, func(x, y string) int { return strings.Compare(x, y) })
 }

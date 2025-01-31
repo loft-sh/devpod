@@ -1,0 +1,5 @@
+This package extracts buildid.go and note.go from cmd/internal/buildid/.
+
+We have modified it to remove support for AIX big archive files, to cut down on our dependencies.
+
+The last upstream commit we've looked at was: e8ee1dc4f9e2632ba1018610d1a1187743ae397f

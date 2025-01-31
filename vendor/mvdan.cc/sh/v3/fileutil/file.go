@@ -1,8 +1,8 @@
 // Copyright (c) 2016, Daniel Martí <mvdan@mvdan.cc>
 // See LICENSE for licensing information
 
-// Package fileutil contains code to work with shell files, also known
-// as shell scripts.
+// Package fileutil allows inspecting shell files, such as detecting whether a
+// file may be shell or extracting its shebang.
 package fileutil
 
 import (

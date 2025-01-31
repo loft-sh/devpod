@@ -169,7 +169,7 @@ func (r *Runner) unTest(ctx context.Context, op syntax.UnTestOperator, x string)
 		return err == nil && info.Size() > 0
 	case syntax.TsFdTerm:
 		fd := atoi(x)
-		var f interface{}
+		var f any
 		switch fd {
 		case 0:
 			f = r.stdin

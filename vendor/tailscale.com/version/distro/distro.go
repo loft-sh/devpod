@@ -30,6 +30,7 @@ const (
 	WDMyCloud = Distro("wdmycloud")
 	Unraid    = Distro("unraid")
 	Alpine    = Distro("alpine")
+	UBNT      = Distro("ubnt") // Ubiquiti Networks
 )
 
 var distro lazy.SyncValue[Distro]
@@ -75,6 +76,12 @@ func linuxDistro() Distro {
 	case have("/usr/local/bin/freenas-debug"):
 		// TrueNAS Scale runs on debian
 		return TrueNAS
+	case have("/usr/bin/ubnt-device-info"):
+		// UBNT runs on Debian-based systems. This MUST be checked before Debian.
+		//
+		// Currently supported product families:
+		// - UDM (UniFi Dream Machine, UDM-Pro)
+		return UBNT
 	case have("/etc/debian_version"):
 		return Debian
 	case have("/etc/arch-release"):

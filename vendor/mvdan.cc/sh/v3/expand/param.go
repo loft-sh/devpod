@@ -199,8 +199,7 @@ func (cfg *Config) paramExp(pe *syntax.ParamExp) (string, error) {
 			if pe.Slice.Length != nil {
 				str = str[:slicePos(sliceLen)]
 			}
-		} else { // elems are already sliced
-		}
+		} // else, elems are already sliced
 	case pe.Repl != nil:
 		orig, err := Pattern(cfg, pe.Repl.Orig)
 		if err != nil {

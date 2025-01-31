@@ -41,7 +41,7 @@ func oneIf(b bool) int {
 	return 0
 }
 
-// atoi is like strconv.Atoi, but it ignores errors and trims whitespace.
+// atoi is like [strconv.Atoi], but it ignores errors and trims whitespace.
 func atoi(s string) int {
 	s = strings.TrimSpace(s)
 	n, _ := strconv.Atoi(s)
@@ -166,7 +166,7 @@ func (r *Runner) builtinCode(ctx context.Context, pos syntax.Pos, name string, a
 		}
 	case "break", "continue":
 		if !r.inLoop {
-			r.errf("%s is only useful in a loop", name)
+			r.errf("%s is only useful in a loop\n", name)
 			break
 		}
 		enclosing := &r.breakEnclosing
@@ -594,7 +594,7 @@ func (r *Runner) builtinCode(ctx context.Context, pos syntax.Pos, name string, a
 			return 1
 		}
 		if len(args) == 0 {
-			args = append(args, "REPLY")
+			args = append(args, shellReplyVar)
 		}
 
 		values := expand.ReadFields(r.ecfg, string(line), len(args), raw)
@@ -752,7 +752,7 @@ func (r *Runner) builtinCode(ctx context.Context, pos syntax.Pos, name string, a
 				words = append(words, w)
 				return true
 			}); err != nil {
-				r.errf("alias: could not parse %q: %v", src, err)
+				r.errf("alias: could not parse %q: %v\n", src, err)
 				continue
 			}
 
@@ -869,7 +869,7 @@ func (r *Runner) builtinCode(ctx context.Context, pos syntax.Pos, name string, a
 			vr.List = append(vr.List, scanner.Text())
 		}
 		if err := scanner.Err(); err != nil {
-			r.errf("%s: unable to read, %v", name, err)
+			r.errf("%s: unable to read, %v\n", name, err)
 			return 2
 		}
 		r.setVarInternal(arrayName, vr)
@@ -878,13 +878,14 @@ func (r *Runner) builtinCode(ctx context.Context, pos syntax.Pos, name string, a
 
 	default:
 		// "umask", "fg", "bg",
-		panic(fmt.Sprintf("unhandled builtin: %s", name))
+		r.errf("%s: unimplemented builtin\n", name)
+		return 2
 	}
 	return 0
 }
 
-// mapfileSplit returns a suitable Split function for a bufio.Scanner, the code
-// is mostly stolen from bufio.ScanLines.
+// mapfileSplit returns a suitable Split function for a [bufio.Scanner];
+// the code is mostly stolen from [bufio.ScanLines].
 func mapfileSplit(delim byte, dropDelim bool) func(data []byte, atEOF bool) (advance int, token []byte, err error) {
 	return func(data []byte, atEOF bool) (advance int, token []byte, err error) {
 		if atEOF && len(data) == 0 {
@@ -978,7 +979,7 @@ func absPath(dir, path string) string {
 	if !filepath.IsAbs(path) {
 		path = filepath.Join(dir, path)
 	}
-	return filepath.Clean(path)
+	return filepath.Clean(path) // TODO: this clean is likely unnecessary
 }
 
 func (r *Runner) absPath(path string) string {

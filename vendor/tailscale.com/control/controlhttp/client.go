@@ -1,7 +1,7 @@
 // Copyright (c) Tailscale Inc & AUTHORS
 // SPDX-License-Identifier: BSD-3-Clause
 
-//go:build !js && !linux
+//go:build !js
 
 // Package controlhttp implements the Tailscale 2021 control protocol
 // base transport over HTTP.

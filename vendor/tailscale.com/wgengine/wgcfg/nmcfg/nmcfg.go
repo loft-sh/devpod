@@ -85,7 +85,7 @@ func WGCfg(nm *netmap.NetworkMap, logf logger.Logf, flags netmap.WGConfigFlags, 
 	skippedSubnets := new(bytes.Buffer)
 
 	for _, peer := range nm.Peers {
-		if peer.DiscoKey().IsZero() && peer.DERP() == "" && !peer.IsWireGuardOnly() {
+		if peer.DiscoKey().IsZero() && peer.HomeDERP() == 0 && !peer.IsWireGuardOnly() {
 			// Peer predates both DERP and active discovery, we cannot
 			// communicate with it.
 			logf("[v1] wgcfg: skipped peer %s, doesn't offer DERP or disco", peer.Key().ShortString())
@@ -106,8 +106,8 @@ func WGCfg(nm *netmap.NetworkMap, logf logger.Logf, flags netmap.WGConfigFlags, 
 		cpeer := &cfg.Peers[len(cfg.Peers)-1]
 
 		didExitNodeWarn := false
-		cpeer.V4MasqAddr = peer.SelfNodeV4MasqAddrForThisPeer()
-		cpeer.V6MasqAddr = peer.SelfNodeV6MasqAddrForThisPeer()
+		cpeer.V4MasqAddr = peer.SelfNodeV4MasqAddrForThisPeer().Clone()
+		cpeer.V6MasqAddr = peer.SelfNodeV6MasqAddrForThisPeer().Clone()
 		cpeer.IsJailed = peer.IsJailed()
 		for _, allowedIP := range peer.AllowedIPs().All() {
 			if allowedIP.Bits() == 0 && peer.StableID() != exitNode {

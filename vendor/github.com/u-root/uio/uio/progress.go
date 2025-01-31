@@ -36,7 +36,7 @@ func (rc *ProgressReadCloser) Read(p []byte) (n int, err error) {
 	return rc.RC.Read(p)
 }
 
-// Read implements io.Closer for ProgressReader.
+// Close implements io.Closer for ProgressReader.
 func (rc *ProgressReadCloser) Close() error {
 	return rc.RC.Close()
 }

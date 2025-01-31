@@ -106,7 +106,7 @@ func oneIf(b bool) int {
 	return 0
 }
 
-// atoi is like strconv.Atoi, but it ignores errors and trims whitespace.
+// atoi is like [strconv.Atoi], but it ignores errors and trims whitespace.
 func atoi(s string) int {
 	s = strings.TrimSpace(s)
 	n, _ := strconv.Atoi(s)

@@ -13,20 +13,24 @@ import (
 	"sync"
 )
 
-type devNull int
+// devNull implements an io.Writer and io.ReaderFrom that discards any writes.
+type devNull struct{}
 
 // devNull implements ReaderFrom as an optimization so io.Copy to
 // ioutil.Discard can avoid doing unnecessary work.
-var _ io.ReaderFrom = devNull(0)
+var _ io.ReaderFrom = devNull{}
 
+// Write is an io.Writer.Write that discards data.
 func (devNull) Write(p []byte) (int, error) {
 	return len(p), nil
 }
 
+// Name is like os.File.Name() and returns "null".
 func (devNull) Name() string {
 	return "null"
 }
 
+// WriteString implements io.StringWriter and discards given data.
 func (devNull) WriteString(s string) (int, error) {
 	return len(s), nil
 }
@@ -38,6 +42,7 @@ var blackHolePool = sync.Pool{
 	},
 }
 
+// ReadFrom implements io.ReaderFrom and discards data being read.
 func (devNull) ReadFrom(r io.Reader) (n int64, err error) {
 	bufp := blackHolePool.Get().(*[]byte)
 	var readSize int
@@ -54,6 +59,7 @@ func (devNull) ReadFrom(r io.Reader) (n int64, err error) {
 	}
 }
 
+// Close does nothing.
 func (devNull) Close() error {
 	return nil
 }
@@ -67,4 +73,4 @@ type WriteNameCloser interface {
 
 // Discard is a WriteNameCloser on which all Write and Close calls succeed
 // without doing anything, and the Name call returns "null".
-var Discard WriteNameCloser = devNull(0)
+var Discard WriteNameCloser = devNull{}

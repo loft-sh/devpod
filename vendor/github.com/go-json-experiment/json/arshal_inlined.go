@@ -29,11 +29,13 @@ import (
 // represent any arbitrary JSON object member. Explicitly named fields take
 // precedence over the inlined fallback. Only one inlined fallback is allowed.
 
-var jsontextValueType = reflect.TypeOf((*jsontext.Value)(nil)).Elem()
+var errRawInlinedNotObject = errors.New("inlined raw value must be a JSON object")
+
+var jsontextValueType = reflect.TypeFor[jsontext.Value]()
 
 // marshalInlinedFallbackAll marshals all the members in an inlined fallback.
 func marshalInlinedFallbackAll(enc *jsontext.Encoder, va addressableValue, mo *jsonopts.Struct, f *structField, insertUnquotedName func([]byte) bool) error {
-	v := addressableValue{va.Field(f.index[0])} // addressable if struct value is addressable
+	v := addressableValue{va.Field(f.index[0]), va.forcedAddr} // addressable if struct value is addressable
 	if len(f.index) > 1 {
 		v = v.fieldByIndex(f.index[1:], false)
 		if !v.IsValid() {
@@ -62,23 +64,22 @@ func marshalInlinedFallbackAll(enc *jsontext.Encoder, va addressableValue, mo *j
 			if err == io.EOF {
 				err = io.ErrUnexpectedEOF
 			}
-			return &SemanticError{action: "marshal", GoType: jsontextValueType, Err: err}
+			return newMarshalErrorBefore(enc, v.Type(), err)
 		}
 		if tok.Kind() != '{' {
-			err := errors.New("inlined raw value must be a JSON object")
-			return &SemanticError{action: "marshal", JSONKind: tok.Kind(), GoType: jsontextValueType, Err: err}
+			return newMarshalErrorBefore(enc, v.Type(), errRawInlinedNotObject)
 		}
 		for dec.PeekKind() != '}' {
 			// Parse the JSON object name.
 			var flags jsonwire.ValueFlags
 			val, err := xd.ReadValue(&flags)
 			if err != nil {
-				return &SemanticError{action: "marshal", GoType: jsontextValueType, Err: err}
+				return newMarshalErrorBefore(enc, v.Type(), err)
 			}
 			if insertUnquotedName != nil {
 				name := jsonwire.UnquoteMayCopy(val, flags.IsVerbatim())
 				if !insertUnquotedName(name) {
-					return export.NewDuplicateNameError(val, 0)
+					return newDuplicateNameError(enc.StackPointer().Parent(), val, enc.OutputOffset())
 				}
 			}
 			if err := enc.WriteValue(val); err != nil {
@@ -88,38 +89,37 @@ func marshalInlinedFallbackAll(enc *jsontext.Encoder, va addressableValue, mo *j
 			// Parse the JSON object value.
 			val, err = xd.ReadValue(&flags)
 			if err != nil {
-				return &SemanticError{action: "marshal", GoType: jsontextValueType, Err: err}
+				return newMarshalErrorBefore(enc, v.Type(), err)
 			}
 			if err := enc.WriteValue(val); err != nil {
 				return err
 			}
 		}
 		if _, err := dec.ReadToken(); err != nil {
-			return &SemanticError{action: "marshal", GoType: jsontextValueType, Err: err}
+			return newMarshalErrorBefore(enc, v.Type(), err)
 		}
 		if err := xd.CheckEOF(); err != nil {
-			return &SemanticError{action: "marshal", GoType: jsontextValueType, Err: err}
+			return newMarshalErrorBefore(enc, v.Type(), err)
 		}
 		return nil
 	} else {
-		m := v // must be a map[string]V
+		m := v // must be a map[~string]V
 		n := m.Len()
 		if n == 0 {
 			return nil
 		}
-		mk := newAddressableValue(stringType)
+		mk := newAddressableValue(m.Type().Key())
 		mv := newAddressableValue(m.Type().Elem())
 		marshalKey := func(mk addressableValue) error {
-			xe := export.Encoder(enc)
-			b, err := jsonwire.AppendQuote(enc.UnusedBuffer(), mk.String(), &xe.Flags)
+			b, err := jsonwire.AppendQuote(enc.UnusedBuffer(), mk.String(), &mo.Flags)
 			if err != nil {
-				return err
+				return newMarshalErrorBefore(enc, m.Type().Key(), err)
 			}
 			if insertUnquotedName != nil {
 				isVerbatim := bytes.IndexByte(b, '\\') < 0
 				name := jsonwire.UnquoteMayCopy(b, isVerbatim)
 				if !insertUnquotedName(name) {
-					return export.NewDuplicateNameError(b, 0)
+					return newDuplicateNameError(enc.StackPointer().Parent(), b, enc.OutputOffset())
 				}
 			}
 			return enc.WriteValue(b)
@@ -165,7 +165,7 @@ func marshalInlinedFallbackAll(enc *jsontext.Encoder, va addressableValue, mo *j
 
 // unmarshalInlinedFallbackNext unmarshals only the next member in an inlined fallback.
 func unmarshalInlinedFallbackNext(dec *jsontext.Decoder, va addressableValue, uo *jsonopts.Struct, f *structField, quotedName, unquotedName []byte) error {
-	v := addressableValue{va.Field(f.index[0])} // addressable if struct value is addressable
+	v := addressableValue{va.Field(f.index[0]), va.forcedAddr} // addressable if struct value is addressable
 	if len(f.index) > 1 {
 		v = v.fieldByIndex(f.index[1:], true)
 	}
@@ -186,8 +186,7 @@ func unmarshalInlinedFallbackNext(dec *jsontext.Decoder, va addressableValue, uo
 					*b = append(*b, ',')
 				}
 			} else {
-				err := errors.New("inlined raw value must be a JSON object")
-				return &SemanticError{action: "unmarshal", GoType: jsontextValueType, Err: err}
+				return newUnmarshalErrorAfterWithSkipping(dec, uo, v.Type(), errRawInlinedNotObject)
 			}
 		}
 		*b = append(*b, quotedName...)
@@ -202,12 +201,15 @@ func unmarshalInlinedFallbackNext(dec *jsontext.Decoder, va addressableValue, uo
 	} else {
 		name := string(unquotedName) // TODO: Intern this?
 
-		m := v // must be a map[string]V
+		m := v // must be a map[~string]V
 		if m.IsNil() {
 			m.Set(reflect.MakeMap(m.Type()))
 		}
 		mk := reflect.ValueOf(name)
-		mv := newAddressableValue(v.Type().Elem()) // TODO: Cache across calls?
+		if mkt := m.Type().Key(); mkt != stringType {
+			mk = mk.Convert(mkt)
+		}
+		mv := newAddressableValue(m.Type().Elem()) // TODO: Cache across calls?
 		if v2 := m.MapIndex(mk); v2.IsValid() {
 			mv.Set(v2)
 		}

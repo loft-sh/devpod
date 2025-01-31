@@ -230,8 +230,7 @@ func (w *wrappedReader) Read(p []byte) (n int, err error) {
 // called with said statements.
 //
 // If a line ending in an incomplete statement is parsed, the function will be
-// called with any fully parsed statements, and Parser.Incomplete will return
-// true.
+// called with any fully parsed statements, and [Parser.Incomplete] will return true.
 //
 // One can imagine a simple interactive shell implementation as follows:
 //
@@ -414,7 +413,7 @@ type Parser struct {
 // it needs to finish properly parsing a statement.
 //
 // It is only safe to call while the parser is blocked on a read. For an example
-// use case, see the documentation for Parser.Interactive.
+// use case, see [Parser.Interactive].
 func (p *Parser) Incomplete() bool {
 	// If we're in a quote state other than noState, we're parsing a node
 	// such as a double-quoted string.
@@ -738,7 +737,7 @@ func (p *Parser) quoteErr(lpos Pos, quote token) {
 		p.tok.String(), quote)
 }
 
-func (p *Parser) matchingErr(lpos Pos, left, right interface{}) {
+func (p *Parser) matchingErr(lpos Pos, left, right any) {
 	p.posErr(lpos, "reached %s without matching %s with %s",
 		p.tok.String(), left, right)
 }
@@ -762,7 +761,7 @@ func (p *Parser) errPass(err error) {
 }
 
 // IsIncomplete reports whether a Parser error could have been avoided with
-// extra input bytes. For example, if an io.EOF was encountered while there was
+// extra input bytes. For example, if an [io.EOF] was encountered while there was
 // an unclosed quote or parenthesis.
 func IsIncomplete(err error) bool {
 	perr, ok := err.(ParseError)
@@ -804,8 +803,8 @@ func IsKeyword(word string) bool {
 // the parser cannot recover.
 type ParseError struct {
 	Filename string
-	Pos
-	Text string
+	Pos      Pos
+	Text     string
 
 	Incomplete bool
 }
@@ -822,9 +821,9 @@ func (e ParseError) Error() string {
 // in the current language variant, and what languages support it.
 type LangError struct {
 	Filename string
-	Pos
-	Feature string
-	Langs   []LangVariant
+	Pos      Pos
+	Feature  string
+	Langs    []LangVariant
 }
 
 func (e LangError) Error() string {
@@ -849,7 +848,7 @@ func (e LangError) Error() string {
 	return buf.String()
 }
 
-func (p *Parser) posErr(pos Pos, format string, a ...interface{}) {
+func (p *Parser) posErr(pos Pos, format string, a ...any) {
 	p.errPass(ParseError{
 		Filename:   p.f.Name,
 		Pos:        pos,
@@ -858,7 +857,7 @@ func (p *Parser) posErr(pos Pos, format string, a ...interface{}) {
 	})
 }
 
-func (p *Parser) curErr(format string, a ...interface{}) {
+func (p *Parser) curErr(format string, a ...any) {
 	p.posErr(p.pos, format, a...)
 }
 
@@ -1628,6 +1627,9 @@ func (p *Parser) doRedirect(s *Stmt) {
 	if !p.lang.isBash() && r.N != nil && r.N.Value[0] == '{' {
 		p.langErr(r.N.Pos(), "{varname} redirects", LangBash)
 	}
+	if p.lang == LangPOSIX && (p.tok == rdrAll || p.tok == appAll) {
+		p.langErr(p.pos, "&> redirects", LangBash, LangMirBSDKorn)
+	}
 	r.Op, r.OpPos = RedirOperator(p.tok), p.pos
 	p.next()
 	switch r.Op {
@@ -2078,7 +2080,7 @@ func (p *Parser) caseClause(s *Stmt) {
 
 func (p *Parser) caseItems(stop string) (items []*CaseItem) {
 	p.got(_Newl)
-	for p.tok != _EOF && !(p.tok == _LitWord && p.val == stop) {
+	for p.tok != _EOF && (p.tok != _LitWord || p.val != stop) {
 		ci := &CaseItem{}
 		ci.Comments, p.accComs = p.accComs, nil
 		p.got(leftParen)

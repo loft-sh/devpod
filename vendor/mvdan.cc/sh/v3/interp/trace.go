@@ -44,7 +44,7 @@ func (t *tracer) string(s string) {
 	t.buf.WriteString(s)
 }
 
-func (t *tracer) stringf(f string, a ...interface{}) {
+func (t *tracer) stringf(f string, a ...any) {
 	if t == nil {
 		return
 	}

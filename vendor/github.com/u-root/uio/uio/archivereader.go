@@ -18,6 +18,7 @@ const (
 	defaultArchivePreReadSizeBytes = 1024
 )
 
+// ErrPreReadError indicates there was not enough underlying data to decompress.
 var ErrPreReadError = errors.New("pre-read nothing")
 
 // ArchiveReader reads from a io.Reader, decompresses source bytes
@@ -30,6 +31,7 @@ var ErrPreReadError = errors.New("pre-read nothing")
 type ArchiveReader struct {
 	// src is where we read source bytes.
 	src io.Reader
+
 	// buf stores pre-read bytes from original io.Reader. Archive format
 	// detection will be done against it.
 	buf []byte
@@ -41,6 +43,7 @@ type ArchiveReader struct {
 	preReadSizeBytes int
 }
 
+// NewArchiveReader is a decompression reader.
 func NewArchiveReader(r io.Reader) (ArchiveReader, error) {
 	ar := ArchiveReader{
 		src: r,
@@ -80,6 +83,7 @@ func NewArchiveReader(r io.Reader) (ArchiveReader, error) {
 	return ar, nil
 }
 
+// Read reads from the archive uncompressed.
 func (ar ArchiveReader) Read(p []byte) (n int, err error) {
 	return ar.src.Read(p)
 }

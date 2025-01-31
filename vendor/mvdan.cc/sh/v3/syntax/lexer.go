@@ -270,6 +270,18 @@ skipSpace:
 		case ';', '"', '\'', '(', ')', '$', '|', '&', '>', '<', '`':
 			p.tok = p.regToken(r)
 		case '#':
+			// If we're parsing $foo#bar, ${foo}#bar, 'foo'#bar, or "foo"#bar,
+			// #bar is a continuation of the same word, not a comment.
+			// TODO: support $(foo)#bar and `foo`#bar as well, which is slightly tricky,
+			// as we can't easily tell them apart from (foo)#bar and `#bar`,
+			// where #bar should remain a comment.
+			if !p.spaced {
+				switch p.tok {
+				case _LitWord, rightBrace, sglQuote, dblQuote:
+					p.advanceLitNone(r)
+					return
+				}
+			}
 			r = p.rune()
 			p.newLit(r)
 		runeLoop:
@@ -372,10 +384,7 @@ func (p *Parser) extendedGlob() bool {
 		// We do this after peeking for just one byte, so that the input `echo *`
 		// followed by a newline does not hang an interactive shell parser until
 		// another byte is input.
-		if p.peekBytes("()") {
-			return false
-		}
-		return true
+		return !p.peekBytes("()")
 	}
 	return false
 }
@@ -420,9 +429,6 @@ func (p *Parser) regToken(r rune) token {
 			p.rune()
 			return andAnd
 		case '>':
-			if p.lang == LangPOSIX {
-				break
-			}
 			if p.rune() == '>' {
 				p.rune()
 				return appAll

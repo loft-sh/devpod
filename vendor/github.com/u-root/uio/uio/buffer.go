@@ -8,8 +8,6 @@ import (
 	"encoding/binary"
 	"errors"
 	"fmt"
-
-	"github.com/josharian/native"
 )
 
 // Marshaler is the interface implemented by an object that can marshal itself
@@ -178,7 +176,7 @@ func NewBigEndianBuffer(b []byte) *Lexer {
 func NewNativeEndianBuffer(b []byte) *Lexer {
 	return &Lexer{
 		Buffer: NewBuffer(b),
-		order:  native.Endian,
+		order:  binary.NativeEndian,
 	}
 }
 

@@ -165,11 +165,19 @@ flowchart LR
         click go-onewire "https://github.com/SpComb/go-onewire"
     end
 
+    subgraph "NETLINK_SOCK_DIAG"
+        direction LR
+
+        go-diag["github.com/florianl/go-diag"]
+        click go-diag "https://github.com/florianl/go-diag"
+    end
+
     NETLINK_CONNECTOR --> netlink
     NETLINK_CRYPTO --> netlink
     NETLINK_GENERIC --> netlink
     NETLINK_KOBJECT_UEVENT --> netlink
     NETLINK_NETFILTER --> netlink
     NETLINK_ROUTE --> netlink
+    NETLINK_SOCK_DIAG --> netlink
     NETLINK_W1 --> netlink
 ```

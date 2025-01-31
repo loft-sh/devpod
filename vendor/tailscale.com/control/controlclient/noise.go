@@ -11,6 +11,7 @@ import (
 	"errors"
 	"math"
 	"net/http"
+	"net/netip"
 	"net/url"
 	"sync"
 	"time"
@@ -111,24 +112,39 @@ type NoiseOpts struct {
 // netMon may be nil, if non-nil it's used to do faster interface lookups.
 // dialPlan may be nil
 func NewNoiseClient(opts NoiseOpts) (*NoiseClient, error) {
+	logf := opts.Logf
 	u, err := url.Parse(opts.ServerURL)
 	if err != nil {
 		return nil, err
 	}
+
+	if u.Scheme != "http" && u.Scheme != "https" {
+		return nil, errors.New("invalid ServerURL scheme, must be http or https")
+	}
+
 	var httpPort string
 	var httpsPort string
+	addr, _ := netip.ParseAddr(u.Hostname())
+	isPrivateHost := addr.IsPrivate() || addr.IsLoopback() || u.Hostname() == "localhost"
 	if port := u.Port(); port != "" {
-		// If there is an explicit port specified, trust the scheme and hope for the best
-		if u.Scheme == "http" {
+		// If there is an explicit port specified, entirely rely on the scheme,
+		// unless it's http with a private host in which case we never try using HTTPS.
+		if u.Scheme == "https" {
+			httpPort = ""
+			httpsPort = port
+		} else if u.Scheme == "http" {
 			httpPort = port
 			httpsPort = "443"
-			if u.Hostname() == "127.0.0.1" || u.Hostname() == "localhost" {
+			if isPrivateHost {
+				logf("setting empty HTTPS port with http scheme and private host %s", u.Hostname())
 				httpsPort = ""
 			}
-		} else {
-			httpPort = "80"
-			httpsPort = port
 		}
+	} else if u.Scheme == "http" && isPrivateHost {
+		// Whenever the scheme is http and the hostname is an IP address, do not set the HTTPS port,
+		// as there cannot be a TLS certificate issued for an IP, unless it's a public IP.
+		httpPort = "80"
+		httpsPort = ""
 	} else {
 		// Otherwise, use the standard ports
 		httpPort = "80"
@@ -380,17 +396,20 @@ func (nc *NoiseClient) dial(ctx context.Context) (*noiseconn.Conn, error) {
 // post does a POST to the control server at the given path, JSON-encoding body.
 // The provided nodeKey is an optional load balancing hint.
 func (nc *NoiseClient) post(ctx context.Context, path string, nodeKey key.NodePublic, body any) (*http.Response, error) {
+	return nc.doWithBody(ctx, "POST", path, nodeKey, body)
+}
+
+func (nc *NoiseClient) doWithBody(ctx context.Context, method, path string, nodeKey key.NodePublic, body any) (*http.Response, error) {
 	jbody, err := json.Marshal(body)
 	if err != nil {
 		return nil, err
 	}
-	req, err := http.NewRequestWithContext(ctx, "POST", "https://"+nc.host+path, bytes.NewReader(jbody))
+	req, err := http.NewRequestWithContext(ctx, method, "https://"+nc.host+path, bytes.NewReader(jbody))
 	if err != nil {
 		return nil, err
 	}
 	addLBHeader(req, nodeKey)
 	req.Header.Set("Content-Type", "application/json")
-
 	conn, err := nc.getConn(ctx)
 	if err != nil {
 		return nil, err

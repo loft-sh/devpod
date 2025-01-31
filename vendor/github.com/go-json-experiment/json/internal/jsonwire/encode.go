@@ -85,7 +85,11 @@ func AppendQuote[Bytes ~[]byte | ~string](dst []byte, src Bytes, flags *jsonflag
 		case r == utf8.RuneError && rn == 1:
 			hasInvalidUTF8 = true
 			dst = append(dst, src[i:n]...)
-			dst = append(dst, "\ufffd"...)
+			if flags.Get(jsonflags.EscapeWithLegacySemantics) {
+				dst = append(dst, `\ufffd`...)
+			} else {
+				dst = append(dst, "\ufffd"...)
+			}
 			n += rn
 			i = n
 		case (r == '\u2028' || r == '\u2029') && flags.Get(jsonflags.EscapeForJS):
@@ -150,18 +154,48 @@ func ReformatString(dst, src []byte, flags *jsonflags.Flags) ([]byte, int, error
 	if err != nil {
 		return dst, n, err
 	}
-	isCanonical := !flags.Get(jsonflags.EscapeForHTML | jsonflags.EscapeForJS)
-	if flags.Get(jsonflags.PreserveRawStrings) || (isCanonical && valFlags.IsCanonical()) {
+
+	// If the output requires no special escapes, and the input
+	// is already in canonical form or should be preserved verbatim,
+	// then directly copy the input to the output.
+	if !flags.Get(jsonflags.AnyEscape) &&
+		(valFlags.IsCanonical() || flags.Get(jsonflags.PreserveRawStrings)) {
 		dst = append(dst, src[:n]...) // copy the string verbatim
 		return dst, n, nil
 	}
 
-	// TODO: Implement a direct, raw-to-raw reformat for strings.
-	// If the escapeRune option would have resulted in no changes to the output,
-	// it would be faster to simply append src to dst without going through
-	// an intermediary representation in a separate buffer.
+	// Under [jsonflags.EscapeWithLegacySemantics], any pre-escaped sequences
+	// remain escaped, however we still need to respect the
+	// [jsonflags.EscapeForHTML] and [jsonflags.EscapeForJS] options.
+	if flags.Get(jsonflags.EscapeWithLegacySemantics) {
+		var i, lastAppendIndex int
+		for i < n {
+			if c := src[i]; c < utf8.RuneSelf {
+				if (c == '<' || c == '>' || c == '&') && flags.Get(jsonflags.EscapeForHTML) {
+					dst = append(dst, src[lastAppendIndex:i]...)
+					dst = appendEscapedASCII(dst, c)
+					lastAppendIndex = i + 1
+				}
+				i++
+			} else {
+				r, rn := utf8.DecodeRune(truncateMaxUTF8(src[i:]))
+				if (r == '\u2028' || r == '\u2029') && flags.Get(jsonflags.EscapeForJS) {
+					dst = append(dst, src[lastAppendIndex:i]...)
+					dst = appendEscapedUnicode(dst, r)
+					lastAppendIndex = i + rn
+				}
+				i += rn
+			}
+		}
+		return append(dst, src[lastAppendIndex:n]...), n, nil
+	}
+
+	// The input contains characters that might need escaping,
+	// unnecessary escape sequences, or invalid UTF-8.
+	// Perform a round-trip unquote and quote to properly reformat
+	// these sequences according the current flags.
 	b, _ := AppendUnquote(nil, src[:n])
-	dst, _ = AppendQuote(dst, string(b), flags)
+	dst, _ = AppendQuote(dst, b, flags)
 	return dst, n, nil
 }
 

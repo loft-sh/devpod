@@ -78,20 +78,50 @@ func EscapeForJS(v bool) Options {
 	}
 }
 
-// Expand specifies that the JSON output should be expanded,
-// where every JSON object member or JSON array element
-// appears on a new, indented line according to the nesting depth.
-// If an indent is not already specified, then it defaults to using "\t".
-//
-// If set to false, then the output is compact,
-// where no whitespace is emitted between JSON values.
+// SpaceAfterColon specifies that the JSON output should emit a space character
+// after each colon separator following a JSON object name.
+// If false, then no space character appears after the colon separator.
 //
 // This only affects encoding and is ignored when decoding.
-func Expand(v bool) Options {
+func SpaceAfterColon(v bool) Options {
 	if v {
-		return jsonflags.Expand | 1
+		return jsonflags.SpaceAfterColon | 1
 	} else {
-		return jsonflags.Expand | 0
+		return jsonflags.SpaceAfterColon | 0
+	}
+}
+
+// SpaceAfterComma specifies that the JSON output should emit a space character
+// after each comma separator following a JSON object value or array element.
+// If false, then no space character appears after the comma separator.
+//
+// This only affects encoding and is ignored when decoding.
+func SpaceAfterComma(v bool) Options {
+	if v {
+		return jsonflags.SpaceAfterComma | 1
+	} else {
+		return jsonflags.SpaceAfterComma | 0
+	}
+}
+
+// Multiline specifies that the JSON output should expand to multiple lines,
+// where every JSON object member or JSON array element appears on
+// a new, indented line according to the nesting depth.
+//
+// If [SpaceAfterColon] is not specified, then the default is true.
+// If [SpaceAfterComma] is not specified, then the default is false.
+// If [WithIndent] is not specified, then the default is "\t".
+//
+// If set to false, then the output is a single-line,
+// where the only whitespace emitted is determined by the current
+// values of [SpaceAfterColon] and [SpaceAfterComma].
+//
+// This only affects encoding and is ignored when decoding.
+func Multiline(v bool) Options {
+	if v {
+		return jsonflags.Multiline | 1
+	} else {
+		return jsonflags.Multiline | 0
 	}
 }
 
@@ -102,10 +132,10 @@ func Expand(v bool) Options {
 // The indent must only be composed of space or tab characters.
 //
 // If the intent to emit indented output without a preference for
-// the particular indent string, then use [Expand] instead.
+// the particular indent string, then use [Multiline] instead.
 //
 // This only affects encoding and is ignored when decoding.
-// Use of this option implies [Expand] being set to true.
+// Use of this option implies [Multiline] being set to true.
 func WithIndent(indent string) Options {
 	// Fast-path: Return a constant for common indents, which avoids allocating.
 	// These are derived from analyzing the Go module proxy on 2023-07-01.
@@ -138,7 +168,7 @@ func WithIndent(indent string) Options {
 // The prefix must only be composed of space or tab characters.
 //
 // This only affects encoding and is ignored when decoding.
-// Use of this option implies [Expand] being set to true.
+// Use of this option implies [Multiline] being set to true.
 func WithIndentPrefix(prefix string) Options {
 	if s := strings.Trim(prefix, " \t"); len(s) > 0 {
 		panic("json: invalid character " + jsonwire.QuoteRune(s) + " in indent prefix")

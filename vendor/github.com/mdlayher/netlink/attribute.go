@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"math"
 
-	"github.com/josharian/native"
 	"github.com/mdlayher/netlink/nlenc"
 )
 
@@ -168,7 +167,7 @@ type AttributeDecoder struct {
 func NewAttributeDecoder(b []byte) (*AttributeDecoder, error) {
 	ad := &AttributeDecoder{
 		// By default, use native byte order.
-		ByteOrder: native.Endian,
+		ByteOrder: binary.NativeEndian,
 
 		b: b,
 	}
@@ -485,7 +484,7 @@ type AttributeEncoder struct {
 
 // NewAttributeEncoder creates an AttributeEncoder that encodes Attributes.
 func NewAttributeEncoder() *AttributeEncoder {
-	return &AttributeEncoder{ByteOrder: native.Endian}
+	return &AttributeEncoder{ByteOrder: binary.NativeEndian}
 }
 
 // Uint8 encodes uint8 data into an Attribute specified by typ.

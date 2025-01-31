@@ -39,16 +39,16 @@ const (
 var numRange = regexp.MustCompile(`^([+-]?\d+)\.\.([+-]?\d+)}`)
 
 // Regexp turns a shell pattern into a regular expression that can be used with
-// regexp.Compile. It will return an error if the input pattern was incorrect.
-// Otherwise, the returned expression can be passed to regexp.MustCompile.
+// [regexp.Compile]. It will return an error if the input pattern was incorrect.
+// Otherwise, the returned expression can be passed to [regexp.MustCompile].
 //
 // For example, Regexp(`foo*bar?`, true) returns `foo.*bar.`.
 //
-// Note that this function (and QuoteMeta) should not be directly used with file
+// Note that this function (and [QuoteMeta]) should not be directly used with file
 // paths if Windows is supported, as the path separator on that platform is the
 // same character as the escaping character for shell patterns.
 func Regexp(pat string, mode Mode) (string, error) {
-	any := false
+	needsEscaping := false
 noopLoop:
 	for _, r := range pat {
 		switch r {
@@ -56,11 +56,11 @@ noopLoop:
 		// regular expression metacharacters
 		case '*', '?', '[', '\\', '.', '+', '(', ')', '|',
 			']', '{', '}', '^', '$':
-			any = true
+			needsEscaping = true
 			break noopLoop
 		}
 	}
-	if !any && mode&EntireString == 0 { // short-cut without a string copy
+	if !needsEscaping && mode&EntireString == 0 { // short-cut without a string copy
 		return pat, nil
 	}
 	closingBraces := []int{}
@@ -302,7 +302,7 @@ func HasMeta(pat string, mode Mode) bool {
 //
 // For example, QuoteMeta(`foo*bar?`) returns `foo\*bar\?`.
 func QuoteMeta(pat string, mode Mode) string {
-	any := false
+	needsEscaping := false
 loop:
 	for _, r := range pat {
 		switch r {
@@ -312,11 +312,11 @@ loop:
 			}
 			fallthrough
 		case '*', '?', '[', '\\':
-			any = true
+			needsEscaping = true
 			break loop
 		}
 	}
-	if !any { // short-cut without a string copy
+	if !needsEscaping { // short-cut without a string copy
 		return pat
 	}
 	var buf bytes.Buffer

@@ -1,7 +1,7 @@
 // Copyright (c) Tailscale Inc & AUTHORS
 // SPDX-License-Identifier: BSD-3-Clause
 
-//go:build go1.19
+//go:build go1.22
 
 package tailscale
 
@@ -61,6 +61,12 @@ type LocalClient struct {
 	// Dial optionally specifies an alternate func that connects to the local
 	// machine's tailscaled or equivalent. If nil, a default is used.
 	Dial func(ctx context.Context, network, addr string) (net.Conn, error)
+
+	// Transport optionally specifies an alternate [http.RoundTripper]
+	// used to execute HTTP requests. If nil, a default [http.Transport] is used,
+	// potentially with custom dialing logic from [Dial].
+	// It is primarily used for testing.
+	Transport http.RoundTripper
 
 	// Socket specifies an alternate path to the local Tailscale socket.
 	// If empty, a platform-specific default is used.
@@ -129,9 +135,9 @@ func (lc *LocalClient) DoLocalRequest(req *http.Request) (*http.Response, error)
 	req.Header.Set("Tailscale-Cap", strconv.Itoa(int(tailcfg.CurrentCapabilityVersion)))
 	lc.tsClientOnce.Do(func() {
 		lc.tsClient = &http.Client{
-			Transport: &http.Transport{
-				DialContext: lc.dialer(),
-			},
+			Transport: cmp.Or(lc.Transport, http.RoundTripper(
+				&http.Transport{DialContext: lc.dialer()}),
+			),
 		}
 	})
 	if !lc.OmitAuth {

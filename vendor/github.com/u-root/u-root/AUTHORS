@@ -1,0 +1,19 @@
+# This is the official list of u-root authors for copyright purposes. This will
+# not list all people who have contributed; for example, many Google employee
+# contributors are not listed here, since Google holds the copyright to their
+# contributions.
+#
+# This list is not complete and does not strive to be.
+
+# Names should be added to this file as one of
+#     Organization's name
+#     Organization's name <contact email>
+#     Individual's name <submission email address>
+#     Individual's name <submission email address> <email2> <emailN>
+
+Andrey Mirtchovski <mirtchovski@gmail.com>
+Facebook, Inc.
+Genesys Telecommunications Laboratories, Inc.
+Google LLC
+Oracle Corporation <simran.p.singh@oracle.com>
+Ron Minnich <rminnich@gmail.com>

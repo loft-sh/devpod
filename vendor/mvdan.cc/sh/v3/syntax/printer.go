@@ -216,7 +216,7 @@ func (c *colCounter) Reset(w io.Writer) {
 // Printer holds the internal state of the printing mechanism of a
 // program.
 type Printer struct {
-	bufWriter
+	bufWriter // TODO: embedding this makes the methods part of the API, which we did not intend
 	tabWriter *tabwriter.Writer
 	cols      colCounter
 
@@ -308,7 +308,7 @@ func (p *Printer) spacePad(pos Pos) {
 // wantsNewline reports whether we want to print at least one newline before
 // printing a node at a given position. A zero position can be given to simply
 // tell if we want a newline following what's just been printed.
-func (p *Printer) wantsNewline(pos Pos) bool {
+func (p *Printer) wantsNewline(pos Pos, escapingNewline bool) bool {
 	if p.mustNewline {
 		// We must have a newline here.
 		return true
@@ -319,7 +319,10 @@ func (p *Printer) wantsNewline(pos Pos) bool {
 		// as that might move them further down to the wrong place.
 		return false
 	}
-	// THe newline is optional, and we want it via either wantNewline or via
+	if escapingNewline && p.minify {
+		return false
+	}
+	// The newline is optional, and we want it via either wantNewline or via
 	// the position's line.
 	return p.wantNewline || pos.Line() > p.line
 }
@@ -351,7 +354,7 @@ func (p *Printer) spacedToken(s string, pos Pos) {
 }
 
 func (p *Printer) semiOrNewl(s string, pos Pos) {
-	if p.wantsNewline(Pos{}) {
+	if p.wantsNewline(Pos{}, false) {
 		p.newline(pos)
 		p.indent()
 	} else {
@@ -509,7 +512,7 @@ func (p *Printer) newlines(pos Pos) {
 		p.firstLine = false
 		return // no empty lines at the top
 	}
-	if !p.wantsNewline(pos) {
+	if !p.wantsNewline(pos, false) {
 		return
 	}
 	p.flushHeredocs()
@@ -527,7 +530,7 @@ func (p *Printer) newlines(pos Pos) {
 }
 
 func (p *Printer) rightParen(pos Pos) {
-	if !p.minify {
+	if len(p.pendingHdocs) > 0 || !p.minify {
 		p.newlines(pos)
 	}
 	p.WriteByte(')')
@@ -535,7 +538,7 @@ func (p *Printer) rightParen(pos Pos) {
 }
 
 func (p *Printer) semiRsrv(s string, pos Pos) {
-	if p.wantsNewline(pos) {
+	if p.wantsNewline(pos, false) {
 		p.newlines(pos)
 	} else {
 		if !p.wroteSemi {
@@ -955,7 +958,7 @@ func (p *Printer) casePatternJoin(pats []*Word) {
 		if i > 0 {
 			p.spacedToken("|", Pos{})
 		}
-		if p.wantsNewline(w.Pos()) {
+		if p.wantsNewline(w.Pos(), true) {
 			if !anyNewline {
 				p.incLevel()
 				anyNewline = true
@@ -1015,7 +1018,7 @@ func (p *Printer) stmt(s *Stmt) {
 	}
 	p.incLevel()
 	for _, r := range s.Redirs[startRedirs:] {
-		if p.wantsNewline(r.OpPos) {
+		if p.wantsNewline(r.OpPos, true) {
 			p.bslashNewl()
 		}
 		if p.wantSpace == spaceRequired {
@@ -1413,7 +1416,7 @@ func (p *Printer) nestedStmts(stmts []*Stmt, last []Comment, closing Pos) {
 func (p *Printer) assigns(assigns []*Assign) {
 	p.incLevel()
 	for _, a := range assigns {
-		if p.wantsNewline(a.Pos()) {
+		if p.wantsNewline(a.Pos(), true) {
 			p.bslashNewl()
 		} else {
 			p.spacePad(a.Pos())

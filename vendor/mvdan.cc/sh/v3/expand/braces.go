@@ -10,7 +10,7 @@ import (
 )
 
 // Braces performs brace expansion on a word, given that it contains any
-// syntax.BraceExp parts. For example, the word with a brace expansion
+// [syntax.BraceExp] parts. For example, the word with a brace expansion
 // "foo{bar,baz}" will return two literal words, "foobar" and "foobaz".
 //
 // Note that the resulting words may share word parts.

@@ -112,14 +112,14 @@ func (p Pos) Offset() uint { return uint(p.offs) }
 // Line returns the line number of the position, starting at 1.
 //
 // Line is protected against overflows; if an input has too many lines, extra
-// lines will have a line number of 0, rendered as "?" by Pos.String.
+// lines will have a line number of 0, rendered as "?" by [Pos.String].
 func (p Pos) Line() uint { return uint(p.lineCol >> colBitSize) }
 
 // Col returns the column number of the position, starting at 1. It counts in
 // bytes.
 //
 // Col is protected against overflows; if an input line has too many columns,
-// extra columns will have a column number of 0, rendered as "?" by Pos.String.
+// extra columns will have a column number of 0, rendered as "?" by [Pos.String].
 func (p Pos) Col() uint { return uint(p.lineCol & colBitMask) }
 
 func (p Pos) String() string {
@@ -139,7 +139,7 @@ func (p Pos) String() string {
 }
 
 // IsValid reports whether the position contains useful position information.
-// Some positions returned via Parse may be invalid: for example, Stmt.Semicolon
+// Some positions returned via [Parse] may be invalid: for example, [Stmt.Semicolon]
 // will only be valid if a statement contained a closing token such as ';'.
 func (p Pos) IsValid() bool { return p != Pos{} }
 

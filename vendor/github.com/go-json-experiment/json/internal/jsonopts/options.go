@@ -46,19 +46,17 @@ type ArshalValues struct {
 // DefaultOptionsV2 is the set of all options that define default v2 behavior.
 var DefaultOptionsV2 = Struct{
 	Flags: jsonflags.Flags{
-		Presence: uint64(jsonflags.AllFlags),
+		Presence: uint64(jsonflags.AllFlags & ^jsonflags.WhitespaceFlags),
 		Values:   uint64(0),
 	},
-	CoderValues: CoderValues{Indent: "\t"}, // Indent is set, but Expand is set to false
 }
 
 // DefaultOptionsV1 is the set of all options that define default v1 behavior.
 var DefaultOptionsV1 = Struct{
 	Flags: jsonflags.Flags{
-		Presence: uint64(jsonflags.AllFlags),
+		Presence: uint64(jsonflags.AllFlags & ^jsonflags.WhitespaceFlags),
 		Values:   uint64(jsonflags.DefaultV1Flags),
 	},
-	CoderValues: CoderValues{Indent: "\t"}, // Indent is set, but Expand is set to false
 }
 
 // CopyCoderOptions copies coder-specific options from src to dst.
@@ -132,10 +130,10 @@ func (dst *Struct) Join(srcs ...Options) {
 		case jsonflags.Bools:
 			dst.Flags.Set(src)
 		case Indent:
-			dst.Flags.Set(jsonflags.Expand | jsonflags.Indent | 1)
+			dst.Flags.Set(jsonflags.Multiline | jsonflags.Indent | 1)
 			dst.Indent = string(src)
 		case IndentPrefix:
-			dst.Flags.Set(jsonflags.Expand | jsonflags.IndentPrefix | 1)
+			dst.Flags.Set(jsonflags.Multiline | jsonflags.IndentPrefix | 1)
 			dst.IndentPrefix = string(src)
 		case ByteLimit:
 			dst.Flags.Set(jsonflags.ByteLimit | 1)

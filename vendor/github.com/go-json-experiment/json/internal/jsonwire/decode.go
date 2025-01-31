@@ -386,7 +386,7 @@ func AppendUnquote[Bytes ~[]byte | ~string](dst []byte, src Bytes) (v []byte, er
 // hasEscapedUTF16Prefix reports whether b is possibly
 // the truncated prefix of a \uFFFF escape sequence.
 func hasEscapedUTF16Prefix[Bytes ~[]byte | ~string](b Bytes, lowerSurrogateHalf bool) bool {
-	for i := 0; i < len(b); i++ {
+	for i := range len(b) {
 		switch c := b[i]; {
 		case i == 0 && c != '\\':
 			return false
@@ -567,7 +567,7 @@ func parseHexUint16[Bytes ~[]byte | ~string](b Bytes) (v uint16, ok bool) {
 	if len(b) != 4 {
 		return 0, false
 	}
-	for i := 0; i < 4; i++ {
+	for i := range 4 {
 		c := b[i]
 		switch {
 		case '0' <= c && c <= '9':

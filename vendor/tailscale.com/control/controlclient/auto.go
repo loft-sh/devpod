@@ -525,20 +525,6 @@ func (c *Auto) mapRoutine() {
 		} else {
 			mrs.bo.BackOff(ctx, err)
 			report(err, "PollNetMap")
-
-			// this is required for platform based connection as platform
-			// will delete the network peer immediately and hence we run
-			// into errors on the following netmap, so we need to relogin
-			c.mu.Lock()
-			if !c.wantLoggedIn || c.loginGoal == nil {
-				c.logf("mapRoutine: relogin because netmap has failed")
-				c.loggedIn = false
-				c.state = StateNotAuthenticated
-				c.mu.Unlock()
-				c.Login(LoginEphemeral)
-			} else {
-				c.mu.Unlock()
-			}
 		}
 	}
 }

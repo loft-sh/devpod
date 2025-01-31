@@ -19,7 +19,7 @@ type testParser struct {
 	err func(err error)
 }
 
-func (p *testParser) errf(format string, a ...interface{}) {
+func (p *testParser) errf(format string, a ...any) {
 	p.err(fmt.Errorf(format, a...))
 }
 

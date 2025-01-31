@@ -1,4 +1,4 @@
-//go:build wasm || plan9 || aix
+//go:build wasm || plan9 || aix || solaris || illumos
 
 /* SPDX-License-Identifier: MIT
  *

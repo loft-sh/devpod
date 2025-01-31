@@ -14,6 +14,7 @@ import (
 	"os"
 	"regexp"
 	"runtime"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -21,6 +22,17 @@ import (
 	"mvdan.cc/sh/v3/expand"
 	"mvdan.cc/sh/v3/pattern"
 	"mvdan.cc/sh/v3/syntax"
+)
+
+const (
+	// shellReplyPS3Var, or PS3, is a special variable in Bash used by the select command,
+	// while the shell is awaiting for input. the default value is shellDefaultPS3
+	shellReplyPS3Var = "PS3"
+	// shellDefaultPS3, or #?, is PS3's default value
+	shellDefaultPS3 = "#? "
+	// shellReplyVar, or REPLY, is a special variable in Bash that is used to store the result of
+	// the select command or of the read command, when no variable name is specified
+	shellReplyVar = "REPLY"
 )
 
 func (r *Runner) fillExpandConfig(ctx context.Context) {
@@ -93,20 +105,20 @@ func (r *Runner) fillExpandConfig(ctx context.Context) {
 				case syntax.CmdIn:
 					f, err := os.OpenFile(path, os.O_WRONLY, 0)
 					if err != nil {
-						r.errf("cannot open fifo for stdout: %v", err)
+						r.errf("cannot open fifo for stdout: %v\n", err)
 						return
 					}
 					r2.stdout = f
 					defer func() {
 						if err := f.Close(); err != nil {
-							r.errf("closing stdout fifo: %v", err)
+							r.errf("closing stdout fifo: %v\n", err)
 						}
 						os.Remove(path)
 					}()
 				default: // syntax.CmdOut
 					f, err := os.OpenFile(path, os.O_RDONLY, 0)
 					if err != nil {
-						r.errf("cannot open fifo for stdin: %v", err)
+						r.errf("cannot open fifo for stdin: %v\n", err)
 						return
 					}
 					r2.stdin = f
@@ -244,11 +256,11 @@ func (r *Runner) out(s string) {
 	io.WriteString(r.stdout, s)
 }
 
-func (r *Runner) outf(format string, a ...interface{}) {
+func (r *Runner) outf(format string, a ...any) {
 	fmt.Fprintf(r.stdout, format, a...)
 }
 
-func (r *Runner) errf(format string, a ...interface{}) {
+func (r *Runner) errf(format string, a ...any) {
 	fmt.Fprintf(r.stderr, format, a...)
 }
 
@@ -447,6 +459,7 @@ func (r *Runner) cmd(ctx context.Context, cm syntax.Command) {
 			wg.Wait()
 			if r.opts[optPipeFail] && r2.exit != 0 && r.exit == 0 {
 				r.exit = r2.exit
+				r.shellExited = r2.shellExited
 			}
 			r.setErr(r2.err)
 		}
@@ -486,6 +499,47 @@ func (r *Runner) cmd(ctx context.Context, cm syntax.Command) {
 			inToken := y.InPos.IsValid()
 			if inToken {
 				items = r.fields(y.Items...) // for i in ...; do ...
+			}
+
+			if x.Select {
+				ps3 := shellDefaultPS3
+				if e := r.envGet(shellReplyPS3Var); e != "" {
+					ps3 = e
+				}
+
+				prompt := func() []byte {
+					// display menu
+					for i, word := range items {
+						r.errf("%d) %v\n", i+1, word)
+					}
+					r.errf("%s", ps3)
+
+					line, err := r.readLine(true)
+					if err != nil {
+						r.exit = 1
+						return nil
+					}
+					return line
+				}
+
+			retry:
+				choice := prompt()
+				if len(choice) == 0 {
+					goto retry // no reply; try again
+				}
+
+				reply := string(choice)
+				r.setVarString(shellReplyVar, reply)
+
+				c, _ := strconv.Atoi(reply)
+				if c > 0 && c <= len(items) {
+					r.setVarString(name, items[c-1])
+				}
+
+				// execute commands until break or return is encountered
+				if r.loopStmtsBroken(ctx, x.Do) {
+					break
+				}
 			}
 
 			for _, field := range items {

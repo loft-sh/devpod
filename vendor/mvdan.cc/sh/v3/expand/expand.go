@@ -83,7 +83,7 @@ type Config struct {
 }
 
 // UnexpectedCommandError is returned if a command substitution is encountered
-// when Config.CmdSubst is nil.
+// when [Config.CmdSubst] is nil.
 type UnexpectedCommandError struct {
 	Node *syntax.CmdSubst
 }
@@ -182,9 +182,9 @@ func Document(cfg *Config, word *syntax.Word) (string, error) {
 
 const patMode = pattern.Filenames | pattern.Braces
 
-// Pattern expands a single shell word as a pattern, using syntax.QuotePattern
+// Pattern expands a single shell word as a pattern, using [syntax.QuotePattern]
 // on any non-quoted parts of the input word. The result can be used on
-// syntax.TranslatePattern directly.
+// [syntax.TranslatePattern] directly.
 //
 // The config specifies shell expansion options; nil behaves the same as an
 // empty config.
@@ -287,9 +287,10 @@ formatLoop:
 			case 'x', 'u', 'U':
 				i++
 				max := 2
-				if c == 'u' {
+				switch c {
+				case 'u':
 					max = 4
-				} else if c == 'U' {
+				case 'U':
 					max = 8
 				}
 				digits := readDigits(max, true)
@@ -342,7 +343,7 @@ formatLoop:
 				if len(args) > 0 {
 					arg, args = args[0], args[1:]
 				}
-				var farg interface{}
+				var farg any
 				if c == 'b' {
 					// Passing in nil for args ensures that % format
 					// strings aren't processed; only escape sequences
@@ -801,7 +802,7 @@ func findAllIndex(pat, name string, n int) [][]int {
 
 var rxGlobStar = regexp.MustCompile(".*")
 
-// pathJoin2 is a simpler version of filepath.Join without cleaning the result,
+// pathJoin2 is a simpler version of [filepath.Join] without cleaning the result,
 // since that's needed for globbing.
 func pathJoin2(elem1, elem2 string) string {
 	if elem1 == "" {
@@ -814,7 +815,7 @@ func pathJoin2(elem1, elem2 string) string {
 }
 
 // pathSplit splits a file path into its elements, retaining empty ones. Before
-// splitting, slashes are replaced with filepath.Separator, so that splitting
+// splitting, slashes are replaced with [filepath.Separator], so that splitting
 // Unix paths on Windows works as well.
 func pathSplit(path string) []string {
 	path = filepath.FromSlash(path)
@@ -976,7 +977,8 @@ func (cfg *Config) globDir(base, dir string, rx *regexp.Regexp, matchHidden bool
 	return matches, nil
 }
 
-// ReadFields TODO write doc.
+// ReadFields splits and returns n fields from s, like the "read" shell builtin.
+// If raw is set, backslash escape sequences are not interpreted.
 //
 // The config specifies shell expansion options; nil behaves the same as an
 // empty config.

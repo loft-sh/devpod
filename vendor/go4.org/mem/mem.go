@@ -265,6 +265,30 @@ func NewReader(m RO) *Reader {
 	return &Reader{sr: strings.NewReader(m.str())}
 }
 
+// Cut works like strings.Cut, but takes and returns ROs.
+func Cut(m, sep RO) (before, after RO, found bool) {
+	if i := Index(m, sep); i >= 0 {
+		return m.SliceTo(i), m.SliceFrom(i + sep.Len()), true
+	}
+	return m, S(""), false
+}
+
+// CutPrefix works like strings.CutPrefix, but takes and returns ROs.
+func CutPrefix(m, prefix RO) (after RO, found bool) {
+	if !HasPrefix(m, prefix) {
+		return m, false
+	}
+	return m.SliceFrom(prefix.Len()), true
+}
+
+// CutSuffix works like strings.CutSuffix, but takes and returns ROs.
+func CutSuffix(m, suffix RO) (before RO, found bool) {
+	if !HasSuffix(m, suffix) {
+		return m, false
+	}
+	return m.SliceTo(m.Len() - suffix.Len()), true
+}
+
 // Reader is like a bytes.Reader or strings.Reader.
 type Reader struct {
 	sr *strings.Reader

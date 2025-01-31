@@ -25,6 +25,7 @@ import (
 	"tailscale.com/cmd/tailscale/cli/ffcomplete"
 	"tailscale.com/envknob"
 	"tailscale.com/paths"
+	"tailscale.com/util/slicesx"
 	"tailscale.com/version/distro"
 )
 
@@ -84,9 +85,9 @@ var localClient = tailscale.LocalClient{
 
 // Run runs the CLI. The args do not include the binary name.
 func Run(args []string) (err error) {
-	if runtime.GOOS == "linux" && os.Getenv("GOKRAZY_FIRST_START") == "1" && distro.Get() == distro.Gokrazy && os.Getppid() == 1 {
-		// We're running on gokrazy and it's the first start.
-		// Don't run the tailscale CLI as a service; just exit.
+	if runtime.GOOS == "linux" && os.Getenv("GOKRAZY_FIRST_START") == "1" && distro.Get() == distro.Gokrazy && os.Getppid() == 1 && len(args) == 0 {
+		// We're running on gokrazy and the user did not specify 'up'.
+		// Don't run the tailscale CLI and spam logs with usage; just exit.
 		// See https://gokrazy.org/development/process-interface/
 		os.Exit(0)
 	}
@@ -182,7 +183,7 @@ For help on subcommands, add --help after: "tailscale status --help".
 This CLI is still under active development. Commands and flags will
 change in the future.
 `),
-		Subcommands: append([]*ffcli.Command{
+		Subcommands: nonNilCmds(
 			upCmd,
 			downCmd,
 			setCmd,
@@ -214,7 +215,8 @@ change in the future.
 			debugCmd,
 			driveCmd,
 			idTokenCmd,
-		}, maybeAdvertiseCmd()...),
+			advertiseCmd(),
+		),
 		FlagSet: rootfs,
 		Exec: func(ctx context.Context, args []string) error {
 			if len(args) > 0 {
@@ -237,6 +239,10 @@ change in the future.
 
 	ffcomplete.Inject(rootCmd, func(c *ffcli.Command) { c.LongHelp = hidden + c.LongHelp }, usageFunc)
 	return rootCmd
+}
+
+func nonNilCmds(cmds ...*ffcli.Command) []*ffcli.Command {
+	return slicesx.Filter(cmds[:0], cmds, func(c *ffcli.Command) bool { return c != nil })
 }
 
 func fatalf(format string, a ...any) {
