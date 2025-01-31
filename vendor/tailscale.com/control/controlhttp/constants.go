@@ -18,19 +18,15 @@ import (
 )
 
 const (
-	// upgradeHeader is the value of the Upgrade HTTP header used to
-	// indicate the Tailscale control protocol.
-	upgradeHeaderValue = "tailscale-control-protocol"
-
-	// handshakeHeaderName is the HTTP request header that can
-	// optionally contain base64-encoded initial handshake
-	// payload, to save an RTT.
-	handshakeHeaderName = "X-Tailscale-Handshake"
-
 	// serverUpgradePath is where the server-side HTTP handler to
 	// to do the protocol switch is located.
 	serverUpgradePath = "/ts2021"
 )
+
+// NoPort is a sentinel value for Dialer.HTTPSPort to indicate that HTTPS
+// should not be tried on any port. It exists primarily for some localhost
+// tests where the control plane only runs on HTTP.
+const NoPort = "none"
 
 // Dialer contains configuration on how to dial the Tailscale control server.
 type Dialer struct {
@@ -62,6 +58,8 @@ type Dialer struct {
 	// HTTPSPort is the port number to use when making a HTTPS connection.
 	//
 	// If not specified, this defaults to port 443.
+	//
+	// If "none" (NoPort), HTTPS is disabled.
 	HTTPSPort string
 
 	// Dialer is the dialer used to make outbound connections.
@@ -78,6 +76,8 @@ type Dialer struct {
 	// dropped.
 	Logf logger.Logf
 
+	// NetMon is the [netmon.Monitor] to use for this Dialer. It must be
+	// non-nil.
 	NetMon *netmon.Monitor
 
 	// HealthTracker, if non-nil, is the health tracker to use.
@@ -95,8 +95,9 @@ type Dialer struct {
 	omitCertErrorLogging bool
 	testFallbackDelay    time.Duration
 
-	// tstime.Clock is used instead of time package for methods such as time.Now.
-	// If not specified, will default to tstime.StdClock{}.
+	// Clock, if non-nil, overrides the clock to use.
+	// If nil, tstime.StdClock is used.
+	// This exists primarily for tests.
 	Clock tstime.Clock
 }
 

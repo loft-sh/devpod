@@ -13,6 +13,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"io/ioutil"
 	"os"
 	"strings"
 
@@ -324,7 +325,7 @@ func (k *Key) LoadKeyReader(r io.Reader, scheme string, KeyIDHashAlgorithms []st
 		return ErrNoPEMBlock
 	}
 	// Read key bytes
-	pemBytes, err := io.ReadAll(r)
+	pemBytes, err := ioutil.ReadAll(r)
 	if err != nil {
 		return err
 	}
@@ -343,7 +344,7 @@ func (k *Key) LoadKeyReaderDefaults(r io.Reader) error {
 		return ErrNoPEMBlock
 	}
 	// Read key bytes
-	pemBytes, err := io.ReadAll(r)
+	pemBytes, err := ioutil.ReadAll(r)
 	if err != nil {
 		return err
 	}
@@ -365,7 +366,7 @@ func (k *Key) LoadKeyReaderDefaults(r io.Reader) error {
 func getDefaultKeyScheme(key interface{}) (scheme string, keyIDHashAlgorithms []string, err error) {
 	keyIDHashAlgorithms = []string{"sha256", "sha512"}
 
-	switch k := key.(type) {
+	switch key.(type) {
 	case *rsa.PublicKey, *rsa.PrivateKey:
 		scheme = rsassapsssha256Scheme
 	case ed25519.PrivateKey, ed25519.PublicKey:
@@ -373,7 +374,7 @@ func getDefaultKeyScheme(key interface{}) (scheme string, keyIDHashAlgorithms []
 	case *ecdsa.PrivateKey, *ecdsa.PublicKey:
 		scheme = ecdsaSha2nistp256
 	case *x509.Certificate:
-		return getDefaultKeyScheme(k.PublicKey)
+		return getDefaultKeyScheme(key.(*x509.Certificate).PublicKey)
 	default:
 		err = ErrUnsupportedKeyType
 	}
@@ -381,10 +382,11 @@ func getDefaultKeyScheme(key interface{}) (scheme string, keyIDHashAlgorithms []
 	return scheme, keyIDHashAlgorithms, err
 }
 
-func (k *Key) loadKey(keyObj interface{}, pemData *pem.Block, scheme string, keyIDHashAlgorithms []string) error {
-	switch key := keyObj.(type) {
+func (k *Key) loadKey(key interface{}, pemData *pem.Block, scheme string, keyIDHashAlgorithms []string) error {
+
+	switch key.(type) {
 	case *rsa.PublicKey:
-		pubKeyBytes, err := x509.MarshalPKIXPublicKey(key)
+		pubKeyBytes, err := x509.MarshalPKIXPublicKey(key.(*rsa.PublicKey))
 		if err != nil {
 			return err
 		}
@@ -394,7 +396,7 @@ func (k *Key) loadKey(keyObj interface{}, pemData *pem.Block, scheme string, key
 	case *rsa.PrivateKey:
 		// Note: RSA Public Keys will get stored as X.509 SubjectPublicKeyInfo (RFC5280)
 		// This behavior is consistent to the securesystemslib
-		pubKeyBytes, err := x509.MarshalPKIXPublicKey(key.Public())
+		pubKeyBytes, err := x509.MarshalPKIXPublicKey(key.(*rsa.PrivateKey).Public())
 		if err != nil {
 			return err
 		}
@@ -402,16 +404,16 @@ func (k *Key) loadKey(keyObj interface{}, pemData *pem.Block, scheme string, key
 			return err
 		}
 	case ed25519.PublicKey:
-		if err := k.setKeyComponents(key, []byte{}, ed25519KeyType, scheme, keyIDHashAlgorithms); err != nil {
+		if err := k.setKeyComponents(key.(ed25519.PublicKey), []byte{}, ed25519KeyType, scheme, keyIDHashAlgorithms); err != nil {
 			return err
 		}
 	case ed25519.PrivateKey:
-		pubKeyBytes := key.Public()
-		if err := k.setKeyComponents(pubKeyBytes.(ed25519.PublicKey), key, ed25519KeyType, scheme, keyIDHashAlgorithms); err != nil {
+		pubKeyBytes := key.(ed25519.PrivateKey).Public()
+		if err := k.setKeyComponents(pubKeyBytes.(ed25519.PublicKey), key.(ed25519.PrivateKey), ed25519KeyType, scheme, keyIDHashAlgorithms); err != nil {
 			return err
 		}
 	case *ecdsa.PrivateKey:
-		pubKeyBytes, err := x509.MarshalPKIXPublicKey(key.Public())
+		pubKeyBytes, err := x509.MarshalPKIXPublicKey(key.(*ecdsa.PrivateKey).Public())
 		if err != nil {
 			return err
 		}
@@ -419,7 +421,7 @@ func (k *Key) loadKey(keyObj interface{}, pemData *pem.Block, scheme string, key
 			return err
 		}
 	case *ecdsa.PublicKey:
-		pubKeyBytes, err := x509.MarshalPKIXPublicKey(key)
+		pubKeyBytes, err := x509.MarshalPKIXPublicKey(key.(*ecdsa.PublicKey))
 		if err != nil {
 			return err
 		}
@@ -427,7 +429,7 @@ func (k *Key) loadKey(keyObj interface{}, pemData *pem.Block, scheme string, key
 			return err
 		}
 	case *x509.Certificate:
-		err := k.loadKey(key.PublicKey, pemData, scheme, keyIDHashAlgorithms)
+		err := k.loadKey(key.(*x509.Certificate).PublicKey, pemData, scheme, keyIDHashAlgorithms)
 		if err != nil {
 			return err
 		}

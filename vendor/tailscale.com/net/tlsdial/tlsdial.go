@@ -27,6 +27,8 @@ import (
 
 	"tailscale.com/envknob"
 	"tailscale.com/health"
+	"tailscale.com/hostinfo"
+	"tailscale.com/net/tlsdial/blockblame"
 )
 
 var counterFallbackOK int32 // atomic
@@ -47,6 +49,16 @@ var (
 // hostname already, to avoid log spam for users with custom DERP servers,
 // Headscale, etc.
 var tlsdialWarningPrinted sync.Map // map[string]bool
+
+var mitmBlockWarnable = health.Register(&health.Warnable{
+	Code:  "blockblame-mitm-detected",
+	Title: "Network may be blocking Tailscale",
+	Text: func(args health.Args) string {
+		return fmt.Sprintf("Network equipment from %q may be blocking Tailscale traffic on this network. Connect to another network, or contact your network administrator for assistance.", args["manufacturer"])
+	},
+	Severity:            health.SeverityMedium,
+	ImpactsConnectivity: true,
+})
 
 // Config returns a tls.Config for connecting to a server.
 // If base is non-nil, it's cloned as the base config before
@@ -81,22 +93,58 @@ func Config(host string, ht *health.Tracker, base *tls.Config) *tls.Config {
 	// own cert verification, as do the same work that it'd do
 	// (with the baked-in fallback root) in the VerifyConnection hook.
 	conf.InsecureSkipVerify = true
-	conf.VerifyConnection = func(cs tls.ConnectionState) error {
+	conf.VerifyConnection = func(cs tls.ConnectionState) (retErr error) {
+		if host == "log.tailscale.io" && hostinfo.IsNATLabGuestVM() {
+			// Allow log.tailscale.io TLS MITM for integration tests when
+			// the client's running within a NATLab VM.
+			return nil
+		}
+
 		// Perform some health checks on this certificate before we do
 		// any verification.
+		var cert *x509.Certificate
+		var selfSignedIssuer string
+		if certs := cs.PeerCertificates; len(certs) > 0 {
+			cert = certs[0]
+			if certIsSelfSigned(cert) {
+				selfSignedIssuer = cert.Issuer.String()
+			}
+		}
 		if ht != nil {
 			if insecureSkipVerify() {
 				ht.SetTLSConnectionError(cs.ServerName, nil)
 				return nil
 			}
 
-			if certIsSelfSigned(cs.PeerCertificates[0]) {
-				// Self-signed certs are never valid.
-				ht.SetTLSConnectionError(cs.ServerName, fmt.Errorf("certificate is self-signed"))
-			} else {
-				// Ensure we clear any error state for this ServerName.
-				ht.SetTLSConnectionError(cs.ServerName, nil)
-			}
+			defer func() {
+				if retErr != nil && cert != nil {
+					// Is it a MITM SSL certificate from a well-known network appliance manufacturer?
+					// Show a dedicated warning.
+					m, ok := blockblame.VerifyCertificate(cert)
+					if ok {
+						log.Printf("tlsdial: server cert for %q looks like %q equipment (could be blocking Tailscale)", host, m.Name)
+						ht.SetUnhealthy(mitmBlockWarnable, health.Args{"manufacturer": m.Name})
+					} else {
+						ht.SetHealthy(mitmBlockWarnable)
+					}
+				} else {
+					ht.SetHealthy(mitmBlockWarnable)
+				}
+				if retErr != nil && selfSignedIssuer != "" {
+					// Self-signed certs are never valid.
+					//
+					// TODO(bradfitz): plumb down the selfSignedIssuer as a
+					// structured health warning argument.
+					ht.SetTLSConnectionError(cs.ServerName, fmt.Errorf("likely intercepted connection; certificate is self-signed by %v", selfSignedIssuer))
+				} else {
+					// Ensure we clear any error state for this ServerName.
+					ht.SetTLSConnectionError(cs.ServerName, nil)
+					if selfSignedIssuer != "" {
+						// Log the self-signed issuer, but don't treat it as an error.
+						log.Printf("tlsdial: warning: server cert for %q passed x509 validation but is self-signed by %q", host, selfSignedIssuer)
+					}
+				}
+			}()
 		}
 
 		// First try doing x509 verification with the system's
