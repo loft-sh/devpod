@@ -21,6 +21,7 @@ import (
 	"github.com/loft-sh/devpod/pkg/gpg"
 	"github.com/loft-sh/devpod/pkg/loftconfig"
 	"github.com/loft-sh/devpod/pkg/netstat"
+	"github.com/loft-sh/devpod/pkg/platform"
 	provider2 "github.com/loft-sh/devpod/pkg/provider"
 	"github.com/loft-sh/devpod/pkg/stdio"
 	"github.com/loft-sh/log"
@@ -53,11 +54,13 @@ func RunUpServer(ctx context.Context, reader io.Reader, writer io.WriteCloser, a
 	return tunnelServ.RunWithResult(ctx, reader, writer)
 }
 
-func RunSetupServer(ctx context.Context, reader io.Reader, writer io.WriteCloser, allowGitCredentials, allowDockerCredentials bool, mounts []*config.Mount, log log.Logger, options ...Option) (*config.Result, error) {
+func RunSetupServer(ctx context.Context, reader io.Reader, writer io.WriteCloser, allowGitCredentials, allowDockerCredentials bool, mounts []*config.Mount, tunnelClient tunnel.TunnelClient, log log.Logger, options ...Option) (*config.Result, error) {
 	opts := append(options, []Option{
 		WithMounts(mounts),
 		WithAllowGitCredentials(allowGitCredentials),
 		WithAllowDockerCredentials(allowDockerCredentials),
+		WithAllowKubeConfig(true),
+		WithTunnelClient(tunnelClient),
 	}...)
 	tunnelServ := New(log, opts...)
 
@@ -84,10 +87,12 @@ type tunnelServer struct {
 	forwarder              netstat.Forwarder
 	allowGitCredentials    bool
 	allowDockerCredentials bool
+	allowKubeConfig        bool
 	result                 *config.Result
 	workspace              *provider2.Workspace
 	log                    log.Logger
 	gitCredentialsOverride gitCredentialsOverride
+	tunnelClient           tunnel.TunnelClient
 }
 
 type gitCredentialsOverride struct {
@@ -290,6 +295,40 @@ func (t *tunnelServer) LoftConfig(ctx context.Context, message *tunnel.Message) 
 	}
 
 	return &tunnel.Message{Message: string(out)}, nil
+}
+
+func (t *tunnelServer) KubeConfig(ctx context.Context, message *tunnel.Message) (*tunnel.Message, error) {
+	if !t.allowKubeConfig || t.tunnelClient == nil {
+		return nil, fmt.Errorf("kube config forbidden")
+	}
+
+	// fetch loft config from host machine
+	req, err := json.Marshal(loftconfig.LoftConfigRequest{})
+	if err != nil {
+		return nil, err
+	}
+	rawLoftConfigRes, err := t.tunnelClient.LoftConfig(ctx, &tunnel.Message{Message: string(req)})
+	if err != nil {
+		return nil, fmt.Errorf("fetch loft config: %w", err)
+	}
+	loftConfigRes := &loftconfig.LoftConfigResponse{}
+	err = json.Unmarshal([]byte(rawLoftConfigRes.Message), loftConfigRes)
+	if err != nil {
+		return nil, fmt.Errorf("get loft config: %w", err)
+	}
+
+	// get info from runner
+	spaceInstanceName := os.Getenv(platform.SpaceInstanceNameEnv)
+	virtualClusterInstanceName := os.Getenv(platform.VirtualClusterInstanceNameEnv)
+	namespace := os.Getenv(platform.InstanceNamespaceEnv)
+
+	// create kubeconfig based on info
+	kubeConfig, err := platform.NewInstanceKubeConfig(ctx, loftConfigRes.LoftConfig, spaceInstanceName, virtualClusterInstanceName, namespace)
+	if err != nil {
+		return nil, fmt.Errorf("create kube config: %w", err)
+	}
+
+	return &tunnel.Message{Message: string(kubeConfig)}, nil
 }
 
 func (t *tunnelServer) GPGPublicKeys(ctx context.Context, message *tunnel.Message) (*tunnel.Message, error) {

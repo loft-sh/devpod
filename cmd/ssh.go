@@ -689,7 +689,7 @@ func (cmd *SSHCmd) jumpLocalProxyContainer(ctx context.Context, devPodConfig *co
 		return err
 	}
 
-	runner, err := workspace.CreateRunner(workspaceInfo, log)
+	runner, err := workspace.CreateRunner(workspaceInfo, nil, log)
 	if err != nil {
 		return err
 	}

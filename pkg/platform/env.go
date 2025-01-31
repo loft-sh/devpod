@@ -18,4 +18,8 @@ const (
 
 	TimeoutEnv        = "LOFT_TIMEOUT"
 	ProviderBinaryEnv = "PRO_PROVIDER"
+
+	SpaceInstanceNameEnv          = "LOFT_SPACE_INSTANCE_NAME"
+	VirtualClusterInstanceNameEnv = "LOFT_VIRTUAL_CLUSTER_INSTANCE_NAME"
+	InstanceNamespaceEnv          = "LOFT_INSTANCE_NAMESPACE"
 )

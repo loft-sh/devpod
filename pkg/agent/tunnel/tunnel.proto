@@ -16,6 +16,7 @@ service Tunnel {
   rpc GitUser(Empty) returns (Message) {}
   rpc LoftConfig(Message) returns (Message) {}
   rpc GPGPublicKeys(Message) returns (Message) {}
+  rpc KubeConfig(Message) returns (Message) {}
 
   rpc ForwardPort(ForwardPortRequest) returns (ForwardPortResponse) {}
   rpc StopForwardPort(StopForwardPortRequest) returns (StopForwardPortResponse) {}

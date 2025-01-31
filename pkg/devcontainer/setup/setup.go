@@ -9,19 +9,22 @@ import (
 	"sort"
 	"strings"
 
+	"github.com/loft-sh/devpod/pkg/agent/tunnel"
 	"github.com/loft-sh/devpod/pkg/command"
 	copy2 "github.com/loft-sh/devpod/pkg/copy"
 	"github.com/loft-sh/devpod/pkg/devcontainer/config"
 	"github.com/loft-sh/devpod/pkg/envfile"
 	"github.com/loft-sh/log"
 	"github.com/pkg/errors"
+	"k8s.io/client-go/tools/clientcmd"
+	clientcmdapi "k8s.io/client-go/tools/clientcmd/api"
 )
 
 const (
 	ResultLocation = "/var/run/devpod/result.json"
 )
 
-func SetupContainer(ctx context.Context, setupInfo *config.Result, extraWorkspaceEnv []string, chownProjects bool, log log.Logger) error {
+func SetupContainer(ctx context.Context, setupInfo *config.Result, extraWorkspaceEnv []string, chownProjects bool, tunnelClient tunnel.TunnelClient, log log.Logger) error {
 	// write result to ResultLocation
 	WriteResult(setupInfo, log)
 
@@ -58,6 +61,11 @@ func SetupContainer(ctx context.Context, setupInfo *config.Result, extraWorkspac
 	err = ChownAgentSock(setupInfo)
 	if err != nil {
 		return errors.Wrap(err, "chown ssh agent sock file")
+	}
+
+	err = SetupKubeConfig(ctx, setupInfo, tunnelClient, log)
+	if err != nil {
+		log.Errorf("Error setting up KubeConfig: %v", err)
 	}
 
 	// run commands
@@ -229,6 +237,81 @@ func ChownAgentSock(setupInfo *config.Result) error {
 		if err != nil && !os.IsNotExist(err) {
 			return err
 		}
+	}
+
+	return nil
+}
+
+// SetupKubeConfig retrieves and stores a KubeConfig file in the default location `$HOME/.kube/config`.
+// It merges our KubeConfig with existing ones.
+func SetupKubeConfig(ctx context.Context, setupInfo *config.Result, tunnelClient tunnel.TunnelClient, log log.Logger) error {
+	exists, err := markerFileExists("setupKubeConfig", "")
+	if err != nil {
+		return err
+	} else if exists || tunnelClient == nil {
+		return nil
+	}
+
+	// get kubernetes config from setup server
+	kubeConfigRes, err := tunnelClient.KubeConfig(ctx, &tunnel.Message{})
+	if err != nil {
+		return err
+	} else if kubeConfigRes.Message == "" {
+		return nil
+	}
+
+	log.Info("Setup KubeConfig")
+	user := config.GetRemoteUser(setupInfo)
+	homeDir, err := command.GetHome(user)
+	if err != nil {
+		return err
+	}
+
+	kubeDir := filepath.Join(homeDir, ".kube")
+	err = os.Mkdir(kubeDir, 0755)
+	if err != nil && !errors.Is(err, os.ErrExist) {
+		return err
+	}
+
+	configPath := filepath.Join(kubeDir, "config")
+	existingConfig, err := clientcmd.LoadFromFile(configPath)
+	if err != nil && !errors.Is(err, os.ErrNotExist) {
+		return err
+	}
+	if existingConfig == nil {
+		existingConfig = clientcmdapi.NewConfig()
+	}
+
+	kubeConfig, err := clientcmd.Load([]byte(kubeConfigRes.Message))
+	if err != nil {
+		return err
+	}
+	// merge with existing kubeConfig
+	for name, cluster := range kubeConfig.Clusters {
+		existingConfig.Clusters[name] = cluster
+	}
+	for name, authInfo := range kubeConfig.AuthInfos {
+		existingConfig.AuthInfos[name] = authInfo
+	}
+	for name, context := range kubeConfig.Contexts {
+		existingConfig.Contexts[name] = context
+	}
+
+	// Set the current context to the new one.
+	// This might not always be the correct choice but given that someone
+	// explicitly required this workspace to be in a virtual cluster/space
+	// it's fair to assume they also want to point the current context to it
+	existingConfig.CurrentContext = kubeConfig.CurrentContext
+
+	err = clientcmd.WriteToFile(*existingConfig, configPath)
+	if err != nil {
+		return err
+	}
+
+	// ensure `remoteUser` owns kubeConfig
+	err = copy2.ChownR(kubeDir, user)
+	if err != nil {
+		return err
 	}
 
 	return nil
