@@ -23,6 +23,7 @@ import (
 	"gvisor.dev/gvisor/pkg/tcpip/header"
 )
 
+// +stateify savable
 type linkResolver struct {
 	resolver LinkAddressResolver
 
@@ -34,6 +35,8 @@ var _ NetworkDispatcher = (*nic)(nil)
 
 // nic represents a "network interface card" to which the networking stack is
 // attached.
+//
+// +stateify savable
 type nic struct {
 	NetworkLinkEndpoint
 
@@ -47,7 +50,7 @@ type nic struct {
 	// enableDisableMu is used to synchronize attempts to enable/disable the NIC.
 	// Without this mutex, calls to enable/disable the NIC may interleave and
 	// leave the NIC in an inconsistent state.
-	enableDisableMu nicRWMutex
+	enableDisableMu nicRWMutex `state:"nosave"`
 
 	// The network endpoints themselves may be modified by calling the interface's
 	// methods, but the map reference and entries must be constant.
@@ -69,7 +72,7 @@ type nic struct {
 	linkResQueue packetsPendingLinkResolution
 
 	// packetEPsMu protects annotated fields below.
-	packetEPsMu packetEPsRWMutex
+	packetEPsMu packetEPsRWMutex `state:"nosave"`
 
 	// eps is protected by the mutex, but the values contained in it are not.
 	//
@@ -78,7 +81,15 @@ type nic struct {
 
 	qDisc QueueingDiscipline
 
-	gro groDispatcher
+	// deliverLinkPackets specifies whether this NIC delivers packets to
+	// packet sockets. It is immutable.
+	//
+	// deliverLinkPackets is off by default because some users already
+	// deliver link packets by explicitly calling nic.DeliverLinkPackets.
+	deliverLinkPackets bool
+
+	// Primary is the main controlling interface in a bonded setup.
+	Primary *nic
 }
 
 // makeNICStats initializes the NIC statistics and associates them to the global
@@ -90,6 +101,7 @@ func makeNICStats(global tcpip.NICStats) sharedStats {
 	return stats
 }
 
+// +stateify savable
 type packetEndpointList struct {
 	mu packetEndpointListRWMutex
 
@@ -133,6 +145,7 @@ func (p *packetEndpointList) forEach(fn func(PacketEndpoint)) {
 
 var _ QueueingDiscipline = (*delegatingQueueingDiscipline)(nil)
 
+// +stateify savable
 type delegatingQueueingDiscipline struct {
 	LinkWriter
 }
@@ -174,6 +187,7 @@ func newNIC(stack *Stack, id tcpip.NICID, ep LinkEndpoint, opts NICOptions) *nic
 		linkAddrResolvers:         make(map[tcpip.NetworkProtocolNumber]*linkResolver),
 		duplicateAddressDetectors: make(map[tcpip.NetworkProtocolNumber]DuplicateAddressDetector),
 		qDisc:                     qDisc,
+		deliverLinkPackets:        opts.DeliverLinkPackets,
 	}
 	nic.linkResQueue.init(nic)
 
@@ -202,7 +216,6 @@ func newNIC(stack *Stack, id tcpip.NICID, ep LinkEndpoint, opts NICOptions) *nic
 		}
 	}
 
-	nic.gro.init(opts.GROTimeout)
 	nic.NetworkLinkEndpoint.Attach(nic)
 
 	return nic
@@ -298,7 +311,10 @@ func (n *nic) enable() tcpip.Error {
 // remove detaches NIC from the link endpoint and releases network endpoint
 // resources. This guarantees no packets between this NIC and the network
 // stack.
-func (n *nic) remove() tcpip.Error {
+//
+// It returns an action that has to be excuted after releasing the Stack lock
+// and any error encountered.
+func (n *nic) remove(closeLinkEndpoint bool) (func(), tcpip.Error) {
 	n.enableDisableMu.Lock()
 
 	n.disableLocked()
@@ -309,18 +325,24 @@ func (n *nic) remove() tcpip.Error {
 
 	n.enableDisableMu.Unlock()
 
-	// Shutdown GRO.
-	n.gro.close()
-
 	// Drain and drop any packets pending link resolution.
 	// We must not hold n.enableDisableMu here.
 	n.linkResQueue.cancel()
 
+	var deferAct func()
 	// Prevent packets from going down to the link before shutting the link down.
 	n.qDisc.Close()
 	n.NetworkLinkEndpoint.Attach(nil)
+	if closeLinkEndpoint {
+		ep := n.NetworkLinkEndpoint
+		ep.SetOnCloseAction(nil)
+		// The link endpoint has to be closed without holding a
+		// netstack lock, because it can trigger other netstack
+		// operations.
+		deferAct = ep.Close
+	}
 
-	return nil
+	return deferAct, nil
 }
 
 // setPromiscuousMode enables or disables promiscuous mode.
@@ -396,6 +418,11 @@ func (n *nic) writeRawPacketWithLinkHeaderInPayload(pkt *PacketBuffer) tcpip.Err
 func (n *nic) writeRawPacket(pkt *PacketBuffer) tcpip.Error {
 	// Always an outgoing packet.
 	pkt.PktType = tcpip.PacketOutgoing
+
+	if n.deliverLinkPackets {
+		n.DeliverLinkPacket(pkt.NetworkProtocolNumber, pkt)
+	}
+
 	if err := n.qDisc.WritePacket(pkt); err != nil {
 		if _, ok := err.(*tcpip.ErrNoBufferSpace); ok {
 			n.stats.txPacketsDroppedNoBufferSpace.Increment()
@@ -498,7 +525,7 @@ func (n *nic) getAddressOrCreateTempInner(protocol tcpip.NetworkProtocolNumber, 
 		return nil
 	}
 
-	return addressableEndpoint.AcquireAssignedAddress(address, createTemp, peb)
+	return addressableEndpoint.AcquireAssignedAddress(address, createTemp, peb, false)
 }
 
 // addAddress adds a new address to n, so that it starts accepting packets
@@ -735,19 +762,23 @@ func (n *nic) DeliverNetworkPacket(protocol tcpip.NetworkProtocolNumber, pkt *Pa
 
 	pkt.RXChecksumValidated = n.NetworkLinkEndpoint.Capabilities()&CapabilityRXChecksumOffload != 0
 
-	n.gro.dispatch(pkt, protocol, networkEndpoint)
+	if n.deliverLinkPackets {
+		n.DeliverLinkPacket(protocol, pkt)
+	}
+
+	networkEndpoint.HandlePacket(pkt)
 }
 
 func (n *nic) DeliverLinkPacket(protocol tcpip.NetworkProtocolNumber, pkt *PacketBuffer) {
 	// Deliver to interested packet endpoints without holding NIC lock.
 	var packetEPPkt *PacketBuffer
 	defer func() {
-		if !packetEPPkt.IsNil() {
+		if packetEPPkt != nil {
 			packetEPPkt.DecRef()
 		}
 	}()
 	deliverPacketEPs := func(ep PacketEndpoint) {
-		if packetEPPkt.IsNil() {
+		if packetEPPkt == nil {
 			// Packet endpoints hold the full packet.
 			//
 			// We perform a deep copy because higher-level endpoints may point to
@@ -1062,4 +1093,12 @@ func (n *nic) multicastForwarding(protocol tcpip.NetworkProtocolNumber) (bool, t
 	}
 
 	return ep.MulticastForwarding(), nil
+}
+
+// CoordinatorNIC represents NetworkLinkEndpoint that can join multiple network devices.
+type CoordinatorNIC interface {
+	// AddNIC adds the specified NIC device.
+	AddNIC(n *nic) tcpip.Error
+	// DelNIC deletes the specified NIC device.
+	DelNIC(n *nic) tcpip.Error
 }

@@ -10,7 +10,9 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"iter"
 	"maps"
+	"reflect"
 	"slices"
 
 	"go4.org/mem"
@@ -111,6 +113,13 @@ type StructView[T any] interface {
 	AsStruct() T
 }
 
+// Cloner is any type that has a Clone function returning a deep-clone of the receiver.
+type Cloner[T any] interface {
+	// Clone returns a deep-clone of the receiver.
+	// It returns nil, when the receiver is nil.
+	Clone() T
+}
+
 // ViewCloner is any type that has had View and Clone funcs generated using
 // tailscale.com/cmd/viewer.
 type ViewCloner[T any, V StructView[T]] interface {
@@ -136,6 +145,17 @@ type SliceView[T ViewCloner[T, V], V StructView[T]] struct {
 	// It is named distinctively to make you think of how dangerous it is to escape
 	// to callers. You must not let callers be able to mutate it.
 	ж []T
+}
+
+// All returns an iterator over v.
+func (v SliceView[T, V]) All() iter.Seq2[int, V] {
+	return func(yield func(int, V) bool) {
+		for i := range v.ж {
+			if !yield(i, v.ж[i].View()) {
+				return
+			}
+		}
+	}
 }
 
 // MarshalJSON implements json.Marshaler.
@@ -198,6 +218,17 @@ type Slice[T any] struct {
 	// It is named distinctively to make you think of how dangerous it is to escape
 	// to callers. You must not let callers be able to mutate it.
 	ж []T
+}
+
+// All returns an iterator over v.
+func (v Slice[T]) All() iter.Seq2[int, T] {
+	return func(yield func(int, T) bool) {
+		for i, v := range v.ж {
+			if !yield(i, v) {
+				return
+			}
+		}
+	}
 }
 
 // MapKey returns a unique key for a slice, based on its address and length.
@@ -329,13 +360,99 @@ func SliceEqualAnyOrder[T comparable](a, b Slice[T]) bool {
 	return true
 }
 
-// MapOf returns a view over m. It is the caller's responsibility to make sure K
-// and V is immutable, if this is being used to provide a read-only view over m.
-func MapOf[K comparable, V comparable](m map[K]V) Map[K, V] {
-	return Map[K, V]{m}
+// MapSlice is a view over a map whose values are slices.
+type MapSlice[K comparable, V any] struct {
+	// ж is the underlying mutable value, named with a hard-to-type
+	// character that looks pointy like a pointer.
+	// It is named distinctively to make you think of how dangerous it is to escape
+	// to callers. You must not let callers be able to mutate it.
+	ж map[K][]V
 }
 
-// Map is a view over a map whose values are immutable.
+// MapSliceOf returns a MapSlice for the provided map. It is the caller's
+// responsibility to make sure V is immutable.
+func MapSliceOf[K comparable, V any](m map[K][]V) MapSlice[K, V] {
+	return MapSlice[K, V]{m}
+}
+
+// Contains reports whether k has an entry in the map.
+func (m MapSlice[K, V]) Contains(k K) bool {
+	_, ok := m.ж[k]
+	return ok
+}
+
+// IsNil reports whether the underlying map is nil.
+func (m MapSlice[K, V]) IsNil() bool {
+	return m.ж == nil
+}
+
+// Len returns the number of elements in the map.
+func (m MapSlice[K, V]) Len() int { return len(m.ж) }
+
+// Get returns the element with key k.
+func (m MapSlice[K, V]) Get(k K) Slice[V] {
+	return SliceOf(m.ж[k])
+}
+
+// GetOk returns the element with key k and a bool representing whether the key
+// is in map.
+func (m MapSlice[K, V]) GetOk(k K) (Slice[V], bool) {
+	v, ok := m.ж[k]
+	return SliceOf(v), ok
+}
+
+// MarshalJSON implements json.Marshaler.
+func (m MapSlice[K, V]) MarshalJSON() ([]byte, error) {
+	return json.Marshal(m.ж)
+}
+
+// UnmarshalJSON implements json.Unmarshaler.
+// It should only be called on an uninitialized Map.
+func (m *MapSlice[K, V]) UnmarshalJSON(b []byte) error {
+	if m.ж != nil {
+		return errors.New("already initialized")
+	}
+	return json.Unmarshal(b, &m.ж)
+}
+
+// Range calls f for every k,v pair in the underlying map.
+// It stops iteration immediately if f returns false.
+func (m MapSlice[K, V]) Range(f MapRangeFn[K, Slice[V]]) {
+	for k, v := range m.ж {
+		if !f(k, SliceOf(v)) {
+			return
+		}
+	}
+}
+
+// AsMap returns a shallow-clone of the underlying map.
+//
+// If V is a pointer type, it is the caller's responsibility to make sure the
+// values are immutable. The map and slices are cloned, but the values are not.
+func (m MapSlice[K, V]) AsMap() map[K][]V {
+	if m.ж == nil {
+		return nil
+	}
+	out := maps.Clone(m.ж)
+	for k, v := range out {
+		out[k] = slices.Clone(v)
+	}
+	return out
+}
+
+// All returns an iterator iterating over the keys and values of m.
+func (m MapSlice[K, V]) All() iter.Seq2[K, Slice[V]] {
+	return func(yield func(K, Slice[V]) bool) {
+		for k, v := range m.ж {
+			if !yield(k, SliceOf(v)) {
+				return
+			}
+		}
+	}
+}
+
+// Map provides a read-only view of a map. It is the caller's responsibility to
+// make sure V is immutable.
 type Map[K comparable, V any] struct {
 	// ж is the underlying mutable value, named with a hard-to-type
 	// character that looks pointy like a pointer.
@@ -344,8 +461,20 @@ type Map[K comparable, V any] struct {
 	ж map[K]V
 }
 
+// MapOf returns a view over m. It is the caller's responsibility to make sure V
+// is immutable.
+func MapOf[K comparable, V any](m map[K]V) Map[K, V] {
+	return Map[K, V]{m}
+}
+
 // Has reports whether k has an entry in the map.
+// Deprecated: use Contains instead.
 func (m Map[K, V]) Has(k K) bool {
+	return m.Contains(k)
+}
+
+// Contains reports whether k has an entry in the map.
+func (m Map[K, V]) Contains(k K) bool {
 	_, ok := m.ж[k]
 	return ok
 }
@@ -408,6 +537,18 @@ func (m Map[K, V]) Range(f MapRangeFn[K, V]) {
 	}
 }
 
+// All returns an iterator iterating over the keys
+// and values of m.
+func (m Map[K, V]) All() iter.Seq2[K, V] {
+	return func(yield func(K, V) bool) {
+		for k, v := range m.ж {
+			if !yield(k, v) {
+				return
+			}
+		}
+	}
+}
+
 // MapFnOf returns a MapFn for m.
 func MapFnOf[K comparable, T any, V any](m map[K]T, f func(T) V) MapFn[K, T, V] {
 	return MapFn[K, T, V]{
@@ -428,7 +569,13 @@ type MapFn[K comparable, T any, V any] struct {
 }
 
 // Has reports whether k has an entry in the map.
+// Deprecated: use Contains instead.
 func (m MapFn[K, T, V]) Has(k K) bool {
+	return m.Contains(k)
+}
+
+// Contains reports whether k has an entry in the map.
+func (m MapFn[K, T, V]) Contains(k K) bool {
 	_, ok := m.ж[k]
 	return ok
 }
@@ -460,5 +607,59 @@ func (m MapFn[K, T, V]) Range(f MapRangeFn[K, V]) {
 		if !f(k, m.wrapv(v)) {
 			return
 		}
+	}
+}
+
+// All returns an iterator iterating over the keys and value views of m.
+func (m MapFn[K, T, V]) All() iter.Seq2[K, V] {
+	return func(yield func(K, V) bool) {
+		for k, v := range m.ж {
+			if !yield(k, m.wrapv(v)) {
+				return
+			}
+		}
+	}
+}
+
+// ContainsPointers reports whether T contains any pointers,
+// either explicitly or implicitly.
+// It has special handling for some types that contain pointers
+// that we know are free from memory aliasing/mutation concerns.
+func ContainsPointers[T any]() bool {
+	return containsPointers(reflect.TypeFor[T]())
+}
+
+func containsPointers(typ reflect.Type) bool {
+	switch typ.Kind() {
+	case reflect.Pointer, reflect.UnsafePointer:
+		return true
+	case reflect.Chan, reflect.Map, reflect.Slice:
+		return true
+	case reflect.Array:
+		return containsPointers(typ.Elem())
+	case reflect.Interface, reflect.Func:
+		return true // err on the safe side.
+	case reflect.Struct:
+		if isWellKnownImmutableStruct(typ) {
+			return false
+		}
+		for i := range typ.NumField() {
+			if containsPointers(typ.Field(i).Type) {
+				return true
+			}
+		}
+	}
+	return false
+}
+
+func isWellKnownImmutableStruct(typ reflect.Type) bool {
+	switch typ.String() {
+	case "time.Time":
+		// time.Time contains a pointer that does not need copying
+		return true
+	case "netip.Addr", "netip.Prefix", "netip.AddrPort":
+		return true
+	default:
+		return false
 	}
 }

@@ -16,8 +16,8 @@ type DumpListNode[V any] struct {
 	Subnets []DumpListNode[V] `json:"subnets,omitempty"`
 }
 
-// MarshalJSON dumps table into two sorted lists: for ipv4 and ipv6.
-// Every root and subnet are array, not map, because the order matters.
+// MarshalJSON dumps the table into two sorted lists: for ipv4 and ipv6.
+// Every root and subnet is an array, not a map, because the order matters.
 func (t *Table[V]) MarshalJSON() ([]byte, error) {
 	t.init()
 
@@ -25,8 +25,8 @@ func (t *Table[V]) MarshalJSON() ([]byte, error) {
 		Ipv4 []DumpListNode[V] `json:"ipv4,omitempty"`
 		Ipv6 []DumpListNode[V] `json:"ipv6,omitempty"`
 	}{
-		Ipv4: t.DumpList(true),
-		Ipv6: t.DumpList(false),
+		Ipv4: t.DumpList4(),
+		Ipv6: t.DumpList6(),
 	}
 
 	buf, err := json.Marshal(result)
@@ -37,28 +37,36 @@ func (t *Table[V]) MarshalJSON() ([]byte, error) {
 	return buf, nil
 }
 
-// DumpList dumps ipv4 or ipv6 tree into list of roots and their subnets.
-// It can be used to analyze tree or build custom json representation.
-func (t *Table[V]) DumpList(is4 bool) []DumpListNode[V] {
+// DumpList4 dumps the ipv4 tree into a list of roots and their subnets.
+// It can be used to analyze the tree or build custom json representation.
+func (t *Table[V]) DumpList4() []DumpListNode[V] {
 	t.init()
-	rootNode := t.rootNodeByVersion(is4)
-	if rootNode.isEmpty() {
+	if t.rootV4 == nil {
 		return nil
 	}
-
-	return rootNode.dumpListRec(0, nil, is4)
+	return t.rootV4.dumpListRec(0, zeroPath, 0, true)
 }
 
-func (n *node[V]) dumpListRec(parentIdx uint, path []byte, is4 bool) []DumpListNode[V] {
-	directKids := n.getKidsRec(parentIdx, path, is4)
-	slices.SortFunc(directKids, sortPrefix[V])
+// DumpList6 dumps the ipv6 tree into a list of roots and their subnets.
+// It can be used to analyze the tree or build custom json representation.
+func (t *Table[V]) DumpList6() []DumpListNode[V] {
+	t.init()
+	if t.rootV6 == nil {
+		return nil
+	}
+	return t.rootV6.dumpListRec(0, zeroPath, 0, false)
+}
+
+func (n *node[V]) dumpListRec(parentIdx uint, path [16]byte, depth int, is4 bool) []DumpListNode[V] {
+	directKids := n.getKidsRec(parentIdx, path, depth, is4)
+	slices.SortFunc(directKids, cmpKidByPrefix[V])
 
 	nodes := make([]DumpListNode[V], 0, len(directKids))
 	for _, kid := range directKids {
 		nodes = append(nodes, DumpListNode[V]{
 			CIDR:    kid.cidr,
 			Value:   kid.val,
-			Subnets: kid.n.dumpListRec(kid.idx, kid.path, is4),
+			Subnets: kid.n.dumpListRec(kid.idx, kid.path, kid.depth, is4),
 		})
 	}
 
