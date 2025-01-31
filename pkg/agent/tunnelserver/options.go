@@ -1,6 +1,7 @@
 package tunnelserver
 
 import (
+	"github.com/loft-sh/devpod/pkg/agent/tunnel"
 	"github.com/loft-sh/devpod/pkg/devcontainer/config"
 	"github.com/loft-sh/devpod/pkg/netstat"
 	provider2 "github.com/loft-sh/devpod/pkg/provider"
@@ -36,6 +37,13 @@ func WithAllowDockerCredentials(allowDockerCredentials bool) Option {
 	}
 }
 
+func WithAllowKubeConfig(allow bool) Option {
+	return func(s *tunnelServer) *tunnelServer {
+		s.allowKubeConfig = allow
+		return s
+	}
+}
+
 func WithMounts(mounts []*config.Mount) Option {
 	return func(s *tunnelServer) *tunnelServer {
 		s.mounts = mounts
@@ -49,6 +57,13 @@ func WithGitCredentialsOverride(username string, token string) Option {
 			username: username,
 			token:    token,
 		}
+		return s
+	}
+}
+
+func WithTunnelClient(tunnelClient tunnel.TunnelClient) Option {
+	return func(s *tunnelServer) *tunnelServer {
+		s.tunnelClient = tunnelClient
 		return s
 	}
 }

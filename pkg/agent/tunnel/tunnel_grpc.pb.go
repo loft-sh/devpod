@@ -30,6 +30,7 @@ const (
 	Tunnel_GitUser_FullMethodName           = "/tunnel.Tunnel/GitUser"
 	Tunnel_LoftConfig_FullMethodName        = "/tunnel.Tunnel/LoftConfig"
 	Tunnel_GPGPublicKeys_FullMethodName     = "/tunnel.Tunnel/GPGPublicKeys"
+	Tunnel_KubeConfig_FullMethodName        = "/tunnel.Tunnel/KubeConfig"
 	Tunnel_ForwardPort_FullMethodName       = "/tunnel.Tunnel/ForwardPort"
 	Tunnel_StopForwardPort_FullMethodName   = "/tunnel.Tunnel/StopForwardPort"
 	Tunnel_StreamGitClone_FullMethodName    = "/tunnel.Tunnel/StreamGitClone"
@@ -50,6 +51,7 @@ type TunnelClient interface {
 	GitUser(ctx context.Context, in *Empty, opts ...grpc.CallOption) (*Message, error)
 	LoftConfig(ctx context.Context, in *Message, opts ...grpc.CallOption) (*Message, error)
 	GPGPublicKeys(ctx context.Context, in *Message, opts ...grpc.CallOption) (*Message, error)
+	KubeConfig(ctx context.Context, in *Message, opts ...grpc.CallOption) (*Message, error)
 	ForwardPort(ctx context.Context, in *ForwardPortRequest, opts ...grpc.CallOption) (*ForwardPortResponse, error)
 	StopForwardPort(ctx context.Context, in *StopForwardPortRequest, opts ...grpc.CallOption) (*StopForwardPortResponse, error)
 	StreamGitClone(ctx context.Context, in *Empty, opts ...grpc.CallOption) (grpc.ServerStreamingClient[Chunk], error)
@@ -155,6 +157,16 @@ func (c *tunnelClient) GPGPublicKeys(ctx context.Context, in *Message, opts ...g
 	return out, nil
 }
 
+func (c *tunnelClient) KubeConfig(ctx context.Context, in *Message, opts ...grpc.CallOption) (*Message, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(Message)
+	err := c.cc.Invoke(ctx, Tunnel_KubeConfig_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 func (c *tunnelClient) ForwardPort(ctx context.Context, in *ForwardPortRequest, opts ...grpc.CallOption) (*ForwardPortResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(ForwardPortResponse)
@@ -245,6 +257,7 @@ type TunnelServer interface {
 	GitUser(context.Context, *Empty) (*Message, error)
 	LoftConfig(context.Context, *Message) (*Message, error)
 	GPGPublicKeys(context.Context, *Message) (*Message, error)
+	KubeConfig(context.Context, *Message) (*Message, error)
 	ForwardPort(context.Context, *ForwardPortRequest) (*ForwardPortResponse, error)
 	StopForwardPort(context.Context, *StopForwardPortRequest) (*StopForwardPortResponse, error)
 	StreamGitClone(*Empty, grpc.ServerStreamingServer[Chunk]) error
@@ -286,6 +299,9 @@ func (UnimplementedTunnelServer) LoftConfig(context.Context, *Message) (*Message
 }
 func (UnimplementedTunnelServer) GPGPublicKeys(context.Context, *Message) (*Message, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GPGPublicKeys not implemented")
+}
+func (UnimplementedTunnelServer) KubeConfig(context.Context, *Message) (*Message, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method KubeConfig not implemented")
 }
 func (UnimplementedTunnelServer) ForwardPort(context.Context, *ForwardPortRequest) (*ForwardPortResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method ForwardPort not implemented")
@@ -485,6 +501,24 @@ func _Tunnel_GPGPublicKeys_Handler(srv interface{}, ctx context.Context, dec fun
 	return interceptor(ctx, in, info, handler)
 }
 
+func _Tunnel_KubeConfig_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(Message)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(TunnelServer).KubeConfig(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Tunnel_KubeConfig_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(TunnelServer).KubeConfig(ctx, req.(*Message))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 func _Tunnel_ForwardPort_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(ForwardPortRequest)
 	if err := dec(in); err != nil {
@@ -596,6 +630,10 @@ var Tunnel_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "GPGPublicKeys",
 			Handler:    _Tunnel_GPGPublicKeys_Handler,
+		},
+		{
+			MethodName: "KubeConfig",
+			Handler:    _Tunnel_KubeConfig_Handler,
 		},
 		{
 			MethodName: "ForwardPort",
