@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"k8s.io/klog/v2"
+	"tailscale.com/client/tailscale"
 	"tailscale.com/envknob"
 	"tailscale.com/ipn/store/mem"
 	"tailscale.com/tsnet"
@@ -24,6 +25,7 @@ type TSNet interface {
 	Start(ctx context.Context) error
 	Stop()
 	Dial(ctx context.Context, network, addr string) (net.Conn, error)
+	LocalClient() (*tailscale.LocalClient, error)
 }
 
 // tsNet is the implementation of TSNet
@@ -49,7 +51,7 @@ func NewTSNet(config *TSNetConfig) TSNet {
 	}
 }
 
-// Start starts the TSNet server and binds port handlers
+// Start runs tailscale up and binds port handlers
 func (t *tsNet) Start(ctx context.Context) error {
 	if t.config.AccessKey == "" || t.config.Host == "" {
 		return fmt.Errorf("access key or host cannot be empty")
@@ -81,7 +83,7 @@ func (t *tsNet) Start(ctx context.Context) error {
 	}
 
 	// Start the server
-	if err := t.tsServer.Start(); err != nil {
+	if _, err := t.tsServer.Up(ctx); err != nil {
 		return fmt.Errorf("failed to start tsnet server: %w", err)
 	}
 
@@ -120,9 +122,17 @@ func (t *tsNet) Stop() {
 // Dial allows dialing to a specific address via Tailscale
 func (t *tsNet) Dial(ctx context.Context, network, addr string) (net.Conn, error) {
 	if t.tsServer == nil {
-		return nil, fmt.Errorf("Tailscale server is not running")
+		return nil, fmt.Errorf("tailscale server is not running")
 	}
 	return t.tsServer.Dial(ctx, network, addr)
+}
+
+// LocalClient returns the tailscale API client to the caller
+func (t *tsNet) LocalClient() (*tailscale.LocalClient, error) {
+	if t.tsServer == nil {
+		return nil, fmt.Errorf("tailscale server is not running")
+	}
+	return t.tsServer.LocalClient()
 }
 
 // checkDerpConnection validates the DERP connection

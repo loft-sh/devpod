@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"net"
 
-	"github.com/vishvananda/netlink/nl"
+	"github.com/tailscale/netlink/nl"
 	"golang.org/x/sys/unix"
 )
 
@@ -307,6 +307,7 @@ func (h *Handle) RdmaLinkDel(name string) error {
 
 // RdmaLinkAdd adds an rdma link for the specified type to the network device.
 // Similar to: rdma link add NAME type TYPE netdev NETDEV
+//
 //	NAME - specifies the new name of the rdma link to add
 //	TYPE - specifies which rdma type to use.  Link types:
 //		rxe - Soft RoCE driver

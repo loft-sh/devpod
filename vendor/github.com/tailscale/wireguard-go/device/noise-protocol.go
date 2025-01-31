@@ -124,7 +124,7 @@ type Handshake struct {
 	localEphemeral            NoisePrivateKey          // ephemeral secret key
 	localIndex                uint32                   // used to clear hash-table
 	remoteIndex               uint32                   // index for sending
-	remoteStatic              NoisePublicKey           // long term key
+	remoteStatic              NoisePublicKey           // long term key, never changes, can be accessed without mutex
 	remoteEphemeral           NoisePublicKey           // ephemeral public key
 	precomputedStaticStatic   [NoisePublicKeySize]byte // precomputed shared secret
 	lastTimestamp             tai64n.Timestamp

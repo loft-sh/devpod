@@ -702,7 +702,9 @@ func pseudoHeaderChecksum32(protocol uint8, srcAddr, dstAddr []byte, totalLen ui
 	return foldedSum
 }
 
-func pseudoHeaderChecksum(protocol uint8, srcAddr, dstAddr []byte, totalLen uint16) uint16 {
+// PseudoHeaderChecksum computes an IP pseudo-header checksum. srcAddr and
+// dstAddr must be 4 or 16 bytes in length.
+func PseudoHeaderChecksum(protocol uint8, srcAddr, dstAddr []byte, totalLen uint16) uint16 {
 	if strconv.IntSize < 64 {
 		return pseudoHeaderChecksum32(protocol, srcAddr, dstAddr, totalLen)
 	}

@@ -492,6 +492,9 @@ func lexKeyEnd(lx *lexer) stateFn {
 		lx.emit(itemKeyEnd)
 		return lexSkip(lx, lexValue)
 	default:
+		if r == '\n' {
+			return lx.errorPrevLine(fmt.Errorf("expected '.' or '=', but got %q instead", r))
+		}
 		return lx.errorf("expected '.' or '=', but got %q instead", r)
 	}
 }
@@ -559,6 +562,9 @@ func lexValue(lx *lexer) stateFn {
 	}
 	if r == eof {
 		return lx.errorf("unexpected EOF; expected value")
+	}
+	if r == '\n' {
+		return lx.errorPrevLine(fmt.Errorf("expected value but found %q instead", r))
 	}
 	return lx.errorf("expected value but found %q instead", r)
 }

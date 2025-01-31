@@ -10,17 +10,27 @@ import (
 	"strings"
 )
 
+type nodeType byte
+
+const (
+	nullNode         nodeType = iota // empty node
+	fullNode                         // prefixes and children
+	leafNode                         // only prefixes
+	intermediateNode                 // only children
+)
+
+// ##################################################
+//  useful during development, debugging and testing
+// ##################################################
+
 // dumpString is just a wrapper for dump.
 func (t *Table[V]) dumpString() string {
 	w := new(strings.Builder)
-	if err := t.dump(w); err != nil {
-		panic(err)
-	}
+	t.dump(w)
 	return w.String()
 }
 
-// dump the IPv4 and IPv6 tables to w.
-// Useful during development and debugging.
+// dump the table structure and all the nodes to w.
 //
 //	 Output:
 //
@@ -47,89 +57,98 @@ func (t *Table[V]) dumpString() string {
 //		...prefxs(#1): 1/8
 //
 // ...
-func (t *Table[V]) dump(w io.Writer) error {
+func (t *Table[V]) dump(w io.Writer) {
 	t.init()
 
-	if _, err := fmt.Fprint(w, "IPv4:\n"); err != nil {
-		return err
-	}
-	t.rootV4.dumpRec(w, nil, true)
+	fmt.Fprint(w, "### IPv4:")
+	t.rootV4.dumpRec(w, zeroPath, 0, true)
 
-	if _, err := fmt.Fprint(w, "IPv6:\n"); err != nil {
-		return err
-	}
-	t.rootV6.dumpRec(w, nil, false)
-
-	return nil
+	fmt.Fprint(w, "### IPv6:")
+	t.rootV6.dumpRec(w, zeroPath, 0, false)
 }
 
 // dumpRec, rec-descent the trie.
-func (n *node[V]) dumpRec(w io.Writer, path []byte, is4 bool) {
-	n.dump(w, path, is4)
+func (n *node[V]) dumpRec(w io.Writer, path [16]byte, depth int, is4 bool) {
+	n.dump(w, path, depth, is4)
 
-	for i, child := range n.children.nodes {
-		addr := n.children.addrs.Select(uint(i))
-		child.dumpRec(w, append(path, byte(addr)), is4)
+	// make backing arrays, no heap allocs
+	addrBackingArray := [maxNodeChildren]uint{}
+
+	// the node may have childs, the rec-descent monster starts
+	for i, addr := range n.allChildAddrs(addrBackingArray[:]) {
+		octet := byte(addr)
+		child := n.children[i]
+		path[depth] = octet
+
+		child.dumpRec(w, path, depth+1, is4)
 	}
 }
 
 // dump the node to w.
-func (n *node[V]) dump(w io.Writer, path []byte, is4 bool) {
-	must := func(_ int, err error) {
-		if err != nil {
-			panic(err)
-		}
-	}
-
-	depth := len(path)
-	bits := depth * stride
+func (n *node[V]) dump(w io.Writer, path [16]byte, depth int, is4 bool) {
+	bits := depth * strideLen
 	indent := strings.Repeat(".", depth)
 
-	// node type with depth and addr path and bits.
-	must(fmt.Fprintf(w, "\n%s[%s] depth:  %d path: [%v] / %d\n",
-		indent, n.hasType(), depth, ancestors(path, is4), bits))
+	// node type with depth and octet path and bits.
+	fmt.Fprintf(w, "\n%s[%s] depth:  %d path: [%s] / %d\n",
+		indent, n.hasType(), depth, ipStridePath(path, depth, is4), bits)
 
-	if len(n.prefixes.values) != 0 {
-		indices := n.prefixes.allIndexes()
+	if nPfxLen := len(n.prefixes); nPfxLen != 0 {
+		// make backing arrays, no heap allocs
+		idxBackingArray := [maxNodePrefixes]uint{}
+		allIndices := n.allStrideIndexes(idxBackingArray[:])
+
 		// print the baseIndices for this node.
-		must(fmt.Fprintf(w, "%sindexs(#%d): %v\n", indent, len(n.prefixes.values), indices))
+		fmt.Fprintf(w, "%sindexs(#%d): %v\n", indent, nPfxLen, allIndices)
 
 		// print the prefixes for this node
-		must(fmt.Fprintf(w, "%sprefxs(#%d): ", indent, len(n.prefixes.values)))
+		fmt.Fprintf(w, "%sprefxs(#%d):", indent, nPfxLen)
 
-		for _, idx := range indices {
-			addr, bits := baseIndexToPrefix(idx)
-			must(fmt.Fprintf(w, "%s/%d ", addrFmt(addr, is4), bits))
+		for _, idx := range allIndices {
+			octet, bits := baseIndexToPrefix(idx)
+			fmt.Fprintf(w, " %s/%d", octetFmt(octet, is4), bits)
 		}
-		must(fmt.Fprintln(w))
+		fmt.Fprintln(w)
+
+		// print the values for this node
+		fmt.Fprintf(w, "%svalues(#%d):", indent, nPfxLen)
+
+		for _, val := range n.prefixes {
+			fmt.Fprintf(w, " %v", val)
+		}
+		fmt.Fprintln(w)
 	}
 
-	if len(n.children.nodes) != 0 {
+	if childs := len(n.children); childs != 0 {
 		// print the childs for this node
-		must(fmt.Fprintf(w, "%schilds(#%d): ", indent, len(n.children.nodes)))
+		fmt.Fprintf(w, "%schilds(#%d):", indent, childs)
 
-		for i := range n.children.nodes {
-			addr := n.children.addrs.Select(uint(i))
-			must(fmt.Fprintf(w, "%s ", addrFmt(addr, is4)))
+		addrBackingArray := [maxNodeChildren]uint{}
+		for _, addr := range n.allChildAddrs(addrBackingArray[:]) {
+			octet := byte(addr)
+			fmt.Fprintf(w, " %s", octetFmt(octet, is4))
 		}
-		must(fmt.Fprintln(w))
+		fmt.Fprintln(w)
 	}
 }
 
-// addrFmt, different format strings for IPv4 and IPv6, decimal versus hex.
-func addrFmt(addr uint, is4 bool) string {
+// octetFmt, different format strings for IPv4 and IPv6, decimal versus hex.
+func octetFmt(octet byte, is4 bool) string {
 	if is4 {
-		return fmt.Sprintf("%d", addr)
+		return fmt.Sprintf("%d", octet)
 	}
-	return fmt.Sprintf("0x%02x", addr)
+	return fmt.Sprintf("0x%02x", octet)
 }
 
-// IP stride path, different formats for IPv4 and IPv6, dotted decimal or hex.
-func ancestors(bs []byte, is4 bool) string {
+// ip stride path, different formats for IPv4 and IPv6, dotted decimal or hex.
+//
+//	127.0.0
+//	2001:0d
+func ipStridePath(path [16]byte, depth int, is4 bool) string {
 	buf := new(strings.Builder)
 
 	if is4 {
-		for i, b := range bs {
+		for i, b := range path[:depth] {
 			if i != 0 {
 				buf.WriteString(".")
 			}
@@ -138,7 +157,7 @@ func ancestors(bs []byte, is4 bool) string {
 		return buf.String()
 	}
 
-	for i, b := range bs {
+	for i, b := range path[:depth] {
 		if i != 0 && i%2 == 0 {
 			buf.WriteString(":")
 		}
@@ -151,7 +170,7 @@ func ancestors(bs []byte, is4 bool) string {
 func (nt nodeType) String() string {
 	switch nt {
 	case nullNode:
-		return "ROOT"
+		return "NULL"
 	case fullNode:
 		return "FULL"
 	case leafNode:
@@ -164,8 +183,8 @@ func (nt nodeType) String() string {
 
 // hasType returns the nodeType.
 func (n *node[V]) hasType() nodeType {
-	lenPefixes := len(n.prefixes.values)
-	lenChilds := len(n.children.nodes)
+	lenPefixes := len(n.prefixes)
+	lenChilds := len(n.children)
 
 	if lenPefixes == 0 && lenChilds != 0 {
 		return intermediateNode
