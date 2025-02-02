@@ -1,6 +1,7 @@
 package vscode
 
 import (
+	"bytes"
 	"context"
 	"errors"
 	"fmt"
@@ -76,7 +77,7 @@ func openViaCLI(ctx context.Context, workspace, folder string, newWindow bool, f
 	}
 
 	if codePath[0] == "flatpak" {
-		log.Debugf("Running with Flatpak suing the package %s.", codePath[2])
+		log.Debugf("Running with Flatpak using the package %s.", codePath[2])
 		out, err := exec.Command(codePath[0], "ps", "--columns=application").Output()
 		if err != nil {
 			return command.WrapCommandError(out, err)
@@ -144,10 +145,18 @@ func openViaCLI(ctx context.Context, workspace, folder string, newWindow bool, f
 	folderUriArg := fmt.Sprintf("--folder-uri=vscode-remote://ssh-remote+%s.devpod/%s", workspace, folder)
 	args = append(codePath, args...)
 	args = append(args, folderUriArg)
+	cmd := exec.CommandContext(ctx, args[0], args[1:]...)
+	var b bytes.Buffer
+	if codePath[0] != "flatpak" {
+		cmd.Stdout = &b
+		cmd.Stderr = &b
+	} else {
+		log.Debug("Skipping output capture due to issue with `flatpak run` leading the command to hang")
+	}
 	log.Debugf("Run %s command %s %s", flavor.DisplayName(), args[0], strings.Join(args[1:], " "))
-	out, err = exec.CommandContext(ctx, args[0], args[1:]...).CombinedOutput()
+	err = cmd.Run()
 	if err != nil {
-		return command.WrapCommandError(out, err)
+		return command.WrapCommandError(b.Bytes(), err)
 	}
 
 	return nil
