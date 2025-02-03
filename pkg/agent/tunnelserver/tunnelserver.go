@@ -15,7 +15,6 @@ import (
 	"github.com/loft-sh/devpod/pkg/devcontainer/config"
 	"github.com/loft-sh/devpod/pkg/dockercredentials"
 	"github.com/loft-sh/devpod/pkg/extract"
-	"github.com/loft-sh/devpod/pkg/git"
 	"github.com/loft-sh/devpod/pkg/gitcredentials"
 	"github.com/loft-sh/devpod/pkg/gitsshsigning"
 	"github.com/loft-sh/devpod/pkg/gpg"
@@ -333,75 +332,6 @@ func (t *tunnelServer) Log(ctx context.Context, message *tunnel.LogMessage) (*tu
 	}
 
 	return &tunnel.Empty{}, nil
-}
-
-func (t *tunnelServer) StreamGitClone(message *tunnel.Empty, stream tunnel.Tunnel_StreamGitCloneServer) error {
-	if t.workspace == nil {
-		return fmt.Errorf("workspace is nil")
-	} else if t.workspace.Source.GitRepository == "" {
-		return fmt.Errorf("invalid repository")
-	}
-
-	// clone here
-	tempDir, err := os.MkdirTemp("", "devpod-git-clone-*")
-	if err != nil {
-		return fmt.Errorf("create temp dir: %w", err)
-	}
-	defer os.RemoveAll(tempDir)
-
-	// clone repository
-	cloneArgs := []string{"clone", t.workspace.Source.GitRepository, tempDir}
-	if t.workspace.Source.GitBranch != "" {
-		cloneArgs = append(cloneArgs, "--branch", t.workspace.Source.GitBranch)
-	}
-
-	// run command
-	err = git.CommandContext(context.Background(), cloneArgs...).Run()
-	if err != nil {
-		return err
-	}
-
-	if t.workspace.Source.GitPRReference != "" {
-		prBranch := git.GetBranchNameForPR(t.workspace.Source.GitPRReference)
-
-		// git fetch origin pull/996/head:PR996
-		fetchArgs := []string{"fetch", "origin", t.workspace.Source.GitPRReference + ":" + prBranch}
-		fetchCmd := git.CommandContext(context.Background(), fetchArgs...)
-		fetchCmd.Dir = tempDir
-		err = fetchCmd.Run()
-		if err != nil {
-			return err
-		}
-
-		// git switch PR996
-		switchArgs := []string{"switch", prBranch}
-		switchCmd := git.CommandContext(context.Background(), switchArgs...)
-		switchCmd.Dir = tempDir
-		err = switchCmd.Run()
-		if err != nil {
-			return err
-		}
-	} else if t.workspace.Source.GitCommit != "" {
-		// reset here
-		// git reset --hard $COMMIT_SHA
-		resetArgs := []string{"reset", "--hard", t.workspace.Source.GitCommit}
-		resetCmd := git.CommandContext(context.Background(), resetArgs...)
-		resetCmd.Dir = tempDir
-
-		err = resetCmd.Run()
-		if err != nil {
-			return err
-		}
-	}
-
-	buf := bufio.NewWriterSize(NewStreamWriter(stream, t.log), 10*1024)
-	err = extract.WriteTar(buf, tempDir, false)
-	if err != nil {
-		return err
-	}
-
-	// make sure buffer is flushed
-	return buf.Flush()
 }
 
 func (t *tunnelServer) StreamWorkspace(message *tunnel.Empty, stream tunnel.Tunnel_StreamWorkspaceServer) error {

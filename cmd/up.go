@@ -87,6 +87,10 @@ func NewUpCmd(f *flags.GlobalFlags) *cobra.Command {
 				return err
 			}
 
+			if devPodConfig.ContextOption(config.ContextOptionSSHStrictHostKeyChecking) == "true" {
+				cmd.StrictHostKeyChecking = true
+			}
+
 			ctx := cobraCmd.Context()
 			client, logger, err := cmd.prepareClient(ctx, devPodConfig, args)
 			if err != nil {
@@ -1104,7 +1108,7 @@ func setupDotfiles(
 	log.Infof("Dotfiles git repository %s specified", dotfilesRepo)
 	log.Debug("Cloning dotfiles into the devcontainer...")
 
-	dotCmd, err := buildDotCmd(dotfilesRepo, dotfilesScript, envFiles, envKeyValuePairs, devPodConfig, client, log)
+	dotCmd, err := buildDotCmd(devPodConfig, dotfilesRepo, dotfilesScript, envFiles, envKeyValuePairs, client, log)
 	if err != nil {
 		return err
 	}
@@ -1129,13 +1133,17 @@ func setupDotfiles(
 	return nil
 }
 
-func buildDotCmdAgentArguments(dotfilesRepo, dotfilesScript string, log log.Logger) []string {
+func buildDotCmdAgentArguments(devPodConfig *config.Config, dotfilesRepo, dotfilesScript string, log log.Logger) []string {
 	agentArguments := []string{
 		"agent",
 		"workspace",
 		"install-dotfiles",
 		"--repository",
 		dotfilesRepo,
+	}
+
+	if devPodConfig.ContextOption(config.ContextOptionSSHStrictHostKeyChecking) == "true" {
+		agentArguments = append(agentArguments, "--strict-host-key-checking")
 	}
 
 	if log.GetLevel() == logrus.DebugLevel {
@@ -1150,7 +1158,7 @@ func buildDotCmdAgentArguments(dotfilesRepo, dotfilesScript string, log log.Logg
 	return agentArguments
 }
 
-func buildDotCmd(dotfilesRepo, dotfilesScript string, envFiles, envKeyValuePairs []string, devPodConfig *config.Config, client client2.BaseWorkspaceClient, log log.Logger) (*exec.Cmd, error) {
+func buildDotCmd(devPodConfig *config.Config, dotfilesRepo, dotfilesScript string, envFiles, envKeyValuePairs []string, client client2.BaseWorkspaceClient, log log.Logger) (*exec.Cmd, error) {
 	sshCmd := []string{
 		"ssh",
 		"--agent-forwarding=true",
@@ -1175,7 +1183,7 @@ func buildDotCmd(dotfilesRepo, dotfilesScript string, envFiles, envKeyValuePairs
 		remoteUser = "root"
 	}
 
-	agentArguments := buildDotCmdAgentArguments(dotfilesRepo, dotfilesScript, log)
+	agentArguments := buildDotCmdAgentArguments(devPodConfig, dotfilesRepo, dotfilesScript, log)
 	sshCmd = append(sshCmd,
 		"--user",
 		remoteUser,

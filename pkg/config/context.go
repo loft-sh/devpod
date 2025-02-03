@@ -21,6 +21,7 @@ const (
 	ContextOptionSSHConfigPath              = "SSH_CONFIG_PATH"
 	ContextOptionAgentInjectTimeout         = "AGENT_INJECT_TIMEOUT"
 	ContextOptionRegistryCache              = "REGISTRY_CACHE"
+	ContextOptionSSHStrictHostKeyChecking   = "SSH_STRICT_HOST_KEY_CHECKING"
 )
 
 var ContextOptions = []ContextOption{
@@ -97,6 +98,12 @@ var ContextOptions = []ContextOption{
 		Name:        ContextOptionRegistryCache,
 		Description: "Specifies the registry to use as a build cache, e.g. gcr.io/my-project/my-dev-env",
 		Default:     "",
+	},
+	{
+		Name:        ContextOptionSSHStrictHostKeyChecking,
+		Description: "Enables strict ssh host key checking for all operations",
+		Default:     "false",
+		Enum:        []string{"true", "false"},
 	},
 }
 

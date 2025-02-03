@@ -19,8 +19,9 @@ import (
 type InstallDotfilesCmd struct {
 	*flags.GlobalFlags
 
-	Repository    string
-	InstallScript string
+	Repository            string
+	InstallScript         string
+	StrictHostKeyChecking bool
 }
 
 // NewInstallDotfilesCmd creates a new command
@@ -38,6 +39,7 @@ func NewInstallDotfilesCmd(flags *flags.GlobalFlags) *cobra.Command {
 	}
 	installDotfilesCmd.Flags().StringVar(&cmd.Repository, "repository", "", "The dotfiles repository")
 	installDotfilesCmd.Flags().StringVar(&cmd.InstallScript, "install-script", "", "The dotfiles install command to execute")
+	installDotfilesCmd.Flags().BoolVar(&cmd.StrictHostKeyChecking, "strict-host-key-checking", false, "Set to enable strict host key checking for git cloning via SSH")
 	return installDotfilesCmd
 }
 
@@ -51,8 +53,9 @@ func (cmd *InstallDotfilesCmd) Run(ctx context.Context) error {
 		logger.Infof("Cloning dotfiles %s", cmd.Repository)
 
 		gitInfo := git.NormalizeRepositoryGitInfo(cmd.Repository)
+		gitOpts := git.GitCommandOptions{StrictHostKeyChecking: cmd.StrictHostKeyChecking}
 
-		if err := git.CloneRepository(ctx, gitInfo, targetDir, "", nil, logger); err != nil {
+		if err := git.CloneRepository(ctx, gitInfo, targetDir, gitOpts, "", nil, logger); err != nil {
 			return err
 		}
 	} else {

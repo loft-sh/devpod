@@ -570,14 +570,14 @@ func configureSystemGitCredentials(ctx context.Context, cancel context.CancelFun
 	gitCredentials := fmt.Sprintf("!'%s' agent git-credentials --port %d", binaryPath, serverPort)
 	_ = os.Setenv("DEVPOD_GIT_HELPER_PORT", strconv.Itoa(serverPort))
 
-	err = git.CommandContext(ctx, "config", "--system", "--add", "credential.helper", gitCredentials).Run()
+	err = git.CommandContext(ctx, git.GitCommandOptions{}, "config", "--system", "--add", "credential.helper", gitCredentials).Run()
 	if err != nil {
 		return nil, fmt.Errorf("add git credential helper: %w", err)
 	}
 
 	cleanup := func() {
 		log.Debug("Unset setup system credential helper")
-		err = git.CommandContext(ctx, "config", "--system", "--unset", "credential.helper").Run()
+		err = git.CommandContext(ctx, git.GitCommandOptions{}, "config", "--system", "--unset", "credential.helper").Run()
 		if err != nil {
 			log.Errorf("unset system credential helper %v", err)
 		}
