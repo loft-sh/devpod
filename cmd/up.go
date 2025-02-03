@@ -81,6 +81,19 @@ func NewUpCmd(f *flags.GlobalFlags) *cobra.Command {
 	upCmd := &cobra.Command{
 		Use:   "up [flags] [workspace-path|workspace-name]",
 		Short: "Starts a new workspace",
+		PreRunE: func(cobraCmd *cobra.Command, args []string) error {
+			absExtraDevContainerPaths := []string{}
+			for _, extraPath := range cmd.ExtraDevContainerPaths {
+				absExtraPath, err := filepath.Abs(extraPath)
+				if err != nil {
+					return err
+				}
+
+				absExtraDevContainerPaths = append(absExtraDevContainerPaths, absExtraPath)
+			}
+			cmd.ExtraDevContainerPaths = absExtraDevContainerPaths
+			return nil
+		},
 		RunE: func(cobraCmd *cobra.Command, args []string) error {
 			devPodConfig, err := config.LoadConfig(cmd.Context, cmd.Provider)
 			if err != nil {
@@ -108,6 +121,7 @@ func NewUpCmd(f *flags.GlobalFlags) *cobra.Command {
 	upCmd.Flags().StringArrayVar(&cmd.IDEOptions, "ide-option", []string{}, "IDE option in the form KEY=VALUE")
 	upCmd.Flags().StringVar(&cmd.DevContainerImage, "devcontainer-image", "", "The container image to use, this will override the devcontainer.json value in the project")
 	upCmd.Flags().StringVar(&cmd.DevContainerPath, "devcontainer-path", "", "The path to the devcontainer.json relative to the project")
+	upCmd.Flags().StringArrayVar(&cmd.ExtraDevContainerPaths, "extra-devcontainer-path", []string{}, "The path to additional devcontainer.json files to override original devcontainer.json")
 	upCmd.Flags().StringVar(&cmd.EnvironmentTemplate, "environment-template", "", "Environment template to use")
 	_ = upCmd.Flags().MarkHidden("environment-template")
 	upCmd.Flags().StringVar(&cmd.EnvironmentTemplateVersion, "environment-template-version", "", "Specific version of DevPodEnvironmentTemplate to use. Empty for latest.")

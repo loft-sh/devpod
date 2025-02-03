@@ -61,6 +61,21 @@ func (r *runner) runSingleContainer(
 			return nil, err
 		}
 
+		userConfig, err := config.ParseDevContainerUserJSON(parsedConfig.Config)
+		if err != nil {
+			return nil, err
+		} else if userConfig != nil {
+			config.AddConfigToImageMetadata(userConfig, imageMetadataConfig)
+		}
+
+		for _, v := range options.ExtraDevContainerPaths {
+			extraConfig, err := config.ParseDevContainerJSONFile(v)
+			if err != nil {
+				return nil, err
+			}
+			config.AddConfigToImageMetadata(extraConfig, imageMetadataConfig)
+		}
+
 		mergedConfig, err = config.MergeConfiguration(parsedConfig.Config, imageMetadataConfig.Config)
 		if err != nil {
 			return nil, errors.Wrap(err, "merge config")
@@ -100,6 +115,21 @@ func (r *runner) runSingleContainer(
 			if err != nil {
 				return nil, errors.Wrap(err, "delete devcontainer")
 			}
+		}
+
+		userConfig, err := config.ParseDevContainerUserJSON(parsedConfig.Config)
+		if err != nil {
+			return nil, err
+		} else if userConfig != nil {
+			config.AddConfigToImageMetadata(userConfig, buildInfo.ImageMetadata)
+		}
+
+		for _, v := range options.ExtraDevContainerPaths {
+			extraConfig, err := config.ParseDevContainerJSONFile(v)
+			if err != nil {
+				return nil, err
+			}
+			config.AddConfigToImageMetadata(extraConfig, buildInfo.ImageMetadata)
 		}
 
 		// merge configuration
