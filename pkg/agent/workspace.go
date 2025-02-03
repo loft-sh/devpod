@@ -297,7 +297,8 @@ func CloneRepositoryForWorkspace(
 	// run git command
 	cloner := git.NewClonerWithOpts(getGitOptions(options)...)
 	gitInfo := git.NewGitInfo(source.GitRepository, source.GitBranch, source.GitCommit, source.GitPRReference, source.GitSubPath)
-	err := git.CloneRepositoryWithEnv(ctx, gitInfo, extraEnv, workspaceDir, helper, cloner, log)
+	gitOpts := git.GitCommandOptions{StrictHostKeyChecking: options.StrictHostKeyChecking}
+	err := git.CloneRepositoryWithEnv(ctx, gitInfo, extraEnv, workspaceDir, gitOpts, helper, cloner, log)
 	if err != nil {
 		// cleanup workspace dir if clone failed, otherwise we won't try to clone again when rebuilding this workspace
 		if cleanupErr := cleanupWorkspaceDir(workspaceDir); cleanupErr != nil {

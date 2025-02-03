@@ -61,6 +61,10 @@ func NewBuildCmd(flags *flags.GlobalFlags) *cobra.Command {
 				}
 			}
 
+			if devPodConfig.ContextOption(config.ContextOptionSSHStrictHostKeyChecking) == "true" {
+				cmd.StrictHostKeyChecking = true
+			}
+
 			// create a temporary workspace
 			exists := workspace2.Exists(ctx, devPodConfig, args, "", log.Default)
 			sshConfigFile, err := os.CreateTemp("", "devpodssh.config")

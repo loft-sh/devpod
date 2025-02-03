@@ -20,7 +20,6 @@ service Tunnel {
   rpc ForwardPort(ForwardPortRequest) returns (ForwardPortResponse) {}
   rpc StopForwardPort(StopForwardPortRequest) returns (StopForwardPortResponse) {}
 
-  rpc StreamGitClone(Empty) returns (stream Chunk) {}
   rpc StreamWorkspace(Empty) returns (stream Chunk) {}
   rpc StreamMount(StreamMountRequest) returns (stream Chunk) {}
 }

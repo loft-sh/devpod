@@ -8,7 +8,9 @@ import (
 	"time"
 
 	"github.com/loft-sh/devpod/cmd/flags"
+	"github.com/loft-sh/devpod/pkg/config"
 	"github.com/loft-sh/devpod/pkg/devcontainer"
+	"github.com/loft-sh/devpod/pkg/git"
 	"github.com/loft-sh/log"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
@@ -35,13 +37,18 @@ func NewGetWorkspaceConfigCommand(flags *flags.GlobalFlags) *cobra.Command {
 	shellCmd := &cobra.Command{
 		Use:   "get-workspace-config",
 		Short: "Retrieves a workspace config",
-		RunE: func(_ *cobra.Command, args []string) error {
+		RunE: func(cobraCmd *cobra.Command, args []string) error {
+			devPodConfig, err := config.LoadConfig(cmd.Context, cmd.Provider)
+			if err != nil {
+				return err
+			}
+
 			if cmd.maxDepth < 0 {
 				log.Default.Debugf("--max-depth was %d, setting to 0", cmd.maxDepth)
 				cmd.maxDepth = 0
 			}
 
-			return cmd.Run(context.Background(), args)
+			return cmd.Run(cobraCmd.Context(), devPodConfig, args)
 		},
 	}
 
@@ -51,7 +58,7 @@ func NewGetWorkspaceConfigCommand(flags *flags.GlobalFlags) *cobra.Command {
 	return shellCmd
 }
 
-func (cmd *GetWorkspaceConfigCommand) Run(ctx context.Context, args []string) error {
+func (cmd *GetWorkspaceConfigCommand) Run(ctx context.Context, devPodConfig *config.Config, args []string) error {
 	if len(args) != 1 {
 		return fmt.Errorf("workspace source is missing")
 	}
@@ -78,7 +85,10 @@ func (cmd *GetWorkspaceConfigCommand) Run(ctx context.Context, args []string) er
 		_ = os.RemoveAll(tmpDir)
 	}()
 	go func() {
-		result, err := devcontainer.FindDevcontainerFiles(ctx, rawSource, tmpDir, cmd.maxDepth, logger)
+		gitOpts := git.GitCommandOptions{
+			StrictHostKeyChecking: devPodConfig.ContextOption(config.ContextOptionSSHStrictHostKeyChecking) == "true",
+		}
+		result, err := devcontainer.FindDevcontainerFiles(ctx, rawSource, tmpDir, cmd.maxDepth, gitOpts, logger)
 		if err != nil {
 			errChan <- err
 			return
