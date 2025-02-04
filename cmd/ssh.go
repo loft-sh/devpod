@@ -236,11 +236,19 @@ func (cmd *SSHCmd) startTSProxyTunnel(
 		LogF:      func(format string, args ...any) {},
 	})
 
+	// network := tailscale.NewLocalDaemon(
+	// 	config.AccessKey,
+	// 	hostname,
+	// 	fmt.Sprintf("https://%s", tailscale.RemoveProtocol(config.Host)),
+	// 	cmd.Provider,
+	// 	cmd.Context,
+	// 	log)
+
 	// Start Tailscale network
 	startCtx, cancel := context.WithCancel(ctx)
 	defer cancel()
 	go func() {
-		if err := network.Start(startCtx); err != nil {
+		if err := network.Start(startCtx, log); err != nil {
 			log.Errorf("failed to start TSNet: %v", err)
 			cancel()
 		}

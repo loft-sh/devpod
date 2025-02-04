@@ -12,6 +12,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/loft-sh/log"
 	"k8s.io/klog/v2"
 	"tailscale.com/client/tailscale"
 	"tailscale.com/envknob"
@@ -22,7 +23,7 @@ import (
 
 // TSNet is the main interface
 type TSNet interface {
-	Start(ctx context.Context) error
+	Start(ctx context.Context, log log.Logger) error
 	Stop()
 	Dial(ctx context.Context, network, addr string) (net.Conn, error)
 	LocalClient() (*tailscale.LocalClient, error)
@@ -52,7 +53,7 @@ func NewTSNet(config *TSNetConfig) TSNet {
 }
 
 // Start runs tailscale up and binds port handlers
-func (t *tsNet) Start(ctx context.Context) error {
+func (t *tsNet) Start(ctx context.Context, log log.Logger) error {
 	if t.config.AccessKey == "" || t.config.Host == "" {
 		return fmt.Errorf("access key or host cannot be empty")
 	}
@@ -72,6 +73,7 @@ func (t *tsNet) Start(ctx context.Context) error {
 	store, _ := mem.New(tslogger.Discard, "")
 	envknob.Setenv("TS_DEBUG_TLS_DIAL_INSECURE_SKIP_VERIFY", "true")
 	klog.Infof("Connecting to control URL - %v", baseUrl.String()+"/coordinator/")
+	log.Infof("Connecting to control URL - %v", baseUrl.String()+"/coordinator/")
 	t.tsServer = &tsnet.Server{
 		Hostname:   t.config.Hostname,
 		Logf:       t.config.LogF,
@@ -87,6 +89,8 @@ func (t *tsNet) Start(ctx context.Context) error {
 		return fmt.Errorf("failed to start tsnet server: %w", err)
 	}
 
+	log.Info("Network is up")
+
 	// Bind port handlers
 	for port, handler := range t.config.PortHandlers {
 		listener, err := t.tsServer.Listen("tcp", ":"+port)
@@ -97,6 +101,7 @@ func (t *tsNet) Start(ctx context.Context) error {
 
 		go handler(listener)
 		klog.Infof("Port %s bound with handler", port)
+		log.Infof("Port %s bound with handler", port)
 	}
 
 	<-ctx.Done()

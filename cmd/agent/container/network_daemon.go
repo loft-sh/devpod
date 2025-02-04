@@ -8,6 +8,7 @@ import (
 	"github.com/loft-sh/devpod/cmd/flags"
 	sshServer "github.com/loft-sh/devpod/pkg/ssh/server"
 	"github.com/loft-sh/devpod/pkg/tailscale"
+	"github.com/loft-sh/log"
 	"github.com/spf13/cobra"
 )
 
@@ -48,7 +49,7 @@ func (cmd *NetworkDaemonCmd) Run(_ *cobra.Command, _ []string) error {
 			fmt.Sprintf("%d", sshServer.DefaultUserPort): tailscale.ReverseProxyHandler(fmt.Sprintf("127.0.0.1:%d", sshServer.DefaultUserPort)),
 		},
 	})
-	if err := tsNet.Start(context.TODO()); err != nil {
+	if err := tsNet.Start(context.TODO(), log.Default.ErrorStreamOnly()); err != nil {
 		return fmt.Errorf("cannot start tsNet server: %w", err)
 	}
 

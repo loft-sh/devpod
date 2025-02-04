@@ -221,7 +221,7 @@ func (cmd *SetupContainerCmd) Run(ctx context.Context) error {
 				return nil, err
 			}
 
-			return exec.Command(binaryPath, "agent", "container", "network-daemon", "--access-key", cmd.AccessKey, "--host", "host.docker.internal:8080", "--hostname", cmd.NetworkHostname), nil
+			return exec.Command(binaryPath, "agent", "container", "network-daemon", "--access-key", cmd.AccessKey, "--host", "loft.default.svc.cluster.local:443", "--hostname", cmd.NetworkHostname), nil
 		})
 		if err != nil {
 			return err
