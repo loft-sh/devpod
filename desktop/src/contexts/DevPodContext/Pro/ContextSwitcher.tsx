@@ -29,6 +29,8 @@ import {
 import { ManagementV1Project } from "@loft-enterprise/client/gen/models/managementV1Project"
 import { ReactNode, useMemo } from "react"
 import { useProInstances } from "../proInstances"
+import { useNavigate } from "react-router"
+import { Routes } from "@/routes"
 
 export const HOST_OSS = "Open Source"
 type THostPickerProps = Readonly<{
@@ -181,6 +183,7 @@ function PlatformDetails({
   onConnect,
   onCancelWatch,
 }: TPlatformDetailsProps) {
+  const navigate = useNavigate()
   const [, { disconnect }] = useProInstances()
   const { modal: deleteProviderModal, open: openDeleteProviderModal } = useDeleteProviderModal(
     host,
@@ -189,6 +192,7 @@ function PlatformDetails({
     async () => {
       await onCancelWatch?.()
       disconnect.run({ id: host })
+      navigate(Routes.ROOT)
     }
   )
 
