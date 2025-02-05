@@ -33,3 +33,24 @@ export function DevPodProvider({ children }: Readonly<{ children?: ReactNode }>)
 
   return <DevPodContext.Provider value={value}>{children}</DevPodContext.Provider>
 }
+
+export function ProviderProvider({ children }: Readonly<{ children?: ReactNode }>) {
+  const providersQuery = useQuery({
+    queryKey: QueryKeys.PROVIDERS,
+    queryFn: async () => (await client.providers.listAll()).unwrap(),
+    refetchInterval: REFETCH_PROVIDER_INTERVAL_MS,
+    enabled: true,
+  })
+
+  const value = useMemo<TDevpodContext>(
+    () => ({
+      providers: [
+        providersQuery.data,
+        { status: providersQuery.status, error: providersQuery.error },
+      ],
+    }),
+    [providersQuery.data, providersQuery.status, providersQuery.error]
+  )
+
+  return <DevPodContext.Provider value={value}>{children}</DevPodContext.Provider>
+}

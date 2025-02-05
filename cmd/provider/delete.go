@@ -99,7 +99,7 @@ func DeleteProvider(ctx context.Context, devPodConfig *config.Config, provider s
 				wg.Add(1)
 				go func(w provider2.Workspace) {
 					defer wg.Done()
-					_, err := workspace.Delete(ctx, devPodConfig, []string{w.ID}, true, true, client.DeleteOptions{
+					_, err := workspace.Delete(ctx, devPodConfig, []string{w.ID}, true, false, client.DeleteOptions{
 						IgnoreNotFound: true,
 						Force:          true,
 					}, logpkg.Discard)

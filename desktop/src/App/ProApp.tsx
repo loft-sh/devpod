@@ -27,6 +27,7 @@ import {
   useProHost,
 } from "../contexts"
 import { useConnectionStatus } from "@/lib"
+import { ProviderProvider } from "@/contexts/DevPodContext/DevPodProvider"
 
 export function ProApp() {
   const host = useProHost()
@@ -38,13 +39,15 @@ export function ProApp() {
 
   return (
     <WorkspaceStoreProvider store={store}>
-      <ProInstancesProvider>
-        <ToolbarProvider>
-          <ProProvider host={host}>
-            <ProAppContent host={host} />
-          </ProProvider>
-        </ToolbarProvider>
-      </ProInstancesProvider>
+      <ProviderProvider>
+        <ProInstancesProvider>
+          <ToolbarProvider>
+            <ProProvider host={host}>
+              <ProAppContent host={host} />
+            </ProProvider>
+          </ToolbarProvider>
+        </ProInstancesProvider>
+      </ProviderProvider>
     </WorkspaceStoreProvider>
   )
 }
