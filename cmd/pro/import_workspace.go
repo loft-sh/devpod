@@ -118,7 +118,7 @@ func (cmd *ImportCmd) Run(ctx context.Context, args []string) error {
 			return fmt.Errorf("resolve instance options: %w", err)
 		}
 
-		err = cmd.writeWorkspaceDefinition(devPodConfig, provider, instanceOpts, instance)
+		err = cmd.writeWorkspaceDefinition(devPodConfig, provider, instanceOpts)
 		if err != nil {
 			return errors.Wrap(err, "prepare workspace to import definition")
 		}
@@ -152,7 +152,7 @@ func (cmd *ImportCmd) writeNewWorkspaceDefinition(devPodConfig *config.Config, i
 	return provider2.SaveWorkspaceConfig(workspaceObj)
 }
 
-func (cmd *ImportCmd) writeWorkspaceDefinition(devPodConfig *config.Config, provider *provider2.ProviderConfig, instanceOpts map[string]string, instance *managementv1.DevPodWorkspaceInstance) error {
+func (cmd *ImportCmd) writeWorkspaceDefinition(devPodConfig *config.Config, provider *provider2.ProviderConfig, instanceOpts map[string]string) error {
 	workspaceObj := &provider2.Workspace{
 		ID:  cmd.WorkspaceId,
 		UID: cmd.WorkspaceUid,
@@ -162,10 +162,6 @@ func (cmd *ImportCmd) writeWorkspaceDefinition(devPodConfig *config.Config, prov
 		},
 		Context:  devPodConfig.DefaultContext,
 		Imported: !cmd.Own,
-		Pro: &provider2.ProMetadata{
-			Project:     instanceOpts[platform.ProjectEnv],
-			DisplayName: instance.Spec.DisplayName,
-		},
 	}
 
 	devPodConfig, err := options.ResolveOptions(context.Background(), devPodConfig, provider, instanceOpts, false, false, nil, cmd.log)

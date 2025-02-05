@@ -44,16 +44,16 @@ func Delete(ctx context.Context, devPodConfig *config.Config, args []string, ign
 		return workspaceID, nil
 	}
 
-	// skip deletion if imported
+	// only remove local folder if workspace is imported or pro
 	workspaceConfig := client.WorkspaceConfig()
-	if !force && workspaceConfig.Imported {
+	if !force && (workspaceConfig.Imported || workspaceConfig.IsPro()) {
 		// delete workspace folder
 		err = clientimplementation.DeleteWorkspaceFolder(devPodConfig.DefaultContext, client.Workspace(), workspaceConfig.SSHConfigPath, log)
 		if err != nil {
 			return "", err
 		}
 
-		log.Donef("Skip remote deletion of workspace %s as it is imported, if you really want to delete this workspace also remotely, run with --force", client.Workspace())
+		log.Donef("Skip remote deletion of workspace %s, if you really want to delete this workspace also remotely, run with --force", client.Workspace())
 		return client.Workspace(), nil
 	}
 
