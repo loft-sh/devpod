@@ -26,6 +26,7 @@ import { Routes } from "../routes"
 import { useChangelogModal } from "./useChangelogModal"
 import { useQuery } from "@tanstack/react-query"
 import { QueryKeys } from "@/queryKeys"
+import { TProInstance } from "@/types"
 
 export function useAppReady() {
   const [[proInstances]] = useProInstances()
@@ -173,6 +174,27 @@ export function useAppReady() {
 
       if (event.type === "ImportWorkspace") {
         await getCurrentWebviewWindow().setFocus()
+        // Do we already know the workspace?
+        let workspacesResult = await client.workspaces.listAll(false)
+        if (workspacesResult.err) {
+          const cleanedMsg = workspacesResult.val.message.split("\n").at(-1) ?? ""
+          setFailedMessage("Failed to list workspaces: " + cleanedMsg)
+
+          return
+        }
+        let maybeWorkspace = workspacesResult.val.find((w) => w.id === event.workspace_id)
+        // Is it a pro workspace?
+        if (maybeWorkspace && maybeWorkspace.provider?.name) {
+          const proInstance = await findProInstance(maybeWorkspace.provider.name)
+          if (proInstance && proInstance.host) {
+            navigate(Routes.toProWorkspace(proInstance.host, maybeWorkspace.id))
+
+            return
+          }
+        }
+
+        // At this point it can't be a new pro workspace anymore,
+        // we'll have to go through the old import flow
         const importResult = await client.pro.importWorkspace({
           workspaceID: event.workspace_id,
           workspaceUID: event.workspace_uid,
@@ -186,11 +208,11 @@ export function useAppReady() {
 
           return
         }
-        const workspacesResult = await client.workspaces.listAll(false)
+        workspacesResult = await client.workspaces.listAll(false)
         if (workspacesResult.err) {
           return
         }
-        const maybeWorkspace = workspacesResult.val.find((w) => w.id === event.workspace_id)
+        maybeWorkspace = workspacesResult.val.find((w) => w.id === event.workspace_id)
         if (!maybeWorkspace) {
           setFailedMessage("Could not find workspace after import")
 
@@ -278,21 +300,8 @@ export function useAppReady() {
 
       const providerName = maybeWorkspace?.provider?.name
       if (maybeWorkspace !== undefined && providerName) {
-        // find provider for workspace
-        const providersRes = await client.providers.listAll()
-        if (providersRes.err) return
-        const provider = providersRes.val[providerName]
-        if (!provider) return
-
-        // handle pro provider
-        if (provider.isProxyProvider && provider.config?.exec?.proxy?.health) {
-          const proInstanceRes = await client.pro.listProInstances()
-          if (proInstanceRes.err) return
-          const proInstance = proInstanceRes.val.find(
-            (proInstance) => proInstance.provider === providerName
-          )
-          if (!proInstance?.host) return
-
+        const proInstance = await findProInstance(providerName)
+        if (proInstance && proInstance.host) {
           navigate(Routes.toProWorkspace(proInstance.host, maybeWorkspace.id))
 
           return
@@ -391,4 +400,25 @@ function useErrorModal() {
   }, [onClose, onOpen, failedMessage])
 
   return { modal, handleOpen: onOpen, setFailedMessage }
+}
+
+async function findProInstance(providerName: string): Promise<TProInstance | null> {
+  const providersRes = await client.providers.listAll()
+  if (providersRes.err) return null
+  const provider = providersRes.val[providerName]
+  if (!provider) return null
+
+  // handle pro provider
+  if (provider.isProxyProvider && provider.config?.exec?.proxy?.health) {
+    const proInstanceRes = await client.pro.listProInstances()
+    if (proInstanceRes.err) return null
+    const proInstance = proInstanceRes.val.find(
+      (proInstance) => proInstance.provider === providerName
+    )
+    if (!proInstance?.host) return null
+
+    return proInstance
+  }
+
+  return null
 }
