@@ -3,7 +3,7 @@ import { useProContext, useProInstances } from "@/contexts"
 import { DevPodIcon } from "@/icons"
 import emptyWorkspacesImage from "@/images/empty_workspaces.svg"
 import { useConnectionStatus, useReLoginProModal } from "@/lib"
-import { Box, Button, Container, HStack, Heading, Image, Text, VStack } from "@chakra-ui/react"
+import { Button, Container, Heading, Image, Text, VStack } from "@chakra-ui/react"
 import { useMemo } from "react"
 import { Outlet } from "react-router-dom"
 
@@ -36,29 +36,6 @@ export function ProInstance() {
           </Button>
         </VStack>
         {reLoginProModal}
-      </Container>
-    )
-  }
-
-  if (connectionStatus.state === "disconnected") {
-    return (
-      <Container maxW="container.lg" h="full">
-        <VStack align="center" mt="-40" justify="center" w="full" h="full">
-          <HStack gap="4">
-            <Box boxSize="4" bg={"red.400"} rounded="full" />
-            <Heading fontWeight="thin" color="gray.600">
-              Unable to connect to platform
-            </Heading>
-          </HStack>
-          <Text textAlign="center">
-            DevPod can not connect to your platform at{" "}
-            <Text display="inline" fontWeight="semibold">
-              {host}
-            </Text>
-            .<br />
-            Please contact your administrator.
-          </Text>
-        </VStack>
       </Container>
     )
   }
