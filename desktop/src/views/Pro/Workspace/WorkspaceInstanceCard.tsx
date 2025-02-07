@@ -1,9 +1,10 @@
 import { ProWorkspaceInstance, useTemplates, useWorkspace, useWorkspaceActions } from "@/contexts"
-import { CogOutlined, Status } from "@/icons"
+import { Clock, CogOutlined, Status } from "@/icons"
 import {
-  TParameterWithValue,
   getDisplayName,
+  getLastActivity,
   getParametersWithValues,
+  TParameterWithValue,
   useDeleteWorkspaceModal,
   useRebuildWorkspaceModal,
   useResetWorkspaceModal,
@@ -14,20 +15,21 @@ import {
   Card,
   CardBody,
   CardHeader,
+  ComponentWithAs,
   Divider,
   HStack,
-  Text,
-  ComponentWithAs,
   IconProps,
-  VStack,
+  Text,
   useColorModeValue,
+  VStack,
 } from "@chakra-ui/react"
 import { ManagementV1DevPodWorkspaceTemplate } from "@loft-enterprise/client/gen/models/managementV1DevPodWorkspaceTemplate"
-import { useCallback, useMemo, ReactElement, ReactNode, cloneElement } from "react"
+import { cloneElement, ReactElement, ReactNode, useCallback, useMemo } from "react"
 import { useNavigate } from "react-router"
 import { WorkspaceCardHeader } from "./WorkspaceCardHeader"
 import { WorkspaceStatus } from "./WorkspaceStatus"
 import { useStoreTroubleshoot } from "@/lib/useStoreTroubleshoot"
+import dayjs from "dayjs"
 
 type TWorkspaceInstanceCardProps = Readonly<{
   host: string
@@ -120,6 +122,22 @@ export function WorkspaceInstanceCard({ instanceName, host }: TWorkspaceInstance
     }
   }, [storeTroubleshoot, instance, workspaceActions])
 
+  // Format timespan labels.
+  const [lastActivity, created] = useMemo(() => {
+    if (!instance) {
+      return [undefined, undefined]
+    }
+
+    const lastActivityDate = getLastActivity(instance)
+    const lastActivityFormatted = lastActivityDate
+      ? dayjs(lastActivityDate).from(Date.now())
+      : undefined
+
+    const createdFormatted = dayjs(instance.metadata?.creationTimestamp).from(Date.now())
+
+    return [lastActivityFormatted, createdFormatted]
+  }, [instance])
+
   if (!instance) {
     return null
   }
@@ -166,6 +184,18 @@ export function WorkspaceInstanceCard({ instanceName, host }: TWorkspaceInstance
                 {getDisplayName(template, templateRef?.name)}/{templateRef?.version || "latest"}
               </Text>
             </WorkspaceInfoDetail>
+
+            {lastActivity && (
+              <WorkspaceInfoDetail icon={Clock} label={<Text>Last activity</Text>}>
+                <Text>{lastActivity}</Text>
+              </WorkspaceInfoDetail>
+            )}
+
+            {created && (
+              <WorkspaceInfoDetail icon={Clock} label={<Text>Created</Text>}>
+                <Text>{created}</Text>
+              </WorkspaceInfoDetail>
+            )}
 
             {parameters.length > 0 && (
               <>
