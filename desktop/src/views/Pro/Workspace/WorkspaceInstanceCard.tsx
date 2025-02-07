@@ -130,7 +130,7 @@ export function WorkspaceInstanceCard({ instanceName, host }: TWorkspaceInstance
   }
 
   const templateRef = instance.spec?.templateRef
-  const isRunning = instance.status?.lastWorkspaceStatus === "Running" // TODO: Types
+  const isRunning = instance.status?.lastWorkspaceStatus === "Running"
 
   return (
     <>
@@ -150,7 +150,7 @@ export function WorkspaceInstanceCard({ instanceName, host }: TWorkspaceInstance
               onDeleteClicked={openDeleteModal}
               onRebuildClicked={openRebuildModal}
               onResetClicked={openResetModal}
-              onStopClicked={isRunning ? openStopModal : workspace.stop}
+              onStopClicked={!isRunning ? openStopModal : workspace.stop}
               onTroubleshootClicked={handleTroubleshootClicked}
             />
           </WorkspaceCardHeader>
