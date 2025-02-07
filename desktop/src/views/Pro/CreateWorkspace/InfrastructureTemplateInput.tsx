@@ -67,7 +67,13 @@ export function InfrastructureTemplateInput({
 
       const paramValue = getDeepValue(value.options, p.variable)
       if (paramValue == null && p.defaultValue != null) {
-        setValue(`${FieldName.OPTIONS}.${p.variable}`, p.defaultValue)
+        if (p.type === "number") {
+          setValue(`${FieldName.OPTIONS}.${p.variable}`, parseFloat(p.defaultValue))
+        } else if (p.type === "boolean") {
+          setValue(`${FieldName.OPTIONS}.${p.variable}`, p.defaultValue === "true")
+        } else {
+          setValue(`${FieldName.OPTIONS}.${p.variable}`, p.defaultValue)
+        }
       }
     })
 

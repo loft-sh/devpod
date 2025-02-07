@@ -364,8 +364,7 @@ function getDefaultValues(
         if (!parameter.variable) {
           continue
         }
-        // dirty, dirty hack, maybe come back and fix types
-        defaultValues.options[parameter.variable] = parameter.value as any
+        defaultValues.options[parameter.variable] = parameter.value
       }
     }
   }
