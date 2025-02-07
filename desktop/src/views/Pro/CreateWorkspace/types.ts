@@ -27,7 +27,7 @@ export type TFormValues = {
 type TOptions = {
   workspaceTemplate?: string
   workspaceTemplateVersion?: string
-  [key: string]: string | Record<string, unknown> | undefined
+  [key: string]: string | boolean | number | Record<string, unknown> | undefined
 }
 
 export type TDevContainerType = "path" | "external"
