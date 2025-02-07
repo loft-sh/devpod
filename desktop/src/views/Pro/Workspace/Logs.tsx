@@ -15,6 +15,7 @@ import {
   Button,
   HStack,
   IconButton,
+  Image,
   LinkBox,
   LinkOverlay,
   Spinner,
@@ -28,6 +29,7 @@ import { HiStop } from "react-icons/hi"
 import { Link as RouterLink, useLocation } from "react-router-dom"
 import { TTabProps } from "./types"
 import { TSearchOptions } from "@/components/Terminal/useTerminalSearch"
+import EmptyImage from "@/images/empty-default.svg"
 
 export function Logs({ host, instance }: TTabProps) {
   const [accordionIndex, setAccordionIndex] = useState<number>(0)
@@ -47,25 +49,34 @@ export function Logs({ host, instance }: TTabProps) {
   }, [actions, location.state?.actionID])
 
   return (
-    <VStack align="start" w="full">
-      <Accordion
-        w="full"
-        allowToggle
-        index={accordionIndex}
-        onChange={(idx) => setAccordionIndex(idx as number)}>
-        {actions?.map((action) => (
-          <AccordionItem mb={"2"} key={action.id} w="full" border={"none"}>
-            {({ isExpanded }) => (
-              <ActionAccordionItem
-                actionID={action.id}
-                isExpanded={isExpanded}
-                host={host}
-                instanceID={instance.id}
-              />
-            )}
-          </AccordionItem>
-        ))}
-      </Accordion>
+    <VStack align="start" w="full" h={"full"}>
+      {!actions?.length ? (
+        <VStack h={"full"} w={"full"} justifyContent={"center"} alignItems={"center"} flexGrow={1}>
+          <Image src={EmptyImage} />
+          <Text fontWeight={"semibold"} fontSize={"sm"} color={"text.secondary"}>
+            No logs to show yet
+          </Text>
+        </VStack>
+      ) : (
+        <Accordion
+          w="full"
+          allowToggle
+          index={accordionIndex}
+          onChange={(idx) => setAccordionIndex(idx as number)}>
+          {actions.map((action) => (
+            <AccordionItem mb={"2"} key={action.id} w="full" border={"none"}>
+              {({ isExpanded }) => (
+                <ActionAccordionItem
+                  actionID={action.id}
+                  isExpanded={isExpanded}
+                  host={host}
+                  instanceID={instance.id}
+                />
+              )}
+            </AccordionItem>
+          ))}
+        </Accordion>
+      )}
     </VStack>
   )
 }
