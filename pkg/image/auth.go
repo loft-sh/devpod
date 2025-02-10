@@ -4,12 +4,22 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"io"
 	"os"
 
+	"github.com/awslabs/amazon-ecr-credential-helper/ecr-login"
+	"github.com/chrismellard/docker-credential-acr-env/pkg/credhelper"
 	"github.com/google/go-containerregistry/pkg/authn"
-	"github.com/google/go-containerregistry/pkg/authn/k8schain"
 	kubernetesauth "github.com/google/go-containerregistry/pkg/authn/kubernetes"
+	"github.com/google/go-containerregistry/pkg/v1/google"
 	"gopkg.in/square/go-jose.v2/jwt"
+	"k8s.io/client-go/kubernetes"
+	"k8s.io/client-go/rest"
+)
+
+var (
+	amazonKeychain authn.Keychain = authn.NewKeychainFromHelper(ecr.NewECRHelper(ecr.WithLogger(io.Discard)))
+	azureKeychain  authn.Keychain = authn.NewKeychainFromHelper(credhelper.NewACRCredentialsHelper())
 )
 
 const tokenFileLocation = "/var/run/secrets/kubernetes.io/serviceaccount/token"
@@ -34,8 +44,6 @@ type ref struct {
 }
 
 func getKeychain(ctx context.Context) (authn.Keychain, error) {
-	var keychain authn.Keychain
-
 	tokenBytes, err := os.ReadFile(tokenFileLocation)
 	if err != nil {
 		if errors.Is(err, os.ErrNotExist) {
@@ -51,16 +59,30 @@ func getKeychain(ctx context.Context) (authn.Keychain, error) {
 	if err != nil {
 		return nil, err
 	}
-
-	keychain, err = k8schain.NewInCluster(ctx, kubernetesauth.Options{
+	clusterConfig, err := rest.InClusterConfig()
+	if err != nil {
+		return nil, err
+	}
+	client, err := kubernetes.NewForConfig(clusterConfig)
+	if err != nil {
+		return nil, err
+	}
+	k8sKeychain, err := kubernetesauth.New(ctx, client, kubernetesauth.Options{
 		ServiceAccountName: m.serviceAccountName,
 		Namespace:          m.namespace,
 	})
 	if err != nil {
-		return nil, fmt.Errorf("authenticate: %w", err)
+		return nil, err
 	}
 
-	return keychain, nil
+	// Order matters here: We want to go through all of the cloud provider keychains before we hit the default keychain (docker config.json)
+	return authn.NewMultiKeychain(
+		k8sKeychain,
+		google.Keychain,
+		amazonKeychain,
+		azureKeychain,
+		authn.DefaultKeychain,
+	), nil
 }
 
 type podMetadata struct {
