@@ -1,12 +1,8 @@
-import { WORKSPACE_STATUSES } from "@/constants"
 import { removeWorkspaceAction, stopWorkspaceAction } from "@/contexts/DevPodContext/workspaces"
-import { Pause, Stack3D, Trash, WorkspaceStatus } from "@/icons"
-import { ChevronDownIcon } from "@chakra-ui/icons"
+import { Stack3D } from "@/icons"
 import {
   Box,
   Button,
-  Checkbox,
-  FormLabel,
   HStack,
   Image,
   Menu,
@@ -15,33 +11,21 @@ import {
   MenuItemOption,
   MenuList,
   MenuOptionGroup,
-  Modal,
-  ModalBody,
-  ModalCloseButton,
-  ModalContent,
-  ModalFooter,
-  ModalHeader,
-  ModalOverlay,
   Text,
-  VStack,
   useDisclosure,
+  VStack,
 } from "@chakra-ui/react"
-import { useId, useMemo, useState } from "react"
+import { useCallback, useEffect, useId, useMemo, useState } from "react"
 import { useNavigate } from "react-router"
-import { useProviders, useWorkspaceStore, useWorkspaces } from "../../contexts"
-import { exists } from "../../lib"
-import { Routes } from "../../routes"
-import { TProviderID, TWorkspace } from "../../types"
+import { useProviders, useWorkspaces, useWorkspaceStore } from "@/contexts"
+import { exists, useSelection, useSortWorkspaces } from "@/lib"
+import { Routes } from "@/routes"
+import { TProviderID, TWorkspace } from "@/types"
 import { WorkspaceCard } from "./WorkspaceCard"
-import { WorkspaceStatusBadge } from "./WorkspaceStatusBadge"
-
-const SORT_OPTIONS = [
-  "Recently Used",
-  "Least Recently Used",
-  "Recently Created",
-  "Least Recently Created",
-] as const
-const DEFAULT_SORT_OPTION = "Recently Used"
+import { WorkspaceListSelection } from "@/components/ListSelection"
+import { DeleteWorkspacesModal } from "@/components/DeleteWorkspacesModal"
+import { DEFAULT_SORT_WORKSPACE_MODE } from "@/lib/useSortWorkspaces"
+import { TWorkspaceStatusFilterState, WorkspaceSorter, WorkspaceStatusFilter } from "@/components"
 
 type TWorkspacesInfo = Readonly<{
   workspaceCards: TWorkspace[]
@@ -53,8 +37,9 @@ export function ListWorkspaces() {
   const navigate = useNavigate()
   const [[providers]] = useProviders()
   const workspaces = useWorkspaces<TWorkspace>()
-  const [selectedWorkspaces, setSelectedWorkspaces] = useState(new Set<string>())
-  const [forceDelete, setForceDelete] = useState(false)
+
+  const selection = useSelection()
+
   const {
     isOpen: isDeleteOpen,
     onOpen: handleDeleteClicked,
@@ -62,16 +47,18 @@ export function ListWorkspaces() {
   } = useDisclosure()
 
   const [providersFilter, setProvidersFilter] = useState<TProviderID[] | "all">("all")
-  const [statusFilter, setStatusFilter] = useState<string[] | "all">("all")
-  const [selectedSortOption, setSelectedSortOption] = useState(DEFAULT_SORT_OPTION)
+  const [statusFilter, setStatusFilter] = useState<TWorkspaceStatusFilterState>("all")
+
+  const [selectedSortOption, setSelectedSortOption] = useState(DEFAULT_SORT_WORKSPACE_MODE)
+  const sortedWorkspaces = useSortWorkspaces(workspaces, selectedSortOption)
 
   const { workspaceCards } = useMemo<TWorkspacesInfo>(() => {
     const empty: TWorkspacesInfo = { workspaceCards: [] }
-    if (!exists(workspaces)) {
+    if (!exists(sortedWorkspaces)) {
       return empty
     }
 
-    const ret = workspaces.reduce<TWorkspacesInfo>((acc, workspace) => {
+    return sortedWorkspaces.reduce<TWorkspacesInfo>((acc, workspace) => {
       const { id } = workspace
       if (!exists(id)) {
         return acc
@@ -93,55 +80,27 @@ export function ListWorkspaces() {
 
       return acc
     }, empty)
+  }, [providersFilter, statusFilter, sortedWorkspaces])
 
-    ret.workspaceCards.sort((a, b) => {
-      if (selectedSortOption === "Recently Used") {
-        return new Date(a.lastUsed) > new Date(b.lastUsed) ? -1 : 1
-      }
+  const workspaceIds = useMemo(() => {
+    return workspaceCards.map((w) => w.id)
+  }, [workspaceCards])
 
-      if (selectedSortOption === "Least Recently Used") {
-        return new Date(b.lastUsed) > new Date(a.lastUsed) ? -1 : 1
-      }
+  useEffect(() => {
+    selection.prune(workspaceIds)
+  }, [selection, workspaceIds])
 
-      if (selectedSortOption === "Recently Created") {
-        return new Date(a.creationTimestamp) > new Date(b.creationTimestamp) ? -1 : 1
-      }
+  const handleSelectionChanged = useCallback(
+    (workspaceID: string) => () => selection.toggleSelection(workspaceID),
+    [selection]
+  )
 
-      if (selectedSortOption === "Least Recently Created") {
-        return new Date(b.creationTimestamp) > new Date(a.creationTimestamp) ? -1 : 1
-      }
+  const handleSelectAllClicked = useCallback(() => {
+    selection.toggleSelectAll(workspaceIds)
+  }, [workspaceIds, selection])
 
-      return 0
-    })
-
-    return ret
-  }, [providersFilter, selectedSortOption, statusFilter, workspaces])
-
-  const handleSelectionChanged = (workspaceID: string) => () => {
-    setSelectedWorkspaces((curr) => {
-      const updated = new Set(curr)
-      if (updated.has(workspaceID)) {
-        updated.delete(workspaceID)
-      } else {
-        updated.add(workspaceID)
-      }
-
-      return updated
-    })
-  }
-
-  const handleSelectAllClicked = () => {
-    setSelectedWorkspaces((curr) => {
-      if (curr.size === workspaceCards.length) {
-        return new Set()
-      }
-
-      return new Set(workspaceCards.map((workspace) => workspace.id))
-    })
-  }
-
-  const handleStopAllClicked = () => {
-    const allSelected = workspaces.filter((workspace) => selectedWorkspaces.has(workspace.id))
+  const handleStopAllClicked = useCallback(() => {
+    const allSelected = workspaces.filter((workspace) => selection.has(workspace.id))
     for (const w of allSelected) {
       stopWorkspaceAction({
         workspaceID: w.id,
@@ -150,20 +109,24 @@ export function ListWorkspaces() {
       })
     }
 
-    setSelectedWorkspaces(new Set())
-  }
+    selection.clear()
+  }, [selection, store, viewID, workspaces])
 
-  const handleDeleteAllClicked = () => {
-    const allSelected = workspaces.filter((workspace) => selectedWorkspaces.has(workspace.id))
-    for (const w of allSelected) {
-      removeWorkspaceAction({
-        workspaceID: w.id,
-        streamID: viewID,
-        force: forceDelete,
-        store,
-      })
-    }
-  }
+  const handleDeleteAllClicked = useCallback(
+    (forceDelete: boolean) => {
+      const allSelected = workspaces.filter((workspace) => selection.has(workspace.id))
+      for (const w of allSelected) {
+        removeWorkspaceAction({
+          workspaceID: w.id,
+          streamID: viewID,
+          force: forceDelete,
+          store,
+        })
+      }
+      selection.clear()
+    },
+    [selection, workspaces, viewID, store]
+  )
 
   const availableProviders = Object.entries(providers ?? {}).filter(
     ([, provider]) => !provider.isProxyProvider
@@ -174,40 +137,13 @@ export function ListWorkspaces() {
     <>
       <VStack alignItems={"flex-start"} paddingBottom="6" w="full">
         <HStack justifyContent="space-between" w="full">
-          <HStack>
-            <Checkbox
-              id="select-all"
-              isIndeterminate={
-                selectedWorkspaces.size > 0 && selectedWorkspaces.size < workspaceCards.length
-              }
-              isChecked={
-                workspaceCards.length > 0 && selectedWorkspaces.size === workspaceCards.length
-              }
-              onChange={handleSelectAllClicked}
-            />
-            <FormLabel whiteSpace="nowrap" paddingTop="2" htmlFor="select-all" color="gray.500">
-              {selectedWorkspaces.size === 0
-                ? "Select all"
-                : ` ${selectedWorkspaces.size} of ${workspaceCards.length} selected`}
-            </FormLabel>
-            {selectedWorkspaces.size > 0 && (
-              <>
-                <Button
-                  variant="ghost"
-                  leftIcon={<Pause boxSize={4} />}
-                  onClick={handleStopAllClicked}>
-                  Stop
-                </Button>
-                <Button
-                  variant="ghost"
-                  colorScheme="red"
-                  leftIcon={<Trash boxSize={4} />}
-                  onClick={handleDeleteClicked}>
-                  Delete
-                </Button>
-              </>
-            )}
-          </HStack>
+          <WorkspaceListSelection
+            totalAmount={workspaceCards.length}
+            selectionAmount={selection.size}
+            handleSelectAllClicked={handleSelectAllClicked}
+            handleStopAllClicked={handleStopAllClicked}
+            handleDeleteClicked={handleDeleteClicked}
+          />
 
           <HStack>
             <Menu closeOnSelect={false} offset={[0, 2]}>
@@ -247,72 +183,9 @@ export function ListWorkspaces() {
               </MenuList>
             </Menu>
 
-            <Menu closeOnSelect={false} offset={[0, 2]}>
-              <MenuButton
-                as={Button}
-                variant="outline"
-                leftIcon={<WorkspaceStatus boxSize={4} color="gray.600" />}>
-                Status ({getCurrentFilterCount(statusFilter, WORKSPACE_STATUSES.length)}/
-                {WORKSPACE_STATUSES.length})
-              </MenuButton>
-              <MenuList>
-                <MenuItemOption
-                  isChecked={
-                    statusFilter.includes("all") ||
-                    statusFilter.length === WORKSPACE_STATUSES.length
-                  }
-                  onClick={() => setStatusFilter((curr) => (curr === "all" ? [] : "all"))}
-                  key="all"
-                  value="all">
-                  Select All
-                </MenuItemOption>
-                <MenuOptionGroup
-                  value={
-                    statusFilter === "all"
-                      ? (WORKSPACE_STATUSES as unknown as string[])
-                      : statusFilter
-                  }
-                  onChange={(value) => setStatusFilter(typeof value === "string" ? [value] : value)}
-                  type="checkbox">
-                  <MenuDivider />
-                  {WORKSPACE_STATUSES.map((status) => (
-                    <MenuItemOption key={status} value={status}>
-                      <HStack>
-                        <WorkspaceStatusBadge
-                          status={status}
-                          isLoading={false}
-                          hasError={false}
-                          showText={false}
-                        />{" "}
-                        <Text> {status}</Text>
-                      </HStack>
-                    </MenuItemOption>
-                  ))}
-                </MenuOptionGroup>
-              </MenuList>
-            </Menu>
+            <WorkspaceStatusFilter statusFilter={statusFilter} setStatusFilter={setStatusFilter} />
 
-            <Menu offset={[0, 2]}>
-              <MenuButton as={Button} variant="outline" rightIcon={<ChevronDownIcon boxSize={4} />}>
-                Sort by: {selectedSortOption}
-              </MenuButton>
-              <MenuList>
-                <MenuOptionGroup
-                  type="radio"
-                  value={selectedSortOption}
-                  onChange={(value) =>
-                    setSelectedSortOption(
-                      (Array.isArray(value) ? value[0] : value) ?? DEFAULT_SORT_OPTION
-                    )
-                  }>
-                  {SORT_OPTIONS.map((option) => (
-                    <MenuItemOption key={option} value={option}>
-                      {option}
-                    </MenuItemOption>
-                  ))}
-                </MenuOptionGroup>
-              </MenuList>
-            </Menu>
+            <WorkspaceSorter sortMode={selectedSortOption} setSortMode={setSelectedSortOption} />
           </HStack>
         </HStack>
 
@@ -327,7 +200,7 @@ export function ListWorkspaces() {
               <WorkspaceCard
                 key={workspace.id}
                 workspaceID={workspace.id}
-                isSelected={selectedWorkspaces.has(workspace.id)}
+                isSelected={selection.has(workspace.id)}
                 onSelectionChange={handleSelectionChanged(workspace.id)}
               />
             ))
@@ -335,36 +208,12 @@ export function ListWorkspaces() {
         </Box>
       </VStack>
 
-      <Modal onClose={onDeleteClose} isOpen={isDeleteOpen} isCentered>
-        <ModalOverlay />
-        <ModalContent>
-          <ModalHeader>Delete {selectedWorkspaces.size} Workspaces</ModalHeader>
-          <ModalCloseButton />
-          <ModalBody>
-            Deleting the workspaces will erase all state. Are you sure you want to delete the
-            selected workspaces?
-            <Box marginTop={"2.5"}>
-              <Checkbox checked={forceDelete} onChange={(e) => setForceDelete(e.target.checked)}>
-                Force Delete
-              </Checkbox>
-            </Box>
-          </ModalBody>
-          <ModalFooter>
-            <HStack spacing={"2"}>
-              <Button onClick={onDeleteClose}>Close</Button>
-              <Button
-                colorScheme="red"
-                onClick={() => {
-                  handleDeleteAllClicked()
-                  onDeleteClose()
-                  setSelectedWorkspaces(new Set())
-                }}>
-                Delete
-              </Button>
-            </HStack>
-          </ModalFooter>
-        </ModalContent>
-      </Modal>
+      <DeleteWorkspacesModal
+        isOpen={isDeleteOpen}
+        onCloseRequested={onDeleteClose}
+        onDeleteRequested={handleDeleteAllClicked}
+        amount={selection.size}
+      />
     </>
   )
 }

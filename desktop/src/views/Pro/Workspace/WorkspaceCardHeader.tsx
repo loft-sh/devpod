@@ -30,6 +30,8 @@ import {
   Text,
   TextProps,
   VStack,
+  Checkbox,
+  Box,
 } from "@chakra-ui/react"
 import React, { ReactNode, createContext, useContext, useCallback } from "react"
 type TWorkspaceCardHeaderContext = ProWorkspaceInstance
@@ -39,10 +41,16 @@ type TWorkspaceCardHeaderProps = Readonly<{
   instance: ProWorkspaceInstance
   children?: ReactNode
   showSource?: boolean
+  isSelected?: boolean
+  showSelection?: boolean
+  onSelectionChange?: (isSelected: boolean) => void
 }>
 export function WorkspaceCardHeader({
   instance,
   children,
+  isSelected,
+  onSelectionChange,
+  showSelection,
   showSource = true,
 }: TWorkspaceCardHeaderProps) {
   const source = instance.status?.source
@@ -56,18 +64,33 @@ export function WorkspaceCardHeader({
             {source?.gitRepository || source?.image || source?.localFolder}
           </Text>
         )}
-        <Heading size="md" my="1">
-          <Text
-            fontWeight="bold"
-            maxW="50rem"
-            overflow="hidden"
-            whiteSpace="nowrap"
-            textOverflow="ellipsis">
-            {getDisplayName(instance, instance.id)}
-          </Text>
-        </Heading>
+        <HStack alignItems={"center"}>
+          {showSelection && (
+            <Box mr={"1"} onClick={(e) => e.stopPropagation()}>
+              <Checkbox
+                mt={"1.5"}
+                isChecked={isSelected}
+                onClick={(e) => e.stopPropagation()}
+                onChange={(e) => {
+                  onSelectionChange?.(e.target.checked)
+                }}
+              />
+            </Box>
+          )}
+          <Heading size="md" my="1">
+            <Text
+              fontWeight="bold"
+              maxW="50rem"
+              overflow="hidden"
+              whiteSpace="nowrap"
+              textOverflow="ellipsis">
+              {getDisplayName(instance, instance.id)}
+            </Text>
+          </Heading>
+        </HStack>
         {showSource && sourceDetail ? sourceDetail : null}
       </VStack>
+
       <WorkspaceCardHeaderContext.Provider value={instance}>
         {children}
       </WorkspaceCardHeaderContext.Provider>

@@ -3,9 +3,9 @@ import dayjs from "dayjs"
 import { ReactNode, useId } from "react"
 import { HiClock, HiOutlineCode } from "react-icons/hi"
 import { useNavigate } from "react-router"
-import { IconTag } from "../../components"
-import { Stack3D } from "../../icons"
-import { Routes } from "../../routes"
+import { IconTag } from "@/components"
+import { Stack3D } from "@/icons"
+import { Routes } from "@/routes"
 
 type TWorkspaceCardHeaderProps = Readonly<{
   id: string

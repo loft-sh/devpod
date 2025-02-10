@@ -51,6 +51,10 @@ const badgeOptionMappings: {
     icon: <CircleDuotone boxSize={5} />,
     color: "red.500",
   },
+  [WorkspaceDisplayStatus.Failed]: {
+    icon: <CircleDuotone boxSize={5} />,
+    color: "red.500",
+  },
   [WorkspaceDisplayStatus.Running]: {
     icon: <CircleDuotone boxSize={5} />,
     color: "primary.500",
@@ -70,33 +74,53 @@ type TWorkspaceStatusProps = Readonly<{
 }>
 export function WorkspaceStatus({ status }: TWorkspaceStatusProps) {
   const displayStatus = determineDisplayStatus(status)
+
+  return <WorkspaceDisplayStatusBadge displayStatus={displayStatus} />
+}
+
+export function WorkspaceDisplayStatusBadge({
+  displayStatus,
+  compact,
+}: {
+  displayStatus: TWorkspaceDisplayStatus
+  compact?: boolean
+}) {
   const badgeProps = badgeOptionMappings[displayStatus]
 
-  return <StatusBadge displayStatus={displayStatus} {...badgeProps} />
+  return <StatusBadge displayStatus={displayStatus} compact={compact} {...badgeProps} />
 }
 
 type TStatusBadgeProps = Readonly<{
   icon?: React.ReactNode
   color?: BoxProps["color"]
   displayStatus: TWorkspaceDisplayStatus
+  compact?: boolean
 }>
-function StatusBadge({ icon, displayStatus, color }: TStatusBadgeProps) {
+function StatusBadge({ icon, displayStatus, color, compact }: TStatusBadgeProps) {
   let s: string = displayStatus
   if (displayStatus === WorkspaceDisplayStatus.WaitingToInitialize) {
     s = "Waiting to Initialize"
   }
 
   return (
-    <HStack w="full" align="center" justify="start" gap="1" color={color}>
+    <HStack
+      w={compact ? "fit-content" : "full"}
+      align="center"
+      justify="start"
+      gap="1"
+      color={color}>
       {icon}
-      <Text fontWeight="medium">{s}</Text>
+      {!compact && <Text fontWeight="medium">{s}</Text>}
     </HStack>
   )
 }
 
-type TWorkspaceDisplayStatus = (typeof WorkspaceDisplayStatus)[keyof typeof WorkspaceDisplayStatus]
+export type TWorkspaceDisplayStatus =
+  (typeof WorkspaceDisplayStatus)[keyof typeof WorkspaceDisplayStatus]
 
-function determineDisplayStatus(status: ProWorkspaceInstance["status"]): TWorkspaceDisplayStatus {
+export function determineDisplayStatus(
+  status: ProWorkspaceInstance["status"]
+): TWorkspaceDisplayStatus {
   const phase = status?.phase
   const lastWorkspaceStatus = status?.lastWorkspaceStatus
 

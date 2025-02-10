@@ -23,7 +23,7 @@ export function useStopWorkspaceModal(onClick: (closeModal: VoidFunction) => voi
           <ModalHeader>Stop Workspace</ModalHeader>
           <ModalCloseButton />
           <ModalBody>
-            Stopping the workspace while it&apos;s not running may leave it in a corrupted state. Do
+            Stopping a workspace while it&apos;s not running may leave it in a corrupted state. Do
             you want to stop it regardless?
           </ModalBody>
           <ModalFooter>
