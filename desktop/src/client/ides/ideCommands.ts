@@ -7,8 +7,8 @@ import {
   DEVPOD_FLAG_JSON_LOG_OUTPUT,
   DEVPOD_FLAG_JSON_OUTPUT,
 } from "../constants"
-import { getErrorFromChildProcess, Result, ResultError, Return } from "../../lib"
-import { TIDEs } from "../../types"
+import { getErrorFromChildProcess, Result, ResultError, Return } from "@/lib"
+import { TIDEs } from "@/types"
 
 export class IDECommands {
   static DEBUG = false

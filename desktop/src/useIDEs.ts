@@ -3,6 +3,7 @@ import { useMemo } from "react"
 import { client } from "./client"
 import { useSettings } from "./contexts"
 import { QueryKeys } from "./queryKeys"
+import { TIDE, TIDEs } from "@/types"
 
 // See pkg/config/ide.go for names
 const FLEET_IDE_NAME = "fleet"
@@ -46,4 +47,32 @@ export function useIDEs() {
     () => ({ ides, defaultIDE: idesQuery.data?.find((ide) => ide.default) }),
     [ides, idesQuery.data]
   )
+}
+
+export function useGroupIDEs(ides?: TIDEs) {
+  return useMemo(() => {
+    return ides?.reduce(
+      (accum, ide) => {
+        const group = ide.group ?? "Other"
+
+        if (group === "Primary") {
+          accum.primary.push(ide)
+        } else {
+          if (!accum.subMenus[group]) {
+            accum.subMenus[group] = []
+            accum.subMenuGroups.push(group)
+          }
+
+          accum.subMenus[group]!.push(ide)
+        }
+
+        return accum
+      },
+      {
+        primary: [] as TIDE[],
+        subMenuGroups: [] as string[],
+        subMenus: {} as { [key: string]: TIDE[] },
+      }
+    )
+  }, [ides])
 }

@@ -26,3 +26,11 @@ const (
 	IDECodium          IDE = "codium"
 	IDEZed             IDE = "zed"
 )
+
+type IDEGroup string
+
+const (
+	IDEGroupPrimary   IDEGroup = "Primary"
+	IDEGroupJetBrains IDEGroup = "JetBrains"
+	IDEGroupOther     IDEGroup = "Other"
+)
