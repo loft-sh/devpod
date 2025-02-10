@@ -35,9 +35,16 @@ import dayjs from "dayjs"
 type TWorkspaceInstanceCardProps = Readonly<{
   host: string
   instanceName: string
+  isSelected?: boolean
+  onSelectionChange?: (isSelected: boolean) => void
 }>
 
-export function WorkspaceInstanceCard({ instanceName, host }: TWorkspaceInstanceCardProps) {
+export function WorkspaceInstanceCard({
+  instanceName,
+  host,
+  isSelected,
+  onSelectionChange,
+}: TWorkspaceInstanceCardProps) {
   const hoverColor = useColorModeValue("gray.50", "gray.800")
   const { data: templates } = useTemplates()
   const workspace = useWorkspace<ProWorkspaceInstance>(instanceName)
@@ -172,7 +179,11 @@ export function WorkspaceInstanceCard({ instanceName, host }: TWorkspaceInstance
         boxShadow="0px 2px 4px 0px rgba(0, 0, 0, 0.07)"
         onClick={() => navigate(Routes.toProWorkspace(host, instance.id))}>
         <CardHeader overflow="hidden" w="full">
-          <WorkspaceCardHeader instance={instance}>
+          <WorkspaceCardHeader
+            showSelection={true}
+            isSelected={isSelected}
+            onSelectionChange={onSelectionChange}
+            instance={instance}>
             <WorkspaceCardHeader.Controls
               onOpenClicked={handleOpenClicked}
               onDeleteClicked={openDeleteModal}
