@@ -20,6 +20,7 @@ import {
   HStack,
   IconProps,
   Text,
+  Tooltip,
   useColorModeValue,
   VStack,
 } from "@chakra-ui/react"
@@ -133,9 +134,18 @@ export function WorkspaceInstanceCard({ instanceName, host }: TWorkspaceInstance
       ? dayjs(lastActivityDate).from(Date.now())
       : undefined
 
-    const createdFormatted = dayjs(instance.metadata?.creationTimestamp).from(Date.now())
+    const createdFormatted = instance.metadata?.creationTimestamp
+      ? dayjs(instance.metadata.creationTimestamp).from(Date.now())
+      : undefined
 
-    return [lastActivityFormatted, createdFormatted]
+    return [
+      lastActivityFormatted
+        ? { formatted: lastActivityFormatted, date: lastActivityDate }
+        : undefined,
+      createdFormatted
+        ? { formatted: createdFormatted, date: instance.metadata?.creationTimestamp }
+        : undefined,
+    ]
   }, [instance])
 
   if (!instance) {
@@ -187,13 +197,17 @@ export function WorkspaceInstanceCard({ instanceName, host }: TWorkspaceInstance
 
             {lastActivity && (
               <WorkspaceInfoDetail icon={Clock} label={<Text>Last activity</Text>}>
-                <Text>{lastActivity}</Text>
+                <Tooltip label={lastActivity.date ? lastActivity.date.toLocaleString() : undefined}>
+                  <Text>{lastActivity.formatted}</Text>
+                </Tooltip>
               </WorkspaceInfoDetail>
             )}
 
             {created && (
               <WorkspaceInfoDetail icon={Clock} label={<Text>Created</Text>}>
-                <Text>{created}</Text>
+                <Tooltip label={created.date ? new Date(created.date).toLocaleString() : undefined}>
+                  <Text>{created.formatted}</Text>
+                </Tooltip>
               </WorkspaceInfoDetail>
             )}
 
