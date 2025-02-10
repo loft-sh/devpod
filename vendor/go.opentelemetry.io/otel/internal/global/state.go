@@ -1,28 +1,23 @@
 // Copyright The OpenTelemetry Authors
-//
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-//     http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
+// SPDX-License-Identifier: Apache-2.0
 
 package global // import "go.opentelemetry.io/otel/internal/global"
 
 import (
+	"errors"
 	"sync"
 	"sync/atomic"
 
+	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/propagation"
 	"go.opentelemetry.io/otel/trace"
 )
 
 type (
+	errorHandlerHolder struct {
+		eh ErrorHandler
+	}
+
 	tracerProviderHolder struct {
 		tp trace.TracerProvider
 	}
@@ -30,15 +25,65 @@ type (
 	propagatorsHolder struct {
 		tm propagation.TextMapPropagator
 	}
+
+	meterProviderHolder struct {
+		mp metric.MeterProvider
+	}
 )
 
 var (
-	globalTracer      = defaultTracerValue()
-	globalPropagators = defaultPropagatorsValue()
+	globalErrorHandler  = defaultErrorHandler()
+	globalTracer        = defaultTracerValue()
+	globalPropagators   = defaultPropagatorsValue()
+	globalMeterProvider = defaultMeterProvider()
 
+	delegateErrorHandlerOnce      sync.Once
 	delegateTraceOnce             sync.Once
 	delegateTextMapPropagatorOnce sync.Once
+	delegateMeterOnce             sync.Once
 )
+
+// GetErrorHandler returns the global ErrorHandler instance.
+//
+// The default ErrorHandler instance returned will log all errors to STDERR
+// until an override ErrorHandler is set with SetErrorHandler. All
+// ErrorHandler returned prior to this will automatically forward errors to
+// the set instance instead of logging.
+//
+// Subsequent calls to SetErrorHandler after the first will not forward errors
+// to the new ErrorHandler for prior returned instances.
+func GetErrorHandler() ErrorHandler {
+	return globalErrorHandler.Load().(errorHandlerHolder).eh
+}
+
+// SetErrorHandler sets the global ErrorHandler to h.
+//
+// The first time this is called all ErrorHandler previously returned from
+// GetErrorHandler will send errors to h instead of the default logging
+// ErrorHandler. Subsequent calls will set the global ErrorHandler, but not
+// delegate errors to h.
+func SetErrorHandler(h ErrorHandler) {
+	current := GetErrorHandler()
+
+	if _, cOk := current.(*ErrDelegator); cOk {
+		if _, ehOk := h.(*ErrDelegator); ehOk && current == h {
+			// Do not assign to the delegate of the default ErrDelegator to be
+			// itself.
+			Error(
+				errors.New("no ErrorHandler delegate configured"),
+				"ErrorHandler remains its current value.",
+			)
+			return
+		}
+	}
+
+	delegateErrorHandlerOnce.Do(func() {
+		if def, ok := current.(*ErrDelegator); ok {
+			def.setDelegate(h)
+		}
+	})
+	globalErrorHandler.Store(errorHandlerHolder{eh: h})
+}
 
 // TracerProvider is the internal implementation for global.TracerProvider.
 func TracerProvider() trace.TracerProvider {
@@ -47,17 +92,24 @@ func TracerProvider() trace.TracerProvider {
 
 // SetTracerProvider is the internal implementation for global.SetTracerProvider.
 func SetTracerProvider(tp trace.TracerProvider) {
+	current := TracerProvider()
+
+	if _, cOk := current.(*tracerProvider); cOk {
+		if _, tpOk := tp.(*tracerProvider); tpOk && current == tp {
+			// Do not assign the default delegating TracerProvider to delegate
+			// to itself.
+			Error(
+				errors.New("no delegate configured in tracer provider"),
+				"Setting tracer provider to its current value. No delegate will be configured",
+			)
+			return
+		}
+	}
+
 	delegateTraceOnce.Do(func() {
-		current := TracerProvider()
-		if current == tp {
-			// Setting the provider to the prior default is nonsense, panic.
-			// Panic is acceptable because we are likely still early in the
-			// process lifetime.
-			panic("invalid TracerProvider, the global instance cannot be reinstalled")
-		} else if def, ok := current.(*tracerProvider); ok {
+		if def, ok := current.(*tracerProvider); ok {
 			def.setDelegate(tp)
 		}
-
 	})
 	globalTracer.Store(tracerProviderHolder{tp: tp})
 }
@@ -69,20 +121,63 @@ func TextMapPropagator() propagation.TextMapPropagator {
 
 // SetTextMapPropagator is the internal implementation for global.SetTextMapPropagator.
 func SetTextMapPropagator(p propagation.TextMapPropagator) {
+	current := TextMapPropagator()
+
+	if _, cOk := current.(*textMapPropagator); cOk {
+		if _, pOk := p.(*textMapPropagator); pOk && current == p {
+			// Do not assign the default delegating TextMapPropagator to
+			// delegate to itself.
+			Error(
+				errors.New("no delegate configured in text map propagator"),
+				"Setting text map propagator to its current value. No delegate will be configured",
+			)
+			return
+		}
+	}
+
 	// For the textMapPropagator already returned by TextMapPropagator
 	// delegate to p.
 	delegateTextMapPropagatorOnce.Do(func() {
-		if current := TextMapPropagator(); current == p {
-			// Setting the provider to the prior default is nonsense, panic.
-			// Panic is acceptable because we are likely still early in the
-			// process lifetime.
-			panic("invalid TextMapPropagator, the global instance cannot be reinstalled")
-		} else if def, ok := current.(*textMapPropagator); ok {
+		if def, ok := current.(*textMapPropagator); ok {
 			def.SetDelegate(p)
 		}
 	})
 	// Return p when subsequent calls to TextMapPropagator are made.
 	globalPropagators.Store(propagatorsHolder{tm: p})
+}
+
+// MeterProvider is the internal implementation for global.MeterProvider.
+func MeterProvider() metric.MeterProvider {
+	return globalMeterProvider.Load().(meterProviderHolder).mp
+}
+
+// SetMeterProvider is the internal implementation for global.SetMeterProvider.
+func SetMeterProvider(mp metric.MeterProvider) {
+	current := MeterProvider()
+	if _, cOk := current.(*meterProvider); cOk {
+		if _, mpOk := mp.(*meterProvider); mpOk && current == mp {
+			// Do not assign the default delegating MeterProvider to delegate
+			// to itself.
+			Error(
+				errors.New("no delegate configured in meter provider"),
+				"Setting meter provider to its current value. No delegate will be configured",
+			)
+			return
+		}
+	}
+
+	delegateMeterOnce.Do(func() {
+		if def, ok := current.(*meterProvider); ok {
+			def.setDelegate(mp)
+		}
+	})
+	globalMeterProvider.Store(meterProviderHolder{mp: mp})
+}
+
+func defaultErrorHandler() *atomic.Value {
+	v := &atomic.Value{}
+	v.Store(errorHandlerHolder{eh: &ErrDelegator{}})
+	return v
 }
 
 func defaultTracerValue() *atomic.Value {
@@ -97,10 +192,8 @@ func defaultPropagatorsValue() *atomic.Value {
 	return v
 }
 
-// ResetForTest restores the initial global state, for testing purposes.
-func ResetForTest() {
-	globalTracer = defaultTracerValue()
-	globalPropagators = defaultPropagatorsValue()
-	delegateTraceOnce = sync.Once{}
-	delegateTextMapPropagatorOnce = sync.Once{}
+func defaultMeterProvider() *atomic.Value {
+	v := &atomic.Value{}
+	v.Store(meterProviderHolder{mp: &meterProvider{}})
+	return v
 }

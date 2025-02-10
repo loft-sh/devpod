@@ -11,10 +11,15 @@ export function getOptionValue(option: TOptionWithID) {
   return option.value ?? option.defaultValue
 }
 export function canCreateMachine(providerConfig: TProviderConfig | undefined | null): boolean {
-  return exists(providerConfig?.exec?.["create"])
+  const exec = providerConfig?.exec
+  if (exec?.proxy) {
+    return false
+  }
+
+  return exists((exec as Record<string, unknown> | undefined)?.["create"])
 }
 
-function getOptionDisplayName(id: TOptionID) {
+function getOptionFallbackDisplayName(id: TOptionID) {
   return id
     .toLowerCase()
     .replace(/_/g, " ")
@@ -22,14 +27,42 @@ function getOptionDisplayName(id: TOptionID) {
 }
 
 export function getVisibleOptions(
-  options: TProviderOptions | undefined | null
+  options: TProviderOptions | undefined | null,
+  edit?: boolean
 ): readonly TOptionWithID[] {
   return Object.entries(options ?? {})
-    .filter(([, { hidden }]) => !(exists(hidden) && hidden))
+    .filter(([, { hidden, mutable }]) => {
+      if (exists(hidden) && hidden) {
+        return false
+      }
+      if (edit && !mutable) {
+        return false
+      }
+
+      return true
+    })
     .map<TOptionWithID>(([optionName, option]) => ({
       id: optionName,
       defaultValue: option.default,
-      displayName: getOptionDisplayName(optionName),
       ...option,
+      displayName: option.displayName || getOptionFallbackDisplayName(optionName),
     }))
+}
+
+export function mergeOptionDefinitions(
+  stateOptions: TProviderOptions,
+  configOptions: TProviderOptions
+): TProviderOptions {
+  const res: TProviderOptions = {}
+  for (const [k, v] of Object.entries(stateOptions)) {
+    const config = configOptions[k]
+    if (config) {
+      res[k] = { ...config, ...v }
+      continue
+    }
+
+    res[k] = v
+  }
+
+  return res
 }

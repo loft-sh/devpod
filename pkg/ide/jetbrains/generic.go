@@ -3,6 +3,7 @@ package jetbrains
 import (
 	"fmt"
 	"io"
+	"net/http"
 	"net/url"
 	"os"
 	"path"
@@ -16,8 +17,8 @@ import (
 	"github.com/loft-sh/devpod/pkg/extract"
 	devpodhttp "github.com/loft-sh/devpod/pkg/http"
 	"github.com/loft-sh/devpod/pkg/ide"
+	"github.com/loft-sh/devpod/pkg/util"
 	"github.com/loft-sh/log"
-	"github.com/mitchellh/go-homedir"
 	"github.com/pkg/errors"
 	"github.com/skratchdot/open-golang/open"
 )
@@ -28,15 +29,25 @@ const (
 	DownloadArm64Option = "DOWNLOAD_ARM64"
 )
 
-func getDownloadURLs(options ide.Options, values map[string]config.OptionValue, templateAmd64, templateArm64 string) (string, string) {
+func getLatestDownloadURL(code string, platform string) string {
+	return fmt.Sprintf("https://download.jetbrains.com/product?code=%s&platform=%s", code, platform)
+}
+
+func getDownloadURLs(options ide.Options, values map[string]config.OptionValue, productCode string, templateAmd64 string, templateArm64 string) (string, string) {
 	version := options.GetValue(values, VersionOption)
-	amd64Download := options.GetValue(values, DownloadAmd64Option)
-	if amd64Download == "" {
-		amd64Download = fmt.Sprintf(templateAmd64, version)
-	}
-	arm64Download := options.GetValue(values, DownloadArm64Option)
-	if arm64Download == "" {
-		arm64Download = fmt.Sprintf(templateArm64, version)
+	var amd64Download, arm64Download string
+	if version == "latest" {
+		amd64Download = getLatestDownloadURL(productCode, "linux")
+		arm64Download = getLatestDownloadURL(productCode, "linuxARM64")
+	} else {
+		amd64Download = options.GetValue(values, DownloadAmd64Option)
+		if amd64Download == "" {
+			amd64Download = fmt.Sprintf(templateAmd64, version)
+		}
+		arm64Download = options.GetValue(values, DownloadArm64Option)
+		if arm64Download == "" {
+			arm64Download = fmt.Sprintf(templateArm64, version)
+		}
 	}
 
 	return amd64Download, arm64Download
@@ -123,7 +134,7 @@ func getBaseFolder(userName string) (string, error) {
 	if userName != "" {
 		homeFolder, err = command.GetHome(userName)
 	} else {
-		homeFolder, err = homedir.Dir()
+		homeFolder, err = util.UserHomeDir()
 	}
 	if err != nil {
 		return "", err
@@ -167,6 +178,10 @@ func (o *GenericJetBrainsServer) download(targetFolder string, log log.Logger) (
 		return "", errors.Wrap(err, "download binary")
 	}
 	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK && resp.StatusCode != http.StatusCreated {
+		return "", errors.Wrapf(err, "download binary returned status code %d", resp.StatusCode)
+	}
 
 	stat, err := os.Stat(targetPath)
 	if err == nil && stat.Size() == resp.ContentLength {

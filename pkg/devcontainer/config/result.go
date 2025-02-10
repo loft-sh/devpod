@@ -3,9 +3,18 @@ package config
 const UserLabel = "devpod.user"
 
 type Result struct {
-	MergedConfig        *MergedDevContainerConfig `json:"MergedConfig"`
-	SubstitutionContext *SubstitutionContext      `json:"SubstitutionContext"`
-	ContainerDetails    *ContainerDetails         `json:"ContainerDetails"`
+	DevContainerConfigWithPath *DevContainerConfigWithPath `json:"DevContainerConfigWithPath"`
+	MergedConfig               *MergedDevContainerConfig   `json:"MergedConfig"`
+	SubstitutionContext        *SubstitutionContext        `json:"SubstitutionContext"`
+	ContainerDetails           *ContainerDetails           `json:"ContainerDetails"`
+}
+
+type DevContainerConfigWithPath struct {
+	// Config is the devcontainer.json config
+	Config *DevContainerConfig `json:"config,omitempty"`
+
+	// Path is the relative path to the devcontainer.json from the workspace folder
+	Path string `json:"path,omitempty"`
 }
 
 func GetMounts(result *Result) []*Mount {

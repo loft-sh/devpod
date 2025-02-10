@@ -5,3 +5,6 @@ providers:
   - repository: https://github.com/mrsimonemms/devpod-provider-hetzner
   - repository: https://github.com/cloudbit-ch/devpod-provider-cloudbit
   - repository: https://github.com/flowswiss/devpod-provider-flow
+  - repository: https://github.com/navaneeth-dev/devpod-provider-vultr
+  - repository: https://github.com/minhio/devpod-provider-multipass
+  - repository: https://github.com/akyriako/devpod-provider-opentelekomcloud

@@ -7,7 +7,7 @@ import (
 	"sort"
 	"time"
 
-	"github.com/loft-sh/devpod/cmd/flags"
+	proflags "github.com/loft-sh/devpod/cmd/pro/flags"
 	"github.com/loft-sh/devpod/pkg/config"
 	"github.com/loft-sh/devpod/pkg/provider"
 	"github.com/loft-sh/devpod/pkg/workspace"
@@ -18,20 +18,21 @@ import (
 
 // ListCmd holds the list cmd flags
 type ListCmd struct {
-	flags.GlobalFlags
+	proflags.GlobalFlags
 
 	Output string
+	Login  bool
 }
 
 // NewListCmd creates a new command
-func NewListCmd(flags *flags.GlobalFlags) *cobra.Command {
+func NewListCmd(flags *proflags.GlobalFlags) *cobra.Command {
 	cmd := &ListCmd{
 		GlobalFlags: *flags,
 	}
 	listCmd := &cobra.Command{
 		Use:     "list",
 		Aliases: []string{"ls"},
-		Short:   "List available pro instances",
+		Short:   "List available DevPod Pro instances",
 		Args:    cobra.NoArgs,
 		RunE: func(_ *cobra.Command, args []string) error {
 			return cmd.Run(context.Background())
@@ -39,6 +40,7 @@ func NewListCmd(flags *flags.GlobalFlags) *cobra.Command {
 	}
 
 	listCmd.Flags().StringVar(&cmd.Output, "output", "plain", "The output format to use. Can be json or plain")
+	listCmd.Flags().BoolVar(&cmd.Login, "login", false, "Check if the user is logged into the pro instance")
 	return listCmd
 }
 
@@ -57,24 +59,45 @@ func (cmd *ListCmd) Run(ctx context.Context) error {
 	if cmd.Output == "plain" {
 		tableEntries := [][]string{}
 		for _, proInstance := range proInstances {
-			tableEntries = append(tableEntries, []string{
+			entry := []string{
 				proInstance.Host,
 				proInstance.Provider,
 				time.Since(proInstance.CreationTimestamp.Time).Round(1 * time.Second).String(),
-			})
+			}
+			if cmd.Login {
+				err = checkLogin(ctx, devPodConfig, proInstance)
+				entry = append(entry, fmt.Sprintf("%t", err == nil))
+			}
+
+			tableEntries = append(tableEntries, entry)
 		}
 		sort.SliceStable(tableEntries, func(i, j int) bool {
 			return tableEntries[i][0] < tableEntries[j][0]
 		})
 
-		table.PrintTable(log.Default, []string{
+		tableHeaders := []string{
 			"Host",
 			"Provider",
 			"Age",
-		}, tableEntries)
+		}
+		if cmd.Login {
+			tableHeaders = append(tableHeaders, "Authenticated")
+		}
+
+		table.PrintTable(log.Default, tableHeaders, tableEntries)
 	} else if cmd.Output == "json" {
-		tableEntries := []*provider.ProInstance{}
-		tableEntries = append(tableEntries, proInstances...)
+		tableEntries := []*proTableEntry{}
+		for _, proInstance := range proInstances {
+			entry := &proTableEntry{ProInstance: proInstance}
+			if cmd.Login {
+				err = checkLogin(ctx, devPodConfig, proInstance)
+				isAuthenticated := err == nil
+				entry.Authenticated = &isAuthenticated
+			}
+
+			tableEntries = append(tableEntries, entry)
+		}
+
 		sort.SliceStable(tableEntries, func(i, j int) bool {
 			return tableEntries[i].Host < tableEntries[j].Host
 		})
@@ -85,6 +108,21 @@ func (cmd *ListCmd) Run(ctx context.Context) error {
 		fmt.Print(string(out))
 	} else {
 		return fmt.Errorf("unexpected output format, choose either json or plain. Got %s", cmd.Output)
+	}
+
+	return nil
+}
+
+type proTableEntry struct {
+	*provider.ProInstance
+
+	Authenticated *bool `json:"authenticated,omitempty"`
+}
+
+func checkLogin(ctx context.Context, devPodConfig *config.Config, proInstance *provider.ProInstance) error {
+	// for every pro instance, check auth status by calling login
+	if err := login(ctx, devPodConfig, proInstance.Host, proInstance.Provider, "", true, false, log.Default); err != nil {
+		return fmt.Errorf("not logged into %s", proInstance.Host)
 	}
 
 	return nil

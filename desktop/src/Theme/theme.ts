@@ -1,4 +1,11 @@
-import { Theme, ThemeOverride, Tooltip, defineStyleConfig, extendTheme } from "@chakra-ui/react"
+import {
+  ColorMode,
+  Theme,
+  ThemeOverride,
+  Tooltip,
+  defineStyleConfig,
+  extendTheme,
+} from "@chakra-ui/react"
 import { mode } from "@chakra-ui/theme-tools"
 import { Menu } from "./menu"
 import { Switch } from "./switch"
@@ -26,7 +33,7 @@ const Link = defineStyleConfig({
     muted(props) {
       const primary = props.theme.colors.primary
 
-      return { color: mode(primary["900"], primary["200"])(props) }
+      return { color: mode(primary["800"], primary["200"])(props) }
     },
   },
 })
@@ -34,7 +41,7 @@ const Link = defineStyleConfig({
 const FormError = defineStyleConfig({
   baseStyle: {
     text: {
-      userSelect: "auto",
+      userSelect: "text",
       cursor: "text",
     },
   },
@@ -44,6 +51,10 @@ const FormError = defineStyleConfig({
 // Unfortunately there is no other way of overring the default placement.
 Tooltip.defaultProps = { ...Tooltip.defaultProps, placement: "top" }
 
+const getInitialColorMode = (defaultColor: ColorMode = "light"): ColorMode => {
+  return (localStorage.getItem("chakra-ui-color-mode") as ColorMode | undefined) ?? defaultColor
+}
+
 export const theme = extendTheme({
   styles: {
     global({ colorMode }) {
@@ -52,6 +63,7 @@ export const theme = extendTheme({
           fontSize: "14px",
           overflow: "hidden",
           background: "transparent",
+          position: "fixed",
         },
         body: {
           background: "transparent",
@@ -59,10 +71,10 @@ export const theme = extendTheme({
           cursor: "default",
         },
         td: {
-          userSelect: "auto",
+          userSelect: "text",
         },
         code: {
-          userSelect: "auto",
+          userSelect: "text",
           cursor: "text",
         },
         "input::placeholder": {
@@ -80,12 +92,22 @@ export const theme = extendTheme({
       800: "#8E00EB",
       900: "#40006A",
     },
+    text: {
+      secondary: "#465E75",
+      tertiary: "#5C7997",
+    },
+    divider: {
+      main: "#B0C3D6",
+      light: "#DCE5EE",
+      dark: "#465E75",
+    },
     background: {
       darkest: "rgb(16, 18, 20)",
     },
   },
   config: {
-    initialColorMode: "light",
+    // in order to prevent chakra-ui color mode screen flash, we already set initial theme color mode to the local storage color mode
+    initialColorMode: getInitialColorMode("light"),
     useSystemColorMode: false,
   },
   components: {

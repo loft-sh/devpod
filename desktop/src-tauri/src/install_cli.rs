@@ -92,8 +92,8 @@ fn install(_app_handle: AppHandle, force: bool) -> Result<(), InstallCLIError> {
         let mut user_local_bin = home;
         user_local_bin.push(".local/bin/devpod");
 
-        target_paths.push(user_bin);
         target_paths.push(user_local_bin);
+        target_paths.push(user_bin);
     }
 
     let mut latest_error: Option<InstallCLIError> = None;
@@ -124,21 +124,49 @@ fn install(_app_handle: AppHandle, force: bool) -> Result<(), InstallCLIError> {
             target_path.to_string_lossy()
         );
 
-        let operation = if is_on_tmpfs { copy } else { symlink };
-        match operation(cli_path.clone(), &target_path)
-            .with_context(|| format!("path: {}", str_target_path))
-            .map_err(InstallCLIError::Link)
-        {
-            Ok(..) => {
-                return Ok(());
+        let mut is_flatpak = false;
+
+        match env::var("FLATPAK_ID") {
+            Ok(_) => is_flatpak = true,
+            Err(_) => is_flatpak = false,
+        }
+
+        if is_flatpak {
+            match copy(cli_path.clone(), &target_path)
+                .with_context(|| format!("path: {}", str_target_path))
+                .map_err(InstallCLIError::Link)
+            {
+                Ok(..) => {
+                    return Ok(());
+                }
+                Err(err) => {
+                    warn!(
+                        "Failed to copy from {} to {}: {}; Retrying with other paths...",
+                        cli_path.to_string_lossy(),
+                        target_path.to_string_lossy(),
+                        err
+                    );
+                    latest_error = Some(err);
+                }
             }
-            Err(err) => {
-                warn!(
-                    "Failed to link to {}: {}; Retrying with other paths...",
-                    target_path.to_string_lossy(),
-                    err
-                );
-                latest_error = Some(err);
+        } else {
+            let operation = if is_on_tmpfs { copy } else { symlink };
+
+            match operation(cli_path.clone(), &target_path)
+                .with_context(|| format!("path: {}", str_target_path))
+                .map_err(InstallCLIError::Link)
+            {
+                Ok(..) => {
+                    return Ok(());
+                }
+                Err(err) => {
+                    warn!(
+                        "Failed to link to {}: {}; Retrying with other paths...",
+                        target_path.to_string_lossy(),
+                        err
+                    );
+                    latest_error = Some(err);
+                }
             }
         }
     }
@@ -186,6 +214,7 @@ fn find_fs_type(curr_path: &Path, mount_lines: &Lines) -> Option<String> {
 #[cfg(target_os = "windows")]
 fn install(app_handle: AppHandle, force: bool) -> Result<(), InstallCLIError> {
     use log::error;
+    use tauri::Manager;
     use std::fs;
     use windows::Win32::{
         Foundation::{GetLastError, HWND, LPARAM},
@@ -203,9 +232,9 @@ fn install(app_handle: AppHandle, force: bool) -> Result<(), InstallCLIError> {
 
     let cli_path = get_cli_path().map_err(|e| InstallCLIError::NoExePath(e))?;
     let mut bin_dir = app_handle
-        .path_resolver()
+        .path()
         .app_data_dir()
-        .ok_or(InstallCLIError::DataDir)?;
+        .map_err(|_|InstallCLIError::DataDir)?;
     bin_dir.push("bin");
 
     // Create binary directory in app dir and write bin_files to disk

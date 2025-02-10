@@ -1,24 +1,28 @@
 import { useCallback, useEffect, useId, useMemo, useRef, useSyncExternalStore } from "react"
-import { client, TStreamEventListenerFn } from "../../../client"
+import { TStreamEventListenerFn, client } from "../../../client"
 import { TStreamID, TUnsubscribeFn } from "../../../types"
-import { devPodStore } from "../devPodStore"
+import { useWorkspaceStore } from "../workspaceStore"
+import { IWorkspaceStore } from "../workspaceStore/workspaceStore"
 import { TActionID, TActionObj } from "./action"
 
 type TActionResult = Readonly<{
   data: TActionObj
   connectOrReplay(onStream: TStreamEventListenerFn): void | VoidFunction
+  cancel(): void
 }>
 
 export function useAction(actionID: TActionID | undefined): TActionResult | undefined {
+  const { store } = useWorkspaceStore()
+  const isCancellingRef = useRef(false)
   const viewID = useId()
   const data = useSyncExternalStore(
-    useCallback((listener) => devPodStore.subscribe(listener), []),
+    useCallback((listener) => store.subscribe(listener), [store]),
     () => {
       if (actionID === undefined) {
         return undefined
       }
 
-      return getAction(actionID)
+      return getAction(actionID, store)
     }
   )
 
@@ -39,12 +43,25 @@ export function useAction(actionID: TActionID | undefined): TActionResult | unde
 
         return replay(data.id, onStream)
       },
+      cancel: () => {
+        if (isCancellingRef.current) {
+          return
+        }
+        isCancellingRef.current = true
+        // could improve by setting timeout as fallback if promise doesn't resolve, let's see if this is enough
+        client.workspaces.cancelAction(data.targetID).finally(() => {
+          isCancellingRef.current = false
+        })
+      },
     }
   }, [data, connect, replay])
 }
 
-export function getAction(actionID: TActionID): TActionObj | undefined {
-  const { active, history } = devPodStore.getAllActions()
+export function getAction(
+  actionID: TActionID,
+  store: IWorkspaceStore<string, unknown>
+): TActionObj | undefined {
+  const { active, history } = store.getAllActions()
 
   return [...active, ...history].find((action) => action.id === actionID)
 }

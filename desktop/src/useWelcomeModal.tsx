@@ -37,16 +37,29 @@ export function useWelcomeModal() {
     navigate(Routes.WORKSPACE_CREATE)
   }, [navigate, onClose])
 
-  // Only show the welcome modal once
+  // Open the welcome modal on first visit, except if we start with a `SetupPro` event
   useEffect(() => {
     const maybeFirstVisit = localStorage.getItem(IS_FIRST_VISIT_KEY)
-    if (maybeFirstVisit === null && !isOpen) {
+    let shouldShowWelcomeModal = maybeFirstVisit === null && !isOpen
+
+    const listenerPromise = client.subscribe("event", (event) => {
+      if (event.type === "SetupPro") {
+        shouldShowWelcomeModal = false
+        onClose()
+      }
+    })
+
+    if (shouldShowWelcomeModal) {
       onOpen()
       localStorage.setItem(IS_FIRST_VISIT_KEY, "false")
 
       return
     }
-  }, [isOpen, onOpen])
+
+    return () => {
+      listenerPromise.then((unsubscribe) => unsubscribe())
+    }
+  }, [isOpen, onClose, onOpen])
 
   const modal = useMemo(() => {
     return (
@@ -85,9 +98,7 @@ export function useWelcomeModal() {
                     cloud. It&apos;s also possible to extend DevPod and write your own custom
                     providers. <br />
                     For more information, head over to our{" "}
-                    <Link
-                      color="primary.600"
-                      onClick={() => client.openLink("https://devpod.sh/docs")}>
+                    <Link color="primary.600" onClick={() => client.open("https://devpod.sh/docs")}>
                       documentation.
                     </Link>
                   </Text>
@@ -106,8 +117,7 @@ export function useWelcomeModal() {
                   <Text>
                     DevPod ships with a powerful CLI that allows you to create, manage and connect
                     to your workspaces and providers. You can either{" "}
-                    <Link
-                      onClick={() => client.openLink("https://github.com/loft-sh/devpod/releases")}>
+                    <Link onClick={() => client.open("https://github.com/loft-sh/devpod/releases")}>
                       download the standalone binary
                     </Link>{" "}
                     or directly add it to your <Code>$PATH</Code>.

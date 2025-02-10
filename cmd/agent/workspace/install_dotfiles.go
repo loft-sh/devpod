@@ -10,6 +10,7 @@ import (
 	"github.com/loft-sh/devpod/cmd/flags"
 	"github.com/loft-sh/devpod/pkg/git"
 	"github.com/loft-sh/log"
+	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 )
@@ -18,8 +19,9 @@ import (
 type InstallDotfilesCmd struct {
 	*flags.GlobalFlags
 
-	Repository    string
-	InstallScript string
+	Repository            string
+	InstallScript         string
+	StrictHostKeyChecking bool
 }
 
 // NewInstallDotfilesCmd creates a new command
@@ -37,43 +39,47 @@ func NewInstallDotfilesCmd(flags *flags.GlobalFlags) *cobra.Command {
 	}
 	installDotfilesCmd.Flags().StringVar(&cmd.Repository, "repository", "", "The dotfiles repository")
 	installDotfilesCmd.Flags().StringVar(&cmd.InstallScript, "install-script", "", "The dotfiles install command to execute")
+	installDotfilesCmd.Flags().BoolVar(&cmd.StrictHostKeyChecking, "strict-host-key-checking", false, "Set to enable strict host key checking for git cloning via SSH")
 	return installDotfilesCmd
 }
 
 // Run runs the command logic
 func (cmd *InstallDotfilesCmd) Run(ctx context.Context) error {
 	logger := log.Default.ErrorStreamOnly()
+	targetDir := filepath.Join(os.Getenv("HOME"), "dotfiles")
 
-	_, err := os.Stat("dotfiles")
-	if err == nil {
-		logger.Info("dotfiles already set up, skipping")
-
-		return nil
-	}
-
-	cloneArgs := []string{"clone", cmd.Repository, "dotfiles"}
-
-	logger.Infof("Cloning dotfiles %s", cmd.Repository)
-
-	err = git.CommandContext(ctx, cloneArgs...).Run()
+	_, err := os.Stat(targetDir)
 	if err != nil {
-		return err
+		logger.Infof("Cloning dotfiles %s", cmd.Repository)
+
+		gitInfo := git.NormalizeRepositoryGitInfo(cmd.Repository)
+		gitOpts := git.GitCommandOptions{StrictHostKeyChecking: cmd.StrictHostKeyChecking}
+
+		if err := git.CloneRepository(ctx, gitInfo, targetDir, gitOpts, "", nil, logger); err != nil {
+			return err
+		}
+	} else {
+		logger.Info("dotfiles already set up, skipping cloning")
 	}
 
 	logger.Debugf("Entering dotfiles directory")
 
-	err = os.Chdir("dotfiles")
+	err = os.Chdir(targetDir)
 	if err != nil {
 		return err
 	}
 
 	if cmd.InstallScript != "" {
 		logger.Infof("Executing install script %s", cmd.InstallScript)
+		command := "./" + strings.TrimPrefix(cmd.InstallScript, "./")
 
-		scriptCmd := exec.Command("./" + cmd.InstallScript)
+		err := ensureExecutable(command)
+		if err != nil {
+			return errors.Wrapf(err, "failed to make install script %s executable", command)
+		}
 
+		scriptCmd := exec.Command(command)
 		writer := logger.Writer(logrus.InfoLevel, false)
-
 		scriptCmd.Stdout = writer
 		scriptCmd.Stderr = writer
 
@@ -99,14 +105,19 @@ var scriptLocations = []string{
 func setupDotfiles(logger log.Logger) error {
 	for _, command := range scriptLocations {
 		logger.Debugf("Trying executing %s", command)
-
-		scriptCmd := exec.Command(command)
-
 		writer := logger.Writer(logrus.InfoLevel, false)
 
+		err := ensureExecutable(command)
+		if err != nil {
+			logger.Infof("Failed to make install script %s executable: %v", command, err)
+			logger.Debug("Trying next location")
+			continue
+		}
+
+		scriptCmd := exec.Command(command)
 		scriptCmd.Stdout = writer
 		scriptCmd.Stderr = writer
-		err := scriptCmd.Run()
+		err = scriptCmd.Run()
 		if err != nil {
 			logger.Infof("Execution of %s was unsuccessful: %v", command, err)
 			logger.Debug("Trying next location")
@@ -135,11 +146,31 @@ func setupDotfiles(logger log.Logger) error {
 		if strings.HasPrefix(file.Name(), ".") && !file.IsDir() {
 			logger.Debugf("linking %s in home", file.Name())
 
+			// remove existing symlink and relink
+			if _, err := os.Lstat(filepath.Join(os.Getenv("HOME"), file.Name())); err == nil {
+				os.Remove(filepath.Join(os.Getenv("HOME"), file.Name()))
+			}
 			err = os.Symlink(filepath.Join(pwd, file.Name()), filepath.Join(os.Getenv("HOME"), file.Name()))
 			if err != nil {
 				return err
 			}
 		}
+	}
+
+	return nil
+}
+
+func ensureExecutable(path string) error {
+	checkCmd := exec.Command("test", "-f", path)
+	err := checkCmd.Run()
+	if err != nil {
+		return errors.Wrapf(err, "install script %s not found", path)
+	}
+
+	chmodCmd := exec.Command("chmod", "+x", path)
+	err = chmodCmd.Run()
+	if err != nil {
+		return errors.Wrapf(err, "failed to make install script %s executable", path)
 	}
 
 	return nil

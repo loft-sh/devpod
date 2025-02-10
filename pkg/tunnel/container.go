@@ -1,3 +1,6 @@
+// Package tunnel provides the functions used by the CLI to tunnel into a container using either
+// a tunneled connection from the workspace client (using a machine provider) or a direct SSH connection
+// from the proxy client (Ssh, k8s or docker provider)
 package tunnel
 
 import (
@@ -10,6 +13,7 @@ import (
 
 	"github.com/loft-sh/devpod/pkg/agent"
 	"github.com/loft-sh/devpod/pkg/client"
+	"github.com/loft-sh/devpod/pkg/config"
 	"github.com/loft-sh/devpod/pkg/provider"
 	devssh "github.com/loft-sh/devpod/pkg/ssh"
 	"github.com/loft-sh/log"
@@ -18,9 +22,11 @@ import (
 	"golang.org/x/crypto/ssh"
 )
 
-func NewContainerTunnel(client client.WorkspaceClient, proxy bool, log log.Logger) *ContainerHandler {
+// NewContainerTunnel constructs a ContainerTunnel using the workspace client, if proxy is True then
+// the workspace's agent config is not periodically updated
+func NewContainerTunnel(client client.WorkspaceClient, proxy bool, log log.Logger) *ContainerTunnel {
 	updateConfigInterval := time.Second * 30
-	return &ContainerHandler{
+	return &ContainerTunnel{
 		client:               client,
 		updateConfigInterval: updateConfigInterval,
 		proxy:                proxy,
@@ -28,16 +34,19 @@ func NewContainerTunnel(client client.WorkspaceClient, proxy bool, log log.Logge
 	}
 }
 
-type ContainerHandler struct {
+// ContainerTunnel manages the state of the tunnel to the container
+type ContainerTunnel struct {
 	client               client.WorkspaceClient
 	updateConfigInterval time.Duration
 	proxy                bool
 	log                  log.Logger
 }
 
+// Handler defines what to do once the tunnel has a client established
 type Handler func(ctx context.Context, containerClient *ssh.Client) error
 
-func (c *ContainerHandler) Run(ctx context.Context, handler Handler) error {
+// Run creates an "outer" tunnel to the host to start the SSH server so that the "inner" tunnel can connect to the container over SSH
+func (c *ContainerTunnel) Run(ctx context.Context, handler Handler, cfg *config.Config, envVars map[string]string) error {
 	if handler == nil {
 		return nil
 	}
@@ -58,6 +67,9 @@ func (c *ContainerHandler) Run(ctx context.Context, handler Handler) error {
 	defer stdoutWriter.Close()
 	defer stdinWriter.Close()
 
+	// Get the timeout from the context options
+	timeout := config.ParseTimeOption(cfg, config.ContextOptionAgentInjectTimeout)
+
 	// tunnel to host
 	tunnelChan := make(chan error, 1)
 	go func() {
@@ -69,14 +81,26 @@ func (c *ContainerHandler) Run(ctx context.Context, handler Handler) error {
 		if c.log.GetLevel() == logrus.DebugLevel {
 			command += " --debug"
 		}
-		tunnelChan <- agent.InjectAgentAndExecute(cancelCtx, func(ctx context.Context, command string, stdin io.Reader, stdout io.Writer, stderr io.Writer) error {
-			return c.client.Command(ctx, client.CommandOptions{
-				Command: command,
-				Stdin:   stdin,
-				Stdout:  stdout,
-				Stderr:  stderr,
-			})
-		}, c.client.AgentLocal(), c.client.AgentPath(), c.client.AgentURL(), true, command, stdinReader, stdoutWriter, writer, c.log.ErrorStreamOnly())
+		tunnelChan <- agent.InjectAgentAndExecute(
+			cancelCtx,
+			func(ctx context.Context, command string, stdin io.Reader, stdout io.Writer, stderr io.Writer) error {
+				return c.client.Command(ctx, client.CommandOptions{
+					Command: command,
+					Stdin:   stdin,
+					Stdout:  stdout,
+					Stderr:  stderr,
+				})
+			},
+			c.client.AgentLocal(),
+			c.client.AgentPath(),
+			c.client.AgentURL(),
+			true,
+			command,
+			stdinReader,
+			stdoutWriter,
+			writer,
+			c.log.ErrorStreamOnly(),
+			timeout)
 	}()
 
 	// connect to container
@@ -102,7 +126,11 @@ func (c *ContainerHandler) Run(ctx context.Context, handler Handler) error {
 		}
 
 		// wait until we are done
-		containerChan <- errors.Wrap(c.runRunInContainer(cancelCtx, sshClient, handler), "run in container")
+		if err := c.runInContainer(cancelCtx, sshClient, handler, envVars); err != nil {
+			containerChan <- fmt.Errorf("run in container: %w", err)
+		} else {
+			containerChan <- nil
+		}
 	}()
 
 	// wait for result
@@ -114,7 +142,8 @@ func (c *ContainerHandler) Run(ctx context.Context, handler Handler) error {
 	}
 }
 
-func (c *ContainerHandler) updateConfig(ctx context.Context, sshClient *ssh.Client) {
+// updateConfig is called periodically to keep the workspace agent config up to date
+func (c *ContainerTunnel) updateConfig(ctx context.Context, sshClient *ssh.Client) {
 	for {
 		select {
 		case <-ctx.Done():
@@ -123,7 +152,7 @@ func (c *ContainerHandler) updateConfig(ctx context.Context, sshClient *ssh.Clie
 			c.log.Debugf("Start refresh")
 
 			// update options
-			err := c.client.RefreshOptions(ctx, nil)
+			err := c.client.RefreshOptions(ctx, nil, false)
 			if err != nil {
 				c.log.Errorf("Error refreshing workspace options: %v", err)
 				break
@@ -144,7 +173,7 @@ func (c *ContainerHandler) updateConfig(ctx context.Context, sshClient *ssh.Clie
 			}
 
 			c.log.Debugf("Run command in container: %s", command)
-			err = devssh.Run(ctx, sshClient, command, nil, buf, buf)
+			err = devssh.Run(ctx, sshClient, command, nil, buf, buf, nil)
 			if err != nil {
 				c.log.Errorf("Error updating remote workspace: %s%v", buf.String(), err)
 			} else {
@@ -154,7 +183,8 @@ func (c *ContainerHandler) updateConfig(ctx context.Context, sshClient *ssh.Clie
 	}
 }
 
-func (c *ContainerHandler) runRunInContainer(ctx context.Context, sshClient *ssh.Client, runInContainer Handler) error {
+// runInContainer uses the connected SSH client to execute handler on the remote
+func (c *ContainerTunnel) runInContainer(ctx context.Context, sshClient *ssh.Client, handler Handler, envVars map[string]string) error {
 	// compress info
 	workspaceInfo, _, err := c.client.AgentInfo(provider.CLIOptions{Proxy: c.proxy})
 	if err != nil {
@@ -191,7 +221,7 @@ func (c *ContainerHandler) runRunInContainer(ctx context.Context, sshClient *ssh
 		if c.log.GetLevel() == logrus.DebugLevel {
 			command += " --debug"
 		}
-		err = devssh.Run(cancelCtx, sshClient, command, stdinReader, stdoutWriter, writer)
+		err = devssh.Run(cancelCtx, sshClient, command, stdinReader, stdoutWriter, writer, envVars)
 		if err != nil {
 			c.log.Errorf("Error tunneling to container: %v", err)
 			return
@@ -207,5 +237,5 @@ func (c *ContainerHandler) runRunInContainer(ctx context.Context, sshClient *ssh
 	c.log.Debugf("Successfully connected to container")
 
 	// start handler
-	return runInContainer(cancelCtx, containerClient)
+	return handler(cancelCtx, containerClient)
 }

@@ -2,6 +2,7 @@ package vscode
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"os/exec"
 	"runtime"
@@ -12,39 +13,61 @@ import (
 	"github.com/skratchdot/open-golang/open"
 )
 
-func Open(ctx context.Context, workspace, folder string, newWindow bool, log log.Logger) error {
-	log.Infof("Starting VSCode...")
-	err := openViaCLI(ctx, workspace, folder, newWindow, log)
-	if err != nil {
-		log.Debugf("Error opening vscode via cli: %v", err)
-	} else {
+func Open(ctx context.Context, workspace, folder string, newWindow bool, flavor Flavor, log log.Logger) error {
+	log.Infof("Starting %s...", flavor.DisplayName())
+	cliErr := openViaCLI(ctx, workspace, folder, newWindow, flavor, log)
+	if cliErr == nil {
 		return nil
 	}
 
-	return openViaBrowser(workspace, folder, newWindow, log)
+	browserErr := openViaBrowser(workspace, folder, newWindow, flavor, log)
+	if browserErr == nil {
+		return nil
+	}
+
+	return errors.Join(cliErr, browserErr)
 }
 
-func openViaBrowser(workspace, folder string, newWindow bool, log log.Logger) error {
-	openURL := `vscode://vscode-remote/ssh-remote+` + workspace + `.devpod/` + folder
+func openViaBrowser(workspace, folder string, newWindow bool, flavor Flavor, log log.Logger) error {
+	protocol := `vscode://`
+	switch flavor {
+	case FlavorStable:
+		protocol = `vscode://`
+	case FlavorInsiders:
+		protocol = `vscode-insiders://`
+	case FlavorCursor:
+		protocol = `cursor://`
+	case FlavorPositron:
+		protocol = `positron://`
+	case FlavorCodium:
+		protocol = `codium://`
+	}
+
+	openURL := protocol + `vscode-remote/ssh-remote+` + workspace + `.devpod/` + folder
 	if newWindow {
 		openURL += "?windowId=_blank"
 	}
 
 	err := open.Run(openURL)
 	if err != nil {
-		log.Debugf("Starting VSCode caused error: %v", err)
-		log.Errorf("Seems like you don't have Visual Studio Code installed on your computer locally. Please install VSCode via https://code.visualstudio.com/")
+		log.Debugf("Starting %s caused error: %v", flavor, err)
+		log.Errorf("Seems like you don't have %s installed on your computer locally", flavor)
 		return err
 	}
 
 	return nil
 }
 
-func openViaCLI(ctx context.Context, workspace, folder string, newWindow bool, log log.Logger) error {
+func openViaCLI(ctx context.Context, workspace, folder string, newWindow bool, flavor Flavor, log log.Logger) error {
 	// try to find code cli
-	codePath := findCLI()
+	codePath := findCLI(flavor)
 	if codePath == "" {
-		return fmt.Errorf("couldn't find the code binary")
+		return fmt.Errorf("couldn't find the %s binary", flavor)
+	}
+
+	sshExtension := "ms-vscode-remote.remote-ssh"
+	if flavor == FlavorCodium {
+		sshExtension = "jeanp413.open-remote-ssh"
 	}
 
 	// make sure ms-vscode-remote.remote-ssh is installed
@@ -56,7 +79,7 @@ func openViaCLI(ctx context.Context, workspace, folder string, newWindow bool, l
 	found := false
 	foundContainers := false
 	for _, str := range splitted {
-		if strings.TrimSpace(str) == "ms-vscode-remote.remote-ssh" {
+		if strings.TrimSpace(str) == sshExtension {
 			found = true
 		} else if strings.TrimSpace(str) == "ms-vscode-remote.remote-containers" {
 			foundContainers = true
@@ -65,7 +88,7 @@ func openViaCLI(ctx context.Context, workspace, folder string, newWindow bool, l
 
 	// install remote-ssh extension
 	if !found {
-		args := []string{"--install-extension", "ms-vscode-remote.remote-ssh"}
+		args := []string{"--install-extension", sshExtension}
 		log.Debugf("Run vscode command %s %s", codePath, strings.Join(args, " "))
 		out, err := exec.CommandContext(ctx, codePath, args...).Output()
 		if err != nil {
@@ -86,7 +109,7 @@ func openViaCLI(ctx context.Context, workspace, folder string, newWindow bool, l
 	// Needs to be separated by `=` because of windows
 	folderUriArg := fmt.Sprintf("--folder-uri=vscode-remote://ssh-remote+%s.devpod/%s", workspace, folder)
 	args = append(args, folderUriArg)
-	log.Debugf("Run vscode command %s %s", codePath, strings.Join(args, " "))
+	log.Debugf("Run %s command %s %s", flavor.DisplayName(), codePath, strings.Join(args, " "))
 	out, err = exec.CommandContext(ctx, codePath, args...).CombinedOutput()
 	if err != nil {
 		return command.WrapCommandError(out, err)
@@ -95,11 +118,55 @@ func openViaCLI(ctx context.Context, workspace, folder string, newWindow bool, l
 	return nil
 }
 
-func findCLI() string {
-	if command.Exists("code") {
-		return "code"
-	} else if runtime.GOOS == "darwin" && command.Exists("/Applications/Visual Studio Code.app/Contents/Resources/app/bin/code") {
-		return "/Applications/Visual Studio Code.app/Contents/Resources/app/bin/code"
+func findCLI(flavor Flavor) string {
+	if flavor == FlavorStable {
+		if command.Exists("code") {
+			return "code"
+		} else if runtime.GOOS == "darwin" && command.Exists("/Applications/Visual Studio Code.app/Contents/Resources/app/bin/code") {
+			return "/Applications/Visual Studio Code.app/Contents/Resources/app/bin/code"
+		}
+
+		return ""
+	}
+
+	if flavor == FlavorInsiders {
+		if command.Exists("code-insiders") {
+			return "code-insiders"
+		} else if runtime.GOOS == "darwin" && command.Exists("/Applications/Visual Studio Code - Insiders.app/Contents/Resources/app/bin/code") {
+			return "/Applications/Visual Studio Code - Insiders.app/Contents/Resources/app/bin/code"
+		}
+
+		return ""
+	}
+
+	if flavor == FlavorCursor {
+		if command.Exists("cursor") {
+			return "cursor"
+		} else if runtime.GOOS == "darwin" && command.Exists("/Applications/Cursor.app/Contents/Resources/app/bin/cursor") {
+			return "/Applications/Cursor.app/Contents/Resources/app/bin/cursor"
+		}
+
+		return ""
+	}
+
+	if flavor == FlavorPositron {
+		if command.Exists("positron") {
+			return "positron"
+		} else if runtime.GOOS == "darwin" && command.Exists("/Applications/Positron.app/Contents/Resources/app/bin/positron") {
+			return "/Applications/Positron.app/Contents/Resources/app/bin/positron"
+		}
+
+		return ""
+	}
+
+	if flavor == FlavorCodium {
+		if command.Exists("codium") {
+			return "codium"
+		} else if runtime.GOOS == "darwin" && command.Exists("/Applications/Codium.app/Contents/Resources/app/bin/codium") {
+			return "/Applications/Codium.app/Contents/Resources/app/bin/codium"
+		}
+
+		return ""
 	}
 
 	return ""

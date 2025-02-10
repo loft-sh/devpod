@@ -7,7 +7,7 @@ import Tabs from '@theme/Tabs';
 import TabItem from '@theme/TabItem';
 import CodeBlock from '@theme/CodeBlock';
 
-In order to get started with DevPod, you can choose between the DevPod Desktop application and DevPod CLI.
+To get started with DevPod, choose either the [DevPod Desktop](#install-devpod) application or the [DevPod CLI](#install-devpod-cli).
 
 ## Install DevPod
 
@@ -19,32 +19,37 @@ Download DevPod Desktop:
 - [Linux Targz](https://github.com/loft-sh/devpod/releases/latest/download/DevPod_linux_x86_64.tar.gz)
 
 :::info Previous Releases
-For previous releases, please take a look at the [Github releases page](https://github.com/loft-sh/devpod/releases)
+For earlier versions, visit the [GitHub releases page](https://github.com/loft-sh/devpod/releases)
 :::
 
 :::info Linux Packages
 **The official package is the Appimage**, it has been tested working on:
 
-- Debian 11 and newer
-- Ubuntu 20.04 and newer
-- Fedora 32 and newer
-- Centos 9stream and newer
-- RHEL/Alma Linux/Rocky Linux 9 and newer
+- Debian 12 and newer
+- Ubuntu 22.04 and newer
+- Fedora 36 and newer
 - Opensuse Leap 15.3 and newer
 - Opensuse Tumbleweed
 - Archlinux
 
 Make sure you have the following dependencies installed for the Appimage to work (usually already installed in desktop distributions):
 
-- glibc version 2.30+
+- glibc version 2.35+
 - fuse2, fuse2 libraries, libopengl, libfribidi, libegl, libxgl
-    - `sudo apt-get install fuse libfuse2 libopengl0 libfribidi0`
+    - `sudo apt-get install fuse libfuse2 libopengl0 libfribidi0 libgles2-mesa`
     - `sudo dnf install fuse fuse-libs libglvnd-egl libglvnd-opengl libglvnd-glx harfbuzz fontconfig fribidi libthai`
     - `sudo zypper in fuse libfuse2 libharfbuzz0 libfribidi0 libthai0`
 
-Note that these are generally needed for AppImage to work, they are not specific to DevPod
+These are generally needed for AppImage to work; they are not specific to DevPod.
 :::
 
+:::info Windows Packages
+Make sure you have the following dependencies installed for the Desktop App to work:
+
+- [WebView 2](https://developer.microsoft.com/en-us/microsoft-edge/webview2/?form=MA13LH)
+
+Note that WebView 2 is normally already installed on recent versions of Windows and should not need installing unless you experience issues.
+:::
 
 :::info Linux Custom Packages
 Since we're not providing deb or rpm packages anymore, we're now providing a tar.gz
@@ -64,11 +69,13 @@ correct functioning of the program:
 - libwebkit2gtk-4.0-37
 - librust-openssl-sys-dev
 - librust-glib-sys-dev
+
+On Fedora: `sudo dnf install libappindicator-gtk3`
 :::
 
-## Optional: Install DevPod CLI
+## Install DevPod CLI
 
-DevPod CLI can be very useful to control DevPod from a terminal. Select one of the installation methods below. You can also install it later from within the Desktop App.
+Alternatively, you can also use the CLI instead of the desktop application. The DevPod CLI is useful for managing DevPod directly from a terminal. Choose an installation method below, or install it later from the Desktop App."
 
 <Tabs values={[
           {label: 'MacOS Silicon/ARM', value: 'macarm64'},
@@ -95,7 +102,7 @@ curl -L -o devpod "https://github.com/loft-sh/devpod/releases/latest/download/de
 
 ```text
 md -Force "$Env:APPDATA\devpod"; [System.Net.ServicePointManager]::SecurityProtocol = [System.Net.SecurityProtocolType]'Tls,Tls11,Tls12';
-Invoke-WebRequest -URI "https://github.com/loft-sh/devpod/releases/latest/download/devpod-windows-amd64.exe" -o $Env:APPDATA\devpod\devpod.exe;
+Invoke-WebRequest -URI "https://github.com/loft-sh/devpod/releases/latest/download/devpod-windows-amd64.exe" -OutFile $Env:APPDATA\devpod\devpod.exe;
 $env:Path += ";" + $Env:APPDATA + "\devpod";
 [Environment]::SetEnvironmentVariable("Path", $env:Path, [System.EnvironmentVariableTarget]::User);
 ```

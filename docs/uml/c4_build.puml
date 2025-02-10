@@ -1,0 +1,37 @@
+@startuml
+!include https://raw.githubusercontent.com/plantuml-stdlib/C4-PlantUML/master/C4_Component.puml
+
+skinparam linetype ortho
+skinparam nodesep 100
+skinparam ranksep 250
+scale 1920x1080
+
+LAYOUT_TOP_DOWN()
+HIDE_STEREOTYPE()
+
+title Component Diagram for DevPod Build Process
+
+Person(user, "DevPod", "CLI or UI")
+Component(reg, "Registry", "Remote cache")
+Component(ctx, "Context", "Build options, driver, registry cache etc.")
+Component(cdf, "Compiled Dockerfile", "")
+
+Boundary(repo, "Git repo") {
+  Component(bctx, "Build context", "Source code, dot files etc.")
+  Component(df, "Dockerfile", "")
+
+  Boundary(cluster, "Dev Container Spec") {
+    Component(dc, ".devcontainer.json", "Define dev env")
+    Component(fa, "Feature A", "docker in docker")
+    Component(fb, "Feature B", "git stuff")
+  }
+}
+
+Rel(repo, user, "")
+Rel(dc, user, "")
+Rel(fa, user, "")
+Rel(fb, user, "")
+Rel_Right(ctx, user, "")
+Rel(user, cdf, "")
+Rel(cdf, reg, "")
+@enduml

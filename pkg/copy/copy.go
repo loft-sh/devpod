@@ -23,7 +23,8 @@ func Chown(path string, userName string) error {
 	}
 
 	uid, _ := strconv.Atoi(userID.Uid)
-	return os.Lchown(path, uid, -1)
+	gid, _ := strconv.Atoi(userID.Gid)
+	return os.Lchown(path, uid, gid)
 }
 
 func ChownR(path string, userName string) error {
@@ -99,7 +100,7 @@ func Directory(scrDir, dest string) error {
 				return err
 			}
 		default:
-			if err := File(sourcePath, destPath, 0666); err != nil {
+			if err := File(sourcePath, destPath, 0644); err != nil {
 				return err
 			}
 		}

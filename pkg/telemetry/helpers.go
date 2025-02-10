@@ -1,71 +1,30 @@
 package telemetry
 
 import (
-	"os"
-	"runtime"
+	"crypto/hmac"
+	"crypto/sha256"
+	"fmt"
 
-	"github.com/loft-sh/devpod/pkg/encoding"
-	"github.com/loft-sh/devpod/pkg/telemetry/types"
-	"github.com/loft-sh/devpod/pkg/version"
-	"github.com/spf13/cobra"
-	"github.com/spf13/pflag"
+	"github.com/denisbrodbeck/machineid"
+	"github.com/loft-sh/devpod/pkg/util"
 )
 
-const (
-	UIEnvVar = "DEVPOD_UI"
-)
-
-func (d *DefaultCollector) getInstanceProperties(command *cobra.Command, executionID string, ts int64) types.InstanceProperties {
-	p := types.InstanceProperties{
-		Timestamp:   ts,
-		ExecutionID: executionID,
-		UID:         encoding.GetMachineUID(nil),
-		Arch:        runtime.GOARCH,
-		OS:          runtime.GOOS,
-		Version:     getVersion(),
-		Flags:       getFlags(command),
-		UI:          isUIEvent(),
+// GetMachineID retrieves machine ID and encodes it together with users $HOME path and
+// extra key to protect privacy. Returns a hex-encoded string.
+func GetMachineID() string {
+	id, err := machineid.ID()
+	if err != nil {
+		id = "error"
 	}
 
-	return p
-}
-
-func getVersion() types.Version {
-	return types.Version{
-		Major:      version.GetMajorVersion(),
-		Minor:      version.GetMinorVersion(),
-		Patch:      version.GetPatchVersion(),
-		PreRelease: version.GetPrerelease(),
-		Build:      version.GetBuild(),
-	}
-}
-
-func getFlags(command *cobra.Command) types.Flags {
-	if command == nil {
-		return types.Flags{}
+	// get $HOME to distinguish two users on the same machine
+	// will be hashed later together with the ID
+	home, err := util.UserHomeDir()
+	if err != nil {
+		home = "error"
 	}
 
-	setFlags := []string{}
-	command.Flags().VisitAll(func(f *pflag.Flag) {
-		if f.Changed {
-			setFlags = append(setFlags, f.Name)
-		}
-	})
-
-	return types.Flags{SetFlags: setFlags}
-}
-
-func shouldSkipCommand(cmd string) bool {
-	if isUIEvent() {
-		for _, exception := range UIEventsExceptions {
-			if cmd == exception {
-				return true
-			}
-		}
-	}
-	return false
-}
-
-func isUIEvent() bool {
-	return os.Getenv(UIEnvVar) == "true"
+	mac := hmac.New(sha256.New, []byte(id))
+	mac.Write([]byte(home))
+	return fmt.Sprintf("%x", mac.Sum(nil))
 }

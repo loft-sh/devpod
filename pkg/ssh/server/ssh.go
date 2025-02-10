@@ -9,12 +9,12 @@ import (
 	"os/exec"
 	"os/user"
 	"path/filepath"
-	"runtime"
 	"strings"
 	"sync"
 	"time"
 
 	"github.com/loft-sh/devpod/pkg/command"
+	"github.com/loft-sh/devpod/pkg/shell"
 	"github.com/loft-sh/log"
 	"github.com/loft-sh/ssh"
 	perrors "github.com/pkg/errors"
@@ -24,8 +24,8 @@ import (
 
 var DefaultPort = 8022
 
-func NewServer(addr string, hostKey []byte, keys []ssh.PublicKey, workdir string, log log.Logger) (*Server, error) {
-	shell, err := getShell()
+func NewServer(addr string, hostKey []byte, keys []ssh.PublicKey, workdir string, reuseSock string, log log.Logger) (*Server, error) {
+	sh, err := shell.GetShell("")
 	if err != nil {
 		return nil, err
 	}
@@ -38,8 +38,9 @@ func NewServer(addr string, hostKey []byte, keys []ssh.PublicKey, workdir string
 	forwardHandler := &ssh.ForwardedTCPHandler{}
 	forwardedUnixHandler := &ssh.ForwardedUnixHandler{}
 	server := &Server{
-		shell:       shell,
+		shell:       sh,
 		workdir:     workdir,
+		reuseSock:   reuseSock,
 		log:         log,
 		currentUser: currentUser.Username,
 		sshServer: ssh.Server{
@@ -111,76 +112,45 @@ type Server struct {
 	currentUser string
 	shell       []string
 	workdir     string
+	reuseSock   string
 	sshServer   ssh.Server
 	log         log.Logger
-}
-
-func getUserShell() (string, error) {
-	currentUser, err := user.Current()
-	if err != nil {
-		return "", err
-	}
-
-	output, err := exec.Command("getent", "passwd", currentUser.Username).Output()
-	if err != nil {
-		return "", err
-	}
-
-	shell := strings.Split(string(output), ":")
-	if len(shell) != 7 {
-		return "", fmt.Errorf("unexpected getent format: %s", string(output))
-	}
-
-	loginShell := strings.TrimSpace(filepath.Base(shell[6]))
-	if loginShell == "nologin" {
-		return "", fmt.Errorf("no login shell configured")
-	}
-
-	return loginShell, nil
-}
-
-func getShell() ([]string, error) {
-	// try to get a shell
-	if runtime.GOOS != "windows" {
-		// infere login shell from getent
-		shell, err := getUserShell()
-		if err == nil {
-			return []string{shell}, nil
-		}
-
-		// fallback to path discovery if unsuccessful
-		_, err = exec.LookPath("bash")
-		if err == nil {
-			return []string{"bash"}, nil
-		}
-
-		_, err = exec.LookPath("sh")
-		if err == nil {
-			return []string{"sh"}, nil
-		}
-	}
-
-	// fallback to our in-built shell
-	executable, err := os.Executable()
-	if err != nil {
-		return nil, err
-	}
-
-	return []string{executable, "helper", "sh"}, nil
 }
 
 func (s *Server) handler(sess ssh.Session) {
 	ptyReq, winCh, isPty := sess.Pty()
 	cmd := s.getCommand(sess, isPty)
 	if ssh.AgentRequested(sess) {
-		l, err := ssh.NewAgentListener()
+		// on some systems (like containers) /tmp may not exists, this ensures
+		// that we have a compliant directory structure
+		err := os.MkdirAll("/tmp", 0o777)
+		if err != nil {
+			s.exitWithError(sess, perrors.Wrap(err, "creating /tmp dir"))
+			return
+		}
+
+		// Check if we should create a "shared" socket to be reused by clients
+		// used for browser tunnels such as openvscode, since the IDE itself doesn't create an SSH connection it uses a "backhaul" connection and uses the existing socket
+		dir := ""
+		if s.reuseSock != "" {
+			dir = filepath.Join(os.TempDir(), fmt.Sprintf("auth-agent-%s", s.reuseSock))
+			err = os.MkdirAll(dir, 0777)
+			if err != nil {
+				s.exitWithError(sess, perrors.Wrap(err, "creating SSH_AUTH_SOCK dir in /tmp"))
+				return
+			}
+		}
+
+		l, tmpDir, err := ssh.NewAgentListener(dir)
 		if err != nil {
 			s.exitWithError(sess, perrors.Wrap(err, "start agent"))
 			return
 		}
-
 		defer l.Close()
+		defer os.RemoveAll(tmpDir)
+
 		go ssh.ForwardAgentConnections(l, sess)
+
 		cmd.Env = append(cmd.Env, fmt.Sprintf("%s=%s", "SSH_AUTH_SOCK", l.Addr().String()))
 	}
 

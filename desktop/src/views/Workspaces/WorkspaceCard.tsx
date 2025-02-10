@@ -1,84 +1,120 @@
-import { ChevronRightIcon } from "@chakra-ui/icons"
 import {
   Box,
-  BoxProps,
-  Button,
-  ButtonGroup,
   Card,
-  CardFooter,
   CardHeader,
-  Checkbox,
-  Heading,
-  HStack,
   Icon,
-  IconButton,
-  IconProps,
-  Image,
-  Menu,
-  MenuButton,
-  MenuItem,
-  MenuList,
+  List,
+  ListItem,
   Modal,
   ModalBody,
   ModalCloseButton,
   ModalContent,
-  ModalFooter,
   ModalHeader,
   ModalOverlay,
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-  Portal,
-  Stack,
   Text,
-  TextProps,
-  Tooltip,
   useDisclosure,
-  useToast,
-  VStack,
 } from "@chakra-ui/react"
-import { useQuery } from "@tanstack/react-query"
-import dayjs from "dayjs"
-import { useCallback, useMemo, useState } from "react"
-import { HiClock, HiOutlineCode, HiShare } from "react-icons/hi"
+import { useCallback, useMemo, useRef, useState } from "react"
 import { useNavigate } from "react-router"
-import { client } from "../../client"
-import { IconTag, IDEIcon, Ripple } from "../../components"
+import { IconTag, WorkspaceCardHeader } from "../../components"
 import {
   TActionID,
-  TActionObj,
-  useProInstances,
   useProvider,
   useSettings,
   useWorkspace,
   useWorkspaceActions,
 } from "../../contexts"
-import { ArrowPath, Ellipsis, Pause, Play, Stack3D, Trash } from "../../icons"
-import { NoWorkspaceImageSvg } from "../../images"
-import { getIDEDisplayName, useHover } from "../../lib"
-import { QueryKeys } from "../../queryKeys"
+import {
+  getIDEName,
+  getWorkspaceSourceName,
+  useDeleteWorkspaceModal,
+  useRebuildWorkspaceModal,
+  useResetWorkspaceModal,
+  useStopWorkspaceModal,
+} from "../../lib"
 import { Routes } from "../../routes"
-import { TIDE, TProInstance, TWorkspace, TWorkspaceID } from "../../types"
+import { TProvider, TWorkspace, TWorkspaceID } from "../../types"
 import { useIDEs } from "../../useIDEs"
-import { getIDEName, getSourceName } from "./helpers"
+import { WorkspaceControls } from "./WorkspaceControls"
+import { WorkspaceStatusBadge } from "./WorkspaceStatusBadge"
+import { ConfigureProviderOptionsForm } from "../Providers"
+import { Template } from "@/icons"
+import { HiServerStack } from "react-icons/hi2"
+import { TOptionWithID, mergeOptionDefinitions } from "../Providers/helpers"
+import { processDisplayOptions } from "../Providers/AddProvider/useProviderOptions"
+import { useStoreTroubleshoot } from "@/lib/useStoreTroubleshoot"
 
 type TWorkspaceCardProps = Readonly<{
   workspaceID: TWorkspaceID
+  isSelected?: boolean
   onSelectionChange?: (isSelected: boolean) => void
 }>
 
-export function WorkspaceCard({ workspaceID, onSelectionChange }: TWorkspaceCardProps) {
-  const [forceDelete, setForceDelete] = useState<boolean>(false)
-  const navigate = useNavigate()
+export function WorkspaceCard({ workspaceID, isSelected, onSelectionChange }: TWorkspaceCardProps) {
+  const changeOptionsModalBodyRef = useRef<HTMLDivElement>(null)
   const settings = useSettings()
+  const navigate = useNavigate()
   const { ides, defaultIDE } = useIDEs()
-  const { isOpen: isDeleteOpen, onOpen: onDeleteOpen, onClose: onDeleteClose } = useDisclosure()
-  const { isOpen: isRebuildOpen, onOpen: onRebuildOpen, onClose: onRebuildClose } = useDisclosure()
-  const { isOpen: isStopOpen, onOpen: onStopOpen, onClose: onStopClose } = useDisclosure()
-  const workspace = useWorkspace(workspaceID)
-  const { isEnabled: isShareEnabled, onClick: handleShareClicked } = useShareWorkspace(
-    workspace.data
+  const workspace = useWorkspace<TWorkspace>(workspaceID)
+  const workspaceName = workspace.data?.id ?? ""
+  const workspaceActions = useWorkspaceActions(workspaceName)
+  const navigateToAction = useCallback(
+    (actionID: TActionID | undefined) => {
+      if (actionID !== undefined && actionID !== "") {
+        navigate(Routes.toAction(actionID))
+      }
+    },
+    [navigate]
   )
+  const { modal: stopModal, open: openStopModal } = useStopWorkspaceModal(
+    useCallback(
+      (close) => {
+        workspace.stop()
+        close()
+      },
+      [workspace]
+    )
+  )
+  const { modal: deleteModal, open: openDeleteModal } = useDeleteWorkspaceModal(
+    workspaceName,
+    useCallback(
+      (force, close) => {
+        workspace.remove(force)
+        close()
+      },
+      [workspace]
+    )
+  )
+  const { modal: rebuildModal, open: openRebuildModal } = useRebuildWorkspaceModal(
+    workspaceName,
+    useCallback(
+      (close) => {
+        const actionID = workspace.rebuild()
+        close()
+        navigateToAction(actionID)
+      },
+      [navigateToAction, workspace]
+    )
+  )
+  const { modal: resetModal, open: openResetModal } = useResetWorkspaceModal(
+    workspaceName,
+    useCallback(
+      (close) => {
+        const actionID = workspace.reset()
+        close()
+        navigateToAction(actionID)
+      },
+      [navigateToAction, workspace]
+    )
+  )
+  const {
+    isOpen: isChangeOptionsOpen,
+    onOpen: handleChangeOptionsClicked,
+    onClose: onChangeOptionsClose,
+  } = useDisclosure()
+  const { store: storeTroubleshoot } = useStoreTroubleshoot()
+
+  const [provider] = useProvider(workspace.data?.provider?.name)
   const [ideName, setIdeName] = useState<string | undefined>(() => {
     if (settings.fixedIDE && defaultIDE?.name) {
       return defaultIDE.name
@@ -86,286 +122,28 @@ export function WorkspaceCard({ workspaceID, onSelectionChange }: TWorkspaceCard
 
     return workspace.data?.ide?.name ?? undefined
   })
+  const ideDisplayName =
+    ideName !== undefined
+      ? getIDEName({ name: ideName }, ides)
+      : getIDEName(workspace.data?.ide, ides)
 
-  const navigateToAction = (actionID: TActionID | undefined) => {
-    if (actionID !== undefined && actionID !== "") {
-      navigate(Routes.toAction(actionID))
+  const handleLogsClicked = useCallback(() => {
+    let actionID = workspace.current?.id
+    if (actionID === undefined) {
+      actionID = workspace.checkStatus()
     }
-  }
 
-  const handleOpenWithIDEClicked = (id: TWorkspaceID, ide: TIDE["name"]) => async () => {
-    if (!ide) {
-      return
-    }
-    setIdeName(ide)
-
-    const actionID = workspace.start({ id, ideConfig: { name: ide } })
-    if (!settings.fixedIDE) {
-      await client.ides.useIDE(ide)
-    }
     navigateToAction(actionID)
-  }
+  }, [navigateToAction, workspace])
 
-  const isLoading = useMemo(() => {
-    if (workspace.current?.status === "pending") {
-      return true
+  const handleTroubleshootClicked = useCallback(() => {
+    if (workspaceActions && workspace.data) {
+      storeTroubleshoot({
+        workspace: workspace.data,
+        workspaceActions: workspaceActions,
+      })
     }
-
-    return false
-  }, [workspace])
-
-  const isOpenDisabled = workspace.data?.status === "Busy"
-  const isOpenDisabledReason =
-    "Cannot open this workspace because it is busy. If this doesn't change, try to force delete and recreate it."
-  const [isStartWithHovering, startWithRef] = useHover()
-  const [isPopoverHovering, popoverContentRef] = useHover()
-
-  if (workspace.data === undefined) {
-    return null
-  }
-
-  const { id, picture, ide, status } = workspace.data
-
-  return (
-    <>
-      <Card key={id} direction="row" width="full" maxWidth="60rem" variant="outline" maxHeight="48">
-        <Image
-          loading="lazy"
-          objectFit="contain"
-          width="18.75rem"
-          height="12rem"
-          style={{ aspectRatio: "2 / 1" }}
-          src={picture ?? NoWorkspaceImageSvg}
-          fallbackSrc={NoWorkspaceImageSvg}
-          alt="Project Image"
-        />
-        <Stack width="full" justifyContent={"space-between"}>
-          <WorkspaceCardHeader
-            workspace={workspace.data}
-            isLoading={isLoading}
-            currentAction={workspace.current}
-            ideName={ideName}
-            onCheckStatusClicked={() => {
-              const actionID = workspace.checkStatus()
-              navigateToAction(actionID)
-            }}
-            onSelectionChange={onSelectionChange}
-            onActionIndicatorClicked={navigateToAction}
-          />
-
-          <CardFooter padding="none" paddingBottom={4}>
-            <HStack spacing="2" width="full" justifyContent="end" paddingRight={"10px"}>
-              <ButtonGroup isAttached variant="solid-outline">
-                <Tooltip label={isOpenDisabled ? isOpenDisabledReason : undefined}>
-                  <Button
-                    aria-label="Start workspace"
-                    leftIcon={<Icon as={HiOutlineCode} boxSize={5} />}
-                    isDisabled={isOpenDisabled}
-                    onClick={() => {
-                      const actionID = workspace.start({
-                        id,
-                        ideConfig: { name: ideName ?? ide?.name ?? null },
-                      })
-                      navigateToAction(actionID)
-                    }}
-                    isLoading={isLoading}>
-                    Open
-                  </Button>
-                </Tooltip>
-                <Menu placement="top">
-                  <MenuButton
-                    as={IconButton}
-                    aria-label="More actions"
-                    colorScheme="gray"
-                    isDisabled={isLoading}
-                    icon={<Ellipsis transform={"rotate(90deg)"} boxSize={5} />}
-                  />
-                  <Portal>
-                    <MenuList>
-                      <Popover
-                        isOpen={isStartWithHovering || isPopoverHovering}
-                        placement="right"
-                        offset={[100, 0]}>
-                        <PopoverTrigger>
-                          <MenuItem
-                            ref={startWithRef}
-                            icon={<Play boxSize={4} />}
-                            isDisabled={isOpenDisabled}>
-                            <HStack width="full" justifyContent="space-between">
-                              <Text>Start with</Text>
-                              <ChevronRightIcon boxSize={4} />
-                            </HStack>
-                          </MenuItem>
-                        </PopoverTrigger>
-                        <PopoverContent
-                          zIndex="popover"
-                          width="fit-content"
-                          ref={popoverContentRef}>
-                          {ides?.map((ide) => (
-                            <MenuItem
-                              isDisabled={isOpenDisabled}
-                              onClick={handleOpenWithIDEClicked(id, ide.name)}
-                              key={ide.name}
-                              value={ide.name!}
-                              icon={<IDEIcon ide={ide} width={6} height={6} size="sm" />}>
-                              {getIDEDisplayName(ide)}
-                            </MenuItem>
-                          ))}
-                        </PopoverContent>
-                      </Popover>
-                      <MenuItem
-                        icon={<ArrowPath boxSize={4} />}
-                        onClick={onRebuildOpen}
-                        isDisabled={isOpenDisabled}>
-                        Rebuild
-                      </MenuItem>
-                      {isShareEnabled && (
-                        <MenuItem
-                          icon={<Icon as={HiShare} boxSize={4} />}
-                          onClick={handleShareClicked}>
-                          Share
-                        </MenuItem>
-                      )}
-                      <MenuItem
-                        isDisabled={status !== "Running"}
-                        onClick={() => {
-                          if (status !== "Running") {
-                            onStopOpen()
-
-                            return
-                          }
-
-                          workspace.stop()
-                        }}
-                        icon={<Pause boxSize={4} />}>
-                        Stop
-                      </MenuItem>
-                      <MenuItem
-                        fontWeight="normal"
-                        icon={<Trash boxSize={4} />}
-                        onClick={() => onDeleteOpen()}>
-                        Delete
-                      </MenuItem>
-                    </MenuList>
-                  </Portal>
-                </Menu>
-              </ButtonGroup>
-            </HStack>
-          </CardFooter>
-        </Stack>
-      </Card>
-
-      <Modal onClose={onRebuildClose} isOpen={isRebuildOpen} isCentered>
-        <ModalOverlay />
-        <ModalContent>
-          <ModalHeader>Rebuild Workspace</ModalHeader>
-          <ModalCloseButton />
-          <ModalBody>
-            Rebuilding the workspace will erase all state saved in the docker container overlay.
-            This means you might need to reinstall or reconfigure certain applications. State in
-            docker volumes is persisted. Are you sure you want to rebuild {workspace.data.id}?
-          </ModalBody>
-          <ModalFooter>
-            <HStack spacing={"2"}>
-              <Button onClick={onRebuildClose}>Close</Button>
-              <Button
-                colorScheme={"primary"}
-                onClick={async () => {
-                  const actionID = workspace.rebuild()
-                  onRebuildClose()
-                  navigateToAction(actionID)
-                }}>
-                Rebuild
-              </Button>
-            </HStack>
-          </ModalFooter>
-        </ModalContent>
-      </Modal>
-
-      <Modal onClose={onDeleteClose} isOpen={isDeleteOpen} isCentered>
-        <ModalOverlay />
-        <ModalContent>
-          <ModalHeader>Delete Workspace</ModalHeader>
-          <ModalCloseButton />
-          <ModalBody>
-            Deleting the workspace will erase all state. Are you sure you want to delete{" "}
-            {workspace.data.id}?
-            <Box marginTop={"2.5"}>
-              <Checkbox checked={forceDelete} onChange={(e) => setForceDelete(e.target.checked)}>
-                Force Delete the Workspace
-              </Checkbox>
-            </Box>
-          </ModalBody>
-          <ModalFooter>
-            <HStack spacing={"2"}>
-              <Button onClick={onDeleteClose}>Close</Button>
-              <Button
-                colorScheme={"red"}
-                onClick={async () => {
-                  workspace.remove(forceDelete)
-                  onDeleteClose()
-                }}>
-                Delete
-              </Button>
-            </HStack>
-          </ModalFooter>
-        </ModalContent>
-      </Modal>
-
-      <Modal onClose={onStopClose} isOpen={isStopOpen} isCentered>
-        <ModalOverlay />
-        <ModalContent>
-          <ModalHeader>Stop Workspace</ModalHeader>
-          <ModalCloseButton />
-          <ModalBody>
-            Stopping the workspace while it&apos;s not running may leave it in a corrupted state. Do
-            you want to stop it regardless?
-          </ModalBody>
-          <ModalFooter>
-            <HStack spacing={"2"}>
-              <Button onClick={onStopClose}>Close</Button>
-              <Button
-                colorScheme={"red"}
-                onClick={() => {
-                  workspace.stop()
-                  onStopClose()
-                }}>
-                Stop
-              </Button>
-            </HStack>
-          </ModalFooter>
-        </ModalContent>
-      </Modal>
-    </>
-  )
-}
-
-type TWorkspaceCardHeaderProps = Readonly<{
-  workspace: TWorkspace
-  isLoading: boolean
-  currentAction: TActionObj | undefined
-  ideName: string | undefined
-  onActionIndicatorClicked: (actionID: TActionID | undefined) => void
-  onCheckStatusClicked?: VoidFunction
-  onSelectionChange?: (isSelected: boolean) => void
-}>
-function WorkspaceCardHeader({
-  workspace,
-  isLoading,
-  currentAction,
-  ideName,
-  onSelectionChange,
-  onCheckStatusClicked,
-  onActionIndicatorClicked,
-}: TWorkspaceCardHeaderProps) {
-  const navigate = useNavigate()
-  const { id, status, provider, ide, lastUsed, source } = workspace
-  const workspaceActions = useWorkspaceActions(id)
-
-  const idesQuery = useQuery({
-    queryKey: QueryKeys.IDES,
-    queryFn: async () => (await client.ides.listAll()).unwrap(),
-  })
+  }, [storeTroubleshoot, workspace.data, workspaceActions])
 
   const hasError = useMemo<boolean>(() => {
     if (!workspaceActions?.length || workspaceActions[0]?.status !== "error") {
@@ -375,233 +153,237 @@ function WorkspaceCardHeader({
     return true
   }, [workspaceActions])
 
-  const handleBadgeClicked = useMemo(() => {
-    if (currentAction !== undefined) {
-      return () => onActionIndicatorClicked(currentAction.id)
+  const handleBadgeClicked = useCallback(() => {
+    if (workspace.current !== undefined) {
+      navigateToAction(workspace.current.id)
     }
 
-    if (status === undefined || status === "NotFound") {
-      return () => onCheckStatusClicked?.()
+    if (workspace.data?.status === undefined || workspace.data.status === "NotFound") {
+      const actionID = workspace.checkStatus()
+      navigateToAction(actionID)
     }
 
     const maybeLastAction = workspaceActions?.[0]
     if (maybeLastAction) {
-      return () => onActionIndicatorClicked(maybeLastAction.id)
+      navigateToAction(maybeLastAction.id)
     }
 
     return undefined
-  }, [currentAction, onActionIndicatorClicked, onCheckStatusClicked, status, workspaceActions])
+  }, [navigateToAction, workspace, workspaceActions])
 
-  const ideDisplayName =
-    ideName !== undefined
-      ? getIDEName({ name: ideName }, idesQuery.data)
-      : getIDEName(ide, idesQuery.data)
+  const handleChangeOptionsFinishClicked = (extraProviderOptions: Record<string, string>) => {
+    // diff against current workspace options
+    let changedOptions: Record<string, string> | undefined = undefined
+    if (Object.keys(extraProviderOptions).length > 0) {
+      changedOptions = {}
+      const workspaceOptions = workspace.data?.provider?.options ?? {}
+      for (const [k, v] of Object.entries(extraProviderOptions)) {
+        // check if current workspace option doesn't contain option or it does but value is different
+        if (!workspaceOptions[k] || workspaceOptions[k]?.value !== v) {
+          changedOptions[k] = v
+        }
+      }
+    }
+    const actionID = workspace.start({
+      id: workspaceID,
+      providerConfig: { options: changedOptions },
+    })
+    onChangeOptionsClose()
+    navigateToAction(actionID)
+  }
+
+  const isLoading = workspace.current?.status === "pending"
+
+  if (workspace.data === undefined) {
+    return null
+  }
+
+  const maybeRunnerName = getRunnerName(workspace.data, provider)
+  const maybeTemplate = getTemplate(workspace.data, provider)
+  const maybeTemplateOptions = getTemplateOptions(workspace.data, provider)
 
   return (
-    <CardHeader display="flex" flexDirection="column" overflow="hidden">
-      <VStack align="start" spacing={0}>
-        <HStack justifyContent="space-between" maxWidth="30rem">
-          <Heading size="md">
-            <HStack alignItems="center">
-              <Text
-                fontWeight="bold"
-                maxWidth="23rem"
-                overflow="hidden"
-                whiteSpace="nowrap"
-                textOverflow="ellipsis">
-                {id}
-              </Text>
+    <>
+      <Card
+        key={workspace.data.id}
+        direction="row"
+        width="full"
+        maxWidth="60rem"
+        variant="outline"
+        backgroundColor={isSelected ? "gray.50" : "transparent"}
+        marginBottom="3">
+        <CardHeader overflow="hidden" w="full">
+          <WorkspaceCardHeader
+            id={workspace.data.id}
+            source={
+              workspace.data.source && (
+                <Text
+                  fontSize="sm"
+                  color="gray.500"
+                  userSelect="text"
+                  maxWidth="30rem"
+                  overflow="hidden"
+                  whiteSpace="nowrap"
+                  textOverflow="ellipsis"
+                  marginTop={-0.5}
+                  _hover={{ overflow: "visible", cursor: "text" }}>
+                  {getWorkspaceSourceName(workspace.data.source)}
+                </Text>
+              )
+            }
+            isSelected={isSelected}
+            onSelectionChange={onSelectionChange}
+            statusBadge={
               <WorkspaceStatusBadge
-                status={status}
+                status={workspace.data.status}
                 isLoading={isLoading}
                 hasError={hasError}
                 onClick={handleBadgeClicked}
               />
-            </HStack>
-          </Heading>
-          {onSelectionChange !== undefined && (
-            <Checkbox onChange={(e) => onSelectionChange(e.target.checked)} />
-          )}
-        </HStack>
-        {source && (
-          <Text
-            fontSize="sm"
-            color="gray.500"
-            userSelect="auto"
-            maxWidth="30rem"
-            overflow="hidden"
-            whiteSpace="nowrap"
-            textOverflow="ellipsis"
-            _hover={{ overflow: "visible", cursor: "text" }}>
-            {getSourceName(source)}
-          </Text>
-        )}
-      </VStack>
-
-      <HStack rowGap={2} marginTop={4} flexWrap="wrap" alignItems="center">
-        <IconTag
-          icon={<Stack3D />}
-          label={provider?.name ?? "No provider"}
-          infoText={provider?.name ? `Uses provider ${provider.name}` : undefined}
-          onClick={() => {
-            if (!provider?.name) {
-              return
             }
+            controls={
+              <WorkspaceControls
+                id={workspace.data.id}
+                workspace={workspace}
+                provider={provider}
+                isLoading={isLoading}
+                isIDEFixed={settings.fixedIDE}
+                ides={ides}
+                ideName={ideName}
+                setIdeName={setIdeName}
+                navigateToAction={navigateToAction}
+                onRebuildClicked={openRebuildModal}
+                onResetClicked={openResetModal}
+                onDeleteClicked={openDeleteModal}
+                onStopClicked={openStopModal}
+                onLogsClicked={handleLogsClicked}
+                onTroubleshootClicked={handleTroubleshootClicked}
+                onChangeOptionsClicked={handleChangeOptionsClicked}
+              />
+            }>
+            <WorkspaceCardHeader.Provider name={workspace.data.provider?.name ?? undefined} />
+            <WorkspaceCardHeader.IDE name={ideDisplayName} />
+            <WorkspaceCardHeader.LastUsed timestamp={workspace.data.lastUsed} />
+            {maybeTemplate && (
+              <IconTag
+                icon={<Template />}
+                label={maybeTemplate}
+                info={
+                  <Box width="full">
+                    Using {maybeTemplate} template with options: <br />
+                    {maybeTemplateOptions.length > 0 ? (
+                      <List mt="2" width="full">
+                        {maybeTemplateOptions.map((opt) => (
+                          <ListItem
+                            key={opt.id}
+                            width="full"
+                            display="flex"
+                            flexFlow="row nowrap"
+                            alignItems="space-between">
+                            <Text fontWeight="bold">{opt.value}</Text>
+                            <Text ml="4">({opt.displayName || opt.id})</Text>
+                          </ListItem>
+                        ))}
+                      </List>
+                    ) : (
+                      "No options configured"
+                    )}
+                  </Box>
+                }
+              />
+            )}
+            {maybeRunnerName && (
+              <IconTag
+                icon={<Icon as={HiServerStack} />}
+                label={maybeRunnerName}
+                info={`Running on ${maybeRunnerName}`}
+              />
+            )}
+          </WorkspaceCardHeader>
+        </CardHeader>
+      </Card>
 
-            navigate(Routes.toProvider(provider.name))
-          }}
-        />
-        <IconTag
-          icon={<Icon as={HiOutlineCode} />}
-          label={ideDisplayName}
-          infoText={`Will be opened in ${ideDisplayName}`}
-        />
-        <IconTag
-          icon={<Icon as={HiClock} />}
-          label={dayjs(new Date(lastUsed)).fromNow()}
-          infoText={`Last used ${dayjs(new Date(lastUsed)).fromNow()}`}
-        />
-      </HStack>
-    </CardHeader>
+      {resetModal}
+      {rebuildModal}
+      {deleteModal}
+      {stopModal}
+
+      <Modal
+        onClose={onChangeOptionsClose}
+        isOpen={isChangeOptionsOpen}
+        isCentered
+        size="4xl"
+        scrollBehavior="inside">
+        <ModalOverlay />
+        <ModalContent>
+          <ModalHeader>Change Options</ModalHeader>
+          <ModalCloseButton />
+          <ModalBody
+            ref={changeOptionsModalBodyRef}
+            overflowX="hidden"
+            overflowY="auto"
+            paddingBottom="0">
+            {workspace.data.provider?.name ? (
+              <ConfigureProviderOptionsForm
+                workspace={workspace.data}
+                showBottomActionBar
+                isModal
+                submitTitle="Update &amp; Open"
+                containerRef={changeOptionsModalBodyRef}
+                reuseMachine={false}
+                providerID={workspace.data.provider.name}
+                onFinish={handleChangeOptionsFinishClicked}
+              />
+            ) : (
+              <>Unable to find provider for this workspace</>
+            )}
+          </ModalBody>
+        </ModalContent>
+      </Modal>
+    </>
   )
 }
 
-type TWorkspaceStatusBadgeProps = Readonly<{
-  status: TWorkspace["status"]
-  isLoading: boolean
-  hasError: boolean
-  onClick?: () => void
-}>
-function WorkspaceStatusBadge({
-  onClick,
-  status,
-  hasError,
-  isLoading,
-}: TWorkspaceStatusBadgeProps) {
-  const badge = useMemo(() => {
-    const sharedProps: BoxProps = {
-      as: "span",
-      borderRadius: "full",
-      width: "12px",
-      height: "12px",
-      borderWidth: "2px",
-      zIndex: "1",
-    }
-    const sharedTextProps: TextProps = {
-      fontWeight: "medium",
-      fontSize: "sm",
-    }
-    const rippleProps: IconProps = {
-      boxSize: 8,
-      position: "absolute",
-      left: "-8px",
-      zIndex: "0",
-    }
-
-    if (hasError) {
-      return (
-        <>
-          <Box {...sharedProps} backgroundColor="white" borderColor="red.400" />
-          <Text {...sharedTextProps} color="red.400">
-            Error
-          </Text>
-        </>
-      )
-    }
-
-    if (isLoading) {
-      return (
-        <>
-          <Box {...sharedProps} backgroundColor="white" borderColor="yellow.500" />
-          <Ripple {...rippleProps} color="yellow.500" />
-          <Text {...sharedTextProps} color="yellow.500">
-            Loading
-          </Text>
-        </>
-      )
-    }
-
-    if (status === "Running") {
-      return (
-        <>
-          <Box {...sharedProps} backgroundColor="green.200" borderColor="green.400" />
-          <Text {...sharedTextProps} color="green.400">
-            Running
-          </Text>
-        </>
-      )
-    }
-
-    return (
-      <>
-        <Box {...sharedProps} backgroundColor="purple.200" borderColor="purple.400" zIndex="1" />
-        <Text {...sharedTextProps} color="purple.400">
-          {status ?? "Unknown"}
-        </Text>
-      </>
-    )
-  }, [hasError, isLoading, status])
-
-  return (
-    <HStack
-      cursor={onClick ? "pointer" : "default"}
-      onClick={onClick}
-      spacing="1"
-      position="relative">
-      {badge}
-    </HStack>
+function getRunnerName(workspace: TWorkspace, provider: TProvider | undefined): string | undefined {
+  const options = mergeOptionDefinitions(
+    workspace.provider?.options ?? {},
+    provider?.config?.options ?? {}
   )
-}
-
-function useShareWorkspace(workspace: TWorkspace | undefined) {
-  const toast = useToast()
-  const [provider] = useProvider(workspace?.provider?.name)
-  const [[proInstances]] = useProInstances()
-  const proInstance = useMemo<TProInstance | undefined>(() => {
-    if (!provider?.isProxyProvider) {
-      return undefined
-    }
-
-    return proInstances?.find((instance) => instance.provider === provider.config?.name)
-  }, [proInstances, provider?.config?.name, provider?.isProxyProvider])
-
-  const handleShareClicked = useCallback(async () => {
-    const devpodProHost = proInstance?.host
-    const workspace_id = workspace?.id
-    const workspace_uid = workspace?.uid
-    if (!devpodProHost || !workspace_id || !workspace_uid) {
-      return
-    }
-
-    const searchParams = new URLSearchParams()
-    searchParams.set("workspace-uid", workspace_uid)
-    searchParams.set("workspace-id", workspace_id)
-    searchParams.set("devpod-pro-host", devpodProHost)
-
-    const link = `https://devpod.sh/import#${searchParams.toString()}`
-    const res = await client.writeToClipboard(link)
-    if (!res.ok) {
-      toast({
-        title: "Failed to share workspace",
-        description: res.val.message,
-        status: "error",
-        duration: 5_000,
-        isClosable: true,
-      })
-
-      return
-    }
-
-    toast({
-      title: "Copied workspace link to clipboard",
-      status: "success",
-      duration: 5_000,
-      isClosable: true,
-    })
-  }, [proInstance?.host, toast, workspace?.id, workspace?.uid])
-
-  return {
-    isEnabled: workspace !== undefined && provider?.isProxyProvider && proInstance !== undefined,
-    onClick: handleShareClicked,
+  const maybeRunnerOption = options["LOFT_RUNNER"]
+  if (!maybeRunnerOption) {
+    return undefined
   }
+  const value = maybeRunnerOption.value
+
+  return maybeRunnerOption.enum?.find((e) => e.value === value)?.displayName ?? value ?? undefined
+}
+
+function getTemplate(workspace: TWorkspace, provider: TProvider | undefined): string | undefined {
+  const options = mergeOptionDefinitions(
+    workspace.provider?.options ?? {},
+    provider?.config?.options ?? {}
+  )
+  const maybeTemplateOption = options["LOFT_TEMPLATE"]
+  if (!maybeTemplateOption) {
+    return undefined
+  }
+  const value = maybeTemplateOption.value
+
+  return maybeTemplateOption.enum?.find((e) => e.value === value)?.displayName ?? value ?? undefined
+}
+
+function getTemplateOptions(
+  workspace: TWorkspace,
+  provider: TProvider | undefined
+): readonly TOptionWithID[] {
+  const options = mergeOptionDefinitions(
+    workspace.provider?.options ?? {},
+    provider?.config?.options ?? {}
+  )
+  const displayOptions = processDisplayOptions(options, [], true)
+
+  // shouldn't have groups here as we passed in empty array earlier
+  return [...displayOptions.required, ...displayOptions.other].filter(
+    (opt) => opt.id !== "LOFT_TEMPLATE"
+  )
 }

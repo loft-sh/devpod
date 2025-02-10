@@ -42,7 +42,7 @@ export function WarningMessageBox({
             borderRadius: "md",
           }
         : {})}
-      userSelect="auto"
+      userSelect="text"
       display="inline-block">
       <Text color={textColor} fontSize={fontSize}>
         {warning}

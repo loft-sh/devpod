@@ -60,6 +60,12 @@ var AllowedIDEs = []AllowedIDE{
 		Icon:        "https://devpod.sh/assets/goland.svg",
 	},
 	{
+		Name:        config.IDERustRover,
+		DisplayName: "RustRover",
+		Options:     jetbrains.RustRoverOptions,
+		Icon:        "https://devpod.sh/assets/rustrover.svg",
+	},
+	{
 		Name:        config.IDEPyCharm,
 		DisplayName: "PyCharm",
 		Options:     jetbrains.PyCharmOptions,
@@ -102,6 +108,12 @@ var AllowedIDEs = []AllowedIDE{
 		Icon:        "https://devpod.sh/assets/webstorm.svg",
 	},
 	{
+		Name:        config.IDEDataSpell,
+		DisplayName: "DataSpell",
+		Options:     jetbrains.DataSpellOptions,
+		Icon:        "https://devpod.sh/assets/dataspell.svg",
+	},
+	{
 		Name:         config.IDEFleet,
 		DisplayName:  "Fleet",
 		Options:      fleet.Options,
@@ -114,6 +126,56 @@ var AllowedIDEs = []AllowedIDE{
 		Options:      jupyter.Options,
 		Icon:         "https://devpod.sh/assets/jupyter.svg",
 		IconDark:     "https://devpod.sh/assets/jupyter_dark.svg",
+		Experimental: true,
+	},
+	{
+		Name:         config.IDEJupyterDesktop,
+		DisplayName:  "Jupyter Desktop",
+		Options:      jupyter.Options,
+		Icon:         "https://devpod.sh/assets/jupyter.svg",
+		IconDark:     "https://devpod.sh/assets/jupyter_dark.svg",
+		Experimental: true,
+	},
+	{
+		Name:         config.IDEVSCodeInsiders,
+		DisplayName:  "VSCode Insiders",
+		Options:      vscode.Options,
+		Icon:         "https://devpod.sh/assets/vscode_insiders.svg",
+		Experimental: true,
+	},
+	{
+		Name:         config.IDECursor,
+		DisplayName:  "Cursor",
+		Options:      vscode.Options,
+		Icon:         "https://devpod.sh/assets/cursor.svg",
+		Experimental: true,
+	},
+	{
+		Name:         config.IDEMarimo,
+		DisplayName:  "Marimo",
+		Options:      vscode.Options,
+		Icon:         "https://devpod.sh/assets/marimo.svg",
+		Experimental: true,
+	},
+	{
+		Name:         config.IDECodium,
+		DisplayName:  "Codium",
+		Options:      vscode.Options,
+		Icon:         "https://devpod.sh/assets/codium.svg",
+		Experimental: true,
+	},
+	{
+		Name:         config.IDEPositron,
+		DisplayName:  "Positron",
+		Options:      vscode.Options,
+		Icon:         "https://devpod.sh/assets/positron.svg",
+		Experimental: true,
+	},
+	{
+		Name:         config.IDEZed,
+		DisplayName:  "Zed",
+		Options:      ide.Options{},
+		Icon:         "https://devpod.sh/assets/zed.svg",
 		Experimental: true,
 	},
 }
@@ -232,7 +294,7 @@ func ParseOptions(options []string, ideOptions ide.Options) (map[string]config.O
 
 			if !matcher.MatchString(value) {
 				if ideOption.ValidationMessage != "" {
-					return nil, fmt.Errorf(ideOption.ValidationMessage)
+					return nil, fmt.Errorf("%s", ideOption.ValidationMessage)
 				}
 
 				return nil, fmt.Errorf("invalid value '%s' for option '%s', has to match the following regEx: %s", value, key, ideOption.ValidationPattern)

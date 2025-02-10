@@ -9,9 +9,6 @@ type Machine struct {
 	// ID is the machine id to use
 	ID string `json:"id,omitempty"`
 
-	// Folder is the local folder where machine related contents will be stored
-	Folder string `json:"folder,omitempty"`
-
 	// Provider is the provider used to create this workspace
 	Provider MachineProviderConfig `json:"provider,omitempty"`
 

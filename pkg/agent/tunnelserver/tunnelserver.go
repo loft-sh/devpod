@@ -3,9 +3,11 @@ package tunnelserver
 import (
 	"bufio"
 	"context"
+	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"io"
+	"os"
 	"path/filepath"
 	"strings"
 
@@ -13,47 +15,66 @@ import (
 	"github.com/loft-sh/devpod/pkg/devcontainer/config"
 	"github.com/loft-sh/devpod/pkg/dockercredentials"
 	"github.com/loft-sh/devpod/pkg/extract"
-	"github.com/loft-sh/devpod/pkg/git"
 	"github.com/loft-sh/devpod/pkg/gitcredentials"
+	"github.com/loft-sh/devpod/pkg/gitsshsigning"
+	"github.com/loft-sh/devpod/pkg/gpg"
+	"github.com/loft-sh/devpod/pkg/loftconfig"
 	"github.com/loft-sh/devpod/pkg/netstat"
+	"github.com/loft-sh/devpod/pkg/platform"
 	provider2 "github.com/loft-sh/devpod/pkg/provider"
 	"github.com/loft-sh/devpod/pkg/stdio"
 	"github.com/loft-sh/log"
+	"github.com/moby/patternmatcher/ignorefile"
 	perrors "github.com/pkg/errors"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/reflection"
 )
 
-func RunServicesServer(ctx context.Context, reader io.Reader, writer io.WriteCloser, allowGitCredentials, allowDockerCredentials bool, forwarder netstat.Forwarder, log log.Logger) error {
-	tunnelServ := &tunnelServer{
-		forwarder:              forwarder,
-		allowGitCredentials:    allowGitCredentials,
-		allowDockerCredentials: allowDockerCredentials,
-		log:                    log,
-	}
+func RunServicesServer(ctx context.Context, reader io.Reader, writer io.WriteCloser, allowGitCredentials, allowDockerCredentials bool, forwarder netstat.Forwarder, workspace *provider2.Workspace, log log.Logger, options ...Option) error {
+	opts := append(options, []Option{
+		WithForwarder(forwarder),
+		WithAllowGitCredentials(allowGitCredentials),
+		WithAllowDockerCredentials(allowDockerCredentials),
+		WithWorkspace(workspace),
+	}...)
+	tunnelServ := New(log, opts...)
 
 	return tunnelServ.Run(ctx, reader, writer)
 }
 
-func RunUpServer(ctx context.Context, reader io.Reader, writer io.WriteCloser, allowGitCredentials, allowDockerCredentials bool, workspace *provider2.Workspace, log log.Logger) (*config.Result, error) {
-	tunnelServ := &tunnelServer{
-		workspace:              workspace,
-		allowGitCredentials:    allowGitCredentials,
-		allowDockerCredentials: allowDockerCredentials,
-		log:                    log,
-	}
+func RunUpServer(ctx context.Context, reader io.Reader, writer io.WriteCloser, allowGitCredentials, allowDockerCredentials bool, workspace *provider2.Workspace, log log.Logger, options ...Option) (*config.Result, error) {
+	opts := append(options, []Option{
+		WithWorkspace(workspace),
+		WithAllowGitCredentials(allowGitCredentials),
+		WithAllowDockerCredentials(allowDockerCredentials),
+	}...)
+	tunnelServ := New(log, opts...)
 
 	return tunnelServ.RunWithResult(ctx, reader, writer)
 }
 
-func RunSetupServer(ctx context.Context, reader io.Reader, writer io.WriteCloser, allowDockerCredentials bool, mounts []*config.Mount, log log.Logger) (*config.Result, error) {
-	tunnelServ := &tunnelServer{
-		mounts:                 mounts,
-		allowDockerCredentials: allowDockerCredentials,
-		log:                    log,
-	}
+func RunSetupServer(ctx context.Context, reader io.Reader, writer io.WriteCloser, allowGitCredentials, allowDockerCredentials bool, mounts []*config.Mount, tunnelClient tunnel.TunnelClient, log log.Logger, options ...Option) (*config.Result, error) {
+	opts := append(options, []Option{
+		WithMounts(mounts),
+		WithAllowGitCredentials(allowGitCredentials),
+		WithAllowDockerCredentials(allowDockerCredentials),
+		WithAllowKubeConfig(true),
+		WithTunnelClient(tunnelClient),
+	}...)
+	tunnelServ := New(log, opts...)
 
 	return tunnelServ.RunWithResult(ctx, reader, writer)
+}
+
+func New(log log.Logger, options ...Option) *tunnelServer {
+	s := &tunnelServer{
+		log: log,
+	}
+	for _, o := range options {
+		s = o(s)
+	}
+
+	return s
 }
 
 type tunnelServer struct {
@@ -65,9 +86,17 @@ type tunnelServer struct {
 	forwarder              netstat.Forwarder
 	allowGitCredentials    bool
 	allowDockerCredentials bool
+	allowKubeConfig        bool
 	result                 *config.Result
 	workspace              *provider2.Workspace
 	log                    log.Logger
+	gitCredentialsOverride gitCredentialsOverride
+	tunnelClient           tunnel.TunnelClient
+}
+
+type gitCredentialsOverride struct {
+	username string
+	token    string
 }
 
 func (t *tunnelServer) RunWithResult(ctx context.Context, reader io.Reader, writer io.WriteCloser) (*config.Result, error) {
@@ -159,7 +188,7 @@ func (t *tunnelServer) DockerCredentials(ctx context.Context, message *tunnel.Me
 }
 
 func (t *tunnelServer) GitUser(ctx context.Context, empty *tunnel.Empty) (*tunnel.Message, error) {
-	gitUser, err := gitcredentials.GetUser()
+	gitUser, err := gitcredentials.GetUser("")
 	if err != nil {
 		return nil, err
 	}
@@ -185,9 +214,78 @@ func (t *tunnelServer) GitCredentials(ctx context.Context, message *tunnel.Messa
 		return nil, perrors.Wrap(err, "decode git credentials request")
 	}
 
-	response, err := gitcredentials.GetCredentials(credentials)
+	if t.gitCredentialsOverride.token != "" {
+		credentials.Username = t.gitCredentialsOverride.username
+		credentials.Password = t.gitCredentialsOverride.token
+	} else {
+		if t.workspace.Source.GitRepository != "" {
+			path, err := gitcredentials.GetHTTPPath(ctx, gitcredentials.GetHttpPathParameters{
+				Host:        credentials.Host,
+				Protocol:    credentials.Protocol,
+				CurrentPath: credentials.Path,
+				Repository:  t.workspace.Source.GitRepository,
+			})
+			if err != nil {
+				return nil, fmt.Errorf("get http path: %w", err)
+			}
+			// Set the credentials `path` field to the path component of the git repository URL.
+			// This allows downstream credential helpers to figure out which passwords needs to be fetched
+			credentials.Path = path
+		}
+
+		response, err := gitcredentials.GetCredentials(credentials)
+		if err != nil {
+			return nil, perrors.Wrap(err, "get git response")
+		}
+		credentials = response
+	}
+
+	out, err := json.Marshal(credentials)
 	if err != nil {
-		return nil, perrors.Wrap(err, "get git response")
+		return nil, err
+	}
+
+	return &tunnel.Message{Message: string(out)}, nil
+}
+
+func (t *tunnelServer) GitSSHSignature(ctx context.Context, message *tunnel.Message) (*tunnel.Message, error) {
+	signatureRequest := &gitsshsigning.GitSSHSignatureRequest{}
+	err := json.Unmarshal([]byte(message.Message), signatureRequest)
+	if err != nil {
+		return nil, perrors.Wrap(err, "git ssh sign request")
+	}
+
+	signatureResponse, err := signatureRequest.Sign()
+	if err != nil {
+		return nil, perrors.Wrap(err, "get git ssh signature")
+	}
+
+	out, err := json.Marshal(signatureResponse)
+	if err != nil {
+		return nil, err
+	}
+
+	return &tunnel.Message{Message: string(out)}, nil
+}
+
+func (t *tunnelServer) LoftConfig(ctx context.Context, message *tunnel.Message) (*tunnel.Message, error) {
+	loftConfigRequest := &loftconfig.LoftConfigRequest{}
+	err := json.Unmarshal([]byte(message.Message), loftConfigRequest)
+	if err != nil {
+		return nil, perrors.Wrap(err, "loft platform config request")
+	}
+
+	var response *loftconfig.LoftConfigResponse
+	if t.workspace != nil {
+		response, err = loftconfig.ReadFromWorkspace(t.workspace)
+		if err != nil {
+			return nil, fmt.Errorf("read loft config: %w", err)
+		}
+	} else {
+		response, err = loftconfig.Read(loftConfigRequest)
+		if err != nil {
+			return nil, fmt.Errorf("read loft config: %w", err)
+		}
 	}
 
 	out, err := json.Marshal(response)
@@ -196,6 +294,51 @@ func (t *tunnelServer) GitCredentials(ctx context.Context, message *tunnel.Messa
 	}
 
 	return &tunnel.Message{Message: string(out)}, nil
+}
+
+func (t *tunnelServer) KubeConfig(ctx context.Context, message *tunnel.Message) (*tunnel.Message, error) {
+	if !t.allowKubeConfig || t.tunnelClient == nil {
+		return nil, fmt.Errorf("kube config forbidden")
+	}
+
+	// fetch loft config from host machine
+	req, err := json.Marshal(loftconfig.LoftConfigRequest{})
+	if err != nil {
+		return nil, err
+	}
+	rawLoftConfigRes, err := t.tunnelClient.LoftConfig(ctx, &tunnel.Message{Message: string(req)})
+	if err != nil {
+		return nil, fmt.Errorf("fetch loft config: %w", err)
+	}
+	loftConfigRes := &loftconfig.LoftConfigResponse{}
+	err = json.Unmarshal([]byte(rawLoftConfigRes.Message), loftConfigRes)
+	if err != nil {
+		return nil, fmt.Errorf("get loft config: %w", err)
+	}
+
+	// get info from runner
+	spaceInstanceName := os.Getenv(platform.SpaceInstanceNameEnv)
+	virtualClusterInstanceName := os.Getenv(platform.VirtualClusterInstanceNameEnv)
+	namespace := os.Getenv(platform.InstanceNamespaceEnv)
+
+	// create kubeconfig based on info
+	kubeConfig, err := platform.NewInstanceKubeConfig(ctx, loftConfigRes.LoftConfig, spaceInstanceName, virtualClusterInstanceName, namespace)
+	if err != nil {
+		return nil, fmt.Errorf("create kube config: %w", err)
+	}
+
+	return &tunnel.Message{Message: string(kubeConfig)}, nil
+}
+
+func (t *tunnelServer) GPGPublicKeys(ctx context.Context, message *tunnel.Message) (*tunnel.Message, error) {
+	rawPubKeys, err := gpg.GetHostPubKey()
+	if err != nil {
+		return nil, fmt.Errorf("get gpg host public keys: %w", err)
+	}
+
+	pubKeyArgument := base64.StdEncoding.EncodeToString(rawPubKeys)
+
+	return &tunnel.Message{Message: pubKeyArgument}, nil
 }
 
 func (t *tunnelServer) SendResult(ctx context.Context, result *tunnel.Message) (*tunnel.Empty, error) {
@@ -230,75 +373,23 @@ func (t *tunnelServer) Log(ctx context.Context, message *tunnel.LogMessage) (*tu
 	return &tunnel.Empty{}, nil
 }
 
-func (t *tunnelServer) StreamGitClone(message *tunnel.Empty, stream tunnel.Tunnel_StreamGitCloneServer) error {
-	if t.workspace == nil {
-		return fmt.Errorf("workspace is nil")
-	} else if t.workspace.Source.GitRepository == "" {
-		return fmt.Errorf("invalid repository")
-	}
-
-	// clone here
-	gitCloneDir := filepath.Join(t.workspace.Folder, "source")
-	cloneArgs := []string{"clone", t.workspace.Source.GitRepository, gitCloneDir}
-	if t.workspace.Source.GitBranch != "" {
-		cloneArgs = append(cloneArgs, "--branch", t.workspace.Source.GitBranch)
-	}
-
-	err := git.CommandContext(context.Background(), cloneArgs...).Run()
-	if err != nil {
-		return err
-	}
-
-	if t.workspace.Source.GitPRReference != "" {
-		prBranch := git.GetBranchNameForPR(t.workspace.Source.GitPRReference)
-
-		// git fetch origin pull/996/head:PR996
-		fetchArgs := []string{"fetch", "origin", t.workspace.Source.GitPRReference + ":" + prBranch}
-		fetchCmd := git.CommandContext(context.Background(), fetchArgs...)
-		fetchCmd.Dir = gitCloneDir
-		err = fetchCmd.Run()
-		if err != nil {
-			return err
-		}
-
-		// git switch PR996
-		switchArgs := []string{"switch", prBranch}
-		switchCmd := git.CommandContext(context.Background(), switchArgs...)
-		switchCmd.Dir = gitCloneDir
-		err = switchCmd.Run()
-		if err != nil {
-			return err
-		}
-	} else if t.workspace.Source.GitCommit != "" {
-		// reset here
-		// git reset --hard $COMMIT_SHA
-		resetArgs := []string{"reset", "--hard", t.workspace.Source.GitCommit}
-		resetCmd := git.CommandContext(context.Background(), resetArgs...)
-		resetCmd.Dir = gitCloneDir
-
-		err = resetCmd.Run()
-		if err != nil {
-			return err
-		}
-	}
-
-	buf := bufio.NewWriterSize(NewStreamWriter(stream, t.log), 10*1024)
-	err = extract.WriteTar(buf, gitCloneDir, false)
-	if err != nil {
-		return err
-	}
-
-	// make sure buffer is flushed
-	return buf.Flush()
-}
-
 func (t *tunnelServer) StreamWorkspace(message *tunnel.Empty, stream tunnel.Tunnel_StreamWorkspaceServer) error {
 	if t.workspace == nil {
 		return fmt.Errorf("workspace is nil")
 	}
 
+	// Get .devpodignore files to exclude
+	excludes := []string{}
+	f, err := os.Open(filepath.Join(t.workspace.Source.LocalFolder, ".devpodignore"))
+	if err == nil {
+		excludes, err = ignorefile.ReadAll(f)
+		if err != nil {
+			t.log.Warnf("Error reading .devpodignore file: %v", err)
+		}
+	}
+
 	buf := bufio.NewWriterSize(NewStreamWriter(stream, t.log), 10*1024)
-	err := extract.WriteTar(buf, t.workspace.Source.LocalFolder, false)
+	err = extract.WriteTarExclude(buf, t.workspace.Source.LocalFolder, false, excludes)
 	if err != nil {
 		return err
 	}
@@ -319,8 +410,20 @@ func (t *tunnelServer) StreamMount(message *tunnel.StreamMountRequest, stream tu
 		return fmt.Errorf("mount %s is not allowed to download", message.Mount)
 	}
 
+	// Get .devpodignore files to exclude
+	excludes := []string{}
+	if t.workspace != nil {
+		f, err := os.Open(filepath.Join(t.workspace.Source.LocalFolder, ".devpodignore"))
+		if err == nil {
+			excludes, err = ignorefile.ReadAll(f)
+			if err != nil {
+				t.log.Warnf("Error reading .devpodignore file: %v", err)
+			}
+		}
+	}
+
 	buf := bufio.NewWriterSize(NewStreamWriter(stream, t.log), 10*1024)
-	err := extract.WriteTar(buf, mount.Source, false)
+	err := extract.WriteTarExclude(buf, mount.Source, false, excludes)
 	if err != nil {
 		return err
 	}

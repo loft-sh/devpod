@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"strings"
+	"time"
 
 	"github.com/loft-sh/devpod/pkg/devcontainer/config"
 	"github.com/loft-sh/devpod/pkg/devcontainer/metadata"
@@ -13,9 +14,22 @@ import (
 	"github.com/pkg/errors"
 )
 
-var dockerlessImage = "ghcr.io/loft-sh/dockerless:0.1.4"
+var dockerlessImage = "ghcr.io/loft-sh/dockerless:0.2.0"
 
-func (r *runner) runSingleContainer(ctx context.Context, parsedConfig *config.SubstitutedConfig, options UpOptions) (*config.Result, error) {
+const (
+	DevPodExtraEnvVar           = "DEVPOD"
+	RemoteContainersExtraEnvVar = "REMOTE_CONTAINERS"
+	WorkspaceIDExtraEnvVar      = "DEVPOD_WORKSPACE_ID"
+	WorkspaceUIDExtraEnvVar     = "DEVPOD_WORKSPACE_UID"
+)
+
+func (r *runner) runSingleContainer(
+	ctx context.Context,
+	parsedConfig *config.SubstitutedConfig,
+	substitutionContext *config.SubstitutionContext,
+	options UpOptions,
+	timeout time.Duration,
+) (*config.Result, error) {
 	containerDetails, err := r.Driver.FindDevContainer(ctx, r.ID)
 	if err != nil {
 		return nil, fmt.Errorf("find dev container: %w", err)
@@ -25,7 +39,10 @@ func (r *runner) runSingleContainer(ctx context.Context, parsedConfig *config.Su
 	var (
 		mergedConfig *config.MergedDevContainerConfig
 	)
-	if !options.Recreate && containerDetails != nil {
+	// if options.Recreate is true, and workspace is a running container, we should not rebuild
+	if options.Recreate && parsedConfig.Config.ContainerID != "" {
+		return nil, fmt.Errorf("cannot recreate container not created by DevPod")
+	} else if !options.Recreate && containerDetails != nil {
 		// start container if not running
 		if strings.ToLower(containerDetails.State.Status) != "running" {
 			err = r.Driver.StartDevContainer(ctx, r.ID)
@@ -34,7 +51,12 @@ func (r *runner) runSingleContainer(ctx context.Context, parsedConfig *config.Su
 			}
 		}
 
-		imageMetadataConfig, err := metadata.GetImageMetadataFromContainer(containerDetails, r.SubstitutionContext, r.Log)
+		// if we are working with a non-managed container, and it has set workingDir, set it as the workspaceFolder
+		if parsedConfig.Config.ContainerID != "" && containerDetails.Config.WorkingDir != "" {
+			substitutionContext.ContainerWorkspaceFolder = containerDetails.Config.WorkingDir
+		}
+
+		imageMetadataConfig, err := metadata.GetImageMetadataFromContainer(containerDetails, substitutionContext, r.Log)
 		if err != nil {
 			return nil, err
 		}
@@ -43,14 +65,30 @@ func (r *runner) runSingleContainer(ctx context.Context, parsedConfig *config.Su
 		if err != nil {
 			return nil, errors.Wrap(err, "merge config")
 		}
+
+		// If driver can reprovision, rerun the devcontainer and let the driver handle follow-up steps
+		if d, ok := r.Driver.(driver.ReprovisioningDriver); ok && d.CanReprovision() {
+			err = r.Driver.RunDevContainer(ctx, r.ID, nil)
+			if err != nil {
+				return nil, errors.Wrap(err, "start dev container")
+			}
+
+			// get from build info
+			containerDetails, err = r.Driver.FindDevContainer(ctx, r.ID)
+			if err != nil {
+				return nil, fmt.Errorf("find dev container: %w", err)
+			}
+		}
 	} else {
 		// we need to build the container
-		buildInfo, err := r.build(ctx, parsedConfig, config.BuildOptions{
+		buildInfo, err := r.build(ctx, parsedConfig, substitutionContext, provider2.BuildOptions{
 			CLIOptions: provider2.CLIOptions{
 				PrebuildRepositories: options.PrebuildRepositories,
 				ForceDockerless:      options.ForceDockerless,
 			},
-			NoBuild: options.NoBuild,
+			NoBuild:       options.NoBuild,
+			RegistryCache: options.RegistryCache,
+			ExportCache:   false,
 		})
 		if err != nil {
 			return nil, errors.Wrap(err, "build image")
@@ -71,7 +109,7 @@ func (r *runner) runSingleContainer(ctx context.Context, parsedConfig *config.Su
 		}
 
 		// run dev container
-		err = r.runContainer(ctx, parsedConfig, mergedConfig, buildInfo)
+		err = r.runContainer(ctx, parsedConfig, substitutionContext, mergedConfig, buildInfo)
 		if err != nil {
 			return nil, errors.Wrap(err, "start dev container")
 		}
@@ -86,12 +124,13 @@ func (r *runner) runSingleContainer(ctx context.Context, parsedConfig *config.Su
 	}
 
 	// setup container
-	return r.setupContainer(ctx, containerDetails, mergedConfig)
+	return r.setupContainer(ctx, parsedConfig.Raw, containerDetails, mergedConfig, substitutionContext, timeout)
 }
 
 func (r *runner) runContainer(
 	ctx context.Context,
 	parsedConfig *config.SubstitutedConfig,
+	substitutionContext *config.SubstitutionContext,
 	mergedConfig *config.MergedDevContainerConfig,
 	buildInfo *config.BuildInfo,
 ) error {
@@ -100,17 +139,19 @@ func (r *runner) runContainer(
 	// build run options for dockerless mode
 	var runOptions *driver.RunOptions
 	if buildInfo.Dockerless != nil {
-		runOptions, err = r.getDockerlessRunOptions(mergedConfig, buildInfo)
+		runOptions, err = r.getDockerlessRunOptions(mergedConfig, substitutionContext, buildInfo)
 		if err != nil {
 			return fmt.Errorf("build dockerless run options: %w", err)
 		}
 	} else {
 		// build run options
-		runOptions, err = r.getRunOptions(mergedConfig, buildInfo)
+		runOptions, err = r.getRunOptions(mergedConfig, substitutionContext, buildInfo)
 		if err != nil {
 			return fmt.Errorf("build run options: %w", err)
 		}
 	}
+
+	runOptions.Env = r.addExtraEnvVars(runOptions.Env)
 
 	// check if docker
 	dockerDriver, ok := r.Driver.(driver.DockerDriver)
@@ -132,10 +173,11 @@ func (r *runner) runContainer(
 
 func (r *runner) getDockerlessRunOptions(
 	mergedConfig *config.MergedDevContainerConfig,
+	substitutionContext *config.SubstitutionContext,
 	buildInfo *config.BuildInfo,
 ) (*driver.RunOptions, error) {
 	// parse workspace mount
-	workspaceMountParsed := config.ParseMount(r.SubstitutionContext.WorkspaceMount)
+	workspaceMountParsed := config.ParseMount(substitutionContext.WorkspaceMount)
 
 	// add metadata as label here
 	marshalled, err := json.Marshal(buildInfo.ImageMetadata.Raw)
@@ -146,6 +188,7 @@ func (r *runner) getDockerlessRunOptions(
 		"DOCKERLESS":            "true",
 		"DOCKERLESS_CONTEXT":    buildInfo.Dockerless.Context,
 		"DOCKERLESS_DOCKERFILE": buildInfo.Dockerless.Dockerfile,
+		"GODEBUG":               "http2client=0", // https://github.com/GoogleContainerTools/kaniko/issues/875
 	}
 	for k, v := range mergedConfig.ContainerEnv {
 		env[k] = v
@@ -175,8 +218,14 @@ func (r *runner) getDockerlessRunOptions(
 		Target: "/workspaces/.dockerless",
 	})
 
+	uid := ""
+	if r.WorkspaceConfig != nil && r.WorkspaceConfig.Workspace != nil {
+		uid = r.WorkspaceConfig.Workspace.UID
+	}
+
 	// build run options
 	return &driver.RunOptions{
+		UID:        uid,
 		Image:      image,
 		User:       "root",
 		Entrypoint: "/.dockerless/dockerless",
@@ -202,10 +251,11 @@ func (r *runner) getDockerlessRunOptions(
 
 func (r *runner) getRunOptions(
 	mergedConfig *config.MergedDevContainerConfig,
+	substitutionContext *config.SubstitutionContext,
 	buildInfo *config.BuildInfo,
 ) (*driver.RunOptions, error) {
 	// parse workspace mount
-	workspaceMountParsed := config.ParseMount(r.SubstitutionContext.WorkspaceMount)
+	workspaceMountParsed := config.ParseMount(substitutionContext.WorkspaceMount)
 
 	// add metadata as label here
 	marshalled, err := json.Marshal(buildInfo.ImageMetadata.Raw)
@@ -225,7 +275,13 @@ func (r *runner) getRunOptions(
 		user = mergedConfig.ContainerUser
 	}
 
+	uid := ""
+	if r.WorkspaceConfig != nil && r.WorkspaceConfig.Workspace != nil {
+		uid = r.WorkspaceConfig.Workspace.UID
+	}
+
 	return &driver.RunOptions{
+		UID:            uid,
 		Image:          buildInfo.ImageName,
 		User:           user,
 		Entrypoint:     entrypoint,
@@ -238,6 +294,25 @@ func (r *runner) getRunOptions(
 		SecurityOpt:    mergedConfig.SecurityOpt,
 		Mounts:         mergedConfig.Mounts,
 	}, nil
+}
+
+// add environment variables that signals that we are in a remote container
+// (vscode compatibility) and specifically that we are using devpod.
+func (r *runner) addExtraEnvVars(env map[string]string) map[string]string {
+	if env == nil {
+		env = make(map[string]string)
+	}
+
+	env[DevPodExtraEnvVar] = "true"
+	env[RemoteContainersExtraEnvVar] = "true"
+	if r.WorkspaceConfig != nil && r.WorkspaceConfig.Workspace != nil && r.WorkspaceConfig.Workspace.ID != "" {
+		env[WorkspaceIDExtraEnvVar] = r.WorkspaceConfig.Workspace.ID
+	}
+	if r.WorkspaceConfig != nil && r.WorkspaceConfig.Workspace != nil && r.WorkspaceConfig.Workspace.UID != "" {
+		env[WorkspaceUIDExtraEnvVar] = r.WorkspaceConfig.Workspace.UID
+	}
+
+	return env
 }
 
 func GetStartScript(mergedConfig *config.MergedDevContainerConfig) string {

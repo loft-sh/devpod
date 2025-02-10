@@ -1,16 +1,5 @@
 // Copyright The OpenTelemetry Authors
-//
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-//     http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
+// SPDX-License-Identifier: Apache-2.0
 
 package codes // import "go.opentelemetry.io/otel/codes"
 
@@ -23,10 +12,20 @@ import (
 const (
 	// Unset is the default status code.
 	Unset Code = 0
+
 	// Error indicates the operation contains an error.
+	//
+	// NOTE: The error code in OTLP is 2.
+	// The value of this enum is only relevant to the internals
+	// of the Go SDK.
 	Error Code = 1
+
 	// Ok indicates operation has been validated by an Application developers
 	// or Operator to have completed successfully, or contain no error.
+	//
+	// NOTE: The Ok code in OTLP is 1.
+	// The value of this enum is only relevant to the internals
+	// of the Go SDK.
 	Ok Code = 2
 
 	maxCode = 3
@@ -84,7 +83,7 @@ func (c *Code) UnmarshalJSON(b []byte) error {
 				return fmt.Errorf("invalid code: %q", ci)
 			}
 
-			*c = Code(ci)
+			*c = Code(ci) // nolint: gosec  // Bit size of 32 check above.
 			return nil
 		}
 		return fmt.Errorf("invalid code: %q", string(b))

@@ -1,22 +1,17 @@
 package helper
 
 import (
-	"bufio"
 	"context"
 	"encoding/json"
 	"fmt"
-	"io/fs"
 	"os"
-	"path/filepath"
-	"strings"
 	"time"
 
 	"github.com/loft-sh/devpod/cmd/flags"
-	"github.com/loft-sh/devpod/pkg/file"
+	"github.com/loft-sh/devpod/pkg/config"
+	"github.com/loft-sh/devpod/pkg/devcontainer"
 	"github.com/loft-sh/devpod/pkg/git"
-	"github.com/loft-sh/devpod/pkg/image"
 	"github.com/loft-sh/log"
-	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 )
@@ -42,13 +37,18 @@ func NewGetWorkspaceConfigCommand(flags *flags.GlobalFlags) *cobra.Command {
 	shellCmd := &cobra.Command{
 		Use:   "get-workspace-config",
 		Short: "Retrieves a workspace config",
-		RunE: func(_ *cobra.Command, args []string) error {
+		RunE: func(cobraCmd *cobra.Command, args []string) error {
+			devPodConfig, err := config.LoadConfig(cmd.Context, cmd.Provider)
+			if err != nil {
+				return err
+			}
+
 			if cmd.maxDepth < 0 {
 				log.Default.Debugf("--max-depth was %d, setting to 0", cmd.maxDepth)
 				cmd.maxDepth = 0
 			}
 
-			return cmd.Run(context.Background(), args)
+			return cmd.Run(cobraCmd.Context(), devPodConfig, args)
 		},
 	}
 
@@ -58,7 +58,7 @@ func NewGetWorkspaceConfigCommand(flags *flags.GlobalFlags) *cobra.Command {
 	return shellCmd
 }
 
-func (cmd *GetWorkspaceConfigCommand) Run(ctx context.Context, args []string) error {
+func (cmd *GetWorkspaceConfigCommand) Run(ctx context.Context, devPodConfig *config.Config, args []string) error {
 	if len(args) != 1 {
 		return fmt.Errorf("workspace source is missing")
 	}
@@ -74,15 +74,21 @@ func (cmd *GetWorkspaceConfigCommand) Run(ctx context.Context, args []string) er
 	ctx, cancel := context.WithTimeout(context.Background(), cmd.timeout)
 	defer cancel()
 
-	done := make(chan *GetWorkspaceConfigCommandResult, 1)
+	done := make(chan *devcontainer.GetWorkspaceConfigResult, 1)
 	errChan := make(chan error, 1)
 
 	tmpDir, err := os.MkdirTemp("", "devpod")
 	if err != nil {
 		return err
 	}
+	defer func() {
+		_ = os.RemoveAll(tmpDir)
+	}()
 	go func() {
-		result, err := findDevcontainerFiles(ctx, rawSource, tmpDir, cmd.maxDepth, logger)
+		gitOpts := git.GitCommandOptions{
+			StrictHostKeyChecking: devPodConfig.ContextOption(config.ContextOptionSSHStrictHostKeyChecking) == "true",
+		}
+		result, err := devcontainer.FindDevcontainerFiles(ctx, rawSource, tmpDir, cmd.maxDepth, gitOpts, logger)
 		if err != nil {
 			errChan <- err
 			return
@@ -92,11 +98,9 @@ func (cmd *GetWorkspaceConfigCommand) Run(ctx context.Context, args []string) er
 
 	select {
 	case err := <-errChan:
-		_ = os.RemoveAll(tmpDir)
-		return errors.WithMessage(err, "unable to find devcontainer files")
+		return fmt.Errorf("unable to find devcontainer files: %w", err)
 	case <-ctx.Done():
-		_ = os.RemoveAll(tmpDir)
-		return errors.WithMessage(ctx.Err(), "timeout while searching for devcontainer files")
+		return fmt.Errorf("timeout while searching for devcontainer files")
 	case result := <-done:
 		out, err := json.Marshal(result)
 		if err != nil {
@@ -107,153 +111,4 @@ func (cmd *GetWorkspaceConfigCommand) Run(ctx context.Context, args []string) er
 	defer close(done)
 
 	return nil
-}
-
-func findDevcontainerFiles(ctx context.Context, rawSource, tmpDirPath string, maxDepth int, log log.Logger) (*GetWorkspaceConfigCommandResult, error) {
-	result := &GetWorkspaceConfigCommandResult{}
-
-	// local path
-	isLocalPath, _ := file.IsLocalDir(rawSource)
-	if isLocalPath {
-		log.Debug("Local directory detected")
-		result.IsLocal = true
-		initialDepth := strings.Count(rawSource, string(filepath.Separator))
-		err := filepath.WalkDir(rawSource, func(path string, info fs.DirEntry, err error) error {
-			if err != nil {
-				return err
-			}
-			depth := strings.Count(path, string(filepath.Separator)) - initialDepth
-			if info.IsDir() && depth > maxDepth {
-				return filepath.SkipDir
-			}
-
-			if isDevcontainerFilename(path) {
-				relPath, err := filepath.Rel(rawSource, path)
-				if err != nil {
-					log.Warnf("Unable to get relative path for %s: %s", path, err.Error())
-					return nil
-				}
-				result.ConfigPaths = append(result.ConfigPaths, relPath)
-			}
-
-			return nil
-		})
-		if err != nil {
-			return nil, err
-		}
-
-		return result, nil
-	}
-
-	// git repo
-	gitRepository, gitPRReference, gitBranch, gitCommit := git.NormalizeRepository(rawSource)
-	if strings.HasSuffix(rawSource, ".git") || git.PingRepository(gitRepository) {
-		log.Debug("Git repository detected")
-		result.IsGitRepository = true
-
-		log.Debugf("Cloning git repository into %s", tmpDirPath)
-		// git clone --bare --depth=1 $REPO
-		cloneArgs := []string{"clone"}
-		if gitCommit == "" {
-			cloneArgs = append(cloneArgs, "--bare", "--depth=1")
-		}
-		cloneArgs = append(cloneArgs, gitRepository, tmpDirPath)
-		if gitBranch != "" {
-			cloneArgs = append(cloneArgs, "--branch", gitBranch)
-		}
-		err := git.CommandContext(ctx, cloneArgs...).Run()
-		if err != nil {
-			return nil, err
-		}
-		log.Debug("Done cloning git repository")
-
-		if gitPRReference != "" {
-			log.Debugf("Fetching pull request : %s", gitPRReference)
-
-			prBranch := git.GetBranchNameForPR(gitPRReference)
-
-			// git fetch origin pull/996/head:PR996
-			fetchArgs := []string{"fetch", "origin", gitPRReference + ":" + prBranch}
-			fetchCmd := git.CommandContext(ctx, fetchArgs...)
-			fetchCmd.Dir = tmpDirPath
-			err = fetchCmd.Run()
-			if err != nil {
-				return nil, err
-			}
-
-			// git switch PR996
-			switchArgs := []string{"switch", prBranch}
-			switchCmd := git.CommandContext(ctx, switchArgs...)
-			switchCmd.Dir = tmpDirPath
-			err = switchCmd.Run()
-			if err != nil {
-				return nil, err
-			}
-		} else if gitCommit != "" {
-			log.Debugf("Resetting HEAD to %s", gitCommit)
-			// git reset --hard $COMMIT_SHA
-			resetArgs := []string{"reset", "--hard", gitCommit}
-			resetCmd := git.CommandContext(ctx, resetArgs...)
-			resetCmd.Dir = tmpDirPath
-			err = resetCmd.Run()
-			if err != nil {
-				return nil, err
-			}
-			log.Debugf("HEAD is now at %s", gitCommit)
-		}
-
-		log.Debug("Listing git file tree")
-		ref := "HEAD"
-		// checkout on branch if available
-		if gitBranch != "" {
-			ref = gitBranch
-		}
-		// git ls-tree -r --full-name --name-only $REF
-		lsArgs := []string{"ls-tree", "-r", "--full-name", "--name-only", ref}
-		lsCmd := git.CommandContext(ctx, lsArgs...)
-		lsCmd.Dir = tmpDirPath
-		stdout, err := lsCmd.StdoutPipe()
-		if err != nil {
-			return nil, err
-		}
-		err = lsCmd.Start()
-		if err != nil {
-			return nil, err
-		}
-
-		scanner := bufio.NewScanner(stdout)
-		for scanner.Scan() {
-			path := scanner.Text()
-			depth := strings.Count(path, string(filepath.Separator))
-			if depth > maxDepth {
-				continue
-			}
-			if isDevcontainerFilename(path) {
-				result.ConfigPaths = append(result.ConfigPaths, path)
-			}
-		}
-
-		err = lsCmd.Wait()
-		if err != nil {
-			return nil, err
-		}
-
-		return result, nil
-	}
-
-	// container image
-	_, err := image.GetImage(rawSource)
-	if err == nil {
-		log.Debug("Container image detected")
-		result.IsImage = true
-		// Doesn't matter, we just want to know if it's an image
-		// not going to poke around in the image fs
-		return result, nil
-	}
-
-	return result, nil
-}
-
-func isDevcontainerFilename(path string) bool {
-	return filepath.Base(path) == ".devcontainer.json" || filepath.Base(path) == "devcontainer.json"
 }

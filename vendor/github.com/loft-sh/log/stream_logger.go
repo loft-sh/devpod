@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/acarl005/stripansi"
+	"github.com/go-logr/logr"
 	goansi "github.com/k0kubun/go-ansi"
 	"github.com/loft-sh/log/hash"
 	"github.com/loft-sh/log/scanner"
@@ -116,6 +117,8 @@ type StreamLogger struct {
 
 	sinks []Logger
 }
+
+var _ Logger = &StreamLogger{}
 
 type Prefix struct {
 	Prefix string
@@ -579,3 +582,71 @@ type NopCloser struct {
 }
 
 func (NopCloser) Close() error { return nil }
+
+// --- Logr LogSink ---
+
+type streamLogSink struct {
+	logger        *StreamLogger
+	name          string
+	keysAndValues []interface{}
+}
+
+var _ logr.LogSink = &streamLogSink{}
+
+// Enabled implements logr.LogSink.
+func (s *streamLogSink) Enabled(level int) bool {
+	// if the logrus level is debug or trace, we always log
+	if s.logger.level > logrus.InfoLevel {
+		return true
+	}
+
+	// if the logr level is 0, we log if the logrus level is info or higher
+	return s.logger.level <= logrus.InfoLevel && level == 0
+}
+
+// Error implements logr.LogSink.
+func (s *streamLogSink) Error(err error, msg string, keysAndValues ...interface{}) {
+	s.logger.WithPrefix(s.name).Error(err, msg, append(s.keysAndValues, keysAndValues...))
+}
+
+// Info implements logr.LogSink.
+func (s *streamLogSink) Info(level int, msg string, keysAndValues ...interface{}) {
+	if level == 0 {
+		s.logger.WithPrefix(s.name).Info(msg, append(s.keysAndValues, keysAndValues...))
+	} else {
+		s.logger.WithPrefix(s.name).Debug(msg, append(s.keysAndValues, keysAndValues...))
+	}
+}
+
+// Init implements logr.LogSink.
+func (streamLogSink) Init(info logr.RuntimeInfo) {}
+
+// WithName implements logr.LogSink.
+func (s *streamLogSink) WithName(name string) logr.LogSink {
+	if s.name != "" {
+		name = s.name + "." + name
+	}
+
+	return &streamLogSink{
+		logger:        s.logger,
+		name:          name,
+		keysAndValues: s.keysAndValues,
+	}
+}
+
+// WithValues implements logr.LogSink.
+func (s *streamLogSink) WithValues(keysAndValues ...interface{}) logr.LogSink {
+	return &streamLogSink{
+		logger:        s.logger,
+		name:          s.name,
+		keysAndValues: append(s.keysAndValues, keysAndValues...),
+	}
+}
+
+func (s *StreamLogger) LogrLogSink() logr.LogSink {
+	return &streamLogSink{
+		logger:        s,
+		name:          "",
+		keysAndValues: []interface{}{},
+	}
+}

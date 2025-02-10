@@ -26,7 +26,7 @@ func NewStatusCmd(flags *flags.GlobalFlags) *cobra.Command {
 		GlobalFlags: flags,
 	}
 	statusCmd := &cobra.Command{
-		Use:   "status",
+		Use:   "status [name]",
 		Short: "Retrieves the status of an existing machine",
 		RunE: func(_ *cobra.Command, args []string) error {
 			return cmd.Run(context.Background(), args)

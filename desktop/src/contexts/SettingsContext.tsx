@@ -8,10 +8,9 @@ import {
   useState,
 } from "react"
 import { client } from "../client"
-import { getKeys } from "../lib"
-import { LocalStorageToFileMigrationBackend, Store } from "../lib"
-import { TUnsubscribeFn } from "../types"
 import { Settings } from "../gen"
+import { getKeys, LocalStorageToFileMigrationBackend, Store } from "../lib"
+import { TUnsubscribeFn } from "../types"
 
 export type TSettings = Settings
 type TSetting = keyof TSettings
@@ -31,9 +30,25 @@ const initialSettings: TSettings = {
   zoom: "md",
   transparency: false,
   autoUpdate: true,
+  additionalCliFlags: "",
+  additionalEnvVars: "",
+  dotfilesUrl: "",
+  sshKeyPath: "",
+  httpProxyUrl: "",
+  httpsProxyUrl: "",
+  noProxy: "",
+
+  experimental_colorMode: "light",
   experimental_multiDevcontainer: false,
   experimental_fleet: true,
   experimental_jupyterNotebooks: true,
+  experimental_vscodeInsiders: true,
+  experimental_cursor: true,
+  experimental_positron: true,
+  experimental_jupyterDesktop: true,
+  experimental_zed: true,
+  experimental_codium: true,
+  experimental_marimo: true,
   experimental_devPodPro: false,
 }
 function getSettingKeys(): readonly TSetting[] {
@@ -42,7 +57,9 @@ function getSettingKeys(): readonly TSetting[] {
 
 // WARN: needs to match the filename on the rust side
 const SETTING_STORE_KEY = "settings"
-const settingsStore = new Store(new LocalStorageToFileMigrationBackend(SETTING_STORE_KEY))
+const settingsStore = new Store<Record<TSetting, string | boolean | unknown>>(
+  new LocalStorageToFileMigrationBackend(SETTING_STORE_KEY)
+)
 
 export function SettingsProvider({ children }: Readonly<{ children?: ReactNode }>) {
   const [settings, setSettings] = useState(initialSettings)
@@ -84,6 +101,24 @@ export function SettingsProvider({ children }: Readonly<{ children?: ReactNode }
   useEffect(() => {
     client.setSetting("debugFlag", settings.debugFlag)
   }, [settings.debugFlag])
+
+  useEffect(() => {
+    client.setSetting("additionalCliFlags", settings.additionalCliFlags)
+  }, [settings.additionalCliFlags])
+
+  useEffect(() => {
+    client.setSetting("dotfilesUrl", settings.dotfilesUrl)
+  }, [settings.dotfilesUrl])
+
+  useEffect(() => {
+    client.setSetting("additionalEnvVars", settings.additionalEnvVars)
+  }, [settings.additionalEnvVars])
+
+  useEffect(() => {
+    client.setSetting("httpProxyUrl", settings.httpProxyUrl)
+    client.setSetting("httpsProxyUrl", settings.httpsProxyUrl)
+    client.setSetting("noProxy", settings.noProxy)
+  }, [settings.httpProxyUrl, settings.httpsProxyUrl, settings.noProxy])
 
   const set = useCallback<TSettingsContext["set"]>((key, value) => {
     settingsStore.set(key, value)

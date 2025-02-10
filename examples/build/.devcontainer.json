@@ -1,0 +1,10 @@
+{
+  "name": "My dev env",
+  "build": {
+    "context": ".",
+    "dockerfile": "./Dockerfile"
+  },
+  "features":{
+    "ghcr.io/devcontainers/features/github-cli:1": {}
+  }
+}

@@ -58,8 +58,14 @@ func (cmd *ContainerTunnelCmd) Run(ctx context.Context, log log.Logger) error {
 		return nil
 	}
 
+	// make sure content folder exists
+	_, err = workspace.InitContentFolder(workspaceInfo, log)
+	if err != nil {
+		return err
+	}
+
 	// create runner
-	runner, err := workspace.CreateRunner(workspaceInfo, log)
+	runner, err := workspace.CreateRunner(workspaceInfo, nil, log)
 	if err != nil {
 		return err
 	}
@@ -89,6 +95,7 @@ func (cmd *ContainerTunnelCmd) Run(ctx context.Context, log log.Logger) error {
 		os.Stdout,
 		os.Stderr,
 		log,
+		workspaceInfo.InjectTimeout,
 	)
 	if err != nil {
 		return err
@@ -106,7 +113,7 @@ func startDevContainer(ctx context.Context, workspaceConfig *provider2.AgentWork
 	// start container if necessary
 	if containerDetails == nil || containerDetails.State.Status != "running" {
 		// start container
-		_, err = StartContainer(ctx, runner, log)
+		_, err = StartContainer(ctx, runner, log, workspaceConfig)
 		if err != nil {
 			return err
 		}
@@ -116,7 +123,7 @@ func startDevContainer(ctx context.Context, workspaceConfig *provider2.AgentWork
 		err = runner.Command(ctx, "root", "cat "+setup.ResultLocation, nil, buf, buf)
 		if err != nil {
 			// start container
-			_, err = StartContainer(ctx, runner, log)
+			_, err = StartContainer(ctx, runner, log, workspaceConfig)
 			if err != nil {
 				return err
 			}
@@ -126,9 +133,9 @@ func startDevContainer(ctx context.Context, workspaceConfig *provider2.AgentWork
 	return nil
 }
 
-func StartContainer(ctx context.Context, runner devcontainer.Runner, log log.Logger) (*config.Result, error) {
+func StartContainer(ctx context.Context, runner devcontainer.Runner, log log.Logger, workspaceConfig *provider2.AgentWorkspaceInfo) (*config.Result, error) {
 	log.Debugf("Starting DevPod container...")
-	result, err := runner.Up(ctx, devcontainer.UpOptions{NoBuild: true})
+	result, err := runner.Up(ctx, devcontainer.UpOptions{NoBuild: true}, workspaceConfig.InjectTimeout)
 	if err != nil {
 		return result, err
 	}

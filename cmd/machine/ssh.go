@@ -11,6 +11,7 @@ import (
 	"github.com/loft-sh/devpod/pkg/client"
 	"github.com/loft-sh/devpod/pkg/config"
 	devssh "github.com/loft-sh/devpod/pkg/ssh"
+	devsshagent "github.com/loft-sh/devpod/pkg/ssh/agent"
 	"github.com/loft-sh/devpod/pkg/workspace"
 	"github.com/loft-sh/log"
 	"github.com/mattn/go-isatty"
@@ -18,7 +19,6 @@ import (
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 	"golang.org/x/crypto/ssh"
-	agent "golang.org/x/crypto/ssh/agent"
 	"golang.org/x/term"
 )
 
@@ -36,7 +36,7 @@ func NewSSHCmd(flags *flags.GlobalFlags) *cobra.Command {
 		GlobalFlags: flags,
 	}
 	sshCmd := &cobra.Command{
-		Use:   "ssh",
+		Use:   "ssh [name]",
 		Short: "SSH into the machine",
 		RunE: func(c *cobra.Command, args []string) error {
 			return cmd.Run(context.Background(), args)
@@ -63,21 +63,39 @@ func (cmd *SSHCmd) Run(ctx context.Context, args []string) error {
 	writer := log.Default.ErrorStreamOnly().Writer(logrus.InfoLevel, false)
 	defer writer.Close()
 
+	// Get the timeout from the context options
+	timeout := config.ParseTimeOption(devPodConfig, config.ContextOptionAgentInjectTimeout)
+
 	// start the ssh session
-	return StartSSHSession(ctx, "", cmd.Command, cmd.AgentForwarding, func(ctx context.Context, stdin io.Reader, stdout io.Writer, stderr io.Writer) error {
-		command := fmt.Sprintf("'%s' helper ssh-server --stdio", machineClient.AgentPath())
-		if cmd.Debug {
-			command += " --debug"
-		}
-		return devagent.InjectAgentAndExecute(ctx, func(ctx context.Context, command string, stdin io.Reader, stdout io.Writer, stderr io.Writer) error {
-			return machineClient.Command(ctx, client.CommandOptions{
-				Command: command,
-				Stdin:   stdin,
-				Stdout:  stdout,
-				Stderr:  stderr,
-			})
-		}, machineClient.AgentLocal(), machineClient.AgentPath(), machineClient.AgentURL(), true, command, stdin, stdout, stderr, log.Default.ErrorStreamOnly())
-	}, writer)
+	return StartSSHSession(
+		ctx,
+		"",
+		cmd.Command,
+		cmd.AgentForwarding,
+		func(ctx context.Context, stdin io.Reader, stdout io.Writer, stderr io.Writer) error {
+			command := fmt.Sprintf("'%s' helper ssh-server --stdio", machineClient.AgentPath())
+			if cmd.Debug {
+				command += " --debug"
+			}
+			return devagent.InjectAgentAndExecute(ctx, func(ctx context.Context, command string, stdin io.Reader, stdout io.Writer, stderr io.Writer) error {
+				return machineClient.Command(ctx, client.CommandOptions{
+					Command: command,
+					Stdin:   stdin,
+					Stdout:  stdout,
+					Stderr:  stderr,
+				})
+			},
+				machineClient.AgentLocal(),
+				machineClient.AgentPath(),
+				machineClient.AgentURL(),
+				true,
+				command,
+				stdin,
+				stdout,
+				stderr,
+				log.Default.ErrorStreamOnly(),
+				timeout)
+		}, writer)
 }
 
 type ExecFunc func(ctx context.Context, stdin io.Reader, stdout io.Writer, stderr io.Writer) error
@@ -88,12 +106,14 @@ func StartSSHSession(ctx context.Context, user, command string, agentForwarding 
 	if err != nil {
 		return err
 	}
+	defer stdoutReader.Close()
+	defer stdoutWriter.Close()
 	stdinReader, stdinWriter, err := os.Pipe()
 	if err != nil {
 		return err
 	}
-	defer stdoutWriter.Close()
 	defer stdinWriter.Close()
+	defer stdinReader.Close()
 
 	// start ssh machine
 	errChan := make(chan error, 1)
@@ -101,7 +121,6 @@ func StartSSHSession(ctx context.Context, user, command string, agentForwarding 
 		errChan <- exec(ctx, stdinReader, stdoutWriter, stderr)
 	}()
 
-	// start ssh client as root / default user
 	sshClient, err := devssh.StdioClientWithUser(stdoutReader, stdinWriter, user, false)
 	if err != nil {
 		return err
@@ -115,34 +134,30 @@ func StartSSHSession(ctx context.Context, user, command string, agentForwarding 
 	}
 	defer session.Close()
 
-	var (
-		stdout io.Writer = os.Stdout
-		stdin  io.Reader = os.Stdin
-	)
-
 	// request agent forwarding
-	authSock := os.Getenv("SSH_AUTH_SOCK")
+	authSock := devsshagent.GetSSHAuthSocket()
 	if agentForwarding && authSock != "" {
-		err = agent.ForwardToRemote(sshClient, authSock)
+		err = devsshagent.ForwardToRemote(sshClient, authSock)
 		if err != nil {
 			return errors.Errorf("forward agent: %v", err)
 		}
 
-		err = agent.RequestAgentForwarding(session)
+		err = devsshagent.RequestAgentForwarding(session)
 		if err != nil {
 			return errors.Errorf("request agent forwarding: %v", err)
 		}
 	}
 
-	stdoutFile, validOut := stdout.(*os.File)
-	stdinFile, validIn := stdin.(*os.File)
-	if validOut && validIn && isatty.IsTerminal(stdoutFile.Fd()) {
-		state, err := term.MakeRaw(int(stdinFile.Fd()))
+	stdout := os.Stdout
+	stdin := os.Stdin
+
+	if isatty.IsTerminal(stdout.Fd()) {
+		state, err := term.MakeRaw(int(stdout.Fd()))
 		if err != nil {
 			return err
 		}
 		defer func() {
-			_ = term.Restore(int(stdinFile.Fd()), state)
+			_ = term.Restore(int(stdout.Fd()), state)
 		}()
 
 		windowChange := devssh.WatchWindowSize(ctx)
@@ -153,7 +168,7 @@ func StartSSHSession(ctx context.Context, user, command string, agentForwarding 
 					return
 				case <-windowChange:
 				}
-				width, height, err := term.GetSize(int(stdoutFile.Fd()))
+				width, height, err := term.GetSize(int(stdout.Fd()))
 				if err != nil {
 					continue
 				}
@@ -161,9 +176,19 @@ func StartSSHSession(ctx context.Context, user, command string, agentForwarding 
 			}
 		}()
 
-		err = session.RequestPty("xterm-256color", 128, 128, ssh.TerminalModes{})
-		if err != nil {
-			return err
+		// get initial terminal
+		t := "xterm-256color"
+		termEnv, ok := os.LookupEnv("TERM")
+		if ok {
+			t = termEnv
+		}
+		// get initial window size
+		width, height := 80, 40
+		if w, h, err := term.GetSize(int(stdout.Fd())); err == nil {
+			width, height = w, h
+		}
+		if err = session.RequestPty(t, height, width, ssh.TerminalModes{}); err != nil {
+			return fmt.Errorf("request pty: %w", err)
 		}
 	}
 
@@ -171,26 +196,17 @@ func StartSSHSession(ctx context.Context, user, command string, agentForwarding 
 	session.Stdout = stdout
 	session.Stderr = stderr
 	if command == "" {
-		err = session.Shell()
+		if err := session.Shell(); err != nil {
+			return fmt.Errorf("start ssh session with shell: %w", err)
+		}
 	} else {
-		err = session.Start(command)
-	}
-	if err != nil {
-		return err
-	}
-
-	// set correct window size
-	if validOut && validIn && isatty.IsTerminal(stdoutFile.Fd()) {
-		width, height, err := term.GetSize(int(stdoutFile.Fd()))
-		if err == nil {
-			_ = session.WindowChange(height, width)
+		if err := session.Start(command); err != nil {
+			return fmt.Errorf("start ssh session with command %s: %w", command, err)
 		}
 	}
 
-	// wait until done
-	err = session.Wait()
-	if err != nil {
-		return err
+	if err := session.Wait(); err != nil {
+		return fmt.Errorf("ssh session: %w", err)
 	}
 
 	return nil

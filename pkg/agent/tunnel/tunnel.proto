@@ -12,12 +12,15 @@ service Tunnel {
 
   rpc DockerCredentials(Message) returns (Message) {}
   rpc GitCredentials(Message) returns (Message) {}
+  rpc GitSSHSignature(Message) returns (Message) {}
   rpc GitUser(Empty) returns (Message) {}
+  rpc LoftConfig(Message) returns (Message) {}
+  rpc GPGPublicKeys(Message) returns (Message) {}
+  rpc KubeConfig(Message) returns (Message) {}
 
   rpc ForwardPort(ForwardPortRequest) returns (ForwardPortResponse) {}
   rpc StopForwardPort(StopForwardPortRequest) returns (StopForwardPortResponse) {}
 
-  rpc StreamGitClone(Empty) returns (stream Chunk) {}
   rpc StreamWorkspace(Empty) returns (stream Chunk) {}
   rpc StreamMount(StreamMountRequest) returns (stream Chunk) {}
 }

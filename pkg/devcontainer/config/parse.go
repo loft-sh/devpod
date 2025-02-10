@@ -1,11 +1,14 @@
 package config
 
 import (
+	"bufio"
 	"encoding/json"
 	"fmt"
 	"os"
 	path2 "path"
 	"path/filepath"
+	"strings"
+	"unicode/utf8"
 
 	doublestar "github.com/bmatcuk/doublestar/v4"
 	"github.com/pkg/errors"
@@ -46,7 +49,7 @@ func SaveDevContainerJSON(config *DevContainerConfig) error {
 		return fmt.Errorf("no origin in config")
 	}
 
-	err := os.MkdirAll(filepath.Dir(config.Origin), 0777)
+	err := os.MkdirAll(filepath.Dir(config.Origin), 0755)
 	if err != nil {
 		return err
 	}
@@ -56,7 +59,7 @@ func SaveDevContainerJSON(config *DevContainerConfig) error {
 		return err
 	}
 
-	err = os.WriteFile(config.Origin, out, 0666)
+	err = os.WriteFile(config.Origin, out, 0644)
 	if err != nil {
 		return err
 	}
@@ -165,4 +168,36 @@ func Convert(from interface{}, to interface{}) error {
 	}
 
 	return json.Unmarshal(out, to)
+}
+
+func ParseKeyValueFile(filename string) ([]string, error) {
+	f, err := os.Open(filename)
+	if err != nil {
+		return nil, err
+	}
+	defer f.Close()
+	keyValuePairs := []string{}
+	scanner := bufio.NewScanner(f)
+	lineNum := 1
+	for scanner.Scan() {
+		scannedBytes := scanner.Bytes()
+		if !utf8.Valid(scannedBytes) {
+			return nil, fmt.Errorf("env file %s contains invalid utf8 bytes in line %d", filename, lineNum)
+		}
+		line := string(scannedBytes)
+		// skip commented or empty lines
+		if len(line) > 0 && !strings.HasPrefix(line, "#") {
+			key, value, found := strings.Cut(line, "=")
+			if len(key) == 0 || strings.Contains(key, " ") {
+				return nil, fmt.Errorf("env file %s contains invalid variable key in line %d: %s", filename, lineNum, line)
+			} else if len(value) == 0 {
+				return nil, fmt.Errorf("env file %s contains invalid variable value in line %d: %s", filename, lineNum, line)
+			}
+			if found {
+				keyValuePairs = append(keyValuePairs, line)
+			}
+		}
+		lineNum++
+	}
+	return keyValuePairs, nil
 }

@@ -20,6 +20,7 @@ import {
   Tabs,
   Text,
   VStack,
+  useColorMode,
   useColorModeValue,
 } from "@chakra-ui/react"
 import { ReactNode, useEffect, useMemo, useState } from "react"
@@ -37,8 +38,21 @@ import {
   useVersion,
 } from "../../lib"
 import { useWelcomeModal } from "../../useWelcomeModal"
-import { useAgentURLOption } from "./useContextOptions"
+import {
+  useAgentURLOption,
+  useDockerCredentialsForwardingOption,
+  useGitCredentialsForwardingOption,
+  useTelemetryOption,
+} from "./useContextOptions"
 import { useIDESettings } from "./useIDESettings"
+import {
+  useCLIFlagsOption,
+  useDotfilesOption,
+  useExtraEnvVarsOption,
+  useProxyOptions,
+  useSSHKeySignatureOption,
+} from "./useSettingsOptions"
+import { compareVersions } from "compare-versions"
 
 const SETTINGS_TABS = [
   { label: "General", component: <GeneralSettings /> },
@@ -77,6 +91,8 @@ function GeneralSettings() {
   const { settings, set } = useChangeSettings()
   const { modal: welcomeModal, show: showWelcomeModal } = useWelcomeModal()
   const { input: agentURLInput, helpText: agentURLHelpText } = useAgentURLOption()
+  const { input: proxyInput, helpText: proxyHelpText } = useProxyOptions()
+  const { input: telemetryInput, helpText: telemetryHelpText } = useTelemetryOption()
   const {
     badge: installCLIBadge,
     button: installCLIButton,
@@ -86,10 +102,6 @@ function GeneralSettings() {
 
   return (
     <>
-      <SettingSection title="Agent URL" description={agentURLHelpText}>
-        {agentURLInput}
-      </SettingSection>
-
       <SettingSection title="CLI" description={installCLIHelpText}>
         <HStack>
           {installCLIButton}
@@ -110,6 +122,18 @@ function GeneralSettings() {
           isChecked={settings.debugFlag}
           onChange={(e) => set("debugFlag", e.target.checked)}
         />
+      </SettingSection>
+
+      <SettingSection title="Agent URL" description={agentURLHelpText}>
+        {agentURLInput}
+      </SettingSection>
+
+      <SettingSection title="Proxy Configuration" description={proxyHelpText}>
+        {proxyInput}
+      </SettingSection>
+
+      <SettingSection title="Telemetry" description={telemetryHelpText}>
+        {telemetryInput}
       </SettingSection>
 
       <SettingSection
@@ -136,13 +160,18 @@ function GeneralSettings() {
 }
 
 function CustomizationSettings() {
+  const { input: dotfilesInput } = useDotfilesOption()
+  const { input: gitSSHSignatureInput } = useSSHKeySignatureOption()
   const { settings, set } = useChangeSettings()
   const { ides, defaultIDE, updateDefaultIDE } = useIDESettings()
+  const { input: dockerCredentialForwardingInput, helpText: dockerCredentialForwardingHelpText } =
+    useDockerCredentialsForwardingOption()
+  const { input: gitCredentialForwardingInput, helpText: gitCredentialForwardingHelpText } =
+    useGitCredentialsForwardingOption()
 
   return (
     <>
       <SettingSection
-        showDivider={false}
         title="IDE"
         description="Select the default IDE you're using for workspaces. This will be overridden whenever you create a workspace with a different IDE. You can prevent this by checking the 'Always use this IDE' checkbox">
         <>
@@ -163,6 +192,31 @@ function CustomizationSettings() {
             Always use this IDE
           </Checkbox>
         </>
+      </SettingSection>
+
+      <SettingSection
+        title="Dotfiles"
+        description="Set the dotfiles git repository to use inside workspaces">
+        {dotfilesInput}
+      </SettingSection>
+
+      <SettingSection
+        title="SSH Key for Git commit signing"
+        description="Set path of your SSH key you want to use for signing Git commits">
+        {gitSSHSignatureInput}
+      </SettingSection>
+
+      <SettingSection
+        title="Docker credentials forwarding"
+        description={dockerCredentialForwardingHelpText}>
+        {dockerCredentialForwardingInput}
+      </SettingSection>
+
+      <SettingSection
+        showDivider={false}
+        title="Git credentials forwarding"
+        description={gitCredentialForwardingHelpText}>
+        {gitCredentialForwardingInput}
       </SettingSection>
     </>
   )
@@ -213,12 +267,14 @@ function AppearanceSettings() {
 }
 function UpdateSettings() {
   const { settings, set } = useChangeSettings()
-  const releases = useReleases()
   const platform = usePlatform()
   const arch = useArch()
   const version = useVersion()
   const [selectedVersion, setSelectedVersion] = useState<string | undefined>(undefined)
   const { isChecking, check, isUpdateAvailable, pendingUpdate } = useUpdate()
+  const releases = useReleases()
+    ?.slice()
+    .sort((a, b) => compareVersions(a.tag_name, b.tag_name))
   const downloadLink = useMemo(() => {
     const release = releases?.find((release) => release.tag_name === selectedVersion)
     if (!release) {
@@ -299,7 +355,7 @@ function UpdateSettings() {
             {downloadLink && (
               <Text fontSize="sm" width="full">
                 Visit{" "}
-                <Link onClick={() => client.openLink(downloadLink)} fontSize="sm">
+                <Link onClick={() => client.open(downloadLink)} fontSize="sm">
                   Github
                 </Link>{" "}
                 to download {selectedVersion}
@@ -313,7 +369,10 @@ function UpdateSettings() {
 }
 
 function ExperimentalSettings() {
+  const { input: cliFlagsInput, helpText: cliFlagsHelpText } = useCLIFlagsOption()
+  const { input: extraEnvVarsInput, helpText: extraEnvVarsHelpText } = useExtraEnvVarsOption()
   const { settings, set } = useChangeSettings()
+  const { setColorMode } = useColorMode()
 
   return (
     <VStack align="start">
@@ -339,6 +398,7 @@ function ExperimentalSettings() {
             JetBrains Fleet
           </FormLabel>
         </HStack>
+
         <HStack width="full" align="center">
           <Switch
             isChecked={settings.experimental_jupyterNotebooks}
@@ -348,16 +408,105 @@ function ExperimentalSettings() {
             Jupyter Notebooks
           </FormLabel>
         </HStack>
+
+        <HStack width="full" align="center">
+          <Switch
+            isChecked={settings.experimental_jupyterDesktop}
+            onChange={(e) => set("experimental_jupyterDesktop", e.target.checked)}
+          />
+          <FormLabel marginBottom="0" whiteSpace="nowrap" fontSize="sm">
+            Jupyter Desktop
+          </FormLabel>
+        </HStack>
+
+        <HStack width="full" align="center">
+          <Switch
+            isChecked={settings.experimental_vscodeInsiders}
+            onChange={(e) => set("experimental_vscodeInsiders", e.target.checked)}
+          />
+          <FormLabel marginBottom="0" whiteSpace="nowrap" fontSize="sm">
+            VSCode Insiders
+          </FormLabel>
+        </HStack>
+
+        <HStack width="full" align="center">
+          <Switch
+            isChecked={settings.experimental_cursor}
+            onChange={(e) => set("experimental_cursor", e.target.checked)}
+          />
+          <FormLabel marginBottom="0" whiteSpace="nowrap" fontSize="sm">
+            Cursor
+          </FormLabel>
+        </HStack>
+
+        <HStack width="full" align="center">
+          <Switch
+            isChecked={settings.experimental_marimo}
+            onChange={(e) => set("experimental_marimo", e.target.checked)}
+          />
+          <FormLabel marginBottom="0" whiteSpace="nowrap" fontSize="sm">
+            Marimo
+          </FormLabel>
+        </HStack>
+
+        <HStack width="full" align="center">
+          <Switch
+            isChecked={settings.experimental_positron}
+            onChange={(e) => set("experimental_positron", e.target.checked)}
+          />
+          <FormLabel marginBottom="0" whiteSpace="nowrap" fontSize="sm">
+            Positron
+          </FormLabel>
+        </HStack>
+
+        <HStack width="full" align="center">
+          <Switch
+            isChecked={settings.experimental_codium}
+            onChange={(e) => set("experimental_codium", e.target.checked)}
+          />
+          <FormLabel marginBottom="0" whiteSpace="nowrap" fontSize="sm">
+            Codium
+          </FormLabel>
+        </HStack>
+
+        <HStack width="full" align="center">
+          <Switch
+            isChecked={settings.experimental_zed}
+            onChange={(e) => set("experimental_zed", e.target.checked)}
+          />
+          <FormLabel marginBottom="0" whiteSpace="nowrap" fontSize="sm">
+            Zed
+          </FormLabel>
+        </HStack>
       </SettingSection>
 
-      <SettingSection
-        showDivider={false}
-        title="DevPod Pro (alpha)"
-        description="Enable DevPod Pro login and creation">
+      <SettingSection title="Additional CLI Flags" description={cliFlagsHelpText}>
+        {cliFlagsInput}
+      </SettingSection>
+
+      <SettingSection title="Additional Environment Variables" description={extraEnvVarsHelpText}>
+        {extraEnvVarsInput}
+      </SettingSection>
+
+      <SettingSection title="DevPod Pro (beta)" description="Enable DevPod Pro login and creation">
         <Switch
           isChecked={settings.experimental_devPodPro}
           onChange={(e) => set("experimental_devPodPro", e.target.checked)}
         />
+      </SettingSection>
+
+      <SettingSection title="Color Mode" description="" showDivider={false}>
+        <RadioGroup
+          value={settings.experimental_colorMode}
+          onChange={(newValue: TSettings["experimental_colorMode"]) => {
+            set("experimental_colorMode", newValue)
+            setColorMode(newValue)
+          }}>
+          <HStack>
+            <Radio value="light">Light</Radio>
+            <Radio value="dark">Dark</Radio>
+          </HStack>
+        </RadioGroup>
       </SettingSection>
     </VStack>
   )

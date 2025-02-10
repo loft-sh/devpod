@@ -28,10 +28,14 @@ func Build(ctx context.Context, client *buildkit.Client, writer io.Writer, platf
 	if err != nil {
 		return err
 	}
+	cacheTo, err := ParseCacheEntry(options.CacheTo)
+	if err != nil {
+		return err
+	}
 
 	// is context stream?
 	attachable := []session.Attachable{}
-	attachable = append(attachable, authprovider.NewDockerAuthProvider(dockerConfig))
+	attachable = append(attachable, authprovider.NewDockerAuthProvider(dockerConfig, nil))
 
 	// create solve options
 	solveOptions := buildkit.SolveOpt{
@@ -42,6 +46,7 @@ func Build(ctx context.Context, client *buildkit.Client, writer io.Writer, platf
 		},
 		Session:      attachable,
 		CacheImports: cacheFrom,
+		CacheExports: cacheTo,
 	}
 
 	// set options target
@@ -104,6 +109,9 @@ func Build(ctx context.Context, client *buildkit.Client, writer io.Writer, platf
 	for key, value := range options.BuildArgs {
 		solveOptions.FrontendAttrs["build-arg:"+key] = value
 	}
+
+	// add additional build cli options
+	// TODO: convert options.CliOpts into a solveOptions.FrontendAttr
 
 	pw, err := NewPrinter(ctx, writer)
 	if err != nil {

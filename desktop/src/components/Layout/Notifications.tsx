@@ -1,6 +1,14 @@
 import {
+  Badge,
+  Box,
+  Button,
   Center,
+  Divider,
+  HStack,
+  Heading,
   IconButton,
+  Image,
+  Link,
   LinkBox,
   LinkOverlay,
   Popover,
@@ -12,27 +20,30 @@ import {
   Portal,
   Spinner,
   Text,
-  Image,
-  useColorModeValue,
   VStack,
-  Box,
-  Badge,
-  HStack,
-  Heading,
-  Button,
-  Link,
+  useColorModeValue,
 } from "@chakra-ui/react"
 import dayjs from "dayjs"
-import { useMemo } from "react"
-import { Link as RouterLink, useLocation } from "react-router-dom"
-import { useSettings, useAllWorkspaceActions } from "../../contexts"
+import { JSX, ReactNode, useMemo } from "react"
+import { Link as RouterLink, To, useLocation } from "react-router-dom"
+import { client } from "../../client"
+import { TActionObj, useAllWorkspaceActions, useSettings } from "../../contexts"
 import { Bell, CheckCircle, ExclamationCircle, ExclamationTriangle } from "../../icons"
 import { getActionDisplayName, useUpdate } from "../../lib"
-import { Routes } from "../../routes"
 import { Ripple } from "../Animation"
-import { client } from "../../client"
 
-export function Notifications() {
+type TNotificationsProps = Readonly<{
+  badgeNumber?: number
+  providerUpdates?: ReactNode
+  icon?: JSX.Element
+  getActionDestination: (action: TActionObj) => To
+}>
+export function Notifications({
+  icon,
+  badgeNumber = 0,
+  providerUpdates,
+  getActionDestination,
+}: TNotificationsProps) {
   const location = useLocation()
   const actions = useAllWorkspaceActions()
   const backgroundColor = useColorModeValue("white", "gray.900")
@@ -46,20 +57,22 @@ export function Notifications() {
     return [...actions.active, ...actions.history]
   }, [actions.active, actions.history])
 
+  const maybeIconColor = useMemo(() => icon?.props.color, [icon])
+
   return (
     <Popover placement="bottom">
       <PopoverTrigger>
-        <Center>
+        <Center marginRight="4">
           <IconButton
             variant="ghost"
             size="md"
             rounded="full"
             aria-label="Show onging operations"
-            marginRight="4"
+            {...(maybeIconColor ? { color: maybeIconColor } : {})}
             icon={
               <>
-                <Bell boxSize={6} position="absolute" />
-                {pendingUpdate && (
+                {icon ? icon : <Bell boxSize={6} position="absolute" />}
+                {(pendingUpdate || badgeNumber !== 0) && (
                   <Badge
                     colorScheme="red"
                     position="absolute"
@@ -68,7 +81,7 @@ export function Notifications() {
                     borderRadius="full"
                     right="0"
                     top="0">
-                    1
+                    {pendingUpdate ? 1 + badgeNumber : badgeNumber}
                   </Badge>
                 )}
                 {hasActiveActions && <Ripple boxSize={10} />}
@@ -98,9 +111,7 @@ export function Notifications() {
                     <Heading size="xs">{pendingUpdate.tag_name} is available</Heading>
                     <Text fontSize="xs">
                       See{" "}
-                      <Link onClick={() => client.openLink(pendingUpdate.html_url)}>
-                        release notes
-                      </Link>
+                      <Link onClick={() => client.open(pendingUpdate.html_url)}>release notes</Link>
                     </Text>
                   </VStack>
                   <Button
@@ -113,7 +124,17 @@ export function Notifications() {
                 </HStack>
               )}
               <Box width="full" overflowY="auto" maxHeight="17rem" height="full" padding="1">
-                {combinedActions.length === 0 && <Text padding={2}>No notifications</Text>}
+                {combinedActions.length === 0 && badgeNumber === 0 && (
+                  <Text padding={2}>No notifications</Text>
+                )}
+
+                {providerUpdates && (
+                  <>
+                    {providerUpdates}
+                    <Divider />
+                  </>
+                )}
+
                 {combinedActions.map((action) => (
                   <LinkBox
                     key={action.id}
@@ -145,8 +166,8 @@ export function Notifications() {
                       <Text fontWeight="bold">
                         <LinkOverlay
                           as={RouterLink}
-                          to={Routes.toAction(action.id)}
-                          state={{ origin: location.pathname }}
+                          to={getActionDestination(action)}
+                          state={{ origin: location.pathname, actionID: action.id }}
                           textTransform="capitalize">
                           {getActionDisplayName(action)}
                         </LinkOverlay>

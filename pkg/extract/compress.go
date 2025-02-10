@@ -8,12 +8,13 @@ import (
 	"path"
 	"path/filepath"
 	"runtime"
+	"strings"
 	"time"
 
 	"github.com/pkg/errors"
 )
 
-func WriteTar(writer io.Writer, localPath string, compress bool) error {
+func WriteTarExclude(writer io.Writer, localPath string, compress bool, excludedPaths []string) error {
 	absolute, err := filepath.Abs(localPath)
 	if err != nil {
 		return errors.Wrap(err, "absolute")
@@ -40,12 +41,16 @@ func WriteTar(writer io.Writer, localPath string, compress bool) error {
 
 	// When its a file we copy the file to the toplevel of the tar
 	if !stat.IsDir() {
-		return NewArchiver(filepath.Dir(absolute), tarWriter).AddToArchive(filepath.Base(absolute))
+		return NewArchiver(filepath.Dir(absolute), tarWriter, excludedPaths).AddToArchive(filepath.Base(absolute))
 	}
 
 	// When its a folder we copy the contents and not the folder itself to the
 	// toplevel of the tar
-	return NewArchiver(absolute, tarWriter).AddToArchive("")
+	return NewArchiver(absolute, tarWriter, excludedPaths).AddToArchive("")
+}
+
+func WriteTar(writer io.Writer, localPath string, compress bool) error {
+	return WriteTarExclude(writer, localPath, compress, nil)
 }
 
 // Archiver is responsible for compressing specific files and folders within a target directory
@@ -53,37 +58,59 @@ type Archiver struct {
 	basePath     string
 	writer       *tar.Writer
 	writtenFiles map[string]bool
+
+	excludedPaths []string
 }
 
 // NewArchiver creates a new archiver
-func NewArchiver(basePath string, writer *tar.Writer) *Archiver {
+func NewArchiver(basePath string, writer *tar.Writer, excludedPaths []string) *Archiver {
 	return &Archiver{
 		basePath:     basePath,
 		writer:       writer,
 		writtenFiles: map[string]bool{},
+
+		excludedPaths: excludedPaths,
 	}
 }
 
 // AddToArchive adds a new path to the archive
 func (a *Archiver) AddToArchive(relativePath string) error {
-	absFilepath := path.Join(a.basePath, relativePath)
 	if a.writtenFiles[relativePath] {
 		return nil
 	}
 
 	// We skip files that are suddenly not there anymore
-	stat, err := os.Lstat(absFilepath)
+	stat, err := os.Lstat(path.Join(a.basePath, relativePath))
 	if err != nil {
 		// config.Logf("[Upstream] Couldn't stat file %s: %s\n", absFilepath, err.Error())
 		return nil
 	}
 
 	if stat.IsDir() {
+		// check if excluded
+		if a.isExcluded(path.Clean(relativePath) + "/") {
+			return nil
+		}
+
 		// Recursively tar folder
 		return a.tarFolder(relativePath, stat)
 	}
 
+	// check if excluded
+	if a.isExcluded(path.Clean(relativePath)) {
+		return nil
+	}
 	return a.tarFile(relativePath, stat)
+}
+
+func (a *Archiver) isExcluded(relativePath string) bool {
+	for _, excludePath := range a.excludedPaths {
+		if strings.HasPrefix(relativePath, excludePath) {
+			return true
+		}
+	}
+
+	return false
 }
 
 func (a *Archiver) tarFolder(target string, targetStat os.FileInfo) error {

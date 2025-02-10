@@ -57,7 +57,7 @@ func StdioClientWithUser(reader io.Reader, writer io.WriteCloser, user string, e
 }
 
 func StdioClientFromKeyBytesWithUser(keyBytes []byte, reader io.Reader, writer io.WriteCloser, user string, exitOnClose bool) (*ssh.Client, error) {
-	conn := stdio.NewStdioStream(reader, writer, exitOnClose)
+	conn := stdio.NewStdioStream(reader, writer, exitOnClose, 0)
 	clientConfig, err := ConfigFromKeyBytes(keyBytes)
 	if err != nil {
 		return nil, err
@@ -90,12 +90,19 @@ func ConfigFromKeyBytes(keyBytes []byte) (*ssh.ClientConfig, error) {
 	return clientConfig, nil
 }
 
-func Run(ctx context.Context, client *ssh.Client, command string, stdin io.Reader, stdout io.Writer, stderr io.Writer) error {
+func Run(ctx context.Context, client *ssh.Client, command string, stdin io.Reader, stdout io.Writer, stderr io.Writer, envVars map[string]string) error {
 	sess, err := client.NewSession()
 	if err != nil {
 		return err
 	}
 	defer sess.Close()
+
+	for k, v := range envVars {
+		err = sess.Setenv(k, v)
+		if err != nil {
+			return err
+		}
+	}
 
 	exit := make(chan struct{})
 	defer close(exit)

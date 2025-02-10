@@ -1,10 +1,10 @@
-import { CloseIcon } from "@chakra-ui/icons"
-import { Code, IconButton, Input, InputGroup, InputRightElement } from "@chakra-ui/react"
+import { Code, Link, Switch } from "@chakra-ui/react"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
-import { FocusEvent, KeyboardEvent, useCallback, useMemo, useRef, useState } from "react"
+import { useCallback, useMemo } from "react"
 import { client } from "../../client"
 import { QueryKeys } from "../../queryKeys"
 import { TContextOptionName } from "../../types"
+import { ClearableInput } from "./ClearableInput"
 
 const DEFAULT_DEVPOD_AGENT_URL = "https://github.com/loft-sh/devpod/releases/latest/download/"
 
@@ -34,72 +34,24 @@ export function useContextOptions() {
 
 export function useAgentURLOption() {
   const { options, updateOption } = useContextOptions()
-  const [hasFocus, setHasFocus] = useState(false)
-  const inputRef = useRef<HTMLInputElement>(null)
 
-  const handleBlur = useCallback(
-    (e: FocusEvent<HTMLInputElement>) => {
-      const value = e.target.value.trim()
+  const handleChanged = useCallback(
+    (newValue: string) => {
+      const value = newValue.trim()
       updateOption({ option: "AGENT_URL", value })
-      setHasFocus(false)
     },
     [updateOption]
   )
 
-  const handleKeyUp = useCallback((e: KeyboardEvent<HTMLInputElement>) => {
-    if (e.key !== "Enter") return
-
-    e.currentTarget.blur()
-  }, [])
-
-  const handleFocus = useCallback(() => {
-    setHasFocus(true)
-  }, [])
-
-  const handleClearDevPodAgent = useCallback(() => {
-    const el = inputRef.current
-    if (!el) return
-
-    el.value = ""
-  }, [])
-
   const input = useMemo(
     () => (
-      <InputGroup maxWidth="72">
-        <Input
-          ref={inputRef}
-          spellCheck={false}
-          placeholder="Override Agent URL"
-          defaultValue={options?.AGENT_URL.value ?? undefined}
-          onBlur={handleBlur}
-          onKeyUp={handleKeyUp}
-          onFocus={handleFocus}
-        />
-        <InputRightElement>
-          <IconButton
-            visibility={hasFocus ? "visible" : "hidden"}
-            size="xs"
-            borderRadius="full"
-            icon={<CloseIcon />}
-            aria-label="clear"
-            onMouseDown={(e) => {
-              // needed to prevent losing focus from input
-              e.stopPropagation()
-              e.preventDefault()
-            }}
-            onClick={handleClearDevPodAgent}
-          />
-        </InputRightElement>
-      </InputGroup>
+      <ClearableInput
+        placeholder="Override Agent URL"
+        defaultValue={options?.AGENT_URL.value ?? ""}
+        onChange={handleChanged}
+      />
     ),
-    [
-      options?.AGENT_URL.value,
-      handleBlur,
-      handleKeyUp,
-      handleFocus,
-      hasFocus,
-      handleClearDevPodAgent,
-    ]
+    [handleChanged, options?.AGENT_URL.value]
   )
 
   const helpText = useMemo(
@@ -109,6 +61,88 @@ export function useAgentURLOption() {
         <Code>{DEFAULT_DEVPOD_AGENT_URL}</Code>
       </>
     ),
+    []
+  )
+
+  return { input, helpText }
+}
+
+export function useTelemetryOption() {
+  const { options, updateOption } = useContextOptions()
+
+  const input = useMemo(
+    () => (
+      <Switch
+        isChecked={options?.TELEMETRY.value === "true"}
+        onChange={(e) => updateOption({ option: "TELEMETRY", value: e.target.checked.toString() })}
+      />
+    ),
+    [options?.TELEMETRY.value, updateOption]
+  )
+
+  const helpText = useMemo(
+    () => (
+      <>
+        Telemetry plays an important role in improving DevPod for everyone.{" "}
+        <strong>We never collect any actual values, only anonymized metadata!</strong> For an
+        in-depth explanation, please refer to the{" "}
+        <Link onClick={() => client.open("https://devpod.sh/docs/other-topics/telemetry")}>
+          documentation
+        </Link>
+      </>
+    ),
+    []
+  )
+
+  return { input, helpText }
+}
+
+export function useDockerCredentialsForwardingOption() {
+  const { options, updateOption } = useContextOptions()
+
+  const input = useMemo(
+    () => (
+      <Switch
+        isChecked={options?.SSH_INJECT_DOCKER_CREDENTIALS.value === "true"}
+        onChange={(e) =>
+          updateOption({
+            option: "SSH_INJECT_DOCKER_CREDENTIALS",
+            value: e.target.checked.toString(),
+          })
+        }
+      />
+    ),
+    [options?.SSH_INJECT_DOCKER_CREDENTIALS.value, updateOption]
+  )
+
+  const helpText = useMemo(
+    () => <>Enable to forward your local docker credentials to workspaces</>,
+    []
+  )
+
+  return { input, helpText }
+}
+
+export function useGitCredentialsForwardingOption() {
+  const { options, updateOption } = useContextOptions()
+
+  const input = useMemo(
+    () => (
+      <Switch
+        isChecked={options?.SSH_INJECT_GIT_CREDENTIALS.value === "true"}
+        onChange={(e) =>
+          updateOption({
+            option: "SSH_INJECT_GIT_CREDENTIALS",
+            value: e.target.checked.toString(),
+          })
+        }
+      />
+    ),
+    [options?.SSH_INJECT_GIT_CREDENTIALS.value, updateOption]
+  )
+
+  const helpText = useMemo(
+    () => <>Enable to forward your local HTTPS based git credentials to workspaces</>,
     []
   )
 

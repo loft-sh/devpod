@@ -1,4 +1,5 @@
 use serde::{Deserialize, Serialize};
+use tauri::AppHandle;
 
 use super::{
     config::{CommandConfig, DevpodCommandConfig, DevpodCommandError},
@@ -24,8 +25,8 @@ impl ListProInstancesCommand {
         ListProInstancesCommand {}
     }
 
-    fn deserialize(&self, str: &str) -> Result<Vec<ProInstance>, DevpodCommandError> {
-        serde_json::from_str(str).map_err(DevpodCommandError::Parse)
+    fn deserialize(&self, d: Vec<u8>) -> Result<Vec<ProInstance>, DevpodCommandError> {
+        serde_json::from_slice(&d).map_err(DevpodCommandError::Parse)
     }
 }
 impl DevpodCommandConfig<Vec<ProInstance>> for ListProInstancesCommand {
@@ -36,13 +37,12 @@ impl DevpodCommandConfig<Vec<ProInstance>> for ListProInstancesCommand {
         }
     }
 
-    fn exec(self) -> Result<Vec<ProInstance>, DevpodCommandError> {
-        let output = self
-            .new_command()?
-            .output()
+    fn exec(self, app_handle: &AppHandle) -> Result<Vec<ProInstance>, DevpodCommandError> {
+        let cmd = self.new_command(app_handle)?;
+
+        let output = tauri::async_runtime::block_on(async move { cmd.output().await })
             .map_err(|_| DevpodCommandError::Output)?;
 
-        self.deserialize(&output.stdout)
+        self.deserialize(output.stdout)
     }
 }
-

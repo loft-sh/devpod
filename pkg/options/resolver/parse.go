@@ -33,7 +33,7 @@ func validateUserValue(optionName, userValue string, option *types.Option) error
 
 		if !matcher.MatchString(userValue) {
 			if option.ValidationMessage != "" {
-				return fmt.Errorf(option.ValidationMessage)
+				return fmt.Errorf("%s", option.ValidationMessage)
 			}
 
 			return fmt.Errorf("invalid value '%s' for option '%s', has to match the following regEx: %s", userValue, optionName, option.ValidationPattern)
@@ -43,7 +43,7 @@ func validateUserValue(optionName, userValue string, option *types.Option) error
 	if len(option.Enum) > 0 {
 		found := false
 		for _, e := range option.Enum {
-			if userValue == e {
+			if userValue == e.Value {
 				found = true
 				break
 			}

@@ -1,5 +1,6 @@
 import {
   Box,
+  Button,
   ButtonGroup,
   Card,
   CardBody,
@@ -29,7 +30,14 @@ import { ProviderPlaceholder, Stack3D, Trash } from "../../icons"
 import { exists } from "../../lib"
 import { QueryKeys } from "../../queryKeys"
 import { Routes } from "../../routes"
-import { TProvider, TProviderID, TProviderSource, TRunnable, TWithProviderID } from "../../types"
+import {
+  TProvider,
+  TProviderID,
+  TProviderSource,
+  TRunnable,
+  TWithProviderID,
+  TWorkspace,
+} from "../../types"
 import { useSetupProviderModal } from "./useSetupProviderModal"
 import { useDeleteProviderModal } from "./useDeleteProviderModal"
 
@@ -43,7 +51,7 @@ type TProviderCardProps = {
 export function ProviderCard({ id, provider, remove }: TProviderCardProps) {
   const navigate = useNavigate()
   const queryClient = useQueryClient()
-  const workspaces = useWorkspaces()
+  const workspaces = useWorkspaces<TWorkspace>()
   const providerWorkspaces = useMemo(
     () => workspaces.filter((workspace) => workspace.provider?.name === id),
     [id, workspaces]
@@ -80,13 +88,13 @@ export function ProviderCard({ id, provider, remove }: TProviderCardProps) {
     onSettled: () => {
       queryClient.invalidateQueries(QueryKeys.PROVIDERS)
       queryClient.invalidateQueries(QueryKeys.providerUpdate(id))
+      queryClient.invalidateQueries(QueryKeys.PROVIDERS_CHECK_UPDATE_ALL)
     },
   })
   const { modal: deleteProviderModal, open: openDeleteProviderModal } = useDeleteProviderModal(
     id,
     "provider",
     "delete",
-    providerWorkspaces.length > 0,
     () => remove.run({ providerID: id })
   )
 
@@ -143,22 +151,27 @@ export function ProviderCard({ id, provider, remove }: TProviderCardProps) {
                 fontWeight="regular">
                 {providerVersion}
               </Text>
-              {providerUpdate && providerUpdate.updateAvailable && providerSource && (
-                <Tooltip
-                  label={
-                    providerUpdate.latestVersion
-                      ? `Version ${providerUpdate.latestVersion} available`
-                      : "New version available"
-                  }>
-                  <IconButton
-                    variant="ghost"
-                    aria-label="Update provider"
-                    size="xs"
-                    icon={<Icon as={HiArrowPath} boxSize="4" />}
-                    onClick={() => updateProvider({ providerID: id, source: providerSource })}
-                  />
-                </Tooltip>
-              )}
+              {providerUpdate &&
+                providerUpdate.updateAvailable &&
+                providerSource &&
+                !provider.isProxyProvider && (
+                  <Tooltip
+                    label={
+                      providerUpdate.latestVersion
+                        ? `Version ${providerUpdate.latestVersion} available`
+                        : "New version available"
+                    }>
+                    <Button
+                      marginLeft="2"
+                      aria-label="Update provider"
+                      colorScheme="orange"
+                      size="xs"
+                      leftIcon={<Icon as={HiArrowPath} boxSize="4" />}
+                      onClick={() => updateProvider({ providerID: id, source: providerSource })}>
+                      Update
+                    </Button>
+                  </Tooltip>
+                )}
             </HStack>
           )}
           <HStack rowGap={2} marginTop={4} flexWrap="nowrap" alignItems="center">
@@ -171,13 +184,19 @@ export function ProviderCard({ id, provider, remove }: TProviderCardProps) {
                   ? providerWorkspaces.length + " workspaces"
                   : "No workspaces"
               }
-              infoText={`This provider is used by ${providerWorkspaces.length} ${
+              info={`This provider is used by ${providerWorkspaces.length} ${
                 providerWorkspaces.length === 1 ? "workspace" : "workspaces"
               }`}
             />
           </HStack>
         </CardBody>
-        <CardFooter justify="space-between">
+        <CardFooter
+          display="flex"
+          alignItems="flex-end"
+          justify="space-between"
+          paddingBottom="4"
+          paddingTop="0"
+          paddingX="4">
           <HStack>
             <Switch
               isDisabled={isDefaultProvider}
@@ -209,6 +228,7 @@ export function ProviderCard({ id, provider, remove }: TProviderCardProps) {
                     })
                   }
                   icon={<Icon as={HiDuplicate} boxSize="4" />}
+                  isDisabled={provider.isProxyProvider}
                 />
               </Tooltip>
             )}
@@ -220,7 +240,12 @@ export function ProviderCard({ id, provider, remove }: TProviderCardProps) {
                 icon={<Icon as={HiPencil} boxSize="4" />}
               />
             </Tooltip>
-            <Tooltip label="Delete Provider">
+            <Tooltip
+              label={
+                provider.isProxyProvider
+                  ? "This provider is associated with a Pro instance. Disconnecting the Pro instance will automatically delete this provider"
+                  : "Delete Provider"
+              }>
               <IconButton
                 aria-label="Delete Provider"
                 variant="ghost"
@@ -228,6 +253,7 @@ export function ProviderCard({ id, provider, remove }: TProviderCardProps) {
                 icon={<Trash boxSize="4" />}
                 onClick={openDeleteProviderModal}
                 isLoading={remove.status === "loading" && remove.target?.providerID === id}
+                isDisabled={provider.isProxyProvider}
               />
             </Tooltip>
           </ButtonGroup>

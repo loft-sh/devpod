@@ -30,6 +30,9 @@ func (sa *StrIntArray) UnmarshalJSON(data []byte) error {
 	case int:
 		*sa = StrIntArray([]string{strconv.Itoa(obj)})
 		return nil
+	case float64:
+		*sa = StrIntArray([]string{strconv.Itoa(int(obj))})
+		return nil
 	case []interface{}:
 		s := make([]string, 0, len(obj))
 		for _, v := range obj {
@@ -137,7 +140,7 @@ func (l *LifecycleHook) UnmarshalJSON(data []byte) error {
 type StrBool string
 
 // UnmarshalJSON parses fields that may be numbers or booleans.
-func (f *StrBool) UnmarshalJSON(data []byte) error {
+func (s *StrBool) UnmarshalJSON(data []byte) error {
 	var jsonObj interface{}
 	err := json.Unmarshal(data, &jsonObj)
 	if err != nil {
@@ -145,11 +148,76 @@ func (f *StrBool) UnmarshalJSON(data []byte) error {
 	}
 	switch obj := jsonObj.(type) {
 	case string:
-		*f = StrBool(obj)
+		*s = StrBool(obj)
 		return nil
 	case bool:
-		*f = StrBool(strconv.FormatBool(obj))
+		*s = StrBool(strconv.FormatBool(obj))
 		return nil
 	}
+	return ErrUnsupportedType
+}
+
+func (s *StrBool) Bool() (bool, error) {
+	if s == nil {
+		return false, nil
+	}
+
+	return strconv.ParseBool(string(*s))
+}
+
+type OptionEnum struct {
+	Value       string `json:"value,omitempty"`
+	DisplayName string `json:"displayName,omitempty"`
+}
+
+type OptionEnumArray []OptionEnum
+
+func (e *OptionEnumArray) UnmarshalJSON(data []byte) error {
+	var jsonObj interface{}
+	err := json.Unmarshal(data, &jsonObj)
+	if err != nil {
+		return err
+	}
+	switch obj := jsonObj.(type) {
+	case []interface{}:
+		if len(obj) == 0 {
+			*e = OptionEnumArray{}
+			return nil
+		}
+		ret := make([]OptionEnum, 0, len(obj))
+		switch obj[0].(type) {
+		case string:
+			for _, v := range obj {
+				if s, ok := v.(string); ok {
+					ret = append(ret, OptionEnum{Value: s})
+				}
+			}
+		case map[string]interface{}:
+			for _, v := range obj {
+				m, ok := v.(map[string]interface{})
+				if !ok {
+					return ErrUnsupportedType
+				}
+				value := ""
+				if s, ok := m["value"].(string); ok {
+					value = s
+				}
+				displayName := ""
+				if s, ok := m["displayName"].(string); ok {
+					displayName = s
+				}
+				ret = append(ret, OptionEnum{
+					Value:       value,
+					DisplayName: displayName,
+				})
+			}
+		default:
+			return ErrUnsupportedType
+		}
+
+		*e = OptionEnumArray(ret)
+		return nil
+	}
+
 	return ErrUnsupportedType
 }

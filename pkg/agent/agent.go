@@ -110,7 +110,7 @@ func ParseAgentWorkspaceInfo(workspaceConfigFile string) (*provider2.AgentWorksp
 
 func ReadAgentWorkspaceInfo(agentFolder, context, id string, log log.Logger) (bool, *provider2.AgentWorkspaceInfo, error) {
 	workspaceInfo, err := readAgentWorkspaceInfo(agentFolder, context, id)
-	if err != nil && !errors.Is(err, ErrFindAgentHomeFolder) {
+	if err != nil && !(errors.Is(err, ErrFindAgentHomeFolder) || errors.Is(err, os.ErrPermission)) {
 		return false, nil, err
 	}
 
@@ -185,9 +185,13 @@ func decodeWorkspaceInfoAndWrite(
 		}
 	}
 
-	// check content folder
-	if workspaceInfo.Workspace.Source.LocalFolder != "" {
-		_, err = os.Stat(workspaceInfo.Workspace.Source.LocalFolder)
+	// check content folder for local folder workspace source
+	//
+	// We don't want to initialize the content folder with the value of the local workspace folder
+	// if we're running in proxy mode.
+	// We only have write access to /var/lib/loft/* by default causing nearly all local folders to run into permissions issues
+	if workspaceInfo.Workspace.Source.LocalFolder != "" && !workspaceInfo.CLIOptions.Proxy {
+		_, err = os.Stat(workspaceInfo.WorkspaceOrigin)
 		if err == nil {
 			workspaceInfo.ContentFolder = workspaceInfo.Workspace.Source.LocalFolder
 		}
@@ -217,7 +221,7 @@ func CreateWorkspaceBusyFile(folder string) {
 		return
 	}
 
-	_ = os.WriteFile(filePath, nil, 0666)
+	_ = os.WriteFile(filePath, nil, 0600)
 }
 
 func HasWorkspaceBusyFile(folder string) bool {
@@ -244,7 +248,7 @@ func writeWorkspaceInfo(file string, workspaceInfo *provider2.AgentWorkspaceInfo
 	}
 
 	// write workspace config
-	err = os.WriteFile(file, encoded, 0666)
+	err = os.WriteFile(file, encoded, 0600)
 	if err != nil {
 		return fmt.Errorf("write workspace config file: %w", err)
 	}
@@ -288,7 +292,7 @@ func rerunAsRoot(workspaceInfo *provider2.AgentWorkspaceInfo, log log.Logger) (b
 	}
 
 	// call ourself
-	args := []string{binary}
+	args := []string{"--preserve-env", binary}
 	args = append(args, os.Args[1:]...)
 	log.Debugf("Rerun as root: %s", strings.Join(args, " "))
 	cmd := exec.Command("sudo", args...)
@@ -313,11 +317,12 @@ func Tunnel(
 	stdout io.Writer,
 	stderr io.Writer,
 	log log.Logger,
+	timeout time.Duration,
 ) error {
 	// inject agent
 	err := InjectAgent(ctx, func(ctx context.Context, command string, stdin io.Reader, stdout io.Writer, stderr io.Writer) error {
 		return exec(ctx, "root", command, stdin, stdout, stderr)
-	}, false, ContainerDevPodHelperLocation, DefaultAgentDownloadURL(), false, log)
+	}, false, ContainerDevPodHelperLocation, DefaultAgentDownloadURL(), false, log, timeout)
 	if err != nil {
 		return err
 	}

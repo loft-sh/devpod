@@ -1,0 +1,43 @@
+---
+title: Quickstart DevPod CLI
+sidebar_label: DevPod CLI
+---
+
+import AddProvider from '../fragments/add-provider.mdx'
+
+## Quickstart with DevPod CLI
+
+Make sure you have installed [DevPod CLI](../getting-started/install.mdx#optional-install-devpod-cli) on your system.
+
+### Add a Provider
+
+You can add a provider via (local-docker for example):
+
+```
+devpod provider add docker
+```
+
+:::info Other providers
+For more providers, please take a look at [Add a DevPod Provider](../managing-providers/add-provider.mdx)
+:::
+
+### Start a Workspace
+
+Afterwards you can start a workspace via:
+
+```
+# Start in VS Code browser
+devpod up github.com/microsoft/vscode-remote-try-node --ide openvscode
+
+# Start in VS Code
+devpod up github.com/microsoft/vscode-remote-try-node --ide vscode
+
+# Start without IDE
+devpod up github.com/microsoft/vscode-remote-try-node --ide none
+```
+
+If you have selected an IDE it should popup automatically. If not, you can connect to the workspace manually:
+
+```
+ssh MY_WORKSPACE_NAME.devpod
+```

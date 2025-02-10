@@ -32,9 +32,10 @@ func (m *MergeOp) Validate(ctx context.Context, constraints *Constraints) error 
 }
 
 func (m *MergeOp) Marshal(ctx context.Context, constraints *Constraints) (digest.Digest, []byte, *pb.OpMetadata, []*SourceLocation, error) {
-	if m.Cached(constraints) {
-		return m.Load()
+	if dgst, dt, md, srcs, err := m.Load(constraints); err == nil {
+		return dgst, dt, md, srcs, nil
 	}
+
 	if err := m.Validate(ctx, constraints); err != nil {
 		return "", nil, nil, nil, err
 	}
@@ -44,7 +45,7 @@ func (m *MergeOp) Marshal(ctx context.Context, constraints *Constraints) (digest
 
 	op := &pb.MergeOp{}
 	for _, input := range m.inputs {
-		op.Inputs = append(op.Inputs, &pb.MergeInput{Input: pb.InputIndex(len(pop.Inputs))})
+		op.Inputs = append(op.Inputs, &pb.MergeInput{Input: int64(len(pop.Inputs))})
 		pbInput, err := input.ToInput(ctx, constraints)
 		if err != nil {
 			return "", nil, nil, nil, err
@@ -53,13 +54,12 @@ func (m *MergeOp) Marshal(ctx context.Context, constraints *Constraints) (digest
 	}
 	pop.Op = &pb.Op_Merge{Merge: op}
 
-	dt, err := pop.Marshal()
+	dt, err := deterministicMarshal(pop)
 	if err != nil {
 		return "", nil, nil, nil, err
 	}
 
-	m.Store(dt, md, m.constraints.SourceLocations, constraints)
-	return m.Load()
+	return m.Store(dt, md, m.constraints.SourceLocations, constraints)
 }
 
 func (m *MergeOp) Output() Output {
@@ -70,6 +70,31 @@ func (m *MergeOp) Inputs() []Output {
 	return m.inputs
 }
 
+// Merge merges multiple states into a single state. This is useful in
+// conjunction with [Diff] to create set of patches which are independent of
+// each other to a base state without affecting the cache of other merged
+// states.
+// As an example, lets say you have a rootfs with the following directories:
+//
+//	/ /bin /etc /opt /tmp
+//
+// Now lets say you want to copy a directory /etc/foo from one state and a
+// binary /bin/bar from another state.
+// [Copy] makes a duplicate of file on top of another directory.
+// Merge creates a directory whose contents is an overlay of 2 states on top of each other.
+//
+// With "Merge" you can do this:
+//
+//	fooState := Diff(rootfs, fooState)
+//	barState := Diff(rootfs, barState)
+//
+// Then merge the results with:
+//
+//	Merge(rootfs, fooDiff, barDiff)
+//
+// The resulting state will have both /etc/foo and /bin/bar, but because Merge
+// was used, changing the contents of "fooDiff" does not require copying
+// "barDiff" again.
 func Merge(inputs []State, opts ...ConstraintsOpt) State {
 	// filter out any scratch inputs, which have no effect when merged
 	var filteredInputs []State
@@ -92,5 +117,5 @@ func Merge(inputs []State, opts ...ConstraintsOpt) State {
 		o.SetConstraintsOption(&c)
 	}
 	addCap(&c, pb.CapMergeOp)
-	return NewState(NewMerge(filteredInputs, c).Output())
+	return filteredInputs[0].WithOutput(NewMerge(filteredInputs, c).Output())
 }

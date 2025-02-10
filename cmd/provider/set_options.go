@@ -3,6 +3,7 @@ package provider
 import (
 	"context"
 	"fmt"
+	"os"
 
 	"github.com/loft-sh/devpod/cmd/flags"
 	"github.com/loft-sh/devpod/pkg/config"
@@ -29,7 +30,7 @@ func NewSetOptionsCmd(flags *flags.GlobalFlags) *cobra.Command {
 		GlobalFlags: *flags,
 	}
 	setOptionsCmd := &cobra.Command{
-		Use:   "set-options",
+		Use:   "set-options [provider]",
 		Short: "Sets options for the given provider. Similar to 'devpod provider use', but does not switch the default provider.",
 		RunE: func(_ *cobra.Command, args []string) error {
 			logger := log.Logger(log.Default)
@@ -61,6 +62,12 @@ func (cmd *SetOptionsCmd) Run(ctx context.Context, args []string, log log.Logger
 	} else if providerName == "" {
 		return fmt.Errorf("please specify a provider")
 	}
+	log.Debugf("providerName=%+v", providerName)
+
+	if os.Getenv("DEVPOD_UI") == "" && len(cmd.Options) == 0 {
+		return fmt.Errorf("please specify option")
+	}
+	log.Debugf("Options=%+v", cmd.Options)
 
 	providerWithOptions, err := workspace.FindProvider(devPodConfig, providerName, log)
 	if err != nil {
@@ -75,6 +82,7 @@ func (cmd *SetOptionsCmd) Run(ctx context.Context, args []string, log log.Logger
 		cmd.Reconfigure,
 		cmd.Dry,
 		cmd.Dry,
+		false,
 		&cmd.SingleMachine,
 		log,
 	)

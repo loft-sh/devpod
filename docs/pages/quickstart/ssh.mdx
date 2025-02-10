@@ -1,0 +1,48 @@
+---
+title: Quickstart SSH
+sidebar_label: SSH
+---
+
+import AddProvider from '../fragments/add-provider.mdx'
+
+## Quickstart with SSH
+
+Make sure you have installed [DevPod](../getting-started/install.mdx) on your system.
+
+### Add a Provider
+
+<AddProvider />
+
+### Start a Workspace with SSH
+
+Navigate to 'Workspaces' > '+ Create'. Enter your project url or choose one of the quickstart examples. 
+
+<figure>
+<img src="/docs/media/create-workspace-repo.png" alt="DevPod Flow" />
+  <figcaption>Create Workspace</figcaption>
+</figure>
+
+Make sure to select 'None' under 'Default IDE'
+
+<figure>
+  <img src="/docs/media/create-workspace-ssh.png" alt="DevPod Flow" />
+  <figcaption>Select IDE</figcaption>
+</figure>
+
+Then press 'Create Workspace'.
+
+<figure>
+  <img src="/docs/media/create-workspace-final-ssh.png" alt="DevPod Flow" />
+  <figcaption>Create Workspace</figcaption>
+</figure>
+
+A new window appears showing DevPod starting the workspace. After the workspace was created, you can connect to the workspace via ssh:
+
+```
+ssh MY_WORKSPACE_NAME.devpod
+```
+
+### Using environment variables in your .devcontainer.json
+
+If you want to use env variables e.g. for dynamic control over container image version
+please follow this instruction: [Environment variables in devcontainer.json](../developing-in-workspaces/environment-variables-in-devcontainer-json.mdx)

@@ -10,6 +10,8 @@ import (
 	"golang.org/x/crypto/ssh"
 )
 
+// newForwarder returns a new forwarder using an SSH client and list of ports to forward,
+// for each port a new go routine is used to manage the SSH channel
 func newForwarder(sshClient *ssh.Client, forwardedPorts []string, log log.Logger) netstat.Forwarder {
 	return &forwarder{
 		sshClient:      sshClient,
@@ -19,8 +21,9 @@ func newForwarder(sshClient *ssh.Client, forwardedPorts []string, log log.Logger
 	}
 }
 
+// forwarder multiplexes a SSH client to forward ports to the remote container
 type forwarder struct {
-	m sync.Mutex
+	sync.Mutex
 
 	sshClient      *ssh.Client
 	forwardedPorts []string
@@ -29,9 +32,10 @@ type forwarder struct {
 	log     log.Logger
 }
 
+// Forward opens an SSH channel in the existing connection with channel type "direct-tcpip" to forward the local port
 func (f *forwarder) Forward(port string) error {
-	f.m.Lock()
-	defer f.m.Unlock()
+	f.Lock()
+	defer f.Unlock()
 
 	if f.isExcluded(port) || f.portMap[port] != nil {
 		return nil
@@ -52,9 +56,10 @@ func (f *forwarder) Forward(port string) error {
 	return nil
 }
 
+// StopForward stops the port forwarding for the given port
 func (f *forwarder) StopForward(port string) error {
-	f.m.Lock()
-	defer f.m.Unlock()
+	f.Lock()
+	defer f.Unlock()
 
 	if f.isExcluded(port) || f.portMap[port] == nil {
 		return nil

@@ -16,14 +16,16 @@ import (
 	"github.com/loft-sh/devpod/pkg/ide"
 	"github.com/loft-sh/devpod/pkg/ide/vscode"
 	"github.com/loft-sh/devpod/pkg/single"
+	"github.com/loft-sh/devpod/pkg/util"
 	"github.com/loft-sh/log"
-	"github.com/mitchellh/go-homedir"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 )
 
-const DownloadAmd64Template = "https://github.com/gitpod-io/openvscode-server/releases/download/openvscode-server-%s/openvscode-server-%s-linux-x64.tar.gz"
-const DownloadArm64Template = "https://github.com/gitpod-io/openvscode-server/releases/download/openvscode-server-%s/openvscode-server-%s-linux-arm64.tar.gz"
+const (
+	DownloadAmd64Template = "https://github.com/gitpod-io/openvscode-server/releases/download/openvscode-server-%s/openvscode-server-%s-linux-x64.tar.gz"
+	DownloadArm64Template = "https://github.com/gitpod-io/openvscode-server/releases/download/openvscode-server-%s/openvscode-server-%s-linux-arm64.tar.gz"
+)
 
 const (
 	ForwardPortsOption  = "FORWARD_PORTS"
@@ -52,7 +54,7 @@ var Options = ide.Options{
 	VersionOption: {
 		Name:        VersionOption,
 		Description: "The version for the open vscode binary",
-		Default:     "v1.79.2",
+		Default:     "v1.84.2",
 	},
 	OpenOption: {
 		Name:        OpenOption,
@@ -122,7 +124,7 @@ func (o *OpenVSCodeServer) Install() error {
 	// check what release we need to download
 	url := o.getReleaseUrl()
 
-	vscode.InstallAlpineRequirements(o.log)
+	vscode.InstallAPKRequirements(o.log)
 
 	// download tar
 	resp, err := devpodhttp.GetHTTPClient().Get(url)
@@ -220,12 +222,12 @@ func (o *OpenVSCodeServer) installSettings() error {
 	}
 
 	settingsDir := filepath.Join(location, "data", "Machine")
-	err = os.MkdirAll(settingsDir, 0777)
+	err = os.MkdirAll(settingsDir, 0755)
 	if err != nil {
 		return err
 	}
 
-	err = os.WriteFile(filepath.Join(settingsDir, "settings.json"), []byte(o.settings), 0666)
+	err = os.WriteFile(filepath.Join(settingsDir, "settings.json"), []byte(o.settings), 0600)
 	if err != nil {
 		return err
 	}
@@ -278,14 +280,14 @@ func prepareOpenVSCodeServerLocation(userName string) (string, error) {
 	if userName != "" {
 		homeFolder, err = command.GetHome(userName)
 	} else {
-		homeFolder, err = homedir.Dir()
+		homeFolder, err = util.UserHomeDir()
 	}
 	if err != nil {
 		return "", err
 	}
 
 	folder := filepath.Join(homeFolder, ".openvscode-server")
-	err = os.MkdirAll(folder, 0777)
+	err = os.MkdirAll(folder, 0755)
 	if err != nil {
 		return "", err
 	}

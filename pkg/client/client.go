@@ -17,7 +17,7 @@ type BaseClient interface {
 	Context() string
 
 	// RefreshOptions updates the options
-	RefreshOptions(ctx context.Context, userOptions []string) error
+	RefreshOptions(ctx context.Context, userOptions []string, reconfigure bool) error
 
 	// Status retrieves the workspace status
 	Status(ctx context.Context, options StatusOptions) (Status, error)
@@ -132,11 +132,15 @@ type CommandOptions struct {
 type UpOptions struct {
 	provider.CLIOptions
 
+	Debug bool
+
 	Stdin  io.Reader
 	Stdout io.Writer
 }
 
 type SshOptions struct {
+	User string
+
 	Stdin  io.Reader
 	Stdout io.Writer
 }

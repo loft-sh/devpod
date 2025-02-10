@@ -37,10 +37,10 @@ func NewBuildCmd(flags *flags.GlobalFlags) *cobra.Command {
 		GlobalFlags: flags,
 	}
 	buildCmd := &cobra.Command{
-		Use:   "build",
+		Use:   "build [flags] [workspace-path|workspace-name]",
 		Short: "Builds a workspace",
-		RunE: func(_ *cobra.Command, args []string) error {
-			ctx := context.Background()
+		RunE: func(cobraCmd *cobra.Command, args []string) error {
+			ctx := cobraCmd.Context()
 			devPodConfig, err := config.LoadConfig(cmd.Context, cmd.Provider)
 			if err != nil {
 				return err
@@ -54,9 +54,28 @@ func NewBuildCmd(flags *flags.GlobalFlags) *cobra.Command {
 				}
 			}
 
+			// validate tags
+			if len(cmd.Tag) > 0 {
+				if err := image.ValidateTags(cmd.Tag); err != nil {
+					return fmt.Errorf("cannot build image, %w", err)
+				}
+			}
+
+			if devPodConfig.ContextOption(config.ContextOptionSSHStrictHostKeyChecking) == "true" {
+				cmd.StrictHostKeyChecking = true
+			}
+
 			// create a temporary workspace
-			exists := workspace2.Exists(devPodConfig, args)
-			baseWorkspaceClient, err := workspace2.ResolveWorkspace(
+			exists := workspace2.Exists(ctx, devPodConfig, args, "", log.Default)
+			sshConfigFile, err := os.CreateTemp("", "devpodssh.config")
+			if err != nil {
+				return err
+			}
+			sshConfigPath := sshConfigFile.Name()
+			// defer removal of temporary ssh config file
+			defer os.Remove(sshConfigPath)
+
+			baseWorkspaceClient, err := workspace2.Resolve(
 				ctx,
 				devPodConfig,
 				"",
@@ -65,9 +84,12 @@ func NewBuildCmd(flags *flags.GlobalFlags) *cobra.Command {
 				"",
 				cmd.Machine,
 				cmd.ProviderOptions,
+				false,
 				cmd.DevContainerImage,
 				cmd.DevContainerPath,
+				sshConfigPath,
 				nil,
+				cmd.UID,
 				false,
 				log.Default,
 			)
@@ -76,7 +98,7 @@ func NewBuildCmd(flags *flags.GlobalFlags) *cobra.Command {
 			}
 
 			// delete workspace if we have created it
-			if exists == "" {
+			if exists == "" && !cmd.SkipDelete {
 				defer func() {
 					err = baseWorkspaceClient.Delete(ctx, client.DeleteOptions{Force: true})
 					if err != nil {
@@ -101,8 +123,11 @@ func NewBuildCmd(flags *flags.GlobalFlags) *cobra.Command {
 	buildCmd.Flags().BoolVar(&cmd.SkipDelete, "skip-delete", false, "If true will not delete the workspace after building it")
 	buildCmd.Flags().StringVar(&cmd.Machine, "machine", "", "The machine to use for this workspace. The machine needs to exist beforehand or the command will fail. If the workspace already exists, this option has no effect")
 	buildCmd.Flags().StringVar(&cmd.Repository, "repository", "", "The repository to push to")
+	buildCmd.Flags().StringSliceVar(&cmd.Tag, "tag", []string{}, "Image Tag(s) in the form of a comma separated list --tag latest,arm64 or multiple flags --tag latest --tag arm64")
 	buildCmd.Flags().StringSliceVar(&cmd.Platform, "platform", []string{}, "Set target platform for build")
 	buildCmd.Flags().BoolVar(&cmd.SkipPush, "skip-push", false, "If true will not push the image to the repository, useful for testing")
+	buildCmd.Flags().Var(&cmd.GitCloneStrategy, "git-clone-strategy", "The git clone strategy DevPod uses to checkout git based workspaces. Can be full (default), blobless, treeless or shallow")
+	buildCmd.Flags().BoolVar(&cmd.GitCloneRecursiveSubmodules, "git-clone-recursive-submodules", false, "If true will clone git submodule repositories recursively")
 
 	// TESTING
 	buildCmd.Flags().BoolVar(&cmd.ForceBuild, "force-build", false, "TESTING ONLY")
@@ -139,7 +164,7 @@ func (cmd *BuildCmd) build(ctx context.Context, workspaceClient client.Workspace
 
 func (cmd *BuildCmd) buildAgentClient(ctx context.Context, workspaceClient client.WorkspaceClient, log log.Logger) error {
 	// compress info
-	workspaceInfo, _, err := workspaceClient.AgentInfo(cmd.CLIOptions)
+	workspaceInfo, wInfo, err := workspaceClient.AgentInfo(cmd.CLIOptions)
 	if err != nil {
 		return err
 	}
@@ -176,14 +201,26 @@ func (cmd *BuildCmd) buildAgentClient(ctx context.Context, workspaceClient clien
 		writer := log.ErrorStreamOnly().Writer(logrus.InfoLevel, false)
 		defer writer.Close()
 
-		errChan <- agent.InjectAgentAndExecute(cancelCtx, func(ctx context.Context, command string, stdin io.Reader, stdout io.Writer, stderr io.Writer) error {
-			return workspaceClient.Command(ctx, client.CommandOptions{
-				Command: command,
-				Stdin:   stdin,
-				Stdout:  stdout,
-				Stderr:  stderr,
-			})
-		}, workspaceClient.AgentLocal(), workspaceClient.AgentPath(), workspaceClient.AgentURL(), true, command, stdinReader, stdoutWriter, writer, log.ErrorStreamOnly())
+		errChan <- agent.InjectAgentAndExecute(
+			cancelCtx,
+			func(ctx context.Context, command string, stdin io.Reader, stdout io.Writer, stderr io.Writer) error {
+				return workspaceClient.Command(ctx, client.CommandOptions{
+					Command: command,
+					Stdin:   stdin,
+					Stdout:  stdout,
+					Stderr:  stderr,
+				})
+			},
+			workspaceClient.AgentLocal(),
+			workspaceClient.AgentPath(),
+			workspaceClient.AgentURL(),
+			true,
+			command,
+			stdinReader,
+			stdoutWriter,
+			writer,
+			log.ErrorStreamOnly(),
+			wInfo.InjectTimeout)
 	}()
 
 	// create container etc.

@@ -9,3 +9,6 @@ export type TAction<
       type: TType
       payload: TPayload
     }
+
+const PRO_INSTANCE_DETAILS = ["logs", "configuration"] as const
+export type TProInstanceDetail = (typeof PRO_INSTANCE_DETAILS)[number]

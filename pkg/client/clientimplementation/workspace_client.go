@@ -18,6 +18,7 @@ import (
 	"github.com/loft-sh/devpod/pkg/client"
 	"github.com/loft-sh/devpod/pkg/compress"
 	"github.com/loft-sh/devpod/pkg/config"
+	config2 "github.com/loft-sh/devpod/pkg/devcontainer/config"
 	"github.com/loft-sh/devpod/pkg/options"
 	"github.com/loft-sh/devpod/pkg/provider"
 	"github.com/loft-sh/devpod/pkg/shell"
@@ -101,7 +102,7 @@ func (s *workspaceClient) Context() string {
 	return s.workspace.Context
 }
 
-func (s *workspaceClient) RefreshOptions(ctx context.Context, userOptionsRaw []string) error {
+func (s *workspaceClient) RefreshOptions(ctx context.Context, userOptionsRaw []string, reconfigure bool) error {
 	s.m.Lock()
 	defer s.m.Unlock()
 
@@ -155,13 +156,35 @@ func (s *workspaceClient) AgentInfo(cliOptions provider.CLIOptions) (string, *pr
 }
 
 func (s *workspaceClient) agentInfo(cliOptions provider.CLIOptions) (string, *provider.AgentWorkspaceInfo, error) {
+	// try to load last devcontainer.json
+	var lastDevContainerConfig *config2.DevContainerConfigWithPath
+	var workspaceOrigin string
+	if s.workspace != nil {
+		result, err := provider.LoadWorkspaceResult(s.workspace.Context, s.workspace.ID)
+		if err != nil {
+			s.log.Debugf("Error loading workspace result: %v", err)
+		} else if result != nil {
+			lastDevContainerConfig = result.DevContainerConfigWithPath
+		}
+
+		workspaceOrigin = s.workspace.Origin
+	}
+
 	// build struct
 	agentInfo := &provider.AgentWorkspaceInfo{
-		Workspace:  s.workspace,
-		Machine:    s.machine,
-		CLIOptions: cliOptions,
-		Agent:      options.ResolveAgentConfig(s.devPodConfig, s.config, s.workspace, s.machine),
-		Options:    s.devPodConfig.ProviderOptions(s.Provider()),
+		WorkspaceOrigin:        workspaceOrigin,
+		Workspace:              s.workspace,
+		Machine:                s.machine,
+		LastDevContainerConfig: lastDevContainerConfig,
+		CLIOptions:             cliOptions,
+		Agent:                  options.ResolveAgentConfig(s.devPodConfig, s.config, s.workspace, s.machine),
+		Options:                s.devPodConfig.ProviderOptions(s.Provider()),
+	}
+
+	// if we are running proxy mode
+	if cliOptions.Proxy || cliOptions.ForceCredentials {
+		agentInfo.Agent.InjectGitCredentials = "true"
+		agentInfo.Agent.InjectDockerCredentials = "true"
 	}
 
 	// we don't send any provider options if proxy because these could contain
@@ -176,6 +199,12 @@ func (s *workspaceClient) agentInfo(cliOptions provider.CLIOptions) (string, *pr
 			agentInfo.Machine.Provider.Options = map[string]config.OptionValue{}
 		}
 	}
+
+	// Get the timeout from the context options
+	agentInfo.InjectTimeout = config.ParseTimeOption(s.devPodConfig, config.ContextOptionAgentInjectTimeout)
+
+	// Set registry cache from context option
+	agentInfo.RegistryCache = s.devPodConfig.ContextOption(config.ContextOptionRegistryCache)
 
 	// marshal config
 	out, err := json.Marshal(agentInfo)
@@ -366,7 +395,7 @@ func (s *workspaceClient) Delete(ctx context.Context, opt client.DeleteOptions) 
 		}
 	}
 
-	return DeleteWorkspaceFolder(s.workspace.Context, s.workspace.ID, s.log)
+	return DeleteWorkspaceFolder(s.workspace.Context, s.workspace.ID, s.workspace.SSHConfigPath, s.log)
 }
 
 func (s *workspaceClient) isMachineRunning(ctx context.Context) (bool, error) {
@@ -595,8 +624,14 @@ func DeleteMachineFolder(context, machineID string) error {
 	return nil
 }
 
-func DeleteWorkspaceFolder(context, workspaceID string, log log.Logger) error {
-	err := ssh.RemoveFromConfig(workspaceID, log)
+func DeleteWorkspaceFolder(context string, workspaceID string, sshConfigPath string, log log.Logger) error {
+	path, err := ssh.ResolveSSHConfigPath(sshConfigPath)
+	if err != nil {
+		return err
+	}
+	sshConfigPath = path
+
+	err = ssh.RemoveFromConfig(workspaceID, sshConfigPath, log)
 	if err != nil {
 		log.Errorf("Remove workspace '%s' from ssh config: %v", workspaceID, err)
 	}

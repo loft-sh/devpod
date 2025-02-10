@@ -8,7 +8,7 @@ jobs:
     if: startsWith(github.ref, 'refs/tags/v') == true
     permissions:
       contents: write
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-22.04
     outputs:
       package_version: ${{ steps.get-version.outputs.package_version }}
       original_package_version: ${{ steps.get-version.outputs.original_package_version }}
@@ -108,12 +108,12 @@ jobs:
             target: x86_64-pc-windows-msvc
             arch: amd64
             cli_only: false
-          - host: ubuntu-20.04
+          - host: ubuntu-22.04
             target: x86_64-unknown-linux-gnu
             os: linux
             arch: amd64
             cli_only: false
-          - host: ubuntu-20.04
+          - host: ubuntu-22.04
             target: aarch64-unknown-linux-gnu
             os: linux
             arch: arm64
@@ -139,7 +139,7 @@ jobs:
         working-directory: "./desktop"
 
       - name: Setup System Dependencies
-        if: matrix.settings.host == 'ubuntu-20.04' && matrix.settings.cli_only == false
+        if: matrix.settings.host == 'ubuntu-22.04' && matrix.settings.cli_only == false
         run: |
           sudo apt-get update
           sudo apt-get install -y libgtk-3-dev libwebkit2gtk-4.0-dev libayatana-appindicator3-dev librsvg2-dev
@@ -159,7 +159,7 @@ jobs:
       - name: Go setup
         uses: actions/setup-go@v2
         with:
-          go-version: 1.20.5
+          go-version: 1.21.8
 
       - name: Build Sidecar CLI
         if: matrix.settings.host != 'windows-latest'
@@ -194,18 +194,26 @@ jobs:
         run: yarn install
         working-directory: "./desktop"
 
+      - name: Install additional ubuntu dependencies
+        if: matrix.settings.host == 'ubuntu-22.04'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libwebkit2gtk-4.1-dev librsvg2-dev patchelf
+
       - name: Build Desktop App
-        if: matrix.settings.host == 'ubuntu-20.04' && matrix.settings.cli_only == false
-        uses: tauri-apps/tauri-action@v0.4.0
+        if: matrix.settings.host == 'ubuntu-22.04' && matrix.settings.cli_only == false
+        uses: tauri-apps/tauri-action@v0.5.15
         with:
           releaseId: ${{ needs.create-release.outputs.release_id }}
           projectPath: "./desktop"
-          args: "--config src-tauri/tauri-linux.conf.json --target ${{ matrix.settings.target }} --features enable-updater --bundles appimage,updater"
+          args: "--config src-tauri/tauri-linux.conf.json --target ${{ matrix.settings.target }} --bundles appimage,deb,updater"
           includeUpdaterJson: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           TAURI_PRIVATE_KEY: ${{ secrets.TAURI_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_PRIVATE_KEY }}
           TAURI_KEY_PASSWORD: ${{ secrets.TAURI_KEY_PASSWORD }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_KEY_PASSWORD }}
           # AppImage Signing:
           SIGN: ${{ secrets.APP_IMAGE_SIGN }}
           SIGN_KEY: ${{ secrets.APP_IMAGE_SIGN_KEY }}
@@ -213,16 +221,18 @@ jobs:
 
       - name: Build Desktop App
         if: matrix.settings.host == 'macos-latest' && matrix.settings.cli_only == false
-        uses: tauri-apps/tauri-action@v0.4.0
+        uses: tauri-apps/tauri-action@v0.5.15
         with:
           releaseId: ${{ needs.create-release.outputs.release_id }}
           projectPath: "./desktop"
-          args: "--target ${{ matrix.settings.target }} --features enable-updater"
+          args: "--target ${{ matrix.settings.target }}"
           includeUpdaterJson: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           TAURI_PRIVATE_KEY: ${{ secrets.TAURI_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_PRIVATE_KEY }}
           TAURI_KEY_PASSWORD: ${{ secrets.TAURI_KEY_PASSWORD }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_KEY_PASSWORD }}
           # MacOS Signing:
           ENABLE_CODE_SIGNING: ${{ secrets.APPLE_CERTIFICATE }}
           APPLE_CERTIFICATE: ${{ secrets.APPLE_CERTIFICATE }}
@@ -233,25 +243,27 @@ jobs:
           APPLE_PASSWORD: ${{ secrets.APPLE_PASSWORD }}
 
       - name: Build linux tar.gz
-        if: matrix.settings.host == 'ubuntu-20.04' && matrix.settings.cli_only == false
+        if: matrix.settings.host == 'ubuntu-22.04' && matrix.settings.cli_only == false
         id: build-desktop-targz
         run: |
-          cd ./desktop/src-tauri/target/${{ matrix.settings.target }}/release/bundle/appimage/dev-pod.AppDir || exit 1
-          tar --exclude=usr/lib --exclude=usr/share/doc -zcvf dev-pod-desktop.tar.gz usr
+          cd ./desktop/src-tauri/target/${{ matrix.settings.target }}/release/bundle/appimage/DevPod.AppDir || exit 1
+          tar --exclude=usr/bin/xdg-open --exclude=usr/lib --exclude=usr/share/doc --exclude=usr/share/glib-2.0 -zcvf DevPod-desktop.tar.gz usr
 
-          mv dev-pod-desktop.tar.gz ../../dev-pod-${{needs.create-release.outputs.package_version}}.tar.gz
+          mv DevPod-desktop.tar.gz ../../DevPod-${{needs.create-release.outputs.package_version}}.tar.gz
 
       - name: Build Desktop App
         if: matrix.settings.host == 'windows-latest' && matrix.settings.cli_only == false
         id: build-desktop-app
-        uses: tauri-apps/tauri-action@v0.4.0
+        uses: tauri-apps/tauri-action@v0.5.15
         with:
           projectPath: "./desktop"
-          args: " --target ${{ matrix.settings.target }} --features enable-updater"
+          args: " --target ${{ matrix.settings.target }}"
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           TAURI_PRIVATE_KEY: ${{ secrets.TAURI_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_PRIVATE_KEY }}
           TAURI_KEY_PASSWORD: ${{ secrets.TAURI_KEY_PASSWORD }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_KEY_PASSWORD }}
 
       - name: Sign Windows App
         if: matrix.settings.host == 'windows-latest'
@@ -262,27 +274,64 @@ jobs:
           CODESIGNTOOL_TOTP_SECRET: ${{ secrets.CODESIGNTOOL_TOTP_SECRET }}
           CODESIGNTOOL_CREDENTIAL_ID: ${{ secrets.CODESIGNTOOL_CREDENTIAL_ID }}
           CODESIGNTOOL_DOWNLOAD_URL: ${{ vars.CODESIGNTOOL_DOWNLOAD_URL }}
-          CODESIGNTOOL_FILE_PATH: desktop\src-tauri\target\${{ matrix.settings.target }}\release\bundle\msi\DevPod_${{ needs.create-release.outputs.package_version }}_x64_en-US.msi
+          TAURI_PRIVATE_KEY: ${{ secrets.TAURI_PRIVATE_KEY }}
+          TAURI_KEY_PASSWORD: ${{ secrets.TAURI_KEY_PASSWORD }}
         run: |
           $username = "$Env:CODESIGNTOOL_USERNAME"
           $password = "$Env:CODESIGNTOOL_PASSWORD"
           $totp_secret = "$Env:CODESIGNTOOL_TOTP_SECRET"
           $credential_id = "$Env:CODESIGNTOOL_CREDENTIAL_ID"
           $download_url = "$Env:CODESIGNTOOL_DOWNLOAD_URL"
-          $input_file_path = "$Env:CODESIGNTOOL_FILE_PATH"
+          $private_key = "$Env:TAURI_PRIVATE_KEY"
+          $private_key_password = "$Env:TAURI_KEY_PASSWORD"
+
+          $cli_input_file_path = "desktop\src-tauri\bin\devpod-cli-${{ matrix.settings.target }}.exe"
+
+          $msi_file_name = "DevPod_${{ needs.create-release.outputs.package_version }}_x64_en-US"
+          $msi_input_file_path = "desktop\src-tauri\target\${{ matrix.settings.target }}\release\bundle\msi\$msi_file_name.msi"
+
+          $updater_base_zip_file_path = "src-tauri\target\${{ matrix.settings.target }}\release\bundle\msi\$msi_file_name.msi.zip"
+          $updater_zip_file_path = "desktop\$updater_base_zip_file_path"
+          $updater_extraction_folder_path = "desktop\src-tauri\target\${{ matrix.settings.target }}\release\bundle\msi\updater"
+          $updater_input_file_path = "$updater_extraction_folder_path\$msi_file_name.msi"
+
+          $nsis_input_file_path = "desktop\src-tauri\target\${{ matrix.settings.target }}\release\bundle\nsis\DevPod_${{ needs.create-release.outputs.package_version }}_x64-setup.exe"
 
           Write-Output "Starting to download CodeSignTool from $download_url"
 
           Invoke-WebRequest -Uri $download_url -OutFile codesigntool.zip
 
           $destination_path = "codesigntool"
-          Write-Output "Unzipping to $destination_path"
+          Write-Output "Unzipping codesigntool.zip to $destination_path"
           Expand-Archive "codesigntool.zip" -DestinationPath $destination_path
 
-          Set-Location -Path $destination_path
-          Set-Location -Path (Get-ChildItem -Path . -Include CodeSignTool* | %{$_.FullName})
+          Write-Output "Unzipping updater: ($updater_zip_file_path) -> ($updater_extraction_folder_path)"
 
-          cmd.exe /c ".\CodeSignTool.bat" sign -username="$username" -password="$password" -totp_secret="$totp_secret" -credential_id="$credential_id" -input_file_path="..\..\$input_file_path" -override
+          Expand-Archive "$updater_zip_file_path" -DestinationPath "$updater_extraction_folder_path"
+          Remove-Item "$updater_zip_file_path"
+
+          Set-Location -Path $destination_path
+
+          Write-Output "Sigining files"
+
+          $cli_input_file_path = Resolve-Path  "..\$cli_input_file_path" | select -ExpandProperty Path
+          $msi_input_file_path = Resolve-Path  "..\$msi_input_file_path" | select -ExpandProperty Path
+          $nsis_input_file_path = Resolve-Path  "..\$nsis_input_file_path" | select -ExpandProperty Path
+          $updater_input_file_path = Resolve-Path  "..\$updater_input_file_path" | select -ExpandProperty Path
+
+          cmd.exe /c ".\CodeSignTool.bat" sign -username="$username" -password="$password" -totp_secret="$totp_secret" -credential_id="$credential_id" -input_file_path="$cli_input_file_path" -override
+          cmd.exe /c ".\CodeSignTool.bat" sign -username="$username" -password="$password" -totp_secret="$totp_secret" -credential_id="$credential_id" -input_file_path="$msi_input_file_path" -override
+          cmd.exe /c ".\CodeSignTool.bat" sign -username="$username" -password="$password" -totp_secret="$totp_secret" -credential_id="$credential_id" -input_file_path="$nsis_input_file_path" -override
+          cmd.exe /c ".\CodeSignTool.bat" sign -username="$username" -password="$password" -totp_secret="$totp_secret" -credential_id="$credential_id" -input_file_path="$updater_input_file_path" -override
+
+          Write-Output "Re-compressing updater"
+          Set-Location -Path ".."
+          7z a -tzip -mx=0 "$updater_zip_file_path" ".\$updater_extraction_folder_path\*"
+          Remove-Item "$updater_zip_file_path.sig"
+
+          Write-Output "Re-signing updater zip"
+          Set-Location -Path "desktop"
+          yarn tauri signer sign --password="$private_key_password" --private-key="$private_key" "$updater_base_zip_file_path"
 
       - name: Upload Release Asset
         if: matrix.settings.host == 'windows-latest'
@@ -291,20 +340,43 @@ jobs:
           script: |
             const fs = require("fs")
 
-            // The .msi builder formats the version to xx.xx.xx.xxxx
-            const version = "${{ needs.create-release.outputs.package_version }}".replace("-", ".")
+            const version = "${{ needs.create-release.outputs.package_version }}"
+
+            // prepare MSI vars
             const msiName = `DevPod_${version}_x64_en-US.msi`
             const msiPath = `desktop/src-tauri/target/${{ matrix.settings.target }}/release/bundle/msi/${msiName}`
             const msiZipName = `${msiName}.zip`
             const msiZipPath = `desktop/src-tauri/target/${{ matrix.settings.target }}/release/bundle/msi/${msiZipName}`
             const msiZipSigName = `${msiName}.zip.sig`
             const msiZipSigPath = `desktop/src-tauri/target/${{ matrix.settings.target }}/release/bundle/msi/${msiZipSigName}`
+
+            // prepare NSIS vars
+            // the installer itself is suffixed with `.exe` but updater artifacts end with `.nsis.*`
+            const nsisName = `DevPod_${version}_x64-setup`
+            const nsisPath = `desktop/src-tauri/target/${{ matrix.settings.target }}/release/bundle/nsis/${nsisName}.exe`
+
+            // Let's skip uploading the updater artifacts until we've figured out auto updating for both nsis and msi
+            // const nsisZipName = `${nsisName}.nsis.zip`
+            // const nsisZipPath = `desktop/src-tauri/target/${{ matrix.settings.target }}/release/bundle/nsis/${nsisZipName}`
+            // const nsisZipSigName = `${nsisName}.nsis.zip.sig`
+            // const nsisZipSigPath = `desktop/src-tauri/target/${{ matrix.settings.target }}/release/bundle/nsis/${nsisZipSigName}`
+
             const cliName = "devpod-windows-${{ matrix.settings.arch }}.exe"
             const cliPath = "desktop/src-tauri/bin/devpod-cli-${{ matrix.settings.target }}.exe"
 
             const releaseId = "${{ needs.create-release.outputs.release_id }}"
 
-            const releaseAssets = [{ name: msiName, path: msiPath }, { name: cliName, path: cliPath }, { name: msiZipName, path: msiZipPath }, { name: msiZipSigName, path: msiZipSigPath }]
+            const releaseAssets = [
+              { name: cliName, path: cliPath },
+
+              { name: msiName, path: msiPath },
+              { name: msiZipName, path: msiZipPath }, 
+              { name: msiZipSigName, path: msiZipSigPath },
+
+              { name: `${nsisName}.exe`, path: nsisPath },
+              // { name: nsisZipName, path: nsisZipPath }, 
+              // { name: nsisZipSigName, path: nsisZipSigPath },
+            ]
             for (const asset of releaseAssets) {
               console.log("Attempting to upload release asset: ", asset)
               await github.rest.repos.uploadReleaseAsset({
@@ -350,14 +422,14 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Upload Tar.gz Asset
-        if: matrix.settings.host == 'ubuntu-20.04' && matrix.settings.cli_only == false
+        if: matrix.settings.host == 'ubuntu-22.04' && matrix.settings.cli_only == false
         uses: actions/github-script@v6
         with:
           script: |
             const fs = require("fs")
 
             const releaseId = "${{ needs.create-release.outputs.release_id }}"
-            const assetName = "dev-pod-${{needs.create-release.outputs.package_version}}.tar.gz"
+            const assetName = "DevPod-${{needs.create-release.outputs.package_version}}.tar.gz"
             const assetPath = `desktop/src-tauri/target/${{ matrix.settings.target }}/release/bundle/${assetName}`
 
             console.log("Attempting to upload release asset: ", assetName)
@@ -381,10 +453,44 @@ jobs:
     if: startsWith(github.ref, 'refs/tags/v') == true
     permissions:
       contents: write
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-22.04
     steps:
       - name: Checkout repository
         uses: actions/checkout@v3
+
+      - name: Release pro provider
+        run: |
+          set -e
+
+          VERSION="v${{ needs.create-release.outputs.original_package_version }}"
+          OUT_DIR="release"
+          ASSETS="devpod-darwin-amd64 devpod-darwin-arm64 devpod-linux-amd64 devpod-linux-arm64 devpod-windows-amd64.exe"
+
+          echo "Prepare output directory $OUT_DIR..."
+          if [ ! -d "$OUT_DIR" ]; then
+            mkdir "$OUT_DIR"
+          else
+            rm -rf $OUT_DIR
+          fi
+          printf "Done\n\n"
+
+          echo "Download release assets into $OUT_DIR..."
+          for asset in $ASSETS; do
+                printf "\t$asset\n"
+                gh release download $VERSION --pattern="$asset" --dir="$OUT_DIR"
+                printf "\tDone\n"
+          done
+          printf "Done\n\n"
+
+          echo "Generate provider.yaml..."
+          go run ./hack/pro/main.go $VERSION > ./release/provider.yaml
+          printf "Done\n\n"
+
+          echo "Upload provider.yaml..."
+          gh release upload $VERSION ./release/provider.yaml --clobber
+          printf "Done\n\n"
+        env:
+          GH_TOKEN: ${{ github.token }}
 
       - name: Update `latest.json`
         uses: actions/github-script@v6
@@ -418,14 +524,13 @@ jobs:
             const latestRes = await fetchAsset(latestAsset.id)
             const latest = await latestRes.json()
             const version = latest.version
-            const winVersion = latest.version.replace("-", ".")
 
             const infos = [
-              { target: "linux-x86_64", sigFile: ".AppImage.tar.gz.sig", packageType: ".tar.gz", originalAssetName: `dev-pod_${version}_amd64.AppImage`, desiredAssetName: "DevPod_linux_amd64.AppImage" },
+              { target: "linux-x86_64", sigFile: ".AppImage.tar.gz.sig", packageType: ".tar.gz", originalAssetName: `DevPod_${version}_amd64.AppImage`, desiredAssetName: "DevPod_linux_amd64.AppImage" },
               { target: "darwin-aarch64", sigFile: "aarch64.app.tar.gz.sig", packageType: ".tar.gz", originalAssetName: `DevPod_${version}_aarch64.dmg`, desiredAssetName: "DevPod_macos_aarch64.dmg", originalUpdaterAssetName: "DevPod_aarch64.app.tar.gz", desiredUpdaterAssetName: "DevPod_macos_aarch64.app.tar.gz" },
               { target: "darwin-x86_64", sigFile: "x64.app.tar.gz.sig", packageType: ".tar.gz", originalAssetName: `DevPod_${version}_x64.dmg`, desiredAssetName: "DevPod_macos_x64.dmg", originalUpdaterAssetName: "DevPod_x64.app.tar.gz", desiredUpdaterAssetName: "DevPod_macos_x64.app.tar.gz" },
-              { target: "windows-x86_64", sigFile: ".msi.zip.sig", packageType: ".zip", originalAssetName: `DevPod_${winVersion}_x64_en-US.msi`, desiredAssetName: "DevPod_windows_x64_en-US.msi" },
-              { originalAssetName: `dev-pod-${version}.tar.gz`, desiredAssetName: "DevPod_linux_x86_64.tar.gz" },
+              { target: "windows-x86_64", sigFile: ".msi.zip.sig", packageType: ".zip", originalAssetName: `DevPod_${version}_x64_en-US.msi`, desiredAssetName: "DevPod_windows_x64_en-US.msi" },
+              { originalAssetName: `DevPod-${version}.tar.gz`, desiredAssetName: "DevPod_linux_x86_64.tar.gz" },
             ]
 
             for (const info of infos) {

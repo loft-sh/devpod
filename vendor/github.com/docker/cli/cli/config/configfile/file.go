@@ -37,11 +37,11 @@ type ConfigFile struct {
 	PruneFilters         []string                     `json:"pruneFilters,omitempty"`
 	Proxies              map[string]ProxyConfig       `json:"proxies,omitempty"`
 	Experimental         string                       `json:"experimental,omitempty"`
-	StackOrchestrator    string                       `json:"stackOrchestrator,omitempty"` // Deprecated: swarm is now the default orchestrator, and this option is ignored.
 	CurrentContext       string                       `json:"currentContext,omitempty"`
 	CLIPluginsExtraDirs  []string                     `json:"cliPluginsExtraDirs,omitempty"`
 	Plugins              map[string]map[string]string `json:"plugins,omitempty"`
 	Aliases              map[string]string            `json:"aliases,omitempty"`
+	Features             map[string]string            `json:"features,omitempty"`
 }
 
 // ProxyConfig contains proxy configuration settings
@@ -95,6 +95,9 @@ func (configFile *ConfigFile) ContainsAuth() bool {
 
 // GetAuthConfigs returns the mapping of repo to auth configuration
 func (configFile *ConfigFile) GetAuthConfigs() map[string]types.AuthConfig {
+	if configFile.AuthConfigs == nil {
+		configFile.AuthConfigs = make(map[string]types.AuthConfig)
+	}
 	return configFile.AuthConfigs
 }
 
@@ -241,12 +244,11 @@ func decodeAuth(authStr string) (string, string, error) {
 	if n > decLen {
 		return "", "", errors.Errorf("Something went wrong decoding auth config")
 	}
-	arr := strings.SplitN(string(decoded), ":", 2)
-	if len(arr) != 2 {
+	userName, password, ok := strings.Cut(string(decoded), ":")
+	if !ok || userName == "" {
 		return "", "", errors.Errorf("Invalid auth configuration file")
 	}
-	password := strings.Trim(arr[1], "\x00")
-	return arr[0], password, nil
+	return userName, strings.Trim(password, "\x00"), nil
 }
 
 // GetCredentialsStore returns a new credentials store from the settings in the
@@ -301,7 +303,9 @@ func (configFile *ConfigFile) GetAllCredentials() (map[string]types.AuthConfig, 
 	for registryHostname := range configFile.CredentialHelpers {
 		newAuth, err := configFile.GetAuthConfig(registryHostname)
 		if err != nil {
-			return nil, err
+			// TODO(thaJeztah): use context-logger, so that this output can be suppressed (in tests).
+			logrus.WithError(err).Warnf("Failed to get credentials for registry: %s", registryHostname)
+			continue
 		}
 		auths[registryHostname] = newAuth
 	}

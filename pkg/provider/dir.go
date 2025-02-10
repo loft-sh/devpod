@@ -10,11 +10,13 @@ import (
 	"strings"
 
 	"github.com/loft-sh/devpod/pkg/config"
+	config2 "github.com/loft-sh/devpod/pkg/devcontainer/config"
 	"github.com/loft-sh/devpod/pkg/id"
 )
 
 const (
 	WorkspaceConfigFile   = "workspace.json"
+	WorkspaceResultFile   = "workspace_result.json"
 	MachineConfigFile     = "machine.json"
 	ProInstanceConfigFile = "pro.json"
 	ProviderConfigFile    = "provider.json"
@@ -170,7 +172,7 @@ func SaveProviderConfig(context string, provider *ProviderConfig) error {
 	}
 
 	providerConfigFile := filepath.Join(providerDir, ProviderConfigFile)
-	err = os.WriteFile(providerConfigFile, providerDirBytes, 0666)
+	err = os.WriteFile(providerConfigFile, providerDirBytes, 0600)
 	if err != nil {
 		return err
 	}
@@ -195,7 +197,32 @@ func SaveProInstanceConfig(context string, proInstance *ProInstance) error {
 	}
 
 	proInstanceConfigFile := filepath.Join(providerDir, ProInstanceConfigFile)
-	err = os.WriteFile(proInstanceConfigFile, proInstanceBytes, 0666)
+	err = os.WriteFile(proInstanceConfigFile, proInstanceBytes, 0600)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func SaveWorkspaceResult(workspace *Workspace, result *config2.Result) error {
+	workspaceDir, err := GetWorkspaceDir(workspace.Context, workspace.ID)
+	if err != nil {
+		return err
+	}
+
+	err = os.MkdirAll(workspaceDir, 0755)
+	if err != nil {
+		return err
+	}
+
+	resultBytes, err := json.Marshal(result)
+	if err != nil {
+		return err
+	}
+
+	workspaceResultFile := filepath.Join(workspaceDir, WorkspaceResultFile)
+	err = os.WriteFile(workspaceResultFile, resultBytes, 0600)
 	if err != nil {
 		return err
 	}
@@ -220,7 +247,7 @@ func SaveWorkspaceConfig(workspace *Workspace) error {
 	}
 
 	workspaceConfigFile := filepath.Join(workspaceDir, WorkspaceConfigFile)
-	err = os.WriteFile(workspaceConfigFile, workspaceConfigBytes, 0666)
+	err = os.WriteFile(workspaceConfigFile, workspaceConfigBytes, 0644)
 	if err != nil {
 		return err
 	}
@@ -245,7 +272,7 @@ func SaveMachineConfig(machine *Machine) error {
 	}
 
 	machineConfigFile := filepath.Join(machineDir, MachineConfigFile)
-	err = os.WriteFile(machineConfigFile, machineConfigBytes, 0666)
+	err = os.WriteFile(machineConfigFile, machineConfigBytes, 0600)
 	if err != nil {
 		return err
 	}
@@ -260,7 +287,16 @@ func MachineExists(context, machineID string) bool {
 	}
 
 	_, err = os.Stat(machineDir)
+	return err == nil
+}
 
+func ProviderExists(context, provider string) bool {
+	providerDir, err := GetProviderDir(context, provider)
+	if err != nil {
+		return false
+	}
+
+	_, err = os.Stat(providerDir)
 	return err == nil
 }
 
@@ -349,4 +385,27 @@ func LoadWorkspaceConfig(context, workspaceID string) (*Workspace, error) {
 	workspaceConfig.Context = context
 	workspaceConfig.Origin = workspaceConfigFile
 	return workspaceConfig, nil
+}
+
+func LoadWorkspaceResult(context, workspaceID string) (*config2.Result, error) {
+	workspaceDir, err := GetWorkspaceDir(context, workspaceID)
+	if err != nil {
+		return nil, err
+	}
+
+	workspaceResultFile := filepath.Join(workspaceDir, WorkspaceResultFile)
+	workspaceResultBytes, err := os.ReadFile(workspaceResultFile)
+	if os.IsNotExist(err) {
+		return nil, nil
+	} else if err != nil {
+		return nil, err
+	}
+
+	workspaceResult := &config2.Result{}
+	err = json.Unmarshal(workspaceResultBytes, workspaceResult)
+	if err != nil {
+		return nil, err
+	}
+
+	return workspaceResult, nil
 }

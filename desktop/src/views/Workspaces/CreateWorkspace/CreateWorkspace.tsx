@@ -2,6 +2,7 @@ import { ExampleCard, Form, IDEIcon, WarningMessageBox } from "@/components"
 import {
   Box,
   Button,
+  Code,
   Flex,
   FormControl,
   FormErrorMessage,
@@ -9,7 +10,6 @@ import {
   FormLabel,
   Grid,
   HStack,
-  Icon,
   IconButton,
   Input,
   Link,
@@ -28,40 +28,33 @@ import {
   useColorModeValue,
   useToken,
 } from "@chakra-ui/react"
-import { useCallback, useEffect, useMemo } from "react"
+import { useCallback, useEffect, useMemo, useState } from "react"
 import { Controller, ControllerRenderProps } from "react-hook-form"
-import { FiFolder } from "react-icons/fi"
 import { useNavigate } from "react-router"
-import { Link as RouterLink, useSearchParams } from "react-router-dom"
+import { Link as RouterLink } from "react-router-dom"
 import { useBorderColor } from "../../../Theme"
-import { client } from "../../../client"
 import { RECOMMENDED_PROVIDER_SOURCES, SIDEBAR_WIDTH } from "../../../constants"
 import { useProvider, useProviders, useWorkspace, useWorkspaces } from "../../../contexts"
 import { Plus } from "../../../icons"
 import { CommunitySvg, ProviderPlaceholderSvg } from "../../../images"
-import { exists, getKeys, isEmpty, useFormErrors } from "../../../lib"
+import { canHealthCheck, exists, getKeys, isEmpty, useFormErrors } from "../../../lib"
 import { Routes } from "../../../routes"
-import { TIDE } from "../../../types"
+import { TIDE, TWorkspace, TWorkspaceSourceType } from "../../../types"
 import { useIDEs } from "../../../useIDEs"
 import { useSetupProviderModal } from "../../Providers"
 import { ProviderOptionsPopover } from "./ProviderOptionsPopover"
+import { WorkspaceSourceInput } from "./WorkspaceSourceInput"
 import { COMMUNITY_WORKSPACE_EXAMPLES, WORKSPACE_EXAMPLES } from "./constants"
-import {
-  FieldName,
-  TCreateWorkspaceArgs,
-  TCreateWorkspaceSearchParams,
-  TFormValues,
-  TSelectProviderOptions,
-} from "./types"
+import { FieldName, TCreateWorkspaceArgs, TFormValues, TSelectProviderOptions } from "./types"
 import { useCreateWorkspaceForm } from "./useCreateWorkspaceForm"
 
 export function CreateWorkspace() {
   const { ides } = useIDEs()
 
-  const searchParams = useCreateWorkspaceParams()
   const navigate = useNavigate()
-  const workspace = useWorkspace(undefined)
+  const workspace = useWorkspace<TWorkspace>(undefined)
   const [[providers]] = useProviders()
+  const [sourceType, setSourceType] = useState<TWorkspaceSourceType>("git")
 
   const handleCreateWorkspace = useCallback(
     ({
@@ -80,15 +73,16 @@ export function CreateWorkspace() {
         ideConfig: { name: defaultIDE },
         sourceConfig: {
           source: workspaceSource,
+          type: sourceType,
         },
       })
 
-      // set workspace id to show terminal
+      // set action id to show terminal
       if (!isEmpty(actionID)) {
         navigate(Routes.toAction(actionID, Routes.WORKSPACES))
       }
     },
-    [navigate, workspace]
+    [navigate, sourceType, workspace]
   )
 
   const {
@@ -101,7 +95,8 @@ export function CreateWorkspace() {
     isSubmitting,
     currentSource,
     selectDevcontainerModal,
-  } = useCreateWorkspaceForm(searchParams, providers, ides, handleCreateWorkspace)
+  } = useCreateWorkspaceForm(handleCreateWorkspace)
+
   const {
     sourceError,
     providerError,
@@ -117,7 +112,7 @@ export function CreateWorkspace() {
     }
 
     const installed = Object.entries(providers)
-      .filter(([, p]) => !!p.state?.initialized)
+      .filter(([, p]) => !!p.state?.initialized && !canHealthCheck(p.config))
       .map(([key, value]) => ({ name: key, ...value }))
 
     return {
@@ -125,16 +120,6 @@ export function CreateWorkspace() {
       recommended: RECOMMENDED_PROVIDER_SOURCES,
     }
   }, [providers])
-
-  const handleSelectFolderClicked = useCallback(async () => {
-    const selected = await client.selectFromDir()
-    if (typeof selected === "string") {
-      setValue(FieldName.SOURCE, selected, {
-        shouldDirty: true,
-        shouldValidate: true,
-      })
-    }
-  }, [setValue])
 
   const handleExampleCardClicked = useCallback(
     (newSource: string) => {
@@ -167,7 +152,6 @@ export function CreateWorkspace() {
 
   const backgroundColor = useColorModeValue("gray.50", "gray.800")
   const borderColor = useBorderColor()
-  const inputBackgroundColor = useColorModeValue("white", "black")
   const bottomBarBackgroundColor = useColorModeValue("white", "background.darkest")
   const { colorMode } = useColorMode()
 
@@ -185,7 +169,7 @@ export function CreateWorkspace() {
             <FormControl
               backgroundColor={backgroundColor}
               paddingX="20"
-              paddingY="32"
+              paddingY="20"
               height="full"
               isRequired
               isInvalid={exists(sourceError)}
@@ -194,43 +178,29 @@ export function CreateWorkspace() {
               borderRightWidth="thin"
               borderRightColor={borderColor}>
               <VStack width="full">
-                <Text marginBottom="2" fontWeight="bold">
+                <Text width="90%" marginBottom="6" fontWeight="bold">
                   Enter Workspace Source
                 </Text>
                 <HStack spacing={0} justifyContent={"center"} width="full">
-                  <Input
-                    spellCheck={false}
-                    backgroundColor={inputBackgroundColor}
-                    borderTopRightRadius={0}
-                    borderBottomRightRadius={0}
-                    placeholder="github.com/my-org/my-repo"
-                    fontSize={"16px"}
-                    padding={"10px"}
-                    height={"42px"}
-                    width={"60%"}
-                    type="text"
-                    {...register(FieldName.SOURCE, { required: true })}
+                  <Controller
+                    name={FieldName.SOURCE}
+                    control={control}
+                    rules={{ required: true }}
+                    render={({ field }) => (
+                      <WorkspaceSourceInput
+                        field={field}
+                        sourceType={sourceType}
+                        onSourceTypeChanged={setSourceType}
+                      />
+                    )}
                   />
-                  <Button
-                    leftIcon={<Icon as={FiFolder} />}
-                    borderTopLeftRadius={0}
-                    borderBottomLeftRadius={0}
-                    borderTopWidth={"thin"}
-                    borderRightWidth={"thin"}
-                    borderBottomWidth={"thin"}
-                    borderColor={borderColor}
-                    height={"42px"}
-                    flex={"0 0 140px"}
-                    onClick={handleSelectFolderClicked}>
-                    Select Folder
-                  </Button>
                 </HStack>
                 {exists(sourceError) && (
                   <FormErrorMessage>{sourceError.message ?? "Error"}</FormErrorMessage>
                 )}
                 <FormHelperText textAlign={"center"}>
-                  Any git repository or local path to a folder you would like to create a workspace
-                  from can be a source as long as it adheres to the{" "}
+                  Any git repository, local path to a folder or container image you would like to
+                  create a workspace from can be a source as long as it adheres to the{" "}
                   <Link
                     fontWeight="bold"
                     target="_blank"
@@ -421,7 +391,7 @@ export function CreateWorkspace() {
                 <FormLabel>Devcontainer Path</FormLabel>
                 <Input
                   spellCheck={false}
-                  placeholder=".devcontainer/service/.devcontainer.json"
+                  placeholder="Optionally enter path to devcontainer.json"
                   type="text"
                   {...register(FieldName.DEVCONTAINER_PATH, { required: false })}
                 />
@@ -429,7 +399,10 @@ export function CreateWorkspace() {
                   <FormErrorMessage>{devcontainerPathError.message ?? "Error"}</FormErrorMessage>
                 ) : (
                   <FormHelperText>
-                    DevPod will use this path to create the dev container for this workspace.
+                    DevPod will use this path to create the dev container for this workspace. If not
+                    specified it&apos;ll use <Code>.devcontainer.json</Code> or{" "}
+                    <Code>.devcontainer/devcontainer.json</Code>. <br />
+                    Example: <Code>.devcontainer/service/devcontainer.json</Code>
                   </FormHelperText>
                 )}
               </FormControl>
@@ -469,15 +442,6 @@ export function CreateWorkspace() {
   )
 }
 
-function useCreateWorkspaceParams(): TCreateWorkspaceSearchParams {
-  const [searchParams] = useSearchParams()
-
-  return useMemo(
-    () => Routes.getWorkspaceCreateParamsFromSearchParams(searchParams),
-    [searchParams]
-  )
-}
-
 type TProviderInputProps = Readonly<{
   options: TSelectProviderOptions
   field: ControllerRenderProps<TFormValues, (typeof FieldName)["PROVIDER"]>
@@ -486,7 +450,7 @@ type TProviderInputProps = Readonly<{
 function ProviderInput({ options, field, onAddProviderClicked }: TProviderInputProps) {
   const gridChildWidth = useToken("sizes", "12")
   const [provider] = useProvider(field.value)
-  const workspaces = useWorkspaces()
+  const workspaces = useWorkspaces<TWorkspace>()
   const reuseWorkspace = useMemo(() => {
     return workspaces.find((workspace) => {
       return (

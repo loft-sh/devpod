@@ -108,7 +108,7 @@ func (r *Resolver) resolveOption(
 	} else if len(option.Enum) == 1 {
 		resolvedOptionValues[optionName] = config.OptionValue{
 			Children: beforeValue.Children,
-			Value:    option.Enum[0],
+			Value:    option.Enum[0].Value,
 		}
 	} else {
 		resolvedOptionValues[optionName] = config.OptionValue{
@@ -128,11 +128,16 @@ func (r *Resolver) resolveOption(
 			return fmt.Errorf("option %s is required, but no value provided", optionName)
 		}
 
+		questionOpts := []string{}
+		for _, enumOpt := range option.Enum {
+			questionOpts = append(questionOpts, enumOpt.Value)
+		}
+
 		// check if there is only one option
 		r.log.Info(option.Description)
 		answer, err := r.log.Question(&survey.QuestionOptions{
 			Question:               fmt.Sprintf("Please enter a value for %s", optionName),
-			Options:                option.Enum,
+			Options:                questionOpts,
 			ValidationRegexPattern: option.ValidationPattern,
 			ValidationMessage:      option.ValidationMessage,
 			IsPassword:             option.Password,
@@ -230,6 +235,19 @@ func (r *Resolver) refreshSubOptions(
 		}
 	}
 
+	// remove invalid existing user values
+	for newOptionName, newOption := range newDynamicOptions {
+		userValue, ok := r.userOptions[newOptionName]
+		if !ok {
+			continue
+		}
+
+		err := validateUserValue(newOptionName, userValue, newOption)
+		if err != nil {
+			delete(r.userOptions, newOptionName)
+		}
+	}
+
 	// set children on value
 	val := resolvedOptionValues[optionName]
 	val.Children = []string{}
@@ -270,8 +288,13 @@ func (r *Resolver) getChangedOptions(oldOptions config.OptionDefinitions, newOpt
 			continue
 		}
 
+		enumValues := []string{}
+		for _, o := range newV.Enum {
+			enumValues = append(enumValues, o.Value)
+		}
+
 		// check if value still valid
-		if len(newV.Enum) > 0 && !contains(newV.Enum, oldValue.Value) {
+		if len(newV.Enum) > 0 && !contains(enumValues, oldValue.Value) {
 			changedOptions[newK] = newV
 			continue
 		}

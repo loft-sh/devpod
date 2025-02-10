@@ -2,15 +2,17 @@ package compose
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"io"
+	"os"
 	"os/exec"
 	"regexp"
 	"strings"
 
 	"github.com/blang/semver"
-	composecli "github.com/compose-spec/compose-go/cli"
-	composetypes "github.com/compose-spec/compose-go/types"
+	composecli "github.com/compose-spec/compose-go/v2/cli"
+	composetypes "github.com/compose-spec/compose-go/v2/types"
 	"github.com/loft-sh/devpod/pkg/devcontainer/config"
 	"github.com/loft-sh/devpod/pkg/docker"
 	"github.com/pkg/errors"
@@ -23,18 +25,19 @@ const (
 	ServiceLabel         = "com.docker.compose.service"
 )
 
-func LoadDockerComposeProject(paths []string, envFiles []string) (*composetypes.Project, error) {
+func LoadDockerComposeProject(ctx context.Context, paths []string, envFiles []string) (*composetypes.Project, error) {
 	projectOptions, err := composecli.NewProjectOptions(
 		paths,
 		composecli.WithOsEnv,
 		composecli.WithEnvFiles(envFiles...),
 		composecli.WithDotEnv,
+		composecli.WithDefaultProfiles(),
 	)
 	if err != nil {
 		return nil, err
 	}
 
-	project, err := composecli.ProjectFromOptions(projectOptions)
+	project, err := composecli.ProjectFromOptions(ctx, projectOptions)
 	if err != nil {
 		return nil, err
 	}
@@ -141,7 +144,7 @@ func (h *ComposeHelper) Remove(ctx context.Context, projectName string, args []s
 }
 
 func (h *ComposeHelper) GetDefaultImage(projectName, serviceName string) (string, error) {
-	version, err := semver.Parse(h.Version)
+	version, err := semver.Parse(strings.TrimPrefix(h.Version, "v"))
 	if err != nil {
 		return "", err
 	}
@@ -158,7 +161,40 @@ func (h *ComposeHelper) GetDefaultImage(projectName, serviceName string) (string
 	return fmt.Sprintf("%s-%s", projectName, serviceName), nil
 }
 
+func (h *ComposeHelper) FindProjectFiles(ctx context.Context, projectName string) ([]string, error) {
+	buildArgs := []string{"--project-name", projectName}
+	buildArgs = append(buildArgs, "ls", "-a", "--filter", "name="+projectName, "--format", "json")
+
+	rawOut, err := h.buildCmd(ctx, buildArgs...).CombinedOutput()
+	if err != nil {
+		return nil, errors.Wrapf(err, "%s", string(rawOut))
+	}
+
+	type composeOutput struct {
+		Name        string
+		Status      string
+		ConfigFiles string
+	}
+	var composeOutputs []composeOutput
+	if err := json.Unmarshal(rawOut, &composeOutputs); err != nil {
+		return nil, errors.Wrapf(err, "parse compose output")
+	}
+
+	// no compose project found
+	if len(composeOutputs) == 0 {
+		return nil, nil
+	}
+
+	// Parse project files of first match
+	projectFiles := strings.Split(composeOutputs[0].ConfigFiles, ",")
+	return projectFiles, nil
+}
+
 func (h *ComposeHelper) GetProjectName(runnerID string) string {
+	// Check for project name override - https://docs.docker.com/compose/how-tos/project-name/
+	if projectNameOverride := os.Getenv("COMPOSE_PROJECT_NAME"); projectNameOverride != "" {
+		return projectNameOverride
+	}
 	return h.toProjectName(runnerID)
 }
 

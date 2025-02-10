@@ -9,6 +9,7 @@ type TCommandCacheID = `${string}:${TActionName}`
 type TCommandHandler = Readonly<{
   promise: Promise<ResultError>
   stream?: (streamHandler?: THandler<TStreamEventListenerFn>) => TUnsubscribeFn
+  cancel?: () => Promise<ResultError>
 }>
 type TCommandCacheStore = Map<TCommandCacheID, TCommandHandler>
 
@@ -23,6 +24,18 @@ export class CommandCache {
     const cacheID = this.getCacheID(info)
 
     return this.store.get(cacheID)
+  }
+
+  public findCommandHandlerById(id: string) {
+    for (const [cacheID, handler] of this.store) {
+      const [actionID] = cacheID.split(":")
+
+      if (actionID === id) {
+        return handler
+      }
+    }
+
+    return undefined
   }
 
   public clear(info: TCommandCacheInfo) {
@@ -50,7 +63,7 @@ export class CommandCache {
         return noop
       }
 
-      // Replay events in-order before registering the new newHandler
+      //  events in-order before registering the new newHandler
       if (!isEmpty(events)) {
         for (const event of events) {
           handler.notify(event)
@@ -64,11 +77,15 @@ export class CommandCache {
 
       return eventManager.subscribe(handler)
     }
+    const cancel: TCommandHandler["cancel"] = () => {
+      return cmd.cancel()
+    }
 
     const cacheID = this.getCacheID(info)
     this.store.set(cacheID, {
       promise,
       stream,
+      cancel,
     })
 
     return { operation: promise, stream }

@@ -8,68 +8,80 @@ repository = ""
 edition = "2021"
 
 [build-dependencies]
-tauri-build = { version = "1.2", features = [] }
+tauri-build = { version = "2", features = [] }
 
 [dependencies]
+# Tauri
+tauri = { version = "2", features = [
+        "macos-private-api",
+        "image-ico",
+        "tray-icon",
+] }
+# Serde
 serde_json = "1.0"
 serde = { version = "1.0", features = ["derive"] }
-# Tauri
-tauri = { version = "1.2.4", features = [
-        "process-relaunch",
-        "window-close",
-        "notification-all",
-        "clipboard-write-text",
-        "dialog-open",
-        "fs-all",
-        "macos-private-api",
-        "os-all",
-        "path-all",
-        "process-command-api",
-        "process-exit",
-        "shell-all",
-        "system-tray",
-        "window-set-focus",
-        "window-start-dragging",
-        "icon-ico",
-] }
+serde_qs = "0.12.0"
+serde_yaml = "0.9.21"
+serde_urlencoded = "0.7.1"
+
+# Tauri plugins
 tauri-plugin-deep-link = { version = "0.1.0" }
-tauri-plugin-store = { git = "https://github.com/tauri-apps/plugins-workspace", branch = "dev" }
+tauri-plugin-store = { version = "2.1.0" }
+tauri-plugin-dialog = "2"
+tauri-plugin-shell = "2"
+tauri-plugin-clipboard-manager = "2"
+tauri-plugin-fs = "2"
+tauri-plugin-os = "2"
+tauri-plugin-process = "2"
+tauri-plugin-updater = "2"
+tauri-plugin-notification = "2"
+
 # Logging
 log = { version = "0.4" }
-tauri-plugin-log = { git = "https://github.com/tauri-apps/plugins-workspace", branch = "dev" }
+tauri-plugin-log = { version = "2" }
 # Datetime
 chrono = { version = "0.4.23", features = ["serde"] }
 
-tokio = { version = "1.26.0", features = ["time", "parking_lot", "sync"] }
+tokio = { version = "1.26.0", features = [
+        "time",
+        "parking_lot",
+        "sync",
+        "net",
+] }
 thiserror = "1.0.38"
 regex = "1.7.1"
 lazy_static = "1.4.0"
 url = "2.3.1"
 anyhow = "1.0.70"
-serde_qs = "0.12.0"
 dirs = "5.0.1"
-serde_yaml = "0.9.21"
 reqwest = { version = "0.11.18", features = ["json"] }
 dispatch = "0.2.0"
 ts-rs = { version = "6.2.1", features = ["serde-compat", "chrono-impl"] }
 semver = "1.0.18"
 strip-ansi-escapes = "0.1.1"
+axum = { version = "0.7.1", features = ["ws"] }
+tower-http = { version = "0.5.1", features = ["cors"] }
+http = "1.0.0"
+nix = { version = "0.29.0", features = ["signal"] }
 
 [target.'cfg(target_os = "windows")'.dependencies]
 winreg = "0.50.0"
 windows = { version = "0.48", features = [
         "Win32_Foundation",
         "Win32_UI_WindowsAndMessaging",
+        "Win32_System",
+        "Win32_System_Diagnostics",
+        "Win32_System_Diagnostics_ToolHelp",
+        "Win32_System_Threading",
 ] }
 
 [target.'cfg(target_os = "macos")'.dependencies]
-window-vibrancy = "0.3.2"
+window-vibrancy = "0.5.2"
 cocoa = "0.24"
 objc = "0.2"
 
 
 [features]
-enable-updater = ["tauri/updater"]
 # by default Tauri runs in production mode
 # when `tauri dev` runs it is executed with `cargo run --no-default-features` if `devPath` is an URL
 default = ["custom-protocol"]

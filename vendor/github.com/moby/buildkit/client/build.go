@@ -2,6 +2,7 @@ package client
 
 import (
 	"context"
+	"maps"
 
 	"github.com/moby/buildkit/client/buildid"
 	gateway "github.com/moby/buildkit/frontend/gateway/client"
@@ -42,12 +43,10 @@ func (c *Client) Build(ctx context.Context, opt SolveOpt, product string, buildF
 	}
 
 	cb := func(ref string, s *session.Session, opts map[string]string) error {
-		for k, v := range opts {
-			if feOpts == nil {
-				feOpts = map[string]string{}
-			}
-			feOpts[k] = v
+		if feOpts == nil {
+			feOpts = map[string]string{}
 		}
+		maps.Copy(feOpts, opts)
 		gwClient := c.gatewayClientForBuild(ref)
 		g, err := grpcclient.New(ctx, feOpts, s.ID(), product, gwClient, gworkers)
 		if err != nil {
@@ -82,6 +81,11 @@ type gatewayClientForBuild struct {
 func (g *gatewayClientForBuild) ResolveImageConfig(ctx context.Context, in *gatewayapi.ResolveImageConfigRequest, opts ...grpc.CallOption) (*gatewayapi.ResolveImageConfigResponse, error) {
 	ctx = buildid.AppendToOutgoingContext(ctx, g.buildID)
 	return g.gateway.ResolveImageConfig(ctx, in, opts...)
+}
+
+func (g *gatewayClientForBuild) ResolveSourceMeta(ctx context.Context, in *gatewayapi.ResolveSourceMetaRequest, opts ...grpc.CallOption) (*gatewayapi.ResolveSourceMetaResponse, error) {
+	ctx = buildid.AppendToOutgoingContext(ctx, g.buildID)
+	return g.gateway.ResolveSourceMeta(ctx, in, opts...)
 }
 
 func (g *gatewayClientForBuild) Solve(ctx context.Context, in *gatewayapi.SolveRequest, opts ...grpc.CallOption) (*gatewayapi.SolveResponse, error) {

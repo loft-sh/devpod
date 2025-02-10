@@ -26,7 +26,7 @@ func NewDeleteCmd(flags *flags.GlobalFlags) *cobra.Command {
 		GlobalFlags: flags,
 	}
 	deleteCmd := &cobra.Command{
-		Use:   "delete",
+		Use:   "delete [name]",
 		Short: "Deletes an existing machine",
 		RunE: func(_ *cobra.Command, args []string) error {
 			return cmd.Run(context.Background(), args)
@@ -51,7 +51,7 @@ func (cmd *DeleteCmd) Run(ctx context.Context, args []string) error {
 	}
 
 	// check if there are workspaces that still use this machine
-	workspaces, err := workspace.ListWorkspaces(devPodConfig, log.Default)
+	workspaces, err := workspace.List(ctx, devPodConfig, false, log.Default)
 	if err != nil {
 		return err
 	}

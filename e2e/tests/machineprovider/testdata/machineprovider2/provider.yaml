@@ -37,7 +37,8 @@ exec:
       fi
     fi
   create: |-
-    docker run -d --privileged --name devpod-${MACHINE_ID} docker:dind
+    docker run -d --privileged --name devpod-${MACHINE_ID} docker
+    docker exec devpod-${MACHINE_ID} mkdir /etc/init.d
     sleep 5
   delete: |-
     docker stop devpod-${MACHINE_ID} && docker rm devpod-${MACHINE_ID}

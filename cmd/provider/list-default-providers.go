@@ -27,6 +27,7 @@ func getDevpodProviderList() error {
 	if err != nil {
 		return err
 	}
+	defer resp.Body.Close()
 
 	result, err := io.ReadAll(resp.Body)
 	if err != nil {

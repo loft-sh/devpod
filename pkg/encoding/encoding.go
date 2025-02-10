@@ -9,8 +9,8 @@ import (
 
 	"github.com/denisbrodbeck/machineid"
 	"github.com/google/uuid"
+	"github.com/loft-sh/devpod/pkg/util"
 	"github.com/loft-sh/log"
-	"github.com/mitchellh/go-homedir"
 )
 
 const (
@@ -27,7 +27,15 @@ const (
 func CreateNewUID(context, id string) string {
 	// this returns always a UID with length 16
 	uid := strings.ReplaceAll(uuid.New().String()+uuid.New().String(), "-", "")
-	return SafeConcatNameMax([]string{id, context, uid}, WorkspaceUIDLength)
+	args := []string{}
+	if context != "" {
+		args = append(args, context)
+	}
+	if id != "" {
+		args = append(args, id)
+	}
+	args = append(args, uid)
+	return SafeConcatNameMax(args, WorkspaceUIDLength)
 }
 
 func CreateNewUIDShort(id string) string {
@@ -73,7 +81,7 @@ func GetMachineUID(log log.Logger) string {
 	}
 	// get $HOME to distinguish two users on the same machine
 	// will be hashed later together with the ID
-	home, err := homedir.Dir()
+	home, err := util.UserHomeDir()
 	if err != nil {
 		home = "error"
 		if log != nil {

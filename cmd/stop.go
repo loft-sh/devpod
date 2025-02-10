@@ -24,16 +24,17 @@ func NewStopCmd(flags *flags.GlobalFlags) *cobra.Command {
 		GlobalFlags: flags,
 	}
 	stopCmd := &cobra.Command{
-		Use:   "stop",
-		Short: "Stops an existing workspace",
-		RunE: func(_ *cobra.Command, args []string) error {
-			ctx := context.Background()
+		Use:     "stop [flags] [workspace-path|workspace-name]",
+		Aliases: []string{"down"},
+		Short:   "Stops an existing workspace",
+		RunE: func(cobraCmd *cobra.Command, args []string) error {
+			ctx := cobraCmd.Context()
 			devPodConfig, err := config.LoadConfig(cmd.Context, cmd.Provider)
 			if err != nil {
 				return err
 			}
 
-			client, err := workspace2.GetWorkspace(devPodConfig, args, false, log.Default)
+			client, err := workspace2.Get(ctx, devPodConfig, args, false, log.Default)
 			if err != nil {
 				return err
 			}
@@ -87,7 +88,7 @@ func (cmd *StopCmd) stopSingleMachine(ctx context.Context, client client2.BaseWo
 	}
 
 	// try to find other workspace with same machine
-	workspaces, err := workspace2.ListWorkspaces(devPodConfig, log.Default)
+	workspaces, err := workspace2.List(ctx, devPodConfig, false, log.Default)
 	if err != nil {
 		return false, errors.Wrap(err, "list workspaces")
 	}

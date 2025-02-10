@@ -1,6 +1,9 @@
 name: E2E tests
 
 on:
+  release:
+    types: [prereleased]
+  workflow_dispatch: {}
   pull_request:
     branches:
       - main
@@ -23,37 +26,114 @@ env:
 jobs:
   test-e2e:
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: true
+      max-parallel: 16
+      matrix:
+        label:
+          - "build"
+          - "ide"
+          - "integration"
+          - "machine"
+          - "machineprovider"
+          - "provider"
+          - "proxyprovider"
+          - "ssh"
+          - "up"
+          - "up-docker"
+          - "up-podman"
+          - "up-docker-compose"
+          - "up-docker-build"
+          - "up-docker-compose-build"
+          - "context"
 
     steps:
-    - name: Checkout repo
-      uses: actions/checkout@v2
+      - name: Checkout repo
+        uses: actions/checkout@v2
 
-    - name: Set up Go
-      uses: actions/setup-go@v2
-      with:
-        go-version: 1.20.5
+      - name: Set up Go
+        uses: actions/setup-go@v2
+        with:
+          go-version: 1.21.8
 
-    - name: Set up kind k8s cluster
-      uses: engineerd/setup-kind@v0.5.0
-      with:
-        version: "v0.20.0"
-        image: kindest/node:v1.27.3
+      - name: Set up kind k8s cluster
+        uses: engineerd/setup-kind@v0.5.0
+        with:
+          version: "v0.20.0"
+          image: kindest/node:v1.27.3
 
-    - name: Testing kind cluster set-up
-      run: |
-        set -x
-        kubectl cluster-info
-        kubectl get pods -n kube-system -v 10
-        echo "kubectl config current-context:" $(kubectl config current-context)
-        echo "KUBECONFIG env var:" ${KUBECONFIG}
+      - name: Testing kind cluster set-up
+        run: |
+          set -x
+          kubectl cluster-info
+          kubectl get pods -n kube-system -v 10
+          echo "kubectl config current-context:" $(kubectl config current-context)
+          echo "KUBECONFIG env var:" ${KUBECONFIG}
 
-    - name: Build binary and copy to the E2E directory
-      working-directory: ./e2e
-      run: |
-        chmod +x ../hack/build-e2e.sh
-        BUILDDIR=bin SRCDIR=".." ../hack/build-e2e.sh
+      - name: Build binary and copy to the E2E directory
+        working-directory: ./e2e
+        run: |
+          chmod +x ../hack/build-e2e.sh
+          BUILDDIR=bin SRCDIR=".." ../hack/build-e2e.sh
 
-    - name: E2E test
-      working-directory: ./e2e
-      run: |
-        sudo KUBECONFIG=/home/runner/.kube/config go test -v -ginkgo.v -timeout 3600s
+      - name: E2E test
+        working-directory: ./e2e
+        run: |
+          sudo KUBECONFIG=/home/runner/.kube/config \
+            GH_USERNAME=${GH_USERNAME} \
+            GH_ACCESS_TOKEN=${GH_ACCESS_TOKEN} \
+            go test -v -ginkgo.v -timeout 3600s --ginkgo.label-filter=${{ matrix.label }}
+        env:
+          GH_USERNAME: ${{ secrets.GH_PRIVATE_REPO_USER_TEST }}
+          GH_ACCESS_TOKEN: ${{ secrets.GH_PRIVATE_REPO_TOKEN_TEST }}
+
+  test-e2e-windows:
+    runs-on: self-hosted-windows
+    # We run this only on PRs, for pre-releases we run the full separate workflow
+    if: ${{ github.event_name == 'pull_request' }}
+    strategy:
+      fail-fast: true
+      max-parallel: 1
+      matrix:
+        label:
+          - "build"
+          - "ide"
+          - "ssh"
+          - "up-docker"
+          - "up-docker-build"
+          - "up-docker-compose"
+          # - "up-docker-wsl"
+
+    steps:
+      - name: Git set line ending
+        run: |
+          git config --global core.autocrlf false
+
+      - name: Checkout repo
+        uses: actions/checkout@v2
+
+      - name: Set up Go
+        uses: actions/setup-go@v2
+        with:
+          go-version: 1.21.8
+
+      - name: Build binary and copy to the E2E directory
+        run: |
+          mkdir e2e\bin
+          go build -ldflags "-s -w" -o e2e\bin\devpod-windows-amd64.exe
+          $Env:GOOS = "linux"; $Env:GOARCH = "amd64"; go build -ldflags "-s -w" -o e2e\bin\devpod-linux-amd64
+
+      - name: E2E test
+        working-directory: .\e2e
+        run: |
+          go run github.com/onsi/ginkgo/v2/ginkgo -r --timeout=3600s --label-filter=${{ matrix.label }}
+
+      - name: Container cleanup
+        if: ${{ always() }}
+        run: |
+          if (Test-Path C:\Users\loft-user\.devpod\) {
+            Remove-Item -Recurse C:\Users\loft-user\.devpod\
+          }
+          sh -c "docker ps -q -a | xargs docker rm -f || :"
+          sh -c "docker images --format '{{.Repository}}:{{.Tag}},{{.ID}}' | grep -E 'devpod|none|temp|^test' | cut -d',' -f2 | xargs docker rmi -f || :"
+          sh -c "docker images --format '{{.Tag}}|{{.Digest}}' | grep none | cut -d'|' -f1 | xargs docker rmi -f || :"

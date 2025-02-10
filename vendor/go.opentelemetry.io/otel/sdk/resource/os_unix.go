@@ -1,16 +1,5 @@
 // Copyright The OpenTelemetry Authors
-//
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-//     http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
+// SPDX-License-Identifier: Apache-2.0
 
 //go:build aix || darwin || dragonfly || freebsd || linux || netbsd || openbsd || solaris || zos
 // +build aix darwin dragonfly freebsd linux netbsd openbsd solaris zos
@@ -18,7 +7,6 @@
 package resource // import "go.opentelemetry.io/otel/sdk/resource"
 
 import (
-	"bytes"
 	"fmt"
 	"os"
 
@@ -69,21 +57,12 @@ func uname() (string, error) {
 	}
 
 	return fmt.Sprintf("%s %s %s %s %s",
-		charsToString(utsName.Sysname[:]),
-		charsToString(utsName.Nodename[:]),
-		charsToString(utsName.Release[:]),
-		charsToString(utsName.Version[:]),
-		charsToString(utsName.Machine[:]),
+		unix.ByteSliceToString(utsName.Sysname[:]),
+		unix.ByteSliceToString(utsName.Nodename[:]),
+		unix.ByteSliceToString(utsName.Release[:]),
+		unix.ByteSliceToString(utsName.Version[:]),
+		unix.ByteSliceToString(utsName.Machine[:]),
 	), nil
-}
-
-// charsToString converts a C-like null-terminated char array to a Go string.
-func charsToString(charArray []byte) string {
-	if i := bytes.IndexByte(charArray, 0); i >= 0 {
-		charArray = charArray[:i]
-	}
-
-	return string(charArray)
 }
 
 // getFirstAvailableFile returns an *os.File of the first available

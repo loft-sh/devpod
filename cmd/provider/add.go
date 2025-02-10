@@ -33,7 +33,7 @@ func NewAddCmd(flags *flags.GlobalFlags) *cobra.Command {
 		GlobalFlags: flags,
 	}
 	addCmd := &cobra.Command{
-		Use:   "add",
+		Use:   "add [URL or path]",
 		Short: "Adds a new provider to DevPod",
 		PreRunE: func(cobraCommand *cobra.Command, args []string) error {
 			if cmd.FromExisting != "" {
@@ -93,14 +93,14 @@ func (cmd *AddCmd) Run(ctx context.Context, devPodConfig *config.Config, args []
 
 	log.Default.Donef("Successfully installed provider %s", providerConfig.Name)
 	if cmd.Use {
-		configureErr := ConfigureProvider(ctx, providerConfig, devPodConfig.DefaultContext, options, true, false, &cmd.SingleMachine, log.Default)
+		configureErr := ConfigureProvider(ctx, providerConfig, devPodConfig.DefaultContext, options, true, false, false, &cmd.SingleMachine, log.Default)
 		if configureErr != nil {
 			devPodConfig, err := config.LoadConfig(cmd.Context, "")
 			if err != nil {
 				return err
 			}
 
-			err = DeleteProvider(devPodConfig, providerConfig.Name, true)
+			err = DeleteProvider(ctx, devPodConfig, providerConfig.Name, true, false, log.Default)
 			if err != nil {
 				return errors.Wrap(err, "delete provider")
 			}

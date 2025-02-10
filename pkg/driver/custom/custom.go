@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"io"
 	"strings"
+	"time"
 
 	"github.com/loft-sh/devpod/pkg/agent"
 	"github.com/loft-sh/devpod/pkg/binaries"
@@ -16,6 +17,7 @@ import (
 	provider2 "github.com/loft-sh/devpod/pkg/provider"
 	"github.com/loft-sh/devpod/pkg/types"
 	"github.com/loft-sh/log"
+	"github.com/loft-sh/log/scanner"
 	"github.com/sirupsen/logrus"
 )
 
@@ -25,6 +27,8 @@ func NewCustomDriver(workspaceInfo *provider2.AgentWorkspaceInfo, log log.Logger
 		workspaceInfo: workspaceInfo,
 	}
 }
+
+var _ driver.Driver = (*customDriver)(nil)
 
 type customDriver struct {
 	log log.Logger
@@ -200,9 +204,16 @@ func (c *customDriver) RunDevContainer(ctx context.Context, workspaceId string, 
 		return fmt.Errorf("marshal run options: %w", err)
 	}
 
-	// create a log writer
-	writer := c.log.Writer(logrus.InfoLevel, false)
+	done := make(chan struct{})
+	reader, writer := io.Pipe()
 	defer writer.Close()
+	go func() {
+		scan := scanner.NewScanner(reader)
+		for scan.Scan() {
+			c.log.Info(scan.Text())
+		}
+		done <- struct{}{}
+	}()
 
 	// run command
 	err = c.runCommand(
@@ -219,10 +230,43 @@ func (c *customDriver) RunDevContainer(ctx context.Context, workspaceId string, 
 		c.log,
 	)
 	if err != nil {
+		// close writer, wait for logging to flush and shut down
+		writer.Close()
+		select {
+		case <-done:
+		// forcibly shut down after 1 second
+		case <-time.After(1 * time.Second):
+		}
 		return fmt.Errorf("error running devcontainer: %w", err)
 	}
 
 	return nil
+}
+
+func (c *customDriver) GetDevContainerLogs(ctx context.Context, workspaceID string, stdout io.Writer, stderr io.Writer) error {
+	// run command
+	err := c.runCommand(
+		ctx,
+		workspaceID,
+		"getDevContainerLogs",
+		c.workspaceInfo.Agent.Custom.GetDevContainerLogs,
+		nil,
+		stdout,
+		stderr,
+		nil,
+		c.log,
+	)
+	if err != nil {
+		return fmt.Errorf("error getting devcontainer logs: %w", err)
+	}
+
+	return nil
+}
+
+var _ driver.ReprovisioningDriver = (*customDriver)(nil)
+
+func (c *customDriver) CanReprovision() bool {
+	return c.workspaceInfo.Agent.Custom.CanReprovision == "true"
 }
 
 func (c *customDriver) runCommand(

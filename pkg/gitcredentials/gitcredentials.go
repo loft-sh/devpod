@@ -3,6 +3,7 @@ package gitcredentials
 import (
 	"context"
 	"fmt"
+	netUrl "net/url"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -30,25 +31,24 @@ type GitUser struct {
 }
 
 func ConfigureHelper(binaryPath, userName string, port int) error {
-	homeDir, err := command.GetHome(userName)
+	gitConfigPath, err := getGlobalGitConfigPath(userName)
 	if err != nil {
 		return err
 	}
 
-	gitConfigPath := filepath.Join(homeDir, ".gitconfig")
 	out, err := os.ReadFile(gitConfigPath)
 	if err != nil && !os.IsNotExist(err) {
 		return err
 	}
 
 	config := string(out)
-	if !strings.Contains(config, fmt.Sprintf(`helper = "%s agent git-credentials --port %d"`, binaryPath, port)) {
+	if !strings.Contains(config, fmt.Sprintf(`helper = !'%s' agent git-credentials --port %d`, binaryPath, port)) {
 		content := removeCredentialHelper(config) + fmt.Sprintf(`
 [credential]
-        helper = "%s agent git-credentials --port %d"
+        helper = !'%s' agent git-credentials --port %d
 `, binaryPath, port)
 
-		err = os.WriteFile(gitConfigPath, []byte(content), 0644)
+		err = os.WriteFile(gitConfigPath, []byte(content), 0600)
 		if err != nil {
 			return errors.Wrap(err, "write git config")
 		}
@@ -63,12 +63,11 @@ func ConfigureHelper(binaryPath, userName string, port int) error {
 }
 
 func RemoveHelper(userName string) error {
-	homeDir, err := command.GetHome(userName)
+	gitConfigPath, err := getGlobalGitConfigPath(userName)
 	if err != nil {
 		return err
 	}
 
-	gitConfigPath := filepath.Join(homeDir, ".gitconfig")
 	return RemoveHelperFromPath(gitConfigPath)
 }
 
@@ -79,7 +78,7 @@ func RemoveHelperFromPath(gitConfigPath string) error {
 	}
 
 	if strings.Contains(string(out), "[credential]") {
-		err = os.WriteFile(gitConfigPath, []byte(removeCredentialHelper(string(out))), 0644)
+		err = os.WriteFile(gitConfigPath, []byte(removeCredentialHelper(string(out))), 0600)
 		if err != nil {
 			return errors.Wrap(err, "write git config")
 		}
@@ -142,7 +141,7 @@ func ToString(credentials *GitCredentials) string {
 
 func SetUser(userName string, user *GitUser) error {
 	if user.Name != "" {
-		shellCommand := fmt.Sprintf("git config --global user.name '%s'", user.Name)
+		shellCommand := fmt.Sprintf(`git config --global user.name "%s"`, user.Name)
 		args := []string{}
 		if userName != "" {
 			args = append(args, "su", userName, "-c", shellCommand)
@@ -156,7 +155,7 @@ func SetUser(userName string, user *GitUser) error {
 		}
 	}
 	if user.Email != "" {
-		shellCommand := fmt.Sprintf("git config --global user.email '%s'", user.Email)
+		shellCommand := fmt.Sprintf(`git config --global user.email "%s"`, user.Email)
 		args := []string{}
 		if userName != "" {
 			args = append(args, "su", userName, "-c", shellCommand)
@@ -172,21 +171,32 @@ func SetUser(userName string, user *GitUser) error {
 	return nil
 }
 
-func GetUser() (*GitUser, error) {
+func GetUser(userName string) (*GitUser, error) {
 	gitUser := &GitUser{}
 
+	scopeArgs := []string{"config"}
+	if userName != "" {
+		p, err := getGlobalGitConfigPath(userName)
+		if err != nil {
+			return gitUser, fmt.Errorf("get git global dir for %s: %w", userName, err)
+		}
+		scopeArgs = append(scopeArgs, "--file", p)
+	} else {
+		scopeArgs = append(scopeArgs, "--global")
+	}
+
 	// we ignore the error here, because if email is empty we don't care
-	name, _ := exec.Command("git", "config", "--global", "user.name").Output()
+	name, _ := exec.Command("git", append(scopeArgs[:], "user.name")...).Output()
 	gitUser.Name = strings.TrimSpace(string(name))
 
-	email, _ := exec.Command("git", "config", "--global", "user.email").Output()
+	email, _ := exec.Command("git", append(scopeArgs[:], "user.email")...).Output()
 	gitUser.Email = strings.TrimSpace(string(email))
+
 	return gitUser, nil
 }
 
 func GetCredentials(requestObj *GitCredentials) (*GitCredentials, error) {
-	var c *exec.Cmd
-
+	// run in git helper mode if we have a port
 	gitHelperPort := os.Getenv("DEVPOD_GIT_HELPER_PORT")
 	if gitHelperPort != "" {
 		binaryPath, err := os.Executable()
@@ -194,18 +204,69 @@ func GetCredentials(requestObj *GitCredentials) (*GitCredentials, error) {
 			return nil, err
 		}
 
-		c = exec.Command(binaryPath, "agent", "git-credentials", "--port", gitHelperPort, "get")
-	} else {
-		c = git.CommandContext(context.TODO(), "credential", "fill")
+		c := exec.Command(binaryPath, "agent", "git-credentials", "--port", gitHelperPort, "get")
+
+		c.Stdin = strings.NewReader(ToString(requestObj))
+		stdout, err := c.Output()
+		if err != nil {
+			return nil, err
+		}
+
+		return Parse(string(stdout))
 	}
 
+	// use local credentials if not
+	c := git.CommandContext(context.TODO(), git.GitCommandOptions{}, "credential", "fill")
 	c.Stdin = strings.NewReader(ToString(requestObj))
 	stdout, err := c.Output()
 	if err != nil {
 		return nil, err
 	}
-
 	return Parse(string(stdout))
+}
+
+type GetHttpPathParameters struct {
+	Host        string
+	Protocol    string
+	CurrentPath string
+	Repository  string
+}
+
+// GetHTTPPath checks for gits `credential.useHttpPath` setting for a given host+protocol and returns the path component
+// of `GitCredential` if the setting is true
+func GetHTTPPath(ctx context.Context, params GetHttpPathParameters) (string, error) {
+	// No need to look up the HTTP Path if we already have one
+	if params.CurrentPath != "" {
+		return params.CurrentPath, nil
+	}
+
+	// Check if we need to respect gits `credential.useHttpPath`
+	// The actual format for the key is `credential.$PROTOCOL://$HOST.useHttpPath`, i.e. `credential.https://github.com.useHttpPath`
+	// We need to ignore the error as git will always exit with 1 if the key doesn't exist
+	configKey := fmt.Sprintf("credential.%s://%s.useHttpPath", params.Protocol, params.Host)
+	out, _ := git.CommandContext(ctx, git.GitCommandOptions{}, "config", "--get", configKey).Output()
+	if strings.TrimSpace(string(out)) != "true" {
+		return "", nil
+	}
+	// We can assume the GitRepository is always HTTP(S) based as otherwise we wouldn't
+	// request credentials for it
+	url, err := netUrl.Parse(params.Repository)
+	if err != nil {
+		return "", fmt.Errorf("parse workspace repository: %w", err)
+	}
+
+	return url.Path, nil
+}
+
+func SetupGpgGitKey(gitSignKey string) error {
+	gitConfigCmd := exec.Command("git", []string{"config", "--global", "user.signingKey", gitSignKey}...)
+
+	out, err := gitConfigCmd.Output()
+	if err != nil {
+		return errors.Wrap(err, "git signkey: "+string(out))
+	}
+
+	return nil
 }
 
 func removeCredentialHelper(content string) string {
@@ -231,4 +292,24 @@ func removeCredentialHelper(content string) string {
 	}
 
 	return strings.Join(out, "\n")
+}
+
+// getGlobalGitConfigPath resolves the global git config for the specified user according to
+// https://git-scm.com/docs/git-config/#Documentation/git-config.txt-XDGCONFIGHOMEgitconfig
+func getGlobalGitConfigPath(userName string) (string, error) {
+	if xdgConfigHome := os.Getenv("XDG_CONFIG_HOME"); xdgConfigHome != "" {
+		return filepath.Join(xdgConfigHome, "git", "config"), nil
+	}
+
+	home, err := command.GetHome(userName)
+	if err != nil {
+		return "", fmt.Errorf("get homedir for %s: %w", userName, err)
+	}
+
+	return filepath.Join(home, ".gitconfig"), nil
+}
+
+// GetLocalGitConfigPath resolves the local git config for the specified repository path
+func GetLocalGitConfigPath(repoPath string) string {
+	return filepath.Join(repoPath, ".git", "config")
 }

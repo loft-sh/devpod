@@ -28,6 +28,7 @@ func InjectAgent(
 	downloadURL string,
 	preferDownload bool,
 	log log.Logger,
+	timeout time.Duration,
 ) error {
 	return InjectAgentAndExecute(
 		ctx,
@@ -41,6 +42,7 @@ func InjectAgent(
 		nil,
 		nil,
 		log,
+		timeout,
 	)
 }
 
@@ -56,6 +58,7 @@ func InjectAgentAndExecute(
 	stdout io.Writer,
 	stderr io.Writer,
 	log log.Logger,
+	timeout time.Duration,
 ) error {
 	// should execute locally?
 	if local {
@@ -111,7 +114,7 @@ func InjectAgentAndExecute(
 			stdin,
 			stdout,
 			stderr,
-			time.Second*20,
+			timeout,
 			log,
 		)
 		if err != nil {
@@ -189,7 +192,10 @@ func downloadAgentLocally(tryDownloadURL, targetArch string, log log.Logger) (st
 		return agentPath, nil
 	}
 
-	resp, err := devpodhttp.GetHTTPClient().Get(tryDownloadURL + "/devpod-linux-" + targetArch)
+	fullDownloadURL := tryDownloadURL + "/devpod-linux-" + targetArch
+	log.Debugf("Attempting to download DevPod agent from: %s", fullDownloadURL)
+
+	resp, err := devpodhttp.GetHTTPClient().Get(fullDownloadURL)
 	if err != nil {
 		return "", errors.Wrap(err, "download devpod")
 	}
@@ -209,7 +215,7 @@ func downloadAgentLocally(tryDownloadURL, targetArch string, log log.Logger) (st
 	_, err = io.Copy(file, resp.Body)
 	if err != nil {
 		_ = os.Remove(agentPath)
-		return "", errors.Wrap(err, "download devpod")
+		return "", errors.Wrapf(err, "failed to download devpod from URL: %s", fullDownloadURL)
 	}
 
 	return agentPath, nil

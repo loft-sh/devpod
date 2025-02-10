@@ -1,0 +1,15 @@
+{
+  "dockerComposeFile": "docker-compose.devcontainer.yml",
+  "service": "app",
+  "runServices": ["app2"],
+  "workspaceFolder": "/workspaces",
+  "features":{
+    "ghcr.io/devcontainers/features/github-cli:1": {},
+    "ghcr.io/devcontainers/features/node:1": {
+      "installYarnUsingApt": true,
+      "version": "lts",
+      "nvmVersion": "latest"
+    }
+  },
+  "forwardPorts": [1337, "db:5432"]
+}

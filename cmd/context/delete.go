@@ -61,7 +61,10 @@ func (cmd *DeleteCmd) Run(ctx context.Context, context string) error {
 
 	delete(devPodConfig.Contexts, context)
 	if devPodConfig.DefaultContext == context {
-		devPodConfig.DefaultContext = ""
+		devPodConfig.DefaultContext = "default"
+	}
+	if devPodConfig.OriginalContext == context {
+		devPodConfig.OriginalContext = "default"
 	}
 
 	err = config.SaveConfig(devPodConfig)

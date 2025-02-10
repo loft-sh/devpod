@@ -62,7 +62,6 @@ func InjectAndExecute(
 	if err != nil {
 		return true, err
 	}
-	defer stdoutWriter.Close()
 
 	// delayed stderr
 	delayedStderr := newDelayedWriter(stderr)
@@ -82,7 +81,6 @@ func InjectAndExecute(
 	execErrChan := make(chan error, 1)
 	go func() {
 		defer stdoutWriter.Close()
-		defer stdinWriter.Close()
 		defer log.Debugf("done exec")
 
 		err := exec(cancelCtx, scriptRawCode, stdinReader, stdoutWriter, delayedStderr)
@@ -96,10 +94,8 @@ func InjectAndExecute(
 	// inject file
 	injectChan := make(chan injectResult, 1)
 	go func() {
-		defer stdoutWriter.Close()
 		defer stdinWriter.Close()
 		defer log.Debugf("done inject")
-		defer cancel()
 
 		wasExecuted, err := inject(localFile, stdinWriter, stdin, stdoutReader, stdout, delayedStderr, timeout, log)
 		injectChan <- injectResult{

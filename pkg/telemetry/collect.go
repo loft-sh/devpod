@@ -1,183 +1,208 @@
 package telemetry
 
 import (
-	"bytes"
-	"encoding/base64"
 	"encoding/json"
-	"fmt"
-	"net/http"
-	"sync"
+	"os"
+	"runtime"
+	"strings"
 	"time"
 
-	"github.com/google/uuid"
-	"github.com/loft-sh/devpod/cmd/flags"
-	"github.com/loft-sh/devpod/pkg/telemetry/serviceaccount"
-	"github.com/loft-sh/devpod/pkg/telemetry/types"
+	"github.com/loft-sh/analytics-client/client"
+	devpodclient "github.com/loft-sh/devpod/pkg/client"
+	"github.com/loft-sh/devpod/pkg/config"
+	"github.com/loft-sh/devpod/pkg/version"
 	"github.com/loft-sh/log"
+	"github.com/moby/term"
 	"github.com/spf13/cobra"
-	"gopkg.in/square/go-jose.v2/jwt"
 )
+
+type ErrorSeverityType string
 
 const (
-	telemetryEndpoint          = "https://admin.loft.sh/analytics/v1/devpod/v1/events"
-	telemetryRequestTimeout    = 5 * time.Second
-	telemetrySendFinishedAfter = 10 * time.Second
+	WarningSeverity ErrorSeverityType = "warning"
+	ErrorSeverity   ErrorSeverityType = "error"
+	FatalSeverity   ErrorSeverityType = "fatal"
+	PanicSeverity   ErrorSeverityType = "panic"
 )
 
-var (
-	Collector EventCollector = NewDefaultCollector()
+const UIEnvVar = "DEVPOD_UI"
 
-	UIEventsExceptions []string = []string{"devpod list", "devpod provider list", "devpod status"}
-
-	// a dummy key so this doesn't fail for dev/testing, this is set by build flag in release action
-	telemetryPrivateKey = `LS0tLS1CRUdJTiBSU0EgUFJJVkFURSBLRVktLS0tLQpNSUlKS1FJQkFBS0NBZ0VBdlE3cHhqYzEybzlJdXQyQkQ2TUtaWnhDY29hbXpJNVV0Wll6Wk5GZFVQYkJsSlI0ClBXOEM1STM3ZHk1cW1yMlU5UlJSbjNlOUpjSDRPS0QzenVHSkhDd0Z2TnpOYzJsYVQ0dlE5NjlVeVpmakdhT3AKVmxtSEhDaDJXajZvbHNUNmhldGJySTNpYzNvVm1XRHBhSHM4OGU3K2dzTnkyTUowNjNES0ZYM0VLV3pNQVVWZQprZUI1M29DWStCT0R0RExRcHd3eC9wQWp1bUFNS0dkNEc2a3FhcE1VZElpN1NKMzlyL2JxL2VUeWZwSUUzOW9ZCmoxanlhdkFpRFMxR1g0Mm5mU0lkck5NSDhERytSSzNVSHMycTFDOXI0Y1dzenVURktlOHprZ2ltdC9oY2sxS2sKZjZBTllyRE0vQmlrcWZoYXVDcHlMdDFhOTdHbUNNb0x1Z3NBWlB6TjhlTXk4eFlwZy9PZ3hjQ3d2a1E2SzVnTQo0Q3k5ZG5aOFVJTlBTVE02Z2xJUFR1cHpPUzYwVDlBb2VZREcwa245bEVYKzhHT1RyZ1NmaTBONEpxbzZ0YlU0Cjk0TXlvcTB2VmtaVjNGYWNKMDcwbFJQaUFxcm1BeDdMS1J0UUNoeiszY0hLcDhBUmNWS1RuT3VpSHdDNEk0SUYKUGhmbzZ4QWFQWUJ0RDRNQUtydFErS3pycVlwNHZaTVZZWUpWR1hzT2xFN1FGSUJjUk5FUTlPdmlTSHZpTEhsTApHbjhER1NxWVVBWEVPVVZBNWtkTUVwOGhYMXJkb2pyNk9FbEt5dnF1Wk9JMk9yekhDWmFCNS9nQVZwelRGcGhYCjlrN2oyU1FyNUcxbXI2TTE3VXJacnhBcUphSGo1ZnBuL2dCOW9ubkN1bmcvSTNDOEVzb0xVQnovd0xrQ0F3RUEKQVFLQ0FnRUFsMGVNcHBCZEpuTks5a1B5VnVuV2t2SVRkWUxyaTNsRXJUendDUGRDM1Z0bUVSY3drNi8xdDU4cApIZmZsVThicG42WlBuZlA1UlhKTnhqcC9zR3BtQlVYd25XeHRkYkZTazU1RWF6MC84a1A0Yy9heXRLYlU1eUkxCmVnYnpiaGxXZ2J5UDBhYURFbllaUEc4QXRoc083R1NhQVZhVjJuN1hnZUh4d25xdGNaeGVMWkl0bHpyeEthcnIKUEc2WkQ2TXR0TTJjWDU5RkI0aDlrZ01oWjdqWWVRa1I4Q0hOQXRGeFF0R292ZHJxYzM4eUtWRmlINnBENkhBWQpQMFVBTDh1d3Z2K0NrVjBYMkFwbHZwejl4Rnc4R3FlTGd0QmpjL1k1RWxJV2lQOGxNTWFxaFRRMjd1ekthVE1pCkE0TlFsN1ZrR2tQVXRFMXAwaE96MFFxamtZM21GSWpsTEhJYTBWN3QybmxrSXJNKzVLbVNqbFF4WjhMRHZGcnoKTkxFaUk5dnp1RWNHdVpPYXZHdjhzSmhXK2paQ3JQWVVyc3dPMTBsYnVsMkdnL2JBVFd2U3lVUGlyb1RsbEc5NApsVzFrMzl1MUk5d0tLaExSaE5TMlZQTW4xSE1CY0FFQXlTTWFudDdwbjQ4R1R1Q0VseUlEZTM4OW9KWHVOcXpNCjdrS2VaaG0wYzBJNmpvSThVcmNyMVZvTTErbmdtdzlxWldtOWJXekZpNW1IaTlCRXkyRGpjeHlOK1l3bFRVQW4Kd0EyblpoMVY0U1hUZUVWUzFOQ3J5dGNXSlZBdjJObWpTV3ZUQk4yaFdCZzEyVGpXZi9MSEF4eklyVzBaa0tKcgptVXdDQ0V3anhkM2JIMzluWnZkeG5xTXVISnZnUUpmM1NGQVRmZlZDWjI2OWdCZUtoZ0VDZ2dFQkFOc2IyTnZ5CmhxU2MwbW43VWtncHYvUjh0TVNsVVRId3g3cDNCZ21xR2tnU0JCR0t3cEI4Q1NzNWl4UHFGYzZaMFlBY0toL0wKZEFGTFNMN3NHRFFweGpleTFmWEtpeXdQUm5MZEZ2aTBac29UcXhsRUJweVBlQjlWSXZLckFuN3cyWVY0VnJIdQpsbGcwV0FmL2s3cTdsMXRGUmxnaFFSN084UVVtS1daUGNGRjhqR1lYZHZhWUdjZzRpSkM4djBBZ1VhQmxPMCt6CnEzaHBvQ0Q5NlRIUUNTdDQvT0E1Rmo2SzUweWk1N2FHd25vMTNBbVQ5eG9Qc0dqeldLMG1oUGp3M0NZQlYwbisKTit4OVBBcXBJdmhPbU1KZmpOWEQzYndoSFNjNUd4VjlpbUpBSk03MjhZazR5Nm9rVTdJNkJXZDNLV3pDaVRENwp5UHE4U1N3amxoaVk3WGtDZ2dFQkFOemp6NlFHZ1V5Zm5PZ1IwR2JEejAyMVQrOUkrdHZwSnVPQmZNWTVsTlo0CndHOGtoSkdFZk5CQUxqOXIzQXcxaDhEbEpSUmp2OVFFR2krYmFpRkJPWVB4VTlyczJnMmhIWkk5ZkdyRW1LUDMKRjJsNE1TNm1vVGx0RUxwZnM5R3FhQmxyRFlYODFYeEVSQTU0aUhQSmRoQjl0K0QxTFdxRXVLMVVaZ25NUlNQLwp2RHdZUEFXOHlvMGhiM0JDMTVvZ3BPRzMyMWl0QmpYVjhtN1pmN25rZjNyOEhWaG5BcytubW93bXg1dU8yanZ6CmtrajdxaC9WRmlHajcxc1ovV0NHQk9pQk0ySVVMNVhQUmpCM2lNQXMzNGtaTHdlOC9SL3NsaE81bzFucVhVeW4KLzV3UTFoYlNKOXpzNzdwYys0K2ROUHdJVzdHSnhEbENkQWZTd0RuNjNVRUNnZ0VBRnFhWFVZMk4yOENXZy94RwpNazJXbVhpMjIwbFh6bmpjdk9zSEJjSysrc3BaLzFJLzhOM1J1TlUzQ25UOWtpRVdwazdERUF4aFRxend0VVFFCjhJZU5CVDhJbldNMTVmVWlURWVNMDJNYTZUTUZVaFJWTnFRaVArTDJQTzN1MFI2bTdnUlZ1Z2szSTZFdHBJNEkKUUpxWitBWitVaWdGNm1Cc1RDTDR6cW5ScTZyYmZNWmFOdjNjVkhWN3NMTENkcWVncUpzdWVYdlNjeDFBUDRqZwpMWlViRFpKeFdlQ3M2d1JEQ3dvZ09COVFSWUFCNGorWW9Pb1VTNVUwaXBuYnp6eGZGZEszcWwrTWVuY3IyTkpKCldqQU4zTEl5QmZzOGxmRTZhVTZlL1NiQVFvM3RBRFJKSGUxd0tJT2UzMkxlSWljUWNqemVIK0Uza3F3YVNHVFoKWkd1U3lRS0NBUUVBbjREeGcyUWZJaEZ2NERSYzVKZ29yZGhyYkVLcXd2bk5WeU05MG5YcUFDVVo4Q2ZTZ3JIRQozeXc1T1JyTnZ4TTRnQlgzZkkyN0M0SWExcDNIT1ZROEVBYkhvcUs5b25IaFJLU1pudzl2bVpibmxRVnhubG84CnVaY0VLVkRLTEhCODB6MzJlZlprd21NWk1jbmYzcHh2WU9FblVvNDR5VjRsYlNRd3VvcUNzc2dNU09qSER1MlEKNWZCcTVBbWdYbStNSUdIL1JqMUs2cjBmWHVRMzB5Z28xY29QOXJJTDJaOFJmbnJTVUlZTEdKZDkzcTI3MzFpagpybzhPWEI2Y1ZJTHlNR0o3bENzM1lWcFhPTkJZTTAwejdXLytBZng2Vy84Zk1BY3c2ZERPcG5mNW45eVllOG90CmR0NnhEVVh2Y1hqM3RiYmpYNFEzNlpFTzhFZEMvNXNqQVFLQ0FRQkJSNHk5OTJyN05LOVZTZUh1TG1VSUZjd2kKS1dnMG0rVGk2TGxyeDFPS2k3b3cydDhubXlDQklNaDhGWTVJL0RsV1JpTTh0WWUrS2VBYTJCUFdpWmRVbUVQUgpKTHpBWVFjNXhYNVNSait3MDNHZjljdzBteFRNazNzbGxSUERYNEZ2bVpSRDkyRHBwWlFBbHdTU3haZHEyWERrCmMrZG9pVE9zTm04endNaFNXVTFiK2d6MjlabnVFamtMeU1HaXVlUll6bXNVdmdjL09KRzdSU2V5NzhmUWtZYm0KWnRIb3o3dFdJTFJxSVRYclFlZ2h6N2Jrc1lPMzM5QjE5bEI0blFPc2Y3MnBMVnMyTWdkRWlwUUp4VDlaVWRmaQpGZkQ1YzNlSkNINlNWQkRSdjFpV3Y5TzRSdWkvNThMcVRvYVE0bzdmRWxha2RoN3BrK3ZiWnRmNG41dlUKLS0tLS1FTkQgUlNBIFBSSVZBVEUgS0VZLS0tLS0K`
-)
-
-type EventCollector interface {
-	// RecordStartEvent populates TelemetryRequest with the data about Command start and uploads the request to the telemetry backend
-	RecordStartEvent(provider string)
-	RecordEndEvent(err error)
-	SetCLIData(*cobra.Command, *flags.GlobalFlags)
+var UIEventsExceptions []string = []string{
+	"devpod list",
+	"devpod status",
+	"devpod provider list",
+	"devpod pro list",
+	"devpod pro check-health",
+	"devpod pro check-update",
+	"devpod ide list",
+	"devpod ide use",
+	"devpod provider use",
+	"devpod version",
+	"devpod context options",
 }
 
-func NewDefaultCollector() *DefaultCollector {
-	decodedCertificate, err := base64.RawStdEncoding.DecodeString(telemetryPrivateKey)
-	if err != nil {
-		panic(fmt.Errorf("failed to decode telemetry key string: %w", err))
-	}
+// skip everything in pro mode
+var CollectorCLI CLICollector = &noopCollector{}
 
-	privateKey, err := parsePrivateKey(decodedCertificate)
-	if err != nil {
-		panic(fmt.Errorf("failed to parse telemetry key: %w", err))
-	}
+type CLICollector interface {
+	RecordCLI(err error)
+	SetClient(client devpodclient.BaseWorkspaceClient)
 
-	tokenGenerator, err := serviceaccount.JWTTokenGenerator("devpod-telemetry", privateKey)
-	if err != nil {
-		panic(fmt.Errorf("failed to create JWTTokenGenerator: %w", err))
-	}
-
-	return &DefaultCollector{
-		executionID:    uuid.New().String(),
-		startTime:      time.Now(),
-		tokenGenerator: tokenGenerator,
-	}
+	// Flush makes sure all events are sent to the backend
+	Flush()
 }
 
-type DefaultCollector struct {
-	mux       sync.Mutex
-	startOnce sync.Once
-
-	startTime   time.Time
-	executionID string
-
-	command     *cobra.Command
-	globalFlags *flags.GlobalFlags
-	provider    string
-
-	tokenGenerator serviceaccount.TokenGenerator
-}
-
-func (d *DefaultCollector) SetCLIData(command *cobra.Command, globalFlags *flags.GlobalFlags) {
-	d.mux.Lock()
-	defer d.mux.Unlock()
-
-	d.command = command
-	d.globalFlags = globalFlags
-}
-
-func (d *DefaultCollector) RecordStartEvent(provider string) {
-	d.startOnce.Do(func() {
-		d.mux.Lock()
-		defer d.mux.Unlock()
-
-		d.provider = provider
-		cmd := ""
-		if d.command != nil {
-			cmd = d.command.CommandPath()
-		}
-
-		if shouldSkipCommand(cmd) {
-			return
-		}
-
-		ts := time.Now().UnixMicro()
-		recordEvent(d.tokenGenerator, &types.TelemetryRequest{
-			EventType: types.EventCommandStarted,
-			Event: types.CMDStartedEvent{
-				Timestamp:   ts,
-				ExecutionID: d.executionID,
-				Command:     cmd,
-				Provider:    provider,
-			},
-			InstanceProperties: d.getInstanceProperties(d.command, d.executionID, ts),
-		})
-	})
-}
-
-func (d *DefaultCollector) RecordEndEvent(err error) {
-	d.mux.Lock()
-	defer d.mux.Unlock()
-
-	// only record if there is a start event
-	if d.provider == "" || (time.Since(d.startTime) < telemetrySendFinishedAfter && err == nil) {
+// StartCLI starts collecting events and sending them to the backend from the CLI
+func StartCLI(devPodConfig *config.Config, cmd *cobra.Command) {
+	telemetryOpt := devPodConfig.ContextOption(config.ContextOptionTelemetry)
+	if telemetryOpt == "false" || version.GetVersion() == version.DevVersion ||
+		os.Getenv("DEVPOD_DISABLE_TELEMETRY") == "true" {
 		return
 	}
 
-	cmd := ""
-	if d.command != nil {
-		cmd = d.command.CommandPath()
+	// create a new default collector
+	collector, err := newCLICollector(cmd)
+	if err != nil {
+		// Log the problem but don't fail - use disabled Collector instead
+		log.Default.WithPrefix("telemetry").Infof("%s", err.Error())
+	} else {
+		CollectorCLI = collector
+	}
+}
+
+func newCLICollector(cmd *cobra.Command) (*cliCollector, error) {
+	defaultCollector := &cliCollector{
+		analyticsClient: client.NewClient(),
+		log:             log.Default.WithPrefix("telemetry"),
+		cmd:             cmd,
 	}
 
-	if shouldSkipCommand(cmd) {
+	return defaultCollector, nil
+}
+
+type cliCollector struct {
+	analyticsClient client.Client
+	cmd             *cobra.Command
+	client          devpodclient.BaseWorkspaceClient
+
+	log log.Logger
+}
+
+func (d *cliCollector) SetClient(client devpodclient.BaseWorkspaceClient) {
+	d.client = client
+}
+
+func (d *cliCollector) Flush() {
+	d.analyticsClient.Flush()
+}
+
+func (d *cliCollector) RecordCLI(err error) {
+	if d.cmd == nil {
+		d.log.Debug("no command found, skipping")
 		return
 	}
-
-	cmdErr := ""
-	if err != nil {
-		cmdErr = err.Error()
+	cmd := d.cmd.CommandPath()
+	isUI := false
+	if os.Getenv(UIEnvVar) == "true" {
+		isUI = true
+	}
+	// Ignore certain commands triggered by DevPod Desktop
+	if isUI {
+		for _, exception := range UIEventsExceptions {
+			if cmd == exception {
+				return
+			}
+		}
 	}
 
-	ts := time.Now().UnixMicro()
-	recordEvent(d.tokenGenerator, &types.TelemetryRequest{
-		EventType: types.EventCommandFinished,
-		Event: types.CMDFinishedEvent{
-			Timestamp:      ts,
-			ExecutionID:    d.executionID,
-			Command:        cmd,
-			Provider:       d.provider,
-			Success:        err == nil,
-			ProcessingTime: int(time.Since(d.startTime).Microseconds()),
-			Errors:         cmdErr,
+	isCI := false
+	if !isUI {
+		isCI = isCIEnvironment()
+	}
+
+	isInteractive := false
+	if !isUI {
+		isInteractive = isInteractiveShell()
+	}
+
+	timezone, _ := time.Now().Zone()
+	eventProperties := map[string]interface{}{
+		"command":        cmd,
+		"version":        version.GetVersion(),
+		"desktop":        isUI,
+		"is_ci":          isCI,
+		"is_interactive": isInteractive,
+	}
+	if d.client != nil {
+		eventProperties["provider"] = d.client.Provider()
+
+		if d.client.WorkspaceConfig() != nil {
+			eventProperties["source_type"] = d.client.WorkspaceConfig().Source.Type()
+			eventProperties["ide"] = d.client.WorkspaceConfig().IDE.Name
+		}
+	}
+	userProperties := map[string]interface{}{
+		"os_name":  runtime.GOOS,
+		"os_arch":  runtime.GOARCH,
+		"timezone": timezone,
+	}
+	if err != nil {
+		eventProperties["error"] = err.Error()
+	}
+
+	// Check if we're on the runner
+	isPro := false
+	wd, wdErr := os.Getwd()
+	if wdErr == nil {
+		if strings.HasPrefix(wd, "/var/lib/loft/devpod") {
+			isPro = true
+		}
+	}
+	eventType := "devpod_cli"
+	if isPro {
+		eventType = "devpod_cli_runner"
+	}
+
+	// build the event and record
+	eventPropertiesRaw, _ := json.Marshal(eventProperties)
+	userPropertiesRaw, _ := json.Marshal(userProperties)
+	d.analyticsClient.RecordEvent(client.Event{
+		"event": {
+			"type":       eventType,
+			"machine_id": GetMachineID(),
+			"properties": string(eventPropertiesRaw),
+			"timestamp":  time.Now().Unix(),
 		},
-		InstanceProperties: d.getInstanceProperties(d.command, d.executionID, ts),
+		"user": {
+			"machine_id": GetMachineID(),
+			"properties": string(userPropertiesRaw),
+			"timestamp":  time.Now().Unix(),
+		},
 	})
 }
 
-func recordEvent(tokenGenerator serviceaccount.TokenGenerator, r *types.TelemetryRequest) {
-	token, err := tokenGenerator.GenerateToken(&jwt.Claims{}, &jwt.Claims{})
-	if err != nil {
-		log.Default.Debugf("failed to generate telemetry request signed token: %v", err)
-		return
+// isCIEnvironment looks up a couple of well-known CI env vars
+func isCIEnvironment() bool {
+	ciIndicators := []string{
+		"CI",                     // Generic CI variable
+		"TRAVIS",                 // Travis CI
+		"GITHUB_ACTIONS",         // GitHub Actions
+		"GITLAB_CI",              // GitLab CI
+		"CIRCLECI",               // CircleCI
+		"TEAMCITY_VERSION",       // TeamCity
+		"BITBUCKET_BUILD_NUMBER", // Bitbucket
 	}
 
-	r.Token = token
-	marshaled, err := json.Marshal(r)
-	// handle potential Marshal errors
-	if err != nil {
-		log.Default.Debugf("failed to json.Marshal telemetry request: %v", err)
-		return
+	for _, key := range ciIndicators {
+		if _, exists := os.LookupEnv(key); exists {
+			return true
+		}
 	}
+	return false
+}
 
-	// send the telemetry data and ignore the response
-	client := http.Client{
-		Timeout: telemetryRequestTimeout,
-	}
-	_, err = client.Post(
-		telemetryEndpoint,
-		"multipart/form-data",
-		bytes.NewReader(marshaled),
-	)
-	if err != nil {
-		log.Default.Debugf("error sending telemetry request: %v", err)
-	}
+// isInteractiveShell checks if the current shell is in interactive mode or not.
+// Can be combined with `isCi` to narrow down usage
+func isInteractiveShell() bool {
+	return term.IsTerminal(os.Stdin.Fd())
 }

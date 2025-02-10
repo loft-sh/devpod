@@ -10,12 +10,14 @@ type Framework struct {
 }
 
 func NewDefaultFramework(path string) *Framework {
-	var binName = "devpod-"
+	binName := "devpod-"
 	switch runtime.GOOS {
 	case "darwin":
 		binName = binName + "darwin-"
 	case "linux":
 		binName = binName + "linux-"
+	case "windows":
+		binName = binName + "windows-"
 	}
 
 	switch runtime.GOARCH {
@@ -24,5 +26,10 @@ func NewDefaultFramework(path string) *Framework {
 	case "arm64":
 		binName = binName + "arm64"
 	}
+
+	if runtime.GOOS == "windows" {
+		binName = binName + ".exe"
+	}
+
 	return &Framework{DevpodBinDir: path, DevpodBinName: binName}
 }

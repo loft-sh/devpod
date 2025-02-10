@@ -1,4 +1,4 @@
-// Copyright 2013-2022 The Cobra Authors
+// Copyright 2013-2023 The Cobra Authors
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -21,7 +21,7 @@ import (
 
 type PositionalArgs func(cmd *Command, args []string) error
 
-// Legacy arg validation has the following behaviour:
+// legacyArgs validation has the following behaviour:
 // - root commands with no subcommands can take arbitrary arguments
 // - root commands with subcommands will do subcommand validity checking
 // - subcommands will always accept arbitrary arguments
@@ -52,9 +52,9 @@ func OnlyValidArgs(cmd *Command, args []string) error {
 	if len(cmd.ValidArgs) > 0 {
 		// Remove any description that may be included in ValidArgs.
 		// A description is following a tab character.
-		var validArgs []string
+		validArgs := make([]string, 0, len(cmd.ValidArgs))
 		for _, v := range cmd.ValidArgs {
-			validArgs = append(validArgs, strings.Split(v, "\t")[0])
+			validArgs = append(validArgs, strings.SplitN(v, "\t", 2)[0])
 		}
 		for _, v := range args {
 			if !stringInSlice(v, validArgs) {

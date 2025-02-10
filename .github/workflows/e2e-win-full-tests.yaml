@@ -1,0 +1,63 @@
+name: E2E Win full tests
+
+on:
+  release:
+    types: [prereleased]
+  workflow_dispatch: {}
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+env:
+  GO111MODULE: on
+  GOFLAGS: -mod=vendor
+
+jobs:
+  test-e2e-windows:
+    runs-on: self-hosted-windows
+    strategy:
+      fail-fast: true
+      max-parallel: 1
+      matrix:
+        label:
+          - "build"
+          - "ide"
+          - "ssh"
+          - "up-docker"
+          - "up-docker-build"
+          - "up-docker-compose"
+          # - "up-docker-wsl"
+
+    steps:
+      - name: Git set line ending
+        run: |
+          git config --global core.autocrlf false
+
+      - name: Checkout repo
+        uses: actions/checkout@v2
+
+      - name: Set up Go
+        uses: actions/setup-go@v2
+        with:
+          go-version: 1.21.8
+
+      - name: Build binary and copy to the E2E directory
+        run: |
+          mkdir e2e\bin
+          go build -ldflags "-s -w" -o e2e\bin\devpod-windows-amd64.exe
+          $Env:GOOS = "linux"; $Env:GOARCH = "amd64"; go build -ldflags "-s -w" -o e2e\bin\devpod-linux-amd64
+
+      - name: E2E test
+        working-directory: .\e2e
+        run: |
+          go run github.com/onsi/ginkgo/v2/ginkgo -r --timeout=3600s --label-filter=${{ matrix.label }}
+
+      - name: Container cleanup
+        if: ${{ always() }}
+        run: |
+          if (Test-Path C:\Users\loft-user\.devpod\) {
+            Remove-Item -Recurse C:\Users\loft-user\.devpod\
+          }
+          sh -c "docker ps -q -a | xargs docker rm -f || :"
+          sh -c "docker images --format '{{.Repository}}:{{.Tag}},{{.ID}}' | grep -E 'devpod|none|temp|^test' | cut -d',' -f2 | xargs docker rmi -f || :"
+          sh -c "docker images --format '{{.ID}}|{{.Digest}}' | grep none | cut -d'|' -f1 | xargs docker rmi -f || :"

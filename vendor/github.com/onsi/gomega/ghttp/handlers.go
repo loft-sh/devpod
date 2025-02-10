@@ -11,11 +11,13 @@ import (
 	"reflect"
 	"strings"
 
-	"github.com/golang/protobuf/proto"
 	"github.com/onsi/gomega"
 	. "github.com/onsi/gomega"
 	"github.com/onsi/gomega/internal/gutil"
 	"github.com/onsi/gomega/types"
+	"google.golang.org/protobuf/proto"
+	"google.golang.org/protobuf/protoadapt"
+	"google.golang.org/protobuf/runtime/protoiface"
 )
 
 type GHTTPWithGomega struct {
@@ -28,8 +30,8 @@ func NewGHTTPWithGomega(gomega Gomega) *GHTTPWithGomega {
 	}
 }
 
-//CombineHandler takes variadic list of handlers and produces one handler
-//that calls each handler in order.
+// CombineHandler takes variadic list of handlers and produces one handler
+// that calls each handler in order.
 func CombineHandlers(handlers ...http.HandlerFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, req *http.Request) {
 		for _, handler := range handlers {
@@ -38,11 +40,11 @@ func CombineHandlers(handlers ...http.HandlerFunc) http.HandlerFunc {
 	}
 }
 
-//VerifyRequest returns a handler that verifies that a request uses the specified method to connect to the specified path
-//You may also pass in an optional rawQuery string which is tested against the request's `req.URL.RawQuery`
+// VerifyRequest returns a handler that verifies that a request uses the specified method to connect to the specified path
+// You may also pass in an optional rawQuery string which is tested against the request's `req.URL.RawQuery`
 //
-//For path, you may pass in a string, in which case strict equality will be applied
-//Alternatively you can pass in a matcher (ContainSubstring("/foo") and MatchRegexp("/foo/[a-f0-9]+") for example)
+// For path, you may pass in a string, in which case strict equality will be applied
+// Alternatively you can pass in a matcher (ContainSubstring("/foo") and MatchRegexp("/foo/[a-f0-9]+") for example)
 func (g GHTTPWithGomega) VerifyRequest(method string, path interface{}, rawQuery ...string) http.HandlerFunc {
 	return func(w http.ResponseWriter, req *http.Request) {
 		g.gomega.Expect(req.Method).Should(Equal(method), "Method mismatch")
@@ -61,24 +63,24 @@ func (g GHTTPWithGomega) VerifyRequest(method string, path interface{}, rawQuery
 	}
 }
 
-//VerifyContentType returns a handler that verifies that a request has a Content-Type header set to the
-//specified value
+// VerifyContentType returns a handler that verifies that a request has a Content-Type header set to the
+// specified value
 func (g GHTTPWithGomega) VerifyContentType(contentType string) http.HandlerFunc {
 	return func(w http.ResponseWriter, req *http.Request) {
 		g.gomega.Expect(req.Header.Get("Content-Type")).Should(Equal(contentType))
 	}
 }
 
-//VerifyMimeType returns a handler that verifies that a request has a specified mime type set
-//in Content-Type header
+// VerifyMimeType returns a handler that verifies that a request has a specified mime type set
+// in Content-Type header
 func (g GHTTPWithGomega) VerifyMimeType(mimeType string) http.HandlerFunc {
 	return func(w http.ResponseWriter, req *http.Request) {
 		g.gomega.Expect(strings.Split(req.Header.Get("Content-Type"), ";")[0]).Should(Equal(mimeType))
 	}
 }
 
-//VerifyBasicAuth returns a handler that verifies the request contains a BasicAuth Authorization header
-//matching the passed in username and password
+// VerifyBasicAuth returns a handler that verifies the request contains a BasicAuth Authorization header
+// matching the passed in username and password
 func (g GHTTPWithGomega) VerifyBasicAuth(username string, password string) http.HandlerFunc {
 	return func(w http.ResponseWriter, req *http.Request) {
 		auth := req.Header.Get("Authorization")
@@ -91,11 +93,11 @@ func (g GHTTPWithGomega) VerifyBasicAuth(username string, password string) http.
 	}
 }
 
-//VerifyHeader returns a handler that verifies the request contains the passed in headers.
-//The passed in header keys are first canonicalized via http.CanonicalHeaderKey.
+// VerifyHeader returns a handler that verifies the request contains the passed in headers.
+// The passed in header keys are first canonicalized via http.CanonicalHeaderKey.
 //
-//The request must contain *all* the passed in headers, but it is allowed to have additional headers
-//beyond the passed in set.
+// The request must contain *all* the passed in headers, but it is allowed to have additional headers
+// beyond the passed in set.
 func (g GHTTPWithGomega) VerifyHeader(header http.Header) http.HandlerFunc {
 	return func(w http.ResponseWriter, req *http.Request) {
 		for key, values := range header {
@@ -105,15 +107,30 @@ func (g GHTTPWithGomega) VerifyHeader(header http.Header) http.HandlerFunc {
 	}
 }
 
-//VerifyHeaderKV returns a handler that verifies the request contains a header matching the passed in key and values
-//(recall that a `http.Header` is a mapping from string (key) to []string (values))
-//It is a convenience wrapper around `VerifyHeader` that allows you to avoid having to create an `http.Header` object.
+// VerifyHeaderKV returns a handler that verifies the request contains a header matching the passed in key and values
+// (recall that a `http.Header` is a mapping from string (key) to []string (values))
+// It is a convenience wrapper around `VerifyHeader` that allows you to avoid having to create an `http.Header` object.
 func (g GHTTPWithGomega) VerifyHeaderKV(key string, values ...string) http.HandlerFunc {
 	return g.VerifyHeader(http.Header{key: values})
 }
 
-//VerifyBody returns a handler that verifies that the body of the request matches the passed in byte array.
-//It does this using Equal().
+// VerifyHost returns a handler that verifies the host of a request matches the expected host
+// Host is a special header in net/http, which is not set on the request.Header but rather on the Request itself
+//
+// Host may be a string or a matcher
+func (g GHTTPWithGomega) VerifyHost(host interface{}) http.HandlerFunc {
+	return func(w http.ResponseWriter, req *http.Request) {
+		switch p := host.(type) {
+		case types.GomegaMatcher:
+			g.gomega.Expect(req.Host).Should(p, "Host mismatch")
+		default:
+			g.gomega.Expect(req.Host).Should(Equal(host), "Host mismatch")
+		}
+	}
+}
+
+// VerifyBody returns a handler that verifies that the body of the request matches the passed in byte array.
+// It does this using Equal().
 func (g GHTTPWithGomega) VerifyBody(expectedBody []byte) http.HandlerFunc {
 	return CombineHandlers(
 		func(w http.ResponseWriter, req *http.Request) {
@@ -125,10 +142,10 @@ func (g GHTTPWithGomega) VerifyBody(expectedBody []byte) http.HandlerFunc {
 	)
 }
 
-//VerifyJSON returns a handler that verifies that the body of the request is a valid JSON representation
-//matching the passed in JSON string.  It does this using Gomega's MatchJSON method
+// VerifyJSON returns a handler that verifies that the body of the request is a valid JSON representation
+// matching the passed in JSON string.  It does this using Gomega's MatchJSON method
 //
-//VerifyJSON also verifies that the request's content type is application/json
+// VerifyJSON also verifies that the request's content type is application/json
 func (g GHTTPWithGomega) VerifyJSON(expectedJSON string) http.HandlerFunc {
 	return CombineHandlers(
 		g.VerifyMimeType("application/json"),
@@ -141,9 +158,9 @@ func (g GHTTPWithGomega) VerifyJSON(expectedJSON string) http.HandlerFunc {
 	)
 }
 
-//VerifyJSONRepresenting is similar to VerifyJSON.  Instead of taking a JSON string, however, it
-//takes an arbitrary JSON-encodable object and verifies that the requests's body is a JSON representation
-//that matches the object
+// VerifyJSONRepresenting is similar to VerifyJSON.  Instead of taking a JSON string, however, it
+// takes an arbitrary JSON-encodable object and verifies that the requests's body is a JSON representation
+// that matches the object
 func (g GHTTPWithGomega) VerifyJSONRepresenting(object interface{}) http.HandlerFunc {
 	data, err := json.Marshal(object)
 	g.gomega.Expect(err).ShouldNot(HaveOccurred())
@@ -153,10 +170,10 @@ func (g GHTTPWithGomega) VerifyJSONRepresenting(object interface{}) http.Handler
 	)
 }
 
-//VerifyForm returns a handler that verifies a request contains the specified form values.
+// VerifyForm returns a handler that verifies a request contains the specified form values.
 //
-//The request must contain *all* of the specified values, but it is allowed to have additional
-//form values beyond the passed in set.
+// The request must contain *all* of the specified values, but it is allowed to have additional
+// form values beyond the passed in set.
 func (g GHTTPWithGomega) VerifyForm(values url.Values) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		err := r.ParseForm()
@@ -167,18 +184,18 @@ func (g GHTTPWithGomega) VerifyForm(values url.Values) http.HandlerFunc {
 	}
 }
 
-//VerifyFormKV returns a handler that verifies a request contains a form key with the specified values.
+// VerifyFormKV returns a handler that verifies a request contains a form key with the specified values.
 //
-//It is a convenience wrapper around `VerifyForm` that lets you avoid having to create a `url.Values` object.
+// It is a convenience wrapper around `VerifyForm` that lets you avoid having to create a `url.Values` object.
 func (g GHTTPWithGomega) VerifyFormKV(key string, values ...string) http.HandlerFunc {
 	return g.VerifyForm(url.Values{key: values})
 }
 
-//VerifyProtoRepresenting returns a handler that verifies that the body of the request is a valid protobuf
-//representation of the passed message.
+// VerifyProtoRepresenting returns a handler that verifies that the body of the request is a valid protobuf
+// representation of the passed message.
 //
-//VerifyProtoRepresenting also verifies that the request's content type is application/x-protobuf
-func (g GHTTPWithGomega) VerifyProtoRepresenting(expected proto.Message) http.HandlerFunc {
+// VerifyProtoRepresenting also verifies that the request's content type is application/x-protobuf
+func (g GHTTPWithGomega) VerifyProtoRepresenting(expected protoiface.MessageV1) http.HandlerFunc {
 	return CombineHandlers(
 		g.VerifyContentType("application/x-protobuf"),
 		func(w http.ResponseWriter, req *http.Request) {
@@ -189,13 +206,14 @@ func (g GHTTPWithGomega) VerifyProtoRepresenting(expected proto.Message) http.Ha
 			expectedType := reflect.TypeOf(expected)
 			actualValuePtr := reflect.New(expectedType.Elem())
 
-			actual, ok := actualValuePtr.Interface().(proto.Message)
-			g.gomega.Expect(ok).Should(BeTrue(), "Message value is not a proto.Message")
+			actual, ok := actualValuePtr.Interface().(protoiface.MessageV1)
+			g.gomega.Expect(ok).Should(BeTrueBecause("Message value should be a protoiface.MessageV1"))
 
-			err = proto.Unmarshal(body, actual)
+			err = proto.Unmarshal(body, protoadapt.MessageV2Of(actual))
 			g.gomega.Expect(err).ShouldNot(HaveOccurred(), "Failed to unmarshal protobuf")
 
-			g.gomega.Expect(actual).Should(Equal(expected), "ProtoBuf Mismatch")
+			g.gomega.Expect(proto.Equal(protoadapt.MessageV2Of(expected), protoadapt.MessageV2Of(actual))).
+				Should(BeTrue(), "ProtoBuf Mismatch")
 		},
 	)
 }
@@ -309,13 +327,13 @@ func (g GHTTPWithGomega) RespondWithJSONEncodedPtr(statusCode *int, object inter
 	}
 }
 
-//RespondWithProto returns a handler that responds to a request with the specified status code and a body
-//containing the protobuf serialization of the provided message.
+// RespondWithProto returns a handler that responds to a request with the specified status code and a body
+// containing the protobuf serialization of the provided message.
 //
-//Also, RespondWithProto can be given an optional http.Header.  The headers defined therein will be added to the response headers.
-func (g GHTTPWithGomega) RespondWithProto(statusCode int, message proto.Message, optionalHeader ...http.Header) http.HandlerFunc {
+// Also, RespondWithProto can be given an optional http.Header.  The headers defined therein will be added to the response headers.
+func (g GHTTPWithGomega) RespondWithProto(statusCode int, message protoadapt.MessageV1, optionalHeader ...http.Header) http.HandlerFunc {
 	return func(w http.ResponseWriter, req *http.Request) {
-		data, err := proto.Marshal(message)
+		data, err := proto.Marshal(protoadapt.MessageV2Of(message))
 		g.gomega.Expect(err).ShouldNot(HaveOccurred())
 
 		var headers http.Header
@@ -358,6 +376,10 @@ func VerifyHeaderKV(key string, values ...string) http.HandlerFunc {
 	return NewGHTTPWithGomega(gomega.Default).VerifyHeaderKV(key, values...)
 }
 
+func VerifyHost(host interface{}) http.HandlerFunc {
+	return NewGHTTPWithGomega(gomega.Default).VerifyHost(host)
+}
+
 func VerifyBody(expectedBody []byte) http.HandlerFunc {
 	return NewGHTTPWithGomega(gomega.Default).VerifyBody(expectedBody)
 }
@@ -378,7 +400,7 @@ func VerifyFormKV(key string, values ...string) http.HandlerFunc {
 	return NewGHTTPWithGomega(gomega.Default).VerifyFormKV(key, values...)
 }
 
-func VerifyProtoRepresenting(expected proto.Message) http.HandlerFunc {
+func VerifyProtoRepresenting(expected protoiface.MessageV1) http.HandlerFunc {
 	return NewGHTTPWithGomega(gomega.Default).VerifyProtoRepresenting(expected)
 }
 
@@ -398,6 +420,6 @@ func RespondWithJSONEncodedPtr(statusCode *int, object interface{}, optionalHead
 	return NewGHTTPWithGomega(gomega.Default).RespondWithJSONEncodedPtr(statusCode, object, optionalHeader...)
 }
 
-func RespondWithProto(statusCode int, message proto.Message, optionalHeader ...http.Header) http.HandlerFunc {
+func RespondWithProto(statusCode int, message protoadapt.MessageV1, optionalHeader ...http.Header) http.HandlerFunc {
 	return NewGHTTPWithGomega(gomega.Default).RespondWithProto(statusCode, message, optionalHeader...)
 }

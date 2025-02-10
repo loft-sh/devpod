@@ -1,0 +1,83 @@
+name: Build Dev Container
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - "main"
+    paths:
+      - ".github/devcontainer/**"
+
+jobs:
+  build-and-push:
+    runs-on: ubuntu-latest
+    permissions:
+      packages: "write"
+      contents: "write"
+      pull-requests: "write"
+    steps:
+      - name: Checkout
+        id: checkout
+        uses: actions/checkout@v1
+
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v2
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v1
+
+      - name: Set up Docker Buildx
+        id: buildx
+        uses: docker/setup-buildx-action@v1
+
+      - name: Prepare DevPod
+        run: |
+          curl -L -o devpod "https://github.com/loft-sh/devpod/releases/latest/download/devpod-linux-amd64" \
+            && sudo install -c -m 0755 devpod /usr/local/bin \
+            && rm -f devpod
+          devpod provider add docker
+
+      - name: "Build and push image"
+        run: |
+          for ARCH in amd64 arm64; do
+            # Build for $ARCH
+            devpod build . --devcontainer-path .github/devcontainer/devcontainer.json --platform linux/$ARCH --skip-push
+            ID=$(docker images --format "{{.ID}} {{.CreatedAt}} {{.Tag}}" | sort -rk 2 | grep "devpod" | awk 'NR==1{print $1}')
+            echo "found image: $ID"
+            if [ -z "${ID}" ]; then
+              echo "Image ID empty, exiting"
+              exit 0 
+            fi 
+            docker image ls
+            docker tag $ID ghcr.io/loft-sh/devpod:dev-$ARCH
+            docker push ghcr.io/loft-sh/devpod:dev-$ARCH
+          done
+          SUFFIX="${{github.sha}}"
+          IMAGE_NAME="devpod:dev-$SUFFIX"
+          echo "IMAGE_NAME=$IMAGE_NAME" >> $GITHUB_ENV
+          # Combine into multi-arch image
+          docker manifest create ghcr.io/loft-sh/$IMAGE_NAME \
+                 --amend ghcr.io/loft-sh/devpod:dev-amd64 \
+                 --amend ghcr.io/loft-sh/devpod:dev-arm64
+
+          docker manifest push ghcr.io/loft-sh/$IMAGE_NAME
+
+      - name: Update devcontainer.json
+        if: ${{ success() }}
+        run: |
+          sed -i "s|\(\"image\": \"\).*|\1ghcr.io/loft-sh/${IMAGE_NAME}\",|" .devcontainer/devcontainer.json
+
+      - name: Create Pull Request
+        if: ${{ success() }}
+        uses: peter-evans/create-pull-request@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          commit-message: "Update devcontainer image to ghcr.io/loft-sh/${{ env.IMAGE_NAME }}"
+          title: "Update devcontainer image"
+          body: "This PR updates the devcontainer image to ghcr.io/loft-sh/${{ env.IMAGE_NAME }}"
+          branch: "update-devcontainer-${{ github.sha }}"
+          base: "main"

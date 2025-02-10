@@ -1,10 +1,4 @@
-import {
-  TProvider,
-  TProviderID,
-  TProviderOptionGroup,
-  TProviderOptions,
-  TWithProviderID,
-} from "../../../types"
+import { TProvider, TProviderID, TWithProviderID } from "../../../types"
 
 export const FieldName = {
   PROVIDER_SOURCE: "providerSource",
@@ -22,4 +16,4 @@ export type TCloneProviderInfo = Readonly<{
 }>
 
 export type TSetupProviderResult = TWithProviderID &
-  Readonly<{ options: TProviderOptions; optionGroups: TProviderOptionGroup[] }>
+  Readonly<{ suggestedOptions: Record<string, string> }>

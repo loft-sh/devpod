@@ -1,18 +1,8 @@
 {
-  "name": "Go",
-  "build": {
-    "dockerfile": "Dockerfile"
-  },
-  "features": {
-    "ghcr.io/devcontainers/features/docker-in-docker:2": {
-      "version": "latest"
-    }
-  },
-  "mounts": [
-    {
-      "type": "volume",
-      "source": "devpod",
-      "target": "/home/vscode"
-    }
-  ]
+  "name": "DevPod Development",
+  "image": "ghcr.io/loft-sh/devpod:dev-6b64450abdb0ebc2ce7f663f9ff935c56679f8b6",
+  "remoteUser": "devpod",
+  "postCreateCommand": "bash ./.devcontainer/post_create.sh",
+  // Required for DinD
+  "privileged": true
 }

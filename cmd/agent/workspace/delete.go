@@ -77,16 +77,20 @@ func (cmd *DeleteCmd) Run(ctx context.Context) error {
 
 func removeContainer(ctx context.Context, workspaceInfo *provider2.AgentWorkspaceInfo, log log.Logger) error {
 	log.Debugf("Removing DevPod container from server...")
-	runner, err := CreateRunner(workspaceInfo, log)
+	runner, err := CreateRunner(workspaceInfo, nil, log)
 	if err != nil {
 		return err
 	}
 
-	err = runner.Delete(ctx)
-	if err != nil {
-		return err
+	if workspaceInfo.Workspace.Source.Container != "" {
+		log.Infof("Skipping container deletion, since it was not created by DevPod")
+	} else {
+		err = runner.Delete(ctx)
+		if err != nil {
+			return err
+		}
+		log.Debugf("Successfully removed DevPod container from server")
 	}
-	log.Debugf("Successfully removed DevPod container from server")
 
 	return nil
 }

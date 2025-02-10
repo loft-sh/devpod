@@ -6,7 +6,6 @@ import (
 
 	"github.com/loft-sh/devpod/cmd/flags"
 	"github.com/loft-sh/devpod/pkg/agent"
-	"github.com/loft-sh/devpod/pkg/devcontainer/config"
 	provider2 "github.com/loft-sh/devpod/pkg/provider"
 	"github.com/loft-sh/log"
 	"github.com/pkg/errors"
@@ -66,7 +65,7 @@ func (cmd *BuildCmd) Run(ctx context.Context) error {
 		}()
 	}
 
-	runner, err := CreateRunner(workspaceInfo, logger)
+	runner, err := CreateRunner(workspaceInfo, nil, logger)
 	if err != nil {
 		return err
 	}
@@ -81,10 +80,11 @@ func (cmd *BuildCmd) Run(ctx context.Context) error {
 	// build and push images
 	for _, platform := range platforms {
 		// build the image
-		imageName, err := runner.Build(ctx, config.BuildOptions{
-			CLIOptions: workspaceInfo.CLIOptions,
-
-			Platform: platform,
+		imageName, err := runner.Build(ctx, provider2.BuildOptions{
+			CLIOptions:    workspaceInfo.CLIOptions,
+			RegistryCache: workspaceInfo.RegistryCache,
+			Platform:      platform,
+			ExportCache:   true,
 		})
 		if err != nil {
 			logger.Errorf("Error building image: %v", err)

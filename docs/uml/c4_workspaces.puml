@@ -1,0 +1,41 @@
+@startuml
+!include https://raw.githubusercontent.com/plantuml-stdlib/C4-PlantUML/master/C4_Component.puml
+
+skinparam linetype ortho
+skinparam nodesep 150
+skinparam ranksep 150
+scale 1920x1080
+
+HIDE_STEREOTYPE()
+LAYOUT_TOP_DOWN()
+
+title Component diagram for DevPod
+
+Person(user, "DevPod", "CLI or UI")
+System(prov, "Provider", "Devpod Provider")
+Component(ide, "IDE", "Local IDE")
+Component(ctx, "Context", "Config, working dir etc.")
+Component(env, "Local Env", "Shell variables, git credentials etc.")
+Component(dc, ".devcontainer.json", "Dev container spec")
+Component(git, "Git repo", "Project repo")
+
+System_Boundary(cluster, "Machine / Cluster") {
+  System(controlPlane, "Control plane", "Tunnels connection")
+  Container_Boundary(ws, "Workspace") {
+    Component(runner, "Dev container", "")
+    Component(agent, "Agent", "")
+    Component(ssh, "SSH server", "")
+  }
+}
+
+BiRel(user, prov, "devpod up ...")
+BiRel(prov, controlPlane, "")
+BiRel(controlPlane, agent, " gRPC")
+BiRel_Left(agent, ssh, "Tunnelled STDIO")
+Rel(agent, runner, "")
+BiRel_Left(user, ide, "SSH port forwarding")
+Rel(ctx, user, "")
+Rel(env, user, "")
+Rel(git, user, "")
+Rel(dc, user, "")
+@enduml

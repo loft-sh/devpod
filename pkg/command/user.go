@@ -3,12 +3,12 @@ package command
 import (
 	"os/user"
 
-	"github.com/mitchellh/go-homedir"
+	"github.com/loft-sh/devpod/pkg/util"
 )
 
 func GetHome(userName string) (string, error) {
 	if userName == "" {
-		return homedir.Dir()
+		return util.UserHomeDir()
 	}
 
 	u, err := user.Lookup(userName)

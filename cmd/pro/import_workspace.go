@@ -3,19 +3,29 @@ package pro
 import (
 	"context"
 	"fmt"
+	"strconv"
 
-	"github.com/loft-sh/devpod/cmd/flags"
+	proflags "github.com/loft-sh/devpod/cmd/pro/flags"
+	"github.com/loft-sh/devpod/cmd/pro/provider/list"
 	"github.com/loft-sh/devpod/pkg/config"
+	"github.com/loft-sh/devpod/pkg/options"
+	"github.com/loft-sh/devpod/pkg/platform"
+	"github.com/loft-sh/devpod/pkg/platform/client"
+	"github.com/loft-sh/devpod/pkg/platform/parameters"
+	"github.com/loft-sh/devpod/pkg/platform/project"
 	provider2 "github.com/loft-sh/devpod/pkg/provider"
 	"github.com/loft-sh/devpod/pkg/random"
-	"github.com/loft-sh/devpod/pkg/workspace"
 	"github.com/loft-sh/log"
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
+	"gopkg.in/yaml.v2"
+
+	managementv1 "github.com/loft-sh/api/v4/pkg/apis/management/v1"
+	storagev1 "github.com/loft-sh/api/v4/pkg/apis/storage/v1"
 )
 
 type ImportCmd struct {
-	*flags.GlobalFlags
+	*proflags.GlobalFlags
 
 	WorkspaceId      string
 	WorkspaceUid     string
@@ -26,7 +36,7 @@ type ImportCmd struct {
 }
 
 // NewImportCmd creates a new command
-func NewImportCmd(globalFlags *flags.GlobalFlags) *cobra.Command {
+func NewImportCmd(globalFlags *proflags.GlobalFlags) *cobra.Command {
 	logger := log.GetInstance()
 	cmd := &ImportCmd{
 		GlobalFlags: globalFlags,
@@ -84,30 +94,68 @@ func (cmd *ImportCmd) Run(ctx context.Context, args []string) error {
 		cmd.WorkspaceId = newWorkspaceId
 	}
 
-	provider, err := resolveProInstance(devPodConfig, devPodProHost, cmd.log)
+	provider, err := platform.ProviderFromHost(ctx, devPodConfig, devPodProHost, cmd.log)
 	if err != nil {
-		return errors.Wrap(err, "resolve provider")
+		return fmt.Errorf("resolve provider: %w", err)
 	}
 
-	err = cmd.writeWorkspaceDefinition(devPodConfig, provider)
+	baseClient, err := platform.InitClientFromProvider(ctx, devPodConfig, provider.Name, cmd.log)
+	if err != nil {
+		return fmt.Errorf("base client: %w", err)
+	}
+	instance, err := platform.FindInstanceInProject(ctx, baseClient, cmd.WorkspaceUid, cmd.WorkspaceProject)
+	if err != nil {
+		return fmt.Errorf("find workspace instance: %w", err)
+	}
+	if instance == nil {
+		return fmt.Errorf("workspace instance with UID %s not found", cmd.WorkspaceUid)
+	}
+
+	// old pro provider
+	if !provider.HasHealthCheck() {
+		instanceOpts, err := resolveInstanceOptions(ctx, instance, baseClient)
+		if err != nil {
+			return fmt.Errorf("resolve instance options: %w", err)
+		}
+
+		err = cmd.writeWorkspaceDefinition(devPodConfig, provider, instanceOpts)
+		if err != nil {
+			return errors.Wrap(err, "prepare workspace to import definition")
+		}
+		cmd.log.Infof("Successfully imported workspace %s", cmd.WorkspaceId)
+		return nil
+	}
+
+	// new pro provider
+	err = cmd.writeNewWorkspaceDefinition(devPodConfig, instance, provider.Name)
 	if err != nil {
 		return errors.Wrap(err, "prepare workspace to import definition")
 	}
-
 	cmd.log.Infof("Successfully imported workspace %s", cmd.WorkspaceId)
+
 	return nil
 }
 
-func (cmd *ImportCmd) writeWorkspaceDefinition(devPodConfig *config.Config, provider *provider2.ProviderConfig) error {
-	workspaceFolder, err := provider2.GetWorkspaceDir(devPodConfig.DefaultContext, cmd.WorkspaceId)
-	if err != nil {
-		return errors.Wrap(err, "get workspace dir")
+func (cmd *ImportCmd) writeNewWorkspaceDefinition(devPodConfig *config.Config, instance *managementv1.DevPodWorkspaceInstance, providerName string) error {
+	workspaceObj := &provider2.Workspace{
+		ID:       cmd.WorkspaceId,
+		UID:      cmd.WorkspaceUid,
+		Provider: provider2.WorkspaceProviderConfig{Name: providerName},
+		Context:  devPodConfig.DefaultContext,
+		Imported: !cmd.Own,
+		Pro: &provider2.ProMetadata{
+			Project:     project.ProjectFromNamespace(instance.Namespace),
+			DisplayName: instance.Spec.DisplayName,
+		},
 	}
 
+	return provider2.SaveWorkspaceConfig(workspaceObj)
+}
+
+func (cmd *ImportCmd) writeWorkspaceDefinition(devPodConfig *config.Config, provider *provider2.ProviderConfig, instanceOpts map[string]string) error {
 	workspaceObj := &provider2.Workspace{
-		ID:     cmd.WorkspaceId,
-		UID:    cmd.WorkspaceUid,
-		Folder: workspaceFolder,
+		ID:  cmd.WorkspaceId,
+		UID: cmd.WorkspaceUid,
 		Provider: provider2.WorkspaceProviderConfig{
 			Name:    provider.Name,
 			Options: map[string]config.OptionValue{},
@@ -115,12 +163,15 @@ func (cmd *ImportCmd) writeWorkspaceDefinition(devPodConfig *config.Config, prov
 		Context:  devPodConfig.DefaultContext,
 		Imported: !cmd.Own,
 	}
-	if cmd.WorkspaceProject != "" {
-		workspaceObj.Provider.Options["LOFT_PROJECT"] = config.OptionValue{
-			Value:        cmd.WorkspaceProject,
-			UserProvided: true,
-		}
+
+	devPodConfig, err := options.ResolveOptions(context.Background(), devPodConfig, provider, instanceOpts, false, false, nil, cmd.log)
+	if err != nil {
+		return fmt.Errorf("resolve options: %w", err)
 	}
+	if devPodConfig.Current() == nil || devPodConfig.Current().Providers[provider.Name] == nil {
+		return fmt.Errorf("unable to resolve provider config for provider %s", provider.Name)
+	}
+	workspaceObj.Provider.Options = devPodConfig.Current().Providers[provider.Name].Options
 
 	err = provider2.SaveWorkspaceConfig(workspaceObj)
 	if err != nil {
@@ -130,18 +181,80 @@ func (cmd *ImportCmd) writeWorkspaceDefinition(devPodConfig *config.Config, prov
 	return nil
 }
 
-func resolveProInstance(devPodConfig *config.Config, devPodProHost string, log log.Logger) (*provider2.ProviderConfig, error) {
-	proInstanceConfig, err := provider2.LoadProInstanceConfig(devPodConfig.DefaultContext, devPodProHost)
-	if err != nil {
-		return nil, fmt.Errorf("load pro instance %s: %w", devPodProHost, err)
+func resolveInstanceOptions(ctx context.Context, instance *managementv1.DevPodWorkspaceInstance, baseClient client.Client) (map[string]string, error) {
+	opts := map[string]string{}
+	projectName := project.ProjectFromNamespace(instance.Namespace)
+
+	opts[platform.ProjectEnv] = projectName
+	if instance.Spec.TemplateRef == nil {
+		return opts, nil
+	}
+	if instance.Spec.RunnerRef.Runner != "" {
+		opts[platform.RunnerEnv] = instance.Spec.RunnerRef.Runner
+	}
+	opts[platform.TemplateOptionEnv] = instance.Spec.TemplateRef.Name
+
+	if instance.Spec.TemplateRef.Version != "" {
+		opts[platform.TemplateVersionOptionEnv] = instance.Spec.TemplateRef.Version
 	}
 
-	provider, err := workspace.FindProvider(devPodConfig, proInstanceConfig.Provider, log)
+	if instance.Spec.Parameters == "" {
+		return opts, nil
+	}
+	managementClient, err := baseClient.Management()
 	if err != nil {
-		return nil, errors.Wrap(err, "find provider")
-	} else if !provider.Config.IsProxyProvider() {
-		return nil, fmt.Errorf("provider is not a proxy provider")
+		return nil, fmt.Errorf("get management client: %w", err)
+	}
+	template, err := list.FindTemplate(ctx, managementClient, projectName, instance.Spec.TemplateRef.Name)
+	if err != nil {
+		return nil, fmt.Errorf("find template: %w", err)
+	}
+	templateParameters := template.Spec.Parameters
+	if len(template.Spec.Versions) > 0 {
+		templateParameters, err = list.GetTemplateParameters(template, instance.Spec.TemplateRef.Version)
+		if err != nil {
+			return nil, fmt.Errorf("get template parameters: %w", err)
+		}
+	}
+	err = fillParameterOptions(opts, templateParameters, instance.Spec.Parameters)
+	if err != nil {
+		return nil, fmt.Errorf("fill parameter options: %w", err)
 	}
 
-	return provider.Config, nil
+	return opts, nil
+}
+
+func fillParameterOptions(opts map[string]string, parameterDefinitions []storagev1.AppParameter, instanceParameters string) error {
+	parametersMap := map[string]interface{}{}
+	err := yaml.Unmarshal([]byte(instanceParameters), &parametersMap)
+	if err != nil {
+		return fmt.Errorf("unmarshal parameters: %w", err)
+	}
+
+	for _, parameter := range parameterDefinitions {
+		val := parameters.GetDeepValue(parametersMap, parameter.Variable)
+		var strVal string
+		if val != nil {
+			switch t := val.(type) {
+			case string:
+				strVal = t
+			case int:
+				strVal = strconv.Itoa(t)
+			case bool:
+				strVal = strconv.FormatBool(t)
+			default:
+				return fmt.Errorf("unrecognized type for parameter %s (%s) in file: %v", parameter.Label, parameter.Variable, t)
+			}
+		}
+
+		_, err := parameters.VerifyValue(strVal, parameter)
+		if err != nil {
+			return err
+		}
+
+		optionName := list.VariableToEnvironmentVariable(parameter.Variable)
+		opts[optionName] = strVal
+	}
+
+	return nil
 }

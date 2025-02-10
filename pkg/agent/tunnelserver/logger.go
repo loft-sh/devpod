@@ -6,6 +6,7 @@ import (
 	"io"
 	"os"
 
+	"github.com/go-logr/logr"
 	"github.com/loft-sh/devpod/pkg/agent/tunnel"
 	"github.com/loft-sh/log"
 	"github.com/loft-sh/log/scanner"
@@ -245,4 +246,8 @@ func (s *tunnelLogger) Question(params *survey.QuestionOptions) (string, error) 
 
 func (s *tunnelLogger) ErrorStreamOnly() log.Logger {
 	return s
+}
+
+func (*tunnelLogger) LogrLogSink() logr.LogSink {
+	return nil
 }

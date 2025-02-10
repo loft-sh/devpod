@@ -11,10 +11,11 @@ import {
   FormLabel,
   Input,
   Select,
+  Textarea,
 } from "@chakra-ui/react"
 
 type TOptionFormField = TOptionWithID &
-  Readonly<{ isRequired?: boolean; refreshSubOptions?: (id: string) => void }>
+  Readonly<{ isRequired?: boolean; onRefresh?: (id: string) => void }>
 
 export function OptionFormField({
   id,
@@ -26,7 +27,7 @@ export function OptionFormField({
   displayName,
   suggestions,
   enum: enumProp,
-  refreshSubOptions,
+  onRefresh,
   subOptionsCommand,
   isRequired = false,
 }: TOptionFormField) {
@@ -37,9 +38,13 @@ export function OptionFormField({
     const registerProps = register(id, { required: isRequired })
     const valueProp = exists(value) ? { defaultValue: value } : {}
     const defaultValueProp = exists(defaultValue) ? { defaultValue } : {}
-    const props = { ...defaultValueProp, ...valueProp, ...registerProps }
+    const props = {
+      ...defaultValueProp,
+      ...valueProp,
+      ...registerProps,
+    }
     const refresh = () => {
-      refreshSubOptions?.(id)
+      onRefresh?.(id)
     }
 
     if (exists(suggestions)) {
@@ -66,7 +71,8 @@ export function OptionFormField({
           }}
         />
       )
-    } else if (enumProp?.length) {
+    }
+    if (enumProp?.length) {
       let placeholder: string | undefined = "Select option"
       if (value) {
         placeholder = undefined
@@ -76,12 +82,16 @@ export function OptionFormField({
         <Select
           {...props}
           onChange={wrapFunction(props.onChange, refresh, !!subOptionsCommand)}
+          onBlur={wrapFunction(props.onChange, refresh, !!subOptionsCommand)}
           placeholder={placeholder}>
-          {enumProp.map((val, i) => (
-            <option key={i} value={val}>
-              {val}
-            </option>
-          ))}
+          {enumProp.map(
+            (opt, i) =>
+              opt.value && (
+                <option key={i} value={opt.value}>
+                  {opt.displayName ?? opt.value}
+                </option>
+              )
+          )}
         </Select>
       )
     }
@@ -89,7 +99,7 @@ export function OptionFormField({
     switch (type) {
       case "boolean":
         return (
-          <Checkbox defaultChecked={props.defaultValue === "true"} {...props}>
+          <Checkbox {...props} defaultChecked={props.defaultValue === "true"}>
             {displayName}
           </Checkbox>
         )
@@ -123,6 +133,17 @@ export function OptionFormField({
             onBlur={wrapFunction(props.onBlur, refresh, !!subOptionsCommand)}
           />
         )
+      case "multiline":
+        return (
+          <Textarea
+            rows={2}
+            spellCheck={false}
+            placeholder={`Enter ${displayName}`}
+            whiteSpace="pre"
+            {...props}
+            onBlur={wrapFunction(props.onBlur, refresh, !!subOptionsCommand)}
+          />
+        )
       default:
         return (
           <Input
@@ -143,7 +164,7 @@ export function OptionFormField({
     suggestions,
     enumProp,
     type,
-    refreshSubOptions,
+    onRefresh,
     subOptionsCommand,
     displayName,
     password,
@@ -156,7 +177,7 @@ export function OptionFormField({
       {exists(optionError) ? (
         <FormErrorMessage>{optionError.message?.toString() ?? "Error"}</FormErrorMessage>
       ) : (
-        exists(description) && <FormHelperText>{description}</FormHelperText>
+        exists(description) && <FormHelperText userSelect="text">{description}</FormHelperText>
       )}
     </FormControl>
   )

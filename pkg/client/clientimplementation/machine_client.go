@@ -52,7 +52,7 @@ func (s *machineClient) MachineConfig() *provider.Machine {
 	return provider.CloneMachine(s.machine)
 }
 
-func (s *machineClient) RefreshOptions(ctx context.Context, userOptionsRaw []string) error {
+func (s *machineClient) RefreshOptions(ctx context.Context, userOptionsRaw []string, reconfigure bool) error {
 	userOptions, err := provider.ParseOptions(userOptionsRaw)
 	if err != nil {
 		return errors.Wrap(err, "parse options")

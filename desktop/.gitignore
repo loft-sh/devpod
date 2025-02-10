@@ -24,3 +24,4 @@ dist-ssr
 *.sw?
 
 src-tauri/bin/*
+.DS_Store

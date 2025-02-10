@@ -7,15 +7,19 @@ import (
 	"strings"
 
 	util "github.com/loft-sh/devpod/pkg/util/hash"
-	"github.com/moby/buildkit/frontend/dockerfile/dockerignore"
 	"github.com/moby/patternmatcher"
+	"github.com/moby/patternmatcher/ignorefile"
 	"github.com/pkg/errors"
 
 	"github.com/loft-sh/log"
 	"github.com/loft-sh/log/hash"
 )
 
-func CalculatePrebuildHash(originalConfig *DevContainerConfig, platform, architecture, contextPath, dockerfilePath, dockerfileContent string, log log.Logger) (string, error) {
+func CalculatePrebuildHash(
+	originalConfig *DevContainerConfig,
+	platform, architecture, contextPath, dockerfilePath, dockerfileContent string,
+	buildInfo *ImageBuildInfo,
+	log log.Logger) (string, error) {
 	parsedConfig := CloneDevContainerConfig(originalConfig)
 
 	if platform != "" {
@@ -57,8 +61,17 @@ func CalculatePrebuildHash(originalConfig *DevContainerConfig, platform, archite
 	}
 	excludes = append(excludes, DevPodContextFeatureFolder+"/")
 
+	// find exact files to hash
+	// todo pass down target or search all
+	// todo update DirectoryHash function
+	var includes []string
+	if buildInfo.Dockerfile != nil {
+		includes = buildInfo.Dockerfile.BuildContextFiles()
+	}
+	log.Debug("Build context files to use for hash are ", includes)
+
 	// get hash of the context directory
-	contextHash, err := util.DirectoryHash(contextPath, excludes)
+	contextHash, err := util.DirectoryHash(contextPath, excludes, includes)
 	if err != nil {
 		return "", err
 	}
@@ -100,7 +113,7 @@ func readDockerignore(contextDir string, dockerfile string) ([]string, error) {
 
 	defer f.Close()
 
-	excludes, err = dockerignore.ReadAll(f)
+	excludes, err = ignorefile.ReadAll(f)
 	if err != nil {
 		return nil, err
 	}

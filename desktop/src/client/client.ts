@@ -1,29 +1,26 @@
-import {
-  app,
-  clipboard,
-  dialog,
-  fs,
-  invoke,
-  os,
-  path,
-  process,
-  shell,
-  event,
-  updater,
-  window as tauriWindow,
-} from "@tauri-apps/api"
-import { Command } from "@tauri-apps/api/shell"
+import { UseToastOptions } from "@chakra-ui/react"
+import { app, event, path } from "@tauri-apps/api"
+import { invoke } from "@tauri-apps/api/core"
+import { Command } from "@tauri-apps/plugin-shell"
+import { Theme as TauriTheme, getCurrentWindow } from "@tauri-apps/api/window"
+import * as log from "@tauri-apps/plugin-log"
 import { TSettings } from "../contexts"
+import { Release } from "../gen"
 import { Result, Return, isError, noop } from "../lib"
-import { TCommunityContributions, TUnsubscribeFn } from "../types"
+import { TCommunityContributions, TProID, TUnsubscribeFn } from "../types"
+import { Command as DevPodCommand } from "./command"
 import { ContextClient } from "./context"
 import { IDEsClient } from "./ides"
+import { ProClient } from "./pro"
 import { ProvidersClient } from "./providers"
 import { WorkspacesClient } from "./workspaces"
-import { UseToastOptions } from "@chakra-ui/react"
-import { Release } from "../gen"
-import { ProClient } from "./pro"
-import { Theme as TauriTheme } from "@tauri-apps/api/window"
+import * as clipboard from "@tauri-apps/plugin-clipboard-manager"
+import * as dialog from "@tauri-apps/plugin-dialog"
+import * as fs from "@tauri-apps/plugin-fs"
+import * as os from "@tauri-apps/plugin-os"
+import * as process from "@tauri-apps/plugin-process"
+import * as shell from "@tauri-apps/plugin-shell"
+import * as updater from "@tauri-apps/plugin-updater"
 
 // These types have to match the rust types! Make sure to update them as well!
 type TChannels = {
@@ -48,12 +45,29 @@ type TChannels = {
         workspace_id: string
         workspace_uid: string
         devpod_pro_host: string
+        project: string
+        options: Record<string, string> | null
+      }>
+    | Readonly<{
+        type: "SetupPro"
+        host: string
+        accessKey: string | null
         options: Record<string, string> | null
       }>
 }
 type TChannelName = keyof TChannels
 type TClientEventListener<TChannel extends TChannelName> = (payload: TChannels[TChannel]) => void
-type TClientSettings = Pick<TSettings, "debugFlag">
+type TClientSettings = Pick<
+  TSettings,
+  | "debugFlag"
+  | "additionalCliFlags"
+  | "dotfilesUrl"
+  | "additionalEnvVars"
+  | "sshKeyPath"
+  | "httpProxyUrl"
+  | "httpsProxyUrl"
+  | "noProxy"
+>
 export type TPlatform = Awaited<ReturnType<typeof os.platform>>
 export type TArch = Awaited<ReturnType<typeof os.arch>>
 
@@ -62,7 +76,7 @@ class Client {
   public readonly providers = new ProvidersClient()
   public readonly ides = new IDEsClient()
   public readonly context = new ContextClient()
-  public readonly pro = new ProClient()
+  public readonly pro = new ProClient("")
 
   public setSetting<TSettingName extends keyof TClientSettings>(
     name: TSettingName,
@@ -70,12 +84,35 @@ class Client {
   ) {
     // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
     if (name === "debugFlag") {
-      this.workspaces.setDebug(value)
-      this.providers.setDebug(value)
-      this.ides.setDebug(value)
-      this.pro.setDebug(value)
+      const debug: boolean = value as boolean
+      this.workspaces.setDebug(debug)
+      this.providers.setDebug(debug)
+      this.ides.setDebug(debug)
+      this.pro.setDebug(debug)
+    }
+    if (name === "additionalCliFlags") {
+      this.workspaces.setAdditionalFlags(value as string)
+    }
+    if (name === "dotfilesUrl") {
+      this.workspaces.setDotfilesFlag(value as string)
+    }
+    if (name === "sshKeyPath") {
+      this.workspaces.setSSHKeyPath(value as string)
+    }
+    if (name === "additionalEnvVars") {
+      DevPodCommand.ADDITIONAL_ENV_VARS = value as string
+    }
+    if (name === "httpProxyUrl") {
+      DevPodCommand.HTTP_PROXY = value as string
+    }
+    if (name === "httpsProxyUrl") {
+      DevPodCommand.HTTPS_PROXY = value as string
+    }
+    if (name === "noProxy") {
+      DevPodCommand.NO_PROXY = value as string
     }
   }
+
   public ready(): Promise<void> {
     return invoke("ui_ready")
   }
@@ -96,11 +133,21 @@ class Client {
     }
   }
 
-  public fetchPlatform(): Promise<TPlatform> {
+  // emitEvent publishes to a given channel and invokes the corresponding handler.
+  // This is only intended to be used for debugging right now.
+  public emitEvent<T extends TChannelName>(e: TChannels[T]) {
+    event.emit("event", e)
+  }
+
+  public fetchPlatform(): TPlatform {
     return os.platform()
   }
 
-  public fetchArch(): Promise<TArch> {
+  public pathSeparator(): string {
+    return path.sep()
+  }
+
+  public fetchArch(): TArch {
     return os.arch()
   }
 
@@ -129,10 +176,17 @@ class Client {
 
   public async fetchReleases(): Promise<Result<readonly Release[]>> {
     try {
-      const releases = await invoke<readonly Release[]>("get_releases")
+      // WARN: This is a workaround for a memory leak in tauri, see https://github.com/tauri-apps/tauri/issues/4026 for more details.
+      // tl;dr tauri doesn't release the memory in it's invoke api properly which is specially noticeable with larger payload, like the releases.
+      const res = await fetch("http://localhost:25842/releases")
+      if (!res.ok) {
+        return Return.Failed(`Fetch releases: ${res.statusText}`)
+      }
+      const releases = (await res.json()) as readonly Release[]
 
       return Return.Value(releases)
     } catch (e) {
+      // return empty list if error during development
       if (isError(e)) {
         return Return.Failed(e.message)
       }
@@ -161,8 +215,8 @@ class Client {
     }
   }
 
-  public async selectFromDir(): Promise<string | string[] | null> {
-    return dialog.open({ directory: true, multiple: false })
+  public async selectFromDir(title?: string): Promise<string | null> {
+    return dialog.open({ title, directory: true, multiple: false })
   }
 
   public async selectFromFileYaml(): Promise<string | string[] | null> {
@@ -175,6 +229,26 @@ class Client {
 
   public async selectFromFile(): Promise<string | string[] | null> {
     return dialog.open({ directory: false, multiple: false })
+  }
+
+  public async copyFile(src: string, dest: string): Promise<void> {
+    return fs.copyFile(src, dest)
+  }
+
+  public async copyFilePaths(src: string[], dest: string[]) {
+    return this.copyFile(await path.join(...src), await path.join(...dest))
+  }
+
+  public async writeTextFile(targetPath: string[], data: string) {
+    return fs.writeTextFile(await path.join(...targetPath), data)
+  }
+
+  public async readFile(targetPath: string[]) {
+    return fs.readFile(await path.join(...targetPath))
+  }
+
+  public async writeFile(targetPath: string[], data: Uint8Array) {
+    return fs.writeFile(await path.join(...targetPath), data)
   }
 
   public async installCLI(force: boolean = false): Promise<Result<void>> {
@@ -194,9 +268,25 @@ class Client {
       return Return.Failed("Unable to install CLI")
     }
   }
+
+  public async getEnv(name: string): Promise<boolean> {
+    return invoke<boolean>("get_env", { name })
+  }
+
   public async isCLIInstalled(): Promise<Result<boolean>> {
     try {
-      const result = await new Command("run-path-devpod-cli", ["version"]).execute()
+      // we're in a flatpak, we need to check in other paths.
+      if (import.meta.env.TAURI_IS_FLATPAK === "true") {
+        const home_dir = await this.getEnv("HOME")
+        // this will throw if doesn't exist
+        const exists = await invoke<boolean>("file_exists", {
+          filepath: home_dir + "/.local/bin/devpod",
+        })
+
+        return Return.Value(exists)
+      }
+
+      const result = await Command.create("run-path-devpod-cli", ["version"]).execute()
       if (result.code !== 0) {
         return Return.Value(false)
       }
@@ -207,7 +297,7 @@ class Client {
     }
   }
 
-  public openLink(link: string): void {
+  public open(link: string): void {
     shell.open(link)
   }
 
@@ -253,30 +343,12 @@ class Client {
 
   public async installUpdate(): Promise<Result<void>> {
     try {
-      let unsubscribe: TUnsubscribeFn | undefined
-      // Synchronize promise state with update operation
-      await new Promise((res, rej) => {
-        updater
-          .onUpdaterEvent((event) => {
-            if (event.status === "ERROR") {
-              unsubscribe?.()
-              rej(event.error)
+      const update = await updater.check()
+      if (!update) {
+        return Return.Ok()
+      }
 
-              return
-            }
-
-            if (event.status === "DONE") {
-              unsubscribe?.()
-              res(undefined)
-
-              return
-            }
-          })
-          .then(async (u) => {
-            unsubscribe = u
-            await updater.installUpdate()
-          })
-      })
+      await update.install()
 
       return Return.Ok()
     } catch (e) {
@@ -288,11 +360,20 @@ class Client {
     await process.relaunch()
   }
   public async closeCurrentWindow(): Promise<void> {
-    await tauriWindow.getCurrent().close()
+    await getCurrentWindow().close()
   }
 
   public async getSystemTheme(): Promise<TauriTheme | null> {
-    return tauriWindow.appWindow.theme()
+    return getCurrentWindow().theme()
+  }
+
+  public log(level: "debug" | "info" | "warn" | "error", message: string) {
+    const logFn = log[level]
+    logFn(message)
+  }
+
+  public getProClient(id: TProID): ProClient {
+    return new ProClient(id)
   }
 }
 

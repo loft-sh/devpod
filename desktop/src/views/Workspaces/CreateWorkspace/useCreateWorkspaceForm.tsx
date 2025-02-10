@@ -1,3 +1,4 @@
+import { Routes } from "@/routes"
 import {
   Button,
   Code,
@@ -15,33 +16,68 @@ import {
 } from "@chakra-ui/react"
 import { FormEventHandler, useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { useForm } from "react-hook-form"
+import { createSearchParams } from "react-router-dom"
 import { client } from "../../../client"
 import { useSettings, useWorkspaces } from "../../../contexts"
 import { exists } from "../../../lib"
 import { randomWords } from "../../../lib/randomWords"
 import { TIDEs, TProviders, TWorkspace } from "../../../types"
-import { FieldName, TCreateWorkspaceArgs, TCreateWorkspaceSearchParams, TFormValues } from "./types"
+import { FieldName, TCreateWorkspaceArgs, TFormValues } from "./types"
 
 const DEFAULT_PREBUILD_REPOSITORY_KEY = "devpod-create-prebuild-repository"
 const DEFAULT_CONTAINER_PATH = "__internal-default"
 
-export function useCreateWorkspaceForm(
-  params: TCreateWorkspaceSearchParams,
-  providers: TProviders | undefined,
-  ides: TIDEs | undefined,
-  onCreateWorkspace: (args: TCreateWorkspaceArgs) => void
-) {
+export function useCreateWorkspaceForm(onCreateWorkspace: (args: TCreateWorkspaceArgs) => void) {
   const formRef = useRef<HTMLFormElement>(null)
   const settings = useSettings()
-  const workspaces = useWorkspaces()
+  const workspaces = useWorkspaces<TWorkspace>()
   const [isSubmitLoading, setIsSubmitLoading] = useState(false)
-  const { register, handleSubmit, formState, watch, setError, setValue, control } =
+  const { register, handleSubmit, formState, watch, setError, setValue, control, getFieldState } =
     useForm<TFormValues>({
-      defaultValues: {
-        [FieldName.PREBUILD_REPOSITORY]:
-          window.localStorage.getItem(DEFAULT_PREBUILD_REPOSITORY_KEY) ?? "",
-        [FieldName.PROVIDER]: Object.keys(providers ?? {})[0] ?? undefined,
-        [FieldName.DEVCONTAINER_PATH]: undefined,
+      async defaultValues() {
+        const params = Routes.getWorkspaceCreateParamsFromSearchParams(
+          createSearchParams(location.search)
+        )
+
+        const [providersRes, idesRes] = await Promise.all([
+          client.providers.listAll(),
+          client.ides.listAll(),
+        ])
+        let providers: TProviders = {}
+        if (providersRes.ok) {
+          providers = providersRes.val
+        }
+
+        let ides: TIDEs = []
+        if (idesRes.ok) {
+          ides = idesRes.val
+        }
+
+        const defaultProvider =
+          params.providerID ??
+          Object.keys(providers).find((providerID) => providers[providerID]?.default) ??
+          Object.keys(providers)[0] ??
+          ""
+
+        const defaultIDE =
+          params.ide ??
+          ides.find((ide) => ide.default)?.name ??
+          ides.find((ide) => ide.name === "openvscode")?.name ??
+          ""
+
+        const defaultWorkspaceID = params.workspaceID ?? ""
+        const defaultSource = params.rawSource ?? ""
+        const defaultPrebuildRepo =
+          window.localStorage.getItem(DEFAULT_PREBUILD_REPOSITORY_KEY) ?? ""
+
+        return {
+          [FieldName.ID]: defaultWorkspaceID,
+          [FieldName.SOURCE]: defaultSource,
+          [FieldName.PROVIDER]: defaultProvider,
+          [FieldName.DEFAULT_IDE]: defaultIDE,
+          [FieldName.DEVCONTAINER_PATH]: undefined,
+          [FieldName.PREBUILD_REPOSITORY]: defaultPrebuildRepo,
+        }
       },
     })
   const currentSource = watch(FieldName.SOURCE)
@@ -63,47 +99,6 @@ export function useCreateWorkspaceForm(
 
   const { modal: selectDevcontainerModal, show: showSelectDevcontainerModal } =
     useSelectDevcontainerModal({ onSelected: handleDevcontainerSelected })
-
-  useEffect(() => {
-    const opts = {
-      shouldDirty: true,
-      shouldValidate: true,
-    }
-    if (params.workspaceID !== undefined) {
-      setValue(FieldName.ID, params.workspaceID, opts)
-    }
-
-    if (params.rawSource !== undefined) {
-      setValue(FieldName.SOURCE, params.rawSource, opts)
-    }
-
-    // default ide
-    if (params.ide !== undefined) {
-      setValue(FieldName.DEFAULT_IDE, params.ide, opts)
-    } else if (ides?.length) {
-      const defaultIDE = ides.find((ide) => ide.default)
-      if (defaultIDE) {
-        setValue(FieldName.DEFAULT_IDE, defaultIDE.name!, opts)
-      } else {
-        const openvscode = ides.find((ide) => ide.name === "openvscode")
-        if (openvscode && openvscode.name) {
-          setValue(FieldName.DEFAULT_IDE, openvscode.name, opts)
-        }
-      }
-    }
-
-    // default provider
-    if (params.providerID !== undefined) {
-      setValue(FieldName.PROVIDER, params.providerID, opts)
-    } else if (providers) {
-      const defaultProviderID = Object.keys(providers).find(
-        (providerID) => providers[providerID]?.default
-      )
-      if (defaultProviderID) {
-        setValue(FieldName.PROVIDER, defaultProviderID, opts)
-      }
-    }
-  }, [ides, params, providers, setValue])
 
   // Handle workspace name
   useEffect(() => {
@@ -140,7 +135,7 @@ export function useCreateWorkspaceForm(
         }
       })
     }
-  }, [currentProvider, currentSource, setError, setValue, workspaces])
+  }, [currentProvider, currentSource, getFieldState, setError, setValue, workspaces])
 
   const onSubmit = useCallback<FormEventHandler<HTMLFormElement>>(
     (event) =>

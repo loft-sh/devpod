@@ -17,6 +17,7 @@ type MergedDevContainerConfig struct {
 	ImageContainer          `json:",inline"`
 	ComposeContainer        `json:",inline"`
 	DockerfileContainer     `json:",inline"`
+	RunningContainer        `json:",inline"`
 
 	// Origin is the origin from where this config was loaded
 	Origin string `json:"-"`
@@ -29,6 +30,7 @@ type DevContainerConfig struct {
 	ImageContainer         `json:",inline"`
 	ComposeContainer       `json:",inline"`
 	DockerfileContainer    `json:",inline"`
+	RunningContainer       `json:",inline"`
 
 	// Origin is the origin from where this config was loaded
 	Origin string `json:"-"`
@@ -58,7 +60,7 @@ type DevContainerConfigBase struct {
 	PortsAttributes map[string]PortAttribute `json:"portAttributes,omitempty"`
 
 	// Set default properties that are applied to all ports that don't get properties from the setting `remote.portsAttributes`.
-	OtherPortsAttributes map[string]PortAttribute `json:"otherPortsAttributes,omitempty"`
+	OtherPortsAttributes *PortAttribute `json:"otherPortsAttributes,omitempty"`
 
 	// Controls whether on Linux the container's user should be updated with the local user's UID and GID. On by default when opening from a local folder.
 	UpdateRemoteUserUID *bool `json:"updateRemoteUserUID,omitempty"`
@@ -217,6 +219,10 @@ type DockerfileContainer struct {
 	Build *ConfigBuildOptions `json:"build,omitempty"`
 }
 
+type RunningContainer struct {
+	ContainerID string `json:"containerID,omitempty"`
+}
+
 func (d DockerfileContainer) GetDockerfile() string {
 	if d.Dockerfile != "" {
 		return d.Dockerfile
@@ -251,6 +257,13 @@ func (d DockerfileContainer) GetArgs() map[string]string {
 	return nil
 }
 
+func (d DockerfileContainer) GetOptions() []string {
+	if d.Build != nil {
+		return d.Build.Options
+	}
+	return nil
+}
+
 func (d DockerfileContainer) GetCacheFrom() types.StrArray {
 	if d.Build != nil {
 		return d.Build.CacheFrom
@@ -273,6 +286,9 @@ type ConfigBuildOptions struct {
 
 	// The image to consider as a cache. Use an array to specify multiple images.
 	CacheFrom types.StrArray `json:"cacheFrom,omitempty"`
+
+	// Build cli options
+	Options []string `json:"options,omitempty"`
 }
 
 type HostRequirements struct {
@@ -286,7 +302,7 @@ type HostRequirements struct {
 	Storage string `json:"storage,omitempty"`
 
 	// If GPU support should be enabled
-	GPU bool `json:"gpu,omitempty"`
+	GPU types.StrBool `json:"gpu,omitempty"`
 }
 
 type PortAttribute struct {
@@ -407,6 +423,14 @@ func (m *Mount) UnmarshalJSON(data []byte) error {
 		externalStr, ok := obj["external"].(bool)
 		if ok {
 			m.External = externalStr
+		}
+		otherInterface, ok := obj["other"].([]interface{})
+		if ok {
+			otherStr := make([]string, len(otherInterface))
+			for i := range otherInterface {
+				otherStr[i] = otherInterface[i].(string)
+			}
+			m.Other = otherStr
 		}
 		return nil
 	}

@@ -8,6 +8,7 @@ import (
 	"path/filepath"
 	"runtime"
 	"strings"
+	"time"
 
 	"github.com/loft-sh/devpod/pkg/config"
 	"github.com/loft-sh/devpod/pkg/copy"
@@ -84,7 +85,7 @@ func DownloadBinaries(binaries map[string][]*provider2.ProviderBinary, targetFol
 			}
 
 			// try to download the binary
-			for i := 0; i < 2; i++ {
+			for i := 0; i < 3; i++ {
 				binaryPath, err := downloadBinary(binaryName, binary, targetFolder, log)
 				if err != nil {
 					return nil, errors.Wrapf(err, "downloading binary %s", binaryName)
@@ -99,6 +100,7 @@ func DownloadBinaries(binaries map[string][]*provider2.ProviderBinary, targetFol
 					} else if !strings.EqualFold(fileHash, binary.Checksum) {
 						_ = os.Remove(binaryPath)
 						log.Errorf("Unexpected file checksum %s != %s for binary %s", strings.ToLower(fileHash), strings.ToLower(binary.Checksum), binaryName)
+						time.Sleep(250 * time.Millisecond)
 						continue
 					}
 				}

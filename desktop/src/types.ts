@@ -60,7 +60,9 @@ export type TProviderConfig = Readonly<{
   options: TProviderOptions
   icon: TMaybe<string>
   home: TMaybe<string>
-  exec: TMaybe<Record<string, readonly string[]>>
+  exec:
+    | TMaybe<Record<string, readonly string[]> & { proxy: never }>
+    | TMaybe<{ proxy: TMaybe<Record<string, readonly string[]>> }>
 }>
 export type TProviderOptionGroup = Readonly<{
   name: TMaybe<string>
@@ -82,12 +84,14 @@ export type TProviderOption = Readonly<{
   children: TMaybe<string[]>
   // If value is a password
   password: TMaybe<boolean>
+  // DisplayName of the option, preferred over the option name by a supporting tool.
+  displayName: TMaybe<string>
   // A description of the option displayed to the user by a supporting tool.
   description: TMaybe<string>
   // If required is true and the user doesn't supply a value, devpod will ask the user
   required: TMaybe<boolean>
   // Allowed values for this option.
-  enum: TMaybe<string[]>
+  enum: TMaybe<TOptionEnum[]>
   // Suggestions are suggestions to show in the DevPod UI for this option
   suggestions: TMaybe<string[]>
   // Hidden specifies if the option should be hidden
@@ -100,17 +104,24 @@ export type TProviderOption = Readonly<{
   command: TMaybe<string>
   // SubOptionsCommand is the command to retrieve sub options
   subOptionsCommand: TMaybe<string>
-  // Type is the provider option type. Can be one of: string, duration, number or boolean. Defaults to string
-  type: TMaybe<"string" | "duration" | "number" | "boolean">
+  // Type is the provider option type. Can be one of: string, multiline, duration, number or boolean. Defaults to string
+  type: TMaybe<"string" | "duration" | "number" | "boolean" | "multiline">
+  // Mutable specifies if an option can be changed on the workspace or machine after creating it
+  mutable: TMaybe<boolean>
+}>
+export type TOptionEnum = Readonly<{
+  value: TMaybe<string>
+  displayName: TMaybe<string>
 }>
 
 export type TAddProviderConfig = Readonly<{
   name?: TProviderConfig["name"]
 }>
 export type TConfigureProviderConfig = Readonly<{
-  options: Record<string, unknown>
+  options: Record<string, string>
   useAsDefaultProvider?: boolean
   reuseMachine?: boolean
+  reconfigure?: boolean
 }>
 export type TProviderManager = Readonly<{
   remove: TRunnable<TWithProviderID> &
@@ -131,20 +142,14 @@ export type TWorkspace = Readonly<{
   uid: string
   picture: TMaybe<string>
   machine: TMaybe<Readonly<{ machineId: TMaybe<string> }>>
-  provider: TMaybe<Readonly<{ name: TMaybe<string> }>>
+  provider: TMaybe<Readonly<{ name: TMaybe<string>; options: TMaybe<TProviderOptions> }>>
   status: TMaybe<"Running" | "Busy" | "Stopped" | "NotFound">
   ide: TMaybe<{
     name: TMaybe<string>
   }>
   creationTimestamp: string
   lastUsed: string
-  source: TMaybe<{
-    gitRepository: TMaybe<string>
-    gitBranch: TMaybe<string>
-    gitCommit: TMaybe<string>
-    localFolder: TMaybe<string>
-    image: TMaybe<string>
-  }>
+  source: TMaybe<TWorkspaceSource>
 }>
 export type TWorkspaceWithoutStatus = Omit<TWorkspace, "status"> & Readonly<{ status: null }>
 export type TWorkspaceStatusResult = Readonly<{
@@ -153,23 +158,51 @@ export type TWorkspaceStatusResult = Readonly<{
   provider: TMaybe<string>
   state: TMaybe<TWorkspace["status"]>
 }>
+export type TWorkspaceSourceType = "local" | "git" | "image"
 export type TWorkspaceStartConfig = Readonly<{
   id: string
   prebuildRepositories?: string[]
   devcontainerPath?: string
   ideConfig?: TWorkspace["ide"]
-  providerConfig?: Readonly<{ providerID?: TProviderID }>
+  providerConfig?: Readonly<{ providerID?: TProviderID; options?: Record<string, string> }>
   // Instead of starting a workspace just by ID, the sourceConfig starts it with a `source/ID` combination
   sourceConfig?: Readonly<{
     source: string
+    type?: TWorkspaceSourceType
   }>
 }>
-export const SUPPORTED_IDES = ["vscode", "intellj"] as const
+export type TWorkspaceSource = {
+  gitRepository: TMaybe<string>
+  gitBranch: TMaybe<string>
+  gitCommit: TMaybe<string>
+  gitPRReference: TMaybe<string>
+  gitSubPath: TMaybe<string>
+  localFolder: TMaybe<string>
+  image: TMaybe<string>
+}
+export const SUPPORTED_IDES = [
+  "none",
+  "vscode",
+  "vscode-insiders",
+  "intellj",
+  "goland",
+  "rustrover",
+  "pycharm",
+  "phpstorm",
+  "clion",
+  "rubymine",
+  "rider",
+  "webstorm",
+  "openvscode",
+  "jupyternotebook",
+  "fleet",
+] as const
 export type TSupportedIDE = (typeof SUPPORTED_IDES)[number]
 export type TImportWorkspaceConfig = Readonly<{
   workspaceID: string
   workspaceUID: string
   devPodProHost: string
+  project: string
   options: Record<string, string> | null
 }>
 
@@ -178,7 +211,11 @@ export type TImportWorkspaceConfig = Readonly<{
 //#region Context
 export type TContextOptions = Record<TContextOptionName, TContextOption>
 // See pkg/config/context.go
-export type TContextOptionName = "AGENT_URL"
+export type TContextOptionName =
+  | "AGENT_URL"
+  | "TELEMETRY"
+  | "SSH_INJECT_DOCKER_CREDENTIALS"
+  | "SSH_INJECT_GIT_CREDENTIALS"
 export type TContextOption = Readonly<{
   name: TContextOptionName
   description: string | null | undefined
@@ -195,6 +232,7 @@ export type TProInstance = Readonly<{
   host: TMaybe<string>
   provider: TMaybe<string>
   creationTimestamp: TMaybe<string>
+  authenticated: TMaybe<boolean>
 }>
 export type TProInstances = readonly TProInstance[]
 export type TProInstanceManager = Readonly<{
@@ -207,8 +245,19 @@ export type TProInstanceManager = Readonly<{
 }>
 export type TProInstanceLoginConfig = Readonly<{
   host: string
-  providerName?: string
+  accessKey?: string
   streamListener?: TStreamEventListenerFn
+}>
+export type TListProInstancesConfig = Readonly<
+  | {
+      authenticate?: boolean
+    }
+  | undefined
+>
+export type TPlatformVersionInfo = Readonly<{
+  serverVersion: TMaybe<string>
+  remoteProviderVersion: TMaybe<string>
+  currentProviderVersion: TMaybe<string>
 }>
 //#endregion
 
@@ -226,6 +275,13 @@ export type TCommunityProvider = Readonly<{
   repository: string
 }>
 //#endregion
+export type TPlatformHealthCheck = Readonly<{
+  healthy: TMaybe<boolean>
+}>
+export type TPlatformUpdateCheck = Readonly<{
+  available: TMaybe<boolean>
+  newVersion: TMaybe<string>
+}>
 
 export function isWithWorkspaceID(arg: unknown): arg is TWithWorkspaceID {
   return typeof arg === "object" && arg !== null && "workspaceID" in arg

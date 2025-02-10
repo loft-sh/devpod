@@ -3,7 +3,10 @@
 /test
 /e2e/bin
 devpod
+devpod.exe
+devpod-cli
 # Unit test targets
 main
 profile.out
+package-lock.json
 tags

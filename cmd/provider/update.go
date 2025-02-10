@@ -26,7 +26,7 @@ func NewUpdateCmd(flags *flags.GlobalFlags) *cobra.Command {
 		GlobalFlags: flags,
 	}
 	updateCmd := &cobra.Command{
-		Use:   "update",
+		Use:   "update [name] [URL or path]",
 		Short: "Updates a provider in DevPod",
 		RunE: func(_ *cobra.Command, args []string) error {
 			ctx := context.Background()
@@ -61,7 +61,7 @@ func (cmd *UpdateCmd) Run(ctx context.Context, devPodConfig *config.Config, args
 
 	log.Default.Donef("Successfully updated provider %s", providerConfig.Name)
 	if cmd.Use {
-		err = ConfigureProvider(ctx, providerConfig, devPodConfig.DefaultContext, cmd.Options, false, false, nil, log.Default)
+		err = ConfigureProvider(ctx, providerConfig, devPodConfig.DefaultContext, cmd.Options, false, false, false, nil, log.Default)
 		if err != nil {
 			log.Default.Errorf("Error configuring provider, please retry with 'devpod provider use %s --reconfigure'", providerConfig.Name)
 			return errors.Wrap(err, "configure provider")

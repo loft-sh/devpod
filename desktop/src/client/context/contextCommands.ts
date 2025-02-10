@@ -17,7 +17,9 @@ export class ContextCommands {
     return new Command([...args, ...(ContextCommands.DEBUG ? [DEVPOD_FLAG_DEBUG] : [])])
   }
 
-  static async SetOptions(rawOptions: Record<TContextOptionName, string>): Promise<ResultError> {
+  static async SetOptions(
+    rawOptions: Partial<Record<TContextOptionName, string>>
+  ): Promise<ResultError> {
     const optionsFlag = serializeRawOptions(rawOptions)
     const result = await ContextCommands.newCommand([
       DEVPOD_COMMAND_CONTEXT,

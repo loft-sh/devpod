@@ -83,6 +83,7 @@ func ResolveAndSaveOptionsWorkspace(
 	originalWorkspace *provider2.Workspace,
 	userOptions map[string]string,
 	log log.Logger,
+	options ...resolver.Option,
 ) (*provider2.Workspace, error) {
 	// reload config
 	workspace, err := provider2.LoadWorkspaceConfig(originalWorkspace.Context, originalWorkspace.ID)
@@ -101,13 +102,14 @@ func ResolveAndSaveOptionsWorkspace(
 	if err != nil {
 		return nil, err
 	}
+	options = append(options, resolver.WithResolveLocal())
 
 	// resolve options
 	resolvedOptions, _, err := resolver.New(
 		userOptions,
 		provider2.Merge(provider2.ToOptionsWorkspace(workspace), binaryPaths),
 		log,
-		resolver.WithResolveLocal(),
+		options...,
 	).Resolve(
 		ctx,
 		devConfig.DynamicProviderOptionDefinitions(provider.Name),
@@ -136,12 +138,24 @@ func ResolveAndSaveOptionsWorkspace(
 	return workspace, nil
 }
 
+func ResolveAndSaveOptionsProxy(
+	ctx context.Context,
+	devConfig *config.Config,
+	provider *provider2.ProviderConfig,
+	originalWorkspace *provider2.Workspace,
+	userOptions map[string]string,
+	log log.Logger,
+) (*provider2.Workspace, error) {
+	return ResolveAndSaveOptionsWorkspace(ctx, devConfig, provider, originalWorkspace, userOptions, log, resolver.WithResolveSubOptions())
+}
+
 func ResolveOptions(
 	ctx context.Context,
 	devConfig *config.Config,
 	provider *provider2.ProviderConfig,
 	userOptions map[string]string,
 	skipRequired bool,
+	skipSubOptions bool,
 	singleMachine *bool,
 	log log.Logger,
 ) (*config.Config, error) {
@@ -151,20 +165,26 @@ func ResolveOptions(
 		return nil, err
 	}
 
+	resolverOpts := []resolver.Option{
+		resolver.WithResolveGlobal(),
+		resolver.WithSkipRequired(skipRequired),
+	}
+	if !skipSubOptions {
+		resolverOpts = append(resolverOpts, resolver.WithResolveSubOptions())
+	}
+
 	// create new resolver
 	resolve := resolver.New(
 		userOptions,
 		provider2.Merge(provider2.GetBaseEnvironment(devConfig.DefaultContext, provider.Name), binaryPaths),
 		log,
-		resolver.WithResolveGlobal(),
-		resolver.WithResolveSubOptions(),
-		resolver.WithSkipRequired(skipRequired),
+		resolverOpts...,
 	)
 
 	// loop and resolve options, as soon as we encounter a new dynamic option it will get filled
 	resolvedOptionValues, dynamicOptionDefinitions, err := resolve.Resolve(
 		ctx,
-		devConfig.DynamicProviderOptionDefinitions(provider.Name),
+		nil,
 		provider.Options,
 		devConfig.ProviderOptions(provider.Name),
 	)
@@ -205,9 +225,11 @@ func ResolveAgentConfig(devConfig *config.Config, provider *provider2.ProviderCo
 	agentConfig.Dockerless.Image = resolver.ResolveDefaultValue(agentConfig.Dockerless.Image, options)
 	agentConfig.Dockerless.Disabled = types.StrBool(resolver.ResolveDefaultValue(string(agentConfig.Dockerless.Disabled), options))
 	agentConfig.Dockerless.IgnorePaths = resolver.ResolveDefaultValue(agentConfig.Dockerless.IgnorePaths, options)
+	agentConfig.Dockerless.RegistryCache = devConfig.ContextOption(config.ContextOptionRegistryCache)
 	agentConfig.Driver = resolver.ResolveDefaultValue(agentConfig.Driver, options)
 	agentConfig.Local = types.StrBool(resolver.ResolveDefaultValue(string(agentConfig.Local), options))
 	agentConfig.Docker.Path = resolver.ResolveDefaultValue(agentConfig.Docker.Path, options)
+	agentConfig.Docker.Builder = resolver.ResolveDefaultValue(agentConfig.Docker.Builder, options)
 	agentConfig.Docker.Install = types.StrBool(resolver.ResolveDefaultValue(string(agentConfig.Docker.Install), options))
 	agentConfig.Docker.Env = resolver.ResolveDefaultValues(agentConfig.Docker.Env, options)
 	agentConfig.DataPath = resolver.ResolveDefaultValue(agentConfig.DataPath, options)
@@ -224,6 +246,9 @@ func ResolveAgentConfig(devConfig *config.Config, provider *provider2.ProviderCo
 	agentConfig.Timeout = resolver.ResolveDefaultValue(agentConfig.Timeout, options)
 	agentConfig.ContainerTimeout = resolver.ResolveDefaultValue(agentConfig.ContainerTimeout, options)
 	agentConfig.InjectGitCredentials = types.StrBool(resolver.ResolveDefaultValue(string(agentConfig.InjectGitCredentials), options))
+	if devConfig.ContextOption(config.ContextOptionSSHInjectGitCredentials) != "" {
+		agentConfig.InjectGitCredentials = types.StrBool(devConfig.ContextOption(config.ContextOptionSSHInjectGitCredentials))
+	}
 	agentConfig.InjectDockerCredentials = types.StrBool(resolver.ResolveDefaultValue(string(agentConfig.InjectDockerCredentials), options))
 	return agentConfig
 }

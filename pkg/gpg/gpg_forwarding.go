@@ -21,6 +21,7 @@ type GPGConf struct {
 	PublicKey  []byte
 	OwnerTrust []byte
 	SocketPath string
+	GitKey     string
 }
 
 func IsGpgTunnelRunning(
@@ -39,7 +40,7 @@ func IsGpgTunnelRunning(
 
 	// capture the output, if it's empty it means we don't have gpg-forwarding
 	var out bytes.Buffer
-	err := devssh.Run(ctx, client, command, nil, &out, writer)
+	err := devssh.Run(ctx, client, command, nil, &out, writer, nil)
 
 	return err == nil && len(out.Bytes()) > 1
 }
@@ -69,7 +70,12 @@ func (g *GPGConf) ImportGpgKey() error {
 		_, _ = stdin.Write(g.PublicKey)
 	}()
 
-	return gpgImportCmd.Run()
+	out, err := gpgImportCmd.CombinedOutput()
+	if err != nil {
+		return fmt.Errorf("import gpg public key: %s %w", out, err)
+	}
+
+	return nil
 }
 
 func (g *GPGConf) ImportOwnerTrust() error {
@@ -145,7 +151,7 @@ func (g *GPGConf) SetupRemoteSocketLink() error {
 		return err
 	}
 
-	err = exec.Command("sudo", "ln", "-f", g.SocketPath, "/tmp/S.gpg-agent").Run()
+	err = exec.Command("sudo", "ln", "-s", "-f", g.SocketPath, "/tmp/S.gpg-agent").Run()
 	if err != nil {
 		return err
 	}

@@ -26,6 +26,7 @@ var (
 	DevPodDebug = "DEVPOD_DEBUG"
 
 	DevPodFlagsUp     = "DEVPOD_FLAGS_UP"
+	DevPodFlagsSsh    = "DEVPOD_FLAGS_SSH"
 	DevPodFlagsDelete = "DEVPOD_FLAGS_DELETE"
 	DevPodFlagsStatus = "DEVPOD_FLAGS_STATUS"
 )
@@ -138,7 +139,7 @@ func (s *proxyClient) Context() string {
 	return s.workspace.Context
 }
 
-func (s *proxyClient) RefreshOptions(ctx context.Context, userOptionsRaw []string) error {
+func (s *proxyClient) RefreshOptions(ctx context.Context, userOptionsRaw []string, reconfigure bool) error {
 	s.m.Lock()
 	defer s.m.Unlock()
 
@@ -147,9 +148,16 @@ func (s *proxyClient) RefreshOptions(ctx context.Context, userOptionsRaw []strin
 		return perrors.Wrap(err, "parse options")
 	}
 
-	workspace, err := options.ResolveAndSaveOptionsWorkspace(ctx, s.devPodConfig, s.config, s.workspace, userOptions, s.log)
+	workspace, err := options.ResolveAndSaveOptionsProxy(ctx, s.devPodConfig, s.config, s.workspace, userOptions, s.log)
 	if err != nil {
 		return err
+	}
+
+	if reconfigure {
+		err := s.updateInstance(ctx)
+		if err != nil {
+			return err
+		}
 	}
 
 	s.workspace = workspace
@@ -163,6 +171,11 @@ func (s *proxyClient) Up(ctx context.Context, opt client.UpOptions) error {
 		readLogStream(reader, s.log.ErrorStreamOnly())
 	}()
 
+	opts := EncodeOptions(opt.CLIOptions, DevPodFlagsUp)
+	if opt.Debug {
+		opts["DEBUG"] = "true"
+	}
+
 	err := RunCommandWithBinaries(
 		ctx,
 		"up",
@@ -172,7 +185,7 @@ func (s *proxyClient) Up(ctx context.Context, opt client.UpOptions) error {
 		nil,
 		s.devPodConfig.ProviderOptions(s.config.Name),
 		s.config,
-		EncodeOptions(opt.CLIOptions, DevPodFlagsUp),
+		opts,
 		opt.Stdin,
 		opt.Stdout,
 		writer,
@@ -201,7 +214,7 @@ func (s *proxyClient) Ssh(ctx context.Context, opt client.SshOptions) error {
 		nil,
 		s.devPodConfig.ProviderOptions(s.config.Name),
 		s.config,
-		nil,
+		EncodeOptions(opt, DevPodFlagsSsh),
 		opt.Stdin,
 		opt.Stdout,
 		writer,
@@ -262,7 +275,7 @@ func (s *proxyClient) Delete(ctx context.Context, opt client.DeleteOptions) erro
 		s.log.Errorf("Error deleting workspace: %v", err)
 	}
 
-	return DeleteWorkspaceFolder(s.workspace.Context, s.workspace.ID, s.log)
+	return DeleteWorkspaceFolder(s.workspace.Context, s.workspace.ID, s.workspace.SSHConfigPath, s.log)
 }
 
 func (s *proxyClient) Stop(ctx context.Context, opt client.StopOptions) error {
@@ -331,6 +344,29 @@ func (s *proxyClient) Status(ctx context.Context, options client.StatusOptions) 
 
 	// parse status
 	return client.ParseStatus(status.State)
+}
+
+func (s *proxyClient) updateInstance(ctx context.Context) error {
+	err := RunCommandWithBinaries(
+		ctx,
+		"updateWorkspace",
+		s.config.Exec.Proxy.Update.Workspace,
+		s.workspace.Context,
+		s.workspace,
+		nil,
+		s.devPodConfig.ProviderOptions(s.config.Name),
+		s.config,
+		nil,
+		os.Stdin,
+		os.Stdout,
+		os.Stderr,
+		s.log.ErrorStreamOnly(),
+	)
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
 
 func EncodeOptions(options any, name string) map[string]string {

@@ -16,9 +16,9 @@ import (
 	devpodhttp "github.com/loft-sh/devpod/pkg/http"
 	"github.com/loft-sh/devpod/pkg/ide"
 	"github.com/loft-sh/devpod/pkg/single"
+	"github.com/loft-sh/devpod/pkg/util"
 	"github.com/loft-sh/log"
 	"github.com/loft-sh/log/scanner"
-	"github.com/mitchellh/go-homedir"
 	"github.com/pkg/errors"
 )
 
@@ -27,11 +27,17 @@ const (
 )
 
 const (
+	VersionOption       = "VERSION"
 	DownloadAmd64Option = "DOWNLOAD_AMD64"
 	DownloadArm64Option = "DOWNLOAD_ARM64"
 )
 
 var Options = ide.Options{
+	VersionOption: {
+		Name:        VersionOption,
+		Description: "The version of fleet to install",
+		Default:     "latest",
+	},
 	DownloadArm64Option: {
 		Name:        DownloadArm64Option,
 		Description: "The download url for the arm64 install script",
@@ -90,7 +96,7 @@ func (o *FleetServer) Install(projectDir string) error {
 		return fmt.Errorf("unexpected status code while trying to download fleet from %s: %d", url, resp.StatusCode)
 	}
 
-	f, err := os.OpenFile(fleetBinary, os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0777)
+	f, err := os.OpenFile(fleetBinary, os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0755)
 	if err != nil {
 		return err
 	}
@@ -121,7 +127,21 @@ func (o *FleetServer) Start(binaryPath, location, projectDir string) error {
 
 	err := single.Single("fleet.pid", func() (*exec.Cmd, error) {
 		o.log.Infof("Starting fleet in background...")
-		runCommand := fmt.Sprintf("%s launch workspace -- --projectDir '%s' --cache-path '%s' --auth=accept-everyone --publish --enableSmartMode", binaryPath, projectDir, location)
+		// Determine version of fleet to use
+		var runCommand string
+		version := Options.GetValue(o.values, VersionOption)
+		if version == "latest" {
+			runCommand = fmt.Sprintf(
+				"%s launch workspace -- --projectDir '%s' --cache-path '%s' --auth=accept-everyone --publish --enableSmartMode",
+				binaryPath, projectDir, location,
+			)
+		} else {
+			runCommand = fmt.Sprintf(
+				"%s launch workspace --workspace-version %s -- --projectDir '%s' --cache-path '%s' --auth=accept-everyone --publish --enableSmartMode",
+				binaryPath, version, projectDir, location,
+			)
+		}
+
 		args := []string{}
 		if o.userName != "" {
 			args = append(args, "su", o.userName, "-c", runCommand)
@@ -154,13 +174,13 @@ func (o *FleetServer) Start(binaryPath, location, projectDir string) error {
 		text := s.Text()
 		if strings.Contains(text, "https://fleet.jetbrains.com/") {
 			index := strings.Index(text, "https://fleet.jetbrains.com/")
-			err = os.WriteFile(FleetURLFile, []byte(strings.TrimSpace(text[index:])), 0666)
+			err = os.WriteFile(FleetURLFile, []byte(strings.TrimSpace(text[index:])), 0600)
 			if err != nil {
 				return err
 			}
 
 			o.log.Infof("Fleet has successfully started")
-			return nil
+			return o.startMonitor()
 		} else {
 			_, _ = stdoutBuffer.Write([]byte(text + "\n"))
 		}
@@ -169,20 +189,40 @@ func (o *FleetServer) Start(binaryPath, location, projectDir string) error {
 	return fmt.Errorf("seems like there was an error starting up fleet: %s%s", stdoutBuffer.String(), stderrBuffer.String())
 }
 
+func (o *FleetServer) startMonitor() error {
+	self, err := os.Executable()
+	if err != nil {
+		return err
+	}
+
+	return single.Single("fleet-monitor.pid", func() (*exec.Cmd, error) {
+		o.log.Infof("Starting fleet monitor in background...")
+		runCommand := fmt.Sprintf("%s helper fleet-server --workspaceid %s", self, "test")
+		args := []string{}
+		if o.userName != "" {
+			args = append(args, "su", o.userName, "-c", runCommand)
+		} else {
+			args = append(args, "sh", "-c", runCommand)
+		}
+		cmd := exec.Command(args[0], args[1:]...)
+		return cmd, nil
+	})
+}
+
 func prepareFleetServerLocation(userName string) (string, error) {
 	var err error
 	homeFolder := ""
 	if userName != "" {
 		homeFolder, err = command.GetHome(userName)
 	} else {
-		homeFolder, err = homedir.Dir()
+		homeFolder, err = util.UserHomeDir()
 	}
 	if err != nil {
 		return "", err
 	}
 
 	folder := filepath.Join(homeFolder, ".fleet-server")
-	err = os.MkdirAll(folder, 0777)
+	err = os.MkdirAll(folder, 0755)
 	if err != nil {
 		return "", err
 	}

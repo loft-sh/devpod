@@ -1,18 +1,12 @@
 import { UseMutationOptions, useMutation, useQueryClient } from "@tanstack/react-query"
 import { client } from "../../../client"
-import {
-  TAddProviderConfig,
-  TProviderID,
-  TProviderOptionGroup,
-  TProviderOptions,
-} from "../../../types"
 import { QueryKeys } from "../../../queryKeys"
+import { TAddProviderConfig, TProviderID } from "../../../types"
 
 type TAddUserMutationOptions = UseMutationOptions<
   Readonly<{
     providerID: TProviderID
-    options: TProviderOptions
-    optionGroups: TProviderOptionGroup[]
+    suggestedOptions: Record<string, string>
   }>,
   unknown,
   Readonly<{
@@ -48,15 +42,6 @@ export function useAddProvider({ onSuccess, onError }: TUseAddProvider) {
       // add provider
       ;(await client.providers.add(rawProviderSource, config)).unwrap()
 
-      // get options
-      let options: TProviderOptions | undefined
-      try {
-        options = (await client.providers.getOptions(providerID!)).unwrap()
-      } catch (e) {
-        ;(await client.providers.remove(providerID)).unwrap()
-        throw e
-      }
-
       // check if provider could be added
       providers = (await client.providers.listAll()).unwrap()
       if (!providers?.[providerID!]) {
@@ -65,8 +50,7 @@ export function useAddProvider({ onSuccess, onError }: TUseAddProvider) {
 
       return {
         providerID: providerID!,
-        options: options!,
-        optionGroups: providers[providerID!]?.config?.optionGroups || [],
+        suggestedOptions: {},
       }
     },
     onSuccess(result, ...rest) {

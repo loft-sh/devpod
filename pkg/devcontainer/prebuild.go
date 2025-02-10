@@ -5,21 +5,23 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"github.com/loft-sh/devpod/pkg/devcontainer/config"
 	"github.com/loft-sh/devpod/pkg/driver"
 	"github.com/loft-sh/devpod/pkg/driver/docker"
 	"github.com/loft-sh/devpod/pkg/image"
+	"github.com/loft-sh/devpod/pkg/provider"
 	"github.com/pkg/errors"
 )
 
-func (r *runner) Build(ctx context.Context, options config.BuildOptions) (string, error) {
+func (r *runner) Build(ctx context.Context, options provider.BuildOptions) (string, error) {
 	dockerDriver, ok := r.Driver.(driver.DockerDriver)
 	if !ok {
 		return "", fmt.Errorf("building only supported with docker driver")
 	}
 
-	substitutedConfig, err := r.prepare(options.CLIOptions)
+	substitutedConfig, substitutionContext, err := r.getSubstitutedConfig(options.CLIOptions)
 	if err != nil {
 		return "", err
 	}
@@ -37,9 +39,16 @@ func (r *runner) Build(ctx context.Context, options config.BuildOptions) (string
 	}()
 
 	// check if we need to build container
-	buildInfo, err := r.build(ctx, substitutedConfig, options)
+	buildInfo, err := r.build(ctx, substitutedConfig, substitutionContext, options)
 	if err != nil {
 		return "", errors.Wrap(err, "build image")
+	}
+
+	// have a fallback value for PrebuildHash
+	// in some cases it may be empty, and this would lead to
+	// invalid reference format during image pushing.
+	if buildInfo.PrebuildHash == "" {
+		buildInfo.PrebuildHash = "latest"
 	}
 
 	// prebuild already exists
@@ -61,9 +70,14 @@ func (r *runner) Build(ctx context.Context, options config.BuildOptions) (string
 		return prebuildImage, nil
 	}
 
+	if isDockerComposeConfig(substitutedConfig.Config) {
+		if err := dockerDriver.TagDevContainer(ctx, buildInfo.ImageName, prebuildImage); err != nil {
+			return "", errors.Wrap(err, "tag image")
+		}
+	}
+
 	// check if we can push image
-	err = image.CheckPushPermissions(prebuildImage)
-	if err != nil {
+	if err := image.CheckPushPermissions(prebuildImage); err != nil {
 		return "", fmt.Errorf(
 			"cannot push to repository %s. Please make sure you are logged into the registry and credentials are available. (Error: %w)",
 			prebuildImage,
@@ -71,10 +85,28 @@ func (r *runner) Build(ctx context.Context, options config.BuildOptions) (string
 		)
 	}
 
+	// Setup all image tags (prebuild and any user defined tags)
+	imageRefs := []string{prebuildImage}
+
+	imageRepoName := strings.Split(prebuildImage, ":")
+	if buildInfo.Tags != nil {
+		for _, tag := range buildInfo.Tags {
+			imageRefs = append(imageRefs, imageRepoName[0]+":"+tag)
+		}
+	}
+
+	// tag the image
+	for _, imageRef := range imageRefs {
+		if err := dockerDriver.TagDevContainer(ctx, prebuildImage, imageRef); err != nil {
+			return "", errors.Wrap(err, "tag image")
+		}
+	}
+
 	// push the image to the registry
-	err = dockerDriver.PushDevContainer(ctx, prebuildImage)
-	if err != nil {
-		return "", errors.Wrap(err, "push image")
+	for _, imageRef := range imageRefs {
+		if err := dockerDriver.PushDevContainer(ctx, imageRef); err != nil {
+			return "", errors.Wrap(err, "push image")
+		}
 	}
 
 	return prebuildImage, nil

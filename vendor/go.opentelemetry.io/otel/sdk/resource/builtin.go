@@ -1,16 +1,5 @@
 // Copyright The OpenTelemetry Authors
-//
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-//     http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
+// SPDX-License-Identifier: Apache-2.0
 
 package resource // import "go.opentelemetry.io/otel/sdk/resource"
 
@@ -20,9 +9,11 @@ import (
 	"os"
 	"path/filepath"
 
-	"go.opentelemetry.io/otel"
+	"github.com/google/uuid"
+
 	"go.opentelemetry.io/otel/attribute"
-	semconv "go.opentelemetry.io/otel/semconv/v1.7.0"
+	"go.opentelemetry.io/otel/sdk"
+	semconv "go.opentelemetry.io/otel/semconv/v1.26.0"
 )
 
 type (
@@ -47,6 +38,8 @@ type (
 	}
 
 	defaultServiceNameDetector struct{}
+
+	defaultServiceInstanceIDDetector struct{}
 )
 
 var (
@@ -54,15 +47,16 @@ var (
 	_ Detector = host{}
 	_ Detector = stringDetector{}
 	_ Detector = defaultServiceNameDetector{}
+	_ Detector = defaultServiceInstanceIDDetector{}
 )
 
 // Detect returns a *Resource that describes the OpenTelemetry SDK used.
 func (telemetrySDK) Detect(context.Context) (*Resource, error) {
 	return NewWithAttributes(
 		semconv.SchemaURL,
-		semconv.TelemetrySDKNameKey.String("opentelemetry"),
-		semconv.TelemetrySDKLanguageKey.String("go"),
-		semconv.TelemetrySDKVersionKey.String(otel.Version()),
+		semconv.TelemetrySDKName("opentelemetry"),
+		semconv.TelemetrySDKLanguageGo,
+		semconv.TelemetrySDKVersion(sdk.Version()),
 	), nil
 }
 
@@ -92,7 +86,7 @@ func (sd stringDetector) Detect(ctx context.Context) (*Resource, error) {
 	return NewWithAttributes(sd.schemaURL, sd.K.String(value)), nil
 }
 
-// Detect implements Detector
+// Detect implements Detector.
 func (defaultServiceNameDetector) Detect(ctx context.Context) (*Resource, error) {
 	return StringDetector(
 		semconv.SchemaURL,
@@ -103,6 +97,22 @@ func (defaultServiceNameDetector) Detect(ctx context.Context) (*Resource, error)
 				return "unknown_service:go", nil
 			}
 			return "unknown_service:" + filepath.Base(executable), nil
+		},
+	).Detect(ctx)
+}
+
+// Detect implements Detector.
+func (defaultServiceInstanceIDDetector) Detect(ctx context.Context) (*Resource, error) {
+	return StringDetector(
+		semconv.SchemaURL,
+		semconv.ServiceInstanceIDKey,
+		func() (string, error) {
+			version4Uuid, err := uuid.NewRandom()
+			if err != nil {
+				return "", err
+			}
+
+			return version4Uuid.String(), nil
 		},
 	).Detect(ctx)
 }

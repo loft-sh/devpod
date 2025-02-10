@@ -1,4 +1,8 @@
-import { ConfigureProviderOptionsForm, TOptionWithID, useProviderOptions } from "@/views/Providers"
+import {
+  ConfigureProviderOptionsForm,
+  TOptionWithID,
+  useProviderDisplayOptions,
+} from "@/views/Providers"
 import { ViewIcon } from "@chakra-ui/icons"
 import {
   ButtonGroup,
@@ -23,14 +27,15 @@ import {
 import { ReactElement, useCallback, useRef, useState } from "react"
 import { HiPencil } from "react-icons/hi2"
 import { TNamedProvider } from "../../../types"
+import { mergeOptionDefinitions } from "@/views/Providers/helpers"
 
 type TProviderOptionsPopoverProps = Readonly<{ provider: TNamedProvider; trigger: ReactElement }>
 export function ProviderOptionsPopover({ provider, trigger }: TProviderOptionsPopoverProps) {
   const { isOpen, onClose, onOpen } = useDisclosure()
   const bodyRef = useRef<HTMLDivElement | null>(null)
 
-  const options = useProviderOptions(
-    provider.state?.options ?? {},
+  const options = useProviderDisplayOptions(
+    mergeOptionDefinitions(provider.state?.options ?? {}, provider.config?.options ?? {}),
     provider.config?.optionGroups ?? []
   )
   const [isLocked, setIsLocked] = useState(false)
@@ -163,33 +168,54 @@ function ProviderOptionList({ options }: TProviderOptionListProps) {
 
   return (
     <List width="full" marginBottom="2">
-      {options.map((option, i) => (
-        <ListItem key={i} width="full" display="flex" flexFlow="row nowrap">
-          <Tooltip label={option.displayName}>
-            <Text
-              whiteSpace="nowrap"
-              wordBreak="keep-all"
-              marginRight="4"
-              width="40"
-              minWidth="40"
-              overflowX="hidden"
-              textOverflow="ellipsis">
-              {option.displayName}
-            </Text>
-          </Tooltip>
-          <Text
-            textOverflow="ellipsis"
-            wordBreak="keep-all"
-            whiteSpace="nowrap"
-            width="full"
-            overflowX="hidden"
-            color={valueColor}
-            userSelect="auto"
-            _hover={{ overflow: "visible", cursor: "text" }}>
-            {option.value ?? "-"}
-          </Text>
-        </ListItem>
-      ))}
+      {options.map((option, i) => {
+        let value = option.value ?? "-"
+        if (option.password) {
+          value = "*".repeat(value.length)
+        }
+
+        return (
+          <ListItem key={i} width="full" display="flex" flexFlow="row nowrap">
+            <Tooltip label={option.displayName}>
+              <Text
+                whiteSpace="nowrap"
+                wordBreak="keep-all"
+                marginRight="4"
+                width="40"
+                minWidth="40"
+                overflowX="hidden"
+                textOverflow="ellipsis">
+                {option.displayName}
+              </Text>
+            </Tooltip>
+            {option.enum ? (
+              <Text
+                textOverflow="ellipsis"
+                wordBreak="keep-all"
+                whiteSpace="nowrap"
+                width="full"
+                overflowX="hidden"
+                color={valueColor}
+                userSelect="text"
+                _hover={{ overflow: "visible", cursor: "text" }}>
+                {option.enum.find((e) => e.value === value)?.displayName ?? value}
+              </Text>
+            ) : (
+              <Text
+                textOverflow="ellipsis"
+                wordBreak="keep-all"
+                whiteSpace="nowrap"
+                width="full"
+                overflowX="hidden"
+                color={valueColor}
+                userSelect="text"
+                _hover={{ overflow: "visible", cursor: "text" }}>
+                {value}
+              </Text>
+            )}
+          </ListItem>
+        )
+      })}
     </List>
   )
 }

@@ -9,13 +9,13 @@ import (
 
 	"github.com/loft-sh/devpod/pkg/agent/tunnel"
 	devpodhttp "github.com/loft-sh/devpod/pkg/http"
-	"github.com/loft-sh/devpod/pkg/port"
+	portpkg "github.com/loft-sh/devpod/pkg/port"
 	"github.com/loft-sh/devpod/pkg/random"
 	"github.com/loft-sh/log"
 )
 
 func StartCredentialsServer(ctx context.Context, cancel context.CancelFunc, client tunnel.TunnelClient, log log.Logger) (int, error) {
-	port, err := port.FindAvailablePort(random.InRange(13000, 17000))
+	port, err := portpkg.FindAvailablePort(random.InRange(13000, 17000))
 	if err != nil {
 		return 0, err
 	}
@@ -23,7 +23,7 @@ func StartCredentialsServer(ctx context.Context, cancel context.CancelFunc, clie
 	go func() {
 		defer cancel()
 
-		err := RunCredentialsServer(ctx, "", port, false, false, false, client, log)
+		err := RunCredentialsServer(ctx, port, client, "", log)
 		if err != nil {
 			log.Errorf("Error running git credentials server: %v", err)
 		}

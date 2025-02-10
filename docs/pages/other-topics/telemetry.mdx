@@ -23,38 +23,31 @@ Below you can find an example of the payload that DevPod CLI would send to our t
 
 ```yaml
 {
-  "type":"cmdfinished",                   # type of event, another type is "cmdstarted"
   "event":{
+    "type":"devpod_cli",                   # type of event
+    "machine_id":"3ed2c7...ee308e6",  # securely hashed machine ID to de-duplicate information received from the same user
     "timestamp":1683878643781772,
-    "executionID":"23736e5...83b3d656a0", # random ID to de-duplicate information received via different event types
-    "command":"devpod provider delete",   # the CLI command that was executed
-    "provider":"kubernetes",              # the default provider
-    "processingTime":71980,               # how long it took for the command to execute
-    "errors":"provider 'docker' does not exist"
+    "properties": {
+      "command":"devpod provider delete",   # the CLI command that was executed
+      "provider":"kubernetes",              # the default provider
+      "source_type":"git:",                 # the workspace source type (git, image, local, container, unknown)
+      "ide":"vscode",                       # the IDE used to open a workspace
+      "desktop":"true",                     # whether this cli command has been executed by DevPod Desktop or is a direct CLI invocation
+      "version":"v0.5.29",                  # the CLI version
+      "error":"provider 'docker' does not exist" # an error that occurred during command execution
+    }
   },
-  "instanceProperties":{
-    "uid":"3ed2c7...ee308e6",  # securily hashed machine ID to de-duplicate information received from the same user
-    "arch":"amd64",            # CPU architecture
-    "os":"linux",              # Operating system
-    "version":{                # DevPod CLI version
-      "major":"0",
-      "minor":"1",
-      "patch":"0"
-    },
-    "flags":{
-      "setFlags":[             # List of flags(names only) that were set
-        "debug"
-      ]
-    },
-    "ui": false
+  "user":{
+    "machine_id":"3ed2c7...ee308e6",  # securely hashed machine ID to de-duplicate information received from the same user
+    "arch":"amd64",                   # CPU architecture
+    "os":"linux",                     # Operating system
   },
-  "token":"eyJhbG...coNz80"    # Token generated from the static key included in the CLI binary. It is used to validate payload integrity. 
 }
 ```
 
 ### Telemetry opt-out process
 
-To disable the telemetry execute the following command:
+To disable the telemetry, set the environment variable `DEVPOD_DISABLE_TELEMETRY=true`. It can also be opted out for individual context by executing the following command:
 
 ```bash
 devpod context set-options -o TELEMETRY=false

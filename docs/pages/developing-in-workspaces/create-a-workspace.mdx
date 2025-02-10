@@ -59,6 +59,13 @@ Run the following command in a terminal to start a new workspace:
 devpod up github.com/microsoft/vscode-remote-try-node
 ```
 
+You can check out specific states of the repository by appending a commit hash, branch or Pull Request slug to the repository url:
+```
+Branch: devpod up github.com/microsoft/vscode-remote-try-node@main
+Commit: devpod up github.com/microsoft/vscode-remote-try-node@sha256:15ba80171af11374143288fd3d54898860107323
+PR:     devpod up github.com/microsoft/vscode-remote-try-node@pull/108/head # Only works for GitHub!
+```
+
 :::info Private Git Repositories
 DevPod will forward git credentials to a remote machine so that you can also pull private repositories.
 :::
@@ -96,6 +103,19 @@ DevPod will create the following `.devcontainer.json`:
 }
 ```
 
+#### Existing local container
+
+If you have a local container running, you can create a workspace from it by running:
+```
+devpod up my-workspace --source container:$CONTAINER_ID 
+```
+
+This only works with the `docker` provider.
+
+:::info
+Using `--recreate` on a workspace based on an already existing container will be rejected.
+:::
+
 ## Recreating a workspace
 
 If you are working on the `devcontainer.json` or have pulled changes that affect the development environment, you can recreate a workspace. Recreating a workspace means to apply changes in the `devcontainer.json` or related `Dockerfile` to the development environment. If a prebuild repository is supplied, DevPod will try to find the updated development environment image inside the prebuild repository and if not found will fall back to building it.
@@ -113,3 +133,19 @@ Run the following command to rebuild an existing workspace:
 devpod up my-workspace --recreate
 ```
 
+## Resetting a workspace
+
+Some scenarios require pulling in the latest changes from a git repository or re-uploading your local folder. If instead of recreating the devcontainer you need to completely restart your workspace from a clean slate, use `Reset` over `Recreate`.
+
+** When recreating a workspace, no changes will be preserved! **
+
+### Via DevPod Desktop Application
+
+Navigate to the 'Workspaces' view and press on the 'More Options' button on the workspace you want to reset. Then press 'Reset' and confirm.
+
+### Via DevPod CLI
+
+Run the following command to reset an existing workspace:
+```
+devpod up my-workspace --reset
+```

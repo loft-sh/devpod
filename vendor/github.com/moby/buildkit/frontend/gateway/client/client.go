@@ -6,6 +6,7 @@ import (
 	"syscall"
 
 	"github.com/moby/buildkit/client/llb"
+	"github.com/moby/buildkit/client/llb/sourceresolver"
 	"github.com/moby/buildkit/solver/pb"
 	"github.com/moby/buildkit/solver/result"
 	spb "github.com/moby/buildkit/sourcepolicy/pb"
@@ -26,8 +27,9 @@ func NewResult() *Result {
 }
 
 type Client interface {
+	sourceresolver.MetaResolver
 	Solve(ctx context.Context, req SolveRequest) (*Result, error)
-	ResolveImageConfig(ctx context.Context, ref string, opt llb.ResolveImageConfigOpt) (digest.Digest, []byte, error)
+	ResolveImageConfig(ctx context.Context, ref string, opt sourceresolver.Opt) (string, digest.Digest, []byte, error)
 	BuildOpts() BuildOpts
 	Inputs(ctx context.Context) (map[string]llb.State, error)
 	NewContainer(ctx context.Context, req NewContainerRequest) (Container, error)
@@ -38,6 +40,7 @@ type Client interface {
 // new container, without defining the initial process.
 type NewContainerRequest struct {
 	Mounts      []Mount
+	Hostname    string
 	NetMode     pb.NetMode
 	ExtraHosts  []*pb.HostIP
 	Platform    *pb.Platform
@@ -70,6 +73,7 @@ type Container interface {
 type StartRequest struct {
 	Args           []string
 	Env            []string
+	SecretEnv      []*pb.SecretEnv
 	User           string
 	Cwd            string
 	Tty            bool

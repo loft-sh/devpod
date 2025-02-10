@@ -1,0 +1,66 @@
+---
+title: Linux Troubleshooting
+sidebar_label: Linux Troubleshooting
+---
+
+This purpose of this page is to outline any known issues with using devpod on Linux and provide known workarounds / fixes.
+
+### File permission issues when using a local directory and a remoteUser (or containerUser)
+
+When up'ing a workspace using a local directory, that also specifies a remote container user (via devcontainer.json), the ownership of the directory will change
+to the remote user. Since this remote user is in a different user namespace, the ownership will appear as a unknown user. To fix this, simply chown the directory
+back to the local user, such as `sudo chown -R $USER:$GROUP .`. The reason this is neccesary is by default, when a new user is created by the container runtime,
+such as docker, all files from the host file system will be owned by root during the overlay. For your dev environment to be useful remotely, DevPod needs to
+chown the workspace to the remote user. Once the workspace has stopped, you need to change the ownership back. In general local direcotories are typically used
+for development, once the devcontainer is working it is better to push the workspace to a git repo and use this.
+
+### Using FISH shell
+
+Custom configurations in config.fish file run every time a fish -c command is called, so this processes somewhat get on the way of devpod agent workspace up.
+
+The solution is to move the customizations inside the if status is-interactive case.
+
+From this
+
+```
+if status is-interactive
+    # Commands to run in interactive sessions can go here
+end
+eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)"
+
+# customizations
+```
+
+to this
+
+```
+if status is-interactive
+    # Commands to run in interactive sessions can go here
+    eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)"
+    
+    # customizations
+end
+```
+
+### Using SELinux
+
+If you are running SELinux and try to start a workspace with a mounted volume, you may recieve a "Permission Denied" even if the ownership of the files are correct. To resolve
+append `:Z` to your volume definitions, like so
+
+```
+{
+    // some fields
+
+    "workspaceMount": "",
+    "workspaceFolder": "/workspaces/${localWorkspaceFolderBasename}",
+    "runArgs": [
+        // other args
+        "--volume=${localWorkspaceFolder}:/workspaces/${localWorkspaceFolderBasename}:Z"
+    ]
+}
+```
+
+### ENAMETOOLONG error when opening a workspace in vscode
+
+There is a [known issue](https://github.com/loft-sh/devpod/issues/1045) where some linux distros use a large PATH to find SSH and causes the connection string to be too long. The workaround is to specify
+the SSH binary explicitly in vscode.
