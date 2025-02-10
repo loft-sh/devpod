@@ -7,7 +7,7 @@ import (
 	"sync"
 
 	"github.com/loft-sh/devpod/cmd/flags"
-	"github.com/loft-sh/devpod/pkg/client"
+	"github.com/loft-sh/devpod/pkg/client/clientimplementation"
 	"github.com/loft-sh/devpod/pkg/config"
 	provider2 "github.com/loft-sh/devpod/pkg/provider"
 	"github.com/loft-sh/devpod/pkg/workspace"
@@ -99,10 +99,13 @@ func DeleteProvider(ctx context.Context, devPodConfig *config.Config, provider s
 				wg.Add(1)
 				go func(w provider2.Workspace) {
 					defer wg.Done()
-					_, err := workspace.Delete(ctx, devPodConfig, []string{w.ID}, true, false, client.DeleteOptions{
-						IgnoreNotFound: true,
-						Force:          true,
-					}, logpkg.Discard)
+					client, err := workspace.Get(ctx, devPodConfig, []string{w.ID}, false, log)
+					if err != nil {
+						log.Errorf("Failed to get workspace %s: %v", w.ID, err)
+						return
+					}
+					// delete workspace folder
+					err = clientimplementation.DeleteWorkspaceFolder(devPodConfig.DefaultContext, client.Workspace(), client.WorkspaceConfig().SSHConfigPath, log)
 					if err != nil {
 						log.Errorf("Failed to delete workspace %s: %v", w.ID, err)
 						return
