@@ -31,6 +31,8 @@ type AllowedIDE struct {
 	IconDark string `json:"iconDark,omitempty"`
 	// Experimental indicates that this IDE is experimental
 	Experimental bool `json:"experimental,omitempty"`
+	// Group this IDE belongs to, e.g. for navigation
+	Group config.IDEGroup `json:"group,omitempty"`
 }
 
 var AllowedIDEs = []AllowedIDE{
@@ -40,78 +42,73 @@ var AllowedIDEs = []AllowedIDE{
 		Options:     map[string]ide.Option{},
 		Icon:        "https://devpod.sh/assets/none.svg",
 		IconDark:    "https://devpod.sh/assets/none_dark.svg",
+		Group:       config.IDEGroupPrimary,
 	},
 	{
 		Name:        config.IDEVSCode,
 		DisplayName: "VSCode",
 		Options:     vscode.Options,
 		Icon:        "https://devpod.sh/assets/vscode.svg",
+		Group:       config.IDEGroupPrimary,
 	},
 	{
 		Name:        config.IDEOpenVSCode,
 		DisplayName: "VSCode Browser",
 		Options:     openvscode.Options,
 		Icon:        "https://devpod.sh/assets/vscodebrowser.svg",
+		Group:       config.IDEGroupPrimary,
 	},
 	{
-		Name:        config.IDEGoland,
-		DisplayName: "Goland",
-		Options:     jetbrains.GolandOptions,
-		Icon:        "https://devpod.sh/assets/goland.svg",
+		Name:         config.IDECursor,
+		DisplayName:  "Cursor",
+		Options:      vscode.Options,
+		Icon:         "https://devpod.sh/assets/cursor.svg",
+		Experimental: true,
+		Group:        config.IDEGroupPrimary,
 	},
 	{
-		Name:        config.IDERustRover,
-		DisplayName: "RustRover",
-		Options:     jetbrains.RustRoverOptions,
-		Icon:        "https://devpod.sh/assets/rustrover.svg",
+		Name:         config.IDEZed,
+		DisplayName:  "Zed",
+		Options:      ide.Options{},
+		Icon:         "https://devpod.sh/assets/zed.svg",
+		Experimental: true,
+		Group:        config.IDEGroupPrimary,
 	},
 	{
-		Name:        config.IDEPyCharm,
-		DisplayName: "PyCharm",
-		Options:     jetbrains.PyCharmOptions,
-		Icon:        "https://devpod.sh/assets/pycharm.svg",
-	},
-	{
-		Name:        config.IDEPhpStorm,
-		DisplayName: "PhpStorm",
-		Options:     jetbrains.PhpStormOptions,
-		Icon:        "https://devpod.sh/assets/phpstorm.svg",
+		Name:         config.IDECodium,
+		DisplayName:  "Codium",
+		Options:      vscode.Options,
+		Icon:         "https://devpod.sh/assets/codium.svg",
+		Experimental: true,
+		Group:        config.IDEGroupPrimary,
 	},
 	{
 		Name:        config.IDEIntellij,
 		DisplayName: "Intellij",
 		Options:     jetbrains.IntellijOptions,
 		Icon:        "https://devpod.sh/assets/intellij.svg",
+		Group:       config.IDEGroupJetBrains,
 	},
 	{
-		Name:        config.IDECLion,
-		DisplayName: "CLion",
-		Options:     jetbrains.CLionOptions,
-		Icon:        "https://devpod.sh/assets/clion.svg",
+		Name:        config.IDEPyCharm,
+		DisplayName: "PyCharm",
+		Options:     jetbrains.PyCharmOptions,
+		Icon:        "https://devpod.sh/assets/pycharm.svg",
+		Group:       config.IDEGroupJetBrains,
+	},
+	{
+		Name:        config.IDEPhpStorm,
+		DisplayName: "PhpStorm",
+		Options:     jetbrains.PhpStormOptions,
+		Icon:        "https://devpod.sh/assets/phpstorm.svg",
+		Group:       config.IDEGroupJetBrains,
 	},
 	{
 		Name:        config.IDERider,
 		DisplayName: "Rider",
 		Options:     jetbrains.RiderOptions,
 		Icon:        "https://devpod.sh/assets/rider.svg",
-	},
-	{
-		Name:        config.IDERubyMine,
-		DisplayName: "RubyMine",
-		Options:     jetbrains.RubyMineOptions,
-		Icon:        "https://devpod.sh/assets/rubymine.svg",
-	},
-	{
-		Name:        config.IDEWebStorm,
-		DisplayName: "WebStorm",
-		Options:     jetbrains.WebStormOptions,
-		Icon:        "https://devpod.sh/assets/webstorm.svg",
-	},
-	{
-		Name:        config.IDEDataSpell,
-		DisplayName: "DataSpell",
-		Options:     jetbrains.DataSpellOptions,
-		Icon:        "https://devpod.sh/assets/dataspell.svg",
+		Group:       config.IDEGroupJetBrains,
 	},
 	{
 		Name:         config.IDEFleet,
@@ -119,6 +116,49 @@ var AllowedIDEs = []AllowedIDE{
 		Options:      fleet.Options,
 		Icon:         "https://devpod.sh/assets/fleet.svg",
 		Experimental: true,
+		Group:        config.IDEGroupJetBrains,
+	},
+	{
+		Name:        config.IDEGoland,
+		DisplayName: "Goland",
+		Options:     jetbrains.GolandOptions,
+		Icon:        "https://devpod.sh/assets/goland.svg",
+		Group:       config.IDEGroupJetBrains,
+	},
+	{
+		Name:        config.IDEWebStorm,
+		DisplayName: "WebStorm",
+		Options:     jetbrains.WebStormOptions,
+		Icon:        "https://devpod.sh/assets/webstorm.svg",
+		Group:       config.IDEGroupJetBrains,
+	},
+	{
+		Name:        config.IDERustRover,
+		DisplayName: "RustRover",
+		Options:     jetbrains.RustRoverOptions,
+		Icon:        "https://devpod.sh/assets/rustrover.svg",
+		Group:       config.IDEGroupJetBrains,
+	},
+	{
+		Name:        config.IDERubyMine,
+		DisplayName: "RubyMine",
+		Options:     jetbrains.RubyMineOptions,
+		Icon:        "https://devpod.sh/assets/rubymine.svg",
+		Group:       config.IDEGroupJetBrains,
+	},
+	{
+		Name:        config.IDECLion,
+		DisplayName: "CLion",
+		Options:     jetbrains.CLionOptions,
+		Icon:        "https://devpod.sh/assets/clion.svg",
+		Group:       config.IDEGroupJetBrains,
+	},
+	{
+		Name:        config.IDEDataSpell,
+		DisplayName: "DataSpell",
+		Options:     jetbrains.DataSpellOptions,
+		Icon:        "https://devpod.sh/assets/dataspell.svg",
+		Group:       config.IDEGroupJetBrains,
 	},
 	{
 		Name:         config.IDEJupyterNotebook,
@@ -127,6 +167,7 @@ var AllowedIDEs = []AllowedIDE{
 		Icon:         "https://devpod.sh/assets/jupyter.svg",
 		IconDark:     "https://devpod.sh/assets/jupyter_dark.svg",
 		Experimental: true,
+		Group:        config.IDEGroupOther,
 	},
 	{
 		Name:         config.IDEJupyterDesktop,
@@ -135,6 +176,7 @@ var AllowedIDEs = []AllowedIDE{
 		Icon:         "https://devpod.sh/assets/jupyter.svg",
 		IconDark:     "https://devpod.sh/assets/jupyter_dark.svg",
 		Experimental: true,
+		Group:        config.IDEGroupOther,
 	},
 	{
 		Name:         config.IDEVSCodeInsiders,
@@ -142,13 +184,7 @@ var AllowedIDEs = []AllowedIDE{
 		Options:      vscode.Options,
 		Icon:         "https://devpod.sh/assets/vscode_insiders.svg",
 		Experimental: true,
-	},
-	{
-		Name:         config.IDECursor,
-		DisplayName:  "Cursor",
-		Options:      vscode.Options,
-		Icon:         "https://devpod.sh/assets/cursor.svg",
-		Experimental: true,
+		Group:        config.IDEGroupOther,
 	},
 	{
 		Name:         config.IDEMarimo,
@@ -156,13 +192,7 @@ var AllowedIDEs = []AllowedIDE{
 		Options:      vscode.Options,
 		Icon:         "https://devpod.sh/assets/marimo.svg",
 		Experimental: true,
-	},
-	{
-		Name:         config.IDECodium,
-		DisplayName:  "Codium",
-		Options:      vscode.Options,
-		Icon:         "https://devpod.sh/assets/codium.svg",
-		Experimental: true,
+		Group:        config.IDEGroupOther,
 	},
 	{
 		Name:         config.IDEPositron,
@@ -170,13 +200,7 @@ var AllowedIDEs = []AllowedIDE{
 		Options:      vscode.Options,
 		Icon:         "https://devpod.sh/assets/positron.svg",
 		Experimental: true,
-	},
-	{
-		Name:         config.IDEZed,
-		DisplayName:  "Zed",
-		Options:      ide.Options{},
-		Icon:         "https://devpod.sh/assets/zed.svg",
-		Experimental: true,
+		Group:        config.IDEGroupOther,
 	},
 }
 

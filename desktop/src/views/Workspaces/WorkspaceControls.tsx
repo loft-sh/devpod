@@ -18,11 +18,11 @@ import {
   Tooltip,
   useToast,
 } from "@chakra-ui/react"
-import { useMemo, useCallback } from "react"
+import { useMemo, useCallback, useState } from "react"
 import { HiOutlineCode, HiShare } from "react-icons/hi"
-import { client } from "../../client"
-import { IDEIcon } from "../../components"
-import { TActionID, useProInstances } from "../../contexts"
+import { client } from "@/client"
+import { IDEGroup, IDEIcon } from "@/components"
+import { TActionID, useProInstances } from "@/contexts"
 import {
   ArrowCycle,
   ArrowPath,
@@ -33,9 +33,10 @@ import {
   Play,
   Stack3D,
   Trash,
-} from "../../icons"
-import { getIDEDisplayName, useHover } from "../../lib"
-import { TIDE, TIDEs, TProInstance, TProvider, TWorkspace, TWorkspaceID } from "../../types"
+} from "@/icons"
+import { getIDEDisplayName, useHover } from "@/lib"
+import { TIDE, TIDEs, TProInstance, TProvider, TWorkspace, TWorkspaceID } from "@/types"
+import { useGroupIDEs } from "@/useIDEs"
 
 type TWorkspaceControlsProps = Readonly<{
   id: TWorkspaceID
@@ -86,25 +87,52 @@ export function WorkspaceControls({
     proInstance
   )
 
-  const handleOpenWithIDEClicked = (id: TWorkspaceID, ide: TIDE["name"]) => async () => {
-    if (!ide) {
-      return
-    }
-    setIdeName(ide)
+  const handleOpenWithIDEClicked = useCallback(
+    (id: TWorkspaceID, ide: TIDE["name"]) => async () => {
+      if (!ide) {
+        return
+      }
+      setIdeName(ide)
 
-    const actionID = workspace.start({ id, ideConfig: { name: ide } })
-    if (!isIDEFixed) {
-      await client.ides.useIDE(ide)
-    }
-    navigateToAction(actionID)
-  }
+      const actionID = workspace.start({ id, ideConfig: { name: ide } })
+      if (!isIDEFixed) {
+        await client.ides.useIDE(ide)
+      }
+      navigateToAction(actionID)
+    },
+    [isIDEFixed, setIdeName, workspace, navigateToAction]
+  )
+
+  const onIDESelected = useCallback(
+    (selectedIDE: TIDE["name"]) => {
+      handleOpenWithIDEClicked(id, selectedIDE)()
+    },
+    [id, handleOpenWithIDEClicked]
+  )
+
   const isOpenDisabled = workspace.data?.status === "Busy"
   const isOpenDisabledReason =
     "Cannot open this workspace because it is busy. If this doesn't change, try to force delete and recreate it."
   const [isStartWithHovering, startWithRef] = useHover()
   const [isPopoverHovering, popoverContentRef] = useHover()
+
+  const [ideGroupHoverState, setIdeGroupHoverState] = useState<{ [key: string]: boolean }>({})
+
+  const setIdeGroupHovered = useCallback(
+    (group: string, hovered: boolean) => {
+      setIdeGroupHoverState((old) => ({ ...old, [group]: hovered }))
+    },
+    [setIdeGroupHoverState]
+  )
+
+  const ideGroupHovered = useMemo(() => {
+    return Object.values(ideGroupHoverState).includes(true)
+  }, [ideGroupHoverState])
+
   const isChangeOptionsEnabled =
     workspace.data?.provider?.options != null && proInstance !== undefined
+
+  const groupedIDEs = useGroupIDEs(ides)
 
   return (
     <HStack spacing="2" width="full" justifyContent="end">
@@ -135,7 +163,7 @@ export function WorkspaceControls({
           <Portal>
             <MenuList>
               <Popover
-                isOpen={isStartWithHovering || isPopoverHovering}
+                isOpen={isStartWithHovering || isPopoverHovering || ideGroupHovered}
                 placement="right"
                 offset={[100, 0]}>
                 <PopoverTrigger>
@@ -149,22 +177,30 @@ export function WorkspaceControls({
                     </HStack>
                   </MenuItem>
                 </PopoverTrigger>
-                <PopoverContent
-                  marginTop="10"
-                  zIndex="popover"
-                  width="fit-content"
-                  ref={popoverContentRef}>
-                  {ides?.map((ide) => (
-                    <MenuItem
-                      isDisabled={isOpenDisabled || isLoading}
-                      onClick={handleOpenWithIDEClicked(id, ide.name)}
-                      key={ide.name}
-                      value={ide.name!}
-                      icon={<IDEIcon ide={ide} width={6} height={6} size="sm" />}>
-                      {getIDEDisplayName(ide)}
-                    </MenuItem>
-                  ))}
-                </PopoverContent>
+                <Portal>
+                  <PopoverContent zIndex="popover" width="fit-content" ref={popoverContentRef}>
+                    {groupedIDEs?.primary.map((ide) => (
+                      <MenuItem
+                        isDisabled={isOpenDisabled || isLoading}
+                        onClick={handleOpenWithIDEClicked(id, ide.name)}
+                        key={ide.name}
+                        value={ide.name!}
+                        icon={<IDEIcon ide={ide} width={6} height={6} size="sm" />}>
+                        {getIDEDisplayName(ide)}
+                      </MenuItem>
+                    ))}
+                    {groupedIDEs?.subMenuGroups.map((group) => (
+                      <IDEGroup
+                        key={group}
+                        ides={groupedIDEs.subMenus[group]}
+                        group={group}
+                        onHoverChange={setIdeGroupHovered}
+                        disabled={isOpenDisabled || isLoading}
+                        onItemClick={onIDESelected}
+                      />
+                    ))}
+                  </PopoverContent>
+                </Portal>
               </Popover>
               <MenuItem
                 isDisabled={workspace.data?.status !== "Running"}

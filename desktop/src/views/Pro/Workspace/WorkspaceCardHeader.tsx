@@ -1,4 +1,4 @@
-import { IDEIcon } from "@/components"
+import { IDEGroup, IDEIcon } from "@/components"
 import { ProWorkspaceInstance, useSettings } from "@/contexts"
 import {
   ArrowCycle,
@@ -14,7 +14,7 @@ import {
 } from "@/icons"
 import { getDisplayName, getIDEDisplayName } from "@/lib"
 import { TIDE, TIDEs, TWorkspaceSource } from "@/types"
-import { useIDEs } from "@/useIDEs"
+import { useGroupIDEs, useIDEs } from "@/useIDEs"
 import { ChevronDownIcon } from "@chakra-ui/icons"
 import {
   Button,
@@ -31,7 +31,7 @@ import {
   TextProps,
   VStack,
 } from "@chakra-ui/react"
-import { ReactNode, createContext, useContext } from "react"
+import React, { ReactNode, createContext, useContext, useCallback } from "react"
 type TWorkspaceCardHeaderContext = ProWorkspaceInstance
 const WorkspaceCardHeaderContext = createContext<TWorkspaceCardHeaderContext>(null!)
 
@@ -95,10 +95,13 @@ export function Controls({
   const settings = useSettings()
   const instance = useContext(WorkspaceCardHeaderContext)
   const ide = getWorkspaceIDE(instance, ides, defaultIDE, settings.fixedIDE)
+  const groupedIDEs = useGroupIDEs(ides)
+
+  const stopPropagation = useCallback((e: React.UIEvent) => e.stopPropagation(), [])
 
   return (
-    <ButtonGroup size="sm" onClick={(e) => e.stopPropagation()}>
-      <ButtonGroup variant="proWorkspaceIDE" isAttached onClick={(e) => e.stopPropagation()}>
+    <ButtonGroup size="sm" onClick={stopPropagation}>
+      <ButtonGroup variant="proWorkspaceIDE" isAttached onClick={stopPropagation}>
         {ide && (
           <Button onClick={() => onOpenClicked(ide.name!)}>
             <HStack>
@@ -117,7 +120,7 @@ export function Controls({
             icon={<ChevronDownIcon boxSize="5" />}
           />
           <MenuList>
-            {ides?.map((ide) => (
+            {groupedIDEs?.primary.map((ide) => (
               <MenuItem
                 onClick={() => onOpenClicked(ide.name!)}
                 key={ide.name}
@@ -125,6 +128,15 @@ export function Controls({
                 icon={<IDEIcon ide={ide} width={6} height={6} size="sm" />}>
                 {getIDEDisplayName(ide)}
               </MenuItem>
+            ))}
+            {groupedIDEs?.subMenuGroups.map((group) => (
+              <IDEGroup
+                key={group}
+                placement={"left-end"}
+                ides={groupedIDEs.subMenus[group]}
+                group={group}
+                onItemClick={(selectedIDE) => onOpenClicked(selectedIDE!)}
+              />
             ))}
           </MenuList>
         </Menu>
