@@ -253,8 +253,9 @@ func listProWorkspacesForProvider(ctx context.Context, devPodConfig *config.Conf
 			LastUsedTimestamp: lastUsedTimestamp,
 			CreationTimestamp: creationTimestamp,
 			Pro: &providerpkg.ProMetadata{
-				Project:     projectName,
-				DisplayName: instance.Spec.DisplayName,
+				InstanceName: instance.GetName(),
+				Project:      projectName,
+				DisplayName:  instance.Spec.DisplayName,
 			},
 		}
 		retWorkspaces = append(retWorkspaces, &workspace)

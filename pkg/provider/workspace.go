@@ -75,6 +75,9 @@ type Workspace struct {
 }
 
 type ProMetadata struct {
+	// InstanceName is the platform CRD name for this workspace
+	InstanceName string `json:"instanceName,omitempty"`
+
 	// Project is the platform project the workspace lives in
 	Project string `json:"project,omitempty"`
 
