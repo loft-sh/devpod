@@ -131,7 +131,7 @@ func (cmd *SSHServerCmd) Run(_ *cobra.Command, _ []string) error {
 			return fmt.Errorf("address %s already in use: %w", cmd.Address, err)
 		}
 
-		log.Default.ErrorStreamOnly().Debugf("address %s already in use", cmd.Address)
+		log.Default.ErrorStreamOnly().Info("address %s already in use", cmd.Address)
 		return nil
 	}
 

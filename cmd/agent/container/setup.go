@@ -1,3 +1,5 @@
+//go:build !windows
+
 package container
 
 import (
@@ -35,6 +37,7 @@ import (
 	"github.com/loft-sh/devpod/pkg/ide/vscode"
 	provider2 "github.com/loft-sh/devpod/pkg/provider"
 	"github.com/loft-sh/devpod/pkg/single"
+	sshServer "github.com/loft-sh/devpod/pkg/ssh/server"
 	"github.com/loft-sh/log"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
@@ -213,9 +216,9 @@ func (cmd *SetupContainerCmd) Run(ctx context.Context) error {
 	}
 
 	// start tailscale networking daemon
-	if (cmd.AccessKey != "" && cmd.NetworkHostname != "") || true { // FIXME
+	if (cmd.AccessKey != "" && cmd.NetworkHostname != "") || true { // FIXME: cleanup
 		err = single.Single("network.daemon.pid", func() (*exec.Cmd, error) {
-			logger.Infof("Start DevPod Networking Daemon")
+			logger.Infof("Start networking daemon")
 			binaryPath, err := os.Executable()
 			if err != nil {
 				return nil, err
@@ -228,13 +231,28 @@ func (cmd *SetupContainerCmd) Run(ctx context.Context) error {
 		}
 
 		err = single.Single("ssh.daemon.pid", func() (*exec.Cmd, error) {
-			logger.Infof("Start DevPod Networking Daemon")
+			logger.Infof("Start SSH server")
 			binaryPath, err := os.Executable()
 			if err != nil {
 				return nil, err
 			}
 
-			return exec.Command(binaryPath, "helper", "ssh-server", "--track-activity"), nil
+			var workdir string
+			if setupInfo.MergedConfig != nil && setupInfo.MergedConfig.WorkspaceFolder != "" {
+				workdir = setupInfo.MergedConfig.WorkspaceFolder
+			}
+			if workspaceInfo.Source.GitSubPath != "" {
+				setupInfo.SubstitutionContext.ContainerWorkspaceFolder = filepath.Join(setupInfo.SubstitutionContext.ContainerWorkspaceFolder, workspaceInfo.Source.GitSubPath)
+				workdir = setupInfo.SubstitutionContext.ContainerWorkspaceFolder
+			}
+
+			args := []string{"helper", "ssh-server"}
+			args = append(args, "--address", fmt.Sprintf("127.0.0.1:%d", sshServer.DefaultUserPort))
+			if workdir != "" {
+				args = append(args, fmt.Sprintf("--workdir '%s'", workdir))
+			}
+
+			return exec.Command(binaryPath, args...), nil
 		})
 		if err != nil {
 			return err

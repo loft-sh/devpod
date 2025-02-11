@@ -3,11 +3,10 @@ package container
 import (
 	"context"
 	"fmt"
-	"net"
 
 	"github.com/loft-sh/devpod/cmd/flags"
-	sshServer "github.com/loft-sh/devpod/pkg/ssh/server"
-	"github.com/loft-sh/devpod/pkg/tailscale"
+	"github.com/loft-sh/devpod/pkg/platform/client"
+	"github.com/loft-sh/devpod/pkg/ts"
 	"github.com/spf13/cobra"
 )
 
@@ -29,7 +28,9 @@ func NewNetworkDaemonCmd(flags *flags.GlobalFlags) *cobra.Command {
 		Use:   "network-daemon",
 		Short: "Starts tailscale network daemon",
 		Args:  cobra.NoArgs,
-		RunE:  cmd.Run,
+		RunE: func(cobraCmd *cobra.Command, args []string) error {
+			return cmd.Run(cobraCmd.Context())
+		},
 	}
 	daemonCmd.Flags().StringVar(&cmd.AccessKey, "access-key", "", "")
 	daemonCmd.Flags().StringVar(&cmd.PlatformHost, "host", "", "")
@@ -38,17 +39,26 @@ func NewNetworkDaemonCmd(flags *flags.GlobalFlags) *cobra.Command {
 }
 
 // Run runs the command logic
-func (cmd *NetworkDaemonCmd) Run(_ *cobra.Command, _ []string) error {
-	tsNet := tailscale.NewTSNet(&tailscale.TSNetConfig{
+func (cmd *NetworkDaemonCmd) Run(ctx context.Context) error {
+	// init kube config
+	config := client.NewConfig()
+	config.AccessKey = cmd.AccessKey
+	config.Host = "https://" + cmd.PlatformHost
+	config.Insecure = true
+	baseClient := client.NewClientFromConfig(config)
+	err := baseClient.RefreshSelf(context.TODO())
+	if err != nil {
+		return err
+	}
+
+	tsServer := ts.NewWorkspaceServer(&ts.WorkspaceServerConfig{
 		AccessKey: cmd.AccessKey,
-		Host:      tailscale.RemoveProtocol(cmd.PlatformHost),
+		Host:      ts.RemoveProtocol(cmd.PlatformHost),
 		Hostname:  cmd.NetworkHostname,
-		PortHandlers: map[string]func(net.Listener){
-			fmt.Sprintf("%d", sshServer.DefaultPort):     tailscale.ReverseProxyHandler(fmt.Sprintf("127.0.0.1:%d", sshServer.DefaultPort)),
-			fmt.Sprintf("%d", sshServer.DefaultUserPort): tailscale.ReverseProxyHandler(fmt.Sprintf("127.0.0.1:%d", sshServer.DefaultUserPort)),
-		},
+		Client:    baseClient,
 	})
-	if err := tsNet.Start(context.TODO()); err != nil {
+	err = tsServer.Start(ctx)
+	if err != nil {
 		return fmt.Errorf("cannot start tsNet server: %w", err)
 	}
 

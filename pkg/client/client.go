@@ -59,6 +59,9 @@ type ProxyClient interface {
 
 	// Ssh starts an ssh tunnel to the workspace container
 	Ssh(ctx context.Context, options SshOptions) error
+
+	// CurrentUser returns information about the authenticated user accessing this workspace
+	CurrentUser(ctx context.Context) (User, error)
 }
 
 type MachineClient interface {
@@ -177,4 +180,9 @@ type WorkspaceStatus struct {
 	Context  string `json:"context,omitempty"`
 	Provider string `json:"provider,omitempty"`
 	State    string `json:"state,omitempty"`
+}
+
+type User struct {
+	Name string `json:"name,omitempty"`
+	UID  string `json:"uid,omitempty"`
 }
