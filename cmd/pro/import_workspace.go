@@ -144,8 +144,9 @@ func (cmd *ImportCmd) writeNewWorkspaceDefinition(devPodConfig *config.Config, i
 		Context:  devPodConfig.DefaultContext,
 		Imported: !cmd.Own,
 		Pro: &provider2.ProMetadata{
-			Project:     project.ProjectFromNamespace(instance.Namespace),
-			DisplayName: instance.Spec.DisplayName,
+			InstanceName: instance.GetName(),
+			Project:      project.ProjectFromNamespace(instance.Namespace),
+			DisplayName:  instance.Spec.DisplayName,
 		},
 	}
 
@@ -163,8 +164,9 @@ func (cmd *ImportCmd) writeWorkspaceDefinition(devPodConfig *config.Config, prov
 		Context:  devPodConfig.DefaultContext,
 		Imported: !cmd.Own,
 		Pro: &provider2.ProMetadata{
-			Project:     instanceOpts[platform.ProjectEnv],
-			DisplayName: instance.Spec.DisplayName,
+			InstanceName: instance.GetName(),
+			Project:      instanceOpts[platform.ProjectEnv],
+			DisplayName:  instance.Spec.DisplayName,
 		},
 	}
 
