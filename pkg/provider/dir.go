@@ -20,6 +20,9 @@ const (
 	MachineConfigFile     = "machine.json"
 	ProInstanceConfigFile = "pro.json"
 	ProviderConfigFile    = "provider.json"
+
+	DaemonSocket    = "devpod.sock"
+	DaemonStateFile = "devpod_ts.state"
 )
 
 func GetProInstancesDir(context string) (string, error) {
@@ -74,6 +77,15 @@ func GetProviderDir(context, providerName string) (string, error) {
 	}
 
 	return filepath.Join(configDir, "contexts", context, "providers", providerName), nil
+}
+
+func GetTailscaleDir(context, providerName string) (string, error) {
+	configDir, err := config.GetConfigDir()
+	if err != nil {
+		return "", err
+	}
+
+	return filepath.Join(configDir, "contexts", context, "providers", providerName, "ts"), nil
 }
 
 func GetProviderBinariesDir(context, providerName string) (string, error) {

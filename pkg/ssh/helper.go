@@ -6,8 +6,6 @@ import (
 	"io"
 
 	"github.com/loft-sh/devpod/pkg/stdio"
-	"github.com/loft-sh/devpod/pkg/tailscale"
-	"github.com/loft-sh/log"
 	"github.com/pkg/errors"
 	"golang.org/x/crypto/ssh"
 )
@@ -56,33 +54,6 @@ func StdioClient(reader io.Reader, writer io.WriteCloser, exitOnClose bool) (*ss
 
 func StdioClientWithUser(reader io.Reader, writer io.WriteCloser, user string, exitOnClose bool) (*ssh.Client, error) {
 	return StdioClientFromKeyBytesWithUser(nil, reader, writer, user, exitOnClose)
-}
-
-func TailscaleClientWithUser(ctx context.Context, ts tailscale.TSNet, serverAddress, user string, log log.Logger) (*ssh.Client, error) {
-	log.Debugf("Connecting to SSH server at %s with user %s", serverAddress, user)
-
-	conn, err := ts.Dial(ctx, "tcp", serverAddress)
-	if err != nil {
-		log.Errorf("Failed to connect to %s: %v", serverAddress, err)
-		return nil, fmt.Errorf("failed to connect to %s: %w", serverAddress, err)
-	}
-
-	clientConfig := &ssh.ClientConfig{
-		User:            user,
-		Auth:            []ssh.AuthMethod{}, // FIXME
-		HostKeyCallback: ssh.InsecureIgnoreHostKey(),
-	}
-
-	log.Debugf("Attempting to establish SSH connection with %s as user %s", serverAddress, user)
-
-	sshConn, channels, requests, err := ssh.NewClientConn(conn, serverAddress, clientConfig)
-	if err != nil {
-		log.Errorf("Failed to establish SSH connection to %s: %v", serverAddress, err)
-		return nil, fmt.Errorf("failed to establish SSH connection: %w", err)
-	}
-
-	log.Debugf("SSH connection established with %s as user %s", serverAddress, user)
-	return ssh.NewClient(sshConn, channels, requests), nil
 }
 
 func StdioClientFromKeyBytesWithUser(keyBytes []byte, reader io.Reader, writer io.WriteCloser, user string, exitOnClose bool) (*ssh.Client, error) {
