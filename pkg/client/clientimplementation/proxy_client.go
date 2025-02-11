@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/gofrs/flock"
+	managementv1 "github.com/loft-sh/api/v4/pkg/apis/management/v1"
 	"github.com/loft-sh/devpod/pkg/client"
 	"github.com/loft-sh/devpod/pkg/config"
 	"github.com/loft-sh/devpod/pkg/options"
@@ -344,6 +345,43 @@ func (s *proxyClient) Status(ctx context.Context, options client.StatusOptions) 
 
 	// parse status
 	return client.ParseStatus(status.State)
+}
+
+// FIXME: can remove?
+func (s *proxyClient) CurrentUser(ctx context.Context) (client.User, error) {
+	s.m.Lock()
+	defer s.m.Unlock()
+
+	buf := bytes.Buffer{}
+	err := RunCommandWithBinaries(
+		ctx,
+		"getSelf",
+		s.config.Exec.Proxy.Get.Self,
+		s.workspace.Context,
+		nil,
+		nil,
+		s.devPodConfig.ProviderOptions(s.config.Name),
+		s.config,
+		nil,
+		nil,
+		&buf,
+		nil,
+		s.log.ErrorStreamOnly())
+	if err != nil {
+		return client.User{}, fmt.Errorf("get self: %w", err)
+	}
+
+	self := &managementv1.Self{}
+	err = json.Unmarshal(buf.Bytes(), self)
+	if err != nil {
+		return client.User{}, fmt.Errorf("parse self: %w", err)
+	}
+
+	user := client.User{
+		Name: self.Status.Subject,
+		UID:  self.Status.UID,
+	}
+	return user, nil
 }
 
 func (s *proxyClient) updateInstance(ctx context.Context) error {

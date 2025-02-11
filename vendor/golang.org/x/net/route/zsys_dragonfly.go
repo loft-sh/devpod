@@ -11,10 +11,8 @@ const (
 
 	sizeofIfaMsghdrDragonFlyBSD58 = 0x18
 
-	sizeofRtMsghdrDragonFlyBSD4  = 0x98
-	sizeofRtMetricsDragonFlyBSD4 = 0x70
+	sizeofRtMsghdrDragonFlyBSD4 = 0x98
 
-	sizeofSockaddrStorage = 0x80
-	sizeofSockaddrInet    = 0x10
-	sizeofSockaddrInet6   = 0x1c
+	sizeofSockaddrInet  = 0x10
+	sizeofSockaddrInet6 = 0x1c
 )
