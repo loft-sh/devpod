@@ -17,10 +17,12 @@ import { TIDE, TIDEs, TWorkspaceSource } from "@/types"
 import { useGroupIDEs, useIDEs } from "@/useIDEs"
 import { ChevronDownIcon } from "@chakra-ui/icons"
 import {
+  Box,
   Button,
   ButtonGroup,
-  HStack,
+  Checkbox,
   Heading,
+  HStack,
   IconButton,
   Menu,
   MenuButton,
@@ -30,10 +32,9 @@ import {
   Text,
   TextProps,
   VStack,
-  Checkbox,
-  Box,
 } from "@chakra-ui/react"
-import React, { ReactNode, createContext, useContext, useCallback } from "react"
+import React, { createContext, ReactNode, useCallback, useContext } from "react"
+
 type TWorkspaceCardHeaderContext = ProWorkspaceInstance
 const WorkspaceCardHeaderContext = createContext<TWorkspaceCardHeaderContext>(null!)
 
@@ -59,16 +60,11 @@ export function WorkspaceCardHeader({
   return (
     <HStack justify="space-between" align="start">
       <VStack align="start" spacing={0}>
-        {showSource && (
-          <Text color="gray.500">
-            {source?.gitRepository || source?.image || source?.localFolder}
-          </Text>
-        )}
         <HStack alignItems={"center"}>
           {showSelection && (
             <Box mr={"1"} onClick={(e) => e.stopPropagation()}>
               <Checkbox
-                mt={"1.5"}
+                mt={"1"}
                 isChecked={isSelected}
                 onClick={(e) => e.stopPropagation()}
                 onChange={(e) => {
@@ -77,6 +73,13 @@ export function WorkspaceCardHeader({
               />
             </Box>
           )}
+          {showSource && (
+            <Text color="gray.500">
+              {source?.gitRepository || source?.image || source?.localFolder}
+            </Text>
+          )}
+        </HStack>
+        <HStack alignItems={"center"}>
           <Heading size="md" my="1">
             <Text
               fontWeight="bold"
