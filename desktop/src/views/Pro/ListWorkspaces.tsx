@@ -38,6 +38,8 @@ import { IWorkspaceStore } from "@/contexts/DevPodContext/workspaceStore"
 import { TWorkspaceStatusFilterState, WorkspaceSorter, WorkspaceStatusFilter } from "@/components"
 import { determineDisplayStatus } from "@/views/Pro/Workspace/WorkspaceStatus"
 
+import EmptyImage from "@/images/empty-default.svg"
+
 export function ListWorkspaces() {
   const { store } = useWorkspaceStore<IWorkspaceStore<string, ProWorkspaceInstance>>()
   const instances = useWorkspaces<ProWorkspaceInstance>()
@@ -171,7 +173,20 @@ export function ListWorkspaces() {
                 />
               </HStack>
             </HStack>
-            <List w="full" mb="4">
+            <List w="full" h={"full"} mb="4">
+              {!sortedWorkspaces?.length && (
+                <VStack
+                  w={"full"}
+                  h={"full"}
+                  justifyContent={"center"}
+                  alignItems={"center"}
+                  flexGrow={1}>
+                  <Image src={EmptyImage} />
+                  <Text fontWeight={"semibold"} fontSize={"sm"} color={"text.secondary"}>
+                    No items found
+                  </Text>
+                </VStack>
+              )}
               {sortedWorkspaces?.map((instance) => (
                 <ListItem key={instance.id}>
                   <WorkspaceInstanceCard
