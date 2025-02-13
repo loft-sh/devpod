@@ -19,12 +19,20 @@ import (
 
 const LoftTSNetDomain = "ts.loft"
 
-func GetClientHostname(userName string) (string, error) {
+func GetOSHostname() (string, error) {
 	osHostname, err := os.Hostname()
+	if err != nil {
+		fmt.Printf("Failed to get hostname: %v\n", err)
+		return "", err
+	}
+	return strings.ToLower(strings.ReplaceAll(osHostname, ".", "-")), nil
+}
+
+func GetClientHostname(userName string) (string, error) {
+	osHostname, err := GetOSHostname()
 	if err != nil {
 		return "", err
 	}
-	osHostname = strings.ToLower(strings.ReplaceAll(osHostname, ".", "-"))
 	return fmt.Sprintf("devpod.%s.%s.client", osHostname, userName), nil
 }
 

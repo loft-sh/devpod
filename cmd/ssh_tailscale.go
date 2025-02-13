@@ -82,7 +82,13 @@ func startTSProxyTunnel(
 	ns := project.ProjectNamespace(wCfg.Pro.Project)
 	// notify platform that we'd like to connect
 	log.Info("Sending SSH request to platform")
-	sshOpts := &managementv1.DevPodSshOptions{}
+	clientHostname, err := ts.GetOSHostname()
+	if err != nil {
+		log.Error("Error getting client hostname")
+	}
+	sshOpts := &managementv1.DevPodSshOptions{
+		ClientHostname: clientHostname,
+	}
 	_, err = managementClient.Loft().ManagementV1().DevPodWorkspaceInstances(ns).SSH(ctx, wCfg.Pro.InstanceName, sshOpts, metav1.CreateOptions{})
 	if err != nil {
 		log.Error("Error sending SSH Request", err)
