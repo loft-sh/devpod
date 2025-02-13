@@ -165,7 +165,10 @@ export function ListWorkspaces() {
     }
   }
 
-  const allProvidersCount = Object.keys(providers ?? {}).length
+  const availableProviders = Object.entries(providers ?? {}).filter(
+    ([, provider]) => !provider.isProxyProvider
+  )
+  const allProvidersCount = availableProviders.length
 
   return (
     <>
@@ -228,7 +231,7 @@ export function ListWorkspaces() {
                   }
                   type="checkbox">
                   <MenuDivider />
-                  {Object.entries(providers ?? {}).map(([providerID, provider]) => (
+                  {availableProviders.map(([providerID, provider]) => (
                     <MenuItemOption key={providerID} value={providerID}>
                       <HStack>
                         {provider.config?.icon ? (
