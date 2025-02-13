@@ -14,14 +14,13 @@ import {
   Text,
   useDisclosure,
 } from "@chakra-ui/react"
-import { FormEventHandler, useCallback, useEffect, useMemo, useRef, useState } from "react"
+import { FormEventHandler, useCallback, useMemo, useRef, useState } from "react"
 import { useForm } from "react-hook-form"
 import { createSearchParams } from "react-router-dom"
-import { client } from "../../../client"
-import { useSettings, useWorkspaces } from "../../../contexts"
-import { exists } from "../../../lib"
-import { randomWords } from "../../../lib/randomWords"
-import { TIDEs, TProviders, TWorkspace } from "../../../types"
+import { client } from "@/client"
+import { useSettings, useWorkspaces } from "@/contexts"
+import { randomWords } from "@/lib/randomWords"
+import { TIDEs, TProviders, TWorkspace } from "@/types"
 import { FieldName, TCreateWorkspaceArgs, TFormValues } from "./types"
 
 const DEFAULT_PREBUILD_REPOSITORY_KEY = "devpod-create-prebuild-repository"
@@ -32,56 +31,63 @@ export function useCreateWorkspaceForm(onCreateWorkspace: (args: TCreateWorkspac
   const settings = useSettings()
   const workspaces = useWorkspaces<TWorkspace>()
   const [isSubmitLoading, setIsSubmitLoading] = useState(false)
-  const { register, handleSubmit, formState, watch, setError, setValue, control, getFieldState } =
-    useForm<TFormValues>({
-      async defaultValues() {
-        const params = Routes.getWorkspaceCreateParamsFromSearchParams(
-          createSearchParams(location.search)
-        )
+  const {
+    register,
+    handleSubmit,
+    formState,
+    watch,
+    setError,
+    setValue,
+    getValues,
+    control,
+    trigger,
+  } = useForm<TFormValues>({
+    async defaultValues() {
+      const params = Routes.getWorkspaceCreateParamsFromSearchParams(
+        createSearchParams(location.search)
+      )
 
-        const [providersRes, idesRes] = await Promise.all([
-          client.providers.listAll(),
-          client.ides.listAll(),
-        ])
-        let providers: TProviders = {}
-        if (providersRes.ok) {
-          providers = providersRes.val
-        }
+      const [providersRes, idesRes] = await Promise.all([
+        client.providers.listAll(),
+        client.ides.listAll(),
+      ])
+      let providers: TProviders = {}
+      if (providersRes.ok) {
+        providers = providersRes.val
+      }
 
-        let ides: TIDEs = []
-        if (idesRes.ok) {
-          ides = idesRes.val
-        }
+      let ides: TIDEs = []
+      if (idesRes.ok) {
+        ides = idesRes.val
+      }
 
-        const defaultProvider =
-          params.providerID ??
-          Object.keys(providers).find((providerID) => providers[providerID]?.default) ??
-          Object.keys(providers)[0] ??
-          ""
+      const defaultProvider =
+        params.providerID ??
+        Object.keys(providers).find((providerID) => providers[providerID]?.default) ??
+        Object.keys(providers)[0] ??
+        ""
 
-        const defaultIDE =
-          params.ide ??
-          ides.find((ide) => ide.default)?.name ??
-          ides.find((ide) => ide.name === "openvscode")?.name ??
-          ""
+      const defaultIDE =
+        params.ide ??
+        ides.find((ide) => ide.default)?.name ??
+        ides.find((ide) => ide.name === "openvscode")?.name ??
+        ""
 
-        const defaultWorkspaceID = params.workspaceID ?? ""
-        const defaultSource = params.rawSource ?? ""
-        const defaultPrebuildRepo =
-          window.localStorage.getItem(DEFAULT_PREBUILD_REPOSITORY_KEY) ?? ""
+      const defaultWorkspaceID = params.workspaceID ?? ""
+      const defaultSource = params.rawSource ?? ""
+      const defaultPrebuildRepo = window.localStorage.getItem(DEFAULT_PREBUILD_REPOSITORY_KEY) ?? ""
 
-        return {
-          [FieldName.ID]: defaultWorkspaceID,
-          [FieldName.SOURCE]: defaultSource,
-          [FieldName.PROVIDER]: defaultProvider,
-          [FieldName.DEFAULT_IDE]: defaultIDE,
-          [FieldName.DEVCONTAINER_PATH]: undefined,
-          [FieldName.PREBUILD_REPOSITORY]: defaultPrebuildRepo,
-        }
-      },
-    })
+      return {
+        [FieldName.ID]: defaultWorkspaceID,
+        [FieldName.SOURCE]: defaultSource,
+        [FieldName.PROVIDER]: defaultProvider,
+        [FieldName.DEFAULT_IDE]: defaultIDE,
+        [FieldName.DEVCONTAINER_PATH]: undefined,
+        [FieldName.PREBUILD_REPOSITORY]: defaultPrebuildRepo,
+      }
+    },
+  })
   const currentSource = watch(FieldName.SOURCE)
-  const currentProvider = watch(FieldName.PROVIDER)
   const isSubmitting = useMemo(
     () => formState.isSubmitting || isSubmitLoading,
     [formState.isSubmitting, isSubmitLoading]
@@ -100,43 +106,6 @@ export function useCreateWorkspaceForm(onCreateWorkspace: (args: TCreateWorkspac
   const { modal: selectDevcontainerModal, show: showSelectDevcontainerModal } =
     useSelectDevcontainerModal({ onSelected: handleDevcontainerSelected })
 
-  // Handle workspace name
-  useEffect(() => {
-    if (exists(currentSource) && currentSource !== "") {
-      setValue(FieldName.ID, "", { shouldDirty: true })
-
-      client.workspaces.newID(currentSource).then((res) => {
-        if (res.err) {
-          setError(FieldName.SOURCE, { message: res.val.message })
-
-          return
-        }
-        let workspaceID = res.val
-        if (!isWorkspaceNameAvailable(workspaceID, workspaces)) {
-          workspaceID = `${workspaceID}-${currentProvider}`
-
-          if (isWorkspaceNameAvailable(workspaceID, workspaces)) {
-            setValue(FieldName.ID, workspaceID, { shouldDirty: true })
-
-            return
-          }
-
-          const words = randomWords({ amount: 2 })
-          workspaceID = `${res.val}-${words[0] ?? "x"}-${words[1] ?? "y"}`
-          if (isWorkspaceNameAvailable(workspaceID, workspaces)) {
-            setValue(FieldName.ID, workspaceID, { shouldDirty: true })
-
-            return
-          }
-
-          setError(FieldName.SOURCE, { message: "Workspace with the same name already exists" })
-
-          return
-        }
-      })
-    }
-  }, [currentProvider, currentSource, getFieldState, setError, setValue, workspaces])
-
   const onSubmit = useCallback<FormEventHandler<HTMLFormElement>>(
     (event) =>
       handleSubmit(async (data) => {
@@ -151,8 +120,10 @@ export function useCreateWorkspaceForm(onCreateWorkspace: (args: TCreateWorkspac
         const workspaceSource = data[FieldName.SOURCE].trim()
         setIsSubmitLoading(true)
         let workspaceID = data[FieldName.ID]
+
         if (!workspaceID) {
           const newIDResult = await client.workspaces.newID(workspaceSource)
+
           if (newIDResult.err) {
             setIsSubmitLoading(false)
             setError(FieldName.SOURCE, { message: newIDResult.val.message })
@@ -161,6 +132,11 @@ export function useCreateWorkspaceForm(onCreateWorkspace: (args: TCreateWorkspac
           }
 
           workspaceID = newIDResult.val
+        }
+
+        if (!isWorkspaceNameAvailable(workspaceID, workspaces)) {
+          const words = randomWords({ amount: 2 })
+          workspaceID = `${workspaceID}-${words[0] ?? "x"}-${words[1] ?? "y"}`
         }
 
         if (workspaces.find((workspace) => workspace.id === workspaceID)) {
@@ -244,6 +220,8 @@ export function useCreateWorkspaceForm(onCreateWorkspace: (args: TCreateWorkspac
     isSubmitLoading,
     formState,
     onSubmit,
+    getValues,
+    trigger,
     isSubmitting,
     currentSource,
     control,
