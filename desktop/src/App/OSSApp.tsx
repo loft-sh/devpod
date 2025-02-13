@@ -249,10 +249,12 @@ function useProviderUpdates() {
       }
 
       const results = await Promise.allSettled(
-        Object.keys(providers).map(async (p) => ({
-          name: p,
-          update: await client.providers.checkUpdate(p),
-        }))
+        Object.entries(providers)
+          .filter(([, provider]) => !provider.isProxyProvider)
+          .map(async ([p]) => ({
+            name: p,
+            update: await client.providers.checkUpdate(p),
+          }))
       )
 
       return results
