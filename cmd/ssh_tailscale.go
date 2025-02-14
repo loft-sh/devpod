@@ -59,15 +59,12 @@ func startTSProxyTunnel(
 
 	log.Debugf("Host %s is reachable. Proceeding with SSH session...", wAddr.Host())
 
-	// Create an SSH Client for the tool server
+	// Root ssh client for tool
 	toolSSHClient, err := ts.WaitForSSHClient(ctx, lc, wAddr.Host(), wAddr.Port(), "root", log)
 	if err != nil {
 		return fmt.Errorf("failed to create SSH client for tool server: %w", err)
 	}
 	defer toolSSHClient.Close()
-	log.Debugf("Connection to tool server established")
-
-	// TODO: move into separate function
 
 	// Forward ports if specified
 	if len(cmd.ForwardPorts) > 0 {
@@ -84,18 +81,11 @@ func startTSProxyTunnel(
 		go cmd.startServices(ctx, devPodConfig, toolSSHClient, cmd.GitUsername, cmd.GitToken, wCfg, log)
 	}
 
-	// Create an SSH client for the user server
-	sshClient, err := ts.WaitForSSHClient(ctx, lc, wAddr.Host(), wAddr.Port(), cmd.User, log)
-	if err != nil {
-		return fmt.Errorf("failed to create SSH client for user server: %w", err)
-	}
-	defer sshClient.Close()
-
 	// Handle GPG agent forwarding
 	if cmd.GPGAgentForwarding || devPodConfig.ContextOption(config.ContextOptionGPGAgentForwarding) == "true" {
-		if gpg.IsGpgTunnelRunning(cmd.User, ctx, sshClient, log) {
+		if gpg.IsGpgTunnelRunning(cmd.User, ctx, toolSSHClient, log) {
 			log.Debugf("[GPG] exporting already running, skipping")
-		} else if err := cmd.setupGPGAgent(ctx, sshClient, log); err != nil {
+		} else if err := cmd.setupGPGAgent(ctx, toolSSHClient, log); err != nil {
 			return err
 		}
 	}
@@ -109,6 +99,13 @@ func startTSProxyTunnel(
 		return ts.DirectTunnel(ctx, lc, wAddr.Host(), wAddr.Port(), os.Stdin, os.Stdout)
 	}
 
+	// User ssh client for actual session
+	sshClient, err := ts.WaitForSSHClient(ctx, lc, wAddr.Host(), wAddr.Port(), cmd.User, log)
+	if err != nil {
+		return fmt.Errorf("failed to create SSH client for user server: %w", err)
+	}
+
+	defer sshClient.Close()
 	// Connect to the inner server and handle user session
 	return machine.RunSSHSession(
 		ctx,

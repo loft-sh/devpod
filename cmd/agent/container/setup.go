@@ -37,7 +37,6 @@ import (
 	"github.com/loft-sh/devpod/pkg/ide/vscode"
 	provider2 "github.com/loft-sh/devpod/pkg/provider"
 	"github.com/loft-sh/devpod/pkg/single"
-	sshServer "github.com/loft-sh/devpod/pkg/ssh/server"
 	"github.com/loft-sh/log"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
@@ -216,7 +215,7 @@ func (cmd *SetupContainerCmd) Run(ctx context.Context) error {
 	}
 
 	// start tailscale networking daemon
-	if (cmd.AccessKey != "" && cmd.NetworkHostname != "") || true { // FIXME: cleanup
+	if cmd.AccessKey != "" && cmd.NetworkHostname != "" {
 		err = single.Single("network.daemon.pid", func() (*exec.Cmd, error) {
 			logger.Infof("Start networking daemon")
 			binaryPath, err := os.Executable()
@@ -246,11 +245,12 @@ func (cmd *SetupContainerCmd) Run(ctx context.Context) error {
 				workdir = setupInfo.SubstitutionContext.ContainerWorkspaceFolder
 			}
 
-			args := []string{"helper", "ssh-server"}
-			args = append(args, "--address", fmt.Sprintf("127.0.0.1:%d", sshServer.DefaultUserPort))
+			args := []string{"agent", "container", "ssh-server"}
 			if workdir != "" {
 				args = append(args, fmt.Sprintf("--workdir '%s'", workdir))
 			}
+			user := config.GetRemoteUser(setupInfo)
+			args = append(args, "--remote-user", user)
 
 			return exec.Command(binaryPath, args...), nil
 		})
