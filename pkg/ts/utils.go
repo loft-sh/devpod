@@ -51,25 +51,29 @@ func GetURL(host string, port int) string {
 	return fmt.Sprintf("%s.%s:%d", host, LoftTSNetDomain, port)
 }
 
-func DirectTunnel(ctx context.Context, network WorkspaceServer, host string, port int, stdin io.Reader, stdout io.Writer) error {
-	address := fmt.Sprintf("%s.%s:%d", host, LoftTSNetDomain, port)
-	conn, err := network.Dial(ctx, "tcp", address)
+func DirectTunnel(ctx context.Context, lc *tailscale.LocalClient, host string, port int, stdin io.Reader, stdout io.Writer) error {
+	conn, err := lc.DialTCP(ctx, host, uint16(port))
 	if err != nil {
 		return fmt.Errorf("failed to connect to SSH server in proxy mode: %w", err)
 	}
 	defer conn.Close()
 
-	// Forward stdin, stdout, and stderr for proxy mode
+	errChan := make(chan error, 1)
 	go func() {
-		_, _ = io.Copy(conn, stdin)
+		_, err := io.Copy(stdout, conn)
+		errChan <- err
 	}()
 	go func() {
-		_, _ = io.Copy(stdout, conn)
+		_, err := io.Copy(conn, stdin)
+		errChan <- err
 	}()
 
-	// Block until the connection is closed
-	<-ctx.Done()
-	return nil
+	select {
+	case <-ctx.Done():
+		return ctx.Err()
+	case err := <-errChan:
+		return err
+	}
 }
 
 func WaitNodeReady(ctx context.Context, lc *tailscale.LocalClient) error {
