@@ -3,20 +3,15 @@ package cmd
 import (
 	"context"
 	"fmt"
-	"io/fs"
 	"os"
-	"syscall"
 
 	"github.com/loft-sh/devpod/cmd/machine"
 	client2 "github.com/loft-sh/devpod/pkg/client"
 	"github.com/loft-sh/devpod/pkg/config"
 	"github.com/loft-sh/devpod/pkg/gpg"
-	"github.com/loft-sh/devpod/pkg/platform"
 	sshServer "github.com/loft-sh/devpod/pkg/ssh/server"
 	"github.com/loft-sh/devpod/pkg/ts"
 	"github.com/loft-sh/log"
-	"github.com/pkg/errors"
-	"github.com/takama/daemon"
 	tsclient "tailscale.com/client/tailscale"
 )
 
@@ -29,33 +24,18 @@ func startTSProxyTunnel(
 ) error {
 	log.Debugf("Starting proxy connection")
 
-	baseClient, err := platform.InitClientFromProvider(ctx, devPodConfig, client.WorkspaceConfig().Provider.Name, log)
-	if err != nil {
-		return err
-	}
-
 	daemonSocket, err := ts.GetSocketForProvider(devPodConfig, client.WorkspaceConfig().Provider.Name)
 	if err != nil {
 		return err
 	}
 
-	// TODO: Can we move this to the provider side?
 	lc := &tsclient.LocalClient{
 		Socket:        daemonSocket,
 		UseSocketOnly: true,
 	}
-
-	log.Info("Check local node status")
 	status, err := lc.Status(ctx)
 	if err != nil {
-		if errors.Is(err, fs.ErrNotExist) || errors.Is(err, syscall.ECONNREFUSED) {
-			err = startDevPodD(ts.RemoveProtocol(baseClient.Config().Host))
-			if err != nil {
-				return err
-			}
-		} else {
-			return fmt.Errorf("failed to connect to local DevPod Daemon: %w", err)
-		}
+		return fmt.Errorf("connect to daemon: %w", err)
 	}
 
 	// TODO: handle not-authenticated state
@@ -68,11 +48,9 @@ func startTSProxyTunnel(
 	if err != nil {
 		return fmt.Errorf("check local node ready: %w", err)
 	}
-	log.Done("Local node is ready")
 
 	wCfg := client.WorkspaceConfig()
 	wAddr := ts.NewAddr(ts.GetWorkspaceHostname(wCfg.Pro.InstanceName, wCfg.Pro.Project), sshServer.DefaultUserPort)
-	log.Info("workspace host", wAddr.Host())
 
 	err = ts.WaitHostReachable(ctx, lc, wAddr, log)
 	if err != nil {
@@ -81,8 +59,6 @@ func startTSProxyTunnel(
 
 	log.Debugf("Host %s is reachable. Proceeding with SSH session...", wAddr.Host())
 
-	log.Info("Creating tool ssh client")
-	// timeoutCtx, err :=
 	// Create an SSH Client for the tool server
 	toolSSHClient, err := ts.WaitForSSHClient(ctx, lc, wAddr.Host(), wAddr.Port(), "root", log)
 	if err != nil {
@@ -108,7 +84,6 @@ func startTSProxyTunnel(
 		go cmd.startServices(ctx, devPodConfig, toolSSHClient, cmd.GitUsername, cmd.GitToken, wCfg, log)
 	}
 
-	log.Info("Creating user ssh client")
 	// Create an SSH client for the user server
 	sshClient, err := ts.WaitForSSHClient(ctx, lc, wAddr.Host(), wAddr.Port(), cmd.User, log)
 	if err != nil {
@@ -125,21 +100,13 @@ func startTSProxyTunnel(
 		}
 	}
 
-	// Retrieve environment variables
-	// envVars, err := cmd.retrieveEnVars()
-	// if err != nil {
-	// 	return err
-	// }
-
-	// Handle ssh remote proxy mode
+	// Handle ssh stdio mode
 	if cmd.Stdio {
 		if cmd.SSHKeepAliveInterval != DisableSSHKeepAlive {
 			go startSSHKeepAlive(ctx, toolSSHClient, cmd.SSHKeepAliveInterval, log)
 		}
 
-		// TODO: What about stderr?
-		// return ts.DirectTunnel(ctx, network, host, sshServer.DefaultPort, os.Stdin, os.Stdout)
-		return nil
+		return ts.DirectTunnel(ctx, lc, wAddr.Host(), wAddr.Port(), os.Stdin, os.Stdout)
 	}
 
 	// Connect to the inner server and handle user session
@@ -150,38 +117,4 @@ func startTSProxyTunnel(
 		cmd.Command,
 		os.Stderr,
 	)
-}
-
-// TODO: When to shut down?
-// FIXME: This currently only works on macOS, we'll need
-// platform specific handling for this
-func startDevPodD(host string) error {
-	// TODO: Properly manage peros
-	return nil
-	name := fmt.Sprintf("sh.loft.devpodd.%s", host)
-	desc := fmt.Sprintf("Daemon for DevPod Pro %s", host)
-	service, err := daemon.New(name, desc, daemon.UserAgent)
-	if err != nil {
-		return err
-	}
-
-	args := []string{"pro", "daemon", "--host", host}
-	fmt.Println(args)
-	test, err := service.Install(args...)
-	if err != nil {
-		if errors.Is(err, daemon.ErrAlreadyInstalled) {
-			return nil
-		}
-
-		return err
-	}
-	fmt.Println(test)
-
-	test, err = service.Start()
-	if err != nil && !errors.Is(err, daemon.ErrAlreadyRunning) {
-		return err
-	}
-	fmt.Println(test)
-
-	return nil
 }
