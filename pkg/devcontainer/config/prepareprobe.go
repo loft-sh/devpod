@@ -11,7 +11,7 @@ import (
 	"syscall"
 )
 
-func PrepareProbe(cmd *exec.Cmd, userName string) error {
+func PrepareCmdUser(cmd *exec.Cmd, userName string) error {
 	// execute as user
 	u, err := user.Lookup(userName)
 	if err != nil {
