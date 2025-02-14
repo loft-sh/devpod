@@ -8,14 +8,11 @@ import (
 	"net/url"
 	"time"
 
-	managementv1 "github.com/loft-sh/api/v4/pkg/apis/management/v1"
 	"github.com/loft-sh/log"
 	"github.com/sirupsen/logrus"
 
 	"github.com/loft-sh/devpod/pkg/platform/client"
-	"github.com/loft-sh/devpod/pkg/platform/project"
 	sshServer "github.com/loft-sh/devpod/pkg/ssh/server"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/klog/v2"
 	"tailscale.com/envknob"
 	"tailscale.com/ipn/store"
@@ -91,23 +88,9 @@ func (t *WorkspaceServer) Start(ctx context.Context) error {
 	t.listeners = append(t.listeners, listener)
 
 	go func() {
-		gracePeriod := 5 * time.Second // TODO: Move into config
+		gracePeriod := 5 * time.Second // TODO: make configurable
 		counter := newConnectionCounter(context.TODO(), gracePeriod, func(address string) {
-			fmt.Println(address, "timed out, informing control plane")
-			managementClient, err := t.config.Client.Management()
-			if err != nil {
-				fmt.Println(err)
-				return
-			}
-
-			name, projectName, err := ParseWorkspaceHostname(t.config.Hostname)
-			ns := project.ProjectNamespace(projectName)
-			// TODO: What if we can't reach control plane?
-			_, err = managementClient.Loft().ManagementV1().DevPodWorkspaceInstances(ns).SSH(ctx, name, &managementv1.DevPodSshOptions{}, metav1.CreateOptions{})
-			if err != nil {
-				fmt.Println(err)
-				return
-			}
+			// TODO:Update sleep mode
 		}, log.Default.WithLevel(logrus.DebugLevel))
 
 		for {
