@@ -93,7 +93,7 @@ func doProbe(ctx context.Context, userEnvProbe UserEnvProbe, preferredShell []st
 	defer cancel()
 	cmd := exec.CommandContext(timeoutCtx, args[0], args[1:]...)
 
-	err := PrepareProbe(cmd, userName)
+	err := PrepareCmdUser(cmd, userName)
 	if err != nil {
 		return nil, fmt.Errorf("prepare probe: %w", err)
 	}
