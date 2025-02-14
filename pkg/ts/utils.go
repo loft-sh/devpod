@@ -119,13 +119,12 @@ func CheckLocalNodeReady(status *ipnstate.Status) error {
 
 // WaitHostReachable polls until the given host is reachable via ts.
 func WaitHostReachable(ctx context.Context, lc *tailscale.LocalClient, addr Addr, log log.Logger) error {
-	const retryInterval = 100 * time.Millisecond
-	const maxRetries = 60
-
-	// TODO: Exponential backoff
+	const maxRetries = 20
 
 	for i := 0; i < maxRetries; i++ {
-		conn, err := lc.DialTCP(ctx, addr.Host(), uint16(addr.Port()))
+		timeoutCtx, cancel := context.WithTimeout(ctx, 5*time.Second)
+		defer cancel()
+		conn, err := lc.DialTCP(timeoutCtx, addr.Host(), uint16(addr.Port()))
 		if err == nil {
 			_ = conn.Close()
 			return nil // Host is reachable
@@ -135,7 +134,7 @@ func WaitHostReachable(ctx context.Context, lc *tailscale.LocalClient, addr Addr
 		select {
 		case <-ctx.Done():
 			return ctx.Err()
-		case <-time.After(retryInterval):
+		default:
 		}
 	}
 

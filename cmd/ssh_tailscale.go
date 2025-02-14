@@ -7,20 +7,17 @@ import (
 	"os"
 	"syscall"
 
-	managementv1 "github.com/loft-sh/api/v4/pkg/apis/management/v1"
 	"github.com/loft-sh/devpod/cmd/machine"
 	client2 "github.com/loft-sh/devpod/pkg/client"
 	"github.com/loft-sh/devpod/pkg/config"
 	"github.com/loft-sh/devpod/pkg/gpg"
 	"github.com/loft-sh/devpod/pkg/platform"
-	"github.com/loft-sh/devpod/pkg/platform/project"
 	sshServer "github.com/loft-sh/devpod/pkg/ssh/server"
 	"github.com/loft-sh/devpod/pkg/ts"
 	"github.com/loft-sh/log"
 	"github.com/pkg/errors"
 	"github.com/takama/daemon"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	tsClient "tailscale.com/client/tailscale"
+	tsclient "tailscale.com/client/tailscale"
 )
 
 func startTSProxyTunnel(
@@ -43,7 +40,7 @@ func startTSProxyTunnel(
 	}
 
 	// TODO: Can we move this to the provider side?
-	lc := &tsClient.LocalClient{
+	lc := &tsclient.LocalClient{
 		Socket:        daemonSocket,
 		UseSocketOnly: true,
 	}
@@ -73,21 +70,7 @@ func startTSProxyTunnel(
 	}
 	log.Done("Local node is ready")
 
-	managementClient, err := baseClient.Management()
-	if err != nil {
-		return err
-	}
-
 	wCfg := client.WorkspaceConfig()
-	ns := project.ProjectNamespace(wCfg.Pro.Project)
-	// notify platform that we'd like to connect
-	log.Info("Sending SSH request to platform")
-	sshOpts := &managementv1.DevPodSshOptions{}
-	_, err = managementClient.Loft().ManagementV1().DevPodWorkspaceInstances(ns).SSH(ctx, wCfg.Pro.InstanceName, sshOpts, metav1.CreateOptions{})
-	if err != nil {
-		log.Error("Error sending SSH Request", err)
-	}
-
 	wAddr := ts.NewAddr(ts.GetWorkspaceHostname(wCfg.Pro.InstanceName, wCfg.Pro.Project), sshServer.DefaultUserPort)
 	log.Info("workspace host", wAddr.Host())
 
