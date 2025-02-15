@@ -1,0 +1,139 @@
+---
+title: Docker provider via WSL
+sidebar_label: Docker provider via WSL
+---
+
+## Purpose
+
+The purpose of this quickstart is to provide a Docker environment via WSL, and a guide on how to integrate DevPod to Docker running in WSL.
+
+There are 3 parts to this tutorial. 
+1. Step 1 to Step 5 relates to installing Docker in WSL
+2. Step 6 and Step 7 relate to integrating Docker client (for Windows) with Docker daemon in WSL
+3. Step 8 relates to Integrating DevPod with Docker in WSL
+
+## Installing Docker in WSL
+
+### 1. Enable WSL2 feature
+
+To enable WSL2 on your Windows machine, run this command in **Powershell (run as Administrator)**. Make sure to restart your computer after this command is completed.
+
+You can skip this if you have installed WSL2 previously.
+
+```
+dism.exe /online /enable-feature /featurename:Microsoft-Windows-Subsystem-Linux /all /norestart
+```
+
+### 2. Install WSL2 Distro
+
+Install `Ubuntu-24.04`. Supply the `username` and `password` when asked.
+
+```
+wsl --install Ubuntu-24.04
+```
+
+To access the Ubuntu shell, type `wsl` in Powershell.
+
+### 3. Install Docker in Ubuntu-24.04
+
+Use the command below to install the Docker engine on Ubuntu 24.04.
+
+```
+#!/bin/bash
+# If your machine is behind corporate firewall, 
+# make sure to define your HTTP_PROXY and HTTPS_PROXY before running the command below
+
+sudo apt-get update
+sudo apt-get install ca-certificates curl
+sudo install -m 0755 -d /etc/apt/keyrings
+sudo -E curl --verbose -fsSL https://download.docker.com/linux/ubuntu/gpg -o /etc/apt/keyrings/docker.asc
+sudo chmod a+r /etc/apt/keyrings/docker.asc
+
+# Add the repository to Apt sources:
+echo \
+  "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.asc] https://download.docker.com/linux/ubuntu \
+  $(. /etc/os-release && echo "$VERSION_CODENAME") stable" | \
+  sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
+sudo apt-get update
+sudo apt-get install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
+
+sudo usermod -aG docker $USER
+sudo systemctl enable docker.service
+sudo systemctl enable containerd.service
+
+sudo systemctl start docker.service
+sudo systemctl start containerd.service
+
+```
+
+### 4. [optional] Configure docker daemon proxy
+
+```
+#!/bin/bash
+# If your machine is behind corporate firewall, 
+# make sure to define your HTTP_PROXY and HTTPS_PROXY before running the command below
+
+sudo mkdir -p /etc/systemd/system/docker.service.d
+sudo touch /etc/systemd/system/docker.service.d/http-proxy.conf
+echo "[Service]" | sudo tee -a /etc/systemd/system/docker.service.d/http-proxy.conf
+echo "Environment='HTTP_PROXY=$HTTP_PROXY'" | sudo tee -a /etc/systemd/system/docker.service.d/http-proxy.conf
+echo "Environment='HTTPS_PROXY=$HTTPS_PROXY'" | sudo tee -a /etc/systemd/system/docker.service.d/http-proxy.conf
+echo "Environment='NO_PROXY=$NO_PROXY'" | sudo tee -a /etc/systemd/system/docker.service.d/http-proxy.conf
+echo "Environment='http_proxy=$http_proxy'" | sudo tee -a /etc/systemd/system/docker.service.d/http-proxy.conf
+echo "Environment='https_proxy=$https_proxy'" | sudo tee -a /etc/systemd/system/docker.service.d/http-proxy.conf
+echo "Environment='no_proxy=$no_proxy'" | sudo tee -a /etc/systemd/system/docker.service.d/http-proxy.conf
+
+# restart docker daemon
+sudo systemctl daemon-reload
+sudo systemctl restart docker.service
+sudo systemctl restart containerd.service
+```
+
+### 5. Expose docker daemon to windows via port 2375
+
+This command allows the Docker daemon to receive instructions from port `2375`. This also means that we can access port `2375` from Windows.
+
+```
+#!/bin/bash
+sudo cp /lib/systemd/system/docker.service /etc/systemd/system/
+sudo sed -i 's/\ -H\ fd:\/\//\ -H\ fd:\/\/\ -H\ tcp:\/\/127.0.0.1:2375/g' /etc/systemd/system/docker.service
+sudo systemctl daemon-reload
+sudo systemctl restart docker.service
+```
+
+## Integrate Docker client (for Windows) with Docker daemon in WSL
+
+### 6. Download the Docker client for Windows
+
+Download the docker client from [this url](https://download.docker.com/win/static/stable/x86_64/). At the time of writing, the latest version is `docker-27.5.1.zip`. 
+Extract the downloaded zip, and add the folder to your PATH environment variable.
+
+Verify that everything works by typing `docker` in a new Powershell.
+
+### 7. Integrate Docker Windows client with Docker installed in WSL
+
+```
+# run this command in Powershell
+
+docker --version
+docker context create lin --docker host=tcp://127.0.0.1:2375
+docker context use lin
+docker run hello-world
+```
+
+## Integrate DevPod with Docker in WSL
+
+### 8. Setup DevPod Docker provider to use Docker installed in WSL
+
+Set `Docker Host` as `tcp://127.0.0.1:2375` and `Docker Path` as `docker`.
+
+<figure>
+  <img src="/docs/media/docker-provider-via-wsl.png" alt="set docker provider to use tcp://127.0.0.1:2375" />
+  <figcaption>set docker provider to use tcp://127.0.0.1:2375</figcaption>
+</figure>
+
+## Summary
+
+Following this tutorial, you should be able to use DevPod with a Docker provider running in WSL. 
+You can try any of the examples in `Create Workspace`.
+
