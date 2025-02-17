@@ -32,14 +32,11 @@ use custom_protocol::CustomProtocol;
 use log::{error, info};
 use std::sync::{Arc, Mutex};
 use system_tray::SystemTray;
-use tauri::{
-    tray::TrayIconBuilder,
-    Manager, Wry,
-};
+use tauri::{tray::TrayIconBuilder, Manager, Wry};
 use tokio::sync::mpsc::{self, Sender};
 use ui_messages::UiMessage;
-use workspaces::WorkspacesState;
 use util::{kill_child_processes, QUIT_EXIT_CODE};
+use workspaces::WorkspacesState;
 
 pub type AppHandle = tauri::AppHandle<Wry>;
 
@@ -56,15 +53,25 @@ fn main() -> anyhow::Result<()> {
     // https://unix.stackexchange.com/questions/82620/gui-apps-dont-inherit-path-from-parent-console-apps
     fix_env::fix_env("PATH")?;
 
-    let custom_protocol = CustomProtocol::init();
     let contributions = community_contributions::init()?;
 
     let ctx = tauri::generate_context!();
     let app_name = ctx.package_info().name.to_string();
 
+    CustomProtocol::forward_deep_link();
+
     let (tx, rx) = mpsc::channel::<UiMessage>(10);
 
     let mut app_builder = tauri::Builder::default()
+        .plugin(tauri_plugin_single_instance::init(|app, args, cwd| {
+            let app_state = app.state::<AppState>();
+
+            tauri::async_runtime::block_on(async move {
+                if let Err(err) = app_state.ui_messages.send(UiMessage::ShowDashboard).await {
+                    error!("Failed to broadcast show dashboard message: {}", err);
+                };
+            });
+        }))
         .manage(AppState {
             workspaces: Arc::new(Mutex::new(WorkspacesState::default())),
             community_contributions: Arc::new(Mutex::new(contributions)),
@@ -95,6 +102,8 @@ fn main() -> anyhow::Result<()> {
             workspaces::setup(&app.handle(), app.state());
             community_contributions::setup(app.state());
             action_logs::setup(&app.handle())?;
+
+            let custom_protocol = CustomProtocol::init();
             custom_protocol.setup(app.handle().clone());
 
             let app_handle = app.handle().clone();
@@ -158,7 +167,6 @@ fn main() -> anyhow::Result<()> {
         .build(ctx)
         .expect("error while building tauri application");
 
-
     app.run(move |app_handle, event| {
         let exit_requested_tx = tx.clone();
 
@@ -179,7 +187,7 @@ fn main() -> anyhow::Result<()> {
                 // Check if the user clicked "Quit" in the system tray, in which case we have to actually close.
                 if let Some(code) = code {
                     if code == QUIT_EXIT_CODE {
-                        return
+                        return;
                     }
                 }
 

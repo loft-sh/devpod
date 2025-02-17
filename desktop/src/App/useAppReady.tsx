@@ -109,6 +109,14 @@ export function useAppReady() {
   const handleMessage: Parameters<typeof client.subscribe>[1] = useCallback(
     async (event) => {
       if (event.type === "ShowDashboard") {
+        if (await getCurrentWebviewWindow().isMinimized()) {
+          await getCurrentWebviewWindow().unminimize()
+        }
+
+        if (!(await getCurrentWebviewWindow().isVisible())) {
+          await getCurrentWebviewWindow().show()
+        }
+
         await getCurrentWebviewWindow().setFocus()
 
         return

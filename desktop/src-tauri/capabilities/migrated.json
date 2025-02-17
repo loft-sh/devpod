@@ -70,6 +70,7 @@
     "core:window:allow-start-dragging",
     "core:window:allow-close",
     "core:window:allow-set-focus",
+    "core:window:allow-unminimize",
     "notification:default",
     "store:allow-load",
     "store:default",

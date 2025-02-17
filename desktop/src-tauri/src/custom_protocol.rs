@@ -159,6 +159,55 @@ impl CustomProtocol {
         Self {}
     }
 
+    pub fn forward_deep_link() {
+        #[cfg(target_os = "linux")]
+        {
+            use std::{
+                fs::{remove_file},
+                io::{ErrorKind, Write},
+                os::unix::net::{UnixStream}
+            };
+
+            let addr = format!("/tmp/{}-deep-link.sock", APP_IDENTIFIER);
+
+            match UnixStream::connect(&addr) {
+                Ok(mut stream) => {
+                    if let Err(io_err) = stream.write_all(std::env::args().nth(1).unwrap_or_default().as_bytes())
+                    {
+                        log::error!(
+                            "Error sending message to primary instance: {}",
+                            io_err.to_string()
+                        );
+                    };
+                }
+                Err(err) => {
+                    log::error!("Error creating socket listener: {}", err.to_string());
+                    if err.kind() == ErrorKind::ConnectionRefused {
+                        let _ = remove_file(&addr);
+                    }
+                }
+            };
+        }
+
+        #[cfg(target_os = "windows")]
+        {
+            use std::io::Write;
+            use interprocess::local_socket::{LocalSocketListener, LocalSocketStream};
+
+            if let Ok(mut conn) = LocalSocketStream::connect(APP_IDENTIFIER) {
+                if let Err(io_err) = conn.write_all(std::env::args().nth(1).unwrap_or_default().as_bytes())
+                {
+                    log::error!(
+                        "Error sending message to primary instance: {}",
+                        io_err.to_string()
+                    );
+                };
+                let _ = conn.write_all(b"\n");
+            }
+        }
+
+    }
+
     pub fn setup(&self, app: AppHandle) {
         let app_handle = app.clone();
 
