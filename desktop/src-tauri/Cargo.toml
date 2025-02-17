@@ -35,6 +35,7 @@ tauri-plugin-os = "2"
 tauri-plugin-process = "2"
 tauri-plugin-updater = "2"
 tauri-plugin-notification = "2"
+tauri-plugin-single-instance = "2"
 
 # Logging
 log = { version = "0.4" }
@@ -63,6 +64,7 @@ axum = { version = "0.7.1", features = ["ws"] }
 tower-http = { version = "0.5.1", features = ["cors"] }
 http = "1.0.0"
 nix = { version = "0.29.0", features = ["signal"] }
+interprocess = "1.2.1"
 
 [target.'cfg(target_os = "windows")'.dependencies]
 winreg = "0.50.0"
@@ -79,7 +81,6 @@ windows = { version = "0.48", features = [
 window-vibrancy = "0.5.2"
 cocoa = "0.24"
 objc = "0.2"
-
 
 [features]
 # by default Tauri runs in production mode
