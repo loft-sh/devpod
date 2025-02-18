@@ -11,7 +11,6 @@ import (
 	"os/exec"
 	"path/filepath"
 	"strings"
-	"sync"
 	"time"
 
 	"github.com/loft-sh/devpod/cmd/agent/workspace"
@@ -263,12 +262,11 @@ func (cmd *SSHCmd) jumpContainer(
 	log log.Logger,
 ) error {
 	// lock the workspace as long as we init the connection
-	unlockOnce := sync.Once{}
 	err := client.Lock(ctx)
 	if err != nil {
 		return err
 	}
-	defer unlockOnce.Do(client.Unlock)
+	defer client.Unlock()
 
 	// start the workspace
 	err = startWait(ctx, client, false, log)
@@ -283,9 +281,21 @@ func (cmd *SSHCmd) jumpContainer(
 
 	// We can optimize if we know we're on pro and the client is local
 	if cmd.Proxy && client.AgentLocal() {
-		return cmd.jumpLocalProxyContainer(ctx, devPodConfig, client, log, func(ctx context.Context, command string, sshClient *ssh.Client) error {
-			// we have a connection to the container, make sure others can connect as well
-			unlockOnce.Do(client.Unlock)
+		encodedWorkspaceInfo, _, err := client.AgentInfo(provider.CLIOptions{Proxy: true})
+		if err != nil {
+			return fmt.Errorf("prepare workspace info: %w", err)
+		}
+		// we don't need the client anymore, can unlock
+		client.Unlock()
+
+		shouldExit, workspaceInfo, err := agent.WorkspaceInfo(encodedWorkspaceInfo, log)
+		if err != nil {
+			return err
+		} else if shouldExit {
+			return nil
+		}
+
+		return cmd.jumpLocalProxyContainer(ctx, devPodConfig, workspaceInfo, log, func(ctx context.Context, command string, sshClient *ssh.Client) error {
 			writer := log.Writer(logrus.InfoLevel, false)
 			defer writer.Close()
 
@@ -297,7 +307,7 @@ func (cmd *SSHCmd) jumpContainer(
 	return tunnel.NewContainerTunnel(client, cmd.Proxy, log).
 		Run(ctx, func(ctx context.Context, containerClient *ssh.Client) error {
 			// we have a connection to the container, make sure others can connect as well
-			unlockOnce.Do(client.Unlock)
+			client.Unlock()
 
 			// start ssh tunnel
 			return cmd.startTunnel(ctx, devPodConfig, containerClient, client, log)
@@ -672,19 +682,8 @@ func (cmd *SSHCmd) setupGPGAgent(
 // This completely skips the agent.
 //
 // WARN: This is considered experimental for the time being!
-func (cmd *SSHCmd) jumpLocalProxyContainer(ctx context.Context, devPodConfig *config.Config, client client2.WorkspaceClient, log log.Logger, exec func(ctx context.Context, command string, sshClient *ssh.Client) error) error {
-	encodedWorkspaceInfo, _, err := client.AgentInfo(provider.CLIOptions{Proxy: true})
-	if err != nil {
-		return fmt.Errorf("prepare workspace info: %w", err)
-	}
-	shouldExit, workspaceInfo, err := agent.WorkspaceInfo(encodedWorkspaceInfo, log)
-	if err != nil {
-		return err
-	} else if shouldExit {
-		return nil
-	}
-
-	_, err = workspace.InitContentFolder(workspaceInfo, log)
+func (cmd *SSHCmd) jumpLocalProxyContainer(ctx context.Context, devPodConfig *config.Config, workspaceInfo *provider.AgentWorkspaceInfo, log log.Logger, exec func(ctx context.Context, command string, sshClient *ssh.Client) error) error {
+	_, err := workspace.InitContentFolder(workspaceInfo, log)
 	if err != nil {
 		return err
 	}
@@ -759,7 +758,7 @@ func (cmd *SSHCmd) jumpLocalProxyContainer(ctx context.Context, devPodConfig *co
 		}
 	}()
 
-	workdir := filepath.Join("/workspaces", client.Workspace())
+	workdir := filepath.Join("/workspaces", workspaceInfo.Workspace.ID)
 	if cmd.WorkDir != "" {
 		workdir = cmd.WorkDir
 	}
