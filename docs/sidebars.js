@@ -179,6 +179,10 @@ module.exports = {
           type: "doc",
           id: "tutorials/reduce-build-times-with-cache",
         },
+        {
+          type: "doc",
+          id: "tutorials/docker-provider-via-wsl",
+        },
       ],
     },
     {
