@@ -13,7 +13,6 @@ import (
 	"github.com/loft-sh/devpod/cmd/machine"
 	"github.com/loft-sh/devpod/cmd/pro"
 	"github.com/loft-sh/devpod/cmd/provider"
-	ts "github.com/loft-sh/devpod/cmd/tailscale"
 	"github.com/loft-sh/devpod/cmd/use"
 	"github.com/loft-sh/devpod/pkg/client/clientimplementation"
 	"github.com/loft-sh/devpod/pkg/config"
@@ -136,6 +135,5 @@ func BuildRoot() *cobra.Command {
 	rootCmd.AddCommand(NewLogsCmd(globalFlags))
 	rootCmd.AddCommand(NewUpgradeCmd())
 	rootCmd.AddCommand(NewTroubleshootCmd(globalFlags))
-	rootCmd.AddCommand(ts.NewTailscaleCmd(globalFlags))
 	return rootCmd
 }

@@ -139,7 +139,6 @@ function useErrorDimensions(
   defaultWidth: BoxProps["width"] = "5xl"
 ) {
   const [errorHeight, setErrorHeight] = useState<BoxProps["height"]>(defaultHeight)
-  // TODO: calculate width dynamically based on parent width
   const [errorWidth] = useState<BoxProps["width"]>(defaultWidth)
 
   useEffect(() => {

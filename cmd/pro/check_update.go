@@ -9,6 +9,7 @@ import (
 	"github.com/loft-sh/devpod/cmd/pro/flags"
 	"github.com/loft-sh/devpod/pkg/config"
 	"github.com/loft-sh/devpod/pkg/platform"
+	"github.com/loft-sh/devpod/pkg/provider"
 	versionpkg "github.com/loft-sh/devpod/pkg/version"
 	"github.com/loft-sh/log"
 	"github.com/spf13/cobra"
@@ -33,7 +34,12 @@ func NewCheckUpdateCmd(globalFlags *flags.GlobalFlags) *cobra.Command {
 		Short:  "Check platform provider update",
 		Hidden: true,
 		RunE: func(cobraCmd *cobra.Command, args []string) error {
-			return cmd.Run(cobraCmd.Context())
+			devPodConfig, provider, err := findProProvider(cobraCmd.Context(), cmd.Context, cmd.Provider, cmd.Host, cmd.Log)
+			if err != nil {
+				return err
+			}
+
+			return cmd.Run(cobraCmd.Context(), devPodConfig, provider)
 		},
 		PersistentPreRun: func(cmd *cobra.Command, args []string) {
 			root := cmd.Root()
@@ -59,17 +65,7 @@ type ProviderUpdateInfo struct {
 	NewVersion string `json:"newVersion,omitempty"`
 }
 
-func (cmd *CheckUpdateCmd) Run(ctx context.Context) error {
-	devPodConfig, err := config.LoadConfig(cmd.Context, cmd.Provider)
-	if err != nil {
-		return err
-	}
-
-	provider, err := platform.ProviderFromHost(ctx, devPodConfig, cmd.Host, log.Discard)
-	if err != nil {
-		return err
-	}
-
+func (cmd *CheckUpdateCmd) Run(ctx context.Context, devPodConfig *config.Config, provider *provider.ProviderConfig) error {
 	remoteVersion, err := platform.GetDevPodVersion(fmt.Sprintf("https://%s", cmd.Host))
 	if err != nil {
 		return err

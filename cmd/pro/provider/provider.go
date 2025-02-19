@@ -6,10 +6,12 @@ import (
 	"github.com/loft-sh/devpod/cmd/agent"
 	"github.com/loft-sh/devpod/cmd/pro/flags"
 	"github.com/loft-sh/devpod/cmd/pro/provider/create"
+	"github.com/loft-sh/devpod/cmd/pro/provider/daemon"
 	"github.com/loft-sh/devpod/cmd/pro/provider/get"
 	"github.com/loft-sh/devpod/cmd/pro/provider/list"
 	"github.com/loft-sh/devpod/cmd/pro/provider/update"
 	"github.com/loft-sh/devpod/cmd/pro/provider/watch"
+	"github.com/loft-sh/devpod/pkg/client/clientimplementation"
 	"github.com/loft-sh/devpod/pkg/platform"
 	"github.com/loft-sh/devpod/pkg/platform/client"
 	"github.com/loft-sh/devpod/pkg/telemetry"
@@ -32,6 +34,10 @@ func NewProProviderCmd(globalFlags *flags.GlobalFlags) *cobra.Command {
 
 			log.Default.SetFormat(log.JSONFormat)
 
+			if os.Getenv(clientimplementation.DevPodDebug) == "true" {
+				globalFlags.Debug = true
+			}
+
 			// Disable debug hints if we execute pro commands from DevPod Desktop
 			// We're reusing the agent.AgentExecutedAnnotation for simplicity, could rename in the future
 			if os.Getenv(telemetry.UIEnvVar) == "true" {
@@ -53,6 +59,7 @@ func NewProProviderCmd(globalFlags *flags.GlobalFlags) *cobra.Command {
 	c.AddCommand(create.NewCmd(globalFlags))
 	c.AddCommand(get.NewCmd(globalFlags))
 	c.AddCommand(update.NewCmd(globalFlags))
+	c.AddCommand(daemon.NewCmd(globalFlags))
 	c.AddCommand(NewHealthCmd(globalFlags))
 
 	c.AddCommand(NewUpCmd(globalFlags))
