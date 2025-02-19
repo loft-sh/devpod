@@ -13,7 +13,6 @@ import (
 
 	"github.com/loft-sh/devpod/pkg/platform/client"
 	sshServer "github.com/loft-sh/devpod/pkg/ssh/server"
-	"k8s.io/klog/v2"
 	"tailscale.com/envknob"
 	"tailscale.com/ipn/store"
 	"tailscale.com/tsnet"
@@ -24,6 +23,7 @@ type WorkspaceServer struct {
 	listeners []net.Listener
 
 	config *WorkspaceServerConfig
+	log    log.Logger
 }
 
 // WorkspaceServerConfig defines the configuration for the TSNet instance
@@ -36,9 +36,10 @@ type WorkspaceServerConfig struct {
 }
 
 // NewTSNet creates a new instance of TSNet
-func NewWorkspaceServer(config *WorkspaceServerConfig) *WorkspaceServer {
+func NewWorkspaceServer(config *WorkspaceServerConfig, log log.Logger) *WorkspaceServer {
 	return &WorkspaceServer{
 		config: config,
+		log:    log,
 	}
 }
 
@@ -50,12 +51,12 @@ func (t *WorkspaceServer) Start(ctx context.Context) error {
 
 	// Build the platform URL
 	baseUrl := url.URL{
-		Scheme: getEnvOrDefault("LOFT_TSNET_SCHEME", "https"),
+		Scheme: GetEnvOrDefault("LOFT_TSNET_SCHEME", "https"),
 		Host:   t.config.Host,
 	}
 
 	// Check DERP connection
-	if err := checkDerpConnection(ctx, &baseUrl); err != nil {
+	if err := CheckDerpConnection(ctx, &baseUrl); err != nil {
 		return fmt.Errorf("failed to verify DERP connection: %w", err)
 	}
 
@@ -65,7 +66,7 @@ func (t *WorkspaceServer) Start(ctx context.Context) error {
 		return fmt.Errorf("Create file store: %w", err)
 	}
 	envknob.Setenv("TS_DEBUG_TLS_DIAL_INSECURE_SKIP_VERIFY", "true")
-	klog.Infof("Connecting to control URL - %v", baseUrl.String()+"/coordinator/")
+	t.log.Infof("Connecting to control URL - %v", baseUrl.String()+"/coordinator/")
 	t.tsServer = &tsnet.Server{
 		Hostname:   t.config.Hostname,
 		Logf:       t.config.LogF,
@@ -98,7 +99,7 @@ func (t *WorkspaceServer) Start(ctx context.Context) error {
 			// backend conn is our connection to the ssh server
 			clientConn, err := listener.Accept()
 			if err != nil {
-				klog.Errorf("Failed to accept connection: %v", err)
+				t.log.Errorf("Failed to accept connection: %v", err)
 				continue
 			}
 			clientHost, _, err := net.SplitHostPort(clientConn.RemoteAddr().String())
@@ -116,7 +117,7 @@ func (t *WorkspaceServer) Start(ctx context.Context) error {
 				localAddr := fmt.Sprintf("127.0.0.1:%d", sshServer.DefaultUserPort)
 				backendConn, err := net.Dial("tcp", localAddr)
 				if err != nil {
-					klog.Errorf("Failed to connect to local address %s: %v", localAddr, err)
+					t.log.Errorf("Failed to connect to local address %s: %v", localAddr, err)
 					return
 				}
 				defer backendConn.Close()
@@ -148,7 +149,7 @@ func (t *WorkspaceServer) Stop() {
 		t.tsServer = nil
 	}
 
-	klog.Info("Tailscale server stopped")
+	t.log.Info("Tailscale server stopped")
 }
 
 // Dial allows dialing to a specific address via Tailscale

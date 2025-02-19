@@ -1,10 +1,11 @@
 use tauri::AppHandle;
 
+use crate::resource_watcher::Workspace;
+
 use super::{
     config::{CommandConfig, DevpodCommandConfig, DevpodCommandError},
     constants::{DEVPOD_BINARY_NAME, DEVPOD_COMMAND_LIST, FLAG_OUTPUT_JSON},
 };
-use crate::workspaces::WorkspacesState;
 
 pub struct ListWorkspacesCommand {}
 impl ListWorkspacesCommand {
@@ -12,11 +13,11 @@ impl ListWorkspacesCommand {
         ListWorkspacesCommand {}
     }
 
-    fn deserialize(&self, d: Vec<u8>) -> Result<WorkspacesState, DevpodCommandError> {
+    fn deserialize(&self, d: Vec<u8>) -> Result<Vec<Workspace>, DevpodCommandError> {
         serde_json::from_slice(&d).map_err(DevpodCommandError::Parse)
     }
 }
-impl DevpodCommandConfig<WorkspacesState> for ListWorkspacesCommand {
+impl DevpodCommandConfig<Vec<Workspace>> for ListWorkspacesCommand {
     fn config(&self) -> CommandConfig {
         CommandConfig {
             binary_name: DEVPOD_BINARY_NAME,
@@ -24,11 +25,21 @@ impl DevpodCommandConfig<WorkspacesState> for ListWorkspacesCommand {
         }
     }
 
-    fn exec(self, app_handle: &AppHandle) -> Result<WorkspacesState, DevpodCommandError> {
+    fn exec_blocking(self, app_handle: &AppHandle) -> Result<Vec<Workspace>, DevpodCommandError> {
         let cmd = self.new_command(app_handle)?;
 
         let output = tauri::async_runtime::block_on(async move { cmd.output().await })
             .map_err(|_| DevpodCommandError::Output)?;
+
+        self.deserialize(output.stdout)
+    }
+}
+
+impl ListWorkspacesCommand {
+    pub async fn exec(self, app_handle: &AppHandle) -> Result<Vec<Workspace>, DevpodCommandError> {
+        let cmd = self.new_command(app_handle)?;
+
+        let output = cmd.output().await.map_err(|_| DevpodCommandError::Output)?;
 
         self.deserialize(output.stdout)
     }

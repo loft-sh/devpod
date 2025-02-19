@@ -146,7 +146,7 @@ func WaitHostReachable(ctx context.Context, lc *tailscale.LocalClient, addr Addr
 }
 
 func GetSocketForProvider(devPodConfig *config.Config, providerName string) (string, error) {
-	tsDir, err := provider.GetTailscaleDir(devPodConfig.DefaultContext, providerName)
+	tsDir, err := provider.GetDaemonDir(devPodConfig.DefaultContext, providerName)
 	if err != nil {
 		return "", err
 	}

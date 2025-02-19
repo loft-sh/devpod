@@ -124,8 +124,21 @@ function ProAppContent({ host }: TProAppContentProps) {
                   rounded="full"
                 />
                 <Text color="gray.600" textTransform="capitalize">
-                  {connectionStatus.state}
+                  Platform
                 </Text>
+                {connectionStatus.details?.daemon && (
+                  <>
+                    <Box
+                      ml="2"
+                      boxSize="2"
+                      bg={connectionStatus.state === "connected" ? "green.400" : "red.400"}
+                      rounded="full"
+                    />
+                    <Text color="gray.600" textTransform="capitalize">
+                      Daemon
+                    </Text>
+                  </>
+                )}
               </HStack>
             )}
           </HStack>

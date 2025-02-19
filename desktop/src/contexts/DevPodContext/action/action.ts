@@ -82,7 +82,6 @@ export class Action {
       return
     }
     // We're no longer interested in status updates
-    // TODO: cancel somehow?
     this.eventManager.clear()
     this._status = "cancelled"
     this._finishedAt = Date.now()
