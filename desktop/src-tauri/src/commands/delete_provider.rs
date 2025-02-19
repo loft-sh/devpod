@@ -25,7 +25,7 @@ impl DevpodCommandConfig<()> for DeleteProviderCommand {
         }
     }
 
-    fn exec(self, app_handle: &AppHandle) -> Result<(), DevpodCommandError> {
+    fn exec_blocking(self, app_handle: &AppHandle) -> Result<(), DevpodCommandError> {
         let cmd = self.new_command(app_handle)?;
 
         tauri::async_runtime::block_on(async move { cmd.status().await })

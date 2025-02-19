@@ -150,7 +150,6 @@ export const Terminal = forwardRef<TTerminalRef, TTerminalProps>(function T(
   }, [terminalTheme])
 
   useEffect(() => {
-    // TODO: resize when global font size changes
     let maybeFontSize = terminalRef.current?.options.fontSize
     if (exists(maybeFontSize)) {
       maybeFontSize = remToPx(fontSize)

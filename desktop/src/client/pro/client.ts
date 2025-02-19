@@ -4,11 +4,13 @@ import { ManagementV1Project } from "@loft-enterprise/client/gen/models/manageme
 import { ManagementV1ProjectClusters } from "@loft-enterprise/client/gen/models/managementV1ProjectClusters"
 import { ManagementV1ProjectTemplates } from "@loft-enterprise/client/gen/models/managementV1ProjectTemplates"
 import { ManagementV1Self } from "@loft-enterprise/client/gen/models/managementV1Self"
-import { ErrorTypeCancelled, Result, ResultError } from "../../lib"
+import { ErrorTypeCancelled, Result, ResultError, Return, isError } from "../../lib"
 import { TImportWorkspaceConfig, TListProInstancesConfig, TProID, TProInstance } from "../../types"
 import { TDebuggable, TStreamEventListenerFn } from "../types"
 import { ProCommands } from "./proCommands"
 import { Failed } from "@loft-enterprise/client"
+import { TAURI_SERVER_URL } from "../tauriClient"
+import { DaemonStatus } from "@/gen"
 
 export class ProClient implements TDebuggable {
   constructor(private readonly id: string) {}
@@ -25,8 +27,34 @@ export class ProClient implements TDebuggable {
     return ProCommands.Login(host, accessKey, listener)
   }
 
-  public async checkHealth() {
+  public async checkPlatformHealth() {
     return ProCommands.CheckHealth(this.id)
+  }
+
+  public async checkDaemonHealth(): Promise<Result<{ found: boolean; status?: DaemonStatus }>> {
+    try {
+      const res = await fetch(`${TAURI_SERVER_URL}/daemon/${this.id}/status`, {
+        method: "GET",
+      })
+      if (res.status != 200) {
+        return Return.Value({ found: false })
+      }
+
+      const status: DaemonStatus = await res.json()
+
+      return Return.Value({ found: true, status })
+    } catch (e) {
+      if (isError(e)) {
+        return Return.Failed(e.message)
+      }
+
+      const errMsg = "Unable to get daemon status"
+      if (typeof e === "string") {
+        return Return.Failed(`${errMsg}: ${e}`)
+      }
+
+      return Return.Failed(errMsg)
+    }
   }
 
   public async getVersion() {

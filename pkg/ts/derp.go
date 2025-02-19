@@ -9,15 +9,13 @@ import (
 	"net/url"
 	"os"
 	"strings"
-	"sync"
 	"time"
 
-	"github.com/loft-sh/log"
 	"k8s.io/klog/v2"
 )
 
-// checkDerpConnection validates the DERP connection
-func checkDerpConnection(ctx context.Context, baseUrl *url.URL) error {
+// CheckDerpConnection validates the DERP connection
+func CheckDerpConnection(ctx context.Context, baseUrl *url.URL) error {
 	newTransport := http.DefaultTransport.(*http.Transport).Clone()
 	newTransport.TLSClientConfig = &tls.Config{
 		InsecureSkipVerify: true,
@@ -53,7 +51,7 @@ func checkDerpConnection(ctx context.Context, baseUrl *url.URL) error {
 }
 
 // Utility function to get environment variable or default
-func getEnvOrDefault(envVar, defaultVal string) string {
+func GetEnvOrDefault(envVar, defaultVal string) string {
 	if val := os.Getenv(envVar); val != "" {
 		return val
 	}
@@ -66,61 +64,4 @@ func RemoveProtocol(hostPath string) string {
 		return hostPath[idx+3:]
 	}
 	return hostPath
-}
-
-func newConnectionCounter(ctx context.Context, timeout time.Duration, onTimeout func(address string), log log.Logger) *connectionCounter {
-	return &connectionCounter{
-		conns:       map[string]int{},
-		generations: map[string]int{},
-		timeout:     timeout,
-		onTimeout:   onTimeout,
-		log:         log,
-		ctx:         ctx,
-	}
-}
-
-type connectionCounter struct {
-	conns       map[string]int
-	generations map[string]int
-	m           sync.Mutex
-
-	ctx       context.Context
-	timeout   time.Duration
-	onTimeout func(address string)
-	log       log.Logger
-}
-
-func (c *connectionCounter) Add(address string) {
-	c.m.Lock()
-	defer c.m.Unlock()
-
-	c.conns[address]++
-	c.log.Debugf("New connection on %s (Total: %d)", address, c.conns[address])
-}
-
-func (c *connectionCounter) Dec(address string) {
-	c.m.Lock()
-	defer c.m.Unlock()
-
-	c.conns[address]--
-	connCount := c.conns[address]
-	c.log.Debugf("Closed connection on %s (Total: %d)", address, connCount)
-
-	if connCount <= 0 && c.timeout > 0 {
-		c.generations[address]++
-
-		go func(generation int, address string) {
-			select {
-			case <-c.ctx.Done():
-				return
-			case <-time.After(c.timeout):
-				c.m.Lock()
-				defer c.m.Unlock()
-
-				if c.generations[address] == generation && c.conns[address] <= 0 {
-					c.onTimeout(address)
-				}
-			}
-		}(c.generations[address], address)
-	}
 }

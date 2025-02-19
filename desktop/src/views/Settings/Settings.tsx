@@ -124,6 +124,12 @@ function GeneralSettings() {
         />
       </SettingSection>
 
+      <SettingSection title="Logs" description={"Open the logs for DevPod Desktop"}>
+        <Button variant="outline" onClick={() => client.openDir("AppLog")}>
+          Open Logs
+        </Button>
+      </SettingSection>
+
       <SettingSection title="Agent URL" description={agentURLHelpText}>
         {agentURLInput}
       </SettingSection>
