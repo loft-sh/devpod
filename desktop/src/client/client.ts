@@ -21,6 +21,7 @@ import * as os from "@tauri-apps/plugin-os"
 import * as process from "@tauri-apps/plugin-process"
 import * as shell from "@tauri-apps/plugin-shell"
 import * as updater from "@tauri-apps/plugin-updater"
+import { TAURI_SERVER_URL } from "./tauriClient"
 
 // These types have to match the rust types! Make sure to update them as well!
 type TChannels = {
@@ -53,6 +54,10 @@ type TChannels = {
         host: string
         accessKey: string | null
         options: Record<string, string> | null
+      }>
+    | Readonly<{
+        type: "OpenProInstance"
+        host: string | null
       }>
 }
 type TChannelName = keyof TChannels
@@ -178,7 +183,7 @@ class Client {
     try {
       // WARN: This is a workaround for a memory leak in tauri, see https://github.com/tauri-apps/tauri/issues/4026 for more details.
       // tl;dr tauri doesn't release the memory in it's invoke api properly which is specially noticeable with larger payload, like the releases.
-      const res = await fetch("http://localhost:25842/releases")
+      const res = await fetch(TAURI_SERVER_URL + "/releases")
       if (!res.ok) {
         return Return.Failed(`Fetch releases: ${res.statusText}`)
       }
@@ -200,12 +205,18 @@ class Client {
     }
   }
 
-  public async openDir(dir: Extract<keyof typeof fs.BaseDirectory, "AppData">): Promise<void> {
+  public async openDir(
+    dir: Extract<keyof typeof fs.BaseDirectory, "AppData" | "AppLog">
+  ): Promise<void> {
     try {
       let p: string
       switch (dir) {
         case "AppData": {
           p = await path.appDataDir()
+          break
+        }
+        case "AppLog": {
+          p = await path.join(await path.appLogDir(), "DevPod.log")
           break
         }
       }

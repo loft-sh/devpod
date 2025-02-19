@@ -35,6 +35,8 @@ pub enum DevpodCommandError {
     Failed(#[from] tauri_plugin_shell::Error),
     #[error("command exited with non-zero code")]
     Exit,
+    #[error("error")]
+    Any(#[from] anyhow::Error)
 }
 impl serde::Serialize for DevpodCommandError {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
@@ -51,7 +53,7 @@ pub trait DevpodCommandConfig<T> {
             args: vec![],
         }
     }
-    fn exec(self, app_handle: &AppHandle) -> Result<T, DevpodCommandError>;
+    fn exec_blocking(self, app_handle: &AppHandle) -> Result<T, DevpodCommandError>;
 
     fn new_command(&self, app_handle: &AppHandle) -> Result<Command, DevpodCommandError> {
         let config = self.config();

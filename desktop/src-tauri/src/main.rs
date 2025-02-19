@@ -11,12 +11,14 @@ mod action_logs;
 mod commands;
 mod community_contributions;
 mod custom_protocol;
+mod daemon;
 mod file_exists;
 mod fix_env;
 mod get_env;
 mod install_cli;
 mod logging;
 mod providers;
+mod resource_watcher;
 mod server;
 mod settings;
 mod system_tray;
@@ -25,24 +27,26 @@ mod ui_ready;
 mod updates;
 mod util;
 mod window;
-mod workspaces;
 
 use community_contributions::CommunityContributions;
 use custom_protocol::CustomProtocol;
 use log::{error, info};
+use resource_watcher::{ProState, WorkspacesState};
 use std::sync::{Arc, Mutex};
 use system_tray::SystemTray;
 use tauri::{tray::TrayIconBuilder, Manager, Wry};
-use tokio::sync::mpsc::{self, Sender};
+    mpsc::{self, Sender},
+    RwLock,
+};
 use ui_messages::UiMessage;
 use util::{kill_child_processes, QUIT_EXIT_CODE};
 use workspaces::WorkspacesState;
 
 pub type AppHandle = tauri::AppHandle<Wry>;
 
-#[derive(Debug)]
 pub struct AppState {
-    workspaces: Arc<Mutex<WorkspacesState>>,
+    workspaces: Arc<RwLock<WorkspacesState>>,
+    pro: Arc<RwLock<ProState>>,
     community_contributions: Arc<Mutex<CommunityContributions>>,
     ui_messages: Sender<UiMessage>,
     releases: Arc<Mutex<updates::Releases>>,
@@ -78,7 +82,8 @@ fn main() -> anyhow::Result<()> {
     }
     app_builder = app_builder
         .manage(AppState {
-            workspaces: Arc::new(Mutex::new(WorkspacesState::default())),
+            workspaces: Arc::new(RwLock::new(WorkspacesState::default())),
+            pro: Arc::new(RwLock::new(ProState::default())),
             community_contributions: Arc::new(Mutex::new(contributions)),
             ui_messages: tx.clone(),
             releases: Arc::new(Mutex::new(updates::Releases::default())),
@@ -104,8 +109,9 @@ fn main() -> anyhow::Result<()> {
             let window = app.get_webview_window("main").unwrap();
             window_helper.setup(&window);
 
-            workspaces::setup(&app.handle(), app.state());
-            community_contributions::setup(app.state());
+            let app_handle = app.handle().clone();
+            tauri::async_runtime::spawn(async move { resource_watcher::setup(&app_handle).await });
+
             action_logs::setup(&app.handle())?;
 
             let custom_protocol = CustomProtocol::init();
@@ -139,17 +145,18 @@ fn main() -> anyhow::Result<()> {
 
             let system_tray = SystemTray::new();
             let app_handle = app.handle().clone();
-            let menu =
-                system_tray.build_menu(&app_handle, Box::new(&WorkspacesState::default()))?;
-
-            let _tray = TrayIconBuilder::with_id("main")
-                .icon(app.default_window_icon().unwrap().clone())
-                .icon_as_template(true)
-                .menu(&menu)
-                .menu_on_left_click(true)
-                .on_menu_event(system_tray.get_menu_event_handler())
-                .on_tray_icon_event(system_tray.get_tray_icon_event_handler())
-                .build(app)?;
+            tauri::async_runtime::block_on(async move {
+                if let Ok(menu) = system_tray.init(&app_handle).await {
+                    let _tray = TrayIconBuilder::with_id("main")
+                        .icon(app.default_window_icon().unwrap().clone())
+                        .icon_as_template(true)
+                        .menu(&menu)
+                        .menu_on_left_click(true)
+                        .on_menu_event(system_tray.get_menu_event_handler())
+                        .on_tray_icon_event(system_tray.get_tray_icon_event_handler())
+                        .build(app);
+                }
+            });
 
             info!("Setup done");
             Ok(())
@@ -229,6 +236,9 @@ fn main() -> anyhow::Result<()> {
             }
             tauri::RunEvent::Exit => {
                 providers::check_dangling_provider(app_handle);
+                tauri::async_runtime::block_on(async move {
+                    resource_watcher::shutdown(app_handle).await;
+                });
             }
             _ => {}
         }
