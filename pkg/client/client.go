@@ -59,9 +59,6 @@ type ProxyClient interface {
 
 	// Ssh starts an ssh tunnel to the workspace container
 	Ssh(ctx context.Context, options SshOptions) error
-
-	// CurrentUser returns information about the authenticated user accessing this workspace
-	CurrentUser(ctx context.Context) (User, error)
 }
 
 type MachineClient interface {

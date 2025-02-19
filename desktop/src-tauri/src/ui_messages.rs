@@ -85,6 +85,7 @@ pub enum UiMessage {
     ShowDashboard,
     ShowToast(ShowToastMsg),
     OpenWorkspace(OpenWorkspaceMsg),
+    OpenProInstance(OpenProInstanceMsg),
     SetupPro(SetupProMsg),
     ImportWorkspace(ImportWorkspaceMsg),
     CommandFailed(ParseError),
@@ -128,6 +129,12 @@ pub struct OpenWorkspaceMsg {
     pub provider_id: Option<String>,
     pub ide: Option<String>,
     pub source: Option<String>,
+}
+
+#[derive(Debug, PartialEq, Serialize, Deserialize, Clone)]
+#[serde(deny_unknown_fields)]
+pub struct OpenProInstanceMsg {
+    pub host: Option<String>,
 }
 
 #[derive(Debug, PartialEq, Serialize, Clone)]

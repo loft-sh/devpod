@@ -8,7 +8,7 @@ import (
 	"github.com/loft-sh/devpod/cmd/pro/flags"
 	"github.com/loft-sh/devpod/pkg/client/clientimplementation"
 	"github.com/loft-sh/devpod/pkg/config"
-	"github.com/loft-sh/devpod/pkg/platform"
+	"github.com/loft-sh/devpod/pkg/provider"
 	providerpkg "github.com/loft-sh/devpod/pkg/provider"
 	"github.com/loft-sh/log"
 	"github.com/sirupsen/logrus"
@@ -34,7 +34,12 @@ func NewVersionCmd(globalFlags *flags.GlobalFlags) *cobra.Command {
 		Short:  "Get version",
 		Hidden: true,
 		RunE: func(cobraCmd *cobra.Command, args []string) error {
-			return cmd.Run(cobraCmd.Context())
+			devPodConfig, provider, err := findProProvider(cobraCmd.Context(), cmd.Context, cmd.Provider, cmd.Host, cmd.Log)
+			if err != nil {
+				return err
+			}
+
+			return cmd.Run(cobraCmd.Context(), devPodConfig, provider)
 		},
 	}
 
@@ -44,21 +49,7 @@ func NewVersionCmd(globalFlags *flags.GlobalFlags) *cobra.Command {
 	return c
 }
 
-func (cmd *VersionCmd) Run(ctx context.Context) error {
-	devPodConfig, err := config.LoadConfig(cmd.Context, cmd.Provider)
-	if err != nil {
-		return err
-	}
-
-	provider, err := platform.ProviderFromHost(ctx, devPodConfig, cmd.Host, cmd.Log)
-	if err != nil {
-		return fmt.Errorf("load provider: %w", err)
-	}
-
-	if !provider.IsProxyProvider() {
-		return fmt.Errorf("only pro providers can get version, provider \"%s\" is not a pro provider", provider.Name)
-	}
-
+func (cmd *VersionCmd) Run(ctx context.Context, devPodConfig *config.Config, provider *provider.ProviderConfig) error {
 	opts := devPodConfig.ProviderOptions(provider.Name)
 	opts[providerpkg.PROVIDER_ID] = config.OptionValue{Value: provider.Name}
 	opts[providerpkg.PROVIDER_CONTEXT] = config.OptionValue{Value: cmd.Context}
@@ -67,7 +58,7 @@ func (cmd *VersionCmd) Run(ctx context.Context) error {
 	// ignore --debug because we tunnel json through stdio
 	cmd.Log.SetLevel(logrus.InfoLevel)
 
-	err = clientimplementation.RunCommandWithBinaries(
+	err := clientimplementation.RunCommandWithBinaries(
 		ctx,
 		"getVersion",
 		provider.Exec.Proxy.Get.Version,
