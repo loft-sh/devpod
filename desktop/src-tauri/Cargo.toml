@@ -15,6 +15,7 @@ tauri-build = { version = "2", features = [] }
 tauri = { version = "2", features = [
         "macos-private-api",
         "image-ico",
+        "image-png",
         "tray-icon",
 ] }
 # Serde
@@ -54,7 +55,7 @@ lazy_static = "1.4.0"
 url = "2.3.1"
 anyhow = "1.0.70"
 dirs = "5.0.1"
-reqwest = { version = "0.11.18", features = ["json"] }
+reqwest = { version = "0.12.12", features = ["json"] }
 dispatch = "0.2.0"
 ts-rs = { version = "6.2.1", features = ["serde-compat", "chrono-impl"] }
 semver = "1.0.18"
@@ -63,6 +64,10 @@ axum = { version = "0.7.1", features = ["ws"] }
 tower-http = { version = "0.5.1", features = ["cors"] }
 http = "1.0.0"
 nix = { version = "0.29.0", features = ["signal"] }
+hyper = { version = "1.6.0", features = ["client", "http1"] }
+pin-project-lite = "0.2.16"
+bytes = "1.10.0"
+http-body-util = "0.1.2"
 
 [target.'cfg(target_os = "windows")'.dependencies]
 winreg = "0.50.0"

@@ -14,7 +14,7 @@ pub fn build_plugin() -> TauriPlugin<Wry> {
 
     #[cfg(not(debug_assertions))] // only enable in release builds
     targets.push(Target::new(TargetKind::LogDir {
-        file_name: Some("DevPod.log".to_string()),
+        file_name: Some("DevPod".to_string()),
     }));
 
     let builder = tauri_plugin_log::Builder::default().targets(targets);

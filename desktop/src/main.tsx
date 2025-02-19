@@ -14,9 +14,8 @@ dayjs.extend(relativeTime)
 
 const queryClient = new QueryClient()
 
-// TODO: Clean up :)
 let render = true
-const l = localStorage.getItem("devpod-location-current")
+const l = localStorage.getItem("devpod-location-current") // check usePreserveLocation before changing this
 if (l) {
   const loc = JSON.parse(l) as Location
   if (window.location.pathname !== loc.pathname) {

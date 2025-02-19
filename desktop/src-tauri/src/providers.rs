@@ -1,8 +1,9 @@
 use crate::commands::delete_pro_instance::DeleteProInstanceCommand;
-use crate::commands::list_pro_instances::{ListProInstancesCommand, ProInstance};
+use crate::commands::list_pro_instances::ListProInstancesCommand;
 use crate::commands::{delete_provider::DeleteProviderCommand, DevpodCommandConfig};
+use crate::resource_watcher::{Identifiable, ProInstance};
 use crate::AppHandle;
-use log::{debug, error, info, warn};
+use log::{debug, error, info};
 use tauri_plugin_store::StoreExt;
 
 pub fn check_dangling_provider(app_handle: &AppHandle) {
@@ -38,7 +39,7 @@ pub fn check_dangling_provider(app_handle: &AppHandle) {
         dangling_providers.join(", ")
     );
 
-    let pro_instances = match ListProInstancesCommand::new().exec(app_handle) {
+    let pro_instances = match ListProInstancesCommand::new().exec_blocking(app_handle) {
         Ok(pro_instances) => pro_instances,
         Err(err) => {
             error!("Failed to list pro instances, {}", err);
@@ -51,7 +52,7 @@ pub fn check_dangling_provider(app_handle: &AppHandle) {
         check_pro_instances(app_handle, &pro_instances, &dangling_provider);
 
         if DeleteProviderCommand::new(dangling_provider.clone())
-            .exec(&app_handle)
+            .exec_blocking(&app_handle)
             .is_ok()
             && store.delete(dangling_provider_key)
         {
@@ -71,21 +72,15 @@ fn check_pro_instances(
 ) {
     if let Some(pro_instance) = pro_instances
         .iter()
-        .find(|pro_instance| pro_instance.id() == Some(dangling_provider))
+        .find(|pro_instance| &pro_instance.id() == dangling_provider)
     {
-        let pro_id = match pro_instance.id() {
-            Some(pro_id) => pro_id,
-            None => {
-                warn!("Found pro instance without id, skipping");
-                return;
-            }
-        };
+        let pro_id = pro_instance.id();
         info!(
             "Found dangling provider {} matching pro instance {}",
             dangling_provider, pro_id
         );
 
-        match DeleteProInstanceCommand::new(pro_id.to_string()).exec(app_handle) {
+        match DeleteProInstanceCommand::new(pro_id.to_string()).exec_blocking(app_handle) {
             Ok(_) => info!("Successfully deleted pro instance {}", pro_id),
             Err(err) => error!("Failed to delete pro instance {}, {}", pro_id, err),
         }
