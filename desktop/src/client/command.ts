@@ -7,6 +7,7 @@ import {
 import { debug, ErrorTypeCancelled, isError, Result, ResultError, Return, sleep } from "../lib"
 import { DEVPOD_BINARY, DEVPOD_FLAG_OPTION, DEVPOD_UI_ENV_VAR } from "./constants"
 import { TStreamEvent } from "./types"
+import { TAURI_SERVER_URL } from "./tauriClient"
 
 export type TStreamEventListenerFn = (event: TStreamEvent) => void
 export type TEventListener<TEventName extends string> = Parameters<
@@ -188,7 +189,7 @@ export class Command implements TCommand<ChildProcess<string>> {
         return Return.Ok()
       }
       // Try to send signal first before force killing process
-      await fetch("http://localhost:25842/child-process/signal", {
+      await fetch(TAURI_SERVER_URL + "/child-process/signal", {
         method: "POST",
         headers: {
           "content-type": "application/json",

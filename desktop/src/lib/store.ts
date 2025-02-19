@@ -56,7 +56,7 @@ export class LocalStorageBackend<T extends TBaseStore> implements TStorageBacken
     try {
       window.localStorage.setItem(this.getKey(key), JSON.stringify(value))
     } catch {
-      // TODO: let caller know, noop for now
+      // noop
     }
   }
 
@@ -95,7 +95,7 @@ export class FileStorageBackend<T extends TBaseStore> implements TStorageBackend
       await this.store.set(key.toString(), value)
       await this.store.save()
     } catch {
-      // TODO: let caller know, noop for now
+      // noop
     }
   }
 

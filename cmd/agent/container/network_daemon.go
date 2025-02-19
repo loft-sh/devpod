@@ -7,6 +7,7 @@ import (
 	"github.com/loft-sh/devpod/cmd/flags"
 	"github.com/loft-sh/devpod/pkg/platform/client"
 	"github.com/loft-sh/devpod/pkg/ts"
+	"github.com/loft-sh/log"
 	"github.com/spf13/cobra"
 )
 
@@ -56,7 +57,7 @@ func (cmd *NetworkDaemonCmd) Run(ctx context.Context) error {
 		Host:      ts.RemoveProtocol(cmd.PlatformHost),
 		Hostname:  cmd.NetworkHostname,
 		Client:    baseClient,
-	})
+	}, log.Discard) // FIXME: proper logging
 	err = tsServer.Start(ctx)
 	if err != nil {
 		return fmt.Errorf("cannot start tsNet server: %w", err)

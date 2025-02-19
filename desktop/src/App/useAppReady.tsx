@@ -171,6 +171,23 @@ export function useAppReady() {
         return
       }
 
+      if (event.type === "OpenProInstance") {
+        const proInstances = await client.pro.listProInstances()
+        if (proInstances.err) {
+          return
+        }
+
+        const existingInstance = proInstances.val.find((i) => i.host === event.host)
+        if (!existingInstance?.host) {
+          return
+        }
+
+        await getCurrentWebviewWindow().setFocus()
+        navigate(Routes.toProInstance(existingInstance.host))
+
+        return
+      }
+
       if (event.type === "ImportWorkspace") {
         await getCurrentWebviewWindow().setFocus()
         const importResult = await client.pro.importWorkspace({

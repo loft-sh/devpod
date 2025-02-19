@@ -277,6 +277,9 @@ type ProxyCommands struct {
 
 	// Update updates entities associated with this provider
 	Update UpdateProxyCommands `json:"update,omitempty"`
+
+	// Daemon manages the networking daemon for this provider
+	Daemon DaemonProxyCommands `json:"daemon,omitempty"`
 }
 
 type ListProxyCommands struct {
@@ -319,6 +322,14 @@ type UpdateProxyCommands struct {
 	Workspace types.StrArray `json:"workspace,omitempty"`
 }
 
+type DaemonProxyCommands struct {
+	// Start starts the daemon
+	Start types.StrArray `json:"start,omitempty"`
+
+	// Status gets the daemon status
+	Status types.StrArray `json:"status,omitempty"`
+}
+
 type SubOptions struct {
 	Options map[string]*types.Option `json:"options,omitempty"`
 }
@@ -333,4 +344,8 @@ func (c *ProviderConfig) IsProxyProvider() bool {
 
 func (c *ProviderConfig) HasHealthCheck() bool {
 	return c.Exec.Proxy != nil && len(c.Exec.Proxy.Health) > 0
+}
+
+func (c *ProviderConfig) SupportsDaemon() bool {
+	return c.Exec.Proxy != nil && len(c.Exec.Proxy.Daemon.Start) > 0
 }
