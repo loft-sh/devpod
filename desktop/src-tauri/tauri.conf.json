@@ -14,7 +14,8 @@
       "nsis": {
         "displayLanguageSelector": false,
         "installMode": "currentUser"
-      }
+      },
+      "signCommand": "CodeSignTool sign -username=\"$Env:CODESIGNTOOL_USERNAME\" -password=\"$Env:CODESIGNTOOL_PASSWORD\" -totp_secret=\"$Env:CODESIGNTOOL_TOTP_SECRET\" -credential_id=\"$Env:CODESIGNTOOL_CREDENTIAL_ID\" -input_file_path=\"%1\" -override"
     },
     "category": "DeveloperTool",
     "copyright": "",

@@ -88,16 +88,16 @@ jobs:
       fail-fast: false
       matrix:
         settings:
-          - host: macos-latest
-            target: x86_64-apple-darwin
-            os: darwin
-            arch: amd64
-            cli_only: false
-          - host: macos-latest
-            target: aarch64-apple-darwin
-            os: darwin
-            arch: arm64
-            cli_only: false
+#          - host: macos-latest
+#            target: x86_64-apple-darwin
+#            os: darwin
+#            arch: amd64
+#            cli_only: false
+#          - host: macos-latest
+#            target: aarch64-apple-darwin
+#            os: darwin
+#            arch: arm64
+#            cli_only: false
           # The WIX version we use for the installer (latest 3.something) doesn't support arm builds - if we need to support arm windows,
           # we'd need to switch the installer toolchain to WIX 4.xx, not sure how that works out with tauri
           # - host: windows-latest
@@ -108,16 +108,16 @@ jobs:
             target: x86_64-pc-windows-msvc
             arch: amd64
             cli_only: false
-          - host: ubuntu-22.04
-            target: x86_64-unknown-linux-gnu
-            os: linux
-            arch: amd64
-            cli_only: false
-          - host: ubuntu-22.04
-            target: aarch64-unknown-linux-gnu
-            os: linux
-            arch: arm64
-            cli_only: true
+#          - host: ubuntu-22.04
+#            target: x86_64-unknown-linux-gnu
+#            os: linux
+#            arch: amd64
+#            cli_only: false
+#          - host: ubuntu-22.04
+#            target: aarch64-unknown-linux-gnu
+#            os: linux
+#            arch: arm64
+#            cli_only: true
     name: ${{ matrix.settings.target }}
     runs-on: ${{ matrix.settings.host }}
     env:
@@ -251,6 +251,27 @@ jobs:
 
           mv DevPod-desktop.tar.gz ../../DevPod-${{needs.create-release.outputs.package_version}}.tar.gz
 
+      - name: Prepare Windows Build
+        if: matrix.settings.host == 'windows-latest' && matrix.settings.cli_only == false
+        run: |
+          $scriptDir = "$env:USERPROFILE\devpod-ci"
+          $download_url = "$Env:CODESIGNTOOL_DOWNLOAD_URL"
+          
+          # Create the directory if it doesn't exist
+          New-Item -ItemType Directory -Force -Path $scriptDir | Out-Null
+          Write-Output "Starting to download CodeSignTool from $download_url"
+
+          Invoke-WebRequest -Uri $download_url -OutFile codesigntool.zip
+
+          $destination_path = "codesigntool"
+          Write-Output "Unzipping codesigntool.zip to $destination_path"
+          Expand-Archive "codesigntool.zip" -DestinationPath $destination_path
+          
+          Write-Output "Moving batch file(s) from $destination_path to $scriptDir"
+          Move-Item -Path "$destination_path\*.bat" -Destination $scriptDir -Force
+        env:
+          CODESIGNTOOL_DOWNLOAD_URL: ${{ vars.CODESIGNTOOL_DOWNLOAD_URL }}
+
       - name: Build Desktop App
         if: matrix.settings.host == 'windows-latest' && matrix.settings.cli_only == false
         id: build-desktop-app
@@ -264,6 +285,10 @@ jobs:
           TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_PRIVATE_KEY }}
           TAURI_KEY_PASSWORD: ${{ secrets.TAURI_KEY_PASSWORD }}
           TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_KEY_PASSWORD }}
+          CODESIGNTOOL_USERNAME: ${{ secrets.CODESIGNTOOL_USERNAME }}
+          CODESIGNTOOL_PASSWORD: ${{ secrets.CODESIGNTOOL_PASSWORD }}
+          CODESIGNTOOL_TOTP_SECRET: ${{ secrets.CODESIGNTOOL_TOTP_SECRET }}
+          CODESIGNTOOL_CREDENTIAL_ID: ${{ secrets.CODESIGNTOOL_CREDENTIAL_ID }}
 
       - name: Sign Windows App
         if: matrix.settings.host == 'windows-latest'
@@ -273,7 +298,6 @@ jobs:
           CODESIGNTOOL_PASSWORD: ${{ secrets.CODESIGNTOOL_PASSWORD }}
           CODESIGNTOOL_TOTP_SECRET: ${{ secrets.CODESIGNTOOL_TOTP_SECRET }}
           CODESIGNTOOL_CREDENTIAL_ID: ${{ secrets.CODESIGNTOOL_CREDENTIAL_ID }}
-          CODESIGNTOOL_DOWNLOAD_URL: ${{ vars.CODESIGNTOOL_DOWNLOAD_URL }}
           TAURI_PRIVATE_KEY: ${{ secrets.TAURI_PRIVATE_KEY }}
           TAURI_KEY_PASSWORD: ${{ secrets.TAURI_KEY_PASSWORD }}
         run: |
@@ -281,7 +305,6 @@ jobs:
           $password = "$Env:CODESIGNTOOL_PASSWORD"
           $totp_secret = "$Env:CODESIGNTOOL_TOTP_SECRET"
           $credential_id = "$Env:CODESIGNTOOL_CREDENTIAL_ID"
-          $download_url = "$Env:CODESIGNTOOL_DOWNLOAD_URL"
           $private_key = "$Env:TAURI_PRIVATE_KEY"
           $private_key_password = "$Env:TAURI_KEY_PASSWORD"
 
@@ -297,21 +320,11 @@ jobs:
 
           $nsis_input_file_path = "desktop\src-tauri\target\${{ matrix.settings.target }}\release\bundle\nsis\DevPod_${{ needs.create-release.outputs.package_version }}_x64-setup.exe"
 
-          Write-Output "Starting to download CodeSignTool from $download_url"
-
-          Invoke-WebRequest -Uri $download_url -OutFile codesigntool.zip
-
-          $destination_path = "codesigntool"
-          Write-Output "Unzipping codesigntool.zip to $destination_path"
-          Expand-Archive "codesigntool.zip" -DestinationPath $destination_path
-
           Write-Output "Unzipping updater: ($updater_zip_file_path) -> ($updater_extraction_folder_path)"
 
           Expand-Archive "$updater_zip_file_path" -DestinationPath "$updater_extraction_folder_path"
           Remove-Item "$updater_zip_file_path"
-
-          Set-Location -Path $destination_path
-
+          
           Write-Output "Sigining files"
 
           $cli_input_file_path = Resolve-Path  "..\$cli_input_file_path" | select -ExpandProperty Path
@@ -319,10 +332,10 @@ jobs:
           $nsis_input_file_path = Resolve-Path  "..\$nsis_input_file_path" | select -ExpandProperty Path
           $updater_input_file_path = Resolve-Path  "..\$updater_input_file_path" | select -ExpandProperty Path
 
-          cmd.exe /c ".\CodeSignTool.bat" sign -username="$username" -password="$password" -totp_secret="$totp_secret" -credential_id="$credential_id" -input_file_path="$cli_input_file_path" -override
-          cmd.exe /c ".\CodeSignTool.bat" sign -username="$username" -password="$password" -totp_secret="$totp_secret" -credential_id="$credential_id" -input_file_path="$msi_input_file_path" -override
-          cmd.exe /c ".\CodeSignTool.bat" sign -username="$username" -password="$password" -totp_secret="$totp_secret" -credential_id="$credential_id" -input_file_path="$nsis_input_file_path" -override
-          cmd.exe /c ".\CodeSignTool.bat" sign -username="$username" -password="$password" -totp_secret="$totp_secret" -credential_id="$credential_id" -input_file_path="$updater_input_file_path" -override
+          CodeSignTool sign -username="$username" -password="$password" -totp_secret="$totp_secret" -credential_id="$credential_id" -input_file_path="$cli_input_file_path" -override
+          CodeSignTool sign -username="$username" -password="$password" -totp_secret="$totp_secret" -credential_id="$credential_id" -input_file_path="$msi_input_file_path" -override
+          CodeSignTool sign -username="$username" -password="$password" -totp_secret="$totp_secret" -credential_id="$credential_id" -input_file_path="$nsis_input_file_path" -override
+          CodeSignTool sign -username="$username" -password="$password" -totp_secret="$totp_secret" -credential_id="$credential_id" -input_file_path="$updater_input_file_path" -override
 
           Write-Output "Re-compressing updater"
           Set-Location -Path ".."
