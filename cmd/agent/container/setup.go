@@ -79,6 +79,7 @@ func NewSetupContainerCmd(flags *flags.GlobalFlags) *cobra.Command {
 	setupContainerCmd.Flags().StringVar(&cmd.SetupInfo, "setup-info", "", "The container setup info")
 	setupContainerCmd.Flags().StringVar(&cmd.AccessKey, "access-key", "", "Access Key to use")
 	setupContainerCmd.Flags().StringVar(&cmd.NetworkHostname, "network-hostname", "", "Network hostname to use")
+	setupContainerCmd.Flags().StringVar(&cmd.PlatformHost, "platform-host", "", "Platform host")
 	_ = setupContainerCmd.MarkFlagRequired("setup-info")
 	return setupContainerCmd
 }
@@ -217,13 +218,13 @@ func (cmd *SetupContainerCmd) Run(ctx context.Context) error {
 	// start tailscale networking daemon
 	if cmd.AccessKey != "" && cmd.NetworkHostname != "" {
 		err = single.Single("network.daemon.pid", func() (*exec.Cmd, error) {
-			logger.Infof("Start networking daemon")
+			logger.Infof("Start networking daemon on %s", cmd.PlatformHost)
 			binaryPath, err := os.Executable()
 			if err != nil {
 				return nil, err
 			}
 
-			return exec.Command(binaryPath, "agent", "container", "network-daemon", "--access-key", cmd.AccessKey, "--host", "host.docker.internal:8080", "--hostname", cmd.NetworkHostname), nil
+			return exec.Command(binaryPath, "agent", "container", "network-daemon", "--access-key", cmd.AccessKey, "--host", cmd.PlatformHost, "--hostname", cmd.NetworkHostname), nil
 		})
 		if err != nil {
 			return err
