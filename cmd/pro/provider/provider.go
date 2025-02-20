@@ -6,7 +6,6 @@ import (
 	"github.com/loft-sh/devpod/cmd/agent"
 	"github.com/loft-sh/devpod/cmd/pro/flags"
 	"github.com/loft-sh/devpod/cmd/pro/provider/create"
-	"github.com/loft-sh/devpod/cmd/pro/provider/daemon"
 	"github.com/loft-sh/devpod/cmd/pro/provider/get"
 	"github.com/loft-sh/devpod/cmd/pro/provider/list"
 	"github.com/loft-sh/devpod/cmd/pro/provider/update"
@@ -59,7 +58,6 @@ func NewProProviderCmd(globalFlags *flags.GlobalFlags) *cobra.Command {
 	c.AddCommand(create.NewCmd(globalFlags))
 	c.AddCommand(get.NewCmd(globalFlags))
 	c.AddCommand(update.NewCmd(globalFlags))
-	c.AddCommand(daemon.NewCmd(globalFlags))
 	c.AddCommand(NewHealthCmd(globalFlags))
 
 	c.AddCommand(NewUpCmd(globalFlags))
