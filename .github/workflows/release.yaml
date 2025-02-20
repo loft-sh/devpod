@@ -88,16 +88,16 @@ jobs:
       fail-fast: false
       matrix:
         settings:
-#          - host: macos-latest
-#            target: x86_64-apple-darwin
-#            os: darwin
-#            arch: amd64
-#            cli_only: false
-#          - host: macos-latest
-#            target: aarch64-apple-darwin
-#            os: darwin
-#            arch: arm64
-#            cli_only: false
+          #          - host: macos-latest
+          #            target: x86_64-apple-darwin
+          #            os: darwin
+          #            arch: amd64
+          #            cli_only: false
+          #          - host: macos-latest
+          #            target: aarch64-apple-darwin
+          #            os: darwin
+          #            arch: arm64
+          #            cli_only: false
           # The WIX version we use for the installer (latest 3.something) doesn't support arm builds - if we need to support arm windows,
           # we'd need to switch the installer toolchain to WIX 4.xx, not sure how that works out with tauri
           # - host: windows-latest
@@ -108,16 +108,16 @@ jobs:
             target: x86_64-pc-windows-msvc
             arch: amd64
             cli_only: false
-#          - host: ubuntu-22.04
-#            target: x86_64-unknown-linux-gnu
-#            os: linux
-#            arch: amd64
-#            cli_only: false
-#          - host: ubuntu-22.04
-#            target: aarch64-unknown-linux-gnu
-#            os: linux
-#            arch: arm64
-#            cli_only: true
+    #          - host: ubuntu-22.04
+    #            target: x86_64-unknown-linux-gnu
+    #            os: linux
+    #            arch: amd64
+    #            cli_only: false
+    #          - host: ubuntu-22.04
+    #            target: aarch64-unknown-linux-gnu
+    #            os: linux
+    #            arch: arm64
+    #            cli_only: true
     name: ${{ matrix.settings.target }}
     runs-on: ${{ matrix.settings.host }}
     env:
@@ -256,7 +256,7 @@ jobs:
         run: |
           $scriptDir = "$env:USERPROFILE\devpod-ci"
           $download_url = "$Env:CODESIGNTOOL_DOWNLOAD_URL"
-          
+
           # Create the directory if it doesn't exist
           New-Item -ItemType Directory -Force -Path $scriptDir | Out-Null
           Write-Output "Starting to download CodeSignTool from $download_url"
@@ -266,9 +266,12 @@ jobs:
           $destination_path = "codesigntool"
           Write-Output "Unzipping codesigntool.zip to $destination_path"
           Expand-Archive "codesigntool.zip" -DestinationPath $destination_path
-          
+
           Write-Output "Moving batch file(s) from $destination_path to $scriptDir"
           Move-Item -Path "$destination_path\*.bat" -Destination $scriptDir -Force
+
+          Add-Content -Path $env:GITHUB_PATH -Value $scriptDir
+
         env:
           CODESIGNTOOL_DOWNLOAD_URL: ${{ vars.CODESIGNTOOL_DOWNLOAD_URL }}
 
@@ -324,7 +327,7 @@ jobs:
 
           Expand-Archive "$updater_zip_file_path" -DestinationPath "$updater_extraction_folder_path"
           Remove-Item "$updater_zip_file_path"
-          
+
           Write-Output "Sigining files"
 
           $cli_input_file_path = Resolve-Path  "..\$cli_input_file_path" | select -ExpandProperty Path
