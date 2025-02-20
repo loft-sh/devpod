@@ -254,7 +254,7 @@ jobs:
       - name: Prepare Windows Build
         if: matrix.settings.host == 'windows-latest' && matrix.settings.cli_only == false
         run: |
-          $scriptDir = "$env:USERPROFILE\devpod-ci"
+          $scriptDir = "$Env:USERPROFILE\devpod-ci"
           $download_url = "$Env:CODESIGNTOOL_DOWNLOAD_URL"
 
           # Create the directory if it doesn't exist
@@ -271,7 +271,8 @@ jobs:
           Move-Item -Path "$destination_path\*.bat" -Destination $scriptDir -Force
 
           Add-Content -Path $env:GITHUB_PATH -Value $scriptDir
-
+          CodeSignTool.bat
+          CodeSignTool
         env:
           CODESIGNTOOL_DOWNLOAD_URL: ${{ vars.CODESIGNTOOL_DOWNLOAD_URL }}
 
