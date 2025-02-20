@@ -8,6 +8,12 @@ import (
 )
 
 func NewSetupContainerCmd(flags *flags.GlobalFlags) *cobra.Command {
-	panic("Not implemented for windows, this should never be called!")
-	return nil
+	return &cobra.Command{
+		Use:   "setup",
+		Short: "Sets up a container",
+		Args:  cobra.NoArgs,
+		RunE: func(cmd *cobra.Command, args []string) error {
+			panic("Windows Containers are not supported")
+		},
+	}
 }

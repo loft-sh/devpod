@@ -15,10 +15,11 @@ type Client struct {
 	httpClient *http.Client
 }
 
-func NewClient(socket string) Client {
+func NewClient(daemonFolder, provider string) Client {
+	socketAddr := GetSocketAddr(daemonFolder, provider)
 	tr := http.DefaultTransport.(*http.Transport).Clone()
 	tr.DialContext = func(ctx context.Context, network, addr string) (net.Conn, error) {
-		conn, err := net.Dial("unix", socket)
+		conn, err := dial(socketAddr)
 		if err != nil {
 			return nil, err
 		}
