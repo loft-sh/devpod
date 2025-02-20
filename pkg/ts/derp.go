@@ -14,6 +14,8 @@ import (
 	"k8s.io/klog/v2"
 )
 
+type ConnTrackingFunc func(address string)
+
 // CheckDerpConnection validates the DERP connection
 func CheckDerpConnection(ctx context.Context, baseUrl *url.URL) error {
 	newTransport := http.DefaultTransport.(*http.Transport).Clone()
