@@ -13,7 +13,6 @@ import (
 	devpodlog "github.com/loft-sh/devpod/pkg/log"
 	"github.com/loft-sh/devpod/pkg/platform"
 	"github.com/loft-sh/devpod/pkg/platform/client"
-	"github.com/loft-sh/devpod/pkg/provider"
 	"github.com/loft-sh/log"
 	"github.com/sirupsen/logrus"
 	"tailscale.com/client/tailscale"
@@ -27,11 +26,11 @@ type Daemon struct {
 	log            log.Logger
 }
 
-func Init(ctx context.Context, rootDir string, debug bool) (*Daemon, error) {
+func Init(ctx context.Context, rootDir string, providerName string, debug bool) (*Daemon, error) {
 	log := initLogging(rootDir, debug)
 
-	socket := filepath.Join(rootDir, provider.DaemonSocket)
-	log.Infof("Starting Daemon on socket: %s", socket)
+	socket := GetSocketAddr(rootDir, providerName)
+	log.Infof("Starting Daemon on address: %s", socket)
 	// listen to socket for early return  in case it's already in use
 	socketListener, err := listen(socket)
 	if err != nil {
@@ -67,10 +66,10 @@ func Init(ctx context.Context, rootDir string, debug bool) (*Daemon, error) {
 	}, nil
 }
 
-func (d *Daemon) Start(ctx context.Context) error {
+func (d *Daemon) Start() error {
 	errChan := make(chan error, 1)
 	go func() {
-		d.log.Infof("Starting local server: %s", d.localServer.Addr)
+		d.log.Infof("Starting local server: %s", d.localServer.Addr())
 		err := d.localServer.ListenAndServe()
 		errChan <- err
 	}()
@@ -96,16 +95,16 @@ func (d *Daemon) Listen(ln net.Listener) error {
 		}
 		d.log.Debug("Accepted connection")
 
-		bConn := NewBufferedConn(rawConn)
+		bConn := newBufferedConn(rawConn)
 		clientType, err := getClientType(bConn)
 		if err != nil {
-			bConn.Close()
+			_ = bConn.Close()
 			d.log.Debug("Failed to get client type: %w", err)
 			continue
 		}
 		switch clientType {
 		case devPodClientType:
-			go d.handler(bConn, dialHTTP(d.localServer.Addr))
+			go d.handler(bConn, dialLocal(d.localServer))
 		case tailscaleClientType:
 			go d.handler(bConn, dialTS(lc))
 		}
@@ -121,9 +120,7 @@ func initLogging(rootDir string, debug bool) log.Logger {
 	logPath := filepath.Join(rootDir, "daemon.log")
 	logger := log.NewFileLogger(logPath, logLevel)
 	if os.Getenv("DEVPOD_UI") != "true" {
-		streamLogger := log.NewStreamLogger(os.Stdout, os.Stderr, logLevel)
-		streamLogger.SetFormat(log.JSONFormat)
-		logger = devpodlog.NewCombinedLogger(logLevel, logger, streamLogger)
+		logger = devpodlog.NewCombinedLogger(logLevel, logger, log.NewStreamLogger(os.Stdout, os.Stderr, logLevel))
 	}
 
 	return logger
@@ -137,13 +134,9 @@ func dialTS(lc *tailscale.LocalClient) dialFunc {
 	}
 }
 
-func dialHTTP(addr string) dialFunc {
+func dialLocal(l *localServer) dialFunc {
 	return func(ctx context.Context) (net.Conn, error) {
-		deadline, ok := ctx.Deadline()
-		if ok {
-			return net.DialTimeout("tcp", addr, deadline.Sub(time.Now()))
-		}
-		return net.Dial("tcp", addr)
+		return l.Dial(ctx, "tcp", l.Addr())
 	}
 }
 
@@ -190,7 +183,7 @@ func getClientType(bConn *bufferedConn) (clientType, error) {
 	}
 }
 
-func NewBufferedConn(conn net.Conn) *bufferedConn {
+func newBufferedConn(conn net.Conn) *bufferedConn {
 	return &bufferedConn{
 		Conn: conn,
 		br:   bufio.NewReader(conn),

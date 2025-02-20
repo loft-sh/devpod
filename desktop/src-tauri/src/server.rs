@@ -66,44 +66,7 @@ async fn signal_handler(
         payload.signal,
         payload.process_id.to_string()
     );
-    #[cfg(not(windows))]
-    {
-        util::kill_process(payload.process_id as u32);
-    }
-    #[cfg(windows)]
-    {
-        use crate::util::kill_child_processes;
-        use windows::Win32::Foundation::{CloseHandle, HANDLE};
-        use windows::Win32::System::Threading::{OpenProcess, TerminateProcess, PROCESS_TERMINATE};
-
-        kill_child_processes(payload.process_id as u32);
-
-        unsafe {
-            let handle: windows::core::Result<HANDLE> = OpenProcess(
-                PROCESS_TERMINATE,
-                false,
-                payload.process_id.try_into().unwrap(),
-            );
-            if handle.is_err() {
-                error!(
-                    "unable to open process {}: {:?}",
-                    payload.process_id,
-                    handle.unwrap_err()
-                );
-                return StatusCode::INTERNAL_SERVER_ERROR;
-            }
-            let handle: HANDLE = handle.unwrap();
-
-            let result = TerminateProcess(handle, 1);
-            CloseHandle(handle);
-            if !result.as_bool() {
-                error!("unable to terminate process {}", payload.process_id);
-                return StatusCode::INTERNAL_SERVER_ERROR;
-            }
-        }
-    }
-
-    info!("successfully killed process");
+    util::kill_process(payload.process_id as u32);
 
     return StatusCode::OK;
 }

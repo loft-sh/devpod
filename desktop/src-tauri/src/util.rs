@@ -123,26 +123,20 @@ pub fn kill_process(pid: u32) {
         };
         return;
     }
+
     #[cfg(windows)]
     {
         use crate::util::kill_child_processes;
         use windows::Win32::Foundation::{CloseHandle, HANDLE};
         use windows::Win32::System::Threading::{OpenProcess, TerminateProcess, PROCESS_TERMINATE};
 
-        kill_child_processes(pid);
+        // kill_child_processes(pid);
 
         unsafe {
-            let handle: windows::core::Result<HANDLE> = OpenProcess(
-                PROCESS_TERMINATE,
-                false,
-                payload.process_id.try_into().unwrap(),
-            );
+            let handle: windows::core::Result<HANDLE> =
+                OpenProcess(PROCESS_TERMINATE, false, pid);
             if handle.is_err() {
-                error!(
-                    "unable to open process {}: {:?}",
-                    payload.process_id,
-                    handle.unwrap_err()
-                );
+                error!("unable to open process {}: {:?}", pid, handle.unwrap_err());
                 return;
             }
             let handle: HANDLE = handle.unwrap();
@@ -150,8 +144,8 @@ pub fn kill_process(pid: u32) {
             let result = TerminateProcess(handle, 1);
             CloseHandle(handle);
             if !result.as_bool() {
-                error!("unable to terminate process {}", payload.process_id);
-                return;
+                error!("unable to terminate process {}", pid);
+                return
             }
         }
     }

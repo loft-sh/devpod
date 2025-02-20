@@ -1,24 +1,20 @@
 package pro
 
 import (
-	"bytes"
 	"context"
+	"encoding/json"
 	"fmt"
+	platformdaemon "github.com/loft-sh/devpod/pkg/platform/daemon"
 
 	"github.com/loft-sh/devpod/cmd/agent"
 	proflags "github.com/loft-sh/devpod/cmd/pro/flags"
-	"github.com/loft-sh/devpod/pkg/client/clientimplementation"
 	"github.com/loft-sh/devpod/pkg/config"
-	devpodlog "github.com/loft-sh/devpod/pkg/log"
-	"github.com/loft-sh/devpod/pkg/platform"
-	"github.com/loft-sh/devpod/pkg/provider"
-	"github.com/loft-sh/devpod/pkg/ts"
+	providerpkg "github.com/loft-sh/devpod/pkg/provider"
 	"github.com/loft-sh/log"
-	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 )
 
-// DaemonStatusCmd holds the devpod daemon flags
+// DaemonStatusCmd holds the DevPod daemon flags
 type DaemonStatusCmd struct {
 	*proflags.GlobalFlags
 
@@ -62,42 +58,23 @@ func NewDaemonStatusCmd(flags *proflags.GlobalFlags) *cobra.Command {
 	return c
 }
 
-func (cmd *DaemonStatusCmd) Run(ctx context.Context, devPodConfig *config.Config, provider *provider.ProviderConfig) error {
-	socket, err := ts.GetSocketForProvider(devPodConfig, provider.Name)
+func (cmd *DaemonStatusCmd) Run(ctx context.Context, devPodConfig *config.Config, provider *providerpkg.ProviderConfig) error {
+	dir, err := providerpkg.GetDaemonDir(devPodConfig.DefaultContext, provider.Name)
+	if err != nil {
+		return fmt.Errorf("get daemon dir: %w", err)
+	}
+
+	client := platformdaemon.NewClient(dir, provider.Name)
+	status, err := client.Status(ctx)
 	if err != nil {
 		return err
 	}
-	opts := devPodConfig.ProviderOptions(provider.Name)
-	opts[platform.DaemonSocketEnv] = config.OptionValue{Value: socket}
-
-	// ignore --debug because we tunnel json through stdio
-	cmd.Log.SetLevel(logrus.InfoLevel)
-
-	var buf, errBuf bytes.Buffer
-	err = clientimplementation.RunCommandWithBinaries(
-		ctx,
-		"getDaemonStatus",
-		provider.Exec.Proxy.Daemon.Status,
-		devPodConfig.DefaultContext,
-		nil,
-		nil,
-		opts,
-		provider,
-		nil,
-		nil,
-		&buf,
-		&errBuf,
-		cmd.Log)
+	out, err := json.Marshal(status)
 	if err != nil {
-		inner := ""
-		lineObj, err2 := devpodlog.Unmarshal(errBuf.Bytes())
-		if err2 == nil {
-			inner = lineObj.Message
-		}
-
-		return fmt.Errorf("get daemon status: %w %s", err, inner)
+		return err
 	}
-	fmt.Println(buf.String())
+
+	fmt.Print(string(out))
 
 	return nil
 }

@@ -1,10 +1,11 @@
+use crate::daemon::DaemonStatus;
 use anyhow::anyhow;
 use bytes::{Buf, Bytes};
+use core::time;
 use http_body_util::{BodyExt, Empty};
 use log::error;
 use pin_project_lite::pin_project;
 use serde::de::DeserializeOwned;
-use core::time;
 use std::{
     io,
     path::Path,
@@ -12,8 +13,6 @@ use std::{
     task::{Context, Poll},
 };
 use tokio::io::AsyncWriteExt;
-use tokio::net::UnixStream;
-use crate::daemon::DaemonStatus;
 
 pub struct Client {
     socket: String,
@@ -41,13 +40,17 @@ impl Client {
         });
 
         let req = hyper::Request::builder()
-            .uri(format!("http://{}{}", "localclient.devpod", target_path))
+            .uri(format!("http://localclient.devpod{}", target_path))
             .header(hyper::header::HOST, "sh.loft.devpod.desktop")
             .body(Empty::<Bytes>::new())?;
 
         let res = sender.send_request(req).await?;
         if res.status() != http::StatusCode::OK {
-            return Err(anyhow!("request to {} failed: {}", target_path, res.status()));
+            return Err(anyhow!(
+                "request to {} failed: {}",
+                target_path,
+                res.status()
+            ));
         }
 
         let body = res.collect().await?.aggregate();
@@ -57,17 +60,26 @@ impl Client {
     }
 }
 
-
 const DEVPOD_PREFIX_BYTE: u8 = 0x01;
+
 pub struct HandshakeStream {
-    inner: UnixStream,
+    inner: InnerStream,
 }
+#[cfg(not(windows))]
+type InnerStream = tokio::net::UnixStream;
+#[cfg(windows)]
+type InnerStream = tokio::net::windows::named_pipe::NamedPipeClient;
 
 impl HandshakeStream {
     pub async fn connect(p: &Path) -> tokio::io::Result<Self> {
-        // TODO: Named pipe stream on windows
-        let stream = UnixStream::connect(p).await?;
-        let mut hs = HandshakeStream { inner: stream };
+        let mut inner: InnerStream;
+        #[cfg(not(windows))] {
+            inner = tokio::net::UnixStream::connect(p).await?;
+        }
+        #[cfg(windows)] {
+            inner = tokio::net::windows::named_pipe::ClientOptions::new().open(p)?;
+        }
+        let mut hs = HandshakeStream { inner };
         // send devpod prefix as first byte
         hs.inner.write_u8(DEVPOD_PREFIX_BYTE).await?;
         Ok(hs)

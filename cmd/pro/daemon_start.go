@@ -3,14 +3,12 @@ package pro
 import (
 	"context"
 	"fmt"
+	platformdaemon "github.com/loft-sh/devpod/pkg/platform/daemon"
+	"github.com/sirupsen/logrus"
 	"os"
 
 	proflags "github.com/loft-sh/devpod/cmd/pro/flags"
-	"github.com/loft-sh/devpod/pkg/client/clientimplementation"
 	"github.com/loft-sh/devpod/pkg/config"
-	devpodlog "github.com/loft-sh/devpod/pkg/log"
-	"github.com/loft-sh/devpod/pkg/platform"
-	"github.com/loft-sh/devpod/pkg/provider"
 	providerpkg "github.com/loft-sh/devpod/pkg/provider"
 	"github.com/loft-sh/log"
 	"github.com/spf13/cobra"
@@ -28,7 +26,6 @@ type DaemonStartCmd struct {
 func NewDaemonStartCmd(flags *proflags.GlobalFlags) *cobra.Command {
 	cmd := &DaemonStartCmd{
 		GlobalFlags: flags,
-		Log:         log.Default,
 	}
 	c := &cobra.Command{
 		Use:   "daemon-start",
@@ -55,35 +52,19 @@ func (cmd *DaemonStartCmd) Run(ctx context.Context, devPodConfig *config.Config,
 		return err
 	}
 
-	extraEnv := providerpkg.GetBaseEnvironment(devPodConfig.DefaultContext, provider.Name)
-	extraEnv[platform.DaemonFolderEnv] = dir
-
-	writer := devpodlog.PipeJSONStream(cmd.Log)
-	defer writer.Close()
-
-	err = clientimplementation.RunCommandWithBinaries(
-		ctx,
-		"startDaemon",
-		provider.Exec.Proxy.Daemon.Start,
-		devPodConfig.DefaultContext,
-		nil,
-		nil,
-		devPodConfig.ProviderOptions(provider.Name),
-		provider,
-		extraEnv,
-		nil,
-		writer,
-		writer,
-		cmd.Log)
+	d, err := platformdaemon.Init(ctx, dir, provider.Name, cmd.Debug)
 	if err != nil {
-		return fmt.Errorf("start daemon: %w", err)
+		return fmt.Errorf("init daemon: %w", err)
 	}
 
-	return nil
+	// NOTE: Do not remove, other processes rely on this for the startup sequence
+	logInitialized()
+
+	return d.Start()
 }
 
 func ensureDaemonDir(context, providerName string) (string, error) {
-	tsDir, err := provider.GetDaemonDir(context, providerName)
+	tsDir, err := providerpkg.GetDaemonDir(context, providerName)
 	if err != nil {
 		return "", fmt.Errorf("get daemon dir: %w", err)
 	}
@@ -94,4 +75,9 @@ func ensureDaemonDir(context, providerName string) (string, error) {
 	}
 
 	return tsDir, nil
+}
+
+func logInitialized() {
+	logger := log.NewStreamLogger(os.Stdout, os.Stderr, logrus.InfoLevel)
+	logger.Done("Initialized daemon")
 }
