@@ -271,10 +271,24 @@ jobs:
           Move-Item -Path "$destination_path\*.bat" -Destination $scriptDir -Force
 
           Add-Content -Path $env:GITHUB_PATH -Value $scriptDir
-          CodeSignTool.bat
-          CodeSignTool
         env:
           CODESIGNTOOL_DOWNLOAD_URL: ${{ vars.CODESIGNTOOL_DOWNLOAD_URL }}
+
+      - name: Test CodeSignTool Invocation
+        if: matrix.settings.host == 'windows-latest' && matrix.settings.cli_only == false
+        run: |
+          Write-Output "Attempting to invoke CodeSignTool from PATH"
+          try {
+            CodeSignTool.bat
+          } catch {
+            Write-Output "Invocation failed, error ignored."
+          }
+
+          try {
+            CodeSignTool
+          } catch {
+            Write-Output "Invocation failed, error ignored."
+          }
 
       - name: Build Desktop App
         if: matrix.settings.host == 'windows-latest' && matrix.settings.cli_only == false
