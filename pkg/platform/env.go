@@ -24,5 +24,4 @@ const (
 	InstanceNamespaceEnv          = "LOFT_INSTANCE_NAMESPACE"
 
 	DaemonFolderEnv = "DAEMON_FOLDER"
-	DaemonSocketEnv = "DAEMON_SOCKET"
 )

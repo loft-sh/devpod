@@ -3,6 +3,8 @@ package cmd
 import (
 	"context"
 	"fmt"
+	"github.com/loft-sh/devpod/pkg/platform/daemon"
+	"github.com/loft-sh/devpod/pkg/provider"
 	"os"
 
 	"github.com/loft-sh/devpod/cmd/machine"
@@ -24,13 +26,13 @@ func startTSProxyTunnel(
 ) error {
 	log.Debugf("Starting proxy connection")
 
-	daemonSocket, err := ts.GetSocketForProvider(devPodConfig, client.WorkspaceConfig().Provider.Name)
+	providerName := client.WorkspaceConfig().Provider.Name
+	tsDir, err := provider.GetDaemonDir(devPodConfig.DefaultContext, providerName)
 	if err != nil {
 		return err
 	}
-
 	lc := &tsclient.LocalClient{
-		Socket:        daemonSocket,
+		Socket:        daemon.GetSocketAddr(tsDir, providerName),
 		UseSocketOnly: true,
 	}
 	status, err := lc.Status(ctx)
