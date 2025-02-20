@@ -269,15 +269,14 @@ func shouldDeleteLocalWorkspace(localWorkspace *providerpkg.Workspace, proWorksp
 	if !ok {
 		return false
 	}
-	if isTransientError(res.err) {
+	// Don't delete the workspace if we encountered any error fetching the remote workspaces.
+	// This could potentially be destructive so we err or the side of caution and only allow
+	// deletion if fetching the remote workspace was successful
+	if res.err != nil {
 		return false
 	}
 	hasProCounterpart := slices.ContainsFunc(res.workspaces, func(w *providerpkg.Workspace) bool {
 		return localWorkspace.UID == w.UID
 	})
 	return !hasProCounterpart
-}
-
-func isTransientError(err error) bool {
-	return errors.Is(err, errListProWorkspaces)
 }
