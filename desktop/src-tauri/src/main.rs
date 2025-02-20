@@ -52,6 +52,7 @@ pub struct AppState {
     releases: Arc<Mutex<updates::Releases>>,
     pending_update: Arc<Mutex<Option<updates::Release>>>,
     update_installed: Arc<Mutex<bool>>,
+    resources_handles: Arc<Mutex<Vec<tauri::async_runtime::JoinHandle<()>>>>,
 }
 fn main() -> anyhow::Result<()> {
     // https://unix.stackexchange.com/questions/82620/gui-apps-dont-inherit-path-from-parent-console-apps
@@ -74,6 +75,7 @@ fn main() -> anyhow::Result<()> {
             releases: Arc::new(Mutex::new(updates::Releases::default())),
             pending_update: Arc::new(Mutex::new(None)),
             update_installed: Arc::new(Mutex::new(false)),
+            resources_handles: Arc::new(Mutex::new(vec![])),
         })
         .plugin(logging::build_plugin())
         .plugin(tauri_plugin_store::Builder::default().build())
@@ -95,7 +97,7 @@ fn main() -> anyhow::Result<()> {
             window_helper.setup(&window);
 
             let app_handle = app.handle().clone();
-            tauri::async_runtime::spawn(async move { resource_watcher::setup(&app_handle).await });
+            resource_watcher::setup(&app_handle);
 
             action_logs::setup(&app.handle())?;
             custom_protocol.setup(app.handle().clone());
@@ -171,7 +173,6 @@ fn main() -> anyhow::Result<()> {
                 info!("Handling ExitRequested event.");
 
                 // On windows, we want to kill all existing child processes to prevent dangling processes later down the line.
-                kill_child_processes(std::process::id());
 
                 tauri::async_runtime::block_on(async move {
                     if let Err(err) = exit_requested_tx.send(UiMessage::ExitRequested).await {
@@ -204,6 +205,7 @@ fn main() -> anyhow::Result<()> {
                 }
             }
             tauri::RunEvent::Exit => {
+                kill_child_processes(std::process::id());
                 providers::check_dangling_provider(app_handle);
                 tauri::async_runtime::block_on(async move {
                     resource_watcher::shutdown(app_handle).await;

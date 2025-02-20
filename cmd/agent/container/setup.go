@@ -550,18 +550,6 @@ func (cmd *SetupContainerCmd) setupVSCode(setupInfo *config.Result, ideOptions m
 	})
 }
 
-func setupVSCodeExtensions(setupInfo *config.Result, flavor vscode.Flavor, log log.Logger) error {
-	vsCodeConfiguration := config.GetVSCodeConfiguration(setupInfo.MergedConfig)
-	user := config.GetRemoteUser(setupInfo)
-	return vscode.NewVSCodeServer(vsCodeConfiguration.Extensions, "", user, nil, flavor, log).InstallExtensions()
-}
-
-func setupOpenVSCodeExtensions(setupInfo *config.Result, log log.Logger) error {
-	vsCodeConfiguration := config.GetVSCodeConfiguration(setupInfo.MergedConfig)
-	user := config.GetRemoteUser(setupInfo)
-	return openvscode.NewOpenVSCodeServer(vsCodeConfiguration.Extensions, "", user, "", "", nil, log).InstallExtensions()
-}
-
 func (cmd *SetupContainerCmd) setupOpenVSCode(setupInfo *config.Result, ideOptions map[string]config2.OptionValue, log log.Logger) error {
 	log.Debugf("Setup openvscode...")
 	vsCodeConfiguration := config.GetVSCodeConfiguration(setupInfo.MergedConfig)

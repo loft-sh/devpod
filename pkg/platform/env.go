@@ -20,5 +20,4 @@ const (
 	ProviderBinaryEnv = "PRO_PROVIDER"
 
 	DaemonFolderEnv = "DAEMON_FOLDER"
-	DaemonSocketEnv = "DAEMON_SOCKET"
 )

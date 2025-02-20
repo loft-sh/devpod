@@ -13,7 +13,7 @@ use log::{debug, error, info};
 use serde::Deserialize;
 use std::{collections::HashSet, hash::Hash, time};
 use tauri::{
-    async_runtime::Receiver,
+    async_runtime::{Receiver, JoinHandle},
     image::Image,
     menu::{IconMenuItem, MenuItem, Submenu, SubmenuBuilder},
     Manager, Wry,
@@ -61,8 +61,8 @@ impl Workspace {
 }
 
 impl WorkspacesState {
-    pub const IDENTIFIER_PREFIX: &str = "workspaces-";
-    pub const CREATE_WORKSPACE_ID: &str = "workspaces-create_workspace";
+    pub const IDENTIFIER_PREFIX: &'static str = "workspaces-";
+    pub const CREATE_WORKSPACE_ID: &'static str = "workspaces-create_workspace";
 
     fn item_id(id: &String) -> String {
         format!("{}{}", Self::IDENTIFIER_PREFIX, id)
@@ -218,30 +218,40 @@ impl Daemon {
     }
 
     fn get_socket_addr(&self) -> Result<String, DevpodCommandError> {
-        let home = self.get_home()?;
-        let context = self.context.clone().unwrap_or("default".to_string());
         let provider = self
             .provider
             .clone()
             .ok_or(DevpodCommandError::Any(anyhow!(
                 "provider not set for pro instance"
             )))?;
+        #[cfg(unix)]
+        {
+            let home = self.get_home()?;
+            let context = self.context.clone().unwrap_or("default".to_string());
 
-        return Ok(format!(
-            "{}/contexts/{}/providers/{}/daemon/devpod.sock",
-            home, context, provider
-        ));
+            return Ok(format!(
+                "{}/contexts/{}/providers/{}/daemon/devpod.sock",
+                home, context, provider
+            ));
+        }
+        #[cfg(windows)]
+        {
+            return Ok(format!("\\\\.\\pipe\\devpod.{}", provider).to_string());
+        }
     }
 
-    pub async fn try_start(&mut self, host: String, app_handle: &AppHandle) {
+    pub async fn try_start(&mut self, host: String, app_handle: &AppHandle)  {
         if !self.should_retry() {
             self.try_notify_failed(app_handle);
             return;
         }
+        info!(
+            "[{}] attempting to start daemon ({}/10)",
+            host, self.retry_count
+        );
         self.retry_count += 1;
         if let Some(_) = self.command {
-            self.try_stop().await;
-            self.command = None;
+             self.try_stop().await;
         }
         match self.spawn(host, app_handle).await {
             Ok(command) => {
@@ -253,11 +263,16 @@ impl Daemon {
         }
     }
 
-    pub async fn try_stop(&mut self) {
-        if let Some(command) = &self.command {
-            crate::util::kill_process(command.1.pid());
-            self.command = None;
+    pub async fn try_stop(&mut self)  {
+        if let Some(command) = self.command.take() {
+            let pid = command.1.pid();
+            if let Err(err) = command.1.kill() {
+                debug!("Failed to kill command {:?}", err);
+                // kill it with fire
+                crate::util::kill_process(pid);
+            }
         }
+        self.command = None;
     }
 
     fn should_retry(&self) -> bool {
@@ -279,7 +294,7 @@ impl Daemon {
 
         tokio::select! {
             _ = self.wait_for_first_message(&mut rx) => {},
-            _ = tokio::time::sleep(tokio::time::Duration::from_secs(10)) => {
+            _ = tokio::time::sleep(tokio::time::Duration::from_secs(30)) => {
                 info!("[{}] timed out waiting for daemon to start", host);
             }
         }
@@ -291,7 +306,8 @@ impl Daemon {
         loop {
             if let Some(event) = rx.recv().await {
                 match event {
-                    CommandEvent::Stdout(_) => {
+                    CommandEvent::Stdout(out) => {
+                        debug!("Daemon startup: {}", String::from_utf8(out).unwrap().trim());
                         return;
                     }
                     _ => {}
@@ -339,10 +355,12 @@ impl ToSystemTraySubmenu for ProState {
     }
 }
 
-pub async fn setup(app_handle: &AppHandle) {
+pub fn setup(app_handle: &AppHandle) {
+    let state = app_handle.state::<AppState>();
+    let mut resource_handles = state.resources_handles.lock().unwrap();
     // daemon watcher
     let daemon_app_handle = app_handle.clone();
-    tauri::async_runtime::spawn(async move {
+    let daemon_watcher_handle = tauri::async_runtime::spawn(async move {
         let sleep_duration = time::Duration::from_millis(1_000);
         loop {
             let res = watch_daemons(&daemon_app_handle).await;
@@ -351,11 +369,13 @@ pub async fn setup(app_handle: &AppHandle) {
             };
             let _ = tokio::time::sleep(sleep_duration).await;
         }
+        ()
     });
+    resource_handles.push(daemon_watcher_handle);
 
     // main resources watchers
     let resources_app_handle = app_handle.clone();
-    tauri::async_runtime::spawn(async move {
+    let resources_handle = tauri::async_runtime::spawn(async move {
         let sleep_duration = time::Duration::from_millis(5_000);
         loop {
             handle_workspaces(&resources_app_handle).await;
@@ -363,11 +383,20 @@ pub async fn setup(app_handle: &AppHandle) {
             let _ = tokio::time::sleep(sleep_duration).await;
         }
     });
+    resource_handles.push(resources_handle);
+
 }
 
 pub async fn shutdown(app_handle: &AppHandle) {
-    info!("Shutting down daemons");
+    info!("Shutting down resource watchers");
     let state = app_handle.state::<AppState>();
+    // shut down background tasks
+    let mut handles = state.resources_handles.lock().unwrap();
+    for handle in handles.iter() {
+        handle.abort();
+    }
+    handles.clear();
+    // shut down daemons
     let mut pro_state = state.pro.write().await;
     for pro_instance in pro_state.instances.iter_mut() {
         let id = pro_instance.id().clone();
@@ -417,7 +446,7 @@ async fn watch_daemons(app_handle: &AppHandle) -> anyhow::Result<()> {
                         all_ready = false;
                         info!("[{}] daemon stopped, attempting to restart", id);
                         daemon.status.state = daemon::DaemonState::Pending;
-                        daemon.try_start(id, app_handle).await;
+                         daemon.try_start(id, app_handle).await;
                     }
                     daemon::DaemonState::Pending => {
                         all_ready = false;
@@ -442,10 +471,6 @@ async fn watch_daemons(app_handle: &AppHandle) -> anyhow::Result<()> {
                         daemon.command = None;
                     }
                     None => {
-                        info!(
-                            "[{}] attempting to start daemon ({}/10)",
-                            id, daemon.retry_count
-                        );
                         daemon.status.state = daemon::DaemonState::Pending;
                         daemon.try_start(id, app_handle).await;
                     }

@@ -283,12 +283,15 @@ binaries:
     - os: linux
       arch: arm64
       path: /usr/local/bin/devpod
-    - os: darwin
+    - os: darwin 
       arch: amd64
       path: /usr/local/bin/devpod
     - os: darwin
       arch: arm64
       path: /usr/local/bin/devpod
+    - os: windows
+      arch: amd64
+      path: "C:\\Users\\pasca\\workspace\\devpod\\desktop\\src-tauri\\bin\\devpod-cli-x86_64-pc-windows-msvc.exe"
 exec:
   proxy:
     up: |-
