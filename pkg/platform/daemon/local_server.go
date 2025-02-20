@@ -1,21 +1,21 @@
 package daemon
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"net"
 	"net/http"
-	"strconv"
+	"tailscale.com/net/memnet"
 
-	"github.com/loft-sh/devpod/pkg/port"
-	"github.com/loft-sh/devpod/pkg/random"
 	"tailscale.com/client/tailscale"
 	"tailscale.com/ipn"
 )
 
 type localServer struct {
-	*http.Server
-	lc *tailscale.LocalClient
+	httpServer *http.Server
+	lc         *tailscale.LocalClient
+	listener   *memnet.Listener
 }
 
 type Status struct {
@@ -38,22 +38,27 @@ var (
 
 func getLocalServer(lc *tailscale.LocalClient) (*localServer, error) {
 	l := &localServer{lc: lc}
-	p, err := port.FindAvailablePort(random.InRange(12000, 17000))
-	if err != nil {
-		return nil, fmt.Errorf("no port available in range 12000:17000: %w", err)
-	}
 	m := http.NewServeMux()
 	m.HandleFunc("GET "+routeHealth, l.health)
 	m.HandleFunc("GET "+routeMetrics, l.metrics)
 	m.HandleFunc("GET "+routeStatus, l.status)
 
-	addr := net.JoinHostPort("127.0.0.1", strconv.Itoa(p))
-	l.Server = &http.Server{
-		Addr:    addr,
-		Handler: m,
-	}
+	l.httpServer = &http.Server{Handler: m}
+	l.listener = memnet.Listen("localclient.devpod:80")
 
 	return l, nil
+}
+
+func (l *localServer) ListenAndServe() error {
+	return l.httpServer.Serve(l.listener)
+}
+
+func (l *localServer) Addr() string {
+	return l.listener.Addr().String()
+}
+
+func (l *localServer) Dial(ctx context.Context, network, addr string) (net.Conn, error) {
+	return l.listener.Dial(ctx, network, addr)
 }
 
 func (l *localServer) metrics(w http.ResponseWriter, r *http.Request) {

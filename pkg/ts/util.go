@@ -5,12 +5,9 @@ import (
 	"fmt"
 	"io"
 	"os"
-	"path/filepath"
 	"strings"
 	"time"
 
-	"github.com/loft-sh/devpod/pkg/config"
-	"github.com/loft-sh/devpod/pkg/provider"
 	"github.com/loft-sh/log"
 	"tailscale.com/client/tailscale"
 	"tailscale.com/ipn"
@@ -143,13 +140,4 @@ func WaitHostReachable(ctx context.Context, lc *tailscale.LocalClient, addr Addr
 	}
 
 	return fmt.Errorf("host %s not reachable after %d attempts", addr.String(), maxRetries)
-}
-
-func GetSocketForProvider(devPodConfig *config.Config, providerName string) (string, error) {
-	tsDir, err := provider.GetDaemonDir(devPodConfig.DefaultContext, providerName)
-	if err != nil {
-		return "", err
-	}
-
-	return filepath.Join(tsDir, provider.DaemonSocket), nil
 }
