@@ -167,12 +167,8 @@ func validateProviderType(config *ProviderConfig) error {
 	}
 
 	// validate driver
-	if config.Agent.Driver != "" && config.Agent.Driver != CustomDriver && config.Agent.Driver != DockerDriver {
-		if config.Agent.Driver == "kubernetes" {
-			return fmt.Errorf("kubernetes is not an in-built provider in this DevPod version anymore, please run `devpod provider update kubernetes kubernetes` to use the latest kubernetes provider")
-		}
-
-		return fmt.Errorf("agent.driver can only be docker or custom")
+	if config.Agent.Driver != "" && config.Agent.Driver != CustomDriver && config.Agent.Driver != DockerDriver && config.Agent.Driver != KubernetesDriver {
+		return fmt.Errorf("agent.driver can only be docker, kubernetes or custom")
 	}
 
 	// validate custom driver
