@@ -251,44 +251,32 @@ jobs:
 
           mv DevPod-desktop.tar.gz ../../DevPod-${{needs.create-release.outputs.package_version}}.tar.gz
 
-      - name: Prepare Windows Build
+      - name: Prepare Windows Signing Tool
         if: matrix.settings.host == 'windows-latest' && matrix.settings.cli_only == false
         run: |
-          $scriptDir = "$Env:USERPROFILE\devpod-ci"
+          $destination_path = "$Env:USERPROFILE\code-signing"
           $download_url = "$Env:CODESIGNTOOL_DOWNLOAD_URL"
 
           # Create the directory if it doesn't exist
-          New-Item -ItemType Directory -Force -Path $scriptDir | Out-Null
+          New-Item -ItemType Directory -Force -Path $destination_path | Out-Null
           Write-Output "Starting to download CodeSignTool from $download_url"
 
           Invoke-WebRequest -Uri $download_url -OutFile codesigntool.zip
 
-          $destination_path = "codesigntool"
           Write-Output "Unzipping codesigntool.zip to $destination_path"
           Expand-Archive "codesigntool.zip" -DestinationPath $destination_path
 
-          Write-Output "Moving batch file(s) from $destination_path to $scriptDir"
-          Move-Item -Path "$destination_path\*.bat" -Destination $scriptDir -Force
-
-          Add-Content -Path $env:GITHUB_PATH -Value $scriptDir
+          Add-Content -Path $env:GITHUB_PATH -Value $destination_path
+          # This is requried in addition to setting the PATH because of how CodeSignTool wrote their batch script
+          "CODE_SIGN_TOOL_PATH=$destination_path" | Out-File -FilePath $env:GITHUB_ENV -Append
         env:
           CODESIGNTOOL_DOWNLOAD_URL: ${{ vars.CODESIGNTOOL_DOWNLOAD_URL }}
 
-      - name: Test CodeSignTool Invocation
+      - name: Print Signing Tool Version
         if: matrix.settings.host == 'windows-latest' && matrix.settings.cli_only == false
         run: |
-          Write-Output "Attempting to invoke CodeSignTool from PATH"
-          try {
-            CodeSignTool.bat
-          } catch {
-            Write-Output "Invocation failed, error ignored."
-          }
-
-          try {
-            CodeSignTool
-          } catch {
-            Write-Output "Invocation failed, error ignored."
-          }
+          Write-Output "Attempting to get CodeSignTool version"
+          CodeSignTool.bat --version
 
       - name: Build Desktop App
         if: matrix.settings.host == 'windows-latest' && matrix.settings.cli_only == false
@@ -350,10 +338,10 @@ jobs:
           $nsis_input_file_path = Resolve-Path  "..\$nsis_input_file_path" | select -ExpandProperty Path
           $updater_input_file_path = Resolve-Path  "..\$updater_input_file_path" | select -ExpandProperty Path
 
-          CodeSignTool sign -username="$username" -password="$password" -totp_secret="$totp_secret" -credential_id="$credential_id" -input_file_path="$cli_input_file_path" -override
-          CodeSignTool sign -username="$username" -password="$password" -totp_secret="$totp_secret" -credential_id="$credential_id" -input_file_path="$msi_input_file_path" -override
-          CodeSignTool sign -username="$username" -password="$password" -totp_secret="$totp_secret" -credential_id="$credential_id" -input_file_path="$nsis_input_file_path" -override
-          CodeSignTool sign -username="$username" -password="$password" -totp_secret="$totp_secret" -credential_id="$credential_id" -input_file_path="$updater_input_file_path" -override
+          CodeSignTool.bat sign -username="$username" -password="$password" -totp_secret="$totp_secret" -credential_id="$credential_id" -input_file_path="$cli_input_file_path" -override
+          CodeSignTool.bat sign -username="$username" -password="$password" -totp_secret="$totp_secret" -credential_id="$credential_id" -input_file_path="$msi_input_file_path" -override
+          CodeSignTool.bat sign -username="$username" -password="$password" -totp_secret="$totp_secret" -credential_id="$credential_id" -input_file_path="$nsis_input_file_path" -override
+          CodeSignTool.bat sign -username="$username" -password="$password" -totp_secret="$totp_secret" -credential_id="$credential_id" -input_file_path="$updater_input_file_path" -override
 
           Write-Output "Re-compressing updater"
           Set-Location -Path ".."
