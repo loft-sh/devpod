@@ -88,16 +88,16 @@ jobs:
       fail-fast: false
       matrix:
         settings:
-          #          - host: macos-latest
-          #            target: x86_64-apple-darwin
-          #            os: darwin
-          #            arch: amd64
-          #            cli_only: false
-          #          - host: macos-latest
-          #            target: aarch64-apple-darwin
-          #            os: darwin
-          #            arch: arm64
-          #            cli_only: false
+          - host: macos-latest
+            target: x86_64-apple-darwin
+            os: darwin
+            arch: amd64
+            cli_only: false
+          - host: macos-latest
+            target: aarch64-apple-darwin
+            os: darwin
+            arch: arm64
+            cli_only: false
           # The WIX version we use for the installer (latest 3.something) doesn't support arm builds - if we need to support arm windows,
           # we'd need to switch the installer toolchain to WIX 4.xx, not sure how that works out with tauri
           # - host: windows-latest
@@ -108,16 +108,16 @@ jobs:
             target: x86_64-pc-windows-msvc
             arch: amd64
             cli_only: false
-    #          - host: ubuntu-22.04
-    #            target: x86_64-unknown-linux-gnu
-    #            os: linux
-    #            arch: amd64
-    #            cli_only: false
-    #          - host: ubuntu-22.04
-    #            target: aarch64-unknown-linux-gnu
-    #            os: linux
-    #            arch: arm64
-    #            cli_only: true
+          - host: ubuntu-22.04
+            target: x86_64-unknown-linux-gnu
+            os: linux
+            arch: amd64
+            cli_only: false
+          - host: ubuntu-22.04
+            target: aarch64-unknown-linux-gnu
+            os: linux
+            arch: arm64
+            cli_only: true
     name: ${{ matrix.settings.target }}
     runs-on: ${{ matrix.settings.host }}
     env:
@@ -296,7 +296,7 @@ jobs:
           CODESIGNTOOL_TOTP_SECRET: ${{ secrets.CODESIGNTOOL_TOTP_SECRET }}
           CODESIGNTOOL_CREDENTIAL_ID: ${{ secrets.CODESIGNTOOL_CREDENTIAL_ID }}
 
-      - name: Sign Windows App
+      - name: Sign Windows Sidecar Binary
         if: matrix.settings.host == 'windows-latest'
         shell: powershell
         env:
@@ -304,53 +304,17 @@ jobs:
           CODESIGNTOOL_PASSWORD: ${{ secrets.CODESIGNTOOL_PASSWORD }}
           CODESIGNTOOL_TOTP_SECRET: ${{ secrets.CODESIGNTOOL_TOTP_SECRET }}
           CODESIGNTOOL_CREDENTIAL_ID: ${{ secrets.CODESIGNTOOL_CREDENTIAL_ID }}
-          TAURI_PRIVATE_KEY: ${{ secrets.TAURI_PRIVATE_KEY }}
-          TAURI_KEY_PASSWORD: ${{ secrets.TAURI_KEY_PASSWORD }}
         run: |
           $username = "$Env:CODESIGNTOOL_USERNAME"
           $password = "$Env:CODESIGNTOOL_PASSWORD"
           $totp_secret = "$Env:CODESIGNTOOL_TOTP_SECRET"
           $credential_id = "$Env:CODESIGNTOOL_CREDENTIAL_ID"
-          $private_key = "$Env:TAURI_PRIVATE_KEY"
-          $private_key_password = "$Env:TAURI_KEY_PASSWORD"
 
           $cli_input_file_path = "desktop\src-tauri\bin\devpod-cli-${{ matrix.settings.target }}.exe"
 
-          $msi_file_name = "DevPod_${{ needs.create-release.outputs.package_version }}_x64_en-US"
-          $msi_input_file_path = "desktop\src-tauri\target\${{ matrix.settings.target }}\release\bundle\msi\$msi_file_name.msi"
-
-          $updater_base_zip_file_path = "src-tauri\target\${{ matrix.settings.target }}\release\bundle\msi\$msi_file_name.msi.zip"
-          $updater_zip_file_path = "desktop\$updater_base_zip_file_path"
-          $updater_extraction_folder_path = "desktop\src-tauri\target\${{ matrix.settings.target }}\release\bundle\msi\updater"
-          $updater_input_file_path = "$updater_extraction_folder_path\$msi_file_name.msi"
-
-          $nsis_input_file_path = "desktop\src-tauri\target\${{ matrix.settings.target }}\release\bundle\nsis\DevPod_${{ needs.create-release.outputs.package_version }}_x64-setup.exe"
-
-          Write-Output "Unzipping updater: ($updater_zip_file_path) -> ($updater_extraction_folder_path)"
-
-          Expand-Archive "$updater_zip_file_path" -DestinationPath "$updater_extraction_folder_path"
-          Remove-Item "$updater_zip_file_path"
-
-          Write-Output "Sigining files"
-
+          Write-Output "Signing files"
           $cli_input_file_path = Resolve-Path  "..\$cli_input_file_path" | select -ExpandProperty Path
-          $msi_input_file_path = Resolve-Path  "..\$msi_input_file_path" | select -ExpandProperty Path
-          $nsis_input_file_path = Resolve-Path  "..\$nsis_input_file_path" | select -ExpandProperty Path
-          $updater_input_file_path = Resolve-Path  "..\$updater_input_file_path" | select -ExpandProperty Path
-
           CodeSignTool.bat sign -username="$username" -password="$password" -totp_secret="$totp_secret" -credential_id="$credential_id" -input_file_path="$cli_input_file_path" -override
-          CodeSignTool.bat sign -username="$username" -password="$password" -totp_secret="$totp_secret" -credential_id="$credential_id" -input_file_path="$msi_input_file_path" -override
-          CodeSignTool.bat sign -username="$username" -password="$password" -totp_secret="$totp_secret" -credential_id="$credential_id" -input_file_path="$nsis_input_file_path" -override
-          CodeSignTool.bat sign -username="$username" -password="$password" -totp_secret="$totp_secret" -credential_id="$credential_id" -input_file_path="$updater_input_file_path" -override
-
-          Write-Output "Re-compressing updater"
-          Set-Location -Path ".."
-          7z a -tzip -mx=0 "$updater_zip_file_path" ".\$updater_extraction_folder_path\*"
-          Remove-Item "$updater_zip_file_path.sig"
-
-          Write-Output "Re-signing updater zip"
-          Set-Location -Path "desktop"
-          yarn tauri signer sign --password="$private_key_password" --private-key="$private_key" "$updater_base_zip_file_path"
 
       - name: Upload Release Asset
         if: matrix.settings.host == 'windows-latest'
