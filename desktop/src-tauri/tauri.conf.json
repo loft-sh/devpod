@@ -48,7 +48,7 @@
     "createUpdaterArtifacts": "v1Compatible"
   },
   "productName": "DevPod",
-  "mainBinaryName": "DevPod Desktop",
+  "mainBinaryName": "DevPod",
   "version": "../package.json",
   "identifier": "sh.loft.devpod",
   "plugins": {

@@ -9,6 +9,8 @@
     "core:default",
     "process:allow-exit",
     "process:allow-restart",
+    "core:window:default",
+    "core:window:allow-close",
     "os:default"
   ]
 }
