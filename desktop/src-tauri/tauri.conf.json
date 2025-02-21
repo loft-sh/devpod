@@ -15,7 +15,7 @@
         "displayLanguageSelector": false,
         "installMode": "currentUser"
       },
-      "signCommand": "CodeSignTool.bat sign -username=\"$Env:CODESIGNTOOL_USERNAME\" -password=\"$Env:CODESIGNTOOL_PASSWORD\" -totp_secret=\"$Env:CODESIGNTOOL_TOTP_SECRET\" -credential_id=\"$Env:CODESIGNTOOL_CREDENTIAL_ID\" -input_file_path=\"%1\" -override"
+      "signCommand": ".\\sign.bat %1"
     },
     "category": "DeveloperTool",
     "copyright": "",
