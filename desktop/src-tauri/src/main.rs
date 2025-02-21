@@ -62,8 +62,11 @@ fn main() -> anyhow::Result<()> {
 
     let (tx, rx) = mpsc::channel::<UiMessage>(10);
 
-    let mut app_builder = tauri::Builder::default()
-        .plugin(tauri_plugin_single_instance::init(|app, args, cwd| {
+    let mut app_builder = tauri::Builder::default();
+    // this case is handled by macos itself + tauri::RunEvent::Reopen
+    #[cfg(not(target_os = "macos"))]
+    {
+        app_builder = app_builder.plugin(tauri_plugin_single_instance::init(|app, _args, _cwd| {
             let app_state = app.state::<AppState>();
 
             tauri::async_runtime::block_on(async move {
@@ -71,7 +74,9 @@ fn main() -> anyhow::Result<()> {
                     error!("Failed to broadcast show dashboard message: {}", err);
                 };
             });
-        }))
+        }));
+    }
+    app_builder = app_builder
         .manage(AppState {
             workspaces: Arc::new(Mutex::new(WorkspacesState::default())),
             community_contributions: Arc::new(Mutex::new(contributions)),
@@ -169,6 +174,20 @@ fn main() -> anyhow::Result<()> {
 
     app.run(move |app_handle, event| {
         let exit_requested_tx = tx.clone();
+        let reopen_tx = tx.clone();
+
+        #[cfg(target_os = "macos")]
+        {
+            if let tauri::RunEvent::Reopen { .. } = event {
+                tauri::async_runtime::block_on(async move {
+                    if let Err(err) = reopen_tx.send(UiMessage::ShowDashboard).await {
+                        error!("Failed to broadcast show dashboard message: {}", err);
+                    };
+                });
+
+                return;
+            }
+        }
 
         match event {
             // Prevents app from exiting when last window is closed, leaving the system tray active
