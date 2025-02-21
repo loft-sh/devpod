@@ -34,6 +34,13 @@ type Credentials struct {
 	Secret    string
 }
 
+func (c *Credentials) AuthToken() string {
+	if c.Username != "" {
+		return c.Username + ":" + c.Secret
+	}
+	return c.Secret
+}
+
 func ConfigureCredentialsContainer(userName string, port int, log log.Logger) error {
 	userHome, err := command.GetHome(userName)
 	if err != nil {

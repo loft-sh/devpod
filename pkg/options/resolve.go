@@ -228,10 +228,34 @@ func ResolveAgentConfig(devConfig *config.Config, provider *provider2.ProviderCo
 	agentConfig.Dockerless.RegistryCache = devConfig.ContextOption(config.ContextOptionRegistryCache)
 	agentConfig.Driver = resolver.ResolveDefaultValue(agentConfig.Driver, options)
 	agentConfig.Local = types.StrBool(resolver.ResolveDefaultValue(string(agentConfig.Local), options))
+
+	// docker driver
 	agentConfig.Docker.Path = resolver.ResolveDefaultValue(agentConfig.Docker.Path, options)
 	agentConfig.Docker.Builder = resolver.ResolveDefaultValue(agentConfig.Docker.Builder, options)
 	agentConfig.Docker.Install = types.StrBool(resolver.ResolveDefaultValue(string(agentConfig.Docker.Install), options))
 	agentConfig.Docker.Env = resolver.ResolveDefaultValues(agentConfig.Docker.Env, options)
+
+	// kubernetes driver
+	agentConfig.Kubernetes.KubernetesContext = resolver.ResolveDefaultValue(agentConfig.Kubernetes.KubernetesContext, options)
+	agentConfig.Kubernetes.KubernetesConfig = resolver.ResolveDefaultValue(agentConfig.Kubernetes.KubernetesConfig, options)
+	agentConfig.Kubernetes.KubernetesNamespace = resolver.ResolveDefaultValue(agentConfig.Kubernetes.KubernetesNamespace, options)
+	agentConfig.Kubernetes.Architecture = resolver.ResolveDefaultValue(agentConfig.Kubernetes.Architecture, options)
+	agentConfig.Kubernetes.InactivityTimeout = resolver.ResolveDefaultValue(agentConfig.Kubernetes.InactivityTimeout, options)
+	agentConfig.Kubernetes.StorageClass = resolver.ResolveDefaultValue(agentConfig.Kubernetes.StorageClass, options)
+	agentConfig.Kubernetes.PvcAccessMode = resolver.ResolveDefaultValue(agentConfig.Kubernetes.PvcAccessMode, options)
+	agentConfig.Kubernetes.PvcAnnotations = resolver.ResolveDefaultValue(agentConfig.Kubernetes.PvcAnnotations, options)
+	agentConfig.Kubernetes.NodeSelector = resolver.ResolveDefaultValue(agentConfig.Kubernetes.NodeSelector, options)
+	agentConfig.Kubernetes.Resources = resolver.ResolveDefaultValue(agentConfig.Kubernetes.Resources, options)
+	agentConfig.Kubernetes.WorkspaceVolumeMount = resolver.ResolveDefaultValue(agentConfig.Kubernetes.WorkspaceVolumeMount, options)
+	agentConfig.Kubernetes.PodManifestTemplate = resolver.ResolveDefaultValue(agentConfig.Kubernetes.PodManifestTemplate, options)
+	agentConfig.Kubernetes.Labels = resolver.ResolveDefaultValue(agentConfig.Kubernetes.Labels, options)
+	agentConfig.Kubernetes.StrictSecurity = resolver.ResolveDefaultValue(agentConfig.Kubernetes.StrictSecurity, options)
+	agentConfig.Kubernetes.CreateNamespace = resolver.ResolveDefaultValue(agentConfig.Kubernetes.CreateNamespace, options)
+	agentConfig.Kubernetes.ClusterRole = resolver.ResolveDefaultValue(agentConfig.Kubernetes.ClusterRole, options)
+	agentConfig.Kubernetes.ServiceAccount = resolver.ResolveDefaultValue(agentConfig.Kubernetes.ServiceAccount, options)
+	agentConfig.Kubernetes.PodTimeout = resolver.ResolveDefaultValue(agentConfig.Kubernetes.PodTimeout, options)
+	agentConfig.Kubernetes.KubernetesPullSecretsEnabled = resolver.ResolveDefaultValue(agentConfig.Kubernetes.KubernetesPullSecretsEnabled, options)
+
 	agentConfig.DataPath = resolver.ResolveDefaultValue(agentConfig.DataPath, options)
 	agentConfig.Path = resolver.ResolveDefaultValue(agentConfig.Path, options)
 	if agentConfig.Path == "" && agentConfig.Local == "true" {

@@ -1,0 +1,130 @@
+name: kubernetes
+version: v0.0.1
+icon: https://devpod.sh/assets/kubernetes.svg
+home: https://github.com/loft-sh/devpod
+description: |-
+  DevPod on Kubernetes
+optionGroups:
+  - options:
+      - KUBERNETES_NAMESPACE
+      - DISK_SIZE
+    name: "Options"
+    defaultVisible: true
+  - options:
+      - KUBERNETES_CONTEXT
+      - KUBERNETES_CONFIG
+    name: "Kubernetes Config"
+  - options:
+      - CLUSTER_ROLE
+      - SERVICE_ACCOUNT
+      - CREATE_NAMESPACE
+      - INACTIVITY_TIMEOUT
+      - STORAGE_CLASS
+      - PVC_ACCESS_MODE
+      - PVC_ANNOTATIONS
+      - RESOURCES
+      - POD_MANIFEST_TEMPLATE
+      - NODE_SELECTOR
+      - LABELS
+      - DOCKERLESS_DISABLED
+      - DOCKERLESS_IMAGE
+    name: "Advanced Options"
+options:
+  DISK_SIZE:
+    description: The default size for the persistent volume to use.
+    default: 10Gi
+    global: true
+  KUBERNETES_CONTEXT:
+    description: The kubernetes context to use. E.g. my-kube-context
+  KUBERNETES_CONFIG:
+    description: The kubernetes config to use. E.g. /path/to/my/kube/config.yaml
+  KUBERNETES_PULL_SECRETS_ENABLED:
+    description: If true, DevPod will try to use the pull secrets from the current context.
+    default: "true"
+    type: boolean
+    global: true
+  KUBERNETES_NAMESPACE:
+    description: The kubernetes namespace to use. Defaults to devpod.
+    default: "devpod"
+  CREATE_NAMESPACE:
+    description: If true, DevPod will try to create the namespace.
+    default: "true"
+    type: boolean
+    global: true
+  CLUSTER_ROLE:
+    description: If defined, DevPod will create a role binding for the given cluster role.
+    global: true
+  SERVICE_ACCOUNT:
+    description: If defined, DevPod will use the given service account for the dev container.
+    global: true
+  INACTIVITY_TIMEOUT:
+    description: "If defined, will automatically stop the pod after the inactivity period. Examples: 10m, 1h"
+  POD_TIMEOUT:
+    description: "Determines how long the provider waits for the workspace pod to come up. Examples: 10m, 1h"
+    default: 10m
+  STORAGE_CLASS:
+    description: If defined, DevPod will use the given storage class to create the persistent volume claim. You will need to ensure the storage class exists in your cluster!
+    global: true
+  PVC_ACCESS_MODE:
+    description: If defined, DevPod will use the given access mode to create the persistent volume claim. You will need to ensure the storage class support the given access mode!. E.g. RWO or ROX or RWX or RWOP
+    global: true
+  PVC_ANNOTATIONS:
+    description: If defined, DevPod will use add the given annotations to the main workspace pvc
+    global: true
+  NODE_SELECTOR:
+    description: The node selector to use for the workspace pod. E.g. my-label=value,my-label-2=value-2
+    global: true
+  RESOURCES:
+    description: The resources to use for the workspace container. E.g. requests.cpu=500m,limits.memory=5Gi,limits.gpu-vendor.example/example-gpu=1
+    global: true
+  POD_MANIFEST_TEMPLATE:
+    description: Pod manifest template file path used as template to build the devpod pod. E.g. /path/pod_manifest.yaml. Alternatively can be an inline yaml string.
+    global: true
+    type: multiline
+  LABELS:
+    description: The labels to use for the workspace pod. E.g. devpod.sh/example=value,devpod.sh/example2=value2
+    global: true
+  DOCKERLESS_IMAGE:
+    description: The dockerless image to use.
+    global: true
+  DOCKERLESS_DISABLED:
+    description: If dockerless should be disabled. Dockerless is the way DevPod uses to build images directly within Kubernetes. If dockerless is disabled and no image is specified, DevPod will fail instead.
+    global: true
+    default: "false"
+  STRICT_SECURITY:
+    description: "EXPERIMENTAL! Use at your own risk. Removes the default security context and merges the one from POD_MANIFEST_TEMPLATE if specified."
+    type: boolean
+    default: false
+  WORKSPACE_VOLUME_MOUNT:
+    description: Sets the path of the workspace volume mount. By default it is the root of your workspace source code, usually /workspaces/$WORKSPACE_ID. If you intend to create multi-repo workspaces or need additional files throughout the lifecycle of the workspace, set this option to a parent directory of the workspace mount.
+    type: string
+agent:
+  containerInactivityTimeout: ${INACTIVITY_TIMEOUT}
+  local: true
+  dockerless:
+    disabled: ${DOCKERLESS_DISABLED}
+    image: ${DOCKERLESS_IMAGE}
+  driver: kubernetes
+  kubernetes:
+    kubernetesContext: ${KUBERNETES_CONTEXT}
+    kubernetesConfig: ${KUBERNETES_CONFIG}
+    kubernetesNamespace: ${KUBERNETES_NAMESPACE}
+    podTimeout: ${POD_TIMEOUT}
+    kubernetesPullSecretsEnabled: ${KUBERNETES_PULL_SECRETS_ENABLED}
+    createNamespace: ${CREATE_NAMESPACE}
+    clusterRole: ${CLUSTER_ROLE}
+    serviceAccount: ${SERVICE_ACCOUNT}
+    architecture: ${ARCHITECTURE}
+    inactivityTimeout: ${INACTIVITY_TIMEOUT}
+    storageClass: ${STORAGE_CLASS}
+    pvcAccessMode: ${PVC_ACCESS_MODE}
+    pvcAnnotations: ${PVC_ANNOTATIONS}
+    nodeSelector: ${NODE_SELECTOR}
+    resources: ${RESOURCES}
+    workspaceVolumeMount: ${WORKSPACE_VOLUME_MOUNT}
+    podManifestTemplate: ${POD_MANIFEST_TEMPLATE}
+    labels: ${LABELS}
+    strictSecurity: ${STRICT_SECURITY}
+exec:
+  command: |-
+    "${DEVPOD}" helper sh -c "${COMMAND}"
