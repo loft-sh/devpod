@@ -35,12 +35,12 @@ use resource_watcher::{ProState, WorkspacesState};
 use std::sync::{Arc, Mutex};
 use system_tray::SystemTray;
 use tauri::{tray::TrayIconBuilder, Manager, Wry};
+use tokio::sync::{
     mpsc::{self, Sender},
     RwLock,
 };
 use ui_messages::UiMessage;
 use util::{kill_child_processes, QUIT_EXIT_CODE};
-use workspaces::WorkspacesState;
 
 pub type AppHandle = tauri::AppHandle<Wry>;
 

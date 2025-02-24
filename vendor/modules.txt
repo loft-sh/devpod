@@ -1019,11 +1019,6 @@ github.com/opencontainers/runtime-spec/specs-go
 # github.com/otiai10/copy v1.7.0
 ## explicit; go 1.14
 github.com/otiai10/copy
-# github.com/peterbourgon/ff/v3 v3.4.0
-## explicit; go 1.18
-github.com/peterbourgon/ff/v3
-github.com/peterbourgon/ff/v3/ffcli
-github.com/peterbourgon/ff/v3/internal
 # github.com/pierrec/lz4/v4 v4.1.21
 ## explicit; go 1.14
 github.com/pierrec/lz4/v4
@@ -1089,11 +1084,6 @@ github.com/shibumi/go-pathspec
 # github.com/sirupsen/logrus v1.9.3
 ## explicit; go 1.13
 github.com/sirupsen/logrus
-# github.com/skip2/go-qrcode v0.0.0-20200617195104-da1b6568686e
-## explicit; go 1.13
-github.com/skip2/go-qrcode
-github.com/skip2/go-qrcode/bitset
-github.com/skip2/go-qrcode/reedsolomon
 # github.com/skratchdot/open-golang v0.0.0-20200116055534-eef842397966
 ## explicit
 github.com/skratchdot/open-golang/open
@@ -1180,9 +1170,6 @@ github.com/tonistiigi/units
 # github.com/tonistiigi/vt100 v0.0.0-20240514184818-90bafcd6abab
 ## explicit; go 1.12
 github.com/tonistiigi/vt100
-# github.com/toqueteos/webbrowser v1.2.0
-## explicit; go 1.12
-github.com/toqueteos/webbrowser
 # github.com/u-root/uio v0.0.0-20240118234441-a3c409a6018e
 ## explicit; go 1.16
 github.com/u-root/uio/rand
@@ -1393,7 +1380,6 @@ golang.org/x/net/websocket
 ## explicit; go 1.18
 golang.org/x/oauth2
 golang.org/x/oauth2/authhandler
-golang.org/x/oauth2/clientcredentials
 golang.org/x/oauth2/google
 golang.org/x/oauth2/google/externalaccount
 golang.org/x/oauth2/google/internal/externalaccountauthorizeduser
@@ -2438,10 +2424,6 @@ sigs.k8s.io/structured-merge-diff/v4/value
 ## explicit; go 1.12
 sigs.k8s.io/yaml
 sigs.k8s.io/yaml/goyaml.v2
-# software.sslmate.com/src/go-pkcs12 v0.4.0
-## explicit; go 1.19
-software.sslmate.com/src/go-pkcs12
-software.sslmate.com/src/go-pkcs12/internal/rc2
 # tailscale.com v1.68.2 => github.com/loft-sh/tailscale v1.78.1-loft.4
 ## explicit; go 1.23.1
 tailscale.com
@@ -2452,9 +2434,6 @@ tailscale.com/client/tailscale/apitype
 tailscale.com/client/web
 tailscale.com/clientupdate
 tailscale.com/clientupdate/distsign
-tailscale.com/cmd/tailscale/cli
-tailscale.com/cmd/tailscale/cli/ffcomplete
-tailscale.com/cmd/tailscale/cli/ffcomplete/internal
 tailscale.com/control/controlbase
 tailscale.com/control/controlclient
 tailscale.com/control/controlhttp
@@ -2544,7 +2523,6 @@ tailscale.com/syncs
 tailscale.com/tailcfg
 tailscale.com/taildrop
 tailscale.com/tempfork/heap
-tailscale.com/tempfork/spf13/cobra
 tailscale.com/tka
 tailscale.com/tsconst
 tailscale.com/tsd
@@ -2597,7 +2575,6 @@ tailscale.com/util/osdiag/internal/wsc
 tailscale.com/util/osshare
 tailscale.com/util/osuser
 tailscale.com/util/progresstracking
-tailscale.com/util/quarantine
 tailscale.com/util/race
 tailscale.com/util/racebuild
 tailscale.com/util/rands
