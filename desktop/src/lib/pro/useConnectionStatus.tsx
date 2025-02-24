@@ -6,14 +6,6 @@ type TConnectionState = "connected" | "disconnected"
 type TConnectionStatus = {
   state?: TConnectionState
   isLoading: boolean
-  details?: {
-    platform: {
-      state: TConnectionState
-    }
-    daemon?: {
-      state: TConnectionState
-    }
-  }
 }
 export function useConnectionStatus(): TConnectionStatus {
   const { host, client } = useProContext()
@@ -23,24 +15,11 @@ export function useConnectionStatus(): TConnectionStatus {
       try {
         const connectionStatus: Omit<TConnectionStatus, "isLoading"> = {
           state: "disconnected",
-          details: {
-            platform: {
-              state: "disconnected",
-            },
-          },
         }
 
-        const platformRes = await client.checkPlatformHealth()
+        const platformRes = await client.checkHealth()
         if (platformRes.ok && platformRes.val.healthy) {
-          connectionStatus.details!.platform.state = "connected"
           connectionStatus.state = "connected"
-        }
-
-        const daemonRes = await client.checkDaemonHealth()
-        if (daemonRes.ok && daemonRes.val.found && daemonRes.val.status?.state == "running") {
-          connectionStatus.details!.daemon = {
-            state: "connected",
-          }
         }
 
         return connectionStatus

@@ -1,17 +1,18 @@
 use crate::{ui_messages, util, AppHandle, AppState};
 use axum::{
+    body::Body,
     extract::{
         connect_info::ConnectInfo,
         ws::{Message, WebSocket, WebSocketUpgrade},
-        Path, State as AxumState,
+        Path, Request, State as AxumState,
     },
     http::{HeaderMap, StatusCode},
     response::{IntoResponse, Response},
-    routing::{get, post},
+    routing::{any, get, post},
     Json, Router,
 };
-use http::Method;
-use log::{error, info, warn};
+use http::{uri::PathAndQuery, Method};
+use log::{info, warn};
 use serde::{Deserialize, Serialize};
 use std::net::SocketAddr;
 use tauri::{Manager, State};
@@ -37,6 +38,7 @@ pub async fn setup(app_handle: &AppHandle) -> anyhow::Result<()> {
         .route("/releases", get(releases_handler))
         .route("/child-process/signal", post(signal_handler))
         .route("/daemon/:pro_id/status", get(daemon_status_handler))
+        .route("/daemon-proxy/:pro_id/*path", any(daemon_proxy_handler))
         .with_state(state)
         .layer(cors);
 
@@ -88,6 +90,38 @@ async fn daemon_status_handler(
     return match pro.find_instance(pro_id) {
         Some(pro_instance) => match pro_instance.daemon() {
             Some(daemon) => Json(daemon.status()).into_response(),
+            None => StatusCode::NOT_FOUND.into_response(),
+        },
+        None => StatusCode::NOT_FOUND.into_response(),
+    };
+}
+
+async fn daemon_proxy_handler(
+    Path((pro_id, path)): Path<(String, String)>,
+    AxumState(server): AxumState<ServerState>,
+    mut req: Request<Body>,
+) -> impl IntoResponse {
+    let state = server.app_handle.state::<AppState>();
+    let pro = state.pro.read().await;
+    return match pro.find_instance(pro_id) {
+        Some(pro_instance) => match pro_instance.daemon() {
+            Some(daemon) => {
+                // strip `daemon-proxy/:pro_id` from path before we hand the request to the daemon
+                let original_query = req.uri().query();
+                let new_path_with_query = match original_query {
+                    Some(query) => format!("/{}?{}", path, query),
+                    None => format!("/{}", path)
+                };
+                let mut parts = req.uri().clone().into_parts();
+                parts.path_and_query = Some(new_path_with_query.parse().expect("Invalid path"));
+                let new_uri = http::Uri::from_parts(parts).expect("Failed to build new URI");
+                *req.uri_mut() = new_uri;
+
+                return match daemon.proxy_request(req).await {
+                    Ok(res) => res.into_response(),
+                    Err(_) => StatusCode::INTERNAL_SERVER_ERROR.into_response(),
+                };
+            }
             None => StatusCode::NOT_FOUND.into_response(),
         },
         None => StatusCode::NOT_FOUND.into_response(),

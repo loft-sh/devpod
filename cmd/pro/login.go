@@ -34,9 +34,10 @@ type LoginCmd struct {
 
 	Options []string
 
-	Login        bool
-	Use          bool
-	ForceBrowser bool
+	Login         bool
+	Use           bool
+	ForceBrowser  bool
+	ProxyProvider bool
 }
 
 // NewLoginCmd creates a new command
@@ -63,6 +64,7 @@ func NewLoginCmd(flags *proflags.GlobalFlags) *cobra.Command {
 	loginCmd.Flags().StringVar(&cmd.Version, "version", "", "The version to use for the DevPod provider")
 	loginCmd.Flags().StringArrayVarP(&cmd.Options, "option", "o", []string{}, "Provider option in the form KEY=VALUE")
 	loginCmd.Flags().BoolVar(&cmd.ForceBrowser, "force-browser", false, "Force login through browser")
+	loginCmd.Flags().BoolVar(&cmd.ProxyProvider, "proxy-provider", false, "Install proxy provider instead of built-in daemon provider")
 
 	loginCmd.Flags().StringVar(&cmd.ProviderSource, "provider-source", "", "The source of the provider")
 	_ = loginCmd.Flags().MarkHidden("provider-source")
@@ -141,9 +143,19 @@ func (cmd *LoginCmd) Run(ctx context.Context, fullURL string, log log.Logger) er
 			CreationTimestamp: types.Now(),
 		}
 
-		err = cmd.addLoftProvider(devPodConfig, fullURL, log)
-		if err != nil {
-			return err
+		// proxy providers are deprecated and shouldn't be used
+		// unless explicitly requiring one
+		if cmd.ProxyProvider {
+			err = cmd.addLoftProvider(devPodConfig, fullURL, log)
+			if err != nil {
+				return err
+			}
+		} else {
+			// add built-in pro (daemon) provider
+			_, err = workspace.AddProvider(devPodConfig, cmd.Provider, "pro", log)
+			if err != nil {
+				return err
+			}
 		}
 
 		err = provider.SaveProInstanceConfig(devPodConfig.DefaultContext, currentInstance)
@@ -181,7 +193,7 @@ func (cmd *LoginCmd) Run(ctx context.Context, fullURL string, log log.Logger) er
 		}
 	}
 
-	log.Donef("Successfully configured Loft DevPod Pro")
+	log.Donef("Successfully configured DevPod Pro")
 	return nil
 }
 
@@ -231,7 +243,7 @@ func (cmd *LoginCmd) resolveProviderSource(url string) error {
 }
 
 func login(ctx context.Context, devPodConfig *config.Config, url string, providerName string, accessKey string, skipBrowserLogin, forceBrowser bool, log log.Logger) error {
-	configPath, err := platform.LoftConfigPath(devPodConfig, providerName)
+	configPath, err := platform.LoftConfigPath(devPodConfig.DefaultContext, providerName)
 	if err != nil {
 		return err
 	}
