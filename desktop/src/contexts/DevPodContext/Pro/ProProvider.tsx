@@ -10,6 +10,7 @@ import { ReactNode, createContext, useContext, useEffect, useMemo, useState } fr
 import { useNavigate } from "react-router-dom"
 import { ProWorkspaceStore, useWorkspaceStore } from "../workspaceStore"
 import { ContextSwitcher, HOST_OSS } from "./ContextSwitcher"
+import { useProInstances } from "../proInstances"
 
 type TProContext = Readonly<{
   managementSelfQuery: UseQueryResult<ManagementV1Self | undefined>
@@ -21,22 +22,32 @@ type TProContext = Readonly<{
 }>
 const ProContext = createContext<TProContext>(null!)
 export function ProProvider({ host, children }: { host: string; children: ReactNode }) {
+  const [[proInstances]] = useProInstances()
   const [isLoadingWorkspaces, setIsLoadingWorkspaces] = useState(false)
   const navigate = useNavigate()
   const { store } = useWorkspaceStore<ProWorkspaceStore>()
-  const client = useMemo(() => globalClient.getProClient(host), [host])
+  const client = useMemo(() => {
+    const maybeProInstance = proInstances?.find((instance) => instance.host == host)
+    if (!maybeProInstance) {
+      return null
+    }
+
+    return globalClient.getProClient(maybeProInstance)
+  }, [proInstances, host])
   const [selectedProject, setSelectedProject] = useState<ManagementV1Project | null>(null)
   const managementSelfQuery = useQuery({
-    queryKey: ["managementSelf"],
+    queryKey: ["managementSelf", client],
     queryFn: async () => {
-      return (await client.getSelf()).unwrap()
+      return (await client!.getSelf()).unwrap()
     },
+    enabled: !!client,
   })
   const projectsQuery = useQuery({
-    queryKey: ["pro", host, "projects"],
+    queryKey: ["pro", host, "projects", client],
     queryFn: async () => {
-      return (await client.listProjects()).unwrap()
+      return (await client!.listProjects()).unwrap()
     },
+    enabled: !!client,
   })
 
   const currentProject = useMemo<ManagementV1Project | undefined>(() => {
@@ -54,7 +65,7 @@ export function ProProvider({ host, children }: { host: string; children: ReactN
   const [waitingForCancel, setWaitingForCancel] = useState<boolean>(false)
 
   useEffect(() => {
-    if (!currentProject?.metadata?.name) {
+    if (!currentProject?.metadata?.name || !client) {
       return
     }
     setIsLoadingWorkspaces(true)
@@ -120,10 +131,14 @@ export function ProProvider({ host, children }: { host: string; children: ReactN
       currentProject,
       projectsQuery,
       host,
-      client,
+      client: client!,
       isLoadingWorkspaces,
     }
   }, [managementSelfQuery, currentProject, projectsQuery, host, client, isLoadingWorkspaces])
+
+  if (!client) {
+    return null
+  }
 
   return (
     <ProContext.Provider value={value}>

@@ -1,27 +1,28 @@
 import { UseToastOptions } from "@chakra-ui/react"
 import { app, event, path } from "@tauri-apps/api"
 import { invoke } from "@tauri-apps/api/core"
-import { Command } from "@tauri-apps/plugin-shell"
 import { Theme as TauriTheme, getCurrentWindow } from "@tauri-apps/api/window"
+import * as clipboard from "@tauri-apps/plugin-clipboard-manager"
+import * as dialog from "@tauri-apps/plugin-dialog"
+import * as fs from "@tauri-apps/plugin-fs"
 import * as log from "@tauri-apps/plugin-log"
+import * as os from "@tauri-apps/plugin-os"
+import * as process from "@tauri-apps/plugin-process"
+import * as shell from "@tauri-apps/plugin-shell"
+import { Command } from "@tauri-apps/plugin-shell"
+import * as updater from "@tauri-apps/plugin-updater"
 import { TSettings } from "../contexts"
 import { Release } from "../gen"
 import { Result, Return, isError, noop } from "../lib"
-import { TCommunityContributions, TProID, TUnsubscribeFn } from "../types"
+import { TCommunityContributions, TProInstance, TUnsubscribeFn } from "../types"
 import { Command as DevPodCommand } from "./command"
 import { ContextClient } from "./context"
 import { IDEsClient } from "./ides"
 import { ProClient } from "./pro"
+import { DaemonClient } from "./pro/client"
 import { ProvidersClient } from "./providers"
-import { WorkspacesClient } from "./workspaces"
-import * as clipboard from "@tauri-apps/plugin-clipboard-manager"
-import * as dialog from "@tauri-apps/plugin-dialog"
-import * as fs from "@tauri-apps/plugin-fs"
-import * as os from "@tauri-apps/plugin-os"
-import * as process from "@tauri-apps/plugin-process"
-import * as shell from "@tauri-apps/plugin-shell"
-import * as updater from "@tauri-apps/plugin-updater"
 import { TAURI_SERVER_URL } from "./tauriClient"
+import { WorkspacesClient } from "./workspaces"
 
 // These types have to match the rust types! Make sure to update them as well!
 type TChannels = {
@@ -383,8 +384,12 @@ class Client {
     logFn(message)
   }
 
-  public getProClient(id: TProID): ProClient {
-    return new ProClient(id)
+  public getProClient(proInstance: TProInstance): ProClient {
+    if (proInstance.capabilities?.includes("daemon")) {
+      return new DaemonClient(proInstance.host!)
+    } else {
+      return new ProClient(proInstance.host!)
+    }
   }
 }
 

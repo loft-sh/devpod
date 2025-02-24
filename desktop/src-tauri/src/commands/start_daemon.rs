@@ -3,7 +3,7 @@ use tauri_plugin_shell::process::Command;
 
 use super::{
     config::{CommandConfig, DevpodCommandConfig, DevpodCommandError},
-    constants::{DEVPOD_BINARY_NAME, DEVPOD_COMMAND_PRO, DEVPOD_COMMAND_START_DAEMON, FLAG_DEBUG, FLAG_HOST},
+    constants::{DEVPOD_BINARY_NAME, DEVPOD_COMMAND_PRO, DEVPOD_COMMAND_DAEMON, DEVPOD_COMMAND_START, FLAG_DEBUG, FLAG_HOST},
 };
 
 pub struct StartDaemonCommand {
@@ -39,7 +39,8 @@ impl DevpodCommandConfig<()> for StartDaemonCommand {
             binary_name: DEVPOD_BINARY_NAME,
             args: vec![
                 DEVPOD_COMMAND_PRO,
-                DEVPOD_COMMAND_START_DAEMON,
+                DEVPOD_COMMAND_DAEMON,
+                DEVPOD_COMMAND_START,
                 &self.host_flag,
                 &self.debug_flag,
             ],

@@ -2,7 +2,13 @@ use crate::daemon::DaemonStatus;
 use anyhow::anyhow;
 use bytes::{Buf, Bytes};
 use core::time;
+use http::Uri;
 use http_body_util::{BodyExt, Empty};
+use hyper::{
+    body::{Body, Incoming},
+    client::conn::http1::SendRequest,
+    header,
+};
 use log::error;
 use pin_project_lite::pin_project;
 use serde::de::DeserializeOwned;
@@ -14,6 +20,9 @@ use std::{
 };
 use tokio::io::AsyncWriteExt;
 
+pub type Request = hyper::Request<axum::body::Body>;
+pub type Response = hyper::Response<hyper::body::Incoming>;
+#[derive(Debug)]
 pub struct Client {
     socket: String,
 }
@@ -23,11 +32,42 @@ impl Client {
     }
 
     pub async fn status(&self) -> anyhow::Result<DaemonStatus> {
-        let res = self.do_request::<DaemonStatus>("/status").await?;
+        let res = self.get::<DaemonStatus>("/status").await?;
         return Ok(res);
     }
 
-    async fn do_request<T: DeserializeOwned>(&self, target_path: &str) -> anyhow::Result<T> {
+    pub async fn proxy(&self, mut req: Request) -> anyhow::Result<Response> {
+        let addr = Path::new(&self.socket);
+        let handshake_stream = HandshakeStream::connect(&addr).await?;
+        let io = TokioIo::new(handshake_stream);
+
+        let (mut sender, conn) = hyper::client::conn::http1::handshake(io).await?;
+        tokio::task::spawn(async move {
+            if let Err(err) = conn.await {
+                error!("Connection failed: {:?}", err);
+            }
+        });
+
+        let path_and_query = req
+            .uri()
+            .path_and_query()
+            .map(|pq| pq.as_str())
+            .unwrap_or("");
+        let new_uri = format!("http://localclient.devpod{}", path_and_query);
+        *req.uri_mut() = new_uri
+            .parse::<Uri>()
+            .map_err(|e| anyhow!("failed to parse new URI: {:?}", e))?;
+
+        req.headers_mut().insert(
+            header::HOST,
+            header::HeaderValue::from_static("sh.loft.devpod.desktop"),
+        );
+
+        let res = sender.send_request(req).await?;
+        return Ok(res);
+    }
+
+    async fn get<T: DeserializeOwned>(&self, target_path: &str) -> anyhow::Result<T> {
         let addr = Path::new(&self.socket);
         let handshake_stream = HandshakeStream::connect(&addr).await?;
         let io = TokioIo::new(handshake_stream);
@@ -73,10 +113,12 @@ type InnerStream = tokio::net::windows::named_pipe::NamedPipeClient;
 impl HandshakeStream {
     pub async fn connect(p: &Path) -> tokio::io::Result<Self> {
         let mut inner: InnerStream;
-        #[cfg(not(windows))] {
+        #[cfg(not(windows))]
+        {
             inner = tokio::net::UnixStream::connect(p).await?;
         }
-        #[cfg(windows)] {
+        #[cfg(windows)]
+        {
             inner = tokio::net::windows::named_pipe::ClientOptions::new().open(p)?;
         }
         let mut hs = HandshakeStream { inner };
