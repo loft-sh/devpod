@@ -116,6 +116,17 @@ func OptionsFromEnv(name string) url.Values {
 	return nil
 }
 
+func URLOptions(options any) url.Values {
+	raw, _ := json.Marshal(options)
+	if options != "" {
+		return url.Values{
+			"options": []string{string(raw)},
+		}
+	}
+
+	return nil
+}
+
 func DialInstance(baseClient client.Client, workspace *managementv1.DevPodWorkspaceInstance, subResource string, values url.Values, log log.Logger) (*websocket.Conn, error) {
 	restConfig, err := baseClient.ManagementConfig()
 	if err != nil {

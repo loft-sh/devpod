@@ -166,5 +166,5 @@ export function deepCopy<T>(obj: T): T | undefined {
 }
 
 export function canHealthCheck(providerConfig: TProvider["config"]): boolean {
-  return !!providerConfig?.exec?.proxy?.["health"]
+  return !!providerConfig?.exec?.proxy?.["health"] || !!providerConfig?.exec?.daemon
 }

@@ -62,8 +62,9 @@ export type TProviderConfig = Readonly<{
   icon: TMaybe<string>
   home: TMaybe<string>
   exec:
-    | TMaybe<Record<string, readonly string[]> & { proxy: never }>
-    | TMaybe<{ proxy: TMaybe<Record<string, readonly string[]>> }>
+    | TMaybe<Record<string, readonly string[]> & { proxy: never; daemon: never }>
+    | TMaybe<{ proxy: TMaybe<Record<string, readonly string[]>>; daemon: never }>
+    | TMaybe<{ daemon: TMaybe<Record<string, readonly string[]>>; proxy: never }>
 }>
 export type TProviderOptionGroup = Readonly<{
   name: TMaybe<string>
@@ -234,6 +235,7 @@ export type TProInstance = Readonly<{
   provider: TMaybe<string>
   creationTimestamp: TMaybe<string>
   authenticated: TMaybe<boolean>
+  capabilities: TMaybe<readonly string[]>
 }>
 export type TProInstances = readonly TProInstance[]
 export type TProInstanceManager = Readonly<{

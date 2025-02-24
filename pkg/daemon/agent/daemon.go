@@ -1,4 +1,4 @@
-package daemon
+package agent
 
 import (
 	"errors"

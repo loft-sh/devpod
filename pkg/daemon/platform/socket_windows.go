@@ -4,9 +4,10 @@ package daemon
 
 import (
 	"fmt"
-	"gopkg.in/natefinch/npipe.v2"
 	"net"
 	"time"
+
+	"gopkg.in/natefinch/npipe.v2"
 )
 
 func GetSocketAddr(preferredDir, providerName string) string {

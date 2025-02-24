@@ -723,6 +723,9 @@ github.com/jsimonetti/rtnetlink/internal/unix
 # github.com/json-iterator/go v1.1.12
 ## explicit; go 1.12
 github.com/json-iterator/go
+# github.com/julienschmidt/httprouter v1.3.0
+## explicit; go 1.7
+github.com/julienschmidt/httprouter
 # github.com/k0kubun/go-ansi v0.0.0-20180517002512-3bf9e2903213
 ## explicit
 github.com/k0kubun/go-ansi

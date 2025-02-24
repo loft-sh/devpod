@@ -13,7 +13,7 @@ use log::{debug, error, info};
 use serde::Deserialize;
 use std::{collections::HashSet, hash::Hash, time};
 use tauri::{
-    async_runtime::{Receiver, JoinHandle},
+    async_runtime::Receiver,
     image::Image,
     menu::{IconMenuItem, MenuItem, Submenu, SubmenuBuilder},
     Manager, Wry,
@@ -197,37 +197,38 @@ pub struct Daemon {
     command: Option<(Receiver<CommandEvent>, CommandChild)>,
     retry_count: i64,
     notified_user: bool,
+    client: daemon::client::Client,
 
     context: Option<String>,
     provider: Option<String>,
 }
 impl Daemon {
-    pub fn new(context: Option<String>, provider: Option<String>) -> Daemon {
-        return Daemon {
+    pub fn new(context: Option<String>, provider: Option<String>) -> anyhow::Result<Daemon> {
+        let socket_addr = Daemon::get_socket_addr(context.clone(), provider.clone())?;
+        let client = daemon::client::Client::new(socket_addr);
+
+        return Ok(Daemon {
             status: daemon::DaemonStatus::default(),
             command: None,
             retry_count: 0,
             notified_user: false,
             context,
             provider,
-        };
+            client,
+        });
     }
 
-    pub fn status(&self) -> &daemon::DaemonStatus {
-        return &self.status;
-    }
-
-    fn get_socket_addr(&self) -> Result<String, DevpodCommandError> {
-        let provider = self
-            .provider
-            .clone()
-            .ok_or(DevpodCommandError::Any(anyhow!(
-                "provider not set for pro instance"
-            )))?;
+    fn get_socket_addr(
+        context: Option<String>,
+        provider: Option<String>,
+    ) -> Result<String, DevpodCommandError> {
+        let provider = provider.clone().ok_or(DevpodCommandError::Any(anyhow!(
+            "provider not set for pro instance"
+        )))?;
         #[cfg(unix)]
         {
-            let home = self.get_home()?;
-            let context = self.context.clone().unwrap_or("default".to_string());
+            let home = Self::get_home()?;
+            let context = context.clone().unwrap_or("default".to_string());
 
             return Ok(format!(
                 "{}/contexts/{}/providers/{}/daemon/devpod.sock",
@@ -240,7 +241,40 @@ impl Daemon {
         }
     }
 
-    pub async fn try_start(&mut self, host: String, app_handle: &AppHandle)  {
+    fn get_home() -> anyhow::Result<String> {
+        if let Ok(devpod_home) = std::env::var("DEVPOD_HOME") {
+            return Ok(devpod_home);
+        }
+
+        if let Some(mut home) = home_dir() {
+            home.push(".devpod");
+            if let Some(home) = home.to_str() {
+                return Ok(home.to_owned());
+            }
+        }
+
+        return Err(anyhow!("Failed to get home directory for current user"));
+    }
+
+    pub fn status(&self) -> &daemon::DaemonStatus {
+        return &self.status;
+    }
+
+    pub async fn get_status(&self) -> anyhow::Result<daemon::DaemonStatus> {
+        return self.client.status().await;
+    }
+
+    pub async fn proxy_request(
+        &self,
+        req: daemon::client::Request,
+    ) -> anyhow::Result<daemon::client::Response> {
+        let path = req.uri().path_and_query();
+        debug!("proxying daemon request: {}", path.expect("Invalid path"));
+
+        return self.client.proxy(req).await;
+    }
+
+    pub async fn try_start(&mut self, host: String, app_handle: &AppHandle) {
         if !self.should_retry() {
             self.try_notify_failed(app_handle);
             return;
@@ -251,7 +285,7 @@ impl Daemon {
         );
         self.retry_count += 1;
         if let Some(_) = self.command {
-             self.try_stop().await;
+            self.try_stop().await;
         }
         match self.spawn(host, app_handle).await {
             Ok(command) => {
@@ -263,7 +297,7 @@ impl Daemon {
         }
     }
 
-    pub async fn try_stop(&mut self)  {
+    pub async fn try_stop(&mut self) {
         if let Some(command) = self.command.take() {
             let pid = command.1.pid();
             if let Err(err) = command.1.kill() {
@@ -332,21 +366,6 @@ impl Daemon {
             self.notified_user = true;
         }
     }
-
-    fn get_home(&self) -> anyhow::Result<String> {
-        if let Ok(devpod_home) = std::env::var("DEVPOD_HOME") {
-            return Ok(devpod_home);
-        }
-
-        if let Some(mut home) = home_dir() {
-            home.push(".devpod");
-            if let Some(home) = home.to_str() {
-                return Ok(home.to_owned());
-            }
-        }
-
-        return Err(anyhow!("Failed to get home directory for current user"));
-    }
 }
 
 impl ToSystemTraySubmenu for ProState {
@@ -369,7 +388,6 @@ pub fn setup(app_handle: &AppHandle) {
             };
             let _ = tokio::time::sleep(sleep_duration).await;
         }
-        ()
     });
     resource_handles.push(daemon_watcher_handle);
 
@@ -384,7 +402,6 @@ pub fn setup(app_handle: &AppHandle) {
         }
     });
     resource_handles.push(resources_handle);
-
 }
 
 pub async fn shutdown(app_handle: &AppHandle) {
@@ -420,22 +437,20 @@ async fn watch_daemons(app_handle: &AppHandle) -> anyhow::Result<()> {
         }
         let daemon = instance.daemon();
         if daemon.is_none() {
-            instance.daemon = Some(Daemon::new(
-                instance.context.clone(),
-                instance.provider.clone(),
-            ));
+            instance.daemon = Some(
+                Daemon::new(instance.context.clone(), instance.provider.clone())
+                    .map_err(|err| anyhow!("Failed to create new daemon: {}", err))?,
+            );
         }
         let daemon = instance.daemon.as_mut().unwrap();
         if !daemon.should_retry() {
             continue;
         }
 
-        let socket_addr = daemon.get_socket_addr()?;
-        let daemon_client = daemon::client::Client::new(socket_addr);
         if let Some(menu_item) = &instance.menu_item {
             let _ = menu_item.set_icon(Some(daemon.status.state.get_icon()));
         }
-        match daemon_client.status().await {
+        match daemon.get_status().await {
             Ok(status) => {
                 daemon.status = status;
                 match daemon.status.state {
@@ -446,7 +461,7 @@ async fn watch_daemons(app_handle: &AppHandle) -> anyhow::Result<()> {
                         all_ready = false;
                         info!("[{}] daemon stopped, attempting to restart", id);
                         daemon.status.state = daemon::DaemonState::Pending;
-                         daemon.try_start(id, app_handle).await;
+                        daemon.try_start(id, app_handle).await;
                     }
                     daemon::DaemonState::Pending => {
                         all_ready = false;

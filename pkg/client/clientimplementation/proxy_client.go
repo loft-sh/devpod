@@ -163,6 +163,28 @@ func (s *proxyClient) RefreshOptions(ctx context.Context, userOptionsRaw []strin
 	return nil
 }
 
+func (s *proxyClient) Create(ctx context.Context, stdin io.Reader, stdout io.Writer, stderr io.Writer) error {
+	err := RunCommandWithBinaries(
+		ctx,
+		"createWorkspace",
+		s.config.Exec.Proxy.Create.Workspace,
+		s.workspace.Context,
+		s.workspace,
+		nil,
+		s.devPodConfig.ProviderOptions(s.config.Name),
+		s.config,
+		nil,
+		stdin,
+		stdout,
+		stderr,
+		s.log)
+	if err != nil {
+		return fmt.Errorf("create remote workspace : %w", err)
+	}
+
+	return nil
+}
+
 func (s *proxyClient) Up(ctx context.Context, opt client.UpOptions) error {
 	writer := devpodlog.PipeJSONStream(s.log.ErrorStreamOnly())
 	defer writer.Close()
