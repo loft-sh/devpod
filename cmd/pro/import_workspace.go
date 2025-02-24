@@ -15,6 +15,7 @@ import (
 	"github.com/loft-sh/devpod/pkg/platform/project"
 	provider2 "github.com/loft-sh/devpod/pkg/provider"
 	"github.com/loft-sh/devpod/pkg/random"
+	"github.com/loft-sh/devpod/pkg/workspace"
 	"github.com/loft-sh/log"
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
@@ -94,7 +95,7 @@ func (cmd *ImportCmd) Run(ctx context.Context, args []string) error {
 		cmd.WorkspaceId = newWorkspaceId
 	}
 
-	provider, err := platform.ProviderFromHost(ctx, devPodConfig, devPodProHost, cmd.log)
+	provider, err := workspace.ProviderFromHost(ctx, devPodConfig, devPodProHost, cmd.log)
 	if err != nil {
 		return fmt.Errorf("resolve provider: %w", err)
 	}

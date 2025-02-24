@@ -52,7 +52,10 @@ export function useAppReady() {
       // we don't really care about the result in the context of the GUI, just need to make sure it's updating
       await Promise.allSettled(
         proInstances
-          .filter((instance) => instance.provider && instance.host)
+          .filter(
+            (instance) =>
+              instance.provider && instance.host && instance.capabilities?.["update-provider"]
+          )
           .map(async (instance) => {
             const proClient = client.getProClient(instance.host!)
             const checkUpdateRes = await proClient.checkUpdate()

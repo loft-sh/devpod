@@ -125,7 +125,7 @@ func validate(config *ProviderConfig) error {
 }
 
 func validateProviderType(config *ProviderConfig) error {
-	if config.Exec.Proxy != nil {
+	if config.IsProxyProvider() {
 		if !reflect.DeepEqual(config.Agent, ProviderAgentConfig{}) {
 			return fmt.Errorf("agent config is not allowed for proxy providers")
 		}
@@ -161,6 +161,36 @@ func validateProviderType(config *ProviderConfig) error {
 		}
 		if len(config.Exec.Proxy.Up) == 0 {
 			return fmt.Errorf("exec.proxy.up is required for proxy providers")
+		}
+
+		return nil
+	}
+
+	// daemon provider
+	if config.IsDaemonProvider() {
+		if !reflect.DeepEqual(config.Agent, ProviderAgentConfig{}) {
+			return fmt.Errorf("agent config is not allowed for daemon providers")
+		}
+		if len(config.Exec.Command) > 0 {
+			return fmt.Errorf("exec.command is not allowed in daemon providers")
+		}
+		if len(config.Exec.Create) > 0 {
+			return fmt.Errorf("exec.create is not allowed in daemon providers")
+		}
+		if len(config.Exec.Start) > 0 {
+			return fmt.Errorf("exec.create is not allowed in daemon providers")
+		}
+		if len(config.Exec.Stop) > 0 {
+			return fmt.Errorf("exec.create is not allowed in daemon providers")
+		}
+		if len(config.Exec.Status) > 0 {
+			return fmt.Errorf("exec.create is not allowed in daemon providers")
+		}
+		if len(config.Exec.Delete) > 0 {
+			return fmt.Errorf("exec.create is not allowed in daemon providers")
+		}
+		if len(config.Exec.Daemon.Start) == 0 {
+			return fmt.Errorf("exec.daemon.start is required for daemon providers")
 		}
 
 		return nil

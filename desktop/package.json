@@ -9,7 +9,7 @@
     "preview": "vite preview",
     "tauri": "tauri",
     "desktop:dev": "tauri dev --config src-tauri/tauri-dev.conf.json",
-    "desktop:dev:debug": "export DEBUG=true; yarn desktop:dev",
+    "desktop:dev:debug": "DEBUG=true yarn desktop:dev",
     "desktop:build:dev": "DEBUG=true tauri build --config src-tauri/tauri-dev.conf.json",
     "desktop:build:flatpak": "DEBUG=true tauri build --config src-tauri/tauri-flatpak.conf.json",
     "desktop:build:debug": "tauri build --debug",

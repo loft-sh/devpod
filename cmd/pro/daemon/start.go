@@ -1,11 +1,15 @@
-package pro
+package daemon
 
 import (
 	"context"
 	"fmt"
-	platformdaemon "github.com/loft-sh/devpod/pkg/platform/daemon"
-	"github.com/sirupsen/logrus"
 	"os"
+	"path/filepath"
+
+	managementv1 "github.com/loft-sh/api/v4/pkg/apis/management/v1"
+	platformdaemon "github.com/loft-sh/devpod/pkg/daemon/platform"
+	"github.com/loft-sh/devpod/pkg/platform/client"
+	"github.com/sirupsen/logrus"
 
 	proflags "github.com/loft-sh/devpod/cmd/pro/flags"
 	"github.com/loft-sh/devpod/pkg/config"
@@ -14,21 +18,21 @@ import (
 	"github.com/spf13/cobra"
 )
 
-// DaemonStartCmd holds the devpod daemon flags
-type DaemonStartCmd struct {
+// StartCmd holds the devpod daemon flags
+type StartCmd struct {
 	*proflags.GlobalFlags
 
 	Host string
 	Log  log.Logger
 }
 
-// NewDaemonStartCmd creates a new command
-func NewDaemonStartCmd(flags *proflags.GlobalFlags) *cobra.Command {
-	cmd := &DaemonStartCmd{
+// NewStartCmd creates a new command
+func NewStartCmd(flags *proflags.GlobalFlags) *cobra.Command {
+	cmd := &StartCmd{
 		GlobalFlags: flags,
 	}
 	c := &cobra.Command{
-		Use:   "daemon-start",
+		Use:   "start",
 		Short: "Start the client daemon",
 		RunE: func(cobraCmd *cobra.Command, args []string) error {
 			devPodConfig, provider, err := findProProvider(cobraCmd.Context(), cmd.Context, cmd.Provider, cmd.Host, cmd.Log)
@@ -46,13 +50,30 @@ func NewDaemonStartCmd(flags *proflags.GlobalFlags) *cobra.Command {
 	return c
 }
 
-func (cmd *DaemonStartCmd) Run(ctx context.Context, devPodConfig *config.Config, provider *providerpkg.ProviderConfig) error {
+func (cmd *StartCmd) Run(ctx context.Context, devPodConfig *config.Config, provider *providerpkg.ProviderConfig) error {
 	dir, err := ensureDaemonDir(devPodConfig.DefaultContext, provider.Name)
 	if err != nil {
 		return err
 	}
 
-	d, err := platformdaemon.Init(ctx, dir, provider.Name, cmd.Debug)
+	loftConfigPath := filepath.Join(dir, "..", "loft-config.json")
+	baseClient, err := client.InitClientFromPath(ctx, loftConfigPath)
+	if err != nil {
+		return err
+	}
+	userName := getUserName(baseClient.Self())
+	if userName == "" {
+		return fmt.Errorf("user name not set")
+	}
+
+	d, err := platformdaemon.Init(ctx, platformdaemon.InitConfig{
+		RootDir:        dir,
+		ProviderName:   provider.Name,
+		Context:        devPodConfig.DefaultContext,
+		UserName:       userName,
+		PlatformClient: baseClient,
+		Debug:          cmd.Debug,
+	})
 	if err != nil {
 		return fmt.Errorf("init daemon: %w", err)
 	}
@@ -80,4 +101,16 @@ func ensureDaemonDir(context, providerName string) (string, error) {
 func logInitialized() {
 	logger := log.NewStreamLogger(os.Stdout, os.Stderr, logrus.InfoLevel)
 	logger.Done("Initialized daemon")
+}
+
+func getUserName(self *managementv1.Self) string {
+	if self.Status.User != nil {
+		return self.Status.User.Name
+	}
+
+	if self.Status.Team != nil {
+		return self.Status.Team.Name
+	}
+
+	return self.Status.Subject
 }
