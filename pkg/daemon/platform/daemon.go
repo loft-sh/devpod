@@ -11,7 +11,6 @@ import (
 	"time"
 
 	devpodlog "github.com/loft-sh/devpod/pkg/log"
-	"github.com/loft-sh/devpod/pkg/platform"
 	"github.com/loft-sh/devpod/pkg/platform/client"
 	"github.com/loft-sh/log"
 	"github.com/sirupsen/logrus"
@@ -26,36 +25,36 @@ type Daemon struct {
 	log            log.Logger
 }
 
-func Init(ctx context.Context, rootDir string, providerName string, debug bool) (*Daemon, error) {
-	log := initLogging(rootDir, debug)
+type InitConfig struct {
+	RootDir        string
+	Context        string
+	ProviderName   string
+	UserName       string
+	PlatformClient client.Client
 
-	socket := GetSocketAddr(rootDir, providerName)
-	log.Infof("Starting Daemon on address: %s", socket)
+	Debug bool
+}
+
+func Init(ctx context.Context, config InitConfig) (*Daemon, error) {
+	log := initLogging(config.RootDir, config.Debug)
+
+	socketAddr := GetSocketAddr(config.RootDir, config.ProviderName)
+	log.Infof("Starting Daemon on address: %s", socketAddr)
 	// listen to socket for early return  in case it's already in use
-	socketListener, err := listen(socket)
+	socketListener, err := listen(socketAddr)
 	if err != nil {
 		return nil, fmt.Errorf("listen on socket: %w", err)
 	}
 
-	loftConfigPath := filepath.Join(rootDir, "..", "loft-config.json")
-	baseClient, err := client.InitClientFromPath(ctx, loftConfigPath)
+	platformConfig := config.PlatformClient.Config()
+	tsServer, lc, err := newTSServer(ctx, platformConfig.Host, platformConfig.AccessKey, config.UserName, config.RootDir, platformConfig.Insecure, log)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("create tailscale server: %w", err)
 	}
 
-	userName := platform.GetUserName(baseClient.Self())
-	if userName == "" {
-		return nil, fmt.Errorf("user name not set")
-	}
-
-	tsServer, lc, err := getTSServer(ctx, baseClient.Config(), userName, rootDir, log)
+	localServer, err := newLocalServer(lc, config.PlatformClient, config.Context, log)
 	if err != nil {
-		return nil, fmt.Errorf("get tailscale server: %w", err)
-	}
-
-	localServer, err := getLocalServer(lc)
-	if err != nil {
-		return nil, fmt.Errorf("get local server: %w", err)
+		return nil, fmt.Errorf("create local server: %w", err)
 	}
 
 	return &Daemon{
@@ -93,7 +92,6 @@ func (d *Daemon) Listen(ln net.Listener) error {
 			d.log.Error("Failed to accept connection: %v", err)
 			continue
 		}
-		d.log.Debug("Accepted connection")
 
 		bConn := newBufferedConn(rawConn)
 		clientType, err := getClientType(bConn)

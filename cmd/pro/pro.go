@@ -7,12 +7,13 @@ import (
 
 	"github.com/loft-sh/devpod/cmd/flags"
 	"github.com/loft-sh/devpod/cmd/pro/add"
+	"github.com/loft-sh/devpod/cmd/pro/daemon"
 	proflags "github.com/loft-sh/devpod/cmd/pro/flags"
 	"github.com/loft-sh/devpod/cmd/pro/provider"
 	"github.com/loft-sh/devpod/cmd/pro/reset"
 	"github.com/loft-sh/devpod/pkg/config"
-	"github.com/loft-sh/devpod/pkg/platform"
 	providerpkg "github.com/loft-sh/devpod/pkg/provider"
+	"github.com/loft-sh/devpod/pkg/workspace"
 	"github.com/loft-sh/log"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
@@ -57,6 +58,7 @@ func NewProCmd(flags *flags.GlobalFlags, streamLogger *log.StreamLogger) *cobra.
 	proCmd.AddCommand(NewWakeupCmd(globalFlags))
 	proCmd.AddCommand(reset.NewResetCmd(globalFlags))
 	proCmd.AddCommand(provider.NewProProviderCmd(globalFlags))
+	proCmd.AddCommand(daemon.NewCmd(globalFlags))
 	proCmd.AddCommand(add.NewAddCmd(globalFlags))
 	proCmd.AddCommand(NewWatchWorkspacesCmd(globalFlags))
 	proCmd.AddCommand(NewSelfCmd(globalFlags))
@@ -70,8 +72,6 @@ func NewProCmd(flags *flags.GlobalFlags, streamLogger *log.StreamLogger) *cobra.
 	proCmd.AddCommand(NewCheckHealthCmd(globalFlags))
 	proCmd.AddCommand(NewCheckUpdateCmd(globalFlags))
 	proCmd.AddCommand(NewUpdateProviderCmd(globalFlags))
-	proCmd.AddCommand(NewDaemonStartCmd(globalFlags))
-	proCmd.AddCommand(NewDaemonStatusCmd(globalFlags))
 	return proCmd
 }
 
@@ -81,7 +81,7 @@ func findProProvider(ctx context.Context, context, provider, host string, log lo
 		return nil, nil, err
 	}
 
-	pCfg, err := platform.ProviderFromHost(ctx, devPodConfig, host, log)
+	pCfg, err := workspace.ProviderFromHost(ctx, devPodConfig, host, log)
 	if err != nil {
 		return devPodConfig, nil, fmt.Errorf("load provider: %w", err)
 	}

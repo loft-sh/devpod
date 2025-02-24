@@ -1,7 +1,12 @@
 import { client } from "@/client"
 import { useProInstances, useProviders, useSettings } from "@/contexts"
 import { CheckCircle, CircleWithArrow, DevPodProBadge, ExclamationTriangle, Plus } from "@/icons"
-import { canHealthCheck, exists, useLoginProModal, useReLoginProModal } from "@/lib"
+import {
+  canHealthCheck as isNewProProvider,
+  exists,
+  useLoginProModal,
+  useReLoginProModal,
+} from "@/lib"
 import { Routes } from "@/routes"
 import { TProID, TProInstance, TProInstances, TProviderConfig } from "@/types"
 import { useDeleteProviderModal } from "@/views/Providers/useDeleteProviderModal"
@@ -128,7 +133,7 @@ function ProPopoverContent({
 
               return acc
             }
-            if (!canHealthCheck(curr.providerConfig)) {
+            if (!isNewProProvider(curr.providerConfig)) {
               acc.legacyProInstances.push(curr)
 
               return acc

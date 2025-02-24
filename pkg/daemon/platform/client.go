@@ -7,15 +7,17 @@ import (
 	"io"
 	"net"
 	"net/http"
+
+	managementv1 "github.com/loft-sh/api/v4/pkg/apis/management/v1"
 )
 
 const devPodClientPrefix = 0x01
 
-type Client struct {
+type LocalClient struct {
 	httpClient *http.Client
 }
 
-func NewClient(daemonFolder, provider string) Client {
+func NewLocalClient(daemonFolder, provider string) *LocalClient {
 	socketAddr := GetSocketAddr(daemonFolder, provider)
 	tr := http.DefaultTransport.(*http.Transport).Clone()
 	tr.DialContext = func(ctx context.Context, network, addr string) (net.Conn, error) {
@@ -31,10 +33,10 @@ func NewClient(daemonFolder, provider string) Client {
 	}
 	httpClient := &http.Client{Transport: tr}
 
-	return Client{httpClient: httpClient}
+	return &LocalClient{httpClient: httpClient}
 }
 
-func (c *Client) Status(ctx context.Context) (Status, error) {
+func (c *LocalClient) Status(ctx context.Context) (Status, error) {
 	b, err := c.doRequest(ctx, http.MethodGet, routeStatus, nil)
 	if err != nil {
 		return Status{}, err
@@ -49,7 +51,22 @@ func (c *Client) Status(ctx context.Context) (Status, error) {
 	return status, nil
 }
 
-func (c *Client) doRequest(ctx context.Context, method string, path string, body io.Reader) ([]byte, error) {
+func (c *LocalClient) ListWorkspaces(ctx context.Context) ([]managementv1.DevPodWorkspaceInstance, error) {
+	b, err := c.doRequest(ctx, http.MethodGet, routeListWorkspaces, nil)
+	if err != nil {
+		return nil, err
+	}
+
+	instances := []managementv1.DevPodWorkspaceInstance{}
+	err = json.Unmarshal(b, &instances)
+	if err != nil {
+		return nil, err
+	}
+
+	return instances, nil
+}
+
+func (c *LocalClient) doRequest(ctx context.Context, method string, path string, body io.Reader) ([]byte, error) {
 	req, err := http.NewRequestWithContext(ctx, method, fmt.Sprintf("http://localclient.devpod%s", path), body)
 	if err != nil {
 		return nil, err

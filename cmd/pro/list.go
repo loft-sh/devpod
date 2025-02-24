@@ -128,8 +128,9 @@ type proTableEntry struct {
 type Capability string
 
 var (
-	capabilityDaemon      Capability = "daemon"
-	capabilityHealthCheck Capability = "health-check"
+	capabilityDaemon         Capability = "daemon"
+	capabilityHealthCheck    Capability = "health-check"
+	capabilityUpdateProvider Capability = "update-provider"
 )
 
 func checkLogin(ctx context.Context, devPodConfig *config.Config, proInstance *provider.ProInstance) error {
@@ -150,9 +151,10 @@ func getCapabilities(ctx context.Context, devPodConfig *config.Config, proInstan
 
 	if provider.Config.HasHealthCheck() {
 		capabilities = append(capabilities, capabilityHealthCheck)
+		capabilities = append(capabilities, capabilityUpdateProvider)
 	}
 
-	if provider.Config.SupportsDaemon() {
+	if provider.Config.IsDaemonProvider() {
 		capabilities = append(capabilities, capabilityDaemon)
 	}
 

@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"github.com/loft-sh/devpod/pkg/provider"
+	"golang.org/x/crypto/ssh"
 )
 
 type BaseClient interface {
@@ -51,14 +52,37 @@ type Client interface {
 	Command(ctx context.Context, options CommandOptions) error
 }
 
+// ProxyClient executes it's commands on the platform
+//
+// Deprecated: Use DaemonClient instead
 type ProxyClient interface {
 	BaseWorkspaceClient
+
+	// Create creates a new remote workspace
+	Create(ctx context.Context, stdin io.Reader, stdout io.Writer, stderr io.Writer) error
 
 	// Up creates a new remote workspace
 	Up(ctx context.Context, options UpOptions) error
 
 	// Ssh starts an ssh tunnel to the workspace container
 	Ssh(ctx context.Context, options SshOptions) error
+}
+
+// DaemonClient connects to workspaces through a shared daemon
+type DaemonClient interface {
+	BaseWorkspaceClient
+
+	// Create creates a new remote workspace
+	Create(ctx context.Context, stdin io.Reader, stdout io.Writer, stderr io.Writer) error
+
+	// Up start a new remote workspace
+	Up(ctx context.Context, options UpOptions) error
+
+	// SSHClients returns an SSH client for the tool and one for the actual user
+	SSHClients(ctx context.Context, user string) (*ssh.Client, *ssh.Client, error)
+
+	// DirectTunnel forwards stdio to the workspace
+	DirectTunnel(ctx context.Context, stdin io.Reader, stdout io.Writer) error
 }
 
 type MachineClient interface {
