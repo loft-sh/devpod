@@ -6,7 +6,6 @@ import (
 	"net/url"
 	"path/filepath"
 
-	"github.com/loft-sh/devpod/pkg/platform/client"
 	"github.com/loft-sh/devpod/pkg/provider"
 	"github.com/loft-sh/devpod/pkg/ts"
 	"github.com/loft-sh/log"
@@ -18,16 +17,16 @@ import (
 	"tailscale.com/types/logger"
 )
 
-func getTSServer(ctx context.Context, cfg *client.Config, userName, rootDir string, log log.Logger) (*tsnet.Server, *tailscale.LocalClient, error) {
+func newTSServer(ctx context.Context, host, accessKey, userName, rootDir string, insecure bool, log log.Logger) (*tsnet.Server, *tailscale.LocalClient, error) {
 	// Build the platform URL
 	baseUrl := url.URL{
 		Scheme: ts.GetEnvOrDefault("LOFT_TSNET_SCHEME", "https"),
-		Host:   ts.RemoveProtocol(cfg.Host),
+		Host:   ts.RemoveProtocol(host),
 	}
 	if err := ts.CheckDerpConnection(ctx, &baseUrl); err != nil {
 		return nil, nil, fmt.Errorf("failed to verify DERP connection: %w", err)
 	}
-	if cfg.Insecure {
+	if insecure {
 		envknob.Setenv("TS_DEBUG_TLS_DIAL_INSECURE_SKIP_VERIFY", "true")
 	}
 	hostname, err := ts.GetClientHostname(userName)
@@ -55,7 +54,7 @@ func getTSServer(ctx context.Context, cfg *client.Config, userName, rootDir stri
 		Logf:       logf,
 		UserLogf:   userLogf,
 		ControlURL: baseUrl.String() + "/coordinator/",
-		AuthKey:    cfg.AccessKey,
+		AuthKey:    accessKey,
 		Dir:        rootDir,
 		Ephemeral:  false,
 		Store:      store,

@@ -67,10 +67,9 @@ type SSHCmd struct {
 
 	Proxy bool
 
-	Command      string
-	User         string
-	WorkDir      string
-	UseTailscale bool
+	Command string
+	User    string
+	WorkDir string
 }
 
 // NewSSHCmd creates a new ssh command
@@ -121,7 +120,6 @@ func NewSSHCmd(f *flags.GlobalFlags) *cobra.Command {
 	sshCmd.Flags().BoolVar(&cmd.Stdio, "stdio", false, "If true will tunnel connection through stdout and stdin")
 	sshCmd.Flags().BoolVar(&cmd.StartServices, "start-services", true, "If false will not start any port-forwarding or git / docker credentials helper")
 	sshCmd.Flags().DurationVar(&cmd.SSHKeepAliveInterval, "ssh-keepalive-interval", 55*time.Second, "How often should keepalive request be made (55s)")
-	sshCmd.Flags().BoolVar(&cmd.UseTailscale, "use-tailscale", true, "")
 
 	return sshCmd
 }
@@ -155,27 +153,77 @@ func (cmd *SSHCmd) Run(
 		cmd.Context = devPodConfig.DefaultContext
 	}
 
-	if cmd.UseTailscale {
-		proxyClient, ok := client.(client2.ProxyClient)
-		if !ok {
-			return fmt.Errorf("tailscale is only accessible to DevPod Pro workspaces")
-		}
-		return startTSProxyTunnel(ctx, devPodConfig, proxyClient, *cmd, log)
-	}
-
-	// check if regular workspace client
 	workspaceClient, ok := client.(client2.WorkspaceClient)
 	if ok {
 		return cmd.jumpContainer(ctx, devPodConfig, workspaceClient, log)
 	}
-
-	// check if proxy client
 	proxyClient, ok := client.(client2.ProxyClient)
 	if ok {
 		return cmd.startProxyTunnel(ctx, devPodConfig, proxyClient, log)
 	}
+	daemonClient, ok := client.(client2.DaemonClient)
+	if ok {
+		return cmd.jumpContainerTailscale(ctx, devPodConfig, daemonClient, log)
+	}
 
 	return nil
+}
+
+func (cmd *SSHCmd) jumpContainerTailscale(
+	ctx context.Context,
+	devPodConfig *config.Config,
+	client client2.DaemonClient,
+	log log.Logger,
+) error {
+	log.Debugf("Starting tailscale connection")
+	toolSSHClient, sshClient, err := client.SSHClients(ctx, cmd.User)
+	if err != nil {
+		return err
+	}
+	defer toolSSHClient.Close()
+	defer sshClient.Close()
+
+	// Forward ports if specified
+	if len(cmd.ForwardPorts) > 0 {
+		return cmd.forwardPorts(ctx, toolSSHClient, log)
+	}
+
+	// Reverse forward ports if specified
+	if len(cmd.ReverseForwardPorts) > 0 && !cmd.GPGAgentForwarding {
+		return cmd.reverseForwardPorts(ctx, toolSSHClient, log)
+	}
+
+	// Start port-forwarding and services if enabled
+	if cmd.StartServices {
+		go cmd.startServices(ctx, devPodConfig, toolSSHClient, cmd.GitUsername, cmd.GitToken, client.WorkspaceConfig(), log)
+	}
+
+	// Handle GPG agent forwarding
+	if cmd.GPGAgentForwarding || devPodConfig.ContextOption(config.ContextOptionGPGAgentForwarding) == "true" {
+		if gpg.IsGpgTunnelRunning(cmd.User, ctx, toolSSHClient, log) {
+			log.Debugf("[GPG] exporting already running, skipping")
+		} else if err := cmd.setupGPGAgent(ctx, toolSSHClient, log); err != nil {
+			return err
+		}
+	}
+
+	// Handle ssh stdio mode
+	if cmd.Stdio {
+		if cmd.SSHKeepAliveInterval != DisableSSHKeepAlive {
+			go startSSHKeepAlive(ctx, toolSSHClient, cmd.SSHKeepAliveInterval, log)
+		}
+
+		return client.DirectTunnel(ctx, os.Stdin, os.Stdout)
+	}
+
+	// Connect to the inner server and handle user session
+	return machine.RunSSHSession(
+		ctx,
+		sshClient,
+		cmd.AgentForwarding,
+		cmd.Command,
+		os.Stderr,
+	)
 }
 
 func (cmd *SSHCmd) startProxyTunnel(

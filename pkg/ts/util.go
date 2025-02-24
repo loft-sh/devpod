@@ -3,7 +3,6 @@ package ts
 import (
 	"context"
 	"fmt"
-	"io"
 	"os"
 	"strings"
 	"time"
@@ -46,31 +45,6 @@ func GetURL(host string, port int) string {
 		return fmt.Sprintf("%s.%s", host, LoftTSNetDomain)
 	}
 	return fmt.Sprintf("%s.%s:%d", host, LoftTSNetDomain, port)
-}
-
-func DirectTunnel(ctx context.Context, lc *tailscale.LocalClient, host string, port int, stdin io.Reader, stdout io.Writer) error {
-	conn, err := lc.DialTCP(ctx, host, uint16(port))
-	if err != nil {
-		return fmt.Errorf("failed to connect to SSH server in proxy mode: %w", err)
-	}
-	defer conn.Close()
-
-	errChan := make(chan error, 1)
-	go func() {
-		_, err := io.Copy(stdout, conn)
-		errChan <- err
-	}()
-	go func() {
-		_, err := io.Copy(conn, stdin)
-		errChan <- err
-	}()
-
-	select {
-	case <-ctx.Done():
-		return ctx.Err()
-	case err := <-errChan:
-		return err
-	}
 }
 
 func WaitNodeReady(ctx context.Context, lc *tailscale.LocalClient) error {
