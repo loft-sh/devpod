@@ -1,8 +1,6 @@
 // Copyright (c) Tailscale Inc & AUTHORS
 // SPDX-License-Identifier: BSD-3-Clause
 
-//go:build js || linux
-
 package controlhttp
 
 import (
@@ -22,7 +20,7 @@ import (
 
 // Variant of Dial that tunnels the request over WebSockets, since we cannot do
 // bi-directional communication over an HTTP connection when in JS.
-func (d *Dialer) Dial(ctx context.Context) (*ClientConn, error) {
+func (d *Dialer) DialWebsocket(ctx context.Context) (*ClientConn, error) {
 	if d.Hostname == "" {
 		return nil, errors.New("required Dialer.Hostname empty")
 	}

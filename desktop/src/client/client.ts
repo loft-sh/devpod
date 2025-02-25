@@ -13,7 +13,7 @@ import { Command } from "@tauri-apps/plugin-shell"
 import * as updater from "@tauri-apps/plugin-updater"
 import { TSettings } from "../contexts"
 import { Release } from "../gen"
-import { Result, Return, isError, noop } from "../lib"
+import { Result, Return, hasCapability, isError, noop } from "../lib"
 import { TCommunityContributions, TProInstance, TUnsubscribeFn } from "../types"
 import { Command as DevPodCommand } from "./command"
 import { ContextClient } from "./context"
@@ -384,8 +384,8 @@ class Client {
     logFn(message)
   }
 
-  public getProClient(proInstance: TProInstance): ProClient {
-    if (proInstance.capabilities?.includes("daemon")) {
+  public getProClient(proInstance: TProInstance): ProClient | DaemonClient {
+    if (hasCapability(proInstance, "daemon")) {
       return new DaemonClient(proInstance.host!)
     } else {
       return new ProClient(proInstance.host!)

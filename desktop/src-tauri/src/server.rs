@@ -11,11 +11,11 @@ use axum::{
     routing::{any, get, post},
     Json, Router,
 };
-use http::{uri::PathAndQuery, Method};
+use http::Method;
 use log::{info, warn};
 use serde::{Deserialize, Serialize};
 use std::net::SocketAddr;
-use tauri::{Manager, State};
+use tauri::Manager;
 use tower_http::cors::{Any, CorsLayer};
 
 #[derive(Clone)]
@@ -38,6 +38,7 @@ pub async fn setup(app_handle: &AppHandle) -> anyhow::Result<()> {
         .route("/releases", get(releases_handler))
         .route("/child-process/signal", post(signal_handler))
         .route("/daemon/:pro_id/status", get(daemon_status_handler))
+        .route("/daemon/:pro_id/restart", get(daemon_restart_handler))
         .route("/daemon-proxy/:pro_id/*path", any(daemon_proxy_handler))
         .with_state(state)
         .layer(cors);
@@ -96,6 +97,25 @@ async fn daemon_status_handler(
     };
 }
 
+async fn daemon_restart_handler(
+    Path(pro_id): Path<String>,
+    AxumState(server): AxumState<ServerState>,
+) -> impl IntoResponse {
+    let state = server.app_handle.state::<AppState>();
+    let mut pro = state.pro.write().await;
+    return match pro.find_instance_mut(pro_id) {
+        Some(pro_instance) => match pro_instance.daemon_mut() {
+            Some(daemon) => {
+                info!("Attempting to restart daemon");
+                daemon.try_stop().await;
+                return StatusCode::OK.into_response();
+            }
+            None => StatusCode::NOT_FOUND.into_response(),
+        },
+        None => StatusCode::NOT_FOUND.into_response(),
+    };
+}
+
 async fn daemon_proxy_handler(
     Path((pro_id, path)): Path<(String, String)>,
     AxumState(server): AxumState<ServerState>,
@@ -110,7 +130,7 @@ async fn daemon_proxy_handler(
                 let original_query = req.uri().query();
                 let new_path_with_query = match original_query {
                     Some(query) => format!("/{}?{}", path, query),
-                    None => format!("/{}", path)
+                    None => format!("/{}", path),
                 };
                 let mut parts = req.uri().clone().into_parts();
                 parts.path_and_query = Some(new_path_with_query.parse().expect("Invalid path"));

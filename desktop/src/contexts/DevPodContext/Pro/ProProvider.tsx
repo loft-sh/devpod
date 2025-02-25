@@ -93,7 +93,7 @@ export function ProProvider({ host, children }: { host: string; children: ReactN
       }, 1_000)
     })
 
-    const canceler = () => {
+    function canceler() {
       canceled = true
       setCancelWatch(undefined)
       setWaitingForCancel(true)

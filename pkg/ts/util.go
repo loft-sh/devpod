@@ -10,7 +10,6 @@ import (
 	"github.com/loft-sh/log"
 	"tailscale.com/client/tailscale"
 	"tailscale.com/ipn"
-	"tailscale.com/ipn/ipnstate"
 )
 
 const LoftTSNetDomain = "ts.loft"
@@ -69,26 +68,6 @@ func WaitNodeReady(ctx context.Context, lc *tailscale.LocalClient) error {
 		}
 
 		fmt.Println("IPN message:", n)
-	}
-}
-
-// TODO: Improve error handling
-func CheckLocalNodeReady(status *ipnstate.Status) error {
-	switch status.BackendState {
-	case ipn.Stopped.String():
-		return fmt.Errorf("Tailscale is stopped")
-	case ipn.NeedsLogin.String():
-		s := "Logged out."
-		if status.AuthURL != "" {
-			s += fmt.Sprintf("\nLog in at: %s", status.AuthURL)
-		}
-		return fmt.Errorf(s)
-	case ipn.NeedsMachineAuth.String():
-		return fmt.Errorf("Machine is not yet approved by tailnet admin")
-	case ipn.Running.String(), ipn.Starting.String():
-		return nil
-	default:
-		return fmt.Errorf("unexpected state: %s", status.BackendState)
 	}
 }
 
