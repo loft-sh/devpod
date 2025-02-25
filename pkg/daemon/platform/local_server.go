@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"runtime/debug"
 
+	"github.com/gorilla/handlers"
 	"github.com/julienschmidt/httprouter"
 	managementv1 "github.com/loft-sh/api/v4/pkg/apis/management/v1"
 	"github.com/loft-sh/devpod/pkg/platform"
@@ -17,9 +18,11 @@ import (
 	"github.com/loft-sh/devpod/pkg/platform/labels"
 	"github.com/loft-sh/devpod/pkg/platform/project"
 	"github.com/loft-sh/log"
+	"github.com/sirupsen/logrus"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"tailscale.com/client/tailscale"
 	"tailscale.com/ipn"
+	"tailscale.com/ipn/ipnstate"
 	"tailscale.com/net/memnet"
 )
 
@@ -33,7 +36,14 @@ type localServer struct {
 }
 
 type Status struct {
-	State DaemonState `json:"state,omitempty"`
+	State         DaemonState  `json:"state,omitempty"`
+	LoginRequired bool         `json:"loginRequired,omitempty"`
+	Debug         *DebugStatus `json:"debug,omitempty"`
+}
+
+type DebugStatus struct {
+	Tailscale *ipnstate.Status   `json:"tailscale,omitempty"`
+	Self      *managementv1.Self `json:"self,omitempty"`
 }
 
 type DaemonState string
@@ -70,8 +80,8 @@ func newLocalServer(lc *tailscale.LocalClient, pc platformclient.Client, devPodC
 
 	router := httprouter.New()
 	router.PanicHandler = func(w http.ResponseWriter, r *http.Request, i interface{}) {
-		http.Error(w, fmt.Errorf("panic: %v", i).Error(), http.StatusInternalServerError)
-		l.log.Error(fmt.Errorf("panic: %v", i), debug.Stack())
+		http.Error(w, fmt.Errorf("panic: %s", i).Error(), http.StatusInternalServerError)
+		l.log.Error(fmt.Errorf("panic: %s", i), debug.Stack())
 	}
 	router.GET(routeHealth, l.health)
 	router.GET(routeStatus, l.status)
@@ -86,7 +96,7 @@ func newLocalServer(lc *tailscale.LocalClient, pc platformclient.Client, devPodC
 	router.POST(routeCreateWorkspace, l.createWorkspace)
 	router.POST(routeUpdateWorkspace, l.updateWorkspace)
 
-	l.httpServer = &http.Server{Handler: l.withDebugLogging(router)}
+	l.httpServer = &http.Server{Handler: handlers.LoggingHandler(log.Writer(logrus.DebugLevel, true), router)}
 
 	return l, nil
 }
@@ -120,17 +130,23 @@ func (l *localServer) status(w http.ResponseWriter, r *http.Request, params http
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
-	daemonState := DaemonStateStopped
+	status := &Status{}
 	switch st.BackendState {
 	case ipn.Starting.String():
-		daemonState = DaemonStatePending
+		status.State = DaemonStatePending
 	case ipn.Running.String():
-		daemonState = DaemonStateRunning
+		status.State = DaemonStateRunning
 	default:
 		// we consider all other states as `stopped`
+		status.State = DaemonStateStopped
+	}
+	if r.URL.Query().Has("debug") {
+		status.Debug = &DebugStatus{
+			Tailscale: st,
+			Self:      l.pc.Self(),
+		}
 	}
 
-	status := Status{State: daemonState}
 	tryJSON(w, status)
 }
 

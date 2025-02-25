@@ -31,7 +31,7 @@ func (c *CombinedLogger) log(level logrus.Level, logFunc func(logLib.Logger)) {
 	c.m.Lock()
 	defer c.m.Unlock()
 
-	if level < c.level {
+	if level > c.level {
 		return
 	}
 

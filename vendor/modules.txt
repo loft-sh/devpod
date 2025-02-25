@@ -654,6 +654,9 @@ github.com/google/uuid
 # github.com/gorilla/csrf v1.7.2
 ## explicit; go 1.20
 github.com/gorilla/csrf
+# github.com/gorilla/handlers v1.5.2
+## explicit; go 1.20
+github.com/gorilla/handlers
 # github.com/gorilla/securecookie v1.1.2
 ## explicit; go 1.20
 github.com/gorilla/securecookie
@@ -2427,7 +2430,7 @@ sigs.k8s.io/structured-merge-diff/v4/value
 ## explicit; go 1.12
 sigs.k8s.io/yaml
 sigs.k8s.io/yaml/goyaml.v2
-# tailscale.com v1.68.2 => github.com/loft-sh/tailscale v1.78.1-loft.4
+# tailscale.com v1.68.2 => github.com/loft-sh/tailscale v1.78.1-loft.6
 ## explicit; go 1.23.1
 tailscale.com
 tailscale.com/appc
@@ -2621,4 +2624,4 @@ tailscale.com/wgengine/wgcfg/nmcfg
 tailscale.com/wgengine/wgint
 tailscale.com/wgengine/wglog
 tailscale.com/wgengine/winnet
-# tailscale.com => github.com/loft-sh/tailscale v1.78.1-loft.4
+# tailscale.com => github.com/loft-sh/tailscale v1.78.1-loft.6

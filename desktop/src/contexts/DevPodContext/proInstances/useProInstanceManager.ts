@@ -1,3 +1,4 @@
+import { DaemonClient } from "@/client/pro/client"
 import { Err, Failed } from "@/lib"
 import { useMutation, useQueryClient } from "@tanstack/react-query"
 import { useMemo } from "react"
@@ -18,6 +19,12 @@ export function useProInstanceManager(): TProInstanceManager {
       const maybeNewInstance = proInstances?.find((instance) => instance.host === host)
       let maybeProviderName = maybeNewInstance?.provider
 
+      if (maybeNewInstance) {
+        const proClient = client.getProClient(maybeNewInstance)
+        if (proClient instanceof DaemonClient) {
+          await proClient.restartDaemon()
+        }
+      }
       try {
         const providers = (await client.providers.listAll()).unwrap()
         if (providers === undefined || Object.keys(providers).length === 0) {

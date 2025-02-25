@@ -280,6 +280,8 @@ export type TCommunityProvider = Readonly<{
 //#endregion
 export type TPlatformHealthCheck = Readonly<{
   healthy: TMaybe<boolean>
+  loginRequired: TMaybe<boolean>
+  details: TMaybe<string[]>
 }>
 export type TPlatformUpdateCheck = Readonly<{
   available: TMaybe<boolean>

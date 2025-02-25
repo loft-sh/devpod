@@ -1,8 +1,6 @@
 // Copyright (c) Tailscale Inc & AUTHORS
 // SPDX-License-Identifier: BSD-3-Clause
 
-//go:build !js && !linux
-
 // Package controlhttp implements the Tailscale 2021 control protocol
 // base transport over HTTP.
 //
@@ -64,7 +62,7 @@ var stdDialer net.Dialer
 //
 // The provided ctx is only used for the initial connection, until
 // Dial returns. It does not affect the connection once established.
-func (a *Dialer) Dial(ctx context.Context) (*ClientConn, error) {
+func (a *Dialer) DialDirect(ctx context.Context) (*ClientConn, error) {
 	if a.Hostname == "" {
 		return nil, errors.New("required Dialer.Hostname empty")
 	}

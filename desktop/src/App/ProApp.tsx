@@ -9,6 +9,8 @@ import {
   HStack,
   IconButton,
   Link,
+  List,
+  ListItem,
   Text,
   Tooltip,
   useColorModeValue,
@@ -26,7 +28,7 @@ import {
   useProContext,
   useProHost,
 } from "../contexts"
-import { useConnectionStatus } from "@/lib"
+import { TConnectionStatus, useConnectionStatus } from "@/lib"
 import { ProviderProvider } from "@/contexts/DevPodContext/DevPodProvider"
 
 export function ProApp() {
@@ -116,18 +118,7 @@ function ProAppContent({ host }: TProAppContentProps) {
             <StatusBar.Arch />
             <StatusBar.DebugMenu />
             <Divider orientation="vertical" h={STATUS_BAR_HEIGHT} mx="2" />
-            {!connectionStatus.isLoading && (
-              <HStack gap="1">
-                <Box
-                  boxSize="2"
-                  bg={connectionStatus.state === "connected" ? "green.400" : "red.400"}
-                  rounded="full"
-                />
-                <Text color="gray.600" textTransform="capitalize">
-                  Platform
-                </Text>
-              </HStack>
-            )}
+            <ConnectionStatus status={connectionStatus} />
           </HStack>
         </>
       }>
@@ -147,4 +138,40 @@ function usePlatformVersion(): TPlatformVersionInfo | undefined {
   })
 
   return data
+}
+
+type TConnectionStatusProps = Readonly<{
+  status: TConnectionStatus
+}>
+function ConnectionStatus({ status }: TConnectionStatusProps) {
+  if (status.isLoading) {
+    return null
+  }
+
+  const content = (
+    <HStack gap="1">
+      <Box boxSize="2" bg={status.healthy ? "green.400" : "red.400"} rounded="full" />
+      <Text color="gray.600" textTransform="capitalize">
+        Connected
+      </Text>
+    </HStack>
+  )
+
+  if (status.details && status.details.length > 0) {
+    return (
+      <Tooltip
+        label={
+          <List>
+            {status.details.map((detail, i) => (
+              <ListItem key={i}>{detail}</ListItem>
+            ))}
+            )
+          </List>
+        }>
+        {content}
+      </Tooltip>
+    )
+  }
+
+  return content
 }

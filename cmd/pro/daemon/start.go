@@ -2,14 +2,15 @@ package daemon
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"os"
 	"path/filepath"
 
 	managementv1 "github.com/loft-sh/api/v4/pkg/apis/management/v1"
+	daemon "github.com/loft-sh/devpod/pkg/daemon/platform"
 	platformdaemon "github.com/loft-sh/devpod/pkg/daemon/platform"
 	"github.com/loft-sh/devpod/pkg/platform/client"
-	"github.com/sirupsen/logrus"
 
 	proflags "github.com/loft-sh/devpod/cmd/pro/flags"
 	"github.com/loft-sh/devpod/pkg/config"
@@ -51,6 +52,7 @@ func NewStartCmd(flags *proflags.GlobalFlags) *cobra.Command {
 }
 
 func (cmd *StartCmd) Run(ctx context.Context, devPodConfig *config.Config, provider *providerpkg.ProviderConfig) error {
+	isDesktopControlled := os.Getenv("DEVPOD_UI") == "true"
 	dir, err := ensureDaemonDir(devPodConfig.DefaultContext, provider.Name)
 	if err != nil {
 		return err
@@ -59,6 +61,11 @@ func (cmd *StartCmd) Run(ctx context.Context, devPodConfig *config.Config, provi
 	loftConfigPath := filepath.Join(dir, "..", "loft-config.json")
 	baseClient, err := client.InitClientFromPath(ctx, loftConfigPath)
 	if err != nil {
+		if platformdaemon.IsAccessKeyNotFound(err) && isDesktopControlled {
+			printStatus(daemon.Status{State: daemon.DaemonStateStopped, LoginRequired: true})
+			return err
+		}
+
 		return err
 	}
 	userName := getUserName(baseClient.Self())
@@ -78,8 +85,9 @@ func (cmd *StartCmd) Run(ctx context.Context, devPodConfig *config.Config, provi
 		return fmt.Errorf("init daemon: %w", err)
 	}
 
-	// NOTE: Do not remove, other processes rely on this for the startup sequence
-	logInitialized()
+	if isDesktopControlled {
+		printStatus(daemon.Status{State: daemon.DaemonStatePending})
+	}
 
 	return d.Start()
 }
@@ -98,9 +106,13 @@ func ensureDaemonDir(context, providerName string) (string, error) {
 	return tsDir, nil
 }
 
-func logInitialized() {
-	logger := log.NewStreamLogger(os.Stdout, os.Stderr, logrus.InfoLevel)
-	logger.Done("Initialized daemon")
+func printStatus(status daemon.Status) {
+	out, err := json.Marshal(status)
+	if err != nil {
+		fmt.Printf("failed to marshal status: %v\n", err)
+		os.Exit(1)
+	}
+	fmt.Println(string(out))
 }
 
 func getUserName(self *managementv1.Self) string {

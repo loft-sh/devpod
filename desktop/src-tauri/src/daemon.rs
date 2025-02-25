@@ -6,9 +6,11 @@ use tauri::image::Image;
 pub mod client;
 
 #[derive(Debug, Default, Serialize, Deserialize, Eq, PartialEq, TS)]
+#[serde(rename_all = "camelCase", default)]
 #[ts(export)]
 pub struct DaemonStatus {
     pub state: DaemonState,
+    pub login_required: bool,
 }
 
 #[derive(Debug, Default, Eq, PartialEq, Serialize, Deserialize, TS)]
