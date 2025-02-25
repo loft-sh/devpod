@@ -66,7 +66,7 @@ func (cmd *StatusCmd) Run(ctx context.Context, devPodConfig *config.Config, prov
 	}
 
 	client := platformdaemon.NewLocalClient(dir, provider.Name)
-	status, err := client.Status(ctx)
+	status, err := client.Status(ctx, cmd.Debug)
 	if err != nil {
 		return err
 	}

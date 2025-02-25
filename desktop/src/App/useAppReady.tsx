@@ -21,7 +21,7 @@ import {
   useProInstances,
   useWorkspaceStore,
 } from "../contexts"
-import { exists, useLoginProModal } from "../lib"
+import { exists, hasCapability, useLoginProModal } from "../lib"
 import { Routes } from "../routes"
 import { useChangelogModal } from "./useChangelogModal"
 import { useQuery } from "@tanstack/react-query"
@@ -54,10 +54,10 @@ export function useAppReady() {
         proInstances
           .filter(
             (instance) =>
-              instance.provider && instance.host && instance.capabilities?.["update-provider"]
+              instance.provider && instance.host && hasCapability(instance, "update-provider")
           )
           .map(async (instance) => {
-            const proClient = client.getProClient(instance.host!)
+            const proClient = client.getProClient(instance)
             const checkUpdateRes = await proClient.checkUpdate()
             if (checkUpdateRes.err) {
               client.log(
