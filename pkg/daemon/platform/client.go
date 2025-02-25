@@ -15,6 +15,7 @@ const devPodClientPrefix = 0x01
 
 type LocalClient struct {
 	httpClient *http.Client
+	provider   string
 }
 
 func NewLocalClient(daemonFolder, provider string) *LocalClient {
@@ -33,7 +34,7 @@ func NewLocalClient(daemonFolder, provider string) *LocalClient {
 	}
 	httpClient := &http.Client{Transport: tr}
 
-	return &LocalClient{httpClient: httpClient}
+	return &LocalClient{httpClient: httpClient, provider: provider}
 }
 
 func (c *LocalClient) Status(ctx context.Context) (Status, error) {
@@ -73,6 +74,10 @@ func (c *LocalClient) doRequest(ctx context.Context, method string, path string,
 	}
 	res, err := c.httpClient.Do(req)
 	if err != nil {
+		if isConnectToDaemonError(err) {
+			return nil, errDaemonNotAvailable{Err: err, Provider: c.provider}
+		}
+
 		return nil, err
 	}
 	defer res.Body.Close()
