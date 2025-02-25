@@ -109,13 +109,10 @@ func (r *runner) setupContainer(
 	r.Log.Infof("Setup container...")
 
 	setupCommand := fmt.Sprintf(
-		"'%s' agent container setup --setup-info '%s' --container-workspace-info '%s' --access-key '%s' --network-hostname '%s' --platform-host '%s'",
+		"'%s' agent container setup --setup-info '%s' --container-workspace-info '%s'",
 		agent.ContainerDevPodHelperLocation,
 		compressed,
 		workspaceConfigCompressed,
-		r.WorkspaceConfig.CLIOptions.AccessKey,
-		r.WorkspaceConfig.CLIOptions.NetworkHostname,
-		r.WorkspaceConfig.CLIOptions.PlatformHost,
 	)
 	if runtime.GOOS == "linux" || !isDockerDriver {
 		setupCommand += " --chown-workspace"
@@ -125,6 +122,11 @@ func (r *runner) setupContainer(
 	}
 	if r.WorkspaceConfig.Agent.InjectGitCredentials != "false" {
 		setupCommand += " --inject-git-credentials"
+	}
+	if r.WorkspaceConfig.CLIOptions.AccessKey != "" &&
+		r.WorkspaceConfig.CLIOptions.NetworkHostname != "" &&
+		r.WorkspaceConfig.CLIOptions.PlatformHost != "" {
+		setupCommand += fmt.Sprintf(" --access-key '%s' --network-hostname '%s' --platform-host '%s'", r.WorkspaceConfig.CLIOptions.AccessKey, r.WorkspaceConfig.CLIOptions.NetworkHostname, r.WorkspaceConfig.CLIOptions.PlatformHost)
 	}
 	if r.Log.GetLevel() == logrus.DebugLevel {
 		setupCommand += " --debug"
