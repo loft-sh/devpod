@@ -1,9 +1,10 @@
 use crate::AppState;
 use crate::{custom_protocol::ParseError, window::WindowHelper, AppHandle};
-use log::{error, warn};
+use log::{error, info, warn};
 use serde::{de, Deserialize, Serialize};
 use std::collections::{HashMap, VecDeque};
-use tauri::{Manager, State, Emitter};
+use tauri::{Emitter, Manager, State};
+use tauri_plugin_notification::NotificationExt;
 use tokio::sync::mpsc::Receiver;
 
 pub async fn send_ui_message(
@@ -53,6 +54,33 @@ impl UiMessageHelper {
                 UiMessage::ExitRequested => {
                     self.is_ready = false;
                 }
+                UiMessage::LoginRequired(msg) => {
+                    info!("Login required: {} {}", msg.host, msg.provider);
+                    let title = "Login required".to_string();
+                    let body = format!(
+                        "You have been logged out. Please log back in to {}",
+                        msg.host,
+                    );
+
+                    let main_window = self.app_handle.get_webview_window("main");
+                    // send os notification if we aren't ready to display the main window
+                    if !self.is_ready || main_window.is_none() {
+                        let _ = self
+                            .app_handle
+                            .notification()
+                            .builder()
+                            .title(title)
+                            .body(body)
+                            .show();
+                        continue;
+                    }
+
+                    // shows toast
+                    let _ = self.app_handle.emit(
+                        "event",
+                        ShowToastMsg::new(title, body, ToastStatus::Warning),
+                    );
+                }
                 // send all other messages to the UI
                 _ => self.handle_msg(ui_msg),
             }
@@ -89,6 +117,7 @@ pub enum UiMessage {
     SetupPro(SetupProMsg),
     ImportWorkspace(ImportWorkspaceMsg),
     CommandFailed(ParseError),
+    LoginRequired(LoginRequiredMsg),
 }
 
 #[derive(Debug, Serialize, Clone)]
@@ -249,4 +278,11 @@ impl OpenWorkspaceMsg {
             source: None,
         }
     }
+}
+
+#[derive(Debug, PartialEq, Serialize, Clone)]
+#[serde(deny_unknown_fields)]
+pub struct LoginRequiredMsg {
+    pub host: String,
+    pub provider: String,
 }
