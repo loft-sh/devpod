@@ -22,6 +22,8 @@ use tauri::{
 use tauri_plugin_notification::NotificationExt;
 use tauri_plugin_shell::process::{CommandChild, CommandEvent};
 
+static WARNING_TRAY_ICON_BYTES: &'static [u8] = include_bytes!("../icons/icon_warning.png");
+
 pub trait Identifiable {
     type ID: Eq + Hash + Clone;
     fn id(&self) -> Self::ID;
@@ -107,6 +109,7 @@ static RETRY_DEBUG_THRESHOLD: i64 = 7;
 pub struct ProState {
     instances: Vec<ProInstance>,
     submenu: Option<Submenu<tauri::Wry>>,
+    all_ready: bool,
 }
 impl Identifiable for ProInstance {
     type ID = String;
@@ -485,6 +488,7 @@ async fn watch_daemons(app_handle: &AppHandle) -> anyhow::Result<()> {
         }
         let daemon = instance.daemon.as_mut().unwrap();
         if !daemon.should_retry() {
+            all_ready = false;
             continue;
         }
 
@@ -539,15 +543,19 @@ async fn watch_daemons(app_handle: &AppHandle) -> anyhow::Result<()> {
         }
     }
 
-    let _ = all_ready;
-    // TODO: swap out icons
-    // if let Some(main_tray) = app_handle.tray_by_id("main") {
-    // let icon = match all_ready {
-    //     true => app_handle.default_window_icon().unwrap().clone(),
-    //     false => app_handle.default_window_icon().unwrap().clone(),
-    // };
-    // let _ = main_tray.set_icon(Some(icon));
-    // }
+    if pro_state.all_ready != all_ready {
+        pro_state.all_ready = all_ready;
+
+        // update main system tray icon
+        if let Some(main_tray) = app_handle.tray_by_id("main") {
+            let icon = match pro_state.all_ready {
+                true => app_handle.default_window_icon().unwrap().clone(),
+                false => Image::from_bytes(WARNING_TRAY_ICON_BYTES).unwrap(),
+            };
+            let _ = main_tray.set_icon(Some(icon));
+            let _ = main_tray.set_icon_as_template(true);
+        }
+    }
 
     return Ok(());
 }
