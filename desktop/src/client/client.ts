@@ -60,6 +60,11 @@ type TChannels = {
         type: "OpenProInstance"
         host: string | null
       }>
+    | Readonly<{
+        type: "LoginRequired"
+        host: string
+        provider: string
+      }>
 }
 type TChannelName = keyof TChannels
 type TClientEventListener<TChannel extends TChannelName> = (payload: TChannels[TChannel]) => void

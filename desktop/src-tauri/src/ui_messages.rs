@@ -56,15 +56,15 @@ impl UiMessageHelper {
                 }
                 UiMessage::LoginRequired(msg) => {
                     info!("Login required: {} {}", msg.host, msg.provider);
-                    let title = "Login required".to_string();
-                    let body = format!(
-                        "You have been logged out. Please log back in to {}",
-                        msg.host,
-                    );
 
                     let main_window = self.app_handle.get_webview_window("main");
-                    // send os notification if we aren't ready to display the main window
                     if !self.is_ready || main_window.is_none() {
+                        // send os notification if we aren't ready to display the main window
+                        let title = "Login required".to_string();
+                        let body = format!(
+                            "You have been logged out. Please log back in to {}",
+                            msg.host,
+                        );
                         let _ = self
                             .app_handle
                             .notification()
@@ -75,11 +75,8 @@ impl UiMessageHelper {
                         continue;
                     }
 
-                    // shows toast
-                    let _ = self.app_handle.emit(
-                        "event",
-                        ShowToastMsg::new(title, body, ToastStatus::Warning),
-                    );
+                    // let main window handle
+                    let _ = self.app_handle.emit("event", UiMessage::LoginRequired(msg));
                 }
                 // send all other messages to the UI
                 _ => self.handle_msg(ui_msg),
