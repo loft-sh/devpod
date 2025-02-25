@@ -37,8 +37,12 @@ func NewLocalClient(daemonFolder, provider string) *LocalClient {
 	return &LocalClient{httpClient: httpClient, provider: provider}
 }
 
-func (c *LocalClient) Status(ctx context.Context) (Status, error) {
-	b, err := c.doRequest(ctx, http.MethodGet, routeStatus, nil)
+func (c *LocalClient) Status(ctx context.Context, debug bool) (Status, error) {
+	path := routeStatus
+	if debug {
+		path += "?debug"
+	}
+	b, err := c.doRequest(ctx, http.MethodGet, path, nil)
 	if err != nil {
 		return Status{}, err
 	}

@@ -141,29 +141,13 @@ func (c *client) RefreshOptions(ctx context.Context, userOptionsRaw []string, re
 }
 
 func (c *client) SSHClients(ctx context.Context, user string) (toolClient *ssh.Client, userClient *ssh.Client, err error) {
-	status, err := c.tsClient.Status(ctx)
-	if err != nil {
-		return nil, nil, fmt.Errorf("connect to daemon: %w", err)
-	}
-
-	// TODO: handle not-authenticated state
-	err = ts.WaitNodeReady(ctx, c.tsClient)
-	if err != nil {
-		return nil, nil, fmt.Errorf("wait node ready: %w", err)
-	}
-
-	err = ts.CheckLocalNodeReady(status)
-	if err != nil {
-		return nil, nil, fmt.Errorf("check local node ready: %w", err)
-	}
-
 	wAddr, err := c.getWorkspaceAddress()
 	if err != nil {
-		return nil, nil, fmt.Errorf("resolve workspace hostname")
+		return nil, nil, fmt.Errorf("resolve workspace hostname: %w", err)
 	}
 	err = ts.WaitHostReachable(ctx, c.tsClient, wAddr, c.log)
 	if err != nil {
-		return nil, nil, fmt.Errorf("reach TSNet host: %w", err)
+		return nil, nil, fmt.Errorf("reach host: %w", err)
 	}
 
 	c.log.Debugf("Host %s is reachable. Proceeding with SSH session...", wAddr.Host())
@@ -183,7 +167,7 @@ func (c *client) SSHClients(ctx context.Context, user string) (toolClient *ssh.C
 func (c *client) DirectTunnel(ctx context.Context, stdin io.Reader, stdout io.Writer) error {
 	wAddr, err := c.getWorkspaceAddress()
 	if err != nil {
-		return fmt.Errorf("resolve workspace hostname")
+		return fmt.Errorf("resolve workspace hostname: %w", err)
 	}
 	conn, err := c.tsClient.DialTCP(ctx, wAddr.Host(), uint16(wAddr.Port()))
 	if err != nil {

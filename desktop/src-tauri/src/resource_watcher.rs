@@ -5,6 +5,7 @@ use crate::{
     },
     daemon,
     system_tray::ToSystemTraySubmenu,
+    ui_messages,
 };
 use crate::{AppHandle, AppState};
 use anyhow::anyhow;
@@ -142,6 +143,10 @@ impl ProState {
     pub fn find_instance(&self, pro_id: String) -> Option<&ProInstance> {
         return self.instances.iter().find(|i| i.id() == pro_id);
     }
+
+    pub fn find_instance_mut(&mut self, pro_id: String) -> Option<&mut ProInstance> {
+        return self.instances.iter_mut().find(|i| i.id() == pro_id);
+    }
 }
 
 #[derive(Deserialize)]
@@ -172,6 +177,10 @@ impl ProInstance {
         return &self.daemon;
     }
 
+    pub fn daemon_mut(&mut self) -> Option<&mut Daemon> {
+        return self.daemon.as_mut();
+    }
+
     fn new_menu_item(&self, app_handle: &AppHandle) -> tauri::Result<IconMenuItem<Wry>> {
         return IconMenuItem::with_id(
             app_handle,
@@ -196,11 +205,11 @@ pub struct Daemon {
     status: daemon::DaemonStatus,
     command: Option<(Receiver<CommandEvent>, CommandChild)>,
     retry_count: i64,
-    notified_user: bool,
     client: daemon::client::Client,
-
-    context: Option<String>,
     provider: Option<String>,
+
+    notified_user_daemon_failed: bool,
+    notified_login_required: bool,
 }
 impl Daemon {
     pub fn new(context: Option<String>, provider: Option<String>) -> anyhow::Result<Daemon> {
@@ -211,8 +220,8 @@ impl Daemon {
             status: daemon::DaemonStatus::default(),
             command: None,
             retry_count: 0,
-            notified_user: false,
-            context,
+            notified_user_daemon_failed: false,
+            notified_login_required: false,
             provider,
             client,
         });
@@ -307,9 +316,13 @@ impl Daemon {
             }
         }
         self.command = None;
+        self.status = daemon::DaemonStatus::default();
     }
 
     fn should_retry(&self) -> bool {
+        if self.status.login_required {
+            return false;
+        }
         return self.retry_count <= MAX_RETRY_COUNT;
     }
 
@@ -318,7 +331,7 @@ impl Daemon {
     }
 
     async fn spawn(
-        &self,
+        &mut self,
         host: String,
         app_handle: &AppHandle,
     ) -> Result<(Receiver<CommandEvent>, CommandChild), DevpodCommandError> {
@@ -327,44 +340,72 @@ impl Daemon {
             .spawn()?;
 
         tokio::select! {
-            _ = self.wait_for_first_message(&mut rx) => {},
+            status = self.get_initial_status(&mut rx) => {
+                if let Ok(status) = status {
+                    self.status = status;
+                    self.try_notify_login(host, app_handle).await;
+                }
+            },
             _ = tokio::time::sleep(tokio::time::Duration::from_secs(30)) => {
-                info!("[{}] timed out waiting for daemon to start", host);
+                return Err(DevpodCommandError::Any(anyhow!("Timed out waiting for daemon to start")));
             }
         }
 
         return Ok((rx, child));
     }
 
-    async fn wait_for_first_message(&self, rx: &mut Receiver<CommandEvent>) {
+    async fn get_initial_status(
+        &self,
+        rx: &mut Receiver<CommandEvent>,
+    ) -> anyhow::Result<daemon::DaemonStatus> {
         loop {
             if let Some(event) = rx.recv().await {
                 match event {
                     CommandEvent::Stdout(out) => {
-                        debug!("Daemon startup: {}", String::from_utf8(out).unwrap().trim());
-                        return;
+                        return serde_json::from_slice::<daemon::DaemonStatus>(&out)
+                            .map_err(|err| anyhow!("failed to parse status: {:?}", err));
                     }
-                    _ => {}
+                    _ => {
+                        return Err(anyhow!("expected stdout message"));
+                    }
                 }
             }
         }
     }
 
+    async fn try_notify_login(&mut self, host: String, app_handle: &AppHandle) {
+        if self.notified_login_required {
+            return;
+        }
+
+        let msg = ui_messages::LoginRequiredMsg {
+            host,
+            provider: self.provider.clone().unwrap_or("".to_string()),
+        };
+        let _ = app_handle
+            .state::<AppState>()
+            .ui_messages
+            .send(ui_messages::UiMessage::LoginRequired(msg))
+            .await;
+
+        self.notified_login_required = true;
+    }
+
     fn try_notify_failed(&mut self, app_handle: &AppHandle) {
-        if !self.notified_user {
-            let res = app_handle
+        if self.notified_user_daemon_failed {
+            return;
+        }
+        let res = app_handle
                 .notification()
                 .builder()
                 .title("Failed to start daemon")
                 .body("Please take a look at \"Settings > Open Logs\" or report this issue to an administrator")
                 .show();
-
-            if let Err(err) = res {
-                error!("Unable to send daemon-failed notification: {}", err);
-            }
-
-            self.notified_user = true;
+        if let Err(err) = res {
+            error!("Unable to send daemon-failed notification: {}", err);
         }
+
+        self.notified_user_daemon_failed = true;
     }
 }
 
