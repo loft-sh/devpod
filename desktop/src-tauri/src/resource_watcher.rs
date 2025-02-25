@@ -501,6 +501,8 @@ async fn watch_daemons(app_handle: &AppHandle) -> anyhow::Result<()> {
                 match daemon.status.state {
                     daemon::DaemonState::Running => {
                         daemon.retry_count = 0;
+                        // reset login notification once the daemon is up and running
+                        daemon.notified_login_required = false;
                     }
                     daemon::DaemonState::Stopped => {
                         all_ready = false;

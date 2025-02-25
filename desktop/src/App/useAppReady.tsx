@@ -1,4 +1,8 @@
+import { QueryKeys } from "@/queryKeys"
+import { TProInstance } from "@/types"
 import {
+  Button,
+  HStack,
   Modal,
   ModalBody,
   ModalCloseButton,
@@ -6,9 +10,11 @@ import {
   ModalFooter,
   ModalHeader,
   ModalOverlay,
+  Text,
   useDisclosure,
   useToast,
 } from "@chakra-ui/react"
+import { useQuery } from "@tanstack/react-query"
 import { getCurrentWebviewWindow } from "@tauri-apps/api/webviewWindow"
 import { useCallback, useEffect, useId, useMemo, useRef, useState } from "react"
 import { matchPath, useNavigate } from "react-router"
@@ -24,9 +30,6 @@ import {
 import { exists, hasCapability, useLoginProModal } from "../lib"
 import { Routes } from "../routes"
 import { useChangelogModal } from "./useChangelogModal"
-import { useQuery } from "@tanstack/react-query"
-import { QueryKeys } from "@/queryKeys"
-import { TProInstance } from "@/types"
 
 export function useAppReady() {
   const [[proInstances]] = useProInstances()
@@ -127,6 +130,7 @@ export function useAppReady() {
 
       if (event.type === "ShowToast") {
         await getCurrentWebviewWindow().setFocus()
+
         toast({
           title: event.title,
           description: event.message,
@@ -145,6 +149,43 @@ export function useAppReady() {
           .map(([key, value]) => `${key}: ${value}`)
           .join("\n")
         setFailedMessage(message)
+
+        return
+      }
+
+      if (event.type === "LoginRequired") {
+        const proInstances = await client.pro.listProInstances()
+        if (proInstances.err) {
+          return
+        }
+        const existingInstance = proInstances.val.find((i) => i.host === event.host)
+        if (!existingInstance) {
+          return
+        }
+
+        await getCurrentWebviewWindow().setFocus()
+        const match = matchPath(Routes.toProInstance(event.host), location.pathname)
+        if (match != null) {
+          // only show toast if we're not on pro instance page anyway
+          return
+        }
+        toast({
+          title: "Login Required",
+          description: (
+            <HStack>
+              <Text>You have been logged out. Please log back in.</Text>
+              <Button
+                ml="2"
+                variant="ghost"
+                onClick={() => navigate(Routes.toProInstance(event.host))}>
+                Log in
+              </Button>
+            </HStack>
+          ),
+          status: "warning",
+          duration: 5_000,
+          isClosable: true,
+        })
 
         return
       }

@@ -1,5 +1,7 @@
 import { STATUS_BAR_HEIGHT } from "@/constants"
+import { ProviderProvider } from "@/contexts/DevPodContext/DevPodProvider"
 import { BellDuotone, CogDuotone } from "@/icons"
+import { TConnectionStatus, useConnectionStatus } from "@/lib"
 import { QueryKeys } from "@/queryKeys"
 import { Routes } from "@/routes"
 import { TPlatformVersionInfo } from "@/types"
@@ -28,8 +30,6 @@ import {
   useProContext,
   useProHost,
 } from "../contexts"
-import { TConnectionStatus, useConnectionStatus } from "@/lib"
-import { ProviderProvider } from "@/contexts/DevPodContext/DevPodProvider"
 
 export function ProApp() {
   const host = useProHost()
