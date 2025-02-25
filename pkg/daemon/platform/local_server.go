@@ -8,6 +8,8 @@ import (
 	"net"
 	"net/http"
 	"runtime/debug"
+	"sync"
+	"time"
 
 	"github.com/gorilla/handlers"
 	"github.com/julienschmidt/httprouter"
@@ -27,12 +29,13 @@ import (
 )
 
 type localServer struct {
-	httpServer    *http.Server
-	lc            *tailscale.LocalClient
-	listener      *memnet.Listener
-	log           log.Logger
-	pc            platformclient.Client
-	devPodContext string
+	devPodContext  string
+	httpServer     *http.Server
+	lc             *tailscale.LocalClient
+	listener       *memnet.Listener
+	pc             platformclient.Client
+	platformStatus *platformStatus
+	log            log.Logger
 }
 
 type Status struct {
@@ -54,6 +57,13 @@ var (
 	DaemonStatePending DaemonState = "pending"
 )
 
+const platformStatusCheckInterval = 10 * time.Second
+
+type platformStatus struct {
+	mu            sync.RWMutex
+	authenticated bool
+}
+
 var (
 	routeHealth           = "/health"
 	routeMetrics          = "/metrics"
@@ -71,11 +81,12 @@ var (
 
 func newLocalServer(lc *tailscale.LocalClient, pc platformclient.Client, devPodContext string, log log.Logger) (*localServer, error) {
 	l := &localServer{
-		lc:            lc,
-		pc:            pc,
-		log:           log,
-		devPodContext: devPodContext,
-		listener:      memnet.Listen("localclient.devpod:80"),
+		lc:             lc,
+		pc:             pc,
+		log:            log,
+		devPodContext:  devPodContext,
+		listener:       memnet.Listen("localclient.devpod:80"),
+		platformStatus: &platformStatus{authenticated: true},
 	}
 
 	router := httprouter.New()
@@ -102,7 +113,17 @@ func newLocalServer(lc *tailscale.LocalClient, pc platformclient.Client, devPodC
 }
 
 func (l *localServer) ListenAndServe() error {
-	return l.httpServer.Serve(l.listener)
+	errChan := make(chan error, 1)
+	go func() {
+		l.log.Info("Start config watcher")
+		err := l.watchPlatform(context.TODO() /* We currently don't have an in-process shutdown mechanism, might want to add later */)
+		errChan <- err
+	}()
+	go func() {
+		err := l.httpServer.Serve(l.listener)
+		errChan <- err
+	}()
+	return <-errChan
 }
 
 func (l *localServer) Addr() string {
@@ -120,6 +141,39 @@ func (l *localServer) withDebugLogging(handler http.Handler) http.Handler {
 	})
 }
 
+func (l *localServer) watchPlatform(ctx context.Context) error {
+	for {
+		l.log.Debug("Check platform status")
+
+		managementClient, err := l.pc.Management()
+		if err != nil {
+			l.log.Error(fmt.Errorf("create mangement client: %w", err))
+		} else {
+			_, err = managementClient.Loft().ManagementV1().Selves().Create(ctx, &managementv1.Self{}, metav1.CreateOptions{})
+			l.platformStatus.mu.Lock()
+			if err != nil {
+				if IsAccessKeyNotFound(err) {
+					l.log.Warn("client not authenticated: %s", err)
+					l.platformStatus.authenticated = false
+				} else {
+					l.log.Error("failed to create self: %v", err)
+				}
+			} else {
+				// We don't want to be too restrictive in case the error
+				// is transient and doesn't impact existing connections
+				l.platformStatus.authenticated = true
+			}
+			l.platformStatus.mu.Unlock()
+		}
+
+		select {
+		case <-ctx.Done():
+			return ctx.Err()
+		case <-time.After(platformStatusCheckInterval):
+		}
+	}
+}
+
 func (l *localServer) health(w http.ResponseWriter, r *http.Request, params httprouter.Params) {
 	w.WriteHeader(http.StatusOK)
 }
@@ -131,6 +185,7 @@ func (l *localServer) status(w http.ResponseWriter, r *http.Request, params http
 		return
 	}
 	status := &Status{}
+	// overall state
 	switch st.BackendState {
 	case ipn.Starting.String():
 		status.State = DaemonStatePending
@@ -140,10 +195,21 @@ func (l *localServer) status(w http.ResponseWriter, r *http.Request, params http
 		// we consider all other states as `stopped`
 		status.State = DaemonStateStopped
 	}
+
+	// authentication info
+	l.platformStatus.mu.RLock()
+	if !l.platformStatus.authenticated {
+		status.LoginRequired = true
+	}
+	l.platformStatus.mu.RUnlock()
+
+	// debug info
+	self := l.pc.Self()
+	self.Status.AccessKey = "*********" // redact access key
 	if r.URL.Query().Has("debug") {
 		status.Debug = &DebugStatus{
 			Tailscale: st,
-			Self:      l.pc.Self(),
+			Self:      self,
 		}
 	}
 
