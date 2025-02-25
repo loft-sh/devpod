@@ -11,6 +11,7 @@ import (
 	"github.com/loft-sh/devpod/cmd/provider"
 	"github.com/loft-sh/devpod/pkg/client"
 	"github.com/loft-sh/devpod/pkg/config"
+	daemon "github.com/loft-sh/devpod/pkg/daemon/platform"
 	"github.com/loft-sh/devpod/pkg/platform"
 	pkgprovider "github.com/loft-sh/devpod/pkg/provider"
 	"github.com/loft-sh/devpod/pkg/version"
@@ -51,6 +52,7 @@ func (cmd *TroubleshootCmd) Run(ctx context.Context, args []string) {
 		Workspace             *pkgprovider.Workspace
 		WorkspaceStatus       client.Status
 		WorkspaceTroubleshoot *managementv1.DevPodWorkspaceInstanceTroubleshoot
+		DaemonStatus          *daemon.Status
 
 		Errors []PrintableError `json:",omitempty"`
 	}
@@ -129,6 +131,21 @@ func (cmd *TroubleshootCmd) Run(ctx context.Context, args []string) {
 		}
 	} else {
 		info.Errors = append(info.Errors, PrintableError{fmt.Errorf("get workspace: %w", err)})
+	}
+
+	daemonClient, ok := workspaceClient.(client.DaemonClient)
+	if ok {
+		dir, err := pkgprovider.GetDaemonDir(info.Config.DefaultContext, daemonClient.Provider())
+		if err != nil {
+			info.Errors = append(info.Errors, PrintableError{fmt.Errorf("get daemon dir: %w", err)})
+		} else {
+			status, err := daemon.NewLocalClient(dir, daemonClient.Provider()).Status(ctx, true)
+			if err != nil {
+				info.Errors = append(info.Errors, PrintableError{fmt.Errorf("get daemon status: %w", err)})
+			} else {
+				info.DaemonStatus = &status
+			}
+		}
 	}
 }
 

@@ -17,6 +17,7 @@ import (
 
 	"golang.org/x/net/http2"
 	"tailscale.com/control/controlhttp"
+	"tailscale.com/envknob"
 	"tailscale.com/health"
 	"tailscale.com/internal/noiseconn"
 	"tailscale.com/net/dnscache"
@@ -29,6 +30,10 @@ import (
 	"tailscale.com/util/mak"
 	"tailscale.com/util/multierr"
 	"tailscale.com/util/singleflight"
+)
+
+var (
+	dialDirect = envknob.RegisterBool("TS_DEBUG_DIAL_DIRECT")
 )
 
 // NoiseClient provides a http.Client to connect to tailcontrol over
@@ -341,7 +346,7 @@ func (nc *NoiseClient) dial(ctx context.Context) (*noiseconn.Conn, error) {
 	ctx, cancel := context.WithTimeout(ctx, timeout)
 	defer cancel()
 
-	clientConn, err := (&controlhttp.Dialer{
+	dialer := &controlhttp.Dialer{
 		Hostname:        nc.host,
 		HTTPPort:        nc.httpPort,
 		HTTPSPort:       cmp.Or(nc.httpsPort, controlhttp.NoPort),
@@ -355,7 +360,15 @@ func (nc *NoiseClient) dial(ctx context.Context) (*noiseconn.Conn, error) {
 		NetMon:          nc.netMon,
 		HealthTracker:   nc.health,
 		Clock:           tstime.StdClock{},
-	}).Dial(ctx)
+	}
+
+	var err error
+	var clientConn *controlhttp.ClientConn
+	if dialDirect() {
+		clientConn, err = dialer.DialDirect(ctx)
+	} else {
+		clientConn, err = dialer.DialWebsocket(ctx)
+	}
 	if err != nil {
 		return nil, err
 	}

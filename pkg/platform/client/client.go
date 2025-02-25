@@ -39,6 +39,9 @@ var CacheFolder = ".loft"
 // DefaultCacheConfig is the path to the config
 var DefaultCacheConfig = "config.json"
 
+// Copied from platform `pkg/authentication/registry.go`
+var ErrAccessKeyNotFound = fmt.Errorf("platform access key not found. Please login again")
+
 const (
 	VersionPath   = "%s/version"
 	LoginPath     = "%s/login?cli=true"

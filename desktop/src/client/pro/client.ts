@@ -6,10 +6,11 @@ import { ManagementV1Project } from "@loft-enterprise/client/gen/models/manageme
 import { ManagementV1ProjectClusters } from "@loft-enterprise/client/gen/models/managementV1ProjectClusters"
 import { ManagementV1ProjectTemplates } from "@loft-enterprise/client/gen/models/managementV1ProjectTemplates"
 import { ManagementV1Self } from "@loft-enterprise/client/gen/models/managementV1Self"
-import { ErrorTypeCancelled, Result, ResultError, Return, isError } from "../../lib"
+import { ErrorTypeCancelled, Result, ResultError, Return, isError, sleep } from "../../lib"
 import {
   TImportWorkspaceConfig,
   TListProInstancesConfig,
+  TPlatformHealthCheck,
   TPlatformVersionInfo,
   TProID,
   TProInstance,
@@ -33,7 +34,7 @@ export class ProClient implements TDebuggable {
     return ProCommands.Login(host, accessKey, listener)
   }
 
-  public async checkHealth() {
+  public async checkHealth(): Promise<Result<TPlatformHealthCheck>> {
     return ProCommands.CheckHealth(this.id)
   }
 
@@ -162,7 +163,7 @@ export class DaemonClient extends ProClient {
     return Return.Failed(fallbackMsg)
   }
 
-  private async get<T>(path: string): Promise<Result<T>> {
+  private async getProxy<T>(path: string): Promise<Result<T>> {
     try {
       const res = await fetch(`${TAURI_SERVER_URL}/daemon-proxy/${this.id}${path}`, {
         method: "GET",
@@ -171,9 +172,29 @@ export class DaemonClient extends ProClient {
         },
       })
       if (!res.ok) {
-        return Return.Failed(`Fetch releases: ${res.statusText}`)
+        return Return.Failed(`Get resource: ${res.statusText}`)
       }
       const json: T = await res.json()
+
+      return Return.Value(json)
+    } catch (e) {
+      return this.handleError(e, "unable to get resource")
+    }
+  }
+
+  private async get<T>(path: string): Promise<Result<T>> {
+    try {
+      const res = await fetch(`${TAURI_SERVER_URL}${path}`, {
+        method: "GET",
+        headers: {
+          "content-type": "application/json",
+        },
+      })
+      if (!res.ok) {
+        return Return.Failed(`Get resource: ${res.statusText}`)
+      }
+
+      const json: T = await res.json().catch(() => "")
 
       return Return.Value(json)
     } catch (e) {
@@ -201,11 +222,40 @@ export class DaemonClient extends ProClient {
     }
   }
 
-  public async checkHealth(): Promise<Result<{ healthy: boolean }>> {
-    const status: DaemonStatus = await this.get("/status")
-    // TODO: Implement me
+  private async waitDaemonRunning() {
+    for (let i = 0; i < 10; i++) {
+      const healthRes = await this.checkHealth()
+      if (healthRes.ok && healthRes.val.healthy) {
+        return
+      }
+      await sleep(500)
+    }
+  }
 
-    return Return.Value({ healthy: true })
+  public async restartDaemon() {
+    return this.get(`/daemon/${this.id}/restart`)
+  }
+
+  public async checkHealth(): Promise<Result<TPlatformHealthCheck>> {
+    // NOTE: We don't access this through the proxy because there might be issues during daemon startup
+    // that we couldn't surface otherwise
+    const res = await this.get<DaemonStatus>(`/daemon/${this.id}/status`)
+    if (!res.ok) {
+      return res
+    }
+    const status = res.val
+    let healthy = status.state === "running"
+
+    const details = []
+    if (status.loginRequired) {
+      healthy = false
+      details.push("Login required to connect to platform")
+    }
+    if (status.state === "pending") {
+      details.push("Daemon is starting up")
+    }
+
+    return Return.Value({ healthy, details, loginRequired: status.loginRequired })
   }
 
   public watchWorkspaces(
@@ -265,15 +315,17 @@ export class DaemonClient extends ProClient {
       const url = new URL(`${TAURI_SERVER_URL}/daemon-proxy/${this.id}/watch-workspaces`)
       url.searchParams.set("project", projectName)
 
-      // start long-lived request. This should never stop unless cancelled trough abortController
-      fetch(url, {
-        method: "GET",
-        headers: { "content-type": "application/json" },
-        keepalive: true,
-        signal: abortController.signal,
-      }).then((res) => {
-        reader = res.body?.getReader()
-        read()
+      this.waitDaemonRunning().then(() => {
+        // start long-lived request. This should never stop unless cancelled trough abortController
+        fetch(url, {
+          method: "GET",
+          headers: { "content-type": "application/json" },
+          keepalive: true,
+          signal: abortController.signal,
+        }).then((res) => {
+          reader = res.body?.getReader()
+          read()
+        })
       })
 
       return async (): Promise<Result<undefined>> => {
@@ -289,27 +341,27 @@ export class DaemonClient extends ProClient {
   }
 
   public async getSelf(): Promise<Result<ManagementV1Self>> {
-    return this.get("/self")
+    return this.getProxy("/self")
   }
 
   public async listProjects(): Promise<Result<readonly ManagementV1Project[]>> {
-    return this.get("/projects")
+    return this.getProxy("/projects")
   }
 
   public async getVersion() {
-    return this.get<TPlatformVersionInfo>("/version")
+    return this.getProxy<TPlatformVersionInfo>("/version")
   }
 
   public async getProjectTemplates(
     projectName: string
   ): Promise<Result<ManagementV1ProjectTemplates>> {
-    return this.get(`/projects/${projectName}/templates`)
+    return this.getProxy(`/projects/${projectName}/templates`)
   }
 
   public async getProjectClusters(
     projectName: string
   ): Promise<Result<ManagementV1ProjectClusters>> {
-    return this.get(`/projects/${projectName}/clusters`)
+    return this.getProxy(`/projects/${projectName}/clusters`)
   }
 
   public async createWorkspace(

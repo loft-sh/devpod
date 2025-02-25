@@ -115,10 +115,8 @@ func startWorkspaceWatcher(ctx context.Context, config watchConfig, onChange cha
 		onChange(instanceStore.List())
 	}()
 	go func() {
-		select {
-		case <-ctx.Done():
-			close(stopCh)
-		}
+		<-ctx.Done()
+		stopCh <- struct{}{}
 	}()
 
 	<-stopCh
