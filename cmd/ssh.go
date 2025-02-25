@@ -516,7 +516,7 @@ func (cmd *SSHCmd) startTunnel(ctx context.Context, devPodConfig *config.Config,
 	}
 
 	log.Debugf("Run outer container tunnel")
-	command := fmt.Sprintf("'%s' helper ssh-server --track-activity --workdir '%s'", agent.ContainerDevPodHelperLocation, workdir)
+	command := fmt.Sprintf("'%s' helper ssh-server --track-activity --stdio --workdir '%s'", agent.ContainerDevPodHelperLocation, workdir)
 	if cmd.ReuseSSHAuthSock != "" {
 		log.Debug("Reusing SSH_AUTH_SOCK")
 		command += fmt.Sprintf(" --reuse-ssh-auth-sock=%s", cmd.ReuseSSHAuthSock)
