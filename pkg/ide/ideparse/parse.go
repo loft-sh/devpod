@@ -13,6 +13,7 @@ import (
 	"github.com/loft-sh/devpod/pkg/ide/jetbrains"
 	"github.com/loft-sh/devpod/pkg/ide/jupyter"
 	"github.com/loft-sh/devpod/pkg/ide/openvscode"
+	"github.com/loft-sh/devpod/pkg/ide/rstudio"
 	"github.com/loft-sh/devpod/pkg/ide/vscode"
 	"github.com/loft-sh/devpod/pkg/provider"
 	"github.com/pkg/errors"
@@ -182,6 +183,14 @@ var AllowedIDEs = []AllowedIDE{
 		DisplayName:  "Positron",
 		Options:      vscode.Options,
 		Icon:         "https://devpod.sh/assets/positron.svg",
+		Experimental: true,
+		Group:        config.IDEGroupOther,
+	},
+	{
+		Name:         config.IDERStudio,
+		DisplayName:  "RStudio Server",
+		Options:      rstudio.Options,
+		Icon:         "https://devpod.sh/assets/rstudio.svg",
 		Experimental: true,
 		Group:        config.IDEGroupOther,
 	},

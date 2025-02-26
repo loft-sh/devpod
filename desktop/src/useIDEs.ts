@@ -13,6 +13,7 @@ const CURSOR = "cursor"
 const POSITRON = "positron"
 const CODIUM = "codium"
 const ZED = "zed"
+const RSTUDIO = "rstudio"
 
 export function useIDEs() {
   const idesQuery = useQuery({
@@ -33,6 +34,7 @@ export function useIDEs() {
         if (ide.name === POSITRON && settings.experimental_positron) return true
         if (ide.name === CODIUM && settings.experimental_codium) return true
         if (ide.name === ZED && settings.experimental_zed) return true
+        if (ide.name === RSTUDIO && settings.experimental_rstudio) return true
 
         return false
       }),

@@ -23,6 +23,7 @@ const (
 	IDEPositron        IDE = "positron"
 	IDECodium          IDE = "codium"
 	IDEZed             IDE = "zed"
+	IDERStudio         IDE = "rstudio"
 )
 
 type IDEGroup string

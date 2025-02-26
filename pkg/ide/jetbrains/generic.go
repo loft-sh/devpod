@@ -9,7 +9,6 @@ import (
 	"path"
 	"path/filepath"
 	"runtime"
-	"time"
 
 	"github.com/loft-sh/devpod/pkg/command"
 	"github.com/loft-sh/devpod/pkg/config"
@@ -194,34 +193,14 @@ func (o *GenericJetBrainsServer) download(targetFolder string, log log.Logger) (
 	}
 	defer file.Close()
 
-	_, err = io.Copy(file, &progressReader{
-		reader:    resp.Body,
-		totalSize: resp.ContentLength,
-		log:       log,
+	_, err = io.Copy(file, &ide.ProgressReader{
+		Reader:    resp.Body,
+		TotalSize: resp.ContentLength,
+		Log:       log,
 	})
 	if err != nil {
 		return "", errors.Wrap(err, "download file")
 	}
 
 	return targetPath, nil
-}
-
-type progressReader struct {
-	reader io.Reader
-
-	lastMessage time.Time
-	bytesRead   int64
-	totalSize   int64
-	log         log.Logger
-}
-
-func (p *progressReader) Read(b []byte) (n int, err error) {
-	n, err = p.reader.Read(b)
-	p.bytesRead += int64(n)
-	if time.Since(p.lastMessage) > time.Second*1 {
-		p.log.Infof("Downloaded %.2f / %.2f MB", float64(p.bytesRead)/1024/1024, float64(p.totalSize/1024/1024))
-		p.lastMessage = time.Now()
-	}
-
-	return n, err
 }

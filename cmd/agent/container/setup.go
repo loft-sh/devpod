@@ -31,6 +31,7 @@ import (
 	"github.com/loft-sh/devpod/pkg/ide/jetbrains"
 	"github.com/loft-sh/devpod/pkg/ide/jupyter"
 	"github.com/loft-sh/devpod/pkg/ide/openvscode"
+	"github.com/loft-sh/devpod/pkg/ide/rstudio"
 	"github.com/loft-sh/devpod/pkg/ide/vscode"
 	provider2 "github.com/loft-sh/devpod/pkg/provider"
 	"github.com/loft-sh/devpod/pkg/single"
@@ -443,6 +444,8 @@ func (cmd *SetupContainerCmd) installIDE(setupInfo *config.Result, ide *provider
 		return fleet.NewFleetServer(config.GetRemoteUser(setupInfo), ide.Options, log).Install(setupInfo.SubstitutionContext.ContainerWorkspaceFolder)
 	case string(config2.IDEJupyterNotebook):
 		return jupyter.NewJupyterNotebookServer(setupInfo.SubstitutionContext.ContainerWorkspaceFolder, config.GetRemoteUser(setupInfo), ide.Options, log).Install()
+	case string(config2.IDERStudio):
+		return rstudio.NewRStudioServer(setupInfo.SubstitutionContext.ContainerWorkspaceFolder, config.GetRemoteUser(setupInfo), ide.Options, log).Install()
 	}
 
 	return nil
