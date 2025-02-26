@@ -411,16 +411,6 @@ function ExperimentalSettings() {
 
         <HStack width="full" align="center">
           <Switch
-            isChecked={settings.experimental_jupyterDesktop}
-            onChange={(e) => set("experimental_jupyterDesktop", e.target.checked)}
-          />
-          <FormLabel marginBottom="0" whiteSpace="nowrap" fontSize="sm">
-            Jupyter Desktop
-          </FormLabel>
-        </HStack>
-
-        <HStack width="full" align="center">
-          <Switch
             isChecked={settings.experimental_vscodeInsiders}
             onChange={(e) => set("experimental_vscodeInsiders", e.target.checked)}
           />
@@ -436,16 +426,6 @@ function ExperimentalSettings() {
           />
           <FormLabel marginBottom="0" whiteSpace="nowrap" fontSize="sm">
             Cursor
-          </FormLabel>
-        </HStack>
-
-        <HStack width="full" align="center">
-          <Switch
-            isChecked={settings.experimental_marimo}
-            onChange={(e) => set("experimental_marimo", e.target.checked)}
-          />
-          <FormLabel marginBottom="0" whiteSpace="nowrap" fontSize="sm">
-            Marimo
           </FormLabel>
         </HStack>
 
