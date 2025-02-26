@@ -458,6 +458,16 @@ function ExperimentalSettings() {
             Zed
           </FormLabel>
         </HStack>
+
+        <HStack width="full" align="center">
+          <Switch
+            isChecked={settings.experimental_rstudio}
+            onChange={(e) => set("experimental_rstudio", e.target.checked)}
+          />
+          <FormLabel marginBottom="0" whiteSpace="nowrap" fontSize="sm">
+            RStudio Server
+          </FormLabel>
+        </HStack>
       </SettingSection>
 
       <SettingSection title="Additional CLI Flags" description={cliFlagsHelpText}>

@@ -29,6 +29,7 @@ import (
 	"github.com/loft-sh/devpod/pkg/ide/jetbrains"
 	"github.com/loft-sh/devpod/pkg/ide/jupyter"
 	"github.com/loft-sh/devpod/pkg/ide/openvscode"
+	"github.com/loft-sh/devpod/pkg/ide/rstudio"
 	"github.com/loft-sh/devpod/pkg/ide/vscode"
 	"github.com/loft-sh/devpod/pkg/ide/zed"
 	open2 "github.com/loft-sh/devpod/pkg/open"
@@ -330,6 +331,19 @@ func (cmd *UpCmd) Run(
 				cmd.SSHAuthSockID,
 				log,
 			)
+		case string(config.IDERStudio):
+			return startRStudioInBrowser(
+				cmd.GPGAgentForwarding,
+				ctx,
+				devPodConfig,
+				client,
+				user,
+				ideConfig.Options,
+				cmd.GitUsername,
+				cmd.GitToken,
+				cmd.SSHAuthSockID,
+				log,
+			)
 		}
 	}
 
@@ -592,6 +606,65 @@ func startJupyterNotebookInBrowser(
 	// start in browser
 	logger.Infof("Starting jupyter notebook in browser mode at %s", targetURL)
 	extraPorts := []string{fmt.Sprintf("%s:%d", jupyterAddress, jupyter.DefaultServerPort)}
+	return startBrowserTunnel(
+		ctx,
+		devPodConfig,
+		client,
+		user,
+		targetURL,
+		false,
+		extraPorts,
+		gitUsername,
+		gitToken,
+		authSockID,
+		logger,
+	)
+}
+
+func startRStudioInBrowser(
+	forwardGpg bool,
+	ctx context.Context,
+	devPodConfig *config.Config,
+	client client2.BaseWorkspaceClient,
+	user string,
+	ideOptions map[string]config.OptionValue,
+	gitUsername, gitToken, authSockID string,
+	logger log.Logger,
+) error {
+	if forwardGpg {
+		err := performGpgForwarding(client, logger)
+		if err != nil {
+			return err
+		}
+	}
+
+	// determine port
+	addr, port, err := parseAddressAndPort(
+		rstudio.Options.GetValue(ideOptions, rstudio.BindAddressOption),
+		rstudio.DefaultServerPort,
+	)
+	if err != nil {
+		return err
+	}
+
+	// wait until reachable then open browser
+	targetURL := fmt.Sprintf("http://localhost:%d", port)
+	if rstudio.Options.GetValue(ideOptions, rstudio.OpenOption) == "true" {
+		go func() {
+			err = open2.Open(ctx, targetURL, logger)
+			if err != nil {
+				logger.Errorf("error opening rstudio: %v", err)
+			}
+
+			logger.Infof(
+				"Successfully started RStudio Server in browser mode. Please keep this terminal open as long as you use it",
+			)
+		}()
+	}
+
+	// start in browser
+	logger.Infof("Starting RStudio server in browser mode at %s", targetURL)
+	extraPorts := []string{fmt.Sprintf("%s:%d", addr, port)}
 	return startBrowserTunnel(
 		ctx,
 		devPodConfig,

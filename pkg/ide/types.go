@@ -1,6 +1,12 @@
 package ide
 
-import "github.com/loft-sh/devpod/pkg/config"
+import (
+	"io"
+	"time"
+
+	"github.com/loft-sh/devpod/pkg/config"
+	"github.com/loft-sh/log"
+)
 
 type IDE interface {
 	Install() error
@@ -42,4 +48,24 @@ func (o Options) GetValue(values map[string]config.OptionValue, key string) stri
 // Browser based IDEs use a browser tunnel to communicate with the remote server instead of an independent ssh connection
 func ReusesAuthSock(ide string) bool {
 	return ide == "openvscode" || ide == "jupyternotebook"
+}
+
+type ProgressReader struct {
+	Reader    io.Reader
+	TotalSize int64
+	Log       log.Logger
+
+	lastMessage time.Time
+	bytesRead   int64
+}
+
+func (p *ProgressReader) Read(b []byte) (n int, err error) {
+	n, err = p.Reader.Read(b)
+	p.bytesRead += int64(n)
+	if time.Since(p.lastMessage) > time.Second*1 {
+		p.Log.Infof("Downloaded %.2f / %.2f MB", float64(p.bytesRead)/1024/1024, float64(p.TotalSize/1024/1024))
+		p.lastMessage = time.Now()
+	}
+
+	return n, err
 }

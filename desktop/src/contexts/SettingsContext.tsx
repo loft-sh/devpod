@@ -47,6 +47,7 @@ const initialSettings: TSettings = {
   experimental_positron: true,
   experimental_zed: true,
   experimental_codium: true,
+  experimental_rstudio: true,
   experimental_devPodPro: false,
 }
 function getSettingKeys(): readonly TSetting[] {
