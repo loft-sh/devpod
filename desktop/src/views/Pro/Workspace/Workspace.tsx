@@ -162,7 +162,14 @@ export function Workspace() {
           </Box>
 
           <HStack mt="4" gap="6" flexWrap="wrap">
-            <WorkspaceInfoDetail label={<WorkspaceStatus status={instance.status} />} />
+            <WorkspaceInfoDetail
+              label={
+                <WorkspaceStatus
+                  status={instance.status}
+                  deletionTimestamp={instance.metadata?.deletionTimestamp}
+                />
+              }
+            />
             <WorkspaceInfoDetail
               icon={Status}
               label={
