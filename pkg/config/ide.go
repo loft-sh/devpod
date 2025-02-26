@@ -19,10 +19,8 @@ const (
 	IDEDataSpell       IDE = "dataspell"
 	IDEFleet           IDE = "fleet"
 	IDEJupyterNotebook IDE = "jupyternotebook"
-	IDEJupyterDesktop  IDE = "jupyterdesktop"
 	IDECursor          IDE = "cursor"
 	IDEPositron        IDE = "positron"
-	IDEMarimo          IDE = "marimo"
 	IDECodium          IDE = "codium"
 	IDEZed             IDE = "zed"
 )
