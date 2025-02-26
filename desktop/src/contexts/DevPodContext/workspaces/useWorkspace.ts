@@ -3,7 +3,7 @@ import { TStreamEventListenerFn, client } from "../../../client"
 import { exists } from "../../../lib"
 import { TIdentifiable, TStreamID, TWorkspaceID, TWorkspaceStartConfig } from "../../../types"
 import { TActionID, TActionObj, useConnectAction, useReplayAction } from "../action"
-import { IWorkspaceStore, useWorkspaceStore } from "../workspaceStore"
+import { IWorkspaceStore, ProWorkspaceStore, useWorkspaceStore } from "../workspaceStore"
 
 export type TWorkspaceResult<T> = Readonly<{
   data: T | undefined
@@ -350,6 +350,11 @@ export function removeWorkspaceAction({
       if (result.err) {
         return result
       }
+      // Pro Desktop app will get updates through watcher, no need to remove from local store
+      if (store instanceof ProWorkspaceStore) {
+        return result
+      }
+
       store.removeWorkspace(workspaceID)
 
       return result

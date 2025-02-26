@@ -68,7 +68,7 @@ export function WorkspaceInstanceCard({
     instanceDisplayName,
     useCallback(
       (_, close) => {
-        workspace.remove(true)
+        workspace.remove(true, true)
         close()
       },
       [workspace]
@@ -197,7 +197,10 @@ export function WorkspaceInstanceCard({
         <CardBody pt="0">
           <HStack gap="6" align="start">
             <WorkspaceInfoDetail icon={Status} label={<Text>Status</Text>}>
-              <WorkspaceStatus status={instance.status} />
+              <WorkspaceStatus
+                status={instance.status}
+                deletionTimestamp={instance.metadata?.deletionTimestamp}
+              />
             </WorkspaceInfoDetail>
 
             <WorkspaceInfoDetail icon={Status} label={<Text>Template</Text>}>
