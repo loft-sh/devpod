@@ -1,6 +1,7 @@
 import { ProWorkspaceInstance } from "@/contexts"
 import { CheckCircle, CircleDuotone, Clock, ExclamationTriangle, NotFound, Sleep } from "@/icons"
 import { BoxProps, HStack, Text } from "@chakra-ui/react"
+import { V1ObjectMeta } from "@loft-enterprise/client/gen/models/V1ObjectMeta"
 import React from "react"
 
 export const InstancePhase = {
@@ -8,6 +9,7 @@ export const InstancePhase = {
   WaitingToInitialize: "",
   Sleeping: "Sleeping",
   Failed: "Failed",
+  Terminating: "Terminating",
   Pending: "Pending",
 } as const
 
@@ -55,6 +57,10 @@ const badgeOptionMappings: {
     icon: <CircleDuotone boxSize={5} />,
     color: "red.500",
   },
+  [WorkspaceDisplayStatus.Terminating]: {
+    icon: <CircleDuotone boxSize={5} />,
+    color: "red.500",
+  },
   [WorkspaceDisplayStatus.Running]: {
     icon: <CircleDuotone boxSize={5} />,
     color: "primary.500",
@@ -71,9 +77,10 @@ const badgeOptionMappings: {
 
 type TWorkspaceStatusProps = Readonly<{
   status: ProWorkspaceInstance["status"]
+  deletionTimestamp: V1ObjectMeta["deletionTimestamp"]
 }>
-export function WorkspaceStatus({ status }: TWorkspaceStatusProps) {
-  const displayStatus = determineDisplayStatus(status)
+export function WorkspaceStatus({ status, deletionTimestamp }: TWorkspaceStatusProps) {
+  const displayStatus = determineDisplayStatus(status, deletionTimestamp)
 
   return <WorkspaceDisplayStatusBadge displayStatus={displayStatus} />
 }
@@ -119,10 +126,14 @@ export type TWorkspaceDisplayStatus =
   (typeof WorkspaceDisplayStatus)[keyof typeof WorkspaceDisplayStatus]
 
 export function determineDisplayStatus(
-  status: ProWorkspaceInstance["status"]
+  status: ProWorkspaceInstance["status"],
+  deletionTimestamp: Date | undefined
 ): TWorkspaceDisplayStatus {
   const phase = status?.phase
   const lastWorkspaceStatus = status?.lastWorkspaceStatus
+  if (deletionTimestamp) {
+    return WorkspaceDisplayStatus.Terminating
+  }
 
   if (!phase || phase === InstancePhase.Pending) {
     return WorkspaceDisplayStatus.Pending
