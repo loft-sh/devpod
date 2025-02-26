@@ -55,7 +55,9 @@ export function ListWorkspaces() {
       return instances
     }
 
-    return instances.filter((i) => statusFilter.includes(determineDisplayStatus(i.status)))
+    return instances.filter((i) =>
+      statusFilter.includes(determineDisplayStatus(i.status, i.metadata?.deletionTimestamp))
+    )
   }, [instances, statusFilter])
 
   const [selectedSortOption, setSelectedSortOption] = useState(DEFAULT_SORT_WORKSPACE_MODE)
