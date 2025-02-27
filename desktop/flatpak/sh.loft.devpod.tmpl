@@ -21,7 +21,7 @@ finish-args:
 
 modules:
   - shared-modules/libayatana-appindicator/libayatana-appindicator-gtk3.json
-  - name: binary
+  - name: devpod
     buildsystem: simple
     sources:
       - type: file
@@ -33,9 +33,11 @@ modules:
       - type: file
         path: devpod-wrapper
       - type: file
-        path: sh.loft.Devpod.metainfo.xml
+        url: https://github.com/loft-sh/devpod/releases/download/v${VERSION}/DevPod.desktop
+        sha256: ${DESKTOP_SHA256}
       - type: file
-        path: sh.loft.Devpod.desktop
+        url: https://github.com/loft-sh/devpod/releases/download/v${VERSION}/DevPod.metainfo.xml
+        sha256: ${META_SHA256}
     build-commands:
       - ar -x *.deb
       - tar -xf data.tar.gz

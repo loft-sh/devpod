@@ -473,7 +473,7 @@ jobs:
               release_id: releaseId
             })
 
-            const mdAssetName = "DevPod.metadata.xml"
+            const mdAssetName = "DevPod.metainfo.xml"
             const mdAssetPath = `desktop/src-tauri/flatpak/${mdAssetName}`
 
             console.log("Attempting to upload release asset: ", mdAssetName)
@@ -496,8 +496,12 @@ jobs:
         run: |
           export VERSION="${{ needs.create-release.outputs.original_package_version }}"
           export debPath="desktop/src-tauri/target/${{ matrix.settings.target }}/release/bundle/deb/DevPod_${VERSION}_amd64.deb"
+          export desktopPath="desktop/src-tauri/target/${{ matrix.settings.target }}/release/bundle/deb/DevPod.desktop"
+          export metaPath="desktop/src-tauri/target/${{ matrix.settings.target }}/release/bundle/deb/DevPod.metainfo.xml"
           export SHA256=$(sha256sum "${debPath}" | cut -f1 -d ' ')
-          envsubst < desktop/flatpak/sh.loft.DevPod.tmpl > desktop/flatpak/sh.loft.devPod.yaml
+          export DESKTOP_SHA256=$(sha256sum "${desktopPath}" | cut -f1 -d ' ')
+          export META_SHA256=$(sha256sum "${metaPath}" | cut -f1 -d ' ')
+          envsubst < desktop/flatpak/sh.loft.DevPod.tmpl > desktop/flatpak/sh.loft.devpod.yaml
 
       # - name: Updates flatpak manifest in flathub
       #   uses: dmnemec/copy_file_to_another_repo_action@master
