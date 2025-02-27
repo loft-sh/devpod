@@ -98,6 +98,9 @@ options:
   WORKSPACE_VOLUME_MOUNT:
     description: Sets the path of the workspace volume mount. By default it is the root of your workspace source code, usually /workspaces/$WORKSPACE_ID. If you intend to create multi-repo workspaces or need additional files throughout the lifecycle of the workspace, set this option to a parent directory of the workspace mount.
     type: string
+  ARCHITECTURE:
+    description: The cpu architecture to use for the workspace pod. E.g. amd64, arm64, etc.
+    type: string
 agent:
   containerInactivityTimeout: ${INACTIVITY_TIMEOUT}
   local: true
