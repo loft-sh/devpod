@@ -46,6 +46,8 @@ func (f Flavor) DisplayName() string {
 		return "positron"
 	case FlavorCodium:
 		return "VSCodium"
+	case FlavorCodiumInsiders:
+		return "VSCodium Insiders"
 	default:
 		return "VSCode"
 	}
