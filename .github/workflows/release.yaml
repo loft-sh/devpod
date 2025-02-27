@@ -448,6 +448,69 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
+      - name: Upload flatpak assets
+        if: matrix.settings.host != 'windows-latest'
+        uses: actions/github-script@v6
+        with:
+          script: |
+            const fs = require("fs")
+
+            const releaseId = "${{ needs.create-release.outputs.release_id }}"
+            const assetName = "DevPod.desktop"
+            const assetPath = `desktop/src-tauri/target/${{ matrix.settings.target }}/release/bundle/deb/DevPod_${{needs.create-release.outputs.package_version}}_amd64/data/usr/share/applications/${assetName}`
+
+            console.log("Attempting to upload release asset: ", assetName)
+
+            await github.rest.repos.uploadReleaseAsset({
+              headers: {
+                "content-type": "application/zip",
+                "content-length": fs.statSync(assetPath).size
+              },
+              name: assetName,
+              data: fs.readFileSync(assetPath),
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              release_id: releaseId
+            })
+
+            const mdAssetName = "DevPod.metadata.xml"
+            const mdAssetPath = `desktop/src-tauri/flatpak/${mdAssetName}`
+
+            console.log("Attempting to upload release asset: ", mdAssetName)
+
+            await github.rest.repos.uploadReleaseAsset({
+              headers: {
+                "content-type": "application/zip",
+                "content-length": fs.statSync(mdAssetPath).size
+              },
+              name: mdAssetName,
+              data: fs.readFileSync(mdAssetPath),
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              release_id: releaseId
+            })
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Generate updated flatpak manifest
+        run: |
+          export VERSION="${{ needs.create-release.outputs.original_package_version }}"
+          export debPath="desktop/src-tauri/target/${{ matrix.settings.target }}/release/bundle/deb/DevPod_${VERSION}_amd64.deb"
+          export SHA256=$(sha256sum "${debPath}" | cut -f1 -d ' ')
+          envsubst < desktop/flatpak/sh.loft.DevPod.tmpl > desktop/flatpak/sh.loft.devPod.yaml
+
+      # - name: Updates flatpak manifest in flathub
+      #   uses: dmnemec/copy_file_to_another_repo_action@master
+      #   env:
+      #     API_TOKEN_GITHUB: ${{ secrets.API_TOKEN_GITHUB }}
+      #   with:
+      #     source_file: 'desktop/flatpak/sh.loft.DevPod.yaml'
+      #     destination_repo: 'flathub/sh.loft.DevPod'
+      #     destination_folder: ''
+      #     user_email: 'bot@loft.sh'
+      #     user_name: 'loftbot'
+      #     commit_message: 'Update flatpak manifest with latest release'
+
   publish-updates:
     needs: [build-app, create-release]
     if: startsWith(github.ref, 'refs/tags/v') == true

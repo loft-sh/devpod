@@ -1,0 +1,53 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<component type="desktop-application">
+  <id>sh.loft.Devpod</id>
+
+  <name>Devpod</name>
+  <summary>Codespaces but open-source, client-only and unopinionated: Works with any IDE and lets you use any cloud, kubernetes or just localhost docker.</summary>
+  <developer_name>Loft Labs</developer_name>
+
+  <metadata_license>FSFAP</metadata_license>
+  <project_license>MPL-2.0</project_license>
+
+  <url type="homepage">https://devpod.sh</url>
+  <url type="vcs-browser">https://github.com/loft-sh/devpod</url>
+  <url type="bugtracker">https://github.com/loft-sh/devpod/issues</url>
+
+  <supports>
+    <control>pointing</control>
+    <control>keyboard</control>
+    <control>touch</control>
+  </supports>
+
+  <description>
+    <p>
+	Codespaces but open-source, client-only and unopinionated: Works with any IDE and lets you use any cloud, kubernetes or just localhost docker.
+    </p>
+  </description>
+
+  <launchable type="desktop-id">sh.loft.Devpod.desktop</launchable>
+  <screenshots>
+    <screenshot type="default">
+      <image>https://devpod.sh/docs/media/devpod-architecture-2.png</image>
+      <caption>Devpod Architecture</caption>
+    </screenshot>
+    <screenshot>
+      <image>https://devpod.sh/docs/media/add-provider-2.png</image>
+      <caption>Adding a Provider</caption>
+    </screenshot>
+    <screenshot>
+      <image>https://devpod.sh/docs/media/create-workspace-vscode-browser.png</image>
+      <caption>Using vscode in the browser</caption>
+    </screenshot>
+  </screenshots>
+
+  <releases>
+    <release type="stable" version="v0.6.10" date="2024-01-21">
+      <description>
+		    <p>Release notes can be found at https://github.com/loft-sh/devpod/releases/tag/v0.6.10</p>
+      </description>
+    </release>
+  </releases>
+
+  <content_rating type="oars-1.1"/>
+</component>
