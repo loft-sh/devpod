@@ -172,7 +172,7 @@ func listProWorkspacesForProvider(ctx context.Context, devPodConfig *config.Conf
 	}
 	if err != nil {
 		log.Warnf("Failed to list pro workspaces for provider %s: %v", provider, err)
-		return nil, nil
+		return nil, err
 	}
 
 	retWorkspaces := []*providerpkg.Workspace{}
