@@ -7,6 +7,7 @@ import (
 	"io"
 	"net"
 	"net/http"
+	"time"
 
 	managementv1 "github.com/loft-sh/api/v4/pkg/apis/management/v1"
 )
@@ -72,7 +73,9 @@ func (c *LocalClient) ListWorkspaces(ctx context.Context) ([]managementv1.DevPod
 }
 
 func (c *LocalClient) doRequest(ctx context.Context, method string, path string, body io.Reader) ([]byte, error) {
-	req, err := http.NewRequestWithContext(ctx, method, fmt.Sprintf("http://localclient.devpod%s", path), body)
+	timeoutCtx, cancel := context.WithTimeout(ctx, 2*time.Second)
+	defer cancel()
+	req, err := http.NewRequestWithContext(timeoutCtx, method, fmt.Sprintf("http://localclient.devpod%s", path), body)
 	if err != nil {
 		return nil, err
 	}
