@@ -75,6 +75,7 @@ export function ContextSwitcher({
       authenticated: undefined,
       provider: undefined,
       creationTimestamp: undefined,
+      capabilities: undefined,
     })
 
     return p
