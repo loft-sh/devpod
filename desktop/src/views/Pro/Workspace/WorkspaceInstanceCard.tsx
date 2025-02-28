@@ -115,7 +115,7 @@ export function WorkspaceInstanceCard({
 
     const parameters = getParametersWithValues(instance, currentTemplate)
     if (!parameters) {
-      return empty
+      return { parameters: [], template: currentTemplate }
     }
 
     return { parameters, template: currentTemplate }
