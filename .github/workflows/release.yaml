@@ -457,7 +457,7 @@ jobs:
             })
 
             const mdAssetName = "DevPod.metainfo.xml"
-            const mdAssetPath = `desktop/src-tauri/flatpak/${mdAssetName}`
+            const mdAssetPath = `desktop/flatpak/${mdAssetName}`
 
             console.log("Attempting to upload release asset: ", mdAssetName)
 
@@ -481,7 +481,7 @@ jobs:
           export VERSION="${{ needs.create-release.outputs.original_package_version }}"
           export debPath="desktop/src-tauri/target/${{ matrix.settings.target }}/release/bundle/deb/DevPod_${VERSION}_amd64.deb"
           export desktopPath="desktop/src-tauri/target/${{ matrix.settings.target }}/release/bundle/deb/DevPod.desktop"
-          export metaPath="desktop/src-tauri/target/${{ matrix.settings.target }}/release/bundle/deb/DevPod.metainfo.xml"
+          export metaPath="desktop/flatpak/DevPod.metainfo.xml"
           export SHA256=$(sha256sum "${debPath}" | cut -f1 -d ' ')
           export DESKTOP_SHA256=$(sha256sum "${desktopPath}" | cut -f1 -d ' ')
           export META_SHA256=$(sha256sum "${metaPath}" | cut -f1 -d ' ')
