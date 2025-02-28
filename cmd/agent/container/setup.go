@@ -238,17 +238,20 @@ func (cmd *SetupContainerCmd) Run(ctx context.Context) error {
 			}
 
 			var workdir string
-			if setupInfo.MergedConfig != nil && setupInfo.MergedConfig.WorkspaceFolder != "" {
-				workdir = setupInfo.MergedConfig.WorkspaceFolder
-			}
 			if workspaceInfo.Source.GitSubPath != "" {
 				setupInfo.SubstitutionContext.ContainerWorkspaceFolder = filepath.Join(setupInfo.SubstitutionContext.ContainerWorkspaceFolder, workspaceInfo.Source.GitSubPath)
+				workdir = setupInfo.SubstitutionContext.ContainerWorkspaceFolder
+			}
+			if workdir == "" && setupInfo.MergedConfig != nil {
+				workdir = setupInfo.MergedConfig.WorkspaceFolder
+			}
+			if workdir == "" && setupInfo.SubstitutionContext != nil {
 				workdir = setupInfo.SubstitutionContext.ContainerWorkspaceFolder
 			}
 
 			args := []string{"agent", "container", "ssh-server"}
 			if workdir != "" {
-				args = append(args, fmt.Sprintf("--workdir '%s'", workdir))
+				args = append(args, "--workdir", workdir)
 			}
 			user := config.GetRemoteUser(setupInfo)
 			args = append(args, "--remote-user", user)

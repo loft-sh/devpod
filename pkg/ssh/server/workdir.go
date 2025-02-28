@@ -9,7 +9,8 @@ import (
 func findWorkdir(workdir string, userName string) string {
 	// check if requested workdir exists
 	if workdir != "" {
-		if _, err := os.Stat(workdir); err == nil {
+		_, err := os.Stat(workdir)
+		if err == nil {
 			return workdir
 		}
 	}
@@ -20,5 +21,5 @@ func findWorkdir(workdir string, userName string) string {
 		workdir = home
 	}
 
-	return ""
+	return workdir
 }
