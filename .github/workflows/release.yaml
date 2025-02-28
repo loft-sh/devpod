@@ -449,7 +449,7 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Upload flatpak assets
-        if: matrix.settings.host != 'windows-latest'
+        if: matrix.settings.host == 'ubuntu-22.04' && matrix.settings.cli_only == false
         uses: actions/github-script@v6
         with:
           script: |
@@ -493,6 +493,7 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Generate updated flatpak manifest
+        if: matrix.settings.host == 'ubuntu-22.04' && matrix.settings.cli_only == false
         run: |
           export VERSION="${{ needs.create-release.outputs.original_package_version }}"
           export debPath="desktop/src-tauri/target/${{ matrix.settings.target }}/release/bundle/deb/DevPod_${VERSION}_amd64.deb"
