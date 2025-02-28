@@ -152,7 +152,7 @@ function ConnectionStatus({ status }: TConnectionStatusProps) {
     <HStack gap="1">
       <Box boxSize="2" bg={status.healthy ? "green.400" : "red.400"} rounded="full" />
       <Text color="gray.600" textTransform="capitalize">
-        Connected
+        {status.healthy ? "Connected" : "Disconnected"}
       </Text>
     </HStack>
   )
