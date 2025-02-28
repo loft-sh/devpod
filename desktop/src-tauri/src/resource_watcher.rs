@@ -346,7 +346,9 @@ impl Daemon {
             status = self.get_initial_status(&mut rx) => {
                 if let Ok(status) = status {
                     self.status = status;
-                    self.try_notify_login(host, app_handle).await;
+                    if self.status.login_required {
+                        self.try_notify_login(host, app_handle).await;
+                    }
                 }
             },
             _ = tokio::time::sleep(tokio::time::Duration::from_secs(30)) => {

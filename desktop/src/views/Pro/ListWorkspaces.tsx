@@ -35,30 +35,46 @@ import {
 import { DeleteWorkspacesModal } from "@/components/DeleteWorkspacesModal"
 import { removeWorkspaceAction, stopWorkspaceAction } from "@/contexts/DevPodContext/workspaces"
 import { IWorkspaceStore } from "@/contexts/DevPodContext/workspaceStore"
-import { TWorkspaceStatusFilterState, WorkspaceSorter, WorkspaceStatusFilter } from "@/components"
+import {
+  TWorkspaceOwnerFilterState,
+  TWorkspaceStatusFilterState,
+  WorkspaceSorter,
+  WorkspaceStatusFilter,
+} from "@/components"
 import { determineDisplayStatus } from "@/views/Pro/Workspace/WorkspaceStatus"
 
 import EmptyImage from "@/images/empty-default.svg"
+import { ManagementV1Self } from "@loft-enterprise/client/gen/models/managementV1Self"
+import { WorkspaceOwnerFilter } from "@/components/WorkspaceOwnerFilter"
 
 export function ListWorkspaces() {
   const { store } = useWorkspaceStore<IWorkspaceStore<string, ProWorkspaceInstance>>()
   const instances = useWorkspaces<ProWorkspaceInstance>()
   const viewID = useId()
-  const { host, isLoadingWorkspaces } = useProContext()
+  const { host, isLoadingWorkspaces, managementSelfQuery } = useProContext()
   const navigate = useNavigate()
   const { data: templates } = useTemplates()
 
   const [statusFilter, setStatusFilter] = useState<TWorkspaceStatusFilterState>("all")
+  const [ownerFilter, setOwnerFilter] = useState<TWorkspaceOwnerFilterState>("user")
 
   const filteredWorkspaces = useMemo(() => {
-    if (statusFilter === "all") {
-      return instances
+    let retInstances = instances
+
+    // owner filter
+    if (ownerFilter == "user") {
+      retInstances = retInstances.filter((i) => isOwner(i, managementSelfQuery.data))
     }
 
-    return instances.filter((i) =>
-      statusFilter.includes(determineDisplayStatus(i.status, i.metadata?.deletionTimestamp))
-    )
-  }, [instances, statusFilter])
+    // status filter
+    if (statusFilter != "all") {
+      retInstances = retInstances.filter((i) =>
+        statusFilter.includes(determineDisplayStatus(i.status, i.metadata?.deletionTimestamp))
+      )
+    }
+
+    return retInstances
+  }, [instances, managementSelfQuery.data, ownerFilter, statusFilter])
 
   const [selectedSortOption, setSelectedSortOption] = useState(DEFAULT_SORT_WORKSPACE_MODE)
   const sortedWorkspaces = useSortProWorkspaces(filteredWorkspaces, selectedSortOption)
@@ -164,6 +180,7 @@ export function ListWorkspaces() {
                 handleDeleteClicked={openDeleteModal}
               />
               <HStack align={"center"}>
+                <WorkspaceOwnerFilter ownerFilter={ownerFilter} setOwnerFilter={setOwnerFilter} />
                 <WorkspaceStatusFilter
                   variant={"pro"}
                   statusFilter={statusFilter}
@@ -238,4 +255,24 @@ export function ListWorkspaces() {
       {stopModal}
     </>
   )
+}
+
+function isOwner(instance: ProWorkspaceInstance, self: ManagementV1Self | undefined): boolean {
+  if (!self) {
+    return false
+  }
+
+  if (!instance.spec?.owner) {
+    return false
+  }
+
+  const owner = instance.spec.owner
+  if (self.status?.user?.name == owner.user) {
+    return true
+  }
+  if (owner.team && self.status?.user?.teams?.find((team) => team.name == owner.team)) {
+    return true
+  }
+
+  return false
 }
