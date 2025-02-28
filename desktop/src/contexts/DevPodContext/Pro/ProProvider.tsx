@@ -7,7 +7,7 @@ import { ManagementV1Project } from "@loft-enterprise/client/gen/models/manageme
 import { ManagementV1Self } from "@loft-enterprise/client/gen/models/managementV1Self"
 import { UseQueryResult, useQuery } from "@tanstack/react-query"
 import { ReactNode, createContext, useContext, useEffect, useMemo, useState } from "react"
-import { useNavigate } from "react-router-dom"
+import { Navigate, useNavigate } from "react-router-dom"
 import { ProWorkspaceStore, useWorkspaceStore } from "../workspaceStore"
 import { ContextSwitcher, HOST_OSS } from "./ContextSwitcher"
 import { useProInstances } from "../proInstances"
@@ -21,18 +21,20 @@ type TProContext = Readonly<{
 }>
 const ProContext = createContext<TProContext>(null!)
 export function ProProvider({ host, children }: { host: string; children: ReactNode }) {
-  const [[proInstances]] = useProInstances()
+  const [[proInstances, { status: proInstancesStatus }]] = useProInstances()
   const [isLoadingWorkspaces, setIsLoadingWorkspaces] = useState(false)
   const navigate = useNavigate()
+  const currentProInstance = useMemo(() => {
+    return proInstances?.find((instance) => instance.host == host)
+  }, [host, proInstances])
   const { store } = useWorkspaceStore<ProWorkspaceStore>()
   const client = useMemo(() => {
-    const maybeProInstance = proInstances?.find((instance) => instance.host == host)
-    if (!maybeProInstance) {
+    if (!currentProInstance) {
       return null
     }
 
-    return globalClient.getProClient(maybeProInstance)
-  }, [proInstances, host])
+    return globalClient.getProClient(currentProInstance)
+  }, [currentProInstance])
   const [selectedProject, setSelectedProject] = useState<ManagementV1Project | null>(null)
   const managementSelfQuery = useQuery({
     queryKey: ["managementSelf", client],
@@ -133,6 +135,11 @@ export function ProProvider({ host, children }: { host: string; children: ReactN
       isLoadingWorkspaces,
     }
   }, [managementSelfQuery, currentProject, host, client, isLoadingWorkspaces])
+
+  // this pro instance doesn't exist, let's route back to root
+  if (proInstancesStatus == "success" && !currentProInstance) {
+    return <Navigate to={Routes.ROOT} />
+  }
 
   if (!client) {
     return null
