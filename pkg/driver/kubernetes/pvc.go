@@ -40,10 +40,7 @@ func (k *KubernetesDriver) buildPersistentVolumeClaim(
 		return nil, err
 	}
 
-	size := "10Gi"
-	if k.options.DiskSize != "" {
-		size = k.options.DiskSize
-	}
+	size := k.options.DiskSize
 	quantity, err := resource.ParseQuantity(size)
 	if err != nil {
 		return nil, errors.Wrapf(err, "parse persistent volume size '%s'", size)

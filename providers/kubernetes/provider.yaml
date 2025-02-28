@@ -113,6 +113,7 @@ agent:
     kubernetesConfig: ${KUBERNETES_CONFIG}
     kubernetesNamespace: ${KUBERNETES_NAMESPACE}
     podTimeout: ${POD_TIMEOUT}
+    diskSize: ${DISK_SIZE}
     kubernetesPullSecretsEnabled: ${KUBERNETES_PULL_SECRETS_ENABLED}
     createNamespace: ${CREATE_NAMESPACE}
     clusterRole: ${CLUSTER_ROLE}
