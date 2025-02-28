@@ -1,0 +1,52 @@
+id: sh.loft.Devpod
+
+runtime: org.gnome.Platform
+runtime-version: '47'
+sdk: org.gnome.Sdk
+
+command: DevPod
+finish-args:
+  - --socket=wayland # Permission needed to show the window
+  - --socket=fallback-x11 # Permission needed to show the window
+  - --device=dri # OpenGL, not necessary for all projects
+  - --share=ipc
+  - --share=network
+  - --socket=ssh-auth
+  - --socket=gpg-agent
+  - --filesystem=home
+  - --talk-name=org.freedesktop.Flatpak
+  - --talk-name=org.freedesktop.Notifications
+  - --talk-name=org.kde.StatusNotifierWatcher
+  - --filesystem=xdg-run/keyring
+
+modules:
+  - shared-modules/libayatana-appindicator/libayatana-appindicator-gtk3.json
+  - name: devpod
+    buildsystem: simple
+    sources:
+      - type: file
+        url: https://github.com/loft-sh/devpod/releases/download/v${VERSION}/DevPod_${VERSION}_amd64.deb
+        sha256: ${SHA256} # This is required if you are using a remote source
+        only-arches: [x86_64] #This source is only used on x86_64 Computers
+        # This path points to the binary file which was created in the .deb bundle.
+        # Tauri also creates a folder which corresponds to the content of the unpacked .deb.
+      - type: file
+        path: devpod-wrapper
+      - type: file
+        url: https://github.com/loft-sh/devpod/releases/download/v${VERSION}/DevPod.desktop
+        sha256: ${DESKTOP_SHA256}
+      - type: file
+        url: https://github.com/loft-sh/devpod/releases/download/v${VERSION}/DevPod.metainfo.xml
+        sha256: ${META_SHA256}
+    build-commands:
+      - ar -x *.deb
+      - tar -xf data.tar.gz
+      - cp devpod-wrapper /app/bin/devpod-cli
+      - chmod +x /app/bin/devpod-cli
+      - install -Dm755 usr/bin/devpod-cli /app/bin/devpod-bin
+      - install -Dm755 usr/bin/DevPod /app/bin/DevPod
+      - install -Dm644 sh.loft.Devpod.desktop /app/share/applications/sh.loft.Devpod.desktop
+      - install -Dm644 usr/share/icons/hicolor/128x128/apps/DevPod.png /app/share/icons/hicolor/128x128/apps/sh.loft.Devpod.png
+      - install -Dm644 usr/share/icons/hicolor/32x32/apps/DevPod.png /app/share/icons/hicolor/32x32/apps/sh.loft.Devpod.png
+      - install -Dm644 usr/share/icons/hicolor/256x256@2/apps/DevPod.png /app/share/icons/hicolor/256x256@2/apps/sh.loft.Devpod.png
+      - install -Dm644 sh.loft.Devpod.metainfo.xml /app/share/metainfo/sh.loft.Devpod.metainfo.xml
