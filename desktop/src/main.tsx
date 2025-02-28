@@ -1,4 +1,4 @@
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query"
+import { Logger, QueryClient, QueryClientProvider } from "@tanstack/react-query"
 import { ReactQueryDevtools } from "@tanstack/react-query-devtools"
 import dayjs from "dayjs"
 import relativeTime from "dayjs/plugin/relativeTime"
@@ -9,10 +9,24 @@ import "@xterm/xterm/css/xterm.css"
 import { ThemeProvider } from "./Theme"
 import { SettingsProvider } from "./contexts"
 import { router } from "./routes"
+import { client } from "./client"
 
 dayjs.extend(relativeTime)
 
-const queryClient = new QueryClient()
+const logger: Logger | undefined = import.meta.env.PROD
+  ? {
+      log: () => {
+        // noop in prod
+      },
+      warn: (...args: any[]) => {
+        client.log("warn", args.join(" "))
+      },
+      error: (...args: any[]) => {
+        client.log("error", args.join(" "))
+      },
+    }
+  : undefined
+const queryClient = new QueryClient({ logger })
 
 // TODO: Clean up :)
 let render = true
