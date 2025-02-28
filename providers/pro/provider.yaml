@@ -12,4 +12,4 @@ options:
 exec:
   daemon:
     start: ${DEVPOD} pro daemon start
-    status: ${DEVPOD} pro daemon start
+    status: ${DEVPOD} pro daemon status
