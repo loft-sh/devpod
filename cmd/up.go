@@ -198,7 +198,6 @@ func (cmd *UpCmd) Run(
 	if result.MergedConfig != nil && result.MergedConfig.WorkspaceFolder != "" {
 		workdir = result.MergedConfig.WorkspaceFolder
 	}
-
 	if client.WorkspaceConfig().Source.GitSubPath != "" {
 		result.SubstitutionContext.ContainerWorkspaceFolder = filepath.Join(result.SubstitutionContext.ContainerWorkspaceFolder, client.WorkspaceConfig().Source.GitSubPath)
 		workdir = result.SubstitutionContext.ContainerWorkspaceFolder
