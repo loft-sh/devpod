@@ -77,7 +77,12 @@ func (d *Daemon) Start() error {
 		err := d.Listen(d.socketListener)
 		errChan <- err
 	}()
-	return <-errChan
+	err := <-errChan
+
+	_ = d.tsServer.Close()
+	_ = d.socketListener.Close()
+
+	return err
 }
 
 func (d *Daemon) Listen(ln net.Listener) error {
@@ -89,7 +94,7 @@ func (d *Daemon) Listen(ln net.Listener) error {
 	for {
 		rawConn, err := ln.Accept()
 		if err != nil {
-			d.log.Error("Failed to accept connection: %v", err)
+			d.log.Warnf("Failed to accept connection: %v", err)
 			continue
 		}
 

@@ -71,6 +71,15 @@ func (c *LocalClient) ListWorkspaces(ctx context.Context) ([]managementv1.DevPod
 	return instances, nil
 }
 
+func (c *LocalClient) Shutdown(ctx context.Context) error {
+	_, err := c.doRequest(ctx, http.MethodGet, routeShutdown, nil)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
 func (c *LocalClient) doRequest(ctx context.Context, method string, path string, body io.Reader) ([]byte, error) {
 	req, err := http.NewRequestWithContext(ctx, method, fmt.Sprintf("http://localclient.devpod%s", path), body)
 	if err != nil {

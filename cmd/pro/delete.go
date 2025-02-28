@@ -8,6 +8,8 @@ import (
 	proflags "github.com/loft-sh/devpod/cmd/pro/flags"
 	providercmd "github.com/loft-sh/devpod/cmd/provider"
 	"github.com/loft-sh/devpod/pkg/config"
+	platformdaemon "github.com/loft-sh/devpod/pkg/daemon/platform"
+	"github.com/loft-sh/devpod/pkg/provider"
 	provider2 "github.com/loft-sh/devpod/pkg/provider"
 	"github.com/loft-sh/log"
 	"github.com/pkg/errors"
@@ -57,6 +59,24 @@ func (cmd *DeleteCmd) Run(ctx context.Context, args []string) error {
 		}
 
 		return fmt.Errorf("load pro instance %s: %w", proInstanceName, err)
+	}
+
+	providerConfig, err := provider.LoadProviderConfig(devPodConfig.DefaultContext, proInstanceConfig.Provider)
+	if err != nil {
+		return fmt.Errorf("load provider: %w", err)
+	}
+
+	// stop daemon
+	if providerConfig.IsDaemonProvider() {
+		daemonDir, err := provider.GetDaemonDir(devPodConfig.DefaultContext, proInstanceConfig.Provider)
+		if err != nil {
+			return err
+		}
+
+		err = platformdaemon.NewLocalClient(daemonDir, proInstanceConfig.Provider).Shutdown(ctx)
+		if err != nil {
+			log.Default.Warnf("Failed to shut down daemon: %v", err)
+		}
 	}
 
 	// delete the provider
