@@ -72,6 +72,15 @@ func (c *LocalClient) ListWorkspaces(ctx context.Context) ([]managementv1.DevPod
 	return instances, nil
 }
 
+func (c *LocalClient) Shutdown(ctx context.Context) error {
+	_, err := c.doRequest(ctx, http.MethodGet, routeShutdown, nil)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
 func (c *LocalClient) doRequest(ctx context.Context, method string, path string, body io.Reader) ([]byte, error) {
 	timeoutCtx, cancel := context.WithTimeout(ctx, 2*time.Second)
 	defer cancel()
