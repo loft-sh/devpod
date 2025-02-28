@@ -36,6 +36,7 @@ type localServer struct {
 	pc             platformclient.Client
 	platformStatus *platformStatus
 	log            log.Logger
+	stopChan       chan struct{}
 }
 
 type Status struct {
@@ -69,6 +70,7 @@ var (
 	routeMetrics          = "/metrics"
 	routeStatus           = "/status"
 	routeVersion          = "/version"
+	routeShutdown         = "/shutdown"
 	routeSelf             = "/self"
 	routeProjects         = "/projects"
 	routeProjectTemplates = "/projects/:project/templates"
@@ -87,6 +89,7 @@ func newLocalServer(lc *tailscale.LocalClient, pc platformclient.Client, devPodC
 		devPodContext:  devPodContext,
 		listener:       memnet.Listen("localclient.devpod:80"),
 		platformStatus: &platformStatus{authenticated: true},
+		stopChan:       make(chan struct{}, 1),
 	}
 
 	router := httprouter.New()
@@ -97,6 +100,7 @@ func newLocalServer(lc *tailscale.LocalClient, pc platformclient.Client, devPodC
 	router.GET(routeHealth, l.health)
 	router.GET(routeStatus, l.status)
 	router.GET(routeVersion, l.version)
+	router.GET(routeShutdown, l.shutdown)
 	router.GET(routeMetrics, l.metrics)
 	router.GET(routeSelf, l.self)
 	router.GET(routeProjects, l.projects)
@@ -116,7 +120,7 @@ func (l *localServer) ListenAndServe() error {
 	errChan := make(chan error, 1)
 	go func() {
 		l.log.Info("Start config watcher")
-		err := l.watchPlatform(context.TODO() /* We currently don't have an in-process shutdown mechanism, might want to add later */)
+		err := l.watchPlatform(l.stopChan)
 		errChan <- err
 	}()
 	go func() {
@@ -124,6 +128,13 @@ func (l *localServer) ListenAndServe() error {
 		errChan <- err
 	}()
 	return <-errChan
+}
+
+func (l *localServer) Close() error {
+	l.log.Info("shutting down local server")
+	l.stopChan <- struct{}{}
+	_ = l.listener.Close()
+	return nil
 }
 
 func (l *localServer) Addr() string {
@@ -134,14 +145,7 @@ func (l *localServer) Dial(ctx context.Context, network, addr string) (net.Conn,
 	return l.listener.Dial(ctx, network, addr)
 }
 
-func (l *localServer) withDebugLogging(handler http.Handler) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		l.log.Debugf("%s %s %s", r.Method, r.URL.Path, r.URL.RawQuery)
-		handler.ServeHTTP(w, r)
-	})
-}
-
-func (l *localServer) watchPlatform(ctx context.Context) error {
+func (l *localServer) watchPlatform(stopChan <-chan struct{}) error {
 	for {
 		l.log.Debug("Check platform status")
 
@@ -149,7 +153,7 @@ func (l *localServer) watchPlatform(ctx context.Context) error {
 		if err != nil {
 			l.log.Error(fmt.Errorf("create mangement client: %w", err))
 		} else {
-			_, err = managementClient.Loft().ManagementV1().Selves().Create(ctx, &managementv1.Self{}, metav1.CreateOptions{})
+			_, err = managementClient.Loft().ManagementV1().Selves().Create(context.Background(), &managementv1.Self{}, metav1.CreateOptions{})
 			l.platformStatus.mu.Lock()
 			if err != nil {
 				if IsAccessKeyNotFound(err) {
@@ -167,8 +171,8 @@ func (l *localServer) watchPlatform(ctx context.Context) error {
 		}
 
 		select {
-		case <-ctx.Done():
-			return ctx.Err()
+		case <-stopChan:
+			return nil
 		case <-time.After(platformStatusCheckInterval):
 		}
 	}
@@ -218,6 +222,16 @@ func (l *localServer) status(w http.ResponseWriter, r *http.Request, params http
 
 func (l *localServer) metrics(w http.ResponseWriter, r *http.Request, params httprouter.Params) {
 	// TODO: Get from tailscale local client
+}
+
+func (l *localServer) shutdown(w http.ResponseWriter, r *http.Request, params httprouter.Params) {
+	err := l.Close()
+	if err == nil {
+		http.Error(w, fmt.Errorf("shut down daemon server: %w", err).Error(), http.StatusInternalServerError)
+		return
+	}
+
+	w.WriteHeader(http.StatusOK)
 }
 
 type VersionInfo struct {
