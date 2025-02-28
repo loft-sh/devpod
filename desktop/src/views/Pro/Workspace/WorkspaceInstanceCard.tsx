@@ -68,7 +68,7 @@ export function WorkspaceInstanceCard({
     instanceDisplayName,
     useCallback(
       (_, close) => {
-        workspace.remove(true, true)
+        workspace.remove(true)
         close()
       },
       [workspace]
