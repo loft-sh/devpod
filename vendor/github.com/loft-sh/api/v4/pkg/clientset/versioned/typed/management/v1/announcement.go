@@ -3,9 +3,9 @@
 package v1
 
 import (
-	"context"
+	context "context"
 
-	v1 "github.com/loft-sh/api/v4/pkg/apis/management/v1"
+	managementv1 "github.com/loft-sh/api/v4/pkg/apis/management/v1"
 	scheme "github.com/loft-sh/api/v4/pkg/clientset/versioned/scheme"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	types "k8s.io/apimachinery/pkg/types"
@@ -21,33 +21,34 @@ type AnnouncementsGetter interface {
 
 // AnnouncementInterface has methods to work with Announcement resources.
 type AnnouncementInterface interface {
-	Create(ctx context.Context, announcement *v1.Announcement, opts metav1.CreateOptions) (*v1.Announcement, error)
-	Update(ctx context.Context, announcement *v1.Announcement, opts metav1.UpdateOptions) (*v1.Announcement, error)
+	Create(ctx context.Context, announcement *managementv1.Announcement, opts metav1.CreateOptions) (*managementv1.Announcement, error)
+	Update(ctx context.Context, announcement *managementv1.Announcement, opts metav1.UpdateOptions) (*managementv1.Announcement, error)
 	// Add a +genclient:noStatus comment above the type to avoid generating UpdateStatus().
-	UpdateStatus(ctx context.Context, announcement *v1.Announcement, opts metav1.UpdateOptions) (*v1.Announcement, error)
+	UpdateStatus(ctx context.Context, announcement *managementv1.Announcement, opts metav1.UpdateOptions) (*managementv1.Announcement, error)
 	Delete(ctx context.Context, name string, opts metav1.DeleteOptions) error
 	DeleteCollection(ctx context.Context, opts metav1.DeleteOptions, listOpts metav1.ListOptions) error
-	Get(ctx context.Context, name string, opts metav1.GetOptions) (*v1.Announcement, error)
-	List(ctx context.Context, opts metav1.ListOptions) (*v1.AnnouncementList, error)
+	Get(ctx context.Context, name string, opts metav1.GetOptions) (*managementv1.Announcement, error)
+	List(ctx context.Context, opts metav1.ListOptions) (*managementv1.AnnouncementList, error)
 	Watch(ctx context.Context, opts metav1.ListOptions) (watch.Interface, error)
-	Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts metav1.PatchOptions, subresources ...string) (result *v1.Announcement, err error)
+	Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts metav1.PatchOptions, subresources ...string) (result *managementv1.Announcement, err error)
 	AnnouncementExpansion
 }
 
 // announcements implements AnnouncementInterface
 type announcements struct {
-	*gentype.ClientWithList[*v1.Announcement, *v1.AnnouncementList]
+	*gentype.ClientWithList[*managementv1.Announcement, *managementv1.AnnouncementList]
 }
 
 // newAnnouncements returns a Announcements
 func newAnnouncements(c *ManagementV1Client) *announcements {
 	return &announcements{
-		gentype.NewClientWithList[*v1.Announcement, *v1.AnnouncementList](
+		gentype.NewClientWithList[*managementv1.Announcement, *managementv1.AnnouncementList](
 			"announcements",
 			c.RESTClient(),
 			scheme.ParameterCodec,
 			"",
-			func() *v1.Announcement { return &v1.Announcement{} },
-			func() *v1.AnnouncementList { return &v1.AnnouncementList{} }),
+			func() *managementv1.Announcement { return &managementv1.Announcement{} },
+			func() *managementv1.AnnouncementList { return &managementv1.AnnouncementList{} },
+		),
 	}
 }

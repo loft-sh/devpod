@@ -3,13 +3,13 @@
 package v1
 
 import (
-	"context"
+	context "context"
 	time "time"
 
-	managementv1 "github.com/loft-sh/api/v4/pkg/apis/management/v1"
+	apismanagementv1 "github.com/loft-sh/api/v4/pkg/apis/management/v1"
 	versioned "github.com/loft-sh/api/v4/pkg/clientset/versioned"
 	internalinterfaces "github.com/loft-sh/api/v4/pkg/informers/externalversions/internalinterfaces"
-	v1 "github.com/loft-sh/api/v4/pkg/listers/management/v1"
+	managementv1 "github.com/loft-sh/api/v4/pkg/listers/management/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	runtime "k8s.io/apimachinery/pkg/runtime"
 	watch "k8s.io/apimachinery/pkg/watch"
@@ -20,7 +20,7 @@ import (
 // ResetAccessKeys.
 type ResetAccessKeyInformer interface {
 	Informer() cache.SharedIndexInformer
-	Lister() v1.ResetAccessKeyLister
+	Lister() managementv1.ResetAccessKeyLister
 }
 
 type resetAccessKeyInformer struct {
@@ -54,7 +54,7 @@ func NewFilteredResetAccessKeyInformer(client versioned.Interface, resyncPeriod 
 				return client.ManagementV1().ResetAccessKeys().Watch(context.TODO(), options)
 			},
 		},
-		&managementv1.ResetAccessKey{},
+		&apismanagementv1.ResetAccessKey{},
 		resyncPeriod,
 		indexers,
 	)
@@ -65,9 +65,9 @@ func (f *resetAccessKeyInformer) defaultInformer(client versioned.Interface, res
 }
 
 func (f *resetAccessKeyInformer) Informer() cache.SharedIndexInformer {
-	return f.factory.InformerFor(&managementv1.ResetAccessKey{}, f.defaultInformer)
+	return f.factory.InformerFor(&apismanagementv1.ResetAccessKey{}, f.defaultInformer)
 }
 
-func (f *resetAccessKeyInformer) Lister() v1.ResetAccessKeyLister {
-	return v1.NewResetAccessKeyLister(f.Informer().GetIndexer())
+func (f *resetAccessKeyInformer) Lister() managementv1.ResetAccessKeyLister {
+	return managementv1.NewResetAccessKeyLister(f.Informer().GetIndexer())
 }

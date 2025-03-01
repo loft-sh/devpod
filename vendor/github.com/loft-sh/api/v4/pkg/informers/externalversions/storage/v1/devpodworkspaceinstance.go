@@ -3,13 +3,13 @@
 package v1
 
 import (
-	"context"
+	context "context"
 	time "time"
 
-	storagev1 "github.com/loft-sh/api/v4/pkg/apis/storage/v1"
+	apisstoragev1 "github.com/loft-sh/api/v4/pkg/apis/storage/v1"
 	versioned "github.com/loft-sh/api/v4/pkg/clientset/versioned"
 	internalinterfaces "github.com/loft-sh/api/v4/pkg/informers/externalversions/internalinterfaces"
-	v1 "github.com/loft-sh/api/v4/pkg/listers/storage/v1"
+	storagev1 "github.com/loft-sh/api/v4/pkg/listers/storage/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	runtime "k8s.io/apimachinery/pkg/runtime"
 	watch "k8s.io/apimachinery/pkg/watch"
@@ -20,7 +20,7 @@ import (
 // DevPodWorkspaceInstances.
 type DevPodWorkspaceInstanceInformer interface {
 	Informer() cache.SharedIndexInformer
-	Lister() v1.DevPodWorkspaceInstanceLister
+	Lister() storagev1.DevPodWorkspaceInstanceLister
 }
 
 type devPodWorkspaceInstanceInformer struct {
@@ -55,7 +55,7 @@ func NewFilteredDevPodWorkspaceInstanceInformer(client versioned.Interface, name
 				return client.StorageV1().DevPodWorkspaceInstances(namespace).Watch(context.TODO(), options)
 			},
 		},
-		&storagev1.DevPodWorkspaceInstance{},
+		&apisstoragev1.DevPodWorkspaceInstance{},
 		resyncPeriod,
 		indexers,
 	)
@@ -66,9 +66,9 @@ func (f *devPodWorkspaceInstanceInformer) defaultInformer(client versioned.Inter
 }
 
 func (f *devPodWorkspaceInstanceInformer) Informer() cache.SharedIndexInformer {
-	return f.factory.InformerFor(&storagev1.DevPodWorkspaceInstance{}, f.defaultInformer)
+	return f.factory.InformerFor(&apisstoragev1.DevPodWorkspaceInstance{}, f.defaultInformer)
 }
 
-func (f *devPodWorkspaceInstanceInformer) Lister() v1.DevPodWorkspaceInstanceLister {
-	return v1.NewDevPodWorkspaceInstanceLister(f.Informer().GetIndexer())
+func (f *devPodWorkspaceInstanceInformer) Lister() storagev1.DevPodWorkspaceInstanceLister {
+	return storagev1.NewDevPodWorkspaceInstanceLister(f.Informer().GetIndexer())
 }

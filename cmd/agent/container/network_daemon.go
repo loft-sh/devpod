@@ -57,7 +57,7 @@ func (cmd *NetworkDaemonCmd) Run(ctx context.Context) error {
 		Host:      ts.RemoveProtocol(cmd.PlatformHost),
 		Hostname:  cmd.NetworkHostname,
 		Client:    baseClient,
-	}, log.Discard) // FIXME: proper logging
+	}, log.Default) // FIXME: proper logging
 	err = tsServer.Start(ctx)
 	if err != nil {
 		return fmt.Errorf("cannot start tsNet server: %w", err)

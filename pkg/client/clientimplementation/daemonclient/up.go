@@ -8,24 +8,27 @@ import (
 
 	managementv1 "github.com/loft-sh/api/v4/pkg/apis/management/v1"
 	storagev1 "github.com/loft-sh/api/v4/pkg/apis/storage/v1"
+	"github.com/loft-sh/apiserver/pkg/builders"
 	clientpkg "github.com/loft-sh/devpod/pkg/client"
+	"github.com/loft-sh/devpod/pkg/compress"
+	"github.com/loft-sh/devpod/pkg/devcontainer/config"
 	"github.com/loft-sh/devpod/pkg/platform"
-	"github.com/loft-sh/devpod/pkg/platform/remotecommand"
 	"github.com/loft-sh/log"
 	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-func (c *client) Up(ctx context.Context, opt clientpkg.UpOptions) error {
+func (c *client) Up(ctx context.Context, opt clientpkg.UpOptions) (*config.Result, error) {
 	baseClient, err := c.initPlatformClient(ctx)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	instance, err := platform.FindInstance(ctx, baseClient, c.workspace.UID)
 	if err != nil {
-		return err
+		return nil, err
 	} else if instance == nil {
-		return fmt.Errorf("workspace %s not found. Looks like it does not exist anymore and you can delete it", c.workspace.ID)
+		return nil, fmt.Errorf("workspace %s not found. Looks like it does not exist anymore and you can delete it", c.workspace.ID)
 	}
 
 	// Log current workspace information. This is both useful to the user to understand the workspace configuration
@@ -39,21 +42,73 @@ func (c *client) Up(ctx context.Context, opt clientpkg.UpOptions) error {
 
 		instance, err = platform.UpdateInstance(ctx, baseClient, oldInstance, instance, c.log)
 		if err != nil {
-			return fmt.Errorf("update instance: %w", err)
+			return nil, fmt.Errorf("update instance: %w", err)
 		}
 		c.log.Info("Successfully updated template")
 	}
 
-	conn, err := platform.DialInstance(baseClient, instance, "up", platform.URLOptions(opt), c.log)
+	// encode options
+	rawOptions, _ := json.Marshal(opt)
+	managementClient, err := baseClient.Management()
 	if err != nil {
-		return err
+		return nil, fmt.Errorf("error getting management client: %w", err)
 	}
 
-	_, err = remotecommand.ExecuteConn(ctx, conn, opt.Stdin, opt.Stdout, os.Stderr, c.log)
+	// create up task
+	task, err := managementClient.Loft().ManagementV1().DevPodWorkspaceInstances(instance.Namespace).Up(ctx, instance.Name, &managementv1.DevPodWorkspaceInstanceUp{
+		Spec: managementv1.DevPodWorkspaceInstanceUpSpec{
+			Options: string(rawOptions),
+		},
+	}, metav1.CreateOptions{})
 	if err != nil {
-		return fmt.Errorf("error executing: %w", err)
+		return nil, fmt.Errorf("error creating up: %w", err)
+	} else if task.Status.TaskID == "" {
+		return nil, fmt.Errorf("no up task id returned from server")
 	}
-	return nil
+
+	// stream logs
+	exitCode, err := printLogs(ctx, managementClient, instance, task.Status.TaskID, os.Stdout, os.Stderr, c.log)
+	if err != nil {
+		return nil, fmt.Errorf("error printing logs: %w", err)
+	} else if exitCode != 0 {
+		return nil, fmt.Errorf("up failed with exit code %d", exitCode)
+	}
+
+	// get result
+	tasks := &managementv1.DevPodWorkspaceInstanceTasks{}
+	err = managementClient.Loft().ManagementV1().RESTClient().Get().
+		Namespace(instance.Namespace).
+		Resource("devpodworkspaceinstances").
+		Name(instance.Name).
+		SubResource("tasks").
+		VersionedParams(&managementv1.DevPodWorkspaceInstanceTasksOptions{
+			TaskID: task.Status.TaskID,
+		}, builders.ParameterCodec).
+		Do(ctx).
+		Into(tasks)
+	if err != nil {
+		return nil, fmt.Errorf("error getting up result: %w", err)
+	} else if len(tasks.Tasks) == 0 || tasks.Tasks[0].Result == "" {
+		return nil, fmt.Errorf("up result not found")
+	} else if len(tasks.Tasks) > 1 {
+		return nil, fmt.Errorf("multiple up results found")
+	}
+
+	// decompress result
+	compressedResult, err := compress.Decompress(tasks.Tasks[0].Result)
+	if err != nil {
+		return nil, fmt.Errorf("error decompressing up result: %w", err)
+	}
+
+	// unmarshal result
+	result := &config.Result{}
+	err = json.Unmarshal([]byte(compressedResult), result)
+	if err != nil {
+		return nil, fmt.Errorf("error unmarshalling up result: %w", err)
+	}
+
+	// return result
+	return result, nil
 }
 
 func templateUpdateRequired(instance *managementv1.DevPodWorkspaceInstance) bool {
@@ -76,11 +131,11 @@ func templateUpdateRequired(instance *managementv1.DevPodWorkspaceInstance) bool
 
 func printInstanceInfo(instance *managementv1.DevPodWorkspaceInstance, log log.Logger) {
 	workspaceConfig, _ := json.Marshal(struct {
-		Runner     storagev1.RunnerRef
+		Cluster    storagev1.ClusterRef
 		Template   *storagev1.TemplateRef
 		Parameters string
 	}{
-		Runner:     instance.Spec.RunnerRef,
+		Cluster:    instance.Spec.ClusterRef,
 		Template:   instance.Spec.TemplateRef,
 		Parameters: instance.Spec.Parameters,
 	})

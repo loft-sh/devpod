@@ -3,10 +3,10 @@
 package v1
 
 import (
-	v1 "github.com/loft-sh/api/v4/pkg/apis/storage/v1"
-	"k8s.io/apimachinery/pkg/labels"
-	"k8s.io/client-go/listers"
-	"k8s.io/client-go/tools/cache"
+	storagev1 "github.com/loft-sh/api/v4/pkg/apis/storage/v1"
+	labels "k8s.io/apimachinery/pkg/labels"
+	listers "k8s.io/client-go/listers"
+	cache "k8s.io/client-go/tools/cache"
 )
 
 // VirtualClusterTemplateLister helps list VirtualClusterTemplates.
@@ -14,19 +14,19 @@ import (
 type VirtualClusterTemplateLister interface {
 	// List lists all VirtualClusterTemplates in the indexer.
 	// Objects returned here must be treated as read-only.
-	List(selector labels.Selector) (ret []*v1.VirtualClusterTemplate, err error)
+	List(selector labels.Selector) (ret []*storagev1.VirtualClusterTemplate, err error)
 	// Get retrieves the VirtualClusterTemplate from the index for a given name.
 	// Objects returned here must be treated as read-only.
-	Get(name string) (*v1.VirtualClusterTemplate, error)
+	Get(name string) (*storagev1.VirtualClusterTemplate, error)
 	VirtualClusterTemplateListerExpansion
 }
 
 // virtualClusterTemplateLister implements the VirtualClusterTemplateLister interface.
 type virtualClusterTemplateLister struct {
-	listers.ResourceIndexer[*v1.VirtualClusterTemplate]
+	listers.ResourceIndexer[*storagev1.VirtualClusterTemplate]
 }
 
 // NewVirtualClusterTemplateLister returns a new VirtualClusterTemplateLister.
 func NewVirtualClusterTemplateLister(indexer cache.Indexer) VirtualClusterTemplateLister {
-	return &virtualClusterTemplateLister{listers.New[*v1.VirtualClusterTemplate](indexer, v1.Resource("virtualclustertemplate"))}
+	return &virtualClusterTemplateLister{listers.New[*storagev1.VirtualClusterTemplate](indexer, storagev1.Resource("virtualclustertemplate"))}
 }

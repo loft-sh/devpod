@@ -3,13 +3,13 @@
 package v1
 
 import (
-	"context"
+	context "context"
 	time "time"
 
-	managementv1 "github.com/loft-sh/api/v4/pkg/apis/management/v1"
+	apismanagementv1 "github.com/loft-sh/api/v4/pkg/apis/management/v1"
 	versioned "github.com/loft-sh/api/v4/pkg/clientset/versioned"
 	internalinterfaces "github.com/loft-sh/api/v4/pkg/informers/externalversions/internalinterfaces"
-	v1 "github.com/loft-sh/api/v4/pkg/listers/management/v1"
+	managementv1 "github.com/loft-sh/api/v4/pkg/listers/management/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	runtime "k8s.io/apimachinery/pkg/runtime"
 	watch "k8s.io/apimachinery/pkg/watch"
@@ -20,7 +20,7 @@ import (
 // IngressAuthTokens.
 type IngressAuthTokenInformer interface {
 	Informer() cache.SharedIndexInformer
-	Lister() v1.IngressAuthTokenLister
+	Lister() managementv1.IngressAuthTokenLister
 }
 
 type ingressAuthTokenInformer struct {
@@ -54,7 +54,7 @@ func NewFilteredIngressAuthTokenInformer(client versioned.Interface, resyncPerio
 				return client.ManagementV1().IngressAuthTokens().Watch(context.TODO(), options)
 			},
 		},
-		&managementv1.IngressAuthToken{},
+		&apismanagementv1.IngressAuthToken{},
 		resyncPeriod,
 		indexers,
 	)
@@ -65,9 +65,9 @@ func (f *ingressAuthTokenInformer) defaultInformer(client versioned.Interface, r
 }
 
 func (f *ingressAuthTokenInformer) Informer() cache.SharedIndexInformer {
-	return f.factory.InformerFor(&managementv1.IngressAuthToken{}, f.defaultInformer)
+	return f.factory.InformerFor(&apismanagementv1.IngressAuthToken{}, f.defaultInformer)
 }
 
-func (f *ingressAuthTokenInformer) Lister() v1.IngressAuthTokenLister {
-	return v1.NewIngressAuthTokenLister(f.Informer().GetIndexer())
+func (f *ingressAuthTokenInformer) Lister() managementv1.IngressAuthTokenLister {
+	return managementv1.NewIngressAuthTokenLister(f.Informer().GetIndexer())
 }

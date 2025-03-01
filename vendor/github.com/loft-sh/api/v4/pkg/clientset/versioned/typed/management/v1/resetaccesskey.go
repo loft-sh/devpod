@@ -3,9 +3,9 @@
 package v1
 
 import (
-	"context"
+	context "context"
 
-	v1 "github.com/loft-sh/api/v4/pkg/apis/management/v1"
+	managementv1 "github.com/loft-sh/api/v4/pkg/apis/management/v1"
 	scheme "github.com/loft-sh/api/v4/pkg/clientset/versioned/scheme"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	types "k8s.io/apimachinery/pkg/types"
@@ -21,33 +21,34 @@ type ResetAccessKeysGetter interface {
 
 // ResetAccessKeyInterface has methods to work with ResetAccessKey resources.
 type ResetAccessKeyInterface interface {
-	Create(ctx context.Context, resetAccessKey *v1.ResetAccessKey, opts metav1.CreateOptions) (*v1.ResetAccessKey, error)
-	Update(ctx context.Context, resetAccessKey *v1.ResetAccessKey, opts metav1.UpdateOptions) (*v1.ResetAccessKey, error)
+	Create(ctx context.Context, resetAccessKey *managementv1.ResetAccessKey, opts metav1.CreateOptions) (*managementv1.ResetAccessKey, error)
+	Update(ctx context.Context, resetAccessKey *managementv1.ResetAccessKey, opts metav1.UpdateOptions) (*managementv1.ResetAccessKey, error)
 	// Add a +genclient:noStatus comment above the type to avoid generating UpdateStatus().
-	UpdateStatus(ctx context.Context, resetAccessKey *v1.ResetAccessKey, opts metav1.UpdateOptions) (*v1.ResetAccessKey, error)
+	UpdateStatus(ctx context.Context, resetAccessKey *managementv1.ResetAccessKey, opts metav1.UpdateOptions) (*managementv1.ResetAccessKey, error)
 	Delete(ctx context.Context, name string, opts metav1.DeleteOptions) error
 	DeleteCollection(ctx context.Context, opts metav1.DeleteOptions, listOpts metav1.ListOptions) error
-	Get(ctx context.Context, name string, opts metav1.GetOptions) (*v1.ResetAccessKey, error)
-	List(ctx context.Context, opts metav1.ListOptions) (*v1.ResetAccessKeyList, error)
+	Get(ctx context.Context, name string, opts metav1.GetOptions) (*managementv1.ResetAccessKey, error)
+	List(ctx context.Context, opts metav1.ListOptions) (*managementv1.ResetAccessKeyList, error)
 	Watch(ctx context.Context, opts metav1.ListOptions) (watch.Interface, error)
-	Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts metav1.PatchOptions, subresources ...string) (result *v1.ResetAccessKey, err error)
+	Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts metav1.PatchOptions, subresources ...string) (result *managementv1.ResetAccessKey, err error)
 	ResetAccessKeyExpansion
 }
 
 // resetAccessKeys implements ResetAccessKeyInterface
 type resetAccessKeys struct {
-	*gentype.ClientWithList[*v1.ResetAccessKey, *v1.ResetAccessKeyList]
+	*gentype.ClientWithList[*managementv1.ResetAccessKey, *managementv1.ResetAccessKeyList]
 }
 
 // newResetAccessKeys returns a ResetAccessKeys
 func newResetAccessKeys(c *ManagementV1Client) *resetAccessKeys {
 	return &resetAccessKeys{
-		gentype.NewClientWithList[*v1.ResetAccessKey, *v1.ResetAccessKeyList](
+		gentype.NewClientWithList[*managementv1.ResetAccessKey, *managementv1.ResetAccessKeyList](
 			"resetaccesskeys",
 			c.RESTClient(),
 			scheme.ParameterCodec,
 			"",
-			func() *v1.ResetAccessKey { return &v1.ResetAccessKey{} },
-			func() *v1.ResetAccessKeyList { return &v1.ResetAccessKeyList{} }),
+			func() *managementv1.ResetAccessKey { return &managementv1.ResetAccessKey{} },
+			func() *managementv1.ResetAccessKeyList { return &managementv1.ResetAccessKeyList{} },
+		),
 	}
 }

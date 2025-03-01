@@ -6,7 +6,7 @@
 package v1
 
 import (
-	v1 "k8s.io/api/core/v1"
+	corev1 "k8s.io/api/core/v1"
 	runtime "k8s.io/apimachinery/pkg/runtime"
 )
 
@@ -52,7 +52,7 @@ func SetObjectDefaults_DevPodWorkspaceInstanceTroubleshoot(in *DevPodWorkspaceIn
 			}
 			if b.VolumeSource.AzureDisk != nil {
 				if b.VolumeSource.AzureDisk.CachingMode == nil {
-					ptrVar1 := v1.AzureDataDiskCachingMode(v1.AzureDataDiskCachingReadWrite)
+					ptrVar1 := corev1.AzureDataDiskCachingMode(corev1.AzureDataDiskCachingReadWrite)
 					b.VolumeSource.AzureDisk.CachingMode = &ptrVar1
 				}
 				if b.VolumeSource.AzureDisk.FSType == nil {
@@ -64,7 +64,7 @@ func SetObjectDefaults_DevPodWorkspaceInstanceTroubleshoot(in *DevPodWorkspaceIn
 					b.VolumeSource.AzureDisk.ReadOnly = &ptrVar1
 				}
 				if b.VolumeSource.AzureDisk.Kind == nil {
-					ptrVar1 := v1.AzureDataDiskKind(v1.AzureSharedBlobDisk)
+					ptrVar1 := corev1.AzureDataDiskKind(corev1.AzureSharedBlobDisk)
 					b.VolumeSource.AzureDisk.Kind = &ptrVar1
 				}
 			}
@@ -237,7 +237,7 @@ func SetObjectDefaults_Runner(in *Runner) {
 				}
 				if a.VolumeSource.AzureDisk != nil {
 					if a.VolumeSource.AzureDisk.CachingMode == nil {
-						ptrVar1 := v1.AzureDataDiskCachingMode(v1.AzureDataDiskCachingReadWrite)
+						ptrVar1 := corev1.AzureDataDiskCachingMode(corev1.AzureDataDiskCachingReadWrite)
 						a.VolumeSource.AzureDisk.CachingMode = &ptrVar1
 					}
 					if a.VolumeSource.AzureDisk.FSType == nil {
@@ -249,7 +249,7 @@ func SetObjectDefaults_Runner(in *Runner) {
 						a.VolumeSource.AzureDisk.ReadOnly = &ptrVar1
 					}
 					if a.VolumeSource.AzureDisk.Kind == nil {
-						ptrVar1 := v1.AzureDataDiskKind(v1.AzureSharedBlobDisk)
+						ptrVar1 := corev1.AzureDataDiskKind(corev1.AzureSharedBlobDisk)
 						a.VolumeSource.AzureDisk.Kind = &ptrVar1
 					}
 				}

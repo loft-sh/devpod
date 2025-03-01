@@ -3,9 +3,9 @@
 package v1
 
 import (
-	"context"
+	context "context"
 
-	v1 "github.com/loft-sh/api/v4/pkg/apis/management/v1"
+	managementv1 "github.com/loft-sh/api/v4/pkg/apis/management/v1"
 	scheme "github.com/loft-sh/api/v4/pkg/clientset/versioned/scheme"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	types "k8s.io/apimachinery/pkg/types"
@@ -21,33 +21,34 @@ type ConfigsGetter interface {
 
 // ConfigInterface has methods to work with Config resources.
 type ConfigInterface interface {
-	Create(ctx context.Context, config *v1.Config, opts metav1.CreateOptions) (*v1.Config, error)
-	Update(ctx context.Context, config *v1.Config, opts metav1.UpdateOptions) (*v1.Config, error)
+	Create(ctx context.Context, config *managementv1.Config, opts metav1.CreateOptions) (*managementv1.Config, error)
+	Update(ctx context.Context, config *managementv1.Config, opts metav1.UpdateOptions) (*managementv1.Config, error)
 	// Add a +genclient:noStatus comment above the type to avoid generating UpdateStatus().
-	UpdateStatus(ctx context.Context, config *v1.Config, opts metav1.UpdateOptions) (*v1.Config, error)
+	UpdateStatus(ctx context.Context, config *managementv1.Config, opts metav1.UpdateOptions) (*managementv1.Config, error)
 	Delete(ctx context.Context, name string, opts metav1.DeleteOptions) error
 	DeleteCollection(ctx context.Context, opts metav1.DeleteOptions, listOpts metav1.ListOptions) error
-	Get(ctx context.Context, name string, opts metav1.GetOptions) (*v1.Config, error)
-	List(ctx context.Context, opts metav1.ListOptions) (*v1.ConfigList, error)
+	Get(ctx context.Context, name string, opts metav1.GetOptions) (*managementv1.Config, error)
+	List(ctx context.Context, opts metav1.ListOptions) (*managementv1.ConfigList, error)
 	Watch(ctx context.Context, opts metav1.ListOptions) (watch.Interface, error)
-	Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts metav1.PatchOptions, subresources ...string) (result *v1.Config, err error)
+	Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts metav1.PatchOptions, subresources ...string) (result *managementv1.Config, err error)
 	ConfigExpansion
 }
 
 // configs implements ConfigInterface
 type configs struct {
-	*gentype.ClientWithList[*v1.Config, *v1.ConfigList]
+	*gentype.ClientWithList[*managementv1.Config, *managementv1.ConfigList]
 }
 
 // newConfigs returns a Configs
 func newConfigs(c *ManagementV1Client) *configs {
 	return &configs{
-		gentype.NewClientWithList[*v1.Config, *v1.ConfigList](
+		gentype.NewClientWithList[*managementv1.Config, *managementv1.ConfigList](
 			"configs",
 			c.RESTClient(),
 			scheme.ParameterCodec,
 			"",
-			func() *v1.Config { return &v1.Config{} },
-			func() *v1.ConfigList { return &v1.ConfigList{} }),
+			func() *managementv1.Config { return &managementv1.Config{} },
+			func() *managementv1.ConfigList { return &managementv1.ConfigList{} },
+		),
 	}
 }

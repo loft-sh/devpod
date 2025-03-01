@@ -3,10 +3,10 @@
 package v1
 
 import (
-	v1 "github.com/loft-sh/api/v4/pkg/apis/management/v1"
-	"k8s.io/apimachinery/pkg/labels"
-	"k8s.io/client-go/listers"
-	"k8s.io/client-go/tools/cache"
+	managementv1 "github.com/loft-sh/api/v4/pkg/apis/management/v1"
+	labels "k8s.io/apimachinery/pkg/labels"
+	listers "k8s.io/client-go/listers"
+	cache "k8s.io/client-go/tools/cache"
 )
 
 // DirectClusterEndpointTokenLister helps list DirectClusterEndpointTokens.
@@ -14,19 +14,19 @@ import (
 type DirectClusterEndpointTokenLister interface {
 	// List lists all DirectClusterEndpointTokens in the indexer.
 	// Objects returned here must be treated as read-only.
-	List(selector labels.Selector) (ret []*v1.DirectClusterEndpointToken, err error)
+	List(selector labels.Selector) (ret []*managementv1.DirectClusterEndpointToken, err error)
 	// Get retrieves the DirectClusterEndpointToken from the index for a given name.
 	// Objects returned here must be treated as read-only.
-	Get(name string) (*v1.DirectClusterEndpointToken, error)
+	Get(name string) (*managementv1.DirectClusterEndpointToken, error)
 	DirectClusterEndpointTokenListerExpansion
 }
 
 // directClusterEndpointTokenLister implements the DirectClusterEndpointTokenLister interface.
 type directClusterEndpointTokenLister struct {
-	listers.ResourceIndexer[*v1.DirectClusterEndpointToken]
+	listers.ResourceIndexer[*managementv1.DirectClusterEndpointToken]
 }
 
 // NewDirectClusterEndpointTokenLister returns a new DirectClusterEndpointTokenLister.
 func NewDirectClusterEndpointTokenLister(indexer cache.Indexer) DirectClusterEndpointTokenLister {
-	return &directClusterEndpointTokenLister{listers.New[*v1.DirectClusterEndpointToken](indexer, v1.Resource("directclusterendpointtoken"))}
+	return &directClusterEndpointTokenLister{listers.New[*managementv1.DirectClusterEndpointToken](indexer, managementv1.Resource("directclusterendpointtoken"))}
 }
