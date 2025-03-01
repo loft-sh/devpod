@@ -11,19 +11,20 @@ import (
 // +genclient:noStatus
 // +genclient:method=GetState,verb=get,subresource=state,result=github.com/loft-sh/api/v4/pkg/apis/management/v1.DevPodWorkspaceInstanceState
 // +genclient:method=SetState,verb=create,subresource=state,input=github.com/loft-sh/api/v4/pkg/apis/management/v1.DevPodWorkspaceInstanceState,result=github.com/loft-sh/api/v4/pkg/apis/management/v1.DevPodWorkspaceInstanceState
+// +genclient:method=Up,verb=create,subresource=up,input=github.com/loft-sh/api/v4/pkg/apis/management/v1.DevPodWorkspaceInstanceUp,result=github.com/loft-sh/api/v4/pkg/apis/management/v1.DevPodWorkspaceInstanceUp
+// +genclient:method=Stop,verb=create,subresource=stop,input=github.com/loft-sh/api/v4/pkg/apis/management/v1.DevPodWorkspaceInstanceStop,result=github.com/loft-sh/api/v4/pkg/apis/management/v1.DevPodWorkspaceInstanceStop
 // +genclient:method=Troubleshoot,verb=get,subresource=troubleshoot,result=github.com/loft-sh/api/v4/pkg/apis/management/v1.DevPodWorkspaceInstanceTroubleshoot
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 
 // DevPodWorkspaceInstance holds the DevPodWorkspaceInstance information
 // +k8s:openapi-gen=true
 // +resource:path=devpodworkspaceinstances,rest=DevPodWorkspaceInstanceREST
-// +subresource:request=DevPodUpOptions,path=up,kind=DevPodUpOptions,rest=DevPodUpOptionsREST
-// +subresource:request=DevPodDeleteOptions,path=delete,kind=DevPodDeleteOptions,rest=DevPodDeleteOptionsREST
-// +subresource:request=DevPodSshOptions,path=ssh,kind=DevPodSshOptions,rest=DevPodSshOptionsREST
-// +subresource:request=DevPodStopOptions,path=stop,kind=DevPodStopOptions,rest=DevPodStopOptionsREST
-// +subresource:request=DevPodStatusOptions,path=getstatus,kind=DevPodStatusOptions,rest=DevPodStatusOptionsREST
+// +subresource:request=DevPodWorkspaceInstanceUp,path=up,kind=DevPodWorkspaceInstanceUp,rest=DevPodWorkspaceInstanceUpREST
+// +subresource:request=DevPodWorkspaceInstanceStop,path=stop,kind=DevPodWorkspaceInstanceStop,rest=DevPodWorkspaceInstanceStopREST
 // +subresource:request=DevPodWorkspaceInstanceState,path=state,kind=DevPodWorkspaceInstanceState,rest=DevPodWorkspaceInstanceStateREST
 // +subresource:request=DevPodWorkspaceInstanceTroubleshoot,path=troubleshoot,kind=DevPodWorkspaceInstanceTroubleshoot,rest=DevPodWorkspaceInstanceTroubleshootREST
+// +subresource:request=DevPodWorkspaceInstanceLog,path=log,kind=DevPodWorkspaceInstanceLog,rest=DevPodWorkspaceInstanceLogREST
+// +subresource:request=DevPodWorkspaceInstanceTasks,path=tasks,kind=DevPodWorkspaceInstanceTasks,rest=DevPodWorkspaceInstanceTasksREST
 type DevPodWorkspaceInstance struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`

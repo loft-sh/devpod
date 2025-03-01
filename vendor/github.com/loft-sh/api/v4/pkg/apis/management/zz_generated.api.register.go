@@ -443,7 +443,17 @@ var (
 	NewVirtualClusterInstanceREST = func(getter generic.RESTOptionsGetter) rest.Storage {
 		return NewVirtualClusterInstanceRESTFunc(Factory)
 	}
-	NewVirtualClusterInstanceRESTFunc       NewRESTFunc
+	NewVirtualClusterInstanceRESTFunc     NewRESTFunc
+	ManagementVirtualClusterSchemaStorage = builders.NewApiResourceWithStorage( // Resource status endpoint
+		InternalVirtualClusterSchema,
+		func() runtime.Object { return &VirtualClusterSchema{} },     // Register versioned resource
+		func() runtime.Object { return &VirtualClusterSchemaList{} }, // Register versioned resource list
+		NewVirtualClusterSchemaREST,
+	)
+	NewVirtualClusterSchemaREST = func(getter generic.RESTOptionsGetter) rest.Storage {
+		return NewVirtualClusterSchemaRESTFunc(Factory)
+	}
+	NewVirtualClusterSchemaRESTFunc         NewRESTFunc
 	ManagementVirtualClusterTemplateStorage = builders.NewApiResourceWithStorage( // Resource status endpoint
 		InternalVirtualClusterTemplate,
 		func() runtime.Object { return &VirtualClusterTemplate{} },     // Register versioned resource
@@ -453,8 +463,18 @@ var (
 	NewVirtualClusterTemplateREST = func(getter generic.RESTOptionsGetter) rest.Storage {
 		return NewVirtualClusterTemplateRESTFunc(Factory)
 	}
-	NewVirtualClusterTemplateRESTFunc NewRESTFunc
-	InternalAgentAuditEvent           = builders.NewInternalResource(
+	NewVirtualClusterTemplateRESTFunc   NewRESTFunc
+	ManagementWorkspaceAccessKeyStorage = builders.NewApiResourceWithStorage( // Resource status endpoint
+		InternalWorkspaceAccessKey,
+		func() runtime.Object { return &WorkspaceAccessKey{} },     // Register versioned resource
+		func() runtime.Object { return &WorkspaceAccessKeyList{} }, // Register versioned resource list
+		NewWorkspaceAccessKeyREST,
+	)
+	NewWorkspaceAccessKeyREST = func(getter generic.RESTOptionsGetter) rest.Storage {
+		return NewWorkspaceAccessKeyRESTFunc(Factory)
+	}
+	NewWorkspaceAccessKeyRESTFunc NewRESTFunc
+	InternalAgentAuditEvent       = builders.NewInternalResource(
 		"agentauditevents",
 		"AgentAuditEvent",
 		func() runtime.Object { return &AgentAuditEvent{} },
@@ -666,30 +686,14 @@ var (
 		func() runtime.Object { return &DevPodWorkspaceInstance{} },
 		func() runtime.Object { return &DevPodWorkspaceInstanceList{} },
 	)
-	InternalDevPodDeleteOptionsREST = builders.NewInternalSubresource(
-		"devpodworkspaceinstances", "DevPodDeleteOptions", "delete",
-		func() runtime.Object { return &DevPodDeleteOptions{} },
+	InternalDevPodWorkspaceInstanceLogREST = builders.NewInternalSubresource(
+		"devpodworkspaceinstances", "DevPodWorkspaceInstanceLog", "log",
+		func() runtime.Object { return &DevPodWorkspaceInstanceLog{} },
 	)
-	NewDevPodDeleteOptionsREST = func(getter generic.RESTOptionsGetter) rest.Storage {
-		return NewDevPodDeleteOptionsRESTFunc(Factory)
+	NewDevPodWorkspaceInstanceLogREST = func(getter generic.RESTOptionsGetter) rest.Storage {
+		return NewDevPodWorkspaceInstanceLogRESTFunc(Factory)
 	}
-	NewDevPodDeleteOptionsRESTFunc  NewRESTFunc
-	InternalDevPodStatusOptionsREST = builders.NewInternalSubresource(
-		"devpodworkspaceinstances", "DevPodStatusOptions", "getstatus",
-		func() runtime.Object { return &DevPodStatusOptions{} },
-	)
-	NewDevPodStatusOptionsREST = func(getter generic.RESTOptionsGetter) rest.Storage {
-		return NewDevPodStatusOptionsRESTFunc(Factory)
-	}
-	NewDevPodStatusOptionsRESTFunc NewRESTFunc
-	InternalDevPodSshOptionsREST   = builders.NewInternalSubresource(
-		"devpodworkspaceinstances", "DevPodSshOptions", "ssh",
-		func() runtime.Object { return &DevPodSshOptions{} },
-	)
-	NewDevPodSshOptionsREST = func(getter generic.RESTOptionsGetter) rest.Storage {
-		return NewDevPodSshOptionsRESTFunc(Factory)
-	}
-	NewDevPodSshOptionsRESTFunc              NewRESTFunc
+	NewDevPodWorkspaceInstanceLogRESTFunc    NewRESTFunc
 	InternalDevPodWorkspaceInstanceStateREST = builders.NewInternalSubresource(
 		"devpodworkspaceinstances", "DevPodWorkspaceInstanceState", "state",
 		func() runtime.Object { return &DevPodWorkspaceInstanceState{} },
@@ -698,14 +702,22 @@ var (
 		return NewDevPodWorkspaceInstanceStateRESTFunc(Factory)
 	}
 	NewDevPodWorkspaceInstanceStateRESTFunc NewRESTFunc
-	InternalDevPodStopOptionsREST           = builders.NewInternalSubresource(
-		"devpodworkspaceinstances", "DevPodStopOptions", "stop",
-		func() runtime.Object { return &DevPodStopOptions{} },
+	InternalDevPodWorkspaceInstanceStopREST = builders.NewInternalSubresource(
+		"devpodworkspaceinstances", "DevPodWorkspaceInstanceStop", "stop",
+		func() runtime.Object { return &DevPodWorkspaceInstanceStop{} },
 	)
-	NewDevPodStopOptionsREST = func(getter generic.RESTOptionsGetter) rest.Storage {
-		return NewDevPodStopOptionsRESTFunc(Factory)
+	NewDevPodWorkspaceInstanceStopREST = func(getter generic.RESTOptionsGetter) rest.Storage {
+		return NewDevPodWorkspaceInstanceStopRESTFunc(Factory)
 	}
-	NewDevPodStopOptionsRESTFunc                    NewRESTFunc
+	NewDevPodWorkspaceInstanceStopRESTFunc   NewRESTFunc
+	InternalDevPodWorkspaceInstanceTasksREST = builders.NewInternalSubresource(
+		"devpodworkspaceinstances", "DevPodWorkspaceInstanceTasks", "tasks",
+		func() runtime.Object { return &DevPodWorkspaceInstanceTasks{} },
+	)
+	NewDevPodWorkspaceInstanceTasksREST = func(getter generic.RESTOptionsGetter) rest.Storage {
+		return NewDevPodWorkspaceInstanceTasksRESTFunc(Factory)
+	}
+	NewDevPodWorkspaceInstanceTasksRESTFunc         NewRESTFunc
 	InternalDevPodWorkspaceInstanceTroubleshootREST = builders.NewInternalSubresource(
 		"devpodworkspaceinstances", "DevPodWorkspaceInstanceTroubleshoot", "troubleshoot",
 		func() runtime.Object { return &DevPodWorkspaceInstanceTroubleshoot{} },
@@ -714,15 +726,15 @@ var (
 		return NewDevPodWorkspaceInstanceTroubleshootRESTFunc(Factory)
 	}
 	NewDevPodWorkspaceInstanceTroubleshootRESTFunc NewRESTFunc
-	InternalDevPodUpOptionsREST                    = builders.NewInternalSubresource(
-		"devpodworkspaceinstances", "DevPodUpOptions", "up",
-		func() runtime.Object { return &DevPodUpOptions{} },
+	InternalDevPodWorkspaceInstanceUpREST          = builders.NewInternalSubresource(
+		"devpodworkspaceinstances", "DevPodWorkspaceInstanceUp", "up",
+		func() runtime.Object { return &DevPodWorkspaceInstanceUp{} },
 	)
-	NewDevPodUpOptionsREST = func(getter generic.RESTOptionsGetter) rest.Storage {
-		return NewDevPodUpOptionsRESTFunc(Factory)
+	NewDevPodWorkspaceInstanceUpREST = func(getter generic.RESTOptionsGetter) rest.Storage {
+		return NewDevPodWorkspaceInstanceUpRESTFunc(Factory)
 	}
-	NewDevPodUpOptionsRESTFunc    NewRESTFunc
-	InternalDevPodWorkspacePreset = builders.NewInternalResource(
+	NewDevPodWorkspaceInstanceUpRESTFunc NewRESTFunc
+	InternalDevPodWorkspacePreset        = builders.NewInternalResource(
 		"devpodworkspacepresets",
 		"DevPodWorkspacePreset",
 		func() runtime.Object { return &DevPodWorkspacePreset{} },
@@ -1254,7 +1266,19 @@ var (
 		return NewVirtualClusterInstanceLogRESTFunc(Factory)
 	}
 	NewVirtualClusterInstanceLogRESTFunc NewRESTFunc
-	InternalVirtualClusterTemplate       = builders.NewInternalResource(
+	InternalVirtualClusterSchema         = builders.NewInternalResource(
+		"virtualclusterschemas",
+		"VirtualClusterSchema",
+		func() runtime.Object { return &VirtualClusterSchema{} },
+		func() runtime.Object { return &VirtualClusterSchemaList{} },
+	)
+	InternalVirtualClusterSchemaStatus = builders.NewInternalResourceStatus(
+		"virtualclusterschemas",
+		"VirtualClusterSchemaStatus",
+		func() runtime.Object { return &VirtualClusterSchema{} },
+		func() runtime.Object { return &VirtualClusterSchemaList{} },
+	)
+	InternalVirtualClusterTemplate = builders.NewInternalResource(
 		"virtualclustertemplates",
 		"VirtualClusterTemplate",
 		func() runtime.Object { return &VirtualClusterTemplate{} },
@@ -1265,6 +1289,18 @@ var (
 		"VirtualClusterTemplateStatus",
 		func() runtime.Object { return &VirtualClusterTemplate{} },
 		func() runtime.Object { return &VirtualClusterTemplateList{} },
+	)
+	InternalWorkspaceAccessKey = builders.NewInternalResource(
+		"workspaceaccesskeys",
+		"WorkspaceAccessKey",
+		func() runtime.Object { return &WorkspaceAccessKey{} },
+		func() runtime.Object { return &WorkspaceAccessKeyList{} },
+	)
+	InternalWorkspaceAccessKeyStatus = builders.NewInternalResourceStatus(
+		"workspaceaccesskeys",
+		"WorkspaceAccessKeyStatus",
+		func() runtime.Object { return &WorkspaceAccessKey{} },
+		func() runtime.Object { return &WorkspaceAccessKeyList{} },
 	)
 	// Registered resources and subresources
 	ApiVersion = builders.NewApiGroup("management.loft.sh").WithKinds(
@@ -1300,13 +1336,12 @@ var (
 		InternalDevPodEnvironmentTemplateStatus,
 		InternalDevPodWorkspaceInstance,
 		InternalDevPodWorkspaceInstanceStatus,
-		InternalDevPodDeleteOptionsREST,
-		InternalDevPodStatusOptionsREST,
-		InternalDevPodSshOptionsREST,
+		InternalDevPodWorkspaceInstanceLogREST,
 		InternalDevPodWorkspaceInstanceStateREST,
-		InternalDevPodStopOptionsREST,
+		InternalDevPodWorkspaceInstanceStopREST,
+		InternalDevPodWorkspaceInstanceTasksREST,
 		InternalDevPodWorkspaceInstanceTroubleshootREST,
-		InternalDevPodUpOptionsREST,
+		InternalDevPodWorkspaceInstanceUpREST,
 		InternalDevPodWorkspacePreset,
 		InternalDevPodWorkspacePresetStatus,
 		InternalDevPodWorkspaceTemplate,
@@ -1388,8 +1423,12 @@ var (
 		InternalVirtualClusterExternalDatabaseREST,
 		InternalVirtualClusterInstanceKubeConfigREST,
 		InternalVirtualClusterInstanceLogREST,
+		InternalVirtualClusterSchema,
+		InternalVirtualClusterSchemaStatus,
 		InternalVirtualClusterTemplate,
 		InternalVirtualClusterTemplateStatus,
+		InternalWorkspaceAccessKey,
+		InternalWorkspaceAccessKeyStatus,
 	)
 
 	// Required by code generated by go2idl
@@ -1451,6 +1490,11 @@ type AgentAuditEventSpec struct {
 }
 
 type AgentAuditEventStatus struct {
+}
+
+type AgentCostControlConfig struct {
+	Enabled                  *bool `json:"enabled,omitempty"`
+	CostControlClusterConfig `json:",inline"`
 }
 
 // +genclient
@@ -1733,14 +1777,15 @@ type ClusterAgentConfig struct {
 }
 
 type ClusterAgentConfigCommon struct {
-	Cluster                string             `json:"cluster,omitempty"`
-	Audit                  *AgentAuditConfig  `json:"audit,omitempty"`
-	DefaultImageRegistry   string             `json:"defaultImageRegistry,omitempty"`
-	TokenCaCert            []byte             `json:"tokenCaCert,omitempty"`
-	LoftHost               string             `json:"loftHost,omitempty"`
-	ProjectNamespacePrefix string             `json:"projectNamespacePrefix,omitempty"`
-	LoftInstanceID         string             `json:"loftInstanceID,omitempty"`
-	AnalyticsSpec          AgentAnalyticsSpec `json:"analyticsSpec"`
+	Cluster                string                  `json:"cluster,omitempty"`
+	Audit                  *AgentAuditConfig       `json:"audit,omitempty"`
+	DefaultImageRegistry   string                  `json:"defaultImageRegistry,omitempty"`
+	TokenCaCert            []byte                  `json:"tokenCaCert,omitempty"`
+	LoftHost               string                  `json:"loftHost,omitempty"`
+	ProjectNamespacePrefix string                  `json:"projectNamespacePrefix,omitempty"`
+	LoftInstanceID         string                  `json:"loftInstanceID,omitempty"`
+	AnalyticsSpec          AgentAnalyticsSpec      `json:"analyticsSpec"`
+	CostControl            *AgentCostControlConfig `json:"costControl,omitempty"`
 }
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
@@ -1900,10 +1945,19 @@ type ConvertVirtualClusterConfigStatus struct {
 }
 
 type CostControl struct {
-	Enabled        *bool                `json:"enabled,omitempty"`
-	GlobalMetrics  *storagev1.Metrics   `json:"globalMetrics,omitempty"`
-	ClusterMetrics *storagev1.Metrics   `json:"clusterMetrics,omitempty"`
-	Settings       *CostControlSettings `json:"settings,omitempty"`
+	Enabled  *bool                    `json:"enabled,omitempty"`
+	Global   CostControlGlobalConfig  `json:"global,omitempty"`
+	Cluster  CostControlClusterConfig `json:"cluster,omitempty"`
+	Settings *CostControlSettings     `json:"settings,omitempty"`
+}
+
+type CostControlClusterConfig struct {
+	Metrics  *storagev1.Metrics  `json:"metrics,omitempty"`
+	OpenCost *storagev1.OpenCost `json:"opencost,omitempty"`
+}
+
+type CostControlGlobalConfig struct {
+	Metrics *storagev1.Metrics `json:"metrics,omitempty"`
 }
 
 type CostControlResourcePrice struct {
@@ -1916,13 +1970,6 @@ type CostControlSettings struct {
 	AvgCPUPricePerNode          *CostControlResourcePrice `json:"averageCPUPricePerNode,omitempty"`
 	AvgRAMPricePerNode          *CostControlResourcePrice `json:"averageRAMPricePerNode,omitempty"`
 	ControlPlanePricePerCluster *CostControlResourcePrice `json:"controlPlanePricePerCluster,omitempty"`
-}
-
-// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
-
-type DevPodDeleteOptions struct {
-	metav1.TypeMeta `json:",inline"`
-	Options         string `json:"options,omitempty"`
 }
 
 // +genclient
@@ -1943,37 +1990,6 @@ type DevPodEnvironmentTemplateSpec struct {
 type DevPodEnvironmentTemplateStatus struct {
 }
 
-// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
-
-type DevPodSshOptions struct {
-	metav1.TypeMeta `json:",inline"`
-	Options         string `json:"options,omitempty"`
-}
-
-// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
-
-type DevPodStatusOptions struct {
-	metav1.TypeMeta `json:",inline"`
-	Options         string `json:"options,omitempty"`
-}
-
-// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
-
-type DevPodStopOptions struct {
-	metav1.TypeMeta `json:",inline"`
-	Options         string `json:"options,omitempty"`
-}
-
-// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
-
-type DevPodUpOptions struct {
-	metav1.TypeMeta `json:",inline"`
-	WebMode         bool   `json:"webMode,omitempty"`
-	CLIMode         bool   `json:"cliMode,omitempty"`
-	Debug           bool   `json:"debug,omitempty"`
-	Options         string `json:"options,omitempty"`
-}
-
 // +genclient
 // +genclient
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
@@ -1983,6 +1999,13 @@ type DevPodWorkspaceInstance struct {
 	metav1.ObjectMeta `json:"metadata,omitempty"`
 	Spec              DevPodWorkspaceInstanceSpec   `json:"spec,omitempty"`
 	Status            DevPodWorkspaceInstanceStatus `json:"status,omitempty"`
+}
+
+// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
+
+type DevPodWorkspaceInstanceLog struct {
+	metav1.TypeMeta   `json:",inline"`
+	metav1.ObjectMeta `json:"metadata,omitempty"`
 }
 
 type DevPodWorkspaceInstanceSpec struct {
@@ -2004,6 +2027,39 @@ type DevPodWorkspaceInstanceStatus struct {
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 
+type DevPodWorkspaceInstanceStop struct {
+	metav1.TypeMeta   `json:",inline"`
+	metav1.ObjectMeta `json:"metadata,omitempty"`
+	Spec              DevPodWorkspaceInstanceStopSpec   `json:"spec,omitempty"`
+	Status            DevPodWorkspaceInstanceStopStatus `json:"status,omitempty"`
+}
+
+type DevPodWorkspaceInstanceStopSpec struct {
+	Options string `json:"options,omitempty"`
+}
+
+type DevPodWorkspaceInstanceStopStatus struct {
+	TaskID string `json:"taskId,omitempty"`
+}
+
+type DevPodWorkspaceInstanceTask struct {
+	ID        string      `json:"id,omitempty"`
+	Type      string      `json:"type,omitempty"`
+	Result    string      `json:"result,omitempty"`
+	Status    string      `json:"status,omitempty"`
+	CreatedAt metav1.Time `json:"createdAt,omitempty"`
+}
+
+// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
+
+type DevPodWorkspaceInstanceTasks struct {
+	metav1.TypeMeta   `json:",inline"`
+	metav1.ObjectMeta `json:"metadata,omitempty"`
+	Tasks             []DevPodWorkspaceInstanceTask `json:"tasks,omitempty"`
+}
+
+// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
+
 type DevPodWorkspaceInstanceTroubleshoot struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
@@ -2013,6 +2069,24 @@ type DevPodWorkspaceInstanceTroubleshoot struct {
 	Pods              []corev1.Pod                       `json:"pods,omitempty"`
 	PVCs              []corev1.PersistentVolumeClaim     `json:"pvcs,omitempty"`
 	Errors            []string                           `json:"errors,omitempty"`
+}
+
+// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
+
+type DevPodWorkspaceInstanceUp struct {
+	metav1.TypeMeta   `json:",inline"`
+	metav1.ObjectMeta `json:"metadata,omitempty"`
+	Spec              DevPodWorkspaceInstanceUpSpec   `json:"spec,omitempty"`
+	Status            DevPodWorkspaceInstanceUpStatus `json:"status,omitempty"`
+}
+
+type DevPodWorkspaceInstanceUpSpec struct {
+	Debug   bool   `json:"debug,omitempty"`
+	Options string `json:"options,omitempty"`
+}
+
+type DevPodWorkspaceInstanceUpStatus struct {
+	TaskID string `json:"taskId,omitempty"`
 }
 
 // +genclient
@@ -2814,13 +2888,19 @@ type UserPermissionsRole struct {
 type UserProfile struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
-	DisplayName       string  `json:"displayName,omitempty"`
-	Username          string  `json:"username,omitempty"`
-	Password          string  `json:"password,omitempty"`
-	CurrentPassword   string  `json:"currentPassword,omitempty"`
-	Email             string  `json:"email,omitempty"`
-	Icon              *string `json:"icon,omitempty"`
-	Custom            string  `json:"custom,omitempty"`
+	DisplayName       string                         `json:"displayName,omitempty"`
+	Username          string                         `json:"username,omitempty"`
+	Password          string                         `json:"password,omitempty"`
+	CurrentPassword   string                         `json:"currentPassword,omitempty"`
+	Email             string                         `json:"email,omitempty"`
+	Icon              *string                        `json:"icon,omitempty"`
+	Custom            string                         `json:"custom,omitempty"`
+	Secrets           *map[string]*UserProfileSecret `json:"secrets,omitempty"`
+}
+
+type UserProfileSecret struct {
+	Type string `json:"type,omitempty"`
+	Data string `json:"data,omitempty"`
 }
 
 type UserSpec struct {
@@ -2904,6 +2984,26 @@ type VirtualClusterInstanceStatus struct {
 }
 
 // +genclient
+// +genclient:nonNamespaced
+// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
+
+type VirtualClusterSchema struct {
+	metav1.TypeMeta   `json:",inline"`
+	metav1.ObjectMeta `json:"metadata,omitempty"`
+	Spec              VirtualClusterSchemaSpec   `json:"spec,omitempty"`
+	Status            VirtualClusterSchemaStatus `json:"status,omitempty"`
+}
+
+type VirtualClusterSchemaSpec struct {
+	Version string `json:"version,omitempty"`
+}
+
+type VirtualClusterSchemaStatus struct {
+	Schema        string `json:"schema,omitempty"`
+	DefaultValues string `json:"defaultValues,omitempty"`
+}
+
+// +genclient
 // +genclient
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 
@@ -2921,6 +3021,25 @@ type VirtualClusterTemplateSpec struct {
 type VirtualClusterTemplateStatus struct {
 	storagev1.VirtualClusterTemplateStatus `json:",inline"`
 	Apps                                   []*storagev1.EntityInfo `json:"apps,omitempty"`
+}
+
+// +genclient
+// +genclient:nonNamespaced
+// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
+
+type WorkspaceAccessKey struct {
+	metav1.TypeMeta   `json:",inline"`
+	metav1.ObjectMeta `json:"metadata,omitempty"`
+	Spec              WorkspaceAccessKeySpec   `json:"spec,omitempty"`
+	Status            WorkspaceAccessKeyStatus `json:"status,omitempty"`
+}
+
+type WorkspaceAccessKeySpec struct {
+	storagev1.AccessKeySpec `json:",inline"`
+}
+
+type WorkspaceAccessKeyStatus struct {
+	storagev1.AccessKeyStatus `json:",inline"`
 }
 
 // AgentAuditEvent Functions and Structs
@@ -4215,26 +4334,10 @@ type DevPodWorkspaceInstanceList struct {
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 
-type DevPodDeleteOptionsList struct {
+type DevPodWorkspaceInstanceLogList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:"metadata,omitempty"`
-	Items           []DevPodDeleteOptions `json:"items"`
-}
-
-// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
-
-type DevPodStatusOptionsList struct {
-	metav1.TypeMeta `json:",inline"`
-	metav1.ListMeta `json:"metadata,omitempty"`
-	Items           []DevPodStatusOptions `json:"items"`
-}
-
-// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
-
-type DevPodSshOptionsList struct {
-	metav1.TypeMeta `json:",inline"`
-	metav1.ListMeta `json:"metadata,omitempty"`
-	Items           []DevPodSshOptions `json:"items"`
+	Items           []DevPodWorkspaceInstanceLog `json:"items"`
 }
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
@@ -4247,10 +4350,18 @@ type DevPodWorkspaceInstanceStateList struct {
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 
-type DevPodStopOptionsList struct {
+type DevPodWorkspaceInstanceStopList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:"metadata,omitempty"`
-	Items           []DevPodStopOptions `json:"items"`
+	Items           []DevPodWorkspaceInstanceStop `json:"items"`
+}
+
+// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
+
+type DevPodWorkspaceInstanceTasksList struct {
+	metav1.TypeMeta `json:",inline"`
+	metav1.ListMeta `json:"metadata,omitempty"`
+	Items           []DevPodWorkspaceInstanceTasks `json:"items"`
 }
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
@@ -4263,10 +4374,10 @@ type DevPodWorkspaceInstanceTroubleshootList struct {
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 
-type DevPodUpOptionsList struct {
+type DevPodWorkspaceInstanceUpList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:"metadata,omitempty"`
-	Items           []DevPodUpOptions `json:"items"`
+	Items           []DevPodWorkspaceInstanceUp `json:"items"`
 }
 
 func (DevPodWorkspaceInstance) NewStatus() interface{} {
@@ -8003,6 +8114,125 @@ func (s *storageVirtualClusterInstance) DeleteVirtualClusterInstance(ctx context
 	return sync, err
 }
 
+// VirtualClusterSchema Functions and Structs
+//
+// +k8s:deepcopy-gen=false
+type VirtualClusterSchemaStrategy struct {
+	builders.DefaultStorageStrategy
+}
+
+// +k8s:deepcopy-gen=false
+type VirtualClusterSchemaStatusStrategy struct {
+	builders.DefaultStatusStorageStrategy
+}
+
+// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
+
+type VirtualClusterSchemaList struct {
+	metav1.TypeMeta `json:",inline"`
+	metav1.ListMeta `json:"metadata,omitempty"`
+	Items           []VirtualClusterSchema `json:"items"`
+}
+
+func (VirtualClusterSchema) NewStatus() interface{} {
+	return VirtualClusterSchemaStatus{}
+}
+
+func (pc *VirtualClusterSchema) GetStatus() interface{} {
+	return pc.Status
+}
+
+func (pc *VirtualClusterSchema) SetStatus(s interface{}) {
+	pc.Status = s.(VirtualClusterSchemaStatus)
+}
+
+func (pc *VirtualClusterSchema) GetSpec() interface{} {
+	return pc.Spec
+}
+
+func (pc *VirtualClusterSchema) SetSpec(s interface{}) {
+	pc.Spec = s.(VirtualClusterSchemaSpec)
+}
+
+func (pc *VirtualClusterSchema) GetObjectMeta() *metav1.ObjectMeta {
+	return &pc.ObjectMeta
+}
+
+func (pc *VirtualClusterSchema) SetGeneration(generation int64) {
+	pc.ObjectMeta.Generation = generation
+}
+
+func (pc VirtualClusterSchema) GetGeneration() int64 {
+	return pc.ObjectMeta.Generation
+}
+
+// Registry is an interface for things that know how to store VirtualClusterSchema.
+// +k8s:deepcopy-gen=false
+type VirtualClusterSchemaRegistry interface {
+	ListVirtualClusterSchemas(ctx context.Context, options *internalversion.ListOptions) (*VirtualClusterSchemaList, error)
+	GetVirtualClusterSchema(ctx context.Context, id string, options *metav1.GetOptions) (*VirtualClusterSchema, error)
+	CreateVirtualClusterSchema(ctx context.Context, id *VirtualClusterSchema) (*VirtualClusterSchema, error)
+	UpdateVirtualClusterSchema(ctx context.Context, id *VirtualClusterSchema) (*VirtualClusterSchema, error)
+	DeleteVirtualClusterSchema(ctx context.Context, id string) (bool, error)
+}
+
+// NewRegistry returns a new Registry interface for the given Storage. Any mismatched types will panic.
+func NewVirtualClusterSchemaRegistry(sp builders.StandardStorageProvider) VirtualClusterSchemaRegistry {
+	return &storageVirtualClusterSchema{sp}
+}
+
+// Implement Registry
+// storage puts strong typing around storage calls
+// +k8s:deepcopy-gen=false
+type storageVirtualClusterSchema struct {
+	builders.StandardStorageProvider
+}
+
+func (s *storageVirtualClusterSchema) ListVirtualClusterSchemas(ctx context.Context, options *internalversion.ListOptions) (*VirtualClusterSchemaList, error) {
+	if options != nil && options.FieldSelector != nil && !options.FieldSelector.Empty() {
+		return nil, fmt.Errorf("field selector not supported yet")
+	}
+	st := s.GetStandardStorage()
+	obj, err := st.List(ctx, options)
+	if err != nil {
+		return nil, err
+	}
+	return obj.(*VirtualClusterSchemaList), err
+}
+
+func (s *storageVirtualClusterSchema) GetVirtualClusterSchema(ctx context.Context, id string, options *metav1.GetOptions) (*VirtualClusterSchema, error) {
+	st := s.GetStandardStorage()
+	obj, err := st.Get(ctx, id, options)
+	if err != nil {
+		return nil, err
+	}
+	return obj.(*VirtualClusterSchema), nil
+}
+
+func (s *storageVirtualClusterSchema) CreateVirtualClusterSchema(ctx context.Context, object *VirtualClusterSchema) (*VirtualClusterSchema, error) {
+	st := s.GetStandardStorage()
+	obj, err := st.Create(ctx, object, nil, &metav1.CreateOptions{})
+	if err != nil {
+		return nil, err
+	}
+	return obj.(*VirtualClusterSchema), nil
+}
+
+func (s *storageVirtualClusterSchema) UpdateVirtualClusterSchema(ctx context.Context, object *VirtualClusterSchema) (*VirtualClusterSchema, error) {
+	st := s.GetStandardStorage()
+	obj, _, err := st.Update(ctx, object.Name, rest.DefaultUpdatedObjectInfo(object), nil, nil, false, &metav1.UpdateOptions{})
+	if err != nil {
+		return nil, err
+	}
+	return obj.(*VirtualClusterSchema), nil
+}
+
+func (s *storageVirtualClusterSchema) DeleteVirtualClusterSchema(ctx context.Context, id string) (bool, error) {
+	st := s.GetStandardStorage()
+	_, sync, err := st.Delete(ctx, id, nil, &metav1.DeleteOptions{})
+	return sync, err
+}
+
 // VirtualClusterTemplate Functions and Structs
 //
 // +k8s:deepcopy-gen=false
@@ -8117,6 +8347,125 @@ func (s *storageVirtualClusterTemplate) UpdateVirtualClusterTemplate(ctx context
 }
 
 func (s *storageVirtualClusterTemplate) DeleteVirtualClusterTemplate(ctx context.Context, id string) (bool, error) {
+	st := s.GetStandardStorage()
+	_, sync, err := st.Delete(ctx, id, nil, &metav1.DeleteOptions{})
+	return sync, err
+}
+
+// WorkspaceAccessKey Functions and Structs
+//
+// +k8s:deepcopy-gen=false
+type WorkspaceAccessKeyStrategy struct {
+	builders.DefaultStorageStrategy
+}
+
+// +k8s:deepcopy-gen=false
+type WorkspaceAccessKeyStatusStrategy struct {
+	builders.DefaultStatusStorageStrategy
+}
+
+// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
+
+type WorkspaceAccessKeyList struct {
+	metav1.TypeMeta `json:",inline"`
+	metav1.ListMeta `json:"metadata,omitempty"`
+	Items           []WorkspaceAccessKey `json:"items"`
+}
+
+func (WorkspaceAccessKey) NewStatus() interface{} {
+	return WorkspaceAccessKeyStatus{}
+}
+
+func (pc *WorkspaceAccessKey) GetStatus() interface{} {
+	return pc.Status
+}
+
+func (pc *WorkspaceAccessKey) SetStatus(s interface{}) {
+	pc.Status = s.(WorkspaceAccessKeyStatus)
+}
+
+func (pc *WorkspaceAccessKey) GetSpec() interface{} {
+	return pc.Spec
+}
+
+func (pc *WorkspaceAccessKey) SetSpec(s interface{}) {
+	pc.Spec = s.(WorkspaceAccessKeySpec)
+}
+
+func (pc *WorkspaceAccessKey) GetObjectMeta() *metav1.ObjectMeta {
+	return &pc.ObjectMeta
+}
+
+func (pc *WorkspaceAccessKey) SetGeneration(generation int64) {
+	pc.ObjectMeta.Generation = generation
+}
+
+func (pc WorkspaceAccessKey) GetGeneration() int64 {
+	return pc.ObjectMeta.Generation
+}
+
+// Registry is an interface for things that know how to store WorkspaceAccessKey.
+// +k8s:deepcopy-gen=false
+type WorkspaceAccessKeyRegistry interface {
+	ListWorkspaceAccessKeys(ctx context.Context, options *internalversion.ListOptions) (*WorkspaceAccessKeyList, error)
+	GetWorkspaceAccessKey(ctx context.Context, id string, options *metav1.GetOptions) (*WorkspaceAccessKey, error)
+	CreateWorkspaceAccessKey(ctx context.Context, id *WorkspaceAccessKey) (*WorkspaceAccessKey, error)
+	UpdateWorkspaceAccessKey(ctx context.Context, id *WorkspaceAccessKey) (*WorkspaceAccessKey, error)
+	DeleteWorkspaceAccessKey(ctx context.Context, id string) (bool, error)
+}
+
+// NewRegistry returns a new Registry interface for the given Storage. Any mismatched types will panic.
+func NewWorkspaceAccessKeyRegistry(sp builders.StandardStorageProvider) WorkspaceAccessKeyRegistry {
+	return &storageWorkspaceAccessKey{sp}
+}
+
+// Implement Registry
+// storage puts strong typing around storage calls
+// +k8s:deepcopy-gen=false
+type storageWorkspaceAccessKey struct {
+	builders.StandardStorageProvider
+}
+
+func (s *storageWorkspaceAccessKey) ListWorkspaceAccessKeys(ctx context.Context, options *internalversion.ListOptions) (*WorkspaceAccessKeyList, error) {
+	if options != nil && options.FieldSelector != nil && !options.FieldSelector.Empty() {
+		return nil, fmt.Errorf("field selector not supported yet")
+	}
+	st := s.GetStandardStorage()
+	obj, err := st.List(ctx, options)
+	if err != nil {
+		return nil, err
+	}
+	return obj.(*WorkspaceAccessKeyList), err
+}
+
+func (s *storageWorkspaceAccessKey) GetWorkspaceAccessKey(ctx context.Context, id string, options *metav1.GetOptions) (*WorkspaceAccessKey, error) {
+	st := s.GetStandardStorage()
+	obj, err := st.Get(ctx, id, options)
+	if err != nil {
+		return nil, err
+	}
+	return obj.(*WorkspaceAccessKey), nil
+}
+
+func (s *storageWorkspaceAccessKey) CreateWorkspaceAccessKey(ctx context.Context, object *WorkspaceAccessKey) (*WorkspaceAccessKey, error) {
+	st := s.GetStandardStorage()
+	obj, err := st.Create(ctx, object, nil, &metav1.CreateOptions{})
+	if err != nil {
+		return nil, err
+	}
+	return obj.(*WorkspaceAccessKey), nil
+}
+
+func (s *storageWorkspaceAccessKey) UpdateWorkspaceAccessKey(ctx context.Context, object *WorkspaceAccessKey) (*WorkspaceAccessKey, error) {
+	st := s.GetStandardStorage()
+	obj, _, err := st.Update(ctx, object.Name, rest.DefaultUpdatedObjectInfo(object), nil, nil, false, &metav1.UpdateOptions{})
+	if err != nil {
+		return nil, err
+	}
+	return obj.(*WorkspaceAccessKey), nil
+}
+
+func (s *storageWorkspaceAccessKey) DeleteWorkspaceAccessKey(ctx context.Context, id string) (bool, error) {
 	st := s.GetStandardStorage()
 	_, sync, err := st.Delete(ctx, id, nil, &metav1.DeleteOptions{})
 	return sync, err

@@ -3,9 +3,9 @@
 package v1
 
 import (
-	"context"
+	context "context"
 
-	v1 "github.com/loft-sh/api/v4/pkg/apis/management/v1"
+	managementv1 "github.com/loft-sh/api/v4/pkg/apis/management/v1"
 	scheme "github.com/loft-sh/api/v4/pkg/clientset/versioned/scheme"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	types "k8s.io/apimachinery/pkg/types"
@@ -21,33 +21,36 @@ type ConvertVirtualClusterConfigsGetter interface {
 
 // ConvertVirtualClusterConfigInterface has methods to work with ConvertVirtualClusterConfig resources.
 type ConvertVirtualClusterConfigInterface interface {
-	Create(ctx context.Context, convertVirtualClusterConfig *v1.ConvertVirtualClusterConfig, opts metav1.CreateOptions) (*v1.ConvertVirtualClusterConfig, error)
-	Update(ctx context.Context, convertVirtualClusterConfig *v1.ConvertVirtualClusterConfig, opts metav1.UpdateOptions) (*v1.ConvertVirtualClusterConfig, error)
+	Create(ctx context.Context, convertVirtualClusterConfig *managementv1.ConvertVirtualClusterConfig, opts metav1.CreateOptions) (*managementv1.ConvertVirtualClusterConfig, error)
+	Update(ctx context.Context, convertVirtualClusterConfig *managementv1.ConvertVirtualClusterConfig, opts metav1.UpdateOptions) (*managementv1.ConvertVirtualClusterConfig, error)
 	// Add a +genclient:noStatus comment above the type to avoid generating UpdateStatus().
-	UpdateStatus(ctx context.Context, convertVirtualClusterConfig *v1.ConvertVirtualClusterConfig, opts metav1.UpdateOptions) (*v1.ConvertVirtualClusterConfig, error)
+	UpdateStatus(ctx context.Context, convertVirtualClusterConfig *managementv1.ConvertVirtualClusterConfig, opts metav1.UpdateOptions) (*managementv1.ConvertVirtualClusterConfig, error)
 	Delete(ctx context.Context, name string, opts metav1.DeleteOptions) error
 	DeleteCollection(ctx context.Context, opts metav1.DeleteOptions, listOpts metav1.ListOptions) error
-	Get(ctx context.Context, name string, opts metav1.GetOptions) (*v1.ConvertVirtualClusterConfig, error)
-	List(ctx context.Context, opts metav1.ListOptions) (*v1.ConvertVirtualClusterConfigList, error)
+	Get(ctx context.Context, name string, opts metav1.GetOptions) (*managementv1.ConvertVirtualClusterConfig, error)
+	List(ctx context.Context, opts metav1.ListOptions) (*managementv1.ConvertVirtualClusterConfigList, error)
 	Watch(ctx context.Context, opts metav1.ListOptions) (watch.Interface, error)
-	Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts metav1.PatchOptions, subresources ...string) (result *v1.ConvertVirtualClusterConfig, err error)
+	Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts metav1.PatchOptions, subresources ...string) (result *managementv1.ConvertVirtualClusterConfig, err error)
 	ConvertVirtualClusterConfigExpansion
 }
 
 // convertVirtualClusterConfigs implements ConvertVirtualClusterConfigInterface
 type convertVirtualClusterConfigs struct {
-	*gentype.ClientWithList[*v1.ConvertVirtualClusterConfig, *v1.ConvertVirtualClusterConfigList]
+	*gentype.ClientWithList[*managementv1.ConvertVirtualClusterConfig, *managementv1.ConvertVirtualClusterConfigList]
 }
 
 // newConvertVirtualClusterConfigs returns a ConvertVirtualClusterConfigs
 func newConvertVirtualClusterConfigs(c *ManagementV1Client) *convertVirtualClusterConfigs {
 	return &convertVirtualClusterConfigs{
-		gentype.NewClientWithList[*v1.ConvertVirtualClusterConfig, *v1.ConvertVirtualClusterConfigList](
+		gentype.NewClientWithList[*managementv1.ConvertVirtualClusterConfig, *managementv1.ConvertVirtualClusterConfigList](
 			"convertvirtualclusterconfigs",
 			c.RESTClient(),
 			scheme.ParameterCodec,
 			"",
-			func() *v1.ConvertVirtualClusterConfig { return &v1.ConvertVirtualClusterConfig{} },
-			func() *v1.ConvertVirtualClusterConfigList { return &v1.ConvertVirtualClusterConfigList{} }),
+			func() *managementv1.ConvertVirtualClusterConfig { return &managementv1.ConvertVirtualClusterConfig{} },
+			func() *managementv1.ConvertVirtualClusterConfigList {
+				return &managementv1.ConvertVirtualClusterConfigList{}
+			},
+		),
 	}
 }

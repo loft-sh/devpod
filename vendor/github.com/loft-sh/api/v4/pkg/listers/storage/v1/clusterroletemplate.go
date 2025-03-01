@@ -3,10 +3,10 @@
 package v1
 
 import (
-	v1 "github.com/loft-sh/api/v4/pkg/apis/storage/v1"
-	"k8s.io/apimachinery/pkg/labels"
-	"k8s.io/client-go/listers"
-	"k8s.io/client-go/tools/cache"
+	storagev1 "github.com/loft-sh/api/v4/pkg/apis/storage/v1"
+	labels "k8s.io/apimachinery/pkg/labels"
+	listers "k8s.io/client-go/listers"
+	cache "k8s.io/client-go/tools/cache"
 )
 
 // ClusterRoleTemplateLister helps list ClusterRoleTemplates.
@@ -14,19 +14,19 @@ import (
 type ClusterRoleTemplateLister interface {
 	// List lists all ClusterRoleTemplates in the indexer.
 	// Objects returned here must be treated as read-only.
-	List(selector labels.Selector) (ret []*v1.ClusterRoleTemplate, err error)
+	List(selector labels.Selector) (ret []*storagev1.ClusterRoleTemplate, err error)
 	// Get retrieves the ClusterRoleTemplate from the index for a given name.
 	// Objects returned here must be treated as read-only.
-	Get(name string) (*v1.ClusterRoleTemplate, error)
+	Get(name string) (*storagev1.ClusterRoleTemplate, error)
 	ClusterRoleTemplateListerExpansion
 }
 
 // clusterRoleTemplateLister implements the ClusterRoleTemplateLister interface.
 type clusterRoleTemplateLister struct {
-	listers.ResourceIndexer[*v1.ClusterRoleTemplate]
+	listers.ResourceIndexer[*storagev1.ClusterRoleTemplate]
 }
 
 // NewClusterRoleTemplateLister returns a new ClusterRoleTemplateLister.
 func NewClusterRoleTemplateLister(indexer cache.Indexer) ClusterRoleTemplateLister {
-	return &clusterRoleTemplateLister{listers.New[*v1.ClusterRoleTemplate](indexer, v1.Resource("clusterroletemplate"))}
+	return &clusterRoleTemplateLister{listers.New[*storagev1.ClusterRoleTemplate](indexer, storagev1.Resource("clusterroletemplate"))}
 }

@@ -3,13 +3,13 @@
 package v1
 
 import (
-	"context"
+	context "context"
 	time "time"
 
-	storagev1 "github.com/loft-sh/api/v4/pkg/apis/storage/v1"
+	apisstoragev1 "github.com/loft-sh/api/v4/pkg/apis/storage/v1"
 	versioned "github.com/loft-sh/api/v4/pkg/clientset/versioned"
 	internalinterfaces "github.com/loft-sh/api/v4/pkg/informers/externalversions/internalinterfaces"
-	v1 "github.com/loft-sh/api/v4/pkg/listers/storage/v1"
+	storagev1 "github.com/loft-sh/api/v4/pkg/listers/storage/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	runtime "k8s.io/apimachinery/pkg/runtime"
 	watch "k8s.io/apimachinery/pkg/watch"
@@ -20,7 +20,7 @@ import (
 // Users.
 type UserInformer interface {
 	Informer() cache.SharedIndexInformer
-	Lister() v1.UserLister
+	Lister() storagev1.UserLister
 }
 
 type userInformer struct {
@@ -54,7 +54,7 @@ func NewFilteredUserInformer(client versioned.Interface, resyncPeriod time.Durat
 				return client.StorageV1().Users().Watch(context.TODO(), options)
 			},
 		},
-		&storagev1.User{},
+		&apisstoragev1.User{},
 		resyncPeriod,
 		indexers,
 	)
@@ -65,9 +65,9 @@ func (f *userInformer) defaultInformer(client versioned.Interface, resyncPeriod 
 }
 
 func (f *userInformer) Informer() cache.SharedIndexInformer {
-	return f.factory.InformerFor(&storagev1.User{}, f.defaultInformer)
+	return f.factory.InformerFor(&apisstoragev1.User{}, f.defaultInformer)
 }
 
-func (f *userInformer) Lister() v1.UserLister {
-	return v1.NewUserLister(f.Informer().GetIndexer())
+func (f *userInformer) Lister() storagev1.UserLister {
+	return storagev1.NewUserLister(f.Informer().GetIndexer())
 }

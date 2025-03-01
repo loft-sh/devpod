@@ -32,4 +32,16 @@ type UserProfile struct {
 	// Custom is custom information that should be saved of the user
 	// +optional
 	Custom string `json:"custom,omitempty"`
+	// Secrets is a map of secret names to secret data
+	// +optional
+	Secrets *map[string]*UserProfileSecret `json:"secrets,omitempty"`
+}
+
+type UserProfileSecret struct {
+	// Type is the type of the secret
+	// +optional
+	Type string `json:"type,omitempty"`
+	// Data is the data of the secret
+	// +optional
+	Data string `json:"data,omitempty"`
 }

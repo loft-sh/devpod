@@ -3,10 +3,10 @@
 package v1
 
 import (
-	v1 "github.com/loft-sh/api/v4/pkg/apis/management/v1"
-	"k8s.io/apimachinery/pkg/labels"
-	"k8s.io/client-go/listers"
-	"k8s.io/client-go/tools/cache"
+	managementv1 "github.com/loft-sh/api/v4/pkg/apis/management/v1"
+	labels "k8s.io/apimachinery/pkg/labels"
+	listers "k8s.io/client-go/listers"
+	cache "k8s.io/client-go/tools/cache"
 )
 
 // ProjectSecretLister helps list ProjectSecrets.
@@ -14,7 +14,7 @@ import (
 type ProjectSecretLister interface {
 	// List lists all ProjectSecrets in the indexer.
 	// Objects returned here must be treated as read-only.
-	List(selector labels.Selector) (ret []*v1.ProjectSecret, err error)
+	List(selector labels.Selector) (ret []*managementv1.ProjectSecret, err error)
 	// ProjectSecrets returns an object that can list and get ProjectSecrets.
 	ProjectSecrets(namespace string) ProjectSecretNamespaceLister
 	ProjectSecretListerExpansion
@@ -22,17 +22,17 @@ type ProjectSecretLister interface {
 
 // projectSecretLister implements the ProjectSecretLister interface.
 type projectSecretLister struct {
-	listers.ResourceIndexer[*v1.ProjectSecret]
+	listers.ResourceIndexer[*managementv1.ProjectSecret]
 }
 
 // NewProjectSecretLister returns a new ProjectSecretLister.
 func NewProjectSecretLister(indexer cache.Indexer) ProjectSecretLister {
-	return &projectSecretLister{listers.New[*v1.ProjectSecret](indexer, v1.Resource("projectsecret"))}
+	return &projectSecretLister{listers.New[*managementv1.ProjectSecret](indexer, managementv1.Resource("projectsecret"))}
 }
 
 // ProjectSecrets returns an object that can list and get ProjectSecrets.
 func (s *projectSecretLister) ProjectSecrets(namespace string) ProjectSecretNamespaceLister {
-	return projectSecretNamespaceLister{listers.NewNamespaced[*v1.ProjectSecret](s.ResourceIndexer, namespace)}
+	return projectSecretNamespaceLister{listers.NewNamespaced[*managementv1.ProjectSecret](s.ResourceIndexer, namespace)}
 }
 
 // ProjectSecretNamespaceLister helps list and get ProjectSecrets.
@@ -40,15 +40,15 @@ func (s *projectSecretLister) ProjectSecrets(namespace string) ProjectSecretName
 type ProjectSecretNamespaceLister interface {
 	// List lists all ProjectSecrets in the indexer for a given namespace.
 	// Objects returned here must be treated as read-only.
-	List(selector labels.Selector) (ret []*v1.ProjectSecret, err error)
+	List(selector labels.Selector) (ret []*managementv1.ProjectSecret, err error)
 	// Get retrieves the ProjectSecret from the indexer for a given namespace and name.
 	// Objects returned here must be treated as read-only.
-	Get(name string) (*v1.ProjectSecret, error)
+	Get(name string) (*managementv1.ProjectSecret, error)
 	ProjectSecretNamespaceListerExpansion
 }
 
 // projectSecretNamespaceLister implements the ProjectSecretNamespaceLister
 // interface.
 type projectSecretNamespaceLister struct {
-	listers.ResourceIndexer[*v1.ProjectSecret]
+	listers.ResourceIndexer[*managementv1.ProjectSecret]
 }

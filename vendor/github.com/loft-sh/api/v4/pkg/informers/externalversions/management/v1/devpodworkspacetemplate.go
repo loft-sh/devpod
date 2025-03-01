@@ -3,13 +3,13 @@
 package v1
 
 import (
-	"context"
+	context "context"
 	time "time"
 
-	managementv1 "github.com/loft-sh/api/v4/pkg/apis/management/v1"
+	apismanagementv1 "github.com/loft-sh/api/v4/pkg/apis/management/v1"
 	versioned "github.com/loft-sh/api/v4/pkg/clientset/versioned"
 	internalinterfaces "github.com/loft-sh/api/v4/pkg/informers/externalversions/internalinterfaces"
-	v1 "github.com/loft-sh/api/v4/pkg/listers/management/v1"
+	managementv1 "github.com/loft-sh/api/v4/pkg/listers/management/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	runtime "k8s.io/apimachinery/pkg/runtime"
 	watch "k8s.io/apimachinery/pkg/watch"
@@ -20,7 +20,7 @@ import (
 // DevPodWorkspaceTemplates.
 type DevPodWorkspaceTemplateInformer interface {
 	Informer() cache.SharedIndexInformer
-	Lister() v1.DevPodWorkspaceTemplateLister
+	Lister() managementv1.DevPodWorkspaceTemplateLister
 }
 
 type devPodWorkspaceTemplateInformer struct {
@@ -54,7 +54,7 @@ func NewFilteredDevPodWorkspaceTemplateInformer(client versioned.Interface, resy
 				return client.ManagementV1().DevPodWorkspaceTemplates().Watch(context.TODO(), options)
 			},
 		},
-		&managementv1.DevPodWorkspaceTemplate{},
+		&apismanagementv1.DevPodWorkspaceTemplate{},
 		resyncPeriod,
 		indexers,
 	)
@@ -65,9 +65,9 @@ func (f *devPodWorkspaceTemplateInformer) defaultInformer(client versioned.Inter
 }
 
 func (f *devPodWorkspaceTemplateInformer) Informer() cache.SharedIndexInformer {
-	return f.factory.InformerFor(&managementv1.DevPodWorkspaceTemplate{}, f.defaultInformer)
+	return f.factory.InformerFor(&apismanagementv1.DevPodWorkspaceTemplate{}, f.defaultInformer)
 }
 
-func (f *devPodWorkspaceTemplateInformer) Lister() v1.DevPodWorkspaceTemplateLister {
-	return v1.NewDevPodWorkspaceTemplateLister(f.Informer().GetIndexer())
+func (f *devPodWorkspaceTemplateInformer) Lister() managementv1.DevPodWorkspaceTemplateLister {
+	return managementv1.NewDevPodWorkspaceTemplateLister(f.Informer().GetIndexer())
 }

@@ -3,13 +3,13 @@
 package v1
 
 import (
-	"context"
+	context "context"
 	time "time"
 
-	storagev1 "github.com/loft-sh/api/v4/pkg/apis/storage/v1"
+	apisstoragev1 "github.com/loft-sh/api/v4/pkg/apis/storage/v1"
 	versioned "github.com/loft-sh/api/v4/pkg/clientset/versioned"
 	internalinterfaces "github.com/loft-sh/api/v4/pkg/informers/externalversions/internalinterfaces"
-	v1 "github.com/loft-sh/api/v4/pkg/listers/storage/v1"
+	storagev1 "github.com/loft-sh/api/v4/pkg/listers/storage/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	runtime "k8s.io/apimachinery/pkg/runtime"
 	watch "k8s.io/apimachinery/pkg/watch"
@@ -20,7 +20,7 @@ import (
 // VirtualClusterInstances.
 type VirtualClusterInstanceInformer interface {
 	Informer() cache.SharedIndexInformer
-	Lister() v1.VirtualClusterInstanceLister
+	Lister() storagev1.VirtualClusterInstanceLister
 }
 
 type virtualClusterInstanceInformer struct {
@@ -55,7 +55,7 @@ func NewFilteredVirtualClusterInstanceInformer(client versioned.Interface, names
 				return client.StorageV1().VirtualClusterInstances(namespace).Watch(context.TODO(), options)
 			},
 		},
-		&storagev1.VirtualClusterInstance{},
+		&apisstoragev1.VirtualClusterInstance{},
 		resyncPeriod,
 		indexers,
 	)
@@ -66,9 +66,9 @@ func (f *virtualClusterInstanceInformer) defaultInformer(client versioned.Interf
 }
 
 func (f *virtualClusterInstanceInformer) Informer() cache.SharedIndexInformer {
-	return f.factory.InformerFor(&storagev1.VirtualClusterInstance{}, f.defaultInformer)
+	return f.factory.InformerFor(&apisstoragev1.VirtualClusterInstance{}, f.defaultInformer)
 }
 
-func (f *virtualClusterInstanceInformer) Lister() v1.VirtualClusterInstanceLister {
-	return v1.NewVirtualClusterInstanceLister(f.Informer().GetIndexer())
+func (f *virtualClusterInstanceInformer) Lister() storagev1.VirtualClusterInstanceLister {
+	return storagev1.NewVirtualClusterInstanceLister(f.Informer().GetIndexer())
 }

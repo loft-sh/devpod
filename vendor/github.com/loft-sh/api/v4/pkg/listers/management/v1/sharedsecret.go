@@ -3,10 +3,10 @@
 package v1
 
 import (
-	v1 "github.com/loft-sh/api/v4/pkg/apis/management/v1"
-	"k8s.io/apimachinery/pkg/labels"
-	"k8s.io/client-go/listers"
-	"k8s.io/client-go/tools/cache"
+	managementv1 "github.com/loft-sh/api/v4/pkg/apis/management/v1"
+	labels "k8s.io/apimachinery/pkg/labels"
+	listers "k8s.io/client-go/listers"
+	cache "k8s.io/client-go/tools/cache"
 )
 
 // SharedSecretLister helps list SharedSecrets.
@@ -14,7 +14,7 @@ import (
 type SharedSecretLister interface {
 	// List lists all SharedSecrets in the indexer.
 	// Objects returned here must be treated as read-only.
-	List(selector labels.Selector) (ret []*v1.SharedSecret, err error)
+	List(selector labels.Selector) (ret []*managementv1.SharedSecret, err error)
 	// SharedSecrets returns an object that can list and get SharedSecrets.
 	SharedSecrets(namespace string) SharedSecretNamespaceLister
 	SharedSecretListerExpansion
@@ -22,17 +22,17 @@ type SharedSecretLister interface {
 
 // sharedSecretLister implements the SharedSecretLister interface.
 type sharedSecretLister struct {
-	listers.ResourceIndexer[*v1.SharedSecret]
+	listers.ResourceIndexer[*managementv1.SharedSecret]
 }
 
 // NewSharedSecretLister returns a new SharedSecretLister.
 func NewSharedSecretLister(indexer cache.Indexer) SharedSecretLister {
-	return &sharedSecretLister{listers.New[*v1.SharedSecret](indexer, v1.Resource("sharedsecret"))}
+	return &sharedSecretLister{listers.New[*managementv1.SharedSecret](indexer, managementv1.Resource("sharedsecret"))}
 }
 
 // SharedSecrets returns an object that can list and get SharedSecrets.
 func (s *sharedSecretLister) SharedSecrets(namespace string) SharedSecretNamespaceLister {
-	return sharedSecretNamespaceLister{listers.NewNamespaced[*v1.SharedSecret](s.ResourceIndexer, namespace)}
+	return sharedSecretNamespaceLister{listers.NewNamespaced[*managementv1.SharedSecret](s.ResourceIndexer, namespace)}
 }
 
 // SharedSecretNamespaceLister helps list and get SharedSecrets.
@@ -40,15 +40,15 @@ func (s *sharedSecretLister) SharedSecrets(namespace string) SharedSecretNamespa
 type SharedSecretNamespaceLister interface {
 	// List lists all SharedSecrets in the indexer for a given namespace.
 	// Objects returned here must be treated as read-only.
-	List(selector labels.Selector) (ret []*v1.SharedSecret, err error)
+	List(selector labels.Selector) (ret []*managementv1.SharedSecret, err error)
 	// Get retrieves the SharedSecret from the indexer for a given namespace and name.
 	// Objects returned here must be treated as read-only.
-	Get(name string) (*v1.SharedSecret, error)
+	Get(name string) (*managementv1.SharedSecret, error)
 	SharedSecretNamespaceListerExpansion
 }
 
 // sharedSecretNamespaceLister implements the SharedSecretNamespaceLister
 // interface.
 type sharedSecretNamespaceLister struct {
-	listers.ResourceIndexer[*v1.SharedSecret]
+	listers.ResourceIndexer[*managementv1.SharedSecret]
 }

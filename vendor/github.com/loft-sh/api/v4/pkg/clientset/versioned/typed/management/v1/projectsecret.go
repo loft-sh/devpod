@@ -3,9 +3,9 @@
 package v1
 
 import (
-	"context"
+	context "context"
 
-	v1 "github.com/loft-sh/api/v4/pkg/apis/management/v1"
+	managementv1 "github.com/loft-sh/api/v4/pkg/apis/management/v1"
 	scheme "github.com/loft-sh/api/v4/pkg/clientset/versioned/scheme"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	types "k8s.io/apimachinery/pkg/types"
@@ -21,31 +21,32 @@ type ProjectSecretsGetter interface {
 
 // ProjectSecretInterface has methods to work with ProjectSecret resources.
 type ProjectSecretInterface interface {
-	Create(ctx context.Context, projectSecret *v1.ProjectSecret, opts metav1.CreateOptions) (*v1.ProjectSecret, error)
-	Update(ctx context.Context, projectSecret *v1.ProjectSecret, opts metav1.UpdateOptions) (*v1.ProjectSecret, error)
+	Create(ctx context.Context, projectSecret *managementv1.ProjectSecret, opts metav1.CreateOptions) (*managementv1.ProjectSecret, error)
+	Update(ctx context.Context, projectSecret *managementv1.ProjectSecret, opts metav1.UpdateOptions) (*managementv1.ProjectSecret, error)
 	Delete(ctx context.Context, name string, opts metav1.DeleteOptions) error
 	DeleteCollection(ctx context.Context, opts metav1.DeleteOptions, listOpts metav1.ListOptions) error
-	Get(ctx context.Context, name string, opts metav1.GetOptions) (*v1.ProjectSecret, error)
-	List(ctx context.Context, opts metav1.ListOptions) (*v1.ProjectSecretList, error)
+	Get(ctx context.Context, name string, opts metav1.GetOptions) (*managementv1.ProjectSecret, error)
+	List(ctx context.Context, opts metav1.ListOptions) (*managementv1.ProjectSecretList, error)
 	Watch(ctx context.Context, opts metav1.ListOptions) (watch.Interface, error)
-	Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts metav1.PatchOptions, subresources ...string) (result *v1.ProjectSecret, err error)
+	Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts metav1.PatchOptions, subresources ...string) (result *managementv1.ProjectSecret, err error)
 	ProjectSecretExpansion
 }
 
 // projectSecrets implements ProjectSecretInterface
 type projectSecrets struct {
-	*gentype.ClientWithList[*v1.ProjectSecret, *v1.ProjectSecretList]
+	*gentype.ClientWithList[*managementv1.ProjectSecret, *managementv1.ProjectSecretList]
 }
 
 // newProjectSecrets returns a ProjectSecrets
 func newProjectSecrets(c *ManagementV1Client, namespace string) *projectSecrets {
 	return &projectSecrets{
-		gentype.NewClientWithList[*v1.ProjectSecret, *v1.ProjectSecretList](
+		gentype.NewClientWithList[*managementv1.ProjectSecret, *managementv1.ProjectSecretList](
 			"projectsecrets",
 			c.RESTClient(),
 			scheme.ParameterCodec,
 			namespace,
-			func() *v1.ProjectSecret { return &v1.ProjectSecret{} },
-			func() *v1.ProjectSecretList { return &v1.ProjectSecretList{} }),
+			func() *managementv1.ProjectSecret { return &managementv1.ProjectSecret{} },
+			func() *managementv1.ProjectSecretList { return &managementv1.ProjectSecretList{} },
+		),
 	}
 }
