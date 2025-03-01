@@ -3,13 +3,13 @@
 package v1
 
 import (
-	"context"
+	context "context"
 	time "time"
 
-	managementv1 "github.com/loft-sh/api/v4/pkg/apis/management/v1"
+	apismanagementv1 "github.com/loft-sh/api/v4/pkg/apis/management/v1"
 	versioned "github.com/loft-sh/api/v4/pkg/clientset/versioned"
 	internalinterfaces "github.com/loft-sh/api/v4/pkg/informers/externalversions/internalinterfaces"
-	v1 "github.com/loft-sh/api/v4/pkg/listers/management/v1"
+	managementv1 "github.com/loft-sh/api/v4/pkg/listers/management/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	runtime "k8s.io/apimachinery/pkg/runtime"
 	watch "k8s.io/apimachinery/pkg/watch"
@@ -20,7 +20,7 @@ import (
 // DirectClusterEndpointTokens.
 type DirectClusterEndpointTokenInformer interface {
 	Informer() cache.SharedIndexInformer
-	Lister() v1.DirectClusterEndpointTokenLister
+	Lister() managementv1.DirectClusterEndpointTokenLister
 }
 
 type directClusterEndpointTokenInformer struct {
@@ -54,7 +54,7 @@ func NewFilteredDirectClusterEndpointTokenInformer(client versioned.Interface, r
 				return client.ManagementV1().DirectClusterEndpointTokens().Watch(context.TODO(), options)
 			},
 		},
-		&managementv1.DirectClusterEndpointToken{},
+		&apismanagementv1.DirectClusterEndpointToken{},
 		resyncPeriod,
 		indexers,
 	)
@@ -65,9 +65,9 @@ func (f *directClusterEndpointTokenInformer) defaultInformer(client versioned.In
 }
 
 func (f *directClusterEndpointTokenInformer) Informer() cache.SharedIndexInformer {
-	return f.factory.InformerFor(&managementv1.DirectClusterEndpointToken{}, f.defaultInformer)
+	return f.factory.InformerFor(&apismanagementv1.DirectClusterEndpointToken{}, f.defaultInformer)
 }
 
-func (f *directClusterEndpointTokenInformer) Lister() v1.DirectClusterEndpointTokenLister {
-	return v1.NewDirectClusterEndpointTokenLister(f.Informer().GetIndexer())
+func (f *directClusterEndpointTokenInformer) Lister() managementv1.DirectClusterEndpointTokenLister {
+	return managementv1.NewDirectClusterEndpointTokenLister(f.Informer().GetIndexer())
 }

@@ -6,6 +6,7 @@ import (
 	"io"
 	"strings"
 
+	"github.com/loft-sh/devpod/pkg/devcontainer/config"
 	"github.com/loft-sh/devpod/pkg/provider"
 	"golang.org/x/crypto/ssh"
 )
@@ -76,7 +77,7 @@ type DaemonClient interface {
 	Create(ctx context.Context, stdin io.Reader, stdout io.Writer, stderr io.Writer) error
 
 	// Up start a new remote workspace
-	Up(ctx context.Context, options UpOptions) error
+	Up(ctx context.Context, options UpOptions) (*config.Result, error)
 
 	// SSHClients returns an SSH client for the tool and one for the actual user
 	SSHClients(ctx context.Context, user string) (*ssh.Client, *ssh.Client, error)

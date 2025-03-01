@@ -3,13 +3,13 @@
 package v1
 
 import (
-	"context"
+	context "context"
 	time "time"
 
-	managementv1 "github.com/loft-sh/api/v4/pkg/apis/management/v1"
+	apismanagementv1 "github.com/loft-sh/api/v4/pkg/apis/management/v1"
 	versioned "github.com/loft-sh/api/v4/pkg/clientset/versioned"
 	internalinterfaces "github.com/loft-sh/api/v4/pkg/informers/externalversions/internalinterfaces"
-	v1 "github.com/loft-sh/api/v4/pkg/listers/management/v1"
+	managementv1 "github.com/loft-sh/api/v4/pkg/listers/management/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	runtime "k8s.io/apimachinery/pkg/runtime"
 	watch "k8s.io/apimachinery/pkg/watch"
@@ -20,7 +20,7 @@ import (
 // Backups.
 type BackupInformer interface {
 	Informer() cache.SharedIndexInformer
-	Lister() v1.BackupLister
+	Lister() managementv1.BackupLister
 }
 
 type backupInformer struct {
@@ -54,7 +54,7 @@ func NewFilteredBackupInformer(client versioned.Interface, resyncPeriod time.Dur
 				return client.ManagementV1().Backups().Watch(context.TODO(), options)
 			},
 		},
-		&managementv1.Backup{},
+		&apismanagementv1.Backup{},
 		resyncPeriod,
 		indexers,
 	)
@@ -65,9 +65,9 @@ func (f *backupInformer) defaultInformer(client versioned.Interface, resyncPerio
 }
 
 func (f *backupInformer) Informer() cache.SharedIndexInformer {
-	return f.factory.InformerFor(&managementv1.Backup{}, f.defaultInformer)
+	return f.factory.InformerFor(&apismanagementv1.Backup{}, f.defaultInformer)
 }
 
-func (f *backupInformer) Lister() v1.BackupLister {
-	return v1.NewBackupLister(f.Informer().GetIndexer())
+func (f *backupInformer) Lister() managementv1.BackupLister {
+	return managementv1.NewBackupLister(f.Informer().GetIndexer())
 }

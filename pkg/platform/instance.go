@@ -134,12 +134,6 @@ func DialInstance(baseClient client.Client, workspace *managementv1.DevPodWorksp
 	}
 
 	host := restConfig.Host
-
-	// check if this workspace has been scheduled to run on a specific runner
-	if workspace.Annotations != nil && workspace.Annotations[storagev1.DevPodWorkspaceRunnerEndpointAnnotation] != "" {
-		host = workspace.Annotations[storagev1.DevPodWorkspaceRunnerEndpointAnnotation]
-	}
-
 	parsedURL, _ := url.Parse(host)
 	if parsedURL != nil && parsedURL.Host != "" {
 		host = parsedURL.Host
@@ -232,11 +226,6 @@ func WaitForInstance(ctx context.Context, client client.Client, instance *manage
 			return false, nil
 		}
 
-		if !isRunnerReady(updatedInstance, storagev1.BuiltinRunnerName) {
-			log.Debugf("Runner is not ready yet", name, status.Phase)
-			return false, nil
-		}
-
 		log.Debugf("Workspace %s is ready", name)
 		return true, nil
 	})
@@ -246,7 +235,6 @@ func WaitForInstance(ctx context.Context, client client.Client, instance *manage
 		// basic status
 		msg += fmt.Sprintf("ready: %t\n", isReady(updatedInstance))
 		msg += fmt.Sprintf("template synced: %t\n", isTemplateSynced(updatedInstance))
-		msg += fmt.Sprintf("runner ready: %t\n", isRunnerReady(updatedInstance, storagev1.BuiltinRunnerName))
 		msg += "\n"
 
 		// CRD conditions
@@ -272,19 +260,6 @@ func isReady(workspace *managementv1.DevPodWorkspaceInstance) bool {
 	}
 
 	return workspace.Status.Phase == storagev1.InstanceReady
-}
-
-func isRunnerReady(workspace *managementv1.DevPodWorkspaceInstance, builtinRunnerName string) bool {
-	if workspace.Spec.RunnerRef.Runner == "" {
-		return true
-	}
-
-	if workspace.Spec.RunnerRef.Runner == builtinRunnerName {
-		return true
-	}
-
-	return workspace.GetAnnotations() != nil &&
-		workspace.GetAnnotations()[storagev1.DevPodWorkspaceRunnerEndpointAnnotation] != ""
 }
 
 func isTemplateSynced(workspace *managementv1.DevPodWorkspaceInstance) bool {

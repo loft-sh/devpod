@@ -27,8 +27,8 @@ var (
 	// DevPodWorkspaceSourceAnnotation holds the workspace source of the devpod workspace
 	DevPodWorkspaceSourceAnnotation = "loft.sh/workspace-source"
 
-	// DevPodWorkspaceRunnerNetworkPeerAnnotation holds the workspace runner network peer name of the devpod workspace
-	DevPodWorkspaceRunnerEndpointAnnotation = "loft.sh/runner-endpoint"
+	// DevPodClientsAnnotation holds the active clients for a workspace networpeer
+	DevPodClientsAnnotation = "loft.sh/devpod-clients"
 )
 
 var (
@@ -107,10 +107,9 @@ type DevPodWorkspaceInstanceSpec struct {
 	// +optional
 	Template *DevPodWorkspaceTemplateDefinition `json:"template,omitempty"`
 
-	// RunnerRef is the reference to the connected runner holding
-	// this workspace
+	// ClusterRef is the reference to the cluster holding this workspace
 	// +optional
-	RunnerRef RunnerRef `json:"runnerRef,omitempty"`
+	ClusterRef ClusterRef `json:"clusterRef,omitempty"`
 
 	// Parameters are values to pass to the template.
 	// The values should be encoded as YAML string where each parameter is represented as a top-level field key.
@@ -124,6 +123,14 @@ type DevPodWorkspaceInstanceSpec struct {
 	// PreventWakeUpOnConnection is used to prevent workspace that uses sleep mode from waking up on incomming ssh connection.
 	// +optional
 	PreventWakeUpOnConnection bool `json:"preventWakeUpOnConnection,omitempty"`
+
+	// NetworkAccessKeyRef is the reference to workspace AccessKey instance used for connecting to internal loft tailscale network.
+	// +optional
+	NetworkAccessKeyRef *ClusterObjectRef `json:"networkAccessKeyRef,omitempty"`
+
+	// NetworkHost is this workspace hostname in internal loft tailscale network.
+	// +optional
+	NetworkHost string `json:"networkHost,omitempty"`
 }
 
 type PresetRef struct {
@@ -151,6 +158,12 @@ type EnvironmentRef struct {
 	// Version is the version of DevPodEnvironmentTemplate this references
 	// +optional
 	Version string `json:"version,omitempty"`
+}
+
+// ClusterObjectRef is a generic reference to cluster level object.
+type ClusterObjectRef struct {
+	// Name is the name of cluster level resource this references.
+	Name string `json:"name"`
 }
 
 type DevPodWorkspaceInstanceStatus struct {
@@ -183,10 +196,6 @@ type DevPodWorkspaceInstanceStatus struct {
 	// IgnoreReconciliation ignores reconciliation for this object
 	// +optional
 	IgnoreReconciliation bool `json:"ignoreReconciliation,omitempty"`
-
-	// ClusterRef holds the runners cluster if the workspace is scheduled
-	// on kubernetes based runner
-	ClusterRef *ClusterRef `json:"clusterRef,omitempty"`
 }
 
 type WorkspaceStatusResult struct {

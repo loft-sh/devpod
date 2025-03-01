@@ -3,13 +3,13 @@
 package v1
 
 import (
-	"context"
+	context "context"
 	time "time"
 
-	storagev1 "github.com/loft-sh/api/v4/pkg/apis/storage/v1"
+	apisstoragev1 "github.com/loft-sh/api/v4/pkg/apis/storage/v1"
 	versioned "github.com/loft-sh/api/v4/pkg/clientset/versioned"
 	internalinterfaces "github.com/loft-sh/api/v4/pkg/informers/externalversions/internalinterfaces"
-	v1 "github.com/loft-sh/api/v4/pkg/listers/storage/v1"
+	storagev1 "github.com/loft-sh/api/v4/pkg/listers/storage/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	runtime "k8s.io/apimachinery/pkg/runtime"
 	watch "k8s.io/apimachinery/pkg/watch"
@@ -20,7 +20,7 @@ import (
 // DevPodWorkspacePresets.
 type DevPodWorkspacePresetInformer interface {
 	Informer() cache.SharedIndexInformer
-	Lister() v1.DevPodWorkspacePresetLister
+	Lister() storagev1.DevPodWorkspacePresetLister
 }
 
 type devPodWorkspacePresetInformer struct {
@@ -54,7 +54,7 @@ func NewFilteredDevPodWorkspacePresetInformer(client versioned.Interface, resync
 				return client.StorageV1().DevPodWorkspacePresets().Watch(context.TODO(), options)
 			},
 		},
-		&storagev1.DevPodWorkspacePreset{},
+		&apisstoragev1.DevPodWorkspacePreset{},
 		resyncPeriod,
 		indexers,
 	)
@@ -65,9 +65,9 @@ func (f *devPodWorkspacePresetInformer) defaultInformer(client versioned.Interfa
 }
 
 func (f *devPodWorkspacePresetInformer) Informer() cache.SharedIndexInformer {
-	return f.factory.InformerFor(&storagev1.DevPodWorkspacePreset{}, f.defaultInformer)
+	return f.factory.InformerFor(&apisstoragev1.DevPodWorkspacePreset{}, f.defaultInformer)
 }
 
-func (f *devPodWorkspacePresetInformer) Lister() v1.DevPodWorkspacePresetLister {
-	return v1.NewDevPodWorkspacePresetLister(f.Informer().GetIndexer())
+func (f *devPodWorkspacePresetInformer) Lister() storagev1.DevPodWorkspacePresetLister {
+	return storagev1.NewDevPodWorkspacePresetLister(f.Informer().GetIndexer())
 }

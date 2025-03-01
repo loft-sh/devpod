@@ -3,9 +3,9 @@
 package v1
 
 import (
-	"context"
+	context "context"
 
-	v1 "github.com/loft-sh/api/v4/pkg/apis/management/v1"
+	managementv1 "github.com/loft-sh/api/v4/pkg/apis/management/v1"
 	scheme "github.com/loft-sh/api/v4/pkg/clientset/versioned/scheme"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	types "k8s.io/apimachinery/pkg/types"
@@ -21,33 +21,38 @@ type TranslateVClusterResourceNamesGetter interface {
 
 // TranslateVClusterResourceNameInterface has methods to work with TranslateVClusterResourceName resources.
 type TranslateVClusterResourceNameInterface interface {
-	Create(ctx context.Context, translateVClusterResourceName *v1.TranslateVClusterResourceName, opts metav1.CreateOptions) (*v1.TranslateVClusterResourceName, error)
-	Update(ctx context.Context, translateVClusterResourceName *v1.TranslateVClusterResourceName, opts metav1.UpdateOptions) (*v1.TranslateVClusterResourceName, error)
+	Create(ctx context.Context, translateVClusterResourceName *managementv1.TranslateVClusterResourceName, opts metav1.CreateOptions) (*managementv1.TranslateVClusterResourceName, error)
+	Update(ctx context.Context, translateVClusterResourceName *managementv1.TranslateVClusterResourceName, opts metav1.UpdateOptions) (*managementv1.TranslateVClusterResourceName, error)
 	// Add a +genclient:noStatus comment above the type to avoid generating UpdateStatus().
-	UpdateStatus(ctx context.Context, translateVClusterResourceName *v1.TranslateVClusterResourceName, opts metav1.UpdateOptions) (*v1.TranslateVClusterResourceName, error)
+	UpdateStatus(ctx context.Context, translateVClusterResourceName *managementv1.TranslateVClusterResourceName, opts metav1.UpdateOptions) (*managementv1.TranslateVClusterResourceName, error)
 	Delete(ctx context.Context, name string, opts metav1.DeleteOptions) error
 	DeleteCollection(ctx context.Context, opts metav1.DeleteOptions, listOpts metav1.ListOptions) error
-	Get(ctx context.Context, name string, opts metav1.GetOptions) (*v1.TranslateVClusterResourceName, error)
-	List(ctx context.Context, opts metav1.ListOptions) (*v1.TranslateVClusterResourceNameList, error)
+	Get(ctx context.Context, name string, opts metav1.GetOptions) (*managementv1.TranslateVClusterResourceName, error)
+	List(ctx context.Context, opts metav1.ListOptions) (*managementv1.TranslateVClusterResourceNameList, error)
 	Watch(ctx context.Context, opts metav1.ListOptions) (watch.Interface, error)
-	Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts metav1.PatchOptions, subresources ...string) (result *v1.TranslateVClusterResourceName, err error)
+	Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts metav1.PatchOptions, subresources ...string) (result *managementv1.TranslateVClusterResourceName, err error)
 	TranslateVClusterResourceNameExpansion
 }
 
 // translateVClusterResourceNames implements TranslateVClusterResourceNameInterface
 type translateVClusterResourceNames struct {
-	*gentype.ClientWithList[*v1.TranslateVClusterResourceName, *v1.TranslateVClusterResourceNameList]
+	*gentype.ClientWithList[*managementv1.TranslateVClusterResourceName, *managementv1.TranslateVClusterResourceNameList]
 }
 
 // newTranslateVClusterResourceNames returns a TranslateVClusterResourceNames
 func newTranslateVClusterResourceNames(c *ManagementV1Client) *translateVClusterResourceNames {
 	return &translateVClusterResourceNames{
-		gentype.NewClientWithList[*v1.TranslateVClusterResourceName, *v1.TranslateVClusterResourceNameList](
+		gentype.NewClientWithList[*managementv1.TranslateVClusterResourceName, *managementv1.TranslateVClusterResourceNameList](
 			"translatevclusterresourcenames",
 			c.RESTClient(),
 			scheme.ParameterCodec,
 			"",
-			func() *v1.TranslateVClusterResourceName { return &v1.TranslateVClusterResourceName{} },
-			func() *v1.TranslateVClusterResourceNameList { return &v1.TranslateVClusterResourceNameList{} }),
+			func() *managementv1.TranslateVClusterResourceName {
+				return &managementv1.TranslateVClusterResourceName{}
+			},
+			func() *managementv1.TranslateVClusterResourceNameList {
+				return &managementv1.TranslateVClusterResourceNameList{}
+			},
+		),
 	}
 }

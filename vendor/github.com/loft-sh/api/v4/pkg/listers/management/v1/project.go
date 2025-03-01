@@ -3,10 +3,10 @@
 package v1
 
 import (
-	v1 "github.com/loft-sh/api/v4/pkg/apis/management/v1"
-	"k8s.io/apimachinery/pkg/labels"
-	"k8s.io/client-go/listers"
-	"k8s.io/client-go/tools/cache"
+	managementv1 "github.com/loft-sh/api/v4/pkg/apis/management/v1"
+	labels "k8s.io/apimachinery/pkg/labels"
+	listers "k8s.io/client-go/listers"
+	cache "k8s.io/client-go/tools/cache"
 )
 
 // ProjectLister helps list Projects.
@@ -14,19 +14,19 @@ import (
 type ProjectLister interface {
 	// List lists all Projects in the indexer.
 	// Objects returned here must be treated as read-only.
-	List(selector labels.Selector) (ret []*v1.Project, err error)
+	List(selector labels.Selector) (ret []*managementv1.Project, err error)
 	// Get retrieves the Project from the index for a given name.
 	// Objects returned here must be treated as read-only.
-	Get(name string) (*v1.Project, error)
+	Get(name string) (*managementv1.Project, error)
 	ProjectListerExpansion
 }
 
 // projectLister implements the ProjectLister interface.
 type projectLister struct {
-	listers.ResourceIndexer[*v1.Project]
+	listers.ResourceIndexer[*managementv1.Project]
 }
 
 // NewProjectLister returns a new ProjectLister.
 func NewProjectLister(indexer cache.Indexer) ProjectLister {
-	return &projectLister{listers.New[*v1.Project](indexer, v1.Resource("project"))}
+	return &projectLister{listers.New[*managementv1.Project](indexer, managementv1.Resource("project"))}
 }

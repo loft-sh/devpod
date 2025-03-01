@@ -3,10 +3,10 @@
 package v1
 
 import (
-	v1 "github.com/loft-sh/api/v4/pkg/apis/management/v1"
-	"k8s.io/apimachinery/pkg/labels"
-	"k8s.io/client-go/listers"
-	"k8s.io/client-go/tools/cache"
+	managementv1 "github.com/loft-sh/api/v4/pkg/apis/management/v1"
+	labels "k8s.io/apimachinery/pkg/labels"
+	listers "k8s.io/client-go/listers"
+	cache "k8s.io/client-go/tools/cache"
 )
 
 // EventLister helps list Events.
@@ -14,19 +14,19 @@ import (
 type EventLister interface {
 	// List lists all Events in the indexer.
 	// Objects returned here must be treated as read-only.
-	List(selector labels.Selector) (ret []*v1.Event, err error)
+	List(selector labels.Selector) (ret []*managementv1.Event, err error)
 	// Get retrieves the Event from the index for a given name.
 	// Objects returned here must be treated as read-only.
-	Get(name string) (*v1.Event, error)
+	Get(name string) (*managementv1.Event, error)
 	EventListerExpansion
 }
 
 // eventLister implements the EventLister interface.
 type eventLister struct {
-	listers.ResourceIndexer[*v1.Event]
+	listers.ResourceIndexer[*managementv1.Event]
 }
 
 // NewEventLister returns a new EventLister.
 func NewEventLister(indexer cache.Indexer) EventLister {
-	return &eventLister{listers.New[*v1.Event](indexer, v1.Resource("event"))}
+	return &eventLister{listers.New[*managementv1.Event](indexer, managementv1.Resource("event"))}
 }

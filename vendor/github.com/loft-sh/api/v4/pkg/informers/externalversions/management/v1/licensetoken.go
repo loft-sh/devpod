@@ -3,13 +3,13 @@
 package v1
 
 import (
-	"context"
+	context "context"
 	time "time"
 
-	managementv1 "github.com/loft-sh/api/v4/pkg/apis/management/v1"
+	apismanagementv1 "github.com/loft-sh/api/v4/pkg/apis/management/v1"
 	versioned "github.com/loft-sh/api/v4/pkg/clientset/versioned"
 	internalinterfaces "github.com/loft-sh/api/v4/pkg/informers/externalversions/internalinterfaces"
-	v1 "github.com/loft-sh/api/v4/pkg/listers/management/v1"
+	managementv1 "github.com/loft-sh/api/v4/pkg/listers/management/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	runtime "k8s.io/apimachinery/pkg/runtime"
 	watch "k8s.io/apimachinery/pkg/watch"
@@ -20,7 +20,7 @@ import (
 // LicenseTokens.
 type LicenseTokenInformer interface {
 	Informer() cache.SharedIndexInformer
-	Lister() v1.LicenseTokenLister
+	Lister() managementv1.LicenseTokenLister
 }
 
 type licenseTokenInformer struct {
@@ -54,7 +54,7 @@ func NewFilteredLicenseTokenInformer(client versioned.Interface, resyncPeriod ti
 				return client.ManagementV1().LicenseTokens().Watch(context.TODO(), options)
 			},
 		},
-		&managementv1.LicenseToken{},
+		&apismanagementv1.LicenseToken{},
 		resyncPeriod,
 		indexers,
 	)
@@ -65,9 +65,9 @@ func (f *licenseTokenInformer) defaultInformer(client versioned.Interface, resyn
 }
 
 func (f *licenseTokenInformer) Informer() cache.SharedIndexInformer {
-	return f.factory.InformerFor(&managementv1.LicenseToken{}, f.defaultInformer)
+	return f.factory.InformerFor(&apismanagementv1.LicenseToken{}, f.defaultInformer)
 }
 
-func (f *licenseTokenInformer) Lister() v1.LicenseTokenLister {
-	return v1.NewLicenseTokenLister(f.Informer().GetIndexer())
+func (f *licenseTokenInformer) Lister() managementv1.LicenseTokenLister {
+	return managementv1.NewLicenseTokenLister(f.Informer().GetIndexer())
 }

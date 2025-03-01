@@ -3,13 +3,13 @@
 package v1
 
 import (
-	"context"
+	context "context"
 	time "time"
 
-	storagev1 "github.com/loft-sh/api/v4/pkg/apis/storage/v1"
+	apisstoragev1 "github.com/loft-sh/api/v4/pkg/apis/storage/v1"
 	versioned "github.com/loft-sh/api/v4/pkg/clientset/versioned"
 	internalinterfaces "github.com/loft-sh/api/v4/pkg/informers/externalversions/internalinterfaces"
-	v1 "github.com/loft-sh/api/v4/pkg/listers/storage/v1"
+	storagev1 "github.com/loft-sh/api/v4/pkg/listers/storage/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	runtime "k8s.io/apimachinery/pkg/runtime"
 	watch "k8s.io/apimachinery/pkg/watch"
@@ -20,7 +20,7 @@ import (
 // SpaceTemplates.
 type SpaceTemplateInformer interface {
 	Informer() cache.SharedIndexInformer
-	Lister() v1.SpaceTemplateLister
+	Lister() storagev1.SpaceTemplateLister
 }
 
 type spaceTemplateInformer struct {
@@ -54,7 +54,7 @@ func NewFilteredSpaceTemplateInformer(client versioned.Interface, resyncPeriod t
 				return client.StorageV1().SpaceTemplates().Watch(context.TODO(), options)
 			},
 		},
-		&storagev1.SpaceTemplate{},
+		&apisstoragev1.SpaceTemplate{},
 		resyncPeriod,
 		indexers,
 	)
@@ -65,9 +65,9 @@ func (f *spaceTemplateInformer) defaultInformer(client versioned.Interface, resy
 }
 
 func (f *spaceTemplateInformer) Informer() cache.SharedIndexInformer {
-	return f.factory.InformerFor(&storagev1.SpaceTemplate{}, f.defaultInformer)
+	return f.factory.InformerFor(&apisstoragev1.SpaceTemplate{}, f.defaultInformer)
 }
 
-func (f *spaceTemplateInformer) Lister() v1.SpaceTemplateLister {
-	return v1.NewSpaceTemplateLister(f.Informer().GetIndexer())
+func (f *spaceTemplateInformer) Lister() storagev1.SpaceTemplateLister {
+	return storagev1.NewSpaceTemplateLister(f.Informer().GetIndexer())
 }

@@ -1,10 +1,23 @@
 GOOS := $(shell go env GOOS)
 GOARCH := $(shell go env GOARCH)
 
+# Platform host
+PLATFORM_HOST := localhost:8080
+
 # Build the CLI and Desktop
 .PHONY: build
 build:
 	BUILD_PLATFORMS=$(GOOS) ./hack/rebuild.sh
+
+# Run the desktop app
+.PHONY: run-desktop
+run-desktop: build
+	cd desktop && yarn desktop:dev
+
+# Run the daemon against loft host
+.PHONY: run-daemon
+run-daemon: build
+	devpod pro daemon start --host $(PLATFORM_HOST) 
 
 # Copy the devpod binary to the platform pod
 .PHONY: cp-to-platform

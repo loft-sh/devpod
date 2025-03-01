@@ -3,9 +3,9 @@
 package v1
 
 import (
-	"context"
+	context "context"
 
-	v1 "github.com/loft-sh/api/v4/pkg/apis/management/v1"
+	managementv1 "github.com/loft-sh/api/v4/pkg/apis/management/v1"
 	scheme "github.com/loft-sh/api/v4/pkg/clientset/versioned/scheme"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	types "k8s.io/apimachinery/pkg/types"
@@ -21,33 +21,34 @@ type VirtualClusterTemplatesGetter interface {
 
 // VirtualClusterTemplateInterface has methods to work with VirtualClusterTemplate resources.
 type VirtualClusterTemplateInterface interface {
-	Create(ctx context.Context, virtualClusterTemplate *v1.VirtualClusterTemplate, opts metav1.CreateOptions) (*v1.VirtualClusterTemplate, error)
-	Update(ctx context.Context, virtualClusterTemplate *v1.VirtualClusterTemplate, opts metav1.UpdateOptions) (*v1.VirtualClusterTemplate, error)
+	Create(ctx context.Context, virtualClusterTemplate *managementv1.VirtualClusterTemplate, opts metav1.CreateOptions) (*managementv1.VirtualClusterTemplate, error)
+	Update(ctx context.Context, virtualClusterTemplate *managementv1.VirtualClusterTemplate, opts metav1.UpdateOptions) (*managementv1.VirtualClusterTemplate, error)
 	// Add a +genclient:noStatus comment above the type to avoid generating UpdateStatus().
-	UpdateStatus(ctx context.Context, virtualClusterTemplate *v1.VirtualClusterTemplate, opts metav1.UpdateOptions) (*v1.VirtualClusterTemplate, error)
+	UpdateStatus(ctx context.Context, virtualClusterTemplate *managementv1.VirtualClusterTemplate, opts metav1.UpdateOptions) (*managementv1.VirtualClusterTemplate, error)
 	Delete(ctx context.Context, name string, opts metav1.DeleteOptions) error
 	DeleteCollection(ctx context.Context, opts metav1.DeleteOptions, listOpts metav1.ListOptions) error
-	Get(ctx context.Context, name string, opts metav1.GetOptions) (*v1.VirtualClusterTemplate, error)
-	List(ctx context.Context, opts metav1.ListOptions) (*v1.VirtualClusterTemplateList, error)
+	Get(ctx context.Context, name string, opts metav1.GetOptions) (*managementv1.VirtualClusterTemplate, error)
+	List(ctx context.Context, opts metav1.ListOptions) (*managementv1.VirtualClusterTemplateList, error)
 	Watch(ctx context.Context, opts metav1.ListOptions) (watch.Interface, error)
-	Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts metav1.PatchOptions, subresources ...string) (result *v1.VirtualClusterTemplate, err error)
+	Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts metav1.PatchOptions, subresources ...string) (result *managementv1.VirtualClusterTemplate, err error)
 	VirtualClusterTemplateExpansion
 }
 
 // virtualClusterTemplates implements VirtualClusterTemplateInterface
 type virtualClusterTemplates struct {
-	*gentype.ClientWithList[*v1.VirtualClusterTemplate, *v1.VirtualClusterTemplateList]
+	*gentype.ClientWithList[*managementv1.VirtualClusterTemplate, *managementv1.VirtualClusterTemplateList]
 }
 
 // newVirtualClusterTemplates returns a VirtualClusterTemplates
 func newVirtualClusterTemplates(c *ManagementV1Client) *virtualClusterTemplates {
 	return &virtualClusterTemplates{
-		gentype.NewClientWithList[*v1.VirtualClusterTemplate, *v1.VirtualClusterTemplateList](
+		gentype.NewClientWithList[*managementv1.VirtualClusterTemplate, *managementv1.VirtualClusterTemplateList](
 			"virtualclustertemplates",
 			c.RESTClient(),
 			scheme.ParameterCodec,
 			"",
-			func() *v1.VirtualClusterTemplate { return &v1.VirtualClusterTemplate{} },
-			func() *v1.VirtualClusterTemplateList { return &v1.VirtualClusterTemplateList{} }),
+			func() *managementv1.VirtualClusterTemplate { return &managementv1.VirtualClusterTemplate{} },
+			func() *managementv1.VirtualClusterTemplateList { return &managementv1.VirtualClusterTemplateList{} },
+		),
 	}
 }

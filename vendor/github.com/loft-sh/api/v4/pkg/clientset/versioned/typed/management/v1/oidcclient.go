@@ -3,9 +3,9 @@
 package v1
 
 import (
-	"context"
+	context "context"
 
-	v1 "github.com/loft-sh/api/v4/pkg/apis/management/v1"
+	managementv1 "github.com/loft-sh/api/v4/pkg/apis/management/v1"
 	scheme "github.com/loft-sh/api/v4/pkg/clientset/versioned/scheme"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	types "k8s.io/apimachinery/pkg/types"
@@ -21,33 +21,34 @@ type OIDCClientsGetter interface {
 
 // OIDCClientInterface has methods to work with OIDCClient resources.
 type OIDCClientInterface interface {
-	Create(ctx context.Context, oIDCClient *v1.OIDCClient, opts metav1.CreateOptions) (*v1.OIDCClient, error)
-	Update(ctx context.Context, oIDCClient *v1.OIDCClient, opts metav1.UpdateOptions) (*v1.OIDCClient, error)
+	Create(ctx context.Context, oIDCClient *managementv1.OIDCClient, opts metav1.CreateOptions) (*managementv1.OIDCClient, error)
+	Update(ctx context.Context, oIDCClient *managementv1.OIDCClient, opts metav1.UpdateOptions) (*managementv1.OIDCClient, error)
 	// Add a +genclient:noStatus comment above the type to avoid generating UpdateStatus().
-	UpdateStatus(ctx context.Context, oIDCClient *v1.OIDCClient, opts metav1.UpdateOptions) (*v1.OIDCClient, error)
+	UpdateStatus(ctx context.Context, oIDCClient *managementv1.OIDCClient, opts metav1.UpdateOptions) (*managementv1.OIDCClient, error)
 	Delete(ctx context.Context, name string, opts metav1.DeleteOptions) error
 	DeleteCollection(ctx context.Context, opts metav1.DeleteOptions, listOpts metav1.ListOptions) error
-	Get(ctx context.Context, name string, opts metav1.GetOptions) (*v1.OIDCClient, error)
-	List(ctx context.Context, opts metav1.ListOptions) (*v1.OIDCClientList, error)
+	Get(ctx context.Context, name string, opts metav1.GetOptions) (*managementv1.OIDCClient, error)
+	List(ctx context.Context, opts metav1.ListOptions) (*managementv1.OIDCClientList, error)
 	Watch(ctx context.Context, opts metav1.ListOptions) (watch.Interface, error)
-	Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts metav1.PatchOptions, subresources ...string) (result *v1.OIDCClient, err error)
+	Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts metav1.PatchOptions, subresources ...string) (result *managementv1.OIDCClient, err error)
 	OIDCClientExpansion
 }
 
 // oIDCClients implements OIDCClientInterface
 type oIDCClients struct {
-	*gentype.ClientWithList[*v1.OIDCClient, *v1.OIDCClientList]
+	*gentype.ClientWithList[*managementv1.OIDCClient, *managementv1.OIDCClientList]
 }
 
 // newOIDCClients returns a OIDCClients
 func newOIDCClients(c *ManagementV1Client) *oIDCClients {
 	return &oIDCClients{
-		gentype.NewClientWithList[*v1.OIDCClient, *v1.OIDCClientList](
+		gentype.NewClientWithList[*managementv1.OIDCClient, *managementv1.OIDCClientList](
 			"oidcclients",
 			c.RESTClient(),
 			scheme.ParameterCodec,
 			"",
-			func() *v1.OIDCClient { return &v1.OIDCClient{} },
-			func() *v1.OIDCClientList { return &v1.OIDCClientList{} }),
+			func() *managementv1.OIDCClient { return &managementv1.OIDCClient{} },
+			func() *managementv1.OIDCClientList { return &managementv1.OIDCClientList{} },
+		),
 	}
 }

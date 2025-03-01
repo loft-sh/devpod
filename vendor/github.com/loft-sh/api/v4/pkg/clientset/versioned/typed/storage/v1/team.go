@@ -3,9 +3,9 @@
 package v1
 
 import (
-	"context"
+	context "context"
 
-	v1 "github.com/loft-sh/api/v4/pkg/apis/storage/v1"
+	storagev1 "github.com/loft-sh/api/v4/pkg/apis/storage/v1"
 	scheme "github.com/loft-sh/api/v4/pkg/clientset/versioned/scheme"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	types "k8s.io/apimachinery/pkg/types"
@@ -21,33 +21,34 @@ type TeamsGetter interface {
 
 // TeamInterface has methods to work with Team resources.
 type TeamInterface interface {
-	Create(ctx context.Context, team *v1.Team, opts metav1.CreateOptions) (*v1.Team, error)
-	Update(ctx context.Context, team *v1.Team, opts metav1.UpdateOptions) (*v1.Team, error)
+	Create(ctx context.Context, team *storagev1.Team, opts metav1.CreateOptions) (*storagev1.Team, error)
+	Update(ctx context.Context, team *storagev1.Team, opts metav1.UpdateOptions) (*storagev1.Team, error)
 	// Add a +genclient:noStatus comment above the type to avoid generating UpdateStatus().
-	UpdateStatus(ctx context.Context, team *v1.Team, opts metav1.UpdateOptions) (*v1.Team, error)
+	UpdateStatus(ctx context.Context, team *storagev1.Team, opts metav1.UpdateOptions) (*storagev1.Team, error)
 	Delete(ctx context.Context, name string, opts metav1.DeleteOptions) error
 	DeleteCollection(ctx context.Context, opts metav1.DeleteOptions, listOpts metav1.ListOptions) error
-	Get(ctx context.Context, name string, opts metav1.GetOptions) (*v1.Team, error)
-	List(ctx context.Context, opts metav1.ListOptions) (*v1.TeamList, error)
+	Get(ctx context.Context, name string, opts metav1.GetOptions) (*storagev1.Team, error)
+	List(ctx context.Context, opts metav1.ListOptions) (*storagev1.TeamList, error)
 	Watch(ctx context.Context, opts metav1.ListOptions) (watch.Interface, error)
-	Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts metav1.PatchOptions, subresources ...string) (result *v1.Team, err error)
+	Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts metav1.PatchOptions, subresources ...string) (result *storagev1.Team, err error)
 	TeamExpansion
 }
 
 // teams implements TeamInterface
 type teams struct {
-	*gentype.ClientWithList[*v1.Team, *v1.TeamList]
+	*gentype.ClientWithList[*storagev1.Team, *storagev1.TeamList]
 }
 
 // newTeams returns a Teams
 func newTeams(c *StorageV1Client) *teams {
 	return &teams{
-		gentype.NewClientWithList[*v1.Team, *v1.TeamList](
+		gentype.NewClientWithList[*storagev1.Team, *storagev1.TeamList](
 			"teams",
 			c.RESTClient(),
 			scheme.ParameterCodec,
 			"",
-			func() *v1.Team { return &v1.Team{} },
-			func() *v1.TeamList { return &v1.TeamList{} }),
+			func() *storagev1.Team { return &storagev1.Team{} },
+			func() *storagev1.TeamList { return &storagev1.TeamList{} },
+		),
 	}
 }

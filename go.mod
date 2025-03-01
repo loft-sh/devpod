@@ -32,6 +32,7 @@ require (
 	github.com/loft-sh/agentapi/v4 v4.2.0-alpha.6
 	github.com/loft-sh/analytics-client v0.0.0-20240219162240-2f4c64b2494e
 	github.com/loft-sh/api/v4 v4.0.0-alpha.6.0.20241129074910-a24d4104d586
+	github.com/loft-sh/apiserver v0.0.0-20250206205835-422f1d472459
 	github.com/loft-sh/log v0.0.0-20240219160058-26d83ffb46ac
 	github.com/loft-sh/programming-language-detection v0.0.5
 	github.com/loft-sh/ssh v0.0.5
@@ -67,7 +68,7 @@ require (
 	k8s.io/kube-aggregator v0.32.1
 	k8s.io/kubectl v0.29.1
 	mvdan.cc/sh/v3 v3.6.0
-	sigs.k8s.io/controller-runtime v0.19.4
+	sigs.k8s.io/controller-runtime v0.20.1
 	tailscale.com v1.68.2
 )
 
@@ -158,7 +159,7 @@ require (
 	github.com/godbus/dbus/v5 v5.1.1-0.20230522191255-76236955d466 // indirect
 	github.com/golang-jwt/jwt/v4 v4.5.0 // indirect
 	github.com/golang/groupcache v0.0.0-20210331224755-41bb18bfe9da // indirect
-	github.com/google/btree v1.1.2 // indirect
+	github.com/google/btree v1.1.3 // indirect
 	github.com/google/cel-go v0.22.0 // indirect
 	github.com/google/gnostic-models v0.6.9-0.20230804172637-c7be7c783f49 // indirect
 	github.com/google/go-github/v30 v30.1.0 // indirect
@@ -187,7 +188,6 @@ require (
 	github.com/kylelemons/godebug v1.1.0 // indirect
 	github.com/liggitt/tabwriter v0.0.0-20181228230101-89fcab3d43de // indirect
 	github.com/loft-sh/admin-apis v0.0.0-20241127134028-9cfb6b23ec44 // indirect
-	github.com/loft-sh/apiserver v0.0.0-20250129120545-2a1d356b8c09 // indirect
 	github.com/lucasb-eyer/go-colorful v1.2.0 // indirect
 	github.com/mailru/easyjson v0.7.7 // indirect
 	github.com/mattn/go-localereader v0.0.1 // indirect
@@ -332,3 +332,5 @@ require (
 )
 
 replace tailscale.com => github.com/loft-sh/tailscale v1.78.1-loft.6
+
+replace github.com/loft-sh/api/v4 => ../loft-enterprise/staging/src/github.com/loft-sh/api/v4

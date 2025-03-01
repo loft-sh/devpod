@@ -3,9 +3,9 @@
 package v1
 
 import (
-	"context"
+	context "context"
 
-	v1 "github.com/loft-sh/api/v4/pkg/apis/management/v1"
+	managementv1 "github.com/loft-sh/api/v4/pkg/apis/management/v1"
 	scheme "github.com/loft-sh/api/v4/pkg/clientset/versioned/scheme"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	types "k8s.io/apimachinery/pkg/types"
@@ -21,33 +21,36 @@ type DirectClusterEndpointTokensGetter interface {
 
 // DirectClusterEndpointTokenInterface has methods to work with DirectClusterEndpointToken resources.
 type DirectClusterEndpointTokenInterface interface {
-	Create(ctx context.Context, directClusterEndpointToken *v1.DirectClusterEndpointToken, opts metav1.CreateOptions) (*v1.DirectClusterEndpointToken, error)
-	Update(ctx context.Context, directClusterEndpointToken *v1.DirectClusterEndpointToken, opts metav1.UpdateOptions) (*v1.DirectClusterEndpointToken, error)
+	Create(ctx context.Context, directClusterEndpointToken *managementv1.DirectClusterEndpointToken, opts metav1.CreateOptions) (*managementv1.DirectClusterEndpointToken, error)
+	Update(ctx context.Context, directClusterEndpointToken *managementv1.DirectClusterEndpointToken, opts metav1.UpdateOptions) (*managementv1.DirectClusterEndpointToken, error)
 	// Add a +genclient:noStatus comment above the type to avoid generating UpdateStatus().
-	UpdateStatus(ctx context.Context, directClusterEndpointToken *v1.DirectClusterEndpointToken, opts metav1.UpdateOptions) (*v1.DirectClusterEndpointToken, error)
+	UpdateStatus(ctx context.Context, directClusterEndpointToken *managementv1.DirectClusterEndpointToken, opts metav1.UpdateOptions) (*managementv1.DirectClusterEndpointToken, error)
 	Delete(ctx context.Context, name string, opts metav1.DeleteOptions) error
 	DeleteCollection(ctx context.Context, opts metav1.DeleteOptions, listOpts metav1.ListOptions) error
-	Get(ctx context.Context, name string, opts metav1.GetOptions) (*v1.DirectClusterEndpointToken, error)
-	List(ctx context.Context, opts metav1.ListOptions) (*v1.DirectClusterEndpointTokenList, error)
+	Get(ctx context.Context, name string, opts metav1.GetOptions) (*managementv1.DirectClusterEndpointToken, error)
+	List(ctx context.Context, opts metav1.ListOptions) (*managementv1.DirectClusterEndpointTokenList, error)
 	Watch(ctx context.Context, opts metav1.ListOptions) (watch.Interface, error)
-	Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts metav1.PatchOptions, subresources ...string) (result *v1.DirectClusterEndpointToken, err error)
+	Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts metav1.PatchOptions, subresources ...string) (result *managementv1.DirectClusterEndpointToken, err error)
 	DirectClusterEndpointTokenExpansion
 }
 
 // directClusterEndpointTokens implements DirectClusterEndpointTokenInterface
 type directClusterEndpointTokens struct {
-	*gentype.ClientWithList[*v1.DirectClusterEndpointToken, *v1.DirectClusterEndpointTokenList]
+	*gentype.ClientWithList[*managementv1.DirectClusterEndpointToken, *managementv1.DirectClusterEndpointTokenList]
 }
 
 // newDirectClusterEndpointTokens returns a DirectClusterEndpointTokens
 func newDirectClusterEndpointTokens(c *ManagementV1Client) *directClusterEndpointTokens {
 	return &directClusterEndpointTokens{
-		gentype.NewClientWithList[*v1.DirectClusterEndpointToken, *v1.DirectClusterEndpointTokenList](
+		gentype.NewClientWithList[*managementv1.DirectClusterEndpointToken, *managementv1.DirectClusterEndpointTokenList](
 			"directclusterendpointtokens",
 			c.RESTClient(),
 			scheme.ParameterCodec,
 			"",
-			func() *v1.DirectClusterEndpointToken { return &v1.DirectClusterEndpointToken{} },
-			func() *v1.DirectClusterEndpointTokenList { return &v1.DirectClusterEndpointTokenList{} }),
+			func() *managementv1.DirectClusterEndpointToken { return &managementv1.DirectClusterEndpointToken{} },
+			func() *managementv1.DirectClusterEndpointTokenList {
+				return &managementv1.DirectClusterEndpointTokenList{}
+			},
+		),
 	}
 }

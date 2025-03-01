@@ -3,9 +3,9 @@
 package v1
 
 import (
-	"context"
+	context "context"
 
-	v1 "github.com/loft-sh/api/v4/pkg/apis/management/v1"
+	managementv1 "github.com/loft-sh/api/v4/pkg/apis/management/v1"
 	scheme "github.com/loft-sh/api/v4/pkg/clientset/versioned/scheme"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	types "k8s.io/apimachinery/pkg/types"
@@ -21,33 +21,34 @@ type ClusterRoleTemplatesGetter interface {
 
 // ClusterRoleTemplateInterface has methods to work with ClusterRoleTemplate resources.
 type ClusterRoleTemplateInterface interface {
-	Create(ctx context.Context, clusterRoleTemplate *v1.ClusterRoleTemplate, opts metav1.CreateOptions) (*v1.ClusterRoleTemplate, error)
-	Update(ctx context.Context, clusterRoleTemplate *v1.ClusterRoleTemplate, opts metav1.UpdateOptions) (*v1.ClusterRoleTemplate, error)
+	Create(ctx context.Context, clusterRoleTemplate *managementv1.ClusterRoleTemplate, opts metav1.CreateOptions) (*managementv1.ClusterRoleTemplate, error)
+	Update(ctx context.Context, clusterRoleTemplate *managementv1.ClusterRoleTemplate, opts metav1.UpdateOptions) (*managementv1.ClusterRoleTemplate, error)
 	// Add a +genclient:noStatus comment above the type to avoid generating UpdateStatus().
-	UpdateStatus(ctx context.Context, clusterRoleTemplate *v1.ClusterRoleTemplate, opts metav1.UpdateOptions) (*v1.ClusterRoleTemplate, error)
+	UpdateStatus(ctx context.Context, clusterRoleTemplate *managementv1.ClusterRoleTemplate, opts metav1.UpdateOptions) (*managementv1.ClusterRoleTemplate, error)
 	Delete(ctx context.Context, name string, opts metav1.DeleteOptions) error
 	DeleteCollection(ctx context.Context, opts metav1.DeleteOptions, listOpts metav1.ListOptions) error
-	Get(ctx context.Context, name string, opts metav1.GetOptions) (*v1.ClusterRoleTemplate, error)
-	List(ctx context.Context, opts metav1.ListOptions) (*v1.ClusterRoleTemplateList, error)
+	Get(ctx context.Context, name string, opts metav1.GetOptions) (*managementv1.ClusterRoleTemplate, error)
+	List(ctx context.Context, opts metav1.ListOptions) (*managementv1.ClusterRoleTemplateList, error)
 	Watch(ctx context.Context, opts metav1.ListOptions) (watch.Interface, error)
-	Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts metav1.PatchOptions, subresources ...string) (result *v1.ClusterRoleTemplate, err error)
+	Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts metav1.PatchOptions, subresources ...string) (result *managementv1.ClusterRoleTemplate, err error)
 	ClusterRoleTemplateExpansion
 }
 
 // clusterRoleTemplates implements ClusterRoleTemplateInterface
 type clusterRoleTemplates struct {
-	*gentype.ClientWithList[*v1.ClusterRoleTemplate, *v1.ClusterRoleTemplateList]
+	*gentype.ClientWithList[*managementv1.ClusterRoleTemplate, *managementv1.ClusterRoleTemplateList]
 }
 
 // newClusterRoleTemplates returns a ClusterRoleTemplates
 func newClusterRoleTemplates(c *ManagementV1Client) *clusterRoleTemplates {
 	return &clusterRoleTemplates{
-		gentype.NewClientWithList[*v1.ClusterRoleTemplate, *v1.ClusterRoleTemplateList](
+		gentype.NewClientWithList[*managementv1.ClusterRoleTemplate, *managementv1.ClusterRoleTemplateList](
 			"clusterroletemplates",
 			c.RESTClient(),
 			scheme.ParameterCodec,
 			"",
-			func() *v1.ClusterRoleTemplate { return &v1.ClusterRoleTemplate{} },
-			func() *v1.ClusterRoleTemplateList { return &v1.ClusterRoleTemplateList{} }),
+			func() *managementv1.ClusterRoleTemplate { return &managementv1.ClusterRoleTemplate{} },
+			func() *managementv1.ClusterRoleTemplateList { return &managementv1.ClusterRoleTemplateList{} },
+		),
 	}
 }
