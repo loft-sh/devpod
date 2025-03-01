@@ -3,9 +3,9 @@
 package v1
 
 import (
-	"context"
+	context "context"
 
-	v1 "github.com/loft-sh/api/v4/pkg/apis/management/v1"
+	managementv1 "github.com/loft-sh/api/v4/pkg/apis/management/v1"
 	scheme "github.com/loft-sh/api/v4/pkg/clientset/versioned/scheme"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	types "k8s.io/apimachinery/pkg/types"
@@ -21,46 +21,47 @@ type ClustersGetter interface {
 
 // ClusterInterface has methods to work with Cluster resources.
 type ClusterInterface interface {
-	Create(ctx context.Context, cluster *v1.Cluster, opts metav1.CreateOptions) (*v1.Cluster, error)
-	Update(ctx context.Context, cluster *v1.Cluster, opts metav1.UpdateOptions) (*v1.Cluster, error)
+	Create(ctx context.Context, cluster *managementv1.Cluster, opts metav1.CreateOptions) (*managementv1.Cluster, error)
+	Update(ctx context.Context, cluster *managementv1.Cluster, opts metav1.UpdateOptions) (*managementv1.Cluster, error)
 	// Add a +genclient:noStatus comment above the type to avoid generating UpdateStatus().
-	UpdateStatus(ctx context.Context, cluster *v1.Cluster, opts metav1.UpdateOptions) (*v1.Cluster, error)
+	UpdateStatus(ctx context.Context, cluster *managementv1.Cluster, opts metav1.UpdateOptions) (*managementv1.Cluster, error)
 	Delete(ctx context.Context, name string, opts metav1.DeleteOptions) error
 	DeleteCollection(ctx context.Context, opts metav1.DeleteOptions, listOpts metav1.ListOptions) error
-	Get(ctx context.Context, name string, opts metav1.GetOptions) (*v1.Cluster, error)
-	List(ctx context.Context, opts metav1.ListOptions) (*v1.ClusterList, error)
+	Get(ctx context.Context, name string, opts metav1.GetOptions) (*managementv1.Cluster, error)
+	List(ctx context.Context, opts metav1.ListOptions) (*managementv1.ClusterList, error)
 	Watch(ctx context.Context, opts metav1.ListOptions) (watch.Interface, error)
-	Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts metav1.PatchOptions, subresources ...string) (result *v1.Cluster, err error)
-	ListAccess(ctx context.Context, clusterName string, options metav1.GetOptions) (*v1.ClusterMemberAccess, error)
-	ListMembers(ctx context.Context, clusterName string, options metav1.GetOptions) (*v1.ClusterMembers, error)
-	ListVirtualClusterDefaults(ctx context.Context, clusterName string, options metav1.GetOptions) (*v1.ClusterVirtualClusterDefaults, error)
-	GetAgentConfig(ctx context.Context, clusterName string, options metav1.GetOptions) (*v1.ClusterAgentConfig, error)
-	GetAccessKey(ctx context.Context, clusterName string, options metav1.GetOptions) (*v1.ClusterAccessKey, error)
+	Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts metav1.PatchOptions, subresources ...string) (result *managementv1.Cluster, err error)
+	ListAccess(ctx context.Context, clusterName string, options metav1.GetOptions) (*managementv1.ClusterMemberAccess, error)
+	ListMembers(ctx context.Context, clusterName string, options metav1.GetOptions) (*managementv1.ClusterMembers, error)
+	ListVirtualClusterDefaults(ctx context.Context, clusterName string, options metav1.GetOptions) (*managementv1.ClusterVirtualClusterDefaults, error)
+	GetAgentConfig(ctx context.Context, clusterName string, options metav1.GetOptions) (*managementv1.ClusterAgentConfig, error)
+	GetAccessKey(ctx context.Context, clusterName string, options metav1.GetOptions) (*managementv1.ClusterAccessKey, error)
 
 	ClusterExpansion
 }
 
 // clusters implements ClusterInterface
 type clusters struct {
-	*gentype.ClientWithList[*v1.Cluster, *v1.ClusterList]
+	*gentype.ClientWithList[*managementv1.Cluster, *managementv1.ClusterList]
 }
 
 // newClusters returns a Clusters
 func newClusters(c *ManagementV1Client) *clusters {
 	return &clusters{
-		gentype.NewClientWithList[*v1.Cluster, *v1.ClusterList](
+		gentype.NewClientWithList[*managementv1.Cluster, *managementv1.ClusterList](
 			"clusters",
 			c.RESTClient(),
 			scheme.ParameterCodec,
 			"",
-			func() *v1.Cluster { return &v1.Cluster{} },
-			func() *v1.ClusterList { return &v1.ClusterList{} }),
+			func() *managementv1.Cluster { return &managementv1.Cluster{} },
+			func() *managementv1.ClusterList { return &managementv1.ClusterList{} },
+		),
 	}
 }
 
-// ListAccess takes name of the cluster, and returns the corresponding v1.ClusterMemberAccess object, and an error if there is any.
-func (c *clusters) ListAccess(ctx context.Context, clusterName string, options metav1.GetOptions) (result *v1.ClusterMemberAccess, err error) {
-	result = &v1.ClusterMemberAccess{}
+// ListAccess takes name of the cluster, and returns the corresponding managementv1.ClusterMemberAccess object, and an error if there is any.
+func (c *clusters) ListAccess(ctx context.Context, clusterName string, options metav1.GetOptions) (result *managementv1.ClusterMemberAccess, err error) {
+	result = &managementv1.ClusterMemberAccess{}
 	err = c.GetClient().Get().
 		Resource("clusters").
 		Name(clusterName).
@@ -71,9 +72,9 @@ func (c *clusters) ListAccess(ctx context.Context, clusterName string, options m
 	return
 }
 
-// ListMembers takes name of the cluster, and returns the corresponding v1.ClusterMembers object, and an error if there is any.
-func (c *clusters) ListMembers(ctx context.Context, clusterName string, options metav1.GetOptions) (result *v1.ClusterMembers, err error) {
-	result = &v1.ClusterMembers{}
+// ListMembers takes name of the cluster, and returns the corresponding managementv1.ClusterMembers object, and an error if there is any.
+func (c *clusters) ListMembers(ctx context.Context, clusterName string, options metav1.GetOptions) (result *managementv1.ClusterMembers, err error) {
+	result = &managementv1.ClusterMembers{}
 	err = c.GetClient().Get().
 		Resource("clusters").
 		Name(clusterName).
@@ -84,9 +85,9 @@ func (c *clusters) ListMembers(ctx context.Context, clusterName string, options 
 	return
 }
 
-// ListVirtualClusterDefaults takes name of the cluster, and returns the corresponding v1.ClusterVirtualClusterDefaults object, and an error if there is any.
-func (c *clusters) ListVirtualClusterDefaults(ctx context.Context, clusterName string, options metav1.GetOptions) (result *v1.ClusterVirtualClusterDefaults, err error) {
-	result = &v1.ClusterVirtualClusterDefaults{}
+// ListVirtualClusterDefaults takes name of the cluster, and returns the corresponding managementv1.ClusterVirtualClusterDefaults object, and an error if there is any.
+func (c *clusters) ListVirtualClusterDefaults(ctx context.Context, clusterName string, options metav1.GetOptions) (result *managementv1.ClusterVirtualClusterDefaults, err error) {
+	result = &managementv1.ClusterVirtualClusterDefaults{}
 	err = c.GetClient().Get().
 		Resource("clusters").
 		Name(clusterName).
@@ -97,9 +98,9 @@ func (c *clusters) ListVirtualClusterDefaults(ctx context.Context, clusterName s
 	return
 }
 
-// GetAgentConfig takes name of the cluster, and returns the corresponding v1.ClusterAgentConfig object, and an error if there is any.
-func (c *clusters) GetAgentConfig(ctx context.Context, clusterName string, options metav1.GetOptions) (result *v1.ClusterAgentConfig, err error) {
-	result = &v1.ClusterAgentConfig{}
+// GetAgentConfig takes name of the cluster, and returns the corresponding managementv1.ClusterAgentConfig object, and an error if there is any.
+func (c *clusters) GetAgentConfig(ctx context.Context, clusterName string, options metav1.GetOptions) (result *managementv1.ClusterAgentConfig, err error) {
+	result = &managementv1.ClusterAgentConfig{}
 	err = c.GetClient().Get().
 		Resource("clusters").
 		Name(clusterName).
@@ -110,9 +111,9 @@ func (c *clusters) GetAgentConfig(ctx context.Context, clusterName string, optio
 	return
 }
 
-// GetAccessKey takes name of the cluster, and returns the corresponding v1.ClusterAccessKey object, and an error if there is any.
-func (c *clusters) GetAccessKey(ctx context.Context, clusterName string, options metav1.GetOptions) (result *v1.ClusterAccessKey, err error) {
-	result = &v1.ClusterAccessKey{}
+// GetAccessKey takes name of the cluster, and returns the corresponding managementv1.ClusterAccessKey object, and an error if there is any.
+func (c *clusters) GetAccessKey(ctx context.Context, clusterName string, options metav1.GetOptions) (result *managementv1.ClusterAccessKey, err error) {
+	result = &managementv1.ClusterAccessKey{}
 	err = c.GetClient().Get().
 		Resource("clusters").
 		Name(clusterName).

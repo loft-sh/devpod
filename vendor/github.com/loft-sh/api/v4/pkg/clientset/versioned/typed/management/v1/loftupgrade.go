@@ -3,9 +3,9 @@
 package v1
 
 import (
-	"context"
+	context "context"
 
-	v1 "github.com/loft-sh/api/v4/pkg/apis/management/v1"
+	managementv1 "github.com/loft-sh/api/v4/pkg/apis/management/v1"
 	scheme "github.com/loft-sh/api/v4/pkg/clientset/versioned/scheme"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	types "k8s.io/apimachinery/pkg/types"
@@ -21,33 +21,34 @@ type LoftUpgradesGetter interface {
 
 // LoftUpgradeInterface has methods to work with LoftUpgrade resources.
 type LoftUpgradeInterface interface {
-	Create(ctx context.Context, loftUpgrade *v1.LoftUpgrade, opts metav1.CreateOptions) (*v1.LoftUpgrade, error)
-	Update(ctx context.Context, loftUpgrade *v1.LoftUpgrade, opts metav1.UpdateOptions) (*v1.LoftUpgrade, error)
+	Create(ctx context.Context, loftUpgrade *managementv1.LoftUpgrade, opts metav1.CreateOptions) (*managementv1.LoftUpgrade, error)
+	Update(ctx context.Context, loftUpgrade *managementv1.LoftUpgrade, opts metav1.UpdateOptions) (*managementv1.LoftUpgrade, error)
 	// Add a +genclient:noStatus comment above the type to avoid generating UpdateStatus().
-	UpdateStatus(ctx context.Context, loftUpgrade *v1.LoftUpgrade, opts metav1.UpdateOptions) (*v1.LoftUpgrade, error)
+	UpdateStatus(ctx context.Context, loftUpgrade *managementv1.LoftUpgrade, opts metav1.UpdateOptions) (*managementv1.LoftUpgrade, error)
 	Delete(ctx context.Context, name string, opts metav1.DeleteOptions) error
 	DeleteCollection(ctx context.Context, opts metav1.DeleteOptions, listOpts metav1.ListOptions) error
-	Get(ctx context.Context, name string, opts metav1.GetOptions) (*v1.LoftUpgrade, error)
-	List(ctx context.Context, opts metav1.ListOptions) (*v1.LoftUpgradeList, error)
+	Get(ctx context.Context, name string, opts metav1.GetOptions) (*managementv1.LoftUpgrade, error)
+	List(ctx context.Context, opts metav1.ListOptions) (*managementv1.LoftUpgradeList, error)
 	Watch(ctx context.Context, opts metav1.ListOptions) (watch.Interface, error)
-	Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts metav1.PatchOptions, subresources ...string) (result *v1.LoftUpgrade, err error)
+	Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts metav1.PatchOptions, subresources ...string) (result *managementv1.LoftUpgrade, err error)
 	LoftUpgradeExpansion
 }
 
 // loftUpgrades implements LoftUpgradeInterface
 type loftUpgrades struct {
-	*gentype.ClientWithList[*v1.LoftUpgrade, *v1.LoftUpgradeList]
+	*gentype.ClientWithList[*managementv1.LoftUpgrade, *managementv1.LoftUpgradeList]
 }
 
 // newLoftUpgrades returns a LoftUpgrades
 func newLoftUpgrades(c *ManagementV1Client) *loftUpgrades {
 	return &loftUpgrades{
-		gentype.NewClientWithList[*v1.LoftUpgrade, *v1.LoftUpgradeList](
+		gentype.NewClientWithList[*managementv1.LoftUpgrade, *managementv1.LoftUpgradeList](
 			"loftupgrades",
 			c.RESTClient(),
 			scheme.ParameterCodec,
 			"",
-			func() *v1.LoftUpgrade { return &v1.LoftUpgrade{} },
-			func() *v1.LoftUpgradeList { return &v1.LoftUpgradeList{} }),
+			func() *managementv1.LoftUpgrade { return &managementv1.LoftUpgrade{} },
+			func() *managementv1.LoftUpgradeList { return &managementv1.LoftUpgradeList{} },
+		),
 	}
 }

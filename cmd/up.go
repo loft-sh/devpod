@@ -479,75 +479,27 @@ func (cmd *UpCmd) devPodUpDaemon(
 	client client2.DaemonClient,
 	log log.Logger,
 ) (*config2.Result, error) {
-	// create pipes
-	stdoutReader, stdoutWriter, err := os.Pipe()
-	if err != nil {
-		return nil, err
-	}
-	stdinReader, stdinWriter, err := os.Pipe()
-	if err != nil {
-		return nil, err
-	}
-	defer stdoutWriter.Close()
-	defer stdinWriter.Close()
-
-	// start machine on stdio
-	cancelCtx, cancel := context.WithCancel(ctx)
-	defer cancel()
-
-	// create up command
-	errChan := make(chan error, 1)
-	go func() {
-		defer log.Debugf("Done executing up command")
-		defer cancel()
-
-		// build devpod up options
-		workspace := client.WorkspaceConfig()
-		baseOptions := cmd.CLIOptions
-		baseOptions.ID = workspace.ID
-		baseOptions.DevContainerPath = workspace.DevContainerPath
-		baseOptions.DevContainerImage = workspace.DevContainerImage
-		baseOptions.IDE = workspace.IDE.Name
-		baseOptions.IDEOptions = nil
-		baseOptions.Source = workspace.Source.String()
-		for optionName, optionValue := range workspace.IDE.Options {
-			baseOptions.IDEOptions = append(
-				baseOptions.IDEOptions,
-				optionName+"="+optionValue.Value,
-			)
-		}
-
-		// run devpod up elsewhere
-		err = client.Up(ctx, client2.UpOptions{
-			CLIOptions: baseOptions,
-			Debug:      cmd.Debug,
-
-			Stdin:  stdinReader,
-			Stdout: stdoutWriter,
-		})
-		if err != nil {
-			errChan <- fmt.Errorf("executing up daemon command: %w", err)
-		} else {
-			errChan <- nil
-		}
-	}()
-
-	// create container etc.
-	result, err := tunnelserver.RunUpServer(
-		cancelCtx,
-		stdoutReader,
-		stdinWriter,
-		true,
-		true,
-		client.WorkspaceConfig(),
-		log,
-	)
-	if err != nil {
-		return nil, errors.Wrap(err, "run tunnel machine")
+	// build devpod up options
+	workspace := client.WorkspaceConfig()
+	baseOptions := cmd.CLIOptions
+	baseOptions.ID = workspace.ID
+	baseOptions.DevContainerPath = workspace.DevContainerPath
+	baseOptions.DevContainerImage = workspace.DevContainerImage
+	baseOptions.IDE = workspace.IDE.Name
+	baseOptions.IDEOptions = nil
+	baseOptions.Source = workspace.Source.String()
+	for optionName, optionValue := range workspace.IDE.Options {
+		baseOptions.IDEOptions = append(
+			baseOptions.IDEOptions,
+			optionName+"="+optionValue.Value,
+		)
 	}
 
-	// wait until command finished
-	return result, <-errChan
+	// run devpod up elsewhere
+	return client.Up(ctx, client2.UpOptions{
+		CLIOptions: baseOptions,
+		Debug:      cmd.Debug,
+	})
 }
 
 func (cmd *UpCmd) devPodUpMachine(

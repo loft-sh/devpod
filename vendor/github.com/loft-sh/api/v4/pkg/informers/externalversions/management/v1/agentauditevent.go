@@ -3,13 +3,13 @@
 package v1
 
 import (
-	"context"
+	context "context"
 	time "time"
 
-	managementv1 "github.com/loft-sh/api/v4/pkg/apis/management/v1"
+	apismanagementv1 "github.com/loft-sh/api/v4/pkg/apis/management/v1"
 	versioned "github.com/loft-sh/api/v4/pkg/clientset/versioned"
 	internalinterfaces "github.com/loft-sh/api/v4/pkg/informers/externalversions/internalinterfaces"
-	v1 "github.com/loft-sh/api/v4/pkg/listers/management/v1"
+	managementv1 "github.com/loft-sh/api/v4/pkg/listers/management/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	runtime "k8s.io/apimachinery/pkg/runtime"
 	watch "k8s.io/apimachinery/pkg/watch"
@@ -20,7 +20,7 @@ import (
 // AgentAuditEvents.
 type AgentAuditEventInformer interface {
 	Informer() cache.SharedIndexInformer
-	Lister() v1.AgentAuditEventLister
+	Lister() managementv1.AgentAuditEventLister
 }
 
 type agentAuditEventInformer struct {
@@ -54,7 +54,7 @@ func NewFilteredAgentAuditEventInformer(client versioned.Interface, resyncPeriod
 				return client.ManagementV1().AgentAuditEvents().Watch(context.TODO(), options)
 			},
 		},
-		&managementv1.AgentAuditEvent{},
+		&apismanagementv1.AgentAuditEvent{},
 		resyncPeriod,
 		indexers,
 	)
@@ -65,9 +65,9 @@ func (f *agentAuditEventInformer) defaultInformer(client versioned.Interface, re
 }
 
 func (f *agentAuditEventInformer) Informer() cache.SharedIndexInformer {
-	return f.factory.InformerFor(&managementv1.AgentAuditEvent{}, f.defaultInformer)
+	return f.factory.InformerFor(&apismanagementv1.AgentAuditEvent{}, f.defaultInformer)
 }
 
-func (f *agentAuditEventInformer) Lister() v1.AgentAuditEventLister {
-	return v1.NewAgentAuditEventLister(f.Informer().GetIndexer())
+func (f *agentAuditEventInformer) Lister() managementv1.AgentAuditEventLister {
+	return managementv1.NewAgentAuditEventLister(f.Informer().GetIndexer())
 }

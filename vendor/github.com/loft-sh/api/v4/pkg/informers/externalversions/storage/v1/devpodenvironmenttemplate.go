@@ -3,13 +3,13 @@
 package v1
 
 import (
-	"context"
+	context "context"
 	time "time"
 
-	storagev1 "github.com/loft-sh/api/v4/pkg/apis/storage/v1"
+	apisstoragev1 "github.com/loft-sh/api/v4/pkg/apis/storage/v1"
 	versioned "github.com/loft-sh/api/v4/pkg/clientset/versioned"
 	internalinterfaces "github.com/loft-sh/api/v4/pkg/informers/externalversions/internalinterfaces"
-	v1 "github.com/loft-sh/api/v4/pkg/listers/storage/v1"
+	storagev1 "github.com/loft-sh/api/v4/pkg/listers/storage/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	runtime "k8s.io/apimachinery/pkg/runtime"
 	watch "k8s.io/apimachinery/pkg/watch"
@@ -20,7 +20,7 @@ import (
 // DevPodEnvironmentTemplates.
 type DevPodEnvironmentTemplateInformer interface {
 	Informer() cache.SharedIndexInformer
-	Lister() v1.DevPodEnvironmentTemplateLister
+	Lister() storagev1.DevPodEnvironmentTemplateLister
 }
 
 type devPodEnvironmentTemplateInformer struct {
@@ -54,7 +54,7 @@ func NewFilteredDevPodEnvironmentTemplateInformer(client versioned.Interface, re
 				return client.StorageV1().DevPodEnvironmentTemplates().Watch(context.TODO(), options)
 			},
 		},
-		&storagev1.DevPodEnvironmentTemplate{},
+		&apisstoragev1.DevPodEnvironmentTemplate{},
 		resyncPeriod,
 		indexers,
 	)
@@ -65,9 +65,9 @@ func (f *devPodEnvironmentTemplateInformer) defaultInformer(client versioned.Int
 }
 
 func (f *devPodEnvironmentTemplateInformer) Informer() cache.SharedIndexInformer {
-	return f.factory.InformerFor(&storagev1.DevPodEnvironmentTemplate{}, f.defaultInformer)
+	return f.factory.InformerFor(&apisstoragev1.DevPodEnvironmentTemplate{}, f.defaultInformer)
 }
 
-func (f *devPodEnvironmentTemplateInformer) Lister() v1.DevPodEnvironmentTemplateLister {
-	return v1.NewDevPodEnvironmentTemplateLister(f.Informer().GetIndexer())
+func (f *devPodEnvironmentTemplateInformer) Lister() storagev1.DevPodEnvironmentTemplateLister {
+	return storagev1.NewDevPodEnvironmentTemplateLister(f.Informer().GetIndexer())
 }

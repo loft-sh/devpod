@@ -3,9 +3,9 @@
 package v1
 
 import (
-	"context"
+	context "context"
 
-	v1 "github.com/loft-sh/api/v4/pkg/apis/management/v1"
+	managementv1 "github.com/loft-sh/api/v4/pkg/apis/management/v1"
 	scheme "github.com/loft-sh/api/v4/pkg/clientset/versioned/scheme"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	types "k8s.io/apimachinery/pkg/types"
@@ -21,33 +21,34 @@ type AgentAuditEventsGetter interface {
 
 // AgentAuditEventInterface has methods to work with AgentAuditEvent resources.
 type AgentAuditEventInterface interface {
-	Create(ctx context.Context, agentAuditEvent *v1.AgentAuditEvent, opts metav1.CreateOptions) (*v1.AgentAuditEvent, error)
-	Update(ctx context.Context, agentAuditEvent *v1.AgentAuditEvent, opts metav1.UpdateOptions) (*v1.AgentAuditEvent, error)
+	Create(ctx context.Context, agentAuditEvent *managementv1.AgentAuditEvent, opts metav1.CreateOptions) (*managementv1.AgentAuditEvent, error)
+	Update(ctx context.Context, agentAuditEvent *managementv1.AgentAuditEvent, opts metav1.UpdateOptions) (*managementv1.AgentAuditEvent, error)
 	// Add a +genclient:noStatus comment above the type to avoid generating UpdateStatus().
-	UpdateStatus(ctx context.Context, agentAuditEvent *v1.AgentAuditEvent, opts metav1.UpdateOptions) (*v1.AgentAuditEvent, error)
+	UpdateStatus(ctx context.Context, agentAuditEvent *managementv1.AgentAuditEvent, opts metav1.UpdateOptions) (*managementv1.AgentAuditEvent, error)
 	Delete(ctx context.Context, name string, opts metav1.DeleteOptions) error
 	DeleteCollection(ctx context.Context, opts metav1.DeleteOptions, listOpts metav1.ListOptions) error
-	Get(ctx context.Context, name string, opts metav1.GetOptions) (*v1.AgentAuditEvent, error)
-	List(ctx context.Context, opts metav1.ListOptions) (*v1.AgentAuditEventList, error)
+	Get(ctx context.Context, name string, opts metav1.GetOptions) (*managementv1.AgentAuditEvent, error)
+	List(ctx context.Context, opts metav1.ListOptions) (*managementv1.AgentAuditEventList, error)
 	Watch(ctx context.Context, opts metav1.ListOptions) (watch.Interface, error)
-	Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts metav1.PatchOptions, subresources ...string) (result *v1.AgentAuditEvent, err error)
+	Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts metav1.PatchOptions, subresources ...string) (result *managementv1.AgentAuditEvent, err error)
 	AgentAuditEventExpansion
 }
 
 // agentAuditEvents implements AgentAuditEventInterface
 type agentAuditEvents struct {
-	*gentype.ClientWithList[*v1.AgentAuditEvent, *v1.AgentAuditEventList]
+	*gentype.ClientWithList[*managementv1.AgentAuditEvent, *managementv1.AgentAuditEventList]
 }
 
 // newAgentAuditEvents returns a AgentAuditEvents
 func newAgentAuditEvents(c *ManagementV1Client) *agentAuditEvents {
 	return &agentAuditEvents{
-		gentype.NewClientWithList[*v1.AgentAuditEvent, *v1.AgentAuditEventList](
+		gentype.NewClientWithList[*managementv1.AgentAuditEvent, *managementv1.AgentAuditEventList](
 			"agentauditevents",
 			c.RESTClient(),
 			scheme.ParameterCodec,
 			"",
-			func() *v1.AgentAuditEvent { return &v1.AgentAuditEvent{} },
-			func() *v1.AgentAuditEventList { return &v1.AgentAuditEventList{} }),
+			func() *managementv1.AgentAuditEvent { return &managementv1.AgentAuditEvent{} },
+			func() *managementv1.AgentAuditEventList { return &managementv1.AgentAuditEventList{} },
+		),
 	}
 }

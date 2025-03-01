@@ -3,9 +3,9 @@
 package v1
 
 import (
-	"context"
+	context "context"
 
-	v1 "github.com/loft-sh/api/v4/pkg/apis/management/v1"
+	managementv1 "github.com/loft-sh/api/v4/pkg/apis/management/v1"
 	scheme "github.com/loft-sh/api/v4/pkg/clientset/versioned/scheme"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	types "k8s.io/apimachinery/pkg/types"
@@ -21,33 +21,34 @@ type EventsGetter interface {
 
 // EventInterface has methods to work with Event resources.
 type EventInterface interface {
-	Create(ctx context.Context, event *v1.Event, opts metav1.CreateOptions) (*v1.Event, error)
-	Update(ctx context.Context, event *v1.Event, opts metav1.UpdateOptions) (*v1.Event, error)
+	Create(ctx context.Context, event *managementv1.Event, opts metav1.CreateOptions) (*managementv1.Event, error)
+	Update(ctx context.Context, event *managementv1.Event, opts metav1.UpdateOptions) (*managementv1.Event, error)
 	// Add a +genclient:noStatus comment above the type to avoid generating UpdateStatus().
-	UpdateStatus(ctx context.Context, event *v1.Event, opts metav1.UpdateOptions) (*v1.Event, error)
+	UpdateStatus(ctx context.Context, event *managementv1.Event, opts metav1.UpdateOptions) (*managementv1.Event, error)
 	Delete(ctx context.Context, name string, opts metav1.DeleteOptions) error
 	DeleteCollection(ctx context.Context, opts metav1.DeleteOptions, listOpts metav1.ListOptions) error
-	Get(ctx context.Context, name string, opts metav1.GetOptions) (*v1.Event, error)
-	List(ctx context.Context, opts metav1.ListOptions) (*v1.EventList, error)
+	Get(ctx context.Context, name string, opts metav1.GetOptions) (*managementv1.Event, error)
+	List(ctx context.Context, opts metav1.ListOptions) (*managementv1.EventList, error)
 	Watch(ctx context.Context, opts metav1.ListOptions) (watch.Interface, error)
-	Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts metav1.PatchOptions, subresources ...string) (result *v1.Event, err error)
+	Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts metav1.PatchOptions, subresources ...string) (result *managementv1.Event, err error)
 	EventExpansion
 }
 
 // events implements EventInterface
 type events struct {
-	*gentype.ClientWithList[*v1.Event, *v1.EventList]
+	*gentype.ClientWithList[*managementv1.Event, *managementv1.EventList]
 }
 
 // newEvents returns a Events
 func newEvents(c *ManagementV1Client) *events {
 	return &events{
-		gentype.NewClientWithList[*v1.Event, *v1.EventList](
+		gentype.NewClientWithList[*managementv1.Event, *managementv1.EventList](
 			"events",
 			c.RESTClient(),
 			scheme.ParameterCodec,
 			"",
-			func() *v1.Event { return &v1.Event{} },
-			func() *v1.EventList { return &v1.EventList{} }),
+			func() *managementv1.Event { return &managementv1.Event{} },
+			func() *managementv1.EventList { return &managementv1.EventList{} },
+		),
 	}
 }

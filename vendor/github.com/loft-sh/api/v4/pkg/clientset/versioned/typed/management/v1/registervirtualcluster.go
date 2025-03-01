@@ -3,9 +3,9 @@
 package v1
 
 import (
-	"context"
+	context "context"
 
-	v1 "github.com/loft-sh/api/v4/pkg/apis/management/v1"
+	managementv1 "github.com/loft-sh/api/v4/pkg/apis/management/v1"
 	scheme "github.com/loft-sh/api/v4/pkg/clientset/versioned/scheme"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	types "k8s.io/apimachinery/pkg/types"
@@ -21,33 +21,34 @@ type RegisterVirtualClustersGetter interface {
 
 // RegisterVirtualClusterInterface has methods to work with RegisterVirtualCluster resources.
 type RegisterVirtualClusterInterface interface {
-	Create(ctx context.Context, registerVirtualCluster *v1.RegisterVirtualCluster, opts metav1.CreateOptions) (*v1.RegisterVirtualCluster, error)
-	Update(ctx context.Context, registerVirtualCluster *v1.RegisterVirtualCluster, opts metav1.UpdateOptions) (*v1.RegisterVirtualCluster, error)
+	Create(ctx context.Context, registerVirtualCluster *managementv1.RegisterVirtualCluster, opts metav1.CreateOptions) (*managementv1.RegisterVirtualCluster, error)
+	Update(ctx context.Context, registerVirtualCluster *managementv1.RegisterVirtualCluster, opts metav1.UpdateOptions) (*managementv1.RegisterVirtualCluster, error)
 	// Add a +genclient:noStatus comment above the type to avoid generating UpdateStatus().
-	UpdateStatus(ctx context.Context, registerVirtualCluster *v1.RegisterVirtualCluster, opts metav1.UpdateOptions) (*v1.RegisterVirtualCluster, error)
+	UpdateStatus(ctx context.Context, registerVirtualCluster *managementv1.RegisterVirtualCluster, opts metav1.UpdateOptions) (*managementv1.RegisterVirtualCluster, error)
 	Delete(ctx context.Context, name string, opts metav1.DeleteOptions) error
 	DeleteCollection(ctx context.Context, opts metav1.DeleteOptions, listOpts metav1.ListOptions) error
-	Get(ctx context.Context, name string, opts metav1.GetOptions) (*v1.RegisterVirtualCluster, error)
-	List(ctx context.Context, opts metav1.ListOptions) (*v1.RegisterVirtualClusterList, error)
+	Get(ctx context.Context, name string, opts metav1.GetOptions) (*managementv1.RegisterVirtualCluster, error)
+	List(ctx context.Context, opts metav1.ListOptions) (*managementv1.RegisterVirtualClusterList, error)
 	Watch(ctx context.Context, opts metav1.ListOptions) (watch.Interface, error)
-	Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts metav1.PatchOptions, subresources ...string) (result *v1.RegisterVirtualCluster, err error)
+	Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts metav1.PatchOptions, subresources ...string) (result *managementv1.RegisterVirtualCluster, err error)
 	RegisterVirtualClusterExpansion
 }
 
 // registerVirtualClusters implements RegisterVirtualClusterInterface
 type registerVirtualClusters struct {
-	*gentype.ClientWithList[*v1.RegisterVirtualCluster, *v1.RegisterVirtualClusterList]
+	*gentype.ClientWithList[*managementv1.RegisterVirtualCluster, *managementv1.RegisterVirtualClusterList]
 }
 
 // newRegisterVirtualClusters returns a RegisterVirtualClusters
 func newRegisterVirtualClusters(c *ManagementV1Client) *registerVirtualClusters {
 	return &registerVirtualClusters{
-		gentype.NewClientWithList[*v1.RegisterVirtualCluster, *v1.RegisterVirtualClusterList](
+		gentype.NewClientWithList[*managementv1.RegisterVirtualCluster, *managementv1.RegisterVirtualClusterList](
 			"registervirtualclusters",
 			c.RESTClient(),
 			scheme.ParameterCodec,
 			"",
-			func() *v1.RegisterVirtualCluster { return &v1.RegisterVirtualCluster{} },
-			func() *v1.RegisterVirtualClusterList { return &v1.RegisterVirtualClusterList{} }),
+			func() *managementv1.RegisterVirtualCluster { return &managementv1.RegisterVirtualCluster{} },
+			func() *managementv1.RegisterVirtualClusterList { return &managementv1.RegisterVirtualClusterList{} },
+		),
 	}
 }

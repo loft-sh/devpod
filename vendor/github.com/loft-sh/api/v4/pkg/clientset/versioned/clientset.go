@@ -3,8 +3,8 @@
 package versioned
 
 import (
-	"fmt"
-	"net/http"
+	fmt "fmt"
+	http "net/http"
 
 	managementv1 "github.com/loft-sh/api/v4/pkg/clientset/versioned/typed/management/v1"
 	storagev1 "github.com/loft-sh/api/v4/pkg/clientset/versioned/typed/storage/v1"

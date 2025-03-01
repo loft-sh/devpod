@@ -3,10 +3,10 @@
 package v1
 
 import (
-	v1 "github.com/loft-sh/api/v4/pkg/apis/storage/v1"
-	"k8s.io/apimachinery/pkg/labels"
-	"k8s.io/client-go/listers"
-	"k8s.io/client-go/tools/cache"
+	storagev1 "github.com/loft-sh/api/v4/pkg/apis/storage/v1"
+	labels "k8s.io/apimachinery/pkg/labels"
+	listers "k8s.io/client-go/listers"
+	cache "k8s.io/client-go/tools/cache"
 )
 
 // AccessKeyLister helps list AccessKeys.
@@ -14,19 +14,19 @@ import (
 type AccessKeyLister interface {
 	// List lists all AccessKeys in the indexer.
 	// Objects returned here must be treated as read-only.
-	List(selector labels.Selector) (ret []*v1.AccessKey, err error)
+	List(selector labels.Selector) (ret []*storagev1.AccessKey, err error)
 	// Get retrieves the AccessKey from the index for a given name.
 	// Objects returned here must be treated as read-only.
-	Get(name string) (*v1.AccessKey, error)
+	Get(name string) (*storagev1.AccessKey, error)
 	AccessKeyListerExpansion
 }
 
 // accessKeyLister implements the AccessKeyLister interface.
 type accessKeyLister struct {
-	listers.ResourceIndexer[*v1.AccessKey]
+	listers.ResourceIndexer[*storagev1.AccessKey]
 }
 
 // NewAccessKeyLister returns a new AccessKeyLister.
 func NewAccessKeyLister(indexer cache.Indexer) AccessKeyLister {
-	return &accessKeyLister{listers.New[*v1.AccessKey](indexer, v1.Resource("accesskey"))}
+	return &accessKeyLister{listers.New[*storagev1.AccessKey](indexer, storagev1.Resource("accesskey"))}
 }

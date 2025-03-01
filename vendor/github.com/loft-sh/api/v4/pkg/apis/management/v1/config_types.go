@@ -725,16 +725,30 @@ type CostControl struct {
 	// that provides dashboard data is deployed
 	Enabled *bool `json:"enabled,omitempty"`
 
-	// GlobalMetrics are settings for the global metrics backend. This aggregates metrics for the Cost Control Dashboard
-	// across all connected clusters
-	GlobalMetrics *storagev1.Metrics `json:"globalMetrics,omitempty"`
+	// Global are settings for globally managed components
+	Global CostControlGlobalConfig `json:"global,omitempty"`
 
-	// ClusterMetrics are settings for each cluster's metrics backend. These settings apply all connected clusters
-	// unless overridden by modifying the Cluster's spec.
-	ClusterMetrics *storagev1.Metrics `json:"clusterMetrics,omitempty"`
+	// Cluster are settings for each cluster's managed components. These settings apply to all connected clusters
+	// unless overridden by modifying the Cluster's spec
+	Cluster CostControlClusterConfig `json:"cluster,omitempty"`
 
 	// Settings specify price-related settings that are taken into account for the ROI dashboard calculations.
 	Settings *CostControlSettings `json:"settings,omitempty"`
+}
+
+type CostControlGlobalConfig struct {
+	// Metrics these settings apply to metric infrastructure used to aggregate metrics across all connected clusters
+	Metrics *storagev1.Metrics `json:"metrics,omitempty"`
+}
+
+type CostControlClusterConfig struct {
+	// Metrics are settings applied to metric infrastructure in each connected cluster. These can be overridden in
+	// individual clusters by modifying the Cluster's spec
+	Metrics *storagev1.Metrics `json:"metrics,omitempty"`
+
+	// OpenCost are settings applied to OpenCost deployments in each connected cluster. These can be overridden in
+	// individual clusters by modifying the Cluster's spec
+	OpenCost *storagev1.OpenCost `json:"opencost,omitempty"`
 }
 
 type CostControlSettings struct {

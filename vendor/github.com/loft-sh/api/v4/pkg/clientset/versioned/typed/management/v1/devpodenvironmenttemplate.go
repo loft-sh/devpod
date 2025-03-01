@@ -3,9 +3,9 @@
 package v1
 
 import (
-	"context"
+	context "context"
 
-	v1 "github.com/loft-sh/api/v4/pkg/apis/management/v1"
+	managementv1 "github.com/loft-sh/api/v4/pkg/apis/management/v1"
 	scheme "github.com/loft-sh/api/v4/pkg/clientset/versioned/scheme"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	types "k8s.io/apimachinery/pkg/types"
@@ -21,31 +21,34 @@ type DevPodEnvironmentTemplatesGetter interface {
 
 // DevPodEnvironmentTemplateInterface has methods to work with DevPodEnvironmentTemplate resources.
 type DevPodEnvironmentTemplateInterface interface {
-	Create(ctx context.Context, devPodEnvironmentTemplate *v1.DevPodEnvironmentTemplate, opts metav1.CreateOptions) (*v1.DevPodEnvironmentTemplate, error)
-	Update(ctx context.Context, devPodEnvironmentTemplate *v1.DevPodEnvironmentTemplate, opts metav1.UpdateOptions) (*v1.DevPodEnvironmentTemplate, error)
+	Create(ctx context.Context, devPodEnvironmentTemplate *managementv1.DevPodEnvironmentTemplate, opts metav1.CreateOptions) (*managementv1.DevPodEnvironmentTemplate, error)
+	Update(ctx context.Context, devPodEnvironmentTemplate *managementv1.DevPodEnvironmentTemplate, opts metav1.UpdateOptions) (*managementv1.DevPodEnvironmentTemplate, error)
 	Delete(ctx context.Context, name string, opts metav1.DeleteOptions) error
 	DeleteCollection(ctx context.Context, opts metav1.DeleteOptions, listOpts metav1.ListOptions) error
-	Get(ctx context.Context, name string, opts metav1.GetOptions) (*v1.DevPodEnvironmentTemplate, error)
-	List(ctx context.Context, opts metav1.ListOptions) (*v1.DevPodEnvironmentTemplateList, error)
+	Get(ctx context.Context, name string, opts metav1.GetOptions) (*managementv1.DevPodEnvironmentTemplate, error)
+	List(ctx context.Context, opts metav1.ListOptions) (*managementv1.DevPodEnvironmentTemplateList, error)
 	Watch(ctx context.Context, opts metav1.ListOptions) (watch.Interface, error)
-	Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts metav1.PatchOptions, subresources ...string) (result *v1.DevPodEnvironmentTemplate, err error)
+	Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts metav1.PatchOptions, subresources ...string) (result *managementv1.DevPodEnvironmentTemplate, err error)
 	DevPodEnvironmentTemplateExpansion
 }
 
 // devPodEnvironmentTemplates implements DevPodEnvironmentTemplateInterface
 type devPodEnvironmentTemplates struct {
-	*gentype.ClientWithList[*v1.DevPodEnvironmentTemplate, *v1.DevPodEnvironmentTemplateList]
+	*gentype.ClientWithList[*managementv1.DevPodEnvironmentTemplate, *managementv1.DevPodEnvironmentTemplateList]
 }
 
 // newDevPodEnvironmentTemplates returns a DevPodEnvironmentTemplates
 func newDevPodEnvironmentTemplates(c *ManagementV1Client) *devPodEnvironmentTemplates {
 	return &devPodEnvironmentTemplates{
-		gentype.NewClientWithList[*v1.DevPodEnvironmentTemplate, *v1.DevPodEnvironmentTemplateList](
+		gentype.NewClientWithList[*managementv1.DevPodEnvironmentTemplate, *managementv1.DevPodEnvironmentTemplateList](
 			"devpodenvironmenttemplates",
 			c.RESTClient(),
 			scheme.ParameterCodec,
 			"",
-			func() *v1.DevPodEnvironmentTemplate { return &v1.DevPodEnvironmentTemplate{} },
-			func() *v1.DevPodEnvironmentTemplateList { return &v1.DevPodEnvironmentTemplateList{} }),
+			func() *managementv1.DevPodEnvironmentTemplate { return &managementv1.DevPodEnvironmentTemplate{} },
+			func() *managementv1.DevPodEnvironmentTemplateList {
+				return &managementv1.DevPodEnvironmentTemplateList{}
+			},
+		),
 	}
 }

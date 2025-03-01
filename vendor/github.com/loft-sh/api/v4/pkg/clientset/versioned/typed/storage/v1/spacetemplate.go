@@ -3,9 +3,9 @@
 package v1
 
 import (
-	"context"
+	context "context"
 
-	v1 "github.com/loft-sh/api/v4/pkg/apis/storage/v1"
+	storagev1 "github.com/loft-sh/api/v4/pkg/apis/storage/v1"
 	scheme "github.com/loft-sh/api/v4/pkg/clientset/versioned/scheme"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	types "k8s.io/apimachinery/pkg/types"
@@ -21,33 +21,34 @@ type SpaceTemplatesGetter interface {
 
 // SpaceTemplateInterface has methods to work with SpaceTemplate resources.
 type SpaceTemplateInterface interface {
-	Create(ctx context.Context, spaceTemplate *v1.SpaceTemplate, opts metav1.CreateOptions) (*v1.SpaceTemplate, error)
-	Update(ctx context.Context, spaceTemplate *v1.SpaceTemplate, opts metav1.UpdateOptions) (*v1.SpaceTemplate, error)
+	Create(ctx context.Context, spaceTemplate *storagev1.SpaceTemplate, opts metav1.CreateOptions) (*storagev1.SpaceTemplate, error)
+	Update(ctx context.Context, spaceTemplate *storagev1.SpaceTemplate, opts metav1.UpdateOptions) (*storagev1.SpaceTemplate, error)
 	// Add a +genclient:noStatus comment above the type to avoid generating UpdateStatus().
-	UpdateStatus(ctx context.Context, spaceTemplate *v1.SpaceTemplate, opts metav1.UpdateOptions) (*v1.SpaceTemplate, error)
+	UpdateStatus(ctx context.Context, spaceTemplate *storagev1.SpaceTemplate, opts metav1.UpdateOptions) (*storagev1.SpaceTemplate, error)
 	Delete(ctx context.Context, name string, opts metav1.DeleteOptions) error
 	DeleteCollection(ctx context.Context, opts metav1.DeleteOptions, listOpts metav1.ListOptions) error
-	Get(ctx context.Context, name string, opts metav1.GetOptions) (*v1.SpaceTemplate, error)
-	List(ctx context.Context, opts metav1.ListOptions) (*v1.SpaceTemplateList, error)
+	Get(ctx context.Context, name string, opts metav1.GetOptions) (*storagev1.SpaceTemplate, error)
+	List(ctx context.Context, opts metav1.ListOptions) (*storagev1.SpaceTemplateList, error)
 	Watch(ctx context.Context, opts metav1.ListOptions) (watch.Interface, error)
-	Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts metav1.PatchOptions, subresources ...string) (result *v1.SpaceTemplate, err error)
+	Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts metav1.PatchOptions, subresources ...string) (result *storagev1.SpaceTemplate, err error)
 	SpaceTemplateExpansion
 }
 
 // spaceTemplates implements SpaceTemplateInterface
 type spaceTemplates struct {
-	*gentype.ClientWithList[*v1.SpaceTemplate, *v1.SpaceTemplateList]
+	*gentype.ClientWithList[*storagev1.SpaceTemplate, *storagev1.SpaceTemplateList]
 }
 
 // newSpaceTemplates returns a SpaceTemplates
 func newSpaceTemplates(c *StorageV1Client) *spaceTemplates {
 	return &spaceTemplates{
-		gentype.NewClientWithList[*v1.SpaceTemplate, *v1.SpaceTemplateList](
+		gentype.NewClientWithList[*storagev1.SpaceTemplate, *storagev1.SpaceTemplateList](
 			"spacetemplates",
 			c.RESTClient(),
 			scheme.ParameterCodec,
 			"",
-			func() *v1.SpaceTemplate { return &v1.SpaceTemplate{} },
-			func() *v1.SpaceTemplateList { return &v1.SpaceTemplateList{} }),
+			func() *storagev1.SpaceTemplate { return &storagev1.SpaceTemplate{} },
+			func() *storagev1.SpaceTemplateList { return &storagev1.SpaceTemplateList{} },
+		),
 	}
 }

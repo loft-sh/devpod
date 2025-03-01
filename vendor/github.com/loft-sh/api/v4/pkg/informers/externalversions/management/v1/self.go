@@ -3,13 +3,13 @@
 package v1
 
 import (
-	"context"
+	context "context"
 	time "time"
 
-	managementv1 "github.com/loft-sh/api/v4/pkg/apis/management/v1"
+	apismanagementv1 "github.com/loft-sh/api/v4/pkg/apis/management/v1"
 	versioned "github.com/loft-sh/api/v4/pkg/clientset/versioned"
 	internalinterfaces "github.com/loft-sh/api/v4/pkg/informers/externalversions/internalinterfaces"
-	v1 "github.com/loft-sh/api/v4/pkg/listers/management/v1"
+	managementv1 "github.com/loft-sh/api/v4/pkg/listers/management/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	runtime "k8s.io/apimachinery/pkg/runtime"
 	watch "k8s.io/apimachinery/pkg/watch"
@@ -20,7 +20,7 @@ import (
 // Selves.
 type SelfInformer interface {
 	Informer() cache.SharedIndexInformer
-	Lister() v1.SelfLister
+	Lister() managementv1.SelfLister
 }
 
 type selfInformer struct {
@@ -54,7 +54,7 @@ func NewFilteredSelfInformer(client versioned.Interface, resyncPeriod time.Durat
 				return client.ManagementV1().Selves().Watch(context.TODO(), options)
 			},
 		},
-		&managementv1.Self{},
+		&apismanagementv1.Self{},
 		resyncPeriod,
 		indexers,
 	)
@@ -65,9 +65,9 @@ func (f *selfInformer) defaultInformer(client versioned.Interface, resyncPeriod 
 }
 
 func (f *selfInformer) Informer() cache.SharedIndexInformer {
-	return f.factory.InformerFor(&managementv1.Self{}, f.defaultInformer)
+	return f.factory.InformerFor(&apismanagementv1.Self{}, f.defaultInformer)
 }
 
-func (f *selfInformer) Lister() v1.SelfLister {
-	return v1.NewSelfLister(f.Informer().GetIndexer())
+func (f *selfInformer) Lister() managementv1.SelfLister {
+	return managementv1.NewSelfLister(f.Informer().GetIndexer())
 }

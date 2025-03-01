@@ -3,13 +3,13 @@
 package v1
 
 import (
-	"context"
+	context "context"
 	time "time"
 
-	managementv1 "github.com/loft-sh/api/v4/pkg/apis/management/v1"
+	apismanagementv1 "github.com/loft-sh/api/v4/pkg/apis/management/v1"
 	versioned "github.com/loft-sh/api/v4/pkg/clientset/versioned"
 	internalinterfaces "github.com/loft-sh/api/v4/pkg/informers/externalversions/internalinterfaces"
-	v1 "github.com/loft-sh/api/v4/pkg/listers/management/v1"
+	managementv1 "github.com/loft-sh/api/v4/pkg/listers/management/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	runtime "k8s.io/apimachinery/pkg/runtime"
 	watch "k8s.io/apimachinery/pkg/watch"
@@ -20,7 +20,7 @@ import (
 // Events.
 type EventInformer interface {
 	Informer() cache.SharedIndexInformer
-	Lister() v1.EventLister
+	Lister() managementv1.EventLister
 }
 
 type eventInformer struct {
@@ -54,7 +54,7 @@ func NewFilteredEventInformer(client versioned.Interface, resyncPeriod time.Dura
 				return client.ManagementV1().Events().Watch(context.TODO(), options)
 			},
 		},
-		&managementv1.Event{},
+		&apismanagementv1.Event{},
 		resyncPeriod,
 		indexers,
 	)
@@ -65,9 +65,9 @@ func (f *eventInformer) defaultInformer(client versioned.Interface, resyncPeriod
 }
 
 func (f *eventInformer) Informer() cache.SharedIndexInformer {
-	return f.factory.InformerFor(&managementv1.Event{}, f.defaultInformer)
+	return f.factory.InformerFor(&apismanagementv1.Event{}, f.defaultInformer)
 }
 
-func (f *eventInformer) Lister() v1.EventLister {
-	return v1.NewEventLister(f.Informer().GetIndexer())
+func (f *eventInformer) Lister() managementv1.EventLister {
+	return managementv1.NewEventLister(f.Informer().GetIndexer())
 }

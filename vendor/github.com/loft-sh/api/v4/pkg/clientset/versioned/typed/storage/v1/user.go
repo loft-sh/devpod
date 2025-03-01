@@ -3,9 +3,9 @@
 package v1
 
 import (
-	"context"
+	context "context"
 
-	v1 "github.com/loft-sh/api/v4/pkg/apis/storage/v1"
+	storagev1 "github.com/loft-sh/api/v4/pkg/apis/storage/v1"
 	scheme "github.com/loft-sh/api/v4/pkg/clientset/versioned/scheme"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	types "k8s.io/apimachinery/pkg/types"
@@ -21,33 +21,34 @@ type UsersGetter interface {
 
 // UserInterface has methods to work with User resources.
 type UserInterface interface {
-	Create(ctx context.Context, user *v1.User, opts metav1.CreateOptions) (*v1.User, error)
-	Update(ctx context.Context, user *v1.User, opts metav1.UpdateOptions) (*v1.User, error)
+	Create(ctx context.Context, user *storagev1.User, opts metav1.CreateOptions) (*storagev1.User, error)
+	Update(ctx context.Context, user *storagev1.User, opts metav1.UpdateOptions) (*storagev1.User, error)
 	// Add a +genclient:noStatus comment above the type to avoid generating UpdateStatus().
-	UpdateStatus(ctx context.Context, user *v1.User, opts metav1.UpdateOptions) (*v1.User, error)
+	UpdateStatus(ctx context.Context, user *storagev1.User, opts metav1.UpdateOptions) (*storagev1.User, error)
 	Delete(ctx context.Context, name string, opts metav1.DeleteOptions) error
 	DeleteCollection(ctx context.Context, opts metav1.DeleteOptions, listOpts metav1.ListOptions) error
-	Get(ctx context.Context, name string, opts metav1.GetOptions) (*v1.User, error)
-	List(ctx context.Context, opts metav1.ListOptions) (*v1.UserList, error)
+	Get(ctx context.Context, name string, opts metav1.GetOptions) (*storagev1.User, error)
+	List(ctx context.Context, opts metav1.ListOptions) (*storagev1.UserList, error)
 	Watch(ctx context.Context, opts metav1.ListOptions) (watch.Interface, error)
-	Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts metav1.PatchOptions, subresources ...string) (result *v1.User, err error)
+	Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts metav1.PatchOptions, subresources ...string) (result *storagev1.User, err error)
 	UserExpansion
 }
 
 // users implements UserInterface
 type users struct {
-	*gentype.ClientWithList[*v1.User, *v1.UserList]
+	*gentype.ClientWithList[*storagev1.User, *storagev1.UserList]
 }
 
 // newUsers returns a Users
 func newUsers(c *StorageV1Client) *users {
 	return &users{
-		gentype.NewClientWithList[*v1.User, *v1.UserList](
+		gentype.NewClientWithList[*storagev1.User, *storagev1.UserList](
 			"users",
 			c.RESTClient(),
 			scheme.ParameterCodec,
 			"",
-			func() *v1.User { return &v1.User{} },
-			func() *v1.UserList { return &v1.UserList{} }),
+			func() *storagev1.User { return &storagev1.User{} },
+			func() *storagev1.UserList { return &storagev1.UserList{} },
+		),
 	}
 }

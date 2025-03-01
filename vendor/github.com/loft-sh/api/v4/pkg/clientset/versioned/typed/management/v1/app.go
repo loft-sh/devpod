@@ -3,9 +3,9 @@
 package v1
 
 import (
-	"context"
+	context "context"
 
-	v1 "github.com/loft-sh/api/v4/pkg/apis/management/v1"
+	managementv1 "github.com/loft-sh/api/v4/pkg/apis/management/v1"
 	scheme "github.com/loft-sh/api/v4/pkg/clientset/versioned/scheme"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	types "k8s.io/apimachinery/pkg/types"
@@ -21,42 +21,43 @@ type AppsGetter interface {
 
 // AppInterface has methods to work with App resources.
 type AppInterface interface {
-	Create(ctx context.Context, app *v1.App, opts metav1.CreateOptions) (*v1.App, error)
-	Update(ctx context.Context, app *v1.App, opts metav1.UpdateOptions) (*v1.App, error)
+	Create(ctx context.Context, app *managementv1.App, opts metav1.CreateOptions) (*managementv1.App, error)
+	Update(ctx context.Context, app *managementv1.App, opts metav1.UpdateOptions) (*managementv1.App, error)
 	// Add a +genclient:noStatus comment above the type to avoid generating UpdateStatus().
-	UpdateStatus(ctx context.Context, app *v1.App, opts metav1.UpdateOptions) (*v1.App, error)
+	UpdateStatus(ctx context.Context, app *managementv1.App, opts metav1.UpdateOptions) (*managementv1.App, error)
 	Delete(ctx context.Context, name string, opts metav1.DeleteOptions) error
 	DeleteCollection(ctx context.Context, opts metav1.DeleteOptions, listOpts metav1.ListOptions) error
-	Get(ctx context.Context, name string, opts metav1.GetOptions) (*v1.App, error)
-	List(ctx context.Context, opts metav1.ListOptions) (*v1.AppList, error)
+	Get(ctx context.Context, name string, opts metav1.GetOptions) (*managementv1.App, error)
+	List(ctx context.Context, opts metav1.ListOptions) (*managementv1.AppList, error)
 	Watch(ctx context.Context, opts metav1.ListOptions) (watch.Interface, error)
-	Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts metav1.PatchOptions, subresources ...string) (result *v1.App, err error)
-	GetCredentials(ctx context.Context, appName string, options metav1.GetOptions) (*v1.AppCredentials, error)
+	Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts metav1.PatchOptions, subresources ...string) (result *managementv1.App, err error)
+	GetCredentials(ctx context.Context, appName string, options metav1.GetOptions) (*managementv1.AppCredentials, error)
 
 	AppExpansion
 }
 
 // apps implements AppInterface
 type apps struct {
-	*gentype.ClientWithList[*v1.App, *v1.AppList]
+	*gentype.ClientWithList[*managementv1.App, *managementv1.AppList]
 }
 
 // newApps returns a Apps
 func newApps(c *ManagementV1Client) *apps {
 	return &apps{
-		gentype.NewClientWithList[*v1.App, *v1.AppList](
+		gentype.NewClientWithList[*managementv1.App, *managementv1.AppList](
 			"apps",
 			c.RESTClient(),
 			scheme.ParameterCodec,
 			"",
-			func() *v1.App { return &v1.App{} },
-			func() *v1.AppList { return &v1.AppList{} }),
+			func() *managementv1.App { return &managementv1.App{} },
+			func() *managementv1.AppList { return &managementv1.AppList{} },
+		),
 	}
 }
 
-// GetCredentials takes name of the app, and returns the corresponding v1.AppCredentials object, and an error if there is any.
-func (c *apps) GetCredentials(ctx context.Context, appName string, options metav1.GetOptions) (result *v1.AppCredentials, err error) {
-	result = &v1.AppCredentials{}
+// GetCredentials takes name of the app, and returns the corresponding managementv1.AppCredentials object, and an error if there is any.
+func (c *apps) GetCredentials(ctx context.Context, appName string, options metav1.GetOptions) (result *managementv1.AppCredentials, err error) {
+	result = &managementv1.AppCredentials{}
 	err = c.GetClient().Get().
 		Resource("apps").
 		Name(appName).

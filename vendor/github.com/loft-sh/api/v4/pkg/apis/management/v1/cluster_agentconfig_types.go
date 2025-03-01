@@ -47,6 +47,9 @@ type ClusterAgentConfigCommon struct {
 
 	// AnalyticsSpec holds info needed for the agent to send analytics data to the analytics backend.
 	AnalyticsSpec AgentAnalyticsSpec `json:"analyticsSpec"`
+
+	// CostControl holds the settings related to the Cost Control ROI dashboard and its metrics gathering infrastructure
+	CostControl *AgentCostControlConfig `json:"costControl,omitempty"`
 }
 
 type AgentAuditConfig struct {
@@ -99,4 +102,14 @@ type AgentAuditConfig struct {
 // AgentAnalyticsSpec holds info the agent can use to send analytics data to the analytics backend.
 type AgentAnalyticsSpec struct {
 	AnalyticsEndpoint string `json:"analyticsEndpoint,omitempty"`
+}
+
+type AgentCostControlConfig struct {
+	// Enabled specifies whether the ROI dashboard should be available in the UI, and if the metrics infrastructure
+	// that provides dashboard data is deployed
+	Enabled *bool `json:"enabled,omitempty"`
+
+	// CostControlClusterConfig are settings for each cluster's managed components. These settings apply to all connected clusters
+	// unless overridden by modifying the Cluster's spec
+	CostControlClusterConfig `json:",inline"`
 }
