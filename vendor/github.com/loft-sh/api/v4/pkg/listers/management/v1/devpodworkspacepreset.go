@@ -3,10 +3,10 @@
 package v1
 
 import (
-	v1 "github.com/loft-sh/api/v4/pkg/apis/management/v1"
-	"k8s.io/apimachinery/pkg/labels"
-	"k8s.io/client-go/listers"
-	"k8s.io/client-go/tools/cache"
+	managementv1 "github.com/loft-sh/api/v4/pkg/apis/management/v1"
+	labels "k8s.io/apimachinery/pkg/labels"
+	listers "k8s.io/client-go/listers"
+	cache "k8s.io/client-go/tools/cache"
 )
 
 // DevPodWorkspacePresetLister helps list DevPodWorkspacePresets.
@@ -14,19 +14,19 @@ import (
 type DevPodWorkspacePresetLister interface {
 	// List lists all DevPodWorkspacePresets in the indexer.
 	// Objects returned here must be treated as read-only.
-	List(selector labels.Selector) (ret []*v1.DevPodWorkspacePreset, err error)
+	List(selector labels.Selector) (ret []*managementv1.DevPodWorkspacePreset, err error)
 	// Get retrieves the DevPodWorkspacePreset from the index for a given name.
 	// Objects returned here must be treated as read-only.
-	Get(name string) (*v1.DevPodWorkspacePreset, error)
+	Get(name string) (*managementv1.DevPodWorkspacePreset, error)
 	DevPodWorkspacePresetListerExpansion
 }
 
 // devPodWorkspacePresetLister implements the DevPodWorkspacePresetLister interface.
 type devPodWorkspacePresetLister struct {
-	listers.ResourceIndexer[*v1.DevPodWorkspacePreset]
+	listers.ResourceIndexer[*managementv1.DevPodWorkspacePreset]
 }
 
 // NewDevPodWorkspacePresetLister returns a new DevPodWorkspacePresetLister.
 func NewDevPodWorkspacePresetLister(indexer cache.Indexer) DevPodWorkspacePresetLister {
-	return &devPodWorkspacePresetLister{listers.New[*v1.DevPodWorkspacePreset](indexer, v1.Resource("devpodworkspacepreset"))}
+	return &devPodWorkspacePresetLister{listers.New[*managementv1.DevPodWorkspacePreset](indexer, managementv1.Resource("devpodworkspacepreset"))}
 }

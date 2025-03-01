@@ -3,13 +3,13 @@
 package v1
 
 import (
-	"context"
+	context "context"
 	time "time"
 
-	managementv1 "github.com/loft-sh/api/v4/pkg/apis/management/v1"
+	apismanagementv1 "github.com/loft-sh/api/v4/pkg/apis/management/v1"
 	versioned "github.com/loft-sh/api/v4/pkg/clientset/versioned"
 	internalinterfaces "github.com/loft-sh/api/v4/pkg/informers/externalversions/internalinterfaces"
-	v1 "github.com/loft-sh/api/v4/pkg/listers/management/v1"
+	managementv1 "github.com/loft-sh/api/v4/pkg/listers/management/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	runtime "k8s.io/apimachinery/pkg/runtime"
 	watch "k8s.io/apimachinery/pkg/watch"
@@ -20,7 +20,7 @@ import (
 // Apps.
 type AppInformer interface {
 	Informer() cache.SharedIndexInformer
-	Lister() v1.AppLister
+	Lister() managementv1.AppLister
 }
 
 type appInformer struct {
@@ -54,7 +54,7 @@ func NewFilteredAppInformer(client versioned.Interface, resyncPeriod time.Durati
 				return client.ManagementV1().Apps().Watch(context.TODO(), options)
 			},
 		},
-		&managementv1.App{},
+		&apismanagementv1.App{},
 		resyncPeriod,
 		indexers,
 	)
@@ -65,9 +65,9 @@ func (f *appInformer) defaultInformer(client versioned.Interface, resyncPeriod t
 }
 
 func (f *appInformer) Informer() cache.SharedIndexInformer {
-	return f.factory.InformerFor(&managementv1.App{}, f.defaultInformer)
+	return f.factory.InformerFor(&apismanagementv1.App{}, f.defaultInformer)
 }
 
-func (f *appInformer) Lister() v1.AppLister {
-	return v1.NewAppLister(f.Informer().GetIndexer())
+func (f *appInformer) Lister() managementv1.AppLister {
+	return managementv1.NewAppLister(f.Informer().GetIndexer())
 }

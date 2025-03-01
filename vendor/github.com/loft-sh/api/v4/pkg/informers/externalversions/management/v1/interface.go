@@ -86,8 +86,12 @@ type Interface interface {
 	Users() UserInformer
 	// VirtualClusterInstances returns a VirtualClusterInstanceInformer.
 	VirtualClusterInstances() VirtualClusterInstanceInformer
+	// VirtualClusterSchemas returns a VirtualClusterSchemaInformer.
+	VirtualClusterSchemas() VirtualClusterSchemaInformer
 	// VirtualClusterTemplates returns a VirtualClusterTemplateInformer.
 	VirtualClusterTemplates() VirtualClusterTemplateInformer
+	// WorkspaceAccessKeys returns a WorkspaceAccessKeyInformer.
+	WorkspaceAccessKeys() WorkspaceAccessKeyInformer
 }
 
 type version struct {
@@ -296,7 +300,17 @@ func (v *version) VirtualClusterInstances() VirtualClusterInstanceInformer {
 	return &virtualClusterInstanceInformer{factory: v.factory, namespace: v.namespace, tweakListOptions: v.tweakListOptions}
 }
 
+// VirtualClusterSchemas returns a VirtualClusterSchemaInformer.
+func (v *version) VirtualClusterSchemas() VirtualClusterSchemaInformer {
+	return &virtualClusterSchemaInformer{factory: v.factory, tweakListOptions: v.tweakListOptions}
+}
+
 // VirtualClusterTemplates returns a VirtualClusterTemplateInformer.
 func (v *version) VirtualClusterTemplates() VirtualClusterTemplateInformer {
 	return &virtualClusterTemplateInformer{factory: v.factory, tweakListOptions: v.tweakListOptions}
+}
+
+// WorkspaceAccessKeys returns a WorkspaceAccessKeyInformer.
+func (v *version) WorkspaceAccessKeys() WorkspaceAccessKeyInformer {
+	return &workspaceAccessKeyInformer{factory: v.factory, tweakListOptions: v.tweakListOptions}
 }

@@ -210,6 +210,7 @@ const (
 	AccessKeyScopeRoleNetworkPeer AccessKeyScopeRoleName = "network-peer"
 	AccessKeyScopeRoleLoftCLI     AccessKeyScopeRoleName = "loft-cli"
 	AccessKeyScopeRoleRunner      AccessKeyScopeRoleName = "runner"
+	AccessKeyScopeRoleWorkspace   AccessKeyScopeRoleName = "workspace"
 )
 
 type AccessKeyScopeCluster struct {
@@ -428,6 +429,7 @@ const (
 	AccessKeyTypeReset            AccessKeyType = "Reset"
 	AccessKeyTypeOIDCRefreshToken AccessKeyType = "OIDCRefreshToken"
 	AccessKeyTypeNetworkPeer      AccessKeyType = "NetworkPeer"
+	AccessKeyTypeWorkspace        AccessKeyType = "Workspace"
 )
 
 // AccessKeyStatus holds the status of an access key

@@ -3,13 +3,13 @@
 package v1
 
 import (
-	"context"
+	context "context"
 	time "time"
 
-	managementv1 "github.com/loft-sh/api/v4/pkg/apis/management/v1"
+	apismanagementv1 "github.com/loft-sh/api/v4/pkg/apis/management/v1"
 	versioned "github.com/loft-sh/api/v4/pkg/clientset/versioned"
 	internalinterfaces "github.com/loft-sh/api/v4/pkg/informers/externalversions/internalinterfaces"
-	v1 "github.com/loft-sh/api/v4/pkg/listers/management/v1"
+	managementv1 "github.com/loft-sh/api/v4/pkg/listers/management/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	runtime "k8s.io/apimachinery/pkg/runtime"
 	watch "k8s.io/apimachinery/pkg/watch"
@@ -20,7 +20,7 @@ import (
 // Announcements.
 type AnnouncementInformer interface {
 	Informer() cache.SharedIndexInformer
-	Lister() v1.AnnouncementLister
+	Lister() managementv1.AnnouncementLister
 }
 
 type announcementInformer struct {
@@ -54,7 +54,7 @@ func NewFilteredAnnouncementInformer(client versioned.Interface, resyncPeriod ti
 				return client.ManagementV1().Announcements().Watch(context.TODO(), options)
 			},
 		},
-		&managementv1.Announcement{},
+		&apismanagementv1.Announcement{},
 		resyncPeriod,
 		indexers,
 	)
@@ -65,9 +65,9 @@ func (f *announcementInformer) defaultInformer(client versioned.Interface, resyn
 }
 
 func (f *announcementInformer) Informer() cache.SharedIndexInformer {
-	return f.factory.InformerFor(&managementv1.Announcement{}, f.defaultInformer)
+	return f.factory.InformerFor(&apismanagementv1.Announcement{}, f.defaultInformer)
 }
 
-func (f *announcementInformer) Lister() v1.AnnouncementLister {
-	return v1.NewAnnouncementLister(f.Informer().GetIndexer())
+func (f *announcementInformer) Lister() managementv1.AnnouncementLister {
+	return managementv1.NewAnnouncementLister(f.Informer().GetIndexer())
 }

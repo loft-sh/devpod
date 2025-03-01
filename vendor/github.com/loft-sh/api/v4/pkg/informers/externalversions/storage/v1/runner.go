@@ -3,13 +3,13 @@
 package v1
 
 import (
-	"context"
+	context "context"
 	time "time"
 
-	storagev1 "github.com/loft-sh/api/v4/pkg/apis/storage/v1"
+	apisstoragev1 "github.com/loft-sh/api/v4/pkg/apis/storage/v1"
 	versioned "github.com/loft-sh/api/v4/pkg/clientset/versioned"
 	internalinterfaces "github.com/loft-sh/api/v4/pkg/informers/externalversions/internalinterfaces"
-	v1 "github.com/loft-sh/api/v4/pkg/listers/storage/v1"
+	storagev1 "github.com/loft-sh/api/v4/pkg/listers/storage/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	runtime "k8s.io/apimachinery/pkg/runtime"
 	watch "k8s.io/apimachinery/pkg/watch"
@@ -20,7 +20,7 @@ import (
 // Runners.
 type RunnerInformer interface {
 	Informer() cache.SharedIndexInformer
-	Lister() v1.RunnerLister
+	Lister() storagev1.RunnerLister
 }
 
 type runnerInformer struct {
@@ -54,7 +54,7 @@ func NewFilteredRunnerInformer(client versioned.Interface, resyncPeriod time.Dur
 				return client.StorageV1().Runners().Watch(context.TODO(), options)
 			},
 		},
-		&storagev1.Runner{},
+		&apisstoragev1.Runner{},
 		resyncPeriod,
 		indexers,
 	)
@@ -65,9 +65,9 @@ func (f *runnerInformer) defaultInformer(client versioned.Interface, resyncPerio
 }
 
 func (f *runnerInformer) Informer() cache.SharedIndexInformer {
-	return f.factory.InformerFor(&storagev1.Runner{}, f.defaultInformer)
+	return f.factory.InformerFor(&apisstoragev1.Runner{}, f.defaultInformer)
 }
 
-func (f *runnerInformer) Lister() v1.RunnerLister {
-	return v1.NewRunnerLister(f.Informer().GetIndexer())
+func (f *runnerInformer) Lister() storagev1.RunnerLister {
+	return storagev1.NewRunnerLister(f.Informer().GetIndexer())
 }

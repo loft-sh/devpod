@@ -43,6 +43,8 @@ type NetworkPeerStatus struct {
 	// Online is whether the node is currently connected to the coordination
 	// server.
 	Online bool `json:"online,omitempty"`
+	// DevPodPeers is a list of the hostnames of peers
+	DevPodPeers []string `json:"devPodPeers,omitempty"`
 }
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object

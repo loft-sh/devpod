@@ -3,10 +3,10 @@
 package v1
 
 import (
-	v1 "github.com/loft-sh/api/v4/pkg/apis/storage/v1"
-	"k8s.io/apimachinery/pkg/labels"
-	"k8s.io/client-go/listers"
-	"k8s.io/client-go/tools/cache"
+	storagev1 "github.com/loft-sh/api/v4/pkg/apis/storage/v1"
+	labels "k8s.io/apimachinery/pkg/labels"
+	listers "k8s.io/client-go/listers"
+	cache "k8s.io/client-go/tools/cache"
 )
 
 // DevPodWorkspaceInstanceLister helps list DevPodWorkspaceInstances.
@@ -14,7 +14,7 @@ import (
 type DevPodWorkspaceInstanceLister interface {
 	// List lists all DevPodWorkspaceInstances in the indexer.
 	// Objects returned here must be treated as read-only.
-	List(selector labels.Selector) (ret []*v1.DevPodWorkspaceInstance, err error)
+	List(selector labels.Selector) (ret []*storagev1.DevPodWorkspaceInstance, err error)
 	// DevPodWorkspaceInstances returns an object that can list and get DevPodWorkspaceInstances.
 	DevPodWorkspaceInstances(namespace string) DevPodWorkspaceInstanceNamespaceLister
 	DevPodWorkspaceInstanceListerExpansion
@@ -22,17 +22,17 @@ type DevPodWorkspaceInstanceLister interface {
 
 // devPodWorkspaceInstanceLister implements the DevPodWorkspaceInstanceLister interface.
 type devPodWorkspaceInstanceLister struct {
-	listers.ResourceIndexer[*v1.DevPodWorkspaceInstance]
+	listers.ResourceIndexer[*storagev1.DevPodWorkspaceInstance]
 }
 
 // NewDevPodWorkspaceInstanceLister returns a new DevPodWorkspaceInstanceLister.
 func NewDevPodWorkspaceInstanceLister(indexer cache.Indexer) DevPodWorkspaceInstanceLister {
-	return &devPodWorkspaceInstanceLister{listers.New[*v1.DevPodWorkspaceInstance](indexer, v1.Resource("devpodworkspaceinstance"))}
+	return &devPodWorkspaceInstanceLister{listers.New[*storagev1.DevPodWorkspaceInstance](indexer, storagev1.Resource("devpodworkspaceinstance"))}
 }
 
 // DevPodWorkspaceInstances returns an object that can list and get DevPodWorkspaceInstances.
 func (s *devPodWorkspaceInstanceLister) DevPodWorkspaceInstances(namespace string) DevPodWorkspaceInstanceNamespaceLister {
-	return devPodWorkspaceInstanceNamespaceLister{listers.NewNamespaced[*v1.DevPodWorkspaceInstance](s.ResourceIndexer, namespace)}
+	return devPodWorkspaceInstanceNamespaceLister{listers.NewNamespaced[*storagev1.DevPodWorkspaceInstance](s.ResourceIndexer, namespace)}
 }
 
 // DevPodWorkspaceInstanceNamespaceLister helps list and get DevPodWorkspaceInstances.
@@ -40,15 +40,15 @@ func (s *devPodWorkspaceInstanceLister) DevPodWorkspaceInstances(namespace strin
 type DevPodWorkspaceInstanceNamespaceLister interface {
 	// List lists all DevPodWorkspaceInstances in the indexer for a given namespace.
 	// Objects returned here must be treated as read-only.
-	List(selector labels.Selector) (ret []*v1.DevPodWorkspaceInstance, err error)
+	List(selector labels.Selector) (ret []*storagev1.DevPodWorkspaceInstance, err error)
 	// Get retrieves the DevPodWorkspaceInstance from the indexer for a given namespace and name.
 	// Objects returned here must be treated as read-only.
-	Get(name string) (*v1.DevPodWorkspaceInstance, error)
+	Get(name string) (*storagev1.DevPodWorkspaceInstance, error)
 	DevPodWorkspaceInstanceNamespaceListerExpansion
 }
 
 // devPodWorkspaceInstanceNamespaceLister implements the DevPodWorkspaceInstanceNamespaceLister
 // interface.
 type devPodWorkspaceInstanceNamespaceLister struct {
-	listers.ResourceIndexer[*v1.DevPodWorkspaceInstance]
+	listers.ResourceIndexer[*storagev1.DevPodWorkspaceInstance]
 }

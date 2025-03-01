@@ -196,8 +196,8 @@ func resolveInstanceOptions(ctx context.Context, instance *managementv1.DevPodWo
 	if instance.Spec.TemplateRef == nil {
 		return opts, nil
 	}
-	if instance.Spec.RunnerRef.Runner != "" {
-		opts[platform.RunnerEnv] = instance.Spec.RunnerRef.Runner
+	if instance.Spec.ClusterRef.Cluster != "" {
+		opts[platform.ClusterEnv] = instance.Spec.ClusterRef.Cluster
 	}
 	opts[platform.TemplateOptionEnv] = instance.Spec.TemplateRef.Name
 

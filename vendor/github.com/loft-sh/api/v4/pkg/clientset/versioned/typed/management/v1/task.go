@@ -3,9 +3,9 @@
 package v1
 
 import (
-	"context"
+	context "context"
 
-	v1 "github.com/loft-sh/api/v4/pkg/apis/management/v1"
+	managementv1 "github.com/loft-sh/api/v4/pkg/apis/management/v1"
 	scheme "github.com/loft-sh/api/v4/pkg/clientset/versioned/scheme"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	types "k8s.io/apimachinery/pkg/types"
@@ -21,33 +21,34 @@ type TasksGetter interface {
 
 // TaskInterface has methods to work with Task resources.
 type TaskInterface interface {
-	Create(ctx context.Context, task *v1.Task, opts metav1.CreateOptions) (*v1.Task, error)
-	Update(ctx context.Context, task *v1.Task, opts metav1.UpdateOptions) (*v1.Task, error)
+	Create(ctx context.Context, task *managementv1.Task, opts metav1.CreateOptions) (*managementv1.Task, error)
+	Update(ctx context.Context, task *managementv1.Task, opts metav1.UpdateOptions) (*managementv1.Task, error)
 	// Add a +genclient:noStatus comment above the type to avoid generating UpdateStatus().
-	UpdateStatus(ctx context.Context, task *v1.Task, opts metav1.UpdateOptions) (*v1.Task, error)
+	UpdateStatus(ctx context.Context, task *managementv1.Task, opts metav1.UpdateOptions) (*managementv1.Task, error)
 	Delete(ctx context.Context, name string, opts metav1.DeleteOptions) error
 	DeleteCollection(ctx context.Context, opts metav1.DeleteOptions, listOpts metav1.ListOptions) error
-	Get(ctx context.Context, name string, opts metav1.GetOptions) (*v1.Task, error)
-	List(ctx context.Context, opts metav1.ListOptions) (*v1.TaskList, error)
+	Get(ctx context.Context, name string, opts metav1.GetOptions) (*managementv1.Task, error)
+	List(ctx context.Context, opts metav1.ListOptions) (*managementv1.TaskList, error)
 	Watch(ctx context.Context, opts metav1.ListOptions) (watch.Interface, error)
-	Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts metav1.PatchOptions, subresources ...string) (result *v1.Task, err error)
+	Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts metav1.PatchOptions, subresources ...string) (result *managementv1.Task, err error)
 	TaskExpansion
 }
 
 // tasks implements TaskInterface
 type tasks struct {
-	*gentype.ClientWithList[*v1.Task, *v1.TaskList]
+	*gentype.ClientWithList[*managementv1.Task, *managementv1.TaskList]
 }
 
 // newTasks returns a Tasks
 func newTasks(c *ManagementV1Client) *tasks {
 	return &tasks{
-		gentype.NewClientWithList[*v1.Task, *v1.TaskList](
+		gentype.NewClientWithList[*managementv1.Task, *managementv1.TaskList](
 			"tasks",
 			c.RESTClient(),
 			scheme.ParameterCodec,
 			"",
-			func() *v1.Task { return &v1.Task{} },
-			func() *v1.TaskList { return &v1.TaskList{} }),
+			func() *managementv1.Task { return &managementv1.Task{} },
+			func() *managementv1.TaskList { return &managementv1.TaskList{} },
+		),
 	}
 }

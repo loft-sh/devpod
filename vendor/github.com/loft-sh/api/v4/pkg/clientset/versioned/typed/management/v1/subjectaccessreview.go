@@ -3,9 +3,9 @@
 package v1
 
 import (
-	"context"
+	context "context"
 
-	v1 "github.com/loft-sh/api/v4/pkg/apis/management/v1"
+	managementv1 "github.com/loft-sh/api/v4/pkg/apis/management/v1"
 	scheme "github.com/loft-sh/api/v4/pkg/clientset/versioned/scheme"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	types "k8s.io/apimachinery/pkg/types"
@@ -21,33 +21,34 @@ type SubjectAccessReviewsGetter interface {
 
 // SubjectAccessReviewInterface has methods to work with SubjectAccessReview resources.
 type SubjectAccessReviewInterface interface {
-	Create(ctx context.Context, subjectAccessReview *v1.SubjectAccessReview, opts metav1.CreateOptions) (*v1.SubjectAccessReview, error)
-	Update(ctx context.Context, subjectAccessReview *v1.SubjectAccessReview, opts metav1.UpdateOptions) (*v1.SubjectAccessReview, error)
+	Create(ctx context.Context, subjectAccessReview *managementv1.SubjectAccessReview, opts metav1.CreateOptions) (*managementv1.SubjectAccessReview, error)
+	Update(ctx context.Context, subjectAccessReview *managementv1.SubjectAccessReview, opts metav1.UpdateOptions) (*managementv1.SubjectAccessReview, error)
 	// Add a +genclient:noStatus comment above the type to avoid generating UpdateStatus().
-	UpdateStatus(ctx context.Context, subjectAccessReview *v1.SubjectAccessReview, opts metav1.UpdateOptions) (*v1.SubjectAccessReview, error)
+	UpdateStatus(ctx context.Context, subjectAccessReview *managementv1.SubjectAccessReview, opts metav1.UpdateOptions) (*managementv1.SubjectAccessReview, error)
 	Delete(ctx context.Context, name string, opts metav1.DeleteOptions) error
 	DeleteCollection(ctx context.Context, opts metav1.DeleteOptions, listOpts metav1.ListOptions) error
-	Get(ctx context.Context, name string, opts metav1.GetOptions) (*v1.SubjectAccessReview, error)
-	List(ctx context.Context, opts metav1.ListOptions) (*v1.SubjectAccessReviewList, error)
+	Get(ctx context.Context, name string, opts metav1.GetOptions) (*managementv1.SubjectAccessReview, error)
+	List(ctx context.Context, opts metav1.ListOptions) (*managementv1.SubjectAccessReviewList, error)
 	Watch(ctx context.Context, opts metav1.ListOptions) (watch.Interface, error)
-	Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts metav1.PatchOptions, subresources ...string) (result *v1.SubjectAccessReview, err error)
+	Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts metav1.PatchOptions, subresources ...string) (result *managementv1.SubjectAccessReview, err error)
 	SubjectAccessReviewExpansion
 }
 
 // subjectAccessReviews implements SubjectAccessReviewInterface
 type subjectAccessReviews struct {
-	*gentype.ClientWithList[*v1.SubjectAccessReview, *v1.SubjectAccessReviewList]
+	*gentype.ClientWithList[*managementv1.SubjectAccessReview, *managementv1.SubjectAccessReviewList]
 }
 
 // newSubjectAccessReviews returns a SubjectAccessReviews
 func newSubjectAccessReviews(c *ManagementV1Client) *subjectAccessReviews {
 	return &subjectAccessReviews{
-		gentype.NewClientWithList[*v1.SubjectAccessReview, *v1.SubjectAccessReviewList](
+		gentype.NewClientWithList[*managementv1.SubjectAccessReview, *managementv1.SubjectAccessReviewList](
 			"subjectaccessreviews",
 			c.RESTClient(),
 			scheme.ParameterCodec,
 			"",
-			func() *v1.SubjectAccessReview { return &v1.SubjectAccessReview{} },
-			func() *v1.SubjectAccessReviewList { return &v1.SubjectAccessReviewList{} }),
+			func() *managementv1.SubjectAccessReview { return &managementv1.SubjectAccessReview{} },
+			func() *managementv1.SubjectAccessReviewList { return &managementv1.SubjectAccessReviewList{} },
+		),
 	}
 }

@@ -26,7 +26,7 @@ func CreateInstance(ctx context.Context, baseClient client.Client, id, uid strin
 	formCtx, cancelForm := context.WithCancel(ctx)
 	defer cancelForm()
 
-	var selectedRunner *managementv1.Runner
+	var selectedCluster *managementv1.Cluster
 	var selectedProject *managementv1.Project
 	var selectedTemplate *managementv1.DevPodWorkspaceTemplate
 	selectedTemplateVersion := ""
@@ -40,12 +40,12 @@ func CreateInstance(ctx context.Context, baseClient client.Client, id, uid strin
 				Title("Project").
 				Options(projectOptions...).
 				Value(&selectedProject),
-			huh.NewSelect[*managementv1.Runner]().
-				Title("Runner").
-				OptionsFunc(func() []huh.Option[*managementv1.Runner] {
-					return getRunnerOptions(ctx, baseClient, selectedProject, cancelForm, log)
+			huh.NewSelect[*managementv1.Cluster]().
+				Title("Cluster").
+				OptionsFunc(func() []huh.Option[*managementv1.Cluster] {
+					return getClusterOptions(ctx, baseClient, selectedProject, cancelForm, log)
 				}, &selectedProject).
-				Value(&selectedRunner).
+				Value(&selectedCluster).
 				WithHeight(5),
 			huh.NewSelect[*managementv1.DevPodWorkspaceTemplate]().
 				Title("Template").
@@ -111,8 +111,8 @@ func CreateInstance(ctx context.Context, baseClient client.Client, id, uid strin
 					Name:    selectedTemplate.GetName(),
 					Version: selectedTemplateVersion,
 				},
-				RunnerRef: storagev1.RunnerRef{
-					Runner: selectedRunner.GetName(),
+				ClusterRef: storagev1.ClusterRef{
+					Cluster: selectedCluster.GetName(),
 				},
 				Parameters: renderedParameters,
 			},
@@ -272,8 +272,8 @@ func projectOptions(ctx context.Context, client client.Client) ([]ProjectOption,
 	return projectOptions, nil
 }
 
-func getRunnerOptions(ctx context.Context, client client.Client, project *managementv1.Project, cancel CancelFunc, log log.Logger) []huh.Option[*managementv1.Runner] {
-	opts := []huh.Option[*managementv1.Runner]{}
+func getClusterOptions(ctx context.Context, client client.Client, project *managementv1.Project, cancel CancelFunc, log log.Logger) []huh.Option[*managementv1.Cluster] {
+	opts := []huh.Option[*managementv1.Cluster]{}
 	if project == nil {
 		return opts
 	}
@@ -285,10 +285,10 @@ func getRunnerOptions(ctx context.Context, client client.Client, project *manage
 
 		return nil
 	}
-	for _, runner := range clusters.Runners {
-		r := &runner
-		opts = append(opts, huh.Option[*managementv1.Runner]{
-			Key:   platform.DisplayName(runner.GetName(), runner.Spec.DisplayName),
+	for _, cluster := range clusters.Clusters {
+		r := &cluster
+		opts = append(opts, huh.Option[*managementv1.Cluster]{
+			Key:   platform.DisplayName(cluster.GetName(), cluster.Spec.DisplayName),
 			Value: r,
 		})
 	}

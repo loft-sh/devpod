@@ -3,9 +3,9 @@
 package v1
 
 import (
-	"context"
+	context "context"
 
-	v1 "github.com/loft-sh/api/v4/pkg/apis/management/v1"
+	managementv1 "github.com/loft-sh/api/v4/pkg/apis/management/v1"
 	scheme "github.com/loft-sh/api/v4/pkg/clientset/versioned/scheme"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	types "k8s.io/apimachinery/pkg/types"
@@ -21,43 +21,44 @@ type RunnersGetter interface {
 
 // RunnerInterface has methods to work with Runner resources.
 type RunnerInterface interface {
-	Create(ctx context.Context, runner *v1.Runner, opts metav1.CreateOptions) (*v1.Runner, error)
-	Update(ctx context.Context, runner *v1.Runner, opts metav1.UpdateOptions) (*v1.Runner, error)
+	Create(ctx context.Context, runner *managementv1.Runner, opts metav1.CreateOptions) (*managementv1.Runner, error)
+	Update(ctx context.Context, runner *managementv1.Runner, opts metav1.UpdateOptions) (*managementv1.Runner, error)
 	// Add a +genclient:noStatus comment above the type to avoid generating UpdateStatus().
-	UpdateStatus(ctx context.Context, runner *v1.Runner, opts metav1.UpdateOptions) (*v1.Runner, error)
+	UpdateStatus(ctx context.Context, runner *managementv1.Runner, opts metav1.UpdateOptions) (*managementv1.Runner, error)
 	Delete(ctx context.Context, name string, opts metav1.DeleteOptions) error
 	DeleteCollection(ctx context.Context, opts metav1.DeleteOptions, listOpts metav1.ListOptions) error
-	Get(ctx context.Context, name string, opts metav1.GetOptions) (*v1.Runner, error)
-	List(ctx context.Context, opts metav1.ListOptions) (*v1.RunnerList, error)
+	Get(ctx context.Context, name string, opts metav1.GetOptions) (*managementv1.Runner, error)
+	List(ctx context.Context, opts metav1.ListOptions) (*managementv1.RunnerList, error)
 	Watch(ctx context.Context, opts metav1.ListOptions) (watch.Interface, error)
-	Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts metav1.PatchOptions, subresources ...string) (result *v1.Runner, err error)
-	GetConfig(ctx context.Context, runnerName string, options metav1.GetOptions) (*v1.RunnerConfig, error)
-	GetAccessKey(ctx context.Context, runnerName string, options metav1.GetOptions) (*v1.RunnerAccessKey, error)
+	Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts metav1.PatchOptions, subresources ...string) (result *managementv1.Runner, err error)
+	GetConfig(ctx context.Context, runnerName string, options metav1.GetOptions) (*managementv1.RunnerConfig, error)
+	GetAccessKey(ctx context.Context, runnerName string, options metav1.GetOptions) (*managementv1.RunnerAccessKey, error)
 
 	RunnerExpansion
 }
 
 // runners implements RunnerInterface
 type runners struct {
-	*gentype.ClientWithList[*v1.Runner, *v1.RunnerList]
+	*gentype.ClientWithList[*managementv1.Runner, *managementv1.RunnerList]
 }
 
 // newRunners returns a Runners
 func newRunners(c *ManagementV1Client) *runners {
 	return &runners{
-		gentype.NewClientWithList[*v1.Runner, *v1.RunnerList](
+		gentype.NewClientWithList[*managementv1.Runner, *managementv1.RunnerList](
 			"runners",
 			c.RESTClient(),
 			scheme.ParameterCodec,
 			"",
-			func() *v1.Runner { return &v1.Runner{} },
-			func() *v1.RunnerList { return &v1.RunnerList{} }),
+			func() *managementv1.Runner { return &managementv1.Runner{} },
+			func() *managementv1.RunnerList { return &managementv1.RunnerList{} },
+		),
 	}
 }
 
-// GetConfig takes name of the runner, and returns the corresponding v1.RunnerConfig object, and an error if there is any.
-func (c *runners) GetConfig(ctx context.Context, runnerName string, options metav1.GetOptions) (result *v1.RunnerConfig, err error) {
-	result = &v1.RunnerConfig{}
+// GetConfig takes name of the runner, and returns the corresponding managementv1.RunnerConfig object, and an error if there is any.
+func (c *runners) GetConfig(ctx context.Context, runnerName string, options metav1.GetOptions) (result *managementv1.RunnerConfig, err error) {
+	result = &managementv1.RunnerConfig{}
 	err = c.GetClient().Get().
 		Resource("runners").
 		Name(runnerName).
@@ -68,9 +69,9 @@ func (c *runners) GetConfig(ctx context.Context, runnerName string, options meta
 	return
 }
 
-// GetAccessKey takes name of the runner, and returns the corresponding v1.RunnerAccessKey object, and an error if there is any.
-func (c *runners) GetAccessKey(ctx context.Context, runnerName string, options metav1.GetOptions) (result *v1.RunnerAccessKey, err error) {
-	result = &v1.RunnerAccessKey{}
+// GetAccessKey takes name of the runner, and returns the corresponding managementv1.RunnerAccessKey object, and an error if there is any.
+func (c *runners) GetAccessKey(ctx context.Context, runnerName string, options metav1.GetOptions) (result *managementv1.RunnerAccessKey, err error) {
+	result = &managementv1.RunnerAccessKey{}
 	err = c.GetClient().Get().
 		Resource("runners").
 		Name(runnerName).

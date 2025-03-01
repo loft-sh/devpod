@@ -3,10 +3,10 @@
 package v1
 
 import (
-	v1 "github.com/loft-sh/api/v4/pkg/apis/storage/v1"
-	"k8s.io/apimachinery/pkg/labels"
-	"k8s.io/client-go/listers"
-	"k8s.io/client-go/tools/cache"
+	storagev1 "github.com/loft-sh/api/v4/pkg/apis/storage/v1"
+	labels "k8s.io/apimachinery/pkg/labels"
+	listers "k8s.io/client-go/listers"
+	cache "k8s.io/client-go/tools/cache"
 )
 
 // TaskLister helps list Tasks.
@@ -14,19 +14,19 @@ import (
 type TaskLister interface {
 	// List lists all Tasks in the indexer.
 	// Objects returned here must be treated as read-only.
-	List(selector labels.Selector) (ret []*v1.Task, err error)
+	List(selector labels.Selector) (ret []*storagev1.Task, err error)
 	// Get retrieves the Task from the index for a given name.
 	// Objects returned here must be treated as read-only.
-	Get(name string) (*v1.Task, error)
+	Get(name string) (*storagev1.Task, error)
 	TaskListerExpansion
 }
 
 // taskLister implements the TaskLister interface.
 type taskLister struct {
-	listers.ResourceIndexer[*v1.Task]
+	listers.ResourceIndexer[*storagev1.Task]
 }
 
 // NewTaskLister returns a new TaskLister.
 func NewTaskLister(indexer cache.Indexer) TaskLister {
-	return &taskLister{listers.New[*v1.Task](indexer, v1.Resource("task"))}
+	return &taskLister{listers.New[*storagev1.Task](indexer, storagev1.Resource("task"))}
 }

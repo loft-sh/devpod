@@ -3,13 +3,13 @@
 package v1
 
 import (
-	"context"
+	context "context"
 	time "time"
 
-	managementv1 "github.com/loft-sh/api/v4/pkg/apis/management/v1"
+	apismanagementv1 "github.com/loft-sh/api/v4/pkg/apis/management/v1"
 	versioned "github.com/loft-sh/api/v4/pkg/clientset/versioned"
 	internalinterfaces "github.com/loft-sh/api/v4/pkg/informers/externalversions/internalinterfaces"
-	v1 "github.com/loft-sh/api/v4/pkg/listers/management/v1"
+	managementv1 "github.com/loft-sh/api/v4/pkg/listers/management/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	runtime "k8s.io/apimachinery/pkg/runtime"
 	watch "k8s.io/apimachinery/pkg/watch"
@@ -20,7 +20,7 @@ import (
 // VirtualClusterTemplates.
 type VirtualClusterTemplateInformer interface {
 	Informer() cache.SharedIndexInformer
-	Lister() v1.VirtualClusterTemplateLister
+	Lister() managementv1.VirtualClusterTemplateLister
 }
 
 type virtualClusterTemplateInformer struct {
@@ -54,7 +54,7 @@ func NewFilteredVirtualClusterTemplateInformer(client versioned.Interface, resyn
 				return client.ManagementV1().VirtualClusterTemplates().Watch(context.TODO(), options)
 			},
 		},
-		&managementv1.VirtualClusterTemplate{},
+		&apismanagementv1.VirtualClusterTemplate{},
 		resyncPeriod,
 		indexers,
 	)
@@ -65,9 +65,9 @@ func (f *virtualClusterTemplateInformer) defaultInformer(client versioned.Interf
 }
 
 func (f *virtualClusterTemplateInformer) Informer() cache.SharedIndexInformer {
-	return f.factory.InformerFor(&managementv1.VirtualClusterTemplate{}, f.defaultInformer)
+	return f.factory.InformerFor(&apismanagementv1.VirtualClusterTemplate{}, f.defaultInformer)
 }
 
-func (f *virtualClusterTemplateInformer) Lister() v1.VirtualClusterTemplateLister {
-	return v1.NewVirtualClusterTemplateLister(f.Informer().GetIndexer())
+func (f *virtualClusterTemplateInformer) Lister() managementv1.VirtualClusterTemplateLister {
+	return managementv1.NewVirtualClusterTemplateLister(f.Informer().GetIndexer())
 }
