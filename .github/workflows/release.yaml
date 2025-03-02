@@ -112,7 +112,7 @@ jobs:
             target: x86_64-unknown-linux-gnu
             os: linux
             arch: amd64
-            cli_only: false
+            cli_only: true
           - host: ubuntu-22.04
             target: aarch64-unknown-linux-gnu
             os: linux
