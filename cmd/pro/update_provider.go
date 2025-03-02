@@ -58,6 +58,9 @@ func (cmd *UpdateProviderCmd) Run(ctx context.Context, args []string) error {
 	if err != nil {
 		return fmt.Errorf("load provider: %w", err)
 	}
+	if provider.Source.Internal {
+		return nil
+	}
 	providerSource, err := workspace.ResolveProviderSource(devPodConfig, provider.Name, cmd.Log)
 	if err != nil {
 		return fmt.Errorf("resolve provider source %s: %w", provider.Name, err)
