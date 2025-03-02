@@ -313,7 +313,7 @@ jobs:
           $cli_input_file_path = "desktop\src-tauri\bin\devpod-cli-${{ matrix.settings.target }}.exe"
 
           Write-Output "Signing files"
-          $cli_input_file_path = Resolve-Path  "..\$cli_input_file_path" | select -ExpandProperty Path
+          $cli_input_file_path = Resolve-Path  "$cli_input_file_path" | select -ExpandProperty Path
           CodeSignTool.bat sign -username="$username" -password="$password" -totp_secret="$totp_secret" -credential_id="$credential_id" -input_file_path="$cli_input_file_path" -override
 
       - name: Upload Release Asset
