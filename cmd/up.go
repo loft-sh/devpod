@@ -1347,6 +1347,9 @@ func checkProviderUpdate(devPodConfig *config.Config, proInstance *provider2.Pro
 	if p.Config.Version == version.DevVersion {
 		return nil
 	}
+	if p.Config.Source.Internal {
+		return nil
+	}
 
 	v1, err := semver.Parse(strings.TrimPrefix(newVersion, "v"))
 	if err != nil {
