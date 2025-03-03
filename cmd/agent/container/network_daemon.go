@@ -64,11 +64,11 @@ func (cmd *NetworkDaemonCmd) Run(ctx context.Context) error {
 	}
 
 	tsServer := ts.NewWorkspaceServer(&ts.WorkspaceServerConfig{
-		AccessKey: cmd.AccessKey,
-		Host:      ts.RemoveProtocol(cmd.PlatformHost),
-		Hostname:  cmd.WorkspaceHost,
-		Client:    baseClient,
-		RootDir:   rootDir,
+		AccessKey:     cmd.AccessKey,
+		PlatformHost:  ts.RemoveProtocol(cmd.PlatformHost),
+		WorkspaceHost: cmd.WorkspaceHost,
+		Client:        baseClient,
+		RootDir:       rootDir,
 	}, log)
 	err = tsServer.Start(ctx)
 	if err != nil {
