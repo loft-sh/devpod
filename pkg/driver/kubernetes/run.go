@@ -43,6 +43,7 @@ func (k *KubernetesDriver) RunDevContainer(
 	workspaceId string,
 	options *driver.RunOptions,
 ) error {
+	k.Log.Debugf("Running devcontainer for workspace '%s'", workspaceId)
 	workspaceId = getID(workspaceId)
 
 	// namespace
@@ -58,9 +59,7 @@ func (k *KubernetesDriver) RunDevContainer(
 	pvc, containerInfo, err := k.getDevContainerPvc(ctx, workspaceId)
 	if err != nil {
 		return err
-	}
-
-	if pvc == nil {
+	} else if pvc == nil {
 		if options == nil {
 			return fmt.Errorf("no options provided and no persistent volume claim found for workspace '%s'", workspaceId)
 		}
@@ -231,9 +230,9 @@ func (k *KubernetesDriver) runContainer(
 			k.Log.Errorf("Error unmarshalling existing provider options, continuing...: %s", err)
 		}
 
+		// Nothing changed, can safely return
 		if optionsEqual(existingOptions, k.options) {
-			// Nothing changed, can safely return
-			k.Log.Debug("Provider options did not change, skipping update")
+			k.Log.Infof("Pod '%s' already exists and nothing changed, skipping update", existingPod.Name)
 			return nil
 		}
 
@@ -475,7 +474,7 @@ func optionsEqual(a, b *provider2.ProviderKubernetesDriverConfig) bool {
 func (k *KubernetesDriver) createNamespace(ctx context.Context) error {
 	_, err := k.client.Client().CoreV1().Namespaces().Get(ctx, k.namespace, metav1.GetOptions{})
 	if kerrors.IsNotFound(err) || kerrors.IsForbidden(err) {
-		k.Log.Debugf("Create namespace '%s'", k.namespace)
+		k.Log.Infof("Create namespace '%s'", k.namespace)
 		_, err := k.client.Client().CoreV1().Namespaces().Create(ctx, &corev1.Namespace{
 			ObjectMeta: metav1.ObjectMeta{
 				Name: k.namespace,

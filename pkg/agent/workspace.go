@@ -285,8 +285,13 @@ func CloneRepositoryForWorkspace(
 
 	// setup private ssh key if passed in
 	extraEnv := []string{}
-	if options.SSHKey != "" {
-		sshExtraEnv, cleanUpSSHKey, err := setupSSHKey(options.SSHKey, agentConfig.Path)
+	if len(options.Platform.Credentials.GitSsh) > 0 {
+		keys := []string{}
+		for _, key := range options.Platform.Credentials.GitSsh {
+			keys = append(keys, key.Key)
+		}
+
+		sshExtraEnv, cleanUpSSHKey, err := setupSSHKey(keys, agentConfig.Path)
 		if err != nil {
 			return err
 		}
@@ -340,27 +345,37 @@ func cleanupWorkspaceDir(workspaceDir string) error {
 	return os.RemoveAll(workspaceDir)
 }
 
-func setupSSHKey(key string, agentPath string) ([]string, func(), error) {
-	keyFile, err := os.CreateTemp("", "")
-	if err != nil {
-		return nil, nil, err
-	}
+func setupSSHKey(keys []string, agentPath string) ([]string, func(), error) {
+	keyFiles := []string{}
+	for _, key := range keys {
+		keyFile, err := os.CreateTemp("", "")
+		if err != nil {
+			return nil, nil, err
+		}
+		defer keyFile.Close()
 
-	if err := writeSSHKey(keyFile, key); err != nil {
-		return nil, nil, err
-	}
+		if err := writeSSHKey(keyFile, key); err != nil {
+			return nil, nil, err
+		}
 
-	if err := os.Chmod(keyFile.Name(), 0o400); err != nil {
-		return nil, nil, err
+		if err := os.Chmod(keyFile.Name(), 0o400); err != nil {
+			return nil, nil, err
+		}
+
+		keyFiles = append(keyFiles, keyFile.Name())
 	}
 
 	env := []string{"GIT_TERMINAL_PROMPT=0"}
-	gitSSHCmd := []string{agentPath, "helper", "ssh-git-clone", "--key-file=" + keyFile.Name()}
-	env = append(env, "GIT_SSH_COMMAND="+command.Quote(gitSSHCmd))
+	gitSSHCmd := []string{agentPath, "helper", "ssh-git-clone"}
+	for _, keyFile := range keyFiles {
+		gitSSHCmd = append(gitSSHCmd, "--key-file="+keyFile)
+	}
 
+	env = append(env, "GIT_SSH_COMMAND="+command.Quote(gitSSHCmd))
 	cleanup := func() {
-		os.Remove(keyFile.Name())
-		keyFile.Close()
+		for _, keyFile := range keyFiles {
+			os.Remove(keyFile)
+		}
 	}
 
 	return env, cleanup, nil

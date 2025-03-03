@@ -58,7 +58,7 @@ func (r *runner) setupContainer(
 	// Ensure workspace mounts cannot escape their content folder for local agents in proxy mode.
 	// There _might_ be a use-case that requires an allowlist for certain directories
 	// when running as a standalone runner with docker-in-docker set up. Let's add it when/if the time comes.
-	if r.WorkspaceConfig.Agent.Local == "true" && r.WorkspaceConfig.CLIOptions.Proxy {
+	if r.WorkspaceConfig.Agent.Local == "true" && r.WorkspaceConfig.CLIOptions.Platform.Enabled {
 		result.MergedConfig.Mounts = filterWorkspaceMounts(result.MergedConfig.Mounts, r.WorkspaceConfig.ContentFolder, r.Log)
 	}
 
@@ -123,10 +123,10 @@ func (r *runner) setupContainer(
 	if r.WorkspaceConfig.Agent.InjectGitCredentials != "false" {
 		setupCommand += " --inject-git-credentials"
 	}
-	if r.WorkspaceConfig.CLIOptions.AccessKey != "" &&
-		r.WorkspaceConfig.CLIOptions.NetworkHostname != "" &&
-		r.WorkspaceConfig.CLIOptions.PlatformHost != "" {
-		setupCommand += fmt.Sprintf(" --access-key '%s' --network-hostname '%s' --platform-host '%s'", r.WorkspaceConfig.CLIOptions.AccessKey, r.WorkspaceConfig.CLIOptions.NetworkHostname, r.WorkspaceConfig.CLIOptions.PlatformHost)
+	if r.WorkspaceConfig.CLIOptions.Platform.AccessKey != "" &&
+		r.WorkspaceConfig.CLIOptions.Platform.WorkspaceHost != "" &&
+		r.WorkspaceConfig.CLIOptions.Platform.PlatformHost != "" {
+		setupCommand += fmt.Sprintf(" --access-key '%s' --workspace-host '%s' --platform-host '%s'", r.WorkspaceConfig.CLIOptions.Platform.AccessKey, r.WorkspaceConfig.CLIOptions.Platform.WorkspaceHost, r.WorkspaceConfig.CLIOptions.Platform.PlatformHost)
 	}
 	if r.Log.GetLevel() == logrus.DebugLevel {
 		setupCommand += " --debug"
