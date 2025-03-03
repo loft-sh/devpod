@@ -95,6 +95,7 @@ type UpOptions struct {
 }
 
 func (r *runner) Up(ctx context.Context, options UpOptions, timeout time.Duration) (*config.Result, error) {
+	r.Log.Debugf("Up devcontainer for workspace '%s' with timeout %s", r.WorkspaceConfig.Workspace.ID, timeout)
 	if r.shouldRecreateWorkspace(options) {
 		return r.recreateCustomDriver(ctx, options, timeout)
 	}
@@ -103,7 +104,6 @@ func (r *runner) Up(ctx context.Context, options UpOptions, timeout time.Duratio
 	if err != nil {
 		return nil, err
 	}
-
 	defer cleanupBuildInformation(substitutedConfig.Config)
 
 	if err := runInitializeCommand(r.LocalWorkspaceFolder, substitutedConfig.Config, options.InitEnv, r.Log); err != nil {

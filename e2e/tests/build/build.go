@@ -24,7 +24,7 @@ var _ = DevPodDescribe("devpod build test suite", func() {
 			var err error
 			initialDir, err = os.Getwd()
 			framework.ExpectNoError(err)
-			dockerHelper = &docker.DockerHelper{DockerCommand: "docker"}
+			dockerHelper = &docker.DockerHelper{DockerCommand: "docker", Log: log.Default}
 		})
 
 		ginkgo.It("build docker buildx", func() {

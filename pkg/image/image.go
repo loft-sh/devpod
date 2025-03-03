@@ -10,6 +10,7 @@ import (
 	"github.com/google/go-containerregistry/pkg/name"
 	v1 "github.com/google/go-containerregistry/pkg/v1"
 	"github.com/google/go-containerregistry/pkg/v1/remote"
+	"github.com/loft-sh/log"
 	"github.com/pkg/errors"
 )
 
@@ -75,7 +76,10 @@ func CheckPushPermissions(image string) error {
 	return nil
 }
 
-func GetImageConfig(ctx context.Context, image string) (*v1.ConfigFile, v1.Image, error) {
+func GetImageConfig(ctx context.Context, image string, log log.Logger) (*v1.ConfigFile, v1.Image, error) {
+	log.Debugf("Getting image config for image '%s'", image)
+	defer log.Debugf("Done getting image config for image '%s'", image)
+
 	img, err := GetImage(ctx, image)
 	if err != nil {
 		return nil, nil, err
