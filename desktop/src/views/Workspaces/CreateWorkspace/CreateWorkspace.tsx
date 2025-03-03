@@ -1,4 +1,11 @@
-import { ExampleCard, Form, IDEIcon, WarningMessageBox } from "@/components"
+import {
+  ExampleCard,
+  Form,
+  IDEIcon,
+  SourceInput,
+  validateSourceInput,
+  WarningMessageBox,
+} from "@/components"
 import {
   Box,
   Button,
@@ -32,18 +39,18 @@ import { useCallback, useEffect, useMemo, useState } from "react"
 import { Controller, ControllerRenderProps } from "react-hook-form"
 import { useNavigate } from "react-router"
 import { Link as RouterLink } from "react-router-dom"
-import { useBorderColor } from "../../../Theme"
-import { RECOMMENDED_PROVIDER_SOURCES, SIDEBAR_WIDTH } from "../../../constants"
-import { useProvider, useProviders, useWorkspace, useWorkspaces } from "../../../contexts"
-import { Plus } from "../../../icons"
+import { useBorderColor } from "@/Theme"
+import { RECOMMENDED_PROVIDER_SOURCES, SIDEBAR_WIDTH } from "@/constants"
+import { useProvider, useProviders, useWorkspace, useWorkspaces } from "@/contexts"
+import { Plus } from "@/icons"
 import { CommunitySvg, ProviderPlaceholderSvg } from "../../../images"
-import { canHealthCheck, exists, getKeys, isEmpty, useFormErrors } from "../../../lib"
-import { Routes } from "../../../routes"
-import { TIDE, TWorkspace, TWorkspaceSourceType } from "../../../types"
-import { useIDEs } from "../../../useIDEs"
+import { canHealthCheck, exists, getKeys, isEmpty, useFormErrors } from "@/lib"
+import { Routes } from "@/routes"
+import { TIDE, TWorkspace, TWorkspaceSourceType } from "@/types"
+import { useIDEs } from "@/useIDEs"
 import { useSetupProviderModal } from "../../Providers"
 import { ProviderOptionsPopover } from "./ProviderOptionsPopover"
-import { WorkspaceSourceInput } from "./WorkspaceSourceInput"
+import { SourceTypeTabs } from "./SourceTypeTabs"
 import { COMMUNITY_WORKSPACE_EXAMPLES, WORKSPACE_EXAMPLES } from "./constants"
 import { FieldName, TCreateWorkspaceArgs, TFormValues, TSelectProviderOptions } from "./types"
 import { useCreateWorkspaceForm } from "./useCreateWorkspaceForm"
@@ -92,6 +99,7 @@ export function CreateWorkspace() {
     onSubmit,
     control,
     formState,
+    trigger,
     isSubmitting,
     currentSource,
     selectDevcontainerModal,
@@ -182,18 +190,30 @@ export function CreateWorkspace() {
                   Enter Workspace Source
                 </Text>
                 <HStack spacing={0} justifyContent={"center"} width="full">
-                  <Controller
-                    name={FieldName.SOURCE}
-                    control={control}
-                    rules={{ required: true }}
-                    render={({ field }) => (
-                      <WorkspaceSourceInput
-                        field={field}
-                        sourceType={sourceType}
-                        onSourceTypeChanged={setSourceType}
+                  <VStack w={"full"}>
+                    <SourceTypeTabs sourceType={sourceType} onSourceTypeChanged={setSourceType} />
+                    <Box w={"90%"}>
+                      <Controller
+                        name={FieldName.SOURCE}
+                        control={control}
+                        rules={{
+                          required: true,
+                          validate: (value) => {
+                            return validateSourceInput(value, sourceType)
+                          },
+                        }}
+                        render={({ field, fieldState }) => (
+                          <SourceInput
+                            height={"12"}
+                            field={field}
+                            trigger={trigger}
+                            fieldState={fieldState}
+                            mode={sourceType}
+                          />
+                        )}
                       />
-                    )}
-                  />
+                    </Box>
+                  </VStack>
                 </HStack>
                 {exists(sourceError) && (
                   <FormErrorMessage>{sourceError.message ?? "Error"}</FormErrorMessage>

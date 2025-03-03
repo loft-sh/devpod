@@ -1,4 +1,10 @@
-import { BottomActionBar, BottomActionBarError, Form } from "@/components"
+import {
+  BottomActionBar,
+  BottomActionBarError,
+  Form,
+  SourceInput,
+  validateSourceInput,
+} from "@/components"
 import { ProWorkspaceInstance, useProjectClusters, useTemplates } from "@/contexts"
 import { Code, Laptop, Parameters } from "@/icons"
 import {
@@ -30,12 +36,12 @@ import { Controller, DefaultValues, FormProvider, useForm } from "react-hook-for
 import { DevContainerInput } from "./DevContainerInput"
 import { IDEInput } from "./IDEInput"
 import { InfrastructureTemplateInput } from "./InfrastructureTemplateInput"
-import { SourceInput } from "./SourceInput"
 import { FieldName, TFormValues } from "./types"
 import { RunnerInput } from "@/views/Pro/CreateWorkspace/RunnerInput"
 import { ManagementV1DevPodWorkspacePreset } from "@loft-enterprise/client/gen/models/managementV1DevPodWorkspacePreset"
 import { Gold } from "@/icons/Gold"
 import { PresetInput } from "@/views/Pro/CreateWorkspace/PresetInput"
+import { SourceSelect } from "@/views/Pro/CreateWorkspace/SourceSelect"
 
 type TCreateWorkspaceFormProps = Readonly<{
   instance?: ProWorkspaceInstance
@@ -68,6 +74,7 @@ export function CreateWorkspaceForm({
   const { data: projectClusterData, isLoading: projectClusterDataLoading } = useProjectClusters()
 
   const form = useForm<TFormValues>({ mode: "onChange", defaultValues })
+
   const {
     sourceError,
     defaultIDEError,
@@ -166,7 +173,30 @@ export function CreateWorkspaceForm({
                   Source Code
                 </FormLabel>
               }>
-              <SourceInput isDisabled={isUpdate} resetPreset={resetPreset} />
+              <Controller
+                name={FieldName.SOURCE}
+                control={form.control}
+                disabled={isUpdate}
+                rules={{
+                  required: true,
+                  validate: (value, { sourceType }) => {
+                    return validateSourceInput(value, sourceType)
+                  },
+                  onChange: () => {
+                    resetPreset()
+                  },
+                }}
+                render={({ field, fieldState }) => (
+                  <SourceInput
+                    field={field}
+                    trigger={form.trigger}
+                    fieldState={fieldState}
+                    resetPreset={resetPreset}
+                    mode={form.getValues(FieldName.SOURCE_TYPE)}
+                    leftAddon={<SourceSelect resetPreset={resetPreset} />}
+                  />
+                )}
+              />
 
               {exists(sourceError) && (
                 <FormErrorMessage>{sourceError.message ?? "Error"}</FormErrorMessage>
