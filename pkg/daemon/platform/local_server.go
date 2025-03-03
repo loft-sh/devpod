@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"io"
 	"net"
 	"net/http"
 	"runtime/debug"
@@ -15,7 +14,6 @@ import (
 	"github.com/julienschmidt/httprouter"
 	managementv1 "github.com/loft-sh/api/v4/pkg/apis/management/v1"
 	"github.com/loft-sh/devpod/pkg/platform"
-	"github.com/loft-sh/devpod/pkg/platform/client"
 	platformclient "github.com/loft-sh/devpod/pkg/platform/client"
 	"github.com/loft-sh/devpod/pkg/platform/labels"
 	"github.com/loft-sh/devpod/pkg/platform/project"
@@ -75,6 +73,7 @@ var (
 	routeProjects         = "/projects"
 	routeProjectTemplates = "/projects/:project/templates"
 	routeProjectClusters  = "/projects/:project/clusters"
+	routeGetWorkspace     = "/workspace"
 	routeWatchWorkspaces  = "/watch-workspaces"
 	routeListWorkspaces   = "/list-workspaces"
 	routeCreateWorkspace  = "/create-workspace"
@@ -106,6 +105,7 @@ func newLocalServer(lc *tailscale.LocalClient, pc platformclient.Client, devPodC
 	router.GET(routeProjects, l.projects)
 	router.GET(routeProjectTemplates, l.projectTemplates)
 	router.GET(routeProjectClusters, l.projectClusters)
+	router.GET(routeGetWorkspace, l.getWorkspace)
 	router.GET(routeWatchWorkspaces, l.watchWorkspaces)
 	router.GET(routeListWorkspaces, l.listWorkspace)
 	router.POST(routeCreateWorkspace, l.createWorkspace)
@@ -354,6 +354,27 @@ func (l *localServer) listWorkspace(w http.ResponseWriter, r *http.Request, para
 	tryJSON(w, instances)
 }
 
+func (l *localServer) getWorkspace(w http.ResponseWriter, r *http.Request, params httprouter.Params) {
+	uid := r.URL.Query().Get("uid")
+	if uid == "" {
+		http.Error(w, "missing required query parameter \"uid\"", http.StatusInternalServerError)
+		return
+	}
+
+	instance, err := platform.FindInstance(r.Context(), l.pc, uid)
+	if err != nil {
+		http.Error(w, fmt.Errorf("failed to get workspace with uid %s: %w", uid, err).Error(), http.StatusInternalServerError)
+		return
+	}
+	if instance == nil {
+		// send OK but don't try to marshal nil instance
+		w.WriteHeader(http.StatusOK)
+		return
+	}
+
+	tryJSON(w, instance)
+}
+
 func (l *localServer) watchWorkspaces(w http.ResponseWriter, r *http.Request, params httprouter.Params) {
 	f, ok := w.(http.Flusher)
 	if !ok {
@@ -393,18 +414,13 @@ func (l *localServer) watchWorkspaces(w http.ResponseWriter, r *http.Request, pa
 }
 
 func (l *localServer) createWorkspace(w http.ResponseWriter, r *http.Request, params httprouter.Params) {
-	body, err := io.ReadAll(r.Body)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
-		return
-	}
-
 	instance := &managementv1.DevPodWorkspaceInstance{}
-	err = json.Unmarshal(body, instance)
+	err := json.NewDecoder(r.Body).Decode(instance)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
+	instance.TypeMeta = metav1.TypeMeta{}
 
 	updatedInstance, err := createInstance(r.Context(), l.pc, instance, l.log)
 	if err != nil {
@@ -416,18 +432,13 @@ func (l *localServer) createWorkspace(w http.ResponseWriter, r *http.Request, pa
 }
 
 func (l *localServer) updateWorkspace(w http.ResponseWriter, r *http.Request, params httprouter.Params) {
-	body, err := io.ReadAll(r.Body)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
-		return
-	}
-
 	newInstance := &managementv1.DevPodWorkspaceInstance{}
-	err = json.Unmarshal(body, newInstance)
+	err := json.NewDecoder(r.Body).Decode(newInstance)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
+	newInstance.TypeMeta = metav1.TypeMeta{}
 
 	projectName := project.ProjectFromNamespace(newInstance.GetNamespace())
 	oldInstance, err := platform.FindInstanceByName(r.Context(), l.pc, newInstance.GetName(), projectName)
@@ -456,7 +467,7 @@ func tryJSON(w http.ResponseWriter, obj interface{}) {
 	_, _ = w.Write(out)
 }
 
-func createInstance(ctx context.Context, client client.Client, instance *managementv1.DevPodWorkspaceInstance, log log.Logger) (*managementv1.DevPodWorkspaceInstance, error) {
+func createInstance(ctx context.Context, client platformclient.Client, instance *managementv1.DevPodWorkspaceInstance, log log.Logger) (*managementv1.DevPodWorkspaceInstance, error) {
 	managementClient, err := client.Management()
 	if err != nil {
 		return nil, err
@@ -472,7 +483,7 @@ func createInstance(ctx context.Context, client client.Client, instance *managem
 	return platform.WaitForInstance(ctx, client, updatedInstance, log)
 }
 
-func updateInstance(ctx context.Context, client client.Client, oldInstance *managementv1.DevPodWorkspaceInstance, newInstance *managementv1.DevPodWorkspaceInstance, log log.Logger) (*managementv1.DevPodWorkspaceInstance, error) {
+func updateInstance(ctx context.Context, client platformclient.Client, oldInstance *managementv1.DevPodWorkspaceInstance, newInstance *managementv1.DevPodWorkspaceInstance, log log.Logger) (*managementv1.DevPodWorkspaceInstance, error) {
 	// This ensures the template is kept up to date with configuration changes
 	if newInstance.Spec.TemplateRef != nil {
 		newInstance.Spec.TemplateRef.SyncOnce = true
