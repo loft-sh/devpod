@@ -30,6 +30,7 @@ func (r *runner) runSingleContainer(
 	options UpOptions,
 	timeout time.Duration,
 ) (*config.Result, error) {
+	r.Log.Debugf("Starting devcontainer in single container mode...")
 	containerDetails, err := r.Driver.FindDevContainer(ctx, r.ID)
 	if err != nil {
 		return nil, fmt.Errorf("find dev container: %w", err)
