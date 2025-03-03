@@ -2,12 +2,15 @@ package ts
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"io"
 	"net"
 	"net/http"
 	"net/http/httputil"
 	"net/url"
+	"os"
+	"path/filepath"
 	"strings"
 	"sync"
 	"time"
@@ -16,10 +19,13 @@ import (
 	"github.com/sirupsen/logrus"
 
 	"github.com/loft-sh/devpod/pkg/platform/client"
+	"github.com/loft-sh/devpod/pkg/provider"
 	sshServer "github.com/loft-sh/devpod/pkg/ssh/server"
+	"tailscale.com/client/tailscale"
 	"tailscale.com/envknob"
 	"tailscale.com/ipn/store"
 	"tailscale.com/tsnet"
+	"tailscale.com/types/netmap"
 )
 
 const (
@@ -43,6 +49,7 @@ type WorkspaceServerConfig struct {
 	Hostname  string
 	LogF      func(format string, args ...interface{})
 	Client    client.Client
+	RootDir   string
 }
 
 // NewWorkspaceServer creates a new TSNet server instance.
@@ -63,15 +70,30 @@ func (s *WorkspaceServer) Start(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
+	lc, err := s.tsServer.LocalClient()
+	if err != nil {
+		return err
+	}
 
 	// Discover a runner and set up connection tracking (with heartbeat)
-	discoveredRunner := s.discoverRunner(ctx)
+	discoveredRunner := s.discoverRunner(ctx, lc)
 	cc := s.createConnectionCounter(ctx, discoveredRunner, projectName, workspaceName)
 
 	// Start both SSH and HTTP reverse proxy listeners
 	if err := s.startListeners(ctx, cc); err != nil {
 		return err
 	}
+
+	go func() {
+		WatchNetmap(ctx, lc, func(netMap *netmap.NetworkMap) {
+			nm, err := json.Marshal(netMap)
+			if err != nil {
+				s.log.Errorf("Failed to marshal netmap: %v", err)
+			} else {
+				_ = os.WriteFile(filepath.Join(s.config.RootDir, "netmap.json"), nm, 0o644)
+			}
+		})
+	}()
 
 	// Wait until the context is canceled.
 	<-ctx.Done()
@@ -141,7 +163,7 @@ func (s *WorkspaceServer) setupControlURL(ctx context.Context) (*url.URL, error)
 
 // initTsServer initializes the TSNet server.
 func (s *WorkspaceServer) initTsServer(ctx context.Context, controlURL *url.URL) error {
-	fs, err := store.NewFileStore(s.config.LogF, "/tmp/tailscale/state")
+	fs, err := store.NewFileStore(s.config.LogF, filepath.Join(s.config.RootDir, provider.DaemonStateFile))
 	if err != nil {
 		return fmt.Errorf("failed to create file store: %w", err)
 	}
@@ -152,7 +174,7 @@ func (s *WorkspaceServer) initTsServer(ctx context.Context, controlURL *url.URL)
 		Logf:       s.config.LogF,
 		ControlURL: controlURL.String() + "/coordinator/",
 		AuthKey:    s.config.AccessKey,
-		Dir:        "/tmp/tailscale/runner",
+		Dir:        s.config.RootDir,
 		Ephemeral:  false,
 		Store:      fs,
 	}
@@ -303,12 +325,7 @@ func (s *WorkspaceServer) handleSSHConnection(clientConn net.Conn, clientHost st
 }
 
 // discoverRunner attempts to find the runner peer from the TSNet status.
-func (s *WorkspaceServer) discoverRunner(ctx context.Context) string {
-	lc, err := s.tsServer.LocalClient()
-	if err != nil {
-		s.log.Infof("discoverRunner: failed to get local client: %v", err)
-		return ""
-	}
+func (s *WorkspaceServer) discoverRunner(ctx context.Context, lc *tailscale.LocalClient) string {
 	status, err := lc.Status(ctx)
 	if err != nil {
 		s.log.Infof("discoverRunner: failed to get status: %v", err)
