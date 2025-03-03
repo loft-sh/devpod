@@ -157,10 +157,10 @@ func (l *localServer) watchPlatform(stopChan <-chan struct{}) error {
 			l.platformStatus.mu.Lock()
 			if err != nil {
 				if IsAccessKeyNotFound(err) {
-					l.log.Warn("client not authenticated: %s", err)
+					l.log.Warnf("client not authenticated: %s", err)
 					l.platformStatus.authenticated = false
 				} else {
-					l.log.Error("failed to create self: %v", err)
+					l.log.Errorf("failed to create self: %v", err)
 				}
 			} else {
 				// We don't want to be too restrictive in case the error

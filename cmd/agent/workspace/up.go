@@ -77,7 +77,7 @@ func (cmd *UpCmd) Run(ctx context.Context) error {
 	cancelCtx, cancel := context.WithCancel(ctx)
 	defer cancel()
 
-	tunnelClient, logger, credentialsDir, err := initWorkspace(cancelCtx, cancel, workspaceInfo, cmd.Debug, !workspaceInfo.CLIOptions.Proxy && !workspaceInfo.CLIOptions.DisableDaemon)
+	tunnelClient, logger, credentialsDir, err := initWorkspace(cancelCtx, cancel, workspaceInfo, cmd.Debug, !workspaceInfo.CLIOptions.Platform.Enabled && !workspaceInfo.CLIOptions.DisableDaemon)
 	if err != nil {
 		err1 := clientimplementation.DeleteWorkspaceFolder(workspaceInfo.Workspace.Context, workspaceInfo.Workspace.ID, workspaceInfo.Workspace.SSHConfigPath, logger)
 		if err1 != nil {
@@ -259,7 +259,7 @@ func initWorkspace(ctx context.Context, cancel context.CancelFunc, workspaceInfo
 func prepareWorkspace(ctx context.Context, workspaceInfo *provider2.AgentWorkspaceInfo, client tunnel.TunnelClient, helper string, log log.Logger) error {
 	// change content folder if source is local folder in proxy mode
 	// to a folder that's known ahead of time inside of DEVPOD_HOME
-	if workspaceInfo.CLIOptions.Proxy && workspaceInfo.Workspace.Source.LocalFolder != "" {
+	if workspaceInfo.CLIOptions.Platform.Enabled && workspaceInfo.Workspace.Source.LocalFolder != "" {
 		workspaceInfo.ContentFolder = agent.GetAgentWorkspaceContentDir(workspaceInfo.Origin)
 	}
 
@@ -288,7 +288,7 @@ func prepareWorkspace(ctx context.Context, workspaceInfo *provider2.AgentWorkspa
 		}
 
 		if crane.ShouldUse(&workspaceInfo.CLIOptions) {
-			log.Infof("Pulling devcontainer spec from %v", workspaceInfo.CLIOptions.EnvironmentTemplate)
+			log.Infof("Pulling devcontainer spec from %v", workspaceInfo.CLIOptions.Platform.EnvironmentTemplate)
 			return nil
 		}
 		return agent.CloneRepositoryForWorkspace(ctx,

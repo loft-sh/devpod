@@ -11,6 +11,7 @@ import (
 	"github.com/loft-sh/devpod/pkg/agent/tunnelserver"
 	"github.com/loft-sh/devpod/pkg/client"
 	"github.com/loft-sh/devpod/pkg/config"
+	config2 "github.com/loft-sh/devpod/pkg/devcontainer/config"
 	"github.com/loft-sh/devpod/pkg/image"
 	"github.com/loft-sh/devpod/pkg/provider"
 	workspace2 "github.com/loft-sh/devpod/pkg/workspace"
@@ -125,7 +126,7 @@ func NewBuildCmd(flags *flags.GlobalFlags) *cobra.Command {
 	buildCmd.Flags().StringVar(&cmd.Machine, "machine", "", "The machine to use for this workspace. The machine needs to exist beforehand or the command will fail. If the workspace already exists, this option has no effect")
 	buildCmd.Flags().StringVar(&cmd.Repository, "repository", "", "The repository to push to")
 	buildCmd.Flags().StringSliceVar(&cmd.Tag, "tag", []string{}, "Image Tag(s) in the form of a comma separated list --tag latest,arm64 or multiple flags --tag latest --tag arm64")
-	buildCmd.Flags().StringSliceVar(&cmd.Platform, "platform", []string{}, "Set target platform for build")
+	buildCmd.Flags().StringSliceVar(&cmd.Platforms, "platform", []string{}, "Set target platform for build")
 	buildCmd.Flags().BoolVar(&cmd.SkipPush, "skip-push", false, "If true will not push the image to the repository, useful for testing")
 	buildCmd.Flags().Var(&cmd.GitCloneStrategy, "git-clone-strategy", "The git clone strategy DevPod uses to checkout git based workspaces. Can be full (default), blobless, treeless or shallow")
 	buildCmd.Flags().BoolVar(&cmd.GitCloneRecursiveSubmodules, "git-clone-recursive-submodules", false, "If true will clone git submodule repositories recursively")
@@ -160,20 +161,21 @@ func (cmd *BuildCmd) build(ctx context.Context, workspaceClient client.Workspace
 		return err
 	}
 
-	return cmd.buildAgentClient(ctx, workspaceClient, log)
+	log.Infof("Building devcontainer...")
+	defer log.Debugf("Done building devcontainer")
+	_, err = buildAgentClient(ctx, workspaceClient, cmd.CLIOptions, "build", log)
+	return err
 }
 
-func (cmd *BuildCmd) buildAgentClient(ctx context.Context, workspaceClient client.WorkspaceClient, log log.Logger) error {
+func buildAgentClient(ctx context.Context, workspaceClient client.WorkspaceClient, cliOptions provider.CLIOptions, agentCommand string, log log.Logger, options ...tunnelserver.Option) (*config2.Result, error) {
 	// compress info
-	workspaceInfo, wInfo, err := workspaceClient.AgentInfo(cmd.CLIOptions)
+	workspaceInfo, wInfo, err := workspaceClient.AgentInfo(cliOptions)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	// create container etc.
-	log.Infof("Building devcontainer...")
-	defer log.Debugf("Done building devcontainer")
-	command := fmt.Sprintf("'%s' agent workspace build --workspace-info '%s'", workspaceClient.AgentPath(), workspaceInfo)
+	command := fmt.Sprintf("'%s' agent workspace %s --workspace-info '%s'", workspaceClient.AgentPath(), agentCommand, workspaceInfo)
 	if log.GetLevel() == logrus.DebugLevel {
 		command += " --debug"
 	}
@@ -181,11 +183,11 @@ func (cmd *BuildCmd) buildAgentClient(ctx context.Context, workspaceClient clien
 	// create pipes
 	stdoutReader, stdoutWriter, err := os.Pipe()
 	if err != nil {
-		return err
+		return nil, err
 	}
 	stdinReader, stdinWriter, err := os.Pipe()
 	if err != nil {
-		return err
+		return nil, err
 	}
 	defer stdoutWriter.Close()
 	defer stdinWriter.Close()
@@ -225,19 +227,20 @@ func (cmd *BuildCmd) buildAgentClient(ctx context.Context, workspaceClient clien
 	}()
 
 	// create container etc.
-	_, err = tunnelserver.RunUpServer(
+	result, err := tunnelserver.RunUpServer(
 		cancelCtx,
 		stdoutReader,
 		stdinWriter,
-		workspaceClient.AgentInjectGitCredentials(),
-		workspaceClient.AgentInjectDockerCredentials(),
+		workspaceClient.AgentInjectGitCredentials(cliOptions),
+		workspaceClient.AgentInjectDockerCredentials(cliOptions),
 		workspaceClient.WorkspaceConfig(),
 		log,
+		options...,
 	)
 	if err != nil {
-		return errors.Wrap(err, "run tunnel machine")
+		return nil, errors.Wrap(err, "run tunnel machine")
 	}
 
 	// wait until command finished
-	return <-errChan
+	return result, <-errChan
 }

@@ -23,7 +23,7 @@ func execOptionCommand(ctx context.Context, command string, resolvedOptions map[
 		env = append(env, k+"="+v)
 	}
 
-	err := shell.ExecuteCommandWithShell(ctx, command, nil, stdout, stderr, env)
+	err := shell.RunEmulatedShell(ctx, command, nil, stdout, stderr, env)
 	if err != nil {
 		return nil, errors.Wrapf(err, "exec command: %s%s", stdout.String(), stderr.String())
 	}
