@@ -14,6 +14,7 @@ import (
 	"github.com/loft-sh/devpod/pkg/command"
 	"github.com/loft-sh/devpod/pkg/devcontainer/config"
 	"github.com/loft-sh/devpod/pkg/image"
+	"github.com/loft-sh/log"
 	"github.com/loft-sh/log/scanner"
 	perrors "github.com/pkg/errors"
 )
@@ -54,6 +55,7 @@ type DockerHelper struct {
 	// allow command to have a custom environment
 	Environment []string
 	Builder     DockerBuilder
+	Log         log.Logger
 }
 
 func (r *DockerHelper) GPUSupportEnabled() (bool, error) {
@@ -197,7 +199,7 @@ func (r *DockerHelper) InspectImage(ctx context.Context, imageName string, tryRe
 			return nil, err
 		}
 
-		imageConfig, _, err := image.GetImageConfig(ctx, imageName)
+		imageConfig, _, err := image.GetImageConfig(ctx, imageName, r.Log)
 		if err != nil {
 			return nil, perrors.Wrap(err, "get image config remotely")
 		}
