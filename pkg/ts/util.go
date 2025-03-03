@@ -2,6 +2,7 @@ package ts
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"os"
 	"strings"
@@ -10,6 +11,7 @@ import (
 	"github.com/loft-sh/log"
 	"tailscale.com/client/tailscale"
 	"tailscale.com/ipn"
+	"tailscale.com/types/netmap"
 )
 
 const LoftTSNetDomain = "ts.loft"
@@ -93,4 +95,29 @@ func WaitHostReachable(ctx context.Context, lc *tailscale.LocalClient, addr Addr
 	}
 
 	return fmt.Errorf("host %s not reachable after %d attempts", addr.String(), maxRetries)
+}
+
+func WatchNetmap(ctx context.Context, lc *tailscale.LocalClient, netmapChangedFn func(nm *netmap.NetworkMap)) error {
+	watcher, err := lc.WatchIPNBus(ctx, ipn.NotifyInitialNetMap|ipn.NotifyRateLimit|ipn.NotifyWatchEngineUpdates)
+	if err != nil {
+		return err
+	}
+	defer watcher.Close()
+
+	var netMap *netmap.NetworkMap
+	for {
+		n, err := watcher.Next()
+		if err != nil {
+			return fmt.Errorf("watch ipn: %w", err)
+		}
+		if n.ErrMessage != nil {
+			return fmt.Errorf("tailscale error: %w", errors.New(*n.ErrMessage))
+		}
+		if n.NetMap != nil {
+			if n.NetMap != netMap {
+				netMap = n.NetMap
+				netmapChangedFn(netMap)
+			}
+		}
+	}
 }
