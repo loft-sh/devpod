@@ -13,8 +13,8 @@ import (
 )
 
 type SSHGitClone struct {
-	KeyFile string
-	Port    string
+	KeyFiles []string
+	Port     string
 }
 
 func NewSSHGitCloneCmd() *cobra.Command {
@@ -27,7 +27,7 @@ func NewSSHGitCloneCmd() *cobra.Command {
 		},
 	}
 
-	sshCmd.Flags().StringVar(&cmd.KeyFile, "key-file", "", "SSH Key file to use")
+	sshCmd.Flags().StringArrayVar(&cmd.KeyFiles, "key-file", []string{}, "SSH Key file to use")
 	sshCmd.Flags().StringVar(&cmd.Port, "port", "22", "SSH port to use, defaults to 22")
 	_ = sshCmd.MarkFlagRequired("key-file")
 	return sshCmd
@@ -48,7 +48,7 @@ func (cmd *SSHGitClone) Run(ctx context.Context, args []string) error {
 		return err
 	}
 
-	sshConfig, err := getConfig(user, cmd.KeyFile)
+	sshConfig, err := getConfig(user, cmd.KeyFiles)
 	if err != nil {
 		return err
 	}
@@ -76,21 +76,25 @@ func (cmd *SSHGitClone) Run(ctx context.Context, args []string) error {
 	return nil
 }
 
-func getConfig(userName string, keyFilePath string) (*ssh.ClientConfig, error) {
-	out, err := os.ReadFile(keyFilePath)
-	if err != nil {
-		return nil, fmt.Errorf("read private ssh key: %w", err)
-	}
+func getConfig(userName string, keyFilePaths []string) (*ssh.ClientConfig, error) {
+	signers := []ssh.Signer{}
+	for _, keyFilePath := range keyFilePaths {
+		out, err := os.ReadFile(keyFilePath)
+		if err != nil {
+			return nil, fmt.Errorf("read private ssh key: %w", err)
+		}
 
-	signer, err := ssh.ParsePrivateKey(out)
-	if err != nil {
-		return nil, fmt.Errorf("parse private key: %w", err)
+		signer, err := ssh.ParsePrivateKey(out)
+		if err != nil {
+			return nil, fmt.Errorf("parse private key: %w", err)
+		}
+
+		signers = append(signers, signer)
 	}
 
 	return &ssh.ClientConfig{
-		User: userName,
-		Auth: []ssh.AuthMethod{
-			ssh.PublicKeys(signer)},
+		User:            userName,
+		Auth:            []ssh.AuthMethod{ssh.PublicKeys(signers...)},
 		HostKeyCallback: ssh.InsecureIgnoreHostKey(),
 	}, nil
 }

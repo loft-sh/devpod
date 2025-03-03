@@ -56,7 +56,7 @@ type SetupContainerCmd struct {
 	SetupInfo              string
 	AccessKey              string
 	PlatformHost           string
-	NetworkHostname        string
+	WorkspaceHost          string
 }
 
 // NewSetupContainerCmd creates a new command
@@ -78,7 +78,7 @@ func NewSetupContainerCmd(flags *flags.GlobalFlags) *cobra.Command {
 	setupContainerCmd.Flags().StringVar(&cmd.ContainerWorkspaceInfo, "container-workspace-info", "", "The container workspace info")
 	setupContainerCmd.Flags().StringVar(&cmd.SetupInfo, "setup-info", "", "The container setup info")
 	setupContainerCmd.Flags().StringVar(&cmd.AccessKey, "access-key", "", "Access Key to use")
-	setupContainerCmd.Flags().StringVar(&cmd.NetworkHostname, "network-hostname", "", "Network hostname to use")
+	setupContainerCmd.Flags().StringVar(&cmd.WorkspaceHost, "workspace-host", "", "Workspace hostname to use")
 	setupContainerCmd.Flags().StringVar(&cmd.PlatformHost, "platform-host", "", "Platform host")
 	_ = setupContainerCmd.MarkFlagRequired("setup-info")
 	return setupContainerCmd
@@ -200,7 +200,7 @@ func (cmd *SetupContainerCmd) Run(ctx context.Context) error {
 	}
 
 	// start container daemon if necessary
-	if !workspaceInfo.CLIOptions.Proxy && !workspaceInfo.CLIOptions.DisableDaemon && workspaceInfo.ContainerTimeout != "" {
+	if !workspaceInfo.CLIOptions.Platform.Enabled && !workspaceInfo.CLIOptions.DisableDaemon && workspaceInfo.ContainerTimeout != "" {
 		err = single.Single("devpod.daemon.pid", func() (*exec.Cmd, error) {
 			logger.Debugf("Start DevPod Container Daemon with Inactivity Timeout %s", workspaceInfo.ContainerTimeout)
 			binaryPath, err := os.Executable()
@@ -216,7 +216,7 @@ func (cmd *SetupContainerCmd) Run(ctx context.Context) error {
 	}
 
 	// start tailscale networking daemon
-	if cmd.AccessKey != "" && cmd.NetworkHostname != "" {
+	if cmd.AccessKey != "" && cmd.WorkspaceHost != "" {
 		err = single.Single("network.daemon.pid", func() (*exec.Cmd, error) {
 			logger.Infof("Start networking daemon on %s", cmd.PlatformHost)
 			binaryPath, err := os.Executable()
@@ -224,7 +224,7 @@ func (cmd *SetupContainerCmd) Run(ctx context.Context) error {
 				return nil, err
 			}
 
-			return exec.Command(binaryPath, "agent", "container", "network-daemon", "--access-key", cmd.AccessKey, "--host", cmd.PlatformHost, "--hostname", cmd.NetworkHostname), nil
+			return exec.Command(binaryPath, "agent", "container", "network-daemon", "--access-key", cmd.AccessKey, "--platform-host", cmd.PlatformHost, "--workspace-host", cmd.WorkspaceHost), nil
 		})
 		if err != nil {
 			return err
