@@ -1,6 +1,7 @@
 package daemon
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -57,6 +58,24 @@ func (c *LocalClient) Status(ctx context.Context, debug bool) (Status, error) {
 	return status, nil
 }
 
+func (c *LocalClient) GetWorkspace(ctx context.Context, uid string) (*managementv1.DevPodWorkspaceInstance, error) {
+	b, err := c.doRequest(ctx, http.MethodGet, routeGetWorkspace+fmt.Sprintf("?uid=%s", uid), nil)
+	if err != nil {
+		return nil, err
+	}
+
+	if len(b) == 0 {
+		return nil, nil
+	}
+	instance := &managementv1.DevPodWorkspaceInstance{}
+	err = json.Unmarshal(b, instance)
+	if err != nil {
+		return nil, err
+	}
+
+	return instance, nil
+}
+
 func (c *LocalClient) ListWorkspaces(ctx context.Context) ([]managementv1.DevPodWorkspaceInstance, error) {
 	b, err := c.doRequest(ctx, http.MethodGet, routeListWorkspaces, nil)
 	if err != nil {
@@ -70,6 +89,42 @@ func (c *LocalClient) ListWorkspaces(ctx context.Context) ([]managementv1.DevPod
 	}
 
 	return instances, nil
+}
+
+func (c *LocalClient) CreateWorkspace(ctx context.Context, workspace *managementv1.DevPodWorkspaceInstance) (*managementv1.DevPodWorkspaceInstance, error) {
+	body, err := json.Marshal(workspace)
+	if err != nil {
+		return nil, err
+	}
+	b, err := c.doRequest(ctx, http.MethodPost, routeCreateWorkspace, bytes.NewReader(body))
+	if err != nil {
+		return nil, err
+	}
+	newInstance := &managementv1.DevPodWorkspaceInstance{}
+	err = json.Unmarshal(b, newInstance)
+	if err != nil {
+		return nil, err
+	}
+
+	return newInstance, nil
+}
+
+func (c *LocalClient) UpdateWorkspace(ctx context.Context, workspace *managementv1.DevPodWorkspaceInstance) (*managementv1.DevPodWorkspaceInstance, error) {
+	body, err := json.Marshal(workspace)
+	if err != nil {
+		return nil, err
+	}
+	b, err := c.doRequest(ctx, http.MethodPost, routeUpdateWorkspace, bytes.NewReader(body))
+	if err != nil {
+		return nil, err
+	}
+	newInstance := &managementv1.DevPodWorkspaceInstance{}
+	err = json.Unmarshal(b, newInstance)
+	if err != nil {
+		return nil, err
+	}
+
+	return newInstance, nil
 }
 
 func (c *LocalClient) Shutdown(ctx context.Context) error {
@@ -97,6 +152,13 @@ func (c *LocalClient) doRequest(ctx context.Context, method string, path string,
 		return nil, err
 	}
 	defer res.Body.Close()
+	if res.StatusCode != http.StatusOK {
+		b, err := io.ReadAll(res.Body)
+		if err != nil {
+			return nil, err
+		}
+		return nil, fmt.Errorf("%s: %s", res.Status, string(b))
+	}
 
 	return io.ReadAll(res.Body)
 }

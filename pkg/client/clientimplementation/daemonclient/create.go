@@ -5,15 +5,10 @@ import (
 	"fmt"
 	"io"
 
-	managementv1 "github.com/loft-sh/api/v4/pkg/apis/management/v1"
-	"github.com/loft-sh/devpod/pkg/platform"
-	clientpkg "github.com/loft-sh/devpod/pkg/platform/client"
 	"github.com/loft-sh/devpod/pkg/platform/form"
 	"github.com/loft-sh/devpod/pkg/platform/project"
 	"github.com/loft-sh/devpod/pkg/provider"
-	"github.com/loft-sh/log"
 	"github.com/loft-sh/log/terminal"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 func (c *client) Create(ctx context.Context, stdin io.Reader, stdout io.Writer, stderr io.Writer) error {
@@ -22,7 +17,7 @@ func (c *client) Create(ctx context.Context, stdin io.Reader, stdout io.Writer, 
 		return err
 	}
 
-	instance, err := platform.FindInstance(ctx, baseClient, c.workspace.UID)
+	instance, err := c.localClient.GetWorkspace(ctx, c.workspace.UID)
 	if err != nil {
 		return err
 	}
@@ -39,7 +34,7 @@ func (c *client) Create(ctx context.Context, stdin io.Reader, stdout io.Writer, 
 		return err
 	}
 
-	_, err = createInstance(ctx, baseClient, instance, c.log)
+	_, err = c.localClient.CreateWorkspace(ctx, instance)
 	if err != nil {
 		return err
 	}
@@ -62,20 +57,4 @@ func (c *client) Create(ctx context.Context, stdin io.Reader, stdout io.Writer, 
 	}
 
 	return nil
-}
-
-func createInstance(ctx context.Context, client clientpkg.Client, instance *managementv1.DevPodWorkspaceInstance, log log.Logger) (*managementv1.DevPodWorkspaceInstance, error) {
-	managementClient, err := client.Management()
-	if err != nil {
-		return nil, err
-	}
-
-	updatedInstance, err := managementClient.Loft().ManagementV1().
-		DevPodWorkspaceInstances(instance.GetNamespace()).
-		Create(ctx, instance, metav1.CreateOptions{})
-	if err != nil {
-		return nil, fmt.Errorf("create workspace instance: %w", err)
-	}
-
-	return platform.WaitForInstance(ctx, client, updatedInstance, log)
 }

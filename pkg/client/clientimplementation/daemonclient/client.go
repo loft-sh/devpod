@@ -258,10 +258,6 @@ func (c *client) Ping(ctx context.Context, writer io.Writer) error {
 	return nil
 }
 
-func (c *client) updateInstance(ctx context.Context) error {
-	return nil
-}
-
 func (c *client) initPlatformClient(ctx context.Context) (platformclient.Client, error) {
 	configPath, err := platform.LoftConfigPath(c.Context(), c.Provider())
 	if err != nil {
