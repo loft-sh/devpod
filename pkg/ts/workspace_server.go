@@ -44,12 +44,12 @@ type WorkspaceServer struct {
 
 // WorkspaceServerConfig defines configuration for the TSNet instance.
 type WorkspaceServerConfig struct {
-	AccessKey string
-	Host      string
-	Hostname  string
-	LogF      func(format string, args ...interface{})
-	Client    client.Client
-	RootDir   string
+	AccessKey     string
+	PlatformHost  string
+	WorkspaceHost string
+	LogF          func(format string, args ...interface{})
+	Client        client.Client
+	RootDir       string
 }
 
 // NewWorkspaceServer creates a new TSNet server instance.
@@ -138,12 +138,12 @@ func (s *WorkspaceServer) setupTSNet(ctx context.Context) (workspace, project st
 		return "", "", err
 	}
 
-	return s.parseHostname()
+	return s.parseWorkspaceHostname()
 }
 
 // validateConfig ensures required configuration values are set.
 func (s *WorkspaceServer) validateConfig() error {
-	if s.config.AccessKey == "" || s.config.Host == "" || s.config.Hostname == "" {
+	if s.config.AccessKey == "" || s.config.PlatformHost == "" || s.config.WorkspaceHost == "" {
 		return fmt.Errorf("access key, host, or hostname cannot be empty")
 	}
 	return nil
@@ -153,7 +153,7 @@ func (s *WorkspaceServer) validateConfig() error {
 func (s *WorkspaceServer) setupControlURL(ctx context.Context) (*url.URL, error) {
 	baseURL := &url.URL{
 		Scheme: GetEnvOrDefault("LOFT_TSNET_SCHEME", "https"),
-		Host:   s.config.Host,
+		Host:   s.config.PlatformHost,
 	}
 	if err := CheckDerpConnection(ctx, baseURL); err != nil {
 		return nil, fmt.Errorf("failed to verify DERP connection: %w", err)
@@ -170,7 +170,7 @@ func (s *WorkspaceServer) initTsServer(ctx context.Context, controlURL *url.URL)
 	envknob.Setenv("TS_DEBUG_TLS_DIAL_INSECURE_SKIP_VERIFY", "true")
 	s.log.Infof("Connecting to control URL - %s/coordinator/", controlURL.String())
 	s.tsServer = &tsnet.Server{
-		Hostname:   s.config.Hostname,
+		Hostname:   s.config.WorkspaceHost,
 		Logf:       s.config.LogF,
 		ControlURL: controlURL.String() + "/coordinator/",
 		AuthKey:    s.config.AccessKey,
@@ -185,10 +185,10 @@ func (s *WorkspaceServer) initTsServer(ctx context.Context, controlURL *url.URL)
 }
 
 // parseHostname extracts workspace and project names from the hostname.
-func (s *WorkspaceServer) parseHostname() (workspace, project string, err error) {
-	parts := strings.Split(s.config.Hostname, ".")
+func (s *WorkspaceServer) parseWorkspaceHostname() (workspace, project string, err error) {
+	parts := strings.Split(s.config.WorkspaceHost, ".")
 	if len(parts) < 4 {
-		return "", "", fmt.Errorf("invalid hostname format: %s", s.config.Hostname)
+		return "", "", fmt.Errorf("invalid workspace hostname format: %s", s.config.WorkspaceHost)
 	}
 	return parts[1], parts[2], nil
 }

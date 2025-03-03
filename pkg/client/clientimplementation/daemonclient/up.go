@@ -144,7 +144,7 @@ func printInstanceInfo(instance *managementv1.DevPodWorkspaceInstance, log log.L
 		Template:   instance.Spec.TemplateRef,
 		Parameters: instance.Spec.Parameters,
 	})
-	log.Info("Starting pro workspace with configuration", string(workspaceConfig))
+	log.Debug("Starting pro workspace with configuration", string(workspaceConfig))
 }
 
 type MessageType byte
