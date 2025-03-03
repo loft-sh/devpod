@@ -6,18 +6,19 @@ import (
 	"io"
 
 	"github.com/loft-sh/devpod/pkg/agent/tunnel"
+	"github.com/loft-sh/devpod/pkg/provider"
 	"github.com/loft-sh/devpod/pkg/stdio"
 	"github.com/loft-sh/log"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/reflection"
 )
 
-func RunRunnerServer(ctx context.Context, reader io.Reader, writer io.WriteCloser, allowGitCredentials, allowDockerCredentials bool, gitUsername, gitToken string, log log.Logger) error {
+func RunRunnerServer(ctx context.Context, reader io.Reader, writer io.WriteCloser, allowGitCredentials, allowDockerCredentials bool, platformOptions *provider.PlatformOptions, log log.Logger) error {
 	runnerServ := &runnerServer{
 		log:                    log,
 		allowGitCredentials:    allowGitCredentials,
 		allowDockerCredentials: allowDockerCredentials,
-		gitCredentials:         gitCredentialsOverride{username: gitUsername, token: gitToken},
+		platformOptions:        platformOptions,
 	}
 
 	return runnerServ.Run(ctx, reader, writer)
@@ -29,7 +30,7 @@ type runnerServer struct {
 	allowGitCredentials    bool
 	allowDockerCredentials bool
 	log                    log.Logger
-	gitCredentials         gitCredentialsOverride
+	platformOptions        *provider.PlatformOptions
 }
 
 func (t *runnerServer) Run(ctx context.Context, reader io.Reader, writer io.WriteCloser) error {

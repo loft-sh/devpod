@@ -134,28 +134,45 @@ func (s *workspaceClient) RefreshOptions(ctx context.Context, userOptionsRaw []s
 	return nil
 }
 
-func (s *workspaceClient) AgentInjectGitCredentials() bool {
+func (s *workspaceClient) AgentInjectGitCredentials(cliOptions provider.CLIOptions) bool {
 	s.m.Lock()
 	defer s.m.Unlock()
 
-	return options.ResolveAgentConfig(s.devPodConfig, s.config, s.workspace, s.machine).InjectGitCredentials == "true"
+	return s.agentInfo(cliOptions).Agent.InjectGitCredentials == "true"
 }
 
-func (s *workspaceClient) AgentInjectDockerCredentials() bool {
+func (s *workspaceClient) AgentInjectDockerCredentials(cliOptions provider.CLIOptions) bool {
 	s.m.Lock()
 	defer s.m.Unlock()
 
-	return options.ResolveAgentConfig(s.devPodConfig, s.config, s.workspace, s.machine).InjectDockerCredentials == "true"
+	return s.agentInfo(cliOptions).Agent.InjectDockerCredentials == "true"
 }
 
 func (s *workspaceClient) AgentInfo(cliOptions provider.CLIOptions) (string, *provider.AgentWorkspaceInfo, error) {
 	s.m.Lock()
 	defer s.m.Unlock()
 
-	return s.agentInfo(cliOptions)
+	return s.compressedAgentInfo(cliOptions)
 }
 
-func (s *workspaceClient) agentInfo(cliOptions provider.CLIOptions) (string, *provider.AgentWorkspaceInfo, error) {
+func (s *workspaceClient) compressedAgentInfo(cliOptions provider.CLIOptions) (string, *provider.AgentWorkspaceInfo, error) {
+	agentInfo := s.agentInfo(cliOptions)
+
+	// marshal config
+	out, err := json.Marshal(agentInfo)
+	if err != nil {
+		return "", nil, err
+	}
+
+	compressed, err := compress.Compress(string(out))
+	if err != nil {
+		return "", nil, err
+	}
+
+	return compressed, agentInfo, nil
+}
+
+func (s *workspaceClient) agentInfo(cliOptions provider.CLIOptions) *provider.AgentWorkspaceInfo {
 	// try to load last devcontainer.json
 	var lastDevContainerConfig *config2.DevContainerConfigWithPath
 	var workspaceOrigin string
@@ -181,8 +198,8 @@ func (s *workspaceClient) agentInfo(cliOptions provider.CLIOptions) (string, *pr
 		Options:                s.devPodConfig.ProviderOptions(s.Provider()),
 	}
 
-	// if we are running proxy mode
-	if cliOptions.Proxy || cliOptions.ForceCredentials {
+	// if we are running platform mode
+	if cliOptions.Platform.Enabled {
 		agentInfo.Agent.InjectGitCredentials = "true"
 		agentInfo.Agent.InjectDockerCredentials = "true"
 	}
@@ -190,7 +207,7 @@ func (s *workspaceClient) agentInfo(cliOptions provider.CLIOptions) (string, *pr
 	// we don't send any provider options if proxy because these could contain
 	// sensitive information and we don't want to allow privileged containers that
 	// have access to the host to save these.
-	if agentInfo.Agent.Driver != provider.CustomDriver && (cliOptions.Proxy || cliOptions.DisableDaemon) {
+	if agentInfo.Agent.Driver != provider.CustomDriver && (cliOptions.Platform.Enabled || cliOptions.DisableDaemon) {
 		agentInfo.Options = map[string]config.OptionValue{}
 		agentInfo.Workspace = provider.CloneWorkspace(agentInfo.Workspace)
 		agentInfo.Workspace.Provider.Options = map[string]config.OptionValue{}
@@ -206,18 +223,7 @@ func (s *workspaceClient) agentInfo(cliOptions provider.CLIOptions) (string, *pr
 	// Set registry cache from context option
 	agentInfo.RegistryCache = s.devPodConfig.ContextOption(config.ContextOptionRegistryCache)
 
-	// marshal config
-	out, err := json.Marshal(agentInfo)
-	if err != nil {
-		return "", nil, err
-	}
-
-	compressed, err := compress.Compress(string(out))
-	if err != nil {
-		return "", nil, err
-	}
-
-	return compressed, agentInfo, nil
+	return agentInfo
 }
 
 func (s *workspaceClient) initLock() {
@@ -348,7 +354,7 @@ func (s *workspaceClient) Delete(ctx context.Context, opt client.DeleteOptions) 
 			defer writer.Close()
 
 			s.log.Infof("Deleting container...")
-			compressed, info, err := s.agentInfo(provider.CLIOptions{})
+			compressed, info, err := s.compressedAgentInfo(provider.CLIOptions{})
 			if err != nil {
 				return fmt.Errorf("agent info")
 			}
@@ -445,7 +451,7 @@ func (s *workspaceClient) Stop(ctx context.Context, opt client.StopOptions) erro
 		defer writer.Close()
 
 		s.log.Infof("Stopping container...")
-		compressed, info, err := s.agentInfo(provider.CLIOptions{})
+		compressed, info, err := s.compressedAgentInfo(provider.CLIOptions{})
 		if err != nil {
 			return fmt.Errorf("agent info")
 		}
@@ -551,7 +557,7 @@ func (s *workspaceClient) Status(ctx context.Context, options client.StatusOptio
 func (s *workspaceClient) getContainerStatus(ctx context.Context) (client.Status, error) {
 	stdout := &bytes.Buffer{}
 	buf := &bytes.Buffer{}
-	compressed, info, err := s.agentInfo(provider.CLIOptions{})
+	compressed, info, err := s.compressedAgentInfo(provider.CLIOptions{})
 	if err != nil {
 		return "", fmt.Errorf("get agent info")
 	}
@@ -592,7 +598,7 @@ func RunCommand(ctx context.Context, command types.StrArray, environ []string, s
 
 	// use shell if command length is equal 1
 	if len(command) == 1 {
-		return shell.ExecuteCommandWithShell(ctx, command[0], stdin, stdout, stderr, environ)
+		return shell.RunEmulatedShell(ctx, command[0], stdin, stdout, stderr, environ)
 	}
 
 	// run command

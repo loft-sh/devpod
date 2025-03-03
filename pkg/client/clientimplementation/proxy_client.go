@@ -24,6 +24,8 @@ import (
 var (
 	DevPodDebug = "DEVPOD_DEBUG"
 
+	DevPodPlatformOptions = "DEVPOD_PLATFORM_OPTIONS"
+
 	DevPodFlagsUp     = "DEVPOD_FLAGS_UP"
 	DevPodFlagsSsh    = "DEVPOD_FLAGS_SSH"
 	DevPodFlagsDelete = "DEVPOD_FLAGS_DELETE"
@@ -392,4 +394,13 @@ func DecodeOptionsFromEnv(name string, into any) (bool, error) {
 	}
 
 	return true, json.Unmarshal([]byte(raw), into)
+}
+
+func DecodePlatformOptionsFromEnv(into *provider.PlatformOptions) error {
+	raw := os.Getenv(DevPodPlatformOptions)
+	if raw == "" {
+		return nil
+	}
+
+	return json.Unmarshal([]byte(raw), into)
 }

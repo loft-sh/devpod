@@ -39,8 +39,7 @@ func RunServices(
 	user string,
 	forwardPorts bool,
 	extraPorts []string,
-	gitUsername,
-	gitToken string,
+	platformOptions *provider.PlatformOptions,
 	workspace *provider.Workspace,
 	log log.Logger,
 ) error {
@@ -104,7 +103,7 @@ func RunServices(
 				forwarder,
 				workspace,
 				log,
-				tunnelserver.WithGitCredentialsOverride(gitUsername, gitToken),
+				tunnelserver.WithPlatformOptions(platformOptions),
 			)
 			if err != nil {
 				errChan <- errors.Wrap(err, "run tunnel server")

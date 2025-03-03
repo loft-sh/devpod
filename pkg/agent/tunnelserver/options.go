@@ -51,12 +51,9 @@ func WithMounts(mounts []*config.Mount) Option {
 	}
 }
 
-func WithGitCredentialsOverride(username string, token string) Option {
+func WithPlatformOptions(options *provider2.PlatformOptions) Option {
 	return func(s *tunnelServer) *tunnelServer {
-		s.gitCredentialsOverride = gitCredentialsOverride{
-			username: username,
-			token:    token,
-		}
+		s.platformOptions = options
 		return s
 	}
 }
