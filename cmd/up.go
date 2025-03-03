@@ -1346,6 +1346,8 @@ func (cmd *UpCmd) prepareClient(ctx context.Context, devPodConfig *config.Config
 		source = provider2.ParseWorkspaceSource(cmd.Source)
 		if source == nil {
 			return nil, nil, fmt.Errorf("workspace source is missing")
+		} else if source.LocalFolder != "" && cmd.Platform.Enabled {
+			return nil, nil, fmt.Errorf("local folder is not supported in platform mode. Please specify a git repository instead")
 		}
 	}
 

@@ -69,8 +69,6 @@ type Workspace struct {
 
 	// Path to the file where the SSH config to access the workspace is stored
 	SSHConfigPath string `json:"sshConfigPath,omitempty"`
-
-	Hostname string `json:"hostname,omitempty"`
 }
 
 type ProMetadata struct {
