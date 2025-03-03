@@ -49,5 +49,5 @@ func (cmd *ShellCommand) Run(ctx context.Context, args []string) error {
 		cmd.Command = string(content)
 	}
 
-	return shell.ExecuteCommandWithShell(ctx, cmd.Command, os.Stdin, os.Stdout, os.Stderr, os.Environ())
+	return shell.RunEmulatedShell(ctx, cmd.Command, os.Stdin, os.Stdout, os.Stderr, os.Environ())
 }

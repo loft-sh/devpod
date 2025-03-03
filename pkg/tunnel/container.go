@@ -24,12 +24,11 @@ import (
 
 // NewContainerTunnel constructs a ContainerTunnel using the workspace client, if proxy is True then
 // the workspace's agent config is not periodically updated
-func NewContainerTunnel(client client.WorkspaceClient, proxy bool, log log.Logger) *ContainerTunnel {
+func NewContainerTunnel(client client.WorkspaceClient, log log.Logger) *ContainerTunnel {
 	updateConfigInterval := time.Second * 30
 	return &ContainerTunnel{
 		client:               client,
 		updateConfigInterval: updateConfigInterval,
-		proxy:                proxy,
 		log:                  log,
 	}
 }
@@ -38,7 +37,6 @@ func NewContainerTunnel(client client.WorkspaceClient, proxy bool, log log.Logge
 type ContainerTunnel struct {
 	client               client.WorkspaceClient
 	updateConfigInterval time.Duration
-	proxy                bool
 	log                  log.Logger
 }
 
@@ -119,7 +117,7 @@ func (c *ContainerTunnel) Run(ctx context.Context, handler Handler, cfg *config.
 		c.log.Debugf("Successfully connected to host")
 
 		// update workspace remotely
-		if !c.proxy && c.updateConfigInterval > 0 {
+		if c.updateConfigInterval > 0 {
 			go func() {
 				c.updateConfig(cancelCtx, sshClient)
 			}()
@@ -159,7 +157,7 @@ func (c *ContainerTunnel) updateConfig(ctx context.Context, sshClient *ssh.Clien
 			}
 
 			// compress info
-			workspaceInfo, agentInfo, err := c.client.AgentInfo(provider.CLIOptions{Proxy: c.proxy})
+			workspaceInfo, agentInfo, err := c.client.AgentInfo(provider.CLIOptions{})
 			if err != nil {
 				c.log.Errorf("Error compressing workspace info: %v", err)
 				break
@@ -186,7 +184,7 @@ func (c *ContainerTunnel) updateConfig(ctx context.Context, sshClient *ssh.Clien
 // runInContainer uses the connected SSH client to execute handler on the remote
 func (c *ContainerTunnel) runInContainer(ctx context.Context, sshClient *ssh.Client, handler Handler, envVars map[string]string) error {
 	// compress info
-	workspaceInfo, _, err := c.client.AgentInfo(provider.CLIOptions{Proxy: c.proxy})
+	workspaceInfo, _, err := c.client.AgentInfo(provider.CLIOptions{})
 	if err != nil {
 		return err
 	}

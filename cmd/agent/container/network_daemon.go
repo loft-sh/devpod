@@ -15,9 +15,9 @@ import (
 type NetworkDaemonCmd struct {
 	*flags.GlobalFlags
 
-	AccessKey       string
-	PlatformHost    string
-	NetworkHostname string
+	AccessKey     string
+	PlatformHost  string
+	WorkspaceHost string
 }
 
 // NewDaemonCmd creates a new command
@@ -34,8 +34,8 @@ func NewNetworkDaemonCmd(flags *flags.GlobalFlags) *cobra.Command {
 		},
 	}
 	daemonCmd.Flags().StringVar(&cmd.AccessKey, "access-key", "", "")
-	daemonCmd.Flags().StringVar(&cmd.PlatformHost, "host", "", "")
-	daemonCmd.Flags().StringVar(&cmd.NetworkHostname, "hostname", "", "")
+	daemonCmd.Flags().StringVar(&cmd.PlatformHost, "platform-host", "", "")
+	daemonCmd.Flags().StringVar(&cmd.WorkspaceHost, "workspace-host", "", "")
 	return daemonCmd
 }
 
@@ -55,7 +55,7 @@ func (cmd *NetworkDaemonCmd) Run(ctx context.Context) error {
 	tsServer := ts.NewWorkspaceServer(&ts.WorkspaceServerConfig{
 		AccessKey: cmd.AccessKey,
 		Host:      ts.RemoveProtocol(cmd.PlatformHost),
-		Hostname:  cmd.NetworkHostname,
+		Hostname:  cmd.WorkspaceHost,
 		Client:    baseClient,
 	}, log.Default) // FIXME: proper logging
 	err = tsServer.Start(ctx)

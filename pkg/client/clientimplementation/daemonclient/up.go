@@ -1,10 +1,10 @@
 package daemonclient
 
 import (
+	"bufio"
 	"context"
 	"encoding/json"
 	"fmt"
-	"os"
 
 	managementv1 "github.com/loft-sh/api/v4/pkg/apis/management/v1"
 	storagev1 "github.com/loft-sh/api/v4/pkg/apis/storage/v1"
@@ -12,10 +12,14 @@ import (
 	clientpkg "github.com/loft-sh/devpod/pkg/client"
 	"github.com/loft-sh/devpod/pkg/compress"
 	"github.com/loft-sh/devpod/pkg/devcontainer/config"
+	devpodlog "github.com/loft-sh/devpod/pkg/log"
 	"github.com/loft-sh/devpod/pkg/platform"
+	"github.com/loft-sh/devpod/pkg/platform/kube"
 	"github.com/loft-sh/log"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+
+	_ "github.com/loft-sh/api/v4/pkg/apis/management/install" // Install the management group to ensure the option types are registered
 )
 
 func (c *client) Up(ctx context.Context, opt clientpkg.UpOptions) (*config.Result, error) {
@@ -57,6 +61,7 @@ func (c *client) Up(ctx context.Context, opt clientpkg.UpOptions) (*config.Resul
 	// create up task
 	task, err := managementClient.Loft().ManagementV1().DevPodWorkspaceInstances(instance.Namespace).Up(ctx, instance.Name, &managementv1.DevPodWorkspaceInstanceUp{
 		Spec: managementv1.DevPodWorkspaceInstanceUpSpec{
+			Debug:   opt.Debug,
 			Options: string(rawOptions),
 		},
 	}, metav1.CreateOptions{})
@@ -67,7 +72,7 @@ func (c *client) Up(ctx context.Context, opt clientpkg.UpOptions) (*config.Resul
 	}
 
 	// stream logs
-	exitCode, err := printLogs(ctx, managementClient, instance, task.Status.TaskID, os.Stdout, os.Stderr, c.log)
+	exitCode, err := printLogs(ctx, managementClient, instance, task.Status.TaskID, c.log)
 	if err != nil {
 		return nil, fmt.Errorf("error printing logs: %w", err)
 	} else if exitCode != 0 {
@@ -140,4 +145,83 @@ func printInstanceInfo(instance *managementv1.DevPodWorkspaceInstance, log log.L
 		Parameters: instance.Spec.Parameters,
 	})
 	log.Info("Starting pro workspace with configuration", string(workspaceConfig))
+}
+
+type MessageType byte
+
+const (
+	StdoutData MessageType = 0
+	StderrData MessageType = 2
+	ExitCode   MessageType = 6
+)
+
+type Message struct {
+	Type     MessageType `json:"type"`
+	ExitCode int         `json:"exitCode,omitempty"`
+	Bytes    []byte      `json:"bytes,omitempty"`
+}
+
+func printLogs(ctx context.Context, managementClient kube.Interface, workspace *managementv1.DevPodWorkspaceInstance, taskID string, logger log.Logger) (int, error) {
+	// get logs reader
+	logsReader, err := managementClient.Loft().ManagementV1().RESTClient().Get().
+		Namespace(workspace.Namespace).
+		Resource("devpodworkspaceinstances").
+		Name(workspace.Name).
+		SubResource("log").
+		VersionedParams(&managementv1.DevPodWorkspaceInstanceLogOptions{
+			TaskID: taskID,
+			Follow: true,
+		}, builders.ParameterCodec).
+		Stream(ctx)
+	if err != nil {
+		return -1, fmt.Errorf("error getting task logs: %w", err)
+	}
+	defer logsReader.Close()
+
+	// create scanner from logs reader
+	scanner := bufio.NewScanner(logsReader)
+
+	// Increase the maximum token size to handle very long lines.
+	// Here, we set a maximum capacity of 1MB.
+	const maxCapacity = 1024 * 1024 // 1MB
+	buf := make([]byte, 1024)       // starting buffer size of 1KB
+	scanner.Buffer(buf, maxCapacity)
+
+	// create json streamer
+	stdoutStreamer := devpodlog.PipeJSONStream(logger)
+	defer stdoutStreamer.Close()
+	stderrStreamer := devpodlog.PipeJSONStream(logger)
+	defer stderrStreamer.Close()
+
+	// loop over all lines
+	for scanner.Scan() {
+		line := scanner.Text()
+
+		// parse message
+		message := &Message{}
+		if err := json.Unmarshal([]byte(line), message); err != nil {
+			return -1, fmt.Errorf("error parsing JSON from logs reader: %w, line: %s", err, string(line))
+		}
+
+		// write message to stdout or stderr
+		if message.Type == StdoutData {
+			if _, err := stdoutStreamer.Write(message.Bytes); err != nil {
+				logger.Debugf("error read stdout: %v", err)
+				return 1, err
+			}
+		} else if message.Type == StderrData {
+			if _, err := stderrStreamer.Write(message.Bytes); err != nil {
+				logger.Debugf("error read stderr: %v", err)
+				return 1, err
+			}
+		} else if message.Type == ExitCode {
+			logger.Debugf("exit code: %d", message.ExitCode)
+			return int(message.ExitCode), nil
+		}
+	}
+	if err := scanner.Err(); err != nil {
+		return -1, fmt.Errorf("logs reader error: %w", err)
+	}
+
+	return 0, nil
 }

@@ -121,10 +121,10 @@ type WorkspaceClient interface {
 	Client
 
 	// AgentInjectGitCredentials returns if the credentials helper should get injected
-	AgentInjectGitCredentials() bool
+	AgentInjectGitCredentials(options provider.CLIOptions) bool
 
 	// AgentInjectDockerCredentials returns if the credentials helper should get injected
-	AgentInjectDockerCredentials() bool
+	AgentInjectDockerCredentials(options provider.CLIOptions) bool
 
 	// AgentInfo returns the info to send to the agent
 	AgentInfo(options provider.CLIOptions) (string, *provider.AgentWorkspaceInfo, error)

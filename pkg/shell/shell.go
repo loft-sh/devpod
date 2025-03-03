@@ -12,47 +12,15 @@ import (
 	"strings"
 	"time"
 
-	command2 "github.com/loft-sh/devpod/pkg/command"
 	"github.com/pkg/errors"
 	"mvdan.cc/sh/v3/expand"
 	"mvdan.cc/sh/v3/interp"
 	"mvdan.cc/sh/v3/syntax"
 )
 
-func ExecuteCommandWithShell(
-	ctx context.Context,
-	command string,
-	stdin io.Reader,
-	stdout io.Writer,
-	stderr io.Writer,
-	environ []string,
-) error {
+func RunEmulatedShell(ctx context.Context, command string, stdin io.Reader, stdout io.Writer, stderr io.Writer, env []string) error {
 	command = strings.ReplaceAll(command, "\r", "")
 
-	// try to find a proper shell
-	if runtime.GOOS != "windows" {
-		if command2.Exists("bash") {
-			cmd := exec.CommandContext(ctx, "bash", "-c", command)
-			cmd.Stdin = stdin
-			cmd.Stdout = stdout
-			cmd.Stderr = stderr
-			cmd.Env = environ
-			return cmd.Run()
-		} else if command2.Exists("sh") {
-			cmd := exec.CommandContext(ctx, "sh", "-c", command)
-			cmd.Stdin = stdin
-			cmd.Stdout = stdout
-			cmd.Stderr = stderr
-			cmd.Env = environ
-			return cmd.Run()
-		}
-	}
-
-	// run emulated shell
-	return RunEmulatedShell(ctx, command, stdin, stdout, stderr, environ)
-}
-
-func RunEmulatedShell(ctx context.Context, command string, stdin io.Reader, stdout io.Writer, stderr io.Writer, env []string) error {
 	// Let's parse the complete command
 	parsed, err := syntax.NewParser().Parse(strings.NewReader(command), "")
 	if err != nil {

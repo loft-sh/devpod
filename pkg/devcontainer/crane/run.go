@@ -67,7 +67,7 @@ func (c *command) Run() (string, error) {
 
 // ShouldUse takes CLIOptions and returns true if crane should be used
 func ShouldUse(cliOptions *provider2.CLIOptions) bool {
-	return IsAvailable() && cliOptions.EnvironmentTemplate != ""
+	return IsAvailable() && cliOptions.Platform.EnvironmentTemplate != ""
 }
 
 // IsAvailable checks if devpod crane is installed in host system
@@ -80,21 +80,16 @@ func IsAvailable() bool {
 func PullConfigFromSource(workspaceInfo *provider2.AgentWorkspaceInfo, options *provider2.CLIOptions, log log.Logger) (string, error) {
 	var data string
 	var err error
-	if options.EnvironmentTemplate == "" {
+	if options.Platform.EnvironmentTemplate == "" {
 		return "", fmt.Errorf("failed to pull config from source based on options")
 	}
 
 	command := New(PullCommand).
 		WithArg(EnvironmentCrane).
-		WithArg(options.EnvironmentTemplate)
+		WithArg(options.Platform.EnvironmentTemplate)
 
-	if options.GitUsername != "" && options.GitToken != "" {
-		command = command.WithFlag("--git-username", options.GitUsername).
-			WithFlag("--git-token", options.GitToken)
-	}
-
-	if options.EnvironmentTemplateVersion != "" {
-		command = command.WithFlag("--version", options.EnvironmentTemplateVersion)
+	if options.Platform.EnvironmentTemplateVersion != "" {
+		command = command.WithFlag("--version", options.Platform.EnvironmentTemplateVersion)
 	}
 
 	data, err = command.Run()
