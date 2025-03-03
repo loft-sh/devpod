@@ -13,6 +13,10 @@ func (k *KubernetesDriver) TargetArchitecture(ctx context.Context, workspaceId s
 		return k.options.Architecture, nil
 	}
 
+	k.Log.Debugf("Getting target architecture for workspace '%s'", workspaceId)
+	defer k.Log.Debugf("Done getting target architecture for workspace '%s'", workspaceId)
+
+	// get all nodes
 	nodes, err := k.client.Client().CoreV1().Nodes().List(ctx, metav1.ListOptions{})
 	if err != nil {
 		if kerrors.IsForbidden(err) {

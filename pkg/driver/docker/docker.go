@@ -58,6 +58,7 @@ func NewDockerDriver(workspaceInfo *provider2.AgentWorkspaceInfo, log log.Logger
 			Environment:   makeEnvironment(workspaceInfo.Agent.Docker.Env, log),
 			ContainerID:   workspaceInfo.Workspace.Source.Container,
 			Builder:       builder,
+			Log:           log,
 		},
 		Log: log,
 	}, nil
