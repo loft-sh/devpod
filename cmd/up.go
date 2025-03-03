@@ -900,6 +900,10 @@ func startBrowserTunnel(
 				})
 			}
 
+			configureDockerCredentials := devPodConfig.ContextOption(config.ContextOptionSSHInjectDockerCredentials) == "true"
+			configureGitCredentials := devPodConfig.ContextOption(config.ContextOptionSSHInjectGitCredentials) == "true"
+			configureGitSSHSignatureHelper := devPodConfig.ContextOption(config.ContextOptionGitSSHSignatureForwarding) == "true"
+
 			// run in container
 			err := tunnel.RunServices(
 				ctx,
@@ -910,6 +914,9 @@ func startBrowserTunnel(
 				extraPorts,
 				nil,
 				client.WorkspaceConfig(),
+				configureDockerCredentials,
+				configureGitCredentials,
+				configureGitSSHSignatureHelper,
 				logger,
 			)
 			if err != nil {
