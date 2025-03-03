@@ -2,10 +2,13 @@ package daemonclient
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"io"
+	"net/netip"
 	"os"
 	"path/filepath"
+	"strings"
 	"sync"
 	"time"
 
@@ -23,6 +26,7 @@ import (
 	perrors "github.com/pkg/errors"
 	"golang.org/x/crypto/ssh"
 	"tailscale.com/client/tailscale"
+	"tailscale.com/tailcfg"
 )
 
 var (
@@ -208,6 +212,50 @@ func (c *client) initLock() {
 		// create workspace lock
 		c.workspaceLock = flock.New(filepath.Join(workspaceLocksDir, c.workspace.ID+".workspace.lock"))
 	})
+}
+
+func (c *client) Ping(ctx context.Context, writer io.Writer) error {
+	wAddr, err := c.getWorkspaceAddress()
+	if err != nil {
+		return err
+	}
+	status, err := c.tsClient.Status(ctx)
+	if err != nil {
+		return err
+	}
+	hostname := strings.TrimSuffix(wAddr.Host(), "."+status.CurrentTailnet.Name)
+	var ip *netip.Addr
+	for _, peer := range status.Peer {
+		if peer.HostName == hostname {
+			ip = &peer.TailscaleIPs[0]
+		}
+	}
+
+	if ip == nil {
+		return fmt.Errorf("no network peer for hostname %s", wAddr.Host())
+	}
+
+	for i := 0; i < 10; i++ {
+		timeoutCtx, cancel := context.WithTimeout(ctx, 5*time.Second)
+		defer cancel()
+		result, err := c.tsClient.Ping(timeoutCtx, *ip, tailcfg.PingDisco)
+		if err != nil {
+			return err
+		}
+		if result.Err != "" {
+			return errors.New(result.Err)
+		}
+		latency := time.Duration(result.LatencySeconds * float64(time.Second)).Round(time.Millisecond)
+		via := result.Endpoint
+		if result.DERPRegionID != 0 {
+			via = fmt.Sprintf("DERP(%s)", result.DERPRegionCode)
+		}
+		writer.Write([]byte(fmt.Sprintf("pong from %s (%s) via %v in %v\n", result.NodeName, result.NodeIP, via, latency)))
+
+		time.Sleep(time.Second)
+	}
+
+	return nil
 }
 
 func (c *client) updateInstance(ctx context.Context) error {

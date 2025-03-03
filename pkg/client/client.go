@@ -83,6 +83,9 @@ type DaemonClient interface {
 
 	// DirectTunnel forwards stdio to the workspace
 	DirectTunnel(ctx context.Context, stdin io.Reader, stdout io.Writer) error
+
+	// Ping tries to ping a workspace and prints results to stdout
+	Ping(ctx context.Context, stdout io.Writer) error
 }
 
 type MachineClient interface {
