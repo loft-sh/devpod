@@ -447,7 +447,6 @@ func (cmd *UpCmd) devPodUpProxy(
 	return result, <-errChan
 }
 
-// TODO: This is just re-using the proxy provider for now, need to change after runner refactoring
 func (cmd *UpCmd) devPodUpDaemon(
 	ctx context.Context,
 	client client2.DaemonClient,
