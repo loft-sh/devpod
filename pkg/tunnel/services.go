@@ -41,6 +41,7 @@ func RunServices(
 	extraPorts []string,
 	platformOptions *provider.PlatformOptions,
 	workspace *provider.Workspace,
+	configureDockerCredentials, configureGitCredentials, configureGitSSHSignatureHelper bool,
 	log log.Logger,
 ) error {
 	// calculate exit after timeout
@@ -54,10 +55,6 @@ func RunServices(
 	if err != nil {
 		return errors.Wrap(err, "forward ports")
 	}
-
-	configureDockerCredentials := devPodConfig.ContextOption(config.ContextOptionSSHInjectDockerCredentials) == "true"
-	configureGitCredentials := devPodConfig.ContextOption(config.ContextOptionSSHInjectGitCredentials) == "true"
-	configureGitSSHSignatureHelper := devPodConfig.ContextOption(config.ContextOptionGitSSHSignatureForwarding) == "true"
 
 	return retry.OnError(wait.Backoff{
 		Steps:    math.MaxInt,
