@@ -287,15 +287,7 @@ impl Daemon {
     }
 
     pub async fn try_start(&mut self, host: String, app_handle: &AppHandle) {
-        if !self.should_retry() {
-            self.try_notify_failed(app_handle);
-            return;
-        }
-        info!(
-            "[{}] attempting to start daemon ({}/10)",
-            host, self.retry_count
-        );
-        self.retry_count += 1;
+        info!("[{}] attempting to start daemon", host);
         if let Some(_) = self.command {
             self.try_stop().await;
         }
@@ -322,11 +314,20 @@ impl Daemon {
         self.status = daemon::DaemonStatus::default();
     }
 
-    fn should_retry(&self) -> bool {
+    fn should_retry(&mut self, app_handle: &AppHandle) -> bool {
         if self.status.login_required {
             return false;
         }
-        return self.retry_count <= MAX_RETRY_COUNT;
+
+        self.retry_count += 1;
+        if self.retry_count < MAX_RETRY_COUNT {
+            return true;
+        } else {
+            self.try_notify_failed(app_handle);
+
+            // fall back to every 5 ticks after reaching `MAX_RETRY_COUNT`
+            return self.retry_count % 5 == 0;
+        }
     }
 
     fn should_debug(&self) -> bool {
@@ -489,7 +490,7 @@ async fn watch_daemons(app_handle: &AppHandle) -> anyhow::Result<()> {
             );
         }
         let daemon = instance.daemon.as_mut().unwrap();
-        if !daemon.should_retry() {
+        if !daemon.should_retry(app_handle) {
             all_ready = false;
             continue;
         }
