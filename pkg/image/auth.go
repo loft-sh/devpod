@@ -13,8 +13,6 @@ import (
 	kubernetesauth "github.com/google/go-containerregistry/pkg/authn/kubernetes"
 	"github.com/google/go-containerregistry/pkg/v1/google"
 	"gopkg.in/square/go-jose.v2/jwt"
-	"k8s.io/client-go/kubernetes"
-	"k8s.io/client-go/rest"
 )
 
 var (
@@ -59,15 +57,7 @@ func getKeychain(ctx context.Context) (authn.Keychain, error) {
 	if err != nil {
 		return nil, err
 	}
-	clusterConfig, err := rest.InClusterConfig()
-	if err != nil {
-		return nil, err
-	}
-	client, err := kubernetes.NewForConfig(clusterConfig)
-	if err != nil {
-		return nil, err
-	}
-	k8sKeychain, err := kubernetesauth.New(ctx, client, kubernetesauth.Options{
+	k8sKeychain, err := kubernetesauth.NewInCluster(ctx, kubernetesauth.Options{
 		ServiceAccountName: m.serviceAccountName,
 		Namespace:          m.namespace,
 	})
@@ -75,13 +65,22 @@ func getKeychain(ctx context.Context) (authn.Keychain, error) {
 		return nil, err
 	}
 
-	// Order matters here: We want to go through all of the cloud provider keychains before we hit the default keychain (docker config.json)
-	return authn.NewMultiKeychain(
+	// add default keychains
+	keyChains := []authn.Keychain{
 		k8sKeychain,
 		google.Keychain,
 		amazonKeychain,
-		azureKeychain,
-		authn.DefaultKeychain,
+	}
+
+	// check if we should add azure keychain
+	if os.Getenv("AZURE_CLIENT_ID") != "" && os.Getenv("AZURE_TENANT_ID") != "" {
+		keyChains = append(keyChains, azureKeychain)
+	}
+	keyChains = append(keyChains, authn.DefaultKeychain)
+
+	// Order matters here: We want to go through all of the cloud provider keychains before we hit the default keychain (docker config.json)
+	return authn.NewMultiKeychain(
+		keyChains...,
 	), nil
 }
 

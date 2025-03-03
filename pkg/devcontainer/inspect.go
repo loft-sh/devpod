@@ -15,7 +15,7 @@ func (r *runner) inspectImage(ctx context.Context, imageName string) (*config.Im
 	}
 
 	// fallback to just looking into the remote registry
-	imageConfig, _, err := image.GetImageConfig(ctx, imageName)
+	imageConfig, _, err := image.GetImageConfig(ctx, imageName, r.Log)
 	if err != nil {
 		return nil, err
 	}

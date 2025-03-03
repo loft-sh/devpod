@@ -431,6 +431,9 @@ func getNodeSelector(pod *corev1.Pod, rawNodeSelector string) (map[string]string
 }
 
 func (k *KubernetesDriver) StartDevContainer(ctx context.Context, workspaceId string) error {
+	k.Log.Debugf("Starting devcontainer for workspace '%s'", workspaceId)
+	defer k.Log.Debugf("Done starting devcontainer for workspace '%s'", workspaceId)
+
 	workspaceId = getID(workspaceId)
 	_, containerInfo, err := k.getDevContainerPvc(ctx, workspaceId)
 	if err != nil {
