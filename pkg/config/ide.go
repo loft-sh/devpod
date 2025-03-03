@@ -22,6 +22,7 @@ const (
 	IDECursor          IDE = "cursor"
 	IDEPositron        IDE = "positron"
 	IDECodium          IDE = "codium"
+	IDECodiumInsiders  IDE = "codium-insiders"
 	IDEZed             IDE = "zed"
 	IDERStudio         IDE = "rstudio"
 )
