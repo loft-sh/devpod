@@ -110,7 +110,6 @@ func newLocalServer(lc *tailscale.LocalClient, pc platformclient.Client, devPodC
 	router.GET(routeListWorkspaces, l.listWorkspace)
 	router.POST(routeCreateWorkspace, l.createWorkspace)
 	router.POST(routeUpdateWorkspace, l.updateWorkspace)
-	router.GET(routeGetWorkspace, l.getWorkspace)
 
 	l.httpServer = &http.Server{Handler: handlers.LoggingHandler(log.Writer(logrus.DebugLevel, true), router)}
 
