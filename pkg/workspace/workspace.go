@@ -267,7 +267,7 @@ func createWorkspace(
 	}
 
 	// resolve workspace
-	workspace, err := resolveWorkspaceConfig(ctx, provider, devPodConfig, name, workspaceID, source, isLocalPath, sshConfigPath, uid, hostname)
+	workspace, err := resolveWorkspaceConfig(ctx, provider, devPodConfig, name, workspaceID, source, isLocalPath, sshConfigPath, uid)
 	if err != nil {
 		return nil, nil, nil, err
 	}
@@ -389,7 +389,6 @@ func resolveWorkspaceConfig(
 	isLocalPath bool,
 	sshConfigPath string,
 	uid string,
-	hostname string,
 ) (*providerpkg.Workspace, error) {
 	now := types.Now()
 	if uid == "" {
@@ -461,10 +460,6 @@ func resolveWorkspaceConfig(
 	}
 	if gitSubdir != "" {
 		workspace.Source.GitSubPath = gitSubdir
-	}
-
-	if hostname != "" {
-		workspace.Hostname = hostname
 	}
 
 	return workspace, nil
