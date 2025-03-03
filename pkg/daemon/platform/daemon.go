@@ -3,6 +3,7 @@ package daemon
 import (
 	"bufio"
 	"context"
+	"encoding/json"
 	"fmt"
 	"io"
 	"net"
@@ -12,16 +13,19 @@ import (
 
 	devpodlog "github.com/loft-sh/devpod/pkg/log"
 	"github.com/loft-sh/devpod/pkg/platform/client"
+	"github.com/loft-sh/devpod/pkg/ts"
 	"github.com/loft-sh/log"
 	"github.com/sirupsen/logrus"
 	"tailscale.com/client/tailscale"
 	"tailscale.com/tsnet"
+	"tailscale.com/types/netmap"
 )
 
 type Daemon struct {
 	socketListener net.Listener
 	tsServer       *tsnet.Server
 	localServer    *localServer
+	rootDir        string
 	log            log.Logger
 }
 
@@ -61,11 +65,12 @@ func Init(ctx context.Context, config InitConfig) (*Daemon, error) {
 		socketListener: socketListener,
 		tsServer:       tsServer,
 		localServer:    localServer,
+		rootDir:        config.RootDir,
 		log:            log,
 	}, nil
 }
 
-func (d *Daemon) Start() error {
+func (d *Daemon) Start(ctx context.Context) error {
 	errChan := make(chan error, 1)
 	go func() {
 		d.log.Infof("Starting local server: %s", d.localServer.Addr())
@@ -75,6 +80,11 @@ func (d *Daemon) Start() error {
 	go func() {
 		d.log.Info("Start proxying connections")
 		err := d.Listen(d.socketListener)
+		errChan <- err
+	}()
+	go func() {
+		d.log.Info("Start netmap watcher")
+		err := d.watchNetmap(ctx)
 		errChan <- err
 	}()
 	err := <-errChan
@@ -114,6 +124,45 @@ func (d *Daemon) Listen(ln net.Listener) error {
 	}
 }
 
+func (d *Daemon) handler(conn net.Conn, dialFunc dialFunc) {
+	defer conn.Close()
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	backendConn, err := dialFunc(ctx)
+	if err != nil {
+		d.log.Error("dial: %v", err)
+		return
+	}
+	defer backendConn.Close()
+
+	errChan := make(chan error, 1)
+	go func() {
+		_, err := io.Copy(backendConn, conn)
+		errChan <- err
+	}()
+	go func() {
+		_, err := io.Copy(conn, backendConn)
+		errChan <- err
+	}()
+	<-errChan
+}
+
+func (d *Daemon) watchNetmap(ctx context.Context) error {
+	lc, err := d.tsServer.LocalClient()
+	if err != nil {
+		return err
+	}
+
+	return ts.WatchNetmap(ctx, lc, func(netMap *netmap.NetworkMap) {
+		nm, err := json.Marshal(netMap)
+		if err != nil {
+			d.log.Errorf("Failed to marshal netmap: %v", err)
+		} else {
+			_ = os.WriteFile(filepath.Join(d.rootDir, "netmap.json"), nm, 0o644)
+		}
+	})
+}
+
 func initLogging(rootDir string, debug bool) log.Logger {
 	logLevel := logrus.InfoLevel
 	if debug {
@@ -141,29 +190,6 @@ func dialLocal(l *localServer) dialFunc {
 	return func(ctx context.Context) (net.Conn, error) {
 		return l.Dial(ctx, "tcp", l.Addr())
 	}
-}
-
-func (d *Daemon) handler(conn net.Conn, dialFunc dialFunc) {
-	defer conn.Close()
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-	defer cancel()
-	backendConn, err := dialFunc(ctx)
-	if err != nil {
-		d.log.Error("dial: %v", err)
-		return
-	}
-	defer backendConn.Close()
-
-	errChan := make(chan error, 1)
-	go func() {
-		_, err := io.Copy(backendConn, conn)
-		errChan <- err
-	}()
-	go func() {
-		_, err := io.Copy(conn, backendConn)
-		errChan <- err
-	}()
-	<-errChan
 }
 
 type clientType string

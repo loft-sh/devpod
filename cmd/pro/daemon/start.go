@@ -89,7 +89,7 @@ func (cmd *StartCmd) Run(ctx context.Context, devPodConfig *config.Config, provi
 		printStatus(daemon.Status{State: daemon.DaemonStatePending})
 	}
 
-	return d.Start()
+	return d.Start(ctx)
 }
 
 func ensureDaemonDir(context, providerName string) (string, error) {
