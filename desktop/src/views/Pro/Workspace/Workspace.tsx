@@ -19,7 +19,16 @@ import {
   useStopWorkspaceModal,
 } from "@/lib"
 import { Routes } from "@/routes"
-import { Box, ComponentWithAs, HStack, IconProps, Text, VStack } from "@chakra-ui/react"
+import {
+  Box,
+  Center,
+  ComponentWithAs,
+  HStack,
+  IconProps,
+  Spinner,
+  Text,
+  VStack,
+} from "@chakra-ui/react"
 import { ManagementV1DevPodWorkspaceTemplate } from "@loft-enterprise/client/gen/models/managementV1DevPodWorkspaceTemplate"
 import dayjs from "dayjs"
 import { ReactElement, cloneElement, useCallback, useEffect, useMemo } from "react"
@@ -34,7 +43,7 @@ export function Workspace() {
   const params = useParams<{ workspace: string }>()
   const { data: templates } = useTemplates()
   const { data: projectClusters } = useProjectClusters()
-  const { host } = useProContext()
+  const { host, isLoadingWorkspaces } = useProContext()
   const navigate = useNavigate()
   const workspace = useWorkspace<ProWorkspaceInstance>(params.workspace)
   const instance = workspace.data
@@ -115,6 +124,15 @@ export function Workspace() {
   }, [storeTroubleshoot, workspace.data, workspaceActions])
 
   if (!instance) {
+    if (isLoadingWorkspaces) {
+      return (
+        <Center w="full" h="60%" flexFlow="column nowrap">
+          <Spinner size="xl" thickness="4px" speed="1s" color="gray.600" />
+          <Text mt="4">Loading Workspaces...</Text>
+        </Center>
+      )
+    }
+
     return (
       <VStack align="start" gap="4">
         <BackToWorkspaces />
