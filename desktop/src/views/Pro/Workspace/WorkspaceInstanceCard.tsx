@@ -1,36 +1,35 @@
 import { ProWorkspaceInstance, useTemplates, useWorkspace, useWorkspaceActions } from "@/contexts"
-import { Clock, CogOutlined, Status } from "@/icons"
+import { Clock, CogOutlined, Status, User } from "@/icons"
 import {
+  TParameterWithValue,
   getDisplayName,
   getLastActivity,
   getParametersWithValues,
-  TParameterWithValue,
   useDeleteWorkspaceModal,
   useRebuildWorkspaceModal,
   useResetWorkspaceModal,
   useStopWorkspaceModal,
 } from "@/lib"
+import { useStoreTroubleshoot } from "@/lib/useStoreTroubleshoot"
 import { Routes } from "@/routes"
 import {
   Card,
   CardBody,
   CardHeader,
   ComponentWithAs,
-  Divider,
   HStack,
   IconProps,
   Text,
   Tooltip,
-  useColorModeValue,
   VStack,
+  useColorModeValue,
 } from "@chakra-ui/react"
 import { ManagementV1DevPodWorkspaceTemplate } from "@loft-enterprise/client/gen/models/managementV1DevPodWorkspaceTemplate"
-import { cloneElement, ReactElement, ReactNode, useCallback, useMemo } from "react"
+import dayjs from "dayjs"
+import { ReactElement, ReactNode, cloneElement, useCallback, useMemo } from "react"
 import { useNavigate } from "react-router"
 import { WorkspaceCardHeader } from "./WorkspaceCardHeader"
 import { WorkspaceStatus } from "./WorkspaceStatus"
-import { useStoreTroubleshoot } from "@/lib/useStoreTroubleshoot"
-import dayjs from "dayjs"
 
 type TWorkspaceInstanceCardProps = Readonly<{
   host: string
@@ -155,6 +154,10 @@ export function WorkspaceInstanceCard({
     ]
   }, [instance])
 
+  const owner = useMemo(() => {
+    return instance?.spec?.owner?.user ?? instance?.spec?.owner?.team ?? "unknown"
+  }, [instance])
+
   if (!instance) {
     return null
   }
@@ -194,42 +197,48 @@ export function WorkspaceInstanceCard({
             />
           </WorkspaceCardHeader>
         </CardHeader>
-        <CardBody pt="0">
-          <HStack gap="6" align="start">
-            <WorkspaceInfoDetail icon={Status} label={<Text>Status</Text>}>
-              <WorkspaceStatus
-                status={instance.status}
-                deletionTimestamp={instance.metadata?.deletionTimestamp}
-              />
-            </WorkspaceInfoDetail>
-
-            <WorkspaceInfoDetail icon={Status} label={<Text>Template</Text>}>
-              <Text>
-                {getDisplayName(template, templateRef?.name)}/{templateRef?.version || "latest"}
-              </Text>
-            </WorkspaceInfoDetail>
-
-            {lastActivity && (
-              <WorkspaceInfoDetail icon={Clock} label={<Text>Last activity</Text>}>
-                <Tooltip label={lastActivity.date ? lastActivity.date.toLocaleString() : undefined}>
-                  <Text>{lastActivity.formatted}</Text>
-                </Tooltip>
+        <CardBody py="0">
+          <VStack gap="6" align="start">
+            <HStack gap="6">
+              <WorkspaceInfoDetail icon={Status} label={<Text>Status</Text>}>
+                <WorkspaceStatus
+                  status={instance.status}
+                  deletionTimestamp={instance.metadata?.deletionTimestamp}
+                />
               </WorkspaceInfoDetail>
-            )}
 
-            {created && (
-              <WorkspaceInfoDetail icon={Clock} label={<Text>Created</Text>}>
-                <Tooltip label={created.date ? new Date(created.date).toLocaleString() : undefined}>
-                  <Text>{created.formatted}</Text>
-                </Tooltip>
+              <WorkspaceInfoDetail icon={Status} label={<Text>Template</Text>}>
+                <Text>
+                  {getDisplayName(template, templateRef?.name)}/{templateRef?.version || "latest"}
+                </Text>
               </WorkspaceInfoDetail>
-            )}
 
-            {parameters.length > 0 && (
-              <>
-                <Divider orientation="vertical" mx="2" h="12" borderColor="gray.400" />
+              <WorkspaceInfoDetail icon={User} label={<Text>Owner</Text>}>
+                <Text>{owner}</Text>
+              </WorkspaceInfoDetail>
 
-                {parameters.map((param) => {
+              {lastActivity && (
+                <WorkspaceInfoDetail icon={Clock} label={<Text>Last activity</Text>}>
+                  <Tooltip
+                    label={lastActivity.date ? lastActivity.date.toLocaleString() : undefined}>
+                    <Text>{lastActivity.formatted}</Text>
+                  </Tooltip>
+                </WorkspaceInfoDetail>
+              )}
+
+              {created && (
+                <WorkspaceInfoDetail icon={Clock} label={<Text>Created</Text>}>
+                  <Tooltip
+                    label={created.date ? new Date(created.date).toLocaleString() : undefined}>
+                    <Text>{created.formatted}</Text>
+                  </Tooltip>
+                </WorkspaceInfoDetail>
+              )}
+            </HStack>
+
+            <HStack gap="6" wrap="wrap">
+              {parameters.length > 0 &&
+                parameters.map((param) => {
                   let label = param.label
                   if (!label) {
                     label = param.variable
@@ -253,9 +262,8 @@ export function WorkspaceInstanceCard({
                     </WorkspaceInfoDetail>
                   )
                 })}
-              </>
-            )}
-          </HStack>
+            </HStack>
+          </VStack>
         </CardBody>
       </Card>
 

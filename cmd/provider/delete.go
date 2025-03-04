@@ -7,6 +7,7 @@ import (
 
 	"github.com/loft-sh/devpod/cmd/flags"
 	"github.com/loft-sh/devpod/pkg/config"
+	"github.com/loft-sh/devpod/pkg/platform"
 	provider2 "github.com/loft-sh/devpod/pkg/provider"
 	"github.com/loft-sh/devpod/pkg/workspace"
 	logpkg "github.com/loft-sh/log"
@@ -77,7 +78,7 @@ func (cmd *DeleteCmd) Run(ctx context.Context, args []string) error {
 
 func DeleteProvider(ctx context.Context, devPodConfig *config.Config, provider string, ignoreNotFound bool, log logpkg.Logger) error {
 	// check if there are workspaces that still use this provider
-	workspaces, err := workspace.List(ctx, devPodConfig, true, log)
+	workspaces, err := workspace.List(ctx, devPodConfig, true, platform.AllOwnerFilter, log)
 	if err != nil {
 		return err
 	}

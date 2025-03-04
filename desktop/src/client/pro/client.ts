@@ -18,6 +18,7 @@ import {
 import { TAURI_SERVER_URL } from "../tauriClient"
 import { TDebuggable, TStreamEventListenerFn } from "../types"
 import { ProCommands } from "./proCommands"
+import { TWorkspaceOwnerFilterState } from "@/components"
 
 export class ProClient implements TDebuggable {
   constructor(protected readonly id: string) {}
@@ -66,6 +67,7 @@ export class ProClient implements TDebuggable {
 
   public watchWorkspaces(
     projectName: string,
+    ownerFilter: TWorkspaceOwnerFilterState,
     listener: (newWorkspaces: readonly ProWorkspaceInstance[]) => void,
     errorListener?: (failed: Failed) => void
   ) {
@@ -260,6 +262,7 @@ export class DaemonClient extends ProClient {
 
   public watchWorkspaces(
     projectName: string,
+    ownerFilter: TWorkspaceOwnerFilterState,
     listener: (newWorkspaces: readonly ProWorkspaceInstance[]) => void,
     errorListener?: (failed: Failed) => void
   ) {
@@ -314,6 +317,7 @@ export class DaemonClient extends ProClient {
       const abortController = new AbortController()
       const url = new URL(`${TAURI_SERVER_URL}/daemon-proxy/${this.id}/watch-workspaces`)
       url.searchParams.set("project", projectName)
+      url.searchParams.set("owner", ownerFilter)
 
       this.waitDaemonRunning().then(() => {
         // start long-lived request. This should never stop unless cancelled trough abortController
