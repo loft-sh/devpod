@@ -1,3 +1,6 @@
+import { TWorkspaceStatusFilterState, WorkspaceSorter, WorkspaceStatusFilter } from "@/components"
+import { DeleteWorkspacesModal } from "@/components/DeleteWorkspacesModal"
+import { WorkspaceListSelection } from "@/components/ListSelection"
 import {
   ProWorkspaceInstance,
   useProContext,
@@ -5,9 +8,18 @@ import {
   useWorkspaces,
   useWorkspaceStore,
 } from "@/contexts"
+import { removeWorkspaceAction, stopWorkspaceAction } from "@/contexts/DevPodContext/workspaces"
+import { IWorkspaceStore } from "@/contexts/DevPodContext/workspaceStore"
 import { DevPodIcon } from "@/icons"
 import emptyWorkspacesImage from "@/images/empty_workspaces.svg"
+import {
+  DEFAULT_SORT_WORKSPACE_MODE,
+  useSelection,
+  useSortProWorkspaces,
+  useStopWorkspaceModal,
+} from "@/lib"
 import { Routes } from "@/routes"
+import { determineDisplayStatus } from "@/views/Pro/Workspace/WorkspaceStatus"
 import {
   Button,
   Center,
@@ -22,47 +34,30 @@ import {
   useDisclosure,
   VStack,
 } from "@chakra-ui/react"
+import { useCallback, useEffect, useId, useMemo, useState } from "react"
 import { useNavigate } from "react-router"
 import { WorkspaceInstanceCard } from "./Workspace"
-import { useCallback, useEffect, useId, useMemo, useState } from "react"
-import { WorkspaceListSelection } from "@/components/ListSelection"
-import {
-  DEFAULT_SORT_WORKSPACE_MODE,
-  useSelection,
-  useSortProWorkspaces,
-  useStopWorkspaceModal,
-} from "@/lib"
-import { DeleteWorkspacesModal } from "@/components/DeleteWorkspacesModal"
-import { removeWorkspaceAction, stopWorkspaceAction } from "@/contexts/DevPodContext/workspaces"
-import { IWorkspaceStore } from "@/contexts/DevPodContext/workspaceStore"
-import {
-  TWorkspaceOwnerFilterState,
-  TWorkspaceStatusFilterState,
-  WorkspaceSorter,
-  WorkspaceStatusFilter,
-} from "@/components"
-import { determineDisplayStatus } from "@/views/Pro/Workspace/WorkspaceStatus"
 
+import { WorkspaceOwnerFilter } from "@/components/WorkspaceOwnerFilter"
 import EmptyImage from "@/images/empty-default.svg"
 import { ManagementV1Self } from "@loft-enterprise/client/gen/models/managementV1Self"
-import { WorkspaceOwnerFilter } from "@/components/WorkspaceOwnerFilter"
 
 export function ListWorkspaces() {
   const { store } = useWorkspaceStore<IWorkspaceStore<string, ProWorkspaceInstance>>()
   const instances = useWorkspaces<ProWorkspaceInstance>()
   const viewID = useId()
-  const { host, isLoadingWorkspaces, managementSelfQuery } = useProContext()
+  const { host, isLoadingWorkspaces, managementSelfQuery, ownerFilter, setOwnerFilter } =
+    useProContext()
   const navigate = useNavigate()
   const { data: templates } = useTemplates()
 
   const [statusFilter, setStatusFilter] = useState<TWorkspaceStatusFilterState>("all")
-  const [ownerFilter, setOwnerFilter] = useState<TWorkspaceOwnerFilterState>("user")
 
   const filteredWorkspaces = useMemo(() => {
     let retInstances = instances
 
     // owner filter
-    if (ownerFilter == "user") {
+    if (ownerFilter == "self") {
       retInstances = retInstances.filter((i) => isOwner(i, managementSelfQuery.data))
     }
 

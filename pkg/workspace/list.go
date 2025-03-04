@@ -16,6 +16,7 @@ import (
 	"github.com/loft-sh/devpod/pkg/client/clientimplementation"
 	"github.com/loft-sh/devpod/pkg/config"
 	daemon "github.com/loft-sh/devpod/pkg/daemon/platform"
+	"github.com/loft-sh/devpod/pkg/platform"
 	providerpkg "github.com/loft-sh/devpod/pkg/provider"
 	"github.com/loft-sh/devpod/pkg/types"
 	"github.com/loft-sh/log"
@@ -25,7 +26,7 @@ import (
 
 const ProjectLabel = "loft.sh/project"
 
-func List(ctx context.Context, devPodConfig *config.Config, skipPro bool, log log.Logger) ([]*providerpkg.Workspace, error) {
+func List(ctx context.Context, devPodConfig *config.Config, skipPro bool, owner platform.OwnerFilter, log log.Logger) ([]*providerpkg.Workspace, error) {
 	// list local workspaces
 	localWorkspaces, err := ListLocalWorkspaces(devPodConfig.DefaultContext, skipPro, log)
 	if err != nil {
@@ -35,7 +36,7 @@ func List(ctx context.Context, devPodConfig *config.Config, skipPro bool, log lo
 	proWorkspaces := []*providerpkg.Workspace{}
 	if !skipPro {
 		// list remote workspaces
-		proWorkspaceResults, err := listProWorkspaces(ctx, devPodConfig, log)
+		proWorkspaceResults, err := listProWorkspaces(ctx, devPodConfig, owner, log)
 		if err != nil {
 			return nil, err
 		}
@@ -120,7 +121,7 @@ type listProWorkspacesResult struct {
 	err        error
 }
 
-func listProWorkspaces(ctx context.Context, devPodConfig *config.Config, log log.Logger) (map[string]listProWorkspacesResult, error) {
+func listProWorkspaces(ctx context.Context, devPodConfig *config.Config, owner platform.OwnerFilter, log log.Logger) (map[string]listProWorkspacesResult, error) {
 	results := map[string]listProWorkspacesResult{}
 	// lock around `results`
 	var mu sync.Mutex
@@ -144,7 +145,7 @@ func listProWorkspaces(ctx context.Context, devPodConfig *config.Config, log log
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
-			workspaces, err := listProWorkspacesForProvider(ctx, devPodConfig, provider, providerConfig, log)
+			workspaces, err := listProWorkspacesForProvider(ctx, devPodConfig, provider, providerConfig, owner, log)
 			mu.Lock()
 			defer mu.Unlock()
 			results[provider] = listProWorkspacesResult{
@@ -158,7 +159,7 @@ func listProWorkspaces(ctx context.Context, devPodConfig *config.Config, log log
 	return results, nil
 }
 
-func listProWorkspacesForProvider(ctx context.Context, devPodConfig *config.Config, provider string, providerConfig *providerpkg.ProviderConfig, log log.Logger) ([]*providerpkg.Workspace, error) {
+func listProWorkspacesForProvider(ctx context.Context, devPodConfig *config.Config, provider string, providerConfig *providerpkg.ProviderConfig, owner platform.OwnerFilter, log log.Logger) ([]*providerpkg.Workspace, error) {
 	var (
 		instances []managementv1.DevPodWorkspaceInstance
 		err       error
@@ -166,7 +167,7 @@ func listProWorkspacesForProvider(ctx context.Context, devPodConfig *config.Conf
 	if providerConfig.IsProxyProvider() {
 		instances, err = listInstancesProxyProvider(ctx, devPodConfig, provider, providerConfig, log)
 	} else if providerConfig.IsDaemonProvider() {
-		instances, err = listInstancesDaemonProvider(ctx, devPodConfig, provider, providerConfig, log)
+		instances, err = listInstancesDaemonProvider(ctx, devPodConfig, provider, providerConfig, owner, log)
 	} else {
 		return nil, fmt.Errorf("cannot list pro workspaces with provider %s", provider)
 	}
@@ -310,11 +311,11 @@ func listInstancesProxyProvider(ctx context.Context, devPodConfig *config.Config
 	return instances, nil
 }
 
-func listInstancesDaemonProvider(ctx context.Context, devPodConfig *config.Config, provider string, providerConfig *providerpkg.ProviderConfig, log log.Logger) ([]managementv1.DevPodWorkspaceInstance, error) {
+func listInstancesDaemonProvider(ctx context.Context, devPodConfig *config.Config, provider string, providerConfig *providerpkg.ProviderConfig, owner platform.OwnerFilter, log log.Logger) ([]managementv1.DevPodWorkspaceInstance, error) {
 	dir, err := providerpkg.GetDaemonDir(devPodConfig.DefaultContext, provider)
 	if err != nil {
 		return nil, err
 	}
 
-	return daemon.NewLocalClient(dir, provider).ListWorkspaces(ctx)
+	return daemon.NewLocalClient(dir, provider).ListWorkspaces(ctx, owner)
 }

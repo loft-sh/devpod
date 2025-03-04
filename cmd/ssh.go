@@ -84,7 +84,7 @@ func NewSSHCmd(f *flags.GlobalFlags) *cobra.Command {
 			}
 
 			ctx := cobraCmd.Context()
-			client, err := workspace2.Get(ctx, devPodConfig, args, true, log.Default.ErrorStreamOnly())
+			client, err := workspace2.Get(ctx, devPodConfig, args, true, cmd.Owner, log.Default.ErrorStreamOnly())
 			if err != nil {
 				return err
 			}
