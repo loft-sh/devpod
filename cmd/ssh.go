@@ -196,7 +196,7 @@ func (cmd *SSHCmd) jumpContainerTailscale(
 	configureGitCredentials := devPodConfig.ContextOption(config.ContextOptionSSHInjectGitCredentials) == "true"
 	configureGitSSHSignatureHelper := devPodConfig.ContextOption(config.ContextOptionGitSSHSignatureForwarding) == "true"
 
-	if workspace.Status.Instance.CredentialForwarding != nil {
+	if workspace != nil && workspace.Status.Instance != nil && workspace.Status.Instance.CredentialForwarding != nil {
 		if workspace.Status.Instance.CredentialForwarding.Docker != nil {
 			configureDockerCredentials = !workspace.Status.Instance.CredentialForwarding.Docker.Disabled
 		}
