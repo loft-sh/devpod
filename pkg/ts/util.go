@@ -48,31 +48,6 @@ func GetURL(host string, port int) string {
 	return fmt.Sprintf("%s.%s:%d", host, LoftTSNetDomain, port)
 }
 
-func WaitNodeReady(ctx context.Context, lc *tailscale.LocalClient) error {
-	watcher, err := lc.WatchIPNBus(ctx, ipn.NotifyInitialState)
-	if err != nil {
-		return err
-	}
-	defer watcher.Close()
-
-	for {
-		// TODO: Improve this, checkout tailscales cli/up.go
-		n, err := watcher.Next()
-		if err != nil {
-			return err
-		}
-		if n.ErrMessage != nil {
-			return fmt.Errorf(*n.ErrMessage)
-		}
-
-		if s := n.State; s != nil && s.String() == ipn.Running.String() {
-			return nil
-		}
-
-		fmt.Println("IPN message:", n)
-	}
-}
-
 // WaitHostReachable polls until the given host is reachable via ts.
 func WaitHostReachable(ctx context.Context, lc *tailscale.LocalClient, addr Addr, log log.Logger) error {
 	const maxRetries = 20
@@ -94,7 +69,7 @@ func WaitHostReachable(ctx context.Context, lc *tailscale.LocalClient, addr Addr
 		}
 	}
 
-	return fmt.Errorf("host %s not reachable after %d attempts", addr.String(), maxRetries)
+	return fmt.Errorf("host %s not reachable", addr.String())
 }
 
 func WatchNetmap(ctx context.Context, lc *tailscale.LocalClient, netmapChangedFn func(nm *netmap.NetworkMap)) error {
