@@ -9,7 +9,7 @@ export const InstancePhase = {
   WaitingToInitialize: "",
   Sleeping: "Sleeping",
   Failed: "Failed",
-  Terminating: "Terminating",
+  Deleting: "Deleting",
   Pending: "Pending",
 } as const
 
@@ -57,7 +57,7 @@ const badgeOptionMappings: {
     icon: <CircleDuotone boxSize={5} />,
     color: "red.500",
   },
-  [WorkspaceDisplayStatus.Terminating]: {
+  [WorkspaceDisplayStatus.Deleting]: {
     icon: <CircleDuotone boxSize={5} />,
     color: "red.500",
   },
@@ -132,7 +132,7 @@ export function determineDisplayStatus(
   const phase = status?.phase
   const lastWorkspaceStatus = status?.lastWorkspaceStatus
   if (deletionTimestamp) {
-    return WorkspaceDisplayStatus.Terminating
+    return WorkspaceDisplayStatus.Deleting
   }
 
   if (!phase || phase === InstancePhase.Pending) {
