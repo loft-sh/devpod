@@ -307,106 +307,109 @@ export function useAppReady() {
         return
       }
 
-      const workspacesResult = await client.workspaces.listAll(false)
-      if (workspacesResult.err) {
-        return
-      }
+      // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
+      if (event.type === "OpenWorkspace") {
+        const workspacesResult = await client.workspaces.listAll(false)
+        if (workspacesResult.err) {
+          return
+        }
 
-      // Try to find workspace by source
-      let maybeWorkspace = workspacesResult.val.find((w) => {
-        if (!w.source) {
+        // Try to find workspace by source
+        let maybeWorkspace = workspacesResult.val.find((w) => {
+          if (!w.source) {
+            return false
+          }
+
+          // Check `repo@sha256:commitHash`
+          if (
+            `${w.source.gitRepository ?? ""}${WORKSPACE_SOURCE_COMMIT_DELIMITER}${
+              w.source.gitCommit ?? ""
+            }` === event.source
+          ) {
+            return true
+          }
+
+          // Check `repo@branch`
+          if (
+            `${w.source.gitRepository ?? ""}${WORKSPACE_SOURCE_BRANCH_DELIMITER}${
+              w.source.gitBranch ?? ""
+            }` === event.source
+          ) {
+            return true
+          }
+
+          // Check Git repo
+          if (w.source.gitRepository === event.source) {
+            return true
+          }
+
+          // Check local folder
+          if (w.source.localFolder === event.source) {
+            return true
+          }
+
+          // Check Docker Image
+          if (w.source.image === event.source) {
+            return true
+          }
+
           return false
+        })
+
+        // If we don't have a workspace by now, `source` isn't defined but `workspace_id` is, try to find workspace by ID
+        // This happens for example if the message is triggered by a system tray item
+        // WARN: `event.source` can be an empty string here, hence the falsy check
+        if (maybeWorkspace === undefined && !event.source && exists(event.workspace_id)) {
+          maybeWorkspace = workspacesResult.val.find((w) => w.id === event.workspace_id)
         }
 
-        // Check `repo@sha256:commitHash`
-        if (
-          `${w.source.gitRepository ?? ""}${WORKSPACE_SOURCE_COMMIT_DELIMITER}${
-            w.source.gitCommit ?? ""
-          }` === event.source
-        ) {
-          return true
+        const ides = await client.ides.listAll()
+        let defaultIDE = undefined
+        if (ides.ok) {
+          defaultIDE = ides.val.find((ide) => ide.default)?.name
         }
 
-        // Check `repo@branch`
-        if (
-          `${w.source.gitRepository ?? ""}${WORKSPACE_SOURCE_BRANCH_DELIMITER}${
-            w.source.gitBranch ?? ""
-          }` === event.source
-        ) {
-          return true
-        }
+        const providerName = maybeWorkspace?.provider?.name
+        if (maybeWorkspace !== undefined && providerName) {
+          const proInstance = await findProInstance(providerName)
+          if (proInstance && proInstance.host) {
+            navigate(Routes.toProWorkspace(proInstance.host, maybeWorkspace.id))
 
-        // Check Git repo
-        if (w.source.gitRepository === event.source) {
-          return true
-        }
+            return
+          }
 
-        // Check local folder
-        if (w.source.localFolder === event.source) {
-          return true
-        }
+          const actionID = startWorkspaceAction({
+            workspaceID: maybeWorkspace.id,
+            streamID: viewID,
+            config: {
+              id: maybeWorkspace.id,
+              providerConfig: { providerID: providerName },
+              ideConfig: { name: defaultIDE ?? maybeWorkspace.ide?.name ?? null },
+            },
+            store,
+          })
 
-        // Check Docker Image
-        if (w.source.image === event.source) {
-          return true
-        }
-
-        return false
-      })
-
-      // If we don't have a workspace by now, `source` isn't defined but `workspace_id` is, try to find workspace by ID
-      // This happens for example if the message is triggered by a system tray item
-      // WARN: `event.source` can be an empty string here, hence the falsy check
-      if (maybeWorkspace === undefined && !event.source && exists(event.workspace_id)) {
-        maybeWorkspace = workspacesResult.val.find((w) => w.id === event.workspace_id)
-      }
-
-      const ides = await client.ides.listAll()
-      let defaultIDE = undefined
-      if (ides.ok) {
-        defaultIDE = ides.val.find((ide) => ide.default)?.name
-      }
-
-      const providerName = maybeWorkspace?.provider?.name
-      if (maybeWorkspace !== undefined && providerName) {
-        const proInstance = await findProInstance(providerName)
-        if (proInstance && proInstance.host) {
-          navigate(Routes.toProWorkspace(proInstance.host, maybeWorkspace.id))
+          navigate(Routes.toAction(actionID))
 
           return
         }
 
-        const actionID = startWorkspaceAction({
-          workspaceID: maybeWorkspace.id,
-          streamID: viewID,
-          config: {
-            id: maybeWorkspace.id,
-            providerConfig: { providerID: providerName },
-            ideConfig: { name: defaultIDE ?? maybeWorkspace.ide?.name ?? null },
-          },
-          store,
-        })
+        const match = matchPath(Routes.PRO_INSTANCE, location.pathname)
+        if (match && match.params.host) {
+          navigate(Routes.toProWorkspaceCreate(match.params.host))
 
-        navigate(Routes.toAction(actionID))
+          return
+        }
 
-        return
+        navigate(
+          Routes.toWorkspaceCreate({
+            workspaceID: event.workspace_id,
+            providerID: event.provider_id,
+            rawSource: event.source,
+            ide: event.ide,
+          })
+        )
       }
-
-      const match = matchPath(Routes.PRO_INSTANCE, location.pathname)
-      if (match && match.params.host) {
-        navigate(Routes.toProWorkspaceCreate(match.params.host))
-
-        return
-      }
-
-      navigate(
-        Routes.toWorkspaceCreate({
-          workspaceID: event.workspace_id,
-          providerID: event.provider_id,
-          rawSource: event.source,
-          ide: event.ide,
-        })
-      )
     },
     [handleProLogin, navigate, setFailedMessage, setSetting, store, toast, viewID]
   )
@@ -475,19 +478,15 @@ async function findProInstance(providerName: string): Promise<TProInstance | nul
   const providersRes = await client.providers.listAll()
   if (providersRes.err) return null
   const provider = providersRes.val[providerName]
-  if (!provider) return null
+  if (!provider || !provider.isProxyProvider) return null
 
   // handle pro provider
-  if (provider.isProxyProvider && provider.config?.exec?.proxy?.health) {
-    const proInstanceRes = await client.pro.listProInstances()
-    if (proInstanceRes.err) return null
-    const proInstance = proInstanceRes.val.find(
-      (proInstance) => proInstance.provider === providerName
-    )
-    if (!proInstance?.host) return null
+  const proInstanceRes = await client.pro.listProInstances()
+  if (proInstanceRes.err) return null
+  const proInstance = proInstanceRes.val.find(
+    (proInstance) => proInstance.provider === providerName
+  )
+  if (!proInstance?.host) return null
 
-    return proInstance
-  }
-
-  return null
+  return proInstance
 }
