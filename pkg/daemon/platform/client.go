@@ -11,6 +11,7 @@ import (
 	"time"
 
 	managementv1 "github.com/loft-sh/api/v4/pkg/apis/management/v1"
+	"github.com/loft-sh/devpod/pkg/platform"
 )
 
 const devPodClientPrefix = 0x01
@@ -76,8 +77,8 @@ func (c *LocalClient) GetWorkspace(ctx context.Context, uid string) (*management
 	return instance, nil
 }
 
-func (c *LocalClient) ListWorkspaces(ctx context.Context) ([]managementv1.DevPodWorkspaceInstance, error) {
-	b, err := c.doRequest(ctx, http.MethodGet, routeListWorkspaces, nil)
+func (c *LocalClient) ListWorkspaces(ctx context.Context, ownerFilter platform.OwnerFilter) ([]managementv1.DevPodWorkspaceInstance, error) {
+	b, err := c.doRequest(ctx, http.MethodGet, routeListWorkspaces+"?owner="+ownerFilter.String(), nil)
 	if err != nil {
 		return nil, err
 	}

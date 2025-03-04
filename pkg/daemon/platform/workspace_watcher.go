@@ -39,6 +39,7 @@ type watchConfig struct {
 	Context        string
 	Project        string
 	PlatformClient client.Client
+	OwnerFilter    platform.OwnerFilter
 	Log            log.Logger
 }
 
@@ -61,7 +62,7 @@ func startWorkspaceWatcher(ctx context.Context, config watchConfig, onChange cha
 	)
 	workspaceInformer := factory.Management().V1().DevPodWorkspaceInstances()
 
-	instanceStore := newStore(workspaceInformer, self, config.Context, config.Log)
+	instanceStore := newStore(workspaceInformer, self, config.Context, config.OwnerFilter, config.Log)
 
 	_, err = workspaceInformer.Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{
 		AddFunc: func(obj interface{}) {
@@ -126,10 +127,10 @@ func startWorkspaceWatcher(ctx context.Context, config watchConfig, onChange cha
 }
 
 type instanceStore struct {
-	informer      informermanagementv1.DevPodWorkspaceInstanceInformer
-	self          *managementv1.Self
-	context       string
-	filterByOwner bool
+	informer    informermanagementv1.DevPodWorkspaceInstanceInformer
+	self        *managementv1.Self
+	context     string
+	ownerFilter platform.OwnerFilter
 
 	m         sync.Mutex
 	instances map[string]*ProWorkspaceInstance
@@ -137,13 +138,14 @@ type instanceStore struct {
 	log log.Logger
 }
 
-func newStore(informer informermanagementv1.DevPodWorkspaceInstanceInformer, self *managementv1.Self, context string, log log.Logger) *instanceStore {
+func newStore(informer informermanagementv1.DevPodWorkspaceInstanceInformer, self *managementv1.Self, context string, ownerFilter platform.OwnerFilter, log log.Logger) *instanceStore {
 	return &instanceStore{
-		informer:  informer,
-		self:      self,
-		context:   context,
-		instances: map[string]*ProWorkspaceInstance{},
-		log:       log,
+		informer:    informer,
+		self:        self,
+		context:     context,
+		instances:   map[string]*ProWorkspaceInstance{},
+		ownerFilter: ownerFilter,
+		log:         log,
 	}
 }
 
@@ -152,6 +154,9 @@ func (s *instanceStore) key(meta metav1.ObjectMeta) string {
 }
 
 func (s *instanceStore) Add(instance *managementv1.DevPodWorkspaceInstance) {
+	if s.ownerFilter == platform.SelfOwnerFilter && !platform.IsOwner(s.self, instance.GetOwner()) {
+		return
+	}
 	var source *provider.WorkspaceSource
 	if instance.GetAnnotations() != nil && instance.GetAnnotations()[storagev1.DevPodWorkspaceSourceAnnotation] != "" {
 		source = provider.ParseWorkspaceSource(instance.GetAnnotations()[storagev1.DevPodWorkspaceSourceAnnotation])
@@ -184,14 +189,16 @@ func (s *instanceStore) Add(instance *managementv1.DevPodWorkspaceInstance) {
 }
 
 func (s *instanceStore) Update(oldInstance *managementv1.DevPodWorkspaceInstance, newInstance *managementv1.DevPodWorkspaceInstance) {
+	if s.ownerFilter == platform.SelfOwnerFilter && !platform.IsOwner(s.self, newInstance.GetOwner()) {
+		return
+	}
 	s.Add(newInstance)
 }
 
 func (s *instanceStore) Delete(instance *managementv1.DevPodWorkspaceInstance) {
-	if s.filterByOwner && !platform.IsOwner(s.self, instance.Spec.Owner) {
+	if s.ownerFilter == platform.SelfOwnerFilter && !platform.IsOwner(s.self, instance.GetOwner()) {
 		return
 	}
-
 	s.m.Lock()
 	defer s.m.Unlock()
 	key := s.key(instance.ObjectMeta)

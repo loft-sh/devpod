@@ -9,7 +9,7 @@ import {
 } from "@chakra-ui/react"
 import { useCallback } from "react"
 
-export type TWorkspaceOwnerFilterState = "user" | "all"
+export type TWorkspaceOwnerFilterState = "self" | "all"
 
 export function WorkspaceOwnerFilter({
   ownerFilter,
@@ -28,11 +28,11 @@ export function WorkspaceOwnerFilter({
   return (
     <Menu offset={[0, 2]}>
       <MenuButton as={Button} variant="outline" rightIcon={<ChevronDownIcon boxSize={4} />}>
-        Workspaces: {ownerFilter == "user" ? "Mine" : "All"}
+        Workspaces: {ownerFilter == "self" ? "Mine" : "All"}
       </MenuButton>
       <MenuList>
         <MenuOptionGroup type="radio" value={ownerFilter} onChange={onChange}>
-          <MenuItemOption key="user" value="user">
+          <MenuItemOption key="self" value="self">
             Mine
           </MenuItemOption>
           <MenuItemOption key="all" value="all">

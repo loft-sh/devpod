@@ -316,6 +316,12 @@ func (l *localServer) projectClusters(w http.ResponseWriter, r *http.Request, pa
 }
 
 func (l *localServer) listWorkspace(w http.ResponseWriter, r *http.Request, params httprouter.Params) {
+	ownerParam := r.URL.Query().Get("owner")
+	ownerFilter := platform.SelfOwnerFilter
+	if ownerParam != "" {
+		ownerFilter = platform.OwnerFilter(ownerParam)
+	}
+
 	managementClient, err := l.pc.Management()
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -342,6 +348,9 @@ func (l *localServer) listWorkspace(w http.ResponseWriter, r *http.Request, para
 		}
 
 		for _, instance := range workspaceList.Items {
+			if ownerFilter == platform.SelfOwnerFilter && !platform.IsOwner(l.pc.Self(), instance.GetOwner()) {
+				continue
+			}
 			if instance.GetLabels() == nil {
 				instance.Labels = map[string]string{}
 			}
@@ -387,12 +396,18 @@ func (l *localServer) watchWorkspaces(w http.ResponseWriter, r *http.Request, pa
 		http.Error(w, "missing required query parameter \"project\"", http.StatusInternalServerError)
 		return
 	}
+	ownerParam := r.URL.Query().Get("owner")
+	ownerFilter := platform.SelfOwnerFilter
+	if ownerParam != "" {
+		ownerFilter = platform.OwnerFilter(ownerParam)
+	}
 
 	w.Header().Set("Content-Type", "application/json")
 	enc := json.NewEncoder(w)
 	err := startWorkspaceWatcher(r.Context(), watchConfig{
 		Project:        project,
 		Context:        l.devPodContext,
+		OwnerFilter:    ownerFilter,
 		PlatformClient: l.pc,
 		Log:            l.log},
 		func(instanceList []*ProWorkspaceInstance) {
