@@ -1,12 +1,21 @@
 import { ProClient, client as globalClient } from "@/client"
-import { ToolbarActions, ToolbarTitle } from "@/components"
+import { TWorkspaceOwnerFilterState, ToolbarActions, ToolbarTitle } from "@/components"
 import { Annotations, Result } from "@/lib"
 import { Routes } from "@/routes"
 import { Text } from "@chakra-ui/react"
 import { ManagementV1Project } from "@loft-enterprise/client/gen/models/managementV1Project"
 import { ManagementV1Self } from "@loft-enterprise/client/gen/models/managementV1Self"
 import { UseQueryResult, useQuery } from "@tanstack/react-query"
-import { ReactNode, createContext, useContext, useEffect, useMemo, useState } from "react"
+import {
+  Dispatch,
+  ReactNode,
+  SetStateAction,
+  createContext,
+  useContext,
+  useEffect,
+  useMemo,
+  useState,
+} from "react"
 import { Navigate, useNavigate } from "react-router-dom"
 import { ProWorkspaceStore, useWorkspaceStore } from "../workspaceStore"
 import { ContextSwitcher, HOST_OSS } from "./ContextSwitcher"
@@ -19,11 +28,14 @@ type TProContext = Readonly<{
   host: string
   client: ProClient
   isLoadingWorkspaces: boolean
+  ownerFilter: TWorkspaceOwnerFilterState
+  setOwnerFilter: Dispatch<SetStateAction<TWorkspaceOwnerFilterState>>
 }>
 const ProContext = createContext<TProContext>(null!)
 export function ProProvider({ host, children }: { host: string; children: ReactNode }) {
   const [[proInstances, { status: proInstancesStatus }]] = useProInstances()
   const [isLoadingWorkspaces, setIsLoadingWorkspaces] = useState(false)
+  const [ownerFilter, setOwnerFilter] = useState<TWorkspaceOwnerFilterState>("self")
   const navigate = useNavigate()
   const currentProInstance = useMemo(() => {
     return proInstances?.find((instance) => instance.host == host)
@@ -74,27 +86,32 @@ export function ProProvider({ host, children }: { host: string; children: ReactN
 
     let canceled = false
 
-    const toCancel = client.watchWorkspaces(currentProject.metadata.name, (workspaces) => {
-      if (canceled) {
-        return
-      }
-
-      // sort by last activity (newest > oldest)
-      const sorted = workspaces.slice().sort((a, b) => {
-        const lastActivityA = a.metadata?.annotations?.[Annotations.SleepModeLastActivity]
-        const lastActivityB = b.metadata?.annotations?.[Annotations.SleepModeLastActivity]
-        if (!(lastActivityA && lastActivityB)) {
-          return 0
+    const toCancel = client.watchWorkspaces(
+      currentProject.metadata.name,
+      ownerFilter,
+      (workspaces) => {
+        if (canceled) {
+          return
         }
 
-        return parseInt(lastActivityB, 10) - parseInt(lastActivityA, 10)
-      })
-      store.setWorkspaces(sorted)
-      // dirty, dirty
-      setTimeout(() => {
-        setIsLoadingWorkspaces(false)
-      }, 1_000)
-    })
+        // sort by last activity (newest > oldest)
+        const sorted = workspaces.slice().sort((a, b) => {
+          const lastActivityA = a.metadata?.annotations?.[Annotations.SleepModeLastActivity]
+          const lastActivityB = b.metadata?.annotations?.[Annotations.SleepModeLastActivity]
+          if (!(lastActivityA && lastActivityB)) {
+            return 0
+          }
+
+          return parseInt(lastActivityB, 10) - parseInt(lastActivityA, 10)
+        })
+        console.log(sorted)
+        store.setWorkspaces(sorted)
+        // dirty, dirty
+        setTimeout(() => {
+          setIsLoadingWorkspaces(false)
+        }, 1_000)
+      }
+    )
 
     function canceler() {
       canceled = true
@@ -109,7 +126,7 @@ export function ProProvider({ host, children }: { host: string; children: ReactN
     return () => {
       canceler()
     }
-  }, [client, store, currentProject])
+  }, [client, store, currentProject, ownerFilter])
 
   const handleProjectChanged = (newProject: ManagementV1Project) => {
     setSelectedProject(newProject)
@@ -135,8 +152,18 @@ export function ProProvider({ host, children }: { host: string; children: ReactN
       host,
       client: client!,
       isLoadingWorkspaces,
+      ownerFilter,
+      setOwnerFilter,
     }
-  }, [managementSelfQuery, currentProject, projectsQuery, host, client, isLoadingWorkspaces])
+  }, [
+    managementSelfQuery,
+    currentProject,
+    projectsQuery,
+    host,
+    client,
+    isLoadingWorkspaces,
+    ownerFilter,
+  ])
 
   // this pro instance doesn't exist, let's route back to root
   if (proInstancesStatus == "success" && !currentProInstance) {

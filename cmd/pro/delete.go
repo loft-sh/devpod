@@ -11,6 +11,7 @@ import (
 	"github.com/loft-sh/devpod/pkg/client/clientimplementation"
 	"github.com/loft-sh/devpod/pkg/config"
 	platformdaemon "github.com/loft-sh/devpod/pkg/daemon/platform"
+	"github.com/loft-sh/devpod/pkg/platform"
 	"github.com/loft-sh/devpod/pkg/provider"
 	provider2 "github.com/loft-sh/devpod/pkg/provider"
 	"github.com/loft-sh/devpod/pkg/workspace"
@@ -77,11 +78,11 @@ func (cmd *DeleteCmd) Run(ctx context.Context, args []string) error {
 			return err
 		}
 
-		workspaces, err := workspace.List(ctx, devPodConfig, true, log.Default)
+		workspaces, err := workspace.List(ctx, devPodConfig, true, cmd.Owner, log.Default)
 		if err != nil {
 			log.Default.Warnf("Failed to list workspaces: %v", err)
 		} else {
-			cleanupLocalWorkspaces(ctx, devPodConfig, workspaces, providerConfig.Name, log.Default)
+			cleanupLocalWorkspaces(ctx, devPodConfig, workspaces, providerConfig.Name, cmd.Owner, log.Default)
 		}
 
 		daemonClient := platformdaemon.NewLocalClient(daemonDir, proInstanceConfig.Provider)
@@ -112,7 +113,7 @@ func (cmd *DeleteCmd) Run(ctx context.Context, args []string) error {
 	return nil
 }
 
-func cleanupLocalWorkspaces(ctx context.Context, devPodConfig *config.Config, workspaces []*provider2.Workspace, providerName string, log log.Logger) {
+func cleanupLocalWorkspaces(ctx context.Context, devPodConfig *config.Config, workspaces []*provider2.Workspace, providerName string, owner platform.OwnerFilter, log log.Logger) {
 	usedWorkspaces := []*provider2.Workspace{}
 
 	for _, workspace := range workspaces {
@@ -128,7 +129,7 @@ func cleanupLocalWorkspaces(ctx context.Context, devPodConfig *config.Config, wo
 			wg.Add(1)
 			go func(w provider2.Workspace) {
 				defer wg.Done()
-				client, err := workspace.Get(ctx, devPodConfig, []string{w.ID}, false, log)
+				client, err := workspace.Get(ctx, devPodConfig, []string{w.ID}, true, owner, log)
 				if err != nil {
 					log.Errorf("Failed to get workspace %s: %v", w.ID, err)
 					return

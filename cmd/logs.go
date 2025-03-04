@@ -15,7 +15,6 @@ import (
 	"github.com/loft-sh/log"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
-	// tsClient "tailscale.com/client/tailscale"
 )
 
 // LogsCmd holds the configuration
@@ -46,7 +45,7 @@ func (cmd *LogsCmd) Run(ctx context.Context, args []string) error {
 		return err
 	}
 
-	baseClient, err := workspace.Get(ctx, devPodConfig, args, false, log.Default)
+	baseClient, err := workspace.Get(ctx, devPodConfig, args, false, cmd.Owner, log.Default)
 	if err != nil {
 		return err
 	}
