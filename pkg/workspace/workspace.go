@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"sort"
 	"strings"
 
 	"github.com/charmbracelet/huh"
@@ -17,6 +18,7 @@ import (
 	"github.com/loft-sh/devpod/pkg/git"
 	"github.com/loft-sh/devpod/pkg/ide/ideparse"
 	"github.com/loft-sh/devpod/pkg/image"
+	"github.com/loft-sh/devpod/pkg/platform"
 	providerpkg "github.com/loft-sh/devpod/pkg/provider"
 	"github.com/loft-sh/devpod/pkg/types"
 	"github.com/loft-sh/log"
@@ -40,8 +42,8 @@ func Resolve(
 	source *providerpkg.WorkspaceSource,
 	uid string,
 	changeLastUsed bool,
+	owner platform.OwnerFilter,
 	log log.Logger,
-	hostname string,
 ) (client.BaseWorkspaceClient, error) {
 	// verify desired id
 	if desiredID != "" {
@@ -64,8 +66,8 @@ func Resolve(
 		source,
 		uid,
 		changeLastUsed,
+		owner,
 		log,
-		hostname,
 	)
 	if err != nil {
 		return nil, err
@@ -131,7 +133,7 @@ func getWorkspaceClient(devPodConfig *config.Config, provider *providerpkg.Provi
 }
 
 // Get tries to retrieve an already existing workspace
-func Get(ctx context.Context, devPodConfig *config.Config, args []string, changeLastUsed bool, log log.Logger) (client.BaseWorkspaceClient, error) {
+func Get(ctx context.Context, devPodConfig *config.Config, args []string, changeLastUsed bool, owner platform.OwnerFilter, log log.Logger) (client.BaseWorkspaceClient, error) {
 	var (
 		provider  *providerpkg.ProviderConfig
 		workspace *providerpkg.Workspace
@@ -141,12 +143,12 @@ func Get(ctx context.Context, devPodConfig *config.Config, args []string, change
 
 	// check if we have no args
 	if len(args) == 0 {
-		provider, workspace, machine, err = selectWorkspace(ctx, devPodConfig, changeLastUsed, "", log)
+		provider, workspace, machine, err = selectWorkspace(ctx, devPodConfig, changeLastUsed, "", owner, log)
 		if err != nil {
 			return nil, err
 		}
 	} else {
-		workspace = findWorkspace(ctx, devPodConfig, args, "", log)
+		workspace = findWorkspace(ctx, devPodConfig, args, "", owner, log)
 		if workspace == nil {
 			return nil, fmt.Errorf("workspace %s doesn't exist", args[0])
 		}
@@ -165,8 +167,8 @@ func Get(ctx context.Context, devPodConfig *config.Config, args []string, change
 }
 
 // Exists checks if the given workspace already exists
-func Exists(ctx context.Context, devPodConfig *config.Config, args []string, workspaceID string, log log.Logger) string {
-	workspace := findWorkspace(ctx, devPodConfig, args, workspaceID, log)
+func Exists(ctx context.Context, devPodConfig *config.Config, args []string, workspaceID string, owner platform.OwnerFilter, log log.Logger) string {
+	workspace := findWorkspace(ctx, devPodConfig, args, workspaceID, owner, log)
 	if workspace == nil {
 		return ""
 	}
@@ -185,20 +187,20 @@ func resolveWorkspace(
 	source *providerpkg.WorkspaceSource,
 	uid string,
 	changeLastUsed bool,
+	owner platform.OwnerFilter,
 	log log.Logger,
-	hostname string,
 ) (*providerpkg.ProviderConfig, *providerpkg.Workspace, *providerpkg.Machine, error) {
 	// check if we have no args
 	if len(args) == 0 {
 		if desiredID != "" {
-			workspace := findWorkspace(ctx, devPodConfig, nil, desiredID, log)
+			workspace := findWorkspace(ctx, devPodConfig, nil, desiredID, owner, log)
 			if workspace == nil {
 				return nil, nil, nil, fmt.Errorf("workspace %s doesn't exist", desiredID)
 			}
 			return loadExistingWorkspace(devPodConfig, workspace.ID, changeLastUsed, log)
 		}
 
-		return selectWorkspace(ctx, devPodConfig, changeLastUsed, sshConfigPath, log)
+		return selectWorkspace(ctx, devPodConfig, changeLastUsed, sshConfigPath, owner, log)
 	}
 
 	// check if workspace already exists
@@ -209,14 +211,14 @@ func resolveWorkspace(
 
 	// check if desired id already exists
 	if desiredID != "" {
-		if Exists(ctx, devPodConfig, nil, desiredID, log) != "" {
+		if Exists(ctx, devPodConfig, nil, desiredID, owner, log) != "" {
 			log.Infof("Workspace %s already exists", desiredID)
 			return loadExistingWorkspace(devPodConfig, desiredID, changeLastUsed, log)
 		}
 
 		// set desired id
 		workspaceID = desiredID
-	} else if Exists(ctx, devPodConfig, nil, workspaceID, log) != "" {
+	} else if Exists(ctx, devPodConfig, nil, workspaceID, owner, log) != "" {
 		log.Infof("Workspace %s already exists", workspaceID)
 		return loadExistingWorkspace(devPodConfig, workspaceID, changeLastUsed, log)
 	}
@@ -234,7 +236,6 @@ func resolveWorkspace(
 		isLocalPath,
 		uid,
 		log,
-		hostname,
 	)
 	if err != nil {
 		_ = clientimplementation.DeleteWorkspaceFolder(devPodConfig.DefaultContext, workspaceID, sshConfigPath, log)
@@ -256,7 +257,6 @@ func createWorkspace(
 	isLocalPath bool,
 	uid string,
 	log log.Logger,
-	hostname string,
 ) (*providerpkg.ProviderConfig, *providerpkg.Workspace, *providerpkg.Machine, error) {
 	// get default provider
 	provider, _, err := LoadProviders(devPodConfig, log)
@@ -465,7 +465,7 @@ func resolveWorkspaceConfig(
 	return workspace, nil
 }
 
-func findWorkspace(ctx context.Context, devPodConfig *config.Config, args []string, workspaceID string, log log.Logger) *providerpkg.Workspace {
+func findWorkspace(ctx context.Context, devPodConfig *config.Config, args []string, workspaceID string, owner platform.OwnerFilter, log log.Logger) *providerpkg.Workspace {
 	if len(args) == 0 && workspaceID == "" {
 		return nil
 	}
@@ -478,7 +478,7 @@ func findWorkspace(ctx context.Context, devPodConfig *config.Config, args []stri
 		workspaceID = ToID(name)
 	}
 
-	allWorkspaces, err := List(ctx, devPodConfig, false, log)
+	allWorkspaces, err := List(ctx, devPodConfig, false, owner, log)
 	if err != nil {
 		log.Debugf("failed to list workspaces: %v", err)
 		return nil
@@ -506,15 +506,20 @@ func findWorkspace(ctx context.Context, devPodConfig *config.Config, args []stri
 	return retWorkspace
 }
 
-func selectWorkspace(ctx context.Context, devPodConfig *config.Config, changeLastUsed bool, sshConfigPath string, log log.Logger) (*providerpkg.ProviderConfig, *providerpkg.Workspace, *providerpkg.Machine, error) {
+func selectWorkspace(ctx context.Context, devPodConfig *config.Config, changeLastUsed bool, sshConfigPath string, owner platform.OwnerFilter, log log.Logger) (*providerpkg.ProviderConfig, *providerpkg.Workspace, *providerpkg.Machine, error) {
 	if !terminal.IsTerminalIn {
 		return nil, nil, nil, errProvideWorkspaceArg
 	}
 
-	workspaces, err := List(ctx, devPodConfig, false, log)
+	workspaces, err := List(ctx, devPodConfig, false, owner, log)
 	if err != nil {
 		return nil, nil, nil, fmt.Errorf("list workspaces: %w", err)
 	}
+
+	// sort by last used
+	sort.SliceStable(workspaces, func(i, j int) bool {
+		return workspaces[i].LastUsedTimestamp.Time.Unix() > workspaces[j].LastUsedTimestamp.Time.Unix()
+	})
 
 	// prepare form options
 	options := []huh.Option[*providerpkg.Workspace]{}

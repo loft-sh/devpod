@@ -1370,8 +1370,8 @@ func (cmd *UpCmd) prepareClient(ctx context.Context, devPodConfig *config.Config
 		source,
 		cmd.UID,
 		true,
+		cmd.Owner,
 		logger,
-		cmd.Platform.WorkspaceHost,
 	)
 	if err != nil {
 		return nil, logger, err

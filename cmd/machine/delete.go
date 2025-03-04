@@ -7,6 +7,7 @@ import (
 	"github.com/loft-sh/devpod/cmd/flags"
 	"github.com/loft-sh/devpod/pkg/client"
 	"github.com/loft-sh/devpod/pkg/config"
+	"github.com/loft-sh/devpod/pkg/platform"
 	"github.com/loft-sh/devpod/pkg/workspace"
 	"github.com/loft-sh/log"
 	"github.com/spf13/cobra"
@@ -51,7 +52,7 @@ func (cmd *DeleteCmd) Run(ctx context.Context, args []string) error {
 	}
 
 	// check if there are workspaces that still use this machine
-	workspaces, err := workspace.List(ctx, devPodConfig, false, log.Default)
+	workspaces, err := workspace.List(ctx, devPodConfig, false, platform.SelfOwnerFilter, log.Default)
 	if err != nil {
 		return err
 	}
