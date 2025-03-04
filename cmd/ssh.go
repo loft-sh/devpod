@@ -182,7 +182,7 @@ func (cmd *SSHCmd) jumpContainerTailscale(
 		return cmd.reverseForwardPorts(ctx, toolSSHClient, log)
 	}
 
-	dir, err := providerpkg.GetDaemonDir(devPodConfig.DefaultContext, devPodConfig.Current().DefaultProvider)
+	dir, err := providerpkg.GetDaemonDir(client.Context(), client.WorkspaceConfig().Provider.Name)
 	if err != nil {
 		return err
 	}
