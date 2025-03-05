@@ -13,7 +13,6 @@ import { ContextSwitcher, HOST_OSS } from "./ContextSwitcher"
 
 type TProContext = Readonly<{
   managementSelfQuery: UseQueryResult<ManagementV1Self | undefined>
-  projectsQuery: UseQueryResult<readonly ManagementV1Project[] | undefined>
   currentProject?: ManagementV1Project
   host: string
   client: ProClient
@@ -118,12 +117,11 @@ export function ProProvider({ host, children }: { host: string; children: ReactN
     return {
       managementSelfQuery,
       currentProject,
-      projectsQuery,
       host,
       client,
       isLoadingWorkspaces,
     }
-  }, [managementSelfQuery, currentProject, projectsQuery, host, client, isLoadingWorkspaces])
+  }, [managementSelfQuery, currentProject, host, client, isLoadingWorkspaces])
 
   return (
     <ProContext.Provider value={value}>

@@ -80,10 +80,7 @@ export const Routes = {
   PRO_WORKSPACE_CREATE: "/pro/:host/new",
   PRO_SETTINGS: "/pro/:host/settings",
   toProInstance(host: string): string {
-    // This is a workaround for react-routers interaction with hostnames as path components
-    const h = host.replaceAll(".", "-")
-
-    return `/pro/${h}`
+    return `/pro/${host}`
   },
   toProWorkspace(host: string, instanceID: string): string {
     const base = this.toProInstance(host)

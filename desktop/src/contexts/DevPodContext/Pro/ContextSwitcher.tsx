@@ -145,7 +145,7 @@ export function ContextSwitcher({
                                     ) : undefined
                                   }
                                   onClick={() => onProjectChange(project)}>
-                                  {getDisplayName(project)}
+                                  {getDisplayName(project, "Unknown Project")}
                                 </Button>
                               </ListItem>
                             ))}
