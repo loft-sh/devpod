@@ -29,8 +29,6 @@ type DevPodWorkspaceInstanceInterface interface {
 	List(ctx context.Context, opts metav1.ListOptions) (*managementv1.DevPodWorkspaceInstanceList, error)
 	Watch(ctx context.Context, opts metav1.ListOptions) (watch.Interface, error)
 	Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts metav1.PatchOptions, subresources ...string) (result *managementv1.DevPodWorkspaceInstance, err error)
-	GetState(ctx context.Context, devPodWorkspaceInstanceName string, options metav1.GetOptions) (*managementv1.DevPodWorkspaceInstanceState, error)
-	SetState(ctx context.Context, devPodWorkspaceInstanceName string, devPodWorkspaceInstanceState *managementv1.DevPodWorkspaceInstanceState, opts metav1.CreateOptions) (*managementv1.DevPodWorkspaceInstanceState, error)
 	Up(ctx context.Context, devPodWorkspaceInstanceName string, devPodWorkspaceInstanceUp *managementv1.DevPodWorkspaceInstanceUp, opts metav1.CreateOptions) (*managementv1.DevPodWorkspaceInstanceUp, error)
 	Stop(ctx context.Context, devPodWorkspaceInstanceName string, devPodWorkspaceInstanceStop *managementv1.DevPodWorkspaceInstanceStop, opts metav1.CreateOptions) (*managementv1.DevPodWorkspaceInstanceStop, error)
 	Troubleshoot(ctx context.Context, devPodWorkspaceInstanceName string, options metav1.GetOptions) (*managementv1.DevPodWorkspaceInstanceTroubleshoot, error)
@@ -55,35 +53,6 @@ func newDevPodWorkspaceInstances(c *ManagementV1Client, namespace string) *devPo
 			func() *managementv1.DevPodWorkspaceInstanceList { return &managementv1.DevPodWorkspaceInstanceList{} },
 		),
 	}
-}
-
-// GetState takes name of the devPodWorkspaceInstance, and returns the corresponding managementv1.DevPodWorkspaceInstanceState object, and an error if there is any.
-func (c *devPodWorkspaceInstances) GetState(ctx context.Context, devPodWorkspaceInstanceName string, options metav1.GetOptions) (result *managementv1.DevPodWorkspaceInstanceState, err error) {
-	result = &managementv1.DevPodWorkspaceInstanceState{}
-	err = c.GetClient().Get().
-		Namespace(c.GetNamespace()).
-		Resource("devpodworkspaceinstances").
-		Name(devPodWorkspaceInstanceName).
-		SubResource("state").
-		VersionedParams(&options, scheme.ParameterCodec).
-		Do(ctx).
-		Into(result)
-	return
-}
-
-// SetState takes the representation of a devPodWorkspaceInstanceState and creates it.  Returns the server's representation of the devPodWorkspaceInstanceState, and an error, if there is any.
-func (c *devPodWorkspaceInstances) SetState(ctx context.Context, devPodWorkspaceInstanceName string, devPodWorkspaceInstanceState *managementv1.DevPodWorkspaceInstanceState, opts metav1.CreateOptions) (result *managementv1.DevPodWorkspaceInstanceState, err error) {
-	result = &managementv1.DevPodWorkspaceInstanceState{}
-	err = c.GetClient().Post().
-		Namespace(c.GetNamespace()).
-		Resource("devpodworkspaceinstances").
-		Name(devPodWorkspaceInstanceName).
-		SubResource("state").
-		VersionedParams(&opts, scheme.ParameterCodec).
-		Body(devPodWorkspaceInstanceState).
-		Do(ctx).
-		Into(result)
-	return
 }
 
 // Up takes the representation of a devPodWorkspaceInstanceUp and creates it.  Returns the server's representation of the devPodWorkspaceInstanceUp, and an error, if there is any.

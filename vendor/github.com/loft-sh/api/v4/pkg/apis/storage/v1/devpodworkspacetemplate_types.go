@@ -80,8 +80,59 @@ type DevPodWorkspaceTemplateSpec struct {
 }
 
 type DevPodWorkspaceTemplateDefinition struct {
-	// Provider holds the DevPod provider configuration
-	Provider DevPodWorkspaceProvider `json:"provider"`
+	// Kubernetes holds the definition for kubernetes based workspaces
+	Kubernetes *DevPodWorkspaceKubernetesSpec `json:"kubernetes,omitempty"`
+
+	// WorkspaceEnv are environment variables that should be available within the created workspace.
+	// +optional
+	WorkspaceEnv map[string]DevPodProviderOption `json:"workspaceEnv,omitempty"`
+
+	// InitEnv are environment variables that should be available during the initialization phase of the created workspace.
+	// +optional
+	InitEnv map[string]DevPodProviderOption `json:"initEnv,omitempty"`
+
+	// InstanceTemplate holds the workspace instance template
+	// +optional
+	InstanceTemplate DevPodWorkspaceInstanceTemplateDefinition `json:"instanceTemplate,omitempty"`
+
+	// GitCloneStrategy specifies how git based workspace are being cloned. Can be "" (full, default), treeless, blobless or shallow
+	// +optional
+	GitCloneStrategy GitCloneStrategy `json:"gitCloneStrategy,omitempty"`
+
+	// PreventWakeUpOnConnection is used to prevent workspace that uses sleep mode from waking up on incomming ssh connection.
+	// +optional
+	PreventWakeUpOnConnection bool `json:"preventWakeUpOnConnection,omitempty"`
+
+	// Provider holds the legacy VM provider configuration
+	//
+	// Deprecated: use fields on template instead
+	// +optional
+	Provider *DevPodWorkspaceProvider `json:"provider,omitempty"`
+}
+
+type DevPodWorkspaceKubernetesSpec struct {
+	// Pod holds the definition for workspace pod.
+	//
+	// Defaults will be applied for fields that aren't specified.
+	// +optional
+	Pod *DevPodWorkspacePodTemplate `json:"pod,omitempty"`
+
+	// VolumeClaim holds the definition for the main workspace persistent volume.
+	// This volume is guaranteed to exist for the lifespan of the workspace.
+	//
+	// Defaults will be applied for fields that aren't specified.
+	// +optional
+	VolumeClaim *DevPodWorkspaceVolumeClaimTemplate `json:"volumeClaim,omitempty"`
+
+	// PodTimeout specifies a maximum duration to wait for the workspace pod to start up before failing.
+	// Default: 10m
+	// +optional
+	PodTimeout string `json:"podTimeout,omitempty"`
+
+	// NodeArchitecture specifies the node architecture the workspace image will be built for.
+	// Only necessary if you need to build workspace images on the fly in the kubernetes cluster and your cluster is mixed architecture.
+	// +optional
+	NodeArchitecure string `json:"nodeArchitecture,omitempty"`
 
 	// SpaceTemplateRef is a reference to the space that should get created for this DevPod.
 	// If this is specified, the kubernetes provider will be selected automatically.
@@ -102,38 +153,190 @@ type DevPodWorkspaceTemplateDefinition struct {
 	// If this is specified, the kubernetes provider will be selected automatically.
 	// +optional
 	VirtualClusterTemplate *VirtualClusterTemplateDefinition `json:"virtualClusterTemplate,omitempty"`
+}
 
-	// WorkspaceEnv are environment variables that should be available within the created workspace.
+// DevPodWorkspacePodTemplate is a less restrictive PodTemplate
+type DevPodWorkspacePodTemplate struct {
+	// The pods metadata
+	// +kubebuilder:pruning:PreserveUnknownFields
 	// +optional
-	WorkspaceEnv map[string]DevPodProviderOption `json:"workspaceEnv,omitempty"`
+	TemplateMetadata `json:"metadata,omitempty"`
 
-	// InitEnv are environment variables that should be available during the initialization phase of the created workspace.
-	// +optional
-	InitEnv map[string]DevPodProviderOption `json:"initEnv,omitempty"`
+	Spec DevPodWorkspacePodTemplateSpec `json:"spec,omitempty"`
+}
 
-	// InstanceTemplate holds the workspace instance template
+// DevPodWorkspacePodTemplateSpec is a less restrictive PodSpec
+type DevPodWorkspacePodTemplateSpec struct {
+	// List of volumes that can be mounted by containers belonging to the pod.
 	// +optional
-	InstanceTemplate DevPodWorkspaceInstanceTemplateDefinition `json:"instanceTemplate,omitempty"`
+	Volumes []corev1.Volume `json:"volumes,omitempty"`
 
-	// UseProjectGitCredentials specifies if the project git credentials should be used instead of local ones for this workspace
+	// List of initialization containers belonging to the pod.
 	// +optional
-	UseProjectGitCredentials bool `json:"useProjectGitCredentials,omitempty"`
+	InitContainers []corev1.Container `json:"initContainers,omitempty"`
 
-	// UseProjectSSHCredentials specifies if the project ssh credentials should be used instead of local ones for this workspace
+	// List of containers belonging to the pod.
 	// +optional
-	UseProjectSSHCredentials bool `json:"useProjectSSHCredentials,omitempty"`
+	Containers []corev1.Container `json:"containers,omitempty"`
 
-	// GitCloneStrategy specifies how git based workspace are being cloned. Can be "" (full, default), treeless, blobless or shallow
+	// Restart policy for all containers within the pod.
 	// +optional
-	GitCloneStrategy GitCloneStrategy `json:"gitCloneStrategy,omitempty"`
+	RestartPolicy corev1.RestartPolicy `json:"restartPolicy,omitempty"`
 
-	// CredentialForwarding specifies controls for how workspaces created by this template forward credentials into the workspace
+	// Optional duration in seconds the pod needs to terminate gracefully. May be decreased in delete request.
 	// +optional
-	CredentialForwarding *CredentialForwarding `json:"credentialForwarding,omitempty"`
+	TerminationGracePeriodSeconds *int64 `json:"terminationGracePeriodSeconds,omitempty"`
 
-	// PreventWakeUpOnConnection is used to prevent workspace that uses sleep mode from waking up on incomming ssh connection.
+	// Optional duration in seconds the pod may be active on the node relative to
 	// +optional
-	PreventWakeUpOnConnection bool `json:"preventWakeUpOnConnection,omitempty"`
+	ActiveDeadlineSeconds *int64 `json:"activeDeadlineSeconds,omitempty"`
+
+	// Set DNS policy for the pod.
+	// +optional
+	DNSPolicy corev1.DNSPolicy `json:"dnsPolicy,omitempty"`
+
+	// NodeSelector is a selector which must be true for the pod to fit on a node.
+	// +optional
+	NodeSelector map[string]string `json:"nodeSelector,omitempty"`
+
+	// ServiceAccountName is the name of the ServiceAccount to use to run this pod.
+	// +optional
+	ServiceAccountName string `json:"serviceAccountName,omitempty"`
+
+	// AutomountServiceAccountToken indicates whether a service account token should be automatically mounted.
+	// +optional
+	AutomountServiceAccountToken *bool `json:"automountServiceAccountToken,omitempty"`
+
+	// NodeName indicates in which node this pod is scheduled.
+	// +optional
+	NodeName string `json:"nodeName,omitempty"`
+
+	// Host networking requested for this pod. Use the host's network namespace.
+	// +optional
+	HostNetwork bool `json:"hostNetwork,omitempty"`
+
+	// Use the host's pid namespace.
+	// +optional
+	HostPID bool `json:"hostPID,omitempty"`
+
+	// Use the host's ipc namespace.
+	// +optional
+	HostIPC bool `json:"hostIPC,omitempty"`
+
+	// Share a single process namespace between all of the containers in a pod.
+	// +optional
+	ShareProcessNamespace *bool `json:"shareProcessNamespace,omitempty"`
+
+	// SecurityContext holds pod-level security attributes and common container settings.
+	// +optional
+	SecurityContext *corev1.PodSecurityContext `json:"securityContext,omitempty"`
+
+	// ImagePullSecrets is an optional list of references to secrets in the same namespace to use for pulling any of the images used by this PodSpec.
+	// +optional
+	ImagePullSecrets []corev1.LocalObjectReference `json:"imagePullSecrets,omitempty"`
+
+	// Specifies the hostname of the Pod
+	// +optional
+	Hostname string `json:"hostname,omitempty"`
+
+	// If specified, the fully qualified Pod hostname will be "<hostname>.<subdomain>.<pod namespace>.svc.<cluster domain>".
+	// +optional
+	Subdomain string `json:"subdomain,omitempty"`
+
+	// If specified, the pod's scheduling constraints
+	// +optional
+	Affinity *corev1.Affinity `json:"affinity,omitempty"`
+
+	// If specified, the pod will be dispatched by specified scheduler.
+	// If not specified, the pod will be dispatched by default scheduler.
+	// +optional
+	SchedulerName string `json:"schedulerName,omitempty"`
+
+	// If specified, the pod's tolerations.
+	// +optional
+	Tolerations []corev1.Toleration `json:"tolerations,omitempty"`
+
+	// HostAliases is an optional list of hosts and IPs that will be injected into the pod's hosts
+	// +optional
+	HostAliases []corev1.HostAlias `json:"hostAliases,omitempty"`
+
+	// If specified, indicates the pod's priority.
+	// +optional
+	PriorityClassName string `json:"priorityClassName,omitempty"`
+
+	// +optional
+	Priority *int32 `json:"priority,omitempty"`
+
+	// Specifies the DNS parameters of a pod.
+	// +optional
+	DNSConfig *corev1.PodDNSConfig `json:"dnsConfig,omitempty"`
+
+	// If specified, all readiness gates will be evaluated for pod readiness.
+	// +optional
+	ReadinessGates []corev1.PodReadinessGate `json:"readinessGates,omitempty"`
+
+	// RuntimeClassName refers to a RuntimeClass object in the node.k8s.io group, which should be used to run this pod
+	// +optional
+	RuntimeClassName *string `json:"runtimeClassName,omitempty"`
+
+	// EnableServiceLinks indicates whether information about services should be injected into pod's
+	// environment variables, matching the syntax of Docker links.
+	// +optional
+	EnableServiceLinks *bool `json:"enableServiceLinks,omitempty"`
+
+	// PreemptionPolicy is the Policy for preempting pods with lower priority.
+	// +optional
+	PreemptionPolicy *corev1.PreemptionPolicy `json:"preemptionPolicy,omitempty"`
+
+	// Overhead represents the resource overhead associated with running a pod for a given RuntimeClass.
+	// +optional
+	Overhead corev1.ResourceList `json:"overhead,omitempty"`
+
+	// TopologySpreadConstraints describes how a group of pods ought to spread across topology domains.
+	// +optional
+	TopologySpreadConstraints []corev1.TopologySpreadConstraint `json:"topologySpreadConstraints,omitempty"`
+
+	// If true the pod's hostname will be configured as the pod's FQDN, rather than the leaf name (the default).
+	// In Linux containers, this means setting the FQDN in the hostname field of the kernel (the nodename field of struct utsname).
+	// In Windows containers, this means setting the registry value of hostname for the registry key HKEY_LOCAL_MACHINE\\SYSTEM\\CurrentControlSet\\Services\\Tcpip\\Parameters to FQDN.
+	// +optional
+	SetHostnameAsFQDN *bool `json:"setHostnameAsFQDN,omitempty"`
+
+	// Specifies the OS of the containers in the pod.
+	// +optional
+	OS *corev1.PodOS `json:"os,omitempty"`
+
+	// Use the host's user namespace.
+	// +optional
+	HostUsers *bool `json:"hostUsers,omitempty"`
+
+	// SchedulingGates is an opaque list of values that if specified will block scheduling the pod.
+	// If schedulingGates is not empty, the pod will stay in the SchedulingGated state and the
+	// scheduler will not attempt to schedule the pod.
+	// +optional
+	SchedulingGates []corev1.PodSchedulingGate `json:"schedulingGates,omitempty"`
+
+	// ResourceClaims defines which ResourceClaims must be allocated
+	// and reserved before the Pod is allowed to start. The resources
+	// will be made available to those containers which consume them
+	// by name.
+	// +optional
+	ResourceClaims []corev1.PodResourceClaim `json:"resourceClaims,omitempty"`
+
+	// Resources is the total amount of CPU and Memory resources required by all
+	// containers in the pod. It supports specifying Requests and Limits for
+	// "cpu" and "memory" resource names only. ResourceClaims are not supported.
+	// +optional
+	Resources *corev1.ResourceRequirements `json:"resources,omitempty"`
+}
+
+type DevPodWorkspaceVolumeClaimTemplate struct {
+	// The pods metadata
+	// +kubebuilder:pruning:PreserveUnknownFields
+	// +optional
+	TemplateMetadata `json:"metadata,omitempty"`
+
+	Spec corev1.PersistentVolumeClaimSpec `json:"spec,omitempty"`
 }
 
 // +enum
@@ -147,31 +350,10 @@ const (
 	ShallowCloneStrategy  GitCloneStrategy = "shallow"
 )
 
-type CredentialForwarding struct {
-	// Docker specifies controls for how workspaces created by this template forward docker credentials
-	// +optional
-	Docker *DockerCredentialForwarding `json:"docker,omitempty"`
-
-	// Git specifies controls for how workspaces created by this template forward git credentials
-	// +optional
-	Git *GitCredentialForwarding `json:"git,omitempty"`
-}
-
-type DockerCredentialForwarding struct {
-	// Disabled prevents all workspaces created by this template from forwarding credentials into the workspace
-	// +optional
-	Disabled bool `json:"disabled,omitempty"`
-}
-
-type GitCredentialForwarding struct {
-	// Disabled prevents all workspaces created by this template from forwarding credentials into the workspace
-	// +optional
-	Disabled bool `json:"disabled,omitempty"`
-}
-
 type DevPodWorkspaceProvider struct {
 	// Name is the name of the provider. This can also be an url.
-	Name string `json:"name"`
+	// +optional
+	Name string `json:"name,omitempty"`
 
 	// Options are the provider option values
 	// +optional
@@ -183,7 +365,7 @@ type DevPodWorkspaceProvider struct {
 }
 
 type DevPodWorkspaceInstanceTemplateDefinition struct {
-	// The virtual cluster instance metadata
+	// The workspace instance metadata
 	// +kubebuilder:pruning:PreserveUnknownFields
 	// +optional
 	TemplateMetadata `json:"metadata,omitempty"`

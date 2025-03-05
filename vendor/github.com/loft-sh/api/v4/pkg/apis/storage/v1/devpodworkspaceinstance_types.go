@@ -32,10 +32,10 @@ var (
 )
 
 var (
+	DevPodPlatformOptions = "DEVPOD_PLATFORM_OPTIONS"
+
 	DevPodFlagsUp     = "DEVPOD_FLAGS_UP"
 	DevPodFlagsDelete = "DEVPOD_FLAGS_DELETE"
-	DevPodFlagsStatus = "DEVPOD_FLAGS_STATUS"
-	DevPodFlagsSsh    = "DEVPOD_FLAGS_SSH"
 	DevPodFlagsStop   = "DEVPOD_FLAGS_STOP"
 )
 
@@ -123,14 +123,6 @@ type DevPodWorkspaceInstanceSpec struct {
 	// PreventWakeUpOnConnection is used to prevent workspace that uses sleep mode from waking up on incomming ssh connection.
 	// +optional
 	PreventWakeUpOnConnection bool `json:"preventWakeUpOnConnection,omitempty"`
-
-	// NetworkAccessKeyRef is the reference to workspace AccessKey instance used for connecting to internal loft tailscale network.
-	// +optional
-	NetworkAccessKeyRef *ClusterObjectRef `json:"networkAccessKeyRef,omitempty"`
-
-	// NetworkHost is this workspace hostname in internal loft tailscale network.
-	// +optional
-	NetworkHost string `json:"networkHost,omitempty"`
 }
 
 type PresetRef struct {
@@ -158,12 +150,6 @@ type EnvironmentRef struct {
 	// Version is the version of DevPodEnvironmentTemplate this references
 	// +optional
 	Version string `json:"version,omitempty"`
-}
-
-// ClusterObjectRef is a generic reference to cluster level object.
-type ClusterObjectRef struct {
-	// Name is the name of cluster level resource this references.
-	Name string `json:"name"`
 }
 
 type DevPodWorkspaceInstanceStatus struct {

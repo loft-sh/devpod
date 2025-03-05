@@ -6,6 +6,7 @@ import (
 
 	"github.com/loft-sh/devpod/cmd/flags"
 	client2 "github.com/loft-sh/devpod/pkg/client"
+	"github.com/loft-sh/devpod/pkg/client/clientimplementation"
 	"github.com/loft-sh/devpod/pkg/config"
 	workspace2 "github.com/loft-sh/devpod/pkg/workspace"
 	"github.com/loft-sh/log"
@@ -16,6 +17,7 @@ import (
 // StopCmd holds the destroy cmd flags
 type StopCmd struct {
 	*flags.GlobalFlags
+	client2.StopOptions
 }
 
 // NewStopCmd creates a new destroy command
@@ -34,6 +36,11 @@ func NewStopCmd(flags *flags.GlobalFlags) *cobra.Command {
 				return err
 			}
 
+			err = clientimplementation.DecodePlatformOptionsFromEnv(&cmd.StopOptions.Platform)
+			if err != nil {
+				return fmt.Errorf("decode platform options: %w", err)
+			}
+
 			client, err := workspace2.Get(ctx, devPodConfig, args, false, cmd.Owner, log.Default)
 			if err != nil {
 				return err
@@ -49,11 +56,13 @@ func NewStopCmd(flags *flags.GlobalFlags) *cobra.Command {
 // Run runs the command logic
 func (cmd *StopCmd) Run(ctx context.Context, devPodConfig *config.Config, client client2.BaseWorkspaceClient) error {
 	// lock workspace
-	err := client.Lock(ctx)
-	if err != nil {
-		return err
+	if !cmd.Platform.Enabled {
+		err := client.Lock(ctx)
+		if err != nil {
+			return err
+		}
+		defer client.Unlock()
 	}
-	defer client.Unlock()
 
 	// get instance status
 	instanceStatus, err := client.Status(ctx, client2.StatusOptions{})

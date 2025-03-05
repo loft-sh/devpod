@@ -74,8 +74,6 @@ func Clusters(ctx context.Context, client client.Client, projectName string) (*m
 	clustersList, err := managementClient.Loft().ManagementV1().Projects().ListClusters(ctx, projectName, metav1.GetOptions{})
 	if err != nil {
 		return clustersList, fmt.Errorf("list clusters: %w", err)
-	} else if len(clustersList.Runners) == 0 {
-		return clustersList, fmt.Errorf("seems like there is no runner allowed in project %s, please make sure to at least have a single runner available", projectName)
 	}
 
 	return clustersList, nil

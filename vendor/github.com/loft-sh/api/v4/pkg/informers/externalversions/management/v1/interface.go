@@ -62,8 +62,6 @@ type Interface interface {
 	RegisterVirtualClusters() RegisterVirtualClusterInformer
 	// ResetAccessKeys returns a ResetAccessKeyInformer.
 	ResetAccessKeys() ResetAccessKeyInformer
-	// Runners returns a RunnerInformer.
-	Runners() RunnerInformer
 	// Selves returns a SelfInformer.
 	Selves() SelfInformer
 	// SelfSubjectAccessReviews returns a SelfSubjectAccessReviewInformer.
@@ -90,8 +88,6 @@ type Interface interface {
 	VirtualClusterSchemas() VirtualClusterSchemaInformer
 	// VirtualClusterTemplates returns a VirtualClusterTemplateInformer.
 	VirtualClusterTemplates() VirtualClusterTemplateInformer
-	// WorkspaceAccessKeys returns a WorkspaceAccessKeyInformer.
-	WorkspaceAccessKeys() WorkspaceAccessKeyInformer
 }
 
 type version struct {
@@ -240,11 +236,6 @@ func (v *version) ResetAccessKeys() ResetAccessKeyInformer {
 	return &resetAccessKeyInformer{factory: v.factory, tweakListOptions: v.tweakListOptions}
 }
 
-// Runners returns a RunnerInformer.
-func (v *version) Runners() RunnerInformer {
-	return &runnerInformer{factory: v.factory, tweakListOptions: v.tweakListOptions}
-}
-
 // Selves returns a SelfInformer.
 func (v *version) Selves() SelfInformer {
 	return &selfInformer{factory: v.factory, tweakListOptions: v.tweakListOptions}
@@ -308,9 +299,4 @@ func (v *version) VirtualClusterSchemas() VirtualClusterSchemaInformer {
 // VirtualClusterTemplates returns a VirtualClusterTemplateInformer.
 func (v *version) VirtualClusterTemplates() VirtualClusterTemplateInformer {
 	return &virtualClusterTemplateInformer{factory: v.factory, tweakListOptions: v.tweakListOptions}
-}
-
-// WorkspaceAccessKeys returns a WorkspaceAccessKeyInformer.
-func (v *version) WorkspaceAccessKeys() WorkspaceAccessKeyInformer {
-	return &workspaceAccessKeyInformer{factory: v.factory, tweakListOptions: v.tweakListOptions}
 }

@@ -21,11 +21,14 @@ type DevPodWorkspaceInstanceTask struct {
 	// Type is the type of the task
 	Type string `json:"type,omitempty"`
 
-	// Result is the result of the task
-	Result string `json:"result,omitempty"`
-
 	// Status is the status of the task
 	Status string `json:"status,omitempty"`
+
+	// Result is the result of the task
+	Result []byte `json:"result,omitempty"`
+
+	// Logs is the compressed logs of the task
+	Logs []byte `json:"logs,omitempty"`
 
 	// CreatedAt is the timestamp when the task was created
 	CreatedAt metav1.Time `json:"createdAt,omitempty"`
