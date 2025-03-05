@@ -61,11 +61,13 @@ func Delete(ctx context.Context, devPodConfig *config.Config, args []string, ign
 	// get instance status
 	if !force {
 		// lock workspace only if we don't force deletion
-		err := client.Lock(ctx)
-		if err != nil {
-			return "", err
+		if !deleteOptions.Platform.Enabled {
+			err := client.Lock(ctx)
+			if err != nil {
+				return "", err
+			}
+			defer client.Unlock()
 		}
-		defer client.Unlock()
 
 		// retrieve instance status
 		instanceStatus, err := client.Status(ctx, client2.StatusOptions{})

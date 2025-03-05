@@ -23,7 +23,6 @@ type StorageV1Interface interface {
 	DevPodWorkspaceTemplatesGetter
 	NetworkPeersGetter
 	ProjectsGetter
-	RunnersGetter
 	SharedSecretsGetter
 	SpaceInstancesGetter
 	SpaceTemplatesGetter
@@ -81,10 +80,6 @@ func (c *StorageV1Client) NetworkPeers() NetworkPeerInterface {
 
 func (c *StorageV1Client) Projects() ProjectInterface {
 	return newProjects(c)
-}
-
-func (c *StorageV1Client) Runners() RunnerInterface {
-	return newRunners(c)
 }
 
 func (c *StorageV1Client) SharedSecrets(namespace string) SharedSecretInterface {

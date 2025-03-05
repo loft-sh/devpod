@@ -6,7 +6,6 @@ import (
 	"io"
 	"os"
 
-	storagev1 "github.com/loft-sh/api/v4/pkg/apis/storage/v1"
 	"github.com/loft-sh/devpod/cmd/pro/flags"
 	"github.com/loft-sh/devpod/pkg/platform"
 	"github.com/loft-sh/devpod/pkg/platform/client"
@@ -58,7 +57,7 @@ func (cmd *SshCmd) Run(ctx context.Context, stdin io.Reader, stdout io.Writer, s
 		return fmt.Errorf("couldn't find workspace")
 	}
 
-	conn, err := platform.DialInstance(baseClient, workspace, "ssh", platform.OptionsFromEnv(storagev1.DevPodFlagsSsh), cmd.Log)
+	conn, err := platform.DialInstance(baseClient, workspace, "ssh", platform.OptionsFromEnv("DEVPOD_FLAGS_SSH"), cmd.Log)
 	if err != nil {
 		return err
 	}

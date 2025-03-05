@@ -20,12 +20,10 @@ import (
 	"github.com/loft-sh/devpod/pkg/agent/tunnelserver"
 	client2 "github.com/loft-sh/devpod/pkg/client"
 	"github.com/loft-sh/devpod/pkg/config"
-	daemon "github.com/loft-sh/devpod/pkg/daemon/platform"
 	"github.com/loft-sh/devpod/pkg/devcontainer"
 	"github.com/loft-sh/devpod/pkg/gpg"
 	"github.com/loft-sh/devpod/pkg/port"
 	"github.com/loft-sh/devpod/pkg/provider"
-	providerpkg "github.com/loft-sh/devpod/pkg/provider"
 	devssh "github.com/loft-sh/devpod/pkg/ssh"
 	"github.com/loft-sh/devpod/pkg/tunnel"
 	workspace2 "github.com/loft-sh/devpod/pkg/workspace"
@@ -182,30 +180,9 @@ func (cmd *SSHCmd) jumpContainerTailscale(
 		return cmd.reverseForwardPorts(ctx, toolSSHClient, log)
 	}
 
-	dir, err := providerpkg.GetDaemonDir(client.Context(), client.WorkspaceConfig().Provider.Name)
-	if err != nil {
-		return err
-	}
-
-	workspace, err := daemon.NewLocalClient(dir, devPodConfig.Current().DefaultProvider).GetWorkspace(ctx, client.WorkspaceConfig().UID)
-	if err != nil {
-		return err
-	}
-
 	configureDockerCredentials := devPodConfig.ContextOption(config.ContextOptionSSHInjectDockerCredentials) == "true"
 	configureGitCredentials := devPodConfig.ContextOption(config.ContextOptionSSHInjectGitCredentials) == "true"
 	configureGitSSHSignatureHelper := devPodConfig.ContextOption(config.ContextOptionGitSSHSignatureForwarding) == "true"
-
-	if workspace != nil && workspace.Status.Instance != nil && workspace.Status.Instance.CredentialForwarding != nil {
-		if workspace.Status.Instance.CredentialForwarding.Docker != nil {
-			configureDockerCredentials = !workspace.Status.Instance.CredentialForwarding.Docker.Disabled
-		}
-		if workspace.Status.Instance.CredentialForwarding.Git != nil {
-			configureGitCredentials = !workspace.Status.Instance.CredentialForwarding.Git.Disabled
-			configureGitSSHSignatureHelper = !workspace.Status.Instance.CredentialForwarding.Git.Disabled
-		}
-	}
-
 	if cmd.StartServices {
 		go cmd.startServices(
 			ctx,

@@ -118,10 +118,6 @@ type RegisterVirtualClusterListerExpansion interface{}
 // ResetAccessKeyLister.
 type ResetAccessKeyListerExpansion interface{}
 
-// RunnerListerExpansion allows custom methods to be added to
-// RunnerLister.
-type RunnerListerExpansion interface{}
-
 // SelfListerExpansion allows custom methods to be added to
 // SelfLister.
 type SelfListerExpansion interface{}
@@ -185,7 +181,3 @@ type VirtualClusterSchemaListerExpansion interface{}
 // VirtualClusterTemplateListerExpansion allows custom methods to be added to
 // VirtualClusterTemplateLister.
 type VirtualClusterTemplateListerExpansion interface{}
-
-// WorkspaceAccessKeyListerExpansion allows custom methods to be added to
-// WorkspaceAccessKeyLister.
-type WorkspaceAccessKeyListerExpansion interface{}
