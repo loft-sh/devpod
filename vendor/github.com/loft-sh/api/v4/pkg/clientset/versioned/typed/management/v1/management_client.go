@@ -39,7 +39,6 @@ type ManagementV1Interface interface {
 	RedirectTokensGetter
 	RegisterVirtualClustersGetter
 	ResetAccessKeysGetter
-	RunnersGetter
 	SelvesGetter
 	SelfSubjectAccessReviewsGetter
 	SharedSecretsGetter
@@ -53,7 +52,6 @@ type ManagementV1Interface interface {
 	VirtualClusterInstancesGetter
 	VirtualClusterSchemasGetter
 	VirtualClusterTemplatesGetter
-	WorkspaceAccessKeysGetter
 }
 
 // ManagementV1Client is used to interact with features provided by the management.loft.sh group.
@@ -169,10 +167,6 @@ func (c *ManagementV1Client) ResetAccessKeys() ResetAccessKeyInterface {
 	return newResetAccessKeys(c)
 }
 
-func (c *ManagementV1Client) Runners() RunnerInterface {
-	return newRunners(c)
-}
-
 func (c *ManagementV1Client) Selves() SelfInterface {
 	return newSelves(c)
 }
@@ -223,10 +217,6 @@ func (c *ManagementV1Client) VirtualClusterSchemas() VirtualClusterSchemaInterfa
 
 func (c *ManagementV1Client) VirtualClusterTemplates() VirtualClusterTemplateInterface {
 	return newVirtualClusterTemplates(c)
-}
-
-func (c *ManagementV1Client) WorkspaceAccessKeys() WorkspaceAccessKeyInterface {
-	return newWorkspaceAccessKeys(c)
 }
 
 // NewForConfig creates a new ManagementV1Client for the given config.

@@ -161,6 +161,10 @@ type NamespacePattern struct {
 	// VirtualCluster holds the namespace pattern to use for virtual cluster instances
 	// +optional
 	VirtualCluster string `json:"virtualCluster,omitempty"`
+
+	// DevPodWorkspace holds the namespace pattern to use for DevPod workspaces
+	// +optional
+	DevPodWorkspace string `json:"devPodWorkspace,omitempty"`
 }
 
 type Quotas struct {
@@ -516,34 +520,30 @@ type DevPodProjectSpec struct {
 	// +optional
 	Git *GitProjectSpec `json:"git,omitempty"`
 
-	// SSH defines additional ssh related settings like private keys, to be
-	// specified as base64 encoded strings.
-	// +optional
-	SSH *SSHProjectSpec `json:"ssh,omitempty"`
-
 	// FallbackImage defines an image all workspace will fall back to if no devcontainer.json could be detected
 	// +optional
 	FallbackImage string `json:"fallbackImage,omitempty"`
 }
 
 type GitProjectSpec struct {
-	// Token defines the token to use for authentication.
+	// HTTP defines additional http related settings like credentials, to be
+	// specified as base64 encoded strings.
 	// +optional
-	Token string `json:"token,omitempty"`
+	HTTP *GitProjectCredentials `json:"http,omitempty"`
 
-	// TokenSecretRef defines the project secret to use for token authentication.
-	// Will be used if `Token` is not provided.
+	// SSH defines additional ssh related settings like private keys, to be
+	// specified as base64 encoded strings.
 	// +optional
-	TokenProjectSecretRef *corev1.SecretKeySelector `json:"tokenSecretRef,omitempty"`
+	SSH *GitProjectCredentials `json:"ssh,omitempty"`
 }
 
-type SSHProjectSpec struct {
-	// Token defines the private ssh key to use for authentication,
+type GitProjectCredentials struct {
+	// Token defines the credentials to use for authentication,
 	// this is a base64 encoded string.
 	// +optional
 	Token string `json:"token,omitempty"`
 
-	// TokenSecretRef defines the project secret to use as private ssh key for authentication.
+	// TokenSecretRef defines the project secret to use as credentials for authentication.
 	// Will be used if `Token` is not provided.
 	// +optional
 	TokenProjectSecretRef *corev1.SecretKeySelector `json:"tokenSecretRef,omitempty"`

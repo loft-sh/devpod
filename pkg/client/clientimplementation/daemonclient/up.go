@@ -10,7 +10,6 @@ import (
 	storagev1 "github.com/loft-sh/api/v4/pkg/apis/storage/v1"
 	"github.com/loft-sh/apiserver/pkg/builders"
 	clientpkg "github.com/loft-sh/devpod/pkg/client"
-	"github.com/loft-sh/devpod/pkg/compress"
 	"github.com/loft-sh/devpod/pkg/devcontainer/config"
 	devpodlog "github.com/loft-sh/devpod/pkg/log"
 	"github.com/loft-sh/devpod/pkg/platform"
@@ -93,21 +92,15 @@ func (c *client) Up(ctx context.Context, opt clientpkg.UpOptions) (*config.Resul
 		Into(tasks)
 	if err != nil {
 		return nil, fmt.Errorf("error getting up result: %w", err)
-	} else if len(tasks.Tasks) == 0 || tasks.Tasks[0].Result == "" {
+	} else if len(tasks.Tasks) == 0 || tasks.Tasks[0].Result == nil {
 		return nil, fmt.Errorf("up result not found")
 	} else if len(tasks.Tasks) > 1 {
 		return nil, fmt.Errorf("multiple up results found")
 	}
 
-	// decompress result
-	compressedResult, err := compress.Decompress(tasks.Tasks[0].Result)
-	if err != nil {
-		return nil, fmt.Errorf("error decompressing up result: %w", err)
-	}
-
 	// unmarshal result
 	result := &config.Result{}
-	err = json.Unmarshal([]byte(compressedResult), result)
+	err = json.Unmarshal(tasks.Tasks[0].Result, result)
 	if err != nil {
 		return nil, fmt.Errorf("error unmarshalling up result: %w", err)
 	}

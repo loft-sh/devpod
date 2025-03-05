@@ -136,9 +136,13 @@ type ValidateOptions struct{}
 
 type StartOptions struct{}
 
-type StopOptions struct{}
+type StopOptions struct {
+	Platform provider.PlatformOptions `json:"platform,omitempty"`
+}
 
 type DeleteOptions struct {
+	Platform provider.PlatformOptions `json:"platform,omitempty"`
+
 	IgnoreNotFound bool   `json:"ignoreNotFound,omitempty"`
 	Force          bool   `json:"force,omitempty"`
 	GracePeriod    string `json:"gracePeriod,omitempty"`

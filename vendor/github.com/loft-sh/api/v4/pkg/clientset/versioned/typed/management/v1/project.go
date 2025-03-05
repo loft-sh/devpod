@@ -33,7 +33,6 @@ type ProjectInterface interface {
 	Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts metav1.PatchOptions, subresources ...string) (result *managementv1.Project, err error)
 	ListMembers(ctx context.Context, projectName string, options metav1.GetOptions) (*managementv1.ProjectMembers, error)
 	ListTemplates(ctx context.Context, projectName string, options metav1.GetOptions) (*managementv1.ProjectTemplates, error)
-	ListRunners(ctx context.Context, projectName string, options metav1.GetOptions) (*managementv1.ProjectRunners, error)
 	ListClusters(ctx context.Context, projectName string, options metav1.GetOptions) (*managementv1.ProjectClusters, error)
 	MigrateVirtualClusterInstance(ctx context.Context, projectName string, projectMigrateVirtualClusterInstance *managementv1.ProjectMigrateVirtualClusterInstance, opts metav1.CreateOptions) (*managementv1.ProjectMigrateVirtualClusterInstance, error)
 	ImportSpace(ctx context.Context, projectName string, projectImportSpace *managementv1.ProjectImportSpace, opts metav1.CreateOptions) (*managementv1.ProjectImportSpace, error)
@@ -81,19 +80,6 @@ func (c *projects) ListTemplates(ctx context.Context, projectName string, option
 		Resource("projects").
 		Name(projectName).
 		SubResource("templates").
-		VersionedParams(&options, scheme.ParameterCodec).
-		Do(ctx).
-		Into(result)
-	return
-}
-
-// ListRunners takes name of the project, and returns the corresponding managementv1.ProjectRunners object, and an error if there is any.
-func (c *projects) ListRunners(ctx context.Context, projectName string, options metav1.GetOptions) (result *managementv1.ProjectRunners, err error) {
-	result = &managementv1.ProjectRunners{}
-	err = c.GetClient().Get().
-		Resource("projects").
-		Name(projectName).
-		SubResource("runners").
 		VersionedParams(&options, scheme.ParameterCodec).
 		Do(ctx).
 		Into(result)

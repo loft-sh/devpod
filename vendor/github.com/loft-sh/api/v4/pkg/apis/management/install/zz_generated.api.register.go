@@ -55,7 +55,6 @@ func addKnownTypes(scheme *runtime.Scheme) error {
 		&management.DevPodWorkspaceInstance{},
 		&management.DevPodWorkspaceInstanceList{},
 		&management.DevPodWorkspaceInstanceLog{},
-		&management.DevPodWorkspaceInstanceState{},
 		&management.DevPodWorkspaceInstanceStop{},
 		&management.DevPodWorkspaceInstanceTasks{},
 		&management.DevPodWorkspaceInstanceTroubleshoot{},
@@ -94,7 +93,6 @@ func addKnownTypes(scheme *runtime.Scheme) error {
 		&management.ProjectMembers{},
 		&management.ProjectMigrateSpaceInstance{},
 		&management.ProjectMigrateVirtualClusterInstance{},
-		&management.ProjectRunners{},
 		&management.ProjectTemplates{},
 		&management.ProjectSecret{},
 		&management.ProjectSecretList{},
@@ -104,10 +102,6 @@ func addKnownTypes(scheme *runtime.Scheme) error {
 		&management.RegisterVirtualClusterList{},
 		&management.ResetAccessKey{},
 		&management.ResetAccessKeyList{},
-		&management.Runner{},
-		&management.RunnerList{},
-		&management.RunnerAccessKey{},
-		&management.RunnerConfig{},
 		&management.Self{},
 		&management.SelfList{},
 		&management.SelfSubjectAccessReview{},
@@ -145,8 +139,6 @@ func addKnownTypes(scheme *runtime.Scheme) error {
 		&management.VirtualClusterSchemaList{},
 		&management.VirtualClusterTemplate{},
 		&management.VirtualClusterTemplateList{},
-		&management.WorkspaceAccessKey{},
-		&management.WorkspaceAccessKeyList{},
 	)
 	return nil
 }
