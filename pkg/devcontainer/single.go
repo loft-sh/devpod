@@ -21,6 +21,12 @@ const (
 	RemoteContainersExtraEnvVar = "REMOTE_CONTAINERS"
 	WorkspaceIDExtraEnvVar      = "DEVPOD_WORKSPACE_ID"
 	WorkspaceUIDExtraEnvVar     = "DEVPOD_WORKSPACE_UID"
+	TimeoutExtraEnvVar          = "DEVPOD_TIMEOUT"
+	AccessKeyExtraEnvVar        = "DEVPOD_ACCESS_KEY"
+	PlatformHostExtraEnvVar     = "DEVPOD_PLATFORM_HOST"
+	WorkspaceHostExtraEnvVar    = "DEVPOD_WORKSPACE_HOST"
+
+	DefaultEntrypointLoop = "while sleep 1 & wait $!; do :; done"
 )
 
 func (r *runner) runSingleContainer(
@@ -81,6 +87,7 @@ func (r *runner) runSingleContainer(
 			}
 		}
 	} else {
+
 		// we need to build the container
 		buildInfo, err := r.build(ctx, parsedConfig, substitutionContext, provider2.BuildOptions{
 			CLIOptions: provider2.CLIOptions{
@@ -107,6 +114,25 @@ func (r *runner) runSingleContainer(
 		mergedConfig, err = config.MergeConfiguration(parsedConfig.Config, buildInfo.ImageMetadata.Config)
 		if err != nil {
 			return nil, errors.Wrap(err, "merge config")
+		}
+
+		// Inject the daemon entrypoint if platform configuration is provided.
+		if options.CLIOptions.Platform.AccessKey != "" {
+			r.Log.Debugf("Platform config detected, injecting DevPod daemon entrypoint.")
+
+			// Wait for the devpod binary to be injected at /usr/local/bin/devpod,
+			// then execute the daemon as PID 1.
+			daemonEntrypoint := `
+while ! command -v /usr/local/bin/devpod >/dev/null 2>&1; do
+  echo "Waiting for devpod tool..."
+  sleep 1
+done
+exec /usr/local/bin/devpod agent container daemon`
+
+			mergedConfig.Entrypoints = append(mergedConfig.Entrypoints, daemonEntrypoint)
+			mergedConfig.ContainerEnv[AccessKeyExtraEnvVar] = options.CLIOptions.Platform.AccessKey
+			mergedConfig.ContainerEnv[PlatformHostExtraEnvVar] = options.CLIOptions.Platform.PlatformHost
+			mergedConfig.ContainerEnv[WorkspaceHostExtraEnvVar] = options.CLIOptions.Platform.WorkspaceHost
 		}
 
 		// run dev container
@@ -318,11 +344,13 @@ func (r *runner) addExtraEnvVars(env map[string]string) map[string]string {
 
 func GetStartScript(mergedConfig *config.MergedDevContainerConfig) string {
 	customEntrypoints := mergedConfig.Entrypoints
+	if len(customEntrypoints) == 0 {
+		customEntrypoints = append(customEntrypoints, DefaultEntrypointLoop)
+	}
 	return `echo Container started
 trap "exit 0" 15
-` + strings.Join(customEntrypoints, "\n") + `
 exec "$@"
-while sleep 1 & wait $!; do :; done`
+` + strings.Join(customEntrypoints, "\n")
 }
 
 func GetContainerEntrypointAndArgs(mergedConfig *config.MergedDevContainerConfig, imageDetails *config.ImageDetails) (string, []string) {
