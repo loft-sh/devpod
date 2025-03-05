@@ -13,6 +13,7 @@ import { Select } from "./select"
 import { Switch } from "./switch"
 import { Tabs } from "./tabs"
 import { Tag } from "./tag"
+import { Text } from "./text"
 
 const Code = defineStyleConfig({
   variants: {
@@ -27,10 +28,13 @@ const Code = defineStyleConfig({
 
 const Link = defineStyleConfig({
   defaultProps: {
-    variant: "muted",
+    variant: "primary",
   },
   variants: {
     muted(props) {
+      return { color: mode("gray.600", "gray.400")(props) }
+    },
+    primary(props) {
       const primary = props.theme.colors.primary
 
       return { color: mode(primary["800"], primary["400"])(props) }
@@ -81,12 +85,28 @@ export const theme = extendTheme({
   },
   colors: {
     primary: {
-      200: "#E4ADFF",
-      400: "#CA60FF",
-      500: "#BA50FF",
-      600: "#AA40EE",
-      800: "#8E00EB",
+      50: "#F8EFFF",
+      100: "#F0DFFF",
+      200: "#D8ABFF",
+      300: "#BF76FF",
+      400: "#B157FF",
+      500: "#A640FF",
+      600: "#9B29FF",
+      700: "#8600DC",
+      800: "#7100B9",
       900: "#40006A",
+    },
+    gray: {
+      50: "#F7F5F9",
+      100: "#ECE8F0",
+      200: "#DCD6E1",
+      300: "#C5BFC9",
+      400: "#ABA5B0",
+      500: "#948E99",
+      600: "#7C7581",
+      700: "#655E69",
+      800: "#4A464D",
+      900: "#2C2630",
     },
     text: {
       secondary: "#465E75",
@@ -122,5 +142,6 @@ export const theme = extendTheme({
     Tag,
     Input,
     Select,
+    Text,
   },
 } satisfies ThemeOverride) as Theme

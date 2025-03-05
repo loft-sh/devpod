@@ -21,8 +21,8 @@ import {
   Text,
   VStack,
   useColorMode,
-  useColorModeValue,
 } from "@chakra-ui/react"
+import { compareVersions } from "compare-versions"
 import { ReactNode, useEffect, useMemo, useState } from "react"
 import { HiMagnifyingGlassPlus } from "react-icons/hi2"
 import { client } from "../../client"
@@ -52,7 +52,6 @@ import {
   useProxyOptions,
   useSSHKeySignatureOption,
 } from "./useSettingsOptions"
-import { compareVersions } from "compare-versions"
 
 const SETTINGS_TABS = [
   { label: "General", component: <GeneralSettings /> },
@@ -510,10 +509,8 @@ function ExperimentalSettings() {
 
 type TSettingDescriptionProps = Readonly<{ children: ReactNode }>
 function SettingDescription({ children }: TSettingDescriptionProps) {
-  const descriptionColor = useColorModeValue("gray.500", "gray.400")
-
   return (
-    <Text color={descriptionColor} fontSize="sm">
+    <Text color={"gray.600"} _dark={{ color: "gray.300" }} fontSize="sm">
       {children}
     </Text>
   )

@@ -86,15 +86,14 @@ export function ContextSwitcher({
   const handleConnectPlatform = () => {
     handleConnectClicked()
   }
-  const buttonColor = useColorModeValue("gray.700", "gray.200")
   const hoverBgColor = useColorModeValue("gray.100", "gray.700")
-  const projectsColor = useColorModeValue("gray.500", "gray.400")
+  const projectsColor = useColorModeValue("gray.600", "gray.300")
 
   return (
     <>
       <Popover>
         <PopoverTrigger>
-          <Button variant="ghost" color={buttonColor} rightIcon={<ArrowUpDownIcon />}>
+          <Button variant="ghost" rightIcon={<ArrowUpDownIcon />}>
             {getDisplayName(currentProject, "Unknown Project")}
           </Button>
         </PopoverTrigger>

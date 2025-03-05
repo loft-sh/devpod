@@ -150,10 +150,9 @@ export function CreateWorkspace() {
     }
   }, [providers, showSetupProviderModal, wasDismissed])
 
-  const backgroundColor = useColorModeValue("gray.50", "gray.800")
+  const backgroundColor = useColorModeValue("gray.50", "gray.900")
   const borderColor = useBorderColor()
   const bottomBarBackgroundColor = useColorModeValue("white", "background.darkest")
-  const textColor = useColorModeValue("gray.500", "gray.300")
   const { colorMode } = useColorMode()
 
   return (
@@ -168,6 +167,7 @@ export function CreateWorkspace() {
             borderWidth="thin"
             borderColor={borderColor}>
             <FormControl
+              borderLeftRadius="lg"
               backgroundColor={backgroundColor}
               paddingX="20"
               paddingY="20"
@@ -224,7 +224,6 @@ export function CreateWorkspace() {
                 borderBottomWidth="thin"
                 borderColor={borderColor}
                 width="full"
-                color={textColor}
                 marginBottom="4"
                 fontWeight="medium"
                 textAlign="center">

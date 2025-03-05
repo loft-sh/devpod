@@ -58,7 +58,6 @@ type TProAppContentProps = Readonly<{ host: string }>
 function ProAppContent({ host }: TProAppContentProps) {
   const connectionStatus = useConnectionStatus()
   const versionInfo = usePlatformVersion()
-  const iconColor = useColorModeValue("primary.600", "primary.400")
 
   return (
     <ProLayout
@@ -79,12 +78,18 @@ function ProAppContent({ host }: TProAppContentProps) {
                 size="md"
                 rounded="full"
                 aria-label="Go to settings"
-                icon={<CogDuotone color={iconColor} />}
+                icon={<CogDuotone color={"primary.600"} _dark={{ color: "primary.300" }} />}
               />
             </Link>
             <Notifications
               getActionDestination={(action) => Routes.toProWorkspace(host, action.targetID)}
-              icon={<BellDuotone color={iconColor} position="absolute" />}
+              icon={
+                <BellDuotone
+                  color={"primary.600"}
+                  _dark={{ color: "primary.300" }}
+                  position="absolute"
+                />
+              }
             />
           </HStack>
         </>

@@ -33,7 +33,7 @@ export function BottomActionBar({
   children,
 }: TModalBottomBarProps) {
   const ref = useRef<HTMLDivElement>(null)
-  const bottomBarBackgroundColor = useColorModeValue("white", "gray.800")
+  const bottomBarBackgroundColor = useColorModeValue("white", "gray.900")
   const bottomBarBackgroundColorModal = useColorModeValue("white", "background.darkest")
   const borderColor = useBorderColor()
   const translateX = useBreakpointValue({

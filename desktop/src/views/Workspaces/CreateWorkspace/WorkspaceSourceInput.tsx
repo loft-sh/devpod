@@ -68,8 +68,7 @@ export function WorkspaceSourceInput({
   sourceType,
   onSourceTypeChanged,
 }: TWorkspaceSourceInputProps) {
-  const inputBackgroundColor = useColorModeValue("white", "black")
-  const tabBgColor = useColorModeValue("white", "gray.700")
+  const inputBackgroundColor = useColorModeValue("white", "background.darkest")
   const borderColor = useBorderColor()
   const typeTabIndex = SOURCE_TYPE_MAP[sourceType]
   const handleSourceTypeChanged = (index: number) => {
@@ -221,20 +220,20 @@ export function WorkspaceSourceInput({
               <PopoverArrow />
               <VStack>
                 <Tabs
-                  variant="muted"
+                  variant="muted-popover"
                   size="sm"
                   index={tabIndex}
                   onChange={handleAdvancedOptionTabChanged}>
                   <TabList>
-                    <Tab bg={tabBgColor}>Branch</Tab>
-                    <Tab bg={tabBgColor}>Commit</Tab>
-                    <Tab isDisabled={!allowPullRequest} bg={tabBgColor}>
+                    <Tab>Branch</Tab>
+                    <Tab>Commit</Tab>
+                    <Tab isDisabled={!allowPullRequest}>
                       <Tooltip
                         label={!allowPullRequest ? "Pull request reference must be a number" : ""}>
                         Pull Request
                       </Tooltip>
                     </Tab>
-                    <Tab bg={tabBgColor}>Sub Folder</Tab>
+                    <Tab>Sub Folder</Tab>
                   </TabList>
                   <TabPanels paddingTop="2">
                     <Tooltip

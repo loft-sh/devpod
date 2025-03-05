@@ -9,7 +9,7 @@ export const Tag = defineMultiStyleConfig({
     return {
       container: {
         bg: mode("gray.200", "gray.700")(props),
-        color: mode("gray.700", "gray.200")(props),
+        color: mode("gray.800", "gray.100")(props),
       },
     }
   }),

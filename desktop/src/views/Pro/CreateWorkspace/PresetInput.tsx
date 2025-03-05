@@ -1,4 +1,5 @@
-import { ManagementV1DevPodWorkspacePreset } from "@loft-enterprise/client/gen/models/managementV1DevPodWorkspacePreset"
+import { useBorderColor } from "@/Theme"
+import { presetDisplayName } from "@/views/Pro/helpers"
 import {
   Box,
   Menu,
@@ -8,10 +9,9 @@ import {
   Portal,
   Spinner,
   useColorModeValue,
-  useToken,
 } from "@chakra-ui/react"
+import { ManagementV1DevPodWorkspacePreset } from "@loft-enterprise/client/gen/models/managementV1DevPodWorkspacePreset"
 import { AiOutlineCodeSandbox } from "react-icons/ai"
-import { presetDisplayName } from "@/views/Pro/helpers"
 
 type TPresetInputProps = Readonly<{
   preset?: ManagementV1DevPodWorkspacePreset
@@ -21,8 +21,8 @@ type TPresetInputProps = Readonly<{
   isUpdate?: boolean
 }>
 export function PresetInput({ preset, presets, loading, isUpdate, setPreset }: TPresetInputProps) {
-  const primaryColor = useToken("colors", "primary.500")
-  const unusedColor = useToken("colors", "divider.main")
+  const selectedColor = useColorModeValue("primary.500", "primary.300")
+  const unusedColor = useBorderColor()
   const textColor = useColorModeValue("gray.800", "gray.200")
 
   const displayName = presetDisplayName(preset)
@@ -41,8 +41,8 @@ export function PresetInput({ preset, presets, loading, isUpdate, setPreset }: T
       borderRadius={"4px"}
       transitionProperty={"border-color,color"}
       transitionDuration={"0.3s"}
-      color={displayName ? primaryColor : unusedColor}
-      borderColor={displayName ? primaryColor : unusedColor}>
+      color={displayName ? selectedColor : unusedColor}
+      borderColor={displayName ? selectedColor : unusedColor}>
       <AiOutlineCodeSandbox opacity={0.7} size={"24"} />
       <Box color={textColor} fontWeight={displayName ? "semibold" : undefined}>
         {displayName ?? "No preset selected"}
@@ -51,14 +51,19 @@ export function PresetInput({ preset, presets, loading, isUpdate, setPreset }: T
       {!isUpdate && (
         <Box ml={"auto"}>
           <Menu>
-            <MenuButton as={Box} cursor={"pointer"} fontWeight={"semibold"} color={primaryColor}>
+            <MenuButton
+              as={Box}
+              cursor={"pointer"}
+              fontWeight={"semibold"}
+              color={"primary.500"}
+              _dark={{ color: "primary.300" }}>
               Change Preset
             </MenuButton>
             <Portal>
               <MenuList zIndex={"popover"}>
                 <MenuItem
                   fontSize={"md"}
-                  color={"text.tertiary"}
+                  color={"gray.500"}
                   onClick={() => {
                     setPreset?.(undefined)
                   }}>

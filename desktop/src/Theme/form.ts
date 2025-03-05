@@ -7,8 +7,17 @@ export const Form = defineMultiStyleConfig({
   baseStyle: definePartsStyle((props) => {
     return {
       helperText: {
-        color: mode("gray.500", "gray.400")(props),
+        color: mode("gray.500", "gray.300")(props),
       },
     }
   }),
+  variants: {
+    contrast: definePartsStyle((props) => {
+      return {
+        helperText: {
+          color: mode("gray.600", "gray.300")(props),
+        },
+      }
+    }),
+  },
 })

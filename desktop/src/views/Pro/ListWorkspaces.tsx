@@ -1,6 +1,7 @@
 import { TWorkspaceStatusFilterState, WorkspaceSorter, WorkspaceStatusFilter } from "@/components"
 import { DeleteWorkspacesModal } from "@/components/DeleteWorkspacesModal"
 import { WorkspaceListSelection } from "@/components/ListSelection"
+import { WorkspaceOwnerFilter } from "@/components/WorkspaceOwnerFilter"
 import {
   ProWorkspaceInstance,
   useProContext,
@@ -11,6 +12,7 @@ import {
 import { IWorkspaceStore } from "@/contexts/DevPodContext/workspaceStore"
 import { removeWorkspaceAction, stopWorkspaceAction } from "@/contexts/DevPodContext/workspaces"
 import { DevPodIcon } from "@/icons"
+import { default as EmptyDarkImage, default as EmptyImage } from "@/images/empty_default.svg"
 import emptyWorkspacesImage from "@/images/empty_workspaces.svg"
 import emptyWorkspacesDarkImage from "@/images/empty_workspaces_dark.svg"
 import {
@@ -37,13 +39,10 @@ import {
   useColorModeValue,
   useDisclosure,
 } from "@chakra-ui/react"
+import { ManagementV1Self } from "@loft-enterprise/client/gen/models/managementV1Self"
 import { useCallback, useEffect, useId, useMemo, useState } from "react"
 import { useNavigate } from "react-router"
 import { WorkspaceInstanceCard } from "./Workspace"
-
-import { WorkspaceOwnerFilter } from "@/components/WorkspaceOwnerFilter"
-import EmptyImage from "@/images/empty-default.svg"
-import { ManagementV1Self } from "@loft-enterprise/client/gen/models/managementV1Self"
 
 export function ListWorkspaces() {
   const { store } = useWorkspaceStore<IWorkspaceStore<string, ProWorkspaceInstance>>()
@@ -200,7 +199,7 @@ export function ListWorkspaces() {
                   justifyContent={"center"}
                   alignItems={"center"}
                   flexGrow={1}>
-                  <Image src={EmptyImage} />
+                  <Image src={colorMode == "dark" ? EmptyDarkImage : EmptyImage} />
                   <Text fontWeight={"semibold"} fontSize={"sm"} color={"text.secondary"}>
                     No items found
                   </Text>
@@ -239,8 +238,7 @@ export function ListWorkspaces() {
               />
 
               <Button
-                variant="solid"
-                colorScheme="primary"
+                variant="primary"
                 leftIcon={<DevPodIcon boxSize={5} />}
                 onClick={handleCreateClicked}>
                 Create Workspace

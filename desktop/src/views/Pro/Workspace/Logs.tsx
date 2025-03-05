@@ -23,6 +23,7 @@ import {
   Text,
   Tooltip,
   VStack,
+  useColorMode,
   useColorModeValue,
 } from "@chakra-ui/react"
 import dayjs from "dayjs"
@@ -31,11 +32,13 @@ import { HiStop } from "react-icons/hi"
 import { Link as RouterLink, useLocation } from "react-router-dom"
 import { TTabProps } from "./types"
 import { TSearchOptions } from "@/components/Terminal/useTerminalSearch"
-import EmptyImage from "@/images/empty-default.svg"
+import EmptyImage from "@/images/empty_default.svg"
+import EmptyDarkImage from "@/images/empty_default.svg"
 
 export function Logs({ host, instance }: TTabProps) {
   const [accordionIndex, setAccordionIndex] = useState<number>(0)
   const actions = useWorkspaceActions(instance.id)
+  const { colorMode } = useColorMode()
 
   const location = useLocation()
 
@@ -54,7 +57,7 @@ export function Logs({ host, instance }: TTabProps) {
     <VStack align="start" w="full" h={"full"}>
       {!actions?.length ? (
         <VStack h={"full"} w={"full"} justifyContent={"center"} alignItems={"center"} flexGrow={1}>
-          <Image src={EmptyImage} />
+          <Image src={colorMode == "dark" ? EmptyDarkImage : EmptyImage} />
           <Text fontWeight={"semibold"} fontSize={"sm"} color={"text.secondary"}>
             No logs to show yet
           </Text>

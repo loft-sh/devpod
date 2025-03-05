@@ -19,4 +19,28 @@ export const Select = defineMultiStyleConfig({
       },
     },
   }),
+  variants: {
+    outline: definePartsStyle(() => {
+      return {
+        addon: {
+          border: "",
+          borderWidth: "thin",
+          borderStyle: "solid",
+          borderColor: "gray.200",
+          _dark: {
+            borderColor: "gray.700",
+          },
+        },
+        field: {
+          border: "",
+          borderWidth: "thin",
+          borderStyle: "solid",
+          borderColor: "gray.200",
+          _dark: {
+            borderColor: "gray.700",
+          },
+        },
+      }
+    }),
+  },
 })

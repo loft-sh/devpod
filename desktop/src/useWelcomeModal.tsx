@@ -10,7 +10,6 @@ import {
   ModalFooter,
   ModalOverlay,
   Text,
-  useColorModeValue,
   useDisclosure,
   VStack,
 } from "@chakra-ui/react"
@@ -61,7 +60,6 @@ export function useWelcomeModal() {
       listenerPromise.then((unsubscribe) => unsubscribe())
     }
   }, [isOpen, onClose, onOpen])
-  const textColor = useColorModeValue("gray.500", "gray.400")
 
   const modal = useMemo(() => {
     return (
@@ -124,7 +122,7 @@ export function useWelcomeModal() {
                     </Link>{" "}
                     or directly add it to your <Code>$PATH</Code>.
                     <br />
-                    <Text as="span" color={textColor}>
+                    <Text as="span" variant="muted">
                       Feel free to skip this step. You can always install the CLI from the{" "}
                       <Code variant="decorative">Settings</Code> tab.
                     </Text>
@@ -134,7 +132,7 @@ export function useWelcomeModal() {
                       {installCLIButton}
                       {installCLIBadge}
                     </HStack>
-                    <Text color={textColor} fontSize="sm">
+                    <Text variant="muted" fontSize="sm">
                       {installCLIHelpText}
                     </Text>
                   </VStack>
@@ -171,7 +169,6 @@ export function useWelcomeModal() {
     isCancellable,
     isOpen,
     onClose,
-    textColor,
   ])
 
   const show = useCallback(

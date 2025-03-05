@@ -83,11 +83,10 @@ export function SidebarMenuItem({ to, children, icon: iconProps }: TSidebarMenuP
   const settings = useSettings()
   const backgroundColorToken = useColorModeValue("gray.300", "gray.700")
   const backgroundColor = useToken("colors", backgroundColorToken)
-  const borderColorToken = useColorModeValue("blackAlpha.200", "whiteAlpha.300")
+  const borderColorToken = useColorModeValue("primary.600", "primary.600")
   const borderColor = useToken("colors", borderColorToken)
-  const backgroundActiveColor = useToken("colors", "primary.400")
-  const activeTextColorToken = useColorModeValue("white", "gray.900")
-  const activeTextColor = useToken("colors", activeTextColorToken)
+  const backgroundActiveColorToken = useColorModeValue("primary.500", "primary.700")
+  const backgroundActiveColor = useToken("colors", backgroundActiveColorToken)
   const isLeft = settings.sidebarPosition === "left"
   const icon = cloneElement(iconProps, { boxSize: 4 })
 
@@ -111,13 +110,15 @@ export function SidebarMenuItem({ to, children, icon: iconProps }: TSidebarMenuP
         borderColor="transparent"
         opacity={0.8}
         fontSize="md"
+        color="gray.900"
+        _dark={{ color: "gray.100" }}
         _hover={{ textDecoration: "none", backgroundColor }}
         // @ts-ignore // this function is added by react-router-dom's `NavLink`
         style={({ isActive }) => ({
           ...(isActive
             ? {
                 backgroundColor: backgroundActiveColor,
-                color: activeTextColor,
+                color: "white",
                 borderColor,
                 opacity: 1,
               }

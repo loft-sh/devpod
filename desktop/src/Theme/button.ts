@@ -8,10 +8,11 @@ export const Button = defineStyleConfig({
   variants: {
     primary(props) {
       return {
-        color: mode("white", "gray.900")(props),
+        color: mode("white", "gray.50")(props),
         borderColor: "primary.600",
         _dark: {
-          borderColor: "primary.600",
+          borderColor: "primary.500",
+          backgroundColor: "primary.600",
         },
         borderWidth: 1,
         backgroundColor: "primary.500",
@@ -21,7 +22,7 @@ export const Button = defineStyleConfig({
             background: "primary.500",
           },
           _dark: {
-            backgroundColor: "primary.600",
+            backgroundColor: "primary.700",
           },
         },
       }
@@ -47,7 +48,7 @@ export const Button = defineStyleConfig({
     solid(props) {
       return {
         _dark: {
-          bg: "gray.600",
+          bg: "gray.800",
         },
         _hover: {
           _dark: {
@@ -63,7 +64,7 @@ export const Button = defineStyleConfig({
     },
     ["solid-outline"](props) {
       return {
-        color: mode("gray.600", "gray.400")(props),
+        color: mode("gray.800", "gray.100")(props),
         borderColor: mode("gray.200", "gray.700")(props),
         borderWidth: 1,
         ".chakra-button__group[data-attached][data-orientation=horizontal] > &:not(:last-of-type)":
@@ -113,6 +114,20 @@ export const Button = defineStyleConfig({
           bg: "gray.800",
           _dark: {
             bg: "gray.500",
+          },
+        },
+      }
+    },
+    ghost(props) {
+      return {
+        _hover: {
+          _dark: {
+            bg: props.colorScheme == "primary" ? "" : "gray.700",
+          },
+        },
+        _active: {
+          _dark: {
+            bg: props.colorScheme == "primary" ? "" : "gray.800",
           },
         },
       }

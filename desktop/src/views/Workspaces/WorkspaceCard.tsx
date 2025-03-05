@@ -1,3 +1,5 @@
+import { Template } from "@/icons"
+import { useStoreTroubleshoot } from "@/lib/useStoreTroubleshoot"
 import {
   Box,
   Card,
@@ -12,10 +14,10 @@ import {
   ModalHeader,
   ModalOverlay,
   Text,
-  useColorModeValue,
   useDisclosure,
 } from "@chakra-ui/react"
 import { useCallback, useMemo, useRef, useState } from "react"
+import { HiServerStack } from "react-icons/hi2"
 import { useNavigate } from "react-router"
 import { IconTag, WorkspaceCardHeader } from "../../components"
 import {
@@ -36,14 +38,11 @@ import {
 import { Routes } from "../../routes"
 import { TProvider, TWorkspace, TWorkspaceID } from "../../types"
 import { useIDEs } from "../../useIDEs"
+import { ConfigureProviderOptionsForm } from "../Providers"
+import { processDisplayOptions } from "../Providers/AddProvider/useProviderOptions"
+import { TOptionWithID, mergeOptionDefinitions } from "../Providers/helpers"
 import { WorkspaceControls } from "./WorkspaceControls"
 import { WorkspaceStatusBadge } from "./WorkspaceStatusBadge"
-import { ConfigureProviderOptionsForm } from "../Providers"
-import { Template } from "@/icons"
-import { HiServerStack } from "react-icons/hi2"
-import { TOptionWithID, mergeOptionDefinitions } from "../Providers/helpers"
-import { processDisplayOptions } from "../Providers/AddProvider/useProviderOptions"
-import { useStoreTroubleshoot } from "@/lib/useStoreTroubleshoot"
 
 type TWorkspaceCardProps = Readonly<{
   workspaceID: TWorkspaceID
@@ -59,7 +58,6 @@ export function WorkspaceCard({ workspaceID, isSelected, onSelectionChange }: TW
   const workspace = useWorkspace<TWorkspace>(workspaceID)
   const workspaceName = workspace.data?.id ?? ""
   const workspaceActions = useWorkspaceActions(workspaceName)
-  const selectedBgColor = useColorModeValue("gray.50", "gray.800")
   const navigateToAction = useCallback(
     (actionID: TActionID | undefined) => {
       if (actionID !== undefined && actionID !== "") {
@@ -195,7 +193,6 @@ export function WorkspaceCard({ workspaceID, isSelected, onSelectionChange }: TW
   }
 
   const isLoading = workspace.current?.status === "pending"
-  const sourceTextColor = useColorModeValue("gray.500", "gray.300")
 
   if (workspace.data === undefined) {
     return null
@@ -213,7 +210,6 @@ export function WorkspaceCard({ workspaceID, isSelected, onSelectionChange }: TW
         width="full"
         maxWidth="60rem"
         variant="outline"
-        backgroundColor={isSelected ? selectedBgColor : "transparent"}
         marginBottom="3">
         <CardHeader overflow="hidden" w="full">
           <WorkspaceCardHeader
@@ -222,7 +218,8 @@ export function WorkspaceCard({ workspaceID, isSelected, onSelectionChange }: TW
               workspace.data.source && (
                 <Text
                   fontSize="sm"
-                  color={sourceTextColor}
+                  color={"gray.600"}
+                  _dark={{ color: "gray.300" }}
                   userSelect="text"
                   maxWidth="30rem"
                   overflow="hidden"

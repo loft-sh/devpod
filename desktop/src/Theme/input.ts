@@ -5,18 +5,22 @@ const { definePartsStyle, defineMultiStyleConfig } = createMultiStyleConfigHelpe
   inputAnatomy.keys
 )
 export const Input = defineMultiStyleConfig({
-  baseStyle: definePartsStyle({
-    addon: {
-      borderColor: "gray.200",
-      _dark: {
-        borderColor: "gray.700",
-      },
-    },
-    field: {
-      borderColor: "gray.200",
-      _dark: {
-        borderColor: "gray.700",
-      },
-    },
-  }),
+  variants: {
+    outline: definePartsStyle(() => {
+      return {
+        addon: {
+          borderColor: "gray.200",
+          _dark: {
+            borderColor: "gray.800",
+          },
+        },
+        field: {
+          borderColor: "gray.200",
+          _dark: {
+            borderColor: "gray.800",
+          },
+        },
+      }
+    }),
+  },
 })

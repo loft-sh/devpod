@@ -39,14 +39,13 @@ type TIDECardProps = Readonly<{
   onClick: VoidFunction
 }>
 function IDECard({ name, isSelected, icon, onClick }: TIDECardProps) {
-  const color = useColorModeValue("gray.600", "gray.300")
   const iconColor = useColorModeValue("gray.700", "gray.500")
 
   let content = icon
   if (name === "None") {
     content = (
       <HStack px="2" py="0" align="center" justify="center" h="full" w="full">
-        <Text fontWeight="medium" color={color}>
+        <Text fontWeight="medium" variant="contrast">
           SSH
         </Text>
         <Tooltip label="Selecting SSH only adds an entry in the form of `$workspace.devpod` to your SSH configuration. You can connect to it using your terminal or IDEs that aren't supported by DevPod but support SSH connections.">
@@ -72,7 +71,16 @@ function IDECard({ name, isSelected, icon, onClick }: TIDECardProps) {
         position="relative"
         overflow="hidden"
         padding="1"
-        {...(isSelected ? { borderColor: "primary.500", borderWidth: "2px" } : {})}
+        {...(isSelected
+          ? {
+              borderColor: "primary.500",
+              borderWidth: "2px",
+              _dark: {
+                borderColor: "primary.500",
+                bg: "gray.800",
+              },
+            }
+          : {})}
         {...(!isSelected ? { onClick } : {})}>
         {content}
       </Card>

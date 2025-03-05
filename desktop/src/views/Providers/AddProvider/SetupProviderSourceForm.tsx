@@ -229,7 +229,6 @@ export function SetupProviderSourceForm({
   const genericProviders = RECOMMENDED_PROVIDER_SOURCES.filter((p) => p.group === "generic")
   const cloudProviders = RECOMMENDED_PROVIDER_SOURCES.filter((p) => p.group === "cloud")
   const communityProviders = contributions?.providers
-  const textColor = useColorModeValue("gray.500", "gray.300")
 
   return (
     <>
@@ -344,7 +343,7 @@ export function SetupProviderSourceForm({
             </HStack>
           </FormControl>
 
-          <Container color="gray.600" maxWidth="container.md">
+          <Container color="gray.700" _dark={{ color: "gray.200" }} maxWidth="container.md">
             {showCustom.manual && (
               <FormControl isRequired isInvalid={exists(providerSourceError)}>
                 <FormLabel>Source</FormLabel>
@@ -373,10 +372,8 @@ export function SetupProviderSourceForm({
 
             {!formState.isDirty && (
               <>
-                <Text color={textColor} fontWeight="bold">
-                  Choose your provider
-                </Text>
-                <Text color={textColor} marginBottom="8">
+                <Text fontWeight="bold">Choose your provider</Text>
+                <Text marginBottom="8">
                   Providers determine how and where your workspaces run. They connect to the cloud
                   platform - or local environment - of your choice and spin up your workspaces. You
                   can choose from a number of pre-built providers, or connect your own.

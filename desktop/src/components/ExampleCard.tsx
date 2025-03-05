@@ -6,7 +6,6 @@ import {
   Text,
   Tooltip,
   forwardRef,
-  useColorMode,
   useColorModeValue,
   useToken,
 } from "@chakra-ui/react"
@@ -111,7 +110,8 @@ export const ExampleCard = forwardRef<TExampleCardProps, ComponentType<typeof Ca
             <Text
               paddingBottom="1"
               fontSize="11px"
-              color="gray.400"
+              color="gray.500"
+              _dark={{ color: "gray.300" }}
               fontWeight="medium"
               overflow="hidden"
               maxWidth={sizes[size]}
