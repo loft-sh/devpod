@@ -2,11 +2,14 @@ package devcontainer
 
 import (
 	"context"
+	"encoding/base64"
 	"encoding/json"
 	"fmt"
+	"path/filepath"
 	"strings"
 	"time"
 
+	"github.com/loft-sh/devpod/pkg/daemon/agent"
 	"github.com/loft-sh/devpod/pkg/devcontainer/config"
 	"github.com/loft-sh/devpod/pkg/devcontainer/metadata"
 	"github.com/loft-sh/devpod/pkg/driver"
@@ -17,14 +20,11 @@ import (
 var dockerlessImage = "ghcr.io/loft-sh/dockerless:0.2.0"
 
 const (
-	DevPodExtraEnvVar           = "DEVPOD"
-	RemoteContainersExtraEnvVar = "REMOTE_CONTAINERS"
-	WorkspaceIDExtraEnvVar      = "DEVPOD_WORKSPACE_ID"
-	WorkspaceUIDExtraEnvVar     = "DEVPOD_WORKSPACE_UID"
-	TimeoutExtraEnvVar          = "DEVPOD_TIMEOUT"
-	AccessKeyExtraEnvVar        = "DEVPOD_ACCESS_KEY"
-	PlatformHostExtraEnvVar     = "DEVPOD_PLATFORM_HOST"
-	WorkspaceHostExtraEnvVar    = "DEVPOD_WORKSPACE_HOST"
+	DevPodExtraEnvVar                = "DEVPOD"
+	RemoteContainersExtraEnvVar      = "REMOTE_CONTAINERS"
+	WorkspaceIDExtraEnvVar           = "DEVPOD_WORKSPACE_ID"
+	WorkspaceUIDExtraEnvVar          = "DEVPOD_WORKSPACE_UID"
+	WorkspaceDaemonConfigExtraEnvVar = "DEVPOD_WORKSPACE_DAEMON_CONFIG"
 
 	DefaultEntrypointLoop = "while sleep 1 & wait $!; do :; done"
 )
@@ -115,13 +115,12 @@ func (r *runner) runSingleContainer(
 		if err != nil {
 			return nil, errors.Wrap(err, "merge config")
 		}
-
 		// Inject the daemon entrypoint if platform configuration is provided.
 		if options.CLIOptions.Platform.AccessKey != "" {
 			r.Log.Debugf("Platform config detected, injecting DevPod daemon entrypoint.")
 
-			// Wait for the devpod binary to be injected at /usr/local/bin/devpod,
-			// then execute the daemon as PID 1.
+			// Wait for the devpod binary to be available at /usr/local/bin/devpod,
+			// then execute the daemon as root process.
 			daemonEntrypoint := `
 while ! command -v /usr/local/bin/devpod >/dev/null 2>&1; do
   echo "Waiting for devpod tool..."
@@ -130,9 +129,39 @@ done
 exec /usr/local/bin/devpod agent container daemon`
 
 			mergedConfig.Entrypoints = append(mergedConfig.Entrypoints, daemonEntrypoint)
-			mergedConfig.ContainerEnv[AccessKeyExtraEnvVar] = options.CLIOptions.Platform.AccessKey
-			mergedConfig.ContainerEnv[PlatformHostExtraEnvVar] = options.CLIOptions.Platform.PlatformHost
-			mergedConfig.ContainerEnv[WorkspaceHostExtraEnvVar] = options.CLIOptions.Platform.WorkspaceHost
+
+			var workdir string
+			if r.WorkspaceConfig.Workspace.Source.GitSubPath != "" {
+				substitutionContext.ContainerWorkspaceFolder = filepath.Join(substitutionContext.ContainerWorkspaceFolder, r.WorkspaceConfig.Workspace.Source.GitSubPath)
+				workdir = substitutionContext.ContainerWorkspaceFolder
+			}
+			if workdir == "" && mergedConfig != nil {
+				workdir = mergedConfig.WorkspaceFolder
+			}
+			if workdir == "" && substitutionContext != nil {
+				workdir = substitutionContext.ContainerWorkspaceFolder
+			}
+
+			user := mergedConfig.RemoteUser
+			if mergedConfig.RemoteUser == "" {
+				user = "root"
+			}
+
+			daemonConfig := agent.DaemonConfig{
+				Platform: options.CLIOptions.Platform,
+				Ssh: agent.SshConfig{
+					Workdir: workdir,
+					User:    user,
+				},
+			}
+
+			data, err := json.Marshal(daemonConfig)
+			if err != nil {
+				r.Log.Errorf("Failed to marshal daemon config: %v", err)
+			} else {
+				encoded := base64.StdEncoding.EncodeToString(data)
+				mergedConfig.ContainerEnv[WorkspaceDaemonConfigExtraEnvVar] = encoded
+			}
 		}
 
 		// run dev container
