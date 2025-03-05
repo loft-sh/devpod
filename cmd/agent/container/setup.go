@@ -215,41 +215,6 @@ func (cmd *SetupContainerCmd) Run(ctx context.Context) error {
 		}
 	}
 
-	// start tailscale networking daemon
-	if cmd.AccessKey != "" && cmd.WorkspaceHost != "" {
-		err = single.Single("ssh.daemon.pid", func() (*exec.Cmd, error) {
-			logger.Infof("Start SSH server")
-			binaryPath, err := os.Executable()
-			if err != nil {
-				return nil, err
-			}
-
-			var workdir string
-			if workspaceInfo.Source.GitSubPath != "" {
-				setupInfo.SubstitutionContext.ContainerWorkspaceFolder = filepath.Join(setupInfo.SubstitutionContext.ContainerWorkspaceFolder, workspaceInfo.Source.GitSubPath)
-				workdir = setupInfo.SubstitutionContext.ContainerWorkspaceFolder
-			}
-			if workdir == "" && setupInfo.MergedConfig != nil {
-				workdir = setupInfo.MergedConfig.WorkspaceFolder
-			}
-			if workdir == "" && setupInfo.SubstitutionContext != nil {
-				workdir = setupInfo.SubstitutionContext.ContainerWorkspaceFolder
-			}
-
-			args := []string{"agent", "container", "ssh-server"}
-			if workdir != "" {
-				args = append(args, "--workdir", workdir)
-			}
-			user := config.GetRemoteUser(setupInfo)
-			args = append(args, "--remote-user", user)
-
-			return exec.Command(binaryPath, args...), nil
-		})
-		if err != nil {
-			return err
-		}
-	}
-
 	out, err := json.Marshal(setupInfo)
 	if err != nil {
 		return fmt.Errorf("marshal setup info: %w", err)
