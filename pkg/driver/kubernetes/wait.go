@@ -73,8 +73,12 @@ func (k *KubernetesDriver) waitPodRunning(ctx context.Context, id string) (*core
 				if IsCritical(containerStatus) {
 					return false, fmt.Errorf("pod '%s' init container '%s' is waiting to start: %s (%s)", id, c.Name, c.State.Waiting.Message, c.State.Waiting.Reason)
 				}
+				if c.State.Waiting.Message == "" {
+					throttledLogger.Infof("Waiting, since pod '%s' init container '%s' is waiting to start: %s", id, c.Name, c.State.Waiting.Reason)
+				} else {
+					throttledLogger.Infof("Waiting, since pod '%s' init container '%s' is waiting to start: %s (%s)", id, c.Name, c.State.Waiting.Message, c.State.Waiting.Reason)
+				}
 
-				throttledLogger.Infof("Waiting, since pod '%s' init container '%s' is waiting to start: %s (%s)", id, c.Name, c.State.Waiting.Message, c.State.Waiting.Reason)
 				return false, nil
 			}
 
@@ -121,8 +125,12 @@ func (k *KubernetesDriver) waitPodRunning(ctx context.Context, id string) (*core
 				if IsCritical(containerStatus) {
 					return false, fmt.Errorf("pod '%s' container '%s' is waiting to start: %s (%s)", id, c.Name, c.State.Waiting.Message, c.State.Waiting.Reason)
 				}
+				if c.State.Waiting.Message == "" {
+					throttledLogger.Infof("Waiting, since pod '%s' container '%s' is waiting to start: %s", id, c.Name, c.State.Waiting.Reason)
+				} else {
+					throttledLogger.Infof("Waiting, since pod '%s' container '%s' is waiting to start: %s (%s)", id, c.Name, c.State.Waiting.Message, c.State.Waiting.Reason)
+				}
 
-				throttledLogger.Infof("Waiting, since pod '%s' container '%s' is waiting to start: %s (%s)", id, c.Name, c.State.Waiting.Message, c.State.Waiting.Reason)
 				return false, nil
 			}
 

@@ -24,8 +24,6 @@ type NetworkPeerExpansion interface{}
 
 type ProjectExpansion interface{}
 
-type RunnerExpansion interface{}
-
 type SharedSecretExpansion interface{}
 
 type SpaceInstanceExpansion interface{}
