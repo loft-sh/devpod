@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <component type="desktop-application">
-  <id>sh.loft.Devpod</id>
+  <id>sh.loft.devpod</id>
 
   <name>Devpod</name>
   <summary>Codespaces but open-source, client-only and unopinionated: Works with any IDE and lets you use any cloud, kubernetes or just localhost docker.</summary>
@@ -25,7 +25,7 @@
     </p>
   </description>
 
-  <launchable type="desktop-id">sh.loft.Devpod.desktop</launchable>
+  <launchable type="desktop-id">sh.loft.devpod.desktop</launchable>
   <screenshots>
     <screenshot type="default">
       <image>https://devpod.sh/docs/media/devpod-architecture-2.png</image>
