@@ -12,6 +12,7 @@ import {
   ModalHeader,
   ModalOverlay,
   Text,
+  useColorModeValue,
   useDisclosure,
 } from "@chakra-ui/react"
 import { useCallback, useMemo, useRef, useState } from "react"
@@ -58,6 +59,7 @@ export function WorkspaceCard({ workspaceID, isSelected, onSelectionChange }: TW
   const workspace = useWorkspace<TWorkspace>(workspaceID)
   const workspaceName = workspace.data?.id ?? ""
   const workspaceActions = useWorkspaceActions(workspaceName)
+  const selectedBgColor = useColorModeValue("gray.50", "gray.800")
   const navigateToAction = useCallback(
     (actionID: TActionID | undefined) => {
       if (actionID !== undefined && actionID !== "") {
@@ -193,6 +195,7 @@ export function WorkspaceCard({ workspaceID, isSelected, onSelectionChange }: TW
   }
 
   const isLoading = workspace.current?.status === "pending"
+  const sourceTextColor = useColorModeValue("gray.500", "gray.300")
 
   if (workspace.data === undefined) {
     return null
@@ -210,7 +213,7 @@ export function WorkspaceCard({ workspaceID, isSelected, onSelectionChange }: TW
         width="full"
         maxWidth="60rem"
         variant="outline"
-        backgroundColor={isSelected ? "gray.50" : "transparent"}
+        backgroundColor={isSelected ? selectedBgColor : "transparent"}
         marginBottom="3">
         <CardHeader overflow="hidden" w="full">
           <WorkspaceCardHeader
@@ -219,7 +222,7 @@ export function WorkspaceCard({ workspaceID, isSelected, onSelectionChange }: TW
               workspace.data.source && (
                 <Text
                   fontSize="sm"
-                  color="gray.500"
+                  color={sourceTextColor}
                   userSelect="text"
                   maxWidth="30rem"
                   overflow="hidden"

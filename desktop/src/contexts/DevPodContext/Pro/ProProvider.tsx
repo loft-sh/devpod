@@ -104,7 +104,6 @@ export function ProProvider({ host, children }: { host: string; children: ReactN
 
           return parseInt(lastActivityB, 10) - parseInt(lastActivityA, 10)
         })
-        console.log(sorted)
         store.setWorkspaces(sorted)
         // dirty, dirty
         setTimeout(() => {

@@ -153,6 +153,7 @@ export function CreateWorkspace() {
   const backgroundColor = useColorModeValue("gray.50", "gray.800")
   const borderColor = useBorderColor()
   const bottomBarBackgroundColor = useColorModeValue("white", "background.darkest")
+  const textColor = useColorModeValue("gray.500", "gray.300")
   const { colorMode } = useColorMode()
 
   return (
@@ -223,7 +224,7 @@ export function CreateWorkspace() {
                 borderBottomWidth="thin"
                 borderColor={borderColor}
                 width="full"
-                color="gray.500"
+                color={textColor}
                 marginBottom="4"
                 fontWeight="medium"
                 textAlign="center">

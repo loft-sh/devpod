@@ -81,11 +81,13 @@ type TSidebarMenuProps = Pick<LinkProps, "to"> &
   Readonly<{ children?: ReactNode; icon: ReactElement }>
 export function SidebarMenuItem({ to, children, icon: iconProps }: TSidebarMenuProps) {
   const settings = useSettings()
-  const backgroundColorToken = useColorModeValue("blackAlpha.100", "whiteAlpha.200")
+  const backgroundColorToken = useColorModeValue("gray.300", "gray.700")
   const backgroundColor = useToken("colors", backgroundColorToken)
   const borderColorToken = useColorModeValue("blackAlpha.200", "whiteAlpha.300")
   const borderColor = useToken("colors", borderColorToken)
   const backgroundActiveColor = useToken("colors", "primary.400")
+  const activeTextColorToken = useColorModeValue("white", "gray.900")
+  const activeTextColor = useToken("colors", activeTextColorToken)
   const isLeft = settings.sidebarPosition === "left"
   const icon = cloneElement(iconProps, { boxSize: 4 })
 
@@ -115,7 +117,7 @@ export function SidebarMenuItem({ to, children, icon: iconProps }: TSidebarMenuP
           ...(isActive
             ? {
                 backgroundColor: backgroundActiveColor,
-                color: "white",
+                color: activeTextColor,
                 borderColor,
                 opacity: 1,
               }

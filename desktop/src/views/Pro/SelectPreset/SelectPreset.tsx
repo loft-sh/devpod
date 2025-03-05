@@ -1,6 +1,13 @@
+import { useBorderColor } from "@/Theme"
+import { useProContext, useTemplates } from "@/contexts"
+import { Routes } from "@/routes"
+import { BackToWorkspaces } from "@/views/Pro/BackToWorkspaces"
+import { presetDisplayName } from "@/views/Pro/helpers"
+import { SearchIcon } from "@chakra-ui/icons"
 import {
   Box,
   Button,
+  Card,
   Grid,
   Heading,
   HStack,
@@ -12,21 +19,19 @@ import {
   Link,
   Spinner,
   Text,
+  useColorModeValue,
   useToken,
   VStack,
 } from "@chakra-ui/react"
-import React, { ChangeEvent, useCallback, useMemo, useRef, useState } from "react"
-import { useNavigate } from "react-router"
-import { useProContext, useTemplates } from "@/contexts"
-import { Routes } from "@/routes"
-import { SearchIcon } from "@chakra-ui/icons"
-import { BackToWorkspaces } from "@/views/Pro/BackToWorkspaces"
+import { ChangeEvent, useCallback, useMemo, useRef, useState } from "react"
 import { AiOutlineCloseCircle } from "react-icons/ai"
-import { presetDisplayName } from "@/views/Pro/helpers"
+import { useNavigate } from "react-router"
 
 export function SelectPreset() {
   const gridChildWidth = useToken("sizes", "96")
   const gridChildHeight = useToken("sizes", "48")
+  const bg = useColorModeValue("white", "background.darkest")
+  const borderColor = useBorderColor()
 
   const [searchString, setSearchString] = useState<string | undefined>(undefined)
   const searchInputRef = useRef<HTMLInputElement | null>(null)
@@ -82,7 +87,7 @@ export function SelectPreset() {
             placeholder={"Filter by name, repo or image"}
             spellCheck={false}
             onChange={changeSearchString}
-            bg={"white"}
+            bg={bg}
           />
           {searchString && (
             <InputRightElement>
@@ -105,7 +110,8 @@ export function SelectPreset() {
           columnGap={"5"}
           w={"full"}>
           {!searchString && (
-            <Box
+            <Card
+              variant="outline"
               onClick={createPlain}
               display={"flex"}
               cursor={"pointer"}
@@ -113,14 +119,14 @@ export function SelectPreset() {
               alignItems={"center"}
               justifyContent={"center"}
               h={gridChildHeight}
-              border={"1px"}
-              borderColor={"divider.main"}
+              borderWidth="thin"
+              borderColor={borderColor}
               boxSizing={"border-box"}
               borderRadius={"4px"}>
               <Button variant={"outline"} colorScheme={"primary"}>
                 New Custom Workspace
               </Button>
-            </Box>
+            </Card>
           )}
           {filteredPresets.map((preset) => (
             <PresetBox
@@ -152,14 +158,19 @@ function PresetBox({
   host: string
 }) {
   const navigate = useNavigate()
+  const borderColor = useBorderColor()
 
   const createFromPreset = useCallback(() => {
     navigate(Routes.toProWorkspaceCreate(host, preset))
   }, [navigate, host, preset])
 
   return (
-    <Box
+    <Card
+      variant="outline"
       _hover={{
+        _dark: {
+          borderColor: "primary.500",
+        },
         borderColor: "primary.500",
       }}
       onClick={createFromPreset}
@@ -168,9 +179,8 @@ function PresetBox({
       display={"flex"}
       flexDir={"column"}
       justifyContent={"space-between"}
-      bg={"white"}
       border={"1px"}
-      borderColor={"divider.main"}
+      borderColor={borderColor}
       boxSizing={"border-box"}
       boxShadow={"0px 8px 16px 4px rgba(0, 0, 0, 0.10)"}
       paddingY={"18px"}
@@ -184,7 +194,7 @@ function PresetBox({
         </Heading>
         <Box display={"flex"} mt={"10px"} flexDir={"column"}>
           <Box fontSize={"sm"}>Source Code:</Box>
-          <Box fontSize={"md"} color={"text.tertiary"}>
+          <Box fontSize={"md"} color={"gray.500"}>
             {source}
           </Box>
         </Box>
@@ -192,6 +202,6 @@ function PresetBox({
       <Button flexShrink={0} variant={"primary"}>
         Select Preset
       </Button>
-    </Box>
+    </Card>
   )
 }

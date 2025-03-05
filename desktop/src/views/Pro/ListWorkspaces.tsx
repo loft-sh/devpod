@@ -5,13 +5,14 @@ import {
   ProWorkspaceInstance,
   useProContext,
   useTemplates,
-  useWorkspaces,
   useWorkspaceStore,
+  useWorkspaces,
 } from "@/contexts"
-import { removeWorkspaceAction, stopWorkspaceAction } from "@/contexts/DevPodContext/workspaces"
 import { IWorkspaceStore } from "@/contexts/DevPodContext/workspaceStore"
+import { removeWorkspaceAction, stopWorkspaceAction } from "@/contexts/DevPodContext/workspaces"
 import { DevPodIcon } from "@/icons"
 import emptyWorkspacesImage from "@/images/empty_workspaces.svg"
+import emptyWorkspacesDarkImage from "@/images/empty_workspaces_dark.svg"
 import {
   DEFAULT_SORT_WORKSPACE_MODE,
   useSelection,
@@ -24,15 +25,17 @@ import {
   Button,
   Center,
   Container,
-  Heading,
   HStack,
+  Heading,
   Image,
   List,
   ListItem,
   Spinner,
   Text,
-  useDisclosure,
   VStack,
+  useColorMode,
+  useColorModeValue,
+  useDisclosure,
 } from "@chakra-ui/react"
 import { useCallback, useEffect, useId, useMemo, useState } from "react"
 import { useNavigate } from "react-router"
@@ -50,6 +53,8 @@ export function ListWorkspaces() {
     useProContext()
   const navigate = useNavigate()
   const { data: templates } = useTemplates()
+  const textColor = useColorModeValue("gray.600", "gray.400")
+  const { colorMode } = useColorMode()
 
   const [statusFilter, setStatusFilter] = useState<TWorkspaceStatusFilterState>("all")
 
@@ -223,10 +228,15 @@ export function ListWorkspaces() {
         ) : (
           <Container maxW="container.lg" h="full">
             <VStack align="center" justify="center" w="full" h="full">
-              <Heading fontWeight="thin" color="gray.600">
+              <Heading fontWeight="thin" color={textColor}>
                 Create a DevPod Workspace
               </Heading>
-              <Image src={emptyWorkspacesImage} w="100%" h="40vh" my="12" />
+              <Image
+                src={colorMode == "dark" ? emptyWorkspacesDarkImage : emptyWorkspacesImage}
+                w="100%"
+                h="40vh"
+                my="12"
+              />
 
               <Button
                 variant="solid"

@@ -16,6 +16,7 @@ import {
   Tabs,
   Tooltip,
   VStack,
+  useColorMode,
   useColorModeValue,
   useToken,
 } from "@chakra-ui/react"
@@ -56,7 +57,7 @@ export function SourceInput({ isDisabled, resetPreset }: TSourceInputProps) {
   const { register, formState, watch, setValue, trigger: validate } = useFormContext<TFormValues>()
   const currentValue = watch(FieldName.SOURCE)
   const sourceType = watch(FieldName.SOURCE_TYPE, "git")
-  const inputBackgroundColor = useColorModeValue("white", "black")
+  const inputBackgroundColor = useColorModeValue("white", "background.darkest")
   const borderColor = useBorderColor()
   const errorBorderColor = useToken("colors", "red.500")
   const [tabIndex, setTabIndex] = useState(0)
@@ -144,6 +145,7 @@ export function SourceInput({ isDisabled, resetPreset }: TSourceInputProps) {
   const hasErrors = formState.errors[FieldName.SOURCE]
   const allowPullRequest =
     advancedGitSettings.value.length === 0 || !isNaN(parseInt(advancedGitSettings.value))
+  const { colorMode } = useColorMode()
 
   const { placeholder, secondaryAction } = useMemo(() => {
     if (sourceType === "local") {
@@ -185,6 +187,7 @@ export function SourceInput({ isDisabled, resetPreset }: TSourceInputProps) {
         <Popover isLazy onOpen={handlePopoverOpened}>
           <PopoverTrigger>
             <Button
+              bg={colorMode == "dark" ? "gray.800" : undefined}
               isDisabled={isDisabled}
               aria-invalid={hasErrors ? "true" : undefined}
               _invalid={{
@@ -254,6 +257,7 @@ export function SourceInput({ isDisabled, resetPreset }: TSourceInputProps) {
     advancedGitSettings.value,
     allowPullRequest,
     borderColor,
+    colorMode,
     currentValue,
     errorBorderColor,
     handleAdvancedOptionTabChanged,
@@ -268,7 +272,7 @@ export function SourceInput({ isDisabled, resetPreset }: TSourceInputProps) {
 
   return (
     <InputGroup zIndex="docked">
-      <InputLeftAddon padding="0" h="10">
+      <InputLeftAddon bg={colorMode == "dark" ? "gray.800" : undefined} padding="0" h="10">
         <Select
           {...register(FieldName.SOURCE_TYPE, {
             onChange: () => {

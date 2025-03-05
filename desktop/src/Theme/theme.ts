@@ -1,26 +1,26 @@
-import {
-  ColorMode,
-  Theme,
-  ThemeOverride,
-  Tooltip,
-  defineStyleConfig,
-  extendTheme,
-} from "@chakra-ui/react"
+import { Theme, ThemeOverride, Tooltip, defineStyleConfig, extendTheme } from "@chakra-ui/react"
 import { mode } from "@chakra-ui/theme-tools"
+import { Button } from "./button"
+import { Card } from "./card"
+import { Checkbox } from "./checkbox"
+import { Form } from "./form"
+import { Input } from "./input"
 import { Menu } from "./menu"
+import { Modal } from "./modal"
+import { Popover } from "./popover"
+import { Radio } from "./radio"
+import { Select } from "./select"
 import { Switch } from "./switch"
 import { Tabs } from "./tabs"
-import { Checkbox } from "./checkbox"
-import { Radio } from "./radio"
-import { Popover } from "./popover"
-import { Button } from "./button"
 import { Tag } from "./tag"
 
 const Code = defineStyleConfig({
   variants: {
-    decorative: {
-      backgroundColor: "primary.400",
-      color: "white",
+    decorative(props) {
+      return {
+        backgroundColor: "primary.400",
+        color: mode("white", "gray.900")(props),
+      }
     },
   },
 })
@@ -33,7 +33,7 @@ const Link = defineStyleConfig({
     muted(props) {
       const primary = props.theme.colors.primary
 
-      return { color: mode(primary["800"], primary["200"])(props) }
+      return { color: mode(primary["800"], primary["400"])(props) }
     },
   },
 })
@@ -50,10 +50,6 @@ const FormError = defineStyleConfig({
 // It's ugly but it works: https://github.com/chakra-ui/chakra-ui/issues/1424#issuecomment-743342944
 // Unfortunately there is no other way of overring the default placement.
 Tooltip.defaultProps = { ...Tooltip.defaultProps, placement: "top" }
-
-const getInitialColorMode = (defaultColor: ColorMode = "light"): ColorMode => {
-  return (localStorage.getItem("chakra-ui-color-mode") as ColorMode | undefined) ?? defaultColor
-}
 
 export const theme = extendTheme({
   styles: {
@@ -106,12 +102,12 @@ export const theme = extendTheme({
     },
   },
   config: {
-    // in order to prevent chakra-ui color mode screen flash, we already set initial theme color mode to the local storage color mode
-    initialColorMode: getInitialColorMode("light"),
-    useSystemColorMode: false,
+    initialColorMode: "system",
+    useSystemColorMode: true,
   },
   components: {
     Button,
+    Card,
     Code,
     Menu,
     Switch,
@@ -119,8 +115,12 @@ export const theme = extendTheme({
     Checkbox,
     Radio,
     Link,
+    Form,
     FormError,
     Popover,
+    Modal,
     Tag,
+    Input,
+    Select,
   },
 } satisfies ThemeOverride) as Theme

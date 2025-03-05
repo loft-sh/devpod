@@ -69,6 +69,7 @@ export function WorkspaceSourceInput({
   onSourceTypeChanged,
 }: TWorkspaceSourceInputProps) {
   const inputBackgroundColor = useColorModeValue("white", "black")
+  const tabBgColor = useColorModeValue("white", "gray.700")
   const borderColor = useBorderColor()
   const typeTabIndex = SOURCE_TYPE_MAP[sourceType]
   const handleSourceTypeChanged = (index: number) => {
@@ -225,15 +226,15 @@ export function WorkspaceSourceInput({
                   index={tabIndex}
                   onChange={handleAdvancedOptionTabChanged}>
                   <TabList>
-                    <Tab>Branch</Tab>
-                    <Tab>Commit</Tab>
-                    <Tab isDisabled={!allowPullRequest}>
+                    <Tab bg={tabBgColor}>Branch</Tab>
+                    <Tab bg={tabBgColor}>Commit</Tab>
+                    <Tab isDisabled={!allowPullRequest} bg={tabBgColor}>
                       <Tooltip
                         label={!allowPullRequest ? "Pull request reference must be a number" : ""}>
                         Pull Request
                       </Tooltip>
                     </Tab>
-                    <Tab>Sub Folder</Tab>
+                    <Tab bg={tabBgColor}>Sub Folder</Tab>
                   </TabList>
                   <TabPanels paddingTop="2">
                     <Tooltip

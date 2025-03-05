@@ -7,6 +7,7 @@ import {
   MenuList,
   Portal,
   Spinner,
+  useColorModeValue,
   useToken,
 } from "@chakra-ui/react"
 import { AiOutlineCodeSandbox } from "react-icons/ai"
@@ -22,6 +23,7 @@ type TPresetInputProps = Readonly<{
 export function PresetInput({ preset, presets, loading, isUpdate, setPreset }: TPresetInputProps) {
   const primaryColor = useToken("colors", "primary.500")
   const unusedColor = useToken("colors", "divider.main")
+  const textColor = useColorModeValue("gray.800", "gray.200")
 
   const displayName = presetDisplayName(preset)
 
@@ -42,7 +44,7 @@ export function PresetInput({ preset, presets, loading, isUpdate, setPreset }: T
       color={displayName ? primaryColor : unusedColor}
       borderColor={displayName ? primaryColor : unusedColor}>
       <AiOutlineCodeSandbox opacity={0.7} size={"24"} />
-      <Box color={"text.secondary"} fontWeight={displayName ? "semibold" : undefined}>
+      <Box color={textColor} fontWeight={displayName ? "semibold" : undefined}>
         {displayName ?? "No preset selected"}
       </Box>
 

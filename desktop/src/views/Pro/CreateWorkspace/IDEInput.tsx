@@ -1,7 +1,7 @@
 import { IDEIcon } from "@/components"
 import { TIDE } from "@/types"
 import { InfoIcon } from "@chakra-ui/icons"
-import { Box, Card, HStack, Text, Tooltip } from "@chakra-ui/react"
+import { Box, Card, HStack, Text, Tooltip, useColorModeValue } from "@chakra-ui/react"
 import { ReactElement, cloneElement } from "react"
 import { ControllerRenderProps } from "react-hook-form"
 import { FieldName, TFormValues } from "./types"
@@ -39,15 +39,18 @@ type TIDECardProps = Readonly<{
   onClick: VoidFunction
 }>
 function IDECard({ name, isSelected, icon, onClick }: TIDECardProps) {
+  const color = useColorModeValue("gray.600", "gray.300")
+  const iconColor = useColorModeValue("gray.700", "gray.500")
+
   let content = icon
   if (name === "None") {
     content = (
       <HStack px="2" py="0" align="center" justify="center" h="full" w="full">
-        <Text fontWeight="medium" color="gray.700">
+        <Text fontWeight="medium" color={color}>
           SSH
         </Text>
         <Tooltip label="Selecting SSH only adds an entry in the form of `$workspace.devpod` to your SSH configuration. You can connect to it using your terminal or IDEs that aren't supported by DevPod but support SSH connections.">
-          <InfoIcon ml="-0.5" color="gray.600" />
+          <InfoIcon ml="-0.5" color={iconColor} />
         </Tooltip>
       </HStack>
     )

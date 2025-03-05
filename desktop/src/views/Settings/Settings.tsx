@@ -280,7 +280,7 @@ function UpdateSettings() {
   const { isChecking, check, isUpdateAvailable, pendingUpdate } = useUpdate()
   const releases = useReleases()
     ?.slice()
-    .sort((a, b) => compareVersions(a.tag_name, b.tag_name))
+    .sort((a, b) => compareVersions(b.tag_name, a.tag_name))
   const downloadLink = useMemo(() => {
     const release = releases?.find((release) => release.tag_name === selectedVersion)
     if (!release) {
