@@ -217,19 +217,6 @@ func (cmd *SetupContainerCmd) Run(ctx context.Context) error {
 
 	// start tailscale networking daemon
 	if cmd.AccessKey != "" && cmd.WorkspaceHost != "" {
-		err = single.Single("network.daemon.pid", func() (*exec.Cmd, error) {
-			logger.Infof("Start networking daemon on %s", cmd.PlatformHost)
-			binaryPath, err := os.Executable()
-			if err != nil {
-				return nil, err
-			}
-
-			return exec.Command(binaryPath, "agent", "container", "network-daemon", "--access-key", cmd.AccessKey, "--platform-host", cmd.PlatformHost, "--workspace-host", cmd.WorkspaceHost), nil
-		})
-		if err != nil {
-			return err
-		}
-
 		err = single.Single("ssh.daemon.pid", func() (*exec.Cmd, error) {
 			logger.Infof("Start SSH server")
 			binaryPath, err := os.Executable()
