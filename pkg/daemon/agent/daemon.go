@@ -7,11 +7,23 @@ import (
 	"os/exec"
 	"runtime"
 
+	"github.com/loft-sh/devpod/pkg/provider"
 	"github.com/loft-sh/devpod/pkg/single"
 	"github.com/loft-sh/log"
 	perrors "github.com/pkg/errors"
 	"github.com/takama/daemon"
 )
+
+type SshConfig struct {
+	Workdir string `json:"workdir,omitempty"`
+	User    string `json:"user,omitempty"`
+}
+
+type DaemonConfig struct {
+	Platform provider.PlatformOptions `json:"platform,omitempty"`
+	Ssh      SshConfig                `json:"ssh,omitempty"`
+	Timeout  string                   `json:"timeout"`
+}
 
 func InstallDaemon(agentDir string, interval string, log log.Logger) error {
 	if runtime.GOOS == "windows" || runtime.GOOS == "darwin" {

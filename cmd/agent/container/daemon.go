@@ -2,8 +2,11 @@ package container
 
 import (
 	"context"
+	"encoding/base64"
+	"encoding/json"
 	"fmt"
 	"os"
+	"os/exec"
 	"os/signal"
 	"path/filepath"
 	"strings"
@@ -12,6 +15,7 @@ import (
 	"time"
 
 	"github.com/loft-sh/devpod/pkg/agent"
+	agentd "github.com/loft-sh/devpod/pkg/daemon/agent"
 	"github.com/loft-sh/devpod/pkg/devcontainer"
 	devpodlog "github.com/loft-sh/devpod/pkg/log"
 	"github.com/loft-sh/devpod/pkg/platform/client"
@@ -22,42 +26,37 @@ import (
 	"github.com/spf13/cobra"
 )
 
-// DaemonCmd holds the merged command flags.
 type DaemonCmd struct {
-	Timeout       string
-	AccessKey     string
-	PlatformHost  string
-	WorkspaceHost string
+	Config *agentd.DaemonConfig
 }
 
-// NewDaemonCmd creates the new merged daemon command.
+// NewDaemonCmd creates the merged daemon command.
 func NewDaemonCmd() *cobra.Command {
-	cmd := &DaemonCmd{}
+	cmd := &DaemonCmd{
+		Config: &agentd.DaemonConfig{},
+	}
 	daemonCmd := &cobra.Command{
 		Use:   "daemon",
-		Short: "Starts the DevPod network daemon and monitors container activity if timeout is set",
+		Short: "Starts the DevPod network daemon, SSH server and monitors container activity if timeout is set",
 		Args:  cobra.NoArgs,
 		RunE:  cmd.Run,
 	}
-	daemonCmd.Flags().StringVar(&cmd.Timeout, "timeout", "", "The timeout to stop the container after")
-	daemonCmd.Flags().StringVar(&cmd.AccessKey, "access-key", "", "Access key for the platform")
-	daemonCmd.Flags().StringVar(&cmd.PlatformHost, "platform-host", "", "Platform host")
-	daemonCmd.Flags().StringVar(&cmd.WorkspaceHost, "workspace-host", "", "Workspace host")
+	daemonCmd.Flags().StringVar(&cmd.Config.Timeout, "timeout", "", "The timeout to stop the container after")
 	return daemonCmd
 }
 
-// Run runs the command logic
 func (cmd *DaemonCmd) Run(c *cobra.Command, args []string) error {
-	// Load configuration from flags and/or environment variables.
-	cmd.loadConfig()
+	if err := cmd.loadConfig(); err != nil {
+		return err
+	}
 
 	ctx := c.Context()
 
-	// Prepare timeout if provided.
+	// Prepare timeout if specified.
 	var timeoutDuration time.Duration
-	if cmd.Timeout != "" {
+	if cmd.Config.Timeout != "" {
 		var err error
-		timeoutDuration, err = time.ParseDuration(cmd.Timeout)
+		timeoutDuration, err = time.ParseDuration(cmd.Config.Timeout)
 		if err != nil {
 			return errors.Wrap(err, "failed to parse timeout duration")
 		}
@@ -71,62 +70,85 @@ func (cmd *DaemonCmd) Run(c *cobra.Command, args []string) error {
 	ctx, cancel := context.WithCancel(ctx)
 	defer cancel()
 
-	// Start network and timeout tasks if configured.
-	errChan := make(chan error, 2)
+	errChan := make(chan error, 3)
 	var wg sync.WaitGroup
 	tasksStarted := false
 
+	// Start Tailscale networking server.
 	if cmd.shouldRunNetworkServer() {
 		tasksStarted = true
 		wg.Add(1)
 		go runNetworkServer(ctx, cmd, errChan, &wg)
 	}
+
+	// Start timeout monitor.
 	if timeoutDuration > 0 {
 		tasksStarted = true
 		wg.Add(1)
 		go runTimeoutMonitor(ctx, timeoutDuration, errChan, &wg)
 	}
+
+	// Start ssh server.
+	if cmd.shouldRunSsh() {
+		tasksStarted = true
+		wg.Add(1)
+		go runSshServer(ctx, cmd, errChan, &wg)
+	}
+
 	if !tasksStarted {
 		// Block indefinitely if no task is configured.
 		select {}
 	}
 
-	// Listen for OS signals.
+	// Listen for OS termination signals.
 	go handleSignals(ctx, errChan)
 
-	// Wait until an error (or termination signal) occurs.
+	// Wait until an error or termination signal occurs.
 	err := <-errChan
 	cancel()
 	wg.Wait()
 
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Daemon error: %v\n", err) // Logging the error for visibility
+		fmt.Fprintf(os.Stderr, "Daemon error: %v\n", err)
 		os.Exit(1)
 	}
-
 	os.Exit(0)
-	return err // Unreachable but required for function signature.
+	return nil // Unreachable but needed.
 }
 
-// loadConfig loads values from flags; if not present, falls back to environment variables.
-func (cmd *DaemonCmd) loadConfig() {
-	if strings.TrimSpace(cmd.Timeout) == "" {
-		cmd.Timeout = os.Getenv(devcontainer.TimeoutExtraEnvVar)
+// loadConfig loads the daemon configuration from base64-encoded JSON.
+// If a CLI-provided timeout exists, it will override the timeout in the config.
+func (cmd *DaemonCmd) loadConfig() error {
+	if encodedCfg := os.Getenv(devcontainer.WorkspaceDaemonConfigExtraEnvVar); strings.TrimSpace(encodedCfg) != "" {
+		decoded, err := base64.StdEncoding.DecodeString(encodedCfg)
+		if err != nil {
+			return fmt.Errorf("error decoding daemon config: %v", err)
+		}
+		var cfg agentd.DaemonConfig
+		if err = json.Unmarshal(decoded, &cfg); err != nil {
+			return fmt.Errorf("error unmarshalling daemon config: %v", err)
+		}
+		// If CLI provided a timeout, preserve it.
+		if cmd.Config.Timeout != "" {
+			cfg.Timeout = cmd.Config.Timeout
+		}
+		cmd.Config = &cfg
+		return nil
 	}
-	if strings.TrimSpace(cmd.AccessKey) == "" {
-		cmd.AccessKey = os.Getenv(devcontainer.AccessKeyExtraEnvVar)
-	}
-	if strings.TrimSpace(cmd.PlatformHost) == "" {
-		cmd.PlatformHost = os.Getenv(devcontainer.PlatformHostExtraEnvVar)
-	}
-	if strings.TrimSpace(cmd.WorkspaceHost) == "" {
-		cmd.WorkspaceHost = os.Getenv(devcontainer.WorkspaceHostExtraEnvVar)
-	}
+
+	return nil
 }
 
-// shouldRunNetworkServer returns true if all necessary network parameters are set.
+// shouldRunNetworkServer returns true if the required platform parameters are present.
 func (cmd *DaemonCmd) shouldRunNetworkServer() bool {
-	return cmd.AccessKey != "" && cmd.PlatformHost != "" && cmd.WorkspaceHost != ""
+	return cmd.Config.Platform.AccessKey != "" &&
+		cmd.Config.Platform.PlatformHost != "" &&
+		cmd.Config.Platform.WorkspaceHost != ""
+}
+
+// shouldRunSsh returns true if at least one SSH configuration value is provided.
+func (cmd *DaemonCmd) shouldRunSsh() bool {
+	return cmd.Config.Ssh.Workdir != "" || cmd.Config.Ssh.User != ""
 }
 
 // setupActivityFile creates and sets permissions on the container activity file.
@@ -137,7 +159,7 @@ func setupActivityFile() error {
 	return os.Chmod(agent.ContainerActivityFile, 0777)
 }
 
-// runTimeoutMonitor monitors the activity file and sends an error if stale.
+// runTimeoutMonitor monitors the activity file and signals an error if the timeout is exceeded.
 func runTimeoutMonitor(ctx context.Context, duration time.Duration, errChan chan<- error, wg *sync.WaitGroup) {
 	defer wg.Done()
 	ticker := time.NewTicker(10 * time.Second)
@@ -151,6 +173,7 @@ func runTimeoutMonitor(ctx context.Context, duration time.Duration, errChan chan
 			if err != nil {
 				continue
 			}
+			// Signal termination if the activity file is older than the timeout.
 			if stat.ModTime().Add(duration).After(time.Now()) {
 				continue
 			}
@@ -170,8 +193,8 @@ func runNetworkServer(ctx context.Context, cmd *DaemonCmd, errChan chan<- error,
 	}
 	logger := initLogging(rootDir)
 	config := client.NewConfig()
-	config.AccessKey = cmd.AccessKey
-	config.Host = "https://" + cmd.PlatformHost
+	config.AccessKey = cmd.Config.Platform.AccessKey
+	config.Host = "https://" + cmd.Config.Platform.PlatformHost
 	config.Insecure = true
 	baseClient := client.NewClientFromConfig(config)
 	if err := baseClient.RefreshSelf(ctx); err != nil {
@@ -179,14 +202,46 @@ func runNetworkServer(ctx context.Context, cmd *DaemonCmd, errChan chan<- error,
 		return
 	}
 	tsServer := ts.NewWorkspaceServer(&ts.WorkspaceServerConfig{
-		AccessKey:     cmd.AccessKey,
-		PlatformHost:  ts.RemoveProtocol(cmd.PlatformHost),
-		WorkspaceHost: cmd.WorkspaceHost,
+		AccessKey:     cmd.Config.Platform.AccessKey,
+		PlatformHost:  ts.RemoveProtocol(cmd.Config.Platform.PlatformHost),
+		WorkspaceHost: cmd.Config.Platform.WorkspaceHost,
 		Client:        baseClient,
 		RootDir:       rootDir,
 	}, logger)
 	if err := tsServer.Start(ctx); err != nil {
 		errChan <- fmt.Errorf("failed to start network server: %w", err)
+	}
+}
+
+// runSshServer starts the SSH server.
+func runSshServer(ctx context.Context, cmd *DaemonCmd, errChan chan<- error, wg *sync.WaitGroup) {
+	defer wg.Done()
+	binaryPath, err := os.Executable()
+	if err != nil {
+		errChan <- err
+		return
+	}
+
+	args := []string{"agent", "container", "ssh-server"}
+	if cmd.Config.Ssh.Workdir != "" {
+		args = append(args, "--workdir", cmd.Config.Ssh.Workdir)
+	}
+	if cmd.Config.Ssh.User != "" {
+		args = append(args, "--remote-user", cmd.Config.Ssh.User)
+	}
+
+	sshCmd := exec.Command(binaryPath, args...)
+	sshCmd.Stdout = os.Stdout
+	sshCmd.Stderr = os.Stderr
+
+	if err := sshCmd.Start(); err != nil {
+		errChan <- fmt.Errorf("failed to start SSH server: %w", err)
+		return
+	}
+
+	if err := sshCmd.Wait(); err != nil {
+		errChan <- fmt.Errorf("SSH server exited abnormally: %w", err)
+		return
 	}
 }
 
