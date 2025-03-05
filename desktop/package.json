@@ -68,7 +68,7 @@
     "@types/uuid": "9.0.5",
     "@typescript-eslint/eslint-plugin": "5.59.11",
     "@typescript-eslint/parser": "5.59.11",
-    "@vitejs/plugin-react": "4.1.0",
+    "@vitejs/plugin-react": "4.3.4",
     "eslint": "8.44.0",
     "eslint-config-prettier": "8.8.0",
     "eslint-config-react-app": "7.0.1",
@@ -76,7 +76,7 @@
     "eslint-plugin-react-hooks": "4.6.0",
     "prettier": "3.0.3",
     "typescript": "5.0.4",
-    "vite": "4.4.9"
+    "vite": "6.2.0"
   },
   "resolutions": {
     "lodash": "4.17.21"
