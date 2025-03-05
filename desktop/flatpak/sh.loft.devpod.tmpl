@@ -44,7 +44,6 @@ modules:
       - install -Dm755 usr/bin/devpod-cli /app/bin/devpod-bin
       - install -Dm755 usr/bin/DevPod\ Desktop /app/bin/sh.loft.devpod
       - install -Dm644 DevPod.desktop /app/share/applications/sh.loft.devpod.desktop
-      - desktop-file-edit --set-key Name --set-value sh.loft.devpod /app/share/applications/sh.loft.devpod.desktop
       - desktop-file-edit --set-key Exec --set-value sh.loft.devpod /app/share/applications/sh.loft.devpod.desktop
       - desktop-file-edit --set-icon sh.loft.devpod /app/share/applications/sh.loft.devpod.desktop
       - install -Dm644 usr/share/icons/hicolor/128x128/apps/DevPod\ Desktop.png /app/share/icons/hicolor/128x128/apps/sh.loft.devpod.png
