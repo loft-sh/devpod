@@ -8,6 +8,7 @@ import (
 // +genclient
 // +genclient:nonNamespaced
 // +genclient:method=GetProfile,verb=get,subresource=profile,result=github.com/loft-sh/api/v4/pkg/apis/management/v1.UserProfile
+// +genclient:method=UpdateProfile,verb=create,subresource=profile,input=github.com/loft-sh/api/v4/pkg/apis/management/v1.UserProfile,result=github.com/loft-sh/api/v4/pkg/apis/management/v1.UserProfile
 // +genclient:method=ListClusters,verb=get,subresource=clusters,result=github.com/loft-sh/api/v4/pkg/apis/management/v1.UserClusters
 // +genclient:method=ListAccessKeys,verb=get,subresource=accesskeys,result=github.com/loft-sh/api/v4/pkg/apis/management/v1.UserAccessKeys
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object

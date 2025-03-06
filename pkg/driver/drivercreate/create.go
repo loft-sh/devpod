@@ -17,9 +17,10 @@ func NewDriver(workspaceInfo *provider2.AgentWorkspaceInfo, log log.Logger) (dri
 		return docker.NewDockerDriver(workspaceInfo, log)
 	} else if driver == provider2.CustomDriver {
 		return custom.NewCustomDriver(workspaceInfo, log), nil
-	} else if driver == "kubernetes" {
+	} else if driver == provider2.KubernetesDriver {
 		return kubernetes.NewKubernetesDriver(workspaceInfo, log)
 	}
 
-	return nil, fmt.Errorf("unrecognized driver '%s', possible values are %s or %s", driver, provider2.DockerDriver, provider2.CustomDriver)
+	return nil, fmt.Errorf("unrecognized driver '%s', possible values are %s, %s or %s",
+		driver, provider2.DockerDriver, provider2.CustomDriver, provider2.KubernetesDriver)
 }

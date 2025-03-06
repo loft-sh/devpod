@@ -41,7 +41,7 @@ type ref struct {
 	UID  string `json:"uid,omitempty"`
 }
 
-func getKeychain(ctx context.Context) (authn.Keychain, error) {
+func GetKeychain(ctx context.Context) (authn.Keychain, error) {
 	tokenBytes, err := os.ReadFile(tokenFileLocation)
 	if err != nil {
 		if errors.Is(err, os.ErrNotExist) {
