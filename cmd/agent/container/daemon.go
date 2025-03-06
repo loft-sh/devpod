@@ -28,12 +28,14 @@ import (
 
 type DaemonCmd struct {
 	Config *agentd.DaemonConfig
+	Log    log.Logger
 }
 
 // NewDaemonCmd creates the merged daemon command.
 func NewDaemonCmd() *cobra.Command {
 	cmd := &DaemonCmd{
 		Config: &agentd.DaemonConfig{},
+		Log:    log.NewStreamLogger(os.Stdout, os.Stderr, logrus.InfoLevel),
 	}
 	daemonCmd := &cobra.Command{
 		Use:   "daemon",
@@ -46,6 +48,9 @@ func NewDaemonCmd() *cobra.Command {
 }
 
 func (cmd *DaemonCmd) Run(c *cobra.Command, args []string) error {
+	cmd.Log.Info("DevPod daemon started")
+	defer cmd.Log.Info("exiting")
+
 	if err := cmd.loadConfig(); err != nil {
 		return err
 	}
@@ -95,9 +100,13 @@ func (cmd *DaemonCmd) Run(c *cobra.Command, args []string) error {
 		go runSshServer(ctx, cmd, errChan, &wg)
 	}
 
+	// In case no task is configured, just wait indefinitely.
 	if !tasksStarted {
-		// Block indefinitely if no task is configured.
-		select {}
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			<-ctx.Done()
+		}()
 	}
 
 	// Listen for OS termination signals.
@@ -109,7 +118,7 @@ func (cmd *DaemonCmd) Run(c *cobra.Command, args []string) error {
 	wg.Wait()
 
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Daemon error: %v\n", err)
+		cmd.Log.Errorf("Daemon error: %v", err)
 		os.Exit(1)
 	}
 	os.Exit(0)
@@ -128,14 +137,12 @@ func (cmd *DaemonCmd) loadConfig() error {
 		if err = json.Unmarshal(decoded, &cfg); err != nil {
 			return fmt.Errorf("error unmarshalling daemon config: %v", err)
 		}
-		// If CLI provided a timeout, preserve it.
+
 		if cmd.Config.Timeout != "" {
 			cfg.Timeout = cmd.Config.Timeout
 		}
 		cmd.Config = &cfg
-		return nil
 	}
-
 	return nil
 }
 
@@ -239,10 +246,23 @@ func runSshServer(ctx context.Context, cmd *DaemonCmd, errChan chan<- error, wg 
 		return
 	}
 
+	done := make(chan struct{})
+	go func() {
+		select {
+		case <-ctx.Done():
+			if sshCmd.Process != nil {
+				sshCmd.Process.Signal(syscall.SIGTERM)
+			}
+		case <-done:
+		}
+	}()
+
 	if err := sshCmd.Wait(); err != nil {
 		errChan <- fmt.Errorf("SSH server exited abnormally: %w", err)
+		close(done)
 		return
 	}
+	close(done)
 }
 
 // handleSignals listens for OS termination signals and sends an error through errChan.
