@@ -35,7 +35,7 @@ func Build(ctx context.Context, client *buildkit.Client, writer io.Writer, platf
 
 	// is context stream?
 	attachable := []session.Attachable{}
-	attachable = append(attachable, authprovider.NewDockerAuthProvider(dockerConfig, nil))
+	attachable = append(attachable, authprovider.NewDockerAuthProvider(authprovider.DockerAuthProviderConfig{ConfigFile: dockerConfig}))
 
 	// create solve options
 	solveOptions := buildkit.SolveOpt{

@@ -51,7 +51,7 @@ type mount struct {
 }
 
 type ExecOp struct {
-	MarshalCache
+	cache       MarshalCache
 	proxyEnv    *ProxyEnv
 	root        Output
 	mounts      []*mount
@@ -60,9 +60,13 @@ type ExecOp struct {
 	isValidated bool
 	secrets     []SecretInfo
 	ssh         []SSHInfo
+	cdiDevices  []CDIDeviceInfo
 }
 
 func (e *ExecOp) AddMount(target string, source Output, opt ...MountOption) Output {
+	cache := e.cache.Acquire()
+	defer cache.Release()
+
 	m := &mount{
 		target: target,
 		source: source,
@@ -84,7 +88,7 @@ func (e *ExecOp) AddMount(target string, source Output, opt ...MountOption) Outp
 		}
 		m.output = o
 	}
-	e.Store(nil, nil, nil, nil)
+	cache.Store(nil, nil, nil, nil)
 	e.isValidated = false
 	return m.output
 }
@@ -128,7 +132,10 @@ func (e *ExecOp) Validate(ctx context.Context, c *Constraints) error {
 }
 
 func (e *ExecOp) Marshal(ctx context.Context, c *Constraints) (digest.Digest, []byte, *pb.OpMetadata, []*SourceLocation, error) {
-	if dgst, dt, md, srcs, err := e.Load(c); err == nil {
+	cache := e.cache.Acquire()
+	defer cache.Release()
+
+	if dgst, dt, md, srcs, err := cache.Load(c); err == nil {
 		return dgst, dt, md, srcs, nil
 	}
 
@@ -260,6 +267,7 @@ func (e *ExecOp) Marshal(ctx context.Context, c *Constraints) (digest.Digest, []
 		Network:  network,
 		Security: security,
 	}
+
 	if network != NetModeSandbox {
 		addCap(&e.constraints, pb.CapExecMetaNetwork)
 	}
@@ -313,6 +321,18 @@ func (e *ExecOp) Marshal(ctx context.Context, c *Constraints) (digest.Digest, []
 
 	if len(e.ssh) > 0 {
 		addCap(&e.constraints, pb.CapExecMountSSH)
+	}
+
+	if len(e.cdiDevices) > 0 {
+		addCap(&e.constraints, pb.CapExecMetaCDI)
+		cd := make([]*pb.CDIDevice, len(e.cdiDevices))
+		for i, d := range e.cdiDevices {
+			cd[i] = &pb.CDIDevice{
+				Name:     d.Name,
+				Optional: d.Optional,
+			}
+		}
+		peo.CdiDevices = cd
 	}
 
 	if e.constraints.Platform == nil {
@@ -446,7 +466,7 @@ func (e *ExecOp) Marshal(ctx context.Context, c *Constraints) (digest.Digest, []
 	if err != nil {
 		return "", nil, nil, nil, err
 	}
-	return e.Store(dt, md, e.constraints.SourceLocations, c)
+	return cache.Store(dt, md, e.constraints.SourceLocations, c)
 }
 
 func (e *ExecOp) Output() Output {
@@ -616,6 +636,41 @@ func AddUlimit(name UlimitName, soft int64, hard int64) RunOption {
 	return runOptionFunc(func(ei *ExecInfo) {
 		ei.State = ei.State.AddUlimit(name, soft, hard)
 	})
+}
+
+func AddCDIDevice(opts ...CDIDeviceOption) RunOption {
+	return runOptionFunc(func(ei *ExecInfo) {
+		c := &CDIDeviceInfo{}
+		for _, opt := range opts {
+			opt.SetCDIDeviceOption(c)
+		}
+		ei.CDIDevices = append(ei.CDIDevices, *c)
+	})
+}
+
+type CDIDeviceOption interface {
+	SetCDIDeviceOption(*CDIDeviceInfo)
+}
+
+type cdiDeviceOptionFunc func(*CDIDeviceInfo)
+
+func (fn cdiDeviceOptionFunc) SetCDIDeviceOption(ci *CDIDeviceInfo) {
+	fn(ci)
+}
+
+func CDIDeviceName(name string) CDIDeviceOption {
+	return cdiDeviceOptionFunc(func(ci *CDIDeviceInfo) {
+		ci.Name = name
+	})
+}
+
+var CDIDeviceOptional = cdiDeviceOptionFunc(func(ci *CDIDeviceInfo) {
+	ci.Optional = true
+})
+
+type CDIDeviceInfo struct {
+	Name     string
+	Optional bool
 }
 
 func ValidExitCodes(codes ...int) RunOption {
@@ -809,6 +864,7 @@ type ExecInfo struct {
 	ProxyEnv       *ProxyEnv
 	Secrets        []SecretInfo
 	SSH            []SSHInfo
+	CDIDevices     []CDIDeviceInfo
 }
 
 type MountInfo struct {

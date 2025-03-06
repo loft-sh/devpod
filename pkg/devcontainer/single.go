@@ -87,7 +87,6 @@ func (r *runner) runSingleContainer(
 			}
 		}
 	} else {
-
 		// we need to build the container
 		buildInfo, err := r.build(ctx, parsedConfig, substitutionContext, provider2.BuildOptions{
 			CLIOptions: provider2.CLIOptions{
