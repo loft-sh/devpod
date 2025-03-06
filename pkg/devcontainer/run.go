@@ -6,7 +6,6 @@ import (
 	"io"
 	"os"
 	"os/exec"
-	"path/filepath"
 	"runtime"
 	"strings"
 	"time"
@@ -194,11 +193,6 @@ func (r *runner) recreateCustomDriver(ctx context.Context, options UpOptions, ti
 	options.Reset = false
 	options.Recreate = false
 	return r.Up(ctx, options, timeout)
-}
-
-func cleanupBuildInformation(c *config.DevContainerConfig) {
-	contextPath := config.GetContextPath(c)
-	_ = os.RemoveAll(filepath.Join(contextPath, config.DevPodContextFeatureFolder))
 }
 
 func isDockerFileConfig(config *config.DevContainerConfig) bool {

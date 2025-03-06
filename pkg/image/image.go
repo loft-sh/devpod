@@ -25,7 +25,7 @@ func GetImage(ctx context.Context, image string) (v1.Image, error) {
 		return nil, err
 	}
 
-	keychain, err := getKeychain(ctx)
+	keychain, err := GetKeychain(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("create authentication keychain: %w", err)
 	}
@@ -44,7 +44,7 @@ func GetImageForArch(ctx context.Context, image, arch string) (v1.Image, error) 
 		return nil, err
 	}
 
-	keychain, err := getKeychain(ctx)
+	keychain, err := GetKeychain(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("create authentication keychain: %w", err)
 	}
@@ -61,7 +61,6 @@ func GetImageForArch(ctx context.Context, image, arch string) (v1.Image, error) 
 
 	return img, err
 }
-
 func CheckPushPermissions(image string) error {
 	ref, err := name.ParseReference(image)
 	if err != nil {
