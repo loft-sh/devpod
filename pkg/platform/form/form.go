@@ -3,7 +3,6 @@ package form
 import (
 	"context"
 	"fmt"
-	"os"
 	"slices"
 	"strconv"
 	"strings"
@@ -22,7 +21,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-func CreateInstance(ctx context.Context, baseClient client.Client, id, uid string, log log.Logger) (*managementv1.DevPodWorkspaceInstance, error) {
+func CreateInstance(ctx context.Context, baseClient client.Client, id, uid, source, picture string, log log.Logger) (*managementv1.DevPodWorkspaceInstance, error) {
 	formCtx, cancelForm := context.WithCancel(ctx)
 	defer cancelForm()
 
@@ -100,8 +99,8 @@ func CreateInstance(ctx context.Context, baseClient client.Client, id, uid strin
 				labels.ProjectLabel:               selectedProject.GetName(),
 			},
 			Annotations: map[string]string{
-				storagev1.DevPodWorkspacePictureAnnotation: os.Getenv(platform.WorkspacePictureEnv),
-				storagev1.DevPodWorkspaceSourceAnnotation:  os.Getenv(platform.WorkspaceSourceEnv),
+				storagev1.DevPodWorkspacePictureAnnotation: picture,
+				storagev1.DevPodWorkspaceSourceAnnotation:  source,
 			},
 		},
 		Spec: managementv1.DevPodWorkspaceInstanceSpec{
