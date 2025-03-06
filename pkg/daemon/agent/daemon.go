@@ -1,13 +1,18 @@
 package agent
 
 import (
+	"encoding/base64"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"runtime"
 
+	"github.com/loft-sh/devpod/pkg/devcontainer/config"
 	"github.com/loft-sh/devpod/pkg/provider"
+	provider2 "github.com/loft-sh/devpod/pkg/provider"
 	"github.com/loft-sh/devpod/pkg/single"
 	"github.com/loft-sh/log"
 	perrors "github.com/pkg/errors"
@@ -23,6 +28,51 @@ type DaemonConfig struct {
 	Platform provider.PlatformOptions `json:"platform,omitempty"`
 	Ssh      SshConfig                `json:"ssh,omitempty"`
 	Timeout  string                   `json:"timeout"`
+}
+
+func BuildDaemonConfig(platformOptions provider2.PlatformOptions, workspaceConfig *provider2.Workspace, substitutionContext *config.SubstitutionContext, mergedConfig *config.MergedDevContainerConfig) (*DaemonConfig, error) {
+	var workdir string
+	if workspaceConfig.Source.GitSubPath != "" {
+		substitutionContext.ContainerWorkspaceFolder = filepath.Join(substitutionContext.ContainerWorkspaceFolder, workspaceConfig.Source.GitSubPath)
+		workdir = substitutionContext.ContainerWorkspaceFolder
+	}
+	if workdir == "" && mergedConfig != nil {
+		workdir = mergedConfig.WorkspaceFolder
+	}
+	if workdir == "" && substitutionContext != nil {
+		workdir = substitutionContext.ContainerWorkspaceFolder
+	}
+
+	// Get remote user; default to "root" if empty.
+	user := mergedConfig.RemoteUser
+	if user == "" {
+		user = "root"
+	}
+
+	daemonConfig := &DaemonConfig{
+		Platform: platformOptions,
+		Ssh: SshConfig{
+			Workdir: workdir,
+			User:    user,
+		},
+	}
+
+	return daemonConfig, nil
+}
+
+func GetEncodedDaemonConfig(platformOptions provider2.PlatformOptions, workspaceConfig *provider2.Workspace, substitutionContext *config.SubstitutionContext, mergedConfig *config.MergedDevContainerConfig) (string, error) {
+	daemonConfig, err := BuildDaemonConfig(platformOptions, workspaceConfig, substitutionContext, mergedConfig)
+	if err != nil {
+		return "", err
+	}
+
+	data, err := json.Marshal(daemonConfig)
+	if err != nil {
+		return "", err
+	}
+	encoded := base64.StdEncoding.EncodeToString(data)
+	return encoded, nil
+
 }
 
 func InstallDaemon(agentDir string, interval string, log log.Logger) error {
