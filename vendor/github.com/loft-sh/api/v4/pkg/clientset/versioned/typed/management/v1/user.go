@@ -32,6 +32,7 @@ type UserInterface interface {
 	Watch(ctx context.Context, opts metav1.ListOptions) (watch.Interface, error)
 	Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts metav1.PatchOptions, subresources ...string) (result *managementv1.User, err error)
 	GetProfile(ctx context.Context, userName string, options metav1.GetOptions) (*managementv1.UserProfile, error)
+	UpdateProfile(ctx context.Context, userName string, userProfile *managementv1.UserProfile, opts metav1.CreateOptions) (*managementv1.UserProfile, error)
 	ListClusters(ctx context.Context, userName string, options metav1.GetOptions) (*managementv1.UserClusters, error)
 	ListAccessKeys(ctx context.Context, userName string, options metav1.GetOptions) (*managementv1.UserAccessKeys, error)
 
@@ -65,6 +66,20 @@ func (c *users) GetProfile(ctx context.Context, userName string, options metav1.
 		Name(userName).
 		SubResource("profile").
 		VersionedParams(&options, scheme.ParameterCodec).
+		Do(ctx).
+		Into(result)
+	return
+}
+
+// UpdateProfile takes the representation of a userProfile and creates it.  Returns the server's representation of the userProfile, and an error, if there is any.
+func (c *users) UpdateProfile(ctx context.Context, userName string, userProfile *managementv1.UserProfile, opts metav1.CreateOptions) (result *managementv1.UserProfile, err error) {
+	result = &managementv1.UserProfile{}
+	err = c.GetClient().Post().
+		Resource("users").
+		Name(userName).
+		SubResource("profile").
+		VersionedParams(&opts, scheme.ParameterCodec).
+		Body(userProfile).
 		Do(ctx).
 		Into(result)
 	return

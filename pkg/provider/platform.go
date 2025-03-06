@@ -16,6 +16,10 @@ type PlatformOptions struct {
 
 	// credentials for the workspace
 	Credentials PlatformWorkspaceCredentials `json:"credentials,omitempty"`
+
+	// Remote builds
+	BuildRegistry  string `json:"registry,omitempty"`
+	BuilderAddress string `json:"builderAddress,omitempty"`
 }
 
 type PlatformWorkspaceCredentials struct {

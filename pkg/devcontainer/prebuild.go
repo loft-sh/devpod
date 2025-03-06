@@ -7,9 +7,9 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/loft-sh/devpod/pkg/devcontainer/build"
 	"github.com/loft-sh/devpod/pkg/devcontainer/config"
 	"github.com/loft-sh/devpod/pkg/driver"
-	"github.com/loft-sh/devpod/pkg/driver/docker"
 	"github.com/loft-sh/devpod/pkg/image"
 	"github.com/loft-sh/devpod/pkg/provider"
 	"github.com/pkg/errors"
@@ -58,7 +58,7 @@ func (r *runner) Build(ctx context.Context, options provider.BuildOptions) (stri
 	} else if prebuildRepo != "" {
 		prebuildImage = prebuildRepo + ":" + buildInfo.PrebuildHash
 	} else {
-		prebuildImage = docker.GetImageName(r.LocalWorkspaceFolder, buildInfo.PrebuildHash)
+		prebuildImage = build.GetImageName(r.LocalWorkspaceFolder, buildInfo.PrebuildHash)
 	}
 
 	if buildInfo.ImageName == prebuildImage {
