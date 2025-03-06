@@ -29,7 +29,7 @@ func (c *client) Create(ctx context.Context, stdin io.Reader, stdout io.Writer, 
 		return fmt.Errorf("unable to create new instance through CLI if stdin is not a terminal")
 	}
 
-	instance, err = form.CreateInstance(ctx, baseClient, c.workspace.ID, c.workspace.UID, c.log)
+	instance, err = form.CreateInstance(ctx, baseClient, c.workspace.ID, c.workspace.UID, c.workspace.Source.String(), c.workspace.Picture, c.log)
 	if err != nil {
 		return err
 	}
