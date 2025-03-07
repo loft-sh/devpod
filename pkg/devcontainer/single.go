@@ -96,6 +96,7 @@ func (r *runner) runSingleContainer(
 			CLIOptions: provider2.CLIOptions{
 				PrebuildRepositories: options.PrebuildRepositories,
 				ForceDockerless:      options.ForceDockerless,
+				Platform:             options.CLIOptions.Platform,
 			},
 			NoBuild:       options.NoBuild,
 			RegistryCache: options.RegistryCache,

@@ -2,9 +2,11 @@ package buildkit
 
 import (
 	"context"
+	"encoding/base64"
 	"errors"
 	"fmt"
 	"net/http"
+	"net/url"
 	"os"
 	"path/filepath"
 	"strings"
@@ -48,19 +50,38 @@ func BuildRemote(
 	if !options.CLIOptions.Platform.Enabled {
 		return nil, errors.New("remote builds are only supported in DevPod Pro")
 	}
-	if options.CLIOptions.Platform.BuilderAddress == "" {
+	if options.CLIOptions.Platform.Build == nil {
+		return nil, errors.New("build options are required for remote builds")
+	}
+	if options.CLIOptions.Platform.Build.RemoteAddress == "" {
 		return nil, errors.New("builder address is required to build image remotely")
 	}
-	if options.CLIOptions.Platform.BuildRegistry == "" && !options.SkipPush {
+	if options.CLIOptions.Platform.Build.Repository == "" && !options.SkipPush {
 		return nil, errors.New("remote builds require a registry to be provided")
 	}
 
-	// Do we already have image?
+	remoteURL, err := url.Parse(options.CLIOptions.Platform.Build.RemoteAddress)
+	if err != nil {
+		return nil, err
+	}
+
+	// temporarily write certs to disk because buildkit only accepts paths
+	tmpDir, caPath, keyPath, certPath, err := ensureCertPaths(options.CLIOptions.Platform.Build)
+	if err != nil {
+		return nil, fmt.Errorf("ensure certificates: %w", err)
+	}
+	defer func() {
+		_ = os.RemoveAll(tmpDir)
+	}()
 
 	// initialize remote buildkit client
 	timeoutCtx, cancel := context.WithTimeout(ctx, 5*time.Second)
 	defer cancel()
-	c, err := client.New(timeoutCtx, options.CLIOptions.Platform.BuilderAddress)
+	c, err := client.New(timeoutCtx,
+		options.CLIOptions.Platform.Build.RemoteAddress,
+		client.WithServerConfig(remoteURL.Hostname(), caPath),
+		client.WithCredentials(certPath, keyPath),
+	)
 	if err != nil {
 		return nil, fmt.Errorf("get client: %w", err)
 	}
@@ -68,22 +89,22 @@ func BuildRemote(
 
 	info, err := c.Info(timeoutCtx)
 	if err != nil {
-		return nil, fmt.Errorf("get info: %w", err)
+		return nil, fmt.Errorf("get remote builder info: %w", err)
 	}
 
-	imageName := options.CLIOptions.Platform.BuildRegistry + "/" + build.GetImageName(localWorkspaceFolder, prebuildHash)
-
-	// check push permissions before building
+	imageName := options.CLIOptions.Platform.Build.Repository + "/" + build.GetImageName(localWorkspaceFolder, prebuildHash)
 	ref, err := name.ParseReference(imageName)
 	if err != nil {
-		return nil, fmt.Errorf("parse image name %s: %w", imageName, err)
+		return nil, fmt.Errorf("unable to resolve registry %s and image %s: %w",
+			options.CLIOptions.Platform.Build.Repository,
+			build.GetImageName(localWorkspaceFolder, prebuildHash), err)
 	}
 	keychain, err := image.GetKeychain(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("get docker auth keychain: %w", err)
 	}
-	imageDetails, err := getImageDetails(ctx, ref, targetArch, keychain)
 	// we can return early if we find an existing image with the exact configuration in the repository
+	imageDetails, err := getImageDetails(ctx, ref, targetArch, keychain)
 	if err == nil {
 		log.Infof("Found existing image %s, skipping build", imageName)
 		return &config.BuildInfo{
@@ -280,4 +301,46 @@ func getImageDetails(ctx context.Context, ref name.Reference, targetArch string,
 	}
 
 	return imageDetails, nil
+}
+
+func ensureCertPaths(buildOpts *provider.PlatformBuildOptions) (parentDir string, caPath string, keyPath string, certPath string, err error) {
+	parentDir, err = os.MkdirTemp("", "build-certs-*")
+	if err != nil {
+		return parentDir, caPath, keyPath, caPath, fmt.Errorf("create temp dir: %w", err)
+	}
+
+	// write CA
+	caPath = filepath.Join(parentDir, "ca.pem")
+	caBytes, err := base64.StdEncoding.DecodeString(buildOpts.CertCA)
+	if err != nil {
+		return parentDir, caPath, keyPath, caPath, fmt.Errorf("decode CA: %w", err)
+	}
+	err = os.WriteFile(caPath, caBytes, 0o700)
+	if err != nil {
+		return parentDir, caPath, keyPath, caPath, fmt.Errorf("write CA file: %w", err)
+	}
+
+	// write key
+	keyPath = filepath.Join(parentDir, "key.pem")
+	keyBytes, err := base64.StdEncoding.DecodeString(buildOpts.CertKey)
+	if err != nil {
+		return parentDir, caPath, keyPath, caPath, fmt.Errorf("decode private key: %w", err)
+	}
+	err = os.WriteFile(keyPath, keyBytes, 0o700)
+	if err != nil {
+		return parentDir, caPath, keyPath, caPath, fmt.Errorf("write private key file: %w", err)
+	}
+
+	// write cert
+	certPath = filepath.Join(parentDir, "cert.pem")
+	certBytes, err := base64.StdEncoding.DecodeString(buildOpts.Cert)
+	if err != nil {
+		return parentDir, caPath, keyPath, caPath, fmt.Errorf("decode cert: %w", err)
+	}
+	err = os.WriteFile(certPath, certBytes, 0o700)
+	if err != nil {
+		return parentDir, caPath, keyPath, caPath, fmt.Errorf("write cert file: %w", err)
+	}
+
+	return parentDir, caPath, keyPath, caPath, nil
 }

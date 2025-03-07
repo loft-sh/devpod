@@ -110,6 +110,8 @@ func (r *runner) Up(ctx context.Context, options UpOptions, timeout time.Duratio
 		if err := runInitializeCommand(r.LocalWorkspaceFolder, substitutedConfig.Config, options.InitEnv, r.Log); err != nil {
 			return nil, err
 		}
+	} else {
+		r.Log.Info("Skipping initializeCommand on platform")
 	}
 
 	switch {

@@ -18,8 +18,7 @@ type PlatformOptions struct {
 	Credentials PlatformWorkspaceCredentials `json:"credentials,omitempty"`
 
 	// Remote builds
-	BuildRegistry  string `json:"registry,omitempty"`
-	BuilderAddress string `json:"builderAddress,omitempty"`
+	Build *PlatformBuildOptions `json:"build,omitempty"`
 }
 
 type PlatformWorkspaceCredentials struct {
@@ -43,4 +42,12 @@ type PlatformDockerCredentials struct {
 	Host     string `json:"host,omitempty"`
 	User     string `json:"user,omitempty"`
 	Password string `json:"password,omitempty"`
+}
+
+type PlatformBuildOptions struct {
+	Repository    string `json:"repository,omitempty"`
+	RemoteAddress string `json:"remoteAddress,omitempty"`
+	CertCA        string `json:"certCa,omitempty"`
+	CertKey       string `json:"certKey,omitempty"`
+	Cert          string `json:"cert,omitempty"`
 }
