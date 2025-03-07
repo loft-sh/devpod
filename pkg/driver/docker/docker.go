@@ -286,10 +286,6 @@ func (d *dockerDriver) RunDockerDevContainer(
 		args = append(args, "-e", k+"="+v)
 	}
 
-	// security options
-	if init != nil && *init {
-		args = append(args, "--init")
-	}
 	if options.Privileged != nil && *options.Privileged {
 		args = append(args, "--privileged")
 	}
