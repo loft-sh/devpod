@@ -262,7 +262,7 @@ func (r *runner) buildImage(
 	if options.CLIOptions.Platform.Enabled {
 		buildInfo, err := buildkit.BuildRemote(ctx, prebuildHash, parsedConfig, extendedBuildInfo, dockerfilePath, dockerfileContent, r.LocalWorkspaceFolder, options, targetArch, r.Log)
 		if err != nil {
-			return nil, fmt.Errorf("remote: %w", err)
+			return nil, fmt.Errorf("(remote) %w", err)
 		}
 
 		return buildInfo, nil
