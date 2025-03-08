@@ -93,8 +93,8 @@ func newLocalServer(lc *tailscale.LocalClient, pc platformclient.Client, devPodC
 
 	router := httprouter.New()
 	router.PanicHandler = func(w http.ResponseWriter, r *http.Request, i interface{}) {
-		http.Error(w, fmt.Errorf("panic: %s", i).Error(), http.StatusInternalServerError)
-		l.log.Error(fmt.Errorf("panic: %s", i), debug.Stack())
+		http.Error(w, fmt.Errorf("panic: %v", i).Error(), http.StatusInternalServerError)
+		l.log.Error(fmt.Errorf("panic: %v", i), string(debug.Stack()))
 	}
 	router.GET(routeHealth, l.health)
 	router.GET(routeStatus, l.status)
@@ -111,9 +111,19 @@ func newLocalServer(lc *tailscale.LocalClient, pc platformclient.Client, devPodC
 	router.POST(routeCreateWorkspace, l.createWorkspace)
 	router.POST(routeUpdateWorkspace, l.updateWorkspace)
 
-	l.httpServer = &http.Server{Handler: handlers.LoggingHandler(log.Writer(logrus.DebugLevel, true), router)}
+	handler := handlers.LoggingHandler(log.Writer(logrus.DebugLevel, true), router)
+	handler = handlers.RecoveryHandler(handlers.RecoveryLogger(panicLogger{log: l.log}), handlers.PrintRecoveryStack(true))(handler)
+	l.httpServer = &http.Server{Handler: handler}
 
 	return l, nil
+}
+
+type panicLogger struct {
+	log log.Logger
+}
+
+func (r panicLogger) Println(args ...interface{}) {
+	r.log.Error(args...)
 }
 
 func (l *localServer) ListenAndServe() error {
@@ -423,7 +433,7 @@ func (l *localServer) watchWorkspaces(w http.ResponseWriter, r *http.Request, pa
 	)
 	if err != nil {
 		http.Error(w, fmt.Errorf("failed to watch workspaces: %w", err).Error(), http.StatusInternalServerError)
-		l.log.Error("watch workspaces: %w", err)
+		l.log.Errorf("watch workspaces: %w", err)
 		return
 	}
 }

@@ -3,6 +3,7 @@ package daemon
 import (
 	"context"
 	"fmt"
+	"runtime/debug"
 	"sync"
 	"time"
 
@@ -109,18 +110,23 @@ func startWorkspaceWatcher(ctx context.Context, config watchConfig, onChange cha
 	stopCh := make(chan struct{})
 	defer close(stopCh)
 	go func() {
+		defer func() {
+			if err := recover(); err != nil {
+				config.Log.Errorf("panic in workspace watcher: %v\n%s", err, debug.Stack())
+			}
+		}()
+
+		config.Log.Debug("starting workspace watcher")
 		factory.Start(stopCh)
 		factory.WaitForCacheSync(stopCh)
 
 		// Kick off initial message
 		onChange(instanceStore.List())
 	}()
-	go func() {
-		<-ctx.Done()
-		stopCh <- struct{}{}
-	}()
-
-	<-stopCh
+	select {
+	case <-ctx.Done():
+	case <-stopCh:
+	}
 	config.Log.Debug("workspace watcher done")
 
 	return nil

@@ -287,16 +287,17 @@ impl Daemon {
     }
 
     pub async fn try_start(&mut self, host: String, app_handle: &AppHandle) {
-        info!("[{}] attempting to start daemon", host);
+        info!("[{}] attempting to start daemon", host.clone());
         if let Some(_) = self.command {
             self.try_stop().await;
         }
-        match self.spawn(host, app_handle).await {
+        match self.spawn(host.clone(), app_handle).await {
             Ok(command) => {
+                info!("[{}] Successfully started daemon", host.clone());
                 self.command = Some(command);
             }
             Err(err) => {
-                error!("failed to spawn daemon command {:?}", err);
+                error!("[{}] Failed to spawn daemon command {:?}", host, err);
             }
         }
     }
