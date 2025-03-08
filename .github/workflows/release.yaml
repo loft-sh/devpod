@@ -241,6 +241,7 @@ jobs:
           APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
           APPLE_ID: ${{ secrets.APPLE_ID }}
           APPLE_PASSWORD: ${{ secrets.APPLE_PASSWORD }}
+          CI: false # https://github.com/tauri-apps/tauri-action/issues/740
 
       - name: Build linux tar.gz
         if: matrix.settings.host == 'ubuntu-22.04' && matrix.settings.cli_only == false

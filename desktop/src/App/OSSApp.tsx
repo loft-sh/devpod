@@ -41,8 +41,7 @@ export function OSSApp() {
   const rootRouteMatch = useMatch(Routes.ROOT)
   const { sidebarPosition } = useSettings()
   const contentBackgroundColor = useColorModeValue("white", "background.darkest")
-  const subheadingTextColor = useColorModeValue("gray.500", "gray.400")
-  const actionHoverColor = useColorModeValue("gray.100", "gray.800")
+  const actionHoverColor = useColorModeValue("gray.100", "gray.700")
   const toolbarHeight = useToken("sizes", showTitleBar ? "28" : "20")
   const borderColor = useBorderColor()
   const showTitle = isMacOS || isLinux
@@ -150,7 +149,7 @@ export function OSSApp() {
                                           <Text fontWeight="bold">Provider {providerName}</Text>
                                         </LinkOverlay>
                                       </Text>
-                                      <Text color={subheadingTextColor} marginTop="-1">
+                                      <Text variant="contrast" marginTop="-1">
                                         Update available
                                       </Text>
                                     </VStack>

@@ -44,6 +44,7 @@ export function WorkspaceInstanceCard({
   isSelected,
   onSelectionChange,
 }: TWorkspaceInstanceCardProps) {
+  const bgColor = useColorModeValue("white", "gray.900")
   const hoverColor = useColorModeValue("gray.50", "gray.800")
   const { data: templates } = useTemplates()
   const workspace = useWorkspace<ProWorkspaceInstance>(instanceName)
@@ -178,6 +179,7 @@ export function WorkspaceInstanceCard({
         variant="outline"
         marginBottom="3"
         paddingLeft="2"
+        bg={bgColor}
         _hover={{ bgColor: hoverColor, cursor: "pointer" }}
         boxShadow="0px 2px 4px 0px rgba(0, 0, 0, 0.07)"
         onClick={() => navigate(Routes.toProWorkspace(host, instance.id))}>
@@ -281,12 +283,14 @@ type TWorkspaceInfoDetailProps = Readonly<{
   children: ReactNode
 }>
 function WorkspaceInfoDetail({ icon: Icon, label, children }: TWorkspaceInfoDetailProps) {
-  const l = cloneElement(label, { color: "gray.500", fontWeight: "medium", fontSize: "sm" })
+  const color = useColorModeValue("gray.700", "gray.300")
+  const labelColor = useColorModeValue("gray.500", "gray.400")
+  const l = cloneElement(label, { color: labelColor, fontWeight: "medium", fontSize: "sm" })
 
   return (
-    <VStack align="start" gap="1" color="gray.700">
+    <VStack align="start" gap="1" color={color}>
       <HStack gap="1">
-        <Icon boxSize={4} color="gray.500" />
+        <Icon boxSize={4} color={labelColor} />
         {l}
       </HStack>
       {children}

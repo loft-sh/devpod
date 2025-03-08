@@ -16,7 +16,6 @@ import {
   Switch,
   Text,
   Tooltip,
-  useColorModeValue,
 } from "@chakra-ui/react"
 import { UseMutationResult, useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { useMemo } from "react"
@@ -98,7 +97,6 @@ export function ProviderCard({ id, provider, remove }: TProviderCardProps) {
     () => remove.run({ providerID: id })
   )
 
-  const labelTextColor = useColorModeValue("gray.600", "gray.400")
   const providerIcon = provider.config?.icon
   const isDefaultProvider = provider.default ?? false
   const providerVersion = provider.config?.version
@@ -144,9 +142,9 @@ export function ProviderCard({ id, provider, remove }: TProviderCardProps) {
           {providerVersion && (
             <HStack spacing="0">
               <Text
+                variant="muted"
                 paddingY="1"
                 fontFamily="monospace"
-                color={labelTextColor}
                 fontSize="sm"
                 fontWeight="regular">
                 {providerVersion}
@@ -207,7 +205,7 @@ export function ProviderCard({ id, provider, remove }: TProviderCardProps) {
                 }
               }}
             />
-            <Text fontSize="sm" color={labelTextColor}>
+            <Text fontSize="sm" variant="muted">
               Default
             </Text>
           </HStack>
