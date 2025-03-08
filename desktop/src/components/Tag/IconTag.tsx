@@ -1,4 +1,4 @@
-import { ButtonProps, Tag, TagLabel, TagProps, Tooltip, useColorModeValue } from "@chakra-ui/react"
+import { ButtonProps, Tag, TagLabel, TagProps, Tooltip } from "@chakra-ui/react"
 import { ReactElement, ReactNode, cloneElement } from "react"
 
 type TIconTagProps = Readonly<{
@@ -10,14 +10,12 @@ type TIconTagProps = Readonly<{
   TagProps
 
 export function IconTag({ icon: iconProps, label, info, onClick, ...tagProps }: TIconTagProps) {
-  const tagColor = useColorModeValue("gray.700", "gray.300")
   const icon = cloneElement(iconProps, { boxSize: 4 })
 
   return (
     <Tooltip label={info}>
       <Tag
         borderRadius="full"
-        color={tagColor}
         onClick={onClick}
         role={onClick ? "button" : "status"}
         cursor={onClick ? "pointer" : "default"}

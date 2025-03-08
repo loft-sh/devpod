@@ -1,5 +1,14 @@
 import { getDisplayName } from "@/lib"
-import { Box, Input, InputGroup, InputLeftAddon, Select, useToken } from "@chakra-ui/react"
+import {
+  Box,
+  Input,
+  InputGroup,
+  InputLeftAddon,
+  Select,
+  useColorMode,
+  useColorModeValue,
+  useToken,
+} from "@chakra-ui/react"
 import { ManagementV1DevPodEnvironmentTemplate } from "@loft-enterprise/client/gen/models/managementV1DevPodEnvironmentTemplate"
 import { useEffect, useMemo, useState } from "react"
 import { useFormContext } from "react-hook-form"
@@ -17,6 +26,8 @@ export function DevContainerInput({
   const { register, watch, resetField } = useFormContext()
   const devContainerType = watch(FieldName.DEVCONTAINER_TYPE, "path")
   const envTemplateValue = watch(FieldName.DEVCONTAINER_JSON)
+  const bg = useColorModeValue("white", "background.darkest")
+  const { colorMode } = useColorMode()
 
   const [envReference, setEnvReference] = useState<string | undefined>(envTemplateValue)
 
@@ -76,8 +87,8 @@ export function DevContainerInput({
   return (
     <Box display={"flex"} flexDirection={"row"} w={"full"} gap={"4"}>
       <Box flexGrow={1}>
-        <InputGroup bg="white" w={"full"}>
-          <InputLeftAddon padding="0">
+        <InputGroup bg={bg} w={"full"}>
+          <InputLeftAddon padding="0" bg={colorMode == "dark" ? "gray.800" : undefined}>
             <Select
               {...register(FieldName.DEVCONTAINER_TYPE, {
                 onChange: () => {
@@ -108,7 +119,7 @@ export function DevContainerInput({
 
       {versions?.length && (
         <Box w={48}>
-          <InputGroup bg={"white"} w={"full"}>
+          <InputGroup bg={bg} w={"full"}>
             <Select
               {...register(FieldName.ENV_TEMPLATE_VERSION, {
                 onChange: () => {

@@ -14,6 +14,7 @@ import {
   Box,
   Button,
   HStack,
+  Heading,
   IconButton,
   Image,
   LinkBox,
@@ -22,6 +23,8 @@ import {
   Text,
   Tooltip,
   VStack,
+  useColorMode,
+  useColorModeValue,
 } from "@chakra-ui/react"
 import dayjs from "dayjs"
 import { useEffect, useState } from "react"
@@ -29,11 +32,13 @@ import { HiStop } from "react-icons/hi"
 import { Link as RouterLink, useLocation } from "react-router-dom"
 import { TTabProps } from "./types"
 import { TSearchOptions } from "@/components/Terminal/useTerminalSearch"
-import EmptyImage from "@/images/empty-default.svg"
+import EmptyImage from "@/images/empty_default.svg"
+import EmptyDarkImage from "@/images/empty_default.svg"
 
 export function Logs({ host, instance }: TTabProps) {
   const [accordionIndex, setAccordionIndex] = useState<number>(0)
   const actions = useWorkspaceActions(instance.id)
+  const { colorMode } = useColorMode()
 
   const location = useLocation()
 
@@ -52,7 +57,7 @@ export function Logs({ host, instance }: TTabProps) {
     <VStack align="start" w="full" h={"full"}>
       {!actions?.length ? (
         <VStack h={"full"} w={"full"} justifyContent={"center"} alignItems={"center"} flexGrow={1}>
-          <Image src={EmptyImage} />
+          <Image src={colorMode == "dark" ? EmptyDarkImage : EmptyImage} />
           <Text fontWeight={"semibold"} fontSize={"sm"} color={"text.secondary"}>
             No logs to show yet
           </Text>
@@ -94,10 +99,11 @@ function ActionAccordionItem({
   isExpanded,
 }: TActionAccordionItemProps) {
   const action = useAction(actionID)
+  const bgColor = useColorModeValue("white", "background.darkest")
 
   return action?.data ? (
     <>
-      <h2 role={"heading"}>
+      <Heading as={"h2"}>
         <AccordionButton
           as={LinkBox}
           w="full"
@@ -106,12 +112,11 @@ function ActionAccordionItem({
           gap="2"
           paddingY={2}
           paddingX={3}
-          border={"1px solid"}
+          borderWidth="thin"
           borderRadius="md"
           boxSizing={"border-box"}
-          borderColor={"divider.main"}
           borderBottomRadius={isExpanded ? 0 : undefined}
-          backgroundColor={"white"}
+          backgroundColor={bgColor}
           width="full"
           flexFlow="row nowrap">
           {action.data.status === "pending" && <Spinner color="blue.300" size="sm" />}
@@ -131,7 +136,9 @@ function ActionAccordionItem({
           </LinkOverlay>
 
           <Tooltip label={dayjs(action.data.createdAt).format()}>
-            <Text color="gray.600">{dayjs(action.data.createdAt).fromNow()}</Text>
+            <Text fontWeight="normal" color="gray.600" _dark={{ color: "gray.400" }}>
+              {dayjs(action.data.createdAt).fromNow()}
+            </Text>
           </Tooltip>
 
           {action.data.status === "pending" && (
@@ -152,14 +159,13 @@ function ActionAccordionItem({
             <AccordionIcon />
           </HStack>
         </AccordionButton>
-      </h2>
+      </Heading>
       <AccordionPanel
-        bgColor={"white"}
-        border={isExpanded ? "1px solid" : "none"}
+        bgColor={bgColor}
+        borderWidth={isExpanded ? "thin" : "unset"}
         borderTop={"none"}
         borderBottomRadius={"md"}
-        padding={0}
-        borderColor={"divider.main"}>
+        padding={0}>
         {isExpanded && <ActionTerminal actionID={actionID} />}
       </AccordionPanel>
     </>

@@ -7,11 +7,13 @@ use log::{error, warn};
 use tauri::{
     menu::{Menu, MenuBuilder, MenuEvent, MenuItem, Submenu},
     tray::{MouseButton, TrayIcon, TrayIconEvent},
-    Manager, State, Wry,
+    Manager, Wry,
 };
 use util::QUIT_EXIT_CODE;
 
-pub type SystemTrayClickHandler = Box<dyn Fn(&AppHandle, State<AppState>)>;
+pub static WARNING_SYSTEM_TRAY_ICON_BYTES: &'static [u8] = include_bytes!("../icons/icon_warning_system_tray.png");
+pub static SYSTEM_TRAY_ICON_BYTES: &'static [u8] = include_bytes!("../icons/icon_system_tray.png");
+
 pub trait ToSystemTraySubmenu {
     fn to_submenu(&self, app_handle: &AppHandle) -> anyhow::Result<Submenu<Wry>>;
 }
