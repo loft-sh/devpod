@@ -28,6 +28,7 @@ import {
   Spinner,
   Text,
   VStack,
+  useColorModeValue,
 } from "@chakra-ui/react"
 import { ManagementV1DevPodWorkspaceTemplate } from "@loft-enterprise/client/gen/models/managementV1DevPodWorkspaceTemplate"
 import dayjs from "dayjs"
@@ -97,13 +98,12 @@ export function Workspace() {
       ),
     [instance, templates]
   )
-  const runner = useMemo(
-    () =>
-      projectClusters?.runners.find(
-        (runner) => runner.metadata?.name === instance?.spec?.runnerRef?.runner
-      ),
-    [projectClusters, instance]
-  )
+  const cluster = useMemo(() => {
+    return projectClusters?.clusters.find(
+      // @ts-ignore FIXME: after updating types
+      (cluster) => cluster.metadata?.name === instance?.spec?.clusterRef?.cluster
+    )
+  }, [projectClusters, instance])
 
   // navigate to pro instance view after successfully deleting the workspace
   useEffect(() => {
@@ -198,7 +198,7 @@ export function Workspace() {
             />
             {sourceInfo && <WorkspaceInfoDetail icon={sourceInfo.icon} label={sourceInfo.label} />}
             <WorkspaceInfoDetail icon={Status} label={formatTemplateDetail(instance, template)} />
-            <WorkspaceInfoDetail icon={Globe} label={<Text>{getDisplayName(runner)}</Text>} />
+            <WorkspaceInfoDetail icon={Globe} label={<Text>{getDisplayName(cluster)}</Text>} />
             {lastActivity && (
               <WorkspaceInfoDetail
                 icon={Clock}
@@ -230,7 +230,8 @@ type TWorkspaceInfoDetailProps = Readonly<{
   label: ReactElement
 }>
 function WorkspaceInfoDetail({ icon: Icon, label }: TWorkspaceInfoDetailProps) {
-  const l = cloneElement(label, { color: "gray.600" })
+  const color = useColorModeValue("gray.600", "gray.400")
+  const l = cloneElement(label, { color })
 
   return (
     <HStack gap="1" whiteSpace="nowrap" userSelect="text" cursor="text">
