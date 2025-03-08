@@ -4,7 +4,7 @@ use crate::{
         start_daemon::StartDaemonCommand, DevpodCommandError,
     },
     daemon,
-    system_tray::ToSystemTraySubmenu,
+    system_tray::{ToSystemTraySubmenu, SYSTEM_TRAY_ICON_BYTES, WARNING_SYSTEM_TRAY_ICON_BYTES},
     ui_messages,
 };
 use crate::{AppHandle, AppState};
@@ -22,7 +22,6 @@ use tauri::{
 use tauri_plugin_notification::NotificationExt;
 use tauri_plugin_shell::process::{CommandChild, CommandEvent};
 
-static WARNING_TRAY_ICON_BYTES: &'static [u8] = include_bytes!("../icons/icon_warning.png");
 
 pub trait Identifiable {
     type ID: Eq + Hash + Clone;
@@ -554,8 +553,8 @@ async fn watch_daemons(app_handle: &AppHandle) -> anyhow::Result<()> {
         // update main system tray icon
         if let Some(main_tray) = app_handle.tray_by_id("main") {
             let icon = match pro_state.all_ready {
-                true => app_handle.default_window_icon().unwrap().clone(),
-                false => Image::from_bytes(WARNING_TRAY_ICON_BYTES).unwrap(),
+                true => Image::from_bytes(SYSTEM_TRAY_ICON_BYTES).unwrap(),
+                false => Image::from_bytes(WARNING_SYSTEM_TRAY_ICON_BYTES).unwrap(),
             };
             let _ = main_tray.set_icon(Some(icon));
             let _ = main_tray.set_icon_as_template(true);

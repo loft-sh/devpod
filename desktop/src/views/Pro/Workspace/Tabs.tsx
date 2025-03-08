@@ -17,8 +17,8 @@ export const DETAILS_TABS: Readonly<{
 ]
 type TWorkspaceTabProps = Readonly<{}> & TTabProps
 export function WorkspaceTabs({ ...tabProps }: TWorkspaceTabProps) {
-  const headerBackgroundColor = useColorModeValue("white", "black")
-  const contentBackgroundColor = useColorModeValue("gray.50", "gray.800")
+  const headerBackgroundColor = useColorModeValue("white", "background.darkest")
+  const contentBackgroundColor = useColorModeValue("gray.50", "gray.900")
   const [searchParams, setSearchParams] = useSearchParams()
 
   const tabIndex = useMemo(() => {

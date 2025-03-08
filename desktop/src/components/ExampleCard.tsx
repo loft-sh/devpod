@@ -6,7 +6,6 @@ import {
   Text,
   Tooltip,
   forwardRef,
-  useColorMode,
   useColorModeValue,
   useToken,
 } from "@chakra-ui/react"
@@ -44,7 +43,6 @@ export const ExampleCard = forwardRef<TExampleCardProps, ComponentType<typeof Ca
     ref
   ) {
     const hoverBackgroundColor = useColorModeValue("gray.50", "gray.800")
-    const { colorMode } = useColorMode()
 
     const primaryColorLight = useToken("colors", "primary.400")
     const primaryColorDark = useToken("colors", "primary.800")
@@ -58,11 +56,7 @@ export const ExampleCard = forwardRef<TExampleCardProps, ComponentType<typeof Ca
             bottom: 0,
             left: 0,
             right: 0,
-            background:
-              colorMode === "light"
-                ? `linear-gradient(135deg, ${primaryColorLight}55 30%, ${primaryColorDark}55, ${primaryColorDark}88)`
-                : `linear-gradient(135deg, ${primaryColorLight}AA 30%, ${primaryColorDark}AA, ${primaryColorDark}CC)`,
-            ...(colorMode === "dark" ? { mixBlendMode: "overlay" } : {}),
+            background: `linear-gradient(135deg, ${primaryColorLight}55 30%, ${primaryColorDark}55, ${primaryColorDark}88)`,
             opacity: 0.7,
             width: "full",
             height: "full",
@@ -100,6 +94,12 @@ export const ExampleCard = forwardRef<TExampleCardProps, ComponentType<typeof Ca
           boxSizing="border-box"
           position="relative"
           backgroundColor="transparent"
+          _dark={{
+            backgroundColor: "transparent",
+            _hover: {
+              backgroundColor: isDisabled || isSelected ? undefined : hoverBackgroundColor,
+            },
+          }}
           overflow="hidden"
           _hover={{ backgroundColor: isDisabled || isSelected ? undefined : hoverBackgroundColor }}
           {...(onClick && !isDisabled && !isSelected ? { onClick } : {})}
@@ -110,7 +110,8 @@ export const ExampleCard = forwardRef<TExampleCardProps, ComponentType<typeof Ca
             <Text
               paddingBottom="1"
               fontSize="11px"
-              color="gray.400"
+              color="gray.500"
+              _dark={{ color: "gray.300" }}
               fontWeight="medium"
               overflow="hidden"
               maxWidth={sizes[size]}

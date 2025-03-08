@@ -23,6 +23,7 @@ import {
   Input,
   Spinner,
   VStack,
+  useColorModeValue,
 } from "@chakra-ui/react"
 import { ManagementV1DevPodWorkspaceTemplate } from "@loft-enterprise/client/gen/models/managementV1DevPodWorkspaceTemplate"
 import { ReactNode, useCallback, useEffect, useMemo, useRef } from "react"
@@ -132,6 +133,7 @@ export function CreateWorkspaceForm({
       }
     }
   }, [preset, form, isUpdate])
+  const inputBg = useColorModeValue("white", "background.darkest")
 
   return (
     <Form onSubmit={form.handleSubmit(onSubmit)}>
@@ -277,7 +279,7 @@ export function CreateWorkspaceForm({
                   Workspace Name
                 </FormLabel>
               }>
-              <Input {...form.register(FieldName.NAME, { required: false })} bg="white" />
+              <Input {...form.register(FieldName.NAME, { required: false })} bg={inputBg} />
 
               {exists(nameError) && (
                 <FormErrorMessage>{nameError.message ?? "Error"}</FormErrorMessage>

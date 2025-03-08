@@ -10,6 +10,7 @@ import { ThemeProvider } from "./Theme"
 import { SettingsProvider } from "./contexts"
 import { router } from "./routes"
 import { client } from "./client"
+import { ColorModeScript } from "@chakra-ui/react"
 
 dayjs.extend(relativeTime)
 
@@ -41,11 +42,14 @@ if (l) {
 if (render) {
   ReactDOM.createRoot(document.getElementById("root") as HTMLElement).render(<Root />)
 }
+// force chakra to determine color mode on startup
+localStorage.removeItem("chakra-ui-color-mode")
 
 function Root() {
   return (
     <StrictMode>
       <SettingsProvider>
+        <ColorModeScript initialColorMode={"system"} />
         <ThemeProvider>
           <QueryClientProvider client={queryClient}>
             <RouterProvider router={router} />

@@ -50,7 +50,7 @@ export function App() {
 
 export function ErrorPage() {
   const error = useRouteError()
-  const contentBackgroundColor = useColorModeValue("white", "black")
+  const contentBackgroundColor = useColorModeValue("white", "background.darkest")
 
   return (
     <Box height="100vh" width="100vw" backgroundColor={contentBackgroundColor}>

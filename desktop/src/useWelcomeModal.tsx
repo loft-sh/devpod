@@ -74,13 +74,13 @@ export function useWelcomeModal() {
         <ModalOverlay />
         <ModalContent>
           {isCancellable && <ModalCloseButton />}
-          <ModalBody>
+          <ModalBody borderRadius={"md"}>
             <VStack align="start" spacing="8" paddingX="4" paddingTop="4">
               <Steps finishText="Get Started" onFinish={handleSetupFinished}>
                 <Step>
                   <HStack width="full" justifyContent="space-between" alignItems="center">
                     <HStack>
-                      <Heading as="h1" size="lg" marginRight="2">
+                      <Heading as="h1" size="lg">
                         Welcome to
                       </Heading>
                       <DevpodWordmark width="40" height="16" />
@@ -98,7 +98,7 @@ export function useWelcomeModal() {
                     cloud. It&apos;s also possible to extend DevPod and write your own custom
                     providers. <br />
                     For more information, head over to our{" "}
-                    <Link color="primary.600" onClick={() => client.open("https://devpod.sh/docs")}>
+                    <Link onClick={() => client.open("https://devpod.sh/docs")}>
                       documentation.
                     </Link>
                   </Text>
@@ -122,7 +122,7 @@ export function useWelcomeModal() {
                     </Link>{" "}
                     or directly add it to your <Code>$PATH</Code>.
                     <br />
-                    <Text as="span" color="gray.500">
+                    <Text as="span" variant="muted">
                       Feel free to skip this step. You can always install the CLI from the{" "}
                       <Code variant="decorative">Settings</Code> tab.
                     </Text>
@@ -132,7 +132,7 @@ export function useWelcomeModal() {
                       {installCLIButton}
                       {installCLIBadge}
                     </HStack>
-                    <Text color="gray.500" fontSize="sm">
+                    <Text variant="muted" fontSize="sm">
                       {installCLIHelpText}
                     </Text>
                   </VStack>
@@ -150,7 +150,7 @@ export function useWelcomeModal() {
                   <Text>
                     Workspaces are your reproducible development environment on a per-project basis.
                     Turn a local folder, git repository or docker container into a workspace and
-                    connect it to your favorite coding tool. Or just ssh into them and go crazy.
+                    connect it to your favorite coding tool. Or just ssh into them start developing.
                   </Text>
                 </Step>
               </Steps>

@@ -1,3 +1,4 @@
+import { client } from "@/client"
 import { ChevronDownIcon } from "@chakra-ui/icons"
 import {
   Button,
@@ -16,15 +17,12 @@ import {
   Tabs,
   Tooltip,
   VStack,
-  useColorModeValue,
   useToken,
 } from "@chakra-ui/react"
 import debounce from "lodash.debounce"
 import { useCallback, useMemo, useState } from "react"
 import { useFormContext } from "react-hook-form"
 import { FiFolder } from "react-icons/fi"
-import { useBorderColor } from "@/Theme"
-import { client } from "@/client"
 import { FieldName, TFormValues } from "./types"
 
 // WARN: Make sure these match the regexes in /pkg/git/git.go
@@ -56,8 +54,6 @@ export function SourceInput({ isDisabled, resetPreset }: TSourceInputProps) {
   const { register, formState, watch, setValue, trigger: validate } = useFormContext<TFormValues>()
   const currentValue = watch(FieldName.SOURCE)
   const sourceType = watch(FieldName.SOURCE_TYPE, "git")
-  const inputBackgroundColor = useColorModeValue("white", "black")
-  const borderColor = useBorderColor()
   const errorBorderColor = useToken("colors", "red.500")
   const [tabIndex, setTabIndex] = useState(0)
   const [advancedGitSettings, setAdvancedGitSettings] =
@@ -151,6 +147,8 @@ export function SourceInput({ isDisabled, resetPreset }: TSourceInputProps) {
         placeholder: "/path/to/workspace",
         secondaryAction: (
           <Button
+            bg="gray.200"
+            _dark={{ bg: "gray.800" }}
             isDisabled={isDisabled}
             aria-invalid={hasErrors ? "true" : undefined}
             _invalid={{
@@ -167,7 +165,6 @@ export function SourceInput({ isDisabled, resetPreset }: TSourceInputProps) {
             borderRightWidth={"thin"}
             borderBottomWidth={"thin"}
             minW="28"
-            borderColor={borderColor}
             height="10"
             onClick={handleSelectFolderClicked}>
             Browse...
@@ -185,11 +182,15 @@ export function SourceInput({ isDisabled, resetPreset }: TSourceInputProps) {
         <Popover isLazy onOpen={handlePopoverOpened}>
           <PopoverTrigger>
             <Button
+              variant="ghost"
+              bg="gray.200"
+              borderColor="gray.200"
+              _dark={{ bg: "gray.800", borderColor: "gray.800" }}
               isDisabled={isDisabled}
               aria-invalid={hasErrors ? "true" : undefined}
               _invalid={{
                 borderStyle: "solid",
-                borderWidth: "1px",
+                borderWidth: "thin",
                 borderLeftWidth: 0,
                 borderColor: errorBorderColor,
               }}
@@ -200,7 +201,6 @@ export function SourceInput({ isDisabled, resetPreset }: TSourceInputProps) {
               borderTopWidth={"thin"}
               borderRightWidth={"thin"}
               borderBottomWidth={"thin"}
-              borderColor={borderColor}
               minW="32"
               height="10">
               Advanced...
@@ -210,7 +210,7 @@ export function SourceInput({ isDisabled, resetPreset }: TSourceInputProps) {
             <PopoverArrow />
             <VStack>
               <Tabs
-                variant="muted"
+                variant="muted-popover"
                 size="sm"
                 index={tabIndex}
                 onChange={handleAdvancedOptionTabChanged}>
@@ -253,7 +253,6 @@ export function SourceInput({ isDisabled, resetPreset }: TSourceInputProps) {
   }, [
     advancedGitSettings.value,
     allowPullRequest,
-    borderColor,
     currentValue,
     errorBorderColor,
     handleAdvancedOptionTabChanged,
@@ -278,10 +277,12 @@ export function SourceInput({ isDisabled, resetPreset }: TSourceInputProps) {
           })}
           _invalid={{
             borderStyle: "solid",
-            borderWidth: "1px",
+            borderWidth: "thin",
             borderRightWidth: 0,
             borderColor: errorBorderColor,
           }}
+          bg="gray.200"
+          _dark={{ bg: "gray.800" }}
           borderTopRightRadius="0"
           borderBottomRightRadius="0"
           focusBorderColor="transparent"
@@ -317,7 +318,6 @@ export function SourceInput({ isDisabled, resetPreset }: TSourceInputProps) {
           borderColor: errorBorderColor,
         }}
         spellCheck={false}
-        backgroundColor={inputBackgroundColor}
         fontSize="md"
         height="10"
         type="text"

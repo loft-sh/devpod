@@ -1,17 +1,20 @@
 import { TWorkspaceStatusFilterState, WorkspaceSorter, WorkspaceStatusFilter } from "@/components"
 import { DeleteWorkspacesModal } from "@/components/DeleteWorkspacesModal"
 import { WorkspaceListSelection } from "@/components/ListSelection"
+import { WorkspaceOwnerFilter } from "@/components/WorkspaceOwnerFilter"
 import {
   ProWorkspaceInstance,
   useProContext,
   useTemplates,
-  useWorkspaces,
   useWorkspaceStore,
+  useWorkspaces,
 } from "@/contexts"
-import { removeWorkspaceAction, stopWorkspaceAction } from "@/contexts/DevPodContext/workspaces"
 import { IWorkspaceStore } from "@/contexts/DevPodContext/workspaceStore"
+import { removeWorkspaceAction, stopWorkspaceAction } from "@/contexts/DevPodContext/workspaces"
 import { DevPodIcon } from "@/icons"
+import { default as EmptyDarkImage, default as EmptyImage } from "@/images/empty_default.svg"
 import emptyWorkspacesImage from "@/images/empty_workspaces.svg"
+import emptyWorkspacesDarkImage from "@/images/empty_workspaces_dark.svg"
 import {
   DEFAULT_SORT_WORKSPACE_MODE,
   useSelection,
@@ -24,23 +27,22 @@ import {
   Button,
   Center,
   Container,
-  Heading,
   HStack,
+  Heading,
   Image,
   List,
   ListItem,
   Spinner,
   Text,
-  useDisclosure,
   VStack,
+  useColorMode,
+  useColorModeValue,
+  useDisclosure,
 } from "@chakra-ui/react"
+import { ManagementV1Self } from "@loft-enterprise/client/gen/models/managementV1Self"
 import { useCallback, useEffect, useId, useMemo, useState } from "react"
 import { useNavigate } from "react-router"
 import { WorkspaceInstanceCard } from "./Workspace"
-
-import { WorkspaceOwnerFilter } from "@/components/WorkspaceOwnerFilter"
-import EmptyImage from "@/images/empty-default.svg"
-import { ManagementV1Self } from "@loft-enterprise/client/gen/models/managementV1Self"
 
 export function ListWorkspaces() {
   const { store } = useWorkspaceStore<IWorkspaceStore<string, ProWorkspaceInstance>>()
@@ -50,6 +52,8 @@ export function ListWorkspaces() {
     useProContext()
   const navigate = useNavigate()
   const { data: templates } = useTemplates()
+  const textColor = useColorModeValue("gray.600", "gray.400")
+  const { colorMode } = useColorMode()
 
   const [statusFilter, setStatusFilter] = useState<TWorkspaceStatusFilterState>("all")
 
@@ -195,7 +199,7 @@ export function ListWorkspaces() {
                   justifyContent={"center"}
                   alignItems={"center"}
                   flexGrow={1}>
-                  <Image src={EmptyImage} />
+                  <Image src={colorMode == "dark" ? EmptyDarkImage : EmptyImage} />
                   <Text fontWeight={"semibold"} fontSize={"sm"} color={"text.secondary"}>
                     No items found
                   </Text>
@@ -223,14 +227,18 @@ export function ListWorkspaces() {
         ) : (
           <Container maxW="container.lg" h="full">
             <VStack align="center" justify="center" w="full" h="full">
-              <Heading fontWeight="thin" color="gray.600">
+              <Heading fontWeight="thin" color={textColor}>
                 Create a DevPod Workspace
               </Heading>
-              <Image src={emptyWorkspacesImage} w="100%" h="40vh" my="12" />
+              <Image
+                src={colorMode == "dark" ? emptyWorkspacesDarkImage : emptyWorkspacesImage}
+                w="100%"
+                h="40vh"
+                my="12"
+              />
 
               <Button
-                variant="solid"
-                colorScheme="primary"
+                variant="primary"
                 leftIcon={<DevPodIcon boxSize={5} />}
                 onClick={handleCreateClicked}>
                 Create Workspace

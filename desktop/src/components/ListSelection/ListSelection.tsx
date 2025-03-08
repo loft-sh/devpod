@@ -1,7 +1,7 @@
-import { Button, Checkbox, FormLabel, HStack } from "@chakra-ui/react"
 import { Pause, Trash } from "@/icons"
-import React, { ReactElement, useMemo } from "react"
+import { Button, Checkbox, FormLabel, HStack } from "@chakra-ui/react"
 import { ThemeTypings } from "@chakra-ui/styled-system"
+import { ReactElement, useMemo } from "react"
 
 type TSelectionAction = {
   label: string
@@ -33,7 +33,7 @@ export function ListSelection({
         isChecked={totalAmount > 0 && selectionAmount === totalAmount}
         onChange={handleSelectAllClicked}
       />
-      <FormLabel whiteSpace="nowrap" paddingTop="2" htmlFor="select-all" color="gray.500">
+      <FormLabel whiteSpace="nowrap" paddingTop="2" htmlFor="select-all">
         {selectionAmount === 0 ? "Select all" : ` ${selectionAmount} of ${totalAmount} selected`}
       </FormLabel>
       {selectionAmount > 0 && (

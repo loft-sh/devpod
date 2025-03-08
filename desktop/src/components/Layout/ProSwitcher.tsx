@@ -1,9 +1,9 @@
 import { client } from "@/client"
 import { useProInstances, useProviders, useSettings } from "@/contexts"
-import { CheckCircle, CircleWithArrow, DevPodProBadge, ExclamationTriangle, Plus } from "@/icons"
+import { CheckCircle, CircleWithArrow, DevPodProBadge, ExclamationTriangle } from "@/icons"
 import {
-  canHealthCheck as isNewProProvider,
   exists,
+  canHealthCheck as isNewProProvider,
   useLoginProModal,
   useReLoginProModal,
 } from "@/lib"
@@ -111,6 +111,7 @@ function ProPopoverContent({
   onReLogin,
 }: TProPopoverContentProps) {
   const navigate = useNavigate()
+  const hoverBgColor = useColorModeValue("gray.100", "gray.700")
   const [[providers]] = useProviders()
   const { newProInstances, legacyProInstances } = useMemo(() => {
     return (
@@ -171,9 +172,6 @@ function ProPopoverContent({
               icon={<Icon as={HiArrowRightOnRectangle} boxSize={5} />}
             />
           </Tooltip>
-          <Tooltip label="Create new Pro instance">
-            <IconButton aria-label="Create new Pro Instance" isDisabled icon={<Plus />} />
-          </Tooltip>
         </ButtonGroup>
       </PopoverHeader>
       <PopoverBody>
@@ -206,7 +204,7 @@ function ProPopoverContent({
             return (
               <ListItem key={host}>
                 <Button
-                  _hover={{ bg: "gray.100" }}
+                  _hover={{ bg: hoverBgColor }}
                   variant="unstyled"
                   w="full"
                   px="4"

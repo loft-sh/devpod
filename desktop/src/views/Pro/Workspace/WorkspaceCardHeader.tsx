@@ -31,6 +31,7 @@ import {
   Portal,
   Text,
   TextProps,
+  useColorModeValue,
   VStack,
 } from "@chakra-ui/react"
 import React, { createContext, ReactNode, useCallback, useContext } from "react"
@@ -56,6 +57,7 @@ export function WorkspaceCardHeader({
 }: TWorkspaceCardHeaderProps) {
   const source = instance.status?.source
   const sourceDetail = getSourceDetail(source)
+  const textColor = useColorModeValue("gray.500", "gray.400")
 
   return (
     <HStack justify="space-between" align="start">
@@ -74,7 +76,7 @@ export function WorkspaceCardHeader({
             </Box>
           )}
           {showSource && (
-            <Text color="gray.500">
+            <Text color={textColor}>
               {source?.gitRepository || source?.image || source?.localFolder}
             </Text>
           )}
@@ -122,6 +124,9 @@ export function Controls({
   const instance = useContext(WorkspaceCardHeaderContext)
   const ide = getWorkspaceIDE(instance, ides, defaultIDE, settings.fixedIDE)
   const groupedIDEs = useGroupIDEs(ides)
+  const borderColor = useColorModeValue("white", "gray.900")
+  const menuHoverColor = useColorModeValue("gray.200", "gray.700")
+  const menuActiveColor = useColorModeValue("gray.300", "gray.700")
 
   const stopPropagation = useCallback((e: React.UIEvent) => e.stopPropagation(), [])
 
@@ -139,7 +144,7 @@ export function Controls({
         <Menu>
           <MenuButton
             as={IconButton}
-            borderLeftColor="white"
+            borderLeftColor={borderColor}
             borderLeftStyle="solid"
             borderLeftWidth="thin"
             aria-label="Show more IDEs"
@@ -171,11 +176,10 @@ export function Controls({
       <Menu placement="bottom">
         <MenuButton
           as={IconButton}
-          colorScheme="gray"
           variant="ghost"
           aria-label="More actions"
-          _hover={{ bgColor: "gray.200" }}
-          _active={{ bgColor: "gray.300" }}
+          _hover={{ bgColor: menuHoverColor }}
+          _active={{ bgColor: menuActiveColor }}
           icon={<Ellipsis transform={"rotate(90deg)"} boxSize={5} />}
         />
         <Portal>

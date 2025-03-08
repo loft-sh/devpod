@@ -1,8 +1,17 @@
+import { TWorkspaceStatusFilterState, WorkspaceSorter, WorkspaceStatusFilter } from "@/components"
+import { DeleteWorkspacesModal } from "@/components/DeleteWorkspacesModal"
+import { WorkspaceListSelection } from "@/components/ListSelection"
+import { useProviders, useWorkspaceStore, useWorkspaces } from "@/contexts"
 import { removeWorkspaceAction, stopWorkspaceAction } from "@/contexts/DevPodContext/workspaces"
 import { Stack3D } from "@/icons"
+import { exists, useSelection, useSortWorkspaces } from "@/lib"
+import { DEFAULT_SORT_WORKSPACE_MODE } from "@/lib/useSortWorkspaces"
+import { Routes } from "@/routes"
+import { TProvider, TProviderID, TWorkspace } from "@/types"
 import {
   Box,
   Button,
+  ColorMode,
   HStack,
   Image,
   Menu,
@@ -12,20 +21,14 @@ import {
   MenuList,
   MenuOptionGroup,
   Text,
-  useDisclosure,
   VStack,
+  useColorMode,
+  useDisclosure,
 } from "@chakra-ui/react"
 import { useCallback, useEffect, useId, useMemo, useState } from "react"
 import { useNavigate } from "react-router"
-import { useProviders, useWorkspaces, useWorkspaceStore } from "@/contexts"
-import { exists, useSelection, useSortWorkspaces } from "@/lib"
-import { Routes } from "@/routes"
-import { TProviderID, TWorkspace } from "@/types"
 import { WorkspaceCard } from "./WorkspaceCard"
-import { WorkspaceListSelection } from "@/components/ListSelection"
-import { DeleteWorkspacesModal } from "@/components/DeleteWorkspacesModal"
-import { DEFAULT_SORT_WORKSPACE_MODE } from "@/lib/useSortWorkspaces"
-import { TWorkspaceStatusFilterState, WorkspaceSorter, WorkspaceStatusFilter } from "@/components"
+import { RECOMMENDED_PROVIDER_SOURCES } from "../../constants"
 
 type TWorkspacesInfo = Readonly<{
   workspaceCards: TWorkspace[]
@@ -37,6 +40,7 @@ export function ListWorkspaces() {
   const navigate = useNavigate()
   const [[providers]] = useProviders()
   const workspaces = useWorkspaces<TWorkspace>()
+  const { colorMode } = useColorMode()
 
   const selection = useSelection()
 
@@ -167,18 +171,18 @@ export function ListWorkspaces() {
                   }
                   type="checkbox">
                   <MenuDivider />
-                  {availableProviders.map(([providerID, provider]) => (
-                    <MenuItemOption key={providerID} value={providerID}>
-                      <HStack>
-                        {provider.config?.icon ? (
-                          <Image src={provider.config.icon} boxSize={4} />
-                        ) : (
-                          <Box boxSize={4} />
-                        )}
-                        <Text>{providerID}</Text>
-                      </HStack>
-                    </MenuItemOption>
-                  ))}
+                  {availableProviders.map(([providerID, provider]) => {
+                    const icon = getProviderIcon(provider, colorMode)
+
+                    return (
+                      <MenuItemOption key={providerID} value={providerID}>
+                        <HStack>
+                          {icon ? <Image src={icon} boxSize={4} /> : <Box boxSize={4} />}
+                          <Text>{providerID}</Text>
+                        </HStack>
+                      </MenuItemOption>
+                    )
+                  })}
                 </MenuOptionGroup>
               </MenuList>
             </Menu>
@@ -224,4 +228,19 @@ function getCurrentFilterCount(filter: string[] | "all", total: number) {
   }
 
   return filter.length
+}
+
+function getProviderIcon(provider: TProvider, colorMode: ColorMode): string | undefined {
+  const maybeProviderSource = RECOMMENDED_PROVIDER_SOURCES.find(
+    (p) => p.name === provider.config?.name
+  )
+  if (maybeProviderSource) {
+    if (colorMode === "dark") {
+      return maybeProviderSource.imageDarkMode ?? maybeProviderSource.image
+    }
+
+    return maybeProviderSource.image
+  }
+
+  return provider.config?.icon ?? undefined
 }

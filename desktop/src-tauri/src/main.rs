@@ -33,8 +33,8 @@ use custom_protocol::CustomProtocol;
 use log::{error, info};
 use resource_watcher::{ProState, WorkspacesState};
 use std::sync::{Arc, Mutex};
-use system_tray::SystemTray;
-use tauri::{tray::TrayIconBuilder, Manager, Wry};
+use system_tray::{SystemTray, SYSTEM_TRAY_ICON_BYTES};
+use tauri::{image::Image, tray::TrayIconBuilder, Manager, Wry};
 use tokio::sync::{
     mpsc::{self, Sender},
     RwLock,
@@ -150,7 +150,7 @@ fn main() -> anyhow::Result<()> {
             tauri::async_runtime::block_on(async move {
                 if let Ok(menu) = system_tray.init(&app_handle).await {
                     let _tray = TrayIconBuilder::with_id("main")
-                        .icon(app.default_window_icon().unwrap().clone())
+                        .icon(Image::from_bytes(SYSTEM_TRAY_ICON_BYTES).unwrap(),)
                         .icon_as_template(true)
                         .menu(&menu)
                         .menu_on_left_click(true)

@@ -7,6 +7,7 @@ import {
   InputLeftElement,
   InputRightElement,
   Tooltip,
+  useColorModeValue,
 } from "@chakra-ui/react"
 import { ArrowDown, ArrowUp, MatchCase, Search, WholeWord } from "@/icons"
 import { ReactElement, useEffect, useRef, useState } from "react"
@@ -31,6 +32,7 @@ export function TerminalSearchBar({
   paddingY,
   paddingX,
 }: TTerminalSearchBarProps) {
+  const bgColor = useColorModeValue("white", "gray.800")
   const [searchString, setSearchString] = useState<string | undefined>(undefined)
   const [debouncedSearchString, setDebouncedSearchString] = useState<string | undefined>(undefined)
   const [caseSensitive, setCaseSensitive] = useState<boolean>(false)
@@ -72,7 +74,7 @@ export function TerminalSearchBar({
           value={searchString ?? ""}
           placeholder={"Search..."}
           spellCheck={false}
-          bg={"white"}
+          bg={bgColor}
           onKeyDown={(e) => {
             if (e.key === "Enter") {
               if (e.shiftKey) {
@@ -157,6 +159,8 @@ function ToggleButton({
   value: boolean
   setValue: (value: boolean) => void
 }) {
+  const hoverBgColor = useColorModeValue("gray.100", "gray.700")
+
   return (
     <Tooltip label={label}>
       <IconButton
@@ -165,7 +169,7 @@ function ToggleButton({
         color={value ? "white" : undefined}
         backgroundColor={value ? "primary.400" : undefined}
         _hover={{
-          bg: value ? "primary.600" : "gray.100",
+          bg: value ? "primary.600" : hoverBgColor,
         }}
         aria-label={label}
         fontFamily={"mono"}

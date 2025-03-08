@@ -8,7 +8,7 @@ export function BackToWorkspaces() {
   const { host } = useProContext()
 
   return (
-    <Link as={RouterLink} color="gray.600" to={Routes.toProInstance(host)}>
+    <Link as={RouterLink} variant="muted" to={Routes.toProInstance(host)}>
       <ChevronLeftIcon boxSize={5} /> Back to Workspaces
     </Link>
   )
