@@ -10,7 +10,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/loft-sh/devpod/pkg/agent/tunnel"
 	"github.com/loft-sh/devpod/pkg/devcontainer/config"
 	"github.com/loft-sh/devpod/pkg/driver"
 	"github.com/loft-sh/devpod/pkg/driver/drivercreate"
@@ -48,7 +47,6 @@ type Runner interface {
 func NewRunner(
 	agentPath, agentDownloadURL string,
 	workspaceConfig *provider2.AgentWorkspaceInfo,
-	tunnelClient tunnel.TunnelClient,
 	log log.Logger,
 ) (Runner, error) {
 	driver, err := drivercreate.NewDriver(workspaceConfig, log)
@@ -65,14 +63,12 @@ func NewRunner(
 		LocalWorkspaceFolder: workspaceConfig.ContentFolder,
 		ID:                   GetRunnerIDFromWorkspace(workspaceConfig.Workspace),
 		WorkspaceConfig:      workspaceConfig,
-		TunnelClient:         tunnelClient,
 		Log:                  log,
 	}, nil
 }
 
 type runner struct {
-	Driver       driver.Driver
-	TunnelClient tunnel.TunnelClient
+	Driver driver.Driver
 
 	WorkspaceConfig  *provider2.AgentWorkspaceInfo
 	AgentPath        string

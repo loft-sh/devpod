@@ -523,6 +523,11 @@ type DevPodProjectSpec struct {
 	// FallbackImage defines an image all workspace will fall back to if no devcontainer.json could be detected
 	// +optional
 	FallbackImage string `json:"fallbackImage,omitempty"`
+
+	// RegistryPattern specifies a template pattern to use for building images on the fly.
+	// Requires the platform pods to be authenticated against the registry.
+	// +optional
+	RegistryPattern string `json:"registryPattern,omitempty"`
 }
 
 type GitProjectSpec struct {
