@@ -19,6 +19,7 @@ import { TAURI_SERVER_URL } from "../tauriClient"
 import { TDebuggable, TStreamEventListenerFn } from "../types"
 import { ProCommands } from "./proCommands"
 import { TWorkspaceOwnerFilterState } from "@/components"
+import { client as globalClient } from "../client"
 
 export class ProClient implements TDebuggable {
   constructor(protected readonly id: string) {}
@@ -270,47 +271,48 @@ export class DaemonClient extends ProClient {
     const decoder = new TextDecoder()
     let buffer = ""
 
-    const read = () => {
-      reader
-        ?.read()
-        .then(({ done, value }) => {
-          if (done) {
-            return
-          }
-          buffer += decoder.decode(value, { stream: true })
-          // NOTE: This relies on sender to end every message with a newline character. Make sure you also update the daemon server if you change this!
-          const lines = buffer.split("\n")
-          // Keep the last partial line in the buffer
-          const maybeLine = lines.pop()
-          if (maybeLine !== undefined) {
-            buffer = maybeLine
-          }
+    const read = async () => {
+      try {
+        if (!reader) {
+          return
+        }
+        const { done, value } = await reader.read()
+        if (done) {
+          return
+        }
+        buffer += decoder.decode(value, { stream: true })
+        // NOTE: This relies on sender to end every message with a newline character. Make sure you also update the daemon server if you change this!
+        const lines = buffer.split("\n")
+        // Keep the last partial line in the buffer
+        const maybeLine = lines.pop()
+        if (maybeLine !== undefined) {
+          buffer = maybeLine
+        }
 
-          lines.forEach((line) => {
-            if (line.trim()) {
-              try {
-                const rawInstances: readonly ManagementV1DevPodWorkspaceInstance[] =
-                  JSON.parse(line)
-                const workspaceInstances = rawInstances.map(
-                  (instance) => new ProWorkspaceInstance(instance)
-                )
-                listener(workspaceInstances)
-              } catch (err) {
-                const res = this.handleError(err, "failed to parse workspaces")
-                if (res.err) {
-                  errorListener?.(res.val)
-                }
+        lines.forEach((line) => {
+          if (line.trim()) {
+            try {
+              const rawInstances: readonly ManagementV1DevPodWorkspaceInstance[] = JSON.parse(line)
+              const workspaceInstances = rawInstances.map(
+                (instance) => new ProWorkspaceInstance(instance)
+              )
+              listener(workspaceInstances)
+            } catch (err) {
+              const res = this.handleError(err, "failed to parse workspaces")
+              if (res.err) {
+                errorListener?.(res.val)
+
+                return err
               }
             }
-          })
+          }
+        })
 
-          // Continue reading
-          read()
-        })
-        .catch((err) => {
-          // log error for now, should usually just be `AbortError`
-          console.log(err)
-        })
+        // Continue reading
+        read()
+      } catch (err) {
+        return err
+      }
     }
 
     try {
@@ -320,16 +322,31 @@ export class DaemonClient extends ProClient {
       url.searchParams.set("owner", ownerFilter)
 
       this.waitDaemonRunning().then(() => {
+        globalClient.log("info", `[${this.id}] Start watching workspaces`)
         // start long-lived request. This should never stop unless cancelled trough abortController
         fetch(url, {
           method: "GET",
           headers: { "content-type": "application/json" },
           keepalive: true,
           signal: abortController.signal,
-        }).then((res) => {
-          reader = res.body?.getReader()
-          read()
         })
+          .then((res) => {
+            reader = res.body?.getReader()
+
+            return read()
+          })
+          .catch((err) => {
+            globalClient.log("info", `[${this.id}] Watch workspaces error ${err}`)
+            console.log("watch workspaces error", err)
+          })
+          .finally(() => {
+            globalClient.log(
+              "info",
+              `[${this.id}] Stopped watching workspaces, attempting to reconnect`
+            )
+            // reconnect if it goes down
+            this.watchWorkspaces(projectName, ownerFilter, listener, errorListener)
+          })
       })
 
       return async (): Promise<Result<undefined>> => {
