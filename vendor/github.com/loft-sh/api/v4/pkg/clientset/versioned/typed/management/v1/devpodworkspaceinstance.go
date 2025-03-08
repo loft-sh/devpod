@@ -32,6 +32,7 @@ type DevPodWorkspaceInstanceInterface interface {
 	Up(ctx context.Context, devPodWorkspaceInstanceName string, devPodWorkspaceInstanceUp *managementv1.DevPodWorkspaceInstanceUp, opts metav1.CreateOptions) (*managementv1.DevPodWorkspaceInstanceUp, error)
 	Stop(ctx context.Context, devPodWorkspaceInstanceName string, devPodWorkspaceInstanceStop *managementv1.DevPodWorkspaceInstanceStop, opts metav1.CreateOptions) (*managementv1.DevPodWorkspaceInstanceStop, error)
 	Troubleshoot(ctx context.Context, devPodWorkspaceInstanceName string, options metav1.GetOptions) (*managementv1.DevPodWorkspaceInstanceTroubleshoot, error)
+	Cancel(ctx context.Context, devPodWorkspaceInstanceName string, devPodWorkspaceInstanceCancel *managementv1.DevPodWorkspaceInstanceCancel, opts metav1.CreateOptions) (*managementv1.DevPodWorkspaceInstanceCancel, error)
 
 	DevPodWorkspaceInstanceExpansion
 }
@@ -94,6 +95,21 @@ func (c *devPodWorkspaceInstances) Troubleshoot(ctx context.Context, devPodWorks
 		Name(devPodWorkspaceInstanceName).
 		SubResource("troubleshoot").
 		VersionedParams(&options, scheme.ParameterCodec).
+		Do(ctx).
+		Into(result)
+	return
+}
+
+// Cancel takes the representation of a devPodWorkspaceInstanceCancel and creates it.  Returns the server's representation of the devPodWorkspaceInstanceCancel, and an error, if there is any.
+func (c *devPodWorkspaceInstances) Cancel(ctx context.Context, devPodWorkspaceInstanceName string, devPodWorkspaceInstanceCancel *managementv1.DevPodWorkspaceInstanceCancel, opts metav1.CreateOptions) (result *managementv1.DevPodWorkspaceInstanceCancel, err error) {
+	result = &managementv1.DevPodWorkspaceInstanceCancel{}
+	err = c.GetClient().Post().
+		Namespace(c.GetNamespace()).
+		Resource("devpodworkspaceinstances").
+		Name(devPodWorkspaceInstanceName).
+		SubResource("cancel").
+		VersionedParams(&opts, scheme.ParameterCodec).
+		Body(devPodWorkspaceInstanceCancel).
 		Do(ctx).
 		Into(result)
 	return

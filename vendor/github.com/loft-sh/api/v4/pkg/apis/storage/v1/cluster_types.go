@@ -26,6 +26,11 @@ const (
 	OpenCostLastAppliedHashAnnotation                              = "loft.sh/opencost-last-applied-hash"
 	OpenCostDeployed                  agentstoragev1.ConditionType = "OpenCostDeployed"
 	OpenCostAvailable                 agentstoragev1.ConditionType = "OpenCostAvailable"
+
+	BuildKitServiceAddress                                         = "loft.sh/buildkit-service-address"
+	BuildKitLastAppliedHashAnnotation                              = "loft.sh/buildkit-last-applied-hash"
+	BuildKitDeployed                  agentstoragev1.ConditionType = "BuildKitDeployed"
+	BuildKitAvailable                 agentstoragev1.ConditionType = "BuildKitAvailable"
 )
 
 // +genclient

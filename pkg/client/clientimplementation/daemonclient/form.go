@@ -1,4 +1,4 @@
-package form
+package daemonclient
 
 import (
 	"context"
@@ -14,14 +14,14 @@ import (
 	"github.com/loft-sh/devpod/cmd/pro/provider/list"
 	"github.com/loft-sh/devpod/pkg/encoding"
 	"github.com/loft-sh/devpod/pkg/platform"
-	"github.com/loft-sh/devpod/pkg/platform/client"
+	platformclient "github.com/loft-sh/devpod/pkg/platform/client"
 	"github.com/loft-sh/devpod/pkg/platform/labels"
 	"github.com/loft-sh/devpod/pkg/platform/project"
 	"github.com/loft-sh/log"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-func CreateInstance(ctx context.Context, baseClient client.Client, id, uid, source, picture string, log log.Logger) (*managementv1.DevPodWorkspaceInstance, error) {
+func createInstanceInteractive(ctx context.Context, baseClient platformclient.Client, id, uid, source, picture string, log log.Logger) (*managementv1.DevPodWorkspaceInstance, error) {
 	formCtx, cancelForm := context.WithCancel(ctx)
 	defer cancelForm()
 
@@ -110,10 +110,11 @@ func CreateInstance(ctx context.Context, baseClient client.Client, id, uid, sour
 					Name:    selectedTemplate.GetName(),
 					Version: selectedTemplateVersion,
 				},
-				// FIXME: Bring back runner ref
-				// ClusterRef: storagev1.ClusterRef{
-				// 	Cluster: selectedCluster.GetName(),
-				// },
+				Target: storagev1.WorkspaceTarget{
+					Cluster: &storagev1.WorkspaceTargetName{
+						Name: selectedCluster.GetName(),
+					},
+				},
 				Parameters: renderedParameters,
 			},
 		},
@@ -122,7 +123,7 @@ func CreateInstance(ctx context.Context, baseClient client.Client, id, uid, sour
 	return instance, nil
 }
 
-func UpdateInstance(ctx context.Context, baseClient client.Client, instance *managementv1.DevPodWorkspaceInstance, log log.Logger) (*managementv1.DevPodWorkspaceInstance, error) {
+func updateInstanceInteractive(ctx context.Context, baseClient platformclient.Client, instance *managementv1.DevPodWorkspaceInstance, log log.Logger) (*managementv1.DevPodWorkspaceInstance, error) {
 	formCtx, cancelForm := context.WithCancel(ctx)
 	defer cancelForm()
 
@@ -255,7 +256,7 @@ var latestTemplateVersion = huh.Option[string]{
 	Value: "",
 }
 
-func projectOptions(ctx context.Context, client client.Client) ([]ProjectOption, error) {
+func projectOptions(ctx context.Context, client platformclient.Client) ([]ProjectOption, error) {
 	projects, err := list.Projects(ctx, client)
 	if err != nil {
 		return nil, err
@@ -272,7 +273,7 @@ func projectOptions(ctx context.Context, client client.Client) ([]ProjectOption,
 	return projectOptions, nil
 }
 
-func getClusterOptions(ctx context.Context, client client.Client, project *managementv1.Project, cancel CancelFunc, log log.Logger) []huh.Option[*managementv1.Cluster] {
+func getClusterOptions(ctx context.Context, client platformclient.Client, project *managementv1.Project, cancel CancelFunc, log log.Logger) []huh.Option[*managementv1.Cluster] {
 	opts := []huh.Option[*managementv1.Cluster]{}
 	if project == nil {
 		return opts
@@ -296,7 +297,7 @@ func getClusterOptions(ctx context.Context, client client.Client, project *manag
 	return opts
 }
 
-func getTemplateOptions(ctx context.Context, client client.Client, project *managementv1.Project, cancel CancelFunc, log log.Logger) []huh.Option[*managementv1.DevPodWorkspaceTemplate] {
+func getTemplateOptions(ctx context.Context, client platformclient.Client, project *managementv1.Project, cancel CancelFunc, log log.Logger) []huh.Option[*managementv1.DevPodWorkspaceTemplate] {
 	opts := []huh.Option[*managementv1.DevPodWorkspaceTemplate]{}
 	if project == nil {
 		return opts
