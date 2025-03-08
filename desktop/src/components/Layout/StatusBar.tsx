@@ -38,6 +38,7 @@ export function StatusBar(boxProps: BoxProps) {
       zIndex="overlay"
       {...boxProps}
       color="gray.600"
+      _dark={{ color: "gray.400" }}
     />
   )
 }
@@ -65,6 +66,7 @@ function ZoomMenu() {
   const zoomIcon = useMemo(() => {
     return { icon: <CheckIcon /> }
   }, [])
+  const textColor = useColorModeValue("gray.900", "gray.300")
 
   return (
     <Menu>
@@ -75,7 +77,7 @@ function ZoomMenu() {
         rounded="full"
         icon={<Icon boxSize="5" color="iconColor" as={HiMagnifyingGlassPlus} />}
       />
-      <MenuList>
+      <MenuList color={textColor}>
         <MenuItem onClick={() => set("zoom", "sm")} {...(settings.zoom === "sm" ? zoomIcon : {})}>
           Small
         </MenuItem>

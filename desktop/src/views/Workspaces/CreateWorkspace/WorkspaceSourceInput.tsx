@@ -68,7 +68,7 @@ export function WorkspaceSourceInput({
   sourceType,
   onSourceTypeChanged,
 }: TWorkspaceSourceInputProps) {
-  const inputBackgroundColor = useColorModeValue("white", "black")
+  const inputBackgroundColor = useColorModeValue("white", "background.darkest")
   const borderColor = useBorderColor()
   const typeTabIndex = SOURCE_TYPE_MAP[sourceType]
   const handleSourceTypeChanged = (index: number) => {
@@ -220,7 +220,7 @@ export function WorkspaceSourceInput({
               <PopoverArrow />
               <VStack>
                 <Tabs
-                  variant="muted"
+                  variant="muted-popover"
                   size="sm"
                   index={tabIndex}
                   onChange={handleAdvancedOptionTabChanged}>

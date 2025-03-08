@@ -9,8 +9,34 @@ import {
   useToken,
 } from "@chakra-ui/react"
 import { HiBeaker } from "react-icons/hi2"
-import { NoneSvg, NoneSvgDark } from "../../images"
+import {
+  CLionSvg,
+  CodiumSvg,
+  CursorSvg,
+  DataSpellSvg,
+  FleetSvg,
+  GolandSvg,
+  IntelliJSvg,
+  JupyterNotebookDarkSvg,
+  JupyterNotebookSvg,
+  NoneSvg,
+  NoneSvgDark,
+  PHPStormSvg,
+  PositronSvg,
+  PycharmSvg,
+  RStudioSvg,
+  RiderSvg,
+  RubyMineSvg,
+  RustRoverSvg,
+  VSCodeBrowser,
+  VSCodeInsidersSvg,
+  VSCodeSvg,
+  WebstormSvg,
+  ZedDarkSvg,
+  ZedSvg,
+} from "../../images"
 import { TIDE } from "../../types"
+import { useMemo } from "react"
 
 const SIZES: Record<NonNullable<TIDEIconProps["size"]>, IconProps> = {
   sm: {
@@ -21,6 +47,32 @@ const SIZES: Record<NonNullable<TIDEIconProps["size"]>, IconProps> = {
     boxSize: 6,
     padding: "3px",
   },
+}
+
+const IDE_ICONS: Record<string, string> = {
+  none: NoneSvg,
+  vscode: VSCodeSvg,
+  "vscode-insiders": VSCodeInsidersSvg,
+  openvscode: VSCodeBrowser,
+  intellij: IntelliJSvg,
+  goland: GolandSvg,
+  rustrover: RustRoverSvg,
+  pycharm: PycharmSvg,
+  phpstorm: PHPStormSvg,
+  clion: CLionSvg,
+  rubymine: RubyMineSvg,
+  rider: RiderSvg,
+  webstorm: WebstormSvg,
+  dataspell: DataSpellSvg,
+  fleet: FleetSvg,
+  jupyternotebook: JupyterNotebookSvg,
+  jupyternotebook_dark: JupyterNotebookDarkSvg,
+  cursor: CursorSvg,
+  positron: PositronSvg,
+  codium: CodiumSvg,
+  zed: ZedSvg,
+  zed_dark: ZedDarkSvg,
+  rstudio: RStudioSvg,
 }
 
 type TIDEIconProps = Readonly<{ ide: TIDE; size?: "sm" | "md" }> & BoxProps
@@ -47,7 +99,20 @@ export function IDEIcon({ ide, size = "md", ...boxProps }: TIDEIconProps) {
           color: `${primaryColorDark}CC`,
         }
   const fallbackIcon = colorMode === "light" ? NoneSvg : NoneSvgDark
-  const icon = colorMode === "light" ? ide.icon : ide.iconDark ?? ide.icon
+
+  const icon = useMemo(() => {
+    if (colorMode === "light") {
+      return IDE_ICONS[ide.name!] ?? ide.icon
+    } else {
+      const darkIcon = IDE_ICONS[ide.name! + "_dark"] ?? ide.iconDark
+      if (darkIcon) {
+        return darkIcon
+      }
+
+      // fall back to regular icon
+      return IDE_ICONS[ide.name!] ?? ide.icon
+    }
+  }, [colorMode, ide])
 
   return (
     <Box width="full" height="full" position="relative">
