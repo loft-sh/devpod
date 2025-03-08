@@ -141,11 +141,12 @@ func templateUpdateRequired(instance *managementv1.DevPodWorkspaceInstance) bool
 
 func printInstanceInfo(instance *managementv1.DevPodWorkspaceInstance, log log.Logger) {
 	workspaceConfig, _ := json.Marshal(struct {
-		Cluster    storagev1.ClusterRef
+		// Cluster    storagev1.ClusterRef
 		Template   *storagev1.TemplateRef
 		Parameters string
 	}{
-		Cluster:    instance.Spec.ClusterRef,
+		// FIXME: Bring back runner type
+		// Cluster:    instance.Spec.ClusterRef,
 		Template:   instance.Spec.TemplateRef,
 		Parameters: instance.Spec.Parameters,
 	})

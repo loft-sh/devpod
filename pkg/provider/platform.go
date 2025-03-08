@@ -6,7 +6,10 @@ type PlatformOptions struct {
 	Enabled bool `json:"enabled,omitempty"`
 
 	// connection options
-	AccessKey     string `json:"accessKey,omitempty"`
+	// AccessKey is used by the workspace daemon to authenticate itself
+	AccessKey string `json:"accessKey,omitempty"`
+	// UserAccessKey can be used as the workspace owner
+	UserAccessKey string `json:"userAccessKey,omitempty"`
 	WorkspaceHost string `json:"workspaceHost,omitempty"`
 	PlatformHost  string `json:"platformHost,omitempty"`
 
@@ -16,6 +19,10 @@ type PlatformOptions struct {
 
 	// credentials for the workspace
 	Credentials PlatformWorkspaceCredentials `json:"credentials,omitempty"`
+
+	// Kubernetes holds configuration for workspaces that need information about their kubernetes environment, i.e.
+	// the ones running in virtual clusters or spaces
+	Kubernetes *Kubernetes `json:"kubernetes,omitempty"`
 
 	// Remote builds
 	Build *PlatformBuildOptions `json:"build,omitempty"`
@@ -50,4 +57,10 @@ type PlatformBuildOptions struct {
 	CertCA        string `json:"certCa,omitempty"`
 	CertKey       string `json:"certKey,omitempty"`
 	Cert          string `json:"cert,omitempty"`
+}
+
+type Kubernetes struct {
+	SpaceName          string `json:"spaceName,omitempty"`
+	VirtualClusterName string `json:"virtualClusterName,omitempty"`
+	Namespace          string `json:"namespace,omitempty"`
 }

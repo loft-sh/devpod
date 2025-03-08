@@ -251,6 +251,7 @@ func SetupKubeConfig(ctx context.Context, setupInfo *config.Result, tunnelClient
 	} else if exists || tunnelClient == nil {
 		return nil
 	}
+	log.Info("Setup KubeConfig")
 
 	// get kubernetes config from setup server
 	kubeConfigRes, err := tunnelClient.KubeConfig(ctx, &tunnel.Message{})
@@ -260,7 +261,6 @@ func SetupKubeConfig(ctx context.Context, setupInfo *config.Result, tunnelClient
 		return nil
 	}
 
-	log.Info("Setup KubeConfig")
 	user := config.GetRemoteUser(setupInfo)
 	homeDir, err := command.GetHome(user)
 	if err != nil {

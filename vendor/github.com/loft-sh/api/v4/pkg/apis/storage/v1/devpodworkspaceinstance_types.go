@@ -107,9 +107,14 @@ type DevPodWorkspaceInstanceSpec struct {
 	// +optional
 	Template *DevPodWorkspaceTemplateDefinition `json:"template,omitempty"`
 
-	// ClusterRef is the reference to the cluster holding this workspace
+	// Target is the reference to the cluster holding this workspace
 	// +optional
-	ClusterRef ClusterRef `json:"clusterRef,omitempty"`
+	Target WorkspaceTarget `json:"target,omitempty"`
+
+	// Deprecated: Use TargetRef instead
+	// RunnerRef is the reference to the runner holding this workspace
+	// +optional
+	RunnerRef RunnerRef `json:"runnerRef,omitempty"`
 
 	// Parameters are values to pass to the template.
 	// The values should be encoded as YAML string where each parameter is represented as a top-level field key.
@@ -137,6 +142,48 @@ type PresetRef struct {
 	Version string `json:"version,omitempty"`
 }
 
+type WorkspaceTarget struct {
+	// Cluster is the reference to the cluster holding this workspace
+	// +optional
+	Cluster *WorkspaceTargetName `json:"cluster,omitempty"`
+
+	// Cluster is the reference to the virtual cluster holding this workspace
+	// +optional
+	VirtualCluster *WorkspaceTargetName `json:"virtualCluster,omitempty"`
+}
+
+type WorkspaceResolvedTarget struct {
+	// Cluster is the reference to the cluster holding this workspace
+	// +optional
+	Cluster *WorkspaceTargetNamespace `json:"cluster,omitempty"`
+
+	// Cluster is the reference to the virtual cluster holding this workspace
+	// +optional
+	VirtualCluster *WorkspaceTargetNamespace `json:"virtualCluster,omitempty"`
+
+	// Space is the reference to the space holding this workspace
+	// +optional
+	Space *WorkspaceTargetName `json:"space,omitempty"`
+}
+
+func (w WorkspaceResolvedTarget) Empty() bool {
+	return w == WorkspaceResolvedTarget{}
+}
+
+type WorkspaceTargetName struct {
+	// Name is the name of the target
+	Name string `json:"name"`
+}
+
+type WorkspaceTargetNamespace struct {
+	// Name is the name of the object
+	Name string `json:"name"`
+
+	// Namespace is the namespace within the cluster.
+	// +optional
+	Namespace string `json:"namespace,omitempty"`
+}
+
 type RunnerRef struct {
 	// Runner is the connected runner the workspace will be created in
 	// +optional
@@ -153,6 +200,10 @@ type EnvironmentRef struct {
 }
 
 type DevPodWorkspaceInstanceStatus struct {
+	// ResolvedTarget is the resolved target of the workspace
+	// +optional
+	ResolvedTarget WorkspaceResolvedTarget `json:"resolvedTarget,omitempty"`
+
 	// LastWorkspaceStatus is the last workspace status reported by the runner.
 	// +optional
 	LastWorkspaceStatus WorkspaceStatus `json:"lastWorkspaceStatus,omitempty"`
