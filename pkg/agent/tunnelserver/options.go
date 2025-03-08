@@ -2,7 +2,6 @@ package tunnelserver
 
 import (
 	"github.com/loft-sh/api/v4/pkg/devpod"
-	"github.com/loft-sh/devpod/pkg/agent/tunnel"
 	"github.com/loft-sh/devpod/pkg/devcontainer/config"
 	"github.com/loft-sh/devpod/pkg/netstat"
 	provider2 "github.com/loft-sh/devpod/pkg/provider"
@@ -55,13 +54,6 @@ func WithMounts(mounts []*config.Mount) Option {
 func WithPlatformOptions(options *devpod.PlatformOptions) Option {
 	return func(s *tunnelServer) *tunnelServer {
 		s.platformOptions = options
-		return s
-	}
-}
-
-func WithTunnelClient(tunnelClient tunnel.TunnelClient) Option {
-	return func(s *tunnelServer) *tunnelServer {
-		s.tunnelClient = tunnelClient
 		return s
 	}
 }

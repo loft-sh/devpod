@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/loft-sh/devpod/pkg/platform/form"
 	"github.com/loft-sh/log/terminal"
 )
 
@@ -24,7 +23,7 @@ func (c *client) updateInstance(ctx context.Context) error {
 	if oldInstance == nil {
 		return fmt.Errorf("unable to find old workspace instance")
 	}
-	newInstance, err := form.UpdateInstance(ctx, baseClient, oldInstance, c.log)
+	newInstance, err := updateInstanceInteractive(ctx, baseClient, oldInstance, c.log)
 	if err != nil {
 		return err
 	}

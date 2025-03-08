@@ -662,7 +662,15 @@ var (
 		func() runtime.Object { return &DevPodWorkspaceInstance{} },
 		func() runtime.Object { return &DevPodWorkspaceInstanceList{} },
 	)
-	InternalDevPodWorkspaceInstanceLogREST = builders.NewInternalSubresource(
+	InternalDevPodWorkspaceInstanceCancelREST = builders.NewInternalSubresource(
+		"devpodworkspaceinstances", "DevPodWorkspaceInstanceCancel", "cancel",
+		func() runtime.Object { return &DevPodWorkspaceInstanceCancel{} },
+	)
+	NewDevPodWorkspaceInstanceCancelREST = func(getter generic.RESTOptionsGetter) rest.Storage {
+		return NewDevPodWorkspaceInstanceCancelRESTFunc(Factory)
+	}
+	NewDevPodWorkspaceInstanceCancelRESTFunc NewRESTFunc
+	InternalDevPodWorkspaceInstanceLogREST   = builders.NewInternalSubresource(
 		"devpodworkspaceinstances", "DevPodWorkspaceInstanceLog", "log",
 		func() runtime.Object { return &DevPodWorkspaceInstanceLog{} },
 	)
@@ -1256,6 +1264,7 @@ var (
 		InternalDevPodEnvironmentTemplateStatus,
 		InternalDevPodWorkspaceInstance,
 		InternalDevPodWorkspaceInstanceStatus,
+		InternalDevPodWorkspaceInstanceCancelREST,
 		InternalDevPodWorkspaceInstanceLogREST,
 		InternalDevPodWorkspaceInstanceStopREST,
 		InternalDevPodWorkspaceInstanceTasksREST,
@@ -1817,6 +1826,7 @@ type ConfigStatus struct {
 	DisableConfigEndpoint  bool                            `json:"disableConfigEndpoint,omitempty"`
 	Cloud                  *Cloud                          `json:"cloud,omitempty"`
 	CostControl            *CostControl                    `json:"costControl,omitempty"`
+	ImageBuilder           *ImageBuilder                   `json:"imageBuilder,omitempty"`
 }
 
 type Connector struct {
@@ -1911,6 +1921,14 @@ type DevPodWorkspaceInstance struct {
 	metav1.ObjectMeta `json:"metadata,omitempty"`
 	Spec              DevPodWorkspaceInstanceSpec   `json:"spec,omitempty"`
 	Status            DevPodWorkspaceInstanceStatus `json:"status,omitempty"`
+}
+
+// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
+
+type DevPodWorkspaceInstanceCancel struct {
+	metav1.TypeMeta   `json:",inline"`
+	metav1.ObjectMeta `json:"metadata,omitempty"`
+	TaskID            string `json:"taskId,omitempty"`
 }
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
@@ -2093,6 +2111,12 @@ type GroupResources struct {
 	Group         string   `json:"group,omitempty" protobuf:"bytes,1,opt,name=group"`
 	Resources     []string `json:"resources,omitempty" protobuf:"bytes,2,rep,name=resources"`
 	ResourceNames []string `json:"resourceNames,omitempty" protobuf:"bytes,3,rep,name=resourceNames"`
+}
+
+type ImageBuilder struct {
+	Enabled   *bool                        `json:"enabled,omitempty"`
+	Replicas  *int32                       `json:"replicas,omitempty"`
+	Resources *corev1.ResourceRequirements `json:"resources,omitempty"`
 }
 
 // +genclient
@@ -4172,6 +4196,14 @@ type DevPodWorkspaceInstanceList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:"metadata,omitempty"`
 	Items           []DevPodWorkspaceInstance `json:"items"`
+}
+
+// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
+
+type DevPodWorkspaceInstanceCancelList struct {
+	metav1.TypeMeta `json:",inline"`
+	metav1.ListMeta `json:"metadata,omitempty"`
+	Items           []DevPodWorkspaceInstanceCancel `json:"items"`
 }
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object

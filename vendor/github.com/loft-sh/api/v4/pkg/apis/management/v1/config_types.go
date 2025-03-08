@@ -4,6 +4,7 @@ import (
 	auditv1 "github.com/loft-sh/api/v4/pkg/apis/audit/v1"
 	storagev1 "github.com/loft-sh/api/v4/pkg/apis/storage/v1"
 	uiv1 "github.com/loft-sh/api/v4/pkg/apis/ui/v1"
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -76,6 +77,9 @@ type ConfigStatus struct {
 
 	// CostControl holds the settings related to the Cost Control ROI dashboard and its metrics gathering infrastructure
 	CostControl *CostControl `json:"costControl,omitempty"`
+
+	// ImageBuilder holds the settings related to the image builder
+	ImageBuilder *ImageBuilder `json:"imageBuilder,omitempty"`
 }
 
 // Audit holds the audit configuration options for loft. Changing any options will require a loft restart
@@ -771,4 +775,16 @@ type CostControlResourcePrice struct {
 
 	// TimePeriod specifies the time period for the price.
 	TimePeriod string `json:"timePeriod,omitempty"`
+}
+
+type ImageBuilder struct {
+	// Enabled specifies whether the remote image builder should be available.
+	// If it's not available building ad-hoc images from a devcontainer.json is not supported
+	Enabled *bool `json:"enabled,omitempty"`
+
+	// Replicas is the number of desired replicas.
+	Replicas *int32 `json:"replicas,omitempty"`
+
+	// Resources are compute resource required by the buildkit containers
+	Resources *corev1.ResourceRequirements `json:"resources,omitempty"`
 }

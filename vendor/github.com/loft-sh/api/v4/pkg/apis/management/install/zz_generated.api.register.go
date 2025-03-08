@@ -54,6 +54,7 @@ func addKnownTypes(scheme *runtime.Scheme) error {
 		&management.DevPodEnvironmentTemplateList{},
 		&management.DevPodWorkspaceInstance{},
 		&management.DevPodWorkspaceInstanceList{},
+		&management.DevPodWorkspaceInstanceCancel{},
 		&management.DevPodWorkspaceInstanceLog{},
 		&management.DevPodWorkspaceInstanceStop{},
 		&management.DevPodWorkspaceInstanceTasks{},

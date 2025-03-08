@@ -103,7 +103,7 @@ func (cmd *UpCmd) Run(ctx context.Context) error {
 
 func (cmd *UpCmd) up(ctx context.Context, workspaceInfo *provider2.AgentWorkspaceInfo, tunnelClient tunnel.TunnelClient, logger log.Logger) error {
 	// create devcontainer
-	result, err := cmd.devPodUp(ctx, workspaceInfo, tunnelClient, logger)
+	result, err := cmd.devPodUp(ctx, workspaceInfo, logger)
 	if err != nil {
 		return err
 	}
@@ -121,8 +121,8 @@ func (cmd *UpCmd) up(ctx context.Context, workspaceInfo *provider2.AgentWorkspac
 	return nil
 }
 
-func (cmd *UpCmd) devPodUp(ctx context.Context, workspaceInfo *provider2.AgentWorkspaceInfo, tunnelClient tunnel.TunnelClient, log log.Logger) (*config2.Result, error) {
-	runner, err := CreateRunner(workspaceInfo, tunnelClient, log)
+func (cmd *UpCmd) devPodUp(ctx context.Context, workspaceInfo *provider2.AgentWorkspaceInfo, log log.Logger) (*config2.Result, error) {
+	runner, err := CreateRunner(workspaceInfo, log)
 	if err != nil {
 		return nil, err
 	}
@@ -139,8 +139,8 @@ func (cmd *UpCmd) devPodUp(ctx context.Context, workspaceInfo *provider2.AgentWo
 	return result, nil
 }
 
-func CreateRunner(workspaceInfo *provider2.AgentWorkspaceInfo, tunnelClient tunnel.TunnelClient, log log.Logger) (devcontainer.Runner, error) {
-	return devcontainer.NewRunner(agent.ContainerDevPodHelperLocation, agent.DefaultAgentDownloadURL(), workspaceInfo, tunnelClient, log)
+func CreateRunner(workspaceInfo *provider2.AgentWorkspaceInfo, log log.Logger) (devcontainer.Runner, error) {
+	return devcontainer.NewRunner(agent.ContainerDevPodHelperLocation, agent.DefaultAgentDownloadURL(), workspaceInfo, log)
 }
 
 func InitContentFolder(workspaceInfo *provider2.AgentWorkspaceInfo, log log.Logger) (bool, error) {
