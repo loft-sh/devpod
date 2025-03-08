@@ -87,10 +87,6 @@ type DevPodWorkspaceTemplateDefinition struct {
 	// +optional
 	WorkspaceEnv map[string]DevPodProviderOption `json:"workspaceEnv,omitempty"`
 
-	// InitEnv are environment variables that should be available during the initialization phase of the created workspace.
-	// +optional
-	InitEnv map[string]DevPodProviderOption `json:"initEnv,omitempty"`
-
 	// InstanceTemplate holds the workspace instance template
 	// +optional
 	InstanceTemplate DevPodWorkspaceInstanceTemplateDefinition `json:"instanceTemplate,omitempty"`
@@ -98,10 +94,6 @@ type DevPodWorkspaceTemplateDefinition struct {
 	// GitCloneStrategy specifies how git based workspace are being cloned. Can be "" (full, default), treeless, blobless or shallow
 	// +optional
 	GitCloneStrategy GitCloneStrategy `json:"gitCloneStrategy,omitempty"`
-
-	// PreventWakeUpOnConnection is used to prevent workspace that uses sleep mode from waking up on incomming ssh connection.
-	// +optional
-	PreventWakeUpOnConnection bool `json:"preventWakeUpOnConnection,omitempty"`
 
 	// Provider holds the legacy VM provider configuration
 	//

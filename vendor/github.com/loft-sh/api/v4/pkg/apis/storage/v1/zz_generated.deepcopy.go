@@ -2308,13 +2308,6 @@ func (in *DevPodWorkspaceTemplateDefinition) DeepCopyInto(out *DevPodWorkspaceTe
 			(*out)[key] = *val.DeepCopy()
 		}
 	}
-	if in.InitEnv != nil {
-		in, out := &in.InitEnv, &out.InitEnv
-		*out = make(map[string]DevPodProviderOption, len(*in))
-		for key, val := range *in {
-			(*out)[key] = *val.DeepCopy()
-		}
-	}
 	in.InstanceTemplate.DeepCopyInto(&out.InstanceTemplate)
 	if in.Provider != nil {
 		in, out := &in.Provider, &out.Provider

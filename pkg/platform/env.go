@@ -12,6 +12,7 @@ const (
 	ConfigEnv  = "LOFT_CONFIG"
 	ProjectEnv = "LOFT_PROJECT"
 	ClusterEnv = "LOFT_CLUSTER"
+	RunnerEnv  = "LOFT_RUNNER"
 
 	TemplateOptionEnv        = "LOFT_TEMPLATE"
 	TemplateVersionOptionEnv = "LOFT_TEMPLATE_VERSION"

@@ -128,17 +128,12 @@ func templateUpdateRequired(instance *managementv1.DevPodWorkspaceInstance) bool
 }
 
 func printInstanceInfo(instance *managementv1.DevPodWorkspaceInstance, log log.Logger) {
-	var cluster storagev1.WorkspaceTargetNamespace
-	if instance.Status.ResolvedTarget.Cluster != nil {
-		cluster = *instance.Status.ResolvedTarget.Cluster
-	}
-
 	workspaceConfig, _ := json.Marshal(struct {
-		Cluster    storagev1.WorkspaceTargetNamespace
+		Target     storagev1.WorkspaceTarget
 		Template   *storagev1.TemplateRef
 		Parameters string
 	}{
-		Cluster:    cluster,
+		Target:     instance.Spec.Target,
 		Template:   instance.Spec.TemplateRef,
 		Parameters: instance.Spec.Parameters,
 	})
