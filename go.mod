@@ -225,6 +225,7 @@ require (
 	github.com/prometheus/client_model v0.6.1 // indirect
 	github.com/prometheus/common v0.60.0 // indirect
 	github.com/prometheus/procfs v0.15.1 // indirect
+	github.com/ramr/go-reaper v0.2.3 // indirect
 	github.com/rivo/uniseg v0.4.7 // indirect
 	github.com/safchain/ethtool v0.3.0 // indirect
 	github.com/secure-systems-lab/go-securesystemslib v0.8.0 // indirect

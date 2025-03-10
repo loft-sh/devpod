@@ -48,14 +48,13 @@ func NewDaemonCmd() *cobra.Command {
 }
 
 func (cmd *DaemonCmd) Run(c *cobra.Command, args []string) error {
-	cmd.Log.Info("DevPod daemon started")
-	defer cmd.Log.Info("exiting")
+	ctx := c.Context()
+	errChan := make(chan error, 4)
+	var wg sync.WaitGroup
 
 	if err := cmd.loadConfig(); err != nil {
 		return err
 	}
-
-	ctx := c.Context()
 
 	// Prepare timeout if specified.
 	var timeoutDuration time.Duration
@@ -75,9 +74,13 @@ func (cmd *DaemonCmd) Run(c *cobra.Command, args []string) error {
 	ctx, cancel := context.WithCancel(ctx)
 	defer cancel()
 
-	errChan := make(chan error, 3)
-	var wg sync.WaitGroup
-	tasksStarted := false
+	var tasksStarted bool
+
+	// Start process reaper.
+	if os.Getpid() == 1 {
+		wg.Add(1)
+		go runReaper(ctx, errChan, &wg)
+	}
 
 	// Start Tailscale networking server.
 	if cmd.shouldRunNetworkServer() {
@@ -112,7 +115,7 @@ func (cmd *DaemonCmd) Run(c *cobra.Command, args []string) error {
 	// Listen for OS termination signals.
 	go handleSignals(ctx, errChan)
 
-	// Wait until an error or termination signal occurs.
+	// Wait until an error (or termination signal) occurs.
 	err := <-errChan
 	cancel()
 	wg.Wait()
@@ -137,7 +140,6 @@ func (cmd *DaemonCmd) loadConfig() error {
 		if err = json.Unmarshal(decoded, &cfg); err != nil {
 			return fmt.Errorf("error unmarshalling daemon config: %v", err)
 		}
-
 		if cmd.Config.Timeout != "" {
 			cfg.Timeout = cmd.Config.Timeout
 		}
@@ -166,6 +168,13 @@ func setupActivityFile() error {
 	return os.Chmod(agent.ContainerActivityFile, 0777)
 }
 
+// runReaper starts the process reaper and waits for context cancellation.
+func runReaper(ctx context.Context, errChan chan<- error, wg *sync.WaitGroup) {
+	defer wg.Done()
+	agentd.RunProcessReaper()
+	<-ctx.Done()
+}
+
 // runTimeoutMonitor monitors the activity file and signals an error if the timeout is exceeded.
 func runTimeoutMonitor(ctx context.Context, duration time.Duration, errChan chan<- error, wg *sync.WaitGroup) {
 	defer wg.Done()
@@ -180,12 +189,10 @@ func runTimeoutMonitor(ctx context.Context, duration time.Duration, errChan chan
 			if err != nil {
 				continue
 			}
-			// Signal termination if the activity file is older than the timeout.
-			if stat.ModTime().Add(duration).After(time.Now()) {
-				continue
+			if !stat.ModTime().Add(duration).After(time.Now()) {
+				errChan <- errors.New("timeout reached, terminating daemon")
+				return
 			}
-			errChan <- errors.New("timeout reached, terminating daemon")
-			return
 		}
 	}
 }
