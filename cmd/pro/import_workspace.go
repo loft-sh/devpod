@@ -196,8 +196,8 @@ func resolveInstanceOptions(ctx context.Context, instance *managementv1.DevPodWo
 	if instance.Spec.TemplateRef == nil {
 		return opts, nil
 	}
-	if instance.Spec.ClusterRef.Cluster != "" {
-		opts[platform.ClusterEnv] = instance.Spec.ClusterRef.Cluster
+	if instance.Status.ResolvedTarget.Cluster != nil && instance.Status.ResolvedTarget.Cluster.Name != "" {
+		opts[platform.ClusterEnv] = instance.Status.ResolvedTarget.Cluster.Name
 	}
 	opts[platform.TemplateOptionEnv] = instance.Spec.TemplateRef.Name
 

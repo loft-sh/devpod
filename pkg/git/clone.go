@@ -22,13 +22,16 @@ const (
 )
 
 type Cloner interface {
-	Clone(ctx context.Context, repository string, targetDir string, gitOpts GitCommandOptions, extraArgs, extraEnv []string, log log.Logger) error
+	Clone(ctx context.Context, repository string, targetDir string, extraArgs, extraEnv []string, log log.Logger) error
 }
 
 type Option func(*cloner)
 
 func WithCloneStrategy(strategy CloneStrategy) Option {
 	return func(c *cloner) {
+		if strategy == "" {
+			strategy = FullCloneStrategy
+		}
 		c.cloneStrategy = strategy
 	}
 }
@@ -40,7 +43,9 @@ func WithRecursiveSubmodules() Option {
 }
 
 func NewClonerWithOpts(options ...Option) Cloner {
-	cloner := &cloner{}
+	cloner := &cloner{
+		cloneStrategy: FullCloneStrategy,
+	}
 	for _, opt := range options {
 		opt(cloner)
 	}
@@ -100,23 +105,22 @@ func (c *cloner) initialArgs() []string {
 	return []string{"clone"}
 }
 
-func (c *cloner) Clone(ctx context.Context, repository string, targetDir string, gitOpts GitCommandOptions, extraArgs, extraEnv []string, log log.Logger) error {
+func (c *cloner) Clone(ctx context.Context, repository string, targetDir string, extraArgs, extraEnv []string, log log.Logger) error {
 	args := c.initialArgs()
 	args = append(args, extraArgs...)
 	args = append(args, c.extraArgs...)
 	args = append(args, repository, targetDir)
-	return run(ctx, args, gitOpts, extraEnv, log)
+	return run(ctx, args, extraEnv, log)
 }
 
-func run(ctx context.Context, args []string, gitOpts GitCommandOptions, extraEnv []string, log log.Logger) error {
+func run(ctx context.Context, args []string, extraEnv []string, log log.Logger) error {
 	var buf bytes.Buffer
 
 	args = append(args, "--progress")
 
-	gitCommand := CommandContext(ctx, gitOpts, args...)
+	gitCommand := CommandContext(ctx, extraEnv, args...)
 	gitCommand.Stdout = &buf
 	gitCommand.Stderr = &buf
-	gitCommand.Env = append(gitCommand.Env, extraEnv...)
 
 	// git always prints progress output to stderr,
 	// we need to check the exit code to decide where the logs should go

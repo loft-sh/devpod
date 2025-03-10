@@ -4,6 +4,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/loft-sh/api/v4/pkg/devpod"
 	"github.com/loft-sh/devpod/pkg/config"
 	devcontainerconfig "github.com/loft-sh/devpod/pkg/devcontainer/config"
 	"github.com/loft-sh/devpod/pkg/git"
@@ -198,7 +199,7 @@ type AgentWorkspaceInfo struct {
 
 type CLIOptions struct {
 	// Platform are the platform options
-	Platform PlatformOptions `json:"platform,omitempty"`
+	Platform devpod.PlatformOptions `json:"platform,omitempty"`
 
 	// up options
 	ID                          string            `json:"id,omitempty"`

@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/gofrs/flock"
+	"github.com/loft-sh/api/v4/pkg/devpod"
 	"github.com/loft-sh/devpod/pkg/client"
 	"github.com/loft-sh/devpod/pkg/config"
 	devpodlog "github.com/loft-sh/devpod/pkg/log"
@@ -396,7 +397,7 @@ func DecodeOptionsFromEnv(name string, into any) (bool, error) {
 	return true, json.Unmarshal([]byte(raw), into)
 }
 
-func DecodePlatformOptionsFromEnv(into *provider.PlatformOptions) error {
+func DecodePlatformOptionsFromEnv(into *devpod.PlatformOptions) error {
 	raw := os.Getenv(DevPodPlatformOptions)
 	if raw == "" {
 		return nil

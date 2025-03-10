@@ -216,7 +216,7 @@ func GetCredentials(requestObj *GitCredentials) (*GitCredentials, error) {
 	}
 
 	// use local credentials if not
-	c := git.CommandContext(context.TODO(), git.GitCommandOptions{}, "credential", "fill")
+	c := git.CommandContext(context.TODO(), git.GetDefaultExtraEnv(false), "credential", "fill")
 	c.Stdin = strings.NewReader(ToString(requestObj))
 	stdout, err := c.Output()
 	if err != nil {
@@ -244,7 +244,7 @@ func GetHTTPPath(ctx context.Context, params GetHttpPathParameters) (string, err
 	// The actual format for the key is `credential.$PROTOCOL://$HOST.useHttpPath`, i.e. `credential.https://github.com.useHttpPath`
 	// We need to ignore the error as git will always exit with 1 if the key doesn't exist
 	configKey := fmt.Sprintf("credential.%s://%s.useHttpPath", params.Protocol, params.Host)
-	out, _ := git.CommandContext(ctx, git.GitCommandOptions{}, "config", "--get", configKey).Output()
+	out, _ := git.CommandContext(ctx, git.GetDefaultExtraEnv(false), "config", "--get", configKey).Output()
 	if strings.TrimSpace(string(out)) != "true" {
 		return "", nil
 	}
