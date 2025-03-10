@@ -252,10 +252,9 @@ function EmptyProInstances({ onConnect }: TEmptyProInstancesProps) {
           Learn more
         </Link>
       </Text>
-      <ButtonGroup width="full" marginTop="4" variant="primary">
-        <Button onClick={onConnect}>Login to Pro</Button>
-        <Button isDisabled>Create new Pro Instance</Button>
-      </ButtonGroup>
+      <Button marginTop="4" variant="primary" onClick={onConnect}>
+        Login to Pro
+      </Button>
     </VStack>
   )
 }

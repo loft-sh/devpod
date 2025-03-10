@@ -50,6 +50,9 @@ export const QueryKeys = {
   proProviderUpdates(proInstances: TProInstances | undefined) {
     return ["check-pro-provider-updates", proInstances]
   },
+  userProfile(name: string | undefined) {
+    return ["user-profile", name]
+  },
 }
 
 export const MutationKeys = {

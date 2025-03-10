@@ -15,6 +15,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/utils/ptr"
 )
 
 const DevContainerName = "devpod"
@@ -212,7 +213,13 @@ func (k *KubernetesDriver) runContainer(
 	pod.Spec.InitContainers = initContainers
 	pod.Spec.Containers = getContainers(pod, options.Image, options.Entrypoint, options.Cmd, envVars, volumeMounts, capabilities, resources, options.Privileged, k.options.StrictSecurity)
 	pod.Spec.Volumes = getVolumes(pod, id)
-
+	// avoids a problem where attaching volumes with large repositories would cause an extremely long pod startup time
+	// because changing the ownership of all files takes longer than the kubelet expects it to
+	if pod.Spec.SecurityContext == nil {
+		pod.Spec.SecurityContext = &corev1.PodSecurityContext{
+			FSGroupChangePolicy: ptr.To(corev1.FSGroupChangeOnRootMismatch),
+		}
+	}
 	if k.options.KubernetesPullSecretsEnabled == "true" && pullSecretsCreated {
 		pod.Spec.ImagePullSecrets = []corev1.LocalObjectReference{{Name: getPullSecretsName(id)}}
 	}

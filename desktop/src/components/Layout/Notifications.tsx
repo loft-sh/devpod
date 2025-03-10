@@ -62,7 +62,7 @@ export function Notifications({
   return (
     <Popover placement="bottom">
       <PopoverTrigger>
-        <Center marginRight="4">
+        <Center>
           <IconButton
             variant="ghost"
             size="md"

@@ -70,11 +70,11 @@ export function WorkspaceSourceInput({
 }: TWorkspaceSourceInputProps) {
   const inputBackgroundColor = useColorModeValue("white", "background.darkest")
   const borderColor = useBorderColor()
+  const [tabIndex, setTabIndex] = useState(0)
   const typeTabIndex = SOURCE_TYPE_MAP[sourceType]
   const handleSourceTypeChanged = (index: number) => {
     onSourceTypeChanged(SOURCE_TYPE_MAP[index as 0 | 1 | 2] as TWorkspaceSourceType)
   }
-  const [tabIndex, setTabIndex] = useState(0)
   const [advancedGitSettings, setAdvancedGitSettings] =
     useState<Readonly<{ option: TAdvancedGitSetting | null; value: string }>>(
       INITIAL_ADVANCED_SETTINGS
