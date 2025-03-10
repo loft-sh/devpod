@@ -110,12 +110,14 @@ func CreateInstance(ctx context.Context, baseClient client.Client, id, uid, sour
 					Name:    selectedTemplate.GetName(),
 					Version: selectedTemplateVersion,
 				},
-				ClusterRef: storagev1.ClusterRef{
-					Cluster: selectedCluster.GetName(),
-				},
 				Parameters: renderedParameters,
 			},
 		},
+	}
+	if selectedCluster != nil && selectedCluster.Name != "" {
+		instance.Spec.Target.Cluster = &storagev1.WorkspaceTargetName{
+			Name: selectedCluster.Name,
+		}
 	}
 
 	return instance, nil

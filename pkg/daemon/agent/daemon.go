@@ -10,8 +10,8 @@ import (
 	"path/filepath"
 	"runtime"
 
+	"github.com/loft-sh/api/v4/pkg/devpod"
 	"github.com/loft-sh/devpod/pkg/devcontainer/config"
-	"github.com/loft-sh/devpod/pkg/provider"
 	provider2 "github.com/loft-sh/devpod/pkg/provider"
 	"github.com/loft-sh/devpod/pkg/single"
 	"github.com/loft-sh/log"
@@ -25,12 +25,12 @@ type SshConfig struct {
 }
 
 type DaemonConfig struct {
-	Platform provider.PlatformOptions `json:"platform,omitempty"`
-	Ssh      SshConfig                `json:"ssh,omitempty"`
-	Timeout  string                   `json:"timeout"`
+	Platform devpod.PlatformOptions `json:"platform,omitempty"`
+	Ssh      SshConfig              `json:"ssh,omitempty"`
+	Timeout  string                 `json:"timeout"`
 }
 
-func BuildDaemonConfig(platformOptions provider2.PlatformOptions, workspaceConfig *provider2.Workspace, substitutionContext *config.SubstitutionContext, mergedConfig *config.MergedDevContainerConfig) (*DaemonConfig, error) {
+func BuildDaemonConfig(platformOptions devpod.PlatformOptions, workspaceConfig *provider2.Workspace, substitutionContext *config.SubstitutionContext, mergedConfig *config.MergedDevContainerConfig) (*DaemonConfig, error) {
 	var workdir string
 	if workspaceConfig.Source.GitSubPath != "" {
 		substitutionContext.ContainerWorkspaceFolder = filepath.Join(substitutionContext.ContainerWorkspaceFolder, workspaceConfig.Source.GitSubPath)
@@ -60,7 +60,7 @@ func BuildDaemonConfig(platformOptions provider2.PlatformOptions, workspaceConfi
 	return daemonConfig, nil
 }
 
-func GetEncodedDaemonConfig(platformOptions provider2.PlatformOptions, workspaceConfig *provider2.Workspace, substitutionContext *config.SubstitutionContext, mergedConfig *config.MergedDevContainerConfig) (string, error) {
+func GetEncodedDaemonConfig(platformOptions devpod.PlatformOptions, workspaceConfig *provider2.Workspace, substitutionContext *config.SubstitutionContext, mergedConfig *config.MergedDevContainerConfig) (string, error) {
 	daemonConfig, err := BuildDaemonConfig(platformOptions, workspaceConfig, substitutionContext, mergedConfig)
 	if err != nil {
 		return "", err

@@ -10,7 +10,6 @@ import (
 	"github.com/loft-sh/devpod/cmd/flags"
 	"github.com/loft-sh/devpod/pkg/config"
 	"github.com/loft-sh/devpod/pkg/devcontainer"
-	"github.com/loft-sh/devpod/pkg/git"
 	"github.com/loft-sh/log"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
@@ -85,10 +84,7 @@ func (cmd *GetWorkspaceConfigCommand) Run(ctx context.Context, devPodConfig *con
 		_ = os.RemoveAll(tmpDir)
 	}()
 	go func() {
-		gitOpts := git.GitCommandOptions{
-			StrictHostKeyChecking: devPodConfig.ContextOption(config.ContextOptionSSHStrictHostKeyChecking) == "true",
-		}
-		result, err := devcontainer.FindDevcontainerFiles(ctx, rawSource, tmpDir, cmd.maxDepth, gitOpts, logger)
+		result, err := devcontainer.FindDevcontainerFiles(ctx, rawSource, tmpDir, cmd.maxDepth, devPodConfig.ContextOption(config.ContextOptionSSHStrictHostKeyChecking) == "true", logger)
 		if err != nil {
 			errChan <- err
 			return

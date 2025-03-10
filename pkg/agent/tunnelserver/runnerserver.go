@@ -5,15 +5,15 @@ import (
 	"fmt"
 	"io"
 
+	"github.com/loft-sh/api/v4/pkg/devpod"
 	"github.com/loft-sh/devpod/pkg/agent/tunnel"
-	"github.com/loft-sh/devpod/pkg/provider"
 	"github.com/loft-sh/devpod/pkg/stdio"
 	"github.com/loft-sh/log"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/reflection"
 )
 
-func RunRunnerServer(ctx context.Context, reader io.Reader, writer io.WriteCloser, allowGitCredentials, allowDockerCredentials bool, platformOptions *provider.PlatformOptions, log log.Logger) error {
+func RunRunnerServer(ctx context.Context, reader io.Reader, writer io.WriteCloser, allowGitCredentials, allowDockerCredentials bool, platformOptions *devpod.PlatformOptions, log log.Logger) error {
 	runnerServ := &runnerServer{
 		log:                    log,
 		allowGitCredentials:    allowGitCredentials,
@@ -30,7 +30,7 @@ type runnerServer struct {
 	allowGitCredentials    bool
 	allowDockerCredentials bool
 	log                    log.Logger
-	platformOptions        *provider.PlatformOptions
+	platformOptions        *devpod.PlatformOptions
 }
 
 func (t *runnerServer) Run(ctx context.Context, reader io.Reader, writer io.WriteCloser) error {

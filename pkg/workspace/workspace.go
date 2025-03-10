@@ -422,7 +422,7 @@ func resolveWorkspaceConfig(
 
 	// is git?
 	gitRepository, gitPRReference, gitBranch, gitCommit, gitSubdir := git.NormalizeRepository(name)
-	if strings.HasSuffix(name, ".git") || git.PingRepository(gitRepository) {
+	if strings.HasSuffix(name, ".git") || git.PingRepository(gitRepository, git.GetDefaultExtraEnv(false)) {
 		workspace.Picture = getProjectImage(name)
 		workspace.Source = providerpkg.WorkspaceSource{
 			GitRepository:  gitRepository,
