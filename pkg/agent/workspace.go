@@ -346,7 +346,7 @@ func CloneRepositoryForWorkspace(
 		}
 
 		// create client
-		log.Infof("Cloning repository %s with platform git cache...", source.GitRepository)
+		log.Infof("Cloning repository %s in platform...", source.GitRepository)
 		_, err = devpod.NewRunnerClient(grpcClient).Clone(ctx, &devpod.CloneRequest{
 			TargetPath: workspaceDir,
 			Options:    string(jsonOptions),

@@ -95,6 +95,10 @@ type DevPodWorkspaceTemplateDefinition struct {
 	// +optional
 	GitCloneStrategy GitCloneStrategy `json:"gitCloneStrategy,omitempty"`
 
+	// CredentialForwarding specifies controls for how workspaces created by this template forward credentials into the workspace
+	// +optional
+	CredentialForwarding *CredentialForwarding `json:"credentialForwarding,omitempty"`
+
 	// Provider holds the legacy VM provider configuration
 	//
 	// Deprecated: use fields on template instead
@@ -406,6 +410,28 @@ type DevPodWorkspaceTemplateVersion struct {
 	// Version is the version. Needs to be in X.X.X format.
 	// +optional
 	Version string `json:"version,omitempty"`
+}
+
+type CredentialForwarding struct {
+	// Docker specifies controls for how workspaces created by this template forward docker credentials
+	// +optional
+	Docker *DockerCredentialForwarding `json:"docker,omitempty"`
+
+	// Git specifies controls for how workspaces created by this template forward git credentials
+	// +optional
+	Git *GitCredentialForwarding `json:"git,omitempty"`
+}
+
+type DockerCredentialForwarding struct {
+	// Disabled prevents all workspaces created by this template from forwarding credentials into the workspace
+	// +optional
+	Disabled bool `json:"disabled,omitempty"`
+}
+
+type GitCredentialForwarding struct {
+	// Disabled prevents all workspaces created by this template from forwarding credentials into the workspace
+	// +optional
+	Disabled bool `json:"disabled,omitempty"`
 }
 
 // DevPodWorkspaceTemplateStatus holds the status
