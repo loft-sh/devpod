@@ -199,7 +199,7 @@ type AgentWorkspaceInfo struct {
 
 type CLIOptions struct {
 	// Platform are the platform options
-	Platform devpod.PlatformOptions `json:"platform,omitempty"`
+	Platform devpod.PlatformOptions `json:"platformOptions,omitempty"`
 
 	// up options
 	ID                          string            `json:"id,omitempty"`
@@ -226,7 +226,7 @@ type CLIOptions struct {
 	// build options
 	Repository string   `json:"repository,omitempty"`
 	SkipPush   bool     `json:"skipPush,omitempty"`
-	Platforms  []string `json:"platforms,omitempty"`
+	Platforms  []string `json:"platform,omitempty"`
 	Tag        []string `json:"tag,omitempty"`
 
 	ForceBuild            bool `json:"forceBuild,omitempty"`
