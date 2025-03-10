@@ -193,7 +193,7 @@ func printLogs(ctx context.Context, managementClient kube.Interface, workspace *
 		// parse message
 		message := &Message{}
 		if err := json.Unmarshal([]byte(line), message); err != nil {
-			return -1, fmt.Errorf("error parsing JSON from logs reader: %w, line: %s", err, string(line))
+			return -1, fmt.Errorf("error parsing JSON from logs reader: %w, line: %s", err, line)
 		}
 
 		// write message to stdout or stderr
@@ -209,7 +209,7 @@ func printLogs(ctx context.Context, managementClient kube.Interface, workspace *
 			}
 		} else if message.Type == ExitCode {
 			logger.Debugf("exit code: %d", message.ExitCode)
-			return int(message.ExitCode), nil
+			return message.ExitCode, nil
 		}
 	}
 	if err := scanner.Err(); err != nil {

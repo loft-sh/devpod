@@ -55,8 +55,6 @@ type Client interface {
 }
 
 // ProxyClient executes it's commands on the platform
-//
-// Deprecated: Use DaemonClient instead
 type ProxyClient interface {
 	BaseWorkspaceClient
 

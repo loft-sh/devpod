@@ -9,7 +9,6 @@ import (
 
 	managementv1 "github.com/loft-sh/api/v4/pkg/apis/management/v1"
 	daemon "github.com/loft-sh/devpod/pkg/daemon/platform"
-	platformdaemon "github.com/loft-sh/devpod/pkg/daemon/platform"
 	"github.com/loft-sh/devpod/pkg/platform/client"
 
 	proflags "github.com/loft-sh/devpod/cmd/pro/flags"
@@ -61,7 +60,7 @@ func (cmd *StartCmd) Run(ctx context.Context, devPodConfig *config.Config, provi
 	loftConfigPath := filepath.Join(dir, "..", "loft-config.json")
 	baseClient, err := client.InitClientFromPath(ctx, loftConfigPath)
 	if err != nil {
-		if platformdaemon.IsAccessKeyNotFound(err) && isDesktopControlled {
+		if daemon.IsAccessKeyNotFound(err) && isDesktopControlled {
 			printStatus(daemon.Status{State: daemon.DaemonStateStopped, LoginRequired: true})
 			return err
 		}
@@ -73,7 +72,7 @@ func (cmd *StartCmd) Run(ctx context.Context, devPodConfig *config.Config, provi
 		return fmt.Errorf("user name not set")
 	}
 
-	d, err := platformdaemon.Init(ctx, platformdaemon.InitConfig{
+	d, err := daemon.Init(ctx, daemon.InitConfig{
 		RootDir:        dir,
 		ProviderName:   provider.Name,
 		Context:        devPodConfig.DefaultContext,

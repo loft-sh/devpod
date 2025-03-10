@@ -121,7 +121,7 @@ func BuildRemote(
 	// check push permissions early
 	err = remote.CheckPushPermission(ref, keychain, http.DefaultTransport)
 	if err != nil {
-		return nil, fmt.Errorf("pushing %s is not allowed: %w", err)
+		return nil, fmt.Errorf("pushing %s is not allowed: %w", ref, err)
 	}
 
 	// resolve credentials for registry
