@@ -39,6 +39,19 @@ const muted = definePartsStyle((props) => {
     },
   }
 })
+const enclosed = definePartsStyle((props) => {
+  return {
+    tab: {
+      fontWeight: "medium",
+      _selected: {
+        color: mode("primary.600", "primary.300")(props),
+      },
+      _hover: {
+        bg: mode("gray.50", "gray.800")(props),
+      },
+    },
+  }
+})
 
 const mutedPopover = definePartsStyle((props) => {
   return {
@@ -78,6 +91,7 @@ const mutedPopover = definePartsStyle((props) => {
 
 const variants = {
   muted,
+  enclosed,
   "muted-popover": mutedPopover,
 }
 

@@ -13,6 +13,7 @@ import (
 	"github.com/gorilla/handlers"
 	"github.com/julienschmidt/httprouter"
 	managementv1 "github.com/loft-sh/api/v4/pkg/apis/management/v1"
+	"github.com/loft-sh/devpod/pkg/gitcredentials"
 	"github.com/loft-sh/devpod/pkg/platform"
 	platformclient "github.com/loft-sh/devpod/pkg/platform/client"
 	"github.com/loft-sh/devpod/pkg/platform/labels"
@@ -64,20 +65,23 @@ type platformStatus struct {
 }
 
 var (
-	routeHealth           = "/health"
-	routeMetrics          = "/metrics"
-	routeStatus           = "/status"
-	routeVersion          = "/version"
-	routeShutdown         = "/shutdown"
-	routeSelf             = "/self"
-	routeProjects         = "/projects"
-	routeProjectTemplates = "/projects/:project/templates"
-	routeProjectClusters  = "/projects/:project/clusters"
-	routeGetWorkspace     = "/workspace"
-	routeWatchWorkspaces  = "/watch-workspaces"
-	routeListWorkspaces   = "/list-workspaces"
-	routeCreateWorkspace  = "/create-workspace"
-	routeUpdateWorkspace  = "/update-workspace"
+	routeHealth            = "/health"
+	routeMetrics           = "/metrics"
+	routeStatus            = "/status"
+	routeVersion           = "/version"
+	routeShutdown          = "/shutdown"
+	routeSelf              = "/self"
+	routeProjects          = "/projects"
+	routeProjectTemplates  = "/projects/:project/templates"
+	routeProjectClusters   = "/projects/:project/clusters"
+	routeGetWorkspace      = "/workspace"
+	routeWatchWorkspaces   = "/watch-workspaces"
+	routeListWorkspaces    = "/list-workspaces"
+	routeCreateWorkspace   = "/create-workspace"
+	routeUpdateWorkspace   = "/update-workspace"
+	routeGetUserProfile    = "/user-profile"
+	routeUpdateUserProfile = "/update-user-profile"
+	routeGitCredentials    = "/git-credentials"
 )
 
 func newLocalServer(lc *tailscale.LocalClient, pc platformclient.Client, devPodContext string, log log.Logger) (*localServer, error) {
@@ -110,6 +114,9 @@ func newLocalServer(lc *tailscale.LocalClient, pc platformclient.Client, devPodC
 	router.GET(routeListWorkspaces, l.listWorkspace)
 	router.POST(routeCreateWorkspace, l.createWorkspace)
 	router.POST(routeUpdateWorkspace, l.updateWorkspace)
+	router.GET(routeGetUserProfile, l.userProfile)
+	router.POST(routeUpdateUserProfile, l.updateUserProfile)
+	router.GET(routeGitCredentials, l.getGitCredentials)
 
 	handler := handlers.LoggingHandler(log.Writer(logrus.DebugLevel, true), router)
 	handler = handlers.RecoveryHandler(handlers.RecoveryLogger(panicLogger{log: l.log}), handlers.PrintRecoveryStack(true))(handler)
@@ -262,6 +269,47 @@ func (l *localServer) version(w http.ResponseWriter, r *http.Request, params htt
 
 func (l *localServer) self(w http.ResponseWriter, r *http.Request, params httprouter.Params) {
 	tryJSON(w, l.pc.Self())
+}
+
+func (l *localServer) userProfile(w http.ResponseWriter, r *http.Request, params httprouter.Params) {
+	managementClient, err := l.pc.Management()
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	userName := l.pc.Self().Status.User.Name
+
+	profile, err := managementClient.Loft().ManagementV1().Users().GetProfile(r.Context(), userName, metav1.GetOptions{})
+	if err != nil {
+		http.Error(w, fmt.Errorf("get user profile: %w", err).Error(), http.StatusInternalServerError)
+		return
+	}
+
+	tryJSON(w, profile)
+}
+
+func (l *localServer) updateUserProfile(w http.ResponseWriter, r *http.Request, params httprouter.Params) {
+	profile := &managementv1.UserProfile{}
+	err := json.NewDecoder(r.Body).Decode(profile)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+	profile.TypeMeta = metav1.TypeMeta{}
+
+	managementClient, err := l.pc.Management()
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	userName := l.pc.Self().Status.User.Name
+	updatedProfile, err := managementClient.Loft().ManagementV1().Users().UpdateProfile(r.Context(), userName, profile, metav1.CreateOptions{})
+	if err != nil {
+		http.Error(w, fmt.Errorf("update user profile: %w", err).Error(), http.StatusInternalServerError)
+		return
+	}
+
+	tryJSON(w, updatedProfile)
 }
 
 func (l *localServer) projects(w http.ResponseWriter, r *http.Request, params httprouter.Params) {
@@ -479,6 +527,29 @@ func (l *localServer) updateWorkspace(w http.ResponseWriter, r *http.Request, pa
 	}
 
 	tryJSON(w, updatedInstance)
+}
+
+func (l *localServer) getGitCredentials(w http.ResponseWriter, r *http.Request, params httprouter.Params) {
+	host := r.URL.Query().Get("host")
+	if host == "" {
+		http.Error(w, "missing required query parameter \"host\"", http.StatusInternalServerError)
+		return
+	}
+	protocol := r.URL.Query().Get("protocol")
+	if protocol == "" {
+		protocol = "https"
+	}
+
+	credentials, err := gitcredentials.GetCredentials(&gitcredentials.GitCredentials{
+		Protocol: protocol,
+		Host:     host,
+	})
+	if err != nil {
+		http.Error(w, fmt.Errorf("get git credentials: %w", err).Error(), http.StatusBadRequest)
+		return
+	}
+
+	tryJSON(w, credentials)
 }
 
 func tryJSON(w http.ResponseWriter, obj interface{}) {

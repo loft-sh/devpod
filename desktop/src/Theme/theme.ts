@@ -14,6 +14,7 @@ import { Switch } from "./switch"
 import { Tabs } from "./tabs"
 import { Tag } from "./tag"
 import { Text } from "./text"
+import { Textarea } from "./textarea"
 
 const Code = defineStyleConfig({
   variants: {
@@ -143,5 +144,6 @@ export const theme = extendTheme({
     Input,
     Select,
     Text,
+    Textarea,
   },
 } satisfies ThemeOverride) as Theme

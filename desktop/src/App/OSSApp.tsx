@@ -120,45 +120,45 @@ export function OSSApp() {
                         <Toolbar.Actions />
                       </GridItem>
                       <GridItem display="flex" alignItems="center" justifyContent="center">
-                        <Notifications
-                          getActionDestination={(action) => Routes.toAction(action.id)}
-                          badgeNumber={providerUpdateCount}
-                          providerUpdates={
-                            providerUpdateInfo &&
-                            providerUpdateCount > 0 && (
-                              <>
-                                {providerUpdateInfo.map(({ providerName }) => (
-                                  <LinkBox
-                                    key={providerName}
-                                    padding={2}
-                                    fontSize="sm"
-                                    borderRadius="md"
-                                    width="full"
-                                    display="flex"
-                                    flexFlow="row nowrap"
-                                    alignItems="center"
-                                    gap={3}
-                                    _hover={{ backgroundColor: actionHoverColor }}>
-                                    <Stack3D color="gray.400" />
-                                    <VStack align="start" spacing="0">
-                                      <Text>
-                                        <LinkOverlay
-                                          as={RouterLink}
-                                          to={Routes.PROVIDERS}
-                                          textTransform="capitalize">
-                                          <Text fontWeight="bold">Provider {providerName}</Text>
-                                        </LinkOverlay>
-                                      </Text>
-                                      <Text variant="contrast" marginTop="-1">
-                                        Update available
-                                      </Text>
-                                    </VStack>
-                                  </LinkBox>
-                                ))}
-                              </>
-                            )
-                          }
-                        />
+                        <Box mr="4">
+                          <Notifications
+                            getActionDestination={(action) => Routes.toAction(action.id)}
+                            badgeNumber={providerUpdateCount}
+                            providerUpdates={
+                              providerUpdateInfo &&
+                              providerUpdateCount > 0 && (
+                                <>
+                                  {providerUpdateInfo.map(({ providerName }) => (
+                                    <LinkBox
+                                      key={providerName}
+                                      padding={2}
+                                      fontSize="sm"
+                                      borderRadius="md"
+                                      width="full"
+                                      display="flex"
+                                      flexFlow="row nowrap"
+                                      alignItems="center"
+                                      gap={3}
+                                      _hover={{ backgroundColor: actionHoverColor }}>
+                                      <Stack3D color="gray.400" />
+                                      <VStack align="start" spacing="0">
+                                        <Text>
+                                          <LinkOverlay
+                                            as={RouterLink}
+                                            to={Routes.PROVIDERS}
+                                            textTransform="capitalize">
+                                            <Text fontWeight="bold">Provider {providerName}</Text>
+                                          </LinkOverlay>
+                                        </Text>
+                                        <Text marginTop="-1">Update available</Text>
+                                      </VStack>
+                                    </LinkBox>
+                                  ))}
+                                </>
+                              )
+                            }
+                          />
+                        </Box>
                         <ProSwitcher />
                       </GridItem>
                     </Grid>

@@ -485,7 +485,7 @@ type TCustomProviderInputProps = Readonly<{
 function CustomProviderInput({ field, isInvalid, onAccept }: TCustomProviderInputProps) {
   const backgroundColor = useColorModeValue("white", "black")
   const handleSelectFileClicked = useCallback(async () => {
-    const selected = await client.selectFromFileYaml()
+    const selected = await client.selectFileYaml()
     if (typeof selected === "string") {
       field.onChange(selected)
       field.onBlur()

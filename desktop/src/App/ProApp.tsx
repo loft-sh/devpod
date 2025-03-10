@@ -1,25 +1,35 @@
 import { STATUS_BAR_HEIGHT } from "@/constants"
 import { ProviderProvider } from "@/contexts/DevPodContext/DevPodProvider"
-import { BellDuotone, CogDuotone } from "@/icons"
+import { BellDuotone, CogDuotone, LockDuotone } from "@/icons"
 import { TConnectionStatus, useConnectionStatus } from "@/lib"
 import { QueryKeys } from "@/queryKeys"
 import { Routes } from "@/routes"
 import { TPlatformVersionInfo } from "@/types"
 import {
+  Avatar,
   Box,
+  Button,
   Divider,
   HStack,
   IconButton,
   Link,
   List,
   ListItem,
+  Popover,
+  PopoverArrow,
+  PopoverContent,
+  PopoverHeader,
+  PopoverTrigger,
+  Portal,
   Text,
   Tooltip,
   useColorModeValue,
+  useDisclosure,
 } from "@chakra-ui/react"
+import { ManagementV1Self } from "@loft-enterprise/client/gen/models/managementV1Self"
 import { useQuery } from "@tanstack/react-query"
-import { useMemo } from "react"
-import { Outlet, Link as RouterLink } from "react-router-dom"
+import { ReactElement, ReactNode, cloneElement, useMemo } from "react"
+import { Outlet, Link as RouterLink, To } from "react-router-dom"
 import { Notifications, ProLayout, StatusBar, Toolbar } from "../components"
 import {
   ProInstancesProvider,
@@ -56,6 +66,7 @@ export function ProApp() {
 
 type TProAppContentProps = Readonly<{ host: string }>
 function ProAppContent({ host }: TProAppContentProps) {
+  const { managementSelfQuery: selfQuery } = useProContext()
   const connectionStatus = useConnectionStatus()
   const versionInfo = usePlatformVersion()
 
@@ -65,22 +76,15 @@ function ProAppContent({ host }: TProAppContentProps) {
         <>
           <HStack gap="4">
             <Box>
-              <Toolbar.Title />
+              <Link variant="" to={Routes.toProInstance(host)} as={RouterLink}>
+                <Toolbar.Title />
+              </Link>
             </Box>
             <Box>
               <Toolbar.Actions />
             </Box>
           </HStack>
           <HStack pr="2">
-            <Link as={RouterLink} to={Routes.toProSettings(host)}>
-              <IconButton
-                variant="ghost"
-                size="md"
-                rounded="full"
-                aria-label="Go to settings"
-                icon={<CogDuotone color={"primary.600"} _dark={{ color: "primary.300" }} />}
-              />
-            </Link>
             <Notifications
               getActionDestination={(action) => Routes.toProWorkspace(host, action.targetID)}
               icon={
@@ -91,6 +95,8 @@ function ProAppContent({ host }: TProAppContentProps) {
                 />
               }
             />
+            <Divider orientation="vertical" h="10" />
+            <UserMenu host={host} self={selfQuery.data} />
           </HStack>
         </>
       }
@@ -179,4 +185,88 @@ function ConnectionStatus({ status }: TConnectionStatusProps) {
   }
 
   return content
+}
+
+type TProfileMenuProps = Readonly<{
+  host: string
+  self: ManagementV1Self | undefined
+}>
+function UserMenu({ host, self }: TProfileMenuProps) {
+  const iconColor = useColorModeValue("primary.600", "primary.300")
+  const { isOpen, onClose, onToggle } = useDisclosure()
+
+  const userName = self?.status?.user?.displayName ?? self?.status?.user?.name ?? "Anonymous"
+
+  return (
+    <>
+      <Popover placement="bottom" isOpen={isOpen} onClose={onClose} returnFocusOnClose={false}>
+        <PopoverTrigger>
+          <IconButton
+            onClick={onToggle}
+            variant="ghost"
+            size="md"
+            rounded="full"
+            aria-label="User Menu"
+            icon={
+              <Avatar
+                name={userName}
+                size="xs"
+                fontWeight="bold"
+                bg={iconColor}
+                _dark={{ color: "gray.900" }}
+                src={self?.status?.user?.icon}
+              />
+            }
+          />
+        </PopoverTrigger>
+        <Portal>
+          <PopoverContent zIndex="popover" w="72">
+            <PopoverArrow />
+            <PopoverHeader textOverflow="ellipsis" overflow="hidden" maxW="72" whiteSpace="nowrap">
+              {userName}
+            </PopoverHeader>
+            <List my="4" onClick={onClose}>
+              <ListItem>
+                {/* TODO: Implement when we need it
+                 UserLinkButton to={Routes.toProProfile(host)} icon={<ProfileDuotone />}>
+                  Profile
+                </UserLinkButton>*/}
+              </ListItem>
+              <ListItem>
+                <UserLinkButton to={Routes.toProCredentials(host)} icon={<LockDuotone />}>
+                  Credentials
+                </UserLinkButton>
+              </ListItem>
+              <ListItem>
+                <UserLinkButton to={Routes.toProSettings(host)} icon={<CogDuotone />}>
+                  Settings
+                </UserLinkButton>
+              </ListItem>
+            </List>
+          </PopoverContent>
+        </Portal>
+      </Popover>
+    </>
+  )
+}
+
+type TUserLinkButton = Readonly<{ children: ReactNode; to: To; icon: ReactElement }>
+function UserLinkButton({ children, to, icon }: TUserLinkButton) {
+  const clonedIcon = cloneElement(icon, { boxSize: 5 })
+
+  return (
+    <Button
+      as={RouterLink}
+      size="sm"
+      fontWeight="semibold"
+      variant={"ghost"}
+      w="full"
+      display="flex"
+      justifyContent="start"
+      alignItems="center"
+      leftIcon={clonedIcon}
+      to={to}>
+      {children}
+    </Button>
+  )
 }
