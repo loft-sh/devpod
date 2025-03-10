@@ -13,6 +13,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/loft-sh/api/v4/pkg/devpod"
 	"github.com/loft-sh/devpod/cmd/agent/workspace"
 	"github.com/loft-sh/devpod/cmd/flags"
 	"github.com/loft-sh/devpod/cmd/machine"
@@ -826,7 +827,7 @@ func startWorkspaceCredentialServer(ctx context.Context, client *ssh.Client, use
 	return devssh.Run(ctx, client, command, stdin, stdout, writer, nil)
 }
 
-func startLocalServer(ctx context.Context, allowGitCredentials, allowDockerCredentials bool, platformOptions *provider.PlatformOptions, stdoutReader io.Reader, stdinWriter io.WriteCloser, log log.Logger) error {
+func startLocalServer(ctx context.Context, allowGitCredentials, allowDockerCredentials bool, platformOptions *devpod.PlatformOptions, stdoutReader io.Reader, stdinWriter io.WriteCloser, log log.Logger) error {
 	err := tunnelserver.RunRunnerServer(ctx, stdoutReader, stdinWriter, allowGitCredentials, allowDockerCredentials, platformOptions, log)
 	if err != nil {
 		return fmt.Errorf("run runner services server: %w", err)

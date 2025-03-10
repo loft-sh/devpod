@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"github.com/docker/go-connections/nat"
+	"github.com/loft-sh/api/v4/pkg/devpod"
 	"github.com/loft-sh/devpod/pkg/agent"
 	"github.com/loft-sh/devpod/pkg/agent/tunnelserver"
 	"github.com/loft-sh/devpod/pkg/config"
@@ -39,7 +40,7 @@ func RunServices(
 	user string,
 	forwardPorts bool,
 	extraPorts []string,
-	platformOptions *provider.PlatformOptions,
+	platformOptions *devpod.PlatformOptions,
 	workspace *provider.Workspace,
 	configureDockerCredentials, configureGitCredentials, configureGitSSHSignatureHelper bool,
 	log log.Logger,

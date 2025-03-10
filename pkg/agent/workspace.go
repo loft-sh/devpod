@@ -3,13 +3,16 @@ package agent
 import (
 	"context"
 	"encoding/base64"
+	"encoding/json"
 	"fmt"
+	"net"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"runtime"
 	"strings"
 
+	"github.com/loft-sh/api/v4/pkg/devpod"
 	"github.com/loft-sh/devpod/pkg/command"
 	"github.com/loft-sh/devpod/pkg/config"
 	"github.com/loft-sh/devpod/pkg/git"
@@ -18,6 +21,8 @@ import (
 	"github.com/loft-sh/devpod/pkg/util"
 	"github.com/loft-sh/log"
 	"github.com/moby/patternmatcher/ignorefile"
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials/insecure"
 )
 
 var extraSearchLocations = []string{"/home/devpod/.devpod/agent", "/opt/devpod/agent", "/var/lib/devpod/agent", "/var/devpod/agent"}
@@ -300,16 +305,68 @@ func CloneRepositoryForWorkspace(
 	}
 
 	// run git command
-	cloner := git.NewClonerWithOpts(getGitOptions(options)...)
 	gitInfo := git.NewGitInfo(source.GitRepository, source.GitBranch, source.GitCommit, source.GitPRReference, source.GitSubPath)
-	gitOpts := git.GitCommandOptions{StrictHostKeyChecking: options.StrictHostKeyChecking}
-	err := git.CloneRepositoryWithEnv(ctx, gitInfo, extraEnv, workspaceDir, gitOpts, helper, cloner, log)
-	if err != nil {
-		// cleanup workspace dir if clone failed, otherwise we won't try to clone again when rebuilding this workspace
-		if cleanupErr := cleanupWorkspaceDir(workspaceDir); cleanupErr != nil {
-			return fmt.Errorf("clone repository: %w, cleanup workspace: %w", err, cleanupErr)
+
+	// should run with platform git cache?
+	platformGitcacheEnabled := options.Platform.Enabled && options.Platform.RunnerSocket != ""
+	if platformGitcacheEnabled {
+		_, err := os.Stat(options.Platform.RunnerSocket)
+		if err != nil {
+			platformGitcacheEnabled = false
 		}
-		return fmt.Errorf("clone repository: %w", err)
+	}
+
+	// try to clone with platform gitcache
+	if platformGitcacheEnabled {
+		dialer := &net.Dialer{}
+		conn, err := dialer.DialContext(ctx, "unix", options.Platform.RunnerSocket)
+		if err != nil {
+			return fmt.Errorf("dial platform gitcache: %w", err)
+		}
+		defer conn.Close()
+
+		// Set up a connection to the server.
+		grpcClient, err := grpc.NewClient("unix://"+options.Platform.RunnerSocket, grpc.WithTransportCredentials(insecure.NewCredentials()))
+		if err != nil {
+			return fmt.Errorf("create platform gitcache client: %w", err)
+		}
+
+		// marshal options
+		jsonOptions, err := json.Marshal(&devpod.CloneOptions{
+			Repository:        source.GitRepository,
+			Branch:            source.GitBranch,
+			Commit:            source.GitCommit,
+			PRReference:       source.GitPRReference,
+			SubPath:           source.GitSubPath,
+			CredentialsHelper: helper,
+			ExtraEnv:          append(git.GetDefaultExtraEnv(options.StrictHostKeyChecking), extraEnv...),
+		})
+		if err != nil {
+			return fmt.Errorf("marshal git options: %w", err)
+		}
+
+		// create client
+		log.Infof("Cloning repository %s with platform git cache...", source.GitRepository)
+		_, err = devpod.NewRunnerClient(grpcClient).Clone(ctx, &devpod.CloneRequest{
+			TargetPath: workspaceDir,
+			Options:    string(jsonOptions),
+		})
+		if err != nil {
+			// cleanup workspace dir if clone failed, otherwise we won't try to clone again when rebuilding this workspace
+			if cleanupErr := cleanupWorkspaceDir(workspaceDir); cleanupErr != nil {
+				return fmt.Errorf("clone repository (with gitcache): %w, cleanup workspace: %w", err, cleanupErr)
+			}
+			return fmt.Errorf("clone repository (with gitcache): %w", err)
+		}
+	} else {
+		err := git.CloneRepositoryWithEnv(ctx, gitInfo, extraEnv, workspaceDir, helper, options.StrictHostKeyChecking, log, getGitOptions(options)...)
+		if err != nil {
+			// cleanup workspace dir if clone failed, otherwise we won't try to clone again when rebuilding this workspace
+			if cleanupErr := cleanupWorkspaceDir(workspaceDir); cleanupErr != nil {
+				return fmt.Errorf("clone repository: %w, cleanup workspace: %w", err, cleanupErr)
+			}
+			return fmt.Errorf("clone repository: %w", err)
+		}
 	}
 
 	log.Done("Successfully cloned repository")
