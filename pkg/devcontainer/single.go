@@ -50,6 +50,7 @@ func (r *runner) runSingleContainer(
 	var (
 		mergedConfig *config.MergedDevContainerConfig
 	)
+
 	// if options.Recreate is true, and workspace is a running container, we should not rebuild
 	if options.Recreate && parsedConfig.Config.ContainerID != "" {
 		return nil, fmt.Errorf("cannot recreate container not created by DevPod")
@@ -108,9 +109,16 @@ func (r *runner) runSingleContainer(
 
 		// delete container on recreation
 		if options.Recreate {
-			err := r.Delete(ctx)
-			if err != nil {
-				return nil, errors.Wrap(err, "delete devcontainer")
+			if _, ok := r.Driver.(driver.DockerDriver); ok {
+				err := r.Delete(ctx)
+				if err != nil {
+					return nil, errors.Wrap(err, "delete devcontainer")
+				}
+			} else {
+				err := r.Driver.StopDevContainer(ctx, r.ID)
+				if err != nil {
+					return nil, errors.Wrap(err, "stop devcontainer")
+				}
 			}
 		}
 
@@ -119,6 +127,7 @@ func (r *runner) runSingleContainer(
 		if err != nil {
 			return nil, errors.Wrap(err, "merge config")
 		}
+
 		// Inject the daemon entrypoint if platform configuration is provided.
 		if options.CLIOptions.Platform.AccessKey != "" {
 			r.Log.Debugf("Platform config detected, injecting DevPod daemon entrypoint.")

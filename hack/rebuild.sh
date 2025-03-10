@@ -10,8 +10,12 @@ if [[ -z "${BUILD_PLATFORMS}" ]]; then
     BUILD_PLATFORMS="linux windows darwin"
 fi
 
+if [[ -z "${BUILD_ARCHS}" ]]; then
+    BUILD_ARCHS="amd64 arm64"
+fi
+
 for os in $BUILD_PLATFORMS; do
-    for arch in amd64 arm64; do
+    for arch in $BUILD_ARCHS; do
         # don't build for arm on windows
         if [[ "$os" == "windows" && "$arch" == "arm64" ]]; then
             continue

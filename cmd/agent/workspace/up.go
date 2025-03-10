@@ -293,6 +293,7 @@ func prepareWorkspace(ctx context.Context, workspaceInfo *provider2.AgentWorkspa
 			log.Infof("Pulling devcontainer spec from %v", workspaceInfo.CLIOptions.Platform.EnvironmentTemplate)
 			return nil
 		}
+
 		return agent.CloneRepositoryForWorkspace(ctx,
 			&workspaceInfo.Workspace.Source,
 			&workspaceInfo.Agent,
