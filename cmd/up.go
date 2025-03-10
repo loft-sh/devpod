@@ -664,7 +664,7 @@ func startRStudioInBrowser(
 
 	// start in browser
 	logger.Infof("Starting RStudio server in browser mode at %s", targetURL)
-	extraPorts := []string{fmt.Sprintf("%s:%d", addr, port)}
+	extraPorts := []string{fmt.Sprintf("%s:%d", addr, rstudio.DefaultServerPort)}
 	return startBrowserTunnel(
 		ctx,
 		devPodConfig,
