@@ -6,6 +6,7 @@ import (
 	"io"
 	"strings"
 
+	"github.com/loft-sh/api/v4/pkg/devpod"
 	"github.com/loft-sh/devpod/pkg/devcontainer/config"
 	"github.com/loft-sh/devpod/pkg/provider"
 	"golang.org/x/crypto/ssh"
@@ -137,11 +138,11 @@ type ValidateOptions struct{}
 type StartOptions struct{}
 
 type StopOptions struct {
-	Platform provider.PlatformOptions `json:"platform,omitempty"`
+	Platform devpod.PlatformOptions `json:"platform,omitempty"`
 }
 
 type DeleteOptions struct {
-	Platform provider.PlatformOptions `json:"platform,omitempty"`
+	Platform devpod.PlatformOptions `json:"platform,omitempty"`
 
 	IgnoreNotFound bool   `json:"ignoreNotFound,omitempty"`
 	Force          bool   `json:"force,omitempty"`

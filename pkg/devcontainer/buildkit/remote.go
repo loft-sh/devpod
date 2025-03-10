@@ -18,6 +18,7 @@ import (
 	"github.com/google/go-containerregistry/pkg/name"
 	v1 "github.com/google/go-containerregistry/pkg/v1"
 	"github.com/google/go-containerregistry/pkg/v1/remote"
+	"github.com/loft-sh/api/v4/pkg/devpod"
 	"github.com/loft-sh/devpod/pkg/devcontainer/build"
 	"github.com/loft-sh/devpod/pkg/devcontainer/config"
 	"github.com/loft-sh/devpod/pkg/devcontainer/feature"
@@ -303,7 +304,7 @@ func getImageDetails(ctx context.Context, ref name.Reference, targetArch string,
 	return imageDetails, nil
 }
 
-func ensureCertPaths(buildOpts *provider.PlatformBuildOptions) (parentDir string, caPath string, keyPath string, certPath string, err error) {
+func ensureCertPaths(buildOpts *devpod.PlatformBuildOptions) (parentDir string, caPath string, keyPath string, certPath string, err error) {
 	parentDir, err = os.MkdirTemp("", "build-certs-*")
 	if err != nil {
 		return parentDir, caPath, keyPath, caPath, fmt.Errorf("create temp dir: %w", err)

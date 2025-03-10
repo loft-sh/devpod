@@ -11,6 +11,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/loft-sh/api/v4/pkg/devpod"
 	"github.com/loft-sh/devpod/pkg/agent/tunnel"
 	"github.com/loft-sh/devpod/pkg/devcontainer/config"
 	"github.com/loft-sh/devpod/pkg/dockercredentials"
@@ -92,7 +93,7 @@ type tunnelServer struct {
 	log                    log.Logger
 	tunnelClient           tunnel.TunnelClient
 
-	platformOptions *provider2.PlatformOptions
+	platformOptions *devpod.PlatformOptions
 }
 
 func (t *tunnelServer) RunWithResult(ctx context.Context, reader io.Reader, writer io.WriteCloser) (*config.Result, error) {

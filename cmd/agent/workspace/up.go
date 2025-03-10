@@ -70,8 +70,10 @@ func (cmd *UpCmd) Run(ctx context.Context) error {
 	}
 
 	// make sure daemon doesn't shut us down while we are doing things
-	agent.CreateWorkspaceBusyFile(workspaceInfo.Origin)
-	defer agent.DeleteWorkspaceBusyFile(workspaceInfo.Origin)
+	if !workspaceInfo.CLIOptions.Platform.Enabled {
+		agent.CreateWorkspaceBusyFile(workspaceInfo.Origin)
+		defer agent.DeleteWorkspaceBusyFile(workspaceInfo.Origin)
+	}
 
 	// initialize the workspace
 	cancelCtx, cancel := context.WithCancel(ctx)
