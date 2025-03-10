@@ -244,7 +244,7 @@ func (l *localServer) metrics(w http.ResponseWriter, r *http.Request, params htt
 func (l *localServer) shutdown(w http.ResponseWriter, r *http.Request, params httprouter.Params) {
 	err := l.Close()
 	if err != nil {
-		http.Error(w, fmt.Errorf("shut down daemon server: %v", err).Error(), http.StatusInternalServerError)
+		http.Error(w, fmt.Errorf("shut down daemon server: %w", err).Error(), http.StatusInternalServerError)
 		return
 	}
 

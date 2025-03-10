@@ -134,11 +134,11 @@ func (cmd *DaemonCmd) loadConfig() error {
 	if encodedCfg := os.Getenv(devcontainer.WorkspaceDaemonConfigExtraEnvVar); strings.TrimSpace(encodedCfg) != "" {
 		decoded, err := base64.StdEncoding.DecodeString(encodedCfg)
 		if err != nil {
-			return fmt.Errorf("error decoding daemon config: %v", err)
+			return fmt.Errorf("error decoding daemon config: %w", err)
 		}
 		var cfg agentd.DaemonConfig
 		if err = json.Unmarshal(decoded, &cfg); err != nil {
-			return fmt.Errorf("error unmarshalling daemon config: %v", err)
+			return fmt.Errorf("error unmarshalling daemon config: %w", err)
 		}
 		if cmd.Config.Timeout != "" {
 			cfg.Timeout = cmd.Config.Timeout
@@ -258,7 +258,9 @@ func runSshServer(ctx context.Context, cmd *DaemonCmd, errChan chan<- error, wg 
 		select {
 		case <-ctx.Done():
 			if sshCmd.Process != nil {
-				sshCmd.Process.Signal(syscall.SIGTERM)
+				if err := sshCmd.Process.Signal(syscall.SIGTERM); err != nil {
+					errChan <- fmt.Errorf("failed to send SIGTERM to SSH server: %w", err)
+				}
 			}
 		case <-done:
 		}

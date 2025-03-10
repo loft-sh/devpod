@@ -7,12 +7,12 @@ import (
 	"github.com/loft-sh/devpod/pkg/platform/client"
 )
 
-type errDaemonNotAvailable struct {
+type daemonNotAvailableError struct {
 	Err      error
 	Provider string
 }
 
-func (e errDaemonNotAvailable) Error() string {
+func (e daemonNotAvailableError) Error() string {
 	return fmt.Sprintf("The DevPod Daemon for provider %s isn't reachable. Is DevPod Desktop or `devpod pro daemon start --host=$YOUR_PRO_HOST` running? %v", e.Provider, e.Err)
 }
 

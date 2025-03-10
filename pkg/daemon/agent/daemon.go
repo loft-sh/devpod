@@ -72,7 +72,6 @@ func GetEncodedDaemonConfig(platformOptions devpod.PlatformOptions, workspaceCon
 	}
 	encoded := base64.StdEncoding.EncodeToString(data)
 	return encoded, nil
-
 }
 
 func InstallDaemon(agentDir string, interval string, log log.Logger) error {

@@ -7,10 +7,10 @@ import (
 	"runtime"
 
 	"github.com/loft-sh/devpod/e2e/framework"
+	"github.com/loft-sh/devpod/pkg/devcontainer/build"
 	"github.com/loft-sh/devpod/pkg/devcontainer/config"
 	"github.com/loft-sh/devpod/pkg/docker"
 	"github.com/loft-sh/devpod/pkg/dockerfile"
-	dockerdriver "github.com/loft-sh/devpod/pkg/driver/docker"
 	"github.com/loft-sh/log"
 	"github.com/onsi/ginkgo/v2"
 )
@@ -110,7 +110,7 @@ var _ = DevPodDescribe("devpod build test suite", func() {
 			// make sure images are there
 			prebuildHash, err := config.CalculatePrebuildHash(cfg, "linux/amd64", "amd64", filepath.Dir(cfg.Origin), dockerfilePath, modifiedDockerfileContents, info, log.Default)
 			framework.ExpectNoError(err)
-			_, err = dockerHelper.InspectImage(ctx, dockerdriver.GetImageName(tempDir, prebuildHash), false)
+			_, err = dockerHelper.InspectImage(ctx, build.GetImageName(tempDir, prebuildHash), false)
 			framework.ExpectNoError(err)
 		})
 

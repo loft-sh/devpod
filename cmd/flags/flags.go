@@ -30,7 +30,7 @@ func SetGlobalFlags(flags *flag.FlagSet) *GlobalFlags {
 	flags.BoolVar(&globalFlags.Silent, "silent", false, "Run in silent mode and prevents any devpod log output except panics & fatals")
 
 	flags.Var(&globalFlags.Owner, "owner", "Show pro workspaces for owner")
-	flags.MarkHidden("owner")
+	_ = flags.MarkHidden("owner")
 	flags.StringVar(&globalFlags.UID, "uid", "", "Set UID for workspace")
 	_ = flags.MarkHidden("uid")
 	flags.StringVar(&globalFlags.AgentDir, "agent-dir", "", "The data folder where agent data is stored.")

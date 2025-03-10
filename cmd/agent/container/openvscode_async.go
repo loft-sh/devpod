@@ -2,6 +2,7 @@ package container
 
 import (
 	"encoding/json"
+
 	"github.com/loft-sh/devpod/cmd/flags"
 	"github.com/loft-sh/devpod/pkg/compress"
 	"github.com/loft-sh/devpod/pkg/devcontainer/config"
