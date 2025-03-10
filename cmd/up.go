@@ -158,7 +158,7 @@ func (cmd *UpCmd) Run(
 		cmd.SSHAuthSockID = util.RandStringBytes(10)
 		log.Debug("Reusing SSH_AUTH_SOCK", cmd.SSHAuthSockID)
 	} else if cmd.Platform.Enabled && ide.ReusesAuthSock(targetIDE) {
-		log.Debug("Reusing SSH_AUTH_SOCK is not supported with proxy mode, consider launching the IDE from the platform UI")
+		log.Debug("Reusing SSH_AUTH_SOCK is not supported with platform mode, consider launching the IDE from the platform UI")
 	}
 
 	// run devpod agent up
