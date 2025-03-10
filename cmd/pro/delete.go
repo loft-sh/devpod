@@ -13,7 +13,6 @@ import (
 	platformdaemon "github.com/loft-sh/devpod/pkg/daemon/platform"
 	"github.com/loft-sh/devpod/pkg/platform"
 	"github.com/loft-sh/devpod/pkg/provider"
-	provider2 "github.com/loft-sh/devpod/pkg/provider"
 	"github.com/loft-sh/devpod/pkg/workspace"
 	"github.com/loft-sh/log"
 	"github.com/pkg/errors"
@@ -56,7 +55,7 @@ func (cmd *DeleteCmd) Run(ctx context.Context, args []string) error {
 
 	// load pro instance config
 	proInstanceName := args[0]
-	proInstanceConfig, err := provider2.LoadProInstanceConfig(devPodConfig.DefaultContext, proInstanceName)
+	proInstanceConfig, err := provider.LoadProInstanceConfig(devPodConfig.DefaultContext, proInstanceName)
 	if err != nil {
 		if os.IsNotExist(err) && cmd.IgnoreNotFound {
 			return nil
@@ -99,7 +98,7 @@ func (cmd *DeleteCmd) Run(ctx context.Context, args []string) error {
 	}
 
 	// delete the pro instance dir itself
-	proInstanceDir, err := provider2.GetProInstanceDir(devPodConfig.DefaultContext, proInstanceConfig.Host)
+	proInstanceDir, err := provider.GetProInstanceDir(devPodConfig.DefaultContext, proInstanceConfig.Host)
 	if err != nil {
 		return err
 	}
@@ -113,8 +112,8 @@ func (cmd *DeleteCmd) Run(ctx context.Context, args []string) error {
 	return nil
 }
 
-func cleanupLocalWorkspaces(ctx context.Context, devPodConfig *config.Config, workspaces []*provider2.Workspace, providerName string, owner platform.OwnerFilter, log log.Logger) {
-	usedWorkspaces := []*provider2.Workspace{}
+func cleanupLocalWorkspaces(ctx context.Context, devPodConfig *config.Config, workspaces []*provider.Workspace, providerName string, owner platform.OwnerFilter, log log.Logger) {
+	usedWorkspaces := []*provider.Workspace{}
 
 	for _, workspace := range workspaces {
 		if workspace.Provider.Name == providerName {
@@ -127,7 +126,7 @@ func cleanupLocalWorkspaces(ctx context.Context, devPodConfig *config.Config, wo
 		// try to force delete all workspaces in the background
 		for _, w := range usedWorkspaces {
 			wg.Add(1)
-			go func(w provider2.Workspace) {
+			go func(w provider.Workspace) {
 				defer wg.Done()
 				client, err := workspace.Get(ctx, devPodConfig, []string{w.ID}, true, owner, log)
 				if err != nil {

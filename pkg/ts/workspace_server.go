@@ -85,14 +85,16 @@ func (s *WorkspaceServer) Start(ctx context.Context) error {
 	}
 
 	go func() {
-		WatchNetmap(ctx, lc, func(netMap *netmap.NetworkMap) {
+		if err := WatchNetmap(ctx, lc, func(netMap *netmap.NetworkMap) {
 			nm, err := json.Marshal(netMap)
 			if err != nil {
 				s.log.Errorf("Failed to marshal netmap: %v", err)
 			} else {
 				_ = os.WriteFile(filepath.Join(s.config.RootDir, "netmap.json"), nm, 0o644)
 			}
-		})
+		}); err != nil {
+			s.log.Errorf("Failed to watch netmap: %v", err)
+		}
 	}()
 
 	// Wait until the context is canceled.

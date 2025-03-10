@@ -196,8 +196,9 @@ func resolveInstanceOptions(ctx context.Context, instance *managementv1.DevPodWo
 	if instance.Spec.TemplateRef == nil {
 		return opts, nil
 	}
+	//nolint:all
 	if instance.Spec.RunnerRef.Runner != "" {
-		opts[platform.RunnerEnv] = instance.Spec.RunnerRef.Runner
+		opts[platform.RunnerEnv] = instance.Spec.RunnerRef.Runner //nolint:all
 	}
 	opts[platform.TemplateOptionEnv] = instance.Spec.TemplateRef.Name
 

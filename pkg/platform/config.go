@@ -27,9 +27,7 @@ func Timeout() time.Duration {
 
 // ReadConfig reads client.Config for given context and provider
 func ReadConfig(contextName string, providerName string) (*client.Config, error) {
-	if contextName == "" {
-
-	}
+	// contextName is allowed to be empty
 	providerDir, err := provider.GetProviderDir(contextName, providerName)
 	if err != nil {
 		return nil, err

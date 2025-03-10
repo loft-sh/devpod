@@ -9,7 +9,6 @@ import (
 	"github.com/loft-sh/devpod/pkg/client/clientimplementation"
 	"github.com/loft-sh/devpod/pkg/config"
 	"github.com/loft-sh/devpod/pkg/provider"
-	providerpkg "github.com/loft-sh/devpod/pkg/provider"
 	"github.com/loft-sh/log"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
@@ -49,10 +48,10 @@ func NewVersionCmd(globalFlags *flags.GlobalFlags) *cobra.Command {
 	return c
 }
 
-func (cmd *VersionCmd) Run(ctx context.Context, devPodConfig *config.Config, provider *provider.ProviderConfig) error {
-	opts := devPodConfig.ProviderOptions(provider.Name)
-	opts[providerpkg.PROVIDER_ID] = config.OptionValue{Value: provider.Name}
-	opts[providerpkg.PROVIDER_CONTEXT] = config.OptionValue{Value: cmd.Context}
+func (cmd *VersionCmd) Run(ctx context.Context, devPodConfig *config.Config, providerConfig *provider.ProviderConfig) error {
+	opts := devPodConfig.ProviderOptions(providerConfig.Name)
+	opts[provider.PROVIDER_ID] = config.OptionValue{Value: providerConfig.Name}
+	opts[provider.PROVIDER_CONTEXT] = config.OptionValue{Value: cmd.Context}
 
 	var buf bytes.Buffer
 	// ignore --debug because we tunnel json through stdio
@@ -61,12 +60,12 @@ func (cmd *VersionCmd) Run(ctx context.Context, devPodConfig *config.Config, pro
 	err := clientimplementation.RunCommandWithBinaries(
 		ctx,
 		"getVersion",
-		provider.Exec.Proxy.Get.Version,
+		providerConfig.Exec.Proxy.Get.Version,
 		devPodConfig.DefaultContext,
 		nil,
 		nil,
 		opts,
-		provider,
+		providerConfig,
 		nil,
 		nil,
 		&buf,

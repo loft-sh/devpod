@@ -147,7 +147,7 @@ func (c *LocalClient) doRequest(ctx context.Context, method string, path string,
 	res, err := c.httpClient.Do(req)
 	if err != nil {
 		if isConnectToDaemonError(err) {
-			return nil, errDaemonNotAvailable{Err: err, Provider: c.provider}
+			return nil, daemonNotAvailableError{Err: err, Provider: c.provider}
 		}
 
 		return nil, err
