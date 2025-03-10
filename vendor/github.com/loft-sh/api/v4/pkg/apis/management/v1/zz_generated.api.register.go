@@ -119,6 +119,7 @@ func addKnownTypes(scheme *runtime.Scheme) error {
 		&UserList{},
 		&UserAccessKeys{},
 		&UserClusters{},
+		&UserDetailedPermissions{},
 		&UserPermissions{},
 		&UserProfile{},
 		&VirtualClusterInstance{},
@@ -369,6 +370,12 @@ var (
 			func() runtime.Object { return &UserClusters{} }, // Register versioned resource
 			nil,
 			management.NewUserClustersREST,
+		),
+		builders.NewApiResourceWithStorage(
+			management.InternalUserDetailedPermissionsREST,
+			func() runtime.Object { return &UserDetailedPermissions{} }, // Register versioned resource
+			nil,
+			management.NewUserDetailedPermissionsREST,
 		),
 		builders.NewApiResourceWithStorage(
 			management.InternalUserPermissionsREST,
@@ -982,6 +989,14 @@ type UserClustersList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:"metadata,omitempty"`
 	Items           []UserClusters `json:"items"`
+}
+
+// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
+
+type UserDetailedPermissionsList struct {
+	metav1.TypeMeta `json:",inline"`
+	metav1.ListMeta `json:"metadata,omitempty"`
+	Items           []UserDetailedPermissions `json:"items"`
 }
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object

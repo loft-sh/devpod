@@ -1145,8 +1145,16 @@ var (
 	NewUserClustersREST = func(getter generic.RESTOptionsGetter) rest.Storage {
 		return NewUserClustersRESTFunc(Factory)
 	}
-	NewUserClustersRESTFunc     NewRESTFunc
-	InternalUserPermissionsREST = builders.NewInternalSubresource(
+	NewUserClustersRESTFunc             NewRESTFunc
+	InternalUserDetailedPermissionsREST = builders.NewInternalSubresource(
+		"users", "UserDetailedPermissions", "detailed-permissions",
+		func() runtime.Object { return &UserDetailedPermissions{} },
+	)
+	NewUserDetailedPermissionsREST = func(getter generic.RESTOptionsGetter) rest.Storage {
+		return NewUserDetailedPermissionsRESTFunc(Factory)
+	}
+	NewUserDetailedPermissionsRESTFunc NewRESTFunc
+	InternalUserPermissionsREST        = builders.NewInternalSubresource(
 		"users", "UserPermissions", "permissions",
 		func() runtime.Object { return &UserPermissions{} },
 	)
@@ -1338,6 +1346,7 @@ var (
 		InternalUserStatus,
 		InternalUserAccessKeysREST,
 		InternalUserClustersREST,
+		InternalUserDetailedPermissionsREST,
 		InternalUserPermissionsREST,
 		InternalUserProfileREST,
 		InternalVirtualClusterInstance,
@@ -1467,6 +1476,10 @@ type Apps struct {
 	NoDefault      bool                            `json:"noDefault,omitempty"`
 	Repositories   []storagev1.HelmChartRepository `json:"repositories,omitempty"`
 	PredefinedApps []PredefinedApp                 `json:"predefinedApps,omitempty"`
+}
+
+type AssignedVia struct {
+	Team string `json:"team,omitempty"`
 }
 
 type Audit struct {
@@ -1894,8 +1907,12 @@ type CostControlSettings struct {
 	ControlPlanePricePerCluster *CostControlResourcePrice `json:"controlPlanePricePerCluster,omitempty"`
 }
 
+type CurrentUserAccess struct {
+	Verbs []string `json:"verbs,omitempty"`
+}
+
 // +genclient
-// +genclient
+// +genclient:nonNamespaced
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 
 type DevPodEnvironmentTemplate struct {
@@ -2163,7 +2180,7 @@ type KioskStatus struct {
 }
 
 // +genclient
-// +genclient
+// +genclient:nonNamespaced
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 
 type License struct {
@@ -2269,6 +2286,11 @@ type OIDCClientSpec struct {
 }
 
 type OIDCClientStatus struct {
+}
+
+type ObjectNames struct {
+	Name        string `json:"name"`
+	DisplayName string `json:"displayName,omitempty"`
 }
 
 // +genclient
@@ -2747,6 +2769,39 @@ type UserClusters struct {
 	Clusters          []ClusterAccounts `json:"clusters,omitempty"`
 }
 
+// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
+
+type UserDetailedPermissions struct {
+	metav1.TypeMeta     `json:",inline"`
+	metav1.ObjectMeta   `json:"metadata,omitempty"`
+	TeamMemberships     []UserDrilldownPermissionsTeam    `json:"teamMemberships,omitempty"`
+	RolesAssigned       []UserDrilldownManagementRoles    `json:"rolesAssigned,omitempty"`
+	ProjectMemberships  []UserDrilldownProjectMemberships `json:"projectMemberships,omitempty"`
+	VirtualClusterRoles []UserDrilldownVClusterRoles      `json:"virtualClusterRoles,omitempty"`
+}
+
+type UserDrilldownManagementRoles struct {
+	ObjectNames `json:",omitempty"`
+	Management  bool        `json:"management,omitempty"`
+	AssignedVia AssignedVia `json:"assignedVia,omitempty"`
+}
+
+type UserDrilldownPermissionsTeam struct {
+	ObjectNames `json:",omitempty"`
+}
+
+type UserDrilldownProjectMemberships struct {
+	ObjectNames `json:",omitempty"`
+	Role        string      `json:"role,omitempty"`
+	AssignedVia AssignedVia `json:"assignedVia,omitempty"`
+}
+
+type UserDrilldownVClusterRoles struct {
+	ObjectNames `json:",omitempty"`
+	Role        string      `json:"role,omitempty"`
+	AssignedVia AssignedVia `json:"assignedVia,omitempty"`
+}
+
 type UserInfo struct {
 	storagev1.EntityInfo `json:",inline"`
 	Teams                []*storagev1.EntityInfo `json:"teams,omitempty"`
@@ -2866,6 +2921,7 @@ type VirtualClusterInstanceStatus struct {
 	CanUse                                 bool                       `json:"canUse,omitempty"`
 	CanUpdate                              bool                       `json:"canUpdate,omitempty"`
 	Online                                 bool                       `json:"online,omitempty"`
+	CurrentUserAccess                      CurrentUserAccess          `json:"currentUserAccess,omitempty"`
 }
 
 // +genclient
@@ -2906,6 +2962,7 @@ type VirtualClusterTemplateSpec struct {
 type VirtualClusterTemplateStatus struct {
 	storagev1.VirtualClusterTemplateStatus `json:",inline"`
 	Apps                                   []*storagev1.EntityInfo `json:"apps,omitempty"`
+	CurrentUserAccess                      CurrentUserAccess       `json:"currentUserAccess,omitempty"`
 }
 
 // AgentAuditEvent Functions and Structs
@@ -7569,6 +7626,14 @@ type UserClustersList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:"metadata,omitempty"`
 	Items           []UserClusters `json:"items"`
+}
+
+// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
+
+type UserDetailedPermissionsList struct {
+	metav1.TypeMeta `json:",inline"`
+	metav1.ListMeta `json:"metadata,omitempty"`
+	Items           []UserDetailedPermissions `json:"items"`
 }
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
