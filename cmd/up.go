@@ -875,6 +875,33 @@ func startBrowserTunnel(
 			}
 		}()
 	}
+
+	// handle this directly with the daemon client
+	daemonClient, ok := client.(client2.DaemonClient)
+	if ok {
+		toolClient, _, err := daemonClient.SSHClients(ctx, user)
+		if err != nil {
+			return err
+		}
+		defer toolClient.Close()
+
+		err = startServicesDaemon(ctx,
+			devPodConfig,
+			daemonClient,
+			toolClient,
+			user,
+			logger,
+			forwardPorts,
+			extraPorts,
+		)
+		if err != nil {
+			return err
+		}
+		<-ctx.Done()
+
+		return nil
+	}
+
 	err := tunnel.NewTunnel(
 		ctx,
 		func(ctx context.Context, stdin io.Reader, stdout io.Writer) error {
@@ -924,7 +951,7 @@ func startBrowserTunnel(
 				logger,
 			)
 			if err != nil {
-				logger.Errorf("error running credentials server: %v", err)
+				return fmt.Errorf("run credentials server in browser tunnel: %w", err)
 			}
 
 			<-ctx.Done()
