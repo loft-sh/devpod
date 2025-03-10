@@ -287,6 +287,23 @@ export type TPlatformUpdateCheck = Readonly<{
   available: TMaybe<boolean>
   newVersion: TMaybe<string>
 }>
+export const UserSecret = {
+  GIT_HTTP: "devpod-git-http",
+  GIT_SSH: "devpod-git-ssh",
+} as const
+export type TUserSecretType = (typeof UserSecret)[keyof typeof UserSecret]
+export type TGitCredentialData = {
+  password: string
+  host?: string
+  user?: string
+  path?: string
+}
+export type TGitCredentialHelperData = Readonly<{
+  host: string
+  path?: string
+  username?: string
+  password: string
+}>
 
 export function isWithWorkspaceID(arg: unknown): arg is TWithWorkspaceID {
   return typeof arg === "object" && arg !== null && "workspaceID" in arg

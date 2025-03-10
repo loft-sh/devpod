@@ -211,21 +211,34 @@ class Client {
     }
   }
 
+  public async getDir(
+    dir: Extract<keyof typeof fs.BaseDirectory, "AppData" | "AppLog" | "Home"> | "SSH"
+  ): Promise<string> {
+    switch (dir) {
+      case "AppData": {
+        return path.appDataDir()
+      }
+      case "AppLog": {
+        return await path.appLogDir()
+      }
+      case "Home": {
+        return await path.homeDir()
+      }
+      case "SSH": {
+        return await path.join(await path.homeDir(), ".ssh")
+      }
+    }
+  }
+
   public async openDir(
     dir: Extract<keyof typeof fs.BaseDirectory, "AppData" | "AppLog">
   ): Promise<void> {
     try {
-      let p: string
-      switch (dir) {
-        case "AppData": {
-          p = await path.appDataDir()
-          break
-        }
-        case "AppLog": {
-          p = await path.join(await path.appLogDir(), "DevPod.log")
-          break
-        }
+      let p = await this.getDir(dir)
+      if (dir === "AppLog") {
+        p = await path.join(p, "DevPod.log")
       }
+
       shell.open(p)
     } catch (e) {
       // noop for now
@@ -236,7 +249,7 @@ class Client {
     return dialog.open({ title, directory: true, multiple: false })
   }
 
-  public async selectFromFileYaml(): Promise<string | string[] | null> {
+  public async selectFileYaml(): Promise<string | string[] | null> {
     return dialog.open({
       filters: [{ name: "yaml", extensions: ["yml", "yaml"] }],
       directory: false,
@@ -244,8 +257,8 @@ class Client {
     })
   }
 
-  public async selectFromFile(): Promise<string | string[] | null> {
-    return dialog.open({ directory: false, multiple: false })
+  public async selectFile(defaultPath?: string): Promise<string | string[] | null> {
+    return dialog.open({ directory: false, multiple: false, defaultPath })
   }
 
   public async copyFile(src: string, dest: string): Promise<void> {
@@ -262,6 +275,10 @@ class Client {
 
   public async readFile(targetPath: string[]) {
     return fs.readFile(await path.join(...targetPath))
+  }
+
+  public async readTextFile(targetPath: string[]) {
+    return fs.readTextFile(await path.join(...targetPath))
   }
 
   public async writeFile(targetPath: string[], data: Uint8Array) {

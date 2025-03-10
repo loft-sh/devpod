@@ -1,3 +1,4 @@
+import { TWorkspaceOwnerFilterState } from "@/components"
 import { ProWorkspaceInstance } from "@/contexts"
 import { DaemonStatus } from "@/gen"
 import { Failed } from "@loft-enterprise/client"
@@ -6,8 +7,11 @@ import { ManagementV1Project } from "@loft-enterprise/client/gen/models/manageme
 import { ManagementV1ProjectClusters } from "@loft-enterprise/client/gen/models/managementV1ProjectClusters"
 import { ManagementV1ProjectTemplates } from "@loft-enterprise/client/gen/models/managementV1ProjectTemplates"
 import { ManagementV1Self } from "@loft-enterprise/client/gen/models/managementV1Self"
+import { ManagementV1UserProfile } from "@loft-enterprise/client/gen/models/managementV1UserProfile"
 import { ErrorTypeCancelled, Result, ResultError, Return, isError, sleep } from "../../lib"
 import {
+  TGitCredentialData,
+  TGitCredentialHelperData,
   TImportWorkspaceConfig,
   TListProInstancesConfig,
   TPlatformHealthCheck,
@@ -175,7 +179,14 @@ export class DaemonClient extends ProClient {
         },
       })
       if (!res.ok) {
-        return Return.Failed(`Get resource: ${res.statusText}`)
+        const maybeText = await res.text()
+
+        let errMessage = `Get resource: ${res.statusText}.`
+        if (maybeText) {
+          errMessage += maybeText
+        }
+
+        return Return.Failed(errMessage)
       }
       const json: T = await res.json()
 
@@ -365,6 +376,23 @@ export class DaemonClient extends ProClient {
     return this.getProxy("/self")
   }
 
+  public async getUserProfile(): Promise<Result<ManagementV1UserProfile>> {
+    return this.getProxy("/user-profile")
+  }
+
+  public async updateUserProfile(
+    userProfile: ManagementV1UserProfile
+  ): Promise<Result<ManagementV1UserProfile>> {
+    try {
+      const body = JSON.stringify(userProfile)
+      const res = (await this.post("/update-user-profile", body)) as Result<ManagementV1UserProfile>
+
+      return res
+    } catch (e) {
+      return this.handleError(e, "failed to update workspace")
+    }
+  }
+
   public async listProjects(): Promise<Result<readonly ManagementV1Project[]>> {
     return this.getProxy("/projects")
   }
@@ -407,6 +435,14 @@ export class DaemonClient extends ProClient {
     } catch (e) {
       return this.handleError(e, "failed to update workspace")
     }
+  }
+
+  public async queryGitCredentialsHelper(
+    host: string
+  ): Promise<Result<TGitCredentialHelperData | undefined>> {
+    const searchParams = new URLSearchParams([["host", host]])
+
+    return this.getProxy("/git-credentials?" + searchParams.toString())
   }
 
   public async checkUpdate() {
