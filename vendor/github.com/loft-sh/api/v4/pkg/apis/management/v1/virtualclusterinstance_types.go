@@ -55,6 +55,10 @@ type VirtualClusterInstanceStatus struct {
 	// for an agentless vCluster.
 	// +optional
 	Online bool `json:"online,omitempty"`
+
+	// CurrentUserAccess returns which actions (get / update / delete) user can perform on the object.
+	// +optional
+	CurrentUserAccess CurrentUserAccess `json:"currentUserAccess,omitempty"`
 }
 
 func (a *VirtualClusterInstance) GetConditions() agentstoragev1.Conditions {
@@ -79,4 +83,9 @@ func (a *VirtualClusterInstance) GetAccess() []storagev1.Access {
 
 func (a *VirtualClusterInstance) SetAccess(access []storagev1.Access) {
 	a.Spec.Access = access
+}
+
+type CurrentUserAccess struct {
+	// +optional
+	Verbs []string `json:"verbs,omitempty"`
 }

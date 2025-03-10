@@ -31,6 +31,10 @@ type VirtualClusterTemplateStatus struct {
 
 	// +optional
 	Apps []*storagev1.EntityInfo `json:"apps,omitempty"`
+
+	// CurrentUserAccess returns which actions (get / update / delete) user can perform on the object.
+	// +optional
+	CurrentUserAccess CurrentUserAccess `json:"currentUserAccess,omitempty"`
 }
 
 func (a *VirtualClusterTemplate) GetVersions() []storagev1.VersionAccessor {

@@ -31,7 +31,7 @@ require (
 	github.com/julienschmidt/httprouter v1.3.0
 	github.com/loft-sh/agentapi/v4 v4.2.0-alpha.6
 	github.com/loft-sh/analytics-client v0.0.0-20240219162240-2f4c64b2494e
-	github.com/loft-sh/api/v4 v4.0.0-alpha.6.0.20241129074910-a24d4104d586
+	github.com/loft-sh/api/v4 v4.2.2
 	github.com/loft-sh/apiserver v0.0.0-20250206205835-422f1d472459
 	github.com/loft-sh/log v0.0.0-20240219160058-26d83ffb46ac
 	github.com/loft-sh/programming-language-detection v0.0.5
