@@ -707,7 +707,7 @@ func (r *runner) generateDockerComposeUpProject(
 trap "exit 0" 15
 ` + strings.Join(mergedConfig.Entrypoints, "\n") + `
 exec "$$@"
-while sleep 1 & wait $$!; do :; done`,
+` + DefaultEntrypoint,
 		"-",
 	}
 	entrypoint = append(entrypoint, userEntrypoint...)
