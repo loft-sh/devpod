@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"github.com/gofrs/flock"
+	storagev1 "github.com/loft-sh/api/v4/pkg/apis/storage/v1"
 	clientpkg "github.com/loft-sh/devpod/pkg/client"
 	"github.com/loft-sh/devpod/pkg/config"
 	daemon "github.com/loft-sh/devpod/pkg/daemon/platform"
@@ -47,7 +48,6 @@ func New(devPodConfig *config.Config, prov *provider.ProviderConfig, workspace *
 		Socket:        daemon.GetSocketAddr(daemonDir, workspace.Provider.Name),
 		UseSocketOnly: true,
 	}
-	localClient := daemon.NewLocalClient(daemonDir, prov.Name)
 
 	return &client{
 		devPodConfig: devPodConfig,
@@ -55,7 +55,7 @@ func New(devPodConfig *config.Config, prov *provider.ProviderConfig, workspace *
 		workspace:    workspace,
 		log:          log,
 		tsClient:     tsClient,
-		localClient:  localClient,
+		localClient:  daemon.NewLocalClient(daemonDir, prov.Name),
 	}, nil
 }
 
@@ -149,8 +149,18 @@ func (c *client) SSHClients(ctx context.Context, user string) (toolClient *ssh.C
 	if err != nil {
 		return nil, nil, fmt.Errorf("resolve workspace hostname: %w", err)
 	}
+
 	err = ts.WaitHostReachable(ctx, c.tsClient, wAddr, c.log)
 	if err != nil {
+		instance, getWorkspaceErr := c.localClient.GetWorkspace(ctx, c.workspace.UID)
+		if getWorkspaceErr != nil {
+			return nil, nil, fmt.Errorf("couldn't get workspace: %w", getWorkspaceErr)
+		} else if instance.Status.Phase != storagev1.InstanceReady {
+			return nil, nil, fmt.Errorf("workspace is '%s', please run `devpod up %s` to start it again", instance.Status.Phase, c.workspace.ID)
+		} else if instance.Status.LastWorkspaceStatus != storagev1.WorkspaceStatusRunning {
+			return nil, nil, fmt.Errorf("workspace is '%s', please run `devpod up %s` to start it again", instance.Status.LastWorkspaceStatus, c.workspace.ID)
+		}
+
 		return nil, nil, fmt.Errorf("reach host: %w", err)
 	}
 
