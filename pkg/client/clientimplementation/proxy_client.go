@@ -189,7 +189,7 @@ func (s *proxyClient) Create(ctx context.Context, stdin io.Reader, stdout io.Wri
 }
 
 func (s *proxyClient) Up(ctx context.Context, opt client.UpOptions) error {
-	writer := devpodlog.PipeJSONStream(s.log.ErrorStreamOnly())
+	writer, _ := devpodlog.PipeJSONStream(s.log.ErrorStreamOnly())
 	defer writer.Close()
 
 	opts := EncodeOptions(opt.CLIOptions, DevPodFlagsUp)
@@ -220,7 +220,7 @@ func (s *proxyClient) Up(ctx context.Context, opt client.UpOptions) error {
 }
 
 func (s *proxyClient) Ssh(ctx context.Context, opt client.SshOptions) error {
-	writer := devpodlog.PipeJSONStream(s.log.ErrorStreamOnly())
+	writer, _ := devpodlog.PipeJSONStream(s.log.ErrorStreamOnly())
 	defer writer.Close()
 
 	err := RunCommandWithBinaries(
@@ -249,7 +249,7 @@ func (s *proxyClient) Delete(ctx context.Context, opt client.DeleteOptions) erro
 	s.m.Lock()
 	defer s.m.Unlock()
 
-	writer := devpodlog.PipeJSONStream(s.log.ErrorStreamOnly())
+	writer, _ := devpodlog.PipeJSONStream(s.log.ErrorStreamOnly())
 	defer writer.Close()
 
 	var gracePeriod *time.Duration
@@ -297,7 +297,7 @@ func (s *proxyClient) Stop(ctx context.Context, opt client.StopOptions) error {
 	s.m.Lock()
 	defer s.m.Unlock()
 
-	writer := devpodlog.PipeJSONStream(s.log.ErrorStreamOnly())
+	writer, _ := devpodlog.PipeJSONStream(s.log.ErrorStreamOnly())
 	defer writer.Close()
 
 	err := RunCommandWithBinaries(
