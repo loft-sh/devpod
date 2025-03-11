@@ -17,9 +17,6 @@ import (
 
 func NewKubernetesDriver(workspaceInfo *provider2.AgentWorkspaceInfo, log log.Logger) (driver.ReprovisioningDriver, error) {
 	options := workspaceInfo.Agent.Kubernetes
-	if options.KubernetesNamespace == "" {
-		options.KubernetesNamespace = "devpod"
-	}
 	if options.KubernetesNamespace != "" {
 		log.Debugf("Use Kubernetes Namespace '%s'", options.KubernetesNamespace)
 	}
