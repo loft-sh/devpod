@@ -9,13 +9,15 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
-func PipeJSONStream(logger log.Logger) io.WriteCloser {
+func PipeJSONStream(logger log.Logger) (io.WriteCloser, chan struct{}) {
+	done := make(chan struct{})
 	reader, writer := io.Pipe()
 	go func() {
 		ReadJSONStream(reader, logger)
+		close(done)
 	}()
 
-	return writer
+	return writer, done
 }
 
 func ReadJSONStream(reader io.Reader, logger log.Logger) {
