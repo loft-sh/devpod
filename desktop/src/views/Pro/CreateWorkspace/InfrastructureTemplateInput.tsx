@@ -394,7 +394,7 @@ function createTraversablePropertyPath(path: string): string[] {
   return path.split(".")
 }
 
-export function getDeepValue<T>(obj: any, path: string): T | undefined {
+function getDeepValue<T>(obj: any, path: string): T | undefined {
   if (!obj) return undefined
 
   const a = createTraversablePropertyPath(path)

@@ -1,4 +1,5 @@
-export { ProProvider, useProContext } from "./ProProvider"
+export { ProProvider } from "./ProProvider"
+export { useProContext } from "./useProContext"
 export { ProWorkspaceInstance } from "./workspaceInstance"
 export { useProHost } from "./useProHost"
 export { useTemplates } from "./useTemplates"

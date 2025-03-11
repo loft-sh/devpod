@@ -40,6 +40,7 @@ import {
   useProContext,
   useProHost,
 } from "../contexts"
+import { DaemonClient } from "@/client/pro/client"
 
 export function ProApp() {
   const host = useProHost()
@@ -66,7 +67,7 @@ export function ProApp() {
 
 type TProAppContentProps = Readonly<{ host: string }>
 function ProAppContent({ host }: TProAppContentProps) {
-  const { managementSelfQuery: selfQuery } = useProContext()
+  const { managementSelfQuery: selfQuery, client } = useProContext()
   const connectionStatus = useConnectionStatus()
   const versionInfo = usePlatformVersion()
 
@@ -85,18 +86,44 @@ function ProAppContent({ host }: TProAppContentProps) {
             </Box>
           </HStack>
           <HStack pr="2">
-            <Notifications
-              getActionDestination={(action) => Routes.toProWorkspace(host, action.targetID)}
-              icon={
-                <BellDuotone
-                  color={"primary.600"}
-                  _dark={{ color: "primary.300" }}
-                  position="absolute"
+            {client instanceof DaemonClient ? (
+              <>
+                <Notifications
+                  getActionDestination={(action) => Routes.toProWorkspace(host, action.targetID)}
+                  icon={
+                    <BellDuotone
+                      color={"primary.600"}
+                      _dark={{ color: "primary.300" }}
+                      position="absolute"
+                    />
+                  }
                 />
-              }
-            />
-            <Divider orientation="vertical" h="10" />
-            <UserMenu host={host} self={selfQuery.data} />
+                <Divider orientation="vertical" h="10" />
+                <UserMenu host={host} self={selfQuery.data} />
+              </>
+            ) : (
+              <>
+                <Link as={RouterLink} to={Routes.toProSettings(host)}>
+                  <IconButton
+                    variant="ghost"
+                    size="md"
+                    rounded="full"
+                    aria-label="Go to settings"
+                    icon={<CogDuotone color={"primary.600"} _dark={{ color: "primary.300" }} />}
+                  />
+                </Link>
+                <Notifications
+                  getActionDestination={(action) => Routes.toProWorkspace(host, action.targetID)}
+                  icon={
+                    <BellDuotone
+                      color={"primary.600"}
+                      _dark={{ color: "primary.300" }}
+                      position="absolute"
+                    />
+                  }
+                />
+              </>
+            )}
           </HStack>
         </>
       }

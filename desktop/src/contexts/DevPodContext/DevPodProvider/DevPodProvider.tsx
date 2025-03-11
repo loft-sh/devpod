@@ -1,15 +1,10 @@
 import { useQuery } from "@tanstack/react-query"
-import { createContext, ReactNode, useMemo } from "react"
-import { client } from "../../client"
-import { QueryKeys } from "../../queryKeys"
-import { TProviders, TQueryResult } from "../../types"
-import { REFETCH_PROVIDER_INTERVAL_MS } from "./constants"
-import { usePollWorkspaces } from "./workspaces"
-
-export type TDevpodContext = Readonly<{
-  providers: TQueryResult<TProviders>
-}>
-export const DevPodContext = createContext<TDevpodContext | null>(null)
+import { ReactNode, useMemo } from "react"
+import { client } from "../../../client"
+import { QueryKeys } from "../../../queryKeys"
+import { REFETCH_PROVIDER_INTERVAL_MS } from "../constants"
+import { usePollWorkspaces } from "../workspaces"
+import { DevPodContext, TDevpodContext } from "./DevPodContext"
 
 export function DevPodProvider({ children }: Readonly<{ children?: ReactNode }>) {
   usePollWorkspaces()

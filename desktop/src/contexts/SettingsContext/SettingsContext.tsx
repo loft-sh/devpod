@@ -1,26 +1,8 @@
-import {
-  createContext,
-  ReactNode,
-  useCallback,
-  useContext,
-  useEffect,
-  useMemo,
-  useState,
-} from "react"
-import { client } from "../client"
-import { Settings } from "../gen"
-import { getKeys, LocalStorageToFileMigrationBackend, Store } from "../lib"
-import { TUnsubscribeFn } from "../types"
-
-export type TSettings = Settings
-type TSetting = keyof TSettings
-
-type TSettingsContext = Readonly<{
-  settings: TSettings
-  set<TKey extends keyof TSettings>(setting: TKey, value: TSettings[TKey]): void
-}>
-
-const SettingsContext = createContext<TSettingsContext>(null!)
+import { ReactNode, useCallback, useEffect, useMemo, useState } from "react"
+import { client } from "@/client"
+import { getKeys, LocalStorageToFileMigrationBackend, Store } from "@/lib"
+import { TUnsubscribeFn } from "@/types"
+import { TSetting, TSettings, TSettingsContext, SettingsContext } from "./useSettings"
 
 const initialSettings: TSettings = {
   sidebarPosition: "left",
@@ -126,12 +108,4 @@ export function SettingsProvider({ children }: Readonly<{ children?: ReactNode }
   const value = useMemo(() => ({ settings, set }), [set, settings])
 
   return <SettingsContext.Provider value={value}>{children}</SettingsContext.Provider>
-}
-
-export function useSettings() {
-  return useContext(SettingsContext).settings
-}
-
-export function useChangeSettings() {
-  return useContext(SettingsContext)
 }

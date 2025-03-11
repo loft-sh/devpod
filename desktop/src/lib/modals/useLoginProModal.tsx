@@ -203,7 +203,7 @@ export function useLoginProModal() {
                                 new URL(`https://${value.replace(/^https?:\/\//, "")}`)
 
                                 return true
-                              } catch (error) {
+                              } catch {
                                 return "Please enter a valid URL"
                               }
                             },

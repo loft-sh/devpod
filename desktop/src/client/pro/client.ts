@@ -1,16 +1,14 @@
 import { TWorkspaceOwnerFilterState } from "@/components"
 import { ProWorkspaceInstance } from "@/contexts"
 import { DaemonStatus } from "@/gen"
-import { Failed } from "@loft-enterprise/client"
 import { ManagementV1DevPodWorkspaceInstance } from "@loft-enterprise/client/gen/models/managementV1DevPodWorkspaceInstance"
 import { ManagementV1Project } from "@loft-enterprise/client/gen/models/managementV1Project"
 import { ManagementV1ProjectClusters } from "@loft-enterprise/client/gen/models/managementV1ProjectClusters"
 import { ManagementV1ProjectTemplates } from "@loft-enterprise/client/gen/models/managementV1ProjectTemplates"
 import { ManagementV1Self } from "@loft-enterprise/client/gen/models/managementV1Self"
 import { ManagementV1UserProfile } from "@loft-enterprise/client/gen/models/managementV1UserProfile"
-import { ErrorTypeCancelled, Result, ResultError, Return, isError, sleep } from "../../lib"
+import { Result, ResultError, Return, isError } from "../../lib"
 import {
-  TGitCredentialData,
   TGitCredentialHelperData,
   TImportWorkspaceConfig,
   TListProInstancesConfig,
@@ -22,8 +20,7 @@ import {
 import { TAURI_SERVER_URL } from "../tauriClient"
 import { TDebuggable, TStreamEventListenerFn } from "../types"
 import { ProCommands } from "./proCommands"
-import { TWorkspaceOwnerFilterState } from "@/components"
-import { client as globalClient } from "../client"
+import { client as globalClient } from "@/client"
 
 export class ProClient implements TDebuggable {
   constructor(protected readonly id: string) {}
@@ -70,36 +67,29 @@ export class ProClient implements TDebuggable {
     return ProCommands.ImportWorkspace(config)
   }
 
-  public watchWorkspaces(
+  public watchWorkspacesProxy(
     projectName: string,
-    ownerFilter: TWorkspaceOwnerFilterState,
-    listener: (newWorkspaces: readonly ProWorkspaceInstance[]) => void,
-    errorListener?: (failed: Failed) => void
+    _ownerFilter: TWorkspaceOwnerFilterState,
+    listener: (newWorkspaces: readonly ProWorkspaceInstance[]) => void
   ) {
     const cmd = ProCommands.WatchWorkspaces(this.id, projectName)
 
     // kick off stream in the background
-    cmd
-      .stream(
-        (event) => {
-          if (event.type === "data") {
-            const rawInstances =
-              event.data as unknown as readonly ManagementV1DevPodWorkspaceInstance[]
-            const workspaceInstances = rawInstances.map(
-              (instance) => new ProWorkspaceInstance(instance)
-            )
-            listener(workspaceInstances)
+    cmd.stream(
+      (event) => {
+        if (event.type === "data") {
+          const rawInstances =
+            event.data as unknown as readonly ManagementV1DevPodWorkspaceInstance[]
+          const workspaceInstances = rawInstances.map(
+            (instance) => new ProWorkspaceInstance(instance)
+          )
+          listener(workspaceInstances)
 
-            return
-          }
-        },
-        { ignoreStderrError: true }
-      )
-      .then((res) => {
-        if (res.err && res.val.type !== ErrorTypeCancelled) {
-          errorListener?.(res.val)
+          return
         }
-      })
+      },
+      { ignoreStderrError: true }
+    )
 
     // Don't await here, we want to return the unsubscribe function
     return () => {
@@ -236,16 +226,6 @@ export class DaemonClient extends ProClient {
     }
   }
 
-  private async waitDaemonRunning() {
-    for (let i = 0; i < 10; i++) {
-      const healthRes = await this.checkHealth()
-      if (healthRes.ok && healthRes.val.healthy) {
-        return
-      }
-      await sleep(500)
-    }
-  }
-
   public async restartDaemon() {
     return this.get(`/daemon/${this.id}/restart`)
   }
@@ -275,101 +255,11 @@ export class DaemonClient extends ProClient {
   public watchWorkspaces(
     projectName: string,
     ownerFilter: TWorkspaceOwnerFilterState,
-    listener: (newWorkspaces: readonly ProWorkspaceInstance[]) => void,
-    errorListener?: (failed: Failed) => void
-  ) {
-    let reader: ReadableStreamDefaultReader | undefined = undefined
-    const decoder = new TextDecoder()
-    let buffer = ""
+    listener: TWorksaceListener
+  ): () => void {
+    const watcher = new WorkspaceWatcher(this.id, projectName, ownerFilter, listener)
 
-    const read = async () => {
-      try {
-        if (!reader) {
-          return
-        }
-        const { done, value } = await reader.read()
-        if (done) {
-          return
-        }
-        buffer += decoder.decode(value, { stream: true })
-        // NOTE: This relies on sender to end every message with a newline character. Make sure you also update the daemon server if you change this!
-        const lines = buffer.split("\n")
-        // Keep the last partial line in the buffer
-        const maybeLine = lines.pop()
-        if (maybeLine !== undefined) {
-          buffer = maybeLine
-        }
-
-        lines.forEach((line) => {
-          if (line.trim()) {
-            try {
-              const rawInstances: readonly ManagementV1DevPodWorkspaceInstance[] = JSON.parse(line)
-              const workspaceInstances = rawInstances.map(
-                (instance) => new ProWorkspaceInstance(instance)
-              )
-              listener(workspaceInstances)
-            } catch (err) {
-              const res = this.handleError(err, "failed to parse workspaces")
-              if (res.err) {
-                errorListener?.(res.val)
-
-                return err
-              }
-            }
-          }
-        })
-
-        // Continue reading
-        read()
-      } catch (err) {
-        return err
-      }
-    }
-
-    try {
-      const abortController = new AbortController()
-      const url = new URL(`${TAURI_SERVER_URL}/daemon-proxy/${this.id}/watch-workspaces`)
-      url.searchParams.set("project", projectName)
-      url.searchParams.set("owner", ownerFilter)
-
-      this.waitDaemonRunning().then(() => {
-        globalClient.log("info", `[${this.id}] Start watching workspaces`)
-        // start long-lived request. This should never stop unless cancelled trough abortController
-        fetch(url, {
-          method: "GET",
-          headers: { "content-type": "application/json" },
-          keepalive: true,
-          signal: abortController.signal,
-        })
-          .then((res) => {
-            reader = res.body?.getReader()
-
-            return read()
-          })
-          .catch((err) => {
-            globalClient.log("info", `[${this.id}] Watch workspaces error ${err}`)
-            console.log("watch workspaces error", err)
-          })
-          .finally(() => {
-            globalClient.log(
-              "info",
-              `[${this.id}] Stopped watching workspaces, attempting to reconnect`
-            )
-            // reconnect if it goes down
-            this.watchWorkspaces(projectName, ownerFilter, listener, errorListener)
-          })
-      })
-
-      return async (): Promise<Result<undefined>> => {
-        abortController.abort()
-
-        return Return.Value(undefined)
-      }
-    } catch (e) {
-      return async (): Promise<Result<undefined>> => {
-        return Return.Value(undefined)
-      }
-    }
+    return watcher.watch()
   }
 
   public async getSelf(): Promise<Result<ManagementV1Self>> {
@@ -452,5 +342,113 @@ export class DaemonClient extends ProClient {
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   public async update(_version: string) {
     return Return.Failed("provider is built-in, update is not supported")
+  }
+}
+type TWorksaceListener = (newWorkspaces: readonly ProWorkspaceInstance[]) => void
+
+class WorkspaceWatcher {
+  private abortController = new AbortController()
+
+  constructor(
+    private readonly hostID: string,
+    private readonly projectName: string,
+    private readonly ownerFilter: TWorkspaceOwnerFilterState,
+    private readonly listener: TWorksaceListener
+  ) {}
+
+  public cancel() {
+    this.abortController.abort("watcher cancelled")
+  }
+
+  public watch(): () => void {
+    try {
+      const url = new URL(`${TAURI_SERVER_URL}/daemon-proxy/${this.hostID}/watch-workspaces`)
+      url.searchParams.set("project", this.projectName)
+      url.searchParams.set("owner", this.ownerFilter)
+
+      // start long-lived request. This should never stop unless cancelled through abortController
+      fetch(url, {
+        method: "GET",
+        headers: { "content-type": "application/json" },
+        keepalive: true,
+        signal: this.abortController.signal,
+      })
+        .then((res) => {
+          const reader = res.body?.getReader()
+
+          return this.read(reader)
+        })
+        .catch((err) => {
+          globalClient.log("info", `[${this.hostID}] watch workspaces error: ${err}`)
+        })
+        .finally(() => {
+          if (!this.abortController.signal.aborted) {
+            // Either the webview or the daemon terminated the watcher, try to reconnect
+            this.watch()
+          }
+          // Otherwise caller is responsible for reestablishing connection
+        })
+      return this.cancel.bind(this)
+    } catch {
+      return this.cancel.bind(this)
+    }
+  }
+
+  private async read(reader: ReadableStreamDefaultReader | undefined): Promise<unknown> {
+    const decoder = new TextDecoder()
+    let buffer = ""
+
+    try {
+      if (!reader) {
+        return
+      }
+
+      const { done, value } = await reader.read()
+      if (done) {
+        return
+      }
+      buffer += decoder.decode(value, { stream: true })
+      // NOTE: This relies on sender to end every message with a newline character. Make sure you also update the daemon server if you change this!
+      const lines = buffer.split("\n")
+      // Keep the last partial line in the buffer
+      const maybeLine = lines.pop()
+      if (maybeLine !== undefined) {
+        buffer = maybeLine
+      }
+
+      lines.forEach((line) => {
+        if (line.trim()) {
+          try {
+            const rawInstances: readonly ManagementV1DevPodWorkspaceInstance[] = JSON.parse(line)
+            const workspaceInstances = rawInstances.map(
+              (instance) => new ProWorkspaceInstance(instance)
+            )
+            this.listener(workspaceInstances)
+          } catch (err) {
+            const res = this.handleError(err, "failed to parse workspaces")
+            if (res.err) {
+              return err
+            }
+          }
+        }
+      })
+
+      // Continue reading
+      return this.read(reader)
+    } catch (err) {
+      return err
+    }
+  }
+
+  private handleError<T>(err: unknown, fallbackMsg: string): Result<T> {
+    if (isError(err)) {
+      return Return.Failed(err.message)
+    }
+
+    if (typeof err === "string") {
+      return Return.Failed(`${fallbackMsg}: ${err}`)
+    }
+
+    return Return.Failed(fallbackMsg)
   }
 }
