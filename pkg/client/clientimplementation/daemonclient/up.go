@@ -156,6 +156,7 @@ type Message struct {
 
 func printLogs(ctx context.Context, managementClient kube.Interface, workspace *managementv1.DevPodWorkspaceInstance, taskID string, logger log.Logger) (int, error) {
 	// get logs reader
+	logger.Debugf("printing logs of task: %s", taskID)
 	logsReader, err := managementClient.Loft().ManagementV1().RESTClient().Get().
 		Namespace(workspace.Namespace).
 		Resource("devpodworkspaceinstances").
@@ -181,10 +182,17 @@ func printLogs(ctx context.Context, managementClient kube.Interface, workspace *
 	scanner.Buffer(buf, maxCapacity)
 
 	// create json streamer
-	stdoutStreamer := devpodlog.PipeJSONStream(logger)
-	defer stdoutStreamer.Close()
-	stderrStreamer := devpodlog.PipeJSONStream(logger)
-	defer stderrStreamer.Close()
+	stdoutStreamer, stdoutDone := devpodlog.PipeJSONStream(logger)
+	stderrStreamer, stderrDone := devpodlog.PipeJSONStream(logger.ErrorStreamOnly())
+	defer func() {
+		// close the streams
+		stdoutStreamer.Close()
+		stderrStreamer.Close()
+
+		// wait for the streams to be closed
+		<-stdoutDone
+		<-stderrDone
+	}()
 
 	// loop over all lines
 	for scanner.Scan() {
