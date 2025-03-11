@@ -203,14 +203,14 @@ func (s *WorkspaceServer) parseWorkspaceHostname() (workspace, project string, e
 func (s *WorkspaceServer) startListeners(ctx context.Context) error {
 	// Create and start the SSH listener.
 	s.log.Infof("Starting SSH listener")
-	sshListener, err := s.createListener(fmt.Sprintf(":%d", sshServer.DefaultUserPort), "ssh")
+	sshListener, err := s.createListener(fmt.Sprintf(":%d", sshServer.DefaultUserPort))
 	if err != nil {
 		return err
 	}
 
 	// Create and start the HTTP reverse proxy listener.
 	s.log.Infof("Starting HTTP reverse proxy listener on TSNet port %s", TSPortForwardPort)
-	wsListener, err := s.createListener(fmt.Sprintf(":%s", TSPortForwardPort), "http")
+	wsListener, err := s.createListener(fmt.Sprintf(":%s", TSPortForwardPort))
 	if err != nil {
 		return fmt.Errorf("failed to create listener on TS port %s: %w", TSPortForwardPort, err)
 	}
@@ -233,33 +233,33 @@ func (s *WorkspaceServer) startListeners(ctx context.Context) error {
 }
 
 // createListener creates a raw listener and wraps it with connection tracking.
-func (s *WorkspaceServer) createListener(addr, protocol string) (net.Listener, error) {
+func (s *WorkspaceServer) createListener(addr string) (net.Listener, error) {
 	l, err := s.tsServer.Listen("tcp", addr)
 	if err != nil {
 		return nil, fmt.Errorf("failed to listen on %s: %w", addr, err)
 	}
 
 	// create a new tracked listener to track the number of connections
-	return newTrackedListener(
-		l,
-		func(address string) {
-			s.log.Infof("Client connected from %s (protocol: %s)", address, protocol)
-			s.connectionCounterMu.Lock()
-			s.connectionCounter++
-			s.connectionCounterMu.Unlock()
-		},
-		func(address string) {
-			s.log.Infof("Client disconnected from %s", address)
-			s.connectionCounterMu.Lock()
-			s.connectionCounter--
-			s.connectionCounterMu.Unlock()
-		},
-	), nil
+	return l, nil
+}
+
+func (s *WorkspaceServer) addConnection() {
+	s.connectionCounterMu.Lock()
+	defer s.connectionCounterMu.Unlock()
+	s.connectionCounter++
+}
+
+func (s *WorkspaceServer) removeConnection() {
+	s.connectionCounterMu.Lock()
+	defer s.connectionCounterMu.Unlock()
+	s.connectionCounter--
 }
 
 // httpPortForwardHandler is the HTTP reverse proxy handler for workspace.
 // It reconstructs the target URL using custom headers and forwards the request.
 func (s *WorkspaceServer) httpPortForwardHandler(w http.ResponseWriter, r *http.Request) {
+	s.addConnection()
+	defer s.removeConnection()
 	s.log.Debugf("httpPortForwardHandler: starting")
 
 	// Retrieve required custom headers.
@@ -321,6 +321,8 @@ func (s *WorkspaceServer) handleSSHConnections(ctx context.Context, listener net
 
 // handleSSHConnection proxies the SSH connection to the local backend.
 func (s *WorkspaceServer) handleSSHConnection(clientConn net.Conn) {
+	s.addConnection()
+	defer s.removeConnection()
 	defer clientConn.Close()
 
 	localAddr := fmt.Sprintf("127.0.0.1:%d", sshServer.DefaultUserPort)
@@ -423,53 +425,4 @@ func (s *WorkspaceServer) discoverRunner(ctx context.Context, lc *tailscale.Loca
 
 	s.log.Infof("discoverRunner: selected runner = %s", runner)
 	return runner, nil
-}
-
-// trackedListener wraps a net.Listener to track connections.
-type trackedListener struct {
-	net.Listener
-	onConnect    func(address string)
-	onDisconnect func(address string)
-}
-
-func newTrackedListener(l net.Listener, onConnect, onDisconnect func(address string)) net.Listener {
-	return &trackedListener{
-		Listener:     l,
-		onConnect:    onConnect,
-		onDisconnect: onDisconnect,
-	}
-}
-
-func (tl *trackedListener) Accept() (net.Conn, error) {
-	conn, err := tl.Listener.Accept()
-	if err != nil {
-		return nil, err
-	}
-
-	remote := conn.RemoteAddr().String()
-	tl.onConnect(remote)
-	return newTrackedConn(conn, func() {
-		tl.onDisconnect(remote)
-	}), nil
-}
-
-// trackedConn wraps a net.Conn to ensure the connection counter is updated when closing.
-type trackedConn struct {
-	net.Conn
-	onDisconnect func()
-	once         sync.Once
-}
-
-func newTrackedConn(c net.Conn, onDisconnect func()) net.Conn {
-	return &trackedConn{
-		Conn:         c,
-		onDisconnect: onDisconnect,
-	}
-}
-
-func (tc *trackedConn) Close() error {
-	tc.once.Do(func() {
-		tc.onDisconnect()
-	})
-	return tc.Conn.Close()
 }
