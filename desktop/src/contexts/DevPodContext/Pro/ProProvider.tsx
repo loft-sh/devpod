@@ -1,36 +1,19 @@
-import { ProClient, client as globalClient } from "@/client"
+import { client as globalClient } from "@/client"
+import { DaemonClient } from "@/client/pro/client"
 import { TWorkspaceOwnerFilterState, ToolbarActions, ToolbarTitle } from "@/components"
 import { Annotations, Result } from "@/lib"
 import { Routes } from "@/routes"
 import { Text } from "@chakra-ui/react"
 import { ManagementV1Project } from "@loft-enterprise/client/gen/models/managementV1Project"
-import { ManagementV1Self } from "@loft-enterprise/client/gen/models/managementV1Self"
-import { UseQueryResult, useQuery } from "@tanstack/react-query"
-import {
-  Dispatch,
-  ReactNode,
-  SetStateAction,
-  createContext,
-  useContext,
-  useEffect,
-  useMemo,
-  useState,
-} from "react"
+import { useQuery } from "@tanstack/react-query"
+import { ReactNode, useEffect, useMemo, useState } from "react"
 import { Navigate, useNavigate } from "react-router-dom"
-import { ProWorkspaceStore, useWorkspaceStore } from "../workspaceStore"
-import { ContextSwitcher, HOST_OSS } from "./ContextSwitcher"
 import { useProInstances } from "../proInstances"
+import { ProWorkspaceStore, useWorkspaceStore } from "../workspaceStore"
+import { ContextSwitcher } from "./ContextSwitcher"
+import { HOST_OSS } from "./constants"
+import { ProContext, TProContext } from "./useProContext"
 
-type TProContext = Readonly<{
-  managementSelfQuery: UseQueryResult<ManagementV1Self | undefined>
-  currentProject?: ManagementV1Project
-  host: string
-  client: ProClient
-  isLoadingWorkspaces: boolean
-  ownerFilter: TWorkspaceOwnerFilterState
-  setOwnerFilter: Dispatch<SetStateAction<TWorkspaceOwnerFilterState>>
-}>
-const ProContext = createContext<TProContext>(null!)
 export function ProProvider({ host, children }: { host: string; children: ReactNode }) {
   const [[proInstances, { status: proInstancesStatus }]] = useProInstances()
   const [isLoadingWorkspaces, setIsLoadingWorkspaces] = useState(false)
@@ -83,16 +66,9 @@ export function ProProvider({ host, children }: { host: string; children: ReactN
     }
     setIsLoadingWorkspaces(true)
 
-    let canceled = false
-
-    const toCancel = client.watchWorkspaces(
-      currentProject.metadata.name,
-      ownerFilter,
-      (workspaces) => {
-        if (canceled) {
-          return
-        }
-
+    if (client instanceof DaemonClient) {
+      // daemon client impl
+      return client.watchWorkspaces(currentProject.metadata.name, ownerFilter, (workspaces) => {
         // sort by last activity (newest > oldest)
         const sorted = workspaces.slice().sort((a, b) => {
           const lastActivityA = a.metadata?.annotations?.[Annotations.SleepModeLastActivity]
@@ -104,25 +80,48 @@ export function ProProvider({ host, children }: { host: string; children: ReactN
           return parseInt(lastActivityB, 10) - parseInt(lastActivityA, 10)
         })
         store.setWorkspaces(sorted)
-        // dirty, dirty
-        setTimeout(() => {
-          setIsLoadingWorkspaces(false)
-        }, 1_000)
+        setIsLoadingWorkspaces(false)
+      })
+    } else {
+      let canceled = false
+      // proxy client impl
+      const toCancel = client.watchWorkspacesProxy(
+        currentProject.metadata.name,
+        ownerFilter,
+        (workspaces) => {
+          if (canceled) {
+            return
+          }
+
+          // sort by last activity (newest > oldest)
+          const sorted = workspaces.slice().sort((a, b) => {
+            const lastActivityA = a.metadata?.annotations?.[Annotations.SleepModeLastActivity]
+            const lastActivityB = b.metadata?.annotations?.[Annotations.SleepModeLastActivity]
+            if (!(lastActivityA && lastActivityB)) {
+              return 0
+            }
+
+            return parseInt(lastActivityB, 10) - parseInt(lastActivityA, 10)
+          })
+          store.setWorkspaces(sorted)
+          // dirty, dirty
+          setTimeout(() => {
+            setIsLoadingWorkspaces(false)
+          }, 1_000)
+        }
+      )
+
+      function canceler() {
+        canceled = true
+        setCancelWatch(undefined)
+        setWaitingForCancel(true)
+
+        return toCancel().finally(() => setWaitingForCancel(false))
       }
-    )
-
-    function canceler() {
-      canceled = true
-      setCancelWatch(undefined)
-      setWaitingForCancel(true)
-
-      return toCancel().finally(() => setWaitingForCancel(false))
-    }
-
-    setCancelWatch({ fn: canceler })
-
-    return () => {
-      canceler()
+      setCancelWatch({ fn: canceler })
+      return () => {
+        canceler()
+      }
     }
   }, [client, store, currentProject, ownerFilter])
 
@@ -184,8 +183,4 @@ export function ProProvider({ host, children }: { host: string; children: ReactN
       {children}
     </ProContext.Provider>
   )
-}
-
-export function useProContext() {
-  return useContext(ProContext)
 }

@@ -39,8 +39,9 @@ export function useStoreTroubleshoot() {
           unwrappedLogFiles.map(async ([src, target]) => {
             try {
               const data = await client.readFile(src)
+
               return { fileName: target, data }
-            } catch (err) {
+            } catch {
               // ignore missing log files and continue
               return null
             }

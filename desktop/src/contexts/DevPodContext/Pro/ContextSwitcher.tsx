@@ -32,8 +32,8 @@ import { ManagementV1Project } from "@loft-enterprise/client/gen/models/manageme
 import { ReactNode, useMemo } from "react"
 import { useNavigate } from "react-router"
 import { useProInstances } from "../proInstances"
+import { HOST_OSS } from "./constants"
 
-export const HOST_OSS = "Open Source"
 type THostPickerProps = Readonly<{
   currentHost: string
   onHostChange: (newHost: string) => void

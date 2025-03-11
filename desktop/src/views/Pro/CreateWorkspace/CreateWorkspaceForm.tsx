@@ -33,7 +33,7 @@ import { IDEInput } from "./IDEInput"
 import { InfrastructureTemplateInput } from "./InfrastructureTemplateInput"
 import { SourceInput } from "./SourceInput"
 import { FieldName, TFormValues } from "./types"
-import { RunnerInput } from "@/views/Pro/CreateWorkspace/RunnerInput"
+import { TargetInput } from "@/views/Pro/CreateWorkspace/RunnerInput"
 import { ManagementV1DevPodWorkspacePreset } from "@loft-enterprise/client/gen/models/managementV1DevPodWorkspacePreset"
 import { Gold } from "@/icons/Gold"
 import { PresetInput } from "@/views/Pro/CreateWorkspace/PresetInput"
@@ -75,7 +75,7 @@ export function CreateWorkspaceForm({
     nameError,
     devcontainerJSONError,
     optionsError,
-    runnerError,
+    targetError,
   } = useFormErrors(Object.values(FieldName), form.formState)
 
   const isUpdate = useMemo(() => {
@@ -200,22 +200,22 @@ export function CreateWorkspaceForm({
             </CreateWorkspaceRow>
           </FormControl>
 
-          <FormControl isDisabled={!!instance} isRequired isInvalid={exists(runnerError)}>
+          <FormControl isDisabled={!!instance} isRequired isInvalid={exists(targetError)}>
             <CreateWorkspaceRow
               label={
                 <FormLabel>
                   <Code boxSize={5} mr="1" />
-                  Runner
+                  Cluster
                 </FormLabel>
               }>
               {projectClusterDataLoading ? (
                 <Spinner />
               ) : (
-                <RunnerInput runners={projectClusterData?.runners} />
+                <TargetInput projectClusters={projectClusterData} />
               )}
 
-              {exists(runnerError) && (
-                <FormErrorMessage>{runnerError.message ?? "Error"}</FormErrorMessage>
+              {exists(targetError) && (
+                <FormErrorMessage>{targetError.message ?? "Error"}</FormErrorMessage>
               )}
             </CreateWorkspaceRow>
           </FormControl>
@@ -341,7 +341,7 @@ function getDefaultValues(
   }
   const defaultValues: DefaultValues<TFormValues> = {
     defaultIDE: instance.status?.ide?.name ?? "none",
-    runner: instance.spec?.runnerRef?.runner,
+    target: instance.spec?.runnerRef?.runner ?? instance.spec?.target?.cluster?.name,
   }
 
   // source

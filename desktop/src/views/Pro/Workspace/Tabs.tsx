@@ -7,7 +7,7 @@ import { Tab, TabList, TabPanel, TabPanels, Tabs, useColorModeValue } from "@cha
 import { useSearchParams } from "react-router-dom"
 import { Routes } from "@/routes"
 
-export const DETAILS_TABS: Readonly<{
+const DETAILS_TABS: Readonly<{
   key: TProInstanceDetail
   label: string
   component: ComponentType<TTabProps>

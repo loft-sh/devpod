@@ -1,14 +1,18 @@
 import { useFormContext } from "react-hook-form"
 import { FieldName, TFormValues } from "@/views/Pro/CreateWorkspace/types"
 import { Select } from "@chakra-ui/react"
-import { ManagementV1Runner } from "@loft-enterprise/client/gen/models/managementV1Runner"
+import { ManagementV1ProjectClusters } from "@loft-enterprise/client/gen/models/managementV1ProjectClusters"
 
-export function RunnerInput({ runners }: { runners: readonly ManagementV1Runner[] | undefined }) {
+export function TargetInput({
+  projectClusters,
+}: {
+  projectClusters: ManagementV1ProjectClusters | undefined
+}) {
   const { register } = useFormContext<TFormValues>()
 
   return (
-    <Select {...register(FieldName.RUNNER)}>
-      {runners?.map((r, index) => (
+    <Select {...register(FieldName.TARGET)}>
+      {projectClusters?.clusters?.map((r, index) => (
         <option key={index} value={r.metadata?.name}>
           {r.spec?.displayName ?? r.metadata?.name}
         </option>

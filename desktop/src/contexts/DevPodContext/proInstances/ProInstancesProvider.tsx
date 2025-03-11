@@ -1,15 +1,10 @@
 import { useQuery } from "@tanstack/react-query"
-import { createContext, ReactNode, useMemo } from "react"
+import { ReactNode, useMemo } from "react"
 import { client } from "../../../client"
 import { QueryKeys } from "../../../queryKeys"
-import { TProInstances, TQueryResult } from "../../../types"
 import { useChangeSettings } from "../../SettingsContext"
 import { REFETCH_INTERVAL_MS } from "../constants"
-
-export type TProInstancesContext = TQueryResult<TProInstances>
-export const ProInstancesContext = createContext<TProInstancesContext>([
-  [],
-] as unknown as TProInstancesContext)
+import { ProInstancesContext, TProInstancesContext } from "./context"
 
 export function ProInstancesProvider({ children }: Readonly<{ children?: ReactNode }>) {
   const { set } = useChangeSettings()

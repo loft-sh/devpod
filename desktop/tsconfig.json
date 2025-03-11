@@ -22,7 +22,7 @@
       "@/*": ["src/*"]
     }
   },
-  "include": ["src", ".eslintrc.cjs", "update-window", "vite.config.ts"],
+  "include": ["src", "./eslint.config.js", "update-window", "vite.config.ts"],
   "references": [
     {
       "path": "tsconfig.node.json"
