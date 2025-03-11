@@ -26,7 +26,13 @@ func (c *client) Delete(ctx context.Context, opt clientpkg.DeleteOptions) error 
 	if err != nil {
 		return err
 	} else if workspace == nil {
-		return fmt.Errorf("couldn't find workspace")
+		// delete the workspace folder
+		err = clientimplementation.DeleteWorkspaceFolder(c.workspace.Context, c.workspace.ID, c.workspace.SSHConfigPath, c.log)
+		if err != nil {
+			return err
+		}
+
+		return nil
 	}
 
 	managementClient, err := baseClient.Management()
@@ -60,6 +66,7 @@ func (c *client) Delete(ctx context.Context, opt clientpkg.DeleteOptions) error 
 		}
 	}
 
+	// delete the workspace folder
 	err = clientimplementation.DeleteWorkspaceFolder(c.workspace.Context, c.workspace.ID, c.workspace.SSHConfigPath, c.log)
 	if err != nil {
 		return err
