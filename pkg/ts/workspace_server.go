@@ -16,7 +16,6 @@ import (
 	"time"
 
 	"github.com/loft-sh/log"
-	"github.com/sirupsen/logrus"
 
 	"github.com/loft-sh/devpod/pkg/platform/client"
 	"github.com/loft-sh/devpod/pkg/provider"
@@ -37,6 +36,9 @@ const (
 type WorkspaceServer struct {
 	tsServer  *tsnet.Server
 	listeners []net.Listener
+
+	connectionCounter   int
+	connectionCounterMu sync.Mutex
 
 	config *WorkspaceServerConfig
 	log    log.Logger
@@ -75,27 +77,29 @@ func (s *WorkspaceServer) Start(ctx context.Context) error {
 		return err
 	}
 
-	// Discover a runner and set up connection tracking (with heartbeat)
-	discoveredRunner := s.discoverRunner(ctx, lc)
-	cc := s.createConnectionCounter(ctx, discoveredRunner, projectName, workspaceName)
+	// send heartbeats
+	go s.sendHeartbeats(ctx, projectName, workspaceName, lc)
 
 	// Start both SSH and HTTP reverse proxy listeners
-	if err := s.startListeners(ctx, cc); err != nil {
+	if err := s.startListeners(ctx); err != nil {
 		return err
 	}
 
-	go func() {
-		if err := WatchNetmap(ctx, lc, func(netMap *netmap.NetworkMap) {
-			nm, err := json.Marshal(netMap)
-			if err != nil {
-				s.log.Errorf("Failed to marshal netmap: %v", err)
-			} else {
-				_ = os.WriteFile(filepath.Join(s.config.RootDir, "netmap.json"), nm, 0o644)
+	// debug: write the netmap to a file
+	if os.Getenv("DEVPOD_DEBUG_DAEMON") == "true" {
+		go func() {
+			if err := WatchNetmap(ctx, lc, func(netMap *netmap.NetworkMap) {
+				nm, err := json.Marshal(netMap)
+				if err != nil {
+					s.log.Errorf("Failed to marshal netmap: %v", err)
+				} else {
+					_ = os.WriteFile(filepath.Join(s.config.RootDir, "netmap.json"), nm, 0o644)
+				}
+			}); err != nil {
+				s.log.Errorf("Failed to watch netmap: %v", err)
 			}
-		}); err != nil {
-			s.log.Errorf("Failed to watch netmap: %v", err)
-		}
-	}()
+		}()
+	}
 
 	// Wait until the context is canceled.
 	<-ctx.Done()
@@ -196,17 +200,17 @@ func (s *WorkspaceServer) parseWorkspaceHostname() (workspace, project string, e
 }
 
 // startListeners creates and starts the SSH and HTTP reverse proxy listeners.
-func (s *WorkspaceServer) startListeners(ctx context.Context, cc *connectionCounter) error {
+func (s *WorkspaceServer) startListeners(ctx context.Context) error {
 	// Create and start the SSH listener.
 	s.log.Infof("Starting SSH listener")
-	sshListener, err := s.createListener(ctx, fmt.Sprintf(":%d", sshServer.DefaultUserPort), cc)
+	sshListener, err := s.createListener(fmt.Sprintf(":%d", sshServer.DefaultUserPort), "ssh")
 	if err != nil {
 		return err
 	}
 
 	// Create and start the HTTP reverse proxy listener.
 	s.log.Infof("Starting HTTP reverse proxy listener on TSNet port %s", TSPortForwardPort)
-	wsListener, err := s.createListener(ctx, fmt.Sprintf(":%s", TSPortForwardPort), cc)
+	wsListener, err := s.createListener(fmt.Sprintf(":%s", TSPortForwardPort), "http")
 	if err != nil {
 		return fmt.Errorf("failed to create listener on TS port %s: %w", TSPortForwardPort, err)
 	}
@@ -229,12 +233,28 @@ func (s *WorkspaceServer) startListeners(ctx context.Context, cc *connectionCoun
 }
 
 // createListener creates a raw listener and wraps it with connection tracking.
-func (s *WorkspaceServer) createListener(ctx context.Context, addr string, cc *connectionCounter) (net.Listener, error) {
+func (s *WorkspaceServer) createListener(addr, protocol string) (net.Listener, error) {
 	l, err := s.tsServer.Listen("tcp", addr)
 	if err != nil {
 		return nil, fmt.Errorf("failed to listen on %s: %w", addr, err)
 	}
-	return newTrackedListener(l, cc), nil
+
+	// create a new tracked listener to track the number of connections
+	return newTrackedListener(
+		l,
+		func(address string) {
+			s.log.Infof("Client connected from %s (protocol: %s)", address, protocol)
+			s.connectionCounterMu.Lock()
+			s.connectionCounter++
+			s.connectionCounterMu.Unlock()
+		},
+		func(address string) {
+			s.log.Infof("Client disconnected from %s", address)
+			s.connectionCounterMu.Lock()
+			s.connectionCounter--
+			s.connectionCounterMu.Unlock()
+		},
+	), nil
 }
 
 // httpPortForwardHandler is the HTTP reverse proxy handler for workspace.
@@ -295,18 +315,12 @@ func (s *WorkspaceServer) handleSSHConnections(ctx context.Context, listener net
 			s.log.Errorf("Failed to accept connection: %v", err)
 			continue
 		}
-		clientHost, _, err := net.SplitHostPort(clientConn.RemoteAddr().String())
-		if err != nil {
-			s.log.Infof("Unable to parse host: %s", clientConn.RemoteAddr().String())
-			clientConn.Close()
-			continue
-		}
-		go s.handleSSHConnection(clientConn, clientHost)
+		go s.handleSSHConnection(clientConn)
 	}
 }
 
 // handleSSHConnection proxies the SSH connection to the local backend.
-func (s *WorkspaceServer) handleSSHConnection(clientConn net.Conn, clientHost string) {
+func (s *WorkspaceServer) handleSSHConnection(clientConn net.Conn) {
 	defer clientConn.Close()
 
 	localAddr := fmt.Sprintf("127.0.0.1:%d", sshServer.DefaultUserPort)
@@ -326,98 +340,103 @@ func (s *WorkspaceServer) handleSSHConnection(clientConn net.Conn, clientHost st
 	_, err = io.Copy(clientConn, backendConn)
 }
 
+func (s *WorkspaceServer) sendHeartbeats(ctx context.Context, projectName, workspaceName string, lc *tailscale.LocalClient) {
+	// create a new http client with a custom transport
+	transport := &http.Transport{DialContext: s.tsServer.Dial}
+	client := &http.Client{Transport: transport, Timeout: 10 * time.Second}
+
+	// create a ticker to send heartbeats every 10 seconds
+	ticker := time.NewTicker(10 * time.Second)
+	defer ticker.Stop()
+	for {
+		select {
+		case <-ctx.Done():
+			return
+		case <-ticker.C:
+			// get the current number of connections
+			s.connectionCounterMu.Lock()
+			connections := s.connectionCounter
+			s.connectionCounterMu.Unlock()
+
+			// send a heartbeat if there are connections
+			if connections > 0 {
+				err := s.sendHeartbeat(ctx, client, projectName, workspaceName, lc, connections)
+				if err != nil {
+					s.log.Errorf("Failed to send heartbeat: %v", err)
+				}
+			}
+		}
+	}
+}
+
+func (s *WorkspaceServer) sendHeartbeat(ctx context.Context, client *http.Client, projectName, workspaceName string, lc *tailscale.LocalClient, connections int) error {
+	ctx, cancel := context.WithTimeout(ctx, 10*time.Second)
+	defer cancel()
+
+	discoveredRunner, err := s.discoverRunner(ctx, lc)
+	if err != nil {
+		return fmt.Errorf("failed to discover runner: %v", err)
+	}
+
+	heartbeatURL := fmt.Sprintf("http://%s.ts.loft/devpod/%s/%s/heartbeat", discoveredRunner, projectName, workspaceName)
+	s.log.Infof("Sending heartbeat to %s, because there are %d active connections", heartbeatURL, connections)
+	req, err := http.NewRequestWithContext(ctx, "GET", heartbeatURL, nil)
+	if err != nil {
+		return fmt.Errorf("failed to create request for %s: %v", heartbeatURL, err)
+	}
+
+	req.Header.Set("Authorization", "Bearer "+s.config.AccessKey)
+	resp, err := client.Do(req)
+	if err != nil {
+		return fmt.Errorf("request to %s failed: %v", heartbeatURL, err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		return fmt.Errorf("received response from %s - Status: %d", heartbeatURL, resp.StatusCode)
+	}
+	s.log.Infof("received response from %s - Status: %d", heartbeatURL, resp.StatusCode)
+	return nil
+}
+
 // discoverRunner attempts to find the runner peer from the TSNet status.
-func (s *WorkspaceServer) discoverRunner(ctx context.Context, lc *tailscale.LocalClient) string {
+func (s *WorkspaceServer) discoverRunner(ctx context.Context, lc *tailscale.LocalClient) (string, error) {
 	status, err := lc.Status(ctx)
 	if err != nil {
-		s.log.Infof("discoverRunner: failed to get status: %v", err)
-		return ""
+		return "", fmt.Errorf("failed to get status: %v", err)
 	}
+
 	var runner string
 	for _, peer := range status.Peer {
 		if peer == nil || peer.HostName == "" {
 			continue
 		}
-		s.log.Infof("discoverRunner: found peer %s with IPs %v", peer.HostName, peer.TailscaleIPs)
+
 		if strings.HasSuffix(peer.HostName, "runner") {
 			runner = peer.HostName
 			break
 		}
 	}
-	s.log.Infof("discoverRunner: selected runner = %s", runner)
-	return runner
-}
+	if runner == "" {
+		return "", fmt.Errorf("no active runner found")
+	}
 
-// createConnectionCounter sets up a connection counter with heartbeat callbacks.
-func (s *WorkspaceServer) createConnectionCounter(ctx context.Context, discoveredRunner, projectName, workspaceName string) *connectionCounter {
-	var (
-		heartbeatMu sync.Mutex
-		heartbeats  = make(map[string]context.CancelFunc)
-	)
-	onConnect := func(address string) {
-		s.log.Infof("Client %s connected", address)
-		heartbeatMu.Lock()
-		if _, exists := heartbeats[address]; exists {
-			heartbeatMu.Unlock()
-			return
-		}
-		hbCtx, cancel := context.WithCancel(ctx)
-		heartbeats[address] = cancel
-		heartbeatMu.Unlock()
-		heartbeatURL := fmt.Sprintf("http://%s.ts.loft/devpod/%s/%s/heartbeat", discoveredRunner, projectName, workspaceName)
-		s.log.Debugf("Setting up heartbeat for %s with URL %s", address, heartbeatURL)
-		transport := &http.Transport{DialContext: s.tsServer.Dial}
-		client := &http.Client{Transport: transport, Timeout: 10 * time.Second}
-		go func(addr string, hbCtx context.Context) {
-			ticker := time.NewTicker(10 * time.Second)
-			defer ticker.Stop()
-			for {
-				select {
-				case <-hbCtx.Done():
-					s.log.Infof("Heartbeat for client %s stopped", address)
-					return
-				case <-ticker.C:
-					req, err := http.NewRequestWithContext(hbCtx, "GET", heartbeatURL, nil)
-					s.log.Infof("Building request")
-					if err != nil {
-						s.log.Infof("Heartbeat: failed to create request for %s: %v", heartbeatURL, err)
-						continue
-					}
-					req.Header.Set("Authorization", "Bearer "+s.config.AccessKey)
-					resp, err := client.Do(req)
-					if err != nil {
-						s.log.Infof("Heartbeat: request to %s failed: %v", heartbeatURL, err)
-						continue
-					}
-					s.log.Infof("Heartbeat: received response from %s - Status: %d", heartbeatURL, resp.StatusCode)
-					resp.Body.Close()
-				}
-			}
-		}(address, hbCtx)
-	}
-	onDisconnect := func(address string) {
-		s.log.Infof("Client %s disconnected", address)
-		heartbeatMu.Lock()
-		if cancel, exists := heartbeats[address]; exists {
-			cancel()
-			delete(heartbeats, address)
-		}
-		heartbeatMu.Unlock()
-	}
-	gracePeriod := 5 * time.Second
-	return newConnectionCounter(ctx, gracePeriod, onConnect, onDisconnect, log.Default.WithLevel(logrus.DebugLevel))
+	s.log.Infof("discoverRunner: selected runner = %s", runner)
+	return runner, nil
 }
 
 // trackedListener wraps a net.Listener to track connections.
 type trackedListener struct {
 	net.Listener
-	cc *connectionCounter
+	onConnect    func(address string)
+	onDisconnect func(address string)
 }
 
-func newTrackedListener(l net.Listener, cc *connectionCounter) net.Listener {
+func newTrackedListener(l net.Listener, onConnect, onDisconnect func(address string)) net.Listener {
 	return &trackedListener{
-		Listener: l,
-		cc:       cc,
+		Listener:     l,
+		onConnect:    onConnect,
+		onDisconnect: onDisconnect,
 	}
 }
 
@@ -426,32 +445,31 @@ func (tl *trackedListener) Accept() (net.Conn, error) {
 	if err != nil {
 		return nil, err
 	}
+
 	remote := conn.RemoteAddr().String()
-	tl.cc.Add(remote)
-	return newTrackedConn(conn, tl.cc, remote), nil
+	tl.onConnect(remote)
+	return newTrackedConn(conn, func() {
+		tl.onDisconnect(remote)
+	}), nil
 }
 
 // trackedConn wraps a net.Conn to ensure the connection counter is updated when closing.
 type trackedConn struct {
 	net.Conn
-	cc     *connectionCounter
-	remote string
-	once   sync.Once
+	onDisconnect func()
+	once         sync.Once
 }
 
-func newTrackedConn(c net.Conn, cc *connectionCounter, remote string) net.Conn {
+func newTrackedConn(c net.Conn, onDisconnect func()) net.Conn {
 	return &trackedConn{
-		Conn:   c,
-		cc:     cc,
-		remote: remote,
+		Conn:         c,
+		onDisconnect: onDisconnect,
 	}
 }
 
 func (tc *trackedConn) Close() error {
-	var err error
 	tc.once.Do(func() {
-		err = tc.Conn.Close()
-		tc.cc.Dec(tc.remote)
+		tc.onDisconnect()
 	})
-	return err
+	return tc.Conn.Close()
 }
