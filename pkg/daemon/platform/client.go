@@ -35,6 +35,7 @@ func NewLocalClient(daemonFolder, provider string) *LocalClient {
 		}
 		return conn, err
 	}
+	tr.TLSHandshakeTimeout = 2 * time.Second
 	httpClient := &http.Client{Transport: tr}
 
 	return &LocalClient{httpClient: httpClient, provider: provider}
@@ -138,8 +139,9 @@ func (c *LocalClient) Shutdown(ctx context.Context) error {
 }
 
 func (c *LocalClient) doRequest(ctx context.Context, method string, path string, body io.Reader) ([]byte, error) {
-	timeoutCtx, cancel := context.WithTimeout(ctx, 2*time.Second)
+	timeoutCtx, cancel := context.WithTimeout(ctx, 30*time.Second)
 	defer cancel()
+
 	req, err := http.NewRequestWithContext(timeoutCtx, method, fmt.Sprintf("http://localclient.devpod%s", path), body)
 	if err != nil {
 		return nil, err

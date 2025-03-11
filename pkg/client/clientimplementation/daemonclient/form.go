@@ -381,9 +381,13 @@ func parameterFields(fieldParameters []*FieldParameter) []huh.Field {
 		if title == "" {
 			title = param.Variable
 		}
+		paramType := param.Type
+		if paramType == "" {
+			paramType = "string"
+		}
 
 		var field huh.Field
-		switch param.Type {
+		switch paramType {
 		case "multiline":
 			field = huh.NewText().
 				Title(title).
