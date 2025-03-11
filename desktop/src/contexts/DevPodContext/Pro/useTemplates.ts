@@ -14,7 +14,6 @@ type TTemplates = Readonly<{
 export function useTemplates(): UseQueryResult<TTemplates> {
   const { host, currentProject, client } = useProContext()
   const query = useQuery<TTemplates>({
-    // eslint-disable-next-line @tanstack/query/exhaustive-deps
     queryKey: QueryKeys.proWorkspaceTemplates(host, currentProject?.metadata!.name!),
     queryFn: async () => {
       const projectTemplates = (

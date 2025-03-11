@@ -99,9 +99,14 @@ export function Workspace() {
     [instance, templates]
   )
   const cluster = useMemo(() => {
-    return projectClusters?.clusters.find(
-      // @ts-ignore FIXME: after updating types
-      (cluster) => cluster.metadata?.name === instance?.spec?.clusterRef?.cluster
+    if (instance?.spec?.runnerRef?.runner) {
+      return projectClusters?.runners?.find(
+        (runner) => runner.metadata?.name === instance?.spec?.runnerRef?.runner
+      )
+    }
+
+    return projectClusters?.clusters?.find(
+      (cluster) => cluster.metadata?.name === instance?.spec?.target?.cluster?.name
     )
   }, [projectClusters, instance])
 

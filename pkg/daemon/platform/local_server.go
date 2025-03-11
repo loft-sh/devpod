@@ -66,7 +66,6 @@ type platformStatus struct {
 
 var (
 	routeHealth            = "/health"
-	routeMetrics           = "/metrics"
 	routeStatus            = "/status"
 	routeVersion           = "/version"
 	routeShutdown          = "/shutdown"
@@ -104,7 +103,6 @@ func newLocalServer(lc *tailscale.LocalClient, pc platformclient.Client, devPodC
 	router.GET(routeStatus, l.status)
 	router.GET(routeVersion, l.version)
 	router.GET(routeShutdown, l.shutdown)
-	router.GET(routeMetrics, l.metrics)
 	router.GET(routeSelf, l.self)
 	router.GET(routeProjects, l.projects)
 	router.GET(routeProjectTemplates, l.projectTemplates)
@@ -235,10 +233,6 @@ func (l *localServer) status(w http.ResponseWriter, r *http.Request, params http
 	}
 
 	tryJSON(w, status)
-}
-
-func (l *localServer) metrics(w http.ResponseWriter, r *http.Request, params httprouter.Params) {
-	// TODO: Get from tailscale local client
 }
 
 func (l *localServer) shutdown(w http.ResponseWriter, r *http.Request, params httprouter.Params) {
@@ -467,8 +461,12 @@ func (l *localServer) watchWorkspaces(w http.ResponseWriter, r *http.Request, pa
 		Context:        l.devPodContext,
 		OwnerFilter:    ownerFilter,
 		PlatformClient: l.pc,
+		TsClient:       l.lc,
 		Log:            l.log},
 		func(instanceList []*ProWorkspaceInstance) {
+			if r.Context().Err() != nil {
+				return // Client disconnected, stop trying to write
+			}
 			if instanceList != nil {
 				err := enc.Encode(instanceList)
 				if err != nil {

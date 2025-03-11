@@ -1,5 +1,5 @@
 import { ProWorkspaceInstance, useTemplates, useWorkspace, useWorkspaceActions } from "@/contexts"
-import { Clock, CogOutlined, Status, User } from "@/icons"
+import { Clock, CogOutlined, Dashboard, Status, User } from "@/icons"
 import {
   TParameterWithValue,
   getDisplayName,
@@ -234,6 +234,11 @@ export function WorkspaceInstanceCard({
                     label={created.date ? new Date(created.date).toLocaleString() : undefined}>
                     <Text>{created.formatted}</Text>
                   </Tooltip>
+                </WorkspaceInfoDetail>
+              )}
+              {instance.status?.metrics?.latencyMs && (
+                <WorkspaceInfoDetail icon={Dashboard} label={<Text>Latency</Text>}>
+                  <Text>{instance.status.metrics.latencyMs.toFixed(2)}ms</Text>
                 </WorkspaceInfoDetail>
               )}
             </HStack>

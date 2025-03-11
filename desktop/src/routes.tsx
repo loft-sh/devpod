@@ -1,5 +1,6 @@
-import { Outlet, Params, Path, createBrowserRouter } from "react-router-dom"
+import { Params, Path, createBrowserRouter } from "react-router-dom"
 import { App, ErrorPage } from "./App"
+import { ProRoot } from "./ProRoot"
 import { TActionID } from "./contexts"
 import { TProInstanceDetail, exists } from "./lib"
 import { TProviderID, TSupportedIDE, TWorkspaceID } from "./types"
@@ -197,7 +198,3 @@ export const router = createBrowserRouter([
     ],
   },
 ])
-
-function ProRoot() {
-  return <Outlet />
-}

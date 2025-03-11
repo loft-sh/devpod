@@ -37,7 +37,7 @@ export function getParametersWithValues(
 
       return param
     })
-  } catch (err) {
+  } catch {
     return undefined
   }
 }

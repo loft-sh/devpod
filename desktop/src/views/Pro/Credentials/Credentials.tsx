@@ -51,7 +51,6 @@ export function Credentials() {
   const queryClient = useQueryClient()
   const { client, managementSelfQuery: s } = useProContext()
   const { data: userProfile, isLoading } = useQuery({
-    // eslint-disable-next-line @tanstack/query/exhaustive-deps
     queryKey: QueryKeys.userProfile(s.data?.status?.user?.name),
     queryFn: async () => {
       return (await (client as DaemonClient).getUserProfile()).unwrap()
@@ -206,7 +205,7 @@ function SecretTypeTag({ type }: TSecretTypeTagProps) {
   return <Tag>{displayName}</Tag>
 }
 
-export function useCreateCredentialModal(
+function useCreateCredentialModal(
   userProfile: ManagementV1UserProfile | undefined,
   userName: string | undefined
 ) {

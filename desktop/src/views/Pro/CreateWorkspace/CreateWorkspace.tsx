@@ -28,6 +28,7 @@ import { BackToWorkspaces } from "../BackToWorkspaces"
 import { CreateWorkspaceForm } from "./CreateWorkspaceForm"
 import { TFormValues } from "./types"
 import { useLocation } from "react-router"
+import { DaemonClient } from "@/client/pro/client"
 
 export function CreateWorkspace() {
   const workspace = useWorkspace<ProWorkspaceInstance>(undefined)
@@ -68,11 +69,13 @@ export function CreateWorkspace() {
 
   const handleSubmit = async (values: TFormValues) => {
     setGlobalError(null)
+    const shouldUseRunner = !(client instanceof DaemonClient)
     const instanceRes = await buildWorkspaceInstance(
       values,
       currentProject?.metadata?.name,
       managementSelfQuery.data?.status?.projectNamespacePrefix,
-      presetId
+      presetId,
+      shouldUseRunner
     )
     if (instanceRes.err) {
       setGlobalError(instanceRes.val)
@@ -126,7 +129,8 @@ async function buildWorkspaceInstance(
   values: TFormValues,
   currentProject: string | undefined,
   projectNamespacePrefix: string | undefined,
-  preset: string | undefined
+  preset: string | undefined,
+  shouldUseRunner: boolean
 ): Promise<Result<{ workspaceID: string; instance: ManagementV1DevPodWorkspaceInstance }>> {
   const instance = NewResource(Resources.ManagementV1DevPodWorkspaceInstance)
   const workspaceSource = new Source(values.sourceType, values.source)
@@ -173,8 +177,15 @@ async function buildWorkspaceInstance(
   instance.metadata.annotations[Annotations.WorkspaceSource] = workspaceSource.stringify()
   instance.spec.displayName = displayName
 
-  instance.spec.runnerRef = {
-    runner: values.runner,
+  // TODO: Remove when removing proxy provider
+  if (shouldUseRunner) {
+    instance.spec.runnerRef = {
+      runner: values.target,
+    }
+  } else {
+    instance.spec.target = {
+      cluster: { name: values.target },
+    }
   }
 
   // Template, version and parameters

@@ -93,7 +93,6 @@ class Client {
     name: TSettingName,
     value: TSettings[TSettingName]
   ) {
-    // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
     if (name === "debugFlag") {
       const debug: boolean = value as boolean
       this.workspaces.setDebug(debug)
@@ -240,7 +239,7 @@ class Client {
       }
 
       shell.open(p)
-    } catch (e) {
+    } catch {
       // noop for now
     }
   }
