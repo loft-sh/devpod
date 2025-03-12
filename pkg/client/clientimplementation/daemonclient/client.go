@@ -10,7 +10,6 @@ import (
 	"sync"
 	"time"
 
-	"github.com/gofrs/flock"
 	storagev1 "github.com/loft-sh/api/v4/pkg/apis/storage/v1"
 	clientpkg "github.com/loft-sh/devpod/pkg/client"
 	"github.com/loft-sh/devpod/pkg/config"
@@ -59,8 +58,6 @@ func New(devPodConfig *config.Config, prov *provider.ProviderConfig, workspace *
 
 type client struct {
 	m sync.Mutex
-
-	workspaceLock *flock.Flock
 
 	devPodConfig *config.Config
 	config       *provider.ProviderConfig
@@ -250,7 +247,7 @@ func (c *client) initPlatformClient(ctx context.Context) (platformclient.Client,
 }
 
 func (c *client) getWorkspaceAddress() (ts.Addr, error) {
-	if c.workspace.Pro == nil {
+	if c.workspace.Pro == nil || c.workspace.Pro.InstanceName == "" {
 		return ts.Addr{}, fmt.Errorf("workspace is not initialized")
 	}
 
