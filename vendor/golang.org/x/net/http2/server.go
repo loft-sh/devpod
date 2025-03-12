@@ -50,6 +50,7 @@ import (
 
 	"golang.org/x/net/http/httpguts"
 	"golang.org/x/net/http2/hpack"
+	"golang.org/x/net/internal/httpcommon"
 )
 
 const (
@@ -812,8 +813,7 @@ const maxCachedCanonicalHeadersKeysSize = 2048
 
 func (sc *serverConn) canonicalHeader(v string) string {
 	sc.serveG.check()
-	buildCommonHeaderMapsOnce()
-	cv, ok := commonCanonHeader[v]
+	cv, ok := httpcommon.CachedCanonicalHeader(v)
 	if ok {
 		return cv
 	}
@@ -2233,6 +2233,7 @@ func (sc *serverConn) newStream(id, pusherID uint32, state streamState) *stream 
 func (sc *serverConn) newWriterAndRequest(st *stream, f *MetaHeadersFrame) (*responseWriter, *http.Request, error) {
 	sc.serveG.check()
 
+<<<<<<< HEAD
 	rp := requestParam{
 		method:    f.PseudoValue("method"),
 		scheme:    f.PseudoValue("scheme"),
@@ -2244,14 +2245,31 @@ func (sc *serverConn) newWriterAndRequest(st *stream, f *MetaHeadersFrame) (*res
 	// extended connect is disabled, so we should not see :protocol
 	if disableExtendedConnectProtocol && rp.protocol != "" {
 		return nil, nil, sc.countError("bad_connect", streamError(f.StreamID, ErrCodeProtocol))
+=======
+	rp := httpcommon.ServerRequestParam{
+		Method:    f.PseudoValue("method"),
+		Scheme:    f.PseudoValue("scheme"),
+		Authority: f.PseudoValue("authority"),
+		Path:      f.PseudoValue("path"),
+		Protocol:  f.PseudoValue("protocol"),
+>>>>>>> main
 	}
 
-	isConnect := rp.method == "CONNECT"
+	// extended connect is disabled, so we should not see :protocol
+	if disableExtendedConnectProtocol && rp.Protocol != "" {
+		return nil, nil, sc.countError("bad_connect", streamError(f.StreamID, ErrCodeProtocol))
+	}
+
+	isConnect := rp.Method == "CONNECT"
 	if isConnect {
+<<<<<<< HEAD
 		if rp.protocol == "" && (rp.path != "" || rp.scheme != "" || rp.authority == "") {
+=======
+		if rp.Protocol == "" && (rp.Path != "" || rp.Scheme != "" || rp.Authority == "") {
+>>>>>>> main
 			return nil, nil, sc.countError("bad_connect", streamError(f.StreamID, ErrCodeProtocol))
 		}
-	} else if rp.method == "" || rp.path == "" || (rp.scheme != "https" && rp.scheme != "http") {
+	} else if rp.Method == "" || rp.Path == "" || (rp.Scheme != "https" && rp.Scheme != "http") {
 		// See 8.1.2.6 Malformed Requests and Responses:
 		//
 		// Malformed requests or responses that are detected
@@ -2265,12 +2283,16 @@ func (sc *serverConn) newWriterAndRequest(st *stream, f *MetaHeadersFrame) (*res
 		return nil, nil, sc.countError("bad_path_method", streamError(f.StreamID, ErrCodeProtocol))
 	}
 
-	rp.header = make(http.Header)
+	header := make(http.Header)
+	rp.Header = header
 	for _, hf := range f.RegularFields() {
-		rp.header.Add(sc.canonicalHeader(hf.Name), hf.Value)
+		header.Add(sc.canonicalHeader(hf.Name), hf.Value)
 	}
-	if rp.authority == "" {
-		rp.authority = rp.header.Get("Host")
+	if rp.Authority == "" {
+		rp.Authority = header.Get("Host")
+	}
+	if rp.Protocol != "" {
+		header.Set(":protocol", rp.Protocol)
 	}
 	if rp.protocol != "" {
 		rp.header.Set(":protocol", rp.protocol)
@@ -2282,7 +2304,7 @@ func (sc *serverConn) newWriterAndRequest(st *stream, f *MetaHeadersFrame) (*res
 	}
 	bodyOpen := !f.StreamEnded()
 	if bodyOpen {
-		if vv, ok := rp.header["Content-Length"]; ok {
+		if vv, ok := rp.Header["Content-Length"]; ok {
 			if cl, err := strconv.ParseUint(vv[0], 10, 63); err == nil {
 				req.ContentLength = int64(cl)
 			} else {
@@ -2298,6 +2320,7 @@ func (sc *serverConn) newWriterAndRequest(st *stream, f *MetaHeadersFrame) (*res
 	return rw, req, nil
 }
 
+<<<<<<< HEAD
 type requestParam struct {
 	method                  string
 	scheme, authority, path string
@@ -2306,13 +2329,17 @@ type requestParam struct {
 }
 
 func (sc *serverConn) newWriterAndRequestNoBody(st *stream, rp requestParam) (*responseWriter, *http.Request, error) {
+=======
+func (sc *serverConn) newWriterAndRequestNoBody(st *stream, rp httpcommon.ServerRequestParam) (*responseWriter, *http.Request, error) {
+>>>>>>> main
 	sc.serveG.check()
 
 	var tlsState *tls.ConnectionState // nil if not scheme https
-	if rp.scheme == "https" {
+	if rp.Scheme == "https" {
 		tlsState = sc.tlsState
 	}
 
+<<<<<<< HEAD
 	needsContinue := httpguts.HeaderValuesContainsToken(rp.header["Expect"], "100-continue")
 	if needsContinue {
 		rp.header.Del("Expect")
@@ -2353,29 +2380,32 @@ func (sc *serverConn) newWriterAndRequestNoBody(st *stream, rp requestParam) (*r
 			return nil, nil, sc.countError("bad_path", streamError(st.id, ErrCodeProtocol))
 		}
 		requestURI = rp.path
+=======
+	res := httpcommon.NewServerRequest(rp)
+	if res.InvalidReason != "" {
+		return nil, nil, sc.countError(res.InvalidReason, streamError(st.id, ErrCodeProtocol))
+>>>>>>> main
 	}
 
 	body := &requestBody{
 		conn:          sc,
 		stream:        st,
-		needsContinue: needsContinue,
+		needsContinue: res.NeedsContinue,
 	}
-	req := &http.Request{
-		Method:     rp.method,
-		URL:        url_,
+	req := (&http.Request{
+		Method:     rp.Method,
+		URL:        res.URL,
 		RemoteAddr: sc.remoteAddrStr,
-		Header:     rp.header,
-		RequestURI: requestURI,
+		Header:     rp.Header,
+		RequestURI: res.RequestURI,
 		Proto:      "HTTP/2.0",
 		ProtoMajor: 2,
 		ProtoMinor: 0,
 		TLS:        tlsState,
-		Host:       rp.authority,
+		Host:       rp.Authority,
 		Body:       body,
-		Trailer:    trailer,
-	}
-	req = req.WithContext(st.ctx)
-
+		Trailer:    res.Trailer,
+	}).WithContext(st.ctx)
 	rw := sc.newResponseWriter(st, req)
 	return rw, req, nil
 }
@@ -3270,12 +3300,12 @@ func (sc *serverConn) startPush(msg *startPushRequest) {
 		// we start in "half closed (remote)" for simplicity.
 		// See further comments at the definition of stateHalfClosedRemote.
 		promised := sc.newStream(promisedID, msg.parent.id, stateHalfClosedRemote)
-		rw, req, err := sc.newWriterAndRequestNoBody(promised, requestParam{
-			method:    msg.method,
-			scheme:    msg.url.Scheme,
-			authority: msg.url.Host,
-			path:      msg.url.RequestURI(),
-			header:    cloneHeader(msg.header), // clone since handler runs concurrently with writing the PUSH_PROMISE
+		rw, req, err := sc.newWriterAndRequestNoBody(promised, httpcommon.ServerRequestParam{
+			Method:    msg.method,
+			Scheme:    msg.url.Scheme,
+			Authority: msg.url.Host,
+			Path:      msg.url.RequestURI(),
+			Header:    cloneHeader(msg.header), // clone since handler runs concurrently with writing the PUSH_PROMISE
 		})
 		if err != nil {
 			// Should not happen, since we've already validated msg.url.
