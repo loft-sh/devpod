@@ -200,7 +200,7 @@ export class Command implements TCommand<ChildProcess<string>> {
         }),
       })
 
-      await sleep(2_000)
+      await sleep(3_000)
       // the actual child process could be gone after sending a SIGINT
       // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
       if (this.childProcess) {

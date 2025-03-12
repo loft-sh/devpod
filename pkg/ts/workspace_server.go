@@ -377,20 +377,20 @@ func (s *WorkspaceServer) sendHeartbeat(ctx context.Context, client *http.Client
 
 	discoveredRunner, err := s.discoverRunner(ctx, lc)
 	if err != nil {
-		return fmt.Errorf("failed to discover runner: %v", err)
+		return fmt.Errorf("failed to discover runner: %w", err)
 	}
 
 	heartbeatURL := fmt.Sprintf("http://%s.ts.loft/devpod/%s/%s/heartbeat", discoveredRunner, projectName, workspaceName)
 	s.log.Infof("Sending heartbeat to %s, because there are %d active connections", heartbeatURL, connections)
 	req, err := http.NewRequestWithContext(ctx, "GET", heartbeatURL, nil)
 	if err != nil {
-		return fmt.Errorf("failed to create request for %s: %v", heartbeatURL, err)
+		return fmt.Errorf("failed to create request for %s: %w", heartbeatURL, err)
 	}
 
 	req.Header.Set("Authorization", "Bearer "+s.config.AccessKey)
 	resp, err := client.Do(req)
 	if err != nil {
-		return fmt.Errorf("request to %s failed: %v", heartbeatURL, err)
+		return fmt.Errorf("request to %s failed: %w", heartbeatURL, err)
 	}
 	defer resp.Body.Close()
 
@@ -405,7 +405,7 @@ func (s *WorkspaceServer) sendHeartbeat(ctx context.Context, client *http.Client
 func (s *WorkspaceServer) discoverRunner(ctx context.Context, lc *tailscale.LocalClient) (string, error) {
 	status, err := lc.Status(ctx)
 	if err != nil {
-		return "", fmt.Errorf("failed to get status: %v", err)
+		return "", fmt.Errorf("failed to get status: %w", err)
 	}
 
 	var runner string

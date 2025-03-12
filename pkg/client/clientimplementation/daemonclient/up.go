@@ -59,6 +59,24 @@ func (c *client) Up(ctx context.Context, opt clientpkg.UpOptions) (*config.Resul
 		return nil, fmt.Errorf("error getting management client: %w", err)
 	}
 
+	// prompt user to attach to active task or start new one
+	c.log.Debug("Check active up task")
+	activeUpTask, err := findActiveUpTask(ctx, managementClient, instance)
+	if err != nil {
+		return nil, fmt.Errorf("find active up task: %w", err)
+	}
+
+	// if we have an active up task, cancel it before creating a new one
+	if activeUpTask != nil {
+		c.log.Warnf("Found active up task %s, attempting to cancel it", activeUpTask.ID)
+		_, err = managementClient.Loft().ManagementV1().DevPodWorkspaceInstances(instance.Namespace).Cancel(ctx, instance.Name, &managementv1.DevPodWorkspaceInstanceCancel{
+			TaskID: activeUpTask.ID,
+		}, metav1.CreateOptions{})
+		if err != nil {
+			return nil, fmt.Errorf("cancel task: %w", err)
+		}
+	}
+
 	// create up task
 	task, err := managementClient.Loft().ManagementV1().DevPodWorkspaceInstances(instance.Namespace).Up(ctx, instance.Name, &managementv1.DevPodWorkspaceInstanceUp{
 		Spec: managementv1.DevPodWorkspaceInstanceUpSpec{
@@ -72,7 +90,11 @@ func (c *client) Up(ctx context.Context, opt clientpkg.UpOptions) (*config.Resul
 		return nil, fmt.Errorf("no up task id returned from server")
 	}
 
-	exitCode, err := observeTask(ctx, managementClient, instance, task.Status.TaskID, c.log)
+	return waitTaskDone(ctx, managementClient, instance, task.Status.TaskID, c.log)
+}
+
+func waitTaskDone(ctx context.Context, managementClient kube.Interface, instance *managementv1.DevPodWorkspaceInstance, taskID string, log log.Logger) (*config.Result, error) {
+	exitCode, err := observeTask(ctx, managementClient, instance, taskID, log)
 	if err != nil {
 		return nil, fmt.Errorf("up: %w", err)
 	} else if exitCode != 0 {
@@ -87,7 +109,7 @@ func (c *client) Up(ctx context.Context, opt clientpkg.UpOptions) (*config.Resul
 		Name(instance.Name).
 		SubResource("tasks").
 		VersionedParams(&managementv1.DevPodWorkspaceInstanceTasksOptions{
-			TaskID: task.Status.TaskID,
+			TaskID: taskID,
 		}, builders.ParameterCodec).
 		Do(ctx).
 		Into(tasks)
@@ -266,4 +288,34 @@ func printLogs(ctx context.Context, managementClient kube.Interface, workspace *
 	}
 
 	return 0, nil
+}
+
+const (
+	TaskStatusRunning = "Running"
+	TaskStatusSucceed = "Succeeded"
+	TaskStatusFailed  = "Failed"
+)
+const (
+	TaskTypeUp     = "up"
+	TaskTypeStop   = "stop"
+	TaskTypeDelete = "delete"
+)
+
+func findActiveUpTask(ctx context.Context, managementClient kube.Interface, instance *managementv1.DevPodWorkspaceInstance) (*managementv1.DevPodWorkspaceInstanceTask, error) {
+	tasks := &managementv1.DevPodWorkspaceInstanceTasks{}
+	err := managementClient.Loft().ManagementV1().RESTClient().Get().
+		Namespace(instance.Namespace).
+		Resource("devpodworkspaceinstances").
+		Name(instance.Name).
+		SubResource("tasks").
+		Do(ctx).
+		Into(tasks)
+
+	for _, task := range tasks.Tasks {
+		if task.Status == TaskStatusRunning && task.Type == TaskTypeUp {
+			return &task, nil
+		}
+	}
+
+	return nil, err
 }
