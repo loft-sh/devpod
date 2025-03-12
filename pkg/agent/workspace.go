@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/base64"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net"
 	"os"
@@ -23,6 +24,7 @@ import (
 	"github.com/moby/patternmatcher/ignorefile"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
+	"google.golang.org/grpc/status"
 )
 
 var extraSearchLocations = []string{"/home/devpod/.devpod/agent", "/opt/devpod/agent", "/var/lib/devpod/agent", "/var/devpod/agent"}
@@ -352,6 +354,12 @@ func CloneRepositoryForWorkspace(
 			Options:    string(jsonOptions),
 		})
 		if err != nil {
+			// unpack error
+			statusErr, ok := status.FromError(err)
+			if ok && statusErr.Message() != "" {
+				err = errors.New(statusErr.Message())
+			}
+
 			// cleanup workspace dir if clone failed, otherwise we won't try to clone again when rebuilding this workspace
 			if cleanupErr := cleanupWorkspaceDir(workspaceDir); cleanupErr != nil {
 				return fmt.Errorf("clone repository (with gitcache): %w, cleanup workspace: %w", err, cleanupErr)
