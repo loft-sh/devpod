@@ -113,7 +113,7 @@ pub fn kill_process(pid: u32) {
         use nix::sys::signal::{self, Signal};
         use nix::unistd::Pid;
         let pid = Pid::from_raw(pid as i32);
-        let signal = Signal::SIGKILL;
+        let signal = Signal::SIGINT;
         match signal::kill(pid, signal) {
             Ok(_) => debug!("Successfully killed process {}", pid),
             Err(err) => {

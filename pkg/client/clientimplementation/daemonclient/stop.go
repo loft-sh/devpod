@@ -44,9 +44,9 @@ func (c *client) Stop(ctx context.Context, opt clientpkg.StopOptions) error {
 		return fmt.Errorf("no stop task id returned from server")
 	}
 
-	_, err = printLogs(ctx, managementClient, workspace, retStop.Status.TaskID, c.log)
+	_, err = observeTask(ctx, managementClient, workspace, retStop.Status.TaskID, c.log)
 	if err != nil {
-		return fmt.Errorf("error getting stop logs: %w", err)
+		return fmt.Errorf("stop: %w", err)
 	}
 
 	return nil

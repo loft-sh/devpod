@@ -421,10 +421,12 @@ github.com/liggitt/tabwriter v0.0.0-20181228230101-89fcab3d43de h1:9TO3cAIGXtEhn
 github.com/liggitt/tabwriter v0.0.0-20181228230101-89fcab3d43de/go.mod h1:zAbeS9B/r2mtpb6U+EI2rYA5OAXxsYw6wTamcNW+zcE=
 github.com/loft-sh/admin-apis v0.0.0-20250221182517-7499d86167d2 h1:om1MqUdW84ZQc0GMGGgFfPI6xpTbrF+6DwKVq+76R44=
 github.com/loft-sh/admin-apis v0.0.0-20250221182517-7499d86167d2/go.mod h1:WHCqWfljfD1hkwk41hLeqBhW2yeLvWipB1sH6vfnR7U=
-github.com/loft-sh/agentapi/v4 v4.2.0-alpha.6 h1:eVIzaW+EvIygxNXl5163c1+WcUr8c95OP6lj8FcJHUc=
-github.com/loft-sh/agentapi/v4 v4.2.0-alpha.6/go.mod h1:yqbIMmyXqbzZcK0DlwldRLy0xb3lYnH4NoI3K+iETlM=
+github.com/loft-sh/agentapi/v4 v4.3.0-devpod.alpha.0 h1:dy7pnOSCHg6GKnyRn0oMtGvYE1nCVupMXZzopqO6KDc=
+github.com/loft-sh/agentapi/v4 v4.3.0-devpod.alpha.0/go.mod h1:UteiUdc6QeGt2uXIo5K5qlReRa366GbPY5QdDuPyFCs=
 github.com/loft-sh/analytics-client v0.0.0-20240219162240-2f4c64b2494e h1:JcPnMaoczikvpasi8OJ47dCkWZjfgFubWa4V2SZo7h0=
 github.com/loft-sh/analytics-client v0.0.0-20240219162240-2f4c64b2494e/go.mod h1:FFWcGASyM2QlWTDTCG/WBVM/XYr8btqYt335TFNRCFg=
+github.com/loft-sh/api/v4 v4.3.0-devpod.alpha.0 h1:nakRHE+xJc5WlSHT7+Tq5Ql76L2L1pRH3X1G+JYZaAg=
+github.com/loft-sh/api/v4 v4.3.0-devpod.alpha.0/go.mod h1:9tiitoNy76JZq33Z+S0roYqJUUOqycYJ3VBk8oGJ1WM=
 github.com/loft-sh/apiserver v0.0.0-20250206205835-422f1d472459 h1:6SrgBtT1S9ANsQMoO/O0Mq+hs9EbC5te5kPqOBfg5UI=
 github.com/loft-sh/apiserver v0.0.0-20250206205835-422f1d472459/go.mod h1:rung3jsKjaVAtykQN0vWmFHhx2A/umpRyAae8BJVSeE=
 github.com/loft-sh/log v0.0.0-20240219160058-26d83ffb46ac h1:Gz/7Lb7WgdgIv+KJz87ORA1zvQW52tUqKPGyunlp4dQ=
@@ -910,6 +912,8 @@ k8s.io/kube-openapi v0.0.0-20241105132330-32ad38e42d3f h1:GA7//TjRY9yWGy1poLzYYJ
 k8s.io/kube-openapi v0.0.0-20241105132330-32ad38e42d3f/go.mod h1:R/HEjbvWI0qdfb8viZUeVZm0X6IZnxAydC7YU42CMw4=
 k8s.io/kubectl v0.29.1 h1:rWnW3hi/rEUvvg7jp4iYB68qW5un/urKbv7fu3Vj0/s=
 k8s.io/kubectl v0.29.1/go.mod h1:SZzvLqtuOJYSvZzPZR9weSuP0wDQ+N37CENJf0FhDF4=
+k8s.io/metrics v0.32.1 h1:Ou4nrEtZS2vFf7OJCf9z3+2kr0A00kQzfoSwxg0gXps=
+k8s.io/metrics v0.32.1/go.mod h1:cLnai9XKYby1tNMX+xe8p9VLzTqrxYPcmqfCBoWObcM=
 k8s.io/utils v0.0.0-20241104100929-3ea5e8cea738 h1:M3sRQVHv7vB20Xc2ybTt7ODCeFj6JSWYFzOFnYeS6Ro=
 k8s.io/utils v0.0.0-20241104100929-3ea5e8cea738/go.mod h1:OLgZIPagt7ERELqWJFomSt595RzquPNLL48iOWgYOg0=
 mvdan.cc/sh/v3 v3.6.0 h1:gtva4EXJ0dFNvl5bHjcUEvws+KRcDslT8VKheTYkbGU=

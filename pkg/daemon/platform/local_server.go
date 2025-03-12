@@ -418,7 +418,7 @@ func (l *localServer) listWorkspace(w http.ResponseWriter, r *http.Request, para
 func (l *localServer) getWorkspace(w http.ResponseWriter, r *http.Request, params httprouter.Params) {
 	uid := r.URL.Query().Get("uid")
 	if uid == "" {
-		http.Error(w, "missing required query parameter \"uid\"", http.StatusInternalServerError)
+		http.Error(w, "missing required query parameter \"uid\"", http.StatusBadRequest)
 		return
 	}
 
@@ -445,7 +445,7 @@ func (l *localServer) watchWorkspaces(w http.ResponseWriter, r *http.Request, pa
 
 	project := r.URL.Query().Get("project")
 	if project == "" {
-		http.Error(w, "missing required query parameter \"project\"", http.StatusInternalServerError)
+		http.Error(w, "missing required query parameter \"project\"", http.StatusBadRequest)
 		return
 	}
 	ownerParam := r.URL.Query().Get("owner")
@@ -530,7 +530,7 @@ func (l *localServer) updateWorkspace(w http.ResponseWriter, r *http.Request, pa
 func (l *localServer) getGitCredentials(w http.ResponseWriter, r *http.Request, params httprouter.Params) {
 	host := r.URL.Query().Get("host")
 	if host == "" {
-		http.Error(w, "missing required query parameter \"host\"", http.StatusInternalServerError)
+		http.Error(w, "missing required query parameter \"host\"", http.StatusBadRequest)
 		return
 	}
 	protocol := r.URL.Query().Get("protocol")
@@ -543,7 +543,7 @@ func (l *localServer) getGitCredentials(w http.ResponseWriter, r *http.Request, 
 		Host:     host,
 	})
 	if err != nil {
-		http.Error(w, fmt.Errorf("get git credentials: %w", err).Error(), http.StatusBadRequest)
+		http.Error(w, fmt.Errorf("get git credentials: %w", err).Error(), http.StatusInternalServerError)
 		return
 	}
 

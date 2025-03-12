@@ -29,9 +29,9 @@ require (
 	github.com/gorilla/websocket v1.5.3
 	github.com/joho/godotenv v1.5.1
 	github.com/julienschmidt/httprouter v1.3.0
-	github.com/loft-sh/agentapi/v4 v4.2.0-alpha.6
+	github.com/loft-sh/agentapi/v4 v4.3.0-devpod.alpha.0
 	github.com/loft-sh/analytics-client v0.0.0-20240219162240-2f4c64b2494e
-	github.com/loft-sh/api/v4 v4.2.2
+	github.com/loft-sh/api/v4 v4.3.0-devpod.alpha.0
 	github.com/loft-sh/apiserver v0.0.0-20250206205835-422f1d472459
 	github.com/loft-sh/log v0.0.0-20240219160058-26d83ffb46ac
 	github.com/loft-sh/programming-language-detection v0.0.5
@@ -284,6 +284,7 @@ require (
 	k8s.io/cli-runtime v0.29.1 // indirect
 	k8s.io/component-base v0.32.1 // indirect
 	k8s.io/kube-openapi v0.0.0-20241105132330-32ad38e42d3f // indirect
+	k8s.io/metrics v0.32.1 // indirect
 	sigs.k8s.io/apiserver-network-proxy/konnectivity-client v0.31.0 // indirect
 	sigs.k8s.io/json v0.0.0-20241010143419-9aa6b5e7a4b3 // indirect
 	sigs.k8s.io/structured-merge-diff/v4 v4.4.2 // indirect
@@ -334,5 +335,3 @@ require (
 )
 
 replace tailscale.com => github.com/loft-sh/tailscale v1.78.1-loft.6
-
-replace github.com/loft-sh/api/v4 => ../loft-enterprise/staging/src/github.com/loft-sh/api/v4
