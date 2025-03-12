@@ -244,7 +244,7 @@ func initWorkspace(ctx context.Context, cancel context.CancelFunc, workspaceInfo
 	if workspaceInfo.Agent.IsDockerDriver() && err != nil && !local {
 		errChan <- configureDockerDaemon(ctx, logger)
 	} else {
-		logger.Debug("Skipping configuring daemon")
+		logger.Debug("Skipping configuring docker daemon")
 		errChan <- nil
 	}
 

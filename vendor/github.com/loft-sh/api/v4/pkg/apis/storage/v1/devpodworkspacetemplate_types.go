@@ -91,10 +91,6 @@ type DevPodWorkspaceTemplateDefinition struct {
 	// +optional
 	InstanceTemplate DevPodWorkspaceInstanceTemplateDefinition `json:"instanceTemplate,omitempty"`
 
-	// GitCloneStrategy specifies how git based workspace are being cloned. Can be "" (full, default), treeless, blobless or shallow
-	// +optional
-	GitCloneStrategy GitCloneStrategy `json:"gitCloneStrategy,omitempty"`
-
 	// CredentialForwarding specifies controls for how workspaces created by this template forward credentials into the workspace
 	// +optional
 	CredentialForwarding *CredentialForwarding `json:"credentialForwarding,omitempty"`

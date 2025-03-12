@@ -21,6 +21,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	conversion "k8s.io/apimachinery/pkg/conversion"
 	runtime "k8s.io/apimachinery/pkg/runtime"
+	v1beta1 "k8s.io/metrics/pkg/apis/metrics/v1beta1"
 )
 
 func init() {
@@ -970,6 +971,36 @@ func RegisterConversions(s *runtime.Scheme) error {
 	}); err != nil {
 		return err
 	}
+	if err := s.AddGeneratedConversionFunc((*DevPodWorkspaceInstanceContainerResource)(nil), (*management.DevPodWorkspaceInstanceContainerResource)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1_DevPodWorkspaceInstanceContainerResource_To_management_DevPodWorkspaceInstanceContainerResource(a.(*DevPodWorkspaceInstanceContainerResource), b.(*management.DevPodWorkspaceInstanceContainerResource), scope)
+	}); err != nil {
+		return err
+	}
+	if err := s.AddGeneratedConversionFunc((*management.DevPodWorkspaceInstanceContainerResource)(nil), (*DevPodWorkspaceInstanceContainerResource)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_management_DevPodWorkspaceInstanceContainerResource_To_v1_DevPodWorkspaceInstanceContainerResource(a.(*management.DevPodWorkspaceInstanceContainerResource), b.(*DevPodWorkspaceInstanceContainerResource), scope)
+	}); err != nil {
+		return err
+	}
+	if err := s.AddGeneratedConversionFunc((*DevPodWorkspaceInstanceEvent)(nil), (*management.DevPodWorkspaceInstanceEvent)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1_DevPodWorkspaceInstanceEvent_To_management_DevPodWorkspaceInstanceEvent(a.(*DevPodWorkspaceInstanceEvent), b.(*management.DevPodWorkspaceInstanceEvent), scope)
+	}); err != nil {
+		return err
+	}
+	if err := s.AddGeneratedConversionFunc((*management.DevPodWorkspaceInstanceEvent)(nil), (*DevPodWorkspaceInstanceEvent)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_management_DevPodWorkspaceInstanceEvent_To_v1_DevPodWorkspaceInstanceEvent(a.(*management.DevPodWorkspaceInstanceEvent), b.(*DevPodWorkspaceInstanceEvent), scope)
+	}); err != nil {
+		return err
+	}
+	if err := s.AddGeneratedConversionFunc((*DevPodWorkspaceInstanceKubernetesStatus)(nil), (*management.DevPodWorkspaceInstanceKubernetesStatus)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1_DevPodWorkspaceInstanceKubernetesStatus_To_management_DevPodWorkspaceInstanceKubernetesStatus(a.(*DevPodWorkspaceInstanceKubernetesStatus), b.(*management.DevPodWorkspaceInstanceKubernetesStatus), scope)
+	}); err != nil {
+		return err
+	}
+	if err := s.AddGeneratedConversionFunc((*management.DevPodWorkspaceInstanceKubernetesStatus)(nil), (*DevPodWorkspaceInstanceKubernetesStatus)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_management_DevPodWorkspaceInstanceKubernetesStatus_To_v1_DevPodWorkspaceInstanceKubernetesStatus(a.(*management.DevPodWorkspaceInstanceKubernetesStatus), b.(*DevPodWorkspaceInstanceKubernetesStatus), scope)
+	}); err != nil {
+		return err
+	}
 	if err := s.AddGeneratedConversionFunc((*DevPodWorkspaceInstanceList)(nil), (*management.DevPodWorkspaceInstanceList)(nil), func(a, b interface{}, scope conversion.Scope) error {
 		return Convert_v1_DevPodWorkspaceInstanceList_To_management_DevPodWorkspaceInstanceList(a.(*DevPodWorkspaceInstanceList), b.(*management.DevPodWorkspaceInstanceList), scope)
 	}); err != nil {
@@ -1007,6 +1038,26 @@ func RegisterConversions(s *runtime.Scheme) error {
 	}
 	if err := s.AddGeneratedConversionFunc((*management.DevPodWorkspaceInstanceLogOptions)(nil), (*DevPodWorkspaceInstanceLogOptions)(nil), func(a, b interface{}, scope conversion.Scope) error {
 		return Convert_management_DevPodWorkspaceInstanceLogOptions_To_v1_DevPodWorkspaceInstanceLogOptions(a.(*management.DevPodWorkspaceInstanceLogOptions), b.(*DevPodWorkspaceInstanceLogOptions), scope)
+	}); err != nil {
+		return err
+	}
+	if err := s.AddGeneratedConversionFunc((*DevPodWorkspaceInstancePersistentVolumeClaimStatus)(nil), (*management.DevPodWorkspaceInstancePersistentVolumeClaimStatus)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1_DevPodWorkspaceInstancePersistentVolumeClaimStatus_To_management_DevPodWorkspaceInstancePersistentVolumeClaimStatus(a.(*DevPodWorkspaceInstancePersistentVolumeClaimStatus), b.(*management.DevPodWorkspaceInstancePersistentVolumeClaimStatus), scope)
+	}); err != nil {
+		return err
+	}
+	if err := s.AddGeneratedConversionFunc((*management.DevPodWorkspaceInstancePersistentVolumeClaimStatus)(nil), (*DevPodWorkspaceInstancePersistentVolumeClaimStatus)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_management_DevPodWorkspaceInstancePersistentVolumeClaimStatus_To_v1_DevPodWorkspaceInstancePersistentVolumeClaimStatus(a.(*management.DevPodWorkspaceInstancePersistentVolumeClaimStatus), b.(*DevPodWorkspaceInstancePersistentVolumeClaimStatus), scope)
+	}); err != nil {
+		return err
+	}
+	if err := s.AddGeneratedConversionFunc((*DevPodWorkspaceInstancePodStatus)(nil), (*management.DevPodWorkspaceInstancePodStatus)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1_DevPodWorkspaceInstancePodStatus_To_management_DevPodWorkspaceInstancePodStatus(a.(*DevPodWorkspaceInstancePodStatus), b.(*management.DevPodWorkspaceInstancePodStatus), scope)
+	}); err != nil {
+		return err
+	}
+	if err := s.AddGeneratedConversionFunc((*management.DevPodWorkspaceInstancePodStatus)(nil), (*DevPodWorkspaceInstancePodStatus)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_management_DevPodWorkspaceInstancePodStatus_To_v1_DevPodWorkspaceInstancePodStatus(a.(*management.DevPodWorkspaceInstancePodStatus), b.(*DevPodWorkspaceInstancePodStatus), scope)
 	}); err != nil {
 		return err
 	}
@@ -5562,6 +5613,76 @@ func Convert_management_DevPodWorkspaceInstanceCancelList_To_v1_DevPodWorkspaceI
 	return autoConvert_management_DevPodWorkspaceInstanceCancelList_To_v1_DevPodWorkspaceInstanceCancelList(in, out, s)
 }
 
+func autoConvert_v1_DevPodWorkspaceInstanceContainerResource_To_management_DevPodWorkspaceInstanceContainerResource(in *DevPodWorkspaceInstanceContainerResource, out *management.DevPodWorkspaceInstanceContainerResource, s conversion.Scope) error {
+	out.Name = in.Name
+	out.Resources = in.Resources
+	return nil
+}
+
+// Convert_v1_DevPodWorkspaceInstanceContainerResource_To_management_DevPodWorkspaceInstanceContainerResource is an autogenerated conversion function.
+func Convert_v1_DevPodWorkspaceInstanceContainerResource_To_management_DevPodWorkspaceInstanceContainerResource(in *DevPodWorkspaceInstanceContainerResource, out *management.DevPodWorkspaceInstanceContainerResource, s conversion.Scope) error {
+	return autoConvert_v1_DevPodWorkspaceInstanceContainerResource_To_management_DevPodWorkspaceInstanceContainerResource(in, out, s)
+}
+
+func autoConvert_management_DevPodWorkspaceInstanceContainerResource_To_v1_DevPodWorkspaceInstanceContainerResource(in *management.DevPodWorkspaceInstanceContainerResource, out *DevPodWorkspaceInstanceContainerResource, s conversion.Scope) error {
+	out.Name = in.Name
+	out.Resources = in.Resources
+	return nil
+}
+
+// Convert_management_DevPodWorkspaceInstanceContainerResource_To_v1_DevPodWorkspaceInstanceContainerResource is an autogenerated conversion function.
+func Convert_management_DevPodWorkspaceInstanceContainerResource_To_v1_DevPodWorkspaceInstanceContainerResource(in *management.DevPodWorkspaceInstanceContainerResource, out *DevPodWorkspaceInstanceContainerResource, s conversion.Scope) error {
+	return autoConvert_management_DevPodWorkspaceInstanceContainerResource_To_v1_DevPodWorkspaceInstanceContainerResource(in, out, s)
+}
+
+func autoConvert_v1_DevPodWorkspaceInstanceEvent_To_management_DevPodWorkspaceInstanceEvent(in *DevPodWorkspaceInstanceEvent, out *management.DevPodWorkspaceInstanceEvent, s conversion.Scope) error {
+	out.Reason = in.Reason
+	out.Message = in.Message
+	out.LastTimestamp = in.LastTimestamp
+	out.Type = in.Type
+	return nil
+}
+
+// Convert_v1_DevPodWorkspaceInstanceEvent_To_management_DevPodWorkspaceInstanceEvent is an autogenerated conversion function.
+func Convert_v1_DevPodWorkspaceInstanceEvent_To_management_DevPodWorkspaceInstanceEvent(in *DevPodWorkspaceInstanceEvent, out *management.DevPodWorkspaceInstanceEvent, s conversion.Scope) error {
+	return autoConvert_v1_DevPodWorkspaceInstanceEvent_To_management_DevPodWorkspaceInstanceEvent(in, out, s)
+}
+
+func autoConvert_management_DevPodWorkspaceInstanceEvent_To_v1_DevPodWorkspaceInstanceEvent(in *management.DevPodWorkspaceInstanceEvent, out *DevPodWorkspaceInstanceEvent, s conversion.Scope) error {
+	out.Reason = in.Reason
+	out.Message = in.Message
+	out.LastTimestamp = in.LastTimestamp
+	out.Type = in.Type
+	return nil
+}
+
+// Convert_management_DevPodWorkspaceInstanceEvent_To_v1_DevPodWorkspaceInstanceEvent is an autogenerated conversion function.
+func Convert_management_DevPodWorkspaceInstanceEvent_To_v1_DevPodWorkspaceInstanceEvent(in *management.DevPodWorkspaceInstanceEvent, out *DevPodWorkspaceInstanceEvent, s conversion.Scope) error {
+	return autoConvert_management_DevPodWorkspaceInstanceEvent_To_v1_DevPodWorkspaceInstanceEvent(in, out, s)
+}
+
+func autoConvert_v1_DevPodWorkspaceInstanceKubernetesStatus_To_management_DevPodWorkspaceInstanceKubernetesStatus(in *DevPodWorkspaceInstanceKubernetesStatus, out *management.DevPodWorkspaceInstanceKubernetesStatus, s conversion.Scope) error {
+	out.PodStatus = (*management.DevPodWorkspaceInstancePodStatus)(unsafe.Pointer(in.PodStatus))
+	out.PersistentVolumeClaimStatus = (*management.DevPodWorkspaceInstancePersistentVolumeClaimStatus)(unsafe.Pointer(in.PersistentVolumeClaimStatus))
+	return nil
+}
+
+// Convert_v1_DevPodWorkspaceInstanceKubernetesStatus_To_management_DevPodWorkspaceInstanceKubernetesStatus is an autogenerated conversion function.
+func Convert_v1_DevPodWorkspaceInstanceKubernetesStatus_To_management_DevPodWorkspaceInstanceKubernetesStatus(in *DevPodWorkspaceInstanceKubernetesStatus, out *management.DevPodWorkspaceInstanceKubernetesStatus, s conversion.Scope) error {
+	return autoConvert_v1_DevPodWorkspaceInstanceKubernetesStatus_To_management_DevPodWorkspaceInstanceKubernetesStatus(in, out, s)
+}
+
+func autoConvert_management_DevPodWorkspaceInstanceKubernetesStatus_To_v1_DevPodWorkspaceInstanceKubernetesStatus(in *management.DevPodWorkspaceInstanceKubernetesStatus, out *DevPodWorkspaceInstanceKubernetesStatus, s conversion.Scope) error {
+	out.PodStatus = (*DevPodWorkspaceInstancePodStatus)(unsafe.Pointer(in.PodStatus))
+	out.PersistentVolumeClaimStatus = (*DevPodWorkspaceInstancePersistentVolumeClaimStatus)(unsafe.Pointer(in.PersistentVolumeClaimStatus))
+	return nil
+}
+
+// Convert_management_DevPodWorkspaceInstanceKubernetesStatus_To_v1_DevPodWorkspaceInstanceKubernetesStatus is an autogenerated conversion function.
+func Convert_management_DevPodWorkspaceInstanceKubernetesStatus_To_v1_DevPodWorkspaceInstanceKubernetesStatus(in *management.DevPodWorkspaceInstanceKubernetesStatus, out *DevPodWorkspaceInstanceKubernetesStatus, s conversion.Scope) error {
+	return autoConvert_management_DevPodWorkspaceInstanceKubernetesStatus_To_v1_DevPodWorkspaceInstanceKubernetesStatus(in, out, s)
+}
+
 func autoConvert_v1_DevPodWorkspaceInstanceList_To_management_DevPodWorkspaceInstanceList(in *DevPodWorkspaceInstanceList, out *management.DevPodWorkspaceInstanceList, s conversion.Scope) error {
 	out.ListMeta = in.ListMeta
 	out.Items = *(*[]management.DevPodWorkspaceInstance)(unsafe.Pointer(&in.Items))
@@ -5673,6 +5794,70 @@ func Convert_url_Values_To_v1_DevPodWorkspaceInstanceLogOptions(in *url.Values, 
 	return autoConvert_url_Values_To_v1_DevPodWorkspaceInstanceLogOptions(in, out, s)
 }
 
+func autoConvert_v1_DevPodWorkspaceInstancePersistentVolumeClaimStatus_To_management_DevPodWorkspaceInstancePersistentVolumeClaimStatus(in *DevPodWorkspaceInstancePersistentVolumeClaimStatus, out *management.DevPodWorkspaceInstancePersistentVolumeClaimStatus, s conversion.Scope) error {
+	out.Phase = corev1.PersistentVolumeClaimPhase(in.Phase)
+	out.Capacity = *(*corev1.ResourceList)(unsafe.Pointer(&in.Capacity))
+	out.Conditions = *(*[]corev1.PersistentVolumeClaimCondition)(unsafe.Pointer(&in.Conditions))
+	out.Events = *(*[]management.DevPodWorkspaceInstanceEvent)(unsafe.Pointer(&in.Events))
+	return nil
+}
+
+// Convert_v1_DevPodWorkspaceInstancePersistentVolumeClaimStatus_To_management_DevPodWorkspaceInstancePersistentVolumeClaimStatus is an autogenerated conversion function.
+func Convert_v1_DevPodWorkspaceInstancePersistentVolumeClaimStatus_To_management_DevPodWorkspaceInstancePersistentVolumeClaimStatus(in *DevPodWorkspaceInstancePersistentVolumeClaimStatus, out *management.DevPodWorkspaceInstancePersistentVolumeClaimStatus, s conversion.Scope) error {
+	return autoConvert_v1_DevPodWorkspaceInstancePersistentVolumeClaimStatus_To_management_DevPodWorkspaceInstancePersistentVolumeClaimStatus(in, out, s)
+}
+
+func autoConvert_management_DevPodWorkspaceInstancePersistentVolumeClaimStatus_To_v1_DevPodWorkspaceInstancePersistentVolumeClaimStatus(in *management.DevPodWorkspaceInstancePersistentVolumeClaimStatus, out *DevPodWorkspaceInstancePersistentVolumeClaimStatus, s conversion.Scope) error {
+	out.Phase = corev1.PersistentVolumeClaimPhase(in.Phase)
+	out.Capacity = *(*corev1.ResourceList)(unsafe.Pointer(&in.Capacity))
+	out.Conditions = *(*[]corev1.PersistentVolumeClaimCondition)(unsafe.Pointer(&in.Conditions))
+	out.Events = *(*[]DevPodWorkspaceInstanceEvent)(unsafe.Pointer(&in.Events))
+	return nil
+}
+
+// Convert_management_DevPodWorkspaceInstancePersistentVolumeClaimStatus_To_v1_DevPodWorkspaceInstancePersistentVolumeClaimStatus is an autogenerated conversion function.
+func Convert_management_DevPodWorkspaceInstancePersistentVolumeClaimStatus_To_v1_DevPodWorkspaceInstancePersistentVolumeClaimStatus(in *management.DevPodWorkspaceInstancePersistentVolumeClaimStatus, out *DevPodWorkspaceInstancePersistentVolumeClaimStatus, s conversion.Scope) error {
+	return autoConvert_management_DevPodWorkspaceInstancePersistentVolumeClaimStatus_To_v1_DevPodWorkspaceInstancePersistentVolumeClaimStatus(in, out, s)
+}
+
+func autoConvert_v1_DevPodWorkspaceInstancePodStatus_To_management_DevPodWorkspaceInstancePodStatus(in *DevPodWorkspaceInstancePodStatus, out *management.DevPodWorkspaceInstancePodStatus, s conversion.Scope) error {
+	out.Phase = corev1.PodPhase(in.Phase)
+	out.Conditions = *(*[]corev1.PodCondition)(unsafe.Pointer(&in.Conditions))
+	out.Message = in.Message
+	out.Reason = in.Reason
+	out.InitContainerStatuses = *(*[]corev1.ContainerStatus)(unsafe.Pointer(&in.InitContainerStatuses))
+	out.ContainerStatuses = *(*[]corev1.ContainerStatus)(unsafe.Pointer(&in.ContainerStatuses))
+	out.NodeName = in.NodeName
+	out.Events = *(*[]management.DevPodWorkspaceInstanceEvent)(unsafe.Pointer(&in.Events))
+	out.ContainerResources = *(*[]management.DevPodWorkspaceInstanceContainerResource)(unsafe.Pointer(&in.ContainerResources))
+	out.ContainerMetrics = *(*[]v1beta1.ContainerMetrics)(unsafe.Pointer(&in.ContainerMetrics))
+	return nil
+}
+
+// Convert_v1_DevPodWorkspaceInstancePodStatus_To_management_DevPodWorkspaceInstancePodStatus is an autogenerated conversion function.
+func Convert_v1_DevPodWorkspaceInstancePodStatus_To_management_DevPodWorkspaceInstancePodStatus(in *DevPodWorkspaceInstancePodStatus, out *management.DevPodWorkspaceInstancePodStatus, s conversion.Scope) error {
+	return autoConvert_v1_DevPodWorkspaceInstancePodStatus_To_management_DevPodWorkspaceInstancePodStatus(in, out, s)
+}
+
+func autoConvert_management_DevPodWorkspaceInstancePodStatus_To_v1_DevPodWorkspaceInstancePodStatus(in *management.DevPodWorkspaceInstancePodStatus, out *DevPodWorkspaceInstancePodStatus, s conversion.Scope) error {
+	out.Phase = corev1.PodPhase(in.Phase)
+	out.Conditions = *(*[]corev1.PodCondition)(unsafe.Pointer(&in.Conditions))
+	out.Message = in.Message
+	out.Reason = in.Reason
+	out.InitContainerStatuses = *(*[]corev1.ContainerStatus)(unsafe.Pointer(&in.InitContainerStatuses))
+	out.ContainerStatuses = *(*[]corev1.ContainerStatus)(unsafe.Pointer(&in.ContainerStatuses))
+	out.NodeName = in.NodeName
+	out.Events = *(*[]DevPodWorkspaceInstanceEvent)(unsafe.Pointer(&in.Events))
+	out.ContainerResources = *(*[]DevPodWorkspaceInstanceContainerResource)(unsafe.Pointer(&in.ContainerResources))
+	out.ContainerMetrics = *(*[]v1beta1.ContainerMetrics)(unsafe.Pointer(&in.ContainerMetrics))
+	return nil
+}
+
+// Convert_management_DevPodWorkspaceInstancePodStatus_To_v1_DevPodWorkspaceInstancePodStatus is an autogenerated conversion function.
+func Convert_management_DevPodWorkspaceInstancePodStatus_To_v1_DevPodWorkspaceInstancePodStatus(in *management.DevPodWorkspaceInstancePodStatus, out *DevPodWorkspaceInstancePodStatus, s conversion.Scope) error {
+	return autoConvert_management_DevPodWorkspaceInstancePodStatus_To_v1_DevPodWorkspaceInstancePodStatus(in, out, s)
+}
+
 func autoConvert_v1_DevPodWorkspaceInstanceSpec_To_management_DevPodWorkspaceInstanceSpec(in *DevPodWorkspaceInstanceSpec, out *management.DevPodWorkspaceInstanceSpec, s conversion.Scope) error {
 	out.DevPodWorkspaceInstanceSpec = in.DevPodWorkspaceInstanceSpec
 	return nil
@@ -5696,6 +5881,7 @@ func Convert_management_DevPodWorkspaceInstanceSpec_To_v1_DevPodWorkspaceInstanc
 func autoConvert_v1_DevPodWorkspaceInstanceStatus_To_management_DevPodWorkspaceInstanceStatus(in *DevPodWorkspaceInstanceStatus, out *management.DevPodWorkspaceInstanceStatus, s conversion.Scope) error {
 	out.DevPodWorkspaceInstanceStatus = in.DevPodWorkspaceInstanceStatus
 	out.SleepModeConfig = (*clusterv1.SleepModeConfig)(unsafe.Pointer(in.SleepModeConfig))
+	out.Kubernetes = (*management.DevPodWorkspaceInstanceKubernetesStatus)(unsafe.Pointer(in.Kubernetes))
 	return nil
 }
 
@@ -5707,6 +5893,7 @@ func Convert_v1_DevPodWorkspaceInstanceStatus_To_management_DevPodWorkspaceInsta
 func autoConvert_management_DevPodWorkspaceInstanceStatus_To_v1_DevPodWorkspaceInstanceStatus(in *management.DevPodWorkspaceInstanceStatus, out *DevPodWorkspaceInstanceStatus, s conversion.Scope) error {
 	out.DevPodWorkspaceInstanceStatus = in.DevPodWorkspaceInstanceStatus
 	out.SleepModeConfig = (*clusterv1.SleepModeConfig)(unsafe.Pointer(in.SleepModeConfig))
+	out.Kubernetes = (*DevPodWorkspaceInstanceKubernetesStatus)(unsafe.Pointer(in.Kubernetes))
 	return nil
 }
 

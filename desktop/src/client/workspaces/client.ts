@@ -303,7 +303,6 @@ export class WorkspacesClient implements TDebuggable {
       if (isError(e)) {
         return Return.Failed(e.message)
       }
-      console.error(e)
 
       return Return.Failed(`Unable to retrieve log file for action ${actionID}`)
     }

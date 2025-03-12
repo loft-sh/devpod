@@ -4,7 +4,9 @@ import (
 	"bufio"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
+	"time"
 
 	managementv1 "github.com/loft-sh/api/v4/pkg/apis/management/v1"
 	storagev1 "github.com/loft-sh/api/v4/pkg/apis/storage/v1"
@@ -70,10 +72,9 @@ func (c *client) Up(ctx context.Context, opt clientpkg.UpOptions) (*config.Resul
 		return nil, fmt.Errorf("no up task id returned from server")
 	}
 
-	// stream logs
-	exitCode, err := printLogs(ctx, managementClient, instance, task.Status.TaskID, c.log)
+	exitCode, err := observeTask(ctx, managementClient, instance, task.Status.TaskID, c.log)
 	if err != nil {
-		return nil, fmt.Errorf("error printing logs: %w", err)
+		return nil, fmt.Errorf("up: %w", err)
 	} else if exitCode != 0 {
 		return nil, fmt.Errorf("up failed with exit code %d", exitCode)
 	}
@@ -138,6 +139,43 @@ func printInstanceInfo(instance *managementv1.DevPodWorkspaceInstance, log log.L
 		Parameters: instance.Spec.Parameters,
 	})
 	log.Debug("Starting pro workspace with configuration", string(workspaceConfig))
+}
+
+func observeTask(ctx context.Context, managementClient kube.Interface, instance *managementv1.DevPodWorkspaceInstance, taskID string, log log.Logger) (int, error) {
+	var (
+		exitCode int
+		err      error
+	)
+	errChan := make(chan error, 1)
+
+	printCtx, cancelPrintCtx := context.WithCancel(context.Background())
+	defer cancelPrintCtx()
+
+	go func() {
+		// cancel ongoing task if context is done
+		select {
+		case <-ctx.Done():
+			timeoutCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+			defer cancel()
+			defer cancelPrintCtx()
+			_, err = managementClient.Loft().ManagementV1().DevPodWorkspaceInstances(instance.Namespace).Cancel(timeoutCtx, instance.Name, &managementv1.DevPodWorkspaceInstanceCancel{
+				TaskID: taskID,
+			}, metav1.CreateOptions{})
+			if err != nil {
+				errChan <- err
+			} else {
+				errChan <- errors.New("canceled")
+			}
+		case <-errChan:
+		case <-printCtx.Done():
+		}
+	}()
+	go func() {
+		exitCode, err = printLogs(printCtx, managementClient, instance, taskID, log)
+		errChan <- err
+	}()
+
+	return exitCode, <-errChan
 }
 
 type MessageType byte
@@ -221,6 +259,9 @@ func printLogs(ctx context.Context, managementClient kube.Interface, workspace *
 		}
 	}
 	if err := scanner.Err(); err != nil {
+		if errors.Is(err, context.Canceled) {
+			return 0, nil
+		}
 		return -1, fmt.Errorf("logs reader error: %w", err)
 	}
 
