@@ -180,7 +180,8 @@ func observeTask(ctx context.Context, managementClient kube.Interface, instance 
 			timeoutCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 			defer cancel()
 			defer cancelPrintCtx()
-			_, err = managementClient.Loft().ManagementV1().DevPodWorkspaceInstances(instance.Namespace).Cancel(timeoutCtx, instance.Name, &managementv1.DevPodWorkspaceInstanceCancel{
+
+			_, err := managementClient.Loft().ManagementV1().DevPodWorkspaceInstances(instance.Namespace).Cancel(timeoutCtx, instance.Name, &managementv1.DevPodWorkspaceInstanceCancel{
 				TaskID: taskID,
 			}, metav1.CreateOptions{})
 			if err != nil {
