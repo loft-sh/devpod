@@ -6,8 +6,6 @@ import (
 	"fmt"
 	"io"
 	"net/netip"
-	"os"
-	"path/filepath"
 	"strings"
 	"sync"
 	"time"
@@ -62,8 +60,7 @@ func New(devPodConfig *config.Config, prov *provider.ProviderConfig, workspace *
 type client struct {
 	m sync.Mutex
 
-	workspaceLockOnce sync.Once
-	workspaceLock     *flock.Flock
+	workspaceLock *flock.Flock
 
 	devPodConfig *config.Config
 	config       *provider.ProviderConfig
@@ -74,27 +71,12 @@ type client struct {
 }
 
 func (c *client) Lock(ctx context.Context) error {
-	c.initLock()
-
-	// try to lock workspace
-	c.log.Debugf("Acquire workspace lock...")
-	err := tryLock(ctx, c.workspaceLock, "workspace", c.log)
-	if err != nil {
-		return fmt.Errorf("error locking workspace: %w", err)
-	}
-	c.log.Debugf("Acquired workspace lock...")
-
+	// noop
 	return nil
 }
 
 func (c *client) Unlock() {
-	c.initLock()
-
-	// try to unlock workspace
-	err := c.workspaceLock.Unlock()
-	if err != nil {
-		c.log.Warnf("Error unlocking workspace: %v", err)
-	}
+	// noop
 }
 
 func (c *client) Provider() string {
@@ -207,23 +189,6 @@ func (c *client) DirectTunnel(ctx context.Context, stdin io.Reader, stdout io.Wr
 	}
 }
 
-func (c *client) initLock() {
-	c.workspaceLockOnce.Do(func() {
-		c.m.Lock()
-		defer c.m.Unlock()
-
-		// get locks dir
-		workspaceLocksDir, err := provider.GetLocksDir(c.workspace.Context)
-		if err != nil {
-			panic(fmt.Errorf("get workspaces dir: %w", err))
-		}
-		_ = os.MkdirAll(workspaceLocksDir, 0777)
-
-		// create workspace lock
-		c.workspaceLock = flock.New(filepath.Join(workspaceLocksDir, c.workspace.ID+".workspace.lock"))
-	})
-}
-
 func (c *client) Ping(ctx context.Context, writer io.Writer) error {
 	wAddr, err := c.getWorkspaceAddress()
 	if err != nil {
@@ -290,44 +255,4 @@ func (c *client) getWorkspaceAddress() (ts.Addr, error) {
 	}
 
 	return ts.NewAddr(ts.GetWorkspaceHostname(c.workspace.Pro.InstanceName, c.workspace.Pro.Project), sshServer.DefaultUserPort), nil
-}
-
-func printLogMessagePeriodically(message string, log log.Logger) chan struct{} {
-	done := make(chan struct{})
-	go func() {
-		for {
-			select {
-			case <-done:
-				return
-			case <-time.After(time.Second * 5):
-				log.Info(message)
-			}
-		}
-	}()
-
-	return done
-}
-
-func tryLock(ctx context.Context, lock *flock.Flock, name string, log log.Logger) error {
-	done := printLogMessagePeriodically(fmt.Sprintf("Trying to lock %s, seems like another process is running that blocks this %s", name, name), log)
-	defer close(done)
-
-	now := time.Now()
-	for time.Since(now) < time.Minute*5 {
-		locked, err := lock.TryLock()
-		if err != nil {
-			return err
-		} else if locked {
-			return nil
-		}
-
-		select {
-		case <-time.After(time.Second):
-			continue
-		case <-ctx.Done():
-			return ctx.Err()
-		}
-	}
-
-	return fmt.Errorf("timed out waiting to lock %s, seems like there is another process running on this machine that blocks it", name)
 }

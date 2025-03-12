@@ -1430,7 +1430,7 @@ func WithSignals(ctx context.Context) (context.Context, func()) {
 	signal.Notify(signals, os.Interrupt, syscall.SIGHUP, syscall.SIGTERM, syscall.SIGQUIT)
 	go func() {
 		select {
-		case _ = <-signals:
+		case <-signals:
 			cancel()
 		case <-ctx.Done():
 		}
