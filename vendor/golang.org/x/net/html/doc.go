@@ -78,11 +78,16 @@ example, to process each anchor node in depth-first order:
 	if err != nil {
 		// ...
 	}
-	for n := range doc.Descendants() {
+	var f func(*html.Node)
+	f = func(n *html.Node) {
 		if n.Type == html.ElementNode && n.Data == "a" {
 			// Do something with n...
 		}
+		for c := n.FirstChild; c != nil; c = c.NextSibling {
+			f(c)
+		}
 	}
+	f(doc)
 
 The relevant specifications include:
 https://html.spec.whatwg.org/multipage/syntax.html and

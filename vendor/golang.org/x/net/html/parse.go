@@ -840,10 +840,6 @@ func afterHeadIM(p *parser) bool {
 
 	p.parseImpliedToken(StartTagToken, a.Body, a.Body.String())
 	p.framesetOK = true
-	if p.tok.Type == ErrorToken {
-		// Stop parsing.
-		return true
-	}
 	return false
 }
 
@@ -1035,7 +1031,7 @@ func inBodyIM(p *parser) bool {
 			if p.tok.DataAtom == a.Input {
 				for _, t := range p.tok.Attr {
 					if t.Key == "type" {
-						if strings.EqualFold(t.Val, "hidden") {
+						if strings.ToLower(t.Val) == "hidden" {
 							// Skip setting framesetOK = false
 							return true
 						}
@@ -1463,7 +1459,7 @@ func inTableIM(p *parser) bool {
 			return inHeadIM(p)
 		case a.Input:
 			for _, t := range p.tok.Attr {
-				if t.Key == "type" && strings.EqualFold(t.Val, "hidden") {
+				if t.Key == "type" && strings.ToLower(t.Val) == "hidden" {
 					p.addElement()
 					p.oe.pop()
 					return true
