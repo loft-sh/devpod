@@ -7,7 +7,6 @@ package proxy
 import (
 	"context"
 	"net"
-	"net/netip"
 	"strings"
 )
 
@@ -58,8 +57,7 @@ func (p *PerHost) DialContext(ctx context.Context, network, addr string) (c net.
 }
 
 func (p *PerHost) dialerForRequest(host string) Dialer {
-	if nip, err := netip.ParseAddr(host); err == nil {
-		ip := net.IP(nip.AsSlice())
+	if ip := net.ParseIP(host); ip != nil {
 		for _, net := range p.bypassNetworks {
 			if net.Contains(ip) {
 				return p.bypass
@@ -110,8 +108,8 @@ func (p *PerHost) AddFromString(s string) {
 			}
 			continue
 		}
-		if nip, err := netip.ParseAddr(host); err == nil {
-			p.AddIP(net.IP(nip.AsSlice()))
+		if ip := net.ParseIP(host); ip != nil {
+			p.AddIP(ip)
 			continue
 		}
 		if strings.HasPrefix(host, "*.") {

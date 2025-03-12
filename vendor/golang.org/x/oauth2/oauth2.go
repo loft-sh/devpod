@@ -56,7 +56,7 @@ type Config struct {
 	// the OAuth flow, after the resource owner's URLs.
 	RedirectURL string
 
-	// Scopes specifies optional requested permissions.
+	// Scope specifies optional requested permissions.
 	Scopes []string
 
 	// authStyleCache caches which auth style to use when Endpoint.AuthStyle is
@@ -288,7 +288,7 @@ func (tf *tokenRefresher) Token() (*Token, error) {
 	if tf.refreshToken != tk.RefreshToken {
 		tf.refreshToken = tk.RefreshToken
 	}
-	return tk, nil
+	return tk, err
 }
 
 // reuseTokenSource is a TokenSource that holds a single token in memory
@@ -356,15 +356,11 @@ func NewClient(ctx context.Context, src TokenSource) *http.Client {
 	if src == nil {
 		return internal.ContextClient(ctx)
 	}
-	cc := internal.ContextClient(ctx)
 	return &http.Client{
 		Transport: &Transport{
-			Base:   cc.Transport,
+			Base:   internal.ContextClient(ctx).Transport,
 			Source: ReuseTokenSource(nil, src),
 		},
-		CheckRedirect: cc.CheckRedirect,
-		Jar:           cc.Jar,
-		Timeout:       cc.Timeout,
 	}
 }
 
