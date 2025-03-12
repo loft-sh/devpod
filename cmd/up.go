@@ -219,12 +219,6 @@ func (cmd *UpCmd) Run(
 		return err
 	}
 
-	// reload client to load Pro workspace configuration
-	client, log, err = cmd.prepareClient(ctx, devPodConfig, args)
-	if err != nil {
-		return err
-	}
-
 	// open ide
 	if cmd.OpenIDE {
 		ideConfig := client.WorkspaceConfig().IDE

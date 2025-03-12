@@ -152,6 +152,7 @@ func Get(ctx context.Context, devPodConfig *config.Config, args []string, change
 		if workspace == nil {
 			return nil, fmt.Errorf("workspace %s doesn't exist", args[0])
 		}
+
 		provider, workspace, machine, err = loadExistingWorkspace(devPodConfig, workspace.ID, changeLastUsed, log)
 		if err != nil {
 			return nil, err
@@ -352,10 +353,12 @@ func createWorkspace(
 		if err != nil {
 			return nil, nil, nil, fmt.Errorf("save config: %w", err)
 		}
+
 		err := resolveProInstance(ctx, devPodConfig, provider.Config.Name, workspace, log)
 		if err != nil {
 			return nil, nil, nil, err
 		}
+
 		workspace, err = providerpkg.LoadWorkspaceConfig(workspace.Context, workspace.ID)
 		if err != nil {
 			return nil, nil, nil, err
@@ -612,6 +615,7 @@ func resolveProInstance(ctx context.Context, devPodConfig *config.Config, provid
 	if err != nil {
 		return err
 	}
+
 	workspaceClient, err := getWorkspaceClient(devPodConfig, provider.Config, workspace, nil, log)
 	if err != nil {
 		return err

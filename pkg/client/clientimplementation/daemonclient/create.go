@@ -33,24 +33,18 @@ func (c *client) Create(ctx context.Context, stdin io.Reader, stdout io.Writer, 
 		return err
 	}
 
-	_, err = c.localClient.CreateWorkspace(ctx, instance)
+	instance, err = c.localClient.CreateWorkspace(ctx, instance)
 	if err != nil {
 		return err
 	}
 
-	// once we have the instance, update workspace and save config
-	// TODO: Do we need a file lock?
-	workspaceConfig, err := provider.LoadWorkspaceConfig(c.workspace.Context, c.workspace.ID)
-	if err != nil {
-		return fmt.Errorf("load workspace config: %w", err)
-	}
-	workspaceConfig.Pro = &provider.ProMetadata{
-		InstanceName: instance.GetName(),
-		Project:      project.ProjectFromNamespace(instance.GetNamespace()),
+	c.workspace.Pro = &provider.ProMetadata{
+		InstanceName: instance.Name,
+		Project:      project.ProjectFromNamespace(instance.Namespace),
 		DisplayName:  instance.Spec.DisplayName,
 	}
 
-	err = provider.SaveWorkspaceConfig(workspaceConfig)
+	err = provider.SaveWorkspaceConfig(c.workspace)
 	if err != nil {
 		return fmt.Errorf("save workspace config: %w", err)
 	}
