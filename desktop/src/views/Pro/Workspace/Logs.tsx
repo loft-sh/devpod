@@ -1,5 +1,5 @@
 import { TerminalSearchBar, useStreamingTerminal } from "@/components"
-import { useAction } from "@/contexts"
+import { useAction, useProContext } from "@/contexts"
 import { useWorkspaceActions } from "@/contexts/DevPodContext/workspaces/useWorkspace"
 import { CheckCircle, ExclamationCircle, ExclamationTriangle } from "@/icons"
 import { exists, useDownloadLogs } from "@/lib"
@@ -87,9 +87,9 @@ export function Logs({ host, instance }: TTabProps) {
 }
 
 type TActionAccordionItemProps = Readonly<{
+  host: string
   actionID: string
   isExpanded: boolean
-  host: string
   instanceID: string
 }>
 function ActionAccordionItem({
@@ -100,6 +100,10 @@ function ActionAccordionItem({
 }: TActionAccordionItemProps) {
   const action = useAction(actionID)
   const bgColor = useColorModeValue("white", "background.darkest")
+
+  const handleCancelClicked = () => {
+    action?.cancel()
+  }
 
   return action?.data ? (
     <>
@@ -148,7 +152,7 @@ function ActionAccordionItem({
               leftIcon={<HiStop />}
               onClick={(e) => {
                 e.stopPropagation()
-                action.cancel()
+                handleCancelClicked()
               }}>
               Cancel
             </Button>

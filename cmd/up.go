@@ -8,10 +8,12 @@ import (
 	"net"
 	"os"
 	"os/exec"
+	"os/signal"
 	"path/filepath"
 	"slices"
 	"strconv"
 	"strings"
+	"syscall"
 
 	"github.com/blang/semver"
 	"github.com/loft-sh/devpod/cmd/flags"
@@ -89,7 +91,9 @@ func NewUpCmd(f *flags.GlobalFlags) *cobra.Command {
 				cmd.StrictHostKeyChecking = true
 			}
 
-			ctx := cobraCmd.Context()
+			ctx, cancel := WithSignals(cobraCmd.Context())
+			defer cancel()
+
 			client, logger, err := cmd.prepareClient(ctx, devPodConfig, args)
 			if err != nil {
 				return fmt.Errorf("prepare workspace client: %w", err)
@@ -1418,4 +1422,22 @@ func (cmd *UpCmd) prepareClient(ctx context.Context, devPodConfig *config.Config
 	}
 
 	return client, logger, nil
+}
+
+func WithSignals(ctx context.Context) (context.Context, func()) {
+	ctx, cancel := context.WithCancel(ctx)
+	signals := make(chan os.Signal, 1)
+	signal.Notify(signals, os.Interrupt, syscall.SIGHUP, syscall.SIGTERM, syscall.SIGQUIT)
+	go func() {
+		select {
+		case _ = <-signals:
+			cancel()
+		case <-ctx.Done():
+		}
+	}()
+
+	return ctx, func() {
+		cancel()
+		signal.Stop(signals)
+	}
 }
