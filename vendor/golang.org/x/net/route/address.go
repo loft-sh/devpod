@@ -171,45 +171,55 @@ func (a *Inet6Addr) marshal(b []byte) (int, error) {
 // parseInetAddr parses b as an internet address for IPv4 or IPv6.
 func parseInetAddr(af int, b []byte) (Addr, error) {
 	const (
-		off4 = 4 // offset of in_addr
-		off6 = 8 // offset of in6_addr
+		off4    = 4  // offset of in_addr
+		off6    = 8  // offset of in6_addr
+		ipv4Len = 4  // length of IPv4 address in bytes
+		ipv6Len = 16 // length of IPv6 address in bytes
 	)
 	switch af {
 	case syscall.AF_INET:
-		if len(b) < (off4+1) || len(b) < int(b[0]) || b[0] == 0 {
+		if len(b) < int(b[0]) {
 			return nil, errInvalidAddr
 		}
 		sockAddrLen := int(b[0])
 		a := &Inet4Addr{}
-		n := off4 + 4
-		if sockAddrLen < n {
-			n = sockAddrLen
+		// sockAddrLen of 0 is valid and represents 0.0.0.0
+		if sockAddrLen > off4 {
+			// Calculate how many bytes of the address to copy:
+			// either full IPv4 length or the available length.
+			n := off4 + ipv4Len
+			if sockAddrLen < n {
+				n = sockAddrLen
+			}
+			copy(a.IP[:], b[off4:n])
 		}
-		copy(a.IP[:], b[off4:n])
 		return a, nil
 	case syscall.AF_INET6:
-		if len(b) < (off6+1) || len(b) < int(b[0]) || b[0] == 0 {
+		if len(b) < int(b[0]) {
 			return nil, errInvalidAddr
 		}
 		sockAddrLen := int(b[0])
-		n := off6 + 16
-		if sockAddrLen < n {
-			n = sockAddrLen
-		}
 		a := &Inet6Addr{}
-		if sockAddrLen == sizeofSockaddrInet6 {
-			a.ZoneID = int(nativeEndian.Uint32(b[24:28]))
-		}
-		copy(a.IP[:], b[off6:n])
-		if a.IP[0] == 0xfe && a.IP[1]&0xc0 == 0x80 || a.IP[0] == 0xff && (a.IP[1]&0x0f == 0x01 || a.IP[1]&0x0f == 0x02) {
-			// KAME based IPv6 protocol stack usually
-			// embeds the interface index in the
-			// interface-local or link-local address as
-			// the kernel-internal form.
-			id := int(bigEndian.Uint16(a.IP[2:4]))
-			if id != 0 {
-				a.ZoneID = id
-				a.IP[2], a.IP[3] = 0, 0
+		// sockAddrLen of 0 is valid and represents ::
+		if sockAddrLen > off6 {
+			n := off6 + ipv6Len
+			if sockAddrLen < n {
+				n = sockAddrLen
+			}
+			if sockAddrLen == sizeofSockaddrInet6 {
+				a.ZoneID = int(nativeEndian.Uint32(b[24:28]))
+			}
+			copy(a.IP[:], b[off6:n])
+			if a.IP[0] == 0xfe && a.IP[1]&0xc0 == 0x80 || a.IP[0] == 0xff && (a.IP[1]&0x0f == 0x01 || a.IP[1]&0x0f == 0x02) {
+				// KAME based IPv6 protocol stack usually
+				// embeds the interface index in the
+				// interface-local or link-local address as
+				// the kernel-internal form.
+				id := int(bigEndian.Uint16(a.IP[2:4]))
+				if id != 0 {
+					a.ZoneID = id
+					a.IP[2], a.IP[3] = 0, 0
+				}
 			}
 		}
 		return a, nil
@@ -386,13 +396,19 @@ func marshalAddrs(b []byte, as []Addr) (uint, error) {
 func parseAddrs(attrs uint, fn func(int, []byte) (int, Addr, error), b []byte) ([]Addr, error) {
 	var as [syscall.RTAX_MAX]Addr
 	af := int(syscall.AF_UNSPEC)
+	isInet := func(fam int) bool {
+		return fam == syscall.AF_INET || fam == syscall.AF_INET6
+	}
+	isMask := func(addrType uint) bool {
+		return addrType == syscall.RTAX_NETMASK || addrType == syscall.RTAX_GENMASK
+	}
 	for i := uint(0); i < syscall.RTAX_MAX && len(b) >= roundup(0); i++ {
 		if attrs&(1<<i) == 0 {
 			continue
 		}
 		if i <= syscall.RTAX_BRD {
-			switch b[1] {
-			case syscall.AF_LINK:
+			switch {
+			case b[1] == syscall.AF_LINK:
 				a, err := parseLinkAddr(b)
 				if err != nil {
 					return nil, err
@@ -403,17 +419,15 @@ func parseAddrs(attrs uint, fn func(int, []byte) (int, Addr, error), b []byte) (
 					return nil, errMessageTooShort
 				}
 				b = b[l:]
-			case syscall.AF_INET, syscall.AF_INET6:
-				// #70528: if the sockaddrlen is 0, no address to parse inside,
-				// skip over the record.
-				if b[0] > 0 {
+			case isInet(int(b[1])) || (isMask(i) && isInet(af)):
+				if isInet(int(b[1])) {
 					af = int(b[1])
-					a, err := parseInetAddr(af, b)
-					if err != nil {
-						return nil, err
-					}
-					as[i] = a
 				}
+				a, err := parseInetAddr(af, b)
+				if err != nil {
+					return nil, err
+				}
+				as[i] = a
 				l := roundup(int(b[0]))
 				if len(b) < l {
 					return nil, errMessageTooShort

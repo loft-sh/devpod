@@ -34,13 +34,6 @@ import (
 )
 
 var (
-<<<<<<< HEAD
-	VerboseLogs                    bool
-	logFrameWrites                 bool
-	logFrameReads                  bool
-	inTests                        bool
-	disableExtendedConnectProtocol bool
-=======
 	VerboseLogs    bool
 	logFrameWrites bool
 	logFrameReads  bool
@@ -54,7 +47,6 @@ var (
 	//
 	// Issue #71128.
 	disableExtendedConnectProtocol = true
->>>>>>> main
 )
 
 func init() {
@@ -67,13 +59,8 @@ func init() {
 		logFrameWrites = true
 		logFrameReads = true
 	}
-<<<<<<< HEAD
-	if strings.Contains(e, "http2xconnect=0") {
-		disableExtendedConnectProtocol = true
-=======
 	if strings.Contains(e, "http2xconnect=1") {
 		disableExtendedConnectProtocol = false
->>>>>>> main
 	}
 }
 

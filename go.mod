@@ -53,6 +53,9 @@ require (
 	github.com/spf13/pflag v1.0.5
 	github.com/takama/daemon v1.0.0
 	github.com/tidwall/jsonc v0.3.2
+	golang.org/x/crypto v0.36.0
+	golang.org/x/sys v0.31.0
+	golang.org/x/term v0.30.0
 	google.golang.org/grpc v1.69.4
 	google.golang.org/protobuf v1.35.2
 	gopkg.in/natefinch/npipe.v2 v2.0.0-20160621034901-c1b8fa8bdcce
@@ -264,11 +267,11 @@ require (
 	go.uber.org/zap v1.27.0 // indirect
 	go4.org/mem v0.0.0-20220726221520-4f986261bf13 // indirect
 	go4.org/netipx v0.0.0-20231129151722-fdeea329fbba // indirect
+	golang.org/x/exp v0.0.0-20250106191152-7588d65b2ba8 // indirect
 	golang.org/x/mod v0.22.0 // indirect
+	golang.org/x/oauth2 v0.28.0 // indirect
 	golang.zx2c4.com/wintun v0.0.0-20230126152724-0fa3db229ce2 // indirect
 	golang.zx2c4.com/wireguard/windows v0.5.3 // indirect
-	golang.org/x/exp v0.0.0-20241009180824-f66d83c29e7c // indirect
-	golang.org/x/oauth2 v0.28.0 // indirect
 	gomodules.xyz/jsonpatch/v2 v2.4.0 // indirect
 	google.golang.org/genproto/googleapis/api v0.0.0-20241021214115-324edc3d5d38 // indirect
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20241021214115-324edc3d5d38 // indirect
@@ -326,8 +329,8 @@ require (
 	golang.org/x/net v0.37.0 // indirect
 	golang.org/x/sync v0.12.0 // indirect
 	golang.org/x/text v0.23.0 // indirect
-	golang.org/x/time v0.6.0 // indirect
-	golang.org/x/tools v0.26.0 // indirect
+	golang.org/x/time v0.9.0 // indirect
+	golang.org/x/tools v0.29.0 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 )
 
