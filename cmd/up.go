@@ -100,7 +100,7 @@ func NewUpCmd(f *flags.GlobalFlags) *cobra.Command {
 			}
 			telemetry.CollectorCLI.SetClient(client)
 
-			return cmd.Run(ctx, devPodConfig, client, logger)
+			return cmd.Run(ctx, devPodConfig, client, args, logger)
 		},
 	}
 	upCmd.Flags().BoolVar(&cmd.ConfigureSSH, "configure-ssh", true, "If true will configure the ssh config to include the DevPod workspace")
@@ -145,6 +145,7 @@ func (cmd *UpCmd) Run(
 	ctx context.Context,
 	devPodConfig *config.Config,
 	client client2.BaseWorkspaceClient,
+	args []string,
 	log log.Logger,
 ) error {
 	// a reset implies a recreate
@@ -214,6 +215,12 @@ func (cmd *UpCmd) Run(
 
 	// setup dotfiles in the container
 	err = setupDotfiles(cmd.DotfilesSource, cmd.DotfilesScript, cmd.DotfilesScriptEnvFile, cmd.DotfilesScriptEnv, client, devPodConfig, log)
+	if err != nil {
+		return err
+	}
+
+	// reload client to load Pro workspace configuration
+	client, log, err = cmd.prepareClient(ctx, devPodConfig, args)
 	if err != nil {
 		return err
 	}
