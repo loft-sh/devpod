@@ -26,8 +26,9 @@ const (
 	DevPodWorkspaceLabel    = "devpod.sh/workspace"
 	DevPodWorkspaceUIDLabel = "devpod.sh/workspace-uid"
 
-	DevPodInfoAnnotation        = "devpod.sh/info"
-	DevPodLastAppliedAnnotation = "devpod.sh/last-applied-configuration"
+	DevPodInfoAnnotation                   = "devpod.sh/info"
+	DevPodLastAppliedAnnotation            = "devpod.sh/last-applied-configuration"
+	ClusterAutoscalerSaveToEvictAnnotation = "cluster-autoscaler.kubernetes.io/safe-to-evict"
 )
 
 var ExtraDevPodLabels = map[string]string{
@@ -223,7 +224,7 @@ func (k *KubernetesDriver) runContainer(
 	if k.options.KubernetesPullSecretsEnabled == "true" && pullSecretsCreated {
 		pod.Spec.ImagePullSecrets = []corev1.LocalObjectReference{{Name: getPullSecretsName(id)}}
 	}
-
+	pod.Spec.RestartPolicy = corev1.RestartPolicyNever
 	// try to get existing pod
 	existingPod, err := k.getPod(ctx, id)
 	if err != nil {
@@ -272,6 +273,7 @@ func (k *KubernetesDriver) runPod(ctx context.Context, id string, pod *corev1.Po
 		pod.Annotations = map[string]string{}
 	}
 	pod.Annotations[DevPodLastAppliedAnnotation] = string(lastAppliedConfigRaw)
+	pod.Annotations[ClusterAutoscalerSaveToEvictAnnotation] = "false"
 
 	// marshal the pod
 	podRaw, err := json.Marshal(pod)
