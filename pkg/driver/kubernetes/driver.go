@@ -32,9 +32,9 @@ func NewKubernetesDriver(workspaceInfo *provider2.AgentWorkspaceInfo, log log.Lo
 	// If the kube config has defined a namespace, use it, otherwise stick to the default namespace
 	if namespace == "" {
 		namespace = options.KubernetesNamespace
-		log.Debugf("Use Kubernetes Namespace '%s'", namespace)
+		log.Debugf("Use Default Kubernetes Namespace '%s'", namespace)
 	} else {
-		log.Debugf("Use Default Kubernetes Namespace '%s'", options.KubernetesNamespace)
+		log.Debugf("Use Kubernetes Namespace '%s'", namespace)
 	}
 
 	return &KubernetesDriver{
