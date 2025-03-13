@@ -56,7 +56,7 @@ func newTSServer(ctx context.Context, host, accessKey, userName, rootDir string,
 		ControlURL: baseUrl.String() + "/coordinator/",
 		AuthKey:    accessKey,
 		Dir:        rootDir,
-		Ephemeral:  false,
+		Ephemeral:  true,
 		Store:      store,
 	}
 
