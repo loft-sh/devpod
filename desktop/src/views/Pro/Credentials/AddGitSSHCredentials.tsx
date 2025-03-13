@@ -40,7 +40,7 @@ export function AddGitSSHCredentials({ isDisabled, onCreate }: TAddGitSSHCredent
       const privateKey = data[FieldName.KEY]
       const privateKeyBase64 = window.btoa(privateKey)
       onCreate(data[FieldName.NAME], {
-        password: privateKeyBase64,
+        key: privateKeyBase64,
       })
     } catch {
       // noop, shouldn't happen

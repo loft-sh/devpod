@@ -60,8 +60,9 @@ export function Workspace() {
       (close) => {
         workspace.rebuild()
         close()
+        instance?.id && navigate(Routes.toProWorkspace(host, instance.id))
       },
-      [workspace]
+      [workspace, navigate, host, instance]
     )
   )
   const { modal: resetModal, open: openResetModal } = useResetWorkspaceModal(
@@ -70,8 +71,9 @@ export function Workspace() {
       (close) => {
         workspace.reset()
         close()
+        instance?.id && navigate(Routes.toProWorkspace(host, instance.id))
       },
-      [workspace]
+      [workspace, navigate, host, instance]
     )
   )
   const { template, parameters } = useTemplate(instance)

@@ -245,7 +245,6 @@ func RefreshIDEOptions(devPodConfig *config.Config, workspace *provider.Workspac
 
 	// check if we need to modify workspace
 	if workspace.IDE.Name != ide || !reflect.DeepEqual(workspace.IDE.Options, retValues) {
-		workspace = provider.CloneWorkspace(workspace)
 		workspace.IDE.Name = ide
 		workspace.IDE.Options = retValues
 		err = provider.SaveWorkspaceConfig(workspace)
