@@ -175,6 +175,13 @@ func UpdateInstance(ctx context.Context, client client.Client, oldInstance *mana
 		return nil, err
 	}
 
+	// we don't want to patch status or metadata
+	newInstance = newInstance.DeepCopy()
+	newInstance.Status = oldInstance.Status
+	newInstance.ObjectMeta = oldInstance.ObjectMeta
+	newInstance.TypeMeta = oldInstance.TypeMeta
+
+	// create a patch from the old instance
 	patch := ctrlclient.MergeFrom(oldInstance)
 	data, err := patch.Data(newInstance)
 	if err != nil {
@@ -187,7 +194,7 @@ func UpdateInstance(ctx context.Context, client client.Client, oldInstance *mana
 		DevPodWorkspaceInstances(oldInstance.GetNamespace()).
 		Patch(ctx, oldInstance.GetName(), patch.Type(), data, metav1.PatchOptions{})
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("patch workspace instance: %w (patch: %s)", err, string(data))
 	}
 
 	return WaitForInstance(ctx, client, res, log)
