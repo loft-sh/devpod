@@ -181,7 +181,7 @@ func (s *WorkspaceServer) initTsServer(ctx context.Context, controlURL *url.URL)
 		ControlURL: controlURL.String() + "/coordinator/",
 		AuthKey:    s.config.AccessKey,
 		Dir:        s.config.RootDir,
-		Ephemeral:  false,
+		Ephemeral:  true,
 		Store:      fs,
 	}
 	if _, err := s.tsServer.Up(ctx); err != nil {

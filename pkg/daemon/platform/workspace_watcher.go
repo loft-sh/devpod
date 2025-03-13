@@ -66,7 +66,7 @@ func startWorkspaceWatcher(ctx context.Context, config watchConfig, onChange cha
 		return err
 	}
 
-	factory := informers.NewSharedInformerFactoryWithOptions(clientset, time.Second*60,
+	factory := informers.NewSharedInformerFactoryWithOptions(clientset, time.Second*30,
 		informers.WithNamespace(project.ProjectNamespace(config.Project)),
 	)
 	workspaceInformer := factory.Management().V1().DevPodWorkspaceInstances()
