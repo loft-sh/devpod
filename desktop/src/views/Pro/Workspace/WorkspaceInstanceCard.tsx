@@ -72,8 +72,9 @@ export function WorkspaceInstanceCard({
       (close) => {
         workspace.rebuild()
         close()
+        instance?.id && navigate(Routes.toProWorkspace(host, instance.id))
       },
-      [workspace]
+      [workspace, navigate, host, instance]
     )
   )
 
@@ -83,8 +84,9 @@ export function WorkspaceInstanceCard({
       (close) => {
         workspace.reset()
         close()
+        instance?.id && navigate(Routes.toProWorkspace(host, instance.id))
       },
-      [workspace]
+      [workspace, navigate, host, instance]
     )
   )
 

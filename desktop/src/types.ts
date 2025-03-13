@@ -293,7 +293,8 @@ export const UserSecret = {
 } as const
 export type TUserSecretType = (typeof UserSecret)[keyof typeof UserSecret]
 export type TGitCredentialData = {
-  password: string
+  password?: string
+  key?: string
   host?: string
   user?: string
   path?: string

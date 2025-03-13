@@ -68,9 +68,21 @@ func List(ctx context.Context, devPodConfig *config.Config, skipPro bool, owner 
 
 	// Set indexed by UID for deduplication
 	workspaces := map[string]*providerpkg.Workspace{}
-	// merge pro into local with pro taking precedence if UID matches
-	for _, workspace := range append(localWorkspaces, proWorkspaces...) {
+
+	// set local workspaces
+	for _, workspace := range localWorkspaces {
 		workspaces[workspace.UID] = workspace
+	}
+
+	// merge pro into local with pro taking precedence if UID matches
+	for _, proWorkspace := range proWorkspaces {
+		localWorkspace, ok := workspaces[proWorkspace.UID]
+		if ok {
+			// we want to use the local workspace IDE configuration
+			proWorkspace.IDE = localWorkspace.IDE
+		}
+
+		workspaces[proWorkspace.UID] = proWorkspace
 	}
 
 	retWorkspaces := []*providerpkg.Workspace{}
