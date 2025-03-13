@@ -52,6 +52,15 @@ const FormError = defineStyleConfig({
   },
 })
 
+const TooltipTheme = defineStyleConfig({
+  baseStyle(props) {
+    return {
+      bg: mode("gray.800", "gray.200")(props),
+      color: mode("gray.100", "gray.800")(props),
+    }
+  },
+})
+
 // It's ugly but it works: https://github.com/chakra-ui/chakra-ui/issues/1424#issuecomment-743342944
 // Unfortunately there is no other way of overring the default placement.
 Tooltip.defaultProps = { ...Tooltip.defaultProps, placement: "top" }
@@ -145,5 +154,6 @@ export const theme = extendTheme({
     Select,
     Text,
     Textarea,
+    Tooltip: TooltipTheme,
   },
 } satisfies ThemeOverride) as Theme

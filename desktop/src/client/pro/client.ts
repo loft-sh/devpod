@@ -348,6 +348,8 @@ type TWorksaceListener = (newWorkspaces: readonly ProWorkspaceInstance[]) => voi
 
 class WorkspaceWatcher {
   private abortController = new AbortController()
+  private reader: ReadableStreamDefaultReader | undefined
+  private buffer: string = ""
 
   constructor(
     private readonly hostID: string,
@@ -358,6 +360,9 @@ class WorkspaceWatcher {
 
   public cancel() {
     this.abortController.abort("watcher cancelled")
+    this.reader?.cancel()
+    this.reader = undefined
+    this.buffer = ""
   }
 
   public watch(): () => void {
@@ -374,16 +379,18 @@ class WorkspaceWatcher {
         signal: this.abortController.signal,
       })
         .then((res) => {
-          const reader = res.body?.getReader()
+          this.reader = res.body?.getReader()
 
-          return this.read(reader)
+          return this.read()
         })
         .catch((err) => {
           globalClient.log("info", `[${this.hostID}] watch workspaces error: ${err}`)
         })
-        .finally(() => {
-          if (!this.abortController.signal.aborted) {
+        .finally(async () => {
+          if (!this.abortController.signal.aborted && !(await this.reader?.closed)) {
             // Either the webview or the daemon terminated the watcher, try to reconnect
+            this.reader = undefined
+            this.buffer = ""
             this.watch()
           }
           // Otherwise caller is responsible for reestablishing connection
@@ -394,26 +401,25 @@ class WorkspaceWatcher {
     }
   }
 
-  private async read(reader: ReadableStreamDefaultReader | undefined): Promise<unknown> {
+  private async read(): Promise<unknown> {
     const decoder = new TextDecoder()
-    let buffer = ""
 
     try {
-      if (!reader) {
+      if (!this.reader) {
         return
       }
 
-      const { done, value } = await reader.read()
+      const { done, value } = await this.reader.read()
       if (done) {
         return
       }
-      buffer += decoder.decode(value, { stream: true })
+      this.buffer += decoder.decode(value, { stream: true })
       // NOTE: This relies on sender to end every message with a newline character. Make sure you also update the daemon server if you change this!
-      const lines = buffer.split("\n")
+      const lines = this.buffer.split("\n")
       // Keep the last partial line in the buffer
       const maybeLine = lines.pop()
       if (maybeLine !== undefined) {
-        buffer = maybeLine
+        this.buffer = maybeLine
       }
 
       lines.forEach((line) => {
@@ -434,7 +440,7 @@ class WorkspaceWatcher {
       })
 
       // Continue reading
-      return this.read(reader)
+      this.read()
     } catch (err) {
       return err
     }
