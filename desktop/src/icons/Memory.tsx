@@ -8,8 +8,8 @@ export const Memory = createIcon({
   path: [
     <path
       key="1"
-      fill-rule="evenodd"
-      clip-rule="evenodd"
+      fillRule="evenodd"
+      clipRule="evenodd"
       d="M17.5 2.50012H6.5V21.5001H17.5V2.50012ZM6.5 1.00012C5.67157 1.00012 5 1.67169 5 2.50012V21.5001C5 22.3285 5.67157 23.0001 6.5 23.0001H17.5C18.3284 23.0001 19 22.3285 19 21.5001V2.50012C19 1.67169 18.3284 1.00012 17.5 1.00012H6.5Z"
     />,
     <path key="2" d="M1 5.00012H5V7.00012H1V5.00012Z" />,

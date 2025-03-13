@@ -419,6 +419,7 @@ function KubernetesDetails({ status }: TKubernetesDetailsProps) {
       {resources.map((resource) => {
         return (
           <StackedWorkspaceInfoDetail
+            key={resource.type}
             icon={resource.icon ?? Database}
             label={<Text textTransform={"capitalize"}>{resource.label ?? resource.type}</Text>}
             tooltipLabel={
