@@ -51,7 +51,7 @@ func openViaBrowser(workspace, folder string, newWindow bool, flavor Flavor, log
 	err := open.Run(openURL)
 	if err != nil {
 		log.Debugf("Starting %s caused error: %v", flavor, err)
-		log.Errorf("Seems like you don't have %s installed on your computer locally", flavor)
+		log.Errorf("Seems like you don't have %s installed on your computer locally", flavor.DisplayName())
 		return err
 	}
 
