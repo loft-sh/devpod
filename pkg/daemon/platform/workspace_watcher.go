@@ -10,6 +10,7 @@ import (
 	managementv1 "github.com/loft-sh/api/v4/pkg/apis/management/v1"
 	storagev1 "github.com/loft-sh/api/v4/pkg/apis/storage/v1"
 	loftclient "github.com/loft-sh/api/v4/pkg/clientset/versioned"
+	typedmanagementv1 "github.com/loft-sh/api/v4/pkg/clientset/versioned/typed/management/v1"
 	informers "github.com/loft-sh/api/v4/pkg/informers/externalversions"
 	informermanagementv1 "github.com/loft-sh/api/v4/pkg/informers/externalversions/management/v1"
 	"github.com/loft-sh/devpod/pkg/platform"
@@ -19,6 +20,7 @@ import (
 	"github.com/loft-sh/devpod/pkg/ts"
 	"github.com/loft-sh/log"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/cache"
 	"tailscale.com/client/tailscale"
 	"tailscale.com/ipn/ipnstate"
@@ -59,7 +61,7 @@ func startWorkspaceWatcher(ctx context.Context, config watchConfig, onChange cha
 		return err
 	}
 
-	clientset, err := loftclient.NewForConfig(managementConfig)
+	clientset, err := getClientSet(managementConfig)
 	if err != nil {
 		return err
 	}
@@ -372,4 +374,41 @@ func (s *instanceStore) updateWorkspaceLatencies(ctx context.Context) {
 	}
 
 	wg.Wait()
+}
+
+type extendedClientset struct {
+	*loftclient.Clientset
+	ManagementClient typedmanagementv1.ManagementV1Interface
+}
+
+func (c *extendedClientset) ManagementV1() typedmanagementv1.ManagementV1Interface {
+	return c.ManagementClient
+}
+
+var _ rest.Interface = (*extendedRESTClient)(nil)
+
+type extendedRESTClient struct {
+	rest.Interface
+}
+
+func (e *extendedRESTClient) Get() *rest.Request {
+	req := e.Interface.Get()
+	// We need to pass this to the backend for more information on the management CRD status
+	req.Param("extended", "true")
+
+	return req
+}
+
+func getClientSet(config *rest.Config) (loftclient.Interface, error) {
+	clientset, err := loftclient.NewForConfig(config)
+	if err != nil {
+		return nil, err
+	}
+	mv1 := clientset.ManagementV1()
+	c := typedmanagementv1.New(&extendedRESTClient{Interface: mv1.RESTClient()})
+
+	return &extendedClientset{
+		Clientset:        clientset,
+		ManagementClient: c,
+	}, nil
 }

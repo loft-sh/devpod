@@ -3,46 +3,29 @@ import {
   ProWorkspaceInstance,
   useProContext,
   useProjectClusters,
-  useTemplates,
   useWorkspace,
   useWorkspaceActions,
 } from "@/contexts"
-import { Clock, Folder, Git, Globe, Image, Status } from "@/icons"
 import {
-  Annotations,
-  Source,
   getDisplayName,
-  getLastActivity,
   useDeleteWorkspaceModal,
   useRebuildWorkspaceModal,
   useResetWorkspaceModal,
   useStopWorkspaceModal,
 } from "@/lib"
+import { useStoreTroubleshoot } from "@/lib/useStoreTroubleshoot"
 import { Routes } from "@/routes"
-import {
-  Box,
-  Center,
-  ComponentWithAs,
-  HStack,
-  IconProps,
-  Spinner,
-  Text,
-  VStack,
-  useColorModeValue,
-} from "@chakra-ui/react"
-import { ManagementV1DevPodWorkspaceTemplate } from "@loft-enterprise/client/gen/models/managementV1DevPodWorkspaceTemplate"
-import dayjs from "dayjs"
-import { ReactElement, cloneElement, useCallback, useEffect, useMemo } from "react"
+import { Box, Center, Spinner, Text, VStack } from "@chakra-ui/react"
+import { useCallback, useEffect, useMemo } from "react"
 import { useNavigate, useParams } from "react-router-dom"
 import { BackToWorkspaces } from "../BackToWorkspaces"
 import { WorkspaceTabs } from "./Tabs"
 import { WorkspaceCardHeader } from "./WorkspaceCardHeader"
-import { WorkspaceStatus } from "./WorkspaceStatus"
-import { useStoreTroubleshoot } from "@/lib/useStoreTroubleshoot"
+import { WorkspaceDetails } from "./WorkspaceDetails"
+import { useTemplate } from "./useTemplate"
 
 export function Workspace() {
   const params = useParams<{ workspace: string }>()
-  const { data: templates } = useTemplates()
   const { data: projectClusters } = useProjectClusters()
   const { host, isLoadingWorkspaces } = useProContext()
   const navigate = useNavigate()
@@ -91,13 +74,8 @@ export function Workspace() {
       [workspace]
     )
   )
-  const template = useMemo(
-    () =>
-      templates?.workspace.find(
-        (template) => template.metadata?.name === instance?.spec?.templateRef?.name
-      ),
-    [instance, templates]
-  )
+  const { template, parameters } = useTemplate(instance)
+
   const cluster = useMemo(() => {
     if (instance?.spec?.runnerRef?.runner) {
       return projectClusters?.runners?.find(
@@ -160,12 +138,6 @@ export function Workspace() {
     navigate(Routes.toProWorkspace(host, instance.id))
   }
 
-  const sourceInfo = getSourceInfo(
-    Source.fromRaw(instance.metadata?.annotations?.[Annotations.WorkspaceSource])
-  )
-
-  const lastActivity = getLastActivity(instance)
-
   return (
     <>
       <VStack align="start" width="full" height="full">
@@ -184,33 +156,12 @@ export function Workspace() {
             </WorkspaceCardHeader>
           </Box>
 
-          <HStack mt="4" gap="6" flexWrap="wrap">
-            <WorkspaceInfoDetail
-              label={
-                <WorkspaceStatus
-                  status={instance.status}
-                  deletionTimestamp={instance.metadata?.deletionTimestamp}
-                />
-              }
-            />
-            <WorkspaceInfoDetail
-              icon={Status}
-              label={
-                <HStack whiteSpace="nowrap" wordBreak={"keep-all"}>
-                  <Text>ID: {instance.id}</Text>
-                </HStack>
-              }
-            />
-            {sourceInfo && <WorkspaceInfoDetail icon={sourceInfo.icon} label={sourceInfo.label} />}
-            <WorkspaceInfoDetail icon={Status} label={formatTemplateDetail(instance, template)} />
-            <WorkspaceInfoDetail icon={Globe} label={<Text>{getDisplayName(cluster)}</Text>} />
-            {lastActivity && (
-              <WorkspaceInfoDetail
-                icon={Clock}
-                label={<Text>{dayjs(lastActivity).from(Date.now())}</Text>}
-              />
-            )}
-          </HStack>
+          <WorkspaceDetails
+            instance={instance}
+            template={template}
+            cluster={cluster}
+            parameters={parameters}
+          />
         </VStack>
         <Box height="full">
           <WorkspaceTabs
@@ -227,65 +178,5 @@ export function Workspace() {
       {resetModal}
       {deleteModal}
     </>
-  )
-}
-
-type TWorkspaceInfoDetailProps = Readonly<{
-  icon?: ComponentWithAs<"svg", IconProps>
-  label: ReactElement
-}>
-function WorkspaceInfoDetail({ icon: Icon, label }: TWorkspaceInfoDetailProps) {
-  const color = useColorModeValue("gray.600", "gray.400")
-  const l = cloneElement(label, { color })
-
-  return (
-    <HStack gap="1" whiteSpace="nowrap" userSelect="text" cursor="text">
-      {Icon && <Icon boxSize="5" color="gray.500" />}
-      {l}
-    </HStack>
-  )
-}
-
-function getSourceInfo(
-  source: Source | undefined
-): Readonly<{ icon: ComponentWithAs<"svg", IconProps>; label: ReactElement }> | undefined {
-  if (!source) {
-    return undefined
-  }
-
-  switch (source.type) {
-    case "git":
-      return {
-        icon: Git,
-        label: <Text>{source.value}</Text>,
-      }
-    case "image":
-      return {
-        icon: Image,
-        label: <Text>{source.value}</Text>,
-      }
-    case "local":
-      return {
-        icon: Folder,
-        label: <Text>{source.value}</Text>,
-      }
-  }
-}
-
-function formatTemplateDetail(
-  instance: ProWorkspaceInstance,
-  template: ManagementV1DevPodWorkspaceTemplate | undefined
-): ReactElement {
-  const templateName = instance.spec?.templateRef?.name
-  const templateDisplayName = getDisplayName(template, templateName)
-  let templateVersion = instance.spec?.templateRef?.version
-  if (!templateVersion) {
-    templateVersion = "latest"
-  }
-
-  return (
-    <Text>
-      {templateDisplayName}/{templateVersion}
-    </Text>
   )
 }

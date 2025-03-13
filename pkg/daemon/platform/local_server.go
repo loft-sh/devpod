@@ -142,6 +142,7 @@ func (l *localServer) ListenAndServe() error {
 		err := l.httpServer.Serve(l.listener)
 		errChan <- err
 	}()
+
 	return <-errChan
 }
 
