@@ -1,5 +1,6 @@
 import { defineStyleConfig } from "@chakra-ui/react"
 import { mode } from "@chakra-ui/theme-tools"
+import { theme as defaultTheme } from "@chakra-ui/theme"
 
 export const Button = defineStyleConfig({
   defaultProps: {
@@ -46,18 +47,38 @@ export const Button = defineStyleConfig({
       }
     },
     solid(props) {
+      let bgDark = "gray.800"
+      if (props.colorScheme === "primary") {
+        bgDark = ""
+      } else {
+        bgDark = defaultTheme.components.Button.variants?.solid(props).bg ?? ""
+      }
+
+      let bgHoverDark = "gray.700"
+      if (props.colorScheme === "primary") {
+        bgHoverDark = ""
+      } else {
+        bgHoverDark = defaultTheme.components.Button.variants?.solid(props)._hover.bg ?? ""
+      }
+      let bgActiveDark = "gray.700"
+      if (props.colorScheme === "primary") {
+        bgActiveDark = ""
+      } else {
+        bgActiveDark = defaultTheme.components.Button.variants?.solid(props)._active.bg ?? ""
+      }
+
       return {
         _dark: {
-          bg: "gray.800",
+          bg: bgDark,
         },
         _hover: {
           _dark: {
-            bg: props.colorScheme == "primary" ? "" : "gray.700",
+            bg: bgHoverDark,
           },
         },
         _active: {
           _dark: {
-            bg: props.colorScheme == "primary" ? "" : "gray.800",
+            bg: bgActiveDark,
           },
         },
       }
