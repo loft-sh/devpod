@@ -20,7 +20,8 @@ type Client struct {
 	config *rest.Config
 }
 
-func NewClient(kubeConfig, kubeContext string) (*Client, error) {
+// NewClient constructs a struct wrapping the kubernetes client that is used by the kubernetes driver
+func NewClient(kubeConfig, kubeContext string) (*Client, string, error) {
 	if kubeConfig == "" {
 		kubeConfig = os.Getenv("KUBECONFIG")
 	}
@@ -34,23 +35,30 @@ func NewClient(kubeConfig, kubeContext string) (*Client, error) {
 	}
 
 	// load kubernetes config
-	config, err := clientcmd.NewNonInteractiveDeferredLoadingClientConfig(
+	config := clientcmd.NewNonInteractiveDeferredLoadingClientConfig(
 		clientConfigLoadingRules,
 		&clientcmd.ConfigOverrides{CurrentContext: kubeContext},
-	).ClientConfig()
+	)
+
+	clientConfig, err := config.ClientConfig()
 	if err != nil {
-		return nil, fmt.Errorf("failed to load kubernetes config: %w", err)
+		return nil, "", fmt.Errorf("failed to load kubernetes config: %w", err)
 	}
 
-	kubeClient, err := kubernetes.NewForConfig(config)
+	namespace, _, err := config.Namespace()
 	if err != nil {
-		return nil, err
+		return nil, "", fmt.Errorf("failed to load kubernetes namespace from config: %w", err)
+	}
+
+	kubeClient, err := kubernetes.NewForConfig(clientConfig)
+	if err != nil {
+		return nil, "", err
 	}
 
 	return &Client{
 		client: kubeClient,
-		config: config,
-	}, nil
+		config: clientConfig,
+	}, namespace, nil
 }
 
 func (c *Client) Client() *kubernetes.Clientset {

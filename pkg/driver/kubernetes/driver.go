@@ -15,11 +15,9 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
+// NewKubernetesDriver constructs a struct capable of provisioning a workspace and it's resources using kubernetes
 func NewKubernetesDriver(workspaceInfo *provider2.AgentWorkspaceInfo, log log.Logger) (driver.ReprovisioningDriver, error) {
 	options := workspaceInfo.Agent.Kubernetes
-	if options.KubernetesNamespace != "" {
-		log.Debugf("Use Kubernetes Namespace '%s'", options.KubernetesNamespace)
-	}
 	if options.KubernetesConfig != "" {
 		log.Debugf("Use Kubernetes Config '%s'", options.KubernetesConfig)
 	}
@@ -27,14 +25,20 @@ func NewKubernetesDriver(workspaceInfo *provider2.AgentWorkspaceInfo, log log.Lo
 		log.Debugf("Use Kubernetes Context '%s'", options.KubernetesContext)
 	}
 
-	client, err := NewClient(options.KubernetesConfig, options.KubernetesContext)
+	client, namespace, err := NewClient(options.KubernetesConfig, options.KubernetesContext)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create kubernetes client: %w", err)
 	}
+	// Namespace can be defined in many ways, we first check the kube config, then the provider options KUBERNETES_NAMESPACE, then failing that the default "devpod"
+	if namespace == "" || namespace == "default" || options.KubernetesNamespace != "devpod" {
+		log.Debugf("Using Explicit Kubernetes Namespace")
+		namespace = options.KubernetesNamespace
+	}
+	log.Debugf("Use Kubernetes Namespace '%s'", namespace)
 
 	return &KubernetesDriver{
 		client:    client,
-		namespace: options.KubernetesNamespace,
+		namespace: namespace,
 
 		options: &options,
 		Log:     log,
