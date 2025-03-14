@@ -29,13 +29,12 @@ func NewKubernetesDriver(workspaceInfo *provider2.AgentWorkspaceInfo, log log.Lo
 	if err != nil {
 		return nil, fmt.Errorf("failed to create kubernetes client: %w", err)
 	}
-	// If the kube config has defined a namespace, use it, otherwise stick to the default namespace
-	if namespace == "" {
+	// Namespace can be defined in many ways, we first check the kube config, then the provider options KUBERNETES_NAMESPACE, then failing that the default "devpod"
+	if namespace == "" || options.KubernetesNamespace != "devpod" {
+		log.Debugf("Using Explicit Kubernetes Namespace")
 		namespace = options.KubernetesNamespace
-		log.Debugf("Use Default Kubernetes Namespace '%s'", namespace)
-	} else {
-		log.Debugf("Use Kubernetes Namespace '%s'", namespace)
 	}
+	log.Debugf("Use Kubernetes Namespace '%s'", namespace)
 
 	return &KubernetesDriver{
 		client:    client,
