@@ -49,9 +49,7 @@ func GetURL(host string, port int) string {
 }
 
 // WaitHostReachable polls until the given host is reachable via ts.
-func WaitHostReachable(ctx context.Context, lc *tailscale.LocalClient, addr Addr, log log.Logger) error {
-	const maxRetries = 20
-
+func WaitHostReachable(ctx context.Context, lc *tailscale.LocalClient, addr Addr, maxRetries int, withDelay bool, log log.Logger) error {
 	for i := 0; i < maxRetries; i++ {
 		timeoutCtx, cancel := context.WithTimeout(ctx, 5*time.Second)
 		defer cancel()
@@ -61,6 +59,9 @@ func WaitHostReachable(ctx context.Context, lc *tailscale.LocalClient, addr Addr
 			return nil // Host is reachable
 		}
 		log.Debugf("Host %s not reachable, retrying... (%d/%d)", addr.String(), i+1, maxRetries)
+		if withDelay {
+			time.Sleep(200 * time.Millisecond)
+		}
 
 		select {
 		case <-ctx.Done():

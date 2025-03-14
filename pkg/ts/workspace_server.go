@@ -29,6 +29,8 @@ import (
 const (
 	// TSPortForwardPort is the fixed port on which the workspace WebSocket reverse proxy listens.
 	TSPortForwardPort string = "12051"
+
+	netMapCooldown = 30 * time.Second
 )
 
 // WorkspaceServer holds the TSNet server and its listeners.
@@ -84,21 +86,24 @@ func (s *WorkspaceServer) Start(ctx context.Context) error {
 		return err
 	}
 
-	// debug: write the netmap to a file
-	if os.Getenv("DEVPOD_DEBUG_DAEMON") == "true" {
-		go func() {
-			if err := WatchNetmap(ctx, lc, func(netMap *netmap.NetworkMap) {
-				nm, err := json.Marshal(netMap)
-				if err != nil {
-					s.log.Errorf("Failed to marshal netmap: %v", err)
-				} else {
-					_ = os.WriteFile(filepath.Join(s.config.RootDir, "netmap.json"), nm, 0o644)
-				}
-			}); err != nil {
-				s.log.Errorf("Failed to watch netmap: %v", err)
+	go func() {
+		lastUpdate := time.Now()
+		if err := WatchNetmap(ctx, lc, func(netMap *netmap.NetworkMap) {
+			if time.Since(lastUpdate) < netMapCooldown {
+				return
 			}
-		}()
-	}
+			lastUpdate = time.Now()
+
+			nm, err := json.Marshal(netMap)
+			if err != nil {
+				s.log.Errorf("Failed to marshal netmap: %v", err)
+			} else {
+				_ = os.WriteFile(filepath.Join(s.config.RootDir, "netmap.json"), nm, 0o644)
+			}
+		}); err != nil {
+			s.log.Errorf("Failed to watch netmap: %v", err)
+		}
+	}()
 
 	// Wait until the context is canceled.
 	<-ctx.Done()

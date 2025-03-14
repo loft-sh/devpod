@@ -156,6 +156,12 @@ func (cmd *SSHCmd) jumpContainerTailscale(
 	log log.Logger,
 ) error {
 	log.Debugf("Starting tailscale connection")
+
+	err := client.CheckWorkspaceReachable(ctx)
+	if err != nil {
+		return err
+	}
+
 	toolSSHClient, sshClient, err := client.SSHClients(ctx, cmd.User)
 	if err != nil {
 		return err

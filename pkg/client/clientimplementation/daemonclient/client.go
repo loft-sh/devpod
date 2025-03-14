@@ -22,6 +22,7 @@ import (
 	"github.com/loft-sh/devpod/pkg/ts"
 	"github.com/loft-sh/log"
 	perrors "github.com/pkg/errors"
+	"github.com/skratchdot/open-golang/open"
 	"golang.org/x/crypto/ssh"
 	"tailscale.com/client/tailscale"
 	"tailscale.com/tailcfg"
@@ -123,27 +124,54 @@ func (c *client) RefreshOptions(ctx context.Context, userOptionsRaw []string, re
 	return nil
 }
 
+func (c *client) CheckWorkspaceReachable(ctx context.Context) error {
+	wAddr, err := c.getWorkspaceAddress()
+	if err != nil {
+		return fmt.Errorf("resolve workspace hostname: %w", err)
+	}
+	err = ts.WaitHostReachable(ctx, c.tsClient, wAddr, 5, false, c.log)
+	if err != nil {
+		instance, getWorkspaceErr := c.localClient.GetWorkspace(ctx, c.workspace.UID)
+		// if we can't reach the daemon try to start the desktop app
+		if daemon.IsDaemonNotAvailableError(getWorkspaceErr) {
+			deeplink := fmt.Sprintf("devpod://open?workspace=%s&provider=%s&source=%s&ide=%s", c.workspace.ID, c.config.Name, c.workspace.Source.String(), c.workspace.IDE.Name)
+			openErr := open.Run(deeplink)
+			if openErr != nil {
+				return getWorkspaceErr // inform user about daemon state
+			}
+			// give desktop app a chance to start
+			time.Sleep(2 * time.Second)
+
+			// let's try again
+			err = ts.WaitHostReachable(ctx, c.tsClient, wAddr, 20, true, c.log)
+			if err != nil {
+				instance, getWorkspaceErr = c.localClient.GetWorkspace(ctx, c.workspace.UID)
+			} else {
+				return nil
+			}
+		}
+
+		if getWorkspaceErr != nil {
+			return fmt.Errorf("couldn't get workspace: %w", getWorkspaceErr)
+		} else if instance.Status.Phase != storagev1.InstanceReady {
+			return fmt.Errorf("workspace is '%s', please run `devpod up %s` to start it again", instance.Status.Phase, c.workspace.ID)
+		} else if instance.Status.LastWorkspaceStatus != storagev1.WorkspaceStatusRunning {
+			return fmt.Errorf("workspace is '%s', please run `devpod up %s` to start it again", instance.Status.LastWorkspaceStatus, c.workspace.ID)
+		}
+
+		return fmt.Errorf("reach host: %w", err)
+	}
+
+	c.log.Debugf("Host %s is reachable. Proceeding with SSH session...", wAddr.Host())
+
+	return nil
+}
+
 func (c *client) SSHClients(ctx context.Context, user string) (toolClient *ssh.Client, userClient *ssh.Client, err error) {
 	wAddr, err := c.getWorkspaceAddress()
 	if err != nil {
 		return nil, nil, fmt.Errorf("resolve workspace hostname: %w", err)
 	}
-
-	err = ts.WaitHostReachable(ctx, c.tsClient, wAddr, c.log)
-	if err != nil {
-		instance, getWorkspaceErr := c.localClient.GetWorkspace(ctx, c.workspace.UID)
-		if getWorkspaceErr != nil {
-			return nil, nil, fmt.Errorf("couldn't get workspace: %w", getWorkspaceErr)
-		} else if instance.Status.Phase != storagev1.InstanceReady {
-			return nil, nil, fmt.Errorf("workspace is '%s', please run `devpod up %s` to start it again", instance.Status.Phase, c.workspace.ID)
-		} else if instance.Status.LastWorkspaceStatus != storagev1.WorkspaceStatusRunning {
-			return nil, nil, fmt.Errorf("workspace is '%s', please run `devpod up %s` to start it again", instance.Status.LastWorkspaceStatus, c.workspace.ID)
-		}
-
-		return nil, nil, fmt.Errorf("reach host: %w", err)
-	}
-
-	c.log.Debugf("Host %s is reachable. Proceeding with SSH session...", wAddr.Host())
 
 	toolClient, err = ts.WaitForSSHClient(ctx, c.tsClient, wAddr.Host(), wAddr.Port(), "root", c.log)
 	if err != nil {
