@@ -81,6 +81,9 @@ type DaemonClient interface {
 	// SSHClients returns an SSH client for the tool and one for the actual user
 	SSHClients(ctx context.Context, user string) (*ssh.Client, *ssh.Client, error)
 
+	// CheckWorkspaceReachable checks if the given workspace is reachable from the current machine
+	CheckWorkspaceReachable(ctx context.Context) error
+
 	// DirectTunnel forwards stdio to the workspace
 	DirectTunnel(ctx context.Context, stdin io.Reader, stdout io.Writer) error
 
