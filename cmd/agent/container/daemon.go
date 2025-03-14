@@ -226,7 +226,7 @@ func runNetworkServer(ctx context.Context, cmd *DaemonCmd, errChan chan<- error,
 		},
 	}, logger)
 	if err := tsServer.Start(ctx); err != nil {
-		errChan <- fmt.Errorf("failed to start network server: %w", err)
+		errChan <- fmt.Errorf("network server: %w", err)
 	}
 }
 

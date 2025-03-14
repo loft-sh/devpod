@@ -18,11 +18,10 @@ import (
 	"github.com/loft-sh/log"
 
 	"github.com/loft-sh/devpod/pkg/platform/client"
-	"github.com/loft-sh/devpod/pkg/provider"
 	sshServer "github.com/loft-sh/devpod/pkg/ssh/server"
 	"tailscale.com/client/tailscale"
 	"tailscale.com/envknob"
-	"tailscale.com/ipn/store"
+	"tailscale.com/ipn/store/mem"
 	"tailscale.com/tsnet"
 	"tailscale.com/types/netmap"
 )
@@ -169,10 +168,7 @@ func (s *WorkspaceServer) setupControlURL(ctx context.Context) (*url.URL, error)
 
 // initTsServer initializes the TSNet server.
 func (s *WorkspaceServer) initTsServer(ctx context.Context, controlURL *url.URL) error {
-	fs, err := store.NewFileStore(s.config.LogF, filepath.Join(s.config.RootDir, provider.DaemonStateFile))
-	if err != nil {
-		return fmt.Errorf("failed to create file store: %w", err)
-	}
+	store, _ := mem.New(s.config.LogF, "")
 	envknob.Setenv("TS_DEBUG_TLS_DIAL_INSECURE_SKIP_VERIFY", "true")
 	s.log.Infof("Connecting to control URL - %s/coordinator/", controlURL.String())
 	s.tsServer = &tsnet.Server{
@@ -182,10 +178,10 @@ func (s *WorkspaceServer) initTsServer(ctx context.Context, controlURL *url.URL)
 		AuthKey:    s.config.AccessKey,
 		Dir:        s.config.RootDir,
 		Ephemeral:  true,
-		Store:      fs,
+		Store:      store,
 	}
 	if _, err := s.tsServer.Up(ctx); err != nil {
-		return fmt.Errorf("failed to start tsnet server: %w", err)
+		return err
 	}
 	return nil
 }
