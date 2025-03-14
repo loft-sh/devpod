@@ -6,6 +6,7 @@ import (
 	"net/url"
 	"strings"
 
+	"github.com/blang/semver"
 	proflags "github.com/loft-sh/devpod/cmd/pro/flags"
 	providercmd "github.com/loft-sh/devpod/cmd/provider"
 	"github.com/loft-sh/devpod/pkg/config"
@@ -34,10 +35,9 @@ type LoginCmd struct {
 
 	Options []string
 
-	Login         bool
-	Use           bool
-	ForceBrowser  bool
-	ProxyProvider bool
+	Login        bool
+	Use          bool
+	ForceBrowser bool
 }
 
 // NewLoginCmd creates a new command
@@ -64,7 +64,6 @@ func NewLoginCmd(flags *proflags.GlobalFlags) *cobra.Command {
 	loginCmd.Flags().StringVar(&cmd.Version, "version", "", "The version to use for the DevPod provider")
 	loginCmd.Flags().StringArrayVarP(&cmd.Options, "option", "o", []string{}, "Provider option in the form KEY=VALUE")
 	loginCmd.Flags().BoolVar(&cmd.ForceBrowser, "force-browser", false, "Force login through browser")
-	loginCmd.Flags().BoolVar(&cmd.ProxyProvider, "proxy-provider", false, "Install proxy provider instead of built-in daemon provider")
 
 	loginCmd.Flags().StringVar(&cmd.ProviderSource, "provider-source", "", "The source of the provider")
 	_ = loginCmd.Flags().MarkHidden("provider-source")
@@ -143,9 +142,18 @@ func (cmd *LoginCmd) Run(ctx context.Context, fullURL string, log log.Logger) er
 			CreationTimestamp: types.Now(),
 		}
 
-		// proxy providers are deprecated and shouldn't be used
-		// unless explicitly requiring one
-		if cmd.ProxyProvider {
+		remoteVersion, err := platform.GetDevPodVersion(fullURL)
+		if err != nil {
+			return err
+		}
+		rv, err := semver.Parse(strings.TrimPrefix(remoteVersion, "v"))
+		if err != nil {
+			return fmt.Errorf("invalid version %s: %w", remoteVersion, err)
+		}
+		if rv.LT(semver.Version{Major: 0, Minor: 7, Patch: 0}) {
+			log.Debug("remote version < 0.7.0, installing proxy provider")
+			// proxy providers are deprecated and shouldn't be used
+			// unless explicitly the server version is below 0.7.0
 			err = cmd.addLoftProvider(devPodConfig, fullURL, log)
 			if err != nil {
 				return err
