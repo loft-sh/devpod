@@ -2049,6 +2049,7 @@ type DevPodWorkspaceInstanceTroubleshoot struct {
 	Template          *storagev1.DevPodWorkspaceTemplate `json:"template,omitempty"`
 	Pods              []corev1.Pod                       `json:"pods,omitempty"`
 	PVCs              []corev1.PersistentVolumeClaim     `json:"pvcs,omitempty"`
+	Netmaps           []string                           `json:"netmaps,omitempty"`
 	Errors            []string                           `json:"errors,omitempty"`
 }
 
@@ -2221,7 +2222,7 @@ type KioskStatus struct {
 }
 
 // +genclient
-// +genclient:nonNamespaced
+// +genclient
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 
 type License struct {

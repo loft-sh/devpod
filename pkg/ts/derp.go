@@ -4,14 +4,11 @@ import (
 	"context"
 	"crypto/tls"
 	"fmt"
-	"io"
 	"net/http"
 	"net/url"
 	"os"
 	"strings"
 	"time"
-
-	"k8s.io/klog/v2"
 )
 
 type ConnTrackingFunc func(address string)
@@ -38,14 +35,6 @@ func CheckDerpConnection(ctx context.Context, baseUrl *url.URL) error {
 
 	res, err := client.Do(req)
 	if err != nil || (res != nil && res.StatusCode != http.StatusOK) {
-		klog.FromContext(ctx).Error(err, "Failed to reach the coordinator server.", "url", derpUrl.String())
-
-		if res != nil {
-			body, _ := io.ReadAll(res.Body)
-			defer res.Body.Close()
-			klog.FromContext(ctx).V(1).Info("Response body", "body", string(body))
-		}
-
 		return fmt.Errorf("failed to reach the coordinator server: %w", err)
 	}
 

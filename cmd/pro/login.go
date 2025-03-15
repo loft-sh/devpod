@@ -14,6 +14,7 @@ import (
 	"github.com/loft-sh/devpod/pkg/platform/client"
 	"github.com/loft-sh/devpod/pkg/provider"
 	"github.com/loft-sh/devpod/pkg/types"
+	versionpkg "github.com/loft-sh/devpod/pkg/version"
 	"github.com/loft-sh/devpod/pkg/workspace"
 	"github.com/loft-sh/log"
 	"github.com/mgutz/ansi"
@@ -150,7 +151,7 @@ func (cmd *LoginCmd) Run(ctx context.Context, fullURL string, log log.Logger) er
 		if err != nil {
 			return fmt.Errorf("invalid version %s: %w", remoteVersion, err)
 		}
-		if rv.LT(semver.Version{Major: 0, Minor: 7, Patch: 0}) {
+		if rv.LT(semver.Version{Major: 0, Minor: 6, Patch: 999}) && remoteVersion != versionpkg.DevVersion {
 			log.Debug("remote version < 0.7.0, installing proxy provider")
 			// proxy providers are deprecated and shouldn't be used
 			// unless explicitly the server version is below 0.7.0

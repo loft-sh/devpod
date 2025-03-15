@@ -60,14 +60,14 @@ export function WorkspaceTabs({ ...tabProps }: TWorkspaceTabProps) {
       <TabPanels h="99%">
         {DETAILS_TABS.map(({ label, component: Component }) => (
           <TabPanel
-            h="full"
+            bgColor={contentBackgroundColor}
+            h={label === "Configuration" ? "" : "full"}
             width="100vw"
             ml="-8"
             px="12"
             pt="8"
             pb="0"
-            key={label}
-            bgColor={contentBackgroundColor}>
+            key={label}>
             <Component {...tabProps} />
           </TabPanel>
         ))}

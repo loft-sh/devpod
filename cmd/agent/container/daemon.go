@@ -17,7 +17,6 @@ import (
 	"github.com/loft-sh/devpod/pkg/agent"
 	agentd "github.com/loft-sh/devpod/pkg/daemon/agent"
 	"github.com/loft-sh/devpod/pkg/devcontainer"
-	devpodlog "github.com/loft-sh/devpod/pkg/log"
 	"github.com/loft-sh/devpod/pkg/platform/client"
 	"github.com/loft-sh/devpod/pkg/ts"
 	"github.com/loft-sh/log"
@@ -200,7 +199,7 @@ func runTimeoutMonitor(ctx context.Context, duration time.Duration, errChan chan
 // runNetworkServer starts the network server.
 func runNetworkServer(ctx context.Context, cmd *DaemonCmd, errChan chan<- error, wg *sync.WaitGroup) {
 	defer wg.Done()
-	rootDir := filepath.Join(os.TempDir(), "devpod")
+	rootDir := "/var/devpod"
 	if err := os.MkdirAll(rootDir, os.ModePerm); err != nil {
 		errChan <- err
 		return
@@ -293,8 +292,6 @@ func initLogging(rootDir string) log.Logger {
 	logLevel := logrus.InfoLevel
 	logPath := filepath.Join(rootDir, "daemon.log")
 	logger := log.NewFileLogger(logPath, logLevel)
-	if os.Getenv("DEVPOD_UI") != "true" {
-		logger = devpodlog.NewCombinedLogger(logLevel, logger, log.NewStreamLogger(os.Stdout, os.Stderr, logLevel))
-	}
+
 	return logger
 }

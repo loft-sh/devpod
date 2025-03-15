@@ -3119,6 +3119,11 @@ func (in *DevPodWorkspaceInstanceTroubleshoot) DeepCopyInto(out *DevPodWorkspace
 			(*in)[i].DeepCopyInto(&(*out)[i])
 		}
 	}
+	if in.Netmaps != nil {
+		in, out := &in.Netmaps, &out.Netmaps
+		*out = make([]string, len(*in))
+		copy(*out, *in)
+	}
 	if in.Errors != nil {
 		in, out := &in.Errors, &out.Errors
 		*out = make([]string, len(*in))
