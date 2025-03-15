@@ -34,6 +34,10 @@ type DevPodWorkspaceInstanceTroubleshoot struct {
 	// +optional
 	PVCs []corev1.PersistentVolumeClaim `json:"pvcs,omitempty"`
 
+	// Netmaps is a list of netmaps that are linked to the workspace.
+	// +optional
+	Netmaps []string `json:"netmaps,omitempty"`
+
 	// Errors is a list of errors that occurred while trying to collect
 	// informations for troubleshooting.
 	// +optional

@@ -6115,6 +6115,7 @@ func autoConvert_v1_DevPodWorkspaceInstanceTroubleshoot_To_management_DevPodWork
 	out.Template = (*storagev1.DevPodWorkspaceTemplate)(unsafe.Pointer(in.Template))
 	out.Pods = *(*[]corev1.Pod)(unsafe.Pointer(&in.Pods))
 	out.PVCs = *(*[]corev1.PersistentVolumeClaim)(unsafe.Pointer(&in.PVCs))
+	out.Netmaps = *(*[]string)(unsafe.Pointer(&in.Netmaps))
 	out.Errors = *(*[]string)(unsafe.Pointer(&in.Errors))
 	return nil
 }
@@ -6131,6 +6132,7 @@ func autoConvert_management_DevPodWorkspaceInstanceTroubleshoot_To_v1_DevPodWork
 	out.Template = (*storagev1.DevPodWorkspaceTemplate)(unsafe.Pointer(in.Template))
 	out.Pods = *(*[]corev1.Pod)(unsafe.Pointer(&in.Pods))
 	out.PVCs = *(*[]corev1.PersistentVolumeClaim)(unsafe.Pointer(&in.PVCs))
+	out.Netmaps = *(*[]string)(unsafe.Pointer(&in.Netmaps))
 	out.Errors = *(*[]string)(unsafe.Pointer(&in.Errors))
 	return nil
 }

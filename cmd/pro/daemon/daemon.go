@@ -23,6 +23,7 @@ func NewCmd(globalFlags *flags.GlobalFlags) *cobra.Command {
 
 	c.AddCommand(NewStartCmd(globalFlags))
 	c.AddCommand(NewStatusCmd(globalFlags))
+	c.AddCommand(NewNetcheckCmd(globalFlags))
 
 	return c
 }
