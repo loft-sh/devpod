@@ -495,6 +495,7 @@ func findWorkspace(ctx context.Context, devPodConfig *config.Config, args []stri
 		}
 
 		if workspace.IsPro() {
+			workspace.Imported = true
 			err = providerpkg.SaveWorkspaceConfig(workspace)
 			if err != nil {
 				log.Debugf("failed to save workspace config for workspace \"%s\" with provider \"%s\": %v", workspace.ID, workspace.Provider.Name, err)
@@ -560,6 +561,7 @@ func selectWorkspace(ctx context.Context, devPodConfig *config.Config, changeLas
 			if workspace.SSHConfigPath == "" && sshConfigPath != "" {
 				workspace.SSHConfigPath = sshConfigPath
 			}
+			workspace.Imported = true
 			if err := providerpkg.SaveWorkspaceConfig(workspace); err != nil {
 				return nil, nil, nil, fmt.Errorf("save workspace config for workspace \"%s\": %w", workspace.ID, err)
 			}

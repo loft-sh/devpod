@@ -17,7 +17,7 @@ func GetSocketAddr(preferredDir, providerName string) string {
 	return filepath.Join(preferredDir, provider.DaemonSocket)
 }
 
-func dial(addr string) (net.Conn, error) {
+func Dial(addr string) (net.Conn, error) {
 	return net.DialTimeout("unix", addr, 2*time.Second)
 }
 

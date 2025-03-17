@@ -5,7 +5,9 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"os/signal"
 	"path/filepath"
+	"syscall"
 
 	managementv1 "github.com/loft-sh/api/v4/pkg/apis/management/v1"
 	daemon "github.com/loft-sh/devpod/pkg/daemon/platform"
@@ -30,6 +32,7 @@ type StartCmd struct {
 func NewStartCmd(flags *proflags.GlobalFlags) *cobra.Command {
 	cmd := &StartCmd{
 		GlobalFlags: flags,
+		Log:         log.Default,
 	}
 	c := &cobra.Command{
 		Use:   "start",
@@ -72,6 +75,10 @@ func (cmd *StartCmd) Run(ctx context.Context, devPodConfig *config.Config, provi
 		return fmt.Errorf("user name not set")
 	}
 
+	// Create a context with signal handling
+	ctx, cancel := withGracefulShutdown(ctx, cmd.Log)
+	defer cancel()
+
 	d, err := daemon.Init(ctx, daemon.InitConfig{
 		RootDir:        dir,
 		ProviderName:   provider.Name,
@@ -89,6 +96,38 @@ func (cmd *StartCmd) Run(ctx context.Context, devPodConfig *config.Config, provi
 	}
 
 	return d.Start(ctx)
+}
+
+// withGracefulShutdown returns a context that is canceled when termination signals are received.
+// It implements a two-phase shutdown where a second signal forces immediate termination.
+func withGracefulShutdown(ctx context.Context, log log.Logger) (context.Context, func()) {
+	ctx, cancel := context.WithCancel(ctx)
+	sigChan := make(chan os.Signal, 2)
+	signal.Notify(sigChan, os.Interrupt, syscall.SIGTERM, syscall.SIGHUP, syscall.SIGQUIT)
+
+	go func() {
+		shutdownStarted := false
+		for {
+			select {
+			case sig := <-sigChan:
+				if !shutdownStarted {
+					shutdownStarted = true
+					log.Infof("Received signal %s, starting graceful shutdown...", sig)
+					cancel()
+				} else {
+					log.Warnf("Received second signal %s, forcing immediate shutdown", sig)
+					os.Exit(1)
+				}
+			case <-ctx.Done():
+				return
+			}
+		}
+	}()
+
+	return ctx, func() {
+		signal.Stop(sigChan)
+		cancel()
+	}
 }
 
 func ensureDaemonDir(context, providerName string) (string, error) {

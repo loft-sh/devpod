@@ -5,11 +5,13 @@ import (
 	"fmt"
 	"os"
 	"sync"
+	"time"
 
 	proflags "github.com/loft-sh/devpod/cmd/pro/flags"
 	providercmd "github.com/loft-sh/devpod/cmd/provider"
 	"github.com/loft-sh/devpod/pkg/client/clientimplementation"
 	"github.com/loft-sh/devpod/pkg/config"
+	daemon "github.com/loft-sh/devpod/pkg/daemon/platform"
 	platformdaemon "github.com/loft-sh/devpod/pkg/daemon/platform"
 	"github.com/loft-sh/devpod/pkg/platform"
 	"github.com/loft-sh/devpod/pkg/provider"
@@ -17,6 +19,7 @@ import (
 	"github.com/loft-sh/log"
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
+	"k8s.io/apimachinery/pkg/util/wait"
 )
 
 // DeleteCmd holds the delete cmd flags
@@ -89,6 +92,11 @@ func (cmd *DeleteCmd) Run(ctx context.Context, args []string) error {
 		if err != nil {
 			log.Default.Warnf("Failed to shut down daemon: %v", err)
 		}
+		log.Default.Debug("Waiting for daemon to shut down")
+		err = waitDaemonStopped(ctx, daemonDir, providerConfig.Name)
+		if err != nil {
+			log.Default.Warnf("Failed to wait for daemon to be stopped: %v", err)
+		}
 	}
 
 	// delete the provider config
@@ -146,4 +154,15 @@ func cleanupLocalWorkspaces(ctx context.Context, devPodConfig *config.Config, wo
 		log.Infof("Waiting for %d workspaces to be deleted", len(usedWorkspaces))
 		wg.Wait()
 	}
+}
+
+func waitDaemonStopped(ctx context.Context, daemonDir string, providerName string) error {
+	return wait.PollUntilContextTimeout(ctx, 250*time.Millisecond, 5*time.Second, true, func(ctx context.Context) (done bool, err error) {
+		_, err = daemon.Dial(daemon.GetSocketAddr(daemonDir, providerName))
+		if err != nil {
+			return true, nil
+		}
+
+		return false, nil
+	})
 }

@@ -25,7 +25,7 @@ func NewLocalClient(daemonFolder, provider string) *LocalClient {
 	socketAddr := GetSocketAddr(daemonFolder, provider)
 	tr := http.DefaultTransport.(*http.Transport).Clone()
 	tr.DialContext = func(ctx context.Context, network, addr string) (net.Conn, error) {
-		conn, err := dial(socketAddr)
+		conn, err := Dial(socketAddr)
 		if err != nil {
 			return nil, err
 		}

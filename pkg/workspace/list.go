@@ -52,7 +52,7 @@ func List(ctx context.Context, devPodConfig *config.Config, skipPro bool, owner 
 		cleanedLocalWorkspaces := []*providerpkg.Workspace{}
 		for _, localWorkspace := range localWorkspaces {
 			if localWorkspace.IsPro() {
-				if shouldDeleteLocalWorkspace(localWorkspace, proWorkspaceResults) {
+				if shouldDeleteLocalWorkspace(ctx, localWorkspace, proWorkspaceResults) {
 					err = clientimplementation.DeleteWorkspaceFolder(devPodConfig.DefaultContext, localWorkspace.ID, "", log)
 					if err != nil {
 						log.Debugf("failed to delete local workspace %s: %v", localWorkspace.ID, err)
@@ -275,7 +275,7 @@ func listProWorkspacesForProvider(ctx context.Context, devPodConfig *config.Conf
 	return retWorkspaces, nil
 }
 
-func shouldDeleteLocalWorkspace(localWorkspace *providerpkg.Workspace, proWorkspaceResults map[string]listProWorkspacesResult) bool {
+func shouldDeleteLocalWorkspace(ctx context.Context, localWorkspace *providerpkg.Workspace, proWorkspaceResults map[string]listProWorkspacesResult) bool {
 	// get the correct result for this local workspace
 	res, ok := proWorkspaceResults[localWorkspace.Provider.Name]
 	if !ok {
@@ -287,6 +287,14 @@ func shouldDeleteLocalWorkspace(localWorkspace *providerpkg.Workspace, proWorksp
 	if res.err != nil {
 		return false
 	}
+
+	if localWorkspace.Imported {
+		// does remote still exist?
+		if ok := checkInstanceExists(ctx, localWorkspace); ok {
+			return false
+		}
+	}
+
 	hasProCounterpart := slices.ContainsFunc(res.workspaces, func(w *providerpkg.Workspace) bool {
 		return localWorkspace.UID == w.UID
 	})
@@ -330,4 +338,20 @@ func listInstancesDaemonProvider(ctx context.Context, devPodConfig *config.Confi
 	}
 
 	return daemon.NewLocalClient(dir, provider).ListWorkspaces(ctx, owner)
+}
+
+func checkInstanceExists(ctx context.Context, workspace *providerpkg.Workspace) bool {
+	provider := workspace.Provider.Name
+	context := workspace.Context
+	dir, err := providerpkg.GetDaemonDir(context, provider)
+	if err != nil {
+		return false
+	}
+
+	instance, err := daemon.NewLocalClient(dir, provider).GetWorkspace(ctx, workspace.UID)
+	if err != nil || instance == nil {
+		return false
+	}
+
+	return true
 }
