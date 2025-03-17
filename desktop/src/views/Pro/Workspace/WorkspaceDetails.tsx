@@ -359,6 +359,12 @@ function KubernetesDetails({ status }: TKubernetesDetailsProps) {
       }
     }
 
+    if (!mainContainerResources.resources?.requests) {
+      return Object.entries(mainContainerMetrics?.usage ?? {}).map(([type, quantity]) => {
+        return getResourceDetails(type, undefined, quantity, undefined)
+      })
+    }
+
     return Object.entries(mainContainerResources.resources?.requests ?? {}).map(
       ([type, quantity]) => {
         const used = indexedMetrics[type]
@@ -366,44 +372,8 @@ function KubernetesDetails({ status }: TKubernetesDetailsProps) {
           quantityToScalarBigInt(used),
           quantityToScalarBigInt(quantity)
         )
-        if (type === "memory") {
-          return {
-            type,
-            usagePercentage,
-            icon: Memory,
-            used: formatMemoryGi(used),
-            total: formatMemoryGi(quantity),
-            unit: "Gi",
-          }
-        }
 
-        if (type === "cpu") {
-          return {
-            type,
-            usagePercentage,
-            icon: CPU,
-            label: "CPU",
-            used: formatCPU(used),
-            total: formatCPU(quantity),
-          }
-        }
-        if (type.endsWith("/gpu")) {
-          return {
-            type,
-            used,
-            icon: CPU,
-            label: "GPU",
-            total: quantity,
-            usagePercentage: 100, // need to adjust if fractional GPUs and GPU monitoring are supported by the k8s metrics server
-          }
-        }
-
-        return {
-          type,
-          used,
-          total: quantity,
-          usagePercentage,
-        }
+        return getResourceDetails(type, quantity, used, usagePercentage)
       }
     )
   }, [status.podStatus])
@@ -430,7 +400,13 @@ function KubernetesDetails({ status }: TKubernetesDetailsProps) {
               </Text>
             }>
             <Text>
-              {resource.usagePercentage != invalidQuantity ? resource.usagePercentage + "%" : "-"}
+              {resource.usagePercentage != null
+                ? resource.usagePercentage != invalidQuantity
+                  ? resource.usagePercentage + "%"
+                  : "-"
+                : resource.used != null
+                ? resource.used + (resource.unit ?? "")
+                : "-"}
             </Text>
           </StackedWorkspaceInfoDetail>
         )
@@ -546,5 +522,51 @@ function formatContainerImage(fullImageName: string): string {
     return path
   } catch {
     return fullImageName
+  }
+}
+
+function getResourceDetails(
+  type: string,
+  total: string | undefined,
+  used: string | undefined,
+  usagePercentage: number | undefined
+) {
+  if (type === "memory") {
+    return {
+      type,
+      usagePercentage,
+      icon: Memory,
+      used: formatMemoryGi(used),
+      total: formatMemoryGi(total),
+      unit: "Gi",
+    }
+  }
+
+  if (type === "cpu") {
+    return {
+      type,
+      usagePercentage,
+      icon: CPU,
+      label: "CPU",
+      used: formatCPU(used),
+      total: formatCPU(total),
+    }
+  }
+  if (type.endsWith("/gpu")) {
+    return {
+      type,
+      used,
+      icon: CPU,
+      label: "GPU",
+      total: total,
+      usagePercentage: 100, // need to adjust if fractional GPUs and GPU monitoring are supported by the k8s metrics server
+    }
+  }
+
+  return {
+    type,
+    used,
+    total: total,
+    usagePercentage,
   }
 }
