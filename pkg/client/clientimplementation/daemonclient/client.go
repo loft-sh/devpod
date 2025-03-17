@@ -129,7 +129,7 @@ func (c *client) CheckWorkspaceReachable(ctx context.Context) error {
 	if err != nil {
 		return fmt.Errorf("resolve workspace hostname: %w", err)
 	}
-	err = ts.WaitHostReachable(ctx, c.tsClient, wAddr, 5, false, c.log)
+	err = ts.WaitHostReachable(ctx, c.tsClient, wAddr, 5, c.log)
 	if err != nil {
 		instance, getWorkspaceErr := c.localClient.GetWorkspace(ctx, c.workspace.UID)
 		// if we can't reach the daemon try to start the desktop app
@@ -143,7 +143,7 @@ func (c *client) CheckWorkspaceReachable(ctx context.Context) error {
 			time.Sleep(2 * time.Second)
 
 			// let's try again
-			err = ts.WaitHostReachable(ctx, c.tsClient, wAddr, 20, true, c.log)
+			err = ts.WaitHostReachable(ctx, c.tsClient, wAddr, 20, c.log)
 			if err != nil {
 				instance, getWorkspaceErr = c.localClient.GetWorkspace(ctx, c.workspace.UID)
 			} else {

@@ -143,7 +143,12 @@ func (l *localServer) ListenAndServe() error {
 		errChan <- err
 	}()
 
-	return <-errChan
+	select {
+	case err := <-errChan:
+		return err
+	case <-l.stopChan:
+		return nil
+	}
 }
 
 func (l *localServer) Close() error {

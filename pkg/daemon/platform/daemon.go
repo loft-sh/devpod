@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"net"
@@ -69,30 +70,42 @@ func Init(ctx context.Context, config InitConfig) (*Daemon, error) {
 		log:            log,
 	}, nil
 }
-
 func (d *Daemon) Start(ctx context.Context) error {
 	errChan := make(chan error, 1)
+
 	go func() {
 		d.log.Infof("Starting local server: %s", d.localServer.Addr())
-		err := d.localServer.ListenAndServe()
-		errChan <- err
+		errChan <- d.localServer.ListenAndServe()
 	}()
 	go func() {
 		d.log.Info("Start proxying connections")
-		err := d.Listen(d.socketListener)
-		errChan <- err
+		errChan <- d.Listen(d.socketListener)
 	}()
 	go func() {
 		d.log.Info("Start netmap watcher")
-		err := d.watchNetmap(ctx)
-		errChan <- err
+		errChan <- d.watchNetmap(ctx)
 	}()
-	err := <-errChan
 
-	_ = d.tsServer.Close()
-	_ = d.socketListener.Close()
+	defer func() {
+		d.log.Info("Cleaning up daemon resources")
+		_ = d.tsServer.Close()
+		_ = d.localServer.Close()
+		_ = d.socketListener.Close()
+	}()
 
-	return err
+	select {
+	case err := <-errChan:
+		if err != nil && !errors.Is(err, context.Canceled) {
+			return err
+		}
+		return nil
+	case <-ctx.Done():
+		err := ctx.Err()
+		if !errors.Is(err, context.Canceled) {
+			return err
+		}
+		return nil
+	}
 }
 
 func (d *Daemon) Listen(ln net.Listener) error {
@@ -104,7 +117,7 @@ func (d *Daemon) Listen(ln net.Listener) error {
 	for {
 		rawConn, err := ln.Accept()
 		if err != nil {
-			d.log.Warnf("Failed to accept connection: %v", err)
+			d.log.Debugf("Failed to accept connection: %v", err)
 			continue
 		}
 
@@ -112,7 +125,7 @@ func (d *Daemon) Listen(ln net.Listener) error {
 		clientType, err := getClientType(bConn)
 		if err != nil {
 			_ = bConn.Close()
-			d.log.Debug("Failed to get client type: %w", err)
+			d.log.Debugf("Unknown client type: %v", err)
 			continue
 		}
 		switch clientType {
