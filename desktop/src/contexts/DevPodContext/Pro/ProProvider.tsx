@@ -7,7 +7,7 @@ import { Text } from "@chakra-ui/react"
 import { ManagementV1Project } from "@loft-enterprise/client/gen/models/managementV1Project"
 import { useQuery } from "@tanstack/react-query"
 import { ReactNode, useEffect, useMemo, useState } from "react"
-import { Navigate, useNavigate } from "react-router-dom"
+import { Navigate, useNavigate, useSearchParams } from "react-router-dom"
 import { useProInstances } from "../proInstances"
 import { ProWorkspaceStore, useWorkspaceStore } from "../workspaceStore"
 import { ContextSwitcher } from "./ContextSwitcher"
@@ -19,6 +19,7 @@ export function ProProvider({ host, children }: { host: string; children: ReactN
   const [isLoadingWorkspaces, setIsLoadingWorkspaces] = useState(false)
   const [ownerFilter, setOwnerFilter] = useState<TWorkspaceOwnerFilterState>("self")
   const navigate = useNavigate()
+  const [searchParams, setSearchParams] = useSearchParams()
   const currentProInstance = useMemo(() => {
     return proInstances?.find((instance) => instance.host == host)
   }, [host, proInstances])
@@ -30,7 +31,6 @@ export function ProProvider({ host, children }: { host: string; children: ReactN
 
     return globalClient.getProClient(currentProInstance)
   }, [currentProInstance])
-  const [selectedProject, setSelectedProject] = useState<ManagementV1Project | null>(null)
   const managementSelfQuery = useQuery({
     queryKey: ["managementSelf", client],
     queryFn: async () => {
@@ -47,12 +47,23 @@ export function ProProvider({ host, children }: { host: string; children: ReactN
   })
 
   const currentProject = useMemo<ManagementV1Project | undefined>(() => {
-    if (selectedProject) {
-      return selectedProject
+    if (projectsQuery.data == null) {
+      return undefined
     }
 
-    return projectsQuery.data?.[0]
-  }, [projectsQuery, selectedProject])
+    const projectName = searchParams.get("project") ?? undefined
+    if (!projectName) {
+      return projectsQuery.data[0] ?? undefined
+    }
+
+    const maybeProject =
+      projectsQuery.data.find((project) => project.metadata?.name === projectName) ?? undefined
+    if (!maybeProject) {
+      return projectsQuery.data[0] ?? undefined
+    }
+
+    return maybeProject
+  }, [searchParams, projectsQuery.data])
 
   const [cancelWatch, setCancelWatch] = useState<
     { fn: () => Promise<Result<undefined>> } | undefined
@@ -119,6 +130,7 @@ export function ProProvider({ host, children }: { host: string; children: ReactN
         return toCancel().finally(() => setWaitingForCancel(false))
       }
       setCancelWatch({ fn: canceler })
+
       return () => {
         canceler()
       }
@@ -126,8 +138,13 @@ export function ProProvider({ host, children }: { host: string; children: ReactN
   }, [client, store, currentProject, ownerFilter])
 
   const handleProjectChanged = (newProject: ManagementV1Project) => {
-    setSelectedProject(newProject)
-    navigate(Routes.toProInstance(host))
+    setSearchParams((prev) => {
+      prev.set("project", newProject.metadata?.name ?? "")
+
+      return prev
+    })
+
+    navigate(Routes.toProInstance(host) + "?" + searchParams.toString())
   }
 
   const handleHostChanged = (newHost: string) => {
@@ -137,7 +154,11 @@ export function ProProvider({ host, children }: { host: string; children: ReactN
       return
     }
 
-    setSelectedProject(null) // reset selected project
+    setSearchParams((prev) => {
+      prev.delete("project")
+
+      return prev
+    })
     navigate(Routes.toProInstance(newHost))
   }
 
