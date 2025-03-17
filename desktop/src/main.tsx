@@ -34,7 +34,7 @@ const l = localStorage.getItem("devpod-location-current") // check usePreserveLo
 if (l) {
   const loc = JSON.parse(l) as Location
   if (window.location.pathname !== loc.pathname) {
-    window.location.pathname = loc.pathname
+    window.location.href = loc.pathname + loc.search
     render = false
   }
 }
