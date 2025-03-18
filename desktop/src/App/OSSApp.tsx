@@ -70,7 +70,7 @@ export function OSSApp() {
       <Flex width="100vw" maxWidth="100vw" overflow="hidden">
         {showTitleBar && <TitleBar showTitle={showTitle} />}
 
-        <Box width="full" height="full">
+        <Box width="full" height="full" >
           <Grid height="full" {...mainGridProps}>
             <GridItem area="sidebar">
               <Sidebar paddingTop={titleBarSafeArea}>

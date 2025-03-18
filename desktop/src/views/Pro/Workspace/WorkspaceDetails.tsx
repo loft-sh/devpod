@@ -223,7 +223,7 @@ type TWorkspaceInfoDetailProps = Readonly<{
   tooltipLabel?: ReactNode
 }>
 function WorkspaceInfoDetail({ icon: Icon, label, tooltipLabel }: TWorkspaceInfoDetailProps) {
-  const color = useColorModeValue("gray.600", "gray.300")
+  const color = useColorModeValue("gray.600", "gray.200")
   const l = cloneElement(label, { color })
 
   const content = (

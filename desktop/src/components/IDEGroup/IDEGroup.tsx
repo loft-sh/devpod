@@ -9,6 +9,7 @@ import {
   PopoverTrigger,
   Portal,
   Text,
+  useColorModeValue,
 } from "@chakra-ui/react"
 import { ChevronRightIcon } from "@chakra-ui/icons"
 import { IDEIcon } from "@/components"
@@ -71,16 +72,16 @@ function IDEItem({
   onItemClick: (ide: TIDE["name"]) => void
   disabled?: boolean
 }) {
+  const menuHoverColor = useColorModeValue("gray.100", "gray.700")
+
+
   const onClick = useCallback(() => {
     onItemClick(ide.name)
   }, [onItemClick, ide])
 
   return (
     <MenuItem
-      // Override hover state from chakra as it doesn't work properly here.
-      _hover={{
-        bgColor: "#EDF2F7 !important",
-      }}
+      _hover={{ bg: menuHoverColor }}
       isDisabled={disabled}
       onClick={onClick}
       value={ide.name!}
