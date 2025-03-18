@@ -4,6 +4,7 @@ import { Box, Flex, HStack, useColorModeValue, useToken } from "@chakra-ui/react
 import { ReactNode } from "react"
 import { StatusBar } from "./StatusBar"
 import { Toolbar } from "./Toolbar"
+import { isMacOS } from "@/lib"
 
 type TProLayoutProps = Readonly<{
   toolbarItems: ReactNode
@@ -34,7 +35,7 @@ export function ProLayout({ toolbarItems, statusBarItems, children }: TProLayout
             width="full">
             <HStack
               justifyContent="space-between"
-              paddingLeft="24" // TODO: Check on other platforms
+              paddingLeft={isMacOS ? "24" : "8"}
               data-tauri-drag-region // keep!
             >
               {toolbarItems}

@@ -33,7 +33,7 @@ import { Link as RouterLink, useLocation } from "react-router-dom"
 import { TTabProps } from "./types"
 import { TSearchOptions } from "@/components/Terminal/useTerminalSearch"
 import EmptyImage from "@/images/empty_default.svg"
-import EmptyDarkImage from "@/images/empty_default.svg"
+import EmptyDarkImage from "@/images/empty_default_dark.svg"
 
 export function Logs({ host, instance }: TTabProps) {
   const [accordionIndex, setAccordionIndex] = useState<number>(0)
@@ -58,7 +58,7 @@ export function Logs({ host, instance }: TTabProps) {
       {!actions?.length ? (
         <VStack h={"full"} w={"full"} justifyContent={"center"} alignItems={"center"} flexGrow={1}>
           <Image src={colorMode == "dark" ? EmptyDarkImage : EmptyImage} />
-          <Text fontWeight={"semibold"} fontSize={"sm"} color={"text.secondary"}>
+          <Text fontWeight={"semibold"} fontSize={"sm"} color={"gray.600"} _dark={{ color: "gray.300"}}>
             No logs to show yet
           </Text>
         </VStack>

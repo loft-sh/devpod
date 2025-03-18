@@ -11,7 +11,14 @@ use tauri::{
 };
 use util::QUIT_EXIT_CODE;
 
+#[cfg(not(target_os = "macos"))]
+pub static WARNING_SYSTEM_TRAY_ICON_BYTES: &'static [u8] = include_bytes!("../icons/icon_warning_system_tray_color.png");
+#[cfg(target_os = "macos")]
 pub static WARNING_SYSTEM_TRAY_ICON_BYTES: &'static [u8] = include_bytes!("../icons/icon_warning_system_tray.png");
+
+#[cfg(not(target_os = "macos"))]
+pub static SYSTEM_TRAY_ICON_BYTES: &'static [u8] = include_bytes!("../icons/icon_system_tray_color.png");
+#[cfg(target_os = "macos")]
 pub static SYSTEM_TRAY_ICON_BYTES: &'static [u8] = include_bytes!("../icons/icon_system_tray.png");
 
 pub trait ToSystemTraySubmenu {

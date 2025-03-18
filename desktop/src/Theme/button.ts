@@ -120,22 +120,16 @@ export const Button = defineStyleConfig({
         },
       }
     },
-    proWorkspaceIDE(props) {
+    proWorkspaceIDE(_props) {
       return {
-        color: mode("white", "black")(props),
+        color: "primary.900",
         fontWeight: "semibold",
-        bg: mode("gray.600", "gray.300")(props),
+        bg: "primary.100",
         _hover: {
-          _dark: {
-            bg: "gray.400",
-          },
-          bg: "gray.700",
+          bg: "primary.200",
         },
         _active: {
-          bg: "gray.800",
-          _dark: {
-            bg: "gray.500",
-          },
+          bg: "primary.300",
         },
       }
     },
