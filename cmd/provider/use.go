@@ -6,6 +6,7 @@ import (
 	"io"
 
 	"github.com/loft-sh/devpod/cmd/flags"
+	"github.com/loft-sh/devpod/cmd/provider/utils"
 	"github.com/loft-sh/devpod/pkg/client/clientimplementation"
 	"github.com/loft-sh/devpod/pkg/config"
 	options2 "github.com/loft-sh/devpod/pkg/options"
@@ -43,6 +44,9 @@ func NewUseCmd(flags *flags.GlobalFlags) *cobra.Command {
 			}
 
 			return cmd.Run(context.Background(), args[0])
+		},
+		ValidArgsFunction: func(rootCmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
+			return utils.GetProviderSuggestions(rootCmd, cmd.Context, cmd.Provider, args, toComplete, cmd.Owner, log.Default)
 		},
 	}
 

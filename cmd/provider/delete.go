@@ -6,10 +6,12 @@ import (
 	"os"
 
 	"github.com/loft-sh/devpod/cmd/flags"
+	"github.com/loft-sh/devpod/cmd/provider/utils"
 	"github.com/loft-sh/devpod/pkg/config"
 	"github.com/loft-sh/devpod/pkg/platform"
 	provider2 "github.com/loft-sh/devpod/pkg/provider"
 	"github.com/loft-sh/devpod/pkg/workspace"
+	"github.com/loft-sh/log"
 	logpkg "github.com/loft-sh/log"
 	"github.com/spf13/cobra"
 )
@@ -32,6 +34,9 @@ func NewDeleteCmd(flags *flags.GlobalFlags) *cobra.Command {
 		Short: "Delete a provider",
 		RunE: func(_ *cobra.Command, args []string) error {
 			return cmd.Run(context.Background(), args)
+		},
+		ValidArgsFunction: func(rootCmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
+			return utils.GetProviderSuggestions(rootCmd, cmd.Context, cmd.Provider, args, toComplete, cmd.Owner, log.Default)
 		},
 	}
 
