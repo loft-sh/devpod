@@ -13,6 +13,7 @@ import (
 	daemon "github.com/loft-sh/devpod/pkg/daemon/platform"
 	"github.com/loft-sh/devpod/pkg/platform/client"
 
+	"github.com/loft-sh/devpod/cmd/pro/completion"
 	proflags "github.com/loft-sh/devpod/cmd/pro/flags"
 	"github.com/loft-sh/devpod/pkg/config"
 	providerpkg "github.com/loft-sh/devpod/pkg/provider"
@@ -49,6 +50,9 @@ func NewStartCmd(flags *proflags.GlobalFlags) *cobra.Command {
 
 	c.Flags().StringVar(&cmd.Host, "host", "", "The pro instance to use")
 	_ = c.MarkFlagRequired("host")
+	c.RegisterFlagCompletionFunc("host", func(rootCmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
+		return completion.GetPlatformHostSuggestions(rootCmd, cmd.Context, cmd.Provider, args, toComplete, cmd.Owner, cmd.Log)
+	})
 
 	return c
 }

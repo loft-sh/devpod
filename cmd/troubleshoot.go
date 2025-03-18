@@ -7,9 +7,9 @@ import (
 	"fmt"
 
 	managementv1 "github.com/loft-sh/api/v4/pkg/apis/management/v1"
+	"github.com/loft-sh/devpod/cmd/completion"
 	"github.com/loft-sh/devpod/cmd/flags"
 	"github.com/loft-sh/devpod/cmd/provider"
-	"github.com/loft-sh/devpod/cmd/utils"
 	"github.com/loft-sh/devpod/pkg/client"
 	"github.com/loft-sh/devpod/pkg/config"
 	daemon "github.com/loft-sh/devpod/pkg/daemon/platform"
@@ -37,7 +37,7 @@ func NewTroubleshootCmd(flags *flags.GlobalFlags) *cobra.Command {
 			cmd.Run(cobraCmd.Context(), args)
 		},
 		ValidArgsFunction: func(rootCmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
-			return utils.GetWorkspaceSuggestions(rootCmd, cmd.Context, cmd.Provider, args, toComplete, cmd.Owner, log.Default)
+			return completion.GetWorkspaceSuggestions(rootCmd, cmd.Context, cmd.Provider, args, toComplete, cmd.Owner, log.Default)
 		},
 		Hidden: true,
 	}

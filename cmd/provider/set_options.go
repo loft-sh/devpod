@@ -5,8 +5,8 @@ import (
 	"fmt"
 	"os"
 
+	"github.com/loft-sh/devpod/cmd/completion"
 	"github.com/loft-sh/devpod/cmd/flags"
-	"github.com/loft-sh/devpod/cmd/provider/utils"
 	"github.com/loft-sh/devpod/pkg/config"
 	"github.com/loft-sh/devpod/pkg/workspace"
 	"github.com/loft-sh/log"
@@ -42,7 +42,7 @@ func NewSetOptionsCmd(flags *flags.GlobalFlags) *cobra.Command {
 			return cmd.Run(context.Background(), args, logger)
 		},
 		ValidArgsFunction: func(rootCmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
-			return utils.GetProviderSuggestions(rootCmd, cmd.Context, cmd.Provider, args, toComplete, cmd.Owner, log.Default)
+			return completion.GetProviderSuggestions(rootCmd, cmd.Context, cmd.Provider, args, toComplete, cmd.Owner, log.Default)
 		},
 	}
 
