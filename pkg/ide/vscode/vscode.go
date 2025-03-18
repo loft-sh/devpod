@@ -26,11 +26,12 @@ const (
 type Flavor string
 
 const (
-	FlavorStable   Flavor = "stable"
-	FlavorInsiders Flavor = "insiders"
-	FlavorCursor   Flavor = "cursor"
-	FlavorPositron Flavor = "positron"
-	FlavorCodium   Flavor = "codium"
+	FlavorStable         Flavor = "stable"
+	FlavorInsiders       Flavor = "insiders"
+	FlavorCursor         Flavor = "cursor"
+	FlavorPositron       Flavor = "positron"
+	FlavorCodium         Flavor = "codium"
+	FlavorCodiumInsiders Flavor = "codium-insiders"
 )
 
 func (f Flavor) DisplayName() string {
@@ -45,6 +46,8 @@ func (f Flavor) DisplayName() string {
 		return "positron"
 	case FlavorCodium:
 		return "VSCodium"
+	case FlavorCodiumInsiders:
+		return "VSCodium Insiders"
 	default:
 		return "VSCode"
 	}
@@ -340,6 +343,48 @@ func (o *VsCodeServer) findServerBinaryPath(location string) string {
 		return binPath
 	}
 
+	if o.flavor == FlavorCodiumInsiders {
+		// check legacy location `$HOME/.vscodium-server-insiders/bin`
+		binDir := filepath.Join(location, "bin")
+		for {
+			if time.Now().After(deadline) {
+				o.log.Warn("Timed out installing vscodium-server-insiders")
+				break
+			}
+			entries, err := os.ReadDir(binDir)
+			if err != nil || len(entries) == 0 {
+				o.log.Infof("Read dir %s: %v", binDir, err)
+				o.log.Info("Wait until vscodium-server-insiders is installed...")
+				// check new location `$HOME/.vscodium-server-insiders/cli/servers/Stable-<version>/server/bin/code-server`
+				newBinPath, err := o.findCodeServerBinary(location)
+				if err != nil {
+					o.log.Infof("Read new location %s: %v", location, err)
+					o.log.Info("Wait until vscodium is installed...")
+					time.Sleep(time.Second * 3)
+					continue
+				}
+
+				binPath = newBinPath
+				break
+			}
+
+			binPath = filepath.Join(binDir, entries[0].Name(), "bin", "codium-server-insiders")
+			ctx, cancel := context.WithTimeout(context.Background(), time.Second*4)
+			out, err := exec.CommandContext(ctx, binPath, "--help").CombinedOutput()
+			cancel()
+			if err != nil {
+				o.log.Infof("Execute %s: %v", binPath, command.WrapCommandError(out, err))
+				o.log.Info("Wait until vscodium-server-insiders is installed...")
+				time.Sleep(time.Second * 3)
+				continue
+			}
+
+			break
+		}
+
+		return binPath
+	}
+
 	if o.flavor == FlavorInsiders {
 		serversDir := filepath.Join(location, "cli", "servers")
 		for {
@@ -456,6 +501,8 @@ func prepareServerLocation(userName string, create bool, flavor Flavor) (string,
 		folderName = ".positron-server"
 	case FlavorCodium:
 		folderName = ".vscodium-server"
+	case FlavorCodiumInsiders:
+		folderName = ".vscodium-server-insiders"
 	}
 
 	folder := filepath.Join(homeFolder, folderName)
