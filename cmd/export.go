@@ -6,6 +6,7 @@ import (
 	"fmt"
 
 	"github.com/loft-sh/devpod/cmd/flags"
+	"github.com/loft-sh/devpod/cmd/utils"
 	"github.com/loft-sh/devpod/pkg/config"
 	"github.com/loft-sh/devpod/pkg/provider"
 	workspace2 "github.com/loft-sh/devpod/pkg/workspace"
@@ -35,6 +36,9 @@ func NewExportCmd(flags *flags.GlobalFlags) *cobra.Command {
 			}
 
 			return cmd.Run(ctx, devPodConfig, args)
+		},
+		ValidArgsFunction: func(rootCmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
+			return utils.GetWorkspaceSuggestions(rootCmd, cmd.Context, cmd.Provider, args, toComplete, cmd.Owner, log.Default)
 		},
 	}
 
