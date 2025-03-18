@@ -12,7 +12,6 @@ import (
 	"github.com/loft-sh/devpod/pkg/client/clientimplementation"
 	"github.com/loft-sh/devpod/pkg/config"
 	daemon "github.com/loft-sh/devpod/pkg/daemon/platform"
-	platformdaemon "github.com/loft-sh/devpod/pkg/daemon/platform"
 	"github.com/loft-sh/devpod/pkg/platform"
 	"github.com/loft-sh/devpod/pkg/provider"
 	"github.com/loft-sh/devpod/pkg/workspace"
@@ -87,7 +86,7 @@ func (cmd *DeleteCmd) Run(ctx context.Context, args []string) error {
 			cleanupLocalWorkspaces(ctx, devPodConfig, workspaces, providerConfig.Name, cmd.Owner, log.Default)
 		}
 
-		daemonClient := platformdaemon.NewLocalClient(daemonDir, proInstanceConfig.Provider)
+		daemonClient := daemon.NewLocalClient(daemonDir, proInstanceConfig.Provider)
 		err = daemonClient.Shutdown(ctx)
 		if err != nil {
 			log.Default.Warnf("Failed to shut down daemon: %v", err)
