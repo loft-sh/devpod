@@ -6,6 +6,7 @@ import (
 	"os/exec"
 
 	"github.com/loft-sh/devpod/cmd/agent"
+	"github.com/loft-sh/devpod/cmd/completion"
 	"github.com/loft-sh/devpod/cmd/context"
 	"github.com/loft-sh/devpod/cmd/flags"
 	"github.com/loft-sh/devpod/cmd/helper"
@@ -112,6 +113,7 @@ func BuildRoot() *cobra.Command {
 	rootCmd := NewRootCmd()
 	persistentFlags := rootCmd.PersistentFlags()
 	globalFlags = flags.SetGlobalFlags(persistentFlags)
+	completion.RegisterFlagCompletionFuns(rootCmd, globalFlags)
 
 	rootCmd.AddCommand(agent.NewAgentCmd(globalFlags))
 	rootCmd.AddCommand(provider.NewProviderCmd(globalFlags))

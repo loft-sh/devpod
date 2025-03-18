@@ -1,4 +1,4 @@
-package utils
+package completion
 
 import (
 	"strings"
@@ -10,22 +10,24 @@ import (
 	"github.com/spf13/cobra"
 )
 
-func GetWorkspaceSuggestions(rootCmd *cobra.Command, context, provider string, args []string, toComplete string, owner platform.OwnerFilter, logger log.Logger) ([]string, cobra.ShellCompDirective) {
+func GetPlatformHostSuggestions(rootCmd *cobra.Command, context, provider string, args []string, toComplete string, owner platform.OwnerFilter, logger log.Logger) ([]string, cobra.ShellCompDirective) {
 	devPodConfig, err := config.LoadConfig(context, provider)
 	if err != nil {
 		return nil, cobra.ShellCompDirectiveError
 	}
 
-	workspaces, err := workspace.List(rootCmd.Context(), devPodConfig, false, owner, logger)
+	proInstances, err := workspace.ListProInstances(devPodConfig, logger)
 	if err != nil {
 		return nil, cobra.ShellCompDirectiveError
 	}
 
 	var suggestions []string
-	for _, ws := range workspaces {
-		if strings.HasPrefix(ws.ID, toComplete) {
-			suggestions = append(suggestions, ws.ID)
+
+	for _, instance := range proInstances {
+		if strings.HasPrefix(instance.Host, toComplete) {
+			suggestions = append(suggestions, instance.Host)
 		}
 	}
+
 	return suggestions, cobra.ShellCompDirectiveNoFileComp
 }
