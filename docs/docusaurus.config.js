@@ -5,19 +5,20 @@ module.exports = {
   tagline: "DevContainers everywhere",
   url: "https://devpod.sh",
   baseUrl: __webpack_public_path__,
-  favicon: "/media/devpod-favicon.png",
+  favicon: "/media/devpod-favicon.svg",
   organizationName: "loft-sh", // Usually your GitHub org/user name.
   projectName: "devpod", // Usually your repo name.
   themeConfig: {
     colorMode: {
-      defaultMode: 'light',
+      defaultMode: "light",
       disableSwitch: false,
       respectPrefersColorScheme: true,
     },
     navbar: {
       logo: {
         alt: "devpod",
-        src: "/media/devpod-logo.png",
+        src: "/media/devpod-logo-horizontal.svg",
+        srcDark: "/media/devpod-logo-horizontal-dark.svg",
         href: "https://devpod.sh/",
         target: "_self",
       },
