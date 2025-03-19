@@ -3,17 +3,21 @@ package setup
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"sort"
+	"strconv"
 	"strings"
 
+	"github.com/loft-sh/api/v4/pkg/devpod"
 	"github.com/loft-sh/devpod/pkg/agent/tunnel"
 	"github.com/loft-sh/devpod/pkg/command"
 	copy2 "github.com/loft-sh/devpod/pkg/copy"
 	"github.com/loft-sh/devpod/pkg/devcontainer/config"
 	"github.com/loft-sh/devpod/pkg/envfile"
+	"github.com/loft-sh/devpod/pkg/gitcredentials"
 	"github.com/loft-sh/log"
 	"github.com/pkg/errors"
 	"k8s.io/client-go/tools/clientcmd"
@@ -24,7 +28,7 @@ const (
 	ResultLocation = "/var/run/devpod/result.json"
 )
 
-func SetupContainer(ctx context.Context, setupInfo *config.Result, extraWorkspaceEnv []string, chownProjects bool, tunnelClient tunnel.TunnelClient, log log.Logger) error {
+func SetupContainer(ctx context.Context, setupInfo *config.Result, extraWorkspaceEnv []string, chownProjects bool, platformOptions *devpod.PlatformOptions, tunnelClient tunnel.TunnelClient, log log.Logger) error {
 	// write result to ResultLocation
 	WriteResult(setupInfo, log)
 
@@ -63,9 +67,16 @@ func SetupContainer(ctx context.Context, setupInfo *config.Result, extraWorkspac
 		return errors.Wrap(err, "chown ssh agent sock file")
 	}
 
+	// setup kube config
 	err = SetupKubeConfig(ctx, setupInfo, tunnelClient, log)
 	if err != nil {
 		log.Errorf("Error setting up KubeConfig: %v", err)
+	}
+
+	// setup platform git credentials
+	err = setupPlatformGitCredentials(config.GetRemoteUser(setupInfo), platformOptions, log)
+	if err != nil {
+		log.Errorf("Error setting up platform git credentials: %v", err)
 	}
 
 	// run commands
@@ -334,4 +345,119 @@ func markerFileExists(markerName string, markerContent string) (bool, error) {
 	}
 
 	return false, nil
+}
+
+func setupPlatformGitCredentials(userName string, platformOptions *devpod.PlatformOptions, log log.Logger) error {
+	// platform is not enabled, skip
+	if !platformOptions.Enabled {
+		return nil
+	}
+
+	// setup platform git user
+	if platformOptions.UserCredentials.GitUser != "" && platformOptions.UserCredentials.GitEmail != "" {
+		gitUser, err := gitcredentials.GetUser(userName)
+		if err == nil && gitUser.Name == "" && gitUser.Email == "" {
+			log.Info("Setup workspace git user and email")
+			err := gitcredentials.SetUser(userName, &gitcredentials.GitUser{
+				Name:  platformOptions.UserCredentials.GitUser,
+				Email: platformOptions.UserCredentials.GitEmail,
+			})
+			if err != nil {
+				return fmt.Errorf("set git user: %w", err)
+			}
+		}
+	}
+
+	// setup platform git http credentials
+	err := setupPlatformGitHTTPCredentials(userName, platformOptions, log)
+	if err != nil {
+		log.Errorf("Error setting up platform git http credentials: %v", err)
+	}
+
+	// setup platform git ssh keys
+	err = setupPlatformGitSSHKeys(userName, platformOptions, log)
+	if err != nil {
+		log.Errorf("Error setting up platform git ssh keys: %v", err)
+	}
+
+	return nil
+}
+func setupPlatformGitHTTPCredentials(userName string, platformOptions *devpod.PlatformOptions, log log.Logger) error {
+	if !platformOptions.Enabled || len(platformOptions.UserCredentials.GitHttp) == 0 {
+		return nil
+	}
+
+	log.Info("Setup platform user git http credentials")
+	binaryPath, err := os.Executable()
+	if err != nil {
+		return err
+	}
+	err = gitcredentials.ConfigureHelper(binaryPath, userName, -1)
+	if err != nil {
+		return fmt.Errorf("configure git helper: %w", err)
+	}
+
+	return nil
+}
+
+func setupPlatformGitSSHKeys(userName string, platformOptions *devpod.PlatformOptions, log log.Logger) error {
+	if !platformOptions.Enabled || len(platformOptions.UserCredentials.GitSsh) == 0 {
+		return nil
+	}
+
+	log.Info("Setup platform user git ssh keys")
+	homeFolder, err := command.GetHome(userName)
+	if err != nil {
+		return err
+	}
+
+	// write ssh keys to ~/.ssh/id_rsa
+	sshFolder := filepath.Join(homeFolder, ".ssh")
+	err = os.MkdirAll(sshFolder, 0700)
+	if err != nil && !errors.Is(err, os.ErrExist) {
+		return err
+	}
+	_ = copy2.Chown(sshFolder, userName)
+
+	// delete previous keys
+	files, err := os.ReadDir(sshFolder)
+	if err != nil {
+		return err
+	}
+	for _, file := range files {
+		if !strings.HasPrefix(file.Name(), "platform_git_ssh_") {
+			continue
+		}
+
+		fileName := strings.TrimPrefix(file.Name(), "platform_git_ssh_")
+		index, err := strconv.Atoi(fileName)
+		if err != nil {
+			continue
+		}
+		if index >= len(platformOptions.UserCredentials.GitSsh) {
+			continue
+		}
+
+		err = os.Remove(filepath.Join(sshFolder, file.Name()))
+		if err != nil {
+			log.Warnf("Error removing previous platform git ssh key: %v", err)
+		}
+	}
+
+	// write new keys
+	for i, key := range platformOptions.UserCredentials.GitSsh {
+		fileName := filepath.Join(sshFolder, fmt.Sprintf("platform_git_ssh_%d", i))
+		err = os.WriteFile(fileName, []byte(key.Key), 0600)
+		if err != nil {
+			log.Warnf("Error writing platform git ssh key: %v", err)
+		} else {
+			err = copy2.Chown(fileName, userName)
+			// do not exit on error, we can have non-fatal errors
+			if err != nil {
+				log.Warnf("Error chowning platform git ssh keys: %v", err)
+			}
+		}
+	}
+
+	return nil
 }

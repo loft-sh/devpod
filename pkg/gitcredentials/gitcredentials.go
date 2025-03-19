@@ -41,12 +41,17 @@ func ConfigureHelper(binaryPath, userName string, port int) error {
 		return err
 	}
 
+	helper := fmt.Sprintf(`helper = !'%s' agent git-credentials`, binaryPath)
+	if port != -1 {
+		helper += fmt.Sprintf(` --port %d`, port)
+	}
+
 	config := string(out)
-	if !strings.Contains(config, fmt.Sprintf(`helper = !'%s' agent git-credentials --port %d`, binaryPath, port)) {
+	if !strings.Contains(config, helper) {
 		content := removeCredentialHelper(config) + fmt.Sprintf(`
 [credential]
-        helper = !'%s' agent git-credentials --port %d
-`, binaryPath, port)
+        %s
+`, helper)
 
 		err = os.WriteFile(gitConfigPath, []byte(content), 0600)
 		if err != nil {

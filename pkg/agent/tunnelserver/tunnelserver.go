@@ -212,13 +212,14 @@ func (t *tunnelServer) GitCredentials(ctx context.Context, message *tunnel.Messa
 	}
 
 	if t.platformOptions != nil && t.platformOptions.Enabled {
-		if len(t.platformOptions.Credentials.GitHttp) > 0 {
-			if len(t.platformOptions.Credentials.GitHttp) == 1 {
-				credentials.Username = t.platformOptions.Credentials.GitHttp[0].User
-				credentials.Password = t.platformOptions.Credentials.GitHttp[0].Password
-				credentials.Path = t.platformOptions.Credentials.GitHttp[0].Path
+		gitHttpCredentials := append(t.platformOptions.UserCredentials.GitHttp, t.platformOptions.ProjectCredentials.GitHttp...)
+		if len(gitHttpCredentials) > 0 {
+			if len(gitHttpCredentials) == 1 {
+				credentials.Username = gitHttpCredentials[0].User
+				credentials.Password = gitHttpCredentials[0].Password
+				credentials.Path = gitHttpCredentials[0].Path
 			} else {
-				for _, credential := range t.platformOptions.Credentials.GitHttp {
+				for _, credential := range gitHttpCredentials {
 					if credential.Host == credentials.Host {
 						credentials.Username = credential.User
 						credentials.Password = credential.Password

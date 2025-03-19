@@ -23,7 +23,7 @@ func StartCredentialsServer(ctx context.Context, cancel context.CancelFunc, clie
 	go func() {
 		defer cancel()
 
-		err := RunCredentialsServer(ctx, port, client, "", log)
+		err := RunCredentialsServer(ctx, port, client, log)
 		if err != nil {
 			log.Errorf("Error running git credentials server: %v", err)
 		}
