@@ -23,16 +23,32 @@ import { WorkspaceTabs } from "./Tabs"
 import { WorkspaceCardHeader } from "./WorkspaceCardHeader"
 import { WorkspaceDetails } from "./WorkspaceDetails"
 import { useTemplate } from "./useTemplate"
+import { useMutation } from "@tanstack/react-query"
 
 export function Workspace() {
   const params = useParams<{ workspace: string }>()
   const { data: projectClusters } = useProjectClusters()
-  const { host, isLoadingWorkspaces } = useProContext()
+  const { host, isLoadingWorkspaces, client } = useProContext()
   const navigate = useNavigate()
   const workspace = useWorkspace<ProWorkspaceInstance>(params.workspace)
   const instance = workspace.data
   const instanceDisplayName = getDisplayName(instance)
   const workspaceActions = useWorkspaceActions(instance?.id)
+
+  const { mutate: updateWorkspaceDisplayName } = useMutation({
+    mutationFn: async ({ newName }: Readonly<{ newName: string }>) => {
+      if (!instance) {
+        return
+      }
+      const updatedWorkspace = new ProWorkspaceInstance(instance)
+      if (!updatedWorkspace.spec) {
+        updatedWorkspace.spec = {}
+      }
+      updatedWorkspace.spec.displayName = newName
+
+      return (await client.updateWorkspace(updatedWorkspace)).unwrap()
+    },
+  })
 
   const { modal: stopModal, open: openStopModal } = useStopWorkspaceModal(
     useCallback(
@@ -140,13 +156,20 @@ export function Workspace() {
     navigate(Routes.toProWorkspace(host, instance.id))
   }
 
+  const handleWorkspaceDisplayNameChanged = (newName: string) => {
+    updateWorkspaceDisplayName({ newName })
+  }
+
   return (
     <>
       <VStack align="start" width="full" height="full">
         <BackToWorkspaces />
         <VStack align="start" width="full" pl="4" px="4" paddingInlineEnd="0">
           <Box w="full">
-            <WorkspaceCardHeader instance={instance} showSource={false}>
+            <WorkspaceCardHeader
+              instance={instance}
+              showSource={false}
+              onDisplayNameChange={handleWorkspaceDisplayNameChanged}>
               <WorkspaceCardHeader.Controls
                 onOpenClicked={handleOpenClicked}
                 onDeleteClicked={openDeleteModal}

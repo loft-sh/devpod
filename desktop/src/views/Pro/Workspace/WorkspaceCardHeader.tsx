@@ -3,6 +3,7 @@ import { ProWorkspaceInstance, useSettings } from "@/contexts"
 import {
   ArrowCycle,
   ArrowPath,
+  Close,
   Cog,
   Ellipsis,
   GitBranch,
@@ -15,7 +16,7 @@ import {
 import { getDisplayName, getIDEDisplayName } from "@/lib"
 import { TIDE, TIDEs, TWorkspaceSource } from "@/types"
 import { useGroupIDEs, useIDEs } from "@/useIDEs"
-import { ChevronDownIcon } from "@chakra-ui/icons"
+import { CheckIcon, ChevronDownIcon, CloseIcon, EditIcon } from "@chakra-ui/icons"
 import {
   Box,
   Button,
@@ -24,6 +25,10 @@ import {
   HStack,
   Heading,
   IconButton,
+  Input,
+  InputGroup,
+  InputRightAddon,
+  InputRightElement,
   Menu,
   MenuButton,
   MenuItem,
@@ -34,7 +39,15 @@ import {
   VStack,
   useColorModeValue,
 } from "@chakra-ui/react"
-import React, { ReactNode, createContext, useCallback, useContext } from "react"
+import React, {
+  ChangeEventHandler,
+  KeyboardEventHandler,
+  ReactNode,
+  createContext,
+  useCallback,
+  useContext,
+  useState,
+} from "react"
 
 type TWorkspaceCardHeaderContext = ProWorkspaceInstance
 const WorkspaceCardHeaderContext = createContext<TWorkspaceCardHeaderContext>(null!)
@@ -46,18 +59,50 @@ type TWorkspaceCardHeaderProps = Readonly<{
   isSelected?: boolean
   showSelection?: boolean
   onSelectionChange?: (isSelected: boolean) => void
+  onDisplayNameChange?: (newName: string) => void
 }>
 export function WorkspaceCardHeader({
   instance,
   children,
   isSelected,
-  onSelectionChange,
   showSelection,
   showSource = true,
+  onSelectionChange,
+  onDisplayNameChange,
 }: TWorkspaceCardHeaderProps) {
+  const [isEditingWorkspaceName, setIsEditingWorkspaceName] = useState(false)
+  const [currentWorkspaceName, setCurrentWorkspaceName] = useState(() =>
+    getDisplayName(instance, instance.id)
+  )
   const source = instance.status?.source
   const sourceDetail = getSourceDetail(source)
   const textColor = useColorModeValue("gray.500", "gray.400")
+
+  const reset = () => {
+    setIsEditingWorkspaceName(false)
+    setCurrentWorkspaceName(getDisplayName(instance, instance.id))
+  }
+  const handleCurrentWorkspaceNameChanged: ChangeEventHandler<HTMLInputElement> = (e) => {
+    setCurrentWorkspaceName(e.target.value)
+  }
+  const handleSave = () => {
+    if (currentWorkspaceName.length > 0) {
+      onDisplayNameChange?.(currentWorkspaceName)
+      setIsEditingWorkspaceName(false)
+    } else {
+      reset()
+    }
+  }
+  const handleKeyUp: KeyboardEventHandler<HTMLInputElement> = (e) => {
+    if (e.key === "Escape") {
+      reset()
+      return
+    }
+    if (e.keyCode === 13) {
+      handleSave()
+      return
+    }
+  }
 
   return (
     <HStack justify="space-between" align="start">
@@ -82,15 +127,53 @@ export function WorkspaceCardHeader({
           )}
         </HStack>
         <HStack alignItems={"center"}>
-          <Heading size="md" my="1">
-            <Text
-              fontWeight="bold"
-              maxW="50rem"
-              overflow="hidden"
-              whiteSpace="nowrap"
-              textOverflow="ellipsis">
-              {getDisplayName(instance, instance.id)}
-            </Text>
+          <Heading size="md" my="1" data-group>
+            {isEditingWorkspaceName ? (
+              <>
+                <HStack>
+                  <Input
+                    autoFocus
+                    value={currentWorkspaceName}
+                    onChange={handleCurrentWorkspaceNameChanged}
+                    onKeyUp={handleKeyUp}
+                  />
+                  <ButtonGroup variant="ghost" isAttached>
+                    <IconButton
+                      aria-label="Save name"
+                      icon={<CheckIcon boxSize="3" />}
+                      onClick={handleSave}
+                    />
+                    <IconButton
+                      aria-label="Cancel"
+                      icon={<CloseIcon boxSize="3" />}
+                      onClick={reset}
+                    />
+                  </ButtonGroup>
+                </HStack>
+              </>
+            ) : (
+              <Text
+                lineHeight={onDisplayNameChange ? "2" : ""}
+                fontWeight="bold"
+                maxW="50rem"
+                overflow="hidden"
+                whiteSpace="nowrap"
+                textOverflow="ellipsis">
+                {currentWorkspaceName}
+                {onDisplayNameChange && (
+                  <IconButton
+                    ml="2"
+                    opacity="0"
+                    _groupHover={{ opacity: "1" }}
+                    variant="ghost"
+                    borderRadius={"full"}
+                    aria-label="Change workspace name"
+                    icon={<EditIcon />}
+                    onClick={() => setIsEditingWorkspaceName(true)}
+                  />
+                )}
+              </Text>
+            )}
           </Heading>
         </HStack>
         {showSource && sourceDetail ? sourceDetail : null}
