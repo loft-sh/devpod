@@ -8,7 +8,6 @@ import (
 	"os"
 	"os/exec"
 	"os/signal"
-	"path/filepath"
 	"strings"
 	"sync"
 	"syscall"
@@ -23,6 +22,10 @@ import (
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
+)
+
+const (
+	RootDir = "/var/devpod"
 )
 
 type DaemonCmd struct {
@@ -199,12 +202,11 @@ func runTimeoutMonitor(ctx context.Context, duration time.Duration, errChan chan
 // runNetworkServer starts the network server.
 func runNetworkServer(ctx context.Context, cmd *DaemonCmd, errChan chan<- error, wg *sync.WaitGroup) {
 	defer wg.Done()
-	rootDir := "/var/devpod"
-	if err := os.MkdirAll(rootDir, os.ModePerm); err != nil {
+	if err := os.MkdirAll(RootDir, os.ModePerm); err != nil {
 		errChan <- err
 		return
 	}
-	logger := initLogging(rootDir)
+	logger := initLogging()
 	config := client.NewConfig()
 	config.AccessKey = cmd.Config.Platform.AccessKey
 	config.Host = "https://" + cmd.Config.Platform.PlatformHost
@@ -219,7 +221,7 @@ func runNetworkServer(ctx context.Context, cmd *DaemonCmd, errChan chan<- error,
 		PlatformHost:  ts.RemoveProtocol(cmd.Config.Platform.PlatformHost),
 		WorkspaceHost: cmd.Config.Platform.WorkspaceHost,
 		Client:        baseClient,
-		RootDir:       rootDir,
+		RootDir:       RootDir,
 		LogF: func(format string, args ...interface{}) {
 			logger.Infof(format, args...)
 		},
@@ -288,10 +290,6 @@ func handleSignals(ctx context.Context, errChan chan<- error) {
 }
 
 // initLogging initializes logging and returns a combined logger.
-func initLogging(rootDir string) log.Logger {
-	logLevel := logrus.InfoLevel
-	logPath := filepath.Join(rootDir, "daemon.log")
-	logger := log.NewFileLogger(logPath, logLevel)
-
-	return logger
+func initLogging() log.Logger {
+	return log.NewStdoutLogger(nil, os.Stdout, os.Stderr, logrus.InfoLevel)
 }

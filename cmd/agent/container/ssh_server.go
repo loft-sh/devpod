@@ -44,7 +44,7 @@ func NewSSHServerCmd(flags *flags.GlobalFlags) *cobra.Command {
 
 // Run runs the command logic
 func (cmd *SSHServerCmd) Run(_ *cobra.Command, _ []string) error {
-	logger := getFileLogger(cmd.AgentDir, cmd.RemoteUser, cmd.Debug)
+	logger := getFileLogger(cmd.RemoteUser, cmd.Debug)
 	server, err := helperssh.NewContainerServer(cmd.Address, cmd.Workdir, logger)
 	if err != nil {
 		return err
@@ -64,7 +64,7 @@ func (cmd *SSHServerCmd) Run(_ *cobra.Command, _ []string) error {
 	return server.ListenAndServe()
 }
 
-func getFileLogger(agentDir string, remoteUser string, debug bool) log.Logger {
+func getFileLogger(remoteUser string, debug bool) log.Logger {
 	logLevel := logrus.InfoLevel
 	if debug {
 		logLevel = logrus.DebugLevel

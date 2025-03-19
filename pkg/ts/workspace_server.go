@@ -82,7 +82,7 @@ func (s *WorkspaceServer) Start(ctx context.Context) error {
 	go s.sendHeartbeats(ctx, projectName, workspaceName, lc)
 
 	// Start both SSH and HTTP reverse proxy listeners
-	if err := s.startListeners(ctx); err != nil {
+	if err := s.startListeners(ctx, projectName, workspaceName, lc); err != nil {
 		return err
 	}
 
@@ -201,7 +201,7 @@ func (s *WorkspaceServer) parseWorkspaceHostname() (workspace, project string, e
 }
 
 // startListeners creates and starts the SSH and HTTP reverse proxy listeners.
-func (s *WorkspaceServer) startListeners(ctx context.Context) error {
+func (s *WorkspaceServer) startListeners(ctx context.Context, projectName, workspaceName string, lc *tailscale.LocalClient) error {
 	// Create and start the SSH listener.
 	s.log.Infof("Starting SSH listener")
 	sshListener, err := s.createListener(fmt.Sprintf(":%d", sshServer.DefaultUserPort))
@@ -216,13 +216,37 @@ func (s *WorkspaceServer) startListeners(ctx context.Context) error {
 		return fmt.Errorf("failed to create listener on TS port %s: %w", TSPortForwardPort, err)
 	}
 
-	s.listeners = append(s.listeners, sshListener, wsListener)
+	// Create and start the paltform HTTP git credentials listener
+	s.log.Infof("Starting platform HTTP user git credentials listener on port %s", TSPortForwardPort)
+	credentialsSocket := filepath.Join(s.config.RootDir, "git-credentials.sock")
+	_ = os.Remove(credentialsSocket)
+	gitCredentialsListener, err := net.Listen("unix", credentialsSocket)
+	if err != nil {
+		return fmt.Errorf("failed to create listener on TS port %s: %w", TSPortForwardPort, err)
+	}
+
+	// make sure all users can access the socket
+	_ = os.Chmod(credentialsSocket, 0o777)
+
+	// add all listeners to the list
+	s.listeners = append(s.listeners, sshListener, wsListener, gitCredentialsListener)
+
+	// Setup HTTP handler for git credentials
+	go func() {
+		mux := http.NewServeMux()
+		transport := &http.Transport{DialContext: s.tsServer.Dial}
+		mux.HandleFunc("/git-credentials", func(w http.ResponseWriter, r *http.Request) {
+			s.gitCredentialsHandler(w, r, lc, transport, projectName, workspaceName)
+		})
+		if err := http.Serve(gitCredentialsListener, mux); err != nil && err != http.ErrServerClosed {
+			s.log.Errorf("HTTP git credentials server error: %v", err)
+		}
+	}()
 
 	// Setup HTTP handler for port forwarding.
-	mux := http.NewServeMux()
-	mux.HandleFunc("/portforward", s.httpPortForwardHandler)
-
 	go func() {
+		mux := http.NewServeMux()
+		mux.HandleFunc("/portforward", s.httpPortForwardHandler)
 		if err := http.Serve(wsListener, mux); err != nil && err != http.ErrServerClosed {
 			s.log.Errorf("HTTP server error on TS port %s: %v", TSPortForwardPort, err)
 		}
@@ -230,6 +254,7 @@ func (s *WorkspaceServer) startListeners(ctx context.Context) error {
 
 	// Start handling SSH connections.
 	go s.handleSSHConnections(ctx, sshListener)
+
 	return nil
 }
 
@@ -254,6 +279,38 @@ func (s *WorkspaceServer) removeConnection() {
 	s.connectionCounterMu.Lock()
 	defer s.connectionCounterMu.Unlock()
 	s.connectionCounter--
+}
+
+// httpPortForwardHandler is the HTTP reverse proxy handler for workspace.
+// It reconstructs the target URL using custom headers and forwards the request.
+func (s *WorkspaceServer) gitCredentialsHandler(w http.ResponseWriter, r *http.Request, lc *tailscale.LocalClient, transport *http.Transport, projectName, workspaceName string) {
+	s.log.Infof("Received git credentials request from %s", r.RemoteAddr)
+
+	// create a new http client with a custom transport
+	discoveredRunner, err := s.discoverRunner(r.Context(), lc)
+	if err != nil {
+		http.Error(w, "failed to discover runner", http.StatusInternalServerError)
+		return
+	}
+
+	// build the runner URL
+	runnerURL := fmt.Sprintf("http://%s.ts.loft/devpod/%s/%s/workspace-git-credentials", discoveredRunner, projectName, workspaceName)
+	parsedURL, err := url.Parse(runnerURL)
+	if err != nil {
+		http.Error(w, "failed to parse runner URL", http.StatusInternalServerError)
+		return
+	}
+
+	// Build the reverse proxy with a custom Director.
+	proxy := httputil.NewSingleHostReverseProxy(parsedURL)
+	proxy.Director = func(req *http.Request) {
+		dest := *parsedURL
+		req.URL = &dest
+		req.Host = dest.Host
+		req.Header.Set("Authorization", "Bearer "+s.config.AccessKey)
+	}
+	proxy.Transport = transport
+	proxy.ServeHTTP(w, r)
 }
 
 // httpPortForwardHandler is the HTTP reverse proxy handler for workspace.

@@ -292,9 +292,10 @@ func CloneRepositoryForWorkspace(
 
 	// setup private ssh key if passed in
 	extraEnv := []string{}
-	if len(options.Platform.Credentials.GitSsh) > 0 {
+	gitSshCredentials := append(options.Platform.UserCredentials.GitSsh, options.Platform.ProjectCredentials.GitSsh...)
+	if len(gitSshCredentials) > 0 {
 		keys := []string{}
-		for _, key := range options.Platform.Credentials.GitSsh {
+		for _, key := range gitSshCredentials {
 			keys = append(keys, key.Key)
 		}
 
