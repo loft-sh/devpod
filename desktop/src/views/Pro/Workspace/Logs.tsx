@@ -1,7 +1,10 @@
 import { TerminalSearchBar, useStreamingTerminal } from "@/components"
-import { useAction, useProContext } from "@/contexts"
+import { TSearchOptions } from "@/components/Terminal/useTerminalSearch"
+import { useAction } from "@/contexts"
 import { useWorkspaceActions } from "@/contexts/DevPodContext/workspaces/useWorkspace"
 import { CheckCircle, ExclamationCircle, ExclamationTriangle } from "@/icons"
+import EmptyImage from "@/images/empty_default.svg"
+import EmptyDarkImage from "@/images/empty_default_dark.svg"
 import { exists, useDownloadLogs } from "@/lib"
 import { Routes } from "@/routes"
 import { DownloadIcon } from "@chakra-ui/icons"
@@ -27,17 +30,19 @@ import {
   useColorModeValue,
 } from "@chakra-ui/react"
 import dayjs from "dayjs"
-import { useEffect, useState } from "react"
+import { useEffect, useMemo, useState } from "react"
 import { HiStop } from "react-icons/hi"
 import { Link as RouterLink, useLocation } from "react-router-dom"
 import { TTabProps } from "./types"
-import { TSearchOptions } from "@/components/Terminal/useTerminalSearch"
-import EmptyImage from "@/images/empty_default.svg"
-import EmptyDarkImage from "@/images/empty_default_dark.svg"
+
+const MAX_LOGS = 10
 
 export function Logs({ host, instance }: TTabProps) {
   const [accordionIndex, setAccordionIndex] = useState<number>(0)
-  const actions = useWorkspaceActions(instance.id)
+  const workspaceActions = useWorkspaceActions(instance.id)
+  const actions = useMemo(() => {
+    return workspaceActions?.slice(0, MAX_LOGS)
+  }, [workspaceActions])
   const { colorMode } = useColorMode()
 
   const location = useLocation()
@@ -58,7 +63,11 @@ export function Logs({ host, instance }: TTabProps) {
       {!actions?.length ? (
         <VStack h={"full"} w={"full"} justifyContent={"center"} alignItems={"center"} flexGrow={1}>
           <Image src={colorMode == "dark" ? EmptyDarkImage : EmptyImage} />
-          <Text fontWeight={"semibold"} fontSize={"sm"} color={"gray.600"} _dark={{ color: "gray.300"}}>
+          <Text
+            fontWeight={"semibold"}
+            fontSize={"sm"}
+            color={"gray.600"}
+            _dark={{ color: "gray.300" }}>
             No logs to show yet
           </Text>
         </VStack>

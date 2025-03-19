@@ -41,7 +41,14 @@ export function useWorkspaceActions(
         return undefined
       }
 
-      const workspaceActions = store.getWorkspaceActions(workspaceID)
+      // It's okay to use sort directly here because the store always returns a new array
+      const workspaceActions = store.getWorkspaceActions(workspaceID).sort((a, b) => {
+        if (a.finishedAt && b.finishedAt) {
+          return b.finishedAt - a.finishedAt
+        }
+
+        return b.createdAt - a.createdAt
+      })
       if (!dataCache.current || dataCache.current.length !== workspaceActions.length) {
         dataCache.current = workspaceActions
 
