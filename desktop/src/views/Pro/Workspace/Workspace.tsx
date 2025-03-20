@@ -1,4 +1,3 @@
-import { WarningMessageBox } from "@/components"
 import {
   ProWorkspaceInstance,
   useProContext,
@@ -6,6 +5,8 @@ import {
   useWorkspace,
   useWorkspaceActions,
 } from "@/contexts"
+import EmptyImage from "@/images/empty_default.svg"
+import EmptyDarkImage from "@/images/empty_default_dark.svg"
 import {
   getDisplayName,
   useDeleteWorkspaceModal,
@@ -15,7 +16,8 @@ import {
 } from "@/lib"
 import { useStoreTroubleshoot } from "@/lib/useStoreTroubleshoot"
 import { Routes } from "@/routes"
-import { Box, Center, Spinner, Text, VStack } from "@chakra-ui/react"
+import { Box, Center, Image, Spinner, Text, VStack, useColorMode } from "@chakra-ui/react"
+import { useMutation } from "@tanstack/react-query"
 import { useCallback, useEffect, useMemo } from "react"
 import { useNavigate, useParams } from "react-router-dom"
 import { BackToWorkspaces } from "../BackToWorkspaces"
@@ -23,7 +25,6 @@ import { WorkspaceTabs } from "./Tabs"
 import { WorkspaceCardHeader } from "./WorkspaceCardHeader"
 import { WorkspaceDetails } from "./WorkspaceDetails"
 import { useTemplate } from "./useTemplate"
-import { useMutation } from "@tanstack/react-query"
 
 export function Workspace() {
   const params = useParams<{ workspace: string }>()
@@ -124,29 +125,35 @@ export function Workspace() {
     }
   }, [storeTroubleshoot, workspace.data, workspaceActions])
 
+  const { colorMode } = useColorMode()
+
   if (!instance) {
     if (isLoadingWorkspaces) {
       return (
         <Center w="full" h="60%" flexFlow="column nowrap">
           <Spinner size="xl" thickness="4px" speed="1s" color="gray.600" />
-          <Text mt="4">Loading Workspaces...</Text>
+          <Text mt="4">Loading Workspace...</Text>
         </Center>
       )
     }
 
     return (
-      <VStack align="start" gap="4">
+      <VStack align="start" justifyContent="start">
         <BackToWorkspaces />
-        <WarningMessageBox
-          warning={
-            <>
-              Instance <b>{params.workspace}</b> not found
-            </>
-          }
-        />
+        <VStack w="full" py="32" justifyContent="center" alignItems="center">
+          <Image src={colorMode == "dark" ? EmptyDarkImage : EmptyImage} />
+          <Text
+            fontWeight={"semibold"}
+            fontSize={"sm"}
+            color={"gray.600"}
+            _dark={{ color: "gray.300" }}>
+            Workspace not found
+          </Text>
+        </VStack>
       </VStack>
     )
   }
+
   const canStop =
     instance.status?.lastWorkspaceStatus != "Busy" &&
     instance.status?.lastWorkspaceStatus != "Stopped"
