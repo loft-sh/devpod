@@ -1437,6 +1437,13 @@ func WithSignals(ctx context.Context) (context.Context, func()) {
 		}
 	}()
 
+	go func() {
+		<-ctx.Done()
+		<-signals
+		// force shutdown if context is done and we receive another signal
+		os.Exit(1)
+	}()
+
 	return ctx, func() {
 		cancel()
 		signal.Stop(signals)

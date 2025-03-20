@@ -113,7 +113,7 @@ func BuildRoot() *cobra.Command {
 	rootCmd := NewRootCmd()
 	persistentFlags := rootCmd.PersistentFlags()
 	globalFlags = flags.SetGlobalFlags(persistentFlags)
-	completion.RegisterFlagCompletionFuns(rootCmd, globalFlags)
+	_ = completion.RegisterFlagCompletionFuns(rootCmd, globalFlags)
 
 	rootCmd.AddCommand(agent.NewAgentCmd(globalFlags))
 	rootCmd.AddCommand(provider.NewProviderCmd(globalFlags))
