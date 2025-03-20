@@ -100,9 +100,21 @@ export function AddGitSSHCredentials({ isDisabled, onCreate }: TAddGitSSHCredent
           error={errors.nameError}>
           <Input
             spellCheck={false}
-            placeholder="Git Private Key"
+            placeholder="git-private-key"
             type="text"
-            {...register(FieldName.NAME)}
+            {...register(FieldName.NAME, {
+              validate: (value) => {
+                if (!value) {
+                  return "Name is required"
+                }
+
+                if (!/^[a-z][a-z0-9-_]*$/.test(value)) {
+                  return "Name can only contain lowercase letters, numbers, - and _"
+                }
+
+                return undefined
+              },
+            })}
           />
         </FormSection>
       </VStack>
