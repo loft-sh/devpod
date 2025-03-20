@@ -54,14 +54,14 @@ func (cmd *ListCmd) Run(ctx context.Context) error {
 		return err
 	}
 
-	workspaces, err := workspace.List(ctx, devPodConfig, cmd.SkipPro, log.Default)
+	workspaces, err := workspace.List(ctx, devPodConfig, cmd.SkipPro, cmd.Owner, log.Default)
 	if err != nil {
 		return err
 	}
 
 	if cmd.Output == "json" {
 		sort.SliceStable(workspaces, func(i, j int) bool {
-			return workspaces[i].ID < workspaces[j].ID
+			return workspaces[i].LastUsedTimestamp.Time.Unix() > workspaces[j].LastUsedTimestamp.Time.Unix()
 		})
 		out, err := json.Marshal(workspaces)
 		if err != nil {
@@ -70,9 +70,16 @@ func (cmd *ListCmd) Run(ctx context.Context) error {
 		fmt.Print(string(out))
 	} else if cmd.Output == "plain" {
 		tableEntries := [][]string{}
+		sort.SliceStable(workspaces, func(i, j int) bool {
+			return workspaces[i].LastUsedTimestamp.Time.Unix() > workspaces[j].LastUsedTimestamp.Time.Unix()
+		})
 		for _, entry := range workspaces {
+			name := entry.ID
+			if entry.IsPro() && entry.Pro.DisplayName != "" && entry.ID != entry.Pro.DisplayName {
+				name = fmt.Sprintf("%s (%s)", entry.Pro.DisplayName, entry.ID)
+			}
 			tableEntries = append(tableEntries, []string{
-				entry.ID,
+				name,
 				entry.Source.String(),
 				entry.Machine.ID,
 				entry.Provider.Name,
@@ -83,9 +90,6 @@ func (cmd *ListCmd) Run(ctx context.Context) error {
 			})
 		}
 
-		sort.SliceStable(tableEntries, func(i, j int) bool {
-			return tableEntries[i][0] < tableEntries[j][0]
-		})
 		table.PrintTable(log.Default, []string{
 			"Name",
 			"Source",

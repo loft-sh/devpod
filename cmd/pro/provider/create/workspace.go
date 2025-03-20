@@ -80,6 +80,8 @@ func (cmd *WorkspaceCmd) Run(ctx context.Context, stdin io.Reader, stdout io.Wri
 	workspaceUID := os.Getenv(provider.WORKSPACE_UID)
 	workspaceFolder := os.Getenv(provider.WORKSPACE_FOLDER)
 	workspaceContext := os.Getenv(provider.WORKSPACE_CONTEXT)
+	workspacePicture := os.Getenv(platform.WorkspacePictureEnv)
+	workspaceSource := os.Getenv(platform.WorkspaceSourceEnv)
 	if workspaceUID == "" || workspaceID == "" || workspaceFolder == "" {
 		return fmt.Errorf("workspaceID, workspaceUID or workspace folder not found: %s, %s, %s", workspaceID, workspaceUID, workspaceFolder)
 	}
@@ -95,7 +97,7 @@ func (cmd *WorkspaceCmd) Run(ctx context.Context, stdin io.Reader, stdout io.Wri
 		return fmt.Errorf("unable to create new instance through CLI if stdin is not a terminal")
 	}
 
-	instance, err = form.CreateInstance(ctx, baseClient, workspaceID, workspaceUID, cmd.Log)
+	instance, err = form.CreateInstance(ctx, baseClient, workspaceID, workspaceUID, workspaceSource, workspacePicture, cmd.Log)
 	if err != nil {
 		return err
 	}
@@ -112,8 +114,9 @@ func (cmd *WorkspaceCmd) Run(ctx context.Context, stdin io.Reader, stdout io.Wri
 		return fmt.Errorf("load workspace config: %w", err)
 	}
 	workspaceConfig.Pro = &provider.ProMetadata{
-		Project:     project.ProjectFromNamespace(instance.GetNamespace()),
-		DisplayName: instance.Spec.DisplayName,
+		InstanceName: instance.GetName(),
+		Project:      project.ProjectFromNamespace(instance.GetNamespace()),
+		DisplayName:  instance.Spec.DisplayName,
 	}
 
 	err = provider.SaveWorkspaceConfig(workspaceConfig)

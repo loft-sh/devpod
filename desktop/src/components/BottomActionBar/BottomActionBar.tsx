@@ -14,6 +14,7 @@ import {
 import { motion } from "framer-motion"
 import { RefObject, createContext, useContext, useEffect, useMemo, useRef, useState } from "react"
 import { ErrorMessageBox } from "../Error"
+import { useBorderColor } from "@/Theme"
 
 type TModalBottomBarProps = Readonly<{
   isModal?: boolean
@@ -32,8 +33,9 @@ export function BottomActionBar({
   children,
 }: TModalBottomBarProps) {
   const ref = useRef<HTMLDivElement>(null)
-  const bottomBarBackgroundColor = useColorModeValue("white", "gray.700")
+  const bottomBarBackgroundColor = useColorModeValue("white", "gray.900")
   const bottomBarBackgroundColorModal = useColorModeValue("white", "background.darkest")
+  const borderColor = useBorderColor()
   const translateX = useBreakpointValue({
     base: hasSidebar ? "translateX(-3rem)" : "",
     xl: isModal ? "translateX(-3rem)" : "",
@@ -81,6 +83,7 @@ export function BottomActionBar({
         height="20"
         alignItems="center"
         borderTopWidth="thin"
+        borderColor={borderColor}
         backgroundColor={isModal ? bottomBarBackgroundColor : bottomBarBackgroundColorModal}
         justifyContent="space-between"
         paddingX={paddingX}
@@ -139,7 +142,6 @@ function useErrorDimensions(
   defaultWidth: BoxProps["width"] = "5xl"
 ) {
   const [errorHeight, setErrorHeight] = useState<BoxProps["height"]>(defaultHeight)
-  // TODO: calculate width dynamically based on parent width
   const [errorWidth] = useState<BoxProps["width"]>(defaultWidth)
 
   useEffect(() => {

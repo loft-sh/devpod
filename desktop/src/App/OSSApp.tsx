@@ -41,8 +41,7 @@ export function OSSApp() {
   const rootRouteMatch = useMatch(Routes.ROOT)
   const { sidebarPosition } = useSettings()
   const contentBackgroundColor = useColorModeValue("white", "background.darkest")
-  const subheadingTextColor = useColorModeValue("gray.500", "gray.400")
-  const actionHoverColor = useColorModeValue("gray.100", "gray.800")
+  const actionHoverColor = useColorModeValue("gray.100", "gray.700")
   const toolbarHeight = useToken("sizes", showTitleBar ? "28" : "20")
   const borderColor = useBorderColor()
   const showTitle = isMacOS || isLinux
@@ -71,7 +70,7 @@ export function OSSApp() {
       <Flex width="100vw" maxWidth="100vw" overflow="hidden">
         {showTitleBar && <TitleBar showTitle={showTitle} />}
 
-        <Box width="full" height="full">
+        <Box width="full" height="full" >
           <Grid height="full" {...mainGridProps}>
             <GridItem area="sidebar">
               <Sidebar paddingTop={titleBarSafeArea}>
@@ -121,45 +120,45 @@ export function OSSApp() {
                         <Toolbar.Actions />
                       </GridItem>
                       <GridItem display="flex" alignItems="center" justifyContent="center">
-                        <Notifications
-                          getActionDestination={(action) => Routes.toAction(action.id)}
-                          badgeNumber={providerUpdateCount}
-                          providerUpdates={
-                            providerUpdateInfo &&
-                            providerUpdateCount > 0 && (
-                              <>
-                                {providerUpdateInfo.map(({ providerName }) => (
-                                  <LinkBox
-                                    key={providerName}
-                                    padding={2}
-                                    fontSize="sm"
-                                    borderRadius="md"
-                                    width="full"
-                                    display="flex"
-                                    flexFlow="row nowrap"
-                                    alignItems="center"
-                                    gap={3}
-                                    _hover={{ backgroundColor: actionHoverColor }}>
-                                    <Stack3D color="gray.400" />
-                                    <VStack align="start" spacing="0">
-                                      <Text>
-                                        <LinkOverlay
-                                          as={RouterLink}
-                                          to={Routes.PROVIDERS}
-                                          textTransform="capitalize">
-                                          <Text fontWeight="bold">Provider {providerName}</Text>
-                                        </LinkOverlay>
-                                      </Text>
-                                      <Text color={subheadingTextColor} marginTop="-1">
-                                        Update available
-                                      </Text>
-                                    </VStack>
-                                  </LinkBox>
-                                ))}
-                              </>
-                            )
-                          }
-                        />
+                        <Box mr="4">
+                          <Notifications
+                            getActionDestination={(action) => Routes.toAction(action.id)}
+                            badgeNumber={providerUpdateCount}
+                            providerUpdates={
+                              providerUpdateInfo &&
+                              providerUpdateCount > 0 && (
+                                <>
+                                  {providerUpdateInfo.map(({ providerName }) => (
+                                    <LinkBox
+                                      key={providerName}
+                                      padding={2}
+                                      fontSize="sm"
+                                      borderRadius="md"
+                                      width="full"
+                                      display="flex"
+                                      flexFlow="row nowrap"
+                                      alignItems="center"
+                                      gap={3}
+                                      _hover={{ backgroundColor: actionHoverColor }}>
+                                      <Stack3D color="gray.400" />
+                                      <VStack align="start" spacing="0">
+                                        <Text>
+                                          <LinkOverlay
+                                            as={RouterLink}
+                                            to={Routes.PROVIDERS}
+                                            textTransform="capitalize">
+                                            <Text fontWeight="bold">Provider {providerName}</Text>
+                                          </LinkOverlay>
+                                        </Text>
+                                        <Text marginTop="-1">Update available</Text>
+                                      </VStack>
+                                    </LinkBox>
+                                  ))}
+                                </>
+                              )
+                            }
+                          />
+                        </Box>
                         <ProSwitcher />
                       </GridItem>
                     </Grid>

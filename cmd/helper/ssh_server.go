@@ -57,6 +57,7 @@ func (cmd *SSHServerCmd) Run(_ *cobra.Command, _ []string) error {
 	var (
 		keys    []ssh.PublicKey
 		hostKey []byte
+		err     error
 	)
 	if cmd.Token != "" {
 		// parse token
@@ -83,7 +84,6 @@ func (cmd *SSHServerCmd) Run(_ *cobra.Command, _ []string) error {
 		}
 
 		if len(t.HostKey) > 0 {
-			var err error
 			hostKey, err = base64.StdEncoding.DecodeString(t.HostKey)
 			if err != nil {
 				return fmt.Errorf("decode host key")
@@ -131,7 +131,7 @@ func (cmd *SSHServerCmd) Run(_ *cobra.Command, _ []string) error {
 			return fmt.Errorf("address %s already in use: %w", cmd.Address, err)
 		}
 
-		log.Default.ErrorStreamOnly().Debugf("address %s already in use", cmd.Address)
+		log.Default.ErrorStreamOnly().Infof("address %s already in use", cmd.Address)
 		return nil
 	}
 

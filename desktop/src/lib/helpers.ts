@@ -1,4 +1,4 @@
-import { TIDE, TLogOutput, TProvider } from "../types"
+import { TIDE, TLogOutput, TProInstance, TProvider } from "../types"
 import { ChildProcess } from "@tauri-apps/plugin-shell"
 import { Err, Failed, Return } from "./result"
 import { TActionObj } from "../contexts"
@@ -166,5 +166,12 @@ export function deepCopy<T>(obj: T): T | undefined {
 }
 
 export function canHealthCheck(providerConfig: TProvider["config"]): boolean {
-  return !!providerConfig?.exec?.proxy?.["health"]
+  return !!providerConfig?.exec?.proxy?.["health"] || !!providerConfig?.exec?.daemon
+}
+
+export function hasCapability(
+  proInstance: TProInstance | undefined,
+  capability: "daemon" | "update-provider" | "health-check"
+): boolean {
+  return proInstance?.capabilities?.includes(capability) ?? false
 }

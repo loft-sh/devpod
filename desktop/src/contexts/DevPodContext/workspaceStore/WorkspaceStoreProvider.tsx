@@ -1,10 +1,6 @@
-import { createContext, ReactNode, useMemo } from "react"
+import { ReactNode, useMemo } from "react"
+import { WorkspaceStoreContext } from "./context"
 import { IWorkspaceStore } from "./workspaceStore"
-
-export type TWorkspaceStoreContext = Readonly<{
-  store: IWorkspaceStore<string, unknown>
-}>
-export const WorkspaceStoreContext = createContext<TWorkspaceStoreContext>(null!)
 
 type TWorkspaceStoreProps<TStore> = Readonly<{
   store: TStore

@@ -13,12 +13,9 @@ import { WorkspaceStatus } from "@/icons"
 import { WORKSPACE_STATUSES } from "@/constants"
 import { WorkspaceStatusBadge } from "@/views/Workspaces/WorkspaceStatusBadge"
 import { useCallback } from "react"
-import {
-  TWorkspaceDisplayStatus,
-  WorkspaceDisplayStatus,
-  WorkspaceDisplayStatusBadge,
-} from "@/views/Pro/Workspace/WorkspaceStatus"
+import { WorkspaceDisplayStatusBadge } from "@/views/Pro/Workspace/WorkspaceStatus"
 import { TWorkspace } from "@/types"
+import { TWorkspaceDisplayStatus, WorkspaceDisplayStatus } from "@/views/Pro/Workspace/status"
 
 export type TWorkspaceStatusFilterState = string[] | "all"
 

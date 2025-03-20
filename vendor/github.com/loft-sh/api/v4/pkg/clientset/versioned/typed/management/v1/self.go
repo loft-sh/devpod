@@ -3,9 +3,9 @@
 package v1
 
 import (
-	"context"
+	context "context"
 
-	v1 "github.com/loft-sh/api/v4/pkg/apis/management/v1"
+	managementv1 "github.com/loft-sh/api/v4/pkg/apis/management/v1"
 	scheme "github.com/loft-sh/api/v4/pkg/clientset/versioned/scheme"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	types "k8s.io/apimachinery/pkg/types"
@@ -21,33 +21,34 @@ type SelvesGetter interface {
 
 // SelfInterface has methods to work with Self resources.
 type SelfInterface interface {
-	Create(ctx context.Context, self *v1.Self, opts metav1.CreateOptions) (*v1.Self, error)
-	Update(ctx context.Context, self *v1.Self, opts metav1.UpdateOptions) (*v1.Self, error)
+	Create(ctx context.Context, self *managementv1.Self, opts metav1.CreateOptions) (*managementv1.Self, error)
+	Update(ctx context.Context, self *managementv1.Self, opts metav1.UpdateOptions) (*managementv1.Self, error)
 	// Add a +genclient:noStatus comment above the type to avoid generating UpdateStatus().
-	UpdateStatus(ctx context.Context, self *v1.Self, opts metav1.UpdateOptions) (*v1.Self, error)
+	UpdateStatus(ctx context.Context, self *managementv1.Self, opts metav1.UpdateOptions) (*managementv1.Self, error)
 	Delete(ctx context.Context, name string, opts metav1.DeleteOptions) error
 	DeleteCollection(ctx context.Context, opts metav1.DeleteOptions, listOpts metav1.ListOptions) error
-	Get(ctx context.Context, name string, opts metav1.GetOptions) (*v1.Self, error)
-	List(ctx context.Context, opts metav1.ListOptions) (*v1.SelfList, error)
+	Get(ctx context.Context, name string, opts metav1.GetOptions) (*managementv1.Self, error)
+	List(ctx context.Context, opts metav1.ListOptions) (*managementv1.SelfList, error)
 	Watch(ctx context.Context, opts metav1.ListOptions) (watch.Interface, error)
-	Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts metav1.PatchOptions, subresources ...string) (result *v1.Self, err error)
+	Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts metav1.PatchOptions, subresources ...string) (result *managementv1.Self, err error)
 	SelfExpansion
 }
 
 // selves implements SelfInterface
 type selves struct {
-	*gentype.ClientWithList[*v1.Self, *v1.SelfList]
+	*gentype.ClientWithList[*managementv1.Self, *managementv1.SelfList]
 }
 
 // newSelves returns a Selves
 func newSelves(c *ManagementV1Client) *selves {
 	return &selves{
-		gentype.NewClientWithList[*v1.Self, *v1.SelfList](
+		gentype.NewClientWithList[*managementv1.Self, *managementv1.SelfList](
 			"selves",
 			c.RESTClient(),
 			scheme.ParameterCodec,
 			"",
-			func() *v1.Self { return &v1.Self{} },
-			func() *v1.SelfList { return &v1.SelfList{} }),
+			func() *managementv1.Self { return &managementv1.Self{} },
+			func() *managementv1.SelfList { return &managementv1.SelfList{} },
+		),
 	}
 }

@@ -3,9 +3,9 @@
 package v1
 
 import (
-	"context"
+	context "context"
 
-	v1 "github.com/loft-sh/api/v4/pkg/apis/storage/v1"
+	storagev1 "github.com/loft-sh/api/v4/pkg/apis/storage/v1"
 	scheme "github.com/loft-sh/api/v4/pkg/clientset/versioned/scheme"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	types "k8s.io/apimachinery/pkg/types"
@@ -21,33 +21,34 @@ type ClustersGetter interface {
 
 // ClusterInterface has methods to work with Cluster resources.
 type ClusterInterface interface {
-	Create(ctx context.Context, cluster *v1.Cluster, opts metav1.CreateOptions) (*v1.Cluster, error)
-	Update(ctx context.Context, cluster *v1.Cluster, opts metav1.UpdateOptions) (*v1.Cluster, error)
+	Create(ctx context.Context, cluster *storagev1.Cluster, opts metav1.CreateOptions) (*storagev1.Cluster, error)
+	Update(ctx context.Context, cluster *storagev1.Cluster, opts metav1.UpdateOptions) (*storagev1.Cluster, error)
 	// Add a +genclient:noStatus comment above the type to avoid generating UpdateStatus().
-	UpdateStatus(ctx context.Context, cluster *v1.Cluster, opts metav1.UpdateOptions) (*v1.Cluster, error)
+	UpdateStatus(ctx context.Context, cluster *storagev1.Cluster, opts metav1.UpdateOptions) (*storagev1.Cluster, error)
 	Delete(ctx context.Context, name string, opts metav1.DeleteOptions) error
 	DeleteCollection(ctx context.Context, opts metav1.DeleteOptions, listOpts metav1.ListOptions) error
-	Get(ctx context.Context, name string, opts metav1.GetOptions) (*v1.Cluster, error)
-	List(ctx context.Context, opts metav1.ListOptions) (*v1.ClusterList, error)
+	Get(ctx context.Context, name string, opts metav1.GetOptions) (*storagev1.Cluster, error)
+	List(ctx context.Context, opts metav1.ListOptions) (*storagev1.ClusterList, error)
 	Watch(ctx context.Context, opts metav1.ListOptions) (watch.Interface, error)
-	Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts metav1.PatchOptions, subresources ...string) (result *v1.Cluster, err error)
+	Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts metav1.PatchOptions, subresources ...string) (result *storagev1.Cluster, err error)
 	ClusterExpansion
 }
 
 // clusters implements ClusterInterface
 type clusters struct {
-	*gentype.ClientWithList[*v1.Cluster, *v1.ClusterList]
+	*gentype.ClientWithList[*storagev1.Cluster, *storagev1.ClusterList]
 }
 
 // newClusters returns a Clusters
 func newClusters(c *StorageV1Client) *clusters {
 	return &clusters{
-		gentype.NewClientWithList[*v1.Cluster, *v1.ClusterList](
+		gentype.NewClientWithList[*storagev1.Cluster, *storagev1.ClusterList](
 			"clusters",
 			c.RESTClient(),
 			scheme.ParameterCodec,
 			"",
-			func() *v1.Cluster { return &v1.Cluster{} },
-			func() *v1.ClusterList { return &v1.ClusterList{} }),
+			func() *storagev1.Cluster { return &storagev1.Cluster{} },
+			func() *storagev1.ClusterList { return &storagev1.ClusterList{} },
+		),
 	}
 }

@@ -1,50 +1,69 @@
-import { ProClient, client as globalClient } from "@/client"
-import { ToolbarActions, ToolbarTitle } from "@/components"
+import { client as globalClient } from "@/client"
+import { DaemonClient } from "@/client/pro/client"
+import { TWorkspaceOwnerFilterState, ToolbarActions, ToolbarTitle } from "@/components"
 import { Annotations, Result } from "@/lib"
 import { Routes } from "@/routes"
 import { Text } from "@chakra-ui/react"
 import { ManagementV1Project } from "@loft-enterprise/client/gen/models/managementV1Project"
-import { ManagementV1Self } from "@loft-enterprise/client/gen/models/managementV1Self"
-import { UseQueryResult, useQuery } from "@tanstack/react-query"
-import { ReactNode, createContext, useContext, useEffect, useMemo, useState } from "react"
-import { useNavigate } from "react-router-dom"
+import { useQuery } from "@tanstack/react-query"
+import { ReactNode, useEffect, useMemo, useState } from "react"
+import { Navigate, useNavigate, useSearchParams } from "react-router-dom"
+import { useProInstances } from "../proInstances"
 import { ProWorkspaceStore, useWorkspaceStore } from "../workspaceStore"
-import { ContextSwitcher, HOST_OSS } from "./ContextSwitcher"
+import { ContextSwitcher } from "./ContextSwitcher"
+import { HOST_OSS } from "./constants"
+import { ProContext, TProContext } from "./useProContext"
 
-type TProContext = Readonly<{
-  managementSelfQuery: UseQueryResult<ManagementV1Self | undefined>
-  currentProject?: ManagementV1Project
-  host: string
-  client: ProClient
-  isLoadingWorkspaces: boolean
-}>
-const ProContext = createContext<TProContext>(null!)
 export function ProProvider({ host, children }: { host: string; children: ReactNode }) {
+  const [[proInstances, { status: proInstancesStatus }]] = useProInstances()
   const [isLoadingWorkspaces, setIsLoadingWorkspaces] = useState(false)
+  const [ownerFilter, setOwnerFilter] = useState<TWorkspaceOwnerFilterState>("self")
   const navigate = useNavigate()
+  const [searchParams, setSearchParams] = useSearchParams()
+  const currentProInstance = useMemo(() => {
+    return proInstances?.find((instance) => instance.host == host)
+  }, [host, proInstances])
   const { store } = useWorkspaceStore<ProWorkspaceStore>()
-  const client = useMemo(() => globalClient.getProClient(host), [host])
-  const [selectedProject, setSelectedProject] = useState<ManagementV1Project | null>(null)
+  const client = useMemo(() => {
+    if (!currentProInstance) {
+      return null
+    }
+
+    return globalClient.getProClient(currentProInstance)
+  }, [currentProInstance])
   const managementSelfQuery = useQuery({
-    queryKey: ["managementSelf"],
+    queryKey: ["managementSelf", client],
     queryFn: async () => {
-      return (await client.getSelf()).unwrap()
+      return (await client!.getSelf()).unwrap()
     },
+    enabled: !!client,
   })
   const projectsQuery = useQuery({
-    queryKey: ["pro", host, "projects"],
+    queryKey: ["pro", host, "projects", client],
     queryFn: async () => {
-      return (await client.listProjects()).unwrap()
+      return (await client!.listProjects()).unwrap()
     },
+    enabled: !!client,
   })
 
   const currentProject = useMemo<ManagementV1Project | undefined>(() => {
-    if (selectedProject) {
-      return selectedProject
+    if (projectsQuery.data == null) {
+      return undefined
     }
 
-    return projectsQuery.data?.[0]
-  }, [projectsQuery, selectedProject])
+    const projectName = searchParams.get("project") ?? undefined
+    if (!projectName) {
+      return projectsQuery.data[0] ?? undefined
+    }
+
+    const maybeProject =
+      projectsQuery.data.find((project) => project.metadata?.name === projectName) ?? undefined
+    if (!maybeProject) {
+      return projectsQuery.data[0] ?? undefined
+    }
+
+    return maybeProject
+  }, [searchParams, projectsQuery.data])
 
   const [cancelWatch, setCancelWatch] = useState<
     { fn: () => Promise<Result<undefined>> } | undefined
@@ -53,53 +72,79 @@ export function ProProvider({ host, children }: { host: string; children: ReactN
   const [waitingForCancel, setWaitingForCancel] = useState<boolean>(false)
 
   useEffect(() => {
-    if (!currentProject?.metadata?.name) {
+    if (!currentProject?.metadata?.name || !client) {
       return
     }
     setIsLoadingWorkspaces(true)
 
-    let canceled = false
+    if (client instanceof DaemonClient) {
+      // daemon client impl
+      return client.watchWorkspaces(currentProject.metadata.name, ownerFilter, (workspaces) => {
+        // sort by last activity (newest > oldest)
+        const sorted = workspaces.slice().sort((a, b) => {
+          const lastActivityA = a.metadata?.annotations?.[Annotations.SleepModeLastActivity]
+          const lastActivityB = b.metadata?.annotations?.[Annotations.SleepModeLastActivity]
+          if (!(lastActivityA && lastActivityB)) {
+            return 0
+          }
 
-    const toCancel = client.watchWorkspaces(currentProject.metadata.name, (workspaces) => {
-      if (canceled) {
-        return
-      }
-
-      // sort by last activity (newest > oldest)
-      const sorted = workspaces.slice().sort((a, b) => {
-        const lastActivityA = a.metadata?.annotations?.[Annotations.SleepModeLastActivity]
-        const lastActivityB = b.metadata?.annotations?.[Annotations.SleepModeLastActivity]
-        if (!(lastActivityA && lastActivityB)) {
-          return 0
-        }
-
-        return parseInt(lastActivityB, 10) - parseInt(lastActivityA, 10)
-      })
-      store.setWorkspaces(sorted)
-      // dirty, dirty
-      setTimeout(() => {
+          return parseInt(lastActivityB, 10) - parseInt(lastActivityA, 10)
+        })
+        store.setWorkspaces(sorted)
         setIsLoadingWorkspaces(false)
-      }, 1_000)
-    })
+      })
+    } else {
+      let canceled = false
+      // proxy client impl
+      const toCancel = client.watchWorkspacesProxy(
+        currentProject.metadata.name,
+        ownerFilter,
+        (workspaces) => {
+          if (canceled) {
+            return
+          }
 
-    const canceler = () => {
-      canceled = true
-      setCancelWatch(undefined)
-      setWaitingForCancel(true)
+          // sort by last activity (newest > oldest)
+          const sorted = workspaces.slice().sort((a, b) => {
+            const lastActivityA = a.metadata?.annotations?.[Annotations.SleepModeLastActivity]
+            const lastActivityB = b.metadata?.annotations?.[Annotations.SleepModeLastActivity]
+            if (!(lastActivityA && lastActivityB)) {
+              return 0
+            }
 
-      return toCancel().finally(() => setWaitingForCancel(false))
+            return parseInt(lastActivityB, 10) - parseInt(lastActivityA, 10)
+          })
+          store.setWorkspaces(sorted)
+          // dirty, dirty
+          setTimeout(() => {
+            setIsLoadingWorkspaces(false)
+          }, 1_000)
+        }
+      )
+
+      function canceler() {
+        canceled = true
+        setCancelWatch(undefined)
+        setWaitingForCancel(true)
+
+        return toCancel().finally(() => setWaitingForCancel(false))
+      }
+      setCancelWatch({ fn: canceler })
+
+      return () => {
+        canceler()
+      }
     }
-
-    setCancelWatch({ fn: canceler })
-
-    return () => {
-      canceler()
-    }
-  }, [client, store, currentProject])
+  }, [client, store, currentProject, ownerFilter])
 
   const handleProjectChanged = (newProject: ManagementV1Project) => {
-    setSelectedProject(newProject)
-    navigate(Routes.toProInstance(host))
+    setSearchParams((prev) => {
+      prev.set("project", newProject.metadata?.name ?? "")
+
+      return prev
+    })
+
+    navigate(Routes.toProInstance(host) + "?" + searchParams.toString())
   }
 
   const handleHostChanged = (newHost: string) => {
@@ -109,7 +154,11 @@ export function ProProvider({ host, children }: { host: string; children: ReactN
       return
     }
 
-    setSelectedProject(null) // reset selected project
+    setSearchParams((prev) => {
+      prev.delete("project")
+
+      return prev
+    })
     navigate(Routes.toProInstance(newHost))
   }
 
@@ -118,10 +167,21 @@ export function ProProvider({ host, children }: { host: string; children: ReactN
       managementSelfQuery,
       currentProject,
       host,
-      client,
+      client: client!,
       isLoadingWorkspaces,
+      ownerFilter,
+      setOwnerFilter,
     }
-  }, [managementSelfQuery, currentProject, host, client, isLoadingWorkspaces])
+  }, [managementSelfQuery, currentProject, host, client, isLoadingWorkspaces, ownerFilter])
+
+  // this pro instance doesn't exist, let's route back to root
+  if (proInstancesStatus == "success" && !currentProInstance) {
+    return <Navigate to={Routes.ROOT} />
+  }
+
+  if (!client) {
+    return null
+  }
 
   return (
     <ProContext.Provider value={value}>
@@ -144,8 +204,4 @@ export function ProProvider({ host, children }: { host: string; children: ReactN
       {children}
     </ProContext.Provider>
   )
-}
-
-export function useProContext() {
-  return useContext(ProContext)
 }

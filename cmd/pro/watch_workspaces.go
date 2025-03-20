@@ -10,8 +10,7 @@ import (
 	"github.com/loft-sh/devpod/cmd/pro/flags"
 	"github.com/loft-sh/devpod/pkg/client/clientimplementation"
 	"github.com/loft-sh/devpod/pkg/config"
-	"github.com/loft-sh/devpod/pkg/platform"
-	providerpkg "github.com/loft-sh/devpod/pkg/provider"
+	"github.com/loft-sh/devpod/pkg/provider"
 	"github.com/loft-sh/log"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
@@ -38,7 +37,12 @@ func NewWatchWorkspacesCmd(globalFlags *flags.GlobalFlags) *cobra.Command {
 		Short:  "Watch workspaces",
 		Hidden: true,
 		RunE: func(cobraCmd *cobra.Command, args []string) error {
-			return cmd.Run(cobraCmd.Context())
+			devPodConfig, provider, err := findProProvider(cobraCmd.Context(), cmd.Context, cmd.Provider, cmd.Host, cmd.Log)
+			if err != nil {
+				return err
+			}
+
+			return cmd.Run(cobraCmd.Context(), devPodConfig, provider)
 		},
 	}
 
@@ -51,29 +55,15 @@ func NewWatchWorkspacesCmd(globalFlags *flags.GlobalFlags) *cobra.Command {
 	return c
 }
 
-func (cmd *WatchWorkspacesCmd) Run(ctx context.Context) error {
-	devPodConfig, err := config.LoadConfig(cmd.Context, cmd.Provider)
-	if err != nil {
-		return err
-	}
-
-	provider, err := platform.ProviderFromHost(ctx, devPodConfig, cmd.Host, cmd.Log)
-	if err != nil {
-		return fmt.Errorf("load provider: %w", err)
-	}
-
-	if !provider.IsProxyProvider() {
-		return fmt.Errorf("only pro providers can watch workspaces, provider \"%s\" is not a pro provider", provider.Name)
-	}
-
-	opts := devPodConfig.ProviderOptions(provider.Name)
+func (cmd *WatchWorkspacesCmd) Run(ctx context.Context, devPodConfig *config.Config, providerConfig *provider.ProviderConfig) error {
+	opts := devPodConfig.ProviderOptions(providerConfig.Name)
 	cancelCtx, cancel := context.WithCancel(ctx)
 	defer cancel()
 
 	if cmd.FilterByOwner {
-		opts[providerpkg.LOFT_FILTER_BY_OWNER] = config.OptionValue{Value: "true"}
+		opts[provider.LOFT_FILTER_BY_OWNER] = config.OptionValue{Value: "true"}
 	}
-	opts[providerpkg.LOFT_PROJECT] = config.OptionValue{Value: cmd.Project}
+	opts[provider.LOFT_PROJECT] = config.OptionValue{Value: cmd.Project}
 
 	sigChan := make(chan os.Signal, 1)
 	signal.Notify(sigChan, syscall.SIGINT)
@@ -86,22 +76,22 @@ func (cmd *WatchWorkspacesCmd) Run(ctx context.Context) error {
 	// ignore --debug because we tunnel json through stdio
 	cmd.Log.SetLevel(logrus.InfoLevel)
 
-	err = clientimplementation.RunCommandWithBinaries(
+	err := clientimplementation.RunCommandWithBinaries(
 		cancelCtx,
 		"watchWorkspaces",
-		provider.Exec.Proxy.Watch.Workspaces,
+		providerConfig.Exec.Proxy.Watch.Workspaces,
 		devPodConfig.DefaultContext,
 		nil,
 		nil,
 		opts,
-		provider,
+		providerConfig,
 		nil,
 		nil,
 		os.Stdout,
 		log.Default.ErrorStreamOnly().Writer(logrus.ErrorLevel, false),
 		cmd.Log)
 	if err != nil {
-		return fmt.Errorf("watch workspaces with provider \"%s\": %w", provider.Name, err)
+		return fmt.Errorf("watch workspaces with provider \"%s\": %w", providerConfig.Name, err)
 	}
 
 	return nil

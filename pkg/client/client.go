@@ -6,7 +6,10 @@ import (
 	"io"
 	"strings"
 
+	"github.com/loft-sh/api/v4/pkg/devpod"
+	"github.com/loft-sh/devpod/pkg/devcontainer/config"
 	"github.com/loft-sh/devpod/pkg/provider"
+	"golang.org/x/crypto/ssh"
 )
 
 type BaseClient interface {
@@ -51,14 +54,41 @@ type Client interface {
 	Command(ctx context.Context, options CommandOptions) error
 }
 
+// ProxyClient executes it's commands on the platform
 type ProxyClient interface {
 	BaseWorkspaceClient
+
+	// Create creates a new remote workspace
+	Create(ctx context.Context, stdin io.Reader, stdout io.Writer, stderr io.Writer) error
 
 	// Up creates a new remote workspace
 	Up(ctx context.Context, options UpOptions) error
 
 	// Ssh starts an ssh tunnel to the workspace container
 	Ssh(ctx context.Context, options SshOptions) error
+}
+
+// DaemonClient connects to workspaces through a shared daemon
+type DaemonClient interface {
+	BaseWorkspaceClient
+
+	// Create creates a new remote workspace
+	Create(ctx context.Context, stdin io.Reader, stdout io.Writer, stderr io.Writer) error
+
+	// Up start a new remote workspace
+	Up(ctx context.Context, options UpOptions) (*config.Result, error)
+
+	// SSHClients returns an SSH client for the tool and one for the actual user
+	SSHClients(ctx context.Context, user string) (*ssh.Client, *ssh.Client, error)
+
+	// CheckWorkspaceReachable checks if the given workspace is reachable from the current machine
+	CheckWorkspaceReachable(ctx context.Context) error
+
+	// DirectTunnel forwards stdio to the workspace
+	DirectTunnel(ctx context.Context, stdin io.Reader, stdout io.Writer) error
+
+	// Ping tries to ping a workspace and prints results to stdout
+	Ping(ctx context.Context, stdout io.Writer) error
 }
 
 type MachineClient interface {
@@ -93,10 +123,10 @@ type WorkspaceClient interface {
 	Client
 
 	// AgentInjectGitCredentials returns if the credentials helper should get injected
-	AgentInjectGitCredentials() bool
+	AgentInjectGitCredentials(options provider.CLIOptions) bool
 
 	// AgentInjectDockerCredentials returns if the credentials helper should get injected
-	AgentInjectDockerCredentials() bool
+	AgentInjectDockerCredentials(options provider.CLIOptions) bool
 
 	// AgentInfo returns the info to send to the agent
 	AgentInfo(options provider.CLIOptions) (string, *provider.AgentWorkspaceInfo, error)
@@ -108,9 +138,13 @@ type ValidateOptions struct{}
 
 type StartOptions struct{}
 
-type StopOptions struct{}
+type StopOptions struct {
+	Platform devpod.PlatformOptions `json:"platform,omitempty"`
+}
 
 type DeleteOptions struct {
+	Platform devpod.PlatformOptions `json:"platform,omitempty"`
+
 	IgnoreNotFound bool   `json:"ignoreNotFound,omitempty"`
 	Force          bool   `json:"force,omitempty"`
 	GracePeriod    string `json:"gracePeriod,omitempty"`
@@ -177,4 +211,9 @@ type WorkspaceStatus struct {
 	Context  string `json:"context,omitempty"`
 	Provider string `json:"provider,omitempty"`
 	State    string `json:"state,omitempty"`
+}
+
+type User struct {
+	Name string `json:"name,omitempty"`
+	UID  string `json:"uid,omitempty"`
 }

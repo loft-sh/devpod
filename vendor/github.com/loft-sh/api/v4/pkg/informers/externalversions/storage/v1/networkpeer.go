@@ -3,13 +3,13 @@
 package v1
 
 import (
-	"context"
+	context "context"
 	time "time"
 
-	storagev1 "github.com/loft-sh/api/v4/pkg/apis/storage/v1"
+	apisstoragev1 "github.com/loft-sh/api/v4/pkg/apis/storage/v1"
 	versioned "github.com/loft-sh/api/v4/pkg/clientset/versioned"
 	internalinterfaces "github.com/loft-sh/api/v4/pkg/informers/externalversions/internalinterfaces"
-	v1 "github.com/loft-sh/api/v4/pkg/listers/storage/v1"
+	storagev1 "github.com/loft-sh/api/v4/pkg/listers/storage/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	runtime "k8s.io/apimachinery/pkg/runtime"
 	watch "k8s.io/apimachinery/pkg/watch"
@@ -20,7 +20,7 @@ import (
 // NetworkPeers.
 type NetworkPeerInformer interface {
 	Informer() cache.SharedIndexInformer
-	Lister() v1.NetworkPeerLister
+	Lister() storagev1.NetworkPeerLister
 }
 
 type networkPeerInformer struct {
@@ -54,7 +54,7 @@ func NewFilteredNetworkPeerInformer(client versioned.Interface, resyncPeriod tim
 				return client.StorageV1().NetworkPeers().Watch(context.TODO(), options)
 			},
 		},
-		&storagev1.NetworkPeer{},
+		&apisstoragev1.NetworkPeer{},
 		resyncPeriod,
 		indexers,
 	)
@@ -65,9 +65,9 @@ func (f *networkPeerInformer) defaultInformer(client versioned.Interface, resync
 }
 
 func (f *networkPeerInformer) Informer() cache.SharedIndexInformer {
-	return f.factory.InformerFor(&storagev1.NetworkPeer{}, f.defaultInformer)
+	return f.factory.InformerFor(&apisstoragev1.NetworkPeer{}, f.defaultInformer)
 }
 
-func (f *networkPeerInformer) Lister() v1.NetworkPeerLister {
-	return v1.NewNetworkPeerLister(f.Informer().GetIndexer())
+func (f *networkPeerInformer) Lister() storagev1.NetworkPeerLister {
+	return storagev1.NewNetworkPeerLister(f.Informer().GetIndexer())
 }

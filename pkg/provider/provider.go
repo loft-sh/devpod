@@ -274,6 +274,9 @@ type ProviderCommands struct {
 
 	// Proxy proxies commands
 	Proxy *ProxyCommands `json:"proxy,omitempty"`
+
+	// Daemon commands
+	Daemon *DaemonCommands `json:"daemon,omitempty"`
 }
 
 type ProxyCommands struct {
@@ -351,6 +354,13 @@ type UpdateProxyCommands struct {
 	Workspace types.StrArray `json:"workspace,omitempty"`
 }
 
+type DaemonCommands struct {
+	// Start starts the daemon
+	Start types.StrArray `json:"start,omitempty"`
+	// Status gets the daemon status
+	Status types.StrArray `json:"status,omitempty"`
+}
+
 type SubOptions struct {
 	Options map[string]*types.Option `json:"options,omitempty"`
 }
@@ -365,4 +375,8 @@ func (c *ProviderConfig) IsProxyProvider() bool {
 
 func (c *ProviderConfig) HasHealthCheck() bool {
 	return c.Exec.Proxy != nil && len(c.Exec.Proxy.Health) > 0
+}
+
+func (c *ProviderConfig) IsDaemonProvider() bool {
+	return c.Exec.Daemon != nil
 }

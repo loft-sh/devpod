@@ -3,9 +3,9 @@
 package v1
 
 import (
-	"context"
+	context "context"
 
-	v1 "github.com/loft-sh/api/v4/pkg/apis/storage/v1"
+	storagev1 "github.com/loft-sh/api/v4/pkg/apis/storage/v1"
 	scheme "github.com/loft-sh/api/v4/pkg/clientset/versioned/scheme"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	types "k8s.io/apimachinery/pkg/types"
@@ -21,33 +21,34 @@ type DevPodWorkspaceTemplatesGetter interface {
 
 // DevPodWorkspaceTemplateInterface has methods to work with DevPodWorkspaceTemplate resources.
 type DevPodWorkspaceTemplateInterface interface {
-	Create(ctx context.Context, devPodWorkspaceTemplate *v1.DevPodWorkspaceTemplate, opts metav1.CreateOptions) (*v1.DevPodWorkspaceTemplate, error)
-	Update(ctx context.Context, devPodWorkspaceTemplate *v1.DevPodWorkspaceTemplate, opts metav1.UpdateOptions) (*v1.DevPodWorkspaceTemplate, error)
+	Create(ctx context.Context, devPodWorkspaceTemplate *storagev1.DevPodWorkspaceTemplate, opts metav1.CreateOptions) (*storagev1.DevPodWorkspaceTemplate, error)
+	Update(ctx context.Context, devPodWorkspaceTemplate *storagev1.DevPodWorkspaceTemplate, opts metav1.UpdateOptions) (*storagev1.DevPodWorkspaceTemplate, error)
 	// Add a +genclient:noStatus comment above the type to avoid generating UpdateStatus().
-	UpdateStatus(ctx context.Context, devPodWorkspaceTemplate *v1.DevPodWorkspaceTemplate, opts metav1.UpdateOptions) (*v1.DevPodWorkspaceTemplate, error)
+	UpdateStatus(ctx context.Context, devPodWorkspaceTemplate *storagev1.DevPodWorkspaceTemplate, opts metav1.UpdateOptions) (*storagev1.DevPodWorkspaceTemplate, error)
 	Delete(ctx context.Context, name string, opts metav1.DeleteOptions) error
 	DeleteCollection(ctx context.Context, opts metav1.DeleteOptions, listOpts metav1.ListOptions) error
-	Get(ctx context.Context, name string, opts metav1.GetOptions) (*v1.DevPodWorkspaceTemplate, error)
-	List(ctx context.Context, opts metav1.ListOptions) (*v1.DevPodWorkspaceTemplateList, error)
+	Get(ctx context.Context, name string, opts metav1.GetOptions) (*storagev1.DevPodWorkspaceTemplate, error)
+	List(ctx context.Context, opts metav1.ListOptions) (*storagev1.DevPodWorkspaceTemplateList, error)
 	Watch(ctx context.Context, opts metav1.ListOptions) (watch.Interface, error)
-	Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts metav1.PatchOptions, subresources ...string) (result *v1.DevPodWorkspaceTemplate, err error)
+	Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts metav1.PatchOptions, subresources ...string) (result *storagev1.DevPodWorkspaceTemplate, err error)
 	DevPodWorkspaceTemplateExpansion
 }
 
 // devPodWorkspaceTemplates implements DevPodWorkspaceTemplateInterface
 type devPodWorkspaceTemplates struct {
-	*gentype.ClientWithList[*v1.DevPodWorkspaceTemplate, *v1.DevPodWorkspaceTemplateList]
+	*gentype.ClientWithList[*storagev1.DevPodWorkspaceTemplate, *storagev1.DevPodWorkspaceTemplateList]
 }
 
 // newDevPodWorkspaceTemplates returns a DevPodWorkspaceTemplates
 func newDevPodWorkspaceTemplates(c *StorageV1Client) *devPodWorkspaceTemplates {
 	return &devPodWorkspaceTemplates{
-		gentype.NewClientWithList[*v1.DevPodWorkspaceTemplate, *v1.DevPodWorkspaceTemplateList](
+		gentype.NewClientWithList[*storagev1.DevPodWorkspaceTemplate, *storagev1.DevPodWorkspaceTemplateList](
 			"devpodworkspacetemplates",
 			c.RESTClient(),
 			scheme.ParameterCodec,
 			"",
-			func() *v1.DevPodWorkspaceTemplate { return &v1.DevPodWorkspaceTemplate{} },
-			func() *v1.DevPodWorkspaceTemplateList { return &v1.DevPodWorkspaceTemplateList{} }),
+			func() *storagev1.DevPodWorkspaceTemplate { return &storagev1.DevPodWorkspaceTemplate{} },
+			func() *storagev1.DevPodWorkspaceTemplateList { return &storagev1.DevPodWorkspaceTemplateList{} },
+		),
 	}
 }

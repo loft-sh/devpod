@@ -7,7 +7,7 @@ import { Tab, TabList, TabPanel, TabPanels, Tabs, useColorModeValue } from "@cha
 import { useSearchParams } from "react-router-dom"
 import { Routes } from "@/routes"
 
-export const DETAILS_TABS: Readonly<{
+const DETAILS_TABS: Readonly<{
   key: TProInstanceDetail
   label: string
   component: ComponentType<TTabProps>
@@ -17,8 +17,8 @@ export const DETAILS_TABS: Readonly<{
 ]
 type TWorkspaceTabProps = Readonly<{}> & TTabProps
 export function WorkspaceTabs({ ...tabProps }: TWorkspaceTabProps) {
-  const headerBackgroundColor = useColorModeValue("white", "black")
-  const contentBackgroundColor = useColorModeValue("gray.50", "gray.800")
+  const headerBackgroundColor = useColorModeValue("white", "background.darkest")
+  const contentBackgroundColor = useColorModeValue("gray.50", "background.darkest")
   const [searchParams, setSearchParams] = useSearchParams()
 
   const tabIndex = useMemo(() => {
@@ -60,14 +60,14 @@ export function WorkspaceTabs({ ...tabProps }: TWorkspaceTabProps) {
       <TabPanels h="99%">
         {DETAILS_TABS.map(({ label, component: Component }) => (
           <TabPanel
-            h="full"
+            bgColor={contentBackgroundColor}
+            minH={label === "Configuration" ? "" : "full"}
             width="100vw"
             ml="-8"
             px="12"
             pt="8"
             pb="0"
-            key={label}
-            bgColor={contentBackgroundColor}>
+            key={label}>
             <Component {...tabProps} />
           </TabPanel>
         ))}

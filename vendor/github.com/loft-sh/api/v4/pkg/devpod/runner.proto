@@ -1,0 +1,17 @@
+// protoc -I . runner.proto  --go_out=. --go_opt=paths=source_relative --go-grpc_out=. --go-grpc_opt=paths=source_relative
+syntax = "proto3";
+
+option go_package = "github.com/loft-sh/api/v4/pkg/devpod";
+
+package devpod;
+
+service Runner {
+  rpc Clone(CloneRequest) returns (CloneResponse) {}
+}
+
+message CloneRequest {
+  string targetPath = 1;
+  string options = 2;
+}
+
+message CloneResponse {}

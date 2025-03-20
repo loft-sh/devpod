@@ -3,13 +3,13 @@
 package v1
 
 import (
-	"context"
+	context "context"
 	time "time"
 
-	storagev1 "github.com/loft-sh/api/v4/pkg/apis/storage/v1"
+	apisstoragev1 "github.com/loft-sh/api/v4/pkg/apis/storage/v1"
 	versioned "github.com/loft-sh/api/v4/pkg/clientset/versioned"
 	internalinterfaces "github.com/loft-sh/api/v4/pkg/informers/externalversions/internalinterfaces"
-	v1 "github.com/loft-sh/api/v4/pkg/listers/storage/v1"
+	storagev1 "github.com/loft-sh/api/v4/pkg/listers/storage/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	runtime "k8s.io/apimachinery/pkg/runtime"
 	watch "k8s.io/apimachinery/pkg/watch"
@@ -20,7 +20,7 @@ import (
 // Teams.
 type TeamInformer interface {
 	Informer() cache.SharedIndexInformer
-	Lister() v1.TeamLister
+	Lister() storagev1.TeamLister
 }
 
 type teamInformer struct {
@@ -54,7 +54,7 @@ func NewFilteredTeamInformer(client versioned.Interface, resyncPeriod time.Durat
 				return client.StorageV1().Teams().Watch(context.TODO(), options)
 			},
 		},
-		&storagev1.Team{},
+		&apisstoragev1.Team{},
 		resyncPeriod,
 		indexers,
 	)
@@ -65,9 +65,9 @@ func (f *teamInformer) defaultInformer(client versioned.Interface, resyncPeriod 
 }
 
 func (f *teamInformer) Informer() cache.SharedIndexInformer {
-	return f.factory.InformerFor(&storagev1.Team{}, f.defaultInformer)
+	return f.factory.InformerFor(&apisstoragev1.Team{}, f.defaultInformer)
 }
 
-func (f *teamInformer) Lister() v1.TeamLister {
-	return v1.NewTeamLister(f.Informer().GetIndexer())
+func (f *teamInformer) Lister() storagev1.TeamLister {
+	return storagev1.NewTeamLister(f.Informer().GetIndexer())
 }

@@ -35,8 +35,15 @@ export class ProWorkspaceInstance
 class ProWorkspaceInstanceStatus extends ManagementV1DevPodWorkspaceInstanceStatus {
   "source"?: TWorkspaceSource
   "ide"?: TIDE
+  "metrics"?: ProWorkspaceMetricsSummary
 
   constructor() {
     super()
   }
+}
+
+class ProWorkspaceMetricsSummary {
+  "latencyMs"?: number
+  "connectionType"?: "direct" | "DERP"
+  "derpRegion"?: string
 }

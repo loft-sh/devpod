@@ -15,6 +15,7 @@ import (
 	"github.com/loft-sh/devpod/pkg/platform/project"
 	provider2 "github.com/loft-sh/devpod/pkg/provider"
 	"github.com/loft-sh/devpod/pkg/random"
+	"github.com/loft-sh/devpod/pkg/workspace"
 	"github.com/loft-sh/log"
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
@@ -94,7 +95,7 @@ func (cmd *ImportCmd) Run(ctx context.Context, args []string) error {
 		cmd.WorkspaceId = newWorkspaceId
 	}
 
-	provider, err := platform.ProviderFromHost(ctx, devPodConfig, devPodProHost, cmd.log)
+	provider, err := workspace.ProviderFromHost(ctx, devPodConfig, devPodProHost, cmd.log)
 	if err != nil {
 		return fmt.Errorf("resolve provider: %w", err)
 	}
@@ -118,7 +119,7 @@ func (cmd *ImportCmd) Run(ctx context.Context, args []string) error {
 			return fmt.Errorf("resolve instance options: %w", err)
 		}
 
-		err = cmd.writeWorkspaceDefinition(devPodConfig, provider, instanceOpts)
+		err = cmd.writeWorkspaceDefinition(devPodConfig, provider, instanceOpts, instance)
 		if err != nil {
 			return errors.Wrap(err, "prepare workspace to import definition")
 		}
@@ -144,15 +145,16 @@ func (cmd *ImportCmd) writeNewWorkspaceDefinition(devPodConfig *config.Config, i
 		Context:  devPodConfig.DefaultContext,
 		Imported: !cmd.Own,
 		Pro: &provider2.ProMetadata{
-			Project:     project.ProjectFromNamespace(instance.Namespace),
-			DisplayName: instance.Spec.DisplayName,
+			InstanceName: instance.GetName(),
+			Project:      project.ProjectFromNamespace(instance.Namespace),
+			DisplayName:  instance.Spec.DisplayName,
 		},
 	}
 
 	return provider2.SaveWorkspaceConfig(workspaceObj)
 }
 
-func (cmd *ImportCmd) writeWorkspaceDefinition(devPodConfig *config.Config, provider *provider2.ProviderConfig, instanceOpts map[string]string) error {
+func (cmd *ImportCmd) writeWorkspaceDefinition(devPodConfig *config.Config, provider *provider2.ProviderConfig, instanceOpts map[string]string, instance *managementv1.DevPodWorkspaceInstance) error {
 	workspaceObj := &provider2.Workspace{
 		ID:  cmd.WorkspaceId,
 		UID: cmd.WorkspaceUid,
@@ -162,6 +164,11 @@ func (cmd *ImportCmd) writeWorkspaceDefinition(devPodConfig *config.Config, prov
 		},
 		Context:  devPodConfig.DefaultContext,
 		Imported: !cmd.Own,
+		Pro: &provider2.ProMetadata{
+			InstanceName: instance.GetName(),
+			Project:      instanceOpts[platform.ProjectEnv],
+			DisplayName:  instance.Spec.DisplayName,
+		},
 	}
 
 	devPodConfig, err := options.ResolveOptions(context.Background(), devPodConfig, provider, instanceOpts, false, false, nil, cmd.log)
@@ -189,8 +196,9 @@ func resolveInstanceOptions(ctx context.Context, instance *managementv1.DevPodWo
 	if instance.Spec.TemplateRef == nil {
 		return opts, nil
 	}
+	//nolint:all
 	if instance.Spec.RunnerRef.Runner != "" {
-		opts[platform.RunnerEnv] = instance.Spec.RunnerRef.Runner
+		opts[platform.RunnerEnv] = instance.Spec.RunnerRef.Runner //nolint:all
 	}
 	opts[platform.TemplateOptionEnv] = instance.Spec.TemplateRef.Name
 

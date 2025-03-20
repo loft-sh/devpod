@@ -30,8 +30,6 @@ type Interface interface {
 	NetworkPeers() NetworkPeerInformer
 	// Projects returns a ProjectInformer.
 	Projects() ProjectInformer
-	// Runners returns a RunnerInformer.
-	Runners() RunnerInformer
 	// SharedSecrets returns a SharedSecretInformer.
 	SharedSecrets() SharedSecretInformer
 	// SpaceInstances returns a SpaceInstanceInformer.
@@ -114,11 +112,6 @@ func (v *version) NetworkPeers() NetworkPeerInformer {
 // Projects returns a ProjectInformer.
 func (v *version) Projects() ProjectInformer {
 	return &projectInformer{factory: v.factory, tweakListOptions: v.tweakListOptions}
-}
-
-// Runners returns a RunnerInformer.
-func (v *version) Runners() RunnerInformer {
-	return &runnerInformer{factory: v.factory, tweakListOptions: v.tweakListOptions}
 }
 
 // SharedSecrets returns a SharedSecretInformer.

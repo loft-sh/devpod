@@ -65,14 +65,14 @@ func (cmd *BuildCmd) Run(ctx context.Context) error {
 		}()
 	}
 
-	runner, err := CreateRunner(workspaceInfo, nil, logger)
+	runner, err := CreateRunner(workspaceInfo, logger)
 	if err != nil {
 		return err
 	}
 
 	// if there is no platform specified, we use empty to let
 	// the builder find out itself.
-	platforms := workspaceInfo.CLIOptions.Platform
+	platforms := workspaceInfo.CLIOptions.Platforms
 	if len(platforms) == 0 {
 		platforms = []string{""}
 	}

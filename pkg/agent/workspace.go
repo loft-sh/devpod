@@ -3,13 +3,17 @@ package agent
 import (
 	"context"
 	"encoding/base64"
+	"encoding/json"
+	"errors"
 	"fmt"
+	"net"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"runtime"
 	"strings"
 
+	"github.com/loft-sh/api/v4/pkg/devpod"
 	"github.com/loft-sh/devpod/pkg/command"
 	"github.com/loft-sh/devpod/pkg/config"
 	"github.com/loft-sh/devpod/pkg/git"
@@ -18,6 +22,9 @@ import (
 	"github.com/loft-sh/devpod/pkg/util"
 	"github.com/loft-sh/log"
 	"github.com/moby/patternmatcher/ignorefile"
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials/insecure"
+	"google.golang.org/grpc/status"
 )
 
 var extraSearchLocations = []string{"/home/devpod/.devpod/agent", "/opt/devpod/agent", "/var/lib/devpod/agent", "/var/devpod/agent"}
@@ -285,8 +292,14 @@ func CloneRepositoryForWorkspace(
 
 	// setup private ssh key if passed in
 	extraEnv := []string{}
-	if options.SSHKey != "" {
-		sshExtraEnv, cleanUpSSHKey, err := setupSSHKey(options.SSHKey, agentConfig.Path)
+	gitSshCredentials := append(options.Platform.UserCredentials.GitSsh, options.Platform.ProjectCredentials.GitSsh...)
+	if len(gitSshCredentials) > 0 {
+		keys := []string{}
+		for _, key := range gitSshCredentials {
+			keys = append(keys, key.Key)
+		}
+
+		sshExtraEnv, cleanUpSSHKey, err := setupSSHKey(keys, agentConfig.Path)
 		if err != nil {
 			return err
 		}
@@ -295,16 +308,74 @@ func CloneRepositoryForWorkspace(
 	}
 
 	// run git command
-	cloner := git.NewClonerWithOpts(getGitOptions(options)...)
 	gitInfo := git.NewGitInfo(source.GitRepository, source.GitBranch, source.GitCommit, source.GitPRReference, source.GitSubPath)
-	gitOpts := git.GitCommandOptions{StrictHostKeyChecking: options.StrictHostKeyChecking}
-	err := git.CloneRepositoryWithEnv(ctx, gitInfo, extraEnv, workspaceDir, gitOpts, helper, cloner, log)
-	if err != nil {
-		// cleanup workspace dir if clone failed, otherwise we won't try to clone again when rebuilding this workspace
-		if cleanupErr := cleanupWorkspaceDir(workspaceDir); cleanupErr != nil {
-			return fmt.Errorf("clone repository: %w, cleanup workspace: %w", err, cleanupErr)
+
+	// should run with platform git cache?
+	platformGitcacheEnabled := options.Platform.Enabled && options.Platform.RunnerSocket != ""
+	if platformGitcacheEnabled {
+		_, err := os.Stat(options.Platform.RunnerSocket)
+		if err != nil {
+			platformGitcacheEnabled = false
 		}
-		return fmt.Errorf("clone repository: %w", err)
+	}
+
+	// try to clone with platform gitcache
+	if platformGitcacheEnabled {
+		dialer := &net.Dialer{}
+		conn, err := dialer.DialContext(ctx, "unix", options.Platform.RunnerSocket)
+		if err != nil {
+			return fmt.Errorf("dial platform gitcache: %w", err)
+		}
+		defer conn.Close()
+
+		// Set up a connection to the server.
+		grpcClient, err := grpc.NewClient("unix://"+options.Platform.RunnerSocket, grpc.WithTransportCredentials(insecure.NewCredentials()))
+		if err != nil {
+			return fmt.Errorf("create platform gitcache client: %w", err)
+		}
+
+		// marshal options
+		jsonOptions, err := json.Marshal(&devpod.CloneOptions{
+			Repository:        source.GitRepository,
+			Branch:            source.GitBranch,
+			Commit:            source.GitCommit,
+			PRReference:       source.GitPRReference,
+			SubPath:           source.GitSubPath,
+			CredentialsHelper: helper,
+			ExtraEnv:          append(git.GetDefaultExtraEnv(options.StrictHostKeyChecking), extraEnv...),
+		})
+		if err != nil {
+			return fmt.Errorf("marshal git options: %w", err)
+		}
+
+		// create client
+		log.Infof("Cloning repository %s in platform...", source.GitRepository)
+		_, err = devpod.NewRunnerClient(grpcClient).Clone(ctx, &devpod.CloneRequest{
+			TargetPath: workspaceDir,
+			Options:    string(jsonOptions),
+		})
+		if err != nil {
+			// unpack error
+			statusErr, ok := status.FromError(err)
+			if ok && statusErr.Message() != "" {
+				err = errors.New(statusErr.Message())
+			}
+
+			// cleanup workspace dir if clone failed, otherwise we won't try to clone again when rebuilding this workspace
+			if cleanupErr := cleanupWorkspaceDir(workspaceDir); cleanupErr != nil {
+				return fmt.Errorf("clone repository (with gitcache): %w, cleanup workspace: %w", err, cleanupErr)
+			}
+			return fmt.Errorf("clone repository (with gitcache): %w", err)
+		}
+	} else {
+		err := git.CloneRepositoryWithEnv(ctx, gitInfo, extraEnv, workspaceDir, helper, options.StrictHostKeyChecking, log, getGitOptions(options)...)
+		if err != nil {
+			// cleanup workspace dir if clone failed, otherwise we won't try to clone again when rebuilding this workspace
+			if cleanupErr := cleanupWorkspaceDir(workspaceDir); cleanupErr != nil {
+				return fmt.Errorf("clone repository: %w, cleanup workspace: %w", err, cleanupErr)
+			}
+			return fmt.Errorf("clone repository: %w", err)
+		}
 	}
 
 	log.Done("Successfully cloned repository")
@@ -340,27 +411,37 @@ func cleanupWorkspaceDir(workspaceDir string) error {
 	return os.RemoveAll(workspaceDir)
 }
 
-func setupSSHKey(key string, agentPath string) ([]string, func(), error) {
-	keyFile, err := os.CreateTemp("", "")
-	if err != nil {
-		return nil, nil, err
-	}
+func setupSSHKey(keys []string, agentPath string) ([]string, func(), error) {
+	keyFiles := []string{}
+	for _, key := range keys {
+		keyFile, err := os.CreateTemp("", "")
+		if err != nil {
+			return nil, nil, err
+		}
+		defer keyFile.Close()
 
-	if err := writeSSHKey(keyFile, key); err != nil {
-		return nil, nil, err
-	}
+		if err := writeSSHKey(keyFile, key); err != nil {
+			return nil, nil, err
+		}
 
-	if err := os.Chmod(keyFile.Name(), 0o400); err != nil {
-		return nil, nil, err
+		if err := os.Chmod(keyFile.Name(), 0o400); err != nil {
+			return nil, nil, err
+		}
+
+		keyFiles = append(keyFiles, keyFile.Name())
 	}
 
 	env := []string{"GIT_TERMINAL_PROMPT=0"}
-	gitSSHCmd := []string{agentPath, "helper", "ssh-git-clone", "--key-file=" + keyFile.Name()}
-	env = append(env, "GIT_SSH_COMMAND="+command.Quote(gitSSHCmd))
+	gitSSHCmd := []string{agentPath, "helper", "ssh-git-clone"}
+	for _, keyFile := range keyFiles {
+		gitSSHCmd = append(gitSSHCmd, "--key-file="+keyFile)
+	}
 
+	env = append(env, "GIT_SSH_COMMAND="+command.Quote(gitSSHCmd))
 	cleanup := func() {
-		os.Remove(keyFile.Name())
-		keyFile.Close()
+		for _, keyFile := range keyFiles {
+			os.Remove(keyFile)
+		}
 	}
 
 	return env, cleanup, nil

@@ -1,9 +1,5 @@
 import {
-  Box,
   Button,
-  Heading,
-  Link,
-  ListItem,
   Modal,
   ModalBody,
   ModalCloseButton,
@@ -12,17 +8,14 @@ import {
   ModalHeader,
   ModalOverlay,
   Text,
-  UnorderedList,
   useDisclosure,
 } from "@chakra-ui/react"
-import Markdown from "markdown-to-jsx"
 import { useEffect, useMemo, useState } from "react"
-import { client } from "../client"
 import { Release } from "../gen"
 import { useReleases, useVersion } from "../lib"
+import { Changelog } from "./Changelog"
 
 const LAST_INSTALLED_VERSION_KEY = "devpod-last-installed-version"
-type TLinkClickEvent = React.MouseEvent<HTMLLinkElement> & { target: HTMLLinkElement }
 
 export function useChangelogModal(isReady: boolean) {
   const currentVersion = useVersion()
@@ -72,50 +65,4 @@ export function useChangelogModal(isReady: boolean) {
   }, [currentVersion, isReady, onOpen, releases])
 
   return { modal }
-}
-
-type TChangeLogProps = Readonly<{ rawMarkdown: string }>
-function Changelog({ rawMarkdown }: TChangeLogProps) {
-  return (
-    <Box paddingX="6" paddingY="2" marginBottom="4">
-      <Markdown
-        options={{
-          overrides: {
-            h2: {
-              component: Heading,
-              props: {
-                size: "md",
-                marginBottom: "2",
-                marginTop: "4",
-              },
-            },
-            h3: {
-              component: Heading,
-              props: {
-                size: "sm",
-                marginBottom: "2",
-                marginTop: "4",
-              },
-            },
-            a: {
-              component: Link,
-              props: {
-                onClick: (e: TLinkClickEvent) => {
-                  e.preventDefault()
-                  client.open(e.target.href)
-                },
-              },
-            },
-            ul: {
-              component: UnorderedList,
-            },
-            li: {
-              component: ListItem,
-            },
-          },
-        }}>
-        {rawMarkdown}
-      </Markdown>
-    </Box>
-  )
 }

@@ -8,6 +8,7 @@ import (
 // +genclient
 // +genclient:nonNamespaced
 // +genclient:method=GetProfile,verb=get,subresource=profile,result=github.com/loft-sh/api/v4/pkg/apis/management/v1.UserProfile
+// +genclient:method=UpdateProfile,verb=create,subresource=profile,input=github.com/loft-sh/api/v4/pkg/apis/management/v1.UserProfile,result=github.com/loft-sh/api/v4/pkg/apis/management/v1.UserProfile
 // +genclient:method=ListClusters,verb=get,subresource=clusters,result=github.com/loft-sh/api/v4/pkg/apis/management/v1.UserClusters
 // +genclient:method=ListAccessKeys,verb=get,subresource=accesskeys,result=github.com/loft-sh/api/v4/pkg/apis/management/v1.UserAccessKeys
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
@@ -19,6 +20,7 @@ import (
 // +subresource:request=UserProfile,path=profile,kind=UserProfile,rest=UserProfileREST
 // +subresource:request=UserAccessKeys,path=accesskeys,kind=UserAccessKeys,rest=UserAccessKeysREST
 // +subresource:request=UserPermissions,path=permissions,kind=UserPermissions,rest=UserPermissionsREST
+// +subresource:request=UserDetailedPermissions,path=detailed-permissions,kind=UserDetailedPermissions,rest=UserDetailedPermissionsREST
 type User struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`

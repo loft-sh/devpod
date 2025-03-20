@@ -9,12 +9,13 @@ import (
 	"strings"
 
 	"github.com/loft-sh/devpod/pkg/compose"
+	"github.com/loft-sh/devpod/pkg/devcontainer/build"
+	"github.com/loft-sh/devpod/pkg/devcontainer/buildkit"
 	"github.com/loft-sh/devpod/pkg/devcontainer/config"
 	"github.com/loft-sh/devpod/pkg/devcontainer/feature"
 	"github.com/loft-sh/devpod/pkg/devcontainer/metadata"
 	"github.com/loft-sh/devpod/pkg/dockerfile"
 	"github.com/loft-sh/devpod/pkg/driver"
-	"github.com/loft-sh/devpod/pkg/driver/docker"
 	"github.com/loft-sh/devpod/pkg/image"
 	"github.com/loft-sh/devpod/pkg/provider"
 	"github.com/pkg/errors"
@@ -26,86 +27,12 @@ func (r *runner) build(
 	substitutionContext *config.SubstitutionContext,
 	options provider.BuildOptions,
 ) (*config.BuildInfo, error) {
+	defer cleanupBuildInformation(parsedConfig.Config)
+
 	if isDockerFileConfig(parsedConfig.Config) {
 		return r.buildAndExtendImage(ctx, parsedConfig, substitutionContext, options)
 	} else if isDockerComposeConfig(parsedConfig.Config) {
-		composeHelper, err := r.composeHelper()
-		if err != nil {
-			return nil, errors.Wrap(err, "find docker compose")
-		}
-
-		envFiles, err := r.getEnvFiles()
-		if err != nil {
-			return nil, errors.Wrap(err, "get env files")
-		}
-
-		composeFiles, err := r.getDockerComposeFilePaths(parsedConfig, envFiles)
-		if err != nil {
-			return nil, errors.Wrap(err, "get docker compose file paths")
-		}
-
-		var composeGlobalArgs []string
-		for _, configFile := range composeFiles {
-			composeGlobalArgs = append(composeGlobalArgs, "-f", configFile)
-		}
-
-		for _, envFile := range envFiles {
-			composeGlobalArgs = append(composeGlobalArgs, "--env-file", envFile)
-		}
-
-		r.Log.Debugf("Loading docker compose project %+v", composeFiles)
-		project, err := compose.LoadDockerComposeProject(ctx, composeFiles, envFiles)
-		if err != nil {
-			return nil, errors.Wrap(err, "load docker compose project")
-		}
-		project.Name = composeHelper.GetProjectName(r.ID)
-		r.Log.Debugf("Loaded project %s", project.Name)
-
-		service := parsedConfig.Config.Service
-		composeService, err := project.GetService(service)
-		if err != nil {
-			return nil, fmt.Errorf("service '%s' configured in devcontainer.json not found in Docker Compose configuration", service)
-		}
-
-		originalImageName := composeService.Image
-		if originalImageName == "" {
-			originalImageName, err = composeHelper.GetDefaultImage(project.Name, service)
-			if err != nil {
-				return nil, errors.Wrap(err, "get default image")
-			}
-		}
-
-		overrideBuildImageName, _, imageMetadata, _, err := r.buildAndExtendDockerCompose(ctx, parsedConfig, substitutionContext, project, composeHelper, &composeService, composeGlobalArgs)
-		if err != nil {
-			return nil, errors.Wrap(err, "build and extend docker-compose")
-		}
-
-		currentImageName := overrideBuildImageName
-		if currentImageName == "" {
-			currentImageName = originalImageName
-		}
-
-		imageDetails, err := r.inspectImage(ctx, currentImageName)
-		if err != nil {
-			return nil, errors.Wrap(err, "inspect image")
-		}
-
-		// have a fallback value for PrebuildHash
-		// we don't calculate prebuild hash on docker compose builds
-		// let's use Images :tag then
-		imageTag, err := r.getImageTag(ctx, imageDetails.ID)
-		if err != nil {
-			return nil, errors.Wrap(err, "inspect image")
-		}
-
-		return &config.BuildInfo{
-			ImageDetails:  imageDetails,
-			ImageMetadata: imageMetadata,
-			ImageName:     overrideBuildImageName,
-			PrebuildHash:  imageTag,
-			RegistryCache: options.RegistryCache,
-			Tags:          options.Tag,
-		}, nil
+		return r.buildDevImageCompose(ctx, parsedConfig, substitutionContext, options)
 	}
 
 	return r.extendImage(ctx, parsedConfig, substitutionContext, options)
@@ -332,7 +259,17 @@ func (r *runner) buildImage(
 		}
 	}
 
-	// check if we should fallback to dockerless
+	if options.CLIOptions.Platform.Enabled {
+		buildInfo, err := buildkit.BuildRemote(ctx, prebuildHash, parsedConfig, extendedBuildInfo, dockerfilePath, dockerfileContent, r.LocalWorkspaceFolder, options, targetArch, r.Log)
+		if err != nil {
+			return nil, fmt.Errorf("(remote) %w", err)
+		}
+
+		return buildInfo, nil
+	}
+
+	// check if we should fallback to dockerless.
+	// This should only be OSS kubernetes as of March 06, 2025.
 	dockerDriver, ok := r.Driver.(driver.DockerDriver)
 	if options.ForceDockerless || !ok {
 		if r.WorkspaceConfig.Agent.Dockerless.Disabled == "true" {
@@ -343,6 +280,91 @@ func (r *runner) buildImage(
 	}
 
 	return dockerDriver.BuildDevContainer(ctx, prebuildHash, parsedConfig, extendedBuildInfo, dockerfilePath, dockerfileContent, r.LocalWorkspaceFolder, options)
+}
+
+func (r *runner) buildDevImageCompose(
+	ctx context.Context,
+	parsedConfig *config.SubstitutedConfig,
+	substitutionContext *config.SubstitutionContext,
+	options provider.BuildOptions,
+) (*config.BuildInfo, error) {
+	composeHelper, err := r.composeHelper()
+	if err != nil {
+		return nil, errors.Wrap(err, "find docker compose")
+	}
+
+	envFiles, err := r.getEnvFiles()
+	if err != nil {
+		return nil, errors.Wrap(err, "get env files")
+	}
+
+	composeFiles, err := r.getDockerComposeFilePaths(parsedConfig, envFiles)
+	if err != nil {
+		return nil, errors.Wrap(err, "get docker compose file paths")
+	}
+
+	var composeGlobalArgs []string
+	for _, configFile := range composeFiles {
+		composeGlobalArgs = append(composeGlobalArgs, "-f", configFile)
+	}
+
+	for _, envFile := range envFiles {
+		composeGlobalArgs = append(composeGlobalArgs, "--env-file", envFile)
+	}
+
+	r.Log.Debugf("Loading docker compose project %+v", composeFiles)
+	project, err := compose.LoadDockerComposeProject(ctx, composeFiles, envFiles)
+	if err != nil {
+		return nil, errors.Wrap(err, "load docker compose project")
+	}
+	project.Name = composeHelper.GetProjectName(r.ID)
+	r.Log.Debugf("Loaded project %s", project.Name)
+
+	service := parsedConfig.Config.Service
+	composeService, err := project.GetService(service)
+	if err != nil {
+		return nil, fmt.Errorf("service '%s' configured in devcontainer.json not found in Docker Compose configuration", service)
+	}
+
+	originalImageName := composeService.Image
+	if originalImageName == "" {
+		originalImageName, err = composeHelper.GetDefaultImage(project.Name, service)
+		if err != nil {
+			return nil, errors.Wrap(err, "get default image")
+		}
+	}
+
+	overrideBuildImageName, _, imageMetadata, _, err := r.buildAndExtendDockerCompose(ctx, parsedConfig, substitutionContext, project, composeHelper, &composeService, composeGlobalArgs)
+	if err != nil {
+		return nil, errors.Wrap(err, "build and extend docker-compose")
+	}
+
+	currentImageName := overrideBuildImageName
+	if currentImageName == "" {
+		currentImageName = originalImageName
+	}
+
+	imageDetails, err := r.inspectImage(ctx, currentImageName)
+	if err != nil {
+		return nil, errors.Wrap(err, "inspect image")
+	}
+
+	// have a fallback value for PrebuildHash
+	// we don't calculate prebuild hash on docker compose builds
+	// let's use Images :tag then
+	imageTag, err := r.getImageTag(ctx, imageDetails.ID)
+	if err != nil {
+		return nil, errors.Wrap(err, "inspect image")
+	}
+
+	return &config.BuildInfo{
+		ImageDetails:  imageDetails,
+		ImageMetadata: imageMetadata,
+		ImageName:     overrideBuildImageName,
+		PrebuildHash:  imageTag,
+		RegistryCache: options.RegistryCache,
+		Tags:          options.Tag,
+	}, nil
 }
 
 func dockerlessFallback(
@@ -362,7 +384,7 @@ func dockerlessFallback(
 	}
 
 	// build dockerfile
-	devPodDockerfile, err := docker.RewriteDockerfile(dockerfileContent, extendedBuildInfo)
+	devPodDockerfile, err := build.RewriteDockerfile(dockerfileContent, extendedBuildInfo)
 	if err != nil {
 		return nil, fmt.Errorf("rewrite dockerfile: %w", err)
 	} else if devPodDockerfile == "" {
@@ -375,7 +397,7 @@ func dockerlessFallback(
 
 	// get build args and target
 	containerContext, containerDockerfile := getContainerContextAndDockerfile(localWorkspaceFolder, containerWorkspaceFolder, contextPath, devPodDockerfile)
-	buildArgs, target := docker.GetBuildArgsAndTarget(parsedConfig, extendedBuildInfo)
+	buildArgs, target := build.GetBuildArgsAndTarget(parsedConfig, extendedBuildInfo)
 	return &config.BuildInfo{
 		ImageMetadata: extendedBuildInfo.MetadataConfig,
 		Dockerless: &config.BuildInfoDockerless{
@@ -397,4 +419,9 @@ func getContainerContextAndDockerfile(localWorkspaceFolder, containerWorkspaceFo
 	containerContext := path.Join(containerWorkspaceFolder, strings.TrimPrefix(path.Clean(filepath.ToSlash(contextPath)), prefixPath))
 	containerDockerfile := path.Join(containerWorkspaceFolder, strings.TrimPrefix(path.Clean(filepath.ToSlash(devPodDockerfile)), prefixPath))
 	return containerContext, containerDockerfile
+}
+
+func cleanupBuildInformation(c *config.DevContainerConfig) {
+	contextPath := config.GetContextPath(c)
+	_ = os.RemoveAll(filepath.Join(contextPath, config.DevPodContextFeatureFolder))
 }

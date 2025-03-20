@@ -71,13 +71,13 @@ func (c *SetupLoftPlatformAccessCmd) Run(_ *cobra.Command, args []string) error 
 	err = loftconfig.AuthDevpodCliToPlatform(loftConfig, logger)
 	if err != nil {
 		// log error but don't return to allow other CLIs to install as well
-		logger.Warn("unable to authenticate devpod cli: %v", err)
+		logger.Warnf("unable to authenticate devpod cli: %w", err)
 	}
 
 	err = loftconfig.AuthVClusterCliToPlatform(loftConfig, logger)
 	if err != nil {
 		// log error but don't return to allow other CLIs to install as well
-		logger.Warn("unable to authenticate vcluster cli: %v", err)
+		logger.Warnf("unable to authenticate vcluster cli: %w", err)
 	}
 
 	return nil

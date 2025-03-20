@@ -116,6 +116,17 @@ func OptionsFromEnv(name string) url.Values {
 	return nil
 }
 
+func URLOptions(options any) url.Values {
+	raw, _ := json.Marshal(options)
+	if options != "" {
+		return url.Values{
+			"options": []string{string(raw)},
+		}
+	}
+
+	return nil
+}
+
 func DialInstance(baseClient client.Client, workspace *managementv1.DevPodWorkspaceInstance, subResource string, values url.Values, log log.Logger) (*websocket.Conn, error) {
 	restConfig, err := baseClient.ManagementConfig()
 	if err != nil {
@@ -123,12 +134,6 @@ func DialInstance(baseClient client.Client, workspace *managementv1.DevPodWorksp
 	}
 
 	host := restConfig.Host
-
-	// check if this workspace has been scheduled to run on a specific runner
-	if workspace.Annotations != nil && workspace.Annotations[storagev1.DevPodWorkspaceRunnerEndpointAnnotation] != "" {
-		host = workspace.Annotations[storagev1.DevPodWorkspaceRunnerEndpointAnnotation]
-	}
-
 	parsedURL, _ := url.Parse(host)
 	if parsedURL != nil && parsedURL.Host != "" {
 		host = parsedURL.Host
@@ -170,6 +175,13 @@ func UpdateInstance(ctx context.Context, client client.Client, oldInstance *mana
 		return nil, err
 	}
 
+	// we don't want to patch status or metadata
+	newInstance = newInstance.DeepCopy()
+	newInstance.Status = oldInstance.Status
+	newInstance.ObjectMeta = oldInstance.ObjectMeta
+	newInstance.TypeMeta = oldInstance.TypeMeta
+
+	// create a patch from the old instance
 	patch := ctrlclient.MergeFrom(oldInstance)
 	data, err := patch.Data(newInstance)
 	if err != nil {
@@ -182,7 +194,7 @@ func UpdateInstance(ctx context.Context, client client.Client, oldInstance *mana
 		DevPodWorkspaceInstances(oldInstance.GetNamespace()).
 		Patch(ctx, oldInstance.GetName(), patch.Type(), data, metav1.PatchOptions{})
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("patch workspace instance: %w (patch: %s)", err, string(data))
 	}
 
 	return WaitForInstance(ctx, client, res, log)
@@ -221,11 +233,6 @@ func WaitForInstance(ctx context.Context, client client.Client, instance *manage
 			return false, nil
 		}
 
-		if !isRunnerReady(updatedInstance, storagev1.BuiltinRunnerName) {
-			log.Debugf("Runner is not ready yet", name, status.Phase)
-			return false, nil
-		}
-
 		log.Debugf("Workspace %s is ready", name)
 		return true, nil
 	})
@@ -235,7 +242,6 @@ func WaitForInstance(ctx context.Context, client client.Client, instance *manage
 		// basic status
 		msg += fmt.Sprintf("ready: %t\n", isReady(updatedInstance))
 		msg += fmt.Sprintf("template synced: %t\n", isTemplateSynced(updatedInstance))
-		msg += fmt.Sprintf("runner ready: %t\n", isRunnerReady(updatedInstance, storagev1.BuiltinRunnerName))
 		msg += "\n"
 
 		// CRD conditions
@@ -261,19 +267,6 @@ func isReady(workspace *managementv1.DevPodWorkspaceInstance) bool {
 	}
 
 	return workspace.Status.Phase == storagev1.InstanceReady
-}
-
-func isRunnerReady(workspace *managementv1.DevPodWorkspaceInstance, builtinRunnerName string) bool {
-	if workspace.Spec.RunnerRef.Runner == "" {
-		return true
-	}
-
-	if workspace.Spec.RunnerRef.Runner == builtinRunnerName {
-		return true
-	}
-
-	return workspace.GetAnnotations() != nil &&
-		workspace.GetAnnotations()[storagev1.DevPodWorkspaceRunnerEndpointAnnotation] != ""
 }
 
 func isTemplateSynced(workspace *managementv1.DevPodWorkspaceInstance) bool {

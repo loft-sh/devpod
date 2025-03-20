@@ -1,22 +1,21 @@
 package flags
 
 import (
+	"github.com/loft-sh/devpod/pkg/platform"
 	flag "github.com/spf13/pflag"
 )
 
 type GlobalFlags struct {
-	Context   string
-	Provider  string
-	LogOutput string
-
-	Debug  bool
-	Silent bool
-
-	AgentDir string
-
+	Context    string
+	Provider   string
+	AgentDir   string
 	DevPodHome string
+	UID        string
+	Owner      platform.OwnerFilter
 
-	UID string
+	LogOutput string
+	Debug     bool
+	Silent    bool
 }
 
 // SetGlobalFlags applies the global flags
@@ -30,11 +29,10 @@ func SetGlobalFlags(flags *flag.FlagSet) *GlobalFlags {
 	flags.BoolVar(&globalFlags.Debug, "debug", false, "Prints the stack trace if an error occurs")
 	flags.BoolVar(&globalFlags.Silent, "silent", false, "Run in silent mode and prevents any devpod log output except panics & fatals")
 
-	_ = flags.MarkHidden("git-username")
-	_ = flags.MarkHidden("git-token")
+	flags.Var(&globalFlags.Owner, "owner", "Show pro workspaces for owner")
+	_ = flags.MarkHidden("owner")
 	flags.StringVar(&globalFlags.UID, "uid", "", "Set UID for workspace")
 	_ = flags.MarkHidden("uid")
-
 	flags.StringVar(&globalFlags.AgentDir, "agent-dir", "", "The data folder where agent data is stored.")
 	_ = flags.MarkHidden("agent-dir")
 	return globalFlags

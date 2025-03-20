@@ -62,8 +62,9 @@ export type TProviderConfig = Readonly<{
   icon: TMaybe<string>
   home: TMaybe<string>
   exec:
-    | TMaybe<Record<string, readonly string[]> & { proxy: never }>
-    | TMaybe<{ proxy: TMaybe<Record<string, readonly string[]>> }>
+    | TMaybe<Record<string, readonly string[]> & { proxy: never; daemon: never }>
+    | TMaybe<{ proxy: TMaybe<Record<string, readonly string[]>>; daemon: never }>
+    | TMaybe<{ daemon: TMaybe<Record<string, readonly string[]>>; proxy: never }>
 }>
 export type TProviderOptionGroup = Readonly<{
   name: TMaybe<string>
@@ -234,6 +235,7 @@ export type TProInstance = Readonly<{
   provider: TMaybe<string>
   creationTimestamp: TMaybe<string>
   authenticated: TMaybe<boolean>
+  capabilities: TMaybe<readonly string[]>
 }>
 export type TProInstances = readonly TProInstance[]
 export type TProInstanceManager = Readonly<{
@@ -278,10 +280,30 @@ export type TCommunityProvider = Readonly<{
 //#endregion
 export type TPlatformHealthCheck = Readonly<{
   healthy: TMaybe<boolean>
+  loginRequired: TMaybe<boolean>
+  details: TMaybe<string[]>
 }>
 export type TPlatformUpdateCheck = Readonly<{
   available: TMaybe<boolean>
   newVersion: TMaybe<string>
+}>
+export const UserSecret = {
+  GIT_HTTP: "devpod-git-http",
+  GIT_SSH: "devpod-git-ssh",
+} as const
+export type TUserSecretType = (typeof UserSecret)[keyof typeof UserSecret]
+export type TGitCredentialData = {
+  password?: string
+  key?: string
+  host?: string
+  user?: string
+  path?: string
+}
+export type TGitCredentialHelperData = Readonly<{
+  host: string
+  path?: string
+  username?: string
+  password: string
 }>
 
 export function isWithWorkspaceID(arg: unknown): arg is TWithWorkspaceID {

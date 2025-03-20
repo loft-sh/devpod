@@ -3,9 +3,9 @@
 package v1
 
 import (
-	"context"
+	context "context"
 
-	v1 "github.com/loft-sh/api/v4/pkg/apis/storage/v1"
+	storagev1 "github.com/loft-sh/api/v4/pkg/apis/storage/v1"
 	scheme "github.com/loft-sh/api/v4/pkg/clientset/versioned/scheme"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	types "k8s.io/apimachinery/pkg/types"
@@ -21,33 +21,34 @@ type AccessKeysGetter interface {
 
 // AccessKeyInterface has methods to work with AccessKey resources.
 type AccessKeyInterface interface {
-	Create(ctx context.Context, accessKey *v1.AccessKey, opts metav1.CreateOptions) (*v1.AccessKey, error)
-	Update(ctx context.Context, accessKey *v1.AccessKey, opts metav1.UpdateOptions) (*v1.AccessKey, error)
+	Create(ctx context.Context, accessKey *storagev1.AccessKey, opts metav1.CreateOptions) (*storagev1.AccessKey, error)
+	Update(ctx context.Context, accessKey *storagev1.AccessKey, opts metav1.UpdateOptions) (*storagev1.AccessKey, error)
 	// Add a +genclient:noStatus comment above the type to avoid generating UpdateStatus().
-	UpdateStatus(ctx context.Context, accessKey *v1.AccessKey, opts metav1.UpdateOptions) (*v1.AccessKey, error)
+	UpdateStatus(ctx context.Context, accessKey *storagev1.AccessKey, opts metav1.UpdateOptions) (*storagev1.AccessKey, error)
 	Delete(ctx context.Context, name string, opts metav1.DeleteOptions) error
 	DeleteCollection(ctx context.Context, opts metav1.DeleteOptions, listOpts metav1.ListOptions) error
-	Get(ctx context.Context, name string, opts metav1.GetOptions) (*v1.AccessKey, error)
-	List(ctx context.Context, opts metav1.ListOptions) (*v1.AccessKeyList, error)
+	Get(ctx context.Context, name string, opts metav1.GetOptions) (*storagev1.AccessKey, error)
+	List(ctx context.Context, opts metav1.ListOptions) (*storagev1.AccessKeyList, error)
 	Watch(ctx context.Context, opts metav1.ListOptions) (watch.Interface, error)
-	Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts metav1.PatchOptions, subresources ...string) (result *v1.AccessKey, err error)
+	Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts metav1.PatchOptions, subresources ...string) (result *storagev1.AccessKey, err error)
 	AccessKeyExpansion
 }
 
 // accessKeys implements AccessKeyInterface
 type accessKeys struct {
-	*gentype.ClientWithList[*v1.AccessKey, *v1.AccessKeyList]
+	*gentype.ClientWithList[*storagev1.AccessKey, *storagev1.AccessKeyList]
 }
 
 // newAccessKeys returns a AccessKeys
 func newAccessKeys(c *StorageV1Client) *accessKeys {
 	return &accessKeys{
-		gentype.NewClientWithList[*v1.AccessKey, *v1.AccessKeyList](
+		gentype.NewClientWithList[*storagev1.AccessKey, *storagev1.AccessKeyList](
 			"accesskeys",
 			c.RESTClient(),
 			scheme.ParameterCodec,
 			"",
-			func() *v1.AccessKey { return &v1.AccessKey{} },
-			func() *v1.AccessKeyList { return &v1.AccessKeyList{} }),
+			func() *storagev1.AccessKey { return &storagev1.AccessKey{} },
+			func() *storagev1.AccessKeyList { return &storagev1.AccessKeyList{} },
+		),
 	}
 }

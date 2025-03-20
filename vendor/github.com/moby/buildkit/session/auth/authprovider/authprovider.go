@@ -15,8 +15,8 @@ import (
 	"sync"
 	"time"
 
-	authutil "github.com/containerd/containerd/remotes/docker/auth"
-	remoteserrors "github.com/containerd/containerd/remotes/errors"
+	authutil "github.com/containerd/containerd/v2/core/remotes/docker/auth"
+	remoteserrors "github.com/containerd/containerd/v2/core/remotes/errors"
 	"github.com/docker/cli/cli/config"
 	"github.com/docker/cli/cli/config/configfile"
 	"github.com/docker/cli/cli/config/types"
@@ -38,18 +38,43 @@ const (
 	dockerHubRegistryHost  = "registry-1.docker.io"
 )
 
-func NewDockerAuthProvider(cfg *configfile.ConfigFile, tlsConfigs map[string]*AuthTLSConfig) session.Attachable {
+type DockerAuthProviderConfig struct {
+	// ConfigFile is the docker config file
+	ConfigFile *configfile.ConfigFile
+	// TLSConfigs is a map of host to TLS config
+	TLSConfigs map[string]*AuthTLSConfig
+	// ExpireCachedAuth is a function that returns true auth config should be refreshed
+	// instead of using a pre-cached result.
+	// If nil then the cached result will expire after 10 minutes.
+	// The function is called with the time the cached auth config was created
+	// and the server URL the auth config is for.
+	ExpireCachedAuth func(created time.Time, serverURL string) bool
+}
+
+type authConfigCacheEntry struct {
+	Created time.Time
+	Auth    *types.AuthConfig
+}
+
+func NewDockerAuthProvider(cfg DockerAuthProviderConfig) session.Attachable {
+	if cfg.ExpireCachedAuth == nil {
+		cfg.ExpireCachedAuth = func(created time.Time, _ string) bool {
+			return time.Since(created) > 10*time.Minute
+		}
+	}
 	return &authProvider{
-		authConfigCache: map[string]*types.AuthConfig{},
-		config:          cfg,
+		authConfigCache: map[string]authConfigCacheEntry{},
+		expireAc:        cfg.ExpireCachedAuth,
+		config:          cfg.ConfigFile,
 		seeds:           &tokenSeeds{dir: config.Dir()},
 		loggerCache:     map[string]struct{}{},
-		tlsConfigs:      tlsConfigs,
+		tlsConfigs:      cfg.TLSConfigs,
 	}
 }
 
 type authProvider struct {
-	authConfigCache map[string]*types.AuthConfig
+	authConfigCache map[string]authConfigCacheEntry
+	expireAc        func(time.Time, string) bool
 	config          *configfile.ConfigFile
 	seeds           *tokenSeeds
 	logger          progresswriter.Logger
@@ -130,19 +155,19 @@ func (ap *authProvider) FetchToken(ctx context.Context, req *auth.FetchTokenRequ
 					if err != nil {
 						return nil, err
 					}
-					return toTokenResponse(resp.Token, resp.IssuedAt, resp.ExpiresIn), nil
+					return toTokenResponse(resp.Token, resp.IssuedAt, resp.ExpiresInSeconds), nil
 				}
 			}
 			return nil, err
 		}
-		return toTokenResponse(resp.AccessToken, resp.IssuedAt, resp.ExpiresIn), nil
+		return toTokenResponse(resp.AccessToken, resp.IssuedAt, resp.ExpiresInSeconds), nil
 	}
 	// do request anonymously
 	resp, err := authutil.FetchToken(ctx, httpClient, nil, to)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to fetch anonymous token")
 	}
-	return toTokenResponse(resp.Token, resp.IssuedAt, resp.ExpiresIn), nil
+	return toTokenResponse(resp.Token, resp.IssuedAt, resp.ExpiresInSeconds), nil
 }
 
 func (ap *authProvider) tlsConfig(host string) (*tls.Config, error) {
@@ -247,17 +272,25 @@ func (ap *authProvider) getAuthConfig(ctx context.Context, host string) (*types.
 		host = dockerHubConfigfileKey
 	}
 
-	if _, exists := ap.authConfigCache[host]; !exists {
-		span, _ := tracing.StartSpan(ctx, fmt.Sprintf("load credentials for %s", host))
-		ac, err := ap.config.GetAuthConfig(host)
-		tracing.FinishWithError(span, err)
-		if err != nil {
-			return nil, err
-		}
-		ap.authConfigCache[host] = &ac
+	entry, exists := ap.authConfigCache[host]
+	if exists && !ap.expireAc(entry.Created, host) {
+		return entry.Auth, nil
 	}
 
-	return ap.authConfigCache[host], nil
+	span, _ := tracing.StartSpan(ctx, fmt.Sprintf("load credentials for %s", host))
+	ac, err := ap.config.GetAuthConfig(host)
+	tracing.FinishWithError(span, err)
+	if err != nil {
+		return nil, err
+	}
+	entry = authConfigCacheEntry{
+		Created: time.Now(),
+		Auth:    &ac,
+	}
+
+	ap.authConfigCache[host] = entry
+
+	return entry.Auth, nil
 }
 
 func (ap *authProvider) getAuthorityKey(ctx context.Context, host string, salt []byte) (ed25519.PrivateKey, error) {

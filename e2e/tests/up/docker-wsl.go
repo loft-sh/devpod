@@ -14,6 +14,7 @@ import (
 	"github.com/loft-sh/devpod/e2e/framework"
 	"github.com/loft-sh/devpod/pkg/devcontainer/config"
 	docker "github.com/loft-sh/devpod/pkg/docker"
+	"github.com/loft-sh/log"
 	"github.com/onsi/ginkgo/v2"
 	"github.com/onsi/gomega"
 	"github.com/onsi/gomega/ghttp"
@@ -29,7 +30,7 @@ var _ = DevPodDescribe("devpod up test suite", func() {
 			initialDir, err = os.Getwd()
 			framework.ExpectNoError(err)
 
-			dockerHelper = &docker.DockerHelper{DockerCommand: "docker"}
+			dockerHelper = &docker.DockerHelper{DockerCommand: "docker", Log: log.Default}
 			framework.ExpectNoError(err)
 
 			err = os.Setenv("DOCKER_HOST", "tcp://localhost:2375")

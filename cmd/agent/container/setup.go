@@ -1,3 +1,5 @@
+//go:build !windows
+
 package container
 
 import (
@@ -52,6 +54,9 @@ type SetupContainerCmd struct {
 	InjectGitCredentials   bool
 	ContainerWorkspaceInfo string
 	SetupInfo              string
+	AccessKey              string
+	PlatformHost           string
+	WorkspaceHost          string
 }
 
 // NewSetupContainerCmd creates a new command
@@ -72,6 +77,9 @@ func NewSetupContainerCmd(flags *flags.GlobalFlags) *cobra.Command {
 	setupContainerCmd.Flags().BoolVar(&cmd.InjectGitCredentials, "inject-git-credentials", false, "If DevPod should inject git credentials during setup")
 	setupContainerCmd.Flags().StringVar(&cmd.ContainerWorkspaceInfo, "container-workspace-info", "", "The container workspace info")
 	setupContainerCmd.Flags().StringVar(&cmd.SetupInfo, "setup-info", "", "The container setup info")
+	setupContainerCmd.Flags().StringVar(&cmd.AccessKey, "access-key", "", "Access Key to use")
+	setupContainerCmd.Flags().StringVar(&cmd.WorkspaceHost, "workspace-host", "", "Workspace hostname to use")
+	setupContainerCmd.Flags().StringVar(&cmd.PlatformHost, "platform-host", "", "Platform host")
 	_ = setupContainerCmd.MarkFlagRequired("setup-info")
 	return setupContainerCmd
 }
@@ -180,7 +188,7 @@ func (cmd *SetupContainerCmd) Run(ctx context.Context) error {
 	}
 
 	// setup container
-	err = setup.SetupContainer(ctx, setupInfo, workspaceInfo.CLIOptions.WorkspaceEnv, cmd.ChownWorkspace, tunnelClient, logger)
+	err = setup.SetupContainer(ctx, setupInfo, workspaceInfo.CLIOptions.WorkspaceEnv, cmd.ChownWorkspace, &workspaceInfo.CLIOptions.Platform, tunnelClient, logger)
 	if err != nil {
 		return err
 	}
@@ -192,7 +200,7 @@ func (cmd *SetupContainerCmd) Run(ctx context.Context) error {
 	}
 
 	// start container daemon if necessary
-	if !workspaceInfo.CLIOptions.Proxy && !workspaceInfo.CLIOptions.DisableDaemon && workspaceInfo.ContainerTimeout != "" {
+	if !workspaceInfo.CLIOptions.Platform.Enabled && !workspaceInfo.CLIOptions.DisableDaemon && workspaceInfo.ContainerTimeout != "" {
 		err = single.Single("devpod.daemon.pid", func() (*exec.Cmd, error) {
 			logger.Debugf("Start DevPod Container Daemon with Inactivity Timeout %s", workspaceInfo.ContainerTimeout)
 			binaryPath, err := os.Executable()
@@ -496,18 +504,6 @@ func (cmd *SetupContainerCmd) setupVSCode(setupInfo *config.Result, ideOptions m
 	})
 }
 
-func setupVSCodeExtensions(setupInfo *config.Result, flavor vscode.Flavor, log log.Logger) error {
-	vsCodeConfiguration := config.GetVSCodeConfiguration(setupInfo.MergedConfig)
-	user := config.GetRemoteUser(setupInfo)
-	return vscode.NewVSCodeServer(vsCodeConfiguration.Extensions, "", user, nil, flavor, log).InstallExtensions()
-}
-
-func setupOpenVSCodeExtensions(setupInfo *config.Result, log log.Logger) error {
-	vsCodeConfiguration := config.GetVSCodeConfiguration(setupInfo.MergedConfig)
-	user := config.GetRemoteUser(setupInfo)
-	return openvscode.NewOpenVSCodeServer(vsCodeConfiguration.Extensions, "", user, "", "", nil, log).InstallExtensions()
-}
-
 func (cmd *SetupContainerCmd) setupOpenVSCode(setupInfo *config.Result, ideOptions map[string]config2.OptionValue, log log.Logger) error {
 	log.Debugf("Setup openvscode...")
 	vsCodeConfiguration := config.GetVSCodeConfiguration(setupInfo.MergedConfig)
@@ -568,14 +564,14 @@ func configureSystemGitCredentials(ctx context.Context, cancel context.CancelFun
 	gitCredentials := fmt.Sprintf("!'%s' agent git-credentials --port %d", binaryPath, serverPort)
 	_ = os.Setenv("DEVPOD_GIT_HELPER_PORT", strconv.Itoa(serverPort))
 
-	err = git.CommandContext(ctx, git.GitCommandOptions{}, "config", "--system", "--add", "credential.helper", gitCredentials).Run()
+	err = git.CommandContext(ctx, git.GetDefaultExtraEnv(false), "config", "--system", "--add", "credential.helper", gitCredentials).Run()
 	if err != nil {
 		return nil, fmt.Errorf("add git credential helper: %w", err)
 	}
 
 	cleanup := func() {
 		log.Debug("Unset setup system credential helper")
-		err = git.CommandContext(ctx, git.GitCommandOptions{}, "config", "--system", "--unset", "credential.helper").Run()
+		err = git.CommandContext(ctx, git.GetDefaultExtraEnv(false), "config", "--system", "--unset", "credential.helper").Run()
 		if err != nil {
 			log.Errorf("unset system credential helper %v", err)
 		}

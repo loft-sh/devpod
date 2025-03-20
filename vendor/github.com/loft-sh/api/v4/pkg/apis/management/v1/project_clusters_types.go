@@ -13,7 +13,4 @@ type ProjectClusters struct {
 
 	// Clusters holds all the allowed clusters
 	Clusters []Cluster `json:"clusters,omitempty"`
-
-	// Runners holds all the allowed runners
-	Runners []Runner `json:"runners,omitempty"`
 }

@@ -3,13 +3,13 @@
 package v1
 
 import (
-	"context"
+	context "context"
 	time "time"
 
-	managementv1 "github.com/loft-sh/api/v4/pkg/apis/management/v1"
+	apismanagementv1 "github.com/loft-sh/api/v4/pkg/apis/management/v1"
 	versioned "github.com/loft-sh/api/v4/pkg/clientset/versioned"
 	internalinterfaces "github.com/loft-sh/api/v4/pkg/informers/externalversions/internalinterfaces"
-	v1 "github.com/loft-sh/api/v4/pkg/listers/management/v1"
+	managementv1 "github.com/loft-sh/api/v4/pkg/listers/management/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	runtime "k8s.io/apimachinery/pkg/runtime"
 	watch "k8s.io/apimachinery/pkg/watch"
@@ -20,7 +20,7 @@ import (
 // ClusterRoleTemplates.
 type ClusterRoleTemplateInformer interface {
 	Informer() cache.SharedIndexInformer
-	Lister() v1.ClusterRoleTemplateLister
+	Lister() managementv1.ClusterRoleTemplateLister
 }
 
 type clusterRoleTemplateInformer struct {
@@ -54,7 +54,7 @@ func NewFilteredClusterRoleTemplateInformer(client versioned.Interface, resyncPe
 				return client.ManagementV1().ClusterRoleTemplates().Watch(context.TODO(), options)
 			},
 		},
-		&managementv1.ClusterRoleTemplate{},
+		&apismanagementv1.ClusterRoleTemplate{},
 		resyncPeriod,
 		indexers,
 	)
@@ -65,9 +65,9 @@ func (f *clusterRoleTemplateInformer) defaultInformer(client versioned.Interface
 }
 
 func (f *clusterRoleTemplateInformer) Informer() cache.SharedIndexInformer {
-	return f.factory.InformerFor(&managementv1.ClusterRoleTemplate{}, f.defaultInformer)
+	return f.factory.InformerFor(&apismanagementv1.ClusterRoleTemplate{}, f.defaultInformer)
 }
 
-func (f *clusterRoleTemplateInformer) Lister() v1.ClusterRoleTemplateLister {
-	return v1.NewClusterRoleTemplateLister(f.Informer().GetIndexer())
+func (f *clusterRoleTemplateInformer) Lister() managementv1.ClusterRoleTemplateLister {
+	return managementv1.NewClusterRoleTemplateLister(f.Informer().GetIndexer())
 }

@@ -13,21 +13,17 @@ import (
 	"strconv"
 
 	"github.com/loft-sh/devpod/pkg/agent/tunnel"
-	devpodhttp "github.com/loft-sh/devpod/pkg/http"
 	"github.com/loft-sh/log"
 	"github.com/pkg/errors"
 )
 
 const DefaultPort = "12049"
-const DefaultRunnerPort = "12050"
 const CredentialsServerPortEnv = "DEVPOD_CREDENTIALS_SERVER_PORT"
-const CredentialsServerRunnerPortEnv = "DEVPOD_CREDENTIALS_SERVER_RUNNER_PORT"
 
 func RunCredentialsServer(
 	ctx context.Context,
 	port int,
 	client tunnel.TunnelClient,
-	runnerAddr string,
 	log log.Logger,
 ) error {
 	var handler http.Handler = http.HandlerFunc(func(writer http.ResponseWriter, request *http.Request) {
@@ -63,10 +59,6 @@ func RunCredentialsServer(
 		}
 	})
 
-	if runnerAddr != "" {
-		handler = runnerProxy(handler, runnerAddr, log)
-	}
-
 	addr := net.JoinHostPort("localhost", strconv.Itoa(port))
 	srv := &http.Server{Addr: addr, Handler: handler}
 
@@ -99,57 +91,6 @@ func GetPort() (int, error) {
 	}
 
 	return port, nil
-}
-
-func GetRunnerPort() (int, error) {
-	strPort := cmp.Or(os.Getenv(CredentialsServerRunnerPortEnv), DefaultRunnerPort)
-	port, err := strconv.Atoi(strPort)
-	if err != nil {
-		return 0, fmt.Errorf("convert port %s: %w", strPort, err)
-	}
-
-	return port, nil
-}
-
-func runnerProxy(handler http.Handler, proxyAddr string, log log.Logger) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
-		proxyReq, err := prepareRequest(req, proxyAddr)
-		if err != nil {
-			log.Errorf("prepare proxy request", err)
-			http.Error(w, err.Error(), http.StatusInternalServerError)
-			return
-		}
-
-		// execute request against runner
-		res, err := devpodhttp.GetHTTPClient().Do(&proxyReq)
-		if err != nil {
-			log.Errorf("request from proxy: %v", err)
-			http.Error(w, err.Error(), http.StatusInternalServerError)
-			return
-		}
-		defer res.Body.Close()
-		out, err := io.ReadAll(res.Body)
-		if err != nil {
-			log.Errorf("read response body: %v", err)
-			return
-		}
-		if res.StatusCode != http.StatusOK {
-			log.Errorf("proxy request (%d): %d bytes", res.StatusCode, len(out))
-			return
-		}
-
-		// Send response from runner if it's not empty
-		if len(out) != 0 {
-			w.Header().Set("Content-Type", "application/json")
-			w.WriteHeader(http.StatusOK)
-			_, _ = w.Write(out)
-			log.Debugf("Successfully wrote back %d bytes", len(out))
-			return
-		}
-
-		// Otherwise forward to origin credentials server
-		handler.ServeHTTP(w, req)
-	})
 }
 
 func prepareRequest(req *http.Request, proxyAddr string) (http.Request, error) {

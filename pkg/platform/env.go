@@ -11,6 +11,7 @@ const (
 
 	ConfigEnv  = "LOFT_CONFIG"
 	ProjectEnv = "LOFT_PROJECT"
+	ClusterEnv = "LOFT_CLUSTER"
 	RunnerEnv  = "LOFT_RUNNER"
 
 	TemplateOptionEnv        = "LOFT_TEMPLATE"
@@ -22,4 +23,6 @@ const (
 	SpaceInstanceNameEnv          = "LOFT_SPACE_INSTANCE_NAME"
 	VirtualClusterInstanceNameEnv = "LOFT_VIRTUAL_CLUSTER_INSTANCE_NAME"
 	InstanceNamespaceEnv          = "LOFT_INSTANCE_NAMESPACE"
+
+	DaemonFolderEnv = "DAEMON_FOLDER"
 )

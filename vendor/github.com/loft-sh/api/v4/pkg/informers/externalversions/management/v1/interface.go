@@ -62,8 +62,6 @@ type Interface interface {
 	RegisterVirtualClusters() RegisterVirtualClusterInformer
 	// ResetAccessKeys returns a ResetAccessKeyInformer.
 	ResetAccessKeys() ResetAccessKeyInformer
-	// Runners returns a RunnerInformer.
-	Runners() RunnerInformer
 	// Selves returns a SelfInformer.
 	Selves() SelfInformer
 	// SelfSubjectAccessReviews returns a SelfSubjectAccessReviewInformer.
@@ -86,6 +84,8 @@ type Interface interface {
 	Users() UserInformer
 	// VirtualClusterInstances returns a VirtualClusterInstanceInformer.
 	VirtualClusterInstances() VirtualClusterInstanceInformer
+	// VirtualClusterSchemas returns a VirtualClusterSchemaInformer.
+	VirtualClusterSchemas() VirtualClusterSchemaInformer
 	// VirtualClusterTemplates returns a VirtualClusterTemplateInformer.
 	VirtualClusterTemplates() VirtualClusterTemplateInformer
 }
@@ -236,11 +236,6 @@ func (v *version) ResetAccessKeys() ResetAccessKeyInformer {
 	return &resetAccessKeyInformer{factory: v.factory, tweakListOptions: v.tweakListOptions}
 }
 
-// Runners returns a RunnerInformer.
-func (v *version) Runners() RunnerInformer {
-	return &runnerInformer{factory: v.factory, tweakListOptions: v.tweakListOptions}
-}
-
 // Selves returns a SelfInformer.
 func (v *version) Selves() SelfInformer {
 	return &selfInformer{factory: v.factory, tweakListOptions: v.tweakListOptions}
@@ -294,6 +289,11 @@ func (v *version) Users() UserInformer {
 // VirtualClusterInstances returns a VirtualClusterInstanceInformer.
 func (v *version) VirtualClusterInstances() VirtualClusterInstanceInformer {
 	return &virtualClusterInstanceInformer{factory: v.factory, namespace: v.namespace, tweakListOptions: v.tweakListOptions}
+}
+
+// VirtualClusterSchemas returns a VirtualClusterSchemaInformer.
+func (v *version) VirtualClusterSchemas() VirtualClusterSchemaInformer {
+	return &virtualClusterSchemaInformer{factory: v.factory, tweakListOptions: v.tweakListOptions}
 }
 
 // VirtualClusterTemplates returns a VirtualClusterTemplateInformer.

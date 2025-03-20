@@ -58,6 +58,7 @@ func NewDockerDriver(workspaceInfo *provider2.AgentWorkspaceInfo, log log.Logger
 			Environment:   makeEnvironment(workspaceInfo.Agent.Docker.Env, log),
 			ContainerID:   workspaceInfo.Workspace.Source.Container,
 			Builder:       builder,
+			Log:           log,
 		},
 		Log: log,
 	}, nil
@@ -285,10 +286,6 @@ func (d *dockerDriver) RunDockerDevContainer(
 		args = append(args, "-e", k+"="+v)
 	}
 
-	// security options
-	if init != nil && *init {
-		args = append(args, "--init")
-	}
 	if options.Privileged != nil && *options.Privileged {
 		args = append(args, "--privileged")
 	}

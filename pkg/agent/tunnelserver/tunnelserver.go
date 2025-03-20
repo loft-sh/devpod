@@ -11,6 +11,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/loft-sh/api/v4/pkg/devpod"
 	"github.com/loft-sh/devpod/pkg/agent/tunnel"
 	"github.com/loft-sh/devpod/pkg/devcontainer/config"
 	"github.com/loft-sh/devpod/pkg/dockercredentials"
@@ -53,15 +54,15 @@ func RunUpServer(ctx context.Context, reader io.Reader, writer io.WriteCloser, a
 	return tunnelServ.RunWithResult(ctx, reader, writer)
 }
 
-func RunSetupServer(ctx context.Context, reader io.Reader, writer io.WriteCloser, allowGitCredentials, allowDockerCredentials bool, mounts []*config.Mount, tunnelClient tunnel.TunnelClient, log log.Logger, options ...Option) (*config.Result, error) {
+func RunSetupServer(ctx context.Context, reader io.Reader, writer io.WriteCloser, allowGitCredentials, allowDockerCredentials bool, mounts []*config.Mount, log log.Logger, options ...Option) (*config.Result, error) {
 	opts := append(options, []Option{
 		WithMounts(mounts),
 		WithAllowGitCredentials(allowGitCredentials),
 		WithAllowDockerCredentials(allowDockerCredentials),
 		WithAllowKubeConfig(true),
-		WithTunnelClient(tunnelClient),
 	}...)
 	tunnelServ := New(log, opts...)
+	tunnelServ.allowPlatformOptions = true
 
 	return tunnelServ.RunWithResult(ctx, reader, writer)
 }
@@ -87,16 +88,12 @@ type tunnelServer struct {
 	allowGitCredentials    bool
 	allowDockerCredentials bool
 	allowKubeConfig        bool
+	allowPlatformOptions   bool
 	result                 *config.Result
 	workspace              *provider2.Workspace
 	log                    log.Logger
-	gitCredentialsOverride gitCredentialsOverride
-	tunnelClient           tunnel.TunnelClient
-}
 
-type gitCredentialsOverride struct {
-	username string
-	token    string
+	platformOptions *devpod.PlatformOptions
 }
 
 func (t *tunnelServer) RunWithResult(ctx context.Context, reader io.Reader, writer io.WriteCloser) (*config.Result, error) {
@@ -214,9 +211,24 @@ func (t *tunnelServer) GitCredentials(ctx context.Context, message *tunnel.Messa
 		return nil, perrors.Wrap(err, "decode git credentials request")
 	}
 
-	if t.gitCredentialsOverride.token != "" {
-		credentials.Username = t.gitCredentialsOverride.username
-		credentials.Password = t.gitCredentialsOverride.token
+	if t.platformOptions != nil && t.platformOptions.Enabled {
+		gitHttpCredentials := append(t.platformOptions.UserCredentials.GitHttp, t.platformOptions.ProjectCredentials.GitHttp...)
+		if len(gitHttpCredentials) > 0 {
+			if len(gitHttpCredentials) == 1 {
+				credentials.Username = gitHttpCredentials[0].User
+				credentials.Password = gitHttpCredentials[0].Password
+				credentials.Path = gitHttpCredentials[0].Path
+			} else {
+				for _, credential := range gitHttpCredentials {
+					if credential.Host == credentials.Host {
+						credentials.Username = credential.User
+						credentials.Password = credential.Password
+						credentials.Path = credential.Path
+						break
+					}
+				}
+			}
+		}
 	} else {
 		if t.workspace.Source.GitRepository != "" {
 			path, err := gitcredentials.GetHTTPPath(ctx, gitcredentials.GetHttpPathParameters{
@@ -297,32 +309,11 @@ func (t *tunnelServer) LoftConfig(ctx context.Context, message *tunnel.Message) 
 }
 
 func (t *tunnelServer) KubeConfig(ctx context.Context, message *tunnel.Message) (*tunnel.Message, error) {
-	if !t.allowKubeConfig || t.tunnelClient == nil {
+	if !t.allowKubeConfig {
 		return nil, fmt.Errorf("kube config forbidden")
 	}
 
-	// fetch loft config from host machine
-	req, err := json.Marshal(loftconfig.LoftConfigRequest{})
-	if err != nil {
-		return nil, err
-	}
-	rawLoftConfigRes, err := t.tunnelClient.LoftConfig(ctx, &tunnel.Message{Message: string(req)})
-	if err != nil {
-		return nil, fmt.Errorf("fetch loft config: %w", err)
-	}
-	loftConfigRes := &loftconfig.LoftConfigResponse{}
-	err = json.Unmarshal([]byte(rawLoftConfigRes.Message), loftConfigRes)
-	if err != nil {
-		return nil, fmt.Errorf("get loft config: %w", err)
-	}
-
-	// get info from runner
-	spaceInstanceName := os.Getenv(platform.SpaceInstanceNameEnv)
-	virtualClusterInstanceName := os.Getenv(platform.VirtualClusterInstanceNameEnv)
-	namespace := os.Getenv(platform.InstanceNamespaceEnv)
-
-	// create kubeconfig based on info
-	kubeConfig, err := platform.NewInstanceKubeConfig(ctx, loftConfigRes.LoftConfig, spaceInstanceName, virtualClusterInstanceName, namespace)
+	kubeConfig, err := platform.NewInstanceKubeConfig(ctx, t.platformOptions)
 	if err != nil {
 		return nil, fmt.Errorf("create kube config: %w", err)
 	}
@@ -374,6 +365,9 @@ func (t *tunnelServer) Log(ctx context.Context, message *tunnel.LogMessage) (*tu
 }
 
 func (t *tunnelServer) StreamWorkspace(message *tunnel.Empty, stream tunnel.Tunnel_StreamWorkspaceServer) error {
+	if t.platformOptions != nil && t.platformOptions.Enabled && !t.allowPlatformOptions {
+		return fmt.Errorf("streaming workspace from local computer to platform workspace is not supported. Please specify a git repository to clone instead")
+	}
 	if t.workspace == nil {
 		return fmt.Errorf("workspace is nil")
 	}
@@ -399,6 +393,10 @@ func (t *tunnelServer) StreamWorkspace(message *tunnel.Empty, stream tunnel.Tunn
 }
 
 func (t *tunnelServer) StreamMount(message *tunnel.StreamMountRequest, stream tunnel.Tunnel_StreamMountServer) error {
+	if t.platformOptions != nil && t.platformOptions.Enabled && !t.allowPlatformOptions {
+		return fmt.Errorf("streaming mounts from local computer to platform workspace is not supported. Please specify a git repository to clone instead")
+	}
+
 	var mount *config.Mount
 	for _, m := range t.mounts {
 		if m.String() == message.Mount {

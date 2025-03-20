@@ -1,5 +1,5 @@
+use log::{debug, error, info};
 use std::time::{Duration, Instant};
-use log::{info, error};
 
 // Exit code for the window to signal that the application was quit by the user through the system tray
 // and event handlers may not use prevent_exit().
@@ -21,9 +21,9 @@ where
 pub fn kill_child_processes(parent_pid: u32) {
     #[cfg(windows)]
     {
-        use windows::Win32::System::Threading::*;
-        use windows::Win32::System::Diagnostics::ToolHelp::*;
         use windows::Win32::Foundation::*;
+        use windows::Win32::System::Diagnostics::ToolHelp::*;
+        use windows::Win32::System::Threading::*;
 
         info!("Trying to kill child processes of PID {}.", parent_pid);
 
@@ -47,16 +47,16 @@ pub fn kill_child_processes(parent_pid: u32) {
                         let pid = process_entry.th32ProcessID;
 
                         // Extract zero-terminated string for the executable.
-                        let exe_name = process_entry.szExeFile.iter()
+                        let exe_name = process_entry
+                            .szExeFile
+                            .iter()
                             .take_while(|&&ch| ch != 0)
                             .map(|&ch| ch as u8 as char)
                             .collect::<String>();
 
                         info!(
                             "Found process with PID {} as child of PID {} ({}).",
-                            pid,
-                            parent_pid,
-                            exe_name,
+                            pid, parent_pid, exe_name,
                         );
 
                         // Special exception: We do not clean up tauri's webviews. For now.
@@ -67,10 +67,15 @@ pub fn kill_child_processes(parent_pid: u32) {
                             kill_child_processes(pid);
 
                             // Obtain handle for the child process.
-                            let child_process_handle: windows::core::Result<HANDLE> = OpenProcess(PROCESS_TERMINATE, false, pid);
+                            let child_process_handle: windows::core::Result<HANDLE> =
+                                OpenProcess(PROCESS_TERMINATE, false, pid);
 
                             if child_process_handle.is_err() {
-                                error!("Unable to open process {}: {:?}", pid, child_process_handle.unwrap_err());
+                                error!(
+                                    "Unable to open process {}: {:?}",
+                                    pid,
+                                    child_process_handle.unwrap_err()
+                                );
                             } else {
                                 let child_process_handle: HANDLE = child_process_handle.unwrap();
 
@@ -98,6 +103,50 @@ pub fn kill_child_processes(parent_pid: u32) {
 
             // Clean up the snapshot.
             CloseHandle(snapshot);
+        }
+    }
+}
+
+pub fn kill_process(pid: u32) {
+    #[cfg(not(windows))]
+    {
+        use nix::sys::signal::{self, Signal};
+        use nix::unistd::Pid;
+        let pid = Pid::from_raw(pid as i32);
+        let signal = Signal::SIGINT;
+        match signal::kill(pid, signal) {
+            Ok(_) => debug!("Successfully killed process {}", pid),
+            Err(err) => {
+                error!("Failed to kill process: {}", err);
+                return;
+            }
+        };
+        return;
+    }
+
+    #[cfg(windows)]
+    {
+        use crate::util::kill_child_processes;
+        use windows::Win32::Foundation::{CloseHandle, HANDLE};
+        use windows::Win32::System::Threading::{OpenProcess, TerminateProcess, PROCESS_TERMINATE};
+
+        // kill_child_processes(pid);
+
+        unsafe {
+            let handle: windows::core::Result<HANDLE> =
+                OpenProcess(PROCESS_TERMINATE, false, pid);
+            if handle.is_err() {
+                error!("unable to open process {}: {:?}", pid, handle.unwrap_err());
+                return;
+            }
+            let handle: HANDLE = handle.unwrap();
+
+            let result = TerminateProcess(handle, 1);
+            CloseHandle(handle);
+            if !result.as_bool() {
+                error!("unable to terminate process {}", pid);
+                return
+            }
         }
     }
 }

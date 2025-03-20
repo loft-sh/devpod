@@ -4,6 +4,7 @@ import (
 	auditv1 "github.com/loft-sh/api/v4/pkg/apis/audit/v1"
 	storagev1 "github.com/loft-sh/api/v4/pkg/apis/storage/v1"
 	uiv1 "github.com/loft-sh/api/v4/pkg/apis/ui/v1"
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -76,6 +77,9 @@ type ConfigStatus struct {
 
 	// CostControl holds the settings related to the Cost Control ROI dashboard and its metrics gathering infrastructure
 	CostControl *CostControl `json:"costControl,omitempty"`
+
+	// ImageBuilder holds the settings related to the image builder
+	ImageBuilder *ImageBuilder `json:"imageBuilder,omitempty"`
 }
 
 // Audit holds the audit configuration options for loft. Changing any options will require a loft restart
@@ -725,16 +729,30 @@ type CostControl struct {
 	// that provides dashboard data is deployed
 	Enabled *bool `json:"enabled,omitempty"`
 
-	// GlobalMetrics are settings for the global metrics backend. This aggregates metrics for the Cost Control Dashboard
-	// across all connected clusters
-	GlobalMetrics *storagev1.Metrics `json:"globalMetrics,omitempty"`
+	// Global are settings for globally managed components
+	Global CostControlGlobalConfig `json:"global,omitempty"`
 
-	// ClusterMetrics are settings for each cluster's metrics backend. These settings apply all connected clusters
-	// unless overridden by modifying the Cluster's spec.
-	ClusterMetrics *storagev1.Metrics `json:"clusterMetrics,omitempty"`
+	// Cluster are settings for each cluster's managed components. These settings apply to all connected clusters
+	// unless overridden by modifying the Cluster's spec
+	Cluster CostControlClusterConfig `json:"cluster,omitempty"`
 
 	// Settings specify price-related settings that are taken into account for the ROI dashboard calculations.
 	Settings *CostControlSettings `json:"settings,omitempty"`
+}
+
+type CostControlGlobalConfig struct {
+	// Metrics these settings apply to metric infrastructure used to aggregate metrics across all connected clusters
+	Metrics *storagev1.Metrics `json:"metrics,omitempty"`
+}
+
+type CostControlClusterConfig struct {
+	// Metrics are settings applied to metric infrastructure in each connected cluster. These can be overridden in
+	// individual clusters by modifying the Cluster's spec
+	Metrics *storagev1.Metrics `json:"metrics,omitempty"`
+
+	// OpenCost are settings applied to OpenCost deployments in each connected cluster. These can be overridden in
+	// individual clusters by modifying the Cluster's spec
+	OpenCost *storagev1.OpenCost `json:"opencost,omitempty"`
 }
 
 type CostControlSettings struct {
@@ -757,4 +775,16 @@ type CostControlResourcePrice struct {
 
 	// TimePeriod specifies the time period for the price.
 	TimePeriod string `json:"timePeriod,omitempty"`
+}
+
+type ImageBuilder struct {
+	// Enabled specifies whether the remote image builder should be available.
+	// If it's not available building ad-hoc images from a devcontainer.json is not supported
+	Enabled *bool `json:"enabled,omitempty"`
+
+	// Replicas is the number of desired replicas.
+	Replicas *int32 `json:"replicas,omitempty"`
+
+	// Resources are compute resource required by the buildkit containers
+	Resources *corev1.ResourceRequirements `json:"resources,omitempty"`
 }

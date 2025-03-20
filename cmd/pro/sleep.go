@@ -80,7 +80,14 @@ func (cmd *SleepCmd) Run(ctx context.Context, args []string) error {
 		return err
 	}
 
-	patch := ctrlclient.MergeFrom(workspaceInstance.DeepCopy())
+	// create a deep copy of the workspace instance
+	oldWorkspaceInstance := workspaceInstance.DeepCopy()
+	oldWorkspaceInstance.Status = workspaceInstance.Status
+	oldWorkspaceInstance.ObjectMeta = workspaceInstance.ObjectMeta
+	oldWorkspaceInstance.TypeMeta = workspaceInstance.TypeMeta
+
+	// create a patch from the old workspace instance
+	patch := ctrlclient.MergeFrom(oldWorkspaceInstance)
 	if workspaceInstance.Annotations == nil {
 		workspaceInstance.Annotations = map[string]string{}
 	}

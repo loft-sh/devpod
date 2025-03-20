@@ -27,15 +27,15 @@ var (
 	// DevPodWorkspaceSourceAnnotation holds the workspace source of the devpod workspace
 	DevPodWorkspaceSourceAnnotation = "loft.sh/workspace-source"
 
-	// DevPodWorkspaceRunnerNetworkPeerAnnotation holds the workspace runner network peer name of the devpod workspace
-	DevPodWorkspaceRunnerEndpointAnnotation = "loft.sh/runner-endpoint"
+	// DevPodClientsAnnotation holds the active clients for a workspace networpeer
+	DevPodClientsAnnotation = "loft.sh/devpod-clients"
 )
 
 var (
+	DevPodPlatformOptions = "DEVPOD_PLATFORM_OPTIONS"
+
 	DevPodFlagsUp     = "DEVPOD_FLAGS_UP"
 	DevPodFlagsDelete = "DEVPOD_FLAGS_DELETE"
-	DevPodFlagsStatus = "DEVPOD_FLAGS_STATUS"
-	DevPodFlagsSsh    = "DEVPOD_FLAGS_SSH"
 	DevPodFlagsStop   = "DEVPOD_FLAGS_STOP"
 )
 
@@ -107,8 +107,12 @@ type DevPodWorkspaceInstanceSpec struct {
 	// +optional
 	Template *DevPodWorkspaceTemplateDefinition `json:"template,omitempty"`
 
-	// RunnerRef is the reference to the connected runner holding
-	// this workspace
+	// Target is the reference to the cluster holding this workspace
+	// +optional
+	Target WorkspaceTarget `json:"target,omitempty"`
+
+	// Deprecated: Use TargetRef instead
+	// RunnerRef is the reference to the runner holding this workspace
 	// +optional
 	RunnerRef RunnerRef `json:"runnerRef,omitempty"`
 
@@ -138,6 +142,48 @@ type PresetRef struct {
 	Version string `json:"version,omitempty"`
 }
 
+type WorkspaceTarget struct {
+	// Cluster is the reference to the cluster holding this workspace
+	// +optional
+	Cluster *WorkspaceTargetName `json:"cluster,omitempty"`
+
+	// Cluster is the reference to the virtual cluster holding this workspace
+	// +optional
+	VirtualCluster *WorkspaceTargetName `json:"virtualCluster,omitempty"`
+}
+
+type WorkspaceResolvedTarget struct {
+	// Cluster is the reference to the cluster holding this workspace
+	// +optional
+	Cluster *WorkspaceTargetNamespace `json:"cluster,omitempty"`
+
+	// Cluster is the reference to the virtual cluster holding this workspace
+	// +optional
+	VirtualCluster *WorkspaceTargetNamespace `json:"virtualCluster,omitempty"`
+
+	// Space is the reference to the space holding this workspace
+	// +optional
+	Space *WorkspaceTargetName `json:"space,omitempty"`
+}
+
+func (w WorkspaceResolvedTarget) Empty() bool {
+	return w == WorkspaceResolvedTarget{}
+}
+
+type WorkspaceTargetName struct {
+	// Name is the name of the target
+	Name string `json:"name"`
+}
+
+type WorkspaceTargetNamespace struct {
+	// Name is the name of the object
+	Name string `json:"name"`
+
+	// Namespace is the namespace within the cluster.
+	// +optional
+	Namespace string `json:"namespace,omitempty"`
+}
+
 type RunnerRef struct {
 	// Runner is the connected runner the workspace will be created in
 	// +optional
@@ -154,6 +200,10 @@ type EnvironmentRef struct {
 }
 
 type DevPodWorkspaceInstanceStatus struct {
+	// ResolvedTarget is the resolved target of the workspace
+	// +optional
+	ResolvedTarget WorkspaceResolvedTarget `json:"resolvedTarget,omitempty"`
+
 	// LastWorkspaceStatus is the last workspace status reported by the runner.
 	// +optional
 	LastWorkspaceStatus WorkspaceStatus `json:"lastWorkspaceStatus,omitempty"`
@@ -183,10 +233,6 @@ type DevPodWorkspaceInstanceStatus struct {
 	// IgnoreReconciliation ignores reconciliation for this object
 	// +optional
 	IgnoreReconciliation bool `json:"ignoreReconciliation,omitempty"`
-
-	// ClusterRef holds the runners cluster if the workspace is scheduled
-	// on kubernetes based runner
-	ClusterRef *ClusterRef `json:"clusterRef,omitempty"`
 }
 
 type WorkspaceStatusResult struct {

@@ -1,39 +1,44 @@
-import {
-  ColorMode,
-  Theme,
-  ThemeOverride,
-  Tooltip,
-  defineStyleConfig,
-  extendTheme,
-} from "@chakra-ui/react"
+import { Theme, ThemeOverride, Tooltip, defineStyleConfig, extendTheme } from "@chakra-ui/react"
 import { mode } from "@chakra-ui/theme-tools"
+import { Button } from "./button"
+import { Card } from "./card"
+import { Checkbox } from "./checkbox"
+import { Form } from "./form"
+import { Input } from "./input"
 import { Menu } from "./menu"
+import { Modal } from "./modal"
+import { Popover } from "./popover"
+import { Radio } from "./radio"
+import { Select } from "./select"
 import { Switch } from "./switch"
 import { Tabs } from "./tabs"
-import { Checkbox } from "./checkbox"
-import { Radio } from "./radio"
-import { Popover } from "./popover"
-import { Button } from "./button"
 import { Tag } from "./tag"
+import { Text } from "./text"
+import { Textarea } from "./textarea"
 
 const Code = defineStyleConfig({
   variants: {
-    decorative: {
-      backgroundColor: "primary.400",
-      color: "white",
+    decorative(props) {
+      return {
+        backgroundColor: "primary.400",
+        color: mode("white", "gray.900")(props),
+      }
     },
   },
 })
 
 const Link = defineStyleConfig({
   defaultProps: {
-    variant: "muted",
+    variant: "primary",
   },
   variants: {
     muted(props) {
+      return { color: mode("gray.600", "gray.400")(props) }
+    },
+    primary(props) {
       const primary = props.theme.colors.primary
 
-      return { color: mode(primary["800"], primary["200"])(props) }
+      return { color: mode(primary["800"], primary["400"])(props) }
     },
   },
 })
@@ -47,13 +52,18 @@ const FormError = defineStyleConfig({
   },
 })
 
+const TooltipTheme = defineStyleConfig({
+  baseStyle(props) {
+    return {
+      bg: mode("gray.800", "gray.200")(props),
+      color: mode("gray.100", "gray.800")(props),
+    }
+  },
+})
+
 // It's ugly but it works: https://github.com/chakra-ui/chakra-ui/issues/1424#issuecomment-743342944
 // Unfortunately there is no other way of overring the default placement.
 Tooltip.defaultProps = { ...Tooltip.defaultProps, placement: "top" }
-
-const getInitialColorMode = (defaultColor: ColorMode = "light"): ColorMode => {
-  return (localStorage.getItem("chakra-ui-color-mode") as ColorMode | undefined) ?? defaultColor
-}
 
 export const theme = extendTheme({
   styles: {
@@ -85,12 +95,28 @@ export const theme = extendTheme({
   },
   colors: {
     primary: {
-      200: "#E4ADFF",
-      400: "#CA60FF",
-      500: "#BA50FF",
-      600: "#AA40EE",
-      800: "#8E00EB",
+      50: "#F8EFFF",
+      100: "#F0DFFF",
+      200: "#D8ABFF",
+      300: "#BF76FF",
+      400: "#B157FF",
+      500: "#A640FF",
+      600: "#9B29FF",
+      700: "#8600DC",
+      800: "#7100B9",
       900: "#40006A",
+    },
+    gray: {
+      50: "#F7F5F9",
+      100: "#ECE8F0",
+      200: "#DCD6E1",
+      300: "#C5BFC9",
+      400: "#ABA5B0",
+      500: "#948E99",
+      600: "#7C7581",
+      700: "#655E69",
+      800: "#4A464D",
+      900: "#2C2630",
     },
     text: {
       secondary: "#465E75",
@@ -106,12 +132,12 @@ export const theme = extendTheme({
     },
   },
   config: {
-    // in order to prevent chakra-ui color mode screen flash, we already set initial theme color mode to the local storage color mode
-    initialColorMode: getInitialColorMode("light"),
-    useSystemColorMode: false,
+    initialColorMode: "system",
+    useSystemColorMode: true,
   },
   components: {
     Button,
+    Card,
     Code,
     Menu,
     Switch,
@@ -119,8 +145,15 @@ export const theme = extendTheme({
     Checkbox,
     Radio,
     Link,
+    Form,
     FormError,
     Popover,
+    Modal,
     Tag,
+    Input,
+    Select,
+    Text,
+    Textarea,
+    Tooltip: TooltipTheme,
   },
 } satisfies ThemeOverride) as Theme

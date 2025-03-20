@@ -6,7 +6,7 @@
 package v1
 
 import (
-	v1 "k8s.io/api/core/v1"
+	corev1 "k8s.io/api/core/v1"
 	runtime "k8s.io/apimachinery/pkg/runtime"
 )
 
@@ -14,16 +14,266 @@ import (
 // Public to allow building arbitrary schemes.
 // All generated defaulters are covering - they call all nested defaulters.
 func RegisterDefaults(scheme *runtime.Scheme) error {
-	scheme.AddTypeDefaultingFunc(&Runner{}, func(obj interface{}) { SetObjectDefaults_Runner(obj.(*Runner)) })
-	scheme.AddTypeDefaultingFunc(&RunnerList{}, func(obj interface{}) { SetObjectDefaults_RunnerList(obj.(*RunnerList)) })
+	scheme.AddTypeDefaultingFunc(&DevPodWorkspaceInstance{}, func(obj interface{}) { SetObjectDefaults_DevPodWorkspaceInstance(obj.(*DevPodWorkspaceInstance)) })
+	scheme.AddTypeDefaultingFunc(&DevPodWorkspaceInstanceList{}, func(obj interface{}) {
+		SetObjectDefaults_DevPodWorkspaceInstanceList(obj.(*DevPodWorkspaceInstanceList))
+	})
+	scheme.AddTypeDefaultingFunc(&DevPodWorkspaceTemplate{}, func(obj interface{}) { SetObjectDefaults_DevPodWorkspaceTemplate(obj.(*DevPodWorkspaceTemplate)) })
+	scheme.AddTypeDefaultingFunc(&DevPodWorkspaceTemplateList{}, func(obj interface{}) {
+		SetObjectDefaults_DevPodWorkspaceTemplateList(obj.(*DevPodWorkspaceTemplateList))
+	})
 	return nil
 }
 
-func SetObjectDefaults_Runner(in *Runner) {
-	if in.Spec.ClusterRef != nil {
-		if in.Spec.ClusterRef.PodTemplate != nil {
-			for i := range in.Spec.ClusterRef.PodTemplate.Spec.Volumes {
-				a := &in.Spec.ClusterRef.PodTemplate.Spec.Volumes[i]
+func SetObjectDefaults_DevPodWorkspaceInstance(in *DevPodWorkspaceInstance) {
+	if in.Spec.Template != nil {
+		if in.Spec.Template.Kubernetes != nil {
+			if in.Spec.Template.Kubernetes.Pod != nil {
+				for i := range in.Spec.Template.Kubernetes.Pod.Spec.Volumes {
+					a := &in.Spec.Template.Kubernetes.Pod.Spec.Volumes[i]
+					if a.VolumeSource.ISCSI != nil {
+						if a.VolumeSource.ISCSI.ISCSIInterface == "" {
+							a.VolumeSource.ISCSI.ISCSIInterface = "default"
+						}
+					}
+					if a.VolumeSource.RBD != nil {
+						if a.VolumeSource.RBD.RBDPool == "" {
+							a.VolumeSource.RBD.RBDPool = "rbd"
+						}
+						if a.VolumeSource.RBD.RadosUser == "" {
+							a.VolumeSource.RBD.RadosUser = "admin"
+						}
+						if a.VolumeSource.RBD.Keyring == "" {
+							a.VolumeSource.RBD.Keyring = "/etc/ceph/keyring"
+						}
+					}
+					if a.VolumeSource.AzureDisk != nil {
+						if a.VolumeSource.AzureDisk.CachingMode == nil {
+							ptrVar1 := corev1.AzureDataDiskCachingMode(corev1.AzureDataDiskCachingReadWrite)
+							a.VolumeSource.AzureDisk.CachingMode = &ptrVar1
+						}
+						if a.VolumeSource.AzureDisk.FSType == nil {
+							var ptrVar1 string = "ext4"
+							a.VolumeSource.AzureDisk.FSType = &ptrVar1
+						}
+						if a.VolumeSource.AzureDisk.ReadOnly == nil {
+							var ptrVar1 bool = false
+							a.VolumeSource.AzureDisk.ReadOnly = &ptrVar1
+						}
+						if a.VolumeSource.AzureDisk.Kind == nil {
+							ptrVar1 := corev1.AzureDataDiskKind(corev1.AzureSharedBlobDisk)
+							a.VolumeSource.AzureDisk.Kind = &ptrVar1
+						}
+					}
+					if a.VolumeSource.ScaleIO != nil {
+						if a.VolumeSource.ScaleIO.StorageMode == "" {
+							a.VolumeSource.ScaleIO.StorageMode = "ThinProvisioned"
+						}
+						if a.VolumeSource.ScaleIO.FSType == "" {
+							a.VolumeSource.ScaleIO.FSType = "xfs"
+						}
+					}
+				}
+				for i := range in.Spec.Template.Kubernetes.Pod.Spec.InitContainers {
+					a := &in.Spec.Template.Kubernetes.Pod.Spec.InitContainers[i]
+					for j := range a.Ports {
+						b := &a.Ports[j]
+						if b.Protocol == "" {
+							b.Protocol = "TCP"
+						}
+					}
+					if a.LivenessProbe != nil {
+						if a.LivenessProbe.ProbeHandler.GRPC != nil {
+							if a.LivenessProbe.ProbeHandler.GRPC.Service == nil {
+								var ptrVar1 string = ""
+								a.LivenessProbe.ProbeHandler.GRPC.Service = &ptrVar1
+							}
+						}
+					}
+					if a.ReadinessProbe != nil {
+						if a.ReadinessProbe.ProbeHandler.GRPC != nil {
+							if a.ReadinessProbe.ProbeHandler.GRPC.Service == nil {
+								var ptrVar1 string = ""
+								a.ReadinessProbe.ProbeHandler.GRPC.Service = &ptrVar1
+							}
+						}
+					}
+					if a.StartupProbe != nil {
+						if a.StartupProbe.ProbeHandler.GRPC != nil {
+							if a.StartupProbe.ProbeHandler.GRPC.Service == nil {
+								var ptrVar1 string = ""
+								a.StartupProbe.ProbeHandler.GRPC.Service = &ptrVar1
+							}
+						}
+					}
+				}
+				for i := range in.Spec.Template.Kubernetes.Pod.Spec.Containers {
+					a := &in.Spec.Template.Kubernetes.Pod.Spec.Containers[i]
+					for j := range a.Ports {
+						b := &a.Ports[j]
+						if b.Protocol == "" {
+							b.Protocol = "TCP"
+						}
+					}
+					if a.LivenessProbe != nil {
+						if a.LivenessProbe.ProbeHandler.GRPC != nil {
+							if a.LivenessProbe.ProbeHandler.GRPC.Service == nil {
+								var ptrVar1 string = ""
+								a.LivenessProbe.ProbeHandler.GRPC.Service = &ptrVar1
+							}
+						}
+					}
+					if a.ReadinessProbe != nil {
+						if a.ReadinessProbe.ProbeHandler.GRPC != nil {
+							if a.ReadinessProbe.ProbeHandler.GRPC.Service == nil {
+								var ptrVar1 string = ""
+								a.ReadinessProbe.ProbeHandler.GRPC.Service = &ptrVar1
+							}
+						}
+					}
+					if a.StartupProbe != nil {
+						if a.StartupProbe.ProbeHandler.GRPC != nil {
+							if a.StartupProbe.ProbeHandler.GRPC.Service == nil {
+								var ptrVar1 string = ""
+								a.StartupProbe.ProbeHandler.GRPC.Service = &ptrVar1
+							}
+						}
+					}
+				}
+			}
+		}
+	}
+	if in.Status.Instance != nil {
+		if in.Status.Instance.Kubernetes != nil {
+			if in.Status.Instance.Kubernetes.Pod != nil {
+				for i := range in.Status.Instance.Kubernetes.Pod.Spec.Volumes {
+					a := &in.Status.Instance.Kubernetes.Pod.Spec.Volumes[i]
+					if a.VolumeSource.ISCSI != nil {
+						if a.VolumeSource.ISCSI.ISCSIInterface == "" {
+							a.VolumeSource.ISCSI.ISCSIInterface = "default"
+						}
+					}
+					if a.VolumeSource.RBD != nil {
+						if a.VolumeSource.RBD.RBDPool == "" {
+							a.VolumeSource.RBD.RBDPool = "rbd"
+						}
+						if a.VolumeSource.RBD.RadosUser == "" {
+							a.VolumeSource.RBD.RadosUser = "admin"
+						}
+						if a.VolumeSource.RBD.Keyring == "" {
+							a.VolumeSource.RBD.Keyring = "/etc/ceph/keyring"
+						}
+					}
+					if a.VolumeSource.AzureDisk != nil {
+						if a.VolumeSource.AzureDisk.CachingMode == nil {
+							ptrVar1 := corev1.AzureDataDiskCachingMode(corev1.AzureDataDiskCachingReadWrite)
+							a.VolumeSource.AzureDisk.CachingMode = &ptrVar1
+						}
+						if a.VolumeSource.AzureDisk.FSType == nil {
+							var ptrVar1 string = "ext4"
+							a.VolumeSource.AzureDisk.FSType = &ptrVar1
+						}
+						if a.VolumeSource.AzureDisk.ReadOnly == nil {
+							var ptrVar1 bool = false
+							a.VolumeSource.AzureDisk.ReadOnly = &ptrVar1
+						}
+						if a.VolumeSource.AzureDisk.Kind == nil {
+							ptrVar1 := corev1.AzureDataDiskKind(corev1.AzureSharedBlobDisk)
+							a.VolumeSource.AzureDisk.Kind = &ptrVar1
+						}
+					}
+					if a.VolumeSource.ScaleIO != nil {
+						if a.VolumeSource.ScaleIO.StorageMode == "" {
+							a.VolumeSource.ScaleIO.StorageMode = "ThinProvisioned"
+						}
+						if a.VolumeSource.ScaleIO.FSType == "" {
+							a.VolumeSource.ScaleIO.FSType = "xfs"
+						}
+					}
+				}
+				for i := range in.Status.Instance.Kubernetes.Pod.Spec.InitContainers {
+					a := &in.Status.Instance.Kubernetes.Pod.Spec.InitContainers[i]
+					for j := range a.Ports {
+						b := &a.Ports[j]
+						if b.Protocol == "" {
+							b.Protocol = "TCP"
+						}
+					}
+					if a.LivenessProbe != nil {
+						if a.LivenessProbe.ProbeHandler.GRPC != nil {
+							if a.LivenessProbe.ProbeHandler.GRPC.Service == nil {
+								var ptrVar1 string = ""
+								a.LivenessProbe.ProbeHandler.GRPC.Service = &ptrVar1
+							}
+						}
+					}
+					if a.ReadinessProbe != nil {
+						if a.ReadinessProbe.ProbeHandler.GRPC != nil {
+							if a.ReadinessProbe.ProbeHandler.GRPC.Service == nil {
+								var ptrVar1 string = ""
+								a.ReadinessProbe.ProbeHandler.GRPC.Service = &ptrVar1
+							}
+						}
+					}
+					if a.StartupProbe != nil {
+						if a.StartupProbe.ProbeHandler.GRPC != nil {
+							if a.StartupProbe.ProbeHandler.GRPC.Service == nil {
+								var ptrVar1 string = ""
+								a.StartupProbe.ProbeHandler.GRPC.Service = &ptrVar1
+							}
+						}
+					}
+				}
+				for i := range in.Status.Instance.Kubernetes.Pod.Spec.Containers {
+					a := &in.Status.Instance.Kubernetes.Pod.Spec.Containers[i]
+					for j := range a.Ports {
+						b := &a.Ports[j]
+						if b.Protocol == "" {
+							b.Protocol = "TCP"
+						}
+					}
+					if a.LivenessProbe != nil {
+						if a.LivenessProbe.ProbeHandler.GRPC != nil {
+							if a.LivenessProbe.ProbeHandler.GRPC.Service == nil {
+								var ptrVar1 string = ""
+								a.LivenessProbe.ProbeHandler.GRPC.Service = &ptrVar1
+							}
+						}
+					}
+					if a.ReadinessProbe != nil {
+						if a.ReadinessProbe.ProbeHandler.GRPC != nil {
+							if a.ReadinessProbe.ProbeHandler.GRPC.Service == nil {
+								var ptrVar1 string = ""
+								a.ReadinessProbe.ProbeHandler.GRPC.Service = &ptrVar1
+							}
+						}
+					}
+					if a.StartupProbe != nil {
+						if a.StartupProbe.ProbeHandler.GRPC != nil {
+							if a.StartupProbe.ProbeHandler.GRPC.Service == nil {
+								var ptrVar1 string = ""
+								a.StartupProbe.ProbeHandler.GRPC.Service = &ptrVar1
+							}
+						}
+					}
+				}
+			}
+		}
+	}
+}
+
+func SetObjectDefaults_DevPodWorkspaceInstanceList(in *DevPodWorkspaceInstanceList) {
+	for i := range in.Items {
+		a := &in.Items[i]
+		SetObjectDefaults_DevPodWorkspaceInstance(a)
+	}
+}
+
+func SetObjectDefaults_DevPodWorkspaceTemplate(in *DevPodWorkspaceTemplate) {
+	if in.Spec.Template.Kubernetes != nil {
+		if in.Spec.Template.Kubernetes.Pod != nil {
+			for i := range in.Spec.Template.Kubernetes.Pod.Spec.Volumes {
+				a := &in.Spec.Template.Kubernetes.Pod.Spec.Volumes[i]
 				if a.VolumeSource.ISCSI != nil {
 					if a.VolumeSource.ISCSI.ISCSIInterface == "" {
 						a.VolumeSource.ISCSI.ISCSIInterface = "default"
@@ -42,7 +292,7 @@ func SetObjectDefaults_Runner(in *Runner) {
 				}
 				if a.VolumeSource.AzureDisk != nil {
 					if a.VolumeSource.AzureDisk.CachingMode == nil {
-						ptrVar1 := v1.AzureDataDiskCachingMode(v1.AzureDataDiskCachingReadWrite)
+						ptrVar1 := corev1.AzureDataDiskCachingMode(corev1.AzureDataDiskCachingReadWrite)
 						a.VolumeSource.AzureDisk.CachingMode = &ptrVar1
 					}
 					if a.VolumeSource.AzureDisk.FSType == nil {
@@ -54,7 +304,7 @@ func SetObjectDefaults_Runner(in *Runner) {
 						a.VolumeSource.AzureDisk.ReadOnly = &ptrVar1
 					}
 					if a.VolumeSource.AzureDisk.Kind == nil {
-						ptrVar1 := v1.AzureDataDiskKind(v1.AzureSharedBlobDisk)
+						ptrVar1 := corev1.AzureDataDiskKind(corev1.AzureSharedBlobDisk)
 						a.VolumeSource.AzureDisk.Kind = &ptrVar1
 					}
 				}
@@ -67,8 +317,41 @@ func SetObjectDefaults_Runner(in *Runner) {
 					}
 				}
 			}
-			for i := range in.Spec.ClusterRef.PodTemplate.Spec.InitContainers {
-				a := &in.Spec.ClusterRef.PodTemplate.Spec.InitContainers[i]
+			for i := range in.Spec.Template.Kubernetes.Pod.Spec.InitContainers {
+				a := &in.Spec.Template.Kubernetes.Pod.Spec.InitContainers[i]
+				for j := range a.Ports {
+					b := &a.Ports[j]
+					if b.Protocol == "" {
+						b.Protocol = "TCP"
+					}
+				}
+				if a.LivenessProbe != nil {
+					if a.LivenessProbe.ProbeHandler.GRPC != nil {
+						if a.LivenessProbe.ProbeHandler.GRPC.Service == nil {
+							var ptrVar1 string = ""
+							a.LivenessProbe.ProbeHandler.GRPC.Service = &ptrVar1
+						}
+					}
+				}
+				if a.ReadinessProbe != nil {
+					if a.ReadinessProbe.ProbeHandler.GRPC != nil {
+						if a.ReadinessProbe.ProbeHandler.GRPC.Service == nil {
+							var ptrVar1 string = ""
+							a.ReadinessProbe.ProbeHandler.GRPC.Service = &ptrVar1
+						}
+					}
+				}
+				if a.StartupProbe != nil {
+					if a.StartupProbe.ProbeHandler.GRPC != nil {
+						if a.StartupProbe.ProbeHandler.GRPC.Service == nil {
+							var ptrVar1 string = ""
+							a.StartupProbe.ProbeHandler.GRPC.Service = &ptrVar1
+						}
+					}
+				}
+			}
+			for i := range in.Spec.Template.Kubernetes.Pod.Spec.Containers {
+				a := &in.Spec.Template.Kubernetes.Pod.Spec.Containers[i]
 				for j := range a.Ports {
 					b := &a.Ports[j]
 					if b.Protocol == "" {
@@ -102,11 +385,129 @@ func SetObjectDefaults_Runner(in *Runner) {
 			}
 		}
 	}
+	for i := range in.Spec.Versions {
+		a := &in.Spec.Versions[i]
+		if a.Template.Kubernetes != nil {
+			if a.Template.Kubernetes.Pod != nil {
+				for j := range a.Template.Kubernetes.Pod.Spec.Volumes {
+					b := &a.Template.Kubernetes.Pod.Spec.Volumes[j]
+					if b.VolumeSource.ISCSI != nil {
+						if b.VolumeSource.ISCSI.ISCSIInterface == "" {
+							b.VolumeSource.ISCSI.ISCSIInterface = "default"
+						}
+					}
+					if b.VolumeSource.RBD != nil {
+						if b.VolumeSource.RBD.RBDPool == "" {
+							b.VolumeSource.RBD.RBDPool = "rbd"
+						}
+						if b.VolumeSource.RBD.RadosUser == "" {
+							b.VolumeSource.RBD.RadosUser = "admin"
+						}
+						if b.VolumeSource.RBD.Keyring == "" {
+							b.VolumeSource.RBD.Keyring = "/etc/ceph/keyring"
+						}
+					}
+					if b.VolumeSource.AzureDisk != nil {
+						if b.VolumeSource.AzureDisk.CachingMode == nil {
+							ptrVar1 := corev1.AzureDataDiskCachingMode(corev1.AzureDataDiskCachingReadWrite)
+							b.VolumeSource.AzureDisk.CachingMode = &ptrVar1
+						}
+						if b.VolumeSource.AzureDisk.FSType == nil {
+							var ptrVar1 string = "ext4"
+							b.VolumeSource.AzureDisk.FSType = &ptrVar1
+						}
+						if b.VolumeSource.AzureDisk.ReadOnly == nil {
+							var ptrVar1 bool = false
+							b.VolumeSource.AzureDisk.ReadOnly = &ptrVar1
+						}
+						if b.VolumeSource.AzureDisk.Kind == nil {
+							ptrVar1 := corev1.AzureDataDiskKind(corev1.AzureSharedBlobDisk)
+							b.VolumeSource.AzureDisk.Kind = &ptrVar1
+						}
+					}
+					if b.VolumeSource.ScaleIO != nil {
+						if b.VolumeSource.ScaleIO.StorageMode == "" {
+							b.VolumeSource.ScaleIO.StorageMode = "ThinProvisioned"
+						}
+						if b.VolumeSource.ScaleIO.FSType == "" {
+							b.VolumeSource.ScaleIO.FSType = "xfs"
+						}
+					}
+				}
+				for j := range a.Template.Kubernetes.Pod.Spec.InitContainers {
+					b := &a.Template.Kubernetes.Pod.Spec.InitContainers[j]
+					for k := range b.Ports {
+						c := &b.Ports[k]
+						if c.Protocol == "" {
+							c.Protocol = "TCP"
+						}
+					}
+					if b.LivenessProbe != nil {
+						if b.LivenessProbe.ProbeHandler.GRPC != nil {
+							if b.LivenessProbe.ProbeHandler.GRPC.Service == nil {
+								var ptrVar1 string = ""
+								b.LivenessProbe.ProbeHandler.GRPC.Service = &ptrVar1
+							}
+						}
+					}
+					if b.ReadinessProbe != nil {
+						if b.ReadinessProbe.ProbeHandler.GRPC != nil {
+							if b.ReadinessProbe.ProbeHandler.GRPC.Service == nil {
+								var ptrVar1 string = ""
+								b.ReadinessProbe.ProbeHandler.GRPC.Service = &ptrVar1
+							}
+						}
+					}
+					if b.StartupProbe != nil {
+						if b.StartupProbe.ProbeHandler.GRPC != nil {
+							if b.StartupProbe.ProbeHandler.GRPC.Service == nil {
+								var ptrVar1 string = ""
+								b.StartupProbe.ProbeHandler.GRPC.Service = &ptrVar1
+							}
+						}
+					}
+				}
+				for j := range a.Template.Kubernetes.Pod.Spec.Containers {
+					b := &a.Template.Kubernetes.Pod.Spec.Containers[j]
+					for k := range b.Ports {
+						c := &b.Ports[k]
+						if c.Protocol == "" {
+							c.Protocol = "TCP"
+						}
+					}
+					if b.LivenessProbe != nil {
+						if b.LivenessProbe.ProbeHandler.GRPC != nil {
+							if b.LivenessProbe.ProbeHandler.GRPC.Service == nil {
+								var ptrVar1 string = ""
+								b.LivenessProbe.ProbeHandler.GRPC.Service = &ptrVar1
+							}
+						}
+					}
+					if b.ReadinessProbe != nil {
+						if b.ReadinessProbe.ProbeHandler.GRPC != nil {
+							if b.ReadinessProbe.ProbeHandler.GRPC.Service == nil {
+								var ptrVar1 string = ""
+								b.ReadinessProbe.ProbeHandler.GRPC.Service = &ptrVar1
+							}
+						}
+					}
+					if b.StartupProbe != nil {
+						if b.StartupProbe.ProbeHandler.GRPC != nil {
+							if b.StartupProbe.ProbeHandler.GRPC.Service == nil {
+								var ptrVar1 string = ""
+								b.StartupProbe.ProbeHandler.GRPC.Service = &ptrVar1
+							}
+						}
+					}
+				}
+			}
+		}
+	}
 }
 
-func SetObjectDefaults_RunnerList(in *RunnerList) {
+func SetObjectDefaults_DevPodWorkspaceTemplateList(in *DevPodWorkspaceTemplateList) {
 	for i := range in.Items {
 		a := &in.Items[i]
-		SetObjectDefaults_Runner(a)
+		SetObjectDefaults_DevPodWorkspaceTemplate(a)
 	}
 }

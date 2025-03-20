@@ -1,5 +1,5 @@
 import { useColorModeValue } from "@chakra-ui/react"
 
 export function useBorderColor() {
-  return useColorModeValue("gray.200", "gray.800")
+  return useColorModeValue("gray.200", "gray.700")
 }

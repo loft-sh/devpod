@@ -7,6 +7,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/loft-sh/devpod/pkg/daemon/agent"
 	"github.com/loft-sh/devpod/pkg/devcontainer/config"
 	"github.com/loft-sh/devpod/pkg/devcontainer/metadata"
 	"github.com/loft-sh/devpod/pkg/driver"
@@ -17,10 +18,19 @@ import (
 var dockerlessImage = "ghcr.io/loft-sh/dockerless:0.2.0"
 
 const (
-	DevPodExtraEnvVar           = "DEVPOD"
-	RemoteContainersExtraEnvVar = "REMOTE_CONTAINERS"
-	WorkspaceIDExtraEnvVar      = "DEVPOD_WORKSPACE_ID"
-	WorkspaceUIDExtraEnvVar     = "DEVPOD_WORKSPACE_UID"
+	DevPodExtraEnvVar                = "DEVPOD"
+	RemoteContainersExtraEnvVar      = "REMOTE_CONTAINERS"
+	WorkspaceIDExtraEnvVar           = "DEVPOD_WORKSPACE_ID"
+	WorkspaceUIDExtraEnvVar          = "DEVPOD_WORKSPACE_UID"
+	WorkspaceDaemonConfigExtraEnvVar = "DEVPOD_WORKSPACE_DAEMON_CONFIG"
+
+	DefaultEntrypoint = `
+while ! command -v /usr/local/bin/devpod >/dev/null 2>&1; do
+  echo "Waiting for devpod tool..."
+  sleep 1
+done
+exec /usr/local/bin/devpod agent container daemon
+`
 )
 
 func (r *runner) runSingleContainer(
@@ -30,6 +40,7 @@ func (r *runner) runSingleContainer(
 	options UpOptions,
 	timeout time.Duration,
 ) (*config.Result, error) {
+	r.Log.Debugf("Starting devcontainer in single container mode...")
 	containerDetails, err := r.Driver.FindDevContainer(ctx, r.ID)
 	if err != nil {
 		return nil, fmt.Errorf("find dev container: %w", err)
@@ -39,6 +50,7 @@ func (r *runner) runSingleContainer(
 	var (
 		mergedConfig *config.MergedDevContainerConfig
 	)
+
 	// if options.Recreate is true, and workspace is a running container, we should not rebuild
 	if options.Recreate && parsedConfig.Config.ContainerID != "" {
 		return nil, fmt.Errorf("cannot recreate container not created by DevPod")
@@ -85,6 +97,7 @@ func (r *runner) runSingleContainer(
 			CLIOptions: provider2.CLIOptions{
 				PrebuildRepositories: options.PrebuildRepositories,
 				ForceDockerless:      options.ForceDockerless,
+				Platform:             options.CLIOptions.Platform,
 			},
 			NoBuild:       options.NoBuild,
 			RegistryCache: options.RegistryCache,
@@ -96,9 +109,16 @@ func (r *runner) runSingleContainer(
 
 		// delete container on recreation
 		if options.Recreate {
-			err := r.Delete(ctx)
-			if err != nil {
-				return nil, errors.Wrap(err, "delete devcontainer")
+			if _, ok := r.Driver.(driver.DockerDriver); ok {
+				err := r.Delete(ctx)
+				if err != nil {
+					return nil, errors.Wrap(err, "delete devcontainer")
+				}
+			} else {
+				err := r.Driver.StopDevContainer(ctx, r.ID)
+				if err != nil {
+					return nil, errors.Wrap(err, "stop devcontainer")
+				}
 			}
 		}
 
@@ -106,6 +126,18 @@ func (r *runner) runSingleContainer(
 		mergedConfig, err = config.MergeConfiguration(parsedConfig.Config, buildInfo.ImageMetadata.Config)
 		if err != nil {
 			return nil, errors.Wrap(err, "merge config")
+		}
+
+		// Inject the daemon entrypoint if platform configuration is provided.
+		if options.CLIOptions.Platform.AccessKey != "" {
+			r.Log.Debugf("Platform config detected, injecting DevPod daemon entrypoint.")
+
+			data, err := agent.GetEncodedDaemonConfig(options.Platform, r.WorkspaceConfig.Workspace, substitutionContext, mergedConfig)
+			if err != nil {
+				r.Log.Errorf("Failed to marshal daemon config: %v", err)
+			} else {
+				mergedConfig.ContainerEnv[WorkspaceDaemonConfigExtraEnvVar] = data
+			}
 		}
 
 		// run dev container
@@ -319,9 +351,8 @@ func GetStartScript(mergedConfig *config.MergedDevContainerConfig) string {
 	customEntrypoints := mergedConfig.Entrypoints
 	return `echo Container started
 trap "exit 0" 15
-` + strings.Join(customEntrypoints, "\n") + `
 exec "$@"
-while sleep 1 & wait $!; do :; done`
+` + strings.Join(customEntrypoints, "\n") + DefaultEntrypoint
 }
 
 func GetContainerEntrypointAndArgs(mergedConfig *config.MergedDevContainerConfig, imageDetails *config.ImageDetails) (string, []string) {

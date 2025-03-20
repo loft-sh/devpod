@@ -6,6 +6,7 @@ import (
 	"github.com/loft-sh/devpod/cmd/flags"
 	"github.com/loft-sh/devpod/pkg/compress"
 	"github.com/loft-sh/devpod/pkg/devcontainer/config"
+	"github.com/loft-sh/devpod/pkg/ide/openvscode"
 	"github.com/loft-sh/log"
 	"github.com/spf13/cobra"
 )
@@ -52,4 +53,10 @@ func (cmd *OpenVSCodeAsyncCmd) Run(_ *cobra.Command, _ []string) error {
 	}
 
 	return nil
+}
+
+func setupOpenVSCodeExtensions(setupInfo *config.Result, log log.Logger) error {
+	vsCodeConfiguration := config.GetVSCodeConfiguration(setupInfo.MergedConfig)
+	user := config.GetRemoteUser(setupInfo)
+	return openvscode.NewOpenVSCodeServer(vsCodeConfiguration.Extensions, "", user, "", "", nil, log).InstallExtensions()
 }

@@ -112,7 +112,7 @@ jobs:
             target: x86_64-unknown-linux-gnu
             os: linux
             arch: amd64
-            cli_only: false
+            cli_only: true
           - host: ubuntu-22.04
             target: aarch64-unknown-linux-gnu
             os: linux
@@ -241,6 +241,7 @@ jobs:
           APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
           APPLE_ID: ${{ secrets.APPLE_ID }}
           APPLE_PASSWORD: ${{ secrets.APPLE_PASSWORD }}
+          CI: false # https://github.com/tauri-apps/tauri-action/issues/740
 
       - name: Build linux tar.gz
         if: matrix.settings.host == 'ubuntu-22.04' && matrix.settings.cli_only == false

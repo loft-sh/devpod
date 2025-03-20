@@ -75,7 +75,7 @@ export function UpdateWorkspace({ instance, template }: TUpdateWorkspaceProps) {
   }
 
   return (
-    <Box mb="40">
+    <Box pb="24">
       <CreateWorkspaceForm
         instance={instance}
         presets={presets}

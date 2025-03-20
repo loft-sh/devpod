@@ -1,45 +1,55 @@
-import { WarningMessageBox } from "@/components"
 import {
   ProWorkspaceInstance,
   useProContext,
   useProjectClusters,
-  useTemplates,
   useWorkspace,
   useWorkspaceActions,
 } from "@/contexts"
-import { Clock, Folder, Git, Globe, Image, Status } from "@/icons"
+import EmptyImage from "@/images/empty_default.svg"
+import EmptyDarkImage from "@/images/empty_default_dark.svg"
 import {
-  Annotations,
-  Source,
   getDisplayName,
-  getLastActivity,
   useDeleteWorkspaceModal,
   useRebuildWorkspaceModal,
   useResetWorkspaceModal,
   useStopWorkspaceModal,
 } from "@/lib"
+import { useStoreTroubleshoot } from "@/lib/useStoreTroubleshoot"
 import { Routes } from "@/routes"
-import { Box, ComponentWithAs, HStack, IconProps, Text, VStack } from "@chakra-ui/react"
-import { ManagementV1DevPodWorkspaceTemplate } from "@loft-enterprise/client/gen/models/managementV1DevPodWorkspaceTemplate"
-import dayjs from "dayjs"
-import { ReactElement, cloneElement, useCallback, useEffect, useMemo } from "react"
+import { Box, Center, Image, Spinner, Text, VStack, useColorMode } from "@chakra-ui/react"
+import { useMutation } from "@tanstack/react-query"
+import { useCallback, useEffect, useMemo } from "react"
 import { useNavigate, useParams } from "react-router-dom"
 import { BackToWorkspaces } from "../BackToWorkspaces"
 import { WorkspaceTabs } from "./Tabs"
 import { WorkspaceCardHeader } from "./WorkspaceCardHeader"
-import { WorkspaceStatus } from "./WorkspaceStatus"
-import { useStoreTroubleshoot } from "@/lib/useStoreTroubleshoot"
+import { WorkspaceDetails } from "./WorkspaceDetails"
+import { useTemplate } from "./useTemplate"
 
 export function Workspace() {
   const params = useParams<{ workspace: string }>()
-  const { data: templates } = useTemplates()
   const { data: projectClusters } = useProjectClusters()
-  const { host } = useProContext()
+  const { host, isLoadingWorkspaces, client } = useProContext()
   const navigate = useNavigate()
   const workspace = useWorkspace<ProWorkspaceInstance>(params.workspace)
   const instance = workspace.data
   const instanceDisplayName = getDisplayName(instance)
   const workspaceActions = useWorkspaceActions(instance?.id)
+
+  const { mutate: updateWorkspaceDisplayName } = useMutation({
+    mutationFn: async ({ newName }: Readonly<{ newName: string }>) => {
+      if (!instance) {
+        return
+      }
+      const updatedWorkspace = new ProWorkspaceInstance(instance)
+      if (!updatedWorkspace.spec) {
+        updatedWorkspace.spec = {}
+      }
+      updatedWorkspace.spec.displayName = newName
+
+      return (await client.updateWorkspace(updatedWorkspace)).unwrap()
+    },
+  })
 
   const { modal: stopModal, open: openStopModal } = useStopWorkspaceModal(
     useCallback(
@@ -67,8 +77,9 @@ export function Workspace() {
       (close) => {
         workspace.rebuild()
         close()
+        instance?.id && navigate(Routes.toProWorkspace(host, instance.id))
       },
-      [workspace]
+      [workspace, navigate, host, instance]
     )
   )
   const { modal: resetModal, open: openResetModal } = useResetWorkspaceModal(
@@ -77,24 +88,24 @@ export function Workspace() {
       (close) => {
         workspace.reset()
         close()
+        instance?.id && navigate(Routes.toProWorkspace(host, instance.id))
       },
-      [workspace]
+      [workspace, navigate, host, instance]
     )
   )
-  const template = useMemo(
-    () =>
-      templates?.workspace.find(
-        (template) => template.metadata?.name === instance?.spec?.templateRef?.name
-      ),
-    [instance, templates]
-  )
-  const runner = useMemo(
-    () =>
-      projectClusters?.runners.find(
+  const { template, parameters } = useTemplate(instance)
+
+  const cluster = useMemo(() => {
+    if (instance?.spec?.runnerRef?.runner) {
+      return projectClusters?.runners?.find(
         (runner) => runner.metadata?.name === instance?.spec?.runnerRef?.runner
-      ),
-    [projectClusters, instance]
-  )
+      )
+    }
+
+    return projectClusters?.clusters?.find(
+      (cluster) => cluster.metadata?.name === instance?.spec?.target?.cluster?.name
+    )
+  }, [projectClusters, instance])
 
   // navigate to pro instance view after successfully deleting the workspace
   useEffect(() => {
@@ -114,20 +125,35 @@ export function Workspace() {
     }
   }, [storeTroubleshoot, workspace.data, workspaceActions])
 
+  const { colorMode } = useColorMode()
+
   if (!instance) {
+    if (isLoadingWorkspaces) {
+      return (
+        <Center w="full" h="60%" flexFlow="column nowrap">
+          <Spinner size="xl" thickness="4px" speed="1s" color="gray.600" />
+          <Text mt="4">Loading Workspace...</Text>
+        </Center>
+      )
+    }
+
     return (
-      <VStack align="start" gap="4">
+      <VStack align="start" justifyContent="start">
         <BackToWorkspaces />
-        <WarningMessageBox
-          warning={
-            <>
-              Instance <b>{params.workspace}</b> not found
-            </>
-          }
-        />
+        <VStack w="full" py="32" justifyContent="center" alignItems="center">
+          <Image src={colorMode == "dark" ? EmptyDarkImage : EmptyImage} />
+          <Text
+            fontWeight={"semibold"}
+            fontSize={"sm"}
+            color={"gray.600"}
+            _dark={{ color: "gray.300" }}>
+            Workspace not found
+          </Text>
+        </VStack>
       </VStack>
     )
   }
+
   const canStop =
     instance.status?.lastWorkspaceStatus != "Busy" &&
     instance.status?.lastWorkspaceStatus != "Stopped"
@@ -137,11 +163,9 @@ export function Workspace() {
     navigate(Routes.toProWorkspace(host, instance.id))
   }
 
-  const sourceInfo = getSourceInfo(
-    Source.fromRaw(instance.metadata?.annotations?.[Annotations.WorkspaceSource])
-  )
-
-  const lastActivity = getLastActivity(instance)
+  const handleWorkspaceDisplayNameChanged = (newName: string) => {
+    updateWorkspaceDisplayName({ newName })
+  }
 
   return (
     <>
@@ -149,7 +173,10 @@ export function Workspace() {
         <BackToWorkspaces />
         <VStack align="start" width="full" pl="4" px="4" paddingInlineEnd="0">
           <Box w="full">
-            <WorkspaceCardHeader instance={instance} showSource={false}>
+            <WorkspaceCardHeader
+              instance={instance}
+              showSource={false}
+              onDisplayNameChange={handleWorkspaceDisplayNameChanged}>
               <WorkspaceCardHeader.Controls
                 onOpenClicked={handleOpenClicked}
                 onDeleteClicked={openDeleteModal}
@@ -161,26 +188,12 @@ export function Workspace() {
             </WorkspaceCardHeader>
           </Box>
 
-          <HStack mt="4" gap="6" flexWrap="wrap">
-            <WorkspaceInfoDetail label={<WorkspaceStatus status={instance.status} />} />
-            <WorkspaceInfoDetail
-              icon={Status}
-              label={
-                <HStack whiteSpace="nowrap" wordBreak={"keep-all"}>
-                  <Text>ID: {instance.id}</Text>
-                </HStack>
-              }
-            />
-            {sourceInfo && <WorkspaceInfoDetail icon={sourceInfo.icon} label={sourceInfo.label} />}
-            <WorkspaceInfoDetail icon={Status} label={formatTemplateDetail(instance, template)} />
-            <WorkspaceInfoDetail icon={Globe} label={<Text>{getDisplayName(runner)}</Text>} />
-            {lastActivity && (
-              <WorkspaceInfoDetail
-                icon={Clock}
-                label={<Text>{dayjs(lastActivity).from(Date.now())}</Text>}
-              />
-            )}
-          </HStack>
+          <WorkspaceDetails
+            instance={instance}
+            template={template}
+            cluster={cluster}
+            parameters={parameters}
+          />
         </VStack>
         <Box height="full">
           <WorkspaceTabs
@@ -197,64 +210,5 @@ export function Workspace() {
       {resetModal}
       {deleteModal}
     </>
-  )
-}
-
-type TWorkspaceInfoDetailProps = Readonly<{
-  icon?: ComponentWithAs<"svg", IconProps>
-  label: ReactElement
-}>
-function WorkspaceInfoDetail({ icon: Icon, label }: TWorkspaceInfoDetailProps) {
-  const l = cloneElement(label, { color: "gray.600" })
-
-  return (
-    <HStack gap="1" whiteSpace="nowrap" userSelect="text" cursor="text">
-      {Icon && <Icon boxSize="5" color="gray.500" />}
-      {l}
-    </HStack>
-  )
-}
-
-function getSourceInfo(
-  source: Source | undefined
-): Readonly<{ icon: ComponentWithAs<"svg", IconProps>; label: ReactElement }> | undefined {
-  if (!source) {
-    return undefined
-  }
-
-  switch (source.type) {
-    case "git":
-      return {
-        icon: Git,
-        label: <Text>{source.value}</Text>,
-      }
-    case "image":
-      return {
-        icon: Image,
-        label: <Text>{source.value}</Text>,
-      }
-    case "local":
-      return {
-        icon: Folder,
-        label: <Text>{source.value}</Text>,
-      }
-  }
-}
-
-function formatTemplateDetail(
-  instance: ProWorkspaceInstance,
-  template: ManagementV1DevPodWorkspaceTemplate | undefined
-): ReactElement {
-  const templateName = instance.spec?.templateRef?.name
-  const templateDisplayName = getDisplayName(template, templateName)
-  let templateVersion = instance.spec?.templateRef?.version
-  if (!templateVersion) {
-    templateVersion = "latest"
-  }
-
-  return (
-    <Text>
-      {templateDisplayName}/{templateVersion}
-    </Text>
   )
 }

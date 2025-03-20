@@ -7,10 +7,12 @@ import (
 	"fmt"
 
 	managementv1 "github.com/loft-sh/api/v4/pkg/apis/management/v1"
+	"github.com/loft-sh/devpod/cmd/completion"
 	"github.com/loft-sh/devpod/cmd/flags"
 	"github.com/loft-sh/devpod/cmd/provider"
 	"github.com/loft-sh/devpod/pkg/client"
 	"github.com/loft-sh/devpod/pkg/config"
+	daemon "github.com/loft-sh/devpod/pkg/daemon/platform"
 	"github.com/loft-sh/devpod/pkg/platform"
 	pkgprovider "github.com/loft-sh/devpod/pkg/provider"
 	"github.com/loft-sh/devpod/pkg/version"
@@ -34,6 +36,9 @@ func NewTroubleshootCmd(flags *flags.GlobalFlags) *cobra.Command {
 		Run: func(cobraCmd *cobra.Command, args []string) {
 			cmd.Run(cobraCmd.Context(), args)
 		},
+		ValidArgsFunction: func(rootCmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
+			return completion.GetWorkspaceSuggestions(rootCmd, cmd.Context, cmd.Provider, args, toComplete, cmd.Owner, log.Default)
+		},
 		Hidden: true,
 	}
 
@@ -51,6 +56,7 @@ func (cmd *TroubleshootCmd) Run(ctx context.Context, args []string) {
 		Workspace             *pkgprovider.Workspace
 		WorkspaceStatus       client.Status
 		WorkspaceTroubleshoot *managementv1.DevPodWorkspaceInstanceTroubleshoot
+		DaemonStatus          *daemon.Status
 
 		Errors []PrintableError `json:",omitempty"`
 	}
@@ -93,7 +99,7 @@ func (cmd *TroubleshootCmd) Run(ctx context.Context, args []string) {
 		info.Errors = append(info.Errors, PrintableError{fmt.Errorf("collect platform info: %w", err)})
 	}
 
-	workspaceClient, err := workspace.Get(ctx, info.Config, args, false, logger)
+	workspaceClient, err := workspace.Get(ctx, info.Config, args, false, cmd.Owner, logger)
 	if err == nil {
 		info.Workspace = workspaceClient.WorkspaceConfig()
 		info.WorkspaceStatus, err = workspaceClient.Status(ctx, client.StatusOptions{})
@@ -129,6 +135,21 @@ func (cmd *TroubleshootCmd) Run(ctx context.Context, args []string) {
 		}
 	} else {
 		info.Errors = append(info.Errors, PrintableError{fmt.Errorf("get workspace: %w", err)})
+	}
+
+	daemonClient, ok := workspaceClient.(client.DaemonClient)
+	if ok {
+		dir, err := pkgprovider.GetDaemonDir(info.Config.DefaultContext, daemonClient.Provider())
+		if err != nil {
+			info.Errors = append(info.Errors, PrintableError{fmt.Errorf("get daemon dir: %w", err)})
+		} else {
+			status, err := daemon.NewLocalClient(dir, daemonClient.Provider()).Status(ctx, true)
+			if err != nil {
+				info.Errors = append(info.Errors, PrintableError{fmt.Errorf("get daemon status: %w", err)})
+			} else {
+				info.DaemonStatus = &status
+			}
+		}
 	}
 }
 

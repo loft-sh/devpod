@@ -3,7 +3,7 @@ import { TStreamEventListenerFn, client } from "../../../client"
 import { exists } from "../../../lib"
 import { TIdentifiable, TStreamID, TWorkspaceID, TWorkspaceStartConfig } from "../../../types"
 import { TActionID, TActionObj, useConnectAction, useReplayAction } from "../action"
-import { IWorkspaceStore, useWorkspaceStore } from "../workspaceStore"
+import { IWorkspaceStore, ProWorkspaceStore, useWorkspaceStore } from "../workspaceStore"
 
 export type TWorkspaceResult<T> = Readonly<{
   data: T | undefined
@@ -41,7 +41,14 @@ export function useWorkspaceActions(
         return undefined
       }
 
-      const workspaceActions = store.getWorkspaceActions(workspaceID)
+      // It's okay to use sort directly here because the store always returns a new array
+      const workspaceActions = store.getWorkspaceActions(workspaceID).sort((a, b) => {
+        if (a.finishedAt && b.finishedAt) {
+          return b.finishedAt - a.finishedAt
+        }
+
+        return b.createdAt - a.createdAt
+      })
       if (!dataCache.current || dataCache.current.length !== workspaceActions.length) {
         dataCache.current = workspaceActions
 
@@ -350,6 +357,11 @@ export function removeWorkspaceAction({
       if (result.err) {
         return result
       }
+      // Pro Desktop app will get updates through watcher, no need to remove from local store
+      if (store instanceof ProWorkspaceStore) {
+        return result
+      }
+
       store.removeWorkspace(workspaceID)
 
       return result

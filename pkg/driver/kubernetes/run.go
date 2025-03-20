@@ -15,6 +15,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/utils/ptr"
 )
 
 const DevContainerName = "devpod"
@@ -25,8 +26,9 @@ const (
 	DevPodWorkspaceLabel    = "devpod.sh/workspace"
 	DevPodWorkspaceUIDLabel = "devpod.sh/workspace-uid"
 
-	DevPodInfoAnnotation        = "devpod.sh/info"
-	DevPodLastAppliedAnnotation = "devpod.sh/last-applied-configuration"
+	DevPodInfoAnnotation                   = "devpod.sh/info"
+	DevPodLastAppliedAnnotation            = "devpod.sh/last-applied-configuration"
+	ClusterAutoscalerSaveToEvictAnnotation = "cluster-autoscaler.kubernetes.io/safe-to-evict"
 )
 
 var ExtraDevPodLabels = map[string]string{
@@ -43,6 +45,7 @@ func (k *KubernetesDriver) RunDevContainer(
 	workspaceId string,
 	options *driver.RunOptions,
 ) error {
+	k.Log.Debugf("Running devcontainer for workspace '%s'", workspaceId)
 	workspaceId = getID(workspaceId)
 
 	// namespace
@@ -58,9 +61,7 @@ func (k *KubernetesDriver) RunDevContainer(
 	pvc, containerInfo, err := k.getDevContainerPvc(ctx, workspaceId)
 	if err != nil {
 		return err
-	}
-
-	if pvc == nil {
+	} else if pvc == nil {
 		if options == nil {
 			return fmt.Errorf("no options provided and no persistent volume claim found for workspace '%s'", workspaceId)
 		}
@@ -213,11 +214,17 @@ func (k *KubernetesDriver) runContainer(
 	pod.Spec.InitContainers = initContainers
 	pod.Spec.Containers = getContainers(pod, options.Image, options.Entrypoint, options.Cmd, envVars, volumeMounts, capabilities, resources, options.Privileged, k.options.StrictSecurity)
 	pod.Spec.Volumes = getVolumes(pod, id)
-
+	// avoids a problem where attaching volumes with large repositories would cause an extremely long pod startup time
+	// because changing the ownership of all files takes longer than the kubelet expects it to
+	if pod.Spec.SecurityContext == nil {
+		pod.Spec.SecurityContext = &corev1.PodSecurityContext{
+			FSGroupChangePolicy: ptr.To(corev1.FSGroupChangeOnRootMismatch),
+		}
+	}
 	if k.options.KubernetesPullSecretsEnabled == "true" && pullSecretsCreated {
 		pod.Spec.ImagePullSecrets = []corev1.LocalObjectReference{{Name: getPullSecretsName(id)}}
 	}
-
+	pod.Spec.RestartPolicy = corev1.RestartPolicyNever
 	// try to get existing pod
 	existingPod, err := k.getPod(ctx, id)
 	if err != nil {
@@ -231,9 +238,9 @@ func (k *KubernetesDriver) runContainer(
 			k.Log.Errorf("Error unmarshalling existing provider options, continuing...: %s", err)
 		}
 
+		// Nothing changed, can safely return
 		if optionsEqual(existingOptions, k.options) {
-			// Nothing changed, can safely return
-			k.Log.Debug("Provider options did not change, skipping update")
+			k.Log.Infof("Pod '%s' already exists and nothing changed, skipping update", existingPod.Name)
 			return nil
 		}
 
@@ -266,6 +273,7 @@ func (k *KubernetesDriver) runPod(ctx context.Context, id string, pod *corev1.Po
 		pod.Annotations = map[string]string{}
 	}
 	pod.Annotations[DevPodLastAppliedAnnotation] = string(lastAppliedConfigRaw)
+	pod.Annotations[ClusterAutoscalerSaveToEvictAnnotation] = "false"
 
 	// marshal the pod
 	podRaw, err := json.Marshal(pod)
@@ -432,6 +440,9 @@ func getNodeSelector(pod *corev1.Pod, rawNodeSelector string) (map[string]string
 }
 
 func (k *KubernetesDriver) StartDevContainer(ctx context.Context, workspaceId string) error {
+	k.Log.Debugf("Starting devcontainer for workspace '%s'", workspaceId)
+	defer k.Log.Debugf("Done starting devcontainer for workspace '%s'", workspaceId)
+
 	workspaceId = getID(workspaceId)
 	_, containerInfo, err := k.getDevContainerPvc(ctx, workspaceId)
 	if err != nil {
@@ -475,7 +486,7 @@ func optionsEqual(a, b *provider2.ProviderKubernetesDriverConfig) bool {
 func (k *KubernetesDriver) createNamespace(ctx context.Context) error {
 	_, err := k.client.Client().CoreV1().Namespaces().Get(ctx, k.namespace, metav1.GetOptions{})
 	if kerrors.IsNotFound(err) || kerrors.IsForbidden(err) {
-		k.Log.Debugf("Create namespace '%s'", k.namespace)
+		k.Log.Infof("Create namespace '%s'", k.namespace)
 		_, err := k.client.Client().CoreV1().Namespaces().Create(ctx, &corev1.Namespace{
 			ObjectMeta: metav1.ObjectMeta{
 				Name: k.namespace,

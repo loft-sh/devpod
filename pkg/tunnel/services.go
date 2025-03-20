@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"github.com/docker/go-connections/nat"
+	"github.com/loft-sh/api/v4/pkg/devpod"
 	"github.com/loft-sh/devpod/pkg/agent"
 	"github.com/loft-sh/devpod/pkg/agent/tunnelserver"
 	"github.com/loft-sh/devpod/pkg/config"
@@ -39,9 +40,9 @@ func RunServices(
 	user string,
 	forwardPorts bool,
 	extraPorts []string,
-	gitUsername,
-	gitToken string,
+	platformOptions *devpod.PlatformOptions,
 	workspace *provider.Workspace,
+	configureDockerCredentials, configureGitCredentials, configureGitSSHSignatureHelper bool,
 	log log.Logger,
 ) error {
 	// calculate exit after timeout
@@ -55,10 +56,6 @@ func RunServices(
 	if err != nil {
 		return errors.Wrap(err, "forward ports")
 	}
-
-	configureDockerCredentials := devPodConfig.ContextOption(config.ContextOptionSSHInjectDockerCredentials) == "true"
-	configureGitCredentials := devPodConfig.ContextOption(config.ContextOptionSSHInjectGitCredentials) == "true"
-	configureGitSSHSignatureHelper := devPodConfig.ContextOption(config.ContextOptionGitSSHSignatureForwarding) == "true"
 
 	return retry.OnError(wait.Backoff{
 		Steps:    math.MaxInt,
@@ -104,7 +101,7 @@ func RunServices(
 				forwarder,
 				workspace,
 				log,
-				tunnelserver.WithGitCredentialsOverride(gitUsername, gitToken),
+				tunnelserver.WithPlatformOptions(platformOptions),
 			)
 			if err != nil {
 				errChan <- errors.Wrap(err, "run tunnel server")

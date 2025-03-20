@@ -1,30 +1,25 @@
-import { QueryKeys } from "@/queryKeys"
-import { useQuery } from "@tanstack/react-query"
 import { useProContext } from "@/contexts"
+import { QueryKeys } from "@/queryKeys"
+import { TPlatformHealthCheck } from "@/types"
+import { useQuery } from "@tanstack/react-query"
 
-type TConnectionStatus = Readonly<{
-  state?: "connected" | "disconnected"
+export type TConnectionStatus = Partial<TPlatformHealthCheck> & {
   isLoading: boolean
-}>
+}
 export function useConnectionStatus(): TConnectionStatus {
   const { host, client } = useProContext()
   const { data: connection, isLoading } = useQuery({
     queryKey: QueryKeys.connectionStatus(host),
     queryFn: async () => {
       try {
-        const res = await client.checkHealth()
-        let state: TConnectionStatus["state"] = "disconnected"
-        if (res.err) {
-          return { state }
+        const platformRes = await client.checkHealth()
+        if (platformRes.ok) {
+          return platformRes.val
         }
 
-        if (res.val.healthy) {
-          state = "connected"
-        }
-
-        return { state }
+        return { healthy: false }
       } catch {
-        return { state: "disconnected" as TConnectionStatus["state"] }
+        return { healthy: false }
       }
     },
     refetchInterval: 5_000,

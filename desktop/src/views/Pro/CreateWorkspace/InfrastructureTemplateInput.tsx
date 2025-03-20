@@ -124,13 +124,14 @@ export function InfrastructureTemplateInput({
       resetField(`${FieldName.OPTIONS}.${k}`, resetOptions)
     }
   }
+  const bg = useColorModeValue("gray.50", "gray.900")
 
   return (
     <VStack
       align="start"
       padding="8"
       gap="4"
-      bg="gray.50"
+      bg={bg}
       borderRadius="md"
       borderWidth="thin"
       borderColor={borderColor}>
@@ -223,7 +224,7 @@ function OptionFormField({
   isRequired = false,
   onChange,
 }: TOptionFormFieldProps) {
-  const inputBackground = useColorModeValue("white", "black")
+  const inputBackground = useColorModeValue("white", "background.darkest")
   const { register, formState, control } = useFormContext()
   const optionError = formState.errors[id]
 
@@ -393,7 +394,7 @@ function createTraversablePropertyPath(path: string): string[] {
   return path.split(".")
 }
 
-export function getDeepValue<T>(obj: any, path: string): T | undefined {
+function getDeepValue<T>(obj: any, path: string): T | undefined {
   if (!obj) return undefined
 
   const a = createTraversablePropertyPath(path)

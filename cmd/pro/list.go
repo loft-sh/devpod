@@ -88,7 +88,11 @@ func (cmd *ListCmd) Run(ctx context.Context) error {
 	} else if cmd.Output == "json" {
 		tableEntries := []*proTableEntry{}
 		for _, proInstance := range proInstances {
-			entry := &proTableEntry{ProInstance: proInstance}
+			entry := &proTableEntry{
+				ProInstance:  proInstance,
+				Context:      devPodConfig.DefaultContext,
+				Capabilities: getCapabilities(ctx, devPodConfig, proInstance, log.Discard),
+			}
 			if cmd.Login {
 				err = checkLogin(ctx, devPodConfig, proInstance)
 				isAuthenticated := err == nil
@@ -116,8 +120,18 @@ func (cmd *ListCmd) Run(ctx context.Context) error {
 type proTableEntry struct {
 	*provider.ProInstance
 
-	Authenticated *bool `json:"authenticated,omitempty"`
+	Authenticated *bool        `json:"authenticated,omitempty"`
+	Context       string       `json:"context,omitempty"`
+	Capabilities  []Capability `json:"capabilities,omitempty"`
 }
+
+type Capability string
+
+var (
+	capabilityDaemon         Capability = "daemon"
+	capabilityHealthCheck    Capability = "health-check"
+	capabilityUpdateProvider Capability = "update-provider"
+)
 
 func checkLogin(ctx context.Context, devPodConfig *config.Config, proInstance *provider.ProInstance) error {
 	// for every pro instance, check auth status by calling login
@@ -126,4 +140,23 @@ func checkLogin(ctx context.Context, devPodConfig *config.Config, proInstance *p
 	}
 
 	return nil
+}
+
+func getCapabilities(ctx context.Context, devPodConfig *config.Config, proInstance *provider.ProInstance, log log.Logger) []Capability {
+	capabilities := []Capability{}
+	provider, err := workspace.FindProvider(devPodConfig, proInstance.Provider, log)
+	if err != nil {
+		return capabilities
+	}
+
+	if provider.Config.HasHealthCheck() {
+		capabilities = append(capabilities, capabilityHealthCheck)
+		capabilities = append(capabilities, capabilityUpdateProvider)
+	}
+
+	if provider.Config.IsDaemonProvider() {
+		capabilities = append(capabilities, capabilityDaemon)
+	}
+
+	return capabilities
 }

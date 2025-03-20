@@ -10,6 +10,7 @@ import (
 	"github.com/loft-sh/devpod/cmd/pro/provider/list"
 	"github.com/loft-sh/devpod/cmd/pro/provider/update"
 	"github.com/loft-sh/devpod/cmd/pro/provider/watch"
+	"github.com/loft-sh/devpod/pkg/client/clientimplementation"
 	"github.com/loft-sh/devpod/pkg/platform"
 	"github.com/loft-sh/devpod/pkg/platform/client"
 	"github.com/loft-sh/devpod/pkg/telemetry"
@@ -31,6 +32,10 @@ func NewProProviderCmd(globalFlags *flags.GlobalFlags) *cobra.Command {
 			}
 
 			log.Default.SetFormat(log.JSONFormat)
+
+			if os.Getenv(clientimplementation.DevPodDebug) == "true" {
+				globalFlags.Debug = true
+			}
 
 			// Disable debug hints if we execute pro commands from DevPod Desktop
 			// We're reusing the agent.AgentExecutedAnnotation for simplicity, could rename in the future

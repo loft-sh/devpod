@@ -3,9 +3,9 @@
 package v1
 
 import (
-	"context"
+	context "context"
 
-	v1 "github.com/loft-sh/api/v4/pkg/apis/management/v1"
+	managementv1 "github.com/loft-sh/api/v4/pkg/apis/management/v1"
 	scheme "github.com/loft-sh/api/v4/pkg/clientset/versioned/scheme"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	types "k8s.io/apimachinery/pkg/types"
@@ -21,33 +21,34 @@ type LicenseTokensGetter interface {
 
 // LicenseTokenInterface has methods to work with LicenseToken resources.
 type LicenseTokenInterface interface {
-	Create(ctx context.Context, licenseToken *v1.LicenseToken, opts metav1.CreateOptions) (*v1.LicenseToken, error)
-	Update(ctx context.Context, licenseToken *v1.LicenseToken, opts metav1.UpdateOptions) (*v1.LicenseToken, error)
+	Create(ctx context.Context, licenseToken *managementv1.LicenseToken, opts metav1.CreateOptions) (*managementv1.LicenseToken, error)
+	Update(ctx context.Context, licenseToken *managementv1.LicenseToken, opts metav1.UpdateOptions) (*managementv1.LicenseToken, error)
 	// Add a +genclient:noStatus comment above the type to avoid generating UpdateStatus().
-	UpdateStatus(ctx context.Context, licenseToken *v1.LicenseToken, opts metav1.UpdateOptions) (*v1.LicenseToken, error)
+	UpdateStatus(ctx context.Context, licenseToken *managementv1.LicenseToken, opts metav1.UpdateOptions) (*managementv1.LicenseToken, error)
 	Delete(ctx context.Context, name string, opts metav1.DeleteOptions) error
 	DeleteCollection(ctx context.Context, opts metav1.DeleteOptions, listOpts metav1.ListOptions) error
-	Get(ctx context.Context, name string, opts metav1.GetOptions) (*v1.LicenseToken, error)
-	List(ctx context.Context, opts metav1.ListOptions) (*v1.LicenseTokenList, error)
+	Get(ctx context.Context, name string, opts metav1.GetOptions) (*managementv1.LicenseToken, error)
+	List(ctx context.Context, opts metav1.ListOptions) (*managementv1.LicenseTokenList, error)
 	Watch(ctx context.Context, opts metav1.ListOptions) (watch.Interface, error)
-	Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts metav1.PatchOptions, subresources ...string) (result *v1.LicenseToken, err error)
+	Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts metav1.PatchOptions, subresources ...string) (result *managementv1.LicenseToken, err error)
 	LicenseTokenExpansion
 }
 
 // licenseTokens implements LicenseTokenInterface
 type licenseTokens struct {
-	*gentype.ClientWithList[*v1.LicenseToken, *v1.LicenseTokenList]
+	*gentype.ClientWithList[*managementv1.LicenseToken, *managementv1.LicenseTokenList]
 }
 
 // newLicenseTokens returns a LicenseTokens
 func newLicenseTokens(c *ManagementV1Client) *licenseTokens {
 	return &licenseTokens{
-		gentype.NewClientWithList[*v1.LicenseToken, *v1.LicenseTokenList](
+		gentype.NewClientWithList[*managementv1.LicenseToken, *managementv1.LicenseTokenList](
 			"licensetokens",
 			c.RESTClient(),
 			scheme.ParameterCodec,
 			"",
-			func() *v1.LicenseToken { return &v1.LicenseToken{} },
-			func() *v1.LicenseTokenList { return &v1.LicenseTokenList{} }),
+			func() *managementv1.LicenseToken { return &managementv1.LicenseToken{} },
+			func() *managementv1.LicenseTokenList { return &managementv1.LicenseTokenList{} },
+		),
 	}
 }

@@ -4,9 +4,9 @@ import (
 	"strings"
 	"time"
 
+	"github.com/loft-sh/api/v4/pkg/devpod"
 	"github.com/loft-sh/devpod/pkg/config"
 	devcontainerconfig "github.com/loft-sh/devpod/pkg/devcontainer/config"
-	"github.com/loft-sh/devpod/pkg/flags"
 	"github.com/loft-sh/devpod/pkg/git"
 	"github.com/loft-sh/devpod/pkg/types"
 )
@@ -73,6 +73,9 @@ type Workspace struct {
 }
 
 type ProMetadata struct {
+	// InstanceName is the platform CRD name for this workspace
+	InstanceName string `json:"instanceName,omitempty"`
+
 	// Project is the platform project the workspace lives in
 	Project string `json:"project,omitempty"`
 
@@ -195,8 +198,10 @@ type AgentWorkspaceInfo struct {
 }
 
 type CLIOptions struct {
+	// Platform are the platform options
+	Platform devpod.PlatformOptions `json:"platformOptions,omitempty"`
+
 	// up options
-	flags.GitCredentialsFlags   `json:",inline"`
 	ID                          string            `json:"id,omitempty"`
 	Source                      string            `json:"source,omitempty"`
 	IDE                         string            `json:"ide,omitempty"`
@@ -204,17 +209,13 @@ type CLIOptions struct {
 	PrebuildRepositories        []string          `json:"prebuildRepositories,omitempty"`
 	DevContainerImage           string            `json:"devContainerImage,omitempty"`
 	DevContainerPath            string            `json:"devContainerPath,omitempty"`
-	EnvironmentTemplate         string            `json:"environmentTemplate,omitempty"`
-	EnvironmentTemplateVersion  string            `json:"environmentTemplateVersion,omitempty"`
 	WorkspaceEnv                []string          `json:"workspaceEnv,omitempty"`
 	WorkspaceEnvFile            []string          `json:"workspaceEnvFile,omitempty"`
 	InitEnv                     []string          `json:"initEnv,omitempty"`
 	Recreate                    bool              `json:"recreate,omitempty"`
 	Reset                       bool              `json:"reset,omitempty"`
-	Proxy                       bool              `json:"proxy,omitempty"`
 	DisableDaemon               bool              `json:"disableDaemon,omitempty"`
 	DaemonInterval              string            `json:"daemonInterval,omitempty"`
-	ForceCredentials            bool              `json:"forceCredentials,omitempty"`
 	GitCloneStrategy            git.CloneStrategy `json:"gitCloneStrategy,omitempty"`
 	GitCloneRecursiveSubmodules bool              `json:"gitCloneRecursive,omitempty"`
 	FallbackImage               string            `json:"fallbackImage,omitempty"`
@@ -225,13 +226,12 @@ type CLIOptions struct {
 	// build options
 	Repository string   `json:"repository,omitempty"`
 	SkipPush   bool     `json:"skipPush,omitempty"`
-	Platform   []string `json:"platform,omitempty"`
+	Platforms  []string `json:"platform,omitempty"`
 	Tag        []string `json:"tag,omitempty"`
 
-	ForceBuild            bool   `json:"forceBuild,omitempty"`
-	ForceDockerless       bool   `json:"forceDockerless,omitempty"`
-	ForceInternalBuildKit bool   `json:"forceInternalBuildKit,omitempty"`
-	SSHKey                string `json:"sshkey,omitempty"`
+	ForceBuild            bool `json:"forceBuild,omitempty"`
+	ForceDockerless       bool `json:"forceDockerless,omitempty"`
+	ForceInternalBuildKit bool `json:"forceInternalBuildKit,omitempty"`
 }
 
 type BuildOptions struct {

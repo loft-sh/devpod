@@ -50,10 +50,6 @@ type NetworkPeerListerExpansion interface{}
 // ProjectLister.
 type ProjectListerExpansion interface{}
 
-// RunnerListerExpansion allows custom methods to be added to
-// RunnerLister.
-type RunnerListerExpansion interface{}
-
 // SharedSecretListerExpansion allows custom methods to be added to
 // SharedSecretLister.
 type SharedSecretListerExpansion interface{}

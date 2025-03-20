@@ -127,6 +127,10 @@ func StartSSHSession(ctx context.Context, user, command string, agentForwarding 
 	}
 	defer sshClient.Close()
 
+	return RunSSHSession(ctx, sshClient, agentForwarding, command, stderr)
+}
+
+func RunSSHSession(ctx context.Context, sshClient *ssh.Client, agentForwarding bool, command string, stderr io.Writer) error {
 	// create a new session
 	session, err := sshClient.NewSession()
 	if err != nil {

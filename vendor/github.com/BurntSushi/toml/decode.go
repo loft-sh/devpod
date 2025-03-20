@@ -540,12 +540,14 @@ func (md *MetaData) badtype(dst string, data any) error {
 
 func (md *MetaData) parseErr(err error) error {
 	k := md.context.String()
+	d := string(md.data)
 	return ParseError{
-		LastKey:  k,
-		Position: md.keyInfo[k].pos,
-		Line:     md.keyInfo[k].pos.Line,
+		Message:  err.Error(),
 		err:      err,
-		input:    string(md.data),
+		LastKey:  k,
+		Position: md.keyInfo[k].pos.withCol(d),
+		Line:     md.keyInfo[k].pos.Line,
+		input:    d,
 	}
 }
 

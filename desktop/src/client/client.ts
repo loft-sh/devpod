@@ -1,26 +1,28 @@
 import { UseToastOptions } from "@chakra-ui/react"
 import { app, event, path } from "@tauri-apps/api"
 import { invoke } from "@tauri-apps/api/core"
-import { Command } from "@tauri-apps/plugin-shell"
 import { Theme as TauriTheme, getCurrentWindow } from "@tauri-apps/api/window"
+import * as clipboard from "@tauri-apps/plugin-clipboard-manager"
+import * as dialog from "@tauri-apps/plugin-dialog"
+import * as fs from "@tauri-apps/plugin-fs"
 import * as log from "@tauri-apps/plugin-log"
+import * as os from "@tauri-apps/plugin-os"
+import * as process from "@tauri-apps/plugin-process"
+import * as shell from "@tauri-apps/plugin-shell"
+import { Command } from "@tauri-apps/plugin-shell"
+import * as updater from "@tauri-apps/plugin-updater"
 import { TSettings } from "../contexts"
 import { Release } from "../gen"
-import { Result, Return, isError, noop } from "../lib"
-import { TCommunityContributions, TProID, TUnsubscribeFn } from "../types"
+import { Result, Return, hasCapability, isError, noop } from "../lib"
+import { TCommunityContributions, TProInstance, TUnsubscribeFn } from "../types"
 import { Command as DevPodCommand } from "./command"
 import { ContextClient } from "./context"
 import { IDEsClient } from "./ides"
 import { ProClient } from "./pro"
+import { DaemonClient } from "./pro/client"
 import { ProvidersClient } from "./providers"
+import { TAURI_SERVER_URL } from "./tauriClient"
 import { WorkspacesClient } from "./workspaces"
-import * as clipboard from "@tauri-apps/plugin-clipboard-manager"
-import * as dialog from "@tauri-apps/plugin-dialog"
-import * as fs from "@tauri-apps/plugin-fs"
-import * as os from "@tauri-apps/plugin-os"
-import * as process from "@tauri-apps/plugin-process"
-import * as shell from "@tauri-apps/plugin-shell"
-import * as updater from "@tauri-apps/plugin-updater"
 
 // These types have to match the rust types! Make sure to update them as well!
 type TChannels = {
@@ -54,6 +56,15 @@ type TChannels = {
         accessKey: string | null
         options: Record<string, string> | null
       }>
+    | Readonly<{
+        type: "OpenProInstance"
+        host: string | null
+      }>
+    | Readonly<{
+        type: "LoginRequired"
+        host: string
+        provider: string
+      }>
 }
 type TChannelName = keyof TChannels
 type TClientEventListener<TChannel extends TChannelName> = (payload: TChannels[TChannel]) => void
@@ -82,7 +93,6 @@ class Client {
     name: TSettingName,
     value: TSettings[TSettingName]
   ) {
-    // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
     if (name === "debugFlag") {
       const debug: boolean = value as boolean
       this.workspaces.setDebug(debug)
@@ -178,7 +188,7 @@ class Client {
     try {
       // WARN: This is a workaround for a memory leak in tauri, see https://github.com/tauri-apps/tauri/issues/4026 for more details.
       // tl;dr tauri doesn't release the memory in it's invoke api properly which is specially noticeable with larger payload, like the releases.
-      const res = await fetch("http://localhost:25842/releases")
+      const res = await fetch(TAURI_SERVER_URL + "/releases")
       if (!res.ok) {
         return Return.Failed(`Fetch releases: ${res.statusText}`)
       }
@@ -200,17 +210,36 @@ class Client {
     }
   }
 
-  public async openDir(dir: Extract<keyof typeof fs.BaseDirectory, "AppData">): Promise<void> {
-    try {
-      let p: string
-      switch (dir) {
-        case "AppData": {
-          p = await path.appDataDir()
-          break
-        }
+  public async getDir(
+    dir: Extract<keyof typeof fs.BaseDirectory, "AppData" | "AppLog" | "Home"> | "SSH"
+  ): Promise<string> {
+    switch (dir) {
+      case "AppData": {
+        return path.appDataDir()
       }
+      case "AppLog": {
+        return await path.appLogDir()
+      }
+      case "Home": {
+        return await path.homeDir()
+      }
+      case "SSH": {
+        return await path.join(await path.homeDir(), ".ssh")
+      }
+    }
+  }
+
+  public async openDir(
+    dir: Extract<keyof typeof fs.BaseDirectory, "AppData" | "AppLog">
+  ): Promise<void> {
+    try {
+      let p = await this.getDir(dir)
+      if (dir === "AppLog") {
+        p = await path.join(p, "DevPod.log")
+      }
+
       shell.open(p)
-    } catch (e) {
+    } catch {
       // noop for now
     }
   }
@@ -219,7 +248,7 @@ class Client {
     return dialog.open({ title, directory: true, multiple: false })
   }
 
-  public async selectFromFileYaml(): Promise<string | string[] | null> {
+  public async selectFileYaml(): Promise<string | string[] | null> {
     return dialog.open({
       filters: [{ name: "yaml", extensions: ["yml", "yaml"] }],
       directory: false,
@@ -227,8 +256,8 @@ class Client {
     })
   }
 
-  public async selectFromFile(): Promise<string | string[] | null> {
-    return dialog.open({ directory: false, multiple: false })
+  public async selectFile(defaultPath?: string): Promise<string | string[] | null> {
+    return dialog.open({ directory: false, multiple: false, defaultPath })
   }
 
   public async copyFile(src: string, dest: string): Promise<void> {
@@ -245,6 +274,10 @@ class Client {
 
   public async readFile(targetPath: string[]) {
     return fs.readFile(await path.join(...targetPath))
+  }
+
+  public async readTextFile(targetPath: string[]) {
+    return fs.readTextFile(await path.join(...targetPath))
   }
 
   public async writeFile(targetPath: string[], data: Uint8Array) {
@@ -372,8 +405,12 @@ class Client {
     logFn(message)
   }
 
-  public getProClient(id: TProID): ProClient {
-    return new ProClient(id)
+  public getProClient(proInstance: TProInstance): ProClient | DaemonClient {
+    if (hasCapability(proInstance, "daemon")) {
+      return new DaemonClient(proInstance.host!)
+    } else {
+      return new ProClient(proInstance.host!)
+    }
   }
 }
 

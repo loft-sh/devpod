@@ -1,5 +1,6 @@
 import { Close, Connect, DevpodWordmark, Ellipsis, Folder } from "@/icons"
-import { getDisplayName, Result, useLoginProModal } from "@/lib"
+import { Result, getDisplayName, useLoginProModal } from "@/lib"
+import { Routes } from "@/routes"
 import { TProInstance } from "@/types"
 import { useDeleteProviderModal } from "@/views/Providers"
 import { ArrowUpDownIcon, CheckIcon } from "@chakra-ui/icons"
@@ -21,18 +22,18 @@ import {
   PopoverContent,
   PopoverTrigger,
   Portal,
-  Text,
-  VStack,
-  Tooltip,
   Spinner,
+  Text,
+  Tooltip,
+  VStack,
+  useColorModeValue,
 } from "@chakra-ui/react"
 import { ManagementV1Project } from "@loft-enterprise/client/gen/models/managementV1Project"
 import { ReactNode, useMemo } from "react"
-import { useProInstances } from "../proInstances"
 import { useNavigate } from "react-router"
-import { Routes } from "@/routes"
+import { useProInstances } from "../proInstances"
+import { HOST_OSS } from "./constants"
 
-export const HOST_OSS = "Open Source"
 type THostPickerProps = Readonly<{
   currentHost: string
   onHostChange: (newHost: string) => void
@@ -75,6 +76,7 @@ export function ContextSwitcher({
       authenticated: undefined,
       provider: undefined,
       creationTimestamp: undefined,
+      capabilities: undefined,
     })
 
     return p
@@ -84,12 +86,14 @@ export function ContextSwitcher({
   const handleConnectPlatform = () => {
     handleConnectClicked()
   }
+  const hoverBgColor = useColorModeValue("gray.100", "gray.700")
+  const projectsColor = useColorModeValue("gray.600", "gray.300")
 
   return (
     <>
       <Popover>
         <PopoverTrigger>
-          <Button variant="ghost" color="gray.700" rightIcon={<ArrowUpDownIcon />}>
+          <Button variant="ghost" rightIcon={<ArrowUpDownIcon />}>
             {getDisplayName(currentProject, "Unknown Project")}
           </Button>
         </PopoverTrigger>
@@ -102,12 +106,13 @@ export function ContextSwitcher({
                 </HStack>
               ) : (
                 <List>
-                  {proInstances.map(({ host, authenticated, image }) => (
+                  {proInstances.map(({ host, authenticated, image }, index) => (
                     <ListItem key={host}>
                       <PlatformDetails
                         currentHost={currentHost}
                         host={host!}
                         image={image}
+                        showBorder={index != proInstances.length - 1}
                         onCancelWatch={onCancelWatch}
                         authenticated={authenticated}
                         onConnect={handleConnectPlatform}
@@ -122,14 +127,14 @@ export function ContextSwitcher({
                           pl="2"
                           borderBottomWidth="thin"
                           borderBottomStyle="solid">
-                          <Heading pl="4" size="xs" color="gray.500" textTransform="uppercase">
+                          <Heading pl="4" size="xs" color={projectsColor} textTransform="uppercase">
                             Projects
                           </Heading>
                           <List w="full">
                             {projects.map((project) => (
                               <ListItem key={project.metadata!.name}>
                                 <Button
-                                  _hover={{ bgColor: "gray.100" }}
+                                  _hover={{ bgColor: hoverBgColor }}
                                   variant="unstyled"
                                   w="full"
                                   display="flex"
@@ -137,7 +142,7 @@ export function ContextSwitcher({
                                   alignItems="center"
                                   leftIcon={<Folder boxSize={5} />}
                                   pl="4"
-                                  color="gray.600"
+                                  color={projectsColor}
                                   fontWeight="normal"
                                   rightIcon={
                                     project.metadata?.name === currentProject.metadata?.name ? (
@@ -170,6 +175,7 @@ type TPlatformDetailsProps = Readonly<{
   currentHost: string
   image: ReactNode
   authenticated?: boolean | null
+  showBorder?: boolean
   onClick: VoidFunction
   onConnect: VoidFunction
   onCancelWatch?: () => Promise<Result<undefined>>
@@ -179,6 +185,7 @@ function PlatformDetails({
   currentHost,
   image,
   authenticated,
+  showBorder = true,
   onClick,
   onConnect,
   onCancelWatch,
@@ -195,11 +202,13 @@ function PlatformDetails({
       navigate(Routes.ROOT)
     }
   )
+  const hoverBgColor = useColorModeValue("gray.100", "gray.700")
+  const menuColor = useColorModeValue("gray.700", "gray.200")
 
   return (
     <>
       <HStack
-        _hover={{ bgColor: "gray.100", cursor: "pointer" }}
+        _hover={{ bgColor: hoverBgColor, cursor: "pointer" }}
         w="full"
         px="4"
         h="12"
@@ -207,7 +216,7 @@ function PlatformDetails({
         {...(currentHost != host
           ? {
               borderBottomStyle: "solid",
-              borderBottomWidth: "thin",
+              borderBottomWidth: showBorder ? "thin" : "none",
             }
           : {})}>
         <HStack
@@ -264,7 +273,7 @@ function PlatformDetails({
                   colorScheme="gray"
                   icon={<Ellipsis transform={"rotate(90deg)"} boxSize={5} />}
                 />
-                <MenuList color="gray.700" onClick={(e) => e.stopPropagation()}>
+                <MenuList color={menuColor} onClick={(e) => e.stopPropagation()}>
                   <MenuItem icon={<Connect boxSize={4} />} onClick={onConnect}>
                     Connect another platform
                   </MenuItem>

@@ -8,6 +8,7 @@ import (
 
 	managementv1 "github.com/loft-sh/api/v4/pkg/apis/management/v1"
 	storagev1 "github.com/loft-sh/api/v4/pkg/apis/storage/v1"
+	"github.com/loft-sh/api/v4/pkg/devpod"
 	"github.com/loft-sh/devpod/pkg/platform/annotations"
 	"github.com/loft-sh/devpod/pkg/platform/client"
 	"github.com/loft-sh/devpod/pkg/platform/project"
@@ -20,32 +21,51 @@ var configTTL time.Duration = time.Hour * 24 * 90 // 90 days
 
 // NewInstanceKubeConfig creates a KubeConfig (clientcmdapi.Config) based for either a space instance or virtual cluster instance.
 // We return the config as byte slice to ensure correct handling and formatting through the `clientcmd` methods.
-func NewInstanceKubeConfig(ctx context.Context, loftConfig *client.Config, spaceInstanceName, virtualClusterInstanceName, namespace string) ([]byte, error) {
-	if spaceInstanceName == "" && virtualClusterInstanceName == "" {
+func NewInstanceKubeConfig(ctx context.Context, platformOptions *devpod.PlatformOptions) ([]byte, error) {
+	if platformOptions == nil {
+		return nil, nil
+	}
+	kube := platformOptions.Kubernetes
+	if kube == nil {
+		return nil, nil
+	}
+	accessKey := platformOptions.UserAccessKey
+	if accessKey == "" {
+		return nil, fmt.Errorf("user access key missing")
+	}
+	host := platformOptions.PlatformHost
+	if host == "" {
+		return nil, fmt.Errorf("platform host is missing")
+	}
+	if kube.SpaceName == "" && kube.VirtualClusterName == "" {
 		// nothing to do here
 		return nil, nil
 	}
-	if spaceInstanceName != "" && virtualClusterInstanceName != "" {
+	if kube.SpaceName != "" && kube.VirtualClusterName != "" {
 		return nil, fmt.Errorf("cannot use virtual cluster and space instance together")
 	}
-	if namespace == "" {
+	if kube.Namespace == "" {
 		return nil, fmt.Errorf("namespace missing")
 	}
 
-	baseClient := client.NewClientFromConfig(loftConfig)
+	baseClient := client.NewClientFromConfig(&client.Config{
+		AccessKey: accessKey,
+		Host:      "https://" + host,
+		Insecure:  true,
+	})
 	err := baseClient.RefreshSelf(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("refresh self: %w", err)
 	}
 
 	var kubeConfig *clientcmdapi.Config
-	if spaceInstanceName != "" {
-		kubeConfig, err = kubeConfigForSpaceInstance(ctx, baseClient, spaceInstanceName, namespace)
+	if kube.SpaceName != "" {
+		kubeConfig, err = kubeConfigForSpaceInstance(ctx, baseClient, kube.SpaceName, kube.Namespace)
 		if err != nil {
 			return nil, err
 		}
-	} else if virtualClusterInstanceName != "" {
-		kubeConfig, err = kubeConfigForVirtualClusterInstance(ctx, baseClient, virtualClusterInstanceName, namespace)
+	} else if kube.VirtualClusterName != "" {
+		kubeConfig, err = kubeConfigForVirtualClusterInstance(ctx, baseClient, kube.VirtualClusterName, kube.Namespace)
 		if err != nil {
 			return nil, err
 		}

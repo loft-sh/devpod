@@ -1,7 +1,12 @@
 import { client } from "@/client"
 import { useProInstances, useProviders, useSettings } from "@/contexts"
-import { CheckCircle, CircleWithArrow, DevPodProBadge, ExclamationTriangle, Plus } from "@/icons"
-import { canHealthCheck, exists, useLoginProModal, useReLoginProModal } from "@/lib"
+import { CheckCircle, CircleWithArrow, DevPodProBadge, ExclamationTriangle } from "@/icons"
+import {
+  exists,
+  canHealthCheck as isNewProProvider,
+  useLoginProModal,
+  useReLoginProModal,
+} from "@/lib"
 import { Routes } from "@/routes"
 import { TProID, TProInstance, TProInstances, TProviderConfig } from "@/types"
 import { useDeleteProviderModal } from "@/views/Providers/useDeleteProviderModal"
@@ -106,6 +111,7 @@ function ProPopoverContent({
   onReLogin,
 }: TProPopoverContentProps) {
   const navigate = useNavigate()
+  const hoverBgColor = useColorModeValue("gray.100", "gray.700")
   const [[providers]] = useProviders()
   const { newProInstances, legacyProInstances } = useMemo(() => {
     return (
@@ -128,7 +134,7 @@ function ProPopoverContent({
 
               return acc
             }
-            if (!canHealthCheck(curr.providerConfig)) {
+            if (!isNewProProvider(curr.providerConfig)) {
               acc.legacyProInstances.push(curr)
 
               return acc
@@ -166,9 +172,6 @@ function ProPopoverContent({
               icon={<Icon as={HiArrowRightOnRectangle} boxSize={5} />}
             />
           </Tooltip>
-          <Tooltip label="Create new Pro instance">
-            <IconButton aria-label="Create new Pro Instance" isDisabled icon={<Plus />} />
-          </Tooltip>
         </ButtonGroup>
       </PopoverHeader>
       <PopoverBody>
@@ -201,7 +204,7 @@ function ProPopoverContent({
             return (
               <ListItem key={host}>
                 <Button
-                  _hover={{ bg: "gray.100" }}
+                  _hover={{ bg: hoverBgColor }}
                   variant="unstyled"
                   w="full"
                   px="4"
@@ -249,10 +252,9 @@ function EmptyProInstances({ onConnect }: TEmptyProInstancesProps) {
           Learn more
         </Link>
       </Text>
-      <ButtonGroup width="full" marginTop="4" variant="primary">
-        <Button onClick={onConnect}>Login to Pro</Button>
-        <Button isDisabled>Create new Pro Instance</Button>
-      </ButtonGroup>
+      <Button marginTop="4" variant="primary" onClick={onConnect}>
+        Login to Pro
+      </Button>
     </VStack>
   )
 }

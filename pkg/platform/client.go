@@ -8,7 +8,6 @@ import (
 	"github.com/loft-sh/devpod/pkg/config"
 	"github.com/loft-sh/devpod/pkg/platform/client"
 	"github.com/loft-sh/devpod/pkg/provider"
-	"github.com/loft-sh/devpod/pkg/workspace"
 	"github.com/loft-sh/log"
 )
 
@@ -18,11 +17,11 @@ func InitClientFromHost(ctx context.Context, devPodConfig *config.Config, devPod
 		return nil, fmt.Errorf("provider from pro instance: %w", err)
 	}
 
-	return InitClientFromProvider(ctx, devPodConfig, provider.Name, log)
+	return InitClientFromProvider(ctx, devPodConfig, provider, log)
 }
 
 func InitClientFromProvider(ctx context.Context, devPodConfig *config.Config, providerName string, log log.Logger) (client.Client, error) {
-	configPath, err := LoftConfigPath(devPodConfig, providerName)
+	configPath, err := LoftConfigPath(devPodConfig.DefaultContext, providerName)
 	if err != nil {
 		return nil, fmt.Errorf("loft config path: %w", err)
 	}
@@ -30,24 +29,17 @@ func InitClientFromProvider(ctx context.Context, devPodConfig *config.Config, pr
 	return client.InitClientFromPath(ctx, configPath)
 }
 
-func ProviderFromHost(ctx context.Context, devPodConfig *config.Config, devPodProHost string, log log.Logger) (*provider.ProviderConfig, error) {
+func ProviderFromHost(ctx context.Context, devPodConfig *config.Config, devPodProHost string, log log.Logger) (string, error) {
 	proInstanceConfig, err := provider.LoadProInstanceConfig(devPodConfig.DefaultContext, devPodProHost)
 	if err != nil {
-		return nil, fmt.Errorf("load pro instance %s: %w", devPodProHost, err)
+		return "", fmt.Errorf("load pro instance %s: %w", devPodProHost, err)
 	}
 
-	provider, err := workspace.FindProvider(devPodConfig, proInstanceConfig.Provider, log)
-	if err != nil {
-		return nil, fmt.Errorf("find provider: %w", err)
-	} else if !provider.Config.IsProxyProvider() {
-		return nil, fmt.Errorf("provider is not a proxy provider")
-	}
-
-	return provider.Config, nil
+	return proInstanceConfig.Provider, nil
 }
 
-func LoftConfigPath(devPodConfig *config.Config, providerName string) (string, error) {
-	providerDir, err := provider.GetProviderDir(devPodConfig.DefaultContext, providerName)
+func LoftConfigPath(context string, providerName string) (string, error) {
+	providerDir, err := provider.GetProviderDir(context, providerName)
 	if err != nil {
 		return "", err
 	}

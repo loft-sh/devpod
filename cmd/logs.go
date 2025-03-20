@@ -6,6 +6,7 @@ import (
 	"io"
 	"os"
 
+	"github.com/loft-sh/devpod/cmd/completion"
 	"github.com/loft-sh/devpod/cmd/flags"
 	"github.com/loft-sh/devpod/pkg/agent"
 	clientpkg "github.com/loft-sh/devpod/pkg/client"
@@ -30,8 +31,11 @@ func NewLogsCmd(flags *flags.GlobalFlags) *cobra.Command {
 	startCmd := &cobra.Command{
 		Use:   "logs [flags] [workspace-path|workspace-name]",
 		Short: "Prints the workspace logs on the machine",
-		RunE: func(_ *cobra.Command, args []string) error {
-			return cmd.Run(context.Background(), args)
+		RunE: func(cobraCmd *cobra.Command, args []string) error {
+			return cmd.Run(cobraCmd.Context(), args)
+		},
+		ValidArgsFunction: func(rootCmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
+			return completion.GetWorkspaceSuggestions(rootCmd, cmd.Context, cmd.Provider, args, toComplete, cmd.Owner, log.Default)
 		},
 	}
 
@@ -45,7 +49,7 @@ func (cmd *LogsCmd) Run(ctx context.Context, args []string) error {
 		return err
 	}
 
-	baseClient, err := workspace.Get(ctx, devPodConfig, args, false, log.Default)
+	baseClient, err := workspace.Get(ctx, devPodConfig, args, false, cmd.Owner, log.Default)
 	if err != nil {
 		return err
 	}

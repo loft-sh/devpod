@@ -56,8 +56,6 @@ type RegisterVirtualClusterExpansion interface{}
 
 type ResetAccessKeyExpansion interface{}
 
-type RunnerExpansion interface{}
-
 type SelfExpansion interface{}
 
 type SelfSubjectAccessReviewExpansion interface{}
@@ -79,5 +77,7 @@ type TranslateVClusterResourceNameExpansion interface{}
 type UserExpansion interface{}
 
 type VirtualClusterInstanceExpansion interface{}
+
+type VirtualClusterSchemaExpansion interface{}
 
 type VirtualClusterTemplateExpansion interface{}

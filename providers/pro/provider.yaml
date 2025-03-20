@@ -1,0 +1,15 @@
+name: devpod-pro
+version: v0.0.1
+icon: https://devpod.sh/assets/devpod.svg
+home: https://github.com/loft-sh/devpod
+description: DevPod Pro
+options:
+  LOFT_CONFIG:
+    global: true
+    hidden: true
+    required: true
+    default: "${PROVIDER_FOLDER}/loft-config.json"
+exec:
+  daemon:
+    start: ${DEVPOD} pro daemon start
+    status: ${DEVPOD} pro daemon status

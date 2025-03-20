@@ -58,7 +58,7 @@ func (r *runner) setupContainer(
 	// Ensure workspace mounts cannot escape their content folder for local agents in proxy mode.
 	// There _might_ be a use-case that requires an allowlist for certain directories
 	// when running as a standalone runner with docker-in-docker set up. Let's add it when/if the time comes.
-	if r.WorkspaceConfig.Agent.Local == "true" && r.WorkspaceConfig.CLIOptions.Proxy {
+	if r.WorkspaceConfig.Agent.Local == "true" && r.WorkspaceConfig.CLIOptions.Platform.Enabled {
 		result.MergedConfig.Mounts = filterWorkspaceMounts(result.MergedConfig.Mounts, r.WorkspaceConfig.ContentFolder, r.Log)
 	}
 
@@ -107,7 +107,13 @@ func (r *runner) setupContainer(
 
 	// setup container
 	r.Log.Infof("Setup container...")
-	setupCommand := fmt.Sprintf("'%s' agent container setup --setup-info '%s' --container-workspace-info '%s'", agent.ContainerDevPodHelperLocation, compressed, workspaceConfigCompressed)
+
+	setupCommand := fmt.Sprintf(
+		"'%s' agent container setup --setup-info '%s' --container-workspace-info '%s'",
+		agent.ContainerDevPodHelperLocation,
+		compressed,
+		workspaceConfigCompressed,
+	)
 	if runtime.GOOS == "linux" || !isDockerDriver {
 		setupCommand += " --chown-workspace"
 	}
@@ -116,6 +122,11 @@ func (r *runner) setupContainer(
 	}
 	if r.WorkspaceConfig.Agent.InjectGitCredentials != "false" {
 		setupCommand += " --inject-git-credentials"
+	}
+	if r.WorkspaceConfig.CLIOptions.Platform.AccessKey != "" &&
+		r.WorkspaceConfig.CLIOptions.Platform.WorkspaceHost != "" &&
+		r.WorkspaceConfig.CLIOptions.Platform.PlatformHost != "" {
+		setupCommand += fmt.Sprintf(" --access-key '%s' --workspace-host '%s' --platform-host '%s'", r.WorkspaceConfig.CLIOptions.Platform.AccessKey, r.WorkspaceConfig.CLIOptions.Platform.WorkspaceHost, r.WorkspaceConfig.CLIOptions.Platform.PlatformHost)
 	}
 	if r.Log.GetLevel() == logrus.DebugLevel {
 		setupCommand += " --debug"
@@ -141,8 +152,8 @@ func (r *runner) setupContainer(
 				r.WorkspaceConfig.Agent.InjectGitCredentials != "false",
 				r.WorkspaceConfig.Agent.InjectDockerCredentials != "false",
 				config.GetMounts(result),
-				r.TunnelClient,
 				r.Log,
+				tunnelserver.WithPlatformOptions(&r.WorkspaceConfig.CLIOptions.Platform),
 			)
 		},
 	)

@@ -22,6 +22,7 @@ import {
   Stack,
   Text,
   useBreakpointValue,
+  useColorMode,
   useColorModeValue,
 } from "@chakra-ui/react"
 import { useQueryClient } from "@tanstack/react-query"
@@ -35,7 +36,6 @@ import {
   useForm,
 } from "react-hook-form"
 import { FiFolder } from "react-icons/fi"
-import { useBorderColor } from "../../../Theme"
 import { client } from "../../../client"
 import { ErrorMessageBox, ExampleCard } from "../../../components"
 import { RECOMMENDED_PROVIDER_SOURCES } from "../../../constants"
@@ -80,8 +80,9 @@ export function SetupProviderSourceForm({
   const providerSource = watch(FieldName.PROVIDER_SOURCE, "")
   const providerName = watch(FieldName.PROVIDER_NAME, undefined)
   const queryClient = useQueryClient()
-  const borderColor = useBorderColor()
+  const borderColor = useColorModeValue("gray.200", "gray.600")
   const hoverBackgroundColor = useColorModeValue("gray.50", "gray.800")
+  const { colorMode } = useColorMode()
 
   const {
     mutate: addProvider,
@@ -249,7 +250,11 @@ export function SetupProviderSourceForm({
                   <ExampleCard
                     size={exampleCardSize}
                     key={source.name}
-                    image={source.image}
+                    image={
+                      colorMode == "dark" && source.imageDarkMode
+                        ? source.imageDarkMode
+                        : source.image
+                    }
                     name={source.name}
                     isSelected={providerSource === source.name}
                     isDisabled={isLoading}
@@ -268,7 +273,11 @@ export function SetupProviderSourceForm({
                   <ExampleCard
                     size={exampleCardSize}
                     key={source.name}
-                    image={source.image}
+                    image={
+                      colorMode == "dark" && source.imageDarkMode
+                        ? source.imageDarkMode
+                        : source.image
+                    }
                     name={source.name}
                     isDisabled={isLoading}
                     isSelected={providerSource === source.name}
@@ -334,7 +343,7 @@ export function SetupProviderSourceForm({
             </HStack>
           </FormControl>
 
-          <Container color="gray.600" maxWidth="container.md">
+          <Container color="gray.700" _dark={{ color: "gray.200" }} maxWidth="container.md">
             {showCustom.manual && (
               <FormControl isRequired isInvalid={exists(providerSourceError)}>
                 <FormLabel>Source</FormLabel>
@@ -363,10 +372,8 @@ export function SetupProviderSourceForm({
 
             {!formState.isDirty && (
               <>
-                <Text color="gray.500" fontWeight="bold">
-                  Choose your provider
-                </Text>
-                <Text color="gray.500" marginBottom="8">
+                <Text fontWeight="bold">Choose your provider</Text>
+                <Text marginBottom="8">
                   Providers determine how and where your workspaces run. They connect to the cloud
                   platform - or local environment - of your choice and spin up your workspaces. You
                   can choose from a number of pre-built providers, or connect your own.
@@ -478,7 +485,7 @@ type TCustomProviderInputProps = Readonly<{
 function CustomProviderInput({ field, isInvalid, onAccept }: TCustomProviderInputProps) {
   const backgroundColor = useColorModeValue("white", "black")
   const handleSelectFileClicked = useCallback(async () => {
-    const selected = await client.selectFromFileYaml()
+    const selected = await client.selectFileYaml()
     if (typeof selected === "string") {
       field.onChange(selected)
       field.onBlur()

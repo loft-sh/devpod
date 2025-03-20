@@ -17,7 +17,7 @@ import (
 	"github.com/loft-sh/devpod/pkg/client/clientimplementation"
 	"github.com/loft-sh/devpod/pkg/command"
 	"github.com/loft-sh/devpod/pkg/credentials"
-	"github.com/loft-sh/devpod/pkg/daemon"
+	agentdaemon "github.com/loft-sh/devpod/pkg/daemon/agent"
 	"github.com/loft-sh/devpod/pkg/devcontainer"
 	config2 "github.com/loft-sh/devpod/pkg/devcontainer/config"
 	"github.com/loft-sh/devpod/pkg/devcontainer/crane"
@@ -70,14 +70,16 @@ func (cmd *UpCmd) Run(ctx context.Context) error {
 	}
 
 	// make sure daemon doesn't shut us down while we are doing things
-	agent.CreateWorkspaceBusyFile(workspaceInfo.Origin)
-	defer agent.DeleteWorkspaceBusyFile(workspaceInfo.Origin)
+	if !workspaceInfo.CLIOptions.Platform.Enabled {
+		agent.CreateWorkspaceBusyFile(workspaceInfo.Origin)
+		defer agent.DeleteWorkspaceBusyFile(workspaceInfo.Origin)
+	}
 
 	// initialize the workspace
 	cancelCtx, cancel := context.WithCancel(ctx)
 	defer cancel()
 
-	tunnelClient, logger, credentialsDir, err := initWorkspace(cancelCtx, cancel, workspaceInfo, cmd.Debug, !workspaceInfo.CLIOptions.Proxy && !workspaceInfo.CLIOptions.DisableDaemon)
+	tunnelClient, logger, credentialsDir, err := initWorkspace(cancelCtx, cancel, workspaceInfo, cmd.Debug, !workspaceInfo.CLIOptions.Platform.Enabled && !workspaceInfo.CLIOptions.DisableDaemon)
 	if err != nil {
 		err1 := clientimplementation.DeleteWorkspaceFolder(workspaceInfo.Workspace.Context, workspaceInfo.Workspace.ID, workspaceInfo.Workspace.SSHConfigPath, logger)
 		if err1 != nil {
@@ -101,7 +103,7 @@ func (cmd *UpCmd) Run(ctx context.Context) error {
 
 func (cmd *UpCmd) up(ctx context.Context, workspaceInfo *provider2.AgentWorkspaceInfo, tunnelClient tunnel.TunnelClient, logger log.Logger) error {
 	// create devcontainer
-	result, err := cmd.devPodUp(ctx, workspaceInfo, tunnelClient, logger)
+	result, err := cmd.devPodUp(ctx, workspaceInfo, logger)
 	if err != nil {
 		return err
 	}
@@ -119,8 +121,8 @@ func (cmd *UpCmd) up(ctx context.Context, workspaceInfo *provider2.AgentWorkspac
 	return nil
 }
 
-func (cmd *UpCmd) devPodUp(ctx context.Context, workspaceInfo *provider2.AgentWorkspaceInfo, tunnelClient tunnel.TunnelClient, log log.Logger) (*config2.Result, error) {
-	runner, err := CreateRunner(workspaceInfo, tunnelClient, log)
+func (cmd *UpCmd) devPodUp(ctx context.Context, workspaceInfo *provider2.AgentWorkspaceInfo, log log.Logger) (*config2.Result, error) {
+	runner, err := CreateRunner(workspaceInfo, log)
 	if err != nil {
 		return nil, err
 	}
@@ -137,8 +139,8 @@ func (cmd *UpCmd) devPodUp(ctx context.Context, workspaceInfo *provider2.AgentWo
 	return result, nil
 }
 
-func CreateRunner(workspaceInfo *provider2.AgentWorkspaceInfo, tunnelClient tunnel.TunnelClient, log log.Logger) (devcontainer.Runner, error) {
-	return devcontainer.NewRunner(agent.ContainerDevPodHelperLocation, agent.DefaultAgentDownloadURL(), workspaceInfo, tunnelClient, log)
+func CreateRunner(workspaceInfo *provider2.AgentWorkspaceInfo, log log.Logger) (devcontainer.Runner, error) {
+	return devcontainer.NewRunner(agent.ContainerDevPodHelperLocation, agent.DefaultAgentDownloadURL(), workspaceInfo, log)
 }
 
 func InitContentFolder(workspaceInfo *provider2.AgentWorkspaceInfo, log log.Logger) (bool, error) {
@@ -242,7 +244,7 @@ func initWorkspace(ctx context.Context, cancel context.CancelFunc, workspaceInfo
 	if workspaceInfo.Agent.IsDockerDriver() && err != nil && !local {
 		errChan <- configureDockerDaemon(ctx, logger)
 	} else {
-		logger.Debug("Skipping configuring daemon")
+		logger.Debug("Skipping configuring docker daemon")
 		errChan <- nil
 	}
 
@@ -259,7 +261,7 @@ func initWorkspace(ctx context.Context, cancel context.CancelFunc, workspaceInfo
 func prepareWorkspace(ctx context.Context, workspaceInfo *provider2.AgentWorkspaceInfo, client tunnel.TunnelClient, helper string, log log.Logger) error {
 	// change content folder if source is local folder in proxy mode
 	// to a folder that's known ahead of time inside of DEVPOD_HOME
-	if workspaceInfo.CLIOptions.Proxy && workspaceInfo.Workspace.Source.LocalFolder != "" {
+	if workspaceInfo.CLIOptions.Platform.Enabled && workspaceInfo.Workspace.Source.LocalFolder != "" {
 		workspaceInfo.ContentFolder = agent.GetAgentWorkspaceContentDir(workspaceInfo.Origin)
 	}
 
@@ -283,14 +285,15 @@ func prepareWorkspace(ctx context.Context, workspaceInfo *provider2.AgentWorkspa
 		}
 
 		if workspaceInfo.CLIOptions.Recreate && !workspaceInfo.CLIOptions.Reset && exists {
-			log.Info("Rebuiling without resetting a git based workspace, keeping old content folder")
+			log.Info("Rebuilding without resetting a git based workspace, keeping old content folder")
 			return nil
 		}
 
 		if crane.ShouldUse(&workspaceInfo.CLIOptions) {
-			log.Infof("Pulling devcontainer spec from %v", workspaceInfo.CLIOptions.EnvironmentTemplate)
+			log.Infof("Pulling devcontainer spec from %v", workspaceInfo.CLIOptions.Platform.EnvironmentTemplate)
 			return nil
 		}
+
 		return agent.CloneRepositoryForWorkspace(ctx,
 			&workspaceInfo.Workspace.Source,
 			&workspaceInfo.Agent,
@@ -393,7 +396,7 @@ func installDaemon(workspaceInfo *provider2.AgentWorkspaceInfo, log log.Logger) 
 	}
 
 	log.Debugf("Installing DevPod daemon into server...")
-	err := daemon.InstallDaemon(workspaceInfo.Agent.DataPath, workspaceInfo.CLIOptions.DaemonInterval, log)
+	err := agentdaemon.InstallDaemon(workspaceInfo.Agent.DataPath, workspaceInfo.CLIOptions.DaemonInterval, log)
 	if err != nil {
 		return errors.Wrap(err, "install daemon")
 	}

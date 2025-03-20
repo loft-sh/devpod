@@ -6,6 +6,7 @@ import (
 	"net/url"
 	"strings"
 
+	"github.com/blang/semver"
 	proflags "github.com/loft-sh/devpod/cmd/pro/flags"
 	providercmd "github.com/loft-sh/devpod/cmd/provider"
 	"github.com/loft-sh/devpod/pkg/config"
@@ -13,6 +14,7 @@ import (
 	"github.com/loft-sh/devpod/pkg/platform/client"
 	"github.com/loft-sh/devpod/pkg/provider"
 	"github.com/loft-sh/devpod/pkg/types"
+	versionpkg "github.com/loft-sh/devpod/pkg/version"
 	"github.com/loft-sh/devpod/pkg/workspace"
 	"github.com/loft-sh/log"
 	"github.com/mgutz/ansi"
@@ -141,9 +143,28 @@ func (cmd *LoginCmd) Run(ctx context.Context, fullURL string, log log.Logger) er
 			CreationTimestamp: types.Now(),
 		}
 
-		err = cmd.addLoftProvider(devPodConfig, fullURL, log)
+		remoteVersion, err := platform.GetDevPodVersion(fullURL)
 		if err != nil {
 			return err
+		}
+		rv, err := semver.Parse(strings.TrimPrefix(remoteVersion, "v"))
+		if err != nil {
+			return fmt.Errorf("invalid version %s: %w", remoteVersion, err)
+		}
+		if rv.LT(semver.Version{Major: 0, Minor: 6, Patch: 999}) && remoteVersion != versionpkg.DevVersion {
+			log.Debug("remote version < 0.7.0, installing proxy provider")
+			// proxy providers are deprecated and shouldn't be used
+			// unless explicitly the server version is below 0.7.0
+			err = cmd.addLoftProvider(devPodConfig, fullURL, log)
+			if err != nil {
+				return err
+			}
+		} else {
+			// add built-in pro (daemon) provider
+			_, err = workspace.AddProvider(devPodConfig, cmd.Provider, "pro", log)
+			if err != nil {
+				return err
+			}
 		}
 
 		err = provider.SaveProInstanceConfig(devPodConfig.DefaultContext, currentInstance)
@@ -181,7 +202,7 @@ func (cmd *LoginCmd) Run(ctx context.Context, fullURL string, log log.Logger) er
 		}
 	}
 
-	log.Donef("Successfully configured Loft DevPod Pro")
+	log.Donef("Successfully configured DevPod Pro")
 	return nil
 }
 
@@ -231,7 +252,7 @@ func (cmd *LoginCmd) resolveProviderSource(url string) error {
 }
 
 func login(ctx context.Context, devPodConfig *config.Config, url string, providerName string, accessKey string, skipBrowserLogin, forceBrowser bool, log log.Logger) error {
-	configPath, err := platform.LoftConfigPath(devPodConfig, providerName)
+	configPath, err := platform.LoftConfigPath(devPodConfig.DefaultContext, providerName)
 	if err != nil {
 		return err
 	}
@@ -283,12 +304,15 @@ binaries:
     - os: linux
       arch: arm64
       path: /usr/local/bin/devpod
-    - os: darwin
+    - os: darwin 
       arch: amd64
       path: /usr/local/bin/devpod
     - os: darwin
       arch: arm64
       path: /usr/local/bin/devpod
+    - os: windows
+      arch: amd64
+      path: "C:\\Users\\pasca\\workspace\\devpod\\desktop\\src-tauri\\bin\\devpod-cli-x86_64-pc-windows-msvc.exe"
 exec:
   proxy:
     up: |-
@@ -303,6 +327,11 @@ exec:
       ${PRO_PROVIDER} pro provider delete
     health: |-
       ${PRO_PROVIDER} pro provider health
+    daemon:
+      start: |-
+        ${PRO_PROVIDER} pro provider daemon start
+      status: |-
+        ${PRO_PROVIDER} pro provider daemon status
     create:
       workspace: |-
         ${PRO_PROVIDER} pro provider create workspace

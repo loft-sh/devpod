@@ -3,13 +3,13 @@
 package v1
 
 import (
-	"context"
+	context "context"
 	time "time"
 
-	managementv1 "github.com/loft-sh/api/v4/pkg/apis/management/v1"
+	apismanagementv1 "github.com/loft-sh/api/v4/pkg/apis/management/v1"
 	versioned "github.com/loft-sh/api/v4/pkg/clientset/versioned"
 	internalinterfaces "github.com/loft-sh/api/v4/pkg/informers/externalversions/internalinterfaces"
-	v1 "github.com/loft-sh/api/v4/pkg/listers/management/v1"
+	managementv1 "github.com/loft-sh/api/v4/pkg/listers/management/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	runtime "k8s.io/apimachinery/pkg/runtime"
 	watch "k8s.io/apimachinery/pkg/watch"
@@ -20,7 +20,7 @@ import (
 // OIDCClients.
 type OIDCClientInformer interface {
 	Informer() cache.SharedIndexInformer
-	Lister() v1.OIDCClientLister
+	Lister() managementv1.OIDCClientLister
 }
 
 type oIDCClientInformer struct {
@@ -54,7 +54,7 @@ func NewFilteredOIDCClientInformer(client versioned.Interface, resyncPeriod time
 				return client.ManagementV1().OIDCClients().Watch(context.TODO(), options)
 			},
 		},
-		&managementv1.OIDCClient{},
+		&apismanagementv1.OIDCClient{},
 		resyncPeriod,
 		indexers,
 	)
@@ -65,9 +65,9 @@ func (f *oIDCClientInformer) defaultInformer(client versioned.Interface, resyncP
 }
 
 func (f *oIDCClientInformer) Informer() cache.SharedIndexInformer {
-	return f.factory.InformerFor(&managementv1.OIDCClient{}, f.defaultInformer)
+	return f.factory.InformerFor(&apismanagementv1.OIDCClient{}, f.defaultInformer)
 }
 
-func (f *oIDCClientInformer) Lister() v1.OIDCClientLister {
-	return v1.NewOIDCClientLister(f.Informer().GetIndexer())
+func (f *oIDCClientInformer) Lister() managementv1.OIDCClientLister {
+	return managementv1.NewOIDCClientLister(f.Informer().GetIndexer())
 }

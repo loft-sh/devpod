@@ -141,13 +141,14 @@ func templateUpdateRequired(instance *managementv1.DevPodWorkspaceInstance) bool
 
 func printInstanceInfo(instance *managementv1.DevPodWorkspaceInstance, log log.Logger) {
 	workspaceConfig, _ := json.Marshal(struct {
-		Runner     storagev1.RunnerRef
+		// Cluster    storagev1.WorkspaceTargetNamespace
 		Template   *storagev1.TemplateRef
 		Parameters string
 	}{
-		Runner:     instance.Spec.RunnerRef,
+		// Cluster:    cluster,
+		// FIXME: Bring back runner ref
 		Template:   instance.Spec.TemplateRef,
 		Parameters: instance.Spec.Parameters,
 	})
-	log.Info("Starting pro workspace with configuration", string(workspaceConfig))
+	log.Debug("Starting pro workspace with configuration", string(workspaceConfig))
 }

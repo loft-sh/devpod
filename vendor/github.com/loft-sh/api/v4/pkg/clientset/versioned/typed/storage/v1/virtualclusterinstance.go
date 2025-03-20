@@ -3,9 +3,9 @@
 package v1
 
 import (
-	"context"
+	context "context"
 
-	v1 "github.com/loft-sh/api/v4/pkg/apis/storage/v1"
+	storagev1 "github.com/loft-sh/api/v4/pkg/apis/storage/v1"
 	scheme "github.com/loft-sh/api/v4/pkg/clientset/versioned/scheme"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	types "k8s.io/apimachinery/pkg/types"
@@ -21,31 +21,32 @@ type VirtualClusterInstancesGetter interface {
 
 // VirtualClusterInstanceInterface has methods to work with VirtualClusterInstance resources.
 type VirtualClusterInstanceInterface interface {
-	Create(ctx context.Context, virtualClusterInstance *v1.VirtualClusterInstance, opts metav1.CreateOptions) (*v1.VirtualClusterInstance, error)
-	Update(ctx context.Context, virtualClusterInstance *v1.VirtualClusterInstance, opts metav1.UpdateOptions) (*v1.VirtualClusterInstance, error)
+	Create(ctx context.Context, virtualClusterInstance *storagev1.VirtualClusterInstance, opts metav1.CreateOptions) (*storagev1.VirtualClusterInstance, error)
+	Update(ctx context.Context, virtualClusterInstance *storagev1.VirtualClusterInstance, opts metav1.UpdateOptions) (*storagev1.VirtualClusterInstance, error)
 	Delete(ctx context.Context, name string, opts metav1.DeleteOptions) error
 	DeleteCollection(ctx context.Context, opts metav1.DeleteOptions, listOpts metav1.ListOptions) error
-	Get(ctx context.Context, name string, opts metav1.GetOptions) (*v1.VirtualClusterInstance, error)
-	List(ctx context.Context, opts metav1.ListOptions) (*v1.VirtualClusterInstanceList, error)
+	Get(ctx context.Context, name string, opts metav1.GetOptions) (*storagev1.VirtualClusterInstance, error)
+	List(ctx context.Context, opts metav1.ListOptions) (*storagev1.VirtualClusterInstanceList, error)
 	Watch(ctx context.Context, opts metav1.ListOptions) (watch.Interface, error)
-	Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts metav1.PatchOptions, subresources ...string) (result *v1.VirtualClusterInstance, err error)
+	Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts metav1.PatchOptions, subresources ...string) (result *storagev1.VirtualClusterInstance, err error)
 	VirtualClusterInstanceExpansion
 }
 
 // virtualClusterInstances implements VirtualClusterInstanceInterface
 type virtualClusterInstances struct {
-	*gentype.ClientWithList[*v1.VirtualClusterInstance, *v1.VirtualClusterInstanceList]
+	*gentype.ClientWithList[*storagev1.VirtualClusterInstance, *storagev1.VirtualClusterInstanceList]
 }
 
 // newVirtualClusterInstances returns a VirtualClusterInstances
 func newVirtualClusterInstances(c *StorageV1Client, namespace string) *virtualClusterInstances {
 	return &virtualClusterInstances{
-		gentype.NewClientWithList[*v1.VirtualClusterInstance, *v1.VirtualClusterInstanceList](
+		gentype.NewClientWithList[*storagev1.VirtualClusterInstance, *storagev1.VirtualClusterInstanceList](
 			"virtualclusterinstances",
 			c.RESTClient(),
 			scheme.ParameterCodec,
 			namespace,
-			func() *v1.VirtualClusterInstance { return &v1.VirtualClusterInstance{} },
-			func() *v1.VirtualClusterInstanceList { return &v1.VirtualClusterInstanceList{} }),
+			func() *storagev1.VirtualClusterInstance { return &storagev1.VirtualClusterInstance{} },
+			func() *storagev1.VirtualClusterInstanceList { return &storagev1.VirtualClusterInstanceList{} },
+		),
 	}
 }

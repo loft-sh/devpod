@@ -82,6 +82,9 @@ func (k *KubernetesDriver) getDevContainerPvc(ctx context.Context, id string) (*
 }
 
 func (k *KubernetesDriver) StopDevContainer(ctx context.Context, workspaceId string) error {
+	k.Log.Debugf("Stopping devcontainer for workspace '%s'", workspaceId)
+	defer k.Log.Debugf("Done stopping devcontainer for workspace '%s'", workspaceId)
+
 	workspaceId = getID(workspaceId)
 
 	// delete pod
@@ -94,6 +97,9 @@ func (k *KubernetesDriver) StopDevContainer(ctx context.Context, workspaceId str
 }
 
 func (k *KubernetesDriver) DeleteDevContainer(ctx context.Context, workspaceId string) error {
+	k.Log.Debugf("Deleting devcontainer for workspace '%s'", workspaceId)
+	defer k.Log.Debugf("Done deleting devcontainer for workspace '%s'", workspaceId)
+
 	workspaceId = getID(workspaceId)
 
 	// delete pod

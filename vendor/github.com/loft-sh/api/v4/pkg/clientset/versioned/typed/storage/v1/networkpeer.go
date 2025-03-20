@@ -3,9 +3,9 @@
 package v1
 
 import (
-	"context"
+	context "context"
 
-	v1 "github.com/loft-sh/api/v4/pkg/apis/storage/v1"
+	storagev1 "github.com/loft-sh/api/v4/pkg/apis/storage/v1"
 	scheme "github.com/loft-sh/api/v4/pkg/clientset/versioned/scheme"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	types "k8s.io/apimachinery/pkg/types"
@@ -21,33 +21,34 @@ type NetworkPeersGetter interface {
 
 // NetworkPeerInterface has methods to work with NetworkPeer resources.
 type NetworkPeerInterface interface {
-	Create(ctx context.Context, networkPeer *v1.NetworkPeer, opts metav1.CreateOptions) (*v1.NetworkPeer, error)
-	Update(ctx context.Context, networkPeer *v1.NetworkPeer, opts metav1.UpdateOptions) (*v1.NetworkPeer, error)
+	Create(ctx context.Context, networkPeer *storagev1.NetworkPeer, opts metav1.CreateOptions) (*storagev1.NetworkPeer, error)
+	Update(ctx context.Context, networkPeer *storagev1.NetworkPeer, opts metav1.UpdateOptions) (*storagev1.NetworkPeer, error)
 	// Add a +genclient:noStatus comment above the type to avoid generating UpdateStatus().
-	UpdateStatus(ctx context.Context, networkPeer *v1.NetworkPeer, opts metav1.UpdateOptions) (*v1.NetworkPeer, error)
+	UpdateStatus(ctx context.Context, networkPeer *storagev1.NetworkPeer, opts metav1.UpdateOptions) (*storagev1.NetworkPeer, error)
 	Delete(ctx context.Context, name string, opts metav1.DeleteOptions) error
 	DeleteCollection(ctx context.Context, opts metav1.DeleteOptions, listOpts metav1.ListOptions) error
-	Get(ctx context.Context, name string, opts metav1.GetOptions) (*v1.NetworkPeer, error)
-	List(ctx context.Context, opts metav1.ListOptions) (*v1.NetworkPeerList, error)
+	Get(ctx context.Context, name string, opts metav1.GetOptions) (*storagev1.NetworkPeer, error)
+	List(ctx context.Context, opts metav1.ListOptions) (*storagev1.NetworkPeerList, error)
 	Watch(ctx context.Context, opts metav1.ListOptions) (watch.Interface, error)
-	Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts metav1.PatchOptions, subresources ...string) (result *v1.NetworkPeer, err error)
+	Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts metav1.PatchOptions, subresources ...string) (result *storagev1.NetworkPeer, err error)
 	NetworkPeerExpansion
 }
 
 // networkPeers implements NetworkPeerInterface
 type networkPeers struct {
-	*gentype.ClientWithList[*v1.NetworkPeer, *v1.NetworkPeerList]
+	*gentype.ClientWithList[*storagev1.NetworkPeer, *storagev1.NetworkPeerList]
 }
 
 // newNetworkPeers returns a NetworkPeers
 func newNetworkPeers(c *StorageV1Client) *networkPeers {
 	return &networkPeers{
-		gentype.NewClientWithList[*v1.NetworkPeer, *v1.NetworkPeerList](
+		gentype.NewClientWithList[*storagev1.NetworkPeer, *storagev1.NetworkPeerList](
 			"networkpeers",
 			c.RESTClient(),
 			scheme.ParameterCodec,
 			"",
-			func() *v1.NetworkPeer { return &v1.NetworkPeer{} },
-			func() *v1.NetworkPeerList { return &v1.NetworkPeerList{} }),
+			func() *storagev1.NetworkPeer { return &storagev1.NetworkPeer{} },
+			func() *storagev1.NetworkPeerList { return &storagev1.NetworkPeerList{} },
+		),
 	}
 }

@@ -93,10 +93,6 @@ type DevPodWorkspacePresetVersion struct {
 	// EnvironmentRef stores reference to DevPodEnvironmentTemplate
 	// +optional
 	EnvironmentRef *EnvironmentRef `json:"environmentRef,omitempty"`
-
-	// UseProjectGitCredentials specifies if the project git credentials should be used instead of local ones for this environment
-	// +optional
-	UseProjectGitCredentials bool `json:"useProjectGitCredentials,omitempty"`
 }
 
 // DevPodWorkspacePresetStatus holds the status

@@ -3,13 +3,13 @@
 package v1
 
 import (
-	"context"
+	context "context"
 	time "time"
 
-	storagev1 "github.com/loft-sh/api/v4/pkg/apis/storage/v1"
+	apisstoragev1 "github.com/loft-sh/api/v4/pkg/apis/storage/v1"
 	versioned "github.com/loft-sh/api/v4/pkg/clientset/versioned"
 	internalinterfaces "github.com/loft-sh/api/v4/pkg/informers/externalversions/internalinterfaces"
-	v1 "github.com/loft-sh/api/v4/pkg/listers/storage/v1"
+	storagev1 "github.com/loft-sh/api/v4/pkg/listers/storage/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	runtime "k8s.io/apimachinery/pkg/runtime"
 	watch "k8s.io/apimachinery/pkg/watch"
@@ -20,7 +20,7 @@ import (
 // SharedSecrets.
 type SharedSecretInformer interface {
 	Informer() cache.SharedIndexInformer
-	Lister() v1.SharedSecretLister
+	Lister() storagev1.SharedSecretLister
 }
 
 type sharedSecretInformer struct {
@@ -55,7 +55,7 @@ func NewFilteredSharedSecretInformer(client versioned.Interface, namespace strin
 				return client.StorageV1().SharedSecrets(namespace).Watch(context.TODO(), options)
 			},
 		},
-		&storagev1.SharedSecret{},
+		&apisstoragev1.SharedSecret{},
 		resyncPeriod,
 		indexers,
 	)
@@ -66,9 +66,9 @@ func (f *sharedSecretInformer) defaultInformer(client versioned.Interface, resyn
 }
 
 func (f *sharedSecretInformer) Informer() cache.SharedIndexInformer {
-	return f.factory.InformerFor(&storagev1.SharedSecret{}, f.defaultInformer)
+	return f.factory.InformerFor(&apisstoragev1.SharedSecret{}, f.defaultInformer)
 }
 
-func (f *sharedSecretInformer) Lister() v1.SharedSecretLister {
-	return v1.NewSharedSecretLister(f.Informer().GetIndexer())
+func (f *sharedSecretInformer) Lister() storagev1.SharedSecretLister {
+	return storagev1.NewSharedSecretLister(f.Informer().GetIndexer())
 }

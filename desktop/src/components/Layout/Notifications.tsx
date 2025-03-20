@@ -48,7 +48,7 @@ export function Notifications({
   const actions = useAllWorkspaceActions()
   const backgroundColor = useColorModeValue("white", "gray.900")
   const subheadingTextColor = useColorModeValue("gray.500", "gray.400")
-  const actionHoverColor = useColorModeValue("gray.100", "gray.800")
+  const actionHoverColor = useColorModeValue("gray.100", "gray.700")
   const hasActiveActions = actions.active.length > 0
   const settings = useSettings()
   const { pendingUpdate, install: installUpdate, isInstalling, isInstallDisabled } = useUpdate()
@@ -62,7 +62,7 @@ export function Notifications({
   return (
     <Popover placement="bottom">
       <PopoverTrigger>
-        <Center marginRight="4">
+        <Center>
           <IconButton
             variant="ghost"
             size="md"
