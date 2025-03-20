@@ -26,7 +26,7 @@
     "@emotion/styled": "11.11.0",
     "@headlessui/react": "1.7.17",
     "@kubernetes/client-node": "1.0.0",
-    "@loft-enterprise/client": "https://github.com/loft-sh/loft-javascript-client#v4.3.0-devpod.alpha.1",
+    "@loft-enterprise/client": "https://github.com/loft-sh/loft-javascript-client#v4.3.0-devpod.alpha.11",
     "@tanstack/react-query": "4.36.1",
     "@tanstack/react-query-devtools": "4.36.1",
     "@tanstack/react-table": "8.10.7",

@@ -157,6 +157,101 @@ type DevPodWorkspacePodTemplate struct {
 	Spec DevPodWorkspacePodTemplateSpec `json:"spec,omitempty"`
 }
 
+// DevPodWorkspacePodResourceRequirements are less restrictive corev1.ResourceRequirements.
+type DevPodWorkspaceResourceRequirements struct {
+	// Limits describes the maximum amount of compute resources allowed.
+	// +optional
+	Limits map[corev1.ResourceName]string `json:"limits,omitempty"`
+
+	// Requests describes the minimum amount of compute resources required.
+	// +optional
+	Requests map[corev1.ResourceName]string `json:"requests,omitempty"`
+
+	// Claims lists the names of resources, defined in spec.resourceClaims,
+	// that are used by this container.
+	// +optional
+	Claims []corev1.ResourceClaim `json:"claims,omitempty"`
+}
+
+// // DevPodWorkspacePodResourceRequirements is a less restrictive corev1.Container.
+type DevPodWorkspaceContainer struct {
+	// Name of the container specified as a DNS_LABEL.
+	Name string `json:"name"`
+	// Container image name.
+	// +optional
+	Image string `json:"image,omitempty"`
+	// Entrypoint array. Not executed within a shell.
+	// +optional
+	// +listType=atomic
+	Command []string `json:"command,omitempty"`
+	// Arguments to the entrypoint.
+	// +optional
+	// +listType=atomic
+	Args []string `json:"args,omitempty"`
+	// Container's working directory.
+	// +optional
+	WorkingDir string `json:"workingDir,omitempty"`
+	// List of ports to expose from the container. Not specifying a port here
+	// +optional
+	Ports []corev1.ContainerPort `json:"ports,omitempty"`
+	// +optional
+	// +listType=atomic
+	EnvFrom []corev1.EnvFromSource `json:"envFrom,omitempty"`
+	// List of environment variables to set in the container.
+	// +optional
+	Env []corev1.EnvVar `json:"env,omitempty"`
+	// Compute Resources required by this container.
+	// +optional
+	Resources DevPodWorkspaceResourceRequirements `json:"resources,omitempty"`
+	// Resources resize policy for the container.
+	// +optional
+	// +listType=atomic
+	ResizePolicy []corev1.ContainerResizePolicy `json:"resizePolicy,omitempty"`
+	// RestartPolicy defines the restart behavior of individual containers in a pod.
+	// +optional
+	RestartPolicy *corev1.ContainerRestartPolicy `json:"restartPolicy,omitempty"`
+	// Pod volumes to mount into the container's filesystem.
+	// +optional
+	VolumeMounts []corev1.VolumeMount `json:"volumeMounts,omitempty"`
+	// volumeDevices is the list of block devices to be used by the container.
+	// +optional
+	VolumeDevices []corev1.VolumeDevice `json:"volumeDevices,omitempty"`
+	// Periodic probe of container liveness.
+	// +optional
+	LivenessProbe *corev1.Probe `json:"livenessProbe,omitempty"`
+	// Periodic probe of container service readiness.
+	// +optional
+	ReadinessProbe *corev1.Probe `json:"readinessProbe,omitempty"`
+	// StartupProbe indicates that the Pod has successfully initialized.
+	// +optional
+	StartupProbe *corev1.Probe `json:"startupProbe,omitempty"`
+	// Actions that the management system should take in response to container lifecycle events.
+	// +optional
+	Lifecycle *corev1.Lifecycle `json:"lifecycle,omitempty"`
+	// Optional: Path at which the file to which the container's termination message
+	// +optional
+	TerminationMessagePath string `json:"terminationMessagePath,omitempty"`
+	// Indicate how the termination message should be populated. File will use the contents of
+	// +optional
+	TerminationMessagePolicy corev1.TerminationMessagePolicy `json:"terminationMessagePolicy,omitempty"`
+	// Image pull policy.
+	// +optional
+	ImagePullPolicy corev1.PullPolicy `json:"imagePullPolicy,omitempty"`
+	// SecurityContext defines the security options the container should be run with.
+	// +optional
+	SecurityContext *corev1.SecurityContext `json:"securityContext,omitempty"`
+
+	// Whether this container should allocate a buffer for stdin in the container runtime.
+	// +optional
+	Stdin bool `json:"stdin,omitempty"`
+	// StdinOnce default is false
+	// +optional
+	StdinOnce bool `json:"stdinOnce,omitempty"`
+	// TTY default is false.
+	// +optional
+	TTY bool `json:"tty,omitempty"`
+}
+
 // DevPodWorkspacePodTemplateSpec is a less restrictive PodSpec
 type DevPodWorkspacePodTemplateSpec struct {
 	// List of volumes that can be mounted by containers belonging to the pod.
@@ -165,11 +260,11 @@ type DevPodWorkspacePodTemplateSpec struct {
 
 	// List of initialization containers belonging to the pod.
 	// +optional
-	InitContainers []corev1.Container `json:"initContainers,omitempty"`
+	InitContainers []DevPodWorkspaceContainer `json:"initContainers,omitempty"`
 
 	// List of containers belonging to the pod.
 	// +optional
-	Containers []corev1.Container `json:"containers,omitempty"`
+	Containers []DevPodWorkspaceContainer `json:"containers,omitempty"`
 
 	// Restart policy for all containers within the pod.
 	// +optional
@@ -319,7 +414,7 @@ type DevPodWorkspacePodTemplateSpec struct {
 	// containers in the pod. It supports specifying Requests and Limits for
 	// "cpu" and "memory" resource names only. ResourceClaims are not supported.
 	// +optional
-	Resources *corev1.ResourceRequirements `json:"resources,omitempty"`
+	Resources *DevPodWorkspaceResourceRequirements `json:"resources,omitempty"`
 }
 
 type DevPodWorkspaceVolumeClaimTemplate struct {
