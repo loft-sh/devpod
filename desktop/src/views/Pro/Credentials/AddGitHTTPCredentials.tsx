@@ -200,9 +200,21 @@ export function AddGitHTTPCredentials({ isDisabled, onCreate }: TCreateGitHTTPCr
           error={errors.nameError}>
           <Input
             spellCheck={false}
-            placeholder="Git Token"
+            placeholder="pat"
             type="text"
-            {...register(FieldName.NAME)}
+            {...register(FieldName.NAME, {
+              validate: (value) => {
+                if (!value) {
+                  return "Name is required"
+                }
+
+                if (!/^[a-z][a-z0-9-_]*$/.test(value)) {
+                  return "Name can only contain lowercase letters, numbers, - and _"
+                }
+
+                return undefined
+              },
+            })}
           />
         </FormSection>
       </VStack>
