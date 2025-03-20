@@ -30,9 +30,9 @@ func getProjectImage(link string) string {
 	if err != nil {
 		return ""
 	}
+	defer res.Body.Close()
 
 	content, err := io.ReadAll(res.Body)
-	_ = res.Body.Close()
 	if err != nil {
 		return ""
 	}

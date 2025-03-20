@@ -50,7 +50,7 @@ func NewStartCmd(flags *proflags.GlobalFlags) *cobra.Command {
 
 	c.Flags().StringVar(&cmd.Host, "host", "", "The pro instance to use")
 	_ = c.MarkFlagRequired("host")
-	c.RegisterFlagCompletionFunc("host", func(rootCmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
+	_ = c.RegisterFlagCompletionFunc("host", func(rootCmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
 		return completion.GetPlatformHostSuggestions(rootCmd, cmd.Context, cmd.Provider, args, toComplete, cmd.Owner, cmd.Log)
 	})
 
@@ -110,27 +110,26 @@ func withGracefulShutdown(ctx context.Context, log log.Logger) (context.Context,
 	signal.Notify(sigChan, os.Interrupt, syscall.SIGTERM, syscall.SIGHUP, syscall.SIGQUIT)
 
 	go func() {
-		shutdownStarted := false
 		for {
 			select {
 			case sig := <-sigChan:
-				if !shutdownStarted {
-					shutdownStarted = true
-					log.Infof("Received signal %s, starting graceful shutdown...", sig)
-					cancel()
-				} else {
-					log.Warnf("Received second signal %s, forcing immediate shutdown", sig)
-					os.Exit(1)
-				}
+				log.Infof("Received signal %s, starting graceful shutdown...", sig)
+				cancel()
 			case <-ctx.Done():
 				return
 			}
 		}
 	}()
+	go func() {
+		<-ctx.Done()
+		<-sigChan
+		// force shutdown if context is done and we receive another signal
+		os.Exit(1)
+	}()
 
 	return ctx, func() {
-		signal.Stop(sigChan)
 		cancel()
+		signal.Stop(sigChan)
 	}
 }
 

@@ -62,6 +62,15 @@ If the workspace is not found, you can use the --ignore-not-found flag to treat 
 
 // Run runs the command logic
 func (cmd *DeleteCmd) Run(ctx context.Context, devPodConfig *config.Config, args []string) error {
+	if len(args) == 0 {
+		workspaceName, err := workspace.Delete(ctx, devPodConfig, args, cmd.IgnoreNotFound, cmd.Force, cmd.DeleteOptions, cmd.Owner, log.Default)
+		if err != nil {
+			return err
+		}
+		log.Default.Donef("Successfully deleted workspace '%s'", workspaceName)
+		return nil
+	}
+
 	for _, arg := range args {
 		workspaceName, err := workspace.Delete(ctx, devPodConfig, []string{arg}, cmd.IgnoreNotFound, cmd.Force, cmd.DeleteOptions, cmd.Owner, log.Default)
 		if err != nil {
