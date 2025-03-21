@@ -31,6 +31,8 @@ import dayjs from "dayjs"
 import { ReactElement, ReactNode, cloneElement, useMemo } from "react"
 import { WorkspaceStatus } from "./WorkspaceStatus"
 import { ManagementV1DevPodWorkspaceInstanceKubernetesStatus } from "@loft-enterprise/client/gen/models/managementV1DevPodWorkspaceInstanceKubernetesStatus"
+import { ManagementV1DevPodWorkspaceInstancePodStatus, ManagementV1DevPodWorkspaceInstancePodStatusPhaseEnum } from "@loft-enterprise/client/gen/models/managementV1DevPodWorkspaceInstancePodStatus"
+import { ManagementV1DevPodWorkspaceInstancePersistentVolumeClaimStatus, ManagementV1DevPodWorkspaceInstancePersistentVolumeClaimStatusPhaseEnum } from "@loft-enterprise/client/gen/models/managementV1DevPodWorkspaceInstancePersistentVolumeClaimStatus"
 import { quantityToScalar } from "@kubernetes/client-node/dist/util"
 
 type TWorkspaceDetailsProps = Readonly<{
@@ -359,13 +361,13 @@ function KubernetesDetails({ status }: TKubernetesDetailsProps) {
       }
     }
 
-    if (!mainContainerResources.resources?.requests) {
+    if (!mainContainerResources.resources?.limits) {
       return Object.entries(mainContainerMetrics?.usage ?? {}).map(([type, quantity]) => {
         return getResourceDetails(type, undefined, quantity, undefined)
       })
     }
 
-    return Object.entries(mainContainerResources.resources?.requests ?? {}).map(
+    return Object.entries(mainContainerResources.resources?.limits ?? {}).map(
       ([type, quantity]) => {
         const used = indexedMetrics[type]
         let usagePercentage = calculateUsagePercentage(
@@ -385,6 +387,9 @@ function KubernetesDetails({ status }: TKubernetesDetailsProps) {
           <Text>{storageCapacity}</Text>
         </StackedWorkspaceInfoDetail>
       )}
+
+      {status.podStatus && <PodStatus podStatus={status.podStatus} />}
+      {status.persistentVolumeClaimStatus && <PvcStatus pvcStatus={status.persistentVolumeClaimStatus} />}
 
       {resources.map((resource) => {
         return (
@@ -412,6 +417,120 @@ function KubernetesDetails({ status }: TKubernetesDetailsProps) {
         )
       })}
     </>
+  )
+}
+
+function PodStatus({ podStatus }: { podStatus: ManagementV1DevPodWorkspaceInstancePodStatus }) {
+  const phase = podStatus.phase
+  const phaseColor = {
+    [ManagementV1DevPodWorkspaceInstancePodStatusPhaseEnum.Pending]: "yellow.500",
+    [ManagementV1DevPodWorkspaceInstancePodStatusPhaseEnum.Running]: "",
+    [ManagementV1DevPodWorkspaceInstancePodStatusPhaseEnum.Succeeded]: "red.400",
+    [ManagementV1DevPodWorkspaceInstancePodStatusPhaseEnum.Failed]: "red.400",
+    [ManagementV1DevPodWorkspaceInstancePodStatusPhaseEnum.Unknown]: "red.400",
+  }
+
+  let reason = podStatus.reason
+  let message = podStatus.message
+  if (phase !== ManagementV1DevPodWorkspaceInstancePodStatusPhaseEnum.Running) {
+    // check container status first
+    const containerStatus = podStatus.containerStatuses?.find((container) => container.name === "devpod" && (container.state?.waiting?.reason || container.state?.terminated?.reason))
+    if (containerStatus) {
+      if (containerStatus.state?.waiting) {
+        reason = containerStatus.state.waiting.reason
+        message = containerStatus.state.waiting.message
+      } else if (containerStatus.state?.terminated) {
+        reason = containerStatus.state.terminated.reason
+        message = containerStatus.state.terminated.message
+        if (!containerStatus.state.terminated.message && containerStatus.state.terminated.exitCode != 0) {
+          message = "Exit code: " + containerStatus.state.terminated.exitCode
+        }
+      }
+    }
+
+    // check pod conditions
+    if (!reason && !message) {
+      const podCondition = podStatus.conditions?.find((condition) => condition.status === "False" && condition.reason)
+      if (podCondition) {
+        reason = podCondition.reason
+        message = podCondition.message
+      }
+    }
+
+    // try to find warning event
+    if (!reason && !message) {
+      const warningEvent = podStatus.events?.find((event) => event.type === "Warning")
+      if (warningEvent) {
+        reason = warningEvent.reason
+        message = warningEvent.message
+      }
+    }
+
+    // try to find normal event
+    if (!reason && !message) {
+      const normalEvent = podStatus.events?.find((event) => event.type === "Normal")
+      if (normalEvent) {
+            reason = normalEvent.reason
+            message = normalEvent.message
+      }
+    }
+  }
+
+  return (
+    <StackedWorkspaceInfoDetail icon={Dashboard} label={<Text>Pod</Text>}>
+      <Text color={phase ? phaseColor[phase] : "gray.500"}>
+        {phase === ManagementV1DevPodWorkspaceInstancePodStatusPhaseEnum.Running ? podStatus.phase : (
+          (reason && message) ? <Tooltip label={message}>
+            <Text>{podStatus.phase} ({reason})</Text>
+          </Tooltip> : (reason ? <Text>{podStatus.phase} ({reason})</Text> : podStatus.phase)
+        )}
+      </Text>
+    </StackedWorkspaceInfoDetail>
+  )
+}
+
+
+function PvcStatus({ pvcStatus }: { pvcStatus: ManagementV1DevPodWorkspaceInstancePersistentVolumeClaimStatus }) {
+  const phase = pvcStatus.phase
+  const phaseColor = {
+    [ManagementV1DevPodWorkspaceInstancePersistentVolumeClaimStatusPhaseEnum.Pending]: "yellow.500",
+    [ManagementV1DevPodWorkspaceInstancePersistentVolumeClaimStatusPhaseEnum.Bound]: "",
+    [ManagementV1DevPodWorkspaceInstancePersistentVolumeClaimStatusPhaseEnum.Lost]: "red.400",
+  } 
+
+  let reason: string | undefined = ""
+  let message: string | undefined = ""
+  if (phase !== ManagementV1DevPodWorkspaceInstancePersistentVolumeClaimStatusPhaseEnum.Bound) {
+    reason = pvcStatus.conditions?.find((condition) => condition.status === "False")?.reason
+    message = pvcStatus.conditions?.find((condition) => condition.status === "False")?.message
+
+    // try to find warning event
+    if (!reason && !message) {
+      const warningEvent = pvcStatus.events?.find((event) => event.type === "Warning")
+      if (warningEvent) {
+        reason = warningEvent.reason
+        message = warningEvent.message
+      }
+    }
+
+    // try to find normal event
+    if (!reason && !message) {
+      const normalEvent = pvcStatus.events?.find((event) => event.type === "Normal")
+      if (normalEvent) {
+        reason = normalEvent.reason
+        message = normalEvent.message
+      }
+    }
+  }
+
+  return (
+    <StackedWorkspaceInfoDetail icon={Dashboard} label={<Text>Volume</Text>}>
+      <Text color={phase ? phaseColor[phase] : "gray.500"}>
+        {phase === ManagementV1DevPodWorkspaceInstancePersistentVolumeClaimStatusPhaseEnum.Bound ? pvcStatus.phase : ((reason && message) ? <Tooltip label={message}>
+          <Text>{pvcStatus.phase} ({reason})</Text>
+        </Tooltip> : reason ? <Text>{pvcStatus.phase} ({reason})</Text> : pvcStatus.phase) }
+      </Text>
+    </StackedWorkspaceInfoDetail>
   )
 }
 
