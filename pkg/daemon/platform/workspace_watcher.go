@@ -12,7 +12,6 @@ import (
 	loftclient "github.com/loft-sh/api/v4/pkg/clientset/versioned"
 	typedmanagementv1 "github.com/loft-sh/api/v4/pkg/clientset/versioned/typed/management/v1"
 	informers "github.com/loft-sh/api/v4/pkg/informers/externalversions"
-	informermanagementv1 "github.com/loft-sh/api/v4/pkg/informers/externalversions/management/v1"
 	"github.com/loft-sh/devpod/pkg/platform"
 	"github.com/loft-sh/devpod/pkg/platform/client"
 	"github.com/loft-sh/devpod/pkg/platform/project"
@@ -66,13 +65,11 @@ func startWorkspaceWatcher(ctx context.Context, config watchConfig, onChange cha
 		return err
 	}
 
-	factory := informers.NewSharedInformerFactoryWithOptions(clientset, time.Second*30,
+	factory := informers.NewSharedInformerFactoryWithOptions(clientset, time.Second*120,
 		informers.WithNamespace(project.ProjectNamespace(config.Project)),
 	)
 	workspaceInformer := factory.Management().V1().DevPodWorkspaceInstances()
-
-	instanceStore := newStore(workspaceInformer, self, config.Context, config.OwnerFilter, config.TsClient, config.Log)
-
+	instanceStore := newStore(self, config.Context, config.OwnerFilter, config.TsClient, config.Log)
 	_, err = workspaceInformer.Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{
 		AddFunc: func(obj interface{}) {
 			instance, ok := obj.(*managementv1.DevPodWorkspaceInstance)
@@ -117,6 +114,7 @@ func startWorkspaceWatcher(ctx context.Context, config watchConfig, onChange cha
 
 	stopCh := make(chan struct{})
 	defer close(stopCh)
+
 	go func() {
 		defer func() {
 			if err := recover(); err != nil {
@@ -124,13 +122,14 @@ func startWorkspaceWatcher(ctx context.Context, config watchConfig, onChange cha
 			}
 		}()
 
-		config.Log.Debug("starting workspace watcher")
+		config.Log.Info("starting workspace watcher")
 		factory.Start(stopCh)
 		factory.WaitForCacheSync(stopCh)
 
 		// Kick off initial message
 		onChange(instanceStore.List())
 
+		// periodically collect workspace metrics
 		instanceStore.collectWorkspaceMetrics(ctx, onChange)
 	}()
 	select {
@@ -143,7 +142,6 @@ func startWorkspaceWatcher(ctx context.Context, config watchConfig, onChange cha
 }
 
 type instanceStore struct {
-	informer    informermanagementv1.DevPodWorkspaceInstanceInformer
 	self        *managementv1.Self
 	context     string
 	ownerFilter platform.OwnerFilter
@@ -179,9 +177,8 @@ type WorkspaceNetworkMetrics struct {
 	Timestamp      int64          `json:"timestamp,omitempty"`
 }
 
-func newStore(informer informermanagementv1.DevPodWorkspaceInstanceInformer, self *managementv1.Self, context string, ownerFilter platform.OwnerFilter, tsClient *tailscale.LocalClient, log log.Logger) *instanceStore {
+func newStore(self *managementv1.Self, context string, ownerFilter platform.OwnerFilter, tsClient *tailscale.LocalClient, log log.Logger) *instanceStore {
 	return &instanceStore{
-		informer:         informer,
 		self:             self,
 		context:          context,
 		instances:        map[string]*ProWorkspaceInstance{},
@@ -376,29 +373,6 @@ func (s *instanceStore) updateWorkspaceLatencies(ctx context.Context) {
 	wg.Wait()
 }
 
-type extendedClientset struct {
-	*loftclient.Clientset
-	ManagementClient typedmanagementv1.ManagementV1Interface
-}
-
-func (c *extendedClientset) ManagementV1() typedmanagementv1.ManagementV1Interface {
-	return c.ManagementClient
-}
-
-var _ rest.Interface = (*extendedRESTClient)(nil)
-
-type extendedRESTClient struct {
-	rest.Interface
-}
-
-func (e *extendedRESTClient) Get() *rest.Request {
-	req := e.Interface.Get()
-	// We need to pass this to the backend for more information on the management CRD status
-	req.Param("extended", "true")
-
-	return req
-}
-
 func getClientSet(config *rest.Config) (loftclient.Interface, error) {
 	clientset, err := loftclient.NewForConfig(config)
 	if err != nil {
@@ -411,4 +385,28 @@ func getClientSet(config *rest.Config) (loftclient.Interface, error) {
 		Clientset:        clientset,
 		ManagementClient: c,
 	}, nil
+}
+
+var _ rest.Interface = (*extendedRESTClient)(nil)
+
+type extendedClientset struct {
+	*loftclient.Clientset
+	ManagementClient typedmanagementv1.ManagementV1Interface
+}
+
+func (c *extendedClientset) ManagementV1() typedmanagementv1.ManagementV1Interface {
+	return c.ManagementClient
+}
+
+type extendedRESTClient struct {
+	rest.Interface
+}
+
+func (e *extendedRESTClient) Get() *rest.Request {
+	req := e.Interface.Get()
+	// We need to pass this to the backend for more information on the management CRD status
+	req.Param("extended", "true")
+	req.Param("resync", "10") // resync every 10 seconds in the watch request
+
+	return req
 }
