@@ -85,6 +85,10 @@ impl Settings {
             error!("unable to open store {}", SETTINGS_FILE_NAME);
             return false;
         }
+        // For linux let out flathub repo provide updates
+        if cfg!(target_os = "linux") {
+            return false;
+        }
 
         store
             .unwrap()
