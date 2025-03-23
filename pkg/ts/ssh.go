@@ -3,23 +3,25 @@ package ts
 import (
 	"context"
 	"fmt"
+	"net"
 	"time"
 
 	"github.com/loft-sh/log"
 	"golang.org/x/crypto/ssh"
-	tsClient "tailscale.com/client/tailscale"
 )
 
-func WaitForSSHClient(ctx context.Context, lc *tsClient.LocalClient, host string, port int, user string, log log.Logger) (*ssh.Client, error) {
-	deadline := time.Now().Add(10 * time.Second)
+type Dialer func(ctx context.Context, network, address string) (net.Conn, error)
+
+func WaitForSSHClient(ctx context.Context, dialer Dialer, network, address string, user string, timeout time.Duration, log log.Logger) (*ssh.Client, error) {
+	deadline := time.Now().Add(timeout)
 
 	var (
 		c   *ssh.Client
 		err error
 	)
-	log.Debugf("Attempting to establish SSH connection with %s as user %s", host, user)
+	log.Debugf("Attempting to establish SSH connection with %s as user %s", address, user)
 	for time.Now().Before(deadline) {
-		c, err = newSSHClient(ctx, lc, host, port, user)
+		c, err = newSSHClient(ctx, dialer, network, address, user)
 		if err == nil {
 			return c, nil
 		}
@@ -35,10 +37,10 @@ func WaitForSSHClient(ctx context.Context, lc *tsClient.LocalClient, host string
 	return c, err
 }
 
-func newSSHClient(ctx context.Context, lc *tsClient.LocalClient, host string, port int, user string) (*ssh.Client, error) {
-	conn, err := lc.DialTCP(ctx, host, uint16(port))
+func newSSHClient(ctx context.Context, dialer Dialer, network, address string, user string) (*ssh.Client, error) {
+	conn, err := dialer(ctx, network, address)
 	if err != nil {
-		return nil, fmt.Errorf("dial %s: %w", host, err)
+		return nil, fmt.Errorf("dial %s: %w", address, err)
 	}
 
 	clientConfig := &ssh.ClientConfig{
@@ -47,8 +49,7 @@ func newSSHClient(ctx context.Context, lc *tsClient.LocalClient, host string, po
 		HostKeyCallback: ssh.InsecureIgnoreHostKey(),
 	}
 
-	serverAddress := fmt.Sprintf("%s:%d", host, port)
-	sshConn, channels, requests, err := ssh.NewClientConn(conn, serverAddress, clientConfig)
+	sshConn, channels, requests, err := ssh.NewClientConn(conn, address, clientConfig)
 	if err != nil {
 		return nil, fmt.Errorf("establish SSH connection: %w", err)
 	}

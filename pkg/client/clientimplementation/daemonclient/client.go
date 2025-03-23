@@ -173,11 +173,12 @@ func (c *client) SSHClients(ctx context.Context, user string) (toolClient *ssh.C
 		return nil, nil, fmt.Errorf("resolve workspace hostname: %w", err)
 	}
 
-	toolClient, err = ts.WaitForSSHClient(ctx, c.tsClient, wAddr.Host(), wAddr.Port(), "root", c.log)
+	address := fmt.Sprintf("%s:%d", wAddr.Host(), wAddr.Port())
+	toolClient, err = ts.WaitForSSHClient(ctx, c.tsClient.Dial, "tcp", address, "root", time.Second*10, c.log)
 	if err != nil {
 		return nil, nil, fmt.Errorf("create SSH tool client: %w", err)
 	}
-	userClient, err = ts.WaitForSSHClient(ctx, c.tsClient, wAddr.Host(), wAddr.Port(), user, c.log)
+	userClient, err = ts.WaitForSSHClient(ctx, c.tsClient.Dial, "tcp", address, user, time.Second*10, c.log)
 	if err != nil {
 		return nil, nil, fmt.Errorf("create SSH user client: %w", err)
 	}

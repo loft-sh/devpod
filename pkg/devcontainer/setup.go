@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"net"
 	"os"
 	"path/filepath"
 	"runtime"
@@ -20,6 +21,9 @@ import (
 	"github.com/loft-sh/devpod/pkg/driver"
 	"github.com/loft-sh/devpod/pkg/ide"
 	provider2 "github.com/loft-sh/devpod/pkg/provider"
+	devssh "github.com/loft-sh/devpod/pkg/ssh"
+	"github.com/loft-sh/devpod/pkg/ssh/server"
+	"github.com/loft-sh/devpod/pkg/ts"
 	"github.com/loft-sh/log"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
@@ -96,15 +100,6 @@ func (r *runner) setupContainer(
 	// check if docker driver
 	_, isDockerDriver := r.Driver.(driver.DockerDriver)
 
-	// ssh tunnel
-	sshTunnelCmd := fmt.Sprintf("'%s' helper ssh-server --stdio", agent.ContainerDevPodHelperLocation)
-	if ide.ReusesAuthSock(r.WorkspaceConfig.Workspace.IDE.Name) {
-		sshTunnelCmd += fmt.Sprintf(" --reuse-ssh-auth-sock=%s", r.WorkspaceConfig.CLIOptions.SSHAuthSockID)
-	}
-	if r.Log.GetLevel() == logrus.DebugLevel {
-		sshTunnelCmd += " --debug"
-	}
-
 	// setup container
 	r.Log.Infof("Setup container...")
 
@@ -132,10 +127,46 @@ func (r *runner) setupContainer(
 		setupCommand += " --debug"
 	}
 
+	// run setup server
+	runSetupServer := func(ctx context.Context, stdin io.WriteCloser, stdout io.Reader) (*config.Result, error) {
+		return tunnelserver.RunSetupServer(
+			ctx,
+			stdout,
+			stdin,
+			r.WorkspaceConfig.Agent.InjectGitCredentials != "false",
+			r.WorkspaceConfig.Agent.InjectDockerCredentials != "false",
+			config.GetMounts(result),
+			r.Log,
+			tunnelserver.WithPlatformOptions(&r.WorkspaceConfig.CLIOptions.Platform),
+		)
+	}
+
+	// check if we should use the platform workspace socket
+	shouldUsePlatformWorkspaceSocket := r.WorkspaceConfig.CLIOptions.Platform.Enabled && r.WorkspaceConfig.CLIOptions.Platform.WorkspaceSocket != ""
+	if shouldUsePlatformWorkspaceSocket {
+		_, err := os.Stat(r.WorkspaceConfig.CLIOptions.Platform.WorkspaceSocket)
+		if err != nil {
+			shouldUsePlatformWorkspaceSocket = false
+		}
+	}
+
+	// if we can use the platform workspace socket we connect directly to it
+	if shouldUsePlatformWorkspaceSocket {
+		return r.runPlatformSetupServer(ctx, setupCommand, runSetupServer)
+	}
+
+	// ssh tunnel
+	sshTunnelCmd := fmt.Sprintf("'%s' helper ssh-server --stdio", agent.ContainerDevPodHelperLocation)
+	if ide.ReusesAuthSock(r.WorkspaceConfig.Workspace.IDE.Name) {
+		sshTunnelCmd += fmt.Sprintf(" --reuse-ssh-auth-sock=%s", r.WorkspaceConfig.CLIOptions.SSHAuthSockID)
+	}
+	if r.Log.GetLevel() == logrus.DebugLevel {
+		sshTunnelCmd += " --debug"
+	}
+
 	agentInjectFunc := func(cancelCtx context.Context, sshCmd string, sshTunnelStdinReader, sshTunnelStdoutWriter *os.File, writer io.WriteCloser) error {
 		return r.Driver.CommandDevContainer(cancelCtx, r.ID, "root", sshCmd, sshTunnelStdinReader, sshTunnelStdoutWriter, writer)
 	}
-
 	return sshtunnel.ExecuteCommand(
 		ctx,
 		nil,
@@ -144,19 +175,66 @@ func (r *runner) setupContainer(
 		sshTunnelCmd,
 		setupCommand,
 		r.Log,
-		func(ctx context.Context, stdin io.WriteCloser, stdout io.Reader) (*config.Result, error) {
-			return tunnelserver.RunSetupServer(
-				ctx,
-				stdout,
-				stdin,
-				r.WorkspaceConfig.Agent.InjectGitCredentials != "false",
-				r.WorkspaceConfig.Agent.InjectDockerCredentials != "false",
-				config.GetMounts(result),
-				r.Log,
-				tunnelserver.WithPlatformOptions(&r.WorkspaceConfig.CLIOptions.Platform),
-			)
-		},
+		runSetupServer,
 	)
+}
+
+func (r *runner) runPlatformSetupServer(ctx context.Context, setupCommand string, tunnelServerFunc sshtunnel.TunnelServerFunc) (*config.Result, error) {
+	r.Log.Infof("Connecting to workspace...")
+
+	// create a dialer that connects to the platform workspace socket
+	dialer := func(ctx context.Context, network, address string) (net.Conn, error) {
+		dial := &net.Dialer{}
+		return dial.DialContext(ctx, "unix", r.WorkspaceConfig.CLIOptions.Platform.WorkspaceSocket)
+	}
+
+	// start machine on stdio
+	ctx, cancel := context.WithCancel(ctx)
+	defer cancel()
+
+	// create a new direct ssh client
+	toolClient, err := ts.WaitForSSHClient(ctx, dialer, "tcp", fmt.Sprintf("%s:%d", r.WorkspaceConfig.CLIOptions.Platform.WorkspaceHost, server.DefaultUserPort), "root", time.Second*30, r.Log)
+	if err != nil {
+		return nil, fmt.Errorf("create SSH tool client: %w", err)
+	}
+	defer toolClient.Close()
+
+	// create the pipes
+	stdoutReader, stdoutWriter, err := os.Pipe()
+	if err != nil {
+		return nil, err
+	}
+	stdinReader, stdinWriter, err := os.Pipe()
+	if err != nil {
+		return nil, err
+	}
+	defer stdoutWriter.Close()
+	defer stdinWriter.Close()
+
+	// create the error channel & execute remote command
+	errChan := make(chan error, 1)
+	go func() {
+		defer cancel()
+
+		writer := r.Log.Writer(logrus.InfoLevel, false)
+		defer writer.Close()
+
+		err = devssh.Run(ctx, toolClient, setupCommand, stdinReader, stdoutWriter, writer, nil)
+		if err != nil {
+			errChan <- errors.Wrap(err, "run agent command")
+		} else {
+			errChan <- nil
+		}
+	}()
+
+	// start tunnel server locally
+	result, err := tunnelServerFunc(ctx, stdinWriter, stdoutReader)
+	if err != nil {
+		return nil, fmt.Errorf("start tunnel server: %w", err)
+	}
+
+	// wait until command finished
+	return result, <-errChan
 }
 
 func getRelativeDevContainerJson(origin, localWorkspaceFolder string) string {

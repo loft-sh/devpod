@@ -9,10 +9,11 @@ type PlatformOptions struct {
 	// AccessKey is used by the workspace daemon to authenticate itself
 	AccessKey string `json:"accessKey,omitempty"`
 	// UserAccessKey can be used as the workspace owner
-	UserAccessKey string `json:"userAccessKey,omitempty"`
-	WorkspaceHost string `json:"workspaceHost,omitempty"`
-	PlatformHost  string `json:"platformHost,omitempty"`
-	RunnerSocket  string `json:"runnerSocket,omitempty"`
+	UserAccessKey   string `json:"userAccessKey,omitempty"`
+	WorkspaceHost   string `json:"workspaceHost,omitempty"`
+	PlatformHost    string `json:"platformHost,omitempty"`
+	RunnerSocket    string `json:"runnerSocket,omitempty"`
+	WorkspaceSocket string `json:"workspaceSocket,omitempty"`
 
 	// environment template options
 	EnvironmentTemplate        string `json:"environmentTemplate,omitempty"`
