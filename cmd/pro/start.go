@@ -357,7 +357,7 @@ DevPod Pro was successfully installed and can now be reached at: %s
 Thanks for using DevPod Pro!
 `,
 			ansi.Color(url, "green+b"),
-			ansi.Color("devpod pro login"+" --insecure "+url, "green+b"),
+			ansi.Color("devpod pro login "+url, "green+b"),
 			"https://loft.sh/docs/administration/ssl",
 			url))
 	}
