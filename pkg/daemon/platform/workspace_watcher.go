@@ -190,8 +190,8 @@ func newStore(self *managementv1.Self, context string, ownerFilter platform.Owne
 	}
 }
 
-func (s *instanceStore) key(meta metav1.ObjectMeta) string {
-	return fmt.Sprintf("%s/%s", meta.Namespace, meta.Name)
+func (s *instanceStore) key(namespace, name string) string {
+	return fmt.Sprintf("%s/%s", namespace, name)
 }
 
 func (s *instanceStore) Add(instance *managementv1.DevPodWorkspaceInstance) {
@@ -223,7 +223,7 @@ func (s *instanceStore) Add(instance *managementv1.DevPodWorkspaceInstance) {
 		},
 	}
 
-	key := s.key(instance.ObjectMeta)
+	key := s.key(instance.ObjectMeta.Namespace, instance.ObjectMeta.Name)
 	s.m.Lock()
 	s.instances[key] = proInstance
 	s.m.Unlock()
@@ -242,7 +242,7 @@ func (s *instanceStore) Delete(instance *managementv1.DevPodWorkspaceInstance) {
 	}
 	s.m.Lock()
 	defer s.m.Unlock()
-	key := s.key(instance.ObjectMeta)
+	key := s.key(instance.ObjectMeta.Namespace, instance.ObjectMeta.Name)
 	delete(s.instances, key)
 
 	// delete from metrics as well
@@ -257,33 +257,42 @@ func (s *instanceStore) List() []*ProWorkspaceInstance {
 
 	instanceList := []*ProWorkspaceInstance{}
 	for _, instance := range s.instances {
-		s.metricsMu.RLock()
-		metrics := s.metrics[s.key(instance.ObjectMeta)]
-		if len(metrics) > 0 {
-			totalMetrics := len(metrics)
-			// calculate average latency
-			var totalLatency float64
-			for _, metric := range metrics {
-				totalLatency += metric.LatencyMs
-			}
-			avgLatency := totalLatency / float64(totalMetrics)
-
-			instance.Status.Metrics = &WorkspaceNetworkMetricsSummary{
-				LatencyMs:          avgLatency,
-				LastConnectionType: metrics[totalMetrics-1].ConnectionType,
-				LastDERPRegion:     metrics[totalMetrics-1].DERPRegion,
-			}
-		}
-		s.metricsMu.RUnlock()
-
-		instanceList = append(instanceList, instance)
+		instanceList = append(instanceList, s.convert(instance))
 	}
 
 	return instanceList
 }
 
+func (s *instanceStore) convert(instance *ProWorkspaceInstance) *ProWorkspaceInstance {
+	if instance == nil {
+		return nil
+	}
+
+	s.metricsMu.RLock()
+	defer s.metricsMu.RUnlock()
+
+	metrics := s.metrics[s.key(instance.ObjectMeta.Namespace, instance.ObjectMeta.Name)]
+	if len(metrics) > 0 {
+		totalMetrics := len(metrics)
+		// calculate average latency
+		var totalLatency float64
+		for _, metric := range metrics {
+			totalLatency += metric.LatencyMs
+		}
+		avgLatency := totalLatency / float64(totalMetrics)
+
+		instance.Status.Metrics = &WorkspaceNetworkMetricsSummary{
+			LatencyMs:          avgLatency,
+			LastConnectionType: metrics[totalMetrics-1].ConnectionType,
+			LastDERPRegion:     metrics[totalMetrics-1].DERPRegion,
+		}
+	}
+
+	return instance
+}
+
 func (s *instanceStore) collectWorkspaceMetrics(ctx context.Context, onChange changeFn) {
-	ticker := time.NewTicker(10 * time.Second)
+	ticker := time.NewTicker(15 * time.Second)
 	defer ticker.Stop()
 
 	// let's kick it off once

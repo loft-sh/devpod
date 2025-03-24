@@ -5,7 +5,9 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"net"
 	"net/netip"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -163,7 +165,6 @@ func (c *client) CheckWorkspaceReachable(ctx context.Context) error {
 	}
 
 	c.log.Debugf("Host %s is reachable. Proceeding with SSH session...", wAddr.Host())
-
 	return nil
 }
 
@@ -174,11 +175,25 @@ func (c *client) SSHClients(ctx context.Context, user string) (toolClient *ssh.C
 	}
 
 	address := fmt.Sprintf("%s:%d", wAddr.Host(), wAddr.Port())
-	toolClient, err = ts.WaitForSSHClient(ctx, c.tsClient.Dial, "tcp", address, "root", time.Second*10, c.log)
+	dial := func(ctx context.Context, network, address string) (net.Conn, error) {
+		addressParts := strings.Split(address, ":")
+		if len(addressParts) != 2 {
+			return nil, fmt.Errorf("invalid address: %s", address)
+		}
+
+		port, err := strconv.Atoi(addressParts[1])
+		if err != nil {
+			return nil, fmt.Errorf("invalid port: %s", addressParts[1])
+		}
+
+		return c.tsClient.DialTCP(ctx, addressParts[0], uint16(port))
+	}
+
+	toolClient, err = ts.WaitForSSHClient(ctx, dial, "tcp", address, "root", time.Second*10, c.log)
 	if err != nil {
 		return nil, nil, fmt.Errorf("create SSH tool client: %w", err)
 	}
-	userClient, err = ts.WaitForSSHClient(ctx, c.tsClient.Dial, "tcp", address, user, time.Second*10, c.log)
+	userClient, err = ts.WaitForSSHClient(ctx, dial, "tcp", address, user, time.Second*10, c.log)
 	if err != nil {
 		return nil, nil, fmt.Errorf("create SSH user client: %w", err)
 	}
