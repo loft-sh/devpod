@@ -469,11 +469,14 @@ func (l *localServer) watchWorkspaces(w http.ResponseWriter, r *http.Request, pa
 		PlatformClient: l.pc,
 		TsClient:       l.lc,
 		Log:            l.log},
-		func(instanceList []*ProWorkspaceInstance) {
+		throttle(func(instanceList []*ProWorkspaceInstance) {
 			if r.Context().Err() != nil {
 				return // Client disconnected, stop trying to write
 			}
+
+			// we need to debounce events here to avoid spamming the client with too many events
 			if instanceList != nil {
+				l.log.Infof("writing workspace list to client")
 				err := enc.Encode(instanceList)
 				if err != nil {
 					http.Error(w, "decode workspace list", http.StatusInternalServerError)
@@ -481,12 +484,61 @@ func (l *localServer) watchWorkspaces(w http.ResponseWriter, r *http.Request, pa
 				}
 				f.Flush()
 			}
-		},
+		}, time.Second),
 	)
 	if err != nil {
 		http.Error(w, fmt.Errorf("failed to watch workspaces: %w", err).Error(), http.StatusInternalServerError)
 		l.log.Errorf("watch workspaces: %w", err)
 		return
+	}
+}
+
+// throttle returns a function that wraps f so that f is called at most once
+// every interval. If a call happens before the interval has elapsed,
+// the latest instanceList is saved and f will be called with it when possible.
+func throttle(f func(instanceList []*ProWorkspaceInstance), interval time.Duration) func(instanceList []*ProWorkspaceInstance) {
+	var mu sync.Mutex
+	var lastExecuted time.Time          // Time of the last execution of f.
+	var pending []*ProWorkspaceInstance // Latest instanceList waiting to be processed.
+	var timer *time.Timer               // Timer scheduled to call f.
+
+	return func(instanceList []*ProWorkspaceInstance) {
+		mu.Lock()
+		defer mu.Unlock()
+
+		now := time.Now()
+		// If enough time has passed and there's no pending timer, call immediately.
+		if timer == nil && now.Sub(lastExecuted) >= interval {
+			lastExecuted = now
+			// Call f asynchronously so the caller is not blocked.
+			f(instanceList)
+			return
+		}
+
+		// Otherwise, save the latest instanceList.
+		pending = instanceList
+
+		// If no timer is set, schedule one to run when the interval expires.
+		if timer == nil {
+			remaining := interval - now.Sub(lastExecuted)
+			if remaining < 0 {
+				remaining = 0
+			}
+			timer = time.AfterFunc(remaining, func() {
+				mu.Lock()
+				// Grab the latest pending instanceList.
+				currentPending := pending
+				// Clear state.
+				pending = nil
+				timer = nil
+				lastExecuted = time.Now()
+				mu.Unlock()
+				// Execute the function with the latest instanceList.
+				if currentPending != nil {
+					f(currentPending)
+				}
+			})
+		}
 	}
 }
 

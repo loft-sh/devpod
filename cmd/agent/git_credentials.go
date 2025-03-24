@@ -16,6 +16,7 @@ import (
 	"github.com/loft-sh/devpod/cmd/flags"
 	"github.com/loft-sh/devpod/pkg/gitcredentials"
 	devpodhttp "github.com/loft-sh/devpod/pkg/http"
+	"github.com/loft-sh/devpod/pkg/ts"
 	"github.com/loft-sh/log"
 	"github.com/spf13/cobra"
 )
@@ -83,7 +84,7 @@ func (cmd *GitCredentialsCmd) Run(ctx context.Context, args []string, log log.Lo
 }
 
 func getCredentialsFromWorkspaceServer(credentials *gitcredentials.GitCredentials, log log.Logger) (*gitcredentials.GitCredentials, error) {
-	if _, err := os.Stat(filepath.Join(container.RootDir, "git-credentials.sock")); err != nil {
+	if _, err := os.Stat(filepath.Join(container.RootDir, ts.RunnerProxySocket)); err != nil {
 		// workspace server is not running
 		return nil, nil
 	}
@@ -91,12 +92,12 @@ func getCredentialsFromWorkspaceServer(credentials *gitcredentials.GitCredential
 	httpClient := &http.Client{
 		Transport: &http.Transport{
 			DialContext: func(_ context.Context, _, _ string) (net.Conn, error) {
-				return net.Dial("unix", "/var/devpod/git-credentials.sock")
+				return net.Dial("unix", filepath.Join(container.RootDir, ts.RunnerProxySocket))
 			},
 		},
 	}
 
-	return doRequest(httpClient, credentials, "http://git-credentials/git-credentials", log)
+	return doRequest(httpClient, credentials, "http://runner-proxy/git-credentials", log)
 }
 
 func getCredentialsFromLocalMachine(credentials *gitcredentials.GitCredentials, port int, log log.Logger) (*gitcredentials.GitCredentials, error) {
