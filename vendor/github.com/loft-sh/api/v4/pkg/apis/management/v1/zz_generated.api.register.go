@@ -46,6 +46,7 @@ func addKnownTypes(scheme *runtime.Scheme) error {
 		&DevPodWorkspaceInstance{},
 		&DevPodWorkspaceInstanceList{},
 		&DevPodWorkspaceInstanceCancel{},
+		&DevPodWorkspaceInstanceDownload{},
 		&DevPodWorkspaceInstanceLog{},
 		&DevPodWorkspaceInstanceStop{},
 		&DevPodWorkspaceInstanceTasks{},
@@ -219,6 +220,12 @@ var (
 			func() runtime.Object { return &DevPodWorkspaceInstanceCancel{} }, // Register versioned resource
 			nil,
 			management.NewDevPodWorkspaceInstanceCancelREST,
+		),
+		builders.NewApiResourceWithStorage(
+			management.InternalDevPodWorkspaceInstanceDownloadREST,
+			func() runtime.Object { return &DevPodWorkspaceInstanceDownload{} }, // Register versioned resource
+			nil,
+			management.NewDevPodWorkspaceInstanceDownloadREST,
 		),
 		builders.NewApiResourceWithStorage(
 			management.InternalDevPodWorkspaceInstanceLogREST,
@@ -621,6 +628,14 @@ type DevPodWorkspaceInstanceCancelList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:"metadata,omitempty"`
 	Items           []DevPodWorkspaceInstanceCancel `json:"items"`
+}
+
+// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
+
+type DevPodWorkspaceInstanceDownloadList struct {
+	metav1.TypeMeta `json:",inline"`
+	metav1.ListMeta `json:"metadata,omitempty"`
+	Items           []DevPodWorkspaceInstanceDownload `json:"items"`
 }
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object

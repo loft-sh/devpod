@@ -669,8 +669,16 @@ var (
 	NewDevPodWorkspaceInstanceCancelREST = func(getter generic.RESTOptionsGetter) rest.Storage {
 		return NewDevPodWorkspaceInstanceCancelRESTFunc(Factory)
 	}
-	NewDevPodWorkspaceInstanceCancelRESTFunc NewRESTFunc
-	InternalDevPodWorkspaceInstanceLogREST   = builders.NewInternalSubresource(
+	NewDevPodWorkspaceInstanceCancelRESTFunc    NewRESTFunc
+	InternalDevPodWorkspaceInstanceDownloadREST = builders.NewInternalSubresource(
+		"devpodworkspaceinstances", "DevPodWorkspaceInstanceDownload", "download",
+		func() runtime.Object { return &DevPodWorkspaceInstanceDownload{} },
+	)
+	NewDevPodWorkspaceInstanceDownloadREST = func(getter generic.RESTOptionsGetter) rest.Storage {
+		return NewDevPodWorkspaceInstanceDownloadRESTFunc(Factory)
+	}
+	NewDevPodWorkspaceInstanceDownloadRESTFunc NewRESTFunc
+	InternalDevPodWorkspaceInstanceLogREST     = builders.NewInternalSubresource(
 		"devpodworkspaceinstances", "DevPodWorkspaceInstanceLog", "log",
 		func() runtime.Object { return &DevPodWorkspaceInstanceLog{} },
 	)
@@ -1273,6 +1281,7 @@ var (
 		InternalDevPodWorkspaceInstance,
 		InternalDevPodWorkspaceInstanceStatus,
 		InternalDevPodWorkspaceInstanceCancelREST,
+		InternalDevPodWorkspaceInstanceDownloadREST,
 		InternalDevPodWorkspaceInstanceLogREST,
 		InternalDevPodWorkspaceInstanceStopREST,
 		InternalDevPodWorkspaceInstanceTasksREST,
@@ -1946,6 +1955,13 @@ type DevPodWorkspaceInstanceCancel struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
 	TaskID            string `json:"taskId,omitempty"`
+}
+
+// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
+
+type DevPodWorkspaceInstanceDownload struct {
+	metav1.TypeMeta   `json:",inline"`
+	metav1.ObjectMeta `json:"metadata,omitempty"`
 }
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
@@ -4262,6 +4278,14 @@ type DevPodWorkspaceInstanceCancelList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:"metadata,omitempty"`
 	Items           []DevPodWorkspaceInstanceCancel `json:"items"`
+}
+
+// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
+
+type DevPodWorkspaceInstanceDownloadList struct {
+	metav1.TypeMeta `json:",inline"`
+	metav1.ListMeta `json:"metadata,omitempty"`
+	Items           []DevPodWorkspaceInstanceDownload `json:"items"`
 }
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object

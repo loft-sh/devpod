@@ -240,9 +240,6 @@ func (s *WorkspaceServer) startListeners(ctx context.Context, projectName, works
 		mux.HandleFunc("/git-credentials", func(w http.ResponseWriter, r *http.Request) {
 			s.gitCredentialsHandler(w, r, lc, transport, projectName, workspaceName)
 		})
-		mux.HandleFunc("/workspace-download", func(w http.ResponseWriter, r *http.Request) {
-			s.workspaceDownloadHandler(w, r, lc, transport, projectName, workspaceName)
-		})
 		if err := http.Serve(runnerProxyListener, mux); err != nil && err != http.ErrServerClosed {
 			s.log.Errorf("HTTP runner proxy server error: %v", err)
 		}
@@ -300,45 +297,6 @@ func (s *WorkspaceServer) gitCredentialsHandler(w http.ResponseWriter, r *http.R
 
 	// build the runner URL
 	runnerURL := fmt.Sprintf("http://%s.ts.loft/devpod/%s/%s/workspace-git-credentials", discoveredRunner, projectName, workspaceName)
-	parsedURL, err := url.Parse(runnerURL)
-	if err != nil {
-		http.Error(w, "failed to parse runner URL", http.StatusInternalServerError)
-		return
-	}
-
-	// Build the reverse proxy with a custom Director.
-	proxy := httputil.NewSingleHostReverseProxy(parsedURL)
-	proxy.Director = func(req *http.Request) {
-		dest := *parsedURL
-		req.URL = &dest
-		req.Host = dest.Host
-		req.Header.Set("Authorization", "Bearer "+s.config.AccessKey)
-	}
-	proxy.Transport = transport
-	proxy.ServeHTTP(w, r)
-}
-
-// httpPortForwardHandler is the HTTP reverse proxy handler for workspace.
-// It reconstructs the target URL using custom headers and forwards the request.
-func (s *WorkspaceServer) workspaceDownloadHandler(w http.ResponseWriter, r *http.Request, lc *tailscale.LocalClient, transport *http.Transport, projectName, workspaceName string) {
-	s.log.Infof("Received workspace download request from %s", r.RemoteAddr)
-
-	// create a new http client with a custom transport
-	discoveredRunner, err := s.discoverRunner(r.Context(), lc)
-	if err != nil {
-		http.Error(w, "failed to discover runner", http.StatusInternalServerError)
-		return
-	}
-
-	// get the path from the query
-	path := r.URL.Query().Get("path")
-	if path == "" {
-		http.Error(w, "missing path", http.StatusBadRequest)
-		return
-	}
-
-	// build the runner URL
-	runnerURL := fmt.Sprintf("http://%s.ts.loft/devpod/%s/%s/workspace-download?path=%s", discoveredRunner, projectName, workspaceName, url.QueryEscape(r.URL.Query().Get("path")))
 	parsedURL, err := url.Parse(runnerURL)
 	if err != nil {
 		http.Error(w, "failed to parse runner URL", http.StatusInternalServerError)

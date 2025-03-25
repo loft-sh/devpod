@@ -37,7 +37,7 @@ func Extract(origReader io.Reader, destFolder string, options ...Option) error {
 	}
 
 	// read ahead
-	bufioReader := bufio.NewReaderSize(origReader, 10*1024*1024)
+	bufioReader := bufio.NewReaderSize(origReader, 1024*1024)
 	testBytes, err := bufioReader.Peek(2) // read 2 bytes
 	if err != nil {
 		return err
