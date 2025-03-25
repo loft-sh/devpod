@@ -4,10 +4,10 @@ package container
 
 import (
 	"context"
+	"crypto/tls"
 	"encoding/json"
 	"fmt"
 	"io"
-	"net"
 	"net/http"
 	"net/url"
 	"os"
@@ -48,7 +48,6 @@ import (
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
-	"k8s.io/apimachinery/pkg/util/wait"
 )
 
 var DockerlessImageConfigOutput = "/.dockerless/image.json"
@@ -585,29 +584,31 @@ func streamMount(ctx context.Context, workspaceInfo *provider2.ContainerWorkspac
 	// if we have a platform workspace socket we connect directly to it
 	if workspaceInfo.CLIOptions.Platform.Enabled {
 		// check if the runner proxy socket exists
-		logger.Infof("Waiting for runner proxy socket to be created")
-		var err error
-		waitErr := wait.PollUntilContextTimeout(ctx, time.Second, 30*time.Second, true, func(ctx context.Context) (done bool, err error) {
-			if _, err = os.Stat(filepath.Join(RootDir, ts.RunnerProxySocket)); err != nil {
-				return false, nil
-			}
-
-			return true, nil
-		})
-		if waitErr != nil {
-			return fmt.Errorf("finding runner proxy socket: %w", err)
-		}
-
 		httpClient := &http.Client{
 			Transport: &http.Transport{
-				DialContext: func(_ context.Context, _, _ string) (net.Conn, error) {
-					return net.Dial("unix", filepath.Join(RootDir, ts.RunnerProxySocket))
+				TLSClientConfig: &tls.Config{
+					InsecureSkipVerify: true,
 				},
 			},
 		}
 
+		// build the url
 		logger.Infof("Download %s into DevContainer %s", m.Source, m.Target)
-		resp, err := httpClient.Get("http://runner-proxy/workspace-download?path=" + url.QueryEscape(m.Source))
+		url := fmt.Sprintf(
+			"https://%s/kubernetes/management/apis/management.loft.sh/v1/namespaces/%s/devpodworkspaceinstances/%s/download?path=%s",
+			ts.RemoveProtocol(workspaceInfo.CLIOptions.Platform.PlatformHost),
+			workspaceInfo.CLIOptions.Platform.InstanceNamespace,
+			workspaceInfo.CLIOptions.Platform.InstanceName,
+			url.QueryEscape(m.Source),
+		)
+		req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
+		if err != nil {
+			return fmt.Errorf("create request: %w", err)
+		}
+		req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", workspaceInfo.CLIOptions.Platform.AccessKey))
+
+		// send the request
+		resp, err := httpClient.Do(req)
 		if err != nil {
 			return fmt.Errorf("download workspace: %w", err)
 		}
@@ -615,7 +616,8 @@ func streamMount(ctx context.Context, workspaceInfo *provider2.ContainerWorkspac
 
 		// check if the response is ok
 		if resp.StatusCode != http.StatusOK {
-			return fmt.Errorf("download workspace: %s", resp.Status)
+			body, _ := io.ReadAll(resp.Body)
+			return fmt.Errorf("download workspace: body = %s, status = %s", string(body), resp.Status)
 		}
 
 		// create progress reader

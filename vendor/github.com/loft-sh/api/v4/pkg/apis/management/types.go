@@ -152,3 +152,13 @@ type DevPodWorkspaceInstanceTasksOptions struct {
 	// +optional
 	TaskID string `json:"taskID,omitempty"`
 }
+
+// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
+
+type DevPodWorkspaceInstanceDownloadOptions struct {
+	metav1.TypeMeta `json:",inline"`
+
+	// Path is the path to download
+	// +optional
+	Path string `json:"path,omitempty"`
+}
