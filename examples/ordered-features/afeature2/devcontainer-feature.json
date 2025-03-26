@@ -1,0 +1,10 @@
+{
+  "name": "A feature 2",
+  "id": "afeature2",
+  "version": "1.0.0",
+  "description": "A feature 2.",
+  "options": {},
+  "installsAfter": [
+    "./afeature1"
+  ]
+}
