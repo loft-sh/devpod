@@ -213,14 +213,14 @@ func resolveWorkspace(
 	// check if desired id already exists
 	if desiredID != "" {
 		if Exists(ctx, devPodConfig, nil, desiredID, owner, log) != "" {
-			log.Infof("Workspace %s already exists", desiredID)
+			log.Debugf("Workspace %s already exists", desiredID)
 			return loadExistingWorkspace(devPodConfig, desiredID, changeLastUsed, log)
 		}
 
 		// set desired id
 		workspaceID = desiredID
 	} else if Exists(ctx, devPodConfig, nil, workspaceID, owner, log) != "" {
-		log.Infof("Workspace %s already exists", workspaceID)
+		log.Debugf("Workspace %s already exists", workspaceID)
 		return loadExistingWorkspace(devPodConfig, workspaceID, changeLastUsed, log)
 	}
 
