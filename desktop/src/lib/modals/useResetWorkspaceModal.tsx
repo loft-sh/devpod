@@ -26,10 +26,10 @@ export function useResetWorkspaceModal(
           <ModalHeader>Reset Workspace</ModalHeader>
           <ModalCloseButton />
           <ModalBody>
-            Reseting the workspace will erase all state saved in the docker container overlay and
+            Resetting the workspace will erase all state saved in the docker container overlay and
             DELETE ALL UNCOMMITTED CODE. This means you might need to reinstall or reconfigure
-            certain applications. You will start with a fresh clone of the repository. Are you sure
-            you want to rebuild {workspaceName}?
+            certain applications. You can also just recreate the pod with rebuild without wiping all state. With reset, you will start with a fresh clone of the repository. Are you sure
+            you want to reset {workspaceName}?
           </ModalBody>
           <ModalFooter>
             <HStack spacing={"2"}>

@@ -8,15 +8,18 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"strings"
 	"sync"
 	"time"
 
+	"github.com/blang/semver/v4"
 	"github.com/gofrs/flock"
 	"github.com/loft-sh/api/v4/pkg/devpod"
 	"github.com/loft-sh/devpod/pkg/client"
 	"github.com/loft-sh/devpod/pkg/config"
 	devpodlog "github.com/loft-sh/devpod/pkg/log"
 	"github.com/loft-sh/devpod/pkg/options"
+	platformclient "github.com/loft-sh/devpod/pkg/platform/client"
 	"github.com/loft-sh/devpod/pkg/provider"
 	"github.com/loft-sh/log"
 	perrors "github.com/pkg/errors"
@@ -197,6 +200,30 @@ func (s *proxyClient) Up(ctx context.Context, opt client.UpOptions) error {
 		opts["DEBUG"] = "true"
 	}
 
+	// check if the provider is outdated
+	providerOptions := s.devPodConfig.ProviderOptions(s.config.Name)
+	if providerOptions["LOFT_CONFIG"].Value != "" {
+		baseClient, err := platformclient.InitClientFromPath(ctx, providerOptions["LOFT_CONFIG"].Value)
+		if err != nil {
+			return fmt.Errorf("error initializing platform client: %w", err)
+		}
+
+		version, err := baseClient.Version()
+		if err != nil {
+			return fmt.Errorf("error retrieving platform version: %w", err)
+		}
+
+		// check if the version is lower than v4.3.0-devpod.alpha.19
+		parsedVersion, err := semver.Parse(strings.TrimPrefix(version.DevPodVersion, "v"))
+		if err != nil {
+			return fmt.Errorf("error parsing platform version: %w", err)
+		}
+
+		if parsedVersion.LT(semver.MustParse("0.7.0")) {
+			return fmt.Errorf("you are using an outdated provider version for this platform. Please disconnect and reconnect the platform to update the provider")
+		}
+	}
+
 	err := RunCommandWithBinaries(
 		ctx,
 		"up",
@@ -204,7 +231,7 @@ func (s *proxyClient) Up(ctx context.Context, opt client.UpOptions) error {
 		s.workspace.Context,
 		s.workspace,
 		nil,
-		s.devPodConfig.ProviderOptions(s.config.Name),
+		providerOptions,
 		s.config,
 		opts,
 		opt.Stdin,
