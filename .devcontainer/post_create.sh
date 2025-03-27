@@ -12,8 +12,8 @@ log "Starting Docker Daemon"
 sudo /usr/local/share/docker-init.sh
 #
 # Add our user to docker group
-sudo newgrp docker
-sudo usermod -aG docker $USER
+sudo usermod -aG docker devpod
+sudo chown devpod:docker /var/run/docker.sock
 
 log "Installing docker provider with default options"
 devpod provider add docker
