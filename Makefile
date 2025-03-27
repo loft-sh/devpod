@@ -5,6 +5,8 @@ SKIP_INSTALL := false
 # Platform host
 PLATFORM_HOST := localhost:8080
 
+# Tests config
+KIND_CLUSTER_NAME := devpod-e2e
 GOLANGCILINT_CONFIG := .golangci.yaml
 
 .PHONY: help
@@ -40,3 +42,17 @@ cp-to-platform: ## Copy the devpod binary to the platform pod
 	POD=$$(kubectl get pod -n $(NAMESPACE) -l app=loft,release=loft -o jsonpath='{.items[0].metadata.name}'); \
 	echo "Copying ./test/devpod-linux-$(GOARCH) to pod $$POD"; \
 	kubectl cp -n $(NAMESPACE) ./test/devpod-linux-$(GOARCH) $$POD:/usr/local/bin/devpod
+
+.PHONY: kind
+kind: ## Create kind cluster for e2e tests
+	kind create cluster --name $(KIND_CLUSTER_NAME)
+
+.PHONY: build-e2e
+build-e2e: ## Build bin for e2e tests
+	SKIP_INSTALL=$(SKIP_INSTALL) BUILD_PLATFORMS=$(GOOS) BUILD_ARCHS=$(GOARCH) BUILDDIR=e2e/bin ./hack/rebuild.sh
+
+
+.PHONY: e2e
+e2e: ## Run e2e tests
+	@cd e2e && go test -v -ginkgo.v -timeout 3600s --ginkgo.label-filter=up ./...
+
