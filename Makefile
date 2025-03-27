@@ -5,6 +5,8 @@ SKIP_INSTALL := false
 # Platform host
 PLATFORM_HOST := localhost:8080
 
+GOLANGCILINT_CONFIG := .golangci.yaml
+
 # Build the CLI and Desktop
 .PHONY: build
 build:
@@ -20,6 +22,10 @@ run-desktop: build
 run-daemon: build
 	devpod pro daemon start --host $(PLATFORM_HOST)
 
+.PHONY: lint
+lint:
+	golangci-lint run -c $(GOLANGCILINT_CONFIG)
+
 # Namespace to use for the platform
 NAMESPACE := loft
 
@@ -29,4 +35,4 @@ cp-to-platform:
 	SKIP_INSTALL=true BUILD_PLATFORMS=linux BUILD_ARCHS=$(GOARCH) ./hack/rebuild.sh
 	POD=$$(kubectl get pod -n $(NAMESPACE) -l app=loft,release=loft -o jsonpath='{.items[0].metadata.name}'); \
 	echo "Copying ./test/devpod-linux-$(GOARCH) to pod $$POD"; \
-	kubectl cp -n $(NAMESPACE) ./test/devpod-linux-$(GOARCH) $$POD:/usr/local/bin/devpod 
+	kubectl cp -n $(NAMESPACE) ./test/devpod-linux-$(GOARCH) $$POD:/usr/local/bin/devpod
