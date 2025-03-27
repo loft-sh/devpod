@@ -62,15 +62,10 @@ func (cmd *GitCredentialsCmd) Run(ctx context.Context, args []string, log log.Lo
 	}
 
 	// try to get the credentials from the workspace server first
-	credentials, err = getCredentialsFromWorkspaceServer(credentials, log)
-	if err != nil {
-		return err
-	} else if credentials == nil && cmd.Port != 0 {
+	credentials = getCredentialsFromWorkspaceServer(credentials)
+	if credentials == nil && cmd.Port != 0 {
 		// try to get the credentials from the local machine
-		credentials, err = getCredentialsFromLocalMachine(credentials, cmd.Port, log)
-		if err != nil {
-			return err
-		}
+		credentials = getCredentialsFromLocalMachine(credentials, cmd.Port)
 	}
 
 	// if we still don't have credentials, just return nothing
@@ -83,10 +78,10 @@ func (cmd *GitCredentialsCmd) Run(ctx context.Context, args []string, log log.Lo
 	return nil
 }
 
-func getCredentialsFromWorkspaceServer(credentials *gitcredentials.GitCredentials, log log.Logger) (*gitcredentials.GitCredentials, error) {
+func getCredentialsFromWorkspaceServer(credentials *gitcredentials.GitCredentials) *gitcredentials.GitCredentials {
 	if _, err := os.Stat(filepath.Join(container.RootDir, ts.RunnerProxySocket)); err != nil {
 		// workspace server is not running
-		return nil, nil
+		return nil
 	}
 
 	httpClient := &http.Client{
@@ -97,43 +92,65 @@ func getCredentialsFromWorkspaceServer(credentials *gitcredentials.GitCredential
 		},
 	}
 
-	return doRequest(httpClient, credentials, "http://runner-proxy/git-credentials", log)
+	credentials, credentialsErr := doRequest(httpClient, credentials, "http://runner-proxy/git-credentials")
+	if credentialsErr != nil {
+		// append error to /tmp/git-credentials.log
+		file, err := os.OpenFile("/tmp/git-credentials-error.log", os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+		if err != nil {
+			return nil
+		}
+		defer file.Close()
+
+		file.WriteString(fmt.Sprintf("get credentials from workspace server: %v\n", credentialsErr))
+		return nil
+	}
+
+	return credentials
 }
 
-func getCredentialsFromLocalMachine(credentials *gitcredentials.GitCredentials, port int, log log.Logger) (*gitcredentials.GitCredentials, error) {
-	return doRequest(devpodhttp.GetHTTPClient(), credentials, "http://localhost:"+strconv.Itoa(port)+"/git-credentials", log)
+func getCredentialsFromLocalMachine(credentials *gitcredentials.GitCredentials, port int) *gitcredentials.GitCredentials {
+	credentials, credentialsErr := doRequest(devpodhttp.GetHTTPClient(), credentials, "http://localhost:"+strconv.Itoa(port)+"/git-credentials")
+	if credentialsErr != nil {
+		// append error to /tmp/git-credentials.log
+		file, err := os.OpenFile("/tmp/git-credentials-error.log", os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+		if err != nil {
+			return nil
+		}
+		defer file.Close()
+
+		file.WriteString(fmt.Sprintf("get credentials from local machine: %v\n", credentialsErr))
+		return nil
+	}
+
+	return credentials
 }
 
-func doRequest(httpClient *http.Client, credentials *gitcredentials.GitCredentials, url string, log log.Logger) (*gitcredentials.GitCredentials, error) {
+func doRequest(httpClient *http.Client, credentials *gitcredentials.GitCredentials, url string) (*gitcredentials.GitCredentials, error) {
 	rawJSON, err := json.Marshal(credentials)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("error marshalling credentials: %w", err)
 	}
 
 	response, err := httpClient.Post(url, "application/json", bytes.NewReader(rawJSON))
 	if err != nil {
-		log.Errorf("Error retrieving credentials from credentials server: %v", err)
-		return nil, nil
+		return nil, fmt.Errorf("error retrieving credentials from credentials server: %w", err)
 	}
 	defer response.Body.Close()
 
 	raw, err := io.ReadAll(response.Body)
 	if err != nil {
-		log.Errorf("Error reading credentials: %v", err)
-		return nil, nil
+		return nil, fmt.Errorf("error reading credentials: %w", err)
 	}
 
 	// has the request succeeded?
 	if response.StatusCode != http.StatusOK {
-		log.Errorf("Error reading credentials (%d): %v", response.StatusCode, string(raw))
-		return nil, nil
+		return nil, fmt.Errorf("error reading credentials (%d): %s", response.StatusCode, string(raw))
 	}
 
 	credentials = &gitcredentials.GitCredentials{}
 	err = json.Unmarshal(raw, credentials)
 	if err != nil {
-		log.Errorf("Error decoding credentials: %v", err)
-		return nil, nil
+		return nil, fmt.Errorf("error decoding credentials: %w", err)
 	}
 
 	return credentials, nil
