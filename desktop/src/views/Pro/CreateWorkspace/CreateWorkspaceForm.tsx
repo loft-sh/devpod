@@ -65,7 +65,6 @@ export function CreateWorkspaceForm({
 
   const { ides, defaultIDE } = useIDEs()
   const { data: templates, isLoading: isTemplatesLoading } = useTemplates()
-
   const { data: projectClusterData, isLoading: projectClusterDataLoading } = useProjectClusters()
 
   const form = useForm<TFormValues>({ mode: "onChange", defaultValues })
