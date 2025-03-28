@@ -12,5 +12,5 @@
   "postCreateCommand": "bash ./.devcontainer/post_create.sh",
   "postStartCommand": "sudo newgrp docker",
   // Required for DinD
-  "privileged": true
+  // "privileged": true
 }
