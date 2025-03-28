@@ -1,14 +1,9 @@
 use crate::daemon::DaemonStatus;
 use anyhow::anyhow;
 use bytes::{Buf, Bytes};
-use core::time;
 use http::Uri;
 use http_body_util::{BodyExt, Empty};
-use hyper::{
-    body::{Body, Incoming},
-    client::conn::http1::SendRequest,
-    header,
-};
+use hyper::header;
 use log::error;
 use pin_project_lite::pin_project;
 use serde::de::DeserializeOwned;

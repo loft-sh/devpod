@@ -74,11 +74,6 @@ func (cmd *DeleteCmd) Run(ctx context.Context, args []string) error {
 	// stop daemon and clean up local workspaces
 	if providerConfig.IsDaemonProvider() {
 		// clean up local workspaces
-		daemonDir, err := provider.GetDaemonDir(devPodConfig.DefaultContext, proInstanceConfig.Provider)
-		if err != nil {
-			return err
-		}
-
 		workspaces, err := workspace.List(ctx, devPodConfig, true, cmd.Owner, log.Default)
 		if err != nil {
 			log.Default.Warnf("Failed to list workspaces: %v", err)
@@ -86,13 +81,13 @@ func (cmd *DeleteCmd) Run(ctx context.Context, args []string) error {
 			cleanupLocalWorkspaces(ctx, devPodConfig, workspaces, providerConfig.Name, cmd.Owner, log.Default)
 		}
 
-		daemonClient := daemon.NewLocalClient(daemonDir, proInstanceConfig.Provider)
+		daemonClient := daemon.NewLocalClient(proInstanceConfig.Provider)
 		err = daemonClient.Shutdown(ctx)
 		if err != nil {
 			log.Default.Warnf("Failed to shut down daemon: %v", err)
 		}
 		log.Default.Debug("Waiting for daemon to shut down")
-		err = waitDaemonStopped(ctx, daemonDir, providerConfig.Name)
+		err = waitDaemonStopped(ctx, providerConfig.Name)
 		if err != nil {
 			log.Default.Warnf("Failed to wait for daemon to be stopped: %v", err)
 		}
@@ -155,9 +150,9 @@ func cleanupLocalWorkspaces(ctx context.Context, devPodConfig *config.Config, wo
 	}
 }
 
-func waitDaemonStopped(ctx context.Context, daemonDir string, providerName string) error {
+func waitDaemonStopped(ctx context.Context, providerName string) error {
 	return wait.PollUntilContextTimeout(ctx, 250*time.Millisecond, 5*time.Second, true, func(ctx context.Context) (done bool, err error) {
-		_, err = daemon.Dial(daemon.GetSocketAddr(daemonDir, providerName))
+		_, err = daemon.Dial(daemon.GetSocketAddr(providerName))
 		if err != nil {
 			return true, nil
 		}

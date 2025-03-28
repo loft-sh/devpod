@@ -332,23 +332,11 @@ func listInstancesProxyProvider(ctx context.Context, devPodConfig *config.Config
 }
 
 func listInstancesDaemonProvider(ctx context.Context, devPodConfig *config.Config, provider string, providerConfig *providerpkg.ProviderConfig, owner platform.OwnerFilter, log log.Logger) ([]managementv1.DevPodWorkspaceInstance, error) {
-	dir, err := providerpkg.GetDaemonDir(devPodConfig.DefaultContext, provider)
-	if err != nil {
-		return nil, err
-	}
-
-	return daemon.NewLocalClient(dir, provider).ListWorkspaces(ctx, owner)
+	return daemon.NewLocalClient(provider).ListWorkspaces(ctx, owner)
 }
 
 func checkInstanceExists(ctx context.Context, workspace *providerpkg.Workspace) bool {
-	provider := workspace.Provider.Name
-	context := workspace.Context
-	dir, err := providerpkg.GetDaemonDir(context, provider)
-	if err != nil {
-		return false
-	}
-
-	instance, err := daemon.NewLocalClient(dir, provider).GetWorkspace(ctx, workspace.UID)
+	instance, err := daemon.NewLocalClient(workspace.Provider.Name).GetWorkspace(ctx, workspace.UID)
 	if err != nil || instance == nil {
 		return false
 	}

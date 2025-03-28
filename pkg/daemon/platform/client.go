@@ -21,8 +21,8 @@ type LocalClient struct {
 	provider   string
 }
 
-func NewLocalClient(daemonFolder, provider string) *LocalClient {
-	socketAddr := GetSocketAddr(daemonFolder, provider)
+func NewLocalClient(provider string) *LocalClient {
+	socketAddr := GetSocketAddr(provider)
 	tr := http.DefaultTransport.(*http.Transport).Clone()
 	tr.DialContext = func(ctx context.Context, network, addr string) (net.Conn, error) {
 		conn, err := Dial(socketAddr)

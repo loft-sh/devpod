@@ -40,12 +40,8 @@ var (
 )
 
 func New(devPodConfig *config.Config, prov *provider.ProviderConfig, workspace *provider.Workspace, log log.Logger) (clientpkg.DaemonClient, error) {
-	daemonDir, err := provider.GetDaemonDir(devPodConfig.DefaultContext, workspace.Provider.Name)
-	if err != nil {
-		return nil, err
-	}
 	tsClient := &tailscale.LocalClient{
-		Socket:        daemon.GetSocketAddr(daemonDir, workspace.Provider.Name),
+		Socket:        daemon.GetSocketAddr(workspace.Provider.Name),
 		UseSocketOnly: true,
 	}
 
@@ -55,7 +51,7 @@ func New(devPodConfig *config.Config, prov *provider.ProviderConfig, workspace *
 		workspace:    workspace,
 		log:          log,
 		tsClient:     tsClient,
-		localClient:  daemon.NewLocalClient(daemonDir, prov.Name),
+		localClient:  daemon.NewLocalClient(prov.Name),
 	}, nil
 }
 

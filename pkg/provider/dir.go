@@ -21,7 +21,6 @@ const (
 	ProInstanceConfigFile = "pro.json"
 	ProviderConfigFile    = "provider.json"
 
-	DaemonSocket    = "devpod.sock"
 	DaemonStateFile = "devpod_ts.state"
 )
 
