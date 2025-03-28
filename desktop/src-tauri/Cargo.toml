@@ -8,11 +8,11 @@ repository = ""
 edition = "2021"
 
 [build-dependencies]
-tauri-build = { version = "2", features = [] }
+tauri-build = { version = "2.1.0", features = [] }
 
 [dependencies]
 # Tauri
-tauri = { version = "2", features = [
+tauri = { version = "2.4.0", features = [
         "macos-private-api",
         "image-ico",
         "image-png",
