@@ -71,6 +71,11 @@ pin-project-lite = "0.2.16"
 bytes = "1.10.0"
 http-body-util = "0.1.2"
 
+[patch.crates-io]
+
+# Change to version if this is released: https://github.com/hoodie/notify-rust/pull/244
+notify-rust = { git = "https://github.com/hoodie/notify-rust.git", branch = "main" }
+
 [target.'cfg(target_os = "windows")'.dependencies]
 winreg = "0.50.0"
 windows = { version = "0.48", features = [

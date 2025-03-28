@@ -1,14 +1,12 @@
 package credentials
 
 import (
-	"bytes"
 	"cmp"
 	"context"
 	"fmt"
 	"io"
 	"net"
 	"net/http"
-	"net/url"
 	"os"
 	"strconv"
 
@@ -91,33 +89,6 @@ func GetPort() (int, error) {
 	}
 
 	return port, nil
-}
-
-func prepareRequest(req *http.Request, proxyAddr string) (http.Request, error) {
-	proxyReq := *req
-	var b bytes.Buffer
-	_, err := b.ReadFrom(req.Body)
-	if err != nil {
-		return proxyReq, fmt.Errorf("read body: %w", err)
-	}
-	req.Body = io.NopCloser(&b)
-	proxyReq.Body = io.NopCloser(bytes.NewReader(b.Bytes()))
-
-	// rewrite target
-	p, err := url.JoinPath(fmt.Sprintf("http://%s", proxyAddr), req.URL.Path)
-	if err != nil {
-		return proxyReq, fmt.Errorf("join url path \"http://%s\", \"%s\": %w", proxyAddr, req.URL.Path, err)
-	}
-
-	proxyURL, err := url.Parse(p)
-	if err != nil {
-		return proxyReq, fmt.Errorf("parse proxy url %s: %w", p, err)
-	}
-
-	proxyReq.URL = proxyURL
-	proxyReq.RequestURI = ""
-
-	return proxyReq, nil
 }
 
 func handleDockerCredentialsRequest(ctx context.Context, writer http.ResponseWriter, request *http.Request, client tunnel.TunnelClient, log log.Logger) error {
