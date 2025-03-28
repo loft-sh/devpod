@@ -93,7 +93,6 @@ fn main() -> anyhow::Result<()> {
             resources_handles: Arc::new(Mutex::new(vec![])),
         })
         .plugin(logging::build_plugin())
-        // .plugin(tauri_plugin_deep_link::init())
         .plugin(tauri_plugin_store::Builder::default().build())
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_clipboard_manager::init())
