@@ -1,6 +1,7 @@
 GOOS := $(shell go env GOOS)
 GOARCH := $(shell go env GOARCH)
 SKIP_INSTALL := false
+GINKGO_LABEL_FILTER ?=
 
 # Platform host
 PLATFORM_HOST := localhost:8080
@@ -54,5 +55,8 @@ build-e2e: ## Build bin for e2e tests
 
 .PHONY: e2e
 e2e: ## Run e2e tests
-	@cd e2e && go test -v -ginkgo.v -timeout 3600s --ginkgo.label-filter=up ./...
+	@cd e2e && go test -v -ginkgo.v -timeout 3600s --ginkgo.label-filter="$(GINKGO_LABEL_FILTER)" ./...
 
+.PHONY: e2e-up
+e2e-up:
+	@$(MAKE) e2e GINKGO_LABEL_FILTER=up
