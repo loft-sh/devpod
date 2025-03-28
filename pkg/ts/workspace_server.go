@@ -218,7 +218,7 @@ func (s *WorkspaceServer) startListeners(ctx context.Context, projectName, works
 		return fmt.Errorf("failed to create listener on TS port %s: %w", TSPortForwardPort, err)
 	}
 
-	// Create and start the paltform HTTP git credentials listener
+	// Create and start the platform HTTP git credentials listener
 	runnerProxySocket := filepath.Join(s.config.RootDir, RunnerProxySocket)
 	s.log.Infof("Starting runner proxy socket on %s", runnerProxySocket)
 	_ = os.Remove(runnerProxySocket)
