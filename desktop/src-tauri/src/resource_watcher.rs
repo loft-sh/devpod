@@ -214,8 +214,8 @@ pub struct Daemon {
     notified_login_required: bool,
 }
 impl Daemon {
-    pub fn new(context: Option<String>, provider: Option<String>) -> anyhow::Result<Daemon> {
-        let socket_addr = Daemon::get_socket_addr(context.clone(), provider.clone())?;
+    pub fn new(provider: Option<String>) -> anyhow::Result<Daemon> {
+        let socket_addr = Daemon::get_socket_addr(provider.clone())?;
         let client = daemon::client::Client::new(socket_addr);
 
         return Ok(Daemon {
@@ -230,7 +230,6 @@ impl Daemon {
     }
 
     fn get_socket_addr(
-        context: Option<String>,
         provider: Option<String>,
     ) -> Result<String, DevpodCommandError> {
         let provider = provider.clone().ok_or(DevpodCommandError::Any(anyhow!(
@@ -238,33 +237,15 @@ impl Daemon {
         )))?;
         #[cfg(unix)]
         {
-            let home = Self::get_home()?;
-            let context = context.clone().unwrap_or("default".to_string());
-
             return Ok(format!(
-                "{}/contexts/{}/providers/{}/daemon/devpod.sock",
-                home, context, provider
+                "/tmp/devpod-{}.sock",
+                provider
             ));
         }
         #[cfg(windows)]
         {
             return Ok(format!("\\\\.\\pipe\\devpod.{}", provider).to_string());
         }
-    }
-
-    fn get_home() -> anyhow::Result<String> {
-        if let Ok(devpod_home) = std::env::var("DEVPOD_HOME") {
-            return Ok(devpod_home);
-        }
-
-        if let Some(mut home) = home_dir() {
-            home.push(".devpod");
-            if let Some(home) = home.to_str() {
-                return Ok(home.to_owned());
-            }
-        }
-
-        return Err(anyhow!("Failed to get home directory for current user"));
     }
 
     pub fn status(&self) -> &daemon::DaemonStatus {
@@ -485,7 +466,7 @@ async fn watch_daemons(app_handle: &AppHandle) -> anyhow::Result<()> {
         let daemon = instance.daemon();
         if daemon.is_none() {
             instance.daemon = Some(
-                Daemon::new(instance.context.clone(), instance.provider.clone())
+                Daemon::new(instance.provider.clone())
                     .map_err(|err| anyhow!("Failed to create new daemon: {}", err))?,
             );
         }

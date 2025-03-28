@@ -10,7 +10,7 @@ import (
 	"gopkg.in/natefinch/npipe.v2"
 )
 
-func GetSocketAddr(preferredDir, providerName string) string {
+func GetSocketAddr(providerName string) string {
 	return fmt.Sprintf("\\\\.\\pipe\\devpod.%s", providerName)
 }
 

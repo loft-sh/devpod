@@ -64,13 +64,7 @@ func NewStatusCmd(flags *proflags.GlobalFlags) *cobra.Command {
 }
 
 func (cmd *StatusCmd) Run(ctx context.Context, devPodConfig *config.Config, provider *providerpkg.ProviderConfig) error {
-	dir, err := providerpkg.GetDaemonDir(devPodConfig.DefaultContext, provider.Name)
-	if err != nil {
-		return fmt.Errorf("get daemon dir: %w", err)
-	}
-
-	client := platformdaemon.NewLocalClient(dir, provider.Name)
-	status, err := client.Status(ctx, cmd.Debug)
+	status, err := platformdaemon.NewLocalClient(provider.Name).Status(ctx, cmd.Debug)
 	if err != nil {
 		return err
 	}

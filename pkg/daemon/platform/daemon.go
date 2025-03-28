@@ -43,7 +43,7 @@ type InitConfig struct {
 func Init(ctx context.Context, config InitConfig) (*Daemon, error) {
 	log := initLogging(config.RootDir, config.Debug)
 
-	socketAddr := GetSocketAddr(config.RootDir, config.ProviderName)
+	socketAddr := GetSocketAddr(config.ProviderName)
 	log.Infof("Starting Daemon on address: %s", socketAddr)
 	// listen to socket for early return  in case it's already in use
 	socketListener, err := listen(socketAddr)

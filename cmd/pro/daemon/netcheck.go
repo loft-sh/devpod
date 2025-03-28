@@ -64,13 +64,8 @@ func NewNetcheckCmd(flags *proflags.GlobalFlags) *cobra.Command {
 }
 
 func (cmd *NetcheckCmd) Run(ctx context.Context, devPodConfig *config.Config, provider *providerpkg.ProviderConfig) error {
-	dir, err := providerpkg.GetDaemonDir(devPodConfig.DefaultContext, provider.Name)
-	if err != nil {
-		return fmt.Errorf("get daemon dir: %w", err)
-	}
-
 	tsClient := &tailscale.LocalClient{
-		Socket:        daemon.GetSocketAddr(dir, provider.Name),
+		Socket:        daemon.GetSocketAddr(provider.Name),
 		UseSocketOnly: true,
 	}
 

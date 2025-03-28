@@ -9,12 +9,10 @@ import (
 	"os"
 	"path/filepath"
 	"time"
-
-	"github.com/loft-sh/devpod/pkg/provider"
 )
 
-func GetSocketAddr(preferredDir, providerName string) string {
-	return filepath.Join(preferredDir, provider.DaemonSocket)
+func GetSocketAddr(providerName string) string {
+	return filepath.Join("/tmp", fmt.Sprintf("devpod-%s.sock", providerName))
 }
 
 func Dial(addr string) (net.Conn, error) {

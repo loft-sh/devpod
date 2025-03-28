@@ -13,7 +13,7 @@ build:
 # Run the desktop app
 .PHONY: run-desktop
 run-desktop: build
-	cd desktop && yarn desktop:dev
+	cd desktop && yarn desktop:dev:debug
 
 # Run the daemon against loft host
 .PHONY: run-daemon

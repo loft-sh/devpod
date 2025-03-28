@@ -139,16 +139,11 @@ func (cmd *TroubleshootCmd) Run(ctx context.Context, args []string) {
 
 	daemonClient, ok := workspaceClient.(client.DaemonClient)
 	if ok {
-		dir, err := pkgprovider.GetDaemonDir(info.Config.DefaultContext, daemonClient.Provider())
+		status, err := daemon.NewLocalClient(daemonClient.Provider()).Status(ctx, true)
 		if err != nil {
-			info.Errors = append(info.Errors, PrintableError{fmt.Errorf("get daemon dir: %w", err)})
+			info.Errors = append(info.Errors, PrintableError{fmt.Errorf("get daemon status: %w", err)})
 		} else {
-			status, err := daemon.NewLocalClient(dir, daemonClient.Provider()).Status(ctx, true)
-			if err != nil {
-				info.Errors = append(info.Errors, PrintableError{fmt.Errorf("get daemon status: %w", err)})
-			} else {
-				info.DaemonStatus = &status
-			}
+			info.DaemonStatus = &status
 		}
 	}
 }
