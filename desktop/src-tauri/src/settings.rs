@@ -5,6 +5,7 @@ use log::error;
 use serde::Serialize;
 use tauri_plugin_store::StoreExt;
 use ts_rs::TS;
+use std::env;
 
 const SETTINGS_FILE_NAME: &str = ".settings.json";
 
@@ -84,6 +85,15 @@ impl Settings {
         if store.is_err() {
             error!("unable to open store {}", SETTINGS_FILE_NAME);
             return false;
+        }
+
+        let mut is_flatpak = false;
+        match env::var("FLATPAK_ID") {
+            Ok(_) => is_flatpak = true,
+            Err(_) => is_flatpak = false,
+        }
+        if is_flatpak {
+            return false
         }
 
         store
