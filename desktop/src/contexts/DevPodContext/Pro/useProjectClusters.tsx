@@ -4,7 +4,7 @@ import { ManagementV1Runner } from "@/runner"
 import { ManagementV1ProjectClusters } from "@loft-enterprise/client/gen/models/managementV1ProjectClusters"
 import { useQuery, UseQueryResult } from "@tanstack/react-query"
 
-type TProjectCluster = ManagementV1ProjectClusters & {
+export type TProjectCluster = ManagementV1ProjectClusters & {
   runners?: Array<ManagementV1Runner>
 }
 export function useProjectClusters(): UseQueryResult<TProjectCluster | undefined> {

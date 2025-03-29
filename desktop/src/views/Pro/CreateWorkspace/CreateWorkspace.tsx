@@ -179,14 +179,8 @@ async function buildWorkspaceInstance(
 
   // TODO: Remove when removing proxy provider
   if (shouldUseRunner) {
-    let runner = values.target
-
-    // we need to set the runner to local if the target is a loft cluster
-    if (runner === "loft-cluster") {
-      runner = "local"
-    }
     instance.spec.runnerRef = {
-      runner,
+      runner: values.target,
     }
   } else {
     instance.spec.target = {

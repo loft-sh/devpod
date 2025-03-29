@@ -219,7 +219,8 @@ func (s *proxyClient) Up(ctx context.Context, opt client.UpOptions) error {
 			return fmt.Errorf("error parsing platform version: %w", err)
 		}
 
-		if parsedVersion.LT(semver.MustParse("0.7.0")) {
+		// if devpod version is greater than 0.7.0 we error here
+		if parsedVersion.GE(semver.MustParse("0.6.99")) {
 			return fmt.Errorf("you are using an outdated provider version for this platform. Please disconnect and reconnect the platform to update the provider")
 		}
 	}
