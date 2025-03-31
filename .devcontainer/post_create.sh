@@ -23,8 +23,3 @@ log "Installing vCluster CLI"
 curl -L -o vcluster "https://github.com/loft-sh/vcluster/releases/download/v0.24.0/vcluster-linux-amd64" && sudo install -c -m 0755 vcluster /usr/local/bin && rm -f vcluster
 
 log "Done"
-
-log "Installing and starting SSH server for testing"
-sudo apt-get update
-sudo apt-get install -y openssh-server
-sudo service ssh start
