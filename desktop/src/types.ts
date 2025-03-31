@@ -281,7 +281,6 @@ export type TCommunityProvider = Readonly<{
 export type TPlatformHealthCheck = Readonly<{
   healthy: TMaybe<boolean>
   online: TMaybe<boolean>
-  daemonState: TMaybe<"pending" | "running" | "stopped">
   loginRequired: TMaybe<boolean>
   details: TMaybe<string[]>
 }>

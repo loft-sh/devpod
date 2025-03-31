@@ -254,7 +254,7 @@ export class DaemonClient extends ProClient {
       details.push("Platform is offline")
     }
 
-    return Return.Value({ healthy, details, loginRequired: status.loginRequired, online: status.online, daemonState: status.state })
+    return Return.Value({ healthy, details, loginRequired: status.loginRequired, online: status.online })
   }
 
   public watchWorkspaces(
